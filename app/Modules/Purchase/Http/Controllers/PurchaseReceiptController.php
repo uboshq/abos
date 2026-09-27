@@ -154,7 +154,7 @@ class PurchaseReceiptController extends Controller implements HasMiddleware
             'order' => $receipt->order,
             'orders' => PurchaseOrder::query()->open()->with('supplier')
                 ->orderByDesc('trx_date')->limit(200)->get(),
-            ...$this->formData(),
+            ...$this->formData($receipt->supplier_id),
         ]);
     }
 
@@ -236,10 +236,10 @@ class PurchaseReceiptController extends Controller implements HasMiddleware
     /**
      * @return array<string, mixed>
      */
-    private function formData(): array
+    private function formData(?int $keepSupplierId = null): array
     {
         return [
-            'suppliers' => Supplier::query()->active()->orderBy('name_en')->get(),
+            'suppliers' => Supplier::query()->active()->forPurchasing($keepSupplierId)->orderBy('name_en')->get(),
             'warehouses' => Warehouse::query()->active()->orderBy('code')->get(),
             'products' => Product::query()->active()->with('unit')->orderBy('name_en')->get(),
         ];

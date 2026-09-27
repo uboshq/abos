@@ -80,7 +80,7 @@ class DirectPurchaseController extends Controller implements HasMiddleware
         return view('purchase::direct.index', [
             'menu' => $this->menu->forUser($request->user()),
             'products' => $this->catalogue($warehouse),
-            'suppliers' => Supplier::query()->active()->orderBy('name_en')->get(),
+            'suppliers' => Supplier::query()->active()->forPurchasing()->orderBy('name_en')->get(),
 
             /*
              * ── গুদাম বনাম তাক — দুইটা আলাদা প্রশ্ন ──────────────────

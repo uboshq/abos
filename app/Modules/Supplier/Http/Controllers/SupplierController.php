@@ -167,7 +167,7 @@ class SupplierController extends Controller implements HasMiddleware
             'menu' => $this->menu->forUser($request->user()),
             'supplier' => $supplier,
             'kind' => $kind,
-            ...$this->options(),
+            ...$this->options($kind === 'service'),
         ]);
     }
 
@@ -280,7 +280,7 @@ class SupplierController extends Controller implements HasMiddleware
         return view('supplier::form', [
             'menu' => $this->menu->forUser($request->user()),
             'supplier' => $supplier,
-            ...$this->options(),
+            ...$this->options($supplier->party_type_id !== null && Supplier::query()->onlyServiceProviders()->whereKey($supplier->id)->exists()),
         ]);
     }
 
@@ -357,13 +357,22 @@ class SupplierController extends Controller implements HasMiddleware
     }
 
     /** @return array<string, mixed> */
-    private function options(): array
+    private function options(bool $services = false): array
     {
         return [
             'branches' => Branch::query()->active()->orderBy('name_en')->get(),
             // "both" ধরনগুলোও আসে: একটা প্রতিষ্ঠান একইসাথে গ্রাহক ও
             // সরবরাহকারী হতে পারে, আর দুইবার লিখতে বলার মানে নেই
-            'partyTypes' => PartyType::query()->for(PartyType::SUPPLIER)->active()->orderBy('code')->get(),
+            /*
+             * ⭐ ধরনের তালিকা তালিকা-ধরে ভাগ — মালিকের নির্দেশ, ২৭ সেপ্টেম্বর ২০২৬:
+             * সরবরাহকারীর ফর্মে কেবল "সরবরাহকারী", সেবাদাতার ফর্মে কেবল সেবার
+             * ধরন। নিয়মটা [[Supplier::scopeOnlySuppliers()]]-এর হুবহু: VENDOR
+             * মানে সরবরাহকারী, বাকি সব সেবাদাতা — তাই ফর্ম আর তালিকা কখনো
+             * আলাদা কথা বলে না।
+             */
+            'partyTypes' => PartyType::query()->for(PartyType::SUPPLIER)->active()
+                ->where('code', $services ? '!=' : '=', Supplier::VENDOR_CODE)
+                ->orderBy('code')->get(),
             'paymentTerms' => PaymentTerm::query()->active()->orderBy('code')->get(),
             'requireBangla' => $this->settings->enabled('supplier.require_bn_name'),
             'requireBin' => $this->settings->enabled('supplier.require_bin'),

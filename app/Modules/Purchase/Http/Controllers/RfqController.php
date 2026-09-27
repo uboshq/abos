@@ -226,7 +226,7 @@ class RfqController extends Controller implements HasMiddleware
         return [
             'products' => Product::query()->active()->with('unit')->orderBy('name_en')->get(),
             'warehouses' => Warehouse::query()->active()->orderBy('code')->get(),
-            'suppliers' => Supplier::query()->orderBy('code')->get(),
+            'suppliers' => Supplier::query()->forPurchasing()->orderBy('code')->get(),
         ];
     }
 }

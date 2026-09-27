@@ -168,7 +168,7 @@ class PurchaseOrderController extends Controller implements HasMiddleware
         return view('purchase::order.form', [
             'menu' => $this->menu->forUser($request->user()),
             'order' => $order,
-            ...$this->formData(),
+            ...$this->formData($order->supplier_id),
         ]);
     }
 
@@ -206,10 +206,10 @@ class PurchaseOrderController extends Controller implements HasMiddleware
     /**
      * @return array<string, mixed>
      */
-    private function formData(): array
+    private function formData(?int $keepSupplierId = null): array
     {
         return [
-            'suppliers' => Supplier::query()->active()->orderBy('name_en')->get(),
+            'suppliers' => Supplier::query()->active()->forPurchasing($keepSupplierId)->orderBy('name_en')->get(),
             'warehouses' => Warehouse::query()->active()->orderBy('code')->get(),
             'products' => Product::query()->active()->with('unit')->orderBy('name_en')->get(),
         ];

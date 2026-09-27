@@ -220,7 +220,7 @@ class PurchaseBillController extends Controller implements HasMiddleware
             'receipts' => PurchaseReceipt::query()
                 ->where('status', DocumentStatus::CONFIRMED)
                 ->with('supplier')->orderByDesc('trx_date')->limit(200)->get(),
-            ...$this->formData(),
+            ...$this->formData($bill->supplier_id),
         ]);
     }
 
@@ -332,12 +332,12 @@ class PurchaseBillController extends Controller implements HasMiddleware
     /**
      * @return array<string, mixed>
      */
-    private function formData(): array
+    private function formData(?int $keepSupplierId = null): array
     {
         $products = Product::query()->active()->with('unit')->orderBy('name_en')->get();
 
         return [
-            'suppliers' => Supplier::query()->active()->orderBy('name_en')->get(),
+            'suppliers' => Supplier::query()->active()->forPurchasing($keepSupplierId)->orderBy('name_en')->get(),
             'products' => $products,
 
             /*

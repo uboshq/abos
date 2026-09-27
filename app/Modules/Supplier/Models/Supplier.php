@@ -221,6 +221,26 @@ class Supplier extends Model implements Drillable
         );
     }
 
+    /**
+     * ক্রয়ের ড্রপডাউন — কেবল পণ্যের সরবরাহকারী, মালিকের নির্দেশ, ২৭ সেপ্টেম্বর ২০২৬।
+     *
+     * ⛔ আগে সরাসরি ক্রয়, আদেশ, বিল, গ্রহণ, ফেরত, দরপত্র, চুক্তি আর চাহিদার
+     * প্রতিটা ড্রপডাউন সব পক্ষ দেখাত — পরিবহন, মেরামত, ভাড়াসহ। অথচ তালিকার
+     * পর্দা দুইটা আগে থেকেই ভাগ করা ছিল ([[scopeOnlySuppliers()]])।
+     *
+     * ⓘ `$keep` — সম্পাদনার পর্দায় কাগজের নিজের পক্ষ। পুরনো কাগজে যদি একজন
+     * সেবাদাতা বসানো থাকে, তাকে ড্রপডাউন থেকে সরালে পর্দা নীরবে অন্য কাউকে
+     * বেছে নিত আর জমা দিলে পক্ষটা বদলে যেত। তাই সে থাকে, কেবল নিজের কাগজে।
+     */
+    public function scopeForPurchasing(Builder $query, ?int $keep = null): Builder
+    {
+        return $query->where(
+            fn (Builder $q) => $q
+                ->onlySuppliers()
+                ->when($keep !== null, fn (Builder $k) => $k->orWhere($k->getModel()->getQualifiedKeyName(), $keep)),
+        );
+    }
+
     public function scopeWithPayable(Builder $query): Builder
     {
         $net = LedgerEntry::query()

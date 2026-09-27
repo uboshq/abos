@@ -172,7 +172,7 @@ class PurchaseRequisitionController extends Controller implements HasMiddleware
              * পাতায় দুইটা বাড়তি কোয়েরি যেত, অথচ ঘরগুলো দেখা যেত না।
              */
             'suppliers' => $requisition->canBecomeAnOrder() && $request->user()?->can('purchase.order.create')
-                ? Supplier::query()->orderBy('code')->get()
+                ? Supplier::query()->forPurchasing()->orderBy('code')->get()
                 : collect(),
             'warehouses' => $requisition->canBecomeAnOrder() && $request->user()?->can('purchase.order.create')
                 ? Warehouse::query()->active()->orderBy('code')->get()
