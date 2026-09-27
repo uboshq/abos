@@ -55,7 +55,7 @@ final class PurchaseRequisitionService
             $requisition = PurchaseRequisition::create([
                 'company_id' => CompanyContext::id(),
                 'branch_id' => CompanyContext::branchId(),
-                'document_no' => $this->numbers->next('PR'),
+                'document_no' => $this->numbers->next('PRQ'),
                 'trx_date' => Carbon::parse($data['trx_date'] ?? now())->toDateString(),
                 'needed_by' => filled($data['needed_by'] ?? null)
                     ? Carbon::parse($data['needed_by'])->toDateString()
