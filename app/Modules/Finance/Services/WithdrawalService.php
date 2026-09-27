@@ -9,6 +9,7 @@ use App\Core\Engines\NumberSeries\NumberSeriesEngine;
 use App\Core\Support\CompanyContext;
 use App\Core\Support\DocumentStatus;
 use App\Core\Support\Money;
+use App\Models\Approval;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Models\Voucher;
 use App\Modules\Accounts\Services\StandardChart;
@@ -219,6 +220,37 @@ final class WithdrawalService
         if ($pending !== null && $pending->isPending()) {
             throw ValidationException::withMessages([
                 'status' => __('finance::validation.withdrawal_awaits_approval', [
+                    'no' => $withdrawal->document_no,
+                ]),
+            ]);
+        }
+
+        /*
+         * ⛔ "না" বলা অনুরোধের টাকাও বেরিয়ে যেত — ২৭ সেপ্টেম্বর ২০২৬।
+         *
+         * ── ⚠️ যা ভাঙা ছিল ─────────────────────────────────────────
+         * উপরের পাহারাটা একাই দাঁড়িয়ে ছিল, আর [[Approval::isPending()]]
+         * সত্য হয় **কেবল** `pending` অবস্থায়। ⓘ অর্থাৎ প্রশ্নটা ছিল
+         * *"সিদ্ধান্ত কি এখনো বাকি?"*, অথচ প্রশ্নটা হওয়া উচিত ছিল
+         * *"সিদ্ধান্তটা কি হ্যাঁ?"*।
+         *
+         * ⛔ ফলে ব্যবস্থাপক স্পষ্ট করে প্রত্যাখ্যান করার **পরেই** পোস্ট
+         * করা যেত — ভাউচার, খতিয়ান, সব বসে যেত। ⚠️ আর সেটা নীরব:
+         * প্রত্যাখ্যানটা লেখা থাকে অন্য টেবিলে, তাই ভাউচারটা দেখতে
+         * হুবহু অনুমোদিত উত্তোলনের মতোই।
+         *
+         * ── ⭐ কেন আলাদা বার্তা, উপরের শর্তে জুড়ে দেওয়া নয় ─────────
+         * *"অনুমোদনের অপেক্ষায়"* শুনে মানুষ অপেক্ষা করেন। ⓘ কিন্তু
+         * এখানে অপেক্ষার কিছু নেই — উত্তরটা এসে গেছে, আর উত্তরটা "না"।
+         * ⚠️ দুইটা এক বার্তায় ফেললে কেউ অনন্তকাল ইনবক্সের দিকে তাকিয়ে
+         * থাকতেন, অথচ করার কাজ ছিল নতুন করে অনুরোধ করা।
+         *
+         * ⓘ `$pending === null` অর্থাৎ প্রবাহ বসানোই নেই — সেই দশাটা
+         * এখানে ছোঁয়া হয়নি, ওটা নিরীক্ষার §1.3-এ আলাদাভাবে বদলাচ্ছে।
+         */
+        if ($pending !== null && $pending->status === Approval::REJECTED) {
+            throw ValidationException::withMessages([
+                'status' => __('finance::validation.withdrawal_was_rejected', [
                     'no' => $withdrawal->document_no,
                 ]),
             ]);

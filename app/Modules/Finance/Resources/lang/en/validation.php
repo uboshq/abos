@@ -32,6 +32,7 @@ return [
     'withdrawal_must_be_positive' => 'The amount must be more than zero',
     'withdrawal_already_posted' => ':no is already in the books',
     'withdrawal_awaits_approval' => ':no is still waiting for approval — the money cannot move before that',
+    'withdrawal_was_rejected' => ':no was rejected — money an approver said no to cannot be posted. Raise a fresh request if it is still needed',
     'withdrawal_over_cap' => 'The monthly cap is :cap — only :left is left this month. Change the cap if more is needed',
     'rental_closed' => 'This contract is closed; nothing more can be posted on it.',
     'rental_term_needed' => 'The term in months is required.',
