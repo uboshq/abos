@@ -274,6 +274,9 @@ class EveryRouteIsGuardedTest extends TestCase
         'api.dashboard.today' => 'প্রতিটা ঘর নিজের চাবি দেখে; চাবি না থাকলে ঘরটাই নেই; রুটে can: নেই',
         'api.reports.index' => 'তালিকা প্রতিটা রিপোর্টের নিজের চাবি (ReportDefinition::permission) ধরে ছাঁকা; চাবিহীন রিপোর্ট আসেই না',
         'api.reports.show' => 'প্রতিটা রিপোর্টের নিজের চাবি কন্ট্রোলারে দেখা হয় — চাবি নেই তো ৪০৩; ঢাকা কলাম উত্তরেই নেই',
+        'api.documents.pdf' => 'কাগজের চাবি ওয়েবের ছাপার রুটের নিজের can: (PaperTrail::abilitiesFor) — কন্ট্রোলারে; চাবি নেই তো ৪০৩, খালি তালিকাতেও ৪০৩',
+        'api.documents.papers' => 'pdf-এর একই পাহারা, একই পথে (DocumentApiController::through) — যে কাগজ ছাপা যায় না তার মাপও নয়',
+        'api.reports.export' => '§৯-এর দরজাই (ReportApiController::show, ReportDefinition::allows) — চাবি নেই তো ৪০৩; ঢাকা কলাম ফাইলেও নেই',
     ];
 
     /**

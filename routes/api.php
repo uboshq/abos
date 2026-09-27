@@ -6,9 +6,11 @@ use App\Http\Controllers\Api\ApprovalApiController;
 use App\Http\Controllers\Api\AppVersionController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\DashboardTodayController;
+use App\Http\Controllers\Api\DocumentApiController;
 use App\Http\Controllers\Api\MeController;
 use App\Http\Controllers\Api\NoticeApiController;
 use App\Http\Controllers\Api\ReportApiController;
+use App\Http\Controllers\Api\ReportExportApiController;
 use App\Http\Controllers\Api\SyncController;
 use App\Http\Middleware\ResolveCompanyContext;
 use Illuminate\Support\Facades\Route;
@@ -180,6 +182,18 @@ Route::prefix('v1')
          */
         Route::get('/reports', [ReportApiController::class, 'index'])->name('reports.index');
         Route::get('/reports/{key}', [ReportApiController::class, 'show'])->name('reports.show');
+
+        /*
+         * নথি ও রপ্তানি — চুক্তি §১০। ⚠️ `can:` নেই, ইচ্ছা করে: কাগজ এগারো
+         * রকম, প্রতিটার চাবি ওয়েবের ছাপার রুটের নিজের `can:` ([[DocumentApiController]]),
+         * আর রপ্তানির চাবি রিপোর্টের নিজের ([[ReportExportApiController]])।
+         *
+         * ⓘ `/reports/{slug}/export` উপরের `/reports/{key}`-এর সাথে ঠোকে না:
+         * `{key}` একটা অংশই ধরে (স্ল্যাশ নয়), তাই `…/export` ওখানে মেলেই না।
+         */
+        Route::get('/documents/{type}/{id}/pdf', [DocumentApiController::class, 'pdf'])->name('documents.pdf');
+        Route::get('/documents/{type}/{id}/papers', [DocumentApiController::class, 'papers'])->name('documents.papers');
+        Route::get('/reports/{slug}/export', ReportExportApiController::class)->name('reports.export');
     });
 
 Route::prefix('v1')
