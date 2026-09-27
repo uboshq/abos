@@ -213,6 +213,26 @@ final class LedgerChain
      * `withoutGlobalScopes()` · `orderBy('id')` · `row_hash` না থাকলে
      * এড়িয়ে যাওয়া — তিনটাই এক।
      *
+     * ── ⛔ কেন `chunk()` নয়, `chunkById()` ──────────────────────────
+     * ⓘ `chunk()` পাতা গোনে `OFFSET`/`LIMIT` দিয়ে — অর্থাৎ "৫০০টা সারি
+     * বাদ দিয়ে পরের ৫০০টা"। ⚠️ হাঁটার মাঝপথে সেটের একটা সারি সরে গেলে
+     * (মুছে ফেলা, বা `company_id` বদলে যাওয়া) পরের পাতার জানালাটা
+     * **এক ঘর পিছিয়ে যায়**, আর ঠিক ওই সীমানার সারিটা কেউ কোনোদিন
+     * দেখে না।
+     *
+     * ⛔ এখানে একটা সারি এড়িয়ে যাওয়া মানে তার পরের **প্রতিটা** সারির
+     * `previous` ভুল — চেইনটা নীরবে ভুল হয়ে বসে, আর কোথাও কিছু লাল
+     * হয় না। ⭐ `chunkById()` জানালা গোনে না, শেষ `id`-র পর থেকে ধরে
+     * (`where id > :last`), তাই সেটটা নড়লেও একটা সারিও বাদ পড়ে না।
+     *
+     * ⓘ দুইটা ক্রম এক: এখানে আগে থেকেই `orderBy('id')`, আর
+     * `chunkById()` নিজেও `id` ধরে আরোহী ক্রমেই হাঁটে — কোনো join নেই,
+     * তাই চাবির নামও দ্ব্যর্থ নয়। ⓘ পুরনো সারিগুলোকে চেইনে টানা
+     * ব্যাকফিলটা — `database/migrations/2026_10_13_100000_the_books_`
+     * `could_be_edited_and_nobody_would_know.php`-এর ৭৮ লাইন — প্রথম
+     * দিন থেকেই `chunkById()` ধরে হাঁটে; এই ফাইলের দুই জায়গা পিছিয়ে
+     * ছিল।
+     *
      * @return int কয়টা সারিতে নতুন সিল বসল
      */
     public static function reseal(int $companyId): int
@@ -224,7 +244,7 @@ final class LedgerChain
         LedgerEntry::withoutGlobalScopes()
             ->where('company_id', $companyId)
             ->orderBy('id')
-            ->chunk(500, function ($rows) use (&$previous, &$sealed, &$last): void {
+            ->chunkById(500, function ($rows) use (&$previous, &$sealed, &$last): void {
                 foreach ($rows as $row) {
                     if ($row->row_hash === null) {
                         continue;
@@ -364,6 +384,13 @@ final class LedgerChain
      * সংখ্যাটা আলাদা করে দেখা হয় কারণ কেউ মাথাটাও একই সাথে বদলে
      * দিলে ছাপ মিলে যেত; দুইটা জায়গা একসাথে ঠিক রাখা অনেক কঠিন।
      *
+     * ── ⛔ আর কেন `chunkById()` ──────────────────────────────────────
+     * ⚠️ যাচাই চলে **অ্যাপ চালু অবস্থায়** — রোজকার `abos:books-check`,
+     * আর প্রতিটা ডিপ্লয়ে। `chunk()`-এর `OFFSET` জানালা সেটের নড়াচড়ায়
+     * পিছিয়ে যায়, আর তখন একটা সারি কেউ দেখে না; ⛔ পাহারার কাছে
+     * "দেখিনি" আর "ঠিক আছে" এক কথা হয়ে যায়। ⓘ কারণটা পুরোটা
+     * [[LedgerChain::reseal()]]-এর মন্তব্যে।
+     *
      * @return array{ok: bool, checked: int, expected: int, broken_at: ?int, reason: ?string}
      */
     public static function verify(int $companyId): array
@@ -377,7 +404,7 @@ final class LedgerChain
         LedgerEntry::withoutGlobalScopes()
             ->where('company_id', $companyId)
             ->orderBy('id')
-            ->chunk(500, function ($rows) use (&$previous, &$checked, &$hashed, &$brokenAt, &$unsealedAt): bool {
+            ->chunkById(500, function ($rows) use (&$previous, &$checked, &$hashed, &$brokenAt, &$unsealedAt): bool {
                 foreach ($rows as $row) {
                     $checked++;
 
