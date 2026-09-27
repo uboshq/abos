@@ -178,3 +178,153 @@ describe('বকেয়া — দুইটা, আর দুইটার ম�
         expect(c.totalDue).toBe(60)
     })
 })
+
+/*
+ * ── লট — কেবল লট ধরা সারিতে, আর আগে থেকে বসানো ─────────────────────
+ *
+ * ⛔ ২৭ সেপ্টেম্বর ২০২৬ পর্যন্ত এই পর্দায় লটের কোনো ঘরই ছিল না, অথচ
+ * নতুন পণ্য লট ধরে চলে — তাই কাউন্টার দিয়ে ঐ পণ্য কেনাই যেত না।
+ */
+describe('লট — কেবল লট ধরা সারিতে', () => {
+    const tracked = (over = {}) => product({
+        id: 7,
+        name: 'ওষুধ',
+        track_batch: true,
+        last_lot: { batch_no: 'L-LAST', expiry_date: '2027-03-31', mrp: '95' },
+        ...over,
+    })
+
+    const withLots = (over = {}) => {
+        const c = counter({
+            catalogue: [product({ track_batch: false, last_lot: null }), tracked()],
+            texts: { paidMoreConfirm: 'বেশি দিচ্ছেন?', lotNeeded: 'লট নম্বর লিখুন' },
+            lotErrors: {},
+            ...over,
+        })
+        c.$nextTick = fn => fn()
+        c.$root = { querySelector: () => null }
+        c.$refs = {}
+
+        return c
+    }
+
+    const add = (c, p) => {
+        c.pick(p)
+        c.entry.rate = '60'
+        c.addToCart()
+
+        return c.lines[c.lines.length - 1]
+    }
+
+    it('লট না-ধরা পণ্যের সারি লট চায় না, লট ধরাটা চায়', () => {
+        const c = withLots()
+
+        expect(c.tracksLot(add(c, c.catalogue[0]))).toBe(false)
+        expect(c.tracksLot(add(c, c.catalogue[1]))).toBe(true)
+    })
+
+    /* ⚠️ পুরনো খসড়ার সারিতে চিহ্ন নেই — তবু তালিকা দেখে লট চায় */
+    it('চিহ্নটা তালিকা থেকে পড়া, সারির কপি থেকে নয়', () => {
+        const c = withLots()
+
+        expect(c.tracksLot({ id: 7 })).toBe(true)
+        expect(c.tracksLot({ id: 1, track_batch: true })).toBe(false)
+    })
+
+    it('কার্টে এই পণ্যের আগের সারি থাকলে তার লট বসে', () => {
+        const c = withLots()
+        const first = add(c, c.catalogue[1])
+        first.batch_no = 'L-TODAY'
+        first.expiry_date = '2028-01-31'
+
+        const second = add(c, c.catalogue[1])
+
+        expect(second.batch_no).toBe('L-TODAY')
+        expect(second.expiry_date).toBe('2028-01-31')
+        expect(second.lot_from).toBe('line')
+    })
+
+    it('আগের সারি না থাকলে পণ্যের শেষ লট — মেয়াদসহ', () => {
+        const c = withLots()
+        const line = add(c, c.catalogue[1])
+
+        expect(line.batch_no).toBe('L-LAST')
+        expect(line.expiry_date).toBe('2027-03-31')
+        expect(line.mrp).toBe('95')
+        expect(line.lot_from).toBe('last')
+    })
+
+    it('কোনো লট জানা না থাকলে খালি — বানানো নম্বর নয়', () => {
+        const c = withLots({ catalogue: [tracked({ last_lot: null })] })
+        const line = add(c, c.catalogue[0])
+
+        expect(line.batch_no).toBe('')
+        expect(line.expiry_date).toBe('')
+    })
+
+    it('লট না-ধরা পণ্যে কিছুই বসে না', () => {
+        const c = withLots()
+        const line = add(c, c.catalogue[0])
+
+        expect(line.batch_no).toBe('')
+        expect(c.lotProblem(line, 0)).toBe('')
+    })
+
+    /* ⭐ বার্তা পাতায়, ব্রাউজারের ভাসমান ইশারায় নয় — আর পাঠানো থামে */
+    it('লট ছাড়া পাঠাতে গেলে পাঠানো থামে আর সারির নিচে বার্তা', () => {
+        const c = withLots({ catalogue: [tracked({ last_lot: null })] })
+        const line = add(c, c.catalogue[0])
+
+        expect(c.lotProblem(line, 0)).toBe('')
+
+        let stopped = false
+        c.guard({ preventDefault: () => { stopped = true } })
+
+        expect(stopped).toBe(true)
+        expect(c.busy).toBe(false)
+        expect(c.lotProblem(line, 0)).toBe('লট নম্বর লিখুন')
+
+        line.batch_no = 'L-9'
+        expect(c.lotProblem(line, 0)).toBe('')
+    })
+
+    it('সার্ভারের সারি-ধরা বার্তাটা ঐ সারির নিচেই, লট লিখলে সরে যায়', () => {
+        const c = withLots({ catalogue: [tracked({ last_lot: null })], lotErrors: { 0: 'সারি ১ — লট লাগবে' } })
+        const line = add(c, c.catalogue[0])
+
+        expect(c.lotProblem(line, 0)).toBe('সারি ১ — লট লাগবে')
+
+        line.batch_no = 'L-1'
+        expect(c.lotProblem(line, 0)).toBe('')
+    })
+
+    it('সারি মুছলে পুরনো সারি-ধরা বার্তাগুলো ভুল সারিতে বসে না', () => {
+        const c = withLots({ catalogue: [tracked({ last_lot: null })], lotErrors: { 1: 'সারি ২ — লট লাগবে' } })
+        add(c, c.catalogue[0])
+        const second = add(c, c.catalogue[0])
+
+        c.dropLine(0)
+
+        expect(c.lotProblem(second, 0)).toBe('')
+    })
+
+    /* ⓘ Enter — লট → মেয়াদ → ছাপা দাম → পরের পণ্য খোঁজা */
+    it('Enter পরের লট-ঘরে যায়, শেষ ঘরের পর খোঁজার ঘরে', () => {
+        const c = withLots()
+        const focused = []
+        const box = name => ({ name, focus: () => focused.push(name) })
+        const lot = box('lot')
+        const expiry = box('expiry')
+        const mrp = box('mrp')
+        const search = box('search')
+        const group = { querySelectorAll: () => [lot, expiry, mrp] }
+        lot.closest = expiry.closest = mrp.closest = () => group
+        c.$root = { querySelector: () => search }
+
+        c.lotNext({ target: lot })
+        c.lotNext({ target: expiry })
+        c.lotNext({ target: mrp })
+
+        expect(focused).toEqual(['expiry', 'mrp', 'search'])
+    })
+})

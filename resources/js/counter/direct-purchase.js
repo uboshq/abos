@@ -27,7 +27,7 @@ import { taka } from '../components/money.js'
 export default function directPurchase({
     catalogue, vatEnabled, lastRatesUrl,
     depositMethods, moneyAccounts, carriers, packs, packDefaults, suppliers,
-    paymentTermDefault, draftKey, hasErrors, accountCodes, texts,
+    paymentTermDefault, draftKey, hasErrors, accountCodes, texts, lotErrors,
 }) {
     return {
         catalogue,
@@ -40,6 +40,14 @@ export default function directPurchase({
         lines: [],
         paidNow: '',
         nextKey: 1,
+
+        /* ── লট — কেবল লট ধরা পণ্যের সারিতে ─────────────────
+           ⓘ সার্ভার ফিরিয়ে দিলে কোন সারির লট নেই সেটা এখানে আসে,
+           সারির ক্রম ধরে (`lines.{i}.batch_no`)। ⚠️ `lotTried` —
+           পাঠানোর চেষ্টা হয়েছে কি না; তার আগে খালি ঘরের নিচে লাল
+           বার্তা দেখানো মানে প্রতিটা নতুন সারিতে অকারণ ধমক। */
+        lotErrors: lotErrors || {},
+        lotTried: false,
 
         /* সরবরাহকারীর আগের বকেয়া — সার্ভার থেকে আসে বাছাইয়ের
            মুহূর্তে ([[loadLastRates]])।
@@ -906,10 +914,21 @@ export default function directPurchase({
         addToCart() {
             if (! this.picked) return;
 
+            const lot = this.lotSeed(this.picked);
+
             this.lines.push({
                 key: this.nextKey++,
                 id: this.picked.id,
                 name: this.picked.name,
+
+                /* ⭐ লটের তিনটা ঘর — আগে থেকে বসানো (`lotSeed`)।
+                   ⓘ লট না-ধরা পণ্যে তিনটাই খালি, আর পর্দায় ঘরগুলো
+                   আঁকাই হয় না — তাই সার্ভারে কিছু যায় না। */
+                batch_no: lot.batch_no,
+                expiry_date: lot.expiry_date,
+                mrp: lot.mrp,
+                lot_from: lot.from,
+
                 qty: this.entry.qty || '1',
                 free_qty: this.entry.free_qty || '',
                 rate: this.entry.rate || '0',
@@ -958,7 +977,18 @@ export default function directPurchase({
                 gifts: [],
             });
 
+            const added = this.lines.length - 1;
+            const tracked = !! this.picked.track_batch;
+
             this.clearEntry();
+
+            /* ⭐ লট ধরা সারিতে কার্সর সোজা লট-ঘরে — বসানো মানটা
+               ঠিক থাকলে Enter, Enter, Enter, আর পরের পণ্য খোঁজা। */
+            if (tracked) {
+                this.$nextTick(() => this.focusLot(added));
+
+                return;
+            }
 
             /* ?. — একটা ঘর খুঁজে না পাওয়া কখনো পুরো পর্দা
                থামানোর কারণ হওয়া উচিত নয়। এখানে ঠিক তা-ই
@@ -1313,6 +1343,20 @@ export default function directPurchase({
                 return;
             }
 
+            /* ⭐ লট ধরা সারিতে লট নেই — পাঠানোর আগেই, সারির নিচে।
+               ⛔ কেবল `required`-এর ভরসায় রাখলে ব্রাউজার একটা ভাসমান
+               ইশারা দেখাত (কখনো স্ক্রলের বাইরে), আর ঘরটা লুকানো
+               থাকলে কিছুই না। ⓘ সার্ভারও একই কথা বলে, সারি ধরে। */
+            const missing = this.firstLotMissing();
+
+            if (missing >= 0) {
+                event.preventDefault();
+                this.lotTried = true;
+                this.$nextTick(() => this.focusLot(missing));
+
+                return;
+            }
+
             const paid = this.paidTotal + (Number(this.paidNow) || 0);
 
             if (paid > this.netPayable
@@ -1336,6 +1380,129 @@ export default function directPurchase({
             this.parkDraft();
 
             this.busy = true;
+        },
+
+        // ── লট ─────────────────────────────────────────────────
+
+        /** এই সারির পণ্য — তালিকা থেকে, সারির নিজের কপি নয়। */
+        productOf(line) {
+            return this.catalogue.find(p => String(p.id) === String(line.id)) || null;
+        },
+
+        /**
+         * সারিটা লট চায় কি না।
+         *
+         * ⚠️ তালিকা থেকে পড়া, সারিতে রাখা চিহ্ন থেকে নয় — পুরনো খসড়ার
+         * সারিতে ঐ চিহ্ন নেই, আর তখন লট ধরা পণ্য লট ছাড়াই পাঠানো যেত।
+         */
+        tracksLot(line) {
+            return !! this.productOf(line)?.track_batch;
+        },
+
+        /**
+         * নতুন সারির লট কোথা থেকে বসবে।
+         *
+         * ১ · কার্টে এই পণ্যের আগের সারি — একই গাড়ির একই পণ্য সাধারণত
+         *     একই লট (আলাদা হলে মানুষটা বদলে দেন)
+         * ২ · নইলে এই পণ্যের **শেষ যে লটে মাল ঢুকেছিল** (সার্ভারের
+         *     [[LastLotFor]]) — মেয়াদসহ
+         * ৩ · নইলে খালি
+         */
+        lotSeed(product) {
+            const blank = { batch_no: '', expiry_date: '', mrp: '', from: '' };
+
+            if (! product || ! product.track_batch) return blank;
+
+            for (let i = this.lines.length - 1; i >= 0; i--) {
+                const earlier = this.lines[i];
+
+                if (String(earlier.id) === String(product.id) && String(earlier.batch_no || '').trim() !== '') {
+                    return {
+                        batch_no: earlier.batch_no,
+                        expiry_date: earlier.expiry_date || '',
+                        mrp: earlier.mrp || '',
+                        from: 'line',
+                    };
+                }
+            }
+
+            const last = product.last_lot;
+
+            if (last && last.batch_no) {
+                return {
+                    batch_no: last.batch_no,
+                    expiry_date: last.expiry_date || '',
+                    mrp: last.mrp || '',
+                    from: 'last',
+                };
+            }
+
+            return blank;
+        },
+
+        /**
+         * সারির নিচের বার্তা — খালি মানে কিছু বলার নেই।
+         *
+         * ⓘ সার্ভারের বার্তা আগে (সে পণ্যের নামসহ বলে), তারপর পর্দার
+         * নিজেরটা — কিন্তু কেবল পাঠানোর চেষ্টার পরে। ⭐ লট লিখলেই দুইটাই
+         * সরে যায়।
+         */
+        lotProblem(line, index) {
+            if (! this.tracksLot(line)) return '';
+            if (String(line.batch_no || '').trim() !== '') return '';
+
+            const server = this.lotErrors[index] ?? this.lotErrors[String(index)];
+
+            if (server) return server;
+
+            return this.lotTried ? (texts.lotNeeded || '') : '';
+        },
+
+        /** লট ধরা অথচ লট-হীন প্রথম সারি — না থাকলে −১। */
+        firstLotMissing() {
+            return this.lines.findIndex(
+                line => this.tracksLot(line) && String(line.batch_no || '').trim() === ''
+            );
+        },
+
+        /**
+         * সারি মোছা — আর সার্ভারের সারি-ধরা বার্তাগুলোও।
+         *
+         * ⚠️ বার্তাগুলো সারির **ক্রম** ধরে বাঁধা; উপরের একটা সারি মুছলে
+         * নিচেরগুলো এক ধাপ ওঠে, আর পুরনো বার্তা ভুল সারির নিচে বসত।
+         */
+        dropLine(index) {
+            this.lines.splice(index, 1);
+            this.lotErrors = {};
+        },
+
+        focusLot(index) {
+            const box = this.$root.querySelector('[name="lines[' + index + '][batch_no]"]');
+
+            if (box) {
+                box.focus();
+                box.select?.();
+            }
+        },
+
+        /**
+         * Enter — লটের পরের ঘরে; শেষ ঘরের পর পরের পণ্য খোঁজা।
+         *
+         * ⚠️ `prevent` ব্লেডেই: ফর্মের ভিতরে Enter মানে ফর্ম জমা, আর
+         * অর্ধেক লেখা কার্ট সার্ভারে চলে যেত।
+         */
+        lotNext(event) {
+            const group = event?.target?.closest?.('[data-lot-fields]');
+            const boxes = group ? Array.from(group.querySelectorAll('[data-lot-field]')) : [];
+            const at = boxes.indexOf(event?.target);
+
+            if (at >= 0 && at < boxes.length - 1) {
+                boxes[at + 1].focus();
+
+                return;
+            }
+
+            this.$root.querySelector('input[x-ref="search"]')?.focus();
         },
 
         money(v) {

@@ -1,0 +1,334 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Tests\Feature\Modules\Purchase;
+
+use App\Core\Support\CompanyContext;
+use App\Models\Company;
+use App\Models\User;
+use App\Modules\Accounts\Services\CashTillService;
+use App\Modules\Accounts\Services\StandardChart;
+use App\Modules\Inventory\Models\Batch;
+use App\Modules\Inventory\Models\Product;
+use App\Modules\Inventory\Models\Warehouse;
+use App\Modules\Purchase\Models\PurchaseBill;
+use App\Modules\Purchase\Services\LastLotFor;
+use App\Modules\Supplier\Models\Supplier;
+use Database\Seeders\DemoSeeder;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Testing\TestResponse;
+use Spatie\Permission\PermissionRegistrar;
+use Tests\Concerns\ChecksTheFiveMatches;
+use Tests\TestCase;
+
+/**
+ * লট ধরা পণ্য সরাসরি ক্রয়ে কেনাই যেত না — ২৭ সেপ্টেম্বর ২০২৬, চালুর আগের ১ নম্বর বাধা।
+ *
+ * ── কী ভাঙা ছিল ──────────────────────────────────────────────────────
+ * মালিকের সিদ্ধান্ত: নতুন পণ্য লট ধরে চলে (`track_batch`)। ⓘ আর লট ধরা
+ * পণ্যে মাল ঢোকার সময় লট নম্বর বাধ্যতামূলক ([[BatchService::receive]])।
+ * ⛔ অথচ সরাসরি ক্রয়ের পর্দায় লট বা মেয়াদের **কোনো ঘরই ছিল না** — তাই
+ * ঐ পণ্য কাউন্টার দিয়ে কেনার কোনো পথই ছিল না।
+ *
+ * ⚠️ আর ব্যর্থতাটাও নোংরা ছিল: বার্তা বসত `lines` নামে (কোন সারি, বলা
+ * নেই), আর ততক্ষণে বিলটা খসড়া হয়ে লেখা হয়ে গেছে — প্রতি চেষ্টায় একটা।
+ *
+ * ── ⭐ এখানে যা দাবি করা হয় ───────────────────────────────────────────
+ *   ক · লট ছাড়া পাঠালে ঠিক ঐ সারির নামে বাংলা বার্তা, আর **কিছুই লেখা হয় না**
+ *   খ · লট ও মেয়াদসহ পাঠালে মাল ঐ লটে ঢোকে, আর পাঁচ মিল মেলে
+ *   গ · পর্দায় লটের ঘর আছে, কেবল লট ধরা সারির জন্য; তালিকা বলে কে লট ধরে
+ *   ঘ · "শেষ লট" মানে শেষ যে লটে মাল **ঢুকেছে**, শেষ যে লট জন্মেছে তা নয়
+ *
+ * ⓘ ব্যবহারকারী ভূমিকাহীন, হাতে কেবল একটা চাবি — `purchase.bill.create`।
+ */
+final class ALotTrackedProductCouldNotBeBoughtDirectlyTest extends TestCase
+{
+    use ChecksTheFiveMatches;
+    use RefreshDatabase;
+
+    private const KEY = 'purchase.bill.create';
+
+    private Company $depot;
+
+    private User $buyer;
+
+    private Supplier $supplier;
+
+    private Warehouse $warehouse;
+
+    private Product $product;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->seed(DemoSeeder::class);
+
+        $this->depot = Company::query()->where('code', 'TDEPOT')->firstOrFail();
+        CompanyContext::set($this->depot->id, $this->depot->defaultBranch()?->id);
+
+        app(StandardChart::class)->install();
+        app(CashTillService::class)->ensurePrimaryTill();
+
+        $this->buyer = User::factory()->create([
+            'name' => 'Counter Buyer',
+            'is_active' => true,
+            'locale' => 'bn',
+            'current_company_id' => $this->depot->id,
+        ]);
+        $this->buyer->companies()->attach($this->depot->id, ['is_active' => true]);
+        CompanyContext::forCompany($this->depot->id, fn () => $this->buyer->givePermissionTo(self::KEY));
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
+        $this->buyer = $this->buyer->fresh();
+
+        $this->assertCount(0, $this->buyer->getRoleNames(), 'ক্রেতার কোনো ভূমিকা থাকার কথা নয় — চাবি একটাই।');
+
+        $this->actingAs($this->buyer);
+
+        $this->supplier = Supplier::query()->firstOrFail();
+        $this->warehouse = Warehouse::query()->where('is_default', true)->firstOrFail();
+
+        /*
+         * ⓘ এমন একটা পণ্য যার আগে কোনো লট নেই — মালিকের "নতুন পণ্য লট
+         * ধরে" নিয়মের হুবহু ছবি।
+         */
+        $this->product = Product::query()
+            ->active()
+            ->whereNotIn('id', Batch::query()->select('product_id'))
+            ->orderBy('id')
+            ->firstOrFail();
+        $this->product->forceFill(['track_batch' => true])->save();
+    }
+
+    // ── ক · লট ছাড়া — সারির নামে বাংলা বার্তা, আর কিছুই লেখা হয় না ──────
+
+    public function test_without_a_lot_the_line_is_refused_in_bengali_and_nothing_is_written(): void
+    {
+        $before = $this->counts();
+
+        $response = $this->buy(['batch_no' => '', 'expiry_date' => '']);
+
+        $response->assertSessionHasErrors('lines.0.batch_no');
+
+        $message = session('errors')->first('lines.0.batch_no');
+        $expected = __('purchase::lot.needs_lot', ['line' => 1, 'product' => $this->product->name()], 'bn');
+
+        $this->assertNotSame('purchase::lot.needs_lot', $expected, 'বাংলা বার্তার চাবিটাই নেই।');
+        $this->assertSame($expected, $message, 'বার্তাটা ঐ সারির লট-ঘরের নামে বসেনি।');
+        $this->assertMatchesRegularExpression('/\p{Bengali}/u', $message, 'বার্তাটা বাংলায় নয়।');
+        $this->assertStringContainsString($this->product->name(), $message, 'বার্তায় পণ্যের নাম নেই — কোন সারি, বোঝা যায় না।');
+
+        $this->assertSame($before, $this->counts(),
+            'লট ছাড়া ফেরানো চেষ্টাও কিছু লিখে ফেলেছে (বিল · মজুদ · খতিয়ান · লট)।');
+
+        // ⓘ ফেরা পাতায় বার্তাটা দেখা যায় — ব্রাউজারের মতো ফেরত-ঠিকানা ধরে
+        $page = $this->buy(['batch_no' => '', 'expiry_date' => ''], [], follow: true)->assertOk();
+        $html = html_entity_decode($page->getContent(), ENT_QUOTES | ENT_HTML5, 'UTF-8');
+
+        $this->assertStringContainsString($message, $html, 'ফেরা পাতায় বার্তাটা নেই।');
+
+        // ⭐ আর সারির লট-ঘরের জন্য, সারির ক্রম ধরে — উপরের তালিকায় কেবল নয়
+        $this->assertStringContainsString('lotErrors: '.json_encode(['0' => $message], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), $html,
+            'সারি-ধরা বার্তাটা পর্দার লট-ঘরে পৌঁছায়নি।');
+
+        $this->assertSame($before, $this->counts(), 'দ্বিতীয় ফেরানো চেষ্টাও কিছু লিখে ফেলেছে।');
+    }
+
+    // ── খ · লট ও মেয়াদসহ — মাল ঐ লটে, আর পাঁচ মিল ────────────────────────
+
+    public function test_with_a_lot_and_expiry_the_goods_enter_that_lot_and_the_five_matches_hold(): void
+    {
+        $expiry = now()->addYear()->toDateString();
+        $snap = $this->snapshot();
+        $till = app(CashTillService::class)->ensurePrimaryTill();
+
+        $this->buy(['batch_no' => 'LOT-A1', 'expiry_date' => $expiry, 'mrp' => '95'], [
+            'paid_now' => '200',
+            'paid_from_account_id' => $till->account_id,
+        ])->assertSessionHasNoErrors()->assertRedirect();
+
+        $bill = PurchaseBill::query()->latest('id')->firstOrFail();
+        $this->assertSame('confirmed', $bill->status, 'বিলটা নিশ্চিত হয়নি।');
+
+        $batch = Batch::query()->where('product_id', $this->product->id)->where('batch_no', 'LOT-A1')->first();
+
+        $this->assertNotNull($batch, 'লট নম্বরটা পর্দা থেকে লট সারিতে পৌঁছায়নি।');
+        $this->assertSame($expiry, $batch->expiry_date?->toDateString(), 'মেয়াদটা লটে বসেনি।');
+        $this->assertSame(0, bccomp((string) $batch->mrp, '95', 4), 'ছাপা দামটা লটে বসেনি।');
+
+        // ⓘ মাল ঐ লটেই ঢুকেছে — ১০ একক
+        $inLot = (string) DB::table('inv_stock_movements')
+            ->where('batch_id', $batch->id)
+            ->selectRaw('COALESCE(SUM(floor_change + unplaced_change), 0) as q')
+            ->value('q');
+        $this->assertSame(0, bccomp($inLot, '10', 4), 'মাল ঐ লটে ঢোকেনি।');
+
+        // ⭐ পাঁচ মিল — ১০ × ৬০ = ৬০০ মজুদে, ৪০০ বাকি, ২০০ নগদে গেল, লাভ অনড়
+        $this->assertTheFiveMatches([
+            'books' => [
+                StandardChart::INVENTORY => bcadd($snap['inventory'], '600', 4),
+                StandardChart::PAYABLE => bcsub($snap['payable'], '400', 4),
+            ],
+            'stock' => [
+                $this->product->id => [
+                    'qty' => bcadd($snap['qty'], '10', 4),
+                    'value' => bcadd($snap['value'], '600', 4),
+                ],
+            ],
+            'party' => [[
+                'type' => 'supplier',
+                'id' => (int) $this->supplier->id,
+                'code' => StandardChart::PAYABLE,
+                'amount' => bcsub($snap['supplier'], '400', 4),
+            ]],
+            'money' => ['cash' => bcsub($snap['cash'], '200', 4)],
+            'profit' => $snap['profit'],
+        ]);
+
+        // ⓘ এই বিলের নিজের দাখিলাও নিজে নিজে সমান
+        $this->assertTheBooksMatch([], PurchaseBill::STOCK_SOURCE, (int) $bill->id);
+    }
+
+    // ── গ · পর্দা — ঘরগুলো আছে, আর তালিকা বলে কে লট ধরে ─────────────────
+
+    public function test_the_screen_carries_lot_fields_only_for_lot_tracked_lines(): void
+    {
+        $this->buy(['batch_no' => 'LOT-SEEN', 'expiry_date' => now()->addMonths(6)->toDateString()])
+            ->assertSessionHasNoErrors();
+
+        $plain = Product::query()->active()->whereKeyNot($this->product->id)->orderBy('id')->firstOrFail();
+        $plain->forceFill(['track_batch' => false])->save();
+
+        $html = $this->decoded($this->get(route('purchase.direct.create'))->assertOk()->getContent());
+
+        // ⓘ সারির লট-ঘর — কেবল লট ধরা সারিতে (শর্তটা JS-এর `tracksLot`, পরীক্ষা JS-এ)
+        $this->assertStringContainsString('x-if="tracksLot(line)"', $html, 'লটের ঘরগুলো শর্তসাপেক্ষ নয়।');
+        $this->assertStringContainsString("'lines[' + (index) + '][batch_no]'", $html, 'লট নম্বরের ঘর নেই।');
+        $this->assertStringContainsString("'lines[' + (index) + '][expiry_date]'", $html, 'মেয়াদের ঘর নেই।');
+        $this->assertStringContainsString("'lines[' + (index) + '][mrp]'", $html, 'ছাপা দামের ঘর নেই।');
+        $this->assertStringContainsString('data-lot-fields', $html);
+
+        // ⓘ Enter পরের ঘরে যায় — ফর্ম জমা হয় না
+        $this->assertStringContainsString('lotNext($event)', $html, 'লটের ঘরে Enter-এর পথ নেই।');
+
+        // ⓘ তালিকা বলে এই পণ্য লট ধরে, আর তার গতবারের লটটা কী
+        $this->assertMatchesRegularExpression(
+            '/"id":'.$this->product->id.',[^{}]*"track_batch":true,"last_lot":\{"batch_no":"LOT-SEEN"/',
+            $html,
+            'পর্দার তালিকায় লট ধরা পণ্যের চিহ্ন বা গতবারের লট নেই।',
+        );
+
+        // ⓘ লট না-ধরা পণ্যের সারি লট চায় না
+        $this->assertMatchesRegularExpression(
+            '/"id":'.$plain->id.',[^{}]*"track_batch":false,"last_lot":null/',
+            $html,
+            'লট না-ধরা পণ্যকেও তালিকা লট ধরা বলছে।',
+        );
+    }
+
+    // ── ঘ · "শেষ লট" মানে শেষ যে লটে মাল ঢুকেছে ──────────────────────────
+
+    public function test_the_last_lot_is_the_last_one_received_not_the_last_one_created(): void
+    {
+        $lots = app(LastLotFor::class);
+
+        $this->assertNull($lots->product((int) $this->product->id), 'লটহীন পণ্যের "শেষ লট" বানানো হয়েছে।');
+
+        $first = now()->addMonths(3)->toDateString();
+        $second = now()->addMonths(9)->toDateString();
+
+        $this->buy(['batch_no' => 'LOT-OLD', 'expiry_date' => $first])->assertSessionHasNoErrors();
+        $this->buy(['batch_no' => 'LOT-NEW', 'expiry_date' => $second])->assertSessionHasNoErrors();
+
+        $this->assertSame(
+            ['batch_no' => 'LOT-NEW', 'expiry_date' => $second],
+            array_intersect_key($lots->product((int) $this->product->id) ?? [], ['batch_no' => 1, 'expiry_date' => 1]),
+        );
+
+        // ⭐ পুরনো লটে আবার মাল এল — এখন সেটাই শেষ, যদিও লট সারিটা পুরনো
+        $this->buy(['batch_no' => 'LOT-OLD', 'expiry_date' => $first])->assertSessionHasNoErrors();
+
+        $this->assertSame('LOT-OLD', $lots->product((int) $this->product->id)['batch_no'] ?? null,
+            'আবার ঢোকা পুরনো লটটা "শেষ লট" হয়নি — জন্মের ক্রম ধরা হচ্ছে।');
+        $this->assertSame($first, $lots->product((int) $this->product->id)['expiry_date'] ?? null);
+    }
+
+    // ── সহায়ক ─────────────────────────────────────────────────────────────
+
+    /**
+     * পর্দার পথেই কেনা — `purchase.direct.store`।
+     *
+     * @param  array<string, string>  $lot
+     * @param  array<string, mixed>  $extra
+     */
+    private function buy(array $lot, array $extra = [], bool $follow = false): TestResponse
+    {
+        $client = $this->from(route('purchase.direct.create'));
+
+        if ($follow) {
+            $client = $client->followingRedirects();
+        }
+
+        return $client->post(route('purchase.direct.store'), [
+            'supplier_id' => $this->supplier->id,
+            'warehouse_id' => $this->warehouse->id,
+            'trx_date' => now()->toDateString(),
+            'supplier_bill_no' => 'LOT-'.fake()->unique()->numberBetween(10000, 99999),
+            'payment_term' => 'cash',
+            ...$extra,
+            'lines' => [[
+                'product_id' => $this->product->id,
+                'qty' => '10',
+                'rate' => '60',
+                'tax' => '0',
+                ...$lot,
+            ]],
+        ]);
+    }
+
+    /** @return array<string, int> */
+    private function counts(): array
+    {
+        return [
+            'bills' => PurchaseBill::query()->withTrashed()->count(),
+            'movements' => DB::table('inv_stock_movements')->count(),
+            'ledger' => DB::table('ledger_entries')->count(),
+            'batches' => DB::table('inv_batches')->count(),
+            'vouchers' => DB::table('vouchers')->count(),
+        ];
+    }
+
+    /** @return array<string, string> */
+    private function snapshot(): array
+    {
+        return [
+            'inventory' => $this->fiveMatchMovementOf(StandardChart::INVENTORY),
+            'payable' => $this->fiveMatchMovementOf(StandardChart::PAYABLE),
+            'qty' => $this->fiveMatchStockOnHand((int) $this->product->id),
+            'value' => $this->fiveMatchLayerValueOf((int) $this->product->id),
+            'supplier' => $this->fiveMatchLedgerMovement(
+                $this->fiveMatchAccountFamily(StandardChart::PAYABLE),
+                fn ($q) => $q->where('party_type', 'supplier')->where('party_id', $this->supplier->id),
+            ),
+            'cash' => $this->fiveMatchLedgerMovement(
+                $this->fiveMatchMoneyAccounts('cash', StandardChart::CASH_IN_HAND),
+            ),
+            'profit' => bcsub(
+                bcadd(
+                    bcmul($this->fiveMatchMovementOf(StandardChart::SALES), '-1', 4),
+                    bcmul($this->fiveMatchMovementOf(StandardChart::SALES_RETURN), '-1', 4),
+                    4,
+                ),
+                $this->fiveMatchMovementOf(StandardChart::COST_OF_GOODS_SOLD),
+                4,
+            ),
+        ];
+    }
+
+    /** পাতায় JSON এনকোড হয়ে বসে — HTML এসকেপ খুলে পড়া। */
+    private function decoded(string $html): string
+    {
+        return html_entity_decode($html, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+    }
+}

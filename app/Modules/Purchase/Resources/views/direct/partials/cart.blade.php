@@ -49,6 +49,78 @@
                                         <input type="hidden" :name="'lines[' + (index) + '][sales_price]'"
                                                :value="line.sales_price">
 
+                                        {{-- ── লট · মেয়াদ · ছাপা দাম — কেবল লট ধরা সারিতে ──
+
+                                             ⛔ ২৭ সেপ্টেম্বর ২০২৬ পর্যন্ত এই পর্দায় ঘরগুলো ছিলই না,
+                                             অথচ নতুন পণ্য লট ধরে চলে — তাই ঐ পণ্য কাউন্টার দিয়ে
+                                             কেনাই যেত না (সার্ভার বলত "লট নম্বর লাগবে")।
+
+                                             ⓘ পণ্যের ঘরের **ভিতরেই**, নতুন কলাম নয়: কলাম যোগ
+                                             হলে নিচের উপহার-সারির `colspan` গোনা বদলাত, আর লট
+                                             না-ধরা সারিতে তিনটা ফাঁকা কলাম পড়ে থাকত।
+
+                                             ⭐ মান আগে থেকে বসানো (`lotSeed`): কার্টে এই পণ্যের
+                                             আগের সারি, নইলে শেষ যে লটে মাল ঢুকেছিল। Enter —
+                                             পরের ঘর; শেষ ঘরের পর পরের পণ্য খোঁজা (`lotNext`)।
+
+                                             ⚠️ `required` নেই, ইচ্ছে করে: ব্রাউজারের ভাসমান ইশারা
+                                             নয়, বার্তা সারির নিচেই (`lotProblem`) — আর সার্ভারও
+                                             ঠিক এই সারির নামে বলে (`lines.{i}.batch_no`)। --}}
+                                        <template x-if="tracksLot(line)">
+                                            <div data-lot-fields class="mt-1 flex flex-wrap items-end gap-1">
+                                                <label class="block">
+                                                    <span class="block text-2xs text-(--color-ink-muted)">
+                                                        {{ __('inventory::field.batch_no') }}
+                                                    </span>
+                                                    <input type="text" maxlength="60" autocomplete="off" data-lot-field
+                                                           :name="'lines[' + (index) + '][batch_no]'" x-model="line.batch_no"
+                                                           @keydown.enter.prevent="lotNext($event)"
+                                                           :aria-invalid="lotProblem(line, index) ? 'true' : 'false'"
+                                                           :class="lotProblem(line, index) ? 'border-(--color-danger)' : 'border-(--color-border)'"
+                                                           class="h-(--spacing-field-dense) w-28 rounded-(--radius-field) border
+                                                                  bg-(--color-surface-card) px-1 text-xs">
+                                                </label>
+
+                                                {{-- ⓘ কোম্পানির ছকের তারিখ-ঘর, সারির ক্রম ধরে বাঁধা নামসহ —
+                                                     লাইন-এডিটরের হুবহু ডাক। --}}
+                                                <div class="w-32">
+                                                    <span class="block text-2xs text-(--color-ink-muted)">
+                                                        {{ __('inventory::field.expiry_date') }}
+                                                    </span>
+                                                    <x-ui.date dense name="expiry_date"
+                                                               bind-name="'lines[' + (index) + '][expiry_date]'"
+                                                               bind-iso="line.expiry_date"
+                                                               bind-model="line.expiry_date"
+                                                               data-lot-field
+                                                               x-on:keydown.enter.prevent="lotNext($event)"
+                                                               class="text-xs" />
+                                                </div>
+
+                                                <label class="block">
+                                                    <span class="block text-2xs text-(--color-ink-muted)">
+                                                        {{ __('inventory::field.mrp') }}
+                                                    </span>
+                                                    <input type="number" step="0.01" min="0" inputmode="decimal" data-lot-field
+                                                           :name="'lines[' + (index) + '][mrp]'" x-model="line.mrp"
+                                                           @keydown.enter.prevent="lotNext($event)"
+                                                           class="num h-(--spacing-field-dense) w-20 rounded-(--radius-field) border
+                                                                  border-(--color-border) bg-(--color-surface-card) px-1 text-end text-xs">
+                                                </label>
+                                            </div>
+                                        </template>
+
+                                        {{-- ⓘ বার্তাটা পাতায়, সারির ঠিক নিচে — পর্দার পাহারা বা সার্ভারের
+                                             ফেরত, যেটাই হোক। লট লিখলেই সরে যায়। --}}
+                                        <p x-show="lotProblem(line, index)" x-cloak role="alert"
+                                           class="mt-1 rounded-(--radius-field) bg-(--color-badge-danger-bg) px-2 py-0.5
+                                                  text-2xs text-(--color-badge-danger-ink)"
+                                           x-text="lotProblem(line, index)"></p>
+
+                                        <span x-show="tracksLot(line) && line.lot_from === 'last' && ! lotProblem(line, index)" x-cloak
+                                              class="block text-2xs text-(--color-ink-muted)">
+                                            {{ __('purchase::lot.from_last_lot') }}
+                                        </span>
+
                                         {{-- ⭐ গতবারের দর — সারিতেই, ভাসমান নয়।
 
                                              এন্ট্রি স্ট্রিপেও একটা "শেষ ক্রয়দর" আছে, কিন্তু
@@ -174,7 +246,7 @@
                                                 {{ __('purchase::action.add_gift') }}
                                             </button>
 
-                                            <button type="button" @click="lines.splice(index, 1)"
+                                            <button type="button" @click="dropLine(index)"
                                                     class="rounded-(--radius-field) px-2 py-1 text-(--color-danger)"
                                                     aria-label="{{ __('purchase::action.clear_line') }}">&times;</button>
                                         </div>

@@ -67,7 +67,16 @@
                   'mfs' => App\Modules\Accounts\Services\StandardChart::MOBILE_MONEY,
                   'cheque' => App\Modules\Accounts\Services\StandardChart::BANK,
               ]),
-              texts: @js(['paidMoreConfirm' => __('purchase::message.paid_more_confirm')]),
+              texts: @js([
+                  'paidMoreConfirm' => __('purchase::message.paid_more_confirm'),
+                  'lotNeeded' => __('purchase::lot.needs_lot_short'),
+              ]),
+              {{-- ⭐ সার্ভার কোন সারির লট ফিরিয়েছে — সারির ক্রম ধরে (`lines.{i}.batch_no`),
+                   যাতে বার্তাটা ঐ সারির লট-ঘরের নিচেই বসে, কেবল উপরের তালিকায় নয় --}}
+              lotErrors: @js(collect($errors->getMessages())
+                  ->filter(fn ($messages, $key) => preg_match('/^lines\.\d+\.batch_no$/', (string) $key) === 1)
+                  ->mapWithKeys(fn ($messages, $key) => [(string) explode('.', (string) $key)[1] => $messages[0]])
+                  ->all()),
           })"
           @submit="guard($event)"
           x-effect="saveDraft()"

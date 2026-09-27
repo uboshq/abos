@@ -20,6 +20,7 @@ use App\Modules\Inventory\Services\PackConversion;
 use App\Modules\MasterData\Models\PaymentMethod;
 use App\Modules\MasterData\Models\PaymentTerm;
 use App\Modules\Purchase\Services\DirectPurchaseService;
+use App\Modules\Purchase\Services\LastLotFor;
 use App\Modules\Purchase\Services\LastPaidRate;
 use App\Modules\Supplier\Models\Supplier;
 use Illuminate\Database\Eloquent\Collection;
@@ -30,6 +31,7 @@ use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
 /**
@@ -62,6 +64,7 @@ class DirectPurchaseController extends Controller implements HasMiddleware
         private readonly SettingsService $settings,
         private readonly MenuBuilder $menu,
         private readonly LastPaidRate $lastPaid,
+        private readonly LastLotFor $lastLots,
     ) {}
 
     public static function middleware(): array
@@ -488,6 +491,8 @@ class DirectPurchaseController extends Controller implements HasMiddleware
             'gifts.*.remarks' => ['nullable', 'string', 'max:191'],
         ]);
 
+        $this->demandLots($data['lines']);
+
         /*
          * ⓘ পর্দার `bill_no` সেবায় যায় `document_no` হয়ে — দুই নামের
          * সেতুটা এখানেই, আর কেবল এখানেই।
@@ -628,9 +633,69 @@ class DirectPurchaseController extends Controller implements HasMiddleware
      */
     private function catalogue(?Warehouse $warehouse): array
     {
+        /*
+         * ⭐ লট ধরা কি না, আর গতবারের লট — পর্দার লট-ঘরের জন্য।
+         *
+         * ⓘ `stockPanel()` সেবার জিনিস আর সেটা এই দুইটা জানে না; তাই
+         * এখানে জোড়া লাগে। ⚠️ `track_batch` না গেলে পর্দা জানত না কোন
+         * সারিতে লট চাইতে হবে, আর লট ধরা পণ্য কেনা যেত না — সার্ভার
+         * বলত "লট নম্বর লাগবে", অথচ পর্দায় লেখার কোনো ঘরই ছিল না।
+         */
+        $lots = $this->lastLots->products(
+            $this->products()->filter(fn (Product $p) => (bool) $p->track_batch)->modelKeys(),
+        );
+
         return $this->products()
-            ->map(fn (Product $p) => $this->purchases->stockPanel($p, $warehouse))
+            ->map(fn (Product $p) => $this->purchases->stockPanel($p, $warehouse) + [
+                'track_batch' => (bool) $p->track_batch,
+                'last_lot' => $p->track_batch ? ($lots[(int) $p->id] ?? null) : null,
+            ])
             ->all();
+    }
+
+    /**
+     * লট ধরা পণ্যের প্রতিটা সারিতে লট নম্বর — কিছু লেখার **আগে**।
+     *
+     * ── কেন এখানে, সেবার পাহারা থাকা সত্ত্বেও ──────────────────────────
+     * [[BatchService::receive]] নিজেও আটকায়, কিন্তু সে ডাক পায় বিল
+     * নিশ্চিত হওয়ার সময় — আর ততক্ষণে বিলটা খসড়া হয়ে লেখা হয়ে গেছে
+     * (সেবার প্রথম লেনদেন)। ⛔ ফলে প্রতিটা ব্যর্থ চেষ্টায় একটা করে
+     * খসড়া বিল পড়ে থাকত, আর বার্তাটা বসত `lines` নামে — কোন সারি, তা
+     * পর্দা বলতে পারত না।
+     *
+     * ⭐ এখানে সারি ধরে: `lines.{i}.batch_no` — পর্দা ঠিক ঐ সারির লট-ঘরের
+     * নিচে বার্তাটা দেখায়, আর কিছুই লেখা হয় না।
+     *
+     * ⓘ মেয়াদ বাধ্যতামূলক নয়, অতীতের তারিখও আটকানো নয় — ঘরের নিয়ম
+     * ([[BatchService::receive]]: "খালি চলে — সব লটে মেয়াদ থাকে না")
+     * তা-ই বলে। নতুন নিয়ম এখানে বানানো হয়নি।
+     *
+     * @param  list<array<string, mixed>>  $lines
+     */
+    private function demandLots(array $lines): void
+    {
+        $tracked = Product::query()
+            ->whereIn('id', array_map(fn (array $line) => (int) $line['product_id'], $lines))
+            ->where('track_batch', true)
+            ->get()
+            ->keyBy('id');
+
+        $missing = [];
+
+        foreach ($lines as $index => $line) {
+            $product = $tracked->get((int) $line['product_id']);
+
+            if ($product !== null && trim((string) ($line['batch_no'] ?? '')) === '') {
+                $missing['lines.'.$index.'.batch_no'] = __('purchase::lot.needs_lot', [
+                    'line' => (int) $index + 1,
+                    'product' => $product->name(),
+                ]);
+            }
+        }
+
+        if ($missing !== []) {
+            throw ValidationException::withMessages($missing);
+        }
     }
 
     /**
