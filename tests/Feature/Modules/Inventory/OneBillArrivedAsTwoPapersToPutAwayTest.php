@@ -70,6 +70,37 @@ final class OneBillArrivedAsTwoPapersToPutAwayTest extends TestCase
     }
 
     /**
+     * ⭐ মাথা আর সারির ঘর সমান — মালিকের ছবি, ২৮ সেপ্টেম্বর ২০২৬: *"eto elo melo keno"*।
+     * ⛔ মাথার তাক-ঘরগুলো শর্তে আসত, সারির ঘর সবসময় — কলাম তিন ঘর সরে যেত।
+     */
+    public function test_every_row_has_as_many_cells_as_the_header(): void
+    {
+        $this->goodsArrived();
+
+        $html = $this->get(route('inventory.stock.placement'))->assertOk()->getContent();
+
+        $this->assertSame(1, preg_match('/<table class="ui-list w-full">(.*?)<\/table>/su',
+            substr($html, (int) strpos($html, 'PBL-4242')), $table), 'প্রস্তুতিটাই ভুল — কাগজের সারণি নেই।');
+
+        preg_match('/<thead>(.*?)<\/thead>/su', $table[1], $head);
+
+        /* ⛔ মাথার কোনো ঘর শর্তের `<template>`-এ নয় — ব্রাউজারে ওটা শর্ত মিথ্যা হলে আঁকা
+           হয় না, আর তখন মাথা ছোট, সারি বড় (আগের ভুলটা ঠিক এই) */
+        $this->assertDoesNotMatchRegularExpression('/<template[^>]*>\s*<th/u', $head[1],
+            '⛔ মাথার ঘর শর্তে আঁকা হয় — তাক না থাকলে কলাম সরে যায়।');
+
+        $columns = substr_count($head[1], '<th');
+
+        preg_match_all('/<tr class="border-t[^"]*"(.*?)<\/tr>/su', $table[1], $rows);
+        $this->assertNotEmpty($rows[1], 'প্রস্তুতিটাই ভুল — কোনো সারি নেই।');
+
+        foreach ($rows[1] as $row) {
+            $this->assertSame($columns, substr_count($row, '<td'),
+                "⛔ মাথায় {$columns}টা ঘর, সারিতে ".substr_count($row, '<td')."টা — কলাম সরে যায়।");
+        }
+    }
+
+    /**
      * ⛔ আর কার্ডটায় দুই রকম মালই থাকে — একটা বাদ পড়ে না।
      *
      * ── ⚠️ কেন এই দাবিটা আলাদা ──────────────────────────────────────

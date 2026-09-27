@@ -83,11 +83,12 @@
                     <tr class="text-start text-2xs text-(--color-ink-muted)">
                         <th class="text-start">{{ __('inventory::field.product') }}</th>
                         <th class="text-start">{{ __('inventory::field.warehouse') }}</th>
-                        {{-- ⓘ তিনটা ঘর কেবল তখনই, যখন ঐ গুদামে তাক বসানো আছে --}}
+                        {{-- ⭐ তিনটা ঘর সবসময় — মালিকের ছবি, ২৮ সেপ্টেম্বর ২০২৬: *"eto elo melo keno"*।
+                             ⛔ আগে মাথার ঘর তিনটা আসত কেবল তাক থাকলে, অথচ নিচের সারিতে ঘর
+                             তিনটা সবসময় — ফলে মাথা আর ঘর তিন কলাম সরে যেত। ⓘ এখন দুই দিকে
+                             একই সংখ্যা; তাক না থাকলে ঘরে কেবল "—"। --}}
                         @foreach (['depth_1', 'depth_2', 'depth_3'] as $depth)
-                            <template x-if="anyPlaces">
-                                <th class="text-start">{{ __('inventory::field.'.$depth) }}</th>
-                            </template>
+                            <th class="text-start">{{ __('inventory::field.'.$depth) }}</th>
                         @endforeach
                         <th class="text-end">{{ __('inventory::field.unplaced') }}</th>
                         <th class="text-end">{{ __('inventory::field.unplaced_free') }}</th>
@@ -166,6 +167,9 @@
                                             </template>
                                         </select>
                                     </template>
+                                    <template x-if="! hasPlaces(w)">
+                                        <span class="text-(--color-ink-muted)">—</span>
+                                    </template>
                                 </td>
                             @endforeach
 
@@ -176,14 +180,21 @@
                             <input type="hidden" name="{{ $name }}[storage_location_id]"
                                    :value="deepest($data)">
 
+                            {{-- ⓘ বসানোর কিছু না থাকলে ঘর নয়, "—" — শূন্যের ঘর দেখতে কাজ বাকি
+                                 মনে হত (মালিকের ছবি, ২৮ সেপ্টেম্বর ২০২৬)। --}}
                             <td class="text-end">
-                                <input type="number" step="0.0001" min="0"
-                                       max="{{ $line['waiting'] }}"
-                                       name="{{ $name }}[qty]"
-                                       value="{{ $line['waiting'] }}"
-                                       class="num h-(--spacing-field) w-28 rounded-(--radius-field)
-                                              border border-(--color-border)
-                                              bg-(--color-surface-card) px-2 text-end">
+                                @if (bccomp($line['waiting'], '0', 4) > 0)
+                                    <input type="number" step="0.0001" min="0"
+                                           max="{{ $line['waiting'] }}"
+                                           name="{{ $name }}[qty]"
+                                           value="{{ $line['waiting'] }}"
+                                           class="num h-(--spacing-field) w-28 rounded-(--radius-field)
+                                                  border border-(--color-border)
+                                                  bg-(--color-surface-card) px-2 text-end">
+                                @else
+                                    <input type="hidden" name="{{ $name }}[qty]" value="0">
+                                    <span class="text-(--color-ink-muted)">—</span>
+                                @endif
                             </td>
 
                             <td class="text-end">
