@@ -253,13 +253,26 @@
 
          ⓘ মাঝের নোটিশ বারটা `flex-1`, সে-ই এই দলটাকে ডান কিনারায় ঠেলে
          রাখে — কোনো `ms-auto` লাগে না। --}}
+    {{-- ⭐ নামটা একটা পিলে — মালিকের নির্দেশ, ২৮ সেপ্টেম্বর ২০২৬: *"user er namta ro zate
+         sundor lage … onno ekta color braground, font gulo ro sposto"*। ⓘ ব্র্যান্ডের হালকা
+         রঙ, ছোট আদ্যক্ষর-বৃত্ত, নাম মোটা, পদবি হালকা; বাঁয়ে পাতলা দাগ, যাতে লাল সতর্কবার্তা
+         আর নাম মিশে না যায়। ⚠️ রংগুলো টোকেন থেকে, তাই দুই মোডেই নিজে থেকে মানায়। --}}
     @if ($user)
-        <span class="flex min-w-0 shrink items-center gap-1">
-            <span class="max-w-48 truncate font-medium text-(--color-ink-body)">{{ $user->name }}</span>
+        <span class="flex min-w-0 shrink items-center gap-2 border-s border-(--color-border) ps-3">
+            <span class="flex min-w-0 items-center gap-2 rounded-full bg-(--color-surface-selected)
+                         py-0.5 ps-0.5 pe-3 ring-1 ring-(--color-brand-500)/30">
+                <span aria-hidden="true"
+                      class="flex size-6 shrink-0 items-center justify-center rounded-full bg-(--color-brand-600)
+                             text-xs font-bold text-white">
+                    {{ mb_strtoupper(mb_substr((string) $user->name, 0, 1)) }}
+                </span>
 
-            @if ($designation)
-                <span class="max-w-40 truncate">({{ $designation }})</span>
-            @endif
+                <span class="max-w-48 truncate text-sm font-semibold text-(--color-ink)">{{ $user->name }}</span>
+
+                @if ($designation)
+                    <span class="max-w-40 truncate text-xs text-(--color-ink-muted)">{{ $designation }}</span>
+                @endif
+            </span>
         </span>
     @endif
 </footer>
