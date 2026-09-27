@@ -69,8 +69,8 @@
 
                     @foreach ($week['bars'] as $bar)
                         <a href="{{ $bar['url'] }}"
-                           class="mx-1 truncate rounded-(--radius-badge) px-2 text-xs font-medium"
-                           style="grid-column: {{ $bar['col'] }} / span {{ $bar['span'] }}; grid-row: {{ $bar['row'] }}; background: var(--color-badge-{{ $bar['tone'] }}-bg); color: var(--color-badge-{{ $bar['tone'] }}-ink)"
+                           class="truncate rounded-(--radius-badge) px-2 text-xs font-medium"
+                           style="margin: 0 0.25rem; grid-column: {{ $bar['col'] }} / span {{ $bar['span'] }}; grid-row: {{ $bar['row'] }}; background: var(--color-badge-{{ $bar['tone'] }}-bg); color: var(--color-badge-{{ $bar['tone'] }}-ink)"
                            title="{{ $bar['code'] }} · {{ $bar['name'] }} · {{ $bar['label'] }} · {{ $bar['period'] }}"
                            data-state="{{ $bar['state'] }}">{{ $bar['cut_before'] ? '‹ ' : '' }}{{ $bar['code'] }} · {{ $bar['name'] }}{{ $bar['cut_after'] ? ' ›' : '' }}</a>
                     @endforeach
