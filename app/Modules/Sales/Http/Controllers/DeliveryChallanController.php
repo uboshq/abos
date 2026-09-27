@@ -61,13 +61,14 @@ class DeliveryChallanController extends Controller implements HasMiddleware
              * ⓘ খসড়াগুলোর নিজের পাতা আছে ([[DirectSaleController::drafts()]]);
              * এখানে দেখালে একই বিক্রি দুই জায়গায় থাকত।
              */
-            ->whereNotExists(fn ($q) => $q->selectRaw('1')
-                ->from('sal_challan_lines as cl')
-                ->join('sal_invoice_lines as il', 'il.delivery_challan_line_id', '=', 'cl.id')
-                ->join('sal_invoices as i', 'i.id', '=', 'il.sales_invoice_id')
-                ->whereColumn('cl.delivery_challan_id', 'sal_challans.id')
-                ->whereNotNull('i.counter_draft')
-                ->where('i.status', DocumentStatus::DRAFT))
+            // ⓘ খসড়া চালান যার বিলও খসড়া — কাউন্টারের খসড়া ([[DirectSaleService::openCounterDrafts()]])
+            ->whereNot(fn ($q) => $q->where('sal_challans.status', DocumentStatus::DRAFT)
+                ->whereExists(fn ($e) => $e->selectRaw('1')
+                    ->from('sal_challan_lines as cl')
+                    ->join('sal_invoice_lines as il', 'il.delivery_challan_line_id', '=', 'cl.id')
+                    ->join('sal_invoices as i', 'i.id', '=', 'il.sales_invoice_id')
+                    ->whereColumn('cl.delivery_challan_id', 'sal_challans.id')
+                    ->where('i.status', DocumentStatus::DRAFT)))
             ->with(['customer.location', 'warehouse'])
             // বাতিলগুলো লুকানো, মোছা নয় (নিয়ম ৫)
             ->when(! $request->boolean('cancelled'),

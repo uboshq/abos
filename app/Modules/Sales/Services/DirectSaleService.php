@@ -525,12 +525,31 @@ final class DirectSaleService
      * রাখা খসড়াও গোনে — ⛔ নাহলে এক শাখায় খসড়া রেখে আরেক শাখায় একই
      * ক্রেতার নতুন বিল হয়ে যেত, আর নিয়মটা কেবল একটা কাউন্টারের হত।
      */
+    /**
+     * কাউন্টারের খোলা খসড়া — এক নিয়ম, সব জায়গায়।
+     *
+     * ⭐ মালিকের অভিযোগ, ২৮ সেপ্টেম্বর ২০২৬: লাইভে খসড়া ড্রপডাউনে আসে না, তালিকায়
+     * দেখায় না, চালান-ইনভয়েসের তালিকায় বসে থাকে। ⛔ কারণ: নিয়মটা কেবল
+     * `counter_draft` দেখত, আর লাইভের চারটা খসড়ার একটাতেও ওটা নেই — কয়েকটা ঐ
+     * ঘরের আগের, বাকিগুলো সইয়ের অপেক্ষায় থাকা বিক্রি।
+     *
+     * ⓘ তাই চিহ্ন নয়, অবস্থা দেখা হয়: বিলটা খসড়া **আর** তার চালানও খসড়া। ⚠️
+     * সাধারণ পথে বিল হয় পাকা চালান থেকে, তাই খসড়া-চালানের খসড়া-বিল কেবল কাউন্টারেরই।
+     *
+     * @param  \Illuminate\Database\Eloquent\Builder<SalesInvoice>|null  $query
+     * @return \Illuminate\Database\Eloquent\Builder<SalesInvoice>
+     */
+    public static function openCounterDrafts($query = null)
+    {
+        return ($query ?? SalesInvoice::query())
+            ->where('sal_invoices.status', DocumentStatus::DRAFT)
+            ->whereHas('lines.challanLine.challan', fn ($c) => $c->where('status', DocumentStatus::DRAFT));
+    }
+
     private function assertNoOtherOpenDraft(Customer $customer, ?SalesInvoice $parked): void
     {
-        $open = SalesInvoice::acrossBranches()
+        $open = self::openCounterDrafts(SalesInvoice::acrossBranches())
             ->where('customer_id', $customer->id)
-            ->where('status', 'draft')
-            ->whereNotNull('counter_draft')
             ->when($parked !== null, fn ($q) => $q->whereKeyNot($parked->id))
             ->orderBy('id')
             ->first(['id', 'document_no']);

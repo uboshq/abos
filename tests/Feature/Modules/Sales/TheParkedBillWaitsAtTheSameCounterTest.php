@@ -678,6 +678,39 @@ final class TheParkedBillWaitsAtTheSameCounterTest extends TestCase
         }
     }
 
+    /**
+     * ⛔ লাইভের অবস্থা — কাউন্টারের চিহ্ন (`counter_draft`) ছাড়া খসড়া।
+     *
+     * ⓘ মালিকের অভিযোগ, ২৮ সেপ্টেম্বর ২০২৬: লাইভের চারটা খসড়ার একটাতেও চিহ্ন
+     * নেই (পুরনো, বা সইয়ের অপেক্ষায়), আর তাই ড্রপডাউন, তালিকা, দুই তালিকা থেকে
+     * বাদ আর এক-ক্রেতা-এক-খসড়া — চারটাই চুপচাপ কাজ করত না। এই পরীক্ষা ঠিক ঐ
+     * সারিটা বানায়।
+     */
+    public function test_a_draft_without_the_counter_mark_is_still_a_draft_everywhere(): void
+    {
+        $draft = $this->park();
+        $challan = $this->challanOf($draft);
+        DB::table('sal_invoices')->where('id', $draft->id)->update(['counter_draft' => null]);
+
+        $list = $this->get(route('sales.direct.drafts'))->assertOk()->getContent();
+        $this->assertStringContainsString(e($draft->document_no), $list, '⛔ চিহ্নহীন খসড়া খসড়া-তালিকায় নেই।');
+        $this->assertStringContainsString(e(route('sales.invoice.show', $draft->id)), $list,
+            '⛔ চিহ্নহীন খসড়া খোলার পথ নেই।');
+
+        $pending = collect($this->get(route('sales.direct.create'))->assertOk()->viewData('pendingDrafts'))->flatten(1);
+        $this->assertTrue($pending->contains(fn ($d) => (int) $d['id'] === $draft->id),
+            '⛔ চিহ্নহীন খসড়া Pending ড্রপডাউনে নেই।');
+
+        $this->assertStringNotContainsString(e(route('sales.invoice.show', $draft)),
+            $this->get(route('sales.invoice.index'))->assertOk()->getContent(),
+            '⛔ চিহ্নহীন খসড়া ইনভয়েসের তালিকায় বসে আছে।');
+        $this->assertStringNotContainsString(e(route('sales.challan.show', $challan)),
+            $this->get(route('sales.challan.index'))->assertOk()->getContent(),
+            '⛔ চিহ্নহীন খসড়ার চালান চালানের তালিকায় বসে আছে।');
+
+        $this->sell(['save_as_draft' => '0'])->assertSessionHasErrors('customer_id');
+    }
+
     /** তালিকা থেকে বাতিল করলে তালিকাতেই ফেরা — আর চাবি ছাড়া পাতাটাই বন্ধ। */
     public function test_discarding_from_the_list_returns_to_the_list_and_the_list_needs_the_counter_key(): void
     {

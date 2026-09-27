@@ -62,7 +62,7 @@ class SalesInvoiceController extends Controller implements HasMiddleware
              * এখানে দেখালে একই বিক্রি দুই জায়গায় থাকত।
              */
             // ⚠️ কেবল এখনো খসড়া — পাকা হওয়া কাউন্টার-বিক্রি তালিকায় থাকেই
-            ->where(fn ($q) => $q->whereNull('counter_draft')->orWhere('status', '<>', DocumentStatus::DRAFT))
+            ->whereNotIn('sal_invoices.id', DirectSaleService::openCounterDrafts()->select('sal_invoices.id'))
             ->with(['customer.location'])
             /*
              * এক গ্রাহকের চালানগুলো।

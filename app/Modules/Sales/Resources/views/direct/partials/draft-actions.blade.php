@@ -1,12 +1,14 @@
 {{-- একটা রাখা খসড়ার দুই কাজ — খোলা আর কারণসহ বাতিল ([[direct/drafts]])।
      ⚠️ বাতিলের ফর্ম সারির নিজের, আলাদা — তালিকার খোঁজার ফর্মের ভিতরে নয়। --}}
 <div class="flex flex-wrap items-center justify-end gap-2">
-    <a href="{{ route('sales.direct.create', ['draft' => $draft->id]) }}"
+    {{-- ⓘ কাউন্টারের ছবি না থাকলে (পুরনো বা সইয়ের অপেক্ষায়) বিলের পাতায় খোলে --}}
+    <a href="{{ $draft->counter_draft !== null ? route('sales.direct.create', ['draft' => $draft->id]) : route('sales.invoice.show', $draft) }}"
        class="rounded-(--radius-field) bg-(--color-brand-600) px-3 py-1 text-xs font-semibold text-white
               hover:bg-(--color-brand-700)">
         {{ __('sales::action.open_draft') }}
     </a>
 
+    @if ($draft->counter_draft !== null)
     <form method="POST" action="{{ route('sales.direct.discard', $draft->id) }}" class="flex items-center gap-1">
         @csrf
         <input type="hidden" name="back" value="drafts">
@@ -21,4 +23,5 @@
             {{ __('core.action.cancel') }}
         </button>
     </form>
+    @endif
 </div>

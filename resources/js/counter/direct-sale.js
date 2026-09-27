@@ -543,9 +543,16 @@ export default function directSale({
         openPending(event) {
             const id = String(event?.target?.value ?? '');
 
-            if (id === '' || ! pendingUrl) return;
+            if (id === '') return;
 
-            window.location.assign(pendingUrl + '?draft=' + encodeURIComponent(id));
+            // ⓘ সার্ভারের দেওয়া ঠিকানা — কাউন্টারের খসড়া কাউন্টারে, বাকিগুলো বিলের পাতায়
+            const draft = this.pendingShown.find(d => String(d.id) === id);
+
+            if (draft?.url) {
+                window.location.assign(draft.url);
+            } else if (pendingUrl) {
+                window.location.assign(pendingUrl + '?draft=' + encodeURIComponent(id));
+            }
         },
 
         /** পাতা খোলার সময় — আছে কিনা দেখা, নিজে থেকে ফেরানো নয়। */
@@ -1000,9 +1007,9 @@ export default function directSale({
 
             this.openDraftPopup = false;
 
-            if (! draft || ! pendingUrl) return;
+            if (! draft) return;
 
-            window.location.assign(pendingUrl + '?draft=' + encodeURIComponent(String(draft.id)));
+            window.location.assign(draft.url || (pendingUrl + '?draft=' + encodeURIComponent(String(draft.id))));
         },
 
         /** পরিবহনের তথ্য নেওয়া — প্যানেল বন্ধ, বোতামে ছোট সারাংশ। */

@@ -1226,9 +1226,7 @@ class DirectSaleController extends Controller implements HasMiddleware
     {
         $q = trim((string) $request->query('q', ''));
 
-        $drafts = SalesInvoice::query()
-            ->where('status', 'draft')
-            ->whereNotNull('counter_draft')
+        $drafts = DirectSaleService::openCounterDrafts()
             ->with(['customer.location', 'lines.challanLine.challan'])
             ->when($q !== '', fn ($query) => $query->search($q))
             ->orderByDesc('id')
@@ -1254,13 +1252,11 @@ class DirectSaleController extends Controller implements HasMiddleware
      */
     private function pendingDrafts(): array
     {
-        return SalesInvoice::query()
-            ->where('status', 'draft')
-            ->whereNotNull('counter_draft')
+        return DirectSaleService::openCounterDrafts()
             ->orderByDesc('id')
             ->limit(500)
             ->with('customer')
-            ->get(['id', 'document_no', 'customer_id', 'total', 'trx_date'])
+            ->get(['id', 'document_no', 'customer_id', 'total', 'trx_date', 'counter_draft'])
             ->groupBy('customer_id')
             ->map(fn (Collection $drafts) => $drafts->map(fn (SalesInvoice $draft) => [
                 'id' => (int) $draft->id,
@@ -1269,6 +1265,10 @@ class DirectSaleController extends Controller implements HasMiddleware
                 'customer' => (string) ($draft->customer?->name() ?? ''),
                 'total' => (string) $draft->total,
                 'date' => $draft->trx_date?->format('d-m-Y') ?? '',
+                // ⓘ কাউন্টারের ছবি থাকলে কাউন্টারেই খোলে, নাহলে (পুরনো বা সইয়ের অপেক্ষায়) বিলের পাতায়
+                'url' => $draft->counter_draft !== null
+                    ? route('sales.direct.create', ['draft' => $draft->id])
+                    : route('sales.invoice.show', $draft->id),
             ])->values()->all())
             ->all();
     }
