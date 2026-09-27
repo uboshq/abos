@@ -58,8 +58,15 @@
     @endphp
 
     <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
+        {{-- ⭐ ছাঁকনির সারি আর খোঁজা — মালিকের নির্দেশ, ২৮ সেপ্টেম্বর ২০২৬: অন্য তালিকার
+             মতোই টুলবার ([[ApprovalInboxController::searched()]])। --}}
+        <form method="GET" class="contents">
+            <x-ui.toolbar :title="__('approval::menu.mine')"
+                          :count="trans_choice('core.count.records', $approvals->total(), ['count' => $approvals->total()])" />
+        </form>
+
         <x-ui.table
-            :empty="__('approval::message.no_requests')"
+            :empty="request('q') ? __('core.empty.no_results') : __('approval::message.no_requests')"
             :rows="$approvals"
             :compact="request()->boolean('compact')"
             :columns="[

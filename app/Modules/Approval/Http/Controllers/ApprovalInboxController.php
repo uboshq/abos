@@ -178,7 +178,7 @@ class ApprovalInboxController extends Controller implements HasMiddleware
          * চলে, দুইটা আলাদা প্রশ্নের জন্য: চিপের সংখ্যাগুলো পুরো
          * তালিকার, আর সারিগুলো সীমার ভেতরে।
          */
-        $pending = $this->engine->pendingQueryFor($subject);
+        $pending = self::searched($this->engine->pendingQueryFor($subject), (string) $request->query('q', ''));
 
         /*
          * মডিউল ধরে ছাঁকনি — §২.২।
@@ -378,12 +378,39 @@ class ApprovalInboxController extends Controller implements HasMiddleware
     }
 
     /** আমার করা অনুরোধগুলো — নতুন আগে। */
+    /**
+     * খোঁজা — মালিকের নির্দেশ, ২৮ সেপ্টেম্বর ২০২৬: দুই তালিকাতেই খোঁজার ঘর।
+     *
+     * ⓘ যা পর্দায় দেখা যায় তা ধরেই: অনুরোধকারীর নাম, অনুরোধের কারণ, অঙ্ক, আর
+     * কাগজের তথ্য (পক্ষ, কী বাবদ, কোথায় — `payload`)। ⚠️ খালি হলে কিছুই বদলায় না।
+     *
+     * @template T of \Illuminate\Database\Eloquent\Builder
+     * @param  T  $query
+     * @return T
+     */
+    private static function searched($query, string $term)
+    {
+        $term = trim($term);
+
+        if ($term === '') {
+            return $query;
+        }
+
+        $like = '%'.str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], $term).'%';
+
+        return $query->where(fn ($q) => $q
+            ->where('requested_reason', 'like', $like)
+            ->orWhere('payload', 'like', $like)
+            ->orWhere('amount', 'like', $like)
+            ->orWhereHas('requester', fn ($u) => $u->where('name', 'like', $like)));
+    }
+
     public function mine(Request $request): View
     {
         return view('approval::inbox.mine', [
             'menu' => $this->menu->forUser($request->user()),
             'labels' => $this->flows->labels(),
-            'approvals' => Approval::query()
+            'approvals' => self::searched(Approval::query(), (string) $request->query('q', ''))
                 ->where('requested_by', $request->user()?->id)
                 ->with(['decisions.user'])
                 ->orderByDesc('id')

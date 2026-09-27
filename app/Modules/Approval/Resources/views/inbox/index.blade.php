@@ -38,8 +38,8 @@
              তালিকার বাক্সের বাইরে। মালিকের নির্দেশ, ১৯ সেপ্টেম্বর ২০২৬:
              *"সব মডিউলেই একই অবস্থা, সব ঠিক করো"*।
 
-             ⓘ খোঁজার ঘর নেই (:search="false") — কন্ট্রোলার কোনো `q`
-             পড়ে না, আর যে ঘর কিছুই খোঁজে না সেটা মৃত বোতাম।
+             ⭐ খোঁজার ঘর আছে — মালিকের নির্দেশ, ২৮ সেপ্টেম্বর ২০২৬; কন্ট্রোলার `q`
+             পড়ে ([[ApprovalInboxController::searched()]])।
 
              ⚠️ মডিউলটা লুকানো ঘরে ফর্মের সাথে যায়: নাহলে ঘনত্ব বা
              রিফ্রেশ চাপলে ছাঁকনিটা নীরবে উঠে যেত, আর সংখ্যাটা বদলে
@@ -52,7 +52,6 @@
 
         <x-ui.toolbar :title="$person ? __('approval::menu.inbox_of', ['name' => $personName]) : __('approval::menu.inbox')"
                       :count="trans_choice('core.count.records', $visibleTotal, ['count' => $visibleTotal])"
-                      :search="false"
                       :filter-labels="['person' => __('approval::field.whose_inbox'), 'module' => __('approval::field.module')]">
             {{--
                 কার ইনবক্স — কেবল যাঁর অনুমতি আছে তাঁর জন্য।
