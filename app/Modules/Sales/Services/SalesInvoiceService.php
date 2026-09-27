@@ -228,6 +228,27 @@ final class SalesInvoiceService
         }
     }
 
+    /**
+     * রাখা খসড়া আবার লেখা — একই খসড়া চালানের ছাড়ে ([[createForHeldCounterSale()]]-এর জোড়া)।
+     *
+     * ⓘ কাউন্টারে "পেন্ডিং" থেকে খুলে আবার "খসড়া রাখুন" চাপলে চালানটা
+     * তখনো খসড়া — ⚠️ সাধারণ [[update()]] খসড়া চালানের সারি নেয় না, আর
+     * সেটাই ঠিক নিয়ম। ⛔ ছাড়টা কেবল এই এক চালানের, আর `finally` বন্ধ করে।
+     *
+     * @param  array<string, mixed>  $data
+     * @param  list<array<string, mixed>>  $lines
+     */
+    public function updateForHeldCounterSale(SalesInvoice $invoice, array $data, array $lines, int $draftChallanId): SalesInvoice
+    {
+        $this->heldChallanId = $draftChallanId;
+
+        try {
+            return $this->update($invoice, $data, $lines);
+        } finally {
+            $this->heldChallanId = null;
+        }
+    }
+
     /** ⓘ [[createForHeldCounterSale()]] চলাকালীন কেবল — বাকি সময় খালি। */
     private ?int $heldChallanId = null;
 
@@ -304,6 +325,7 @@ final class SalesInvoiceService
                  * রাউন্ডিং ছাড়া বসত।
                  */
                 'rounding_amount' => $data['rounding_amount'] ?? '0',
+                'bill_discount' => $data['bill_discount'] ?? '0',
                 'status' => DocumentStatus::DRAFT,
                 'created_by' => auth()->id(),
             ]);
@@ -352,6 +374,9 @@ final class SalesInvoiceService
                  * যেত এমনভাবে যে কেউ কারণ খুঁজে পেত না।
                  */
                 'rounding_amount' => $data['rounding_amount'] ?? $invoice->rounding_amount,
+
+                // ⓘ রাউন্ডিংয়ের একই কারণে: চাবি না এলে আগেরটাই থাকে
+                'bill_discount' => $data['bill_discount'] ?? $invoice->bill_discount,
             ]);
 
             $this->replaceLines($invoice, $lines);
@@ -865,7 +890,33 @@ final class SalesInvoiceService
          * কাজই দুই দিকে মেলানো (৯৯.৬০ → ১০০, আবার ১০০.৪০ → ১০০)।
          */
         $rounding = (string) ($invoice->rounding_amount ?? '0');
-        $totals['total'] = bcadd($totals['total'], $rounding, 4);
+
+        /*
+         * ⭐ বিলের ছাড়ও মোটের ভিতরে — ২৭ সেপ্টেম্বর ২০২৬ (পাঁচ-মিলের পরীক্ষা)।
+         *
+         * ⛔ আগে কাউন্টারের "ছাড়" কেবল চালানে বসত: পর্দা নিত ১,২৪২ − ৪০ − ২ =
+         * ১,২০০, অথচ বিলের মোট ১,২৪২ — ক্রেতা পর্দার অঙ্ক দিয়েও ৪২ টাকা বকেয়া।
+         * ⓘ রাউন্ডিংয়ের পাশে, একই কারণে: সারি বদলালে মোট নতুন করে গোনা হয়,
+         * আর বাইরে বসালে প্রথম হালনাগাদেই ছাড়টা হারাত। খাতা নিজেই মেলে —
+         * বিক্রয় = মোট − ভ্যাট ([[postToLedger()]])।
+         *
+         * ⚠️ ভ্যাট ছাড়ের আগের দামেই থাকে — পর্দাও তাই গোনে (`grossTotal −
+         * discountValue`)।
+         */
+        $billDiscount = (string) ($invoice->bill_discount ?? '0');
+
+        if (bccomp($billDiscount, '0', 4) < 0
+            || bccomp($billDiscount, bcadd($totals['total'], $rounding, 4), 4) > 0) {
+            throw ValidationException::withMessages([
+                'discount_amount' => __('sales::validation.bill_discount_over_total', [
+                    'no' => $invoice->document_no,
+                    'discount' => \App\Core\Support\Money::format($billDiscount),
+                    'total' => \App\Core\Support\Money::format(bcadd($totals['total'], $rounding, 4)),
+                ]),
+            ]);
+        }
+
+        $totals['total'] = bcsub(bcadd($totals['total'], $rounding, 4), $billDiscount, 4);
 
         $invoice->update([...$totals, 'cost_of_goods' => $cost]);
 

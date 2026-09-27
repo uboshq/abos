@@ -72,6 +72,13 @@ Route::middleware('auth')->prefix('sales')->group(function () {
         Route::post('/', [DirectSaleController::class, 'store'])->name('store');
 
         /*
+         * ⭐ রাখা খসড়া বাতিল — মালিকের নির্দেশ, ২৬ সেপ্টেম্বর ২০২৬: খোলা খসড়া
+         * থাকলে নতুন বিল নয়; আগে "conf … batil … edit"। ⓘ চাবিটা কাউন্টারের
+         * নিজের (নিয়ামকের `can:sales.challan.create`) — খসড়াটা ঐ কাউন্টারেরই।
+         */
+        Route::post('/drafts/{invoice}/discard', [DirectSaleController::class, 'discard'])->name('discard');
+
+        /*
          * এই মালে কতটা ফ্রি — সারি যোগ করার আগে জিজ্ঞাসা।
          *
          * ⓘ এটা প্রশ্ন, আদেশ নয় — ⚠️ কিছু বসায় না, কেবল সংখ্যাটা

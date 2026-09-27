@@ -109,4 +109,8 @@ return [
     /* Cash only into your own till - 21 September 2026. */
     'cash_not_your_till' => ':account is not your till - cash can only go into your own.',
     'no_till_of_your_own' => 'No till is held in your name, so cash cannot be taken - choose bank or MFS.',
+    /* The money-account rule - MoneyAccountRule, 27 September 2026. */
+    'unknown_account' => 'That account is not in this company chart.',
+    'group_takes_no_money' => '":name" is a head, not an account — money posted there shows up in no balance. Pick one of the accounts under it.',
+    'not_a_money_account' => ':name is not a cash or bank account — money does not land there.',
 ];

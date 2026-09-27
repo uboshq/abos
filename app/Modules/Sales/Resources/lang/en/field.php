@@ -17,6 +17,10 @@ return [
     'ordered' => 'Ordered',
     'received' => 'Received',
     'pending' => 'Pending',
+    'challan_no_short' => 'Challan No.',
+    'pending_drafts' => 'Pending',
+    'pending_drafts_pick' => 'Open a draft bill',
+    'pending_drafts_none' => 'No drafts',
     'unbilled' => 'Not billed',
     'unbilled_value' => 'Value not billed',
     'bill_count' => 'Bills',
@@ -407,4 +411,6 @@ return [
     'choose' => 'Choose',
     /* The receipts behind the collected figure - 21 September 2026. */
     'money_received' => 'Money received',
+    'carrier_phone' => 'Carrier mobile',
+    'driver_phone' => 'Driver mobile',
 ];

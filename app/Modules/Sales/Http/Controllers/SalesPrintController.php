@@ -242,6 +242,8 @@ class SalesPrintController extends Controller implements HasMiddleware
 
     public function challan(Request $request, DeliveryChallan $challan): Response
     {
+        $this->assertNotAnUnfinishedCounterSale($challan);
+
         $challan->load(['lines.product.unit', 'customer', 'warehouse']);
 
         $doc = new PrintableDocument(
@@ -273,6 +275,8 @@ class SalesPrintController extends Controller implements HasMiddleware
      */
     public function gatepass(Request $request, DeliveryChallan $challan): Response
     {
+        $this->assertNotAnUnfinishedCounterSale($challan);
+
         $challan->load(['lines.product.unit', 'customer', 'warehouse']);
 
         $doc = new PrintableDocument(
@@ -290,6 +294,34 @@ class SalesPrintController extends Controller implements HasMiddleware
 
         return $this->pdf($request, $doc, '0', $challan->document_no, document: $challan,
             paperSetting: 'sales.print.paper.challan', target: 'challan');
+    }
+
+    /**
+     * ⛔ কাউন্টারের অসমাপ্ত বিক্রির চালান ছাপা হয় না — মালিকের নিয়ম,
+     * ২৬ সেপ্টেম্বর ২০২৬: *"sudu challan inv print hobe na"*।
+     *
+     * ⓘ বিলের দুই দরজায় পাহারা ছিল ([[invoice()]], [[draft()]]), চালান আর
+     * গেটপাসে ছিল না — খসড়া চালানের গেটপাস হাতে পেলে মাল গেট পেরোত,
+     * অথচ মজুদে কিছুই নামেনি। ⚠️ পাহারাটা সরু: কেবল যে খসড়া চালানে একটা
+     * খসড়া বিল বাঁধা (কাউন্টারের রাখা বা সইয়ের অপেক্ষার বিক্রি)। অফিসের
+     * সাধারণ খসড়া চালান আগের মতোই ছাপা হয়।
+     */
+    private function assertNotAnUnfinishedCounterSale(DeliveryChallan $challan): void
+    {
+        if ($challan->status !== DocumentStatus::DRAFT) {
+            return;
+        }
+
+        $invoice = SalesInvoice::query()
+            ->where('status', DocumentStatus::DRAFT)
+            ->whereHas('lines.challanLine', fn ($q) => $q->where('delivery_challan_id', $challan->id))
+            ->first(['id', 'document_no']);
+
+        if ($invoice !== null) {
+            throw ValidationException::withMessages([
+                'status' => __('sales::validation.held_no_print', ['no' => $invoice->document_no]),
+            ]);
+        }
     }
 
     public function order(Request $request, SalesOrder $order): Response
@@ -868,6 +900,17 @@ class SalesPrintController extends Controller implements HasMiddleware
          *
          * ⓘ মোটের **আগে**, কারণ ওটা মোটকে বদলায়।
          */
+        /*
+         * ⭐ বিলের ছাড় — ২৭ সেপ্টেম্বর ২০২৬। ⓘ মোট এটা বাদ দিয়েই গোনা
+         * ([[SalesInvoiceService::replaceLines()]]); ⚠️ সারিটা না থাকলে
+         * কাগজের যোগ-বিয়োগ মিলত না, আর ক্রেতা ভাবতেন মোটটা ভুল।
+         */
+        $billDiscount = (string) ($document->bill_discount ?? '0');
+
+        if (bccomp($billDiscount, '0', 4) > 0) {
+            $rows['sales::print.bill_discount'] = $this->money($billDiscount);
+        }
+
         $rounding = (string) ($document->rounding_amount ?? '0');
 
         if (bccomp($rounding, '0', 4) !== 0) {

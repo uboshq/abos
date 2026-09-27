@@ -15,6 +15,7 @@ use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Services\CashTillService;
 use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Customer\Models\Customer;
+use App\Modules\Inventory\Models\Batch;
 use App\Modules\Inventory\Models\Product;
 use App\Modules\Inventory\Models\Warehouse;
 use App\Modules\Inventory\Services\StockService;
@@ -135,6 +136,54 @@ class DirectSaleTest extends TestCase
     }
 
     /**
+     * লট ধরে কেনা মাল, সাথে সরবরাহকারীর ফ্রি — বিক্রির সারির ফ্রি এখান থেকেই।
+     *
+     * ── ⚠️ কেন [[receiveFree()]] এই দুই দাবিতে আর চলে না ──────────────
+     * মালিকের নিয়ম, ২২ সেপ্টেম্বর ২০২৬: ফ্রি **লটের অনুপাতে**, আর লট
+     * ধরা না থাকলে প্রাপ্য শূন্য ([[FreeAllowance::on()]] — *"লট ছাড়া
+     * মাল ঢুকবেও না, বেরোবেও না"*)। ⛔ তাই লট-ছাড়া পণ্যে "৩ ফ্রি" এখন
+     * দেয়ালেই থামে। ⓘ ২৫ সেপ্টেম্বর থেকে লটটা সারিতে বলতেও হয়।
+     *
+     * ১০০ কেনা, ৫০ ফ্রি — ১০ বেচলে ৫ পর্যন্ত; দাবিগুলো ৩ চায়।
+     */
+    private function receiveLotWithFree(Product $product, string $paid = '100', string $free = '50'): Batch
+    {
+        $product->forceFill(['track_batch' => true])->save();
+
+        $bill = app(PurchaseBillService::class)->create(
+            [
+                'supplier_id' => Supplier::query()->value('id'),
+                'warehouse_id' => $this->warehouse->id,
+                'trx_date' => now()->toDateString(),
+            ],
+            [[
+                'product_id' => $product->id,
+                'qty' => $paid,
+                'free_qty' => $free,
+                'rate' => '1',
+                'batch_no' => 'DS-FREE-1',
+                'expiry_date' => now()->addYear()->toDateString(),
+            ]],
+        );
+
+        app(PurchaseBillService::class)->confirm($bill);
+
+        $batch = Batch::query()->where('product_id', $product->id)->where('batch_no', 'DS-FREE-1')->firstOrFail();
+
+        app(StockService::class)->place(
+            product: $product,
+            warehouse: $this->warehouse,
+            qty: $paid,
+            sourceType: PurchaseBill::STOCK_SOURCE,
+            sourceId: $bill->id,
+            batch: $batch,
+            freeQty: $free,
+        );
+
+        return $batch->refresh();
+    }
+
+    /**
      * নগদ কোথায় বসে — প্রধান নগদ কাউন্টারের খাতে, "হাতে নগদ" মাথায় নয়।
      *
      * ── এই পরীক্ষাগুলো আগে মাথাটাই দেখত ─────────────────────────────
@@ -183,7 +232,9 @@ class DirectSaleTest extends TestCase
                 ...$extra,
             ],
             [['product_id' => $this->product->id, 'qty' => $qty, 'rate' => $rate,
-                'free_qty' => $extra['free_qty'] ?? '0']],
+                'free_qty' => $extra['free_qty'] ?? '0',
+                // ⓘ লট ধরা পণ্যে লটটা সারিতেই যায় ([[receiveLotWithFree()]])
+                'batch_id' => $extra['batch_id'] ?? null]],
             $gifts,
         );
     }
@@ -258,12 +309,12 @@ class DirectSaleTest extends TestCase
      */
     public function test_free_quantity_comes_out_of_the_free_pool(): void
     {
-        $this->receiveFree($this->product, '50');
+        $lot = $this->receiveLotWithFree($this->product);
 
         $floorBefore = $this->stock()->floorQty($this->product, $this->warehouse);
         $freeBefore = $this->stock()->freeQty($this->product, $this->warehouse);
 
-        $this->sell(['free_qty' => '3']);
+        $this->sell(['free_qty' => '3', 'batch_id' => $lot->id]);
 
         $this->assertSame(0, bccomp(
             $this->stock()->floorQty($this->product, $this->warehouse),
@@ -286,9 +337,9 @@ class DirectSaleTest extends TestCase
      */
     public function test_free_quantity_is_not_charged_for(): void
     {
-        $this->receiveFree($this->product, '50');
+        $lot = $this->receiveLotWithFree($this->product);
 
-        $result = $this->sell(['free_qty' => '3']);
+        $result = $this->sell(['free_qty' => '3', 'batch_id' => $lot->id]);
 
         // ১০ × ১০০ = ১,০০০ — ফ্রি তিনটার কোনো দাম নেই
         $this->assertSame(0, bccomp((string) $result['invoice']->total, '1000', 4));
@@ -545,6 +596,22 @@ class DirectSaleTest extends TestCase
             'sales.field_total_qty' => __('sales::field.total_free_plus_sales'),
         ];
 
+        /*
+         * ⚠️ লেখা দিয়ে চেনা যায় না এমন ঘর — তার নিজের চিহ্ন দিয়ে খোঁজা।
+         *
+         * ⓘ লাইনের ছাড়ের নাম এখন কেবল "ছাড়" — মালিকের নির্দেশ, ২৬ সেপ্টেম্বর
+         * ২০২৬ (lang `line_discount`: *"এই লাইনে" দুই লাইনে ভেঙে যেত*)। ⛔ আর
+         * কাগজের ছাড়ের নামও "ছাড়" (`discount_amount`), সে বসে মোটের প্যানেলে
+         * আর এই সুইচে লুকায় না। তাই লেখা ধরে খুঁজলে সুইচ বন্ধ করেও কাগজের
+         * ছাড়টা মিলত, আর পাহারা মিথ্যা নালিশ করত।
+         *
+         * ⭐ চিহ্নটা লাইনের ছাড়ের নিজের ঘর — "এই লাইন" প্যানেলের ইনপুট আর
+         * কার্টের লুকানো `[discount_percent]` — দুইটাই কেবল এই সুইচে লুকায়।
+         */
+        $markers = [
+            'sales.field_line_discount' => '/x-model="entry\.discountInput"|\[discount_percent\]/u',
+        ];
+
         foreach ($cases as $key => $label) {
             /*
              * খোঁজা হয় লেখাটার শেষ সহ ("মোট ফ্রি" তারপর ট্যাগ), শুধু লেখাটা নয়।
@@ -553,7 +620,7 @@ class DirectSaleTest extends TestCase
              * লেখা খুঁজলে একটা সারি বন্ধ করেও অন্যটার ভেতরে সেটা পাওয়া
              * যেত, আর পরীক্ষা মিথ্যা নালিশ করত।
              */
-            $needle = '/'.preg_quote($label, '/').'\s*</u';
+            $needle = $markers[$key] ?? '/'.preg_quote($label, '/').'\s*</u';
 
             $settings->set($key, true);
             $settings->flush();
@@ -662,7 +729,12 @@ class DirectSaleTest extends TestCase
          * লাল হয়েছিল — অথচ কোডটা ঠিকই ছিল। ⓘ আজ এই একই ভুল আমি
          * **চারবার** করেছি: পাহারা যেন *চেহারা* না খোঁজে, *মান* খোঁজে।
          */
-        $money = $at(e(__('sales::field.credit_limit')));
+        /*
+         * ⓘ চার নম্বর সারির নিজের বাঁধন — বকেয়ার অঙ্ক। ⚠️ "বাকির সীমা" লেখাটা
+         * এখন পাতায় আরও আগে আছে (খসড়ার পপ-আপ ও উপরের ঘর), তাই লেখা ধরে
+         * খুঁজলে প্রথমটা ক্রেতার বাক্সের বাইরে পড়ত।
+         */
+        $money = $at('x-text="money($abs(customer.due || 0))"');
 
         $this->assertLessThan($name, $picker, 'চিহ্নটা নামের পরে বসে আছে।');
         $this->assertLessThan($point, $name, 'নামের আগে পয়েন্ট বসেছে।');

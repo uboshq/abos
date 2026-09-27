@@ -29,10 +29,52 @@
 
 import { taka } from '../components/money.js'
 
+/*
+ * ⓘ জমার খালি খসড়া — তিন জায়গায় লাগে (শুরু, "যোগ করুন"-এর পরে, "সব
+ * মুছুন")। ⛔ তিনটা আলাদা হাতে লেখা ছিল, আর নতুন ঘর যোগ হলে একটায় বাদ
+ * পড়ত — তখন আগের জমার ব্যাংকের তথ্য পরের জমায় নীরবে চলে যেত।
+ *
+ * ⚠️ `noteCounts` প্রতিবার **নতুন** বস্তু — [[addDeposit()]]-এর মন্তব্য।
+ * ⓘ `chargeBorneBy` ডিফল্ট `us`, আদায় ভাউচারের মতোই ([[charge-bearer]])।
+ */
+const blankDeposit = () => ({
+    methodId: '', accountId: '', amount: '',
+    reference: '', refDate: '', narration: '',
+    movedAt: '', carriedBy: '', noteCounts: {},
+
+    // ব্যাংক
+    transferModeId: '', fromBank: '', fromBranch: '',
+    fromAccountName: '', fromAccountNo: '', depositSlipNo: '', landsOn: '',
+
+    // মোবাইল ব্যাংকিং
+    wallet: '', walletMedium: '', counterpartyPhone: '',
+
+    // দুইটাতেই
+    chargeAmount: '', chargeBorneBy: 'us',
+})
+
+/*
+ * ⓘ পর্দার নাম → সার্ভারের নাম, ধরন অনুযায়ী। ⚠️ সার্ভারের তালিকা
+ * [[DirectSaleService::BANK_DETAIL_FIELDS]]; এখানে কেবল কোন ধরনে কোনটা যায়।
+ */
+const DEPOSIT_DETAIL_FIELDS = {
+    bank: {
+        transfer_mode_id: 'transferModeId', from_bank: 'fromBank', from_branch: 'fromBranch',
+        from_account_name: 'fromAccountName', from_account_no: 'fromAccountNo',
+        deposit_slip_no: 'depositSlipNo', lands_on: 'landsOn',
+        charge_amount: 'chargeAmount', charge_borne_by: 'chargeBorneBy',
+    },
+    mfs: {
+        wallet: 'wallet', wallet_medium: 'walletMedium', counterparty_phone: 'counterpartyPhone',
+        charge_amount: 'chargeAmount', charge_borne_by: 'chargeBorneBy',
+    },
+}
+
 export default function directSale({
     catalogue, customers, walkinId, vatEnabled, packs,
-    paymentTermDefault, carriers, depositMethods, moneyAccounts,
+    paymentTermDefault, carriers, drivers, depositMethods, moneyAccounts,
     draftKey, hasErrors, texts, freeAllowedUrl, warehouseId, creditRules, lots,
+    pendingDrafts, resume, pendingUrl, transferModes, approvalNotice,
 }) {
     /*
      * ⓘ লটের তালিকা — পণ্যের আইডি ধরে, মেয়াদের ক্রমে সাজানো।
@@ -88,6 +130,21 @@ export default function directSale({
          * "বুঝেছি"। কোনো "তবুও চালাও" নেই, কারণ কারও জন্য সেই পথ নেই।
          */
         creditBlocked: false,
+
+        /*
+         * ⭐ সীমা ছাড়ানোর সতর্কতা — পপ-আপ, মালিকের ছবি, ২৭ সেপ্টেম্বর ২০২৬
+         * (সন্ধ্যা)। ⓘ কেবল জানায়: সারিটা কার্টে ঠিকই যায় ([[creditFitsTheLimit()]])।
+         * ⚠️ আগে বোতামের নিচে একটা লেখা ছিল — মালিক ওটা পপ-আপে চেয়েছেন।
+         */
+        creditWarningOpen: false,
+
+        /*
+         * ⭐ অনুমোদনের বার্তা — পপ-আপ, মালিকের ছবি, ২৭ সেপ্টেম্বর ২০২৬ (সন্ধ্যা):
+         * *"অনুমোদনের জন্য পাঠানো হয়েছে — ডেলিভারি চালান · ৳… যিনি সই দেবেন…"*
+         * পাতার মাথায় বা বোতামের নিচে নয়। ⓘ সার্ভার বার্তাটা পাঠায়
+         * (`approval_notice`, [[DirectSaleController::store()]]), পর্দা খুলেই দেখায়।
+         */
+        approvalNotice: typeof approvalNotice === 'string' ? approvalNotice : '',
 
         /* ⓘ লট বাছা হয়নি, বা ঐ লট কার্টে আগে থেকেই আছে। */
         lotWarning: '',
@@ -216,14 +273,22 @@ export default function directSale({
          * গোনাগুলো প্রথমটার ভিতরেও বদলে যেত, কারণ দুইটা সারি একই
          * বস্তুর দিকে তাকাত।
          */
-        depositDraft: {
-            methodId: '', accountId: '', amount: '',
-            reference: '', refDate: '', narration: '',
-            movedAt: '', carriedBy: '', noteCounts: {},
-        },
+        depositDraft: blankDeposit(),
+
+        /* ⓘ ব্যাংক ট্রান্সফারের মোড — মাস্টার ডাটার সারি `{id, label}` */
+        transferModes: transferModes ?? [],
         panel: '',
         carriers,
         carrierId: '',
+
+        /*
+         * ── চালক — নাম লিখলে বা বাছলে নম্বর নিজে বসে ─────────────────
+         * মালিকের ছবি, ২৭ সেপ্টেম্বর ২০২৬ (রাত)। ⓘ তালিকা সার্ভারের —
+         * এই কোম্পানির আগের চালান আর গাড়ির মাস্টার ([[driverSuggestions()]])।
+         */
+        drivers: drivers ?? [],
+        driverName: '',
+        driverPhone: '',
         depositMethods,
         moneyAccounts,
 
@@ -256,7 +321,27 @@ export default function directSale({
          * চালান অন্যজনের পর্দায় ফিরে এলে **ভুল পার্টির নামে বিল**
          * হয়ে যেত।
          */
-        draftKey,
+        /*
+         * ⚠️ খোলা খসড়ার পর্দা আলাদা চাবিতে লেখে (`.resume`)। ⛔ একই চাবি
+         * হলে পেন্ডিং থেকে একটা খসড়া খোলামাত্র `x-effect` বিক্রেতার
+         * **অসমাপ্ত নতুন বিলটা** মুছে তার জায়গায় খসড়াটা লিখে দিত।
+         */
+        draftKey: resume ? draftKey + '.resume' : draftKey,
+
+        /*
+         * ══ রাখা খসড়া — পেন্ডিং থেকে একই পর্দায় ফিরে আসা ═══════════════
+         *
+         * মালিকের নকশা, ২৬ সেপ্টেম্বর ২০২৬: "খসড়া রাখুন" বিলটা রাখে, আর
+         * পাকা করতে এই পর্দাতেই ফিরতে হয় — পেন্ডিং থেকে খসড়াটা বাছলে
+         * **পুরো পর্দা হুবহু** ফেরে, দরকারে বদলে "নিশ্চিত করুন"।
+         *
+         * ⓘ `pendingDrafts` — `{ক্রেতার আইডি: [{id, no, total, date}]}`;
+         * `resume` — `?draft=ID` দিয়ে খোলা হলে সেই খসড়া, নাহলে `null`।
+         * ⚠️ সার্ভার খালি তালিকা `[]` পাঠাতে পারে, তাই খোঁজা হয় কেবল
+         * স্ট্রিং চাবিতে (নিচে [[pendingForCustomer]])।
+         */
+        pendingDrafts: pendingDrafts ?? {},
+        resumeId: resume ? String(resume.invoiceId ?? '') : '',
 
         /** ফিরিয়ে আনার প্রস্তাব — খসড়া পাওয়া গেলে উপরে বার দেখায়। */
         draftFound: false,
@@ -288,21 +373,7 @@ export default function directSale({
                     return;
                 }
 
-                localStorage.setItem(this.draftKey, JSON.stringify({
-                    at: new Date().toISOString(),
-                    customerId: this.customerId,
-                    creditTerm: this.creditTerm,
-                    dueOn: this.dueOn,
-                    lines: this.lines,
-                    discountInput: this.discountInput,
-                    vatMode: this.vatMode,
-                    vatRate: this.vatRate,
-                    expenseInput: this.expenseInput,
-                    roundingInput: this.roundingInput,
-                    roundingSign: this.roundingSign,
-                    deposits: this.deposits,
-                    nextKey: this.nextKey,
-                }));
+                localStorage.setItem(this.draftKey, this.screenSnapshot);
             } catch (e) {
                 /*
                  * ⚠️ চুপ করে থাকা ইচ্ছাকৃত।
@@ -313,6 +384,140 @@ export default function directSale({
                  * কারণ নয়** — সুরক্ষাটা না পেলেও কাউন্টার চলবে।
                  */
             }
+        },
+
+        /*
+         * ⭐ পর্দার ছবি — যা ব্রাউজারে লেখা হয় আর "খসড়া রাখুন"-এ বিলের
+         * সাথে সার্ভারে যায় (`screen_state`)।
+         *
+         * ⚠️ দুই জায়গায় **একই** getter: ⛔ আলাদা করে লিখলে একদিন একটায়
+         * নতুন ঘর যোগ হত আর অন্যটায় না — আর পেন্ডিং থেকে ফেরা খসড়ায় সেই
+         * ঘরটা নীরবে খালি আসত।
+         */
+        get screenSnapshot() {
+            return JSON.stringify({
+                at: new Date().toISOString(),
+                customerId: this.customerId,
+                creditTerm: this.creditTerm,
+                dueOn: this.dueOn,
+                lines: this.lines,
+                discountInput: this.discountInput,
+                vatMode: this.vatMode,
+                vatRate: this.vatRate,
+                expenseInput: this.expenseInput,
+                roundingInput: this.roundingInput,
+                roundingSign: this.roundingSign,
+                deposits: this.deposits,
+                nextKey: this.nextKey,
+            });
+        },
+
+        /*
+         * ⭐ পাতা খোলার মুহূর্ত (`x-init`)।
+         *
+         * ⓘ সাধারণ অবস্থায় আগের মতোই ব্রাউজারের খসড়া খোঁজা হয়। ⚠️ পেন্ডিং
+         * থেকে খোলা হলে সেই প্রস্তাব **দেখানো হয় না** — বিক্রেতা নিজেই একটা
+         * নির্দিষ্ট খসড়া বেছে এসেছেন, আর তার উপরে "আগেরটা ফেরাব?" প্রশ্ন
+         * তুললে দুইটা বিল গুলিয়ে যেত।
+         *
+         * ⚠️ সার্ভার ভুল ধরে ফিরিয়ে দিলে (`hasErrors`) বিলের পুরনো ছবি নয়,
+         * বিক্রেতার **শেষ পাঠানো** অবস্থা ফেরে — ⛔ নাহলে খসড়া খুলে যা যা
+         * বদলেছিলেন, একটা ভুলবার্তায় সব হারাত।
+         */
+        start() {
+            /*
+             * ⓘ অনুমোদনের পপ-আপ — সীমার দেয়ালের একই চেহারা ও একই ধ্বনি।
+             * ⚠️ লেখাটা সার্ভার পপ-আপের ঘরেই একবার বসায়; এখান থেকে পড়া হয়, যাতে
+             * পাতায় বাক্যটা দ্বিতীয়বার (x-data-র ভিতরে) না থাকে।
+             */
+            // ⓘ `$refs` নয় — মূলের x-init চলার সময় সন্তানের x-ref তখনো বসেনি
+            const noticeBox = this.$el?.querySelector?.('[x-ref="approvalNoticeText"]');
+
+            if (this.approvalNotice === '' && noticeBox) {
+                this.approvalNotice = String(noticeBox.textContent ?? '').trim();
+            }
+
+            if (this.approvalNotice !== '') this.soundTheAlarm();
+
+            if (! resume) {
+                this.lookForDraft();
+
+                return;
+            }
+
+            let parked = null;
+
+            try {
+                parked = localStorage.getItem(this.draftKey + '.pending');
+                localStorage.removeItem(this.draftKey + '.pending');
+            } catch (e) {
+                // localStorage বন্ধ — তখন বিলের রাখা ছবিটাই
+            }
+
+            const sameBill = (raw) => {
+                try {
+                    return String(JSON.parse(raw)?.customerId ?? '') === String(resume.customerId);
+                } catch (e) {
+                    return false;
+                }
+            };
+
+            this.applyDraft(hasErrors && parked && sameBill(parked)
+                ? parked
+                : JSON.stringify(resume.screen ?? {}));
+
+            /* ⚠️ ক্রেতা বিলেরটাই — ছবির ভিতরেরটা নয়; সার্ভার অন্য ক্রেতায়
+                 পাকা করতে দেয় না, তাই পর্দাও অন্য কাউকে দেখাবে না। ⓘ শর্ত
+                 আর মেয়াদ ছবি থেকেই — [[chooseCustomer()]] ডাকা হয় না, কারণ
+                 সে ক্রেতার নিজের মেয়াদ বসিয়ে রাখা শর্তটা মুছে দিত। */
+            this.customerId = String(resume.customerId ?? '');
+
+            /* ⓘ পরিবহনকারীর ঘরটা `x-model`, তাই সার্ভারের বসানো মান
+                 Alpine মুছে দেয় — এখানে হাতে বসাতে হয়। */
+            this.carrierId = String(resume.fields?.carrier_id ?? '');
+            this.driverName = String(resume.fields?.driver_name ?? '');
+            this.driverPhone = String(resume.fields?.driver_phone ?? '');
+            this.draftFound = false;
+        },
+
+        /** এই ক্রেতার রাখা খসড়াগুলো — পেন্ডিং ড্রপডাউনের তালিকা। */
+        get pendingForCustomer() {
+            return this.pendingDrafts[String(this.customerId)] ?? [];
+        },
+
+        /*
+         * ⛔ খোলা খসড়া থাকলে নতুন বিল নয় — মালিকের নির্দেশ, ২৬ সেপ্টেম্বর
+         * ২০২৬: আগে খসড়াটা নিশ্চিত, বাতিল বা সম্পাদনা।
+         *
+         * ⓘ যে খসড়াটা এখন খোলা (`resumeId`), সে নিজেকে আটকায় না। ⚠️ খোলা
+         * খসড়াটা এই ক্রেতার তালিকায় না থাকলে (ক্রেতা বদলানো হয়েছে) আটকায় —
+         * নতুন ক্রেতার নিজের খসড়া থাকলে তার বেলাতেও নিয়ম একই।
+         */
+        get customerHasOpenDraft() {
+            const list = this.pendingForCustomer;
+
+            return list.length > 0 && ! list.some(d => String(d.id) === this.resumeId);
+        },
+
+        get openDraftText() {
+            if (! this.customerHasOpenDraft) return '';
+
+            return String(texts.openDraftBlocks ?? '').replace(':no', this.pendingForCustomer[0].no);
+        },
+
+        /*
+         * পেন্ডিং থেকে একটা খসড়া বাছা — পাতাটা `?draft=ID` নিয়ে আবার খোলে।
+         *
+         * ⓘ পাতা নতুন করে খোলা হয় ইচ্ছে করে: খসড়ার নম্বর, চালান, সাধারণ
+         * ঘরগুলো (DO, গাড়ি, মন্তব্য) সার্ভারই বসায়, আর এক পথেই সব ফেরে।
+         * ⚠️ `window` এখানে, ব্লেডে নয় — CSP-Alpine এক্সপ্রেশনে গ্লোবাল পড়ে না।
+         */
+        openPending(event) {
+            const id = String(event?.target?.value ?? '');
+
+            if (id === '' || ! pendingUrl) return;
+
+            window.location.assign(pendingUrl + '?draft=' + encodeURIComponent(id));
         },
 
         /** পাতা খোলার সময় — আছে কিনা দেখা, নিজে থেকে ফেরানো নয়। */
@@ -548,7 +753,8 @@ export default function directSale({
         },
 
         get canConfirm() {
-            return this.lines.length > 0 && this.customerId !== '';
+            /* ⛔ খোলা খসড়া থাকলে দুইটা বোতামই বন্ধ ([[customerHasOpenDraft]]) */
+            return this.lines.length > 0 && this.customerId !== '' && ! this.customerHasOpenDraft;
         },
 
         /*
@@ -988,6 +1194,14 @@ export default function directSale({
         async addToCart() {
             if (! this.picked) return false;
 
+            /* ⛔ খোলা খসড়া থাকলে নতুন বিলের সারিই ওঠে না — মালিকের নির্দেশ,
+                 ২৬ সেপ্টেম্বর ২০২৬। ⓘ বার্তাটা লটের ঘরেই, যেখানে চোখ থাকে। */
+            if (this.customerHasOpenDraft) {
+                this.lotWarning = this.openDraftText;
+
+                return false;
+            }
+
             if (! this.lotIsChosenAndFree()) return false;
 
             if (! this.creditFitsTheLimit()) return false;
@@ -1054,7 +1268,24 @@ export default function directSale({
         lotIsChosenAndFree() {
             this.lotWarning = '';
 
-            if (! this.needsLot) return true;
+            /*
+             * ⛔ একই পণ্য দুই সারিতে নয় — মালিকের নির্দেশ, ২৬ সেপ্টেম্বর ২০২৬:
+             * *"ekoi products ekbareer odik entry nibe na"*। ⓘ লট ধরা পণ্যে
+             * নিয়মটা "প্রতি লটে এক সারি" — এক লটে যথেষ্ট না থাকলে আলাদা লট
+             * বেছে আলাদা সারি ঠিকই চলে (নিচের পরীক্ষা)।
+             *
+             * ⚠️ সারি বদলাতে ([[editLine()]]) সারিটা আগে কার্ট থেকে ওঠে, তাই
+             * নিজের সঙ্গে নিজের ধাক্কা লাগে না।
+             */
+            if (! this.needsLot) {
+                if (this.lines.some(l => String(l.id) === String(this.picked?.id))) {
+                    this.lotWarning = texts.itemAlreadyInCart;
+
+                    return false;
+                }
+
+                return true;
+            }
 
             if (this.entry.batchId === '') {
                 this.lotWarning = texts.lotIsRequired;
@@ -1071,6 +1302,11 @@ export default function directSale({
             return true;
         },
 
+        /*
+         * ⚠️ এখন কেবল **জানায়**, আটকায় না — মালিকের নির্দেশ, ২৬ সেপ্টেম্বর
+         * ২০২৬: *"jast warning but atkabena"*। ⓘ তাই সবসময় `true` ফেরে;
+         * দেয়াল "নিশ্চিত করুন"-এ ([[guardSubmit()]]) আর সেবায়।
+         */
         creditFitsTheLimit() {
             this.creditWarning = '';
 
@@ -1089,7 +1325,12 @@ export default function directSale({
 
             this.creditWarning = texts.creditBeyondLimit.replace(':left', this.money(left));
 
-            return false;
+            /* ⭐ পপ-আপ আর ধ্বনি — কিন্তু সারি আটকায় না (`true`)। মালিক: সারিটা
+                 কার্টে যাবে, খসড়া রাখা যাবে; দেয়াল কেবল "নিশ্চিত করুন"-এ। */
+            this.creditWarningOpen = true;
+            this.soundTheAlarm();
+
+            return true;
         },
 
         /**
@@ -1289,10 +1530,7 @@ export default function directSale({
             this.expenseInput = '';
             this.roundingInput = '';
             this.deposits = [];
-            this.depositDraft = {
-                methodId: '', accountId: '', amount: '',
-                reference: '', refDate: '', narration: '',
-            };
+            this.depositDraft = blankDeposit();
             this.clearEntry();
 
             /*
@@ -1334,6 +1572,21 @@ export default function directSale({
 
             const doNo = this.$root.querySelector('[name=do_no]');
             if (doNo) doNo.value = '';
+
+            /*
+             * ⚠️ খোলা খসড়াও ছাড়া হয় — "সব মুছুন" মানে নতুন বিল। ⛔ তখন
+             * খসড়ার নম্বর দুইটা ঘরে রয়ে গেলে নতুন বিলটা খসড়ার নম্বর নিয়েই
+             * যেত, আর সার্ভার "নম্বর আগেই আছে" বলে ফেরাত। ⓘ খালি ঘরে
+             * সংরক্ষণের সময় সিরিজের পরের নম্বর বসে।
+             */
+            if (this.resumeId !== '') {
+                ['invoice_no', 'challan_no'].forEach((name) => {
+                    const el = this.$root.querySelector(`[name=${name}]`);
+                    if (el) el.value = '';
+                });
+            }
+
+            this.resumeId = '';
         },
 
         /*
@@ -1661,10 +1914,79 @@ export default function directSale({
          * অর্থাৎ যে কোম্পানি উপায়ের সারি বসায়নি, তাদের নগদ গোনার ঘরটাই
          * থাকত না, আর কেউ বলতে পারত না কেন।
          */
+        /*
+         * ⭐ ২৭ সেপ্টেম্বর ২০২৬ (সন্ধ্যা) — মালিকের প্রশ্ন: *উপায় বাছার আগেই
+         * নোটের ঘর কেন?* ⓘ এখন নিয়ম: উপায়ের তালিকা থাকলে **বাছার পরেই** —
+         * নগদ বাছলে নোট, MFS-এ MFS-এর ঘর, ব্যাংকে ব্যাংকের; কিছু না বাছলে কিছুই না।
+         * ⚠️ তালিকাটাই না থাকলে (নতুন কোম্পানি) উপরের যুক্তি অটুট — তখন জমা
+         * নগদই, তাই নোটের ঘর থাকে।
+         */
         get depositIsCash() {
+            if (this.depositMethods.length === 0) return true;
+
+            if (String(this.depositDraft.methodId ?? '') === '') return false;
+
             const kind = this.depositMethodRow?.kind;
 
             return kind === undefined || kind === null || kind === '' || kind === 'cash';
+        },
+
+        /*
+         * ⭐ ব্যাংক আর মোবাইল ব্যাংকিংয়ের ঘর — মালিকের নির্দেশ, ২৭ সেপ্টেম্বর
+         * ২০২৬: *"counter e bank e taka nile ei porda asena tik koro"*।
+         *
+         * ⓘ আদায় ভাউচারে "ব্যাংক অনলাইন" বাছলে যে ঘরগুলো আসে
+         * ([[money-movement]]), কাউন্টারের জমাতেও ঠিক সেগুলো — ট্রান্সফার
+         * মোড, প্রেরকের ব্যাংক-শাখা-হিসাব, স্লিপ, চার্জ, কবে পৌঁছাবে।
+         * ⛔ না থাকলে কাউন্টারে নেওয়া ব্যাংকের টাকা ব্যাংকের কাগজের সাথে
+         * মেলানো যেত না — কে পাঠাল, কোন হিসাব থেকে, চার্জ কে দিল, কিছুই জানা নেই।
+         */
+        get depositKind() {
+            return String(this.depositMethodRow?.kind ?? '');
+        },
+
+        get depositIsBank() {
+            return this.depositKind === 'bank';
+        },
+
+        get depositIsMfs() {
+            return this.depositKind === 'mfs';
+        },
+
+        /* ⓘ চার্জ আর লেনদেনের আইডি — ব্যাংক ও মোবাইল ব্যাংকিং দুইটাতেই */
+        get depositHasCharge() {
+            return this.depositIsBank || this.depositIsMfs;
+        },
+
+        /*
+         * ⭐ একটা জমার ব্যাংক/মোবাইলের তথ্য — সার্ভারের নামে, কেবল ভরা ঘর।
+         *
+         * ⚠️ ধরনটা **সারির উপায় থেকে** নেওয়া হয়, খসড়া থেকে নয়: ⛔ কেউ ব্যাংক
+         * বেছে ঘর ভরে পরে নগদে বদলালে ঘরগুলোর মান রয়ে যায় — ধরন না দেখলে
+         * নগদের জমার সাথে একটা ব্যাংকের স্লিপ নম্বর সার্ভারে চলে যেত।
+         * ⓘ `x-for`-এ তালিকা, কারণ CSP-Alpine এক্সপ্রেশনে `Object` ডাকা যায় না
+         * ([[notesOf()]]-এর একই কারণ)।
+         *
+         * @return {Array<{key: string, value: string}>}
+         */
+        depositDetailsOf(row) {
+            const kind = this.depositMethods.find(m => String(m.id) === String(row?.methodId))?.kind;
+            const map = DEPOSIT_DETAIL_FIELDS[kind] ?? {};
+
+            return Object.entries(map)
+                .map(([key, prop]) => ({ key, value: String(row?.[prop] ?? '').trim() }))
+                .filter(d => d.value !== '');
+        },
+
+        /* ⓘ তালিকার সারিতে — ট্রান্সফার মোড আর লেনদেনের আইডি, সংক্ষেপে */
+        depositRefText(row) {
+            const modeId = this.depositDetailsOf(row).find(d => d.key === 'transfer_mode_id')?.value;
+            const mode = modeId
+                ? (this.transferModes.find(m => String(m.id) === modeId)?.label || '')
+                : '';
+            const parts = [mode, String(row?.reference || '')].filter(p => p !== '');
+
+            return parts.length > 0 ? parts.join(' · ') : '—';
         },
 
         /**
@@ -1733,6 +2055,40 @@ export default function directSale({
          * ⚠️ এক উপায়ের একাধিক খাত থাকতে পারে ("ব্যাংক" উপায়ে
          * তিনটা ব্যাংক হিসাব), তাই ঘরটা তালাবদ্ধ নয়।
          */
+        /** বাছা বাহকের নম্বর — পক্ষের খাতা থেকে; তালিকার বাইরের বাহকে খালি। */
+        get carrierPhone() {
+            const c = this.carriers.find(x => String(x.id) === String(this.carrierId));
+
+            return c ? String(c.phone ?? '') : '';
+        },
+
+        /*
+         * চালকের নাম মিললে নম্বর বসানো।
+         *
+         * ⚠️ কেবল ঘরটা খালি থাকলে, বা আগের বসানো নম্বরটাই থাকলে — কেউ হাতে
+         * নতুন নম্বর লিখে থাকলে সেটা মোছা হয় না।
+         */
+        /*
+         * ⓘ ঘরের `value` (সার্ভারের old() বা খসড়া) `x-model` মুছে দেয় — তাই শুরুতে
+         * একবার তুলে রাখা; অবস্থায় আগে থেকে মান থাকলে সেটাই জেতে।
+         */
+        seedDriver(el, key) {
+            if (String(this[key] ?? '') === '') this[key] = el.defaultValue || '';
+        },
+
+        pickDriver() {
+            const name = String(this.driverName ?? '').trim().toLowerCase();
+            const hit = this.drivers.find(d => String(d.name).trim().toLowerCase() === name);
+
+            if (! hit || ! hit.phone) return;
+
+            const known = this.drivers.some(d => d.phone && d.phone === this.driverPhone);
+
+            if (this.driverPhone === '' || known) {
+                this.driverPhone = hit.phone;
+            }
+        },
+
         pickDepositMethod() {
             this.depositDraft.accountId = this.depositMethodRow?.accountId || '';
 
@@ -1750,6 +2106,39 @@ export default function directSale({
 
             if (! this.depositNeedsReference) {
                 this.depositDraft.reference = '';
+            }
+
+            /*
+             * ⛔ অন্য উপায়ের ঘরগুলো মুছে ফেলা — ২৭ সেপ্টেম্বর ২০২৬।
+             *
+             * ⚠️ ব্যাংক বেছে স্লিপ নম্বর বা MFS বেছে TrxID লিখে পরে নগদে বদলালে
+             * মানগুলো খসড়ায় রয়ে যেত। ⓘ সার্ভারে পাঠানোর সময় ধরন দেখে ছাঁকা
+             * হয় ([[depositDetailsOf()]]), তবু পর্দার খসড়াতেও পুরনো মান রাখা
+             * নয় — ফিরে এলে ভুল ঘর ভরা দেখাত, আর নোটের হিসাব ব্যাংকের জমায় যেত।
+             */
+            const fresh = blankDeposit();
+            if (! this.depositIsBank) {
+                for (const k of ['transferModeId', 'fromBank', 'fromBranch', 'fromAccountName', 'fromAccountNo', 'depositSlipNo', 'landsOn']) {
+                    this.depositDraft[k] = fresh[k];
+                }
+            }
+
+            if (! this.depositIsMfs) {
+                for (const k of ['wallet', 'walletMedium', 'counterpartyPhone']) {
+                    this.depositDraft[k] = fresh[k];
+                }
+            }
+
+            if (! this.depositHasCharge) {
+                this.depositDraft.chargeAmount = fresh.chargeAmount;
+                this.depositDraft.chargeBorneBy = fresh.chargeBorneBy;
+
+                // ⓘ TrxID-ও — নগদে লেনদেনের আইডি নেই
+                if (! this.depositNeedsReference) this.depositDraft.reference = '';
+            }
+
+            if (! this.depositIsCash) {
+                this.depositDraft.noteCounts = {};
             }
         },
 
@@ -1803,11 +2192,7 @@ export default function directSale({
              * ঠেলে দেওয়া সারিটা একই বস্তুর দিকে তাকাত, আর পরের জমার
              * গোনাগুলো আগের সারিতেও বদলে যেত — নীরবে।
              */
-            this.depositDraft = {
-                methodId: '', accountId: '', amount: '',
-                reference: '', refDate: '', narration: '',
-                movedAt: '', carriedBy: '', noteCounts: {},
-            };
+            this.depositDraft = blankDeposit();
 
             this.clearDepositDate();
         },
@@ -2091,11 +2476,15 @@ export default function directSale({
          * সে-ই শেষ কথা বলে। এটা কেবল বিক্রেতাকে আগে থামায়, যাতে সার্ভার
          * পর্যন্ত গিয়ে কার্টটা হারাতে না হয়।
          *
-         * ⓘ "খসড়া রাখুন"-ও এখান দিয়েই যায় — খসড়াও সীমা আটকায়, তাই সীমার
-         * বাইরে খসড়াও হয় না।
+         * ⓘ "খসড়া রাখুন" আটকায় না — মালিকের নির্দেশ, ২৬ সেপ্টেম্বর ২০২৬
+         * (রাতে): *"bill atkanor kotha cilo conf/নিশ্চিত করুন e kintu খসড়া
+         * hobe"*। ⭐ কোন বোতাম চাপা হয়েছে তা `event.submitter` বলে — খসড়ার
+         * বোতামের `value` "1" ([[direct/partials/totals]])।
          */
         guardSubmit(event) {
-            if (this.creditApplies && this.creditLeft < 0) {
+            const asDraft = event?.submitter?.value === '1';
+
+            if (! asDraft && this.creditApplies && this.creditLeft < 0) {
                 event.preventDefault();
                 this.creditBlocked = true;
                 this.soundTheAlarm();
@@ -2106,8 +2495,30 @@ export default function directSale({
             this.parkDraft();
         },
 
+        /*
+         * ⓘ সতর্কতাটা পর্দায় থাকবে কি না। ⚠️ বার্তাটা বসে সারি তোলার
+         * মুহূর্তে, কিন্তু পরে কার্ট থেকে সারি মুছলে সীমায় আবার জায়গা হতে
+         * পারে — ⛔ তখন পুরনো বার্তাটা মিথ্যা বলত, তাই হিসাবটা প্রতিবার
+         * নতুন করে মেলানো হয়।
+         */
+        get creditWarningShown() {
+            return this.creditWarning !== '' && this.creditIsWatched && this.creditLeftAfterEntry < 0;
+        },
+
         closeCreditBlock() {
             this.creditBlocked = false;
+        },
+
+        closeCreditWarning() {
+            this.creditWarningOpen = false;
+        },
+
+        get approvalNoticeShown() {
+            return this.approvalNotice !== '';
+        },
+
+        closeApprovalNotice() {
+            this.approvalNotice = '';
         },
 
         /* ⓘ পপ-আপের লেখা — কত খোলা আছে, আর কত বেশি। */

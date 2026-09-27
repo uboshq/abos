@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Sales\Http\Controllers;
 
 use App\Core\Contracts\RecipeBook;
+use App\Core\Engines\Approval\HeldForApproval;
 use App\Core\Engines\NumberSeries\NumberSeriesEngine;
 use App\Core\Services\MenuBuilder;
 use App\Core\Services\SettingsService;
@@ -23,6 +24,10 @@ use App\Modules\Inventory\Services\PackConversion;
 use App\Modules\Inventory\Services\StockService;
 use App\Modules\MasterData\Models\PaymentMethod;
 use App\Modules\MasterData\Models\PaymentTerm;
+use App\Modules\MasterData\Models\TransferMode;
+use App\Modules\MasterData\Models\Vehicle;
+use App\Modules\Sales\Models\DeliveryChallan;
+use App\Modules\Sales\Models\SalesInvoice;
 use App\Modules\Sales\Services\CreditExposure;
 use App\Modules\Sales\Services\DirectSaleService;
 use App\Modules\Supplier\Models\Supplier;
@@ -221,12 +226,26 @@ class DirectSaleController extends Controller implements HasMiddleware
                 // ভাড়ার গাড়িও পরিবহনকারী, তাই আলাদা ধরন নয়। এখন শুধু TRANSPORT।
                 ->whereHas('partyType', fn ($q) => $q->whereIn('code', ['TRANSPORT']))
                 ->orderBy('name_en')
-                ->get(['id', 'code', 'name_en', 'name_bn'])
+                ->get(['id', 'code', 'name_en', 'name_bn', 'phone', 'contact_phone'])
                 ->map(fn (Supplier $s): array => [
                     'id' => (string) $s->id,
                     'label' => $s->name(),
+                    // ⓘ বাহকের নম্বর পক্ষের খাতা থেকে — মালিকের ছবি, ২৭ সেপ্টেম্বর ২০২৬ (রাত)
+                    'phone' => (string) ($s->phone ?: $s->contact_phone ?: ''),
                 ])
                 ->values(),
+
+            /*
+             * ── চালকের পরামর্শ — একবার লিখলে পরের বার আসে ─────────────
+             *
+             * মালিকের ছবি, ২৭ সেপ্টেম্বর ২০২৬ (রাত): *"চালকের নাম & Mobile no
+             * ekbar save korle porbortite sajest korbe"*।
+             *
+             * ⓘ আলাদা তালিকা নয় — এই কোম্পানির আগের চালান (নতুনটা আগে) আর
+             * গাড়ির মাস্টার। ⚠️ দুইটাই কোম্পানির স্কোপে, তাই অন্য কোম্পানির
+             * চালক কখনো আসে না।
+             */
+            'drivers' => $this->driverSuggestions(),
 
             'moneyAccounts' => Account::query()
                 ->where('is_group', false)
@@ -332,6 +351,23 @@ class DirectSaleController extends Controller implements HasMiddleware
              * placeholder দেখায়, অর্থাৎ আগের আচরণেই ফেরে।
              */
             'invoicePreview' => $this->invoicePreview(),
+            'challanPreview' => $this->seriesPreview('DC'),
+
+            /*
+             * ⭐ রাখা খসড়া — "পেন্ডিং" তালিকা আর খোলা খসড়া (মালিকের নকশা,
+             * ২৬ সেপ্টেম্বর ২০২৬)। ⓘ তালিকাটা ক্রেতা ধরে ভাগ করা, তাই পর্দা
+             * কেবল বাছা ক্রেতার খসড়াগুলো দেখায়।
+             */
+            'pendingDrafts' => $this->pendingDrafts(),
+
+            /*
+             * ⭐ ব্যাংকে জমার "ট্রান্সফার মোড" — রসিদ ভাউচারের একই তালিকা
+             * ([[MasterListsOnTheVoucherForm]]), মালিকের ছবি, ২৭ সেপ্টেম্বর ২০২৬।
+             */
+            'transferModes' => TransferMode::query()->orderBy('code')->get(['id', 'name_en'])
+                ->map(fn (TransferMode $m) => ['id' => (string) $m->id, 'label' => (string) $m->name_en])
+                ->values()->all(),
+            'resume' => $this->resumeFrom($request),
 
             /*
              * বাকির শর্তগুলো — মাস্টার ডাটা থেকে, হাতে লেখা তালিকা থেকে নয়।
@@ -564,6 +600,7 @@ class DirectSaleController extends Controller implements HasMiddleware
             'do_no' => ['nullable', 'string', 'max:64'],
             'vehicle_no' => ['nullable', 'string', 'max:64'],
             'driver_name' => ['nullable', 'string', 'max:191'],
+            'driver_phone' => ['nullable', 'string', 'max:32'],
             'credit_period_days' => ['nullable', 'integer', 'min:0', 'max:365'],
 
             /*
@@ -608,6 +645,24 @@ class DirectSaleController extends Controller implements HasMiddleware
              * বোঝানো হয়, আর সেবা ঠিক ঐটাই দেখে।
              */
             'save_as_draft' => ['nullable', 'in:0,1'],
+
+            /*
+             * ⭐ রাখা খসড়া — মালিকের নকশা, ২৬ সেপ্টেম্বর ২০২৬: খসড়া পাকা হয়
+             * একই পর্দায় ফিরে এসে।
+             *
+             * ⓘ `resume_invoice_id` কেবল আকার দেখে; কোন খসড়া, কার, এখনো
+             * খোলা কি না — সব পাহারা সেবায় ([[DirectSaleService::parkedFor()]]),
+             * লেনদেনের ভিতরে তালা দিয়ে। ⚠️ এখানে `exists` বসালে যাচাই আর
+             * সংরক্ষণের মাঝের ফাঁকে অন্য কাউন্টার সেটা পাকা করে ফেলতে পারত।
+             *
+             * ⓘ `screen_state` পর্দার নিজের ছবি (JSON) — ৫০০ KB-এর ঊর্ধ্বসীমা,
+             * যাতে কেউ হাতে বানানো অনুরোধে বিলের সারিতে মেগাবাইট ভরতে না পারে।
+             */
+            'resume_invoice_id' => ['nullable', 'integer', 'min:1'],
+            'screen_state' => ['nullable', 'string', 'max:500000'],
+
+            // ⭐ চালান নম্বর — বিল নম্বরের মতো; অনন্যতা সেবায় ([[DeliveryChallanService::challanNumber()]])
+            'challan_no' => ['nullable', 'string', 'max:32'],
             'discount_amount' => ['nullable', 'numeric', 'min:0'],
             'expense_amount' => ['nullable', 'numeric', 'min:0'],
             /*
@@ -773,6 +828,29 @@ class DirectSaleController extends Controller implements HasMiddleware
              */
             'deposits.*.note_counts' => ['nullable', 'array'],
             'deposits.*.note_counts.*' => ['nullable', 'integer', 'min:0', 'max:100000'],
+
+            /*
+             * ⭐ ব্যাংক/মোবাইলের বিস্তারিত — মালিকের ছবি, ২৭ সেপ্টেম্বর ২০২৬:
+             * *"counter e bank e taka nile ei porda asena tik koro"*।
+             *
+             * ⓘ হুবহু রসিদ ভাউচারের ঘর ও নিয়ম ([[VoucherRequest]]) — নাম তিন
+             * জায়গায়: এখানে · [[DirectSaleService::depositRows()]] ·
+             * [[DirectSaleService::counterVoucher()]]। ⚠️ একটা বাদ পড়লে ঘরটা
+             * পর্দায় থাকে, ভাউচারে পৌঁছায় না, আর কেউ টের পায় না।
+             */
+            'deposits.*.transfer_mode_id' => ['nullable', 'integer',
+                Rule::exists('mdm_transfer_modes', 'id')],
+            'deposits.*.from_bank' => ['nullable', 'string', 'max:120'],
+            'deposits.*.from_branch' => ['nullable', 'string', 'max:120'],
+            'deposits.*.from_account_name' => ['nullable', 'string', 'max:120'],
+            'deposits.*.from_account_no' => ['nullable', 'string', 'max:64'],
+            'deposits.*.deposit_slip_no' => ['nullable', 'string', 'max:64'],
+            'deposits.*.charge_amount' => ['nullable', 'numeric', 'min:0'],
+            'deposits.*.charge_borne_by' => ['nullable', Rule::in(['us', 'them'])],
+            'deposits.*.lands_on' => ['nullable', 'date'],
+            'deposits.*.wallet' => ['nullable', 'string', 'max:32'],
+            'deposits.*.wallet_medium' => ['nullable', 'string', 'max:32'],
+            'deposits.*.counterparty_phone' => ['nullable', 'string', 'max:20'],
             'narration' => ['nullable', 'string', 'max:500'],
 
             'lines' => ['required', 'array', 'min:1'],
@@ -820,14 +898,31 @@ class DirectSaleController extends Controller implements HasMiddleware
             'gifts.*.remarks' => ['nullable', 'string', 'max:191'],
         ]);
 
-        $result = $this->sales->complete(
-            $data,
-            $data['lines'],
-            array_values(array_filter(
-                $data['gifts'] ?? [],
-                fn (array $gift) => filled($gift['product_id'] ?? null) && (float) ($gift['qty'] ?? 0) > 0,
-            )),
-        );
+        /*
+         * ⭐ অনুমোদনে আটকালে — পপ-আপ, ত্রুটির তালিকা নয়। মালিকের ছবি, ২৭
+         * সেপ্টেম্বর ২০২৬ (সন্ধ্যা): *"অনুমোদনের জন্য পাঠানো হয়েছে — ডেলিভারি
+         * চালান · ৳… যিনি সই দেবেন…"* পাতার মাথায় নয়, বোতামের নিচেও নয়।
+         *
+         * ⓘ বার্তাটা সেবারই ([[DocumentApproval::awaitingWord()]]) — এখানে কেবল
+         * কোথায় বসবে তা বদলায়। ⚠️ `approval_failed` — বিলটা হয়নি, তাই পর্দা
+         * কার্ট ফেরায় ঠিক ত্রুটির মতো ([[direct-sale.js]] `hasErrors`)।
+         */
+        try {
+            $result = $this->sales->complete(
+                $data,
+                $data['lines'],
+                array_values(array_filter(
+                    $data['gifts'] ?? [],
+                    fn (array $gift) => filled($gift['product_id'] ?? null) && (float) ($gift['qty'] ?? 0) > 0,
+                )),
+            );
+        } catch (HeldForApproval $held) {
+            return redirect()
+                ->route('sales.direct.create')
+                ->withInput()
+                ->with('approval_notice', (string) collect($held->errors())->flatten()->first())
+                ->with('approval_failed', true);
+        }
 
         /*
          * ⭐ কাউন্টারের ডিপোজিটে সই লাগলে — বিলের পাতায়, ছাপায় নয় (১৯ সেপ্টেম্বর)।
@@ -836,10 +931,34 @@ class DirectSaleController extends Controller implements HasMiddleware
          * হচ্ছে।"* ⚠️ তাই রসিদের PDF-এ যাওয়াই চলে না; বিলের পাতা বলে কোন
          * ডিপোজিট কার সইয়ের অপেক্ষায়, আর সই হলে সেখান থেকেই "নিশ্চিত"।
          */
+        /*
+         * ⭐ খসড়া রাখা হলে — একই পর্দায়, ছাপায় নয়। মালিক: *"sudu challan
+         * inv print hobe na"*। ⓘ পর্দা খালি হয়ে ফেরে, আর খসড়াটা "পেন্ডিং"-এ।
+         */
+        if ($result['parked'] ?? false) {
+            return redirect()
+                ->route('sales.direct.create')
+                ->with('saved', __('sales::message.draft_parked', [
+                    'invoice' => $result['invoice']->document_no,
+                    'challan' => $result['challan']->document_no,
+                ]));
+        }
+
+        /*
+         * ⭐ সইয়ের অপেক্ষা — কাউন্টারেই ফেরে, বার্তাটা পপ-আপে। মালিকের ছবি,
+         * ২৭ সেপ্টেম্বর ২০২৬ (সন্ধ্যা): অনুমোদনের বার্তা পপ-আপ; পাতার মাথার
+         * "INV-0006 … সইয়ের অপেক্ষায়" ব্যানার ভুল (একই দিন সকালের ছবিতে দাগানো),
+         * আর বোতামের নিচের লেখাও (২৬ তারিখের নিয়ম) এখন বাতিল।
+         *
+         * ⓘ আগে বিলের পাতায় পাঠানো হত, আর বার্তাটা সেখানে পাতার মাথায় বসত।
+         * ⚠️ বিক্রেতার চোখ থাকে কাউন্টারে, আর পরের ক্রেতা দাঁড়িয়ে — তাই পর্দা
+         * খালি হয়ে ফেরে। ⓘ শেষ করাটা আগের মতোই বিলের পাতার বোতামে; বার্তা
+         * বিলের নম্বর বলে।
+         */
         if (($result['awaiting'] ?? []) !== []) {
             return redirect()
-                ->route('sales.invoice.show', $result['invoice']->id)
-                ->with('saved', __('sales::message.direct_sale_held', [
+                ->route('sales.direct.create')
+                ->with('approval_notice', __('sales::message.direct_sale_held', [
                     'invoice' => $result['invoice']->document_no,
                 ]));
         }
@@ -946,6 +1065,9 @@ class DirectSaleController extends Controller implements HasMiddleware
             ->where('company_id', CompanyContext::id())
             ->when($warehouse, fn ($q) => $q->where('warehouse_id', $warehouse->id));
 
+        // ⓘ ক্রয়মূল্যের চাবি একবারই দেখা — নিচের প্রতিটা সারির জন্য নয়
+        $seesCost = (bool) auth()->user()?->can('sales.cost.view');
+
         return Product::query()
             ->active()
             ->with(['unit', 'tax'])
@@ -958,7 +1080,7 @@ class DirectSaleController extends Controller implements HasMiddleware
             ->orderBy('name_en')
             ->limit(self::INLINE_CATALOGUE_LIMIT)
             ->get()
-            ->map(function (Product $p) use ($warehouse) {
+            ->map(function (Product $p) use ($warehouse, $seesCost) {
                 /*
                  * খাবারের উত্তরটা আলাদা — কারণটা
                  * [[RecipeService::sellableQty()]]-এ। POS-ও ঠিক এই
@@ -1002,8 +1124,15 @@ class DirectSaleController extends Controller implements HasMiddleware
                      */
                     'vatInclusive' => (bool) ($p->tax?->is_inclusive ?? false),
 
-                    // ক্রয়মূল্য — ভেতরের কথা, তাই পর্দায় বোতামের পেছনে
-                    'cost' => (float) $p->purchase_price,
+                    /*
+                     * ক্রয়মূল্য — ভেতরের কথা, তাই পর্দায় বোতামের পেছনে।
+                     *
+                     * ⛔ কেবল `sales.cost.view`-ওয়ালার জন্য — ২৭ সেপ্টেম্বর ২০২৬।
+                     * ⚠️ আগে চালান বানাতে পারেন এমন যে কারও পাতার উৎসে প্রতিটা
+                     * পণ্যের ক্রয়মূল্য যেত; বোতাম লুকানো ছিল না, আর লুকালেও
+                     * সংখ্যাটা HTML-এ থাকত। ⓘ চাবি না থাকলে ঘরটাই **নেই** (০ নয়)।
+                     */
+                    ...($seesCost ? ['cost' => (float) $p->purchase_price] : []),
 
                     // নমুনার লাইভ স্টক প্যানেল — ছয়টাই
                     'main' => (string) $p->floor_total,
@@ -1065,12 +1194,140 @@ class DirectSaleController extends Controller implements HasMiddleware
             : Warehouse::query()->where('is_default', true)->active()->first();
     }
 
+    /**
+     * ⭐ রাখা খসড়া বাতিল — কারণ বাধ্যতামূলক, কারণ বাতিলের কাগজে সেটাই থাকে।
+     *
+     * ⚠️ `{invoice}` রুট-বাঁধাই মডেলের স্কোপ মানে (কোম্পানি, শাখা), তাই অন্যের
+     * খসড়া 404। ⓘ বাকি পাহারা — এখনো খসড়া কি না, কাউন্টারের কি না — সেবায়
+     * ([[DirectSaleService::discardParked()]]), তালার ভিতরে।
+     */
+    public function discard(Request $request, SalesInvoice $invoice): RedirectResponse
+    {
+        $data = $request->validate([
+            'reason' => ['required', 'string', 'max:500'],
+        ]);
+
+        $this->sales->discardParked($invoice, $data['reason']);
+
+        return redirect()
+            ->route('sales.direct.create')
+            ->with('saved', __('sales::message.draft_discarded', ['no' => $invoice->document_no]));
+    }
+
+    /**
+     * ক্রেতা ধরে রাখা খসড়াগুলো — `[customerId => [{id, no, total, date}]]`।
+     *
+     * ⓘ কেবল কাউন্টারের রাখা খসড়া (`counter_draft` আছে) — সইয়ের অপেক্ষার
+     * খসড়া বিলের পাতা থেকে শেষ হয়, এখানে নয়। ⚠️ মডেলের স্কোপ কোম্পানি ও
+     * শাখা বসায়, তাই অন্যের খসড়া তালিকায় আসে না। ⓘ ৫০০-র ঊর্ধ্বসীমা:
+     * কাউন্টারে এতগুলো অসমাপ্ত বিল থাকা মানে অন্য কোনো সমস্যা।
+     *
+     * @return array<int, list<array{id: int, no: string, total: string, date: string}>>
+     */
+    private function pendingDrafts(): array
+    {
+        return SalesInvoice::query()
+            ->where('status', 'draft')
+            ->whereNotNull('counter_draft')
+            ->orderByDesc('id')
+            ->limit(500)
+            ->get(['id', 'document_no', 'customer_id', 'total', 'trx_date'])
+            ->groupBy('customer_id')
+            ->map(fn (Collection $drafts) => $drafts->map(fn (SalesInvoice $draft) => [
+                'id' => (int) $draft->id,
+                'no' => (string) $draft->document_no,
+                'total' => (string) $draft->total,
+                'date' => $draft->trx_date?->format('d-m-Y') ?? '',
+            ])->values()->all())
+            ->all();
+    }
+
+    /**
+     * `?draft=ID` — খোলা খসড়াটা পর্দায় ফেরানোর জন্য যা লাগে।
+     *
+     * ⛔ কেবল এখনো খোলা, কাউন্টারের রাখা খসড়া; নাহলে `null`, আর পর্দা খালি
+     * খোলে। ⓘ আসল পাহারা সংরক্ষণে ([[DirectSaleService::parkedFor()]]) —
+     * এখানে দেখানো আর পাকা করার মাঝে কেউ পাকা করে ফেললে সেবাই বলে দেয়।
+     *
+     * @return array{invoiceId: int, invoiceNo: string, challanNo: string, customerId: int, screen: array<mixed>, fields: array<string, mixed>}|null
+     */
+    private function resumeFrom(Request $request): ?array
+    {
+        $id = $request->integer('draft');
+
+        if ($id <= 0) {
+            return null;
+        }
+
+        $draft = SalesInvoice::query()
+            ->with('lines.challanLine.challan')
+            ->where('status', 'draft')
+            ->whereNotNull('counter_draft')
+            ->find($id);
+
+        if ($draft === null) {
+            return null;
+        }
+
+        $saved = (array) $draft->counter_draft;
+
+        return [
+            'invoiceId' => (int) $draft->id,
+            'invoiceNo' => (string) $draft->document_no,
+            'challanNo' => (string) ($draft->lines->first()?->challanLine?->challan?->document_no ?? ''),
+            'customerId' => (int) $draft->customer_id,
+            'screen' => (array) ($saved['screen'] ?? []),
+            'fields' => (array) ($saved['fields'] ?? []),
+        ];
+    }
+
+    /**
+     * চালকের নাম আর নম্বর — আগের চালান আর গাড়ির মাস্টার থেকে, নাম ধরে একবার।
+     *
+     * @return list<array{name: string, phone: string}>
+     */
+    private function driverSuggestions(): array
+    {
+        $seen = [];
+
+        $fromChallans = DeliveryChallan::query()
+            ->whereNotNull('driver_name')
+            ->where('driver_name', '!=', '')
+            ->orderByDesc('id')
+            ->limit(300)
+            ->get(['driver_name', 'driver_phone']);
+
+        $fromVehicles = Vehicle::query()
+            ->whereNotNull('driver_name')
+            ->where('driver_name', '!=', '')
+            ->get(['driver_name', 'driver_phone']);
+
+        foreach ($fromChallans->concat($fromVehicles) as $row) {
+            $name = trim((string) $row->driver_name);
+            $key = mb_strtolower($name);
+
+            // ⓘ নতুন চালানটাই জেতে; নম্বর ছাড়া আগের সারি পরে নম্বর পেলে ভরে
+            if (! isset($seen[$key])) {
+                $seen[$key] = ['name' => $name, 'phone' => trim((string) $row->driver_phone)];
+            } elseif ($seen[$key]['phone'] === '') {
+                $seen[$key]['phone'] = trim((string) $row->driver_phone);
+            }
+        }
+
+        return array_values(array_slice($seen, 0, 100));
+    }
+
     /** সিরিজের পরের নম্বর, কেবল দেখানোর জন্য — [[NumberSeriesEngine::preview()]]. */
     private function invoicePreview(): string
     {
+        return $this->seriesPreview('INV');
+    }
+
+    private function seriesPreview(string $docType): string
+    {
         $series = NumberSeries::query()
             ->where('company_id', CompanyContext::id())
-            ->where('doc_type', 'INV')
+            ->where('doc_type', $docType)
             ->where('is_active', true)
             ->orderByRaw('branch_id IS NULL')
             ->first();

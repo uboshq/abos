@@ -17,6 +17,10 @@ return [
     'ordered' => 'আদেশ',
     'received' => 'এসেছে',
     'pending' => 'বাকি',
+    'challan_no_short' => 'চালান নম্বর',
+    'pending_drafts' => 'পেন্ডিং',
+    'pending_drafts_pick' => 'খসড়া বিল খুলুন',
+    'pending_drafts_none' => 'কোনো খসড়া নেই',
     'unbilled' => 'বিল হয়নি',
     'unbilled_value' => 'বিল না-হওয়া মূল্য',
     'bill_count' => 'বিল সংখ্যা',
@@ -366,4 +370,6 @@ return [
     'choose' => 'বেছে নিন',
     /* ⭐ বিলের পাতায় রসিদের তালিকা — ২১ সেপ্টেম্বর ২০২৬। */
     'money_received' => 'কোন কাগজে টাকা এল',
+    'carrier_phone' => 'বাহকের মোবাইল',
+    'driver_phone' => 'চালকের মোবাইল',
 ];

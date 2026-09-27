@@ -219,6 +219,7 @@
                     --}}
                     <template x-if="expenseValue > 0">
                         <input type="text" name="expense_narration" maxlength="191" required
+                               value="{{ old('expense_narration', $resume['fields']['expense_narration'] ?? '') }}"
                                placeholder="{{ __('sales::field.expense_for_placeholder') }}"
                                class="mt-1 h-(--spacing-inline) w-full rounded-(--radius-field) border
                                       border-(--color-warning) bg-(--color-surface-app) px-2">
@@ -640,7 +641,8 @@
                 <div class="mt-2 grid grid-cols-3 gap-2">
                     {{-- ⓘ খসড়াটা এক ঘর, নিশ্চিত দুই ঘর — চাপটা ডানে,
                          আর রোজকার কাজটাই বড়। --}}
-                    <x-ui.button type="submit" tone="ghost" class="py-2"
+                    {{-- ⓘ ধূসর — মালিকের ছবি, ২৭ সেপ্টেম্বর ২০২৬ (সন্ধ্যা): "খসড়া রাখুন" ছাই রং --}}
+                    <x-ui.button type="submit" tone="neutral" class="py-2"
                                  name="save_as_draft" value="1"
                                  ::disabled="! canConfirm">
                         {{ __('sales::action.save_draft') }}
@@ -653,6 +655,32 @@
                         <span class="num ms-2 font-semibold" x-text="'৳' + money(netPayable)"></span>
                     </x-ui.button>
                 </div>
+
+                {{-- ⭐ সংরক্ষণ আর ত্রুটির বার্তা — বোতামের ঠিক নিচে। মালিকের ছবি,
+                     ২৬ সেপ্টেম্বর ২০২৬: *"অনুমোদনের জন্য পাঠানো হয়েছে … eta খসড়া
+                     রাখুন, নিশ্চিত করুন er niche dibe"*।
+
+                     ⓘ আগে পাতার একদম উপরে বসত, আর বিক্রেতার চোখ থাকে বোতামে —
+                     ⚠️ ফলে "অনুমোদনে গেছে" না দেখে তিনি ভাবতেন বিল পাকা হয়েছে। --}}
+                @if (session('saved'))
+                    <div role="status"
+                         class="mt-2 rounded-(--radius-field) bg-(--color-badge-success-bg) px-3 py-2 text-xs
+                                text-(--color-badge-success-ink)">
+                        {{ session('saved') }}
+                    </div>
+                @endif
+
+                @if ($errors->any())
+                    <div role="alert"
+                         class="mt-2 rounded-(--radius-field) bg-(--color-badge-danger-bg) px-3 py-2 text-xs
+                                text-(--color-badge-danger-ink)">
+                        <ul class="list-inside list-disc">
+                            @foreach ($errors->all() as $error)
+                                <li>{{ $error }}</li>
+                            @endforeach
+                        </ul>
+                    </div>
+                @endif
             </div>
 
         </aside>

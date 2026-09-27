@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import directSale from './direct-sale.js'
 import { magics } from '../components/index.js'
 
@@ -291,7 +291,8 @@ describe('কার্টের সারি উপরে ফিরিয়ে 
         const c = filled()
         await c.addToCart()
 
-        c.picked = product()
+        // ⓘ অন্য পণ্য — ২৬ সেপ্টেম্বর থেকে একই পণ্য দুই সারিতে বসে না
+        c.picked = product({ id: 2, name: 'ডাল' })
         c.entry.qty = '7'
         c.entry.rate = '50'
 
@@ -369,13 +370,14 @@ describe('বাকির সীমা — কার্টেই আটকায
     /*
      * ⛔ এটাই আসল দাবি। ⚠️ বকেয়া ৮,০০০, সীমা ১০,০০০ — খোলা ২,০০০।
      * ২,৫০০ টাকার সারিটা ওটা ছাড়ায়, তাই কার্টেই থামে।
+     * ⭐ ২৬ সেপ্টেম্বর ২০২৬ (রাতে) থেকে সতর্কতা কেবল **জানায়**, সারি আটকায় না — মালিক: *"jast warning but atkabena"*। ⛔ দেয়াল "নিশ্চিত করুন"-এ (পপ-আপ) আর সেবায়।
      */
-    it('সীমা ছাড়ালে সারিটা কার্টে যায় না', async () => {
+    it('[২৬ সেপ্টেম্বর থেকে: সারি যায়, সতর্কতা থাকে] সীমা ছাড়ালে সারিটা কার্টে যায় না', async () => {
         const c = onCredit()
         entry(c, 2500)
 
-        expect(await c.addToCart()).toBe(false)
-        expect(c.lines).toHaveLength(0)
+        expect(await c.addToCart()).toBe(true)
+        expect(c.lines).toHaveLength(1)
         expect(c.creditWarning).not.toBe('')
     })
 
@@ -392,8 +394,10 @@ describe('বাকির সীমা — কার্টেই আটকায
         expect(await c.addToCart()).toBe(true)
 
         entry(c, 1200)
-        expect(await c.addToCart()).toBe(false)
-        expect(c.lines).toHaveLength(1)
+        c.picked = product({ id: 2, name: 'ডাল' })
+        expect(await c.addToCart()).toBe(true)
+        expect(c.creditWarning).not.toBe('')
+        expect(c.lines).toHaveLength(2)
     })
 
     /*
@@ -441,13 +445,13 @@ describe('বাকির সীমা — কার্টেই আটকায
      * আর `canOverride: true` এলেও পর্দা আটকাবেই — সীমা কারও চাবিতে পার
      * হয় না, আর "পার হতে দাও" সুইচও আর নেই।
      */
-    it('পুরনো "পার হতে দাও" বা চাবির ঘর এলেও আটকায়', async () => {
+    it('[সতর্ক করে, আটকায় নিশ্চিত-এ] পুরনো "পার হতে দাও" বা চাবির ঘর এলেও আটকায়', async () => {
         const c = onCredit({
             creditRules: { enabled: true, blocks: false, zeroBlocks: false, canOverride: true },
         })
         entry(c, 50000)
 
-        expect(await c.addToCart()).toBe(false)
+        expect(await c.addToCart()).toBe(true)
         expect(c.creditWarning).not.toBe('')
     })
 
@@ -460,13 +464,15 @@ describe('বাকির সীমা — কার্টেই আটকায
         const open = onCredit({ customers: { 7: { limit: 0, due: 0, days: 30, name: 'নতুন' } } })
         entry(open, 500)
         expect(await open.addToCart()).toBe(true)
+        expect(open.creditWarning).toBe('')
 
         const shut = onCredit({
             customers: { 7: { limit: 0, due: 0, days: 30, name: 'নতুন' } },
             creditRules: { enabled: true, zeroBlocks: true },
         })
         entry(shut, 500)
-        expect(await shut.addToCart()).toBe(false)
+        expect(await shut.addToCart()).toBe(true)
+        expect(shut.creditWarning).not.toBe('')
     })
 
     /*
@@ -543,7 +549,7 @@ describe('সীমার কড়া দেয়াল — আটকে থ�
         const c = held()
         line(c, 1500)
 
-        expect(await c.addToCart()).toBe(false)
+        expect(await c.addToCart()).toBe(true)
         expect(c.creditWarning).toContain('1,000')
     })
 
@@ -770,6 +776,61 @@ describe('লট বাছাই — বাধ্যতামূলক, আর �
     })
 
     /*
+     * ⛔ লট ধরা নয় এমন পণ্য — একই পণ্য দুই সারিতে নয়। মালিকের নিয়ম
+     * (২৬ সেপ্টেম্বর ২০২৬, আবার ২৭ তারিখের ছবিতে): *"ekoi products ekbareer
+     * odik entry nibe na"* — পুরনো লাইভ পর্দায় কসমস ৪০ গ্রাম তিন সারিতে।
+     */
+    it('লট ধরা নয় এমন একই পণ্য দুইবার দিলে আটকায়, বার্তাসহ', async () => {
+        const c = tracked({
+            texts: {
+                notForSales: 'বিক্রয়ের জন্য নয়',
+                creditBeyondLimit: 'আর ৳:left বাকি দেওয়া যাবে',
+                itemAlreadyInCart: 'এই পণ্যটা কার্টে আগে থেকেই আছে',
+            },
+        })
+        c.picked = product()
+
+        expect(await c.addToCart()).toBe(true)
+
+        c.picked = product()
+        c.entry.qty = '3'
+        c.entry.rate = '100'
+
+        expect(await c.addToCart()).toBe(false)
+        expect(c.lines).toHaveLength(1)
+        expect(c.lotWarning).toBe('এই পণ্যটা কার্টে আগে থেকেই আছে')
+
+        // ⓘ তৃতীয়বারও একই — "কসমস তিন সারিতে" আর হয় না
+        c.picked = product()
+        c.entry.qty = '1'
+        c.entry.rate = '100'
+        expect(await c.addToCart()).toBe(false)
+        expect(c.lines).toHaveLength(1)
+    })
+
+    /*
+     * ⓘ পাল্টা-দাবি: সারিটা উপরে তুলে বদলালে সেটা "দ্বিতীয় সারি" নয় —
+     * ⚠️ নিজের সাথে ধাক্কা লাগলে সারি বদলানোই যেত না।
+     */
+    it('উপরে তোলা সারি বদলে আবার বসানো যায় — নিজের সাথে ধাক্কা নয়', async () => {
+        const c = tracked({
+            texts: {
+                notForSales: 'বিক্রয়ের জন্য নয়',
+                creditBeyondLimit: 'আর ৳:left বাকি দেওয়া যাবে',
+                itemAlreadyInCart: 'এই পণ্যটা কার্টে আগে থেকেই আছে',
+            },
+        })
+        c.picked = product()
+        expect(await c.addToCart()).toBe(true)
+
+        await c.editLine(0)
+        c.entry.qty = '5'
+
+        expect(await c.addToCart()).toBe(true)
+        expect(c.lines).toHaveLength(1)
+    })
+
+    /*
      * ⚠️ দুইটা বার্তা আলাদা, আর সেটাই জরুরি — ⛔ এক বার্তা দিলে
      * বিক্রেতা বুঝতেন না লট **বাছতে** হবে না **বদলাতে** হবে।
      */
@@ -799,5 +860,719 @@ describe('লট বাছাই — বাধ্যতামূলক, আর �
         await c.editLine(0)
 
         expect(c.entry.batchId).toBe('12')
+    })
+})
+
+/*
+ * ⭐ রাখা খসড়া — পেন্ডিং থেকে একই পর্দায় ফিরে আসা। মালিকের নকশা, ২৬
+ * সেপ্টেম্বর ২০২৬: "খসড়া রাখুন" বিলটা রাখে, আর পাকা হয় এই পর্দাতেই ফিরে —
+ * পেন্ডিং থেকে বাছলে পুরো পর্দা হুবহু ফেরে, আর খোলা খসড়া থাকলে নতুন বিল নয়।
+ */
+describe('রাখা খসড়া — পেন্ডিং থেকে ফেরা', () => {
+    /* ⓘ localStorage-এর ছোট একটা নকল — node-এ ব্রাউজারের ভাণ্ডার নেই। */
+    const memoryStore = () => {
+        const box = new Map()
+
+        return {
+            getItem: (k) => (box.has(k) ? box.get(k) : null),
+            setItem: (k, v) => box.set(k, String(v)),
+            removeItem: (k) => box.delete(k),
+        }
+    }
+
+    let store
+
+    beforeEach(() => {
+        store = memoryStore()
+        vi.stubGlobal('localStorage', store)
+    })
+
+    afterEach(() => {
+        vi.unstubAllGlobals()
+    })
+
+    const TEXTS = {
+        notForSales: 'বিক্রয়ের জন্য নয়',
+        creditBeyondLimit: 'আর ৳:left বাকি দেওয়া যাবে',
+        openDraftBlocks: 'খসড়া :no খোলা আছে',
+    }
+
+    /** একটা ভরা পর্দা — সারি (লট, ফ্রি, উপহার, ছাড়), জমা, শর্ত। */
+    const filled = (over = {}) => {
+        const c = counter({ texts: TEXTS, ...over })
+
+        c.customerId = '7'
+        c.creditTerm = 'credit:30'
+        c.dueOn = '2026-10-26'
+        c.lines = [{
+            key: 1, id: 1, name: 'চাল', qty: '4', freeQty: '1', rate: '50',
+            discountPercent: 10, unitId: '', batchId: '11', batchNo: 'B-A',
+            gifts: [{ productId: 2, qty: '1' }],
+        }]
+        c.discountInput = '5%'
+        c.expenseInput = '20'
+        c.roundingInput = '0.5'
+        c.roundingSign = '-'
+        c.deposits = [{ methodId: 'cash', accountId: '3', amount: '100' }]
+        c.nextKey = 2
+
+        return c
+    }
+
+    const resumeOf = (screen) => ({
+        invoiceId: 42,
+        invoiceNo: 'INV-0042',
+        challanNo: 'DC-0042',
+        customerId: 7,
+        screen,
+        fields: { carrier_id: 5, do_no: 'DO-1' },
+    })
+
+    const DRAFTS = {
+        7: [{ id: 42, no: 'INV-0042', total: '1000.00', date: '26-09-2026' }],
+        9: [{ id: 43, no: 'INV-0043', total: '50.00', date: '26-09-2026' }],
+    }
+
+    it('পর্দার ছবি applyDraft দিয়ে হুবহু ফেরে', () => {
+        const a = filled()
+        const b = counter({ texts: TEXTS })
+
+        b.applyDraft(a.screenSnapshot)
+
+        expect(b.customerId).toBe('7')
+        expect(b.creditTerm).toBe('credit:30')
+        expect(b.dueOn).toBe('2026-10-26')
+        expect(b.lines).toEqual(a.lines)
+        expect(b.deposits).toEqual(a.deposits)
+        expect(b.discountInput).toBe('5%')
+        expect(b.expenseInput).toBe('20')
+        expect(b.roundingInput).toBe('0.5')
+        expect(b.roundingSign).toBe('-')
+        expect(b.nextKey).toBe(2)
+    })
+
+    /* ⚠️ ব্রাউজারে লেখা আর সার্ভারে পাঠানো — একই ছবি, দুইটা আলাদা নকল নয়। */
+    it('saveDraft ব্রাউজারে ঠিক ঐ ছবিটাই লেখে', () => {
+        const c = filled()
+
+        c.saveDraft()
+
+        const saved = JSON.parse(store.getItem('test.counter'))
+        const snap = JSON.parse(c.screenSnapshot)
+        delete saved.at
+        delete snap.at
+
+        expect(saved).toEqual(snap)
+    })
+
+    it('পেন্ডিং থেকে খুললে সারি, জমা, শর্ত আর ক্রেতা ফেরে', () => {
+        const screen = JSON.parse(filled().screenSnapshot)
+        const c = counter({ texts: TEXTS, resume: resumeOf(screen) })
+
+        c.start()
+
+        expect(c.customerId).toBe('7')
+        expect(c.lines).toEqual(screen.lines)
+        expect(c.deposits).toEqual(screen.deposits)
+        expect(c.creditTerm).toBe('credit:30')
+        expect(c.dueOn).toBe('2026-10-26')
+        expect(c.resumeId).toBe('42')
+        expect(c.carrierId).toBe('5')
+    })
+
+    /*
+     * ⛔ পেন্ডিং থেকে এলে "আগের খসড়া ফেরাব?" প্রশ্ন ওঠে না — আর বিক্রেতার
+     * অসমাপ্ত নতুন বিলটাও মোছে না (খোলা খসড়া আলাদা চাবিতে লেখে)।
+     */
+    it('পেন্ডিং থেকে খুললে ব্রাউজারের প্রস্তাব আসে না, অসমাপ্ত বিলও থাকে', () => {
+        const unfinished = filled().screenSnapshot
+        store.setItem('test.counter', unfinished)
+
+        const c = counter({ texts: TEXTS, resume: resumeOf(JSON.parse(filled().screenSnapshot)) })
+
+        c.start()
+        c.saveDraft()
+
+        expect(c.draftFound).toBe(false)
+        expect(store.getItem('test.counter')).toBe(unfinished)
+        expect(store.getItem('test.counter.resume')).not.toBeNull()
+    })
+
+    /* ⓘ পাল্টা-দাবি: সাধারণ অবস্থায় প্রস্তাবটা ঠিকই আসে — নাহলে উপরেরটা কিছুই মাপত না। */
+    it('সাধারণ অবস্থায় প্রস্তাবটা আসে, নিজে থেকে ফেরে না', () => {
+        store.setItem('test.counter', filled().screenSnapshot)
+
+        const c = counter({ texts: TEXTS })
+        c.start()
+
+        expect(c.draftFound).toBe(true)
+        expect(c.lines).toHaveLength(0)
+    })
+
+    it('ভুলসহ ফিরলে বিক্রেতার শেষ পাঠানো অবস্থাই ফেরে', () => {
+        const edited = filled()
+        edited.lines = [...edited.lines, { ...edited.lines[0], key: 2, batchId: '12' }]
+        store.setItem('test.counter.resume.pending', edited.screenSnapshot)
+
+        const c = counter({
+            texts: TEXTS,
+            hasErrors: true,
+            resume: resumeOf(JSON.parse(filled().screenSnapshot)),
+        })
+        c.start()
+
+        expect(c.lines).toHaveLength(2)
+        expect(store.getItem('test.counter.resume.pending')).toBeNull()
+    })
+
+    it('পেন্ডিং তালিকা কেবল বাছা ক্রেতার', () => {
+        const c = counter({ texts: TEXTS, pendingDrafts: DRAFTS })
+
+        expect(c.pendingForCustomer).toEqual([])
+
+        c.customerId = '7'
+        expect(c.pendingForCustomer.map(d => d.id)).toEqual([42])
+
+        c.customerId = '8'
+        expect(c.pendingForCustomer).toEqual([])
+    })
+
+    /* ⚠️ সার্ভারে একটাও খসড়া না থাকলে তালিকাটা `[]` আসে, বস্তু নয়। */
+    it('খালি তালিকা `[]` এলেও ভাঙে না', () => {
+        const c = counter({ texts: TEXTS, pendingDrafts: [] })
+        c.customerId = '7'
+
+        expect(c.pendingForCustomer).toEqual([])
+        expect(c.customerHasOpenDraft).toBe(false)
+    })
+
+    it('পেন্ডিং বাছলে পাতাটা ?draft=ID নিয়ে খোলে', () => {
+        const assign = vi.fn()
+        vi.stubGlobal('window', { location: { assign } })
+
+        const c = counter({ texts: TEXTS, pendingUrl: '/sales/direct' })
+
+        c.openPending({ target: { value: '' } })
+        expect(assign).not.toHaveBeenCalled()
+
+        c.openPending({ target: { value: '42' } })
+        expect(assign).toHaveBeenCalledWith('/sales/direct?draft=42')
+    })
+
+    /*
+     * ⛔ মালিকের নির্দেশ: খোলা খসড়া থাকলে নতুন বিল নয় — আগে নিশ্চিত, বাতিল
+     * বা সম্পাদনা। ⓘ একই পর্দা, একই কার্ট — কেবল ক্রেতার খসড়া আছে কি না বদলায়।
+     */
+    it('খোলা খসড়া থাকলে দুইটা বোতামই বন্ধ', () => {
+        const c = filled({ pendingDrafts: DRAFTS })
+
+        expect(c.customerHasOpenDraft).toBe(true)
+        expect(c.canConfirm).toBe(false)
+        expect(c.openDraftText).toBe('খসড়া INV-0042 খোলা আছে')
+
+        c.customerId = '8'
+        expect(c.customerHasOpenDraft).toBe(false)
+        expect(c.canConfirm).toBe(true)
+    })
+
+    it('খসড়াটাই খোলা থাকলে সে নিজেকে আটকায় না', () => {
+        const screen = JSON.parse(filled().screenSnapshot)
+        const c = counter({ texts: TEXTS, pendingDrafts: DRAFTS, resume: resumeOf(screen) })
+
+        c.start()
+
+        expect(c.customerHasOpenDraft).toBe(false)
+        expect(c.canConfirm).toBe(true)
+    })
+
+    it('খোলা খসড়া থাকলে সারি কার্টে ওঠে না', async () => {
+        const c = counter({ texts: TEXTS, pendingDrafts: DRAFTS })
+        c.customerId = '7'
+        c.picked = product()
+        c.entry.qty = '1'
+        c.entry.rate = '50'
+
+        expect(await c.addToCart()).toBe(false)
+        expect(c.lines).toHaveLength(0)
+        expect(c.lotWarning).toBe('খসড়া INV-0042 খোলা আছে')
+
+        /* ⓘ পাল্টা-দাবি: খসড়াহীন ক্রেতায় একই সারি ওঠে */
+        c.customerId = '8'
+        expect(await c.addToCart()).toBe(true)
+        expect(c.lines).toHaveLength(1)
+    })
+
+    it('সব মুছলে খোলা খসড়াও ছাড়ে, আর নম্বরের ঘর দুইটা খালি হয়', () => {
+        const screen = JSON.parse(filled().screenSnapshot)
+        const c = counter({ texts: TEXTS, resume: resumeOf(screen) })
+        const boxes = { invoice_no: { value: 'INV-0042' }, challan_no: { value: 'DC-0042' } }
+        c.$root = { querySelector: (sel) => boxes[(sel.match(/name=(\w+)/) || [])[1]] ?? null }
+
+        c.start()
+        c.clearAll()
+
+        expect(c.resumeId).toBe('')
+        expect(c.lines).toHaveLength(0)
+        expect(boxes.invoice_no.value).toBe('')
+        expect(boxes.challan_no.value).toBe('')
+    })
+})
+
+/*
+ * ⭐ ব্যাংক আর মোবাইল ব্যাংকিংয়ের জমা — মালিকের নির্দেশ, ২৭ সেপ্টেম্বর ২০২৬:
+ * *"counter e bank e taka nile ei porda asena tik koro"*। ⓘ আদায় ভাউচারের
+ * "ব্যাংক অনলাইন"-এর ঘরগুলো কাউন্টারের জমাতেও।
+ */
+describe('জমা — ব্যাংক ও মোবাইল ব্যাংকিংয়ের তথ্য', () => {
+    const METHODS = [
+        { id: 1, label: 'নগদ', kind: 'cash', accountId: 'c1' },
+        { id: 2, label: 'ব্যাংক', kind: 'bank', accountId: 'b1', needsReference: true },
+        { id: 3, label: 'বিকাশ', kind: 'mfs', accountId: 'm1', needsReference: true },
+    ]
+    const ACCOUNTS = [
+        { id: 'c1', label: 'ক্যাশ', parent: '1101' },
+        { id: 'b1', label: 'ডাচ-বাংলা', parent: '1102' },
+        { id: 'm1', label: 'বিকাশ হিসাব', parent: '1105' },
+    ]
+
+    const till = () => {
+        const c = counter({
+            depositMethods: METHODS,
+            moneyAccounts: ACCOUNTS,
+            transferModes: [{ id: '4', label: 'NPSB' }],
+        })
+
+        /* ⓘ তারিখের ঘরটা পর্দায় নেই — `dateBox()` তখন কিছুই পায় না */
+        c.$root = { querySelector: () => null }
+
+        return c
+    }
+
+    /** ব্যাংকের একটা জমা, সব ঘর ভরা। */
+    const bankDeposit = (c) => {
+        c.depositDraft.methodId = '2'
+        c.pickDepositMethod()
+        Object.assign(c.depositDraft, {
+            amount: '5000', reference: 'TRX-9',
+            transferModeId: '4', fromBank: 'সোনালী', fromBranch: 'মতিঝিল',
+            fromAccountName: 'রহিম স্টোর', fromAccountNo: '0012', depositSlipNo: 'SL-1',
+            landsOn: '2026-09-28', chargeAmount: '25', chargeBorneBy: 'them',
+        })
+    }
+
+    it('ব্যাংক বাছলে ব্যাংকের ঘর আসে, নগদে আসে না', () => {
+        const c = till()
+
+        c.depositDraft.methodId = '2'
+        expect(c.depositIsBank).toBe(true)
+        expect(c.depositHasCharge).toBe(true)
+        expect(c.depositIsCash).toBe(false)
+
+        c.depositDraft.methodId = '1'
+        expect(c.depositIsBank).toBe(false)
+        expect(c.depositIsMfs).toBe(false)
+        expect(c.depositHasCharge).toBe(false)
+
+        c.depositDraft.methodId = '3'
+        expect(c.depositIsMfs).toBe(true)
+        expect(c.depositIsBank).toBe(false)
+        expect(c.depositHasCharge).toBe(true)
+    })
+
+    it('যোগ করা সারিতে ব্যাংকের তথ্য থাকে, আর সার্ভারের নামে যায়', () => {
+        const c = till()
+        bankDeposit(c)
+
+        c.addDeposit()
+
+        expect(c.deposits).toHaveLength(1)
+        expect(c.deposits[0].fromBank).toBe('সোনালী')
+
+        const sent = Object.fromEntries(c.depositDetailsOf(c.deposits[0]).map(d => [d.key, d.value]))
+        expect(sent).toEqual({
+            transfer_mode_id: '4', from_bank: 'সোনালী', from_branch: 'মতিঝিল',
+            from_account_name: 'রহিম স্টোর', from_account_no: '0012',
+            deposit_slip_no: 'SL-1', lands_on: '2026-09-28',
+            charge_amount: '25', charge_borne_by: 'them',
+        })
+        expect(c.depositRefText(c.deposits[0])).toBe('NPSB · TRX-9')
+    })
+
+    /* ⛔ পরের জমায় আগের ব্যাংকের তথ্য চলে যায় না */
+    it('যোগ করার পর খসড়া খালি হয়, চার্জ আবার "আমরা"', () => {
+        const c = till()
+        bankDeposit(c)
+
+        c.addDeposit()
+
+        expect(c.depositDraft.fromBank).toBe('')
+        expect(c.depositDraft.transferModeId).toBe('')
+        expect(c.depositDraft.landsOn).toBe('')
+        expect(c.depositDraft.chargeAmount).toBe('')
+        expect(c.depositDraft.chargeBorneBy).toBe('us')
+    })
+
+    /*
+     * ⚠️ ব্যাংক বেছে ঘর ভরে পরে নগদে বদলালে মানগুলো খসড়ায় রয়ে যায় —
+     * ⛔ তবু নগদের সারির সাথে ব্যাংকের কিছুই সার্ভারে যায় না।
+     */
+    it('নগদের সারিতে ব্যাংকের কিছুই যায় না, মান রয়ে গেলেও', () => {
+        const c = till()
+        bankDeposit(c)
+        c.depositDraft.methodId = '1'
+        c.pickDepositMethod()
+
+        c.addDeposit()
+
+        expect(c.deposits).toHaveLength(1)
+        expect(c.depositDetailsOf(c.deposits[0])).toEqual([])
+    })
+
+    it('মোবাইল ব্যাংকিংয়ে কেবল তার নিজের ঘর যায়', () => {
+        const c = till()
+        c.depositDraft.methodId = '3'
+        c.pickDepositMethod()
+        Object.assign(c.depositDraft, {
+            amount: '900', reference: 'BK1', wallet: 'bkash', walletMedium: 'send_money',
+            counterpartyPhone: '01811000001', fromBank: 'বাসি মান',
+        })
+
+        c.addDeposit()
+
+        const sent = Object.fromEntries(c.depositDetailsOf(c.deposits[0]).map(d => [d.key, d.value]))
+        expect(sent).toEqual({
+            wallet: 'bkash', wallet_medium: 'send_money', counterparty_phone: '01811000001',
+            charge_borne_by: 'us',
+        })
+    })
+
+    /* ⭐ খসড়া রাখলে ব্যাংকের তথ্যও পর্দার ছবিতে যায়, আর ফেরে */
+    it('পর্দার ছবিতে ব্যাংকের তথ্য থাকে আর ফেরে', () => {
+        const c = till()
+        bankDeposit(c)
+        c.addDeposit()
+
+        const back = till()
+        back.applyDraft(c.screenSnapshot)
+
+        expect(back.deposits).toEqual(c.deposits)
+        expect(back.depositDetailsOf(back.deposits[0])).toEqual(c.depositDetailsOf(c.deposits[0]))
+    })
+})
+
+/*
+ * ⭐ মালিকের ছবি, ২৭ সেপ্টেম্বর ২০২৬ (সন্ধ্যা) — দুইটা পপ-আপ, আর খসড়া সীমা পেরিয়েও।
+ *
+ * ⓵ বাকির সীমা ছাড়ালে পপ-আপ ও ধ্বনি — কিন্তু সারিটা কার্টে **যায়**।
+ * ⓶ সীমা পেরোনো বিল "খসড়া রাখুন"-এ যায়; "নিশ্চিত করুন"-এ থামে (পপ-আপ, ধ্বনি)।
+ * ⓷ সার্ভারের অনুমোদনের বার্তা পর্দা খুলেই পপ-আপে, ধ্বনিসহ।
+ */
+describe('পপ-আপ — সীমার সতর্কতা, অনুমোদন, আর খসড়া সীমা পেরিয়েও', () => {
+    /** সীমা ১০,০০০ · বকেয়া ৮,০০০ → খোলা ২,০০০ */
+    const onCredit = (over = {}) => {
+        const c = counter({
+            customers: { 7: { limit: 10000, due: 8000, days: 30, name: 'রহিম' } },
+            creditRules: { enabled: true, zeroBlocks: false },
+            ...over,
+        })
+
+        c.customerId = '7'
+        c.creditTerm = 'credit:30'
+
+        return c
+    }
+
+    const entry = (c, rate, id = 1) => {
+        c.picked = product({ id, name: 'পণ্য ' + id })
+        c.entry.qty = '1'
+        c.entry.rate = String(rate)
+    }
+
+    const submitEvent = (value) => {
+        const e = { stopped: false, submitter: { value } }
+        e.preventDefault = () => { e.stopped = true }
+
+        return e
+    }
+
+    it('সীমা ছাড়ানো সারি: পপ-আপ খোলে, ধ্বনি বাজে, আর সারিটা কার্টে যায়', async () => {
+        const c = onCredit()
+        let rang = 0
+        c.soundTheAlarm = () => { rang++ }
+        entry(c, 2500)
+
+        expect(await c.addToCart()).toBe(true)
+        expect(c.lines).toHaveLength(1)
+        expect(c.creditWarningOpen).toBe(true)
+        expect(c.creditWarning).toContain('2,000')
+        expect(rang).toBe(1)
+    })
+
+    /* ⛔ পাল্টা-দাবি: সীমার ভিতরে পপ-আপ নেই, ধ্বনিও নেই */
+    it('সীমার ভিতরের সারিতে পপ-আপ নেই', async () => {
+        const c = onCredit()
+        let rang = 0
+        c.soundTheAlarm = () => { rang++ }
+        entry(c, 1500)
+
+        expect(await c.addToCart()).toBe(true)
+        expect(c.creditWarningOpen).toBe(false)
+        expect(rang).toBe(0)
+    })
+
+    it('"বুঝেছি" সতর্কতার পপ-আপ বন্ধ করে, সারি থাকে', async () => {
+        const c = onCredit()
+        c.soundTheAlarm = () => {}
+        entry(c, 2500)
+        await c.addToCart()
+
+        c.closeCreditWarning()
+
+        expect(c.creditWarningOpen).toBe(false)
+        expect(c.lines).toHaveLength(1)
+    })
+
+    /*
+     * ⭐ মালিক: সীমা পেরোনো বিল খসড়া রাখা যায়; পরে জমা যোগ করে সীমার ভিতরে এলে
+     * নিশ্চিত। ⛔ খসড়ার বোতামে পর্দা থামালে বিলটা হারাত।
+     */
+    it('সীমা পেরোনো বিল "খসড়া রাখুন"-এ থামে না', async () => {
+        const c = onCredit()
+        c.soundTheAlarm = () => {}
+        entry(c, 2500)
+        await c.addToCart()
+        let parked = 0
+        c.parkDraft = () => { parked++ }
+
+        const e = submitEvent('1')
+        c.guardSubmit(e)
+
+        expect(e.stopped).toBe(false)
+        expect(c.creditBlocked).toBe(false)
+        expect(parked).toBe(1)
+    })
+
+    /* ⛔ আর একই বিল "নিশ্চিত করুন"-এ থামে — পপ-আপ আর ধ্বনি */
+    it('একই বিল "নিশ্চিত করুন"-এ থামে, পপ-আপ ও ধ্বনিসহ', async () => {
+        const c = onCredit()
+        c.soundTheAlarm = () => {}
+        entry(c, 2500)
+        await c.addToCart()
+        let rang = 0
+        c.soundTheAlarm = () => { rang++ }
+
+        const e = submitEvent('0')
+        c.guardSubmit(e)
+
+        expect(e.stopped).toBe(true)
+        expect(c.creditBlocked).toBe(true)
+        expect(rang).toBe(1)
+    })
+
+    /* ⭐ জমা যোগ করে সীমার ভিতরে এলে নিশ্চিত যায় */
+    it('জমা দিয়ে সীমার ভিতরে এলে "নিশ্চিত করুন" যায়', async () => {
+        const c = onCredit()
+        c.soundTheAlarm = () => {}
+        entry(c, 2500)
+        await c.addToCart()
+        c.deposits = [{ amount: '1000' }]
+        c.parkDraft = () => {}
+
+        const e = submitEvent('0')
+        c.guardSubmit(e)
+
+        expect(e.stopped).toBe(false)
+    })
+
+    it('সার্ভারের অনুমোদনের বার্তা খুলেই পপ-আপে, ধ্বনিসহ', () => {
+        const c = counter({ approvalNotice: 'অনুমোদনের জন্য পাঠানো হয়েছে — ডেলিভারি চালান · ৳৫০০' })
+        let rang = 0
+        c.soundTheAlarm = () => { rang++ }
+        c.lookForDraft = () => {}
+
+        c.start()
+
+        expect(c.approvalNoticeShown).toBe(true)
+        expect(c.approvalNotice).toContain('অনুমোদনের জন্য পাঠানো হয়েছে')
+        expect(rang).toBe(1)
+
+        c.closeApprovalNotice()
+        expect(c.approvalNoticeShown).toBe(false)
+    })
+
+    /* ⛔ পাল্টা-দাবি: বার্তা না থাকলে পপ-আপও নেই, ধ্বনিও নেই */
+    it('বার্তা না থাকলে পপ-আপ নেই', () => {
+        const c = counter()
+        let rang = 0
+        c.soundTheAlarm = () => { rang++ }
+        c.lookForDraft = () => {}
+
+        c.start()
+
+        expect(c.approvalNoticeShown).toBe(false)
+        expect(rang).toBe(0)
+    })
+})
+
+/*
+ * ⭐ জমার প্যানেল — মালিকের ছবি, ২৭ সেপ্টেম্বর ২০২৬ (সন্ধ্যা): *উপায় বাছার
+ * আগেই নোটের ঘর কেন?* ⓘ উপায় বাছার পরেই তার নিজের ঘর: নগদে নোট, MFS-এ
+ * MFS-এর, ব্যাংকে ব্যাংকের; কিছু না বাছলে কিছুই না। আর উপায় বদলালে অন্যের
+ * ঘর মুছে যায় — নগদের সাথে পুরনো TrxID যায় না।
+ */
+describe('জমার প্যানেল — উপায় বাছার পরেই তার ঘর', () => {
+    const METHODS = [
+        { id: 1, label: 'নগদ', kind: 'cash', accountId: 'c1' },
+        { id: 2, label: 'ব্যাংক', kind: 'bank', accountId: 'b1', needsReference: true },
+        { id: 3, label: 'বিকাশ', kind: 'mfs', accountId: 'm1', needsReference: true },
+    ]
+    const ACCOUNTS = [
+        { id: 'c1', label: 'ক্যাশ', parent: '1101' },
+        { id: 'b1', label: 'ডাচ-বাংলা', parent: '1102' },
+        { id: 'm1', label: 'বিকাশ হিসাব', parent: '1105' },
+    ]
+
+    const till = (methods = METHODS) => counter({ depositMethods: methods, moneyAccounts: ACCOUNTS })
+
+    const choose = (c, id) => {
+        c.depositDraft.methodId = String(id)
+        c.pickDepositMethod()
+    }
+
+    it('কিছু না বাছলে নোট, MFS, ব্যাংক — কোনো ঘরই নেই', () => {
+        const c = till()
+
+        expect(c.depositIsCash).toBe(false)
+        expect(c.depositIsMfs).toBe(false)
+        expect(c.depositIsBank).toBe(false)
+        expect(c.depositHasCharge).toBe(false)
+    })
+
+    it('নগদ বাছলে কেবল নোটের ঘর', () => {
+        const c = till()
+        choose(c, 1)
+
+        expect(c.depositIsCash).toBe(true)
+        expect(c.depositIsMfs).toBe(false)
+        expect(c.depositIsBank).toBe(false)
+    })
+
+    it('MFS বাছলে MFS-এর ঘর (TrxID, প্রেরক, চার্জ) — নোট নয়', () => {
+        const c = till()
+        choose(c, 3)
+
+        expect(c.depositIsMfs).toBe(true)
+        expect(c.depositHasCharge).toBe(true)
+        expect(c.depositIsCash).toBe(false)
+        expect(c.depositIsBank).toBe(false)
+    })
+
+    it('ব্যাংক বাছলে ব্যাংকের ঘর — নোট নয়', () => {
+        const c = till()
+        choose(c, 2)
+
+        expect(c.depositIsBank).toBe(true)
+        expect(c.depositHasCharge).toBe(true)
+        expect(c.depositIsCash).toBe(false)
+    })
+
+    /* ⚠️ উপায়ের তালিকাই না থাকলে জমা নগদ — নোটের ঘর থাকে (নতুন কোম্পানি) */
+    it('উপায়ের তালিকা না থাকলে নোটের ঘর থাকে', () => {
+        const c = till([])
+
+        expect(c.depositIsCash).toBe(true)
+    })
+
+    /* ⛔ বিপজ্জনক ইনপুট: MFS-এ TrxID, ফোন, চার্জ লিখে নগদে বদলানো */
+    it('MFS থেকে নগদে বদলালে TrxID, ফোন আর চার্জ মুছে যায়', () => {
+        const c = till()
+        choose(c, 3)
+        Object.assign(c.depositDraft, {
+            reference: 'TRX-1', counterpartyPhone: '01711000000', wallet: 'bkash', chargeAmount: '15',
+        })
+
+        choose(c, 1)
+
+        expect(c.depositDraft.reference).toBe('')
+        expect(c.depositDraft.counterpartyPhone).toBe('')
+        expect(c.depositDraft.wallet).toBe('')
+        expect(c.depositDraft.chargeAmount).toBe('')
+    })
+
+    it('নগদ থেকে ব্যাংকে বদলালে নোটের হিসাব মুছে যায়', () => {
+        const c = till()
+        choose(c, 1)
+        c.depositDraft.noteCounts = { 1000: '2', 500: '1' }
+
+        choose(c, 2)
+
+        expect(c.depositDraft.noteCounts).toEqual({})
+    })
+
+    it('ব্যাংক থেকে MFS-এ বদলালে ব্যাংকের ঘর মুছে যায়', () => {
+        const c = till()
+        choose(c, 2)
+        Object.assign(c.depositDraft, { fromBank: 'সোনালী', depositSlipNo: 'SL-1', transferModeId: '4' })
+
+        choose(c, 3)
+
+        expect(c.depositDraft.fromBank).toBe('')
+        expect(c.depositDraft.depositSlipNo).toBe('')
+        expect(c.depositDraft.transferModeId).toBe('')
+    })
+})
+
+/*
+ * ── বাহক আর চালকের নম্বর — মালিকের ছবি, ২৭ সেপ্টেম্বর ২০২৬ (রাত) ────────
+ * *"বাহকের নাম Dropdown, tar pase mob. no … চালকের নাম & Mobile no ekbar
+ * save korle porbortite sajest korbe"*।
+ */
+describe('বাহক আর চালকের নম্বর', () => {
+    it('বাহক বাছলে তার নম্বর দেখায়, তালিকার বাইরে খালি', () => {
+        const c = counter({ carriers: [{ id: '7', label: 'Sundarban', phone: '01711000000' }] })
+
+        expect(c.carrierPhone).toBe('')
+        c.carrierId = '7'
+        expect(c.carrierPhone).toBe('01711000000')
+        c.carrierId = ''
+        expect(c.carrierPhone).toBe('')
+    })
+
+    it('আগে লেখা চালকের নাম বাছলে নম্বর নিজে বসে', () => {
+        const c = counter({ drivers: [{ name: 'Karim', phone: '01811111111' }] })
+
+        c.driverName = ' karim '
+        c.pickDriver()
+        expect(c.driverPhone).toBe('01811111111')
+    })
+
+    it('হাতে লেখা নতুন নম্বর মোছে না', () => {
+        const c = counter({ drivers: [{ name: 'Karim', phone: '01811111111' }] })
+
+        c.driverPhone = '01999999999'
+        c.driverName = 'Karim'
+        c.pickDriver()
+        expect(c.driverPhone).toBe('01999999999')
+    })
+
+    it('এক চালক থেকে আরেকজনে গেলে বসানো নম্বরটাও বদলায়', () => {
+        const c = counter({ drivers: [
+            { name: 'Karim', phone: '01811111111' },
+            { name: 'Rahim', phone: '01822222222' },
+        ] })
+
+        c.driverName = 'Karim'
+        c.pickDriver()
+        c.driverName = 'Rahim'
+        c.pickDriver()
+        expect(c.driverPhone).toBe('01822222222')
+    })
+
+    it('নতুন নাম হলে কিছুই বসে না', () => {
+        const c = counter({ drivers: [{ name: 'Karim', phone: '01811111111' }] })
+
+        c.driverName = 'Notun'
+        c.pickDriver()
+        expect(c.driverPhone).toBe('')
     })
 })

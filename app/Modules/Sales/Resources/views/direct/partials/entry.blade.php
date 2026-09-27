@@ -518,10 +518,9 @@
 
                                  ⓘ হিসাবটা গোটা ঝুড়ি ধরে, তাই বার্তাটা এই
                                  সারির নয় — পুরো বিলের। --}}
-                            <div x-show="creditWarning" x-cloak
-                                 class="col-span-full rounded-(--radius-field) bg-(--color-badge-danger-bg)
-                                        px-3 py-1.5 text-xs text-(--color-badge-danger-ink)"
-                                 x-text="creditWarning" role="alert"></div>
+                            {{-- ⓘ বার্তাটা এখান থেকে সরে ডান কলামে, উপহার-ক্রয়মূল্য-ঘর
+                                 খালি করুন বোতামের নিচে গেছে — মালিকের ছবি, ২৬
+                                 সেপ্টেম্বর ২০২৬ ([[direct/index]])। --}}
 
                             {{-- ⓘ লটের বার্তা — বাছা হয়নি, বা ঐ লট কার্টে আগেই আছে।
                                  ⚠️ আলাদা ঘর, কারণ দুইটা বার্তা একসাথে দেখা যেতে পারে:

@@ -9,11 +9,13 @@ use App\Core\Services\SettingsService;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Models\Voucher;
 use App\Modules\Accounts\Services\CashTillService;
+use App\Modules\Accounts\Services\MoneyAccountRule;
 use App\Modules\Accounts\Services\ChequeService;
 use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Accounts\Services\VoucherApproval;
 use App\Modules\Accounts\Services\VoucherService;
 use App\Modules\Customer\Models\Customer;
+use App\Modules\Inventory\Models\Batch;
 use App\Modules\Inventory\Models\Product;
 use App\Modules\Inventory\Models\Warehouse;
 use App\Modules\Inventory\Services\BatchAllocator;
@@ -26,6 +28,8 @@ use App\Modules\Sales\Models\DeliveryChallanGiftLine;
 use App\Modules\Sales\Models\SalesInvoice;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use App\Core\Support\DocumentStatus;
+use Illuminate\Support\Arr;
 use Illuminate\Validation\ValidationException;
 
 /**
@@ -52,6 +56,18 @@ use Illuminate\Validation\ValidationException;
 final class DirectSaleService
 {
     use ReadsPackedQuantities;
+
+    /**
+     * কাউন্টারের জমায় যে ব্যাংক/মোবাইলের ঘরগুলো ভাউচারে যায় — এক জায়গায় লেখা।
+     *
+     * ⓘ রসিদ ভাউচারের money-movement পর্দার হুবহু ঘর। ⚠️ নাম আলাদা লিখলে
+     * ঘরটা নীরবে হারাত ([[DirectSaleController::store()]]-এর নিয়মের মন্তব্য)।
+     */
+    public const BANK_DETAIL_FIELDS = [
+        'transfer_mode_id', 'from_bank', 'from_branch', 'from_account_name', 'from_account_no',
+        'deposit_slip_no', 'charge_amount', 'charge_borne_by', 'lands_on',
+        'wallet', 'wallet_medium', 'counterparty_phone',
+    ];
 
     public function __construct(
         private readonly DeliveryChallanService $challans,
@@ -118,24 +134,32 @@ final class DirectSaleService
          * লাগবে কি না সেই প্রশ্নটাই অবান্তর — দুই ক্ষেত্রেই কাগজ খসড়া
          * থাকে, আর সইয়ের অনুরোধ [[hold()]] নিজেই পাঠায়।
          */
-        if ($this->wantsDraft($data) || $this->counterDepositNeedsApproval($data)) {
-            return $this->hold($data, $lines, $gifts, $customer, $warehouse);
+        /*
+         * ⭐ "খসড়া রাখুন" এখন আলাদা — মালিকের নকশা, ২৬ সেপ্টেম্বর ২০২৬ (রাতে):
+         * *"etokkhon bill kore rakhlo ta save thakbe … sudu challan inv print
+         * hobe na approval e zabe na. conf. korte hole abaer ei skinei aste
+         * hobe"*।
+         *
+         * ⓘ খসড়া কোনো সই চায় না — জমার ভাউচারও তৈরি হয় না; জমাগুলো পর্দার
+         * ছবিতে থাকে ([[hold()]] `asDraft`)। ⚠️ আগে হাতের খসড়াও ডিপোজিট
+         * সইয়ে পাঠাত, আর মালিক ঠিক ওটাই চাননি।
+         */
+        if ($this->wantsDraft($data)) {
+            return $this->hold($data, $lines, $gifts, $customer, $warehouse, asDraft: true);
+        }
+
+        if ($this->counterDepositNeedsApproval($data)) {
+            return $this->hold($data, $lines, $gifts, $customer, $warehouse, asDraft: false);
         }
 
         return DB::transaction(function () use ($data, $lines, $gifts, $customer, $warehouse) {
             $trxDate = $data['trx_date'] ?? now()->toDateString();
 
-            $challan = $this->challans->create(
-                [
-                    'customer_id' => $customer->id,
-                    'warehouse_id' => $warehouse->id,
-                    'trx_date' => $trxDate,
-                    'vehicle_no' => $data['vehicle_no'] ?? null,
-                    'driver_name' => $data['driver_name'] ?? null,
-                    'narration' => $data['narration'] ?? null,
-                ],
-                $this->challanLines($lines),
-            );
+            // ⓘ রাখা খসড়া থেকে এলে সেই কাগজ দুইটাই — নম্বর বদলায় না
+            $parked = $this->parkedFor($data, $customer);
+            $this->assertNoOtherOpenDraft($customer, $parked);
+
+            $challan = $this->challanFor($parked, $data, $lines, $customer, $warehouse, $trxDate);
 
             /*
              * ফ্রি পরিমাণ ও কাগজের নিচের ঘরগুলো চালানে বসানো।
@@ -157,23 +181,52 @@ final class DirectSaleService
              */
             $deposit = $this->depositTotal($data);
 
+            $invoiceHeader = [
+                'customer_id' => $customer->id,
+                'warehouse_id' => $warehouse->id,
+                'trx_date' => $data['trx_date'] ?? now()->toDateString(),
+                'due_on' => $this->dueOn($data, $customer),
+                // হাতে লেখা নম্বর — খালি হলে সিরিজ নিজেই দেবে
+                'document_no' => trim((string) ($data['invoice_no'] ?? '')) ?: null,
+                'narration' => $data['narration'] ?? null,
+                ...$this->billFigures($data),
+            ];
+
+            /*
+             * ⛔ রাখা খসড়ার বিলটা চালান নিশ্চিত হওয়ার **আগে** নতুন সারিতে বাঁধা।
+             *
+             * ⚠️ চালানের সারি হালনাগাদে পুরনো সারি মুছে যায়, আর খসড়া বিলের
+             * সারিগুলো তখন কোনো চালানে বাঁধা থাকে না। ⓘ চালানের দেয়াল
+             * ([[CreditExposure::draftInvoices()]]) "এই চালানের খসড়া বিল" চেনে
+             * সারির বাঁধন দিয়ে — বাঁধন না থাকলে ঐ খসড়া বিলটা **আলাদা ধার**
+             * হিসেবে গোনা হত, আর একই টাকা দুইবার: সীমার ভিতরের বিলও ফিরে আসত।
+             */
+            if ($parked !== null) {
+                $parked = $this->invoices->updateForHeldCounterSale(
+                    $parked,
+                    $invoiceHeader,
+                    $this->invoiceLines($challan->fresh(['lines'])),
+                    (int) $challan->id,
+                );
+            }
+
             $challan = $this->challans->confirm($challan->fresh(['lines']), $deposit);
 
             // ফ্রি ও উপহার — চালান নিশ্চিত হওয়ার পর, ফ্রি ভাণ্ডার থেকে
             $this->moveFreeStock($challan->fresh(['lines.product', 'giftLines.product']), $warehouse);
 
-            $invoice = $this->invoices->create(
-                [
-                    'customer_id' => $customer->id,
-                    'warehouse_id' => $warehouse->id,
-                    'trx_date' => $data['trx_date'] ?? now()->toDateString(),
-                    'due_on' => $this->dueOn($data, $customer),
-                    // হাতে লেখা নম্বর — খালি হলে সিরিজ নিজেই দেবে
-                    'document_no' => trim((string) ($data['invoice_no'] ?? '')) ?: null,
-                    'narration' => $data['narration'] ?? null,
-                ],
-                $this->invoiceLines($challan),
-            );
+            /*
+             * ⓘ রাখা খসড়া পাকা হলে বিলটা **সেই একই কাগজ** — নতুন সারি বসে,
+             * পর্দার ছবিটা মুছে যায়। ⚠️ ছবি না মুছলে পাকা বিলটা "পেন্ডিং"
+             * তালিকায় থেকে যেত, আর আবার খোলা যেত।
+             */
+            if ($parked !== null) {
+                // ⓘ সারি উপরে বসে গেছে; নিশ্চিত চালান থেকে আবার লেখা — দাম-পরিমাণ হুবহু, কেবল নিশ্চিত অবস্থায়
+                $invoice = $this->invoices->update($parked, $invoiceHeader, $this->invoiceLines($challan));
+                $invoice->update(['counter_draft' => null]);
+            } else {
+                $invoice = $this->invoices->create($invoiceHeader, $this->invoiceLines($challan));
+            }
 
             /*
              * ⚠️ গোনা টাকাটা **নিশ্চিত করার আগে** জানা দরকার, পরে নয়।
@@ -253,6 +306,20 @@ final class DirectSaleService
     private function counterDepositNeedsApproval(array $data): bool
     {
         foreach ($this->depositRows($data) as $row) {
+            /*
+             * ⛔ নিজের বাক্সে নগদ সই চায় না — মালিকের নিয়ম, ২১ সেপ্টেম্বর ২০২৬:
+             * *"cash e sudu tar nijer cash accounts e taka nite parbe tai app er
+             * dorkar nai"* ([[VoucherApproval::stopping()]] `landsInCash`)।
+             *
+             * ⚠️ এই প্রশ্নটা ছক দেখত, টাকা কোথায় নামছে দেখত না — অথচ ভাউচারের
+             * পাহারা নগদকে ছেড়ে দেয়। ⛔ ফল ছিল একটা মরা খসড়া: বিক্রয় আটকে
+             * থাকত, অথচ সইয়ের কোনো অনুরোধই যেত না, আর "শেষ করুন" সই ছাড়াই
+             * পার হত। ⓘ তাই দুই প্রশ্ন একই খাত দেখে ([[moneyAccountOf()]])।
+             */
+            if ($this->landsInCash($row)) {
+                continue;
+            }
+
             if ($this->approvalEngine->requires(
                 VoucherApproval::MODULE,
                 VoucherApproval::COUNTER_DEPOSIT,
@@ -267,69 +334,123 @@ final class DirectSaleService
     }
 
     /**
-     * সই লাগবে — তাই চালান আর বিল খসড়া, ডিপোজিট রসিদ ভাউচার হয়ে সইয়ের অপেক্ষায়।
+     * এই জমার টাকা কি নগদ খাতে নামবে — [[VoucherApproval::stopping()]]-এর
+     * `landsInCash`-এর আগাম উত্তর, একই খাত ধরে ([[moneyAccountOf()]])।
+     *
+     * @param  array<string, mixed>  $row
+     */
+    private function landsInCash(array $row): bool
+    {
+        if (($row['kind'] ?? null) === 'cheque') {
+            return false;
+        }
+
+        return (bool) Account::query()->find($this->moneyAccountOf($row))?->isCash();
+    }
+
+    /**
+     * জমার টাকা কোন খাতে নামে — এক জায়গায়।
+     *
+     * ⓘ চেক হলে ১১০৪ হাতে-চেক খাত, নাহলে সারির খাত, আর খাত না বললে প্রধান
+     * টিলের নগদ। ⚠️ ভাউচার বানানো ([[counterVoucher()]]) আর সইয়ের আগাম প্রশ্ন
+     * ([[counterDepositNeedsApproval()]]) দুইটাই এটা পড়ে — ⛔ দুই জায়গায় আলাদা
+     * লিখলে একদিন প্রশ্নটা এক খাত দেখত আর ভাউচার আরেক খাতে নামত।
+     *
+     * @param  array<string, mixed>  $row
+     */
+    private function moneyAccountOf(array $row): int
+    {
+        return ($row['kind'] ?? null) === 'cheque'
+            ? (int) $this->chequesInHandAccount()->id
+            : (int) (($row['account_id'] ?? null) ?: $this->tills->ensurePrimaryTill()->account_id);
+    }
+
+    /**
+     * সই লাগবে, বা বিক্রেতা নিজে খসড়া রাখছেন — চালান আর বিল দুইটাই খসড়া।
      *
      * ── ⚠️ কী হয় আর কী হয় না ─────────────────────────────────────────
      * ✓ চালান ও তার সারি, উপহার, বিল — সব লেখা থাকে, খসড়া অবস্থায়।
-     * ✓ প্রতিটা ডিপোজিট একটা **রসিদ ভাউচার** (খসড়া), বিলের সাথে বাঁধা
-     *   (`against`), কাউন্টারের চিহ্নসহ (`origin`) — আর অনুমোদনের অনুরোধ।
-     * ✗ মাল বের হয় না, ফ্রি মাল নড়ে না, খাতায় কিছু বসে না।
+     * ✗ মাল বের হয় না, ফ্রি মাল নড়ে না, খাতায় কিছু বসে না, ছাপা হয় না।
      *
-     * ⓘ বাকিটা [[finishHeld()]] করে, সই হয়ে যাওয়ার পর — বিলের পাতার বোতাম।
+     * ── ⭐ দুইটা মুখ ────────────────────────────────────────────────────
+     * ⓵ `asDraft` — "খসড়া রাখুন" (মালিকের নকশা, ২৬ সেপ্টেম্বর ২০২৬)।
+     *   ⛔ কোনো সই চাওয়া হয় না, কোনো ভাউচার তৈরি হয় না। পর্দাটা হুবহু
+     *   বিলে থাকে (`counter_draft`), আর পাকা হয় **একই পর্দায়** ফিরে এসে
+     *   ([[complete()]] `resume_invoice_id`)।
+     * ⓶ সই লাগবে — প্রতিটা ডিপোজিট একটা **রসিদ ভাউচার** (খসড়া), বিলের
+     *   সাথে বাঁধা, আর অনুমোদনের অনুরোধ। বাকিটা [[finishHeld()]] করে।
+     *
+     * ⓘ রাখা খসড়া থেকে এলে ([[parkedFor()]]) একই চালান ও বিল হালনাগাদ হয়
+     * — নম্বর বদলায় না।
      *
      * @param  list<array<string, mixed>>  $lines
      * @param  list<array<string, mixed>>  $gifts
-     * @return array{challan: DeliveryChallan, invoice: SalesInvoice, extra: string, held: list<mixed>, awaiting: list<Voucher>}
+     * @return array{challan: DeliveryChallan, invoice: SalesInvoice, extra: string, held: list<mixed>, awaiting: list<Voucher>, parked: bool}
      */
-    private function hold(array $data, array $lines, array $gifts, Customer $customer, Warehouse $warehouse): array
+    private function hold(array $data, array $lines, array $gifts, Customer $customer, Warehouse $warehouse, bool $asDraft): array
     {
-        return DB::transaction(function () use ($data, $lines, $gifts, $customer, $warehouse) {
+        return DB::transaction(function () use ($data, $lines, $gifts, $customer, $warehouse, $asDraft) {
             $trxDate = $data['trx_date'] ?? now()->toDateString();
 
-            $challan = $this->challans->create(
-                [
-                    'customer_id' => $customer->id,
-                    'warehouse_id' => $warehouse->id,
-                    'trx_date' => $trxDate,
-                    'vehicle_no' => $data['vehicle_no'] ?? null,
-                    'driver_name' => $data['driver_name'] ?? null,
-                    'narration' => $data['narration'] ?? null,
-                ],
-                $this->challanLines($lines),
-            );
+            $parked = $this->parkedFor($data, $customer);
+            $this->assertNoOtherOpenDraft($customer, $parked);
+
+            $challan = $this->challanFor($parked, $data, $lines, $customer, $warehouse, $trxDate);
 
             $this->stampExtras($challan, $data, $lines);
             $this->writeGifts($challan, $gifts, $warehouse);
 
+            $invoiceHeader = [
+                'customer_id' => $customer->id,
+                'warehouse_id' => $warehouse->id,
+                'trx_date' => $trxDate,
+                'due_on' => $this->dueOn($data, $customer),
+                'document_no' => trim((string) ($data['invoice_no'] ?? '')) ?: null,
+                'narration' => $data['narration'] ?? null,
+                ...$this->billFigures($data),
+            ];
+
             // ⓘ খসড়া চালানের বিল — কেবল এই চালানের জন্য ছাড় ([[SalesInvoiceService::createForHeldCounterSale()]])
-            $invoice = $this->invoices->createForHeldCounterSale(
-                [
-                    'customer_id' => $customer->id,
-                    'warehouse_id' => $warehouse->id,
-                    'trx_date' => $trxDate,
-                    'due_on' => $this->dueOn($data, $customer),
-                    'document_no' => trim((string) ($data['invoice_no'] ?? '')) ?: null,
-                    'narration' => $data['narration'] ?? null,
-                ],
-                $this->invoiceLines($challan->fresh(['lines'])),
-                (int) $challan->id,
-            );
+            $invoice = $parked === null
+                ? $this->invoices->createForHeldCounterSale(
+                    $invoiceHeader,
+                    $this->invoiceLines($challan->fresh(['lines'])),
+                    (int) $challan->id,
+                )
+                : $this->invoices->updateForHeldCounterSale(
+                    $parked,
+                    $invoiceHeader,
+                    $this->invoiceLines($challan->fresh(['lines'])),
+                    (int) $challan->id,
+                );
 
             /*
-             * ⛔ খসড়াও সীমার ভিতরে — ২৬ সেপ্টেম্বর ২০২৬।
+             * ⓘ খসড়ায় সীমার দেয়াল নেই — মালিকের নির্দেশ, ২৬ সেপ্টেম্বর
+             * ২০২৬ (রাতে): *"bill atkanor kotha cilo conf/নিশ্চিত করুন e
+             * kintu খসড়া hobe"*।
              *
-             * ⓘ মালিক: *"bill khosora hole product zemon atkay temon customer
-             * er balanceo atkabe"*। ⚠️ তাই সীমার বেশি খসড়া রাখতে দিলে সীমার
-             * বেশি টাকা আটকে থাকত — সীমার বাইরে কোনো কাগজই তৈরি হয় না,
-             * খসড়াও না। ⓘ লেনদেনের ভিতরে, তাই বাধা পেলে চালান আর বিল
-             * দুইটাই ফিরে যায়।
+             * ⚠️ একই দিন সকালে উল্টোটা লেখা ছিল ("সীমার বাইরে খসড়াও না")।
+             * ⭐ এখনকার নিয়ম: খসড়া রাখা যায়, আর রাখা খসড়া **সীমা আটকে
+             * রাখে** ([[CreditExposure::pending()]] খসড়া বিল গোনে)। ⛔ দেয়াল
+             * পাকা করার মুহূর্তে — চালান নিশ্চিত হয় [[DeliveryChallanService::confirm()]]-এ।
              */
-            $this->credit->assertRoom(
-                customer: $customer,
-                adding: (string) $invoice->total,
-                payingNow: $this->depositTotal($data),
-                exceptInvoiceId: (int) $invoice->id,
-            );
+            if ($asDraft) {
+                $invoice->update(['counter_draft' => $this->screenOf($data)]);
+
+                return [
+                    'challan' => $challan->fresh(['lines', 'giftLines']),
+                    'invoice' => $invoice->fresh(['lines']),
+                    'extra' => '0.0000',
+                    'held' => [],
+                    'awaiting' => [],
+                    'parked' => true,
+                ];
+            }
+
+            // ⓘ সইয়ের পথে গেলে আর "পেন্ডিং" নয় — শেষ হবে বিলের পাতার বোতামে
+            if ($parked !== null) {
+                $invoice->update(['counter_draft' => null]);
+            }
 
             $awaiting = [];
 
@@ -348,8 +469,180 @@ final class DirectSaleService
                 'extra' => '0.0000',
                 'held' => [],
                 'awaiting' => $awaiting,
+                'parked' => false,
             ];
         });
+    }
+
+    /**
+     * ⭐ রাখা খসড়াটা — পর্দা যদি সেটা থেকে এসে থাকে।
+     *
+     * ⛔ চারটা পাহারা, আর প্রতিটা আলাদা ভুল ঠেকায়:
+     * ⓵ কোম্পানি ও শাখা — মডেলের নিজের স্কোপ; অন্যের খসড়া "নেই"।
+     * ⓶ এখনো খসড়া — দুইবার চাপলে দ্বিতীয়টা পাকা বিল আবার লিখতে পারত না।
+     * ⓷ কাউন্টারের রাখা খসড়া (`counter_draft` আছে) — অন্য পথের খসড়া
+     *   (সইয়ের অপেক্ষা, সাধারণ বিল) এখান দিয়ে বদলানো যায় না।
+     * ⓸ একই ক্রেতা — ⚠️ পর্দায় ক্রেতা বদলে ফেললে অন্যের নামের কাগজে
+     *   অন্যের মাল বসত।
+     *
+     * ⓘ `lockForUpdate` — লেনদেনের ভিতরে ডাকা হয়, তাই দুইটা কাউন্টার একই
+     * খসড়া একসাথে পাকা করতে পারে না।
+     *
+     * @param  array<string, mixed>  $data
+     */
+    private function parkedFor(array $data, Customer $customer): ?SalesInvoice
+    {
+        $id = (int) ($data['resume_invoice_id'] ?? 0);
+
+        if ($id <= 0) {
+            return null;
+        }
+
+        $invoice = SalesInvoice::query()->lockForUpdate()->find($id);
+
+        if ($invoice === null || $invoice->status !== 'draft' || $invoice->counter_draft === null) {
+            throw ValidationException::withMessages([
+                'resume_invoice_id' => __('sales::validation.parked_draft_gone'),
+            ]);
+        }
+
+        if ((int) $invoice->customer_id !== (int) $customer->id) {
+            throw ValidationException::withMessages([
+                'customer_id' => __('sales::validation.parked_draft_other_customer', ['no' => $invoice->document_no]),
+            ]);
+        }
+
+        return $invoice;
+    }
+
+    /**
+     * ⛔ একজন ক্রেতার একটাই খোলা খসড়া — মালিকের নির্দেশ, ২৬ সেপ্টেম্বর ২০২৬:
+     * *"ei khosora bill conf na hole r ekta bill entry nibe na tar name age
+     * bill conf korbe noy batil korbe noy edite korbe"*।
+     *
+     * ⓘ খসড়াটাই খোলা থাকলে (পেন্ডিং থেকে এসেছে) সেটা বাদ — ওটাকেই তো
+     * পাকা বা আবার রাখা হচ্ছে। ⚠️ `acrossBranches()`: অন্য শাখার কাউন্টারে
+     * রাখা খসড়াও গোনে — ⛔ নাহলে এক শাখায় খসড়া রেখে আরেক শাখায় একই
+     * ক্রেতার নতুন বিল হয়ে যেত, আর নিয়মটা কেবল একটা কাউন্টারের হত।
+     */
+    private function assertNoOtherOpenDraft(Customer $customer, ?SalesInvoice $parked): void
+    {
+        $open = SalesInvoice::acrossBranches()
+            ->where('customer_id', $customer->id)
+            ->where('status', 'draft')
+            ->whereNotNull('counter_draft')
+            ->when($parked !== null, fn ($q) => $q->whereKeyNot($parked->id))
+            ->orderBy('id')
+            ->first(['id', 'document_no']);
+
+        if ($open !== null) {
+            throw ValidationException::withMessages([
+                'customer_id' => __('sales::validation.open_draft_blocks_new_bill', ['no' => $open->document_no]),
+            ]);
+        }
+    }
+
+    /**
+     * ⭐ রাখা খসড়া বাতিল — মালিকের তিনটা পথের একটা ("conf … batil … edit")।
+     *
+     * ⓘ ক্রম: আগে বিল, তারপর চালান। ⚠️ উল্টো করলে চালানের পাহারা
+     * ([[DeliveryChallanService::assertNotInvoiced()]]) খসড়া বিলটাকে "বিল হয়ে
+     * গেছে" ধরে থামাত। খসড়ায় মাল বা খাতার কিছু নড়েনি, তাই বাতিলে ফেরানোরও
+     * কিছু নেই — কাগজ দুইটা কেবল "বাতিল" হয়, মোছা নয়, কারণসহ।
+     */
+    public function discardParked(SalesInvoice $invoice, string $reason): void
+    {
+        DB::transaction(function () use ($invoice, $reason) {
+            $invoice = SalesInvoice::query()->lockForUpdate()->find($invoice->getKey());
+
+            if ($invoice === null || $invoice->status !== 'draft' || $invoice->counter_draft === null) {
+                throw ValidationException::withMessages([
+                    'resume_invoice_id' => __('sales::validation.parked_draft_gone'),
+                ]);
+            }
+
+            $invoice->loadMissing('lines.challanLine');
+            $challanId = $invoice->lines->first()?->challanLine?->delivery_challan_id;
+
+            $invoice->update(['counter_draft' => null]);
+            $this->invoices->cancel($invoice, $reason);
+
+            $challan = $challanId === null ? null : DeliveryChallan::query()->find($challanId);
+
+            if ($challan !== null && $challan->status === DocumentStatus::DRAFT) {
+                $this->challans->cancel($challan, $reason);
+            }
+        });
+    }
+
+    /**
+     * চালানটা — নতুন, নাহলে রাখা খসড়ার চালান হালনাগাদ।
+     *
+     * ⚠️ রাখা খসড়ার উপহারগুলো আগে মোছা হয় — [[writeGifts()]] কেবল যোগ করে,
+     * ⛔ না মুছলে প্রতিবার খুলে রাখলে উপহার দ্বিগুণ হত।
+     *
+     * @param  array<string, mixed>  $data
+     * @param  list<array<string, mixed>>  $lines
+     */
+    private function challanFor(?SalesInvoice $parked, array $data, array $lines, Customer $customer, Warehouse $warehouse, string $trxDate): DeliveryChallan
+    {
+        $header = [
+            'customer_id' => $customer->id,
+            'warehouse_id' => $warehouse->id,
+            'trx_date' => $trxDate,
+            'vehicle_no' => $data['vehicle_no'] ?? null,
+            'driver_name' => $data['driver_name'] ?? null,
+            'driver_phone' => $data['driver_phone'] ?? null,
+            'narration' => $data['narration'] ?? null,
+        ];
+
+        if ($parked === null) {
+            // ⓘ হাতে লেখা চালান নম্বর — খালি হলে সিরিজ ([[DeliveryChallanService::challanNumber()]])
+            $header['document_no'] = trim((string) ($data['challan_no'] ?? '')) ?: null;
+
+            return $this->challans->create($header, $this->challanLines($lines));
+        }
+
+        $parked->loadMissing('lines.challanLine');
+        $challanId = $parked->lines->first()?->challanLine?->delivery_challan_id;
+
+        $challan = $challanId === null ? null : DeliveryChallan::query()->lockForUpdate()->find($challanId);
+
+        if ($challan === null || $challan->status !== DocumentStatus::DRAFT) {
+            throw ValidationException::withMessages([
+                'resume_invoice_id' => __('sales::validation.parked_draft_gone'),
+            ]);
+        }
+
+        $challan->giftLines()->delete();
+
+        return $this->challans->update($challan, $header, $this->challanLines($lines));
+    }
+
+    /**
+     * পর্দার ছবি — যা বিলে রাখা হয়।
+     *
+     * ⓘ দুই ভাগ: `screen` কাউন্টারের নিজের অবস্থা (সারি, জমা, ছাড়…), আর
+     * `fields` সাধারণ ঘরগুলো (DO, গাড়ি, মন্তব্য…) — যেগুলো Alpine-এর
+     * অবস্থায় থাকে না। ⚠️ কেবল সরল মান রাখা হয়; সারি-জমা-উপহারের তালিকা
+     * `screen`-এই আছে, দুইবার রাখলে কোনটা সত্যি সেই প্রশ্ন উঠত।
+     *
+     * @param  array<string, mixed>  $data
+     * @return array{screen: array<mixed>, fields: array<string, scalar|null>}
+     */
+    private function screenOf(array $data): array
+    {
+        $screen = json_decode((string) ($data['screen_state'] ?? ''), true);
+
+        $fields = array_filter(
+            Arr::except($data, ['screen_state', 'resume_invoice_id', 'save_as_draft', 'lines', 'gifts', 'deposits']),
+            fn ($value) => $value === null || is_scalar($value),
+        );
+
+        return [
+            'screen' => is_array($screen) ? $screen : [],
+            'fields' => $fields,
+        ];
     }
 
     /**
@@ -413,6 +706,11 @@ final class DirectSaleService
 
             $invoice = $this->invoices->confirm($invoice->fresh(['lines']), $deposit);
 
+            // ⓘ পাকা হলে আর "রাখা খসড়া" নয় — চিহ্ন থেকে গেলে ভবিষ্যতের কোনো তালিকা এটাকে খোলা খসড়া ভাবত
+            if ($invoice->counter_draft !== null) {
+                $invoice->update(['counter_draft' => null]);
+            }
+
             // ⓘ চেক হলে রেজিস্টারেও — আগে এই পথের চেক রেজিস্টারে উঠতই না
             foreach ($vouchers as $voucher) {
                 $this->postCounterVoucher($voucher->fresh());
@@ -443,9 +741,12 @@ final class DirectSaleService
     ): Voucher {
         $receivable = Account::query()->postable()->where('code', StandardChart::RECEIVABLE)->firstOrFail();
 
-        $moneyAccount = ($row['kind'] ?? null) === 'cheque'
-            ? $this->chequesInHandAccount()->id
-            : (int) (($row['account_id'] ?? null) ?: $this->tills->ensurePrimaryTill()->account_id);
+        $moneyAccount = $this->moneyAccountOf($row);
+
+        // ⛔ দ্বিতীয় দরজা — অন্য কোনো পথে সারি এলেও টাকার খাত ছাড়া ভাউচার নয় (নিরীক্ষা §১.১)
+        if (($row['kind'] ?? null) !== 'cheque') {
+            app(MoneyAccountRule::class)->assert($moneyAccount, false, 'deposits');
+        }
 
         $narration = $row['narration'] ?? __('sales::message.direct_narration', [
             'no' => $challan->document_no,
@@ -474,6 +775,7 @@ final class DirectSaleService
                 'moved_at' => $row['moved_at'] ?? null,
                 'carried_by' => $row['carried_by'] ?? null,
                 'note_counts' => $row['note_counts'] ?? null,
+                ...($row['bank'] ?? []),
                 'against_type' => SalesInvoice::drillSourceType(),
                 'against_id' => $invoice->id,
                 'origin' => Voucher::ORIGIN_COUNTER,
@@ -484,6 +786,9 @@ final class DirectSaleService
                 $moneyAccount,
                 (string) $row['amount'],
                 $narration,
+
+                // ⓘ ব্যাংকের চার্জ — রসিদ ফর্মের একই পথ ([[VoucherController::linesFrom()]])
+                isset($row['bank']['charge_amount']) ? (string) $row['bank']['charge_amount'] : null,
             ),
         );
     }
@@ -829,6 +1134,28 @@ final class DirectSaleService
             }
 
             $seen[$key] = true;
+
+            /*
+             * ⛔ মেয়াদ পেরোনো লট বাছা যায় না — ২৭ সেপ্টেম্বর ২০২৬।
+             *
+             * ⓘ FEFO নিজে মেয়াদ পেরোনো লট বাদ দেয় ([[BatchAllocator]] `unexpired`)।
+             * ⚠️ কিন্তু বাছা লট সরাসরি যায় ([[StockService::issue()]] `batch`) —
+             * সেখানে কেবল পরিমাণ দেখা হয়, মেয়াদ নয়। ফ্রি মালও এখন বাছা লট
+             * থেকে বেরোয় ([[giveAway()]] `chosen`), তাই ফাঁকটা দুই দিকেই খুলত:
+             * পচা মাল বিক্রি, আর পচা মাল "ফ্রি"। ⓘ পর্দা মেয়াদি লট দেখায় না,
+             * তবে পর্দা দেয়াল নয় — হাতে বানানো অনুরোধ বা পুরনো ট্যাব আসে।
+             * ⭐ ধরা পড়েছে [[FreeGoodsCarryLotsTest]]-এর মেয়াদের দাবিতে।
+             */
+            $lot = $this->chosenLot($product, $batchId);
+
+            if ($lot !== null && $lot->hasExpired(now())) {
+                throw ValidationException::withMessages([
+                    'lines' => __('sales::validation.lot_expired_for', [
+                        'product' => $product->name(),
+                        'lot' => $lot->batch_no,
+                    ]),
+                ]);
+            }
         }
     }
 
@@ -849,7 +1176,20 @@ final class DirectSaleService
                 continue;
             }
 
-            $may = $allowance->on($product, $warehouse, (string) ($line['qty'] ?? '0'));
+            /*
+             * ⭐ লট বাছা থাকলে **তারই** অনুপাত — পর্দার প্রশ্নের হুবহু যমজ
+             * ([[DirectSaleController::freeAllowed()]] `onLot()`)।
+             *
+             * ⛔ আগে এখানে সবসময় `on()` — FEFO ধরে প্রথম লটের অনুপাত। ⚠️ লট
+             * দুইটার অনুপাত আলাদা হলে পর্দা বলত ৪, দেয়াল থামাত ২-এ (abos-79
+             * হাতে গুনে ধরেছেন: লট B ৫০+১০, ২০ বেচলে ৪; FEFO-র লট A ১০০+১০ বলত ২)।
+             * ⓘ মালও বেরোয় ঐ লট থেকেই ([[moveFreeStock()]]), তাই প্রাপ্যও তার।
+             */
+            $lot = $this->chosenLot($product, $line['batch_id'] ?? null);
+
+            $may = $lot !== null
+                ? $allowance->onLot($lot, (string) ($line['qty'] ?? '0'))['allowed']
+                : $allowance->on($product, $warehouse, (string) ($line['qty'] ?? '0'));
 
             if (bccomp($free, $may, 4) <= 0) {
                 continue;
@@ -880,6 +1220,14 @@ final class DirectSaleService
                 $line->product,
                 $free,
                 DeliveryChallan::STOCK_SOURCE.':free',
+                /*
+                 * ⭐ সারির বাছা লট — ফ্রি মালও ঐ লট থেকে। মালিকের নিয়ম: *"যে
+                 * স্লট যেভাবে কেনা, সেইভাবে যাবে"*। ⛔ আগে FEFO: কাগজে লট B,
+                 * অথচ ফ্রি কার্টন বেরোত লট A থেকে — আর লট A-র রিকলে এমন
+                 * গ্রাহকের নাম আসত যিনি ঐ লটের কিছুই পাননি। ⓘ উপহারের কোনো
+                 * বাছা লট নেই, তাই সেখানে FEFO-ই থাকে।
+                 */
+                chosen: $this->chosenLot($line->product, $line->batch_id),
             );
         }
 
@@ -917,8 +1265,41 @@ final class DirectSaleService
         string $qty,
         string $sourceType,
         ?string $narration = null,
+        ?Batch $chosen = null,
     ): void {
         $out = bcmul($qty, '-1', 4);
+
+        /*
+         * ⓘ বাছা লট — কেবল ঐ লটের ফ্রি ভাণ্ডার। ⚠️ কম পড়লে থামে, অন্য লট
+         * দিয়ে পূরণ করে না: ⛔ পূরণ করলে কাগজের লট আর গুদামের লট আবার
+         * আলাদা হত — ঠিক যে ভুলটা সারানো হলো।
+         */
+        if ($chosen !== null) {
+            $have = $chosen->freeBalance($warehouse);
+
+            if (bccomp($have, $qty, 4) < 0) {
+                throw ValidationException::withMessages([
+                    'lines' => __('inventory::validation.free_batch_short', [
+                        'product' => $product->name(),
+                        'short' => rtrim(rtrim(bcsub($qty, $have, 4), '0'), '.'),
+                    ]),
+                ]);
+            }
+
+            $this->stock->move(
+                product: $product,
+                warehouse: $warehouse,
+                sourceType: $sourceType,
+                sourceId: $challan->id,
+                date: $challan->trx_date,
+                documentNo: $challan->document_no,
+                narration: $narration,
+                free: $out,
+                batch: $chosen,
+            );
+
+            return;
+        }
 
         if (! $product->track_batch) {
             $this->stock->move(
@@ -948,6 +1329,46 @@ final class DirectSaleService
                 batch: $slice['batch'],
             );
         }
+    }
+
+    /**
+     * বিলের ছাড় আর রাউন্ডিং — পর্দা যা নিল, বিলেও তাই।
+     *
+     * ⛔ আগে দুইটাই কেবল চালানে বসত ([[stampExtras()]]), বিলে নয় — পর্দা নিত
+     * ১,২০০, বিল বলত ১,২৪২ (পাঁচ-মিলের পরীক্ষা, ২৭ সেপ্টেম্বর ২০২৬)। ⓘ এক
+     * জায়গায়, কারণ দুইটা পথ (পাকা আর খসড়া) একই বিল বানায় — ⚠️ একটায়
+     * ভুলে গেলে রাখা খসড়া পাকা করার দিন মোট বদলে যেত।
+     *
+     * ⚠️ খরচ (`expense_amount`) এখানে নেই, ইচ্ছাকৃত: সেটা গ্রাহকের বিলে যাবে
+     * কি না মালিকের সিদ্ধান্তের অপেক্ষায়।
+     *
+     * @param  array<string, mixed>  $data
+     * @return array{bill_discount: string, rounding_amount: string}
+     */
+    private function billFigures(array $data): array
+    {
+        return [
+            'bill_discount' => $this->money($data['discount_amount'] ?? '0'),
+            'rounding_amount' => $this->signedMoney($data['rounding_amount'] ?? '0'),
+        ];
+    }
+
+    /**
+     * সারিতে বাছা লট — কেবল ঐ পণ্যের লট হলে, নাহলে `null`।
+     *
+     * ⓘ অনুপাতের দেয়াল ([[assertFreeStaysWithinTheRatio()]]) আর ফ্রি মালের
+     * বেরোনো ([[moveFreeStock()]]) দুইটাই এটা পড়ে — ⛔ দুই জায়গায় আলাদা
+     * লিখলে একদিন প্রাপ্য এক লটের আর মাল আরেক লটের হত।
+     */
+    private function chosenLot(Product $product, mixed $batchId): ?Batch
+    {
+        $id = (int) ($batchId ?? 0);
+
+        if ($id <= 0 || ! $product->track_batch) {
+            return null;
+        }
+
+        return Batch::query()->where('product_id', $product->id)->find($id);
     }
 
     /**
@@ -1164,8 +1585,15 @@ final class DirectSaleService
 
         $legacy = trim((string) ($data['deposit_method'] ?? ''));
 
+        /*
+         * ⚠️ পুরনো ঘরে আক্ষরিক `cheque`-ও চেক — abos-20 ধরেছেন, ২৭ সেপ্টেম্বর
+         * ২০২৬। ⓘ ডেমোতে চেকের পদ্ধতির কোড `CHQ`, তাই কোড ধরে খুঁজলে
+         * `cheque` কিছুই পেত না, আর বিক্রয়টা পরের দরজায় (ভাউচারের পাহারা)
+         * গিয়ে এমন ঘরের ভুল নিয়ে ফিরত যেটা কাউন্টারের ফর্মে নেই।
+         */
         if (! $cheque && $legacy !== '') {
-            $cheque = PaymentMethod::query()->where('code', $legacy)->value('kind') === 'cheque';
+            $cheque = strtolower($legacy) === 'cheque'
+                || PaymentMethod::query()->where('code', $legacy)->value('kind') === 'cheque';
         }
 
         if ($cheque) {
@@ -1173,6 +1601,19 @@ final class DirectSaleService
                 'deposits' => __('sales::validation.no_cheque_at_counter'),
             ]);
         }
+    }
+
+    /**
+     * কাউন্টারের জমার খাত — ফাঁকা হলে ফাঁকাই (ভাউচার তখন প্রধান টিল নেয়), নাহলে
+     * কেবল টাকার খাত ([[MoneyAccountRule]])।
+     */
+    private function depositAccount(mixed $accountId): ?int
+    {
+        if (blank($accountId)) {
+            return null;
+        }
+
+        return (int) app(MoneyAccountRule::class)->assert((int) $accountId, false, 'deposits')->id;
     }
 
     private function depositRows(array $data): array
@@ -1210,7 +1651,12 @@ final class DirectSaleService
                  * পাঠায়। ⓘ শেষ ধাপটা কেবল নগদের জন্য ঠিক, তাই উপায়ের
                  * সারিতে খাত বসানো **সেটআপের কাজ**, কোডের নয়।
                  */
-                'account_id' => ($row['account_id'] ?? null) ?: $method?->account_id,
+                /*
+                 * ⛔ কেবল টাকার খাত — পূর্ণ নিরীক্ষা §১.১, ২৭ সেপ্টেম্বর ২০২৬।
+                 * ⚠️ আগে যেকোনো খাত "জমা" হতে পারত (খরচের খাতও), আর তাতে বকেয়া
+                 * মুছে বাকির সীমার দেয়াল পার হত। ⓘ নিয়মটা আদায়েরটাই ([[MoneyAccountRule]])।
+                 */
+                'account_id' => $this->depositAccount(($row['account_id'] ?? null) ?: $method?->account_id),
                 // ধরন — চেক হলে টাকা ১১০৪-এ যায় ও একটা রেজিস্টার-সারি হয়
                 'kind' => $method?->kind,
                 'instrument' => $method?->code,
@@ -1240,6 +1686,12 @@ final class DirectSaleService
                  * গিয়ে শূন্যের সারি পেরোতে হত।
                  */
                 'note_counts' => $this->notesOf($row['note_counts'] ?? null),
+
+                // ⭐ ব্যাংক/মোবাইলের বিস্তারিত — রসিদ ভাউচারের হুবহু ঘর (২৭ সেপ্টেম্বর ২০২৬)
+                'bank' => array_filter(
+                    array_intersect_key($row, array_flip(self::BANK_DETAIL_FIELDS)),
+                    fn ($value) => $value !== null && $value !== '',
+                ),
             ];
         }
 

@@ -468,7 +468,7 @@
                                      — তাই সংখ্যার বদলে "নগদ/অগ্রিম"। ⛔ "০" লিখলে
                                      পড়া হত *"কিছুই দেওয়া যাবে না"*, যেটা ভুল। --}}
                                 <div x-show="customerId" x-cloak
-                                     class="mt-0.5 flex items-center gap-x-3 text-2xs text-(--color-ink-muted)">
+                                     class="mt-0.5 flex flex-wrap items-center gap-x-3 text-2xs text-(--color-ink-muted)">
                                     <span class="whitespace-nowrap">
                                         <span x-text="customer.due < 0
                                                         ? @js(__('sales::field.advance'))
@@ -492,7 +492,28 @@
                                                             : money(customer.limit)"></span>
                                         </span>
                                     @endif
+
+                                    {{-- ⭐ বিল না হওয়া ডিও ও খসড়া — ক্রেতার ঘরেও। মালিকের ছবি,
+                                         ২৬ সেপ্টেম্বর ২০২৬: *"বিল না হওয়া ডিও ও খসড়া customer
+                                         box eo daw"*। ⓘ ডানের হিসাবের সারির একই getter
+                                         (`creditHeld`); শূন্য হলে আসে না। --}}
+                                    <template x-if="creditHeld > 0">
+                                        <span class="whitespace-nowrap">
+                                            {{ __('sales::message.credit_held') }}
+                                            <span class="num ms-1 font-semibold text-(--color-warning-hover)"
+                                                  x-text="money(creditHeld)"></span>
+                                        </span>
+                                    </template>
                                 </div>
+
+                                {{-- ⛔ খোলা খসড়া থাকলে নতুন বিল নয় — মালিকের নির্দেশ,
+                                     ২৬ সেপ্টেম্বর ২০২৬: আগে খসড়াটা নিশ্চিত, বাতিল বা
+                                     সম্পাদনা। ⓘ দুইটা বোতাম তখন বন্ধ (`canConfirm`), আর
+                                     সারিও ওঠে না ([[addToCart()]])। --}}
+                                <div x-show="customerHasOpenDraft" x-cloak role="alert"
+                                     class="mt-1 rounded-(--radius-field) bg-(--color-badge-danger-bg)
+                                            px-2 py-1.5 text-2xs text-(--color-badge-danger-ink)"
+                                     x-text="openDraftText"></div>
                             </div>
                         </div>
 
@@ -608,7 +629,7 @@
 
                                  ⚠️ দুইটা বাক্সের উচ্চতা এক হওয়া কোনো নিয়ম
                                  নয় — ভিতরে যা আছে তার সমান হওয়াই নিয়ম। --}}
-                            <div class="grid min-w-0 self-start grid-cols-1 content-start gap-2 sm:grid-cols-2 rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-sunken) p-3 shadow-sm"
+                            <div class="grid min-w-0 self-start grid-cols-1 content-start gap-2 sm:grid-cols-[minmax(9.5rem,1.2fr)_1fr_1fr] rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-sunken) p-3 shadow-sm"
                                  style="box-shadow: inset var(--rail-tile-on-edge-w, 2px) 0 0 var(--color-badge-inventory-ink)">
                             {{-- পুরো তারিখটা দেখা যেতে হবে — মালিকের কথা,
                                  ৩ সেপ্টেম্বর ২০২৬: "০৩-০৯-২০:" পর্যন্ত দেখিয়ে
@@ -625,40 +646,11 @@
                                      লেখাটা `05-09-2026` — মাত্র ~৮০px।
                                      ⛔ অর্ধেকের বেশি ঘরই ফাঁকা ছিল। --}}
                                 <x-ui.date name="trx_date" dense
-                                           :value="old('trx_date', now()->toDateString())"
+                                           :value="old('trx_date', $resume['fields']['trx_date'] ?? now()->toDateString())"
                                            class="w-full text-sm" />
                                            </label>
 
-                            {{--
-                                বিলের নম্বর — এখনই দেখা যায়, আর বদলানোও যায়।
-
-                                ── কেন বদলাল (৩ সেপ্টেম্বর ২০২৬) ─────────────────
-                                এখানে "নিশ্চিত করলে" লেখা একটা নিষ্ক্রিয় ঘর ছিল।
-                                যুক্তিটা ছিল: আগে থেকে নম্বর দেখালে খসড়া বাতিল
-                                হলে ওই নম্বরটা খরচ হয়ে সিরিজে ফাঁক থেকে যেত।
-
-                                মালিক বললেন নম্বরটা এখানেই তৈরি হবে, আর দরকারে
-                                বদলানো যাবে। **যুক্তিটা টিকে আছে, শুধু সমাধানটা
-                                বদলেছে**: এটা `preview()`, `next()` নয় — অর্থাৎ
-                                সিরিজের পরের নম্বরটা কেবল **দেখানো** হয়, খরচ হয়
-                                না। খসড়া বাতিল হলে কিছুই হারায় না, আর দুইজন
-                                একসাথে কাউন্টার খুললেও দুইজনেই একই নম্বর দেখেন —
-                                আসল নম্বরটা বসে সংরক্ষণের মুহূর্তে, তালার ভেতরে।
-
-                                ⚠️ তাই পর্দায় দেখা নম্বরটা **প্রতিশ্রুতি নয়,
-                                পূর্বাভাস**। কেউ হাতে বদলালে সেটাই যায়, আর
-                                না বদলালে সংরক্ষণের সময়কার আসল পরেরটা।
-                            --}}
-                            <label class="min-w-0">
-                                <span class="mb-0.5 block text-2xs font-semibold uppercase tracking-wide
-                                             text-(--color-ink-muted)">{{ __('sales::field.inv_number') }}</span>
-                                <input type="text" name="invoice_no" value="{{ old('invoice_no', $invoicePreview) }}"
-                                       :title="@js(__('sales::field.invoice_no_editable'))"
-                                       placeholder="{{ __('sales::field.on_confirm') }}"
-                                       class="h-(--spacing-field-dense) w-full rounded-(--radius-field) border border-(--color-border)
-                                              bg-(--color-surface-app) px-2 text-sm">
-                            </label>
-
+                            
                             {{--
                                 বাকির মেয়াদ — একটাই ঘর, ৩ সেপ্টেম্বর ২০২৬।
 
@@ -730,41 +722,84 @@
                                 </select>
                             </label>
 
-                            {{-- কেবল "নির্দিষ্ট তারিখ" বাছলে।
+                            {{-- ⭐ পেন্ডিং — এই ক্রেতার রাখা খসড়া বিল। মালিকের নকশা,
+                                 ২৬ সেপ্টেম্বর ২০২৬: খসড়া পাকা হয় এই পর্দাতেই ফিরে
+                                 এসে — এখান থেকে বাছলে পুরো পর্দা হুবহু ফেরে।
 
-                                 ⓘ শর্তটা আগে `custom` নামে ছিল; এখন `fixed` —
-                                 ক্রয়ের কাউন্টারে যে নামে ওটা আগে থেকেই আছে। --}}
-                            <label class="min-w-0" x-show="termKind === 'fixed'" x-cloak>
+                                 ⓘ ক্রেতা বাছার আগে ঘরটা নেই — খসড়া ক্রেতা ধরে রাখা।
+                                 ⚠️ বাছামাত্র পাতাটা `?draft=ID` নিয়ে খোলে
+                                 ([[openPending()]]); `window` তাই JS-এ, এখানে নয়। --}}
+                            {{-- ⚠️ ঘরটা সবসময় থাকে (ক্রেতা না বাছা পর্যন্ত বন্ধ) — ⛔ লুকালে দ্বিতীয় সারির
+                                 বিল নম্বর উঠে এসে প্রথম সারিতে বসত, আর মালিকের দুই-সারির ছক ভাঙত। --}}
+                            <label class="min-w-0">
                                 <span class="mb-0.5 block text-2xs font-semibold uppercase tracking-wide
-                                             text-(--color-ink-muted)">{{ __('sales::field.due_on_fixed') }}</span>
-                                {{-- ⚠️ ব্রাউজারের নিজের তারিখের ঘর নয় — `x-ui.date` কম্পোনেন্ট।
-
-                                     ওটা লেখাটা **নিজের লোকেল ধরে** আঁকে, আর
-                                     CSS দিয়ে বদলানো যায় না। `05/06` তখন দুইভাবে
-                                     পড়া যায় — ৫ জুন না ৬ মে — আর দুইটাই বৈধ
-                                     বলে ভুলটা খাতা থেকে ধরাই যায় না।
-
-                                     ⓘ কম্পোনেন্টটা সার্ভারে ISO পাঠায় (লুকানো
-                                     ঘরে), তাই `name` ছাড়া আর কিছু লাগেনি।
-                                     `dueOn` Alpine-এর ঘরটা আর দরকার নেই। --}}
-                                <x-ui.date name="due_on" />
+                                             text-(--color-ink-muted)">{{ __('sales::field.pending_drafts') }}</span>
+                                <select @change="openPending($event)"
+                                        :disabled="pendingForCustomer.length === 0"
+                                        class="h-(--spacing-field-dense) w-full rounded-(--radius-field) border border-(--color-border)
+                                               bg-(--color-surface-app) px-2 text-sm">
+                                    <option value=""
+                                            x-text="pendingForCustomer.length > 0
+                                                      ? @js(__('sales::field.pending_drafts_pick'))
+                                                      : @js(__('sales::field.pending_drafts_none'))"></option>
+                                    <template x-for="d in pendingForCustomer" :key="d.id">
+                                        <option :value="d.id" :selected="$str(d.id) === resumeId"
+                                                x-text="d.no + ' · ৳' + money(d.total) + ' · ' + d.date"></option>
+                                    </template>
+                                </select>
                             </label>
 
-                            {{-- ── সার্ভারে যায় দুইটা জিনিস, আর দুইটাই লাগে ────
+                            {{-- ⭐ দুই সারির মাথা — মালিকের ছবি, ২৭ সেপ্টেম্বর ২০২৬ (সন্ধ্যা):
+                                 ১ম সারি বিলের তারিখ · শর্ত · পেন্ডিং; ২য় সারি বিল নম্বর · চালান নম্বর ·
+                                 DO নম্বর। ⓘ তিন কলামের ছক, তাই ক্রমটাই সারি ঠিক করে। --}}
+{{--
+                                বিলের নম্বর — এখনই দেখা যায়, আর বদলানোও যায়।
 
-                                 ⭐ `payment_term` বলে **কোন ধরনের শর্ত**, আর
-                                 `credit_period_days` বলে **কত দিন**।
+                                ── কেন বদলাল (৩ সেপ্টেম্বর ২০২৬) ─────────────────
+                                এখানে "নিশ্চিত করলে" লেখা একটা নিষ্ক্রিয় ঘর ছিল।
+                                যুক্তিটা ছিল: আগে থেকে নম্বর দেখালে খসড়া বাতিল
+                                হলে ওই নম্বরটা খরচ হয়ে সিরিজে ফাঁক থেকে যেত।
 
-                                 ⚠️ দিনসংখ্যাটা ধরনটা বলে না: নগদ আর COD —
-                                 দুইটাই শূন্য দিন, অথচ একটায় টাকা ড্রয়ারে আর
-                                 আরেকটায় ভ্যানে। ⓘ একইভাবে ৫ তারিখে "মাস শেষ"
-                                 আর "২৫ দিনের বাকি" — খাতায় হুবহু এক।
+                                মালিক বললেন নম্বরটা এখানেই তৈরি হবে, আর দরকারে
+                                বদলানো যাবে। **যুক্তিটা টিকে আছে, শুধু সমাধানটা
+                                বদলেছে**: এটা `preview()`, `next()` নয় — অর্থাৎ
+                                সিরিজের পরের নম্বরটা কেবল **দেখানো** হয়, খরচ হয়
+                                না। খসড়া বাতিল হলে কিছুই হারায় না, আর দুইজন
+                                একসাথে কাউন্টার খুললেও দুইজনেই একই নম্বর দেখেন —
+                                আসল নম্বরটা বসে সংরক্ষণের মুহূর্তে, তালার ভেতরে।
 
-                                 ⛔ তাই ধরনটা না পাঠালে *"এই মাসে COD-তে কত
-                                 বিক্রি"* প্রশ্নের উত্তর কোথাও থাকত না। --}}
-                            <input type="hidden" name="payment_term" :value="termKind">
-                            <input type="hidden" name="credit_period_days"
-                                   :value="termKind === 'credit' ? termDays : ''">
+                                ⚠️ তাই পর্দায় দেখা নম্বরটা **প্রতিশ্রুতি নয়,
+                                পূর্বাভাস**। কেউ হাতে বদলালে সেটাই যায়, আর
+                                না বদলালে সংরক্ষণের সময়কার আসল পরেরটা।
+                            --}}
+                            <label class="min-w-0">
+                                <span class="mb-0.5 block text-2xs font-semibold uppercase tracking-wide
+                                             text-(--color-ink-muted)">{{ __('sales::field.inv_number') }}</span>
+                                <input type="text" name="invoice_no" value="{{ old('invoice_no', $resume['invoiceNo'] ?? $invoicePreview) }}"
+                                       @readonly(! empty($resume)) :readonly="resumeId !== ''"
+                                       :title="@js(__('sales::field.invoice_no_editable'))"
+                                       placeholder="{{ __('sales::field.on_confirm') }}"
+                                       class="h-(--spacing-field-dense) w-full rounded-(--radius-field) border border-(--color-border)
+                                              bg-(--color-surface-app) px-2 text-sm">
+                            </label>
+
+                            {{-- ⭐ চালান নম্বর — মালিকের ছক, ২৬ সেপ্টেম্বর ২০২৬: বিলের তারিখ ·
+                                 বিল নম্বর · চালান নম্বর · DO · শর্ত · পেন্ডিং।
+
+                                 ⓘ বিল নম্বরের হুবহু ছাঁচ: সিরিজের পরের নম্বরটা কেবল
+                                 **দেখানো** (`preview()`), আর হাতে বদলালে সেটাই যায়।
+                                 ⚠️ খোলা খসড়ায় দুইটা নম্বরই বন্ধ — সেবা একই বিল-চালান
+                                 পাকা করে, নম্বর বদলায় না; "সব মুছুন" চাপলে খোলে। --}}
+                            <label class="min-w-0">
+                                <span class="mb-0.5 block text-2xs font-semibold uppercase tracking-wide
+                                             text-(--color-ink-muted)">{{ __('sales::field.challan_no_short') }}</span>
+                                <input type="text" name="challan_no" maxlength="32"
+                                       value="{{ old('challan_no', $resume['challanNo'] ?? $challanPreview ?? '') }}"
+                                       @readonly(! empty($resume)) :readonly="resumeId !== ''"
+                                       placeholder="{{ __('sales::field.on_confirm') }}"
+                                       class="h-(--spacing-field-dense) w-full rounded-(--radius-field) border border-(--color-border)
+                                              bg-(--color-surface-app) px-2 text-sm">
+                            </label>
 
                             {{-- DO নম্বর — ঐচ্ছিক, আর নিজের সুইচের পেছনে।
 
@@ -783,11 +818,48 @@
                                 <label class="min-w-0">
                                     <span class="mb-0.5 block text-2xs font-semibold uppercase tracking-wide
                                                  text-(--color-ink-muted)">{{ __('sales::field.do_no') }}</span>
-                                    <input type="text" name="do_no" placeholder="{{ __('sales::field.optional') }}"
+                                    <input type="text" name="do_no" value="{{ old('do_no', $resume['fields']['do_no'] ?? '') }}"
+                                           placeholder="{{ __('sales::field.optional') }}"
                                            class="h-(--spacing-field-dense) w-full rounded-(--radius-field) border border-(--color-border)
                                                   bg-(--color-surface-app) px-2 text-sm">
                                 </label>
                             @endif
+
+                            {{-- কেবল "নির্দিষ্ট তারিখ" বাছলে।
+
+                                 ⓘ শর্তটা আগে `custom` নামে ছিল; এখন `fixed` —
+                                 ক্রয়ের কাউন্টারে যে নামে ওটা আগে থেকেই আছে। --}}
+                            <label class="min-w-0" x-show="termKind === 'fixed'" x-cloak>
+                                <span class="mb-0.5 block text-2xs font-semibold uppercase tracking-wide
+                                             text-(--color-ink-muted)">{{ __('sales::field.due_on_fixed') }}</span>
+                                {{-- ⚠️ ব্রাউজারের নিজের তারিখের ঘর নয় — `x-ui.date` কম্পোনেন্ট।
+
+                                     ওটা লেখাটা **নিজের লোকেল ধরে** আঁকে, আর
+                                     CSS দিয়ে বদলানো যায় না। `05/06` তখন দুইভাবে
+                                     পড়া যায় — ৫ জুন না ৬ মে — আর দুইটাই বৈধ
+                                     বলে ভুলটা খাতা থেকে ধরাই যায় না।
+
+                                     ⓘ কম্পোনেন্টটা সার্ভারে ISO পাঠায় (লুকানো
+                                     ঘরে), তাই `name` ছাড়া আর কিছু লাগেনি।
+                                     `dueOn` Alpine-এর ঘরটা আর দরকার নেই। --}}
+                                <x-ui.date name="due_on" :value="old('due_on', $resume['fields']['due_on'] ?? null)" />
+                            </label>
+
+                            {{-- ── সার্ভারে যায় দুইটা জিনিস, আর দুইটাই লাগে ────
+
+                                 ⭐ `payment_term` বলে **কোন ধরনের শর্ত**, আর
+                                 `credit_period_days` বলে **কত দিন**।
+
+                                 ⚠️ দিনসংখ্যাটা ধরনটা বলে না: নগদ আর COD —
+                                 দুইটাই শূন্য দিন, অথচ একটায় টাকা ড্রয়ারে আর
+                                 আরেকটায় ভ্যানে। ⓘ একইভাবে ৫ তারিখে "মাস শেষ"
+                                 আর "২৫ দিনের বাকি" — খাতায় হুবহু এক।
+
+                                 ⛔ তাই ধরনটা না পাঠালে *"এই মাসে COD-তে কত
+                                 বিক্রি"* প্রশ্নের উত্তর কোথাও থাকত না। --}}
+                            <input type="hidden" name="payment_term" :value="termKind">
+                            <input type="hidden" name="credit_period_days"
+                                   :value="termKind === 'credit' ? termDays : ''">
 
                             </div>
                         </div>

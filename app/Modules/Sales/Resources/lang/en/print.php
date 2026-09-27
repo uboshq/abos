@@ -7,6 +7,7 @@ return [
     'delivery_qty' => 'Delivery qty',
     'paid' => 'Paid',
     'invoice_due' => 'Due on this bill',
+    'bill_discount' => 'Bill discount',
     'previous_due' => 'Previous due',
     'outstanding' => 'Total outstanding',
 

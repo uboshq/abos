@@ -61,8 +61,21 @@ class SalesInvoice extends Model implements Drillable
          */
         'parked_at',
 
+        /*
+         * ⭐ কাউন্টারের "খসড়া রাখুন" — পর্দাটা হুবহু, যাতে একই পর্দায় ফিরে
+         * পাকা করা যায় (মালিকের নকশা, ২৬ সেপ্টেম্বর ২০২৬)। ⓘ `parked_at`
+         * থেকে আলাদা: ওটা টিলের "ক্রেতা টাকা আনতে গেছেন"।
+         */
+        'counter_draft',
+
         'customer_id', 'warehouse_id', 'trx_date', 'due_on',
         'subtotal', 'discount', 'tax', 'rounding_amount', 'total', 'cost_of_goods',
+
+        /*
+         * ⭐ বিলের ছাড় — সারির ছাড় (`discount`) থেকে আলাদা, ২৭ সেপ্টেম্বর ২০২৬।
+         * ⓘ কাউন্টারের "ছাড়" ঘর; মোট থেকে বাদ যায় ([[SalesInvoiceService::replaceLines()]])।
+         */
+        'bill_discount',
         'status', 'narration', 'created_by',
         'cancelled_by', 'cancelled_at', 'cancel_reason',
     ];
@@ -74,8 +87,10 @@ class SalesInvoice extends Model implements Drillable
             'due_on' => 'date',
             'cancelled_at' => 'datetime',
             'parked_at' => 'datetime',
+            'counter_draft' => 'array',
             'subtotal' => 'decimal:4',
             'discount' => 'decimal:4',
+            'bill_discount' => 'decimal:4',
             'tax' => 'decimal:4',
             'rounding_amount' => 'decimal:4',
             'total' => 'decimal:4',

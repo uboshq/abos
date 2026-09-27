@@ -15,6 +15,7 @@ return [
     'delivery_qty' => 'মোট পরিমাণ',
     'paid' => 'পরিশোধিত',
     'invoice_due' => 'এই বিলের বকেয়া',
+    'bill_discount' => 'বিলের ছাড়',
     'previous_due' => 'আগের বকেয়া',
     'outstanding' => 'সব মিলিয়ে পাওনা',
 

@@ -35,24 +35,42 @@
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ __('sales::menu.direct') }}</x-slot:title>
 
-    @if (session('saved'))
-        <div role="status"
-             class="mb-3 rounded-(--radius-field) bg-(--color-badge-success-bg) px-3 py-2 text-sm
-                    text-(--color-badge-success-ink)">
-            {{ session('saved') }}
-        </div>
-    @endif
+    {{-- ⓘ সংরক্ষণ আর ত্রুটির বার্তা এখান থেকে সরে "খসড়া রাখুন / নিশ্চিত
+         করুন" বোতামের নিচে গেছে — মালিকের ছবি, ২৬ সেপ্টেম্বর ২০২৬
+         ([[direct/partials/totals]])। --}}
 
-    @if ($errors->any())
-        <div role="alert"
-             class="mb-3 rounded-(--radius-field) bg-(--color-badge-danger-bg) px-3 py-2 text-sm
-                    text-(--color-badge-danger-ink)">
-            <ul class="list-inside list-disc">
-                @foreach ($errors->all() as $error)
-                    <li>{{ $error }}</li>
-                @endforeach
-            </ul>
-        </div>
+    {{-- ⭐ কোন খসড়াটা খোলা, আর তাকে বাতিল করার পথ — মালিকের নির্দেশ,
+         ২৬ সেপ্টেম্বর ২০২৬: খোলা খসড়া আগে নিশ্চিত, বাতিল বা সম্পাদনা।
+
+         ⚠️ বাতিলের ফর্মটা মূল ফর্মের **বাইরে** — ফর্মের ভিতরে ফর্ম HTML-এ
+         অবৈধ, আর ব্রাউজার তখন ভিতরেরটা ফেলে দিয়ে বোতামটা দিয়ে **মূল
+         বিলটাই** জমা দিত। ⓘ Alpine লাগে না, তাই এটা সাধারণ HTML। --}}
+    @if (! empty($resume))
+        <form method="POST" action="{{ route('sales.direct.discard', $resume['invoiceId']) }}"
+              class="mb-3 flex flex-wrap items-center gap-3 rounded-(--radius-card) border
+                     border-(--color-warning) bg-(--color-badge-pending-bg) p-3">
+            @csrf
+            <span class="text-sm font-semibold text-(--color-badge-pending-ink)">
+                {{ __('sales::field.pending_drafts') }}:
+                <span class="num">{{ $resume['invoiceNo'] }}</span>
+                @if ($resume['challanNo'] !== '')
+                    · {{ __('sales::field.challan_no_short') }}
+                    <span class="num">{{ $resume['challanNo'] }}</span>
+                @endif
+            </span>
+
+            <input type="text" name="reason" required maxlength="500"
+                   aria-label="{{ __('sales::message.cancel_reason') }}"
+                   placeholder="{{ __('sales::message.cancel_reason') }}"
+                   class="ms-auto h-(--spacing-field-dense) w-56 rounded-(--radius-field) border border-(--color-border)
+                          bg-(--color-surface-app) px-2 text-sm">
+
+            <button type="submit"
+                    class="rounded-(--radius-field) bg-(--color-danger) px-4 py-1.5 text-xs font-semibold
+                           text-white hover:bg-(--color-danger-hover)">
+                {{ __('core.action.cancel') }}
+            </button>
+        </form>
     @endif
 
     <form method="POST" action="{{ route('sales.direct.store') }}"
@@ -65,10 +83,11 @@
               packs: @js($packs),
               paymentTermDefault: @js($paymentTermDefault),
               carriers: @js($carriers),
+              drivers: @js($drivers),
               depositMethods: @js($depositMethods),
               moneyAccounts: @js($moneyAccounts),
               draftKey: 'abos.direct-sale.{{ App\Core\Support\CompanyContext::id() }}.{{ auth()->id() }}',
-              hasErrors: @js($errors->any()),
+              hasErrors: @js($errors->any() || session('approval_failed', false)),
               texts: @js([
                   'notForSales' => __('sales::message.not_for_sales'),
                   'freeBeyondRatio' => __('sales::validation.free_over_allowance'),
@@ -76,8 +95,14 @@
                   'creditWall' => __('sales::message.credit_wall_body'),
                   'lotIsRequired' => __('sales::validation.lot_must_be_chosen'),
                   'lotAlreadyInCart' => __('sales::validation.lot_already_in_cart'),
+                  'itemAlreadyInCart' => __('sales::validation.item_already_in_cart'),
                   'freeNextAt' => __('sales::message.free_next_at'),
+                  'openDraftBlocks' => __('sales::validation.open_draft_blocks_new_bill'),
               ]),
+              pendingDrafts: @js($pendingDrafts ?? []),
+              resume: @js($resume ?? null),
+              pendingUrl: @js(route('sales.direct.create')),
+              transferModes: @js($transferModes ?? []),
               freeAllowedUrl: @js(route('sales.direct.free_allowed')),
               warehouseId: @js($warehouse?->id),
               creditRules: @js($creditRules),
@@ -102,7 +127,7 @@
               ফেলতেন। ⓘ দাম: সার্ভার যদি চালানটা ফিরিয়ে দেয়, কার্টটা
               যায় — কিন্তু সেটা আজও যেত, এই বদলে নতুন কিছু হারায়নি।
           --}}
-          x-init="lookForDraft()"
+          x-init="start()"
           x-effect="saveDraft()"
           @submit="guardSubmit($event)"
 
@@ -169,6 +194,16 @@
 
           class="grid gap-3 xl:grid-cols-[1fr_17rem]">
         @csrf
+
+        {{-- ⭐ রাখা খসড়া — মালিকের নকশা, ২৬ সেপ্টেম্বর ২০২৬: "খসড়া রাখুন"
+             বিলটা রাখে, আর পাকা হয় এই পর্দাতেই ফিরে এসে।
+
+             ⓘ `screen_state` পর্দার পুরো ছবি (সারি, লট, ফ্রি, উপহার, ছাড়,
+             জমা) — পেন্ডিং থেকে খুললে হুবহু ফেরে। `resume_invoice_id` বলে
+             কোন খসড়াটা পাকা হচ্ছে; ⚠️ সেবা তখন **একই** বিল-চালান পাকা করে,
+             নম্বর না বদলে। --}}
+        <input type="hidden" name="screen_state" :value="screenSnapshot">
+        <input type="hidden" name="resume_invoice_id" :value="resumeId">
 
         {{--
             ── মজুদ নেই — পর্দার মাঝখানে, লাল, শব্দসহ ──────────────────────
@@ -245,6 +280,57 @@
                 <button type="button" @click="closeCreditBlock()" x-ref="creditWallOk"
                         class="mt-6 w-full rounded-(--radius-field) bg-(--color-danger) px-4 py-3
                                text-lg font-bold text-white hover:bg-(--color-danger-hover)">
+                    {{ __('sales::message.credit_wall_ok') }}
+                </button>
+            </div>
+        </div>
+
+        {{--
+            ── ⭐ দুইটা পপ-আপ — মালিকের ছবি, ২৭ সেপ্টেম্বর ২০২৬ (সন্ধ্যা) ─────────
+
+            ⓵ অনুমোদনের বার্তা (*"অনুমোদনের জন্য পাঠানো হয়েছে — ডেলিভারি চালান ·
+              ৳… যিনি সই দেবেন…"*) — পাতার মাথার ব্যানারে নয়, বোতামের নিচেও নয়।
+            ⓶ বাকির সীমা ছাড়ানোর সতর্কতা — কেবল জানায়, সারিটা কার্টে যায়।
+
+            ⓘ দুইটাই উপরের সীমার দেয়ালের হুবহু ছাঁচ (`alertdialog`, একই ধ্বনি —
+            [[direct-sale.js]] `soundTheAlarm`), যাতে কাউন্টারের সব জরুরি কথা
+            একই চেহারায় আসে। ⚠️ দেয়ালের লাল নয়, সতর্কতার রং — এগুলো থামায় না।
+        --}}
+        <div data-popup="approval-notice" x-show="approvalNoticeShown" x-cloak role="alertdialog" aria-modal="true"
+             aria-labelledby="approval-notice-title"
+             class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+            <div class="w-full max-w-lg rounded-(--radius-card) border-2 border-(--color-warning)
+                        bg-(--color-surface-card) p-6 text-center shadow-lg">
+                <p id="approval-notice-title" class="text-2xl font-bold text-(--color-warning-hover)">
+                    {{ __('sales::message.approval_notice_title') }}
+                </p>
+
+                <p class="mt-4 text-lg font-semibold leading-relaxed text-(--color-ink)"
+                   x-ref="approvalNoticeText" x-text="approvalNotice">{{ session('approval_notice') }}</p>
+
+                <button type="button" @click="closeApprovalNotice()"
+                        class="mt-6 w-full rounded-(--radius-field) bg-(--color-warning) px-4 py-3
+                               text-lg font-bold text-(--color-warning-ink) hover:bg-(--color-warning-hover)">
+                    {{ __('sales::message.credit_wall_ok') }}
+                </button>
+            </div>
+        </div>
+
+        <div data-popup="credit-warning" x-show="creditWarningOpen" x-cloak role="alertdialog" aria-modal="true"
+             aria-labelledby="credit-warning-title"
+             class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+            <div class="w-full max-w-lg rounded-(--radius-card) border-2 border-(--color-warning)
+                        bg-(--color-surface-card) p-6 text-center shadow-lg">
+                <p id="credit-warning-title" class="text-2xl font-bold text-(--color-warning-hover)">
+                    {{ __('sales::message.credit_warning_title') }}
+                </p>
+
+                <p class="mt-4 text-lg font-semibold leading-relaxed text-(--color-ink)"
+                   x-text="creditWarning"></p>
+
+                <button type="button" @click="closeCreditWarning()"
+                        class="mt-6 w-full rounded-(--radius-field) bg-(--color-warning) px-4 py-3
+                               text-lg font-bold text-(--color-warning-ink) hover:bg-(--color-warning-hover)">
                     {{ __('sales::message.credit_wall_ok') }}
                 </button>
             </div>
@@ -652,6 +738,33 @@
                                 <span class="num" x-text="'৳' + money(subTotal)"></span>
                             </div>
 
+                            {{-- ⭐ অবশিষ্ট সীমা এখানেও — মালিকের ছবি, ২৬ সেপ্টেম্বর
+                                 ২০২৬: *"চলতি মোট er niche o অবশিষ্ট সীমা bosbe mane dui
+                                 jaygay ei thakbe"*। ⓘ সংখ্যাটা ডানের হিসাবের সারির হুবহু
+                                 একই getter (`creditLeft`), তাই দুই জায়গায় কখনো আলাদা
+                                 দেখাবে না। --}}
+                            <template x-if="hasCustomer && hasCreditLimit">
+                                <div class="flex justify-between">
+                                    <span class="text-(--color-ink-muted)">{{ __('sales::field.credit_left') }}</span>
+                                    <span class="num font-semibold"
+                                          :class="! termUsesCredit
+                                            ? 'text-(--color-ink-muted)'
+                                            : (creditLeft > 0 ? 'text-(--color-success)' : 'text-(--color-danger)')"
+                                          x-text="'৳' + money(creditLeft > 0 ? creditLeft : 0)"></span>
+                                </div>
+                            </template>
+
+                            {{-- ⭐ সীমা অতিক্রমও এখানে — মালিকের ছবি, ২৭ সেপ্টেম্বর ২০২৬
+                                 (সন্ধ্যা): চলতি মোটের নিচে অবশিষ্ট সীমা **আর** সীমা অতিক্রম;
+                                 ডানের প্যানেলেরটাও থাকে। ⓘ একই getter (`creditOver`)। --}}
+                            <template x-if="hasCustomer && hasCreditLimit && creditOver > 0">
+                                <div class="mt-0.5 flex justify-between rounded-(--radius-field) bg-(--color-danger)
+                                            px-1.5 font-bold text-white" data-row="credit-over">
+                                    <span>{{ __('sales::message.credit_over') }}</span>
+                                    <span class="num" x-text="'৳' + money(creditOver)"></span>
+                                </div>
+                            </template>
+
                             {{-- ⭐ আর কত বাকিতে দেওয়া যাবে — মালিকের নির্দেশ, ২৩ সেপ্টেম্বর ২০২৬।
 
                                  তাঁর কথা: *"avelable Cr Limit … এই লাইন box e চলতি মোট er niche"*।
@@ -734,12 +847,16 @@
 
                         {{-- ক্রয়মূল্য — ভেতরের কথা, গ্রাহককে পড়ে শোনানোর
                              জন্য নয়। তাই বোতামের পেছনে: চোখে পড়ে না,
-                             কিন্তু দরকার হলে এক চাপ দূরে। --}}
+                             কিন্তু দরকার হলে এক চাপ দূরে।
+                             ⛔ চাবি (`sales.cost.view`) না থাকলে বোতামটাই নেই —
+                             সংখ্যাটাও নিয়ামক পাঠায় না। --}}
+                        @can('sales.cost.view')
                         <button type="button" @click="showCosting = ! showCosting"
                                 class="w-full rounded-(--radius-field) leading-tight border border-(--color-border)
                                        px-1 py-1.5 text-2xs font-medium">
                             {{ __('sales::field.costing') }}
                         </button>
+                        @endcan
 
                         <button type="button" @click="clearEntry()"
                                 class="w-full rounded-(--radius-field) leading-tight bg-(--color-danger)/10 px-2 py-1.5
@@ -749,10 +866,22 @@
 
                         {{-- ⓘ ক্রয়মূল্যের সংখ্যাটা তিন কলাম জুড়ে, বোতামের সারির নিচে।
                              ⚠️ একটা কলামে বসালে ≈৯০px-এ একটা দাম কাটা পড়ত। --}}
+                        @can('sales.cost.view')
                         <span x-show="showCosting" x-cloak
                               class="num col-span-full text-end text-xs text-(--color-ink-muted)"
                               x-text="picked ? money(picked.cost) : ''"></span>
+                        @endcan
                     </div>
+
+                    {{-- ⭐ বাকির সীমার সতর্কতা — তিন বোতামের নিচে। মালিকের ছবি,
+                         ২৬ সেপ্টেম্বর ২০২৬: তীর এঁকে এই জায়গা, আর *"jast warning
+                         but atkabena"*।
+
+                         ⓘ এটা কেবল জানায়, সারি তোলা আটকায় না। ⛔ দেয়াল "নিশ্চিত
+                         করুন"-এ (পপআপ আর শব্দ), আর তার পিছনে সেবা
+                         ([[CreditExposure::assertRoom()]])। --}}
+                    {{-- ⓘ সীমার সতর্কতা এখন পপ-আপ (উপরে, `credit-warning`) — মালিকের ছবি,
+                         ২৭ সেপ্টেম্বর ২০২৬ (সন্ধ্যা)। এখানের লেখাটা সরানো হলো। --}}
                     </div>{{-- ডান কলামের মোড়ক শেষ --}}
                     {{--
                         ── ছবির ঘরটা তুলে দেওয়া হলো (৩ সেপ্টেম্বর ২০২৬) ──────
@@ -871,7 +1000,8 @@
                                         <td class="num" x-text="row.refDate || '—'"></td>
                                         <td x-text="depositMethodName(row.methodId)"></td>
                                         <td x-text="depositAccountName(row.accountId)"></td>
-                                        <td class="num" x-text="row.reference || '—'"></td>
+                                        {{-- ⓘ ব্যাংকের জমায় ট্রান্সফার মোডও — "NPSB · TRX123" --}}
+                                        <td class="num" x-text="depositRefText(row)"></td>
                                         <td x-text="row.narration || '—'"></td>
                                         <td class="num text-end font-semibold"
                                             x-text="money(row.amount)"></td>
@@ -893,6 +1023,16 @@
                                              নাম বিশ্বাস করা হয় না। --}}
                                         <td class="hidden">
                                             <x-counter.deposit-fields />
+
+                                            {{-- ⭐ ব্যাংক/মোবাইল ব্যাংকিংয়ের তথ্য — মালিকের
+                                                 নির্দেশ, ২৭ সেপ্টেম্বর ২০২৬। ⓘ কেবল এই
+                                                 পর্দার, তাই ক্রয়ের সাথে ভাগ করা
+                                                 কম্পোনেন্টে নয়; কেবল ভরা ঘর, আর সারির
+                                                 উপায়ের ধরন ধরে ([[depositDetailsOf()]])। --}}
+                                            <template x-for="d in depositDetailsOf(row)" :key="d.key">
+                                                <input type="hidden" :name="'deposits[' + i + '][' + d.key + ']'"
+                                                       :value="d.value">
+                                            </template>
                                         </td>
                                     </tr>
                                 </template>

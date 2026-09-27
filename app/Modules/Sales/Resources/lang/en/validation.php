@@ -24,14 +24,21 @@ return [
     /* ⓘ Reasons in bn/validation.php — the owner chose mandatory lots. */
     'lot_must_be_chosen' => 'This item needs a lot — without one, a return or a recall cannot be traced.',
     'lot_already_in_cart' => 'That lot is already in the cart — pick another, or take that row back up to edit.',
+    'item_already_in_cart' => 'This item is already in the cart — one row per item; take that row back up and change its quantity.',
 
     /* ⓘ The service names the product — reasons in bn/validation.php. */
     'lot_must_be_chosen_for' => ':product needs a lot.',
     'lot_twice_in_one_bill' => ':product — the same lot cannot appear on two lines. Merge them, or pick another lot.',
+    'lot_expired_for' => ':product — lot :lot has expired; nothing can be sold or given free from it. Pick another lot.',
+    'bill_discount_over_total' => ':no — a bill discount of :discount on a bill of :total. The discount cannot exceed the total.',
     'free_beyond_ratio' => ':product — :free free given, but the ratio of this lot allows at most :allowed. '
         .'You cannot pass on more free goods than the supplier gave.',
     'no_lines' => 'At least one line is needed — a document with no lines does nothing.',
     'invoice_no_taken' => 'Invoice :no already exists — give it a different number.',
+    'challan_no_taken' => 'Challan :no already exists — give it a different number.',
+    'parked_draft_gone' => 'This draft is no longer open — someone may have confirmed it. Check the pending list again.',
+    'parked_draft_other_customer' => 'Draft :no belongs to another customer — the customer cannot change; start a new bill.',
+    'open_draft_blocks_new_bill' => 'Draft bill :no is still open for this customer — confirm, cancel or edit it first (open it from Pending).',
 
     // Counter shifts
     'till_already_open' => 'A shift is already open on :till. Two people answerable for one drawer means nobody is — close the other one first.',

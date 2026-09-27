@@ -5,7 +5,9 @@ declare(strict_types=1);
 return [
     'challan_needs_an_order' => 'A challan is written against an order. Goods that leave without one have no paper saying who asked for them.',
 
-    'direct_sale_held' => ':invoice kept as a draft — the deposit is waiting for approval. Once signed, confirm the sale from this page; the goods go out and the invoice can be printed then.',
+    'direct_sale_held' => ':invoice kept as a draft — the deposit is waiting for approval. Once signed, confirm the sale from invoice :invoice; the goods go out and the invoice can be printed then.',
+    'draft_parked' => 'Draft kept — invoice :invoice, challan :challan. Open it from "Pending" on this screen to confirm.',
+    'draft_discarded' => 'Draft :no cancelled.',
     'held_sale_finished' => ':no confirmed — the goods are out, and the invoice and deposit are on the books.',
     'held_explain' => 'Until approval the challan and invoice stay drafts, no goods have left, and the invoice is not printed.',
 
@@ -271,6 +273,8 @@ return [
     'credit_wall_title' => 'Over the limit — this bill cannot go',
     'credit_wall_body' => 'This customer has ৳:left of credit left, and this bill is ৳:short over it. Take a deposit at the counter, or reduce the bill. No one may cross the credit limit — not even the owner.',
     'credit_wall_ok' => 'Understood',
+    'approval_notice_title' => 'Waiting for approval',
+    'credit_warning_title' => 'Over the credit limit',
     'credit_held' => 'Unbilled DOs and drafts',
     'credit_over' => 'Over the limit',
 ];

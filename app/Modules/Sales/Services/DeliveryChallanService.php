@@ -121,7 +121,7 @@ final class DeliveryChallanService
             $order = $this->resolveOrder($data['sales_order_id'] ?? null);
             $warehouse = $this->resolveWarehouse($data['warehouse_id'] ?? $order?->warehouse_id);
 
-            $documentNo = $this->numbers->next('DC');
+            $documentNo = $this->challanNumber(trim((string) ($data['document_no'] ?? '')));
 
             $challan = DeliveryChallan::create([
                 'company_id' => CompanyContext::id(),
@@ -829,5 +829,39 @@ final class DeliveryChallanService
         }
 
         return $year;
+    }
+
+    /**
+     * চালানের নম্বর — হাতে দেওয়া, নাহলে সিরিজের।
+     *
+     * ⭐ কাউন্টারে "চালান নম্বর" ঘর — মালিকের ছবি, ২৬ সেপ্টেম্বর ২০২৬।
+     * ⓘ বিল নম্বরের হুবহু ছাঁচ ([[SalesInvoiceService::create()]]): পর্দার
+     * ঘরে সিরিজের পরেরটা আগে থেকে ভরা থাকে, আর সেটা না বদলালে তা **সিরিজেরই**
+     * — ⚠️ নাহলে সিরিজ এক ধাপও এগোত না, আর দিনের দ্বিতীয় চালানেই একই নম্বর।
+     *
+     * ⛔ হাতে লেখা নম্বর আগে কোনো চালানে বসে থাকলে পড়ার মতো বার্তা;
+     * শেষ পাহারা তবু ডাটাবেসের ইউনিক ইনডেক্স (`company_id, document_no`)।
+     */
+    private function challanNumber(string $given): string
+    {
+        if ($given !== '' && ! $this->numbers->isNextNumber('DC', $given)) {
+            if (DeliveryChallan::query()->where('document_no', $given)->exists()) {
+                throw ValidationException::withMessages([
+                    'challan_no' => __('sales::validation.challan_no_taken', ['no' => $given]),
+                ]);
+            }
+
+            return $given;
+        }
+
+        for ($attempt = 0; $attempt < 50; $attempt++) {
+            $candidate = $this->numbers->next('DC');
+
+            if (! DeliveryChallan::query()->where('document_no', $candidate)->exists()) {
+                return $candidate;
+            }
+        }
+
+        return $this->numbers->next('DC');
     }
 }
