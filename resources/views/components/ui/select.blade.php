@@ -110,8 +110,10 @@
         @endif
 
         @foreach ($options as $value => $text)
-            <option value="{{ $value }}" @if (filled($kinds[$value] ?? null)) data-kind="{{ $kinds[$value] }}" @endif
-                    @selected(! blank($current) && (string) $current === (string) $value)>
+            {{-- ⚠️ `@selected` ঠিক `value`-এর পাশে — ২৮ সেপ্টেম্বর ২০২৬। ⓘ কিছু পরীক্ষা
+                 হুবহু `value="…" selected` খোঁজে; মাঝে লাইন ভাঙলে ব্রাউজারে কিছু বদলায় না,
+                 কিন্তু সেই পরীক্ষাগুলো লাল হয় (abos-7c ধরেছেন)। তাই `data-kind` পরে। --}}
+            <option value="{{ $value }}" @selected(! blank($current) && (string) $current === (string) $value) @if (filled($kinds[$value] ?? null)) data-kind="{{ $kinds[$value] }}" @endif>
                 {{ $text }}
             </option>
         @endforeach
