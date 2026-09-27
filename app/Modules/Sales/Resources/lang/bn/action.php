@@ -78,4 +78,5 @@ return [
     'add_band' => 'ধাপ যোগ করুন',
     'activate_scheme' => 'চালু করুন',
     'cancel_invoice' => 'বিল বাতিল করুন',
+    'open_draft' => 'খুলুন',
 ];

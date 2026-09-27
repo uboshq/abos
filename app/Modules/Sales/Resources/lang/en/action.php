@@ -95,4 +95,5 @@ return [
     'add_band' => 'Add a band',
     'activate_scheme' => 'Activate',
     'cancel_invoice' => 'Cancel invoice',
+    'open_draft' => 'Open',
 ];

@@ -20,6 +20,7 @@ return [
     'by_brand' => 'Sales by Brand',
     'pos' => 'Counter (POS)',
     'direct' => 'Direct Sales',
+    'direct_drafts' => 'Draft List',
     'returns' => 'Sales Returns',
     'lot_trace' => 'Trace a lot (recall)',
     'shift' => 'Counter shift',

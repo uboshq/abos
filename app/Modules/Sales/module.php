@@ -133,6 +133,14 @@ return [
             ['label' => 'sales::menu.direct', 'icon' => 'sales', 'route' => 'sales.direct.create', 'permission' => 'sales.challan.create',
                 'setting' => 'sales.screen_direct'],
 
+            /*
+             * ⭐ রাখা খসড়া — সরাসরি বিক্রয়ের ঠিক পরে, একই চাবি ও একই সুইচে
+             * (মালিকের নির্দেশ, ২৮ সেপ্টেম্বর ২০২৬)। ⓘ কাউন্টার বন্ধ রাখা ডিপোর
+             * খসড়াও থাকে না, তাই আলাদা সুইচ লাগে না।
+             */
+            ['label' => 'sales::menu.direct_drafts', 'icon' => 'inbox', 'route' => 'sales.direct.drafts',
+                'permission' => 'sales.challan.create', 'setting' => 'sales.screen_direct'],
+
             ['label' => 'sales::menu.challans', 'icon' => 'challan', 'route' => 'sales.challan.index', 'permission' => 'sales.challan.view',
                 'setting' => 'sales.screen_challans'],
 

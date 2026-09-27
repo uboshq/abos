@@ -79,6 +79,13 @@ Route::middleware('auth')->prefix('sales')->group(function () {
         Route::post('/drafts/{invoice}/discard', [DirectSaleController::class, 'discard'])->name('discard');
 
         /*
+         * ⭐ রাখা খসড়ার তালিকা — মালিকের নির্দেশ, ২৮ সেপ্টেম্বর ২০২৬: *"সরাসরি
+         * বিক্রয় menu er pore ro ekta menu … খসড়া"*। ⓘ কেবল দেখা আর খোলা —
+         * খসড়া বানানো ও পাকা করা কাউন্টারেই, তাই একই চাবি।
+         */
+        Route::get('/drafts', [DirectSaleController::class, 'drafts'])->name('drafts');
+
+        /*
          * এই মালে কতটা ফ্রি — সারি যোগ করার আগে জিজ্ঞাসা।
          *
          * ⓘ এটা প্রশ্ন, আদেশ নয় — ⚠️ কিছু বসায় না, কেবল সংখ্যাটা

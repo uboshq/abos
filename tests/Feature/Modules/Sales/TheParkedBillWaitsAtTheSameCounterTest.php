@@ -599,6 +599,56 @@ final class TheParkedBillWaitsAtTheSameCounterTest extends TestCase
         $this->assertNotNull($row->counter_draft);
     }
 
+    // ── ⭐ খসড়া তালিকা — মালিকের নির্দেশ, ২৮ সেপ্টেম্বর ২০২৬ ────────────────
+
+    /**
+     * তালিকায় এই কোম্পানির রাখা খসড়া আসে, খোলার লিংকসহ — অন্য কোম্পানিরটা নয়,
+     * আর পাকা হয়ে যাওয়া বিলও নয়।
+     */
+    public function test_the_draft_list_shows_open_drafts_and_opens_them_at_the_counter(): void
+    {
+        $mine = $this->park();
+        $foreign = $this->park([], $this->other);
+        DB::table('sal_invoices')->where('id', $foreign->id)->update([
+            'company_id' => Company::query()->whereKeyNot($this->company->id)->orderBy('id')->firstOrFail()->id,
+        ]);
+
+        $html = $this->get(route('sales.direct.drafts'))->assertOk()->getContent();
+
+        $this->assertStringContainsString(e($mine->document_no), $html, '⛔ রাখা খসড়াটা তালিকায় নেই।');
+        $this->assertStringContainsString(e(route('sales.direct.create', ['draft' => $mine->id])), $html,
+            '⛔ খসড়াটা কাউন্টারে খোলার লিংক নেই।');
+        $this->assertStringNotContainsString(e(route('sales.direct.create', ['draft' => $foreign->id])), $html,
+            '⛔ অন্য কোম্পানির খসড়া তালিকায় এসেছে।');
+
+        /* ⓘ পাকা বিল তালিকায় আসে না — কেবল এখনো খোলা খসড়া */
+        $this->sell(['resume_invoice_id' => $mine->id, 'save_as_draft' => '0'])->assertSessionHasNoErrors();
+
+        $this->assertStringNotContainsString(e(route('sales.direct.create', ['draft' => $mine->id])),
+            $this->get(route('sales.direct.drafts'))->assertOk()->getContent(),
+            '⛔ পাকা হয়ে যাওয়া বিলটা এখনো খসড়া তালিকায়।');
+    }
+
+    /** তালিকা থেকে বাতিল করলে তালিকাতেই ফেরা — আর চাবি ছাড়া পাতাটাই বন্ধ। */
+    public function test_discarding_from_the_list_returns_to_the_list_and_the_list_needs_the_counter_key(): void
+    {
+        $invoice = $this->park();
+
+        $this->post(route('sales.direct.discard', $invoice), ['reason' => 'ভুল পার্টি', 'back' => 'drafts'])
+            ->assertSessionHasNoErrors()
+            ->assertRedirect(route('sales.direct.drafts'));
+
+        $this->assertSame(DocumentStatus::CANCELLED, $invoice->fresh()->status);
+
+        $clerk = User::factory()->create(['current_company_id' => $this->company->id]);
+        $clerk->companies()->attach($this->company->id, ['is_active' => true]);
+
+        $this->actingAs($clerk)->get(route('sales.direct.drafts'))->assertForbidden();
+
+        $clerk->givePermissionTo('sales.challan.create');
+        $this->actingAs($clerk->fresh())->get(route('sales.direct.drafts'))->assertOk();
+    }
+
     // ── ⓹ হাতে লেখা চালান নম্বর ──────────────────────────────────────────
 
     /** ⭐ হাতে লেখা চালান নম্বর বসে — আর একই নম্বর দ্বিতীয়বার নেওয়া হয় না। */

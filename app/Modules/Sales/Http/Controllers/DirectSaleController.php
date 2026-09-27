@@ -1209,9 +1209,37 @@ class DirectSaleController extends Controller implements HasMiddleware
 
         $this->sales->discardParked($invoice, $data['reason']);
 
+        // ⓘ তালিকা থেকে বাতিল করলে তালিকাতেই ফেরা — কাউন্টারে নয়
         return redirect()
-            ->route('sales.direct.create')
+            ->route($request->input('back') === 'drafts' ? 'sales.direct.drafts' : 'sales.direct.create')
             ->with('saved', __('sales::message.draft_discarded', ['no' => $invoice->document_no]));
+    }
+
+    /**
+     * রাখা খসড়ার তালিকা — মালিকের নির্দেশ, ২৮ সেপ্টেম্বর ২০২৬।
+     *
+     * ⓘ ঠিক [[pendingDrafts()]]-এর একই ছাঁকনি (কাউন্টারের খসড়া, এখনো খসড়া),
+     * যাতে কাউন্টারের Pending ড্রপডাউন আর এই তালিকা কখনো আলাদা কথা না বলে।
+     * ⚠️ মডেলের স্কোপ কোম্পানি ও শাখা বসায়, তাই অন্যের খসড়া আসে না।
+     */
+    public function drafts(Request $request): View
+    {
+        $q = trim((string) $request->query('q', ''));
+
+        $drafts = SalesInvoice::query()
+            ->where('status', 'draft')
+            ->whereNotNull('counter_draft')
+            ->with(['customer', 'lines.challanLine.challan'])
+            ->when($q !== '', fn ($query) => $query->search($q))
+            ->orderByDesc('id')
+            ->paginate(50)
+            ->withQueryString();
+
+        return view('sales::direct.drafts', [
+            'menu' => $this->menu->forUser($request->user()),
+            'drafts' => $drafts,
+            'q' => $q,
+        ]);
     }
 
     /**
