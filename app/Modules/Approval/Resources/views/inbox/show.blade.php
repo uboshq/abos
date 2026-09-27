@@ -255,6 +255,38 @@
 
         <div class="min-w-0 space-y-3 lg:sticky lg:top-4">
             @if ($approval->status === \App\Models\Approval::PENDING && $canDecide)
+                {{-- ⭐ চারটা কাজ এক কার্ডে, ট্যাবে — মালিকের নির্দেশ, ২৮ সেপ্টেম্বর ২০২৬:
+                     *"Scrol kore dekte hoy, egulo … guciye sundor kore daw"*। ⓘ আগে চারটা
+                     কার্ড একটার নিচে আরেকটা, আর শেষেরটা পর্দার নিচে নামত। এখন একবারে
+                     একটাই ফর্ম; ⚠️ ক্রম আগের মতোই — প্রথমে সই, শেষে হাতবদল। --}}
+                <div x-data="{ act: 'approve' }"
+                     class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-3">
+                    <div role="tablist" class="mb-3 grid grid-cols-2 gap-1 rounded-(--radius-field)
+                                bg-(--color-surface-app) p-1 sm:grid-cols-4 lg:grid-cols-2">
+                        <button type="button" @click="act = 'approve'"
+                                :class="act === 'approve' ? 'bg-(--color-brand-600) text-white' : 'text-(--color-ink-muted) hover:bg-(--color-surface-hover)'"
+                                class="rounded-(--radius-field) px-2 py-1.5 text-xs font-semibold transition-colors">
+                            {{ __('approval::action.approve') }}
+                        </button>
+                        <button type="button" @click="act = 'reject'"
+                                :class="act === 'reject' ? 'bg-(--color-danger) text-white' : 'text-(--color-ink-muted) hover:bg-(--color-surface-hover)'"
+                                class="rounded-(--radius-field) px-2 py-1.5 text-xs font-semibold transition-colors">
+                            {{ __('approval::action.reject') }}
+                        </button>
+                        <button type="button" @click="act = 'fix'"
+                                :class="act === 'fix' ? 'bg-(--color-warning) text-(--color-warning-ink)' : 'text-(--color-ink-muted) hover:bg-(--color-surface-hover)'"
+                                class="rounded-(--radius-field) px-2 py-1.5 text-xs font-semibold transition-colors">
+                            {{ __('approval::action.send_back') }}
+                        </button>
+                        @if ($forwardTo !== [])
+                        <button type="button" @click="act = 'forward'"
+                                :class="act === 'forward' ? 'bg-(--color-ink) text-(--color-surface-card)' : 'text-(--color-ink-muted) hover:bg-(--color-surface-hover)'"
+                                class="rounded-(--radius-field) px-2 py-1.5 text-xs font-semibold transition-colors">
+                            {{ __('approval::action.forward') }}
+                        </button>
+                        @endif
+                    </div>
+
                 {{-- ⛔ সইয়ের আগে একটা প্রশ্ন — আর শর্টকাট এটা এড়াতে পারে না।
 
                      ⓘ নিশ্চিতকরণটা [[actions.js]]-এর `data-confirm`-এ, অর্থাৎ
@@ -271,8 +303,7 @@
                           : __('approval::message.approve_confirm', [
                               'amount' => \App\Core\Support\Money::format($approval->amount),
                           ]) }}"
-                      class="rounded-(--radius-card) border border-(--color-border)
-                             bg-(--color-surface-card) p-4">
+                      x-show="act === 'approve'">
                     @csrf
 
                     <label class="block">
@@ -293,8 +324,7 @@
                      প্রথমেই জানতে চান কেন, আর না জানলে একই অনুরোধ আবার
                      আসে। --}}
                 <form method="POST" action="{{ route('approval.inbox.reject', $approval->id) }}"
-                      class="rounded-(--radius-card) border border-(--color-border)
-                             bg-(--color-surface-card) p-4">
+                      x-show="act === 'reject'" x-cloak>
                     @csrf
 
                     {{-- ⭐ কারণটা বাছাই করা হয়, শুধু লেখা নয় — ধাপ ১০।
@@ -343,8 +373,7 @@
                      রিপোর্ট আর bulk — সবগুলোর `match` শাখা বাড়াতে হত, আর
                      যেখানে বাড়ানো হত না সেখানে কাগজটা **নীরবে অদৃশ্য** হত। --}}
                 <form method="POST" action="{{ route('approval.inbox.reject', $approval->id) }}"
-                      class="rounded-(--radius-card) border border-(--color-border)
-                             bg-(--color-surface-card) p-4">
+                      x-show="act === 'fix'" x-cloak>
                     @csrf
 
                     {{-- ⓘ কারণ-কোডটা লুকানো ঘরে, বাহিরে নয়।
@@ -380,8 +409,7 @@
                      তাই সহজ পথটা যেন উপরে থাকে। --}}
                 @if ($forwardTo !== [])
                     <form method="POST" action="{{ route('approval.inbox.forward', $approval->id) }}"
-                          class="rounded-(--radius-card) border border-(--color-border)
-                                 bg-(--color-surface-card) p-4">
+                          x-show="act === 'forward'" x-cloak>
                         @csrf
 
                         <x-ui.select name="to"
@@ -407,6 +435,7 @@
                         </x-ui.button>
                     </form>
                 @endif
+                </div>
             @elseif ($approval->status === \App\Models\Approval::PENDING)
                 {{-- ⭐ কেন পারছেন না — তিনটা কারণের মধ্যে কোনটা।
 
