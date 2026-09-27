@@ -78,7 +78,8 @@ class SetupController extends Controller
              * এখনো কোনো প্রশাসক নেই যিনি পরে দুর্বল পাসওয়ার্ড ধরতে
              * পারতেন।
              */
-            'password' => ['required', 'confirmed', Password::min(10)->letters()->numbers()],
+            // ⛔ ১০ থেকে ১২, আর ফাঁসের তালিকা — নিরীক্ষা ২৭ সেপ্টেম্বর ২০২৬; এখন কর্মীর দরজার সমান, কারণ UserController-এ
+            'password' => ['required', 'confirmed', Password::min(12)->letters()->numbers()->uncompromised()],
 
             /*
              * ⚠️ অন্তত একটা ইংরেজি অক্ষর — আর এটা খামখেয়ালি নয়।

@@ -40,6 +40,16 @@ final class Totp
     private const ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
 
     /**
+     * একটা কোড সবচেয়ে বেশি কত সেকেন্ড "ঠিক" থাকতে পারে — ঘড়ির ছাড়সহ।
+     *
+     * ⓘ ধাপ `s`-এর কোড মেলে যতক্ষণ সার্ভারের ধাপ `s-1` থেকে `s+1`-এর
+     * মধ্যে — অর্থাৎ তিনটা ধাপ, নব্বই সেকেন্ড। [[MfaService]] খরচ হওয়া
+     * ধাপের চিহ্ন ঠিক এতক্ষণ রাখে: এর পরে কোডটা এমনিতেই মেলে না, তাই
+     * মনে রাখারও আর কিছু থাকে না।
+     */
+    public const LIFETIME_SECONDS = (2 * self::DRIFT + 1) * self::PERIOD;
+
+    /**
      * নতুন একটা গোপন চাবি — base32-এ, ৩২ অক্ষর (১৬০ বিট)।
      *
      * `random_bytes` — `rand()` নয়। দ্বিতীয়টা অনুমান করা যায়, আর
@@ -79,21 +89,38 @@ final class Totp
      */
     public static function verify(string $secret, string $code, ?int $at = null): bool
     {
+        return self::matchingStep($secret, $code, $at) !== null;
+    }
+
+    /**
+     * কোডটা কোন ধাপের — না মিললে null।
+     *
+     * ── ⛔ কেন কেবল হ্যাঁ/না যথেষ্ট ছিল না, ২৭ সেপ্টেম্বর ২০২৬ ─────────
+     * [[verify()]] বলত "কোডটা ঠিক", কিন্তু বলত না **কোন ধাপের** কোড মিলল।
+     * ⚠️ আর ধাপটা না জানলে "এই কোড আগে একবার চলেছে" মনে রাখার কোনো উপায়
+     * থাকে না — ঘড়ির ছাড়ের দেড় মিনিটে একই কোড যতবার খুশি চলত।
+     *
+     * ⓘ এই শ্রেণিটা নিজে কিছু মনে রাখে না (কোনো ডাটাবেজ বা ক্যাশ নয়) —
+     * সে কেবল গোনে। খরচের হিসাব [[MfaService]]-এর, কারণ সেটা জানে
+     * কোডটা **কার**।
+     */
+    public static function matchingStep(string $secret, string $code, ?int $at = null): ?int
+    {
         $code = preg_replace('/\D/', '', $code) ?? '';
 
         if (strlen($code) !== self::DIGITS) {
-            return false;
+            return null;
         }
 
         $step = intdiv($at ?? time(), self::PERIOD);
 
         for ($i = -self::DRIFT; $i <= self::DRIFT; $i++) {
             if (hash_equals(self::codeAtStep($secret, $step + $i), $code)) {
-                return true;
+                return $step + $i;
             }
         }
 
-        return false;
+        return null;
     }
 
     /**

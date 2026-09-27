@@ -72,7 +72,8 @@ class CustomerPortalController extends Controller
              */
             'password' => [
                 'required', 'string', 'max:191', 'confirmed',
-                Password::min(8)->letters()->numbers(),
+                // ⛔ ১২ অক্ষর আর ফাঁসের তালিকা — নিরীক্ষা ২৭ সেপ্টেম্বর ২০২৬; কারণ UserController-এ
+                Password::min(12)->letters()->numbers()->uncompromised(),
             ],
         ]);
 

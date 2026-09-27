@@ -4,6 +4,7 @@ namespace Tests;
 
 use Illuminate\Foundation\Testing\TestCase as BaseTestCase;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
 use RuntimeException;
 
 abstract class TestCase extends BaseTestCase
@@ -114,6 +115,24 @@ abstract class TestCase extends BaseTestCase
      *
      * ⓘ একটা অলিখিত নিয়ম আর কোনো নিয়ম না থাকা — কার্যত এক জিনিস।
      */
+    /**
+     * ⛔ পরীক্ষা বাইরের নেটে যায় না — ২৭ সেপ্টেম্বর ২০২৬।
+     *
+     * ⓘ পাসওয়ার্ডের নিয়মে এখন `uncompromised()` (ফাঁস হওয়া তালিকা,
+     * api.pwnedpasswords.com)। নতুন পাসওয়ার্ড বসানো প্রতিটা পরীক্ষা নাহলে সত্যিকারের
+     * ঐ সার্ভারে যেত — নেট না থাকলে ৩০ সেকেন্ড ঝুলত, আর ফল নেটের মর্জিতে।
+     * ⭐ এখানে ফাঁকা উত্তর = "ফাঁস হয়নি"; যে পরীক্ষা ফাঁস হওয়া পাসওয়ার্ড মাপে
+     * সে নিজের নকল বসায় ([[AnEightLetterPasswordWasEnoughTest]])।
+     * ⚠️ Http-এর নকলে আগে বসানোটাই জেতে — নিজের নকল লাগলে আগে
+     * `Http::swap(new \Illuminate\Http\Client\Factory)`, তারপর `Http::fake()`।
+     */
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        Http::fake(['api.pwnedpasswords.com/*' => Http::response('', 200)]);
+    }
+
     protected function setUpTraits(): array
     {
         $this->refuseToTouchRealData();

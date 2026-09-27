@@ -38,7 +38,7 @@ return [
     'email' => 'Email address',
     'new_password' => 'New password',
     'confirm_password' => 'Type the new password again',
-    'password_rule' => 'At least 8 characters, including at least one letter and one number.',
+    'password_rule' => 'At least 12 characters, including at least one letter and one number.',
 
     /*
      * Conditional wording — "if". Saying "we have sent it" would itself be

@@ -303,7 +303,7 @@ class ProfileController extends Controller
      * মালিক জানতেন কেবল যেদিন ঢুকতে পারতেন না।
      *
      * ── ⓘ নিয়মটা প্রশাসকের পর্দার সাথে এক ───────────────────────────
-     * অক্ষর **আর** সংখ্যা, অন্তত ৮ — [[App\Modules\SystemAdmin\Http\Controllers\UserController]]
+     * অক্ষর **আর** সংখ্যা, অন্তত ১২, ফাঁসের তালিকায় নয় — [[App\Modules\SystemAdmin\Http\Controllers\UserController]]
      * যা চায় হুবহু তাই। ⚠️ দুই জায়গায় দুই নিয়ম থাকলে একজন এমন
      * পাসওয়ার্ড বসাতেন যেটা অন্য পর্দা মানত না।
      */
@@ -316,7 +316,16 @@ class ProfileController extends Controller
                 'string',
                 'max:191',
                 'confirmed',
-                Password::min(8)->letters()->numbers(),
+                /*
+                 * ⛔ ১২ অক্ষর আর ফাঁসের তালিকা — নিরীক্ষা, ২৭ সেপ্টেম্বর ২০২৬।
+                 * ⓘ আট অক্ষরের অক্ষর-সংখ্যার পাসওয়ার্ড (`password1`) প্রতিটা
+                 * আক্রমণ-তালিকার প্রথম পাতায়। `uncompromised()` Have I Been
+                 * Pwned-কে কেবল hash-এর প্রথম পাঁচ অক্ষর পাঠায় — পাসওয়ার্ড
+                 * কখনো বাইরে যায় না; আর নেট না পেলে Laravel দরজা আটকায় না।
+                 * ⚠️ একই নিয়ম পাঁচটা দরজায় — [[AnEightLetterPasswordWasEnoughTest]]
+                 * প্রতিটায় আলাদা করে প্রমাণ করে।
+                 */
+                Password::min(12)->letters()->numbers()->uncompromised(),
             ],
         ]);
 

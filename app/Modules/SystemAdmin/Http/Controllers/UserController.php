@@ -939,7 +939,7 @@ class UserController extends Controller implements HasMiddleware
             /*
              * নতুন ব্যবহারকারীতে পাসওয়ার্ড লাগে, সম্পাদনায় নয়।
              *
-             * আট অক্ষর — কারণ এই লগইনের পেছনে টাকার খাতা, আর ছোট
+             * বারো অক্ষর (২৭ সেপ্টেম্বর ২০২৬ পর্যন্ত আট) — কারণ এই লগইনের পেছনে টাকার খাতা, আর ছোট
              * পাসওয়ার্ড আন্দাজ করা যায়। কী লেখা হলো তা কোথাও দেখানো
              * বা লেখা হয় না; ভুলে গেলে আবার বসাতে হয়।
              *
@@ -958,7 +958,16 @@ class UserController extends Controller implements HasMiddleware
                 $user === null ? 'required' : 'nullable',
                 'string',
                 'max:191',
-                Password::min(8)->letters()->numbers(),
+                /*
+                 * ⛔ ১২ অক্ষর আর ফাঁসের তালিকা — নিরীক্ষা, ২৭ সেপ্টেম্বর ২০২৬।
+                 * ⓘ আট অক্ষরের অক্ষর-সংখ্যার পাসওয়ার্ড (`password1`) প্রতিটা
+                 * আক্রমণ-তালিকার প্রথম পাতায়। `uncompromised()` Have I Been
+                 * Pwned-কে কেবল hash-এর প্রথম পাঁচ অক্ষর পাঠায় — পাসওয়ার্ড
+                 * কখনো বাইরে যায় না; আর নেট না পেলে Laravel দরজা আটকায় না।
+                 * ⚠️ একই নিয়ম পাঁচটা দরজায় — [[AnEightLetterPasswordWasEnoughTest]]
+                 * প্রতিটায় আলাদা করে প্রমাণ করে।
+                 */
+                Password::min(12)->letters()->numbers()->uncompromised(),
             ],
 
             'locale' => ['required', Rule::in(['bn', 'en'])],

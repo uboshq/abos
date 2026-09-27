@@ -48,7 +48,8 @@ class NoDoorIsWeakerThanTheStaffDoorTest extends TestCase
      * কিবোর্ডে টাইপ করেন আর জটিল নিয়ম বসালে পাসওয়ার্ড কাগজে লেখা শুরু
      * হয় — তখন নিয়মটা নিরাপত্তা বাড়ায় না, কমায়।
      */
-    private const STAFF_MIN = 8;
+    // ⛔ ৮ থেকে ১২ — নিরীক্ষা, ২৭ সেপ্টেম্বর ২০২৬ ([[AnEightLetterPasswordWasEnoughTest]])
+    private const STAFF_MIN = 12;
 
     /**
      * ⚠️ যে দরজাগুলো সত্যিই আছে — পাহারাটা অন্তত এগুলো দেখেই থাকবে।

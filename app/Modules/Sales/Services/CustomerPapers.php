@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Sales\Services;
 
+use App\Core\Services\LoginJournal;
 use App\Core\Support\CompanyContext;
 use App\Models\LedgerEntry;
 use App\Modules\Customer\Models\Customer;
@@ -46,6 +47,11 @@ use Illuminate\Support\Facades\Auth;
  */
 final class CustomerPapers
 {
+    /** ⓘ কেবল [[recordSignIn()]]-এর জন্য — ঢোকার খাতা, কর্মীর দরজার সেই একই লেখক। */
+    public function __construct(
+        private readonly LoginJournal $logins,
+    ) {}
+
     /**
      * যিনি ঢুকেছেন — আর কেবল তিনিই।
      *
@@ -63,6 +69,35 @@ final class CustomerPapers
         CompanyContext::set($customer->company_id, $customer->branch_id);
 
         return $customer;
+    }
+
+    /**
+     * সফল ঢোকা `login_history`-তে — ডিলারের নিজের নামে, গার্ড থেকে।
+     *
+     * ── ⚠️ কেন এটা লাগে, ২৭ সেপ্টেম্বর ২০২৬ ─────────────────────────────
+     * পোর্টালের দরজা এখন কর্মীর দরজার সেই একই [[LoginLock]] মানে, আর
+     * তালাটা গোনে "শেষ সফল লগইনের পর থেকে"। ⛔ সফলটা না লিখলে গোনা কখনো
+     * শূন্যে ফিরত না — সারা বছরের আটটা টাইপের ভুল জমে ডিলার প্রতিটা
+     * নতুন ভুলের পর পনেরো মিনিট বাইরে থাকতেন।
+     *
+     * ── ⓘ কেন এখানে, কন্ট্রোলারে নয় ────────────────────────────────────
+     * এই শ্রেণির ভিত্তি-নিয়মটাই খাটে: পদ্ধতিটা "কার" জিজ্ঞেস করে না,
+     * গ্রাহক আসে [[customer()]] থেকে — তাই ডাকা হয় লগইনের **পরে**, আর
+     * ভুল কোম্পানির নামে সারি বসানোর কোনো পথ থাকে না।
+     * [[EveryPortalScreenAsksTheNarrowPathTest]] পোর্টালের কন্ট্রোলারে
+     * সরাসরি মডেল-ডাক গোনে, আর সেই তালিকা কেবল কমে।
+     *
+     * ── ⓘ লেখাটা জার্নালেরই ─────────────────────────────────────────────
+     * [[LoginJournal::succeededFor()]] — কর্মীর সারির সেই একই লেখক, তাই
+     * নাম ছাঁটা, IP, ব্রাউজার আর নীরবে-ব্যর্থ হওয়ার নিয়ম দুই দরজায় এক।
+     */
+    public function recordSignIn(string $identifier): void
+    {
+        /*
+         * ⓘ গ্রাহক গার্ড থেকে, কোম্পানি তাঁর নিজের সারি থেকে — ডাকার
+         * জায়গা কোনো আইডি পাঠায় না।
+         */
+        $this->logins->succeededFor($identifier, $this->customer()->company_id);
     }
 
     /**

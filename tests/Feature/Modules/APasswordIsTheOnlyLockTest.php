@@ -172,7 +172,12 @@ class APasswordIsTheOnlyLockTest extends TestCase
     {
         $secret = $this->turnOn();
 
-        $this->tryLogin(['code' => Totp::codeFor($secret)])
+        /*
+         * ⓘ পরের ধাপের কোড — এই ধাপেরটা `turnOn()`-এর চালুতেই খরচ হয়ে
+         * গেছে, আর ২৭ সেপ্টেম্বর ২০২৬ থেকে একটা কোড একবারই চলে
+         * ([[TheSameCodeOpenedTheDoorTwiceTest]])।
+         */
+        $this->tryLogin(['code' => Totp::codeFor($secret, time() + 30)])
             ->assertRedirect(route('dashboard'));
 
         $this->assertAuthenticatedAs($this->user);

@@ -93,8 +93,8 @@ class NobodyCouldOpenTheCustomersDoorTest extends TestCase
     {
         $this->actingAs($this->owner)
             ->post(route('customer.portal.store', $this->customer), [
-                'password' => 'shop-pass-1',
-                'password_confirmation' => 'shop-pass-1',
+                'password' => 'shop-pass-2026',
+                'password_confirmation' => 'shop-pass-2026',
             ])
             ->assertRedirect(route('customer.show', $this->customer));
 
@@ -111,7 +111,7 @@ class NobodyCouldOpenTheCustomersDoorTest extends TestCase
 
         $this->post(route('sales.portal.login.attempt'), [
             'code' => 'DOOR-1',
-            'password' => 'shop-pass-1',
+            'password' => 'shop-pass-2026',
         ])->assertRedirect(route('sales.portal.home'));
     }
 
@@ -140,8 +140,8 @@ class NobodyCouldOpenTheCustomersDoorTest extends TestCase
     {
         $this->actingAs($this->owner)
             ->post(route('customer.portal.store', $this->customer), [
-                'password' => 'shop-pass-1',
-                'password_confirmation' => 'shop-pass-2',
+                'password' => 'shop-pass-2026',
+                'password_confirmation' => 'shop-pass-2027',
             ])->assertSessionHasErrors('password');
 
         $this->assertFalse((bool) $this->customer->fresh()->portal_enabled);
@@ -170,7 +170,7 @@ class NobodyCouldOpenTheCustomersDoorTest extends TestCase
         auth()->guard('web')->logout();
 
         $this->post(route('sales.portal.login.attempt'), [
-            'code' => 'DOOR-1', 'password' => 'shop-pass-1',
+            'code' => 'DOOR-1', 'password' => 'shop-pass-2026',
         ])->assertSessionHasErrors('code');
     }
 
@@ -191,7 +191,7 @@ class NobodyCouldOpenTheCustomersDoorTest extends TestCase
         $this->enable();
 
         $this->post(route('sales.portal.login.attempt'), [
-            'code' => 'DOOR-1', 'password' => 'shop-pass-1',
+            'code' => 'DOOR-1', 'password' => 'shop-pass-2026',
         ])->assertRedirect(route('sales.portal.home'));
 
         $this->get(route('sales.portal.home'))->assertOk();
@@ -213,13 +213,13 @@ class NobodyCouldOpenTheCustomersDoorTest extends TestCase
 
         // পুরনো hash রয়ে গেছে, তাই একই পাসওয়ার্ড দিয়ে আবার চালু করা যায়
         $this->actingAs($this->owner)->post(route('customer.portal.store', $this->customer), [
-            'password' => 'shop-pass-1', 'password_confirmation' => 'shop-pass-1',
+            'password' => 'shop-pass-2026', 'password_confirmation' => 'shop-pass-2026',
         ]);
 
         auth()->guard('web')->logout();
 
         $this->post(route('sales.portal.login.attempt'), [
-            'code' => 'DOOR-1', 'password' => 'shop-pass-1',
+            'code' => 'DOOR-1', 'password' => 'shop-pass-2026',
         ])->assertRedirect(route('sales.portal.home'));
     }
 
@@ -238,7 +238,7 @@ class NobodyCouldOpenTheCustomersDoorTest extends TestCase
 
         $this->actingAs($this->salesman)
             ->post(route('customer.portal.store', $this->customer), [
-                'password' => 'shop-pass-1', 'password_confirmation' => 'shop-pass-1',
+                'password' => 'shop-pass-2026', 'password_confirmation' => 'shop-pass-2026',
             ])->assertForbidden();
 
         $this->assertFalse((bool) $this->customer->fresh()->portal_enabled);
@@ -369,7 +369,7 @@ class NobodyCouldOpenTheCustomersDoorTest extends TestCase
         CompanyContext::clear();
 
         $this->post(route('sales.portal.login.attempt'), [
-            'code' => 'DOOR-1', 'password' => 'shop-pass-1',
+            'code' => 'DOOR-1', 'password' => 'shop-pass-2026',
         ])->assertRedirect(route('sales.portal.home'));
 
         CompanyContext::clear();
@@ -447,7 +447,7 @@ class NobodyCouldOpenTheCustomersDoorTest extends TestCase
         ])->assertStatus(429);
     }
 
-    private function enable(string $password = 'shop-pass-1'): void
+    private function enable(string $password = 'shop-pass-2026'): void
     {
         $this->actingAs($this->owner)->post(route('customer.portal.store', $this->customer), [
             'password' => $password,

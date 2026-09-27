@@ -40,7 +40,25 @@ class LoginJournal
         return $this->write($identifier, $user, false, $reason);
     }
 
-    private function write(string $identifier, ?User $user, bool $succeeded, ?string $reason): ?LoginAttempt
+    /**
+     * সফল ঢোকা — যিনি `User` নন (পোর্টালের ডিলার), তাঁর কোম্পানি হাতে দিয়ে।
+     *
+     * ── ⭐ কেন আলাদা পদ্ধতি, ২৭ সেপ্টেম্বর ২০২৬ ──────────────────────────
+     * পোর্টাল এখন কর্মীর দরজার সেই একই [[LoginLock]] মানে, আর তালাটা গোনে
+     * "শেষ সফল লগইনের পর থেকে" — সফলটা না লিখলে ডিলারের গোনা কখনো শূন্যে
+     * ফিরত না। ⚠️ [[succeeded()]] একটা `User` চায়, আর `login_history.user_id`
+     * কেবল `users`-এর দিকে তাকায়; তাই সারিটা `user_id` ছাড়া, কোম্পানি
+     * ডাকার জায়গা থেকে।
+     *
+     * ⓘ হাতে লেখা দ্বিতীয় একটা `create()` নয় — একই [[write()]], যাতে নাম
+     * ছাঁটা, IP আর নীরবে-ব্যর্থ হওয়ার নিয়ম দুই জায়গায় দুই রকম না হয়।
+     */
+    public function succeededFor(string $identifier, ?int $companyId): ?LoginAttempt
+    {
+        return $this->write($identifier, null, true, null, $companyId);
+    }
+
+    private function write(string $identifier, ?User $user, bool $succeeded, ?string $reason, ?int $companyId = null): ?LoginAttempt
     {
         try {
             return LoginAttempt::create([
@@ -51,7 +69,7 @@ class LoginJournal
                  * ঢোকার পরে। কনটেক্সট থেকে নিলে প্রতিটা সারিতে খালি
                  * বসত, আর কোম্পানি ধরে ছাঁকা যেত না।
                  */
-                'company_id' => $user?->current_company_id,
+                'company_id' => $user?->current_company_id ?? $companyId,
                 'user_id' => $user?->getKey(),
 
                 /*

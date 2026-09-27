@@ -161,7 +161,8 @@ class PasswordResetController extends Controller
         $data = $request->validate([
             'token' => ['required', 'string'],
             'email' => ['required', 'string', 'email', 'max:191'],
-            'password' => ['required', 'confirmed', Password::min(8)->letters()->numbers()],
+            // ⛔ ১২ অক্ষর আর ফাঁসের তালিকা — নিরীক্ষা ২৭ সেপ্টেম্বর ২০২৬; কারণ UserController-এ
+            'password' => ['required', 'confirmed', Password::min(12)->letters()->numbers()->uncompromised()],
         ]);
 
         $status = PasswordBroker::reset($data, function (User $user, string $password): void {

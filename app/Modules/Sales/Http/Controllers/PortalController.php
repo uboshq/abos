@@ -4,10 +4,13 @@ declare(strict_types=1);
 
 namespace App\Modules\Sales\Http\Controllers;
 
+use App\Core\Security\LoginLock;
+use App\Core\Services\LoginJournal;
 use App\Core\Services\SettingsService;
 use App\Core\Support\CompanyContext;
 use App\Http\Controllers\Controller;
 use App\Models\LedgerEntry;
+use App\Models\LoginAttempt;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\Customer\Models\Customer;
 use App\Modules\Sales\Models\DepositClaim;
@@ -37,9 +40,31 @@ use Illuminate\View\View;
  */
 class PortalController extends Controller
 {
+    /**
+     * খাতায় আর তালায় ডিলারের কোডের আগে এই চিহ্ন।
+     *
+     * ── ⚠️ কেন আলাদা নামের জগৎ ─────────────────────────────────────────
+     * কর্মী আর ডিলার একই `login_history`-তে, আর [[LoginLock]] গোনে টাইপ
+     * করা নাম ধরে। ⛔ চিহ্ন ছাড়া কর্মীর দরজায় `CUS-0007` নামে আটটা ভুল
+     * ডিলার `CUS-0007`-কে তালাবদ্ধ করত — একটা দরজা দিয়ে আরেকটা বন্ধ
+     * করা যেত। ⓘ আর খাতার পর্দায় চিহ্নটা দেখেই বোঝা যায় চেষ্টাটা কোন
+     * দরজায়।
+     */
+    public const JOURNAL_PREFIX = 'portal:';
+
+    /**
+     * অচেনা কোডে যার বিপরীতে পাসওয়ার্ড মেলানো হয় — কখনো মেলে না।
+     *
+     * ⓘ [[CredentialCheck::verify()]]-এর হুবহু একই কৌশল: bcrypt-এর আকারে
+     * একটা hash, খরচ ১২, যাতে যাচাইটা আসলটার মতোই সময় নেয়।
+     */
+    private const DUMMY_HASH = '$2y$12$.....................................................';
+
     public function __construct(
         private readonly DepositClaimService $claims,
         private readonly CustomerPapers $papers,
+        private readonly LoginLock $lock,
+        private readonly LoginJournal $logins,
     ) {}
 
     /**
@@ -68,6 +93,31 @@ class PortalController extends Controller
             'code' => ['required', 'string', 'max:64'],
             'password' => ['required', 'string'],
         ]);
+
+        $identifier = self::JOURNAL_PREFIX.trim($data['code']);
+
+        /*
+         * ⛔ তালাটা আগে — খোঁজার আগে, পাসওয়ার্ড মেলানোর আগে। নিরীক্ষা,
+         * ২৭ সেপ্টেম্বর ২০২৬।
+         *
+         * ── কী ছিল না ─────────────────────────────────────────────────
+         * পাহারা ছিল কেবল `throttle:5,1` — **IP ধরে**। ⚠️ বহু IP থেকে
+         * চালানো একটা পাসওয়ার্ড-তালিকা প্রতিটা IP-তে মিনিটে পাঁচের নিচে
+         * থাকে, আর তখন একটা ডিলারের কোডে দিনে হাজার চেষ্টা চলত।
+         *
+         * ⭐ তালাটা কর্মীর দরজার **সেই একই** [[LoginLock]] — দ্বিতীয় কোনো
+         * তালা নয়। দুইটা তালা মানে একদিন দুইটা আলাদা নিয়ম।
+         *
+         * ⓘ পাসওয়ার্ড মেলানোর আগে, কারণ তালাবদ্ধ অবস্থায় bcrypt চালালে
+         * ঢুকতে না পারলেও সার্ভারের CPU খাওয়ানো যেত।
+         */
+        if (($minutes = $this->lock->locked($identifier)) !== null) {
+            $this->logins->failed($identifier, null, LoginAttempt::LOCKED);
+
+            throw ValidationException::withMessages([
+                'code' => __('auth.locked', ['minutes' => $minutes]),
+            ]);
+        }
 
         /*
          * প্রার্থীরা — কোড ধরে, ইমেইল নয়।
@@ -107,10 +157,33 @@ class PortalController extends Controller
          * ধরা পড়েছে ব্রাউজারে, লাইভে দেওয়ার আগে।
          */
         $customer = $candidates->first(fn (Customer $c) => Hash::check(
-            $data['password'], (string) $c->portal_password,
+            $data['password'], (string) ($c->portal_password ?: self::DUMMY_HASH),
         ));
 
+        /*
+         * ⛔ অচেনা কোডেও একটা hash যাচাই — নিরীক্ষা, ২৭ সেপ্টেম্বর ২০২৬।
+         *
+         * আগে কোড না মিললে উপরের `first()` একটাও যাচাই চালাত না, আর
+         * উত্তরটা কয়েক মিলিসেকেন্ডে ফিরত; চেনা কোডে একটা bcrypt লাগত।
+         * ⚠️ পর্দার বার্তা এক হলেও **সময়টা** আলাদা ছিল — আর সময় মেপেই
+         * বলা যেত কোন কোডগুলোর পোর্টাল চালু। ⓘ এই লাইনটা তাই অপচয় নয়।
+         */
+        if ($candidates->isEmpty()) {
+            Hash::check($data['password'], self::DUMMY_HASH);
+        }
+
         if ($customer === null) {
+            /*
+             * খাতায় আসল কারণটা, পর্দায় নয়। ⓘ "অচেনা কোড" মানে কেউ কোড
+             * আন্দাজ করছেন, "ভুল পাসওয়ার্ড" মানে কেউ একটা চেনা কোডের
+             * পাসওয়ার্ড — দুইটা আলাদা ঘটনা, আর তালাটা দুইটাই গোনে।
+             */
+            $this->logins->failed(
+                $identifier,
+                null,
+                $candidates->isEmpty() ? LoginAttempt::UNKNOWN : LoginAttempt::WRONG_PASSWORD,
+            );
+
             /*
              * একটাই বার্তা, দুইটা ভুলের জন্য।
              *
@@ -135,6 +208,13 @@ class PortalController extends Controller
         Auth::guard('portal')->login($customer);
         $customer->forceFill(['portal_last_login_at' => now()])->saveQuietly();
         $request->session()->regenerate();
+
+        /*
+         * ⭐ সফল ঢোকাটা খাতায় — তালার গোনা এখান থেকেই শূন্যে ফেরে।
+         * ⓘ লেখাটা [[CustomerPapers::recordSignIn()]]-এ, কারণ এখন গার্ডে
+         * গ্রাহক বসে গেছেন আর "কে" উত্তরটা সেখান থেকেই আসে।
+         */
+        $this->papers->recordSignIn($identifier);
 
         return redirect()->route('sales.portal.home');
     }

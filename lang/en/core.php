@@ -1051,7 +1051,7 @@ return [
         'address' => 'Address',
 
         'password' => 'Password',
-        'password_note' => 'At least 8 characters, with letters and numbers.',
+        'password_note' => 'At least 12 characters, with letters and numbers.',
         'current_password' => 'Current password',
         'new_password' => 'New password',
         'confirm_password' => 'Type the new password again',

@@ -21,7 +21,7 @@ return [
     'email' => 'Email',
     'email_note' => 'This is who you are at the login screen.',
     'password' => 'Password',
-    'password_note' => 'At least 10 characters, with both letters and numbers — this one account holds the whole business.',
+    'password_note' => 'At least 12 characters, with both letters and numbers — this one account holds the whole business.',
     'password_confirmation' => 'Password again',
 
     'company' => 'Your business',

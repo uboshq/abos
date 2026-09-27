@@ -34,7 +34,8 @@ use Tests\TestCase;
 final class TheFourthDoorWhereSomebodyWritesMinEightAgainTest extends TestCase
 {
     /** কর্মী-অ্যাকাউন্টের নিয়ম — সবার মেঝে, ছাদ নয়। */
-    private const FLOOR = 8;
+    // ⛔ ৮ থেকে ১২ — নিরীক্ষা, ২৭ সেপ্টেম্বর ২০২৬ ([[AnEightLetterPasswordWasEnoughTest]])
+    private const FLOOR = 12;
 
     /**
      * যে জায়গাগুলো পাসওয়ার্ড **যাচাই** করে, বসায় না — আর কেন।
