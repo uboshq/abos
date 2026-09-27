@@ -55,6 +55,14 @@ class SalesInvoiceController extends Controller implements HasMiddleware
     {
         $query = SalesInvoice::query()
             ->search($request->query('q'))
+            /*
+             * ⭐ কাউন্টারের রাখা খসড়া এখানে নয় — মালিকের নির্দেশ, ২৮ সেপ্টেম্বর ২০২৬:
+             * *"খসড়া challan r Invoice list e zabena, sekhane sudu pure challan guloi"*।
+             * ⓘ খসড়াগুলোর নিজের পাতা আছে ([[DirectSaleController::drafts()]]);
+             * এখানে দেখালে একই বিক্রি দুই জায়গায় থাকত।
+             */
+            // ⚠️ কেবল এখনো খসড়া — পাকা হওয়া কাউন্টার-বিক্রি তালিকায় থাকেই
+            ->where(fn ($q) => $q->whereNull('counter_draft')->orWhere('status', '<>', DocumentStatus::DRAFT))
             ->with(['customer'])
             /*
              * এক গ্রাহকের চালানগুলো।

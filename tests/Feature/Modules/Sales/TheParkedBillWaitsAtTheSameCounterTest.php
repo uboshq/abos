@@ -629,6 +629,33 @@ final class TheParkedBillWaitsAtTheSameCounterTest extends TestCase
             '⛔ পাকা হয়ে যাওয়া বিলটা এখনো খসড়া তালিকায়।');
     }
 
+    /**
+     * ⭐ রাখা খসড়া চালান বা ইনভয়েসের তালিকায় যায় না — মালিকের নির্দেশ, ২৮
+     * সেপ্টেম্বর ২০২৬। ⓘ পাকা হওয়া কাউন্টার-বিক্রি অবশ্যই যায়।
+     */
+    public function test_a_parked_draft_stays_out_of_the_challan_and_invoice_lists(): void
+    {
+        $parked = $this->park();
+        $parkedChallan = $this->challanOf($parked);
+
+        $this->sell(['save_as_draft' => '0'], $this->other)->assertSessionHasNoErrors();
+        $sold = SalesInvoice::query()->latest('id')->firstOrFail();
+        $soldChallan = $this->challanOf($sold);
+
+        $invoices = $this->get(route('sales.invoice.index'))->assertOk()->getContent();
+        $challans = $this->get(route('sales.challan.index'))->assertOk()->getContent();
+
+        $this->assertStringNotContainsString(e(route('sales.invoice.show', $parked)), $invoices,
+            '⛔ রাখা খসড়া বিল ইনভয়েসের তালিকায় এসেছে।');
+        $this->assertStringNotContainsString(e(route('sales.challan.show', $parkedChallan)), $challans,
+            '⛔ রাখা খসড়ার চালান চালানের তালিকায় এসেছে।');
+
+        $this->assertStringContainsString(e(route('sales.invoice.show', $sold)), $invoices,
+            '⛔ পাকা কাউন্টার-বিক্রির বিল ইনভয়েসের তালিকা থেকে হারিয়েছে।');
+        $this->assertStringContainsString(e(route('sales.challan.show', $soldChallan)), $challans,
+            '⛔ পাকা কাউন্টার-বিক্রির চালান তালিকা থেকে হারিয়েছে।');
+    }
+
     /** তালিকা থেকে বাতিল করলে তালিকাতেই ফেরা — আর চাবি ছাড়া পাতাটাই বন্ধ। */
     public function test_discarding_from_the_list_returns_to_the_list_and_the_list_needs_the_counter_key(): void
     {
