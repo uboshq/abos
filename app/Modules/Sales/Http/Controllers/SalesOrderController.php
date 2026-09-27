@@ -89,7 +89,7 @@ class SalesOrderController extends Controller implements HasMiddleware
     {
         $query = SalesOrder::query()
             ->search($request->query('q'))
-            ->with(['customer', 'warehouse'])
+            ->with(['customer.location', 'warehouse'])
             // বাতিলগুলো লুকানো, মোছা নয় (নিয়ম ৫)
             ->when(! $request->boolean('cancelled'),
                 fn ($q) => $q->where('status', '<>', DocumentStatus::CANCELLED));

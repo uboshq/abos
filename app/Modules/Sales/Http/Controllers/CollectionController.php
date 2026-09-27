@@ -52,7 +52,7 @@ class CollectionController extends Controller implements HasMiddleware
     {
         $query = Collection::query()
             ->search($request->query('q'))
-            ->with(['customer', 'account'])
+            ->with(['customer.location', 'account'])
             // বাতিলগুলো লুকানো, মোছা নয় (নিয়ম ৫)
             ->when(! $request->boolean('cancelled'),
                 fn ($q) => $q->where('status', '<>', DocumentStatus::CANCELLED));

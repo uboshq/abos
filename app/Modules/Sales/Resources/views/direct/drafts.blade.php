@@ -35,6 +35,13 @@
             'render' => fn ($d) => $d->customer?->name(),
         ],
         [
+            // ⭐ গ্রাহকের পরে পয়েন্ট — মালিকের নির্দেশ, ২৮ সেপ্টেম্বর ২০২৬: সব তালিকায় অবশ্যই
+            'key' => 'point',
+            'label' => __('customer::field.point'),
+            'width' => '9rem',
+            'render' => fn ($d) => $d->customer?->location?->name() ?? '—',
+        ],
+        [
             'key' => 'total',
             'label' => __('sales::field.total'),
             'numeric' => true,

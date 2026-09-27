@@ -13,6 +13,9 @@
              'document' => $r, 'route' => 'sales.return.show'])],
         ['key' => 'customer', 'label' => __('sales::field.customer'),
          'render' => fn ($r) => $r->customer?->name()],
+        // ⭐ গ্রাহকের পরে পয়েন্ট — মালিকের নির্দেশ, ২৮ সেপ্টেম্বর ২০২৬: সব তালিকায় অবশ্যই
+        ['key' => 'point', 'label' => __('customer::field.point'), 'width' => '9rem',
+         'render' => fn ($r) => $r->customer?->location?->name() ?? '—'],
         ['key' => 'reason', 'label' => __('sales::field.reason'), 'width' => '10rem',
          'render' => fn ($r) => $r->reasonCode?->name() ?: '—'],
         ['key' => 'total', 'label' => __('sales::field.total'), 'numeric' => true, 'width' => '10rem',

@@ -1229,7 +1229,7 @@ class DirectSaleController extends Controller implements HasMiddleware
         $drafts = SalesInvoice::query()
             ->where('status', 'draft')
             ->whereNotNull('counter_draft')
-            ->with(['customer', 'lines.challanLine.challan'])
+            ->with(['customer.location', 'lines.challanLine.challan'])
             ->when($q !== '', fn ($query) => $query->search($q))
             ->orderByDesc('id')
             ->paginate(50)

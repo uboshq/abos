@@ -63,7 +63,7 @@ class SalesInvoiceController extends Controller implements HasMiddleware
              */
             // ⚠️ কেবল এখনো খসড়া — পাকা হওয়া কাউন্টার-বিক্রি তালিকায় থাকেই
             ->where(fn ($q) => $q->whereNull('counter_draft')->orWhere('status', '<>', DocumentStatus::DRAFT))
-            ->with(['customer'])
+            ->with(['customer.location'])
             /*
              * এক গ্রাহকের চালানগুলো।
              *

@@ -68,7 +68,7 @@ class DeliveryChallanController extends Controller implements HasMiddleware
                 ->whereColumn('cl.delivery_challan_id', 'sal_challans.id')
                 ->whereNotNull('i.counter_draft')
                 ->where('i.status', DocumentStatus::DRAFT))
-            ->with(['customer', 'warehouse'])
+            ->with(['customer.location', 'warehouse'])
             // বাতিলগুলো লুকানো, মোছা নয় (নিয়ম ৫)
             ->when(! $request->boolean('cancelled'),
                 fn ($q) => $q->where('status', '<>', DocumentStatus::CANCELLED));

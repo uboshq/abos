@@ -656,6 +656,28 @@ final class TheParkedBillWaitsAtTheSameCounterTest extends TestCase
             '⛔ পাকা কাউন্টার-বিক্রির চালান তালিকা থেকে হারিয়েছে।');
     }
 
+    /**
+     * ⭐ গ্রাহকের পরে পয়েন্ট — মালিকের নির্দেশ, ২৮ সেপ্টেম্বর ২০২৬: সব তালিকায় অবশ্যই।
+     * ⓘ সারি সহ পাতা — খালি তালিকায় কলামের কোড কখনো চলে না।
+     */
+    public function test_every_list_shows_the_customers_point_after_the_customer(): void
+    {
+        $point = $this->customer->location?->name();
+        $this->assertNotEmpty($point, 'প্রস্তুতিটাই ভুল — ক্রেতার পয়েন্ট নেই।');
+
+        // ⓘ আগে পাকা বিক্রি, পরে খসড়া — খোলা খসড়া থাকলে একই ক্রেতার নতুন বিল আটকায়
+        $this->sell(['save_as_draft' => '0'])->assertSessionHasNoErrors();
+        $this->park();
+
+        foreach (['sales.invoice.index', 'sales.challan.index', 'sales.direct.drafts'] as $list) {
+            $html = $this->get(route($list))->assertOk()->getContent();
+
+            $label = strpos($html, e(__('customer::field.point')));
+            $this->assertNotFalse($label, "⛔ [{$list}] পয়েন্টের কলাম নেই।");
+            $this->assertStringContainsString(e($point), $html, "⛔ [{$list}] ক্রেতার পয়েন্ট সারিতে নেই।");
+        }
+    }
+
     /** তালিকা থেকে বাতিল করলে তালিকাতেই ফেরা — আর চাবি ছাড়া পাতাটাই বন্ধ। */
     public function test_discarding_from_the_list_returns_to_the_list_and_the_list_needs_the_counter_key(): void
     {
