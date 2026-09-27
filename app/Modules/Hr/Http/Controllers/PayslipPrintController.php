@@ -54,6 +54,8 @@ class PayslipPrintController extends Controller implements HasMiddleware
             $request,
             [[$this->documentFor($payslip), (string) $payslip->net]],
             $payslip->run->document_no.'-'.$payslip->employee?->code,
+            'hr_payslip',
+            (int) $payslip->id,
         );
     }
 
@@ -69,7 +71,7 @@ class PayslipPrintController extends Controller implements HasMiddleware
 
         abort_if($documents === [], 404);
 
-        return $this->pdf($request, $documents, $run->document_no);
+        return $this->pdf($request, $documents, $run->document_no, 'hr_payroll_run', (int) $run->id);
     }
 
     /**
@@ -129,7 +131,14 @@ class PayslipPrintController extends Controller implements HasMiddleware
     /**
      * @param  list<array{0: PrintableDocument, 1: string}>  $documents  কাগজ ও তার কাঁচা নিট অঙ্ক
      */
-    private function pdf(Request $request, array $documents, string $documentNo): Response
+    /**
+     * ⛔ `$kind` আর `$documentId` ডাকার জন বলে — ২৭ সেপ্টেম্বর ২০২৬।
+     *
+     * ⓘ আগে খাতার লাইনে `(int) $id` ছিল, অথচ এই পদ্ধতিতে `$id` নেই: ২০ সেপ্টেম্বর
+     * থেকে প্রতিটা বেতনশিট ছাপা ৫০০ দিত। একটা বেতনশিট খাতায় ওঠে নিজের নামে,
+     * রানের সবগুলো রানের নামে — নাহলে "কয়টা ছাপা হলো" ভুল গুনত।
+     */
+    private function pdf(Request $request, array $documents, string $documentNo, string $kind, int $documentId): Response
     {
         /*
          * ⭐ কাগজের মাপ মালিকের বসানো, হাতে লেখা A4 নয় (২০ সেপ্টেম্বর ২০২৬)।
@@ -168,7 +177,7 @@ class PayslipPrintController extends Controller implements HasMiddleware
         $asFile = $request->boolean('download');
 
         $this->trail->record(
-            'hr_payslip', (int) $id, $paper,
+            $kind, $documentId, $paper,
             $asFile ? DocumentDelivery::DOWNLOADED : DocumentDelivery::PRINTED,
             $documentNo,
         );
