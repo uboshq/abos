@@ -147,8 +147,32 @@
                 <dt class="text-(--color-ink-muted)">{{ __('finance::field.limit_amount') }}</dt>
                 <dd class="text-end"><x-ui.amount :value="$facility->limit_amount" /></dd>
 
+                {{-- ⭐ হার যেমন লেখা হয়েছে, তেমনই ছাপা — ২৭ সেপ্টেম্বর ২০২৬।
+
+                     ⛔ এখানে হারটা সোজা ছাপা হত, আর
+                     ঘরটার কাস্ট `decimal:4` ([[BankFacility::casts]]) — অর্থাৎ
+                     অ্যাট্রিবিউটটা **স্ট্রিং** `"12.5000"`। ⚠️ ফল: মালিক `12.5`
+                     লিখলেন, পর্দা বলল `12.5000%`, আর সুদবিহীন ঋণে `0.0000%`।
+
+                     ⓘ সংখ্যাটা ভুল ছিল না, কেবল চেহারাটা — তাই কোনো দাবি লাল
+                     হয়নি, কোনো হিসাবও মেলেনি এমন হয়নি। ধরা পড়ে কেবল চোখে।
+
+                     ⓘ পথটা আমানতের পর্দার নিজের ([[finance::deposit.show]]:৮১)
+                     আর হাতধারের পর্দার ([[finance::hand-loan.show]]) — নতুন কিছু নয়।
+
+                     ⚠️ `?: '0'` টা খালি আর শূন্য — দুইটার জন্যই, কারণ PHP-তে
+                     `'0'` নিজেও মিথ্যা; দুই বেলাতেই উত্তর এক, তাই পাশের
+                     হাতধারের `=== ''` পরীক্ষার সাথে ছাপা এক থাকে। ⓘ কলামটা
+                     `NOT NULL DEFAULT 0` (মাইগ্রেশনের ৮৪ নম্বর লাইন), তাই খাতা
+                     থেকে আসা মান কখনো খালি নয় আর *"হার জানা নেই"* বলে কোনো
+                     অবস্থাই এখানে নেই। ⛔ সেজন্যই শূন্যে `—` নয়, `0%` — সুদবিহীন
+                     ঋণ সত্যিই হয়, আর ওটা একটা **উত্তর**, ফাঁকা ঘর নয়।
+
+                     ⓘ `10.0000` থেকে গুরুত্বপূর্ণ শূন্যটা কাটে না, কারণ কাস্টের
+                     কারণে দশমিক বিন্দুটা সর্বদা থাকে — প্রথম `rtrim` বিন্দুতেই
+                     থামে। ⚠️ দাবিটা তবু লেখা আছে, কাস্ট একদিন সরলে ধরা পড়বে। --}}
                 <dt class="text-(--color-ink-muted)">{{ __('finance::field.interest_rate') }}</dt>
-                <dd class="text-end">{{ $facility->interest_rate }}%</dd>
+                <dd class="text-end">{{ rtrim(rtrim((string) $facility->interest_rate, '0'), '.') ?: '0' }}%</dd>
 
                 <dt class="text-(--color-ink-muted)">{{ __('finance::field.sanctioned_on') }}</dt>
                 <dd class="text-end">{{ $facility->sanctioned_on?->translatedFormat('j F Y') }}</dd>
@@ -216,7 +240,12 @@
                     <dd class="text-end"><x-ui.amount :value="$facility->stock_value" /></dd>
 
                     <dt class="text-(--color-ink-muted)">{{ __('finance::field.margin_percent') }}</dt>
-                    <dd class="text-end">{{ $facility->margin_percent }}%</dd>
+                    {{-- ⓘ উপরের হারের হুবহু একই ভুল, একই সারাই — কেবল কাস্ট
+                         এখানে `decimal:2` ([[BankFacility::casts]]), তাই কাঁচা
+                         রূপটা `30.00%` আর `0.00%`। ⚠️ আলাদা করে লেখা হলো
+                         কারণ দুইটা ঘরের কাস্ট আলাদা, আর একটা সহায়ক বানিয়ে
+                         স্কেলটা লুকিয়ে ফেললে পরের কেউ ভুল স্কেল ধরে নিত। --}}
+                    <dd class="text-end">{{ rtrim(rtrim((string) $facility->margin_percent, '0'), '.') ?: '0' }}%</dd>
 
                     <dt class="text-(--color-ink-muted)">{{ __('finance::field.last_statement_on') }}</dt>
                     <dd class="text-end">{{ $facility->last_statement_on?->translatedFormat('j M Y') ?? '—' }}</dd>
