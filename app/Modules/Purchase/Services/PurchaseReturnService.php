@@ -186,14 +186,11 @@ final class PurchaseReturnService
                  * সত্যিই আছে সেখান থেকেই যায়। ⓘ একটাই সারিতে, তাই
                  * মোট এক মুহূর্তের জন্যও ভুল থাকে না।
                  */
-                $waiting = $this->stock->unplacedQty($line->product, $return->warehouse);
+                // ⓘ পাহারা যে ভাগ দেখে পাস করেছে, নেওয়াও ঠিক সেই ভাগ থেকে — [[returnable()]]
+                $waiting = $this->returnable($line->product, $return->warehouse)['waiting'];
                 $qty = (string) $line->qty;
 
                 $fromWaiting = bccomp($waiting, $qty, 4) >= 0 ? $qty : $waiting;
-
-                if (bccomp($fromWaiting, '0', 4) < 0) {
-                    $fromWaiting = '0';
-                }
 
                 $fromFloor = bcsub($qty, $fromWaiting, 4);
 
@@ -577,7 +574,7 @@ final class PurchaseReturnService
             return;
         }
 
-        $available = $this->stock->availableQty($product, $warehouse);
+        $available = $this->returnable($product, $warehouse)['total'];
 
         if (bccomp($available, $qty, 4) < 0) {
             throw ValidationException::withMessages([
@@ -587,6 +584,43 @@ final class PurchaseReturnService
                 ]),
             ]);
         }
+    }
+
+    /**
+     * ⛔ ফেরতের জন্য কত মাল হাতে আছে — পাহারা আর [[confirm()]] দুইজনেরই
+     * একমাত্র উৎস। ২৭ সেপ্টেম্বর ২০২৬, লাইভ-QA/প্রমাণ-পরীক্ষার ধরা।
+     *
+     * ── কী ভাঙা ছিল ─────────────────────────────────────────────────
+     * [[assertEnoughInStock()]] গুনত `availableQty()` — যা **কেবল তাক**
+     * (তাকে − অর্ডারে ধরা − আটকানো)। অথচ [[confirm()]] মালটা নেয় **আগে
+     * অপেক্ষার ঘর থেকে**, তারপর তাক থেকে। ফলে গাড়ি থেকে নামা ১০টা
+     * সাবানের ৩টা ফেরত দিতে গেলে বলত "গুদামে আছে 0" — মাল হাতের
+     * সামনে, অথচ পাহারা সেই ঘরটা দেখতেই পেত না।
+     *
+     * ⭐ তাই সংখ্যাটা এক জায়গায়, একটা মুহূর্তের ছবি থেকে
+     * ([[StockService::statesFor()]], একটা কোয়েরি):
+     *
+     *     অপেক্ষায় = unplaced              (ঋণাত্মক হলে ০)
+     *     তাকে     = তাকে − ধরা − আটকানো   (ঋণাত্মক হলে ০)
+     *     মোট      = অপেক্ষায় + তাকে
+     *
+     * ⚠️ তাকের অংশে ধরা/আটকানো বাদ — অন্যের অর্ডারে ধরা মাল ফেরতে গেলে
+     * সেই অর্ডার খালি হাতে দাঁড়াত। অপেক্ষার ঘরে কিছু ধরা যায় না, তাই
+     * সেখানে বাদ দেওয়ার কিছু নেই।
+     *
+     * ⓘ পাহারা যা "আছে" বলে, confirm() ঠিক তা-ই নেয় — দুইটা আলাদা
+     * হিসাব থাকলে আবার একদিন একটা হ্যাঁ বলত আর অন্যটা না।
+     *
+     * @return array{waiting: string, shelf: string, total: string}
+     */
+    private function returnable(Product $product, ?Warehouse $warehouse): array
+    {
+        $states = $this->stock->statesFor($product, $warehouse);
+
+        $waiting = bccomp($states['unplaced'], '0', 4) > 0 ? bcadd($states['unplaced'], '0', 4) : '0.0000';
+        $shelf = bccomp($states['available'], '0', 4) > 0 ? bcadd($states['available'], '0', 4) : '0.0000';
+
+        return ['waiting' => $waiting, 'shelf' => $shelf, 'total' => bcadd($waiting, $shelf, 4)];
     }
 
     private function resolveWarehouse(mixed $warehouseId): Warehouse
