@@ -18,7 +18,7 @@ return [
     'document' => 'Document',
     'document_type' => 'Document type',
     'amount' => 'Amount',
-    'threshold' => 'Above this amount',
+    'threshold' => 'At this amount or more',
     'why' => 'Why this rule',
     'code' => 'Code',
     'step_name' => 'Step name',
