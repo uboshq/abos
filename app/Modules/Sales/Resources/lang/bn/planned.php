@@ -1,0 +1,26 @@
+<?php
+
+declare(strict_types=1);
+
+// মেনুতে আগে বসানো পর্দা — [[PlannedScreenController]]
+return [
+    'being_built' => 'এই পর্দাটা তৈরি হচ্ছে — মেনুতে আগে বসানো হয়েছে, কাজ শেষ হলে এখানেই খুলবে।',
+    'quotation_new' => 'নতুন উদ্ধৃতি',
+    'quotation_list' => 'উদ্ধৃতির তালিকা',
+    'quotation_compare' => 'উদ্ধৃতির তুলনা',
+    'quotation_revision' => 'উদ্ধৃতির সংশোধন',
+    'order_new' => 'নতুন বিক্রয় আদেশ',
+    'order_list' => 'আদেশের তালিকা',
+    'order_pending' => 'বাকি আদেশ',
+    'order_partial' => 'আংশিক আদেশ',
+    'order_back' => 'ব্যাক অর্ডার',
+    'about_quotation_new' => 'ক্রেতাকে দামের প্রস্তাব লেখা — পণ্য, পরিমাণ, দর ও মেয়াদসহ।',
+    'about_quotation_list' => 'সব উদ্ধৃতি এক জায়গায় — খসড়া, পাঠানো, গৃহীত আর বাতিল।',
+    'about_quotation_compare' => 'একই ক্রেতার একাধিক উদ্ধৃতি পাশাপাশি রেখে দর ও শর্ত মেলানো।',
+    'about_quotation_revision' => 'পাঠানো উদ্ধৃতির নতুন সংস্করণ — আগেরটা মুছে নয়, সংস্করণ ধরে রেখে।',
+    'about_order_new' => 'ক্রেতার বিক্রয় আদেশ লেখা।',
+    'about_order_list' => 'সব বিক্রয় আদেশ এক জায়গায়।',
+    'about_order_pending' => 'যে আদেশের মাল এখনো একটুও যায়নি।',
+    'about_order_partial' => 'যে আদেশের মাল কিছু গেছে, কিছু বাকি।',
+    'about_order_back' => 'মজুদ না থাকায় যে আদেশের মাল পরে যাবে।',
+];

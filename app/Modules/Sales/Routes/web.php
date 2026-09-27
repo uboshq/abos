@@ -67,6 +67,13 @@ Route::middleware('auth')->prefix('sales')->group(function () {
      * দেখা যায়। আলাদা তালিকা রাখলে একই চালান দুই জায়গায় থাকত, আর
      * "কত মাল বেরিয়েছে" প্রশ্নের দুইটা উত্তর হত।
      */
+    /*
+     * ⭐ মেনুতে আগে বসানো পর্দা — উদ্ধৃতি ও বিক্রয় আদেশ (মালিক, ২৮ সেপ্টেম্বর ২০২৬)।
+     * ⓘ নাম তালিকার বাইরে হলে ৪০৪ ([[PlannedScreenController::SCREENS]])।
+     */
+    Route::get('/planned/{screen}', [\App\Modules\Sales\Http\Controllers\PlannedScreenController::class, 'show'])
+        ->name('planned');
+
     Route::prefix('direct')->name('direct.')->group(function () {
         Route::get('/', [DirectSaleController::class, 'create'])->name('create');
         Route::post('/', [DirectSaleController::class, 'store'])->name('store');

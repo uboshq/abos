@@ -102,6 +102,31 @@ return [
 
         'transactions' => [
             /*
+             * ⭐ উদ্ধৃতি আর বিক্রয় আদেশ — ড্যাশবোর্ডের ঠিক পরে, দুইটা ভাঁজে (মালিকের
+             * নির্দেশ, ২৮ সেপ্টেম্বর ২০২৬: *"age bosaw, code pore korbo"*)। ⓘ প্রতিটা
+             * সারি আপাতত [[PlannedScreenController]]-এর সৎ পাতায় যায়; পর্দা তৈরি
+             * হলে সারিটা নিজের রুটে সরবে।
+             */
+            ['label' => 'sales::planned.quotation_new', 'cluster' => 'quotations', 'icon' => 'book', 'route' => 'sales.planned',
+                'route_params' => ['screen' => 'quotation_new'], 'permission' => 'sales.order.view'],
+            ['label' => 'sales::planned.quotation_list', 'cluster' => 'quotations', 'icon' => 'book', 'route' => 'sales.planned',
+                'route_params' => ['screen' => 'quotation_list'], 'permission' => 'sales.order.view'],
+            ['label' => 'sales::planned.quotation_compare', 'cluster' => 'quotations', 'icon' => 'book', 'route' => 'sales.planned',
+                'route_params' => ['screen' => 'quotation_compare'], 'permission' => 'sales.order.view'],
+            ['label' => 'sales::planned.quotation_revision', 'cluster' => 'quotations', 'icon' => 'book', 'route' => 'sales.planned',
+                'route_params' => ['screen' => 'quotation_revision'], 'permission' => 'sales.order.view'],
+            ['label' => 'sales::planned.order_new', 'cluster' => 'sales_orders', 'icon' => 'receipt', 'route' => 'sales.planned',
+                'route_params' => ['screen' => 'order_new'], 'permission' => 'sales.order.view'],
+            ['label' => 'sales::planned.order_list', 'cluster' => 'sales_orders', 'icon' => 'receipt', 'route' => 'sales.planned',
+                'route_params' => ['screen' => 'order_list'], 'permission' => 'sales.order.view'],
+            ['label' => 'sales::planned.order_pending', 'cluster' => 'sales_orders', 'icon' => 'receipt', 'route' => 'sales.planned',
+                'route_params' => ['screen' => 'order_pending'], 'permission' => 'sales.order.view'],
+            ['label' => 'sales::planned.order_partial', 'cluster' => 'sales_orders', 'icon' => 'receipt', 'route' => 'sales.planned',
+                'route_params' => ['screen' => 'order_partial'], 'permission' => 'sales.order.view'],
+            ['label' => 'sales::planned.order_back', 'cluster' => 'sales_orders', 'icon' => 'receipt', 'route' => 'sales.planned',
+                'route_params' => ['screen' => 'order_back'], 'permission' => 'sales.order.view'],
+
+            /*
              * ⭐ ক্রমটা কাগজের নিজের ধারা ধরে — মালিকের নির্দেশ, ২১ সেপ্টেম্বর ২০২৬।
              *
              * ── ⓘ কেন এই ক্রম ─────────────────────────────────────────
