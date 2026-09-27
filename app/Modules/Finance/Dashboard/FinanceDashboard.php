@@ -192,7 +192,35 @@ final class FinanceDashboard implements ProvidesDashboard
 
                 new Stat(
                     label: __('finance::dashboard.capital_in'),
-                    value: Money::format(CapitalEntry::query()->where('entry_type', 'in')->sum('amount')),
+                    /*
+                     * ⛔ আগে এখানে ও `where('entry_type', 'in')` লেখা ছিল, আর
+                     * `'in'` বলে কোনো মান **কখনো লেখা হয় না**।
+                     *
+                     * ⓘ ঘরটা ধরে `contribution` বা `investment`
+                     * ([[CapitalEntry::KINDS]]) — যাচাইকরণ সেটাই বাধ্য করে,
+                     * [[CapitalFromReceipt]] সেটাই লেখে, আর ফরমের ডিফল্টও
+                     * সেটাই।
+                     *
+                     * ⚠️ তাই ছাঁকনিটা **সবসময় শূন্য সারি** পেত আর টাইলটা
+                     * ০.০০ দেখাত, যত টাকাই খাতায় বসুক। ⛔ কোনো ত্রুটি নয়,
+                     * কোনো ৫০০ নয় — সংখ্যাটা শুধু চিরকাল শূন্য।
+                     *
+                     * ⭐ আর লক্ষণটা এত বিভ্রান্তিকর এই কারণে: পাশের টাইলে
+                     * **দাতার সংখ্যা** ঠিক দেখায় (ওখানে কোনো ছাঁকনি নেই),
+                     * তাই পর্দা বলত *"একজন দাতা, মোট ০.০০"* — পড়তে ডেটা
+                     * হারানোর মতো লাগত, অথচ ডেটা অক্ষত।
+                     *
+                     * ⓘ `KINDS`-এ `PROFIT` **নেই, আর সেটা ইচ্ছাকৃত**: ধরে
+                     * রাখা মুনাফা মূলধনের সারিতে বসে, কিন্তু ওটা **বাইরে
+                     * থেকে আসা টাকা নয়**। ⚠️ সব সারি যোগ করলে টাইলটা
+                     * উল্টো দিকে ভুল বলত, আর **বড় সংখ্যা শূন্যের চেয়ে অনেক
+                     * কঠিন ধরা**।
+                     *
+                     * ⓘ পাহারা: [[TheDashboardLookedForAWordNobodyWritesTest]]।
+                     */
+                    value: Money::format(
+                        CapitalEntry::query()->whereIn('entry_type', CapitalEntry::KINDS)->sum('amount')
+                    ),
                     hint: __('finance::dashboard.capital_in_hint'),
                     href: route('finance.capital.index'),
                     tone: Stat::GOOD,

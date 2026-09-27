@@ -85,6 +85,60 @@
         <p class="mb-4 text-sm text-(--color-ink-muted)">{{ $account->note }}</p>
     @endif
 
+    {{-- ── ⭐ ধারের শর্ত — ২৭ সেপ্টেম্বর ২০২৬ ────────────────
+
+         ⛔ ঘরগুলো সংরক্ষিত হত শুরু থেকেই ([[HandLoanService::open()]]),
+         অথচ এই পাতায় দেখানো হত না — আর সংরক্ষণের পর মানুষ ঠিক
+         এই পাতাতেই আসেন। ⚠️ তাই ব্যবহারকারীর চোখে টাকা আর সুদের
+         হার *"সংরক্ষণের পরে হারিয়ে যেত"* — লাইভে ২৬ সেপ্টেম্বরে
+         মালিক ঠিক এই অভিযোগটাই করেছেন।
+
+         ⓘ ডেটা কখনো হারায়নি — সেবা পাঁচটা ঘরই লেখে। ⛔ এটা সেবার
+         বাগ নয়, **পর্দার** বাগ — আর দুইটা ব্যবহারকারীর কাছে হুবহু এক
+         দেখায়।
+
+         ── ⭐ দুইটা শূন্য এক নয় ────────────────────────────
+         ⓘ `principal` শূন্য মানে **কেউ লেখেনি** — কলামটা `NOT NULL
+         DEFAULT 0.0000`, তাই "ফাঁকা" আর "শূন্য টাকা" আলাদা করার উপায়
+         নেই। ⚠️ `0.00` ছাপলে পর্দা একটা **ভুল সত্য** বলত।
+
+         ⛔ কিন্তু `interest_rate` শূন্য মানে **সুদ নেই**, আর সেটা
+         একটা সত্যিকারের উত্তর ([[HandLoanService]]-এর নিজের টীকায় লেখা:
+         পরিচিত মানুষের ধার প্রায়ই সুদবিহীন)। ⓘ তাই ওটা `0%`।
+
+         ⓘ হারের কাস্ট `decimal:4`, তাই সোজা ছাপলে `12.5000%` বেরোত।
+         ⚠️ পাশের মেয়াদি রিণের পর্দায় (`bank-facility/show.blade.php:151`)
+         ঠিক সেই ভুলটা আছে — তাই আমানতের পর্দার পথ নেওয়া হলো।
+
+         ⓘ খাতের নামটা `$money` তালিকা থেকে — ওটা উপরে তৈরি হয় আর
+         এ পর্যন্ত **কেউ ব্যবহার করত না**। ⛔ `$account->moneyAccount` লেখা
+         যায় না: মডেলে ওই সম্পর্কটা **নেই**, তাই সেটা কোনো ত্রুটি
+         না দিয়ে চিরকাল `null` ফেরত দিত। --}}
+    @php
+        $noPrincipal = bccomp((string) $account->principal, '0', 4) === 0;
+        $rate = rtrim(rtrim((string) $account->interest_rate, '0'), '.');
+    @endphp
+
+    <section data-boxed class="mb-4 rounded-(--radius-card) border border-(--color-border) p-4">
+        <h2 class="mb-3 text-sm font-medium">{{ __('finance::field.security_and_terms') }}</h2>
+
+        <dl class="grid gap-x-6 gap-y-3 sm:grid-cols-2 xl:grid-cols-4">
+            @foreach ([
+                [__('finance::field.loan_principal'),
+                    $noPrincipal ? '—' : \App\Core\Support\Money::format($account->principal)],
+                [__('finance::field.interest_rate'), ($rate === '' ? '0' : $rate).'%'],
+                [__('finance::field.term_months'), $account->term_months ?? '—'],
+                [__('finance::field.loan_money_account'),
+                    $money[$account->money_account_id] ?? '—'],
+            ] as [$label, $value])
+                <div class="min-w-0">
+                    <dt class="text-2xs text-(--color-ink-muted)">{{ $label }}</dt>
+                    <dd class="mt-0.5 truncate">{{ $value }}</dd>
+                </div>
+            @endforeach
+        </dl>
+    </section>
+
     {{-- ── ⭐ পক্ষের সাথে জোড়া — মানচিত্র §১৪খ, ২১ সেপ্টেম্বর ২০২৬ ──────
 
          ⚠️ কেন জোড়াটা দরকার: একই মানুষ প্রায়ই একসাথে ডিলার আর ধারদাতা।

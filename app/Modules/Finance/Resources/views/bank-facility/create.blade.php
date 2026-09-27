@@ -51,7 +51,12 @@
                      মান দিয়ে ইনপুট ভরে, তাই `value` অ্যাট্রিবিউটটা একা যথেষ্ট নয়।
                      ⛔ না দিলে বারোটা ঘর ভরার পর একটা ভুলে পাতা ফিরলে
                      কিস্তির ঘরগুলো **খালি ফিরত**। */
-                  'limit' => (string) old('limit', ''),
+                  /* ⛔ ঘরটার নাম `limit_amount`, `limit` নয় — ২৬ সেপ্টেম্বর
+                     ২০২৬ পর্যন্ত এখানে ভুল চাবি ছিল, তাই `old()` অলে খালি
+                     ফিরত। ⚠️ আর তাতে ঠিক উপরের টীকায় লেখা বিপদটাই ঘটত:
+                     যাচাইকরণ একবার ব্যর্থ হলেই `x-model=limit` টাইপ করা
+                     সীমার অঙ্কটা **মুছে দিত**। */
+                  'limit' => (string) old('limit_amount', ''),
                   'rate' => (string) old('interest_rate', ''),
                   'count' => (string) old('instalments', ''),
                   'instalment' => (string) old('instalment_amount', ''),
