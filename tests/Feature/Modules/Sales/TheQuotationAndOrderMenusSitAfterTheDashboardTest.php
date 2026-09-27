@@ -50,6 +50,15 @@ final class TheQuotationAndOrderMenusSitAfterTheDashboardTest extends TestCase
         $this->assertTrue($quotations < $orders && $orders < $delivery,
             '⛔ ক্রম ভুল — উদ্ধৃতি, তারপর বিক্রয় আদেশ, তারপর বাকি সারি।');
 
+        /* ⭐ শিপমেন্ট ইনভয়েস তালিকার পরে, আর তার পরে মূল্য নির্ধারণ — মালিক, ২৮ সেপ্টেম্বর ২০২৬ */
+        $invoices = strpos($html, e(route('sales.invoice.index')));
+        $shipments = strpos($html, e(route('sales.shipment.index')));
+        $pricing = strpos($html, e(__('core.menu.pricing')));
+
+        $this->assertNotFalse($shipments, 'প্রস্তুতিটাই ভুল — শিপমেন্টের সারি নেই।');
+        $this->assertTrue($invoices !== false && $pricing !== false && $invoices < $shipments && $shipments < $pricing,
+            '⛔ ক্রম ভুল — ইনভয়েস তালিকা, তারপর শিপমেন্ট, তারপর মূল্য নির্ধারণ।');
+
         foreach (PlannedScreenController::SCREENS as $screen) {
             $this->assertStringContainsString(e(route('sales.planned', ['screen' => $screen])), $html,
                 "⛔ '{$screen}' সারিটা মেনুতে নেই।");

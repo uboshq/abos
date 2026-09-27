@@ -28,6 +28,8 @@ final class PlannedScreenController extends Controller implements HasMiddleware
     public const SCREENS = [
         'quotation_new', 'quotation_list', 'quotation_compare', 'quotation_revision',
         'order_new', 'order_list', 'order_pending', 'order_partial', 'order_back',
+        'pricing_lists', 'pricing_customer', 'pricing_channel', 'pricing_territory',
+        'pricing_special', 'pricing_dynamic',
     ];
 
     public function __construct(private readonly MenuBuilder $menu) {}

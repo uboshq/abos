@@ -142,6 +142,7 @@ return [
         'vouchers' => 'Vouchers',
         'quotations' => 'Quotations',
         'sales_orders' => 'Sales Orders',
+        'pricing' => 'Pricing',
         'notice' => 'Notices',
         'control' => 'Books control',
 

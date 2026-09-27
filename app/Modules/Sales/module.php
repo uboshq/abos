@@ -170,7 +170,19 @@ return [
                 'setting' => 'sales.screen_challans'],
 
             /*
-             * শিপমেন্ট — চালানের ঠিক নিচে, একই সুইচের পেছনে নয়।
+             * ⓘ ইনভয়েস তালিকা — মাল যাওয়ার পরে, কারণ বিলটাও তখনই
+             * সত্যি হয়। তালিকাটা সব বিল দেখায় (কাউন্টার, সরাসরি
+             * বিক্রয়, চালান থেকে বানানো), কেবল বাতিলগুলো একটা বোতামের
+             * পেছনে।
+             *
+             * ⛔ দুই মেনুতে একই তালিকা রাখা হয় না — মালিকের নিজের নিয়ম
+             * (*"ekoi jinis dui jaygay dorkar nai"*)।
+             */
+            ['label' => 'sales::menu.invoices', 'icon' => 'receipt', 'route' => 'sales.invoice.index', 'permission' => 'sales.invoice.view'],
+
+            /*
+             * শিপমেন্ট — ইনভয়েস তালিকার পরে (মালিকের নির্দেশ, ২৮ সেপ্টেম্বর ২০২৬);
+             * আগে চালানের ঠিক নিচে ছিল। একই সুইচের পেছনে নয়।
              *
              * যে ডিপো নিজের গাড়িতে মাল পাঠায় না, তার ট্রিপের পর্দাও
              * লাগে না — তাই নিজের সুইচ। কিন্তু চালান বন্ধ থাকলে
@@ -181,15 +193,22 @@ return [
                 'permission' => 'sales.shipment.view', 'setting' => 'sales.screen_shipments'],
 
             /*
-             * ⓘ ইনভয়েস তালিকা — মাল যাওয়ার পরে, কারণ বিলটাও তখনই
-             * সত্যি হয়। তালিকাটা সব বিল দেখায় (কাউন্টার, সরাসরি
-             * বিক্রয়, চালান থেকে বানানো), কেবল বাতিলগুলো একটা বোতামের
-             * পেছনে।
-             *
-             * ⛔ দুই মেনুতে একই তালিকা রাখা হয় না — মালিকের নিজের নিয়ম
-             * (*"ekoi jinis dui jaygay dorkar nai"*)।
+             * ⭐ মূল্য নির্ধারণ — শিপমেন্টের পরে, একটা ভাঁজে (মালিকের নির্দেশ, ২৮
+             * সেপ্টেম্বর ২০২৬: *"age bosaw, code pore korbo"*)। ⓘ আপাতত
+             * [[PlannedScreenController]]-এর সৎ পাতায় যায়।
              */
-            ['label' => 'sales::menu.invoices', 'icon' => 'receipt', 'route' => 'sales.invoice.index', 'permission' => 'sales.invoice.view'],
+            ['label' => 'sales::planned.pricing_lists', 'cluster' => 'pricing', 'icon' => 'wallet', 'route' => 'sales.planned',
+                'route_params' => ['screen' => 'pricing_lists'], 'permission' => 'sales.order.view'],
+            ['label' => 'sales::planned.pricing_customer', 'cluster' => 'pricing', 'icon' => 'wallet', 'route' => 'sales.planned',
+                'route_params' => ['screen' => 'pricing_customer'], 'permission' => 'sales.order.view'],
+            ['label' => 'sales::planned.pricing_channel', 'cluster' => 'pricing', 'icon' => 'wallet', 'route' => 'sales.planned',
+                'route_params' => ['screen' => 'pricing_channel'], 'permission' => 'sales.order.view'],
+            ['label' => 'sales::planned.pricing_territory', 'cluster' => 'pricing', 'icon' => 'wallet', 'route' => 'sales.planned',
+                'route_params' => ['screen' => 'pricing_territory'], 'permission' => 'sales.order.view'],
+            ['label' => 'sales::planned.pricing_special', 'cluster' => 'pricing', 'icon' => 'wallet', 'route' => 'sales.planned',
+                'route_params' => ['screen' => 'pricing_special'], 'permission' => 'sales.order.view'],
+            ['label' => 'sales::planned.pricing_dynamic', 'cluster' => 'pricing', 'icon' => 'wallet', 'route' => 'sales.planned',
+                'route_params' => ['screen' => 'pricing_dynamic'], 'permission' => 'sales.order.view'],
 
             /*
              * ⭐ "আদায়" বোতাম নেই — মালিকের নির্দেশ, ১৯ সেপ্টেম্বর ২০২৬ (ক্রয়ের
