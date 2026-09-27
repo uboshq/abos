@@ -13,6 +13,7 @@ use App\Core\Services\PermissionSyncer;
 use App\Core\Support\CompanyContext;
 use App\Core\Support\RoleLabel;
 use App\Http\Controllers\Controller;
+use App\Http\Middleware\RefuseInactiveAccounts;
 use App\Models\Branch;
 use App\Models\Company;
 use App\Models\User;
@@ -336,8 +337,29 @@ class UserController extends Controller implements HasMiddleware
                 $this->audit->recordAction($user, 'password_set');
             }
 
+            /*
+             * ⛔ নিষ্ক্রিয় করা বা পাসওয়ার্ড বসানো মানে পুরনো চাবিগুলো
+             * শেষ — নিরীক্ষা §১.৫, ২৭ সেপ্টেম্বর ২০২৬।
+             *
+             * আগে এখানে কেবল সারিটা বদলাত; "মনে রাখুন" কুকি আর ফোনের
+             * টোকেন আগের মতোই খুলত। ⓘ খোলা ওয়েব সেশনগুলো মোছা যায় না
+             * (ড্রাইভার `file`), সেগুলো পরের অনুরোধেই
+             * [[RefuseInactiveAccounts]]-এ কাটা পড়ে।
+             */
+            if (! $user->is_active || ($data['password'] ?? '') !== '') {
+                RefuseInactiveAccounts::revokeStandingAccess($user);
+            }
+
             $this->applyAccess($user, $data);
         });
+
+        /*
+         * ⓘ প্রশাসক নিজের পাসওয়ার্ডই বদলালে তাঁর এই সেশনটা থাকে —
+         * নাহলে পরের ক্লিকেই তিনি নিজেকেই বের করে দিতেন।
+         */
+        if (($data['password'] ?? '') !== '' && $request->user()?->is($user)) {
+            RefuseInactiveAccounts::keepThisSession($request, $user->fresh());
+        }
 
         return redirect()
             ->route('system_admin.user.index')

@@ -7,6 +7,7 @@ namespace App\Http\Controllers\Auth;
 use App\Core\Engines\Audit\AuditEngine;
 use App\Core\Support\MailReach;
 use App\Http\Controllers\Controller;
+use App\Http\Middleware\RefuseInactiveAccounts;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -195,6 +196,13 @@ class PasswordResetController extends Controller
              * তা সারিতেই আছে: কার অ্যাকাউন্ট, কোন IP, কোন ব্রাউজার।
              */
             $this->audit->recordAction($user, 'password_reset');
+
+            /*
+             * ⛔ ফোনের টোকেনও শেষ — নিরীক্ষা §১.৫, ২৭ সেপ্টেম্বর ২০২৬।
+             * উপরের `remember_token` কুকিটা মারে, কিন্তু Sanctum টোকেন
+             * আলাদা টেবিলে; রিসেটের পরেও ফোন ভেতরে থেকে যেত।
+             */
+            RefuseInactiveAccounts::revokeStandingAccess($user);
         });
 
         if ($status !== PasswordBroker::PASSWORD_RESET) {

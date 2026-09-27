@@ -8,6 +8,7 @@ use App\Core\Panels\FactRegistry;
 use App\Core\Services\AvatarService;
 use App\Core\Services\MenuBuilder;
 use App\Core\Support\MailReach;
+use App\Http\Middleware\RefuseInactiveAccounts;
 use App\Models\User;
 use App\Notifications\EmailChangeLink;
 use App\Notifications\EmailChangeWarning;
@@ -344,6 +345,16 @@ class ProfileController extends Controller
         }
 
         $user->forceFill(['password' => $validated['password']])->save();
+
+        /*
+         * ⛔ নতুন পাসওয়ার্ড মানে পুরনো চাবিগুলো শেষ — নিরীক্ষা §১.৫,
+         * ২৭ সেপ্টেম্বর ২০২৬। পাসওয়ার্ড বদলানোর সবচেয়ে সাধারণ কারণ "কেউ
+         * জেনে গেছে"; আগে সেই কেউ "মনে রাখুন" কুকি আর ফোনের টোকেন দিয়ে
+         * ভেতরেই থেকে যেতেন। ⓘ অন্য খোলা সেশনগুলো পরের অনুরোধে
+         * [[RefuseInactiveAccounts]]-এ কাটা পড়ে; **এই** সেশনটা থাকে।
+         */
+        RefuseInactiveAccounts::revokeStandingAccess($user);
+        RefuseInactiveAccounts::keepThisSession($request, $user);
 
         return back()->with('password_saved', true);
     }

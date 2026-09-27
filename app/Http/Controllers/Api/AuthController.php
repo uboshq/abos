@@ -9,6 +9,7 @@ use App\Core\Security\CredentialCheck;
 use App\Core\Security\MfaCodeRequired;
 use App\Core\Support\CompanyContext;
 use App\Http\Controllers\Controller;
+use App\Http\Middleware\RefuseInactiveAccounts;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -204,6 +205,21 @@ class AuthController extends Controller
          * দেয়াল", কোনটা তা বলে না; আর ওই অস্পষ্টতাই মাপা আটকে দেয়।
          */
         abort_unless($user instanceof User, 403, 'staff-token-only');
+
+        /*
+         * ⛔ বরখাস্ত মানুষ নবায়ন পান না — নিরীক্ষা §১.৫, ২৭ সেপ্টেম্বর ২০২৬।
+         *
+         * আগে এই দরজা `is_active` দেখত না, তাই নিষ্ক্রিয় করার পরেও ফোন
+         * প্রতিবার নতুন ৩০ দিনের জোড়া পেত — অর্থাৎ **চিরকাল** ভেতরে।
+         * ⓘ [[RefuseInactiveAccounts]] প্রতিটা API অনুরোধেই এটা ধরে; এখানে
+         * আবার দেখা হয় কারণ এই দরজাটাই চিরকালের চাবি, আর মিডলওয়্যার একদিন
+         * কোনো গ্রুপ থেকে বাদ পড়তে পারে।
+         */
+        if (! $user->is_active) {
+            RefuseInactiveAccounts::revokeStandingAccess($user);
+
+            return response()->json(['message' => __('auth.dismissed')], 401);
+        }
 
         $data = $request->validate([
             'deviceId' => ['required', 'string', 'max:64'],

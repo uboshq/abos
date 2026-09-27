@@ -126,4 +126,7 @@ return [
     'recovery_left' => '{0} No recovery codes left — a lost phone would lock you out|{1} Only 1 recovery code left|[2,*] :count recovery codes left',
 
     'no_company' => 'Your sign-in is correct, but you have not been added to a company yet. Ask your manager.',
+
+    'dismissed' => 'Your account has been switched off, so you have been signed out. If this looks wrong, ask your manager.',
+    'password_changed_elsewhere' => 'Your password was changed somewhere else, so this session has ended. Sign in again with the new password.',
 ];

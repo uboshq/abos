@@ -7,6 +7,7 @@ use App\Http\Middleware\ContentSecurityPolicy;
 use App\Http\Middleware\ExportListing;
 use App\Http\Middleware\NormalizeUnicodeInput;
 use App\Http\Middleware\OneSubmitPerForm;
+use App\Http\Middleware\RefuseInactiveAccounts;
 use App\Http\Middleware\RefuseSwitchedOffScreens;
 use App\Http\Middleware\RefuseWorkWithoutALicence;
 use App\Http\Middleware\ResolveCompanyContext;
@@ -205,6 +206,15 @@ return Application::configure(basePath: dirname(__DIR__))
         // কারণ প্রসঙ্গ ছাড়া টেন্যান্ট ডাটা ছোঁয়া মানে সব কোম্পানির রো দেখা।
         $middleware->web(append: [
             /*
+             * ⛔ বরখাস্ত হাতে চাবি নেই — নিরীক্ষা §১.৫, ২৭ সেপ্টেম্বর ২০২৬।
+             *
+             * `is_active` আগে কেবল লগইনে দেখা হত, তারপর সেশন চলতেই থাকত।
+             * ⓘ সবার আগে, যাতে বরখাস্ত মানুষের অনুরোধ কোনো কাজ (এমনকি
+             * ফর্মের টোকেন খরচও) করার আগেই থামে।
+             */
+            RefuseInactiveAccounts::class,
+
+            /*
              * ⛔ একটা ফর্ম একবার আঁকা, একবারই জমা — ১৩ সেপ্টেম্বর ২০২৬।
              *
              * ── কেন সবার আগে ────────────────────────────────────────
@@ -253,6 +263,14 @@ return Application::configure(basePath: dirname(__DIR__))
              * ভিউ রেন্ডার হওয়ার পরে কাজ করে, তাই সবার শেষে।
              */
             ExportListing::class,
+        ]);
+
+        /*
+         * ⛔ ফোনের দরজাতেও একই পাহারা — নিরীক্ষা §১.৫। নিষ্ক্রিয় মানুষের
+         * টোকেন পরের অনুরোধেই ৪০১ পায় আর মুছে যায়।
+         */
+        $middleware->api(append: [
+            RefuseInactiveAccounts::class,
         ]);
 
         /*
