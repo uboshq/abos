@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Http\Controllers\AttachmentController;
+use App\Http\Controllers\HealthController;
 use App\Http\Controllers\LicenceController;
 use App\Http\Controllers\MfaController;
 use App\Http\Controllers\ModuleDashboardController;
@@ -204,5 +205,15 @@ Route::get('/profile/email/confirm/{token}', [ProfileController::class, 'confirm
 Route::get('/p/{token}', [SharedPaperController::class, 'show'])
     ->where('token', '[A-Za-z0-9]{64}')
     ->name('paper.shared');
+
+/*
+ * গভীর স্বাস্থ্য-পরীক্ষা — ডাটাবেস, ডিস্ক, ব্যাকআপের বয়স। `/up` থাকে কেবল
+ * "বেঁচে আছে কি না"-র জন্য। ⚠️ `web` বাদ, কারণ সেশন আর কোম্পানির প্রসঙ্গ
+ * নিজেরাই ডাটাবেস ছোঁয় — বিস্তার [[App\Http\Controllers\HealthController]]-এ।
+ */
+Route::get('/health', HealthController::class)
+    ->withoutMiddleware('web')
+    ->middleware('throttle:'.HealthController::PER_MINUTE.',1')
+    ->name('health');
 
 require __DIR__.'/auth.php';

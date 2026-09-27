@@ -40,6 +40,7 @@ class EveryRouteIsGuardedTest extends TestCase
      */
     private const OPEN_TO_THE_WORLD = [
         'up' => 'স্বাস্থ্য পরীক্ষা — লগইন থাকার আগেই উত্তর দিতে হয়, আর ডেটার কিছুই বলে না',
+        'health' => 'গভীর স্বাস্থ্য পরীক্ষা — ডিপ্লয় আর নজরদারি লগইন ছাড়া ডাকে; উত্তরে কেবল ok/fail, চাবির বদলে throttle',
         'login' => 'দরজাটাই',
         'login.store' => 'দরজাটাই; এখানে চাবির বদলে throttle',
 

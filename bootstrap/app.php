@@ -253,16 +253,6 @@ return Application::configure(basePath: dirname(__DIR__))
              * ভিউ রেন্ডার হওয়ার পরে কাজ করে, তাই সবার শেষে।
              */
             ExportListing::class,
-
-            /*
-             * পাতা কোথা থেকে জিনিস আনতে পারবে — উত্তরের হেডারে।
-             *
-             * সবার শেষে, কারণ এটা কেবল একটা হেডার বসায় আর তার জন্য
-             * উত্তরটা তৈরি হয়ে যাওয়া দরকার। লাইভে HSTS ও বাকি তিনটা
-             * হেডার আগে থেকেই ছিল; ৩১ আগস্ট ২০২৬-এ দেখা গেল CSP-টাই
-             * কেবল নেই।
-             */
-            ContentSecurityPolicy::class,
         ]);
 
         /*
@@ -271,6 +261,20 @@ return Application::configure(basePath: dirname(__DIR__))
          * আর ডাটাবেজে আরেক রূপ যেত।
          */
         $middleware->prepend(NormalizeUnicodeInput::class);
+
+        /*
+         * ⛔ নিরাপত্তার হেডার **প্রতিটা** উত্তরে — ২৭ সেপ্টেম্বর ২০২৬, নিরীক্ষা §৯।
+         *
+         * ⓘ আগে এটা `web` গোষ্ঠীর শেষে ছিল। ⚠️ কিন্তু যে ঠিকানা কোনো রুটের সাথে
+         * মেলে না, সে `web` গোষ্ঠীতে ঢোকেই না — তার ৪০৪-এ CSP, HSTS, nosniff,
+         * Referrer আর Permissions, কিছুই যেত না। ⭐ বিশ্বব্যাপী মিডলওয়্যার সব
+         * অনুরোধ ঘিরে থাকে, ত্রুটির উত্তরও।
+         *
+         * ⓘ HTTPS-নির্ভর কিছুই এখানে বাঁধা নয়: HSTS কেবল `secure()` অনুরোধে
+         * ([[ContentSecurityPolicy::hardenTransport()]]) — লাইভের cPanel আর
+         * ম্যাক মিনির Caddy, দুই জায়গাতেই প্রক্সি যা বলে তা-ই।
+         */
+        $middleware->append(ContentSecurityPolicy::class);
 
         /*
          * রুট-মডেল বাইন্ডিং-এর আগে।

@@ -144,8 +144,15 @@ class ContentSecurityPolicy
          * দুইটা আসেনি।
          */
         $this->hardenTransport($request, $response);
+        $this->limitWhatTheBrowserShares($response);
 
-        if (strtolower((string) env('ABOS_CSP', 'on')) === 'off') {
+        /*
+         * ⛔ `config()`, `env()` নয় — ২৭ সেপ্টেম্বর ২০২৬।
+         *
+         * ⚠️ কনফিগ ক্যাশের পরে `env()` কেবল ডিফল্ট দেয়, তাই লাইভে
+         * `ABOS_CSP=off` কোনোদিন পৌঁছাত না। ব্যাখ্যা `config/abos.php`-এ।
+         */
+        if (strtolower((string) config('abos.csp', 'on')) === 'off') {
             return $response;
         }
 
@@ -198,5 +205,63 @@ class ContentSecurityPolicy
         }
 
         $response->headers->set('Strict-Transport-Security', 'max-age=31536000');
+    }
+
+    /**
+     * ব্রাউজার কী বাইরে পাঠাবে না, আর কোন যন্ত্রে হাত দেবে না।
+     *
+     * ── কেন, ২৭ সেপ্টেম্বর ২০২৬ ─────────────────────────────────────
+     * নিরীক্ষায় লাইভের হেডারে দুইটাই অনুপস্থিত। ⓘ উপরের মন্তব্যে লেখা
+     * "Referrer-Policy বসানো ছিল" — অ্যাপ কোনোদিন বসায়নি, তাই সেটা
+     * সার্ভারের হাতে ছিল, আর সার্ভার বদলালে নীরবে চলে যায়। ⭐ এখন অ্যাপ
+     * নিজেই বসায়, HSTS-এর মতোই CSP-র সুইচের **উপরে**।
+     *
+     * ── Referrer-Policy ─────────────────────────────────────────────
+     * ⚠️ ডিফল্টে ব্রাউজার বাইরের লিংকে (WhatsApp, ব্যাংকের সাইট) পুরো
+     * ঠিকানা পাঠাতে পারে — `?customer=…&from=…` সহ, আর আমাদের ঠিকানায়
+     * কোম্পানি ও গ্রাহকের পরিচয় থাকে। `strict-origin-when-cross-origin`
+     * বাইরে কেবল ডোমেইনটা পাঠায়, ভিতরে পুরোটা — নিজের পাতার "ফিরে যান"
+     * যুক্তি অক্ষত থাকে।
+     *
+     * ── Permissions-Policy ──────────────────────────────────────────
+     * মাপা হয়েছে (২৭ সেপ্টেম্বর): কোনো পর্দা ক্যামেরা, মাইক, অবস্থান,
+     * পেমেন্ট, USB/সিরিয়াল/ব্লুটুথ বা গতি-সেন্সর চায় না — কোডে
+     * `getUserMedia` বা `geolocation` একবারও নেই; হাজিরা পর্দায় অবস্থান
+     * নেই। ⓘ কাগজ স্ক্যান (`scanner.js`) ছবি নেয় `<input type="file">`
+     * থেকে — ফোন নিজের ক্যামেরা অ্যাপ খোলে, আর `camera=()` ঐ পথ আটকায় না।
+     * ⛔ তাই সবগুলো বন্ধ — একটা ঢুকে পড়া স্ক্রিপ্ট ক্যামেরা চাইলে মানুষ
+     * ভাবতেন ERP-ই চাইছে।
+     *
+     * ⓘ কেবল `fullscreen=(self)` খোলা: পর্দার খোলস (`shell.js`)
+     * `requestFullscreen()` ডাকে। ⚠️ কোনোদিন হাজিরায় অবস্থান বা ক্যামেরায়
+     * বারকোড এলে এখানে সেই একটা যন্ত্রকে `(self)` দিতে হবে — নাহলে
+     * ব্রাউজার অনুমতি না চেয়েই নীরবে "না" বলবে।
+     *
+     * ⓘ আগে থেকে বসানো থাকলে ছোঁয়া হয় না — CSP-র একই কারণে।
+     */
+    private function limitWhatTheBrowserShares(Response $response): void
+    {
+        if (! $response->headers->has('Referrer-Policy')) {
+            $response->headers->set('Referrer-Policy', 'strict-origin-when-cross-origin');
+        }
+
+        if (! $response->headers->has('Permissions-Policy')) {
+            $response->headers->set('Permissions-Policy', implode(', ', [
+                'camera=()',
+                'microphone=()',
+                'geolocation=()',
+                'payment=()',
+                'usb=()',
+                'serial=()',
+                'bluetooth=()',
+                'hid=()',
+                'accelerometer=()',
+                'gyroscope=()',
+                'magnetometer=()',
+                'display-capture=()',
+                'browsing-topics=()',
+                'fullscreen=(self)',
+            ]));
+        }
     }
 }

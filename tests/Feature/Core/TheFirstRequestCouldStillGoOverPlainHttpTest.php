@@ -97,19 +97,17 @@ final class TheFirstRequestCouldStillGoOverPlainHttpTest extends TestCase
      */
     public function test_switching_the_content_policy_off_does_not_take_these_with_it(): void
     {
-        putenv('ABOS_CSP=off');
+        // ⓘ সুইচ এখন config-এ (`abos.csp`) — env() config:cache-এর পরে null দেয়
+        config(['abos.csp' => 'off']);
 
-        try {
-            $response = $this->get('https://localhost/login');
+        $response = $this->get('https://localhost/login');
 
-            $this->assertNotNull(
-                $response->headers->get('Strict-Transport-Security'),
-                '⛔ CSP নেভালে HSTS-ও নিভে গেছে — দুইটা আলাদা জিনিস।'
-            );
+        $this->assertNull($response->headers->get('Content-Security-Policy'), 'সুইচটাই কাজ করেনি — দাবিটা কিছু মাপছে না।');
+        $this->assertNotNull(
+            $response->headers->get('Strict-Transport-Security'),
+            '⛔ CSP নেভালে HSTS-ও নিভে গেছে — দুইটা আলাদা জিনিস।'
+        );
 
-            $response->assertHeader('X-Content-Type-Options', 'nosniff');
-        } finally {
-            putenv('ABOS_CSP');
-        }
+        $response->assertHeader('X-Content-Type-Options', 'nosniff');
     }
 }
