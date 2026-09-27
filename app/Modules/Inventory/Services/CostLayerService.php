@@ -107,9 +107,43 @@ final class CostLayerService
         // কয়টা একক এক ধাপ বেশি দরে বসবে — বাকিটুকু ঠিক ততটাই
         $higher = bcmul($residue, '10000', 0);
 
+        /*
+         * ⛔ ভগ্নাংশ পরিমাণে উপরের কৌশলটা পরিমাণের বেশি বসায় —
+         * ২৭ সেপ্টেম্বর ২০২৬ব (নিরীক্ষা §২, abos-7c প্রমাণ দিয়েছেন)।
+         *
+         * ⓘ `$higher` প্রশ্নটার উত্তর *"কয়টা **একক** এক পয়সা বেশি
+         * দরে বসবে"* — আর সেটা অর্থপূর্ণ কেবল পূর্ণসংখ্যক এককে।
+         *
+         * ⚠️ ০.৭ কেজি ও বিল ১০০-তে মাপা ফল হত: `low` ১৪২.৮৫৭১,
+         * `residue` ০.০০০১, আর `$higher` = **১** — অর্থাত্ ০.৭ এল, স্তরে
+         * বসত ১.০। ⛔ আর `$rest` তখন −০.৩, যা নিচের `> 0` শর্তে
+         * **নীরবে** বাদ পড়ত। ⓘ ফল: ০.৩ একক মজুদ আর তার মূল্য শূন্য
+         * থেকে তৈরি হত, আর মজুদ-খাত মজুদ রিপোর্টের সাথে মিলত না।
+         *
+         * ⭐ সীমাটাই যথেষ্ট, আর কিছু ছাড়তেও হয় না — মেপে দেখা:
+         *     ০.৭ × ১৪২.৮৫৭১ = ৯৯.৯৯৯৯
+         *     ০.৭ × ১৪২.৮৫৭২ = ১০০.০০০০   ← হুবহু
+         * ⓘ অর্থাত্ পুরো পরিমাণটা উঁচু দরে বসলে **পরিমাণ ও মূল্য
+         * দুইটাই** ঠিক থাকে।
+         *
+         * ⚠️ প্রথমে আমি ভেবেছিলাম ভগ্নাংশে একটা ছাড়তেই হবে — পরিমাণ
+         * নয় মূল্য। ⓘ মাপাটা সেটা ভুল প্রমাণ করল, আর তাই এখানে কোনো
+         * "অনিবার্য ফারাক"-এর টীকা নেই।
+         */
+        if (bccomp($higher, $qty, 4) > 0) {
+            $higher = $qty;
+        }
+
         $layers = [];
 
-        if (bccomp($higher, '0', 0) > 0) {
+        /*
+         * ⚠️ স্কেল **৪**, ০ নয় — সীমার পরে `$higher` ভগ্নাংশ হতে পারে।
+         * ⛔ স্কেল ০-এ তুলনা করলে ০.৭ **শূন্যের সমান** গণ্য হত, তাই
+         * স্তরটা বসতই না — আর মাল এল অথচ খরচের স্তর শূন্য।
+         * ⓘ সীমা বসানোর পর এই লাইনটাও বদলাতে হয়, আর পরীক্ষাটা
+         * ঠিক এই অবস্থাটাই ধরেছে।
+         */
+        if (bccomp($higher, '0', 4) > 0) {
             $layers[] = $this->receive(
                 $product, $higher, bcadd($low, '0.0001', 4), $sourceType, $sourceId, $documentNo, $date
             );
@@ -212,13 +246,28 @@ final class CostLayerService
         int $sourceId,
         ?string $documentNo = null,
         Carbon|string|null $date = null,
+
+        /*
+         * ⭐ কোন ফেরতগুলো **এই মূল নথিরই** — ২৭ সেপ্টেম্বর ২০২৬।
+         *
+         * ⛔ আগে "আগে কতটা ফিরেছে" গোনা হত স্তর ধরে, **সব** ফেরত মিলিয়ে।
+         * ফলে একই স্তর থেকে দুই বিল মাল নিলে, এক বিলের ফেরত অন্য বিলের
+         * জায়গা খেয়ে ফেলত: S1 আর S2 দুটোই P1 থেকে ৪টা, S1-এর ৪টা ফেরত
+         * এলে S2-এর ২টা ফেরত "বেরিয়েছিল তার বেশি" বলে আটকে যেত।
+         *
+         * ⓘ ডাকার পক্ষ বলে দেয় কোন ফেরত-নথিগুলো গোনা হবে (এই নথিটাও
+         * সহ)। `null` মানে আগের আচরণ — ঐ ধরনের সব ফেরত।
+         *
+         * @var list<int>|null
+         */
+        ?array $returnedBy = null,
     ): string {
         if (bccomp($qty, '0', 4) <= 0) {
             throw new RuntimeException('Returning stock needs a positive quantity.');
         }
 
         return DB::transaction(function () use (
-            $product, $qty, $issuedSourceType, $issuedSourceId, $sourceType, $sourceId, $documentNo, $date
+            $product, $qty, $issuedSourceType, $issuedSourceId, $sourceType, $sourceId, $documentNo, $date, $returnedBy
         ) {
             // মূল নথিটা যে স্তরগুলো থেকে টেনেছিল — টানার উল্টো ক্রমে
             $uses = CostLayerUse::query()
@@ -231,6 +280,22 @@ final class CostLayerService
 
             $remaining = $qty;
             $value = '0';
+
+            /*
+             * ⓘ একই স্তর থেকে মূল নথির একাধিক টান থাকলে (একই পণ্য দুই
+             * সারিতে) স্তরটা একবারই দেখা হয় — মোট টানা থেকে মোট ফেরা বাদ।
+             * ⚠️ টান ধরে ধরে দেখলে প্রতিটা টানের সাথে পুরো "আগে ফেরা" বাদ
+             * যেত, আর জায়গাটা দুইবার কমত।
+             */
+            $issuedOnLayer = [];
+
+            foreach ($uses as $use) {
+                $issuedOnLayer[$use->cost_layer_id] = bcadd(
+                    $issuedOnLayer[$use->cost_layer_id] ?? '0', (string) $use->qty, 4,
+                );
+            }
+
+            $uses = $uses->unique('cost_layer_id')->values();
 
             foreach ($uses as $use) {
                 if (bccomp($remaining, '0', 4) <= 0) {
@@ -246,10 +311,11 @@ final class CostLayerService
                     ->where('cost_layer_id', $use->cost_layer_id)
                     ->where('product_id', $product->id)
                     ->where('source_type', $sourceType)
+                    ->when($returnedBy !== null, fn ($q) => $q->whereIn('source_id', $returnedBy))
                     ->whereRaw('qty < 0')
                     ->sum('qty') ?: '0');
 
-                $available = bcadd((string) $use->qty, $alreadyBack, 4);
+                $available = bcadd($issuedOnLayer[$use->cost_layer_id], $alreadyBack, 4);
 
                 if (bccomp($available, '0', 4) <= 0) {
                     continue;
@@ -294,6 +360,61 @@ final class CostLayerService
                         'product' => $product->name(),
                     ]),
                 ]);
+            }
+
+            return $value;
+        });
+    }
+
+    /**
+     * একটা ফেরত বাতিল — স্তরে যা ফিরেছিল, তা আবার তুলে নেওয়া।
+     *
+     * ── ⛔ কী ঘটত, ২৭ সেপ্টেম্বর ২০২৬ ─────────────────────────────────
+     * ফেরত বাতিলে মাল তাক থেকে নামত আর খাতার দাখিলা উল্টাত, কিন্তু
+     * [[returnToLayers()]] স্তরে যা বসিয়েছিল তা থেকেই যেত। ⓘ হাতে গোনা:
+     * ১০ বেচা, ৪ ফেরত, ফেরত বাতিল → তাকে ১০, খাতায় ৮০০, অথচ স্তরে ১৪
+     * একক আর ১,০৪০ টাকা। ⚠️ মজুদ রিপোর্ট স্তর থেকে পড়ে, তাই ব্যালান্স
+     * শিটের মজুদ আর রিপোর্টের মজুদ আলাদা হয়ে যেত — আর ঐ বাড়তি ৪টা
+     * পরের বিক্রয়ে খরচ হয়ে বেরোত, যা কখনো গুদামে ছিল না।
+     *
+     * ⓘ ফেরত-সারিগুলো মুছে ফেলা হয়, উল্টো সারি লেখা নয় — ⚠️ উল্টো সারি
+     * থাকলে "এই বিলের কতটা আগে ফিরেছে" গোনায় বাতিল ফেরতটাও ধরা পড়ত।
+     * ইতিহাস হারায় না: মজুদের চলাচল আর খাতার উল্টো দাখিলা দুইটাই থাকে।
+     *
+     * ⛔ ফেরা মাল ইতিমধ্যে আবার বেরিয়ে গেলে (স্তরে ততটা নেই) থামে — তখন
+     * বাতিল নয়, নতুন বিক্রয় বা সমন্বয়ই সৎ পথ।
+     *
+     * @return string যত টাকার মাল স্তর থেকে তোলা হলো
+     */
+    public function undoReturn(string $sourceType, int $sourceId): string
+    {
+        return DB::transaction(function () use ($sourceType, $sourceId) {
+            $rows = CostLayerUse::query()
+                ->where('source_type', $sourceType)
+                ->where('source_id', $sourceId)
+                ->whereRaw('qty < 0')
+                ->orderBy('id')
+                ->get();
+
+            $value = '0';
+
+            foreach ($rows as $row) {
+                $back = bcmul((string) $row->qty, '-1', 4);
+                $layer = CostLayer::query()->lockForUpdate()->find($row->cost_layer_id);
+
+                if ($layer === null || bccomp((string) $layer->qty_remaining, $back, 4) < 0) {
+                    throw ValidationException::withMessages([
+                        'status' => __('inventory::validation.layer_already_used', [
+                            'document' => $row->document_no ?? (string) $sourceId,
+                        ]),
+                    ]);
+                }
+
+                $layer->qty_remaining = bcsub((string) $layer->qty_remaining, $back, 4);
+                $layer->save();
+
+                $value = bcadd($value, bcmul((string) $row->amount, '-1', 4), 4);
+                $row->delete();
             }
 
             return $value;
