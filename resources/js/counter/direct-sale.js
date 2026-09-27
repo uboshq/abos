@@ -486,6 +486,29 @@ export default function directSale({
         },
 
         /*
+         * Pending ড্রপডাউনের তালিকা — মালিকের নির্দেশ, ২৮ সেপ্টেম্বর ২০২৬:
+         * *"পেন্ডিং list drop dawne ekhantekei asar kotha"*।
+         *
+         * ⓘ ক্রেতা বাছা থাকলে কেবল তার খসড়া; না থাকলে **সবার**, নতুনটা আগে —
+         * খালি কাউন্টার থেকেই যেকোনো খসড়া খোলা যায়। ⚠️ "খোলা খসড়া থাকলে নতুন
+         * বিল নয়" নিয়মটা ([[customerHasOpenDraft]]) এখনো কেবল বাছা ক্রেতার তালিকা দেখে।
+         */
+        get pendingShown() {
+            if (String(this.customerId ?? '') !== '') return this.pendingForCustomer;
+
+            return Object.values(this.pendingDrafts ?? {})
+                .flat()
+                .sort((a, b) => Number(b.id) - Number(a.id));
+        },
+
+        /** ড্রপডাউনের একটা সারির লেখা — ক্রেতা না বাছা থাকলে নামসহ। */
+        pendingLabel(d) {
+            const who = String(this.customerId ?? '') === '' && d.customer ? d.customer + ' · ' : '';
+
+            return who + d.no + ' · ৳' + this.money(d.total) + ' · ' + d.date;
+        },
+
+        /*
          * ⛔ খোলা খসড়া থাকলে নতুন বিল নয় — মালিকের নির্দেশ, ২৬ সেপ্টেম্বর
          * ২০২৬: আগে খসড়াটা নিশ্চিত, বাতিল বা সম্পাদনা।
          *

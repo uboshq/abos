@@ -1576,3 +1576,29 @@ describe('বাহক আর চালকের নম্বর', () => {
         expect(c.driverPhone).toBe('')
     })
 })
+
+/*
+ * ── Pending ড্রপডাউন — ক্রেতা না বাছলেও সবার খসড়া ──────────────────────
+ * মালিকের নির্দেশ, ২৮ সেপ্টেম্বর ২০২৬: *"পেন্ডিং list drop dawne ekhantekei asar kotha"*।
+ */
+describe('Pending ড্রপডাউনের তালিকা', () => {
+    const drafts = {
+        5: [{ id: 11, no: 'INV-0011', customer: 'রহিম স্টোর', total: '100', date: '27-09-2026' }],
+        9: [{ id: 14, no: 'INV-0014', customer: 'করিম ট্রেডার্স', total: '250', date: '28-09-2026' }],
+    }
+
+    it('ক্রেতা না বাছা থাকলে সবার খসড়া, নতুনটা আগে, নামসহ', () => {
+        const c = counter({ pendingDrafts: drafts })
+
+        expect(c.pendingShown.map(d => d.no)).toEqual(['INV-0014', 'INV-0011'])
+        expect(c.pendingLabel(c.pendingShown[0])).toContain('করিম ট্রেডার্স')
+    })
+
+    it('ক্রেতা বাছলে কেবল তার খসড়া, নাম ছাড়া', () => {
+        const c = counter({ pendingDrafts: drafts })
+
+        c.customerId = '5'
+        expect(c.pendingShown.map(d => d.no)).toEqual(['INV-0011'])
+        expect(c.pendingLabel(c.pendingShown[0])).not.toContain('রহিম স্টোর')
+    })
+})

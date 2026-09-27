@@ -735,16 +735,16 @@
                                 <span class="mb-0.5 block text-2xs font-semibold uppercase tracking-wide
                                              text-(--color-ink-muted)">{{ __('sales::field.pending_drafts') }}</span>
                                 <select @change="openPending($event)"
-                                        :disabled="pendingForCustomer.length === 0"
+                                        :disabled="pendingShown.length === 0"
                                         class="h-(--spacing-field-dense) w-full rounded-(--radius-field) border border-(--color-border)
                                                bg-(--color-surface-app) px-2 text-sm">
                                     <option value=""
-                                            x-text="pendingForCustomer.length > 0
+                                            x-text="pendingShown.length > 0
                                                       ? @js(__('sales::field.pending_drafts_pick'))
                                                       : @js(__('sales::field.pending_drafts_none'))"></option>
-                                    <template x-for="d in pendingForCustomer" :key="d.id">
+                                    <template x-for="d in pendingShown" :key="d.id">
                                         <option :value="d.id" :selected="$str(d.id) === resumeId"
-                                                x-text="d.no + ' · ৳' + money(d.total) + ' · ' + d.date"></option>
+                                                x-text="pendingLabel(d)"></option>
                                     </template>
                                 </select>
                             </label>

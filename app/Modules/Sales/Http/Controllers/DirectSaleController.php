@@ -1231,11 +1231,14 @@ class DirectSaleController extends Controller implements HasMiddleware
             ->whereNotNull('counter_draft')
             ->orderByDesc('id')
             ->limit(500)
+            ->with('customer')
             ->get(['id', 'document_no', 'customer_id', 'total', 'trx_date'])
             ->groupBy('customer_id')
             ->map(fn (Collection $drafts) => $drafts->map(fn (SalesInvoice $draft) => [
                 'id' => (int) $draft->id,
                 'no' => (string) $draft->document_no,
+                // ⓘ ক্রেতা না বাছা থাকলে ড্রপডাউনে সবার খসড়া আসে — তখন নামটাই পরিচয়
+                'customer' => (string) ($draft->customer?->name() ?? ''),
                 'total' => (string) $draft->total,
                 'date' => $draft->trx_date?->format('d-m-Y') ?? '',
             ])->values()->all())
