@@ -253,3 +253,16 @@ Schedule::command('abos:money-due')
     ->onFailure(function () {
         logger()->critical('মেয়াদ ও তাগাদার খবর পাঠানো ব্যর্থ হয়েছে — হাতে দেখতে হবে।');
     });
+
+/*
+ * মেয়াদ পেরোনো অফার নিজে থেকে বন্ধ — প্রোমোশন (869396c5)।
+ *
+ * ⓘ পনেরো মিনিট পর পর, কারণ অফারের শেষ সময় ঘণ্টা-মিনিটে ধরা; দিনে
+ * একবার চালালে শেষ হয়ে যাওয়া অফার সারাদিন বিলে বসত।
+ */
+Schedule::command('promotion:expire')
+    ->everyFifteenMinutes()
+    ->withoutOverlapping()
+    ->onFailure(function () {
+        logger()->critical('মেয়াদ পেরোনো অফার বন্ধ করা ব্যর্থ হয়েছে — হাতে দেখতে হবে।');
+    });
