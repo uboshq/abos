@@ -138,6 +138,11 @@
                                        value="{{ $line['source_type'] ?? $paper['source_type'] }}">
                                 <input type="hidden" name="{{ $name }}[source_id]"
                                        value="{{ $paper['source_id'] }}">
+                                {{-- ⓘ টাকা আর ফ্রি এক সারিতে হলে ফ্রি মালের নিজের উৎস --}}
+                                @if (($line['free_source_type'] ?? null) !== null)
+                                    <input type="hidden" name="{{ $name }}[free_source_type]"
+                                           value="{{ $line['free_source_type'] }}">
+                                @endif
                             </td>
 
                             <td>{{ $line['warehouse_name'] }}</td>

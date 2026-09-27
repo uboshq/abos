@@ -303,7 +303,59 @@ class StockPlacementController extends Controller implements HasMiddleware
             ];
         }
 
+        foreach ($papers as $key => $paper) {
+            $papers[$key]['lines'] = $this->paidAndFreeOnOneRow($paper['lines']);
+        }
+
         return $this->withTheirFacts($papers);
+    }
+
+    /**
+     * একই পণ্যের টাকার মাল আর ফ্রি মাল এক সারিতে — মালিকের নির্দেশ, ২৮ সেপ্টেম্বর
+     * ২০২৬: *"Free alada hoye kothay giyeche … dekte somossa hoy"*।
+     *
+     * ⚠️ দেখায় এক সারি, কিন্তু উৎস দুইটাই থাকে: টাকার মাল বসে নিজের উৎসে, ফ্রি
+     * মাল `…:free` উৎসে (`free_source_type`) — ⛔ নাহলে আসা আর বসানো আলাদা দলে
+     * পড়ত আর কাগজটা তালিকা থেকে কোনোদিন সরত না ([[paperOf()]])।
+     *
+     * ⓘ জোড়া লাগে কেবল যখন টাকার সারির নিজের ফ্রি নেই — দুই দিকেই ফ্রি থাকলে
+     * কোনটা কোন উৎসের তা এক ঘরে বলা যেত না, তাই তখন সারি দুইটাই থাকে।
+     *
+     * @param  list<array<string, mixed>>  $lines
+     * @return list<array<string, mixed>>
+     */
+    private function paidAndFreeOnOneRow(array $lines): array
+    {
+        $paid = [];
+
+        foreach ($lines as $i => $line) {
+            if (! str_contains((string) $line['source_type'], ':free')) {
+                $paid[$line['product_id'].'|'.$line['warehouse_id'].'|'.($line['batch_id'] ?? '')] = $i;
+            }
+        }
+
+        $out = $lines;
+
+        foreach ($lines as $i => $line) {
+            $key = $line['product_id'].'|'.$line['warehouse_id'].'|'.($line['batch_id'] ?? '');
+
+            if (! str_contains((string) $line['source_type'], ':free') || ! isset($paid[$key])) {
+                continue;
+            }
+
+            $host = $paid[$key];
+
+            if (bccomp((string) $out[$host]['waiting_free'], '0', 4) !== 0
+                || bccomp((string) $line['waiting'], '0', 4) !== 0) {
+                continue;
+            }
+
+            $out[$host]['waiting_free'] = $line['waiting_free'];
+            $out[$host]['free_source_type'] = $line['source_type'];
+            unset($out[$i]);
+        }
+
+        return array_values($out);
     }
 
     /**
@@ -372,6 +424,8 @@ class StockPlacementController extends Controller implements HasMiddleware
             'lines.*.warehouse_id' => ['required', 'integer'],
             'lines.*.batch_id' => ['nullable', 'integer'],
             'lines.*.source_type' => ['required', 'string', 'max:60'],
+            // ⓘ জোড়া সারির ফ্রি মালের নিজের উৎস ([[paidAndFreeOnOneRow()]])
+            'lines.*.free_source_type' => ['nullable', 'string', 'max:60', 'ends_with:free'],
             'lines.*.source_id' => ['required', 'integer'],
             'lines.*.qty' => ['nullable', 'numeric', 'min:0'],
             'lines.*.free_qty' => ['nullable', 'numeric', 'min:0'],
@@ -426,18 +480,33 @@ class StockPlacementController extends Controller implements HasMiddleware
                     continue;
                 }
 
-                $this->stock->place(
-                    product: Product::findOrFail($line['product_id']),
-                    warehouse: Warehouse::findOrFail($line['warehouse_id']),
-                    qty: $qty,
-                    sourceType: (string) $line['source_type'],
-                    sourceId: (int) $line['source_id'],
-                    batch: isset($line['batch_id']) ? Batch::find($line['batch_id']) : null,
-                    freeQty: $freeQty,
-                    location: filled($line['storage_location_id'] ?? null)
-                        ? StorageLocation::findOrFail($line['storage_location_id'])
-                        : null,
-                );
+                /*
+                 * ⓘ জোড়া সারি হলে দুই চাপ: টাকার মাল নিজের উৎসে, ফ্রি মাল `…:free`
+                 * উৎসে — একই জায়গায়, একই লটে ([[paidAndFreeOnOneRow()]])।
+                 */
+                $freeSource = (string) ($line['free_source_type'] ?? '');
+                $parts = $freeSource === ''
+                    ? [[(string) $line['source_type'], $qty, $freeQty]]
+                    : [[(string) $line['source_type'], $qty, '0'], [$freeSource, '0', $freeQty]];
+
+                foreach ($parts as [$source, $partQty, $partFree]) {
+                    if (bccomp($partQty, '0', 4) <= 0 && bccomp($partFree, '0', 4) <= 0) {
+                        continue;
+                    }
+
+                    $this->stock->place(
+                        product: Product::findOrFail($line['product_id']),
+                        warehouse: Warehouse::findOrFail($line['warehouse_id']),
+                        qty: $partQty,
+                        sourceType: $source,
+                        sourceId: (int) $line['source_id'],
+                        batch: isset($line['batch_id']) ? Batch::find($line['batch_id']) : null,
+                        freeQty: $partFree,
+                        location: filled($line['storage_location_id'] ?? null)
+                            ? StorageLocation::findOrFail($line['storage_location_id'])
+                            : null,
+                    );
+                }
 
                 $placed++;
             }

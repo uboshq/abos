@@ -137,8 +137,9 @@ final class OneBillArrivedAsTwoPapersToPutAwayTest extends TestCase
     {
         $this->goodsArrived();
 
+        /* ⓘ এখন এক সারি — ফ্রি মালের উৎস `free_source_type`-এ ([[paidAndFreeOnOneRow()]]) */
         $sources = collect($this->papersOnScreen()[0]['lines'])
-            ->pluck('source_type')
+            ->flatMap(fn (array $l) => array_filter([$l['source_type'], $l['free_source_type'] ?? null]))
             ->unique()
             ->values();
 
@@ -151,6 +152,47 @@ final class OneBillArrivedAsTwoPapersToPutAwayTest extends TestCase
             $sources->contains(fn (string $s) => ! str_contains($s, ':free')),
             'টাকার সারিটার উৎস-নাম হারিয়েছে।',
         );
+    }
+
+    /**
+     * ⭐ একই পণ্যের টাকার মাল আর ফ্রি মাল এক সারিতে — মালিকের নির্দেশ, ২৮ সেপ্টেম্বর
+     * ২০২৬: *"Free alada hoye kothay giyeche … dekte somossa hoy"*।
+     */
+    public function test_the_paid_and_the_free_goods_of_one_product_share_one_row(): void
+    {
+        $this->goodsArrived();
+
+        $lines = $this->papersOnScreen()[0]['lines'];
+
+        $this->assertCount(1, $lines, '⛔ একই পণ্য এখনো '.count($lines).'টা সারিতে।');
+        $this->assertSame(10.0, (float) $lines[0]['waiting']);
+        $this->assertSame(2.0, (float) $lines[0]['waiting_free']);
+    }
+
+    /**
+     * ⛔ এক সারিতে বসালেও দুই উৎসই কাটে — কাগজটা তালিকা থেকে সরে যায়।
+     * ⓘ ফ্রি মাল নিজের উৎসে না বসলে কাগজটা চিরকাল "বসানোর অপেক্ষায়" থাকত।
+     */
+    public function test_placing_the_joined_row_clears_both_kinds_and_the_paper_leaves(): void
+    {
+        $this->goodsArrived();
+
+        $line = $this->papersOnScreen()[0]['lines'][0];
+
+        $this->post(route('inventory.stock.placement.store'), [
+            'lines' => [[
+                'product_id' => $line['product_id'],
+                'warehouse_id' => $line['warehouse_id'],
+                'batch_id' => $line['batch_id'],
+                'source_type' => $line['source_type'],
+                'free_source_type' => $line['free_source_type'],
+                'source_id' => $line['source_id'],
+                'qty' => '10',
+                'free_qty' => '2',
+            ]],
+        ])->assertSessionHasNoErrors();
+
+        $this->assertSame([], $this->papersOnScreen(), '⛔ সব বসানোর পরেও কাগজটা তালিকায় রয়ে গেছে।');
     }
 
     /** একই কাগজে দশটা টাকার মাল আর দুইটা ফ্রি — দুই উৎসে, যেভাবে ক্রয় লেখে। */
