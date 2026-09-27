@@ -259,18 +259,15 @@
          আর নাম মিশে না যায়। ⚠️ রংগুলো টোকেন থেকে, তাই দুই মোডেই নিজে থেকে মানায়। --}}
     @if ($user)
         <span class="flex min-w-0 shrink items-center gap-2 border-s border-(--color-border) ps-3">
+            {{-- ⓘ আদ্যক্ষর-বৃত্ত নেই, আর পিলটা ফুটারের উচ্চতার ভিতরে (`leading-none`, কম
+                 প্যাডিং) — মালিকের নির্দেশ, একই দিন: *"a thakbe na … Footer er liner bahire
+                 giyeche"*। --}}
             <span class="flex min-w-0 items-center gap-2 rounded-full bg-(--color-surface-selected)
-                         py-0.5 ps-0.5 pe-3 ring-1 ring-(--color-brand-500)/30">
-                <span aria-hidden="true"
-                      class="flex size-6 shrink-0 items-center justify-center rounded-full bg-(--color-brand-600)
-                             text-xs font-bold text-white">
-                    {{ mb_strtoupper(mb_substr((string) $user->name, 0, 1)) }}
-                </span>
-
-                <span class="max-w-48 truncate text-sm font-semibold text-(--color-ink)">{{ $user->name }}</span>
+                         px-2.5 py-px leading-none ring-1 ring-(--color-brand-500)/30">
+                <span class="max-w-48 truncate text-xs font-semibold text-(--color-ink)">{{ $user->name }}</span>
 
                 @if ($designation)
-                    <span class="max-w-40 truncate text-xs text-(--color-ink-muted)">{{ $designation }}</span>
+                    <span class="max-w-40 truncate text-2xs text-(--color-ink-muted)">{{ $designation }}</span>
                 @endif
             </span>
         </span>
