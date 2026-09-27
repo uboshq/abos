@@ -236,11 +236,15 @@
             </table>
         </div>
 
-        <button type="submit"
-                class="mt-4 h-(--spacing-field) rounded-(--radius-field) bg-(--color-brand-600)
-                       px-4 text-sm font-medium text-white transition-opacity hover:opacity-90">
-            {{ __('inventory::action.place') }}
-        </button>
+        {{-- ⭐ "বুঝে নিলাম" একদম ডানে — মালিকের নির্দেশ, ২৮ সেপ্টেম্বর ২০২৬; সারির "এই সারিটা
+             বসাও" বোতামগুলোর একই কলামের নিচে, তাই চোখ এক সারিতেই থাকে। --}}
+        <div class="mt-4 flex justify-end">
+            <button type="submit"
+                    class="h-(--spacing-field) rounded-(--radius-field) bg-(--color-brand-600)
+                           px-4 text-sm font-medium text-white transition-opacity hover:opacity-90">
+                {{ __('inventory::action.place') }}
+            </button>
+        </div>
         </details>
     </form>
 </section>
