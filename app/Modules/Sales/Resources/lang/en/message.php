@@ -277,4 +277,5 @@ return [
     'credit_warning_title' => 'Over the credit limit',
     'credit_held' => 'Unbilled DOs and drafts',
     'credit_over' => 'Over the limit',
+    'open_draft_title' => 'This customer has an open draft',
 ];

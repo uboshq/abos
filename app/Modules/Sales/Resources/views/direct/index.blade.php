@@ -316,6 +316,35 @@
             </div>
         </div>
 
+        {{-- ⭐ এক ক্রেতার একটাই খসড়া — মালিকের নির্দেশ, ২৮ সেপ্টেম্বর ২০২৬। ⓘ ক্রেতা
+             বাছার মুহূর্তেই আসে, সাথে খসড়াটা খোলার বোতাম ([[openTheOpenDraft()]])। --}}
+        <div data-popup="open-draft" x-show="openDraftPopup" x-cloak role="alertdialog" aria-modal="true"
+             aria-labelledby="open-draft-title"
+             class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+            <div class="w-full max-w-lg rounded-(--radius-card) border-2 border-(--color-warning)
+                        bg-(--color-surface-card) p-6 text-center shadow-lg">
+                <p id="open-draft-title" class="text-2xl font-bold text-(--color-warning-hover)">
+                    {{ __('sales::message.open_draft_title') }}
+                </p>
+
+                <p class="mt-4 text-lg font-semibold leading-relaxed text-(--color-ink)"
+                   x-text="openDraftText"></p>
+
+                <div class="mt-6 grid grid-cols-2 gap-3">
+                    <button type="button" @click="openTheOpenDraft()"
+                            class="rounded-(--radius-field) bg-(--color-warning) px-4 py-3 text-lg font-bold
+                                   text-(--color-warning-ink) hover:bg-(--color-warning-hover)">
+                        {{ __('sales::action.open_draft') }}
+                    </button>
+                    <button type="button" @click="closeOpenDraftPopup()"
+                            class="rounded-(--radius-field) border border-(--color-border) px-4 py-3 text-lg
+                                   font-semibold text-(--color-ink) hover:bg-(--color-surface-hover)">
+                        {{ __('sales::message.credit_wall_ok') }}
+                    </button>
+                </div>
+            </div>
+        </div>
+
         <div data-popup="credit-warning" x-show="creditWarningOpen" x-cloak role="alertdialog" aria-modal="true"
              aria-labelledby="credit-warning-title"
              class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">

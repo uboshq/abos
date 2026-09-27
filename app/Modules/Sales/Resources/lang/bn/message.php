@@ -291,4 +291,5 @@ return [
     'credit_warning_title' => 'বাকির সীমা ছাড়াচ্ছে',
     'credit_held' => 'বিল না হওয়া ডিও ও খসড়া',
     'credit_over' => 'সীমা পার',
+    'open_draft_title' => 'এই ক্রেতার খসড়া খোলা আছে',
 ];

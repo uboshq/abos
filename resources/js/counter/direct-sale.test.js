@@ -1602,3 +1602,30 @@ describe('Pending ড্রপডাউনের তালিকা', () => {
         expect(c.pendingLabel(c.pendingShown[0])).not.toContain('রহিম স্টোর')
     })
 })
+
+/*
+ * ── এক ক্রেতার একটাই খসড়া — বাছার মুহূর্তে পপ-আপ ──────────────────────
+ * মালিকের নির্দেশ, ২৮ সেপ্টেম্বর ২০২৬: *"2ND BAR customer entry dile pop up warning dibe"*।
+ */
+describe('খোলা খসড়ার পপ-আপ', () => {
+    const drafts = { 5: [{ id: 11, no: 'INV-0011', customer: 'রহিম স্টোর', total: '100', date: '27-09-2026' }] }
+
+    it('খোলা খসড়াওয়ালা ক্রেতা বাছলে পপ-আপ খোলে', () => {
+        const c = counter({ pendingDrafts: drafts, texts: { openDraftBlocks: 'খসড়া :no খোলা' } })
+        c.soundTheAlarm = () => {}
+        c.$root = { querySelectorAll: () => [] }  // ⓘ chooseCustomer শর্তের বিকল্প খোঁজে
+
+        c.chooseCustomer(5)
+        expect(c.openDraftPopup).toBe(true)
+        expect(c.openDraftText).toContain('INV-0011')
+    })
+
+    it('খসড়া নেই এমন ক্রেতায় পপ-আপ আসে না', () => {
+        const c = counter({ pendingDrafts: drafts })
+        c.soundTheAlarm = () => {}
+        c.$root = { querySelectorAll: () => [] }
+
+        c.chooseCustomer(9)
+        expect(c.openDraftPopup).toBe(false)
+    })
+})

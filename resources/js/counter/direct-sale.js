@@ -281,6 +281,9 @@ export default function directSale({
         carriers,
         carrierId: '',
 
+        /* ⓘ "এই ক্রেতার খসড়া খোলা আছে" পপ-আপ — [[chooseCustomer()]] */
+        openDraftPopup: false,
+
         /*
          * ── চালক — নাম লিখলে বা বাছলে নম্বর নিজে বসে ─────────────────
          * মালিকের ছবি, ২৭ সেপ্টেম্বর ২০২৬ (রাত)। ⓘ তালিকা সার্ভারের —
@@ -976,6 +979,32 @@ export default function directSale({
             }
             this.customerTerm = '';
             this.customerPickerOpen = false;
+
+            /*
+             * ⭐ এক ক্রেতার একটাই খসড়া — মালিকের নির্দেশ, ২৮ সেপ্টেম্বর ২০২৬: *"2ND BAR
+             * customer entry dile pop up warning dibe zate khosora theke ene edite kore
+             * conform kore"*। ⓘ দেয়ালটা সার্ভারেরই ([[assertNoOtherOpenDraft]]); এখানে
+             * কেবল বাছার মুহূর্তেই পপ-আপ, আর খসড়াটা খোলার বোতাম।
+             */
+            if (this.customerHasOpenDraft) {
+                this.openDraftPopup = true;
+                this.soundTheAlarm();
+            }
+        },
+
+        /** খোলা খসড়াটা এই পর্দাতেই খোলা — সম্পাদনা করে পাকা করার জন্য। */
+        openTheOpenDraft() {
+            const draft = this.pendingForCustomer[0];
+
+            this.openDraftPopup = false;
+
+            if (! draft || ! pendingUrl) return;
+
+            window.location.assign(pendingUrl + '?draft=' + encodeURIComponent(String(draft.id)));
+        },
+
+        closeOpenDraftPopup() {
+            this.openDraftPopup = false;
         },
 
         pickFirstCustomer() {
