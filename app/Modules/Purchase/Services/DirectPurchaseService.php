@@ -4,17 +4,19 @@ declare(strict_types=1);
 
 namespace App\Modules\Purchase\Services;
 
+use App\Core\Engines\Approval\HeldForApproval;
 use App\Core\Support\CompanyContext;
-use App\Modules\Inventory\Models\Product;
-use App\Modules\Inventory\Models\Warehouse;
-use App\Modules\Inventory\Services\ReadsPackedQuantities;
 use App\Modules\Accounts\Models\Account;
+use App\Modules\Accounts\Models\Cheque;
 use App\Modules\Accounts\Models\Voucher;
 use App\Modules\Accounts\Services\CashTillService;
 use App\Modules\Accounts\Services\ChequeService;
 use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Accounts\Services\VoucherApproval;
 use App\Modules\Accounts\Services\VoucherService;
+use App\Modules\Inventory\Models\Product;
+use App\Modules\Inventory\Models\Warehouse;
+use App\Modules\Inventory\Services\ReadsPackedQuantities;
 use App\Modules\Inventory\Services\StockService;
 use App\Modules\MasterData\Models\PaymentMethod;
 use App\Modules\Purchase\Models\PurchaseBill;
@@ -108,7 +110,24 @@ final class DirectPurchaseService
          * যা পাওয়া গেল সেটা বড়: **কাগজ আর কখনো নিঃশব্দে হারায় না**, আর
          * অর্ধেক-বসা অবস্থা পর্দায় দেখা যায় — উবে যাওয়াটা যেত না।
          */
-        $bill = DB::transaction(function () use ($data, $lines, $gifts) {
+        /*
+         * ⭐ একটা লেনদেন — ২৭ সেপ্টেম্বর ২০২৬, লাইভ QA (hp2, TCL), PBL-0002।
+         *
+         * ⛔ উপরের তিন-সীমানার নকশা সইয়ে আটকানো খসড়াটা বাঁচিয়েছিল, কিন্তু
+         * দাম ছিল: **অন্য যেকোনো** ভুলেও আগের ধাপ থেকে যেত — অনাথ খসড়া বিল,
+         * বা পরিশোধের ধাপে ভুলে নিশ্চিত বিল, গুদামে মাল, খাতায় দেনা, অথচ
+         * পর্দায় "হয়নি"। আবার জমা দিলে দ্বিগুণ।
+         *
+         * ⓘ এখন সব একসাথে, আর কেবল "সইয়ের অপেক্ষা" ভিতরে ধরা হয়: তখন
+         * লেনদেন কমিট হয়, তাই খসড়া **আর** ইঞ্জিনের লেখা অনুমোদনের অনুরোধ
+         * দুইটাই থাকে; তারপর ব্যতিক্রমটা বাইরে আবার ছোঁড়া হয়। ⛔ বাকি সব
+         * ভুলে পুরো লেনদেন ফেরে — কিছুই থাকে না।
+         *
+         * পাহারা: AFailedDirectPurchaseLeftABillBehindTest, TheBillWentForApprovalAndVanishedTest।
+         */
+        $held = null;
+
+        $result = DB::transaction(function () use ($data, $lines, $gifts, &$held) {
             $bill = $this->bills->create($data, $this->billLines($lines));
 
             /*
@@ -125,18 +144,21 @@ final class DirectPurchaseService
              */
             $this->writeGifts($bill, $gifts);
 
-            return $bill;
-        });
+            /*
+             * সই — এখন লেনদেনের **ভিতরে**, আর সেটাই ২৭ সেপ্টেম্বরের সংশোধন।
+             *
+             * ⓘ আটকালে ব্যতিক্রমটা এখানেই ধরা হয়, তাই লেনদেন কমিট হয় — খসড়া আর
+             * অনুমোদনের অনুরোধ দুইটাই থাকে (১৮ সেপ্টেম্বরের সংশোধন অক্ষত)। বাকি
+             * সব ভুলে পুরো লেনদেন ফেরে। ছক না থাকলে আগের মতোই সোজা নিশ্চিত।
+             */
+            try {
+                $bill = $this->bills->confirm($bill);
+            } catch (HeldForApproval $e) {
+                $held = $e;
 
-        /*
-         * ⛔ লেনদেনের বাইরে, আর এটাই এই সংশোধনের গোটা মর্ম।
-         *
-         * ⓘ ছক বসানো না থাকলে (অধিকাংশ প্রতিষ্ঠানে নেই) এটা আগের
-         * মতোই সোজা নিশ্চিত করে — আচরণে কোনো বদল নেই।
-         */
-        $bill = $this->bills->confirm($bill);
+                return null;
+            }
 
-        return DB::transaction(function () use ($bill, $data) {
             /*
              * উপহারের মাল — বিল নিশ্চিত হওয়ার **পরে**, আর সেটা ইচ্ছাকৃত।
              *
@@ -159,6 +181,12 @@ final class DirectPurchaseService
 
             return ['bill' => $bill->fresh(['lines', 'giftLines']), 'payments' => $payments];
         });
+
+        if ($held !== null) {
+            throw $held;
+        }
+
+        return $result;
     }
 
     /**
@@ -604,7 +632,7 @@ final class DirectPurchaseService
              * হয় ([[ChequeService::bounce()]]), আর টাকা দেনায় ফিরে আসে।
              */
             $this->cheques->record([
-                'direction' => \App\Modules\Accounts\Models\Cheque::ISSUED,
+                'direction' => Cheque::ISSUED,
                 'voucher_id' => $voucher->id,
                 'party_type' => 'supplier',
                 'party_id' => $bill->supplier_id,
@@ -627,7 +655,7 @@ final class DirectPurchaseService
         $account = Account::query()->postable()->where('code', $code)->first();
 
         if ($account === null) {
-            throw \Illuminate\Validation\ValidationException::withMessages([
+            throw ValidationException::withMessages([
                 'deposits' => __('purchase::validation.no_account_for', ['code' => $code]),
             ]);
         }
