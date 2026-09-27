@@ -272,6 +272,7 @@ final class VoucherService
 
         $this->assertLinesArePostable($voucher);
         $this->assertCashLandsInOwnTill($voucher);
+        $this->assertTheWayMatchesTheAccount($voucher);
         $this->assertBankReferenceIsFree($voucher);
 
         /*
@@ -736,6 +737,50 @@ final class VoucherService
                 ? __('accounts::validation.cash_not_your_till', ['account' => $cash->label()])
                 : __('accounts::validation.no_till_of_your_own'),
         ]);
+    }
+
+    /**
+     * যে মাধ্যমে টাকা এল বা গেল, টাকাটা সেই ধরনের খাতেই — ২৭ সেপ্টেম্বর ২০২৬।
+     *
+     * ⛔ লাইভে TCL-এ ধরা: "নগদ" বাছা, আর নগদ মূলধন বসল ১১০৫-০১ বিকাশে।
+     * সার্ভার মাধ্যম আর খাতের ধরন কখনো মেলাত না, তাই দিনশেষে নগদ মেলে না
+     * আর বিকাশে এমন টাকা দেখায় যা কখনো আসেনি।
+     *
+     * ⓘ কেবল পর্দার পাঁচটা মাধ্যমে (`Voucher::INSTRUMENTS`)। ⚠️ কাউন্টার
+     * এই ঘরে পেমেন্ট-পদ্ধতির **কোড** বসায় (যেমন `CHQ`, `BKASH`) — ওগুলো এই
+     * তালিকায় নেই, তাই কাউন্টারের পথ অপরিবর্তিত।
+     */
+    private function assertTheWayMatchesTheAccount(Voucher $voucher): void
+    {
+        $way = (string) $voucher->instrument;
+
+        if (! in_array($way, Voucher::INSTRUMENTS, true)
+            || ! in_array($voucher->type, [Voucher::RECEIPT, Voucher::PAYMENT, Voucher::EXPENSE], true)) {
+            return;
+        }
+
+        $money = $voucher->lines
+            ->map(fn (VoucherLine $line) => $line->account)
+            ->first(fn (?Account $a) => $a !== null && $a->money_kind !== null);
+
+        if ($money === null) {
+            return;
+        }
+
+        $fits = match ($way) {
+            'cash' => $money->isCash(),
+            'mfs' => $money->isMfs(),
+            default => $money->isBank(),   // transfer · cheque · card
+        };
+
+        if (! $fits) {
+            throw ValidationException::withMessages([
+                'instrument' => __('accounts::validation.way_does_not_fit_account', [
+                    'way' => __('accounts::instrument.'.$way),
+                    'account' => $money->label(),
+                ]),
+            ]);
+        }
     }
 
     private function assertBankReferenceIsFree(Voucher $voucher): void

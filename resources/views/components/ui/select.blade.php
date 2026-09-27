@@ -29,6 +29,16 @@
 
     // ভুলের বার্তা কোন নামে খুঁজবে — x-ui.field-এর মতোই, একই কারণে
     'errorKey' => null,
+
+    /*
+     * ⭐ প্রতিটা সারির ধরন — মান => ধরন, `data-kind` হয়ে বসে (২৭ সেপ্টেম্বর ২০২৬)।
+     *
+     * ⓘ টাকার খাত বাছলে পর্দাকে জানতে হয় খাতটা নগদ, ব্যাংক না MFS — তবেই
+     * লেনদেন-নম্বরের ঘর আসে আর মাধ্যম মেলে ([[money.js]])। ⚠️ ধরনটা সারির
+     * গায়েই, আলাদা তালিকায় নয়: দুই জায়গায় রাখলে একদিন একটা ছাঁকা হত,
+     * অন্যটা নয়।
+     */
+    'kinds' => [],
 ])
 
 {{--
@@ -100,7 +110,8 @@
         @endif
 
         @foreach ($options as $value => $text)
-            <option value="{{ $value }}" @selected(! blank($current) && (string) $current === (string) $value)>
+            <option value="{{ $value }}" @if (filled($kinds[$value] ?? null)) data-kind="{{ $kinds[$value] }}" @endif
+                    @selected(! blank($current) && (string) $current === (string) $value)>
                 {{ $text }}
             </option>
         @endforeach

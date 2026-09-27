@@ -230,14 +230,38 @@ class VoucherRequest extends FormRequest
      */
     private function fillAccountFromParty(): void
     {
-        if (trim((string) $this->input('from_account_id', '')) !== '') {
-            return;
-        }
-
         $type = (string) $this->input('party_type', '');
         $partyId = (int) $this->input('party_id', 0);
 
         if ($type === '' || $partyId <= 0) {
+            return;
+        }
+
+        /*
+         * ⭐ পরিশোধে পক্ষের খাত **ডেবিটে** — ২৭ সেপ্টেম্বর ২০২৬।
+         *
+         * ⛔ আগে নিচের নিয়ম পরিশোধেও `from_account_id`-এ বসাত, আর সেটা ছিল
+         * ২১১০ — একটা **গ্রুপ** খাত, উল্টো দিকে। ফল: সরবরাহকারীকে টাকা দিলে
+         * দেনা বাড়ার দিকে লেখা হত, আর গ্রুপে দাখিলা বসে না বলে পোস্টই আটকাত।
+         * ⓘ পরিশোধে টাকা যায় টাকার খাত থেকে (`from`, পর্দায় বাছা), আর দেনা
+         * কমে সরবরাহকারীর পোস্টযোগ্য খাতে (২১১১, `to`)।
+         */
+        if ((string) $this->input('type') === Voucher::PAYMENT) {
+            if ($type === 'supplier' && trim((string) $this->input('to_account_id', '')) === '') {
+                $payable = Account::query()
+                    ->where('company_id', CompanyContext::id())
+                    ->where('code', StandardChart::PAYABLE)
+                    ->value('id');
+
+                if ($payable !== null) {
+                    $this->merge(['to_account_id' => $payable]);
+                }
+            }
+
+            return;
+        }
+
+        if (trim((string) $this->input('from_account_id', '')) !== '') {
             return;
         }
 
@@ -263,7 +287,6 @@ class VoucherRequest extends FormRequest
          */
         $code = match ([(string) $this->input('type'), $type]) {
             [Voucher::RECEIPT, 'customer'] => StandardChart::RECEIVABLE,
-            [Voucher::PAYMENT, 'supplier'] => StandardChart::PAYABLE_GROUP,
             default => null,
         };
 

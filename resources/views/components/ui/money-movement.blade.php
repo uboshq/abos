@@ -118,7 +118,7 @@
 @endphp
 
 <div class="flex flex-col gap-3"
-     x-data="moneyMovement({ amountField: @js($amountField) })">
+     x-data="moneyMovement({ amountField: @js($amountField), method: @js((string) $was('instrument', 'cash')), charge: @js((string) $was('charge_amount', '0')), chequeDate: @js((string) ($was('instrument_date') instanceof \DateTimeInterface ? $was('instrument_date')->format('Y-m-d') : $was('instrument_date', ''))), moneyField: @js($inward ? 'to_account_id' : 'from_account_id'), notes: @js((array) ($was('note_counts') ?? [])) })">
 
     {{--
         ── কে বহন করল, আর কখন ──────────────────────────────────────
@@ -363,7 +363,7 @@
                         :value="$was('instrument_no')" />
             <x-ui.field name="instrument_date" type="date" :label="__('accounts::field.cheque_date')"
                         :value="$was('instrument_date')" x-model="chequeDate" />
-            <x-ui.field name="from_bank" :label="__('accounts::field.bank_name')" />
+            <x-ui.field name="from_bank" :label="__('accounts::field.bank_name')" :value="$was('from_bank')" />
             <x-ui.field name="from_branch" :label="__('accounts::field.branch')" :value="$was('from_branch')" />
             <x-ui.field name="from_account_name" :label="__('accounts::field.account_holder')"
                         :value="$was('from_account_name')" />

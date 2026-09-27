@@ -92,6 +92,7 @@ return [
     'cheque_needs_amount' => 'A cheque needs an amount above zero.',
     'cheque_needs_party' => 'Say whose cheque this is — otherwise nobody\'s due falls when it clears.',
     'cheque_only_through_register' => 'Cheques are not taken here — enter it in the cheque register. It reaches the books when it clears.',
+    'way_does_not_fit_account' => '":way" was chosen, but the money goes to :account — the way and the account do not match.',
     'cheque_not_from_collection' => 'Cheque :no was not taken on a receipt — return it with the Bounce button on the cheque register.',
     'cleared_cheque_not_cancelled' => 'Cheque :no has cleared and cannot be cancelled. If the bank took the money back, mark it bounced.',
     'cheque_needs_bank' => 'Say which bank account the money lands in.',

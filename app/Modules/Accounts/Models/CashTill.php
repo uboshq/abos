@@ -109,11 +109,26 @@ class CashTill extends Model implements Drillable
      */
     public static function mayUse(?int $userId, int $accountId): bool
     {
-        if (! self::heldByAnyone()) {
+        if ($userId === null) {
             return true;
         }
 
-        if ($userId === null) {
+        /*
+         * ⭐ খাতের নিজের হেফাজত আগে — ২৭ সেপ্টেম্বর ২০২৬।
+         *
+         * ⓘ অফিসের নগদ খাত বাক্স ছাড়াই কারও নামে বসানো যায়
+         * (`accounts.held_by`, ১২ নভেম্বরের মাইগ্রেশন)। ⛔ আগে এখানে কেবল
+         * বাক্স দেখা হত, তাই নিজের নামের অফিস-নগদও "অন্যের" ধরা পড়ত আর
+         * তালিকা থেকে উধাও হত। ⚠️ নিয়মটা ঢিলে হয়নি: অন্যের নামের খাত আগের
+         * মতোই বন্ধ, আর নিজের নামেরটাই কেবল খোলে।
+         */
+        $heldBy = Account::query()->whereKey($accountId)->value('held_by');
+
+        if ($heldBy !== null) {
+            return (int) $heldBy === $userId;
+        }
+
+        if (! self::heldByAnyone()) {
             return true;
         }
 
@@ -125,15 +140,18 @@ class CashTill extends Model implements Drillable
     }
 
     /**
-     * কোম্পানিতে একটাও বাক্স কারও নামে বসানো আছে কি না।
+     * কোম্পানিতে একটাও বাক্স বা নগদ খাত কারও নামে বসানো আছে কি না।
      *
      * ⓘ এটাই সুইচ: না বসা থাকলে গোটা নিয়মটা ঘুমিয়ে থাকে।
      * ⚠️ কনসোল ও সিডারে প্রসঙ্গ থাকে না, আর তখন স্কোপ কিছুই ফেরায় না —
      * সেটাই ঠিক, কারণ ওখানে কোনো ব্যবহারকারীও নেই।
+     * ⓘ নামে বসানো অফিস-নগদও (`held_by`) নিয়মটা জাগায় — হেফাজতের ধারণা
+     * শুরু হয়েছে মানেই নিয়মটা চালু।
      */
     public static function heldByAnyone(): bool
     {
-        return self::query()->active()->whereNotNull('holder_id')->exists();
+        return self::query()->active()->whereNotNull('holder_id')->exists()
+            || Account::query()->where('money_kind', Account::CASH)->whereNotNull('held_by')->exists();
     }
 
     /** যে টিলগুলো এই ব্যবহারকারীর হেফাজতে। */

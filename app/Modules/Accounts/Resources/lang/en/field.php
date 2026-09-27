@@ -122,6 +122,7 @@ return [
     'received_into' => 'Received into',
     'paid_from' => 'Paid from',
     'paid_to' => 'Paid to',
+    'paid_to_from_party' => '— from the payee (a supplier\'s payable) —',
     'expense_head' => 'Expense head',
     'income_by_head' => 'Income by head',
     'income_head' => 'Income head',

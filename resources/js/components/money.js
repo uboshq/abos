@@ -17,8 +17,18 @@ export function moneyAccount ({ chosen = '' } = {}) {
     return {
         chosen,
 
+        /*
+         * ⛔ ধরনটা `chosen` ধরে — ২৭ সেপ্টেম্বর ২০২৬, লাইভে TCL-এ ধরা।
+         *
+         * আগে এখানে `$refs.picker.selectedOptions` পড়া হত। ⚠️ Alpine ওটা
+         * নজরে রাখে না, তাই `x-show="needsReference"` একবার মেপে আর কখনো
+         * মাপত না: ব্যাংক বাছার পরেও লেনদেন-নম্বরের ঘর আসত না — হাতধার,
+         * আমানত, মূলধন, উত্তোলন আর ভাড়ার প্রতিটা পর্দায়। ⓘ `chosen` নজরে
+         * থাকা মান (`x-model`), তাই এখন বাছাই বদলালেই ঘরটা আসে-যায়।
+         */
         get kind () {
-            const option = this.$refs.picker?.selectedOptions?.[0]
+            const value = String(this.chosen ?? '')
+            const option = [...(this.$refs.picker?.options ?? [])].find(o => o.value === value)
 
             return option?.dataset?.kind ?? ''
         },
@@ -60,14 +70,44 @@ export function countNotes (notes) {
  * ⓘ `amountField`: ফর্মের কোন ঘরে টাকার অঙ্কটা থাকে — শুরুতে সেখান
  * থেকেই পড়া হয়, যাতে নোট গোনার তুলনাটা প্রথম থেকেই ঠিক থাকে।
  */
-export function moneyMovement ({ amountField } = {}) {
+/**
+ * খাতের ধরন দেখে মাধ্যম — নগদ খাতে নগদ, MFS-এ MFS, ব্যাংকে ব্যাংকের কোনো পথ।
+ *
+ * ⓘ ব্যাংকে ট্রান্সফার, চেক আর কার্ড তিনটাই চলে, তাই আগে থেকে ওর একটা বাছা
+ * থাকলে সেটাই থাকে; নইলে ট্রান্সফার। ⚠️ সার্ভারও ঠিক এই মিল চায়
+ * ([[VoucherService::assertTheWayMatchesTheAccount()]]) — দুই জায়গা এক কথা বলে।
+ */
+export function wayForKind (kind, current) {
+    if (kind === 'cash') return 'cash'
+    if (kind === 'mfs') return 'mfs'
+    if (kind === 'bank') return ['transfer', 'cheque', 'card'].includes(current) ? current : 'transfer'
+
+    return current
+}
+
+export function moneyMovement ({
+    amountField,
+    method = 'cash',
+    charge = 0,
+    chequeDate = '',
+    notes = {},
+    moneyField = '',
+} = {}) {
     return {
-        method: 'cash',
-        charge: 0,
+        /*
+         * ⛔ শুরুর মান সার্ভার থেকে — ২৭ সেপ্টেম্বর ২০২৬।
+         *
+         * আগে এখানে `method: 'cash'`, `charge: 0`, `notes: {}` আর
+         * `chequeDate: ''` লেখা ছিল। ⚠️ `x-model` তখন সার্ভারের পুরনো মানের
+         * উপরে এগুলো বসাত, তাই ভুল নিয়ে ফর্ম ফিরলে বা সম্পাদনায় মাধ্যম আবার
+         * "নগদ" হত, আর লেনদেন-নম্বর, চার্জ, নোট গোনা, চেকের তারিখ হারাত।
+         */
+        method: method || 'cash',
+        charge: Number(charge) || 0,
         chargeBy: 'us',
         amount: 0,
-        notes: {},
-        chequeDate: '',
+        notes: (notes && typeof notes === 'object') ? { ...notes } : {},
+        chequeDate: chequeDate || '',
 
         /*
          * ⛔ অঙ্কটা একবার নয়, প্রতিবার — ২১ সেপ্টেম্বর ২০২৬।
@@ -108,6 +148,33 @@ export function moneyMovement ({ amountField } = {}) {
                     this.readAmount()
                 }
             })
+
+            /*
+             * ⭐ টাকার খাত বদলালে মাধ্যমও — ২৭ সেপ্টেম্বর ২০২৬।
+             *
+             * ⛔ লাইভে: ব্যাংক বাছার পরেও চিপ "নগদ"-এ থাকত, তাই লেনদেন-নম্বরের
+             * ঘরটা আসতই না, অথচ সার্ভার সেটা চাইত। ⓘ এখন খাতের ধরন
+             * (`data-kind`) দেখে চিপটা নিজে সরে, আর চিপের সাথে ঘরগুলোও আসে।
+             */
+            if (moneyField) {
+                this.$el.closest('form')?.addEventListener('change', (event) => {
+                    if (event.target?.name === moneyField) {
+                        this.followAccount(event.target)
+                    }
+                })
+            }
+        },
+
+        followAccount (select) {
+            /*
+             * ⓘ ধরনটা মান ধরে খোঁজা option থেকে, `selectedOptions` থেকে নয় —
+             * দ্বিতীয়বার বদলালে কিছু পরিবেশে (happy-dom) ওটা পুরনো সারিই দিত,
+             * আর মাধ্যম আগের খাতেই আটকে থাকত।
+             */
+            const option = [...(select?.options ?? [])].find(o => o.value === select.value)
+            const kind = option?.dataset?.kind ?? ''
+
+            this.method = wayForKind(kind, this.method)
         },
 
         get counted () {

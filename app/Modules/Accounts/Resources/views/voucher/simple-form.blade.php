@@ -757,14 +757,56 @@
             বলা যেত না, তাই সেটা লুকানো ও নিষ্ক্রিয়।
         --}}
         @if ($partyAbove)
+            @php
+                /*
+                 * ⭐ টাকার খাতের ধরন প্রতিটা সারির গায়ে — ২৭ সেপ্টেম্বর ২০২৬।
+                 *
+                 * ⓘ মাধ্যমের ব্লক এটা পড়ে খাত বদলালে মাধ্যম বদলায়, আর তখনই
+                 * ব্যাংক বা MFS-এ লেনদেন-নম্বরের ঘর আসে ([[money.js]])। ⛔ আগে
+                 * ঘরটা কেবল চিপ দেখত, আর ব্যাংক বাছার পরেও নম্বর চাওয়ার ঘর ছিল না।
+                 */
+                $isPayment = $voucher->type === \App\Modules\Accounts\Models\Voucher::PAYMENT;
+                $moneyKinds = collect($moneyAccounts)->mapWithKeys(fn ($a) => [$a->id => (string) $a->money_kind])->all();
+                $moneyOptions = collect($moneyAccounts)->mapWithKeys(fn ($a) => [$a->id => $a->label()])->all();
+            @endphp
             <section data-boxed
                      class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
-                <div class="grid items-end gap-3 sm:grid-cols-[2fr_1fr_1.4fr_2fr]">
-                    <x-ui.select name="to_account_id"
-                                 :label="__($sides['to']['label'])"
-                                 :options="collect($optionsFor($sides['to']['source']))->mapWithKeys(fn ($a) => [$a->id => $a->label()])->all()"
-                                 :selected="old('to_account_id', $debitLine?->account_id)"
-                                 required />
+                <div @class([
+                        'grid items-end gap-3',
+                        'sm:grid-cols-[2fr_1fr_1.4fr_2fr]' => ! $isPayment,
+                        'sm:grid-cols-2 lg:grid-cols-[1.6fr_1.6fr_1fr_1.2fr_1.6fr]' => $isPayment,
+                     ])>
+                    @if ($isPayment)
+                        {{--
+                            ⛔ পরিশোধে এই ঘরটা ছিলই না — উপরের পুরনো ঘরটা নমুনা মেনে
+                            লুকানো ও নিষ্ক্রিয়, আর বদলি বসানো হয়েছিল কেবল রসিদে।
+                            ⚠️ ফল লাইভে: একটাও পরিশোধ পোস্ট হয়নি, প্রতিবার
+                            "যে খাত থেকে দিতেই হবে" (hp2, TCL, ২৭ সেপ্টেম্বর ২০২৬)।
+                        --}}
+                        <x-ui.select name="from_account_id" data-money-account
+                                     :label="__('accounts::field.paid_from')"
+                                     :options="$moneyOptions"
+                                     :kinds="$moneyKinds"
+                                     :selected="old('from_account_id', $creditLine?->account_id)"
+                                     :hint="$cashHiddenReason ?? null"
+                                     :placeholder="'—'"
+                                     required />
+
+                        {{-- ⓘ ফাঁকা রাখা যায়: সরবরাহকারী হলে দেনা নিজে ২১১১-এ কমে ([[VoucherRequest]]) --}}
+                        <x-ui.select name="to_account_id"
+                                     :label="__($sides['to']['label'])"
+                                     :options="collect($optionsFor($sides['to']['source']))->mapWithKeys(fn ($a) => [$a->id => $a->label()])->all()"
+                                     :selected="old('to_account_id', $debitLine?->account_id)"
+                                     :placeholder="__('accounts::field.paid_to_from_party')" />
+                    @else
+                        <x-ui.select name="to_account_id" data-money-account
+                                     :label="__($sides['to']['label'])"
+                                     :options="$moneyOptions"
+                                     :kinds="$moneyKinds"
+                                     :selected="old('to_account_id', $debitLine?->account_id)"
+                                     :hint="$cashHiddenReason ?? null"
+                                     required />
+                    @endif
 
                     <x-ui.field name="amount" type="number" step="0.01" inputmode="decimal"
                                 :label="$voucher->type === \App\Modules\Accounts\Models\Voucher::RECEIPT

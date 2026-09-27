@@ -82,12 +82,25 @@ final class DepositFormOptions
             ->filter(fn (Account $a) => ! $a->isCash() || CashTill::mayUse(auth()->id(), (int) $a->id))
             ->values();
 
+        /*
+         * ⭐ কারণটা পর্দায়, সংরক্ষণের আগে — ২৭ সেপ্টেম্বর ২০২৬।
+         *
+         * ⛔ উপরের মন্তব্য দাবি করত পর্দা কারণ বলে, অথচ বার্তাটা আসত কেবল
+         * পোস্টের পরে ([[VoucherService::assertCashLandsInOwnTill()]])। লাইভে
+         * মালিক "নগদ" খুঁজে পাননি, আর কেন তা কোথাও লেখা ছিল না।
+         * ⓘ নিয়ম অক্ষত — কেবল বলা হয়: নগদ খাত লুকানো, আর এই মানুষের নিজের
+         * একটাও নেই।
+         */
+        $hidesCash = $money->contains(fn (Account $a) => $a->isCash())
+            && ! $cashForMe->contains(fn (Account $a) => $a->isCash());
+
         return [
             /*
              * ⓘ টাকার ঘরে যায় ছাঁকা তালিকাটা — নিজের বাক্স ছাড়া অন্য
              * কারও নগদ খাত এখানে আসে না।
              */
             'moneyAccounts' => $cashForMe,
+            'cashHiddenReason' => $hidesCash ? __('accounts::validation.no_till_of_your_own') : null,
             'allAccounts' => $all,
 
             /*
