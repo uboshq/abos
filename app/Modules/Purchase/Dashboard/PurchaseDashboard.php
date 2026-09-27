@@ -11,6 +11,7 @@ use App\Core\Engines\Dashboard\Stat;
 use App\Core\Engines\Dashboard\Tile;
 use App\Core\Support\DocumentStatus;
 use App\Core\Support\Money;
+use App\Modules\Accounts\Services\AccountsFacts;
 use App\Modules\Purchase\Models\Payment;
 use App\Modules\Purchase\Models\PurchaseBill;
 use App\Modules\Purchase\Models\PurchaseOrder;
@@ -63,9 +64,25 @@ final class PurchaseDashboard implements ProvidesDashboard
             ],
 
             stats: [
+                /*
+                 * ⭐ দেনা খাতা থেকে, বিলের যোগফল থেকে নয় — ২৭ সেপ্টেম্বর ২০২৬।
+                 *
+                 * ── ⛔ লাইভ QA-তে কী দেখা গেল ──────────────────────────────
+                 * TCL-এ ৳৩,০০০ কেনা, ৳১,০০০ দেওয়া, ৳২০০ ফেরত — আসল দেনা
+                 * ৳১,৮০০, অথচ এই ঘর বলছিল **৳৩,০০০**। ⓘ সংখ্যাটা নিশ্চিত
+                 * বিলগুলোর `total` যোগ করত, আর বিলের মোট টাকা গেলেও কমে না,
+                 * মাল ফেরত গেলেও না।
+                 *
+                 * ⚠️ হিসাবের ড্যাশবোর্ড, অর্থের ড্যাশবোর্ড আর CFO পাতা আগে
+                 * থেকেই [[AccountsFacts::payable]] পড়ে — খাত ২১১১-এর জের।
+                 * ⛔ এখানে নিজের `SUM` মানে একই প্রশ্নের দ্বিতীয় সংজ্ঞা, আর
+                 * দুই পর্দায় দুই উত্তর। তাই সংজ্ঞা একটাই, ওখানেই।
+                 *
+                 * ⓘ পাহারা: [[ThePayableOnTheDashboardForgotThePaymentsTest]]
+                 */
                 new Stat(
                     label: __('purchase::dashboard.payable'),
-                    value: Money::format(PurchaseBill::query()->whereIn('status', DocumentStatus::POSTED)->sum('total')),
+                    value: Money::format(app(AccountsFacts::class)->payable()),
                     hint: __('purchase::dashboard.payable_hint'),
                     href: route('purchase.bill.index'),
                     tone: Stat::BAD,

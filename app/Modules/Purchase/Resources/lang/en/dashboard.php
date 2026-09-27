@@ -11,7 +11,7 @@ return [
     'title' => 'Dashboard',
     'subtitle' => 'Purchases and payments — where things stand',
     'payable' => 'Payable',
-    'payable_hint' => 'Confirmed bills only — drafts are not counted',
+    'payable_hint' => 'Payable in the books (2111) — after payments and returns',
     'bought_this_month' => 'Bought this month',
     'bought_hint' => 'Confirmed bills this month',
     'paid_this_month' => 'Paid this month',
