@@ -988,6 +988,25 @@ final class TheParkedBillWaitsAtTheSameCounterTest extends TestCase
         $this->assertSame(DocumentStatus::DRAFT, $challan->fresh()->status, 'সই না হওয়া পর্যন্ত মাল বেরোয় না।');
     }
 
+    /**
+     * ⛔ চালকের ফোন চালানে পৌঁছাত না — abos-10-এর ধরা, ২৮ সেপ্টেম্বর ২০২৬: কাউন্টার পাঠাত,
+     * চালান লেখার সেবা ঘরটা বাদ দিত; নিশ্চিতকরণের পাতায় ফোন আসত না। ⚠️ দুই পথই: নতুন
+     * চালান (বিক্রি) আর রাখা খসড়ার চালান হালনাগাদ।
+     */
+    public function test_the_drivers_phone_reaches_the_challan_on_both_paths(): void
+    {
+        $this->sell(['own_transport' => '1', 'driver_name' => 'করিম', 'driver_phone' => '01711000000'])
+            ->assertSessionHasNoErrors();
+        $sold = $this->challanOf(SalesInvoice::query()->latest('id')->firstOrFail());
+
+        $this->assertSame('01711000000', $sold->driver_phone, '⛔ নতুন চালানে চালকের ফোন হারাল।');
+
+        $draft = $this->park(['driver_name' => 'রহিম', 'driver_phone' => '01811000000'], $this->other);
+        $this->park(['resume_invoice_id' => $draft->id, 'driver_name' => 'রহিম', 'driver_phone' => '01911000000'], $this->other);
+
+        $this->assertSame('01911000000', $this->challanOf($draft)->driver_phone, '⛔ খসড়ার চালান হালনাগাদে চালকের ফোন হারাল।');
+    }
+
     /** তালিকা থেকে বাতিল করলে তালিকাতেই ফেরা — আর চাবি ছাড়া পাতাটাই বন্ধ। */
     public function test_discarding_from_the_list_returns_to_the_list_and_the_list_needs_the_counter_key(): void
     {

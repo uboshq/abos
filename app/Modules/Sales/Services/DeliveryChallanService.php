@@ -136,6 +136,8 @@ final class DeliveryChallanService
                 'vehicle_id' => $data['vehicle_id'] ?? null,
                 'vehicle_no' => $data['vehicle_no'] ?? null,
                 'driver_name' => $data['driver_name'] ?? null,
+                // ⓘ কাউন্টার পাঠায়, আগে এখানে চুপচাপ হারাত — নিশ্চিতকরণের পাতায় চালকের ফোন আসত না
+                'driver_phone' => $data['driver_phone'] ?? null,
                 'own_transport' => (bool) ($data['own_transport'] ?? false), // ⓘ ধাপ ৫ — [[TransportRule]]
                 'narration' => $data['narration'] ?? null,
                 'status' => DocumentStatus::DRAFT,
@@ -179,6 +181,8 @@ final class DeliveryChallanService
                 'vehicle_id' => $data['vehicle_id'] ?? null,
                 'vehicle_no' => $data['vehicle_no'] ?? null,
                 'driver_name' => $data['driver_name'] ?? null,
+                // ⓘ কাউন্টার পাঠায়, আগে এখানে চুপচাপ হারাত — নিশ্চিতকরণের পাতায় চালকের ফোন আসত না
+                'driver_phone' => $data['driver_phone'] ?? null,
                 'own_transport' => (bool) ($data['own_transport'] ?? false), // ⓘ ধাপ ৫ — [[TransportRule]]
                 'narration' => $data['narration'] ?? null,
                 'financial_year_id' => $this->resolveFinancialYear($trxDate)->id,
