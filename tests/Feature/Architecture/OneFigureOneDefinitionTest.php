@@ -26,6 +26,24 @@ use Tests\TestCase;
 class OneFigureOneDefinitionTest extends TestCase
 {
     /**
+     * ⭐ "গোনা হয় এমন অবস্থা" তালিকার যত চেহারা — লুপ আর ভুল নমুনা, দুইজনই এটাই পড়ে।
+     *
+     * ⓘ প্রথম দুইটা আগের (২১ সেপ্টেম্বর)। ⚠️ শেষ দুইটা যোগ হলো অডিট §৬-এর
+     * দিনে (২৭ সেপ্টেম্বর ২০২৬): **দুই-উদ্ধৃতির** লেখা (`"confirmed"`) আর
+     * **উল্টো ক্রম** (`closed, confirmed`) — দুইটাই একই নিয়ম, আর পুরনো
+     * খোঁজা কোনোটাই দেখত না। ⓘ যোগ করার আগে মাপা: গোটা `app/`-এ নতুন
+     * কোনো ধরা পড়া নেই।
+     *
+     * @var list<string>
+     */
+    private const PATTERNS = [
+        '/CONFIRMED,(?:self|DocumentStatus)::CLOSED,?\]/',
+        '/CLOSED,(?:self|DocumentStatus)::CONFIRMED,?\]/',
+        '/[\'"]confirmed[\'"],[\'"]closed[\'"]/',
+        '/[\'"]closed[\'"],[\'"]confirmed[\'"]/',
+    ];
+
+    /**
      * "কোন কাগজ গোনা হয়" কেবল এক জায়গায় লেখা।
      *
      * ── কেন গ্রেপ, কেন আচরণ নয় ──────────────────────────────────────
@@ -60,37 +78,107 @@ class OneFigureOneDefinitionTest extends TestCase
          * ⓘ অর্থাৎ পাহারাটা দাবি করত "সংজ্ঞাটা এক জায়গায়", অথচ সাত
          * জায়গায় ছিল — আর সবুজ দেখে সবাই ধরে নিত জিনিসটা এক জায়গায় আছে।
          */
-        $patterns = [
-            '/CONFIRMED,(?:self|DocumentStatus)::CLOSED,?\]/',
-            "/'confirmed','closed'/",
-            '/\'confirmed\',\'closed\'/',
-        ];
-
         $home = 'app/Core/Support/DocumentStatus.php';
 
         $offenders = [];
+        $looked = 0;
+        $homeSeen = false;
 
         foreach ($this->phpFiles() as $path) {
             $relative = str_replace(DIRECTORY_SEPARATOR, '/', substr($path, strlen(base_path()) + 1));
+            $looked++;
 
-            if ($relative === $home) {
+            if (! $this->spellsTheCountedList((string) file_get_contents($path))) {
                 continue;
             }
 
-            $code = preg_replace('/\s+/', '', $this->withoutComments(file_get_contents($path)));
+            if ($relative === $home) {
+                $homeSeen = true;
 
-            foreach ($patterns as $pattern) {
-                if (preg_match($pattern, $code) === 1) {
-                    $offenders[] = $relative;
-
-                    break;
-                }
+                continue;
             }
+
+            $offenders[] = $relative;
         }
+
+        /*
+         * ⭐ "কিছু পেয়েছি" — অডিট §৬, ২৭ সেপ্টেম্বর ২০২৬।
+         *
+         * ⛔ অডিটের কথা: *"অবস্থার পাহারাদার নিজে কিছু পেয়েছে কি না, তা
+         * যাচাই করে না।"* ⚠️ খোঁজার ছাঁচ একদিন অন্ধ হলে — কোড ফরম্যাটার
+         * লেখা বদলালে, ধ্রুবকের নাম বদলালে — `$offenders` খালি থাকত আর
+         * পাহারাটা সবুজ দিত, ঠিক যেমন ২০ সেপ্টেম্বরের "খালি তালিকা আর
+         * খালি তালিকা এক" পাহারাগুলো দিত।
+         *
+         * ⭐ তাই দুইটা গণনা, আর দ্বিতীয়টাই আসল: **একমাত্র বৈধ সংজ্ঞাটা**
+         * (`DocumentStatus::POSTED`) এই খোঁজায় ধরা পড়তেই হবে। ⓘ ওটা আসল
+         * কোড, পরীক্ষায় হাতে লেখা নাম নয় — তাই খোঁজা অন্ধ হলে এখানেই লাল।
+         */
+        $this->assertGreaterThan(1000, $looked,
+            "মাত্র {$looked}টা PHP ফাইল দেখা হলো (২৭ সেপ্টেম্বর ছিল ২১৯১) — হাঁটাটাই ভেঙেছে।");
+
+        $this->assertTrue($homeSeen,
+            "খোঁজাটা {$home}-এর নিজের সংজ্ঞাটাই চিনতে পারছে না — পাহারাটা অন্ধ, "
+            .'আর অন্ধ পাহারার খালি তালিকার কোনো মানে নেই।');
 
         $this->assertSame([], $offenders,
             '"কোন কাগজ গোনা হয়" নিয়মটা একাধিক জায়গায় লেখা হয়েছে। কোয়েরিতে `->posted()`, '
             ."সংজ্ঞা বলতে `DocumentStatus::POSTED` — তালিকাটা {$home}-এ:\n".implode("\n", $offenders));
+    }
+
+    /**
+     * ⛔ ইচ্ছাকৃত ভুল নমুনা — খোঁজাটা সত্যিই কামড়ায় (অডিট §৬, ২৭ সেপ্টেম্বর ২০২৬)।
+     *
+     * ⓘ প্রতিটা নমুনা যায় **সেই একই** [[spellsTheCountedList()]] দিয়ে, যা
+     * উপরের লুপ ডাকে — আলাদা করে লেখা নকল দিয়ে নয়। ⚠️ আর উল্টো দিকও
+     * মাপা: মন্তব্যের ভেতরের তালিকা আর `->posted()` ছাড়া পেতে হবে —
+     * নাহলে "সবকিছু ধরে" এমন পাহারাও এখানে সবুজ থাকত, আর তার মিথ্যা
+     * অভিযোগে মানুষ পাহারাটাই বন্ধ করে দিতেন।
+     */
+    public function test_the_detector_bites_a_deliberately_bad_sample(): void
+    {
+        $bad = [
+            'ধ্রুবক দিয়ে' => <<<'PHP'
+                <?php $q->whereIn('status', [DocumentStatus::CONFIRMED, DocumentStatus::CLOSED]);
+                PHP,
+            'কয়েক লাইনে ভাঙা' => <<<'PHP'
+                <?php $q->whereIn('status', [
+                    self::CONFIRMED,
+                    self::CLOSED,
+                ]);
+                PHP,
+            'এক-উদ্ধৃতির লেখা' => <<<'PHP'
+                <?php $q->whereIn('status', ['confirmed', 'closed']);
+                PHP,
+            'দুই-উদ্ধৃতির লেখা' => <<<'PHP'
+                <?php $q->whereIn('status', ["confirmed", "closed"]);
+                PHP,
+            'কাঁচা SQL-এর ভেতরে, উল্টো ক্রমে' => <<<'PHP'
+                <?php DB::select("select * from sal_invoices where status in ('closed', 'confirmed')");
+                PHP,
+        ];
+
+        foreach ($bad as $shape => $source) {
+            $this->assertTrue($this->spellsTheCountedList($source),
+                "ইচ্ছাকৃত ভুল নমুনাটা ({$shape}) পাহারা পেরিয়ে গেছে — খোঁজাটা এই চেহারা দেখে না।");
+        }
+
+        $innocent = [
+            'লাইন-মন্তব্যে' => <<<'PHP'
+                <?php // আগে লেখা ছিল ['confirmed', 'closed'] — এখন ->posted()
+                PHP,
+            'ব্লক-মন্তব্যে' => <<<'PHP'
+                <?php /* [self::CONFIRMED, self::CLOSED] — DocumentStatus::POSTED দেখুন */
+                PHP,
+            'আসল পথ' => <<<'PHP'
+                <?php $q->posted()->whereIn('status', DocumentStatus::POSTED);
+                PHP,
+        ];
+
+        foreach ($innocent as $shape => $source) {
+            $this->assertFalse($this->spellsTheCountedList($source),
+                "নির্দোষ লেখাকে ({$shape}) অপরাধী বলছে — মিথ্যা অভিযোগের পাহারা মানুষ বন্ধ করে দেয়।");
+        }
     }
 
     /**
@@ -158,6 +246,26 @@ class OneFigureOneDefinitionTest extends TestCase
 
         new Metric('today', 'x', [DocumentStatus::CONFIRMED], Metric::BY_TRANSACTION_DATE, 2,
             Metric::ROUND_AT_TOTAL, 'sales.view', fn () => '0');
+    }
+
+    /**
+     * ⭐ একটা উৎস "গোনা হয় এমন অবস্থা"-র তালিকা নিজে লেখে কি না।
+     *
+     * ⓘ মন্তব্য বাদ, তারপর সব ফাঁকা জায়গা বাদ, তারপর [[PATTERNS]]। ⚠️ লুপ
+     * আর ভুল নমুনা **এই এক পদ্ধতিই** ডাকে — দুই জায়গায় দুই রকম খোঁজা
+     * থাকলে নমুনাটা একটা পরীক্ষা করত, আর পাহারা আরেকটা চালাত।
+     */
+    private function spellsTheCountedList(string $source): bool
+    {
+        $code = preg_replace('/\s+/', '', $this->withoutComments($source));
+
+        foreach (self::PATTERNS as $pattern) {
+            if (preg_match($pattern, $code) === 1) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /** @return list<string> */
