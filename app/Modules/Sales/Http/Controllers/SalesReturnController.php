@@ -11,6 +11,7 @@ use App\Core\Services\MenuBuilder;
 use App\Core\Support\DocumentStatus;
 use App\Http\Controllers\Controller;
 use App\Modules\Customer\Models\Customer;
+use App\Modules\Inventory\Models\Batch;
 use App\Modules\Inventory\Models\Product;
 use App\Modules\Inventory\Models\Warehouse;
 use App\Modules\MasterData\Models\ReasonCode;
@@ -96,7 +97,8 @@ class SalesReturnController extends Controller implements HasMiddleware
 
     public function show(Request $request, SalesReturn $return): View
     {
-        $return->load(['lines.product.unit', 'lines.invoiceLine.invoice', 'customer', 'warehouse', 'reasonCode', 'creator']);
+        $return->load(['lines.product.unit', 'lines.invoiceLine.invoice', 'customer', 'warehouse', 'reasonCode', 'creator',
+            'lines.reasonCode', 'lines.batch']);
 
         return view('sales::return.show', [
             'menu' => $this->menu->forUser($request->user()),
@@ -183,6 +185,25 @@ class SalesReturnController extends Controller implements HasMiddleware
                 ->inContext(ReasonCode::SALES_RETURN)
                 ->orderBy('code')
                 ->get(),
+
+            /*
+             * লট ধরা পণ্যের লটগুলো — NEXUS §২৪।
+             *
+             * ⓘ "মেয়াদোত্তীর্ণ" কারণে লট লাগে, আর লাইনের ড্রপডাউন পণ্য
+             * ধরে ছাঁকে (`lotsFor()`)। ⚠️ তালিকাটা এখানেই সরল সারিতে
+             * বানানো — পর্দায় ক্লোজার বা মডেল পাঠালে CSP-Alpine পড়তে পারত না।
+             */
+            'lots' => Batch::query()
+                ->whereHas('product', fn ($q) => $q->where('track_batch', true))
+                ->orderByDesc('expiry_date')
+                ->get()
+                ->map(fn (Batch $b) => [
+                    'id' => (string) $b->id,
+                    'product_id' => (string) $b->product_id,
+                    'label' => $b->batch_no.($b->expiry_date ? ' · '.$b->expiry_date->toDateString() : ''),
+                ])
+                ->values()
+                ->all(),
 
             'invoices' => SalesInvoice::query()
                 ->where('status', DocumentStatus::CONFIRMED)

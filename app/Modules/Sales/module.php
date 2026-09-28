@@ -280,6 +280,8 @@ return [
                 'route_params' => ['slug' => 'by-brand'], 'permission' => 'sales.report'],
             ['label' => 'sales::margin.report_title', 'icon' => 'reports', 'route' => 'sales.margin.report.show',
                 'route_params' => ['slug' => 'margin'], 'permission' => 'sales.margin.report'],
+            ['label' => 'sales::return_reason.report_title', 'icon' => 'refresh', 'route' => 'sales.return.report.show',
+                'route_params' => ['slug' => 'by-reason'], 'permission' => 'sales.return.report'],
 
             /*
              * রিকল — এই লটটা কাদের কাছে গেছে।
@@ -400,6 +402,12 @@ return [
         'sales.return.view',
         'sales.return.create',
         'sales.return.cancel',
+
+        /*
+         * কারণ ধরে ফেরতের রিপোর্ট — NEXUS §২৪। `sales.report` থেকে আলাদা:
+         * যাঁর ফেরত মাপা হচ্ছে, মাপকাঠিটা তাঁর হাতে থাকা চলে না।
+         */
+        'sales.return.report',
         'sales.pos',
         'sales.discount.override',
         'sales.report',
@@ -532,6 +540,7 @@ return [
             'sales.order.view', 'sales.challan.view', 'sales.invoice.view',
             'sales.collection.view', 'sales.return.view', 'sales.shipment.view',
             'sales.report',
+            'sales.return.report',
         ],
     ],
 
@@ -576,6 +585,7 @@ return [
     'reports' => [
         SalesReports::class,
         \App\Modules\Sales\Reports\MarginReport::class,
+        \App\Modules\Sales\Reports\SalesReturnReasonReports::class,
     ],
 
     /*

@@ -15,6 +15,7 @@ use App\Modules\Customer\Models\Customer;
 use App\Modules\Inventory\Models\Product;
 use App\Modules\Inventory\Models\Warehouse;
 use App\Modules\Inventory\Services\StockService;
+use App\Modules\MasterData\Models\ReasonCode;
 use App\Modules\Sales\Models\SalesInvoice;
 use App\Modules\Sales\Services\SalesInvoiceService;
 use App\Modules\Sales\Services\SalesReturnService;
@@ -79,6 +80,7 @@ class SalesReturnTest extends TestCase
                     'customer_id' => $this->customer->id,
                     'warehouse_id' => $this->warehouse->id,
                     'sales_invoice_id' => $invoice->id,
+                    'reason_code_id' => $this->returnReasonId(),
                     'trx_date' => now()->toDateString(),
                 ],
                 [[
@@ -130,7 +132,8 @@ class SalesReturnTest extends TestCase
                 // মূল বিলটা এখন বাধ্যতামূলক: কোন বিলের মাল ফিরছে না
                 // জানলে ওই মালের খরচ কত ছিল তাও জানা যায় না
                 ['customer_id' => $this->customer->id, 'warehouse_id' => $this->warehouse->id,
-                    'sales_invoice_id' => $invoice->id, 'trx_date' => now()->toDateString()],
+                    'sales_invoice_id' => $invoice->id, 'trx_date' => now()->toDateString(),
+                    'reason_code_id' => $this->returnReasonId()],
                 [['product_id' => $this->product->id,
                     'sales_invoice_line_id' => $invoice->lines->first()->id, 'qty' => '2']],
             )
@@ -156,7 +159,8 @@ class SalesReturnTest extends TestCase
         $this->returns()->confirm(
             $this->returns()->create(
                 ['customer_id' => $this->customer->id, 'warehouse_id' => $this->warehouse->id,
-                    'sales_invoice_id' => $invoice->id, 'trx_date' => now()->toDateString()],
+                    'sales_invoice_id' => $invoice->id, 'trx_date' => now()->toDateString(),
+                    'reason_code_id' => $this->returnReasonId()],
                 [['product_id' => $this->product->id,
                     'sales_invoice_line_id' => $invoice->lines->first()->id,
                     'qty' => '2', 'to_hold' => true]],
@@ -183,7 +187,8 @@ class SalesReturnTest extends TestCase
 
         $return = $this->returns()->create(
             ['customer_id' => $this->customer->id, 'warehouse_id' => $this->warehouse->id,
-                'sales_invoice_id' => $invoice->id, 'trx_date' => now()->toDateString()],
+                'sales_invoice_id' => $invoice->id, 'trx_date' => now()->toDateString(),
+                    'reason_code_id' => $this->returnReasonId()],
             [['product_id' => $this->product->id,
                 'sales_invoice_line_id' => $invoice->lines->first()->id, 'qty' => '12']],
         );
@@ -202,7 +207,8 @@ class SalesReturnTest extends TestCase
 
         $return = $this->returns()->create(
             ['customer_id' => $this->customer->id, 'warehouse_id' => $this->warehouse->id,
-                'sales_invoice_id' => $invoice->id, 'trx_date' => now()->toDateString()],
+                'sales_invoice_id' => $invoice->id, 'trx_date' => now()->toDateString(),
+                    'reason_code_id' => $this->returnReasonId()],
             [['product_id' => $this->product->id,
                 'sales_invoice_line_id' => $invoice->lines->first()->id,
                 'qty' => '2', 'rate' => '9999']],
@@ -221,7 +227,8 @@ class SalesReturnTest extends TestCase
         $return = $this->returns()->confirm(
             $this->returns()->create(
                 ['customer_id' => $this->customer->id, 'warehouse_id' => $this->warehouse->id,
-                    'sales_invoice_id' => $invoice->id, 'trx_date' => now()->toDateString()],
+                    'sales_invoice_id' => $invoice->id, 'trx_date' => now()->toDateString(),
+                    'reason_code_id' => $this->returnReasonId()],
                 [['product_id' => $this->product->id,
                     'sales_invoice_line_id' => $invoice->lines->first()->id, 'qty' => '2']],
             )
@@ -251,7 +258,8 @@ class SalesReturnTest extends TestCase
 
         $return = $this->returns()->create(
             ['customer_id' => $this->customer->id, 'warehouse_id' => $this->warehouse->id,
-                'sales_invoice_id' => $invoice->id, 'trx_date' => now()->toDateString()],
+                'sales_invoice_id' => $invoice->id, 'trx_date' => now()->toDateString(),
+                    'reason_code_id' => $this->returnReasonId()],
             [['product_id' => $this->product->id,
                 'sales_invoice_line_id' => $invoice->lines->first()->id, 'qty' => '2']],
         );
@@ -301,5 +309,16 @@ class SalesReturnTest extends TestCase
                 fn (string $sum, LedgerEntry $e) => bcadd($sum, bcsub((string) $e->debit, (string) $e->credit, 4), 4),
                 '0.0000',
             );
+    }
+
+    /**
+     * ফেরতের একটা কারণ — NEXUS §২৪-এর পর কারণ ছাড়া ফেরত হয় না।
+     *
+     * ⓘ এই ফাইলের দাবিগুলো কারণ নিয়ে নয়; ⚠️ কারণ না দিলে "থামল" দাবিগুলো
+     * ভুল কারণে (কারণ নেই বলে) সবুজ হত।
+     */
+    private function returnReasonId(): int
+    {
+        return (int) ReasonCode::query()->inContext(ReasonCode::SALES_RETURN)->where('code', 'DAMAGE')->value('id');
     }
 }

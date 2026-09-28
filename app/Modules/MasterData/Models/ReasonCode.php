@@ -40,6 +40,8 @@ class ReasonCode extends Model implements Drillable
         'company_id', 'code', 'name_en', 'name_bn',
         'context', 'account_id', 'returns_to_stock', 'needs_approval',
         'visible_to_customer',
+        // NEXUS §২৪ — কারণটা নোট বা লট চাইতে পারে
+        'needs_note', 'needs_lot',
         'is_active', 'created_by',
     ];
 
@@ -49,6 +51,8 @@ class ReasonCode extends Model implements Drillable
             'returns_to_stock' => 'boolean',
             'visible_to_customer' => 'boolean',
             'needs_approval' => 'boolean',
+            'needs_note' => 'boolean',
+            'needs_lot' => 'boolean',
             'is_active' => 'boolean',
         ];
     }

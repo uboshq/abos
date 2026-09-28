@@ -13,17 +13,25 @@
             'product_id' => (string) $l->product_id,
             'sales_invoice_line_id' => (string) $l->id,
             'qty' => '',
+            'free_qty' => '',
             'rate' => (string) $l->rate,
             'tax' => '',
             'to_hold' => false,
+            'reason_code_id' => '',
+            'reason_note' => '',
+            'batch_id' => '',
         ])->all()
         : $return->lines->map(fn ($l) => [
             'product_id' => (string) $l->product_id,
             'sales_invoice_line_id' => (string) ($l->sales_invoice_line_id ?? ''),
             'qty' => (string) $l->qty,
+            'free_qty' => (string) $l->free_qty,
             'rate' => (string) $l->rate,
             'tax' => (string) $l->tax,
             'to_hold' => (bool) $l->to_hold,
+            'reason_code_id' => (string) ($l->reason_code_id ?? ''),
+            'reason_note' => (string) ($l->reason_note ?? ''),
+            'batch_id' => (string) ($l->batch_id ?? ''),
         ])->all();
 
     $existing = old('lines', $rows);
@@ -113,7 +121,13 @@
 
                 <x-ui.select name="reason_code_id" :label="__('sales::field.reason')"
                              :options="$reasons->mapWithKeys(fn ($r) => [$r->id => $r->name()])"
-                             :selected="$return->reason_code_id" placeholder="-" />
+                             :selected="$return->reason_code_id" placeholder="-" required />
+            </div>
+
+            {{-- NEXUS §২৪: "অন্যান্য"-র মতো কারণ বিবরণ চায়; সেবা না পেলে থামায় --}}
+            <div class="mt-3">
+                <x-ui.field name="reason_note" :label="__('sales::return_reason.reason_note')"
+                            :value="old('reason_note', $return->reason_note)" />
             </div>
 
             <div class="mt-3">
@@ -127,6 +141,7 @@
 
             <div x-data="salesReturn({
                              rows: @js($existing),
+                             lots: @js($lots),
                            })">
 
                 <div class="table-responsive">
@@ -135,8 +150,11 @@
                             <tr>
                                 <th class="text-start">{{ __('sales::field.product') }}</th>
                                 <th class="text-end">{{ __('sales::field.quantity') }}</th>
+                                <th class="text-end">{{ __('sales::field.free_qty') }}</th>
                                 <th class="text-end">{{ __('sales::field.rate') }}</th>
                                 <th class="text-end">{{ __('sales::field.tax') }}</th>
+                                <th class="text-start">{{ __('sales::return_reason.line_reason') }}</th>
+                                <th class="text-start">{{ __('sales::return_reason.lot') }}</th>
                                 <th class="text-start">{{ __('sales::field.not_sellable') }}</th>
                                 <th class="text-end">{{ __('sales::field.amount') }}</th>
                                 <th><span class="sr-only">{{ __('sales::action.remove_line') }}</span></th>
@@ -168,6 +186,15 @@
                                                       bg-(--color-surface-card) px-2 text-end">
                                     </td>
 
+                                    {{-- ফ্রি বা উপহারের মাল — ফ্রি ভাণ্ডারে ফেরে, শূন্য দামে; পাওনা কমায় না --}}
+                                    <td class="cell-input" data-label="{{ __('sales::field.free_qty') }}">
+                                        <input type="number" step="0.01" min="0" inputmode="decimal"
+                                               :name="'lines[' + (i) + '][free_qty]'" x-model="row.free_qty"
+                                               class="num h-(--spacing-field-compact) w-full sm:w-20 rounded-(--radius-field)
+                                                      border border-(--color-border)
+                                                      bg-(--color-surface-card) px-2 text-end">
+                                    </td>
+
                                     <td class="cell-input" data-label="{{ __('sales::field.rate') }}">
                                         <input type="number" step="0.01" inputmode="decimal"
                                                :name="'lines[' + (i) + '][rate]'" x-model="row.rate"
@@ -182,6 +209,36 @@
                                                class="num h-(--spacing-field-compact) w-full sm:w-24 rounded-(--radius-field)
                                                       border border-(--color-border)
                                                       bg-(--color-surface-card) px-2 text-end">
+                                    </td>
+
+                                    {{-- লাইনের নিজের কারণ — খালি মানে উপরেরটাই; নোট লাগে কেবল কারণ চাইলে --}}
+                                    <td class="cell-input" data-label="{{ __('sales::return_reason.line_reason') }}">
+                                        <select :name="'lines[' + (i) + '][reason_code_id]'" x-model="row.reason_code_id"
+                                                class="h-(--spacing-field-compact) w-full rounded-(--radius-field) border border-(--color-border)
+                                                       bg-(--color-surface-card) px-2">
+                                            <option value="">{{ __('sales::return_reason.same_as_header') }}</option>
+                                            @foreach ($reasons as $reason)
+                                                <option value="{{ $reason->id }}">{{ $reason->name() }}</option>
+                                            @endforeach
+                                        </select>
+
+                                        <input type="text" maxlength="500"
+                                               :name="'lines[' + (i) + '][reason_note]'" x-model="row.reason_note"
+                                               placeholder="{{ __('sales::return_reason.reason_note') }}"
+                                               class="mt-1 h-(--spacing-field-compact) w-full rounded-(--radius-field)
+                                                      border border-(--color-border) bg-(--color-surface-card) px-2">
+                                    </td>
+
+                                    {{-- লট — কেবল এই লাইনের পণ্যের; মেয়াদোত্তীর্ণ মালে বাধ্যতামূলক --}}
+                                    <td class="cell-input" data-label="{{ __('sales::return_reason.lot') }}">
+                                        <select :name="'lines[' + (i) + '][batch_id]'" x-model="row.batch_id"
+                                                class="h-(--spacing-field-compact) w-full rounded-(--radius-field) border border-(--color-border)
+                                                       bg-(--color-surface-card) px-2">
+                                            <option value="">{{ __('sales::return_reason.no_lot') }}</option>
+                                            <template x-for="lot in lotsFor(row)" :key="lot.id">
+                                                <option :value="lot.id" x-text="lot.label"></option>
+                                            </template>
+                                        </select>
                                     </td>
 
                                     {{-- আবার বেচা যাবে না — টিক দিলে মালটা গুদামে
@@ -208,7 +265,7 @@
 
                         <tfoot>
                             <tr>
-                                <td colspan="5" class="cell text-end font-medium">{{ __('sales::field.total') }}</td>
+                                <td colspan="7" class="cell text-end font-medium">{{ __('sales::field.total') }}</td>
                                 <td class="num cell font-semibold" x-text="total.toFixed(2)"></td>
                                 <td></td>
                             </tr>

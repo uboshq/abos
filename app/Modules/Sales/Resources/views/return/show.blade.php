@@ -37,6 +37,7 @@
                     'sales::field.warehouse' => $return->warehouse?->name() ?: '-',
                     'sales::field.invoice' => $return->invoice?->document_no ?: '-',
                     'sales::field.reason' => $return->reasonCode?->name() ?: '-',
+                    'sales::return_reason.reason_note' => $return->reason_note ?: '-',
                 ] as $label => $value)
                     <div>
                         <dt class="text-(--color-ink-muted)">{{ __($label) }}</dt>
@@ -66,8 +67,14 @@
                      'render' => fn ($l) => $l->product?->name()],
                     ['key' => 'qty', 'label' => __('sales::field.quantity'), 'numeric' => true, 'width' => '8rem',
                      'render' => fn ($l) => rtrim(rtrim((string) $l->qty, '0'), '.').' '.($l->product?->unit?->code ?? '')],
+                    ['key' => 'free_qty', 'label' => __('sales::field.free_qty'), 'numeric' => true, 'width' => '7rem',
+                     'render' => fn ($l) => bccomp((string) $l->free_qty, '0', 4) > 0 ? rtrim(rtrim((string) $l->free_qty, '0'), '.') : '—'],
                     ['key' => 'rate', 'label' => __('sales::field.rate'), 'numeric' => true, 'width' => '8rem',
                      'render' => fn ($l) => \App\Core\Support\Money::format($l->rate)],
+                    ['key' => 'reason', 'label' => __('sales::field.reason'), 'width' => '10rem',
+                     'render' => fn ($l) => $l->reasonCode ? $l->reasonCode->name().($l->reason_note ? ' — '.$l->reason_note : '') : '—'],
+                    ['key' => 'lot', 'label' => __('sales::return_reason.lot'), 'width' => '8rem',
+                     'render' => fn ($l) => $l->batch?->batch_no ?: '—'],
                     ['key' => 'to_hold', 'label' => __('sales::field.not_sellable'), 'width' => '9rem',
                      'render' => fn ($l) => $l->to_hold ? __('core.yes') : __('core.no')],
                     ['key' => 'amount', 'label' => __('sales::field.amount'), 'numeric' => true, 'width' => '10rem',

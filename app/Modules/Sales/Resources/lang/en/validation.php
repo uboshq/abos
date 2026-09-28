@@ -152,5 +152,16 @@ return [
     'scheme_is_live' => "A live scheme's rates cannot be changed — changing them would change what earlier invoices earned. Stop it and write a new one.",
     'price_out_of_range' => ':product — the rate sits more than :tolerance% away from the standard price.',
     'slip_used_twice' => 'A collection from this customer already carries slip :no. Check that one first — entering it twice lowers their balance twice for money that came once.',
+    // ⭐ ফেরত বিলের সাথে বাঁধা — গ্রাহক, সারি, লট আর ফ্রি মাল (২৭ সেপ্টেম্বর ২০২৬)
+    'return_bill_not_posted' => 'Bill :no is not a confirmed sale — nothing left on it, so nothing can come back against it.',
+    'return_bill_other_customer' => 'Bill :no was sold to :customer. A return against it goes in that customer\'s name, or the wrong account is credited.',
+    'return_line_not_on_bill' => 'Line :line: :product is not on bill :no.',
+    'return_line_ambiguous' => 'Line :line: :product is on bill :no more than once — pick the bill line it comes back against.',
+    'return_lot_required' => 'Line :line: :product left bill :no from more than one lot — say which lot came back.',
+    'return_lot_not_on_bill' => 'Line :line: lot :lot of :product did not leave on bill :no.',
+    'return_lot_over' => 'Line :line: only :room of lot :lot left on bill :no and has not come back yet.',
+    'return_free_over' => 'Line :line: only :room free :product was given on bill :no and has not come back yet.',
+    'return_free_needs_bill' => 'Free goods come back only against the bill that gave them — choose the bill.',
+    'invoice_has_live_return' => ':no has a confirmed return (:return) against it. Cancel the return first, then the bill — otherwise the returned part is reversed twice.',
     'draft_not_settable' => 'This draft cannot be changed now: it is confirmed or waiting for a signature.',
 ];

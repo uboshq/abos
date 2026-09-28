@@ -11,6 +11,7 @@ use App\Core\Support\CompanyContext;
 use App\Core\Support\DocumentStatus;
 use App\Models\FinancialYear;
 use App\Models\IssuedNumber;
+use App\Models\LedgerEntry;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Inventory\Models\Product;
@@ -57,6 +58,12 @@ final class SalesReturnService
         private readonly StockService $stock,
         private readonly CostLayerService $costs,
         private readonly DocumentApproval $approvals,
+
+        // ⭐ ফেরতের কারণ — NEXUS §২৪; সব পথ (পর্দা, কাউন্টার, সেবা) এই এক দরজায়
+        private readonly SalesReturnReasonGuard $reasons,
+
+        // ⭐ ফেরত তার বিলে বাঁধা — গ্রাহক, সারি, লট, ফ্রি মাল (২৭ সেপ্টেম্বর ২০২৬)
+        private readonly SalesReturnBillGuard $bills,
     ) {}
 
     /**
@@ -68,6 +75,9 @@ final class SalesReturnService
         if ($lines === []) {
             throw ValidationException::withMessages(['lines' => __('sales::validation.no_lines')]);
         }
+
+        [$data, $lines] = $this->reasons->check($data, $lines);
+        $lines = $this->bills->bind($data, $lines);
 
         return DB::transaction(function () use ($data, $lines) {
             $trxDate = Carbon::parse($data['trx_date'] ?? now());
@@ -84,6 +94,7 @@ final class SalesReturnService
                 'warehouse_id' => $this->resolveWarehouse($data['warehouse_id'] ?? null)->id,
                 'sales_invoice_id' => $data['sales_invoice_id'] ?? null,
                 'reason_code_id' => $data['reason_code_id'] ?? null,
+                'reason_note' => $data['reason_note'] ?? null,
                 'trx_date' => $trxDate->toDateString(),
                 'status' => DocumentStatus::DRAFT,
                 'narration' => $data['narration'] ?? null,
@@ -112,6 +123,11 @@ final class SalesReturnService
     {
         $this->assertEditable($return);
 
+        [$data, $lines] = $this->reasons->check($data, $lines);
+
+        // ⓘ গ্রাহক সম্পাদনায় বদলায় না — তাই কাগজের নিজের গ্রাহক ধরেই মেলানো
+        $lines = $this->bills->bind(['customer_id' => $return->customer_id] + $data, $lines, $return->id);
+
         return DB::transaction(function () use ($return, $data, $lines) {
             $trxDate = Carbon::parse($data['trx_date'] ?? $return->trx_date);
 
@@ -119,6 +135,7 @@ final class SalesReturnService
                 'warehouse_id' => $this->resolveWarehouse($data['warehouse_id'] ?? $return->warehouse_id)->id,
                 'sales_invoice_id' => $data['sales_invoice_id'] ?? null,
                 'reason_code_id' => $data['reason_code_id'] ?? null,
+                'reason_note' => $data['reason_note'] ?? null,
                 'trx_date' => $trxDate->toDateString(),
                 'narration' => $data['narration'] ?? null,
                 'financial_year_id' => $this->resolveFinancialYear($trxDate)->id,
@@ -138,11 +155,18 @@ final class SalesReturnService
             ]);
         }
 
-        $return->loadMissing(['lines.product', 'lines.invoiceLine', 'warehouse', 'reasonCode']);
+        $return->loadMissing(['lines.product', 'lines.invoiceLine', 'lines.reasonCode', 'lines.batch', 'warehouse', 'reasonCode']);
 
         if ($return->lines->isEmpty()) {
             throw ValidationException::withMessages(['lines' => __('sales::validation.no_lines')]);
         }
+
+        /*
+         * ⛔ নিয়মের আগের খসড়াগুলো কারণ ছাড়াই পড়ে আছে — খাতায় বসার আগে
+         * আবার দেখা, নাহলে নিয়ম চালুর পরেও "কারণ নেই" ফেরত জন্মাত।
+         */
+        $this->reasons->checkDocument($return);
+        $this->bills->checkDocument($return);
 
         foreach ($return->lines as $line) {
             $this->assertWithinSold($line);
@@ -173,6 +197,12 @@ final class SalesReturnService
 
         return DB::transaction(function () use ($return) {
             foreach ($return->lines as $line) {
+                $this->freeBack($return, $line, '1');
+
+                if (bccomp((string) $line->qty, '0', 4) <= 0) {
+                    continue;
+                }
+
                 /*
                  * মাল তাকে ফেরে, আর নষ্ট হলে একই সাথে আটকে যায়।
                  *
@@ -187,9 +217,13 @@ final class SalesReturnService
                     sourceId: $return->id,
                     floor: (string) $line->qty,
                     hold: $line->to_hold ? (string) $line->qty : '0',
-                    reason: $return->reasonCode,
+                    // লাইনের নিজের কারণ আগে, তারপর হেডারের
+                    reason: $line->reasonCode ?? $return->reasonCode,
                     date: $return->trx_date,
                     documentNo: $return->document_no,
+
+                    // ⭐ কোন লটের মাল ফিরল — NEXUS §২৪; খালি হলে আগের আচরণ হুবহু
+                    batch: $line->batch,
                 );
             }
 
@@ -214,9 +248,22 @@ final class SalesReturnService
 
         return DB::transaction(function () use ($return, $reason, $date) {
             if ($return->status === DocumentStatus::CONFIRMED) {
-                $return->loadMissing(['lines.product', 'warehouse']);
+                $return->loadMissing(['lines.product', 'lines.batch', 'warehouse']);
+
+                /*
+                 * ⭐ স্তরে যা ফিরেছিল, তা আবার তোলা — ২৭ সেপ্টেম্বর ২০২৬।
+                 * ⛔ এটা ছাড়া বাতিলের পরে তাক আর খাতা ফিরত, স্তর ফিরত না:
+                 * ১০ বেচা, ৪ ফেরত, বাতিল → স্তরে ১৪ একক, খাতায় ১০-এর দাম।
+                 */
+                $this->costs->undoReturn(SalesReturn::STOCK_SOURCE, $return->id);
 
                 foreach ($return->lines as $line) {
+                    $this->freeBack($return, $line, '-1', $date, $reason);
+
+                    if (bccomp((string) $line->qty, '0', 4) <= 0) {
+                        continue;
+                    }
+
                     $this->stock->move(
                         product: $line->product,
                         warehouse: $return->warehouse,
@@ -224,18 +271,29 @@ final class SalesReturnService
                         sourceId: $return->id,
                         floor: bcmul((string) $line->qty, '-1', 4),
                         hold: $line->to_hold ? bcmul((string) $line->qty, '-1', 4) : '0',
+
+                        // যে লটে ঢুকেছিল, সেই লট থেকেই বেরোয়
+                        batch: $line->batch,
                         date: $date,
                         documentNo: $return->document_no,
                         narration: $reason,
                     );
                 }
 
-                $this->posting->reverse(
-                    sourceType: SalesReturn::drillSourceType(),
-                    sourceId: $return->id,
-                    reversalDate: $date,
-                    reason: $reason,
-                );
+                // ⓘ কেবল ফ্রি মালের ফেরত খাতায় কিছুই লেখেনি — উল্টানোর কিছু নেই
+                $posted = LedgerEntry::query()
+                    ->where('source_type', SalesReturn::drillSourceType())
+                    ->where('source_id', $return->id)
+                    ->exists();
+
+                if ($posted) {
+                    $this->posting->reverse(
+                        sourceType: SalesReturn::drillSourceType(),
+                        sourceId: $return->id,
+                        reversalDate: $date,
+                        reason: $reason,
+                    );
+                }
             }
 
             $return->update([
@@ -284,7 +342,23 @@ final class SalesReturnService
 
         $cost = '0';
 
+        /*
+         * ⭐ "আগে কতটা ফিরেছে" — কেবল **এই বিলের** ফেরতগুলো (এটাসহ)।
+         * ⛔ সব ফেরত গুনলে এক বিলের ফেরত একই স্তরের অন্য বিলের জায়গা খেত।
+         */
+        $siblings = SalesReturn::query()
+            ->where('sales_invoice_id', $return->sales_invoice_id)
+            ->where(fn ($q) => $q->posted()->orWhere('id', $return->id))
+            ->pluck('id')
+            ->map(fn ($id) => (int) $id)
+            ->all();
+
         foreach ($return->lines as $line) {
+            // ফ্রি মালের স্তর নেই — শূন্য দামে এসেছিল, শূন্য দামে ফেরে
+            if (bccomp((string) $line->qty, '0', 4) <= 0) {
+                continue;
+            }
+
             $cost = bcadd($cost, $this->costs->returnToLayers(
                 product: $line->product,
                 qty: (string) $line->qty,
@@ -294,6 +368,7 @@ final class SalesReturnService
                 sourceId: $return->id,
                 documentNo: $return->document_no,
                 date: $return->trx_date,
+                returnedBy: $siblings,
             ), 4);
         }
 
@@ -306,6 +381,14 @@ final class SalesReturnService
         $total = (string) $return->total;
 
         if (bccomp($total, '0', 4) <= 0) {
+            /*
+             * ⭐ কেবল ফ্রি বা উপহারের মাল ফিরল — মালিকের সিদ্ধান্ত: শূন্য
+             * দামে, পাওনা না কমিয়ে। ⓘ খাতায় লেখার কিছু নেই, আর সেটাই ঠিক।
+             */
+            if ($return->lines->contains(fn (SalesReturnLine $l) => bccomp((string) $l->free_qty, '0', 4) > 0)) {
+                return;
+            }
+
             throw ValidationException::withMessages([
                 'lines' => __('sales::validation.zero_value_return'),
             ]);
@@ -389,9 +472,12 @@ final class SalesReturnService
         $lineNo = 0;
 
         foreach ($lines as $line) {
-            $qty = $this->money($line['qty'] ?? null);
+            $qty = $this->money(blank($line['qty'] ?? null) ? '0' : $line['qty']);
 
-            if (bccomp($qty, '0', 4) <= 0) {
+            // ⭐ ফ্রি বা উপহারের মাল — দাম নেই, তাই পরিমাণটাই যথেষ্ট (২৭ সেপ্টেম্বর ২০২৬)
+            $free = $this->money(blank($line['free_qty'] ?? null) ? '0' : $line['free_qty']);
+
+            if (bccomp($qty, '0', 4) <= 0 && bccomp($free, '0', 4) <= 0) {
                 continue;
             }
 
@@ -409,6 +495,7 @@ final class SalesReturnService
              */
             $pack = $this->packed($product, $qty, $line['unit_id'] ?? null);
             $qty = $pack['qty'];
+            $free = $this->packed($product, $free, $line['unit_id'] ?? null)['qty'];
 
             $invoiceLine = null;
 
@@ -462,12 +549,19 @@ final class SalesReturnService
                 'product_id' => $product->id,
                 'sales_invoice_line_id' => $invoiceLine?->id,
                 'qty' => $qty,
+                'free_qty' => $free,
                 'entered_qty' => $pack['entered_qty'],
                 'entered_unit_id' => $pack['entered_unit_id'],
                 'rate' => $rate,
                 'tax' => $tax,
                 'amount' => $amount,
                 'to_hold' => (bool) ($line['to_hold'] ?? false),
+
+                // NEXUS §২৪ — যাচাই হয়ে এসেছে [[SalesReturnReasonGuard]] থেকে
+                'reason_code_id' => $line['reason_code_id'] ?? null,
+                'reason_note' => $line['reason_note'] ?? null,
+                'batch_id' => $line['batch_id'] ?? null,
+
                 'line_no' => ++$lineNo,
             ]);
 
@@ -497,6 +591,36 @@ final class SalesReturnService
              */
             'cost_of_goods' => '0',
         ]);
+    }
+
+    /**
+     * ফ্রি বা উপহারের মাল ফ্রি ভাণ্ডারে ফেরে (দিক `1`) বা বাতিলে বেরোয় (`-1`)।
+     *
+     * ⭐ মালিকের সিদ্ধান্ত, ২৭ সেপ্টেম্বর ২০২৬: ফ্রি মাল ফেরত নেওয়া যায় —
+     * যে ভাণ্ডার থেকে বেরিয়েছিল সেখানেই, শূন্য দামে। ⓘ উৎসের নাম `:free`,
+     * বিক্রয়ের `delivery_challan:free`-এর মতো — "ফ্রি কত এল-গেল" আলাদা থাকে।
+     * ⚠️ স্তর নেই, খাতা নেই: দাম ছিল না, তাই পাওনাও কমে না।
+     */
+    private function freeBack(SalesReturn $return, SalesReturnLine $line, string $direction, Carbon|string|null $date = null, ?string $narration = null): void
+    {
+        $free = (string) $line->free_qty;
+
+        if (bccomp($free, '0', 4) <= 0) {
+            return;
+        }
+
+        $this->stock->move(
+            product: $line->product,
+            warehouse: $return->warehouse,
+            sourceType: SalesReturn::STOCK_SOURCE.':free',
+            sourceId: $return->id,
+            free: bcmul($free, $direction, 4),
+            reason: $direction === '1' ? ($line->reasonCode ?? $return->reasonCode) : null,
+            date: $date ?? $return->trx_date,
+            documentNo: $return->document_no,
+            narration: $narration,
+            batch: $line->batch,
+        );
     }
 
     /**

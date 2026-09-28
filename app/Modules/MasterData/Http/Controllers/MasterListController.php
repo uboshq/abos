@@ -254,6 +254,10 @@ class MasterListController extends Controller implements HasMiddleware
                     'options' => 'contexts', 'labels' => 'context', 'rules' => ['required']],
                 'returns_to_stock' => ['type' => 'switch', 'label' => 'master_data::field.returns_to_stock'],
                 'needs_approval' => ['type' => 'switch', 'label' => 'master_data::field.needs_approval'],
+
+                // NEXUS §২৪ — কারণটা বিবরণ বা লট চায় কি না; কোম্পানি নিজেই ঠিক করে
+                'needs_note' => ['type' => 'switch', 'label' => 'master_data::reason_flags.needs_note'],
+                'needs_lot' => ['type' => 'switch', 'label' => 'master_data::reason_flags.needs_lot'],
             ],
             'columns' => ['context', 'returns_to_stock'],
         ],

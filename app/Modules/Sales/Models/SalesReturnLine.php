@@ -8,7 +8,9 @@ use App\Core\Concerns\BelongsToCompany;
 use App\Core\Concerns\HasPublicId;
 use App\Core\Concerns\IsAudited;
 use App\Modules\Inventory\Concerns\HasEnteredPack;
+use App\Modules\Inventory\Models\Batch;
 use App\Modules\Inventory\Models\Product;
+use App\Modules\MasterData\Models\ReasonCode;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -26,12 +28,22 @@ class SalesReturnLine extends Model
         'company_id', 'sales_return_id', 'product_id', 'sales_invoice_line_id',
         'qty', 'entered_qty', 'entered_unit_id',
         'rate', 'tax', 'amount', 'to_hold', 'line_no',
+
+        /*
+         * ⭐ NEXUS §২৪ — লাইনের নিজের কারণ, নোট আর লট।
+         * ⚠️ তালিকায় না থাকলে সেবা পাঠালেও Eloquent নীরবে ফেলে দিত।
+         */
+        'reason_code_id', 'reason_note', 'batch_id',
+
+        // ⭐ ফ্রি বা উপহারের মাল — ফ্রি ভাণ্ডারে ফেরে, শূন্য দামে (২৭ সেপ্টেম্বর ২০২৬)
+        'free_qty',
     ];
 
     protected function casts(): array
     {
         return [
             'qty' => 'decimal:4',
+            'free_qty' => 'decimal:4',
             'entered_qty' => 'decimal:4',
             'rate' => 'decimal:4',
             'tax' => 'decimal:4',
@@ -48,6 +60,18 @@ class SalesReturnLine extends Model
     public function product(): BelongsTo
     {
         return $this->belongsTo(Product::class);
+    }
+
+    /** লাইনের নিজের কারণ — খালি মানে হেডারেরটাই। */
+    public function reasonCode(): BelongsTo
+    {
+        return $this->belongsTo(ReasonCode::class, 'reason_code_id');
+    }
+
+    /** কোন লটের মাল ফিরল — মেয়াদোত্তীর্ণ মালে সরবরাহকারীর দাবি আর রিকল এটা ধরেই। */
+    public function batch(): BelongsTo
+    {
+        return $this->belongsTo(Batch::class);
     }
 
     public function invoiceLine(): BelongsTo

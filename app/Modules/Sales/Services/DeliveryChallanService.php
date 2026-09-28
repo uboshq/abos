@@ -432,6 +432,27 @@ final class DeliveryChallanService
                 );
 
                 /*
+                 * ⭐ ফ্রি আর উপহারের মালও ফ্রি ভাণ্ডারে ফেরে, একই লটে — ২৭ সেপ্টেম্বর ২০২৬।
+                 *
+                 * ⛔ কাউন্টার বিক্রিতে ওগুলো বেরোয় আলাদা উৎস-নামে
+                 * ([[DirectSaleService::moveFreeStock()]]: `:free`, `:gift`),
+                 * আর উপরের উল্টানো কেবল দামের মাল ধরত। ⓘ হাতে গোনা: বিস্কুট
+                 * ফ্রি ১০, ১টা উপহার দিয়ে চালান বাতিল → ফ্রি ১০ হওয়ার কথা,
+                 * থাকত ৯ ([[TheCancelledChallanKeptTheFreeGoodsTest]])।
+                 *
+                 * ⓘ কিছু না থাকলে `reverse()` খালি ফেরে — সাধারণ চালানে কিছু বদলায় না।
+                 */
+                foreach ([':free', ':gift'] as $kind) {
+                    $this->stock->reverse(
+                        sourceType: DeliveryChallan::STOCK_SOURCE.$kind,
+                        sourceId: $challan->id,
+                        reversedType: DeliveryChallan::STOCK_SOURCE.$kind.':cancel',
+                        date: $date,
+                        narration: $reason,
+                    );
+                }
+
+                /*
                  * ধরাটা আলাদা সারিতে ফেরে — লট ধরে নয়, লাইন ধরে।
                  *
                  * Reserved পণ্য ও গুদামের সংখ্যা, লটের নয়। আর অর্ডারটা

@@ -26,6 +26,7 @@ use App\Modules\Sales\Models\DeliveryChallanLine;
 use App\Modules\Sales\Models\PricingRule;
 use App\Modules\Sales\Models\SalesInvoice;
 use App\Modules\Sales\Models\SalesInvoiceLine;
+use App\Modules\Sales\Models\SalesReturn;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -629,6 +630,7 @@ final class SalesInvoiceService
         $invoice->loadMissing(['lines.product', 'lines.challanLine', 'warehouse']);
 
         $this->assertNotCollected($invoice);
+        $this->assertNoLiveReturn($invoice);
 
         /*
          * বাতিল হলে আটকানো মাল ছাড়া পায় — মালিকের নিয়মের অন্য অর্ধেক
@@ -663,6 +665,8 @@ final class SalesInvoiceService
                     );
                 }
 
+                $this->putCostBackInLayers($invoice, $date);
+
                 $this->posting->reverse(
                     sourceType: SalesInvoice::drillSourceType(),
                     sourceId: $invoice->id,
@@ -680,6 +684,61 @@ final class SalesInvoiceService
 
             return $invoice->fresh(['lines']);
         });
+    }
+
+    /**
+     * ⭐ বাতিল বিলের মাল FIFO স্তরে ফেরে — যে স্তর থেকে যতটা, যে দামে গিয়েছিল — ২৭ সেপ্টেম্বর ২০২৬।
+     *
+     * ── ⛔ কী ঘটত ──────────────────────────────────────────────────────
+     * বাতিলে খাতা উল্টাত (Cr ৫১০০ / Dr ১১২০) আর মাল তাকে ফিরত, কিন্তু
+     * confirm-এ [[takeCostFromLayers()]] যে স্তর টেনেছিল তা টানাই থেকে যেত।
+     * ⓘ হাতে গোনা: সাবান ১০০ @ ৪০, ৮টা বেচে বিল + চালান বাতিল → তাকে ১০০,
+     * অথচ স্তরে ৯২ (৩,৬৮০)। ⚠️ মজুদ খাত ৪,০০০ ফিরে পেত, মজুদ রিপোর্ট
+     * পেত না — আর চালানটা আবার বিল করলে একই মালের খরচ দুইবার টানা হত।
+     *
+     * ── কেন আজকের দর বা গড় নয় ──────────────────────────────────────────
+     * খাতার উল্টো দাখিলা ঠিক confirm-এর খরচটাই ফেরায়; স্তরও তাই ঠিক
+     * সেই টানগুলোই ফেরায় ([[CostLayerService::returnToLayers()]])।
+     *
+     * ⓘ পণ্য ধরে একবার ডাকা হয়, আর `returnedBy` কেবল **এই** বিলের বাতিল-
+     * সারি গোনে — নইলে একই স্তর থেকে টানা অন্য বিলের বাতিল এই বিলের
+     * জায়গা খেয়ে ফেলত।
+     *
+     * ⚠️ রান্না করা খাবার (রেসিপি) এখানে বাদ: উপকরণের মাল বাতিলে তাকে
+     * ফেরে না, তাই স্তরে ফেরালে স্তর আর তাক আলাদা হত — আলাদা কাজ।
+     */
+    private function putCostBackInLayers(SalesInvoice $invoice, Carbon $date): void
+    {
+        $qtyOf = [];
+        $productOf = [];
+
+        foreach ($invoice->lines as $line) {
+            if ($this->recipes->consumesOnSale((int) $line->product_id)) {
+                continue;
+            }
+
+            $id = (int) $line->product_id;
+            $qtyOf[$id] = bcadd($qtyOf[$id] ?? '0', (string) $line->qty, 4);
+            $productOf[$id] = $line->product;
+        }
+
+        foreach ($qtyOf as $id => $qty) {
+            if (bccomp($qty, '0', 4) <= 0) {
+                continue;
+            }
+
+            $this->costs->returnToLayers(
+                product: $productOf[$id],
+                qty: $qty,
+                issuedSourceType: SalesInvoice::STOCK_SOURCE,
+                issuedSourceId: (int) $invoice->id,
+                sourceType: SalesInvoice::STOCK_SOURCE.':cancel',
+                sourceId: (int) $invoice->id,
+                documentNo: $invoice->document_no,
+                date: $date,
+                returnedBy: [(int) $invoice->id],
+            );
+        }
     }
 
     private function postToLedger(SalesInvoice $invoice): void
@@ -1213,6 +1272,32 @@ final class SalesInvoiceService
         if (bccomp($invoice->collectedAmount(), '0', 4) > 0) {
             throw ValidationException::withMessages([
                 'status' => __('sales::validation.invoice_already_collected', ['no' => $invoice->document_no]),
+            ]);
+        }
+    }
+
+    /**
+     * ⭐ নিশ্চিত ফেরত আছে এমন বিল বাতিল হয় না — ২৭ সেপ্টেম্বর ২০২৬।
+     *
+     * ⛔ বাতিল গোটা বিলটা উল্টায় — ফেরত আসা অংশসহ। অথচ ঐ অংশ ফেরতে একবার
+     * উল্টানো হয়ে গেছে: পাওনা, বিক্রয়, খরচ আর স্তর দুইবার ফিরত (হাতে গোনা:
+     * ১০ × ১০০ বাকিতে, ৪ ফেরত, বিল বাতিল → গ্রাহক −৪০০, যিনি কিছুই পাবেন না)।
+     * ⓘ আগে ফেরতটা বাতিল, তারপর বিল — দুইটাই নিজের নিজের দাখিলা উল্টায়।
+     */
+    private function assertNoLiveReturn(SalesInvoice $invoice): void
+    {
+        $return = SalesReturn::query()
+            ->where('sales_invoice_id', $invoice->id)
+            ->posted()
+            ->orderBy('id')
+            ->first();
+
+        if ($return !== null) {
+            throw ValidationException::withMessages([
+                'status' => __('sales::validation.invoice_has_live_return', [
+                    'no' => $invoice->document_no,
+                    'return' => $return->document_no,
+                ]),
             ]);
         }
     }

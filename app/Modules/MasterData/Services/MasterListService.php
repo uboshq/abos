@@ -25,6 +25,7 @@ use App\Modules\MasterData\Models\TransferMode;
 use App\Modules\MasterData\Models\Unit;
 use App\Modules\MasterData\Models\VehicleType;
 use App\Modules\MasterData\Support\CodeConventions;
+use App\Modules\MasterData\Support\SalesReturnReasons;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -840,7 +841,7 @@ final class MasterListService implements ProvisionsCompany
             ['DAMAGE', 'Damaged goods', 'ক্ষতিগ্রস্ত পণ্য',
                 ['context' => ReasonCode::SALES_RETURN, 'returns_to_stock' => false]],
             ['EXPIRED', 'Expired', 'মেয়াদোত্তীর্ণ',
-                ['context' => ReasonCode::SALES_RETURN, 'returns_to_stock' => false]],
+                ['context' => ReasonCode::SALES_RETURN, 'returns_to_stock' => false, 'needs_lot' => true]],
             ['WRONG', 'Wrong item delivered', 'ভুল পণ্য দেওয়া হয়েছে',
                 ['context' => ReasonCode::SALES_RETURN, 'returns_to_stock' => true]],
             ['UNSOLD', 'Not sold', 'বিক্রি হয়নি',
@@ -944,6 +945,13 @@ final class MasterListService implements ProvisionsCompany
              */
             ['HOLD-TRN', 'On the way to another warehouse', 'অন্য গুদামের পথে',
                 ['context' => ReasonCode::HOLD, 'returns_to_stock' => true]],
+
+            /*
+             * ⭐ বিক্রয় ফেরতের বাকি চারটা কারণ — NEXUS §২৪, ২৭ সেপ্টেম্বর ২০২৬।
+             * ⓘ তালিকাটা [[SalesReturnReasons]]-এ, ব্যাখ্যাও সেখানে; এখানে
+             * মেশানো হয় যাতে নতুন কোম্পানি আর সিঙ্ক একই সারি পায়।
+             */
+            ...SalesReturnReasons::rows(),
         ];
     }
 

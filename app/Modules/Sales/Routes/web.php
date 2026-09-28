@@ -19,6 +19,7 @@ use App\Modules\Sales\Http\Controllers\SalesOrderController;
 use App\Modules\Sales\Http\Controllers\SalesPrintController;
 use App\Modules\Sales\Http\Controllers\SalesReportController;
 use App\Modules\Sales\Http\Controllers\SalesReturnController;
+use App\Modules\Sales\Http\Controllers\SalesReturnReasonReportController;
 use App\Modules\Sales\Http\Controllers\SalesTargetController;
 use App\Modules\Sales\Http\Controllers\SchemeController;
 use App\Modules\Sales\Http\Controllers\ShiftController;
@@ -346,6 +347,9 @@ Route::middleware('auth')->prefix('sales')->group(function () {
     Route::prefix('returns')->name('return.')->group(function () {
         Route::get('/', [SalesReturnController::class, 'index'])->name('index');
         Route::get('/create', [SalesReturnController::class, 'create'])->name('create');
+
+        // কারণ ধরে ফেরত (NEXUS §২৪) — নাম `*.report.show`, যাতে রিপোর্টের দুই পাহারা দরজাটা চেনে
+        Route::get('/reports/{slug}', [SalesReturnReasonReportController::class, 'show'])->name('report.show');
         Route::post('/', [SalesReturnController::class, 'store'])->name('store');
         Route::get('/{return}', [SalesReturnController::class, 'show'])->whereNumber('return')->name('show');
         Route::get('/{return}/edit', [SalesReturnController::class, 'edit'])->whereNumber('return')->name('edit');

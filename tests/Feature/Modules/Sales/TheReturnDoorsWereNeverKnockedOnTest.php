@@ -11,6 +11,7 @@ use App\Models\Company;
 use App\Models\User;
 use App\Modules\Inventory\Models\Product;
 use App\Modules\Inventory\Models\Warehouse;
+use App\Modules\MasterData\Models\ReasonCode;
 use App\Modules\Sales\Models\SalesInvoice;
 use App\Modules\Sales\Models\SalesReturn;
 use App\Modules\Sales\Services\SalesReturnService;
@@ -193,6 +194,7 @@ final class TheReturnDoorsWereNeverKnockedOnTest extends TestCase
                 'customer_id' => $invoice->customer_id,
                 'warehouse_id' => $this->warehouse->id,
                 'sales_invoice_id' => $invoice->id,
+                'reason_code_id' => $this->returnReasonId(),
                 'trx_date' => now()->toDateString(),
             ],
             [[
@@ -216,5 +218,16 @@ final class TheReturnDoorsWereNeverKnockedOnTest extends TestCase
             ]);
 
         return SalesInvoice::query()->with('lines')->latest('id')->firstOrFail();
+    }
+
+    /**
+     * ফেরতের একটা কারণ — NEXUS §২৪-এর পর কারণ ছাড়া ফেরত হয় না।
+     *
+     * ⓘ এই ফাইলের দাবিগুলো কারণ নিয়ে নয়; ⚠️ কারণ না দিলে "থামল" দাবিগুলো
+     * ভুল কারণে (কারণ নেই বলে) সবুজ হত।
+     */
+    private function returnReasonId(): int
+    {
+        return (int) ReasonCode::query()->inContext(ReasonCode::SALES_RETURN)->where('code', 'DAMAGE')->value('id');
     }
 }

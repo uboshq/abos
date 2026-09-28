@@ -11,6 +11,7 @@ use App\Models\Company;
 use App\Models\User;
 use App\Modules\Inventory\Models\Product;
 use App\Modules\Inventory\Models\Warehouse;
+use App\Modules\MasterData\Models\ReasonCode;
 use App\Modules\Sales\Models\SalesInvoice;
 use App\Modules\Sales\Models\SalesReturn;
 use Database\Seeders\DemoSeeder;
@@ -166,6 +167,7 @@ final class TheCounterReturnDoorWasNeverKnockedOnTest extends TestCase
 
         $this->actingAs($this->outsider->fresh())
             ->post(route('sales.pos.return'), [
+                'reason_code_id' => $this->returnReasonId(),
                 'document_no' => 'কোনো-বিল-নেই',
                 'lines' => [['product_id' => $this->product->id, 'qty' => '1']],
             ])
@@ -199,9 +201,21 @@ final class TheCounterReturnDoorWasNeverKnockedOnTest extends TestCase
         return [
             'document_no' => $invoice->document_no,
             'warehouse_id' => $this->warehouse->id,
+            'reason_code_id' => $this->returnReasonId(),
             'lines' => [
                 ['product_id' => $this->product->id, 'qty' => '1'],
             ],
         ];
+    }
+
+    /**
+     * ফেরতের একটা কারণ — NEXUS §২৪-এর পর কারণ ছাড়া ফেরত হয় না।
+     *
+     * ⓘ এই ফাইলের দাবিগুলো কারণ নিয়ে নয়; ⚠️ কারণ না দিলে "থামল" দাবিগুলো
+     * ভুল কারণে (কারণ নেই বলে) সবুজ হত।
+     */
+    private function returnReasonId(): int
+    {
+        return (int) ReasonCode::query()->inContext(ReasonCode::SALES_RETURN)->where('code', 'DAMAGE')->value('id');
     }
 }
