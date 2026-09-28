@@ -17,6 +17,7 @@ use App\Modules\Finance\Services\DepositKindInstaller;
 use App\Modules\Finance\Services\DepositService;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\Concerns\PutsMoneyInTheTill;
 use Tests\TestCase;
 
 /**
@@ -48,6 +49,7 @@ use Tests\TestCase;
  */
 class TheFdBehindTheLoanTest extends TestCase
 {
+    use PutsMoneyInTheTill;
     use RefreshDatabase;
 
     private Company $company;
@@ -63,6 +65,14 @@ class TheFdBehindTheLoanTest extends TestCase
 
         app(StandardChart::class)->install();
         app(DepositKindInstaller::class)->install();
+
+        /*
+         * ⓵ ২৭ সেপ্টেম্বর ২০২৬: খালি নগদ বাক্স থেকে টাকা বেরোতে পারে না
+         * (CashOnHand)। FD-গুলো নগদ থেকে ১ আগস্টে খোলে — কোনোটা ঋণ ছাড়াই,
+         * আর ঋণ শোধও নগদ থেকে — তাই সেদিনই ১০ লাখ বসানো। টাকা আসে ৩১০০
+         * মূলধন থেকে; এই ফাইল মূলধন মাপে না, তাই কোনো প্রত্যাশা বদলায়নি।
+         */
+        $this->putMoneyIn($this->cash(), '1000000', '2026-08-01');
     }
 
     private function cash(): Account

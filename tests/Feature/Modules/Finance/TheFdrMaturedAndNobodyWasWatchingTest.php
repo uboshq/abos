@@ -10,6 +10,7 @@ use App\Models\User;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Models\Loan;
 use App\Modules\Accounts\Services\CashTillService;
+use App\Modules\Accounts\Services\LoanService;
 use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Finance\Models\Deposit;
 use App\Modules\Finance\Models\DepositKind;
@@ -17,6 +18,8 @@ use App\Modules\Finance\Services\DepositKindInstaller;
 use App\Modules\Finance\Services\DepositService;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Testing\TestResponse;
+use Tests\Concerns\PutsMoneyInTheTill;
 use Tests\TestCase;
 
 /**
@@ -33,6 +36,7 @@ use Tests\TestCase;
  */
 final class TheFdrMaturedAndNobodyWasWatchingTest extends TestCase
 {
+    use PutsMoneyInTheTill;
     use RefreshDatabase;
 
     private Account $cash;
@@ -51,6 +55,12 @@ final class TheFdrMaturedAndNobodyWasWatchingTest extends TestCase
         // ℹ ধরনগুলো সিডারে নেই, ডিপ্লয়ের ইনস্টলারে — তাই এখানেই বসাতে হয়
         app(DepositKindInstaller::class)->install();
         $this->cash = app(CashTillService::class)->ensurePrimaryTill()->account;
+
+        /* ⓵ ২৭ সেপ্টেম্বর ২০২৬: খালি নগদ বাক্স থেকে টাকা বেরোতে পারে না
+           (CashOnHand), আর প্রতিটা জমা টিল থেকে ১ লাখে খোলে — তাই আগেই
+           ৫ লাখ বসানো। টাকা আসে ৩১০০ মূলধন থেকে; এই ফাইল কেবল ট্যাব মাপে,
+           তাই কোনো প্রত্যাশা বদলায়নি। */
+        $this->putMoneyIn($this->cash, '500000', now()->toDateString());
     }
 
     /**
@@ -100,7 +110,7 @@ final class TheFdrMaturedAndNobodyWasWatchingTest extends TestCase
          * ⓘ ঋণটা সেবার পথেই — সারি হাতে বানালে খাতার দাখিলাগুলো বাদ পড়ত,
          * আর তখন পরীক্ষা সত্যিকারের অবস্থাটা মাপত না।
          */
-        $loan = app(\App\Modules\Accounts\Services\LoanService::class)->create(
+        $loan = app(LoanService::class)->create(
             data: [
                 'lender' => 'Islami Bank',
                 'kind' => Loan::TERM,
@@ -146,7 +156,7 @@ final class TheFdrMaturedAndNobodyWasWatchingTest extends TestCase
     }
 
     /** @return list<int> */
-    private function ids(\Illuminate\Testing\TestResponse $page): array
+    private function ids(TestResponse $page): array
     {
         return collect($page->viewData('deposits')->items())
             ->map(fn (Deposit $d) => (int) $d->id)

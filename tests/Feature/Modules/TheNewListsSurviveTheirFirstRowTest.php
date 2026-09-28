@@ -20,6 +20,7 @@ use App\Modules\Sales\Models\DepositClaim;
 use App\Modules\Sales\Services\DepositClaimService;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\Concerns\PutsMoneyInTheTill;
 use Tests\TestCase;
 
 /**
@@ -42,6 +43,7 @@ use Tests\TestCase;
  */
 class TheNewListsSurviveTheirFirstRowTest extends TestCase
 {
+    use PutsMoneyInTheTill;
     use RefreshDatabase;
 
     private Company $company;
@@ -103,6 +105,13 @@ class TheNewListsSurviveTheirFirstRowTest extends TestCase
             'nature' => Account::DEBIT,
             'money_kind' => Account::CASH,
         ]);
+
+        /*
+         * ⓘ ২৭ সেপ্টেম্বর ২০২৬: নতুন টিল খালি, আর খালি টিল থেকে ব্যাংকে
+         * পাঠানো যায় না ([[CashOnHand]]) — তাই কন্ট্রার দিনেই ৫০,০০০ বসানো।
+         * ⭐ টাকাটা টিলে ঢোকে, ব্যাংকে নয়, তাই মিলকরণের লাইন বদলায় না।
+         */
+        $this->putMoneyIn($cash, '50000', '2026-08-10');
 
         $voucher = $vouchers->create(
             [

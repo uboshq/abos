@@ -19,6 +19,7 @@ use App\Modules\MasterData\Models\Person;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Validation\ValidationException;
+use Tests\Concerns\PutsMoneyInTheTill;
 use Tests\TestCase;
 
 /**
@@ -43,6 +44,7 @@ use Tests\TestCase;
  */
 final class TakingYourOwnProfitLookedLikeTakingCapitalTest extends TestCase
 {
+    use PutsMoneyInTheTill;
     use RefreshDatabase;
 
     private User $owner;
@@ -213,6 +215,18 @@ final class TakingYourOwnProfitLookedLikeTakingCapitalTest extends TestCase
             'amount' => $amount,
             'reason' => 'test',
         ]);
+
+        /*
+         * ⓵ ২৭ সেপ্টেম্বর ২০২৬: খালি নগদ বাক্স থেকে টাকা বেরোতে পারে না
+         * (CashOnHand), তাই তোলার সমান টাকা আগে সেই খাতেই বসানো। টাকা আসে
+         * ৩১০০ মূলধন থেকে — এই ফাইল ৩২০০, ২১৯০ আর বেতনের খাত মাপে, ৩১০০
+         * নয়, তাই কোনো প্রত্যাশা বদলায়নি।
+         */
+        $this->putMoneyIn(
+            Account::query()->money()->where('is_group', false)->firstOrFail(),
+            $amount,
+            now()->toDateString(),
+        );
 
         /*
          * ⓘ অবস্থা জোর করে বদলানো হয় না। ⚠️ একবার `CONFIRMED` বসানো

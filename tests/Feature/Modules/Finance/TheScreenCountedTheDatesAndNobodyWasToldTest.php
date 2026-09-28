@@ -22,6 +22,7 @@ use App\Modules\MasterData\Models\Person;
 use App\Modules\MasterData\Services\PersonResolver;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\Concerns\PutsMoneyInTheTill;
 use Tests\TestCase;
 
 /**
@@ -40,6 +41,7 @@ use Tests\TestCase;
  */
 final class TheScreenCountedTheDatesAndNobodyWasToldTest extends TestCase
 {
+    use PutsMoneyInTheTill;
     use RefreshDatabase;
 
     protected function setUp(): void
@@ -53,6 +55,15 @@ final class TheScreenCountedTheDatesAndNobodyWasToldTest extends TestCase
 
         app(StandardChart::class)->install();
         app(DepositKindInstaller::class)->install();
+
+        /*
+         * ⓵ ২৭ সেপ্টেম্বর ২০২৬: খালি নগদ বাক্স থেকে টাকা বেরোতে পারে না
+         * (CashOnHand)। জমা আর হাতধার দুইটাই প্রধান টিল থেকে বেরোয়, তাই
+         * আগেই ২ লাখ বসানো। টাকা আসে ৩১০০ মূলধন থেকে; এই ফাইল কেবল
+         * খবর গোনে, তাই কোনো প্রত্যাশা বদলায়নি।
+         */
+        $this->putMoneyIn(app(CashTillService::class)->ensurePrimaryTill()->account, '200000',
+            now()->toDateString());
     }
 
     /**

@@ -15,6 +15,7 @@ use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Accounts\Services\VoucherService;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\Concerns\PutsMoneyInTheTill;
 use Tests\TestCase;
 
 /**
@@ -38,6 +39,7 @@ use Tests\TestCase;
  */
 class ABalanceSheetThatDidNotBalanceTest extends TestCase
 {
+    use PutsMoneyInTheTill;
     use RefreshDatabase;
 
     private User $user;
@@ -133,9 +135,17 @@ class ABalanceSheetThatDidNotBalanceTest extends TestCase
      */
     public function test_an_expense_lowers_the_profit_and_it_still_balances(): void
     {
-        $before = $this->sheet();
-
         $cash = Account::query()->money()->postable()->active()->firstOrFail();
+
+        /*
+         * ⓘ ২৭ সেপ্টেম্বর ২০২৬: খালি টিল থেকে টাকা বেরোতে পারে না
+         * ([[CashOnHand]]), তাই খরচের আগে ২,০০০ টাকা পুঁজি থেকে বসানো।
+         * ⭐ বসানো হয় `$before` মাপার **আগে** — তাই নিচের তুলনাটা কেবল
+         * খরচটাই দেখে; পুঁজির টাকায় লাভ বদলায় না, দুই পক্ষ সমান বাড়ে।
+         */
+        $this->putMoneyIn($cash, '2000', now()->toDateString());
+
+        $before = $this->sheet();
 
         $voucher = app(VoucherService::class)->create(
             ['type' => Voucher::EXPENSE, 'trx_date' => now()->toDateString(), 'narration' => 'test rent'],
@@ -246,9 +256,16 @@ class ABalanceSheetThatDidNotBalanceTest extends TestCase
      */
     public function test_a_drawing_lowers_the_equity(): void
     {
-        $before = $this->sheet();
-
         $cash = Account::query()->money()->postable()->active()->firstOrFail();
+
+        /*
+         * ⓘ ২৭ সেপ্টেম্বর ২০২৬: খালি টিল থেকে উত্তোলন হয় না ([[CashOnHand]]),
+         * তাই আগে ৩,০০০ টাকা পুঁজি থেকে বসানো। ⚠️ এটা মূলধন বাড়ায়, তাই
+         * বসানো হয় `$before` মাপার **আগে** — নইলে −৩,০০০-এর দাবিটা শূন্য দেখাত।
+         */
+        $this->putMoneyIn($cash, '3000', now()->toDateString());
+
+        $before = $this->sheet();
 
         $voucher = app(VoucherService::class)->create(
             ['type' => Voucher::PAYMENT, 'trx_date' => now()->toDateString(), 'narration' => 'owner took cash'],

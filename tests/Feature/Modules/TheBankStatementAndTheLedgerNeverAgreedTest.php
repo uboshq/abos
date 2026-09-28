@@ -19,6 +19,7 @@ use Database\Seeders\DemoSeeder;
 use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Validation\ValidationException;
+use Tests\Concerns\PutsMoneyInTheTill;
 use Tests\TestCase;
 
 /**
@@ -36,6 +37,7 @@ use Tests\TestCase;
  */
 class TheBankStatementAndTheLedgerNeverAgreedTest extends TestCase
 {
+    use PutsMoneyInTheTill;
     use RefreshDatabase;
 
     private Account $bank;
@@ -83,6 +85,17 @@ class TheBankStatementAndTheLedgerNeverAgreedTest extends TestCase
             'nature' => Account::DEBIT,
             'money_kind' => Account::CASH,
         ]);
+
+        /*
+         * ⓵ ২৭ সেপ্টেম্বর ২০২৬: নগদ বাক্স খালি থেকে টাকা বেরোতে পারে না
+         * (CashOnHand), তাই আগে ১,০০,০০০ টাকা বসানো — প্রথম নগদ→ব্যাংক
+         * সরানোর (১ আগস্ট) দিনেই, যাতে সেদিনের জেরও শূন্যের নিচে না নামে।
+         *
+         * ⓘ টাকাটা আসে পুঁজি থেকে (Dr নগদ / Cr ৩১০০), ভাউচার ছাড়া —
+         * ব্যাংকের খাতে একটা লাইনও বসে না, তাই মিলকরণের তালিকা, খাতার
+         * জের আর "খাতা বদলায় না" পরীক্ষার আগে-পরের গোনা অক্ষত।
+         */
+        $this->putMoneyIn($this->cash, '100000', '2026-08-01');
 
         $this->recons = app(BankReconciliationService::class);
     }

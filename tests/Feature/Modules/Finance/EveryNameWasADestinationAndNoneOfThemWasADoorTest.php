@@ -27,6 +27,7 @@ use App\Modules\MasterData\Models\Person;
 use App\Modules\MasterData\Services\PersonResolver;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\Concerns\PutsMoneyInTheTill;
 use Tests\TestCase;
 
 /**
@@ -47,6 +48,7 @@ use Tests\TestCase;
  */
 final class EveryNameWasADestinationAndNoneOfThemWasADoorTest extends TestCase
 {
+    use PutsMoneyInTheTill;
     use RefreshDatabase;
 
     protected function setUp(): void
@@ -284,6 +286,14 @@ final class EveryNameWasADestinationAndNoneOfThemWasADoorTest extends TestCase
     {
         $kind = DepositKind::query()->where('issuer', 'bank')->firstOrFail();
         $institution = $this->anInstitution();
+
+        /*
+         * ⓵ ২৭ সেপ্টেম্বর ২০২৬: খালি নগদ বাক্স থেকে টাকা বেরোতে পারে না
+         * (CashOnHand), তাই জমার সমান টাকা আগে টিলে বসানো — টাকা আসে ৩১০০
+         * মূলধন থেকে; এই ফাইল কেবল লিংক দেখে, তাই কোনো প্রত্যাশা বদলায়নি।
+         */
+        $this->putMoneyIn(app(CashTillService::class)->ensurePrimaryTill()->account, '100000',
+            now()->toDateString());
 
         return app(DepositService::class)->open([
             'kind_id' => $kind->id,

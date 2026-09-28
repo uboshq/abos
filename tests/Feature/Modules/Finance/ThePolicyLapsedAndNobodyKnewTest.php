@@ -18,6 +18,7 @@ use App\Modules\Finance\Services\InsuranceService;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Validation\ValidationException;
+use Tests\Concerns\PutsMoneyInTheTill;
 use Tests\TestCase;
 
 /**
@@ -32,6 +33,7 @@ use Tests\TestCase;
  */
 final class ThePolicyLapsedAndNobodyKnewTest extends TestCase
 {
+    use PutsMoneyInTheTill;
     use RefreshDatabase;
 
     private InsuranceService $insurance;
@@ -254,6 +256,10 @@ final class ThePolicyLapsedAndNobodyKnewTest extends TestCase
     {
         $cash = Account::query()->money()->postable()->active()->firstOrFail();
         $head = Account::query()->where('code', StandardChart::INSURANCE_PREMIUM)->firstOrFail();
+
+        // ⓵ ২৭ সেপ্টেম্বর ২০২৬: খালি টিল থেকে টাকা বেরোতে পারে না (CashOnHand),
+        // তাই প্রিমিয়ামের সমান টাকা আগে বসানো — এই ফাইল পুঁজি মাপে না।
+        $this->putMoneyIn($cash, (string) $premium->amount, now()->toDateString());
 
         $vouchers = app(VoucherService::class);
 

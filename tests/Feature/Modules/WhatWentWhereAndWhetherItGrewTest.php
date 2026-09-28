@@ -13,6 +13,7 @@ use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Accounts\Services\VoucherService;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\Concerns\PutsMoneyInTheTill;
 use Tests\TestCase;
 
 /**
@@ -31,6 +32,7 @@ use Tests\TestCase;
  */
 class WhatWentWhereAndWhetherItGrewTest extends TestCase
 {
+    use PutsMoneyInTheTill;
     use RefreshDatabase;
 
     private User $user;
@@ -75,6 +77,13 @@ class WhatWentWhereAndWhetherItGrewTest extends TestCase
 
     private function spend(Account $head, string $amount, string $on): Voucher
     {
+        /*
+         * ⓘ ২৭ সেপ্টেম্বর ২০২৬: খালি টিল থেকে খরচ হয় না ([[CashOnHand]]),
+         * তাই খরচের দিনেই সমান টাকা পুঁজি থেকে বসানো। ⭐ পুঁজি খরচের খাত নয়,
+         * তাই পর্দার কোনো সংখ্যা বদলায় না।
+         */
+        $this->putMoneyIn($this->cash(), $amount, $on);
+
         $voucher = app(VoucherService::class)->create(
             ['type' => Voucher::EXPENSE, 'trx_date' => $on, 'narration' => 'test'],
             [
@@ -176,6 +185,9 @@ class WhatWentWhereAndWhetherItGrewTest extends TestCase
         $fuel = $this->expenseHead('Fuel');
 
         /* জাবেদা দিয়ে — অর্থাৎ খরচ ভাউচার নয় */
+        // ⓘ ২৭ সেপ্টেম্বর ২০২৬: টিলে আগে ৭০০ টাকা (CashOnHand); পুঁজি খরচের খাত নয়
+        $this->putMoneyIn($this->cash(), '700', now()->toDateString());
+
         $voucher = app(VoucherService::class)->create(
             ['type' => Voucher::JOURNAL, 'trx_date' => now()->toDateString(), 'narration' => 'freight'],
             [

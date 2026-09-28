@@ -18,6 +18,7 @@ use App\Modules\MasterData\Models\Person;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Validation\ValidationException;
+use Tests\Concerns\PutsMoneyInTheTill;
 use Tests\TestCase;
 
 /**
@@ -40,6 +41,7 @@ use Tests\TestCase;
  */
 class MoneyLentOnAWordIsNotALoanTest extends TestCase
 {
+    use PutsMoneyInTheTill;
     use RefreshDatabase;
 
     private Company $company;
@@ -55,6 +57,14 @@ class MoneyLentOnAWordIsNotALoanTest extends TestCase
 
         app(StandardChart::class)->install();
         app(CashTillService::class)->ensurePrimaryTill();
+
+        /*
+         * ⓵ ২৭ সেপ্টেম্বর ২০২৬: খালি নগদ বাক্স থেকে টাকা বেরোতে পারে না
+         * (CashOnHand), আর হাতধার টিল থেকেই দেওয়া হয় — তাই আগেই ১ লাখ বসানো।
+         * টাকা আসে ৩১০০ মূলধন থেকে; ক্যাশের পরীক্ষা আগে-পরের ফারাক মাপে,
+         * তাই কোনো প্রত্যাশা বদলায়নি।
+         */
+        $this->putMoneyIn($this->cash(), '100000', now()->toDateString());
     }
 
     private function service(): HandLoanService

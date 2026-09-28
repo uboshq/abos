@@ -15,6 +15,7 @@ use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use Tests\Concerns\PutsMoneyInTheTill;
 use Tests\TestCase;
 
 /**
@@ -44,6 +45,7 @@ use Tests\TestCase;
  */
 final class AVoucherHeldForApprovalSaysSoTest extends TestCase
 {
+    use PutsMoneyInTheTill;
     use RefreshDatabase;
 
     private User $owner;
@@ -156,6 +158,18 @@ final class AVoucherHeldForApprovalSaysSoTest extends TestCase
     public function test_without_a_flow_it_posts_as_before(): void
     {
         $this->actingAs($this->owner);
+
+        /*
+         * ⓵ ২৭ সেপ্টেম্বর ২০২৬: নগদ বাক্স খালি থেকে টাকা বেরোতে পারে না
+         * (CashOnHand), তাই আগে ১,০০০ টাকা বসানো — ঠিক সেই খাতে যেখান থেকে
+         * খরচটা যায়, আজকের তারিখে। ⓘ এই টেস্ট মাপে "প্রবাহ না থাকলে পোস্ট
+         * হয়", খালি টিল নয়; টাকা না থাকলে সে ভুল কারণে লাল হত।
+         */
+        $this->putMoneyIn(
+            Account::query()->findOrFail($this->anyMoneyAccount()),
+            '1000',
+            now()->toDateString(),
+        );
 
         $voucher = $this->draftExpense();
 

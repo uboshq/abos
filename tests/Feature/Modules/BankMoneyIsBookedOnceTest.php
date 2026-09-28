@@ -19,6 +19,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
+use Tests\Concerns\PutsMoneyInTheTill;
 use Tests\TestCase;
 
 /**
@@ -37,6 +38,7 @@ use Tests\TestCase;
  */
 class BankMoneyIsBookedOnceTest extends TestCase
 {
+    use PutsMoneyInTheTill;
     use RefreshDatabase;
 
     private Company $company;
@@ -151,6 +153,10 @@ class BankMoneyIsBookedOnceTest extends TestCase
     {
         // নগদের কোনো TrxID নেই। চাইলে প্রতিটা নগদ ভাউচারে একটা বানানো
         // নম্বর বসত — আর সেটাই মেলানোর কাজটা নষ্ট করত।
+        // ⓘ ২৭ সেপ্টেম্বর ২০২৬: খালি টিল থেকে পরিশোধ হয় না (CashOnHand) —
+        // ভাউচারের দিনে (১০ আগস্ট) আগে ৫,০০০ টাকা বসানো।
+        $this->putMoneyIn(Account::query()->findOrFail($this->cash), '5000.00', '2026-08-10');
+
         $posted = $this->service()->post($this->draft($this->cash, $this->rent));
 
         $this->assertTrue($posted->isPosted());
@@ -162,6 +168,9 @@ class BankMoneyIsBookedOnceTest extends TestCase
         // ইউনিক ইনডেক্সটা `(কোম্পানি, খাত, নম্বর)` — তিনটাই NULL হলে
         // MySQL-এ কোনো সংঘাত হয় না। এই পরীক্ষাটা সেটাই ধরে রাখে,
         // কারণ ওখানে ভুল হলে গোটা নগদ পরিশোধই থেমে যেত।
+        // ⓘ ২৭ সেপ্টেম্বর ২০২৬: তিনটা ৫,০০০-এর পরিশোধ — টিলে আগে ১৫,০০০ (CashOnHand)
+        $this->putMoneyIn(Account::query()->findOrFail($this->cash), '15000.00', '2026-08-10');
+
         foreach (range(1, 3) as $ignored) {
             $this->assertTrue($this->service()->post($this->draft($this->cash, $this->rent))->isPosted());
         }

@@ -18,6 +18,7 @@ use App\Modules\Finance\Services\DepositService;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Validation\ValidationException;
+use Tests\Concerns\PutsMoneyInTheTill;
 use Tests\TestCase;
 
 /**
@@ -39,6 +40,7 @@ use Tests\TestCase;
  */
 class MoneyPutAwayIsNotMoneyLentTest extends TestCase
 {
+    use PutsMoneyInTheTill;
     use RefreshDatabase;
 
     private Company $company;
@@ -54,6 +56,14 @@ class MoneyPutAwayIsNotMoneyLentTest extends TestCase
 
         app(StandardChart::class)->install();
         app(DepositKindInstaller::class)->install();
+
+        /*
+         * ⓵ ২৭ সেপ্টেম্বর ২০২৬: খালি নগদ বাক্স থেকে টাকা বেরোতে পারে না
+         * (CashOnHand)। এখানকার সবচেয়ে বড় বেরোনো ৪৫ লাখের সঞ্চয়পত্র, তাই
+         * আগেই ৫০ লাখ বসানো। টাকা আসে ৩১০০ মূলধন থেকে — এই ফাইল কেবল
+         * ১১৬০, ৩২০০ আর মুনাফার খাত মাপে, তাই কোনো প্রত্যাশা বদলায়নি।
+         */
+        $this->putMoneyIn($this->cash(), '5000000', now()->toDateString());
     }
 
     private function service(): DepositService
@@ -406,7 +416,8 @@ class MoneyPutAwayIsNotMoneyLentTest extends TestCase
     {
         $response = $this->post(route('finance.deposit.store', ['issuer' => DepositKind::BANK]), [
             'kind_id' => $this->kind('FDR')->id,
-            'institution' => 'অগ্রণী ব্যাংক',
+            // ⓘ ২০ সেপ্টেম্বর থেকে ফর্মের ঘর `institution_id` বা `institution_new` (dca018c1) — পুরনো `institution` নাম ফর্ম আর নেয় না
+            'institution_new' => 'অগ্রণী ব্যাংক',
             'held_by' => Deposit::BUSINESS,
             'principal' => '250000',
             'return_word' => 'interest',
