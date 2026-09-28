@@ -12,8 +12,11 @@ use App\Modules\Customer\Models\Customer;
 use App\Modules\Inventory\Models\Product;
 use App\Modules\Inventory\Models\Warehouse;
 use App\Modules\Inventory\Services\PackConversion;
+use App\Modules\Inventory\Services\StockService;
 use App\Modules\MasterData\Models\Unit;
+use App\Modules\Sales\Models\DeliveryChallan;
 use App\Modules\Sales\Models\SalesInvoice;
+use App\Modules\Sales\Services\DeliveryChallanService;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -76,16 +79,48 @@ class PackEntryScreenTest extends TestCase
     }
 
     /**
+     * বিল জমা — একটা পাকা চালান ধরে, যেমন পর্দা পাঠায়।
+     *
+     * ⚠️ ২১ সেপ্টেম্বর থেকে বিল জন্মায় কেবল চালান থেকে ([[SalesInvoiceRequest::authorize()]]), আর ২৯
+     * সেপ্টেম্বর থেকে প্রতিটা সারি ঐ চালানেরই সারি ([[SalesInvoiceRequest::after()]])। এই দাবিগুলো তার
+     * আগের — চালান ছাড়া পাঠাত, তাই ৪০৩ পেত আর প্যাকের প্রশ্ন পর্যন্ত পৌঁছাতই না।
+     *
      * @param  array<string, mixed>  $line
      */
     private function postInvoice(array $line)
     {
+        $challan = $this->challan();
+
         return $this->post(route('sales.invoice.store'), [
+            'delivery_challan_id' => $challan->id,
             'customer_id' => $this->customer->id,
             'warehouse_id' => $this->warehouse->id,
             'trx_date' => now()->toDateString(),
-            'lines' => [$line],
+            'lines' => [$line + ['delivery_challan_line_id' => $challan->lines()->value('id')]],
         ]);
+    }
+
+    private ?DeliveryChallan $challan = null;
+
+    /** পিসে ৩০০-র একটা পাকা চালান — "২ বাক্স" (২০০ পিস) আর "৩ পিস" দুইটাই এর ভিতরে। */
+    private function challan(): DeliveryChallan
+    {
+        if ($this->challan !== null) {
+            return $this->challan;
+        }
+
+        // ⓘ লট নয় — এই দাবি প্যাক মাপে, আর লট-ধরা পণ্যে চালান লট চায় (6b5d826b)
+        $this->product->forceFill(['track_batch' => false])->save();
+        app(StockService::class)->move($this->product, $this->warehouse, StockService::ADJUSTMENT, 1, floor: '300');
+
+        $challans = app(DeliveryChallanService::class);
+
+        return $this->challan = $challans->confirm($challans->create([
+            'customer_id' => $this->customer->id,
+            'warehouse_id' => $this->warehouse->id,
+            'trx_date' => now()->toDateString(),
+            'own_transport' => true,
+        ], [['product_id' => $this->product->id, 'delivered_qty' => '300', 'rate' => '8']]));
     }
 
     // ── পর্দা থেকে খাতা ──────────────────────────────────────────
@@ -173,7 +208,8 @@ class PackEntryScreenTest extends TestCase
     {
         $this->switchOn(true);
 
-        $this->get(route('sales.invoice.create'))
+        // ⓘ বিলের ফর্ম খোলে কেবল চালান ধরে (২১ সেপ্টেম্বর ২০২৬)
+        $this->get(route('sales.invoice.create', ['delivery_challan_id' => $this->challan()->id]))
             ->assertOk()
             // ⓘ CSP-এর পর (9b93cc03) নামটা যোগ-চিহ্নে জোড়া, template literal-এ নয়
             ->assertSee(self::UNIT_BOX, escape: false);
@@ -189,7 +225,7 @@ class PackEntryScreenTest extends TestCase
     {
         $this->switchOn(false);
 
-        $this->get(route('sales.invoice.create'))
+        $this->get(route('sales.invoice.create', ['delivery_challan_id' => $this->challan()->id]))
             ->assertOk()
             ->assertDontSee(self::UNIT_BOX, escape: false);
     }

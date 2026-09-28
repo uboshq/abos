@@ -44,6 +44,9 @@ final class TheFreeCartonsWereGivenBeyondWhatCameTest extends TestCase
 
     private Customer $customer;
 
+    /** ফ্রিসহ আসা লট — বিক্রি এটাই বাছে (লট-ধরা পণ্যে লট বাছা বাধ্যতামূলক, abcaec25) */
+    private Batch $lot;
+
     protected function setUp(): void
     {
         parent::setUp();
@@ -68,7 +71,7 @@ final class TheFreeCartonsWereGivenBeyondWhatCameTest extends TestCase
         $this->product->track_batch = true;
         $this->product->save();
 
-        $this->stocked(paid: '100', free: '10');
+        $this->lot = $this->stocked(paid: '100', free: '10');
     }
 
     /**
@@ -76,9 +79,19 @@ final class TheFreeCartonsWereGivenBeyondWhatCameTest extends TestCase
      */
     public function test_more_free_than_the_lot_gave_is_refused(): void
     {
-        $this->expectException(ValidationException::class);
-
-        $this->sell(qty: '20', free: '5');
+        /*
+         * ⚠️ কেবল "ValidationException এল" যথেষ্ট নয় — লট না বাছা বিক্রিও একই ব্যতিক্রম দেয়, আর
+         * তখন এই দাবি ভুল কারণে সবুজ থাকত (২৯ সেপ্টেম্বর ২০২৬ ঠিক তা-ই হচ্ছিল)। তাই বার্তাটা
+         * ফ্রির অনুপাতের।
+         */
+        try {
+            $this->sell(qty: '20', free: '5');
+            $this->fail('অনুপাতের বেশি ফ্রি দিয়েও বিল হয়ে গেছে।');
+        } catch (ValidationException $e) {
+            $this->assertSame(__('sales::validation.free_beyond_ratio', [
+                'product' => $this->product->name(), 'free' => '5', 'allowed' => '2',
+            ]), $e->validator->errors()->first('lines'));
+        }
     }
 
     /**
@@ -162,12 +175,13 @@ final class TheFreeCartonsWereGivenBeyondWhatCameTest extends TestCase
                 'customer_id' => $this->customer->id,
                 'warehouse_id' => $this->warehouse->id,
             ],
-            [['product_id' => $this->product->id, 'qty' => $qty, 'rate' => '100', 'free_qty' => $free]],
+            [['product_id' => $this->product->id, 'batch_id' => $this->lot->id,
+                'qty' => $qty, 'rate' => '100', 'free_qty' => $free]],
         );
     }
 
     /** একটা লট, তার টাকার ও ফ্রি মাল, আর দুইটাই বসানো। */
-    private function stocked(string $paid, string $free, ?Product $product = null, string $lot = 'LOT-1'): void
+    private function stocked(string $paid, string $free, ?Product $product = null, string $lot = 'LOT-1'): Batch
     {
         $product ??= $this->product;
         $stock = app(StockService::class);
@@ -198,5 +212,7 @@ final class TheFreeCartonsWereGivenBeyondWhatCameTest extends TestCase
             qty: $paid, sourceType: 'purchase_bill', sourceId: 7001,
             batch: $batch, freeQty: $free,
         );
+
+        return $batch;
     }
 }
