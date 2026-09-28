@@ -62,6 +62,7 @@ final class PurchaseReceiptService
         private readonly SettingsService $settings,
         private readonly DocumentApproval $approvals,
         private readonly PurchaseBillService $bills,
+        private readonly OrderLineIntake $intake,
     ) {}
 
     /**
@@ -324,6 +325,16 @@ final class PurchaseReceiptService
         );
 
         $confirmed = DB::transaction(function () use ($receipt) {
+            /*
+             * ⛔ আদেশের সীমা আবার — ঠিক এখানে, মাল ঢোকার আগের মুহূর্তে।
+             *
+             * ⚠️ খসড়া লেখার দিন সীমা দেখা হয়েছিল, কিন্তু GRN অনুমোদনের
+             * অপেক্ষায় থাকতে থাকতে আদেশ ধরে একটা বিল একই মাল ঢুকিয়ে দিতে
+             * পারে — তখন এই নিশ্চিত করা মালটা দ্বিতীয়বার তুলত (মাপা:
+             * `TheBillAndTheReceiptBothBroughtTheGoodsTest`)।
+             */
+            $this->assertWithinOrder($receipt);
+
             foreach ($receipt->lines as $line) {
                 /*
                  * প্রতিটা লাইনের জন্য একটা করে চলাচল, এবং source হিসেবে
@@ -671,9 +682,11 @@ final class PurchaseReceiptService
             return null;
         }
 
+        // ⓘ তালা — আদেশ ধরে বিলের পথও একই সারিতে তালা নেয় ([[OrderLineIntake::lock()]])
         $orderLine = PurchaseOrderLine::query()
             ->where('purchase_order_id', $receipt->purchase_order_id)
             ->whereKey((int) $orderLineId)
+            ->lockForUpdate()
             ->first();
 
         if ($orderLine === null) {
@@ -692,28 +705,102 @@ final class PurchaseReceiptService
          * লোক শেষে আদেশ ছাড়াই মাল নামাতে শুরু করেন — অর্থাৎ নিয়ন্ত্রণটা
          * বেশি কড়া করলে নিয়ন্ত্রণটাই উঠে যায়।
          */
+        $this->assertCeiling($orderLine, $receipt, $qty);
+
+        return $orderLine;
+    }
+
+    /**
+     * আদেশের সীমা — দুই পথ মিলিয়ে।
+     *
+     * ── ⛔ ২৭ সেপ্টেম্বর ২০২৬-এর আগে ─────────────────────────────────
+     * এখানে কেবল **অন্য GRN** গোনা হত। ⚠️ অথচ আদেশ ধরে সরাসরি বিলও মাল
+     * ঢোকায় (স্টক, স্তর, ১১২০) — ফলে ৫০-এর আদেশে বিল ৫০ আর GRN ৫০ দুইটাই
+     * পাশ করত, আর গুদামে ১০০ দেখাত। ⭐ এখন "কত ঢুকেছে" আসে
+     * [[OrderLineIntake::takenIn()]] থেকে — বিলের পথও ঐ একই প্রশ্ন করে।
+     *
+     * ⓘ এই চালানের নিজের সারিগুলো বাদ, আর যাচাই হওয়া পরিমাণটা আলাদা
+     * যোগ হয় — খসড়া দ্বিতীয়বার সেভ করলে নিজেকে গুনত না।
+     */
+    private function assertCeiling(PurchaseOrderLine $orderLine, PurchaseReceipt $receipt, string $qty): void
+    {
+        /*
+         * আদেশের চেয়ে কতটুকু বেশি নেওয়া যাবে — সেটিংস থেকে (নিয়ম ৭)।
+         *
+         * শূন্য মানে এক কেজিও বেশি নয়। বাস্তবে বস্তায় ভরা মালে দুই-এক
+         * শতাংশ এদিক-ওদিক হয়, আর প্রতিবার আদেশ সংশোধন করতে বললে গুদামের
+         * লোক শেষে আদেশ ছাড়াই মাল নামাতে শুরু করেন।
+         */
         $allowance = (string) $this->settings->get('purchase.over_receipt_percent', 0);
         $ordered = (string) $orderLine->ordered_qty;
         $ceiling = bcadd($ordered, bcdiv(bcmul($ordered, $allowance, 4), '100', 4), 4);
 
-        // এই চালানের নিজের লাইনগুলো এখনো লেখা হয়নি, তাই আগেরগুলো + এইটা
-        $alreadyReceived = $orderLine->receiptLines()
-            ->where('purchase_receipt_id', '<>', $receipt->id)
-            ->whereHas('receipt', fn ($q) => $q->where('status', '<>', DocumentStatus::CANCELLED))
-            ->sum('received_qty');
+        $onReceipts = $this->intake->onReceipts($orderLine, exceptReceiptId: $receipt->id);
+        $onOrderBills = $this->intake->onOrderBills($orderLine);
 
-        $wouldBe = bcadd((string) ($alreadyReceived ?: '0'), $qty, 4);
+        $wouldBe = bcadd(bcadd($onReceipts, $onOrderBills, 4), $qty, 4);
 
-        if (bccomp($wouldBe, $ceiling, 4) > 0) {
-            throw ValidationException::withMessages([
-                'lines' => __('purchase::validation.over_receipt', [
-                    'ordered' => rtrim(rtrim($ordered, '0'), '.'),
-                    'total' => rtrim(rtrim($wouldBe, '0'), '.'),
-                ]),
-            ]);
+        if (bccomp($wouldBe, $ceiling, 4) <= 0) {
+            return;
         }
 
-        return $orderLine;
+        // ⓘ আগে চার ঘরে নামানো — নাহলে "100"-এর শেষের শূন্য কেটে "1" হত
+        $plain = fn (string $n): string => rtrim(rtrim(bcadd($n, '0', 4), '0'), '.') ?: '0';
+
+        // ⓘ বিলের পথে কিছু না থাকলে পুরনো বার্তাটাই — কারণটা তখনও সেটাই
+        throw ValidationException::withMessages([
+            'lines' => bccomp($onOrderBills, '0', 4) > 0
+                ? __('purchase::order_line.over_ceiling', [
+                    'ordered' => $plain($ordered),
+                    'received' => $plain($onReceipts),
+                    'billed' => $plain($onOrderBills),
+                    'qty' => $plain($qty),
+                ])
+                : __('purchase::validation.over_receipt', [
+                    'ordered' => $plain($ordered),
+                    'total' => $plain($wouldBe),
+                ]),
+        ]);
+    }
+
+    /**
+     * নিশ্চিত করার মুহূর্তে সীমা আবার — প্রতিটা আদেশ-সারি একবার, এই
+     * চালানের ঐ সারির সব পরিমাণ যোগ করে।
+     *
+     * ⚠️ সারি ধরে ধরে দেখলে একই আদেশ-সারি দুই লাইনে ভাগ করে সীমা পেরোনো
+     * যেত — প্রতিটা লাইন একা সীমার ভিতরে, যোগফল বাইরে।
+     */
+    private function assertWithinOrder(PurchaseReceipt $receipt): void
+    {
+        $byOrderLine = [];
+
+        foreach ($receipt->lines as $line) {
+            if ($line->purchase_order_line_id === null) {
+                continue;
+            }
+
+            $id = (int) $line->purchase_order_line_id;
+            $byOrderLine[$id] = bcadd($byOrderLine[$id] ?? '0', (string) $line->received_qty, 4);
+        }
+
+        if ($byOrderLine === []) {
+            return;
+        }
+
+        $this->intake->lock(array_keys($byOrderLine));
+
+        $orderLines = PurchaseOrderLine::query()->whereKey(array_keys($byOrderLine))->get()->keyBy('id');
+
+        foreach ($byOrderLine as $id => $qty) {
+            $orderLine = $orderLines->get($id);
+
+            // ⛔ আদেশের সারি হারালে চুপচাপ পাশ নয় — সীমা দেখারই উপায় নেই
+            if ($orderLine === null) {
+                throw ValidationException::withMessages(['lines' => __('purchase::validation.line_not_in_order')]);
+            }
+
+            $this->assertCeiling($orderLine, $receipt, $qty);
+        }
     }
 
     private function resolveOrder(mixed $orderId): ?PurchaseOrder

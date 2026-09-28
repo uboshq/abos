@@ -276,11 +276,17 @@ class SixtyCartonsTodayAndFortyNextWeekTest extends TestCase
      */
     private function seededQty(string $html): ?string
     {
-        if (! preg_match("/rows: JSON\\.parse\\('(.*?)'\\)/s", $html, $m)) {
+        /*
+         * ⓘ d9aeeb94 থেকে `@js` আর `JSON.parse('…')` লেখে না — লেখে
+         * [[AlpineLiteral]], অর্থাৎ HTML-এস্কেপ করা খাঁটি JSON। পুরনো খোঁজটা
+         * তখন থেকে কিছুই পেত না, আর এই দাবিটা লাল ছিল অথচ কোডটা ঠিক ছিল
+         * (২৮ সেপ্টেম্বর ২০২৬-এ ধরা পড়ল)।
+         */
+        if (! preg_match('/rows: (\[.*?\]),\s*$/m', $html, $m)) {
             return null;
         }
 
-        $rows = json_decode((string) json_decode('"'.$m[1].'"', false), true);
+        $rows = json_decode(html_entity_decode($m[1], ENT_QUOTES | ENT_HTML5), true);
 
         return is_array($rows) && isset($rows[0]['qty']) ? (string) $rows[0]['qty'] : null;
     }

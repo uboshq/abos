@@ -64,6 +64,7 @@ final class PurchaseBillService
         private readonly CostLayerService $costs,
         private readonly SettingsService $settings,
         private readonly DocumentApproval $approvals,
+        private readonly OrderLineIntake $intake,
     ) {}
 
     /**
@@ -1531,9 +1532,11 @@ final class PurchaseBillService
             return null;
         }
 
+        // ⓘ তালা — মাল গ্রহণের পথও একই সারিতে তালা নেয় ([[OrderLineIntake::lock()]])
         $orderLine = PurchaseOrderLine::query()
             ->with('order')
             ->whereKey((int) $orderLineId)
+            ->lockForUpdate()
             ->first();
 
         if ($orderLine === null || $orderLine->order === null) {
@@ -1575,10 +1578,24 @@ final class PurchaseBillService
          * ⓘ বাতিল বিল গোনা থেকে বাদ — বাতিল মানে ঐ পরিমাণটা আবার
          * বিল করা যায়, আর সেটাই ঠিক।
          */
-        $alreadyBilled = $orderLine->billLines()
-            ->where('purchase_bill_id', '<>', $bill->id)
-            ->whereHas('bill', fn ($q) => $q->where('status', '<>', DocumentStatus::CANCELLED))
-            ->sum('qty');
+        /*
+         * ⛔ GRN থাকলে আদেশ ধরে বিল নয় — ২৭ সেপ্টেম্বর ২০২৬।
+         *
+         * ⚠️ আদেশ ধরে বিল মাল ঢোকায় (স্টক, স্তর, ১১২০), আর GRNও ঢোকায় —
+         * দুইটা একই আদেশ-সারিতে পাশ করলে ১০০ গুদামে উঠত ৫০-এর আদেশে
+         * (মাপা: `TheBillAndTheReceiptBothBroughtTheGoodsTest`)। ⓘ GRN
+         * অনুমোদনের অপেক্ষায় থাকলেও — নিশ্চিত হলে সে নিজেই বিল বানায়।
+         */
+        $openReceipt = $this->intake->openReceiptNo($orderLine);
+
+        if ($openReceipt !== null) {
+            throw ValidationException::withMessages([
+                'lines' => __('purchase::order_line.bill_from_receipt', ['no' => $openReceipt]),
+            ]);
+        }
+
+        // ⓘ দুই পথ মিলিয়ে — মাল গ্রহণের পথও ঠিক এই প্রশ্নটাই করে ([[OrderLineIntake::takenIn()]])
+        $alreadyBilled = $this->intake->takenIn($orderLine, exceptBillId: (int) $bill->id);
 
         $wouldBe = bcadd((string) ($alreadyBilled ?: '0'), $qty, 4);
 
