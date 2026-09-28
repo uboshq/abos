@@ -947,6 +947,24 @@ final class DirectSaleService
         $challanId = $invoice->lines->first()?->challanLine?->delivery_challan_id;
         $challan = DeliveryChallan::query()->with(['lines', 'warehouse'])->findOrFail($challanId);
 
+        /*
+         * ⛔ চালানের সই লেনদেনের **বাইরে** চাওয়া — লাইভে ধরা, ২৮ সেপ্টেম্বর ২০২৬।
+         *
+         * ⓘ জমার সই শেষে বিক্রি শেষ করতে গেলে চালানের নিজের সইয়ের ছক থাকলে
+         * [[DeliveryChallanService::confirm()]] লেনদেনের ভিতরে অনুরোধ লিখে থামত, আর
+         * ফেরত-গড়ানোয় অনুরোধটা মুছে যেত — বার্তা বলত "অনুমোদনে পাঠানো হয়েছে", অথচ
+         * কারও ইনবক্সে কিছু নেই, আর বিক্রিটা চিরকাল আটকে (INV-0003, INV-0005)। ⭐ একই
+         * সারাই [[complete()]]-এর মতো: প্রশ্নটা আগে, বাইরে; সই থাকলে চুপচাপ পেরোয়।
+         */
+        app(DocumentApproval::class)->assertClear(
+            document: $challan,
+            module: 'sales',
+            action: 'challan',
+            field: 'status',
+            amount: (string) $challan->total,
+            reason: $challan->narration,
+        );
+
         return DB::transaction(function () use ($invoice, $vouchers, $challan) {
             /*
              * ⛔ গ্রাহকের সারিতে তালা — লেনদেনের **প্রথম** কাজ, ২৭ সেপ্টেম্বর ২০২৬।

@@ -941,6 +941,53 @@ final class TheParkedBillWaitsAtTheSameCounterTest extends TestCase
         $this->post(route('sales.direct.draft_withdraw', $held))->assertSessionHasErrors('resume_invoice_id');
     }
 
+    /**
+     * ⛔ জমার সই শেষে বিক্রি শেষ করতে গেলে চালানের সই চাওয়াটা হারাত — লাইভে ধরা, ২৮
+     * সেপ্টেম্বর ২০২৬ (INV-0003, INV-0005)।
+     *
+     * ⚠️ বিপজ্জনক ইনপুট: জমার সই হয়ে গেছে, আর চালানের নিজের সইয়ের ছক পরে বসানো। ⓘ আগে
+     * অনুরোধটা লেনদেনের ভিতরে লেখা হত আর ফেরত-গড়ানোয় মুছত — বার্তা বলত "পাঠানো হয়েছে",
+     * অথচ সইকারীর ইনবক্স খালি, আর বিক্রিটা চিরকাল আটকে।
+     */
+    public function test_finishing_a_signed_sale_keeps_the_challan_signature_request(): void
+    {
+        $this->counterDepositFlow();
+        $this->sell(['own_transport' => '1', ...$this->bankDeposit()])->assertSessionHasNoErrors();
+        $invoice = SalesInvoice::query()->latest('id')->firstOrFail();
+        $challan = $this->challanOf($invoice);
+
+        /* ⓘ জমার সই — হয়ে গেছে */
+        DB::table('approvals')->where('approvable_type', Voucher::class)->where('status', 'pending')
+            ->update(['status' => 'approved', 'decided_at' => now()]);
+
+        $flow = ApprovalFlow::query()->create([
+            'company_id' => CompanyContext::id(), 'module' => 'sales', 'action' => 'challan',
+            'document_type' => '', 'threshold_amount' => null, 'is_active' => true,
+        ]);
+        ApprovalFlowStep::query()->create([
+            'approval_flow_id' => $flow->id, 'level' => 1, 'approver_type' => 'user', 'approver_id' => $this->owner->id,
+        ]);
+
+        /* ⓘ ইঞ্জিন ছকগুলো মনে রাখে ($flowCache) — নতুন ছক দেখাতে নতুন ইঞ্জিন, লাইভে পরের অনুরোধের মতো */
+        $this->app->forgetInstance(\App\Core\Engines\Approval\ApprovalEngine::class);
+        $this->app->forgetInstance(\App\Core\Engines\Approval\DocumentApproval::class);
+        $this->app->forgetInstance(DirectSaleService::class);
+
+        try {
+            app(DirectSaleService::class)->finishHeld($invoice->fresh());
+            $this->fail('প্রস্তুতিটাই ভুল — চালানের সই না চেয়েই বিক্রি শেষ হয়েছে।');
+        } catch (\App\Core\Engines\Approval\HeldForApproval) {
+            // ⓘ প্রত্যাশিত — চালান সইয়ে গেছে
+        }
+
+        $this->assertSame(1,
+            DB::table('approvals')->where('approvable_type', DeliveryChallan::class)
+                ->where('approvable_id', $challan->id)->where('status', 'pending')->count(),
+            '⛔ চালানের সইয়ের অনুরোধ টেকেনি — "পাঠানো হয়েছে" বলা হল, অথচ ইনবক্স খালি।');
+        $this->assertSame(DocumentStatus::DRAFT, $invoice->fresh()->status, 'সই না হওয়া পর্যন্ত বিল খসড়া।');
+        $this->assertSame(DocumentStatus::DRAFT, $challan->fresh()->status, 'সই না হওয়া পর্যন্ত মাল বেরোয় না।');
+    }
+
     /** তালিকা থেকে বাতিল করলে তালিকাতেই ফেরা — আর চাবি ছাড়া পাতাটাই বন্ধ। */
     public function test_discarding_from_the_list_returns_to_the_list_and_the_list_needs_the_counter_key(): void
     {
