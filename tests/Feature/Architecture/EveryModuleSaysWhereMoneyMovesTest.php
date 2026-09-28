@@ -59,6 +59,10 @@ class EveryModuleSaysWhereMoneyMovesTest extends TestCase
         'sales' => ['collection'],
 
         'hr' => ['payroll'],
+
+        // ⭐ গণনা ও সমন্বয় মেনে নেওয়া খতিয়ানে বসে (Dr ঘাটতি / Cr মজুদ) —
+        // অডিট §১১, ২৭ সেপ্টেম্বর ২০২৬। ⚠️ `transfer` নয়: মোট মজুদের টাকা একই থাকে।
+        'inventory' => ['count'],
     ];
 
     public function test_every_money_action_is_declared_on_its_module(): void

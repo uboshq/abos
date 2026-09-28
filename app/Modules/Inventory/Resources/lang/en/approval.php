@@ -10,6 +10,6 @@ declare(strict_types=1);
  */
 
 return [
-    'count' => 'Accepting a stock-count difference',
+    'count' => 'Stock count or adjustment (accepting the difference)',
     'transfer' => 'Dispatching a stock transfer',
 ];
