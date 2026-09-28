@@ -47,7 +47,7 @@ final class NoticeScheduler
         Notice::query()
             ->where('status', NoticeStatus::SCHEDULED->value)
             ->whereNotNull('starts_on')
-            ->whereDate('starts_on', '<=', now()->toDateString())
+            ->where('starts_on', '<=', now()->toDateString())
             ->orderBy('id')
             ->chunkById(100, function ($notices) use (&$done): void {
                 foreach ($notices as $notice) {
@@ -88,7 +88,7 @@ final class NoticeScheduler
                 $q->where(fn ($w) => $w->whereNotNull('expires_at')->where('expires_at', '<', now()))
                     ->orWhere(fn ($w) => $w->whereNull('expires_at')
                         ->whereNotNull('ends_on')
-                        ->whereDate('ends_on', '<', now()->toDateString()));
+                        ->where('ends_on', '<', now()->toDateString()));
             })
             ->orderBy('id')
             ->chunkById(100, function ($notices) use (&$done): void {

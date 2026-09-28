@@ -457,7 +457,7 @@ final class StatusNotices
             ->where('b.company_id', CompanyContext::id())
             ->whereNull('b.deleted_at')
             ->whereNotNull('b.expiry_date')
-            ->whereDate('b.expiry_date', '<=', $today->copy()->addDays($days)->toDateString())
+            ->where('b.expiry_date', '<=', $today->copy()->addDays($days)->toDateString())
             ->groupBy('b.id')
             ->havingRaw('COALESCE(SUM(m.floor_change), 0) > 0')
 

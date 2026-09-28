@@ -167,7 +167,7 @@ final class StockFacts
     public function movementsToday(): int
     {
         return StockMovement::query()
-            ->whereDate('trx_date', Carbon::today()->toDateString())
+            ->where('trx_date', Carbon::today()->toDateString())
             ->count();
     }
 

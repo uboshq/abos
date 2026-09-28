@@ -48,11 +48,11 @@ trait FiltersByDate
         }
 
         if ($from !== null) {
-            $query->whereDate($column, '>=', $from);
+            $query->where($column, '>=', $from);
         }
 
         if ($to !== null) {
-            $query->whereDate($column, '<=', $to);
+            $query->where($column, '<=', $to);
         }
 
         return ['from' => $from, 'to' => $to];

@@ -66,8 +66,8 @@ class ApprovalDelegation extends Model
         $on = $on ?? now()->toDateString();
 
         return $query->whereNull('revoked_at')
-            ->whereDate('starts_on', '<=', $on)
-            ->whereDate('ends_on', '>=', $on);
+            ->where('starts_on', '<=', $on)
+            ->where('ends_on', '>=', $on);
     }
 
     /**

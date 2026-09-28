@@ -54,7 +54,7 @@ final class LedgerBalances
 
         $rows = LedgerEntry::query()
             ->whereIn('account_id', $want)
-            ->when($upto, fn (Builder $q, string $date) => $q->whereDate('trx_date', '<=', $date))
+            ->when($upto, fn (Builder $q, string $date) => $q->where('trx_date', '<=', $date))
             ->when($branchId, fn (Builder $q, int $branch) => $q->where('branch_id', $branch))
             ->groupBy('account_id')
             ->selectRaw('account_id, COALESCE(SUM(debit), 0) as d, COALESCE(SUM(credit), 0) as c')

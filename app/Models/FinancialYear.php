@@ -59,8 +59,8 @@ class FinancialYear extends Model
         $date = $date instanceof Carbon ? $date : Carbon::parse($date);
 
         return static::query()
-            ->whereDate('starts_on', '<=', $date)
-            ->whereDate('ends_on', '>=', $date)
+            ->where('starts_on', '<=', $date)
+            ->where('ends_on', '>=', $date)
             ->first();
     }
 }

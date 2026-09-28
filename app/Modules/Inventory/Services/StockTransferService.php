@@ -433,8 +433,8 @@ final class StockTransferService
     private function resolveFinancialYear(Carbon $date): FinancialYear
     {
         $year = FinancialYear::query()
-            ->whereDate('starts_on', '<=', $date->toDateString())
-            ->whereDate('ends_on', '>=', $date->toDateString())
+            ->where('starts_on', '<=', $date->toDateString())
+            ->where('ends_on', '>=', $date->toDateString())
             ->first();
 
         if ($year === null) {
