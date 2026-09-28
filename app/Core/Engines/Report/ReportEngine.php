@@ -4,12 +4,18 @@ declare(strict_types=1);
 
 namespace App\Core\Engines\Report;
 
+use App\Core\Services\DataScope;
 use App\Core\Support\CompanyContext;
 use App\Core\Support\RunningBalance;
+use App\Models\UserDataScope;
+use Closure;
+use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Database\Eloquent\Builder as EloquentBuilder;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 use RuntimeException;
 
 /**
@@ -33,6 +39,14 @@ final class ReportEngine
 
     /** @var array<string, ReportDefinition> */
     private array $reports = [];
+
+    /**
+     * কতবার [[branchWall()]] ডাকা হয়েছে — কেবল পার্থক্যটা মাপা হয়।
+     *
+     * ⓘ দেয়ালটা রিপোর্টের নিজের কোয়েরিতে বসে (কলামের নাম কেবল রিপোর্টই
+     * জানে), তাই ইঞ্জিন দেয়াল বসাতে পারে না — কিন্তু বসেছে কি না গুনতে পারে।
+     */
+    private static int $wallsBound = 0;
 
     public function register(ReportDefinition $report): void
     {
@@ -66,7 +80,7 @@ final class ReportEngine
         $report = $this->get($key);
         $filters = $this->normaliseFilters($report, $filters);
 
-        $query = ($report->query)($filters);
+        $query = $this->queryFor($report, $filters);
 
         /*
          * ⭐ খোঁজার শব্দটা এখানে বসে — যোগফল ও গণনার **আগে**।
@@ -253,7 +267,7 @@ final class ReportEngine
             return $rows;
         }
 
-        $before = ($report->query)([
+        $before = $this->queryFor($report, [
             ...$filters,
             'from' => $period['from'],
             'to' => $period['to'],
@@ -318,7 +332,7 @@ final class ReportEngine
         $page = 1;
 
         do {
-            $rows = ($report->query)($filters)->forPage($page, $chunk)->get();
+            $rows = $this->queryFor($report, $filters)->forPage($page, $chunk)->get();
 
             foreach ($rows as $row) {
                 yield (array) $row;
@@ -326,6 +340,65 @@ final class ReportEngine
 
             $page++;
         } while ($rows->count() === $chunk);
+    }
+
+    /**
+     * শাখার দেয়াল — রিপোর্টের কোয়েরিতে `->tap(ReportEngine::branchWall($f, 'table.branch_id'))`।
+     *
+     * ── ⛔ কী ভাঙা ছিল, অডিট ২৭ সেপ্টেম্বর ২০২৬, §৩ ─────────────────────
+     * রিপোর্টগুলো কাঁচা `DB::table` কোয়েরিতে লেখা, তাই মডেলের শাখা-ছাঁকনি সেখানে
+     * পৌঁছায় না। ⚠️ এক শাখায় আটকানো কর্মী বিক্রয়ের রিপোর্ট খুললে গোটা
+     * কোম্পানির সারি আর যোগফল পেতেন — পর্দায়, ফোনে, নির্ধারিত ফাইলে।
+     *
+     * ⭐ শাখা বাছা থাকলে কেবল সেটা (নাগালের ভেতরে কি না [[normaliseFilters()]]
+     * আগেই দেখেছে); না বাছলে আটকানো মানুষের সব শাখা **আর শাখাহীন সারি**
+     * ([[DataScope::allows()]]-এর একই নিয়ম — প্রধান অফিসের জাবেদায় শাখা
+     * থাকে না); সীমা না থাকলে কিছুই না।
+     *
+     * @param  array<string, mixed>  $f
+     * @return Closure(Builder|EloquentBuilder): void
+     */
+    public static function branchWall(array $f, string $column): Closure
+    {
+        self::$wallsBound++;
+
+        return function ($query) use ($f, $column): void {
+            if (! empty($f['branch_id'])) {
+                $query->where($column, $f['branch_id']);
+
+                return;
+            }
+
+            $ids = $f['branch_ids'] ?? null;
+
+            if ($ids !== null) {
+                $query->where(fn ($q) => $q->whereIn($column, $ids)->orWhereNull($column));
+            }
+        };
+    }
+
+    /**
+     * রিপোর্টের কোয়েরি — আর দেয়াল বসেছে কি না তার হিসাব।
+     *
+     * ⛔ দেয়াল ভুলে যাওয়া রিপোর্ট শাখায় আটকানো মানুষের জন্য **চলে না**:
+     * ফেরানোটা একটা ভাঙা পাতা, ফাঁস হওয়াটা চুপচাপ ভুল উত্তর — প্রথমটা
+     * সেদিনই কেউ জানায়, দ্বিতীয়টা কেউ কোনোদিন টের পায় না।
+     *
+     * @param  array<string, mixed>  $filters
+     */
+    private function queryFor(ReportDefinition $report, array $filters): Builder|EloquentBuilder
+    {
+        $before = self::$wallsBound;
+        $query = ($report->query)($filters);
+
+        if (($filters['branch_ids'] ?? null) !== null && $report->branchless === null && self::$wallsBound === $before) {
+            throw new RuntimeException(
+                "Report '{$report->key}' never called ReportEngine::branchWall(), and this user is limited to branches — "
+                .'it would show every branch. Bind the wall, or declare branchless with a written reason.'
+            );
+        }
+
+        return $query;
     }
 
     /**
@@ -350,6 +423,31 @@ final class ReportEngine
 
         $filters['company_id'] = CompanyContext::id();
         $filters['branch_id'] = $filters['branch_id'] ?? null;
+
+        /*
+         * ⛔ শাখার সীমা — পর্দা, ফোন, নির্ধারিত ফাইল, সবার একটাই দরজা এটা।
+         *
+         * ⓘ নির্ধারিত ফাইল মালিকের নামে চলে (runner লগইন করায়), তাই
+         * এখানে "কে" মানে সবসময় যাঁর জন্য সংখ্যাগুলো।
+         */
+        $allowed = app(DataScope::class)->idsFor(auth()->user(), UserDataScope::BRANCH);
+
+        if ($allowed !== null && $report->branchless === ReportDefinition::WHOLE_COMPANY) {
+            throw new AuthorizationException(
+                "Report '{$report->key}' counts the whole company and cannot be split by branch; a branch-limited user cannot have it."
+            );
+        }
+
+        /*
+         * ⛔ নাগালের বাইরের শাখা চাইলে ফেরত — চুপচাপ নিজের শাখায় নামিয়ে
+         * আনা নয়: তাহলে "নেত্রকোনার বিক্রয়" শিরোনামে ময়মনসিংহের সংখ্যা
+         * ছাপা হত, আর সেটা ভুল বলে চেনার উপায় থাকত না।
+         */
+        if ($allowed !== null && ! empty($filters['branch_id']) && ! in_array((int) $filters['branch_id'], $allowed, true)) {
+            throw ValidationException::withMessages(['branch_id' => __('validation.branch_out_of_reach')]);
+        }
+
+        $filters['branch_ids'] = $allowed;
 
         /*
          * ঘরটা সবসময় থাকে, খালি হলেও।
@@ -525,7 +623,7 @@ final class ReportEngine
              * কারণ **কোন** সারিগুলো গোনা হবে সেটা ক্রমই ঠিক করে; বাইরের
              * যোগফল ক্রম নিয়ে মাথা ঘামায় না।
              */
-            $earlier = ($report->query)($filters)->forPage(1, ($page - 1) * $perPage);
+            $earlier = $this->queryFor($report, $filters)->forPage(1, ($page - 1) * $perPage);
 
             $sums = DB::connection($earlier->getConnection()->getName())
                 ->query()

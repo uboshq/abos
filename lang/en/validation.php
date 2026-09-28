@@ -57,6 +57,8 @@ return [
         'uncompromised' => 'The given :attribute has appeared in a data leak. Please choose a different :attribute.',
     ],
 
+    'branch_out_of_reach' => 'This branch is outside the branches you may see.',
+
     'custom' => [],
 
     /*

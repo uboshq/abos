@@ -59,6 +59,7 @@ final class ApprovalReports
     {
         return new ReportDefinition(
             key: 'approval.pending',
+            branchless: ReportDefinition::WHOLE_COMPANY,
             // ⛔ ওয়েবের দরজা যে চাবি দেখে, সেটাই — সূচি ও ফোন এখান থেকে পড়ে (২৭ সেপ্টেম্বর ২০২৬)
             permission: 'approval.report',
             title: 'approval::menu.report_pending',
@@ -163,6 +164,7 @@ final class ApprovalReports
 
         return new ReportDefinition(
             key: $key,
+            branchless: ReportDefinition::WHOLE_COMPANY,
             // ⛔ ওয়েবের দরজা যে চাবি দেখে, সেটাই — সূচি ও ফোন এখান থেকে পড়ে (২৭ সেপ্টেম্বর ২০২৬)
             permission: 'approval.report',
             title: $title,
@@ -231,6 +233,7 @@ final class ApprovalReports
     {
         return new ReportDefinition(
             key: 'approval.bottleneck',
+            branchless: ReportDefinition::WHOLE_COMPANY,
             // ⛔ ওয়েবের দরজা যে চাবি দেখে, সেটাই — সূচি ও ফোন এখান থেকে পড়ে (২৭ সেপ্টেম্বর ২০২৬)
             permission: 'approval.report',
             title: 'approval::menu.report_bottleneck',
@@ -315,6 +318,7 @@ final class ApprovalReports
     {
         return new ReportDefinition(
             key: 'approval.why_rejected',
+            branchless: ReportDefinition::WHOLE_COMPANY,
             // ⛔ ওয়েবের দরজা যে চাবি দেখে, সেটাই — সূচি ও ফোন এখান থেকে পড়ে (২৭ সেপ্টেম্বর ২০২৬)
             permission: 'approval.report',
             title: 'approval::menu.report_why_rejected',
@@ -348,6 +352,7 @@ final class ApprovalReports
     {
         return new ReportDefinition(
             key: 'approval.by_user',
+            branchless: ReportDefinition::WHOLE_COMPANY,
             // ⛔ ওয়েবের দরজা যে চাবি দেখে, সেটাই — সূচি ও ফোন এখান থেকে পড়ে (২৭ সেপ্টেম্বর ২০২৬)
             permission: 'approval.report',
             title: 'approval::menu.report_by_user',

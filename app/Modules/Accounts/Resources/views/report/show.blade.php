@@ -16,6 +16,16 @@
     $filters = $result->filters;
 
     /*
+        ⛔ শাখায় আটকানো মানুষের তালিকায় কেবল নাগালের শাখা — ইঞ্জিন বাকিগুলো
+        ফেরায় (অডিট ২৭ সেপ্টেম্বর, §৩), তাই দেখানো মানে এমন একটা পছন্দ দেওয়া
+        যেটা বাছলেই লাল। ⓘ তালিকাটা ইঞ্জিনের নিজের উত্তর (`branch_ids`) থেকে,
+        আটটা কন্ট্রোলারে আলাদা করে নয়।
+    */
+    if (($filters['branch_ids'] ?? null) !== null) {
+        $branches = $branches->whereIn('id', $filters['branch_ids'])->values();
+    }
+
+    /*
         ⛔ প্রকল্প বাছার তালিকা — পাঠায় কেবল Accounts-এর কন্ট্রোলার।
 
         ⚠️ ২০ সেপ্টেম্বর ২০২৬: `$centres` যোগ হয়েছিল কেবল ঐ এক
@@ -147,6 +157,9 @@
 
     <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
         <form method="GET" class="contents">
+            {{-- ⛔ নাগালের বাইরের শাখা চাইলে ইঞ্জিন ফেরায় — কারণটা এখানে দেখা যায়, নীরব ফেরত নয় (অডিট ২৭ সেপ্টেম্বর, §৩)। --}}
+            <x-ui.errors />
+
             {{--
                 ⭐ খোঁজার ঘর — ২১ সেপ্টেম্বর ২০২৬, মালিকের নির্দেশ
                 *"report e search bar diba"*।

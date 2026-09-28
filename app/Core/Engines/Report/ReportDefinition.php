@@ -22,6 +22,16 @@ use Illuminate\Database\Query\Builder as QueryBuilder;
  */
 final class ReportDefinition
 {
+    /**
+     * ⛔ সংখ্যাগুলো শাখার নথি থেকে আসে, কিন্তু শাখায় ভাগ করা যায় না — শাখায়
+     * আটকানো মানুষকে রিপোর্টটা **ফেরানো হয়** (অডিট ২৭ সেপ্টেম্বর ২০২৬, §৩)।
+     * ⓘ কম-বেশি দেখানো ভুল উত্তর, আর ভুল বলে চেনার উপায় থাকত না।
+     */
+    public const WHOLE_COMPANY = 'whole_company';
+
+    /** ⭐ সারিগুলো কোনো শাখার জিনিসই নয় — সবার জন্য একই রিপোর্ট। */
+    public const NO_BRANCH_DATA = 'no_branch_data';
+
     /** @var list<ReportColumn> */
     public readonly array $columns;
 
@@ -133,7 +143,21 @@ final class ReportDefinition
          * @var null|Closure(array<string, string>): array{label: string, value: string, good: bool}
          */
         public readonly ?Closure $summary = null,
+
+        /**
+         * শাখার দেয়াল থেকে ছাড় — কেবল লেখা কারণসহ।
+         *
+         * `null` (প্রায় সব রিপোর্ট) = কোয়েরি নিজে [[ReportEngine::branchWall()]]
+         * বসায়; না বসালে শাখায় আটকানো মানুষের জন্য ইঞ্জিন রিপোর্টটা চালায়ই না।
+         * ⓘ [[self::WHOLE_COMPANY]] বা [[self::NO_BRANCH_DATA]] দিলে তার
+         * কারণ `EveryReportStandsBehindTheBranchWallTest`-এও লিখতে হয়।
+         */
+        public readonly ?string $branchless = null,
     ) {
+        if ($branchless !== null && ! in_array($branchless, [self::WHOLE_COMPANY, self::NO_BRANCH_DATA], true)) {
+            throw new \InvalidArgumentException("Report '{$key}' declares an unknown branchless kind '{$branchless}'.");
+        }
+
         $this->columns = array_map(
             fn (array $column, int $index) => ReportColumn::fromArray($column, $index),
             $columns,

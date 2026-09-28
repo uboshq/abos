@@ -71,7 +71,7 @@ final class CoreReports
                 // true হত না — অথচ `money_kind` দলেও বসে।
                 ->whereNotNull('accounts.money_kind')
                 ->where('accounts.is_group', false)
-                ->when($f['branch_id'], fn ($q, $branch) => $q->where('ledger_entries.branch_id', $branch))
+                ->tap(ReportEngine::branchWall($f, 'ledger_entries.branch_id'))
                 ->whereBetween('ledger_entries.trx_date', [$f['from'], $f['to']])
                 ->where('ledger_entries.debit', '>', 0)
                 ->orderBy('ledger_entries.trx_date')
@@ -135,7 +135,7 @@ final class CoreReports
             query: fn (array $f) => DB::table('ledger_entries')
                 ->leftJoin('accounts', 'accounts.id', '=', 'ledger_entries.account_id')
                 ->where('ledger_entries.company_id', $f['company_id'])
-                ->when($f['branch_id'], fn ($q, $branch) => $q->where('ledger_entries.branch_id', $branch))
+                ->tap(ReportEngine::branchWall($f, 'ledger_entries.branch_id'))
                 ->whereBetween('ledger_entries.trx_date', [$f['from'], $f['to']])
                 ->orderBy('ledger_entries.trx_date')
                 ->orderBy('ledger_entries.id')
@@ -176,7 +176,7 @@ final class CoreReports
             query: fn (array $f) => DB::table('ledger_entries')
                 ->where('company_id', $f['company_id'])
                 ->when($f['account_id'] ?? null, fn ($q, $account) => $q->where('account_id', $account))
-                ->when($f['branch_id'], fn ($q, $branch) => $q->where('branch_id', $branch))
+                ->tap(ReportEngine::branchWall($f, 'branch_id'))
                 ->whereBetween('trx_date', [$f['from'], $f['to']])
                 ->orderBy('trx_date')
                 ->orderBy('id')
@@ -251,7 +251,7 @@ final class CoreReports
                  * কারণ প্রশ্নটাই এখনো করা হয়নি।
                  */
                 ->where('ledger_entries.cost_center_id', $f['cost_center_id'] ?? 0)
-                ->when($f['branch_id'], fn ($q, $branch) => $q->where('ledger_entries.branch_id', $branch))
+                ->tap(ReportEngine::branchWall($f, 'ledger_entries.branch_id'))
                 ->whereBetween('ledger_entries.trx_date', [$f['from'], $f['to']])
                 ->orderBy('ledger_entries.trx_date')
                 ->orderBy('ledger_entries.id')
@@ -297,7 +297,7 @@ final class CoreReports
             query: fn (array $f) => DB::table('ledger_entries')
                 ->leftJoin('accounts', 'accounts.id', '=', 'ledger_entries.account_id')
                 ->where('ledger_entries.company_id', $f['company_id'])
-                ->when($f['branch_id'], fn ($q, $branch) => $q->where('ledger_entries.branch_id', $branch))
+                ->tap(ReportEngine::branchWall($f, 'ledger_entries.branch_id'))
                 /*
                  * শুরুর তারিখ ধরা হয় না — রেওয়ামিল একটা মুহূর্তের ছবি।
                  *
@@ -382,7 +382,7 @@ final class CoreReports
                 ->where('ledger_entries.company_id', $f['company_id'])
                 ->whereIn('accounts.money_kind', (array) $kind)
                 ->where('accounts.is_group', false)
-                ->when($f['branch_id'], fn ($q, $branch) => $q->where('ledger_entries.branch_id', $branch))
+                ->tap(ReportEngine::branchWall($f, 'ledger_entries.branch_id'))
                 ->whereBetween('ledger_entries.trx_date', [$f['from'], $f['to']])
                 ->orderBy('ledger_entries.trx_date')
                 ->orderBy('ledger_entries.id')
@@ -516,7 +516,7 @@ final class CoreReports
                 ->leftJoin('accounts', 'accounts.id', '=', 'ledger_entries.account_id')
                 ->where('ledger_entries.company_id', $f['company_id'])
                 ->whereIn('accounts.type', $types)
-                ->when($f['branch_id'], fn ($q, $branch) => $q->where('ledger_entries.branch_id', $branch))
+                ->tap(ReportEngine::branchWall($f, 'ledger_entries.branch_id'))
                 // ব্যালেন্স শিটে শুরুর তারিখ ধরা হয় না — একটা মুহূর্তের
                 // ছবিতে "কবে থেকে" প্রশ্নটাই অর্থহীন
                 ->when($dateRange, fn ($q) => $q->where('ledger_entries.trx_date', '>=', $f['from']))
@@ -589,7 +589,7 @@ final class CoreReports
                 // টাকার যেকোনো খাত — নগদ, ব্যাংক, MFS ([[Account::scopeMoney]])
                 ->whereNotNull('accounts.money_kind')
                 ->where('accounts.is_group', false)
-                ->when($f['branch_id'], fn ($q, $branch) => $q->where('ledger_entries.branch_id', $branch))
+                ->tap(ReportEngine::branchWall($f, 'ledger_entries.branch_id'))
                 ->whereBetween('ledger_entries.trx_date', [$f['from'], $f['to']])
                 ->groupBy('ledger_entries.trx_date')
                 ->orderBy('ledger_entries.trx_date')
@@ -668,7 +668,7 @@ final class CoreReports
                 ->leftJoin('acc_cost_centers as c', 'c.id', '=', 'ledger_entries.cost_center_id')
                 ->where('ledger_entries.company_id', $f['company_id'])
                 ->whereBetween('ledger_entries.trx_date', [$f['from'], $f['to']])
-                ->when($f['branch_id'], fn ($q, $branch) => $q->where('ledger_entries.branch_id', $branch))
+                ->tap(ReportEngine::branchWall($f, 'ledger_entries.branch_id'))
 
                 /*
                  * কেবল আয় ও ব্যয় — সম্পদ ও দায় নয়।
@@ -733,7 +733,7 @@ final class CoreReports
                 ->join('accounts', 'accounts.id', '=', 'ledger_entries.account_id')
                 ->where('ledger_entries.company_id', $f['company_id'])
                 ->whereBetween('ledger_entries.trx_date', [$f['from'], $f['to']])
-                ->when($f['branch_id'], fn ($q, $branch) => $q->where('ledger_entries.branch_id', $branch))
+                ->tap(ReportEngine::branchWall($f, 'ledger_entries.branch_id'))
                 ->where('accounts.type', Account::EXPENSE)
 
                 /*
@@ -783,7 +783,7 @@ final class CoreReports
                 ->join('accounts', 'accounts.id', '=', 'ledger_entries.account_id')
                 ->where('ledger_entries.company_id', $f['company_id'])
                 ->whereBetween('ledger_entries.trx_date', [$f['from'], $f['to']])
-                ->when($f['branch_id'], fn ($q, $branch) => $q->where('ledger_entries.branch_id', $branch))
+                ->tap(ReportEngine::branchWall($f, 'ledger_entries.branch_id'))
                 ->where('accounts.type', Account::INCOME)
 
                 // ⓘ গ্রুপে দাখিলা বসে না — শর্তটা তবু লেখা, দাবিটা পড়ে বোঝা যাক

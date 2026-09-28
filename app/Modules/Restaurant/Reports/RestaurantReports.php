@@ -99,7 +99,7 @@ final class RestaurantReports
                         ->whereNull('r.deleted_at');
                 })
                 ->where('i.company_id', $f['company_id'])
-                ->when($f['branch_id'], fn ($q, $b) => $q->where('i.branch_id', $b))
+                ->tap(ReportEngine::branchWall($f, 'i.branch_id'))
                 ->whereBetween('i.trx_date', [$f['from'], $f['to']])
                 // বাতিল বিল গোনা হয় না — ওগুলো ঘটেইনি
                 ->where('i.status', '<>', 'cancelled')

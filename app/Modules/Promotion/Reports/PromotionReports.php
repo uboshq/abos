@@ -85,6 +85,7 @@ final class PromotionReports
     {
         return new ReportDefinition(
             key: 'promotion.register',
+            branchless: ReportDefinition::NO_BRANCH_DATA,
             title: 'promotion::report.title_register',
             filters: ['date_range'],
             permission: self::PERMISSION,
@@ -138,6 +139,7 @@ final class PromotionReports
     {
         return new ReportDefinition(
             key: 'promotion.active',
+            branchless: ReportDefinition::WHOLE_COMPANY,
             title: 'promotion::report.title_active',
             filters: [],
             permission: self::PERMISSION,
@@ -191,6 +193,7 @@ final class PromotionReports
     {
         return new ReportDefinition(
             key: 'promotion.expired',
+            branchless: ReportDefinition::WHOLE_COMPANY,
             title: 'promotion::report.title_expired',
             filters: ['date_range'],
             permission: self::PERMISSION,
@@ -243,6 +246,7 @@ final class PromotionReports
     {
         return new ReportDefinition(
             key: 'promotion.utilization',
+            branchless: ReportDefinition::WHOLE_COMPANY,
             title: 'promotion::report.title_utilization',
             filters: ['date_range'],
             groupBy: 'promotion_id',
@@ -294,6 +298,7 @@ final class PromotionReports
     {
         return new ReportDefinition(
             key: 'promotion.by_customer',
+            branchless: ReportDefinition::WHOLE_COMPANY,
             title: 'promotion::report.title_by_customer',
             filters: ['date_range'],
             groupBy: 'customer_id',
@@ -347,6 +352,7 @@ final class PromotionReports
     {
         return new ReportDefinition(
             key: 'promotion.by_product',
+            branchless: ReportDefinition::WHOLE_COMPANY,
             title: 'promotion::report.title_by_product',
             filters: ['date_range'],
             groupBy: 'product_id',
@@ -402,6 +408,7 @@ final class PromotionReports
     {
         return new ReportDefinition(
             key: 'promotion.discounts',
+            branchless: ReportDefinition::WHOLE_COMPANY,
             title: 'promotion::report.title_discounts',
             filters: ['date_range'],
             permission: self::PERMISSION,
@@ -464,6 +471,8 @@ final class PromotionReports
                     ->join('promotions as p', 'p.id', '=', 'pa.promotion_id')
                     ->join('inv_products as pr', 'pr.id', '=', 'gi.product_id')
                     ->join('inv_warehouses as w', 'w.id', '=', 'gi.warehouse_id')
+                    // ⛔ উপহার বেরোয় গুদাম থেকে, আর গুদামের শাখা আছে — শাখার দেয়াল ওখানেই (অডিট ২৭ সেপ্টেম্বর, §৩)
+                    ->tap(ReportEngine::branchWall($f, 'w.branch_id'))
                     ->leftJoin('customers as c', 'c.id', '=', 'pa.customer_id')
                     ->where('gi.company_id', $f['company_id'])
                     ->whereBetween('gi.issued_at', self::day($f))
@@ -527,6 +536,8 @@ final class PromotionReports
             query: fn (array $f) => DB::table('promotion_gift_issues as gi')
                 ->join('inv_products as pr', 'pr.id', '=', 'gi.product_id')
                 ->join('inv_warehouses as w', 'w.id', '=', 'gi.warehouse_id')
+                // ⛔ উপহার বেরোয় গুদাম থেকে, আর গুদামের শাখা আছে — শাখার দেয়াল ওখানেই (অডিট ২৭ সেপ্টেম্বর, §৩)
+                ->tap(ReportEngine::branchWall($f, 'w.branch_id'))
                 ->where('gi.company_id', $f['company_id'])
                 ->whereBetween('gi.issued_at', self::day($f))
                 ->groupBy('gi.product_id', 'gi.warehouse_id', 'pr.code', 'pr.name_en', 'pr.name_bn',
@@ -576,6 +587,7 @@ final class PromotionReports
     {
         return new ReportDefinition(
             key: 'promotion.budgets',
+            branchless: ReportDefinition::WHOLE_COMPANY,
             title: 'promotion::report.title_budgets',
             filters: ['date_range'],
             permission: self::PERMISSION,
@@ -647,6 +659,7 @@ final class PromotionReports
     {
         return new ReportDefinition(
             key: 'promotion.overrides',
+            branchless: ReportDefinition::WHOLE_COMPANY,
             title: 'promotion::report.title_overrides',
             filters: ['date_range'],
             permission: self::PERMISSION,
@@ -691,6 +704,7 @@ final class PromotionReports
     {
         return new ReportDefinition(
             key: 'promotion.reversals',
+            branchless: ReportDefinition::WHOLE_COMPANY,
             title: 'promotion::report.title_reversals',
             filters: ['date_range'],
             permission: self::PERMISSION,
@@ -735,6 +749,7 @@ final class PromotionReports
     {
         return new ReportDefinition(
             key: 'promotion.cancelled_offers',
+            branchless: ReportDefinition::WHOLE_COMPANY,
             title: 'promotion::report.title_cancelled_offers',
             filters: ['date_range'],
             permission: self::PERMISSION,

@@ -47,6 +47,8 @@ final class EveryExcuseWeGrantedIsCountedTest extends TestCase
         'EveryPolicyRuleIsActuallyReachedTest::REACHED_WITHOUT_A_ROUTE',
         'EveryPortalScreenAsksTheNarrowPathTest::HANDLED',
         'EveryRawQueryNamesItsCompanyTest::DECLARED',
+        // ⚠️ দেয়াল ছাড়া চলা রিপোর্ট — সারিগুলো কোনো শাখার নয় (অডিট ২৭ সেপ্টেম্বর, §৩)
+        'EveryReportStandsBehindTheBranchWallTest::SAME_FOR_EVERYONE',
         'EveryRightWeHandOutStopsSomethingTest::NOT_YET_CHECKED',
         'EveryRouteIsGuardedTest::ANY_SIGNED_IN_USER',
         'EveryRouteIsGuardedTest::CUSTOMER_PORTAL',
@@ -94,6 +96,8 @@ final class EveryExcuseWeGrantedIsCountedTest extends TestCase
      * @var list<string>
      */
     private const NOT_EXCUSES = [
+        // ⓘ উল্টো দিকের তালিকা: এখানে নাম মানে শাখায় আটকানো মানুষের কাছে রিপোর্টটা **বন্ধ** (অডিট ২৭ সেপ্টেম্বর, §৩)
+        'EveryReportStandsBehindTheBranchWallTest::REFUSED',
         // ⓘ চাহিদা: চালান পাকা করার প্রতিটা ডাক আর তার দরজা — ছাড় নয়, যা থাকতেই হবে (ধাপ ৫)
         'EveryChallanConfirmAsksHowTheGoodsTravelTest::KNOWN',
         'EveryListScreenPaginatesTest::NOT_REALLY_A_LIST',
@@ -157,6 +161,14 @@ final class EveryExcuseWeGrantedIsCountedTest extends TestCase
      * বদলাতে হয়, আর সেটা একটা সিদ্ধান্ত যা কমিটে চোখে পড়ে।
      */
     /*
+     * ── ⚠️ ২৩৭ → ২৪০, ২৮ সেপ্টেম্বর ২০২৬ ─────────────────────────────
+     * তিনটা সারি: `EveryReportStandsBehindTheBranchWallTest::SAME_FOR_EVERYONE`
+     * — অফারের তালিকা আর নোটিশের দুইটা রিপোর্ট, যাদের সারি কোনো শাখার নয়,
+     * তাই শাখার দেয়াল ছাড়াই চলে (অডিট ২৭ সেপ্টেম্বর, §৩)।
+     * ⓘ একই দিনের ২০টা **ফেরানো** রিপোর্ট (`REFUSED`) গোনায় নেই — ওগুলো
+     * ছাড় নয়, বন্ধ দরজা।
+     */
+    /*
      * ── ⚠️ ২২৪ → ২৩৭, ২৪ সেপ্টেম্বর ২০২৬ ─────────────────────────────
      * চার সেশনের একদিনের কাজে তেরোটা সারি যোগ হয়েছে। ⛔ ratchet-টা
      * ঠিক এই মুহূর্তটার জন্যই আছে: বাড়াটা **একটা কমিটে চোখে পড়ে**,
@@ -185,7 +197,7 @@ final class EveryExcuseWeGrantedIsCountedTest extends TestCase
      * `EveryMasterNamesItsDuplicateGuard::EXEMPT` ১৫ ·
      * `FLOAT_IS_DELIBERATE` ১৫ · `STEPPING_ASIDE_FOR_NOW` ১৪।
      */
-    private const CEILING = 237;
+    private const CEILING = 240;
 
     /*
      * ── ⚠️ ২২২ → ২২৪, ২৩ সেপ্টেম্বর ২০২৬ ───────────────────────────

@@ -126,6 +126,7 @@ final class StockReports
 
         return new ReportDefinition(
             key: 'inventory.stock_value',
+            branchless: ReportDefinition::WHOLE_COMPANY,
             // ⛔ ওয়েবের দরজা যে চাবি দেখে, সেটাই — সূচি ও ফোন এখান থেকে পড়ে (২৭ সেপ্টেম্বর ২০২৬)
             permission: 'inventory.report',
             title: 'inventory::menu.stock_value',
@@ -309,7 +310,7 @@ final class StockReports
                 ->leftJoin('inv_batches as b', 'b.id', '=', 'm.batch_id')
 
                 ->where('m.company_id', $f['company_id'])
-                ->when($f['branch_id'], fn ($q, $b) => $q->where('m.branch_id', $b))
+                ->tap(ReportEngine::branchWall($f, 'm.branch_id'))
                 /*
                  * ⛔ `w.name_bn` এখানে ছিল না — ২২ সেপ্টেম্বর ২০২৬।
                  *
@@ -450,7 +451,7 @@ final class StockReports
                 ->where('b.company_id', $f['company_id'])
                 ->whereNull('b.deleted_at')
                 ->whereNotNull('b.expiry_date')
-                ->when($f['branch_id'], fn ($q, $b) => $q->where('m.branch_id', $b))
+                ->tap(ReportEngine::branchWall($f, 'm.branch_id'))
                 ->groupBy('b.id', 'b.batch_no', 'b.expiry_date', 'b.mrp', 'p.code', 'p.name_en')
                 // শূন্য বা ঋণাত্মক লট বাদ — তালিকাটা কাজের জিনিস, ইতিহাস নয়
                 ->havingRaw('COALESCE(SUM(m.floor_change), 0) > 0')
@@ -512,7 +513,7 @@ final class StockReports
                 ->join('inv_products as p', 'p.id', '=', 'm.product_id')
                 ->join('inv_warehouses as w', 'w.id', '=', 'm.warehouse_id')
                 ->where('m.company_id', $f['company_id'])
-                ->when($f['branch_id'], fn ($q, $b) => $q->where('m.branch_id', $b))
+                ->tap(ReportEngine::branchWall($f, 'm.branch_id'))
                 ->whereBetween('m.trx_date', [$f['from'], $f['to']])
                 ->orderBy('m.trx_date')
                 ->orderBy('m.id')
@@ -565,7 +566,7 @@ final class StockReports
             query: fn (array $f) => DB::table('inv_stock_movements as m')
                 ->join('inv_products as p', 'p.id', '=', 'm.product_id')
                 ->where('m.company_id', $f['company_id'])
-                ->when($f['branch_id'], fn ($q, $b) => $q->where('m.branch_id', $b))
+                ->tap(ReportEngine::branchWall($f, 'm.branch_id'))
                 // শুরুর তারিখ ধরা হয় না: মজুদ একটা মুহূর্তের অবস্থা,
                 // পরিসরের নয় — ব্যালেন্স শিটে ঠিক একই যুক্তি
                 ->where('m.trx_date', '<=', $f['to'])
@@ -634,7 +635,7 @@ final class StockReports
                 ->join('inv_products as p', 'p.id', '=', 'm.product_id')
                 ->leftJoin('mdm_reason_codes as r', 'r.id', '=', 'm.reason_code_id')
                 ->where('m.company_id', $f['company_id'])
-                ->when($f['branch_id'], fn ($q, $b) => $q->where('m.branch_id', $b))
+                ->tap(ReportEngine::branchWall($f, 'm.branch_id'))
                 ->where('m.trx_date', '<=', $f['to'])
                 ->where('m.hold_change', '<>', 0)
                 ->groupBy('m.product_id', 'p.code', 'p.name_en', 'p.name_bn', 'm.reason_code_id', 'r.name_en', 'r.name_bn')
@@ -706,7 +707,7 @@ final class StockReports
                 ->join('inv_products as p', 'p.id', '=', 'm.product_id')
                 ->join('inv_warehouses as w', 'w.id', '=', 'm.warehouse_id')
                 ->where('m.company_id', $f['company_id'])
-                ->when($f['branch_id'], fn ($q, $b) => $q->where('m.branch_id', $b))
+                ->tap(ReportEngine::branchWall($f, 'm.branch_id'))
 
                 /*
                  * ⓘ শুরুর তারিখ ধরা হয় না — মজুদ একটা মুহূর্তের অবস্থা,
@@ -815,7 +816,7 @@ final class StockReports
                 ->leftJoin('mdm_reason_codes as r', 'r.id', '=', 'm.reason_code_id')
                 ->leftJoin('users as u', 'u.id', '=', 'm.created_by')
                 ->where('m.company_id', $f['company_id'])
-                ->when($f['branch_id'], fn ($q, $b) => $q->where('m.branch_id', $b))
+                ->tap(ReportEngine::branchWall($f, 'm.branch_id'))
 
                 /* ⓘ এটা ঘটনার তালিকা, অবস্থার নয় — তাই পুরো পরিসর। */
                 ->whereBetween('m.trx_date', [$f['from'], $f['to']])
@@ -909,7 +910,7 @@ final class StockReports
                 ->join('inv_products as p', 'p.id', '=', 'm.product_id')
                 ->leftJoin('inv_warehouses as w', 'w.id', '=', 'm.warehouse_id')
                 ->where('m.company_id', $f['company_id'])
-                ->when($f['branch_id'], fn ($q, $b) => $q->where('m.branch_id', $b))
+                ->tap(ReportEngine::branchWall($f, 'm.branch_id'))
                 ->where('m.trx_date', '<=', $f['to'])
                 ->where('m.reserved_change', '<>', 0)
                 ->groupBy(
@@ -1004,7 +1005,15 @@ final class StockReports
             // ⛔ ওয়েবের দরজা যে চাবি দেখে, সেটাই — সূচি ও ফোন এখান থেকে পড়ে (২৭ সেপ্টেম্বর ২০২৬)
             permission: 'inventory.report',
             title: 'inventory::menu.replenishment',
-            filters: ['branch'],
+            /*
+             * ⛔ শাখার ছাঁকনি ঘোষিত ছিল, অথচ কোয়েরি সেটা কোনোদিন পড়েনি — ড্রপডাউনে
+             * শাখা বাছলেও গোটা কোম্পানির সংখ্যা আসত (অডিট ২৭ সেপ্টেম্বর, §৩-এ ধরা)।
+             * ⓘ পুনঃক্রয়ের স্তর আর সর্বোচ্চ মজুদ পণ্যের, কোম্পানি-জোড়া; এক শাখার
+             * মজুদ তার সাথে মেলালে প্রস্তাবটাই ভুল হত। ⭐ তাই ছাঁকনি নেই, আর
+             * শাখায় আটকানো মানুষকে রিপোর্টটা ফেরানো হয়।
+             */
+            filters: [],
+            branchless: ReportDefinition::WHOLE_COMPANY,
 
             /*
              * ⛔ `groupBy` নেই, ইচ্ছাকৃতভাবে।

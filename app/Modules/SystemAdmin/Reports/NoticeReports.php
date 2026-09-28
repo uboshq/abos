@@ -48,6 +48,7 @@ final class NoticeReports
     {
         return new ReportDefinition(
             key: 'system_admin.notice_register',
+            branchless: ReportDefinition::NO_BRANCH_DATA,
             // ⛔ ওয়েবের দরজা যে চাবি দেখে, সেটাই — সূচি ও ফোন এখান থেকে পড়ে (২৭ সেপ্টেম্বর ২০২৬)
             permission: 'system_admin.notice.analytics',
             title: 'core.notice.report_register',
@@ -105,6 +106,7 @@ final class NoticeReports
     {
         return new ReportDefinition(
             key: 'system_admin.notice_signatures',
+            branchless: ReportDefinition::NO_BRANCH_DATA,
             // ⛔ ওয়েবের দরজা যে চাবি দেখে, সেটাই — সূচি ও ফোন এখান থেকে পড়ে (২৭ সেপ্টেম্বর ২০২৬)
             permission: 'system_admin.notice.analytics',
             title: 'core.notice.report_signatures',

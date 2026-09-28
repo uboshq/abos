@@ -75,7 +75,7 @@ final class PartyReports
                 ->tap(fn ($q) => self::joinLadder($q))
                 ->where('ledger_entries.company_id', $f['company_id'])
                 ->where('ledger_entries.party_type', Customer::drillSourceType())
-                ->when($f['branch_id'], fn ($q, $branch) => $q->where('ledger_entries.branch_id', $branch))
+                ->tap(ReportEngine::branchWall($f, 'ledger_entries.branch_id'))
                 /*
                  * পক্ষের ধরন ধরে ছাঁকা — "ডিলারদের কত বকেয়া, পাইকারদের কত"।
                  *
@@ -161,7 +161,7 @@ final class PartyReports
                  * হচ্ছে না, একটা মানুষের তালিকা — তাই "কোন শাখার
                  * বিক্রি" প্রশ্নটাই ওঠে না।
                  */
-                ->when($f['branch_id'], fn ($q, $b) => $q->where('customers.branch_id', $b))
+                ->tap(ReportEngine::branchWall($f, 'customers.branch_id'))
 
                 ->where(fn ($q) => $q->whereNull('customers.credit_limit')
                     ->orWhere('customers.credit_limit', '<=', 0))
@@ -203,7 +203,7 @@ final class PartyReports
                 ->tap(fn ($q) => self::joinLadder($q))
                 ->where('ledger_entries.company_id', $f['company_id'])
                 ->where('ledger_entries.party_type', Customer::drillSourceType())
-                ->when($f['branch_id'], fn ($q, $branch) => $q->where('ledger_entries.branch_id', $branch))
+                ->tap(ReportEngine::branchWall($f, 'ledger_entries.branch_id'))
                 /*
                  * পক্ষের ধরন ধরে ছাঁকা — "ডিলারদের কত বকেয়া, পাইকারদের কত"।
                  *
@@ -283,7 +283,7 @@ final class PartyReports
                     ->tap(fn ($q) => self::joinLadder($q))
                     ->where('ledger_entries.company_id', $f['company_id'])
                     ->where('ledger_entries.party_type', Customer::drillSourceType())
-                    ->when($f['branch_id'], fn ($q, $branch) => $q->where('ledger_entries.branch_id', $branch))
+                    ->tap(ReportEngine::branchWall($f, 'ledger_entries.branch_id'))
                     /* একই ছাঁকনি — প্রশ্নটা এখানেও একই */
                     ->when($f['party_type_id'] ?? null,
                         fn ($q, $type) => $q->where('customers.party_type_id', $type))

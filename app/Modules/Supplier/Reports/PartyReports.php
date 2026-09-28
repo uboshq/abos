@@ -59,7 +59,7 @@ final class PartyReports
                 ->join('suppliers', 'suppliers.id', '=', 'ledger_entries.party_id')
                 ->where('ledger_entries.company_id', $f['company_id'])
                 ->where('ledger_entries.party_type', Supplier::drillSourceType())
-                ->when($f['branch_id'], fn ($q, $branch) => $q->where('ledger_entries.branch_id', $branch))
+                ->tap(ReportEngine::branchWall($f, 'ledger_entries.branch_id'))
                 /*
                  * পক্ষের ধরন ধরে ছাঁকা — "ট্রান্সপোর্টারদের কত দিতে হবে"।
                  *
@@ -184,7 +184,7 @@ final class PartyReports
                     ->where('pur_bills.company_id', $f['company_id'])
                     ->where('pur_bills.status', DocumentStatus::CONFIRMED)
                     ->whereNull('pur_bills.deleted_at')
-                    ->when($f['branch_id'], fn ($q, $b) => $q->where('pur_bills.branch_id', $b))
+                    ->tap(ReportEngine::branchWall($f, 'pur_bills.branch_id'))
                     ->when(
                         $f['party_type_id'] ?? null,
                         fn ($q, $type) => $q->where('suppliers.party_type_id', $type)
@@ -274,7 +274,7 @@ final class PartyReports
                     ->join('suppliers', 'suppliers.id', '=', 'ledger_entries.party_id')
                     ->where('ledger_entries.company_id', $f['company_id'])
                     ->where('ledger_entries.party_type', Supplier::drillSourceType())
-                    ->when($f['branch_id'], fn ($q, $branch) => $q->where('ledger_entries.branch_id', $branch))
+                    ->tap(ReportEngine::branchWall($f, 'ledger_entries.branch_id'))
                     /* একই ছাঁকনি — বয়সের তালিকাতেও প্রশ্নটা একই */
                     ->when($f['party_type_id'] ?? null,
                         fn ($q, $type) => $q->where('suppliers.party_type_id', $type))
