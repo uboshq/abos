@@ -50,6 +50,9 @@ final class TheSuperAdminCouldSkipTheSecondDoorTest extends TestCase
         parent::setUp();
         $this->seed(DemoSeeder::class);
 
+        /* ⓘ phpunit.xml বাকি পরীক্ষার জন্য দরজা বন্ধ রাখে; এই ফাইল নিয়মটাই মাপে, তাই চালু */
+        config(['abos.super_admin_two_step' => true]);
+
         $company = Company::query()->where('code', 'TDEPOT')->firstOrFail();
         CompanyContext::set($company->id, $company->defaultBranch()?->id);
 
@@ -91,6 +94,27 @@ final class TheSuperAdminCouldSkipTheSecondDoorTest extends TestCase
         $this->actingAs($this->admin->fresh())
             ->get(route('inventory.stock.index'))
             ->assertOk();
+    }
+
+    /**
+     * ⓘ চালুর দিন পেছানো যায় কেবল সার্ভারের সুইচে — মালিক, ২৮ সেপ্টেম্বর ২০২৬: *"2step rate kori"*।
+     * ⚠️ একই মানুষ: সুইচ বন্ধ → পর্দা খোলে; সুইচ চালু (ডিফল্ট) → আবার বসানোর পাতায়। ⛔ সুইচ
+     * কোনোদিন ডিফল্টে বন্ধ হলে এই দাবির দ্বিতীয় অর্ধেক লাল হয়।
+     */
+    public function test_the_rollout_switch_only_postpones_and_is_on_by_default(): void
+    {
+        app(MfaService::class)->turnOff($this->admin);
+
+        config(['abos.super_admin_two_step' => false]);
+        $this->actingAs($this->admin->fresh())->get(route('inventory.stock.index'))->assertOk();
+
+        /* ⓘ ফাইলের নিজের ডিফল্ট — .env-এ কিছু না থাকলে চালু (পরীক্ষার phpunit.xml এটা বন্ধ রাখে,
+           তাই লেখাটাই মাপা হয়) */
+        $this->assertStringContainsString("env('ABOS_SUPER_ADMIN_TWO_STEP', true)",
+            (string) file_get_contents(base_path('config/abos.php')), '⛔ দুই ধাপের সুইচ ডিফল্টে বন্ধ।');
+
+        config(['abos.super_admin_two_step' => true]);
+        $this->actingAs($this->admin->fresh())->get(route('inventory.stock.index'))->assertRedirect(route('mfa'));
     }
 
     public function test_the_setup_page_itself_stays_open_or_nobody_could_ever_start(): void

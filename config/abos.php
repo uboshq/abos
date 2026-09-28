@@ -163,6 +163,9 @@ return [
      * ⛔ চাবিটা কাগজে থাকে, কোনো রিপোতে নয় — মালিকের সিদ্ধান্ত,
      * ২৭ সেপ্টেম্বর ২০২৬।
      */
+    /* সুপার অ্যাডমিনের দুই ধাপ — চালু; কোনো সার্ভারে চালুর দিন পেছাতে কেবল .env ([[SuperAdminMustHaveTwoSteps]]) */
+    'super_admin_two_step' => (bool) env('ABOS_SUPER_ADMIN_TWO_STEP', true),
+
     'ledger_seal' => [
         'key' => env('LEDGER_SEAL_KEY', ''),
     ],

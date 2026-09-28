@@ -58,6 +58,16 @@ final class SuperAdminMustHaveTwoSteps
 
     public function handle(Request $request, Closure $next): Response
     {
+        /*
+         * ⓘ চালু করার দিনটা মালিকের — ২৮ সেপ্টেম্বর ২০২৬: *"2step rate kori 9ta mone korio"*।
+         * কোডে সবসময় চালু (ডিফল্ট true, পরীক্ষাও তাই মাপে); কেবল কোনো সার্ভারের .env-এ
+         * `ABOS_SUPER_ADMIN_TWO_STEP=false` বসালে সেখানে সাময়িক বন্ধ — মালিক ফোন হাতে না
+         * নিয়ে বসা পর্যন্ত। ⛔ এটা ছাড় নয়, চালুর সময় বাছা।
+         */
+        if (! config('abos.super_admin_two_step', true)) {
+            return $next($request);
+        }
+
         $user = $request->user();
 
         if ($user === null || ! $user->hasRole(PermissionSyncer::SUPER_ADMIN_ROLE)) {

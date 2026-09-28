@@ -97,6 +97,9 @@
     </source>
     <php>
         <env name="APP_ENV" value="testing"/>
+        <!-- সুপার অ্যাডমিনের দুই ধাপ: নিজের পরীক্ষায় (TheSuperAdminCouldSkipTheSecondDoorTest) চালু করে মাপা;
+             বাকি পরীক্ষা নিজে সুপার অ্যাডমিন বানায়, তাদের কোড বসানো থাকে না — ব্যবসার দাবি মাপতে দরজাটা এখানে বন্ধ -->
+        <env name="ABOS_SUPER_ADMIN_TWO_STEP" value="false"/>
         <env name="APP_MAINTENANCE_DRIVER" value="file"/>
         <env name="BCRYPT_ROUNDS" value="4"/>
         <env name="BROADCAST_CONNECTION" value="null"/>
