@@ -795,6 +795,42 @@ final class TheParkedBillWaitsAtTheSameCounterTest extends TestCase
         $this->assertSame(route('sales.direct.create', ['draft' => $parked->id]), $pending[$parked->id]['url']);
     }
 
+    /**
+     * ⛔ চালানের সই লাগলে বিক্রিটা হারাত — abos-10-এর ধরা, ২৮ সেপ্টেম্বর ২০২৬।
+     *
+     * ⓘ লেনদেনের ভিতরে সই চাওয়া হত, আর ফেরত-গড়ানোয় অনুরোধ আর চালান দুইটাই মুছে
+     * যেত — অথচ পর্দা বলত "অনুমোদনে পাঠানো হয়েছে"। এখন বিক্রিটা সইয়ের অপেক্ষায়
+     * জমা থাকে, আর অনুরোধটা টিকে থাকে।
+     */
+    public function test_a_challan_that_needs_a_signature_keeps_the_sale_and_the_request(): void
+    {
+        $flow = ApprovalFlow::query()->create([
+            'company_id' => CompanyContext::id(), 'module' => 'sales', 'action' => 'challan',
+            'document_type' => '', 'threshold_amount' => null, 'is_active' => true,
+        ]);
+        ApprovalFlowStep::query()->create([
+            'approval_flow_id' => $flow->id, 'level' => 1, 'approver_type' => 'user', 'approver_id' => $this->owner->id,
+        ]);
+
+        $challans = DeliveryChallan::query()->count();
+        $requests = DB::table('approvals')->where('approvable_type', DeliveryChallan::class)->count();
+
+        $this->sell(['save_as_draft' => '0'])->assertSessionHasNoErrors()->assertSessionHas('approval_notice');
+
+        $this->assertSame($challans + 1, DeliveryChallan::query()->count(), '⛔ সইয়ের অপেক্ষার চালান মুছে গেছে।');
+        $this->assertSame($requests + 1,
+            DB::table('approvals')->where('approvable_type', DeliveryChallan::class)->where('status', 'pending')->count(),
+            '⛔ চালানের সইয়ের অনুরোধ টেকেনি — সইকারীর ইনবক্স খালি।');
+
+        $invoice = SalesInvoice::query()->latest('id')->firstOrFail();
+        $this->assertSame(DocumentStatus::DRAFT, $invoice->status, 'সই না হওয়া পর্যন্ত বিল খসড়া।');
+        $this->assertSame(DocumentStatus::DRAFT, $this->challanOf($invoice)->status, 'সই না হওয়া পর্যন্ত মাল বেরোয় না।');
+
+        /* ⓘ আর তালিকায় এটা "অনুমোদনের অপেক্ষায়" — খসড়া নয় */
+        $this->assertStringContainsString(e($invoice->document_no),
+            $this->get(route('sales.direct.drafts', ['tab' => 'approval']))->assertOk()->getContent());
+    }
+
     /** তালিকা থেকে বাতিল করলে তালিকাতেই ফেরা — আর চাবি ছাড়া পাতাটাই বন্ধ। */
     public function test_discarding_from_the_list_returns_to_the_list_and_the_list_needs_the_counter_key(): void
     {

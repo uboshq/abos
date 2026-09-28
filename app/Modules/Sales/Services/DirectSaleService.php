@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Modules\Sales\Services;
 
 use App\Core\Engines\Approval\ApprovalEngine;
+use App\Core\Engines\Approval\DocumentApproval;
+use App\Core\Engines\Approval\HeldForApproval;
 use App\Core\Services\SettingsService;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Models\Voucher;
@@ -152,7 +154,56 @@ final class DirectSaleService
             return $this->hold($data, $lines, $gifts, $customer, $warehouse, asDraft: false);
         }
 
+        /*
+         * ⛔ চালানের সই লাগলে বিক্রিটা হারাত — abos-10-এর ধরা, ২৮ সেপ্টেম্বর ২০২৬।
+         *
+         * ⓘ চালান নিশ্চিত করার সময় সই লাগলে [[DocumentApproval::assertClear()]] অনুরোধ
+         * বসিয়ে HeldForApproval ছোড়ে — কিন্তু এখানে সেটা **লেনদেনের ভিতরে**, তাই
+         * ফেরত-গড়ানোয় অনুরোধ, চালান, বিল সব মুছে যেত, অথচ পর্দা বলত "অনুমোদনে
+         * পাঠানো হয়েছে"। ⭐ এখন: গড়ানোর পরে বিক্রিটা সইয়ের অপেক্ষার খসড়া হয়ে বসে
+         * ([[hold()]]), আর চালানের সইয়ের অনুরোধ যায় **লেনদেনের বাইরে** — টিকে থাকে।
+         * শেষ সইয়ে বিক্রিটা শেষ হয় [[finishHeld()]] দিয়ে।
+         */
+        try {
+            return $this->sellNow($data, $lines, $gifts, $customer, $warehouse);
+        } catch (HeldForApproval) {
+            $result = $this->hold($data, $lines, $gifts, $customer, $warehouse, asDraft: false);
+
+            try {
+                app(DocumentApproval::class)->assertClear(
+                    document: $result['challan'],
+                    module: 'sales',
+                    action: 'challan',
+                    field: 'status',
+                    amount: (string) $result['challan']->total,
+                    reason: $result['challan']->narration,
+                );
+            } catch (HeldForApproval $held) {
+                $result['challan_held'] = (string) collect($held->errors())->flatten()->first();
+            }
+
+            return $result;
+        }
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     * @param  list<array<string, mixed>>  $lines
+     * @param  list<array<string, mixed>>  $gifts
+     * @return array<string, mixed>
+     */
+    private function sellNow(array $data, array $lines, array $gifts, Customer $customer, Warehouse $warehouse): array
+    {
         return DB::transaction(function () use ($data, $lines, $gifts, $customer, $warehouse) {
+            /*
+             * ⛔ গ্রাহকের সারিতে তালা — লেনদেনের **প্রথম** কাজ, ২৭ সেপ্টেম্বর ২০২৬।
+             *
+             * ⓘ InnoDB লেনদেনের প্রথম সাধারণ পড়ায় ছবি তোলে; তালার আগে কিছু পড়া
+             * হলে ভিতরের [[CreditExposure::assertRoomLocked()]] পুরনো বকেয়া দেখত,
+             * আর দুই কাউন্টার একসাথে সীমা পার করত।
+             */
+            $this->credit->lockCustomer($customer);
+
             $trxDate = $data['trx_date'] ?? now()->toDateString();
 
             // ⓘ রাখা খসড়া থেকে এলে সেই কাগজ দুইটাই — নম্বর বদলায় না
@@ -837,6 +888,17 @@ final class DirectSaleService
         $challan = DeliveryChallan::query()->with(['lines', 'warehouse'])->findOrFail($challanId);
 
         return DB::transaction(function () use ($invoice, $vouchers, $challan) {
+            /*
+             * ⛔ গ্রাহকের সারিতে তালা — লেনদেনের **প্রথম** কাজ, ২৭ সেপ্টেম্বর ২০২৬।
+             *
+             * ⓘ InnoDB লেনদেনের প্রথম সাধারণ পড়ায় ছবি তোলে; তালার আগে কিছু পড়া
+             * হলে ভিতরের [[CreditExposure::assertRoomLocked()]] পুরনো বকেয়া দেখত,
+             * আর দুই কাউন্টার একসাথে সীমা পার করত।
+             */
+            if ($invoice->customer_id !== null) {
+                $this->credit->lockCustomer((int) $invoice->customer_id);
+            }
+
             $deposit = array_reduce(
                 $vouchers,
                 fn (string $sum, Voucher $v) => bcadd($sum, (string) $v->amount, 4),

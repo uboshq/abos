@@ -964,6 +964,13 @@ class DirectSaleController extends Controller implements HasMiddleware
          * খালি হয়ে ফেরে। ⓘ শেষ করাটা আগের মতোই বিলের পাতার বোতামে; বার্তা
          * বিলের নম্বর বলে।
          */
+        /* ⓘ চালানের সই চাওয়া হয়েছে — বিক্রিটা সইয়ের অপেক্ষায় জমা, কার্ট খোলা রাখা নয় */
+        if (($result['challan_held'] ?? null) !== null) {
+            return redirect()
+                ->route('sales.direct.create')
+                ->with('approval_notice', $result['challan_held']);
+        }
+
         if (($result['awaiting'] ?? []) !== []) {
             return redirect()
                 ->route('sales.direct.create')
