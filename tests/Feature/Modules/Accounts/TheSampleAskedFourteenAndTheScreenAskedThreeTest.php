@@ -195,8 +195,11 @@ final class TheSampleAskedFourteenAndTheScreenAskedThreeTest extends TestCase
             'gross_amount',
             'ait_amount',
             'vds_amount',
-            'attachment',
             'instrument',
+            // ⓘ সংযুক্তি "কীভাবে দেওয়া হলো"-র ঠিক নিচে, ডান কলামে — মালিকের ২১ সেপ্টেম্বরের নির্দেশে সংযুক্তি ডানে সরেছে
+            // (334aa67e); দাবিটা আগের নকশার ক্রম ধরে রেখেছিল, পর্দা নয়।
+            'attachment',
+            // ⓘ টাকার খাত আর অঙ্ক খরচের পর্দায় নিচের আলাদা সারিতে (simple-form), ডান কলামের পরে
             'from_account_id',
             'amount',
             'narration',
