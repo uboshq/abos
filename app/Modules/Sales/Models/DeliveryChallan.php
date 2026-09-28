@@ -85,6 +85,20 @@ class DeliveryChallan extends Model implements Drillable, ShowsItselfForSigning
         return $this->hasMany(DeliveryChallanLine::class)->orderBy('line_no');
     }
 
+    /**
+     * ⭐ সইয়ের ছাপে কোন সারি — মালের সারি আর উপহারের সারি (২৮ সেপ্টেম্বর ২০২৬)।
+     *
+     * ⓘ ফ্রি মালও কাগজের অংশ: সইয়ের পর উপহার বাড়ালে সইটা আর খাটে না।
+     * ⛔ আগে ছাপ নির্ভর করত ডাকার জায়গায় কী তোলা ছিল তার উপর, আর সই-হওয়া
+     * কাউন্টার-বিক্রি চালান পাকা করতে গিয়ে আবার সই চাইত ([[DocumentFingerprint::asStored()]])।
+     *
+     * @return list<string>
+     */
+    public function fingerprintRelations(): array
+    {
+        return ['lines', 'giftLines'];
+    }
+
     /** উপহারের সারি — অন্য পণ্য, বিক্রির জন্য নয়। */
     public function giftLines(): HasMany
     {

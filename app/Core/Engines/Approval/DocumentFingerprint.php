@@ -61,7 +61,7 @@ final class DocumentFingerprint
      * ── ⓘ সারিগুলোও ধরা হয় ──────────────────────────────────────────
      * ⚠️ কেবল মাথার ঘরগুলো নিলে **পণ্যের সারি বদলানো ধরা পড়ত না** —
      * অথচ ঠিক সেটাই সবচেয়ে বিপজ্জনক বদল। ⓘ যে সম্পর্কগুলো ইতিমধ্যে
-     * তোলা আছে (`relationLoaded`) কেবল সেগুলো — নাহলে একটা ছাপ নিতে
+     * তোলা আছে (কোনগুলো, তা কাগজ ঠিক করে — [[asStored()]]) কেবল সেগুলো — নাহলে একটা ছাপ নিতে
      * গিয়ে গোটা ডাটাবেস তুলে আনত।
      */
     public function of(Model $document): string
@@ -109,10 +109,63 @@ final class DocumentFingerprint
             return $document;
         }
 
-        $stored->setRelations($document->getRelations());
+        /*
+         * ⭐ ছাপে কোন সারি — কাগজের ঘোষণা থেকে, হাতে কী তোলা আছে তা থেকে নয় (২৮ সেপ্টেম্বর ২০২৬)।
+         *
+         * ── ⛔ কী ভাঙা ছিল ─────────────────────────────────────────────
+         * ⓘ আগে হাতের কপির তোলা সম্পর্কগুলোই ছাপে যেত। ⚠️ তাই একই কাগজের
+         * ছাপ ডাকার জায়গা ধরে বদলাত, আর বদলহীন কাগজও "সইয়ের পর বদলেছে"
+         * হয়ে নতুন সই চাইত:
+         *   · খরচের ভাউচার — `create()` ফেরায় `lines`-সহ, `post()` তোলে
+         *     `lines.account`: সই হয়ে যাওয়ার পর "পোস্ট" আবার সই চাইত
+         *     ([[AnExpenseNobodySaidYesToTest]]);
+         *   · কাউন্টারের চালান — [[DirectSaleService::finishHeld()]] দেখে
+         *     `lines`+`warehouse` নিয়ে, [[DeliveryChallanService::confirm()]]
+         *     `lines.product`+`lines.orderLine`+`warehouse` নিয়ে: দ্বিতীয় প্রশ্ন
+         *     লেনদেনের ভিতরে নতুন অনুরোধ খুলে থামত, আর ফেরত-গড়ানোয় সেটা মুছত —
+         *     সই-হওয়া বিক্রি চিরকাল আটকে (লাইভে INV-0003, INV-0005)।
+         *
+         * ── ⭐ এখন ─────────────────────────────────────────────────────
+         * ⓵ কাগজ `fingerprintRelations()` বললে — ঠিক ঐগুলো;
+         * ⓶ না বললে, কাগজের `lines()` থাকলে — কেবল `lines`;
+         * ⓷ নাহলে কেবল মাথার ঘর।
+         * ⓘ তিনটাতেই সারিগুলো ডাটাবেজ থেকে নতুন করে তোলা, হাতেরগুলো উপেক্ষা —
+         * তাই যে-ই ডাকুক, একই কাগজের একই ছাপ।
+         * ⚠️ সারির ভিতরের সম্পর্ক (পণ্য, খাত) ছাপে নেই: ওদের আইডি সারিতেই আছে,
+         * তাই পণ্য বা খাত বদলালে ছাপ এমনিতেই বদলায়।
+         */
+        $stored->setRelations([])->load($this->relationsOf($document));
+
+        /*
+         * ⓘ কিন্তু যা **এখনো ডাটাবেজে নেই** — একটা প্রস্তাব — সেটা কাগজেরই অংশ।
+         *
+         * ⚠️ বাকির সীমা বাড়ানোয় নতুন অঙ্কটা একটা না-সংরক্ষিত সম্পর্ক হিসেবে
+         * কাগজে লাগানো থাকে ([[CustomerService::withProposedLimit()]]), কারণ সইয়ের
+         * আগে সেটা কোথাও লেখা যায় না। ⛔ ওটা বাদ দিলে "১ লাখ থেকে ৫০ লাখ" আর
+         * "১ লাখ থেকে ২ লাখ" একই ছাপ পেত, আর একটা প্রত্যাখ্যাত অঙ্ক অন্য
+         * অঙ্কের অনুরোধও আটকে দিত ([[TheSignatureWasForOneLakhAndFiftyWereSetTest]])।
+         * ⭐ নিয়মটা তাই পরিষ্কার: ডাটাবেজ থেকে তোলা সারি উপেক্ষা (নতুন করে তোলা
+         * হয়), ডাটাবেজে-না-থাকা প্রস্তাব রাখা।
+         */
+        foreach ($document->getRelations() as $name => $related) {
+            if ($related instanceof Model && ! $related->exists) {
+                $stored->setRelation($name, $related);
+            }
+        }
 
         return $stored;
     }
+
+    /** @return list<string> */
+    private function relationsOf(Model $document): array
+    {
+        if (method_exists($document, 'fingerprintRelations')) {
+            return $document->fingerprintRelations();
+        }
+
+        return method_exists($document, 'lines') ? ['lines'] : [];
+    }
+
 
     /**
      * @return array<string, mixed>

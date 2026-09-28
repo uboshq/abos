@@ -405,6 +405,21 @@ class Voucher extends Model implements Drillable, ShowsItselfForSigning
         return ['instrument_no'];
     }
 
+    /**
+     * ⭐ ছাপে কোন সারিগুলো — সবসময় এগুলো, হাতে যা তোলা আছে তা নয় (২৮ সেপ্টেম্বর ২০২৬)।
+     *
+     * ⓘ খাত আর অঙ্ক থাকে সারিতেই (`account_id`, `debit`, `credit`), তাই
+     * `lines` যথেষ্ট — খাত বদলালেও ছাপ বদলায়। ⛔ আগে ছাপ নির্ভর করত ডাকার
+     * জায়গায় কী তোলা ছিল তার উপর, আর সই হওয়া খরচ "পোস্ট"-এ আবার সই চাইত
+     * ([[DocumentFingerprint::asStored()]])।
+     *
+     * @return list<string>
+     */
+    public function fingerprintRelations(): array
+    {
+        return ['lines'];
+    }
+
     public function isCancelled(): bool
     {
         return $this->status === DocumentStatus::CANCELLED;

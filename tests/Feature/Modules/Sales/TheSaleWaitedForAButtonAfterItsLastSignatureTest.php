@@ -145,6 +145,101 @@ final class TheSaleWaitedForAButtonAfterItsLastSignatureTest extends TestCase
     }
 
     /**
+     * ⭐ লাইভের পথ — জমার সই, তারপর চালানের নিজের সই (INV-0003, INV-0005, ২৮ সেপ্টেম্বর ২০২৬)।
+     *
+     * ⓘ চালানের ছক থাকলে জমার সইয়ে বিক্রি শেষ করতে গিয়ে চালান সই চায়
+     * ([[DirectSaleService::finishHeld()]], 9973eed8)। ⚠️ সেটা অপেক্ষা, ব্যর্থতা নয় —
+     * অনুরোধ বসে, লগে শোরগোল নয়; আর চালানের সই পড়লে বিক্রি নিজেই শেষ।
+     */
+    public function test_the_deposit_signature_then_the_challans_own_signature_finish_it(): void
+    {
+        $this->flow('sales', 'challan');
+        $invoice = $this->hold([$this->bank('1000')]);
+
+        Log::spy();
+        $this->sign($this->approvalsOf($invoice));
+
+        $this->assertSame('draft', $invoice->fresh()->status, 'চালানের সই ছাড়াই বিক্রি শেষ হয়ে গেছে।');
+        Log::shouldNotHaveReceived('warning', ['A signed counter sale was not finished automatically', \Mockery::any()]);
+
+        $challan = $this->challanOf($invoice);
+        $pending = Approval::query()
+            ->where('approvable_type', DeliveryChallan::class)
+            ->where('approvable_id', $challan->id)
+            ->where('status', Approval::PENDING)
+            ->get();
+
+        $this->assertCount(1, $pending, 'চালানের সইয়ের অনুরোধটা বসেনি — বিক্রিটা চিরকাল আটকে থাকত।');
+
+        $this->sign($pending->all());
+
+        $this->assertSame('confirmed', $invoice->fresh()->status, 'চালানের সইয়ের পরেও বিক্রি নিজে শেষ হয়নি।');
+        $this->assertSame('confirmed', $this->challanOf($invoice)->status);
+    }
+
+    /**
+     * ⭐ একই কাগজ, একই ছাপ — হাতে কোন সম্পর্ক তোলা আছে তাতে কিছু যায় আসে না।
+     *
+     * ⓘ [[DirectSaleService::finishHeld()]] চালান দেখে `lines`+`warehouse` নিয়ে,
+     * [[DeliveryChallanService::confirm()]] `lines.product`+`lines.orderLine`+`warehouse`
+     * নিয়ে। ⛔ ছাপ দুই রকম হলে দ্বিতীয় প্রশ্ন নতুন সই চাইত আর বিক্রি আটকে থাকত।
+     * ⚠️ আর উল্টো দিকটাও: সারি সত্যিই বদলালে ছাপ বদলায় — নাহলে দাবিটা অন্ধ।
+     */
+    public function test_a_paper_has_one_fingerprint_whatever_happens_to_be_loaded(): void
+    {
+        $invoice = $this->hold([$this->bank('1000')]);
+        $challan = $this->challanOf($invoice);
+        $print = app(\App\Core\Engines\Approval\DocumentFingerprint::class);
+
+        $bare = $print->of(DeliveryChallan::acrossBranches()->findOrFail($challan->id));
+        $finishing = $print->of(DeliveryChallan::acrossBranches()->with(['lines', 'warehouse'])->findOrFail($challan->id));
+        $confirming = $print->of(DeliveryChallan::acrossBranches()
+            ->with(['lines.product', 'lines.orderLine', 'warehouse'])->findOrFail($challan->id));
+
+        $this->assertSame($bare, $finishing, 'চালানের ছাপ বদলাল কেবল কোন সম্পর্ক তোলা ছিল তার জন্য।');
+        $this->assertSame($finishing, $confirming, 'শেষ করা আর পাকা করা — দুই জায়গায় একই চালানের দুই ছাপ।');
+
+        $voucher = $invoice->heldCounterDeposits()->withoutGlobalScope('user-branch')->firstOrFail();
+
+        $this->assertSame(
+            $print->of(Voucher::acrossBranches()->findOrFail($voucher->id)),
+            $print->of(Voucher::acrossBranches()->with('lines.account')->findOrFail($voucher->id)),
+            'ভাউচারের ছাপ বদলাল কেবল কোন সম্পর্ক তোলা ছিল তার জন্য।',
+        );
+
+        // ⚠️ সারি সত্যিই বদলালে ছাপও বদলায়
+        $line = $challan->lines()->firstOrFail();
+        $line->forceFill(['delivered_qty' => bcadd((string) $line->delivered_qty, '1', 4)])->save();
+
+        $afterLine = $print->of(DeliveryChallan::acrossBranches()->findOrFail($challan->id));
+
+        $this->assertNotSame($bare, $afterLine,
+            'চালানের সারির পরিমাণ বদলাল, অথচ ছাপ একই — সইয়ের পর মাল বাড়ানো ধরা পড়ত না।');
+
+        // ⚠️ ফ্রি মালও কাগজের অংশ — সইয়ের পর উপহার বাড়ালে সইটা আর খাটে না
+        \App\Modules\Sales\Models\DeliveryChallanGiftLine::query()->create([
+            'delivery_challan_id' => $challan->id,
+            'product_id' => $this->product->id,
+            'qty' => '1',
+            'line_no' => 1,
+        ]);
+
+        $this->assertNotSame($afterLine, $print->of(DeliveryChallan::acrossBranches()->findOrFail($challan->id)),
+            'সইয়ের পর উপহারের সারি বসল, অথচ ছাপ একই — ফ্রি মাল বাড়ানো ধরা পড়ত না।');
+
+        /*
+         * ⓘ যে কাগজ কিছু ঘোষণা করে না (বিল), তার সারিও ছাপে — `lines()` আছে বলে।
+         * ⛔ নাহলে ঘোষণা-না-করা প্রতিটা কাগজে সইয়ের পর সারি বদলানো নীরবে চলত।
+         */
+        $bill = $print->of(SalesInvoice::acrossBranches()->findOrFail($invoice->id));
+        $invoiceLine = $invoice->lines()->firstOrFail();
+        $invoiceLine->forceFill(['rate' => bcadd((string) $invoiceLine->rate, '1', 4)])->save();
+
+        $this->assertNotSame($bill, $print->of(SalesInvoice::acrossBranches()->findOrFail($invoice->id)),
+            'বিলের সারির দর বদলাল, অথচ ছাপ একই — ঘোষণা-না-করা কাগজের সারি ছাপের বাইরে।');
+    }
+
+    /**
      * ⭐ ফাঁদ ক — নগদের তালা। মিশ্র জমা: নগদ বানানেওয়ালার নিজের বাক্সে (সই চায়
      * না), ব্যাংকেরটা সই চায়। ⛔ সইকারীর নামে চললে নগদটা "আপনার বাক্স নয়"।
      */
@@ -372,12 +467,12 @@ final class TheSaleWaitedForAButtonAfterItsLastSignatureTest extends TestCase
         return ['amount' => $amount, 'account_id' => app(CashTillService::class)->ensurePrimaryTill()->account_id];
     }
 
-    private function flow(): void
+    private function flow(string $module = VoucherApproval::MODULE, string $action = VoucherApproval::COUNTER_DEPOSIT): void
     {
         $flow = ApprovalFlow::query()->create([
             'company_id' => $this->company->id,
-            'module' => VoucherApproval::MODULE,
-            'action' => VoucherApproval::COUNTER_DEPOSIT,
+            'module' => $module,
+            'action' => $action,
             'document_type' => '',
             'threshold_amount' => null,
             'is_active' => true,

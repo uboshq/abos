@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Sales\Services;
 
+use App\Core\Engines\Approval\HeldForApproval;
 use App\Core\Engines\Audit\AuditEngine;
 use App\Core\Support\CompanyContext;
 use App\Models\Approval;
@@ -166,6 +167,14 @@ final class HeldCounterSaleFinisher
             Auth::setUser($maker);
 
             $this->sales->finishHeld(SalesInvoice::query()->findOrFail($invoice->id));
+        } catch (HeldForApproval) {
+            /*
+             * ⓘ শেষ করতে গিয়ে আরেকটা সই চাওয়া হলো — যেমন চালানের নিজের ছক
+             * ([[DirectSaleService::finishHeld()]], 9973eed8)। ⚠️ এটা ব্যর্থতা নয়,
+             * অপেক্ষা: অনুরোধটা বসেছে, আর ঐ সই পড়লে এই পথই আবার চলবে।
+             * ⛔ "refused" লিখলে লগে মিথ্যা শোরগোল উঠত।
+             */
+            $result = ['state' => self::WAITING, 'reason' => __('sales::auto_finish.waiting')];
         } catch (ValidationException $e) {
             $result = [
                 'state' => self::REFUSED,
