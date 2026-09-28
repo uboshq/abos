@@ -15,8 +15,9 @@
     যাবে না, কিন্তু পুরনো হিসাব ও বকেয়া যেমন আছে তেমনই থাকবে।
 --}}
 <div class="flex items-center justify-end gap-1">
-    {{-- বিস্তারিত — চোখের আইকন, মালিকের চাওয়া অনুযায়ী --}}
-    <a href="{{ route('customer.show', $customer) }}"
+    {{-- চোখের আইকন — এক নজরের সারাংশ, খাতা নয় (মালিক, ২৭ সেপ্টেম্বর ২০২৬)।
+         ⓘ খাতায় যাওয়ার পথ সারাংশের বকেয়ার অঙ্কটা, আর তালিকার বকেয়ার কলাম। --}}
+    <a href="{{ route('customer.summary', $customer) }}" data-eye
        title="{{ __('core.action.view') }}"
        aria-label="{{ __('core.action.view') }} {{ $customer->name() }}"
        class="rounded-(--radius-field) p-1.5 text-(--color-ink-muted)

@@ -50,6 +50,9 @@ class ModuleServiceProvider extends ServiceProvider
 
         // ⓘ বিক্রয় বন্ধ থাকলে ডিও বা খসড়া বিল নেই — আটকে থাকা টাকা শূন্য
         $this->app->bind(CreditHolds::class, NoCreditHolds::class);
+
+        // ⓘ বিক্রয় বন্ধ থাকলে বিল বা আদায় নেই — গ্রাহকের সারাংশ কেবল খাতা আর সীমা দেখায়
+        $this->app->bind(\App\Core\Contracts\CustomerTrade::class, \App\Core\Services\NoCustomerTrade::class);
     }
 
     /**

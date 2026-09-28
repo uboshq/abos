@@ -92,6 +92,9 @@ return [
      */
     'bindings' => [
         CreditHolds::class => CreditExposure::class,
+
+        // ⭐ গ্রাহক তালিকার 👁 — এক নজরের সারাংশের বিল ও জমার অংশ (মালিক, ২৭ সেপ্টেম্বর ২০২৬)
+        \App\Core\Contracts\CustomerTrade::class => \App\Modules\Sales\Services\SalesCustomerTrade::class,
     ],
 
     'menu' => [

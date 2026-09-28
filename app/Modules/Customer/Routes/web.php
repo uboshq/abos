@@ -41,6 +41,14 @@ Route::middleware('auth')->prefix('customers')->group(function () {
 
     Route::get('/{customer}', [CustomerController::class, 'show'])
         ->whereNumber('customer')->name('show');
+
+    /*
+     * ⭐ এক নজরের সারাংশ — তালিকার 👁 (মালিক, ২৭ সেপ্টেম্বর ২০২৬)।
+     * ⓘ খাতা ওপরের `show`-এ থাকে, আর সারাংশের বকেয়ার অঙ্কটাই সেখানে যায়।
+     */
+    Route::get('/{customer}/summary', \App\Modules\Customer\Http\Controllers\CustomerSummaryController::class)
+        ->whereNumber('customer')->name('summary');
+
     Route::get('/{customer}/edit', [CustomerController::class, 'edit'])
         ->whereNumber('customer')->name('edit');
     Route::put('/{customer}', [CustomerController::class, 'update'])
