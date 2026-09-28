@@ -483,7 +483,28 @@ final class SalesInvoiceService
 
         $this->assertDiscountApproved($invoice);
 
-        return DB::transaction(function () use ($invoice) {
+        return DB::transaction(function () use ($invoice, $payingNow) {
+            /*
+             * ⛔ ধারের সীমা আবার — এবার গ্রাহকের সারিতে তালা দিয়ে, ২৭ সেপ্টেম্বর ২০২৬।
+             *
+             * ⓘ উপরের [[assertWithinCreditLimit()]] লেনদেনের বাইরে: দুই কাউন্টার
+             * একই মুহূর্তে একই গ্রাহকের বিল নিশ্চিত করলে দুইজনেই পুরনো ছবি
+             * দেখত। ⭐ এখানে তালা পড়ে, আর সীমা-বকেয়া তাজা সারি থেকে
+             * ([[CreditExposure::assertRoomLocked()]])।
+             *
+             * ⚠️ লেনদেনের **প্রথম** কাজ — আগে কিছু পড়লে InnoDB-র ছবি পুরনো
+             * থাকত। ⛔ যুক্তিগুলো হুবহু উপরের মতো, `exceptInvoiceId` সহ —
+             * খসড়া অবস্থায় এই বিল নিজেই সীমা আটকে রেখেছিল।
+             */
+            if ($invoice->customer !== null) {
+                $this->credit->assertRoomLocked(
+                    customer: $invoice->customer,
+                    adding: (string) $invoice->total,
+                    payingNow: $this->money($payingNow),
+                    exceptInvoiceId: (int) $invoice->id,
+                );
+            }
+
             /*
              * চালান ছাড়া লাইনের মাল এখনই বেরোয়।
              *

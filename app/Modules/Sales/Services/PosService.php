@@ -53,6 +53,7 @@ final class PosService
         private readonly CashTillService $tills,
         private readonly CounterApproval $counter,
         private readonly AuditEngine $audit,
+        private readonly CreditExposure $credit,
     ) {}
 
     /**
@@ -293,6 +294,18 @@ final class PosService
         }
 
         return DB::transaction(function () use ($data, $customer, $paid, $invoice) {
+            /*
+             * ⛔ গ্রাহকের সারিতে তালা — লেনদেনের **প্রথম** কাজ, ২৭ সেপ্টেম্বর ২০২৬।
+             *
+             * ⓘ ভিতরের `confirm()` আবার সীমা দেখে তালা দিয়ে
+             * ([[CreditExposure::assertRoomLocked()]]), কিন্তু InnoDB লেনদেনের
+             * প্রথম সাধারণ পড়ায় ছবি তোলে — তার আগে এখানে কিছু পড়া হলে বকেয়া
+             * পুরনো ছবি থেকে আসত। ⭐ তাই তালাটা সবার আগে।
+             */
+            if ($customer !== null) {
+                $this->credit->lockCustomer($customer);
+            }
+
             /*
              * ⚠️ গোনা টাকাটা ধারের সীমার যাচাইয়ে যায় — ৭ সেপ্টেম্বর ২০২৬।
              *

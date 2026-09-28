@@ -271,7 +271,28 @@ final class DeliveryChallanService
             reason: $challan->narration,
         );
 
-        return DB::transaction(function () use ($challan) {
+        return DB::transaction(function () use ($challan, $payingNow) {
+            /*
+             * ⛔ একই দেয়াল আবার — এবার গ্রাহকের সারিতে তালা দিয়ে, ২৭ সেপ্টেম্বর ২০২৬।
+             *
+             * ⓘ উপরের দেয়াল লেনদেনের বাইরে: দুই কাউন্টার একই মুহূর্তে একই
+             * গ্রাহকের চালান নিশ্চিত করলে দুইজনেই "জায়গা আছে" দেখত। ⭐ এখানে
+             * তালা পড়ে, দ্বিতীয়জন অপেক্ষা করে, আর প্রথমজনের কমিটের পরের অঙ্ক
+             * দেখে ([[CreditExposure::assertRoomLocked()]])।
+             *
+             * ⚠️ লেনদেনের **প্রথম** কাজ — আগে কিছু পড়লে InnoDB-র ছবি পুরনো
+             * থাকত। ⛔ যুক্তিগুলো হুবহু উপরের মতো, `exceptChallanId` সহ —
+             * নইলে ধরে রাখা বিক্রয়ের খসড়া বিল দুইবার গোনা হত।
+             */
+            if ($challan->customer !== null) {
+                $this->credit->assertRoomLocked(
+                    customer: $challan->customer,
+                    adding: (string) $challan->total,
+                    payingNow: $payingNow,
+                    exceptChallanId: (int) $challan->id,
+                );
+            }
+
             foreach ($challan->lines as $line) {
                 $qty = (string) $line->delivered_qty;
 
