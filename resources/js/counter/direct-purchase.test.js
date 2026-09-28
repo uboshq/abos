@@ -447,3 +447,160 @@ describe('গোটা বিলের ছাড়', () => {
         expect(c.billDiscountMode).toBe('amount')
     })
 })
+
+/*
+ * ⛔ পাঠানো থেমে যেত, আর পর্দা কিছুই বলত না — ২৯ সেপ্টেম্বর ২০২৬।
+ *
+ * ── ⚠️ কী ভাঙা ছিল ───────────────────────────────────────────────────
+ * `guard()`-এ **তিনটা** জায়গায় `preventDefault()` ডাকা হত আর চুপ করে
+ * ফিরে আসা হত: কার্ট খালি; লট-ধরা পণ্যে লট নম্বর নেই; ভাড়া লেখা আছে
+ * অথচ কে আনল বলা নেই।
+ *
+ * ⛔ কাউন্টারে দাঁড়ানো মানুষটার কাছে এর মানে একটাই — **বোতাম চাপলে
+ * কিছুই হয় না**। ⓘ লট-এরটায় সারির নিচে একটা ছোট বার্তা বসত, কিন্তু
+ * সারিটা স্ক্রলের বাইরে থাকলে সেটাও চোখে পড়ত না; বাকি দুইটায় কোথাও
+ * কিছু লেখা হত না।
+ *
+ * ⭐ তিনটাই সার্ভারও আটকায় (`lines` required·min:1, `demandLots()`,
+ * `carrier_id`-এর `Rule::requiredIf`) — অর্থাৎ পর্দার বার্তাটা
+ * নিরাপত্তা নয়, **ভদ্রতা**: সার্ভার ফিরিয়ে দেওয়ার আগেই বলা।
+ */
+describe('পাঠানো থামলে পর্দা তার কারণ বলে', () => {
+    /** নকল `$refs` — ফোকাস সত্যিই নড়ল কি না, প্রতিনিধি চিহ্ন দিয়ে নয়। */
+    const withRefs = (c) => {
+        const focused = []
+
+        c.$nextTick = (fn) => fn()
+        /* ⓘ `$root` লাগে কারণ `focusLot()` সারির ঘরটা ডিওম থেকে খোঁজে */
+        c.$root = { querySelector: () => null }
+        c.$refs = {
+            search: { focus: () => focused.push('search') },
+            carrier: { focus: () => focused.push('carrier') },
+            carrierName: { focus: () => focused.push('carrierName') },
+        }
+        c.focused = focused
+
+        return c
+    }
+
+    const texts = {
+        paidMoreConfirm: 'বেশি দিচ্ছেন?',
+        lotNeeded: 'লট নম্বর লিখুন',
+        needALine: 'আগে অন্তত একটা পণ্য কার্টে দিন।',
+        needALot: 'লট ধরা পণ্যে লট নম্বর ছাড়া পাঠানো যায় না।',
+        needACarrier: 'ভাড়া লেখা আছে — কে আনল সেটাও লিখুন।',
+    }
+
+    const tracked = (over = {}) => product({ track_batch: true, ...over })
+
+    it('কার্ট খালি — পাঠানো থামে, আর কেন থামল তা লেখা থাকে', () => {
+        const c = withRefs(counter({ texts }))
+
+        let stopped = false
+        c.guard({ preventDefault: () => { stopped = true } })
+
+        expect(stopped).toBe(true)
+        expect(c.stopped).toBe(texts.needALine)
+
+        /* ⭐ আর কার্সর ঐ ঘরেই যায় যেখান থেকে কাজটা শুরু হয় */
+        expect(c.focused).toContain('search')
+    })
+
+    it('লট নম্বর নেই — বার্তা উপরেও, সারির নিচেও', () => {
+        const c = withRefs(counter({ texts, catalogue: [tracked()], lots: true }))
+
+        c.pick(c.catalogue[0])
+        c.entry.qty = '1'
+        c.entry.rate = '10'
+        c.addToCart()
+
+        let stopped = false
+        c.guard({ preventDefault: () => { stopped = true } })
+
+        expect(stopped).toBe(true)
+        expect(c.stopped).toBe(texts.needALot)
+
+        /* ⓘ সারির নিচের বার্তাটাও আগের মতোই থাকে — দুইটা একে অন্যের
+           বদলি নয়: উপরেরটা বলে "কেন থামল", নিচেরটা বলে "কোন সারিতে" */
+        expect(c.lotProblem(c.lines[0], 0)).toBe(texts.lotNeeded)
+    })
+
+    it('ভাড়া আছে কিন্তু বাহক নেই — বার্তা, আর কার্সর বাহকের ঘরে', () => {
+        /* ⓘ তালিকায় বাহক আছে — তাই কার্সর তালিকাটাতেই যাওয়ার কথা */
+        const c = withRefs(counter({ texts, carriers: [{ id: 3, label: 'করিম' }] }))
+
+        c.pick(c.catalogue[0])
+        c.entry.qty = '1'
+        c.entry.rate = '10'
+        c.addToCart()
+
+        c.transportCost = '500'
+
+        let stopped = false
+        c.guard({ preventDefault: () => { stopped = true } })
+
+        expect(stopped).toBe(true)
+        expect(c.stopped).toBe(texts.needACarrier)
+        expect(c.focused).toContain('carrier')
+
+        /*
+         * ⛔ আর পরিবহনের প্যানেলটা খোলা — নাহলে বার্তাটা মিথ্যা বলত।
+         *
+         * ⚠️ এটা ব্রাউজারে ধরা পড়েছে, এই ফাইলে নয়: নকল `$refs` নিয়ে
+         * ফোকাস "নড়েছিল", অথচ আসল পর্দায় ঘরটা গুটানো বলে ব্রাউজার
+         * ওখানে ফোকাস নেয়নি, আর কার্সর বোতামেই রয়ে গিয়েছিল।
+         * ⓘ দাবিটা এখানে বসল যাতে পরের বার কেউ লাইনটা তুলে দিলে লাল হয়।
+         */
+        expect(c.transportOpen).toBe(true)
+    })
+
+    it('বাহকের তালিকা খালি হলে কার্সর হাতে-নাম লেখার ঘরে', () => {
+        /*
+         * ⛔ এটাই আজকের **স্বাভাবিক** দশা, ব্যতিক্রম নয়: কোনো সরবরাহকারী
+         * TRANSPORT ধরনে নেই, তাই তালিকাটা `x-show`-এ লুকানো থাকে আর
+         * হাতে নাম লেখার ঘরটাই একমাত্র পথ।
+         *
+         * ⚠️ আগে কার্সর ঐ লুকানো তালিকাতেই পাঠানো হত — ব্রাউজার কিছুই
+         * করত না, কার্সর বোতামে পড়ে থাকত, আর বার্তাটা "বাহক বাছুন" বলে
+         * এমন কিছু দেখাত না যা বাছা যায়। ⓘ ধরা পড়েছে পাতা খুলে, এই
+         * ফাইলে নয় — নকল `$refs`-এ সবই "কাজ করছিল"।
+         */
+        const c = withRefs(counter({ texts, carriers: [] }))
+
+        c.pick(c.catalogue[0])
+        c.entry.qty = '1'
+        c.entry.rate = '10'
+        c.addToCart()
+
+        c.transportCost = '500'
+        c.guard({ preventDefault: () => {} })
+
+        expect(c.stopped).toBe(texts.needACarrier)
+        expect(c.transportOpen).toBe(true)
+        expect(c.focused).toContain('carrierName')
+        expect(c.focused).not.toContain('carrier')
+    })
+
+    it('বাধা সরে গেলে বার্তাটাও সরে, আর পাঠানো এগোয়', () => {
+        /*
+         * ⛔ বার্তাটা মুছে না গেলে মানুষ ঠিক করার পরেও পুরনো অভিযোগটা
+         * পড়তেন, আর ভাবতেন কাজ হয়নি।
+         */
+        const c = withRefs(counter({ texts }))
+
+        c.guard({ preventDefault: () => {} })
+        expect(c.stopped).toBe(texts.needALine)
+
+        c.pick(c.catalogue[0])
+        c.entry.qty = '1'
+        c.entry.rate = '10'
+        c.addToCart()
+
+        let stopped = false
+        c.guard({ preventDefault: () => { stopped = true } })
+
+        expect(stopped).toBe(false)
+        expect(c.stopped).toBe('')
+        expect(c.busy).toBe(true)
+    })
+})

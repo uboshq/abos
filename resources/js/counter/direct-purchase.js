@@ -49,6 +49,20 @@ export default function directPurchase({
         lotErrors: lotErrors || {},
         lotTried: false,
 
+        /*
+         * ⭐ পাঠানো কেন থামল — এক বাক্যে, পর্দার উপরে।
+         *
+         * ⛔ আগে `guard()` তিন জায়গায় চুপ করে থামত, আর কাউন্টারে
+         * দাঁড়ানো মানুষটার কাছে তার মানে একটাই: **বোতাম চাপলে কিছুই
+         * হয় না**। ⚠️ লট-এরটায় সারির নিচে একটা ছোট বার্তা বসত, কিন্তু
+         * সারিটা স্ক্রলের বাইরে থাকলে সেটাও চোখে পড়ত না।
+         *
+         * ⓘ এটা নিরাপত্তা নয়, ভদ্রতা — তিনটা নিয়মই সার্ভারেও আছে
+         * (`lines` required·min:1, `demandLots()`, `carrier_id`-এর
+         * `Rule::requiredIf`)। ⭐ পর্দা কেবল আগেই বলে দেয়।
+         */
+        stopped: '',
+
         /* সরবরাহকারীর আগের বকেয়া — সার্ভার থেকে আসে বাছাইয়ের
            মুহূর্তে ([[loadLastRates]])।
 
@@ -1429,8 +1443,21 @@ export default function directPurchase({
         },
 
         guard(event) {
-            if (this.busy || this.lines.length === 0) {
+            /* ⭐ প্রতিবার নতুন করে — আগের অভিযোগটা ঠিক করার পরেও পর্দায়
+               থেকে গেলে মানুষ ভাবতেন কাজ হয়নি */
+            this.stopped = '';
+
+            /* ⓘ `busy` ভুল নয়, ওটা দুইবার পাঠানোর পাহারা — তাই চুপচাপ */
+            if (this.busy) {
                 event.preventDefault();
+
+                return;
+            }
+
+            if (this.lines.length === 0) {
+                event.preventDefault();
+                this.stopped = texts.needALine || '';
+                this.focusRef('search');
 
                 return;
             }
@@ -1444,6 +1471,10 @@ export default function directPurchase({
             if (missing >= 0) {
                 event.preventDefault();
                 this.lotTried = true;
+
+                /* ⓘ দুইটা বার্তা, আর দুইটা আলাদা প্রশ্নের উত্তর: উপরেরটা
+                   বলে **কেন থামল**, সারির নিচেরটা বলে **কোন সারিতে** */
+                this.stopped = texts.needALot || '';
                 this.$nextTick(() => this.focusLot(missing));
 
                 return;
@@ -1463,6 +1494,32 @@ export default function directPurchase({
                ভুলসহ ফিরত — আর সেটা কাউন্টারে এক মিনিটের ক্ষতি। */
             if (this.transportNeedsWho) {
                 event.preventDefault();
+                this.stopped = texts.needACarrier || '';
+
+                /*
+                 * ⛔ প্যানেলটা আগে খোলা — নাহলে বার্তাটা মিথ্যা বলত।
+                 *
+                 * ⚠️ পরিবহনের ঘরগুলো গুটানো থাকে, আর গুটানো অবস্থায়
+                 * ব্রাউজার ওখানে ফোকাসও নেয় না। ⓘ তখন পর্দা বলত
+                 * *"বাহক বাছুন"*, অথচ বাছার ঘরটাই দেখা যেত না — আর
+                 * এটা ধরা পড়েছে কেবল পাতাটা সত্যিই খুলে দেখে, কারণ
+                 * নকল `$refs` নিয়ে পরীক্ষায় ফোকাস "নড়েছিল"।
+                 */
+                this.transportOpen = true;
+
+                /*
+                 * ⛔ যেটা সত্যিই ব্যবহার করা যায়, কার্সর তার কাছেই।
+                 *
+                 * ⚠️ বাহকের তালিকাটা `x-show="carriers.length > 0"` —
+                 * আর এই ফাইলের পাশের মন্তব্যেই লেখা আছে যে কোনো
+                 * সরবরাহকারী TRANSPORT ধরনে না থাকায় **প্রথম দিন থেকেই**
+                 * তালিকাটা খালি। ⓘ তখন হাতে-নাম লেখার ঘরটাই একমাত্র পথ।
+                 *
+                 * ⛔ লুকানো ঘরে ফোকাস দিলে ব্রাউজার কিছুই করে না, আর
+                 * কার্সর বোতামেই পড়ে থাকত — অর্থাৎ বার্তাটা "বাহক বাছুন"
+                 * বলত, আর বাছার কিছু পর্দায় থাকত না।
+                 */
+                this.focusRef(this.carriers.length > 0 ? 'carrier' : 'carrierName');
 
                 return;
             }
@@ -1472,6 +1529,17 @@ export default function directPurchase({
             this.parkDraft();
 
             this.busy = true;
+        },
+
+        /**
+         * কার্সরটা ঐ ঘরে নিয়ে যাওয়া যেখানে কাজটা বাকি।
+         *
+         * ⚠️ `$refs` না থাকলে চুপচাপ ফিরে যায় — পরীক্ষায় আর মাউন্ট হওয়ার
+         * আগে ওটা থাকে না, আর একটা বার্তা দেখানোর চেষ্টায় পর্দা ভাঙা
+         * সবচেয়ে বাজে বদল।
+         */
+        focusRef(name) {
+            this.$nextTick(() => this.$refs?.[name]?.focus());
         },
 
         // ── লট ─────────────────────────────────────────────────

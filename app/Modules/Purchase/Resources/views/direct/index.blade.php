@@ -70,6 +70,11 @@
               texts: @js([
                   'paidMoreConfirm' => __('purchase::message.paid_more_confirm'),
                   'lotNeeded' => __('purchase::lot.needs_lot_short'),
+
+                  {{-- ⭐ পাঠানো থামার তিনটা কারণ — পর্দায় লেখার জন্য --}}
+                  'needALine' => __('purchase::message.need_a_line'),
+                  'needALot' => __('purchase::message.need_a_lot'),
+                  'needACarrier' => __('purchase::message.need_a_carrier'),
               ]),
               {{-- ⭐ সার্ভার কোন সারির লট ফিরিয়েছে — সারির ক্রম ধরে (`lines.{i}.batch_no`),
                    যাতে বার্তাটা ঐ সারির লট-ঘরের নিচেই বসে, কেবল উপরের তালিকায় নয় --}}
@@ -100,6 +105,22 @@
              ⓘ বারটা ফর্মের ভিতরে, তাই `x-data`-র স্কোপেই আছে — আর
              দুইটা বোতামেই `type="button"`, নাহলে ওগুলো ফর্মটাই সাবমিট
              করে দিত। --}}
+        {{--
+            ⭐ পাঠানো কেন থামল — এক বাক্যে, একদম উপরে।
+
+            ⛔ আগে তিনটা কারণেই পাঠানো চুপ করে থেমে যেত, আর কাউন্টারে
+            দাঁড়ানো মানুষটার কাছে তার মানে একটাই: বোতাম চাপলে কিছুই হয় না।
+
+            ⓘ রংটা সার্ভারের ভুলের বাক্সের মতোই — এটা একটা অভিযোগ, খবর নয়।
+            ⚠️ `x-cloak` — নাহলে Alpine বসার আগে এক পলকের জন্য খালি বাক্সটা
+            দেখা যেত।
+        --}}
+        <div x-show="stopped !== ''" x-cloak role="alert"
+             data-stopped
+             class="lg:col-span-2 rounded-(--radius-field) bg-(--color-badge-danger-bg)
+                    px-3 py-2 text-sm text-(--color-badge-danger-ink)"
+             x-text="stopped"></div>
+
         <div x-show="draftFound" x-cloak
              class="lg:col-span-2 flex flex-wrap items-center gap-2 rounded-(--radius-card)
                     border border-(--color-border) bg-(--color-badge-warning-bg)
@@ -419,7 +440,7 @@
                          ⓘ এই অবস্থাটা কল্পনা নয়: আজ কোনো সরবরাহকারী
                          TRANSPORT ধরনে নেই, তাই **প্রথম দিন থেকেই** তালিকা
                          খালি থাকবে। --}}
-                    <select name="carrier_id" x-model="carrierId"
+                    <select name="carrier_id" x-model="carrierId" x-ref="carrier"
                             x-show="carriers.length > 0" x-cloak
                             class="h-(--spacing-field-dense) w-full rounded-(--radius-field) border
                                    border-(--color-border) bg-(--color-surface-card) px-2 text-2xs">
@@ -440,6 +461,7 @@
                          ⓘ তালিকা থেকে কেউ বাছা হলে ঘরটা লুকায়: দুইটা
                          একসাথে ভরলে কোনটা সত্যি তা কেউ বলতে পারত না। --}}
                     <input type="text" name="carrier_name" x-model="carrierName"
+                           x-ref="carrierName"
                            x-show="! carrierId" x-cloak
                            placeholder="{{ __('purchase::field.carrier_name') }}"
                            class="h-(--spacing-field-dense) w-full rounded-(--radius-field) border
