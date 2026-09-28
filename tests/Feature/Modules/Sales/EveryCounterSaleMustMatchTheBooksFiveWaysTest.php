@@ -357,6 +357,42 @@ final class EveryCounterSaleMustMatchTheBooksFiveWaysTest extends TestCase
         }
     }
 
+    /**
+     * ⛔ পদ্ধতি আর খাত মেলে না — "নগদ" পদ্ধতিতে বিকাশের খাত (আর উল্টোটা) — ২৮ সেপ্টেম্বর ২০২৬।
+     *
+     * ⓘ দুইটাই টাকার খাত, তাই উপরের দাবি পেরোত। কিন্তু রসিদে লেখা থাকত "নগদ" আর টাকা
+     * বসত বিকাশে — ক্যাশ গোনায় ঘাটতি, বিকাশের জের বাড়তি, আর দুইটা কোনোদিন মিলত না।
+     * ⭐ নিয়ম এক জায়গায় ([[MethodFitsAccount]]) — কাউন্টার, ক্রয় আর সেটিংস একই কথা বলে।
+     * ⓘ পাল্টা-দাবি (বিকাশ পদ্ধতি + বিকাশ খাত, পাঁচ মিলসহ) উপরের বিকাশের পরীক্ষায়।
+     */
+    public function test_the_deposit_method_must_fit_its_account(): void
+    {
+        $bkash = $this->moneyAccount(StandardChart::MOBILE_MONEY, '110592', Account::MFS, 'Proof bKash Fit');
+        $till = Account::query()->where('code', $this->tillCode())->firstOrFail();
+
+        foreach ([
+            'নগদ পদ্ধতি, বিকাশের খাত' => [$this->method('CASH'), $bkash->id],
+            'বিকাশ পদ্ধতি, নগদের বাক্স' => [$this->method('MFS'), $till->id],
+        ] as $label => [$method, $account]) {
+            $before = $this->snapshot($this->plain);
+            $invoices = SalesInvoice::query()->count();
+
+            $this->sell([$this->line($this->plain, '2', '150')], [[
+                'amount' => '300',
+                'account_id' => $account,
+                'payment_method_id' => $method,
+                // ⓘ বিকাশের বাকি ঘর ভরা — যাতে থামাটা কেবল পদ্ধতি-খাতের অমিলে, অন্য নিয়মে নয়
+                'reference' => 'BKFIT'.$method,
+                'wallet' => 'bkash',
+                'counterparty_phone' => '01711000998',
+            ]])->assertSessionHasErrors('deposits.0.account_id');
+
+            $this->assertBooksMoved($before['ledger'], [], "⛔ {$label}: জমা খাতায় বসে গেছে।");
+            $this->assertStockMoved($this->plain, $before, '0', '0');
+            $this->assertSame($invoices, SalesInvoice::query()->count(), "⛔ {$label}: ফেরানো বিক্রির বিল রয়ে গেছে।");
+        }
+    }
+
     // ══ ⓸ আংশিক জমা আর বাকি ═══════════════════════════════════════════════
 
     /**

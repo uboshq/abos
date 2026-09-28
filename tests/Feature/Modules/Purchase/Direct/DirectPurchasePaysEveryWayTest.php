@@ -408,6 +408,35 @@ final class DirectPurchasePaysEveryWayTest extends TestCase
             'অঙ্কের সমান চার্জ, অথচ মজুদে স্তর বসেছে।');
     }
 
+    /**
+     * ⛔ পদ্ধতি আর খাত মেলে না — "নগদ" পদ্ধতিতে বিকাশ থেকে পরিশোধ — ২৮ সেপ্টেম্বর ২০২৬।
+     *
+     * ⓘ দুইটাই টাকার খাত, তাই MoneyAccountRule পেরোত। কিন্তু ভাউচারে "নগদ" আর টাকা
+     * বেরোত বিকাশ থেকে — ক্যাশ গোনা আর বিকাশের জের দুইটাই ভুল। নিয়ম
+     * [[MethodFitsAccount]]-এর, বিক্রয়ের কাউন্টারের হুবহু।
+     */
+    public function test_a_cash_method_cannot_pay_out_of_bkash_and_nothing_is_written(): void
+    {
+        $bkash = $this->bkashAccount();
+        $this->fund($bkash, '1000');
+
+        $before = $this->snapshot();
+        $bills = PurchaseBill::query()->count();
+
+        $this->actingAs($this->owner)->post(route('purchase.direct.store'), [
+            'supplier_id' => $this->supplier->id,
+            'warehouse_id' => $this->warehouse->id,
+            'trx_date' => now()->toDateString(),
+            'supplier_bill_no' => 'MILL-'.fake()->unique()->numberBetween(10000, 99999),
+            'lines' => [['product_id' => $this->product->id, 'qty' => '8', 'rate' => '112.50', 'tax' => '0']],
+            'deposits' => [$this->row('CASH', $bkash, '900', 'CASH-IN-BKASH')],
+        ])->assertSessionHasErrors('deposits.0.account_id');
+
+        $this->assertSame($bills, PurchaseBill::query()->count(), '⛔ নগদ পদ্ধতিতে বিকাশ থেকে পরিশোধ — বিল বসে গেছে।');
+        $this->assertSame($before['ledger_max'], (int) LedgerEntry::query()->max('id'), '⛔ …আর খাতায় সারি বসেছে।');
+        $this->assertSame($before['layer_max'], (int) CostLayer::query()->max('id'), '⛔ …আর মজুদে স্তর বসেছে।');
+    }
+
     // ═══════════════════════════════════════════════════════════════════
     //  ৪ · আংশিক "এখনই দেওয়া"
     // ═══════════════════════════════════════════════════════════════════

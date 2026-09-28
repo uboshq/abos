@@ -25,6 +25,7 @@ use App\Modules\Inventory\Services\FreeAllowance;
 use App\Modules\Inventory\Services\ReadsPackedQuantities;
 use App\Modules\Inventory\Services\StockService;
 use App\Modules\MasterData\Models\PaymentMethod;
+use App\Modules\MasterData\Services\MethodFitsAccount;
 use App\Modules\Sales\Models\DeliveryChallan;
 use App\Modules\Sales\Models\DeliveryChallanGiftLine;
 use App\Modules\Sales\Models\SalesInvoice;
@@ -1920,10 +1921,11 @@ final class DirectSaleService
         $methods = PaymentMethod::query()
             ->whereIn('id', collect($data['deposits'] ?? [])
                 ->pluck('payment_method_id')->filter()->unique()->all())
-            ->get(['id', 'code', 'account_id', 'kind'])
+            // ⓘ নামও — অমিলের বার্তা পদ্ধতির নাম বলে ([[MethodFitsAccount::message()]])
+            ->get(['id', 'code', 'account_id', 'kind', 'name_en', 'name_bn'])
             ->keyBy('id');
 
-        foreach ($data['deposits'] ?? [] as $row) {
+        foreach ($data['deposits'] ?? [] as $i => $row) {
             $amount = $this->money($row['amount'] ?? '0');
 
             // খালি সারি পর্দাতেও বাদ যায়; এখানে দ্বিতীয় দরজা
@@ -1932,6 +1934,16 @@ final class DirectSaleService
             }
 
             $method = $methods->get($row['payment_method_id'] ?? null);
+            $accountId = $this->depositAccount(($row['account_id'] ?? null) ?: $method?->account_id);
+
+            /*
+             * ⛔ পদ্ধতি আর খাত মেলে — "নগদ" পদ্ধতিতে বিকাশের খাত নয় (২৮ সেপ্টেম্বর ২০২৬)।
+             * ⓘ দুইটাই টাকার খাত, তাই টাকার খাতের পাহারা পেরোত; রসিদে "নগদ" আর টাকা বিকাশে —
+             * ক্যাশ গোনা আর বিকাশের জের দুইটাই ভুল। নিয়ম এক জায়গায়: [[MethodFitsAccount]]।
+             */
+            if ($method !== null && $accountId !== null) {
+                app(MethodFitsAccount::class)->assert(Account::query()->findOrFail($accountId), $method, 'deposits.'.$i.'.account_id');
+            }
 
             $rows[] = [
                 'amount' => $amount,
@@ -1946,7 +1958,7 @@ final class DirectSaleService
                  * ⚠️ আগে যেকোনো খাত "জমা" হতে পারত (খরচের খাতও), আর তাতে বকেয়া
                  * মুছে বাকির সীমার দেয়াল পার হত। ⓘ নিয়মটা আদায়েরটাই ([[MoneyAccountRule]])।
                  */
-                'account_id' => $this->depositAccount(($row['account_id'] ?? null) ?: $method?->account_id),
+                'account_id' => $accountId,
                 // ধরন — চেক হলে টাকা ১১০৪-এ যায় ও একটা রেজিস্টার-সারি হয়
                 'kind' => $method?->kind,
                 'instrument' => $method?->code,

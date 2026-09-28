@@ -21,6 +21,7 @@ use App\Modules\Inventory\Models\Warehouse;
 use App\Modules\Inventory\Services\PackConversion;
 use App\Modules\MasterData\Models\PaymentMethod;
 use App\Modules\MasterData\Models\PaymentTerm;
+use App\Modules\MasterData\Services\MethodFitsAccount;
 use App\Modules\Purchase\Services\DirectPurchaseService;
 use App\Modules\Purchase\Services\LastLotFor;
 use App\Modules\Purchase\Services\LastPaidRate;
@@ -536,7 +537,14 @@ class DirectPurchaseController extends Controller implements HasMiddleware
         $money = app(MoneyAccountRule::class);
 
         foreach ($data['deposits'] ?? [] as $i => $row) {
-            $money->assert((int) $row['account_id'], field: 'deposits.'.$i.'.account_id');
+            $account = $money->assert((int) $row['account_id'], field: 'deposits.'.$i.'.account_id');
+
+            // ⛔ আর পদ্ধতির সাথে মেলে — "নগদ" পদ্ধতিতে বিকাশ থেকে নয় ([[MethodFitsAccount]], কাউন্টারের হুবহু)
+            app(MethodFitsAccount::class)->assert(
+                $account,
+                PaymentMethod::query()->find($row['payment_method_id'] ?? null),
+                'deposits.'.$i.'.account_id',
+            );
         }
 
         if (filled($data['paid_from_account_id'] ?? null)) {
