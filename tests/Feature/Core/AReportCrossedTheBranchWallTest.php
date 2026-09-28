@@ -302,6 +302,44 @@ final class AReportCrossedTheBranchWallTest extends TestCase
             app(ReportEngine::class)->run('purchase.settlement', ['from' => $this->day, 'to' => $this->day]));
     }
 
+    /**
+     * ⭐ কোম্পানির সব শাখা যাঁর হাতে, তিনি সীমিত নন — লাইভে ধরা, ২৮ সেপ্টেম্বর ২০২৬: মালিক
+     * নিজের ব্যবহারকারীতে কোম্পানির একমাত্র শাখা টিক দিয়েছিলেন, আর অনুমোদনের সব রিপোর্ট
+     * ৪০৩ দিল।
+     *
+     * ⚠️ দুই দিক, একই মানুষ: এক শাখা বাদে সব → এখনো সীমিত, গোটা কোম্পানির রিপোর্ট নয়;
+     * শেষ শাখাটাও দিলে → পান। ⛔ "প্রায় সব" কে অসীম ধরলে যে একটা শাখা বাদ, তার সংখ্যা
+     * গোটা-কোম্পানির যোগফলে ঢুকে দেখা যেত।
+     */
+    public function test_a_user_holding_every_branch_is_not_limited_but_one_short_still_is(): void
+    {
+        $every = Branch::query()->withoutGlobalScopes()->where('company_id', $this->company->id)->pluck('id')->all();
+        $this->assertGreaterThan(1, count($every), 'প্রস্তুতিটাই ভুল — কোম্পানির একটাই শাখা।');
+
+        $this->liftClerksLimit();
+        $last = array_pop($every);
+
+        foreach ($every as $id) {
+            $this->limitClerkTo(Branch::query()->withoutGlobalScopes()->findOrFail($id));
+        }
+
+        $this->actingAs($this->clerk);
+
+        try {
+            app(ReportEngine::class)->run('purchase.settlement', ['from' => $this->day, 'to' => $this->day]);
+            $this->fail('⛔ এক শাখা বাদ থাকা মানুষ গোটা কোম্পানির নিষ্পত্তি পেয়েছেন।');
+        } catch (AuthorizationException) {
+            // ⭐ ঠিক এটাই — এখনো সীমিত
+        }
+
+        $this->limitClerkTo(Branch::query()->withoutGlobalScopes()->findOrFail($last));
+        $this->actingAs($this->clerk);
+
+        $this->assertInstanceOf(ReportResult::class,
+            app(ReportEngine::class)->run('purchase.settlement', ['from' => $this->day, 'to' => $this->day]),
+            '⛔ সব শাখা হাতে থাকা মানুষকেও গোটা কোম্পানির রিপোর্ট দেওয়া হল না।');
+    }
+
     // ── সহায়ক ───────────────────────────────────────────────────────────
 
     private function branch(string $code): Branch

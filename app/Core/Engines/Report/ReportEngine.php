@@ -432,6 +432,26 @@ final class ReportEngine
          */
         $allowed = app(DataScope::class)->idsFor(auth()->user(), UserDataScope::BRANCH);
 
+        /*
+         * ⭐ কোম্পানির সব শাখা যাঁর হাতে, তিনি সীমিত নন — লাইভে ধরা, ২৮ সেপ্টেম্বর ২০২৬।
+         *
+         * ⓘ মালিক নিজের ব্যবহারকারীতে কোম্পানির একমাত্র শাখাটা টিক দিয়েছিলেন, আর
+         * অনুমোদনের সব রিপোর্ট ৪০৩ দিল — "পুরো কোম্পানি" রিপোর্ট সীমিত লোকের নয় বলে।
+         * ⛔ তালিকাটা সব শাখা ঢাকলে সীমা কিছুই আটকায় না; তাকে "সীমিত" ধরা মানে কেবল
+         * বাধা, সুরক্ষা নয়। ⚠️ পরে নতুন শাখা খুললে তিনি আবার সীমিত — নতুন শাখা তাঁর
+         * তালিকায় নেই, আর সেটাই ঠিক।
+         */
+        if ($allowed !== null) {
+            // ⚠️ কাঁচা প্রশ্ন, স্কোপ ছাড়া — শাখার মডেলে ব্যবহারকারীর সীমা বসলে "সব শাখা" মানে
+            // "তাঁর শাখা" হয়ে যেত, আর যে-কেউ নিজেকে অসীম দেখাতেন
+            $every = DB::table('branches')->where('company_id', CompanyContext::id())->pluck('id')
+                ->map(fn ($id) => (int) $id)->all();
+
+            if ($every !== [] && array_diff($every, $allowed) === []) {
+                $allowed = null;
+            }
+        }
+
         if ($allowed !== null && $report->branchless === ReportDefinition::WHOLE_COMPANY) {
             throw new AuthorizationException(
                 "Report '{$report->key}' counts the whole company and cannot be split by branch; a branch-limited user cannot have it."
