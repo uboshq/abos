@@ -15,6 +15,9 @@
                                   x-show="row.narration"
                                   x-text="' · ' + row.narration"></span>
                         </span>
+                        <span class="num text-(--color-ink-muted)"
+                              x-show="chargeOf(row) !== ''"
+                              x-text="'+ ' + money($num(chargeOf(row)))"></span>
                         <span class="num font-medium" x-text="money($num(row.amount))"></span>
                         <button type="button" @click="dropDeposit(i)"
                                 class="px-1 text-(--color-danger)"
@@ -23,6 +26,14 @@
                         {{-- ⓘ সার্ভারে যা যায় — নামের ভিতরে সূচক, তাই
                              PHP-তে সারিগুলো আলাদা থাকে। --}}
                         <x-counter.deposit-fields />
+
+                        {{-- ⭐ চার্জ — কেবল ব্যাংক/বিকাশের সারিতে, সারির নিজের উপায়
+                             দেখে ([[chargeOf()]])। ⓘ ভাগের কম্পোনেন্টে নয়: বিক্রয়
+                             ঘরটা নিজের পথে পাঠায়, দুইবার গেলে একটা আরেকটাকে ঢাকত।
+                             ⓘ `charge_borne_by` পাঠানো হয় না — সার্ভার `us` ধরে,
+                             মালিকের সিদ্ধান্ত: পরিশোধের চার্জ কোম্পানির খরচ। --}}
+                        <input type="hidden" :name="'deposits[' + i + '][charge_amount]'"
+                               :value="chargeOf(row)">
                     </div>
                 </template>
 
@@ -85,6 +96,21 @@
                         </span>
                         <input type="number" step="0.01" inputmode="decimal"
                                x-model="depositDraft.amount"
+                               class="num h-(--spacing-field) w-full rounded-(--radius-field) border
+                                      border-(--color-border) bg-(--color-surface-card) px-2 text-end text-sm">
+                    </label>
+
+                    {{-- ⭐ ব্যাংক বা বিকাশ যা কেটে রাখল — ২৭ সেপ্টেম্বর ২০২৬।
+                         ⛔ ঘরটা না থাকায় বিকাশে ৯০০ দিলে অ্যাপে কাটত ৯০৫, খাতায়
+                         কমত ৯০০। ⓘ চার্জ কোম্পানির খরচে যায় (৫২১০/৫২১১), আর
+                         সরবরাহকারীর দেনা মোছে পুরো "টাকা" ঘরের অঙ্কে। --}}
+                    <label class="min-w-0 flex-1" x-show="depositHasCharge" x-cloak>
+                        <span class="mb-1 block text-2xs text-(--color-ink-muted)"
+                              x-text="depositIsBank
+                                  ? @js(__('accounts::field.bank_charge'))
+                                  : @js(__('accounts::field.charge'))">{{ __('accounts::field.charge') }}</span>
+                        <input type="number" step="0.01" min="0" inputmode="decimal"
+                               x-model="depositDraft.chargeAmount"
                                class="num h-(--spacing-field) w-full rounded-(--radius-field) border
                                       border-(--color-border) bg-(--color-surface-card) px-2 text-end text-sm">
                     </label>

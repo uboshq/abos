@@ -71,7 +71,7 @@ export default function directPurchase({
            ⭐ আসল উত্তর মায়ের কোডে: ১১০১ নগদ · ১১০২ ব্যাংক ·
            ১১০৫ মোবাইল মানি। বিক্রয়ের দিকেও এভাবেই করা। */
         moneyAccounts,
-        depositDraft: { methodId: '', accountId: '', amount: '', reference: '', refDate: '', narration: '' },
+        depositDraft: { methodId: '', accountId: '', amount: '', reference: '', refDate: '', narration: '', chargeAmount: '' },
 
         /* ── কে মালটা আনল ─────────────────────────────────
            তালিকাটা পক্ষের ধরন ধরে ছাঁকা (TRANSPORT), তাই এখানে
@@ -1023,7 +1023,7 @@ export default function directPurchase({
                ফেলতেন। */
             this.deposits = [];
             this.depositDraft = {
-                methodId: '', accountId: '', amount: '', reference: '', refDate: '', narration: '',
+                methodId: '', accountId: '', amount: '', reference: '', refDate: '', narration: '', chargeAmount: '',
             };
 
             this.carrierId = '';
@@ -1365,10 +1365,38 @@ export default function directPurchase({
             this.depositDraft.accountId = this.depositMethod?.accountId || '';
         },
 
+        /* ⭐ চার্জের ঘর — কেবল ব্যাংক ও মোবাইল ব্যাংকিংয়ে (২৭ সেপ্টেম্বর ২০২৬)।
+           ⛔ নগদে চার্জ হয় না, আর চেকের টাকা আজ যায় না — দুইটাতেই সার্ভার থামাত। */
+        get depositIsBank() {
+            return this.depositMethod?.kind === 'bank';
+        },
+
+        get depositHasCharge() {
+            return this.depositIsBank || this.depositMethod?.kind === 'mfs';
+        },
+
+        /* ⓘ সারির চার্জ — সারির **নিজের** উপায় দেখে, খসড়া থেকে নয়।
+           ⚠️ কেউ বিকাশ বেছে চার্জ লিখে পরে নগদে বদলালে মানটা রয়ে যায় —
+           ধরন না দেখলে নগদের সারির সাথে চার্জ সার্ভারে চলে যেত। */
+        chargeOf(row) {
+            const kind = this.depositMethods.find(m => String(m.id) === String(row?.methodId))?.kind;
+
+            if (kind !== 'bank' && kind !== 'mfs') return '';
+
+            const charge = String(row?.chargeAmount ?? '').trim();
+
+            return Number(charge) > 0 ? charge : '';
+        },
+
         get depositReady() {
+            const charge = this.depositHasCharge ? Number(this.depositDraft.chargeAmount || 0) : 0;
+
             return this.depositDraft.methodId !== ''
                 && this.depositDraft.accountId !== ''
-                && Number(this.depositDraft.amount) > 0;
+                && Number(this.depositDraft.amount) > 0
+                /* ⛔ চার্জ অঙ্কের সমান বা বেশি নয় — সার্ভারও ফেরায় (lt:deposits.*.amount) */
+                && charge >= 0
+                && charge < Number(this.depositDraft.amount);
         },
 
         addDeposit() {
@@ -1377,7 +1405,7 @@ export default function directPurchase({
             this.deposits.push({ ...this.depositDraft });
 
             this.depositDraft = {
-                methodId: '', accountId: '', amount: '', reference: '', refDate: '', narration: '',
+                methodId: '', accountId: '', amount: '', reference: '', refDate: '', narration: '', chargeAmount: '',
             };
         },
 

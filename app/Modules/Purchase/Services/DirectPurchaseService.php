@@ -671,6 +671,23 @@ final class DirectPurchaseService
 
         $narration = $row['narration'] ?? __('purchase::message.paid_against', ['no' => $bill->document_no]);
 
+        /*
+         * ⭐ ব্যাংক/বিকাশের চার্জ — ২৭ সেপ্টেম্বর ২০২৬।
+         *
+         * ⛔ আগে চার্জটা এখানে পৌঁছাতই না, আর পৌঁছালেও ভাউচারে যেত না: বিকাশে
+         * ৯০০ দিলে অ্যাপে কাটত ৯০৫, খাতায় কমত ৯০০ — মাস শেষে অমিল, নীরবে।
+         *
+         * ⓘ মালিকের সিদ্ধান্ত: পরিশোধের চার্জ **কোম্পানির খরচ** (৫২১০/৫২১১),
+         * সরবরাহকারীর দেনায় নয়। দেনা মোছে পুরো অঙ্কে, টাকার খাত কমে অঙ্ক + চার্জ
+         * ([[VoucherService::withCharge()]])। `them` মানে সরবরাহকারী বহন করেছেন —
+         * তখন আমাদের খাত থেকে ঠিক অঙ্কটাই গেছে, খরচের সারি নেই।
+         */
+        $charge = is_numeric($row['charge_amount'] ?? null)
+            && bccomp((string) $row['charge_amount'], '0', 4) > 0
+                ? (string) $row['charge_amount']
+                : null;
+        $bearer = $row['charge_borne_by'] ?? 'us';
+
         $voucher = $this->vouchers->create(
             [
                 'type' => Voucher::PAYMENT,
@@ -685,6 +702,8 @@ final class DirectPurchaseService
                 'against_type' => PurchaseBill::drillSourceType(),
                 'against_id' => $bill->id,
                 'origin' => Voucher::ORIGIN_COUNTER,
+                'charge_amount' => $charge ?? '0',
+                'charge_borne_by' => $bearer,
             ],
             $this->vouchers->twoLineEntry(
                 Voucher::PAYMENT,
@@ -692,6 +711,7 @@ final class DirectPurchaseService
                 (int) $this->account(StandardChart::PAYABLE)->id,
                 (string) $row['amount'],
                 $narration,
+                $bearer === 'us' ? $charge : null,
             ),
         );
 

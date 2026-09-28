@@ -330,6 +330,52 @@ describe('লট — কেবল লট ধরা সারিতে', () => {
 })
 
 /*
+ * ⭐ পরিশোধের চার্জ — ২৭ সেপ্টেম্বর ২০২৬।
+ *
+ * ⛔ ঘরটা না থাকায় বিকাশে ৯০০ দিলে অ্যাপে কাটত ৯০৫, খাতায় কমত ৯০০।
+ * ⓘ চার্জ যায় কেবল ব্যাংক/বিকাশের সারিতে, আর সারির **নিজের** উপায় দেখে।
+ */
+describe('পরিশোধের চার্জ — ব্যাংক আর বিকাশে', () => {
+    const methods = [
+        { id: 1, label: 'নগদ', kind: 'cash', accountId: 10 },
+        { id: 2, label: 'বিকাশ', kind: 'mfs', accountId: 30 },
+        { id: 3, label: 'ব্যাংক', kind: 'bank', accountId: 20 },
+    ]
+
+    it('বিকাশের সারির চার্জ সার্ভারে যায়, নগদের সারির যায় না', () => {
+        const c = counter({ depositMethods: methods })
+
+        expect(c.chargeOf({ methodId: 2, chargeAmount: '5' })).toBe('5')
+        expect(c.chargeOf({ methodId: 3, chargeAmount: '11.50' })).toBe('11.50')
+        expect(c.chargeOf({ methodId: 1, chargeAmount: '5' })).toBe('')
+        expect(c.chargeOf({ methodId: 2, chargeAmount: '' })).toBe('')
+    })
+
+    it('চার্জ অঙ্কের সমান বা বেশি হলে যোগ করা যায় না', () => {
+        const c = counter({ depositMethods: methods })
+        c.depositDraft.methodId = '2'
+        c.depositDraft.accountId = '30'
+        c.depositDraft.amount = '900'
+
+        c.depositDraft.chargeAmount = '900'
+        expect(c.depositReady).toBe(false)
+
+        c.depositDraft.chargeAmount = '5'
+        expect(c.depositReady).toBe(true)
+    })
+
+    it('যোগ করার পরে খসড়ার চার্জ খালি — পরের সারিতে চলে যায় না', () => {
+        const c = counter({ depositMethods: methods })
+        Object.assign(c.depositDraft, { methodId: '2', accountId: '30', amount: '900', chargeAmount: '5' })
+
+        c.addDeposit()
+
+        expect(c.deposits[0].chargeAmount).toBe('5')
+        expect(c.depositDraft.chargeAmount).toBe('')
+    })
+})
+
+/*
  * গোটা বিলের ছাড় — মালিকের সিদ্ধান্ত (ক), ২৭ সেপ্টেম্বর ২০২৬।
  *
  * ⭐ ভাগের নিয়ম সার্ভারের হুবহু ([[DirectPurchaseService::spreadBillDiscount()]]):

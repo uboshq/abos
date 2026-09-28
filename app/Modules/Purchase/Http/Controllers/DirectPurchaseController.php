@@ -415,6 +415,25 @@ class DirectPurchaseController extends Controller implements HasMiddleware
             'deposits.*.ref_date' => ['nullable', 'date'],
             'deposits.*.narration' => ['nullable', 'string', 'max:255'],
 
+            /*
+             * ⭐ ব্যাংক/বিকাশের চার্জ — ২৭ সেপ্টেম্বর ২০২৬।
+             *
+             * ⛔ আগে এই দুইটা নিয়ম ছিল না, তাই `validate()` ঘর দুইটা নীরবে
+             * ছেঁটে ফেলত: বিকাশে ৯০০ দিলে অ্যাপে কাটত ৯০৫, খাতায় কমত ৯০০ —
+             * মাস শেষে ৫ টাকা করে অমিল, আর কোনো পর্দা লাল হত না।
+             *
+             * ⓘ মালিকের সিদ্ধান্ত: পরিশোধের চার্জ **কোম্পানির খরচ** (৫২১০
+             * ব্যাংক চার্জ · ৫২১১ MFS চার্জ), সরবরাহকারীর দেনায় নয় — তাই
+             * `charge_borne_by` ডিফল্ট `us`। নাম হুবহু বিক্রয়ের কাউন্টারের
+             * ([[DirectSaleController]])।
+             *
+             * ⚠️ `lt` এখানেও, যদিও [[VoucherService::withCharge()]] নিজেও
+             * থামায়: চার্জ অঙ্কের সমান বা বেশি হলে ভুলটা ফর্মের ঘরেই দেখা
+             * যায়, বিল-মাল-খাতার কাজ শুরু হওয়ার আগে।
+             */
+            'deposits.*.charge_amount' => ['nullable', 'numeric', 'min:0', 'lt:deposits.*.amount'],
+            'deposits.*.charge_borne_by' => ['nullable', Rule::in(['us', 'them'])],
+
             'lines' => ['required', 'array', 'min:1'],
             'lines.*.product_id' => ['required', 'integer',
                 Rule::exists('inv_products', 'id')->where('company_id', $companyId)],
@@ -501,6 +520,8 @@ class DirectPurchaseController extends Controller implements HasMiddleware
             'gifts.*.against_product_id' => ['nullable', 'integer',
                 Rule::exists('inv_products', 'id')->where('company_id', $companyId)],
             'gifts.*.remarks' => ['nullable', 'string', 'max:191'],
+        ], [
+            'deposits.*.charge_amount.lt' => __('accounts::validation.charge_eats_the_whole_amount'),
         ]);
 
         $this->demandLots($data['lines']);
