@@ -37,6 +37,34 @@ class StockController extends Controller implements HasMiddleware
 {
     use SortsLists;
 
+    /**
+     * ⭐ মজুদের সাতটা ঘর — চলাচলের টেবিলের কলাম ধরে, এক জায়গায়।
+     *
+     * ── ⛔ কেন একটা const, মন্তব্য নয় ──────────────────────────────────
+     * এই নামগুলো দুইবার দরকার হয়: তালিকার `selectSub`-এ (পর্দায় দেখানোর
+     * জন্য) আর "কিছু আছে কি" শর্তে ([[self::anyBoxIsNotEmpty()]])।
+     * ⚠️ আগে শর্তটা নিজের মতো চারটা নাম লিখত আর `selectSub` সাতটা দেখাত।
+     * ⓘ ফল: `reserved`, `free_reserved` বা `unplaced_free`-তে মাল থাকা
+     * পণ্য শর্তের চোখে **শূন্য** — আর এখন যেহেতু শূন্য সারি লুকায়,
+     * ঐ পণ্যটা তালিকা থেকেই হারিয়ে যেত। ⛔ ঠিক পুরনো অভিযোগটাই:
+     * *"স্টক দেখাচ্ছে না"*।
+     *
+     * ⭐ *"দুইটা তালিকা মিলিয়ে রাখো"* লেখা একটা মন্তব্য যথেষ্ট নয় —
+     * ওরা একদিন আলাদা হয়ে যায়, আর কিছুই লাল হয় না। তাই একটাই তালিকা।
+     *
+     * ⓘ `reserved` আর `free_reserved`-ও গোনা হয় (মালিকের সিদ্ধান্তের
+     * সোজা মানে, ২৮ সেপ্টেম্বর): ধরা মালও গুদামের মাল।
+     */
+    public const BOXES = [
+        'floor_change',
+        'reserved_change',
+        'hold_change',
+        'free_change',
+        'free_reserved_change',
+        'unplaced_change',
+        'unplaced_free_change',
+    ];
+
     public function __construct(
         private readonly StockService $stock,
         private readonly StockAdjustmentService $adjustments,
@@ -79,6 +107,7 @@ class StockController extends Controller implements HasMiddleware
     public function index(Request $request): View
     {
         $warehouse = $this->chosenWarehouse($request);
+        $stock = $this->chosenStockFilter($request);
 
         /*
          * চারটা অবস্থা কোয়েরির ভেতরেই, সারি প্রতি একটা করে নয়।
@@ -117,9 +146,7 @@ class StockController extends Controller implements HasMiddleware
              * কিছু ধরে আছে। শূন্য হয়ে যাওয়া নিষ্ক্রিয় পণ্য আগের মতোই
              * তালিকার বাইরে — সেগুলো নিয়ে কারও কিছু করার নেই।
              */
-            ->where(fn (EloquentBuilder $q) => $q
-                ->active()
-                ->orWhereIn('inv_products.id', $this->stillHoldingSomething($warehouse)))
+            ->tap(fn (EloquentBuilder $q) => $this->applyStockFilter($q, $stock, $warehouse))
             ->with('unit')
             ->select('inv_products.*')
             ->selectSub($this->sumOf('floor_change', $warehouse), 'floor_total')
@@ -167,6 +194,27 @@ class StockController extends Controller implements HasMiddleware
             ->selectSub($this->sumOf('unplaced_change', $warehouse), 'unplaced_total')
             ->selectSub($this->sumOf('unplaced_free_change', $warehouse), 'unplaced_free_total');
 
+        /*
+         * ⭐ দাম দুইটা কলামে — মালিকের নির্দেশ, ২৮ সেপ্টেম্বর ২০২৬।
+         *
+         * ⛔ চাবি না থাকলে কোয়েরিতেই যোগ করা হয় না। ⓘ কেবল পর্দায় না
+         * দেখালে সংখ্যাটা তবু ভিউ-তথ্যে থেকে যেত, আর একটা JSON রপ্তানি
+         * বা ভবিষ্যতের কোনো পাতা ওটা নীরবে বের করে দিত।
+         *
+         * ⓘ চাবিটা নতুন নয় — `inventory.cost.view` আগে থেকেই আছে আর
+         * `Product::purchase_price` ও `StockMovement::unit_cost` ওটাতেই
+         * বাঁধা ([[module.php]]-র `sensitive_fields`)।
+         *
+         * ⚠️ স্তরগুলো কোম্পানির, গুদামের নয় — দাম গুদাম বদলালে বদলায় না
+         * (মাইগ্রেশনের টীকা)। তাই এখানে গুদামের ছাঁকনি বসে না, আর
+         * বসালে ভুল হত।
+         */
+        if ($this->maySeeCost($request)) {
+            $query
+                ->selectSub($this->layerSum('qty_remaining * unit_cost'), 'layer_value_total')
+                ->selectSub($this->layerSum('qty_remaining'), 'layer_qty_total');
+        }
+
         $sort = $this->applySort($query, $request, $this->sorts());
 
         $products = $query->paginate(50)->withQueryString();
@@ -189,6 +237,19 @@ class StockController extends Controller implements HasMiddleware
             'sort' => $sort,
             'sortOptions' => $this->sortLabels(),
             'q' => $request->query('q'),
+            'stock' => $stock,
+
+            /*
+             * ⓘ দুইটা আলাদা প্রশ্ন, আর গুলিয়ে ফেললে পাহারাটাই ফাঁকা হয়ে
+             * যেত: `maySeeCost` হলো **অনুমতি**, আর `showCost` হলো
+             * ব্যবহারকারী এই মুহূর্তে দেখতে চান কি না।
+             *
+             * ⚠️ `showCost` কখনো অনুমতিকে ছাড়িয়ে যেতে পারে না — তাই
+             * দুইটার `&&`, আর URL-এ `?cost=show` লিখে কেউ চাবি ছাড়া দাম
+             * দেখতে পারেন না।
+             */
+            'maySeeCost' => $this->maySeeCost($request),
+            'showCost' => $this->maySeeCost($request) && $request->query('cost') !== 'hide',
         ]);
     }
 
@@ -205,6 +266,53 @@ class StockController extends Controller implements HasMiddleware
      * ⓘ গুদামের ছাঁকনি এখানেও লাগে: নেত্রকোনার মাল দেখতে চাইলে
      * ময়মনসিংহের মজুদ এই পণ্যটাকে তালিকায় টেনে আনার কথা নয়।
      */
+    /**
+     * ⭐ শূন্য মজুদের পণ্য তালিকায় আসে না — মালিকের নির্দেশ, ২৮ সেপ্টেম্বর ২০২৬।
+     *
+     * ── ⛔ কী ঘটত ─────────────────────────────────────────────────────
+     * নিয়মটা ছিল *"সক্রিয়, **অথবা** এখনো কিছু ধরে আছে"*। ⓘ তাতে
+     * নিষ্ক্রিয়-কিন্তু-মালসহ পণ্য ঠিকই আসত (ওটার জন্যই লেখা হয়েছিল),
+     * ⚠️ কিন্তু **সক্রিয়-অথচ-শূন্য** পণ্যও আসত — আর একটা ডিপোর
+     * তালিকায় ওগুলোই বেশি। ⛔ ফল: যে সারিগুলো নিয়ে আজ কারও কিছু করার
+     * নেই, সেগুলোর ভিড়ে যেগুলো ফুরিয়ে আসছে তা চোখে পড়ত না।
+     *
+     * ── ⓘ তিনটা অবস্থা, একটা ছাঁকনি ───────────────────────────────────
+     *   `holding` (ডিফল্ট) — সাতটা ঘরের একটাতেও কিছু আছে
+     *   `zero`             — সাতটাই শূন্য, আর পণ্যটা সক্রিয়
+     *   `all`              — আগের নিয়মটাই, হুবহু
+     *
+     * ⭐ `zero`-তে `active()` **রাখা হয়েছে**, আর সেটা ইচ্ছাকৃত: শূন্য
+     * হয়ে যাওয়া নিষ্ক্রিয় পণ্য আগেও তালিকার বাইরে ছিল, কারণ ওগুলো নিয়ে
+     * কারও কিছু করার নেই। ⚠️ ঐ পুরনো সিদ্ধান্তটা এই কাজে বদলানো হয়নি।
+     */
+    private function applyStockFilter(EloquentBuilder $query, string $stock, ?Warehouse $warehouse): void
+    {
+        $holding = $this->stillHoldingSomething($warehouse);
+
+        match ($stock) {
+            'zero' => $query
+                ->active()
+                ->whereNotIn('inv_products.id', $holding),
+
+            'all' => $query->where(fn (EloquentBuilder $q) => $q
+                ->active()
+                ->orWhereIn('inv_products.id', $holding)),
+
+            default => $query->whereIn('inv_products.id', $holding),
+        };
+    }
+
+    /**
+     * ⓘ অজানা মান ডিফল্টে পড়ে — URL-এ হাতে লেখা `?stock=abcd` যেন
+     * নীরবে **সব** সারি না দেখায়।
+     */
+    private function chosenStockFilter(Request $request): string
+    {
+        $stock = (string) $request->query('stock', 'holding');
+
+        return in_array($stock, ['holding', 'zero', 'all'], true) ? $stock : 'holding';
+    }
+
     private function stillHoldingSomething(?Warehouse $warehouse): Builder
     {
         return DB::table('inv_stock_movements')
@@ -212,10 +320,44 @@ class StockController extends Controller implements HasMiddleware
             ->where('company_id', CompanyContext::id())
             ->when($warehouse, fn (Builder $q, Warehouse $w) => $q->where('warehouse_id', $w->id))
             ->groupBy('product_id')
-            ->havingRaw('COALESCE(SUM(floor_change), 0) <> 0
-                      OR COALESCE(SUM(hold_change), 0) <> 0
-                      OR COALESCE(SUM(unplaced_change), 0) <> 0
-                      OR COALESCE(SUM(free_change), 0) <> 0');
+            ->havingRaw($this->anyBoxIsNotEmpty());
+    }
+
+    /**
+     * "সাতটা ঘরের একটাতেও কিছু আছে" — SQL-এ, [[self::BOXES]] ধরে।
+     *
+     * ⓘ নামগুলো হাতে লেখা হয় না, কারণ এই তালিকাটা উপরের `selectSub`
+     * গুলোর সাথে মিলতেই হবে। ⛔ আগে শর্তটা চারটা ঘর লিখত (মেঝে,
+     * আটকানো, বসার অপেক্ষা, ফ্রি) আর `selectSub` সাতটা দেখাত — অর্থাৎ
+     * পর্দায় সংখ্যা থাকা একটা পণ্য শর্তের চোখে শূন্য হতে পারত।
+     */
+    private function anyBoxIsNotEmpty(): string
+    {
+        return collect(self::BOXES)
+            ->map(fn (string $c) => "COALESCE(SUM({$c}), 0) <> 0")
+            ->implode(' OR ');
+    }
+
+    /**
+     * খরচের স্তর থেকে একটা যোগফল — এই পণ্যের, এখনো পড়ে থাকা মালের।
+     *
+     * ⛔ `->sum()` নয়, `selectRaw` — Eloquent-এর যোগফল decimal কলামকে
+     * ভাসমান সংখ্যা বানায়, আর টাকার ঘরে সেটা ঘরের নিয়মে নিষিদ্ধ।
+     * ⓘ সাব-সিলেক্ট হওয়ায় পঞ্চাশ সারির পাতায় পঞ্চাশটা কোয়েরিও হয় না।
+     */
+    private function layerSum(string $expression): Builder
+    {
+        return DB::table('inv_cost_layers')
+            ->selectRaw("COALESCE(SUM({$expression}), 0)")
+            ->whereColumn('product_id', 'inv_products.id')
+            ->where('company_id', CompanyContext::id())
+            ->where('qty_remaining', '>', 0);
+    }
+
+    /** দাম দেখার চাবি আছে কি না — এক জায়গায়, কারণ তিন জায়গায় লাগে। */
+    private function maySeeCost(Request $request): bool
+    {
+        return (bool) $request->user()?->can('inventory.cost.view');
     }
 
     private function sumOf(string $column, ?Warehouse $warehouse): Builder

@@ -169,4 +169,6 @@ return [
     'warranty' => 'Warranty',
     'track_serial' => 'Keep a number for every piece',
     'another_place' => 'Another place',
+    'stock_filter' => 'Stock filter',
+    'stock_value' => 'Stock value',
 ];

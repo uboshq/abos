@@ -29,6 +29,42 @@
         (string) $p->free_reserved_total,
         4,
     );
+
+    /*
+     * ⭐ দামের দুইটা ঘর — মালিকের নির্দেশ, ২৮ সেপ্টেম্বর ২০২৬।
+     *
+     * ── ⓘ হাতে থাকা মাল কোনগুলো, আর কেন ─────────────────────────────
+     * উপরের হিসাব দুইটাই বলে দেয় খোপগুলো কীভাবে বাসা বাঁধে:
+     * `available = floor − reserved − hold`, অর্থাৎ **`floor`-এর ভিতরেই
+     * `reserved` আর `hold` আছে**; আর `free_available = free −
+     * free_reserved`, অর্থাৎ `free`-র ভিতরে `free_reserved`।
+     *
+     * ⛔ তাই যোগ করা হয় কেবল চারটা: `floor + unplaced + free +
+     * unplaced_free`। ⚠️ সাতটা যোগ করলে একই মাল দুইবার গোনা হত, আর
+     * মজুদের মূল্য বাস্তবের চেয়ে বেশি দেখাত।
+     * ⓘ এটা কোড পড়ে মাপা, ধরে নেওয়া নয়।
+     */
+    $onHand = fn ($p) => bcadd(
+        bcadd((string) $p->floor_total, (string) $p->unplaced_total, 4),
+        bcadd((string) $p->free_total, (string) $p->unplaced_free_total, 4),
+        4,
+    );
+
+    /*
+     * ⓘ গড় ক্রয়মূল্য — খরচের স্তরে যা পড়ে আছে তার মোট মূল্য ÷ পরিমাণ,
+     * ঠিক [[StockCountService::averageCost()]]-এর সংজ্ঞাতেই।
+     *
+     * ⛔ স্তর শূন্য হলে `null` — শূন্য নয়। ⚠️ শূন্য লিখলে পর্দা বলত
+     * *"এই মাল বিনামূল্যে এসেছে"*, অথচ সত্যিটা হলো **দাম জানা নেই**,
+     * আর ধরে-নেওয়া দরই এই পুরো ইঞ্জিনটার শত্রু।
+     */
+    $unitCost = function ($p) {
+        $qty = (string) ($p->layer_qty_total ?? '0');
+
+        return bccomp($qty, '0', 4) > 0
+            ? bcdiv((string) $p->layer_value_total, $qty, 4)
+            : null;
+    };
 @endphp
 
 {{--
@@ -183,6 +219,64 @@
     ];
 
     /*
+     * ⭐ দামের ঘর দুইটা শেষে বসে, আর কেবল চাবি থাকলে ও দেখতে চাইলে।
+     *
+     * ⛔ `$showCost` কন্ট্রোলারে হিসাব হয় আর অনুমতিকে কখনো ছাড়ায় না;
+     * চাবি না থাকলে সংখ্যাগুলো কোয়েরিতেই আসে না, কেবল লুকানো হয় না।
+     *
+     * ⚠️ মূল্যটা **সারির নিজের পরিমাণ** × গড় ক্রয়মূল্য, স্তরের মোট মূল্য
+     * সরাসরি নয়। ⓘ কারণ গুদামের ছাঁকনি চালু থাকলে সারির পরিমাণ ঐ
+     * গুদামের, অথচ স্তর কোম্পানির — দুইটা পাশাপাশি বসালে সারিটা নিজের
+     * সাথেই মিলত না। ⭐ ছাঁকনি ছাড়া দুইটা এক জায়গায় পড়ে।
+     */
+    /*
+     * ⛔ চাবিটার নাম এই ফাইলেই লেখা, আর সেটা ইচ্ছাকৃত — দুইটা কারণে।
+     *
+     * ⓘ এক, পাহারা ([[NoSensitiveFieldIsPrintedInTheOpenTest]]) দাবি করে
+     * যে ঘরটা যে ফাইল ছাপে, সেই ফাইলেই চাবির নাম থাকবে। ⭐ আর দাবিটা
+     * ন্যায্য: কন্ট্রোলারে লুকানো একটা `$showCost` দেখে পাঠক বুঝবেন না
+     * ঘরটা আদৌ পাহারা দেওয়া কি না।
+     *
+     * ⓘ দুই, দুইটা পাহারা দুইটা আলাদা কাজ করে, তাই একটা বাদ দিলেও অন্যটা
+     * ধরে: কন্ট্রোলারের শর্তটা সংখ্যাটাকে **কোয়েরিতেই** আসতে দেয় না,
+     * আর এখানকার শর্তটা **পাতায়** আসতে দেয় না।
+     */
+    if ($showCost && request()->user()?->can('inventory.cost.view')) {
+        $columns[] = [
+            'key' => 'avg_cost',
+            'label' => __('inventory::field.purchase_price'),
+            'numeric' => true,
+            'width' => '9rem',
+            /*
+             * ⓘ `ui.amount` সরাসরি ডাকা যায় না — ওটা একটা কম্পোনেন্ট, আর
+             * ছকের `render` ক্লোজার একটা **ভিউ** চায়। ⭐ মোড়কটা হলো
+             * `ui.amount-link`, আর `href` ছাড়া সে সাধারণ অঙ্কই ছাপে।
+             *
+             * ⛔ দাম জানা না থাকলে `—`, শূন্য নয় — উপরের টীকা দেখুন।
+             */
+            'render' => fn ($p) => ($c = $unitCost($p)) === null
+                ? '—'
+                : view('ui.amount-link', [
+                    'value' => $c,
+                    'href' => route('inventory.product.show', $p),
+                ]),
+        ];
+
+        $columns[] = [
+            'key' => 'stock_value',
+            'label' => __('inventory::field.stock_value'),
+            'numeric' => true,
+            'width' => '10rem',
+            'render' => fn ($p) => ($c = $unitCost($p)) === null
+                ? '—'
+                : view('ui.amount-link', [
+                    'value' => bcmul($onHand($p), $c, 4),
+                    'href' => route('inventory.product.show', $p).'#movements',
+                ]),
+        ];
+    }
+
+    /*
      * এই পাতার যোগ — গোটা তালিকার নয়।
      *
      * ── কেন যোগফলটা দরকার ────────────────────────────────────────────
@@ -233,6 +327,35 @@
                     </x-ui.button>
                 @endcan
         </x-slot:actions>
+                {{-- ⭐ শূন্য মজুদের পণ্য তালিকায় আসে না — মালিকের নির্দেশ,
+                     ২৮ সেপ্টেম্বর ২০২৬। ⓘ ছাঁকনিটা গুদামের ঘরের হুবহু একই
+                     চেহারায়, কারণ দুইটা একই কাজ করে আর একই টুলবারে বসে। --}}
+                <label class="flex items-center gap-2 text-sm">
+                    <span class="sr-only">{{ __('inventory::field.stock_filter') }}</span>
+                    <select name="stock"
+                            class="h-(--spacing-field-compact) rounded-(--radius-field) border border-(--color-border)
+                                   bg-(--color-surface-app) px-2 text-sm">
+                        <option value="holding" @selected($stock === 'holding')>{{ __('inventory::message.stock_holding') }}</option>
+                        <option value="zero" @selected($stock === 'zero')>{{ __('inventory::message.stock_zero') }}</option>
+                        <option value="all" @selected($stock === 'all')>{{ __('inventory::message.stock_all') }}</option>
+                    </select>
+                </label>
+
+                {{-- ⓘ ঘরটা দেখা যায় কেবল চাবি থাকলে। ⛔ চাবি ছাড়া ছাঁকনিটা
+                     দেখানো মানে জানিয়ে দেওয়া যে একটা লুকানো কলাম আছে, আর
+                     সেটা নিজেই একটা তথ্য। --}}
+                @if ($maySeeCost)
+                    <label class="flex items-center gap-2 text-sm">
+                        <span class="sr-only">{{ __('inventory::field.purchase_price') }}</span>
+                        <select name="cost"
+                                class="h-(--spacing-field-compact) rounded-(--radius-field) border border-(--color-border)
+                                       bg-(--color-surface-app) px-2 text-sm">
+                            <option value="show" @selected($showCost)>{{ __('inventory::message.cost_show') }}</option>
+                            <option value="hide" @selected(! $showCost)>{{ __('inventory::message.cost_hide') }}</option>
+                        </select>
+                    </label>
+                @endif
+
                 <label class="flex items-center gap-2 text-sm">
                     <span class="sr-only">{{ __('inventory::field.warehouse') }}</span>
                     <select name="warehouse_id"
@@ -247,8 +370,29 @@
             </x-ui.toolbar>
         </form>
 
+        {{-- ⓘ খালি তালিকার কারণটা এখন তিনটা হতে পারে, আর তিনটার উত্তরও
+             আলাদা: খোঁজায় কিছু মেলেনি · কারও গায়ে মাল নেই (তখন ছাঁকনির
+             কথা বলে দেওয়া হয়) · গুদামে এখনো কিছুই আসেনি।
+             ⚠️ লেখাটা নিচের PHP ব্লকে হিসাব করা, অ্যাট্রিবিউটের ভিতরে নয় —
+             একটা `"` অ্যাট্রিবিউট আগেই শেষ করে দেয় আর Blade পুরো ট্যাগটা
+             লেখা হিসেবে ছেপে দেয়, কোনো ত্রুটি ছাড়াই।
+
+             ⛔ আর এই মন্তব্যেই দ্বিতীয় ফাঁদটা ধরা পড়েছিল: প্রথম লেখায়
+             এখানে ডিরেক্টিভটার নাম উদ্ধৃত করা ছিল। ⓘ Blade মন্তব্যের
+             ভিতরেও ওটাকে সত্যিকারের PHP ট্যাগ বানিয়ে ফেলে, আর তাতে নিচের
+             আসল ব্লকটা আর চলেই না — পাতাটা ৫০০ দেয়, অথচ `php -l` আর
+             `view:cache` দুইটাই সবুজ বলে। ⚠️ তাই মন্তব্যে কোনো Blade
+             ডিরেক্টিভের নাম লেখা যাবে না। --}}
+        @php
+            $emptyLine = match (true) {
+                filled($q) => __('core.empty.no_results'),
+                $stock === 'holding' => __('inventory::message.none_holding_stock'),
+                default => __('inventory::message.none_yet'),
+            };
+        @endphp
+
         <x-ui.table
-            :empty="$q ? __('core.empty.no_results') : __('inventory::message.none_yet')"
+            :empty="$emptyLine"
             :rows="$products"
             :compact="request()->boolean('compact')"
             :columns="$columns"

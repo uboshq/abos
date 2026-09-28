@@ -197,4 +197,6 @@ return [
     'warranty' => 'ওয়ারেন্টি',
     'track_serial' => 'প্রতিটা পিসের নম্বর রাখা হবে',
     'another_place' => 'আরেক জায়গা',
+    'stock_filter' => 'মজুদ ছাঁকনি',
+    'stock_value' => 'মজুদের মূল্য',
 ];

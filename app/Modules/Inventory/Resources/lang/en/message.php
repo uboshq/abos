@@ -163,4 +163,10 @@ return [
     'qc_dispose_note' => 'The hold is released and the goods leave the shelf together, so they are never sellable for even a moment in between.',
     'track_serial_hint' => 'For pieces that carry a warranty - each one gets its own number and its own history.',
     'split_over' => 'All places together exceed what is waiting for this product. Reduce it.',
+    'stock_holding' => 'Holding stock',
+    'stock_zero' => 'Zero stock',
+    'stock_all' => 'All products',
+    'none_holding_stock' => 'No product is holding any stock right now. Change the filter to see the ones at zero.',
+    'cost_show' => 'With cost',
+    'cost_hide' => 'Without cost',
 ];
