@@ -118,10 +118,14 @@ return [
                 'route_params' => ['screen' => 'quotation_compare'], 'permission' => 'sales.order.view'],
             ['label' => 'sales::planned.quotation_revision', 'cluster' => 'quotations', 'icon' => 'book', 'route' => 'sales.planned',
                 'route_params' => ['screen' => 'quotation_revision'], 'permission' => 'sales.order.view'],
-            ['label' => 'sales::planned.order_new', 'cluster' => 'sales_orders', 'icon' => 'receipt', 'route' => 'sales.planned',
-                'route_params' => ['screen' => 'order_new'], 'permission' => 'sales.order.view'],
-            ['label' => 'sales::planned.order_list', 'cluster' => 'sales_orders', 'icon' => 'receipt', 'route' => 'sales.planned',
-                'route_params' => ['screen' => 'order_list'], 'permission' => 'sales.order.view'],
+            /* ⭐ পুরনো আদেশের পাতা এই ভাঁজে — মালিকের সিদ্ধান্ত, ২৮ সেপ্টেম্বর ২০২৬: "ডেলিভারি অর্ডার"
+               এখন প্রতিটা বিক্রির চালান ([[DeliveryOrderTabs]]), আর আদেশ নিজের নামে ফিরল। */
+            ['label' => 'sales::planned.order_new', 'cluster' => 'sales_orders', 'icon' => 'receipt', 'route' => 'sales.order.create',
+                'permission' => 'sales.order.create', 'setting' => 'sales.screen_orders'],
+            ['label' => 'sales::planned.order_list', 'cluster' => 'sales_orders', 'icon' => 'receipt', 'route' => 'sales.order.index',
+                'permission' => 'sales.order.view', 'setting' => 'sales.screen_orders'],
+            ['label' => 'sales::menu.order_track', 'cluster' => 'sales_orders', 'icon' => 'search', 'route' => 'sales.order.track',
+                'permission' => 'sales.order.view', 'setting' => 'sales.screen_orders'],
             ['label' => 'sales::planned.order_pending', 'cluster' => 'sales_orders', 'icon' => 'receipt', 'route' => 'sales.planned',
                 'route_params' => ['screen' => 'order_pending'], 'permission' => 'sales.order.view'],
             ['label' => 'sales::planned.order_partial', 'cluster' => 'sales_orders', 'icon' => 'receipt', 'route' => 'sales.planned',
@@ -145,29 +149,17 @@ return [
              * ([[SalesDashboard]])। তাই মেনু ধারা মানে, আর দ্রুত-পথটা
              * ড্যাশবোর্ডে থাকে।
              */
-            ['label' => 'sales::menu.orders', 'icon' => 'book', 'route' => 'sales.order.index', 'permission' => 'sales.order.view',
-                'setting' => 'sales.screen_orders'],
+            /* ⭐ ডেলিভারি অর্ডার — প্রতিটা বিক্রির চালান, ধাপের ট্যাবে; খসড়ার তালিকা এর ভিতরে
+               (মালিকের অনুমোদিত নকশা, ধাপ ৩, ২৮ সেপ্টেম্বর ২০২৬) */
+            ['label' => 'sales::menu.delivery_orders', 'icon' => 'book', 'route' => 'sales.do.index',
+                'permission' => 'sales.challan.view'],
 
-            /*
-             * ⭐ আদেশের খোঁজ — মালিকের চাওয়া, ১৯ সেপ্টেম্বর ২০২৬।
-             *
-             * ⓘ আদেশের সারির ঠিক পরে: প্রশ্নটা ("আমার আদেশটা কোথায়")
-             * আদেশ দেখার পরেই ওঠে। ⚠️ একই সুইচে (`screen_orders`) —
-             * যে ডিপো আদেশের পর্দা বন্ধ রাখে, তার খোঁজার পাতাও লাগে না।
-             */
-            ['label' => 'sales::menu.order_track', 'icon' => 'search', 'route' => 'sales.order.track',
-                'permission' => 'sales.order.view', 'setting' => 'sales.screen_orders'],
+            /* ⓘ আদেশের খোঁজ (১৯ সেপ্টেম্বর ২০২৬) "বিক্রয় আদেশ" ভাঁজে সরেছে — আদেশের সারির পাশে */
 
             ['label' => 'sales::menu.direct', 'icon' => 'sales', 'route' => 'sales.direct.create', 'permission' => 'sales.challan.create',
                 'setting' => 'sales.screen_direct'],
 
-            /*
-             * ⭐ রাখা খসড়া — সরাসরি বিক্রয়ের ঠিক পরে, একই চাবি ও একই সুইচে
-             * (মালিকের নির্দেশ, ২৮ সেপ্টেম্বর ২০২৬)। ⓘ কাউন্টার বন্ধ রাখা ডিপোর
-             * খসড়াও থাকে না, তাই আলাদা সুইচ লাগে না।
-             */
-            ['label' => 'sales::menu.direct_drafts', 'icon' => 'inbox', 'route' => 'sales.direct.drafts',
-                'permission' => 'sales.challan.create', 'setting' => 'sales.screen_direct'],
+            /* ⓘ খসড়ার তালিকা আলাদা সারি নয় — ডেলিভারি অর্ডারের "খসড়া" ট্যাব (ধাপ ৩) */
 
             ['label' => 'sales::menu.challans', 'icon' => 'challan', 'route' => 'sales.challan.index', 'permission' => 'sales.challan.view',
                 'setting' => 'sales.screen_challans'],

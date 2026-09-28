@@ -87,6 +87,12 @@ Route::middleware('auth')->prefix('sales')->group(function () {
     Route::get('/planned/{screen}', [\App\Modules\Sales\Http\Controllers\PlannedScreenController::class, 'show'])
         ->name('planned');
 
+    /*
+     * ⭐ ডেলিভারি অর্ডার — প্রতিটা বিক্রির চালান, ধাপের ট্যাবে (মালিকের সিদ্ধান্ত, ২৮ সেপ্টেম্বর
+     * ২০২৬)। ⓘ কেবল দেখা, তাই একটাই GET।
+     */
+    Route::get('/do', [\App\Modules\Sales\Http\Controllers\DeliveryOrderController::class, 'index'])->name('do.index');
+
     Route::prefix('direct')->name('direct.')->group(function () {
         Route::get('/', [DirectSaleController::class, 'create'])->name('create');
         Route::post('/', [DirectSaleController::class, 'store'])->name('store');

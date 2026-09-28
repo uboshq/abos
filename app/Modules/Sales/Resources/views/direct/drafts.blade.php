@@ -82,22 +82,10 @@
         </div>
     @endif
 
-    {{-- ⭐ দুই ট্যাব — খসড়া আর অনুমোদনের অপেক্ষায় (মালিক, ২৮ সেপ্টেম্বর ২০২৬)। ⓘ নিশ্চিত করে
-         সইয়ে পাঠানো বিক্রি খসড়া নয়, তাই আলাদা ট্যাবে; ওখানে কেবল দেখা। --}}
-    <nav class="mb-3 flex gap-2" aria-label="{{ __('sales::menu.direct_drafts') }}">
-        @foreach (['drafts' => 'sales::field.tab_drafts', 'approval' => 'sales::field.tab_awaiting_approval'] as $key => $label)
-            <a href="{{ route('sales.direct.drafts', $key === 'drafts' ? [] : ['tab' => $key]) }}"
-               @if ($tab === $key) aria-current="page" @endif
-               @class([
-                   'inline-flex items-center gap-2 rounded-(--radius-field) border px-3 py-1.5 text-sm font-semibold',
-                   'border-(--color-brand-600) bg-(--color-brand-600) text-white' => $tab === $key,
-                   'border-(--color-border) text-(--color-ink) hover:bg-(--color-surface-hover)' => $tab !== $key,
-               ])>
-                {{ __($label) }}
-                <span class="num rounded-full bg-black/10 px-1.5 text-xs">{{ $tabCounts[$key] }}</span>
-            </a>
-        @endforeach
-    </nav>
+    {{-- ⭐ ডেলিভারি অর্ডারের ট্যাব-সারি — এই পাতাটাই DO-র "খসড়া" আর "অনুমোদনের অপেক্ষায়"
+         ট্যাব (মালিকের অনুমোদিত নকশা, ধাপ ৩, ২৮ সেপ্টেম্বর ২০২৬: খসড়া তালিকা DO মেনুর ভিতরে)।
+         ⓘ নিশ্চিত করে সইয়ে পাঠানো বিক্রি খসড়া নয়, তাই আলাদা ট্যাবে; ওখানে কেবল দেখা। --}}
+    @include('sales::do.partials.tabs', ['active' => $tab === 'approval' ? 'approval' : 'drafts'])
 
     <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
         <form method="GET" class="contents">

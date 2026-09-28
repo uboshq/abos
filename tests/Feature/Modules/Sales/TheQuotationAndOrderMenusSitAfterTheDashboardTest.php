@@ -42,7 +42,7 @@ final class TheQuotationAndOrderMenusSitAfterTheDashboardTest extends TestCase
 
         $quotations = strpos($html, e(__('core.menu.quotations')));
         $orders = strpos($html, e(__('core.menu.sales_orders')));
-        $delivery = strpos($html, e(__('sales::menu.orders')));
+        $delivery = strpos($html, e(__('sales::menu.delivery_orders')));
 
         $this->assertNotFalse($quotations, '⛔ উদ্ধৃতির ভাঁজ বারে নেই।');
         $this->assertNotFalse($orders, '⛔ বিক্রয় আদেশের ভাঁজ বারে নেই।');
@@ -83,9 +83,9 @@ final class TheQuotationAndOrderMenusSitAfterTheDashboardTest extends TestCase
         $clerk = User::factory()->create(['current_company_id' => $this->company->id]);
         $clerk->companies()->attach($this->company->id, ['is_active' => true]);
 
-        $this->actingAs($clerk)->get(route('sales.planned', ['screen' => 'order_list']))->assertForbidden();
+        $this->actingAs($clerk)->get(route('sales.planned', ['screen' => 'order_pending']))->assertForbidden();
 
         $clerk->givePermissionTo('sales.order.view');
-        $this->actingAs($clerk->fresh())->get(route('sales.planned', ['screen' => 'order_list']))->assertOk();
+        $this->actingAs($clerk->fresh())->get(route('sales.planned', ['screen' => 'order_pending']))->assertOk();
     }
 }
