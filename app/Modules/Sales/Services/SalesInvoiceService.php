@@ -1201,9 +1201,11 @@ final class SalesInvoiceService
             return null;
         }
 
+        // ⓘ তালা — একই সারিতে একসাথে দুই বিল হলে দ্বিতীয়টা প্রথমটার পরে গোনে, আগে নয়
         $challanLine = DeliveryChallanLine::query()
             ->with('challan')
             ->whereKey((int) $challanLineId)
+            ->lockForUpdate()
             ->first();
 
         if ($challanLine === null || $challanLine->challan === null) {
@@ -1249,6 +1251,7 @@ final class SalesInvoiceService
         $alreadyInvoiced = $challanLine->invoiceLines()
             ->where('sales_invoice_id', '<>', $invoice->id)
             ->whereHas('invoice', fn ($q) => $q->where('status', '<>', DocumentStatus::CANCELLED))
+            ->sharedLock()
             ->sum('qty');
 
         $wouldBe = bcadd((string) ($alreadyInvoiced ?: '0'), $qty, 4);

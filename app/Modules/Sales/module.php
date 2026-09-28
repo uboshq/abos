@@ -549,6 +549,8 @@ return [
             // ⭐ মালিকের ভূমিকা-ভাগ, ২৭ সেপ্টেম্বর ২০২৬ (*"baki sob tumar poramorso motei koro"*)
             'sales.challan.create',
             'sales.invoice.create',
+            // ⭐ ডেলিভারি নিশ্চিত ("পৌঁছেছে") — লাইভের যাচাইয়ে আটকেছিল (২৯ সেপ্টেম্বর ২০২৬)
+            'sales.delivery.update',
             'sales.delivery.view',
             'sales.order.view', 'sales.challan.view', 'sales.invoice.view',
             'sales.collection.view', 'sales.return.view', 'sales.shipment.view',

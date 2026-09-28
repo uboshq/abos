@@ -42,9 +42,18 @@
 
         <dl class="grid grid-cols-1 gap-2 text-sm sm:grid-cols-3">
             <div><dt class="text-(--color-ink-muted)">{{ __('sales::gate_pass.column.challan') }}</dt>
+                {{-- ⓘ চালানের পাতা কেবল তার চাবিধারীকে (ওখানে দর ও টাকা); গুদামের লোক যান ডেলিভারির
+                     পাতায় — একই চালান, দাম ছাড়া (লাইভের যাচাই, ২৯ সেপ্টেম্বর ২০২৬) --}}
                 <dd>@if ($pass->challan)
-                        <a class="text-(--color-brand-500) underline-offset-2 hover:underline"
-                           href="{{ route('sales.challan.show', $pass->challan) }}">{{ $pass->challan->document_no }}</a>
+                        @if (auth()->user()?->can('view', $pass->challan))
+                            <a class="text-(--color-brand-500) underline-offset-2 hover:underline"
+                               href="{{ route('sales.challan.show', $pass->challan) }}">{{ $pass->challan->document_no }}</a>
+                        @elseif (auth()->user()?->can('sales.delivery.view'))
+                            <a class="text-(--color-brand-500) underline-offset-2 hover:underline"
+                               href="{{ route('sales.delivery.show', $pass->challan) }}">{{ $pass->challan->document_no }}</a>
+                        @else
+                            {{ $pass->challan->document_no }}
+                        @endif
                     @else — @endif</dd></div>
             <div><dt class="text-(--color-ink-muted)">{{ __('sales::gate_pass.column.customer') }}</dt>
                 <dd>{{ $pass->challan?->customer?->name() ?? '—' }}</dd></div>

@@ -29,6 +29,7 @@ return [
     'new_collection' => 'টাকা আদায়',
     'deliver_against' => 'এই অর্ডারের মাল পাঠান',
     'invoice_against' => 'এই চালানের বিল করুন',
+    'challan_bills' => 'এই চালানের বিল:',
     'collect_against' => 'এই বিলের টাকা নিন',
     'checkout' => 'বিক্রি সম্পূর্ণ করুন',
     'exact' => 'ঠিক টাকা',

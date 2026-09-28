@@ -136,6 +136,28 @@ class DeliveryChallan extends Model implements Drillable, ShowsItselfForSigning
         return $this->vehicle?->registration_no ?? (string) $this->vehicle_no;
     }
 
+    /**
+     * মাল কীভাবে গেল — পাতা আর ছাপার একই উত্তর (লাইভের যাচাই, ২৯ সেপ্টেম্বর ২০২৬)।
+     *
+     * ⓘ নিশ্চিতের আগে এটা বলতেই হয় ([[TransportRule]]), তাই কাগজেও ওঠে: ক্রেতার নিজের গাড়ি হলে
+     * "নিজস্ব পরিবহন", নাহলে বাহকের নাম (লেখা নাম, নয়তো তালিকার বাহক); কিছু না থাকলে ফাঁকা —
+     * গাড়ি ও চালকের ঘর আলাদা ([[vehiclePlate()]])।
+     */
+    public function transportLabel(): string
+    {
+        if ($this->own_transport) {
+            return __('sales::field.transport_own');
+        }
+
+        if (filled($this->carrier_name)) {
+            return (string) $this->carrier_name;
+        }
+
+        return $this->carrier_id !== null
+            ? (string) \App\Modules\Supplier\Models\Supplier::query()->find($this->carrier_id)?->name()
+            : '';
+    }
+
     public function order(): BelongsTo
     {
         return $this->belongsTo(SalesOrder::class, 'sales_order_id');

@@ -142,9 +142,14 @@ class DeliveryChallanController extends Controller implements HasMiddleware
     {
         $challan->load(['lines.product.unit', 'customer', 'warehouse', 'order', 'creator']);
 
+        $bills = app(\App\Modules\Sales\Services\ChallanBills::class);
+
         return view('sales::challan.show', [
             'menu' => $this->menu->forUser($request->user()),
             'challan' => $challan,
+            // ⭐ বিল হয়ে থাকলে বোতামের বদলে বিলের লিংক ([[ChallanBills]])
+            'bills' => $bills->of($challan),
+            'leftToBill' => $bills->leftToBill($challan),
         ]);
     }
 

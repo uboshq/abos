@@ -20,6 +20,7 @@ use App\Modules\Purchase\Services\DirectPurchaseService;
 use App\Modules\Sales\Models\DeliveryChallan;
 use App\Modules\Sales\Models\SalesInvoice;
 use App\Modules\Sales\Models\SalesInvoiceLine;
+use App\Modules\Sales\Services\DeliveryChallanService;
 use App\Modules\Sales\Services\DirectSaleService;
 use App\Modules\Supplier\Models\Supplier;
 use Database\Seeders\DemoSeeder;
@@ -363,6 +364,19 @@ final class TheCostShowedToEveryoneAtTheCounterTest extends TestCase
         };
     }
 
+    /** বিল-না-হওয়া একটা নিশ্চিত চালান — বিলের ফর্মের দরজা মাপতে (বিল হওয়া চালানে ফর্ম খোলে না)। */
+    private function unbilledChallan(): DeliveryChallan
+    {
+        $challans = app(DeliveryChallanService::class);
+
+        return $challans->confirm($challans->create([
+            'customer_id' => $this->challan->customer_id,
+            'warehouse_id' => $this->challan->warehouse_id,
+            'trx_date' => now()->toDateString(),
+            'own_transport' => true,
+        ], [['product_id' => $this->product->id, 'delivered_qty' => '1', 'rate' => '52.10']]));
+    }
+
     /**
      * খরচহীন দরজা: ঠিকানা আর পাতাটা যে এই কাগজ/পণ্যের তার চিহ্ন।
      *
@@ -385,7 +399,8 @@ final class TheCostShowedToEveryoneAtTheCounterTest extends TestCase
             'challan.show' => [route('sales.challan.show', $this->challan), (string) $this->challan->document_no],
             'invoice.index' => [route('sales.invoice.index'), $no],
             // ⓘ ২১ সেপ্টেম্বর থেকে বিলের ফর্ম খোলে কেবল একটা নিশ্চিত চালান বেছে (e0f0c3a7)
-            'invoice.create' => [route('sales.invoice.create', ['delivery_challan_id' => $this->challan->id]), self::CODE],
+            // ⓘ ২৯ সেপ্টেম্বর থেকে বিল হয়ে যাওয়া চালানে ফর্ম খোলে না, চালানে ফেরায় ([[ChallanBills]]) — তাই বিল-না-হওয়া চালান
+            'invoice.create' => [route('sales.invoice.create', ['delivery_challan_id' => $this->unbilledChallan()->id]), self::CODE],
             'challan.create' => [route('sales.challan.create'), self::CODE],
             'order.create' => [route('sales.order.create'), self::CODE],
             'search' => [route('search', ['q' => $no]), $no],

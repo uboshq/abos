@@ -19,6 +19,7 @@ use App\Modules\Inventory\Models\Warehouse;
 use App\Modules\Sales\Http\Requests\SalesInvoiceRequest;
 use App\Modules\Sales\Models\DeliveryChallan;
 use App\Modules\Sales\Models\SalesInvoice;
+use App\Modules\Sales\Services\ChallanBills;
 use App\Modules\Sales\Services\DirectSaleService;
 use App\Modules\Sales\Services\SalesInvoiceService;
 use App\Modules\Sales\Services\TransportRule;
@@ -227,11 +228,23 @@ class SalesInvoiceController extends Controller implements HasMiddleware
      * (রপ্তানি বন্ধ করা হয়েছিল কেবল বোতাম লুকিয়ে)। তাই দরজাটা
      * **এখানে** বন্ধ।
      */
-    public function create(Request $request): View
+    public function create(Request $request): View|RedirectResponse
     {
         $challan = $this->chosenChallan($request);
 
         abort_if($challan === null, 404, __('sales::message.invoice_needs_a_paper'));
+
+        // ⛔ বিল হয়ে গেছে — ফাঁকা ফর্ম নয়, চালানে ফেরত, বিলের নম্বরসহ ([[ChallanBills]])
+        $bills = app(ChallanBills::class);
+
+        if (! $bills->leftToBill($challan)) {
+            return redirect()
+                ->route('sales.challan.show', $challan)
+                ->withErrors(['delivery_challan_id' => __('sales::validation.challan_already_billed', [
+                    'no' => $challan->document_no,
+                    'bills' => $bills->of($challan)->pluck('document_no')->implode(', '),
+                ])]);
+        }
 
         return view('sales::invoice.form', [
             'menu' => $this->menu->forUser($request->user()),

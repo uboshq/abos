@@ -16,7 +16,21 @@
                     </form>
                 @endcan
 
-                @if ($challan->status === \App\Core\Support\DocumentStatus::CONFIRMED)
+                {{-- ⭐ বিল হয়ে থাকলে তার লিংক; বোতাম কেবল বিল করার কিছু বাকি থাকলে ([[ChallanBills]]) --}}
+                @if (($bills ?? collect())->isNotEmpty())
+                    <span class="flex flex-wrap items-center gap-2" data-challan-bills>
+                        <span class="text-sm text-(--color-ink-muted)">{{ __('sales::action.challan_bills') }}</span>
+                        @foreach ($bills as $bill)
+                            @can('view', $bill)
+                                <x-ui.button :href="route('sales.invoice.show', $bill)">{{ $bill->document_no }}</x-ui.button>
+                            @else
+                                <span class="text-sm">{{ $bill->document_no }}</span>
+                            @endcan
+                        @endforeach
+                    </span>
+                @endif
+
+                @if ($challan->status === \App\Core\Support\DocumentStatus::CONFIRMED && ($leftToBill ?? true))
                     @can('create', \App\Modules\Sales\Models\SalesInvoice::class)
                         <x-ui.button tone="primary"
                                      :href="route('sales.invoice.create', ['delivery_challan_id' => $challan->id])">
@@ -48,8 +62,11 @@
                 @foreach ([
                     'sales::field.date' => \App\Core\Support\DateFormat::format($challan->trx_date),
                     'sales::field.warehouse' => $challan->warehouse?->name() ?: '-',
-                    'sales::field.vehicle_no' => $challan->vehicle_no ?: '-',
+                    // ⭐ মাল কীভাবে গেল — ছাপার সাথে একই উত্তর ([[DeliveryChallan::transportLabel()]])
+                    'sales::field.carrier' => $challan->transportLabel() ?: '-',
+                    'sales::field.vehicle_no' => $challan->vehiclePlate() ?: '-',
                     'sales::field.driver_name' => $challan->driver_name ?: '-',
+                    'sales::field.driver_phone' => $challan->driver_phone ?: '-',
                 ] as $label => $value)
                     <div>
                         <dt class="text-(--color-ink-muted)">{{ __($label) }}</dt>

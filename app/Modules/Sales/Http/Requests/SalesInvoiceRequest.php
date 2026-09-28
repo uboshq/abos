@@ -5,8 +5,12 @@ declare(strict_types=1);
 namespace App\Modules\Sales\Http\Requests;
 
 use App\Core\Support\CompanyContext;
+use App\Core\Support\DocumentStatus;
+use App\Modules\Sales\Models\DeliveryChallan;
+use App\Modules\Sales\Services\ChallanBills;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Validator;
 
 /** বিক্রয় বিলের ইনপুট। */
 class SalesInvoiceRequest extends FormRequest
@@ -84,6 +88,63 @@ class SalesInvoiceRequest extends FormRequest
             'lines.*.tax' => ['nullable', 'numeric', 'min:0'],
             'lines.*.narration' => ['nullable', 'string', 'max:500'],
         ];
+    }
+
+    /**
+     * ⛔ চালান ধরে বিল — ঐ চালানের, আর কেবল ঐ চালানের সারি (লাইভের যাচাই, ২৯ সেপ্টেম্বর ২০২৬)।
+     *
+     * ⚠️ `authorize()` কেবল দেখে ঘরটা ভরা কি না। তাই চালানের সারির যোগ ছাড়া একটা হাতে বানানো
+     * POST একই চালানে দ্বিতীয় বিল বানাত — সেবার "বেশি বিল নয়" পাহারা ([[SalesInvoiceService]])
+     * কেবল যোগ থাকা সারি গোনে। ⭐ এখন: চালানটা পাকা ও এই কোম্পানির; বিল করার কিছু বাকি; আর
+     * প্রতিটা সারি ঐ চালানেরই সারি। ⓘ সম্পাদনা (PUT) নিজের বিল ধরে — এই প্রশ্ন ওখানে খাটে না।
+     *
+     * @return list<\Closure(Validator): void>
+     */
+    public function after(): array
+    {
+        if ($this->isMethod('PUT')) {
+            return [];
+        }
+
+        return [function (Validator $validator): void {
+            $challan = DeliveryChallan::query()
+                ->where('status', DocumentStatus::CONFIRMED)
+                ->with('lines')
+                ->find($this->integer('delivery_challan_id'));
+
+            if ($challan === null) {
+                $validator->errors()->add('delivery_challan_id', __('sales::validation.challan_not_billable'));
+
+                return;
+            }
+
+            $bills = app(ChallanBills::class);
+
+            if (! $bills->leftToBill($challan)) {
+                $validator->errors()->add('delivery_challan_id', __('sales::validation.challan_already_billed', [
+                    'no' => $challan->document_no,
+                    'bills' => $bills->of($challan)->pluck('document_no')->implode(', '),
+                ]));
+
+                return;
+            }
+
+            $own = $challan->lines->map(fn ($line) => (int) $line->id)->all();
+
+            foreach ((array) $this->input('lines', []) as $line) {
+                if (! is_array($line) || blank($line['product_id'] ?? null)) {
+                    continue;
+                }
+
+                if (! in_array((int) ($line['delivery_challan_line_id'] ?? 0), $own, true)) {
+                    $validator->errors()->add('lines', __('sales::validation.line_not_on_challan', [
+                        'no' => $challan->document_no,
+                    ]));
+
+                    return;
+                }
+            }
+        }];
     }
 
     /**

@@ -841,8 +841,11 @@ class SalesPrintController extends Controller implements HasMiddleware
             'sales::field.customer' => $challan->customer?->name() ?? '',
             'sales::field.warehouse' => $challan->warehouse?->name() ?? '',
             // বহরের গাড়ি হলে মাস্টারের নম্বরপ্লেট, নাহলে লেখা নম্বরটা
+            // ⭐ নিজস্ব পরিবহন নয়তো বাহক — পাতার সাথে একই উত্তর ([[DeliveryChallan::transportLabel()]])
+            'sales::field.carrier' => $challan->transportLabel(),
             'sales::field.vehicle_no' => $challan->vehiclePlate(),
             'sales::field.driver_name' => $challan->driver_name ?? '',
+            'sales::field.driver_phone' => $challan->driver_phone ?? '',
         ];
     }
 

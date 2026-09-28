@@ -23,6 +23,7 @@ return [
     'new_collection' => 'Collect money',
     'deliver_against' => 'Deliver against this order',
     'invoice_against' => 'Invoice this challan',
+    'challan_bills' => 'Bills of this challan:',
     'collect_against' => 'Collect against this invoice',
     'checkout' => 'Complete sale',
     'exact' => 'Exact',

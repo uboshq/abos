@@ -49,6 +49,10 @@
           class="space-y-4">
         @csrf
         @unless ($isNew) @method('PUT') @endunless
+        {{-- ⓘ চালান ধরে খোলা ফর্ম চালানটা সাথে নেয় — দরজা ওটা দিয়েই সারি মেলায় ([[SalesInvoiceRequest::after()]]) --}}
+        @if ($isNew && $challan)
+            <input type="hidden" name="delivery_challan_id" value="{{ $challan->id }}">
+        @endif
 
         @if ($errors->any())
             <div role="alert"
