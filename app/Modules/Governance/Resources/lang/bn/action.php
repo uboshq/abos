@@ -38,4 +38,5 @@ return [
     'reopened' => 'পুনরায় খোলা',
     'discount_approved' => 'ছাড় অনুমোদিত',
     'overridden' => 'নকল অনুমোদিত',
+    'two_step_reset' => 'দুই ধাপ রিসেট',
 ];

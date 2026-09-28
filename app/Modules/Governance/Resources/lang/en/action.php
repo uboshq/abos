@@ -33,4 +33,5 @@ return [
     'reopened' => 'Reopened',
     'discount_approved' => 'Discount approved',
     'overridden' => 'Duplicate allowed',
+    'two_step_reset' => 'Two-step reset',
 ];
