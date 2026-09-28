@@ -28,6 +28,7 @@ use App\Modules\Supplier\Models\Supplier;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Validation\ValidationException;
+use Tests\Concerns\PutsMoneyInTheTill;
 use Tests\TestCase;
 
 /**
@@ -57,6 +58,7 @@ use Tests\TestCase;
  */
 final class DirectPurchaseLotsFractionsAndReturnsTest extends TestCase
 {
+    use PutsMoneyInTheTill;
     use RefreshDatabase;
 
     private Supplier $supplier;
@@ -80,6 +82,12 @@ final class DirectPurchaseLotsFractionsAndReturnsTest extends TestCase
 
         $till = app(CashTillService::class)->ensurePrimaryTill();
         $this->tillCode = (string) Account::query()->whereKey($till->account_id)->valueOrFail('code');
+
+        /* ⓘ ২৮ সেপ্টেম্বর ২০২৬: খালি নগদ বাক্স থেকে টাকা বেরোয় না (CashOnHand) —
+           কাউন্টারে ৫০০ আর ২০০ টাকা দেওয়া হয়, তাই আজকের তারিখে আগে ৫,০০০ টাকা
+           বসানো। টাকা আসে ৩১০০ মূলধন থেকে; বসানো হয় প্রতিটা `$before` ছবির
+           **আগে**, তাই পাঁচ মিলের নড়াচড়ার অঙ্ক বদলায় না। */
+        $this->putMoneyIn(Account::query()->findOrFail($till->account_id), '5000');
 
         $this->supplier = Supplier::query()->firstOrFail();
         $this->warehouse = Warehouse::query()->where('is_default', true)->firstOrFail();

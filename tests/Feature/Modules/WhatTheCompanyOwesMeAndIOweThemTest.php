@@ -24,6 +24,7 @@ use App\Modules\Supplier\Dashboard\SupplierWidgets;
 use App\Modules\Supplier\Models\Supplier;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\Concerns\PutsMoneyInTheTill;
 use Tests\TestCase;
 
 /**
@@ -45,6 +46,7 @@ use Tests\TestCase;
  */
 class WhatTheCompanyOwesMeAndIOweThemTest extends TestCase
 {
+    use PutsMoneyInTheTill;
     use RefreshDatabase;
 
     private Supplier $alin;
@@ -370,6 +372,14 @@ class WhatTheCompanyOwesMeAndIOweThemTest extends TestCase
      */
     public function test_an_advance_shows_up_as_capital(): void
     {
+        /*
+         * ⓵ ২৮ সেপ্টেম্বর ২০২৬: খালি নগদ বাক্স থেকে টাকা বেরোয় না ([[CashOnHand]]),
+         * আর এখানে প্রধান কাউন্টার থেকে মিলকে ২০ লাখ অগ্রিম যায়। টাকা আসে ৩১০০
+         * মূলধন থেকে, আজকের তারিখে; রিপোর্টটা সরবরাহকারী ধরে মাপে, তাই এই টাকায়
+         * মিলের সারির কোনো সংখ্যা বদলায় না।
+         */
+        $this->putMoneyIn(app(CashTillService::class)->ensurePrimaryTill()->account, '2500000', now()->toDateString());
+
         app(VoucherService::class)->post(
             app(VoucherService::class)->create(
                 ['type' => Voucher::JOURNAL,

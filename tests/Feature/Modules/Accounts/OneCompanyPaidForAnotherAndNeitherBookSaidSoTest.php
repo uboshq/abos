@@ -15,6 +15,7 @@ use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
+use Tests\Concerns\PutsMoneyInTheTill;
 use Tests\TestCase;
 
 /**
@@ -31,6 +32,7 @@ use Tests\TestCase;
  */
 final class OneCompanyPaidForAnotherAndNeitherBookSaidSoTest extends TestCase
 {
+    use PutsMoneyInTheTill;
     use RefreshDatabase;
 
     protected function setUp(): void
@@ -38,6 +40,18 @@ final class OneCompanyPaidForAnotherAndNeitherBookSaidSoTest extends TestCase
         parent::setUp();
 
         $this->seed(DemoSeeder::class);
+
+        /*
+         * ⓵ ২৮ সেপ্টেম্বর ২০২৬: খালি নগদ বাক্স থেকে টাকা বেরোয় না
+         * ([[CashOnHand]]), আর প্রতিটা স্থানান্তর আমাদের (TDEPOT) প্রথম টাকার
+         * খাত থেকে যায় — সবচেয়ে বড়টা ৫,০০০। ⭐ তাই ২০,০০০ টাকা আসে ৩১০০
+         * মূলধন থেকে, আজকের তারিখে, আমাদের কোম্পানির প্রসঙ্গে। ⓘ এই টেস্ট
+         * কেবল চলতি হিসাবের লাইন মাপে, নগদের জের নয়।
+         */
+        [, $alpha] = $this->cast();
+
+        CompanyContext::forCompany((int) $alpha->id,
+            fn () => $this->putMoneyIn($this->money($alpha), '20000', now()->toDateString()));
     }
 
     /**

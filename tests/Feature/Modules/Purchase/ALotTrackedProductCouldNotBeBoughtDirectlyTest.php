@@ -7,6 +7,7 @@ namespace Tests\Feature\Modules\Purchase;
 use App\Core\Support\CompanyContext;
 use App\Models\Company;
 use App\Models\User;
+use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Services\CashTillService;
 use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Inventory\Models\Batch;
@@ -21,6 +22,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Testing\TestResponse;
 use Spatie\Permission\PermissionRegistrar;
 use Tests\Concerns\ChecksTheFiveMatches;
+use Tests\Concerns\PutsMoneyInTheTill;
 use Tests\TestCase;
 
 /**
@@ -46,6 +48,7 @@ use Tests\TestCase;
 final class ALotTrackedProductCouldNotBeBoughtDirectlyTest extends TestCase
 {
     use ChecksTheFiveMatches;
+    use PutsMoneyInTheTill;
     use RefreshDatabase;
 
     private const KEY = 'purchase.bill.create';
@@ -140,8 +143,16 @@ final class ALotTrackedProductCouldNotBeBoughtDirectlyTest extends TestCase
     public function test_with_a_lot_and_expiry_the_goods_enter_that_lot_and_the_five_matches_hold(): void
     {
         $expiry = now()->addYear()->toDateString();
-        $snap = $this->snapshot();
         $till = app(CashTillService::class)->ensurePrimaryTill();
+
+        /*
+         * ⓵ ২৮ সেপ্টেম্বর ২০২৬: খালি নগদ বাক্স থেকে টাকা বেরোয় না (CashOnHand)।
+         * ২০০ নগদে যায় এই টিল থেকে, আজকের তারিখে; টাকা আসে ৩১০০ মূলধন থেকে।
+         * ⓘ মাপের ছবির **আগে** রাখা — পাঁচ মিল আগে-পরের তফাত মাপে, তাই অক্ষত।
+         */
+        $this->putMoneyIn(Account::query()->findOrFail($till->account_id), '1000', now()->toDateString());
+
+        $snap = $this->snapshot();
 
         $this->buy(['batch_no' => 'LOT-A1', 'expiry_date' => $expiry, 'mrp' => '95'], [
             'paid_now' => '200',

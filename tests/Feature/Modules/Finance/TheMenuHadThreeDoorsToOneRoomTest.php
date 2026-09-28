@@ -8,6 +8,7 @@ use App\Core\Module\ModuleDefinition;
 use App\Core\Support\CompanyContext;
 use App\Models\Company;
 use App\Models\User;
+use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Services\CashTillService;
 use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Finance\Models\Deposit;
@@ -16,6 +17,7 @@ use App\Modules\Finance\Services\DepositKindInstaller;
 use App\Modules\Finance\Services\DepositService;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\Concerns\PutsMoneyInTheTill;
 use Tests\TestCase;
 
 /**
@@ -38,6 +40,7 @@ use Tests\TestCase;
  */
 final class TheMenuHadThreeDoorsToOneRoomTest extends TestCase
 {
+    use PutsMoneyInTheTill;
     use RefreshDatabase;
 
     protected function setUp(): void
@@ -211,6 +214,15 @@ final class TheMenuHadThreeDoorsToOneRoomTest extends TestCase
     private function openADeposit(string $issuer): void
     {
         $kind = DepositKind::query()->where('issuer', $issuer)->firstOrFail();
+        $till = app(CashTillService::class)->ensurePrimaryTill()->account_id;
+
+        /*
+         * ⓵ ২৮ সেপ্টেম্বর ২০২৬: খালি নগদ বাক্স থেকে টাকা বেরোয় না
+         * ([[CashOnHand]]), আর আমানতটা খোলা হয় প্রধান কাউন্টারের টাকায়।
+         * ⭐ তাই আগে ২,০০,০০০ টাকা আসে ৩১০০ মূলধন থেকে, আজকের তারিখে।
+         * ⓘ এই টেস্ট মাপে আমানতের যোগফল (১,০০,০০০), নগদের জের নয়।
+         */
+        $this->putMoneyIn(Account::query()->findOrFail($till), '200000', now()->toDateString());
 
         app(DepositService::class)->open([
             'kind_id' => $kind->id,
@@ -220,7 +232,7 @@ final class TheMenuHadThreeDoorsToOneRoomTest extends TestCase
             'return_word' => 'interest',
             'opened_on' => now()->toDateString(),
             'matures_on' => now()->addMonths(2)->toDateString(),
-            'funded_from_account_id' => app(CashTillService::class)->ensurePrimaryTill()->account_id,
+            'funded_from_account_id' => $till,
         ]);
     }
 }

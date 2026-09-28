@@ -11,6 +11,7 @@ use App\Models\ApprovalFlow;
 use App\Models\ApprovalFlowStep;
 use App\Models\Company;
 use App\Models\User;
+use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Models\Cheque;
 use App\Modules\Accounts\Models\Voucher;
 use App\Modules\Accounts\Services\CashTillService;
@@ -24,6 +25,7 @@ use App\Modules\Purchase\Services\DirectPurchaseService;
 use App\Modules\Supplier\Models\Supplier;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\Concerns\PutsMoneyInTheTill;
 use Tests\TestCase;
 
 /**
@@ -40,6 +42,7 @@ use Tests\TestCase;
  */
 final class TheCounterPaidTheMillAndTheBooksNeverHeardTest extends TestCase
 {
+    use PutsMoneyInTheTill;
     use RefreshDatabase;
 
     private User $user;
@@ -62,7 +65,14 @@ final class TheCounterPaidTheMillAndTheBooksNeverHeardTest extends TestCase
         $this->actingAs($this->user);
 
         app(StandardChart::class)->install();
-        app(CashTillService::class)->ensurePrimaryTill();
+        $till = app(CashTillService::class)->ensurePrimaryTill();
+
+        /*
+         * ⓵ ২৮ সেপ্টেম্বর ২০২৬: খালি নগদ বাক্স থেকে টাকা বেরোয় না ([[CashOnHand]]),
+         * আর এখানে কাউন্টার থেকে মিলকে ৬০০ নগদ দেওয়া হয়। টাকা আসে ৩১০০ মূলধন
+         * থেকে, আজকের তারিখে; এই ফাইলে টিলের বা মূলধনের স্থিতি মাপা হয় না।
+         */
+        $this->putMoneyIn(Account::query()->findOrFail($till->account_id), '5000', now()->toDateString());
 
         $this->supplier = Supplier::query()->firstOrFail();
         $this->warehouse = Warehouse::query()->where('is_default', true)->firstOrFail();

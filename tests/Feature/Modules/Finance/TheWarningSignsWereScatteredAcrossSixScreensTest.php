@@ -17,6 +17,7 @@ use App\Modules\Finance\Services\DepositService;
 use App\Modules\Finance\Services\RiskBoard;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\Concerns\PutsMoneyInTheTill;
 use Tests\TestCase;
 
 /**
@@ -33,6 +34,7 @@ use Tests\TestCase;
  */
 final class TheWarningSignsWereScatteredAcrossSixScreensTest extends TestCase
 {
+    use PutsMoneyInTheTill;
     use RefreshDatabase;
 
     private Account $cash;
@@ -243,6 +245,14 @@ final class TheWarningSignsWereScatteredAcrossSixScreensTest extends TestCase
 
     private function deposit(string $reference, string $matures, string $principal): Deposit
     {
+        /*
+         * ⓵ ২৮ সেপ্টেম্বর ২০২৬: খালি নগদ বাক্স থেকে টাকা বেরোয় না ([[CashOnHand]]),
+         * আর জমার টাকা যায় প্রধান কাউন্টার থেকে, খোলার দিনে। টাকা আসে ৩১০০
+         * মূলধন থেকে, ঠিক সেই দিনে আর ঠিক ততটাই; এই ফাইলে মাপা হয় কেবল জমার
+         * ঝুঁকি, টিল বা মূলধনের জের নয়।
+         */
+        $this->putMoneyIn($this->cash, $principal, now()->subMonths(2)->toDateString());
+
         return app(DepositService::class)->open([
             'kind_id' => DepositKind::query()->where('code', 'FDR')->firstOrFail()->id,
             'institution' => 'সোনালী ব্যাংক',

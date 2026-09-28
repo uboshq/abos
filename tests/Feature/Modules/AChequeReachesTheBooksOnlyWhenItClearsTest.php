@@ -335,7 +335,12 @@ final class AChequeReachesTheBooksOnlyWhenItClearsTest extends TestCase
         $dueBefore = $this->due();
 
         $voucher = app(VoucherService::class)->create(
-            ['type' => Voucher::RECEIPT, 'trx_date' => now()->toDateString()],
+            /*
+             * ⓘ `origin` = counter — কাউন্টার নিজে যেভাবে লেখে ([[DirectSaleService]])।
+             * ⚠️ ২৮ সেপ্টেম্বর থেকে হাতের ভাউচার Dr ১১০৪ পায় না
+             * ([[VoucherService::assertNoChequeInHandByHand()]]); কাউন্টারের পায়।
+             */
+            ['type' => Voucher::RECEIPT, 'trx_date' => now()->toDateString(), 'origin' => Voucher::ORIGIN_COUNTER],
             [
                 ['account_id' => StandardChart::find(StandardChart::CHEQUES_IN_HAND)->id, 'debit' => '15000', 'credit' => '0'],
                 ['account_id' => StandardChart::find(StandardChart::RECEIVABLE)->id, 'debit' => '0', 'credit' => '15000',

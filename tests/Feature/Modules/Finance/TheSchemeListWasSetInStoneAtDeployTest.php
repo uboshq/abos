@@ -7,6 +7,7 @@ namespace Tests\Feature\Modules\Finance;
 use App\Core\Support\CompanyContext;
 use App\Models\Company;
 use App\Models\User;
+use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Services\CashTillService;
 use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Finance\Models\Deposit;
@@ -15,6 +16,7 @@ use App\Modules\Finance\Services\DepositKindInstaller;
 use App\Modules\Finance\Services\DepositService;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\Concerns\PutsMoneyInTheTill;
 use Tests\TestCase;
 
 /**
@@ -32,6 +34,7 @@ use Tests\TestCase;
  */
 final class TheSchemeListWasSetInStoneAtDeployTest extends TestCase
 {
+    use PutsMoneyInTheTill;
     use RefreshDatabase;
 
     protected function setUp(): void
@@ -44,6 +47,14 @@ final class TheSchemeListWasSetInStoneAtDeployTest extends TestCase
         $this->actingAs(User::query()->where('email', 'owner@abos.test')->firstOrFail());
 
         app(StandardChart::class)->install();
+
+        /* ⓘ ২৮ সেপ্টেম্বর ২০২৬: খালি নগদ বাক্স থেকে টাকা বেরোয় না (CashOnHand) —
+           ১,০০,০০০ টাকার FDR প্রধান কাউন্টার থেকে যায়, তাই আজকের তারিখে আগে ২,০০,০০০ টাকা
+           বসানো। টাকা আসে ৩১০০ মূলধন থেকে; এই ফাইল কোনো জের মাপে না। */
+        $this->putMoneyIn(
+            Account::query()->findOrFail(app(CashTillService::class)->ensurePrimaryTill()->account_id),
+            '200000',
+        );
 
         // ⓘ ধরনগুলো সিডারে নেই, ডিপ্লয়ের ইনস্টলারে — তাই এখানেই বসাতে হয়
         app(DepositKindInstaller::class)->install();

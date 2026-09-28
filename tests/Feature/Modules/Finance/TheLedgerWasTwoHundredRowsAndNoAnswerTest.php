@@ -14,6 +14,7 @@ use App\Modules\Accounts\Services\VoucherService;
 use App\Modules\Finance\Services\AccountAnalysis;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\Concerns\PutsMoneyInTheTill;
 use Tests\TestCase;
 
 /**
@@ -25,6 +26,7 @@ use Tests\TestCase;
  */
 final class TheLedgerWasTwoHundredRowsAndNoAnswerTest extends TestCase
 {
+    use PutsMoneyInTheTill;
     use RefreshDatabase;
 
     protected function setUp(): void
@@ -44,6 +46,19 @@ final class TheLedgerWasTwoHundredRowsAndNoAnswerTest extends TestCase
         $rent = Account::query()->where('code', StandardChart::RENT)->firstOrFail();
 
         $lastMonth = now()->subMonthNoOverflow()->startOfMonth()->addDays(2)->toDateString();
+
+        /*
+         * ⓵ ২৮ সেপ্টেম্বর ২০২৬: খালি নগদ বাক্স থেকে টাকা বেরোয় না ([[CashOnHand]]),
+         * আর এখানে ভাড়া যায় টাকার খাত থেকে — প্রথমটা গত মাসের তারিখে। টাকা আসে
+         * ৩১০০ মূলধন থেকে, গত মাসের প্রথম দিনে; মাপা হয় কেবল ভাড়ার খাত, যা
+         * এই টাকায় বদলায় না। ⚠️ শুধু এই পরীক্ষায় — নিচেরটা মূলধনই মাপে।
+         */
+        $this->putMoneyIn(
+            Account::query()->money()->postable()->active()->firstOrFail(),
+            '50000',
+            now()->subMonthNoOverflow()->startOfMonth()->toDateString(),
+        );
+
         $this->spend($rent, '5000', $lastMonth);
         $this->spend($rent, '7000', now()->toDateString());
         $this->spend($rent, '1000', now()->toDateString());

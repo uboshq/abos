@@ -7,6 +7,7 @@ namespace Tests\Feature\Modules\Finance;
 use App\Core\Support\CompanyContext;
 use App\Models\Company;
 use App\Models\User;
+use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Services\CashTillService;
 use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Customer\Models\Customer;
@@ -16,6 +17,7 @@ use App\Modules\Finance\Services\HandLoanService;
 use App\Modules\MasterData\Models\Person;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\Concerns\PutsMoneyInTheTill;
 use Tests\TestCase;
 
 /**
@@ -31,6 +33,7 @@ use Tests\TestCase;
  */
 final class TheLoanKnewThePersonButNotTheDealerTest extends TestCase
 {
+    use PutsMoneyInTheTill;
     use RefreshDatabase;
 
     private int $till;
@@ -46,6 +49,13 @@ final class TheLoanKnewThePersonButNotTheDealerTest extends TestCase
 
         app(StandardChart::class)->install();
         $this->till = (int) app(CashTillService::class)->ensurePrimaryTill()->account_id;
+
+        /*
+         * ⓵ ২৮ সেপ্টেম্বর ২০২৬: খালি নগদ বাক্স থেকে টাকা বেরোয় না ([[CashOnHand]]),
+         * আর এখানে চারটা ধারে ১,০০০ করে বেরোয়। টাকা আসে ৩১০০ মূলধন থেকে,
+         * আজকের তারিখে; এই ফাইলে কোনো খাতের স্থিতি মাপা হয় না।
+         */
+        $this->putMoneyIn(Account::query()->findOrFail($this->till), '10000', now()->toDateString());
     }
 
     /**

@@ -17,6 +17,7 @@ use App\Modules\Finance\Services\CashForecast;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Spatie\Permission\Models\Permission;
+use Tests\Concerns\PutsMoneyInTheTill;
 use Tests\TestCase;
 
 /**
@@ -28,6 +29,7 @@ use Tests\TestCase;
  */
 final class TheMonthsPlanNowMeetsTheBooksTest extends TestCase
 {
+    use PutsMoneyInTheTill;
     use RefreshDatabase;
 
     private Account $expense;
@@ -45,6 +47,15 @@ final class TheMonthsPlanNowMeetsTheBooksTest extends TestCase
 
         $this->expense = Account::query()->postable()->where('type', Account::EXPENSE)->orderBy('code')->firstOrFail();
         $this->cash = Account::query()->money()->postable()->active()->orderBy('code')->firstOrFail();
+
+        /*
+         * ⓵ ২৮ সেপ্টেম্বর ২০২৬: খালি নগদ বাক্স থেকে টাকা বেরোয় না
+         * ([[CashOnHand]]), আর প্রতিটা খরচ `$this->cash` থেকে যায় — সবচেয়ে
+         * আগেরটা ২০২৬-০৮-১০-এ। ⭐ তাই ৫০,০০০ টাকা আসে ৩১০০ মূলধন থেকে,
+         * ২০২৬-০৮-০১-এ (অর্থবছরের ভিতরে, প্রথম খরচের আগে)। ⓘ বাজেট বনাম
+         * প্রকৃত কেবল খরচের খাত মাপে; মূলধন সেখানে আসে না।
+         */
+        $this->putMoneyIn($this->cash, '50000', '2026-08-01');
     }
 
     private function spend(string $amount, string $date, ?int $centerId = null): void

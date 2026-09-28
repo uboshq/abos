@@ -8,6 +8,7 @@ use App\Core\Engines\Report\ReportEngine;
 use App\Core\Support\CompanyContext;
 use App\Models\Company;
 use App\Models\User;
+use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Models\CostCenter;
 use App\Modules\Accounts\Models\Voucher;
 use App\Modules\Accounts\Services\CashTillService;
@@ -15,6 +16,7 @@ use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Accounts\Services\VoucherService;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\Concerns\PutsMoneyInTheTill;
 use Tests\TestCase;
 
 /**
@@ -31,6 +33,7 @@ use Tests\TestCase;
  */
 class WhichRouteIsWorthRunningTest extends TestCase
 {
+    use PutsMoneyInTheTill;
     use RefreshDatabase;
 
     private CostCenter $netrakona;
@@ -47,7 +50,15 @@ class WhichRouteIsWorthRunningTest extends TestCase
         $this->actingAs(User::query()->where('email', 'owner@abos.test')->firstOrFail());
 
         app(StandardChart::class)->install();
-        app(CashTillService::class)->ensurePrimaryTill();
+        $till = app(CashTillService::class)->ensurePrimaryTill();
+
+        /*
+         * ⓵ ২৮ সেপ্টেম্বর ২০২৬: খালি নগদ বাক্স থেকে টাকা বেরোয় না ([[CashOnHand]]),
+         * আর এখানে প্রতিটা খরচ প্রধান কাউন্টার থেকে (সবচেয়ে বড়টা ৪,০০০)। টাকা
+         * আসে ৩১০০ মূলধন থেকে, আজকের তারিখে; রিপোর্টটা কেবল আয়-ব্যয়ের খাত
+         * দেখে, তাই এই টাকায় কোনো রুটের সংখ্যা বদলায় না।
+         */
+        $this->putMoneyIn(Account::query()->findOrFail($till->account_id), '20000', now()->toDateString());
 
         $this->netrakona = $this->centre('NTK', 'Netrakona route', 'নেত্রকোনা রুট');
         $this->kendua = $this->centre('KDA', 'Kendua route', 'কেন্দুয়া রুট');

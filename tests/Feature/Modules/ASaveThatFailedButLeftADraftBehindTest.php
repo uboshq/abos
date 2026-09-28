@@ -14,6 +14,7 @@ use App\Modules\Accounts\Services\StandardChart;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Testing\TestResponse;
+use Tests\Concerns\PutsMoneyInTheTill;
 use Tests\TestCase;
 
 /**
@@ -42,6 +43,7 @@ use Tests\TestCase;
  */
 class ASaveThatFailedButLeftADraftBehindTest extends TestCase
 {
+    use PutsMoneyInTheTill;
     use RefreshDatabase;
 
     private Company $company;
@@ -150,6 +152,14 @@ class ASaveThatFailedButLeftADraftBehindTest extends TestCase
      */
     public function test_with_the_number_given_it_saves_and_posts(): void
     {
+        /*
+         * ⓵ ২৮ সেপ্টেম্বর ২০২৬: খালি নগদ বাক্স থেকে টাকা বেরোয় না ([[CashOnHand]]),
+         * আর এই জাবেদার ক্রেডিট পাশটা প্রধান কাউন্টার (৫,০০০)। টাকা আসে ৩১০০
+         * মূলধন থেকে, আজকের তারিখে। ⚠️ শুধু এই পরীক্ষায় — বাকিগুলো ভাউচার
+         * গোনে, আর এখানে কেবল পোস্ট হলো কি না দেখা হয়।
+         */
+        $this->putMoneyIn($this->other(), '10000', now()->toDateString());
+
         $this->submit(['instrument_no' => 'TRX-QA-0001'])
             ->assertSessionHasNoErrors();
 

@@ -15,6 +15,7 @@ use App\Modules\Finance\Models\DepositKind;
 use App\Modules\Finance\Models\Institution;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\Concerns\PutsMoneyInTheTill;
 use Tests\TestCase;
 
 /**
@@ -28,6 +29,7 @@ use Tests\TestCase;
  */
 final class TheTwoFormsStillAskedForTheBankByHandTest extends TestCase
 {
+    use PutsMoneyInTheTill;
     use RefreshDatabase;
 
     protected function setUp(): void
@@ -78,6 +80,11 @@ final class TheTwoFormsStillAskedForTheBankByHandTest extends TestCase
     public function test_a_deposit_adds_a_new_institution_in_the_same_submit(): void
     {
         $from = Account::query()->money()->postable()->active()->firstOrFail();
+
+        // ⓵ ২৮ সেপ্টেম্বর ২০২৬: খালি নগদ বাক্স থেকে টাকা বেরোয় না (CashOnHand)।
+        // আমানতের ১,০০,০০০ যায় এই খাত থেকে, আজকের তারিখে; টাকা আসে ৩১০০ মূলধন থেকে।
+        // ⓘ এখানে কোনো জের মাপা হয় না।
+        $this->putMoneyIn($from, '200000', now()->toDateString());
 
         $page = $this->get(route('finance.deposit.create', ['issuer' => 'bank']))->assertOk();
         $page->assertSee('name="institution_id"', escape: false);

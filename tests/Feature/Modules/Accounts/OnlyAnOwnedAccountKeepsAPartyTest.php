@@ -14,6 +14,7 @@ use App\Modules\Accounts\Services\VoucherService;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Tests\Concerns\PutsMoneyInTheTill;
 use Tests\TestCase;
 
 /**
@@ -47,6 +48,7 @@ use Tests\TestCase;
  */
 final class OnlyAnOwnedAccountKeepsAPartyTest extends TestCase
 {
+    use PutsMoneyInTheTill;
     use RefreshDatabase;
 
     private User $owner;
@@ -116,6 +118,13 @@ final class OnlyAnOwnedAccountKeepsAPartyTest extends TestCase
         $money = (int) Account::query()->money()->postable()->active()
             ->orderBy('code')->value('id');
         $expense = $this->anExpenseAccount();
+
+        /*
+         * ⓵ ২৮ সেপ্টেম্বর ২০২৬: খালি নগদ বাক্স থেকে টাকা বেরোয় না ([[CashOnHand]]),
+         * আর এখানে নগদের খাত থেকে ৪০০ বেরোয়। টাকা আসে ৩১০০ মূলধন থেকে,
+         * আজকের তারিখে; এখানে কেবল কোন সারিতে কোন পক্ষ বসে তা দেখা হয়।
+         */
+        $this->putMoneyIn(Account::query()->findOrFail($money), '5000', now()->toDateString());
 
         $lines = $this->postTwoLines($money, $expense, 'supplier', $this->aSupplierId());
 

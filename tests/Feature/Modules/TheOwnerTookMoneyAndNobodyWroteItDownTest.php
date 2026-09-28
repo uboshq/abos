@@ -20,6 +20,7 @@ use App\Modules\MasterData\Models\Person;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Validation\ValidationException;
+use Tests\Concerns\PutsMoneyInTheTill;
 use Tests\TestCase;
 
 /**
@@ -40,6 +41,7 @@ use Tests\TestCase;
  */
 class TheOwnerTookMoneyAndNobodyWroteItDownTest extends TestCase
 {
+    use PutsMoneyInTheTill;
     use RefreshDatabase;
 
     private Company $company;
@@ -71,6 +73,13 @@ class TheOwnerTookMoneyAndNobodyWroteItDownTest extends TestCase
             'code' => 'P-OWNER',
             'name_en' => 'মালিক',
         ]);
+
+        /*
+         * ⓵ ২৮ সেপ্টেম্বর ২০২৬: খালি নগদ বাক্স থেকে টাকা বেরোয় না (CashOnHand)।
+         * উত্তোলন বসে আজকের তারিখে এই টিল থেকে; টাকা আসে ৩১০০ মূলধন থেকে।
+         * ⓘ টিলের মাপ আগে-পরে ধরে, আর ৩২০০ / খরচের খাত এতে ছোঁয় না।
+         */
+        $this->putMoneyIn($this->cash(), '100000', now()->toDateString());
     }
 
     private function service(): WithdrawalService

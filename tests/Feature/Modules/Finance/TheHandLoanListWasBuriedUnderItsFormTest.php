@@ -7,6 +7,7 @@ namespace Tests\Feature\Modules\Finance;
 use App\Core\Support\CompanyContext;
 use App\Models\Company;
 use App\Models\User;
+use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Services\CashTillService;
 use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Finance\Models\HandLoanAccount;
@@ -15,6 +16,7 @@ use App\Modules\Finance\Services\HandLoanService;
 use App\Modules\MasterData\Models\Person;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\Concerns\PutsMoneyInTheTill;
 use Tests\TestCase;
 
 /**
@@ -31,6 +33,7 @@ use Tests\TestCase;
  */
 final class TheHandLoanListWasBuriedUnderItsFormTest extends TestCase
 {
+    use PutsMoneyInTheTill;
     use RefreshDatabase;
 
     private int $till;
@@ -46,6 +49,11 @@ final class TheHandLoanListWasBuriedUnderItsFormTest extends TestCase
 
         app(StandardChart::class)->install();
         $this->till = (int) app(CashTillService::class)->ensurePrimaryTill()->account_id;
+
+        // ⓵ ২৮ সেপ্টেম্বর ২০২৬: খালি নগদ বাক্স থেকে টাকা বেরোয় না (CashOnHand)।
+        // হাতধার দেওয়া হয় আজকের তারিখে এই টিল থেকে; টাকা আসে ৩১০০ মূলধন থেকে।
+        // ⓘ এখানে টিল বা মূলধনের জের মাপা হয় না, তাই গোনাগুলো অক্ষত।
+        $this->putMoneyIn(Account::query()->findOrFail($this->till), '50000', now()->toDateString());
     }
 
     /**

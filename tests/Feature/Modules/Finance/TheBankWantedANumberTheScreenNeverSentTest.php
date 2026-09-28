@@ -26,6 +26,7 @@ use App\Modules\MasterData\Models\Person;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Validation\ValidationException;
+use Tests\Concerns\PutsMoneyInTheTill;
 use Tests\TestCase;
 
 /**
@@ -65,6 +66,7 @@ use Tests\TestCase;
  */
 class TheBankWantedANumberTheScreenNeverSentTest extends TestCase
 {
+    use PutsMoneyInTheTill;
     use RefreshDatabase;
 
     /** দশটা পোস্ট-পথ — সেবায় `vouchers->create(` ডাকের সংখ্যা। */
@@ -96,6 +98,15 @@ class TheBankWantedANumberTheScreenNeverSentTest extends TestCase
          * আর ব্যর্থতাটা দেখতে প্লাম্বিং ভাঙার মতো লাগত, যা নয়।
          */
         app(DepositKindInstaller::class)->install();
+
+        /*
+         * ⓵ ২৮ সেপ্টেম্বর ২০২৬: খালি নগদ বাক্স থেকে টাকা বেরোয় না
+         * ([[CashOnHand]])। নিচের পথগুলো তিনটা আমানত (৫,০০,০০০ করে) আর দুইটা
+         * ভাড়ার চুক্তি নগদ থেকে খোলে — মোট প্রায় ১৮ লাখ। ⭐ তাই ৫০ লাখ টাকা
+         * আসে ৩১০০ মূলধন থেকে, মাসের প্রথম দিনে — ভাড়ার চুক্তি সেই তারিখেই
+         * খোলে। ⓘ এই টেস্ট কোনো জের মাপে না, কেবল নম্বরটা ভাউচারে বসে কি না।
+         */
+        $this->putMoneyIn($this->cash(), '5000000', now()->startOfMonth()->toDateString());
 
         $this->person = Person::query()->create([
             'company_id' => $this->company->id,

@@ -20,6 +20,7 @@ use App\Modules\MasterData\Models\Person;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Tests\Concerns\PutsMoneyInTheTill;
 use Tests\TestCase;
 
 /**
@@ -47,6 +48,7 @@ use Tests\TestCase;
  */
 class OneWholeMonthOfARealBusinessTest extends TestCase
 {
+    use PutsMoneyInTheTill;
     use RefreshDatabase;
 
     private Company $company;
@@ -207,6 +209,15 @@ class OneWholeMonthOfARealBusinessTest extends TestCase
     {
         $rent = StandardChart::find(StandardChart::RENT);
         $before = $rent->balanceOn();
+
+        /*
+         * ⓵ ২৮ সেপ্টেম্বর ২০২৬: খালি নগদ বাক্স থেকে টাকা বেরোয় না ([[CashOnHand]]),
+         * আর এখানে ১ সেপ্টেম্বরে ৫ লাখ জামানত আর ২০ হাজার ভাড়ার নগদ অংশ বেরোয়।
+         * টাকা আসে ৩১০০ মূলধন থেকে, ১ সেপ্টেম্বরের তারিখে। ⚠️ শুধু এই পরীক্ষায় —
+         * মাসের পরীক্ষাটা হাতের টাকা আর মূলধন নিজেই গোনে; এখানে মাপা হয় কেবল
+         * ভাড়ার খরচ, যা এই টাকায় বদলায় না।
+         */
+        $this->putMoneyIn($this->till, '600000', '2026-09-01');
 
         $contract = app(RentalContractService::class)->open([
             'counterparty' => 'দোকানের মালিক',

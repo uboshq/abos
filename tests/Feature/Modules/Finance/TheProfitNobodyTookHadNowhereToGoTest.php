@@ -19,6 +19,7 @@ use App\Modules\MasterData\Models\Person;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Validation\ValidationException;
+use Tests\Concerns\PutsMoneyInTheTill;
 use Tests\TestCase;
 
 /**
@@ -41,6 +42,7 @@ use Tests\TestCase;
  */
 final class TheProfitNobodyTookHadNowhereToGoTest extends TestCase
 {
+    use PutsMoneyInTheTill;
     use RefreshDatabase;
 
     private User $owner;
@@ -237,11 +239,16 @@ final class TheProfitNobodyTookHadNowhereToGoTest extends TestCase
             'reason' => 'test',
         ]);
 
-        app(WithdrawalService::class)->post(
-            $withdrawal->fresh(),
-            // ⛔ `1101` একটা মাথা, পোস্টযোগ্য খাত নয়
-            Account::query()->money()->where('is_group', false)->firstOrFail(),
-        );
+        // ⛔ `1101` একটা মাথা, পোস্টযোগ্য খাত নয়
+        // ⛔ `1101` একটা মাথা, পোস্টযোগ্য খাত নয়
+        $till = Account::query()->money()->where('is_group', false)->firstOrFail();
+
+        // ⓵ ২৮ সেপ্টেম্বর ২০২৬: খালি নগদ বাক্স থেকে টাকা বেরোয় না (CashOnHand)।
+        // টাকা আসে ৩১০০ মূলধন থেকে, কোনো পক্ষের নাম ছাড়া — তাই বড় অংশীদারের
+        // নামের ক্রেডিট-যোগ অক্ষত; কেবল যে পরীক্ষা তোলে সে-ই রাখে।
+        $this->putMoneyIn($till, $amount, now()->toDateString());
+
+        app(WithdrawalService::class)->post($withdrawal->fresh(), $till);
     }
 
     private function contribute(string $code, string $amount): Person
