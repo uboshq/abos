@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 namespace App\Modules\Approval\Http\Controllers;
 
+use App\Core\Contracts\ShowsItselfForSigning;
 use App\Core\Engines\Approval\ApprovalEngine;
 use App\Core\Engines\Approval\ApprovalSla;
 use App\Core\Engines\Approval\AuthorityService;
 use App\Core\Engines\Approval\BulkApproval;
+use App\Core\Panels\FactRegistry;
 use App\Core\Services\MenuBuilder;
 use App\Http\Controllers\Controller;
 use App\Models\Approval;
@@ -557,6 +559,26 @@ class ApprovalInboxController extends Controller implements HasMiddleware
              */
             'facts' => $mayReadDocument
                 ? ($this->facts->of(collect([$entry]))[$entry->id] ?? [])
+                : [],
+
+            /*
+             * ⭐ কাগজের নিজের সইয়ের পাতা — সারি, মাধ্যম, লেনদেন নম্বর — ২৮ সেপ্টেম্বর ২০২৬।
+             *
+             * ⓘ মালিকের কাজ: সইকারী যেন এই পাতা ছেড়ে না গিয়েই পুরো কাগজটা
+             * দেখেন ([[ShowsItselfForSigning]])। ⚠️ `$document` কাগজ দেখার
+             * অনুমতি না থাকলে আগেই `null` — তাই নিরীক্ষক সারিও পান না।
+             */
+            'sheet' => $sheet = $document instanceof ShowsItselfForSigning
+                ? $document->signingSheet()
+                : null,
+
+            /*
+             * ⓘ যার কাগজ তার খবর — ফোন, ঠিকানা, বকেয়া, বাকির সীমা। মডিউলগুলো
+             * নিজের নিজের অংশ দেয় ([[FactRegistry]], entity `{type}-card`);
+             * অনুমোদন কারও ভিতরে তাকায় না।
+             */
+            'partyCard' => isset($sheet['party'])
+                ? app(FactRegistry::class)->forRecord($sheet['party']['type'].'-card', $sheet['party']['id'])
                 : [],
 
             /*

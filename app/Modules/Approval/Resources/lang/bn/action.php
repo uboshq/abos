@@ -23,4 +23,7 @@ return [
     'previous' => 'আগেরটা',
     'next' => 'পরেরটা',
     'send_back' => 'সংশোধনে ফেরত',
+    // সইয়ের পাতা — [[ShowsItselfForSigning]], ২৮ সেপ্টেম্বর ২০২৬
+    'view_whole_paper' => 'পুরো কাগজ দেখুন',
+    'close' => 'বন্ধ',
 ];

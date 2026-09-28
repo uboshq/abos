@@ -10,7 +10,11 @@ use App\Core\Concerns\HasPublicId;
 use App\Core\Concerns\IsAudited;
 use App\Core\Concerns\ScopedToUserBranch;
 use App\Core\Contracts\Drillable;
+use App\Core\Contracts\ShowsItselfForSigning;
+use App\Core\Services\PartyRegistry;
+use App\Core\Support\DateFormat;
 use App\Core\Support\DocumentStatus;
+use App\Core\Support\Money;
 use App\Models\Branch;
 use App\Models\FinancialYear;
 use App\Models\User;
@@ -27,7 +31,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * ধরনটা শুধু ঠিক করে কোন ফর্মে লেখা হবে ও কী ছাপা হবে। সংরক্ষণ ও
  * পোস্টিং সবার এক, কারণ সবগুলোই শেষমেশ ডেবিট-ক্রেডিটের কয়েকটা সারি।
  */
-class Voucher extends Model implements Drillable
+class Voucher extends Model implements Drillable, ShowsItselfForSigning
 {
     use BelongsToCompany;
     use HasDocumentStatus;
@@ -294,6 +298,89 @@ class Voucher extends Model implements Drillable
     public function isDraft(): bool
     {
         return $this->status === DocumentStatus::DRAFT;
+    }
+
+    /**
+     * সইকারীর পাতায় ভাউচার — ২৮ সেপ্টেম্বর ২০২৬ ([[ShowsItselfForSigning]])।
+     *
+     * ⓘ ভাউচারের নিজের পাতার "বিস্তারিত" অংশ আর সারির টেবিল — একই ঘর, একই
+     * ক্রমে, যাতে সইকারী যা দেখে সই দেন আর পরে যা খোলেন তা এক। ⚠️ লেনদেন
+     * নম্বর আর টাকার খাত আগে: ব্যাংক বা বিকাশের টাকায় সইকারীর প্রথম প্রশ্ন
+     * "টাকাটা সত্যিই এসেছে তো" — আর উত্তর মেলাতে ঠিক এই দুইটাই লাগে।
+     */
+    public function signingSheet(): array
+    {
+        $this->loadMissing(['lines.account', 'branch', 'creator']);
+
+        $parties = app(PartyRegistry::class)->labelsOf(
+            $this->lines
+                ->map(fn (VoucherLine $l) => [(string) $l->party_type, (int) $l->party_id])
+                ->push([(string) $this->party_type, (int) $this->party_id]),
+        );
+
+        /*
+         * ⚠️ `money_account_id` বসে কেবল পোস্টের মুহূর্তে
+         * ([[VoucherService::assertBankReferenceIsFree()]]) — অথচ সইকারী দেখেন
+         * পোস্টের **আগে**। তাই না থাকলে সারি থেকে টাকার খাতটা, ভাউচারের নিজের
+         * পাতা যেভাবে খোঁজে; নাহলে "কোথায়" ঘরটা সই চাওয়া প্রতিটা কাগজে খালি থাকত
+         * (TheSignerSeesThePaperBeforeSigningTest ধরেছে)।
+         */
+        $money = $this->money_account_id === null
+            ? $this->lines->map(fn (VoucherLine $l) => $l->account)
+                ->first(fn (?Account $a) => $a !== null && ($a->isBank() || $a->isMfs() || $a->isCash()))
+            : Account::query()->find($this->money_account_id);
+
+        $way = null;
+
+        if (filled($this->instrument)) {
+            $key = 'accounts::instrument.'.$this->instrument;
+            // ⓘ কাউন্টার এই ঘরে পদ্ধতির কোড বসায় (`BKASH`) — অনুবাদ না থাকলে কোডটাই
+            $way = __($key) === $key ? (string) $this->instrument : __($key);
+        }
+
+        $facts = array_filter([
+            __('accounts::field.date') => DateFormat::format($this->trx_date),
+            __('approval::field.document') => $this->originLabel() ?? $this->typeLabel(),
+            __('approval::field.party') => $parties[$this->party_type.':'.$this->party_id] ?? null,
+            __('accounts::field.instrument') => $way,
+            __('accounts::field.instrument_no') => $this->instrument_no,
+            __('accounts::field.instrument_date') => DateFormat::format($this->instrument_date),
+            __('approval::field.where_money') => $money?->label(),
+            __('core.company.branch') => $this->branch?->name(),
+            __('core.table.narration') => $this->narration,
+            __('core.print.prepared_by') => $this->creator?->name,
+        ], fn ($v) => filled($v));
+
+        $totals = $this->totals();
+
+        return [
+            'facts' => array_map(
+                fn ($label, $value) => ['label' => (string) $label, 'value' => (string) $value],
+                array_keys($facts),
+                $facts,
+            ),
+            'columns' => [
+                ['key' => 'account', 'label' => __('core.print.account')],
+                ['key' => 'party', 'label' => __('approval::field.party')],
+                ['key' => 'narration', 'label' => __('core.table.narration')],
+                ['key' => 'debit', 'label' => __('core.table.debit'), 'numeric' => true],
+                ['key' => 'credit', 'label' => __('core.table.credit'), 'numeric' => true],
+            ],
+            'rows' => $this->lines->map(fn (VoucherLine $l) => [
+                'account' => $l->account?->label(),
+                'party' => $parties[$l->party_type.':'.$l->party_id] ?? null,
+                'narration' => $l->narration,
+                'debit' => bccomp((string) $l->debit, '0', 4) > 0 ? Money::format($l->debit) : null,
+                'credit' => bccomp((string) $l->credit, '0', 4) > 0 ? Money::format($l->credit) : null,
+            ])->values()->all(),
+            'totals' => [
+                'debit' => Money::format($totals['debit']),
+                'credit' => Money::format($totals['credit']),
+            ],
+            'party' => $this->party_type !== null && $this->party_id !== null
+                ? ['type' => (string) $this->party_type, 'id' => (int) $this->party_id]
+                : null,
+        ];
     }
 
     /**

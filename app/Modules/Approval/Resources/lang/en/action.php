@@ -23,4 +23,7 @@ return [
     'previous' => 'Previous',
     'next' => 'Next',
     'send_back' => 'Send back to fix',
+    // The signing sheet — [[ShowsItselfForSigning]], 28 September 2026
+    'view_whole_paper' => 'See the whole paper',
+    'close' => 'Close',
 ];

@@ -10,12 +10,14 @@ use App\Core\Concerns\HasPublicId;
 use App\Core\Concerns\IsAudited;
 use App\Core\Concerns\ScopedToUserBranch;
 use App\Core\Contracts\Drillable;
+use App\Core\Contracts\ShowsItselfForSigning;
 use App\Models\Branch;
 use App\Models\User;
 use App\Modules\Customer\Models\Customer;
 use App\Modules\Inventory\Models\Warehouse;
 use App\Modules\MasterData\Models\Vehicle;
 use App\Modules\Sales\Models\Concerns\TellsTheDeliveryStage;
+use App\Modules\Sales\Support\SalesSigningSheet;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -32,7 +34,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * খতিয়ানে কিছু বসে না। মাল বেরোনো মানে বিক্রি নয় — ফেরত আসতে পারে, আর
  * দাম এখনো ঠিক হয়নি। আয় বসে বিলের দিনে।
  */
-class DeliveryChallan extends Model implements Drillable
+class DeliveryChallan extends Model implements Drillable, ShowsItselfForSigning
 {
     use BelongsToCompany;
     use TellsTheDeliveryStage;
@@ -156,6 +158,12 @@ class DeliveryChallan extends Model implements Drillable
 
     public function drillDocumentNo(): string
     {
+    /** সইকারীর পাতায় — পণ্য, পরিমাণ, ফ্রি, দর, টাকা ([[SalesSigningSheet]])। */
+    public function signingSheet(): array
+    {
+        return SalesSigningSheet::ofChallan($this);
+    }
+
         return $this->document_no;
     }
 

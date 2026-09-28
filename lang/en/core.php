@@ -218,6 +218,11 @@ return [
         'limit' => 'Up to 10 MB. Images, PDF, Excel are fine; programs are not.',
         'unknown_source' => 'Papers cannot be kept against this kind of document.',
         'refused' => 'The file was not accepted — :reason',
+        // Slips — [[AttachmentEngine::SLIP]], 28 September 2026
+        'slip' => 'Bank or bKash slip',
+        'slip_hint' => 'Only a photo (JPG, PNG, WEBP) or a PDF, up to :max.',
+        'slip_too_big' => 'The slip is larger than :max — make it smaller or a PDF and try again.',
+        'slip_wrong_kind' => 'Only a photo (JPG, PNG, WEBP) or a PDF can be a slip, and the file name must match what is inside.',
     ],
 
     'custom_field' => [

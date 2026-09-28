@@ -207,6 +207,17 @@
                 </dl>
             </div>
 
+            {{-- ⭐ কাগজের সারি, মাধ্যম, লেনদেন নম্বর আর পক্ষের খবর — পাতা ছেড়ে না গিয়েই।
+                 ⓘ কারণ [[sheet]]-এর মাথায়; ⚠️ কাগজ দেখার অনুমতি না থাকলে `$sheet` খালি। --}}
+            @if ($sheet !== null)
+                @include('approval::inbox.partials.sheet')
+            @endif
+
+            {{-- ⓘ স্লিপ ও অন্য সংযুক্তি — কাগজ দেখার অনুমতি থাকলেই (`$document` তখনই আসে) --}}
+            @if ($document instanceof \App\Core\Contracts\Drillable)
+                @include('approval::inbox.partials.papers')
+            @endif
+
             {{-- সিদ্ধান্তের ইতিহাস — কোন স্তরে কে কী বলেছেন।
 
                  শুধু চূড়ান্ত অবস্থা রাখলে "তিন নম্বর স্তরে আটকে ছিল কেন"

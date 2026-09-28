@@ -84,4 +84,6 @@ return [
     'fix_and_resend' => 'Fix the paper and confirm it again — amending it asks for a fresh approval on its own.',
     'step_took' => ':hours h',
     'beyond_your_authority' => 'It is your turn, but the amount is past your ceiling — someone above you has to sign.',
+    // The signing sheet — [[ShowsItselfForSigning]], 28 September 2026
+    'more_rows_in_paper' => ':count more rows — see the whole paper.',
 ];

@@ -493,6 +493,13 @@ return [
         'expense_voucher' => Voucher::class,
         'journal_voucher' => Voucher::class,
         'contra_voucher' => Voucher::class,
+        /*
+         * ⓘ 'voucher' — কেবল খুঁজে পাওয়ার জন্য, খাতার নাম নয় (২৮ সেপ্টেম্বর ২০২৬)।
+         * [[Voucher::drillSourceType()]] এই নামটাই দেয়, আর কাগজপত্র (সংযুক্তি) ওই
+         * নামে বসে — নাম না থাকলে ভাউচারের স্লিপ কোনোদিন খুঁজে পাওয়া যেত না।
+         * ⚠️ খাতায় সারি তবুও ধরনের নামে বসে (উপরের পাঁচটা), তাই ডে বুক বদলায় না।
+         */
+        'voucher' => Voucher::class,
         'money_transfer' => MoneyTransfer::class,
         'cash_count' => CashCount::class,
         'money_category' => MoneyCategory::class,

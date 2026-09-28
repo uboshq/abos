@@ -4,14 +4,19 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\Core\Engines\Approval\ApprovalEngine;
 use App\Core\Engines\Attachment\AttachmentEngine;
 use App\Core\Engines\Attachment\AttachmentException;
+use App\Core\Engines\Attachment\NotASlip;
 use App\Core\Engines\Drill\DrillResolver;
+use App\Models\Approval;
 use App\Models\Attachment;
+use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
@@ -49,6 +54,9 @@ class AttachmentController extends Controller
              * সত্যি তা বলা যেত না।
              */
             'file' => ['required', 'file', 'max:10240'],
+
+            // ⓘ `slip` — ব্যাংক বা বিকাশের স্লিপ: কেবল ছবি বা PDF, ৫ MB ([[AttachmentEngine::SLIP]])
+            'kind' => ['nullable', Rule::in(['slip'])],
         ]);
 
         $document = $this->document($validated['source_type'], (int) $validated['source_id']);
@@ -56,6 +64,7 @@ class AttachmentController extends Controller
         $this->authorizeAttaching($document);
 
         $module = $this->drill->moduleFor($validated['source_type']);
+        $slip = ($validated['kind'] ?? null) === 'slip';
 
         if ($module === null) {
             throw ValidationException::withMessages([
@@ -79,7 +88,13 @@ class AttachmentController extends Controller
                 module: $module,
                 entity: $validated['source_type'],
                 entityId: (int) $validated['source_id'],
+                maxBytes: $slip ? AttachmentEngine::SLIP_MAX_BYTES : null,
+                only: $slip ? AttachmentEngine::SLIP : null,
             );
+        } catch (NotASlip $refused) {
+            throw ValidationException::withMessages([
+                'file' => __('core.attachment.slip_'.$refused->reason, ['max' => '5 MB']),
+            ]);
         } catch (AttachmentException $refused) {
             throw ValidationException::withMessages([
                 'file' => __('core.attachment.refused', ['reason' => $refused->getMessage()]),
@@ -102,7 +117,18 @@ class AttachmentController extends Controller
     {
         $document = $this->document($attachment->source_entity, (int) $attachment->source_entity_id);
 
-        $this->authorize('view', $document);
+        /*
+         * ⭐ সইকারী কাগজের চাবি ছাড়াও তার সংযুক্তি খোলেন — ২৮ সেপ্টেম্বর ২০২৬।
+         *
+         * ⛔ ব্যাংক স্লিপ দেখে সই দেওয়াই নিয়ম, অথচ সইকারীর হাতে প্রায়ই ভাউচার
+         * দেখার চাবি থাকে না — তখন স্লিপটা ৪০৩ দিত। ⓘ ছাড় ঠিক অনুমোদনের
+         * পাতার মতোই ([[ApprovalInboxController::show()]]-এর `$mayReadDocument`):
+         * কাগজটার **অপেক্ষমাণ** অনুমোদনে অনুরোধকারী বা সিদ্ধান্তদাতা। ⚠️ সই হয়ে
+         * গেলে বা নিরীক্ষকের জন্য ছাড় নেই — তখন আগের মতো কাগজের নিজের চাবি।
+         */
+        if (! $this->signsFor($document)) {
+            $this->authorize('view', $document);
+        }
 
         if (! $this->attachments->exists($attachment)) {
             abort(404);
@@ -159,6 +185,26 @@ class AttachmentController extends Controller
         }
 
         $this->authorize('update', $document);
+    }
+
+    /** কাগজটার অপেক্ষমাণ কোনো অনুমোদনে এই মানুষটা অনুরোধকারী বা সিদ্ধান্তদাতা কি না। */
+    private function signsFor(Model $document): bool
+    {
+        $user = auth()->user();
+
+        if (! $user instanceof User) {
+            return false;
+        }
+
+        $engine = app(ApprovalEngine::class);
+
+        return Approval::query()
+            ->where('approvable_type', $document::class)
+            ->where('approvable_id', $document->getKey())
+            ->pending()
+            ->get()
+            ->contains(fn (Approval $a) => (int) $a->requested_by === (int) $user->id
+                || $engine->canDecide($a, $user));
     }
 
     /**

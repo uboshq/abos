@@ -76,6 +76,9 @@ class EveryPolicyRuleIsActuallyReachedTest extends TestCase
         'DepositPolicy' => 'একই কারণে',
         'HandLoanAccountPolicy' => 'একই কারণে',
         'RentalContractPolicy' => 'একই কারণে',
+        // ⓘ ২৮ সেপ্টেম্বর ২০২৬ — একই কারণ: স্লিপের কাজে ধরা পড়ল ভাউচারের নীতিই ছিল না, তাই
+        // কাগজ তোলার ঘর আঁকা হত না ([[AVoucherAnswersToTheSameKeysAsItsScreensTest]])
+        'VoucherPolicy' => 'কাগজপত্রের ঘর আর কাগজ নামানোর দরজা থেকে ডাকা হয়; পর্দার পাহারা অনুমতির মিডলওয়্যারে, একই চাবিতে',
 
         /*
          * ⓘ নিচের তিনটা অন্য কারণে — ২১ সেপ্টেম্বর ২০২৬।

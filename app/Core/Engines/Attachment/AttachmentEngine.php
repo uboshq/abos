@@ -76,6 +76,26 @@ final class AttachmentEngine
      */
     private const RAW_IMAGE_CEILING = 2 * 1024 * 1024;
 
+    /**
+     * ব্যাংক বা বিকাশের স্লিপ — কেবল ছবি বা PDF, ২৮ সেপ্টেম্বর ২০২৬ (মালিকের কাজ)।
+     *
+     * ⓘ সাধারণ কাগজের দরজা খোলা-তালিকা (যা নিষিদ্ধ নয় তাই চলে — Excel, Word)।
+     * ⛔ স্লিপ আলাদা: সইকারী ওটা **খুলে দেখেন**, তাই কেবল যা ব্রাউজার নিরাপদে
+     * দেখায়। ⚠️ ধরন ঠিক হয় ফাইলের **বাইট** থেকে (finfo), আর নামের extension-কে
+     * সেই ধরনের সাথে মিলতেই হয় — ছবির নামে PDF বা `.php` নামে ছবি, দুইটাই ফেরে।
+     *
+     * @var array<string, list<string>> আসল mime => যে extension চলে
+     */
+    public const SLIP = [
+        'image/jpeg' => ['jpg', 'jpeg'],
+        'image/png' => ['png'],
+        'image/webp' => ['webp'],
+        'application/pdf' => ['pdf'],
+    ];
+
+    /** ⓘ ফোনের ছবি সাধারণত ২–৪ MB; ৫ MB স্লিপের জন্য যথেষ্ট, আর সার্ভারে বোঝা নয়। */
+    public const SLIP_MAX_BYTES = 5 * 1024 * 1024;
+
     public function __construct(
         private readonly string $disk = 'local',
         private readonly ImageEngine $images = new ImageEngine,
@@ -89,7 +109,13 @@ final class AttachmentEngine
         ?int $replacesId = null,
         ?int $userId = null,
         ?int $maxBytes = null,
+        ?array $only = null,
     ): Attachment {
+        // ⓘ `$only` — কেবল এই ধরনগুলো (যেমন [[SLIP]]); বাকি সব পাহারা তবুও চলে
+        if ($only !== null) {
+            $this->assertOneOf($file, $only, $maxBytes ?? self::DEFAULT_MAX_BYTES);
+        }
+
         $this->assertAllowed($file, $maxBytes ?? self::DEFAULT_MAX_BYTES);
 
         $companyId = CompanyContext::id();
@@ -257,6 +283,28 @@ final class AttachmentEngine
             'mime' => $file->getClientMimeType(),
             'bytes' => (int) Storage::disk($this->disk)->size($path),
         ];
+    }
+
+    /**
+     * অনুমতি-তালিকা — বাইট থেকে ধরন, নামের extension সেই ধরনের হতেই হবে।
+     *
+     * ⚠️ মাপ আগে, ধরন পরে, আর দুইটাই [[NotASlip]] — যাতে মানুষ বাংলায় জানেন কেন।
+     *
+     * @param  array<string, list<string>>  $only
+     */
+    private function assertOneOf(UploadedFile $file, array $only, int $maxBytes): void
+    {
+        if ($file->isValid() && $file->getSize() > $maxBytes) {
+            throw new NotASlip(NotASlip::TOO_BIG);
+        }
+
+        $path = $file->getRealPath();
+        $sniffed = $path === false ? '' : strtolower((string) (new \finfo(FILEINFO_MIME_TYPE))->file($path));
+        $extension = strtolower($file->getClientOriginalExtension());
+
+        if (! isset($only[$sniffed]) || ! in_array($extension, $only[$sniffed], true)) {
+            throw new NotASlip(NotASlip::WRONG_KIND);
+        }
     }
 
     private function assertAllowed(UploadedFile $file, int $maxBytes): void

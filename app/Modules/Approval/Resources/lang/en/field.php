@@ -77,4 +77,7 @@ return [
     'journey' => 'Journey',
     'reason_pick' => 'Choose a reason',
     'what_to_fix' => 'What needs fixing',
+    // The signing sheet — [[ShowsItselfForSigning]], 28 September 2026
+    'sheet' => 'Lines on the paper',
+    'party_card' => 'About the party',
 ];

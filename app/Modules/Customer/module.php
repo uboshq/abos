@@ -13,6 +13,7 @@ use App\Modules\Customer\Dashboard\CustomerDashboard;
 use App\Modules\Customer\Dashboard\CustomerWidgets;
 use App\Modules\Customer\Imports\CustomerImporter;
 use App\Modules\Customer\Models\Customer;
+use App\Modules\Customer\Panels\CustomerCardFacts;
 use App\Modules\Customer\Reports\PartyReports;
 
 return [
@@ -272,6 +273,11 @@ return [
 
     // Control Panel-এ যে সুইচগুলো দেখাবে — নিয়ম ৭।
     'settings' => [
+    // ⓘ সইয়ের পাতায় গ্রাহকের কার্ড — [[CustomerCardFacts]], ২৮ সেপ্টেম্বর ২০২৬
+    'facts' => [
+        CustomerCardFacts::class,
+    ],
+
         [
             'key' => 'customer.require_bn_name',
             'label' => 'customer::settings.require_bn_name',

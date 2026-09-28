@@ -272,5 +272,6 @@
         ⓘ কাগজটা না থাকলে নিরীক্ষার সময় কেবল একটা সংখ্যা থাকে, আর
         "এই দুই হাজার টাকা কীসের" প্রশ্নের উত্তর কারও মনে থাকে না।
     --}}
-    <x-ui.attachments :document="$voucher" />
+    {{-- ⓘ ব্যাংক বা বিকাশের টাকা হলে কাগজটা স্লিপ — কেবল ছবি বা PDF ([[AttachmentEngine::SLIP]]) --}}
+    <x-ui.attachments :document="$voucher" :slip="$bankAccount !== null" />
 </x-layouts.app>

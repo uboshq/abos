@@ -1,4 +1,4 @@
-@props(['document'])
+@props(['document', 'slip' => false])
 
 {{--
     ডকুমেন্টের কাগজপত্র — সরবরাহকারীর বিল, চালানের ছবি, ব্যাংক স্লিপ।
@@ -96,9 +96,17 @@
             <input type="hidden" name="source_type" value="{{ $sourceType }}">
             <input type="hidden" name="source_id" value="{{ $document->getKey() }}">
 
+            {{-- ⭐ ব্যাংক বা বিকাশের টাকার কাগজে স্লিপ — ২৮ সেপ্টেম্বর ২০২৬। ⓘ সার্ভার বাইট দেখে
+                 ধরন ঠিক করে ([[AttachmentEngine::SLIP]]); `accept` কেবল বাছাইটা সহজ করে,
+                 পাহারা নয়। --}}
+            @if ($slip)
+                <input type="hidden" name="kind" value="slip">
+            @endif
+
             {{-- ছবি হলে স্ক্যানের পর্দা খোলে; PDF/Excel-এ কিছুই হয় না
                  ([[components/shell/scanner]])। --}}
             <input type="file" name="file" required
+                   @if ($slip) accept="image/jpeg,image/png,image/webp,application/pdf" @endif
                    x-on:change="$store.scanner.begin($el, 'paper')"
                    class="min-w-0 flex-1 text-sm file:me-2 file:rounded-(--radius-field)
                           file:border file:border-(--color-border) file:bg-(--color-surface-app)
@@ -109,7 +117,7 @@
             {{-- সীমাটা লেখা থাকে, নাহলে বড় ফাইল বেছে জমা দেওয়ার পর
                  ব্যবহারকারী জানতেন সেটা নেওয়া হয়নি --}}
             <span class="w-full text-2xs text-(--color-ink-muted)">
-                {{ __('core.attachment.limit') }}
+                {{ $slip ? __('core.attachment.slip').' — '.__('core.attachment.slip_hint', ['max' => '5 MB']) : __('core.attachment.limit') }}
             </span>
         </form>
     @endif

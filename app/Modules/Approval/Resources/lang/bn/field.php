@@ -78,4 +78,7 @@ return [
     'journey' => 'যাত্রাপথ',
     'reason_pick' => 'একটা কারণ বেছে নিন',
     'what_to_fix' => 'কী ঠিক করতে হবে',
+    // সইয়ের পাতা — [[ShowsItselfForSigning]], ২৮ সেপ্টেম্বর ২০২৬
+    'sheet' => 'কাগজের সারি',
+    'party_card' => 'পক্ষের খবর',
 ];
