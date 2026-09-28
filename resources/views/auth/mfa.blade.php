@@ -65,21 +65,44 @@
                 <h2 class="font-medium">{{ __('auth.mfa_step_one') }}</h2>
                 <p class="mt-1 text-2xs text-(--color-ink-muted)">{{ __('auth.mfa_step_one_note') }}</p>
 
-                {{--
-                    চাবিটা চার-চার ভাগে — হাতে টাইপ করার জন্য।
+                {{-- ⭐ QR — মালিকের অনুরোধে, ২৮ সেপ্টেম্বর ২০২৬।
 
-                    ── কেন QR নয় ─────────────────────────────────────
-                    QR আঁকতে একটা লাইব্রেরি লাগত। প্রতিটা অথেনটিকেটর
-                    অ্যাপে হাতে বসানোর পথ আছে, আর ভাগ করা চাবি টাইপ
-                    করা কঠিন নয়। লাইব্রেরিটা পরে যোগ করলে নিচের
-                    ঠিকানাটাই QR-এ যাবে — কোড বদলাতে হবে না।
-                --}}
-                <code class="mt-3 block rounded-(--radius-field) bg-(--color-surface-app)
+                     ── ⛔ কেন লাগল ────────────────────────────
+                     এই টীকায় আগে লেখা ছিল *"চাবি টাইপ করা কঠিন নয়"*।
+                     ⚠️ মালিক লাইভে প্রথমবারেই ভুল করেছেন — বত্রিশ অক্ষরে
+                     O আর 0, I আর 1 গুলিয়ে যায়, আর কোড মেলে না।
+                     ⓘ ধারণাটা ভুল ছিল, আর ভুলটা ধরা পড়েছে ব্যবহারে।
+
+                     ── ⓘ লাইব্রেরি নয়, নিজেদের ─────────────────────
+                     vendor-এ QR লাইব্রেরি নেই, আর লাইভের ডিপ্লয়
+                     `composer` চালায় না — তাই প্যাকেজ যোগ করলে সেটা
+                     লাইভে পৌঁছাতই না। ⛔ আর বাইরের QR-সেবা মানে গোপন
+                     চাবিটা ইন্টারনেটে পাঠানো, যা এই তালাটারই উল্টো।
+
+                     ⭐ [[QrCode]] সব আঁকে সার্ভারে, অফলাইনে — কোনো JS নেই,
+                     কোনো বাইরের ডাক নেই। ⓘ SVG-তে কোনো ইনলাইন `style` নেই,
+                     তাই CSP-তে কিছু খুলতে হয়নি। --}}
+                <div class="mt-3 flex justify-center">
+                    {!! \App\Core\Support\QrCode::svg($uri, scale: 5, quiet: 4) !!}
+                </div>
+
+                {{-- ⓘ চাবিটা থাকল, নিচে — যাঁর ক্যামেরা কাজ করে না, বা
+                     যিনি ডেস্কটপের অ্যাপ ব্যবহার করেন, তাঁর এটাই পথ। --}}
+                <p class="mt-3 text-center text-2xs text-(--color-ink-muted)">{{ __('auth.mfa_or_type') }}</p>
+
+                <code class="mt-1 block rounded-(--radius-field) bg-(--color-surface-app)
                              px-3 py-3 text-center text-lg tracking-widest">
                     {{ \App\Core\Security\Totp::readable($secret) }}
                 </code>
 
-                <p class="mt-2 break-all text-2xs text-(--color-ink-muted)">{{ $uri }}</p>
+                {{-- ⭐ ঠিকানাটা ক্লিকযোগ্য — ফোনে খুললে অ্যাপ নিজেই ধরে।
+                     ⓘ ডেস্কটপে কিছু হয় না, আর সেটা ক্ষতি নয় — লেখাটা
+                     তখনও পড়া যায়। --}}
+                <p class="mt-2 break-all text-2xs text-(--color-ink-muted)">
+                    <a href="{{ $uri }}" class="text-(--color-link) underline">{{ $uri }}</a>
+                </p>
+
+                <p class="mt-1 text-2xs text-(--color-ink-muted)">{{ __('auth.mfa_uri_hint') }}</p>
 
                 <form method="POST" action="{{ route('mfa.confirm') }}" class="mt-4 space-y-2">
                     @csrf

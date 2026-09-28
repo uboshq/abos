@@ -6,6 +6,7 @@ namespace Tests\Feature\Core;
 
 use App\Core\Security\MfaService;
 use App\Core\Security\Totp;
+use App\Core\Support\QrCode;
 use App\Core\Services\PermissionSyncer;
 use App\Core\Support\CompanyContext;
 use App\Models\AuditTrail;
@@ -166,6 +167,53 @@ final class TheSuperAdminCouldSkipTheSecondDoorTest extends TestCase
         $this->assertNotSame(route('mfa'), $response->headers->get('Location'),
             'সাধারণ ব্যবহারকারীকেও দুই ধাপ বসাতে পাঠানো হচ্ছে — '
             .'যাঁর ফোনে অ্যাপ নেই তিনি কাজই করতে পারবেন না।');
+    }
+
+    /**
+     * ⭐ বসানোর পর্দায় একটা QR আছে, আর তার নিচে চাবিটাও।
+     *
+     * ── ⛔ কেন এটা লাগল, ২৮ সেপ্টেম্বর ২০২৬ ───────────────
+     * মালিক লাইভে বত্রিশ অক্ষরের চাবিটা হাতে লিখতে গিয়ে ভুল
+     * করেছেন (O আর 0), আর কোড মেলেনি — তাই দুই ধাপ সাময়িকভাবে
+     * বন্ধ করতে হয়েছিল।
+     *
+     * ⚠️ চাবিটা **সরানো হয়নি**, আর সেটা ইচ্ছাকৃত: যাঁর ক্যামেরা
+     * কাজ করে না বা যিনি ডেস্কটপের অ্যাপ ব্যবহার করেন, তাঁর ওটাই পথ।
+     */
+    public function test_the_setup_page_shows_a_qr_and_keeps_the_typed_key(): void
+    {
+        app(MfaService::class)->turnOff($this->admin);
+        app(MfaService::class)->begin($this->admin->fresh());
+
+        $page = $this->actingAs($this->admin->fresh())->get(route('mfa'));
+        $page->assertOk();
+
+        $html = $page->getContent();
+
+        $this->assertStringContainsString('<svg ', $html,
+            'বসানোর পর্দায় কোনো QR নেই — মালিককে আবার হাতে লিখতে হবে।');
+
+        /*
+         * ⛔ শুধু `<svg` খোঁজলে দাবিটা অন্ধ হত — পাতায় আইকনও
+         * SVG। ⭐ তাই মিলানো হয় **এই ব্যবহারকারীর নিজের চাবি থেকে
+         * বানানো** QR-এর সাথে, ঘর ধরে।
+         */
+        $user = $this->admin->fresh();
+        $uri = Totp::uri($user->mfa_secret, $user->email, config('app.name'));
+
+        $this->assertStringContainsString(
+            QrCode::svg($uri, scale: 5, quiet: 4),
+            $html,
+            'QR আছে, কিন্তু ওটা এই ব্যবহারকারীর চাবির নয়।',
+        );
+
+        /* ⓘ আর হাতে লেখার চাবিটাও রয়ে গেছে */
+        $this->assertStringContainsString(Totp::readable($user->mfa_secret), $html,
+            'হাতে লেখার চাবিটা পর্দা থেকে উঠে গেছে।');
+
+        /* ⭐ আর ঠিকানাটা ক্লিকযোগ্য */
+        $this->assertStringContainsString('<a href="'.e($uri).'"', $html,
+            'otpauth ঠিকানাটা ক্লিকযোগ্য নয়।');
     }
 
     // ── ⭐ ভুল কোড, আর খরচ হয়ে যাওয়া উদ্ধার-কোড ──────────────────────

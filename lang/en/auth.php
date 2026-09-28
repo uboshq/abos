@@ -133,4 +133,6 @@ return [
     'two_step_reset_done' => 'Their two-step sign-in has been reset. They will set it up again on their next sign-in.',
     'two_step_reset_needs_reason' => 'Say why you are resetting it — this is the answer that stays in the audit trail.',
     'two_step_reset_not_self' => 'Your own two-step cannot be reset from here — use your own screen with your password.',
+    'mfa_or_type' => 'If the camera will not read it, type the key below',
+    'mfa_uri_hint' => 'Opening this link on the phone adds it to the app directly.',
 ];
