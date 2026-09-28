@@ -721,6 +721,41 @@ final class PurchaseBillService
     }
 
     /**
+     * বাতিলে মিলের উপহারও ফেরে — ২৭ সেপ্টেম্বর ২০২৬।
+     *
+     * ── কী ভেঙেছিল ──────────────────────────────────────────────────
+     * [[DirectPurchaseService::bringInGifts()]] উপহারটা (অন্য পণ্য, মিল
+     * বিনামূল্যে দিয়েছে) `:gift` উৎসে ঢোকায়, কিন্তু [[takeBackDirectLines]]
+     * কেবল কেনা মাল আর `:free` ফেরাত। ফলে বাতিল করা বিলের উপহার
+     * গুদামে বসে থাকত — খতিয়ান কেনার আগের অবস্থায় ফিরত, মজুদ ফিরত না,
+     * আর কোনো ভুলও দেখাত না।
+     *
+     * ⓘ ধরা পড়েছে সরাসরি ক্রয়ের প্রমাণ-পরীক্ষায়
+     * (`test_cancelling_a_purchase_also_takes_back_the_gift`)।
+     *
+     * ── কেন `:free`-এর মতোই ────────────────────────────────────────
+     * উপহারও একই বালতিতে বসে (`unplacedFree`), আর `StockService::reverse()`
+     * যে বালতিতে যা ঢুকেছিল সেখান থেকেই ফেরায় — তাই আলাদা কিছু লাগে না।
+     * উপহারটা খরচ হয়ে গেলে `StockService` নিজেই আটকায়, `:free`-এর মতোই।
+     *
+     * ── ⛔ কেন কেবল বাতিলে, সম্পাদনায় নয় ────────────────────────────
+     * [[updatePosted]] কেবল কেনা লাইন আবার ঢোকায়; উপহারের সারিগুলো বিলে
+     * অক্ষত থাকে, আর আবার ঢোকানোর কেউ নেই। ওখানে ফেরালে একটা সম্পাদনাতেই
+     * উপহারটা গুদাম থেকে চিরতরে উবে যেত। পরে বাতিল হলে `reverse()`
+     * শুধু না-ফেরানো চলাচল ধরে, তাই এখানে একবারই ফেরে।
+     */
+    private function takeBackGifts(PurchaseBill $bill, Carbon $date, string $reason): void
+    {
+        $this->stock->reverse(
+            sourceType: PurchaseBill::STOCK_SOURCE.':gift',
+            sourceId: $bill->id,
+            reversedType: PurchaseBill::STOCK_SOURCE.':gift:cancel',
+            date: $date,
+            narration: $reason,
+        );
+    }
+
+    /**
      * ফ্রি মাল নিজের ভাণ্ডারে ঢোকে — বিক্রয়ের মজুদে নয়।
      *
      * ── কেন ব্যয়-স্তরে কিছু যায় না ──────────────────────────────────
@@ -1072,6 +1107,7 @@ final class PurchaseBillService
         return DB::transaction(function () use ($bill, $reason, $date) {
             if ($bill->status === DocumentStatus::CONFIRMED) {
                 $this->takeBackDirectLines($bill, $date, $reason);
+                $this->takeBackGifts($bill, $date, $reason);
 
                 $this->posting->reverse(
                     sourceType: PurchaseBill::drillSourceType(),
