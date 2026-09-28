@@ -68,6 +68,9 @@
                     {{ __('governance::message.no_field_changes') }}
                 </p>
             @else
+                {{-- ⛔ মানগুলো ঘরের পাহারা মেনে — ২৮ সেপ্টেম্বর ২০২৬। ⓘ অডিট প্রতিটা বদল
+                     রাখে, ক্রয়মূল্য আর পরিচয়পত্রের নম্বরসহ; আগে এই পাতা সেগুলো চাবি ছাড়াই
+                     দেখাত। এখন [[FieldSecurity]] যা লুকায়, এখানেও লুকানো থাকে। --}}
                 <x-ui.table
                     :empty="__('governance::message.no_field_changes')"
                     :rows="$trail->changes"
@@ -75,9 +78,9 @@
                         ['key' => 'field', 'label' => __('governance::field.field'), 'width' => '14rem',
                          'render' => fn ($c) => $c->field],
                         ['key' => 'old_value', 'label' => __('governance::field.old_value'),
-                         'render' => fn ($c) => $c->old_value ?? '—'],
+                         'render' => fn ($c) => \App\Core\Security\FieldSecurity::show($trail->auditable_type, $c->field, $c->old_value ?? '—')],
                         ['key' => 'new_value', 'label' => __('governance::field.new_value'),
-                         'render' => fn ($c) => $c->new_value ?? '—'],
+                         'render' => fn ($c) => \App\Core\Security\FieldSecurity::show($trail->auditable_type, $c->field, $c->new_value ?? '—')],
                     ]" />
             @endif
         </section>

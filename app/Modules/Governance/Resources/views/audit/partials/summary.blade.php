@@ -11,9 +11,10 @@
         @foreach ($changes->take(3) as $change)
             <span class="rounded-(--radius-field) bg-(--color-surface-hover) px-1.5 py-0.5 text-2xs">
                 {{ $change->field }}:
-                <span class="text-(--color-ink-muted)">{{ \Illuminate\Support\Str::limit($change->old_value ?? '—', 14) }}</span>
+                {{-- ⛔ ঘরের পাহারা মেনে ([[FieldSecurity]]) — তালিকাতেও ক্রয়মূল্য চাবি ছাড়া নয় --}}
+                <span class="text-(--color-ink-muted)">{{ \Illuminate\Support\Str::limit((string) \App\Core\Security\FieldSecurity::show($trail->auditable_type, $change->field, $change->old_value ?? '—'), 14) }}</span>
                 →
-                {{ \Illuminate\Support\Str::limit($change->new_value ?? '—', 14) }}
+                {{ \Illuminate\Support\Str::limit((string) \App\Core\Security\FieldSecurity::show($trail->auditable_type, $change->field, $change->new_value ?? '—'), 14) }}
             </span>
         @endforeach
 
