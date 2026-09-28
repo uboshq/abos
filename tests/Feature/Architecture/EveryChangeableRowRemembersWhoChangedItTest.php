@@ -7,6 +7,9 @@ namespace Tests\Feature\Architecture;
 use App\Core\Concerns\IsAudited;
 use App\Models\Company;
 use App\Models\Setting;
+use App\Models\User;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Foundation\Auth\User as Authenticatable;
 use Tests\TestCase;
 
 /**
@@ -169,46 +172,30 @@ class EveryChangeableRowRemembersWhoChangedItTest extends TestCase
      */
     public function test_no_model_quietly_leaves_the_audit_trail(): void
     {
-        $unaudited = [];
-
-        foreach ($this->modelFiles() as $file) {
-            $src = (string) file_get_contents($file);
-
-            /*
-             * ⛔ নোঙরটা ছিল `\nclass` — তাই `final class` কোনোদিন ধরা
-             * পড়েনি। ২১ সেপ্টেম্বর ২০২৬, অডিটে ধরা।
-             *
-             * ⚠️ আর ফাঁকটা তাত্ত্বিক ছিল না: [[VoucherBillShare]] ঠিক
-             * ওখান দিয়েই বেরিয়ে গেছে — **টাকার টেবিল, অডিট ছাড়া**।
-             * ⓘ সে রাখে কোন ক্রয় বিলের বিপরীতে কত বসল, আর ভাউচার
-             * সম্পাদনায় প্রতিবার সারিগুলো মুছে নতুন করে লেখা হয়। অর্থাৎ
-             * সরবরাহকারীর বিলের মধ্যে টাকা সরত, কোনো হিসাব না রেখে।
-             *
-             * ⓘ `abstract` বাদ — ওরা নিজেরা কোনো সারি রাখে না।
-             */
-            if (! preg_match('/\n(?:final\s+)?class (\w+) extends .*Model\b/', $src, $m)) {
-                continue;
-            }
-
-            /*
-             * লাইনের শুরুতে, মন্তব্যের ভেতরে নয়।
-             *
-             * প্রথম খসড়ায় এখানে `str_contains($src, 'use IsAudited;')`
-             * ছিল, আর পাহারাটা ভাঙতে গিয়েই ধরা পড়ল: ট্রেইটটা মন্তব্য
-             * করে দিলে (`// use IsAudited;`) লেখাটা ফাইলে থেকেই যায়,
-             * তাই পাহারাটা **সবুজ থাকত** — অর্থাৎ ঠিক যে ভুলটা ধরার
-             * জন্য এটা লেখা, সেটাই ধরত না।
-             */
-            if (preg_match('/^[ \t]*use IsAudited;/m', $src)) {
-                continue;
-            }
-
-            if (! preg_match('/^namespace ([^;]+);/m', $src, $ns)) {
-                continue;
-            }
-
-            $unaudited[] = $ns[1].'\\'.$m[1];
-        }
+        /*
+         * ⭐ "মডেল কি না" — প্রশ্নটা এখন PHP-কে করা হয়, লেখার চেহারাকে নয়।
+         *
+         * ── ⛔ কী ভাঙা ছিল — অডিট §৬, ২৭ সেপ্টেম্বর ২০২৬ ─────────────
+         * নোঙরটা ছিল `extends .*Model` — লেখায় "Model" শব্দটা খোঁজা। ⚠️
+         * তাই `class User extends Authenticatable` কোনোদিন **মডেল বলেই
+         * গোনা হয়নি**: কেউ [[User]] থেকে `use IsAudited;` তুলে দিলে পাহারাটা
+         * সবুজ থাকত — আর যে সারি (কে কাকে কোন চাবি দিল, কাকে বন্ধ করল)
+         * সবচেয়ে বেশি খোঁজা হয়, সেটাই নিঃশব্দে খাতার বাইরে যেত।
+         *
+         * ⓘ আগের দুই ফাঁকও একই রোগের: `\nclass` নোঙর `final class` দেখত
+         * না (২১ সেপ্টেম্বর, [[VoucherBillShare]] — টাকার টেবিল, অডিট
+         * ছাড়া), আর `str_contains('use IsAudited;')` মন্তব্য-করা ট্রেইটও
+         * গুনত। ⛔ তিনবারই প্রশ্নটা লেখার চেহারাকে, আর তিনবারই চেহারা বদলেছে।
+         *
+         * ⭐ এখন: ফাইল থেকে কেবল ক্লাসের নাম (PSR-4), বাকিটা রিফ্লেকশন —
+         * `Model`-এর যেকোনো বংশধর (Authenticatable, Pivot, আরেক মডেল
+         * থেকে জন্মানো), গোটা `app/` জুড়ে। ট্রেইট `class_uses_recursive()`
+         * দিয়ে: মন্তব্য গোনে না, আর মা-ক্লাস থেকে পাওয়া অডিটও গোনে।
+         */
+        $unaudited = array_values(array_filter(
+            $this->modelClasses(),
+            fn (string $class) => $this->leavesNoTrail($class),
+        ));
 
         sort($unaudited);
         $expected = array_keys(self::EXEMPT);
@@ -252,21 +239,125 @@ class EveryChangeableRowRemembersWhoChangedItTest extends TestCase
         }
     }
 
-    /** @return list<string> */
-    private function modelFiles(): array
+    /**
+     * ⭐ "কিছু পেয়েছি" — পাহারাটা সত্যিই মডেলগুলো দেখছে (অডিট §৬, ২৭ সেপ্টেম্বর ২০২৬)।
+     *
+     * ⚠️ উপরের দাবি তালিকা মেলায়। খোঁজাটা একদিন কিছুই না পেলে "অডিটহীন"
+     * তালিকা খালি হত — আর তখন লাল হত কেবল EXEMPT-এর দিকটা, *"তালিকায়
+     * আছে অথচ অডিটে"* বলে: ⛔ ভুল বার্তা, আর মানুষ ছাড়ের তালিকাই মুছে দিতেন।
+     *
+     * ⭐ তাই সংখ্যা আর নাম, দুইটাই: ২৭ সেপ্টেম্বর ২০২৬-এ ২০৩টা মডেল।
+     * ⓘ নামগুলোর মধ্যে [[User]] ইচ্ছাকৃত — সে-ই একমাত্র `extends
+     * Authenticatable`, অর্থাৎ ঠিক যাকে পুরনো খোঁজা দেখত না।
+     */
+    public function test_the_guard_actually_sees_the_models(): void
     {
-        $files = [];
+        $models = $this->modelClasses();
+
+        $this->assertGreaterThan(150, count($models),
+            'মডেল পাওয়া গেল মাত্র '.count($models).'টা (২৭ সেপ্টেম্বর ছিল ২০৩) — খোঁজাটা ভেঙেছে।');
+
+        foreach ([User::class, Setting::class, Company::class] as $named) {
+            $this->assertContains($named, $models,
+                "{$named} মডেলের তালিকায় নেই — পাহারাটা তাকে দেখছেই না।");
+        }
+    }
+
+    /**
+     * ⛔ ইচ্ছাকৃত ভুল নমুনা — লগইনের মডেল, অডিট ছাড়া। এটা ধরা পড়তেই হবে।
+     *
+     * ⓘ নমুনাটা যায় **ঠিক সেই দুই প্রশ্ন দিয়ে** যা পাহারা নিজে করে
+     * ([[isAModel()]], [[leavesNoTrail()]]) — আলাদা করে লেখা নকল দিয়ে নয়,
+     * নাহলে নকলটা কামড়াত আর আসলটা ঘুমাত।
+     *
+     * ⚠️ উল্টো দিকও: অডিটওয়ালা একই গড়নের নমুনা **ছাড়া** পেতে হবে —
+     * নাহলে "সবই ধরে" পাহারাও এখানে সবুজ থাকত।
+     */
+    public function test_a_login_model_without_the_trail_is_caught(): void
+    {
+        $bare = get_class(new class extends Authenticatable {});
+
+        $this->assertTrue($this->isAModel($bare),
+            '`extends Authenticatable` আবার মডেল বলে গোনা হচ্ছে না — অডিট §৬-এর ফাঁকটা ফিরেছে।');
+        $this->assertTrue($this->leavesNoTrail($bare),
+            'অডিট ছাড়া লগইন-মডেল পাহারা পেরিয়ে গেছে।');
+
+        $audited = get_class(new class extends Authenticatable
+        {
+            use IsAudited;
+        });
+
+        $this->assertFalse($this->leavesNoTrail($audited),
+            'অডিটওয়ালা মডেলকেও অডিটহীন বলছে — পাহারাটা চোখ বুজে সব ধরছে।');
+
+        $this->assertFalse($this->isAModel(self::class), 'মডেল নয় এমন ক্লাসও মডেল বলে গোনা হচ্ছে।');
+
+        // ⓘ ফাইল-ছাঁকনিও একই নমুনায়: `final`/`readonly` ক্লাস চোখে পড়ে, অ্যারে-ফেরানো ফাইল পড়ে না
+        $this->assertTrue($this->declaresAClass("<?php\nnamespace X;\n\nfinal class Y extends Authenticatable\n{\n}\n"));
+        $this->assertTrue($this->declaresAClass("<?php\nnamespace X;\n\nreadonly final class Y extends Z\n{\n}\n"));
+        $this->assertFalse($this->declaresAClass("<?php\n\nreturn ['x' => Y::class];\n"));
+    }
+
+    /**
+     * প্রতিটা মডেল — গোটা `app/`, নাম ফাইল থেকে (PSR-4), "মডেল কি না" PHP থেকে।
+     *
+     * @return list<class-string<Model>>
+     */
+    private function modelClasses(): array
+    {
+        $models = [];
 
         $walk = new \RecursiveIteratorIterator(
             new \RecursiveDirectoryIterator(app_path(), \FilesystemIterator::SKIP_DOTS)
         );
 
         foreach ($walk as $f) {
-            if ($f->isFile() && $f->getExtension() === 'php' && str_contains($f->getPathname(), 'Models')) {
-                $files[] = $f->getPathname();
+            if (! $f->isFile() || $f->getExtension() !== 'php') {
+                continue;
+            }
+
+            $src = (string) file_get_contents($f->getPathname());
+
+            /*
+             * ⚠️ আগে দেখা: ফাইলটা ক্লাস ঘোষণা করে কি না।
+             *
+             * ⓘ `module.php`, রুট আর ভাষার ফাইল অ্যারে ফেরায়। ⛔ ওদের নাম
+             * ধরে `class_exists()` ডাকলে অটোলোডার ফাইলটা `require` করে
+             * **চালিয়ে দিত** — পাহারা পড়ার কথা, চালানোর নয়।
+             */
+            if (! $this->declaresAClass($src) || ! preg_match('/^namespace ([^;]+);/m', $src, $ns)) {
+                continue;
+            }
+
+            $class = $ns[1].'\\'.$f->getBasename('.php');
+
+            if (class_exists($class) && $this->isAModel($class)) {
+                $models[] = $class;
             }
         }
 
-        return $files;
+        sort($models);
+
+        return $models;
+    }
+
+    /** ⓘ লাইনের শুরুতে `class X` — `final`, `abstract`, `readonly` যেকোনো ক্রমে; মন্তব্যের `* class` নয়। */
+    private function declaresAClass(string $source): bool
+    {
+        return preg_match('/^[ \t]*(?:(?:final|abstract|readonly)\s+)*class\s+\w+/m', $source) === 1;
+    }
+
+    /** ⭐ মডেল = `Model`-এর যেকোনো বংশধর, বিমূর্ত নয় (বিমূর্ত নিজে কোনো সারি রাখে না)। */
+    private function isAModel(string $class): bool
+    {
+        $reflection = new \ReflectionClass($class);
+
+        return $reflection->isSubclassOf(Model::class) && ! $reflection->isAbstract();
+    }
+
+    /** ⓘ অডিট নেই — নিজের, মা-ক্লাসের বা ট্রেইটের ভেতরের, কোথাও। */
+    private function leavesNoTrail(string $class): bool
+    {
+        return ! in_array(IsAudited::class, class_uses_recursive($class), true);
     }
 }
