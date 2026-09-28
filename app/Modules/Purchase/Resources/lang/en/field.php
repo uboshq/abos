@@ -213,9 +213,12 @@ return [
     /*
      * The receipt block.
      *
-     * 'vat_part_of_cost' is a sentence, not a label, and that is the
-     * point: the words themselves say the VAT is inside the cost, not
-     * something added on top. A bare 'VAT' left people adding it twice.
+     * 'vat_recoverable' is a sentence, not a label, and that is the
+     * point: the words say the VAT is inside the total, not something
+     * added on top, and that it is recoverable (2120), not goods cost.
+     * A bare 'VAT' left people adding it twice. Until 27 Sep 2026 it
+     * was 'vat_part_of_cost', "part of the cost" - the opposite of what
+     * the books do (owner).
      *
      * Three of these are not on the screen: 'this_receipt',
      * 'free_received' and 'to_pay_supplier'. They came from the first
@@ -229,7 +232,7 @@ return [
      */
     'this_receipt' => 'This receipt',
     'sub_total_goods' => 'Sub total (goods)',
-    'vat_part_of_cost' => 'VAT — part of the cost',
+    'vat_recoverable' => 'VAT — within the total, recoverable (not cost)',
     'free_received' => 'Free received',
     'to_pay_supplier' => 'To pay this supplier',
 
