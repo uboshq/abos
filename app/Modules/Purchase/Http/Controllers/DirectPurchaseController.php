@@ -392,6 +392,16 @@ class DirectPurchaseController extends Controller implements HasMiddleware
                     && blank($request->input('carrier_name')))],
             'carrier_name' => ['nullable', 'string', 'max:120'],
             'transport_cost' => ['nullable', 'numeric', 'min:0'],
+
+            /*
+             * গোটা বিলের ছাড় — টাকায় বা শতাংশে (মালিকের ছবি, সিদ্ধান্ত ক)।
+             * ⓘ ভাগটা হয় [[DirectPurchaseService::spreadBillDiscount()]]-এ;
+             * মোটের চেয়ে বড় ছাড়ও সেখানেই থামে, কারণ মোটটা সারি থেকে কষতে হয়।
+             */
+            'bill_discount' => ['nullable', 'numeric', 'min:0',
+                Rule::when($request->input('bill_discount_mode') === 'percent', ['max:100'])],
+            'bill_discount_mode' => ['nullable', Rule::in(['amount', 'percent'])],
+
             'vehicle_no' => ['nullable', 'string', 'max:40'],
             'driver_name' => ['nullable', 'string', 'max:120'],
 

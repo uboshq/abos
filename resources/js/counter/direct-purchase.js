@@ -81,6 +81,12 @@ export default function directPurchase({
         carrierName: '',
         transportCost: '',
         vehicleNo: '',
+
+        /* গোটা বিলের ছাড় — টাকায় বা শতাংশে (মালিকের সিদ্ধান্ত ক, ২৭ সেপ্টেম্বর ২০২৬)।
+           ⓘ ছাড়টা সারিগুলোর খরচে ভাগ হয় — `billShares`, সার্ভারের
+           [[DirectPurchaseService::spreadBillDiscount()]]-এর হুবহু। */
+        billDiscount: '',
+        billDiscountMode: 'amount',
         driverName: '',
 
         /* এই সরবরাহকারীর কাছ থেকে কোন পণ্য গতবার কত দরে —
@@ -234,6 +240,8 @@ export default function directPurchase({
                     carrierId: this.carrierId,
                     carrierName: this.carrierName,
                     transportCost: this.transportCost,
+                    billDiscount: this.billDiscount,
+                    billDiscountMode: this.billDiscountMode,
                     vehicleNo: this.vehicleNo,
                     driverName: this.driverName,
                     nextKey: this.nextKey,
@@ -315,6 +323,8 @@ export default function directPurchase({
                 this.carrierId = d.carrierId ?? '';
                 this.carrierName = d.carrierName ?? '';
                 this.transportCost = d.transportCost ?? '';
+                this.billDiscount = d.billDiscount ?? '';
+                this.billDiscountMode = d.billDiscountMode === 'percent' ? 'percent' : 'amount';
                 this.vehicleNo = d.vehicleNo ?? '';
                 this.driverName = d.driverName ?? '';
                 this.nextKey = d.nextKey ?? (this.lines.length + 1);
@@ -1019,6 +1029,8 @@ export default function directPurchase({
             this.carrierId = '';
             this.carrierName = '';
             this.transportCost = '';
+            this.billDiscount = '';
+            this.billDiscountMode = 'amount';
             this.vehicleNo = '';
             this.driverName = '';
 
@@ -1044,14 +1056,11 @@ export default function directPurchase({
            পর্দায় ০ দেখাত, অথচ খতিয়ানে বসত পুরো অঙ্ক, আর
            "মোট দেয়" দুই জায়গায় দুই রকম হত। */
         lineTax(line) {
-            const base = (Number(line.qty) || 0) * (Number(line.rate) || 0);
-
-            return this.taxOn(base - (Number(line.discount) || 0), line.vat_mode, line.tax, line);
+            return this.taxOn(this.lineGoods(line) - this.billShareOf(line), line.vat_mode, line.tax, line);
         },
 
         lineNet(line) {
-            const base = (Number(line.qty) || 0) * (Number(line.rate) || 0);
-            const net = base - (Number(line.discount) || 0);
+            const net = this.lineGoods(line) - this.billShareOf(line);
 
             /* দামের ভিতরের ভ্যাটে মোট বাড়ে না; দরেই ওটা আছে। */
             return line.tax_inclusive && line.vat_mode === 'product'
@@ -1065,9 +1074,64 @@ export default function directPurchase({
         },
 
         get subTotal() {
-            return this.lines.reduce(
-                (s, l) => s + (Number(l.qty) || 0) * (Number(l.rate) || 0) - (Number(l.discount) || 0), 0,
-            );
+            return this.lines.reduce((s, l) => s + this.lineGoods(l), 0);
+        },
+
+        /** সারির মাল — দর × পরিমাণ − সারির নিজের ছাড়; বিলের ছাড়ের আগে। */
+        lineGoods(line) {
+            return (Number(line.qty) || 0) * (Number(line.rate) || 0) - (Number(line.discount) || 0);
+        },
+
+        /* ⓘ পয়সা পর্যন্ত, অর্ধেক উপরে — সার্ভারের `Money::round()`।
+           ⚠️ EPSILON ছাড়া ১.০০৫ ভাসমান বিন্দুতে ১.০০৪৯… হয়ে নিচে নামত। */
+        paisa(value) {
+            return Math.sign(value) * Math.round((Math.abs(value) + Number.EPSILON) * 100) / 100;
+        },
+
+        /** গোটা বিলের ছাড়, টাকায় — শতাংশ হলে মালের মোট থেকে কষা। */
+        get billDiscountAmount() {
+            const given = Number(this.billDiscount) || 0;
+
+            if (given <= 0) return 0;
+
+            return this.paisa(this.billDiscountMode === 'percent' ? this.subTotal * given / 100 : given);
+        },
+
+        /* ⛔ মোটের চেয়ে বড় ছাড় — সার্ভার থামায়, পর্দা আগেই বলে। */
+        get billDiscountTooBig() {
+            return this.billDiscountAmount > this.paisa(this.subTotal) + 0.001;
+        },
+
+        /*
+         * ⭐ প্রতিটা সারির ভাগ — সারির মালের অনুপাতে, পয়সায় গোল, আর
+         * শেষ যে সারির মাল শূন্যের বেশি সে বাকিটা নেয়। ⚠️ নিয়মটা
+         * সার্ভারের হুবহু; না মিললে সারির ভ্যাট পর্দায় এক আর খাতায়
+         * আরেক হত।
+         */
+        get billShares() {
+            const amount = this.billDiscountAmount;
+            const goods = this.lines.map(l => this.lineGoods(l));
+            const total = goods.reduce((s, g) => s + g, 0);
+
+            if (amount <= 0 || total <= 0 || this.billDiscountTooBig) return goods.map(() => 0);
+
+            const last = goods.reduce((at, g, i) => (g > 0 ? i : at), -1);
+            let left = amount;
+
+            return goods.map((g, i) => {
+                if (g <= 0) return 0;
+
+                const share = i === last ? this.paisa(left) : this.paisa(amount * g / total);
+                left -= share;
+
+                return share;
+            });
+        },
+
+        billShareOf(line) {
+            const i = this.lines.indexOf(line);
+
+            return i < 0 ? 0 : (this.billShares[i] || 0);
         },
 
         get taxTotal() {
@@ -1105,7 +1169,7 @@ export default function directPurchase({
            কমেন্টে লেখা: পর্দায় যোগ করে খতিয়ানে না বসালে
            সংখ্যাটা নীরবে মিথ্যা হয়। */
         get netPayable() {
-            return this.subTotal + this.taxTotal;
+            return this.subTotal - (this.billDiscountTooBig ? 0 : this.billDiscountAmount) + this.taxTotal;
         },
 
         /* এই বিলে কত বাকি — আগে এটার নাম ছিল `balanceDue`।

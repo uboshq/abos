@@ -255,6 +255,137 @@ final class DirectPurchaseCostsLandRightTest extends TestCase
         ]);
     }
 
+    // ── ৫ক · গোটা বিলের ছাড় (মালিকের সিদ্ধান্ত ক, ২৭ সেপ্টেম্বর ২০২৬) ───────
+
+    /**
+     * বিলের ছাড় সারিগুলোর খরচে ভাগ হয় — মালের অনুপাতে, শেষ সারি বাকিটা।
+     *
+     * হাতে কষা:
+     * ```
+     * A ৩ × ১০০ · B ৭ × ১০০ · C ১ × ১০০ · D ১ × ১০০ → মাল ১২০০
+     * বিলের ছাড় ১০০:
+     *   A ১০০ × ৩০০/১২০০ = ২৫            → নেট ২৭৫
+     *   B ১০০ × ৭০০/১২০০ = ৫৮.৩৩৩৩ → ৫৮.৩৩ → নেট ৬৪১.৬৭
+     *   C ১০০ × ১০০/১২০০ =  ৮.৩৩৩৩ →  ৮.৩৩ → নেট  ৯১.৬৭
+     *   D বাকি ১০০ − ২৫ − ৫৮.৩৩ − ৮.৩৩ = ৮.৩৪ → নেট  ৯১.৬৬
+     * ১১২০ মজুদ +১১০০ · ২১১১ প্রদেয় −১১০০ · আলাদা কোনো আয়ের খাত নড়ে না
+     *
+     * ⓘ D ইচ্ছে করে: অনুপাতে গোল করা চারটা ভাগের যোগ ৯৯.৯৯ — বাকি পয়সাটা
+     * শেষ সারি না নিলে এখানেই ধরা পড়ে।
+     * ```
+     *
+     * ⛔ ছাড়টা আয়ে গেলে গুদামের মাল ১০০ টাকা দামি বসত, আর লাভটা আসত কেনার
+     * দিনে। ⛔ শেষ সারি বাকিটা না নিলে স্তরে ৯৯৯.৯৯ আর খাতায় ১০০০।
+     */
+    public function test_a_bill_discount_is_spread_into_the_goods_cost_to_the_paisa(): void
+    {
+        $before = $this->snapshot();
+
+        $bill = $this->buy([
+            'payment_term' => 'credit',
+            'bill_discount' => '100',
+            'lines' => [
+                ['product_id' => $this->a->id, 'qty' => '3', 'rate' => '100', 'tax' => '0'],
+                ['product_id' => $this->b->id, 'qty' => '7', 'rate' => '100', 'tax' => '0'],
+                ['product_id' => $this->c->id, 'qty' => '1', 'rate' => '100', 'tax' => '0'],
+                ['product_id' => $this->g->id, 'qty' => '1', 'rate' => '100', 'tax' => '0'],
+            ],
+        ]);
+
+        $this->assertSame(
+            ['25.0000', '58.3300', '8.3300', '8.3400'],
+            $bill->lines->sortBy('id')->map(fn ($l) => bcadd((string) $l->discount, '0', 4))->values()->all(),
+            'বিলের ছাড় সারিগুলোতে হাতে কষা ভাগে বসেনি — অনুপাত, গোল, নাকি শেষ সারির বাকিটা ভেঙেছে।',
+        );
+        $this->assertSame(0, bccomp((string) $bill->discount, '100', 4),
+            "বিলে ছাড়ের যোগফল {$bill->discount}, লেখা ছিল ১০০ — ভাগে পয়সা হারিয়েছে বা বেড়েছে।");
+        $this->assertSame(0, bccomp((string) $bill->total, '1100', 4),
+            "বিলের মোট {$bill->total}, হাতে কষা ১১০০।");
+
+        $this->assertFiveMatches(
+            before: $before,
+            ledger: [
+                StandardChart::INVENTORY => '1100',
+                StandardChart::PAYABLE => '-1100',
+            ],
+            layers: [
+                $this->a->id => ['3', '275'],
+                $this->b->id => ['7', '641.67'],
+                $this->c->id => ['1', '91.67'],
+                $this->g->id => ['1', '91.66'],
+            ],
+            supplier: '-1100',
+        );
+    }
+
+    /**
+     * শতাংশে লেখা ছাড় সার্ভার নিজে কষে, আর "পণ্য অনুযায়ী" ভ্যাট ছাড়ের পরের দামে।
+     *
+     * হাতে কষা (১৫% বাইরের):
+     * ```
+     * A ১০ × ১০০ = ১০০০ · বিলের ছাড় ১০% = ১০০ → নেট ৯০০
+     * ভ্যাট ৯০০ × ১৫% = ১৩৫ (১৫০ নয়) → মোট ১০৩৫
+     * ১১২০ +৯০০ · ২১২০ +১৩৫ · ২১১১ −১০৩৫
+     * ```
+     */
+    public function test_a_percent_bill_discount_is_worked_out_on_the_server_and_lowers_the_vat_base(): void
+    {
+        $tax = Tax::query()->create([
+            'company_id' => $this->company->id,
+            'code' => 'VAT15-OUT',
+            'name_en' => 'VAT 15%',
+            'name_bn' => 'ভ্যাট ১৫%',
+            'rate' => '15',
+            'kind' => 'vat',
+            'is_inclusive' => false,
+            'is_active' => true,
+        ]);
+
+        $this->a->forceFill(['tax_id' => $tax->id])->save();
+
+        $before = $this->snapshot();
+
+        $bill = $this->buy([
+            'payment_term' => 'credit',
+            'bill_discount' => '10',
+            'bill_discount_mode' => 'percent',
+            'lines' => [['product_id' => $this->a->id, 'qty' => '10', 'rate' => '100']],
+        ]);
+
+        $this->assertSame(0, bccomp((string) $bill->tax, '135', 4),
+            "ভ্যাট {$bill->tax}, হাতে কষা ১৩৫ — ছাড়ের আগের দামে কষা হয়েছে, নাকি শতাংশটা টাকা ধরা হয়েছে।");
+
+        $this->assertFiveMatches(
+            before: $before,
+            ledger: [
+                StandardChart::INVENTORY => '900',
+                StandardChart::VAT_PAYABLE => '135',
+                StandardChart::PAYABLE => '-1035',
+            ],
+            layers: [$this->a->id => ['10', '900']],
+            supplier: '-1035',
+        );
+    }
+
+    /** ⛔ মালের মোটের চেয়ে বড় ছাড় থামে — আর কিছুই বসে না। */
+    public function test_a_bill_discount_over_the_goods_total_is_refused_and_posts_nothing(): void
+    {
+        $bills = PurchaseBill::query()->withTrashed()->count();
+        $entries = LedgerEntry::query()->count();
+
+        $this->post(route('purchase.direct.store'), [
+            'supplier_id' => $this->supplier->id,
+            'warehouse_id' => $this->warehouse->id,
+            'trx_date' => now()->toDateString(),
+            'payment_term' => 'credit',
+            'bill_discount' => '100.01',
+            'lines' => [['product_id' => $this->a->id, 'qty' => '1', 'rate' => '100', 'tax' => '0']],
+        ])->assertSessionHasErrors('bill_discount');
+
+        $this->assertSame($bills, PurchaseBill::query()->withTrashed()->count(), '⛔ বাড়তি ছাড়ে থেমেও বিল থেকে গেছে।');
+        $this->assertSame($entries, LedgerEntry::query()->count(), '⛔ বাড়তি ছাড়ে থেমেও খাতায় সারি বসেছে।');
+    }
+
     // ── ৬ · লরির ভাড়া ─────────────────────────────────────────────────
 
     /**

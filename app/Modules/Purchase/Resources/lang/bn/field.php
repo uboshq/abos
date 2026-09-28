@@ -228,6 +228,9 @@ return [
      */
     'this_receipt' => 'এই রসিদে',
     'sub_total_goods' => 'উপমোট (মাল)',
+    'bill_discount' => 'বিলের ছাড়',
+    'bill_discount_amount' => '৳',
+    'bill_discount_percent' => '%',
     'vat_recoverable' => 'ভ্যাট — মোটের মধ্যেই, ফেরতযোগ্য (খরচ নয়)',
     'free_received' => 'ফ্রি পাওয়া গেল',
     'to_pay_supplier' => 'এই সরবরাহকারীকে দিতে হবে',

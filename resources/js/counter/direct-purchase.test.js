@@ -328,3 +328,76 @@ describe('লট — কেবল লট ধরা সারিতে', () => {
         expect(focused).toEqual(['expiry', 'mrp', 'search'])
     })
 })
+
+/*
+ * গোটা বিলের ছাড় — মালিকের সিদ্ধান্ত (ক), ২৭ সেপ্টেম্বর ২০২৬।
+ *
+ * ⭐ ভাগের নিয়ম সার্ভারের হুবহু ([[DirectPurchaseService::spreadBillDiscount()]]):
+ * সারির মালের অনুপাতে, পয়সায় গোল, শেষ সারি বাকিটা। ⚠️ না মিললে সারির
+ * ভ্যাট পর্দায় এক আর খাতায় আরেক — তাই অঙ্কগুলো সার্ভারের পরীক্ষার সাথে এক।
+ */
+describe('গোটা বিলের ছাড়', () => {
+    const line = (qty, rate, over = {}) => ({ qty, rate, discount: '0', vat_mode: 'none', tax: 0, ...over })
+
+    it('মালের অনুপাতে ভাগ হয়, আর যোগফল হুবহু লেখা ছাড়', () => {
+        const c = counter()
+        c.lines = [line('3', '100'), line('7', '100')]
+        c.billDiscount = '100'
+
+        expect(c.billShares).toEqual([30, 70])
+        expect(c.netPayable).toBe(900)
+    })
+
+    it('তিন ভাগে না মিললে শেষ সারি বাকি পয়সাটা নেয়', () => {
+        const c = counter()
+        c.lines = [line('1', '100'), line('1', '100'), line('1', '100')]
+        c.billDiscount = '100'
+
+        expect(c.billShares).toEqual([33.33, 33.33, 33.34])
+    })
+
+    it('শতাংশে লিখলে মালের মোট থেকে কষা হয়', () => {
+        const c = counter()
+        c.lines = [line('4', '250', { discount: '100' })]
+        c.billDiscountMode = 'percent'
+        c.billDiscount = '10'
+
+        // ⓘ সারির নিজের ছাড়ের পরে: ১০০০ − ১০০ = ৯০০, তার ১০% = ৯০
+        expect(c.billDiscountAmount).toBe(90)
+        expect(c.netPayable).toBe(810)
+    })
+
+    it('মোটের চেয়ে বড় ছাড় ভাগ হয় না, আর পর্দা সেটা বলে', () => {
+        const c = counter()
+        c.lines = [line('1', '100')]
+        c.billDiscount = '100.01'
+
+        expect(c.billDiscountTooBig).toBe(true)
+        expect(c.billShares).toEqual([0])
+        expect(c.netPayable).toBe(100)
+    })
+
+    it('"পণ্য অনুযায়ী" ভ্যাট ছাড়ের পরের দামে কষা হয়', () => {
+        const c = counter({ vatEnabled: true })
+        c.lines = [line('10', '100', { vat_mode: 'product', tax_rate: 15, tax_inclusive: false })]
+        c.billDiscount = '200'
+
+        // ⓘ (১০০০ − ২০০) × ১৫% = ১২০, ১৫০ নয়
+        expect(c.taxTotal).toBeCloseTo(120, 6)
+        expect(c.netPayable).toBeCloseTo(920, 6)
+    })
+
+    it('সব মুছলে ছাড়ও মোছে — পরের ক্রয়ে আগেরটা বসে থাকে না', () => {
+        const c = counter()
+        c.$refs = {}
+        c.$nextTick = (fn) => fn()
+        c.lines = [line('1', '100')]
+        c.billDiscount = '10'
+        c.billDiscountMode = 'percent'
+
+        c.clearAll()
+
+        expect(c.billDiscount).toBe('')
+        expect(c.billDiscountMode).toBe('amount')
+    })
+})

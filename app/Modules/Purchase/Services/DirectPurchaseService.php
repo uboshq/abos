@@ -6,6 +6,7 @@ namespace App\Modules\Purchase\Services;
 
 use App\Core\Engines\Approval\HeldForApproval;
 use App\Core\Support\CompanyContext;
+use App\Core\Support\Money;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Models\Cheque;
 use App\Modules\Accounts\Models\Voucher;
@@ -79,6 +80,8 @@ final class DirectPurchaseService
         if ($lines === []) {
             throw ValidationException::withMessages(['lines' => __('purchase::validation.no_lines')]);
         }
+
+        $lines = $this->spreadBillDiscount($lines, $data);
 
         /*
          * ── ⛔ তিনটা ধাপ, একটা নয় — ১৮ সেপ্টেম্বর ২০২৬ ──────────────────
@@ -198,6 +201,83 @@ final class DirectPurchaseService
      * @param  list<array<string, mixed>>  $lines
      * @return list<array<string, mixed>>
      */
+    /**
+     * গোটা বিলের ছাড় সারিগুলোর খরচে ভাগ হয় — মালিকের সিদ্ধান্ত (ক), ২৭ সেপ্টেম্বর ২০২৬।
+     *
+     * ── কেন সারিতে, আলাদা আয়ের খাতে নয় ────────────────────────────────
+     * ছাড়টা মাল কেনারই দাম কমায়, তাই মজুদের দামও কমে (IAS 2 — নেট দরে
+     * মজুদ)। আলাদা খাতে গেলে গুদামের মাল বেশি দামে বসত, আর লাভটা আসত
+     * কেনার দিনে, বেচার দিনে নয়।
+     *
+     * ── কীভাবে ভাগ ─────────────────────────────────────────────────────
+     * প্রতিটা সারির নিজের নেট (দর × পরিমাণ − সারির ছাড়) অনুপাতে, পয়সা
+     * পর্যন্ত গোল; ⭐ শেষ সারি বাকিটা নেয়, তাই যোগফল হুবহু লেখা ছাড়টাই।
+     * ভাগটা সারির `discount`-এ যোগ হয় — সেখান থেকে খরচের স্তর, খতিয়ান
+     * আর ভ্যাট আগের মতোই চলে ([[DirectPurchaseCostsLandRightTest]])।
+     *
+     * ⓘ ভ্যাট: "পণ্য অনুযায়ী" সারিতে ভ্যাট কষা হয় ছাড়ের পরের নেটে — বিলে
+     * দেখানো ছাড় করযোগ্য মূল্যও কমায়। পর্দাও ঠিক এভাবেই কষে
+     * (`direct-purchase.js` · `billShare()`), তাই দুই জায়গায় একই অঙ্ক।
+     *
+     * ⓘ শতাংশে লিখলে অঙ্কটা **এখানেই** কষা হয় — পর্দার কষা সংখ্যা বিশ্বাস
+     * করা হয় না।
+     *
+     * @param  list<array<string, mixed>>  $lines
+     * @param  array<string, mixed>  $data
+     * @return list<array<string, mixed>>
+     */
+    private function spreadBillDiscount(array $lines, array $data): array
+    {
+        $given = (string) ($data['bill_discount'] ?? '');
+
+        if (! is_numeric($given) || bccomp($given, '0', 4) <= 0) {
+            return $lines;
+        }
+
+        $nets = array_map(
+            fn (array $l) => bcsub(bcmul((string) $l['qty'], (string) $l['rate'], 4), (string) ($l['discount'] ?? '0'), 4),
+            $lines,
+        );
+        $total = array_reduce($nets, fn (string $s, string $n) => bcadd($s, $n, 4), '0');
+
+        $amount = ($data['bill_discount_mode'] ?? 'amount') === 'percent'
+            ? Money::round(bcdiv(bcmul($total, $given, 6), '100', 6))
+            : Money::round($given);
+
+        if (bccomp($amount, '0', 4) <= 0) {
+            return $lines;
+        }
+
+        if (bccomp($amount, $total, 4) > 0) {
+            throw ValidationException::withMessages([
+                'bill_discount' => __('purchase::validation.bill_discount_over_total', ['total' => Money::round($total)]),
+            ]);
+        }
+
+        // ⓘ শেষ যে সারির নেট শূন্যের বেশি — সে বাকিটা নেয়
+        $last = null;
+
+        foreach ($nets as $i => $net) {
+            if (bccomp($net, '0', 4) > 0) {
+                $last = $i;
+            }
+        }
+
+        $left = $amount;
+
+        foreach ($nets as $i => $net) {
+            if (bccomp($net, '0', 4) <= 0) {
+                continue;
+            }
+
+            $share = $i === $last ? $left : Money::round(bcdiv(bcmul($amount, $net, 8), $total, 8));
+            $left = bcsub($left, $share, 4);
+            $lines[$i]['discount'] = bcadd((string) ($lines[$i]['discount'] ?? '0'), $share, 4);
+        }
+
+        return $lines;
+    }
+
     private function billLines(array $lines): array
     {
         return array_map(fn (array $line) => [

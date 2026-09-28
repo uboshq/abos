@@ -81,6 +81,39 @@
                         <dd class="num" x-text="money(subTotal)"></dd>
                     </div>
 
+                    {{-- ⭐ গোটা বিলের ছাড় — মালিকের ছবির `Discount [amount or %]`
+                         (সিদ্ধান্ত ক, ২৭ সেপ্টেম্বর ২০২৬)। ⓘ ছাড়টা সারিগুলোর
+                         খরচে ভাগ হয়, আলাদা খাতে যায় না — ভাগের নিয়ম
+                         [[DirectPurchaseService::spreadBillDiscount()]]-এ, আর
+                         পর্দা ঠিক সেটাই কষে (`billShares`)। ⚠️ শতাংশে লিখলেও
+                         সার্ভার নিজে কষে; পর্দার অঙ্ক কেবল আগে দেখানো। --}}
+                    <div class="flex items-center justify-between gap-2">
+                        <dt class="text-(--color-ink-muted)">{{ __('purchase::field.bill_discount') }}</dt>
+                        <dd class="flex items-center gap-1">
+                            <select name="bill_discount_mode" x-model="billDiscountMode"
+                                    aria-label="{{ __('purchase::field.bill_discount') }}"
+                                    class="h-(--spacing-field-dense) rounded-(--radius-field) border
+                                           border-(--color-border) bg-(--color-surface-card) px-1 text-2xs">
+                                <option value="amount">{{ __('purchase::field.bill_discount_amount') }}</option>
+                                <option value="percent">{{ __('purchase::field.bill_discount_percent') }}</option>
+                            </select>
+                            <input type="number" step="0.01" min="0" inputmode="decimal"
+                                   name="bill_discount" x-model="billDiscount"
+                                   aria-label="{{ __('purchase::field.bill_discount') }}"
+                                   class="num h-(--spacing-field-dense) w-24 rounded-(--radius-field)
+                                          border border-(--color-border) bg-(--color-surface-card)
+                                          px-2 text-end text-2xs">
+                        </dd>
+                    </div>
+                    <div x-show="billDiscountAmount > 0" x-cloak class="flex justify-between">
+                        <dt class="text-(--color-ink-muted)"></dt>
+                        <dd class="num" :class="billDiscountTooBig ? 'text-(--color-danger)' : ''"
+                            x-text="'− ' + money(billDiscountAmount)"></dd>
+                    </div>
+                    @error('bill_discount')
+                        <p class="text-end text-2xs text-(--color-danger)">{{ $message }}</p>
+                    @enderror
+
                     @if ($show['vat'])
                         {{-- ⛔ ২৭ সেপ্টেম্বর ২০২৬ (মালিক): আগে লেখা ছিল "খরচেরই অংশ", অথচ ভ্যাট বসে
                              ফেরতযোগ্য ২১২০-এ, মালের খরচে নয়। এখন দুই কথাই বলে — মোটের

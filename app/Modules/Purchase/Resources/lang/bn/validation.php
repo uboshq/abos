@@ -25,6 +25,7 @@ return [
     'unknown_receipt_line' => 'চালানের লাইনটা এই কোম্পানির তালিকায় নেই।',
     'no_financial_year' => ':date তারিখটা কোনো খোলা অর্থবছরে পড়ে না।',
     'discount_over_line' => 'ছাড় লাইনের টাকার চেয়ে বেশি হতে পারে না।',
+    'bill_discount_over_total' => 'বিলের ছাড় মালের মোট (৳:total)-এর চেয়ে বেশি হতে পারে না।',
     'not_a_number' => 'সংখ্যার ঘরে সংখ্যা দিন।',
     'negative_amount' => 'টাকার ঘর ঋণাত্মক হতে পারে না।',
     'quantity_must_be_positive' => 'পরিমাণ শূন্যের বেশি হতে হবে (:field)।',

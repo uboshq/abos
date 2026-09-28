@@ -232,6 +232,9 @@ return [
      */
     'this_receipt' => 'This receipt',
     'sub_total_goods' => 'Sub total (goods)',
+    'bill_discount' => 'Bill discount',
+    'bill_discount_amount' => 'Tk',
+    'bill_discount_percent' => '%',
     'vat_recoverable' => 'VAT — within the total, recoverable (not cost)',
     'free_received' => 'Free received',
     'to_pay_supplier' => 'To pay this supplier',

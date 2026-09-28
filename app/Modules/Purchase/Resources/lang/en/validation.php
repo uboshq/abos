@@ -17,6 +17,7 @@ return [
     'unknown_receipt_line' => 'That receipt line is not in this company\'s list.',
     'no_financial_year' => ':date does not fall in any open financial year.',
     'discount_over_line' => 'A discount cannot exceed the line amount.',
+    'bill_discount_over_total' => 'The bill discount cannot exceed the goods total (:total).',
     'not_a_number' => 'Please enter a number.',
     'negative_amount' => 'An amount cannot be negative.',
     'quantity_must_be_positive' => 'Quantity must be greater than zero (:field).',
