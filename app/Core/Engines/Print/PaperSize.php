@@ -21,6 +21,9 @@ final class PaperSize
 {
     public const A4 = 'a4';
 
+    // ⓘ আধা পাতা — গেট পাসের জন্য (মালিক, ২৮ সেপ্টেম্বর ২০২৬)
+    public const A5 = 'a5';
+
     public const THERMAL_80 = '80mm';
 
     public const THERMAL_58 = '58mm';
@@ -38,6 +41,7 @@ final class PaperSize
     {
         return match ($name) {
             self::A4 => new self(self::A4, 'A4', 12, 10, false),
+            self::A5 => new self(self::A5, 'A5', 9, 9, false),
 
             // থার্মাল প্রিন্টারে ছাপার প্রস্থ কাগজের চেয়ে কম — ৮০mm রোলে
             // ৭২mm, ৫৮mm রোলে ৪৮mm। পুরো প্রস্থ ধরে নিলে ডান দিকের লেখা
@@ -46,7 +50,7 @@ final class PaperSize
             self::THERMAL_58 => new self(self::THERMAL_58, [58, 3000], 2, 7.5, true),
 
             default => throw new InvalidArgumentException(
-                "Unknown paper size '{$name}'. Use a4, 80mm or 58mm."
+                "Unknown paper size '{$name}'. Use a4, a5, 80mm or 58mm."
             ),
         };
     }
@@ -105,7 +109,7 @@ final class PaperSize
     /** @return list<string> */
     public static function all(): array
     {
-        return [self::A4, self::THERMAL_80, self::THERMAL_58];
+        return [self::A4, self::A5, self::THERMAL_80, self::THERMAL_58];
     }
 
     /**

@@ -20,6 +20,7 @@ use App\Modules\Inventory\Services\IssuedLots;
 use App\Modules\MasterData\Models\Location;
 use App\Modules\Sales\Models\Collection;
 use App\Modules\Sales\Models\DeliveryChallan;
+use App\Modules\Sales\Models\GatePass;
 use App\Modules\Sales\Models\PrintJob;
 use App\Modules\Sales\Models\SalesInvoice;
 use App\Modules\Sales\Models\SalesOrder;
@@ -71,6 +72,7 @@ class SalesPrintController extends Controller implements HasMiddleware
         return [
             new Middleware('can:sales.invoice.view', only: ['invoice', 'draft']),
             new Middleware('can:sales.challan.view', only: ['challan', 'gatepass']),
+            new Middleware('can:sales.gate_pass.view', only: ['gatePassDocument']),
             new Middleware('can:sales.order.view', only: ['order', 'deliveryOrder']),
             new Middleware('can:sales.collection.view', only: ['receipt']),
         ];
@@ -390,6 +392,42 @@ class SalesPrintController extends Controller implements HasMiddleware
 
         return $this->pdf($request, $doc, '0', $challan->document_no, document: $challan,
             paperSetting: 'sales.print.paper.challan', target: 'challan');
+    }
+
+    /**
+     * ⭐ গেট পাস — নিজের কাগজ, রওনার মুহূর্তে তৈরি ([[GatePassService]]), আধা পাতায় (A5)।
+     *
+     * ⓘ দাম নেই — দারোয়ান মেলান গাড়িতে যা আছে কাগজে তা-ই কি না। পণ্য, পরিমাণ আর ফ্রি চালানের
+     * সারি থেকে; গাড়ি, চালক আর কে কখন দিলেন — গেট পাসের নিজের ছবি থেকে। বাতিল হলে পাতায়
+     * "বাতিল" লেখা পড়ে ([[pdf()]])।
+     */
+    public function gatePassDocument(Request $request, GatePass $gatePass): Response
+    {
+        $challan = $gatePass->challan()->with(['lines.product.unit', 'customer', 'warehouse'])->firstOrFail();
+        $gatePass->loadMissing('issuer');
+
+        $doc = new PrintableDocument(
+            title: __('sales::doc.gate_pass'),
+            meta: [
+                'core.print.document_no' => $gatePass->document_no,
+                'sales::gate_pass.column.challan' => $challan->document_no,
+                'sales::field.customer' => $challan->customer?->name() ?? '',
+                'sales::field.vehicle_no' => (string) $gatePass->vehicle_no,
+                'sales::field.driver_name' => trim(($gatePass->driver_name ?? '').' '.($gatePass->driver_phone ?? '')),
+                'sales::gate_pass.column.issued_by' => trim(($gatePass->issuer?->name ?? '').' · '.DateFormat::format($gatePass->issued_at), ' ·'),
+            ],
+            lines: $this->productLines(
+                $challan->lines,
+                'delivered_qty',
+                $this->lots->forDocument(DeliveryChallan::STOCK_SOURCE, $challan->id),
+            ),
+            signatures: ['core.print.storekeeper', 'core.print.driver', 'core.print.gate_officer'],
+            showMoney: false,
+            notice: __('core.print.no_price_notice'),
+        );
+
+        return $this->pdf($request, $doc, '0', $gatePass->document_no, document: $gatePass,
+            paperSetting: 'sales.print.paper.gate_pass', target: 'challan');
     }
 
     /**

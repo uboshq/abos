@@ -56,4 +56,5 @@ return [
     ],
     'invoice_footnote' => 'Red line under the classic invoice (blank = the standard line)',
     'vat_enabled' => 'VAT on sales (off: no VAT box, and the server takes no VAT)',
+    'paper_gate_pass' => 'Gate pass paper',
 ];

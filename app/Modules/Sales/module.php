@@ -171,6 +171,9 @@ return [
                 'route_params' => ['screen' => 'transport_assign'], 'permission' => 'sales.order.view'],
             ['label' => 'sales::planned.loading_sheet', 'cluster' => 'delivery_processing', 'icon' => 'challan', 'route' => 'sales.planned',
                 'route_params' => ['screen' => 'loading_sheet'], 'permission' => 'sales.order.view'],
+            // ⭐ গেট পাস — রওনার মুহূর্তে নিজে তৈরি, এখানে তালিকা ([[GatePassService]])
+            ['label' => 'sales::gate_pass.title', 'cluster' => 'delivery_processing', 'icon' => 'challan', 'route' => 'sales.gate_pass.index',
+                'permission' => 'sales.gate_pass.view'],
             // ⓘ ডিসপ্যাচ রেজিস্টার = ট্রিপের খাতা (শিপমেন্ট) — নিজের সুইচে, আগের মতো
             ['label' => 'sales::menu.dispatch_register', 'cluster' => 'delivery_processing', 'icon' => 'share', 'route' => 'sales.shipment.index',
                 'permission' => 'sales.shipment.view', 'setting' => 'sales.screen_shipments'],
@@ -359,6 +362,9 @@ return [
         'sales.shipment.cancel',
         'sales.delivery.view',
         'sales.delivery.update',
+        // ⓘ গেট পাস — দেখা/ছাপা আর বাতিল আলাদা: বাতিলে গেটের কাগজ অকেজো হয়
+        'sales.gate_pass.view',
+        'sales.gate_pass.cancel',
 
         /*
          * টার্গেট দেখা আর বসানো — দুইটা আলাদা চাবি।
@@ -459,6 +465,7 @@ return [
         'Warehouse' => [
             'sales.delivery.view',
             'sales.delivery.update',
+            'sales.gate_pass.view',
         ],
         /*
          * কাউন্টার — প্রতিটা কোম্পানিতে ডিফল্টে। মালিক, ২৭ সেপ্টেম্বর ২০২৬: *"bosiye daw"*।
@@ -552,6 +559,8 @@ return [
     'doc_types' => [
         'SO' => 'sales::doc.order',
         'DC' => 'sales::doc.challan',
+        // ⭐ গেট পাস — রওনার মুহূর্তে নিজে জন্মায় ([[GatePassService]]); সিরিজ কোম্পানি-প্রতি
+        'GP' => 'sales::doc.gate_pass',
         // ⭐ কাউন্টারের ডেলিভারি অর্ডার — মালিকের নির্দেশ, ২৮ সেপ্টেম্বর ২০২৬: আলাদা উপসর্গ (DS),
         // খসড়া আর নিশ্চিত একই সারিতে; উপসর্গটা কন্ট্রোল প্যানেলের নম্বর-সারি থেকে বদলানো যায়
         'DS' => 'sales::doc.counter_do',
@@ -796,6 +805,15 @@ return [
             'label' => 'sales::settings.invoice_footnote',
             'type' => 'string',
             'default' => null,
+            'group' => 'print',
+        ],
+        [
+            // ⭐ গেট পাসের কাগজ — মালিক: আধা পাতা (A5), ২৮ সেপ্টেম্বর ২০২৬ ([[SalesPrintController::gatePassDocument()]])
+            'key' => 'sales.print.paper.gate_pass',
+            'label' => 'sales::settings.paper_gate_pass',
+            'type' => 'choice',
+            'options' => PaperSize::all(),
+            'default' => PaperSize::A5,
             'group' => 'print',
         ],
         [

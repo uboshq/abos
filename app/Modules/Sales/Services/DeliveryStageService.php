@@ -549,6 +549,15 @@ final class DeliveryStageService
                 ]);
             }
 
+            /*
+             * ⭐ গেট পাস রওনার মুহূর্তে — মালিকের নকশা, ২৮ সেপ্টেম্বর ২০২৬ (রাত)।
+             * ⓘ ট্রিপ বেরোলে আর হাতে "রওনা" বসালে দুইটাই এই পথে আসে — তাই কোনো রওনা কাগজ ছাড়া
+             * বেরোয় না ([[GatePassService::issueFor()]])। একই লেনদেনে: গেট পাস না হলে রওনাও না।
+             */
+            if ($to === DeliveryStage::DISPATCHED) {
+                app(GatePassService::class)->issueFor($challan, $event);
+            }
+
             if ($state === null) {
                 return DeliveryState::create([
                     'company_id' => $challan->company_id,

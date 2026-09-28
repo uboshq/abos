@@ -13,6 +13,7 @@ use App\Modules\Sales\Http\Controllers\PortalController;
 use App\Modules\Sales\Http\Controllers\PosController;
 use App\Modules\Sales\Http\Controllers\PrintQueueController;
 use App\Modules\Sales\Http\Controllers\MarginReportController;
+use App\Modules\Sales\Http\Controllers\GatePassController;
 use App\Modules\Sales\Http\Controllers\SalesInvoiceController;
 use App\Modules\Sales\Http\Controllers\DeliveryStageController;
 use App\Modules\Sales\Http\Controllers\SalesOrderController;
@@ -336,6 +337,9 @@ Route::middleware('auth')->prefix('sales')->group(function () {
             ->whereNumber('challan')->name('challan');
         Route::get('/challan/{challan}/gatepass', [SalesPrintController::class, 'gatepass'])
             ->whereNumber('challan')->name('gatepass');
+        // ⭐ গেট পাস — নিজের কাগজ, রওনার মুহূর্তে তৈরি ([[GatePassService]])
+        Route::get('/gate-pass/{gatePass}', [SalesPrintController::class, 'gatePassDocument'])
+            ->whereNumber('gatePass')->name('gate_pass');
         Route::get('/order/{order}', [SalesPrintController::class, 'order'])
             ->whereNumber('order')->name('order');
         Route::get('/order/{order}/delivery-order', [SalesPrintController::class, 'deliveryOrder'])
@@ -359,6 +363,13 @@ Route::middleware('auth')->prefix('sales')->group(function () {
     });
 
     Route::get('/reports/{slug}', [SalesReportController::class, 'show'])->name('report.show');
+
+    // ⭐ গেট পাস — তালিকা, দেখা, কারণসহ বাতিল; তৈরির দরজা নেই ([[GatePassController]])
+    Route::prefix('gate-passes')->name('gate_pass.')->group(function () {
+        Route::get('/', [GatePassController::class, 'index'])->name('index');
+        Route::get('/{gatePass}', [GatePassController::class, 'show'])->whereNumber('gatePass')->name('show');
+        Route::post('/{gatePass}/cancel', [GatePassController::class, 'cancel'])->whereNumber('gatePass')->name('cancel');
+    });
     // ⓘ মার্জিনের রিপোর্ট — নিজের চাবি ([[MarginReportController]], NEXUS §৩২)
     Route::get('/margin/{slug}', [MarginReportController::class, 'show'])->name('margin.report.show');
 });

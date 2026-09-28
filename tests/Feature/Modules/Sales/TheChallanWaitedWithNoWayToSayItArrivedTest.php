@@ -37,6 +37,9 @@ use Tests\TestCase;
  */
 final class TheChallanWaitedWithNoWayToSayItArrivedTest extends TestCase
 {
+    /** "ডেলিভারি নিশ্চিত" ফর্মের নিজস্ব চিহ্ন — কেবল ঐ ফর্মেই থাকে (delivery/partials/actions)। */
+    private const CONFIRM_FORM = 'name="stage" value="delivered"';
+
     use RefreshDatabase;
 
     private Company $company;
@@ -87,7 +90,8 @@ final class TheChallanWaitedWithNoWayToSayItArrivedTest extends TestCase
 
         $this->actingAs($this->clerk->fresh())->get(route('sales.challan.show', $challan))
             ->assertOk()
-            ->assertDontSee(__('sales::delivery.action.confirm'));
+            // ⚠️ লেখা নয়, ফর্মের চিহ্ন — মেনুর "ডেলিভারি নিশ্চিত" সারিও একই শব্দ (২৮ সেপ্টেম্বর ২০২৬ থেকে)
+            ->assertDontSee(self::CONFIRM_FORM, false);
 
         $this->actingAs($this->clerk->fresh())
             ->post(route('sales.delivery.move', $challan), ['stage' => DeliveryStage::DELIVERED, 'receiver_name' => 'x'])
@@ -99,7 +103,7 @@ final class TheChallanWaitedWithNoWayToSayItArrivedTest extends TestCase
 
         $html = $this->actingAs($this->clerk->fresh())->get(route('sales.challan.show', $challan))
             ->assertOk()
-            ->assertSee(__('sales::delivery.action.confirm'))
+            ->assertSee(self::CONFIRM_FORM, false)
             ->getContent();
 
         $this->assertStringContainsString('value="'.e($customer->name()).'"', $html,
