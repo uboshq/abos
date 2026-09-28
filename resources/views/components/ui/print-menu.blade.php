@@ -69,7 +69,7 @@
                     @foreach ($papers as $paper)
                         <a href="{{ $document['url'] }}?paper={{ $paper }}"
                            target="_blank" rel="noopener"
-                           class="flex-1 rounded-(--radius-field) border px-2 py-1 text-center text-2xs
+                           class="min-w-0 flex-1 truncate rounded-(--radius-field) border px-2 py-1 text-center text-2xs
                                   transition-colors hover:bg-(--color-surface-hover)
                                   {{ $paper === $chosen
                                       ? 'border-(--color-brand-500) font-semibold'

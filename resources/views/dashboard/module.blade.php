@@ -122,7 +122,7 @@
 
                         <div class="flex gap-4 px-4 pb-2">
                             @foreach ($panel->points as $point)
-                                <div class="flex-1 text-center text-2xs text-(--color-ink-muted)">{{ $point['label'] }}</div>
+                                <div class="min-w-0 flex-1 truncate text-center text-2xs text-(--color-ink-muted)">{{ $point['label'] }}</div>
                             @endforeach
                         </div>
 

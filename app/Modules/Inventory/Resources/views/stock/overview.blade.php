@@ -120,7 +120,18 @@
 
             <div class="flex gap-4 px-4 pb-2">
                 @foreach ($flow as $month)
-                    <div class="flex-1 text-center text-2xs text-(--color-ink-muted)">{{ $month['month'] }}</div>
+                    {{-- ⚠️ `min-w-0` আর `truncate` — সাজসজ্জা নয়।
+
+                         ⛔ flex আইটেমের `min-width` ডিফল্টে `auto`, অর্থাৎ সে
+                         নিজের লেখার চেয়ে ছোট হতে পারে না — `flex-1` লেখা
+                         থাকলেও। ⓘ তাই ঘর বাড়লে সারিটা নিজের বাক্স ছাপিয়ে যায়
+                         আর **গোটা পাতা** আড়াআড়ি সরে যায়।
+
+                         ⓘ মাপা (৩৬০×৭৪০, `/sales/overview`): নথি ৬৪px পাশে, আর
+                         শেষ পাঁচটা লেবেল ঠিক ৯·২৩·৩৬·৫১·৬px বাইরে — হুবহু এক।
+                         ⭐ উপরের বারের সারিটা বাঁচে, কারণ তার ঘরে `w-full` ডিভ,
+                         যার min-content শূন্য। --}}
+                    <div class="min-w-0 flex-1 truncate text-center text-2xs text-(--color-ink-muted)">{{ $month['month'] }}</div>
                 @endforeach
             </div>
 
