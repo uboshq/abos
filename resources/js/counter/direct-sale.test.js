@@ -1615,6 +1615,27 @@ describe('Pending ড্রপডাউনের তালিকা', () => {
 })
 
 /*
+ * ── লটের ফ্রি অনুপাত — সবুজ বাক্স (মালিক, ২৮ সেপ্টেম্বর ২০২৬) ──────────
+ */
+describe('ফ্রি অনুপাতের বাক্স', () => {
+    const texts = { freeRatio: 'প্রতি :per-এ ১ ফ্রি (:paid + :free)' }
+
+    it('লটে যা এসেছিল তা থেকে অনুপাত', () => {
+        const c = counter({ texts })
+
+        expect(c.freeRatioText('144', '24')).toBe('প্রতি 6-এ ১ ফ্রি (144 + 24)')
+        expect(c.freeRatioText('13', '2')).toContain('প্রতি 6.5-এ')
+    })
+
+    it('ফ্রি না এলে বাক্সই নেই', () => {
+        const c = counter({ texts })
+
+        expect(c.freeRatioText('144', '0')).toBe('')
+        expect(c.freeRatioText(undefined, undefined)).toBe('')
+    })
+})
+
+/*
  * ── সইয়ের অপেক্ষার বিক্রি — কাউন্টারে কেবল দেখা ─────────────────────────
  * ⛔ আসল পাহারা সার্ভারে; এখানে দাবি: বোতাম বন্ধ, জমা আটকায়, সারি ওঠে না।
  */

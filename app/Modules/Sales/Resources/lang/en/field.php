@@ -22,6 +22,8 @@ return [
     'pending_group_held' => 'Awaiting approval',
     'held_open_approval' => 'Approval page',
     'held_withdraw' => 'Bring back to draft',
+    'pending_group_delivery' => 'Awaiting delivery',
+    'open_challan_to_deliver' => 'Confirm delivery on the challan',
     'pending_drafts' => 'Pending',
     'pending_drafts_pick' => 'Open a draft bill',
     'pending_drafts_none' => 'No drafts',

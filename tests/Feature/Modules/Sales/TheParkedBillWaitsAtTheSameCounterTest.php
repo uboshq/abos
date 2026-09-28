@@ -107,6 +107,8 @@ final class TheParkedBillWaitsAtTheSameCounterTest extends TestCase
             'customer_id' => ($for ?? $this->customer)->id,
             'warehouse_id' => $this->warehouse->id,
             'lines' => [['product_id' => $this->product->id, 'qty' => (string) $qty, 'rate' => '100']],
+            // ⓘ পরিবহন বাধ্যতামূলক (ধাপ ৫, a517adcc) — এখানে বিষয় নয়, তাই "ক্রেতার নিজের"
+            'own_transport' => '1',
             ...$extra,
         ]);
     }
@@ -1005,6 +1007,36 @@ final class TheParkedBillWaitsAtTheSameCounterTest extends TestCase
         $this->park(['resume_invoice_id' => $draft->id, 'driver_name' => 'রহিম', 'driver_phone' => '01911000000'], $this->other);
 
         $this->assertSame('01911000000', $this->challanOf($draft)->driver_phone, '⛔ খসড়ার চালান হালনাগাদে চালকের ফোন হারাল।');
+    }
+
+    /**
+     * ⭐ Pending-এর তৃতীয় ভাগ — ডেলিভারির অপেক্ষায় (মালিকের অনুমোদিত নকশা, ২৮ সেপ্টেম্বর ২০২৬)।
+     *
+     * ⚠️ চার দিক: পাকা বিক্রি ঐ ভাগে আসে; কাউন্টারে কেবল দেখার জন্য খোলে, চালানের পাতার
+     * পথসহ; ক্রেতার নতুন বিল আটকায় না (খসড়া নয়); আর মাল পৌঁছালে ভাগ থেকে সরে যায়।
+     */
+    public function test_a_sold_sale_waits_in_the_delivery_group_until_the_goods_arrive(): void
+    {
+        $this->sell(['own_transport' => '1', 'screen_state' => json_encode(['note' => 'পথে'])])->assertSessionHasNoErrors();
+        $sale = SalesInvoice::query()->latest('id')->firstOrFail();
+        $challan = $this->challanOf($sale);
+
+        $pending = collect($this->get(route('sales.direct.create'))->viewData('pendingDrafts'))->flatten(1)->keyBy('id');
+        $this->assertSame('delivery', $pending[$sale->id]['group'] ?? null, '⛔ পাকা বিক্রি Pending-এর ডেলিভারির ভাগে নেই।');
+
+        $resume = $this->get(route('sales.direct.create', ['draft' => $sale->id]))->assertOk()->viewData('resume');
+        $this->assertTrue($resume['viewOnly'], '⛔ পাকা বিক্রি কাউন্টারে বদলানোর জন্য খুলেছে।');
+        $this->assertSame('delivery', $resume['stage']);
+        $this->assertSame(route('sales.challan.show', $challan), $resume['challanUrl']);
+
+        /* ⓘ নতুন বিল আটকায় না — একই ক্রেতাকে আবার বেচা যায় */
+        $this->sell(['own_transport' => '1'])->assertSessionHasNoErrors();
+
+        app(\App\Modules\Sales\Services\DeliveryStageService::class)
+            ->move($challan->fresh(), \App\Modules\Sales\Services\DeliveryStage::DELIVERED, ['receiver_name' => 'রহিম']);
+
+        $pending = collect($this->get(route('sales.direct.create'))->viewData('pendingDrafts'))->flatten(1)->keyBy('id');
+        $this->assertArrayNotHasKey($sale->id, $pending->all(), '⛔ মাল পৌঁছানোর পরেও বিক্রিটা Pending-এ।');
     }
 
     /** তালিকা থেকে বাতিল করলে তালিকাতেই ফেরা — আর চাবি ছাড়া পাতাটাই বন্ধ। */

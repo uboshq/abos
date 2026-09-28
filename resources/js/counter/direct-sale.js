@@ -155,6 +155,8 @@ export default function directSale({
          * রঙে একটা সুখবর দেখাত, আর বিক্রেতা ভাবতেন কিছু ভুল হয়েছে।
          */
         freeHint: '',
+        /* ⭐ লটের ফ্রি অনুপাত — সবুজ বাক্সে (মালিক, ২৮ সেপ্টেম্বর ২০২৬) — [[freeRatioText()]] */
+        freeRatio: '',
         customers,
         vatEnabled,
         term: '',
@@ -494,7 +496,8 @@ export default function directSale({
 
         /** এই ক্রেতার রাখা খসড়াগুলো — পেন্ডিং ড্রপডাউনের তালিকা। */
         get pendingForCustomer() {
-            return this.pendingDrafts[String(this.customerId)] ?? [];
+            /* ⓘ "ডেলিভারির অপেক্ষায়" পাকা বিক্রি — খসড়া নয়, তাই নতুন বিল আটকায় না */
+            return (this.pendingDrafts[String(this.customerId)] ?? []).filter(d => d.group !== 'delivery');
         },
 
         /*
@@ -506,7 +509,7 @@ export default function directSale({
          * বিল নয়" নিয়মটা ([[customerHasOpenDraft]]) এখনো কেবল বাছা ক্রেতার তালিকা দেখে।
          */
         get pendingShown() {
-            if (String(this.customerId ?? '') !== '') return this.pendingForCustomer;
+            if (String(this.customerId ?? '') !== '') return this.pendingDrafts[String(this.customerId)] ?? [];
 
             return Object.values(this.pendingDrafts ?? {})
                 .flat()
@@ -515,7 +518,12 @@ export default function directSale({
 
         /** Pending-এর দুই ভাগ — খসড়া আর অনুমোদনের অপেক্ষায়; ভাগটা সার্ভার বলে (`group`)। */
         get pendingShownDrafts() {
-            return this.pendingShown.filter(d => d.group !== 'approval');
+            return this.pendingShown.filter(d => d.group !== 'approval' && d.group !== 'delivery');
+        },
+
+        /** তৃতীয় ভাগ — পাকা বিক্রি, মাল এখনো পৌঁছায়নি; কাউন্টারে কেবল দেখা। */
+        get pendingShownDelivery() {
+            return this.pendingShown.filter(d => d.group === 'delivery');
         },
 
         get pendingShownHeld() {
@@ -1459,6 +1467,7 @@ export default function directSale({
          */
         async fillFreeFromTheRatio() {
             this.freeHint = '';
+            this.freeRatio = '';
 
             if (! this.picked || ! this.needsLot || this.entry.batchId === '') {
                 return;
@@ -1485,6 +1494,7 @@ export default function directSale({
                 if (! data || ! data.known) return;
 
                 this.entry.freeQty = this.$num(data.allowed) > 0 ? String(data.allowed) : '';
+                this.freeRatio = this.freeRatioText(data.paid, data.free);
 
                 /*
                  * ⓘ বার্তাটা কেবল তখন, যখন **আর কিছু নিলে সত্যিই কিছু
@@ -1500,6 +1510,25 @@ export default function directSale({
                 /* ⓘ নেটওয়ার্ক পড়ে গেলে ঘরটা যেমন ছিল তেমনই — ⛔ শূন্য
                      বসিয়ে দিলে প্রাপ্য ফ্রি নীরবে হারাত। */
             }
+        },
+
+        /*
+         * লটের অনুপাত — "প্রতি ৬-এ ১ ফ্রি (এসেছিল ১৪৪ + ২৪ ফ্রি)"।
+         * ⓘ লটে ফ্রি না এলে খালি — তখন বাক্সই নেই, ⛔ "০ ফ্রি" দেখালে মনে হত ভুল।
+         * ⓘ ভাগফল দুই ঘর পর্যন্ত, শেষের শূন্য ছাড়া (২৪, ৬.৫)।
+         */
+        freeRatioText(paid, free) {
+            const p = this.$num(paid ?? '0');
+            const f = this.$num(free ?? '0');
+
+            if (! (p > 0) || ! (f > 0)) return '';
+
+            const per = String(Math.round((p / f) * 100) / 100);
+
+            return String(texts.freeRatio ?? '')
+                .replace(':per', per)
+                .replace(':paid', this.qty(String(p)))
+                .replace(':free', this.qty(String(f)));
         },
 
         async freeFitsTheRatio() {

@@ -756,6 +756,12 @@
                                                     x-text="pendingLabel(d)"></option>
                                         </template>
                                     </optgroup>
+                                    <optgroup label="🚚 {{ __('sales::field.pending_group_delivery') }}">
+                                        <template x-for="d in pendingShownDelivery" :key="d.id">
+                                            <option :value="d.id" :selected="$str(d.id) === resumeId"
+                                                    x-text="pendingLabel(d)"></option>
+                                        </template>
+                                    </optgroup>
                                 </select>
                             </label>
 

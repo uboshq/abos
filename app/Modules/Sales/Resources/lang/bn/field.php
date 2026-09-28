@@ -22,6 +22,8 @@ return [
     'pending_group_held' => 'অনুমোদনের অপেক্ষায়',
     'held_open_approval' => 'অনুমোদনের পাতা',
     'held_withdraw' => 'খসড়ায় ফিরিয়ে আনুন',
+    'pending_group_delivery' => 'ডেলিভারির অপেক্ষায়',
+    'open_challan_to_deliver' => 'চালানের পাতায় ডেলিভারি নিশ্চিত',
     'pending_drafts' => 'পেন্ডিং',
     'pending_drafts_pick' => 'খসড়া বিল খুলুন',
     'pending_drafts_none' => 'কোনো খসড়া নেই',

@@ -48,7 +48,29 @@
     {{-- ⭐ সইয়ের অপেক্ষার বিক্রি — কেবল দেখা; যিনি পাঠিয়েছেন তিনি খসড়ায় ফেরাতে পারেন
          (মালিকের অনুমোদিত নকশা, ২৮ সেপ্টেম্বর ২০২৬)। ⓘ বাতিল এখানে নেই — সইয়ের
          অপেক্ষার বিক্রি আগে খসড়ায় ফেরে, তারপর বাতিল বা বদল। --}}
-    @if (! empty($resume) && ! empty($resume['viewOnly']))
+    {{-- ⭐ ডেলিভারির অপেক্ষায় — পাকা বিক্রি, কেবল দেখা; "ডেলিভারি নিশ্চিত" চালানের পাতায় --}}
+    @if (! empty($resume) && ($resume['stage'] ?? '') === 'delivery')
+        <div role="status"
+             class="mb-3 flex flex-wrap items-center gap-3 rounded-(--radius-card) border
+                    border-(--color-border) bg-(--color-badge-info-bg) p-3">
+            <span class="text-sm font-semibold text-(--color-badge-info-ink)">
+                🚚 {{ __('sales::field.pending_group_delivery') }}:
+                <span class="num">{{ $resume['invoiceNo'] }}</span>
+                @if ($resume['challanNo'] !== '')
+                    · {{ __('sales::field.challan_no_short') }}
+                    <span class="num">{{ $resume['challanNo'] }}</span>
+                @endif
+            </span>
+            <span class="text-xs text-(--color-badge-info-ink)">{{ __('sales::message.delivery_view_only') }}</span>
+            @if ($resume['challanUrl'])
+                <a href="{{ $resume['challanUrl'] }}"
+                   class="ms-auto rounded-(--radius-field) bg-(--color-brand-600) px-4 py-1.5 text-xs font-semibold
+                          text-white hover:bg-(--color-brand-700)">
+                    {{ __('sales::field.open_challan_to_deliver') }}
+                </a>
+            @endif
+        </div>
+    @elseif (! empty($resume) && ! empty($resume['viewOnly']))
         <div role="status"
              class="mb-3 flex flex-wrap items-center gap-3 rounded-(--radius-card) border
                     border-(--color-warning) bg-(--color-badge-pending-bg) p-3">
@@ -127,6 +149,7 @@
                   'lotAlreadyInCart' => __('sales::validation.lot_already_in_cart'),
                   'itemAlreadyInCart' => __('sales::validation.item_already_in_cart'),
                   'freeNextAt' => __('sales::message.free_next_at'),
+                  'freeRatio' => __('sales::message.free_ratio'),
                   'openDraftBlocks' => __('sales::validation.open_draft_blocks_new_bill'),
               ]),
               pendingDrafts: @js($pendingDrafts ?? []),

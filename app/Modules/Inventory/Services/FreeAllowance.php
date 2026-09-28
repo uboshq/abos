@@ -87,19 +87,23 @@ final class FreeAllowance
      * না — আর সংখ্যাটা দেখতে নিখুঁত লাগত। ⓘ দুইটা লটের অনুপাত এক
      * হলে কেউ টের পেত না; আলাদা হলে ফ্রি ভুল বসত, নীরবে।
      *
-     * @return array{allowed: string, short: string}
+     * @return array{allowed: string, short: string, paid: string, free: string}
      *         `allowed` — এই পরিমাণে যত ফ্রি পাওনা
      *         `short`   — আর কতটা নিলে পরের ফ্রি
+     *         `paid`/`free` — লটে যা এসেছিল; কাউন্টারের সবুজ বাক্সে অনুপাত (মালিক, ২৮ সেপ্টেম্বর ২০২৬)
      */
     public function onLot(Batch $batch, string $qty): array
     {
+        $came = $this->ratio->arrivedIn($batch);
+
         if (bccomp($qty, '0', 4) <= 0) {
-            return ['allowed' => '0', 'short' => '0'];
+            return ['allowed' => '0', 'short' => '0', ...$came];
         }
 
         return [
             'allowed' => $this->ratio->allowedOn($batch, $qty),
             'short' => $this->ratio->shortOfNextFree($batch, $qty),
+            ...$came,
         ];
     }
 }

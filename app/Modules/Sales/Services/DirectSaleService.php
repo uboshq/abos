@@ -291,6 +291,10 @@ final class DirectSaleService
              */
             $invoice = $this->invoices->confirm($invoice, $deposit);
 
+            /* ⭐ পর্দার ছবি থাকে — মাল পৌঁছানো পর্যন্ত বিক্রিটা Pending-এর "ডেলিভারির অপেক্ষায়"
+               ভাগে কাউন্টারেই কেবল দেখার জন্য খোলে (মালিকের অনুমোদিত নকশা, ২৮ সেপ্টেম্বর ২০২৬) */
+            $invoice->update(['counter_screen' => $this->screenOf($data)]);
+
             /*
              * ⭐ প্রতিটা ডিপোজিট একটা রসিদ ভাউচার, পুরো টাকায় — ১৯ সেপ্টেম্বর ২০২৬।
              *
@@ -652,6 +656,26 @@ final class DirectSaleService
     public static function awaitingApproval($query = null)
     {
         return self::whereHeld(self::openCounterDrafts($query), true);
+    }
+
+    /**
+     * কাউন্টারের পাকা বিক্রি, মাল এখনো পৌঁছায়নি — Pending-এর তৃতীয় ভাগ।
+     *
+     * ⓘ "পৌঁছেছে" মানে চালানের ডেলিভারির ধাপ DELIVERED ([[DeliveryOrderTabs]]-এর একই নিয়ম);
+     * কেবল পর্দার ছবি থাকা বিক্রি — ছবি ছাড়া পুরনোগুলোর কাউন্টারে দেখানোর কিছু নেই।
+     *
+     * @return \Illuminate\Database\Eloquent\Builder<SalesInvoice>
+     */
+    public static function awaitingDelivery($query = null)
+    {
+        return ($query ?? SalesInvoice::query())
+            ->whereIn('sal_invoices.status', DocumentStatus::POSTED)
+            ->whereNotNull('sal_invoices.counter_screen')
+            ->whereHas('lines.challanLine.challan', fn ($c) => $c
+                ->whereIn('sal_challans.status', DocumentStatus::POSTED)
+                ->whereNotExists(fn ($d) => $d->selectRaw('1')->from('sal_delivery_states as ds')
+                    ->whereColumn('ds.delivery_challan_id', 'sal_challans.id')
+                    ->where('ds.stage', DeliveryStage::DELIVERED)));
     }
 
     public static function activeCounterDrafts($query = null)

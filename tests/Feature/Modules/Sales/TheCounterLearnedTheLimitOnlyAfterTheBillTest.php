@@ -97,6 +97,25 @@ final class TheCounterLearnedTheLimitOnlyAfterTheBillTest extends TestCase
     }
 
     /**
+     * ⭐ লট বললে দরজা লটে কী এসেছিল তাও বলে — কাউন্টারের সবুজ বাক্সের অনুপাত (মালিক, ২৮
+     * সেপ্টেম্বর ২০২৬)। ⚠️ সংখ্যাগুলো লটের আসল আসা থেকে, স্থির নয়।
+     */
+    public function test_the_door_tells_what_the_lot_came_with_for_the_ratio_box(): void
+    {
+        $batch = Batch::query()->where('product_id', $this->product->id)->where('batch_no', 'LOT-1')->firstOrFail();
+
+        $this->getJson(route('sales.direct.free_allowed', [
+            'product_id' => $this->product->id,
+            'warehouse_id' => $this->warehouse->id,
+            'qty' => '20',
+            'batch_id' => $batch->id,
+        ]))
+            ->assertOk()
+            ->assertJsonPath('data.paid', fn ($got) => bccomp((string) $got, '100', 4) === 0)
+            ->assertJsonPath('data.free', fn ($got) => bccomp((string) $got, '10', 4) === 0);
+    }
+
+    /**
      * ⭐ আর বেশি মাল নিলে প্রাপ্যও বাড়ে।
      *
      * ── ⚠️ কেন এই দাবিটা আলাদা ──────────────────────────────────────

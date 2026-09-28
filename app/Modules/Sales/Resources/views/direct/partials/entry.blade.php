@@ -558,6 +558,13 @@
                                  পারেন।
 
                                  ⓘ `role="status"`, `alert` নয় — একই কারণে। --}}
+                            {{-- ⭐ লটের ফ্রি অনুপাত — সবুজ বাক্স (মালিকের নির্দেশ, ২৮ সেপ্টেম্বর ২০২৬)।
+                                 ⓘ সবুজ, কারণ এটা তথ্য — কত কিনলে কত ফ্রি; সুযোগের হলুদ বার্তা নিচে আলাদা। --}}
+                            <div x-show="freeRatio" x-cloak
+                                 class="col-span-full rounded-(--radius-field) bg-(--color-badge-success-bg)
+                                        px-3 py-1.5 text-xs font-semibold text-(--color-badge-success-ink)"
+                                 x-text="freeRatio" role="status"></div>
+
                             <div x-show="freeHint" x-cloak
                                  class="col-span-full rounded-(--radius-field) bg-(--color-badge-pending-bg)
                                         px-3 py-1.5 text-xs text-(--color-badge-pending-ink)"

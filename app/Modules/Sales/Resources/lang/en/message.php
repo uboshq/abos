@@ -12,6 +12,7 @@ return [
     'held_withdrawn_reason' => 'Sale brought back to draft',
     'held_not_withdrawable' => 'This sale is no longer awaiting a signature — nothing to bring back.',
     'held_withdraw_only_requester' => 'Only the person who sent it for signature can bring it back to draft.',
+    'delivery_view_only' => 'Sale confirmed — goods not delivered yet. View only; delivery is confirmed on the challan page.',
     'draft_discarded' => 'Draft :no cancelled.',
     'held_sale_finished' => ':no confirmed — the goods are out, and the invoice and deposit are on the books.',
     'held_explain' => 'Until approval the challan and invoice stay drafts, no goods have left, and the invoice is not printed.',
@@ -121,6 +122,7 @@ return [
     'not_for_sales' => 'Not for Sales',
 
     /* ⓘ An opportunity, not a warning — reasons in bn/message.php. */
+    'free_ratio' => 'Free ratio: 1 free per :per (the lot came as :paid + :free free)',
     'free_next_at' => 'Take :more more and another free comes with it.',
     'pick_item_to_see_stock' => 'Pick an item to see its stock.',
     'nothing_added' => 'Nothing added yet. Pick an item above and press Add to Cart.',

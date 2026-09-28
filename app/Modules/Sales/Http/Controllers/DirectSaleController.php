@@ -1395,7 +1395,7 @@ class DirectSaleController extends Controller implements HasMiddleware
            দেখা আর ফিরিয়ে আনা যায়) — মালিকের নির্দেশ, ২৮ সেপ্টেম্বর ২০২৬ */
         $held = DirectSaleService::awaitingApproval()->pluck('sal_invoices.id')->flip();
 
-        return DirectSaleService::activeCounterDrafts()
+        $groups = DirectSaleService::activeCounterDrafts()
             ->orderByDesc('id')
             ->limit(500)
             ->with('customer')
@@ -1417,6 +1417,23 @@ class DirectSaleController extends Controller implements HasMiddleware
                     : route('sales.direct.create', ['draft' => $draft->id]),
             ])->values()->all())
             ->all();
+
+        /* ⭐ তৃতীয় ভাগ — ডেলিভারির অপেক্ষায়; কাউন্টারে কেবল দেখা, নিশ্চিত হয় চালানের পাতায়।
+           ⓘ নতুন বিলের দেয়াল এদের গোনে না — পাকা বিক্রি খসড়া নয় (direct-sale.js). */
+        foreach (DirectSaleService::awaitingDelivery()->with('customer')->orderByDesc('id')->limit(200)
+            ->get(['id', 'document_no', 'customer_id', 'total', 'trx_date']) as $sale) {
+            $groups[$sale->customer_id][] = [
+                'id' => (int) $sale->id,
+                'no' => (string) $sale->document_no,
+                'customer' => (string) ($sale->customer?->name() ?? ''),
+                'total' => (string) $sale->total,
+                'date' => $sale->trx_date?->format('d-m-Y') ?? '',
+                'group' => 'delivery',
+                'url' => route('sales.direct.create', ['draft' => $sale->id]),
+            ];
+        }
+
+        return $groups;
     }
 
     /**
@@ -1441,7 +1458,7 @@ class DirectSaleController extends Controller implements HasMiddleware
             ->find($id);
 
         if ($draft === null) {
-            return null;
+            return $this->deliveryViewFrom($id);
         }
 
         /* ⭐ সইয়ের অপেক্ষায় থাকলে কেবল দেখা — মালিকের অনুমোদিত নকশা, ২৮ সেপ্টেম্বর ২০২৬।
@@ -1463,6 +1480,39 @@ class DirectSaleController extends Controller implements HasMiddleware
             'fields' => (array) ($saved['fields'] ?? []),
             'viewOnly' => $held,
             'approvalUrl' => $held ? $this->approvalUrlFor($draft) : null,
+            'stage' => $held ? 'approval' : 'draft',
+            'challanUrl' => null,
+        ];
+    }
+
+    /**
+     * পাকা বিক্রি, মাল এখনো পৌঁছায়নি — কাউন্টারে কেবল দেখা; "ডেলিভারি নিশ্চিত" চালানের পাতায়
+     * ([[DirectSaleService::awaitingDelivery()]])।
+     *
+     * @return array<string, mixed>|null
+     */
+    private function deliveryViewFrom(int $id): ?array
+    {
+        $sale = DirectSaleService::awaitingDelivery()->with('lines.challanLine.challan')->find($id);
+
+        if ($sale === null) {
+            return null;
+        }
+
+        $saved = (array) $sale->counter_screen;
+        $challan = $sale->lines->first()?->challanLine?->challan;
+
+        return [
+            'invoiceId' => (int) $sale->id,
+            'invoiceNo' => (string) $sale->document_no,
+            'challanNo' => (string) ($challan?->document_no ?? ''),
+            'customerId' => (int) $sale->customer_id,
+            'screen' => (array) ($saved['screen'] ?? []),
+            'fields' => (array) ($saved['fields'] ?? []),
+            'viewOnly' => true,
+            'approvalUrl' => null,
+            'stage' => 'delivery',
+            'challanUrl' => $challan === null ? null : route('sales.challan.show', $challan),
         ];
     }
 
