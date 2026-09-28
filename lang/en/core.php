@@ -473,6 +473,13 @@ return [
         'deleted' => 'Deleted.',
     ],
 
+    'peek' => [
+        'open_full' => 'Open the full page',
+        'close' => 'Close',
+        'loading' => 'Loading…',
+        'failed' => 'This could not be shown here — use the link above to open the full page.',
+    ],
+
     'table' => [
         'range' => ':from - :to of :total',
         'page_total' => 'This page',
