@@ -14,6 +14,7 @@ use App\Http\Controllers\Controller;
 use App\Models\NumberSeries;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Models\CashTill;
+use App\Modules\Accounts\Services\MoneyAccountRule;
 use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Inventory\Models\Product;
 use App\Modules\Inventory\Models\Warehouse;
@@ -493,6 +494,23 @@ class DirectPurchaseController extends Controller implements HasMiddleware
         ]);
 
         $this->demandLots($data['lines']);
+
+        /*
+         * ⛔ টাকা আসে কেবল টাকার খাত থেকে — ২৭ সেপ্টেম্বর ২০২৬ (abos-10 যা পেয়েছেন)।
+         *
+         * ⓘ উপরের `exists` কেবল বলে খাতটা এই কোম্পানির। তাই খরচের খাত থেকেও
+         * "পরিশোধ" বসত — দেনা কমত অথচ টাকা বেরোত না, আর খরচ উল্টো দিকে সরে লাভ
+         * বাড়াত। নিয়ম এক জায়গায় ([[MoneyAccountRule]]), বার্তা ঠিক ঐ সারির নামে।
+         */
+        $money = app(MoneyAccountRule::class);
+
+        foreach ($data['deposits'] ?? [] as $i => $row) {
+            $money->assert((int) $row['account_id'], field: 'deposits.'.$i.'.account_id');
+        }
+
+        if (filled($data['paid_from_account_id'] ?? null)) {
+            $money->assert((int) $data['paid_from_account_id'], field: 'paid_from_account_id');
+        }
 
         /*
          * ⓘ পর্দার `bill_no` সেবায় যায় `document_no` হয়ে — দুই নামের
