@@ -25,6 +25,7 @@ use App\Modules\Inventory\Models\Warehouse;
 use App\Modules\Inventory\Services\StockService;
 use App\Modules\Sales\Models\DeliveryChallan;
 use App\Modules\Sales\Models\SalesInvoice;
+use App\Modules\Sales\Services\DirectSaleService;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
@@ -768,7 +769,8 @@ final class TheParkedBillWaitsAtTheSameCounterTest extends TestCase
     /**
      * ⭐ নিশ্চিত করে সইয়ে পাঠানো বিক্রি খসড়া নয় — মালিকের নির্দেশ, ২৮ সেপ্টেম্বর ২০২৬
      * (*"etato maratok vul"*)। ⓘ খসড়া ট্যাবে নয়, "অনুমোদনের অপেক্ষায়" ট্যাবে; Pending-এ
-     * আলাদা ভাগে, আর খোলে অনুমোদনের পাতায় — ইনভয়েসের পাতায় নয়।
+     * আলাদা ভাগে, আর খোলে কাউন্টারেই — কেবল দেখার জন্য (নকশা বদল, একই দিন পরে:
+     * Pending-এর সব ভাগ কাউন্টারে খোলে)।
      */
     public function test_a_sale_waiting_for_a_signature_is_not_a_draft(): void
     {
@@ -789,8 +791,8 @@ final class TheParkedBillWaitsAtTheSameCounterTest extends TestCase
         $pending = collect($this->get(route('sales.direct.create'))->viewData('pendingDrafts'))->flatten(1)->keyBy('id');
 
         $this->assertSame('approval', $pending[$held->id]['group'] ?? null, '⛔ Pending-এ সইয়ের অপেক্ষার ভাগ নেই।');
-        $this->assertStringContainsString('/approval', (string) $pending[$held->id]['url'],
-            '⛔ সইয়ের অপেক্ষার বিক্রি অনুমোদনের পাতায় খোলে না।');
+        $this->assertSame(route('sales.direct.create', ['draft' => $held->id]), $pending[$held->id]['url'],
+            '⛔ সইয়ের অপেক্ষার বিক্রি কাউন্টারে খোলে না।');
         $this->assertSame('draft', $pending[$parked->id]['group'] ?? null);
         $this->assertSame(route('sales.direct.create', ['draft' => $parked->id]), $pending[$parked->id]['url']);
     }
@@ -829,6 +831,114 @@ final class TheParkedBillWaitsAtTheSameCounterTest extends TestCase
         /* ⓘ আর তালিকায় এটা "অনুমোদনের অপেক্ষায়" — খসড়া নয় */
         $this->assertStringContainsString(e($invoice->document_no),
             $this->get(route('sales.direct.drafts', ['tab' => 'approval']))->assertOk()->getContent());
+    }
+
+    /**
+     * ⭐ সইয়ের অপেক্ষার বিক্রি কাউন্টারে খোলে, কিন্তু কেবল দেখা — মালিকের অনুমোদিত নকশা,
+     * ২৮ সেপ্টেম্বর ২০২৬।
+     *
+     * ⚠️ বিপজ্জনক ইনপুট ইচ্ছাকৃত: খোলা পর্দা থেকেই `resume_invoice_id` দিয়ে "নিশ্চিত"
+     * পাঠানো। ⛔ পর্দার বোতাম বন্ধ থাকাটা পাহারা নয় — সার্ভার ফেরত না দিলে সই ছাড়াই
+     * বিক্রিটা বদলে পাকা হয়ে যেত।
+     */
+    public function test_a_sale_waiting_for_a_signature_opens_at_the_counter_only_to_look(): void
+    {
+        $this->counterDepositFlow();
+        $screen = ['cart' => [['product_id' => $this->product->id, 'qty' => 10]], 'note' => 'সইয়ে গেছে'];
+
+        $this->sell(['screen_state' => json_encode($screen), ...$this->bankDeposit()])->assertSessionHasNoErrors();
+        $held = SalesInvoice::query()->latest('id')->firstOrFail();
+
+        $this->assertNull($held->counter_draft, '⛔ সইয়ের অপেক্ষার বিক্রি খসড়ার চিহ্ন পেয়েছে — সই ছাড়াই বদলানো যেত।');
+
+        $page = $this->get(route('sales.direct.create', ['draft' => $held->id]))->assertOk();
+        $resume = $page->viewData('resume');
+
+        $this->assertIsArray($resume, '⛔ সইয়ের অপেক্ষার বিক্রি কাউন্টারে খোলে না।');
+        $this->assertTrue($resume['viewOnly'], '⛔ সইয়ের অপেক্ষার বিক্রি বদলানোর জন্য খুলেছে।');
+        $this->assertEquals($screen, $resume['screen'], '⛔ পর্দার ছবিটা ফেরেনি।');
+        $this->assertStringContainsString('/approval', (string) $resume['approvalUrl']);
+        $page->assertSee(route('sales.direct.draft_withdraw', $held->id), false);
+        $page->assertDontSee(route('sales.direct.discard', $held->id), false);
+
+        /* ⛔ খোলা পর্দা থেকেই নিশ্চিত — সার্ভার ফেরায় */
+        $this->sell(['resume_invoice_id' => $held->id, 'save_as_draft' => '0'])->assertSessionHasErrors('resume_invoice_id');
+
+        $this->assertSame(DocumentStatus::DRAFT, $held->fresh()->status, '⛔ সই ছাড়াই বিক্রিটা পাকা হয়েছে।');
+        $this->assertTrue(DirectSaleService::isHeldForSignature($held->fresh()), '⛔ সইয়ের অনুরোধটা হারিয়েছে।');
+
+        /* ⓘ সাধারণ খসড়া আগের মতোই বদলানোর জন্য খোলে */
+        $parked = $this->park([], $this->other);
+        $this->assertFalse($this->get(route('sales.direct.create', ['draft' => $parked->id]))->viewData('resume')['viewOnly']);
+    }
+
+    /**
+     * ⭐ যিনি পাঠিয়েছেন তিনি খসড়ায় ফেরান — অনুরোধ প্রত্যাহার, জমা-ভাউচার বাতিল, ছবি খসড়ায়।
+     *
+     * ⚠️ বিপজ্জনক ইনপুট: ফিরিয়ে আনার পরে একই জমা দিয়ে আবার নিশ্চিত। ⛔ পুরনো ভাউচার
+     * খসড়া থেকে গেলে সই শেষে দুই সেটই খাতায় উঠত — একই টাকা দুইবার।
+     */
+    public function test_the_sender_brings_a_held_sale_back_to_draft_and_the_money_is_not_doubled(): void
+    {
+        $this->counterDepositFlow();
+        $screen = ['cart' => [['product_id' => $this->product->id, 'qty' => 10]]];
+
+        $this->sell(['screen_state' => json_encode($screen), ...$this->bankDeposit()])->assertSessionHasNoErrors();
+        $held = SalesInvoice::query()->latest('id')->firstOrFail();
+        $first = $held->heldCounterDeposits()->get();
+
+        $this->assertCount(1, $first, 'দৃশ্যটাই বানানো যায়নি — সইয়ের জমা নেই।');
+
+        $this->post(route('sales.direct.draft_withdraw', $held))
+            ->assertSessionHasNoErrors()
+            ->assertRedirect(route('sales.direct.create', ['draft' => $held->id]));
+
+        $held = $held->fresh();
+
+        $this->assertFalse(DirectSaleService::isHeldForSignature($held), '⛔ ফিরিয়ে আনার পরেও সইয়ের অনুরোধ ঝুলে আছে।');
+        $this->assertSame(DocumentStatus::CANCELLED, $first->first()->fresh()->status, '⛔ পুরনো জমা-ভাউচার বাতিল হয়নি।');
+        $this->assertEquals($screen, $held->counter_draft['screen'] ?? null, '⛔ ছবিটা খসড়ায় ফেরেনি।');
+        $this->assertNull($held->counter_screen);
+        $this->assertFalse($this->get(route('sales.direct.create', ['draft' => $held->id]))->viewData('resume')['viewOnly'],
+            '⛔ ফিরিয়ে আনার পরেও কেবল দেখা।');
+
+        /* ⭐ আবার নিশ্চিত — একটাই জীবিত জমা, একটাই নতুন অনুরোধ */
+        $this->sell(['resume_invoice_id' => $held->id, 'save_as_draft' => '0', ...$this->bankDeposit()])
+            ->assertSessionHasNoErrors();
+
+        $this->assertCount(1, $held->fresh()->heldCounterDeposits()->get(), '⛔ একই টাকার দুইটা জমা-ভাউচার — খাতায় দুইবার উঠত।');
+        $this->assertTrue(DirectSaleService::isHeldForSignature($held->fresh()), '⛔ আবার নিশ্চিত করলেও সইয়ে যায়নি।');
+    }
+
+    /**
+     * ⛔ কেবল যিনি পাঠিয়েছেন — একই লোক, একই বিক্রি; প্রথমে অন্য কেউ (চাবিসহ) ফেরত পান,
+     * তারপর পাঠানেওয়ালা নিজে পারেন।
+     */
+    public function test_only_the_sender_can_bring_a_held_sale_back(): void
+    {
+        $this->counterDepositFlow();
+        $this->sell($this->bankDeposit())->assertSessionHasNoErrors();
+        $held = SalesInvoice::query()->latest('id')->firstOrFail();
+
+        $clerk = User::factory()->create(['current_company_id' => $this->company->id]);
+        $clerk->companies()->attach($this->company->id, ['is_active' => true]);
+        $clerk->givePermissionTo('sales.challan.create');
+
+        $this->actingAs($clerk->fresh())
+            ->post(route('sales.direct.draft_withdraw', $held))
+            ->assertSessionHasErrors('resume_invoice_id');
+
+        $this->assertTrue(DirectSaleService::isHeldForSignature($held->fresh()), '⛔ অন্য কেউ সইয়ের অনুরোধ তুলে নিয়েছে।');
+        $this->assertNull($held->fresh()->counter_draft);
+
+        $this->actingAs($this->owner)
+            ->post(route('sales.direct.draft_withdraw', $held))
+            ->assertSessionHasNoErrors();
+
+        $this->assertFalse(DirectSaleService::isHeldForSignature($held->fresh()));
+
+        /* ⓘ আর খসড়াকে আবার "ফিরিয়ে আনা" যায় না */
+        $this->post(route('sales.direct.draft_withdraw', $held))->assertSessionHasErrors('resume_invoice_id');
     }
 
     /** তালিকা থেকে বাতিল করলে তালিকাতেই ফেরা — আর চাবি ছাড়া পাতাটাই বন্ধ। */

@@ -1327,25 +1327,21 @@ class DirectSaleController extends Controller implements HasMiddleware
     /** সইয়ের অপেক্ষায় থাকা বিক্রির অনুমোদন-পাতা — চালান, বিল বা জমা, যেটায় সই ঝুলছে। */
     private function approvalUrlFor(SalesInvoice $draft): string
     {
-        $draft->loadMissing('lines.challanLine');
-        $challanId = (int) ($draft->lines->first()?->challanLine?->delivery_challan_id ?? 0);
-        $voucherIds = \App\Modules\Accounts\Models\Voucher::query()
-            ->where('against_type', SalesInvoice::drillSourceType())
-            ->where('against_id', $draft->id)->pluck('id')->all();
-
-        $approval = \App\Models\Approval::query()
-            ->where('status', \App\Models\Approval::PENDING)
-            ->where(fn ($q) => $q
-                ->where(fn ($w) => $w->where('approvable_type', DeliveryChallan::class)->where('approvable_id', $challanId))
-                ->orWhere(fn ($w) => $w->where('approvable_type', SalesInvoice::class)->where('approvable_id', $draft->id))
-                ->orWhere(fn ($w) => $w->where('approvable_type', \App\Modules\Accounts\Models\Voucher::class)
-                    ->whereIn('approvable_id', $voucherIds)))
-            ->orderByDesc('id')
-            ->value('id');
+        $approval = DirectSaleService::pendingApprovalsOf($draft)->first()?->id;
 
         return $approval === null
             ? route('sales.direct.drafts', ['tab' => 'approval'])
             : route('approval.inbox.show', $approval);
+    }
+
+    /** ⭐ সইয়ের অপেক্ষা থেকে খসড়ায় — কাউন্টারের "কেবল দেখা" ব্যানারের বোতাম ([[DirectSaleService::withdrawHeld()]]). */
+    public function withdrawHeld(Request $request, SalesInvoice $invoice): RedirectResponse
+    {
+        $this->sales->withdrawHeld($invoice, $request->user());
+
+        // ⓘ খসড়া হয়ে একই কাউন্টারে খোলে — বদলে আবার নিশ্চিত করার জন্য
+        return redirect()->route('sales.direct.create', ['draft' => $invoice->id])
+            ->with('saved', __('sales::message.held_withdrawn', ['no' => $invoice->document_no]));
     }
 
     /** খসড়া নিষ্ক্রিয় — তালিকার বোতাম ([[DirectSaleService::pauseDraft()]]). */
@@ -1387,7 +1383,7 @@ class DirectSaleController extends Controller implements HasMiddleware
             ->orderByDesc('id')
             ->limit(500)
             ->with('customer')
-            ->get(['id', 'document_no', 'customer_id', 'total', 'trx_date', 'counter_draft'])
+            ->get(['id', 'document_no', 'customer_id', 'total', 'trx_date', 'counter_draft', 'counter_screen'])
             ->groupBy('customer_id')
             ->map(fn (Collection $drafts) => $drafts->map(fn (SalesInvoice $draft) => [
                 'id' => (int) $draft->id,
@@ -1397,8 +1393,10 @@ class DirectSaleController extends Controller implements HasMiddleware
                 'total' => (string) $draft->total,
                 'date' => $draft->trx_date?->format('d-m-Y') ?? '',
                 'group' => $held->has($draft->id) ? 'approval' : 'draft',
-                // ⓘ খসড়া কাউন্টারে খোলে; সইয়ের অপেক্ষায় থাকলে অনুমোদনের পাতায় (দেখা ও ফিরিয়ে আনা)
-                'url' => $held->has($draft->id)
+                /* ⭐ সব ভাগ কাউন্টারেই খোলে — মালিকের অনুমোদিত নকশা, ২৮ সেপ্টেম্বর ২০২৬; সইয়ের
+                   অপেক্ষারটা কেবল দেখার জন্য ([[resumeFrom()]] `viewOnly`)। ⓘ পর্দার ছবি ছাড়া
+                   পুরনো বিক্রি (এই বদলের আগের) দেখানোর কিছু নেই — সেটা অনুমোদনের পাতায়। */
+                'url' => $held->has($draft->id) && $draft->counter_screen === null
                     ? $this->approvalUrlFor($draft)
                     : route('sales.direct.create', ['draft' => $draft->id]),
             ])->values()->all())
@@ -1412,7 +1410,7 @@ class DirectSaleController extends Controller implements HasMiddleware
      * খোলে। ⓘ আসল পাহারা সংরক্ষণে ([[DirectSaleService::parkedFor()]]) —
      * এখানে দেখানো আর পাকা করার মাঝে কেউ পাকা করে ফেললে সেবাই বলে দেয়।
      *
-     * @return array{invoiceId: int, invoiceNo: string, challanNo: string, customerId: int, screen: array<mixed>, fields: array<string, mixed>}|null
+     * @return array{invoiceId: int, invoiceNo: string, challanNo: string, customerId: int, screen: array<mixed>, fields: array<string, mixed>, viewOnly: bool, approvalUrl: string|null}|null
      */
     private function resumeFrom(Request $request): ?array
     {
@@ -1422,17 +1420,23 @@ class DirectSaleController extends Controller implements HasMiddleware
             return null;
         }
 
-        $draft = SalesInvoice::query()
+        $draft = DirectSaleService::openCounterDrafts()
             ->with('lines.challanLine.challan')
-            ->where('status', 'draft')
-            ->whereNotNull('counter_draft')
             ->find($id);
 
         if ($draft === null) {
             return null;
         }
 
-        $saved = (array) $draft->counter_draft;
+        /* ⭐ সইয়ের অপেক্ষায় থাকলে কেবল দেখা — মালিকের অনুমোদিত নকশা, ২৮ সেপ্টেম্বর ২০২৬।
+           ⛔ খসড়ার ছবি (`counter_draft`) নয়, দেখার ছবি (`counter_screen`) — আর সংরক্ষণেও
+           পাহারা আছে ([[DirectSaleService::parkedFor()]] `counter_draft` চায়)। */
+        $held = DirectSaleService::isHeldForSignature($draft);
+        $saved = (array) ($held ? $draft->counter_screen : $draft->counter_draft);
+
+        if ($saved === []) {
+            return null;
+        }
 
         return [
             'invoiceId' => (int) $draft->id,
@@ -1441,6 +1445,8 @@ class DirectSaleController extends Controller implements HasMiddleware
             'customerId' => (int) $draft->customer_id,
             'screen' => (array) ($saved['screen'] ?? []),
             'fields' => (array) ($saved['fields'] ?? []),
+            'viewOnly' => $held,
+            'approvalUrl' => $held ? $this->approvalUrlFor($draft) : null,
         ];
     }
 

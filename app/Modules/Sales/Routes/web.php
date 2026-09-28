@@ -107,6 +107,8 @@ Route::middleware('auth')->prefix('sales')->group(function () {
         // ⓘ খসড়া সরিয়ে রাখা ও ফেরানো — তালিকার বোতাম (মালিক, ২৮ সেপ্টেম্বর ২০২৬)
         Route::post('/drafts/{invoice}/pause', [DirectSaleController::class, 'pauseDraft'])->name('draft_pause');
         Route::post('/drafts/{invoice}/resume', [DirectSaleController::class, 'resumeDraft'])->name('draft_resume');
+        // ⓘ সইয়ের অপেক্ষা থেকে খসড়ায় ফেরানো — কেবল যিনি পাঠিয়েছেন (মালিক, ২৮ সেপ্টেম্বর ২০২৬)
+        Route::post('/drafts/{invoice}/withdraw', [DirectSaleController::class, 'withdrawHeld'])->name('draft_withdraw');
 
         /*
          * এই মালে কতটা ফ্রি — সারি যোগ করার আগে জিজ্ঞাসা।

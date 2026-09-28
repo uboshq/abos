@@ -1601,6 +1601,47 @@ describe('Pending ড্রপডাউনের তালিকা', () => {
         expect(c.pendingShown.map(d => d.no)).toEqual(['INV-0011'])
         expect(c.pendingLabel(c.pendingShown[0])).not.toContain('রহিম স্টোর')
     })
+
+    // ⭐ দুই ভাগ — খসড়া আর অনুমোদনের অপেক্ষায় (মালিকের অনুমোদিত নকশা, ২৮ সেপ্টেম্বর ২০২৬)
+    it('খসড়া আর সইয়ের অপেক্ষা আলাদা ভাগে, কোনোটা দুইবার নয়', () => {
+        const c = counter({ pendingDrafts: {
+            5: [{ id: 11, no: 'INV-0011', total: '100', date: '27-09-2026', group: 'draft' }],
+            9: [{ id: 14, no: 'INV-0014', total: '250', date: '28-09-2026', group: 'approval' }],
+        } })
+
+        expect(c.pendingShownDrafts.map(d => d.no)).toEqual(['INV-0011'])
+        expect(c.pendingShownHeld.map(d => d.no)).toEqual(['INV-0014'])
+    })
+})
+
+/*
+ * ── সইয়ের অপেক্ষার বিক্রি — কাউন্টারে কেবল দেখা ─────────────────────────
+ * ⛔ আসল পাহারা সার্ভারে; এখানে দাবি: বোতাম বন্ধ, জমা আটকায়, সারি ওঠে না।
+ */
+describe('কেবল দেখা', () => {
+    const resume = { invoiceId: 14, customerId: 5, screen: {}, fields: {}, viewOnly: true }
+
+    it('দুই বোতাম বন্ধ আর জমা আটকায়', () => {
+        const c = counter({ resume })
+        c.lines = [{ product_id: 1, qty: 1, rate: 100 }]
+        c.customerId = '5'
+
+        expect(c.viewOnly).toBe(true)
+        expect(c.canConfirm).toBe(false)
+
+        let stopped = false
+        c.guardSubmit({ submitter: { value: '0' }, preventDefault: () => { stopped = true } })
+        expect(stopped).toBe(true)
+    })
+
+    it('সাধারণ খসড়ায় দেখা-মোড নেই', () => {
+        const c = counter({ resume: { ...resume, viewOnly: false } })
+        c.lines = [{ product_id: 1, qty: 1, rate: 100 }]
+        c.customerId = '5'
+
+        expect(c.viewOnly).toBe(false)
+        expect(c.canConfirm).toBe(true)
+    })
 })
 
 /*

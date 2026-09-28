@@ -742,10 +742,20 @@
                                             x-text="pendingShown.length > 0
                                                       ? @js(__('sales::field.pending_drafts_pick'))
                                                       : @js(__('sales::field.pending_drafts_none'))"></option>
-                                    <template x-for="d in pendingShown" :key="d.id">
-                                        <option :value="d.id" :selected="$str(d.id) === resumeId"
-                                                x-text="pendingLabel(d)"></option>
-                                    </template>
+                                    {{-- ⭐ ভাগ করে — খসড়া আর অনুমোদনের অপেক্ষায় (মালিকের অনুমোদিত নকশা,
+                                         ২৮ সেপ্টেম্বর ২০২৬); দুইটাই কাউন্টারে খোলে। --}}
+                                    <optgroup label="{{ __('sales::field.pending_group_drafts') }}">
+                                        <template x-for="d in pendingShownDrafts" :key="d.id">
+                                            <option :value="d.id" :selected="$str(d.id) === resumeId"
+                                                    x-text="pendingLabel(d)"></option>
+                                        </template>
+                                    </optgroup>
+                                    <optgroup label="⏳ {{ __('sales::field.pending_group_held') }}">
+                                        <template x-for="d in pendingShownHeld" :key="d.id">
+                                            <option :value="d.id" :selected="$str(d.id) === resumeId"
+                                                    x-text="pendingLabel(d)"></option>
+                                        </template>
+                                    </optgroup>
                                 </select>
                             </label>
 

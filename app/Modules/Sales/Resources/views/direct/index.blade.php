@@ -45,7 +45,37 @@
          ⚠️ বাতিলের ফর্মটা মূল ফর্মের **বাইরে** — ফর্মের ভিতরে ফর্ম HTML-এ
          অবৈধ, আর ব্রাউজার তখন ভিতরেরটা ফেলে দিয়ে বোতামটা দিয়ে **মূল
          বিলটাই** জমা দিত। ⓘ Alpine লাগে না, তাই এটা সাধারণ HTML। --}}
-    @if (! empty($resume))
+    {{-- ⭐ সইয়ের অপেক্ষার বিক্রি — কেবল দেখা; যিনি পাঠিয়েছেন তিনি খসড়ায় ফেরাতে পারেন
+         (মালিকের অনুমোদিত নকশা, ২৮ সেপ্টেম্বর ২০২৬)। ⓘ বাতিল এখানে নেই — সইয়ের
+         অপেক্ষার বিক্রি আগে খসড়ায় ফেরে, তারপর বাতিল বা বদল। --}}
+    @if (! empty($resume) && ! empty($resume['viewOnly']))
+        <div role="status"
+             class="mb-3 flex flex-wrap items-center gap-3 rounded-(--radius-card) border
+                    border-(--color-warning) bg-(--color-badge-pending-bg) p-3">
+            <span class="text-sm font-semibold text-(--color-badge-pending-ink)">
+                ⏳ {{ __('sales::field.pending_group_held') }}:
+                <span class="num">{{ $resume['invoiceNo'] }}</span>
+                @if ($resume['challanNo'] !== '')
+                    · {{ __('sales::field.challan_no_short') }}
+                    <span class="num">{{ $resume['challanNo'] }}</span>
+                @endif
+            </span>
+            <span class="text-xs text-(--color-badge-pending-ink)">{{ __('sales::message.held_view_only') }}</span>
+
+            <a href="{{ $resume['approvalUrl'] }}"
+               class="ms-auto rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-app)
+                      px-4 py-1.5 text-xs font-semibold">
+                {{ __('sales::field.held_open_approval') }}
+            </a>
+
+            <form method="POST" action="{{ route('sales.direct.draft_withdraw', $resume['invoiceId']) }}">
+                @csrf
+                <x-ui.button type="submit" tone="primary" class="py-1.5 text-xs">
+                    {{ __('sales::field.held_withdraw') }}
+                </x-ui.button>
+            </form>
+        </div>
+    @elseif (! empty($resume))
         <form method="POST" action="{{ route('sales.direct.discard', $resume['invoiceId']) }}"
               class="mb-3 flex flex-wrap items-center gap-3 rounded-(--radius-card) border
                      border-(--color-warning) bg-(--color-badge-pending-bg) p-3">
@@ -98,7 +128,6 @@
                   'itemAlreadyInCart' => __('sales::validation.item_already_in_cart'),
                   'freeNextAt' => __('sales::message.free_next_at'),
                   'openDraftBlocks' => __('sales::validation.open_draft_blocks_new_bill'),
-                  'pendingAwaiting' => __('sales::field.tab_awaiting_approval'),
               ]),
               pendingDrafts: @js($pendingDrafts ?? []),
               resume: @js($resume ?? null),

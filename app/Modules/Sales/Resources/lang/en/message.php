@@ -7,6 +7,11 @@ return [
 
     'direct_sale_held' => ':invoice kept as a draft — the deposit is waiting for approval. Once signed, confirm the sale from invoice :invoice; the goods go out and the invoice can be printed then.',
     'draft_parked' => 'Draft kept — invoice :invoice, challan :challan. Open it from "Pending" on this screen to confirm.',
+    'held_view_only' => 'Awaiting signature — view only. Bring it back to draft to change it.',
+    'held_withdrawn' => ':no is back to draft — change it and confirm again.',
+    'held_withdrawn_reason' => 'Sale brought back to draft',
+    'held_not_withdrawable' => 'This sale is no longer awaiting a signature — nothing to bring back.',
+    'held_withdraw_only_requester' => 'Only the person who sent it for signature can bring it back to draft.',
     'draft_discarded' => 'Draft :no cancelled.',
     'held_sale_finished' => ':no confirmed — the goods are out, and the invoice and deposit are on the books.',
     'held_explain' => 'Until approval the challan and invoice stay drafts, no goods have left, and the invoice is not printed.',

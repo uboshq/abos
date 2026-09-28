@@ -348,6 +348,13 @@ export default function directSale({
         pendingDrafts: pendingDrafts ?? {},
         resumeId: resume ? String(resume.invoiceId ?? '') : '',
 
+        /*
+         * ⭐ সইয়ের অপেক্ষার বিক্রি — কেবল দেখা (মালিকের অনুমোদিত নকশা, ২৮ সেপ্টেম্বর ২০২৬)।
+         * ⓘ দুই বোতাম বন্ধ ([[canConfirm]]), কার্টে সারি ওঠে না, আর ছবিটা হাতের খসড়ায়
+         * লেখা হয় না। ⛔ আসল পাহারা সার্ভারে — এটা কেবল ভুল চাপ ঠেকায়।
+         */
+        viewOnly: Boolean(resume?.viewOnly),
+
         /** ফিরিয়ে আনার প্রস্তাব — খসড়া পাওয়া গেলে উপরে বার দেখায়। */
         draftFound: false,
         draftAt: '',
@@ -369,7 +376,7 @@ export default function directSale({
              * ব্যবহারকারীকে ফেরানোর প্রস্তাব দেখানো হচ্ছে**।
              * বোতামটা থাকত, চাপলে কিছুই ফিরত না।
              */
-            if (this.draftFound) return;
+            if (this.draftFound || this.viewOnly) return;
 
             try {
                 if (this.lines.length === 0) {
@@ -506,13 +513,20 @@ export default function directSale({
                 .sort((a, b) => Number(b.id) - Number(a.id));
         },
 
+        /** Pending-এর দুই ভাগ — খসড়া আর অনুমোদনের অপেক্ষায়; ভাগটা সার্ভার বলে (`group`)। */
+        get pendingShownDrafts() {
+            return this.pendingShown.filter(d => d.group !== 'approval');
+        },
+
+        get pendingShownHeld() {
+            return this.pendingShown.filter(d => d.group === 'approval');
+        },
+
         /** ড্রপডাউনের একটা সারির লেখা — ক্রেতা না বাছা থাকলে নামসহ। */
         pendingLabel(d) {
             const who = String(this.customerId ?? '') === '' && d.customer ? d.customer + ' · ' : '';
-            // ⭐ দুই ভাগ — সইয়ের অপেক্ষায় থাকা বিক্রি চিহ্নসহ (মালিক, ২৮ সেপ্টেম্বর ২০২৬)
-            const tag = d.group === 'approval' ? '⏳ ' + (texts.pendingAwaiting ?? '') + ' · ' : '';
-
-            return tag + who + d.no + ' · ৳' + this.money(d.total) + ' · ' + d.date;
+            // ⓘ ভাগের নাম optgroup-এ — সারিতে আবার লিখলে দুইবার পড়তে হত
+            return who + d.no + ' · ৳' + this.money(d.total) + ' · ' + d.date;
         },
 
         /*
@@ -790,6 +804,9 @@ export default function directSale({
         },
 
         get canConfirm() {
+            /* ⛔ সইয়ের অপেক্ষার বিক্রি কেবল দেখা — আগে খসড়ায় ফেরাতে হয় ([[viewOnly]]) */
+            if (this.viewOnly) return false;
+
             /* ⛔ খোলা খসড়া থাকলে দুইটা বোতামই বন্ধ ([[customerHasOpenDraft]]) */
             return this.lines.length > 0 && this.customerId !== '' && ! this.customerHasOpenDraft;
         },
@@ -1267,7 +1284,7 @@ export default function directSale({
          * সে কার্টের সারিটা তুলে আনলে **দুইটা সারিই হারাত**।
          */
         async addToCart() {
-            if (! this.picked) return false;
+            if (! this.picked || this.viewOnly) return false;
 
             /* ⛔ খোলা খসড়া থাকলে নতুন বিলের সারিই ওঠে না — মালিকের নির্দেশ,
                  ২৬ সেপ্টেম্বর ২০২৬। ⓘ বার্তাটা লটের ঘরেই, যেখানে চোখ থাকে। */
@@ -2557,6 +2574,12 @@ export default function directSale({
          * বোতামের `value` "1" ([[direct/partials/totals]])।
          */
         guardSubmit(event) {
+            if (this.viewOnly) {
+                event.preventDefault();
+
+                return;
+            }
+
             const asDraft = event?.submitter?.value === '1';
 
             if (! asDraft && this.creditApplies && this.creditLeft < 0) {

@@ -31,6 +31,8 @@ use App\Modules\Sales\Models\SalesInvoice;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use App\Core\Support\DocumentStatus;
+use App\Models\Approval;
+use App\Models\User;
 use Illuminate\Support\Arr;
 use Illuminate\Validation\ValidationException;
 
@@ -498,10 +500,10 @@ final class DirectSaleService
                 ];
             }
 
-            // ⓘ সইয়ের পথে গেলে আর "পেন্ডিং" নয় — শেষ হবে বিলের পাতার বোতামে
-            if ($parked !== null) {
-                $invoice->update(['counter_draft' => null]);
-            }
+            /* ⓘ সইয়ের পথে গেলে আর খসড়া নয় — শেষ হয় শেষ সইয়ের পরে। ⭐ পর্দার ছবিটা
+               `counter_screen`-এ: কাউন্টারে কেবল দেখা যায়, আর ফিরিয়ে আনলে আবার খসড়া
+               ([[withdrawHeld()]])। ⛔ `counter_draft`-এ নয় — ওটা থাকলে সই ছাড়াই বদলানো যেত। */
+            $invoice->update(['counter_draft' => null, 'counter_screen' => $this->screenOf($data)]);
 
             $awaiting = [];
 
@@ -659,6 +661,18 @@ final class DirectSaleService
     /** এই খসড়া কি সইয়ের অপেক্ষায় — চালান, বিল, বা তার বিপরীতে কাউন্টারের জমা। */
     public static function isHeldForSignature(SalesInvoice $invoice): bool
     {
+        return self::pendingApprovalsOf($invoice)->isNotEmpty();
+    }
+
+    /**
+     * এই বিক্রির ঝুলে থাকা সই-অনুরোধগুলো — চালান, বিল, আর বিলের বিপরীতে কাউন্টারের জমা।
+     * ⓘ এক জায়গায়, কারণ তিনজন একই প্রশ্ন করে: [[isHeldForSignature()]], অনুমোদনের পাতার
+     * ঠিকানা, আর [[withdrawHeld()]]।
+     *
+     * @return \Illuminate\Support\Collection<int, Approval>
+     */
+    public static function pendingApprovalsOf(SalesInvoice $invoice): \Illuminate\Support\Collection
+    {
         $invoice->loadMissing('lines.challanLine');
         $challanId = (int) ($invoice->lines->first()?->challanLine?->delivery_challan_id ?? 0);
         $voucherIds = \App\Modules\Accounts\Models\Voucher::query()
@@ -666,14 +680,60 @@ final class DirectSaleService
             ->where('against_id', $invoice->id)
             ->pluck('id')->all();
 
-        return \App\Models\Approval::query()
-            ->where('status', \App\Models\Approval::PENDING)
+        return Approval::query()
+            ->where('status', Approval::PENDING)
             ->where(fn ($q) => $q
                 ->where(fn ($w) => $w->where('approvable_type', DeliveryChallan::class)->where('approvable_id', $challanId))
                 ->orWhere(fn ($w) => $w->where('approvable_type', SalesInvoice::class)->where('approvable_id', $invoice->id))
                 ->orWhere(fn ($w) => $w->where('approvable_type', \App\Modules\Accounts\Models\Voucher::class)
                     ->whereIn('approvable_id', $voucherIds)))
-            ->exists();
+            ->orderByDesc('id')
+            ->get();
+    }
+
+    /**
+     * ⭐ সইয়ের অপেক্ষা থেকে খসড়ায় ফেরানো — মালিকের অনুমোদিত নকশা, ২৮ সেপ্টেম্বর ২০২৬:
+     * "অনুমোদনের অপেক্ষায়" বিক্রি কাউন্টারে কেবল দেখা যায়; যিনি পাঠিয়েছেন তিনি খসড়ায়
+     * ফিরিয়ে আনতে পারেন, তারপর বদলে আবার নিশ্চিত।
+     *
+     * ⓘ তিন কাজ, একই লেনদেনে: ঝুলে থাকা প্রতিটা সই-অনুরোধ প্রত্যাহার
+     * ([[ApprovalEngine::cancel()]]), কাউন্টারের খসড়া জমা-ভাউচার বাতিল (খাতায় কখনো
+     * বসেনি, তাই উল্টো এন্ট্রি নেই), আর দেখার ছবিটা আবার খসড়ার ছবি।
+     * ⛔ একটা অনুরোধও অন্যের হলে কিছুই নয় — অর্ধেক প্রত্যাহারে বিক্রিটা না খসড়া, না সইয়ের।
+     * ⚠️ জমা-ভাউচার থেকে গেলে আবার নিশ্চিত করলে নতুন ভাউচার বসত, আর [[finishHeld()]]
+     * দুই সেটই খাতায় তুলত — একই টাকা দুইবার।
+     */
+    public function withdrawHeld(SalesInvoice $invoice, User $user): void
+    {
+        DB::transaction(function () use ($invoice, $user) {
+            $invoice = SalesInvoice::query()->lockForUpdate()->find($invoice->getKey());
+
+            if ($invoice === null
+                || $invoice->counter_screen === null
+                || ! self::awaitingApproval()->whereKey($invoice->id)->exists()) {
+                throw ValidationException::withMessages([
+                    'resume_invoice_id' => __('sales::message.held_not_withdrawable'),
+                ]);
+            }
+
+            $approvals = self::pendingApprovalsOf($invoice);
+
+            if ($approvals->contains(fn (Approval $a) => (int) $a->requested_by !== (int) $user->id)) {
+                throw ValidationException::withMessages([
+                    'resume_invoice_id' => __('sales::message.held_withdraw_only_requester'),
+                ]);
+            }
+
+            foreach ($approvals as $approval) {
+                $this->approvalEngine->cancel($approval, $user);
+            }
+
+            foreach ($this->counterVouchers($invoice) as $voucher) {
+                $this->vouchers->cancel($voucher, __('sales::message.held_withdrawn_reason'));
+            }
+
+            $invoice->update(['counter_draft' => $invoice->counter_screen, 'counter_screen' => null]);
+        });
     }
 
     /**
