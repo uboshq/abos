@@ -37,6 +37,31 @@ use Tests\TestCase;
  *
  * ⚠️ তাই **সকালে লাল দেখলে প্রথমে ধরে নিও পাহারাটারই ভুল**, কোড ভাঙেনি।
  * ⭐ প্রথম আসল রান Mac Mini-তে।
+ *
+ * ══ ⛔ এই ফাইলের পুরনো দাবিগুলোর দুর্বলতা — পড়ে নাও, ২৭ সেপ্টেম্বর ২০২৬ ══
+ *
+ * উপরের `test_the_liability_dropdown_offers_only_the_loan_accounts` আর
+ * `test_the_money_dropdown_offers_only_money_accounts` মাপে **ড্রপডাউনের
+ * ভিতরে কী আছে** — তিনটা ঋণের খাত, আর অ-টাকার খাত নেই। ⛔ কিন্তু ওরা
+ * বলতে পারে না ঘরটা ব্যবহারকারী **কোনোদিন দেখেছিলেন কি না**।
+ *
+ * ⚠️ আর ঠিক এই ফাঁকটাতেই একটা ভুল মাসখানেক বেঁচে ছিল। দায়ের ঘরটা
+ * `<template x-if=...>`-এর ভিতরে বসানো ছিল, শর্ত `kind !== cc && kind
+ * !== bg`, অথচ `kind`-এর শুরুর মান `cc`। ⓘ Blade একটা `template`-এর
+ * ভিতরটাও HTML-এ ছেপে দেয় — ওটা নিষ্ক্রিয় থাকে DOM-এ, Alpine ক্লোন না
+ * করা পর্যন্ত। ⛔ ফলে `getContent()`-এ `<select>`-টা ছিল, `<option>`
+ * তিনটাও ছিল, দাবিটা সবুজ ছিল — আর পর্দায় ঘরটা ছিলই না।
+ *
+ * ⛔ তাই উপরের দুইটা দাবির উপর **দৃশ্যমানতার** প্রশ্নে ভরসা কোরো না।
+ * ⭐ নিচের দুইটা দাবি সেই প্রশ্নটাই আলাদা করে করে: ঘরটা কোনো
+ * `template` গেটের ভিতরে নেই তো?
+ *
+ * ── ⚠️ নিচের দাবিগুলোর নিজেরও একটা সীমা আছে ─────────────────────────
+ * PHP-র অনুরোধে Alpine চলে না। ⓘ তাই `x-bind:disabled` বা `x-show`
+ * সত্যিই চলল কি না, সেটা এখান থেকে প্রমাণ করা যায় না — কেবল **বাঁধনটা
+ * লেখা আছে** এটুকু দেখা যায়। ⭐ আসল ভরসাটা সার্ভার থেকে বসানো
+ * `disabled` অ্যাট্রিবিউটে, কারণ ওটা Alpine ছাড়াই HTML-এ থাকে।
+ * ⓘ Alpine নিজে চলল কি না তার পাহারা `resources/js`-এর vitest-এ।
  */
 final class TheDropdownOfferedTheWholeChartTest extends TestCase
 {
@@ -133,6 +158,147 @@ final class TheDropdownOfferedTheWholeChartTest extends TestCase
             $found = (bool) array_filter($money, fn (string $c): bool => str_contains($option, $c));
             $this->assertTrue($found, "টাকার তালিকায় একটা অ-টাকার খাত: {$option}");
         }
+    }
+
+    /**
+     * ⭐ ঘরটা কোনো `template` গেটের ভিতরে নেই — পাঁচ ট্যাবেই আঁকা।
+     *
+     * ── ⛔ কেন দাবিটা এইভাবে লেখা ───────────────────────────────────
+     * `assertSee('liability_account_id')` এই ভুলটা ধরত না: গেটের ভিতরে
+     * থাকলেও লেখাটা পাতায় থাকে। ⓘ তাই মাপা হয় **অবস্থান**: `<select>`-টার
+     * আগে যতগুলো `<template>` খোলা হয়েছে আর যতগুলো বন্ধ, দুইটা সমান
+     * কি না। ⚠️ সমান না হলে ঘরটা একটা বন্ধ খামের ভিতরে বসে আছে।
+     */
+    public function test_the_liability_field_sits_outside_every_template_gate(): void
+    {
+        $page = $this->get(route('finance.bank_facility.create'));
+        $page->assertOk();
+
+        $depth = $this->templateDepthAt($page->getContent(), 'liability_account_id');
+
+        $this->assertNotNull($depth,
+            'পাতায় liability_account_id নামের কোনো select-ই নেই।');
+
+        $this->assertSame(0, $depth,
+            'দায়ের ঘরটা এখনো একটা template গেটের ভিতরে — শুরুর ট্যাবে (cc) '
+            .'Alpine ওটা ক্লোন করে না, তাই ব্যবহারকারী ঘরটা দেখেনই না।');
+
+        /*
+         * ⓘ টাকার ঘরটা ইচ্ছে করেই CC-র বাক্সে, তাই ওটা গেটের ভিতরে
+         * থাকাই ঠিক। ⭐ দাবিটা এখানে রাখা হলো যাতে পরে কেউ
+         * "সব ঘর গেটের বাইরে আনি" বলে ওটাও টেনে বের না করে।
+         */
+        $this->assertSame(1, $this->templateDepthAt($page->getContent(), 'money_account_id'),
+            'টাকার ঘরটা CC-র ড্রয়িং পাওয়ার বাক্সের ভিতরেই থাকার কথা।');
+    }
+
+    /**
+     * ⭐ CC-তে ঘরটা নিষ্ক্রিয়, আর কারণটা পর্দাতেই লেখা।
+     *
+     * ⓘ শুরুর ট্যাব `cc`, তাই সার্ভারই `disabled` বসিয়ে পাঠায় — Alpine
+     * বুট হওয়ার অপেক্ষা না করেই। ⚠️ এই দাবিটাই আসল, কারণ এটা Alpine
+     * ছাড়াই সত্য; নিচের `x-bind` দাবিটা কেবল বাঁধনটা আছে কি না দেখে।
+     */
+    public function test_the_liability_field_is_disabled_and_explained_on_the_cash_credit_tab(): void
+    {
+        $page = $this->get(route('finance.bank_facility.create'));
+        $page->assertOk();
+        $html = $page->getContent();
+
+        $tag = $this->openTagOf($html, 'select', 'liability_account_id');
+
+        $this->assertNotNull($tag, 'পাতায় liability_account_id নামের কোনো select-ই নেই।');
+
+        /*
+         * ⛔ এই দাবিটা প্রথমে `assertStringContainsString('disabled', $tag)`
+         * ছিল, আর সেটা **অন্ধ**: ট্যাগে `x-bind:disabled=...` আছে, যার
+         * ভিতরেই "disabled" শব্দটা বসে আছে। ⚠️ ফলে সার্ভার থেকে বসানো
+         * `disabled` একেবারে উঠে গেলেও দাবিটা সবুজ থাকত — অর্থাৎ ঠিক যে
+         * জিনিসটা মাপার কথা, সেটাই মাপা হত না।
+         *
+         * ⭐ তাই Alpine-এর বাঁধনগুলো আগে কেটে ফেলা হয়, তারপর খোঁজা হয়
+         * একলা দাঁড়ানো `disabled` অ্যাট্রিবিউট। ⓘ Laravel bool `true`-কে
+         * খালি `disabled` হিসেবেই ছাপে (ComponentAttributeBag), তাই
+         * `disabled="..."` নয়, একলা শব্দটাই আসল রূপ।
+         */
+        /*
+         * ⚠️ দুইটা রূপ আলাদা করে লেখা, আর সেটা মেপে জানা: Laravel-এর
+         * [[ComponentAttributeBag]] bool `true`-কে `disabled="disabled"`
+         * বানায়, খালি `disabled` নয়। ⛔ প্রথমে খালি রূপটা ধরে লিখেছিলাম
+         * আর হাতে লেখা একটা নমুনায় "প্রমাণ" করেছিলাম — নমুনাটাই আসল
+         * রেন্ডারের মতো ছিল না। ⓘ তাই ছাঁকনিটা কেবল Alpine-এর রূপ কাটে
+         * (`:disabled` আর `x-bind:disabled`), আর দুইটা রূপের যেটাই আসুক
+         * তাই মেলে।
+         */
+        $plain = preg_replace('/\s(?:x-bind:|:)disabled="[^"]*"/', ' ', $tag);
+
+        $this->assertMatchesRegularExpression('/\sdisabled(?:="[^"]*")?(?=[\s>])/', $plain,
+            'শুরুর ট্যাব cc, অথচ দায়ের ঘরটা খোলা — CC-তে ওটা ভরার কথা নয়। '
+            .'(Alpine-এর বাঁধন কেটে দেখা হয়েছে, তাই x-bind এটাকে সবুজ করতে পারে না।)');
+
+        /*
+         * ⚠️ ধরন বদলালে ঘরটা আবার খুলতে হবে, নাহলে মেয়াদি ঋণেও ওটা
+         * নিষ্ক্রিয় থেকে যেত আর বাগটা উল্টো দিকে ফিরে আসত।
+         */
+        $this->assertStringContainsString('x-bind:disabled', $tag,
+            'ধরন বদলালে ঘরটা খুলবে কীসে — কোনো Alpine বাঁধনই নেই।');
+
+        foreach (['cc', 'bg'] as $kind) {
+            $this->assertStringContainsString("'{$kind}'", $tag,
+                "বাঁধনটা {$kind} ধরনের কথা বলে না।");
+        }
+
+        /*
+         * ⛔ নিষ্ক্রিয় ঘর কারণ না বললে সেটা ভাঙা ঘরের মতো দেখায়।
+         * ⓘ লেখাটা Bengali, আর এখানে হরফ মিলিয়ে দেখা হয় না — ঐ ফাইলে
+         * `য়` যুক্তবর্ণে ভাঙা থাকে, তাই টাইপ করা বাংলা কোনোদিন মেলে না।
+         * ⭐ তার বদলে দেখা হয় লাইনটা আছে, খালি নয়, আর ধরনের সাথে বাঁধা।
+         */
+        $this->assertMatchesRegularExpression(
+            '/<p\b[^>]*data-liability-not-applicable[^>]*>(.*?)<\/p>/s',
+            $html,
+            'CC-তে ঘরটা কেন নিষ্ক্রিয়, সেটা পর্দায় কোথাও লেখা নেই।',
+        );
+
+        preg_match('/<p\b([^>]*data-liability-not-applicable[^>]*)>(.*?)<\/p>/s', $html, $m);
+
+        $this->assertGreaterThan(20, mb_strlen(trim(strip_tags($m[2]))),
+            'ব্যাখ্যার লাইনটা আছে, কিন্তু ভিতরে কিছু নেই।');
+
+        $this->assertStringContainsString('x-show', $m[1],
+            'ব্যাখ্যাটা সব ট্যাবেই দেখা যাবে — ধরনের সাথে বাঁধা নেই।');
+    }
+
+    /**
+     * একটা নামের ইনপুট/সিলেক্টের আগে কয়টা `template` খোলা আছে।
+     *
+     * ⓘ `null` মানে ঘরটা পাতাতেই নেই — শূন্য গভীরতার সাথে গুলিয়ে
+     * যাওয়ার সুযোগ রাখা হয়নি, কারণ দুইটা সম্পূর্ণ আলাদা ব্যর্থতা।
+     */
+    private function templateDepthAt(string $html, string $name): ?int
+    {
+        if (! preg_match('/<select\b[^>]*name="'.preg_quote($name, '/').'"/s', $html, $m, PREG_OFFSET_CAPTURE)) {
+            return null;
+        }
+
+        $before = substr($html, 0, (int) $m[0][1]);
+
+        return preg_match_all('/<template\b/i', $before)
+            - preg_match_all('#</template\s*>#i', $before);
+    }
+
+    /**
+     * একটা নামের ট্যাগের খোলা অংশটা — অ্যাট্রিবিউটগুলো দেখার জন্য।
+     */
+    private function openTagOf(string $html, string $tag, string $name): ?string
+    {
+        $found = preg_match(
+            '/<'.preg_quote($tag, '/').'\b[^>]*name="'.preg_quote($name, '/').'"[^>]*>/s',
+            $html,
+            $m,
+        );
+
+        return $found ? $m[0] : null;
     }
 
     /**

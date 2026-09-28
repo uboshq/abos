@@ -286,12 +286,64 @@
                             :value="old('margin_percent', '15')" numeric />
             </template>
 
-            {{-- ⚠️ গ্যারান্টিতে দায়ের খাত চাওয়া হয় না — ওটা দায় নয় --}}
-            <template x-if="kind !== 'cc' && kind !== 'bg'">
+            {{-- ⭐ দায়ের খাত এখন সব ট্যাবেই — ২৭ সেপ্টেম্বর ২০২৬।
+
+                 ── ⛔ যে ভুলটা মাসখানেক পর্দায় ছিল ─────────────────────────
+                 ঘরটা একটা `template x-if` গেটের ভিতরে ছিল, শর্ত ছিল
+                 `kind !== cc && kind !== bg`। ⚠️ আর `kind`-এর শুরুর মান
+                 `cc` (উপরে, `x-data`-তে)। ⓘ ফলে পাতা খোলার মুহূর্তে গেটটা
+                 বন্ধ, আর ঘরটা DOM-এ ঢোকেই না — অর্থাৎ **শুরুর CC ট্যাবে
+                 আর গ্যারান্টিতে** ঘরটা ছিলই না।
+
+                 ⚠️ সংশোধন: প্রথমে এখানে লেখা ছিল "ব্যবহারকারী কোনোদিন
+                 দেখতেন না" — সেটা বেশি বলা। ⓘ পুরনো `x-if`-এর শর্তটা
+                 CSP-Alpine-এ বৈধ (মেপে দেখা, csp-expressions ৪/৪), তাই
+                 ঋণের ট্যাবে গেট খুলত আর ঘরটা দেখা যেত। ⓘ অভিযোগটা এসেছিল
+                 শুরুর ট্যাব থেকে, আর ওখানেই ঘরটা অনুপস্থিত ছিল।
+
+                 ⛔ আর পাহারাটা এই ভুল ধরতে পারেনি: Blade `template`-এর
+                 ভিতরটাও HTML-এ ছাপে, তাই `option`-গুলো গুনে দেখা দাবিটা
+                 পুরোটা সময় সবুজ ছিল। ⓘ বিস্তারিত
+                 [[TheDropdownOfferedTheWholeChartTest]]-এর মাথায়।
+
+                 ── ⭐ সিদ্ধান্ত: লুকানো নয়, নিষ্ক্রিয় ─────────────────────
+                 ঘরটা পাঁচ ট্যাবেই আঁকা হয়। CC আর গ্যারান্টিতে সেটা
+                 নিষ্ক্রিয়, আর ঠিক নিচে এক লাইনে কারণটা লেখা থাকে।
+                 ⚠️ অনুপস্থিত ঘর কোনো কারণ জানায় না — মানুষ ভাবেন ঘরটা
+                 হারিয়ে গেছে, কিংবা তাঁরা কিছু ভুল করেছেন। নিষ্ক্রিয় ঘর
+                 বলে দেয় ঘরটা আছে, আর এই ধরনে লাগে না।
+
+                 ⓘ শুরুর `disabled`-টা সার্ভার থেকেই বসে, তাই Alpine বুট
+                 হওয়ার আগের মুহূর্তেও ঘরটা খোলা পাওয়া যায় না। ⛔ আর
+                 নিষ্ক্রিয় ঘর জমা হয় না, তাই CC/গ্যারান্টিতে
+                 `liability_account_id` সার্ভারে যায় না — আগের আচরণই। --}}
+            @php
+                $bfKind = old('kind', \App\Modules\Finance\Models\BankFacility::CC);
+                $bfNeedsNoLiability = in_array($bfKind, [
+                    \App\Modules\Finance\Models\BankFacility::CC,
+                    \App\Modules\Finance\Models\BankFacility::GUARANTEE,
+                ], true);
+            @endphp
+
+            <div data-liability-account-cell>
                 <x-ui.select name="liability_account_id" :label="__('finance::field.liability_account')"
                              :options="$liabilityAccounts->mapWithKeys(fn ($a) => [$a->id => $a->code . ' · ' . $a->name()])"
-                             :selected="old('liability_account_id')" />
-            </template>
+                             :selected="old('liability_account_id')"
+                             :disabled="$bfNeedsNoLiability"
+                             x-bind:disabled="kind === 'cc' || kind === 'bg'" />
+
+                {{-- ⓘ লেখাটা এখানে সরাসরি, ভাষার ফাইলে নয় — এই কাজে কেবল
+                     দুইটা ফাইল ছোঁয়ার অনুমতি ছিল। ⚠️ ঋণ রয়ে গেল:
+                     `finance::message`-এ একটা চাবি বানিয়ে এটা সরানো দরকার,
+                     নাহলে ইংরেজি লোকেলেও লাইনটা বাংলায় পড়বে। --}}
+                <p data-liability-not-applicable x-cloak
+                   x-show="kind === 'cc' || kind === 'bg'"
+                   class="mt-1 text-2xs text-(--color-ink-muted)">
+                    চলতি মূলধন আর ব্যাংক গ্যারান্টিতে আলাদা দায়ের খাত লাগে না।
+                    CC-র বকেয়া ব্যাংক হিসাবের নিজের ঋণাত্মক জেরেই থাকে, আর
+                    গ্যারান্টি কেউ ভাঙানোর আগ পর্যন্ত দায় নয় — সম্ভাব্য দায়।
+                </p>
+            </div>
 
             {{-- ⭐ মাঝপথে শোধ করলে ব্যাংক যা নেয় — মালিকের নির্দেশ,
                  ২০ সেপ্টেম্বর ২০২৬: *"majpothe setelment korle ze extra
