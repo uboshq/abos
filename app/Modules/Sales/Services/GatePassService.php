@@ -53,7 +53,8 @@ final class GatePassService
             'delivery_challan_id' => $challan->id,
             'delivery_event_id' => $event->id,
             'shipment_id' => $trip?->id,
-            'vehicle_no' => $trip?->vehicle_no ?: $challan->vehicle_no,
+            // ⓘ বহরের গাড়ি হলে মাস্টারের নম্বরপ্লেট ([[DeliveryChallan::vehiclePlate()]])
+            'vehicle_no' => $trip?->vehicle_no ?: ($challan->vehiclePlate() ?: null),
             'driver_name' => $trip?->driver_name ?: $challan->driver_name,
             'driver_phone' => $challan->driver_phone,
             'issued_by' => auth()->id(),

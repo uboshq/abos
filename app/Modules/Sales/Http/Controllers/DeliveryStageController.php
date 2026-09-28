@@ -6,6 +6,8 @@ namespace App\Modules\Sales\Http\Controllers;
 
 use App\Core\Services\MenuBuilder;
 use App\Http\Controllers\Controller;
+use App\Core\Support\CompanyContext;
+use App\Modules\MasterData\Models\Vehicle;
 use App\Modules\Sales\Models\DeliveryChallan;
 use App\Modules\Sales\Models\DeliveryState;
 use App\Modules\Sales\Services\DeliveryStage;
@@ -15,6 +17,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
@@ -55,15 +58,38 @@ class DeliveryStageController extends Controller implements HasMiddleware
         $rows = DeliveryState::query()
             ->inTab($tab)
             ->whereHas('challan', fn (Builder $q) => $q->search($term === '' ? null : $term))
-            ->with(['challan.customer'])
+            ->with(['challan.customer', 'challan.vehicle'])
             ->orderByDesc('stage_at')
             ->orderByDesc('id')
             ->paginate(50)
             ->withQueryString();
 
+        /*
+         * ⭐ সারির "পরের ধাপ" — কেবল ধাপ বদলানোর চাবিধারীর জন্য (কোঅর্ডিনেটর, ২৯ সেপ্টেম্বর ২০২৬)।
+         * ⓘ বোতামের তালিকা সেবার নিয়মেই ([[DeliveryStageService::manualChoices()]]), আর ট্রিপে থাকা
+         * চালানে বোতাম নেই — ওর খবর ট্রিপ দেয়। পাতাপ্রতি ৫০ সারি, তাই সারি ধরে প্রশ্ন সয়।
+         */
+        $canMove = (bool) $request->user()?->can('sales.delivery.update');
+        $next = [];
+
+        if ($canMove) {
+            foreach ($rows->items() as $row) {
+                if ($row->challan !== null) {
+                    $next[$row->id] = [
+                        'choices' => $this->stages->manualChoices($row->challan),
+                        'trip' => $this->stages->activeTrip($row->challan),
+                    ];
+                }
+            }
+        }
+
         return view('sales::delivery.index', [
             'menu' => $this->menu->forUser($request->user()),
             'rows' => $rows,
+            'next' => $next,
+            'vehicles' => $canMove
+                ? Vehicle::query()->where('is_active', true)->orderBy('registration_no')->get()
+                : collect(),
             'tabs' => $tabs,
             'tab' => $tab,
             'counts' => $this->stages->counts(),
@@ -99,12 +125,52 @@ class DeliveryStageController extends Controller implements HasMiddleware
             'lines' => ['nullable', 'array'],
             // ⓘ আকার সেবা দেখে ([[DeliveryStageService::partialLines()]]) — ঋণাত্মক, বেশি, অন্য চালানের সারি
             'lines.*' => ['nullable'],
+            // ⓘ রওনার গাড়ি ও চালক — সারির ছোট ঘর থেকে; গেট পাস ঐ ছবিটাই নেয় ([[GatePassService]])
+            'vehicle_id' => ['nullable', 'integer',
+                Rule::exists('mdm_vehicles', 'id')->where('company_id', CompanyContext::id())],
+            'vehicle_no' => ['nullable', 'string', 'max:64'],
+            'driver_name' => ['nullable', 'string', 'max:191'],
+            'driver_phone' => ['nullable', 'string', 'max:32'],
         ]);
 
-        $state = $this->stages->move($challan, $data['stage'], $data);
+        $state = DB::transaction(function () use ($challan, $data) {
+            if ($data['stage'] === DeliveryStage::DISPATCHED) {
+                $this->stampTransport($challan, $data);
+            }
+
+            return $this->stages->move($challan->fresh(), $data['stage'], $data);
+        });
 
         return redirect()
             ->back(fallback: route('sales.delivery.show', $challan))
             ->with('saved', __('sales::delivery.saved', ['stage' => $state->label()]));
+    }
+
+    /**
+     * রওনার আগে চালানে গাড়ি ও চালক — যা লেখা হয়েছে কেবল সেটুকু; বহরের গাড়ি বাছলে আর চালক না
+     * লিখলে গাড়ির নিজের চালক। ⓘ নিরীক্ষায় যায় (চালান [[IsAudited]]); মাল বা টাকা নড়ে না।
+     *
+     * @param  array<string, mixed>  $data
+     */
+    private function stampTransport(DeliveryChallan $challan, array $data): void
+    {
+        $vehicle = filled($data['vehicle_id'] ?? null) ? Vehicle::query()->find($data['vehicle_id']) : null;
+        $changes = [];
+
+        if ($vehicle !== null) {
+            $changes['vehicle_id'] = $vehicle->id;
+            $changes['driver_name'] = $vehicle->driver_name;
+            $changes['driver_phone'] = $vehicle->driver_phone;
+        }
+
+        foreach (['vehicle_no', 'driver_name', 'driver_phone'] as $key) {
+            if (filled($data[$key] ?? null)) {
+                $changes[$key] = trim((string) $data[$key]);
+            }
+        }
+
+        if ($changes !== []) {
+            $challan->forceFill($changes)->save();
+        }
     }
 }

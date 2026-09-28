@@ -50,6 +50,7 @@ return [
         'date' => 'Challan date',
         'customer' => 'Customer',
         'stage' => 'Stage',
+        'next' => 'Next stage',
         'since' => 'Since',
         'total' => 'Total',
     ],
@@ -73,6 +74,9 @@ return [
         'on_trip' => 'This challan is on trip :trip — dispatch and delivery news comes from the trip page.',
         'submit' => 'Set',
         'to' => 'Set :stage',
+        'trip_short' => 'Trip :trip',
+        'gate_pass_hint' => 'Setting Dispatched makes the gate pass, with this vehicle and driver.',
+        'partial_page' => 'Partly delivered - on the challan page (quantities per line)',
     ],
 
     'field' => [
@@ -85,6 +89,11 @@ return [
         'delivered_qty' => 'Delivered quantity',
         'sent_qty' => 'On the challan',
         'product' => 'Product',
+        'vehicle' => 'Vehicle (fleet)',
+        'vehicle_not_in_fleet' => '- not in the fleet -',
+        'vehicle_no' => 'Vehicle number',
+        'driver_name' => 'Driver',
+        'driver_phone' => 'Driver phone',
         'partial_hint' => 'Enter what the customer took on each line; the rest comes back on a sales return.',
     ],
 

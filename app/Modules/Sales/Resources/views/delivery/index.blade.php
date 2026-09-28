@@ -48,6 +48,23 @@
             'render' => fn ($s) => \App\Core\Support\Money::format($s->challan?->total ?? '0'),
         ],
     ];
+
+    // ⭐ সারির "পরের ধাপ" — কেবল ধাপ বদলানোর চাবিধারীর জন্য ([[delivery/partials/row-action]])
+    if ($next !== []) {
+        $columns[] = [
+            'key' => 'next',
+            'label' => __('sales::delivery.column.next'),
+            'width' => '12rem',
+            'render' => fn ($s) => isset($next[$s->id]) && $s->challan
+                ? view('sales::delivery.partials.row-action', [
+                    'challan' => $s->challan,
+                    'choices' => $next[$s->id]['choices'],
+                    'trip' => $next[$s->id]['trip'],
+                    'vehicles' => $vehicles,
+                ])
+                : '',
+        ];
+    }
 @endphp
 
 <x-layouts.app :menu="$menu">
