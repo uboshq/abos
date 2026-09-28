@@ -472,6 +472,10 @@ return [
      * Manager: মজুদ ও রিপোর্ট দেখা।
      */
     'role_templates' => [
+        'Accountant' => [
+            // ⭐ মালিকের ভূমিকা-ভাগ, ২৭ সেপ্টেম্বর ২০২৬ (*"baki sob tumar poramorso motei koro"*)
+            'inventory.cost.view',
+        ],
         /*
          * কাউন্টার — প্রতিটা কোম্পানিতে ডিফল্টে। মালিক, ২৭ সেপ্টেম্বর ২০২৬: *"bosiye daw"*।
          * ⓘ কাউন্টারের কর্মী সব ডিলার দেখেন (মালিক, ২৬ সেপ্টেম্বর) — নাহলে বিল করবেন কীভাবে।
@@ -541,7 +545,15 @@ return [
             'inventory.product.view',
         ],
         'Field Sales' => ['inventory.product.view'],
-        'Manager' => ['inventory.stock.view', 'inventory.report', 'inventory.product.view'],
+        'Manager' => [
+            'inventory.stock.view',
+            'inventory.report',
+            'inventory.product.view',
+            // ⭐ মালিকের ভূমিকা-ভাগ, ২৭ সেপ্টেম্বর ২০২৬ (*"baki sob tumar poramorso motei koro"*)
+            'inventory.product.create',
+            'inventory.product.update',
+            'inventory.cost.view',
+        ],
     ],
 
     'doc_types' => [
@@ -775,7 +787,30 @@ return [
             'key' => 'inventory.batch_enabled',
             'label' => 'inventory::settings.batch_enabled',
             'type' => 'boolean',
-            'default' => false,
+
+            /*
+             * ⭐ ডিফল্ট চালু — মালিকের নির্দেশ, ২৮ সেপ্টেম্বর ২০২৬:
+             * *"সব বাই ডিফল্ট"*।
+             *
+             * —— ⛔ কেন বদলাতে হলো ———————————————————
+             * ডিফল্ট `false` থাকায় লাইভে কোনো কোম্পানির জন্য সারিটা
+             * না থাকায় তিনটা কোম্পানিতেই লটের দুইটা রিপোর্ট মেনুতে **ছিলই না**,
+             * আর রুটও ৪০৪ দিত। ⓘ কোড অনেক আগেই লেখা, আর ২৮ সেপ্টেম্বরে
+             * লট-ভিত্তিক রিপোর্টে *"কত দিন ধরে"* কলামও যোগ হয়েছে (f61266ce)।
+             *
+             * ⚠️ অর্থাত্ কাজটা তিনটা অংশে পুরোটাই ছিল, কেবল জোড়াটা নয় —
+             * এই প্রকল্পের সবচেয়ে চেনা ফাঁদ, আর কিছুই ভাঙে না বলে কেউ টেরও পায় না।
+             *
+             * —— ⓘ সুইচটা তবু রয়ে গেল, আর সেটা ইচ্ছাকৃত ———————
+             * যে ব্যবসায় লট ধরা হয় না, তার কাছে ওই দুইটা পাতা খালি (নিয়ম ৭)।
+             * ⭐ মালিকের কথা ছিল ডিফল্ট বদলানো, সুইচ মোছা নয় — তাই কেউ
+             * না বললে আগের মতোই বন্ধ হয়।
+             *
+             * ⛔ সুইচটা কেবল **পর্দার** — নথিতে লট ধরা পণ্যের নিজের
+             * `track_batch` ঘরে, আর মেয়াদের বাধা বা MRP সিলিং এই সুইচ
+             * বন্ধ করলেও খাটে (নিচের টীকা)।
+             */
+            'default' => true,
             'group' => 'entry',
         ],
         [
