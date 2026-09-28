@@ -28,7 +28,7 @@ final class PlannedScreenController extends Controller implements HasMiddleware
     public const SCREENS = [
         'quotation_new', 'quotation_list', 'quotation_compare', 'quotation_revision',
         // ⓘ 'order_new' আর 'order_list' নিজের রুটে সরেছে — পুরনো আদেশের পাতা (২৮ সেপ্টেম্বর ২০২৬)
-        'order_pending', 'order_partial', 'order_back',
+        'order_pending', 'order_partial', 'order_back', 'order_history',
         'pricing_customer', 'pricing_channel', 'pricing_territory',
         'pricing_special', 'pricing_dynamic',
     ];

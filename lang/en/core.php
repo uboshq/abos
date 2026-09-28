@@ -141,7 +141,7 @@ return [
         /* দলের ভেতরের ভাঁজ — এক নামে কয়েকটা পর্দা (১৯ সেপ্টেম্বর ২০২৬) */
         'vouchers' => 'Vouchers',
         'quotations' => 'Quotations',
-        'sales_orders' => 'Sales Orders',
+        'sales_orders' => 'Orders',
         'pricing' => 'Pricing',
         'notice' => 'Notices',
         'control' => 'Books control',

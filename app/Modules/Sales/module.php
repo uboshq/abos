@@ -124,14 +124,18 @@ return [
                 'permission' => 'sales.order.create', 'setting' => 'sales.screen_orders'],
             ['label' => 'sales::planned.order_list', 'cluster' => 'sales_orders', 'icon' => 'receipt', 'route' => 'sales.order.index',
                 'permission' => 'sales.order.view', 'setting' => 'sales.screen_orders'],
-            ['label' => 'sales::menu.order_track', 'cluster' => 'sales_orders', 'icon' => 'search', 'route' => 'sales.order.track',
-                'permission' => 'sales.order.view', 'setting' => 'sales.screen_orders'],
             ['label' => 'sales::planned.order_pending', 'cluster' => 'sales_orders', 'icon' => 'receipt', 'route' => 'sales.planned',
                 'route_params' => ['screen' => 'order_pending'], 'permission' => 'sales.order.view'],
             ['label' => 'sales::planned.order_partial', 'cluster' => 'sales_orders', 'icon' => 'receipt', 'route' => 'sales.planned',
                 'route_params' => ['screen' => 'order_partial'], 'permission' => 'sales.order.view'],
             ['label' => 'sales::planned.order_back', 'cluster' => 'sales_orders', 'icon' => 'receipt', 'route' => 'sales.planned',
                 'route_params' => ['screen' => 'order_back'], 'permission' => 'sales.order.view'],
+            /* ⭐ "অর্ডার" ভাঁজ — মালিকের নির্দেশ, ২৮ সেপ্টেম্বর ২০২৬: New Order, Order List, Pending,
+               Partial, Back, History; "মেনুতে এখন, কোড পরে"। আদেশের খোঁজ শেষে থাকে। */
+            ['label' => 'sales::planned.order_history', 'cluster' => 'sales_orders', 'icon' => 'receipt', 'route' => 'sales.planned',
+                'route_params' => ['screen' => 'order_history'], 'permission' => 'sales.order.view'],
+            ['label' => 'sales::menu.order_track', 'cluster' => 'sales_orders', 'icon' => 'search', 'route' => 'sales.order.track',
+                'permission' => 'sales.order.view', 'setting' => 'sales.screen_orders'],
 
             /*
              * ⭐ ক্রমটা কাগজের নিজের ধারা ধরে — মালিকের নির্দেশ, ২১ সেপ্টেম্বর ২০২৬।
