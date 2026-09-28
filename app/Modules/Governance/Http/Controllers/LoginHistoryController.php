@@ -7,8 +7,8 @@ namespace App\Modules\Governance\Http\Controllers;
 use App\Core\Services\MenuBuilder;
 use App\Core\Support\CompanyContext;
 use App\Http\Controllers\Controller;
-use App\Models\LoginAttempt;
 use App\Models\User;
+use App\Modules\Governance\Services\CompanylessRows;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
@@ -26,7 +26,10 @@ use Illuminate\View\View;
  */
 class LoginHistoryController extends Controller implements HasMiddleware
 {
-    public function __construct(private readonly MenuBuilder $menu) {}
+    public function __construct(
+        private readonly MenuBuilder $menu,
+        private readonly CompanylessRows $companyless,
+    ) {}
 
     public static function middleware(): array
     {
@@ -45,7 +48,7 @@ class LoginHistoryController extends Controller implements HasMiddleware
 
     public function index(Request $request): View
     {
-        $rows = LoginAttempt::query()
+        $rows = $this->companyless->logins($request->user())
 
             /*
              * ⛔ চলতি কোম্পানির লগইনগুলোই — ৬ সেপ্টেম্বর ২০২৬।
@@ -75,13 +78,13 @@ class LoginHistoryController extends Controller implements HasMiddleware
              * ⓘ ধরা পড়েছে [[WhoGotInTest::test_the_journal_can_be_read]]-এ।
              * ⭐ পাশের [[ErrorLogController]] (:৬০) ঠিক এই কারণেই
              * `orWhereNull` রাখে — আমি ছাঁচটা **আধা নকল করেছিলাম**।
+             *
+             * ── ⭐ ২৭ সেপ্টেম্বর ২০২৬ — ছাঁকনিটা এক জায়গায় ─────────────
+             * শর্তটা এখন [[CompanylessRows::logins()]]-এ, আর তালিকা, মাথার
+             * সংখ্যা ও ড্রপডাউন তিনটাই সেটাকে ডাকে। ⛔ অচেনা নামের
+             * কোম্পানিহীন চেষ্টা আগে সবাই দেখতেন; ⭐ এখন কেবল সুপার
+             * অ্যাডমিন (অডিট §৩)। নিজের লোকের নামে চেষ্টা আগের মতোই।
              */
-            ->where(fn (Builder $q) => $q
-                ->where('company_id', CompanyContext::id())
-                ->orWhere(fn (Builder $w) => $w->whereNull('company_id')
-                    ->where(fn (Builder $who) => $who
-                        ->whereIn('identifier', self::identifiersHere())
-                        ->orWhereNotIn('identifier', self::identifiersAnywhere()))))
             ->with('user')
             ->when($request->query('user'), fn (Builder $q, $id) => $q->where('user_id', (int) $id))
             ->when($request->query('only') === 'failed', fn (Builder $q) => $q->failed())
@@ -105,14 +108,8 @@ class LoginHistoryController extends Controller implements HasMiddleware
              * "কিছু অস্বাভাবিক ঘটছে কি না" — আর সেই উত্তরটা তালিকা
              * পড়ে বের করতে হলে বেশিরভাগ দিন কেউ বের করত না।
              */
-            'failedToday' => LoginAttempt::query()
+            'failedToday' => $this->companyless->logins($request->user())
                 // ⚠️ উপরের তালিকার মতোই — এই সংখ্যাটাও কেবল এই কোম্পানির
-                ->where(fn (Builder $q) => $q
-                    ->where('company_id', CompanyContext::id())
-                    ->orWhere(fn (Builder $w) => $w->whereNull('company_id')
-                        ->where(fn (Builder $who) => $who
-                            ->whereIn('identifier', self::identifiersHere())
-                            ->orWhereNotIn('identifier', self::identifiersAnywhere()))))
                 ->failed()
                 ->where('created_at', '>=', now()->subDay())
                 ->count(),
@@ -125,77 +122,11 @@ class LoginHistoryController extends Controller implements HasMiddleware
                  * তালিকাটা না ছাঁকলে অন্য কোম্পানির **নামগুলো** ঐ
                  * ড্রপডাউনে বসত, আর তালিকা ছাঁকা থাকলেও পরিচয় ফাঁস হত।
                  */
-                ->whereIn('id', LoginAttempt::query()
-                    ->where(fn (Builder $q) => $q
-                        ->where('company_id', CompanyContext::id())
-                        ->orWhere(fn (Builder $w) => $w->whereNull('company_id')
-                            ->where(fn (Builder $who) => $who
-                                ->whereIn('identifier', self::identifiersHere())
-                                ->orWhereNotIn('identifier', self::identifiersAnywhere()))))
+                ->whereIn('id', $this->companyless->logins($request->user())
                     ->distinct()->pluck('user_id')->filter())
                 ->whereHas('companies', fn ($q) => $q->whereKey(CompanyContext::id()))
                 ->orderBy('name')
                 ->get(['id', 'name']),
         ]);
-    }
-
-    /**
-     * ⛔ এই কোম্পানির মানুষগুলো লগইনে যা যা লেখেন — ২১ সেপ্টেম্বর ২০২৬।
-     *
-     * ── ⚠️ কেন এটা দরকার হলো ────────────────────────────────────
-     * আগে শর্তটা ছিল `orWhereNull('company_id')`, আর ছাঁচটা নকল করা
-     * হয়েছিল ভুলের খাতা থেকে — যেখানে ওটা ঠিক: কোম্পানি-প্রসঙ্গহীন
-     * ভুল সবার। ⛔ কিন্তু লগইনের সারিতে `company_id` খালি থাকে ঠিক
-     * তখনই যখন **ইমেইলটা চেনা যায়নি** ([[LoginJournal::write()]] —
-     * `$user?->current_company_id`), আর সারিটায় ইমেইল ও আইপি দুইটাই
-     * বসে থাকে। ⓘ ফল: প্রতিটা কোম্পানি বাকি সবার ব্যর্থ লগইনের
-     * ইমেইল ও আইপি পড়তে পারত।
-     *
-     * ⭐ পাহারার মূল্যটা হারায় না: কেউ **আপনার** লোকের নামে বারবার
-     * চেষ্টা করলে সেটা তালিকায় থাকেই। ⚠️ কেবল অন্য কোম্পানির লোকের
-     * নামে চেষ্টা আর আপনার ব্যাপার নয়।
-     *
-     * @return list<string>
-     */
-    private static function identifiersHere(): array
-    {
-        return User::query()
-            ->whereHas('companies', fn ($q) => $q->whereKey(CompanyContext::id()))
-            ->get(['email', 'login_id'])
-            ->flatMap(fn (User $u) => [$u->email, $u->login_id])
-            ->filter()
-            ->unique()
-            ->values()
-            ->all();
-    }
-
-    /**
-     * ⭐ গোটা ইনস্টলেশনের সব নাম — কেবল ছাঁকার জন্য, দেখানোর জন্য নয়।
-     *
-     * ── ⚠️ কেন এই দ্বিতীয় তালিকাটা লাগল ────────────────────────
-     * প্রথম সারাইয়ে অচেনা নামের **সব** চেষ্টা লুকিয়ে ফেলেছিলাম, আর
-     * তাতে খাতাটার মূল কাজটাই চলে গিয়েছিল: *"একই নামে পঁচিশটা মানে
-     * কেউ পাসওয়ার্ড আন্দাজ করছে"* — সেটা আর কেউ দেখতে পেত না
-     * (abos-8b ধরেছে, ২১ সেপ্টেম্বর ২০২৬)।
-     *
-     * ⭐ পার্থক্যটা ধারালো, আর দুইটা ক্ষেত্র এক করে ফেলা ভুল ছিল:
-     *   · নামটা **অন্য কোম্পানির কারো** → ওটা তাঁদের কথা, লুকানো ঠিক
-     *   · নামটা **কারোই নয়** → ওটা আক্রমণকারীর বানানো নাম, আর আইপিটাও
-     *     তার; আক্রমণটা কোনো একটা কোম্পানির উপর নয়, **সবার উপর**
-     *
-     * ⓘ তালিকাটা কেবল `whereNotIn`-এ যায় — একটা নামও পর্দায় ওঠে না।
-     *
-     * @return list<string>
-     */
-    private static function identifiersAnywhere(): array
-    {
-        return User::query()
-            ->withoutGlobalScopes()
-            ->get(['email', 'login_id'])
-            ->flatMap(fn (User $u) => [$u->email, $u->login_id])
-            ->filter()
-            ->unique()
-            ->values()
-            ->all();
     }
 }

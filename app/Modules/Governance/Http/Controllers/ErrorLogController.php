@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace App\Modules\Governance\Http\Controllers;
 
 use App\Core\Services\MenuBuilder;
-use App\Core\Support\CompanyContext;
 use App\Http\Controllers\Controller;
 use App\Models\ErrorEvent;
+use App\Modules\Governance\Services\CompanylessRows;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -35,7 +35,10 @@ use Illuminate\View\View;
  */
 class ErrorLogController extends Controller implements HasMiddleware
 {
-    public function __construct(private readonly MenuBuilder $menu) {}
+    public function __construct(
+        private readonly MenuBuilder $menu,
+        private readonly CompanylessRows $companyless,
+    ) {}
 
     public static function middleware(): array
     {
@@ -45,19 +48,17 @@ class ErrorLogController extends Controller implements HasMiddleware
     public function index(Request $request): View
     {
         /*
-         * কোম্পানির ছাঁকনি হাতে — [[ErrorEvent]] গ্লোবাল স্কোপ ব্যবহার
-         * করে না, কারণ ভুল প্রসঙ্গ বসার আগেও ঘটতে পারে।
+         * কোম্পানির ছাঁকনি [[CompanylessRows::errors()]]-এ — [[ErrorEvent]]
+         * গ্লোবাল স্কোপ ব্যবহার করে না, কারণ ভুল প্রসঙ্গ বসার আগেও ঘটতে পারে।
          *
-         * প্রসঙ্গহীন ভুলগুলোও (company_id খালি) দেখানো হয়, কারণ
-         * সেগুলোই সবচেয়ে গুরুতর — লগইনের পর্দা বা প্রসঙ্গ বসানোর
-         * ব্যবস্থাটাই ভাঙলে ওখানেই লেখা থাকে। লুকিয়ে রাখলে ঠিক যে
-         * ভুলটা সবচেয়ে জরুরি সেটাই কেউ দেখত না।
+         * ⛔ প্রসঙ্গহীন ভুলগুলো (company_id খালি) আগে **সবাই** দেখতেন।
+         * ⚠️ ওগুলো সবচেয়ে গুরুতর, কিন্তু গোটা ব্যবস্থার — বার্তায় অন্য
+         * কোম্পানির তথ্যও থাকতে পারে। ⭐ ২৭ সেপ্টেম্বর ২০২৬ (অডিট §৩)
+         * থেকে কেবল সুপার অ্যাডমিন দেখেন; নিয়মটা এক জায়গায়, তাই তালিকা,
+         * মাথার সংখ্যা আর "দেখেছি" তিনটাই একই উত্তর পায়।
          */
-        $company = CompanyContext::id();
-
-        $rows = ErrorEvent::query()
+        $rows = $this->companyless->errors($request->user())
             ->with(['user', 'acknowledger'])
-            ->where(fn (Builder $q) => $q->where('company_id', $company)->orWhereNull('company_id'))
             ->when($request->query('only') !== 'all', fn (Builder $q) => $q->open())
             ->recentFirst()
             ->paginate(50)
@@ -77,8 +78,7 @@ class ErrorLogController extends Controller implements HasMiddleware
              * শূন্য হলে দেখানোই হয় না — রোজ "০টি ভুল" দেখলে সংখ্যাটা
              * অদৃশ্য হয়ে যায়, আর যেদিন ১৭ হবে সেদিনও চোখে পড়ত না।
              */
-            'freshCount' => ErrorEvent::query()
-                ->where(fn (Builder $q) => $q->where('company_id', $company)->orWhereNull('company_id'))
+            'freshCount' => $this->companyless->errors($request->user())
                 ->open()
                 ->where('last_seen_at', '>=', now()->subDay())
                 ->count(),
@@ -100,12 +100,13 @@ class ErrorLogController extends Controller implements HasMiddleware
          * সরিয়ে দেওয়া যেত — আর ঐ কোম্পানির কেউ কোনোদিন জানত না যে
          * ভুলটা ঘটেছিল।
          *
-         * ⓘ `company_id` `null` হলে সেটা ব্যবস্থার নিজের ভুল (কোনো
-         * কোম্পানির প্রসঙ্গ ছাড়া ঘটা), আর সেটা সবাই দেখতে ও চাপতে
-         * পারেন — তালিকাতেও ঠিক ঐ নিয়মেই আসে।
+         * ⓘ `company_id` `null` হলে সেটা ব্যবস্থার নিজের ভুল — ⭐ ২৭
+         * সেপ্টেম্বর ২০২৬ থেকে সেটা কেবল সুপার অ্যাডমিন দেখেন ও চাপেন।
+         * ⚠️ প্রশ্নটা তালিকার সেই একই [[CompanylessRows::errors()]]-কে —
+         * যা তালিকায় আসে না, তা "দেখেছি" বলেও চাপা যায় না।
          */
         abort_unless(
-            $error->company_id === null || (int) $error->company_id === (int) CompanyContext::id(),
+            $this->companyless->errors($request->user())->whereKey($error->getKey())->exists(),
             404,
         );
 
