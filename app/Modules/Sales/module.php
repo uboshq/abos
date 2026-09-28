@@ -278,6 +278,8 @@ return [
              */
             ['label' => 'sales::menu.by_brand', 'icon' => 'star', 'route' => 'sales.report.show',
                 'route_params' => ['slug' => 'by-brand'], 'permission' => 'sales.report'],
+            ['label' => 'sales::margin.report_title', 'icon' => 'reports', 'route' => 'sales.margin.report.show',
+                'route_params' => ['slug' => 'margin'], 'permission' => 'sales.margin.report'],
 
             /*
              * রিকল — এই লটটা কাদের কাছে গেছে।
@@ -401,6 +403,8 @@ return [
         'sales.pos',
         'sales.discount.override',
         'sales.report',
+        // ⓘ মার্জিনের রিপোর্ট — খরচ দেখায়, তাই নিজের চাবি (NEXUS §৩২ · [[MarginReport]])
+        'sales.margin.report',
 
         /*
          * ক্রয়মূল্য ও মুনাফা দেখার অনুমতি — রিপোর্ট দেখার থেকে আলাদা।
@@ -571,6 +575,7 @@ return [
 
     'reports' => [
         SalesReports::class,
+        \App\Modules\Sales\Reports\MarginReport::class,
     ],
 
     /*
@@ -694,6 +699,7 @@ return [
          * পর্যন্ত সব আগের মতোই চলে।
          */
         'return' => 'sales::approval.return',
+        'margin' => 'sales::margin.approval',
         'order' => 'sales::approval.order',
         'challan' => 'sales::approval.challan',
         'collection' => 'sales::approval.collection',
@@ -930,6 +936,27 @@ return [
             'label' => 'sales::settings.commission_max_amount',
             'type' => 'number',
             'default' => 5000,
+            'group' => 'limits',
+        ],
+        [
+            /*
+             * ⭐ মার্জিনের সীমা — NEXUS §৩২ ([[MarginGuard]])। ⓘ ০ মানে খরচের নিচে বিক্রি ধরা পড়ে,
+             * খরচে বা উপরে নয়। কোম্পানি-প্রতি, কারণ ABOS অনেক ব্যবসায় চলে।
+             */
+            'key' => 'sales.margin.floor_percent',
+            'label' => 'sales::margin.setting_floor',
+            'type' => 'number',
+            'default' => 0,
+            'group' => 'limits',
+        ],
+        [
+            // ⓘ সীমার নিচে হলে কী — সতর্ক (ডিফল্ট, আজকের মতো বিক্রি চলে), অনুমোদন, না আটকানো
+            'key' => 'sales.margin.action',
+            'label' => 'sales::margin.setting_action',
+            'type' => 'choice',
+            'options' => ['warn', 'approval', 'block'],
+            'option_label' => 'sales::margin.action_',
+            'default' => 'warn',
             'group' => 'limits',
         ],
         [

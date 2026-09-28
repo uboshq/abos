@@ -12,6 +12,7 @@ use App\Modules\Sales\Http\Controllers\LotTraceController;
 use App\Modules\Sales\Http\Controllers\PortalController;
 use App\Modules\Sales\Http\Controllers\PosController;
 use App\Modules\Sales\Http\Controllers\PrintQueueController;
+use App\Modules\Sales\Http\Controllers\MarginReportController;
 use App\Modules\Sales\Http\Controllers\SalesInvoiceController;
 use App\Modules\Sales\Http\Controllers\DeliveryStageController;
 use App\Modules\Sales\Http\Controllers\SalesOrderController;
@@ -354,6 +355,8 @@ Route::middleware('auth')->prefix('sales')->group(function () {
     });
 
     Route::get('/reports/{slug}', [SalesReportController::class, 'show'])->name('report.show');
+    // ⓘ মার্জিনের রিপোর্ট — নিজের চাবি ([[MarginReportController]], NEXUS §৩২)
+    Route::get('/margin/{slug}', [MarginReportController::class, 'show'])->name('margin.report.show');
 });
 
 /*

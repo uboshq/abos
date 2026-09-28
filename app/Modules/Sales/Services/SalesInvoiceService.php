@@ -483,6 +483,12 @@ final class SalesInvoiceService
 
         $this->assertDiscountApproved($invoice);
 
+        /*
+         * ⛔ মার্জিনের দেয়াল আবার — বিলে দর বা ছাড় চালানের চেয়ে কমলে (NEXUS §৩২)।
+         * ⓘ চালানের দরে পাশ করা বিক্রি বিলে নেমে গেলে এখানেই ধরা পড়ে ([[MarginGuard]])।
+         */
+        app(MarginGuard::class)->assertMargin($invoice);
+
         return DB::transaction(function () use ($invoice, $payingNow) {
             /*
              * ⛔ ধারের সীমা আবার — এবার গ্রাহকের সারিতে তালা দিয়ে, ২৭ সেপ্টেম্বর ২০২৬।

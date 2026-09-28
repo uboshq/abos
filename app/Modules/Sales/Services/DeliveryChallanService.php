@@ -273,6 +273,16 @@ final class DeliveryChallanService
             reason: $challan->narration,
         );
 
+        /*
+         * ⛔ মার্জিনের দেয়াল — NEXUS §৩২, মালিক: "baki kaj complate koro" (২৮ সেপ্টেম্বর ২০২৬)।
+         *
+         * ⓘ চালানে মাল বেরোয়, তাই প্রশ্নটা এখানে — মাল নড়ার আগে। কোম্পানির সীমা
+         * (`sales.margin.floor_percent`, ডিফল্ট ০%) আর তার নিচে কী হবে (`sales.margin.action`:
+         * সতর্ক / অনুমোদন / আটকানো, ডিফল্ট সতর্ক) — [[MarginGuard::assertMargin()]]।
+         * ⚠️ অনুমোদনে ওপরের চালানের সইয়ের মতোই থামে — কাগজ খসড়া, কিছুই নড়ে না।
+         */
+        app(MarginGuard::class)->assertMargin($challan);
+
         return DB::transaction(function () use ($challan, $payingNow) {
             /*
              * ⛔ একই দেয়াল আবার — এবার গ্রাহকের সারিতে তালা দিয়ে, ২৭ সেপ্টেম্বর ২০২৬।
