@@ -169,8 +169,9 @@ return [
                 'permission' => 'sales.challan.view', 'setting' => 'sales.screen_challans'],
             ['label' => 'sales::planned.transport_assign', 'cluster' => 'delivery_processing', 'icon' => 'share', 'route' => 'sales.planned',
                 'route_params' => ['screen' => 'transport_assign'], 'permission' => 'sales.order.view'],
-            ['label' => 'sales::planned.loading_sheet', 'cluster' => 'delivery_processing', 'icon' => 'challan', 'route' => 'sales.planned',
-                'route_params' => ['screen' => 'loading_sheet'], 'permission' => 'sales.order.view'],
+            // ⭐ লোডিং শিট — এখন আসল পাতা ([[LoadingSheetController]], ২৯ সেপ্টেম্বর ২০২৬)
+            ['label' => 'sales::loading.title', 'cluster' => 'delivery_processing', 'icon' => 'challan', 'route' => 'sales.loading_sheet.index',
+                'permission' => 'sales.shipment.view', 'setting' => 'sales.screen_shipments'],
             // ⭐ গেট পাস — রওনার মুহূর্তে নিজে তৈরি, এখানে তালিকা ([[GatePassService]])
             ['label' => 'sales::gate_pass.title', 'cluster' => 'delivery_processing', 'icon' => 'challan', 'route' => 'sales.gate_pass.index',
                 'permission' => 'sales.gate_pass.view'],

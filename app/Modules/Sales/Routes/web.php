@@ -14,6 +14,7 @@ use App\Modules\Sales\Http\Controllers\PosController;
 use App\Modules\Sales\Http\Controllers\PrintQueueController;
 use App\Modules\Sales\Http\Controllers\MarginReportController;
 use App\Modules\Sales\Http\Controllers\GatePassController;
+use App\Modules\Sales\Http\Controllers\LoadingSheetController;
 use App\Modules\Sales\Http\Controllers\SalesInvoiceController;
 use App\Modules\Sales\Http\Controllers\DeliveryStageController;
 use App\Modules\Sales\Http\Controllers\SalesOrderController;
@@ -340,6 +341,9 @@ Route::middleware('auth')->prefix('sales')->group(function () {
         // ⭐ গেট পাস — নিজের কাগজ, রওনার মুহূর্তে তৈরি ([[GatePassService]])
         Route::get('/gate-pass/{gatePass}', [SalesPrintController::class, 'gatePassDocument'])
             ->whereNumber('gatePass')->name('gate_pass');
+        // ⭐ লোডিং শিট — ট্রিপ ধরে ([[LoadingSheetController]])
+        Route::get('/loading-sheet/{shipment}', [SalesPrintController::class, 'loadingSheet'])
+            ->whereNumber('shipment')->name('loading_sheet');
         Route::get('/order/{order}', [SalesPrintController::class, 'order'])
             ->whereNumber('order')->name('order');
         Route::get('/order/{order}/delivery-order', [SalesPrintController::class, 'deliveryOrder'])
@@ -363,6 +367,13 @@ Route::middleware('auth')->prefix('sales')->group(function () {
     });
 
     Route::get('/reports/{slug}', [SalesReportController::class, 'show'])->name('report.show');
+
+    // ⭐ লোডিং শিট — খোলা ট্রিপ, শিট, আর "লোডিং নিশ্চিত" ([[LoadingSheetController]])
+    Route::prefix('loading-sheets')->name('loading_sheet.')->group(function () {
+        Route::get('/', [LoadingSheetController::class, 'index'])->name('index');
+        Route::get('/{shipment}', [LoadingSheetController::class, 'show'])->whereNumber('shipment')->name('show');
+        Route::post('/{shipment}/confirm', [LoadingSheetController::class, 'confirm'])->whereNumber('shipment')->name('confirm');
+    });
 
     // ⭐ গেট পাস — তালিকা, দেখা, কারণসহ বাতিল; তৈরির দরজা নেই ([[GatePassController]])
     Route::prefix('gate-passes')->name('gate_pass.')->group(function () {

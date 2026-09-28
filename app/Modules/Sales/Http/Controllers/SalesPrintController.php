@@ -24,6 +24,7 @@ use App\Modules\Sales\Models\GatePass;
 use App\Modules\Sales\Models\PrintJob;
 use App\Modules\Sales\Models\SalesInvoice;
 use App\Modules\Sales\Models\SalesOrder;
+use App\Modules\Sales\Models\Shipment;
 use App\Modules\Sales\Services\PrintQueue;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -73,6 +74,7 @@ class SalesPrintController extends Controller implements HasMiddleware
             new Middleware('can:sales.invoice.view', only: ['invoice', 'draft']),
             new Middleware('can:sales.challan.view', only: ['challan', 'gatepass']),
             new Middleware('can:sales.gate_pass.view', only: ['gatePassDocument']),
+            new Middleware('can:sales.shipment.view', only: ['loadingSheet']),
             new Middleware('can:sales.order.view', only: ['order', 'deliveryOrder']),
             new Middleware('can:sales.collection.view', only: ['receipt']),
         ];
@@ -391,6 +393,39 @@ class SalesPrintController extends Controller implements HasMiddleware
         );
 
         return $this->pdf($request, $doc, '0', $challan->document_no, document: $challan,
+            paperSetting: 'sales.print.paper.challan', target: 'challan');
+    }
+
+    /**
+     * ⭐ লোডিং শিট — ট্রিপ ধরে গাড়িতে যা উঠবে, প্রতিটা চালানের প্রতিটা সারি ([[LoadingSheetController]])।
+     * ⓘ দাম নেই — মাল তোলার লোক গোনেন, দাম তাঁর কাজ নয়।
+     */
+    public function loadingSheet(Request $request, Shipment $shipment): Response
+    {
+        $shipment->load(['lines.challan.customer', 'lines.challan.lines.product.unit']);
+
+        $lines = $shipment->lines
+            ->flatMap(fn ($tripLine) => $tripLine->challan?->lines ?? collect())
+            ->values();
+
+        $doc = new PrintableDocument(
+            title: __('sales::loading.title'),
+            meta: [
+                'core.print.document_no' => $shipment->document_no,
+                'core.print.date' => DateFormat::format($shipment->trx_date),
+                'sales::field.vehicle_no' => (string) $shipment->vehicle_no,
+                'sales::field.driver_name' => (string) $shipment->driver_name,
+                'sales::loading.challan_list' => $shipment->lines
+                    ->map(fn ($l) => trim(($l->challan?->document_no ?? '').' '.($l->challan?->customer?->name() ?? '')))
+                    ->implode(' · '),
+            ],
+            lines: $this->productLines($lines, 'delivered_qty', []),
+            signatures: ['core.print.storekeeper', 'core.print.driver'],
+            showMoney: false,
+            notice: __('core.print.no_price_notice'),
+        );
+
+        return $this->pdf($request, $doc, '0', (string) $shipment->document_no, document: $shipment,
             paperSetting: 'sales.print.paper.challan', target: 'challan');
     }
 
