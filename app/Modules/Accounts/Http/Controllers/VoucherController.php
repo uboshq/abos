@@ -50,10 +50,18 @@ class VoucherController extends Controller implements HasMiddleware
     public static function middleware(): array
     {
         return [
-            new Middleware('can:accounts.report', only: ['index', 'show']),
-            new Middleware('can:accounts.voucher.create', only: ['create', 'store']),
-            new Middleware('can:accounts.voucher.update', only: ['edit', 'update', 'post']),
-            new Middleware('can:accounts.voucher.delete', only: ['cancel']),
+            /*
+             * ⓘ চাবি এখন নীতির ভিতরে ([[VoucherPolicy]]), দরজায় নয় — ২৮ সেপ্টেম্বর ২০২৬।
+             * ⚠️ কোন চাবি কী পাহারা দেয় তা হুবহু আগের মতো: দেখা `accounts.report`,
+             * লেখা `accounts.voucher.create`, বদল ও পোস্ট `…update`, বাতিল `…delete`।
+             * ⓘ কেন সরানো: কাগজপত্রের ঘরও একই নীতি জিজ্ঞেস করে; দরজা আর ঘর এক
+             * জায়গা থেকে উত্তর পায়, তাই কোনোদিন দুই রকম বলতে পারে না।
+             */
+            new Middleware('can:viewAny,'.Voucher::class, only: ['index']),
+            new Middleware('can:view,voucher', only: ['show']),
+            new Middleware('can:create,'.Voucher::class, only: ['create', 'store']),
+            new Middleware('can:update,voucher', only: ['edit', 'update', 'post']),
+            new Middleware('can:delete,voucher', only: ['cancel']),
         ];
     }
 

@@ -111,6 +111,34 @@ class AVoucherAnswersToTheSameKeysAsItsScreensTest extends TestCase
         }
     }
 
+    /**
+     * দরজাগুলো নীতি জিজ্ঞেস করে — প্রতিটা দরজা তার আগের চাবিতেই খোলে (২৮ সেপ্টেম্বর ২০২৬)।
+     *
+     * ⓘ মিডলওয়্যার `can:accounts.…` থেকে `can:ability,voucher`-এ সরল। ⚠️ সরানোয়
+     * কোনো দরজার চাবি বদলালে ঠিক এখানে লাল হয়: একই মানুষ, চাবি বন্ধ → ৪০৩, খোলা → খোলে।
+     */
+    public function test_every_voucher_door_still_opens_with_its_own_key(): void
+    {
+        $doors = [
+            'accounts.report' => fn () => $this->get(route('accounts.voucher.index', ['type' => Voucher::JOURNAL])),
+            'accounts.voucher.create' => fn () => $this->get(route('accounts.voucher.create', ['type' => Voucher::JOURNAL])),
+            'accounts.voucher.update' => fn () => $this->get(route('accounts.voucher.edit', $this->voucher)),
+            'accounts.voucher.delete' => fn () => $this->post(route('accounts.voucher.cancel', $this->voucher),
+                ['cancel_reason' => 'KEY-DOOR বাতিল']),
+        ];
+
+        foreach ($doors as $key => $knock) {
+            $user = $this->withEverythingBut($key);
+            $this->actingAs($user);
+            $this->assertSame(403, $knock()->status(), "⛔ '{$key}' ছাড়াই দরজাটা খুলল।");
+
+            $user = $this->grant($user, $key);
+            $this->actingAs($user);
+            $this->assertNotSame(403, $knock()->status(),
+                "⛔ '{$key}' পেয়েও দরজা বন্ধ — চাবি সরানোর সময় বদলে গেছে।");
+        }
+    }
+
     /** কাগজ নামানো — ভাউচার দেখার চাবি ছাড়া ৪০৩, চাবি পেলে খোলে। */
     public function test_a_paper_on_a_voucher_opens_with_the_view_key(): void
     {

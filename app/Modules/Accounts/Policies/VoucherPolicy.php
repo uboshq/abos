@@ -16,13 +16,18 @@ use App\Modules\Accounts\Models\Voucher;
  * পাতায় কাগজ তোলার ফর্ম কোনোদিন আঁকা হয়নি ([[x-ui.attachments]]), আর কাগজ
  * নামানোর দরজা সবসময় ৪০৩ — কোথাও কিছু লাল হত না, কেবল ফর্মটা থাকত না।
  *
- * ⓘ চাবিগুলো [[VoucherController::middleware()]]-এর সাথে এক: দেখা
- * `accounts.report`, লেখা `accounts.voucher.create`, বদল ও পোস্ট
- * `accounts.voucher.update`, বাতিল `accounts.voucher.delete`। ⚠️ দুই জায়গায়
- * আলাদা চাবি হলে পাতা খুলত অথচ তার কাগজ খুলত না, বা উল্টোটা।
+ * ⓘ ভাউচারের দরজাগুলোও ([[VoucherController::middleware()]]) এখন এই নীতিই
+ * জিজ্ঞেস করে: দেখা `accounts.report`, লেখা `accounts.voucher.create`, বদল ও পোস্ট
+ * `accounts.voucher.update`, বাতিল `accounts.voucher.delete`। ⚠️ দরজা আর কাগজের ঘর
+ * এক জায়গা থেকে উত্তর পায়, তাই পাতা খোলে অথচ কাগজ খোলে না — এমন হতে পারে না।
  */
 class VoucherPolicy
 {
+    public function viewAny(User $user): bool
+    {
+        return $user->can('accounts.report');
+    }
+
     public function view(User $user, Voucher $voucher): bool
     {
         return $user->can('accounts.report');
