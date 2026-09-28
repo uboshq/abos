@@ -353,6 +353,8 @@ return [
          * ⓘ জমার দাবির মঞ্জুরি কেবল তাঁর (মালিক, ২৬ সেপ্টেম্বর)।
          */
         'Accountant' => [
+            // ⭐ মালিকের ভূমিকা-ভাগ, ২৭ সেপ্টেম্বর ২০২৬ (*"baki sob tumar poramorso motei koro"*)
+            'purchase.bill.create',
             'purchase.bill.view',
             'purchase.payment.view',
             'purchase.payment.create',
@@ -386,10 +388,17 @@ return [
          * **চাবির** কথা বলে; এই সারিটা বলে কে চাবিটা পাবে।
          */
         'Warehouse' => [
+            // ⭐ মালিকের ভূমিকা-ভাগ, ২৭ সেপ্টেম্বর ২০২৬ (*"baki sob tumar poramorso motei koro"*)
+            'purchase.receipt.view',
             'purchase.requisition.view', 'purchase.requisition.create',
         ],
 
         'Manager' => [
+            // ⭐ মালিকের ভূমিকা-ভাগ, ২৭ সেপ্টেম্বর ২০২৬ (*"baki sob tumar poramorso motei koro"*)
+            'purchase.bill.create',
+            'purchase.bill.view',
+            'purchase.receipt.create',
+            'purchase.return.create',
             'purchase.order.view', 'purchase.receipt.view', 'purchase.bill.view',
             'purchase.return.view', 'purchase.report',
 

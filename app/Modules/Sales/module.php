@@ -521,6 +521,9 @@ return [
             'sales.collection.view', 'sales.collection.create',
         ],
         'Manager' => [
+            // ⭐ মালিকের ভূমিকা-ভাগ, ২৭ সেপ্টেম্বর ২০২৬ (*"baki sob tumar poramorso motei koro"*)
+            'sales.challan.create',
+            'sales.invoice.create',
             'sales.delivery.view',
             'sales.order.view', 'sales.challan.view', 'sales.invoice.view',
             'sales.collection.view', 'sales.return.view', 'sales.shipment.view',

@@ -230,7 +230,11 @@ return [
             'master_data.view',
         ],
         'HR' => ['master_data.view'],
-        'Manager' => ['master_data.view'],
+        'Manager' => [
+            'master_data.view',
+            // ⭐ মালিকের ভূমিকা-ভাগ, ২৭ সেপ্টেম্বর ২০২৬ (*"baki sob tumar poramorso motei koro"*)
+            'master_data.manage',
+        ],
     ],
 
     // এই মডিউলের নিজের কোনো ডকুমেন্ট নম্বর নেই — মাস্টার রেকর্ডের কোড

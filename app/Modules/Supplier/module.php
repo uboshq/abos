@@ -115,7 +115,13 @@ return [
             'supplier.view',
             'supplier.report',
         ],
-        'Manager' => ['supplier.view', 'supplier.report'],
+        'Manager' => [
+            'supplier.view',
+            'supplier.report',
+            // ⭐ মালিকের ভূমিকা-ভাগ, ২৭ সেপ্টেম্বর ২০২৬ (*"baki sob tumar poramorso motei koro"*)
+            'supplier.create',
+            'supplier.update',
+        ],
     ],
 
     'doc_types' => [

@@ -185,7 +185,13 @@ return [
             'customer.report',
         ],
         'Field Sales' => ['customer.view', 'customer.create'],
-        'Manager' => ['customer.view', 'customer.report'],
+        'Manager' => [
+            'customer.view',
+            'customer.report',
+            // ⭐ মালিকের ভূমিকা-ভাগ, ২৭ সেপ্টেম্বর ২০২৬ (*"baki sob tumar poramorso motei koro"*)
+            'customer.create',
+            'customer.update',
+        ],
     ],
 
     // Number Series engine এগুলো থেকে prefix/counter সেটআপ তৈরি করবে।
