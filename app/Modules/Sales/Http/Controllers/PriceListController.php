@@ -47,8 +47,6 @@ final class PriceListController extends Controller implements HasMiddleware
             'products' => $products,
             'last' => $this->book->lastChanges($products->items()),
             'q' => $q,
-            // ⓘ ক্রয়মূল্য কেবল যাঁর চাবি আছে — বিক্রয়ের অন্য পর্দার নিয়মই
-            'showCost' => (bool) $request->user()?->can('sales.cost.view'),
             'canEdit' => (bool) $request->user()?->can('inventory.product.update'),
         ]);
     }

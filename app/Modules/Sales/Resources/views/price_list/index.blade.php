@@ -6,7 +6,9 @@
     ⭐ পণ্যের নামটাই লিংক (নিয়ম ১), আর "ইতিহাস" দেখায় কে কবে কত থেকে বদলাল।
 --}}
 @php
+    use App\Core\Security\FieldSecurity;
     use App\Core\Support\Money;
+    use App\Modules\Inventory\Models\Product;
     use Illuminate\Support\HtmlString;
 
     $link = fn ($p) => new HtmlString('<a href="'.e(route('inventory.product.show', $p)).'"'
@@ -17,6 +19,9 @@
         ['key' => 'product', 'label' => __('sales::price_list.product'), 'render' => $link],
         ['key' => 'unit', 'label' => __('sales::price_list.unit'), 'width' => '6rem', 'render' => fn ($p) => $p->unit?->name() ?? '—'],
     ];
+
+    // ⛔ ক্রয়মূল্য কেবল তার ঘোষিত চাবিতে (inventory.cost.view) — বিক্রয়ের খরচের চাবি যথেষ্ট নয়
+    $showCost = FieldSecurity::visible(Product::class, 'purchase_price');
 
     if ($showCost) {
         $columns[] = ['key' => 'cost', 'label' => __('sales::price_list.cost'), 'numeric' => true,

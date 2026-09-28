@@ -102,16 +102,23 @@ final class ThePriceListWasOnlyASignTest extends TestCase
         $this->assertSame($before, (string) $this->product->fresh()->sale_price);
     }
 
-    /** ⛔ ক্রয়মূল্য কেবল `sales.cost.view` থাকলে — একই মানুষ, চাবি বন্ধ থেকে চালু। */
+    /**
+     * ⛔ ক্রয়মূল্য কেবল তার **ঘোষিত** চাবিতে — একই মানুষ, চাবি বন্ধ থেকে চালু।
+     *
+     * ⓘ ঘরটার চাবি Inventory ঘোষণা করেছে (`inventory.cost.view`, [[FieldSecurity]])।
+     * প্রথম সংস্করণ `sales.cost.view` দেখত — তাই যাঁর বিক্রয়ের খরচ দেখার চাবি
+     * আছে কিন্তু ক্রয়মূল্যের নেই, তিনিও এখানে ক্রয়মূল্য দেখতেন (২৮ সেপ্টেম্বর
+     * ২০২৬, Architecture-এর NoSensitiveFieldIsPrintedInTheOpenTest ধরেছে)।
+     */
     public function test_the_purchase_price_shows_only_on_its_key(): void
     {
-        $this->clerk->givePermissionTo('sales.order.view');
+        $this->clerk->givePermissionTo('sales.order.view', 'sales.cost.view');
 
-        $this->assertFalse($this->actingAs($this->clerk->fresh())->get(route('sales.price_list.index'))->viewData('showCost'));
         $this->actingAs($this->clerk->fresh())->get(route('sales.price_list.index'))
+            ->assertOk()
             ->assertDontSee(__('sales::price_list.cost'));
 
-        $this->clerk->givePermissionTo('sales.cost.view');
+        $this->clerk->givePermissionTo('inventory.cost.view');
 
         $this->actingAs($this->clerk->fresh())->get(route('sales.price_list.index'))
             ->assertSee(__('sales::price_list.cost'));
