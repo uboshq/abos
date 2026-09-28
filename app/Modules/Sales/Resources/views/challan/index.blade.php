@@ -2,6 +2,9 @@
     ডেলিভারি চালান — তালিকা।
 --}}
 @php
+    // ⓘ ডেলিভারির কথা এক প্রশ্নে, পুরো পাতার — [[DeliveryStageService::summaries()]]
+    $delivery = app(\App\Modules\Sales\Services\DeliveryStageService::class)->summaries($challans->items());
+
     $columns = [
         [
             'key' => 'trx_date',
@@ -52,6 +55,13 @@
             'width' => '8rem',
             'render' => fn ($d) => view('sales::components.status-badge', ['document' => $d]),
         ],
+        [
+            // ⭐ মালিকের পরিকল্পনা, ধাপ ৪: "ডেলিভারির অপেক্ষায়" বা "ডেলিভার্ড", প্রতিটা তালিকায়
+            'key' => 'delivery',
+            'label' => __('sales::delivery.summary.column'),
+            'width' => '10rem',
+            'render' => fn ($d) => view('sales::delivery.partials.summary', ['summary' => $delivery[$d->id] ?? null]),
+        ],
     ];
 @endphp
 
@@ -71,13 +81,8 @@
             <x-ui.toolbar :title="__('sales::menu.challans')" :count="__('sales::message.challan_note')"
                 :columns="$columns" :search-placeholder="__('sales::message.challan_search')"
                           :sort="$sortOptions">
-        <x-slot:actions>
-            @can('create', \App\Modules\Sales\Models\DeliveryChallan::class)
-                    <x-ui.button tone="primary" icon="plus" :href="route('sales.challan.create')">
-                        {{ __('sales::action.new_challan') }}
-                    </x-ui.button>
-                @endcan
-        </x-slot:actions>
+        {{-- ⛔ "নতুন চালান" নেই — মালিকের পরিকল্পনা, ধাপ ৪ (২৮ সেপ্টেম্বর ২০২৬): চালান জন্মায়
+             বিক্রি থেকে (অনুমোদনের পরে বিলের সাথে), তালিকা থেকে নয়। এই পাতা কেবল তালিকা। --}}
                 <x-ui.date-range :dates="$dates" />
 
                 <label class="flex min-h-(--spacing-touch) items-center gap-2 text-sm">

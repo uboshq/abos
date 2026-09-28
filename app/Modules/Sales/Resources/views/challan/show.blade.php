@@ -104,6 +104,9 @@
              এটাই একমাত্র প্রমাণ --}}
         <x-ui.attachments :document="$challan" />
 
+        {{-- NEXUS 21-22: delivery stage timeline; the partial checks sales.delivery.view itself --}}
+        @include('sales::delivery.partials.timeline', ['challan' => $challan])
+
         @can('delete', $challan)
             @if ($challan->status !== \App\Core\Support\DocumentStatus::CANCELLED)
                 <x-sales::cancel-form :action="route('sales.challan.cancel', $challan)" />

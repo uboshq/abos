@@ -13,6 +13,7 @@ use App\Modules\Sales\Http\Controllers\PortalController;
 use App\Modules\Sales\Http\Controllers\PosController;
 use App\Modules\Sales\Http\Controllers\PrintQueueController;
 use App\Modules\Sales\Http\Controllers\SalesInvoiceController;
+use App\Modules\Sales\Http\Controllers\DeliveryStageController;
 use App\Modules\Sales\Http\Controllers\SalesOrderController;
 use App\Modules\Sales\Http\Controllers\SalesPrintController;
 use App\Modules\Sales\Http\Controllers\SalesReportController;
@@ -237,6 +238,16 @@ Route::middleware('auth')->prefix('sales')->group(function () {
             ->whereNumber('shipment')->name('close');
         Route::post('/{shipment}/cancel', [ShipmentController::class, 'cancel'])
             ->whereNumber('shipment')->name('cancel');
+    });
+
+    /*
+     * ⭐ ডেলিভারির ধাপ — NEXUS §২১–২২। ⓘ ধাপ মাল নড়ায় না; নড়ায় চালান আর
+     * ট্রিপ, ধাপ কেবল বলে কোথায় আছে ([[DeliveryStageService]])।
+     */
+    Route::prefix('deliveries')->name('delivery.')->group(function () {
+        Route::get('/', [DeliveryStageController::class, 'index'])->name('index');
+        Route::get('/{challan}', [DeliveryStageController::class, 'show'])->whereNumber('challan')->name('show');
+        Route::post('/{challan}/stage', [DeliveryStageController::class, 'move'])->whereNumber('challan')->name('move');
     });
 
     Route::prefix('invoices')->name('invoice.')->group(function () {

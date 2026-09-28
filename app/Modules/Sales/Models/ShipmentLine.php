@@ -31,6 +31,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class ShipmentLine extends Model
 {
     use BelongsToCompany;
+    use \App\Modules\Sales\Models\Concerns\TellsTheDeliveryStage;
     use HasPublicId;
     use IsAudited;
 

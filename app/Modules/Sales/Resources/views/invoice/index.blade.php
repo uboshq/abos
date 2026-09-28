@@ -2,6 +2,10 @@
     বিক্রয় বিল — তালিকা।
 --}}
 @php
+    // ⓘ ডেলিভারির কথা এক প্রশ্নে, পুরো পাতার — [[DeliveryStageService::invoiceSummaries()]]
+    $delivery = app(\App\Modules\Sales\Services\DeliveryStageService::class)
+        ->invoiceSummaries(collect($invoices->items())->pluck('id'));
+
     $columns = [
         [
             'key' => 'trx_date',
@@ -51,6 +55,13 @@
             'label' => __('sales::field.state'),
             'width' => '8rem',
             'render' => fn ($d) => view('sales::components.status-badge', ['document' => $d]),
+        ],
+        [
+            // ⭐ মালিকের পরিকল্পনা, ধাপ ৪ — বিলের চালান পৌঁছেছে কি না
+            'key' => 'delivery',
+            'label' => __('sales::delivery.summary.column'),
+            'width' => '10rem',
+            'render' => fn ($d) => view('sales::delivery.partials.summary', ['summary' => $delivery[$d->id] ?? null]),
         ],
 
         /*

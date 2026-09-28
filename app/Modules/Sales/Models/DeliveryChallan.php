@@ -15,6 +15,7 @@ use App\Models\User;
 use App\Modules\Customer\Models\Customer;
 use App\Modules\Inventory\Models\Warehouse;
 use App\Modules\MasterData\Models\Vehicle;
+use App\Modules\Sales\Models\Concerns\TellsTheDeliveryStage;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -34,6 +35,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 class DeliveryChallan extends Model implements Drillable
 {
     use BelongsToCompany;
+    use TellsTheDeliveryStage;
     use HasDocumentStatus;
     use HasPublicId;
     use IsAudited;

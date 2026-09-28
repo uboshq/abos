@@ -39,6 +39,7 @@ class Shipment extends Model implements Drillable
     use IsAudited;
     use ScopedToUserBranch;
     use SoftDeletes;
+    use \App\Modules\Sales\Models\Concerns\TellsTheDeliveryStage;
 
     protected $table = 'sal_shipments';
 

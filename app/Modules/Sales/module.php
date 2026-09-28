@@ -168,6 +168,8 @@ return [
 
             ['label' => 'sales::menu.challans', 'icon' => 'challan', 'route' => 'sales.challan.index', 'permission' => 'sales.challan.view',
                 'setting' => 'sales.screen_challans'],
+            ['label' => 'sales::delivery.title', 'icon' => 'check-circle', 'route' => 'sales.delivery.index',
+                'permission' => 'sales.delivery.view', 'setting' => 'sales.screen_challans'],
 
             /*
              * ⓘ ইনভয়েস তালিকা — মাল যাওয়ার পরে, কারণ বিলটাও তখনই
@@ -351,6 +353,8 @@ return [
         'sales.shipment.view',
         'sales.shipment.create',
         'sales.shipment.cancel',
+        'sales.delivery.view',
+        'sales.delivery.update',
 
         /*
          * টার্গেট দেখা আর বসানো — দুইটা আলাদা চাবি।
@@ -439,11 +443,17 @@ return [
      * Manager: দেখা ও রিপোর্ট, বানানো নয় (তদারকি; create কেরানির)।
      */
     'role_templates' => [
+        // ⓘ গুদামের লোক মাল তোলেন-বাঁধেন — ধাপ বদলানো তাঁর কাজ (NEXUS §২১)
+        'Warehouse' => [
+            'sales.delivery.view',
+            'sales.delivery.update',
+        ],
         /*
          * কাউন্টার — প্রতিটা কোম্পানিতে ডিফল্টে। মালিক, ২৭ সেপ্টেম্বর ২০২৬: *"bosiye daw"*।
          * ⓘ কাউন্টারের কর্মী সব ডিলার দেখেন (মালিক, ২৬ সেপ্টেম্বর) — নাহলে বিল করবেন কীভাবে।
          */
         'Counter' => [
+            'sales.delivery.view',
             'sales.challan.view',
             'sales.challan.create',
             'sales.invoice.view',
@@ -459,6 +469,7 @@ return [
          * ⚠️ SR→ASM→RSM→DSM-এর বাঁধন এখনো কোডে নেই; আপাতত কেবল চাবির তালিকা।
          */
         'ASM' => [
+            'sales.delivery.view',
             'sales.order.view',
             'sales.order.create',
             'sales.challan.view',
@@ -473,6 +484,7 @@ return [
          * ⚠️ স্তরের বাঁধন এখনো কোডে নেই; আপাতত কেবল চাবির তালিকা।
          */
         'RSM' => [
+            'sales.delivery.view',
             'sales.order.view',
             'sales.order.create',
             'sales.challan.view',
@@ -487,6 +499,7 @@ return [
          * ⚠️ স্তরের বাঁধন এখনো কোডে নেই; আপাতত কেবল চাবির তালিকা।
          */
         'DSM' => [
+            'sales.delivery.view',
             'sales.order.view',
             'sales.order.create',
             'sales.challan.view',
@@ -513,6 +526,7 @@ return [
             'sales.collection.view', 'sales.collection.create',
         ],
         'Manager' => [
+            'sales.delivery.view',
             'sales.order.view', 'sales.challan.view', 'sales.invoice.view',
             'sales.collection.view', 'sales.return.view', 'sales.shipment.view',
             'sales.report',
