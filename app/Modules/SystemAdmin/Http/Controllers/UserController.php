@@ -150,18 +150,19 @@ class UserController extends Controller implements HasMiddleware
 
             /* ⓘ নতুন ব্যবহারকারীর এখনো কোনো ক্ষমতা নেই — ঘরটা আঁকাই হয় না। */
             'effective' => [],
-            ...$this->formData(),
+            ...$this->formData(null, $this->companiesWithinReach($request)),
         ]);
     }
 
     public function store(Request $request): RedirectResponse
     {
-        $data = $this->validated($request, null);
+        $reach = $this->companiesWithinReach($request);
+        $data = $this->validated($request, null, $reach);
 
         $this->assertRolesWithinReach($request, new User, $data);
         $this->assertOwnershipRules(new User, $data);
 
-        $user = DB::transaction(function () use ($data) {
+        $user = DB::transaction(function () use ($data, $reach) {
             $user = User::create([
                 'name' => $data['name'],
                 'email' => $data['email'],
@@ -184,7 +185,7 @@ class UserController extends Controller implements HasMiddleware
                 'is_active' => filter_var($data['is_active'] ?? false, FILTER_VALIDATE_BOOL),
             ]);
 
-            $this->applyAccess($user, $data);
+            $this->applyAccess($user, $data, $reach);
 
             return $user;
         });
@@ -206,7 +207,7 @@ class UserController extends Controller implements HasMiddleware
             'houseScopes' => collect(array_keys($this->scopeKinds()))
                 ->mapWithKeys(fn (string $t) => [$t => $this->scopesOf($user, $t)])->all(),
             'effective' => $this->effectiveAccess($user),
-            ...$this->formData($user),
+            ...$this->formData($user, $this->companiesWithinReach($request)),
         ]);
     }
 
@@ -300,7 +301,8 @@ class UserController extends Controller implements HasMiddleware
         $this->mustBeInThisCompany($user);
         $this->authorize('update', $user);
 
-        $data = $this->validated($request, $user);
+        $reach = $this->companiesWithinReach($request);
+        $data = $this->validated($request, $user, $reach);
 
         $this->assertRolesWithinReach($request, $user, $data);
 
@@ -308,7 +310,7 @@ class UserController extends Controller implements HasMiddleware
         $this->assertSupremeRoleStays($user, $data);
         $this->assertOwnershipRules($user, $data);
 
-        DB::transaction(function () use ($user, $data) {
+        DB::transaction(function () use ($user, $data, $reach) {
             $user->update([
                 'name' => $data['name'],
                 'email' => $data['email'],
@@ -350,7 +352,7 @@ class UserController extends Controller implements HasMiddleware
                 RefuseInactiveAccounts::revokeStandingAccess($user);
             }
 
-            $this->applyAccess($user, $data);
+            $this->applyAccess($user, $data, $reach);
         });
 
         /*
@@ -375,8 +377,9 @@ class UserController extends Controller implements HasMiddleware
      * ইতিহাসে কোনো চিহ্নই থাকত না, অথচ ওটাই সবচেয়ে বড় বদল।
      *
      * @param  array<string, mixed>  $data
+     * @param  list<int>  $reach  [[companiesWithinReach()]]
      */
-    private function applyAccess(User $user, array $data): void
+    private function applyAccess(User $user, array $data, array $reach): void
     {
         $before = $user->roles->pluck('name')->sort()->values()->all();
         $after = array_values($data['roles'] ?? []);
@@ -443,9 +446,27 @@ class UserController extends Controller implements HasMiddleware
          */
         $beforeCompanies = $this->companyCodesOf($user);
 
-        $user->companies()->sync($companies);
+        /*
+         * ⛔ কেবল নাগালের কোম্পানিগুলোর সারি — নিরীক্ষা §১.৭, ২৭ সেপ্টেম্বর ২০২৬।
+         *
+         * আগে এখানে ছিল `sync($companies)`, আর `sync` ফর্মে না-আসা **প্রতিটা**
+         * সারি মুছে দেয়। ⚠️ ফর্মে কেবল প্রশাসকের নাগালের কোম্পানিই থাকে,
+         * তাই দুই-কোম্পানির একজন কর্মীকে ক থেকে সম্পাদনা করলে তাঁর খ-এর
+         * সদস্যপদ নীরবে উঠে যেত — আর নিচের মোছায় খ-এর ভূমিকাও। খ-এর
+         * প্রশাসক কিছুই জানতেন না, কর্মী পরদিন তালাবন্ধ।
+         *
+         * ⭐ এখন: টিক দেওয়াগুলো বসে/হালনাগাদ হয়, আর মোছা যায় কেবল নাগালের
+         * ভেতরের যেগুলো টিক পায়নি। নাগালের বাইরের সারিতে একটা বাইটও বদলায় না।
+         */
+        $user->companies()->syncWithoutDetaching($companies);
 
-        $this->rolesInEveryCompany($user, $after, array_keys($companies));
+        $gone = array_values(array_diff($reach, array_keys($companies)));
+
+        if ($gone !== []) {
+            $user->companies()->detach($gone);
+        }
+
+        $this->rolesInEveryCompany($user, $after, array_keys($companies), $gone);
 
         $afterCompanies = $this->companyCodesOf($user);
 
@@ -486,8 +507,9 @@ class UserController extends Controller implements HasMiddleware
      *
      * @param  list<string>  $roles
      * @param  list<int>  $companyIds
+     * @param  list<int>  $gone  নাগালের ভেতরের যে কোম্পানিগুলোর টিক উঠল
      */
-    private function rolesInEveryCompany(User $user, array $roles, array $companyIds): void
+    private function rolesInEveryCompany(User $user, array $roles, array $companyIds, array $gone): void
     {
         $was = CompanyContext::id();
 
@@ -495,7 +517,7 @@ class UserController extends Controller implements HasMiddleware
             foreach ($companyIds as $companyId) {
                 setPermissionsTeamId((int) $companyId);
 
-                $this->makeSureTheseRolesExistHere((int) $companyId, $roles);
+                $this->makeSureTheseRolesExistHere((int) $companyId, $roles, $was);
 
                 $user->unsetRelation('roles')->syncRoles($roles);
             }
@@ -511,11 +533,20 @@ class UserController extends Controller implements HasMiddleware
          * করে দিয়ে ছয় মাস পরে আবার ঢোকালে তাঁর পুরনো ক্ষমতা নীরবে
          * ফিরে আসত — কেউ সেটা টিকও দেয়নি।
          */
-        DB::table('model_has_roles')
-            ->where('model_type', $user->getMorphClass())
-            ->where('model_id', $user->getKey())
-            ->whereNotIn('company_id', $companyIds === [] ? [0] : $companyIds)
-            ->delete();
+        /*
+         * ⛔ মোছা কেবল নাগালের ভেতরে — নিরীক্ষা §১.৭।
+         *
+         * আগে ছিল `whereNotIn(টিক দেওয়াগুলো)`, অর্থাৎ **প্রশাসক যে কোম্পানি
+         * দেখতেই পান না** সেখানকার ভূমিকাও মুছত। এখন কেবল সেগুলো, যেগুলো
+         * তাঁর নাগালে ছিল আর টিক পায়নি।
+         */
+        if ($gone !== []) {
+            DB::table('model_has_roles')
+                ->where('model_type', $user->getMorphClass())
+                ->where('model_id', $user->getKey())
+                ->whereIn('company_id', $gone)
+                ->delete();
+        }
 
         /*
          * ⚠️ অনুমতির ক্যাশ চব্বিশ ঘণ্টা ধরে জমে থাকে — না মুছলে
@@ -533,16 +564,21 @@ class UserController extends Controller implements HasMiddleware
      * ⚠️ অনুমতি নকল হয় একই নামের পুরনো সারি থেকে — দুই কোম্পানিতে
      * "ম্যানেজার" দুই রকম হলে নামটাই মিথ্যা হয়ে যেত।
      *
+     * ⛔ নকলের উৎস **চলতি কোম্পানির** ভূমিকা — নিরীক্ষা §১.৭। আগে
+     * `->first()` যেকোনো কোম্পানির একই নামের সারি তুলত, তাই অন্য
+     * কোম্পানির নিজের বানানো ভূমিকা অনুমতিসহ এখানে চলে আসতে পারত।
+     *
      * @param  list<string>  $roles
      */
-    private function makeSureTheseRolesExistHere(int $companyId, array $roles): void
+    private function makeSureTheseRolesExistHere(int $companyId, array $roles, ?int $source): void
     {
         foreach ($roles as $name) {
             if (Role::query()->where('name', $name)->where('company_id', $companyId)->exists()) {
                 continue;
             }
 
-            $elsewhere = Role::query()->with('permissions')->where('name', $name)->first();
+            $elsewhere = Role::query()->with('permissions')->where('name', $name)
+                ->where('company_id', $source)->first();
 
             if ($elsewhere === null) {
                 continue;
@@ -759,6 +795,8 @@ class UserController extends Controller implements HasMiddleware
     {
         $beyond = Role::query()
             ->whereIn('name', $data['roles'] ?? [])
+            // ⓘ চলতি কোম্পানির সারি — অন্য কোম্পানির একই নামের ভূমিকার অনুমতি এখানে অপ্রাসঙ্গিক
+            ->where('company_id', CompanyContext::id())
             ->with('permissions')
             ->get()
             ->reject(fn (Role $role) => $request->user()?->can('grantRole', [$user, $role]))
@@ -893,9 +931,13 @@ class UserController extends Controller implements HasMiddleware
     /**
      * @return array<string, mixed>
      */
-    private function validated(Request $request, ?User $user): array
+    /**
+     * @param  list<int>  $reach  [[companiesWithinReach()]]
+     * @return array<string, mixed>
+     */
+    private function validated(Request $request, ?User $user, array $reach): array
     {
-        return $request->validate([
+        $data = $request->validate([
             'name' => ['required', 'string', 'max:191'],
             'email' => ['required', 'email', 'max:191',
                 Rule::unique('users', 'email')->ignore($user?->id)->whereNull('deleted_at')],
@@ -974,7 +1016,12 @@ class UserController extends Controller implements HasMiddleware
             'is_active' => ['nullable', 'boolean'],
 
             'roles' => ['required', 'array', 'min:1'],
-            'roles.*' => [Rule::exists('roles', 'name')],
+            /*
+             * ⛔ কেবল এই কোম্পানির ভূমিকা — নিরীক্ষা §১.৭। আগে যেকোনো
+             * কোম্পানির নাম চলত, আর [[makeSureTheseRolesExistHere()]] খ-এর
+             * নিজের ভূমিকা অনুমতিসহ এখানে নকল করে দিত।
+             */
+            'roles.*' => [Rule::exists('roles', 'name')->where('company_id', CompanyContext::id())],
 
             'companies' => ['required', 'array', 'min:1'],
             /*
@@ -996,9 +1043,15 @@ class UserController extends Controller implements HasMiddleware
              * ⭐ নিয়মটা এক লাইনের: যে কোম্পানিতে আপনি নিজে নেই, সেটা
              * আপনি কাউকে দিতেও পারেন না।
              */
+            /*
+             * ⛔ আর "নিজের কোম্পানি" মানে নাগাল — নিরীক্ষা §১.৭, ২৭ সেপ্টেম্বর ২০২৬।
+             * সদস্য হওয়াই যথেষ্ট ছিল, তাই খ-তে সাধারণ সদস্য প্রশাসকও খ-তে
+             * ভূমিকা বসাতে পারতেন। ⓘ চুপচাপ বাদ না দিয়ে ৪২২: "সংরক্ষিত" বলে
+             * আসলে না করাটা আরেকটা মিথ্যা হত।
+             */
             'companies.*' => [
                 Rule::exists('companies', 'id'),
-                Rule::in($request->user()?->companies()->pluck('companies.id')->all() ?? []),
+                Rule::in($reach),
             ],
             'default_branch' => ['nullable', 'array'],
 
@@ -1019,6 +1072,63 @@ class UserController extends Controller implements HasMiddleware
             'warehouse_scope.*.*' => ['integer'],
             'default_branch.*' => ['nullable', 'integer'],
         ]);
+
+        $this->assertPlacesBelongToTheirCompany($data, $reach);
+
+        return $data;
+    }
+
+    /**
+     * শাখা আর গুদাম — যে কোম্পানির ঘরে এসেছে, সেই কোম্পানিরই কি না।
+     *
+     * ── ⛔ নিরীক্ষা §১.৭, ২৭ সেপ্টেম্বর ২০২৬ ────────────────────────────
+     * উপরে `exists` নেই (কারণ সেখানে লেখা), তাই ক-এর ঘরে খ-এর শাখার আইডি
+     * পাঠালে সেটা ক-এর সদস্যপদে ডিফল্ট শাখা হয়ে বসত — মানুষটার কার্সার
+     * অন্য কোম্পানির শাখায়। ⓘ এখানে টেন্যান্ট স্কোপ সরিয়ে সরাসরি
+     * `company_id` মেলানো হয়, তাই "কেবল চলতি কোম্পানি চেনে" সমস্যাটা নেই।
+     *
+     * ⚠️ নাগালের বাইরের কোম্পানির নামে ঘর এলে সেটাও ৪২২ — ফর্ম সেই ঘর
+     * আঁকেই না, তাই সেটা কেবল হাতে বানানো অনুরোধেই আসে।
+     *
+     * @param  array<string, mixed>  $data
+     * @param  list<int>  $reach
+     */
+    private function assertPlacesBelongToTheirCompany(array $data, array $reach): void
+    {
+        $slots = ['default_branch' => Branch::class, 'branch_scope' => Branch::class];
+
+        foreach ($this->scopeKinds() as $type => $spec) {
+            $slots[$type.'_scope'] = $spec['model'];
+        }
+
+        $errors = [];
+
+        foreach ($slots as $field => $model) {
+            foreach ((array) ($data[$field] ?? []) as $companyId => $ids) {
+                $ids = array_values(array_unique(array_map('intval', array_filter(
+                    (array) $ids,
+                    fn ($id) => $id !== null && $id !== '',
+                ))));
+
+                if ($ids === []) {
+                    continue;
+                }
+
+                $belongs = in_array((int) $companyId, $reach, true)
+                    && $model::query()->withoutGlobalScopes()
+                        ->where('company_id', (int) $companyId)
+                        ->whereIn('id', $ids)
+                        ->count() === count($ids);
+
+                if (! $belongs) {
+                    $errors[$field.'.'.$companyId] = __('system_admin::validation.place_of_another_company');
+                }
+            }
+        }
+
+        if ($errors !== []) {
+            throw ValidationException::withMessages($errors);
+        }
     }
 
     /**
@@ -1064,17 +1174,66 @@ class UserController extends Controller implements HasMiddleware
     }
 
     /**
-     * @return array<string, mixed>
+     * এই প্রশাসক কোন কোম্পানিগুলোর সদস্যপদ আর ভূমিকা ছুঁতে পারেন।
+     *
+     * ── ⛔ নিরীক্ষা §১.৭, ২৭ সেপ্টেম্বর ২০২৬ ────────────────────────────
+     * ⭐ সাধারণ প্রশাসক: কেবল যে কোম্পানিতে দাঁড়িয়ে আছেন। অন্য কোম্পানিতে
+     * সদস্য হওয়া মানে সেখানকার মানুষ সামলানোর অধিকার নয়।
+     *
+     * ⓘ সুপার অ্যাডমিন: আজকের মতোই একাধিক কোম্পানি (মালিকের ২১
+     * সেপ্টেম্বরের অভিযোগ — [[rolesInEveryCompany()]]) — তবে কেবল সেগুলো,
+     * যেখানে তিনি **নিজেও সুপার অ্যাডমিন**। ⚠️ আগে সদস্য হওয়াই যথেষ্ট
+     * ছিল, তাই ক-এর মালিক খ-তে সাধারণ সদস্য হয়েও খ-তে যেকোনো ভূমিকা
+     * বসাতে পারতেন ([[UserPolicy::grantRole()]] কেবল ক-এর ক্ষমতা দেখে)।
+     *
+     * @return list<int>
      */
+    private function companiesWithinReach(Request $request): array
+    {
+        $here = CompanyContext::id();
+        $actor = $request->user();
+
+        if ($here === null || $actor === null) {
+            return [];
+        }
+
+        if (! $actor->hasRole(PermissionSyncer::SUPER_ADMIN_ROLE)) {
+            return [$here];
+        }
+
+        $owned = DB::table('company_user')
+            ->join('model_has_roles', function ($join) {
+                $join->on('model_has_roles.model_id', '=', 'company_user.user_id')
+                    ->on('model_has_roles.company_id', '=', 'company_user.company_id');
+            })
+            ->join('roles', 'roles.id', '=', 'model_has_roles.role_id')
+            ->where('company_user.user_id', $actor->getKey())
+            ->where('company_user.is_active', true)
+            ->where('model_has_roles.model_type', $actor->getMorphClass())
+            ->where('roles.name', PermissionSyncer::SUPER_ADMIN_ROLE)
+            ->pluck('company_user.company_id')
+            ->map(fn ($id) => (int) $id)
+            ->all();
+
+        return array_values(array_unique([$here, ...$owned]));
+    }
+
     /**
      * ফর্মের তালিকাগুলো — ভূমিকা, কোম্পানি, শাখা, গুদাম।
      *
      * ⓘ `$user` লাগে কেবল একটা কারণে: যাঁর ইতিমধ্যেই সুপার
      * অ্যাডমিন ভূমিকাটা আছে, তাঁর তালিকায় সেটা থাকতে হবে।
+     *
+     * @param  list<int>  $reach  [[companiesWithinReach()]]
+     * @return array<string, mixed>
      */
-    private function formData(?User $user = null): array
+    private function formData(?User $user, array $reach): array
     {
-        $companies = Company::query()->orderBy('code')->get();
+        /*
+         * ⛔ কেবল নাগালের কোম্পানি — নিরীক্ষা §৩ ও §১.৭, ২৭ সেপ্টেম্বর ২০২৬।
+         * আগে সার্ভারের **সব** কোম্পানির নাম, শাখা আর গুদাম এই ফর্মে আসত।
+         */
+        $companies = Company::query()->whereIn('id', $reach)->orderBy('code')->get();
 
         return [
             /*
@@ -1105,6 +1264,8 @@ class UserController extends Controller implements HasMiddleware
              * নীরবে নিজের চাবি হারাতেন।
              */
             'roles' => Role::query()
+                // ⛔ কেবল চলতি কোম্পানির ভূমিকা — অন্য কোম্পানির নিজের বানানো নাম এখানে আসে না (§১.৭)
+                ->where('company_id', CompanyContext::id())
                 ->orderBy('name')
                 ->get()
                 ->unique('name')
