@@ -7,6 +7,7 @@ namespace App\Core\Security;
 use App\Models\LedgerEntry;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
+use RuntimeException;
 
 /**
  * খাতাটা কেউ বদলায়নি — দাবি নয়, প্রমাণ।
@@ -74,6 +75,18 @@ final class LedgerChain
     public const UNSEALED = 'unsealed';
 
     /**
+     * ⛔ সারিটা যে চাবিতে সিল করা, সেটা এই সার্ভারে নেই — ২৮ সেপ্টেম্বর ২০২৬।
+     *
+     * ⭐ এটা *"খাতা ভাঙা"* নয়, আর দুইটাকে আলাদা রাখাই এই
+     * সংস্করণ-ব্যবস্থার পুরো কারণ। ⓘ *"চাবি নেই"* মানে **যাচাই করতে
+     * পারছি না**; *"ভাঙা"* মানে **কেউ খাতা বদলেছে**।
+     *
+     * ⚠️ এক করে দেখালে একদিন সত্যিকারের কারচুপিটাও *"আবার চাবির
+     * ঝামেলা"* বলে উড়িয়ে দেওয়া হত — আর সেটাই সবচেয়ে দামি ক্ষতি।
+     */
+    public const NO_KEY = 'no_key';
+
+    /**
      * যে ঘরগুলো চেইনে ঢোকে।
      *
      * ── কেন এগুলোই, আর কেন বাকিগুলো নয় ──────────────────────────────
@@ -125,14 +138,24 @@ final class LedgerChain
                 ->value('last_hash');
         }
 
-        $hash = self::hash($previous, $entry->getAttributes());
+        /*
+         * ⭐ সংস্করণটা এখানেই একবার পড়া হয়, আর সারির সাথেই ফেরত যায় —
+         * ২৮ সেপ্টেম্বর ২০২৬।
+         *
+         * ⛔ সারিটা লেখার সময় আর যাচাইয়ের সময় আলাদা করে সংস্করণ বের
+         * করলে দুইটা একদিন আলাদা হত — যেমন ঠিক এই লেখার মুহূর্তে কেউ
+         * `LEDGER_SEAL_KEY` বসাল। ⚠️ তখন সারিটা লেখা হত এক চাবিতে আর
+         * পড়া হত আরেকটায়, আর খাতাটা ভাঙা দেখাত।
+         */
+        $version = self::sealVersion();
+        $hash = self::hash($previous, $entry->getAttributes(), $version);
 
         DB::table('ledger_chain_heads')->where('company_id', $companyId)->update([
             'last_hash' => $hash,
             'entries' => DB::raw('entries + 1'),
         ]);
 
-        return [$previous, $hash];
+        return [$previous, $hash, $version];
     }
 
     /**
@@ -170,7 +193,7 @@ final class LedgerChain
      *
      * @param  array<string, mixed>  $attributes
      */
-    public static function hash(?string $previous, array $attributes): string
+    public static function hash(?string $previous, array $attributes, ?int $version = null): string
     {
         $parts = [$previous ?? ''];
 
@@ -178,7 +201,73 @@ final class LedgerChain
             $parts[] = self::canonical($field, $attributes[$field] ?? null);
         }
 
-        return hash_hmac('sha256', implode('|', $parts), (string) config('app.key'));
+        return hash_hmac('sha256', implode('|', $parts), self::keyFor($version ?? self::sealVersion()));
+    }
+
+    /**
+     * ⭐ `APP_KEY`-তে সিল করা — যা আজ পর্যন্ত খাতায় আছে সব এই সংস্করণের।
+     */
+    public const SEAL_APP_KEY = 1;
+
+    /** ⭐ খতিয়ানের নিজের চাবিতে সিল করা (`LEDGER_SEAL_KEY`)। */
+    public const SEAL_OWN_KEY = 2;
+
+    /**
+     * নতুন সারি কোন সংস্করণে সিল হবে।
+     *
+     * ── ⚠️ চাবি না বসানো থাকলে পুরোনো সংস্করণ, আর সেটা ইচ্ছাকৃত ────────
+     * ⛔ "চাবি নেই তো থেমে যাও" করা যায় না — তাতে একটা ডিপ্লয়ে খাতা
+     * লেখা বন্ধ হয়ে গোটা ব্যবসা থামত। ⓘ তাই খালি চাবিতে আচরণ হুবহু
+     * আজকেরটাই, আর অবস্থাটা [[self::verify()]] খোলাখুলি জানায়।
+     */
+    public static function sealVersion(): int
+    {
+        return self::ownKey() === '' ? self::SEAL_APP_KEY : self::SEAL_OWN_KEY;
+    }
+
+    /**
+     * একটা সংস্করণের চাবি।
+     *
+     * ⛔ অজানা সংস্করণে ব্যতিক্রম, খালি স্ট্রিং নয়। ⚠️ খালি চাবি দিয়ে
+     * `hash_hmac` চুপচাপ একটা ছাপ বানিয়ে দিত, আর সেটা দেখতে **বৈধ
+     * ছাপের মতোই** — অর্থাৎ পাহারাটা নীরবে অকেজো হয়ে যেত।
+     */
+    public static function keyFor(int $version): string
+    {
+        $key = match ($version) {
+            self::SEAL_APP_KEY => (string) config('app.key'),
+            self::SEAL_OWN_KEY => self::ownKey(),
+            default => throw new RuntimeException("Unknown ledger seal version: {$version}."),
+        };
+
+        if ($key === '') {
+            throw new RuntimeException("The ledger seal key for version {$version} is not configured.");
+        }
+
+        return $key;
+    }
+
+    /** ⓘ এক জায়গায়, কারণ "খালি কি না" প্রশ্নটা তিন জায়গায় লাগে। */
+    private static function ownKey(): string
+    {
+        return trim((string) config('abos.ledger_seal.key'));
+    }
+
+    /**
+     * এই সংস্করণের চাবি হাতে আছে কি না — ব্যতিক্রম ছাড়া জিজ্ঞেস করার পথ।
+     *
+     * ⭐ [[self::verify()]] এটা দিয়েই *"চাবি নেই"* আর *"খাতা ভাঙা"*
+     * আলাদা করে বলে। ⓘ আর ঐ পার্থক্যটাই এই গোটা কাজের কারণ।
+     */
+    public static function hasKeyFor(int $version): bool
+    {
+        try {
+            self::keyFor($version);
+
+            return true;
+        } catch (RuntimeException) {
+            return false;
+        }
     }
 
     /**
@@ -250,7 +339,27 @@ final class LedgerChain
                         continue;
                     }
 
-                    $hash = self::hash($previous, $row->getAttributes());
+                    /*
+                     * ⭐ সারিটার **নিজের** সংস্করণেই আবার সিল — ২৮ সেপ্টেম্বর ২০২৬।
+                     *
+                     * ⛔ এখানে চলতি সংস্করণ বসানো যেত, আর সেটা দেখতে
+                     * "আধুনিক" লাগত। ⚠️ কিন্তু তাতে একটা ঘোষিত
+                     * মাইগ্রেশনের সারাই চুপচাপ একটা **চাবি ঘোরানোও** হয়ে
+                     * যেত — দুইটা সম্পূর্ণ আলাদা কাজ, একটা ডাকে।
+                     *
+                     * ⓘ আর চাবি বদলানোর নিজের কোনো দরকার নেই: পুরোনো
+                     * সারি পুরোনো চাবিতে যাচাই হতেই থাকে, আর সেটার জন্যই
+                     * সংস্করণটা রাখা।
+                     *
+                     * ⚠️ যে সংস্করণের চাবি সার্ভারে নেই, তাতে
+                     * [[self::keyFor()]] ব্যতিক্রম ছোঁড়ে আর কাজটা থামে —
+                     * নীরবে একটা ভুল ছাপ বসিয়ে যাওয়ার চেয়ে থামা ভালো।
+                     */
+                    $hash = self::hash(
+                        $previous,
+                        $row->getAttributes(),
+                        (int) ($row->seal_version ?? self::SEAL_APP_KEY),
+                    );
 
                     /*
                      * ⓘ যে সারির ছাপ আগে থেকেই ঠিক, তাকে ছোঁয়া হয় না —
@@ -391,7 +500,7 @@ final class LedgerChain
      * "দেখিনি" আর "ঠিক আছে" এক কথা হয়ে যায়। ⓘ কারণটা পুরোটা
      * [[LedgerChain::reseal()]]-এর মন্তব্যে।
      *
-     * @return array{ok: bool, checked: int, expected: int, broken_at: ?int, reason: ?string}
+     * @return array{ok: bool, checked: int, expected: int, broken_at: ?int, reason: ?string, seal_version?: int}
      */
     public static function verify(int $companyId): array
     {
@@ -401,10 +510,13 @@ final class LedgerChain
         $brokenAt = null;
         $unsealedAt = null;
 
+        /** @var array{0: int, 1: int}|null ⓘ [সারি, সংস্করণ] — চাবিটা হাতে নেই */
+        $keylessAt = null;
+
         LedgerEntry::withoutGlobalScopes()
             ->where('company_id', $companyId)
             ->orderBy('id')
-            ->chunkById(500, function ($rows) use (&$previous, &$checked, &$hashed, &$brokenAt, &$unsealedAt): bool {
+            ->chunkById(500, function ($rows) use (&$previous, &$checked, &$hashed, &$brokenAt, &$unsealedAt, &$keylessAt): bool {
                 foreach ($rows as $row) {
                     $checked++;
 
@@ -429,7 +541,26 @@ final class LedgerChain
                         return false;
                     }
 
-                    $expected = self::hash($previous, $row->getAttributes());
+                    /*
+                     * ⭐ সারিটা যে সংস্করণে সিল হয়েছিল, সেই চাবিতেই যাচাই —
+                     * ২৮ সেপ্টেম্বর ২০২৬, নিরীক্ষা §৪।
+                     *
+                     * ⛔ চাবিটা হাতে না থাকলে এখানে থামা হয়, আর সেটা
+                     * **"ভাঙা" বলে নয়**। ⚠️ ঐ পার্থক্যটাই এই গোটা কাজের
+                     * কারণ: চাবি না থাকা মানে *আমরা যাচাই করতে পারছি না*,
+                     * আর ভাঙা মানে *কেউ খাতা বদলেছে*। ⓘ দুইটাকে এক
+                     * করে দেখালে একদিন সত্যিকারের কারচুপিটাও "আবার চাবির
+                     * ঝামেলা" বলে উড়িয়ে দেওয়া হত।
+                     */
+                    $version = (int) ($row->seal_version ?? self::SEAL_APP_KEY);
+
+                    if (! self::hasKeyFor($version)) {
+                        $keylessAt = [(int) $row->id, $version];
+
+                        return false;
+                    }
+
+                    $expected = self::hash($previous, $row->getAttributes(), $version);
 
                     if (! hash_equals($expected, (string) $row->row_hash)) {
                         $brokenAt = (int) $row->id;
@@ -456,6 +587,23 @@ final class LedgerChain
                 'expected' => $checked,
                 'broken_at' => $unsealedAt,
                 'reason' => self::UNSEALED,
+            ];
+        }
+
+        /*
+         * ⭐ চাবি না থাকার কথাটা ভাঙা খাতার **আগে** — দুইটাই হলে
+         * প্রথমটাই সত্যিকারের কারণ, আর দ্বিতীয়টা কেবল তার লক্ষণ।
+         */
+        if ($keylessAt !== null) {
+            [$id, $version] = $keylessAt;
+
+            return [
+                'ok' => false,
+                'checked' => $checked,
+                'expected' => $checked,
+                'broken_at' => $id,
+                'reason' => self::NO_KEY,
+                'seal_version' => $version,
             ];
         }
 

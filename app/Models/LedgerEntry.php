@@ -69,10 +69,23 @@ class LedgerEntry extends Model
                 $entry->updateTimestamps();
             }
 
-            [$previous, $hash] = LedgerChain::next($entry);
+            /*
+             * ⭐ সংস্করণটাও সারির গায়ে বসে — ২৮ সেপ্টেম্বর ২০২৬।
+             *
+             * ⓘ সিলের চাবি এখন খতিয়ানের নিজের (`LEDGER_SEAL_KEY`),
+             * `APP_KEY` নয়। ⚠️ চাবি একদিন বদলাবেই, আর তখন পুরোনো সারি
+             * পুরোনো চাবিতেই যাচাই হতে হবে — নাহলে চাবি বদলানো মানে
+             * গোটা খাতা ভাঙা দেখানো।
+             *
+             * ⛔ ঘরটা [[LedgerChain::SIGNED]]-এ নেই, আর থাকা চলবেও না:
+             * ছাপটা নিজের সংস্করণের উপর নির্ভর করলে সংস্করণ বদলালেই ছাপ
+             * বদলাত, আর সেটা একটা অন্তহীন চক্র।
+             */
+            [$previous, $hash, $sealVersion] = LedgerChain::next($entry);
 
             $entry->prev_hash = $previous;
             $entry->row_hash = $hash;
+            $entry->seal_version = $sealVersion;
         });
     }
 
