@@ -171,4 +171,5 @@ return [
     'another_place' => 'Another place',
     'stock_filter' => 'Stock filter',
     'stock_value' => 'Stock value',
+    'held_days' => 'Days held',
 ];

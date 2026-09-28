@@ -199,4 +199,5 @@ return [
     'another_place' => 'আরেক জায়গা',
     'stock_filter' => 'মজুদ ছাঁকনি',
     'stock_value' => 'মজুদের মূল্য',
+    'held_days' => 'কত দিন ধরে',
 ];

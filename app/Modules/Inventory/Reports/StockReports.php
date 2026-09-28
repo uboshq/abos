@@ -327,7 +327,28 @@ final class StockReports
                  * একসাথে একটা ভাঙা পাতাকে অদৃশ্য রেখেছিল।
                  */
                 ->groupBy('p.code', 'p.name_en', 'p.name_bn', 'w.name_en', 'w.name_bn', 'b.batch_no', 'b.expiry_date')
-                ->havingRaw('COALESCE(SUM(m.floor_change), 0) + COALESCE(SUM(m.free_change), 0) > 0')
+                /*
+                 * ⭐ *"এসেছে কিন্তু বসেনি"* মালও সারিটা ধরে রাখে — ২৮ সেপ্টেম্বর ২০২৬।
+                 *
+                 * ── ⛔ কী ঘটত ─────────────────────────────────────────
+                 * শর্তটা ছিল `floor + free > 0`। ⚠️ ক্রয় থেকে আসা মাল
+                 * প্রথমে `unplaced` খোপে বসে, `floor`-এ নয়। ⛔ ফলে যে লট
+                 * আজ এসেছে অথচ কেউ গুদামে তোলেনি, সেটা এই রিপোর্টে
+                 * **ছিলই না** — আর ঠিক ঐ লটটা নিয়েই এখনই কাজ আছে।
+                 *
+                 * ⓘ আর সবচেয়ে বলার মতো ব্যাপার: পাতাটায় `unplaced`
+                 * কলামটা **আগে থেকেই** ছিল। ⚠️ কিন্তু শর্তটা ওটাকে গুনত
+                 * না, তাই সংখ্যাটা কেবল তখনই দেখা যেত যখন একই লটে
+                 * তাকেও মাল আছে — অর্থাৎ কলামটা কোনোদিন একা দাঁড়াতে
+                 * পারত না, আর সেটা অলংকার।
+                 *
+                 * ⓘ একই পরিবারের ভুল আজ মজুদের তালিকাতেও সারানো হয়েছে
+                 * (0382932b), আর দুইটারই শিকড় একই: দেখানো ঘর আর গোনা ঘর
+                 * আলাদা হয়ে গেলে *"স্টক দেখাচ্ছে না"* ফিরে আসে।
+                 */
+                ->havingRaw('COALESCE(SUM(m.floor_change), 0)
+                           + COALESCE(SUM(m.free_change), 0)
+                           + COALESCE(SUM(m.unplaced_change), 0) > 0')
                 ->orderBy('p.code')
                 ->orderBy('b.expiry_date')
                 ->select([
@@ -339,12 +360,53 @@ final class StockReports
                     DB::raw('COALESCE(SUM(m.floor_change), 0) as on_hand'),
                     DB::raw('COALESCE(SUM(m.free_change), 0) as free_on_hand'),
                     DB::raw('COALESCE(SUM(m.unplaced_change), 0) as unplaced'),
+                ])
+
+                /*
+                 * ⭐ লটটা কত দিন ধরে পড়ে আছে — মালিকের নির্দেশ, ২৮ সেপ্টেম্বর ২০২৬।
+                 *
+                 * ── ⓘ কেন এই রিপোর্টেই ────────────────────────────────
+                 * মালিক তিনটা জিনিস একসাথে চেয়েছেন: *"কোন লট, কত দিন ধরে
+                 * আছে, মেয়াদ কবে"*। ⭐ এই পাতাটায় লট আর মেয়াদ আগেই ছিল,
+                 * তাই কেবল দিনটাই বাকি ছিল — নতুন কোনো পাতা লাগেনি।
+                 * ⓘ পাশের মেয়াদের রিপোর্ট উল্টো প্রশ্নের উত্তর দেয়
+                 * (*"কত দিন বাকি"*), আর দুইটা একই প্রশ্ন নয়।
+                 *
+                 * ── ⛔ গোনাটা কেবল **ঢোকার** সারি থেকে ─────────────────
+                 * ⚠️ প্রথমে এখানে লেখা ছিল *"সব সারি গুনলে শেষ বিক্রয়ের
+                 * তারিখটা লটকে নতুন দেখাত"* — আর ঐ যুক্তিটা **ভুল**।
+                 * ⓘ `MIN` সবচেয়ে **পুরনো** তারিখটা নেয়, তাই পরের কোনো
+                 * সারি কখনোই জিততে পারে না।
+                 *
+                 * ⭐ ভুলটা ধরা পড়েছে একটা মিউটেন্ট **বেঁচে যাওয়ায়**:
+                 * `MIN(m.trx_date)` বসিয়েও দাবিটা সবুজ ছিল, অর্থাৎ দাবিটা
+                 * ঐ ঘরটা পাহারাই দিত না।
+                 *
+                 * ⓘ আসল কারণটা উল্টো দিকের: আসার **আগের** তারিখে বসানো
+                 * কোনো সারি (যেমন পিছনের তারিখে দেওয়া একটা সমন্বয়) লটটাকে
+                 * বাস্তবের চেয়ে **পুরনো** দেখাত। ⛔ আর তখন একটা তাজা লট
+                 * পুরনো মালের তালিকায় উঠে আসত, যেখানে তার কাজ নেই।
+                 * ⭐ তাই কেবল সেই সারি যেটা মাল এনেছে — তাকে, ফ্রি, বা
+                 * বসার অপেক্ষায়।
+                 *
+                 * ⚠️ তারিখটা অ্যাপ থেকে, `CURDATE()` থেকে নয় — একই কারণে
+                 * যেটা [[self::expiring()]]-এ লেখা: ২৫/৮/২০২৬-এ লাইভে
+                 * অ্যাপ আর MySQL-এর ঘড়ি এক দিন আলাদা ছিল। ⓘ আর টেস্টে
+                 * সময় জমিয়ে রাখা (`Carbon::setTestNow`) তখনই খাটে যখন
+                 * তারিখটা অ্যাপ থেকে আসে।
+                 */
+                ->selectRaw('DATEDIFF(?, MIN(CASE WHEN m.floor_change > 0
+                                                    OR m.free_change > 0
+                                                    OR m.unplaced_change > 0
+                                                  THEN m.trx_date END)) as held_days', [
+                    Carbon::today()->toDateString(),
                 ]),
             columns: [
                 ['key' => 'product_code', 'label' => 'inventory::field.code', 'width' => '7rem'],
                 ['key' => 'product_name', 'label' => 'inventory::field.product'],
                 ['key' => 'warehouse_name', 'label' => 'inventory::field.warehouse', 'width' => '10rem'],
                 ['key' => 'batch_no', 'label' => 'inventory::field.batch_no', 'width' => '8rem'],
+                ['key' => 'held_days', 'label' => 'inventory::field.held_days', 'width' => '6rem'],
                 ['key' => 'expiry_date', 'label' => 'inventory::field.expiry_date', 'type' => ReportColumn::DATE, 'width' => '7rem'],
                 ['key' => 'on_hand', 'label' => 'inventory::field.floor', 'type' => ReportColumn::MONEY],
                 ['key' => 'free_on_hand', 'label' => 'inventory::field.free', 'type' => ReportColumn::MONEY],
