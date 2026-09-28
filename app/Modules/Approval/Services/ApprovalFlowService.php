@@ -166,50 +166,113 @@ class ApprovalFlowService
     private function replaceSteps(ApprovalFlow $flow, array $steps): void
     {
         /*
-         * পুরোটা বদলে বসানো, সারি ধরে ধরে মেলানো নয়।
+         * পুরোটা বদলে বসানো, সারি ধরে ধরে মেলানো নয় — **এক জায়গা ছাড়া**।
          *
          * ছক সাজানোর পর্দায় মানুষ স্তর যোগ করেন, সরান, ক্রম বদলান।
          * সারি মেলাতে গেলে "কোন সারিটা কোনটা" ঠিক করতে হত, আর একটা
          * ভুল মিলে দুই স্তরের অনুমোদনকারী উল্টে যেত — যেটা কেউ খেয়াল
          * করত না, কারণ সংখ্যা দুইটাই ঠিক থাকত।
+         *
+         * ── ⛔ কী ভাঙা ছিল — অডিট §৩, ২৭ সেপ্টেম্বর ২০২৬ ─────────────
+         * আগে এখানে `$flow->steps()->delete()` — একটা **কোয়েরি-মোছা**, যা
+         * মডেলের ঘটনা ডাকে না। ⚠️ তাই [[ApprovalFlowStep]]-এ [[IsAudited]]
+         * বসালেও পুরনো ধাপ নিঃশব্দে যেত, আর খাতায় উঠত কেবল নতুনটার
+         * "তৈরি"। ⛔ *"এই ধাপে আগে কে সই দিতেন?"* — উত্তর কোথাও নেই।
+         *
+         * ── ⭐ এখন ─────────────────────────────────────────────────────
+         * ⓘ যে স্তরে **আগেও ঠিক একজন, এখনও ঠিক একজন**, সেখানে "কোনটা
+         * কোনটা" প্রশ্নের একটাই উত্তর — তাই সারিটা জায়গায় বদলায়, আর
+         * খাতায় বসে *"approver_id ৫ → ৭"*। ⚠️ মেলানোর উপর কেবল খাতার
+         * বর্ণনা নির্ভর করে, তথ্য নয়: বদলের পর সারির প্রতিটা ঘর হুবহু
+         * যা পাঠানো হয়েছে তা-ই।
+         *
+         * ⓘ বাকি সব স্তরে আগের নিয়মই — মুছে নতুন করে। ⭐ তবে মোছা এখন
+         * **একটা একটা করে**, তাই প্রতিটা পুরনো ধাপের "মোছা" খাতায় ওঠে।
          */
-        $flow->steps()->delete();
+        $before = $flow->steps()->get()->groupBy(fn (ApprovalFlowStep $row) => (int) $row->level);
+        $after = collect($steps)->groupBy(fn (array $step) => (int) $step['level']);
 
-        foreach ($steps as $step) {
-            ApprovalFlowStep::create([
-                'approval_flow_id' => $flow->id,
-                'level' => (int) $step['level'],
-                // ⓘ নাম ঐচ্ছিক — খালি দিলে পর্দা "ধাপ ২" দেখায়, আগের মতোই
-                'step_name' => trim((string) ($step['step_name'] ?? '')) ?: null,
-                'approver_type' => $step['approver_type'],
-                'approver_id' => (int) $step['approver_id'],
-                'requires_all' => (bool) ($step['requires_all'] ?? false),
+        $inPlace = [];
+        $fresh = [];
 
-                /*
-                 * ⚠️ `?? null` । `(int)` নয় — আর সেটাই সবটা।
-                 *
-                 * ⓘ এই ঘরগুলোতে `null` একটা **অর্থবহ মান**:
-                 * *"এই ধাপে ঘড়ি নেই"*। ⛔ শূন্য বসলে সেটা
-                 * *"সাথে সাথে দেরি"* হয়ে যেত, আর প্রতিটা পুরনো প্রবাহ
-                 * সংরক্ষণ করলেই তার কাগজগুলো জন্মেই লাল হত।
-                 */
-                'sla_hours' => $step['sla_hours'] ?? null,
-                'warn_hours' => $step['warn_hours'] ?? null,
-                'escalate_hours' => $step['escalate_hours'] ?? null,
-                'escalate_to_type' => $step['escalate_to_type'] ?? null,
-                'escalate_to_id' => $step['escalate_to_id'] ?? null,
+        foreach ($after as $level => $atLevel) {
+            $had = $before->get($level);
 
-                /*
-                 * ⛔ এই একটায় `null` চলে না — উপরের পাঁচটার মতো নয়।
-                 *
-                 * ⓘ কলামটা `NOT NULL DEFAULT 1`। ⚠️ ডিফল্ট কেবল
-                 * তখনই খাটে যখন ঘরটা INSERT-এ **থাকেই না**; Eloquent
-                 * ঘরটা পাঠায়, তাই `null` পাঠানো মানে সরাসরি নিষেধাজ্ঞা
-                 * ভাঙা — আর কড়া sql_mode-এ সেটা সংরক্ষণই ফেলে দেয়।
-                 */
-                'min_approvals' => $step['min_approvals'] ?? 1,
-            ]);
+            if ($had !== null && $had->count() === 1 && $atLevel->count() === 1) {
+                $inPlace[] = [$had->first(), $this->stepAttributes($flow, $atLevel->first())];
+
+                continue;
+            }
+
+            foreach ($atLevel as $step) {
+                $fresh[] = $this->stepAttributes($flow, $step);
+            }
         }
+
+        $kept = array_map(fn (array $pair) => (int) $pair[0]->id, $inPlace);
+
+        /*
+         * ⛔ ক্রমটা জরুরি: আগে মোছা, তারপর বদল, শেষে নতুন।
+         *
+         * ⓘ `approval_step_unique` = (ছক, স্তর, ধরন, আইডি)। পুরনো সারি
+         * থাকতেই একই চাবির নতুন সারি বসালে গোটা সংরক্ষণ ভেঙে পড়ত।
+         */
+        $flow->steps()->whereKeyNot($kept)->get()
+            ->each(fn (ApprovalFlowStep $gone) => $gone->delete());
+
+        foreach ($inPlace as [$row, $attributes]) {
+            $row->fill($attributes)->save();
+        }
+
+        foreach ($fresh as $attributes) {
+            ApprovalFlowStep::create($attributes);
+        }
+    }
+
+    /**
+     * ⭐ একটা ধাপের ঘরগুলো — তৈরি আর জায়গায় বদল, দুই পথেই এই এক তালিকা।
+     *
+     * ⚠️ দুই জায়গায় আলাদা করে লিখলে একদিন একটায় নতুন ঘর বসত, অন্যটায়
+     * নয় — আর জায়গায়-বদলের পথে ঐ ঘরটা নিঃশব্দে পুরনো মান রেখে দিত।
+     *
+     * @param  array<string, mixed>  $step
+     * @return array<string, mixed>
+     */
+    private function stepAttributes(ApprovalFlow $flow, array $step): array
+    {
+        return [
+            'approval_flow_id' => $flow->id,
+            'level' => (int) $step['level'],
+            // ⓘ নাম ঐচ্ছিক — খালি দিলে পর্দা "ধাপ ২" দেখায়, আগের মতোই
+            'step_name' => trim((string) ($step['step_name'] ?? '')) ?: null,
+            'approver_type' => $step['approver_type'],
+            'approver_id' => (int) $step['approver_id'],
+            'requires_all' => (bool) ($step['requires_all'] ?? false),
+
+            /*
+             * ⚠️ `?? null` । `(int)` নয় — আর সেটাই সবটা।
+             *
+             * ⓘ এই ঘরগুলোতে `null` একটা **অর্থবহ মান**:
+             * *"এই ধাপে ঘড়ি নেই"*। ⛔ শূন্য বসলে সেটা
+             * *"সাথে সাথে দেরি"* হয়ে যেত, আর প্রতিটা পুরনো প্রবাহ
+             * সংরক্ষণ করলেই তার কাগজগুলো জন্মেই লাল হত।
+             */
+            'sla_hours' => $step['sla_hours'] ?? null,
+            'warn_hours' => $step['warn_hours'] ?? null,
+            'escalate_hours' => $step['escalate_hours'] ?? null,
+            'escalate_to_type' => $step['escalate_to_type'] ?? null,
+            'escalate_to_id' => $step['escalate_to_id'] ?? null,
+
+            /*
+             * ⛔ এই একটায় `null` চলে না — উপরের পাঁচটার মতো নয়।
+             *
+             * ⓘ কলামটা `NOT NULL DEFAULT 1`। ⚠️ ডিফল্ট কেবল
+             * তখনই খাটে যখন ঘরটা INSERT-এ **থাকেই না**; Eloquent
+             * ঘরটা পাঠায়, তাই `null` পাঠানো মানে সরাসরি নিষেধাজ্ঞা
+             * ভাঙা — আর কড়া sql_mode-এ সেটা সংরক্ষণই ফেলে দেয়।
+             */
+            'min_approvals' => $step['min_approvals'] ?? 1,
+        ];
     }
 
     /**

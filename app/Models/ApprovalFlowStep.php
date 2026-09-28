@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Models;
 
 use App\Core\Concerns\HasPublicId;
+use App\Core\Concerns\IsAudited;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -14,6 +15,7 @@ class ApprovalFlowStep extends Model
 {
     use HasFactory;
     use HasPublicId;
+    use IsAudited;
 
     public const BY_ROLE = 'role';
 
@@ -35,6 +37,41 @@ class ApprovalFlowStep extends Model
             'escalate_hours' => 'integer',
             'min_approvals' => 'integer',
         ];
+    }
+
+    /**
+     * ⭐ অডিটের সারিটা কার খাতায় — ছকের, প্রসঙ্গের নয় (অডিট §৩, ২৭ সেপ্টেম্বর ২০২৬)।
+     *
+     * ── ⛔ কেন নাম ধরে বলা দরকার ─────────────────────────────────────
+     * `approval_flow_steps`-এর নিজের `company_id` নেই; ধাপটা ছকের মাধ্যমে
+     * বাঁধা। ⓘ [[IsAudited]] তখন চলতি প্রসঙ্গ থেকে আইডি নিত — আর প্রসঙ্গ
+     * জানে না ঐ কোম্পানি সত্যিই এই ছকের কি না
+     * ([[AnAuditedModelMustSayWhoseBooksItBelongsToTest]])।
+     *
+     * ⚠️ `withoutGlobalScopes()` ইচ্ছাকৃত: [[ApprovalFlow]]-এ
+     * [[BelongsToCompany]]-র দেয়াল, তাই অন্য কোম্পানির প্রসঙ্গে বসে
+     * (সিডার, [[MoneyFlowDefaults]]) `$this->flow` `null` ফেরাত — ⛔ আর
+     * [[AuditEngine]] কোম্পানি না পেলে **নিঃশব্দে কিছুই লেখে না**।
+     * ⭐ ছকের সারিটাই একমাত্র সৎ উত্তর: ধাপ যার, খাতাও তার।
+     */
+    public function auditCompanyId(): ?int
+    {
+        $companyId = ApprovalFlow::query()
+            ->withoutGlobalScopes()
+            ->whereKey($this->approval_flow_id)
+            ->value('company_id');
+
+        return $companyId === null ? null : (int) $companyId;
+    }
+
+    /**
+     * ⓘ ছক কোম্পানির নিয়ম, কোনো শাখার নয় — `approval_flows`-এ শাখার ঘরই
+     * নেই। ⚠️ তাই `null`-ই সত্য; ⛔ বদলকারীর নিজের শাখা বসালে একই ছকের
+     * দুই বদল দুই শাখায় দেখাত, অথচ নিয়মটা একটাই।
+     */
+    public function auditBranchId(): ?int
+    {
+        return null;
     }
 
     public function flow(): BelongsTo
