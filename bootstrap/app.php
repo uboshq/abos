@@ -7,12 +7,11 @@ use App\Http\Middleware\ContentSecurityPolicy;
 use App\Http\Middleware\ExportListing;
 use App\Http\Middleware\NormalizeUnicodeInput;
 use App\Http\Middleware\OneSubmitPerForm;
-use App\Http\Middleware\PeekVaries;
 use App\Http\Middleware\RefuseInactiveAccounts;
+use App\Http\Middleware\SuperAdminMustHaveTwoSteps;
 use App\Http\Middleware\RefuseSwitchedOffScreens;
 use App\Http\Middleware\RefuseWorkWithoutALicence;
 use App\Http\Middleware\ResolveCompanyContext;
-use App\Http\Middleware\SuperAdminMustHaveTwoSteps;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -283,13 +282,6 @@ return Application::configure(basePath: dirname(__DIR__))
              * ভিউ রেন্ডার হওয়ার পরে কাজ করে, তাই সবার শেষে।
              */
             ExportListing::class,
-
-            /*
-             * ⓘ এক ঠিকানার দুইটা চেহারা আছে — পিক আর আসল পাতা
-             * ([[App\Core\Support\Peek]])। ⚠️ `Vary` ছাড়া ক্যাশ
-             * একটাকে অন্যটার উত্তর হিসেবে দিত।
-             */
-            PeekVaries::class,
         ]);
 
         /*
