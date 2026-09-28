@@ -55,4 +55,5 @@ return [
         'classic_table' => 'Classic table invoice',
     ],
     'invoice_footnote' => 'Red line under the classic invoice (blank = the standard line)',
+    'vat_enabled' => 'VAT on sales (off: no VAT box, and the server takes no VAT)',
 ];

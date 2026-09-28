@@ -15,4 +15,5 @@ return [
     'paper_order' => 'Paper for the purchase order',
     'paper_receipt' => 'Paper for the goods receipt',
     'screen_requisitions' => 'Show the purchase requisition screen',
+    'vat_enabled' => 'VAT on purchases (off: no VAT box, and the server takes no VAT)',
 ];

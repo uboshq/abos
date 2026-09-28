@@ -691,6 +691,16 @@ class DemoSeeder extends Seeder
          * সেটা [[TheCounterRefusedToSellBelowTheSetPrice]] মেপে দেখে।
          */
         app(SettingsService::class)->set(PricingRule::POLICY, PricingRule::ALLOW);
+
+        /*
+         * ⓘ ডেমো কোম্পানিতে ভ্যাট দুই দিকেই চালু — মালিকের সিদ্ধান্তে ডিফল্ট বন্ধ (২৮ সেপ্টেম্বর ২০২৬),
+         * কিন্তু আজকের দাবিগুলোর অনেকগুলো ভ্যাটের পথটাই মাপে; বন্ধ থাকলে ওরা চুপচাপ অন্য জিনিস
+         * মাপত। ⭐ "বন্ধ" নিজের দাবিতে, সেটিং মুছে দেখা ([[DirectPurchaseCostsLandRightTest]],
+         * [[EveryCounterSaleMustMatchTheBooksFiveWaysTest]])। ⚠️ লাইভের কোম্পানি এই সিডার থেকে নয় —
+         * সেখানে ডিফল্টই খাটে: বন্ধ।
+         */
+        app(SettingsService::class)->set('purchase.vat_enabled', true);
+        app(SettingsService::class)->set('sales.vat_enabled', true);
         app(SettingsService::class)->flush();
     }
 

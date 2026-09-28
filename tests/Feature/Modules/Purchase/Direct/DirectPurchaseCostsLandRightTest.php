@@ -398,7 +398,7 @@ final class DirectPurchaseCostsLandRightTest extends TestCase
      */
     public function test_with_vat_off_a_posted_vat_is_refused_and_nothing_is_written(): void
     {
-        app(SettingsService::class)->set('master_data.tax_enabled', false);
+        app(SettingsService::class)->set('purchase.vat_enabled', false);
 
         $bills = PurchaseBill::query()->withTrashed()->count();
         $entries = LedgerEntry::query()->count();
@@ -438,7 +438,7 @@ final class DirectPurchaseCostsLandRightTest extends TestCase
         ]);
         $this->a->forceFill(['tax_id' => $tax->id])->save();
 
-        app(SettingsService::class)->set('master_data.tax_enabled', false);
+        app(SettingsService::class)->set('purchase.vat_enabled', false);
         $before = $this->snapshot();
 
         $bill = $this->buy([
@@ -458,7 +458,7 @@ final class DirectPurchaseCostsLandRightTest extends TestCase
             supplier: '-1000',
         );
 
-        app(SettingsService::class)->set('master_data.tax_enabled', true);
+        app(SettingsService::class)->set('purchase.vat_enabled', true);
         $before = $this->snapshot();
 
         $bill = $this->buy([
@@ -476,14 +476,36 @@ final class DirectPurchaseCostsLandRightTest extends TestCase
         );
     }
 
+    /**
+     * ⭐ কোনো সেটিং না থাকলে ক্রয়ের ভ্যাট বন্ধ — মালিক, ২৮ সেপ্টেম্বর ২০২৬ (রাত): *"by default vat
+     * sob jaygay off"*। ⓘ ডেমো কোম্পানিতে সিডার চালু করে; এখানে সেটিং মুছে নতুন কোম্পানির হাল
+     * দেখা হয় — লাইভের কোম্পানিগুলোর ঠিক এই হাল। আর দেয়াল সেখানেও থামায়।
+     */
+    public function test_a_company_with_no_vat_setting_buys_without_vat(): void
+    {
+        app(SettingsService::class)->reset('purchase.vat_enabled');
+
+        // ⚠️ বিকল্প মান true — সুইচ ঘোষিত না থাকলে "বন্ধ" পড়ে সবুজ না হয়
+        $this->assertFalse((bool) app(SettingsService::class)->get('purchase.vat_enabled', true),
+            '⛔ কোনো সেটিং নেই, অথচ ক্রয়ের ভ্যাট চালু — মালিকের ডিফল্ট বন্ধ।');
+
+        $this->post(route('purchase.direct.store'), [
+            'supplier_id' => $this->supplier->id,
+            'warehouse_id' => $this->warehouse->id,
+            'trx_date' => now()->toDateString(),
+            'payment_term' => 'credit',
+            'lines' => [['product_id' => $this->a->id, 'qty' => '10', 'rate' => '100', 'tax' => '150']],
+        ])->assertSessionHasErrors('lines');
+    }
+
     /** ⛔→⭐ একই মানুষ: ভ্যাট বন্ধে বিলের পর্দায় ভ্যাটের ঘর নেই, চালু করলে আছে। */
     public function test_the_bill_screen_offers_no_vat_box_when_vat_is_off(): void
     {
-        app(SettingsService::class)->set('master_data.tax_enabled', false);
+        app(SettingsService::class)->set('purchase.vat_enabled', false);
         $this->assertStringNotContainsString("][tax]'", $this->get(route('purchase.bill.create'))->assertOk()->getContent(),
             '⛔ ভ্যাট বন্ধ, অথচ বিলের পর্দায় ভ্যাটের ঘর।');
 
-        app(SettingsService::class)->set('master_data.tax_enabled', true);
+        app(SettingsService::class)->set('purchase.vat_enabled', true);
         $this->assertStringContainsString("][tax]'", $this->get(route('purchase.bill.create'))->assertOk()->getContent(),
             'ভ্যাট চালু, অথচ বিলের পর্দায় ভ্যাটের ঘর নেই — দাবিটা অন্ধ।');
     }

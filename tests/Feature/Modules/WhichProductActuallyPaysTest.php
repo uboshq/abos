@@ -308,8 +308,17 @@ class WhichProductActuallyPaysTest extends TestCase
         foreach ($sales as $key) {
             $slug = str_replace('_', '-', substr($key, strlen('sales.')));
 
-            $this->get(route('sales.report.show', ['slug' => $slug]))
-                ->assertOk();
+            /*
+             * ⓘ কিছু রিপোর্টের নিজের দরজা, নিজের চাবিতে — মার্জিনের রিপোর্ট খরচ দেখায়, তাই
+             * `sales.margin.report.show` ([[MarginReportController]], NEXUS §৩২, ২৮ সেপ্টেম্বর ২০২৬)।
+             * ⚠️ দাবিটা একই থাকে: দরজা থাকতে হবে — কেবল কোন ঠিকানায়, সেটা রিপোর্ট বলে।
+             */
+            $own = "sales.{$slug}.report.show";
+            $url = \Illuminate\Support\Facades\Route::has($own)
+                ? route($own, ['slug' => $slug])
+                : route('sales.report.show', ['slug' => $slug]);
+
+            $this->get($url)->assertOk();
         }
     }
 

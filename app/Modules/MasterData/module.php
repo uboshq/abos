@@ -355,13 +355,6 @@ return [
             'group' => 'location',
         ],
         [
-            'key' => 'master_data.tax_enabled',
-            'label' => 'master_data::settings.tax_enabled',
-            'type' => 'boolean',
-            'default' => true,
-            'group' => 'entry',
-        ],
-        [
             'key' => 'master_data.multi_unit_enabled',
             'label' => 'master_data::settings.multi_unit_enabled',
             'type' => 'boolean',

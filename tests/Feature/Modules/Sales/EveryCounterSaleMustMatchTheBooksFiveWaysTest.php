@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Modules\Sales;
 
+use App\Core\Services\SettingsService;
 use App\Core\Support\CompanyContext;
 use App\Core\Support\DocumentStatus;
 use App\Core\Support\Money;
@@ -473,6 +474,59 @@ final class EveryCounterSaleMustMatchTheBooksFiveWaysTest extends TestCase
         $this->assertSame(0, bccomp((string) $invoice->discount, '120', 4), '⛔ বিলে সারির ছাড় ১২০ নয়।');
         $this->assertSame(0, bccomp((string) $invoice->tax, '162', 4), '⛔ বিলে ভ্যাট ১৬২ নয়।');
         $this->assertPrintedTotalIsTheLedgerTotal($invoice, '1242');
+    }
+
+    /**
+     * ⛔ কোনো সেটিং না থাকলে বিক্রির ভ্যাট বন্ধ — ভ্যাটওয়ালা পণ্যেও ভ্যাট বসে না, আর পাঁচ মিল মেলে।
+     *
+     * ⓘ মালিক, ২৮ সেপ্টেম্বর ২০২৬ (রাত): দুই সুইচ, ডিফল্টে সব জায়গায় বন্ধ। ডেমোতে সিডার চালু করে;
+     * এখানে সেটিং মুছে লাইভের কোম্পানির হাল দেখা হয়।
+     *
+     * হাতে গোনা (উপরের পরীক্ষার সারি): ৮ × ১৫০ = ১,২০০ − ১০% = ১,০৮০ — ভ্যাট ০
+     *   নগদ +১,০৮০ · বিক্রয় −১,০৮০ · খরচ ৮০০ · মজুদ −৮০০ · লাভ ২৮০
+     */
+    public function test_with_no_sales_vat_setting_a_vatted_product_sells_without_vat(): void
+    {
+        app(SettingsService::class)->reset('sales.vat_enabled');
+        // ⚠️ বিকল্প মান true — সুইচ ঘোষিত না থাকলে "বন্ধ" পড়ে সবুজ না হয়
+        $this->assertFalse((bool) app(SettingsService::class)->get('sales.vat_enabled', true),
+            '⛔ কোনো সেটিং নেই, অথচ বিক্রির ভ্যাট চালু — মালিকের ডিফল্ট বন্ধ।');
+
+        $vatted = $this->vattedProduct();
+        $before = $this->snapshot($vatted);
+
+        $this->sell([$this->line($vatted, '8', '150', ['discount_percent' => '10'])], [$this->cash('1080')])
+            ->assertSessionHasNoErrors();
+
+        $invoice = $this->lastInvoiceOf($this->dealer);
+
+        $this->assertBooksMoved($before['ledger'], [
+            $this->tillCode() => '1080',
+            StandardChart::SALES => '-1080',
+            StandardChart::COST_OF_GOODS_SOLD => '800',
+            StandardChart::INVENTORY => '-800',
+        ], '⛔ ভ্যাট বন্ধ, অথচ খাতায় ভ্যাটের সারি।');
+        $this->assertStockMoved($vatted, $before, '-8', '-800');
+        $this->assertDealerMoved($before['ledger'], '0');
+        $this->assertGrossProfit($before['ledger'], '280');
+        $this->assertSame(0, bccomp((string) $invoice->tax, '0', 4), '⛔ ভ্যাট বন্ধ, অথচ বিলে ভ্যাট।');
+        $this->assertPrintedTotalIsTheLedgerTotal($invoice, '1080');
+    }
+
+    /** ⛔ বিক্রির ভ্যাট বন্ধ থাকলে বিলে পাঠানো ভ্যাট থামে — চুপচাপ শূন্য নয়। */
+    public function test_with_sales_vat_off_a_posted_vat_is_refused(): void
+    {
+        app(SettingsService::class)->set('sales.vat_enabled', false);
+
+        try {
+            app(\App\Modules\Sales\Services\SalesInvoiceService::class)->create([
+                'customer_id' => $this->dealer->id,
+                'trx_date' => now()->toDateString(),
+            ], [['product_id' => $this->plain->id, 'qty' => '1', 'rate' => '150', 'tax' => '22.50']]);
+            $this->fail('⛔ বিক্রির ভ্যাট বন্ধ, অথচ ভ্যাটওয়ালা বিল বসে গেছে।');
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            $this->assertArrayHasKey('lines', $e->errors());
+        }
     }
 
     /**

@@ -58,7 +58,7 @@
     'lots' => false,
 ])
 @php
-    $showTax ??= (bool) app(\App\Core\Services\SettingsService::class)->get('master_data.tax_enabled', true);
+    $showTax ??= (bool) app(\App\Core\Services\SettingsService::class)->get('purchase.vat_enabled', false);
 @endphp
 
 @php

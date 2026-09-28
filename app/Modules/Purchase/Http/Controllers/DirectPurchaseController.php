@@ -274,7 +274,7 @@ class DirectPurchaseController extends Controller implements HasMiddleware
             'show' => [
                 'free_qty' => $this->settings->get('purchase.field_free_qty', true),
                 'line_discount' => $this->settings->get('purchase.field_line_discount', true),
-                'vat' => $this->settings->get('master_data.tax_enabled', true),
+                'vat' => $this->settings->get('purchase.vat_enabled', false),
             ],
         ]);
     }

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Sales\Services;
 
+use App\Core\Services\SettingsService;
 use App\Modules\MasterData\Models\Tax;
 use Illuminate\Validation\ValidationException;
 
@@ -40,6 +41,26 @@ trait CalculatesSalesLines
         }
 
         $net = bcsub($base, $discount, 4);
+
+        /*
+         * ⛔ বিক্রির ভ্যাট বন্ধ মানে বন্ধ — মালিক, ২৮ সেপ্টেম্বর ২০২৬ (রাত): *"ETAT jonno duti switch
+         * dibe. tobe by default vat sob jaygay off"*।
+         *
+         * ⓘ সুইচ বিক্রির নিজের (`sales.vat_enabled`, ডিফল্ট বন্ধ) — ক্রয়েরটা আলাদা, আর কোনো দিক অন্যটা
+         * পড়ে না। বন্ধ থাকলে পাঠানো ভ্যাট প্রত্যাখ্যান, পণ্যের নিজের হারও খাটে না — বিল, আদেশ, চালান,
+         * উদ্ধৃতি, কাউন্টার সবাই এই এক জায়গা দিয়ে যায়। ⚠️ চুপচাপ শূন্য করা হয় না: তাহলে
+         * ক্রেতার হাতের কাগজ আর খাতা দুই কথা বলত।
+         */
+        if (! (bool) app(SettingsService::class)->get('sales.vat_enabled', false)) {
+            if ($tax !== null && $tax !== '' && bccomp($this->money($tax), '0', 4) !== 0) {
+                throw ValidationException::withMessages([
+                    'lines' => __('sales::validation.vat_is_off'),
+                ]);
+            }
+
+            $tax = '0';
+            $standard = null;
+        }
 
         /*
          * ভ্যাট কোথা থেকে আসে — আর কেন দুইটা পথ।

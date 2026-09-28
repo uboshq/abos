@@ -955,6 +955,18 @@ return [
         ],
         [
             /*
+             * বিক্রিতে ভ্যাট — মালিক, ২৮ সেপ্টেম্বর ২০২৬ (রাত): দুই সুইচ, ডিফল্টে সব জায়গায় বন্ধ।
+             * ⓘ বন্ধ মানে বন্ধ: ঘর নেই, সার্ভার ভ্যাট নেয় না ([[CalculatesSalesLines::lineFigures()]])।
+             * ক্রয়ের সুইচ আলাদা (`purchase.vat_enabled`) — কোনো দিক অন্যটা পড়ে না।
+             */
+            'key' => 'sales.vat_enabled',
+            'label' => 'sales::settings.vat_enabled',
+            'type' => 'boolean',
+            'default' => false,
+            'group' => 'entry',
+        ],
+        [
+            /*
              * ⭐ মার্জিনের সীমা — NEXUS §৩২ ([[MarginGuard]])। ⓘ ০ মানে খরচের নিচে বিক্রি ধরা পড়ে,
              * খরচে বা উপরে নয়। কোম্পানি-প্রতি, কারণ ABOS অনেক ব্যবসায় চলে।
              */

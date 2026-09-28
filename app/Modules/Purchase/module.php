@@ -699,6 +699,18 @@ return [
             'group' => 'entry',
         ],
         [
+            /*
+             * ক্রয়ে ভ্যাট — মালিক, ২৮ সেপ্টেম্বর ২০২৬ (রাত): দুই সুইচ, ডিফল্টে সব জায়গায় বন্ধ।
+             * ⓘ বন্ধ মানে বন্ধ: ঘর নেই, সার্ভার ভ্যাট নেয় না ([[CalculatesLineTotals::lineFigures()]])।
+             * বিক্রির সুইচ আলাদা (`sales.vat_enabled`) — কোনো দিক অন্যটা পড়ে না।
+             */
+            'key' => 'purchase.vat_enabled',
+            'label' => 'purchase::settings.vat_enabled',
+            'type' => 'boolean',
+            'default' => false,
+            'group' => 'entry',
+        ],
+        [
             // বিল আদেশের দামের সাথে না মিললে আটকে দেওয়া হবে কি না
             'key' => 'purchase.block_price_mismatch',
             'label' => 'purchase::settings.block_price_mismatch',

@@ -473,7 +473,7 @@ class DirectSaleController extends Controller implements HasMiddleware
                 'transport' => $this->settings->get('sales.field_transport', true),
                 'shipment' => $this->settings->get('sales.field_shipment', true),
                 'credit_limit' => $this->settings->get('sales.field_credit_limit', true),
-                'vat' => $this->settings->get('master_data.tax_enabled', true),
+                'vat' => $this->settings->get('sales.vat_enabled', false),
                 'warehouse_select' => $this->settings->get('sales.field_warehouse_select', true),
                 'sub_total' => $this->settings->get('sales.field_sub_total', true),
                 'total_item' => $this->settings->get('sales.field_total_item', true),
