@@ -156,14 +156,14 @@ class DeliveryChallan extends Model implements Drillable, ShowsItselfForSigning
         return 'delivery_challan';
     }
 
-    public function drillDocumentNo(): string
-    {
     /** সইকারীর পাতায় — পণ্য, পরিমাণ, ফ্রি, দর, টাকা ([[SalesSigningSheet]])। */
     public function signingSheet(): array
     {
         return SalesSigningSheet::ofChallan($this);
     }
 
+    public function drillDocumentNo(): string
+    {
         return $this->document_no;
     }
 

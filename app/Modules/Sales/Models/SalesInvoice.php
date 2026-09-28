@@ -371,13 +371,13 @@ class SalesInvoice extends Model implements Drillable, ShowsItselfForSigning
         return 'sales_invoice';
     }
 
-    public function drillDocumentNo(): string
     /** সইকারীর পাতায় — পণ্য, পরিমাণ, ফ্রি, দর, টাকা ([[SalesSigningSheet]])। */
     public function signingSheet(): array
     {
         return SalesSigningSheet::ofInvoice($this);
     }
 
+    public function drillDocumentNo(): string
     {
         return $this->document_no;
     }
