@@ -105,6 +105,7 @@ final class ProfitDistribution
         $profit = (string) $data['profit'];
 
         $this->assertPositive($profit);
+        $this->assertWithinRetainedProfit($profit);
 
         $rows = $this->preview($profit);
 
@@ -184,6 +185,46 @@ final class ProfitDistribution
             return $shares;
         });
     }
+
+    /**
+     * ⭐ যত সঞ্চিত মুনাফা আছে, তার বেশি ঘোষণা নয় — নিরীক্ষা §২।
+     *
+     * ── ⛔ কী ঘটত ───────────────────────────────────
+     * ঘোষণা কেবল দেখত অংকটা ধনাত্মক কি না। ⚠️ তাই যা অর্জিত হয়নি
+     * তাও ঘোষণা করা যেত: সঞ্চিত মুনাফার খাতটা ডেবিটে নেমে যেত,
+     * আর খাতা তবু ভারসাম্যে থাকত — দাখিলাটা নিজে মিলে।
+     *
+     * ⛔ অর্থাৎ না-থাকা লাভ ভাগ হয়ে যেত, আর কোনো পরীক্ষা লাল হত না।
+     *
+     * ── ⓘ আর এটাই "দুইবার নয়"-এর আসল রক্ষা ───────────────
+     * ⭐ ঘোষণার পর সঞ্চিত মুনাফা কমে যায়। ⓘ তাই একই অংক দ্বিতীয়বার
+     * ঘোষণা করতে গেলে এই পাহারাটাই থামায় — আলাদা কোনো নিয়ম
+     * আবিষ্কার করতে হয় না।
+     *
+     * ⚠️ তবে এটা "বছরে একটাই ঘোষণা" বলে না, আর বলা উচিতও নয় —
+     * বছরে দুইবার লাভ বাঁটা স্বাভাবিক। ⓘ পাহারাটা টাকার সীমা
+     * ধরে, বচনের সংখ্যা ধরে নয়।
+     *
+     * ── ⓘ চিহ্নটা মেপে নেওয়া ────────────────────────────
+     * [[Account::balanceOn()]] খাতের **স্বাভাবিক দিকে** ফেরায় — ক্রেডিট
+     * প্রকৃতির খাতে `credit − debit`। ⭐ তাই সঞ্চিত মুনাফা থাকলে সংখ্যাটা
+     * ধনাত্মক। ⚠️ চিহ্ন উল্টো ধরলে পাহারাটা হয় সব আটকাত,
+     * নয় কিছুই আটকাত না — তাই কোড পড়ে নিশ্চিত হওয়া।
+     */
+    private function assertWithinRetainedProfit(string $profit): void
+    {
+        $available = $this->account(StandardChart::RETAINED_EARNINGS)->balanceOn();
+
+        if (bccomp($profit, $available, 4) > 0) {
+            throw ValidationException::withMessages([
+                'profit' => __('finance::validation.more_than_retained', [
+                    'asked' => $profit,
+                    'have' => $available,
+                ]),
+            ]);
+        }
+    }
+
 
     /**
      * এই মানুষের ঘোষিত মুনাফার কতটুকু এখনো তোলা হয়নি।
