@@ -386,6 +386,108 @@ final class DirectPurchaseCostsLandRightTest extends TestCase
         $this->assertSame($entries, LedgerEntry::query()->count(), '⛔ বাড়তি ছাড়ে থেমেও খাতায় সারি বসেছে।');
     }
 
+    // ── ৫খ · ভ্যাট বন্ধ মানে বন্ধ (মালিকের সিদ্ধান্ত, ২৮ সেপ্টেম্বর ২০২৬) ─────────────
+
+    /**
+     * ⛔ ভ্যাট বন্ধ থাকলে পাঠানো ভ্যাট থামে — আর কিছুই লেখা হয় না।
+     *
+     * ⓘ মালিক: *"বন্ধ মানে ভ্যাট টোটাল ফাংশনের বন্ধ"*। পর্দায় ঘর নেই, কিন্তু সরাসরি
+     * অনুরোধে (বা পুরনো খোলা পর্দা থেকে) ভ্যাট এলে সার্ভার নিজেই থামায়
+     * ([[CalculatesLineTotals::lineFigures()]])। ⚠️ চুপচাপ শূন্য করলে বিলের মোট
+     * সরবরাহকারীর কাগজের সাথে মিলত না, আর কেউ জানত না কেন।
+     */
+    public function test_with_vat_off_a_posted_vat_is_refused_and_nothing_is_written(): void
+    {
+        app(SettingsService::class)->set('master_data.tax_enabled', false);
+
+        $bills = PurchaseBill::query()->withTrashed()->count();
+        $entries = LedgerEntry::query()->count();
+
+        $this->post(route('purchase.direct.store'), [
+            'supplier_id' => $this->supplier->id,
+            'warehouse_id' => $this->warehouse->id,
+            'trx_date' => now()->toDateString(),
+            'payment_term' => 'credit',
+            'lines' => [['product_id' => $this->a->id, 'qty' => '10', 'rate' => '100', 'tax' => '150']],
+        ])->assertSessionHasErrors('lines');
+
+        $this->assertSame($bills, PurchaseBill::query()->withTrashed()->count(), '⛔ ভ্যাট বন্ধ, তবু ভ্যাটওয়ালা বিল বসেছে।');
+        $this->assertSame($entries, LedgerEntry::query()->count(), '⛔ ভ্যাট বন্ধ, তবু খাতায় সারি বসেছে।');
+    }
+
+    /**
+     * ⛔→⭐ একই কোম্পানি: ভ্যাট বন্ধে পণ্যের নিজের হার কিছুই যোগ করে না; চালু করলে ফেরে।
+     *
+     * হাতে কষা (১৫% বাইরের), ১০ × ১০০:
+     * ```
+     * বন্ধ:  ১১২০ +১০০০ · ২১২০ ০    · ২১১১ −১০০০ · বিলের ভ্যাট ০
+     * চালু:  ১১২০ +১০০০ · ২১২০ +১৫০ · ২১১১ −১১৫০
+     * ```
+     */
+    public function test_with_vat_off_the_products_own_rate_adds_nothing_and_on_brings_it_back(): void
+    {
+        $tax = Tax::query()->create([
+            'company_id' => $this->company->id,
+            'code' => 'VAT15-OFF',
+            'name_en' => 'VAT 15%',
+            'name_bn' => 'ভ্যাট ১৫%',
+            'rate' => '15',
+            'kind' => 'vat',
+            'is_inclusive' => false,
+            'is_active' => true,
+        ]);
+        $this->a->forceFill(['tax_id' => $tax->id])->save();
+
+        app(SettingsService::class)->set('master_data.tax_enabled', false);
+        $before = $this->snapshot();
+
+        $bill = $this->buy([
+            'payment_term' => 'credit',
+            'lines' => [['product_id' => $this->a->id, 'qty' => '10', 'rate' => '100']],
+        ]);
+
+        $this->assertSame(0, bccomp((string) $bill->tax, '0', 4), "⛔ ভ্যাট বন্ধ, তবু বিলে ভ্যাট {$bill->tax}।");
+        // ⚠️ আর কোনো ভুয়া "ভ্যাটের পার্থক্য"ও নয় — হারটা বন্ধ, তাই মাপার কিছু নেই (মিউট্যান্ট বেঁচেছিল)
+        $this->assertNull($bill->lines->first()->tax_variance,
+            '⛔ ভ্যাট বন্ধ, অথচ সারিতে পণ্যের হার ধরে "পার্থক্য" লেখা — সরবরাহকারী ভুল ভ্যাট দিয়েছেন বলে দেখাবে।');
+
+        $this->assertFiveMatches(
+            before: $before,
+            ledger: [StandardChart::INVENTORY => '1000', StandardChart::PAYABLE => '-1000'],
+            layers: [$this->a->id => ['10', '1000']],
+            supplier: '-1000',
+        );
+
+        app(SettingsService::class)->set('master_data.tax_enabled', true);
+        $before = $this->snapshot();
+
+        $bill = $this->buy([
+            'payment_term' => 'credit',
+            'lines' => [['product_id' => $this->a->id, 'qty' => '10', 'rate' => '100']],
+        ]);
+
+        $this->assertSame(0, bccomp((string) $bill->tax, '150', 4), "ভ্যাট চালু, অথচ বিলে ভ্যাট {$bill->tax}, হাতে কষা ১৫০।");
+
+        $this->assertFiveMatches(
+            before: $before,
+            ledger: [StandardChart::INVENTORY => '1000', StandardChart::VAT_PAYABLE => '150', StandardChart::PAYABLE => '-1150'],
+            layers: [$this->a->id => ['10', '1000']],
+            supplier: '-1150',
+        );
+    }
+
+    /** ⛔→⭐ একই মানুষ: ভ্যাট বন্ধে বিলের পর্দায় ভ্যাটের ঘর নেই, চালু করলে আছে। */
+    public function test_the_bill_screen_offers_no_vat_box_when_vat_is_off(): void
+    {
+        app(SettingsService::class)->set('master_data.tax_enabled', false);
+        $this->assertStringNotContainsString("][tax]'", $this->get(route('purchase.bill.create'))->assertOk()->getContent(),
+            '⛔ ভ্যাট বন্ধ, অথচ বিলের পর্দায় ভ্যাটের ঘর।');
+
+        app(SettingsService::class)->set('master_data.tax_enabled', true);
+        $this->assertStringContainsString("][tax]'", $this->get(route('purchase.bill.create'))->assertOk()->getContent(),
+            'ভ্যাট চালু, অথচ বিলের পর্দায় ভ্যাটের ঘর নেই — দাবিটা অন্ধ।');
+    }
+
     // ── ৬ · লরির ভাড়া ─────────────────────────────────────────────────
 
     /**

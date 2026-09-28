@@ -8,7 +8,6 @@ return [
     'awaiting_bill' => ':no — goods received, bill awaited',
     'bill_clears_pending' => ':no — clears the pending liability',
     'input_vat' => ':no — input VAT',
-    'vat_not_recoverable' => ':no — non-recoverable VAT (received goods)',
     'price_variance' => ':no — purchase price variance',
     'bringing_in_cost' => ':no — cost of bringing the goods in, into their cost',
     'payable_to_supplier' => ':no — payable to the supplier',

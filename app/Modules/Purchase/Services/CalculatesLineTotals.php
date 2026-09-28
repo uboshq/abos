@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Purchase\Services;
 
+use App\Core\Services\SettingsService;
 use App\Modules\MasterData\Models\Tax;
 use Illuminate\Validation\ValidationException;
 
@@ -40,6 +41,25 @@ trait CalculatesLineTotals
         }
 
         $net = bcsub($base, $discount, 4);
+
+        /*
+         * ⛔ ভ্যাট বন্ধ মানে বন্ধ — মালিক, ২৮ সেপ্টেম্বর ২০২৬: *"বন্ধ মানে ভ্যাট টোটাল ফাংশনের বন্ধ"*।
+         *
+         * ⓘ সুইচ একটাই, কোম্পানির ([[master_data.tax_enabled]]) — পর্দা ওটা দেখেই ঘর লুকায়, আর
+         * এখানে সার্ভার নিজে থামায়: পাঠানো ভ্যাট প্রত্যাখ্যান, পণ্যের নিজের হারও খাটে না।
+         * ⚠️ চুপচাপ শূন্য করা হয় না — তাহলে বিলের মোট সরবরাহকারীর কাগজের সাথে মিলত না,
+         * আর কেউ জানত না কেন। বিল, আদেশ আর সরাসরি ক্রয় — তিনটাই এই এক জায়গা দিয়ে যায়।
+         */
+        if (! (bool) app(SettingsService::class)->get('master_data.tax_enabled', true)) {
+            if ($tax !== null && $tax !== '' && bccomp($this->money($tax), '0', 4) !== 0) {
+                throw ValidationException::withMessages([
+                    'lines' => __('purchase::validation.vat_is_off'),
+                ]);
+            }
+
+            $tax = '0';
+            $standard = null;
+        }
 
         /*
          * বিক্রয়ের নিয়মটাই এখানেও — [[CalculatesSalesLines::lineFigures()]]।

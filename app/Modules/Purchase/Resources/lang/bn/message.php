@@ -9,7 +9,6 @@ return [
     'awaiting_bill' => ':no — মাল এসেছে, বিল আসেনি',
     'bill_clears_pending' => ':no — অপেক্ষমাণ দায় নিষ্পত্তি',
     'input_vat' => ':no — উপকরণ ভ্যাট',
-    'vat_not_recoverable' => ':no — অফেরতযোগ্য ভ্যাট (চালানের মাল)',
     'price_variance' => ':no — ক্রয়মূল্যের পার্থক্য',
     'bringing_in_cost' => ':no — মাল আনার খরচ, মালের দামে',
     'payable_to_supplier' => ':no — সরবরাহকারীর প্রদেয়',

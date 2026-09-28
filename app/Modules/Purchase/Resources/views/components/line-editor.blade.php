@@ -15,6 +15,8 @@
     'linkField' => null,
     'linkOptions' => [],
     'showDiscount' => true,
+    // ⓘ ভ্যাটের ঘর — কোম্পানির সুইচ ধরে (মালিক, ২৮ সেপ্টেম্বর ২০২৬: বন্ধ মানে বন্ধ); null মানে সুইচটাই পড়ো
+    'showTax' => null,
     'showSalesPrice' => false,
 
     /*
@@ -55,6 +57,9 @@
      */
     'lots' => false,
 ])
+@php
+    $showTax ??= (bool) app(\App\Core\Services\SettingsService::class)->get('master_data.tax_enabled', true);
+@endphp
 
 @php
     // প্যাকের তালিকা — কন্ট্রোল প্যানেলের সুইচের পেছনে (বিক্রয়ের
@@ -159,7 +164,9 @@
                     @endif
                     @if ($showDiscount)
                         <th class="text-end">{{ __('purchase::field.discount') }}</th>
-                        <th class="text-end">{{ __('purchase::field.tax') }}</th>
+                        @if ($showTax)
+                            <th class="text-end">{{ __('purchase::field.tax') }}</th>
+                        @endif
                     @endif
                     <th class="text-end">{{ __('purchase::field.amount') }}</th>
                     <th><span class="sr-only">{{ __('purchase::action.remove_line') }}</span></th>
@@ -352,12 +359,14 @@
                                        class="num h-(--spacing-field-compact) w-full sm:w-24 rounded-(--radius-field) border border-(--color-border)
                                               bg-(--color-surface-card) px-2 text-end">
                             </td>
+                            @if ($showTax)
                             <td class="cell-input" data-label="{{ __('purchase::field.tax') }}">
                                 <input type="number" step="0.01" inputmode="decimal"
                                        :name="'lines[' + (i) + '][tax]'" x-model="row.tax"
                                        class="num h-(--spacing-field-compact) w-full sm:w-24 rounded-(--radius-field) border border-(--color-border)
                                               bg-(--color-surface-card) px-2 text-end">
                             </td>
+                            @endif
                         @endif
 
                         <td class="num cell" data-label="{{ __('purchase::field.amount') }}"
@@ -377,7 +386,7 @@
             <tfoot>
                 <tr>
                     <td class="cell text-end font-medium"
-                        colspan="{{ ($showDiscount ? 5 : 3) + ($linkField ? 1 : 0) + ($showSalesPrice ? 3 : 0) + ($packs !== [] ? 1 : 0) }}">
+                        colspan="{{ ($showDiscount ? ($showTax ? 5 : 4) : 3) + ($linkField ? 1 : 0) + ($showSalesPrice ? 3 : 0) + ($packs !== [] ? 1 : 0) }}">
                         {{ __('purchase::field.total') }}
                     </td>
                     <td class="num cell font-semibold" x-text="total.toFixed(2)"></td>
