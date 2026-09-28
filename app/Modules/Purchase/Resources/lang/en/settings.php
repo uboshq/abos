@@ -7,6 +7,7 @@ return [
     'field_free_qty' => 'Show the free quantity field',
     'over_receipt_percent' => 'Percent over the ordered quantity that may be received',
     'block_price_mismatch' => 'Block a bill whose value does not match the receipt',
+    'vat_recoverable' => 'Purchase VAT is recoverable (off: the VAT goes into the goods cost)',
 
     'screen_direct' => 'Show the Direct Purchase screen',
     'screen_orders' => 'Show the Purchase Orders screen',

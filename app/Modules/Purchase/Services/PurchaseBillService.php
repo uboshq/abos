@@ -546,7 +546,27 @@ final class PurchaseBillService
      */
     private function goodsValueOf(PurchaseBillLine $line): string
     {
+        /*
+         * ⓘ ভ্যাট ফেরতযোগ্য না হলে ওটা মালেরই দাম — `amount` পুরোটাই।
+         * মালিকের সিদ্ধান্ত (খ), ২৭ সেপ্টেম্বর ২০২৬ · [[vatRecoverable()]]
+         */
+        if (! $this->vatRecoverable()) {
+            return (string) $line->amount;
+        }
+
         return bcsub((string) $line->amount, (string) $line->tax, 4);
+    }
+
+    /**
+     * এই কোম্পানিতে ক্রয়ের ভ্যাট সরকারের কাছে ফেরত পাওয়া যায় কি না।
+     *
+     * ⓘ ডিফল্ট হ্যাঁ — আজকের আচরণ। ⚠️ মজুদের স্তর ([[goodsValueOf()]]) আর
+     * খাতার ডেবিট ([[postLedger]]-এর দুই জায়গা) একই প্রশ্ন এখান থেকেই করে;
+     * দুই জায়গায় দুই উত্তর হলে স্তর আর ১১২০ আলাদা হয়ে যেত।
+     */
+    private function vatRecoverable(): bool
+    {
+        return (bool) $this->settings->get('purchase.vat_recoverable', true);
     }
 
     /**
@@ -1158,6 +1178,7 @@ final class PurchaseBillService
 
         $pendingAmount = '0';   // ২১৬০ থেকে যা সরবে
         $directAmount = '0';    // চালান ছাড়া সরাসরি বিল
+        $receiptTax = '0';      // চালানের সারিগুলোর ভ্যাট
 
         foreach ($bill->lines as $line) {
             $receiptLine = $line->receiptLine;
@@ -1182,14 +1203,13 @@ final class PurchaseBillService
                  * ⭐ ধরা পড়েছে ভ্যাটের ধরনের ড্রপডাউনটা বসানোর পর, যখন
                  * প্রথমবার একটা সরাসরি ক্রয়ে পণ্যের নিজের হার বসল।
                  */
-                $directAmount = bcadd(
-                    $directAmount,
-                    bcsub((string) $line->amount, (string) $line->tax, 4),
-                    4,
-                );
+                $directAmount = bcadd($directAmount, $this->goodsValueOf($line), 4);
 
                 continue;
             }
+
+            // ⓘ চালানের সারির ভ্যাট — ফেরতযোগ্য না হলে নিচে নিজের সারিতে যায়
+            $receiptTax = bcadd($receiptTax, (string) $line->tax, 4);
 
             /*
              * চালানের দর ধরে, বিলের দর ধরে নয় — ফাইলের মাথার ব্যাখ্যা।
@@ -1225,11 +1245,28 @@ final class PurchaseBillService
 
         $tax = (string) $bill->tax;
 
-        if (bccomp($tax, '0', 4) > 0) {
+        if ($this->vatRecoverable() && bccomp($tax, '0', 4) > 0) {
             $lines[] = [
                 'account_id' => $this->account(StandardChart::VAT_PAYABLE)->id,
                 'debit' => $tax,
                 'narration' => __('purchase::message.input_vat', ['no' => $bill->document_no]),
+            ];
+        }
+
+        /*
+         * ⭐ ফেরতযোগ্য নয় এমন ভ্যাট — মালিকের সিদ্ধান্ত (খ), ২৭ সেপ্টেম্বর ২০২৬।
+         *
+         * ⓘ সরাসরি সারির ভ্যাট উপরে মালের দামেই ঢুকেছে ([[goodsValueOf()]])।
+         * ⚠️ চালানের সারির মাল কিন্তু আগেই স্তরে বসে গেছে, চালানের দরে —
+         * হয়তো বিক্রিও হয়ে গেছে। তাই ওই ভ্যাট যায় ৫১৫০ মূল্য-পার্থক্যে,
+         * খরচ হিসেবে, **নিজের সারিতে, নিজের নামে**। ⛔ সারিটা না থাকলে
+         * অঙ্কটা নিচের "পার্থক্য"-এ পড়ত, আর দামের অমিল বলে বিলটা আটকে যেত।
+         */
+        if (! $this->vatRecoverable() && bccomp($receiptTax, '0', 4) > 0) {
+            $lines[] = [
+                'account_id' => $this->account(StandardChart::PURCHASE_PRICE_VARIANCE)->id,
+                'debit' => $receiptTax,
+                'narration' => __('purchase::message.vat_not_recoverable', ['no' => $bill->document_no]),
             ];
         }
 
