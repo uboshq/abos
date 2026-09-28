@@ -36,4 +36,6 @@ return [
     /* Same name under the same parent — LocationService::assertNameIsFree(), 19 September 2026 */
     'location_name_taken' => 'A :level named :name already exists under :parent (:code).',
     'location_name_taken_top' => 'A :level named :name already exists (:code).',
+    /* Method and account kind — [[MethodFitsAccount]], 27 September 2026 */
+    'method_does_not_fit_account' => 'The method ":method" is :kind, but the money would go to :account — the method and the account are not the same kind. Choose a :kind account.',
 ];

@@ -14,6 +14,7 @@ use App\Modules\Finance\Services\RentalContractService;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Validation\ValidationException;
+use Tests\Concerns\PutsMoneyInTheTill;
 use Tests\TestCase;
 
 /**
@@ -27,6 +28,7 @@ use Tests\TestCase;
  */
 class TheAdvanceOnTheGodownWasOnlyInTheOwnersHeadTest extends TestCase
 {
+    use PutsMoneyInTheTill;
     use RefreshDatabase;
 
     private RentalContractService $contracts;
@@ -44,6 +46,14 @@ class TheAdvanceOnTheGodownWasOnlyInTheOwnersHeadTest extends TestCase
         $this->actingAs(User::query()->where('email', 'owner@abos.test')->firstOrFail());
 
         $this->contracts = app(RentalContractService::class);
+
+        /*
+         * ⓵ ২৮ সেপ্টেম্বর ২০২৬: খালি নগদ বাক্স থেকে টাকা বেরোয় না ([[CashOnHand]])।
+         * এখানকার সবচেয়ে বড় বেরোনো ১২ লাখের জামানত, সবচেয়ে পুরনো তারিখ ১ সেপ্টেম্বর —
+         * তাই সেদিনই ৫০ লাখ। টাকা আসে ৩১০০ মূলধন থেকে; নগদের জের এই ফাইল কেবল
+         * আগে-পরের তফাতে মাপে, তাই কোনো প্রত্যাশা বদলায়নি।
+         */
+        $this->putMoneyIn($this->cash(), '5000000', '2026-09-01');
     }
 
     /**

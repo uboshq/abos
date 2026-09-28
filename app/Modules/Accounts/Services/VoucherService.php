@@ -271,6 +271,7 @@ final class VoucherService
         $voucher->load('lines.account');
 
         $this->assertLinesArePostable($voucher);
+        $this->assertNoChequeInHandByHand($voucher);
         $this->assertCashLandsInOwnTill($voucher);
         $this->assertTheWayMatchesTheAccount($voucher);
         $this->assertBankReferenceIsFree($voucher);
@@ -308,6 +309,9 @@ final class VoucherService
         $ownable = $this->accountsThatHoldAParty();
 
         return DB::transaction(function () use ($voucher, $ownable) {
+            // ⚠️ লেনদেনের ভিতরে, খাতায় তোলার আগে — তালা আর মাপা একই লেনদেনে
+            $this->assertMoneyIsThere($voucher);
+
             $this->posting->post(
                 Voucher::SOURCE_TYPES[$voucher->type],
                 $voucher->id,
@@ -524,7 +528,85 @@ final class VoucherService
             ];
         }
 
+        if (in_array($type, [Voucher::PAYMENT, Voucher::EXPENSE], true)) {
+            return $this->paidWithCharge($toAccountId, $fromAccountId, $amount, (string) $charge, $narration);
+        }
+
         return $this->withCharge($toAccountId, $fromAccountId, $amount, (string) $charge, $narration);
+    }
+
+    /**
+     * টাকা **বেরোনোর** সময় ব্যাংক বা MFS যা কাটে — তিনটা সারি, ২৮ সেপ্টেম্বর ২০২৬।
+     *
+     * ── ⭐ সমন্বয়কারীর সিদ্ধান্ত (abos-69) ──────────────────────────────
+     * চার্জ কোম্পানির, সরবরাহকারীর নয়:
+     *
+     *   বিকাশে ৯০০ দেওয়া · চার্জ ৫
+     *   → দেনা ডেবিট ৯০০ · ৫২১১ ডেবিট ৫ · বিকাশ ক্রেডিট ৯০৫
+     *
+     * ⛔ আগে সব চার্জ [[withCharge()]]-এ যেত, যা লেখা হয়েছিল টাকা **ঢোকার**
+     * জন্য: চার্জের খাত বাছত যেখানে টাকা গেল তা দেখে — পরিশোধে সেটা দেনার
+     * খাত, তাই ভুলবার্তা দিয়ে থামত, আর সরাসরি ক্রয়ের "এখনই দেওয়া"-র চার্জ
+     * খাতায় উঠতই না। ⓘ এখানে খাত আসে যেখান থেকে টাকা বেরোল তা দেখে।
+     * ⚠️ দেনা কমে কেবল অঙ্কে — চার্জ দেনায় মিশলে সরবরাহকারীর খাতায় এমন
+     * টাকা "পরিশোধ" দেখাত যা তিনি কোনোদিন পাননি।
+     *
+     * @return list<array<string, mixed>>
+     */
+    private function paidWithCharge(
+        int $toAccountId,
+        int $fromAccountId,
+        string $amount,
+        string $charge,
+        ?string $narration,
+    ): array {
+        $chargeAccount = $this->chargeAccountFor(Account::query()->find($fromAccountId));
+
+        return [
+            [
+                'account_id' => $toAccountId,
+                'debit' => $amount,
+                'credit' => '0',
+                'narration' => $narration,
+            ],
+            [
+                'account_id' => (int) $chargeAccount->id,
+                'debit' => $charge,
+                'credit' => '0',
+                'narration' => $narration,
+            ],
+            [
+                'account_id' => $fromAccountId,
+                'debit' => '0',
+                'credit' => bcadd($amount, $charge, 4),
+                'narration' => $narration,
+            ],
+        ];
+    }
+
+    /**
+     * চার্জের খরচের খাত — টাকার খাত ব্যাংক হলে ৫২১০, MFS হলে ৫২১১।
+     *
+     * ⛔ নগদে চার্জ হয় না ([[withCharge()]]-এর মন্তব্য), তাই অন্য সব খাতে থামে।
+     */
+    private function chargeAccountFor(?Account $money): Account
+    {
+        $code = match (true) {
+            $money?->isMfs() === true => StandardChart::MFS_CHARGES,
+            $money?->isBank() === true => StandardChart::BANK_CHARGES,
+            default => null,
+        };
+
+        if ($code === null) {
+            throw ValidationException::withMessages([
+                'charge_amount' => __('accounts::validation.charge_needs_a_bank_or_mfs'),
+            ]);
+        }
+
+        return StandardChart::find($code)
+            ?? throw ValidationException::withMessages([
+                'charge_amount' => __('accounts::validation.charge_account_missing', ['code' => $code]),
+            ]);
     }
 
     /**
@@ -556,7 +638,7 @@ final class VoucherService
             ]);
         }
 
-        $into = Account::query()->find($toAccountId);
+        $chargeAccount = $this->chargeAccountFor(Account::query()->find($toAccountId));
 
         /*
          * ⚠️ চার্জের খাতটা **কোডে হাতে লেখা নয়** — টাকা যে ধরনের খাতে
@@ -572,26 +654,6 @@ final class VoucherService
          * ব্যাংক-চার্জের খাতে বসানোর চেয়ে থেমে যাওয়াই ভালো — নাহলে
          * ঐ খাতটায় এমন টাকা জমত যা কোনো ব্যাংক কোনোদিন কাটেনি।
          */
-        $code = match (true) {
-            $into?->isMfs() === true => StandardChart::MFS_CHARGES,
-            $into?->isBank() === true => StandardChart::BANK_CHARGES,
-            default => null,
-        };
-
-        if ($code === null) {
-            throw ValidationException::withMessages([
-                'charge_amount' => __('accounts::validation.charge_needs_a_bank_or_mfs'),
-            ]);
-        }
-
-        $chargeAccount = StandardChart::find($code);
-
-        if ($chargeAccount === null) {
-            throw ValidationException::withMessages([
-                'charge_amount' => __('accounts::validation.charge_account_missing', ['code' => $code]),
-            ]);
-        }
-
         return [
             [
                 'account_id' => $toAccountId,
@@ -737,6 +799,57 @@ final class VoucherService
                 ? __('accounts::validation.cash_not_your_till', ['account' => $cash->label()])
                 : __('accounts::validation.no_till_of_your_own'),
         ]);
+    }
+
+    /**
+     * টিল বা ওয়ালেটে যা নেই তা ভাউচার দিয়েও বেরোয় না — ২৭ সেপ্টেম্বর ২০২৬।
+     *
+     * ⛔ লাইভ QA (hp2, TCL): ক্রয়ের পরিশোধে পাহারা বসল ([[PaymentService]]),
+     * কিন্তু পরিশোধ, খরচ আর কন্ট্রা ভাউচার একই টিল থেকে টাকা বের করে — ওরা
+     * এই দরজায় আসে। ⓘ নিয়ম এক জায়গায় ([[CashOnHand]]): নগদ আর MFS শূন্যের
+     * নিচে নয়, ব্যাংক (CC/OD) নামতে পারে।
+     *
+     * ⓘ খাত ধরে **নিট** বের-হওয়া (ক্রেডিট − ডেবিট) মাপা হয়: একই টিলের দুই
+     * সারি একে অন্যকে কাটে, আর টিলে টাকা ঢোকানো ভাউচার কখনো আটকায় না।
+     * ⚠️ তালা id-এর ক্রমে — দুইটা কন্ট্রা উল্টো দিকে একই দুই টিল ছুঁলে
+     * অন্য ক্রমে তালা নিলে একে অন্যের জন্য অপেক্ষায় আটকে যেত।
+     */
+    private function assertMoneyIsThere(Voucher $voucher): void
+    {
+        $cash = app(CashOnHand::class);
+        $out = [];
+
+        foreach ($voucher->lines as $line) {
+            if ($line->account === null || ! $cash->guards($line->account)) {
+                continue;
+            }
+
+            $id = (int) $line->account_id;
+            $out[$id] = bcadd($out[$id] ?? '0', bcsub((string) $line->credit, (string) $line->debit, 4), 4);
+        }
+
+        ksort($out);
+
+        foreach ($out as $id => $amount) {
+            if (bccomp($amount, '0', 4) <= 0) {
+                continue;
+            }
+
+            $account = $voucher->lines->firstWhere('account_id', $id)->account;
+            $cash->lock($account);
+
+            $short = $cash->shortfall($account, $amount, $voucher->trx_date?->toDateString());
+
+            if ($short !== null) {
+                throw ValidationException::withMessages([
+                    'lines' => __('accounts::validation.not_enough_money_in', [
+                        'account' => $account->label(),
+                        'held' => Money::format(bcsub($amount, $short, 4)),
+                        'amount' => Money::format($amount),
+                    ]),
+                ]);
+            }
+        }
     }
 
     /**
@@ -928,6 +1041,36 @@ final class VoucherService
         if (! $voucher->isEditable()) {
             throw ValidationException::withMessages([
                 'status' => __('accounts::validation.posted_cannot_edit', ['no' => $voucher->document_no]),
+            ]);
+        }
+    }
+
+    /**
+     * ১১০৪ "হাতে চেক" কেবল কাউন্টার আর রেজিস্টার ভরে — হাতের ভাউচার নয়, ২৮ সেপ্টেম্বর ২০২৬।
+     *
+     * ⛔ ফাঁকটা: [[assertNoChequeReceived()]] কেবল আদায়ের "চেক" মাধ্যম দেখে।
+     * জাবেদায় সরাসরি Dr ১১০৪ লিখলে বা অন্য মাধ্যম বেছে ১১০৪-এ টাকা নিলে
+     * খাতায় "হাতে চেক" বাড়ত, অথচ রেজিস্টারে কোনো চেক নেই — জমা, পাশ
+     * বা ফেরতের কোনো বোতাম ওই টাকা কোনোদিন ছুঁতে পারত না।
+     *
+     * ⓘ ছাড় কেবল কাউন্টারের (`origin` = counter): ওর পোস্টের পরেই চেকটা
+     * রেজিস্টারে ওঠে ([[DirectSaleService::postCounterVoucher()]])। রেজিস্টার
+     * নিজে খাতায় লেখে PostingEngine দিয়ে, এই দরজা দিয়ে নয়।
+     */
+    private function assertNoChequeInHandByHand(Voucher $voucher): void
+    {
+        if ($voucher->origin === Voucher::ORIGIN_COUNTER) {
+            return;
+        }
+
+        $intoChequesInHand = $voucher->lines->contains(
+            fn (VoucherLine $line) => $line->account?->code === StandardChart::CHEQUES_IN_HAND
+                && bccomp((string) $line->debit, '0', 4) > 0,
+        );
+
+        if ($intoChequesInHand) {
+            throw ValidationException::withMessages([
+                'lines' => __('accounts::validation.cheque_only_through_register'),
             ]);
         }
     }

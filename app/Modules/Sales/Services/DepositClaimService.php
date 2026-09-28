@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace App\Modules\Sales\Services;
 
 use App\Core\Support\Money;
+use App\Modules\Accounts\Services\MoneyAccountRule;
 use App\Modules\Customer\Models\Customer;
+use App\Modules\MasterData\Services\MethodFitsAccount;
 use App\Modules\Sales\Models\DepositClaim;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Carbon;
@@ -92,6 +94,43 @@ final class DepositClaimService
              */
             $amount = Money::of((string) ($overrides['amount'] ?? $claim->amount));
             $date = Carbon::parse((string) ($overrides['trx_date'] ?? $claim->claimed_on))->toDateString();
+
+            /*
+             * ⛔ গ্রাহক যে পথে পাঠালেন, টাকা সেই ধরনের খাতেই — ২৮ সেপ্টেম্বর ২০২৬।
+             *
+             * ⓘ অনুমোদনের পর্দা যেকোনো টাকার খাত বাছতে দেয়। "বিকাশে পাঠালাম"
+             * দাবি ব্যাংকের খাতে মঞ্জুর হলে ব্যাংক-বিবরণী আর খাতা কোনোদিন
+             * মিলত না, আর বিকাশের জের কম দেখাত। নিয়ম এক জায়গায়
+             * ([[MethodFitsAccount]]) — কাউন্টার আর সেটিংসও ওটাই ডাকে।
+             */
+            // ⓘ আগে: টাকার খাত তো? (খরচের খাতে মঞ্জুর হলে বকেয়া মুছত, টাকা কোথাও আসত না)
+            $account = app(MoneyAccountRule::class)->assert($accountId);
+
+            if (! $account->is_active) {
+                throw ValidationException::withMessages([
+                    'account_id' => __('accounts::validation.inactive_account', ['name' => $account->label()]),
+                ]);
+            }
+
+            $methods = app(MethodFitsAccount::class);
+
+            /*
+             * ⚠️ "নগদ" দাবি ব্যাংকেও বসতে পারে — ডিলাররা কোম্পানির ব্যাংকের
+             * শাখায় নগদ জমা দেন, পোর্টালে লেখেন "নগদ"। ⛔ কিন্তু বিকাশে নয়:
+             * ওটা নগদ জমার কোনো পথ নয়।
+             */
+            $fits = $methods->fitsKind($account, $claim->method)
+                || ($claim->method === DepositClaim::CASH && $account->isBank());
+
+            if (! $fits) {
+                throw ValidationException::withMessages([
+                    'account_id' => $methods->message(
+                        $account,
+                        __('master_data::payment_kind.'.$claim->method),
+                        (string) $claim->method,
+                    ),
+                ]);
+            }
 
             $collection = $this->collections->create([
                 'customer_id' => $claim->customer_id,

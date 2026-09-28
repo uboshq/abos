@@ -96,6 +96,7 @@ return [
     'cheque_not_due_yet' => 'Cheque :no is dated :date — it cannot be deposited or cleared before that day.',
     'bank_reference_meaningless' => '":reference" is not a transaction number — enter the real bank or bKash number (at least four letters or digits, not just zeros).',
     'way_does_not_fit_account' => '":way" was chosen, but the money goes to :account — the way and the account do not match.',
+    'not_enough_money_in' => ':account holds :held — :amount cannot go out of it. A cash or bKash balance never goes below zero.',
     'cheque_not_from_collection' => 'Cheque :no was not taken on a receipt — return it with the Bounce button on the cheque register.',
     'cleared_cheque_not_cancelled' => 'Cheque :no has cleared and cannot be cancelled. If the bank took the money back, mark it bounced.',
     'cheque_needs_bank' => 'Say which bank account the money lands in.',
