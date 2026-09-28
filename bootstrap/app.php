@@ -8,6 +8,7 @@ use App\Http\Middleware\ExportListing;
 use App\Http\Middleware\NormalizeUnicodeInput;
 use App\Http\Middleware\OneSubmitPerForm;
 use App\Http\Middleware\RefuseInactiveAccounts;
+use App\Http\Middleware\SuperAdminMustHaveTwoSteps;
 use App\Http\Middleware\RefuseSwitchedOffScreens;
 use App\Http\Middleware\RefuseWorkWithoutALicence;
 use App\Http\Middleware\ResolveCompanyContext;
@@ -238,6 +239,24 @@ return Application::configure(basePath: dirname(__DIR__))
              * কোম্পানি তা না জেনে কোন সুইচ পড়তে হবে বলা যায় না।
              */
             RefuseSwitchedOffScreens::class,
+
+            /*
+             * ⛔ সুপার অ্যাডমিনের দুই ধাপ বাধ্যতামূলক — নিরীক্ষা §৩, ২৮ সেপ্টেম্বর ২০২৬।
+             *
+             * ⓘ যন্ত্রটা আগেই ছিল, কিন্তু চালু করা ছিল ঐচ্ছিক — অর্থাৎ
+             * যিনি সবচেয়ে বেশি ঝুঁকিতে, তাঁর জন্যই তালাটা ঐচ্ছিক ছিল।
+             *
+             * ⭐ সবার শেষে, আর সেটা ইচ্ছাকৃত: বরখাস্ত হলে বা পর্দা
+             * বন্ধ হলে উত্তরটা আগেই দেওয়া ভালো — তাই দুই ধাপের পর্দায়
+             * পাঠানোর আগে ওই দুইটা সিদ্ধান্ত হয়ে যায়।
+             *
+             * ⚠️ এই লাইনটা সবার **শেষে** বসেছে, আর সেটাও মেপে শেখা:
+             * প্রথমবার শ্রেণিটা লিখেই এখানে জুড়ে দিয়েছিলাম, অথচ
+             * [[DemoSeeder]]-এ ফিকশ্চারটা তখনো নেই — ফলে এই গাছে কাজ
+             * করা প্রতিটা সেশনের HTTP পরীক্ষা ৩০২ পেয়েছিল।
+             * ⓘ বাঁধাটা সবশেষে, আর একই কমিটে ফিকশ্চারের সাথে।
+             */
+            SuperAdminMustHaveTwoSteps::class,
 
             /*
              * ⭐ লাইসেন্সের তালা — ২২ সেপ্টেম্বর ২০২৬।

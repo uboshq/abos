@@ -344,6 +344,20 @@ Route::middleware('auth')->prefix('system')->group(function () {
         Route::post('/', [UserController::class, 'store'])->name('store');
         Route::get('/{user}/edit', [UserController::class, 'edit'])->whereNumber('user')->name('edit');
         Route::put('/{user}', [UserController::class, 'update'])->whereNumber('user')->name('update');
+
+        /*
+         * ⭐ ফোন হারানোর পরের দরজা — ২৮ সেপ্টেম্বর ২০২৬।
+         *
+         * ⓘ সুপার অ্যাডমিনে দুই ধাপ বাধ্যতামূলক হওয়ায় ফোন হারানোর
+         * উত্তরটা আর ঐচ্ছিক নয় — না থাকলে মানুষ নিজের ব্যবসায়
+         * আটকে যান। ⭐ তিনটা পথ, এই ক্রমে: নিজের উদ্ধার-কোড →
+         * অন্য সুপার অ্যাডমিনের এই রিসেট → সার্ভারে artisan কমান্ড।
+         *
+         * ⚠️ DELETE, কারণ এটা মুছে দেয় — বসায় না। পরেরবার লগইনে
+         * মানুষ নিজে আবার বসাবেন, আর গোপন চাবিটা কখনো কারও হাতে যায় না।
+         */
+        Route::delete('/{user}/two-step', [UserController::class, 'resetTwoStep'])
+            ->whereNumber('user')->name('two_step.reset');
     });
 
     /*

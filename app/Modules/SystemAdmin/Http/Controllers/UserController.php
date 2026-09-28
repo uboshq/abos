@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\SystemAdmin\Http\Controllers;
 
 use App\Core\Engines\Audit\AuditEngine;
+use App\Core\Security\MfaService;
 use App\Core\Module\ModuleRegistry;
 use App\Core\Services\DataScope;
 use App\Core\Services\MenuBuilder;
@@ -1321,5 +1322,50 @@ class UserController extends Controller implements HasMiddleware
                 ),
             ]),
         ];
+    }
+
+    /**
+     * ⭐ অন্য একজনের দুই ধাপ রিসেট — ফোন হারালে।
+     *
+     * ── ⛔ কেন এটা লাগল ───────────────────────────────
+     * সুপার অ্যাডমিনে দুই ধাপ বাধ্যতামূলক হওয়ার পর ফোন হারানো মানে
+     * নিজের ব্যবসায় আটকে যাওয়া। ⓘ ⭐ তিনটা পথ, এই ক্রমে:
+     *   ১. নিজের উদ্ধার-কোড (বসানোর দিন একবারই দেখানো হয়)
+     *   ২. অন্য সুপার অ্যাডমিনের এই রিসেট
+     *   ৩. একজনই সুপার অ্যাডমিন হলে সার্ভারে `abos:two-step-reset`
+     *
+     * ── ⚠️ তিনটা তালা, আর প্রত্যেকটার নিজস্ব কারণ ────────────
+     * ⭐ অনুরোধকারীকে সুপার অ্যাডমিন হতে হয় — দুই ধাপ খুলে দেওয়া
+     *   একটা তালা খোলা, আর ওটা সাধারণ ব্যবহারকারী-সম্পাদনা নয়।
+     * ⭐ নিজেরটা এখান থেকে নয় — নিজেরটা পাসওয়ার্ড দিয়ে নিজের পর্দায়।
+     *   ⛔ নাহলে একজন সুপার অ্যাডমিন নিজের তালাটা এক ক্লিকে খুলে
+     *   ফেলতেন, আর বাধ্যতামূলক শব্দটার মানে থাকত না।
+     * ⭐ কারণ লেখা বাধ্যতামূলক — ছয় মাস পরে *"কেন খোলা হয়েছিল"*
+     *   প্রশ্নটার উত্তর এই একটা লাইনই।
+     *
+     * ⓘ নিরীক্ষার সারিটা রিসেটের **আগে** লেখা হয়। ⚠️ পরে লিখলে
+     * মাঝে কিছু ভাঙলে তালা খুলে যেত আর খাতায় কোনো দাগ থাকত না —
+     * আর বিনা দাগে খোলা তালাই সবচেয়ে খারাপ ফল।
+     */
+    public function resetTwoStep(Request $request, User $user, MfaService $mfa): RedirectResponse
+    {
+        $actor = $request->user();
+
+        abort_unless($actor->hasRole(PermissionSyncer::SUPER_ADMIN_ROLE), 403);
+
+        if ((int) $actor->id === (int) $user->id) {
+            return back()->withErrors(['reason' => __('auth.two_step_reset_not_self')]);
+        }
+
+        $data = $request->validate(
+            ['reason' => ['required', 'string', 'min:5', 'max:500']],
+            ['reason.required' => __('auth.two_step_reset_needs_reason')],
+        );
+
+        $this->audit->recordAction($user, 'two_step_reset', $data['reason']);
+
+        $mfa->turnOff($user);
+
+        return back()->with('status', __('auth.two_step_reset_done'));
     }
 }
