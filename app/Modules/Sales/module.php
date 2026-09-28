@@ -723,6 +723,38 @@ return [
             'default' => PaperSize::A4,
             'group' => 'print',
         ],
+        /*
+         * ⭐ বিলের নকশা — "ক্লাসিক টেবিল ইনভয়েস", মালিকের নির্দেশ, ২৮ সেপ্টেম্বর ২০২৬।
+         *
+         * ⓘ চলতি নকশা (`standard`) যেমন ছিল তেমনই থাকে, আর ডিফল্টও ওটাই —
+         * ⚠️ কারও চলতি কাগজ নিজে থেকে বদলায় না। নতুনটা একটা আলাদা ছাঁচ
+         * ([[sales::print.invoice-classic]]): মাথায় তিন কলাম (কাকে · কোন
+         * গাড়িতে · কোন বিল), নিচে টাকার সারি আর আদায়ের ছক পাশাপাশি।
+         *
+         * ⛔ থার্মালে খাটে না: তিন কলামের মাথা ৮০মিমিতে ধরে না, তাই রোলে
+         * সবসময় চলতি রসিদ ([[SalesPrintController::invoice()]])।
+         */
+        [
+            'key' => 'sales.print.design.invoice',
+            'label' => 'sales::settings.design_invoice',
+            'type' => 'choice',
+            'options' => ['standard', 'classic_table'],
+            'option_label' => 'sales::settings.design.',
+            'default' => 'standard',
+            'group' => 'print',
+        ],
+        /*
+         * ⓘ ক্লাসিক বিলের নিচের লাল বাক্য — প্রতিটা ব্যবসার নিজের কথা।
+         * ⚠️ খালি রাখলে ভাষার ফাইলের বাক্যটা বসে; ABOS অনেক ব্যবসায় চলে,
+         * তাই এক ব্যবসার শর্ত কোডে বাঁধা হয়নি।
+         */
+        [
+            'key' => 'sales.print.invoice_footnote',
+            'label' => 'sales::settings.invoice_footnote',
+            'type' => 'string',
+            'default' => null,
+            'group' => 'print',
+        ],
         [
             'key' => 'sales.print.paper.challan',
             'label' => 'sales::settings.paper_challan',

@@ -230,10 +230,20 @@ class AClassTheBundleNeverHeardOfDoesNothingTest extends TestCase
          * ⚠️ কেবল বান্ডিল দেখলে পাহারাটা ঐ শ্রেণিগুলোকে "নেই" বলত — আর
          * সেটা হত খাঁটি মিথ্যা অভিযোগ।
          */
-        foreach (File::allFiles(resource_path('views')) as $file) {
-            if (str_ends_with($file->getFilename(), '.blade.php')
-                && str_contains(File::get($file->getPathname()), '<style')) {
-                $sheets[] = $file->getPathname();
+        /*
+         * ⓘ মডিউলের নিজের ছাপার ছাঁচও — ২৮ সেপ্টেম্বর ২০২৬।
+         *
+         * ⚠️ বিলের ক্লাসিক নকশা ([[sales::print.invoice-classic]]) প্রথম ছাঁচ
+         * যেটা মডিউলের ফোল্ডারে থাকে আর নিজের `<style>` বয়। ⛔ কেবল
+         * `resources/views` দেখলে তার প্রতিটা শ্রেণি "নেই" বলে অভিযোগ পেত —
+         * অথচ শ্রেণিগুলো ঠিক ঐ ফাইলেই সংজ্ঞায়িত।
+         */
+        foreach ([resource_path('views'), app_path('Modules')] as $root) {
+            foreach (File::allFiles($root) as $file) {
+                if (str_ends_with($file->getFilename(), '.blade.php')
+                    && str_contains(File::get($file->getPathname()), '<style')) {
+                    $sheets[] = $file->getPathname();
+                }
             }
         }
 

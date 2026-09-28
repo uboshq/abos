@@ -17,6 +17,7 @@ use App\Http\Controllers\Controller;
 use App\Models\DocumentDelivery;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\Inventory\Services\IssuedLots;
+use App\Modules\MasterData\Models\Location;
 use App\Modules\Sales\Models\Collection;
 use App\Modules\Sales\Models\DeliveryChallan;
 use App\Modules\Sales\Models\PrintJob;
@@ -177,11 +178,106 @@ class SalesPrintController extends Controller implements HasMiddleware
          * খসড়ায় নয় (নিচের draft): ওটা এমনিতেই "চূড়ান্ত নয়" লেখা নিয়ে
          * বেরোয়, আর খসড়া কতবার ছাপা হলো তা কারও জানার দরকার নেই।
          */
+        /*
+         * ⭐ ক্লাসিক টেবিল ইনভয়েস — মালিকের নির্দেশ, ২৮ সেপ্টেম্বর ২০২৬।
+         *
+         * ⓘ একই `$doc`, একই সারিতে ওঠা, একই DUPLICATE ও "বাতিল" — কেবল
+         * ছাঁচটা আলাদা। ⛔ আলাদা পথ বানালে একদিন নতুন নকশার বিলে
+         * DUPLICATE বসত না, আর সেটা ধরা পড়ত কেবল দুইবার টাকা চাওয়ার দিনে।
+         *
+         * ⚠️ থার্মালে সবসময় চলতি রসিদ: তিন কলামের মাথা ৮০মিমিতে ধরে না।
+         */
+        $classic = $this->settings->get('sales.print.design.invoice') === 'classic_table'
+            && ! PaperSize::of(PaperSize::chosen(
+                $request->query('paper'),
+                $this->settings->get('sales.print.paper.invoice'),
+            ))->isThermal;
+
         return $this->pdf(
             $request, $doc, (string) $invoice->total, $invoice->document_no,
             type: PrintJob::INVOICE, id: $invoice->id, document: $invoice,
             paperSetting: 'sales.print.paper.invoice',
+            template: $classic ? 'sales::print.invoice-classic' : 'print.document',
+            extra: $classic ? ['facts' => $this->classicFacts($invoice)] : [],
         );
+    }
+
+    /**
+     * ক্লাসিক বিলের মাথার তিন কলাম — কাকে · কোন গাড়িতে · কোন বিল।
+     *
+     * ── ⚠️ না-জানা ঘর খালি থাকে, আন্দাজে ভরে না ─────────────────────────
+     * ⓘ কাউন্টারের নগদ বিক্রিতে চালানই নেই — তখন পরিবহনের ঘরগুলো খালি।
+     * ⛔ "নগদ/বাকি" ঘরটাও কেবল চালানে লেখা শর্ত থেকে; পুরনো চালানে শর্ত
+     * লেখা নেই, আর তখন বকেয়া দেখে "বাকি" লিখে দিলে পরে-শোধ-করা বাকির
+     * বিল "নগদ" ছাপত — কাগজ একটা মিথ্যা বলত।
+     *
+     * @return array{bill_to: array<string, string>, transport: array<string, string>, bill: array<string, string>, total_items: string, total_delivery: string}
+     */
+    private function classicFacts(SalesInvoice $invoice): array
+    {
+        $invoice->loadMissing([
+            'customer.location.parent',
+            'creator',
+            'lines.challanLine.challan.vehicle.vehicleType',
+            'lines.challanLine.challan.order',
+        ]);
+
+        $customer = $invoice->customer;
+        $challan = $invoice->lines->first()?->challanLine?->challan;
+
+        /*
+         * ⓘ পয়েন্ট — গ্রাহক পয়েন্টে বসলে সেটাই, রুটে বসলে তার উপরেরটা।
+         * ⚠️ [[Customer::ladderNode()]] ডাকা হয়নি: সে গাছ বেয়ে যত উপরে
+         * দরকার ওঠে, আর এই রিপোতে lazy loading বন্ধ — এক ধাপ বেশি উঠলেই
+         * ছাপার পাতা ৫০০।
+         */
+        $node = $customer?->location;
+        $point = match (true) {
+            $node?->level === Location::POINT => $node,
+            $node?->level === Location::ROUTE && $node->parent?->level === Location::POINT => $node->parent,
+            default => null,
+        };
+
+        $vehicle = $challan === null ? '' : trim(implode(' ', array_filter([
+            (string) ($challan->vehicle?->vehicleType?->name() ?? ''),
+            (string) $challan->vehiclePlate(),
+        ])));
+
+        $term = (string) ($challan?->payment_term ?? '');
+        $type = match (true) {
+            in_array($term, ['cash', 'cod'], true) => __('sales::print.classic.cash'),
+            $term !== '' => __('sales::print.classic.credit'),
+            default => '',
+        };
+
+        return [
+            'bill_to' => [
+                'name' => (string) ($customer?->name() ?? ''),
+                'point' => (string) ($point?->name() ?? ''),
+                'phone' => (string) ($customer?->phone ?? ''),
+                'address' => (string) ($customer?->address() ?? ''),
+            ],
+            'transport' => [
+                'carrier' => (string) ($challan?->carrier_name ?? ''),
+                'driver_phone' => (string) ($challan?->driver_phone ?? ''),
+                'vehicle' => $vehicle,
+                'delivery_date' => $challan === null
+                    ? ''
+                    : DateFormat::format($challan->ship_date ?? $challan->trx_date),
+            ],
+            'bill' => [
+                'bill_date' => DateFormat::format($invoice->trx_date),
+                'bill_no' => (string) $invoice->document_no,
+                'order_no' => (string) ($challan?->order?->document_no ?? ''),
+                'type' => $type,
+                'created_by' => (string) ($invoice->creator?->name ?? ''),
+            ],
+            'total_items' => (string) $invoice->lines->count(),
+            'total_delivery' => $this->qty($invoice->lines->reduce(
+                fn (string $sum, $line) => bcadd($sum, (string) $line->qty, 4),
+                '0',
+            )),
+        ];
     }
 
     /**
@@ -986,6 +1082,12 @@ class SalesPrintController extends Controller implements HasMiddleware
 
         /* ⓘ কোন কাগজের সুইচ — [[profileFor()]] থার্মাল হলে নিজেই "পস" বানায় */
         string $target = 'invoice',
+
+        /* ⓘ কোন ছাঁচ — বিলের ক্লাসিক নকশা ছাড়া সবাই চলতিটা */
+        string $template = 'print.document',
+
+        /** @var array<string, mixed> ছাঁচের বাড়তি তথ্য */
+        array $extra = [],
     ): Response {
         /*
          * ⭐ কাগজের মাপ: ঠিকানায় যা চাওয়া হয়েছে, নয়তো মালিকের বসানো মাপ।
@@ -1047,8 +1149,9 @@ class SalesPrintController extends Controller implements HasMiddleware
         $locale = app()->getLocale();
 
         $pdf = $this->print->render(
-            template: 'print.document',
+            template: $template,
             data: [
+                ...$extra,
                 'doc' => $doc->withWordsFor($amount, $locale),
                 'title' => $doc->title.' '.$documentNo,
             ],

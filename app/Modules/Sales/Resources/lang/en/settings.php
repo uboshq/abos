@@ -47,4 +47,12 @@ return [
     'paper_challan' => 'Paper for the delivery challan',
     'paper_order' => 'Paper for the sales order',
     'paper_receipt' => 'Paper for the collection receipt',
+
+    // The invoice design — 28 September 2026
+    'design_invoice' => 'Sales invoice design',
+    'design' => [
+        'standard' => 'Standard (current)',
+        'classic_table' => 'Classic table invoice',
+    ],
+    'invoice_footnote' => 'Red line under the classic invoice (blank = the standard line)',
 ];

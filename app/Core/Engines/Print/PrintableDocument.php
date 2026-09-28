@@ -103,6 +103,7 @@ final class PrintableDocument
             amountInWords: $this->amountInWords,
             narration: $this->narration,
             notice: implode(' · ', $stacked),
+            payments: $this->payments,
         );
     }
 
@@ -139,6 +140,16 @@ final class PrintableDocument
             amountInWords: AmountInWords::of($amount, $locale),
             narration: $this->narration,
             notice: $this->notice,
+
+            /*
+             * ⛔ এই লাইনটা ছিল না — ২৮ সেপ্টেম্বর ২০২৬ পর্যন্ত।
+             *
+             * ⓘ প্রতিটা বিল ছাপার আগে এই কপিটা বানানো হয়, আর কপিতে আদায়ের
+             * সারিগুলো আসত না। ⚠️ ফল: আদায়ের ছকটা **কোনোদিন কাগজে ওঠেনি**,
+             * অথচ সারি তোলার পরীক্ষা সবুজ ছিল — কারণ পরীক্ষা সারিগুলো তুলত,
+             * কাগজ আঁকত না। [[AClassicTableInvoiceCanBeChosenTest]] এখন কাগজটাই আঁকে।
+             */
+            payments: $this->payments,
         );
     }
 }
