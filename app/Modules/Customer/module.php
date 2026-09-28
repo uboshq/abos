@@ -277,13 +277,13 @@ return [
         CustomerWidgets::class,
     ],
 
-    // Control Panel-এ যে সুইচগুলো দেখাবে — নিয়ম ৭।
-    'settings' => [
     // ⓘ সইয়ের পাতায় গ্রাহকের কার্ড — [[CustomerCardFacts]], ২৮ সেপ্টেম্বর ২০২৬
     'facts' => [
         CustomerCardFacts::class,
     ],
 
+    // Control Panel-এ যে সুইচগুলো দেখাবে — নিয়ম ৭।
+    'settings' => [
         [
             'key' => 'customer.require_bn_name',
             'label' => 'customer::settings.require_bn_name',
