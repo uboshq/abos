@@ -168,11 +168,19 @@ class ThePickerCouldNotFindItsOwnPartyTest extends TestCase
      */
     public function test_the_filters_actually_look_at_both_names(): void
     {
+        /*
+         * ⓘ ছাঁকনির যুক্তি পাতায় নয়, কাউন্টারের নিজের JS-এ — ১৮ সেপ্টেম্বর ২০২৬ থেকে
+         * (0a7a1193, "Two counters carried their own brain…")। ⚠️ তাই দাবিটা পাতা খোলে,
+         * পাতাটা যে ঐ কম্পোনেন্টই চালায় তা দেখে, আর গোনে কম্পোনেন্টের উৎসে — ⛔ পাতার
+         * HTML-এ গুনলে দাবিটা ১৮ সেপ্টেম্বর থেকে এমন লেখা খুঁজত যা আর কোথাও নেই।
+         */
         foreach ([
-            'purchase.direct.create' => 'ক্রয়ের সরবরাহকারী ও পণ্য',
-            'sales.direct.create' => 'বিক্রয়ের গ্রাহক ও পণ্য',
-        ] as $route => $what) {
-            $html = $this->get(route($route))->assertOk()->getContent();
+            'purchase.direct.create' => ['ক্রয়ের সরবরাহকারী ও পণ্য', 'directPurchase', 'direct-purchase.js'],
+            'sales.direct.create' => ['বিক্রয়ের গ্রাহক ও পণ্য', 'directSale', 'direct-sale.js'],
+        ] as $route => [$what, $component, $source]) {
+            $this->get(route($route))->assertOk()->assertSee('x-data="'.$component.'(', false);
+
+            $html = (string) file_get_contents(resource_path('js/counter/'.$source));
 
             /*
              * ⓘ চলকের নাম পর্দাভেদে আলাদা (`x` · `c` · `p`), তাই তিনটাকেই
