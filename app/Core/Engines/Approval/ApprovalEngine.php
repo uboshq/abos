@@ -285,6 +285,17 @@ final class ApprovalEngine
 
             $this->tell($approval, 'approved');
 
+            /*
+             * ⭐ শেষ সই — এবার কাগজের মালিক-মডিউলকে জানানো (মালিকের সিদ্ধান্ত ১,
+             * ২৭ সেপ্টেম্বর ২০২৬: *"সব সহ শেষ হলে নিজে থেকেই পোস্ট হবে"*)।
+             *
+             * ⓘ লেনদেন পাকা হওয়ার **পরে**: সইটা আগে টিকে যায়, আর শ্রোতার
+             * কোনো বাধা (ধরুন বাকির দেয়াল) সেটা ফেরাতে পারে না
+             * ([[ApprovalDecided]])।
+             */
+            $decided = $approval->fresh();
+            DB::afterCommit(fn () => event(\App\Core\Events\ApprovalDecided::from($decided)));
+
             return $approval->fresh();
         });
     }

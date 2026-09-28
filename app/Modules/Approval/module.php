@@ -173,6 +173,15 @@ return [
         ApprovalWidgets::class,
     ],
 
+    /*
+     * ⭐ শেষ সিদ্ধান্তের ঘোষণা — ২৮ সেপ্টেম্বর ২০২৬। ⓘ ছোড়ে কোরের ইঞ্জিন
+     * ([[ApprovalEngine::approve()]]), ঘোষণা এখানে কারণ অনুমোদন এই মডিউলের;
+     * যার কাগজ সে শোনে (Sales: [[FinishTheHeldSaleOnTheLastSignature]])।
+     */
+    'events' => [
+        \App\Core\Events\ApprovalDecided::class,
+    ],
+
     'settings' => [
         [
             /*

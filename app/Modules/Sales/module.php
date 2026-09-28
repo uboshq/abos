@@ -616,6 +616,16 @@ return [
      * গ্রাহকের পাতাটাই খুলত না। এদিক থেকে দিলে কোনো নতুন নির্ভরতা
      * লাগে না — Sales গ্রাহককে আগে থেকেই চেনে।
      */
+    /*
+     * ⭐ শেষ সইয়ের পরে কাউন্টারের আটকে থাকা বিক্রি নিজে শেষ — মালিকের
+     * সিদ্ধান্ত ১, ২৭ সেপ্টেম্বর ২০২৬ ([[HeldCounterSaleFinisher]])।
+     */
+    'listeners' => [
+        \App\Core\Events\ApprovalDecided::class => [
+            \App\Modules\Sales\Listeners\FinishTheHeldSaleOnTheLastSignature::class,
+        ],
+    ],
+
     'facts' => [
         SalesFacts::class,
     ],

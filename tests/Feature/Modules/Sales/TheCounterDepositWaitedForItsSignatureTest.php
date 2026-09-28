@@ -159,11 +159,12 @@ final class TheCounterDepositWaitedForItsSignatureTest extends TestCase
 
         app(ApprovalEngine::class)->approve($approval, $this->user);
 
-        // ⭐ একই বোতাম — এবার সব একসাথে
-        $this->from($show)->post(route('sales.invoice.confirm', $invoice))
-            ->assertSessionHasNoErrors()
-            ->assertRedirect($show);
-
+        /*
+         * ⭐ শেষ সইয়েই সব একসাথে — বোতাম আর লাগে না (মালিকের সিদ্ধান্ত ১,
+         * ২৭ সেপ্টেম্বর ২০২৬; [[HeldCounterSaleFinisher]])। ⚠️ আগে এখানে সইয়ের
+         * পরে আবার "নিশ্চিত" চাপা হত — লাইভে INV-0005 ঠিক ঐ চাপের অপেক্ষায়
+         * আটকে ছিল।
+         */
         $invoice = $invoice->fresh();
 
         $this->assertSame('confirmed', $invoice->status, 'সইয়ের পরেও বিল নিশ্চিত হয়নি।');

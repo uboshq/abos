@@ -61,6 +61,29 @@ class EveryApprovalAskedForCanBeConfiguredTest extends TestCase
             foreach ($found as $one) {
                 $asked[] = $one[1].'.'.$one[2];
             }
+
+            /*
+             * ⭐ ধ্রুবক দিয়ে চাওয়া — `self::MODULE, self::ACTION` (২৮ সেপ্টেম্বর ২০২৬)।
+             *
+             * ⛔ উপরের regex কেবল লেখা নাম দেখে। [[PromotionApprovalChain::open()]]
+             * অনুরোধ খোলে ধ্রুবক দিয়ে, তাই পাহারাটা বলত *"কেউ promotion.approve
+             * চায় না"* — অথচ চাওয়া হয়, কেবল পাহারা দেখতে পেত না।
+             * ⓘ ক্লাসের নাম ফাইল থেকে, মান reflection দিয়ে — হাতে লেখা নয়।
+             */
+            if (str_contains($code, 'self::MODULE') && str_contains($code, 'self::ACTION')
+                && preg_match('/^namespace\s+([^;]+);/m', $code, $ns) === 1
+                && preg_match('/^(?:final\s+|abstract\s+)?class\s+(\w+)/m', $code, $cls) === 1
+            ) {
+                $class = $ns[1].'\\'.$cls[1];
+
+                if (class_exists($class)) {
+                    $constants = (new \ReflectionClass($class))->getConstants();
+
+                    if (is_string($constants['MODULE'] ?? null) && is_string($constants['ACTION'] ?? null)) {
+                        $asked[] = $constants['MODULE'].'.'.$constants['ACTION'];
+                    }
+                }
+            }
         }
 
         /*
