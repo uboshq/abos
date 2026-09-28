@@ -304,10 +304,30 @@ class StockPlacementController extends Controller implements HasMiddleware
         }
 
         foreach ($papers as $key => $paper) {
-            $papers[$key]['lines'] = $this->paidAndFreeOnOneRow($paper['lines']);
+            /*
+             * ⭐ পরিমাণে অকারণ দশমিক নয় — মালিকের নির্দেশ, ২৮ সেপ্টেম্বর ২০২৬: *"Qnt. te
+             * dosomik dewar dorkar nai … zodi thake tokon ze product e thakbe shudu sei
+             * product e dekhabe"*। "50.0000" নয়, "50"; ভাঙা কার্টন থাকলে কেবল সেই সারিতে "12.5"।
+             * ⚠️ কমা ছাড়া ([[Money::quantity()]]-এর মতো নয়) — এগুলো ইনপুটের মান, আর
+             * "1,500" জমা দিলে সংখ্যা হিসেবে পড়া যেত না।
+             */
+            $papers[$key]['lines'] = array_map(fn (array $line) => [
+                ...$line,
+                'waiting' => self::plainQuantity($line['waiting']),
+                'waiting_free' => self::plainQuantity($line['waiting_free']),
+            ], $this->paidAndFreeOnOneRow($paper['lines']));
         }
 
         return $this->withTheirFacts($papers);
+    }
+
+    /** "50.0000" → "50", "12.5000" → "12.5", "0.0000" → "0" — কমা ছাড়া, স্ট্রিং ধরেই (float নয়)। */
+    private static function plainQuantity(mixed $value): string
+    {
+        $text = (string) $value;
+        $trimmed = str_contains($text, '.') ? rtrim(rtrim($text, '0'), '.') : $text;
+
+        return $trimmed === '' || $trimmed === '-' ? '0' : $trimmed;
     }
 
     /**

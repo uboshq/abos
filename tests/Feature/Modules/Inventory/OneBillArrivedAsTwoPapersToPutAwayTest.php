@@ -250,6 +250,35 @@ final class OneBillArrivedAsTwoPapersToPutAwayTest extends TestCase
             '⛔ বেশি চাওয়া হলেও কিছু বসে গেছে — লেনদেন উল্টায়নি।');
     }
 
+    /**
+     * ⭐ পরিমাণে অকারণ দশমিক নয় — মালিকের ছবি, ২৮ সেপ্টেম্বর ২০২৬: *"Qnt. te dosomik dewar
+     * dorkar nai … zodi thake tokon ze product e thakbe shudu sei product e dekhabe"*।
+     *
+     * ⚠️ দুই দিক একসাথে: পুরো কার্টন "10" (না "10.0000"), আর ভাঙা কার্টন "2.5" — ⛔ শূন্য
+     * কাটতে গিয়ে ভাঙা অংশটাও কেটে ফেললে গুদামের লোক আড়াইয়ের জায়গায় দুই বসাতেন।
+     */
+    public function test_whole_cartons_show_no_decimals_and_a_broken_one_keeps_its_fraction(): void
+    {
+        $this->goodsArrived();
+
+        app(StockService::class)->move(
+            product: $this->product,
+            warehouse: $this->warehouse,
+            sourceType: 'purchase_bill:free',
+            sourceId: 4242,
+            documentNo: 'PBL-4242',
+            unplacedFree: '0.5',
+        );
+
+        $line = $this->papersOnScreen()[0]['lines'][0];
+
+        $this->assertSame('10', $line['waiting'], '⛔ পুরো কার্টনে দশমিক দেখায়।');
+        $this->assertSame('2.5', $line['waiting_free'], '⛔ ভাঙা কার্টনের দশমিক হারিয়েছে বা শূন্য ঝুলছে।');
+
+        $html = $this->get(route('inventory.stock.placement'))->getContent();
+        $this->assertStringNotContainsString('value="10.0000"', $html);
+    }
+
     /** একই কাগজে দশটা টাকার মাল আর দুইটা ফ্রি — দুই উৎসে, যেভাবে ক্রয় লেখে। */
     private function goodsArrived(): void
     {
