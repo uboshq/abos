@@ -41,6 +41,19 @@ Route::middleware('auth')->prefix('promotions')->group(function () {
     /* ⓘ উপহার দেওয়া — `/{promotion}`-এর আগে, যাতে `gifts` শব্দটা অফারের কী না ধরা হয় */
     Route::get('/gifts', [PromotionGiftController::class, 'index'])->name('gift.index');
     Route::post('/applications/{application}/gifts', [PromotionGiftController::class, 'store'])->name('gift.store');
+
+    /*
+     * ⭐ কুপন আর পয়েন্টের পর্দা — `/{promotion}`-এর আগে, নইলে "coupons" একটা
+     * অফারের আইডি ধরা হত (২৮ সেপ্টেম্বর ২০২৬)।
+     * ⓘ চাবি দরজার নিজের: `promotion.coupon`, `promotion.loyalty`, আর কাউন্টারের
+     * কোড যাচাই `promotion.apply` ([[PromotionCouponController]])।
+     */
+    Route::get('/coupons', [\App\Modules\Promotion\Http\Controllers\PromotionCouponController::class, 'index'])->name('coupon.index');
+    Route::post('/coupons/redeem', [\App\Modules\Promotion\Http\Controllers\PromotionCouponController::class, 'redeem'])->name('coupon.redeem');
+    Route::get('/loyalty', [\App\Modules\Promotion\Http\Controllers\PromotionLoyaltyController::class, 'index'])->name('loyalty.index');
+    Route::get('/loyalty/{customer}', [\App\Modules\Promotion\Http\Controllers\PromotionLoyaltyController::class, 'show'])
+        ->whereNumber('customer')->name('loyalty.show');
+
     Route::post('/', [PromotionController::class, 'store'])->name('store');
 
     /*
@@ -69,4 +82,10 @@ Route::middleware('auth')->prefix('promotions')->group(function () {
 
     /* ⓘ ছাদ — প্রতিটা ধরনে একটা; নতুন অঙ্ক পুরনোটা বদলায়, নিরীক্ষা পুরনোটা রাখে */
     Route::post('/{promotion}/budgets', PromotionBudgetController::class)->name('budget.store');
+
+    /* ⭐ কুপনের কোড আর কম্বোর উপাদান — অফারের নিজের পাতা থেকে */
+    Route::post('/{promotion}/coupons', [\App\Modules\Promotion\Http\Controllers\PromotionCouponController::class, 'store'])->name('coupon.store');
+    Route::post('/{promotion}/combo', [\App\Modules\Promotion\Http\Controllers\PromotionComboController::class, 'store'])->name('combo.store');
+    Route::delete('/{promotion}/combo/{item}', [\App\Modules\Promotion\Http\Controllers\PromotionComboController::class, 'destroy'])
+        ->whereNumber('item')->name('combo.destroy');
 });

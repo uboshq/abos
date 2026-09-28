@@ -84,6 +84,12 @@ return [
             ['label' => 'promotion::menu.gifts', 'icon' => 'promotion', 'route' => 'promotion.gift.index',
                 'permission' => 'promotion.gift'],
 
+            /* ⓘ কুপনের কোড আর ক্রেতার পয়েন্ট — প্রতিটা নিজের চাবিতে */
+            ['label' => 'promotion::coupon_screen.menu', 'icon' => 'receipt', 'route' => 'promotion.coupon.index',
+                'permission' => 'promotion.coupon'],
+            ['label' => 'promotion::loyalty_screen.title', 'icon' => 'wallet', 'route' => 'promotion.loyalty.index',
+                'permission' => 'promotion.loyalty'],
+
             /* ⓘ স্পেক §১৬ Promotion Calendar */
             ['label' => 'promotion::calendar.title', 'icon' => 'calendar', 'route' => 'promotion.calendar',
                 'permission' => 'promotion.view'],
@@ -159,6 +165,15 @@ return [
 
         /* ⭐ §১৭-এর প্রতিবেদন দেখা — দরজাটা [[PromotionReportController]]; ছাপা ও রপ্তানিও এই চাবিতেই */
         'promotion.report',
+
+        /*
+         * ⭐ কুপনের কোড বানানো ও দেখা — দরজাটা [[PromotionCouponController]] (২৮ সেপ্টেম্বর ২০২৬)।
+         * ⓘ কাউন্টারে কোড যাচাই `apply`-তেই; কোড বানানো মানে ছাড় ছড়ানো, তাই আলাদা চাবি।
+         */
+        'promotion.coupon',
+
+        /* ⭐ ক্রেতার পয়েন্ট দেখা — দরজাটা [[PromotionLoyaltyController]] */
+        'promotion.loyalty',
 
         /*
          * ⓘ এক সময় তিনটা চাবি দরজা ছাড়া ঘোষিত ছিল (`gift.issue`, `budget.view`, `report`)।

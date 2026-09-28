@@ -229,6 +229,9 @@
             @endif
         </section>
 
+        {{-- ⭐ কম্বো ও বান্ডলের উপাদান — ধরন মেলে কেবল তখনই আঁকে ([[PromotionComboController]]) --}}
+        @include('promotion::partials.combo-items')
+
         {{--
             ⭐ বাজেট — ছাদ আর খরচ পাশাপাশি (স্পেক §১৫)।
 
