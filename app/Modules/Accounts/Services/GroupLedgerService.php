@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Modules\Accounts\Services;
 
-use App\Core\Support\DocumentStatus;
 use App\Models\User;
 use App\Modules\Accounts\Models\Account;
 use Illuminate\Support\Carbon;
@@ -150,41 +149,44 @@ final class GroupLedgerService
          * আছে। ⛔ নাহলে কোয়েরিটা স্থানীয়ভাবে পাস করত আর লাইভে ৫০০ দিত
          * ([[live-mysql-uses-only-full-group-by]])।
          *
-         * ⚠️ আর `voucher_lines`-এ `company_id` **নেই** — কোম্পানি আসে
-         * `vouchers` ধরে, তাই ছাঁকনিটা ঐ টেবিলে বসে।
+         * ── ⭐ উৎসটা `ledger_entries`, `voucher_lines` নয় — নিরীক্ষা §২ ──
+         * ⛔ আগে যোগফল আসত `voucher_lines` থেকে। ⓘ কিন্তু বিক্রয়, ক্রয়
+         * আর বেতন **ভাউচার দিয়ে যায় না** — ওরা সরাসরি পোস্টিং ইঞ্জিন
+         * দিয়ে খতিয়ানে বসে ([[PostingEngine::post()]])।
+         *
+         * ⚠️ ফল: গ্রুপের পাতায় ঐ তিনটাই **শূন্য** দেখাত, অথচ প্রতিটা
+         * কোম্পানির নিজের রিপোর্টে সংখ্যাগুলো ঠিকই ছিল। ⛔ আর শূন্য
+         * দেখতে ভাঙা লাগে না — দেখতে লাগে *"এই মাসে কিছু হয়নি"*।
+         *
+         * ⭐ ভাউচারও খতিয়ানেই বসে (একই ইঞ্জিন), তাই উৎস বদলে কিছু
+         * হারায় না — কেবল যা বাদ পড়ছিল তা যোগ হয়। ⓘ আর খতিয়ানে
+         * `company_id` নিজেরই কলাম, তাই ভাউচারের টেবিলে জোড়াটাও লাগে না।
          */
-        $rows = DB::table('voucher_lines')
-            ->join('vouchers', 'vouchers.id', '=', 'voucher_lines.voucher_id')
-            ->join('accounts', 'accounts.id', '=', 'voucher_lines.account_id')
-            ->whereIn('vouchers.company_id', $companyIds)
-            /*
-             * ⓘ খাতায় যা সত্যিই গোনা হয়: খসড়া নয়, বাতিল নয়।
-             * ⚠️ তালিকাটা [[DocumentStatus::POSTED]] থেকে নেওয়া, হাতে
-             * লেখা নয় — নাহলে একদিন একটা নতুন অবস্থা যোগ হত আর এই
-             * রিপোর্ট নীরবে ওটা বাদ দিত।
-             */
-            ->whereIn('vouchers.status', DocumentStatus::POSTED)
-            ->whereBetween('vouchers.trx_date', [$from, $to])
+        $rows = DB::table('ledger_entries')
+            ->join('accounts', 'accounts.id', '=', 'ledger_entries.account_id')
+            ->whereIn('ledger_entries.company_id', $companyIds)
+            ->whereBetween('ledger_entries.trx_date', [$from, $to])
+
             /*
              * ⭐ `nature`-ও গোষ্ঠীতে, আর সেটা ইচ্ছাকৃত।
              *
              * ⛔ প্রথমে ধরন থেকে দিক ঠিক করতে যাচ্ছিলাম
-             * ([[Account::defaultNatureFor()]] দিয়ে), আর সেটা ভুল হত:
-             * ⚠️ ঐ পদ্ধতিটার নিজের মন্তব্য বলে ওটা **নতুন খাতের ডিফল্ট,
-             * বাধ্যতামূলক নয়** — "সঞ্চিত অবচয়" সম্পদ হয়েও ক্রেডিট
-             * প্রকৃতির, আর সেটা হাতে বদলানো যায়।
+             * ([[Account::defaultNatureFor()]] দিয়ে), আর সেটা ভুল হত:
+             * ⚠️ ऐ পদ্ধতিটার নিজের মন্তব্য বলে ওটা **নতুন খাতের ডিফল্ট,
+             * বাধ্যতামূলক নয়** — "সঞ্চিত অবচয়" সম্পদ হয়েও ক্রেডিট
+             * প্রকৃতির, আর সেটা হাতে বদলানো যায়।
              *
-             * ⓘ ফলে ধরন ধরে চিহ্ন বসালে অবচয়ের অঙ্কটা **উল্টো দিকে**
+             * ⓘ ফলে ধরন ধরে চিহ্ন বসালে অবচয়ের অংকটা **উল্টো দিকে**
              * যোগ হত — সম্পদ বেশি দেখাত, আর সংখ্যাটা দেখতে সঠিকের
-             * মতোই লাগত। তাই প্রতিটা খাতের নিজের `nature`-ই ধরা হয়।
+             * মতোই লাগত। তাই প্রতিটা খাতের নিজের `nature`-ই ধরা হয়।
              */
-            ->groupBy('vouchers.company_id', 'accounts.type', 'accounts.nature')
+            ->groupBy('ledger_entries.company_id', 'accounts.type', 'accounts.nature')
             ->select([
-                'vouchers.company_id',
+                'ledger_entries.company_id',
                 'accounts.type',
                 'accounts.nature',
-                DB::raw('SUM(voucher_lines.debit) as debit'),
-                DB::raw('SUM(voucher_lines.credit) as credit'),
+                DB::raw('SUM(ledger_entries.debit) as debit'),
+                DB::raw('SUM(ledger_entries.credit) as credit'),
             ])
             ->get();
 
