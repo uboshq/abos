@@ -13,9 +13,11 @@ use App\Modules\Inventory\Models\Product;
 use App\Modules\Inventory\Models\StockMovement;
 use App\Modules\Inventory\Models\Warehouse;
 use App\Modules\Sales\Models\DeliveryChallan;
+use App\Modules\Sales\Models\SalesInvoice;
 use App\Modules\Sales\Models\Shipment;
 use App\Modules\Sales\Models\ShipmentLine;
 use App\Modules\Sales\Services\DeliveryChallanService;
+use App\Modules\Sales\Services\SalesInvoiceService;
 use App\Modules\Sales\Services\ShipmentService;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -264,7 +266,14 @@ class AVanGoesOutAndMustComeBackTest extends TestCase
 
         $this->settleAll($trip, ShipmentLine::RETURNED, 'ক্রেতা নেননি');
 
-        app(DeliveryChallanService::class)->cancel($challan, 'মাল ফিরে এসেছে');
+        /*
+         * ⓘ রওনাতেই বিল হয় (মালিক, ২৯ সেপ্টেম্বর ২০২৬ — [[DispatchBill]]), তাই পুরো মাল ফিরলে আগে
+         * বিলটা বাতিল, তারপর চালান — ⛔ বিল রেখে চালান বাতিল হলে প্রাপ্য থাকত, মাল থাকত না।
+         */
+        $bill = SalesInvoice::query()->where('sale_no', $challan->fresh()->sale_no)->firstOrFail();
+        app(SalesInvoiceService::class)->cancel($bill, 'মাল ফিরে এসেছে');
+
+        app(DeliveryChallanService::class)->cancel($challan->fresh(), 'মাল ফিরে এসেছে');
 
         $closed = app(ShipmentService::class)->close($trip->fresh());
 

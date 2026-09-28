@@ -780,7 +780,8 @@ class DirectSaleTest extends TestCase
             'সুইচ বন্ধ, তবু DO-র ঘরটা পর্দায়।');
 
         // ⓘ বাকি তিনটা ঘর ঠিকই আছে — পুরো সারিটা উধাও হয়ে যায়নি
-        foreach (['name="invoice_no"', 'name="payment_term"', 'name="trx_date"'] as $must) {
+        // ⓘ বিক্রি নম্বরের ঘর `challan_no` — ২৯ সেপ্টেম্বর ২০২৬ থেকে বিল আর চালানের একটাই নম্বর ([[SaleNumber]])
+        foreach (['name="challan_no"', 'name="payment_term"', 'name="trx_date"'] as $must) {
             $this->assertStringContainsString($must, $html, "ঘরটা হারিয়ে গেছে: {$must}");
         }
     }

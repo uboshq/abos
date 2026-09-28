@@ -18,7 +18,6 @@ use App\Modules\Sales\Models\SalesReturn;
 use App\Modules\Sales\Services\DeliveryChallanService;
 use App\Modules\Sales\Services\DeliveryStage;
 use App\Modules\Sales\Services\DeliveryStageService;
-use App\Modules\Sales\Services\SalesInvoiceService;
 use App\Modules\Sales\Services\SalesOrderService;
 use App\Modules\Sales\Services\SalesReturnService;
 use Database\Seeders\DemoSeeder;
@@ -85,11 +84,10 @@ final class OneSaleCarriesOneNumberTest extends TestCase
         $this->assertSame($saleNo, (string) $pass->document_no, '⛔ গেট পাস নিজের সারির নম্বর পেয়েছে, বিক্রির নয়।');
         $this->assertSame($saleNo, (string) $pass->sale_no);
 
-        $invoice = $this->billFor($challan);
+        // ⓘ রওনাতেই বিল ([[DispatchBill]]) — সেটাই এই বিক্রির বিল
+        $invoice = SalesInvoice::query()->where('sale_no', $saleNo)->firstOrFail();
         $this->assertSame($saleNo, (string) $invoice->document_no, '⛔ বিল চালানের নম্বর পায়নি।');
-        $this->assertSame($saleNo, (string) $invoice->sale_no);
 
-        app(SalesInvoiceService::class)->confirm($invoice->fresh());
         $return = $this->returnOf($invoice->fresh('lines'));
         // ⓘ ফেরতের নিজের নম্বর, বিক্রির নম্বর সূত্র হিসেবে (মালিক, ২৯ সেপ্টেম্বর ২০২৬)
         $this->assertNotSame($saleNo, (string) $return->document_no, '⛔ ফেরত বিক্রির নম্বর নিয়েছে — ফেরতের নিজের নম্বর চাই।');
@@ -166,22 +164,6 @@ final class OneSaleCarriesOneNumberTest extends TestCase
             'own_transport' => true,
             ...$extra,
         ], [['product_id' => $this->product->id, 'delivered_qty' => '5', 'rate' => '10', ...$line]]);
-    }
-
-    private function billFor(DeliveryChallan $challan): SalesInvoice
-    {
-        $line = $challan->fresh('lines')->lines->firstOrFail();
-
-        return app(SalesInvoiceService::class)->create([
-            'customer_id' => $challan->customer_id,
-            'warehouse_id' => $this->warehouse->id,
-            'trx_date' => now()->toDateString(),
-        ], [[
-            'product_id' => $this->product->id,
-            'delivery_challan_line_id' => $line->id,
-            'qty' => '5',
-            'rate' => '10',
-        ]]);
     }
 
     private function returnOf(SalesInvoice $invoice): SalesReturn

@@ -424,4 +424,9 @@ return [
     'no_lot' => 'No lot',
     'tab_drafts' => 'Drafts',
     'tab_awaiting_approval' => 'Awaiting approval',
+    // ⭐ direct sale, two paths — owner, 29 Sep 2026
+    'hand_over' => 'How the goods go',
+    'hand_over_now' => 'Handed over now',
+    'hand_over_later' => 'Sent later',
+    'hand_over_receiver_hint' => 'Blank means the customer',
 ];

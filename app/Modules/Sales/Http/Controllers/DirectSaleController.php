@@ -729,6 +729,10 @@ class DirectSaleController extends Controller implements HasMiddleware
             'transport_cost' => ['nullable', 'numeric', 'min:0'],
             // ⓘ "পরিবহন লাগবে না (ক্রেতার নিজের)" — `in:0,1`, save_as_draft-এর একই কারণে ([[TransportRule]])
             'own_transport' => ['nullable', 'in:0,1'],
+            // ⭐ দুই পথ — এখনই হাতে হাতে, নয়তো পরে পাঠানো ([[DirectSaleService::handOverIfAsked()]])
+            'hand_over' => ['nullable', 'in:now,later'],
+            'receiver_name' => ['nullable', 'string', 'max:191'],
+            'receiver_phone' => ['nullable', 'string', 'max:32'],
 
             /*
              * চালানটা কোথায় যাচ্ছে।

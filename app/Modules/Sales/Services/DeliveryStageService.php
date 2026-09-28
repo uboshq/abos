@@ -554,7 +554,13 @@ final class DeliveryStageService
              * ⓘ ট্রিপ বেরোলে আর হাতে "রওনা" বসালে দুইটাই এই পথে আসে — তাই কোনো রওনা কাগজ ছাড়া
              * বেরোয় না ([[GatePassService::issueFor()]])। একই লেনদেনে: গেট পাস না হলে রওনাও না।
              */
-            if ($to === DeliveryStage::DISPATCHED) {
+            if ($this->leavesTheGate($state?->stage, $to)) {
+                /*
+                 * ⭐ মাল বের হলেই বিল — মালিক, ২৯ সেপ্টেম্বর ২০২৬: *"ডেলিভারি বের হলেই ইনভয়েজ"*
+                 * ([[DispatchBill]])। ⓘ গেট পাসের আগে, একই লেনদেনে: বিল আটকালে (বাকির দেয়াল)
+                 * গেট পাসও নয়, রওনাও নয়। আগে থেকে বিল থাকলে কিছুই করে না।
+                 */
+                app(DispatchBill::class)->forDispatch($challan);
                 app(GatePassService::class)->issueFor($challan, $event);
             }
 
@@ -696,6 +702,23 @@ final class DeliveryStageService
         }
 
         return $phone;
+    }
+
+    /**
+     * মাল কি এই ধাপে গেট পেরোল?
+     *
+     * ⓘ রওনা তো বটেই। ⚠️ আর গুদাম থেকে সোজা "পৌঁছেছে" (ক্রেতার নিজের গাড়ি, বা হাতে হাতে) —
+     * তখন রওনার ধাপ আসে না, অথচ মালটা গেট পেরোচ্ছে; এখানে না ধরলে ঐ পথে বিলও হত না, গেট
+     * পাসও না। ⛔ রওনার পরে পৌঁছানো নয় — সেখানে গেট আগেই পেরিয়েছে।
+     */
+    private function leavesTheGate(?string $from, string $to): bool
+    {
+        if ($to === DeliveryStage::DISPATCHED) {
+            return true;
+        }
+
+        return in_array($to, DeliveryStage::NEEDS_RECEIVER, true)
+            && in_array($from, [DeliveryStage::ALLOCATED, DeliveryStage::PICKING, DeliveryStage::PACKED], true);
     }
 
     /** ফাঁকা হলে null; সীমার বেশি হলে না। */

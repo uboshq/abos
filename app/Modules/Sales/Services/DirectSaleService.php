@@ -352,6 +352,8 @@ final class DirectSaleService
                 );
             }
 
+            $this->handOverIfAsked($challan, $data, $customer);
+
             $total = (string) $invoice->total;
 
             return [
@@ -940,6 +942,32 @@ final class DirectSaleService
      * @param  array<string, mixed>  $data
      * @return array{screen: array<mixed>, fields: array<string, scalar|null>}
      */
+    /**
+     * ⭐ "এখনই হাতে হাতে" — মালিক, ২৯ সেপ্টেম্বর ২০২৬: এক চাপে চালান, বিল, গেট পাস আর "পৌঁছেছে"।
+     *
+     * ⓘ ধাপ বসে [[DeliveryStageService::move()]] দিয়ে — গুদাম থেকে সোজা পৌঁছানো মানে মাল গেট
+     * পেরোল, তাই সেখানেই গেট পাস ([[DeliveryStageService::leavesTheGate()]]); বিল আগেই আছে, তাই
+     * দ্বিতীয় বিল হয় না। ⓘ প্রাপক খালি হলে গ্রাহক নিজে — কাউন্টারে যিনি দাঁড়িয়ে তিনিই নিলেন।
+     *
+     * "পরে পাঠানো" (ডিফল্ট) — কিছুই নয়: বিক্রিটা ডেলিভারির তালিকায় অপেক্ষা করে, রওনায় গেট পাস।
+     *
+     * @param  array<string, mixed>  $fields
+     */
+    private function handOverIfAsked(DeliveryChallan $challan, array $fields, ?Customer $customer): void
+    {
+        if (($fields['hand_over'] ?? 'later') !== 'now') {
+            return;
+        }
+
+        $receiver = trim((string) ($fields['receiver_name'] ?? ''));
+
+        app(DeliveryStageService::class)->move($challan->fresh(), DeliveryStage::DELIVERED, [
+            'receiver_name' => $receiver !== '' ? $receiver : (string) ($customer?->name_bn ?: $customer?->name_en),
+            'receiver_phone' => trim((string) ($fields['receiver_phone'] ?? '')) ?: null,
+            'note' => __('sales::field.hand_over_now'),
+        ]);
+    }
+
     private function screenOf(array $data): array
     {
         $screen = json_decode((string) ($data['screen_state'] ?? ''), true);
@@ -1054,6 +1082,9 @@ final class DirectSaleService
             foreach ($vouchers as $voucher) {
                 $this->postCounterVoucher($voucher->fresh());
             }
+
+            // ⓘ সইয়ের পরে শেষ হলেও কাউন্টারের বাছাই মানা — পর্দার ছবিতে রাখা ([[screenOf()]])
+            $this->handOverIfAsked($challan, (array) ($invoice->counter_screen['fields'] ?? []), Customer::query()->find($invoice->customer_id));
 
             return $invoice->fresh(['lines']);
         });
