@@ -167,6 +167,16 @@ final class DirectSaleService
          * ([[hold()]]), আর চালানের সইয়ের অনুরোধ যায় **লেনদেনের বাইরে** — টিকে থাকে।
          * শেষ সইয়ে বিক্রিটা শেষ হয় [[finishHeld()]] দিয়ে।
          */
+        /*
+         * ⭐ মার্জিনের সই — NEXUS §৩২। খরচের নিচে, আর কোম্পানি "অনুমোদন" বেছেছে: বিক্রি খসড়া,
+         * মাল নড়ে না, অনুরোধ লেনদেনের **বাইরে** লেখা হয় ([[holdForMargin()]])।
+         * ⛔ ভিতরে লিখে ছুঁড়লে লেনদেনটা অনুরোধটাও মুছত — "সইয়ের অপেক্ষায়", অথচ তালিকায় কিছু নেই।
+         * ⓘ শেষ সইয়ে বাকিটা [[HeldCounterSaleFinisher]] — অন্য সইয়ের মতোই।
+         */
+        if (app(MarginGuard::class)->counterSaleNeedsApproval($data, $lines)) {
+            return $this->holdForMargin($this->hold($data, $lines, $gifts, $customer, $warehouse, asDraft: false));
+        }
+
         try {
             return $this->sellNow($data, $lines, $gifts, $customer, $warehouse);
         } catch (HeldForApproval) {
@@ -185,7 +195,8 @@ final class DirectSaleService
                 $result['challan_held'] = (string) collect($held->errors())->flatten()->first();
             }
 
-            return $result;
+            // ⓘ চালানের ভিতরের মার্জিন-দেয়াল থামিয়েছিল কি না — আগে-থেকে-দেখা ফসকালেও অনুরোধ হারায় না
+            return $this->holdForMargin($result);
         }
     }
 
@@ -195,6 +206,27 @@ final class DirectSaleService
      * @param  list<array<string, mixed>>  $gifts
      * @return array<string, mixed>
      */
+    /**
+     * ⭐ খসড়া রাখা বিক্রির মার্জিন-সই — লেনদেনের বাইরে, যাতে অনুরোধটা টিকে থাকে (NEXUS §৩২)।
+     *
+     * ⓘ দেয়ালটা [[MarginGuard::assertMargin()]] — "অনুমোদন" হলে অনুরোধ লিখে থামে; অন্য
+     * অবস্থায় (সতর্ক, বা সীমার উপরে) কিছুই থামায় না, কেবল সতর্কবার্তা সেশনে।
+     *
+     * @param  array<string, mixed>  $result  [[hold()]]-এর ফল
+     * @return array<string, mixed>
+     */
+    private function holdForMargin(array $result): array
+    {
+        try {
+            app(MarginGuard::class)->assertMargin($result['challan']->fresh(['lines']));
+        } catch (HeldForApproval) {
+            $result['margin_held'] = true;
+            $result['margin_notice'] = __('sales::margin.sale_held', ['invoice' => $result['invoice']->document_no]);
+        }
+
+        return $result;
+    }
+
     private function sellNow(array $data, array $lines, array $gifts, Customer $customer, Warehouse $warehouse): array
     {
         return DB::transaction(function () use ($data, $lines, $gifts, $customer, $warehouse) {

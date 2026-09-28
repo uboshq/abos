@@ -128,6 +128,7 @@
     <form method="POST" action="{{ route('sales.direct.store') }}"
           x-data="directSale({
               catalogue: @js($products),
+              margin: @js($margin),
               lots: @js($lots),
               customers: @js($customerTerms),
               walkinId: {{ $walkinId }},

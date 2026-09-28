@@ -42,6 +42,9 @@
                                                   x-text="@js(__('sales::field.lot')) + ' ' + line.batchNo"></span>
                                         </template>
 
+                                        {{-- ⭐ মার্জিন — খরচের চাবিধারীর জন্য, লটের নিচে (NEXUS §৩২) --}}
+                                        @include('sales::direct.partials.margin-line')
+
                                         <input type="hidden" :name="'lines[' + (i) + '][product_id]'" :value="line.id">
 
                                         {{-- ⚠️ লুকানো ঘরটা সবসময় যায়, খালি হলেও — ⓘ লট

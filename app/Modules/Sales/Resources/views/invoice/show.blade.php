@@ -95,6 +95,9 @@
         </div>
     @endif
 
+    {{-- ⓘ মার্জিনের সতর্কতা — বিল "সতর্ক" পথে নিশ্চিত হলে (NEXUS §৩২) --}}
+    @include('sales::margin.partials.warnings', ['spacing' => 'mb-4'])
+
     {{-- গ্রাহককে পাঠানোর লিংক — "পাঠান" চাপার পরে --}}
     <x-ui.shared-link :message="__('sales::doc.invoice').' '.$invoice->document_no" />
 

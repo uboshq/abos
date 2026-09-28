@@ -671,6 +671,9 @@
                     </div>
                 @endif
 
+                {{-- ⓘ মার্জিনের সতর্কতা — "সতর্ক" পথে বিক্রি হয়েছে, কথাটা বলা (NEXUS §৩২) --}}
+                @include('sales::margin.partials.warnings', ['spacing' => 'mt-2'])
+
                 @if ($errors->any())
                     <div role="alert"
                          class="mt-2 rounded-(--radius-field) bg-(--color-badge-danger-bg) px-3 py-2 text-xs

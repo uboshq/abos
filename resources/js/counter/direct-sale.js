@@ -28,6 +28,7 @@
  */
 
 import { taka } from '../components/money.js'
+import { lineMargin, marginLabel } from './margin.js'
 
 /*
  * ⓘ জমার খালি খসড়া — তিন জায়গায় লাগে (শুরু, "যোগ করুন"-এর পরে, "সব
@@ -75,6 +76,7 @@ export default function directSale({
     paymentTermDefault, carriers, drivers, depositMethods, moneyAccounts,
     draftKey, hasErrors, texts, freeAllowedUrl, warehouseId, creditRules, lots,
     pendingDrafts, resume, pendingUrl, transferModes, approvalNotice,
+    margin = { costs: {}, floor: 0, words: {} },
 }) {
     /*
      * ⓘ লটের তালিকা — পণ্যের আইডি ধরে, মেয়াদের ক্রমে সাজানো।
@@ -1838,6 +1840,29 @@ export default function directSale({
             return this.isInclusive(line)
                 ? this.lineAfterDiscount(line)
                 : this.lineAfterDiscount(line) + this.lineVat(line);
+        },
+
+        /* ⭐ সারির মার্জিন — NEXUS §৩২, আনুমানিক ([[margin.js]]); আসল দেয়াল সার্ভারে।
+           ⓘ নিট = ছাড়ের পরে, দামের ভিতরের ভ্যাট বাদে — [[MarginGuard]] ঠিক এটাই মাপে।
+           ⛔ খরচের চাবি না থাকলে `margin.costs` খালি — কিছুই দেখানো হয় না। */
+        marginOf(line) {
+            const net = this.lineAfterDiscount(line) - (this.isInclusive(line) ? this.lineVat(line) : 0);
+
+            return lineMargin({ qty: line.qty, unitId: line.unitId, net }, (margin.costs || {})[line.id], margin.floor);
+        },
+
+        marginShown(line) {
+            return this.marginOf(line) !== null;
+        },
+
+        marginBelow(line) {
+            const m = this.marginOf(line);
+
+            return !! (m && ! m.unknown && m.below);
+        },
+
+        marginText(line) {
+            return marginLabel(this.marginOf(line), margin.words || {});
         },
 
         get subTotal() {

@@ -31,6 +31,7 @@ use App\Modules\Sales\Models\DeliveryChallan;
 use App\Modules\Sales\Models\SalesInvoice;
 use App\Modules\Sales\Services\CreditExposure;
 use App\Modules\Sales\Services\DirectSaleService;
+use App\Modules\Sales\Services\MarginGuard;
 use App\Modules\Sales\Services\TransportRule;
 use App\Modules\Supplier\Models\Supplier;
 use Illuminate\Http\JsonResponse;
@@ -107,9 +108,21 @@ class DirectSaleController extends Controller implements HasMiddleware
         // শীট আর প্যাকের ড্রপডাউন — একই তালিকা, তাই একবারই তোলা
         $sheetProducts = Product::query()->active()->with('unit')->orderBy('name_en')->get();
 
+        $catalogue = $this->catalogue($warehouse);
+
         return view('sales::direct.index', [
             'menu' => $this->menu->forUser($request->user()),
-            'products' => $this->catalogue($warehouse),
+            'products' => $catalogue,
+
+            /*
+             * ⭐ কার্টের সারির মার্জিন — NEXUS §৩২ ([[MarginGuard::screen()]])। ⛔ খরচের চাবি
+             * না থাকলে খরচের তালিকা খালি যায় — পাতার উৎসেও খরচ থাকে না।
+             */
+            'margin' => app(MarginGuard::class)->screen(
+                $request->user(),
+                // ⚠️ ক্যাটালগের সারি মডেল নয় (stdClass) — খরচের সিঁড়ি পণ্যের মডেল চায়
+                Product::query()->whereIn('id', collect($catalogue)->pluck('id'))->get(),
+            ),
 
             /*
              * ⭐ লট ধরা পণ্যের লটগুলো — পণ্যের আইডি ধরে, মেয়াদের ক্রমে।
@@ -980,6 +993,13 @@ class DirectSaleController extends Controller implements HasMiddleware
          * খালি হয়ে ফেরে। ⓘ শেষ করাটা আগের মতোই বিলের পাতার বোতামে; বার্তা
          * বিলের নম্বর বলে।
          */
+        /* ⭐ মার্জিনের সইয়ে গেছে — চালানের সইয়ের মতোই, কাউন্টারে ফেরে বার্তা নিয়ে (NEXUS §৩২) */
+        if ($result['margin_held'] ?? false) {
+            return redirect()
+                ->route('sales.direct.create')
+                ->with('approval_notice', $result['margin_notice']);
+        }
+
         /* ⓘ চালানের সই চাওয়া হয়েছে — বিক্রিটা সইয়ের অপেক্ষায় জমা, কার্ট খোলা রাখা নয় */
         if (($result['challan_held'] ?? null) !== null) {
             return redirect()
