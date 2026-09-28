@@ -7,6 +7,7 @@ namespace App\Modules\Accounts\Services;
 use App\Core\Engines\NumberSeries\NumberSeriesEngine;
 use App\Core\Engines\Posting\PostingEngine;
 use App\Core\Support\CompanyContext;
+use App\Core\Support\DateFormat;
 use App\Core\Support\Money;
 use App\Models\LedgerEntry;
 use App\Modules\Accounts\Models\Account;
@@ -252,10 +253,27 @@ final class ChequeService
     {
         $this->assertStatus($cheque, [Cheque::PENDING]);
 
+        $bankAccountId ??= $cheque->bank_account_id;
+        $date = $onDate ?? now()->toDateString();
+
+        /*
+         * ⭐ মালিকের হিসাবের নিয়ম, ২৭ সেপ্টেম্বর ২০২৬ — চেক জমা পড়ে কেবল
+         * ব্যাংকে, আর নিজের তারিখের আগে নয়।
+         *
+         * ⛔ আগে যেকোনো খাত নেওয়া হত — নগদ বাক্স বা বিকাশে "জমা" লেখা
+         * থাকলে পাশের দিন টাকাটা সেখানেই বসত। ⓘ খাত না বলা আগের মতোই
+         * চলে; পাশের দিন [[bankFor()]] তখন ব্যাংক চায়।
+         */
+        if ($bankAccountId !== null) {
+            $this->mustBeABank(Account::query()->find($bankAccountId));
+        }
+
+        $this->mustBeDue($cheque, $date, 'deposited_on');
+
         $cheque->update([
             'status' => Cheque::DEPOSITED,
-            'deposited_on' => $onDate ?? now()->toDateString(),
-            'bank_account_id' => $bankAccountId ?? $cheque->bank_account_id,
+            'deposited_on' => $date,
+            'bank_account_id' => $bankAccountId,
         ]);
 
         return $cheque->fresh();
@@ -270,6 +288,21 @@ final class ChequeService
 
         $bank = $this->bankFor($cheque, $bankAccountId);
         $date = $onDate ?? now()->toDateString();
+
+        /*
+         * ⭐ মালিকের হিসাবের নিয়ম, ২৭ সেপ্টেম্বর ২০২৬ — গৃহীত ও দেওয়া
+         * দুই চেকই পাশ হয় কেবল ব্যাংকে, আর নিজের তারিখের আগে নয়।
+         *
+         * ⛔ আগে নগদ বাক্স বা বিকাশেও "পাশ" বসত — বাক্সে এমন টাকা দেখাত যা
+         * কোনো ক্যাশিয়ার গোনেনি। আর আগাম তারিখের চেক আগেই পাশ বসালে
+         * ডিলারের বকেয়া আগেভাগে কমত।
+         *
+         * ⚠️ পাহারা এখানে, [[bankFor()]]-এ নয় — ফেরতের পথও ওটা ডাকে, আর
+         * আগে ভুল খাতে পাশ হওয়া পুরনো চেক যেন ফেরত আটকে না যায়।
+         */
+        $this->mustBeABank($bank);
+        $this->mustBeDue($cheque, $date, 'cleared_on');
+
         $amount = (string) $cheque->amount;
 
         return DB::transaction(function () use ($cheque, $bank, $date, $amount) {
@@ -499,6 +532,52 @@ final class ChequeService
         }
 
         return $bank;
+    }
+
+    /**
+     * চেকের টাকা নামে কেবল ব্যাংক হিসাবে।
+     *
+     * ⓘ খাতটা না পেলে আগের বার্তা ("কোন ব্যাংক"); পেলে, কিন্তু ব্যাংক
+     * না হলে, নতুন বার্তা — নগদ বাক্স আর বিকাশে চেক জমা পড়ে না।
+     */
+    private function mustBeABank(?Account $account): void
+    {
+        if ($account === null) {
+            throw ValidationException::withMessages([
+                'bank_account_id' => __('accounts::validation.cheque_needs_bank'),
+            ]);
+        }
+
+        if (! $account->isBank()) {
+            throw ValidationException::withMessages([
+                'bank_account_id' => __('accounts::validation.cheque_needs_a_bank_account', [
+                    'account' => $account->label(),
+                ]),
+            ]);
+        }
+    }
+
+    /**
+     * আগাম তারিখের চেক নিজের তারিখের আগে টাকা নয়।
+     *
+     * ⓘ কেবল দিন মেলানো হয়, সময় নয় — চেকের তারিখের দিনটাতেই চলে।
+     */
+    private function mustBeDue(Cheque $cheque, Carbon|string $onDate, string $field): void
+    {
+        if ($cheque->cheque_date === null) {
+            return;
+        }
+
+        $on = ($onDate instanceof Carbon ? $onDate : Carbon::parse($onDate))->toDateString();
+
+        if ($on < $cheque->cheque_date->toDateString()) {
+            throw ValidationException::withMessages([
+                $field => __('accounts::validation.cheque_not_due_yet', [
+                    'no' => $cheque->cheque_no,
+                    'date' => DateFormat::format($cheque->cheque_date),
+                ]),
+            ]);
+        }
     }
 
     /** @return array<string, mixed> */

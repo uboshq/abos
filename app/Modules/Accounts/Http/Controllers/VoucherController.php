@@ -523,7 +523,16 @@ class VoucherController extends Controller implements HasMiddleware
             'instrument_no' => ['nullable', 'string', 'max:64'],
         ]);
 
-        if (filled($validated['instrument_no'] ?? null)) {
+        /*
+         * ⛔ কেবল খসড়ায় — ২৭ সেপ্টেম্বর ২০২৬।
+         *
+         * ⚠️ আগে নম্বরটা আগে সংরক্ষণ হত, আর "আগেই পোস্ট হয়েছে" ধরা পড়ত
+         * তার পরে ([[VoucherService::post()]])। ফলে পোস্ট-হওয়া ভাউচারেও এই
+         * দরজায় নতুন নম্বর পাঠালে নম্বরটা বদলে যেত — তারপর ভুলবার্তা।
+         * ⓘ নম্বর ছাপের বাইরে ([[Voucher::fingerprintIgnores()]]) কেবল
+         * পোস্ট হওয়া পর্যন্ত; তারপর ওটা আর নড়ে না।
+         */
+        if ($voucher->isDraft() && filled($validated['instrument_no'] ?? null)) {
             $voucher->forceFill(['instrument_no' => trim($validated['instrument_no'])])->save();
         }
 

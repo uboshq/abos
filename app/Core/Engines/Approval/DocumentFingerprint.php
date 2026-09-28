@@ -121,8 +121,21 @@ final class DocumentFingerprint
     {
         $out = [];
 
+        /*
+         * ⭐ কাগজের নিজের সংকীর্ণ ব্যতিক্রম — ২৭ সেপ্টেম্বর ২০২৬।
+         *
+         * ⓘ উপরের তালিকা সব কাগজের। কোনো কাগজের একটা ঘর যদি সইয়ের শর্ত না
+         * হয়ে **প্রমাণ** হয় (যেমন ভাউচারের ব্যাংক লেনদেন নম্বর — টাকা নড়ার
+         * পরে জন্মায়), সেটা কাগজটা নিজেই বলে (`fingerprintIgnores()`)।
+         * ⚠️ তালিকাটা এখানে সবার জন্য বাড়ানো হয়নি: তাহলে আদায়, পরিশোধ
+         * সব কাগজেই ঘরটা ছাপের বাইরে চলে যেত।
+         */
+        $skip = method_exists($document, 'fingerprintIgnores')
+            ? [...self::NOT_THE_PAPER, ...$document->fingerprintIgnores()]
+            : self::NOT_THE_PAPER;
+
         foreach ($document->getAttributes() as $key => $value) {
-            if (in_array($key, self::NOT_THE_PAPER, true)) {
+            if (in_array($key, $skip, true)) {
                 continue;
             }
 

@@ -24,6 +24,19 @@
     $bankAccount = $voucher->lines->map(fn ($line) => $line->account)
         ->first(fn ($a) => $a !== null && ($a->isBank() || $a->isMfs()));
     $needsReference = $bankAccount !== null && blank($voucher->instrument_no);
+
+    /*
+     * ⭐ অনুমোদনের অপেক্ষা পাতা নিজেই বলে — ২৭ সেপ্টেম্বর ২০২৬, লাইভে RCV-0001।
+     *
+     * ⛔ আগে এটা জানা যেত কেবল পোস্ট চাপার পরের একবারের ফ্ল্যাশে, আর সেটা
+     * `back()`-এর উপর নির্ভর করত। পাতা আবার খুললে বা দ্বিতীয়বার চাপলে কিছুই
+     * বলা হত না। ⓘ এখন খসড়া যতক্ষণ সইয়ের অপেক্ষায়, পাতায় স্থায়ী লেখা থাকে।
+     */
+    $awaitingApproval = $voucher->isDraft() && \App\Models\Approval::query()
+        ->where('approvable_type', $voucher::class)
+        ->where('approvable_id', $voucher->id)
+        ->pending()
+        ->exists();
 @endphp
 
 @php
@@ -54,15 +67,29 @@
                             {{ __('core.action.edit') }}
                         </x-ui.button>
 
+                        @if ($awaitingApproval)
+                            {{-- ⚠️ কেবল বান্ডিলে থাকা শ্রেণি — লাইভে node নেই, তাই নতুন শ্রেণি
+                                 (যেমন `self-center`) চুপচাপ উপেক্ষা হত (Architecture ধরেছে)। --}}
+                            <p role="status"
+                               class="rounded-(--radius-field) bg-(--color-badge-warning-bg) px-3 py-1.5
+                                      text-sm text-(--color-badge-warning-ink)">
+                                {{ __('accounts::message.voucher_approval_pending', ['no' => $voucher->document_no]) }}
+                            </p>
+                        @endif
+
                         <form method="POST" action="{{ route('accounts.voucher.post', $voucher) }}"
                               class="flex items-end gap-2">
                             @csrf
+                            {{-- ⛔ `required` নেই — ২৭ সেপ্টেম্বর ২০২৬, লাইভে RCV-0001।
+                                 ঘর খালি রেখে চাপলে ব্রাউজার জমাটাই পাঠাত না: সার্ভারে কিছু
+                                 পৌঁছাত না, কেবল ক্ষণস্থায়ী বুদবুদ — মানুষ ভাবতেন বোতাম
+                                 কাজ করে না। ⓘ এখন খালি পাঠালে সার্ভার পাতায় স্পষ্ট বলে
+                                 কেন আটকাল ([[VoucherService::assertBankReferenceIsFree()]])। --}}
                             @if ($needsReference)
                                 <x-ui.field name="instrument_no"
                                             :label="__('accounts::field.bank_reference')"
                                             :hint="$bankAccount->label()"
                                             :value="old('instrument_no')"
-                                            required
                                             class="w-56" />
                             @endif
                             <x-ui.button type="submit" tone="primary">

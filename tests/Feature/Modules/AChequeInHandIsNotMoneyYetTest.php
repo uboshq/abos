@@ -86,6 +86,12 @@ class AChequeInHandIsNotMoneyYetTest extends TestCase
     }
 
     /**
+     * ⚠️ বদলানো প্রস্তুতি, ২৭ সেপ্টেম্বর ২০২৬: চেকের তারিখ আগে ছিল আজ + ৭,
+     * আর দাবিগুলো সেটা আজই জমা বা পাশ করত। ⭐ মালিকের নিয়মে আগাম তারিখের
+     * চেক নিজের তারিখের আগে জমা বা পাশ হয় না
+     * ([[AChequeWaitsForItsDateAndItsBankTest]]) — তাই এখন তারিখ আজ। ⓘ যে
+     * দাবির অন্য তারিখ লাগে, সে `$extra` দিয়ে নিজেই বলে।
+     *
      * @param  array<string, mixed>  $extra
      */
     private function received(string $amount = '50000', array $extra = []): Cheque
@@ -94,7 +100,7 @@ class AChequeInHandIsNotMoneyYetTest extends TestCase
             'direction' => Cheque::RECEIVED,
             'cheque_no' => 'A'.random_int(100000, 999999),
             'bank_name' => 'Sonali Bank',
-            'cheque_date' => now()->addDays(7)->toDateString(),
+            'cheque_date' => now()->toDateString(),
             'amount' => $amount,
             'party_type' => 'customer',
             'party_id' => $this->dealer->id,

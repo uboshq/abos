@@ -804,6 +804,24 @@ final class VoucherService
             ]);
         }
 
+        /*
+         * ⛔ অর্থহীন নম্বর নয় — ২৭ সেপ্টেম্বর ২০২৬।
+         *
+         * ⓘ নম্বরটা পোস্টের মুহূর্তে চাওয়ার কারণই ছিল যে আগে চাইলে মানুষ
+         * `0` বসিয়ে এগিয়ে যেতেন। ⚠️ তাই এখানেও সেই ফাঁক বন্ধ: অন্তত চারটা
+         * অক্ষর বা অঙ্ক, আর কেবল শূন্য বা চিহ্ন নয়। ⓘ দুইবার ব্যবহারের
+         * পাহারা নিচে আগের মতোই।
+         */
+        $meaningful = preg_replace('/[^\p{L}\p{N}]/u', '', $reference);
+
+        if (mb_strlen($meaningful) < 4 || preg_match('/^0+$/', $meaningful) === 1) {
+            throw ValidationException::withMessages([
+                'instrument_no' => __('accounts::validation.bank_reference_meaningless', [
+                    'reference' => $reference,
+                ]),
+            ]);
+        }
+
         $twin = Voucher::query()
             ->where('money_account_id', $account->id)
             ->where('instrument_no', $reference)

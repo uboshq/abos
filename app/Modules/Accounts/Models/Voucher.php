@@ -296,6 +296,28 @@ class Voucher extends Model implements Drillable
         return $this->status === DocumentStatus::DRAFT;
     }
 
+    /**
+     * সইয়ের ছাপের বাইরে — কেবল ব্যাংক বা MFS-এর লেনদেন নম্বর ([[DocumentFingerprint]])।
+     *
+     * ── ⭐ কেন — ২৭ সেপ্টেম্বর ২০২৬, লাইভে TCL-এর RCV-0001 ─────────────
+     * নম্বরটা টাকা নড়ার **প্রমাণ**, সইকারী যে শর্তে সম্মতি দেন তা নয়
+     * (অঙ্ক, খাত, পক্ষ, তারিখ, মাধ্যম — ওগুলো ছাপেই থাকে)। ⓘ আর নম্বরটা
+     * জন্মায় টাকা নড়ার পরে, তাই চাওয়া হয় পোস্টের মুহূর্তে ([[show.blade.php]])।
+     * ⛔ ছাপে থাকলে সইয়ের পরে নম্বর বসাতেই ছাপ বদলাত, সই বাতিল হত, আর
+     * প্রতিটা ব্যাংক রসিদে দুইবার সই লাগত।
+     *
+     * ⚠️ মালিকের ২৪ সেপ্টেম্বরের নিয়মের ("যেকোনো ঘর বদলালে সই বাতিল")
+     * একটা সংকীর্ণ ব্যতিক্রম — সমন্বয়কারীর সিদ্ধান্ত। বাকি তিন শর্ত:
+     * পোস্টের পরে নম্বর আর বদলায় না, বসানোটা অডিটে ওঠে, আর অর্থহীন নম্বর
+     * আটকায় ([[VoucherService::assertBankReferenceIsFree()]])।
+     *
+     * @return list<string>
+     */
+    public function fingerprintIgnores(): array
+    {
+        return ['instrument_no'];
+    }
+
     public function isCancelled(): bool
     {
         return $this->status === DocumentStatus::CANCELLED;
