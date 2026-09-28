@@ -69,7 +69,7 @@
                 @unless ($bill->status === \App\Core\Support\DocumentStatus::CANCELLED)
                     @can('delete', $bill)
                         <form method="POST" action="{{ route('purchase.bill.cancel', $bill) }}"
-                              x-data="reasonPrompt({ question: @js(__('purchase::message.cancel_reason_prompt')) })"
+                              x-data="reasonPrompt({ question: @js(__('purchase::message.cancel_reason_prompt')), empty: @js(__('core.form.cancel_needs_reason')) })"
                               @submit="ask($event)">
                             @csrf
                             <input type="hidden" name="reason" x-ref="reason">

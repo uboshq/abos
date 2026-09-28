@@ -119,7 +119,7 @@
                         {{-- বাতিলের কারণ বাধ্যতামূলক — কারণ ছাড়া বাতিল করা
                              ভাউচার পরে কেউ ব্যাখ্যা করতে পারে না --}}
                         <form method="POST" action="{{ route('accounts.voucher.cancel', $voucher) }}"
-                              x-data="reasonPrompt({ question: @js(__('accounts::message.cancel_reason_prompt')) })"
+                              x-data="reasonPrompt({ question: @js(__('accounts::message.cancel_reason_prompt')), empty: @js(__('core.form.cancel_needs_reason')) })"
                               @submit="ask($event)">
                             @csrf
                             <input type="hidden" name="cancel_reason" x-ref="reason">

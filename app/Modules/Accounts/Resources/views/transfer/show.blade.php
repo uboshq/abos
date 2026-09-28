@@ -26,7 +26,7 @@
                 @unless ($transfer->isCancelled())
                     @can('accounts.transfer.create')
                         <form method="POST" action="{{ route('accounts.transfer.cancel', $transfer) }}"
-                              x-data="reasonPrompt({ question: @js(__('accounts::message.cancel_reason_prompt')) })"
+                              x-data="reasonPrompt({ question: @js(__('accounts::message.cancel_reason_prompt')), empty: @js(__('core.form.cancel_needs_reason')) })"
                               @submit="ask($event)">
                             @csrf
                             <input type="hidden" name="cancel_reason" x-ref="reason">

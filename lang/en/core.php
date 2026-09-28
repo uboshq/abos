@@ -983,6 +983,7 @@ return [
         'required' => 'required',
         'choose' => '— choose —',
         'optional' => 'optional',
+        'cancel_needs_reason' => 'Nothing is cancelled without a reason — write why; six months on, this line is the only answer.',
         // Dates read day-month-year everywhere, never the browser's locale
         'date_hint' => 'dd-mm-yyyy',
         'pick_date' => 'Open calendar',

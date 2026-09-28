@@ -66,18 +66,33 @@ export function coaForm ({ parent = '', isGroup = false, isNew = false, kind = '
  * বাতিলের কারণ — বাধ্যতামূলক, কারণ কারণ ছাড়া বাতিল হওয়া কাগজ পরে কেউ
  * ব্যাখ্যা করতে পারে না। ⓘ না লিখলে জমাটাই থামে।
  */
-export function reasonPrompt ({ question }) {
+export function reasonPrompt ({ question, empty = null }) {
     return {
+        /*
+         * ⛔ "বাতিল চাপা" আর "ফাঁকা কারণ" আলাদা — ২৭ সেপ্টেম্বর ২০২৬, লাইভে ধরা।
+         *
+         * ⓘ `prompt()` বাতিল চাপলে `null` দেয় — মানুষ মত বদলেছেন, চুপ থাকাই
+         * ঠিক। ফাঁকা রেখে ঠিক চাপলে দেয় `''` — মানুষ বাতিল করতেই চান, তাই
+         * কেন আটকাল সেটা বলতে হবে। ⚠️ আগে দুইটাই চুপচাপ থামত, আর শুধু স্পেস
+         * লেখা কারণ "আছে" ধরে জমা যেত, তারপর সার্ভার ফেরাত।
+         */
         ask (event) {
             const reason = prompt(question)
 
-            if (! reason) {
+            if (reason === null) {
                 event.preventDefault()
 
                 return
             }
 
-            this.$refs.reason.value = reason
+            if (reason.trim() === '') {
+                event.preventDefault()
+                alert(empty || question)
+
+                return
+            }
+
+            this.$refs.reason.value = reason.trim()
         },
     }
 }

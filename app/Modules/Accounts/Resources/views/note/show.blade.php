@@ -32,7 +32,7 @@
                         {{-- ⚠️ কারণ বাধ্যতামূলক — নোট নিজেই একটা ব্যাখ্যার কাগজ,
                              আর ব্যাখ্যাহীন বাতিল পরে কেউ বুঝত না --}}
                         <form method="POST" action="{{ route('accounts.note.cancel', $note) }}"
-                              x-data="reasonPrompt({ question: @js(__('accounts::note.cancel_reason_prompt')) })"
+                              x-data="reasonPrompt({ question: @js(__('accounts::note.cancel_reason_prompt')), empty: @js(__('core.form.cancel_needs_reason')) })"
                               @submit="ask($event)">
                             @csrf
                             <input type="hidden" name="cancel_reason" x-ref="reason">
