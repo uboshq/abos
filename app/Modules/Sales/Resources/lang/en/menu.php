@@ -6,6 +6,9 @@ return [
     // Owner, 28 Sep 2026: today's sales order is called a Delivery Order
     'orders' => 'Sales Orders',
     'delivery_orders' => 'Delivery Orders',
+    'do_list' => 'DO List',
+    'dispatch_register' => 'Dispatch Register',
+    'delivery_confirmation' => 'Delivery Confirmation',
     'order_track' => 'Order Tracking',
     'receipts' => 'Goods Received',
     'bills' => 'Purchase Bills',

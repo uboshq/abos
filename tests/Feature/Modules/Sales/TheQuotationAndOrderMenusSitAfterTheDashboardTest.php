@@ -42,7 +42,7 @@ final class TheQuotationAndOrderMenusSitAfterTheDashboardTest extends TestCase
 
         $quotations = strpos($html, e(__('core.menu.quotations')));
         $orders = strpos($html, e(__('core.menu.sales_orders')));
-        $delivery = strpos($html, e(__('sales::menu.delivery_orders')));
+        $delivery = strpos($html, e(__('core.menu.delivery_processing')));
 
         $this->assertNotFalse($quotations, '⛔ উদ্ধৃতির ভাঁজ বারে নেই।');
         $this->assertNotFalse($orders, '⛔ বিক্রয় আদেশের ভাঁজ বারে নেই।');
@@ -50,14 +50,18 @@ final class TheQuotationAndOrderMenusSitAfterTheDashboardTest extends TestCase
         $this->assertTrue($quotations < $orders && $orders < $delivery,
             '⛔ ক্রম ভুল — উদ্ধৃতি, তারপর বিক্রয় আদেশ, তারপর বাকি সারি।');
 
-        /* ⭐ শিপমেন্ট ইনভয়েস তালিকার পরে, আর তার পরে মূল্য নির্ধারণ — মালিক, ২৮ সেপ্টেম্বর ২০২৬ */
-        $invoices = strpos($html, e(route('sales.invoice.index')));
+        /* ⭐ Delivery Processing (ডিসপ্যাচ রেজিস্টারসহ), তারপর সরাসরি বিক্রয়, তারপর ইনভয়েস, তারপর মূল্য
+           নির্ধারণ — মালিকের নকশা, ২৮ সেপ্টেম্বর ২০২৬ (রাত) */
         $shipments = strpos($html, e(route('sales.shipment.index')));
-        $pricing = strpos($html, e(__('core.menu.pricing')));
+        $direct = strpos($html, e(route('sales.direct.create')));
+        $invoices = strpos($html, e(route('sales.invoice.index')));
+        // ⓘ রুট ধরে মাপা — ভাঁজের নাম পাতার অন্য জায়গায় আঁকা হয়, তাই নামের অবস্থান ক্রম বলে না
+        $pricing = strpos($html, e(route('sales.price_list.index')));
 
-        $this->assertNotFalse($shipments, 'প্রস্তুতিটাই ভুল — শিপমেন্টের সারি নেই।');
-        $this->assertTrue($invoices !== false && $pricing !== false && $invoices < $shipments && $shipments < $pricing,
-            '⛔ ক্রম ভুল — ইনভয়েস তালিকা, তারপর শিপমেন্ট, তারপর মূল্য নির্ধারণ।');
+        $this->assertNotFalse($shipments, 'প্রস্তুতিটাই ভুল — ডিসপ্যাচ রেজিস্টারের সারি নেই।');
+        $this->assertTrue($direct !== false && $invoices !== false && $pricing !== false
+            && $shipments < $direct && $direct < $invoices && $invoices < $pricing,
+            '⛔ ক্রম ভুল — Delivery Processing, সরাসরি বিক্রয়, ইনভয়েস, মূল্য নির্ধারণ। '.json_encode(compact('shipments', 'direct', 'invoices', 'pricing')));
 
         foreach (PlannedScreenController::SCREENS as $screen) {
             $this->assertStringContainsString(e(route('sales.planned', ['screen' => $screen])), $html,

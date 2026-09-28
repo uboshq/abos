@@ -8,6 +8,9 @@ return [
     'orders' => 'বিক্রয় আদেশ',
     // ⭐ প্রতিটা বিক্রির চালান = একটা DO ([[DeliveryOrderTabs]])
     'delivery_orders' => 'ডেলিভারি অর্ডার',
+    'do_list' => 'DO তালিকা',
+    'dispatch_register' => 'ডিসপ্যাচ রেজিস্টার',
+    'delivery_confirmation' => 'ডেলিভারি নিশ্চিতকরণ',
     // ⭐ আদেশ কোথায় দাঁড়িয়ে — মালিকের চাওয়া, ১৯ সেপ্টেম্বর ২০২৬
     'order_track' => 'আদেশের খোঁজ',
     'receipts' => 'মাল বুঝে নেওয়া',

@@ -152,6 +152,7 @@ return [
         'vouchers' => 'ভাউচার',
         'quotations' => 'উদ্ধৃতি',
         'sales_orders' => 'অর্ডার',
+        'delivery_processing' => 'ডেলিভারি প্রসেসিং',
         'pricing' => 'মূল্য নির্ধারণ',
         'notice' => 'নোটিশ',
         'control' => 'খাতার নিয়ন্ত্রণ',

@@ -155,20 +155,31 @@ return [
              */
             /* ⭐ ডেলিভারি অর্ডার — প্রতিটা বিক্রির চালান, ধাপের ট্যাবে; খসড়ার তালিকা এর ভিতরে
                (মালিকের অনুমোদিত নকশা, ধাপ ৩, ২৮ সেপ্টেম্বর ২০২৬) */
-            ['label' => 'sales::menu.delivery_orders', 'icon' => 'book', 'route' => 'sales.do.index',
+            /*
+             * ⭐ Delivery Processing — মালিকের নকশা, ২৮ সেপ্টেম্বর ২০২৬ (রাত): Create DO, DO List,
+             * চালান, পরিবহন, লোডিং, ডিসপ্যাচ, ডেলিভারি নিশ্চিত — কাগজের ধারায়। ⓘ নিশ্চিতকরণের পরে DO
+             * নিজে চালান; গেট পাস রওনায়; বিল ডেলিভারি নিশ্চিতের পরে। "মেনুতে এখন, কোড পরে" — যে
+             * পর্দা তৈরি হয়নি সে [[PlannedScreenController]]-এর সৎ পাতায়।
+             */
+            ['label' => 'sales::planned.do_new', 'cluster' => 'delivery_processing', 'icon' => 'book', 'route' => 'sales.planned',
+                'route_params' => ['screen' => 'do_new'], 'permission' => 'sales.order.view'],
+            ['label' => 'sales::menu.do_list', 'cluster' => 'delivery_processing', 'icon' => 'book', 'route' => 'sales.do.index',
                 'permission' => 'sales.challan.view'],
+            ['label' => 'sales::menu.challans', 'cluster' => 'delivery_processing', 'icon' => 'challan', 'route' => 'sales.challan.index',
+                'permission' => 'sales.challan.view', 'setting' => 'sales.screen_challans'],
+            ['label' => 'sales::planned.transport_assign', 'cluster' => 'delivery_processing', 'icon' => 'share', 'route' => 'sales.planned',
+                'route_params' => ['screen' => 'transport_assign'], 'permission' => 'sales.order.view'],
+            ['label' => 'sales::planned.loading_sheet', 'cluster' => 'delivery_processing', 'icon' => 'challan', 'route' => 'sales.planned',
+                'route_params' => ['screen' => 'loading_sheet'], 'permission' => 'sales.order.view'],
+            // ⓘ ডিসপ্যাচ রেজিস্টার = ট্রিপের খাতা (শিপমেন্ট) — নিজের সুইচে, আগের মতো
+            ['label' => 'sales::menu.dispatch_register', 'cluster' => 'delivery_processing', 'icon' => 'share', 'route' => 'sales.shipment.index',
+                'permission' => 'sales.shipment.view', 'setting' => 'sales.screen_shipments'],
+            ['label' => 'sales::menu.delivery_confirmation', 'cluster' => 'delivery_processing', 'icon' => 'check-circle', 'route' => 'sales.delivery.index',
+                'permission' => 'sales.delivery.view', 'setting' => 'sales.screen_challans'],
 
-            /* ⓘ আদেশের খোঁজ (১৯ সেপ্টেম্বর ২০২৬) "বিক্রয় আদেশ" ভাঁজে সরেছে — আদেশের সারির পাশে */
-
+            /* ⭐ সরাসরি বিক্রয় — ইনভয়েসের ঠিক আগে: মাঝের সব ধাপ এক চাপে, সোজা বিলে (মালিক, ২৮ সেপ্টেম্বর ২০২৬) */
             ['label' => 'sales::menu.direct', 'icon' => 'sales', 'route' => 'sales.direct.create', 'permission' => 'sales.challan.create',
                 'setting' => 'sales.screen_direct'],
-
-            /* ⓘ খসড়ার তালিকা আলাদা সারি নয় — ডেলিভারি অর্ডারের "খসড়া" ট্যাব (ধাপ ৩) */
-
-            ['label' => 'sales::menu.challans', 'icon' => 'challan', 'route' => 'sales.challan.index', 'permission' => 'sales.challan.view',
-                'setting' => 'sales.screen_challans'],
-            ['label' => 'sales::delivery.title', 'icon' => 'check-circle', 'route' => 'sales.delivery.index',
-                'permission' => 'sales.delivery.view', 'setting' => 'sales.screen_challans'],
 
             /*
              * ⓘ ইনভয়েস তালিকা — মাল যাওয়ার পরে, কারণ বিলটাও তখনই
@@ -181,17 +192,7 @@ return [
              */
             ['label' => 'sales::menu.invoices', 'icon' => 'receipt', 'route' => 'sales.invoice.index', 'permission' => 'sales.invoice.view'],
 
-            /*
-             * শিপমেন্ট — ইনভয়েস তালিকার পরে (মালিকের নির্দেশ, ২৮ সেপ্টেম্বর ২০২৬);
-             * আগে চালানের ঠিক নিচে ছিল। একই সুইচের পেছনে নয়।
-             *
-             * যে ডিপো নিজের গাড়িতে মাল পাঠায় না, তার ট্রিপের পর্দাও
-             * লাগে না — তাই নিজের সুইচ। কিন্তু চালান বন্ধ থাকলে
-             * ট্রিপেরও মানে নেই, আর সেটা সুইচ নয়, বাস্তবতা: তালিকায়
-             * তোলার মতো কোনো চালানই থাকত না।
-             */
-            ['label' => 'sales::menu.shipments', 'icon' => 'share', 'route' => 'sales.shipment.index',
-                'permission' => 'sales.shipment.view', 'setting' => 'sales.screen_shipments'],
+            /* ⓘ শিপমেন্ট এখন "ডিসপ্যাচ রেজিস্টার" নামে Delivery Processing ভাঁজে */
 
             /*
              * ⭐ মূল্য নির্ধারণ — শিপমেন্টের পরে, একটা ভাঁজে (মালিকের নির্দেশ, ২৮
