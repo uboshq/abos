@@ -278,6 +278,17 @@ class AttachmentScreenTest extends TestCase
             'ধনাত্মক নিয়ন্ত্রণটাই ভেঙেছে — ইনি বিল বানাতে পারেন না, তাই নিচের দাবিটা কিছুই প্রমাণ করে না।'
         );
 
+        /*
+         * ⚠️ নতুন অনুরোধের মতো শুরু — ২৮ সেপ্টেম্বর ২০২৬।
+         *
+         * ⓘ লাইভে প্রতিটা অনুরোধ নতুন app পায়। পরীক্ষায় app বেঁচে থাকে: scoped
+         * [[DrillResolver]] (21f12e94) কাগজ তোলার অনুরোধে খসড়া বিলটা মনে রাখে, আর
+         * রুট তার কন্ট্রোলার (ভিতরে সেই রিজলভার) রেখে দেয়। ⛔ তখন মোছার দরজা নিশ্চিত
+         * বিলকে খসড়া দেখত, `update` পাশ করত — আর এই দাবি যা মাপে তা মাপত না।
+         */
+        $this->app->forgetScopedInstances();
+        $this->app['router']->getRoutes()->getByName('attachment.destroy')->flushController();
+
         $this->actingAs($other)
             ->delete(route('attachment.destroy', $paper))
             ->assertForbidden();

@@ -207,10 +207,11 @@ final class TheBankKnewThingsTheBooksHadNeverHeardTest extends TestCase
         $vouchers = app(VoucherService::class);
 
         // ⓘ হুবহু একই অঙ্কের দুইটা সারি, একই দিনে
+        // ⓘ নম্বর অন্তত চার অক্ষর বা অঙ্ক — ২৮ সেপ্টেম্বর থেকে 'W-A'-এর মতো নম্বর ব্যাংকের খাতে বসে না
         foreach (['A', 'B'] as $n) {
             $vouchers->post($vouchers->create(
                 ['type' => Voucher::JOURNAL, 'trx_date' => '2026-09-07',
-                 'narration' => 'তোলা '.$n, 'instrument_no' => 'W-'.$n],
+                 'narration' => 'তোলা '.$n, 'instrument_no' => 'WDR-100'.$n],
                 [
                     ['account_id' => $charge->id, 'debit' => '500', 'credit' => '0'],
                     ['account_id' => $this->bank->id, 'debit' => '0', 'credit' => '500'],

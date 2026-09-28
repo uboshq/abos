@@ -15,6 +15,7 @@ use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Accounts\Services\VoucherService;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\Concerns\PutsMoneyInTheTill;
 use Tests\TestCase;
 
 /**
@@ -31,6 +32,7 @@ use Tests\TestCase;
  */
 final class TheProjectHadNoLedgerOfItsOwnTest extends TestCase
 {
+    use PutsMoneyInTheTill;
     use RefreshDatabase;
 
     private CostCenter $dhaka;
@@ -62,6 +64,13 @@ final class TheProjectHadNoLedgerOfItsOwnTest extends TestCase
 
         $this->cash = Account::query()->money()->postable()->active()->firstOrFail();
         $this->fuel = Account::query()->where('code', StandardChart::BANK_CHARGES)->postable()->firstOrFail();
+
+        /*
+         * ⓵ ২৮ সেপ্টেম্বর ২০২৬: খালি নগদ বাক্স থেকে টাকা বেরোয় না (CashOnHand)। প্রতিটা
+         * খরচ ১,২০০, আজকের তারিখে — তাই আজ ১০,০০০। টাকা আসে ৩১০০ মূলধন থেকে, আর সারিতে
+         * কোনো প্রকল্প নেই, তাই কোনো প্রকল্পের খতিয়ানে ওঠে না।
+         */
+        $this->putMoneyIn($this->cash, '10000', now()->toDateString());
     }
 
     /**
