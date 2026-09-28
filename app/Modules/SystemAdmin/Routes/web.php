@@ -358,6 +358,19 @@ Route::middleware('auth')->prefix('system')->group(function () {
          */
         Route::delete('/{user}/two-step', [UserController::class, 'resetTwoStep'])
             ->whereNumber('user')->name('two_step.reset');
+
+        /*
+         * ⭐ ব্যবহারকারী ধরে দুই ধাপ চালু/বন্ধ — মালিকের নির্দেশ, ২৮ সেপ্টেম্বর ২০২৬।
+         *
+         * ⓘ চাবিটা আলাদা নয় — যে চাবিতে ব্যবহারকারী সম্পাদনা হয়, সেটাই
+         * ([[UserController::middleware()]])। ⚠️ নতুন একটা চওড়া চাবি
+         * বানালে সেটা ভূমিকা-ছকে বসত আর কে কী পায় তার হিসাব ঘোলা হত।
+         *
+         * ⛔ PUT, POST নয়: এটা একটা বিদ্যমান সারির একটা ঘর বদলায়, নতুন
+         * কিছু বানায় না।
+         */
+        Route::put('/{user}/two-step', [UserController::class, 'setTwoStep'])
+            ->whereNumber('user')->name('two_step.set');
     });
 
     /*

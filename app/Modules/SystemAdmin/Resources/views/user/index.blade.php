@@ -122,6 +122,17 @@
             'render' => fn ($u) => view('system_admin::user.partials.status', ['user' => $u]),
         ],
         [
+            /*
+             * ⭐ দুই ধাপের অবস্থা আর বোতাম — মালিকের নির্দেশ, ২৮ সেপ্টেম্বর।
+             * ⓘ অবস্থার পাশে, কারণ দুইটাই *"এই অ্যাকাউন্টটা কেমন
+             * অবস্থায়"* প্রশ্নের উত্তর।
+             */
+            'key' => 'two_step',
+            'label' => __('auth.two_step'),
+            'width' => '9rem',
+            'render' => fn ($u) => view('system_admin::user.partials.two-step', ['user' => $u]),
+        ],
+        [
             'key' => 'actions',
             'label' => __('core.table.actions'),
             'width' => '6rem',

@@ -135,4 +135,12 @@ return [
     'two_step_reset_not_self' => 'Your own two-step cannot be reset from here — use your own screen with your password.',
     'mfa_or_type' => 'If the camera will not read it, type the key below',
     'mfa_uri_hint' => 'Opening this link on the phone adds it to the app directly.',
+    'two_step_now_required' => 'Two-step sign-in is now required for this user. They will get the setup page on their next visit.',
+    'two_step_now_off' => 'Two-step sign-in is off, and the reason is in the audit trail.',
+    'two_step_state_on' => 'On',
+    'two_step_state_pending' => 'Not set up',
+    'two_step_state_off' => 'Off',
+    'two_step_turn_on' => 'Require two-step',
+    'two_step_turn_off' => 'Turn two-step off',
+    'two_step' => 'Two-step',
 ];

@@ -6,6 +6,7 @@ namespace App\Http\Middleware;
 
 use App\Core\Security\MfaService;
 use App\Core\Services\PermissionSyncer;
+use App\Models\User;
 use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -58,19 +59,9 @@ final class SuperAdminMustHaveTwoSteps
 
     public function handle(Request $request, Closure $next): Response
     {
-        /*
-         * ⓘ চালু করার দিনটা মালিকের — ২৮ সেপ্টেম্বর ২০২৬: *"2step rate kori 9ta mone korio"*।
-         * কোডে সবসময় চালু (ডিফল্ট true, পরীক্ষাও তাই মাপে); কেবল কোনো সার্ভারের .env-এ
-         * `ABOS_SUPER_ADMIN_TWO_STEP=false` বসালে সেখানে সাময়িক বন্ধ — মালিক ফোন হাতে না
-         * নিয়ে বসা পর্যন্ত। ⛔ এটা ছাড় নয়, চালুর সময় বাছা।
-         */
-        if (! config('abos.super_admin_two_step', true)) {
-            return $next($request);
-        }
-
         $user = $request->user();
 
-        if ($user === null || ! $user->hasRole(PermissionSyncer::SUPER_ADMIN_ROLE)) {
+        if ($user === null || ! self::isRequiredFor($user)) {
             return $next($request);
         }
 
@@ -80,7 +71,7 @@ final class SuperAdminMustHaveTwoSteps
 
         /*
          * ⓘ API আর fetch-এর জন্য রিডাইরেক্ট নয়, ৪০৩ — একটা JSON
-         * অনুরোধে লগইনের HTML ফেরত গেলে পর্দা সেটাকে **সফল** ধরে নিত।
+         * অনুরোধে লগইনের HTML ফেরত গেলে পর্দা সেটাকে **সফল** ধরে নেয়।
          * ⚠️ এই ঘরে ঐ ভুলটা আগেও হয়েছে।
          */
         if ($request->expectsJson()) {
@@ -88,5 +79,30 @@ final class SuperAdminMustHaveTwoSteps
         }
 
         return redirect()->route('mfa')->with('status', __('auth.two_step_required'));
+    }
+
+    /**
+     * ⭐ এই ব্যবহারকারীর দুই ধাপ বাধ্যতামূলক কি না — দুইটা পথে।
+     *
+     * ── ⓘ দুইটা কেন, আর সুইচটা কেবল প্রথমটায় ──────────────────────────
+     * ⭐ ভূমিকা ধরে: সুপার অ্যাডমিনের সবসময় লাগে — তবে চালুর দিন বাছার
+     *   সুইচটা (`ABOS_SUPER_ADMIN_TWO_STEP`) এই পথটাকে সাময়িকভাবে বন্ধ
+     *   করতে পারে (মালিক ফোন হাতে নিয়ে বসা পর্যন্ত)।
+     * ⭐ সারি ধরে: প্রশাসক নিজে যাঁর জন্য চালু করেন
+     *   (`users.two_step_required`) — মালিকের নির্দেশ, ২৮ সেপ্টেম্বর।
+     *
+     * ⛔ সুইচটা দ্বিতীয় পথটাকে বন্ধ করে **না**, আর সেটা ইচ্ছাকৃত: ওটা
+     * আছে সুপার অ্যাডমিনের তালাটা কবে পড়বে সেটা বাছতে। ⚠️ ওটা দিয়ে
+     * প্রশাসকের হাতে বসানো তালাও খুলে গেলে একটা `.env` লাইন দিয়ে গোটা
+     * ব্যবস্থার দ্বিতীয় তালা খুলে যেত।
+     */
+    public static function isRequiredFor(User $user): bool
+    {
+        if ((bool) ($user->two_step_required ?? false)) {
+            return true;
+        }
+
+        return $user->hasRole(PermissionSyncer::SUPER_ADMIN_ROLE)
+            && (bool) config('abos.super_admin_two_step', true);
     }
 }

@@ -34,4 +34,5 @@ return [
     'discount_approved' => 'Discount approved',
     'overridden' => 'Duplicate allowed',
     'two_step_reset' => 'Two-step reset',
+    'two_step_off' => 'Two-step turned off',
 ];

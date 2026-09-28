@@ -1347,6 +1347,64 @@ class UserController extends Controller implements HasMiddleware
      * মাঝে কিছু ভাঙলে তালা খুলে যেত আর খাতায় কোনো দাগ থাকত না —
      * আর বিনা দাগে খোলা তালাই সবচেয়ে খারাপ ফল।
      */
+    /**
+     * ⭐ এই ব্যবহারকারীর দুই ধাপ চালু বা বন্ধ — মালিকের নির্দেশ, ২৮ সেপ্টেম্বর ২০২৬।
+     *
+     * ── ⓘ চালু করা সস্তা, বন্ধ করা নয় ─────────────────────────────────
+     * ⭐ চালু করা কেবল একটা ঘর `true` — কারণ লাগে না, কারণ এতে
+     * নিরাপত্তা **বাড়ে**। ⓘ পরের অনুরোধেই তিনি বসানোর পর্দায় যাবেন।
+     *
+     * ⛔ বন্ধ করা উল্টো: ওটা একটা তালা খোলা। ⚠️ তাই কারণ লেখা
+     * বাধ্যতামূলক, নিরীক্ষার সারি **আগে** বসে, আর তাঁর বসানো চাবিটাও
+     * মুছে যায় — নাহলে পরে আবার চালু করলে পুরনো ফোনের কোড চলত।
+     *
+     * ── ⚠️ নিজের তালা নিজে খোলা যায় না ────────────────────────────────
+     * [[self::resetTwoStep()]]-এর একই নিয়ম, আর একই কারণে: পারলে
+     * "বাধ্যতামূলক" শব্দটার কোনো মানে থাকত না।
+     * ⓘ নিজের জন্য **চালু** করা অবশ্য চলে — ওটা তালা বসানো, খোলা নয়।
+     */
+    public function setTwoStep(Request $request, User $user, MfaService $mfa): RedirectResponse
+    {
+        $data = $request->validate([
+            'required' => ['required', 'boolean'],
+            'reason' => ['nullable', 'string', 'min:5', 'max:500'],
+        ]);
+
+        $wanted = (bool) $data['required'];
+
+        if ($wanted) {
+            $user->forceFill(['two_step_required' => true])->save();
+
+            return back()->with('status', __('auth.two_step_now_required'));
+        }
+
+        // ── ⛔ এখান থেকে নিচে সবটাই তালা খোলার পথ ──────────────────────
+
+        if ((int) $request->user()->id === (int) $user->id) {
+            return back()->withErrors(['reason' => __('auth.two_step_reset_not_self')]);
+        }
+
+        if (($data['reason'] ?? '') === '') {
+            return back()->withErrors(['reason' => __('auth.two_step_reset_needs_reason')]);
+        }
+
+        /*
+         * ⓘ দাগটা আগে, তালা পরে। ⚠️ পরে লিখলে মাঝে কিছু ভাঙলে তালা খুলে
+         * যেত আর খাতায় কোনো দাগ থাকত না — আর বিনা দাগে খোলা তালাই
+         * সবচেয়ে খারাপ ফল।
+         */
+        $this->audit->recordAction($user, 'two_step_off', $data['reason']);
+
+        $user->forceFill(['two_step_required' => false])->save();
+
+        /* ⭐ বসানো চাবিটাও যায় — নইলে আবার চালু করলে পুরনো ফোন চলত */
+        if ($mfa->isOn($user)) {
+            $mfa->turnOff($user);
+        }
+
+        return back()->with('status', __('auth.two_step_now_off'));
+    }
+
     public function resetTwoStep(Request $request, User $user, MfaService $mfa): RedirectResponse
     {
         $actor = $request->user();
