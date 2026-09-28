@@ -99,7 +99,11 @@ final class TheCounterPutsEachNoticeWhereTheOwnerDrewItTest extends TestCase
 
         $this->assertSame(1, substr_count($html, e($notice)),
             '⛔ অনুমোদনের বার্তা পপ-আপের বাইরেও বসেছে — মাথায় বা বোতামের নিচে।');
-        $this->assertStringNotContainsString('list-inside list-disc', $html,
+        /*
+         * ⓘ ত্রুটির তালিকাটাই মাপা — `role="alert"`-এর ভিতরের তালিকা। ⚠️ কেবল `list-disc` খুঁজলে মার্জিনের
+         * সতর্কতাও (NEXUS §৩২, `role="status"`, একই তালিকার চেহারা) ধরা পড়ত, আর দাবিটা অন্য জিনিসে লাল হত।
+         */
+        $this->assertDoesNotMatchRegularExpression('/role="alert"[^>]*>\s*<ul class="list-inside list-disc"/', $html,
             '⛔ অনুমোদনের বার্তা ত্রুটির তালিকায় (বোতামের নিচে) গেছে।');
     }
 
@@ -194,7 +198,7 @@ final class TheCounterPutsEachNoticeWhereTheOwnerDrewItTest extends TestCase
 
     // ── ⓸ মাথা দুই সারিতে ──────────────────────────────────────────────────
 
-    public function test_the_header_reads_date_terms_pending_then_bill_challan_do(): void
+    public function test_the_header_reads_date_terms_pending_then_sale_number_and_do(): void
     {
         $html = $this->counterPage();
 
@@ -202,8 +206,8 @@ final class TheCounterPutsEachNoticeWhereTheOwnerDrewItTest extends TestCase
             'তারিখ' => 'name="trx_date"',
             'শর্ত' => 'x-model="creditTerm"',
             'পেন্ডিং' => 'openPending($event)',
-            'বিল নম্বর' => 'name="invoice_no"',
-            'চালান নম্বর' => 'name="challan_no"',
+            // ⭐ এক বিক্রি এক নম্বর (মালিক, ২৯ সেপ্টেম্বর ২০২৬) — বিল আর চালানের দুই ঘর একটায় ([[SaleNumber]])
+            'বিক্রি নম্বর' => 'name="challan_no"',
             'DO নম্বর' => 'name="do_no"',
         ];
 

@@ -83,6 +83,14 @@ final class SalesReturnService
             $trxDate = Carbon::parse($data['trx_date'] ?? now());
             $year = $this->resolveFinancialYear($trxDate);
 
+            /*
+             * ⭐ ফেরতের নিজের নম্বর, বিক্রির নম্বর কেবল সূত্র — মালিক, ২৯ সেপ্টেম্বর ২০২৬:
+             * *"Ferote sales id no ref hisebe use hobe but return id alada hobe"*। ⓘ চালান, গেট
+             * পাস, বিল এক নম্বর ([[SaleNumber]]); ফেরত আলাদা কাগজ, আলাদা সারি (SR)।
+             */
+            $saleNo = isset($data['sales_invoice_id'])
+                ? SalesInvoice::query()->whereKey($data['sales_invoice_id'])->value('sale_no')
+                : null;
             $documentNo = $this->numbers->next('SR');
 
             $return = SalesReturn::create([
@@ -90,6 +98,7 @@ final class SalesReturnService
                 'branch_id' => $data['branch_id'] ?? CompanyContext::branchId(),
                 'financial_year_id' => $year->id,
                 'document_no' => $documentNo,
+                'sale_no' => $saleNo,
                 'customer_id' => $data['customer_id'],
                 'warehouse_id' => $this->resolveWarehouse($data['warehouse_id'] ?? null)->id,
                 'sales_invoice_id' => $data['sales_invoice_id'] ?? null,

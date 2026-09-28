@@ -31,7 +31,7 @@ class GatePass extends Model
     protected $table = 'sal_gate_passes';
 
     protected $fillable = [
-        'company_id', 'branch_id', 'document_no',
+        'company_id', 'branch_id', 'document_no', 'sale_no',
         'delivery_challan_id', 'delivery_event_id', 'shipment_id',
         'vehicle_no', 'driver_name', 'driver_phone',
         'issued_by', 'issued_at',

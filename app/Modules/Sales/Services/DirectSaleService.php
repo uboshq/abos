@@ -907,10 +907,8 @@ final class DirectSaleService
         ];
 
         if ($parked === null) {
-            // ⓘ হাতে লেখা চালান নম্বর — খালি হলে সিরিজ ([[DeliveryChallanService::challanNumber()]])
+            // ⓘ হাতে লেখা বিক্রি নম্বর — খালি হলে S-সিরিজ ([[SaleNumber::begin()]]); DS সারি ২৯ সেপ্টেম্বর ২০২৬-এ উঠে গেছে
             $header['document_no'] = trim((string) ($data['challan_no'] ?? '')) ?: null;
-            // ⭐ কাউন্টারের নিজের নম্বর-সারি (DS) — মালিকের নির্দেশ, ২৮ সেপ্টেম্বর ২০২৬
-            $header['series'] = 'DS';
 
             return $this->challans->create($header, $this->challanLines($lines));
         }

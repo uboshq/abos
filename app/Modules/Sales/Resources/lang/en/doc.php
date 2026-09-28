@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 return [
+    'sale' => 'Sale number',
     'order' => 'Sales Order',
     'receipt' => 'Goods Receipt',
     'bill' => 'Purchase Bill',

@@ -43,7 +43,7 @@ class SalesReturn extends Model implements Drillable
     protected $table = 'sal_returns';
 
     protected $fillable = [
-        'company_id', 'branch_id', 'financial_year_id', 'document_no',
+        'company_id', 'branch_id', 'financial_year_id', 'document_no', 'sale_no',
         'customer_id', 'warehouse_id', 'sales_invoice_id', 'reason_code_id',
         'reason_note',
         'trx_date', 'subtotal', 'tax', 'total', 'cost_of_goods',

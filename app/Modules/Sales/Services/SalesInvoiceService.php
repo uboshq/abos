@@ -303,17 +303,21 @@ final class SalesInvoiceService
              * ⓘ সত্যিকারের হাতে-লেখা নম্বরে আচরণ আগের মতোই — সিরিজ ছোঁয়া
              * হয় না, কারণ পুরনো কাগজের নম্বর বসালে সিরিজে ফাঁক পড়া উচিত নয়।
              */
-            $documentNo = match (true) {
-                $given === '' => $this->freeSeriesNumber(),
-                $this->numbers->isNextNumber('INV', $given) => $this->freeSeriesNumber(),
-                default => $given,
-            };
+            /*
+             * ⭐ একটা বিক্রির একটাই নম্বর (মালিক, ২৯ সেপ্টেম্বর ২০২৬): চালান থেকে বিল হলে চালানের
+             * বিক্রির নম্বর — S-0012, একই বিক্রির দ্বিতীয় বিল S-0012/2। ⓘ চালান ছাড়া বিল
+             * (সরাসরি অফিসের বিল) নিজেই নতুন বিক্রি; হাতে লেখা নম্বর তখন আগের মতোই চলে।
+             */
+            $saleNo = $this->saleNumberOfLines($lines)
+                ?? app(SaleNumber::class)->begin(SalesInvoice::class, $given);
+            $documentNo = app(SaleNumber::class)->forPaper(SalesInvoice::class, $saleNo);
 
             $invoice = SalesInvoice::create([
                 'company_id' => CompanyContext::id(),
                 'branch_id' => $data['branch_id'] ?? CompanyContext::branchId(),
                 'financial_year_id' => $year->id,
                 'document_no' => $documentNo,
+                'sale_no' => $saleNo,
                 'customer_id' => $data['customer_id'],
                 'warehouse_id' => $data['warehouse_id'] ?? $this->defaultWarehouse()?->id,
                 'trx_date' => $trxDate->toDateString(),
@@ -1489,17 +1493,30 @@ final class SalesInvoiceService
      * পড়ার মতো বার্তা দেওয়া হয় (উপরে), কারণ তিনি একটা নির্দিষ্ট নম্বর
      * চেয়েছেন; নীরবে অন্য একটা বসিয়ে দিলে সেটা তাঁর কাগজের সাথে মিলত না।
      */
-    private function freeSeriesNumber(): string
+    /**
+     * বিলের সারির চালান যে বিক্রির — তার নম্বর; চালান ছাড়া হলে null।
+     *
+     * @param  list<array<string, mixed>>  $lines
+     */
+    private function saleNumberOfLines(array $lines): ?string
     {
-        for ($attempt = 0; $attempt < 50; $attempt++) {
-            $candidate = $this->numbers->next('INV');
+        foreach ($lines as $line) {
+            $challanLineId = (int) ($line['delivery_challan_line_id'] ?? 0);
 
-            if (! SalesInvoice::query()->where('document_no', $candidate)->exists()) {
-                return $candidate;
+            if ($challanLineId > 0) {
+                $saleNo = DB::table('sal_challan_lines as cl')
+                    ->join('sal_challans as c', 'c.id', '=', 'cl.delivery_challan_id')
+                    ->where('c.company_id', CompanyContext::id())
+                    ->where('cl.id', $challanLineId)
+                    ->value('c.sale_no');
+
+                if ($saleNo !== null) {
+                    return (string) $saleNo;
+                }
             }
         }
 
-        return $this->numbers->next('INV');
+        return null;
     }
 
     /**

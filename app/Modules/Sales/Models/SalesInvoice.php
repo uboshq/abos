@@ -44,7 +44,7 @@ class SalesInvoice extends Model implements Drillable, ShowsItselfForSigning
     public const STOCK_SOURCE = 'sales_invoice';
 
     protected $fillable = [
-        'company_id', 'branch_id', 'financial_year_id', 'document_no',
+        'company_id', 'branch_id', 'financial_year_id', 'document_no', 'sale_no',
 
         /*
          * টিলের পাঠানো চাবি — একই কার্টের দ্বিতীয় অনুরোধ চেনার জন্য।

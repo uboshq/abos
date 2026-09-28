@@ -1081,10 +1081,11 @@ final class TheParkedBillWaitsAtTheSameCounterTest extends TestCase
     }
 
     /**
-     * ⭐ কাউন্টারের নম্বর নিজের সারিতে (DS) — খসড়া আর নিশ্চিত একই সারি; মালিকের নির্দেশ,
-     * ২৮ সেপ্টেম্বর ২০২৬। ⓘ উপসর্গটা নম্বর-সারির, তাই কন্ট্রোল প্যানেল থেকে বদলায়।
+     * ⭐ একটা বিক্রির একটাই নম্বর (S) — চালান আর বিল একই নম্বর, খসড়া আর নিশ্চিত একই সারি;
+     * মালিকের সিদ্ধান্ত, ২৯ সেপ্টেম্বর ২০২৬ ([[SaleNumber]])। ⓘ উপসর্গটা নম্বর-সারির, তাই
+     * কন্ট্রোল প্যানেল থেকে বদলায়।
      */
-    public function test_counter_sales_number_from_their_own_ds_series(): void
+    public function test_a_counter_sale_carries_one_s_number_on_challan_and_bill(): void
     {
         $draft = $this->park();
         $this->sell(['save_as_draft' => '0'], $this->other)->assertSessionHasNoErrors();
@@ -1093,10 +1094,13 @@ final class TheParkedBillWaitsAtTheSameCounterTest extends TestCase
         $first = (string) $this->challanOf($draft)->document_no;
         $second = (string) $this->challanOf($sold)->document_no;
 
-        $this->assertStringStartsWith('DS', $first, '⛔ খসড়ার চালান DS সারিতে নয়।');
-        $this->assertStringStartsWith('DS', $second, '⛔ নিশ্চিত বিক্রির চালান DS সারিতে নয়।');
+        $this->assertStringStartsWith('S-', $first, '⛔ খসড়ার চালান S সারিতে নয়।');
+        $this->assertStringStartsWith('S-', $second, '⛔ নিশ্চিত বিক্রির চালান S সারিতে নয়।');
         $this->assertNotSame($first, $second, '⛔ দুই বিক্রি একই নম্বর পেয়েছে।');
-        $this->assertStringStartsWith('DS', (string) $this->get(route('sales.direct.create'))->viewData('challanPreview'));
+        $this->assertSame($second, (string) $sold->document_no, '⛔ বিল আর চালান আলাদা নম্বর পেয়েছে — এক বিক্রি, এক নম্বর।');
+        $this->assertSame($second, (string) $sold->sale_no, '⛔ বিলে বিক্রির নম্বর লেখা হয়নি।');
+        $this->assertSame($first, (string) $draft->fresh()->document_no, '⛔ খসড়ার বিল তার চালানের নম্বর পায়নি।');
+        $this->assertStringStartsWith('S-', (string) $this->get(route('sales.direct.create'))->viewData('salePreview'));
     }
 
     /**
@@ -1107,7 +1111,7 @@ final class TheParkedBillWaitsAtTheSameCounterTest extends TestCase
      */
     public function test_writing_the_series_next_number_uses_the_series(): void
     {
-        $preview = (string) $this->get(route('sales.direct.create'))->assertOk()->viewData('challanPreview');
+        $preview = (string) $this->get(route('sales.direct.create'))->assertOk()->viewData('salePreview');
 
         $this->assertNotSame('', $preview, 'দৃশ্যটাই বানানো যায়নি — চালানের সিরিজ নেই।');
 
@@ -1115,7 +1119,7 @@ final class TheParkedBillWaitsAtTheSameCounterTest extends TestCase
 
         $this->assertSame($preview, DeliveryChallan::query()->latest('id')->value('document_no'));
 
-        $after = (string) $this->get(route('sales.direct.create'))->assertOk()->viewData('challanPreview');
+        $after = (string) $this->get(route('sales.direct.create'))->assertOk()->viewData('salePreview');
 
         $this->assertNotSame($preview, $after,
             '⛔ সিরিজের পরের নম্বরটা লেখা হলো, অথচ সিরিজ এগোয়নি — পরের চালান একই নম্বর চাইবে।');

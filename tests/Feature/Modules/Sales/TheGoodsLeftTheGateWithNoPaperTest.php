@@ -68,7 +68,8 @@ final class TheGoodsLeftTheGateWithNoPaperTest extends TestCase
 
         $this->assertCount(1, $passes, '⛔ রওনা হলো, অথচ গেট পাস একটা নয়।');
         $pass = $passes->first();
-        $this->assertStringStartsWith('GP', (string) $pass->document_no, '⛔ গেট পাসের নিজের সিরিজ নেই।');
+        // ⭐ এক বিক্রি এক নম্বর (২৯ সেপ্টেম্বর ২০২৬) — গেট পাস চালানের বিক্রির নম্বর পায় ([[SaleNumber]])
+        $this->assertSame((string) $challan->sale_no, (string) $pass->document_no, '⛔ গেট পাস বিক্রির নম্বর পায়নি।');
         $this->assertSame('ঢাকা মেট্রো ট ১১-২২৩৩', $pass->vehicle_no);
         $this->assertSame('রফিক', $pass->driver_name);
         $this->assertSame((int) $this->owner->id, (int) $pass->issued_by);

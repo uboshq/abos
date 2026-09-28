@@ -31,6 +31,7 @@ use App\Modules\Sales\Models\DeliveryChallan;
 use App\Modules\Sales\Models\SalesInvoice;
 use App\Modules\Sales\Services\CreditExposure;
 use App\Modules\Sales\Services\DirectSaleService;
+use App\Modules\Sales\Services\SaleNumber;
 use App\Modules\Sales\Services\MarginGuard;
 use App\Modules\Sales\Services\TransportRule;
 use App\Modules\Supplier\Models\Supplier;
@@ -372,9 +373,8 @@ class DirectSaleController extends Controller implements HasMiddleware
              * সিরিজ না থাকলে খালি — ঘরটা তখন "নিশ্চিত করলে" লেখা
              * placeholder দেখায়, অর্থাৎ আগের আচরণেই ফেরে।
              */
-            'invoicePreview' => $this->invoicePreview(),
-            // ⓘ কাউন্টারের নিজের সারি — [[DirectSaleService::challanFor()]]-এর সাথে এক
-            'challanPreview' => $this->seriesPreview('DS'),
+            // ⭐ একটা বিক্রির একটাই নম্বর — চালান আর বিল দুইটাই এটা ([[SaleNumber]])
+            'salePreview' => $this->seriesPreview(SaleNumber::DOC_TYPE),
 
             /*
              * ⭐ রাখা খসড়া — "পেন্ডিং" তালিকা আর খোলা খসড়া (মালিকের নকশা,
@@ -684,7 +684,7 @@ class DirectSaleController extends Controller implements HasMiddleware
             'resume_invoice_id' => ['nullable', 'integer', 'min:1'],
             'screen_state' => ['nullable', 'string', 'max:500000'],
 
-            // ⭐ চালান নম্বর — বিল নম্বরের মতো; অনন্যতা সেবায় ([[DeliveryChallanService::challanNumber()]])
+            // ⭐ বিক্রি নম্বর (S) — হাতে দেওয়া হলে সেটাই; অনন্যতা সেবায় ([[SaleNumber::begin()]])
             'challan_no' => ['nullable', 'string', 'max:32'],
             'discount_amount' => ['nullable', 'numeric', 'min:0'],
             'expense_amount' => ['nullable', 'numeric', 'min:0'],
@@ -1573,11 +1573,6 @@ class DirectSaleController extends Controller implements HasMiddleware
     }
 
     /** সিরিজের পরের নম্বর, কেবল দেখানোর জন্য — [[NumberSeriesEngine::preview()]]. */
-    private function invoicePreview(): string
-    {
-        return $this->seriesPreview('INV');
-    }
-
     private function seriesPreview(string $docType): string
     {
         $series = NumberSeries::query()

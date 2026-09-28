@@ -121,14 +121,19 @@ final class DeliveryChallanService
             $order = $this->resolveOrder($data['sales_order_id'] ?? null);
             $warehouse = $this->resolveWarehouse($data['warehouse_id'] ?? $order?->warehouse_id);
 
-            // ⓘ কাউন্টার নিজের সারি চায় (`DS`), বাকিরা চালানের (`DC`)
-            $documentNo = $this->challanNumber(trim((string) ($data['document_no'] ?? '')), (string) ($data['series'] ?? 'DC'));
+            /*
+             * ⭐ একটা বিক্রির একটাই নম্বর (মালিক, ২৯ সেপ্টেম্বর ২০২৬) — DO-তেই জন্ম। ⓘ একই আদেশের
+             * আগের DO থাকলে সেই বিক্রিরই নম্বর (দ্বিতীয় চালান S-0012/2); নাহলে নতুন বিক্রি।
+             */
+            $saleNo = $this->saleNumberFor($order?->id, trim((string) ($data['document_no'] ?? '')));
+            $documentNo = app(SaleNumber::class)->forPaper(DeliveryChallan::class, $saleNo);
 
             $challan = DeliveryChallan::create([
                 'company_id' => CompanyContext::id(),
                 'branch_id' => $warehouse->branch_id ?? CompanyContext::branchId(),
                 'financial_year_id' => $year->id,
                 'document_no' => $documentNo,
+                'sale_no' => $saleNo,
                 'customer_id' => $order?->customer_id ?? $data['customer_id'],
                 'warehouse_id' => $warehouse->id,
                 'sales_order_id' => $order?->id,
@@ -890,37 +895,22 @@ final class DeliveryChallanService
         return $year;
     }
 
-    /**
-     * চালানের নম্বর — হাতে দেওয়া, নাহলে সিরিজের।
-     *
-     * ⭐ কাউন্টারে "চালান নম্বর" ঘর — মালিকের ছবি, ২৬ সেপ্টেম্বর ২০২৬।
-     * ⓘ বিল নম্বরের হুবহু ছাঁচ ([[SalesInvoiceService::create()]]): পর্দার
-     * ঘরে সিরিজের পরেরটা আগে থেকে ভরা থাকে, আর সেটা না বদলালে তা **সিরিজেরই**
-     * — ⚠️ নাহলে সিরিজ এক ধাপও এগোত না, আর দিনের দ্বিতীয় চালানেই একই নম্বর।
-     *
-     * ⛔ হাতে লেখা নম্বর আগে কোনো চালানে বসে থাকলে পড়ার মতো বার্তা;
-     * শেষ পাহারা তবু ডাটাবেসের ইউনিক ইনডেক্স (`company_id, document_no`)।
-     */
-    private function challanNumber(string $given, string $docType = 'DC'): string
+    /** এই DO-র বিক্রির নম্বর — আদেশের আগের DO-র নম্বর, নাহলে নতুন ([[SaleNumber::begin()]])। */
+    private function saleNumberFor(?int $orderId, string $given): string
     {
-        if ($given !== '' && ! $this->numbers->isNextNumber($docType, $given)) {
-            if (DeliveryChallan::query()->where('document_no', $given)->exists()) {
-                throw ValidationException::withMessages([
-                    'challan_no' => __('sales::validation.challan_no_taken', ['no' => $given]),
-                ]);
-            }
+        if ($orderId !== null) {
+            $earlier = DeliveryChallan::query()->withoutGlobalScopes()
+                ->where('company_id', CompanyContext::id())
+                ->where('sales_order_id', $orderId)
+                ->whereNotNull('sale_no')
+                ->orderBy('id')
+                ->value('sale_no');
 
-            return $given;
-        }
-
-        for ($attempt = 0; $attempt < 50; $attempt++) {
-            $candidate = $this->numbers->next($docType);
-
-            if (! DeliveryChallan::query()->where('document_no', $candidate)->exists()) {
-                return $candidate;
+            if ($earlier !== null) {
+                return (string) $earlier;
             }
         }
 
-        return $this->numbers->next($docType);
+        return app(SaleNumber::class)->begin(DeliveryChallan::class, $given);
     }
 }

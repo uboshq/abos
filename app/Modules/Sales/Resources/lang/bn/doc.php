@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 return [
+    'sale' => 'বিক্রি নম্বর',
     'order' => 'বিক্রয় আদেশ',
     'receipt' => 'মাল বুঝে নেওয়া',
     'bill' => 'ক্রয় বিল',

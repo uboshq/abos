@@ -49,7 +49,11 @@ final class GatePassService
         return GatePass::query()->create([
             'company_id' => $challan->company_id,
             'branch_id' => $challan->branch_id,
-            'document_no' => $this->numbers->next('GP'),
+            // ⭐ চালানের বিক্রির নম্বরই (মালিক, ২৯ সেপ্টেম্বর ২০২৬); একই চালানের দ্বিতীয় রওনা /2
+            'document_no' => $challan->sale_no !== null
+                ? app(SaleNumber::class)->forPaper(GatePass::class, (string) $challan->sale_no)
+                : $this->numbers->next('GP'),
+            'sale_no' => $challan->sale_no,
             'delivery_challan_id' => $challan->id,
             'delivery_event_id' => $event->id,
             'shipment_id' => $trip?->id,

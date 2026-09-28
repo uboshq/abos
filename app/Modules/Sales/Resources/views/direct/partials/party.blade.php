@@ -766,51 +766,21 @@
                             </label>
 
                             {{-- ⭐ দুই সারির মাথা — মালিকের ছবি, ২৭ সেপ্টেম্বর ২০২৬ (সন্ধ্যা):
-                                 ১ম সারি বিলের তারিখ · শর্ত · পেন্ডিং; ২য় সারি বিল নম্বর · চালান নম্বর ·
-                                 DO নম্বর। ⓘ তিন কলামের ছক, তাই ক্রমটাই সারি ঠিক করে। --}}
-{{--
-                                বিলের নম্বর — এখনই দেখা যায়, আর বদলানোও যায়।
+                                 ১ম সারি বিলের তারিখ · শর্ত · পেন্ডিং; ২য় সারি বিক্রি নম্বর · DO নম্বর
+                                 (২৯ সেপ্টেম্বর ২০২৬ থেকে বিল আর চালানের একটাই নম্বর)। ⓘ তিন কলামের ছক, তাই ক্রমটাই সারি ঠিক করে। --}}
+                            {{-- ⭐ বিক্রি নম্বর — একটা বিক্রির একটাই নম্বর (মালিক, ২৯ সেপ্টেম্বর ২০২৬):
+                                 চালান, গেট পাস, বিল সবাই এই S-নম্বর ([[SaleNumber]]), তাই আলাদা বিল আর
+                                 চালান নম্বরের দুইটা ঘর উঠে গেছে।
 
-                                ── কেন বদলাল (৩ সেপ্টেম্বর ২০২৬) ─────────────────
-                                এখানে "নিশ্চিত করলে" লেখা একটা নিষ্ক্রিয় ঘর ছিল।
-                                যুক্তিটা ছিল: আগে থেকে নম্বর দেখালে খসড়া বাতিল
-                                হলে ওই নম্বরটা খরচ হয়ে সিরিজে ফাঁক থেকে যেত।
-
-                                মালিক বললেন নম্বরটা এখানেই তৈরি হবে, আর দরকারে
-                                বদলানো যাবে। **যুক্তিটা টিকে আছে, শুধু সমাধানটা
-                                বদলেছে**: এটা `preview()`, `next()` নয় — অর্থাৎ
-                                সিরিজের পরের নম্বরটা কেবল **দেখানো** হয়, খরচ হয়
-                                না। খসড়া বাতিল হলে কিছুই হারায় না, আর দুইজন
-                                একসাথে কাউন্টার খুললেও দুইজনেই একই নম্বর দেখেন —
-                                আসল নম্বরটা বসে সংরক্ষণের মুহূর্তে, তালার ভেতরে।
-
-                                ⚠️ তাই পর্দায় দেখা নম্বরটা **প্রতিশ্রুতি নয়,
-                                পূর্বাভাস**। কেউ হাতে বদলালে সেটাই যায়, আর
-                                না বদলালে সংরক্ষণের সময়কার আসল পরেরটা।
-                            --}}
+                                 ⓘ সিরিজের পরের নম্বরটা কেবল **দেখানো** (`preview()`, খরচ হয় না), আর হাতে
+                                 বদলালে সেটাই যায়। ⚠️ খোলা খসড়ায় বন্ধ — সেবা একই বিল-চালান পাকা করে,
+                                 নম্বর বদলায় না; "সব মুছুন" চাপলে খোলে। ⓘ ঘরের নাম `challan_no`-ই রইল:
+                                 নম্বরটা চালানেই জন্মায়। --}}
                             <label class="min-w-0">
                                 <span class="mb-0.5 block text-2xs font-semibold uppercase tracking-wide
-                                             text-(--color-ink-muted)">{{ __('sales::field.inv_number') }}</span>
-                                <input type="text" name="invoice_no" value="{{ old('invoice_no', $resume['invoiceNo'] ?? $invoicePreview) }}"
-                                       @readonly(! empty($resume)) :readonly="resumeId !== ''"
-                                       :title="@js(__('sales::field.invoice_no_editable'))"
-                                       placeholder="{{ __('sales::field.on_confirm') }}"
-                                       class="h-(--spacing-field-dense) w-full rounded-(--radius-field) border border-(--color-border)
-                                              bg-(--color-surface-app) px-2 text-sm">
-                            </label>
-
-                            {{-- ⭐ চালান নম্বর — মালিকের ছক, ২৬ সেপ্টেম্বর ২০২৬: বিলের তারিখ ·
-                                 বিল নম্বর · চালান নম্বর · DO · শর্ত · পেন্ডিং।
-
-                                 ⓘ বিল নম্বরের হুবহু ছাঁচ: সিরিজের পরের নম্বরটা কেবল
-                                 **দেখানো** (`preview()`), আর হাতে বদলালে সেটাই যায়।
-                                 ⚠️ খোলা খসড়ায় দুইটা নম্বরই বন্ধ — সেবা একই বিল-চালান
-                                 পাকা করে, নম্বর বদলায় না; "সব মুছুন" চাপলে খোলে। --}}
-                            <label class="min-w-0">
-                                <span class="mb-0.5 block text-2xs font-semibold uppercase tracking-wide
-                                             text-(--color-ink-muted)">{{ __('sales::field.challan_no_short') }}</span>
+                                             text-(--color-ink-muted)">{{ __('sales::doc.sale') }}</span>
                                 <input type="text" name="challan_no" maxlength="32"
-                                       value="{{ old('challan_no', $resume['challanNo'] ?? $challanPreview ?? '') }}"
+                                       value="{{ old('challan_no', $resume['challanNo'] ?? $salePreview ?? '') }}"
                                        @readonly(! empty($resume)) :readonly="resumeId !== ''"
                                        placeholder="{{ __('sales::field.on_confirm') }}"
                                        class="h-(--spacing-field-dense) w-full rounded-(--radius-field) border border-(--color-border)

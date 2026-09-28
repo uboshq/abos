@@ -559,6 +559,8 @@ return [
 
     'doc_types' => [
         'SO' => 'sales::doc.order',
+        // ⭐ একটা বিক্রির একটাই নম্বর — DO বা সরাসরি বিক্রিতে জন্ম (মালিক, ২৯ সেপ্টেম্বর ২০২৬; [[SaleNumber]])
+        'S' => 'sales::doc.sale',
         'DC' => 'sales::doc.challan',
         // ⭐ গেট পাস — রওনার মুহূর্তে নিজে জন্মায় ([[GatePassService]]); সিরিজ কোম্পানি-প্রতি
         'GP' => 'sales::doc.gate_pass',

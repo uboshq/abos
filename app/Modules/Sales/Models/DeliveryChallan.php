@@ -49,7 +49,7 @@ class DeliveryChallan extends Model implements Drillable, ShowsItselfForSigning
     public const STOCK_SOURCE = 'delivery_challan';
 
     protected $fillable = [
-        'company_id', 'branch_id', 'financial_year_id', 'document_no',
+        'company_id', 'branch_id', 'financial_year_id', 'document_no', 'sale_no',
         'customer_id', 'warehouse_id', 'sales_order_id', 'trx_date',
         'vehicle_id', 'vehicle_no', 'driver_name', 'driver_phone', 'do_no', 'total',
         'discount_amount', 'expense_amount', 'rounding_amount',
