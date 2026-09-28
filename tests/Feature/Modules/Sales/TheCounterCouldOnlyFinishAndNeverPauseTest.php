@@ -73,6 +73,7 @@ final class TheCounterCouldOnlyFinishAndNeverPauseTest extends TestCase
     private function sell(array $extra = []): \Illuminate\Testing\TestResponse
     {
         return $this->post(route('sales.direct.store'), [
+            'own_transport' => '1', // ⓘ ধাপ ৫ — নিশ্চিতে পরিবহন লাগে ([[TransportRule]]); এই দাবি অন্য কিছু মাপে
             'customer_id' => $this->customer->id,
             'warehouse_id' => $this->warehouse->id,
             'lines' => [['product_id' => $this->product->id, 'qty' => '10', 'rate' => '100']],

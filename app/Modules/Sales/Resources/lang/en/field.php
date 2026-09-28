@@ -381,6 +381,7 @@ return [
     /* A lorry hired once — no running account, so a name is enough. */
     'carrier_not_listed' => 'Not listed — I will type it',
     'carrier_name' => "Carrier's name",
+    'own_transport' => "No transport needed (buyer's own)",
     'transport_cost' => 'Transport cost',
     'ship_to' => 'Ship to',
     'ship_to_hint' => 'Shop, store or market',

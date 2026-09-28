@@ -79,6 +79,7 @@ final class TheCounterPutsEachNoticeWhereTheOwnerDrewItTest extends TestCase
         $this->flow('sales', 'challan');
 
         $this->from(route('sales.direct.create'))->post(route('sales.direct.store'), [
+            'own_transport' => '1', // ⓘ ধাপ ৫ — নিশ্চিতে পরিবহন লাগে ([[TransportRule]]); এই দাবি অন্য কিছু মাপে
             'customer_id' => $this->customer->id,
             'warehouse_id' => $this->warehouse->id,
             'deposit' => '1000',
@@ -110,6 +111,7 @@ final class TheCounterPutsEachNoticeWhereTheOwnerDrewItTest extends TestCase
         $this->flow(VoucherApproval::MODULE, VoucherApproval::COUNTER_DEPOSIT);
 
         $this->from(route('sales.direct.create'))->post(route('sales.direct.store'), [
+            'own_transport' => '1', // ⓘ ধাপ ৫ — নিশ্চিতে পরিবহন লাগে ([[TransportRule]]); এই দাবি অন্য কিছু মাপে
             'customer_id' => $this->customer->id,
             'warehouse_id' => $this->warehouse->id,
             ...$this->bankDeposit(),
@@ -138,6 +140,7 @@ final class TheCounterPutsEachNoticeWhereTheOwnerDrewItTest extends TestCase
     public function test_an_ordinary_error_stays_under_the_buttons_and_the_popup_stays_empty(): void
     {
         $this->from(route('sales.direct.create'))->post(route('sales.direct.store'), [
+            'own_transport' => '1', // ⓘ ধাপ ৫ — নিশ্চিতে পরিবহন লাগে ([[TransportRule]]); এই দাবি অন্য কিছু মাপে
             'customer_id' => $this->customer->id,
             'warehouse_id' => $this->warehouse->id,
             'lines' => [],

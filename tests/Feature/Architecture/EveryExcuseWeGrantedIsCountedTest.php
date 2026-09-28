@@ -94,6 +94,8 @@ final class EveryExcuseWeGrantedIsCountedTest extends TestCase
      * @var list<string>
      */
     private const NOT_EXCUSES = [
+        // ⓘ চাহিদা: চালান পাকা করার প্রতিটা ডাক আর তার দরজা — ছাড় নয়, যা থাকতেই হবে (ধাপ ৫)
+        'EveryChallanConfirmAsksHowTheGoodsTravelTest::KNOWN',
         'EveryListScreenPaginatesTest::NOT_REALLY_A_LIST',
         'EveryRawQueryNamesItsCompanyTest::NO_COMPANY_COLUMN',
         'EveryUserListAsksWhichCompanyTest::MUST_ASK',

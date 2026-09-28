@@ -108,6 +108,14 @@
 
                 <x-ui.field name="driver_name" :label="__('sales::field.driver_name')"
                             :value="old('driver_name', $challan->driver_name)" />
+
+                {{-- ⭐ ধাপ ৫, ২৮ সেপ্টেম্বর ২০২৬: গাড়ি না লাগলে বলার জায়গা — নিশ্চিত করতে তিনটার একটা লাগে ([[TransportRule]]) --}}
+                <label class="flex min-h-(--spacing-touch) items-center gap-2 text-sm">
+                    <input type="hidden" name="own_transport" value="0">
+                    <input type="checkbox" name="own_transport" value="1" class="size-4"
+                           @checked(old('own_transport', $challan->own_transport))>
+                    {{ __('sales::field.own_transport') }}
+                </label>
             </div>
 
             <div class="mt-3">

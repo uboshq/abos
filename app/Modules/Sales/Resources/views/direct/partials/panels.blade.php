@@ -123,6 +123,14 @@
                           bg-(--color-surface-card) px-2 text-2xs">
         </label>
 
+        {{-- ⭐ ধাপ ৫, ২৮ সেপ্টেম্বর ২০২৬: নিশ্চিত করতে বাহক বা গাড়ি, নয়তো এই টিক ([[TransportRule]])।
+             ⓘ প্যানেল বন্ধ থাকলেও ঘরটা ফর্মের ভিতরে — `x-show` কেবল লুকায়, পাঠানো বন্ধ করে না। --}}
+        <label class="sm:col-span-3 flex items-center gap-2 text-2xs">
+            <input type="checkbox" name="own_transport" value="1" class="size-4"
+                   @checked(old('own_transport', $resume['fields']['own_transport'] ?? '') === '1')>
+            {{ __('sales::field.own_transport') }}
+        </label>
+
         {{-- ⭐ "কার্টে যোগ করুন" — মালিকের প্রশ্ন, ২৮ সেপ্টেম্বর ২০২৬: *"etar add botam koi? botam
              cara add hobe kemone"*। ⓘ ঘরগুলো বিলের সাথেই যায় (নাম আছে), বোতামটা প্যানেল বন্ধ
              করে আর ডানে একটা ছোট সারাংশ দেখায় — যাতে বোঝা যায় তথ্যটা নেওয়া হয়েছে। --}}

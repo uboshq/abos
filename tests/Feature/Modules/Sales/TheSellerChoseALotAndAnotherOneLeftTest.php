@@ -104,6 +104,7 @@ final class TheSellerChoseALotAndAnotherOneLeftTest extends TestCase
     private function sell(array $line): \Illuminate\Testing\TestResponse
     {
         return $this->post(route('sales.direct.store'), [
+            'own_transport' => '1', // ⓘ ধাপ ৫ — নিশ্চিতে পরিবহন লাগে ([[TransportRule]]); এই দাবি অন্য কিছু মাপে
             'customer_id' => $this->customer->id,
             'warehouse_id' => $this->warehouse->id,
             'lines' => [['product_id' => $this->product->id, 'qty' => '10', 'rate' => '100', ...$line]],
@@ -156,6 +157,7 @@ final class TheSellerChoseALotAndAnotherOneLeftTest extends TestCase
     public function test_the_same_lot_cannot_appear_twice(): void
     {
         $this->post(route('sales.direct.store'), [
+            'own_transport' => '1', // ⓘ ধাপ ৫ — নিশ্চিতে পরিবহন লাগে ([[TransportRule]]); এই দাবি অন্য কিছু মাপে
             'customer_id' => $this->customer->id,
             'warehouse_id' => $this->warehouse->id,
             'lines' => [
@@ -174,6 +176,7 @@ final class TheSellerChoseALotAndAnotherOneLeftTest extends TestCase
     public function test_two_different_lots_may_share_one_bill(): void
     {
         $this->post(route('sales.direct.store'), [
+            'own_transport' => '1', // ⓘ ধাপ ৫ — নিশ্চিতে পরিবহন লাগে ([[TransportRule]]); এই দাবি অন্য কিছু মাপে
             'customer_id' => $this->customer->id,
             'warehouse_id' => $this->warehouse->id,
             'lines' => [
@@ -202,6 +205,7 @@ final class TheSellerChoseALotAndAnotherOneLeftTest extends TestCase
     public function test_a_lot_that_is_short_stops_the_sale(): void
     {
         $this->post(route('sales.direct.store'), [
+            'own_transport' => '1', // ⓘ ধাপ ৫ — নিশ্চিতে পরিবহন লাগে ([[TransportRule]]); এই দাবি অন্য কিছু মাপে
             'customer_id' => $this->customer->id,
             'warehouse_id' => $this->warehouse->id,
             'lines' => [[
@@ -239,6 +243,7 @@ final class TheSellerChoseALotAndAnotherOneLeftTest extends TestCase
         );
 
         $this->post(route('sales.direct.store'), [
+            'own_transport' => '1', // ⓘ ধাপ ৫ — নিশ্চিতে পরিবহন লাগে ([[TransportRule]]); এই দাবি অন্য কিছু মাপে
             'customer_id' => $this->customer->id,
             'warehouse_id' => $this->warehouse->id,
             'lines' => [['product_id' => $plain->id, 'qty' => '10', 'rate' => '100']],

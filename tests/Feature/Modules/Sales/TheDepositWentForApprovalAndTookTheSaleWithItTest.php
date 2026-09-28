@@ -137,6 +137,7 @@ final class TheDepositWentForApprovalAndTookTheSaleWithItTest extends TestCase
     public function test_the_cashier_goes_straight_to_the_receipt(): void
     {
         $response = $this->post(route('sales.direct.store'), [
+            'own_transport' => '1', // ⓘ ধাপ ৫ — নিশ্চিতে পরিবহন লাগে ([[TransportRule]]); এই দাবি অন্য কিছু মাপে
             'customer_id' => $this->customer->id,
             'warehouse_id' => $this->warehouse->id,
             'deposit' => '1000',

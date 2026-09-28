@@ -79,6 +79,8 @@ class DeliveryChallanRequest extends FormRequest
                 Rule::exists('mdm_vehicles', 'id')->where('company_id', $companyId)],
             'vehicle_no' => ['nullable', 'string', 'max:64'],
             'driver_name' => ['nullable', 'string', 'max:191'],
+            // ⓘ "পরিবহন লাগবে না (ক্রেতার নিজের)" — ধাপ ৫ ([[TransportRule]])
+            'own_transport' => ['nullable', 'boolean'],
             'narration' => ['nullable', 'string', 'max:500'],
 
             'lines' => ['required', 'array', 'min:1'],
@@ -119,7 +121,7 @@ class DeliveryChallanRequest extends FormRequest
         return $this->safe()->only([
             'customer_id', 'warehouse_id', 'sales_order_id',
             'trx_date', 'vehicle_id', 'vehicle_no', 'driver_name', 'narration',
-        ]);
+        ]) + ['own_transport' => $this->boolean('own_transport')];
     }
 
     /**

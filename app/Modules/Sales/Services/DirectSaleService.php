@@ -1238,6 +1238,12 @@ final class DirectSaleService
              */
             'carrier_id' => ($data['carrier_id'] ?? '') ?: null,
             'carrier_name' => ($data['carrier_name'] ?? '') ?: null,
+            /*
+             * ⓘ "পরিবহন লাগবে না (ক্রেতার নিজের)" — ধাপ ৫ ([[TransportRule]])। ⚠️ এখানে, চালানের
+             * মাথায় নয়: `DeliveryChallanService::create()` ঘর হাতে বাছে, আর মাথায় দিলে টিকটা
+             * চুপচাপ হারাত। খসড়াতেও বসে, যাতে পরে পাকা করার দরজা ([[finishHeld()]]) জানে।
+             */
+            'own_transport' => ($data['own_transport'] ?? '') === '1',
             'transport_cost' => ($data['transport_cost'] ?? '') !== ''
                 ? $this->money($data['transport_cost'])
                 : null,

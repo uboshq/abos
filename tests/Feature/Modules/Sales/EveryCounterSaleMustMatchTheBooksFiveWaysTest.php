@@ -707,6 +707,7 @@ final class EveryCounterSaleMustMatchTheBooksFiveWaysTest extends TestCase
     private function sell(array $lines, array $deposits = [], array $extra = []): TestResponse
     {
         return $this->actingAs($this->owner)->post(route('sales.direct.store'), [
+            'own_transport' => '1', // ⓘ ধাপ ৫ — নিশ্চিতে পরিবহন লাগে ([[TransportRule]]); এই দাবি অন্য কিছু মাপে
             'customer_id' => $this->dealer->id,
             'warehouse_id' => $this->warehouse->id,
             'lines' => $lines,

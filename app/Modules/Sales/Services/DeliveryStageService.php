@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Sales\Services;
 
+use App\Core\Support\CompanyContext;
 use App\Core\Support\DocumentStatus;
 use App\Modules\MasterData\Models\ReasonCode;
 use App\Modules\Sales\Models\DeliveryChallan;
@@ -269,6 +270,8 @@ final class DeliveryStageService
         $pairs = DB::table('sal_invoice_lines as il')
             ->join('sal_challan_lines as cl', 'cl.id', '=', 'il.delivery_challan_line_id')
             ->join('sal_challans as c', 'c.id', '=', 'cl.delivery_challan_id')
+            // ⓘ id-গুলো এই কোম্পানির পাতা থেকেই আসে, তবু কাঁচা কোয়েরি নিজে বলে কোন কোম্পানি
+            ->where('c.company_id', CompanyContext::id())
             ->whereIn('il.sales_invoice_id', $ids)
             ->where('c.status', '<>', DocumentStatus::CANCELLED)
             ->select('il.sales_invoice_id', 'c.id')

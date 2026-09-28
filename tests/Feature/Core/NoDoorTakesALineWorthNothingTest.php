@@ -155,6 +155,7 @@ final class NoDoorTakesALineWorthNothingTest extends TestCase
     private function payload(string $qtyField, string $rate): array
     {
         return [
+            'own_transport' => '1', // ⓘ ধাপ ৫ — নিশ্চিতে পরিবহন লাগে ([[TransportRule]]); এই দাবি অন্য কিছু মাপে
             /*
              * ⚠️ দুইটা ঘর যাচাইয়ের **আগে** দেখা হয় — আর এটা মেপে শেখা।
              *

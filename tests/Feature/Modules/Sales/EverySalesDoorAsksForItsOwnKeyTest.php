@@ -294,6 +294,7 @@ final class EverySalesDoorAsksForItsOwnKeyTest extends TestCase
                 'customer_id' => $this->customer->id,
                 'warehouse_id' => $this->warehouse->id,
                 'trx_date' => now()->toDateString(),
+                'own_transport' => true, // ⓘ ধাপ ৫ — নিশ্চিতে পরিবহন লাগে; এই দাবি চাবি মাপে, পরিবহন নয়
             ],
             [['product_id' => $this->product->id, 'delivered_qty' => '1', 'rate' => '100']],
         );

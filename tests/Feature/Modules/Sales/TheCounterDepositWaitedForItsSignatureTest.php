@@ -242,6 +242,7 @@ final class TheCounterDepositWaitedForItsSignatureTest extends TestCase
         $collectedBefore = $this->listedCollected();
 
         $this->post(route('sales.direct.store'), [
+            'own_transport' => '1', // ⓘ ধাপ ৫ — নিশ্চিতে পরিবহন লাগে ([[TransportRule]]); এই দাবি অন্য কিছু মাপে
             'customer_id' => $this->customer->id,
             'warehouse_id' => $this->warehouse->id,
             'deposit' => '1500',
@@ -282,6 +283,7 @@ final class TheCounterDepositWaitedForItsSignatureTest extends TestCase
     private function sell(): \Illuminate\Testing\TestResponse
     {
         return $this->post(route('sales.direct.store'), [
+            'own_transport' => '1', // ⓘ ধাপ ৫ — নিশ্চিতে পরিবহন লাগে ([[TransportRule]]); এই দাবি অন্য কিছু মাপে
             'customer_id' => $this->customer->id,
             'warehouse_id' => $this->warehouse->id,
             'deposit' => '1000',

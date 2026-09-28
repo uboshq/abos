@@ -21,6 +21,7 @@ use App\Modules\Sales\Models\DeliveryChallan;
 use App\Modules\Sales\Models\SalesInvoice;
 use App\Modules\Sales\Services\DirectSaleService;
 use App\Modules\Sales\Services\SalesInvoiceService;
+use App\Modules\Sales\Services\TransportRule;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
@@ -323,6 +324,20 @@ class SalesInvoiceController extends Controller implements HasMiddleware
          * ⓘ প্রশ্নটা এখন অবস্থা ধরে: কাগজ খসড়া, আর মাল এখনো গুদামে।
          */
         if ($invoice->waitsAtTheCounter()) {
+            /*
+             * ⛔ "খসড়া রাখুন"-এর বিক্রি এখান দিয়ে পাকা হয় — কাউন্টারের দরজা এড়িয়ে। ⓘ তাই
+             * পরিবহনের প্রশ্ন এখানে আবার, চালানের নিজের ঘর দেখে (ধাপ ৫ · [[TransportRule]])।
+             *
+             * ⚠️ সইয়ে থাকা বিক্রি নয়: সে জমা দেওয়ার সময়েই কাউন্টারের দরজা পেরিয়েছে, আর
+             * ধাপ ৫-এর আগে সইয়ে যাওয়া বিক্রিতে (লাইভে INV-0005, 0006) পরিবহন নেই — ওগুলো
+             * এখানে থামলে সই হয়েও চিরকাল আটকে থাকত, কারণ সইয়ে থাকা বিক্রি বদলানো যায় না।
+             */
+            // ⓘ `counter_draft` = "খসড়া রাখুন" ([[DirectSaleService::hold()]]); সইয়ে পাঠানো বিক্রিতে থাকে না —
+            // ⚠️ isHeldForSignature() নয়: সব সই হয়ে গেলে সেটা মিথ্যা, আর তখনই বোতাম লাগে
+            if ($invoice->counter_draft !== null) {
+                app(TransportRule::class)->assertNamedForHeld($invoice);
+            }
+
             app(DirectSaleService::class)->finishHeld($invoice);
 
             return redirect()

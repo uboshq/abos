@@ -504,6 +504,7 @@ class DirectSaleTest extends TestCase
     public function test_selling_through_the_screen_ends_at_the_receipt(): void
     {
         $response = $this->actingAs($this->user)->post(route('sales.direct.store'), [
+            'own_transport' => '1', // ⓘ ধাপ ৫ — নিশ্চিতে পরিবহন লাগে ([[TransportRule]]); এই দাবি অন্য কিছু মাপে
             'customer_id' => $this->customer->id,
             'warehouse_id' => $this->warehouse->id,
             'deposit' => '500',
@@ -671,6 +672,7 @@ class DirectSaleTest extends TestCase
         app(SettingsService::class)->set('sales.field_warehouse_select', false);
 
         $this->actingAs($this->user)->post(route('sales.direct.store'), [
+            'own_transport' => '1', // ⓘ ধাপ ৫ — নিশ্চিতে পরিবহন লাগে ([[TransportRule]]); এই দাবি অন্য কিছু মাপে
             'customer_id' => $this->customer->id,
             'warehouse_id' => $this->warehouse->id,
             'lines' => [['product_id' => $this->product->id, 'qty' => '2', 'rate' => '100']],
