@@ -236,7 +236,12 @@ final class EveryExcuseWeGrantedIsCountedTest extends TestCase
      *   +১  OPEN_TO_THE_WORLD `sales.scan` — নিজে কিছু দেখায়/বদলায় না, কে এসেছেন দেখে পাঠায়
      *   +২  CUSTOMER_PORTAL `sales.portal.scan`, `.scan.received` — কেবল নিজের চালান, অন্যেরটা ৪০৪
      */
-    private const CEILING = 249;
+    /*
+     * ── ⚠️ ২৪৯ → ২৫১, একই দিন ──────────────────────────────────────────
+     *   +২  MoneyIsNeverAFloat::FLOAT_IS_DELIBERATE — PaperLook আর থার্মালের partial: কাগজের মাপ
+     *       (মিমি, pt), টাকা নয়; নতুন নকশার A5 আর থার্মাল রূপ ভগ্নাংশে ছোট হয়
+     */
+    private const CEILING = 251;
 
     /*
      * ── ⚠️ ২২২ → ২২৪, ২৩ সেপ্টেম্বর ২০২৬ ───────────────────────────

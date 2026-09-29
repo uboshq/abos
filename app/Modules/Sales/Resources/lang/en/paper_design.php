@@ -19,4 +19,5 @@ return [
     'order_details' => 'Order details',
     'quotation_no' => 'Quotation no',
     'not_a_bill' => 'This is an order, not a bill — no money is due on this paper',
+    'terms' => 'Terms',
 ];

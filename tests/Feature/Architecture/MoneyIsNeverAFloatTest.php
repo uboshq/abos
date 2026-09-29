@@ -234,8 +234,10 @@ class MoneyIsNeverAFloatTest extends TestCase
      * @var array<string, string> ফাইল => কারণ
      */
     private const FLOAT_IS_DELIBERATE = [
+        'app/Core/Engines/Print/PaperLook.php' => 'কাগজের মাপ (মিমি, pt) — A5-এ ×০.৭২/×০.৮৫, টাকা নয় (৩০ সেপ্টেম্বর ২০২৬)',
         'app/Models/Attachment.php' => 'ফাইলের আকার, টাকা নয়',
         'app/Modules/Inventory/Http/Requests/StockTransferRequest.php' => 'তুলনা — খালি সারি ছাঁকা',
+        'app/Modules/Sales/Resources/views/print/partials/invoice-thermal.blade.php' => 'থার্মালের অক্ষরের মাপ (pt), টাকা নয় (৩০ সেপ্টেম্বর ২০২৬)',
         'app/Modules/Purchase/Http/Controllers/DirectPurchaseController.php' => 'তুলনা — শূন্যের বেশি কি না',
         'app/Modules/Purchase/Http/Controllers/PurchaseBillController.php' => 'তুলনা — দর শূন্যের বেশি কি না (২১ সেপ্টেম্বর ২০২৬)',
         'app/Modules/Purchase/Http/Requests/PaymentRequest.php' => 'তুলনা — খালি সারি ছাঁকা',
