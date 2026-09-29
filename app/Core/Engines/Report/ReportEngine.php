@@ -48,6 +48,9 @@ final class ReportEngine
      */
     private static int $wallsBound = 0;
 
+    /** ⓘ খোঁজের মোড়কে ভিতরের ক্রম বয়ে আনার ঘর ([[applySearch()]]) — সারিতে দেখানো হয় না */
+    private const SEARCH_ORDER = '__search_order';
+
     public function register(ReportDefinition $report): void
     {
         if (isset($this->reports[$report->key])) {
@@ -115,7 +118,8 @@ final class ReportEngine
         $rows = $query
             ->forPage(max(1, $page), $perPage)
             ->get()
-            ->map(fn ($row) => (array) $row);
+            // ⓘ খোঁজের মোড়কের ক্রমিক ঘরটা সারিতে থাকে না ([[applySearch()]])
+            ->map(fn ($row) => array_diff_key((array) $row, [self::SEARCH_ORDER => true]));
 
         if ($report->runningBalance) {
             $rows = $this->addRunningBalance($report, $rows, $filters, $page, $perPage);
@@ -561,9 +565,75 @@ final class ReportEngine
          */
         $needle = '%'.str_replace(['\\', '%', '_'], ['\\\\', '\%', '\_'], $term).'%';
 
-        $sql = implode(' OR ', array_map(fn (string $c) => "`{$c}` LIKE ?", $columns));
+        $base = $query instanceof \Illuminate\Database\Eloquent\Builder ? $query->getQuery() : $query;
 
-        return $query->havingRaw('('.$sql.')', array_fill(0, count($columns), $needle));
+        /*
+         * ⓘ `GROUP BY` থাকলে `HAVING` লাইভেও চলে — আগের মতো, ছদ্মনামের উপর।
+         */
+        if (! empty($base->groups)) {
+            $sql = implode(' OR ', array_map(fn (string $c) => "`{$c}` LIKE ?", $columns));
+
+            return $query->havingRaw('('.$sql.')', array_fill(0, count($columns), $needle));
+        }
+
+        /*
+         * ⛔ `GROUP BY` ছাড়া `HAVING` লাইভের MariaDB (`ONLY_FULL_GROUP_BY`) নেয় না — *1463 Non-grouping
+         * field … is used in HAVING clause*; ২৯ সেপ্টেম্বর ২০২৬ লাইভে ৬৭টার ২৭টা রিপোর্ট ভাঙত, খাতা আর
+         * ক্যাশ বই সহ। লোকালের MySQL ৮.৪ এটা মেনে নেয়, তাই কোনো টেস্ট লাল হয়নি।
+         *
+         * ⭐ তাই কোয়েরিটা মোড়া হয়, আর ছাঁকা হয় বাইরের `WHERE`-এ — ছদ্মনামগুলো তখন সাধারণ কলাম।
+         * ⚠️ উপরের পুরনো আপত্তিটা (মোড়ালে ভিতরের `ORDER BY` হারায়) সত্যি, তাই ভিতরের ক্রমটা
+         * `ROW_NUMBER() OVER (ORDER BY …)` হয়ে একটা ঘরে বাইরে আসে, আর বাইরে তা দিয়েই সাজানো হয় —
+         * খুঁজলে সারির ক্রম বদলায় না। (MySQL ৮ আর MariaDB ১০.২+ দুইটাতেই চলে।)
+         */
+        $inner = clone $query;
+        $order = $this->orderSql($base);
+
+        if ($order !== null) {
+            $innerBase = $inner instanceof \Illuminate\Database\Eloquent\Builder ? $inner->getQuery() : $inner;
+
+            if ($innerBase->columns === null) {
+                $inner->select('*');
+            }
+
+            $inner->reorder()->selectRaw(
+                'ROW_NUMBER() OVER (ORDER BY '.$order[0].') AS '.self::SEARCH_ORDER,
+                $order[1],
+            );
+        }
+
+        $outer = DB::query()
+            ->fromSub($inner, 'searched')
+            ->where(function ($where) use ($columns, $needle) {
+                foreach ($columns as $column) {
+                    $where->orWhere('searched.'.$column, 'like', $needle);
+                }
+            });
+
+        return $order !== null ? $outer->orderBy('searched.'.self::SEARCH_ORDER) : $outer;
+    }
+
+    /**
+     * কোয়েরির `ORDER BY` অংশটা SQL হিসেবে, বাঁধা মানসহ — নাকি কোনো ক্রমই নেই।
+     *
+     * @return array{0: string, 1: list<mixed>}|null
+     */
+    private function orderSql(\Illuminate\Database\Query\Builder $base): ?array
+    {
+        if (empty($base->orders)) {
+            return null;
+        }
+
+        $grammar = $base->getGrammar();
+        $parts = [];
+
+        foreach ($base->orders as $order) {
+            $parts[] = isset($order['sql'])
+                ? (string) $order['sql']
+                : $grammar->wrap($order['column']).' '.$order['direction'];
+        }
+
+        return [implode(', ', $parts), array_values($base->getRawBindings()['order'] ?? [])];
     }
 
     private function countFor(ReportDefinition $report, $query): int
