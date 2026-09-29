@@ -235,6 +235,26 @@ class SalesInvoice extends Model implements Drillable, ShowsItselfForSigning
      * দেখা যেত — আর এই মডেলে ঠিক ওই ধরনের ভুল (খসড়া আদায় গোনা) একবার
      * ঘটেছে। একটা বদলালে অন্যটাও বদলাতে হবে।
      */
+    /**
+     * পাকা ফেরতে এই বিলের বিপরীতে যা জমা হয়েছে — [[dueAmount()]] এটুকু বাদ দেয়।
+     *
+     * ⓘ তালিকা withCollected() দিয়ে এলে অঙ্কটা সারির সাথেই এসেছে (`returned_total`)।
+     */
+    public function returnedAmount(): string
+    {
+        $preloaded = $this->getAttribute('returned_total');
+
+        if ($preloaded !== null) {
+            return bcadd((string) ($preloaded ?: '0'), '0', 4);
+        }
+
+        return SalesReturn::query()
+            ->where('sales_invoice_id', $this->getKey())
+            ->posted()
+            ->pluck('total')
+            ->reduce(fn (string $sum, $total) => bcadd($sum, (string) $total, 4), '0.0000');
+    }
+
     public function scopeWithCollected(Builder $query): Builder
     {
         $collected = CollectionLine::query()
@@ -259,6 +279,11 @@ class SalesInvoice extends Model implements Drillable, ShowsItselfForSigning
             'sal_invoices.*',
             'collected_total' => $collected,
             'voucher_total' => $byVoucher,
+            // ⓘ পাকা ফেরত — [[returnedAmount()]]-এর হুবহু শর্ত, যাতে তালিকা আর একক পাতা একই বাকি বলে
+            'returned_total' => SalesReturn::query()
+                ->selectRaw('COALESCE(SUM(total), 0)')
+                ->whereColumn('sal_returns.sales_invoice_id', 'sal_invoices.id')
+                ->posted(),
         ]);
     }
 
@@ -347,7 +372,11 @@ class SalesInvoice extends Model implements Drillable, ShowsItselfForSigning
 
     public function dueAmount(): string
     {
-        $due = bcsub((string) $this->total, $this->collectedAmount(), 4);
+        /*
+         * ⛔ পাকা ফেরতও বাকি কমায় — গভীর অডিট, ২৯ সেপ্টেম্বর ২০২৬। আগে বাকি = মোট − আদায়; ফেরত খাতায়
+         * পাওনা কমাত, অথচ বিলের বাকি থেকে বাদ যেত না — আদায়ের পর্দা ফেরত যাওয়া অংশও আবার নিত।
+         */
+        $due = bcsub(bcsub((string) $this->total, $this->collectedAmount(), 4), $this->returnedAmount(), 4);
 
         return bccomp($due, '0', 4) > 0 ? $due : '0.0000';
     }
