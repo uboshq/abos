@@ -143,10 +143,6 @@ final class StockTransferService
             throw ValidationException::withMessages(['lines' => __('inventory::validation.no_lines')]);
         }
 
-        foreach ($transfer->lines as $line) {
-            $this->assertEnoughAtSource($line->product, $transfer->fromWarehouse, (string) $line->qty);
-        }
-
         /*
          * অনুমোদন লাগে কি না — ছক না বসালে আগের মতোই রওনা হয়।
          *
@@ -165,6 +161,21 @@ final class StockTransferService
         );
 
         return DB::transaction(function () use ($transfer) {
+            /*
+             * ⛔ সারি আটকে অবস্থা আবার পড়া — ২৯ সেপ্টেম্বর ২০২৬।
+             * দুইবার চাপ দিলে দুইটা অনুরোধই বাইরের প্রশ্নে "খসড়া" দেখত,
+             * আর মাল দুইবার আটকাত। মজুদের হিসাবও তাই আটকানোর পরে।
+             */
+            if ($this->lockedStatus($transfer) !== DocumentStatus::DRAFT) {
+                throw ValidationException::withMessages([
+                    'status' => __('inventory::validation.only_draft_dispatches', ['no' => $transfer->document_no]),
+                ]);
+            }
+
+            foreach ($transfer->lines as $line) {
+                $this->assertEnoughAtSource($line->product, $transfer->fromWarehouse, (string) $line->qty);
+            }
+
             foreach ($transfer->lines as $line) {
                 /*
                  * মালটা উৎস গুদামেই থাকে, কিন্তু আটকে যায়।
@@ -214,6 +225,13 @@ final class StockTransferService
         $transfer->loadMissing(['lines.product', 'fromWarehouse', 'toWarehouse']);
 
         return DB::transaction(function () use ($transfer) {
+            // ⛔ সারি আটকে আবার দেখা — নাহলে দুইবার চাপে মাল দুইবার সরত (২৯ সেপ্টেম্বর ২০২৬)
+            if ($this->lockedStatus($transfer) !== DocumentStatus::CONFIRMED) {
+                throw ValidationException::withMessages([
+                    'status' => __('inventory::validation.only_dispatched_receives', ['no' => $transfer->document_no]),
+                ]);
+            }
+
             foreach ($transfer->lines as $line) {
                 /*
                  * উৎস ছাড়ল — তাক থেকেও, আটকানো থেকেও।
@@ -290,7 +308,27 @@ final class StockTransferService
         }
 
         return DB::transaction(function () use ($transfer, $reason) {
-            if ($transfer->status === DocumentStatus::CONFIRMED) {
+            /*
+             * ⛔ সারি আটকে আবার পড়া — ২৯ সেপ্টেম্বর ২০২৬। পুরনো পাতার
+             * বাতিল আটকানো মাল দ্বিতীয়বার ছাড়ত (শূন্যের নিচে), বা পৌঁছে
+             * যাওয়া স্থানান্তরও বাতিল করে দিত। ছাড়া হবে কি না, সেটাও
+             * আটকানো অবস্থা থেকেই ঠিক হয়, হাতের পুরনো মডেল থেকে নয়।
+             */
+            $status = $this->lockedStatus($transfer);
+
+            if ($status === DocumentStatus::CLOSED) {
+                throw ValidationException::withMessages([
+                    'status' => __('inventory::validation.received_cannot_cancel', ['no' => $transfer->document_no]),
+                ]);
+            }
+
+            if ($status === DocumentStatus::CANCELLED) {
+                throw ValidationException::withMessages([
+                    'status' => __('inventory::validation.already_cancelled', ['no' => $transfer->document_no]),
+                ]);
+            }
+
+            if ($status === DocumentStatus::CONFIRMED) {
                 $transfer->loadMissing(['lines.product', 'fromWarehouse']);
 
                 // আটকানো মাল ছেড়ে দেওয়া — ট্রাক ফিরে এসেছে
@@ -343,6 +381,20 @@ final class StockTransferService
             ->where('code', 'HOLD-TRN')
             ->where('context', ReasonCode::HOLD)
             ->first();
+    }
+
+    /**
+     * স্থানান্তরের সারি আটকে তার এখনকার অবস্থা — ২৯ সেপ্টেম্বর ২০২৬।
+     *
+     * ⓘ লেনদেনের ভেতরেই ডাকতে হয়; দ্বিতীয় অনুরোধ এখানে অপেক্ষা করে,
+     * আর প্রথমটা শেষ হলে নতুন অবস্থাটা দেখে।
+     */
+    private function lockedStatus(StockTransfer $transfer): string
+    {
+        return (string) StockTransfer::query()
+            ->whereKey($transfer->id)
+            ->lockForUpdate()
+            ->value('status');
     }
 
     /** @param list<array<string, mixed>> $lines */
