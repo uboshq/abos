@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Feature\Modules;
 
 use App\Core\Engines\Report\ReportEngine;
+use App\Core\Security\Totp;
 use App\Core\Services\SettingsService;
 use App\Core\Support\CompanyContext;
 use App\Core\Support\DocumentStatus;
@@ -416,10 +417,18 @@ class CustomerTest extends TestCase
 
         CompanyContext::clear();
 
+        /*
+         * ⓘ মালিক সুপার অ্যাডমিন, আর ২৮ সেপ্টেম্বর ২০২৬ থেকে তাঁর দুই ধাপ
+         * বাধ্যতামূলক (acda6265) — তাই কোডটাও দিতে হয়। ⚠️ কেবল পাসওয়ার্ডে
+         * লগইন ফেরত আসত, আর নিচের পাতা ৩০২ দিত যেন দোষটা পাতার।
+         */
         $this->post(route('login'), [
             'identifier' => 'owner@abos.test',
             'password' => 'password',
+            'code' => Totp::codeFor((string) $this->user->fresh()->mfa_secret),
         ])->assertRedirect();
+
+        $this->assertAuthenticatedAs($this->user, 'web');
 
         $this->get(route('customer.show', $customer))->assertOk()->assertSee($customer->code);
         $this->get(route('customer.edit', $customer))->assertOk();

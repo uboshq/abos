@@ -644,28 +644,53 @@ class SalesTest extends TestCase
     // ── ধারের সীমা ──────────────────────────────────────────────────────
 
     /**
-     * ধারের সীমা পেরোলে অর্ডার আটকায়।
+     * ⭐ আদেশ বসে, সীমা পেরোলেও — মালিকের সিদ্ধান্ত, ২৬ সেপ্টেম্বর ২০২৬
+     * (a263208d): *"customer ba SR order kikore dibe, seta DO/delivery order
+     * theke suro hobe"*। আদেশ আন্দাজের জিনিস।
+     *
+     * ⛔ দেয়ালটা চালানে: **একই** বিক্রয়কর্মী, **একই** আদেশের একই পরিমাণ মাল
+     * পাঠাতে গেলে ফেরত। ⓘ আগে এই দাবি বলত আদেশই আটকায় — সেটা পুরনো নিয়ম।
      */
-    public function test_an_order_past_the_credit_limit_is_blocked(): void
+    public function test_an_order_past_the_credit_limit_stands_but_its_challan_is_refused(): void
     {
         $this->customer->forceFill(['credit_limit' => '500'])->save();
 
         $salesman = User::query()->where('email', 'sales@abos.test')->firstOrFail();
         $this->actingAs($salesman);
 
-        $this->expectException(ValidationException::class);
+        $order = $this->orders()->confirm($this->makeOrder('10', '200'));
 
-        $this->orders()->confirm($this->makeOrder('10', '200'));
+        $this->assertSame(DocumentStatus::CONFIRMED, $order->status,
+            '⛔ ২,০০০ টাকার আদেশ ৫০০ সীমায় আটকে গেছে — দেয়াল আদেশে নয়।');
+
+        try {
+            $this->challans()->confirm($this->makeChallan($order->fresh(['lines']), '10', '200'));
+            $this->fail('⛔ সীমার চারগুণ মাল চালানে বেরিয়ে গেছে।');
+        } catch (ValidationException $e) {
+            $this->assertArrayHasKey('customer_id', $e->errors());
+        }
     }
 
-    /** অনুমতি থাকলে সীমা পার করানো যায় — সেটাই অনুমোদনের জায়গা। */
-    public function test_someone_with_the_permission_can_go_past_the_limit(): void
+    /**
+     * ⛔ সীমা পার করার চাবি আর নেই — মালিক (সুপার অ্যাডমিন) নিজেও চালানে
+     * আটকান: *"limit mane limit 100%, ... emon ki malikero"*।
+     *
+     * ⓘ আগে এই দাবি বলত "অনুমতি থাকলে সীমা পার করানো যায়", আর আদেশেই সেটা
+     * মাপত — ঐ চাবি ও ঐ দেয়াল দুইটাই ২৬ সেপ্টেম্বর উঠে গেছে।
+     */
+    public function test_not_even_the_owner_can_send_goods_past_the_limit(): void
     {
         $this->customer->forceFill(['credit_limit' => '500'])->save();
 
-        $order = $this->orders()->confirm($this->makeOrder('10', '200'));
+        $this->assertTrue($this->user->roles->contains('name', 'super_admin'),
+            'দৃশ্যটাই বানানো যায়নি — মালিক সুপার অ্যাডমিন নন।');
 
+        $order = $this->orders()->confirm($this->makeOrder('10', '200'));
         $this->assertSame(DocumentStatus::CONFIRMED, $order->status);
+
+        $this->expectException(ValidationException::class);
+
+        $this->challans()->confirm($this->makeChallan($order->fresh(['lines']), '10', '200'));
     }
 
     // ── টেন্যান্ট ও অনুমতি ──────────────────────────────────────────────
