@@ -12,6 +12,7 @@ use App\Modules\Sales\Models\DeliveryChallanLine;
 use App\Modules\Sales\Models\DeliveryEvent;
 use App\Modules\Sales\Models\DeliveryEventLine;
 use App\Modules\Sales\Models\DeliveryState;
+use App\Modules\Sales\Models\SalesReturnLine;
 use App\Modules\Sales\Models\Shipment;
 use App\Modules\Sales\Models\ShipmentLine;
 use Illuminate\Support\Collection;
@@ -556,6 +557,15 @@ final class DeliveryStageService
              */
             if ($this->leavesTheGate($state?->stage, $to)) {
                 /*
+                 * ⛔ ফেরত পাকা হওয়া চালান আবার গেট পেরোয় না — গভীর অডিট (৯), ৩০ সেপ্টেম্বর ২০২৬।
+                 * ⓘ কেবল সত্যিকারের রওনায় (গাড়িতে ওঠার আগের ধাপ বা "পৌঁছায়নি" থেকে); ট্রিপের সন্ধ্যার
+                 * শোধরানো ("পৌঁছেছে" থেকে "রওনা") মাল নতুন করে বের করে না, তাই সেটা থামে না।
+                 */
+                if ($state === null || in_array((string) $state->stage, DeliveryStage::DISPATCHABLE, true)) {
+                    $this->assertNothingCameBack($challan, $source === DeliveryStage::BY_SHIPMENT ? 'lines' : 'stage');
+                }
+
+                /*
                  * ⭐ মাল বের হলেই বিল — মালিক, ২৯ সেপ্টেম্বর ২০২৬: *"ডেলিভারি বের হলেই ইনভয়েজ"*
                  * ([[DispatchBill]])। ⓘ গেট পাসের আগে, একই লেনদেনে: বিল আটকালে (বাকির দেয়াল)
                  * গেট পাসও নয়, রওনাও নয়। আগে থেকে বিল থাকলে কিছুই করে না।
@@ -711,6 +721,38 @@ final class DeliveryStageService
      * তখন রওনার ধাপ আসে না, অথচ মালটা গেট পেরোচ্ছে; এখানে না ধরলে ঐ পথে বিলও হত না, গেট
      * পাসও না। ⛔ রওনার পরে পৌঁছানো নয় — সেখানে গেট আগেই পেরিয়েছে।
      */
+    /**
+     * ⛔ পাকা ফেরত আছে এমন চালান রওনা হয় না — গভীর অডিট (৯), ৩০ সেপ্টেম্বর ২০২৬
+     * ([[AReturnedChallanLeftTheGateAgainTest]])।
+     *
+     * ⓘ আগে: চালান ফিরে এল, ক্রেতা একটা অংশ ফেরত দিলেন, ফেরত পাকা হলো — মাল গুদামে। তারপর একই
+     * চালান আবার রওনা হত, আর গেট পাস বেরোত চালানের **পুরো** পরিমাণে। বিল আগেই ছিল, তাই নতুন
+     * বিল হত না ([[DispatchBill]]); দারোয়ানের কাগজ আর খাতার মাল দুই কথা বলত। ⭐ বাকি মাল পাঠাতে
+     * নতুন চালান — তাতে গেট পাস, বিল আর মজুদ তিনটাই সেই পরিমাণে।
+     *
+     * ⓘ ফেরত চালানে বাঁধা থাকে বিলের সারি দিয়ে (ফেরতের সারি → বিলের সারি → চালানের সারি)। বিল
+     * ছাড়া ফেরত কোনো চালানের নয়, তাই এখানে গোনা হয় না। [[ShipmentService]] ট্রিপে তোলার সময়েও
+     * এটাই ডাকে — একই প্রশ্ন, এক জায়গায়।
+     */
+    public function assertNothingCameBack(DeliveryChallan $challan, string $field = 'stage'): void
+    {
+        $returned = SalesReturnLine::query()
+            ->whereHas('return', fn ($q) => $q->posted())
+            ->whereHas('invoiceLine', fn ($q) => $q->whereIn('delivery_challan_line_id',
+                DeliveryChallanLine::query()->select('id')->where('delivery_challan_id', $challan->id)))
+            ->with('return')
+            ->first();
+
+        if ($returned !== null) {
+            throw ValidationException::withMessages([
+                $field => __('sales::delivery.errors.returned_cannot_travel', [
+                    'no' => $challan->document_no,
+                    'return' => $returned->return?->document_no ?? '',
+                ]),
+            ]);
+        }
+    }
+
     private function leavesTheGate(?string $from, string $to): bool
     {
         if ($to === DeliveryStage::DISPATCHED) {

@@ -374,6 +374,9 @@ final class ShipmentService
                 ]);
             }
 
+            // ⛔ পাকা ফেরত আছে এমন চালান গাড়িতে ওঠে না — গভীর অডিট (৯); বেরোনোর মুহূর্তেও একই পাহারা
+            app(DeliveryStageService::class)->assertNothingCameBack($challan, 'lines');
+
             /*
              * এক গুদাম, এক গাড়ি।
              *

@@ -102,6 +102,7 @@ return [
         'not_allowed' => 'Cannot go straight from ":from" to ":to".',
         'on_a_trip' => 'This challan is on trip :trip — record this from the trip page.',
         'cannot_travel' => 'Challan :no is at ":stage" — it cannot go on a van.',
+        'returned_cannot_travel' => 'Challan :no has a posted return (:return) — it cannot leave again. Make a new challan for the goods still to go.',
         'failed_needs_reason' => '"Failed" needs a reason — pick one or write it.',
         'receiver_required' => 'Write the name of the person who received the goods.',
         'phone_invalid' => 'The phone number is not valid — digits only, a leading + is fine.',
