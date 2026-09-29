@@ -45,7 +45,29 @@ final class ReportResult
          * পড়ে মানুষ ভাবত ওইটুকুই সব।
          */
         public readonly ?int $fullRowCount = null,
+
+        /**
+         * ⭐ শাখা ধরে ভাগ — চাওয়া হলে (`byBranch: true`) আর "সব শাখা"-তে; খালি মানে
+         * ভাগ নেই। `rows` তবু আজকের মতোই ভরা; `totals` = Grand Total।
+         *
+         * @var list<BranchSection>
+         */
+        public readonly array $sections = [],
     ) {}
+
+    /** রিপোর্টটা শাখা ধরে ভাগ হয়েছে কি না। */
+    public function isSplitByBranch(): bool
+    {
+        return $this->sections !== [];
+    }
+
+    /** এক শাখার মোট — [[formatTotal()]]-এর একই রূপে। */
+    public function formatSectionTotal(BranchSection $section, ReportColumn $column): string
+    {
+        $value = $section->totals[$column->key] ?? null;
+
+        return $value === null ? '' : Money::format($value, $column->decimals());
+    }
 
     /** উপরের কয়টা সারি দেখানো হচ্ছে — পুরো তালিকা হলে false */
     public function isTopOnly(): bool

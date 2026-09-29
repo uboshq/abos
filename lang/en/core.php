@@ -447,6 +447,9 @@ return [
     ],
 
     'report' => [
+        'no_branch' => 'Head office / no branch',
+        'branch_total' => 'Branch total',
+        'grand_total' => 'Grand total',
         'contribution' => 'Share %',
         'change' => 'Change %',
         'compare_previous' => 'Same length before',

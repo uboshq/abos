@@ -153,6 +153,15 @@ final class ReportDefinition
          * কারণ `EveryReportStandsBehindTheBranchWallTest`-এও লিখতে হয়।
          */
         public readonly ?string $branchless = null,
+
+        /**
+         * "সব শাখা"-তে শাখা ধরে ভাগ হবে কি না (২৯ সেপ্টেম্বর ২০২৬)।
+         *
+         * ⓘ নিজে থেকেই বন্ধ থাকে শাখাহীন রিপোর্টে (`branchless`), চলমান জেরে
+         * (`runningBalance` — এক খাতের জের শাখায় কাটলে জের ভুল হত), Top-N আর
+         * তুলনায়। ভাগ অর্থহীন হলে রিপোর্ট নিজে `false` দেয় — কারণসহ।
+         */
+        public readonly bool $splitByBranch = true,
     ) {
         if ($branchless !== null && ! in_array($branchless, [self::WHOLE_COMPANY, self::NO_BRANCH_DATA], true)) {
             throw new \InvalidArgumentException("Report '{$key}' declares an unknown branchless kind '{$branchless}'.");

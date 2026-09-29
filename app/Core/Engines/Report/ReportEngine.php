@@ -7,6 +7,7 @@ namespace App\Core\Engines\Report;
 use App\Core\Services\DataScope;
 use App\Core\Support\CompanyContext;
 use App\Core\Support\RunningBalance;
+use App\Models\Branch;
 use App\Models\UserDataScope;
 use Closure;
 use Illuminate\Auth\Access\AuthorizationException;
@@ -78,7 +79,7 @@ final class ReportEngine
      *
      * @param  array<string, mixed>  $filters
      */
-    public function run(string $key, array $filters = [], int $page = 1, int $perPage = 100): ReportResult
+    public function run(string $key, array $filters = [], int $page = 1, int $perPage = 100, bool $byBranch = false): ReportResult
     {
         $report = $this->get($key);
         $filters = $this->normaliseFilters($report, $filters);
@@ -135,6 +136,23 @@ final class ReportEngine
             $rows = $this->addComparison($report, $rows, $filters, $comparison);
         }
 
+        /*
+         * ⭐ "সব শাখা"-তে শাখা ধরে ভাগ — চাওয়া হলে (মালিকের নির্দেশ, ২৯ সেপ্টেম্বর
+         * ২০২৬)। ⓘ `$totals` তখনো পুরো নাগালের — সেটাই Grand Total; প্রতিটা শাখার
+         * মোট তার নিজের কোয়েরিতে, তাই Σ শাখা = Grand Total, যোগ করে বানানো নয়।
+         */
+        $sections = [];
+
+        if ($byBranch) {
+            foreach ($this->branchPlan($report, $filters, $top, $comparison) as $part) {
+                $section = $this->section($report, $part['filters'], $part['id'], $part['name'], $perPage);
+
+                if ($section->rowCount > 0) {
+                    $sections[] = $section;
+                }
+            }
+        }
+
         return new ReportResult(
             report: $report,
             rows: $rows->all(),
@@ -145,7 +163,67 @@ final class ReportEngine
             filters: $filters,
             comparison: $comparison,
             fullRowCount: $count,
+            sections: $sections,
         );
+    }
+
+    /**
+     * কোন কোন শাখায় ভাগ হবে — ভাগ না হলে খালি।
+     *
+     * ⛔ ভাগ নেই: রিপোর্ট বন্ধ রেখেছে, শাখাহীন রিপোর্ট, চলমান জের, Top-N বা তুলনা,
+     * রিপোর্টের নিজের শাখা-ছাঁকনি বাছা, হেডারে একটা শাখা বাছা, বা নাগালে একটাই শাখা।
+     *
+     * @param  array<string, mixed>  $filters
+     * @return list<array{id: ?int, name: string, filters: array<string, mixed>}>
+     */
+    private function branchPlan(ReportDefinition $report, array $filters, ?int $top, ?array $comparison): array
+    {
+        if (! $report->splitByBranch || $report->branchless !== null || $report->runningBalance
+            || $top !== null || $comparison !== null || ! empty($filters['branch_id'])
+            || app(DataScope::class)->viewsOneBranch(auth()->user())) {
+            return [];
+        }
+
+        $ids = $filters['branch_ids'] ?? null;
+
+        $branches = Branch::query()->withoutGlobalScopes()
+            ->where('company_id', CompanyContext::id())
+            ->when($ids !== null, fn ($q) => $q->whereIn('id', $ids))
+            ->orderBy('code')
+            ->get();
+
+        if ($branches->count() < 2) {
+            return [];
+        }
+
+        $plan = [];
+
+        foreach ($branches as $branch) {
+            $plan[] = ['id' => (int) $branch->id, 'name' => (string) $branch->name(), 'filters' => [...$filters, 'branch_id' => (int) $branch->id]];
+        }
+
+        // ⓘ শাখাহীন দল শেষে — প্রধান অফিসের, কোম্পানি-স্তরের সারি
+        $plan[] = ['id' => null, 'name' => (string) __('core.report.no_branch'), 'filters' => [...$filters, 'branch_id' => null, 'branch_only_null' => true]];
+
+        return $plan;
+    }
+
+    /** @param  array<string, mixed>  $filters */
+    private function section(ReportDefinition $report, array $filters, ?int $id, string $name, int $perPage): BranchSection
+    {
+        $query = $this->applySearch($report, $this->queryFor($report, $filters), $filters['q'] ?? null);
+
+        $totals = $this->totalsFor($report, clone $query);
+        $count = $this->countFor($report, clone $query);
+
+        $rows = $query->forPage(1, $perPage)->get()
+            ->map(fn ($row) => array_diff_key((array) $row, [self::SEARCH_ORDER => true]));
+
+        if ($report->rankBy !== null) {
+            $rows = $this->addContribution($report, $rows, $totals);
+        }
+
+        return new BranchSection($id, $name, $rows->values()->all(), $totals, $count);
     }
 
     /**
@@ -328,10 +406,47 @@ final class ReportEngine
      *
      * @return \Generator<int, array<string, mixed>>
      */
-    public function stream(string $key, array $filters = [], int $chunk = 1000): \Generator
+    public function stream(string $key, array $filters = [], int $chunk = 1000, bool $byBranch = false): \Generator
     {
         $report = $this->get($key);
         $filters = $this->normaliseFilters($report, $filters);
+
+        /*
+         * ⭐ শাখা ধরে ভাগ — চাওয়া হলে: প্রতিটা শাখার মাথা, সারি, শাখার মোট; শেষে
+         * Grand Total। চিহ্নিত সারিগুলো `__section` ঘরে চেনা যায় — লেখক সেগুলো দেখে
+         * মাথা ও মোটের সারি বসায়।
+         */
+        $plan = $byBranch ? $this->branchPlan($report, $filters, $this->topN($report, $filters), null) : [];
+
+        if ($plan !== []) {
+            foreach ($plan as $part) {
+                $base = $this->queryFor($report, $part['filters']);
+
+                if ($this->countFor($report, clone $base) === 0) {
+                    continue;
+                }
+
+                yield ['__section' => 'head', '__branch' => $part['name']];
+
+                $page = 1;
+
+                do {
+                    $rows = $this->queryFor($report, $part['filters'])->forPage($page, $chunk)->get();
+
+                    foreach ($rows as $row) {
+                        yield (array) $row;
+                    }
+
+                    $page++;
+                } while ($rows->count() === $chunk);
+
+                yield ['__section' => 'total', '__branch' => $part['name'], ...$this->totalsFor($report, $base)];
+            }
+
+            yield ['__section' => 'grand', ...$this->totalsFor($report, $this->queryFor($report, $filters))];
+
+            return;
+        }
 
         $page = 1;
 
@@ -367,6 +482,13 @@ final class ReportEngine
         self::$wallsBound++;
 
         return function ($query) use ($f, $column): void {
+            // ⓘ শাখা ধরে ভাগের শাখাহীন দল — কেবল শাখা লেখা নেই এমন সারি
+            if (! empty($f['branch_only_null'])) {
+                $query->whereNull($column);
+
+                return;
+            }
+
             if (! empty($f['branch_id'])) {
                 $query->where($column, $f['branch_id']);
 
