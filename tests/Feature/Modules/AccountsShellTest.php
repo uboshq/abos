@@ -77,6 +77,40 @@ class AccountsShellTest extends TestCase
     }
 
     /**
+     * ⭐ টাকার কার্ড: হাতে নগদ · MFS · ব্যাংকে · পথে — আর মোটে MFS-ও (মালিক, ২৯ সেপ্টেম্বর ২০২৬)।
+     *
+     * ⛔ আগে মোট ছিল কেবল নগদ + ব্যাংক; বিকাশের টাকা মোটেও ছিল না, ভাগেও না।
+     */
+    public function test_the_money_card_counts_mfs_in_the_total_and_names_it(): void
+    {
+        $till = app(CashTillService::class)->ensurePrimaryTill();
+        [$mfs, $bank] = array_map(fn (array $a) => Account::query()->create([
+            'company_id' => $this->company->id,
+            'code' => $a[0],
+            'name_en' => $a[1],
+            'name_bn' => $a[1],
+            'parent_id' => StandardChart::find($a[2])->id,
+            'type' => Account::ASSET,
+            'nature' => Account::DEBIT,
+            'money_kind' => $a[3],
+        ]), [
+            ['1105-CARD', 'Card wallet', StandardChart::MOBILE_MONEY, Account::MFS],
+            ['1102-CARD', 'Card bank', StandardChart::BANK, Account::BANK],
+        ]);
+
+        $this->open($till->account_id, '1000');
+        $this->open($mfs->id, '700');
+        $this->open($bank->id, '300');
+
+        $this->get(route('dashboard', ['period' => 'today']))
+            ->assertOk()
+            ->assertSee(__('accounts::dashboard.mfs_balance'))
+            ->assertSee('700.00')
+            // ১,০০০ + ৭০০ + ৩০০ — MFS বাদ পড়লে ১,৩০০ দেখাত
+            ->assertSee('2,000.00');
+    }
+
+    /**
      * ড্যাশবোর্ডের প্রতিটা সংখ্যা কোথাও নিয়ে যায় — নিয়ম ১।
      *
      * যে সংখ্যায় ক্লিক করা যায় না সেটা ব্যবহারকারীকে বিশ্বাস করতে বলে,

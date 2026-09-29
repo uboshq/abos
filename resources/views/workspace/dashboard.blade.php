@@ -111,29 +111,6 @@
          মডিউলের পর্দা গভীর: এক বিষয়ের ছয়টা সংখ্যা, চার্ট, তালিকা।
          এটা চওড়া: বারো বিষয়ের একটা করে সংখ্যা, আর কোনটায় নামতে হবে
          সেই সিদ্ধান্ত। দুইটা আলাদা প্রশ্ন, তাই দুইটা পর্দা।     --}}
-    @if (! empty($overall))
-        <div class="mb-4">
-            <h2 class="mb-2 text-xs font-semibold text-(--color-ink-muted)">
-                {{ __('core.dashboard.across_the_business') }}
-            </h2>
-            <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                @foreach ($overall as $row)
-                    <a href="{{ route('module.dashboard', ['module' => $row['module']]) }}"
-                       data-boxed
-                       class="block rounded-(--radius-card) border border-(--color-border)
-                              bg-(--color-surface-card) px-4 py-3">
-                        <div class="text-2xs text-(--color-ink-muted)">{{ $row['name'] }}</div>
-                        <div class="mt-0.5 text-xs text-(--color-ink-muted)">{{ $row['stat']->label }}</div>
-                        <div @class([
-                            'mt-1 text-xl font-semibold tabular-nums',
-                            'text-(--color-badge-warning-ink)' => $row['stat']->tone === \App\Core\Engines\Dashboard\Stat::WARN,
-                            'text-(--color-badge-danger-ink)' => $row['stat']->tone === \App\Core\Engines\Dashboard\Stat::BAD,
-                        ])>{{ $row['stat']->value ?? '—' }}</div>
-                    </a>
-                @endforeach
-            </div>
-        </div>
-    @endif
 
     {{-- ── বাছা কালপর্বটা ───────────────────────────────────────────
          সংখ্যার কার্ড, কিন্তু সব সমান নয়: "আজ"-এর প্রথম টাকার
@@ -237,7 +214,8 @@
                 বাকিগুলো নিচে নেমে যেত, ফলে "টাকা কত · আজ কত বেচলাম ·
                 আজ কত আদায়" — তিনটা একসাথে দেখা যেত না।
             --}}
-            <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            {{-- ⭐ এক লাইনে — বড় কার্ড দুই ঘর + চারটা ছোট = ছয় (মালিক, ২৯ সেপ্টেম্বর ২০২৬) --}}
+            <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-6">
                 @foreach ($widgets as $i => $widget)
                     @php
                         $lead = $i === $leadIndex;
@@ -424,6 +402,31 @@
         @endif
     @endforeach
 
+    {{-- ⭐ "সোজা কথা" (প্রতিটা মডিউলের মাথার সংখ্যা) এখন "আজ"-এর নিচে — মালিকের নির্দেশ,
+         ২৯ সেপ্টেম্বর ২০২৬: "আজ"-এর সারিটা এক লাইনে, সবার উপরে। --}}
+    @if (! empty($overall))
+        <div class="mb-4">
+            <h2 class="mb-2 text-xs font-semibold text-(--color-ink-muted)">
+                {{ __('core.dashboard.across_the_business') }}
+            </h2>
+            <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                @foreach ($overall as $row)
+                    <a href="{{ route('module.dashboard', ['module' => $row['module']]) }}"
+                       data-boxed
+                       class="block rounded-(--radius-card) border border-(--color-border)
+                              bg-(--color-surface-card) px-4 py-3">
+                        <div class="text-2xs text-(--color-ink-muted)">{{ $row['name'] }}</div>
+                        <div class="mt-0.5 text-xs text-(--color-ink-muted)">{{ $row['stat']->label }}</div>
+                        <div @class([
+                            'mt-1 text-xl font-semibold tabular-nums',
+                            'text-(--color-badge-warning-ink)' => $row['stat']->tone === \App\Core\Engines\Dashboard\Stat::WARN,
+                            'text-(--color-badge-danger-ink)' => $row['stat']->tone === \App\Core\Engines\Dashboard\Stat::BAD,
+                        ])>{{ $row['stat']->value ?? '—' }}</div>
+                    </a>
+                @endforeach
+            </div>
+        </div>
+    @endif
     {{-- ── যা করা বাকি ───────────────────────────────────────────────
          কার্ডের ছক নয়, সারির তালিকা — আর শূন্যগুলো এক লাইনে গুটানো।
 

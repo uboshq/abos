@@ -51,7 +51,8 @@ final class AccountsWidgets implements DashboardWidgets
             new Widget(
                 group: 'today',
                 label: __('accounts::dashboard.money_on_hand'),
-                value: Money::format(bcadd(self::cashInHand(), self::bankBalance(), 4)),
+                // ⭐ MFS-ও মোটে — আগে বাদ পড়ত, আর বিকাশের টাকা কোথাও দেখা যেত না (মালিক, ২৯ সেপ্টেম্বর ২০২৬)
+                value: Money::format(bcadd(bcadd(self::cashInHand(), self::mfsBalance(), 4), self::bankBalance(), 4)),
                 href: route('accounts.till.index'),
                 permission: 'accounts.till.view',
                 tone: 'money',
@@ -59,6 +60,7 @@ final class AccountsWidgets implements DashboardWidgets
                 icon: 'wallet',
                 parts: [
                     __('accounts::dashboard.cash_in_hand') => Money::format(self::cashInHand()),
+                    __('accounts::dashboard.mfs_balance') => Money::format(self::mfsBalance()),
                     __('accounts::dashboard.bank_balance') => Money::format(self::bankBalance()),
                     __('accounts::dashboard.in_transit') => Money::format(self::inTransit()),
                 ],
@@ -124,6 +126,11 @@ final class AccountsWidgets implements DashboardWidgets
     public static function cashInHand(): string
     {
         return self::sumOf(CashTill::query()->active()->pluck('account_id')->all());
+    }
+
+    private static function mfsBalance(): string
+    {
+        return self::sumOf(Account::query()->ofMoneyKind(Account::MFS)->pluck('id')->all());
     }
 
     private static function bankBalance(): string
