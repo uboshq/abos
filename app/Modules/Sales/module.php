@@ -467,6 +467,10 @@ return [
             'sales.delivery.view',
             'sales.delivery.update',
             'sales.gate_pass.view',
+            // ⭐ ট্রিপ, লোডিং শিট, রওনা, settle, close — গুদামের কাজ (মালিকের ভূমিকা-ভাগ, ২৭ সেপ্টেম্বর;
+            // হাঁটার স্ক্রিপ্টে ধরা, ২৯ সেপ্টেম্বর ২০২৬)। ⛔ বাতিল (`shipment.cancel`) নয় — ওটা তদারকির
+            'sales.shipment.view',
+            'sales.shipment.create',
         ],
         /*
          * কাউন্টার — প্রতিটা কোম্পানিতে ডিফল্টে। মালিক, ২৭ সেপ্টেম্বর ২০২৬: *"bosiye daw"*।
@@ -551,6 +555,11 @@ return [
             'sales.invoice.create',
             // ⭐ ডেলিভারি নিশ্চিত ("পৌঁছেছে") — লাইভের যাচাইয়ে আটকেছিল (২৯ সেপ্টেম্বর ২০২৬)
             'sales.delivery.update',
+            // ⭐ অর্ডার নিশ্চিত, আর ট্রিপ চালানো ও বাতিল — তদারকি (হাঁটার স্ক্রিপ্টে ধরা, ২৯ সেপ্টেম্বর ২০২৬)।
+            // ⚠️ `order.update` খসড়া সম্পাদনাও খোলে — নিশ্চিত আর সম্পাদনা একই চাবিতে বাঁধা (মালিককে জানানো)
+            'sales.order.update',
+            'sales.shipment.create',
+            'sales.shipment.cancel',
             'sales.delivery.view',
             'sales.order.view', 'sales.challan.view', 'sales.invoice.view',
             'sales.collection.view', 'sales.return.view', 'sales.shipment.view',
