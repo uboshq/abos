@@ -216,6 +216,21 @@ class PortalController extends Controller
          */
         $this->papers->recordSignIn($identifier);
 
+        /*
+         * ⭐ বিলের QR স্ক্যান করে এলে লগইনের পরে সেই QR-এর পাতাতেই ফেরা — ৩০ সেপ্টেম্বর ২০২৬
+         * ([[DeliveryScanController::open()]] ঠিকানাটা রেখে যায়)।
+         *
+         * ⛔ কেবল নিজের সাইটের পোর্টাল বা স্ক্যানের ঠিকানা। সেশনে কর্মীর কোনো পুরনো ঠিকানা
+         * থাকলে ডিলারকে কর্মীর লগইনে ছুড়ে দিত; অন্য সাইটের ঠিকানা হলে লগইনের পরে বাইরে পাঠাত।
+         */
+        $intended = (string) $request->session()->pull('url.intended', '');
+
+        foreach ([url('/scan/'), url('/portal')] as $ours) {
+            if ($intended !== '' && str_starts_with($intended, $ours)) {
+                return redirect()->to($intended);
+            }
+        }
+
         return redirect()->route('sales.portal.home');
     }
 

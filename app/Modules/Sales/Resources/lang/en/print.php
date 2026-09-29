@@ -18,6 +18,19 @@ return [
 
     // The classic table invoice — 28 September 2026
     // ⭐ ২৯ সেপ্টেম্বর ২০২৬: মালিকের নমুনার হুবহু লেখা — ছাঁচ সবসময় `en` থেকে পড়ে
+    // ⓘ "Set Invoice Information"-এর নমুনা বিলের বানানো তথ্য — ছাঁচের মতো সবসময় `en` থেকে পড়া
+    'sample' => [
+        'customer' => 'Sample Traders',
+        'point' => 'Sample Bazar',
+        'address' => 'House 1, Road 1, Dhaka',
+        'carrier' => 'Sample Transport',
+        'creator' => 'Sample Staff',
+        'item_one' => 'Sample Product One',
+        'item_two' => 'Sample Product Two',
+        'method' => 'Cash',
+        'words' => 'Fourteen Thousand Five Hundred (BDT)',
+    ],
+
     'classic' => [
         'heading' => 'INVOICE',
         'bill_to' => 'Bill To,',
@@ -66,9 +79,13 @@ return [
         'method' => 'Payment Method',
         'narration' => 'Narration',
         'amount' => 'Amount',
-        'duplicate' => 'DUPLICATE',
+        // ⭐ পুরো লেখা, শিরোনামের নিচে — মালিক, ৩০ সেপ্টেম্বর ২০২৬; core.print.duplicate_notice-এর সেই একই কথা
+        'duplicate' => 'DUPLICATE — this paper has been printed before',
         'received_by' => 'Received by',
         'prepared_by' => 'Prepared by',
+        'bin' => 'BIN:',
+        'scan_hint' => 'Scan for delivery & account',
+        'tin' => 'TIN:',
         'approved_by' => 'Approved by',
         'printed_at' => 'Printing Time:',
         'footnote' => 'Please check the goods before signing — quantity claims are not accepted after signature.',

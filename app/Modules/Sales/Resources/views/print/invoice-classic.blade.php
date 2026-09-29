@@ -28,16 +28,37 @@
     $duplicate = __('core.print.duplicate_notice');
     $notices = $doc->notices();
     $isDuplicate = in_array($duplicate, $notices, true);
+
+    /*
+     * ⭐ "Set Invoice Information" (মালিক, ২৯ সেপ্টেম্বর ২০২৬) — কী ছাপা হবে তা ঐ ভাগের সুইচে।
+     * ⓘ চাবির নাম এখানে লেখা হয় না; সব [[InvoicePrintLook]]-এর পদ্ধতি দিয়ে।
+     */
+    $look = app(\App\Modules\Sales\Support\InvoicePrintLook::class);
+    $head = $look->header($company);
+    $show = fn (string $what) => $look->shows($what);
+    $signatures = $look->signatures();
     $loud = array_values(array_filter($notices, fn (string $n) => $n !== $duplicate));
 
     $sums = $facts['sums'];
     $showVat = bccomp(str_replace(',', '', $sums['vat']), '0', 4) !== 0;
 
-    $footnote = $settings->get('sales.print.invoice_footnote');
-    $footnote = filled($footnote) ? $footnote : __('sales::print.classic.footnote', [], 'bn');
+    $footnote = $look->footnote();
 
     $logo = $profile->shows('logo') ? $company->logoData() : null;
-    $contact = trim(implode(', ', array_filter([$company->email, $company->website])));
+    $contact = trim(implode(', ', array_filter([$head['email'], $head['website']])));
+
+    /* ⓘ BIN/TIN কোম্পানির প্রোফাইল থেকে — ফাঁকা থাকলে লাইনটাই নেই */
+    $taxIds = $show('bin') ? trim(implode('   ', array_filter([
+        filled($company->bin) ? $en('bin').' '.$company->bin : null,
+        filled($company->tin) ? $en('tin').' '.$company->tin : null,
+    ]))) : '';
+
+    /* ⓘ বন্ধ কলাম মাথা, সারি আর যোগফলের সারি — তিন জায়গা থেকেই যায় */
+    $showFree = $show('free');
+
+    /* ⭐ QR — কেবল চালান থেকে আসা বিলে (কাউন্টারের বিলে লিংক খালি) */
+    $scanUrl = $show('qr') ? (string) ($facts['scan_url'] ?? '') : '';
+    $showTotalQty = $show('total_qty');
 @endphp
 
 <style @nonce>
@@ -56,6 +77,9 @@
     .company-name { font-size: 16pt; font-weight: bold; }
     .company-meta { font-size: 8.5pt; }
     .big-title { text-align: right; font-size: 26pt; font-weight: bold; letter-spacing: 1mm; }
+    td.scan-cell { width: 28%; text-align: center; vertical-align: middle; }
+    .scan { text-align: center; }
+    .scan-hint { font-size: 6.5pt; color: #444; }
     .dup-mark { text-align: right; font-size: 7.5pt; font-weight: bold; color: #444; }
 
     .notice { text-align: center; font-weight: bold; border: 0.4mm solid #000; padding: 2mm; margin-bottom: 3mm; font-size: 11pt; }
@@ -93,7 +117,7 @@
     table.sums tr.net td.num { font-weight: bold; text-decoration: underline; }
 
     .signatures { width: 100%; margin-top: 18mm; }
-    .signatures td { width: 33.3%; text-align: center; font-size: 9pt; padding: 0 4mm; }
+    .signatures td { text-align: center; font-size: 9pt; padding: 0 4mm; }
     .sig-line { border-top: 0.25mm solid #000; padding-top: 1mm; }
 
     .footnote { margin-top: 5mm; text-align: center; color: #c00000; font-weight: bold; font-size: 9pt; }
@@ -102,7 +126,7 @@
 
 <table class="head">
     <tr>
-        <td style="width: 65%">
+        <td style="width: 36%">
             {{-- ⓘ নমুনার মতো লোগো আর নাম এক সারিতে, নাম লোগোর ডানে; লোগো না থাকলে জায়গাটা ফাঁকা --}}
             <table class="brand">
                 <tr>
@@ -113,26 +137,45 @@
                             <div class="logo-space"></div>
                         @endif
                     </td>
-                    <td class="brand-name"><div class="company-name">{{ $company->name('en') }}</div></td>
+                    <td class="brand-name"><div class="company-name">{{ $head['name'] }}</div></td>
                 </tr>
             </table>
 
-            @if ($company->address('en'))
-                <div class="company-meta">{{ $company->address('en') }}</div>
+            @if ($head['address'] !== '')
+                <div class="company-meta" data-head-address>{{ $head['address'] }}</div>
             @endif
 
-            @if ($contact !== '' || $company->phone)
+            @if ($contact !== '' || $head['phone'] !== '')
                 <div class="company-meta">
                     @if ($contact !== ''){{ $en('email') }} {{ $contact }}@endif
-                    @if ($contact !== '' && $company->phone) &nbsp;&nbsp; @endif
-                    @if ($company->phone){{ $en('phone_head') }} {{ $company->phone }}@endif
+                    @if ($contact !== '' && $head['phone'] !== '') &nbsp;&nbsp; @endif
+                    @if ($head['phone'] !== ''){{ $en('phone_head') }} {{ $head['phone'] }}@endif
+                </div>
+            @endif
+
+            @if ($taxIds !== '')
+                <div class="company-meta" data-tax-ids>{{ $taxIds }}</div>
+            @endif
+        </td>
+
+        {{-- ⭐ QR মাথার মাঝখানে — মালিক, ৩০ সেপ্টেম্বর ২০২৬: *"14 number e qr majkhane daw"*।
+             ⛔ `<barcode type="QR">` নয় — ওটা mpdf/qrcode চায়, যেটা vendor-এ নেই আর লাইভের ডিপ্লয়
+             composer চালায় না: প্রতিটা বিলের ছাপা ৫০০ হত (abos-3c ধরেছেন)। ⓘ ঘরের [[QrCode]] থেকে SVG,
+             ছবি হয়ে। QR না থাকলে (কাউন্টারের বিল, বা সুইচ বন্ধ) ঘরটা ফাঁকা থাকে — INVOICE সরে না। --}}
+        <td class="scan-cell">
+            @if ($scanUrl !== '')
+                <div class="scan" data-scan-qr>
+                    <img src="data:image/svg+xml;base64,{{ base64_encode(\App\Core\Support\QrCode::svg($scanUrl, scale: 4, quiet: 2)) }}"
+                         style="width: 20mm; height: 20mm;" alt="">
+                    <div class="scan-hint">{{ $en('scan_hint') }}</div>
                 </div>
             @endif
         </td>
+
         <td>
             <div class="big-title">{{ $en('heading') }}</div>
 
-            @if ($isDuplicate)
+            @if ($isDuplicate && $show('duplicate'))
                 <div class="dup-mark" data-duplicate>{{ $en('duplicate') }}</div>
             @endif
         </td>
@@ -153,18 +196,27 @@
             <div>{{ $en('phone') }} {{ $facts['bill_to']['phone'] }}</div>
             <div>{{ $facts['bill_to']['address'] }}</div>
         </td>
+        {{-- ⓘ বন্ধ থাকলে ঘরটা ফাঁকা থাকে, সরে না — তিন কলামের মাথা নমুনার মাপেই থাকে --}}
         <td class="block">
-            <div class="block-head">{{ $en('transport') }}</div>
-            <div>{{ $en('carrier') }} {{ $facts['transport']['carrier'] }}</div>
-            <div>{{ $en('driver_phone') }} {{ $facts['transport']['driver_phone'] }}</div>
-            <div>{{ $en('vehicle') }} {{ $facts['transport']['vehicle'] }}</div>
-            <div>{{ $en('delivery_date') }} {{ $facts['transport']['delivery_date'] }}</div>
+            @if ($show('transport'))
+                <div data-transport>
+                    <div class="block-head">{{ $en('transport') }}</div>
+                    <div>{{ $en('carrier') }} {{ $facts['transport']['carrier'] }}</div>
+                    <div>{{ $en('driver_phone') }} {{ $facts['transport']['driver_phone'] }}</div>
+                    <div>{{ $en('vehicle') }} {{ $facts['transport']['vehicle'] }}</div>
+                    <div>{{ $en('delivery_date') }} {{ $facts['transport']['delivery_date'] }}</div>
+                </div>
+            @endif
         </td>
         <td class="block">
             <div>{{ $en('bill_date') }} {{ $facts['bill']['bill_date'] }}</div>
             <div>{{ $en('bill_no') }} {{ $facts['bill']['bill_no'] }}</div>
-            <div>{{ $en('order_no') }} {{ $facts['bill']['order_no'] }}</div>
-            <div>{{ $en('type') }} {{ $facts['bill']['type'] }}</div>
+            @if ($show('order_no'))
+                <div data-order-no>{{ $en('order_no') }} {{ $facts['bill']['order_no'] }}</div>
+            @endif
+            @if ($show('invoice_type'))
+                <div data-invoice-type>{{ $en('type') }} {{ $facts['bill']['type'] }}</div>
+            @endif
             <div>{{ $en('created_by') }} {{ $facts['bill']['created_by'] }}</div>
         </td>
     </tr>
@@ -178,8 +230,8 @@
             <th>{{ $en('product') }}</th>
             <th class="num" style="width: 28mm">{{ $en('rate') }}</th>
             <th style="width: 20mm">{{ $en('qty') }}</th>
-            <th style="width: 17mm">{{ $en('free') }}</th>
-            <th style="width: 21mm">{{ $en('total_qty') }}</th>
+            @if ($showFree)<th style="width: 17mm" data-col-free>{{ $en('free') }}</th>@endif
+            @if ($showTotalQty)<th style="width: 21mm" data-col-total-qty>{{ $en('total_qty') }}</th>@endif
             <th class="num" style="width: 30mm">{{ $en('amount') }}</th>
         </tr>
     </thead>
@@ -190,22 +242,24 @@
                 <td>{{ $item['name'] }}</td>
                 <td class="num">{{ $paper->money($item['rate']) }}</td>
                 <td>{{ $item['qty'] }}</td>
-                <td>{{ $item['free'] }}</td>
-                <td>{{ $item['total_qty'] }}</td>
+                @if ($showFree)<td>{{ $item['free'] }}</td>@endif
+                @if ($showTotalQty)<td>{{ $item['total_qty'] }}</td>@endif
                 <td class="num">{{ $paper->money($item['amount']) }}</td>
             </tr>
         @endforeach
 
         {{-- ⭐ কলামের যোগফল — এককভেদে আলাদা ("12 Ctn, 7 Pcs"), কারণ [[classicItems()]]-এ --}}
-        <tr class="grand" data-grand-row>
-            <td></td>
-            <td class="grand-label">{{ $en('grand_total') }}</td>
-            <td></td>
-            <td>{{ $facts['items']['totals']['qty'] }}</td>
-            <td>{{ $facts['items']['totals']['free'] }}</td>
-            <td>{{ $facts['items']['totals']['total_qty'] }}</td>
-            <td class="num">{{ $paper->money($facts['items']['totals']['amount']) }}</td>
-        </tr>
+        @if ($show('grand_total_row'))
+            <tr class="grand" data-grand-row>
+                <td></td>
+                <td class="grand-label">{{ $en('grand_total') }}</td>
+                <td></td>
+                <td>{{ $facts['items']['totals']['qty'] }}</td>
+                @if ($showFree)<td>{{ $facts['items']['totals']['free'] }}</td>@endif
+                @if ($showTotalQty)<td>{{ $facts['items']['totals']['total_qty'] }}</td>@endif
+                <td class="num">{{ $paper->money($facts['items']['totals']['amount']) }}</td>
+            </tr>
+        @endif
     </tbody>
 </table>
 
@@ -217,12 +271,15 @@
     </tr>
 </table>
 
-<div class="words"><strong>{{ $en('in_words') }}</strong> {{ $facts['words'] }}</div>
+@if ($show('amount_words'))
+    <div class="words" data-words><strong>{{ $en('in_words') }}</strong> {{ $facts['words'] }}</div>
+@endif
 
 <table class="bottom">
     <tr>
         <td class="side" style="width: 104mm; padding-right: 4mm;">
-            <div class="payments-head">{{ $en('payments_title') }}</div>
+            @if ($show('deposits'))
+            <div class="payments-head" data-deposits>{{ $en('payments_title') }}</div>
             <table class="payments">
                 <thead>
                     <tr>
@@ -247,6 +304,7 @@
                     @endforeach
                 </tbody>
             </table>
+            @endif
         </td>
         <td class="side">
             <table class="sums">
@@ -259,8 +317,10 @@
                 <tr class="net"><td>{{ $en('net_payable') }}</td><td class="num" style="width: 34mm">{{ $paper->money($sums['net_payable']) }}</td></tr>
                 <tr><td>{{ $en('paid') }}</td><td class="num" style="width: 34mm">{{ $paper->money($sums['paid']) }}</td></tr>
                 <tr><td>{{ $en('invoice_due') }}</td><td class="num" style="width: 34mm">{{ $paper->money($sums['invoice_due']) }}</td></tr>
-                <tr><td>{{ $en('previous_due') }}</td><td class="num" style="width: 34mm">{{ $paper->money($sums['previous_due']) }}</td></tr>
-                <tr><td>{{ $en('total_due') }}</td><td class="num" style="width: 34mm">{{ $paper->money($sums['outstanding']) }}</td></tr>
+                @if ($show('previous_due'))
+                    <tr data-previous-due><td>{{ $en('previous_due') }}</td><td class="num" style="width: 34mm">{{ $paper->money($sums['previous_due']) }}</td></tr>
+                    <tr><td>{{ $en('total_due') }}</td><td class="num" style="width: 34mm">{{ $paper->money($sums['outstanding']) }}</td></tr>
+                @endif
             </table>
         </td>
     </tr>
@@ -268,9 +328,9 @@
 
 <table class="signatures">
     <tr>
-        @foreach (['received_by', 'prepared_by', 'approved_by'] as $who)
-            {{-- ⓘ নমুনার মতো বাংলায় (২৯ সেপ্টেম্বর ২০২৬); ভাষার সুইচ আসছে ছাপার সেটিংয়ের পাতায় --}}
-            <td><div class="sig-line">{{ __('sales::print.classic.'.$who, [], 'bn') }}</div></td>
+        {{-- ⓘ কয়টা ঘর আর কী নাম — "Set Invoice Information"-এ; খালি নাম = নমুনার বাংলা নাম --}}
+        @foreach ($signatures as $label)
+            <td style="width: {{ round(100 / max(1, count($signatures)), 1) }}%"><div class="sig-line" data-signature>{{ $label }}</div></td>
         @endforeach
     </tr>
 </table>

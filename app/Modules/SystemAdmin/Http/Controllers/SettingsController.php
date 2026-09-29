@@ -260,7 +260,7 @@ class SettingsController extends Controller implements HasMiddleware
             fn (array $d) => ! ($d['menu'] ?? false)
                 && ! in_array(
                     $d['group'] ?? 'general',
-                    [self::OWNED_BY_CONTROL_PANEL, self::OWNED_BY_PRINT_SCREEN],
+                    [self::OWNED_BY_CONTROL_PANEL, self::OWNED_BY_PRINT_SCREEN, InvoiceInfoController::GROUP],
                     true,
                 ),
         );

@@ -25,6 +25,19 @@ return [
     'method' => 'কোন পথে',
 
     // ⭐ ক্লাসিক টেবিল ইনভয়েস — ২৮ সেপ্টেম্বর ২০২৬
+    // ⓘ "Set Invoice Information"-এর নমুনা বিলের বানানো তথ্য — ছাঁচের মতো সবসময় `en` থেকে পড়া
+    'sample' => [
+        'customer' => 'Sample Traders',
+        'point' => 'Sample Bazar',
+        'address' => 'House 1, Road 1, Dhaka',
+        'carrier' => 'Sample Transport',
+        'creator' => 'Sample Staff',
+        'item_one' => 'Sample Product One',
+        'item_two' => 'Sample Product Two',
+        'method' => 'Cash',
+        'words' => 'Fourteen Thousand Five Hundred (BDT)',
+    ],
+
     'classic' => [
         'heading' => 'ইনভয়েস',
         'bill_to' => 'বিল যার নামে',
@@ -73,9 +86,13 @@ return [
         'method' => 'কোন পথে',
         'narration' => 'বিবরণ',
         'amount' => 'টাকা',
-        'duplicate' => 'দ্বিতীয় কপি',
+        // ⭐ পুরো লেখা, শিরোনামের নিচে — মালিক, ৩০ সেপ্টেম্বর ২০২৬; core.print.duplicate_notice-এর সেই একই কথা
+        'duplicate' => 'DUPLICATE — এই কাগজটি আগেও ছাপা হয়েছে',
         'received_by' => 'গ্রহণকারী/পরিবহক',
         'prepared_by' => 'প্রস্তুতকারী',
+        'bin' => 'BIN:',
+        'scan_hint' => 'স্ক্যান করুন: ডেলিভারি ও হিসাব',
+        'tin' => 'TIN:',
         'approved_by' => 'অনুমোদনকারী',
         'printed_at' => 'ছাপার সময়',
         'footnote' => 'মাল বুঝে নিয়ে সই করুন — সইয়ের পর পরিমাণ নিয়ে আপত্তি গ্রহণ করা হবে না।',

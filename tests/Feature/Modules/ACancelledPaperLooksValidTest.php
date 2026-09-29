@@ -220,6 +220,8 @@ class ACancelledPaperLooksValidTest extends TestCase
             'sales.print.draft' => 'খসড়া বিলের কাগজ — খসড়া আর বাতিল একসাথে হয় না',
             'sales.print.receipt' => 'আদায়ের রসিদ — একই কন্ট্রোলারের একই সেলাই (SalesPrintController::paper)',
             'sales.print.delivery_order' => 'ডেলিভারি অর্ডার — একই সেলাই, অর্ডারের সারিতে ধরা',
+            'sales.print.gate_pass' => 'গেট পাস — একই সেলাই (pdf()-এ document: $gatePass, বাতিলে status cancelled)',
+            'sales.print.loading_sheet' => 'লোডিং শিট — একই সেলাই (pdf()-এ document: $shipment, বাতিলে status cancelled)',
             'purchase.print.order' => 'ক্রয়ের চারটা কাগজ — PurchasePrintController-এ একই সেলাই',
             'purchase.print.bill' => 'ক্রয়ের চারটা কাগজ — একই সেলাই',
             'purchase.print.receipt' => 'ক্রয়ের চারটা কাগজ — একই সেলাই',
@@ -233,6 +235,8 @@ class ACancelledPaperLooksValidTest extends TestCase
             'system_admin.print_control' => 'ছাপার সেটিংসের পর্দা, কাগজ নয়',
             'system_admin.print_control.update' => 'ছাপার সেটিংস সংরক্ষণ, কাগজ নয়',
             'system_admin.print_control.preview' => 'বানানো নমুনা (PrintSample), সংরক্ষিত কাগজ নয় — বাতিল হতে পারে না',
+            'system_admin.print_control.invoice_info' => '"Set Invoice Information"-এর পর্দা, কাগজ নয়',
+            'system_admin.print_control.invoice_info.update' => '"Set Invoice Information" সংরক্ষণ, কাগজ নয়',
         ];
 
         $unaccounted = collect(app('router')->getRoutes()->getRoutes())

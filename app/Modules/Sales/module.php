@@ -23,6 +23,7 @@ use App\Modules\Sales\Models\SalesReturn;
 use App\Modules\Sales\Models\Shipment;
 use App\Modules\Sales\Panels\SalesFacts;
 use App\Modules\Sales\Reports\SalesReports;
+use App\Modules\Sales\Support\InvoiceDesigns;
 
 /**
  * Sales — প্ল্যান Phase 8।
@@ -809,24 +810,93 @@ return [
             'key' => 'sales.print.design.invoice',
             'label' => 'sales::settings.design_invoice',
             'type' => 'choice',
-            'options' => ['standard', 'classic_table'],
+            /* ⓘ তালিকা একটাই — [[InvoiceDesigns]]; নতুন নকশা সেখানে এক সারি */
+            'options' => InvoiceDesigns::options(),
             'option_label' => 'sales::settings.design.',
+
+            /* ⭐ ছাপার নিয়ন্ত্রণের "বিল → A4" ট্যাবে এই নকশাগুলোর কার্ড ([[PrintControlController::designsFor()]]) */
+            'print_designs' => ['paper' => 'invoice', 'size' => 'a4', 'sample_route' => 'sales.invoice_sample'],
 
             /* ⭐ ২৯ সেপ্টেম্বর ২০২৬ থেকে ক্লাসিকই ডিফল্ট — মালিক: "by defolt kore daw … 100% same" */
             'default' => 'classic_table',
             'group' => 'print',
         ],
         /*
+         * ⭐ "Set Invoice Information" — মালিকের নির্দেশ, ২৯ সেপ্টেম্বর ২০২৬।
+         *
+         * *"Set Invoice Information ei name alada tab koro"*, তারপর *"Print control er
+         * vitotre korte paro"*। ⓘ তাই গ্রুপ `invoice_info`: সাধারণ সেটিংস পর্দা এগুলো
+         * আঁকে না, আঁকে ছাপার নিয়ন্ত্রণের ভেতরের ঐ ভাগটা ([[InvoiceInfoController]]) —
+         * আর সে সেটিংয়ের নাম জানে না, কেবল এই ঘোষণা পড়ে (`part` দিয়ে ভাগ করে)।
+         *
+         * ── ⚠️ মাথার ঘরগুলো বদল, নকল নয় ──────────────────────────────────
+         * ⓘ খালি = কোম্পানির প্রোফাইলের মান ([[InvoicePrintLook::header()]])। ⛔ প্রোফাইলের
+         * নাম-ফোন এখানে নকল করলে প্রোফাইল বদলালেও বিলে পুরনোটা ছাপা হত, নীরবে।
+         *
+         * ⓘ এগুলো কেবল ক্লাসিক নকশার; চলতি নকশার অংশ-কলাম ঐ পাতারই উপরের ভাগে।
+         */
+        ...array_map(fn (string $field) => [
+            'key' => "sales.print.header.{$field}",
+            'label' => "sales::settings.invoice_info.header.{$field}",
+            'type' => 'string',
+            'default' => null,
+            'group' => 'invoice_info',
+            'part' => 'header',
+        ], ['name', 'address', 'phone', 'email', 'website']),
+
+        /*
+         * ⓘ দেখানো/লুকানোর সুইচ — সবগুলো ডিফল্টে চালু, অর্থাৎ আজকের কাগজ যেমন আছে তেমন।
+         *
+         * ⚠️ DUPLICATE বন্ধ করা যায় (মালিকের তালিকায় আছে), কিন্তু ছাপার সারিতে ওঠা বন্ধ হয় না —
+         * কতবার ছাপা হলো তা [[PrintJob]]-এ থাকেই; কেবল কাগজের ছাপটা যায়।
+         */
+        ...array_map(fn (string $what) => [
+            'key' => "sales.print.show.{$what}",
+            'label' => "sales::settings.invoice_info.show.{$what}",
+            'type' => 'boolean',
+            'default' => true,
+            'group' => 'invoice_info',
+            'part' => 'show',
+        ], ['bin', 'invoice_type', 'duplicate', 'order_no', 'transport', 'free', 'total_qty',
+            'grand_total_row', 'previous_due', 'amount_words', 'deposits', 'qr']),
+
+        /*
+         * ⓘ সইয়ের ঘর — কয়টা (২–৪), আর প্রতিটার নাম। খালি নাম = নমুনার বাংলা নাম
+         * (গ্রহণকারী/পরিবহক · প্রস্তুতকারী · অনুমোদনকারী); চতুর্থটার নিজের নাম নেই, খালি থাকলে
+         * ঘরটা নামহীন দাগ না হয়ে বাদ পড়ে ([[InvoicePrintLook::signatures()]])।
+         */
+        [
+            'key' => 'sales.print.signature_count',
+            'label' => 'sales::settings.invoice_info.signature_count',
+            'type' => 'choice',
+            'options' => ['2', '3', '4'],
+            'default' => '3',
+            'group' => 'invoice_info',
+            'part' => 'signature',
+        ],
+        ...array_map(fn (int $n) => [
+            'key' => "sales.print.signature.{$n}",
+            'label' => "sales::settings.invoice_info.signature_label",
+            'label_n' => $n,
+            'type' => 'string',
+            'default' => null,
+            'group' => 'invoice_info',
+            'part' => 'signature',
+        ], [1, 2, 3, 4]),
+
+        /*
          * ⓘ ক্লাসিক বিলের নিচের লাল বাক্য — প্রতিটা ব্যবসার নিজের কথা।
          * ⚠️ খালি রাখলে ভাষার ফাইলের বাক্যটা বসে; ABOS অনেক ব্যবসায় চলে,
-         * তাই এক ব্যবসার শর্ত কোডে বাঁধা হয়নি।
+         * তাই এক ব্যবসার শর্ত কোডে বাঁধা হয়নি। ⭐ ২৯ সেপ্টেম্বর থেকে "Set Invoice
+         * Information"-এ (গ্রুপ `invoice_info`) — বিলের সব লেখা এক জায়গায়।
          */
         [
             'key' => 'sales.print.invoice_footnote',
             'label' => 'sales::settings.invoice_footnote',
             'type' => 'string',
             'default' => null,
-            'group' => 'print',
+            'group' => 'invoice_info',
+            'part' => 'note',
         ],
         [
             // ⭐ গেট পাসের কাগজ — মালিক: আধা পাতা (A5), ২৮ সেপ্টেম্বর ২০২৬ ([[SalesPrintController::gatePassDocument()]])

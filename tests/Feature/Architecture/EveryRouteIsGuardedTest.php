@@ -123,6 +123,7 @@ class EveryRouteIsGuardedTest extends TestCase
         'password.store' => 'ফেরার পথ; টোকেনই প্রমাণ, আর চাবির বদলে throttle',
         'sales.portal.login' => 'গ্রাহকের দরজা — গ্রাহক পোর্টালের লগইন পর্দা',
         'sales.portal.login.attempt' => 'গ্রাহকের দরজা; এখানেও চাবির বদলে throttle',
+        'sales.scan' => 'কাগজের QR-এর দরজা (মালিক, ৩০ সেপ্টেম্বর ২০২৬) — নিজে কিছু দেখায় না, বদলায় না; কর্মী হলে ডেলিভারির পাতায়, গ্রাহক হলে পোর্টালে, কেউ না হলে দুই লগইনের বোতাম ([[DeliveryScanController::open()]])',
 
         /*
          * Sanctum-এর নিজের রুট, আমাদের `routes/` ফাইলের কোনোটাতে নেই —
@@ -299,6 +300,8 @@ class EveryRouteIsGuardedTest extends TestCase
         'sales.portal.claim.create' => 'নিজের জমার দাবি তোলার ফর্ম',
         'sales.portal.claim.store' => 'নিজের জমার দাবি',
         'sales.portal.claim.show' => 'নিজের দাবি — মালিকানা কন্ট্রোলারে যাচাই হয়',
+        'sales.portal.scan' => 'QR থেকে নিজের চালান — অন্যের চালান ৪০৪ ([[ScannedPaper::dealer()]])',
+        'sales.portal.scan.received' => 'নিজের চালানের মাল পাওয়া নিশ্চিত — কেবল রওনার পরে, অন্যেরটা ৪০৪',
         /*
          * ⚠️ খতিয়ানের পাতাটাও এই তালিকায়, আর কারণটা বাকিগুলোর মতোই:
          * পোর্টালে লগইন করেন একজন **গ্রাহক**, আর গ্রাহকের কোনো অনুমতি

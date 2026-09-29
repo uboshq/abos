@@ -14,6 +14,7 @@ use App\Modules\SystemAdmin\Http\Controllers\NoticeController;
 use App\Modules\SystemAdmin\Http\Controllers\NoticeReportController;
 use App\Modules\SystemAdmin\Http\Controllers\NoticeTemplateController;
 use App\Modules\SystemAdmin\Http\Controllers\OwnershipController;
+use App\Modules\SystemAdmin\Http\Controllers\InvoiceInfoController;
 use App\Modules\SystemAdmin\Http\Controllers\PrintControlController;
 use App\Modules\SystemAdmin\Http\Controllers\ReportDownloadController;
 use App\Modules\SystemAdmin\Http\Controllers\ReportScheduleController;
@@ -257,6 +258,15 @@ Route::middleware('auth')->prefix('system')->group(function () {
      */
     Route::get('/print-control/preview', [PrintControlController::class, 'preview'])
         ->name('print_control.preview');
+
+    /*
+     * ⭐ "Set Invoice Information" — মালিকের নির্দেশ, ২৯ সেপ্টেম্বর ২০২৬:
+     * *"Print control er vitotre korte paro"*। ⓘ ছাপার নিয়ন্ত্রণের ঠিকানার নিচে, নিজের ঠিকানায়।
+     */
+    Route::get('/print-control/invoice-info', [InvoiceInfoController::class, 'edit'])
+        ->name('print_control.invoice_info');
+    Route::put('/print-control/invoice-info', [InvoiceInfoController::class, 'update'])
+        ->name('print_control.invoice_info.update');
 
     /*
      * নির্ধারিত রিপোর্ট — সূচি ব্যবস্থাপনা ও ফাইল নামানো।

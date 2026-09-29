@@ -226,6 +226,7 @@ return [
         'module' => 'মডিউল চালু/বন্ধ',
         'group' => 'মেনুর ভাঁজ',
         'item' => 'মেনুর সারি',
+        'invoice_info' => 'Set Your Invoice Information',
         'print_paper' => 'ছাপার কাগজ',
     ],
 

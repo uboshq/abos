@@ -183,6 +183,7 @@ return [
         'module' => 'Module on/off',
         'group' => 'Menu folds',
         'item' => 'Menu rows',
+        'invoice_info' => 'Set Your Invoice Information',
         'print_paper' => 'Paper size',
     ],
 

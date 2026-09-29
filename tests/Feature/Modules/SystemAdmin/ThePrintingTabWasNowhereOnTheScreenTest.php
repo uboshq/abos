@@ -10,6 +10,8 @@ use App\Core\Services\SettingsService;
 use App\Core\Support\CompanyContext;
 use App\Models\Company;
 use App\Models\User;
+use App\Modules\Sales\Support\InvoiceDesigns;
+use App\Modules\SystemAdmin\Http\Controllers\PrintControlController;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -90,24 +92,69 @@ final class ThePrintingTabWasNowhereOnTheScreenTest extends TestCase
         );
     }
 
-    // ── ২ · প্রতিটা কাগজের নিজের ঠিকানা ───────────────────────────────
+    // ── ২ · প্রতিটা কাগজ-মাপের নিজের ঠিকানা, আর পুরনো ৭৮টা কার্ড নেই ──────
+    //
+    // ⭐ মালিক, ৩০ সেপ্টেম্বর ২০২৬: *"total 6 tab e mot 78 ti sorabe"*, *"ekta kore rakho sudhu kajer
+    // jonno"* — প্রতিটা কাগজ-মাপে কেবল "সাধারণ", আর বিল-A4-এ বিক্রয়ের ঘোষিত নকশা।
 
-    public function test_each_paper_has_its_own_address(): void
+    public function test_each_paper_and_size_has_its_own_address_and_no_old_look(): void
     {
-        foreach (PrintProfile::TARGETS as $target) {
-            $this->actingAs($this->owner)
-                ->get(route('system_admin.print_control', ['paper' => $target]))
-                ->assertOk()
-                ->assertSee('papers['.$target.'][format]', escape: false);
+        foreach (PrintControlController::PAPERS as $paper) {
+            foreach (PrintControlController::SIZES as $size) {
+                $html = $this->actingAs($this->owner)
+                    ->get(route('system_admin.print_control', ['paper' => $paper, 'size' => $size]))
+                    ->assertOk()
+                    ->getContent();
+
+                /* ⛔ পুরনো রূপ বাছার ঘর আর রূপের নাম — একটাও না */
+                $this->assertStringNotContainsString('][format]', $html, "{$paper}/{$size}: পুরনো রূপ বাছার ঘর রয়ে গেছে।");
+
+                foreach (PrintFormat::all() as $format) {
+                    if ($format === 'standard') {
+                        continue;
+                    }
+
+                    $this->assertStringNotContainsString('data-design-card="'.$format.'"', $html,
+                        "{$paper}/{$size}: পুরনো রূপ '{$format}'-এর কার্ড রয়ে গেছে।");
+                }
+
+                if ($paper === 'quotation') {
+                    $this->assertStringContainsString('data-no-print-yet', $html);
+
+                    continue;
+                }
+
+                $this->assertStringContainsString('name="size" value="'.$size.'"', $html);
+                $this->assertStringContainsString('data-design-card="standard"', $html, "{$paper}/{$size}: কাজ চালানোর \"সাধারণ\" নেই।");
+            }
         }
+    }
+
+    public function test_the_a4_invoice_offers_the_declared_designs(): void
+    {
+        $html = $this->actingAs($this->owner)
+            ->get(route('system_admin.print_control', ['paper' => 'invoice', 'size' => 'a4']))
+            ->assertOk()
+            ->getContent();
+
+        foreach (array_keys(InvoiceDesigns::ALL) as $design) {
+            $this->assertStringContainsString('data-design-card="'.$design.'"', $html, "বিল-A4-এ '{$design}' নেই।");
+        }
+
+        /* ⓘ A5-এ এখনো কেবল "সাধারণ" */
+        $a5 = $this->actingAs($this->owner)
+            ->get(route('system_admin.print_control', ['paper' => 'invoice', 'size' => 'a5']))
+            ->getContent();
+        $this->assertSame(1, substr_count($a5, 'data-design-card='));
     }
 
     public function test_an_unknown_paper_falls_back_instead_of_breaking(): void
     {
         $this->actingAs($this->owner)
-            ->get(route('system_admin.print_control', ['paper' => 'nonsense']))
+            ->get(route('system_admin.print_control', ['paper' => 'nonsense', 'size' => 'x']))
             ->assertOk()
-            ->assertSee('papers['.PrintProfile::TARGETS[0].'][format]', escape: false);
+            ->assertSee('name="paper" value="invoice"', escape: false)
+            ->assertSee('name="size" value="a4"', escape: false);
     }
 
     // ── ৩ · নমুনাটা সত্যিই বাছা রূপটা আঁকে ─────────────────────────────
@@ -182,52 +229,71 @@ final class ThePrintingTabWasNowhereOnTheScreenTest extends TestCase
         }
     }
 
-    // ── ৫ · একটা কাগজ সংরক্ষণ করলে বাকিরা অক্ষত ───────────────────────
+    // ── ৫ · একটা কাগজ সংরক্ষণ করলে বাকিরা অক্ষত, আর পুরনো রূপ আর লেখা যায় না ──
 
     public function test_saving_one_paper_leaves_the_others_alone(): void
     {
         $settings = app(SettingsService::class);
-
-        $settings->set('print.invoice.format', 'wholesale');
-        $settings->set('print.pos.format', 'compact');
+        $settings->set('print.invoice.parts', ['title']);
 
         $this->actingAs($this->owner)
-            ->from(route('system_admin.print_control', ['paper' => 'challan']))
             ->put(route('system_admin.print_control.update'), [
-                'scope' => ['challan'],
-                'papers' => ['challan' => ['format' => 'boxed']],
+                'paper' => 'challan',
+                'size' => 'a4',
+                'papers' => ['challan' => ['format' => 'boxed', 'parts' => ['title' => '1', 'meta' => '1']]],
             ])
-            ->assertRedirect();
+            ->assertRedirect(route('system_admin.print_control', ['paper' => 'challan', 'size' => 'a4']));
 
-        $this->assertSame('boxed', (string) $settings->get('print.challan.format'));
+        $this->assertSame(['title', 'meta'], $settings->get('print.challan.parts'));
+        $this->assertSame(['title'], $settings->get('print.invoice.parts'), 'চালান সংরক্ষণ করতেই বিলের সুইচ বদলে গেছে।');
 
-        $this->assertSame('wholesale', (string) $settings->get('print.invoice.format'),
-            'চালান সংরক্ষণ করতেই বিলের রূপটা বদলে গেছে — অর্থাৎ ফর্মে '
-            .'অনুপস্থিত কাগজগুলোও ছোঁয়া হচ্ছে, আর ছয়টা কাগজ নীরবে '
-            .'"সাধারণ" রূপে ফিরে যেত।');
+        /* ⛔ পুরনো রূপ ফর্মে পাঠালেও বসে না — বাছার পথটাই নেই */
+        $this->assertSame('standard', (string) $settings->get('print.challan.format'));
+    }
 
-        $this->assertSame('compact', (string) $settings->get('print.pos.format'));
+    public function test_the_a4_invoice_design_is_saved_and_a_stranger_is_not(): void
+    {
+        $settings = app(SettingsService::class);
+
+        $this->actingAs($this->owner)->put(route('system_admin.print_control.update'), [
+            'paper' => 'invoice', 'size' => 'a4', 'design' => 'bw_ledger',
+        ]);
+        $this->assertSame('bw_ledger', (string) $settings->get('sales.print.design.invoice'));
+
+        $this->actingAs($this->owner)->put(route('system_admin.print_control.update'), [
+            'paper' => 'invoice', 'size' => 'a4', 'design' => 'boxed',
+        ]);
+        $this->assertSame('bw_ledger', (string) $settings->get('sales.print.design.invoice'), 'তালিকার বাইরের নাম বসে গেছে।');
     }
 
     public function test_a_form_that_names_no_paper_changes_nothing(): void
     {
-        /*
-         * ⓘ পুরনো কোনো পাতা `scope[]` ছাড়া এলে কিছুই সংরক্ষণ হয় না।
-         * ⚠️ "কিছু সেভ হলো না" ব্যবহারকারী সাথে সাথে দেখেন; "ছয়টা কাগজ
-         * নীরবে রিসেট" কেউ মাসের পর মাস দেখেন না।
-         */
         $settings = app(SettingsService::class);
-        $settings->set('print.invoice.format', 'striped');
+        $settings->set('print.invoice.parts', ['title']);
 
         $this->actingAs($this->owner)
             ->from(route('system_admin.print_control'))
             ->put(route('system_admin.print_control.update'), [
-                'papers' => ['invoice' => ['format' => 'boxed']],
+                'papers' => ['invoice' => ['parts' => ['meta' => '1']]],
             ])
             ->assertRedirect();
 
-        $this->assertSame('striped', (string) $settings->get('print.invoice.format'),
-            'কোন কাগজ বলা হয়নি, তবু একটা বদলে গেছে।');
+        $this->assertSame(['title'], $settings->get('print.invoice.parts'), 'কোন কাগজ বলা হয়নি, তবু বিল বদলে গেছে।');
+    }
+
+    public function test_the_old_looks_a_company_had_chosen_go_back_to_standard(): void
+    {
+        $settings = app(SettingsService::class);
+        $settings->set('print.challan.format', 'boxed');
+        $settings->set('print.pos.format', 'wholesale');
+        $settings->set('print.challan.parts', ['title']);
+
+        (require database_path('migrations/2027_01_30_120000_the_thirteen_old_print_looks_left_the_screen.php'))->up();
+        $settings->flush();
+
+        $this->assertSame('standard', (string) $settings->get('print.challan.format'));
+        $this->assertSame('compact', (string) $settings->get('print.pos.format'));
+        $this->assertSame(['title'], $settings->get('print.challan.parts'), '"সাধারণ"-এর নিজের সুইচ মুছে গেছে।');
     }
 
     // ── ৬ · দরজাটা বন্ধ ───────────────────────────────────────────────

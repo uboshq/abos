@@ -27,10 +27,12 @@ use App\Modules\Sales\Models\SalesInvoice;
 use App\Modules\Sales\Models\SalesOrder;
 use App\Modules\Sales\Models\Shipment;
 use App\Modules\Sales\Services\PrintQueue;
+use App\Modules\Sales\Support\InvoiceDesigns;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
+use Illuminate\Support\Facades\Route;
 use Illuminate\Validation\ValidationException;
 
 /**
@@ -192,17 +194,23 @@ class SalesPrintController extends Controller implements HasMiddleware
          *
          * ⚠️ থার্মালে সবসময় চলতি রসিদ: তিন কলামের মাথা ৮০মিমিতে ধরে না।
          */
-        $classic = $this->settings->get('sales.print.design.invoice') === 'classic_table'
-            && ! PaperSize::of(PaperSize::chosen(
+        /* ⭐ ছাঁচ আসে নকশার একমাত্র তালিকা থেকে ([[InvoiceDesigns]]); `standard` → চলতি নকশা */
+        $designTemplate = InvoiceDesigns::template((string) $this->settings->get('sales.print.design.invoice'));
+        /*
+         * ⭐ নকশাগুলো A4-এর (মালিক, ৩০ সেপ্টেম্বর ২০২৬: কাগজের ভেতরে A4 · A5 · Thermal আলাদা)।
+         * ⓘ A5 আর থার্মালে এখনো "সাধারণ" — ঐ মাপের নকশা মালিক নিশ্চিত করলে আসবে।
+         */
+        $classic = $designTemplate !== null
+            && PaperSize::chosen(
                 $request->query('paper'),
                 $this->settings->get('sales.print.paper.invoice'),
-            ))->isThermal;
+            ) === PaperSize::A4;
 
         return $this->pdf(
             $request, $doc, (string) $invoice->total, $invoice->document_no,
             type: PrintJob::INVOICE, id: $invoice->id, document: $invoice,
             paperSetting: 'sales.print.paper.invoice',
-            template: $classic ? 'sales::print.invoice-classic' : 'print.document',
+            template: $classic ? $designTemplate : 'print.document',
             extra: $classic ? ['facts' => $this->classicFacts($invoice)] : [],
         );
     }
@@ -314,6 +322,16 @@ class SalesPrintController extends Controller implements HasMiddleware
             'items' => $this->classicItems($invoice),
             'sums' => array_map(fn (string $v) => $this->money($v), $sums),
             'words' => $this->sampleWords((string) $invoice->total),
+
+            /*
+             * ⭐ কাগজের QR — মালিক, ৩০ সেপ্টেম্বর ২০২৬: স্ক্যান করে কর্মী ডেলিভারির ধাপ দেন, ডিলার
+             * নিজের হিসাব দেখে মাল পাওয়া নিশ্চিত করেন ([[DeliveryScanController]])। ⓘ লিংকে কেবল
+             * চালানের `public_id` — দাম নেই, টোকেন নেই, আর খুলতে লগইন লাগে। কাউন্টারের বিলে চালান
+             * নেই, তখন খালি, আর ছাঁচ QR আঁকে না।
+             */
+            'scan_url' => $challan?->public_id !== null && Route::has('sales.scan')
+                ? route('sales.scan', $challan->public_id)
+                : '',
         ];
     }
 

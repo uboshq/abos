@@ -8,6 +8,7 @@ use App\Modules\Sales\Http\Controllers\CommissionClaimController;
 use App\Modules\Sales\Http\Controllers\DeliveryChallanController;
 use App\Modules\Sales\Http\Controllers\DepositClaimController;
 use App\Modules\Sales\Http\Controllers\DirectSaleController;
+use App\Modules\Sales\Http\Controllers\InvoiceSampleController;
 use App\Modules\Sales\Http\Controllers\LotTraceController;
 use App\Modules\Sales\Http\Controllers\PortalController;
 use App\Modules\Sales\Http\Controllers\PosController;
@@ -16,6 +17,7 @@ use App\Modules\Sales\Http\Controllers\MarginReportController;
 use App\Modules\Sales\Http\Controllers\GatePassController;
 use App\Modules\Sales\Http\Controllers\LoadingSheetController;
 use App\Modules\Sales\Http\Controllers\SalesInvoiceController;
+use App\Modules\Sales\Http\Controllers\DeliveryScanController;
 use App\Modules\Sales\Http\Controllers\DeliveryStageController;
 use App\Modules\Sales\Http\Controllers\SalesOrderController;
 use App\Modules\Sales\Http\Controllers\SalesPrintController;
@@ -32,6 +34,16 @@ use Illuminate\Support\Facades\Route;
  * Sales মডিউলের রুট — ModuleServiceProvider নিজে নিবন্ধন করে (সেকশন ১৯.৩)।
  * স্থির পথ {model}-এর আগে, আর {model} সংখ্যায় বাঁধা।
  */
+
+/*
+ * ⭐ কাগজের QR-এর দরজা — মালিকের নির্দেশ, ৩০ সেপ্টেম্বর ২০২৬: *"ekta qr add korbe zate mobile scane
+ * korei delivery dap gulo complate …"* আর *"ekoi code dilar scane kore tar hisab r invoice dekte pare"*।
+ *
+ * ⓘ লগইনের বাইরে, কারণ একই QR কর্মী আর ডিলার দুজনেই স্ক্যান করেন — কে এসেছেন তা controller দেখে
+ * ঠিক করে কোন দরজায় পাঠাবে ([[DeliveryScanController::open()]])। ⛔ এই পাতা নিজে কিছু দেখায় না,
+ * কিছু বদলায় না; `public_id` কেবল UUID-র আকারে মানা হয়।
+ */
+Route::get('/scan/{publicId}', [DeliveryScanController::class, 'open'])->where('publicId', '[0-9a-fA-F-]{36}')->name('scan');
 
 Route::middleware('auth')->prefix('sales')->group(function () {
 
@@ -257,6 +269,8 @@ Route::middleware('auth')->prefix('sales')->group(function () {
      * ট্রিপ, ধাপ কেবল বলে কোথায় আছে ([[DeliveryStageService]])।
      */
     Route::prefix('deliveries')->name('delivery.')->group(function () {
+        /* ⭐ QR থেকে কর্মী — চাবি controller-এ (can:sales.delivery.view); `{challan}`-এর আগে */
+        Route::get('/scan/{publicId}', [DeliveryScanController::class, 'staff'])->where('publicId', '[0-9a-fA-F-]{36}')->name('scan');
         Route::get('/', [DeliveryStageController::class, 'index'])->name('index');
         Route::get('/{challan}', [DeliveryStageController::class, 'show'])->whereNumber('challan')->name('show');
         Route::post('/{challan}/stage', [DeliveryStageController::class, 'move'])->whereNumber('challan')->name('move');
@@ -328,6 +342,12 @@ Route::middleware('auth')->prefix('sales')->group(function () {
         Route::post('/{job}/settle', [PrintQueueController::class, 'settle'])
             ->whereNumber('job')->name('settle');
     });
+
+    /*
+     * ⭐ "Set Invoice Information"-এর নমুনা বিল — বানানো তথ্যে, কারও আসল বিল নয়
+     * ([[InvoiceSampleController]])। ⓘ ছাপার নিয়ন্ত্রণের পাতা `Route::has()` দিয়ে এটা খোঁজে।
+     */
+    Route::get('/print/invoice-sample', [InvoiceSampleController::class, 'show'])->name('invoice_sample');
 
     Route::prefix('print')->name('print.')->group(function () {
         Route::get('/invoice/{invoice}', [SalesPrintController::class, 'invoice'])
@@ -413,6 +433,10 @@ Route::prefix('portal')->name('portal.')->group(function () {
 
     Route::middleware(['auth:portal', EnsurePortalStillOpen::class])->group(function () {
         Route::get('/', [PortalController::class, 'home'])->name('home');
+
+        /* ⭐ QR থেকে ডিলার — কেবল নিজের চালান ([[ScannedPaper::dealer()]]), অন্যেরটা ৪০৪ */
+        Route::get('/scan/{publicId}', [DeliveryScanController::class, 'dealer'])->where('publicId', '[0-9a-fA-F-]{36}')->name('scan');
+        Route::post('/scan/{publicId}/received', [DeliveryScanController::class, 'received'])->where('publicId', '[0-9a-fA-F-]{36}')->name('scan.received');
 
         /*
          * নিজের খতিয়ান — "আমার কত বাকি" প্রশ্নের পূর্ণ উত্তর।
