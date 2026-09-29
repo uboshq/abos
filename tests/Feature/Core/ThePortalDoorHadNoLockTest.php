@@ -249,6 +249,31 @@ final class ThePortalDoorHadNoLockTest extends TestCase
         $this->assertGuest('portal');
     }
 
+    /**
+     * ⛔ লগইন করা ডিলার নিজের পোর্টাল খোলেন — সুপার অ্যাডমিনের দুই-ধাপের তালা
+     * তাঁকে ছোঁয় না (গভীর অডিট ২৯ সেপ্টেম্বর ২০২৬)।
+     *
+     * ⓘ ঐ তালাটা ([[SuperAdminMustHaveTwoSteps]]) গোটা web গ্রুপে বসানো, আর সে
+     * `$request->user()`-কে সবসময় কর্মী ধরে নিত; পোর্টালে ওটা একজন গ্রাহক, তাই
+     * লগইনের পরের প্রতিটা পাতা TypeError-এ ৫০০ দিত। ⚠️ সুইচ বন্ধ থাকলেও —
+     * ভাঙনটা সুইচ দেখার আগেই। ⭐ একই ডিলার, সুইচ চালু আর বন্ধ দুই অবস্থায়।
+     */
+    public function test_a_signed_in_dealer_opens_the_portal_whether_the_super_admin_lock_is_on_or_off(): void
+    {
+        foreach ([true, false] as $on) {
+            config(['abos.super_admin_two_step' => $on]);
+
+            $this->attempt('LOCK-1', self::PASSWORD, $on ? '10.4.0.1' : '10.4.0.2')
+                ->assertRedirect(route('sales.portal.home'));
+            $this->assertAuthenticatedAs($this->customer, 'portal');
+
+            $this->get(route('sales.portal.home'))->assertOk();
+
+            $this->post(route('sales.portal.logout'));
+            $this->app['auth']->forgetGuards();
+        }
+    }
+
     /* ── সহায়ক ────────────────────────────────────────────────────── */
 
     private function attempt(string $code, string $password, string $ip): TestResponse

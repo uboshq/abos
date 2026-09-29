@@ -61,7 +61,17 @@ final class SuperAdminMustHaveTwoSteps
     {
         $user = $request->user();
 
-        if ($user === null || ! self::isRequiredFor($user)) {
+        /*
+         * ⛔ কেবল কর্মী — ২৯ সেপ্টেম্বর ২০২৬। এই মিডলওয়্যার গোটা web গ্রুপে, আর
+         * পোর্টালে `user()` একজন গ্রাহক (`auth:portal`); তাঁকে isRequiredFor()-এ
+         * পাঠালে TypeError-এ প্রতিটা ডিলারের পোর্টাল ৫০০ দিত, সুইচ বন্ধ থাকলেও।
+         * সুপার অ্যাডমিন কর্মীদের ভেতরেই হন, গ্রাহক কখনো নন।
+         */
+        if (! $user instanceof User) {
+            return $next($request);
+        }
+
+        if (! self::isRequiredFor($user)) {
             return $next($request);
         }
 
