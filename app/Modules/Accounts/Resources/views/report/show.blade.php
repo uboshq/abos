@@ -381,31 +381,84 @@
                         </tr>
                     </thead>
 
-                    <tbody>
-                        @foreach ($result->rows as $row)
-                            <tr class="transition-colors hover:bg-(--color-surface-hover)">
-                                @foreach ($columns as $column)
-                                    <td @class([
-                                        'align-middle',
-                                        'num' => in_array($column->type, [$money], true),
-                                        'whitespace-nowrap' => $column->type === $date,
-                                    ])>
-                                        @include('accounts::report.partials.cell', [
-                                            'column' => $column,
-                                            'row' => $row,
-                                        ])
-                                    </td>
+                    {{--
+                        ⭐ "সব শাখা"-তে শাখা ধরে ভাগ — মালিকের নির্দেশ, ২৯ সেপ্টেম্বর ২০২৬:
+                        *"সব রিপোর্ট শাখাভিত্তিক আলাদা করে দেখাবে … সাথে Grand Total"*।
+                        ⓘ প্রতিটা শাখার মোট ইঞ্জিনের নিজের কোয়েরিতে ([[BranchSection]]),
+                        আর নিচের সর্বমোট পুরো নাগালের — যোগ করে বানানো নয়।
+                    --}}
+                    @if ($result->isSplitByBranch())
+                        @foreach ($result->sections as $section)
+                            <tbody>
+                                <tr>
+                                    <th scope="colgroup" colspan="{{ count($columns) }}"
+                                        class="bg-(--color-surface-hover) text-start text-sm font-semibold">
+                                        {{ $section->branchName }}
+                                    </th>
+                                </tr>
+                                @foreach ($section->rows as $row)
+                                    <tr class="transition-colors hover:bg-(--color-surface-hover)">
+                                        @foreach ($columns as $column)
+                                            <td @class([
+                                                'align-middle',
+                                                'num' => in_array($column->type, [$money], true),
+                                                'whitespace-nowrap' => $column->type === $date,
+                                            ])>
+                                                @include('accounts::report.partials.cell', [
+                                                    'column' => $column,
+                                                    'row' => $row,
+                                                ])
+                                            </td>
+                                        @endforeach
+                                    </tr>
                                 @endforeach
-                            </tr>
+                                @if ($section->rowCount > count($section->rows))
+                                    <tr>
+                                        <td colspan="{{ count($columns) }}" class="text-sm text-(--color-ink-muted)">
+                                            {{ __('core.report.more_in_branch', ['count' => $section->rowCount - count($section->rows)]) }}
+                                        </td>
+                                    </tr>
+                                @endif
+                                <tr class="font-semibold">
+                                    @foreach ($columns as $index => $column)
+                                        <td @class(['num' => in_array($column->type, [$money], true)])>
+                                            @if ($index === 0)
+                                                {{ __('core.report.branch_total') }} — {{ $section->branchName }}
+                                            @elseif ($column->total && isset($section->totals[$column->key]))
+                                                {{ \App\Core\Support\Money::format($section->totals[$column->key]) }}
+                                            @endif
+                                        </td>
+                                    @endforeach
+                                </tr>
+                            </tbody>
                         @endforeach
-                    </tbody>
+                    @else
+                        <tbody>
+                            @foreach ($result->rows as $row)
+                                <tr class="transition-colors hover:bg-(--color-surface-hover)">
+                                    @foreach ($columns as $column)
+                                        <td @class([
+                                            'align-middle',
+                                            'num' => in_array($column->type, [$money], true),
+                                            'whitespace-nowrap' => $column->type === $date,
+                                        ])>
+                                            @include('accounts::report.partials.cell', [
+                                                'column' => $column,
+                                                'row' => $row,
+                                            ])
+                                        </td>
+                                    @endforeach
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    @endif
 
                     <tfoot>
                         <tr>
                             @foreach ($columns as $index => $column)
                                 <td @class(['num' => in_array($column->type, [$money], true)])>
                                     @if ($index === 0)
-                                        {{ __('core.print.total') }}
+                                        {{ $result->isSplitByBranch() ? __('core.report.grand_total') : __('core.print.total') }}
                                     @elseif ($column->total && isset($result->totals[$column->key]))
                                         {{ \App\Core\Support\Money::format($result->totals[$column->key]) }}
                                     @endif
@@ -416,7 +469,8 @@
                 </table>
             </div>
 
-            @if ($result->totalRows > $result->perPage)
+            {{-- ⓘ শাখা ধরে ভাগে প্রতিটা শাখার প্রথম পাতা — পাতা-ভাগ তখন অর্থহীন --}}
+            @if (! $result->isSplitByBranch() && $result->totalRows > $result->perPage)
                 {{-- পাতা ভাগ করা হলে সেটা বলা দরকার, নাহলে ব্যবহারকারী
                      ভাবত যোগফলটাও শুধু এই পাতার — অথচ ওটা পুরো ফলের --}}
                 <div class="flex flex-wrap items-center justify-between gap-2 border-t border-(--color-border)

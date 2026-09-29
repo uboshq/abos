@@ -74,15 +74,53 @@ final class ReportExport
                 ],
                 $columns,
             ),
-            $result->rows,
-            fn (mixed $row, array $column): string => self::text(
-                $columns[self::indexOf($columns, $column['key'])],
-                is_array($row) ? ($row[$column['key']] ?? null) : null,
-            ),
+            self::rowsOf($result, $columns),
+            function (mixed $row, array $column) use ($columns): string {
+                $index = self::indexOf($columns, $column['key']);
+
+                // ⓘ শাখার মাথা আর মোটের সারি — প্রথম ঘরে লেবেল, বাকিগুলো মোট (যদি থাকে)
+                if (is_array($row) && isset($row['__section'])) {
+                    if ($index === 0) {
+                        return (string) $row['__label'];
+                    }
+
+                    return $columns[$index]->total && isset($row[$column['key']])
+                        ? self::text($columns[$index], $row[$column['key']])
+                        : '';
+                }
+
+                return self::text($columns[$index], is_array($row) ? ($row[$column['key']] ?? null) : null);
+            },
         );
     }
 
     /** @param  list<ReportColumn>  $columns */
+    /**
+     * ফাইলের সারিগুলো — শাখা ধরে ভাগ থাকলে পর্দার একই ক্রমে: প্রতিটা শাখার মাথা,
+     * তার সারি, শাখার মোট; শেষে সর্বমোট (২৯ সেপ্টেম্বর ২০২৬)।
+     *
+     * @param  list<ReportColumn>  $columns
+     * @return list<array<string, mixed>>
+     */
+    private static function rowsOf(ReportResult $result, array $columns): array
+    {
+        if (! $result->isSplitByBranch()) {
+            return $result->rows;
+        }
+
+        $rows = [];
+
+        foreach ($result->sections as $section) {
+            $rows[] = ['__section' => 'head', '__label' => $section->branchName];
+            array_push($rows, ...$section->rows);
+            $rows[] = ['__section' => 'total', '__label' => __('core.report.branch_total').' — '.$section->branchName, ...$section->totals];
+        }
+
+        $rows[] = ['__section' => 'grand', '__label' => __('core.report.grand_total'), ...$result->totals];
+
+        return $rows;
+    }
+
     private static function indexOf(array $columns, string $key): int
     {
         foreach ($columns as $i => $column) {

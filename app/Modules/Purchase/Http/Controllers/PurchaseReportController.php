@@ -100,6 +100,8 @@ class PurchaseReportController extends Controller implements HasMiddleware
              */
             $request->only($definition->requestKeys()),
             page: max(1, (int) $request->query('page', 1)),
+            // ⭐ "সব শাখা"-তে শাখা ধরে ভাগ + সর্বমোট — ভাগ হবে কি না ইঞ্জিন ঠিক করে ([[ReportEngine::branchPlan()]])
+            byBranch: true,
         );
 
         return view('accounts::report.show', [

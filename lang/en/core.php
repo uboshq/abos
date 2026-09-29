@@ -449,6 +449,7 @@ return [
     'report' => [
         'no_branch' => 'Head office / no branch',
         'branch_total' => 'Branch total',
+        'more_in_branch' => 'This branch has :count more rows — choose the branch to see them all, page by page.',
         'grand_total' => 'Grand total',
         'contribution' => 'Share %',
         'change' => 'Change %',
