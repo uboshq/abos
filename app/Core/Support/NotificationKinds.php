@@ -51,6 +51,12 @@ final class NotificationKinds
              * মানুষ খোলে **ঠিক ঐ দিনটায়**, যেদিন ওটা লাগে।
              */
             'backup.failed' => 'core.notify.kind.backup_failed',
+
+            /*
+             * ⛔ সই হলো, অথচ চালান পাকা হলো না (বাকির দেয়াল, মজুদ…) — ২৯ সেপ্টেম্বর ২০২৬।
+             * ⓘ পায় কেবল চালান যিনি বানিয়েছিলেন ([[SignedChallanConfirmer]])।
+             */
+            'sales.signed_challan_stuck' => 'core.notify.kind.signed_challan_stuck',
         ];
     }
 
@@ -84,6 +90,9 @@ final class NotificationKinds
     private const MAIL_BY_DEFAULT = [
         /* কাগজটা তাঁর টেবিলে ফেরত — তিনি না ধরলে কিছুই এগোয় না */
         'approval.rejected',
+
+        /* ⓘ একই কারণ: সই হয়ে গেছে, তবু চালান তাঁর টেবিলে আটকে — তিনি না ধরলে মাল নড়ে না */
+        'sales.signed_challan_stuck',
 
         /*
          * ⭐ সূচির গোটা মানেই "না চাইতেই এসে পৌঁছাবে"।

@@ -1127,7 +1127,9 @@ final class ApprovalEngine
 
         $flows = [];
 
-        foreach (ApprovalFlow::query()->where('is_active', true)->with('steps')->get() as $flow) {
+        // ⓘ `conditions`-ও একসাথে — [[ApprovalFlow::catches()]] প্রতিটা অনুরোধে পড়ে; আলাদা টানলে
+        // লোকালের কড়াকড়িতে ৫০০ আর লাইভে প্রতিবার বাড়তি প্রশ্ন (২৯ সেপ্টেম্বর ২০২৬)
+        foreach (ApprovalFlow::query()->where('is_active', true)->with(['steps', 'conditions'])->get() as $flow) {
             $flows[$flow->module.'|'.$flow->action.'|'.$flow->document_type] = $flow;
         }
 

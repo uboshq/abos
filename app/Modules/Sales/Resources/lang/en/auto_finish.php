@@ -10,5 +10,8 @@ return [
     'rejected' => 'A signature was rejected — correct or cancel the sale',
     'maker_gone' => 'The person who made the sale is inactive or no longer in this company — finish it by hand',
     'audit' => 'Automatic — after the last signature (signed by: :signer; run in the name of the maker :maker)',
+    'challan_audit' => 'Confirmed automatically after the last signature (signed by :signer; run as the maker, :maker)',
+    'challan_stuck_title' => 'Signed, but challan :no was not confirmed',
+    'challan_stuck_body' => ':reason - open the challan, put it right and press "Confirm" again; the signature stands.',
     'by_command' => 'one-off command',
 ];

@@ -42,6 +42,10 @@ final class EveryChallanConfirmAsksHowTheGoodsTravelTest extends TestCase
         'app/Modules/Sales/Http/Controllers/DeliveryChallanController.php' => [1, [
             'app/Modules/Sales/Http/Controllers/DeliveryChallanController.php',
         ]],
+        // ⓘ শেষ সইয়ের পরে অফিসের চালান — দরজা নেই, সেবা নিজেই নিয়মটা জিজ্ঞেস করে (২৯ সেপ্টেম্বর ২০২৬)
+        'app/Modules/Sales/Services/SignedChallanConfirmer.php' => [1, [
+            'app/Modules/Sales/Services/SignedChallanConfirmer.php',
+        ]],
     ];
 
     /** যে ধরনে চালানের সেবার confirm() ডাকা হয় — চলকের নাম ধরে। */

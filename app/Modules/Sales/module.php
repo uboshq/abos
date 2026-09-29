@@ -672,6 +672,8 @@ return [
     'listeners' => [
         \App\Core\Events\ApprovalDecided::class => [
             \App\Modules\Sales\Listeners\FinishTheHeldSaleOnTheLastSignature::class,
+            // ⭐ অফিসের চালানও — শেষ সইয়ে নিজে পাকা ([[SignedChallanConfirmer]], ২৯ সেপ্টেম্বর ২০২৬)
+            \App\Modules\Sales\Listeners\ConfirmTheChallanOnTheLastSignature::class,
         ],
     ],
 

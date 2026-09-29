@@ -1182,6 +1182,7 @@ return [
             'hand_loan_due' => 'When a hand loan falls due',
             'hand_loan_due_note' => 'Overdue, or due within thirty days. ⓘ Loans with no date never send one.',
             'backup_failed' => 'When a backup fails',
+            'signed_challan_stuck' => 'When a signed challan could not be confirmed',
             'backup_failed_note' => 'The nightly backup could not be taken or could not reach a destination, with the reason. ⛔ Off means you learn about it on the day you need the backup.',
         ],
     ],
