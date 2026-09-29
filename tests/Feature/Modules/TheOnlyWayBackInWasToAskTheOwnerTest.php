@@ -116,6 +116,13 @@ class TheOnlyWayBackInWasToAskTheOwnerTest extends TestCase
     public function test_a_link_really_goes_out_to_somebody_we_know(): void
     {
         Notification::fake();
+        /*
+         * ⓘ চিঠি সত্যিই যায় এমন সার্ভার — phpunit.xml-এর `array` ড্রাইভারকে
+         * [[MailReach]] ১৫ সেপ্টেম্বর ২০২৬ থেকে "নীরব" ধরে আর দরজা আগেই ফেরায়
+         * (b1d74cea); এই দাবিটা তার পরের পথ মাপে। Notification::fake() আসল
+         * চিঠি যেতে দেয় না।
+         */
+        config(['mail.default' => 'smtp']);
 
         $this->post(route('password.email'), ['email' => 'sales@abos.test'])
             ->assertRedirect()
@@ -213,6 +220,13 @@ class TheOnlyWayBackInWasToAskTheOwnerTest extends TestCase
     public function test_a_stranger_cannot_count_our_staff_at_this_door(): void
     {
         Notification::fake();
+        /*
+         * ⓘ চিঠি সত্যিই যায় এমন সার্ভার — phpunit.xml-এর `array` ড্রাইভারকে
+         * [[MailReach]] ১৫ সেপ্টেম্বর ২০২৬ থেকে "নীরব" ধরে আর দরজা আগেই ফেরায়
+         * (b1d74cea); এই দাবিটা তার পরের পথ মাপে। Notification::fake() আসল
+         * চিঠি যেতে দেয় না।
+         */
+        config(['mail.default' => 'smtp']);
 
         $known = $this->post(route('password.email'), ['email' => 'sales@abos.test']);
         $unknown = $this->post(route('password.email'), ['email' => 'nobody@nowhere.test']);
