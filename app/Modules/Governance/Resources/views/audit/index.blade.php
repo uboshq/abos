@@ -16,7 +16,7 @@
              'label' => $t->user?->name ?? __('governance::message.system'),
          ])],
         ['key' => 'action', 'label' => __('governance::field.action'), 'width' => '8rem',
-         'render' => fn ($t) => __('governance::action.' . $t->action)],
+         'render' => fn ($t) => \App\Models\AuditTrail::actionInWords($t->action)],
         ['key' => 'record', 'label' => __('governance::field.record'),
          'render' => fn ($t) => view('governance::audit.partials.record', ['trail' => $t])],
         ['key' => 'changes', 'label' => __('governance::field.changes'),
@@ -65,7 +65,7 @@
                     <option value="">{{ __('governance::label.all_actions') }}</option>
                     @foreach ($actions as $action)
                         <option value="{{ $action }}" @selected(($filters['action'] ?? null) === $action)>
-                            {{ __('governance::action.' . $action) }}
+                            {{ \App\Models\AuditTrail::actionInWords($action) }}
                         </option>
                     @endforeach
                 </select>

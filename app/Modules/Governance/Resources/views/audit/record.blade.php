@@ -52,7 +52,7 @@
                      'label' => $t->user?->name ?? __('governance::message.system'),
                  ])],
                 ['key' => 'action', 'label' => __('governance::field.action'), 'width' => '8rem',
-                 'render' => fn ($t) => __('governance::action.' . $t->action)],
+                 'render' => fn ($t) => \App\Models\AuditTrail::actionInWords($t->action)],
                 ['key' => 'changes', 'label' => __('governance::field.changes'),
                  'render' => fn ($t) => view('governance::audit.partials.summary', ['trail' => $t])],
                 ['key' => 'open', 'label' => '—', 'width' => '6rem',

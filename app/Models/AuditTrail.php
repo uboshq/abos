@@ -59,6 +59,43 @@ class AuditTrail extends Model
         self::CONFIRMED, self::CANCELLED, self::APPROVED, self::REJECTED,
     ];
 
+    /**
+     * ⭐ কাজের নাম শব্দে — নিরীক্ষককে কখনো কাঁচা চাবি দেখানো হয় না।
+     *
+     * ── ⛔ লাইভে কী দেখা গিয়েছিল, ২৯ সেপ্টেম্বর ২০২৬ ──────────
+     * `/governance/audit` পাতায় কাজের ঘরে `governance::action.repriced`।
+     * ⓘ মালিক আর নিরীক্ষক — দুই ভূমিকাতেই।
+     *
+     * ── ⚠️ কারণটা অনুবাদের ভুল নয়, দরজাটার আকৃতি ───────
+     * [[IsAudited::auditAction()]] স্বাধীন স্ট্রিং নেয় — ওপরের
+     * [[self::ACTIONS]] তালিকার বাইরেও। তাই নতুন যেকোনো কাজ
+     * শব্দ না পেলে চাবি হয়ে ছাপা হত, আর কোথাও লাল হত না।
+     * ⭐ তাই শব্দ যোগ করাই যথেষ্ট নয় — এখানে একটা পতনরোধও লাগে।
+     *
+     * ⓘ পতনরোধটা কার্পন্যিক নয়: `expiry_corrected` → "expiry corrected"
+     * পড়া যায়, আর সেটা কাঁচা চাবির চেয়ে মানুষের পড়ার মতো।
+     * ⚠️ তবে ওটা অনুবাদের বিকল্প নয় — [[TheAuditTrailShowedItsOwnKeyTest]]
+     * কোডে লেখা প্রতিটা কাজের দুই ভাষাতেই শব্দ আছে কি না গুনে।
+     */
+    public static function actionInWords(?string $action): string
+    {
+        $action = trim((string) $action);
+
+        if ($action === '') {
+            return '—';
+        }
+
+        $key = 'governance::action.'.$action;
+        $words = __($key);
+
+        if (is_string($words) && $words !== $key) {
+            return $words;
+        }
+
+        /* ⓘ শেষ আশ্রয় — দাগের বদলে শব্দ, তবে কখনো চাবি নয় */
+        return str_replace('_', ' ', $action);
+    }
+
     protected $fillable = [
         'company_id', 'branch_id', 'user_id', 'action',
         'auditable_type', 'auditable_id', 'document_no', 'label',

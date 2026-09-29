@@ -35,4 +35,13 @@ return [
     'overridden' => 'Duplicate allowed',
     'two_step_reset' => 'Two-step reset',
     'two_step_off' => 'Two-step turned off',
+    /*
+     * Not only the eight in [[AuditTrail::ACTIONS]] — services that name their
+     * own action land here too. These four were added on 29 September 2026,
+     * after the audit trail printed `governance::action.repriced` on live.
+     */
+    'repriced' => 'Lot repriced',
+    'expiry_corrected' => 'Expiry corrected',
+    'shift_closed' => 'Shift closed',
+    'sent_back' => 'Sent back',
 ];
