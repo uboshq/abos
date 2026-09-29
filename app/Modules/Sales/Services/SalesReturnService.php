@@ -51,6 +51,8 @@ use Illuminate\Validation\ValidationException;
 final class SalesReturnService
 {
     use ReadsPackedQuantities;
+    // ⓘ বিল ছাড়া ফেরতের ভ্যাট বিলের একই নিয়মে — হাতে লেখা নয় ([[replaceLines()]])
+    use CalculatesSalesLines;
 
     public function __construct(
         private readonly NumberSeriesEngine $numbers,
@@ -534,23 +536,30 @@ final class SalesReturnService
              * বিল ছাড়া ফেরতে হাতে লেখা দরটা এন্ট্রির এককে — সেটা নামাতে
              * হয়। পণ্য-মাস্টারের দাম নামে না; ওটা আগেই পণ্যের এককে।
              */
-            $rate = match (true) {
-                $invoiceLine !== null => (string) $invoiceLine->rate,
+            /*
+             * ⛔ বিলের সাথে বাঁধা ফেরত বিল যেভাবে খাতায় বসেছিল ঠিক সেভাবে ফেরে — গভীর অডিট, ২৯ সেপ্টেম্বর ২০২৬।
+             *
+             * আগে দর আসত বিলের লাইনের `rate` থেকে (ছাড়ের **আগের** দাম), আর ভ্যাট হাতে লেখা ঘর থেকে — সীমা
+             * নেই, ভ্যাট বন্ধ থাকলেও। ফলে ছাড়ের বিল ফেরতে বেশি জমা পড়ত, আর `tax = 999999` লিখে যেকোনো
+             * গ্রাহকের বাকি মুছে ফেলা যেত। ⭐ এখন অঙ্ক আর ভ্যাট দুইটাই বিলের লাইন থেকে ([[shareOfTheBill()]]);
+             * বিল ছাড়া ফেরতে ভ্যাট পণ্যের হারে, বিলের একই নিয়মে ([[CalculatesSalesLines::lineFigures()]]) —
+             * হাতে লেখা ভ্যাট কোথাও নেওয়া হয় না।
+             */
+            if ($invoiceLine !== null) {
+                [$amount, $tax] = $this->shareOfTheBill($invoiceLine, $qty);
+                $rate = bccomp($qty, '0', 4) > 0 ? bcdiv($amount, $qty, 4) : (string) $invoiceLine->rate;
+            } else {
+                $rate = filled($line['rate'] ?? null)
+                    // হাতে লেখা দর — যে এককে লেখা, সেখান থেকে নামে
+                    ? $this->packed($product, '1', $pack['entered_unit_id'], $this->money($line['rate']))['rate']
+                    // মাস্টারের দাম — আগেই পণ্যের এককে, নামানোর কিছু নেই
+                    : $this->money($product->sale_price);
 
-                // হাতে লেখা দর — যে এককে লেখা, সেখান থেকে নামে
-                filled($line['rate'] ?? null) => $this->packed(
-                    $product,
-                    '1',
-                    $pack['entered_unit_id'],
-                    $this->money($line['rate']),
-                )['rate'],
-
-                // মাস্টারের দাম — আগেই পণ্যের এককে, নামানোর কিছু নেই
-                default => $this->money($product->sale_price),
-            };
-
-            $amount = bcmul($qty, $rate, 4);
-            $tax = $this->money($line['tax'] ?? '0');
+                $figures = $this->lineFigures($qty, $rate, '0', null, $product->tax);
+                $tax = $figures['tax'];
+                // ⓘ ফেরতের `amount` ভ্যাট ছাড়া (মোট = অঙ্ক + ভ্যাট) — দামের ভেতরের ভ্যাটেও দুইবার গোনা নয়
+                $amount = bcsub($figures['amount'], $tax, 4);
+            }
 
             SalesReturnLine::create([
                 'company_id' => $return->company_id,
@@ -630,6 +639,37 @@ final class SalesReturnService
             narration: $narration,
             batch: $line->batch,
         );
+    }
+
+    /**
+     * বিলের এই লাইনের `$qty` পরিমাণের ভাগ — [অঙ্ক (ভ্যাট ছাড়া), ভ্যাট]।
+     *
+     * ⓘ লাইনের অঙ্কে তার নিজের ছাড় (প্রমোশনসহ) আর ভ্যাট আগেই বসা; বিলের মাথার ছাড় আর রাউন্ডিং বিলের
+     * মোটে বসে, তাই লাইনের ভাগকে বিলের মোট ÷ লাইনগুলোর যোগ দিয়ে গুণ করা হয় — পুরো বিল ফেরত দিলে জমা
+     * হুবহু বিলের মোট। ভ্যাট বিলে বসে মাথার ছাড়ের আগের দামে, তাই ভ্যাটের ভাগ কেবল পরিমাণের অনুপাতে।
+     *
+     * @return array{0: string, 1: string}
+     */
+    private function shareOfTheBill(SalesInvoiceLine $invoiceLine, string $qty): array
+    {
+        $lineQty = (string) $invoiceLine->qty;
+
+        if (bccomp($qty, '0', 4) <= 0 || bccomp($lineQty, '0', 4) <= 0) {
+            return ['0.0000', '0.0000'];
+        }
+
+        $gross = bcdiv(bcmul((string) $invoiceLine->amount, $qty, 8), $lineQty, 8);
+        $tax = bcdiv(bcmul((string) $invoiceLine->tax, $qty, 8), $lineQty, 4);
+
+        $invoice = $invoiceLine->invoice;
+        $linesTotal = $invoice === null ? '0' : $invoice->lines()->pluck('amount')
+            ->reduce(fn (string $sum, $amount) => bcadd($sum, (string) $amount, 4), '0');
+
+        $credit = bccomp($linesTotal, '0', 4) > 0
+            ? bcdiv(bcmul($gross, (string) $invoice->total, 8), $linesTotal, 4)
+            : bcadd($gross, '0', 4);
+
+        return [bcsub($credit, $tax, 4), $tax];
     }
 
     /**
