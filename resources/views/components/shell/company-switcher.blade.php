@@ -37,6 +37,9 @@
     $companies = $shell->companies();
     $branches = $shell->branches();
     $canSwitch = $shell->canSwitch();
+
+    // ⭐ "সব শাখা" — কেবল যাঁর নাগালে একাধিক শাখা (২৯ সেপ্টেম্বর ২০২৬)
+    $viewAll = $branches->count() > 1 && (bool) ($user?->view_all_branches ?? true);
 @endphp
 
 <div x-data="{ open: false }" class="relative">
@@ -85,7 +88,7 @@
         --}}
         <span class="min-w-0 max-w-64 truncate text-start text-sm font-semibold
                      text-(--color-ink)">
-            {{ $company->name() }}@if ($branch)<span class="font-normal text-(--color-ink-muted)"> ({{ $branch->name() }})</span>@endif
+            {{ $company->name() }}@if ($viewAll)<span class="font-normal text-(--color-ink-muted)"> ({{ __('core.company.all_branches') }})</span>@elseif ($branch)<span class="font-normal text-(--color-ink-muted)"> ({{ $branch->name() }})</span>@endif
         </span>
 
         @if ($canSwitch)
@@ -152,6 +155,26 @@
                     {{ __('core.company.branch_of', ['company' => $company->name()]) }}
                 </p>
 
+                <form method="POST" action="{{ route('branch.switch') }}">
+                    @csrf
+                    <input type="hidden" name="branch_id" value="all">
+
+                    <button type="submit" role="menuitem"
+                            @class([
+                                'flex min-h-(--spacing-touch) w-full items-center gap-2 px-3 text-start text-sm',
+                                'transition-colors hover:bg-(--color-surface-hover)',
+                                'font-semibold' => $viewAll,
+                            ])>
+                        <span @class([
+                            'h-4 w-1 shrink-0 rounded-full',
+                            'bg-(--color-brand-500)' => $viewAll,
+                            'bg-(--color-border)' => ! $viewAll,
+                        ])></span>
+
+                        <span class="min-w-0 flex-1 truncate">{{ __('core.company.all_branches') }}</span>
+                    </button>
+                </form>
+
                 @foreach ($branches as $option)
                     <form method="POST" action="{{ route('branch.switch') }}">
                         @csrf
@@ -161,20 +184,20 @@
                                 @class([
                                     'flex min-h-(--spacing-touch) w-full items-center gap-2 px-3 text-start text-sm',
                                     'transition-colors hover:bg-(--color-surface-hover)',
-                                    'font-semibold' => $option->id === $branch?->id,
+                                    'font-semibold' => ! $viewAll && $option->id === $branch?->id,
                                 ])>
                             {{-- ছোট দাগটা কেবল সাজ নয়: লোগোর জায়গাটা ধরে
                                  রাখে, তাই কোম্পানি আর শাখার সারিগুলো এক
                                  রেখায় বসে। --}}
                             <span @class([
                                 'h-4 w-1 shrink-0 rounded-full',
-                                'bg-(--color-brand-500)' => $option->id === $branch?->id,
-                                'bg-(--color-border)' => $option->id !== $branch?->id,
+                                'bg-(--color-brand-500)' => ! $viewAll && $option->id === $branch?->id,
+                                'bg-(--color-border)' => $viewAll || $option->id !== $branch?->id,
                             ])></span>
 
                             <span class="min-w-0 flex-1 truncate">{{ $option->name() }}</span>
 
-                            @if ($option->id === $branch?->id)
+                            @if (! $viewAll && $option->id === $branch?->id)
                                 <svg viewBox="0 0 24 24" class="size-4 shrink-0 fill-(--color-brand-500)"
                                      aria-hidden="true">
                                     <path d="m9 16.2-3.5-3.5-1.4 1.4L9 19 20 8l-1.4-1.4L9 16.2Z"/>

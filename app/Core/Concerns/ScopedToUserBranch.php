@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Core\Concerns;
 
 use App\Core\Services\DataScope;
+use App\Models\User;
 use App\Models\UserDataScope;
 use Illuminate\Database\Eloquent\Builder;
 
@@ -35,21 +36,35 @@ trait ScopedToUserBranch
         static::addGlobalScope('user-branch', function (Builder $builder): void {
             $user = auth()->user();
 
-            if ($user === null) {
+            /*
+             * ⓘ কেবল কর্মী — পোর্টালে `user()` একজন গ্রাহক, তাঁর শাখার সীমা বলে
+             * কিছু নেই (তাঁর দেয়াল মালিকানার, [[CUSTOMER_PORTAL]])।
+             */
+            if (! $user instanceof User) {
                 return;
             }
 
-            $ids = app(DataScope::class)->idsFor($user, UserDataScope::BRANCH);
+            $scope = app(DataScope::class);
+
+            /*
+             * ⭐ দেখার শাখা (২৯ সেপ্টেম্বর ২০২৬) — হেডারে একটা শাখা বাছলে কেবল সেটা,
+             * শাখাহীন সারি ছাড়া; "সব শাখা"-তে আগের মতো নাগাল, শাখাহীনসহ।
+             */
+            $ids = $scope->viewBranchIds($user);
 
             if ($ids === null) {
                 return;
             }
 
+            $withUnbranched = ! $scope->viewsOneBranch($user);
             $table = $builder->getModel()->getTable();
 
-            $builder->where(function (Builder $q) use ($table, $ids): void {
-                $q->whereIn($table.'.branch_id', $ids)
-                    ->orWhereNull($table.'.branch_id');
+            $builder->where(function (Builder $q) use ($table, $ids, $withUnbranched): void {
+                $q->whereIn($table.'.branch_id', $ids);
+
+                if ($withUnbranched) {
+                    $q->orWhereNull($table.'.branch_id');
+                }
             });
         });
     }

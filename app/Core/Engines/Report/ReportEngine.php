@@ -376,7 +376,11 @@ final class ReportEngine
             $ids = $f['branch_ids'] ?? null;
 
             if ($ids !== null) {
-                $query->where(fn ($q) => $q->whereIn($column, $ids)->orWhereNull($column));
+                // ⓘ শাখাহীন সারি কেবল "সব শাখা"-তে — একটা শাখা বাছা থাকলে নয়
+                $nulls = (bool) ($f['branch_nulls'] ?? true);
+                $query->where(fn ($q) => $nulls
+                    ? $q->whereIn($column, $ids)->orWhereNull($column)
+                    : $q->whereIn($column, $ids));
             }
         };
     }
@@ -472,6 +476,20 @@ final class ReportEngine
         }
 
         $filters['branch_ids'] = $allowed;
+        $filters['branch_nulls'] = true;
+
+        /*
+         * ⭐ দেখার শাখা — হেডারে একটা শাখা বাছা থাকলে রিপোর্টও কেবল সেটা, শাখাহীন
+         * সারি ছাড়া (মালিকের নির্দেশ, ২৯ সেপ্টেম্বর ২০২৬: "শুধু সেই শাখার ডাটা")।
+         * ⓘ রিপোর্টের নিজের শাখা-ছাঁকনি বাছা থাকলে সেটাই আগে — উপরে নাগালের ভেতরে
+         * কি না দেখা হয়ে গেছে।
+         */
+        $scope = app(DataScope::class);
+
+        if (empty($filters['branch_id']) && $scope->viewsOneBranch(auth()->user())) {
+            $filters['branch_ids'] = $scope->viewBranchIds(auth()->user());
+            $filters['branch_nulls'] = false;
+        }
 
         /*
          * ঘরটা সবসময় থাকে, খালি হলেও।

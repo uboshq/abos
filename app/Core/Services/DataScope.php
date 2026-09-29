@@ -84,6 +84,56 @@ final class DataScope
         return $ids === null || in_array($id, $ids, true);
     }
 
+    /**
+     * ⭐ দেখার শাখা — হেডারে যা বাছা (২৯ সেপ্টেম্বর ২০২৬)।
+     *
+     * `true` কেবল তখন, যখন তিনি "সব শাখা" নয়, একটা শাখা বেছেছেন আর সেটা তাঁর
+     * নাগালের ভেতরে। ⓘ তখন কেবল সেই শাখার সারি — **শাখাহীন সারিও নয়**:
+     * শাখাহীন কাগজ কোম্পানি-স্তরের (প্রধান অফিসের জাবেদা), সেটা "সব শাখা"-তে।
+     *
+     * ⛔ কেবল **দেখার** পথে — যাচাইয়ের পথে (বাকির সীমা, টিলের জের, খাতার সিল)
+     * কখনো নয়; সেখানে গোটা কোম্পানিই সত্যি।
+     */
+    public function viewsOneBranch(mixed $user): bool
+    {
+        return $this->viewedBranch($user) !== null;
+    }
+
+    /**
+     * ⭐ দেখার শাখার আইডিগুলো — একটা বাছা থাকলে [সেটা], নইলে নাগাল ([[idsFor()]]);
+     * `null` মানে সীমা নেই।
+     *
+     * @return list<int>|null
+     */
+    public function viewBranchIds(mixed $user): ?array
+    {
+        $one = $this->viewedBranch($user);
+
+        if ($one !== null) {
+            return [$one];
+        }
+
+        return $user instanceof User ? $this->idsFor($user, UserDataScope::BRANCH) : null;
+    }
+
+    /** বাছা একটা শাখা — "সব শাখা" হলে, বা বাছাটা নাগালের বাইরে হলে null। */
+    private function viewedBranch(mixed $user): ?int
+    {
+        if (! $user instanceof User || ($user->view_all_branches ?? true)) {
+            return null;
+        }
+
+        $current = CompanyContext::branchId() ?? $user->current_branch_id;
+
+        if ($current === null) {
+            return null;
+        }
+
+        $reach = $this->idsFor($user, UserDataScope::BRANCH);
+
+        return $reach === null || in_array((int) $current, $reach, true) ? (int) $current : null;
+    }
+
     /** অনুমতি বদলালে ক্যাশটাও ভুল হয়ে যায়। */
     public function forget(): void
     {

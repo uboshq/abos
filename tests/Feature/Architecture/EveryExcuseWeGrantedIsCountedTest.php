@@ -96,6 +96,9 @@ final class EveryExcuseWeGrantedIsCountedTest extends TestCase
      * @var list<string>
      */
     private const NOT_EXCUSES = [
+        // ⓘ চাহিদা: খাতা পড়া প্রতিটা ফাইল দেখায় নাকি যাচাই করে (শাখা-দেখা, ২৯ সেপ্টেম্বর ২০২৬)
+        'EveryLedgerReaderSaysWhetherItShowsOrChecksTest::SHOWS',
+        'EveryLedgerReaderSaysWhetherItShowsOrChecksTest::CHECKS',
         // ⓘ উল্টো দিকের তালিকা: এখানে নাম মানে শাখায় আটকানো মানুষের কাছে রিপোর্টটা **বন্ধ** (অডিট ২৭ সেপ্টেম্বর, §৩)
         'EveryReportStandsBehindTheBranchWallTest::REFUSED',
         // ⓘ চাহিদা: চালান পাকা করার প্রতিটা ডাক আর তার দরজা — ছাড় নয়, যা থাকতেই হবে (ধাপ ৫)

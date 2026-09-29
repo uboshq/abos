@@ -1123,6 +1123,7 @@ return [
         'switch' => 'কোম্পানি বদলান',
         'company' => 'কোম্পানি',
         'branch' => 'শাখা',
+        'all_branches' => 'সব শাখা',
         'branch_of' => 'শাখা — :company',
         'stamped_with_branch' => 'আপনি যা লিখছেন তা এই শাখার নামেই বসছে।',
 

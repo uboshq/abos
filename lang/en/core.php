@@ -974,6 +974,7 @@ return [
         'switch' => 'Switch company',
         'company' => 'Company',
         'branch' => 'Branch',
+        'all_branches' => 'All branches',
         'branch_of' => 'Branch — :company',
         'stamped_with_branch' => 'Everything you enter is stamped with the branch you are in.',
 

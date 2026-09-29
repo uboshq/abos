@@ -181,12 +181,22 @@ class WorkspaceController extends Controller
     public function switchBranch(Request $request): RedirectResponse
     {
         $validated = $request->validate([
-            'branch_id' => ['required', 'integer'],
+            // ⭐ "all" = সব শাখা দেখা (২৯ সেপ্টেম্বর ২০২৬); কাজের শাখা তাতে বদলায় না
+            'branch_id' => ['required', 'regex:/^(all|[0-9]+)$/'],
         ]);
 
         $user = $request->user();
 
+        if ($validated['branch_id'] === 'all') {
+            $user->forceFill(['view_all_branches' => true])->save();
+
+            return back();
+        }
+
         $user->switchCompany((int) $user->current_company_id, (int) $validated['branch_id']);
+
+        // ⭐ একটা শাখা বাছা মানে দেখাও সেই শাখায় — [[DataScope::viewsOneBranch()]]
+        $user->forceFill(['view_all_branches' => false])->save();
 
         /*
          * যেখানে ছিলেন সেখানেই ফেরা — কোম্পানি বদলের মতো ড্যাশবোর্ডে নয়।
