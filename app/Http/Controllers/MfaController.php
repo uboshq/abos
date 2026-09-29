@@ -56,6 +56,18 @@ class MfaController extends Controller
     /** চাবি বসানো — কিন্তু চালু নয়, প্রথম কোড না মেলা পর্যন্ত। */
     public function begin(Request $request): RedirectResponse
     {
+        /*
+         * ⛔ চালু থাকা দুই ধাপ এখান দিয়ে নতুন করে বসে না — ২৯ সেপ্টেম্বর ২০২৬।
+         *
+         * `begin()` নতুন চাবি বসায় আর চালুর তারিখ মুছে দেয়, অর্থাৎ দুই ধাপ
+         * **বন্ধ** করে। ⚠️ চালু অবস্থায় এই দরজা খোলা থাকলে [[destroy()]]-এর
+         * পাসওয়ার্ডের পাশ দিয়ে খোলা কম্পিউটারে এক ক্লিকেই দ্বিতীয় তালা উঠে
+         * যেত। ⭐ নতুন ফোনে বসাতে হলে আগে পাসওয়ার্ড দিয়ে বন্ধ, তারপর এখানে।
+         */
+        if ($this->mfa->isOn($request->user())) {
+            return back()->withErrors(['password' => __('auth.mfa_turn_off_first')]);
+        }
+
         $this->mfa->begin($request->user());
 
         return back();

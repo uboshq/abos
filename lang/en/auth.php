@@ -115,6 +115,7 @@ return [
     'mfa_turn_off' => 'Turn it off',
     'mfa_is_on' => 'Two-step sign-in is on.',
     'mfa_off' => 'Two-step sign-in has been turned off.',
+    'mfa_turn_off_first' => 'Two-step sign-in is on. To set it up again, first turn it off with your password.',
     'mfa_step_one' => '1 · Put this key into your app',
     'mfa_step_one_note' => 'In Google Authenticator or any authenticator app, choose "enter a setup key" and type this. It needs no internet.',
     'mfa_step_two' => '2 · The code your app is showing',

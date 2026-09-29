@@ -45,6 +45,15 @@ class APasswordIsTheOnlyLockTest extends TestCase
         CompanyContext::set($company->id, $company->defaultBranch()?->id);
 
         $this->user = User::query()->where('email', 'owner@abos.test')->firstOrFail();
+
+        /*
+         * ⓘ এই ফাইলের সব দাবি শুরু হয় দুই ধাপ **বন্ধ** অবস্থা থেকে — চালু করা
+         * আর বন্ধ করাই এখানে মাপা হয়। ⚠️ ২৮ সেপ্টেম্বর ২০২৬ থেকে (acda6265)
+         * DemoSeeder ডেমো মালিকের TOTP চালু রাখে; শুরুটা তাই এখানে স্পষ্ট করে
+         * বসানো, নইলে "দুই ধাপ ছাড়া আগের মতোই" দাবি চুপচাপ দুই ধাপের দাবি হয়ে যেত।
+         */
+        $this->user->forceFill(['mfa_secret' => null, 'mfa_confirmed_at' => null, 'mfa_recovery_codes' => null])->save();
+        $this->user = $this->user->fresh();
     }
 
     private function mfa(): MfaService
@@ -391,6 +400,43 @@ class APasswordIsTheOnlyLockTest extends TestCase
             ->assertRedirect();
 
         $this->assertFalse($this->mfa()->isOn($this->user->fresh()));
+    }
+
+    /**
+     * ⛔ চালু থাকা দুই ধাপ "আবার বসাও" দিয়ে বন্ধ হয় না — ২৯ সেপ্টেম্বর ২০২৬।
+     *
+     * `POST /two-step` আগে দুই ধাপ চালু থাকলেও নতুন চাবি বসাত আর চালুর তারিখ
+     * মুছে দিত — পাসওয়ার্ড ছাড়াই। ⚠️ অর্থাৎ বন্ধ করার দরজায় যে পাসওয়ার্ড
+     * চাওয়া হয় (উপরের দাবি), খোলা কম্পিউটারে তার পাশ দিয়ে এক ক্লিকেই দুই ধাপ
+     * উঠে যেত; সুপার অ্যাডমিনের বেলায় তারপর যিনি সেশন ধরে আছেন তিনি নিজের
+     * ফোনে নতুন চাবি বসিয়ে নিতেন।
+     *
+     * ⭐ একই মানুষ দুইবার: চালু অবস্থায় কিছুই বদলায় না; পাসওয়ার্ড দিয়ে বন্ধ
+     * করার পরে নতুন করে বসানো আগের মতোই খোলা।
+     */
+    public function test_starting_over_cannot_switch_a_working_second_step_off(): void
+    {
+        $secret = $this->turnOn();
+
+        $this->actingAs($this->user)
+            ->post(route('mfa.begin'))
+            ->assertSessionHasErrors('password');
+
+        $after = $this->user->fresh();
+        $this->assertTrue($this->mfa()->isOn($after), '⛔ পাসওয়ার্ড ছাড়াই দুই ধাপ বন্ধ হয়ে গেছে।');
+        $this->assertSame($secret, (string) $after->mfa_secret, '⛔ চালু অবস্থায় চাবিটাই বদলে গেছে।');
+
+        $this->actingAs($this->user)
+            ->delete(route('mfa.destroy'), ['password' => 'password'])
+            ->assertRedirect();
+
+        $this->actingAs($this->user->fresh())
+            ->post(route('mfa.begin'))
+            ->assertSessionHasNoErrors();
+
+        $restarted = $this->user->fresh();
+        $this->assertNotNull($restarted->mfa_secret, 'বন্ধ করার পরে নতুন করে বসানো গেল না — দাবিটা কিছু মাপছে না।');
+        $this->assertNull($restarted->mfa_confirmed_at);
     }
 
     /** বন্ধ করলে চাবি, তারিখ ও কোড — তিনটাই মুছে যায়। */
