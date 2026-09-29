@@ -12,7 +12,7 @@ use App\Models\ApprovalFlow;
 use App\Models\ApprovalFlowStep;
 use App\Models\Company;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
+use RuntimeException;
 use Spatie\Permission\Models\Role;
 
 /**
@@ -141,9 +141,36 @@ final class MoneyFlowDefaults implements ProvisionsCompany
 
         $report = $this->ensure($company);
 
+        /*
+         * ── ⛔ আগে এখানে একটা `Log::warning` ছিল ────────────────
+         * ⓘ একটা লগ লাইন, আর পর্দায় কিছুই নয় — তাই কোম্পানিটা
+         * তৈরি হয়ে যেত শূন্য ছক নিয়ে, আর কেউ জানত না।
+         *
+         * ⚠️ এটা শুধু নীরবতার প্রশ্ন নয়। সারাইয়ের পর এই পদ্ধতি
+         * [[CompanyProvisioner]]-এর লেনদেনের ভিতর থেকে চলে। ⭐ চুপ করে
+         * সরে গেলে কোম্পানিটা **অর্ধেক তৈরি** অবস্থায় বসে যেত;
+         * ব্যতিক্রম ছুড়লে পুরো কোম্পানিটাই ফিরে যায় — আর অর্ধেক
+         * তৈরি কোম্পানির চেয়ে না-তৈরি কোম্পানি অনেক ভালো।
+         */
+        /*
+         * ── ⓘ আর এই শাখাটায় আজ পৌঁছানো যায় না, আর সেটা মেপে জানা ──────
+         * ⚠️ উপরে ভূমিকা না পেলে `sync()` ডাকা হয়, আর ছাঁচ থেকে
+         * হিসাবরক্ষক ফিরে আসে। আর "একই নামের দুইটা ভূমিকা" দশাটা Spatie
+         * নিজেই আটকায় (`RoleAlreadyExists`, বড়-ছোট হাত নির্বিশেষে —
+         * ২৯ সেপ্টেম্বর ২০২৬-এ মাপা)।
+         *
+         * ⭐ তবু রাখা হলো: collation বা ভূমিকার API বদলালে দশাটা ফিরে
+         * আসতে পারে, আর তখন নীরব একটা লগ-লাইনের চেয়ে জোরে থামা ভালো।
+         * ⛔ কিন্তু এর জন্য কোনো দাবি লেখা যায় না — লিখলে সেটা একটা নকল
+         * দাবি হত, আর নকল দাবি আসল পাহারার চেয়েও খারাপ।
+         */
         if ($report['missing_role']) {
-            Log::warning('money flows: no single Accountant role in company '.$company->code
-                .' — '.count($report['wanting']).' money action(s) have no approval flow yet.');
+            throw new RuntimeException(
+                'No single Accountant role in company '.$company->code.' ('
+                .($report['role_problem'] ?? 'none found').'), so '
+                .count($report['wanting']).' money action(s) would have no approval flow. '
+                .'Roles must be provisioned before the approval flows.'
+            );
         }
     }
 

@@ -30,6 +30,7 @@ use App\Modules\MasterData\Services\LocationService;
 use App\Modules\Sales\Models\PricingRule;
 use App\Modules\Supplier\Services\SupplierService;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
 use Spatie\Permission\Models\Permission;
@@ -471,6 +472,40 @@ class DemoSeeder extends Seeder
             'starts_on' => '2026-07-01',
             'ends_on' => '2027-06-30',
         ]);
+
+        $this->clearTheApprovalFlows($company);
+    }
+
+    /**
+     * ⛔ ডেমো কোম্পানির সইয়ের ছকগুলো মুছে ফেলা — ২৯ সেপ্টেম্বর ২০২৬।
+     *
+     * ── ⓘ কেন এটা এখানে, আর provisioner-এ কোনো সুইচ নয় ─────────────────
+     * [[CompanyProvisioner]] এখন প্রতিটা নতুন কোম্পানিতে ঘোষিত টাকার কাজের
+     * সইয়ের ছক বসায়, আর সেটাই মালিকের কোম্পানিতে দরকার। ⚠️ কিন্তু সিডার
+     * সেই একই পথে **ডেমো** কোম্পানি বানায়।
+     *
+     * ⛔ provisioner-কে "ছক ছাড়া বানাও" বলার কোনো ঘর রাখা হয়নি, আর
+     * রাখা হবেও না: টেস্টে বন্ধ করা যায় এমন সুইচ একদিন লাইভে বন্ধ থাকে।
+     * ⭐ তাই provisioner তার পুরো কাজ করে, আর সিডার তার **নিজের** ঘর
+     * গুছিয়ে নেয় — এটা সুইচ নয়, ডেমোর নিজের সিদ্ধান্ত।
+     *
+     * ── ⚠️ কেন মুছে ফেলা, নিষ্ক্রিয় করা নয় ────────────────────────────
+     * প্রথমে নিষ্ক্রিয় করেছিলাম। ⛔ তাতে ডেমোতে এমন একটা দশা তৈরি হত
+     * **যা লাইভে কোথাও নেই** — পনেরোটা বন্ধ ছক — আর ঐ দশাতেই যেসব টেস্ট
+     * নিজে ছক বসায় তারা থেমে যেত ("এই কাজের ছক আগে থেকেই আছে")। ⓘ মেপে
+     * দেখা: এগারোটা ফাইলে নিশ্চিত সংঘর্ষ, আরও উনিশটায় সম্ভাব্য।
+     *
+     * ⭐ মুছে ফেললে ডেমো হুবহু আজকের চেনা দশাতেই থাকে, আর কোনো টেস্ট নড়ে না।
+     *
+     * ── ⓘ লাইভ এতে ছোঁয়াও যায় না ──────────────────────────────────────
+     * `DemoSeeder` লাইভে কখনো চলে না; ডিপ্লয় কেবল `migrate` চালায়। আর
+     * মালিকের পথটা ([[CompanyProvisioner::create()]]) পাহারায় আছে:
+     * [[\Tests\Feature\Modules\SystemAdmin\ANewCompanyTookMoneyWithNobodyToSignTest]]
+     * দাবি করে ওখানে প্রতিটা ছক **থাকে আর চালু থাকে**।
+     */
+    private function clearTheApprovalFlows(Company $company): void
+    {
+        DB::table('approval_flows')->where('company_id', $company->id)->delete();
     }
 
     /**
