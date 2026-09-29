@@ -23,7 +23,7 @@ namespace App\Modules\Sales\Support;
 final class InvoiceDesigns
 {
     /** যে নকশা অচেনা বা পুরনো মানের জায়গায় বসে */
-    public const FALLBACK = 'classic_table';
+    public const FALLBACK = 'mono_light';
 
     /** @var array<string, string> নাম → ছাঁচ, মালিকের ক্রমে */
     public const ALL = [
@@ -47,6 +47,10 @@ final class InvoiceDesigns
         'seal_boxes' => 'sales::print.invoice-seal_boxes',
         'statement' => 'sales::print.invoice-statement',
         'statement_ledger' => 'sales::print.invoice-statement_ledger',
+
+        /* ⭐ মালিকের ডিফল্ট, ৩০ সেপ্টেম্বর ২০২৬ — ইংরেজি, আর তার বাংলা রূপ */
+        'mono_light' => 'sales::print.invoice-mono_light',
+        'mono_light_bn' => 'sales::print.invoice-mono_light_bn',
     ];
 
     /** সেটিংয়ের বাছাইয়ের তালিকা — চলতি নকশা আগে, তারপর ছাঁচগুলো */

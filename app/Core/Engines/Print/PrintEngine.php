@@ -297,6 +297,12 @@ final class PrintEngine
                 'useOTL' => 0xFF,
                 'useKashida' => 75,
             ],
+
+            /* ⭐ নকশার "INVOICE" শিরোনাম — মালিকের বাছাই, ৩০ সেপ্টেম্বর ২০২৬: Playfair Display Black (OFL) */
+            'playfair' => [
+                'R' => 'PlayfairDisplay-Black.ttf',
+                'B' => 'PlayfairDisplay-Black.ttf',
+            ],
         ];
     }
 

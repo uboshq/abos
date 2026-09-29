@@ -818,8 +818,8 @@ return [
             /* ⭐ ছাপার নিয়ন্ত্রণের "বিল → A4" ট্যাবে এই নকশাগুলোর কার্ড ([[PrintControlController::designsFor()]]) */
             'print_designs' => ['paper' => 'invoice', 'size' => 'a4', 'sample_route' => 'sales.invoice_sample'],
 
-            /* ⭐ ২৯ সেপ্টেম্বর ২০২৬ থেকে ক্লাসিকই ডিফল্ট — মালিক: "by defolt kore daw … 100% same" */
-            'default' => 'classic_table',
+            /* ⭐ ৩০ সেপ্টেম্বর ২০২৬: মালিকের নতুন ডিফল্ট "মোনো ক্লাসিক হালকা" ([[PaperDesigns::defaultFor()]]) */
+            'default' => PaperDesigns::defaultFor('invoice', 'a4'),
             'group' => 'print',
         ],
         /*

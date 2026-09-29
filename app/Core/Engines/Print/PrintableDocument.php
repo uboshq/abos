@@ -112,6 +112,33 @@ final class PrintableDocument
      *
      * @return list<string>
      */
+    /**
+     * "আগেও ছাপা হয়েছে"-র চিহ্ন — দুই ভাষার লেখাই এটা দিয়ে শুরু (`core.print.duplicate_notice`)।
+     *
+     * ⭐ মালিক, ৩০ সেপ্টেম্বর ২০২৬: লেখায় কততম ছাপা ("DUPLICATE — Print No. 3")। ⚠️ তাই লেখাটা আর এক রকম নয়,
+     * আর হুবহু মিলিয়ে চেনা যায় না; শুরুর শব্দে চেনা হয়। ⓘ ভাষা-নিরপেক্ষ — ছাপার সময় ইঞ্জিন লোকেল বদলায়,
+     * আর নোটিশটা বানানো হয় ব্যবহারকারীর ভাষায়; হুবহু মেলাতে গেলে দুই ভাষার মাঝে চিহ্নটা হারাত।
+     */
+    public const DUPLICATE_MARK = 'DUPLICATE';
+
+    /** নোটিশটা কি "আগেও ছাপা হয়েছে"? */
+    public static function isDuplicateNotice(string $notice): bool
+    {
+        return str_starts_with(trim($notice), self::DUPLICATE_MARK);
+    }
+
+    /** এই কাগজের "আগেও ছাপা হয়েছে" লেখা, নম্বরসহ — না থাকলে null */
+    public function duplicateNotice(): ?string
+    {
+        foreach ($this->notices() as $notice) {
+            if (self::isDuplicateNotice($notice)) {
+                return $notice;
+            }
+        }
+
+        return null;
+    }
+
     public function notices(): array
     {
         if ($this->notice === null || trim($this->notice) === '') {

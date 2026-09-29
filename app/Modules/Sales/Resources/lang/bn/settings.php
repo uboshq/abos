@@ -101,6 +101,8 @@ return [
         'tally_classic' => 'ট্যালি ক্লাসিক',
         'sheet_grid' => 'শিট ছক',
         'bank_form' => 'ব্যাংক ফর্ম',
+        'mono_light' => 'মোনো ক্লাসিক হালকা',
+        'mono_light_bn' => 'মোনো ক্লাসিক হালকা (বাংলা)',
     ],
     'invoice_info' => [
         'header' => [

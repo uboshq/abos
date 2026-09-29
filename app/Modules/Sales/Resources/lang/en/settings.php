@@ -101,6 +101,8 @@ return [
         'tally_classic' => 'Tally Classic',
         'sheet_grid' => 'Sheet Grid',
         'bank_form' => 'Bank Form',
+        'mono_light' => 'Mono Classic Light',
+        'mono_light_bn' => 'Mono Classic Light (Bangla)',
     ],
     'invoice_info' => [
         'header' => [

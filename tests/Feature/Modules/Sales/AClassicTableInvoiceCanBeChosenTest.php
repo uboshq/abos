@@ -77,17 +77,27 @@ final class AClassicTableInvoiceCanBeChosenTest extends TestCase
          * মাপে, ধারের দেয়াল নয়।
          */
         Customer::query()->firstOrFail()->forceFill(['credit_limit' => '0'])->save();
+
+        /* ⓘ ৩০ সেপ্টেম্বর ২০২৬ থেকে ডিফল্ট "মোনো ক্লাসিক হালকা" — এই ফাইল ক্লাসিকটাকে মাপে, তাই বেছে নেয় */
+        $this->choose('classic_table');
     }
 
     /**
-     * ⭐ সেটিং না বসানো কোম্পানি ক্লাসিক পায় — মালিক, ২৯ সেপ্টেম্বর ২০২৬: *"by defolt kore daw"*।
+     * ⭐ সেটিং না বসানো কোম্পানি মালিকের ডিফল্ট পায় — ২৯ সেপ্টেম্বর ক্লাসিক, ৩০ সেপ্টেম্বর থেকে
+     * "মোনো ক্লাসিক হালকা" (*"keu select na korle egulotei print hobe"*)।
      */
-    public function test_a_company_with_no_setting_prints_the_classic_invoice(): void
+    public function test_a_company_with_no_setting_prints_the_owners_default(): void
     {
-        $seen = $this->printed($this->anInvoice());
+        app(SettingsService::class)->reset('sales.print.design.invoice');
 
-        $this->assertSame(self::CLASSIC, $seen['view'],
-            'সেটিং না থাকা কোম্পানিতে চলতি নকশা ছাপা হলো — ডিফল্ট এখন ক্লাসিক।');
+        $drawn = false;
+        View::composer('sales::print.invoice-mono_light', function () use (&$drawn) {
+            $drawn = true;
+        });
+
+        $this->actingAs($this->user)->get(route('sales.print.invoice', $this->anInvoice()))->assertOk();
+
+        $this->assertTrue($drawn, 'সেটিং না থাকা কোম্পানিতে মালিকের ডিফল্ট ("মোনো ক্লাসিক হালকা") ছাপা হয়নি।');
     }
 
     public function test_the_standard_design_can_still_be_chosen(): void

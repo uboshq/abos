@@ -52,6 +52,7 @@ final class PaperDesigns
         'aurora', 'bento', 'neo_brutal', 'soft_minimal', 'dark_mode', 'quick_green', 'cloud_blue',
         'tally_classic', 'sheet_grid', 'bank_form', 'modern_green', 'corporate_navy', 'modern_card',
         'swiss_grid', 'sidebar_band', 'bangla_heritage', 'premium_gold', 'editorial_serif', 'ink_saver', 'seal_boxes',
+        'mono_light', 'mono_light_bn',
     ];
 
     /**
@@ -64,7 +65,12 @@ final class PaperDesigns
      */
     public static function defaultFor(string $paper, string $size): string
     {
+        /*
+         * ⭐ ৩০ সেপ্টেম্বর ২০২৬, পরে: *"ok eigulo kei defolt korte bolo keu select na korle egulotei print hobe"* —
+         * বিল আর চালানের A4 "মোনো ক্লাসিক হালকা"। A5 আর থার্মাল আগের মতো, ঐ মাপের রূপ না আসা পর্যন্ত।
+         */
         return match (true) {
+            in_array($paper, ['invoice', 'challan'], true) && $size === 'a4' => 'mono_light',
             $paper === 'invoice' && $size === 'thermal' => 'pos_standard',
             $paper === 'invoice' => 'classic_table',
             default => 'tally_classic',
