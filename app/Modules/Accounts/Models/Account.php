@@ -272,7 +272,7 @@ class Account extends Model implements Drillable
         $row = $preloaded === null
             ? LedgerEntry::query()
                 ->forAccount($this->id)
-                ->when($upto, fn (Builder $q, string $date) => $q->whereDate('trx_date', '<=', $date))
+                ->when($upto, fn (Builder $q, string $date) => $q->where('trx_date', '<=', $date))
                 ->when($branchId, fn (Builder $q, int $branch) => $q->where('branch_id', $branch))
                 ->selectRaw('COALESCE(SUM(debit), 0) as d, COALESCE(SUM(credit), 0) as c')
                 ->first()

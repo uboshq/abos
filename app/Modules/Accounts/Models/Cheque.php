@@ -143,7 +143,7 @@ class Cheque extends Model implements Drillable
     {
         $date = $asOf instanceof Carbon ? $asOf : Carbon::parse($asOf ?? now());
 
-        return $query->open()->whereDate('cheque_date', '<=', $date->toDateString());
+        return $query->open()->where('cheque_date', '<=', $date->toDateString());
     }
 
     public static function drillSourceType(): string

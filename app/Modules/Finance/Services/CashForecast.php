@@ -69,7 +69,7 @@ final class CashForecast
         $horizon = $today->copy()->addDays(max(self::BUCKETS))->toDateString();
 
         $withinHorizon = fn ($q) => $q->where(
-            fn ($w) => $w->whereNull('due_on')->orWhereDate('due_on', '<=', $horizon),
+            fn ($w) => $w->whereNull('due_on')->orWhere('due_on', '<=', $horizon),
         );
 
         foreach (SalesInvoice::query()->posted()->withCollected()->tap($withinHorizon)->get() as $invoice) {
@@ -86,7 +86,7 @@ final class CashForecast
             ->whereHas('loan', fn ($q) => $q->whereIn('status', DocumentStatus::POSTED))
 
             /* ⓘ কিস্তিও একই জানালায় — পরেরগুলো পর্দায় আসে না */
-            ->whereDate('due_date', '<=', $horizon)
+            ->where('due_date', '<=', $horizon)
             ->get();
 
         foreach ($instalments as $row) {

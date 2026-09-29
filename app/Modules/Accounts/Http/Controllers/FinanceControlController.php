@@ -70,7 +70,7 @@ class FinanceControlController extends Controller implements HasMiddleware
          * source_id ধরে, সারি ধরে নয়। একটা বিলে দশটা লাইন থাকলেও সেটা একটা বিল।
          */
         $posted = LedgerEntry::query()
-            ->whereDate('trx_date', $date)
+            ->where('trx_date', $date->toDateString())
             ->select('source_type')
             ->selectRaw('COUNT(DISTINCT source_id) as documents')
             ->selectRaw('COUNT(*) as line_count')

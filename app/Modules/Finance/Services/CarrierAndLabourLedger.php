@@ -49,7 +49,7 @@ final class CarrierAndLabourLedger
     {
         $rows = LedgerEntry::query()
             ->where('account_id', $head->id)
-            ->whereDate('trx_date', '<=', $to)
+            ->where('trx_date', '<=', $to)
             ->selectRaw('party_type, party_id,
                 SUM(CASE WHEN trx_date < ? THEN credit - debit ELSE 0 END) as opening,
                 SUM(CASE WHEN trx_date >= ? THEN credit ELSE 0 END) as charged,
@@ -115,7 +115,7 @@ final class CarrierAndLabourLedger
             ->when($type, fn ($q) => $q->where('party_type', $type)->where('party_id', (int) $id),
                 fn ($q) => $q->whereNull('party_type'));
 
-        $opening = (string) ($scope()->whereDate('trx_date', '<', $from)
+        $opening = (string) ($scope()->where('trx_date', '<', $from)
             ->selectRaw('COALESCE(SUM(credit - debit), 0) as b')->value('b') ?? '0');
 
         $rows = $scope()

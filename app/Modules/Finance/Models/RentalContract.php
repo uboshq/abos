@@ -187,7 +187,7 @@ class RentalContract extends Model implements Drillable
      */
     public function scopeEndingSoon(Builder $query, int $days = 90): Builder
     {
-        return $query->active()->whereDate('ends_on', '<=', now()->addDays($days));
+        return $query->active()->where('ends_on', '<=', now()->addDays($days)->toDateString());
     }
 
     /*

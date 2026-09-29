@@ -162,7 +162,7 @@ final class BankStatementService
         return BankStatementLine::query()
             ->unmatched()
             ->where('bank_account_id', $account->id)
-            ->whereDate('trx_date', '<=', $upto)
+            ->where('trx_date', '<=', $upto)
             ->orderBy('trx_date')
             ->orderBy('id')
             ->get();

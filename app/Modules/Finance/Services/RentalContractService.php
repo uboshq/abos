@@ -215,7 +215,7 @@ class RentalContractService
          * খরচে বসা, জামানত দুইবার কাটা, আর মুনাফা কম দেখানো।
          */
         $already = $contract->adjustments()
-            ->whereDate('for_month', $month->toDateString())
+            ->where('for_month', $month->toDateString())
             ->exists();
 
         if ($already) {

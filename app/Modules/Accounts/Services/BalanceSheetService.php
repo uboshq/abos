@@ -202,7 +202,7 @@ final class BalanceSheetService
         $rows = DB::table('ledger_entries')
             ->join('accounts', 'accounts.id', '=', 'ledger_entries.account_id')
             ->where('ledger_entries.company_id', CompanyContext::id())
-            ->whereDate('ledger_entries.trx_date', '<=', $asOf)
+            ->where('ledger_entries.trx_date', '<=', $asOf)
             ->when($branchId, fn ($q) => $q->where('ledger_entries.branch_id', $branchId))
             ->groupBy('ledger_entries.account_id', 'accounts.nature')
             ->select([
@@ -259,8 +259,8 @@ final class BalanceSheetService
             ->join('accounts', 'accounts.id', '=', 'ledger_entries.account_id')
             ->where('ledger_entries.company_id', CompanyContext::id())
             ->whereIn('accounts.type', [Account::INCOME, Account::EXPENSE])
-            ->whereDate('ledger_entries.trx_date', '>=', $from)
-            ->whereDate('ledger_entries.trx_date', '<=', $asOf)
+            ->where('ledger_entries.trx_date', '>=', $from)
+            ->where('ledger_entries.trx_date', '<=', $asOf)
             ->when($branchId, fn ($q) => $q->where('ledger_entries.branch_id', $branchId))
             ->selectRaw('
                 COALESCE(SUM(CASE WHEN accounts.type = ? THEN credit - debit ELSE 0 END), 0) as income,
@@ -282,8 +282,8 @@ final class BalanceSheetService
     {
         $year = DB::table('financial_years')
             ->where('company_id', CompanyContext::id())
-            ->whereDate('starts_on', '<=', $asOf)
-            ->whereDate('ends_on', '>=', $asOf)
+            ->where('starts_on', '<=', $asOf)
+            ->where('ends_on', '>=', $asOf)
             ->value('starts_on');
 
         if ($year !== null) {

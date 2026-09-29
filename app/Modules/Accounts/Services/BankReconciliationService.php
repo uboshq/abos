@@ -91,7 +91,7 @@ final class BankReconciliationService
             ->whereHas('voucher', fn ($q) => $q
                 ->where('company_id', $recon->company_id)
                 ->whereIn('status', DocumentStatus::POSTED)
-                ->whereDate('trx_date', '<=', $recon->statement_date->toDateString()))
+                ->where('trx_date', '<=', $recon->statement_date->toDateString()))
             ->where(fn ($q) => $q
                 ->whereNull('reconciliation_id')
                 ->orWhere('reconciliation_id', $recon->id))

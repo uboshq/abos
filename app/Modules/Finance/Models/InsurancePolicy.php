@@ -99,7 +99,7 @@ class InsurancePolicy extends Model
     {
         $today ??= now();
 
-        return $query->active()->whereDate('ends_on', '<=', $today->copy()->addDays(self::WARN_DAYS)->toDateString());
+        return $query->active()->where('ends_on', '<=', $today->copy()->addDays(self::WARN_DAYS)->toDateString());
     }
 
     public function daysLeft(?CarbonInterface $today = null): int

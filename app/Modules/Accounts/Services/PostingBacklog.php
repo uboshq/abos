@@ -89,7 +89,7 @@ final class PostingBacklog
 
             $stuck = $class::query()
                 ->where('status', DocumentStatus::CONFIRMED)
-                ->whereDate('trx_date', '>=', $since)
+                ->where('trx_date', '>=', $since)
                 /*
                  * ⓘ খতিয়ানের সারি আছে কি না — সেটাই একমাত্র প্রশ্ন। উল্টো
                  * এন্ট্রিও সারি, তাই বাতিল করা কাগজও "খাতায় আছে" গোনা হয়,
@@ -154,7 +154,7 @@ final class PostingBacklog
                 ->where('company_id', CompanyContext::id())
                 ->whereNull('deleted_at')
                 ->where('status', DocumentStatus::CONFIRMED)
-                ->whereDate('trx_date', '>=', $since)
+                ->where('trx_date', '>=', $since)
                 ->whereNotExists(function ($query) use ($source, $model): void {
                     $query->selectRaw('1')
                         ->from('ledger_entries')

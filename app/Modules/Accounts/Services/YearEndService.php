@@ -163,8 +163,8 @@ final class YearEndService
              * হলে একই তারিখ দুই বছরে পড়ত।
              */
             $newYear = FinancialYear::query()
-                ->whereDate('starts_on', $proposed['starts_on'])
-                ->whereDate('ends_on', $proposed['ends_on'])
+                ->where('starts_on', Carbon::parse($proposed['starts_on'])->toDateString())
+                ->where('ends_on', Carbon::parse($proposed['ends_on'])->toDateString())
                 ->first()
                 ?? FinancialYear::create([
                     'name' => $proposed['name'],
@@ -415,12 +415,12 @@ final class YearEndService
          */
         $clash = FinancialYear::query()
             ->where(function ($q) use ($next) {
-                $q->whereDate('starts_on', '<=', $next['ends_on'])
-                    ->whereDate('ends_on', '>=', $next['starts_on']);
+                $q->where('starts_on', '<=', Carbon::parse($next['ends_on'])->toDateString())
+                    ->where('ends_on', '>=', Carbon::parse($next['starts_on'])->toDateString());
             })
             ->where(function ($q) use ($next) {
-                $q->whereDate('starts_on', '<>', $next['starts_on'])
-                    ->orWhereDate('ends_on', '<>', $next['ends_on']);
+                $q->where('starts_on', '<>', Carbon::parse($next['starts_on'])->toDateString())
+                    ->orWhere('ends_on', '<>', Carbon::parse($next['ends_on'])->toDateString());
             })
             ->exists();
 

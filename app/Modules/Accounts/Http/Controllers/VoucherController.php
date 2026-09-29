@@ -106,8 +106,8 @@ class VoucherController extends Controller implements HasMiddleware
         $query = Voucher::query()
             ->ofType($type)
             ->search($request->query('q'))
-            ->when($request->query('from'), fn ($q, $d) => $q->whereDate('trx_date', '>=', $d))
-            ->when($request->query('to'), fn ($q, $d) => $q->whereDate('trx_date', '<=', $d))
+            ->when($request->query('from'), fn ($q, $d) => $q->where('trx_date', '>=', $d))
+            ->when($request->query('to'), fn ($q, $d) => $q->where('trx_date', '<=', $d))
             ->when($request->query('status'), fn ($q, $s) => $q->where('status', $s))
             /*
              * ⛔ খালি তালিকায় `whereIn` দিলে শূন্য সারি আসে, আর সেটাই

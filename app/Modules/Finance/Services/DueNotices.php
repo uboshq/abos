@@ -68,7 +68,7 @@ final class DueNotices
             ->with('kind')
             ->open()
             ->whereNotNull('matures_on')
-            ->whereDate('matures_on', '<=', now()->addDays(self::WINDOW_DAYS)->toDateString())
+            ->where('matures_on', '<=', now()->addDays(self::WINDOW_DAYS)->toDateString())
             ->orderBy('matures_on')
             ->get();
 

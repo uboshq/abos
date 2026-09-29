@@ -245,8 +245,8 @@ class VoucherListController extends Controller implements HasMiddleware
             $counts[$each] = isset(self::DOCUMENT_TABS[$each])
                 ? DB::query()->fromSub($this->posted(self::DOCUMENT_TABS[$each], $request)->toBase(), 'd')->count()
                 : $this->scoped(Voucher::query(), $each)
-                    ->when($request->query('from'), fn ($q, $d) => $q->whereDate('trx_date', '>=', $d))
-                    ->when($request->query('to'), fn ($q, $d) => $q->whereDate('trx_date', '<=', $d))
+                    ->when($request->query('from'), fn ($q, $d) => $q->where('trx_date', '>=', $d))
+                    ->when($request->query('to'), fn ($q, $d) => $q->where('trx_date', '<=', $d))
                     ->count();
         }
 

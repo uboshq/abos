@@ -438,7 +438,7 @@ final class FixedAssetService
         foreach (FixedAsset::query()->active()->get() as $asset) {
             $already = DepreciationEntry::query()
                 ->where('fixed_asset_id', $asset->id)
-                ->whereDate('period_end', $periodEnd->toDateString())
+                ->where('period_end', $periodEnd->toDateString())
                 ->exists();
 
             if ($already) {

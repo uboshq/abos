@@ -64,7 +64,7 @@ final class InsuranceService
             InsurancePremium::query()
                 ->where('policy_id', $policy->id)
                 ->where('status', InsurancePremium::DRAFT)
-                ->whereDate('period_from', $wasFrom)
+                ->where('period_from', $wasFrom)
                 ->update([
                     'period_from' => $policy->starts_on->toDateString(),
                     'period_to' => $policy->ends_on->toDateString(),
