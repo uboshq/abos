@@ -287,6 +287,20 @@ final class SyncService
      *
      * @return array{records: list<array<string, mixed>>, hasMore: bool, unreadable: list<string>}
      */
+    /**
+     * ⛔ নতুন লগইন = গোড়া থেকে টানা — গভীর অডিট ২৯ সেপ্টেম্বর ২০২৬।
+     *
+     * বেরোনোর সময় অ্যাপ নিজের জমানো তথ্য মোছে (ReferenceCache::clearAll), কিন্তু
+     * এই যন্ত্রের জলচিহ্ন এখানে রয়ে যেত — আর মুছত কেবল কোম্পানি বদলালে
+     * ([[register()]])। ফলে আবার লগইনের পরে টানায় আসত কেবল নতুন বদল; আগের
+     * গ্রাহক, পণ্য, বকেয়া আর কোনোদিন না, কোনো ত্রুটিও না। ⚠️ টোকেন নবায়নে
+     * ডাকা হয় না — নইলে প্রতি নবায়নে পুরো তালিকা আবার আসত।
+     */
+    public function startOver(string $deviceId): void
+    {
+        SyncState::query()->withoutGlobalScopes()->where('device_id', $deviceId)->delete();
+    }
+
     public function pull(User $user, string $deviceId, string $module, int $limit): array
     {
         $since = $this->cursorFor($deviceId, $module);

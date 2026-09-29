@@ -181,6 +181,9 @@ class AuthController extends Controller
             $data['platform'] ?? null,
         );
 
+        // ⛔ নতুন লগইনে ফোনের ক্যাশ খালি — তাই জলচিহ্নও গোড়ায় ([[SyncService::startOver()]])
+        $this->sync->startOver($data['deviceId']);
+
         $this->credentials->recordSuccess($data['identifier'], $user);
 
         return response()->json($this->issue($user, $data['deviceId']));
