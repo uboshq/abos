@@ -905,7 +905,7 @@ final class StandardChart implements ProvisionsCompany
              * মূলধনে যোগ হয় — তখন এই খাত থেকে `3100`/`3200`-এ যায়।
              * ⓘ অর্থাৎ এটা একটা **অপেক্ষাগার**, স্থায়ী ঠিকানা নয়।
              */
-            ['2190', 'Profit Payable to Owners', 'প্রদেয় মুনাফা', $L, '2100', false, []],
+            ['2190', 'Profit Payable to Owners', 'প্রদেয় মুনাফা', $L, '2100', false, []],
 
             /*
              * LTR — ব্যাংক বিলটা শোধ করেছে, আমরা ব্যাংককে শোধ করব।
