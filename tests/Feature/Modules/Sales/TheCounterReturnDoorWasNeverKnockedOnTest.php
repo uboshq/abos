@@ -122,7 +122,18 @@ final class TheCounterReturnDoorWasNeverKnockedOnTest extends TestCase
     {
         $invoice = $this->soldAtTheCounter();
 
+        /*
+         * ⛔ কাউন্টারের চাবি একা ফেরতের দরজা খোলে না — গভীর অডিট, ২৯ সেপ্টেম্বর ২০২৬। আগে এই দাবিটাই
+         * `sales.pos` একা দিয়ে দরজা খুলত, অথচ ফেরত বিক্রির চাবি নয় (নগদও ফেরত যায়)।
+         */
         $this->outsider->givePermissionTo('sales.pos');
+
+        $this->actingAs($this->outsider->fresh())
+            ->post(route('sales.pos.return'), $this->takeBackPayload($invoice))
+            ->assertForbidden();
+        $this->assertSame(0, SalesReturn::query()->count(), '⛔ কাউন্টারের চাবি একাই ফেরত বানিয়েছে।');
+
+        $this->outsider->givePermissionTo('sales.return.create');
 
         /*
          * ⚠️ `assertRedirect()` একা যথেষ্ট নয় — ২৬ সেপ্টেম্বর শেখা।
@@ -163,7 +174,7 @@ final class TheCounterReturnDoorWasNeverKnockedOnTest extends TestCase
      */
     public function test_a_bill_that_does_not_exist_cannot_be_taken_back(): void
     {
-        $this->outsider->givePermissionTo('sales.pos');
+        $this->outsider->givePermissionTo(['sales.pos', 'sales.return.create']);
 
         $this->actingAs($this->outsider->fresh())
             ->post(route('sales.pos.return'), [

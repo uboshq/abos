@@ -456,7 +456,12 @@ final class PosService
             $refund = null;
 
             if (($data['refund'] ?? false) && bccomp((string) $return->total, '0', 4) > 0) {
-                $refund = $this->refund($return);
+                // ⛔ কেবল যতটা শোধ বাকির বেশি হয়ে গেছে — বাকির বিলের ফেরতে ড্রয়ার থেকে নগদ নয় ([[refundable()]])
+                $amount = $this->refundable($invoice->fresh(), (string) $return->total);
+
+                if (bccomp($amount, '0', 4) > 0) {
+                    $refund = $this->refund($return, $amount);
+                }
             }
 
             return ['return' => $return, 'refund' => $refund];
@@ -514,7 +519,30 @@ final class PosService
      * দুইটা কাগজে থাকে — আর ফেরতের কাগজটা ছাপা যায়, যেটা ক্রেতা
      * চাইবেনই।
      */
-    private function refund(SalesReturn $return): Voucher
+    /**
+     * ফেরতে কতটা নগদ ফেরত যায় — গভীর অডিট, ২৯ সেপ্টেম্বর ২০২৬।
+     *
+     * ⛔ আগে ফেরতের পুরো অঙ্ক ড্রয়ার থেকে বেরোত, বিলে কত শোধ হয়েছিল না দেখেই — বাকির বিলের মাল
+     * ফেরতেও নগদ যেত, আর গ্রাহকের পাওনা আবার বাড়ত। ⭐ এখন কেবল শোধের বাড়তিটুকু: আদায় − (মোট − ফেরত),
+     * এই ফেরত সহ ([[SalesInvoice::returnedAmount()]]); শূন্যের নিচে নয়, আর ফেরতের নিজের অঙ্কের বেশি নয়।
+     * তাতে খাতার পাওনা আর বিলের বাকি সবসময় মেলে।
+     */
+    private function refundable(SalesInvoice $invoice, string $returned): string
+    {
+        $over = bcsub(
+            bcadd($invoice->collectedAmount(), $invoice->returnedAmount(), 4),
+            (string) $invoice->total,
+            4,
+        );
+
+        if (bccomp($over, '0', 4) <= 0) {
+            return '0.0000';
+        }
+
+        return bccomp($over, $returned, 4) < 0 ? $over : $returned;
+    }
+
+    private function refund(SalesReturn $return, string $amount): Voucher
     {
         $till = $this->tills->ensurePrimaryTill();
 
@@ -528,7 +556,7 @@ final class PosService
             type: Voucher::PAYMENT,
             fromAccountId: $till->account_id,
             toAccountId: StandardChart::find(StandardChart::RECEIVABLE)->id,
-            amount: (string) $return->total,
+            amount: $amount,
         ));
 
         return $this->vouchers->post($voucher);
@@ -708,8 +736,14 @@ final class PosService
             return null;
         }
 
+        /*
+         * ⛔ কেবল কাউন্টারে রাখা (`parked_at`) বা এই ক্যাশিয়ারের নিজের বানানো খসড়া — গভীর অডিট, ২৯
+         * সেপ্টেম্বর ২০২৬। আগে যেকোনো খসড়া চলত: অফিসের খসড়া বিলও ক্যাশিয়ার তুলে নিয়ে সারি বদলে পাকা করতে
+         * পারতেন, বিল বানানোর চাবি ছাড়াই।
+         */
         return SalesInvoice::query()
             ->where('status', DocumentStatus::DRAFT)
+            ->where(fn ($q) => $q->whereNotNull('parked_at')->orWhere('created_by', auth()->id()))
             ->find($id);
     }
 

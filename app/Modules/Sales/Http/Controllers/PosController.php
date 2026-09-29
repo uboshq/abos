@@ -58,7 +58,11 @@ class PosController extends Controller implements HasMiddleware
 
     public static function middleware(): array
     {
-        return [new Middleware('can:sales.pos')];
+        return [
+            new Middleware('can:sales.pos'),
+            // ⛔ ফেরত বিক্রির চাবি নয় — কাউন্টারেও ফেরতের নিজের চাবি লাগে (গভীর অডিট, ২৯ সেপ্টেম্বর ২০২৬)
+            new Middleware('can:sales.return.create', only: ['takeBack']),
+        ];
     }
 
     /**
