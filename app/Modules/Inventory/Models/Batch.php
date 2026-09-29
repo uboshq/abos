@@ -169,6 +169,20 @@ class Batch extends Model implements Drillable
      * বুঝতেন না কেন। ভাণ্ডার দুইটা আলাদা রাখার যে যুক্তি (৮ আগস্ট),
      * লটের ভেতরেও সেই একই যুক্তি খাটে।
      */
+    /**
+     * তাকে কত — কেবল তোলা মাল, অপেক্ষারটা নয় (২৯ সেপ্টেম্বর ২০২৬, অডিটে প্রমাণিত)।
+     *
+     * ⛔ বিক্রি কাটে তাক থেকে। [[balance()]] তোলার-অপেক্ষার মালও যোগ করে (রিকলের
+     * জন্য সেটাই ঠিক — লটের সব মাল কোথায়), কিন্তু বিক্রির যাচাই ওটা দেখলে যে লটের
+     * সব মাল এখনো অপেক্ষায়, তার তাক ঋণাত্মক হত ([[AnUnshelvedLotWasSoldFromTheShelfTest]])।
+     */
+    public function floorBalance(?Warehouse $warehouse = null): string
+    {
+        return (string) $this->movements()
+            ->when($warehouse !== null, fn ($q) => $q->where('warehouse_id', $warehouse->id))
+            ->sum('floor_change');
+    }
+
     public function freeBalance(?Warehouse $warehouse = null): string
     {
         return (string) $this->movements()

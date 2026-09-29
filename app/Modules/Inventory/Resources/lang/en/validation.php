@@ -133,4 +133,6 @@ return [
     'qc_dispose_over' => 'This paper holds :held - no more than that can be disposed of.',
     // A counted lot's shortage — [[StockAdjustmentService::settle()]], 29 September 2026
     'lot_short_for_count' => 'Lot :lot now holds :held — the counted shortage of :short cannot be booked; goods left this lot after the count, count it again.',
+    // An unshelved lot — [[Batch::floorBalance()]], 29 September 2026
+    'chosen_lot_not_shelved' => ':waiting of lot :lot are not on the shelf yet — only :available are. Put the goods on the shelf first, then sell.',
 ];

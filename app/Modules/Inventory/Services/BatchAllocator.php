@@ -96,7 +96,8 @@ class BatchAllocator
                 break;
             }
 
-            $available = $free ? $batch->freeBalance($warehouse) : $batch->balance($warehouse);
+            // ⛔ তাকের মাল — তোলার-অপেক্ষারটা বিক্রি হয় না ([[Batch::floorBalance()]])
+            $available = $free ? $batch->freeBalance($warehouse) : $batch->floorBalance($warehouse);
 
             if (bccomp($available, '0', 4) <= 0) {
                 continue;
@@ -218,7 +219,8 @@ class BatchAllocator
                 break;
             }
 
-            $available = $batch->balance($warehouse);
+            // ⓘ পর্দার দেখা আর আসল বাছাই একই সংখ্যা দেখে — তাকের মাল
+            $available = $batch->floorBalance($warehouse);
 
             if (bccomp($available, '0', 4) <= 0) {
                 continue;

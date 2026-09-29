@@ -295,9 +295,27 @@ final class StockService
          * ⚠️ দুইটা আলাদা কথা, আর করণীয়ও আলাদা।
          */
         if ($batch !== null) {
-            $have = $batch->balance($warehouse);
+            // ⛔ তাকের মাল — তোলার-অপেক্ষারটা নয় ([[Batch::floorBalance()]])
+            $have = $batch->floorBalance($warehouse);
 
             if (bccomp($have, $qty, 4) < 0) {
+                /*
+                 * ⓘ মাল আছে, কিন্তু এখনো তাকে তোলা হয়নি — কারণটা আলাদা করে বলা হয়
+                 * (২৯ সেপ্টেম্বর ২০২৬): নাহলে কাউন্টার ভাবত লট খালি, অথচ করণীয় হলো
+                 * আগে তাকে তোলা, অন্য লট বাছা নয়।
+                 */
+                $waiting = bcsub($batch->balance($warehouse), $have, 4);
+
+                if (bccomp($waiting, '0', 4) > 0) {
+                    throw ValidationException::withMessages([
+                        'qty' => __('inventory::validation.chosen_lot_not_shelved', [
+                            'lot' => $batch->batch_no,
+                            'available' => rtrim(rtrim($have, '0'), '.') ?: '0',
+                            'waiting' => rtrim(rtrim($waiting, '0'), '.'),
+                        ]),
+                    ]);
+                }
+
                 throw ValidationException::withMessages([
                     'qty' => __('inventory::validation.chosen_lot_short', [
                         'lot' => $batch->batch_no,
