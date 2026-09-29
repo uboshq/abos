@@ -409,16 +409,17 @@
             <h2 class="mb-2 text-xs font-semibold text-(--color-ink-muted)">
                 {{ __('core.dashboard.across_the_business') }}
             </h2>
-            <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {{-- ⭐ দুই লাইনে — বড় পর্দায় আটটা করে (মালিক, ২৯ সেপ্টেম্বর ২০২৬: "১৫টা বক্স ২ লাইনে") --}}
+            <div class="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-8">
                 @foreach ($overall as $row)
                     <a href="{{ route('module.dashboard', ['module' => $row['module']]) }}"
                        data-boxed
-                       class="block rounded-(--radius-card) border border-(--color-border)
-                              bg-(--color-surface-card) px-4 py-3">
-                        <div class="text-2xs text-(--color-ink-muted)">{{ $row['name'] }}</div>
-                        <div class="mt-0.5 text-xs text-(--color-ink-muted)">{{ $row['stat']->label }}</div>
+                       class="block min-w-0 rounded-(--radius-card) border border-(--color-border)
+                              bg-(--color-surface-card) px-3 py-2">
+                        <div class="truncate text-2xs text-(--color-ink-muted)">{{ $row['name'] }}</div>
+                        <div class="mt-0.5 truncate text-xs text-(--color-ink-muted)">{{ $row['stat']->label }}</div>
                         <div @class([
-                            'mt-1 text-xl font-semibold tabular-nums',
+                            'mt-1 truncate text-lg font-semibold tabular-nums',
                             'text-(--color-badge-warning-ink)' => $row['stat']->tone === \App\Core\Engines\Dashboard\Stat::WARN,
                             'text-(--color-badge-danger-ink)' => $row['stat']->tone === \App\Core\Engines\Dashboard\Stat::BAD,
                         ])>{{ $row['stat']->value ?? '—' }}</div>
