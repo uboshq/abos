@@ -361,6 +361,22 @@ final class MasterListService implements ProvisionsCompany
         if ($record instanceof Tax) {
             $this->assertRateIsSane($record);
         }
+
+        /*
+         * ⛔ পদ্ধতির ধরন আর খাতের ধরন এক — ২৭ সেপ্টেম্বর ২০২৬।
+         *
+         * ⚠️ আগে প্রতিটা ঘর আলাদা করে দেখা হত (`Rule::in`), জোড়াটা নয় —
+         * "নগদ" পদ্ধতি বিকাশের খাতে বাঁধা যেত, আর কাউন্টারে ক্যাশিয়ার
+         * "নগদ" চাপলে টাকা বসত বিকাশে। ⓘ নিয়মটা এক জায়গায়
+         * ([[MethodFitsAccount]]); কাউন্টার আর সরাসরি বিক্রয়ও ওটাই ডাকে।
+         */
+        if ($record instanceof PaymentMethod && $record->account_id !== null) {
+            $account = Account::query()->find($record->account_id);
+
+            if ($account !== null) {
+                app(MethodFitsAccount::class)->assert($account, $record, 'account_id');
+            }
+        }
     }
 
     /**

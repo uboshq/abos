@@ -14,6 +14,7 @@ use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Accounts\Services\VoucherService;
 use App\Modules\Customer\Models\Customer;
 use App\Modules\MasterData\Models\PaymentMethod;
+use App\Modules\MasterData\Services\MethodFitsAccount;
 use App\Modules\Sales\Metrics\SalesMetrics;
 use App\Modules\Sales\Models\SalesInvoice;
 use App\Modules\Sales\Models\SalesInvoiceLine;
@@ -368,6 +369,24 @@ final class PosService
             }
 
             $method = $part['method'];
+
+            /*
+             * ⛔ পদ্ধতির ধরন আর টাকার খাতের ধরন এক — ২৭ সেপ্টেম্বর ২০২৬।
+             *
+             * ⚠️ কাউন্টারের ভাউচারে `instrument`-এ পদ্ধতির **কোড** বসে, তাই
+             * ভাউচারের মাধ্যম-পাহারা এই পথে কখনো চলে না। "নগদ" পদ্ধতি বিকাশের
+             * খাতে বাঁধা থাকলে ড্রয়ারে কম, বিকাশে বেশি। ⓘ নিয়মটা এক জায়গায়
+             * ([[MethodFitsAccount]]); খাত না পেলে আদায়ের সেবাই থামায়।
+             */
+            $accountId = $method?->account_id ?? ($data['account_id'] ?? null);
+
+            if ($method !== null && filled($accountId)) {
+                $account = \App\Modules\Accounts\Models\Account::query()->find((int) $accountId);
+
+                if ($account !== null) {
+                    app(MethodFitsAccount::class)->assert($account, $method, 'payment_method_id');
+                }
+            }
 
             $collection = $this->collections->create(
                 [

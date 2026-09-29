@@ -158,11 +158,15 @@ class PaymentMethodKindAndTransferModeTest extends TestCase
 
         $this->assertNull(PaymentMethod::query()->where('name_en', 'Card Machine')->value('kind'));
 
-        // ধরন দিলে সেটাই বসে
+        /*
+         * ধরন দিলে সেটাই বসে।
+         * ⓘ Nagad মোবাইল ব্যাংকিং, তাই তার খাতও MFS — ২৯ সেপ্টেম্বর ২০২৬ থেকে পদ্ধতির
+         * ধরন আর খাতের ধরন মিলতে হয় ([[MethodFitsAccount]]); ব্যাংকের খাতে বাঁধলে থামত।
+         */
         $this->post(route('master_data.payment_method.store'), [
             'name_en' => 'Nagad',
             'kind' => 'mfs',
-            'account_id' => $account->id,
+            'account_id' => $this->aWallet()->id,
         ])->assertRedirect(route('master_data.payment_method.index'));
 
         $this->assertSame('mfs', PaymentMethod::query()->where('name_en', 'Nagad')->value('kind'));
@@ -192,6 +196,22 @@ class PaymentMethodKindAndTransferModeTest extends TestCase
     }
 
     /** ফর্মে account_id বাধ্যতামূলক — তাই একটা টাকার খাত দরকার। */
+    /** মোবাইল ব্যাংকিংয়ের খাত — ১১০৫-এর নিচে, ধরন MFS। */
+    private function aWallet(): Account
+    {
+        $mfs = Account::query()->where('code', '1105')->firstOrFail();
+
+        return Account::query()->create([
+            'parent_id' => $mfs->id,
+            'code' => '110588',
+            'name_en' => 'Counter Nagad',
+            'type' => $mfs->type,
+            'nature' => $mfs->nature,
+            'is_group' => false,
+            'money_kind' => Account::MFS,
+        ]);
+    }
+
     private function aMoneyAccount(): Account
     {
         $bank = Account::query()->where('code', '1102')->firstOrFail();
