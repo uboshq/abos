@@ -14,6 +14,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Testing\TestResponse;
 use Spatie\Permission\Models\Permission;
+use Tests\Concerns\SignsInPastTheSecondStep;
 use Tests\TestCase;
 
 /**
@@ -29,6 +30,7 @@ use Tests\TestCase;
 class WhoGotInTest extends TestCase
 {
     use RefreshDatabase;
+    use SignsInPastTheSecondStep;
 
     private Company $company;
 
@@ -45,11 +47,17 @@ class WhoGotInTest extends TestCase
         CompanyContext::set($this->company->id, $this->company->defaultBranch()?->id);
     }
 
-    private function tryLogin(string $identifier, string $password): TestResponse
+    /**
+     * ⓘ মালিকের দুই ধাপ চালু (acda6265), তাই সফল ঢোকায় কোডটাও যায় —
+     * [[SignsInPastTheSecondStep]]। ভুল পাসওয়ার্ডের চেষ্টায় কোড অপ্রাসঙ্গিক:
+     * পাসওয়ার্ডেই ফেরত আসে।
+     */
+    private function tryLogin(string $identifier, string $password, int $step = 0): TestResponse
     {
         return $this->post(route('login.store'), [
             'identifier' => $identifier,
             'password' => $password,
+            'code' => $this->secondStepCode($identifier, $step),
         ]);
     }
 
@@ -77,7 +85,7 @@ class WhoGotInTest extends TestCase
     {
         $this->tryLogin($this->owner->email, 'password');
         $this->post(route('logout'));
-        $this->tryLogin($this->owner->email, 'password');
+        $this->tryLogin($this->owner->email, 'password', step: 1);
 
         $this->assertSame(2, LoginAttempt::query()->where('succeeded', true)->count());
     }
@@ -207,12 +215,25 @@ class WhoGotInTest extends TestCase
         return $user->fresh();
     }
 
-    /** খাতাটা পড়া যায়, আর ব্যর্থ কারণটা সেখানে লেখা। */
+    /**
+     * খাতাটা পড়া যায়, আর ব্যর্থ কারণটা সেখানে লেখা।
+     *
+     * ⓘ ২৮ সেপ্টেম্বর ২০২৬ থেকে (e7ab9b90) অচেনা নামের চেষ্টা — যার কোনো
+     * কোম্পানি নেই — কেবল এই কোম্পানির সুপার অ্যাডমিনের খাতায়; চাবিওয়ালা
+     * কর্মী দেখেন নিজের কোম্পানির মানুষের চেষ্টা। ⚠️ আগে এই দাবি কর্মীকে
+     * অচেনা নামটা দেখাতে চাইত — সেটাই ছিল ফাঁসটা।
+     */
     public function test_the_journal_can_be_read(): void
     {
+        $this->tryLogin($this->owner->email, 'not-the-password');
         $this->tryLogin('admin', 'letmein');
 
         $this->actingAs($this->clerk(['governance.login.view']))
+            ->get(route('governance.login.index'))
+            ->assertOk()
+            ->assertSee(__('governance::message.why_password'));
+
+        $this->actingAs($this->owner)
             ->get(route('governance.login.index'))
             ->assertOk()
             ->assertSee('admin')

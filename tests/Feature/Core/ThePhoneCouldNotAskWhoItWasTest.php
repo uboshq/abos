@@ -9,6 +9,7 @@ use App\Models\User;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Testing\TestResponse;
+use Tests\Concerns\SignsInPastTheSecondStep;
 use Tests\TestCase;
 
 /**
@@ -30,6 +31,7 @@ use Tests\TestCase;
 class ThePhoneCouldNotAskWhoItWasTest extends TestCase
 {
     use RefreshDatabase;
+    use SignsInPastTheSecondStep;
 
     private const DEVICE = 'handset-me';
 
@@ -59,6 +61,8 @@ class ThePhoneCouldNotAskWhoItWasTest extends TestCase
         return $this->postJson('/api/v1/auth/login', [
             'identifier' => $who,
             'password' => 'password',
+            // ⓘ মালিকের দুই ধাপ চালু (acda6265) — কোডটাও যায়, [[SignsInPastTheSecondStep]]
+            'code' => $this->secondStepCode($who),
             'deviceId' => self::DEVICE.'-'.md5($who),
             'appVersion' => '0.1.0',
             'platform' => 'android',

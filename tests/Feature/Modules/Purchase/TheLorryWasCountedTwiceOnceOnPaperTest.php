@@ -17,6 +17,7 @@ use App\Modules\Supplier\Models\Supplier;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
+use Tests\Concerns\SignsInPastTheSecondStep;
 use Tests\TestCase;
 
 /**
@@ -45,6 +46,7 @@ use Tests\TestCase;
 final class TheLorryWasCountedTwiceOnceOnPaperTest extends TestCase
 {
     use RefreshDatabase;
+    use SignsInPastTheSecondStep;
 
     private const DEVICE = 'warehouse-handset-77';
 
@@ -237,6 +239,8 @@ final class TheLorryWasCountedTwiceOnceOnPaperTest extends TestCase
             // ডেমোর সবার পাসওয়ার্ড `password` — README দেখুন
             'identifier' => 'owner@abos.test',
             'password' => 'password',
+            // ⓘ মালিকের দুই ধাপ চালু (acda6265) — কোডটাও যায়, [[SignsInPastTheSecondStep]]
+            'code' => $this->secondStepCode('owner@abos.test'),
             'deviceId' => self::DEVICE,
             'appVersion' => '0.1.0',
             'platform' => 'android',

@@ -9,6 +9,7 @@ use App\Models\Company;
 use App\Models\User;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\Concerns\SignsInPastTheSecondStep;
 use Tests\TestCase;
 
 /**
@@ -36,6 +37,7 @@ use Tests\TestCase;
 class TwoDoorsAndTheBrowserRemembersTest extends TestCase
 {
     use RefreshDatabase;
+    use SignsInPastTheSecondStep;
 
     private const RETURNING = 'abos_returning';
 
@@ -71,7 +73,11 @@ class TwoDoorsAndTheBrowserRemembersTest extends TestCase
         $this->post(route('login.store'), [
             'identifier' => $this->user->email,
             'password' => 'password',
+            // ⓘ মালিকের দুই ধাপ চালু (acda6265) — কোডটাও যায়, [[SignsInPastTheSecondStep]]
+            'code' => $this->secondStepCode($this->user->email),
         ])->assertPlainCookie(self::RETURNING, '1');
+
+        $this->assertAuthenticatedAs($this->user);
     }
 
     /** চিহ্ন থাকলে `/login` শান্ত দরজায় পাঠিয়ে দেয়। */

@@ -16,6 +16,7 @@ use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Validation\ValidationException;
+use Tests\Concerns\SignsInPastTheSecondStep;
 use Tests\TestCase;
 
 /**
@@ -29,6 +30,7 @@ use Tests\TestCase;
 class ShellTest extends TestCase
 {
     use RefreshDatabase;
+    use SignsInPastTheSecondStep;
 
     protected function setUp(): void
     {
@@ -109,6 +111,8 @@ class ShellTest extends TestCase
         $response = $this->post('/login', [
             'identifier' => 'owner@abos.test',
             'password' => 'password',
+            // ⓘ মালিকের দুই ধাপ চালু (acda6265) — কোডটাও যায়, [[SignsInPastTheSecondStep]]
+            'code' => $this->secondStepCode('owner@abos.test'),
         ]);
 
         $response->assertRedirect('/');
