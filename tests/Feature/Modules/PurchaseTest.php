@@ -451,6 +451,16 @@ class PurchaseTest extends TestCase
     {
         $receipt = $this->receipts()->confirm($this->makeReceipt(null, '40', '50'));
 
+        /*
+         * ⓘ আগে মালটা তাকে ওঠে, তারপর বেরোয় — ২৯ সেপ্টেম্বর ২০২৬। ⚠️ আগে এই দাবি মাল না তুলেই
+         * তাকের অন্য মাল খালি করত আর বাতিল আটকানো আশা করত; সেই আটকানোটাই ছিল বাগ — তোলার
+         * অপেক্ষায় থাকা মাল বিক্রি হয়নি ([[TheCancelledReceiptLeftItsGoodsWaitingToBePlacedTest]])।
+         */
+        app(StockService::class)->place(
+            product: $this->product, warehouse: $this->warehouse, qty: '40',
+            sourceType: PurchaseReceipt::STOCK_SOURCE, sourceId: $receipt->id,
+        );
+
         // মালটা বেরিয়ে গেছে
         app(StockService::class)->move(
             product: $this->product, warehouse: $this->warehouse,

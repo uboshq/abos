@@ -482,41 +482,37 @@ final class PurchaseReceiptService
                  */
                 $this->costs->withdraw(PurchaseReceipt::STOCK_SOURCE, $receipt->id);
 
-                foreach ($receipt->lines as $line) {
-                    /*
-                     * মাল ফেরত যাওয়ার আগে দেখা হয় সেটা এখনো তাকে আছে কি না।
-                     *
-                     * বেচা হয়ে গেলে ঋণাত্মক স্টক হত, আর ঋণাত্মক স্টক মানে
-                     * এমন একটা গুদাম যেখানে মাইনাস পাঁচ বস্তা চাল আছে —
-                     * সেটা দেখে কেউ বুঝত না কী করতে হবে। StockService
-                     * নিজেই আটকায়, আর বার্তাটা ওখান থেকেই আসে।
-                     */
-                    $this->stock->move(
-                        product: $line->product,
-                        warehouse: $receipt->warehouse,
-                        sourceType: PurchaseReceipt::STOCK_SOURCE.':cancel',
+                /*
+                 * ⭐ মাল ফেরে যেখানে আছে সেখান থেকেই, নিজের লট সহ — ২৯ সেপ্টেম্বর ২০২৬।
+                 *
+                 * ── কী ভেঙেছিল ──────────────────────────────────────────
+                 * `confirm()` মাল ঢোকায় `unplaced` ঘরে, লট সহ; কিন্তু এখানে
+                 * প্রতিটা লাইন `floor` থেকে তোলা হত, **লট ছাড়া**, আর
+                 * `unplaced` ছোঁয়া হত না। ফল: না-বসানো চালান বাতিল করলে
+                 * অন্য লটের তাকের মাল কাটা যেত (বা "যথেষ্ট নেই" বলে
+                 * থামত), আর বাতিল করা মাল তখনো বসানো ও বেচা যেত। পুরো
+                 * বসানো চালানেও লটের হিসাব ফিরত না — মাপা:
+                 * `TheCancelledReceiptLeftItsGoodsWaitingToBePlacedTest`।
+                 *
+                 * ── কেন reverse() ──────────────────────────────────────
+                 * বসানোর সারিও এই চালানের উৎসেই লেখা হয়
+                 * ([[StockService::place()]])। তাই উৎসের সব সারি উল্টালে
+                 * যা বসেনি তা অপেক্ষার ঘর থেকে, যা বসেছে তা তাক থেকে —
+                 * আংশিক বসানোও আপনাআপনি ঠিক, আর লটটাও সারি থেকেই আসে।
+                 * নজির [[PurchaseBillService::takeBackDirectLines()]]।
+                 *
+                 * ⚠️ বেচা হয়ে গেলে তাকের উল্টো সারিতে StockService নিজেই
+                 * আটকায় ("তাকে যা নেই তা বের করা যায় না") — আগের মতোই।
+                 * ফ্রি মালও (`:free`) একইভাবে ফেরে।
+                 */
+                foreach ([PurchaseReceipt::STOCK_SOURCE, PurchaseReceipt::STOCK_SOURCE.':free'] as $source) {
+                    $this->stock->reverse(
+                        sourceType: $source,
                         sourceId: $receipt->id,
-                        floor: bcmul((string) $line->received_qty, '-1', 4),
+                        reversedType: $source.':cancel',
                         date: $date,
-                        documentNo: $receipt->document_no,
                         narration: $reason,
                     );
-
-                    // ফ্রি মালও ফেরে — নাহলে বাতিল করা চালানের ফ্রি
-                    // কার্টনগুলো ভাণ্ডারে থেকে যেত, আর প্রস্তুতকারকের
-                    // কাছে "কত ফ্রি পেলাম" সংখ্যাটা ভুল হত
-                    if (bccomp((string) $line->free_qty, '0', 4) > 0) {
-                        $this->stock->move(
-                            product: $line->product,
-                            warehouse: $receipt->warehouse,
-                            sourceType: PurchaseReceipt::STOCK_SOURCE.':free:cancel',
-                            sourceId: $receipt->id,
-                            date: $date,
-                            documentNo: $receipt->document_no,
-                            narration: $reason,
-                            free: bcmul((string) $line->free_qty, '-1', 4),
-                        );
-                    }
                 }
 
                 $this->posting->reverse(
