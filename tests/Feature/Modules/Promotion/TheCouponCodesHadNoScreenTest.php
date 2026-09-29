@@ -7,6 +7,8 @@ namespace Tests\Feature\Modules\Promotion;
 use App\Core\Support\CompanyContext;
 use App\Models\Company;
 use App\Models\User;
+use App\Modules\Customer\Models\Customer;
+use App\Modules\Inventory\Models\Warehouse;
 use App\Modules\Inventory\Models\Product;
 use App\Modules\Promotion\Models\Promotion;
 use App\Modules\Promotion\Models\PromotionBenefit;
@@ -16,6 +18,8 @@ use App\Modules\Promotion\Support\BenefitKind;
 use App\Modules\Promotion\Support\PromotionCombines;
 use App\Modules\Promotion\Support\PromotionStatus;
 use App\Modules\Promotion\Support\PromotionType;
+use App\Modules\Sales\Models\SalesInvoice;
+use App\Modules\Sales\Services\DirectSaleService;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
@@ -47,6 +51,8 @@ final class TheCouponCodesHadNoScreenTest extends TestCase
     private Product $product;
 
     private Promotion $offer;
+
+    private ?SalesInvoice $bill = null;
 
     protected function setUp(): void
     {
@@ -116,15 +122,38 @@ final class TheCouponCodesHadNoScreenTest extends TestCase
      */
     private function redeemAtCounter(string $code, array $overrides = [], ?User $as = null): TestResponse
     {
+        // ⚠️ বিলটা আগে — ওটা মালিকের হাতে বানায়, দরজায় ঢোকার মানুষ বসানোর পরে ডাকলে সে মুছে যেত
+        $bill = $this->bill();
+
         return $this->actingAs($as ?? $this->owner)
             ->post(route('promotion.coupon.redeem'), $overrides + [
                 'code' => $code,
                 'source_type' => 'sales_invoice',
-                'source_id' => 9301,
+                'source_id' => $bill->id,
+                'source_line_id' => $bill->lines()->value('id'),
                 'product_id' => $this->product->id,
                 'qty' => '10',
                 'value' => '1000',
             ]);
+    }
+
+    /**
+     * ⓘ একটা সত্যিকারের পাকা বিল — কুপন এখন কেবল পাকা কাগজের সারিতে খাটে (আগে বানানো নম্বর `9301` দিলেও
+     * খাটত; [[TheCouponWasSpentOnAPaperThatNeverExistedTest]])। মালিকের হাতে বানানো, একবারই।
+     */
+    private function bill(): SalesInvoice
+    {
+        if ($this->bill === null) {
+            $this->actingAs($this->owner);
+            $this->bill = app(DirectSaleService::class)->complete(
+                ['customer_id' => Customer::query()->where('name_en', 'Rahim Traders')->value('id'),
+                    'warehouse_id' => Warehouse::query()->where('is_default', true)->value('id'), 'own_transport' => '1'],
+                [['product_id' => Product::query()->where('name_en', 'Cosmos Biscuit 40gm')->value('id'),
+                    'qty' => '2', 'rate' => '10', 'free_qty' => '0']],
+            )['invoice']->fresh();
+        }
+
+        return $this->bill;
     }
 
     private function aStranger(): User

@@ -39,4 +39,5 @@ return [
     'bound_elsewhere' => 'The coupon :code was issued for another customer.',
     'already_on_bill' => 'The coupon :code is already on this bill.',
     'customer_mismatch' => 'The customer given does not match the customer on the line.',
+    'paper_unknown' => 'That paper or line was not found, or is not confirmed yet - a coupon only works on a line of a confirmed bill or order.',
 ];

@@ -98,6 +98,9 @@ return [
         // ⭐ গ্রাহক তালিকার 👁 — এক নজরের সারাংশের বিল ও জমার অংশ (মালিক, ২৭ সেপ্টেম্বর ২০২৬)
         \App\Core\Contracts\CustomerTrade::class => \App\Modules\Sales\Services\SalesCustomerTrade::class,
 
+        // ⛔ কুপন কেবল পাকা কাগজের সত্যিকারের সারিতে — প্রমোশন বিক্রয়কে চেনে না, চুক্তি চেনে (গভীর অডিট, ২৯ সেপ্টেম্বর ২০২৬)
+        \App\Core\Contracts\CouponPapers::class => \App\Modules\Sales\Services\SalesCouponPapers::class,
+
         // ⭐ সইয়ে আটকে থাকা কাউন্টারের বিক্রি এক পাতায়, এক ক্লিকে নিশ্চিত (মালিক, ২৮ সেপ্টেম্বর ২০২৬)
         \App\Core\Contracts\ApprovalBundles::class => \App\Modules\Sales\Services\CounterSaleBundle::class,
     ],

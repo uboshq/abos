@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Promotion\Http\Controllers;
 
+use App\Core\Contracts\CouponPapers;
 use App\Core\Services\MenuBuilder;
 use App\Http\Controllers\Controller;
 use App\Modules\Customer\Models\Customer;
@@ -179,10 +180,12 @@ final class PromotionCouponController extends Controller implements HasMiddlewar
             'code' => ['required', 'string', 'max:60'],
             'source_type' => ['required', 'string', Rule::in(self::SOURCES)],
             'source_id' => ['required', 'integer', 'min:1'],
-            'source_line_id' => ['nullable', 'integer', 'min:1'],
-            'product_id' => ['required', 'integer'],
-            'qty' => ['required', 'numeric', Decimal::RULE, 'gt:0'],
-            'value' => ['required', 'numeric', Decimal::RULE, 'gte:0'],
+            // ⓘ কোন সারিতে — বাধ্যতামূলক; পণ্য, পরিমাণ আর অঙ্ক আসে ঐ সারি থেকে (নিচে), অনুরোধের ঘরগুলো কেবল
+            // পুরনো পর্দার জন্য যাচাই হয়, ব্যবহার হয় না
+            'source_line_id' => ['required', 'integer', 'min:1'],
+            'product_id' => ['nullable', 'integer'],
+            'qty' => ['nullable', 'numeric', Decimal::RULE, 'gt:0'],
+            'value' => ['nullable', 'numeric', Decimal::RULE, 'gte:0'],
             'customer_id' => ['nullable', 'integer'],
             'warehouse_id' => ['nullable', 'integer'],
             'branch_id' => ['nullable', 'integer'],
@@ -199,16 +202,34 @@ final class PromotionCouponController extends Controller implements HasMiddlewar
          * ⓘ কাঁচা `exists` নিয়ম কোম্পানির ছাঁকনি মানে না; [[BelongsToCompany]]
          * মানে, আর তখন `null` আসে।
          */
-        $product = Product::query()->find($data['product_id']);
+        /*
+         * ⛔ কাগজটা সত্যিই আছে কি না — গভীর অডিট, ২৯ সেপ্টেম্বর ২০২৬।
+         *
+         * আগে পরিমাণ, অঙ্ক, ক্রেতা, শাখা আর কাগজের নম্বর — সবই অনুরোধ থেকে; একটা বানানো নম্বরে কুপনের ব্যবহার,
+         * অফারের বাজেট আর ফ্রি মালের পাওনা খরচ হত। ⭐ এখন সারিটা কাগজ থেকেই ([[CouponPapers]]): এই কোম্পানির
+         * **পাকা** বিল বা আদেশের সেই সারি — পণ্য, পরিমাণ, অঙ্ক, ক্রেতা, শাখা, গুদাম সব ওখান থেকে; অনুরোধের ঐ ঘরগুলো
+         * উপেক্ষিত। ⓘ কেউ চুক্তি না বাঁধলে (বিক্রয় মডিউল নেই) কুপন ভাঙানোই যায় না — ভুল বন্ধ দিকে। একই কাগজে
+         * দ্বিতীয়বার আগের মতোই ফেরে ([[CouponDesk]] `already_on_bill`)।
+         */
+        $paper = app()->bound(CouponPapers::class)
+            ? app(CouponPapers::class)->line((string) $data['source_type'], (int) $data['source_id'], (int) $data['source_line_id'])
+            : null;
+
+        if ($paper === null) {
+            return $this->refusal(['source_id' => [__('promotion::coupon.paper_unknown')]]);
+        }
+
+        $customerId = $paper['customer_id'];
+
+        /* ⛔ দরজায় একজন ক্রেতা বলা হলে আর কাগজে আরেকজন — থামা, চুপচাপ একটা বাছা নয় */
+        if (isset($data['customer_id']) && (int) $data['customer_id'] !== (int) $customerId) {
+            return $this->refusal(['customer_id' => [__('promotion::coupon.customer_mismatch')]]);
+        }
+
+        $product = Product::query()->find($paper['product_id']);
 
         if ($product === null) {
             return $this->refusal(['product_id' => [__('promotion::validation.product_not_yours')]]);
-        }
-
-        $customerId = isset($data['customer_id']) ? (int) $data['customer_id'] : null;
-
-        if ($customerId !== null && ! Customer::query()->whereKey($customerId)->exists()) {
-            return $this->refusal(['customer_id' => [__('promotion::coupon.customer_unknown')]]);
         }
 
         /* ⓘ সারিটা [[PromotionSuggestController]]-এর মতোই — শ্রেণি ও ব্র্যান্ডসহ, নাহলে সুযোগের ছাঁকনি মিলত না */
@@ -217,10 +238,10 @@ final class PromotionCouponController extends Controller implements HasMiddlewar
             'category_id' => $product->category_id ?? null,
             'brand_id' => $product->brand_id ?? null,
             'customer_id' => $customerId,
-            'warehouse_id' => $data['warehouse_id'] ?? null,
-            'branch_id' => $data['branch_id'] ?? null,
-            'qty' => (string) $data['qty'],
-            'value' => (string) $data['value'],
+            'warehouse_id' => $paper['warehouse_id'],
+            'branch_id' => $paper['branch_id'],
+            'qty' => $paper['qty'],
+            'value' => $paper['value'],
         ];
 
         try {
