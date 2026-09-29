@@ -61,10 +61,16 @@ use Illuminate\Support\Facades\Route;
  * `login_history` — [[CredentialCheck]]-এ, ওয়েবের দরজার সাথে ভাগ করা।
  */
 Route::prefix('v1/auth')
-    ->middleware('throttle:10,1')
     ->name('api.auth.')
     ->group(function (): void {
-        Route::post('/login', [AuthController::class, 'login'])->name('login');
+        /*
+         * ⛔ ওয়েবের লগইনের একই থলে ('login') — নাম+IP ধরে। ⓘ নবায়ন আর বেরোনো
+         * নিচে **টোকেনের পরে** গোনা হয়, অর্থাৎ ব্যবহারকারী ধরে: আগে গোটা
+         * গ্রুপে IP ধরে ছিল, আর দোকানের ফোনগুলো একে অন্যের নবায়ন আটকাত।
+         */
+        Route::post('/login', [AuthController::class, 'login'])
+            ->middleware('throttle:login')
+            ->name('login');
 
         /*
          * নবায়ন `abilities:refresh` চায়, `sync` নয় — আর এটাই পুরো
@@ -73,11 +79,11 @@ Route::prefix('v1/auth')
          * দিয়েই নিজেকে চিরকাল নবায়ন করা যেত।
          */
         Route::post('/refresh', [AuthController::class, 'refresh'])
-            ->middleware(['auth:sanctum', 'abilities:'.AuthController::REFRESH])
+            ->middleware(['auth:sanctum', 'abilities:'.AuthController::REFRESH, 'throttle:30,1,api-token'])
             ->name('refresh');
 
         Route::post('/logout', [AuthController::class, 'logout'])
-            ->middleware('auth:sanctum')
+            ->middleware(['auth:sanctum', 'throttle:30,1,api-token'])
             ->name('logout');
     });
 
@@ -89,7 +95,7 @@ Route::prefix('v1/auth')
  * কেবল .env-এর চারটা মান। throttle আছে, কারণ খোলা দরজা।
  */
 Route::get('v1/app/version', AppVersionController::class)
-    ->middleware('throttle:60,1')
+    ->middleware('throttle:60,1,app-version')
     ->name('api.app.version');
 
 /*

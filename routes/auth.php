@@ -41,7 +41,8 @@ Route::middleware('guest')->group(function () {
      * ঘটনার পর দেখা যায় — কিন্তু ঘটার সময় থামানো যায় না।
      */
     Route::post('/login', [LoginController::class, 'store'])
-        ->middleware('throttle:10,1')
+        // ⛔ নিজের থলে (AppServiceProvider-এর 'login') — দোকানের এক IP-তে সবাই এক থলেতে পড়তেন
+        ->middleware('throttle:login')
         ->name('login.store');
 
     /*
@@ -72,15 +73,15 @@ Route::middleware('guest')->group(function () {
         ->name('password.request');
 
     Route::post('/forgot-password', [PasswordResetController::class, 'email'])
-        ->middleware('throttle:5,1')
+        ->middleware('throttle:5,1,password-email')
         ->name('password.email');
 
     Route::get('/reset-password/{token}', [PasswordResetController::class, 'reset'])
-        ->middleware('throttle:10,1')
+        ->middleware('throttle:10,1,password-reset')
         ->name('password.reset');
 
     Route::post('/reset-password', [PasswordResetController::class, 'store'])
-        ->middleware('throttle:10,1')
+        ->middleware('throttle:10,1,password-reset')
         ->name('password.store');
 });
 

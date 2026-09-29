@@ -62,7 +62,7 @@ use Illuminate\Support\Facades\Route;
 Route::prefix('setup')->name('setup.')->group(function () {
     Route::get('/', [SetupController::class, 'show'])->name('show');
     Route::post('/', [SetupController::class, 'store'])
-        ->middleware('throttle:10,1')
+        ->middleware('throttle:10,1,setup')
         ->name('store');
 });
 

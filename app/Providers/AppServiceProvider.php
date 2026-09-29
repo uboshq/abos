@@ -21,10 +21,12 @@ use App\Core\Support\CompanyContext;
 use App\Core\Support\Csp;
 use App\Models\User;
 use App\Policies\UserPolicy;
+use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -251,6 +253,26 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        /*
+         * ⛔ লগইনের থলে — "IP + টাইপ করা নাম" ধরে, আর গোটা ঠিকানার একটা উঁচু ছাদ
+         * (গভীর অডিট ২৯ সেপ্টেম্বর ২০২৬)।
+         *
+         * ── কী ভাঙা ছিল ──────────────────────────────────────────────────
+         * দরজায় ছিল `throttle:10,1`, নাম ছাড়া। ⚠️ Laravel লগইন-না-করা অনুরোধের
+         * চাবি বানায় `ডোমেইন|IP` দিয়ে, তাই ওয়েবের লগইন, ফোনের লগইন, রিসেট আর
+         * ফোনের "আমি কি পুরনো?" এক থলেতে গোনা হত — মিনিটে দশ, সফলসহ। দোকানের
+         * সবাই এক wifi-তে; সকালে দশজন ঢুকলে এগারোতম জন সঠিক পাসওয়ার্ডেও ৪২৯
+         * পেতেন (লাইভে মাপা, আর OneShopSharesOneAddressTest-এ ধরা)।
+         *
+         * ⓘ এক নামে আন্দাজ করা এখনো থামে: নাম+IP-এ মিনিটে দশ, আর তার উপরে
+         * [[LoginLock]] — আটটা ভুলে পনেরো মিনিট। ছাদটা (১২০) কেবল এক জায়গা
+         * থেকে বহু নাম ঘুরিয়ে চেষ্টার জন্য।
+         */
+        RateLimiter::for('login', fn ($request) => [
+            Limit::perMinute(10)->by('name|'.$request->ip().'|'.mb_strtolower(trim((string) $request->input('identifier')))),
+            Limit::perMinute(120)->by('address|'.$request->ip()),
+        ]);
+
         /*
           * নতুন ঘর $fillable-এ না বসালে চুপ করে হারিয়ে যায় — আর নয়।
           *

@@ -166,7 +166,12 @@ final class ThePhoneCouldNotAskIfItWasOldTest extends TestCase
     {
         $middleware = Route::getRoutes()->getByName('api.app.version')?->gatherMiddleware() ?? [];
 
-        $this->assertContains('throttle:60,1', $middleware);
+        /*
+         * ⓘ নিজের থলে (`app-version`) — ২৯ সেপ্টেম্বর ২০২৬ থেকে; আগে এই ডাক
+         * লগইনের থলেতেই গোনা হত, আর দোকানের ফোনগুলো অ্যাপ খুললেই সবার লগইন
+         * আটকাত ([[OneShopSharesOneAddressTest]])। সীমা একই, মিনিটে ৬০।
+         */
+        $this->assertContains('throttle:60,1,app-version', $middleware);
         $this->assertNotContains('auth:sanctum', $middleware);
     }
 }

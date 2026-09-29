@@ -213,7 +213,7 @@ Route::get('/p/{token}', [SharedPaperController::class, 'show'])
  */
 Route::get('/health', HealthController::class)
     ->withoutMiddleware('web')
-    ->middleware('throttle:'.HealthController::PER_MINUTE.',1')
+    ->middleware('throttle:'.HealthController::PER_MINUTE.',1,health')
     ->name('health');
 
 require __DIR__.'/auth.php';

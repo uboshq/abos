@@ -408,7 +408,7 @@ Route::prefix('portal')->name('portal.')->group(function () {
          * গ্রাহকের খাতা খুলে যেত, আর কোনো চিহ্নও থাকত না।
          */
         Route::post('/login', [PortalController::class, 'login'])
-            ->middleware('throttle:5,1')->name('login.attempt');
+            ->middleware('throttle:5,1,portal-login')->name('login.attempt');
     });
 
     Route::middleware(['auth:portal', EnsurePortalStillOpen::class])->group(function () {
