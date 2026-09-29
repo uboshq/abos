@@ -15,6 +15,7 @@ use App\Http\Controllers\Controller;
 use App\Models\DocumentDelivery;
 use App\Modules\Accounts\Models\Voucher;
 use App\Modules\Accounts\Models\VoucherLine;
+use App\Modules\Accounts\Support\VoucherDesigns;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controllers\HasMiddleware;
@@ -85,8 +86,15 @@ class VoucherPrintController extends Controller implements HasMiddleware
          * ভাউচারের সারিগুলো পণ্যের সারির ছাঁচে ঢোকাতে হত, আর ওই ছাঁচে
          * ডেবিট-ক্রেডিট বলে কিছু নেই।
          */
+        /*
+         * ⭐ বাছা নকশা, মাপ ধরে ([[VoucherDesigns]]); `standard` বা অচেনা → চলতি ভাউচার।
+         * ⓘ থার্মাল মাপগুলো (৮০/৫৮মিমি) এক ট্যাব; বাকিরা A5 বা A4।
+         */
+        $size = PaperSize::of($paper)->isThermal ? 'thermal' : ($paper === PaperSize::A5 ? 'a5' : 'a4');
+        $template = VoucherDesigns::template($size, (string) $this->settings->get(VoucherDesigns::key($size))) ?? 'print.voucher';
+
         $pdf = $this->print->render(
-            template: 'print.voucher',
+            template: $template,
             data: [
                 'title' => $voucher->typeLabel().' '.$voucher->document_no,
                 'voucher' => $this->paper($voucher),
@@ -141,6 +149,10 @@ class VoucherPrintController extends Controller implements HasMiddleware
         return [
             'document_no' => (string) $voucher->document_no,
             'date' => DateFormat::format($voucher->trx_date),
+
+            /* ⓘ নতুন নকশাগুলো মাথায় ধরন লেখে (RECEIPT, PAYMENT …) — চলতি ভাউচার এগুলো পড়ে না */
+            'type' => (string) $voucher->type,
+            'type_label' => mb_strtoupper((string) $voucher->typeLabel()),
             /*
              * পক্ষের নাম নেই, ইচ্ছাকৃতভাবে।
              *

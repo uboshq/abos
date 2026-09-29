@@ -63,7 +63,7 @@ class TheGuardsWereNeverProvenTest extends TestCase
         return array_merge([
             'name' => 'Rahim Salesman',
             'email' => 'rahim@abos.test',
-            'password' => 'a-long-enough-secret-9',
+            'password' => 'a-long-enough-secret-9', 'password_confirmation' => 'a-long-enough-secret-9',
             'locale' => 'bn',
             'is_active' => '1',
             'roles' => ['salesman'],
@@ -99,7 +99,7 @@ class TheGuardsWereNeverProvenTest extends TestCase
     {
         $this->actingAs($this->owner)
             ->post(route('system_admin.user.store'), $this->form([
-                'password' => 'onlylettershere',
+                'password' => 'onlylettershere', 'password_confirmation' => 'onlylettershere',
             ]))
             ->assertSessionHasErrors('password');
 
@@ -108,11 +108,56 @@ class TheGuardsWereNeverProvenTest extends TestCase
     }
 
     /** ছোট পাসওয়ার্ডও নয় — সংখ্যা থাকলেও। */
+    /**
+     * ⭐ দুইবার লেখা মিলতে হবে — মালিক, ৩০ সেপ্টেম্বর ২০২৬: *"passwoard 2 bar like confam korlei valo vul hoyna"*।
+     *
+     * ⛔ একই মানুষ, একই পাসওয়ার্ড; কেবল দ্বিতীয় ঘরটা আলাদা — তফাত শুধু মেলানোর নিয়মের।
+     */
+    public function test_a_password_typed_differently_the_second_time_is_refused(): void
+    {
+        $this->actingAs($this->owner)
+            ->post(route('system_admin.user.store'), $this->form([
+                'password_confirmation' => 'a-long-enough-secret-8',
+            ]))
+            ->assertSessionHasErrors('password');
+
+        $this->assertNull(User::query()->where('email', 'rahim@abos.test')->first(),
+            'দুই ঘরে দুই রকম পাসওয়ার্ডেও ব্যবহারকারী তৈরি হয়ে গেছে — ভুল পাসওয়ার্ড নিয়ে কেউ ঢুকতে পারতেন না।');
+
+        $this->actingAs($this->owner)
+            ->post(route('system_admin.user.store'), $this->form())
+            ->assertSessionHasNoErrors();
+
+        $this->assertNotNull(User::query()->where('email', 'rahim@abos.test')->first());
+    }
+
+    public function test_an_edit_with_both_boxes_empty_keeps_the_old_password(): void
+    {
+        $this->actingAs($this->owner)->post(route('system_admin.user.store'), $this->form());
+        $rahim = User::query()->where('email', 'rahim@abos.test')->firstOrFail();
+        $before = $rahim->password;
+
+        $this->actingAs($this->owner)
+            ->put(route('system_admin.user.update', $rahim), $this->form(['password' => '', 'password_confirmation' => '']))
+            ->assertSessionHasNoErrors();
+
+        $this->assertSame($before, $rahim->fresh()->password, 'খালি ঘরে পুরনো পাসওয়ার্ড মুছে গেছে।');
+    }
+
+    public function test_the_form_shows_both_boxes_with_an_eye(): void
+    {
+        $html = $this->actingAs($this->owner)->get(route('system_admin.user.create'))->assertOk()->getContent();
+
+        $this->assertStringContainsString('name="password_confirmation"', $html);
+        $this->assertSame(2, substr_count($html, 'data-password-eye'), 'দুই ঘরে দুইটা চোখের বোতাম থাকার কথা।');
+        $this->assertStringNotContainsString('অন্তত আট অক্ষর', $html, 'নিয়ম ১২ অক্ষর, অথচ লেখা বলছে আট।');
+    }
+
     public function test_a_short_password_is_refused(): void
     {
         $this->actingAs($this->owner)
             ->post(route('system_admin.user.store'), $this->form([
-                'password' => 'ab1',
+                'password' => 'ab1', 'password_confirmation' => 'ab1',
             ]))
             ->assertSessionHasErrors('password');
     }
@@ -334,7 +379,7 @@ class TheGuardsWereNeverProvenTest extends TestCase
         $this->actingAs($this->owner)->put(route('system_admin.user.update', $rahim), [
             'name' => $rahim->name,
             'email' => $rahim->email,
-            'password' => 'another-long-secret-7',
+            'password' => 'another-long-secret-7', 'password_confirmation' => 'another-long-secret-7',
             'locale' => 'bn',
             'is_active' => '1',
             'roles' => ['salesman'],

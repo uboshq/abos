@@ -26,6 +26,7 @@ use App\Modules\Accounts\Models\Voucher;
 use App\Modules\Accounts\Reports\CoreReports;
 use App\Modules\Accounts\Services\CashTillService;
 use App\Modules\Accounts\Services\StandardChart;
+use App\Modules\Accounts\Support\VoucherDesigns;
 
 /**
  * Accounts — প্ল্যান সেকশন ১৯.২।
@@ -669,6 +670,23 @@ return [
             'default' => PaperSize::A4,
             'group' => 'print',
         ],
+        /*
+         * ⭐ ভাউচারের নকশা, প্রতিটা মাপে আলাদা — মালিক, ৩০ সেপ্টেম্বর ২০২৬: *"printe template sob gulo kore
+         * deploy diba A4 A5 tharmal tintiroi"*। ⓘ বিকল্প ফাইল থেকে ([[VoucherDesigns::codes()]]); `standard`
+         * = চলতি ভাউচার, আর সেটাই ডিফল্ট। গ্রুপ `print_paper`: কেবল ছাপার নিয়ন্ত্রণ আঁকে ("ভাউচার" ট্যাব)।
+         */
+        ...array_map(fn (string $size) => [
+            'key' => VoucherDesigns::key($size),
+            'label' => 'accounts::settings.design_voucher',
+            'type' => 'choice',
+            'options' => ['standard', ...VoucherDesigns::codes($size)],
+            'option_label' => 'accounts::settings.design.',
+
+            /* ⭐ ডিফল্ট ট্যালি ক্লাসিক — মালিকের "OK", ৩০ সেপ্টেম্বর ২০২৬; ফাইল না থাকলে চলতি ভাউচার */
+            'default' => 'tally_classic',
+            'group' => 'print_paper',
+            'print_designs' => ['paper' => 'voucher', 'size' => $size, 'sample_route' => 'accounts.voucher.sample'],
+        ], VoucherDesigns::SIZES),
         [
             'key' => 'accounts.print.paper.transfer',
             'label' => 'accounts::settings.paper_transfer',

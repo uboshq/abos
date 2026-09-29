@@ -24,6 +24,7 @@ use App\Modules\Sales\Models\Shipment;
 use App\Modules\Sales\Panels\SalesFacts;
 use App\Modules\Sales\Reports\SalesReports;
 use App\Modules\Sales\Support\InvoiceDesigns;
+use App\Modules\Sales\Support\PaperDesigns;
 
 /**
  * Sales — প্ল্যান Phase 8।
@@ -821,6 +822,30 @@ return [
             'default' => 'classic_table',
             'group' => 'print',
         ],
+        /*
+         * ⭐ বাকি প্রতিটা কাগজ-মাপের নিজের নকশা — মালিক, ৩০ সেপ্টেম্বর ২০২৬: *"printe template sob gulo
+         * kore deploy diba A4 A5 tharmal tintiroi"*। ⓘ বিকল্পগুলো ফাইল থেকে ([[PaperDesigns::codes()]]),
+         * তাই abos-3c নতুন ছাঁচ রাখলে কার্ড নিজেই আসে। ডিফল্ট নতুন নকশা থেকে, মালিকের "OK"-তে
+         * ([[PaperDesigns::defaultFor()]]); `standard` = চলতি কাগজ, বাছা যায়। গ্রুপ `print_paper`।
+         */
+        ...array_merge(...array_map(fn (string $paper) => array_values(array_filter(array_map(
+            fn (string $size) => $paper === 'invoice' && $size === 'a4' ? null : [
+                'key' => PaperDesigns::key($paper, $size),
+                'label' => 'sales::settings.design_invoice',
+                'type' => 'choice',
+                'options' => ['standard', ...PaperDesigns::codes($paper, $size)],
+                'option_label' => 'sales::settings.design.',
+                'default' => PaperDesigns::defaultFor($paper, $size),
+                'group' => 'print_paper',
+                'print_designs' => array_filter([
+                    'paper' => $paper,
+                    'size' => $size,
+                    /* ⓘ নমুনার পাতা কাগজ ধরে; রুট না থাকলে কার্ডে ছবি নেই, ভাঙে না ([[PrintControlController::designsFor()]]) */
+                    'sample_route' => "sales.{$paper}_sample",
+                ]),
+            ],
+            PaperDesigns::SIZES,
+        ))), PaperDesigns::PAPERS)),
         /*
          * ⭐ "Set Invoice Information" — মালিকের নির্দেশ, ২৯ সেপ্টেম্বর ২০২৬।
          *

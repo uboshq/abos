@@ -75,11 +75,56 @@
                 {{-- পাসওয়ার্ড কখনো ভরে দেখানো হয় না — পর্দার HTML-এ থাকলে
                      যে কেউ দেখে ফেলতে পারতেন। সম্পাদনায় খালি মানে
                      "আগেরটাই থাক", মুছে দেওয়া নয়। --}}
-                <x-ui.field name="password" type="password"
-                            :label="__('system_admin::field.password')"
-                            :hint="$isNew ? __('system_admin::field.password_hint')
-                                          : __('system_admin::field.password_blank_hint')"
-                            :required="$isNew" />
+                {{-- ⭐ মালিক, ৩০ সেপ্টেম্বর ২০২৬: *"passworad vew howar icon nai … passwoard 2 bar like confam
+                     korlei valo vul hoyna"* — চোখের বোতাম, আর দ্বিতীয়বার লেখার ঘর; সার্ভার `confirmed` দিয়ে মেলায়।
+                     ⓘ একই ধাঁচ পাসওয়ার্ড বদলের পাতার ([[auth.reset]]) — CSP-Alpine-এ চলে। দুই ঘর এক `show` মানে। --}}
+                <div x-data="{ show: false }" class="contents">
+                    @foreach (['password', 'password_confirmation'] as $pw)
+                        @php $bad = $errors->has($pw); @endphp
+                        <div>
+                            <label for="{{ $pw }}" class="mb-1 block text-sm font-medium">
+                                {{ __('system_admin::field.'.$pw) }}
+                                @if ($isNew)
+                                    <span class="text-(--color-danger)" aria-hidden="true">*</span>
+                                    <span class="sr-only">({{ __('core.form.required') }})</span>
+                                @endif
+                            </label>
+
+                            <div class="relative">
+                                {{-- ⓘ `new-password` — ব্রাউজার যেন নিজের সংরক্ষিত পাসওয়ার্ড বসিয়ে না দেয় --}}
+                                <input id="{{ $pw }}" name="{{ $pw }}" maxlength="191"
+                                       autocomplete="new-password"
+                                       type="password" :type="show ? 'text' : 'password'"
+                                       @if ($isNew) required @endif
+                                       @if ($bad) aria-invalid="true" aria-describedby="{{ $pw }}-error" @endif
+                                       @class([
+                                           'h-(--spacing-field) w-full rounded-(--radius-field) border px-3 pe-12',
+                                           'bg-(--color-surface-card)',
+                                           'border-(--color-danger)' => $bad,
+                                           'border-(--color-border)' => ! $bad,
+                                       ])>
+
+                                <button type="button" @click="show = ! show" data-password-eye
+                                        class="absolute inset-y-0 end-0 flex w-12 items-center justify-center
+                                               text-(--color-ink-muted)"
+                                        :aria-label="show ? '{{ __('auth.hide_password') }}' : '{{ __('auth.show_password') }}'">
+                                    <span x-show="! show"><x-ui.icon name="eye" :size="18" /></span>
+                                    <span x-show="show" x-cloak><x-ui.icon name="eye_off" :size="18" /></span>
+                                </button>
+                            </div>
+
+                            @if ($pw === 'password')
+                                <p class="mt-1 text-2xs text-(--color-ink-muted)">
+                                    {{ $isNew ? __('system_admin::field.password_hint') : __('system_admin::field.password_blank_hint') }}
+                                </p>
+                            @endif
+
+                            @error($pw)
+                                <p id="{{ $pw }}-error" class="mt-1 text-2xs text-(--color-danger)">{{ $message }}</p>
+                            @enderror
+                        </div>
+                    @endforeach
+                </div>
 
                 <x-ui.select name="locale" :label="__('core.appearance.language')"
                              :options="['bn' => 'বাংলা', 'en' => 'English']"

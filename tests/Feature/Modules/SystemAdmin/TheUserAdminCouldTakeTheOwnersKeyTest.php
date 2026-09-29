@@ -110,7 +110,7 @@ final class TheUserAdminCouldTakeTheOwnersKeyTest extends TestCase
         $this->actingAs($this->admin)
             ->put(route('system_admin.user.update', $this->owner), $this->form($this->owner,
                 [PermissionSyncer::SUPER_ADMIN_ROLE],
-                ['email' => 'mine-now@uak.test', 'password' => 'Taken-over-99']))
+                ['email' => 'mine-now@uak.test', 'password' => 'Taken-over-99', 'password_confirmation' => 'Taken-over-99']))
             ->assertForbidden();
 
         $this->assertSame('owner@uak.test', $this->owner->fresh()?->email,
@@ -143,7 +143,7 @@ final class TheUserAdminCouldTakeTheOwnersKeyTest extends TestCase
 
         $this->actingAs($this->admin)
             ->post(route('system_admin.user.store'), $this->form(new User, ['accountant'], [
-                'name' => 'Proxy', 'email' => 'proxy@uak.test', 'password' => 'Proxy-secret-99',
+                'name' => 'Proxy', 'email' => 'proxy@uak.test', 'password' => 'Proxy-secret-99', 'password_confirmation' => 'Proxy-secret-99',
             ]))
             ->assertSessionHasErrors('roles');
     }
@@ -165,7 +165,7 @@ final class TheUserAdminCouldTakeTheOwnersKeyTest extends TestCase
 
         $this->actingAs($this->admin)
             ->put(route('system_admin.user.update', $accountant), $this->form($accountant,
-                ['accountant'], ['password' => 'Borrowed-key-77']))
+                ['accountant'], ['password' => 'Borrowed-key-77', 'password_confirmation' => 'Borrowed-key-77']))
             ->assertForbidden();
 
         $this->assertFalse(

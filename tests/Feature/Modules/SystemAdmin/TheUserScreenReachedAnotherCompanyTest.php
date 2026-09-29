@@ -151,7 +151,7 @@ final class TheUserScreenReachedAnotherCompanyTest extends TestCase
 
         $this->post(route('system_admin.user.store'), $this->form([
             'email' => 'newcomer@abos.test',
-            'password' => 'Plenty0fLetters2026',
+            'password' => 'Plenty0fLetters2026', 'password_confirmation' => 'Plenty0fLetters2026',
             'companies' => [$this->a->id, $this->b->id],
         ]))->assertSessionHasErrors('companies.1');
 

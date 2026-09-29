@@ -120,7 +120,7 @@ class TheLastOwnerCouldLockEveryoneOutTest extends TestCase
             ->post(route('system_admin.user.store'), [
                 'name' => 'Karim Two',
                 'email' => 'karim@abos.test',
-                'password' => 'a-long-enough-secret-9',
+                'password' => 'a-long-enough-secret-9', 'password_confirmation' => 'a-long-enough-secret-9',
                 'locale' => 'bn',
                 'is_active' => '1',
                 'roles' => [PermissionSyncer::SUPER_ADMIN_ROLE],

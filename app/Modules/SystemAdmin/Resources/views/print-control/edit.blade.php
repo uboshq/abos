@@ -48,6 +48,9 @@
             {{ __('system_admin::settings.print_not_yet') }}
         </section>
     @else
+        {{-- ⭐ কার্ডে চাপলে আসল ছাপা, পপআপে — মালিক, ৩০ সেপ্টেম্বর ২০২৬: *"eigulote clic korle popup e real print
+             a4 size er ber hobe"*। ⓘ `src` খালি = বন্ধ; পাতা না ছেড়ে, না-সংরক্ষিত বাছাই না হারিয়ে। --}}
+        <div x-data="{ src: '' }">
         <form method="POST" action="{{ route('system_admin.print_control.update') }}" class="space-y-4">
             @csrf
             @method('PUT')
@@ -74,7 +77,8 @@
                                          peer-checked:border-(--color-brand-600) peer-checked:ring-2 peer-checked:ring-(--color-brand-600)">
                                 @if ($card['sample'] !== null)
                                     {{-- ⛔ `allow-scripts` নেই; `allow-same-origin` লাগে, নইলে লোগো আটকাত --}}
-                                    <span class="block h-44 w-full overflow-hidden bg-white">
+                                    <span class="block h-44 w-full cursor-zoom-in overflow-hidden bg-white" data-open-pdf
+                                          @if ($card['pdf']) @click="src = '{{ $card['pdf'] }}'" @endif>
                                         <iframe src="{{ $card['sample'] }}"
                                                 title="{{ __('system_admin::settings.print_sample_of', ['format' => $card['name']]) }}"
                                                 loading="lazy" tabindex="-1" sandbox="allow-same-origin"
@@ -102,7 +106,9 @@
                 </div>
             </section>
 
-            {{-- ── "সাধারণ" কাগজের সুইচ — কোন অংশ, কোন কলাম কোন ক্রমে ─────────── --}}
+            {{-- ── "সাধারণ" কাগজের সুইচ — কোন অংশ, কোন কলাম কোন ক্রমে ───────────
+                 ⓘ কেবল যেখানে নতুন নকশা নেই; নকশাগুলো নিজের সুইচ মানে ("Set Your Invoice Information")। --}}
+            @unless ($hasDesigns)
             <section data-boxed
                      class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
                 <h2 class="mb-1 text-sm font-semibold">{{ __('system_admin::settings.print_parts') }}</h2>
@@ -144,9 +150,32 @@
                 </div>
             </section>
 
+            @endunless
+
             <div class="flex flex-wrap items-center gap-3">
                 <x-ui.button type="submit" tone="primary">{{ __('core.action.save') }}</x-ui.button>
             </div>
         </form>
+
+        {{-- ── পপআপ: আসল PDF ──────────────────────────────────────────────
+             ⓘ জ্যামিতি ইনলাইন `style`-এ, [[shell.peek]]-এর মতো — বান্ডলে শ্রেণি না থাকলে প্যানেল নীরবে ভাঙত। --}}
+        <div x-show="src !== ''" x-cloak role="dialog" aria-modal="true" data-pdf-popup
+             aria-label="{{ __('system_admin::settings.print_sample') }}"
+             @keydown.escape.window="src = ''" @click.self="src = ''"
+             style="position:fixed;inset:0;z-index:60;display:flex;justify-content:center;align-items:flex-start;
+                    padding:3vh 16px 16px;background:rgb(0 0 0 / 0.55)">
+            <div class="w-full rounded-(--radius-field) bg-(--color-surface-app) shadow-lg"
+                 style="max-width:900px;height:94vh;display:flex;flex-direction:column">
+                <div class="flex items-center justify-between gap-3 border-b border-(--color-border) px-4 py-2">
+                    <a x-bind:href="src" target="_blank" rel="noopener"
+                       class="text-xs text-(--color-link) underline underline-offset-2">{{ __('core.peek.open_full') }}</a>
+                    <button type="button" @click="src = ''"
+                            class="text-xs text-(--color-ink-muted) underline underline-offset-2">{{ __('core.peek.close') }}</button>
+                </div>
+                <iframe x-bind:src="src" title="{{ __('system_admin::settings.print_sample') }}"
+                        style="flex:1;width:100%;border:0;background:#fff"></iframe>
+            </div>
+        </div>
+        </div>
     @endif
 </x-layouts.app>

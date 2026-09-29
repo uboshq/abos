@@ -25,6 +25,7 @@ use App\Modules\Accounts\Http\Controllers\ReportController;
 use App\Modules\Accounts\Http\Controllers\VoucherController;
 use App\Modules\Accounts\Http\Controllers\VoucherListController;
 use App\Modules\Accounts\Http\Controllers\VoucherPrintController;
+use App\Modules\Accounts\Http\Controllers\VoucherSampleController;
 use App\Modules\Accounts\Http\Controllers\YearEndController;
 use App\Modules\Accounts\Models\Account;
 use Illuminate\Support\Facades\Route;
@@ -138,6 +139,8 @@ Route::middleware('auth')->prefix('accounts')->group(function () {
          * স্থির পথটা {voucher}-এর পরে বসেছে কিন্তু নিজের অংশ নিয়ে,
          * তাই সংঘাত নেই: /{voucher} শুধু সংখ্যা মানে (whereNumber)।
          */
+        /* ⭐ ছাপার নিয়ন্ত্রণের ভাউচার-নকশার নমুনা — বানানো তথ্যে ([[VoucherSampleController]]) */
+        Route::get('/sample', [VoucherSampleController::class, 'show'])->name('sample');
         Route::get('/{voucher}/print', VoucherPrintController::class)
             ->whereNumber('voucher')->name('print');
         Route::get('/{voucher}/edit', [VoucherController::class, 'edit'])

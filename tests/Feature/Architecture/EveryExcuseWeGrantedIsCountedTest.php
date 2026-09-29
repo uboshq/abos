@@ -229,7 +229,14 @@ final class EveryExcuseWeGrantedIsCountedTest extends TestCase
      * `EveryMasterNamesItsDuplicateGuard::EXEMPT` ১৫ ·
      * `FLOAT_IS_DELIBERATE` ১৫ · `STEPPING_ASIDE_FOR_NOW` ১৪।
      */
-    private const CEILING = 246;
+    /*
+     * ── ⚠️ ২৪৬ → ২৪৯, ৩০ সেপ্টেম্বর ২০২৬ (abos-69) ──────────────────────
+     * মালিকের QR (*"ekta qr add korbe …"*, *"ekoi code dilar scane kore …"*): তিনটা নতুন দরজা,
+     * প্রত্যেকটা কারণসহ [[EveryRouteIsGuardedTest]]-এ —
+     *   +১  OPEN_TO_THE_WORLD `sales.scan` — নিজে কিছু দেখায়/বদলায় না, কে এসেছেন দেখে পাঠায়
+     *   +২  CUSTOMER_PORTAL `sales.portal.scan`, `.scan.received` — কেবল নিজের চালান, অন্যেরটা ৪০৪
+     */
+    private const CEILING = 249;
 
     /*
      * ── ⚠️ ২২২ → ২২৪, ২৩ সেপ্টেম্বর ২০২৬ ───────────────────────────

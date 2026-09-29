@@ -27,7 +27,10 @@ use App\Modules\Sales\Models\SalesInvoice;
 use App\Modules\Sales\Models\SalesOrder;
 use App\Modules\Sales\Models\Shipment;
 use App\Modules\Sales\Services\PrintQueue;
+use App\Modules\Sales\Support\ChallanPaperFacts;
 use App\Modules\Sales\Support\InvoiceDesigns;
+use App\Modules\Sales\Support\OrderPaperFacts;
+use App\Modules\Sales\Support\PaperDesigns;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controllers\HasMiddleware;
@@ -194,17 +197,17 @@ class SalesPrintController extends Controller implements HasMiddleware
          *
          * ⚠️ থার্মালে সবসময় চলতি রসিদ: তিন কলামের মাথা ৮০মিমিতে ধরে না।
          */
-        /* ⭐ ছাঁচ আসে নকশার একমাত্র তালিকা থেকে ([[InvoiceDesigns]]); `standard` → চলতি নকশা */
-        $designTemplate = InvoiceDesigns::template((string) $this->settings->get('sales.print.design.invoice'));
         /*
-         * ⭐ নকশাগুলো A4-এর (মালিক, ৩০ সেপ্টেম্বর ২০২৬: কাগজের ভেতরে A4 · A5 · Thermal আলাদা)।
-         * ⓘ A5 আর থার্মালে এখনো "সাধারণ" — ঐ মাপের নকশা মালিক নিশ্চিত করলে আসবে।
+         * ⭐ ছাঁচ আসে কাগজ-মাপের নিজের বাছাই থেকে ([[PaperDesigns]]) — মালিক, ৩০ সেপ্টেম্বর ২০২৬:
+         * A4 · A5 · থার্মাল তিনটারই নিজের নকশা। `standard` বা অচেনা → চলতি কাগজ।
          */
-        $classic = $designTemplate !== null
-            && PaperSize::chosen(
-                $request->query('paper'),
-                $this->settings->get('sales.print.paper.invoice'),
-            ) === PaperSize::A4;
+        $chosenPaper = PaperSize::chosen($request->query('paper'), $this->settings->get('sales.print.paper.invoice'));
+        $designSize = PaperDesigns::sizeOf($chosenPaper, PaperSize::of($chosenPaper)->isThermal);
+        $designTemplate = PaperDesigns::template(
+            'invoice', $designSize,
+            (string) $this->settings->get(PaperDesigns::key('invoice', $designSize)),
+        );
+        $classic = $designTemplate !== null;
 
         return $this->pdf(
             $request, $doc, (string) $invoice->total, $invoice->document_no,
@@ -213,6 +216,34 @@ class SalesPrintController extends Controller implements HasMiddleware
             template: $classic ? $designTemplate : 'print.document',
             extra: $classic ? ['facts' => $this->classicFacts($invoice)] : [],
         );
+    }
+
+    /**
+     * ⭐ চালানের বাছা নকশা — মালিক, ৩০ সেপ্টেম্বর ২০২৬ (abos-3c-র ছাঁচ, [[ChallanPaperFacts]])।
+     *
+     * ⓘ `standard` বা অচেনা হলে কিছুই নয় — তখন চলতি চালান (`print.document`), আগের মতোই।
+     *
+     * @return array{template?: string, extra?: array<string, mixed>}
+     */
+    private function challanDesign(Request $request, DeliveryChallan $challan): array
+    {
+        return $this->paperDesign($request, 'challan', 'sales.print.paper.challan', fn () => ChallanPaperFacts::of($challan));
+    }
+
+    /**
+     * একটা কাগজের বাছা নকশা — চালান, অর্ডার, আদায় রসিদ ([[PaperDesigns]])।
+     *
+     * ⓘ facts কেবল নকশা বাছা থাকলে গোনা হয় (closure): চলতি কাগজে ঐ হিসাবের দরকারই নেই।
+     *
+     * @return array{template?: string, extra?: array<string, mixed>}
+     */
+    private function paperDesign(Request $request, string $kind, string $paperSetting, \Closure $facts): array
+    {
+        $paper = PaperSize::chosen($request->query('paper'), $this->settings->get($paperSetting));
+        $size = PaperDesigns::sizeOf($paper, PaperSize::of($paper)->isThermal);
+        $template = PaperDesigns::template($kind, $size, (string) $this->settings->get(PaperDesigns::key($kind, $size)));
+
+        return $template === null ? [] : ['template' => $template, 'extra' => ['facts' => $facts()]];
     }
 
     /**
@@ -508,11 +539,15 @@ class SalesPrintController extends Controller implements HasMiddleware
             narration: $challan->narration,
         );
 
+        $design = $this->challanDesign($request, $challan);
+
         // চালানও — একই কারণে: দুইটা একরকম চালান মানে দুইবার মাল দাবি
         return $this->pdf(
             $request, $doc, (string) $challan->total, $challan->document_no,
             type: PrintJob::CHALLAN, id: $challan->id, document: $challan,
             paperSetting: 'sales.print.paper.challan', target: 'challan',
+            template: $design['template'] ?? 'print.document',
+            extra: $design['extra'] ?? [],
         );
     }
 
@@ -660,8 +695,12 @@ class SalesPrintController extends Controller implements HasMiddleware
             narration: $order->narration,
         );
 
+        $design = $this->paperDesign($request, 'order', 'sales.print.paper.order', fn () => OrderPaperFacts::order($order));
+
         return $this->pdf($request, $doc, (string) $order->total, $order->document_no, document: $order,
-            paperSetting: 'sales.print.paper.order', target: 'order');
+            paperSetting: 'sales.print.paper.order', target: 'order',
+            template: $design['template'] ?? 'print.document',
+            extra: $design['extra'] ?? []);
     }
 
     /**
@@ -730,8 +769,12 @@ class SalesPrintController extends Controller implements HasMiddleware
             narration: $collection->narration,
         );
 
+        $design = $this->paperDesign($request, 'receipt', 'sales.print.paper.receipt', fn () => OrderPaperFacts::receipt($collection));
+
         return $this->pdf($request, $doc, (string) $collection->amount, $collection->document_no, document: $collection,
-            paperSetting: 'sales.print.paper.receipt', target: 'receipt');
+            paperSetting: 'sales.print.paper.receipt', target: 'receipt',
+            template: $design['template'] ?? 'print.document',
+            extra: $design['extra'] ?? []);
     }
 
     // ── সহায়ক ───────────────────────────────────────────────────────────

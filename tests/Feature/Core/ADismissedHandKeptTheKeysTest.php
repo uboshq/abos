@@ -155,7 +155,7 @@ class ADismissedHandKeptTheKeysTest extends TestCase
         $this->freshDevice();
 
         $this->actingAs($this->owner())
-            ->put(route('system_admin.user.update', $this->sales), $this->editForm(['password' => 'Kd8-dismissal-rotor-51']))
+            ->put(route('system_admin.user.update', $this->sales), $this->editForm(['password' => 'Kd8-dismissal-rotor-51', 'password_confirmation' => 'Kd8-dismissal-rotor-51']))
             ->assertRedirect(route('system_admin.user.index'));
 
         $this->assertSame(0, $this->tokensOf($this->sales));

@@ -1011,6 +1011,9 @@ class UserController extends Controller implements HasMiddleware
                  * প্রতিটায় আলাদা করে প্রমাণ করে।
                  */
                 Password::min(12)->letters()->numbers()->uncompromised(),
+
+                /* ⭐ দ্বিতীয়বার লেখা মিলতে হবে — মালিক, ৩০ সেপ্টেম্বর ২০২৬: "2 bar like confam korlei valo vul hoyna" */
+                'confirmed',
             ],
 
             'locale' => ['required', Rule::in(['bn', 'en'])],

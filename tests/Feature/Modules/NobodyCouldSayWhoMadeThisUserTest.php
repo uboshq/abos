@@ -68,7 +68,7 @@ class NobodyCouldSayWhoMadeThisUserTest extends TestCase
         return array_merge([
             'name' => 'Rahim Salesman',
             'email' => 'rahim@abos.test',
-            'password' => 'a-long-enough-secret-9',
+            'password' => 'a-long-enough-secret-9', 'password_confirmation' => 'a-long-enough-secret-9',
             'locale' => 'bn',
             'is_active' => '1',
             'roles' => ['salesman'],
@@ -311,7 +311,7 @@ class NobodyCouldSayWhoMadeThisUserTest extends TestCase
         // পাসওয়ার্ড বদলানোর পথটাও — তৈরির পথ আর বদলের পথ এক নয়
         $this->actingAs($this->owner)
             ->put(route('system_admin.user.update', $rahim), $this->editForm([
-                'password' => 'another-good-secret-7',
+                'password' => 'another-good-secret-7', 'password_confirmation' => 'another-good-secret-7',
             ]))
             ->assertRedirect(route('system_admin.user.index'));
 
@@ -345,7 +345,7 @@ class NobodyCouldSayWhoMadeThisUserTest extends TestCase
 
         $this->actingAs($this->owner)
             ->put(route('system_admin.user.update', $rahim), $this->editForm([
-                'password' => 'another-good-secret-7',
+                'password' => 'another-good-secret-7', 'password_confirmation' => 'another-good-secret-7',
             ]));
 
         $row = $this->trails($rahim, 'password_set')->first();

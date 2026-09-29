@@ -165,7 +165,7 @@ final class AnEightLetterPasswordWasEnoughTest extends TestCase
             'staff_create' => $this->actingAs($this->actor)->post(route('system_admin.user.store'), [
                 'name' => 'Notun Karmi',
                 'email' => 'notun-karmi@abos.test',
-                'password' => $password,
+                'password' => $password, 'password_confirmation' => $password,
                 'locale' => 'bn',
                 'is_active' => '1',
                 'roles' => ['salesman'],
@@ -176,7 +176,7 @@ final class AnEightLetterPasswordWasEnoughTest extends TestCase
             'staff_edit' => $this->actingAs($this->actor)->put(route('system_admin.user.update', $this->target), [
                 'name' => $this->target->name,
                 'email' => $this->target->email,
-                'password' => $password,
+                'password' => $password, 'password_confirmation' => $password,
                 'locale' => 'bn',
                 'is_active' => '1',
                 'roles' => ['salesman'],

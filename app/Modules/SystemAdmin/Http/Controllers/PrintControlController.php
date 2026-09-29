@@ -78,7 +78,10 @@ class PrintControlController extends Controller implements HasMiddleware
             'paper' => $paper,
             'size' => $size,
             'target' => $target,
-            'cards' => $this->cards($target, $designs),
+            'cards' => $this->cards($target, $designs, $size),
+
+            /* ⓘ নতুন নকশা থাকলে "সাধারণ"-এর পুরনো সুইচগুলোও (অংশ, কলাম) পর্দায় নয় — ওগুলো কেবল সাধারণ কাগজের */
+            'hasDesigns' => array_diff($designs['options'] ?? [], ['standard']) !== [],
             'chosen' => $designs === null ? 'standard' : (string) $this->settings->get($designs['key']),
             'profile' => $target === null ? null : $this->profileData($target),
         ]);
@@ -227,15 +230,22 @@ class PrintControlController extends Controller implements HasMiddleware
      *
      * @return list<array{code: string, name: string, sample: ?string}>
      */
-    private function cards(?string $target, ?array $designs): array
+    private function cards(?string $target, ?array $designs, string $size = 'a4'): array
     {
         $cards = [];
 
-        if ($target !== null) {
+        /*
+         * ⭐ "সাধারণ" কেবল যেখানে নতুন নকশা নেই — মালিক, ৩০ সেপ্টেম্বর ২০২৬: *"1st nomuna ta puraton … eta
+         * bad daw"*। ⓘ কাজ চালানোর পথ হিসেবে সেটিংয়ে `standard` থাকে, কিন্তু বাছার কার্ড নয়।
+         */
+        $hasDesigns = array_diff($designs['options'] ?? [], ['standard']) !== [];
+
+        if ($target !== null && ! $hasDesigns) {
             $cards[] = [
                 'code' => 'standard',
                 'name' => __('system_admin::settings.print_standard'),
                 'sample' => route('system_admin.print_control.preview', ['paper' => $target, 'format' => self::defaultFormat($target)]),
+                'pdf' => null,
             ];
         }
 
@@ -247,7 +257,10 @@ class PrintControlController extends Controller implements HasMiddleware
             $cards[] = [
                 'code' => $code,
                 'name' => (string) __($designs['option_label'].$code),
-                'sample' => $designs['sample_route'] === null ? null : route($designs['sample_route'], ['design' => $code]),
+                'sample' => $designs['sample_route'] === null ? null : route($designs['sample_route'], ['design' => $code, 'size' => $size]),
+
+                /* ⓘ আসল ছাপা, পপআপে — নমুনার পাতার `?pdf=1` */
+                'pdf' => $designs['sample_route'] === null ? null : route($designs['sample_route'], ['design' => $code, 'size' => $size, 'pdf' => 1]),
             ];
         }
 

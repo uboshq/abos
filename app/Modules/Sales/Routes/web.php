@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Http\Middleware\EnsurePortalStillOpen;
+use App\Modules\Sales\Http\Controllers\ChallanSampleController;
 use App\Modules\Sales\Http\Controllers\CollectionController;
 use App\Modules\Sales\Http\Controllers\CommissionClaimController;
 use App\Modules\Sales\Http\Controllers\DeliveryChallanController;
@@ -10,12 +11,14 @@ use App\Modules\Sales\Http\Controllers\DepositClaimController;
 use App\Modules\Sales\Http\Controllers\DirectSaleController;
 use App\Modules\Sales\Http\Controllers\InvoiceSampleController;
 use App\Modules\Sales\Http\Controllers\LotTraceController;
+use App\Modules\Sales\Http\Controllers\OrderSampleController;
 use App\Modules\Sales\Http\Controllers\PortalController;
 use App\Modules\Sales\Http\Controllers\PosController;
 use App\Modules\Sales\Http\Controllers\PrintQueueController;
 use App\Modules\Sales\Http\Controllers\MarginReportController;
 use App\Modules\Sales\Http\Controllers\GatePassController;
 use App\Modules\Sales\Http\Controllers\LoadingSheetController;
+use App\Modules\Sales\Http\Controllers\ReceiptSampleController;
 use App\Modules\Sales\Http\Controllers\SalesInvoiceController;
 use App\Modules\Sales\Http\Controllers\DeliveryScanController;
 use App\Modules\Sales\Http\Controllers\DeliveryStageController;
@@ -348,6 +351,9 @@ Route::middleware('auth')->prefix('sales')->group(function () {
      * ([[InvoiceSampleController]])। ⓘ ছাপার নিয়ন্ত্রণের পাতা `Route::has()` দিয়ে এটা খোঁজে।
      */
     Route::get('/print/invoice-sample', [InvoiceSampleController::class, 'show'])->name('invoice_sample');
+    Route::get('/print/challan-sample', [ChallanSampleController::class, 'show'])->name('challan_sample');
+    Route::get('/print/order-sample', [OrderSampleController::class, 'show'])->name('order_sample');
+    Route::get('/print/receipt-sample', [ReceiptSampleController::class, 'show'])->name('receipt_sample');
 
     Route::prefix('print')->name('print.')->group(function () {
         Route::get('/invoice/{invoice}', [SalesPrintController::class, 'invoice'])

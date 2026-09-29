@@ -125,7 +125,11 @@ final class ThePrintingTabWasNowhereOnTheScreenTest extends TestCase
                 }
 
                 $this->assertStringContainsString('name="size" value="'.$size.'"', $html);
-                $this->assertStringContainsString('data-design-card="standard"', $html, "{$paper}/{$size}: কাজ চালানোর \"সাধারণ\" নেই।");
+
+                /* ⭐ মালিক, ৩০ সেপ্টেম্বর ২০২৬: *"1st nomuna ta puraton … eta bad daw"* — নতুন নকশা থাকলে "সাধারণ" কার্ড নেই */
+                $this->assertStringNotContainsString('data-design-card="standard"', $html, "{$paper}/{$size}: পুরনো \"সাধারণ\" কার্ড রয়ে গেছে।");
+                $this->assertGreaterThanOrEqual(20, substr_count($html, 'data-design-card='), "{$paper}/{$size}: নকশার কার্ড নেই।");
+                $this->assertStringNotContainsString('][parts][', $html, "{$paper}/{$size}: \"সাধারণ\"-এর পুরনো সুইচ রয়ে গেছে।");
             }
         }
     }
@@ -141,11 +145,16 @@ final class ThePrintingTabWasNowhereOnTheScreenTest extends TestCase
             $this->assertStringContainsString('data-design-card="'.$design.'"', $html, "বিল-A4-এ '{$design}' নেই।");
         }
 
-        /* ⓘ A5-এ এখনো কেবল "সাধারণ" */
+        /* ⓘ A5-এর নিজের তালিকা; প্রতিটা কার্ডে চাপলে আসল PDF — পপআপ একটাই */
         $a5 = $this->actingAs($this->owner)
             ->get(route('system_admin.print_control', ['paper' => 'invoice', 'size' => 'a5']))
             ->getContent();
-        $this->assertSame(1, substr_count($a5, 'data-design-card='));
+        $this->assertSame(21, substr_count($a5, 'data-design-card='));
+        $this->assertSame(1, substr_count($a5, 'data-pdf-popup'));
+        $this->assertStringContainsString('pdf=1', $a5);
+
+        $this->actingAs($this->owner)->get(route('sales.invoice_sample', ['design' => 'classic_table', 'size' => 'a4', 'pdf' => 1]))
+            ->assertOk()->assertHeader('Content-Type', 'application/pdf');
     }
 
     public function test_an_unknown_paper_falls_back_instead_of_breaking(): void

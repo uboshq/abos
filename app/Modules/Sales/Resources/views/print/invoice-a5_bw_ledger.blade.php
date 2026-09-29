@@ -306,7 +306,7 @@
 <table class="signatures">
     <tr>
         @foreach ($signatures as $label)
-            <td style="width: {{ round(100 / max(1, count($signatures)), 1) }}%"><div class="sig-line" data-signature>{{ $label }}</div></td>
+            <td style="width: {{ round(100 / max(1, count($signatures)), 1) }}%"><table style="width: 100%"><tr><td class="sig-line" style="text-align: center" data-signature>{{ $label }}</td></tr></table></td>
         @endforeach
     </tr>
 </table>

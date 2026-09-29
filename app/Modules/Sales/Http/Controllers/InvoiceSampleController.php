@@ -12,6 +12,7 @@ use App\Core\Services\SettingsService;
 use App\Core\Support\DateFormat;
 use App\Http\Controllers\Controller;
 use App\Modules\Sales\Support\InvoiceDesigns;
+use App\Modules\Sales\Support\PaperDesigns;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controllers\HasMiddleware;
@@ -47,8 +48,17 @@ class InvoiceSampleController extends Controller implements HasMiddleware
      */
     public function show(Request $request): Response
     {
-        $asked = (string) $request->query('design', (string) $this->settings->get('sales.print.design.invoice'));
-        $template = InvoiceDesigns::template($asked) ?? InvoiceDesigns::ALL[InvoiceDesigns::FALLBACK];
+        /* ⓘ `?size=` — A4 · A5 · থার্মাল, প্রতিটার নিজের তালিকা ([[PaperDesigns]]) */
+        $size = in_array($request->query('size'), PaperDesigns::SIZES, true) ? (string) $request->query('size') : 'a4';
+        $asked = (string) $request->query('design', (string) $this->settings->get(PaperDesigns::key('invoice', $size)));
+        $template = PaperDesigns::template('invoice', $size, $asked)
+            ?? PaperDesigns::template('invoice', $size, PaperDesigns::codes('invoice', $size)[0] ?? null)
+            ?? InvoiceDesigns::ALL[InvoiceDesigns::FALLBACK];
+        $paperSize = match ($size) {
+            'a5' => PaperSize::A5,
+            'thermal' => PaperSize::THERMAL_80,
+            default => PaperSize::A4,
+        };
 
         $s = fn (string $key) => (string) __('sales::print.sample.'.$key, [], 'en');
         $today = DateFormat::format(now());
@@ -85,10 +95,28 @@ class InvoiceSampleController extends Controller implements HasMiddleware
             ]],
         );
 
+        /*
+         * ⭐ `?pdf=1` — আসল ছাপা, যে PDF কাগজে যায় (মালিক, ৩০ সেপ্টেম্বর ২০২৬: *"clic korle popup e real print
+         * a4 size er ber hobe"*)। ⓘ না দিলে HTML — কার্ডের ছোট ছবির জন্য, যেটা দ্রুত আঁকে।
+         */
+        if ($request->boolean('pdf')) {
+            $pdf = $this->print->render(
+                template: $template,
+                data: ['doc' => $doc, 'facts' => $facts],
+                paper: $paperSize,
+                profile: 'invoice',
+            );
+
+            return response($pdf, 200, [
+                'Content-Type' => 'application/pdf',
+                'Content-Disposition' => 'inline; filename="sample.pdf"',
+            ]);
+        }
+
         $html = $this->print->preview(
             template: $template,
             data: ['doc' => $doc, 'facts' => $facts],
-            paper: PaperSize::A4,
+            paper: $paperSize,
             profile: PrintProfile::for('invoice', $this->settings),
         );
 
