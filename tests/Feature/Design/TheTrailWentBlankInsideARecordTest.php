@@ -78,7 +78,7 @@ class TheTrailWentBlankInsideARecordTest extends TestCase
     public function test_a_record_page_lights_up_the_list_it_came_from(): void
     {
         $this->get('/finance/deposits/bank');
-        $this->assertSame(['finance.deposit.index|ব্যাংক আমানত'], $this->litRows(),
+        $this->assertSame(['finance.deposit.index|আমানত'], $this->litRows(),
             'তালিকার পাতাতেই সারিটা জ্বলছে না।');
 
         /*
@@ -89,7 +89,7 @@ class TheTrailWentBlankInsideARecordTest extends TestCase
          * তখনো `finance.deposit.show`, আর মেনু ওটাই পড়ে।
          */
         $this->get('/finance/deposits/bank/1');
-        $this->assertSame(['finance.deposit.index|ব্যাংক আমানত'], $this->litRows(),
+        $this->assertSame(['finance.deposit.index|আমানত'], $this->litRows(),
             'রেকর্ডে ঢুকতেই সারিটা নিভে গেছে — breadcrumb-ও তাই ফাঁকা হবে।');
     }
 

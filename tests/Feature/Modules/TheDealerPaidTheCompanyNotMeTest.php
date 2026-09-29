@@ -280,7 +280,9 @@ class TheDealerPaidTheCompanyNotMeTest extends TestCase
     {
         $registry = app(PartyRegistry::class);
 
-        $this->assertEqualsCanonicalizing(['customer', 'supplier'], $registry->types());
+        // ⓘ চার ধরন — মালিক আদায় ভাউচারে কর্মী আর "অন্যান্য" চেয়েছেন (1215c70a, ১৪ সেপ্টেম্বর ২০২৬);
+        // ⭐ দুইটাই নিজের মডিউল থেকে আসে (HR, MasterData) — এই দাবির মূল কথাটাই এটা
+        $this->assertEqualsCanonicalizing(['customer', 'employee', 'person', 'supplier'], $registry->types());
         $this->assertSame(__('customer::menu.party'), $registry->labelFor('customer'));
     }
 

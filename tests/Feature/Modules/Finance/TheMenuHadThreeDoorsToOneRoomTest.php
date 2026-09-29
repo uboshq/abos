@@ -107,7 +107,13 @@ final class TheMenuHadThreeDoorsToOneRoomTest extends TestCase
         $setup = array_map(fn (array $row) => $row['route'] ?? null, $this->rowsOf('settings'));
 
         $this->assertContains('finance.deposit_kind.index', $setup);
-        $this->assertContains('finance.institution.index', $setup);
+        /*
+         * ⓘ প্রতিষ্ঠানের সারি সেটআপে নয়, লেনদেনে — মালিকের অভিযোগে সরানো, ২১ সেপ্টেম্বর ২০২৬
+         * (4f7ea1b9: "আগে ছিল এখন নাই", তারপর 9403ad39: কোনো ভাঁজের ভিতরে নয়)।
+         */
+        $this->assertNotContains('finance.institution.index', $setup);
+        $this->assertContains('finance.institution.index',
+            array_map(fn (array $row) => $row['route'] ?? null, $this->rowsOf('transactions')));
     }
 
     /**
