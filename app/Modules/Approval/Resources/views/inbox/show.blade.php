@@ -10,7 +10,7 @@
 
     <x-slot:header>
         <x-ui.page-header
-            :title="$labels[$approval->module.'.'.$approval->action] ?? $approval->module.' · '.$approval->action"
+            :title="$bundle !== null ? __('approval::field.bundle_title') : ($labels[$approval->module.'.'.$approval->action] ?? $approval->module.' · '.$approval->action)"
             :subtitle="$approval->requested_at?->format('d M Y, H:i')">
             <x-slot:actions>
                 {{-- ⭐ ঘড়িটা অবস্থার পাশে — ২৪ সেপ্টেম্বর ২০২৬।
@@ -209,7 +209,10 @@
 
             {{-- ⭐ কাগজের সারি, মাধ্যম, লেনদেন নম্বর আর পক্ষের খবর — পাতা ছেড়ে না গিয়েই।
                  ⓘ কারণ [[sheet]]-এর মাথায়; ⚠️ কাগজ দেখার অনুমতি না থাকলে `$sheet` খালি। --}}
-            @if ($sheet !== null)
+            {{-- ⓘ কাউন্টারের আটকে থাকা বিক্রি হলে পুরো বিক্রি এক পাতায় ([[ApprovalBundles]]) --}}
+            @if ($bundle !== null)
+                @include('approval::inbox.partials.bundle')
+            @elseif ($sheet !== null)
                 @include('approval::inbox.partials.sheet')
             @endif
 
@@ -277,7 +280,7 @@
                         <button type="button" @click="act = 'approve'"
                                 :class="act === 'approve' ? 'bg-(--color-brand-600) text-white' : 'text-(--color-ink-muted) hover:bg-(--color-surface-hover)'"
                                 class="rounded-(--radius-field) px-2 py-1.5 text-xs font-semibold transition-colors">
-                            {{ __('approval::action.approve') }}
+                            {{ $bundle !== null ? __('approval::action.confirm_all') : __('approval::action.approve') }}
                         </button>
                         <button type="button" @click="act = 'reject'"
                                 :class="act === 'reject' ? 'bg-(--color-danger) text-white' : 'text-(--color-ink-muted) hover:bg-(--color-surface-hover)'"
@@ -308,12 +311,16 @@
                      ⛔ প্রশ্নটা শুধু সইয়ে, ফেরতে নয়: ভুল "হ্যাঁ" টাকা
                      নড়িয়ে দেয়, আর ভুল "না" কেবল একটা কাগজ থামায় —
                      যেটা আবার পাঠানো যায়। --}}
-                <form method="POST" action="{{ route('approval.inbox.approve', $approval->id) }}"
-                      data-confirm="{{ $approval->amount === null
+                {{-- ⭐ বিক্রির পাতায় একটাই বোতাম, সব অপেক্ষমাণ অনুরোধে — সব বা কিছুই না
+                     ([[ApprovalInboxController::confirmAll()]]); অন্য সব অনুরোধ আগের মতো। --}}
+                <form method="POST" action="{{ $bundle !== null ? route('approval.inbox.confirm_all', $approval->id) : route('approval.inbox.approve', $approval->id) }}"
+                      data-confirm="{{ $bundle !== null
+                          ? __('approval::message.bundle_confirm', ['count' => collect($bundle['approvals'])->where('status', \App\Models\Approval::PENDING)->count()])
+                          : ($approval->amount === null
                           ? __('approval::message.approve_confirm_plain')
                           : __('approval::message.approve_confirm', [
                               'amount' => \App\Core\Support\Money::format($approval->amount),
-                          ]) }}"
+                          ])) }}"
                       x-show="act === 'approve'">
                     @csrf
 
@@ -327,7 +334,7 @@
                     </label>
 
                     <x-ui.button type="submit" tone="primary" class="mt-3 w-full">
-                        {{ __('approval::action.approve') }}
+                        {{ $bundle !== null ? __('approval::action.confirm_all') : __('approval::action.approve') }}
                     </x-ui.button>
                 </form>
 

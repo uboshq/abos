@@ -74,6 +74,9 @@ Route::middleware('auth')->prefix('approvals')->group(function () {
         ->whereNumber('approval')->name('inbox.show');
     Route::post('/{approval}/approve', [ApprovalInboxController::class, 'approve'])
         ->whereNumber('approval')->name('inbox.approve');
+    // ⭐ এক বিক্রির সব অনুরোধ একসাথে নিশ্চিত — [[ApprovalBundles]], ২৮ সেপ্টেম্বর ২০২৬
+    Route::post('/{approval}/confirm-all', [ApprovalInboxController::class, 'confirmAll'])
+        ->whereNumber('approval')->name('inbox.confirm_all');
     Route::post('/{approval}/reject', [ApprovalInboxController::class, 'reject'])
         ->whereNumber('approval')->name('inbox.reject');
     Route::post('/{approval}/withdraw', [ApprovalInboxController::class, 'withdraw'])

@@ -80,4 +80,22 @@ return [
     // The signing sheet — [[ShowsItselfForSigning]], 28 September 2026
     'sheet' => 'Lines on the paper',
     'party_card' => 'About the party',
+    // One sale, one page — [[ApprovalBundles]], 28 September 2026
+    'bundle_title' => 'Confirmation',
+    'bill_no' => 'Bill no.',
+    'challan_no' => 'Challan no.',
+    'transport' => 'Transport',
+    'driver_phone' => 'Driver phone',
+    'buyers_own_transport' => 'Own transport (buyer)',
+    'deposited' => 'Deposited',
+    'due_left' => 'Due',
+    'deposits' => 'Deposits',
+    'method' => 'Way',
+    'account' => 'Account',
+    'reference' => 'Transaction no.',
+    'slip' => 'Slip',
+    // What for — the first product and how many more, 29 September 2026
+    'and_more' => ':first and :count more',
+    // The paper's number on the inbox row — 29 September 2026
+    'paper_no' => 'No.',
 ];

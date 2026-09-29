@@ -239,7 +239,84 @@ final class TheSignerSeesWhatIsBeingSoldTest extends TestCase
         }
     }
 
+    /**
+     * ⭐ ইনবক্সের সারি দেখেই বোঝা যায় কোন চালান — ২৯ সেপ্টেম্বর ২০২৬।
+     *
+     * ⛔ লাইভে: একই গ্রাহকের দুইটা চালান সইয়ে, আর তালিকায় দুই সারিই একরকম — নম্বর
+     * কোথাও নেই, পক্ষ আর "কী বাবদ" ফাঁকা (abos-7c ধরেছেন)। সইকারী S-0008 না S-0009
+     * বুঝতে প্রতিটা খুলে দেখতেন। ⓘ এখন প্রতিটা সারিতে নিজের নম্বর, গ্রাহক, আর প্রথম পণ্য।
+     */
+    public function test_each_inbox_row_names_its_own_challan_the_customer_and_the_goods(): void
+    {
+        $signer = User::query()->create([
+            'name' => 'Row Reader',
+            'email' => 'rows-'.uniqid().'@abos.test',
+            'password' => Hash::make('secret-secret'),
+            'is_active' => true,
+        ]);
+        $signer->companies()->attach($this->company->id, ['is_active' => true]);
+        $signer->givePermissionTo(Permission::firstOrCreate(['name' => 'approval.decide', 'guard_name' => 'web']));
+
+        $this->challanFlow($signer);
+
+        $first = $this->heldChallan();
+        $second = $this->heldChallan();
+
+        $html = (string) $this->actingAs($signer)
+            ->get(route('approval.inbox.index'))
+            ->assertOk()
+            ->getContent();
+
+        $customer = e($this->customer->fresh()->name());
+        $goods = e((string) __('approval::field.and_more', [
+            'first' => $this->freeOne->name(),
+            'count' => 1,
+        ]));
+
+        foreach ([$first, $second] as $challan) {
+            $no = (string) $challan->document_no;
+            // ⓘ ঘরের ভিতরে নম্বরটাই পুরো লেখা — চারপাশে ফাঁকা থাকতে পারে, অন্য লেখা নয়
+            $at = preg_match('~>\s*'.preg_quote($no, '~').'\s*<~', $html, $m, PREG_OFFSET_CAPTURE) === 1 ? $m[0][1] : false;
+            $this->assertNotFalse($at, "⛔ চালান {$no}-এর নম্বর ইনবক্সের কোনো সারিতে নেই।");
+
+            // ⓘ নম্বরের সারিটাই — `<tr` থেকে `</tr>` পর্যন্ত; অন্য সারির নাম দিয়ে সবুজ হবে না
+            $row = substr($html, (int) strrpos(substr($html, 0, (int) $at), '<tr'));
+            $row = substr($row, 0, (int) strpos($row, '</tr>'));
+
+            $this->assertStringContainsString($customer, $row, "⛔ {$no}-এর সারিতে গ্রাহকের নাম নেই।");
+            $this->assertStringContainsString($goods, $row, "⛔ {$no}-এর সারিতে 'কী বাবদ' পণ্য বলে না।");
+        }
+
+        $this->assertNotSame((string) $first->document_no, (string) $second->document_no,
+            'প্রস্তুতিটাই ভুল — দুইটা চালানের একই নম্বর।');
+    }
+
     // ── যন্ত্রপাতি ─────────────────────────────────────────────────────────
+
+    /** একটা চালান, দুই পণ্যের — নিশ্চিত করতে গিয়ে সইয়ে আটকে। */
+    private function heldChallan(): DeliveryChallan
+    {
+        $challan = app(DeliveryChallanService::class)->create(
+            [
+                'customer_id' => $this->customer->id,
+                'warehouse_id' => $this->warehouse->id,
+                'trx_date' => now()->toDateString(),
+            ],
+            [
+                ['product_id' => $this->freeOne->id, 'delivered_qty' => '10', 'rate' => (string) $this->freeOne->sale_price],
+                ['product_id' => $this->plainOne->id, 'delivered_qty' => '5', 'rate' => (string) $this->plainOne->sale_price],
+            ],
+        );
+
+        try {
+            app(DeliveryChallanService::class)->confirm($challan->fresh(['lines']));
+            $this->fail('⛔ দৃশ্যটাই বানানো যায়নি — চালানটা সইয়ে আটকানোর কথা।');
+        } catch (HeldForApproval) {
+            // প্রত্যাশিত
+        }
+
+        return $challan->fresh();
+    }
 
     /**
      * কাউন্টারের বিক্রি — প্রথম পণ্য ১০টা, লট থেকে ২ ফ্রি; দ্বিতীয়টা ৫, ফ্রি নেই।

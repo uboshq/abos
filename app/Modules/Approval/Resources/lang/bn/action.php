@@ -26,4 +26,6 @@ return [
     // সইয়ের পাতা — [[ShowsItselfForSigning]], ২৮ সেপ্টেম্বর ২০২৬
     'view_whole_paper' => 'পুরো কাগজ দেখুন',
     'close' => 'বন্ধ',
+    // এক বিক্রি, এক পাতা — [[ApprovalBundles]], ২৮ সেপ্টেম্বর ২০২৬
+    'confirm_all' => 'নিশ্চিত করুন',
 ];

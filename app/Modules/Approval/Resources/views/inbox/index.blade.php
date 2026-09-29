@@ -235,6 +235,8 @@
                  ])],
                 ['key' => 'module', 'label' => __('approval::field.action'),
                  'render' => fn ($a) => view('approval::inbox.partials.what', ['approval' => $a, 'labels' => $labels])],
+                ['key' => 'no', 'label' => __('approval::field.paper_no'), 'width' => '8rem',
+                 'render' => fn ($a) => ($facts[$a->id]['no'] ?? null) ?: '—'],
                 ['key' => 'party', 'label' => __('approval::field.party'), 'width' => '11rem',
                  'render' => fn ($a) => ($facts[$a->id]['party'] ?? null) ?: '—'],
                 ['key' => 'about', 'label' => __('approval::field.what_for'),

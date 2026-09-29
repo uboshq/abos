@@ -95,6 +95,9 @@ return [
 
         // ⭐ গ্রাহক তালিকার 👁 — এক নজরের সারাংশের বিল ও জমার অংশ (মালিক, ২৭ সেপ্টেম্বর ২০২৬)
         \App\Core\Contracts\CustomerTrade::class => \App\Modules\Sales\Services\SalesCustomerTrade::class,
+
+        // ⭐ সইয়ে আটকে থাকা কাউন্টারের বিক্রি এক পাতায়, এক ক্লিকে নিশ্চিত (মালিক, ২৮ সেপ্টেম্বর ২০২৬)
+        \App\Core\Contracts\ApprovalBundles::class => \App\Modules\Sales\Services\CounterSaleBundle::class,
     ],
 
     'menu' => [

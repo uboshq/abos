@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Approval\Http\Controllers;
 
+use App\Core\Contracts\ApprovalBundles;
 use App\Core\Contracts\ShowsItselfForSigning;
 use App\Core\Engines\Approval\ApprovalEngine;
 use App\Core\Engines\Approval\ApprovalSla;
@@ -18,6 +19,8 @@ use App\Models\User;
 use App\Modules\Approval\Services\ApprovalFacts;
 use App\Modules\Approval\Services\ApprovalFlowService;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
@@ -100,7 +103,7 @@ class ApprovalInboxController extends Controller implements HasMiddleware
              * নিজের কোনো দাবি এটা ধরত না, কারণ প্রতিটাতেই মানুষটার
              * কোনো না কোনো চাবি ছিল।
              */
-            new Middleware('can:approval.decide', only: ['approve', 'reject', 'forward', 'bulkApprove']),
+            new Middleware('can:approval.decide', only: ['approve', 'reject', 'forward', 'bulkApprove', 'confirmAll']),
 
             /*
              * ⚠️ `show` এখানে নেই, আর সেটা ইচ্ছাকৃত।
@@ -568,6 +571,12 @@ class ApprovalInboxController extends Controller implements HasMiddleware
              * দেখেন ([[ShowsItselfForSigning]])। ⚠️ `$document` কাগজ দেখার
              * অনুমতি না থাকলে আগেই `null` — তাই নিরীক্ষক সারিও পান না।
              */
+            /*
+             * ⭐ এক বিক্রি, এক পাতা — চালান, বিল আর জমা একসাথে ([[ApprovalBundles]])।
+             * ⓘ কাগজ দেখার অনুমতি না থাকলে দলও নয় — `$document`-এর একই শর্ত।
+             */
+            'bundle' => $mayReadDocument ? $this->bundleOf($entry) : null,
+
             'sheet' => $sheet = $document instanceof ShowsItselfForSigning
                 ? $document->signingSheet()
                 : null,
@@ -847,6 +856,75 @@ class ApprovalInboxController extends Controller implements HasMiddleware
      * ব্যবসার নিয়ম — পর্দার নয়। ⓘ এখানে বসালে আগামীকাল কোনো কনসোল
      * কমান্ড বা API ওটা এড়িয়ে যেতে পারত।
      */
+    /**
+     * এক বিক্রির সব অপেক্ষমাণ অনুরোধ একসাথে নিশ্চিত — ২৮ সেপ্টেম্বর ২০২৬, মালিকের কাজ।
+     *
+     * ⓘ মালিক: *"এটা অনুমোদন বললে ভুল হবে, এটা কনফার্মেশন"* — সিস্টেম আগেই আটকে
+     * রেখেছে, মানুষটা কেবল পুরো ছবিটা দেখে হ্যাঁ বলেন।
+     *
+     * ⛔ সব বা কিছুই না: দলের একটা কাগজও এই মানুষটার পালা না হলে ([[ApprovalEngine::canDecide()]])
+     * কিছুই সই হয় না, আর কোনগুলো তাঁর নয় তা বলা হয় — আধা-সই করা বিক্রি থাকে না।
+     * ⓘ প্রতিটা অনুরোধ তবু নিজের সিদ্ধান্ত-সারি পায় (ইঞ্জিনের `approve()`), একই মানুষ,
+     * একই মুহূর্ত; শেষ সইয়ে বিক্রিটা নিজেই শেষ হয় ([[FinishTheHeldSaleOnTheLastSignature]])।
+     */
+    public function confirmAll(Request $request, int $approval): RedirectResponse
+    {
+        $validated = $request->validate(['remarks' => ['nullable', 'string', 'max:500']]);
+
+        /** @var User $user */
+        $user = $request->user();
+        $entry = Approval::query()->findOrFail($approval);
+        $bundle = $this->bundleOf($entry);
+
+        abort_if($bundle === null, 404);
+
+        $waiting = collect($bundle['approvals'])
+            ->filter(fn (Approval $a) => $a->status === Approval::PENDING)
+            ->values();
+
+        if ($waiting->isEmpty()) {
+            throw ValidationException::withMessages(['confirm' => __('approval::message.bundle_nothing')]);
+        }
+
+        $notYours = $waiting->reject(fn (Approval $a) => $this->engine->canDecide($a, $user));
+
+        if ($notYours->isNotEmpty()) {
+            throw ValidationException::withMessages(['confirm' => __('approval::message.bundle_not_yours', [
+                'papers' => $notYours->map(fn (Approval $a) => $this->paperName($a))->implode(', '),
+            ])]);
+        }
+
+        $remarks = $validated['remarks'] ?? __('approval::message.bundle_remark');
+
+        DB::transaction(function () use ($waiting, $user, $remarks): void {
+            foreach ($waiting as $pending) {
+                $this->engine->approve($pending->fresh(), $user, $remarks);
+            }
+        });
+
+        return redirect()
+            ->route('approval.inbox.index')
+            ->with('saved', __('approval::message.bundle_confirmed', ['count' => $waiting->count()]));
+    }
+
+    /** দলটা — যে মডিউল জানে সে বাঁধে; না বাঁধলে `null`। */
+    private function bundleOf(Approval $entry): ?array
+    {
+        return app()->bound(ApprovalBundles::class)
+            ? app(ApprovalBundles::class)->bundleFor($entry)
+            : null;
+    }
+
+    /** কাগজের নাম — নম্বর থাকলে নম্বর, নাহলে ধরন আর আইডি। */
+    private function paperName(Approval $entry): string
+    {
+        $document = $this->documentOf($entry);
+
+        return $document !== null && method_exists($document, 'drillDocumentNo')
+            ? (string) $document->drillDocumentNo()
+            : class_basename((string) $entry->approvable_type).' #'.$entry->approvable_id;
+    }
+
     public function forward(Request $request, int $approval): RedirectResponse
     {
         $validated = $request->validate([

@@ -51,7 +51,7 @@ final class ApprovalFacts
         $rows = [];
 
         foreach ($approvals as $approval) {
-            $rows[(int) $approval->id] = ['party' => null, 'about' => null, 'where' => null];
+            $rows[(int) $approval->id] = ['no' => null, 'party' => null, 'about' => null, 'where' => null];
 
             if (is_string($approval->approvable_type) && class_exists($approval->approvable_type)) {
                 $idsByType[$approval->approvable_type][(int) $approval->id] = (int) $approval->approvable_id;
@@ -87,6 +87,8 @@ final class ApprovalFacts
 
                 if ($document !== null) {
                     $rows[$approvalId] = [
+                        // ⓘ কাগজের নম্বর — সারি দেখেই বোঝা যায় কোন চালান (S-0008 না S-0009), ২৯ সেপ্টেম্বর ২০২৬
+                        'no' => method_exists($document, 'drillDocumentNo') ? (string) $document->drillDocumentNo() : null,
                         'party' => $this->party($document, $partyLabels),
                         'about' => $this->about($document),
                         'where' => $this->where($document, $accountNames),
@@ -137,12 +139,49 @@ final class ApprovalFacts
             }
         }
 
+        /*
+         * ⓘ বিক্রয় আর ক্রয়ের কাগজে পক্ষ বসে নিজের সম্পর্কে (`customer`, `supplier`) — ২৯
+         * সেপ্টেম্বর ২০২৬। ⛔ আগে এই দুইটা খোঁজা হত না, তাই ইনবক্সে চালান আর বিলের সারিতে
+         * পক্ষ "—" দেখাত (abos-7c ধরেছেন)।
+         */
+        foreach (['customer', 'supplier'] as $relation) {
+            if ($this->has($document, $relation) && $document->{$relation} instanceof Model) {
+                return $this->nameOf($document->{$relation});
+            }
+        }
+
         return $this->firstFilled($document, ['payee_name', 'holder_name', 'party_name']);
     }
 
     private function about(Model $document): ?string
     {
-        return $this->firstFilled($document, ['narration', 'purpose', 'note', 'description', 'title']);
+        $written = $this->firstFilled($document, ['narration', 'purpose', 'note', 'description', 'title']);
+
+        if ($written !== null) {
+            return $written;
+        }
+
+        /*
+         * ⓘ কেউ কিছু না লিখলে — কাগজের পণ্য, ২৯ সেপ্টেম্বর ২০২৬। ⛔ কাউন্টারের চালান আর
+         * বিলে বিবরণ প্রায় কখনো থাকে না, তাই "কী বাবদ" ঘরটা "—" দেখাত; অথচ উত্তরটা
+         * সারিতেই আছে — প্রথম পণ্য, আর বাকি কয়টা।
+         */
+        if (! $this->has($document, 'lines')) {
+            return null;
+        }
+
+        $lines = $document->lines;
+        $first = $lines->first(fn ($line) => $line instanceof Model && $this->has($line, 'product') && $line->product !== null);
+
+        if ($first === null) {
+            return null;
+        }
+
+        $name = (string) $this->nameOf($first->product);
+
+        return $lines->count() > 1
+            ? __('approval::field.and_more', ['first' => $name, 'count' => $lines->count() - 1])
+            : $name;
     }
 
     /**

@@ -44,6 +44,8 @@ final class AClaimAcceptedTwiceTookTheMoneyTwiceTest extends TestCase
 
     private Account $bank;
 
+    private Account $wallet;
+
     private Customer $dealer;
 
     protected function setUp(): void
@@ -69,6 +71,23 @@ final class AClaimAcceptedTwiceTookTheMoneyTwiceTest extends TestCase
             'type' => Account::ASSET,
             'nature' => Account::DEBIT,
             'money_kind' => Account::BANK,
+        ]);
+
+        /*
+         * ⓘ বিকাশের দাবি বিকাশের খাতে — ২৯ সেপ্টেম্বর ২০২৬। ⚠️ আগে TrxID-সহ দাবিটাও উপরের
+         * ব্যাংকের খাতে মঞ্জুর হত; 060726c5 থেকে পথ আর খাতের ধরন মিলতে হয়
+         * ([[MethodFitsAccount]]) — "বিকাশে পাঠালাম" দাবি ব্যাংকে বসে না। নগদের দাবি
+         * ব্যাংকে বসতে পারে, তাই ব্যাংকের খাতটা তাদের জন্য থাকল।
+         */
+        $this->wallet = Account::query()->create([
+            'company_id' => $this->company->id,
+            'code' => '1105-CLAIMTWICE',
+            'name_en' => 'Claim twice wallet',
+            'name_bn' => 'দুইবারের ওয়ালেট',
+            'parent_id' => StandardChart::find(StandardChart::MOBILE_MONEY)->id,
+            'type' => Account::ASSET,
+            'nature' => Account::DEBIT,
+            'money_kind' => Account::MFS,
         ]);
 
         $this->dealer = Customer::query()->firstOrFail();
@@ -108,11 +127,13 @@ final class AClaimAcceptedTwiceTookTheMoneyTwiceTest extends TestCase
         $secondClick = DepositClaim::query()->findOrFail($claim->id);
 
         $service = app(DepositClaimService::class);
-        $service->accept($firstClick, $this->bank->id);
+        $into = $reference === null ? $this->bank : $this->wallet;
+
+        $service->accept($firstClick, $into->id);
 
         $refusal = null;
         try {
-            $service->accept($secondClick, $this->bank->id);
+            $service->accept($secondClick, $into->id);
         } catch (ValidationException $e) {
             $refusal = $e;
         }

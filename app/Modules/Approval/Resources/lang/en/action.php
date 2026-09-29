@@ -26,4 +26,6 @@ return [
     // The signing sheet — [[ShowsItselfForSigning]], 28 September 2026
     'view_whole_paper' => 'See the whole paper',
     'close' => 'Close',
+    // One sale, one page — [[ApprovalBundles]], 28 September 2026
+    'confirm_all' => 'Confirm',
 ];

@@ -81,4 +81,22 @@ return [
     // সইয়ের পাতা — [[ShowsItselfForSigning]], ২৮ সেপ্টেম্বর ২০২৬
     'sheet' => 'কাগজের সারি',
     'party_card' => 'পক্ষের খবর',
+    // এক বিক্রি, এক পাতা — [[ApprovalBundles]], ২৮ সেপ্টেম্বর ২০২৬
+    'bundle_title' => 'নিশ্চিতকরণ',
+    'bill_no' => 'বিল নম্বর',
+    'challan_no' => 'চালান নম্বর',
+    'transport' => 'পরিবহন',
+    'driver_phone' => 'চালকের ফোন',
+    'buyers_own_transport' => 'ক্রেতার নিজের',
+    'deposited' => 'জমা',
+    'due_left' => 'বাকি',
+    'deposits' => 'জমাগুলো',
+    'method' => 'পথ',
+    'account' => 'খাত',
+    'reference' => 'লেনদেন নম্বর',
+    'slip' => 'স্লিপ',
+    // কী বাবদ — প্রথম পণ্য আর বাকি কয়টা, ২৯ সেপ্টেম্বর ২০২৬
+    'and_more' => ':first ও আরও :count টা',
+    // ইনবক্সের সারিতে কাগজের নম্বর — ২৯ সেপ্টেম্বর ২০২৬
+    'paper_no' => 'নম্বর',
 ];

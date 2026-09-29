@@ -86,4 +86,10 @@ return [
     'beyond_your_authority' => 'It is your turn, but the amount is past your ceiling — someone above you has to sign.',
     // The signing sheet — [[ShowsItselfForSigning]], 28 September 2026
     'more_rows_in_paper' => ':count more rows — see the whole paper.',
+    // One sale, one page — [[ApprovalBundles]], 28 September 2026
+    'bundle_confirm' => 'The :count papers of this sale will be confirmed together — challan, bill and deposits. Go ahead?',
+    'bundle_not_yours' => 'Nothing was confirmed — it is not your turn to sign these: :papers.',
+    'bundle_confirmed' => ':count papers confirmed.',
+    'bundle_nothing' => 'Nothing in this sale is still waiting to be confirmed.',
+    'bundle_remark' => 'Confirmed together on one page',
 ];
