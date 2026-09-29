@@ -110,13 +110,21 @@ final class StockCountService
                     ]);
                 }
 
-                // খাতার সংখ্যা — গণনার মুহূর্তের floor, ওই গুদামে
-                $bookQty = $this->stock->floorQty($product, $warehouse);
+                /*
+                 * খাতার সংখ্যা — গণনার মুহূর্তের floor, ওই গুদামে।
+                 * ⛔ লট ধরে গোনা হলে সেই **লটের** সংখ্যা — ২৯ সেপ্টেম্বর ২০২৬। ⚠️ আগে পুরো
+                 * পণ্যের সংখ্যা বসত, তাই লট A-র ৩ গুনলে পার্থক্য হত "১০ থেকে −৭", আর
+                 * কেউ-না-গোনা লট খালি হত ([[TheCountWasSettledAtTheWrongMomentTest]])।
+                 */
+                $lot = $this->lotFor($product, $line);
+                $bookQty = $lot !== null
+                    ? $this->adjustments->lotFloor($lot, $warehouse)
+                    : $this->stock->floorQty($product, $warehouse);
 
                 $count->lines()->create([
                     'company_id' => CompanyContext::id(),
                     'product_id' => $product->id,
-                    'batch_id' => $this->lotFor($product, $line)?->id,
+                    'batch_id' => $lot?->id,
                     'book_qty' => $bookQty,
                     'counted_qty' => $line['counted_qty'],
                     'difference' => bcsub($line['counted_qty'], $bookQty, 4),
@@ -203,10 +211,14 @@ final class StockCountService
                     continue;
                 }
 
-                $this->adjustments->adjust(
+                /*
+                 * ⛔ গণনার নিজের পার্থক্য — অনুমোদনের মুহূর্তে আবার মাপা নয় (২৯ সেপ্টেম্বর
+                 * ২০২৬, অডিটে প্রমাণিত): মাঝের বিক্রি উদ্বৃত্ত হয়ে ফিরত ([[StockAdjustmentService::settle()]])।
+                 */
+                $this->adjustments->settle(
                     product: $line->product,
                     warehouse: $count->warehouse,
-                    countedQty: (string) $line->counted_qty,
+                    difference: (string) $line->difference,
                     reason: $reason,
                     date: $count->count_date,
                     narration: $count->narration ?: $count->document_no,

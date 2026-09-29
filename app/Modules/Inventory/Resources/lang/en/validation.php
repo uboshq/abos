@@ -131,4 +131,6 @@ return [
     'qc_dispose_needs_qty' => 'How much to dispose of has to be a positive number.',
     'qc_dispose_needs_place' => 'This paper names no product or warehouse, so nothing can be taken off the shelf.',
     'qc_dispose_over' => 'This paper holds :held - no more than that can be disposed of.',
+    // A counted lot's shortage — [[StockAdjustmentService::settle()]], 29 September 2026
+    'lot_short_for_count' => 'Lot :lot now holds :held — the counted shortage of :short cannot be booked; goods left this lot after the count, count it again.',
 ];

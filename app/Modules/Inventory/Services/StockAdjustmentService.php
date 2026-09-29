@@ -126,8 +126,34 @@ final class StockAdjustmentService
         ?Batch $batch = null,
     ): ?StockMovement {
         $current = $this->stock->floorQty($product, $warehouse);
-        $difference = bcsub($countedQty, $current, 4);
 
+        return $this->settle(
+            $product, $warehouse, bcsub($countedQty, $current, 4), $reason, $date, $narration, $unitCost, $batch,
+        );
+    }
+
+    /**
+     * একটা জানা পার্থক্য বসানো — ধনাত্মক উদ্বৃত্ত, ঋণাত্মক ঘাটতি (২৯ সেপ্টেম্বর ২০২৬)।
+     *
+     * ── ⛔ কেন আলাদা পথ (অডিটে প্রমাণিত) ─────────────────────────────────
+     * গণনা তার পার্থক্য **গণনার মুহূর্তে** মাপে আর সারিতে রাখে। ⚠️ আগে অনুমোদন
+     * [[adjust()]] ডাকত গোনা সংখ্যা দিয়ে, আর পার্থক্য আবার মাপা হত **অনুমোদনের
+     * মুহূর্তের** তাক ধরে — মাঝে যা বিক্রি হলো তা "উদ্বৃত্ত" হয়ে খাতায় ফিরত
+     * (তাকে ১০, গোনা ৮, মাঝে ৩ বিক্রি → ৫-এর বদলে ৮)। ⓘ তাই গণনা এখানে তার নিজের
+     * পার্থক্যটাই দেয় ([[TheCountWasSettledAtTheWrongMomentTest]])।
+     *
+     * ⚠️ লট দেওয়া থাকলে ঘাটতি **সেই লট থেকেই** বেরোয় — নিচে কারণ।
+     */
+    public function settle(
+        Product $product,
+        Warehouse $warehouse,
+        string $difference,
+        ReasonCode $reason,
+        Carbon|string|null $date = null,
+        ?string $narration = null,
+        ?string $unitCost = null,
+        ?Batch $batch = null,
+    ): ?StockMovement {
         // মিলে গেলে কোনো সারি নয় — শূন্য সারি খতিয়ানে শুধু ভিড় বাড়ায়
         if (bccomp($difference, '0', 4) === 0) {
             return null;
@@ -206,6 +232,14 @@ final class StockAdjustmentService
                     batch: $batch,
                 )
                 /*
+                 * ⛔ গোনা লটের ঘাটতি সেই লট থেকেই — ২৯ সেপ্টেম্বর ২০২৬ (অডিটে প্রমাণিত)।
+                 * ⓘ লট A গোনা হলো, কম পাওয়া গেল লট A-তে; আগে ঘাটতি বেরোত পুরনোটা আগে
+                 * নিয়মে, তাই কেউ-না-গোনা লট B খালি হয়ে যেত। ⚠️ লটে এখন অত মাল না
+                 * থাকলে (গণনার পরে বিক্রি) থামে — লট ঋণাত্মক হয় না।
+                 */
+                : ($batch !== null
+                    ? $this->lotShortage($product, $warehouse, $difference, $reason, $date, $narration, $batch)
+                    /*
                  * ⓘ কয়টা সারি হবে তা আগে জানা যায় না — তিন লট জুড়ে
                  * ঘাটতি হলে তিনটা। ⚠️ খরচ ও খতিয়ানের নোঙর প্রথমটা,
                  * ঠিক যেভাবে [[StockTransferService]] করে: একটা কাগজ,
@@ -220,7 +254,7 @@ final class StockAdjustmentService
                     date: $date,
                     narration: $narration,
                     reason: $reason,
-                )[0];
+                )[0]);
 
             /*
              * মালের দাম আগে, খতিয়ান পরে — কারণ খতিয়ানের অঙ্কটা দাম থেকেই আসে।
@@ -259,6 +293,55 @@ final class StockAdjustmentService
 
             return $movement;
         });
+    }
+
+    /**
+     * গোনা লটের ঘাটতি — ঐ লট থেকেই, আর লটে যা আছে তার বেশি নয়।
+     */
+    private function lotShortage(
+        Product $product,
+        Warehouse $warehouse,
+        string $difference,
+        ReasonCode $reason,
+        Carbon|string|null $date,
+        ?string $narration,
+        Batch $batch,
+    ): StockMovement {
+        $inLot = $this->lotFloor($batch, $warehouse);
+
+        if (bccomp(bcadd($inLot, $difference, 4), '0', 4) < 0) {
+            throw ValidationException::withMessages([
+                'lines' => __('inventory::validation.lot_short_for_count', [
+                    'lot' => $batch->batch_no,
+                    'held' => $inLot,
+                    'short' => bcmul($difference, '-1', 4),
+                ]),
+            ]);
+        }
+
+        return $this->stock->move(
+            product: $product,
+            warehouse: $warehouse,
+            sourceType: StockService::ADJUSTMENT,
+            sourceId: $product->id,
+            floor: $difference,
+            reason: $reason,
+            date: $date,
+            narration: $narration,
+            batch: $batch,
+        );
+    }
+
+    /**
+     * এক লটের তাকের সংখ্যা, এক গুদামে — লটের সারিগুলোর যোগফল।
+     */
+    public function lotFloor(Batch $batch, Warehouse $warehouse): string
+    {
+        return bcadd((string) StockMovement::query()
+            ->where('batch_id', $batch->id)
+            ->where('warehouse_id', $warehouse->id)
+            ->lockForUpdate()
+            ->sum('floor_change'), '0', 4);
     }
 
     /**
