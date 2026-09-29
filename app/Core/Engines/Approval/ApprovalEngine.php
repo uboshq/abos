@@ -195,10 +195,11 @@ final class ApprovalEngine
      */
     public function approve(Approval $approval, User $user, ?string $remarks = null): Approval
     {
-        $this->assertPending($approval);
-        $this->assertCanDecide($approval, $user);
-
         return DB::transaction(function () use ($approval, $user, $remarks) {
+            // ⛔ তালা দিয়ে নতুন করে পড়া, তারপরই যাচাই — [[lockPending()]]
+            $approval = $this->lockPending($approval);
+            $this->assertCanDecide($approval, $user);
+
             ApprovalDecision::create([
                 'approval_id' => $approval->id,
                 'level' => $approval->current_level,
@@ -411,8 +412,6 @@ final class ApprovalEngine
      */
     public function reject(Approval $approval, User $user, string $remarks, ?string $reasonCode = null): Approval
     {
-        $this->assertPending($approval);
-        $this->assertCanDecide($approval, $user);
 
         /*
          * ⛔ অচেনা কারণ বসানো যায় না।
@@ -425,6 +424,10 @@ final class ApprovalEngine
         }
 
         return DB::transaction(function () use ($approval, $user, $remarks, $reasonCode) {
+            // ⛔ তালা দিয়ে নতুন করে পড়া, তারপরই যাচাই — [[lockPending()]]
+            $approval = $this->lockPending($approval);
+            $this->assertCanDecide($approval, $user);
+
             ApprovalDecision::create([
                 'approval_id' => $approval->id,
                 'level' => $approval->current_level,
@@ -965,10 +968,17 @@ final class ApprovalEngine
                  * দরকারই হত না। ⚠️ তাই প্রশ্নটা পাল্টায়:
                  * যাঁদের হয়ে তিনি সই দিতে পারেন, তাঁদের কেউ কি
                  * এই স্তরে আছেন?
+                 *
+                 * ── ⛔ `true` ফেরানো নয়, কেবল দরজা খোলা — ২৯ সেপ্টেম্বর ২০২৬ ──
+                 * ⓘ আগে এখানে সরাসরি `true` ফিরত, আর নিচের তিন পাহারা
+                 * (নিজের অনুরোধ · কর্তৃত্বের সীমা · এই স্তরে আগেই সই)
+                 * ভারপ্রাপ্ত ও উপরে-পাঠানোর গন্তব্যের জন্য কখনো চলত না।
+                 * ⚠️ ফল: অনুরোধকারী নিজে ভার নিয়ে নিজের কাগজে সই দিতেন,
+                 * আর *"তিনজনের দুইজন"* স্তরে একজনই দুইবার সই দিতেন।
+                 * ⭐ এখন দুই পথ কেবল *"ইনি কি এই স্তরে সইকারী"* প্রশ্নের
+                 * উত্তর বদলায়; বাকি পাহারা সবার জন্য একই।
                  */
-                if ($this->delegatorAt($approval, $user) !== null) {
-                    return true;
-                }
+                $standsIn = $this->delegatorAt($approval, $user) !== null;
 
                 /*
                  * ⭐ কাগজটা উপরে পাঠানো হয়েছে, আর গন্তব্য ইনি।
@@ -987,8 +997,12 @@ final class ApprovalEngine
                  * গেল"* জানার জন্য — দখল নেওয়ার জন্য নয়। ⓘ তাই প্রশ্নটা
                  * ধাপকে করা হয়, আর রোলের সবাই সই দিতে পারেন।
                  */
-                return $approval->escalated_at !== null
-                    && $this->escalatedTo($approval, $user);
+                $standsIn = $standsIn
+                    || ($approval->escalated_at !== null && $this->escalatedTo($approval, $user));
+
+                if (! $standsIn) {
+                    return false;
+                }
             }
         }
 
@@ -1013,7 +1027,7 @@ final class ApprovalEngine
          * কত টাকা জানা নেই মানে সীমার নিচে কি না তাও জানা নেই, আর
          * সন্দেহে কড়া দিকটাই নিরাপদ।
          */
-        if ($approval->requested_by === $user->id
+        if ((int) $approval->requested_by === (int) $user->id
             && ! $this->withinSelfLimit($approval)
             && ! $this->isSuperAdmin($user)) {
             return false;
@@ -1326,6 +1340,27 @@ final class ApprovalEngine
     private function roleIds(User $user): array
     {
         return $this->roleCache[$user->id] ??= array_map('intval', $user->roles->modelKeys());
+    }
+
+    /**
+     * ⭐ সিদ্ধান্তের আগে সারিটায় তালা, আর অবস্থা নতুন করে পড়া — ২৯ সেপ্টেম্বর ২০২৬।
+     *
+     * ── ⛔ কেন ─────────────────────────────────────────────────────────
+     * ⓘ আগে যাচাইটা হত হাতে থাকা কপির উপর, লেনদেনের **বাইরে**, আর
+     * সারিতে কোনো তালা ছিল না। ⚠️ দুই পর্দা একই কাগজ খুলে রাখলে দুইটাই
+     * *"অপেক্ষমাণ"* দেখত: অনুমোদিত কাগজে দ্বিতীয় সই বসত, শেষ-সইয়ের খবর
+     * (পোস্টিং) দুইবার যেত, বা অনুমোদিত কাগজ *"বাতিল"* হয়ে যেত।
+     *
+     * ⓘ লেনদেনের ভিতরেই ডাকতে হয় — তালাটা লেনদেন শেষ হওয়া পর্যন্ত থাকে,
+     * তাই দ্বিতীয় জন অপেক্ষা করে, তারপর নতুন অবস্থা দেখে থামে।
+     */
+    private function lockPending(Approval $approval): Approval
+    {
+        $locked = Approval::query()->lockForUpdate()->findOrFail($approval->getKey());
+
+        $this->assertPending($locked);
+
+        return $locked;
     }
 
     private function assertPending(Approval $approval): void
