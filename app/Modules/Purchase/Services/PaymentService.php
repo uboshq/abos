@@ -190,6 +190,36 @@ final class PaymentService
 
         return DB::transaction(function () use ($payment) {
             /*
+             * ⛔ তালা আগে, তারপর আবার দেখা — ২৯ সেপ্টেম্বর ২০২৬।
+             *
+             * উপরের দুইটা পরীক্ষা হাতে ধরা মডেল দেখে, তালা ছাড়া। একই
+             * পরিশোধ দুই ট্যাবে খোলা থাকলে দুইজনের হাতেই সেটা "খসড়া" —
+             * চেকের পথে দ্বিতীয় ডাক আরেকটা চেক লিখত (আলাদা উৎস, তাই
+             * খাতার এক-কাগজ-এক-দাখিলা পাহারা চুপ), প্রদেয় দুইবার ডেবিট।
+             * আর একই বিলের দুইটা খসড়া একই মুহূর্তে একই বাকি দেখে দুইটাই
+             * পাশ করত।
+             *
+             * ⓘ তাই পরিশোধের সারি আর যে বিলগুলো সে শোধ করে সেগুলোয় তালা,
+             * তারপর খাতা থেকে নতুন করে পড়া অবস্থা আর বাকি।
+             */
+            $locked = Payment::query()->whereKey($payment->id)->lockForUpdate()->first();
+
+            if ($locked === null || $locked->status !== DocumentStatus::DRAFT) {
+                throw ValidationException::withMessages([
+                    'status' => __('purchase::validation.only_draft_confirms', ['no' => $payment->document_no]),
+                ]);
+            }
+
+            PurchaseBill::query()
+                ->whereKey($payment->lines()->pluck('purchase_bill_id')->filter()->unique()->all())
+                ->orderBy('id')
+                ->lockForUpdate()
+                ->get();
+
+            $payment->unsetRelation('lines');
+            $this->assertStillFits($payment);
+
+            /*
              * ── চেকে দিলে টাকাটা এখনো যায়নি ──────────────────────────
              *
              * ⛔ আগে এখানে শর্ত ছিল না: `instrument` যা-ই হোক, দাখিলা
