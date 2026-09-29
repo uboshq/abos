@@ -39,9 +39,13 @@ final class CustomerService
     /**
      * @param  array<string, mixed>  $data
      */
+    /** ⓘ শুরুর বাকি বসানোর চাবি — ছাঁচে কেবল হিসাবরক্ষকের ([[assertMayOpenABalance()]]) */
+    public const OPENING_KEY = 'customer.opening_balance';
+
     public function create(array $data): Customer
     {
         $this->assertBornWithoutALimit($data);
+        $this->assertMayOpenABalance($data);
         $this->assertBanglaNameIfRequired($data);
         $this->assertNotADuplicate($data);
         $this->assertOnlyOneDistributorPerPoint($data);
@@ -326,6 +330,36 @@ final class CustomerService
      *
      * @param  array<string, mixed>  $data
      */
+    /**
+     * ⛔ শুরুর বাকি খাতায় বসানো টাকার কাজ — নিজের চাবি লাগে (গভীর অডিট, ২৯ সেপ্টেম্বর ২০২৬)।
+     *
+     * আগে গ্রাহক বানানোর চাবিতেই (Field Sales ছাঁচেও আছে) যেকোনো অঙ্ক, যেকোনো চিহ্ন, যেকোনো তারিখে পাওনা বসত
+     * — কোনো সই ছাড়া; মালিকের নিয়ম যেকোনো টাকায় মানুষের সিদ্ধান্ত। ⭐ পাহারাটা এখানে, দরজায় নয় — ফর্ম,
+     * ইমপোর্ট ([[CustomerImporter]]) আর যেকোনো নতুন পথ একই জায়গা দিয়ে যায়। ⓘ শূন্য বা ফাঁকা অঙ্কে চাবি লাগে
+     * না (গ্রাহক বানানো আটকায় না, কেবল টাকাটা), আর মানুষ ছাড়া পথ (সিডার, কমান্ড) আগের মতো। ⛔ চুপচাপ শূন্য
+     * করা হয় না — তাহলে লোকটা ভাবতেন বসেছে; ফেরত দেওয়া হয় কারণসহ।
+     *
+     * @param  array<string, mixed>  $data
+     */
+    private function assertMayOpenABalance(array $data): void
+    {
+        $amount = trim((string) ($data['opening_balance'] ?? ''));
+
+        if ($amount === '' || ! is_numeric($amount) || bccomp($amount, '0', 4) === 0) {
+            return;
+        }
+
+        $user = auth()->user();
+
+        if ($user === null || $user->can(self::OPENING_KEY)) {
+            return;
+        }
+
+        throw ValidationException::withMessages([
+            'opening_balance' => __('customer::validation.opening_needs_key'),
+        ]);
+    }
+
     private function assertBornWithoutALimit(array $data): void
     {
         $limit = trim((string) ($data['credit_limit'] ?? ''));

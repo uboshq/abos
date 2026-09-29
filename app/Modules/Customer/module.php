@@ -138,6 +138,9 @@ return [
 
         // পার্টির আচরণ — পতাকা তোলা ও নামানো, এক দায়িত্ব
         'customer.conduct.manage',
+
+        // ⛔ শুরুর বাকি খাতায় বসানো — টাকার কাজ, নিজের চাবি (গভীর অডিট, ২৯ সেপ্টেম্বর ২০২৬; [[CustomerService]])
+        'customer.opening_balance',
     ],
 
     /*
@@ -183,6 +186,8 @@ return [
         'Accountant' => [
             'customer.view',
             'customer.report',
+            // ⓘ শুরুর বাকি হিসাবের কাজ — মাঠের বিক্রয়কর্মীর নয়
+            'customer.opening_balance',
         ],
         'Field Sales' => ['customer.view', 'customer.create'],
         'Manager' => [

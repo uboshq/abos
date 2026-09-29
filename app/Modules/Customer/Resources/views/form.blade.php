@@ -250,7 +250,8 @@
                                            :value="old('credit_days', $customer->credit_days)" numeric />
                     @endif
 
-                    @if ($isNew)
+                    {{-- ⛔ শুরুর বাকি টাকার কাজ — নিজের চাবি ছাড়া ঘরটাই নেই ([[CustomerService::assertMayOpenABalance()]]) --}}
+                    @if ($isNew && auth()->user()?->can(\App\Modules\Customer\Services\CustomerService::OPENING_KEY))
                         <x-ui.field name="opening_balance" type="number" step="0.01" inputmode="decimal"
                                            :label="__('customer::field.opening_balance')"
                                            :value="old('opening_balance', 0)" numeric />
@@ -264,7 +265,7 @@
 
                      ⚠️ উপরে থাকলে ওটা পুরো সারিটার ব্যাখ্যা বলে মনে হত,
                      অথচ কথাটা কেবল শেষ দুইটা ঘরের। --}}
-                @if ($isNew)
+                @if ($isNew && auth()->user()?->can(\App\Modules\Customer\Services\CustomerService::OPENING_KEY))
                     <p class="mt-3 max-w-(--spacing-prose-max) text-sm text-(--color-ink-muted)">
                         {{ __('customer::message.opening_note') }}
                     </p>

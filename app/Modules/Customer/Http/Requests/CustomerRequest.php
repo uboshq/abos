@@ -79,7 +79,11 @@ class CustomerRequest extends FormRequest
             'credit_limit' => ['nullable', 'numeric', 'min:0'],
             'credit_days' => ['nullable', 'integer', 'min:0', 'max:365'],
 
-            'opening_balance' => ['nullable', 'numeric'],
+            /*
+             * ⓘ ঋণাত্মক চলে — গ্রাহকের আগাম জমা (অগ্রিম) শুরুর বাকি হিসেবেই আসে। সীমাটা ঘরের মাপের ভিতরে
+             * (`decimal(18,4)`); বসানোর চাবি সেবা দেখে ([[CustomerService::assertMayOpenABalance()]])।
+             */
+            'opening_balance' => ['nullable', 'numeric', 'min:-999999999999', 'max:999999999999'],
             'opening_date' => ['nullable', 'date'],
 
             'branch_id' => [
