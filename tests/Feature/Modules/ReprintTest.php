@@ -40,9 +40,26 @@ class ReprintTest extends TestCase
 
         $company = Company::query()->where('code', 'TDEPOT')->firstOrFail();
         CompanyContext::set($company->id, $company->defaultBranch()?->id);
+
+        /*
+         * ⓘ এই পরীক্ষা চলতি নকশার কাগজ (`print.document`) মাপে। ⚠️ ২৯ সেপ্টেম্বর ২০২৬ থেকে
+         * বিলের ডিফল্ট ক্লাসিক ([[AClassicTableInvoiceCanBeChosenTest]]), তাই নকশাটা এখানে
+         * বেঁধে দেওয়া — নইলে পরীক্ষাটা মাপার কাগজই পেত না।
+         */
+        app(\App\Core\Services\SettingsService::class)->set('sales.print.design.invoice', 'standard');
         $this->actingAs(User::query()->where('email', 'owner@abos.test')->firstOrFail());
 
-        $this->invoice = app(SalesInvoiceService::class)->create(
+        /*
+         * ⓘ নিশ্চিত বিল — খসড়ার ছাপা নকশা অনুযায়ীই বন্ধ ([[SalesPrintController::invoice()]]-এর
+         * `isNotFinalYet`)। ⚠️ আগে এখানে খসড়াটাই ছাপা হত; পাহারাটা আসার পর পাতা ৩০২ দিত, আর
+         * `assertOk()`-এর বার্তা বানাতে গিয়ে "all() on array" — আসল কারণটা ঢাকা পড়ে যেত।
+         */
+        $this->invoice = app(SalesInvoiceService::class)->confirm($this->aDraft());
+    }
+
+    private function aDraft(): SalesInvoice
+    {
+        return app(SalesInvoiceService::class)->create(
             [
                 'customer_id' => Customer::query()->value('id'),
                 'warehouse_id' => Warehouse::query()->where('is_default', true)->value('id'),
@@ -191,23 +208,24 @@ class ReprintTest extends TestCase
     // ── খসড়া ─────────────────────────────────────────────────────
 
     /**
-     * খসড়ায় DUPLICATE বসে না — "চূড়ান্ত নয়" লেখাটাই থাকে।
+     * ⛔ খসড়া ছাপাই হয় না — তাই DUPLICATE-এর প্রশ্নও ওঠে না, আর গোনাও হয় না।
      *
-     * খসড়া দিয়ে কেউ টাকা চাইতে গেলে সেটা DUPLICATE-এর চেয়ে বড় ভুল,
-     * তাই ওই বার্তাটাই জেতে। আর খসড়া কতবার ছাপা হলো তা কারও জানার
-     * দরকার নেই।
+     * ⓘ আগে এখানে দাবি ছিল খসড়ার কাগজে "চূড়ান্ত নয়" লেখা থাকে। ⭐ মালিকের নিয়ম, ২৫
+     * সেপ্টেম্বর ২০২৬: *"খসড়া print hobe na"* ([[SalesPrintController::draft()]]) — কাউন্টারের
+     * কাগজ গ্রাহকের হাতে যায়, আর জলছাপ কেউ পড়ে না। ⚠️ তাই দাবিটা এখন উল্টো: দরজা ফিরিয়ে
+     * দেয়, আর ছাপার সারিতে কিছুই ওঠে না।
      */
-    public function test_a_draft_keeps_its_own_notice(): void
+    public function test_a_draft_is_never_printed_and_never_counted(): void
     {
-        $seen = [];
+        $draft = $this->aDraft();
 
-        View::composer('print.document', function ($view) use (&$seen) {
-            $seen = $view->getData();
-        });
+        $this->get(route('sales.print.draft', ['invoice' => $draft->id]))
+            ->assertRedirect()
+            ->assertSessionHasErrors('status');
 
-        $this->get(route('sales.print.draft', ['invoice' => $this->invoice->id]))->assertOk();
-        $this->get(route('sales.print.draft', ['invoice' => $this->invoice->id]))->assertOk();
-
-        $this->assertSame(__('core.print.draft_notice'), $seen['doc']->notice);
+        $this->assertSame(0, PrintJob::query()
+            ->where('document_type', 'sales_invoice')
+            ->where('document_id', $draft->id)
+            ->count());
     }
 }

@@ -16,6 +16,7 @@ use App\Core\Support\Money;
 use App\Http\Controllers\Controller;
 use App\Models\DocumentDelivery;
 use App\Modules\Accounts\Models\Account;
+use App\Modules\Accounts\Models\Voucher;
 use App\Modules\Inventory\Services\IssuedLots;
 use App\Modules\MasterData\Models\Location;
 use App\Modules\Sales\Models\Collection;
@@ -662,6 +663,40 @@ class SalesPrintController extends Controller implements HasMiddleware
      */
     private array $accountNames = [];
 
+    /**
+     * ⭐ জমার সারির "কোন পথে" — টাকাটা যে খাতে ঢুকল তার নাম ("নগদ", "বিকাশ", "ব্র্যাক ব্যাংক")।
+     *
+     * ── ⛔ লাইভে ঘরটা ফাঁকা ছিল, ২৯ সেপ্টেম্বর ২০২৬ ─────────────────────
+     * ⓘ মালিকের পাঠানো ছবি: RCV-0006, কাউন্টারের নগদ ৫০,০০০, "Payment Method" খালি। আগে
+     * কেবল `money_account_id` পড়া হত, আর নকশা অনুযায়ীই ঘরটা বসে কেবল ব্যাংক-রেফারেন্সওয়ালা
+     * ভাউচারে (TrxID-এর অনন্যতার জন্য, [[VoucherService]])। ⛔ কাউন্টারের ভাউচারে ওটা NULL,
+     * তাই প্রতিটা কাউন্টারের জমা ফাঁকা ছাপত।
+     *
+     * ⭐ তাই তিন ধাপ: `money_account_id` থাকলে সেই খাত · নাহলে রসিদের debit দিকের টাকার খাত
+     * (ভাউচারের নিজের সারি) · তাও না পেলে [[Voucher::wayInWords()]] — কাঁচা কোড (`BKASH`)
+     * কখনো নয়। ⚠️ সারি আর খাত আগেই তোলা থাকে ([[paymentsAgainst()]]-এ `with`), নাহলে
+     * এখানে প্রতিটা জমায় একটা করে কোয়েরি যেত।
+     */
+    private function methodOf(Voucher $voucher): string
+    {
+        $named = $this->accountName((int) ($voucher->money_account_id ?? 0));
+
+        if ($named !== '') {
+            return $named;
+        }
+
+        $money = $voucher->lines
+            ->filter(fn ($line) => bccomp((string) $line->debit, '0', 4) > 0)
+            ->map(fn ($line) => $line->account)
+            ->first(fn ($account) => $account instanceof Account && $account->isMoney());
+
+        if ($money !== null) {
+            return (string) $money->name();
+        }
+
+        return (string) ($voucher->wayInWords() ?? '');
+    }
+
     private function accountName(int $id): string
     {
         if ($id === 0) {
@@ -726,7 +761,7 @@ class SalesPrintController extends Controller implements HasMiddleware
             ];
         }
 
-        foreach ($invoice->receiptVouchers()->get() as $voucher) {
+        foreach ($invoice->receiptVouchers()->with('lines.account')->get() as $voucher) {
             $rows[] = [
                 'ref' => (string) $voucher->document_no,
                 'date' => $voucher->trx_date,
@@ -736,7 +771,7 @@ class SalesPrintController extends Controller implements HasMiddleware
                  * ("নগদ", "ব্র্যাক ব্যাংক")। ⚠️ যন্ত্রের নাম
                  * (`money_kind`) ছাপলে গ্রাহকের কাছে ওটা কিছুই বলত না।
                  */
-                'method' => $this->accountName((int) $voucher->money_account_id),
+                'method' => $this->methodOf($voucher),
                 'narration' => (string) ($voucher->narration ?? ''),
                 'amount' => (string) $voucher->amount,
             ];

@@ -48,6 +48,13 @@ class BatchOnPaperTest extends TestCase
 
         $company = Company::query()->where('code', 'TDEPOT')->firstOrFail();
         CompanyContext::set($company->id, $company->defaultBranch()?->id);
+
+        /*
+         * ⓘ এই পরীক্ষা চলতি নকশার কাগজ (`print.document`) মাপে। ⚠️ ২৯ সেপ্টেম্বর ২০২৬ থেকে
+         * বিলের ডিফল্ট ক্লাসিক ([[AClassicTableInvoiceCanBeChosenTest]]), তাই নকশাটা এখানে
+         * বেঁধে দেওয়া — নইলে পরীক্ষাটা মাপার কাগজই পেত না।
+         */
+        app(\App\Core\Services\SettingsService::class)->set('sales.print.design.invoice', 'standard');
         $this->actingAs(User::query()->where('email', 'owner@abos.test')->firstOrFail());
 
         $this->warehouse = Warehouse::query()->where('is_default', true)->firstOrFail();
@@ -164,7 +171,14 @@ class BatchOnPaperTest extends TestCase
 
         $challan = $this->sell('5');
 
-        $invoice = app(SalesInvoiceService::class)->create(
+        /*
+         * ⓘ নিশ্চিত বিল — খসড়ার ছাপা নকশা অনুযায়ীই বন্ধ ([[SalesPrintController::invoice()]]-এর
+         * `isNotFinalYet`)। ⚠️ আগে এখানে খসড়াটাই ছাপা হত; পাহারাটা আসার পর পাতা ৩০২ দিত, আর
+         * `assertOk()`-এর বার্তা বানাতে গিয়ে "all() on array" — আসল কারণটা ঢাকা পড়ে যেত।
+         */
+        $service = app(SalesInvoiceService::class);
+
+        $invoice = $service->confirm($service->create(
             [
                 'customer_id' => $this->customer->id,
                 'warehouse_id' => $this->warehouse->id,
@@ -176,7 +190,7 @@ class BatchOnPaperTest extends TestCase
                 'rate' => '100',
                 'delivery_challan_line_id' => $challan->lines->first()->id,
             ]],
-        );
+        ));
 
         $line = $this->printed('sales.print.invoice', $invoice)['doc']->lines[0];
 
