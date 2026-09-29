@@ -161,6 +161,35 @@ final class EveryExcuseWeGrantedIsCountedTest extends TestCase
      * বদলাতে হয়, আর সেটা একটা সিদ্ধান্ত যা কমিটে চোখে পড়ে।
      */
     /*
+     * ── ⚠️ ২৪০ → ২৪৬, ২৯ সেপ্টেম্বর ২০২৬ ─────────────────────────────
+     * ছয়টা সারি আগেই কমিট হয়ে গিয়েছিল, ছাদ না বদলে — তাই পাহারা লাল ছিল।
+     * ⓘ মাপা, git ref ধরে প্রতিটা তালিকা (23faba74-এ ২৩৭ → HEAD-এ ২৪৬):
+     *
+     *   +২  EveryRouteIsGuardedTest::OPEN_TO_THE_WORLD
+     *       `health` (bb08ab72) — বাইরের নজরদারি লগইন ছাড়াই ডাকে;
+     *       `api.app.version` (271d754d) — ফোন লগইনের আগেই জানতে চায় সে পুরনো কি না।
+     *       ব্যবসার ডেটা দেয় না কোনোটাই। সরানো যায় না।
+     *   +৬  EveryRouteIsGuardedTest::TOKEN_SYNC
+     *       `api.dashboard.today` (c83f34b3), `api.reports.index` (84e2fa6b) —
+     *       প্রতিটা ঘর/সারি নিজের চাবি দেখে; এক দরজা-চাবি বসালে একটা ঘরের
+     *       চাবিওয়ালাও আটকাতেন। সরানো যায় না।
+     *       `api.reports.show` (84e2fa6b), `api.reports.export`,
+     *       `api.documents.pdf`, `api.documents.papers` (8520617b) — পাহারা
+     *       আছে, পদ্ধতির ভেতরে `abort_unless`-এ, গার্ডের চেনা আকারে নয়।
+     *       ⏳ **চালুর পরে Gate/policy-তে সরানো হবে** (`authorize()`), তখন
+     *       এই চারটা তালিকা থেকে ওঠে আর ছাদ ৪ কমে। ⓘ ফাঁক নেই, মাপা: চারটা
+     *       দরজাতেই একই মানুষ চাবি ছাড়া ৪০৩, চাবিসহ ২০০
+     *       (TheReportsNeverReachedThePhoneTest, ThePhoneCouldNotPrintWhatItSawTest),
+     *       আর `abort_unless` লাইনটা সরালে চারটা দাবিই লাল।
+     *   +১  EveryRawQueryNamesItsCompanyTest::DECLARED
+     *       `InterCompanyService.php` (22b21c44) — কারণ ওখানেই লেখা।
+     *   −৩  EveryChangeableRowRemembersWhoChangedItTest::EXEMPT
+     *       (3179e390, 5d0aac7a, 70c7f3c9) — তিনটা মডেল নিরীক্ষায় ফিরেছে।
+     *
+     * ⚠️ নয়টা নতুন সারির আটটা abos-26/8f-এর নিজের, ঘোষণা ছাড়া বসানো —
+     * ratchet ঠিক এটাই ধরতে বানানো।
+     */
+    /*
      * ── ⚠️ ২৩৭ → ২৪০, ২৮ সেপ্টেম্বর ২০২৬ ─────────────────────────────
      * তিনটা সারি: `EveryReportStandsBehindTheBranchWallTest::SAME_FOR_EVERYONE`
      * — অফারের তালিকা আর নোটিশের দুইটা রিপোর্ট, যাদের সারি কোনো শাখার নয়,
@@ -197,7 +226,7 @@ final class EveryExcuseWeGrantedIsCountedTest extends TestCase
      * `EveryMasterNamesItsDuplicateGuard::EXEMPT` ১৫ ·
      * `FLOAT_IS_DELIBERATE` ১৫ · `STEPPING_ASIDE_FOR_NOW` ১৪।
      */
-    private const CEILING = 240;
+    private const CEILING = 246;
 
     /*
      * ── ⚠️ ২২২ → ২২৪, ২৩ সেপ্টেম্বর ২০২৬ ───────────────────────────
