@@ -33,20 +33,15 @@
         default => [__('accounts::field.debit'), ['debit', null], __('accounts::field.credit'), ['credit', null]],
     };
 
-    $method = function ($v) use ($isMoney) {
-        if ($v->instrument) {
-            return __('accounts::instrument.'.$v->instrument);
-        }
+    /* ⓘ ঘরটার পুরো নিয়ম এখন [[Voucher::wayInWords()]]-এ।
 
-        $kind = $v->lines->map(fn ($l) => $l->account)->first(fn ($a) => $isMoney($a))?->money_kind;
+       ⛔ আগে দুই জায়গায় দুইটা তালিকা ছিল — মডেলে কোডবদ্ধ মান,
+       আর এখানে টাকার খাতের ধরন। ⚠️ দুইটা তালিকা একদিন আলাদা হয়।
 
-        return match ($kind) {
-            \App\Modules\Accounts\Models\Account::CASH => __('accounts::instrument.cash'),
-            \App\Modules\Accounts\Models\Account::MFS => __('accounts::instrument.mfs'),
-            \App\Modules\Accounts\Models\Account::BANK => __('accounts::instrument.transfer'),
-            default => '—',
-        };
-    };
+       ⚠️ মন্তব্যটা PHP-র রীতিতে, কারণ এই ঘরটা একটা PHP ব্লকের
+       ভিতরে — ওখানে ব্লেডের মন্তব্য কাঁচা PHP হয়ে পাতাটা ৫০০ দেয়।
+       ⓘ একবার দিয়েছেও। */
+    $method = fn ($v) => $v->wayInWords() ?? '—';
 
     $flowColumns = array_values(array_filter([
         $type === \App\Modules\Accounts\Models\Voucher::CONTRA ? null : [

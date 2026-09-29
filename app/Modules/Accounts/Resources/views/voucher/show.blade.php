@@ -216,8 +216,7 @@
                 @foreach ([
                     'accounts::field.date' => \App\Core\Support\DateFormat::format($voucher->trx_date),
                     'core.company.branch' => $voucher->branch?->name(),
-                    'accounts::field.instrument' => $voucher->instrument
-                        ? __('accounts::instrument.' . $voucher->instrument) : null,
+                    'accounts::field.instrument' => $voucher->wayInWords(),
                     'accounts::field.instrument_no' => $voucher->instrument_no,
                     'accounts::field.instrument_date' => \App\Core\Support\DateFormat::format($voucher->instrument_date),
                     'core.table.narration' => $voucher->narration,

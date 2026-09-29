@@ -83,6 +83,92 @@ class Voucher extends Model implements Drillable, ShowsItselfForSigning
      */
     public const INSTRUMENTS = ['cash', 'mfs', 'transfer', 'cheque', 'card'];
 
+    /**
+     * ⭐ মাধ্যমের ঘরে যা-ই থাক, পর্দায় একটা শব্দ — কাঁচা চাবি কখনো নয়।
+     *
+     * ── ⛔ কলামটায় দুইটা অর্থ জমা আছে, আর সেটা ইচ্ছাকৃত ─────────
+     * ⓘ হাতে লেখা ভাউচারে কোডবদ্ধ তালিকা ([[self::INSTRUMENTS]], দরজায়
+     * `Rule::in`), আর **কাউন্টারের** ভাউচারে পেমেন্ট-পদ্ধতির **কোড**
+     * (`CASH`, `BKASH`)। লাইভে তাই ঘরটায় `accounts::instrument.CASH` ছাপা হত।
+     *
+     * ── ⚠️ আর কোডটার অর্থ হিসাব মডিউল জানে না, আর জানাও চলবে না ─
+     * ⛔ প্রথমে `PaymentMethod` দেখে কোড → ধরন খোঁজেছিলাম, আর
+     * [[BoundariesTest::test_no_module_reaches_into_one_it_did_not_declare]]
+     * সেটা ধরেছে। ⓘ Accounts-এর `depends_on` ইচ্ছাকৃতভাবে ফাঁকা — বাকি
+     * সবাই এর উপর দাঁড়ায়, তাই ঘোষণা দিয়ে পার পাওয়া হত স্তরগুলো
+     * উল্টে দেওয়া।
+     *
+     * ── ⭐ আর উত্তরটা হিসাবের নিজের কাছেই ছিল ────────────────
+     * ⓘ টাকাটা কোন খাতে গেল, ওটার ধরন ([[Account::money_kind]]) হিসাবের
+     * নিজস্ব। `BKASH` লেখা রসিদের টাকা একটা MFS খাতে বসে, তাই
+     * শব্দটা বের করতে অন্য মডিউলের দরকার নেই।
+     *
+     * ⚠️ এই নিয়মটা আগে তালিকার পর্দায় নিজের একটা `match()`-এ লেখা
+     * হত, আর এখানে আরেকটা হলে দুইটা তালিকা একদিন আলাদা হয়ে যেত।
+     * ⭐ তাই তালিকার ওই `match()` মুছে এখানে একটাই রাখা হলো।
+     *
+     * ── ⓘ তিন ধাপ, আর শেষ ধাপে কখনো চাবি নয় ────────────────
+     * কোডবদ্ধ মান হলে তার শব্দ · নাহলে টাকার খাতের ধরন · তাও না
+     * পেলে যা লেখা আছে তাই — তবে কখনো `accounts::instrument.` নয়।
+     */
+    public function wayInWords(): ?string
+    {
+        $mode = trim((string) $this->instrument);
+
+        if ($mode !== '') {
+            $key = 'accounts::instrument.'.$mode;
+            $words = __($key);
+
+            if (is_string($words) && $words !== $key) {
+                return $words;
+            }
+        }
+
+        $word = match ($this->wayKind()) {
+            Account::CASH => __('accounts::instrument.cash'),
+            Account::MFS => __('accounts::instrument.mfs'),
+            Account::BANK => __('accounts::instrument.transfer'),
+            default => null,
+        };
+
+        if (is_string($word) && $word !== '') {
+            return $word;
+        }
+
+        /* ⓘ শেষ আশ্রয় — চেনা গেল না, তবু মানুষের পড়ার মতো কিছু */
+        return $mode === '' ? null : $mode;
+    }
+
+    /**
+     * টাকাটা কোন ধরনের খাতে বসল — সারি থেকে, কোনো কোয়ারি ছাড়া।
+     *
+     * ⚠️ সম্পর্ক তোলা না থাকলে চুপ করে সরে যাওয়া হয়, আর সেটা
+     * ইচ্ছাকৃত: এখানে একটা `find()` বসালে পঞ্চাশ সারির তালিকায়
+     * পঞ্চাশটা কোয়ারি হত, আর স্থানীয়ভাবে `preventLazyLoading`
+     * পাতাটাই ভাঙত। ⓘ যে পর্দা এই শব্দটা চায় সে সারিগুলো আগেই
+     * তোলে ([[self::signingSheet()]]-এ `loadMissing`, তালিকায় `with`)।
+     */
+    private function wayKind(): ?string
+    {
+        if (! $this->relationLoaded('lines')) {
+            return null;
+        }
+
+        foreach ($this->lines as $line) {
+            if (! $line->relationLoaded('account')) {
+                return null;
+            }
+
+            $account = $line->account;
+
+            if ($account instanceof Account && $account->isMoney()) {
+                return $account->money_kind;
+            }
+        }
+
+        return null;
+    }
+
     public const TYPES = [self::RECEIPT, self::PAYMENT, self::EXPENSE, self::JOURNAL, self::CONTRA];
 
     /**
@@ -330,13 +416,14 @@ class Voucher extends Model implements Drillable, ShowsItselfForSigning
                 ->first(fn (?Account $a) => $a !== null && ($a->isBank() || $a->isMfs() || $a->isCash()))
             : Account::query()->find($this->money_account_id);
 
-        $way = null;
-
-        if (filled($this->instrument)) {
-            $key = 'accounts::instrument.'.$this->instrument;
-            // ⓘ কাউন্টার এই ঘরে পদ্ধতির কোড বসায় (`BKASH`) — অনুবাদ না থাকলে কোডটাই
-            $way = __($key) === $key ? (string) $this->instrument : __($key);
-        }
+        /*
+         * ⓘ কাউন্টার এই ঘরে পদ্ধতির **কোড** বসায় (`BKASH`), হাতে লেখা ভাউচার
+         * কোডবদ্ধ মান (`cash`) — সইয়ের কাগজে দুইটাই শব্দ হয়ে ওঠা দরকার।
+         *
+         * ⚠️ আগে অনুবাদ না মিললে কোডটাই ছাপা হত, তাই সইকারী `BKASH` পড়তেন।
+         * ⭐ এখন [[self::wayInWords()]] টাকার খাতের ধরন ধরেও খোঁজে।
+         */
+        $way = $this->wayInWords();
 
         $facts = array_filter([
             __('accounts::field.date') => DateFormat::format($this->trx_date),
