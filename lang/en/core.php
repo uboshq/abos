@@ -178,6 +178,12 @@ return [
         'location' => 'Location',
         'general' => 'General',
         'screens' => 'Screens',
+
+        /* ⓘ core puts these three on every module — the menu switches */
+        'module' => 'Module on/off',
+        'group' => 'Menu folds',
+        'item' => 'Menu rows',
+        'print_paper' => 'Paper size',
     ],
 
     'action' => [

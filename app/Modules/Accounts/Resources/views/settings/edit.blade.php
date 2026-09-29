@@ -31,7 +31,27 @@
 
         @foreach ($groups as $group => $settings)
             <section data-boxed class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
-                <h2 class="mb-3 font-semibold">{{ __('accounts::settings_group.' . $group) }}</h2>
+                {{--
+                    ⛔ মডিউলের নিজের নাম আগে, না থাকলে কোরের সাধারণটা।
+
+                    ⚠️ আগে এখানে কেবল মডিউলের চাবি দেখা হত, আর তাই পর্দায়
+                    `accounts::settings_group.module`, `.item`, `.group` — তিনটা
+                    কাঁচা চাবি ছাপা হত। ⓘ ওই তিনটা দল মডিউল নিজে লেখে না — কোর
+                    প্রতিটা মডিউলে বসায় ([[SettingsService::menuSwitches()]])।
+
+                    ⭐ কোরের নামস্থানটা আগে থেকেই ছিল, আর সিস্টেমের সেটিংস
+                    পাতাটা সেটাই দেখে — এই পাতাটা নিজের একটা কপি নিয়ে বসে ছিল,
+                    তাই বাগটা কেবল এখানেই টিকে গিয়েছিল।
+                --}}
+                @php
+                    $groupKey = 'accounts::settings_group.'.$group;
+                    $groupLabel = __($groupKey);
+
+                    if ($groupLabel === $groupKey) {
+                        $groupLabel = __('core.settings_group.'.$group);
+                    }
+                @endphp
+                <h2 class="mb-3 font-semibold">{{ $groupLabel }}</h2>
 
                 <div class="space-y-3">
                     @foreach ($settings as $setting)
