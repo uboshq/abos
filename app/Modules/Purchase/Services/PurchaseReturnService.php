@@ -164,6 +164,23 @@ final class PurchaseReturnService
         );
 
         return DB::transaction(function () use ($return) {
+            /*
+             * ⛔ তালা দিয়ে আবার দেখা — ২৯ সেপ্টেম্বর ২০২৬।
+             *
+             * উপরের পরীক্ষাটা হাতের কপি দেখে। পুরনো কপি (দুই ট্যাব, দুইবার
+             * চাপ) হাতে থাকলে সেটা তখনো "খসড়া" বলে, অথচ ফেরতটা ইতিমধ্যে
+             * খাতায় বসে গেছে — দ্বিতীয়বার মাল নড়তে যেত, আর থামত খাতার
+             * ইঞ্জিনের কাঁচা ত্রুটিতে। ⭐ তাই সারিটা তালা দিয়ে ডাটাবেজ থেকেই
+             * অবস্থাটা পড়া হয়।
+             */
+            $current = PurchaseReturn::query()->whereKey($return->id)->lockForUpdate()->value('status');
+
+            if ($current !== DocumentStatus::DRAFT) {
+                throw ValidationException::withMessages([
+                    'status' => __('purchase::validation.only_draft_confirms', ['no' => $return->document_no]),
+                ]);
+            }
+
             foreach ($return->lines as $line) {
                 /*
                  * ⛔ কার্টন না খুলেই ফেরত — ৫ সেপ্টেম্বর ২০২৬।
@@ -227,7 +244,16 @@ final class PurchaseReturnService
         $date = $onDate === null ? now() : Carbon::parse($onDate);
 
         return DB::transaction(function () use ($return, $reason, $date) {
-            if ($return->status === DocumentStatus::CONFIRMED) {
+            // ⛔ confirm()-এর মতোই — পুরনো কপি দিয়ে দ্বিতীয় বাতিল মাল আবার ফেরাত। ২৯ সেপ্টেম্বর ২০২৬।
+            $current = PurchaseReturn::query()->whereKey($return->id)->lockForUpdate()->value('status');
+
+            if ($current === DocumentStatus::CANCELLED) {
+                throw ValidationException::withMessages([
+                    'status' => __('purchase::validation.already_cancelled', ['no' => $return->document_no]),
+                ]);
+            }
+
+            if ($current === DocumentStatus::CONFIRMED) {
                 $return->loadMissing(['lines.product', 'warehouse']);
 
                 /*
@@ -268,6 +294,8 @@ final class PurchaseReturnService
                         unplaced: bcmul($net['unplaced'], '-1', 4),
                     );
                 }
+
+                $this->putCostBackInLayers($return, $date);
 
                 $this->posting->reverse(
                     sourceType: PurchaseReturn::drillSourceType(),
@@ -341,6 +369,50 @@ final class PurchaseReturnService
 
         $return->update(['cost_of_goods' => $cost]);
         $return->refresh();
+    }
+
+    /**
+     * ⛔ বাতিলে স্তরও ফেরে — ২৯ সেপ্টেম্বর ২০২৬।
+     *
+     * ── কী ভাঙা ছিল ─────────────────────────────────────────────────
+     * [[takeCostFromLayers()]] স্তর থেকে মাল কমিয়ে টান-সারি লেখে। বাতিলে
+     * মাল গুদামে ফিরত আর খাতা উল্টাত, কিন্তু স্তর যেমন ছিল তেমনই থাকত।
+     * ⓘ হাতে গোনা: ১০ কেনা, ৪ ফেরত, ফেরত বাতিল → তাকে ১০, খাতায় ৫০০,
+     * অথচ স্তরে ৬। ⚠️ পরের বিক্রয়ে ঐ ৪টার দাম স্তরে পাওয়া যেত না —
+     * অন্য চালানের দামে বেরোত, বা "স্তরে নেই" বলে থামত।
+     *
+     * ⭐ যে স্তর থেকে যতটা গিয়েছিল, সেখানেই ততটা ফেরে
+     * ([[CostLayerService::returnToLayers()]], বিক্রয় বিল বাতিলের একই পথ)।
+     * `returnedBy` কেবল এই কাগজের বাতিল-সারি গোনে।
+     */
+    private function putCostBackInLayers(PurchaseReturn $return, Carbon $date): void
+    {
+        $qtyOf = [];
+        $productOf = [];
+
+        foreach ($return->lines as $line) {
+            $id = (int) $line->product_id;
+            $qtyOf[$id] = bcadd($qtyOf[$id] ?? '0', (string) $line->qty, 4);
+            $productOf[$id] = $line->product;
+        }
+
+        foreach ($qtyOf as $id => $qty) {
+            if (bccomp($qty, '0', 4) <= 0) {
+                continue;
+            }
+
+            $this->costs->returnToLayers(
+                product: $productOf[$id],
+                qty: $qty,
+                issuedSourceType: PurchaseReturn::STOCK_SOURCE,
+                issuedSourceId: (int) $return->id,
+                sourceType: PurchaseReturn::STOCK_SOURCE.':cancel',
+                sourceId: (int) $return->id,
+                documentNo: $return->document_no,
+                date: $date,
+                returnedBy: [(int) $return->id],
+            );
+        }
     }
 
     private function postToLedger(PurchaseReturn $return): void
@@ -474,6 +546,30 @@ final class PurchaseReturnService
                 if ((int) $billLine->product_id !== (int) $product->id) {
                     throw ValidationException::withMessages([
                         'lines' => __('purchase::validation.line_product_mismatch'),
+                    ]);
+                }
+
+                /*
+                 * ⛔ লাইনটা কার বিলের — ২৯ সেপ্টেম্বর ২০২৬।
+                 *
+                 * আগে কেবল পণ্য মেলানো হত। ফলে অন্য সরবরাহকারীর বিলের,
+                 * বা খসড়া বিলের লাইন ধরে ফেরত লেখা যেত — দর আর "কত ফেরত
+                 * দেওয়া যায়" দুইটাই ভুল বিল থেকে আসত, আর দামের স্তরও টানা
+                 * হত অন্যের চালান থেকে। ⭐ তাই: খাতায় বসা বিল, এই ফেরতেরই
+                 * সরবরাহকারী, আর ফেরতে বিল বলা থাকলে ঠিক সেই বিল।
+                 */
+                $bill = $billLine->bill;
+
+                if ($bill === null || ! in_array($bill->status, DocumentStatus::POSTED, true)) {
+                    throw ValidationException::withMessages([
+                        'lines' => __('purchase::validation.bill_not_confirmed', ['no' => $bill?->document_no ?? '']),
+                    ]);
+                }
+
+                if ((int) $bill->supplier_id !== (int) $return->supplier_id
+                    || ($return->purchase_bill_id !== null && (int) $return->purchase_bill_id !== (int) $bill->id)) {
+                    throw ValidationException::withMessages([
+                        'lines' => __('purchase::validation.unknown_bill_line'),
                     ]);
                 }
             }
