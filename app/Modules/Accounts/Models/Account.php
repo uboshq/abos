@@ -252,10 +252,7 @@ class Account extends Model implements Drillable
     public function balanceOn(?string $upto = null, ?int $branchId = null): string
     {
         if ($this->is_group) {
-            return $this->children->reduce(
-                fn (string $carry, self $child) => bcadd($carry, $child->balanceOn($upto, $branchId), 4),
-                '0',
-            );
+            return $this->groupBalanceOn($upto, $branchId);
         }
 
         /*
@@ -292,6 +289,73 @@ class Account extends Model implements Drillable
         $net = bcsub((string) ($row->d ?? 0), (string) ($row->c ?? 0), 4);
 
         return $this->nature === self::CREDIT ? bcmul($net, '-1', 4) : $net;
+    }
+
+    /**
+     * ⭐ দলের জের — পুরো সাবট্রি, তবে গাছ যত গভীরই হোক দুইটা কোয়ারি।
+     *
+     * ── ⛔ কী ঘটত, ২৯ সেপ্টেম্বর ২০২৬ ───────────────────
+     * আগে `$this->children` ধরে নিচে নামা হত। ⓘ যে পর্দা আগে
+     * সব সন্তান তুলে রাখে ([[ChartOfAccountsController]]) তার কোনো অসুবিধা
+     * হত না — কিন্তু যে ডাকে `StandardChart::find('1100')?->balanceOn()`
+     * বলে ([[CfoFigures]], [[AccountsFacts]], [[MoneyCustodyController]]),
+     * তার কাছে সম্পর্কটা তোলা থাকত না।
+     *
+     * ⚠️ তাতে দুই জায়গায় দুই রকম ফল:
+     *   • স্থানীয়ভাবে `preventLazyLoading` চালু, তাই `/finance/cfo` ৫০০।
+     *   • লাইভে ওটা বন্ধ, তাই পাতা খোলে — কেবল খাত যত, কোয়ারিও তত।
+     * ⛔ অর্থাৎ লাইভে কোনো লক্ষণ থাকত না, শুধু পাতাটা ধীরে খুলত।
+     *
+     * ── ⭐ আর টাকার নিয়মটা এখানে এক বিন্দুও বদলায় নি ───────
+     * ⓘ চিহ্ন বসে আগের জায়গাতেই, পাতা-খাতের নিজের প্রকৃতি ধরে:
+     * পথটা পাতা-খাতগুলো খুঁজে বের করে, কাঁচা যোগফল **একবারে** তোলে
+     * ([[LedgerBalances::preload()]]), আর তারপর প্রতিটা খাতকে নিজের
+     * জের বলতে বলে — যা তখন কোনো কোয়ারি করে না।
+     * ⭐ অর্থাৎ উত্তরটা **নির্মাণগতভাবেই** হুবহু আগের মতো।
+     *
+     * ⚠️ সম্পর্কটা আগে থেকে তোলা থাকলে সেটাই ব্যবহার হয় — তাহলে
+     * বাড়তি কোয়ারিটাও লাগে না, আর ছকের পাতার দ্রুত পথটা অক্ষত থাকে।
+     */
+    private function groupBalanceOn(?string $upto, ?int $branchId): string
+    {
+        $family = $this->relationLoaded('children')
+            ? $this->gather(null)
+            : $this->gather($this->balancePool());
+
+        $leaves = $family->reject(fn (self $account) => (bool) $account->is_group);
+
+        app(LedgerBalances::class)->preload(
+            $leaves->map(fn (self $account) => (int) $account->getKey())->values()->all(),
+            $upto,
+            $branchId,
+        );
+
+        return $leaves->reduce(
+            fn (string $carry, self $leaf) => bcadd($carry, $leaf->balanceOn($upto, $branchId), 4),
+            '0',
+        );
+    }
+
+    /**
+     * কোম্পানির পুরো ছক এক কোয়ারিতে, বাবা ধরে সাজানো।
+     *
+     * ⓘ `company_id` হাতে লেখা হয় নি, আর সেটা ইচ্ছাকৃত:
+     * [[BelongsToCompany]] গ্লোবাল স্কোপ প্রতিটা কোয়ারিতে বসায়, আর ওই
+     * ফাইলেই লেখা আছে হাতে লিখলে একদিন কেউ লিখতে ভুলবে।
+     * ⭐ [[AGroupsBalanceWalkedTheWholeTreeTest]] দুই কোম্পানি বসিয়ে মাপে
+     * স্কোপটা সত্যিই ধরে কি না — মন্তব্য কোনো পাহারা নয়।
+     *
+     * ⚠️ দরকারি চারটা ঘরই তোলা হয়, আর `nature` তার মধ্যে — ওটা না
+     * থাকলে চিহ্নটা নেভানো যেত আর সংখ্যাটা উল্টো দিকে বসত।
+     *
+     * @return \Illuminate\Support\Collection<int|string, Collection<int, self>>
+     */
+    private function balancePool(): \Illuminate\Support\Collection
+    {
+        return static::query()
+            ->select(['id', 'parent_id', 'is_group', 'nature'])
+            ->get()
+            ->groupBy('parent_id');
     }
 
     /** এই খাতে কোনো এন্ট্রি বসেছে কি না — মোছার আগে দেখা হয়। */
