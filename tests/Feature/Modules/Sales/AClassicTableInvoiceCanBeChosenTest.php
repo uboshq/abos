@@ -79,45 +79,70 @@ final class AClassicTableInvoiceCanBeChosenTest extends TestCase
         Customer::query()->firstOrFail()->forceFill(['credit_limit' => '0'])->save();
     }
 
-    public function test_the_standard_design_stays_the_default(): void
+    /**
+     * ⭐ সেটিং না বসানো কোম্পানি ক্লাসিক পায় — মালিক, ২৯ সেপ্টেম্বর ২০২৬: *"by defolt kore daw"*।
+     */
+    public function test_a_company_with_no_setting_prints_the_classic_invoice(): void
     {
         $seen = $this->printed($this->anInvoice());
 
-        $this->assertSame(self::STANDARD, $seen['view'],
-            'সেটিং না ছুঁয়েই বিলের নকশা বদলে গেছে — চলতি কাগজ নিজে থেকে বদলানোর কথা নয়।');
+        $this->assertSame(self::CLASSIC, $seen['view'],
+            'সেটিং না থাকা কোম্পানিতে চলতি নকশা ছাপা হলো — ডিফল্ট এখন ক্লাসিক।');
     }
 
-    public function test_the_classic_design_prints_the_real_bill_when_chosen(): void
+    public function test_the_standard_design_can_still_be_chosen(): void
     {
-        $this->choose('classic_table');
+        $this->choose('standard');
+
+        $this->assertSame(self::STANDARD, $this->printed($this->anInvoice())['view'],
+            'চলতি নকশা বাছার পরেও ক্লাসিক ছাপা হলো — মালিকের বাছাই মানা হয়নি।');
+    }
+
+    /**
+     * ⭐ নমুনার হুবহু — ইংরেজি ঘরের নাম, টাকার সারির পুরো ক্রম, কথায় লাখ-কোটি।
+     *
+     * ⓘ ব্যবহারকারীর ভাষা বাংলা হলেও কাগজ নমুনার ইংরেজিতে — তাই দাবি বাংলা ভাষাতেই চালানো।
+     */
+    public function test_the_classic_invoice_reads_like_the_owners_sample(): void
+    {
+        app()->setLocale('bn');
         $invoice = $this->anInvoice();
+        $product = Product::query()->firstOrFail();
 
-        $seen = $this->printed($invoice);
-
-        $this->assertSame(self::CLASSIC, $seen['view'], 'ক্লাসিক বাছার পরেও চলতি নকশা ছাপা হলো।');
-
-        $html = $seen['html'];
+        $html = $this->printed($invoice)['html'];
 
         foreach ([
-            __('sales::print.classic.heading'),
-            __('sales::print.classic.bill_to'),
-            __('sales::print.classic.transport'),
-            $invoice->document_no,
-            $invoice->customer->name(),
-            self::AMOUNT,
-            __('sales::print.classic.net_payable'),
-            __('sales::print.classic.total_due'),
-            __('sales::print.classic.received_by'),
-            __('sales::print.classic.prepared_by'),
-            __('sales::print.classic.approved_by'),
-            __('sales::print.classic.footnote'),
-            $this->user->name,
+            'INVOICE', 'Bill To,', 'M/S', 'Point:', 'Contact No:',
+            'Transportation Details:', 'Transport Name:', 'Driver Mobile#:', 'Vehicle Type &amp; Number:', 'Delivery Date:',
+            'INVOICE DATE:', 'INVOICE ID:', 'Order No:', 'INVOICE TYPE:', 'Created by:',
+            'SL#', 'Item Name', 'Rate', 'QTY', 'Free', 'Total QTY', 'Amount', 'data-grand-row',
+            'Total Item:', 'Delivery Qty.', 'Invoice Amount In Word:',
+            'Grand Total', 'Discount', 'Rounding', 'Net Payable Amount', 'Paid Amount', 'Invoice Due',
+            '(+) Previous Due', 'Outstanding Amount',
+            'Paid - Received Into Accounts', 'Transaction ID', 'Transaction Date', 'Payment Method',
+            'Printing Time:',
+            $invoice->document_no, self::AMOUNT,
         ] as $expected) {
-            $this->assertStringContainsString(e($expected), $html, "ক্লাসিক কাগজে নেই: {$expected}");
+            $this->assertStringContainsString($expected, $html, "নমুনার লেখা কাগজে নেই: {$expected}");
         }
 
-        $this->assertStringNotContainsString(e(__('core.print.duplicate_notice')), $html,
-            'প্রথম ছাপাতেই DUPLICATE বসেছে।');
+        // ⓘ ১২,৩১,৮৭,৫০০ — লাখ-কোটির ইংরেজি, বড় হাতে, "(BDT)"
+        $this->assertStringContainsString('Twelve Crore Thirty One Lac Eighty Seven Thousand Five Hundred (BDT)', $html,
+            'কথায় অঙ্কটা নমুনার ধাঁচে নয়।');
+
+        // ⛔ পণ্যের নামের ঘরে কেবল নাম — কোড নয়
+        $this->assertStringNotContainsString(e((string) $product->code).' - ', $html, 'পণ্যের নামের সাথে কোড জুড়ে গেছে।');
+        $this->assertStringContainsString(e($product->name('en')), $html);
+
+        // ⓘ বিলের ধরন কখনো ফাঁকা নয় — শর্ত বা বিলের মেয়াদ থেকে
+        $this->assertMatchesRegularExpression('/INVOICE TYPE:\s*(CASH|CREDIT)/', $html, 'INVOICE TYPE ফাঁকা ছাপা হলো।');
+
+        // ⓘ সইয়ের সারি নমুনার মতো বাংলায়
+        $this->assertStringContainsString('গ্রহণকারী/পরিবহক', $html);
+        $this->assertStringContainsString('প্রস্তুতকারী', $html);
+
+        // ⓘ প্রথম ছাপায় DUPLICATE নেই
+        $this->assertStringNotContainsString('data-duplicate', $html, 'প্রথম ছাপাতেই DUPLICATE বসেছে।');
     }
 
     /**
@@ -166,16 +191,90 @@ final class AClassicTableInvoiceCanBeChosenTest extends TestCase
             '৮০মিমি রোলে তিন কলামের ক্লাসিক কাগজ গেছে — রোলে ওটা ধরে না।');
     }
 
+    /**
+     * ⭐ দ্বিতীয় কপিতে DUPLICATE — তবে নমুনার মতো কোণে ছোট ছাপ, বড় বাক্স নয়।
+     */
     public function test_the_second_print_still_says_duplicate(): void
     {
-        $this->choose('classic_table');
         $invoice = $this->anInvoice();
 
         $this->printed($invoice);
         $html = $this->printed($invoice)['html'];
 
-        $this->assertStringContainsString(e(__('core.print.duplicate_notice')), $html,
+        $this->assertStringContainsString('data-duplicate', $html,
             'ক্লাসিক নকশায় দ্বিতীয় কপিতে DUPLICATE নেই — দুইটা একরকম কাগজ ঘুরবে।');
+        $this->assertStringNotContainsString('class="notice"', $html,
+            'DUPLICATE আবার বড় বাক্সে — মালিক কোণে ছোট ছাপ চেয়েছেন।');
+    }
+
+    /**
+     * ⭐ বাতিল বিল ক্লাসিক নকশাতেও বড় করে "বাতিল" বলে — DUPLICATE-এর মতো ছোট ছাপ নয়।
+     *
+     * ⛔ বাতিল কাগজ দেখিয়ে মাল বা টাকা চাওয়া যেত ([[ACancelledPaperLooksValidTest]] চলতি নকশা মাপে)।
+     */
+    public function test_a_cancelled_invoice_says_so_in_a_box(): void
+    {
+        $invoice = app(SalesInvoiceService::class)->cancel($this->anInvoice(qty: '1', rate: '100.00'), 'ভুল গ্রাহক');
+
+        $html = $this->printed($invoice)['html'];
+
+        $this->assertStringContainsString('class="notice"', $html, 'বাতিল বিলের গায়ে সতর্কবার্তার বাক্স নেই।');
+        $this->assertStringContainsString(e(__('core.print.cancelled_notice')), $html);
+    }
+
+    /**
+     * ⭐ "Payment Method" ফাঁকা নয় — লাইভে ফাঁকা ছাপা হচ্ছিল (২৯ সেপ্টেম্বর ২০২৬)।
+     *
+     * ⓘ ঠিক সেই অবস্থা বানানো: জমার ভাউচারে `money_account_id` খালি, পদ্ধতিও নেই।
+     * ⭐ তখনো পথটা ভাউচারের নিজের নগদ/ব্যাংক সারি থেকে আসে।
+     */
+    public function test_a_deposit_prints_how_the_money_came(): void
+    {
+        $invoice = $this->anInvoice(qty: '1', rate: '5000.00');
+        $voucher = $this->aReceiptVoucherFor($invoice, '2000');
+
+        $voucher->forceFill(['money_account_id' => null, 'instrument' => null])->saveQuietly();
+
+        $html = $this->printed($invoice)['html'];
+
+        $this->assertMatchesRegularExpression('/data-method>\s*[^<\s][^<]*</u', $html,
+            'Payment Method ঘর ফাঁকা ছাপা হলো।');
+        $this->assertStringContainsString(e($this->cashAccount()->name()), $html);
+    }
+
+    /**
+     * ⭐ ছাপা PDF-এর নিজের লেখা — HTML নয়, কাগজ (`pdftotext` থাকলে)।
+     *
+     * ⚠️ mPDF লেখা চাপা দেয়, তাই PDF-এর বাইট খুঁজে কিছু পাওয়া যায় না; `pdftotext` না থাকলে
+     * দাবিটা কারণ বলে থামে — ভান করে সবুজ হয় না।
+     */
+    public function test_the_printed_pdf_carries_the_sample_words(): void
+    {
+        $bin = trim((string) shell_exec(PHP_OS_FAMILY === 'Windows' ? 'where pdftotext 2>NUL' : 'command -v pdftotext 2>/dev/null'));
+        $bin = strtok($bin, "\r\n") ?: '';
+
+        $invoice = $this->anInvoice();
+        $pdf = $this->actingAs($this->user)->get(route('sales.print.invoice', $invoice))->assertOk()->getContent();
+
+        $this->assertStringStartsWith('%PDF', (string) $pdf, 'ছাপার পথ PDF দেয়নি।');
+
+        /*
+         * ⓘ `pdftotext` না থাকলে লেখা পড়া যায় না (mPDF অক্ষর চাপা দেয়) — তখন কেবল এটুকু:
+         * সত্যিকারের একটা PDF বেরিয়েছে। ⚠️ "এড়িয়ে যাওয়া দাবি" বাড়ানো হয়নি
+         * ([[TheNumberOfSkippedClaimsOnlyGoesDown]]); লেখার বাকি দাবি HTML মাপে।
+         */
+        if ($bin === '') {
+            return;
+        }
+
+        $file = tempnam(sys_get_temp_dir(), 'inv').'.pdf';
+        file_put_contents($file, $pdf);
+        $text = (string) shell_exec(escapeshellarg($bin).' -layout '.escapeshellarg($file).' -');
+        @unlink($file);
+
+        foreach (['INVOICE', 'Bill To,', 'Net Payable Amount', 'Outstanding Amount', 'Paid - Received Into Accounts', '(BDT)', $invoice->document_no] as $expected) {
+            $this->assertStringContainsString($expected, $text, "ছাপা PDF-এ নেই: {$expected}");
+        }
     }
 
     public function test_a_business_can_write_its_own_red_line(): void
@@ -225,6 +324,34 @@ final class AClassicTableInvoiceCanBeChosenTest extends TestCase
     }
 
     // ── যন্ত্রপাতি ─────────────────────────────────────────────────────
+
+    private function aReceiptVoucherFor(SalesInvoice $invoice, string $amount): \App\Modules\Accounts\Models\Voucher
+    {
+        $service = app(\App\Modules\Accounts\Services\VoucherService::class);
+        $receivable = \App\Modules\Accounts\Models\Account::query()->postable()
+            ->where('code', \App\Modules\Accounts\Services\StandardChart::RECEIVABLE)->firstOrFail();
+
+        $voucher = $service->create(
+            [
+                'type' => \App\Modules\Accounts\Models\Voucher::RECEIPT,
+                'trx_date' => now()->toDateString(),
+                'party_type' => 'customer',
+                'party_id' => $invoice->customer_id,
+                'narration' => 'Deposit against the bill',
+                'against_type' => SalesInvoice::drillSourceType(),
+                'against_id' => $invoice->id,
+            ],
+            $service->twoLineEntry(\App\Modules\Accounts\Models\Voucher::RECEIPT, (int) $receivable->id, (int) $this->cashAccount()->id, $amount, 'Deposit'),
+        );
+
+        return $service->post($voucher);
+    }
+
+    private function cashAccount(): \App\Modules\Accounts\Models\Account
+    {
+        return \App\Modules\Accounts\Models\Account::query()->postable()
+            ->ofMoneyKind(\App\Modules\Accounts\Models\Account::CASH)->orderBy('id')->firstOrFail();
+    }
 
     private function choose(string $design): void
     {

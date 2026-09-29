@@ -107,6 +107,13 @@ final class ThePhoneCouldNotPrintWhatItSawTest extends TestCase
         $this->other = Company::query()->where('code', 'FMART')->firstOrFail();
         CompanyContext::set($this->company->id, $this->company->defaultBranch()?->id);
 
+        /*
+         * ⓘ এই পরীক্ষা চলতি নকশার কাগজ (`print.document`) মাপে। ⚠️ ২৯ সেপ্টেম্বর ২০২৬ থেকে
+         * বিলের ডিফল্ট ক্লাসিক ([[AClassicTableInvoiceCanBeChosenTest]]), তাই নকশাটা এখানে
+         * বেঁধে দেওয়া — নইলে পরীক্ষাটা মাপার কাগজই পেত না।
+         */
+        app(\App\Core\Services\SettingsService::class)->set('sales.print.design.invoice', 'standard');
+
         $this->user = User::factory()->create(['current_company_id' => $this->company->id, 'is_active' => true]);
         $this->user->companies()->attach($this->company->id, ['is_active' => true]);
 
@@ -217,8 +224,12 @@ final class ThePhoneCouldNotPrintWhatItSawTest extends TestCase
 
         $papers = $this->phone($this->papersUrl('PurchaseReceipt', $receipt->public_id))->assertOk()->json();
 
-        /* ⓘ ওয়েবের ছাপার বোতাম (x-ui.print-menu) প্রতিটা কাগজে ঠিক এই তালিকা দেখায় */
-        $this->assertSame([PaperSize::A4, PaperSize::THERMAL_80, PaperSize::THERMAL_58], $papers);
+        /*
+         * ⓘ ওয়েবের ছাপার বোতাম (x-ui.print-menu) প্রতিটা কাগজে ঠিক এই তালিকা দেখায়।
+         * ⭐ A5 যোগ হয়েছে ২৮ সেপ্টেম্বর ২০২৬ (গেট পাসের আধা পাতা, 05c1f4a9) — ওয়েবে চেনা মাপ,
+         * তাই ফোনেও।
+         */
+        $this->assertSame([PaperSize::A4, PaperSize::A5, PaperSize::THERMAL_80, PaperSize::THERMAL_58], $papers);
 
         foreach ($papers as $paper) {
             $bytes = $this->phone($this->pdfUrl('PurchaseReceipt', $receipt->public_id, ['paper' => $paper]))
@@ -388,11 +399,12 @@ final class ThePhoneCouldNotPrintWhatItSawTest extends TestCase
     {
         $invoice = $this->invoice();
 
-        $this->phone($this->pdfUrl('SalesInvoice', $invoice->public_id, ['paper' => 'a5']))->assertForbidden();
+        $this->phone($this->pdfUrl('SalesInvoice', $invoice->public_id, ['paper' => 'a3']))->assertForbidden();
 
         $this->grant('sales.invoice.view');
 
-        foreach (['a5', '100mm', 'A4 '] as $paper) {
+        /* ⚠️ `a5` এখন চেনা মাপ (05c1f4a9) — অচেনার নমুনা তাই `a3` */
+        foreach (['a3', '100mm', 'A4 '] as $paper) {
             $this->phone($this->pdfUrl('SalesInvoice', $invoice->public_id, ['paper' => $paper]))
                 ->assertUnprocessable()
                 ->assertJsonValidationErrors('paper');

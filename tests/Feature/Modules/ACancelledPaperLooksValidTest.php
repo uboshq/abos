@@ -51,6 +51,13 @@ class ACancelledPaperLooksValidTest extends TestCase
         $company = Company::query()->where('code', 'TDEPOT')->firstOrFail();
         CompanyContext::set($company->id, $company->defaultBranch()?->id);
 
+        /*
+         * ⓘ এই পরীক্ষা চলতি নকশার কাগজ (`print.document`) মাপে। ⚠️ ২৯ সেপ্টেম্বর ২০২৬ থেকে
+         * বিলের ডিফল্ট ক্লাসিক ([[AClassicTableInvoiceCanBeChosenTest]]), তাই নকশাটা এখানে
+         * বেঁধে দেওয়া — নইলে পরীক্ষাটা মাপার কাগজই পেত না।
+         */
+        app(\App\Core\Services\SettingsService::class)->set('sales.print.design.invoice', 'standard');
+
         $this->actingAs(User::query()->where('email', 'owner@abos.test')->firstOrFail());
     }
 
@@ -223,6 +230,9 @@ class ACancelledPaperLooksValidTest extends TestCase
             'inventory.label.print' => 'পণ্যের লেবেল — কোনো ডকুমেন্ট নয়',
             'sales.print_queue.index' => 'কিউয়ের পর্দা, কাগজ নয়',
             'sales.print_queue.settle' => 'কিউয়ের সারি মেটানোর কাজ, কাগজ নয়',
+            'system_admin.print_control' => 'ছাপার সেটিংসের পর্দা, কাগজ নয়',
+            'system_admin.print_control.update' => 'ছাপার সেটিংস সংরক্ষণ, কাগজ নয়',
+            'system_admin.print_control.preview' => 'বানানো নমুনা (PrintSample), সংরক্ষিত কাগজ নয় — বাতিল হতে পারে না',
         ];
 
         $unaccounted = collect(app('router')->getRoutes()->getRoutes())

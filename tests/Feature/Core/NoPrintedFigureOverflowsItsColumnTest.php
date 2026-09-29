@@ -110,7 +110,21 @@ final class NoPrintedFigureOverflowsItsColumnTest extends TestCase
         CompanyContext::set($company->id, $company->defaultBranch()?->id);
         $this->actingAs($this->user);
 
+        /*
+         * ⓘ এই পরীক্ষা চলতি নকশার কাগজ (`print.document`) মাপে। ⚠️ ২৯ সেপ্টেম্বর ২০২৬ থেকে
+         * বিলের ডিফল্ট ক্লাসিক ([[AClassicTableInvoiceCanBeChosenTest]]), তাই নকশাটা এখানে
+         * বেঁধে দেওয়া — নইলে পরীক্ষাটা মাপার কাগজই পেত না।
+         */
+        app(\App\Core\Services\SettingsService::class)->set('sales.print.design.invoice', 'standard');
+
         $this->customer = Customer::query()->firstOrFail();
+
+        /*
+         * ⓘ বাকির সীমা শূন্য = সীমাহীন ([[Customer]])। ⚠️ ডেমো গ্রাহকের সীমা ৫০ হাজার, আর
+         * এখানকার ১২ কোটির বিল বাকির দেয়ালে আটকাত — এই পাহারা ছাপার ঘর মাপে, দেয়াল নয়।
+         * ⛔ দেয়াল ঢিলা করা হয়নি; কেবল এই পরীক্ষার গ্রাহকের সীমা।
+         */
+        $this->customer->forceFill(['credit_limit' => '0'])->save();
         $this->warehouse = Warehouse::query()->where('is_default', true)->firstOrFail();
         $this->product = Product::query()->firstOrFail();
     }

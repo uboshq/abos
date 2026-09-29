@@ -52,6 +52,13 @@ class PackedDocumentTest extends TestCase
 
         $company = Company::query()->where('code', 'TDEPOT')->firstOrFail();
         CompanyContext::set($company->id, $company->defaultBranch()?->id);
+
+        /*
+         * ⓘ এই পরীক্ষা চলতি নকশার কাগজ (`print.document`) মাপে। ⚠️ ২৯ সেপ্টেম্বর ২০২৬ থেকে
+         * বিলের ডিফল্ট ক্লাসিক ([[AClassicTableInvoiceCanBeChosenTest]]), তাই নকশাটা এখানে
+         * বেঁধে দেওয়া — নইলে পরীক্ষাটা মাপার কাগজই পেত না।
+         */
+        app(\App\Core\Services\SettingsService::class)->set('sales.print.design.invoice', 'standard');
         $this->actingAs(User::query()->where('email', 'owner@abos.test')->firstOrFail());
 
         $this->piece = Unit::query()->where('code', 'PCS')->firstOrFail();

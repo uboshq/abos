@@ -248,19 +248,48 @@ class SalesPrintController extends Controller implements HasMiddleware
             (string) $challan->vehiclePlate(),
         ])));
 
+        /*
+         * ⓘ CASH / CREDIT — চালানে লেখা শর্ত থেকে; শর্ত না থাকলে বিলের নিজের মেয়াদ থেকে
+         * (মেয়াদ বিলের তারিখের পরে → CREDIT, নাহলে CASH)। ⚠️ দুইটাই কাগজের নিজের কথা —
+         * বকেয়া দেখে আন্দাজ নয়: পরে শোধ হওয়া বাকির বিল তখনো CREDIT থাকে।
+         */
         $term = (string) ($challan?->payment_term ?? '');
-        $type = match (true) {
-            in_array($term, ['cash', 'cod'], true) => __('sales::print.classic.cash'),
-            $term !== '' => __('sales::print.classic.credit'),
-            default => '',
+        $credit = match (true) {
+            in_array($term, ['cash', 'cod'], true) => false,
+            $term !== '' => true,
+            default => $invoice->due_on !== null && $invoice->trx_date !== null
+                && $invoice->due_on->greaterThan($invoice->trx_date),
         };
+        $type = __('sales::print.classic.'.($credit ? 'credit' : 'cash'), [], 'en');
+
+        /*
+         * ⭐ টাকার সারি — মালিকের নমুনার ক্রমে, সবসময় একই সারি (২৯ সেপ্টেম্বর ২০২৬)।
+         * ⓘ কাঁচা অঙ্ক থেকে, `$doc->totals`-এর লেখা থেকে নয় — নমুনায় "Discount" আর
+         * "Rounding" শূন্য হলেও থাকে, আর চলতি নকশা শূন্য সারি বাদ দেয়। ⚠️ আগের বকেয়া আর
+         * পরিশোধ একই হিসাবের ([[earlierDue()]], `collectedAmount()`) — দুই নকশা এক কথা বলে।
+         */
+        $paid = $invoice->collectedAmount();
+        $due = $invoice->dueAmount();
+        $earlier = $this->earlierDue($invoice, $due);
+
+        $sums = [
+            'grand_total' => (string) $invoice->subtotal,
+            'discount' => bcadd((string) ($invoice->discount ?? '0'), (string) ($invoice->bill_discount ?? '0'), 4),
+            'vat' => (string) ($invoice->tax ?? '0'),
+            'rounding' => (string) ($invoice->rounding_amount ?? '0'),
+            'net_payable' => (string) $invoice->total,
+            'paid' => $paid,
+            'invoice_due' => $due,
+            'previous_due' => $earlier,
+            'outstanding' => bcadd($earlier, $due, 4),
+        ];
 
         return [
             'bill_to' => [
-                'name' => (string) ($customer?->name() ?? ''),
-                'point' => (string) ($point?->name() ?? ''),
+                'name' => (string) ($customer?->name('en') ?? ''),
+                'point' => (string) ($point?->name('en') ?? ''),
                 'phone' => (string) ($customer?->phone ?? ''),
-                'address' => (string) ($customer?->address() ?? ''),
+                'address' => (string) ($customer?->address('en') ?? ''),
             ],
             'transport' => [
                 'carrier' => (string) ($challan?->carrier_name ?? ''),
@@ -279,10 +308,111 @@ class SalesPrintController extends Controller implements HasMiddleware
             ],
             'total_items' => (string) $invoice->lines->count(),
             'total_delivery' => $this->qty($invoice->lines->reduce(
-                fn (string $sum, $line) => bcadd($sum, (string) $line->qty, 4),
+                fn (string $sum, $line) => bcadd($sum, (string) $line->packedQty('qty'), 4),
                 '0',
             )),
+            'items' => $this->classicItems($invoice),
+            'sums' => array_map(fn (string $v) => $this->money($v), $sums),
+            'words' => $this->sampleWords((string) $invoice->total),
         ];
+    }
+
+    /**
+     * ⭐ নমুনার পণ্যের সারি — মালিকের দাগানো ক্রমে: দর · পরিমাণ · ফ্রি · মোট পরিমাণ · টাকা।
+     *
+     * ⓘ চলতি নকশার সারি ([[productLines()]]) কোড আর লট জুড়ে দেয় — নমুনায় ওগুলো নেই
+     * (মালিক: "100% same")। ⚠️ একক লেখা হয় এককের কোড থেকে (CTN → Ctn), নমুনার মতো;
+     * কোড না থাকলে ইংরেজি নাম।
+     *
+     * ── ⚠️ ফ্রি কোন এককে ─────────────────────────────────────────────
+     * বিক্রির পরিমাণ লেখা থাকে প্যাকে ("10 Ctn"), কিন্তু ফ্রি জমা থাকে ভিত্তি এককে
+     * (পিস)। ⛔ দুইটা সরাসরি যোগ করলে "10 Ctn + 24 পিস = 34" — মিথ্যা অঙ্ক। ⭐ তাই ফ্রি-কে
+     * সারির নিজের অনুপাতে প্যাকে নামানো হয় (প্রবেশের পরিমাণ ÷ ভিত্তি পরিমাণ), তারপর যোগ।
+     *
+     * @return array{rows: list<array{name: string, rate: string, qty: string, free: string, total_qty: string, amount: string}>, totals: array{qty: string, free: string, total_qty: string, amount: string}}
+     */
+    private function classicItems(SalesInvoice $invoice): array
+    {
+        $invoice->loadMissing(['lines.product.unit', 'lines.enteredUnit', 'lines.challanLine']);
+
+        $rows = [];
+        $sum = ['qty' => [], 'free' => [], 'total_qty' => []];
+        $amount = '0';
+
+        foreach ($invoice->lines->values() as $line) {
+            $unit = $line->wasEnteredInAPack() ? $line->enteredUnit : $line->product?->unit;
+            $short = filled($unit?->code) ? ucfirst(strtolower((string) $unit->code)) : (string) ($unit?->name('en') ?? '');
+
+            $qty = $line->packedQty('qty');
+
+            $freeBase = (string) ($line->free_qty ?? $line->challanLine?->free_qty ?? '0');
+            $free = $line->wasEnteredInAPack() && bccomp((string) $line->qty, '0', 6) !== 0
+                ? bcdiv(bcmul($freeBase, (string) $line->entered_qty, 8), (string) $line->qty, 4)
+                : $freeBase;
+
+            $total = bcadd($qty, $free, 4);
+
+            foreach (['qty' => $qty, 'free' => $free, 'total_qty' => $total] as $key => $value) {
+                $sum[$key][$short] = bcadd($sum[$key][$short] ?? '0', $value, 4);
+            }
+
+            /*
+             * ⓘ সারির টাকা = পরিমাণ × দর, ছাড়ের আগে — নমুনার মতো ছাড় বসে নিচের টাকার সারিতে।
+             * ⚠️ তাই নিচের "Grand Total" সারি আর ডানের "Grand Total" (`subtotal`) একই অঙ্ক বলে।
+             */
+            $gross = bcmul((string) $line->qty, (string) $line->rate, 4);
+            $amount = bcadd($amount, $gross, 4);
+
+            $rows[] = [
+                'name' => (string) ($line->product?->name('en') ?? ''),
+                'rate' => $this->money($line->packedRate('rate', 'qty')),
+                'qty' => trim($this->qty($qty).' '.$short),
+                'free' => bccomp($free, '0', 4) > 0 ? trim($this->qty($free).' '.$short) : '',
+                'total_qty' => trim($this->qty($total).' '.$short),
+                'amount' => $this->money($gross),
+            ];
+        }
+
+        /*
+         * ⓘ নিচের "Grand Total" সারি — এককভেদে আলাদা যোগ ("12 Ctn, 7 Pcs")।
+         * ⚠️ ভিত্তি এককে নামিয়ে এক অঙ্ক বানানো যেত, কিন্তু তখন কাগজে "১৪৪ পিস" লেখা
+         * থাকত যেখানে উপরের সারিতে "১২ Ctn" — চোখে মেলানো যেত না।
+         */
+        $joined = fn (array $byUnit) => implode(', ', array_map(
+            fn (string $unit, string $value) => trim($this->qty($value).' '.$unit),
+            array_keys(array_filter($byUnit, fn (string $v) => bccomp($v, '0', 4) > 0)),
+            array_values(array_filter($byUnit, fn (string $v) => bccomp($v, '0', 4) > 0)),
+        ));
+
+        return [
+            'rows' => $rows,
+            'totals' => [
+                'qty' => $joined($sum['qty']),
+                'free' => $joined($sum['free']),
+                'total_qty' => $joined($sum['total_qty']),
+                'amount' => $this->money($amount),
+            ],
+        ];
+    }
+
+    /**
+     * ⭐ কথায় অঙ্ক — নমুনার ধাঁচে: "One Lac Fifty Two Thousand … (BDT)"।
+     *
+     * ⓘ সংখ্যা থেকে শব্দ একটাই জায়গায় ([[AmountInWords]], লাখ-কোটি); এখানে কেবল চেহারা
+     * বদলায় — প্রতিটা শব্দ বড় হাতে, "lakh" → "Lac", হাইফেন নয়, "taka … only" নয়, শেষে
+     * "(BDT)"। ⛔ দ্বিতীয় একটা সংখ্যা-থেকে-শব্দ লিখলে একদিন দুই কাগজে একই অঙ্কের দুই
+     * রকম কথা ছাপা হত।
+     */
+    private function sampleWords(string $amount): string
+    {
+        $words = \App\Core\Support\AmountInWords::of($amount, 'en');
+        $words = (string) preg_replace('/\s+only$/i', '', trim($words));
+        $words = (string) preg_replace('/\btaka\b\s*/i', '', $words);
+        $words = str_replace('-', ' ', $words);
+        $words = ucwords(strtolower(trim((string) preg_replace('/\s+/', ' ', $words))));
+        $words = (string) preg_replace('/\bLakh\b/', 'Lac', $words);
+
+        return $words.' (BDT)';
     }
 
     /**
@@ -662,7 +792,6 @@ class SalesPrintController extends Controller implements HasMiddleware
      * @var array<int, string>
      */
     private array $accountNames = [];
-
     /**
      * ⭐ জমার সারির "কোন পথে" — টাকাটা যে খাতে ঢুকল তার নাম ("নগদ", "বিকাশ", "ব্র্যাক ব্যাংক")।
      *
@@ -814,6 +943,25 @@ class SalesPrintController extends Controller implements HasMiddleware
      *
      * @return array<string, string>
      */
+    /**
+     * ⓘ আগের বকেয়া — গ্রাহকের মোট পাওনা থেকে এই বিলের বকেয়া বাদ, শূন্যের নিচে নয়।
+     *
+     * ⭐ এক জায়গায়, কারণ দুই নকশাই ([[invoiceTotals()]] আর [[classicFacts()]]) এটা ছাপে;
+     * ⛔ দুইবার লিখলে একদিন দুই কাগজে একই গ্রাহকের দুই রকম "আগের বকেয়া" ছাপা হত।
+     */
+    private function earlierDue(SalesInvoice $invoice, string $due): string
+    {
+        $customer = $invoice->customer;
+
+        if ($customer === null) {
+            return '0';
+        }
+
+        $earlier = bcsub($customer->outstanding(), $due, 4);
+
+        return bccomp($earlier, '0', 4) < 0 ? '0' : $earlier;
+    }
+
     private function invoiceTotals(SalesInvoice $invoice, bool $roll = false): array
     {
         $rows = $this->totals($invoice);
@@ -849,11 +997,7 @@ class SalesPrintController extends Controller implements HasMiddleware
         $customer = $roll ? null : $invoice->customer;
 
         if ($customer !== null) {
-            $earlier = bcsub($customer->outstanding(), $due, 4);
-
-            if (bccomp($earlier, '0', 4) < 0) {
-                $earlier = '0';
-            }
+            $earlier = $this->earlierDue($invoice, $due);
 
             if (bccomp($earlier, '0', 4) > 0) {
                 $rows['sales::print.previous_due'] = $this->money($earlier);
