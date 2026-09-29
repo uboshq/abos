@@ -194,6 +194,14 @@ final class CollectionService
         );
 
         return DB::transaction(function () use ($collection) {
+            /*
+             * ⛔ তালা দিয়ে আবার — ২৯ সেপ্টেম্বর ২০২৬ (অডিটে প্রমাণিত)। ⓘ উপরের যাচাই
+             * সইয়ের আগের; খসড়া থাকতে বিল বাতিল হলে বা অন্য আদায় বসলে সেই ছবি
+             * পুরনো। বিলের সারিতে তালা দিয়ে অবস্থা আর বাকি আবার দেখা হয়, খাতায়
+             * বসানোর ঠিক আগে।
+             */
+            $this->assertStillFits($collection, lock: true);
+
             $this->posting->post(
                 sourceType: Collection::drillSourceType(),
                 sourceId: $collection->id,
@@ -327,20 +335,50 @@ final class CollectionService
      * বৈধ ছিল, কারণ তখন কোনোটাই খাতায় বসেনি। দুইটাই নিশ্চিত হলে বিলে
      * তার মোটের চেয়ে বেশি টাকা বসত।
      */
-    private function assertStillFits(Collection $collection): void
+    /**
+     * আদায়ের ভাগ এখনো খাটে কি না — বিল ধরে, সারি ধরে নয় (২৯ সেপ্টেম্বর ২০২৬)।
+     *
+     * ⛔ আগে প্রতিটা সারি আলাদা করে বাকির সাথে মেলানো হত: একই বিল দুই সারিতে
+     * (২,০০০ + ২,০০০, বাকি ৩,৫৫০) পার হত। আর বিলের অবস্থা দেখা হত না — খসড়া
+     * থাকতে বাতিল হওয়া বিলেও আদায় পাকা হত ([[ACollectionPaidOneBillTwiceTest]])।
+     */
+    private function assertStillFits(Collection $collection, bool $lock = false): void
     {
-        $collection->loadMissing('lines.invoice');
+        $collection->loadMissing('lines');
+
+        $wanted = [];
 
         foreach ($collection->lines as $line) {
-            $invoice = $line->invoice;
+            $id = (int) $line->sales_invoice_id;
+            $wanted[$id] = bcadd($wanted[$id] ?? '0', (string) $line->amount, 4);
+        }
+
+        if ($wanted === []) {
+            return;
+        }
+
+        $invoices = SalesInvoice::query()
+            ->whereKey(array_keys($wanted))
+            ->when($lock, fn ($q) => $q->lockForUpdate())
+            ->get()
+            ->keyBy('id');
+
+        foreach ($wanted as $id => $amount) {
+            $invoice = $invoices->get($id);
 
             if ($invoice === null) {
                 continue;
             }
 
+            if ($invoice->status !== DocumentStatus::CONFIRMED) {
+                throw ValidationException::withMessages([
+                    'lines' => __('sales::validation.invoice_not_confirmed', ['no' => $invoice->document_no]),
+                ]);
+            }
+
             $due = $invoice->dueAmount();
 
-            if (bccomp((string) $line->amount, $due, 4) > 0) {
+            if (bccomp($amount, $due, 4) > 0) {
                 throw ValidationException::withMessages([
                     'lines' => __('sales::validation.over_allocated', [
                         'no' => $invoice->document_no,
@@ -365,6 +403,9 @@ final class CollectionService
 
         $allocated = '0';
         $lineNo = 0;
+
+        // ⛔ বিল ধরে চলতি যোগ — একই বিল দুই সারিতে দিলেও মোট তার বাকির বেশি নয় (২৯ সেপ্টেম্বর ২০২৬)
+        $perInvoice = [];
 
         foreach ($lines as $line) {
             $invoiceId = (int) ($line['sales_invoice_id'] ?? 0);
@@ -398,8 +439,9 @@ final class CollectionService
              * তাগাদার তালিকায় ভুল বিল উঠত।
              */
             $due = $invoice->dueAmount();
+            $onThisBill = bcadd($perInvoice[$invoice->id] ?? '0', $amount, 4);
 
-            if (bccomp($amount, $due, 4) > 0) {
+            if (bccomp($onThisBill, $due, 4) > 0) {
                 throw ValidationException::withMessages([
                     'lines' => __('sales::validation.over_allocated', [
                         'no' => $invoice->document_no,
@@ -407,6 +449,8 @@ final class CollectionService
                     ]),
                 ]);
             }
+
+            $perInvoice[$invoice->id] = $onThisBill;
 
             CollectionLine::create([
                 'collection_id' => $collection->id,
