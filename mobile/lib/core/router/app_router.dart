@@ -19,6 +19,7 @@ import '../../features/stock/stock_list_screen.dart';
 import '../../features/today/today_screen.dart';
 import '../../features/sync/sync_status_screen.dart';
 import '../auth/auth_state.dart';
+import '../menu/module_gate.dart';
 
 /// Turns `ref.listen(authStateProvider, ...)` into the [Listenable] go_router
 /// wants for [GoRouter.refreshListenable] — go_router has no native awareness
@@ -63,51 +64,65 @@ final goRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/', builder: (context, state) => const SplashScreen()),
       GoRoute(
           path: '/login', builder: (context, state) => const LoginScreen()),
+      // ⭐ Every screen under /home sits behind [ModuleGateView]: a module
+      // the company switched off for the phone shows "এই অংশটা এখন বন্ধ"
+      // however it was reached — tile, saved link or a widget's tap.
       GoRoute(
         path: '/home',
         builder: (context, state) => const HomeShell(),
         routes: [
           GoRoute(
             path: 'approvals',
-            builder: (context, state) => const ApprovalInboxScreen(),
+            builder: (context, state) =>
+                const ModuleGateView(path: 'approvals', child: ApprovalInboxScreen()),
           ),
           GoRoute(
             path: 'attendance',
-            builder: (context, state) => const AttendanceScreen(),
+            builder: (context, state) =>
+                const ModuleGateView(path: 'attendance', child: AttendanceScreen()),
           ),
           GoRoute(
             path: 'reports',
-            builder: (context, state) => const ReportsScreen(),
+            builder: (context, state) =>
+                const ModuleGateView(path: 'reports', child: ReportsScreen()),
           ),
           GoRoute(
             path: 'today',
-            builder: (context, state) => const TodayScreen(),
+            builder: (context, state) =>
+                const ModuleGateView(path: 'today', child: TodayScreen()),
           ),
           GoRoute(
             path: 'dues',
-            builder: (context, state) => const DueListScreen(),
+            builder: (context, state) =>
+                const ModuleGateView(path: 'dues', child: DueListScreen()),
           ),
           GoRoute(
             path: 'customers',
-            builder: (context, state) => const CustomerListScreen(),
+            builder: (context, state) =>
+                const ModuleGateView(path: 'customers', child: CustomerListScreen()),
             routes: [
               GoRoute(
                 // The public_id in the path, never a sequential one — the
                 // same rule the wire follows (docs/Contract §৩ ক).
                 path: ':id',
-                builder: (context, state) => CustomerDetailScreen(
-                  customerId: state.pathParameters['id'] ?? '',
+                builder: (context, state) => ModuleGateView(
+                  path: 'customers',
+                  child: CustomerDetailScreen(
+                    customerId: state.pathParameters['id'] ?? '',
+                  ),
                 ),
               ),
             ],
           ),
           GoRoute(
             path: 'products',
-            builder: (context, state) => const ProductListScreen(),
+            builder: (context, state) =>
+                const ModuleGateView(path: 'products', child: ProductListScreen()),
           ),
           GoRoute(
             path: 'stock',
-            builder: (context, state) => const StockListScreen(),
+            builder: (context, state) =>
+                const ModuleGateView(path: 'stock', child: StockListScreen()),
           ),
           GoRoute(
             path: 'new-order',
@@ -115,13 +130,15 @@ final goRouterProvider = Provider<GoRouter>((ref) {
             // করে লিখুন" on a rejected order (order_list_screen.dart /
             // sync_status_screen.dart) — absent on the plain "নতুন অর্ডার"
             // tile, which is the ordinary case.
-            builder: (context, state) => NewOrderScreen(
-              prefill: state.extra as OrderPrefill?,
+            builder: (context, state) => ModuleGateView(
+              path: 'new-order',
+              child: NewOrderScreen(prefill: state.extra as OrderPrefill?),
             ),
           ),
           GoRoute(
             path: 'orders',
-            builder: (context, state) => const OrderListScreen(),
+            builder: (context, state) =>
+                const ModuleGateView(path: 'orders', child: OrderListScreen()),
           ),
           GoRoute(
             path: 'sync-status',

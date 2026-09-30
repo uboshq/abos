@@ -80,17 +80,31 @@ class SessionRepository {
 /// The two names the home header shows. Names only: never an id, and never
 /// used as a cache key — that stays `public_id`-based, see [AuthUser].
 class OrgSnapshot {
-  const OrgSnapshot({required this.company, required this.branch});
+  const OrgSnapshot({required this.company, required this.branch, this.phoneModules});
 
   final String company;
   final String branch;
 
+  /// The modules `/me` last said are on for the phone — kept so a widget
+  /// tap on a phone with no signal still meets the same switch
+  /// ([ModuleGate]). Null when never heard.
+  final Set<String>? phoneModules;
+
   bool get isEmpty => company.isEmpty && branch.isEmpty;
 
-  factory OrgSnapshot.fromJson(Map<String, dynamic> json) => OrgSnapshot(
-        company: json['company']?.toString() ?? '',
-        branch: json['branch']?.toString() ?? '',
-      );
+  factory OrgSnapshot.fromJson(Map<String, dynamic> json) {
+    final modules = json['phoneModules'];
+    return OrgSnapshot(
+      company: json['company']?.toString() ?? '',
+      branch: json['branch']?.toString() ?? '',
+      phoneModules:
+          modules is List ? modules.map((e) => e.toString()).toSet() : null,
+    );
+  }
 
-  Map<String, dynamic> toJson() => {'company': company, 'branch': branch};
+  Map<String, dynamic> toJson() => {
+        'company': company,
+        'branch': branch,
+        if (phoneModules != null) 'phoneModules': phoneModules!.toList()..sort(),
+      };
 }

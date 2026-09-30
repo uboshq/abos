@@ -4,17 +4,22 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/auth/auth_state.dart';
 import '../../core/auth/auth_user.dart';
+import '../../core/auth/session_profile.dart';
 import '../../core/auth/session_repository.dart';
+import '../../core/menu/me_api.dart';
 import '../../core/menu/menu_item.dart';
 import '../../core/menu/menu_repository.dart';
+import '../../core/menu/module_gate.dart';
 import '../../core/records/today_record.dart';
 import '../../core/sync_engine/sync_engine.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/update/app_version_check.dart';
 import '../../core/widgets/empty_state.dart';
+import '../../core/workspace/workspace_switcher.dart';
 import '../update/update_gate.dart';
 import 'home_dashboard.dart';
+import 'workspace_picker.dart';
 
 /// The signed-in person's home: three tabs under one header that always
 /// says which company and branch the phone is looking at.
@@ -30,6 +35,10 @@ import 'home_dashboard.dart';
 /// tab. The names come from `/me`; when that cannot be reached they come from
 /// the last `/me` that could (see [SessionRepository.readOrg]); only when the
 /// phone has never heard does the header fall back to the person's own name.
+///
+/// <p>⭐ Tapping the header opens the company/branch picker (0.4.2) — only
+/// when `/me` lists more than one company or branch, since a picker with
+/// nothing to pick is a button that does nothing.
 class HomeShell extends ConsumerStatefulWidget {
   const HomeShell({
     super.key,
@@ -40,6 +49,8 @@ class HomeShell extends ConsumerStatefulWidget {
     this.cacheOrg,
     this.checkUpdate,
     this.now,
+    this.reloadProfile,
+    this.switcher,
   });
 
   /// Seams — the real ones need a server or a secure store.
@@ -50,6 +61,10 @@ class HomeShell extends ConsumerStatefulWidget {
   final Future<void> Function(OrgSnapshot org)? cacheOrg;
   final Future<UpdateStatus> Function()? checkUpdate;
   final DateTime Function()? now;
+
+  /// `GET /me` again, for the picker after a company change.
+  final Future<SessionProfile?> Function()? reloadProfile;
+  final WorkspaceSwitcher? switcher;
 
   @override
   ConsumerState<HomeShell> createState() => _HomeShellState();
@@ -62,6 +77,11 @@ class _HomeShellState extends ConsumerState<HomeShell> {
   List<MenuItem> _items = const [];
   bool _menuLoading = true;
   OrgSnapshot? _org;
+  SessionProfile? _profile;
+
+  /// Bumped after a move, so the day's figures are asked for again — they
+  /// belong to the company and branch they were fetched for.
+  int _generation = 0;
 
   @override
   void initState() {
@@ -81,20 +101,58 @@ class _HomeShellState extends ConsumerState<HomeShell> {
     if (cached != null && !cached.isEmpty && _org == null) {
       setState(() => _org = cached);
     }
+    if (cached?.phoneModules != null && ref.read(phoneModulesProvider) == null) {
+      ref.read(phoneModulesProvider.notifier).state = cached!.phoneModules;
+    }
 
     final home = await (widget.loadHome ?? _menuRepository.homeFor)(user);
     if (!mounted) return;
     final profile = home.profile;
     final fresh = profile == null
         ? null
-        : OrgSnapshot(company: profile.company.name, branch: profile.branch.name);
+        : OrgSnapshot(
+            company: profile.company.name,
+            branch: profile.viewAllBranches && profile.branches.length > 1
+                ? 'সব শাখা'
+                : profile.branch.name,
+            phoneModules: profile.phoneModules,
+          );
+    if (profile?.phoneModules != null) {
+      ref.read(phoneModulesProvider.notifier).state = profile!.phoneModules;
+    }
+    final modules = ref.read(phoneModulesProvider);
     setState(() {
-      _items = home.items;
+      // ⭐ The company's phone switches ([ModuleGate]) — `/me`'s menu is
+      // already filtered, this catches this app's own tiles too.
+      _items = ModuleGate.visible(home.items, modules);
       _menuLoading = false;
+      if (profile != null) _profile = profile;
       if (fresh != null && !fresh.isEmpty) _org = fresh;
     });
     if (fresh != null && !fresh.isEmpty) {
       await (widget.cacheOrg ?? SessionRepository.instance.saveOrg)(fresh);
+    }
+  }
+
+  Future<void> _openPicker() async {
+    final profile = _profile;
+    if (profile == null || !profile.canSwitch) return;
+    final moved = await showWorkspacePicker(
+      context,
+      profile: profile,
+      reload: widget.reloadProfile ?? _fetchProfile,
+      switcher: widget.switcher,
+    );
+    if (!moved || !mounted) return;
+    setState(() => _generation++);
+    await _load();
+  }
+
+  static Future<SessionProfile?> _fetchProfile() async {
+    try {
+      return (await MeApi.fetch()).profile;
+    } catch (_) {
+      return null;
     }
   }
 
@@ -131,6 +189,7 @@ class _HomeShellState extends ConsumerState<HomeShell> {
           subtitle: headerNamesOrg
               ? (org.branch.isNotEmpty ? org.branch : null)
               : (user.roles.isEmpty ? null : user.roles.join(', ')),
+          onTap: (_profile?.canSwitch ?? false) ? _openPicker : null,
         ),
         actions: [
           _SyncAction(onTap: () => context.go('/home/sync-status')),
@@ -147,6 +206,7 @@ class _HomeShellState extends ConsumerState<HomeShell> {
           index: _tab,
           children: [
             HomeDashboard(
+              key: ValueKey('home-dashboard-$_generation'),
               user: user,
               items: _items,
               headerNamesOrg: headerNamesOrg,
@@ -194,13 +254,33 @@ class _HomeShellState extends ConsumerState<HomeShell> {
 }
 
 class _Header extends StatelessWidget {
-  const _Header({required this.title, this.subtitle});
+  const _Header({required this.title, this.subtitle, this.onTap});
 
   final String title;
   final String? subtitle;
 
+  /// Opens the company/branch picker; null when there is nothing to pick.
+  final VoidCallback? onTap;
+
   @override
   Widget build(BuildContext context) {
+    final names = _names();
+    if (onTap == null) return names;
+    return InkWell(
+      key: const ValueKey('workspace-header'),
+      onTap: onTap,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Flexible(child: names),
+          const SizedBox(width: AppSpacing.xs),
+          const Icon(Icons.swap_horiz, size: 18),
+        ],
+      ),
+    );
+  }
+
+  Widget _names() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
