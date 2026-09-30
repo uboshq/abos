@@ -14,7 +14,7 @@
     $up = fn (string $key) => $bn ? $t($key) : mb_strtoupper($t($key));
     $head = \App\Core\Engines\Print\PaperLook::head($company, $profile->shows('logo'));
     $look = app(\App\Modules\Sales\Support\InvoicePrintLook::class);
-    $money = $doc->showMoney;
+    $money = $doc->showMoney && $profile->shows('prices'); /* ⛔ নিয়ম আর মালিকের দামের সুইচ দুইটাই — সাধারণ কাগজের মতো ([[document-body]]); ৩০ সেপ্টেম্বর ২০২৬ */
     $to = $facts['to'];
     $tr = $facts['transport'];
     $all = $doc->notices();

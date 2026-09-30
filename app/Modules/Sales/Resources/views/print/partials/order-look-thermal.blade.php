@@ -6,7 +6,7 @@
     $look = new \App\Core\Engines\Print\PaperLook($look);
     $lang = $look->lang();
     $t = fn (string $key) => (string) __($key, [], $lang);
-    $money = $doc->showMoney;
+    $money = $doc->showMoney && $profile->shows('prices'); /* ⛔ নিয়ম আর মালিকের দামের সুইচ দুইটাই — সাধারণ কাগজের মতো ([[document-body]]); ৩০ সেপ্টেম্বর ২০২৬ */
     $to = $facts['to'];
     $totals = $doc->totals;
     $grandKey = array_key_last($totals);

@@ -14,7 +14,7 @@
     $up = fn (string $key) => mb_strtoupper($t($key));
     $head = \App\Core\Engines\Print\PaperLook::head($company, $profile->shows('logo'));
     $ac = $look->accent();
-    $money = $doc->showMoney;
+    $money = $doc->showMoney && $profile->shows('prices'); /* ⛔ নিয়ম আর মালিকের দামের সুইচ দুইটাই — সাধারণ কাগজের মতো ([[document-body]]); ৩০ সেপ্টেম্বর ২০২৬ */
     $card = $look->card();
     $to = $facts['to'];
     $totals = $doc->totals;
