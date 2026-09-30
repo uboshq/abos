@@ -3,6 +3,7 @@ import { wireActions } from './components/actions.js'
 import { reprice } from './pricing.js'
 import { abosDate } from './date.js'
 import { listKeys } from './list-keys.js'
+import { searchAsYouType } from './search-as-you-type.js'
 import { guardOneSubmit } from './one-submit.js'
 import { stockPlacement } from './placement.js'
 import { scannerStore } from './scanner.js'
@@ -121,6 +122,9 @@ document.addEventListener('alpine:init', () => {
  * করা এক — আর সেটা মেপে দেখা যায়, বিশ্বাস করতে হয় না।
  */
 listKeys()
+
+// তালিকার খোঁজ — টাইপ করতেই, Enter ছাড়া; নিয়ম `search-as-you-type.js`-এ
+searchAsYouType()
 
 /*
  * Columns মেনু — টিক-না-দেওয়া কলামগুলো `?hide=`-এ।

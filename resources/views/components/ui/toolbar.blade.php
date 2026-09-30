@@ -456,10 +456,13 @@
                 {{-- placeholder-এ কী কী দিয়ে খোঁজা যায় তা লেখা থাকে।
                      শুধু "খুঁজুন" লিখলে ব্যবহারকারী নাম দিয়েই খোঁজে, আর
                      মোবাইল নম্বর দিয়েও যে খোঁজা যায় তা কখনো জানে না। --}}
+                {{-- ⭐ টাইপ করতেই খোঁজ (মালিক, ১ অক্টোবর ২০২৬) — `data-live-search` ধরে রাখে এখন কী খোঁজা আছে,
+                     আর খোঁজের পরে ফেরা পাতায় `autofocus` কার্সর ঘরেই রাখে; নিয়মগুলো `search-as-you-type.js`-এ। --}}
                 <input type="search" name="q" value="{{ request('q') }}"
                        placeholder="{{ $searchPlaceholder ?? __('core.action.search') }}"
                        class="h-(--spacing-field-compact) w-full rounded-(--radius-field) border border-(--color-border)
-                              bg-(--color-surface-app) ps-8 pe-3 text-sm" data-quick-find>
+                              bg-(--color-surface-app) ps-8 pe-3 text-sm" data-quick-find
+                       data-live-search="{{ request('q') }}" @if (request()->has('q')) autofocus @endif>
                 <svg viewBox="0 0 24 24" aria-hidden="true"
                      class="pointer-events-none absolute start-2 top-1/2 size-4 -translate-y-1/2
                             fill-(--color-ink-muted)">
