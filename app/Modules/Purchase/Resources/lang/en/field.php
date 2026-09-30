@@ -36,6 +36,12 @@ return [
     'due_on' => 'Due on',
     'supplier_challan_no' => 'Supplier\'s challan no',
     'supplier_bill_no' => 'Supplier\'s bill no',
+    // ⭐ ক্রয়-বিলের তালিকার দুই কলাম — আমাদের বিল নং আর সরবরাহকারীর নিজের নম্বর (মালিক, ৩০ সেপ্টেম্বর ২০২৬)
+    'supp_inv_no' => 'Supp INV No.',
+    'inv_number' => 'INV Number',
+    'bill_paid' => 'Paid',
+    'bill_due' => 'Due',
+    'created_by' => 'Created by',
     'narration' => 'Narration',
     'status' => 'Status',
     'order' => 'Purchase order',

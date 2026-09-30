@@ -14,6 +14,7 @@ use App\Models\Branch;
 use App\Models\User;
 use App\Modules\Accounts\Models\Voucher;
 use App\Modules\Accounts\Models\VoucherBillShare;
+use App\Modules\Inventory\Models\Warehouse;
 use App\Modules\Supplier\Models\Supplier;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
@@ -393,6 +394,12 @@ class PurchaseBill extends Model implements Drillable
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
+    }
+
+    /** মাল যে গুদামে ঢুকেছে — ক্রয়-বিলের তালিকার "গুদাম" কলাম (মালিক, ১ অক্টোবর ২০২৬)। */
+    public function warehouse(): BelongsTo
+    {
+        return $this->belongsTo(Warehouse::class);
     }
 
     public function scopeSearch(Builder $query, ?string $term): Builder

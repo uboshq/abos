@@ -10,6 +10,7 @@ use App\Core\Concerns\SortsLists;
 use App\Core\Services\MenuBuilder;
 use App\Core\Support\DocumentStatus;
 use App\Core\Support\ProcessBand;
+use App\Core\Support\ViewedBranch;
 use App\Http\Controllers\Controller;
 use App\Modules\Inventory\Models\Product;
 use App\Modules\Purchase\Http\Requests\PurchaseBillRequest;
@@ -87,9 +88,20 @@ class PurchaseBillController extends Controller implements HasMiddleware
          */
         $totalled = (clone $query)->reorder();
 
+        /*
+         * ⭐ তালিকার বাড়তি কলাম — মালিক, ১ অক্টোবর ২০২৬: শাখা, গুদাম, পণ্য, পরিশোধিত, বাকি, তৈরি করেছেন।
+         *
+         * ⛔ সবটা একসাথে আনা — পরিশোধ [[PurchaseBill::scopeWithPaid()]]-এ, লাইন গোনা `withCount`-এ, নাম
+         * eager-load-এ। সারিপ্রতি একটা করে পড়লে পঞ্চাশ সারির পাতায় দেড়শো কোয়েরি।
+         * ⓘ যোগফলের কোয়েরির (উপরে) পরে বসানো — ওখানে এগুলোর কাজ নেই।
+         */
+        $query->with(['branch', 'warehouse', 'creator'])->withPaid()->withCount('lines');
+
         return view('purchase::bill.index', [
             'menu' => $this->menu->forUser($request->user()),
             'bills' => $query->paginate(50)->withQueryString(),
+            // ⓘ "শাখা" কলাম কেবল হেডারে "সব শাখা" থাকলে — এক শাখা বাছলে সব সারি একই শাখার
+            'showBranch' => ViewedBranch::one() === null,
             'totals' => [
                 'rows' => (clone $totalled)->count(),
                 'money' => (clone $totalled)->sum('total'),

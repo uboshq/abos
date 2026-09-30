@@ -9,17 +9,51 @@
         ],
         [
             'key' => 'document_no',
-            'label' => __('purchase::field.document_no'),
+            // ⭐ মালিকের ক্রম, ১ অক্টোবর ২০২৬: Date | INV Number | Supp INV No. | Supplier | Branch | Warehouse | Items | Due on | Total | Paid | Due | State | Created by
+            'label' => __('purchase::field.inv_number'),
             'width' => '12rem',
             'render' => fn ($d) => view('purchase::components.doc-link', [
                 'document' => $d,
                 'route' => 'purchase.bill.show',
             ]),
         ],
+        /*
+         * ⭐ সরবরাহকারীর নিজের বিল নম্বর ("Supp INV No.") — মালিক, ৩০ সেপ্টেম্বর ২০২৬: *"Purchase Bills e Purchase
+         * reference no er ekta colam koro"*। ⓘ ঘরটা আগে থেকেই ছিল (`supplier_bill_no`), খোঁজেও ধরা পড়ত, কিন্তু তালিকায় দেখা যেত না —
+         * সরবরাহকারীর কাগজ হাতে নিয়ে মেলাতে প্রতিটা বিল খুলতে হত। ফাঁকা হলে "—"।
+         */
+        [
+            'key' => 'supplier_bill_no',
+            'label' => __('purchase::field.supp_inv_no'),
+            'width' => '9rem',
+            'render' => fn ($d) => filled($d->supplier_bill_no) ? $d->supplier_bill_no : '—',
+        ],
         [
             'key' => 'supplier_id',
             'label' => __('purchase::field.supplier'),
             'render' => fn ($d) => $d->supplier?->name(),
+        ],
+        /*
+         * ⭐ বাকি কলামগুলো — মালিক, ১ অক্টোবর ২০২৬: Branch | Warehouse | Items … Paid | Due … Created by।
+         * ⓘ সবগুলোর তথ্য কন্ট্রোলার একসাথে আনে (eager-load, `withCount`, `withPaid`) — এখানে কোনো কোয়েরি নয়।
+         * ⓘ "শাখা" কেবল হেডারে "সব শাখা" থাকলে ($showBranch) — এক শাখা বাছলে সব সারি একই শাখার।
+         */
+        ...(($showBranch ?? true) ? [[
+            'key' => 'branch_id',
+            'label' => __('purchase::field.branch'),
+            'render' => fn ($d) => $d->branch?->name() ?? '—',
+        ]] : []),
+        [
+            'key' => 'warehouse_id',
+            'label' => __('purchase::field.warehouse'),
+            'render' => fn ($d) => $d->warehouse?->name() ?? '—',
+        ],
+        [
+            'key' => 'lines_count',
+            'label' => __('purchase::field.items'),
+            'numeric' => true,
+            'width' => '5rem',
+            'render' => fn ($d) => (string) $d->lines_count,
         ],
         [
             'key' => 'due_on',
@@ -39,10 +73,29 @@
             ]),
         ],
         [
+            'key' => 'paid_total',
+            'label' => __('purchase::field.bill_paid'),
+            'numeric' => true,
+            'width' => '9rem',
+            'render' => fn ($d) => \App\Core\Support\Money::format($d->paidAmount()),
+        ],
+        [
+            'key' => 'due',
+            'label' => __('purchase::field.bill_due'),
+            'numeric' => true,
+            'width' => '9rem',
+            'render' => fn ($d) => \App\Core\Support\Money::format($d->dueAmount()),
+        ],
+        [
             'key' => 'status',
             'label' => __('purchase::field.state'),
             'width' => '8rem',
             'render' => fn ($d) => view('purchase::components.status-badge', ['document' => $d]),
+        ],
+        [
+            'key' => 'created_by',
+            'label' => __('purchase::field.created_by'),
+            'render' => fn ($d) => $d->creator?->name ?? '—',
         ],
     ];
 @endphp
