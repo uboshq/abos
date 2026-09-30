@@ -21,6 +21,10 @@ return [
     'value_hidden' => 'দেখার অনুমতি নেই',
 
     'flow' => 'মাসে মাসে ঢোকা ও বেরোনো',
+    'flow_value' => 'মাসে মাসে ঢোকা ও বেরোনো — টাকায়, কেনা দরে',
+    'short_crore' => 'কোটি',
+    'short_lakh' => 'লাখ',
+    'short_thousand' => 'হাজার',
     'moved_in' => 'ঢুকেছে',
     'moved_out' => 'বেরিয়েছে',
 

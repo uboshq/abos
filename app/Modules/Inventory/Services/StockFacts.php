@@ -6,6 +6,10 @@ namespace App\Modules\Inventory\Services;
 
 use App\Core\Security\FieldSecurity;
 use App\Core\Support\CompanyContext;
+use App\Core\Support\Money;
+use App\Core\Support\ViewedBranch;
+use App\Models\LedgerEntry;
+use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Inventory\Models\Product;
 use App\Modules\Inventory\Models\StockMovement;
 use Illuminate\Support\Carbon;
@@ -161,6 +165,82 @@ final class StockFacts
             ->value('total');
 
         return bcadd((string) $total, '0', 2);
+    }
+
+    /**
+     * ⭐ মাসে মাসে কত **টাকার** মাল ঢুকল আর বেরোল — কেনা দরে, মজুদের খাত (১১২০) থেকে।
+     *
+     * ── কেন খাতা, পরিমাণ নয় (মালিক, ১ অক্টোবর ২০২৬: "chart e takar amount") ─────────
+     * [[monthlyFlow()]] নড়াচড়ার **পরিমাণ** যোগ করে — বস্তা, কার্টুন আর পিস এক যোগফলে, তাই সংখ্যাটা
+     * দুই মাস মেলাতে কাজে লাগলেও নিজে কিছু বলে না। মজুদের খাতে প্রতিটা ঢোকা ডেবিট আর প্রতিটা
+     * বেরোনো ক্রেডিট, কেনা দরে — চার্ট ঠিক সেই কথাই বলে যা খাতা বলে।
+     *
+     * ⓘ খরচের সংখ্যা: [[value()]]-এর একই চাবি (`inventory.cost.view`); চাবি না থাকলে `null`, আর
+     * পর্দা তখন আগের পরিমাণের চার্ট দেখায়। ⓘ হেডারে বাছা শাখা মানে ([[ViewedBranch::narrow()]])।
+     *
+     * @return list<array{month: string, in: string, out: string}>|null
+     */
+    public function monthlyValueFlow(int $months = 7): ?array
+    {
+        if (! FieldSecurity::visible(StockMovement::class, 'unit_cost')) {
+            return null;
+        }
+
+        $inventory = StandardChart::find(StandardChart::INVENTORY);
+
+        if ($inventory === null) {
+            return null;
+        }
+
+        $from = Carbon::today()->startOfMonth()->subMonths($months - 1);
+
+        $rows = ViewedBranch::narrow(LedgerEntry::query(), 'ledger_entries.branch_id')
+            ->where('ledger_entries.company_id', CompanyContext::id())
+            ->where('account_id', $inventory->id)
+            ->where('trx_date', '>=', $from->toDateString())
+            ->selectRaw("DATE_FORMAT(trx_date, '%Y-%m') as ym")
+            ->selectRaw('COALESCE(SUM(debit), 0) as moved_in')
+            ->selectRaw('COALESCE(SUM(credit), 0) as moved_out')
+            ->groupBy('ym')
+            ->get()
+            ->keyBy('ym');
+
+        $out = [];
+        $cursor = $from->copy();
+
+        for ($i = 0; $i < $months; $i++) {
+            $row = $rows->get($cursor->format('Y-m'));
+
+            $out[] = [
+                'month' => $cursor->translatedFormat('M'),
+                'in' => Money::round($row->moved_in ?? '0'),
+                'out' => Money::round($row->moved_out ?? '0'),
+            ];
+
+            $cursor->addMonth();
+        }
+
+        return $out;
+    }
+
+    /**
+     * টাকার অঙ্ক ছোট করে — চার্টের সরু বারের মাথায় ধরার মতো: "১২.৫ লাখ", "৩.২ কোটি", "৮৫ হাজার"।
+     *
+     * ⓘ পুরো অঙ্ক বারের উপর মাউস রাখলে ([[Money::format()]])।
+     */
+    public static function shortTaka(string $amount): string
+    {
+        $value = abs((float) $amount);
+
+        foreach ([['10000000', 'crore'], ['100000', 'lakh'], ['1000', 'thousand']] as [$unit, $word]) {
+            if ($value >= (float) $unit) {
+                $figure = rtrim(rtrim(number_format($value / (float) $unit, 1, '.', ''), '0'), '.');
+
+                return $figure.' '.__('inventory::overview.short_'.$word);
+            }
+        }
+
+        return (string) round($value);
     }
 
     /** আজ কতগুলো নড়াচড়া লেখা হয়েছে। */

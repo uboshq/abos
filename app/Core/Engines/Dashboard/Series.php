@@ -22,7 +22,9 @@ use InvalidArgumentException;
 final class Series
 {
     /**
-     * @param  list<array{label: string, first: string, second: string}>  $points
+     * ⓘ ঐচ্ছিক: `firstNote`/`secondNote` বারের মাথায় লেখা, `firstTitle`/`secondTitle` মাউস রাখলে (১ অক্টোবর ২০২৬)।
+     *
+     * @param  list<array{label: string, first: string, second: string, firstNote?: string, secondNote?: string, firstTitle?: string, secondTitle?: string}>  $points
      */
     public function __construct(
         public readonly string $label,

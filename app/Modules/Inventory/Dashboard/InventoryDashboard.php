@@ -42,6 +42,9 @@ final class InventoryDashboard implements ProvidesDashboard
         $days = in_array($days, StockFacts::WINDOWS, true) ? $days : 7;
         $window = __('inventory::overview.window', ['days' => $days]);
 
+        // ⭐ চার্ট টাকায়, কেনা দরে (মালিক, ১ অক্টোবর ২০২৬); খরচের চাবি না থাকলে null — তখন আগের পরিমাণে
+        $valueFlow = $facts->monthlyValueFlow();
+
         return new DashboardDefinition(
             title: __('inventory::dashboard.title'),
             subtitle: __('inventory::dashboard.subtitle'),
@@ -80,6 +83,25 @@ final class InventoryDashboard implements ProvidesDashboard
             ],
 
             stats: [
+                // ⭐ মালিকের নির্দেশ, ১ অক্টোবর ২০২৬: মজুদের মূল্য সবার আগে
+                /*
+                 * ⚠️ মজুদের মূল্য একটা **খরচের সংখ্যা**।
+                 *
+                 * [[FieldSecurity]] পণ্যের পাতায় ক্রয়মূল্য `inventory.cost.view`-এর
+                 * পেছনে রাখে। এই সংখ্যাটা খোলা রাখলে ওই পাহারা টপকানোর
+                 * সবচেয়ে সহজ দরজা হত এটাই — একটা পণ্যের দর ঢাকা, অথচ
+                 * গোটা গুদামের দাম খোলা।
+                 *
+                 * চাবি না থাকলে ইঞ্জিন নিজেই ঢেকে দেয় ([[DashboardEngine]]),
+                 * তাই এখানে কেবল চাবিটার নাম বলাই যথেষ্ট।
+                 */
+                new Stat(
+                    label: __('inventory::overview.stock_value'),
+                    value: $facts->value() === null ? null : Money::format($facts->value()),
+                    hint: __('inventory::overview.stock_value_hint'),
+                    permission: 'inventory.cost.view',
+                ),
+
                 new Stat(
                     label: __('inventory::overview.available'),
                     value: Money::format($states['available'], 0),
@@ -143,40 +165,41 @@ final class InventoryDashboard implements ProvidesDashboard
                     href: route('inventory.stock.index', ['sort' => 'available']),
                     tone: Stat::BAD,
                 ),
-
-                /*
-                 * ⚠️ মজুদের মূল্য একটা **খরচের সংখ্যা**।
-                 *
-                 * [[FieldSecurity]] পণ্যের পাতায় ক্রয়মূল্য `inventory.cost.view`-এর
-                 * পেছনে রাখে। এই সংখ্যাটা খোলা রাখলে ওই পাহারা টপকানোর
-                 * সবচেয়ে সহজ দরজা হত এটাই — একটা পণ্যের দর ঢাকা, অথচ
-                 * গোটা গুদামের দাম খোলা।
-                 *
-                 * চাবি না থাকলে ইঞ্জিন নিজেই ঢেকে দেয় ([[DashboardEngine]]),
-                 * তাই এখানে কেবল চাবিটার নাম বলাই যথেষ্ট।
-                 */
-                new Stat(
-                    label: __('inventory::overview.stock_value'),
-                    value: $facts->value() === null ? null : Money::format($facts->value()),
-                    hint: __('inventory::overview.stock_value_hint'),
-                    permission: 'inventory.cost.view',
-                ),
             ],
 
             panels: [
-                new Series(
-                    label: __('inventory::overview.flow'),
-                    points: array_map(
-                        fn (array $m): array => [
-                            'label' => $m['month'],
-                            'first' => $m['in'],
-                            'second' => $m['out'],
-                        ],
-                        $facts->monthlyFlow(),
+                $valueFlow !== null
+                    ? new Series(
+                        label: __('inventory::overview.flow_value'),
+                        points: array_map(
+                            fn (array $m): array => [
+                                'label' => $m['month'],
+                                'first' => $m['in'],
+                                'second' => $m['out'],
+                                // ⓘ বারের মাথায় ছোট অঙ্ক, মাউস রাখলে পুরোটা
+                                'firstNote' => StockFacts::shortTaka($m['in']),
+                                'secondNote' => StockFacts::shortTaka($m['out']),
+                                'firstTitle' => Money::format($m['in']),
+                                'secondTitle' => Money::format($m['out']),
+                            ],
+                            $valueFlow,
+                        ),
+                        firstLabel: __('inventory::overview.moved_in'),
+                        secondLabel: __('inventory::overview.moved_out'),
+                    )
+                    : new Series(
+                        label: __('inventory::overview.flow'),
+                        points: array_map(
+                            fn (array $m): array => [
+                                'label' => $m['month'],
+                                'first' => $m['in'],
+                                'second' => $m['out'],
+                            ],
+                            $facts->monthlyFlow(),
+                        ),
+                        firstLabel: __('inventory::overview.moved_in'),
+                        secondLabel: __('inventory::overview.moved_out'),
                     ),
-                    firstLabel: __('inventory::overview.moved_in'),
-                    secondLabel: __('inventory::overview.moved_out'),
-                ),
 
                 /*
                  * ── কেন এই ভাগটা এই পর্দার সবচেয়ে দামি অংশ ───────────

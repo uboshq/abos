@@ -45,7 +45,9 @@
 
     {{-- ── সংখ্যা ─────────────────────────────────────────────────── --}}
     @if ($dashboard->stats !== [])
-        <div class="mb-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        {{-- ⭐ ছয়টা হলে বড় পর্দায় এক লাইনে — মালিক, ১ অক্টোবর ২০২৬ (মজুদের ড্যাশবোর্ড); সংখ্যা একটু ছোট, যাতে সরু ঘরে ভাঙে না --}}
+        @php $six = count($dashboard->stats) === 6; @endphp
+        <div @class(['mb-3 grid gap-3 sm:grid-cols-2', 'lg:grid-cols-3 xl:grid-cols-6' => $six, 'xl:grid-cols-4' => ! $six])>
             @foreach ($dashboard->stats as $stat)
                 <{{ $stat->href ? 'a' : 'div' }}
                     @if ($stat->href) href="{{ $stat->href }}" @endif
@@ -54,7 +56,9 @@
                            bg-(--color-surface-card) px-4 py-3">
                     <div class="text-xs text-(--color-ink-muted)">{{ $stat->label }}</div>
                     <div @class([
-                        'mt-1 text-2xl font-semibold tabular-nums',
+                        'mt-1 font-semibold tabular-nums',
+                        'text-2xl' => ! $six,
+                        'text-xl' => $six,
                         'text-(--color-badge-success-ink)' => $stat->tone === \App\Core\Engines\Dashboard\Stat::GOOD,
                         'text-(--color-badge-warning-ink)' => $stat->tone === \App\Core\Engines\Dashboard\Stat::WARN,
                         'text-(--color-badge-danger-ink)' => $stat->tone === \App\Core\Engines\Dashboard\Stat::BAD,
@@ -110,12 +114,17 @@
                         <div class="flex items-end gap-4 px-4 pt-6 pb-2" style="height: var(--spacing-chart)">
                             @foreach ($panel->points as $point)
                                 <div class="flex flex-1 items-end justify-center gap-1" style="height:100%">
-                                    <div class="w-1/2 rounded-t bg-(--color-brand-500)"
-                                         style="height:{{ max(2, (int) round((float) $point['first'] / $peak * 100)) }}%"
-                                         title="{{ $panel->firstLabel }}: {{ $point['first'] }}"></div>
-                                    <div class="w-1/2 rounded-t bg-(--color-brand-700)/25"
-                                         style="height:{{ max(2, (int) round((float) $point['second'] / $peak * 100)) }}%"
-                                         title="{{ $panel->secondLabel }}: {{ $point['second'] }}"></div>
+                                    {{-- ⭐ বারের মাথায় অঙ্ক, থাকলে — মজুদের টাকার চার্ট (মালিক, ১ অক্টোবর ২০২৬); মাউস রাখলে পুরোটা --}}
+                                    @foreach ([['first', 'bg-(--color-brand-500)', $panel->firstLabel], ['second', 'bg-(--color-brand-700)/25', $panel->secondLabel]] as [$side, $fill, $name])
+                                        <div class="flex h-full w-1/2 flex-col items-center justify-end">
+                                            @isset($point[$side.'Note'])
+                                                <span class="mb-0.5 whitespace-nowrap text-2xs leading-none tabular-nums text-(--color-ink-muted)">{{ $point[$side.'Note'] }}</span>
+                                            @endisset
+                                            <div class="w-full rounded-t {{ $fill }}"
+                                                 style="height:{{ max(2, (int) round((float) $point[$side] / $peak * 100)) }}%"
+                                                 title="{{ $name }}: {{ $point[$side.'Title'] ?? $point[$side] }}"></div>
+                                        </div>
+                                    @endforeach
                                 </div>
                             @endforeach
                         </div>

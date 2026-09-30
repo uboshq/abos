@@ -21,6 +21,10 @@ return [
     'value_hidden' => 'Not yours to see',
 
     'flow' => 'Moved in and out, by month',
+    'flow_value' => 'Moved in and out, by month — in taka, at cost',
+    'short_crore' => 'crore',
+    'short_lakh' => 'lakh',
+    'short_thousand' => 'thousand',
     'moved_in' => 'In',
     'moved_out' => 'Out',
 
