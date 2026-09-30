@@ -10,6 +10,7 @@ use App\Core\Services\CustomFieldService;
 use App\Core\Services\MenuBuilder;
 use App\Core\Services\SettingsService;
 use App\Http\Controllers\Controller;
+use App\Models\Branch;
 use App\Modules\Inventory\Http\Requests\ProductRequest;
 use App\Modules\Inventory\Models\Product;
 use App\Modules\Inventory\Models\ProductUnit;
@@ -59,7 +60,7 @@ class ProductController extends Controller implements HasMiddleware
 
     public function index(Request $request): View
     {
-        $query = Product::query()
+        $query = Product::query()->soldInViewedBranch()
             ->search($request->query('q'))
             ->when(! $request->boolean('inactive'), fn ($q) => $q->active())
             /*
@@ -304,6 +305,8 @@ class ProductController extends Controller implements HasMiddleware
             'taxes' => Tax::query()->active()->orderBy('code')->get(),
             'brands' => Brand::query()->active()->orderBy('name_en')->get(),
             'categories' => ProductCategory::query()->active()->orderBy('name_en')->get(),
+            // ⭐ কোন শাখায় বিক্রি হয় (৩০ সেপ্টেম্বর ২০২৬) — এক শাখার কোম্পানিতে ঘরটাই দেখায় না
+            'branches' => Branch::query()->orderBy('name_en')->get(),
             // ব্র্যান্ডের ঘরটা প্রতি-কোম্পানি সুইচে (নিয়ম ৭)
             'brandOn' => $this->settings->enabled('inventory.brand_enabled'),
         ];

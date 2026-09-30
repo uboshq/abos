@@ -106,7 +106,7 @@ class SupplierController extends Controller implements HasMiddleware
      */
     private function list(Request $request, bool $services): View
     {
-        $query = Supplier::query()
+        $query = Supplier::query()->inViewedBranch()
             ->when($services, fn ($q) => $q->onlyServiceProviders(), fn ($q) => $q->onlySuppliers())
             ->search($request->query('q'))
             ->when(! $request->boolean('inactive'), fn ($q) => $q->active())

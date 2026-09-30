@@ -165,7 +165,7 @@ class OpeningStockController extends Controller implements HasMiddleware
      */
     private function openProducts()
     {
-        return Product::query()->active()->orderBy('name_en')->get();
+        return Product::query()->soldInViewedBranch()->active()->orderBy('name_en')->get();
     }
 
     /**

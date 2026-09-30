@@ -71,8 +71,8 @@ class PurchaseContractController extends Controller implements HasMiddleware
     {
         return view('purchase::contract.form', [
             'menu' => $this->menu->forUser($request->user()),
-            'suppliers' => Supplier::query()->forPurchasing()->orderBy('code')->get(),
-            'products' => Product::query()->active()->with('unit')->orderBy('name_en')->get(),
+            'suppliers' => Supplier::query()->inViewedBranch()->forPurchasing()->orderBy('code')->get(),
+            'products' => Product::query()->soldInViewedBranch()->active()->with('unit')->orderBy('name_en')->get(),
         ]);
     }
 

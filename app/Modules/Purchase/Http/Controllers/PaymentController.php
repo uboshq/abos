@@ -185,10 +185,13 @@ class PaymentController extends Controller implements HasMiddleware
         $moneyCodes = StandardChart::MONEY_PARENTS;
 
         return [
-            'suppliers' => Supplier::query()->active()->orderBy('name_en')->get(),
-            'accounts' => Account::query()->postable()
+            'suppliers' => Supplier::query()->inViewedBranch()->active()->orderBy('name_en')->get(),
+            // ⭐ অন্য শাখার টিলের খাত বাদ (৩০ সেপ্টেম্বর ২০২৬) — [[Account::scopeNotAnotherBranchsTill()]]
+            // ⚠️ ভেতরের OR বাইরে না ছড়াতে পুরনো প্রশ্নটা উপ-প্রশ্ন হয়ে গেছে
+            'accounts' => Account::query()->notAnotherBranchsTill()->whereIn('id', Account::query()->postable()
                 ->whereIn('code', $moneyCodes)
                 ->orWhereIn('parent_id', Account::query()->whereIn('code', $moneyCodes)->select('id'))
+                ->select('id'))
                 ->orderBy('code')->get(),
 
             /*

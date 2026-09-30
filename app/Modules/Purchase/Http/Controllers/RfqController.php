@@ -224,9 +224,9 @@ class RfqController extends Controller implements HasMiddleware
     private function formData(): array
     {
         return [
-            'products' => Product::query()->active()->with('unit')->orderBy('name_en')->get(),
+            'products' => Product::query()->soldInViewedBranch()->active()->with('unit')->orderBy('name_en')->get(),
             'warehouses' => Warehouse::query()->active()->orderBy('code')->get(),
-            'suppliers' => Supplier::query()->forPurchasing()->orderBy('code')->get(),
+            'suppliers' => Supplier::query()->inViewedBranch()->forPurchasing()->orderBy('code')->get(),
         ];
     }
 }

@@ -174,7 +174,7 @@ class StockTransferController extends Controller implements HasMiddleware
     {
         return [
             'warehouses' => Warehouse::query()->active()->orderBy('code')->get(),
-            'products' => Product::query()->active()->with('unit')->orderBy('name_en')->get(),
+            'products' => Product::query()->soldInViewedBranch()->active()->with('unit')->orderBy('name_en')->get(),
         ];
     }
 

@@ -7,6 +7,7 @@ namespace App\Modules\Accounts\Http\Controllers;
 use App\Core\Concerns\SortsLists;
 use App\Core\Services\MenuBuilder;
 use App\Core\Support\CompanyContext;
+use App\Core\Support\ViewedBranch;
 use App\Http\Controllers\Controller;
 use App\Modules\Accounts\Models\CashCount;
 use App\Modules\Accounts\Models\CashTill;
@@ -94,7 +95,8 @@ class CashCountController extends Controller implements HasMiddleware
     {
         return view('accounts::count.form', [
             'menu' => $this->menu->forUser($request->user()),
-            'tills' => CashTill::query()->active()->orderByDesc('is_primary')->orderBy('code')->get(),
+            // ⭐ হেডারে বাছা শাখার টিল (৩০ সেপ্টেম্বর ২০২৬) — [[ViewedBranch]]
+            'tills' => ViewedBranch::narrow(CashTill::query(), 'cash_tills.branch_id')->active()->orderByDesc('is_primary')->orderBy('code')->get(),
             'notes' => CashCount::DENOMINATIONS,
         ]);
     }

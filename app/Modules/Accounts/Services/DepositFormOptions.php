@@ -54,7 +54,8 @@ final class DepositFormOptions
      */
     public function all(string $type = Voucher::RECEIPT): array
     {
-        $money = Account::query()->money()->postable()->active()->orderBy('code')->get();
+        // ⭐ অন্য শাখার টিলের খাত বাদ (৩০ সেপ্টেম্বর ২০২৬) — [[Account::scopeNotAnotherBranchsTill()]]
+        $money = Account::query()->notAnotherBranchsTill()->money()->postable()->active()->orderBy('code')->get();
         $all = Account::query()->postable()->active()->orderBy('code')->get();
 
         /*

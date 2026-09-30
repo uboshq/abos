@@ -81,8 +81,8 @@ class SalesReturnReasonReportController extends Controller implements HasMiddlew
             'accounts' => collect(),
             'partyTypes' => collect(),
             'extraFilters' => 'sales::return.partials.reason-report-filters',
-            'customers' => Customer::query()->active()->orderBy('name_en')->get(),
-            'products' => Product::query()->active()->orderBy('name_en')->get(),
+            'customers' => Customer::query()->inViewedBranch()->active()->orderBy('name_en')->get(),
+            'products' => Product::query()->soldInViewedBranch()->active()->orderBy('name_en')->get(),
         ]);
     }
 }

@@ -1151,6 +1151,7 @@ final class VoucherService
      */
     public function moneyAccounts(): Collection
     {
-        return Account::query()->money()->postable()->active()->orderBy('code')->get();
+        // ⭐ অন্য শাখার টিলের খাত বাদ (৩০ সেপ্টেম্বর ২০২৬) — [[Account::scopeNotAnotherBranchsTill()]]
+        return Account::query()->notAnotherBranchsTill()->money()->postable()->active()->orderBy('code')->get();
     }
 }

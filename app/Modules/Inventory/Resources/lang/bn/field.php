@@ -3,6 +3,8 @@
 declare(strict_types=1);
 
 return [
+    'sold_in_branches' => 'কোন শাখায় বিক্রি হয়',
+    'sold_in_branches_hint' => 'কোনোটা না বাছলে সব শাখায়।',
     // ⭐ ফ্রি মাল আলাদা — ১৮ সেপ্টেম্বর ২০২৬
     'free' => 'ফ্রি',
     'free_available' => 'ফ্রি বিক্রয়যোগ্য',

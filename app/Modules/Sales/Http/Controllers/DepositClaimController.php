@@ -62,7 +62,8 @@ class DepositClaimController extends Controller implements HasMiddleware
             'status' => $status,
             'pendingCount' => DepositClaim::query()->pending()->count(),
             // `money()` নিজেই দল ছাঁকে, তাই আলাদা `postable()` লাগে না
-            'moneyAccounts' => Account::query()
+            // ⭐ অন্য শাখার টিলের খাত বাদ (৩০ সেপ্টেম্বর ২০২৬) — [[Account::scopeNotAnotherBranchsTill()]]
+            'moneyAccounts' => Account::query()->notAnotherBranchsTill()
                 ->money()->active()->orderBy('code')->get(),
         ]);
     }

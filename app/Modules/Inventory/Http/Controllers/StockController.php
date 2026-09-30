@@ -125,7 +125,7 @@ class StockController extends Controller implements HasMiddleware
          * আর ORDER BY-তে ওগুলো ব্যবহার করা যায়। ইনডেক্সটা ঠিক এই কাজের
          * জন্যই — (company_id, product_id, warehouse_id)।
          */
-        $query = Product::query()
+        $query = Product::query()->soldInViewedBranch()
             ->search($request->query('q'))
             /*
              * ⛔ নিষ্ক্রিয় পণ্যও আসে — যদি তার গায়ে মাল থাকে।
@@ -425,7 +425,7 @@ class StockController extends Controller implements HasMiddleware
     {
         return view('inventory::stock.adjust', [
             'menu' => $this->menu->forUser($request->user()),
-            'products' => Product::query()->active()->orderBy('name_en')->get(),
+            'products' => Product::query()->soldInViewedBranch()->active()->orderBy('name_en')->get(),
             'warehouses' => Warehouse::query()->active()->orderBy('code')->get(),
             'reasons' => ReasonCode::query()
                 ->inContext(ReasonCode::STOCK_ADJUSTMENT)
@@ -503,7 +503,7 @@ class StockController extends Controller implements HasMiddleware
     {
         return view('inventory::stock.issue', [
             'menu' => $this->menu->forUser($request->user()),
-            'products' => Product::query()->active()->orderBy('name_en')->get(),
+            'products' => Product::query()->soldInViewedBranch()->active()->orderBy('name_en')->get(),
             'warehouses' => Warehouse::query()->active()->orderBy('code')->get(),
             'reasons' => ReasonCode::query()
                 ->inContext(ReasonCode::STOCK_ISSUE)

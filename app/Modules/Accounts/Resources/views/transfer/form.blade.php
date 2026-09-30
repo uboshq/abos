@@ -59,7 +59,7 @@
                             class="h-(--spacing-field) w-full rounded-(--radius-field) border
                                    border-(--color-border) bg-(--color-surface-card) px-3">
                         <option value="">—</option>
-                        @foreach ($tills as $till)
+                        @foreach ($fromTills as $till)
                             <option value="{{ $till->id }}" @selected(old('from_till_id') == $till->id)>
                                 {{ $till->code }} — {{ $till->name() }}
                                 ({{ \App\Core\Support\Money::format($till->balance()) }})

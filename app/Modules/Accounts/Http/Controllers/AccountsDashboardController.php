@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Accounts\Http\Controllers;
 
 use App\Core\Services\MenuBuilder;
+use App\Core\Support\ViewedBranch;
 use App\Http\Controllers\Controller;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Models\CashTill;
@@ -49,7 +50,8 @@ class AccountsDashboardController extends Controller implements HasMiddleware
      */
     public function show(Request $request): View
     {
-        $tills = CashTill::query()->active()->with('account')->get();
+        // ⭐ হেডারে বাছা শাখার টিল (৩০ সেপ্টেম্বর ২০২৬) — [[ViewedBranch]]
+        $tills = ViewedBranch::narrow(CashTill::query(), 'cash_tills.branch_id')->active()->with('account')->get();
 
         return view('accounts::dashboard.show', [
             'menu' => $this->menu->forUser($request->user()),

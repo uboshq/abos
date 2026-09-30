@@ -55,7 +55,7 @@ class StrandedStockController extends Controller implements HasMiddleware
         return view('inventory::stock.lot-assign', [
             'menu' => $this->menu->forUser($request->user()),
             'warehouses' => Warehouse::query()->active()->orderBy('code')->get(),
-            'products' => Product::query()->active()->where('track_batch', true)->orderBy('name_en')->get(),
+            'products' => Product::query()->soldInViewedBranch()->active()->where('track_batch', true)->orderBy('name_en')->get(),
             'waiting' => $this->waiting(),
         ]);
     }

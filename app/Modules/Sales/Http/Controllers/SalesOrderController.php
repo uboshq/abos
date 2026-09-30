@@ -196,8 +196,8 @@ class SalesOrderController extends Controller implements HasMiddleware
          * একটা কোয়েরি। ⓘ ছয়জনের ডেমোতে চোখে পড়ে না, তিন হাজার
          * ক্রেতার ডিপোতে পাতা খোলা মানেই তিন হাজার কোয়েরি।
          */
-        $customers = Customer::query()->active()->withOutstanding()->orderBy('name_en')->get();
-        $products = Product::query()->active()->with('unit')->orderBy('name_en')->get();
+        $customers = Customer::query()->inViewedBranch()->active()->withOutstanding()->orderBy('name_en')->get();
+        $products = Product::query()->soldInViewedBranch()->active()->with('unit')->orderBy('name_en')->get();
 
         return [
             'customers' => $customers,

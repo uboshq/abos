@@ -82,7 +82,7 @@ class DirectPurchaseController extends Controller implements HasMiddleware
         return view('purchase::direct.index', [
             'menu' => $this->menu->forUser($request->user()),
             'products' => $this->catalogue($warehouse),
-            'suppliers' => Supplier::query()->active()->forPurchasing()->orderBy('name_en')->get(),
+            'suppliers' => Supplier::query()->inViewedBranch()->active()->forPurchasing()->orderBy('name_en')->get(),
 
             /*
              * ── গুদাম বনাম তাক — দুইটা আলাদা প্রশ্ন ──────────────────
@@ -241,7 +241,7 @@ class DirectPurchaseController extends Controller implements HasMiddleware
              * ফাইলে কোনো প্রতিষ্ঠানের নাম লেখা নেই, আর কোম্পানি চাইলে
              * ধরনটা নিজে বাড়াতে পারে। বিক্রয়ের দিকেও হুবহু এটাই।
              */
-            'carriers' => Supplier::query()
+            'carriers' => Supplier::query()->inViewedBranch()
                 ->active()
                 ->whereHas('partyType', fn ($q) => $q->whereIn('code', ['TRANSPORT']))
                 ->orderBy('name_en')
@@ -773,7 +773,7 @@ class DirectPurchaseController extends Controller implements HasMiddleware
      */
     private function products(): EloquentCollection
     {
-        return $this->products ??= Product::query()
+        return $this->products ??= Product::query()->soldInViewedBranch()
             ->active()
             ->with(['unit', 'tax'])
             ->orderBy('name_en')
@@ -949,7 +949,8 @@ class DirectPurchaseController extends Controller implements HasMiddleware
             ->whereIn('code', StandardChart::MONEY_PARENTS)
             ->pluck('id');
 
-        return Account::query()
+        // ⭐ অন্য শাখার টিলের খাত বাদ (৩০ সেপ্টেম্বর ২০২৬) — [[Account::scopeNotAnotherBranchsTill()]]
+        return Account::query()->notAnotherBranchsTill()
             ->where(fn ($q) => $q->whereIn('parent_id', $heads)->orWhereIn('id', $heads))
             ->where('is_group', false)
             ->orderBy('code')

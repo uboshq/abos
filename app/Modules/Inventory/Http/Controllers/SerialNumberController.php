@@ -91,7 +91,7 @@ class SerialNumberController extends Controller implements HasMiddleware
              * মালিকের সিদ্ধান্তটাই (*"পণ্যে একটা টিক"*) অর্থহীন হত,
              * আর চাল-ডালের বস্তার নম্বর চাওয়া হত।
              */
-            'products' => Product::query()->active()->where('track_serial', true)
+            'products' => Product::query()->soldInViewedBranch()->active()->where('track_serial', true)
                 ->with('unit')->orderBy('name_en')->get(),
         ]);
     }

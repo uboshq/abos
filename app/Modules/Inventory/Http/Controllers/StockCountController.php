@@ -181,7 +181,7 @@ class StockCountController extends Controller implements HasMiddleware
         $warehouse = $warehouses->firstWhere('id', (int) $request->query('warehouse'))
             ?? $warehouses->first();
 
-        $products = Product::query()->active()->with('unit')->orderBy('name_en')->get();
+        $products = Product::query()->soldInViewedBranch()->active()->with('unit')->orderBy('name_en')->get();
 
         return [
             'warehouses' => $warehouses,

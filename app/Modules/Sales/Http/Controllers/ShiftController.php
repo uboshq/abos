@@ -6,6 +6,7 @@ namespace App\Modules\Sales\Http\Controllers;
 
 use App\Core\Services\MenuBuilder;
 use App\Core\Support\CompanyContext;
+use App\Core\Support\ViewedBranch;
 use App\Http\Controllers\Controller;
 use App\Modules\Accounts\Models\CashTill;
 use App\Modules\Sales\Models\CounterShift;
@@ -62,7 +63,8 @@ class ShiftController extends Controller implements HasMiddleware
              * "খুলুন" চাপতেন, আর একটা ভুলের বার্তা পেতেন — অথচ
              * তালিকাটাই আগে থেকে জানত।
              */
-            'tills' => CashTill::query()
+            // ⭐ হেডারে বাছা শাখার টিল (৩০ সেপ্টেম্বর ২০২৬) — [[ViewedBranch]]
+            'tills' => ViewedBranch::narrow(CashTill::query(), 'cash_tills.branch_id')
                 ->active()
                 ->whereNotIn('id', CounterShift::query()->open()->pluck('cash_till_id'))
                 ->orderBy('code')

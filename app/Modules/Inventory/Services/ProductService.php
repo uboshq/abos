@@ -39,8 +39,9 @@ final class ProductService
         $this->assertImportable($data);
 
         [$data, $packs, $defaults] = $this->splitPacks($data);
+        [$data, $branches] = $this->splitBranches($data);
 
-        return DB::transaction(function () use ($data, $packs, $defaults) {
+        return DB::transaction(function () use ($data, $packs, $defaults, $branches) {
             $givenCode = filled($data['code'] ?? null);
 
             $data['code'] = $givenCode ? trim((string) $data['code']) : $this->numbers->next('PRD');
@@ -59,6 +60,8 @@ final class ProductService
             if ($packs !== null && $product->unit_id !== null) {
                 $this->packs->sync($product, $packs, $defaults);
             }
+
+            $this->syncBranches($product, $branches);
 
             if (! $givenCode) {
                 IssuedNumber::query()
@@ -107,8 +110,12 @@ final class ProductService
         // [[ProductPackService::defaults()]]-এ
         $wasBase = $product->unit_id === null ? null : (int) $product->unit_id;
 
-        return DB::transaction(function () use ($product, $data, $packs, $defaults, $wasBase) {
+        [$data, $branches] = $this->splitBranches($data);
+
+        return DB::transaction(function () use ($product, $data, $packs, $defaults, $wasBase, $branches) {
             $product->update($data);
+
+            $this->syncBranches($product, $branches);
 
             if ($packs !== null && $product->unit_id !== null) {
                 $this->packs->sync($product, $packs, $defaults, $wasBase);
@@ -126,6 +133,38 @@ final class ProductService
      * আটকালে ব্যবহারকারী বাধ্য হতেন একটা ভুয়া সমন্বয় দিয়ে মজুদ শূন্য
      * করতে — যা আসল মালটা লুকিয়ে ফেলত।
      */
+    /**
+     * ⭐ কোন শাখায় বিক্রি হয় — ফর্মের ঘর আলাদা করা (৩০ সেপ্টেম্বর ২০২৬, মালিকের সিদ্ধান্ত খ)।
+     *
+     * ⓘ `branch_table` না এলে null — "ছোঁয়া হবে না" (আমদানি, পুরনো ফর্ম, API)। এলে তালিকাটা
+     * যা আছে তাই, আর খালি তালিকা মানে **সব শাখায়**। ⚠️ ব্রাউজার খালি চেকবক্স পাঠায় না,
+     * তাই আলাদা সংকেত — [[splitPacks()]]-এর `pack_table`-এর একই কারণ।
+     *
+     * @param  array<string, mixed>  $data
+     * @return array{0: array<string, mixed>, 1: list<int>|null}
+     */
+    private function splitBranches(array $data): array
+    {
+        $sent = array_key_exists('branch_table', $data);
+        $ids = $sent ? array_values(array_unique(array_map('intval', (array) ($data['branch_ids'] ?? [])))) : null;
+
+        unset($data['branch_table'], $data['branch_ids']);
+
+        return [$data, $ids];
+    }
+
+    /** @param  list<int>|null  $ids */
+    private function syncBranches(Product $product, ?array $ids): void
+    {
+        if ($ids === null) {
+            return;
+        }
+
+        $product->branches()->sync(
+            collect($ids)->mapWithKeys(fn (int $id) => [$id => ['company_id' => $product->company_id]])->all(),
+        );
+    }
+
     /**
      * প্যাকের দুই ঘর পণ্যের ঘর থেকে আলাদা করা।
      *

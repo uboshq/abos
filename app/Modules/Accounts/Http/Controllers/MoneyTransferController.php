@@ -7,6 +7,7 @@ namespace App\Modules\Accounts\Http\Controllers;
 use App\Core\Concerns\SortsLists;
 use App\Core\Services\MenuBuilder;
 use App\Core\Support\CompanyContext;
+use App\Core\Support\ViewedBranch;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Modules\Accounts\Models\Account;
@@ -182,6 +183,11 @@ class MoneyTransferController extends Controller implements HasMiddleware
     private function options(): array
     {
         return [
+            /*
+             * ⭐ "কোন টিল থেকে" — হেডারে বাছা শাখার (৩০ সেপ্টেম্বর ২০২৬); "কোন টিলে" — সবগুলো,
+             * কারণ এক শাখা থেকে আরেক শাখায় টাকা পাঠানো বৈধ কাজ।
+             */
+            'fromTills' => ViewedBranch::narrow(CashTill::query(), 'cash_tills.branch_id')->active()->with('account')->orderByDesc('is_primary')->orderBy('code')->get(),
             'tills' => CashTill::query()->active()->with('account')->orderByDesc('is_primary')->orderBy('code')->get(),
             // ব্যাংকে জমা দেওয়াটাও হস্তান্তর, আর সেটাই দিনশেষে সবচেয়ে
             // বেশি হয় — তাই ব্যাংকের খাতগুলোও গন্তব্যের তালিকায়

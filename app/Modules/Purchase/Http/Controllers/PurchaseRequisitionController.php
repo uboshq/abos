@@ -106,7 +106,7 @@ class PurchaseRequisitionController extends Controller implements HasMiddleware
     {
         return view('purchase::requisition.form', [
             'menu' => $this->menu->forUser($request->user()),
-            'products' => Product::query()->active()->with('unit')->orderBy('name_en')->get(),
+            'products' => Product::query()->soldInViewedBranch()->active()->with('unit')->orderBy('name_en')->get(),
 
             /*
              * Only the active centres, and an empty list is a real answer:
@@ -172,7 +172,7 @@ class PurchaseRequisitionController extends Controller implements HasMiddleware
              * পাতায় দুইটা বাড়তি কোয়েরি যেত, অথচ ঘরগুলো দেখা যেত না।
              */
             'suppliers' => $requisition->canBecomeAnOrder() && $request->user()?->can('purchase.order.create')
-                ? Supplier::query()->forPurchasing()->orderBy('code')->get()
+                ? Supplier::query()->inViewedBranch()->forPurchasing()->orderBy('code')->get()
                 : collect(),
             'warehouses' => $requisition->canBecomeAnOrder() && $request->user()?->can('purchase.order.create')
                 ? Warehouse::query()->active()->orderBy('code')->get()

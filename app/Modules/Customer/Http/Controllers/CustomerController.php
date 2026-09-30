@@ -68,7 +68,7 @@ class CustomerController extends Controller implements HasMiddleware
 
     public function index(Request $request): View
     {
-        $query = Customer::query()
+        $query = Customer::query()->inViewedBranch()
             ->search($request->query('q'))
             ->when($request->boolean('inactive') === false, fn ($q) => $q->active())
             /*

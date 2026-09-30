@@ -12,6 +12,7 @@ use App\Core\Concerns\IsAudited;
 use App\Core\Contracts\Drillable;
 use App\Core\Services\LedgerBalances;
 use App\Core\Support\RunningBalance;
+use App\Core\Support\ViewedBranch;
 use App\Models\LedgerEntry;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
@@ -187,6 +188,28 @@ class Account extends Model implements Drillable
     public function scopeMoney(Builder $query): Builder
     {
         return $query->whereNotNull('money_kind')->where('is_group', false);
+    }
+
+    /**
+     * ⭐ অন্য শাখার টিলের নগদ খাত বাদ — টাকার খাতের পিকারের জন্য (৩০ সেপ্টেম্বর ২০২৬)।
+     *
+     * হেডারে এক শাখা বাছা থাকলে রসিদ, পরিশোধ, আদায় আর সরাসরি বিক্রি-কেনার "টাকা কোথায়"
+     * ঘরে কেবল সেই শাখার টিলের খাত; অন্য শাখার আর শাখাহীন টিলের খাত বাদ। ব্যাংক, MFS আর
+     * টিলহীন নগদ (অফিসের সিন্দুক) কোম্পানির — থাকে। "সব শাখা"-য় কিছুই বাদ নয়।
+     * ⚠️ কেবল পিকার; যাচাই ([[MoneyAccountRule]]) আর পোস্টিং গোটা কোম্পানির।
+     */
+    public function scopeNotAnotherBranchsTill(Builder $query): Builder
+    {
+        $branch = ViewedBranch::one();
+
+        if ($branch === null) {
+            return $query;
+        }
+
+        return $query->whereNotIn($query->getModel()->getTable().'.id', CashTill::query()
+            ->whereNotNull('account_id')
+            ->where(fn ($w) => $w->whereNull('branch_id')->orWhere('branch_id', '!=', $branch))
+            ->select('account_id'));
     }
 
     /** কেবল এক ধরনের টাকার খাত — `ofMoneyKind(Account::BANK)`। */

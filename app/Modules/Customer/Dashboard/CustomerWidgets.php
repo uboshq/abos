@@ -60,7 +60,7 @@ final class CustomerWidgets implements DashboardWidgets
      */
     private static function overTheirLimit(): Widget
     {
-        $count = Customer::query()->active()->overCreditLimit()->count();
+        $count = Customer::query()->inViewedBranch()->active()->overCreditLimit()->count();
 
         return new Widget(
             group: 'todo',
@@ -84,7 +84,7 @@ final class CustomerWidgets implements DashboardWidgets
      */
     private static function receivableAbove(string $ceiling): Widget
     {
-        $total = (string) (Customer::query()->active()->withOutstanding()->get()
+        $total = (string) (Customer::query()->inViewedBranch()->active()->withOutstanding()->get()
             ->reduce(fn (string $sum, Customer $customer) => bcadd($sum, $customer->outstanding(), 4), '0'));
 
         $over = bccomp($total, $ceiling, 4) > 0;

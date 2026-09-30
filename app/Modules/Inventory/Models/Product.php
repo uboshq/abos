@@ -10,7 +10,9 @@ use App\Core\Concerns\HasDocumentStatus;
 use App\Core\Concerns\HasPublicId;
 use App\Core\Concerns\IsAudited;
 use App\Core\Contracts\Drillable;
+use App\Core\Support\ViewedBranch;
 use App\Models\Attachment;
+use App\Models\Branch;
 use App\Models\User;
 use App\Modules\MasterData\Models\Brand;
 use App\Modules\MasterData\Models\ProductCategory;
@@ -20,6 +22,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
@@ -111,6 +114,41 @@ class Product extends Model implements Drillable
             'reorder_qty' => 'decimal:4',
             'is_active' => 'boolean',
         ];
+    }
+
+    /**
+     * ⭐ কোন শাখাগুলোয় বিক্রি হয় — মালিকের সিদ্ধান্ত (খ), ৩০ সেপ্টেম্বর ২০২৬।
+     *
+     * ⓘ খালি মানে **সব শাখায়**; ভরা মানে কেবল সেগুলোয়। পণ্য একটাই — দাম, লট আর খরচের
+     * স্তর ভাগ হয় না ([[each_branch_sells_its_own_goods]] মাইগ্রেশন)।
+     */
+    public function branches(): BelongsToMany
+    {
+        return $this->belongsToMany(Branch::class, 'inv_product_branches')->withTimestamps();
+    }
+
+    /**
+     * ⭐ হেডারে বাছা শাখায় বিক্রি হয় এমন পণ্য — তালিকা আর পিকারের জন্য।
+     *
+     * এক শাখা বাছা থাকলে: যেসব পণ্যের কোনো শাখা বাঁধা নেই (সবার) আর যেগুলো ওই শাখায় বাঁধা।
+     * "সব শাখা"-য় সবগুলো। ⚠️ গ্লোবাল স্কোপ নয় — কাগজের পুরনো লাইন, মজুদ, খরচ আর পোস্টিং
+     * পণ্যটা সবসময় খুঁজে পায় ([[Customer::scopeInViewedBranch()]]-এর একই কারণ)।
+     */
+    public function scopeSoldInViewedBranch(Builder $query): Builder
+    {
+        $branch = ViewedBranch::one();
+
+        if ($branch === null) {
+            return $query;
+        }
+
+        $table = $query->getModel()->getTable();
+
+        return $query->where(fn (Builder $q) => $q
+            ->whereNotExists(fn ($s) => $s->from('inv_product_branches')->whereColumn('inv_product_branches.product_id', $table.'.id'))
+            ->orWhereExists(fn ($s) => $s->from('inv_product_branches')
+                ->whereColumn('inv_product_branches.product_id', $table.'.id')
+                ->where('inv_product_branches.branch_id', $branch)));
     }
 
     public function unit(): BelongsTo

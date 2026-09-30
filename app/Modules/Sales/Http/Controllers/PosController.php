@@ -87,7 +87,7 @@ class PosController extends Controller implements HasMiddleware
         return view('sales::pos.index', [
             'menu' => $this->menu->forUser($request->user()),
             'products' => $this->catalogue($warehouse),
-            'customers' => Customer::query()->active()->orderBy('name_en')->get(['id', 'code', 'name_en', 'name_bn']),
+            'customers' => Customer::query()->inViewedBranch()->active()->orderBy('name_en')->get(['id', 'code', 'name_en', 'name_bn']),
             'warehouses' => Warehouse::query()->active()->orderBy('code')->get(),
             'warehouse' => $warehouse,
             'walkinId' => (int) $this->settings->get('sales.walkin_customer_id', 0),
@@ -592,7 +592,7 @@ class PosController extends Controller implements HasMiddleware
             ->where('company_id', CompanyContext::id())
             ->when($warehouse, fn ($q) => $q->where('warehouse_id', $warehouse->id));
 
-        return Product::query()
+        return Product::query()->soldInViewedBranch()
             ->active()
             ->with('unit')
             ->select('inv_products.*')

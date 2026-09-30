@@ -263,7 +263,7 @@ class RecipeController extends Controller implements HasMiddleware
     private function options(): array
     {
         return [
-            'products' => Product::query()->active()->with('unit')->orderBy('name_en')->get(),
+            'products' => Product::query()->soldInViewedBranch()->active()->with('unit')->orderBy('name_en')->get(),
             'kinds' => [
                 Recipe::TO_ORDER => __('inventory::field.recipe_to_order'),
                 Recipe::BATCH => __('inventory::field.recipe_batch'),

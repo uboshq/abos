@@ -93,6 +93,13 @@ class ProductRequest extends FormRequest
             'qc_required' => ['nullable', 'boolean'],
             'track_serial' => ['nullable', 'boolean'],
 
+            /*
+             * ⭐ কোন শাখায় বিক্রি হয় (৩০ সেপ্টেম্বর ২০২৬) — খালি মানে সব শাখায়।
+             * ⛔ শাখা এই কোম্পানির হতে হবে — অন্য কোম্পানির শাখায় পণ্য বাঁধা যায় না।
+             */
+            'branch_table' => ['nullable', 'boolean'],
+            'branch_ids' => ['nullable', 'array', 'max:100'],
+            'branch_ids.*' => ['integer', Rule::exists('branches', 'id')->where('company_id', $companyId)],
             'pack_table' => ['nullable', 'boolean'],
             'packs' => ['nullable', 'array', 'max:20'],
             'packs.*' => ['array'],

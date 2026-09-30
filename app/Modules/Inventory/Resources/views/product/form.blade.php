@@ -93,6 +93,27 @@
                              :options="$taxes->mapWithKeys(fn ($t) => [$t->id => $t->name()])"
                              :selected="$product->tax_id"
                              placeholder="-" />
+
+                {{-- ⭐ কোন শাখায় বিক্রি হয় (৩০ সেপ্টেম্বর ২০২৬, মালিকের সিদ্ধান্ত খ)।
+                     কোনোটা না বাছলে সব শাখায়। ⓘ `branch_table` — খালি চেকবক্স ব্রাউজার পাঠায় না,
+                     তাই "সব শাখা" আর "ছোঁয়া হয়নি" আলাদা করার সংকেত। --}}
+                @if (($branches ?? collect())->count() > 1)
+                    @php $chosen = collect(old('branch_ids', $product->exists ? $product->branches->pluck('id')->all() : []))->map(fn ($id) => (int) $id)->all(); @endphp
+                    <fieldset class="sm:col-span-2" data-product-branches>
+                        <legend class="mb-1 text-sm font-medium">{{ __('inventory::field.sold_in_branches') }}</legend>
+                        <input type="hidden" name="branch_table" value="1">
+                        <div class="flex flex-wrap gap-x-4 gap-y-1">
+                            @foreach ($branches as $branch)
+                                <label class="inline-flex items-center gap-1.5 text-sm">
+                                    <input type="checkbox" name="branch_ids[]" value="{{ $branch->id }}" @checked(in_array($branch->id, $chosen, true))>
+                                    {{ $branch->name() }}
+                                </label>
+                            @endforeach
+                        </div>
+                        <p class="mt-1 text-2xs text-(--color-ink-muted)">{{ __('inventory::field.sold_in_branches_hint') }}</p>
+                        @error('branch_ids') <p class="mt-1 text-2xs text-(--color-danger)">{{ $message }}</p> @enderror
+                    </fieldset>
+                @endif
             </div>
         </section>
 

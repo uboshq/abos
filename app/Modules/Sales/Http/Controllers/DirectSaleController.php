@@ -93,7 +93,7 @@ class DirectSaleController extends Controller implements HasMiddleware
          * গ্রাহকপ্রতি একটা করে কোয়েরি হত। ঠিক যে N+1-টা `withOutstanding()`
          * দিয়ে বন্ধ করা হয়েছিল, সেটাই পাশের দরজা দিয়ে ফিরে আসত।
          */
-        $customers = Customer::query()->active()->with('location')
+        $customers = Customer::query()->inViewedBranch()->active()->with('location')
             ->withOutstanding()->orderBy('name_en')->get();
 
         /*
@@ -107,7 +107,7 @@ class DirectSaleController extends Controller implements HasMiddleware
         $held = $this->credit->pendingFor($customers->pluck('id')->map(fn ($id) => (int) $id)->all());
 
         // শীট আর প্যাকের ড্রপডাউন — একই তালিকা, তাই একবারই তোলা
-        $sheetProducts = Product::query()->active()->with('unit')->orderBy('name_en')->get();
+        $sheetProducts = Product::query()->soldInViewedBranch()->active()->with('unit')->orderBy('name_en')->get();
 
         $catalogue = $this->catalogue($warehouse);
 
@@ -236,7 +236,7 @@ class DirectSaleController extends Controller implements HasMiddleware
              * দুইটাই সেটিংসের সারি, তাই কোডে কোনো নাম লেখা নেই: কোড দিয়ে
              * খোঁজা হয়, আর কোম্পানি চাইলে আরও ধরন যোগ করতে পারে।
              */
-            'carriers' => Supplier::query()
+            'carriers' => Supplier::query()->inViewedBranch()
                 ->active()
                 // RENTAL পক্ষের ধরনটা বাদ (৪ সেপ্টেম্বর, মালিকের চূড়ান্ত তালিকা) —
                 // ভাড়ার গাড়িও পরিবহনকারী, তাই আলাদা ধরন নয়। এখন শুধু TRANSPORT।
@@ -263,7 +263,8 @@ class DirectSaleController extends Controller implements HasMiddleware
              */
             'drivers' => $this->driverSuggestions(),
 
-            'moneyAccounts' => Account::query()
+            // ⭐ অন্য শাখার টিলের খাত বাদ (৩০ সেপ্টেম্বর ২০২৬) — [[Account::scopeNotAnotherBranchsTill()]]
+            'moneyAccounts' => Account::query()->notAnotherBranchsTill()
                 ->where('is_group', false)
                 ->whereIn('parent_id', Account::query()
                     ->whereIn('code', StandardChart::MONEY_PARENTS)->select('id'))
@@ -1124,7 +1125,7 @@ class DirectSaleController extends Controller implements HasMiddleware
         // ⓘ ক্রয়মূল্যের চাবি একবারই দেখা — নিচের প্রতিটা সারির জন্য নয়
         $seesCost = (bool) auth()->user()?->can('sales.cost.view');
 
-        return Product::query()
+        return Product::query()->soldInViewedBranch()
             ->active()
             ->with(['unit', 'tax'])
             ->select('inv_products.*')

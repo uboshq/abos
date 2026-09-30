@@ -3,6 +3,8 @@
 declare(strict_types=1);
 
 return [
+    'sold_in_branches' => 'Sold in branches',
+    'sold_in_branches_hint' => 'Leave all unticked to sell in every branch.',
     'free' => 'Free',
     'free_available' => 'Free sellable',
     'code' => 'Code',

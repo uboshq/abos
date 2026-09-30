@@ -399,9 +399,9 @@ class SalesInvoiceController extends Controller implements HasMiddleware
     private function formData(): array
     {
         return [
-            'customers' => Customer::query()->active()->orderBy('name_en')->get(),
+            'customers' => Customer::query()->inViewedBranch()->active()->orderBy('name_en')->get(),
             'warehouses' => Warehouse::query()->active()->orderBy('code')->get(),
-            'products' => Product::query()->active()->with('unit')->orderBy('name_en')->get(),
+            'products' => Product::query()->soldInViewedBranch()->active()->with('unit')->orderBy('name_en')->get(),
             'challans' => DeliveryChallan::query()->where('status', DocumentStatus::CONFIRMED)
                 ->with('customer')->orderByDesc('trx_date')->limit(200)->get(),
         ];

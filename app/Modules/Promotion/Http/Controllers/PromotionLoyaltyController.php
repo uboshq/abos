@@ -164,10 +164,8 @@ final class PromotionLoyaltyController extends Controller implements HasMiddlewa
      */
     private function visibleCustomers(User $user): Builder
     {
-        return Customer::query()
-            ->when($this->scope->idsFor($user, UserDataScope::BRANCH), fn (Builder $q, array $ids) => $q
-                ->where(fn (Builder $w) => $w->whereIn('customers.branch_id', $ids)
-                    ->orWhereNull('customers.branch_id')));
+        // ⭐ নাগালের সাথে হেডারে বাছা শাখাও (৩০ সেপ্টেম্বর ২০২৬) — [[Customer::scopeInViewedBranch()]]
+        return Customer::query()->inViewedBranch();
     }
 
     /**

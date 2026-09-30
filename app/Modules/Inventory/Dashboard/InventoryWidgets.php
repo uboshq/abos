@@ -68,7 +68,7 @@ final class InventoryWidgets implements DashboardWidgets
                        where m.product_id = inv_products.id
                          and m.company_id = inv_products.company_id)';
 
-        return Product::query()
+        return Product::query()->soldInViewedBranch()
             ->active()
             ->where('reorder_level', '>', 0)
             ->whereRaw("{$available} <= inv_products.reorder_level")

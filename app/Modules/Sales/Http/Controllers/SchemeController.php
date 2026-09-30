@@ -250,7 +250,7 @@ class SchemeController extends Controller implements HasMiddleware
     public static function targets(): array
     {
         return [
-            Scheme::PRODUCT => Product::query()->where('is_active', true)->orderBy('code')
+            Scheme::PRODUCT => Product::query()->soldInViewedBranch()->where('is_active', true)->orderBy('code')
                 ->pluck('name_en', 'id')->all(),
             Scheme::CATEGORY => ProductCategory::query()->orderBy('code')
                 ->pluck('name_en', 'id')->all(),

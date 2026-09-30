@@ -104,8 +104,8 @@ class CommissionClaimController extends Controller implements HasMiddleware
     {
         return view('sales::commission.create', [
             'menu' => $this->menu->forUser($request->user()),
-            'customers' => Customer::query()->active()->orderBy('name_en')->get(['id', 'code', 'name_en', 'name_bn']),
-            'suppliers' => Supplier::query()->active()->orderBy('name_en')->get(['id', 'code', 'name_en', 'name_bn']),
+            'customers' => Customer::query()->inViewedBranch()->active()->orderBy('name_en')->get(['id', 'code', 'name_en', 'name_bn']),
+            'suppliers' => Supplier::query()->inViewedBranch()->active()->orderBy('name_en')->get(['id', 'code', 'name_en', 'name_bn']),
         ]);
     }
 

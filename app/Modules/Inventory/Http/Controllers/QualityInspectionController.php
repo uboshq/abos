@@ -286,7 +286,7 @@ class QualityInspectionController extends Controller implements HasMiddleware
              * ⚠️ একটাও না থাকলে পর্দা খালি দেখায়, আর সেটাই সঠিক
              * বার্তা: *"আগে পণ্যে টিক দিন"*।
              */
-            'products' => Product::query()->active()->where('qc_required', true)
+            'products' => Product::query()->soldInViewedBranch()->active()->where('qc_required', true)
                 ->with('unit')->orderBy('name_en')->get(),
         ];
     }

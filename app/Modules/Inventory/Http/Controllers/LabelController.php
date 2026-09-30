@@ -70,7 +70,7 @@ class LabelController extends Controller implements HasMiddleware
     {
         return view('inventory::label.index', [
             'menu' => $this->menu->forUser($request->user()),
-            'products' => Product::query()->active()->with('unit')->orderBy('name_en')->get(),
+            'products' => Product::query()->soldInViewedBranch()->active()->with('unit')->orderBy('name_en')->get(),
         ]);
     }
 
