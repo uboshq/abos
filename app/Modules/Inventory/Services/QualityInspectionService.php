@@ -151,6 +151,16 @@ final class QualityInspectionService
         return DB::transaction(function () use (
             $inspection, $result, $acceptedQty, $rejectedQty, $remarks
         ) {
+            /*
+             * ⛔ সারি আটকে "অপেক্ষমাণ" কি না আবার দেখা — চূড়ান্ত অডিট ⛔১৩, ৩০ সেপ্টেম্বর ২০২৬ — [[StockTransferService]]-এর সেই একই সারাই।
+             * দুইবার চাপ দিলে দুইটা অনুরোধই অপেক্ষমাণ দেখত, আর রায়ের মাল দুইবার আটকাত।
+             */
+            if (! (QualityInspection::query()->whereKey($inspection->id)->lockForUpdate()->first()?->isPending() ?? false)) {
+                throw ValidationException::withMessages([
+                    'status' => __('inventory::validation.qc_already_decided'),
+                ]);
+            }
+
             $inspection->loadMissing(['product', 'warehouse', 'batch']);
 
             $held = $this->holdFor($result, $acceptedQty, $rejectedQty);
@@ -293,6 +303,22 @@ final class QualityInspectionService
         }
 
         DB::transaction(function () use ($inspection, $product, $warehouse, $qty, $writeOff, $narration) {
+            /*
+             * ⛔ সারি আটকে সীমাটা আবার মাপা — চূড়ান্ত অডিট ⛔১৩, ৩০ সেপ্টেম্বর ২০২৬ — [[StockTransferService]]-এর সেই একই সারাই।
+             * ওপরের সীমা আসে হাতে ধরা মডেলের `disposed_qty` থেকে; দুইটা বিনাশ একসাথে এলে দুজনেই "১০ আটকানো" পড়ত,
+             * আর কাগজ যা আটকায়নি তাও তাক থেকে যেত। ⓘ আটকানো সারির `disposed_qty` নিচের যোগেও বসে, নইলে পুরনোটার
+             * ওপর যোগ হয়ে আগের বিনাশ মুছে যেত।
+             */
+            $locked = QualityInspection::query()->whereKey($inspection->id)->lockForUpdate()->firstOrFail();
+
+            if (bccomp($qty, $this->heldBy($locked), 4) > 0) {
+                throw ValidationException::withMessages([
+                    'qty' => __('inventory::validation.qc_dispose_over', ['held' => $this->heldBy($locked)]),
+                ]);
+            }
+
+            $inspection->disposed_qty = $locked->disposed_qty;
+
             /* ⓘ প্রথমে আটকানো ছাড়া — কারণটা ঐ আটকানোরই */
             $this->stock->release(
                 product: $product,

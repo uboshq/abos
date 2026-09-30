@@ -115,6 +115,16 @@ final class ProductionService
         );
 
         return DB::transaction(function () use ($production) {
+            /*
+             * ⛔ সারি আটকে "খসড়া" কি না আবার দেখা — চূড়ান্ত অডিট ⛔১৩, ৩০ সেপ্টেম্বর ২০২৬ — [[StockTransferService]]-এর সেই একই সারাই।
+             * দুইবার চাপ দিলে দুইটা অনুরোধই খসড়া দেখত: উপকরণ দুইবার কাটা যেত, রান্না দুইবার গুদামে ঢুকত।
+             */
+            if ((string) Production::query()->whereKey($production->id)->lockForUpdate()->value('status') !== DocumentStatus::DRAFT) {
+                throw ValidationException::withMessages([
+                    'status' => __('inventory::validation.production_not_draft'),
+                ]);
+            }
+
             $recipe = $production->recipe()->with('lines.product')->firstOrFail();
 
             $this->assertCookable($recipe);

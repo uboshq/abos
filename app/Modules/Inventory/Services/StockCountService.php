@@ -206,6 +206,17 @@ final class StockCountService
         );
 
         return DB::transaction(function () use ($count, $reason) {
+            /*
+             * ⛔ সারি আটকে অবস্থা আবার পড়া — চূড়ান্ত অডিট ⛔১৩, ৩০ সেপ্টেম্বর ২০২৬ — [[StockTransferService]]-এর সেই একই সারাই।
+             * ওপরের পরখটা হাতে ধরা মডেল দেখে; দুইবার চাপ দিলে দুইটা অনুরোধই "খসড়া" দেখত, আর গোনার প্রতিটা
+             * পার্থক্য দুইবার সমন্বয় হয়ে খতিয়ানে দুইবার উঠত। ⓘ দ্বিতীয়টা এখানে অপেক্ষা করে, তারপর "নিশ্চিত" পড়ে ফেরে।
+             */
+            if ($this->lockedStatus($count) !== DocumentStatus::DRAFT) {
+                throw ValidationException::withMessages([
+                    'status' => __('inventory::validation.count_not_draft'),
+                ]);
+            }
+
             foreach ($count->lines as $line) {
                 if (bccomp((string) $line->difference, '0', 4) === 0) {
                     continue;
@@ -339,5 +350,14 @@ final class StockCountService
         }
 
         return $out;
+    }
+
+    /** কাগজের অবস্থা, সারি আটকে — [[approve()]]-এর দ্বিতীয় ক্লিক (⛔১৩) */
+    private function lockedStatus(StockCount $count): string
+    {
+        return (string) StockCount::query()
+            ->whereKey($count->id)
+            ->lockForUpdate()
+            ->value('status');
     }
 }
