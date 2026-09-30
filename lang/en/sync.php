@@ -28,4 +28,6 @@ return [
 
     'device_unknown' => 'This handset is not registered yet. Sign out once and sign in again.',
     'module_unknown' => 'This part (:module) cannot be synchronised.',
+
+    'conflict_already_resolved' => 'This conflict was already settled; the first decision stands.',
 ];

@@ -250,8 +250,12 @@ Route::prefix('v1')
             Route::get('/conflicts', [SyncController::class, 'conflicts'])
                 ->middleware('can:governance.audit.view')
                 ->name('conflicts');
+            /*
+             * ⛔ মেটানো একটা **কাজ**, পড়া নয় — নিজের চাবি (৩০ সেপ্টেম্বর ২০২৬)। আগে
+             * নিরীক্ষকের পড়ার চাবিতেই দ্বন্দ্ব মিটিয়ে সারি থেকে সরানো যেত।
+             */
             Route::post('/conflicts/{conflict}/resolve', [SyncController::class, 'resolveConflict'])
-                ->middleware('can:governance.audit.view')
+                ->middleware('can:governance.sync.resolve')
                 ->name('conflicts.resolve');
 
             Route::post('/{module}/push', [SyncController::class, 'push'])

@@ -10,6 +10,7 @@ use App\Models\SyncConflict;
 use App\Models\SyncDevice;
 use App\Models\SyncState;
 use App\Models\User;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -229,8 +230,44 @@ final class SyncService
             ]));
         }
 
+        /*
+         * ⛔ কাজ আর তার দাগ **এক লেনদেনে** — ৩০ সেপ্টেম্বর ২০২৬ (নিরাপত্তা-অডিট খোঁজ ৯)।
+         *
+         * আগে অর্ডারটা নিজের লেনদেনে পাকা হত, আর দাগটা বসত পরে। দুর্বল নেটে ফোন একই
+         * বদল একসাথে দুইবার পাঠালে দুইজনেই "আগে আসেনি" দেখত, দুইজনেই অর্ডার বসাত;
+         * দ্বিতীয়জনের **দাগ** unique-এ আটকাত, কিন্তু অর্ডারটা ততক্ষণে থেকে গেছে —
+         * দুইটা অর্ডার, আর ফোন পেত ৫০০। ⭐ এখন দাগ না বসলে অর্ডারও ফিরে যায়, আর
+         * ফোন পায় আগেরজনের উত্তর ([[TwoPushesOfOneOrderAtOnceLandOnceTest]])।
+         */
         try {
-            $entityId = DB::transaction(fn () => $handler->apply($user, $change));
+            $record = DB::transaction(function () use ($handler, $user, $deviceId, $module, $change) {
+                $entityId = $handler->apply($user, $change);
+
+                return $this->record(
+                    $user, $deviceId, $module, $change,
+                    status: SyncChange::APPLIED,
+                    appliedEntityId: $entityId,
+                );
+            });
+        } catch (UniqueConstraintViolationException $clash) {
+            // ⓘ ভাগের তালায় পড়া — অন্যজনের সদ্য-পাকা সারিটা দেখা চাই, পুরনো ছবি নয়
+            $first = SyncChange::query()
+                ->where('device_id', $deviceId)
+                ->where('change_id', $change->changeId)
+                ->sharedLock()
+                ->first();
+
+            // ⚠️ অন্য কোনো unique-এর ধাক্কা (দলিল নম্বর ইত্যাদি) "আগেই এসেছে" নয়
+            if ($first === null) {
+                throw $clash;
+            }
+
+            return array_filter([
+                'changeId' => $change->changeId,
+                'status' => $first->isSettled() ? SyncChange::DUPLICATE : $first->status,
+                'message' => $first->message,
+                'entityId' => $first->applied_entity_id,
+            ], fn ($value) => $value !== null);
         } catch (SyncRejection $rejection) {
             return $this->refuse(
                 $user, $deviceId, $module, $change, $rejection->getMessage(),
@@ -256,16 +293,10 @@ final class SyncService
             throw $failure;
         }
 
-        $record = $this->record(
-            $user, $deviceId, $module, $change,
-            status: SyncChange::APPLIED,
-            appliedEntityId: $entityId,
-        );
-
         return [
             'changeId' => $change->changeId,
             'status' => $record->status,
-            'entityId' => $entityId,
+            'entityId' => $record->applied_entity_id,
         ];
     }
 
@@ -457,13 +488,32 @@ final class SyncService
             ->all();
     }
 
+    /**
+     * ⛔ কেবল অপেক্ষমাণ দ্বন্দ্ব মেটে, একবারই (৩০ সেপ্টেম্বর ২০২৬, নিরাপত্তা-অডিট খোঁজ ৮)।
+     *
+     * আগে মেটানো দ্বন্দ্ব আবার মেটালে "কে মেটালেন" আর নোট বদলে যেত — প্রথম
+     * সিদ্ধান্তের দাগ মুছত। ⓘ শর্তসহ UPDATE, তালা নয়: একসাথে দুইজন চাপলেও ডাটাবেজ
+     * একটাকেই বসতে দেয়, আর দ্বিতীয়জন কারণসহ ফেরত পান।
+     */
     public function resolveConflict(SyncConflict $conflict, User $user, ?string $note = null): void
     {
-        $conflict->status = SyncConflict::RESOLVED;
-        $conflict->resolved_at = now();
-        $conflict->resolved_by = $user->id;
-        $conflict->note = $note;
-        $conflict->save();
+        $settled = SyncConflict::query()
+            ->whereKey($conflict->getKey())
+            ->where('status', SyncConflict::PENDING)
+            ->update([
+                'status' => SyncConflict::RESOLVED,
+                'resolved_at' => now(),
+                'resolved_by' => $user->id,
+                'note' => $note,
+            ]);
+
+        if ($settled === 0) {
+            throw ValidationException::withMessages([
+                'conflict' => __('sync.conflict_already_resolved'),
+            ]);
+        }
+
+        $conflict->refresh();
     }
 
     /**
