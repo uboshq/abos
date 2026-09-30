@@ -636,22 +636,37 @@ final class SalesInvoiceService
         $this->assertNotCollected($invoice);
         $this->assertNoLiveReturn($invoice);
 
-        /*
-         * বাতিল হলে আটকানো মাল ছাড়া পায় — মালিকের নিয়মের অন্য অর্ধেক
-         * ("যতক্ষণ না cancel করছি")।
-         *
-         * ⓘ এটা নিচের লেনদেনের **বাইরে** নয়, উপরে — কারণ নিচের ব্লকটা
-         * কেবল CONFIRMED বিলের স্টক ফেরায়, আর ধরে রাখা বিল DRAFT
-         * অবস্থায় থাকে। দুইটা আলাদা প্রশ্ন, তাই আলাদা জায়গা।
-         */
-        if ($invoice->parked_at !== null) {
-            app(ParkedStockReservation::class)->release($invoice);
-        }
-
         $date = $onDate === null ? now() : Carbon::parse($onDate);
 
         return DB::transaction(function () use ($invoice, $reason, $date) {
-            if ($invoice->status === DocumentStatus::CONFIRMED) {
+            /*
+             * ⛔ সারি আটকে অবস্থাটা আবার পড়া — চূড়ান্ত অডিট, ৩০ সেপ্টেম্বর ২০২৬।
+             *
+             * আগে "আগেই বাতিল কি না" দেখা হত হাতে ধরা মডেলে, আর ধরা মাল ছাড়া হত লেনদেনের **বাইরে**।
+             * দুইবার চাপে দুইটা অনুরোধই খসড়া দেখত আর দুইবার মাল ছাড়ত — `reserved` শূন্যের নিচে নামত,
+             * আর কাউন্টার অন্য বিলের জন্য ধরা মাল বেচত। ⓘ এখন দ্বিতীয়জন তালা খোলার অপেক্ষায় থাকে,
+             * তারপর বাতিল দেখে ফেরে। পাহারা: [[AParkedBillCancelledTwiceReleasesItsGoodsOnceTest]]।
+             */
+            $locked = SalesInvoice::query()->whereKey($invoice->id)->lockForUpdate()->firstOrFail();
+
+            if ($locked->status === DocumentStatus::CANCELLED) {
+                throw ValidationException::withMessages([
+                    'status' => __('sales::validation.already_cancelled', ['no' => $invoice->document_no]),
+                ]);
+            }
+
+            /*
+             * বাতিল হলে আটকানো মাল ছাড়া পায় — মালিকের নিয়মের অন্য অর্ধেক
+             * ("যতক্ষণ না cancel করছি")।
+             *
+             * ⓘ নিচের ব্লকটা কেবল CONFIRMED বিলের স্টক ফেরায়, আর ধরে রাখা বিল
+             * DRAFT অবস্থায় থাকে — দুইটা আলাদা প্রশ্ন, তাই আলাদা জায়গা।
+             */
+            if ($locked->parked_at !== null) {
+                app(ParkedStockReservation::class)->release($invoice);
+            }
+
+            if ($locked->status === DocumentStatus::CONFIRMED) {
                 foreach ($invoice->lines as $line) {
                     if ($line->challanLine !== null) {
                         continue;
