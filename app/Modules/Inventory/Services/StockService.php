@@ -295,49 +295,72 @@ final class StockService
          * ⚠️ দুইটা আলাদা কথা, আর করণীয়ও আলাদা।
          */
         if ($batch !== null) {
-            // ⛔ তাকের মাল — তোলার-অপেক্ষারটা নয় ([[Batch::floorBalance()]])
-            $have = $batch->floorBalance($warehouse);
+            /*
+             * ⭐ লটের সারিতে তালা, তারপর গোনা — চূড়ান্ত অডিট ⛔৫, ৩০ সেপ্টেম্বর ২০২৬।
+             *
+             * ── ⛔ কী ভাঙা ছিল ─────────────────────────────────────────
+             * এই পাহারাটা লটের মাল গুনত **তালা ছাড়া**। দুই কাউন্টার একই লটে ১০ দেখে দুজনেই ৮ বেচতেন:
+             * নিচের [[assertEnoughOnFloor()]] দুজনকে পালা করে চালায় ঠিকই, কিন্তু সে গোনে **গোটা পণ্য** —
+             * অন্য লটে মাল থাকলে দুজনকেই ছেড়ে দিত, আর এই লট −৬-এ যেত। ⓘ FEFO-র পথ আগে থেকেই লটে
+             * তালা দিত ([[BatchAllocator::candidates()]]); মালিকের সিদ্ধান্তে (২৫ সেপ্টেম্বর) বাছা লটই এখন
+             * বিক্রির আসল পথ, আর ফাঁকটা ছিল ঠিক সেখানেই।
+             *
+             * ── ⚠️ কেন গোনাটাও তালাসহ ───────────────────────────────────
+             * সারিতে তালা পড়ার পরও সাধারণ `SUM` লেনদেনের প্রথম পড়ার snapshot দেখতে পারে — দ্বিতীয়জন
+             * অপেক্ষা শেষে পুরনো ১০-ই পড়তেন। ⓘ তাই গোনা `FOR UPDATE`-এ, যা সবসময় সর্বশেষ কমিট দেখে
+             * (মোটের পাহারার সেই একই কৌশল)। ⓘ লেনদেনটা এখানেই খোলা, যাতে ডাকনেওয়ালা লেনদেনে না থাকলেও
+             * তালাটা চলাচলের সারি লেখা পর্যন্ত টেকে; থাকলে এটা তার ভেতরে savepoint হয়।
+             */
+            return DB::transaction(function () use (
+                $product, $warehouse, $sourceType, $sourceId, $qty, $out, $reserved, $hold,
+                $date, $documentNo, $narration, $reason, $batch
+            ) {
+                Batch::query()->whereKey($batch->id)->lockForUpdate()->first();
 
-            if (bccomp($have, $qty, 4) < 0) {
-                /*
-                 * ⓘ মাল আছে, কিন্তু এখনো তাকে তোলা হয়নি — কারণটা আলাদা করে বলা হয়
-                 * (২৯ সেপ্টেম্বর ২০২৬): নাহলে কাউন্টার ভাবত লট খালি, অথচ করণীয় হলো
-                 * আগে তাকে তোলা, অন্য লট বাছা নয়।
-                 */
-                $waiting = bcsub($batch->balance($warehouse), $have, 4);
+                // ⛔ তাকের মাল — তোলার-অপেক্ষারটা নয় ([[Batch::floorBalance()]]); তালাসহ গোনা
+                $have = $this->lockedLotSum($batch, $warehouse, 'floor_change');
 
-                if (bccomp($waiting, '0', 4) > 0) {
+                if (bccomp($have, $qty, 4) < 0) {
+                    /*
+                     * ⓘ মাল আছে, কিন্তু এখনো তাকে তোলা হয়নি — কারণটা আলাদা করে বলা হয়
+                     * (২৯ সেপ্টেম্বর ২০২৬): নাহলে কাউন্টার ভাবত লট খালি, অথচ করণীয় হলো
+                     * আগে তাকে তোলা, অন্য লট বাছা নয়।
+                     */
+                    $waiting = bcsub($this->lockedLotSum($batch, $warehouse, 'floor_change + unplaced_change'), $have, 4);
+
+                    if (bccomp($waiting, '0', 4) > 0) {
+                        throw ValidationException::withMessages([
+                            'qty' => __('inventory::validation.chosen_lot_not_shelved', [
+                                'lot' => $batch->batch_no,
+                                'available' => rtrim(rtrim($have, '0'), '.') ?: '0',
+                                'waiting' => rtrim(rtrim($waiting, '0'), '.'),
+                            ]),
+                        ]);
+                    }
+
                     throw ValidationException::withMessages([
-                        'qty' => __('inventory::validation.chosen_lot_not_shelved', [
+                        'qty' => __('inventory::validation.chosen_lot_short', [
                             'lot' => $batch->batch_no,
-                            'available' => rtrim(rtrim($have, '0'), '.') ?: '0',
-                            'waiting' => rtrim(rtrim($waiting, '0'), '.'),
+                            'available' => rtrim(rtrim($have, '0'), '.'),
                         ]),
                     ]);
                 }
 
-                throw ValidationException::withMessages([
-                    'qty' => __('inventory::validation.chosen_lot_short', [
-                        'lot' => $batch->batch_no,
-                        'available' => rtrim(rtrim($have, '0'), '.'),
-                    ]),
-                ]);
-            }
-
-            return [$this->move(
-                product: $product,
-                warehouse: $warehouse,
-                sourceType: $sourceType,
-                sourceId: $sourceId,
-                floor: $out,
-                reserved: $reserved,
-                hold: $hold,
-                date: $date,
-                documentNo: $documentNo,
-                narration: $narration,
-                reason: $reason,
-                batch: $batch,
-            )];
+                return [$this->move(
+                    product: $product,
+                    warehouse: $warehouse,
+                    sourceType: $sourceType,
+                    sourceId: $sourceId,
+                    floor: $out,
+                    reserved: $reserved,
+                    hold: $hold,
+                    date: $date,
+                    documentNo: $documentNo,
+                    narration: $narration,
+                    reason: $reason,
+                    batch: $batch,
+                )];
+            });
         }
 
         $allocation = app(BatchAllocator::class)->allocate(
@@ -1014,6 +1037,22 @@ final class StockService
                 ]),
             ]);
         }
+    }
+
+    /**
+     * একটা লটের একটা গুদামে যোগফল — তালাসহ, সর্বশেষ কমিট ধরে ([[issue()]]-এর বাছা লট, ⛔৫)।
+     *
+     * ⓘ `$column` কেবল এই ক্লাসের ভেতর থেকে আসে (`floor_change` বা `floor_change + unplaced_change`) —
+     * ব্যবহারকারীর লেখা কখনো নয়।
+     */
+    private function lockedLotSum(Batch $batch, Warehouse $warehouse, string $column): string
+    {
+        return (string) StockMovement::query()
+            ->where('batch_id', $batch->id)
+            ->inWarehouse($warehouse->id)
+            ->lockForUpdate()
+            ->selectRaw('COALESCE(SUM('.$column.'), 0) as total')
+            ->value('total');
     }
 
     private function assertEnoughOnFloor(Product $product, Warehouse $warehouse, string $floor): void

@@ -207,6 +207,77 @@ class TwoCountersRaceTest extends TestCase
     }
 
     /**
+     * ⭐ কাউন্টারে **নিজে বাছা** লটেও তালা, আর লটের মাল গোনা হয় তালার **পরে** — চূড়ান্ত অডিট ⛔৫,
+     * ৩০ সেপ্টেম্বর ২০২৬।
+     *
+     * ── ⛔ কী ভাঙা ছিল ─────────────────────────────────────────────────
+     * ওপরের দাবিটা কেবল FEFO-র পথ দেখে ([[BatchAllocator::candidates()]])। অথচ মালিকের সিদ্ধান্তে (২৫
+     * সেপ্টেম্বর) কাউন্টারে লট বাছা **বাধ্যতামূলক** — বিক্রির আসল পথ `issue(batch: …)`, আর সেখানে লটের
+     * মাল গোনা হত তালা ছাড়া। ⚠️ দুই কাউন্টার একই লটে ১০ দেখে দুজনেই ৮ বেচতেন; পণ্যের মোটের পাহারা
+     * ([[StockService::assertEnoughOnFloor()]]) দুজনকে পালা করে চালাত, কিন্তু পণ্যের অন্য লটে মাল থাকলে
+     * দুজনকেই ছেড়ে দিত — লট −৬-এ যেত, আর রিকলের খাতা বলত খালি বাক্স থেকে মাল বেরিয়েছে।
+     *
+     * ── ⚠️ কেন কোয়েরির ক্রম মাপা, দুই সংযোগের ধাক্কা নয় ─────────────────
+     * প্রথম খসড়ায় দ্বিতীয় সংযোগ দিয়ে লটের সারি ছুঁয়ে দেখা হয়েছিল — আর সেটা **সারাই ছাড়াই সবুজ** ছিল:
+     * চলাচলের সারি `batch_id` দিয়ে লেখার সময় MySQL বিদেশি চাবির জন্য লটের সারিতে নিজেই ভাগের তালা
+     * বসায়, তাই দ্বিতীয়জন আটকাত — অথচ গোনাটা তখনো তালা ছাড়াই হচ্ছিল। ⓘ তাই দাবিটা সরাসরি কথাটা
+     * মাপে: লটের সারিতে `FOR UPDATE` আগে, আর লটের তাকের মাল গোনা তার পরে, সেটাও তালাসহ (নইলে
+     * আগের snapshot পড়ত)।
+     */
+    public function test_a_chosen_lot_is_counted_only_after_it_is_locked(): void
+    {
+        $this->product->forceFill(['track_batch' => true])->save();
+
+        $batch = Batch::query()->create([
+            'product_id' => $this->product->id,
+            'batch_no' => 'CHOSEN1',
+            'expiry_date' => now()->addYear()->toDateString(),
+        ]);
+
+        app(StockService::class)->move(
+            product: $this->product,
+            warehouse: $this->warehouse,
+            sourceType: 'test_opening',
+            sourceId: $batch->id,
+            floor: '10',
+            batch: $batch,
+        );
+
+        $queries = [];
+        DB::listen(function ($query) use (&$queries) {
+            $queries[] = strtolower($query->sql);
+        });
+
+        app(StockService::class)->issue(
+            product: $this->product,
+            warehouse: $this->warehouse,
+            sourceType: 'test_sale',
+            sourceId: $batch->id,
+            qty: '8',
+            batch: $batch,
+        );
+
+        $lockAt = null;
+        $countAt = null;
+        foreach ($queries as $i => $sql) {
+            if ($lockAt === null && str_contains($sql, 'inv_batches') && str_contains($sql, 'for update')) {
+                $lockAt = $i;
+            }
+            if ($countAt === null && str_contains($sql, 'floor_change') && str_contains($sql, 'batch_id') && str_contains($sql, 'sum(')) {
+                $countAt = $i;
+            }
+        }
+
+        $this->assertNotNull($lockAt, 'বাছা লটের সারিতে কোনো তালা পড়েনি — দুই কাউন্টার একই লট ঋণাত্মকে নিতে পারে।');
+        $this->assertNotNull($countAt, 'লটের তাকের মাল গোনার কোয়েরিই পাওয়া গেল না — দাবিটা কিছু মাপছে না।');
+        $this->assertLessThan($countAt, $lockAt, 'লটের মাল গোনা হয়েছে তালার আগে — দ্বিতীয় কাউন্টার পুরনো সংখ্যা দেখবে।');
+        $this->assertStringContainsString('for update', $queries[$countAt], 'লটের মাল গোনা তালা ছাড়া — আগের snapshot পড়ে ঋণাত্মক মাল ছাড়তে পারে।');
+
+        // ⓘ আর কাজের ফল: ৮ বেরিয়েছে, লটে ২ আছে — ঋণাত্মক নয়
+        $this->assertSame(0, bccomp($batch->floorBalance($this->warehouse), '2', 4));
+    }
+
+    /**
      * অতিরিক্ত বিক্রির চেষ্টা ফিরিয়ে দেওয়া হয়, আর মজুদ ঋণাত্মক হয় না।
      *
      * তালার পরের প্রশ্নটা: অপেক্ষা শেষে দ্বিতীয়জন কী দেখেন। উত্তর —
