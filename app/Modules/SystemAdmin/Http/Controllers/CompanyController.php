@@ -295,7 +295,12 @@ class CompanyController extends Controller implements HasMiddleware
      */
     private function mustBeYourCompany(Request $request, Company $company): void
     {
-        abort_unless($request->user()?->canAccessCompany((int) $company->id), 404);
+        /*
+         * ⛔ সদস্যপদ যথেষ্ট নয় — কোম্পানি চালানোর চাবি **ওই** কোম্পানিতে লাগে
+         * (৩০ সেপ্টেম্বর ২০২৬)। আগে A-তে অ্যাডমিন আর B-তে সাধারণ সদস্য B-র নাম
+         * বদলাতে, বন্ধ করতে, শাখা খুলতে পারতেন ([[User::canInCompany()]])।
+         */
+        abort_unless($request->user()?->canInCompany((int) $company->id, 'system_admin.company.manage'), 404);
     }
 
     public function edit(Request $request, Company $company): View

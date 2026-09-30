@@ -403,6 +403,43 @@ class User extends Authenticatable
     }
 
     /**
+     * ⭐ ওই কোম্পানিতে এই চাবিটা আছে কি না — চলতি কোম্পানিতে নয় (৩০ সেপ্টেম্বর ২০২৬)।
+     *
+     * ── ⛔ কেন দরকার হলো ─────────────────────────────────────────────
+     * কোম্পানি আর শাখার পর্দা চাবি দেখত **চলতি** কোম্পানিতে, আর অন্য কোম্পানির
+     * পাতায় কেবল সদস্যপদ ([[canAccessCompany()]])। A-তে অ্যাডমিন, B-তে সাধারণ
+     * সদস্য — A-তে বসে B-র শাখার নাম বদলাতেন, বন্ধ করতেন
+     * ([[AKeyInOneCompanyOpenedAnothersBranchesTest]])।
+     *
+     * ⓘ spatie-র টিম = কোম্পানি, তাই প্রশ্নটা ওই কোম্পানির প্রসঙ্গে বসে করা হয়
+     * ([[CompanyContext::forCompany()]] টিম বসায় আর ক্যাশ ছাড়ে), আর প্রসঙ্গ ফেরে।
+     * ⚠️ রোল/অনুমতির সম্পর্ক আগের কোম্পানির জন্য তোলা থাকে — দুই দিকেই ফেলে
+     * দেওয়া হয়, নাহলে উত্তরটা আগের কোম্পানির হত, বা পরের প্রশ্নটা এই কোম্পানির।
+     *
+     * ⓘ মালিক প্রতিটা কোম্পানিতে super_admin, তাই তিনি কখনো আটকান না।
+     */
+    public function canInCompany(int $companyId, string $ability): bool
+    {
+        if (! $this->canAccessCompany($companyId)) {
+            return false;
+        }
+
+        $this->unsetRelation('roles')->unsetRelation('permissions');
+
+        try {
+            return (bool) CompanyContext::forCompany($companyId, function () use ($ability): bool {
+                try {
+                    return $this->can($ability);
+                } finally {
+                    $this->unsetRelation('roles')->unsetRelation('permissions');
+                }
+            });
+        } finally {
+            $this->unsetRelation('roles')->unsetRelation('permissions');
+        }
+    }
+
+    /**
      * কোম্পানি বদলানো।
      *
      * পছন্দটা ডাটাবেজে লেখা হয়, সেশনে নয় — DMS-এ এই একটা পার্থক্যের কারণেই

@@ -38,9 +38,12 @@ final class BranchController extends Controller implements HasMiddleware
         private readonly BranchDesk $desk,
     ) {}
 
+    /** ⓘ দরজার চাবি — চলতি কোম্পানিতে দরজায়, আর প্রতিটা কোম্পানিতে আলাদা করে [[yourBranch()]]-এ */
+    private const KEY = 'system_admin.company.manage';
+
     public static function middleware(): array
     {
-        return [new Middleware('can:system_admin.company.manage')];
+        return [new Middleware('can:'.self::KEY)];
     }
 
     public function index(Request $request): View
@@ -146,15 +149,33 @@ final class BranchController extends Controller implements HasMiddleware
     {
         $branch = Branch::query()->withoutGlobalScopes()->whereNull('deleted_at')->findOrFail($id);
 
-        abort_unless($request->user()?->canAccessCompany((int) $branch->company_id), 404);
+        /*
+         * ⛔ সদস্যপদ যথেষ্ট নয় — চাবিটা **ওই** কোম্পানিতে লাগে (৩০ সেপ্টেম্বর ২০২৬)।
+         * আগে A-র চাবিতে B-র শাখা বদলানো যেত ([[User::canInCompany()]])।
+         */
+        abort_unless($request->user()?->canInCompany((int) $branch->company_id, self::KEY), 404);
 
         return $branch;
     }
 
-    /** @return list<int> */
+    /**
+     * যে কোম্পানিগুলোয় আপনি শাখা চালাতে পারেন — সদস্যপদ **আর** সেখানে চাবি।
+     *
+     * @return list<int>
+     */
     private function myCompanyIds(Request $request): array
     {
-        return $request->user()?->companies()->pluck('companies.id')->map(fn ($id) => (int) $id)->all() ?? [];
+        $user = $request->user();
+
+        if ($user === null) {
+            return [];
+        }
+
+        return $user->companies()->pluck('companies.id')
+            ->map(fn ($id) => (int) $id)
+            ->filter(fn (int $id) => $user->canInCompany($id, self::KEY))
+            ->values()
+            ->all();
     }
 
     private function myCompanies(Request $request)
