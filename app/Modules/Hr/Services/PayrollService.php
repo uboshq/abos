@@ -11,6 +11,7 @@ use App\Core\Services\SettingsService;
 use App\Core\Support\CompanyContext;
 use App\Core\Support\DocumentStatus;
 use App\Core\Support\Money;
+use App\Models\Company;
 use App\Models\FinancialYear;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Services\StandardChart;
@@ -83,6 +84,15 @@ final class PayrollService
         }
 
         return DB::transaction(function () use ($employees, $monthStart, $monthEnd, $trx) {
+            /*
+             * ⛔ তালা দিয়ে আবার — চূড়ান্ত অডিট ⛔১৮, ৩০ সেপ্টেম্বর ২০২৬
+             * ([[TwoPayrollRunsForTheSameMonthTest]])। ⓘ উপরের যাচাই তালা ছাড়া, লেনদেনের আগে;
+             * দুইজন একসাথে চাপলে দুইজনেই "নেই" দেখতেন আর একই মাসের দুইটা রান বসত। কোম্পানির
+             * সারিতে তালা দিলে দ্বিতীয়জন প্রথমজনের কমিটের পরে দেখেন, আর ফিরে যান।
+             */
+            Company::query()->whereKey(CompanyContext::id())->lockForUpdate()->first();
+            $this->assertNoLiveRun($monthStart);
+
             $run = PayrollRun::create([
                 'company_id' => CompanyContext::id(),
                 'branch_id' => CompanyContext::branchId(),
