@@ -92,6 +92,15 @@ final class ReportExport
                 return self::text($columns[$index], is_array($row) ? ($row[$column['key']] ?? null) : null);
             },
         );
+
+        /*
+         * ⭐ রিপোর্টের সব পাতা ফাইলে যায় (৩০ সেপ্টেম্বর ২০২৬) — [[ExportListing]] পাতাগুলো জোড়ে।
+         * ⚠️ শাখা-ভাগের রিপোর্টে নয়: সেখানে প্রতিটা শাখার অংশ পাতা-নির্ভর নয়, আবার চালালে
+         * একই অংশ দুইবার বসত।
+         */
+        if (! $result->isSplitByBranch()) {
+            $export->paged($result->lastPage());
+        }
     }
 
     /** @param  list<ReportColumn>  $columns */

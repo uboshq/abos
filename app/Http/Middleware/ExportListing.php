@@ -25,6 +25,9 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
  */
 class ExportListing
 {
+    /** ⓘ ৫০ সারির পাতায় দশ হাজার সারি — মাসের সব বিলের চেয়ে ঢের বেশি */
+    private const MAX_PAGES = 200;
+
     public function __construct(
         private readonly ListExport $export,
         private readonly ExportJournal $log,
@@ -55,6 +58,8 @@ class ExportListing
 
         // ভিউটা এখানেই রেন্ডার হয়, আর তাতেই টেবিলটা জমা পড়ে
         $content = $response->getContent();
+
+        $this->gatherEveryPage($request, $next);
 
         $format = $this->export->format();
 
@@ -105,5 +110,48 @@ class ExportListing
              */
             'Cache-Control' => 'no-store, no-cache, must-revalidate',
         ]);
+    }
+
+    /**
+     * ⭐ সব পাতা — চলতিটা নয় (৩০ সেপ্টেম্বর ২০২৬, নিরাপত্তা-অডিট ২৯ সেপ্টেম্বরের খোলা খোঁজ)।
+     *
+     * ⛔ আগে ফাইলে যেত কেবল পর্দার পাতাটা — ৮০০ সারির তালিকায় ৫০টা। paginator নিজের
+     * কোয়েরি ধরে রাখে না, তাই বাকি পাতা ওখান থেকে চাওয়া যায় না। ⭐ তাই একই অনুরোধ
+     * প্রতিটা পাতার জন্য আবার চলে — একই দরজা, একই চাবি, একই ছাঁকনি — আর টেবিলগুলো
+     * পরপর জোড়া লাগে ([[ListExport::capture()]])। একশো কন্ট্রোলারে হাত দিতে হয় না।
+     *
+     * ⚠️ সীমা [[self::MAX_PAGES]] পাতা — একটা ভুল ছাঁকনিতে গোটা খাতা টেনে সার্ভার আটকে
+     * দেওয়া যাবে না। সীমা পেরোলে খাতায় সারির সংখ্যাটাই সত্যি বলে।
+     */
+    private function gatherEveryPage(Request $request, Closure $next): void
+    {
+        $pages = min($this->export->lastPage(), self::MAX_PAGES);
+
+        if ($pages <= 1 || $this->export->captured() === null) {
+            return;
+        }
+
+        $name = $this->export->pageName();
+        $asked = $request->query->all()[$name] ?? null;
+
+        $this->export->restartFromTheFirstPage();
+
+        try {
+            for ($page = 1; $page <= $pages; $page++) {
+                $request->query->set($name, (string) $page);
+                $this->export->nextPage();
+
+                /** @var Response $again */
+                $again = $next($request);
+
+                if ($again->getStatusCode() !== 200) {
+                    break;
+                }
+
+                $again->getContent();
+            }
+        } finally {
+            $asked === null ? $request->query->remove($name) : $request->query->set($name, $asked);
+        }
     }
 }

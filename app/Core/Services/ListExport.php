@@ -7,6 +7,7 @@ namespace App\Core\Services;
 use BackedEnum;
 use Closure;
 use DateTimeInterface;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Contracts\Support\Renderable;
 use Illuminate\Pagination\AbstractPaginator;
@@ -47,6 +48,21 @@ class ListExport
      * আর যিনি নিজের চিহ্ন ঢাকতে চান তাঁর প্রথম কাজই সেটা।
      */
     private bool $refused = false;
+
+    /**
+     * ⭐ পাতা ভাগ থাকলে মোট কয় পাতা আর পাতার নাম — রপ্তানি **সব** পাতা নেয় (৩০ সেপ্টেম্বর ২০২৬)।
+     *
+     * ⛔ আগে ফাইলে যেত কেবল চলতি পাতার ৫০টা সারি, আর বোতামের নিচে লেখা থাকত "এই পাতায়
+     * যা দেখছেন"। মাস শেষে ৮০০ বিলের তালিকা নামিয়ে কেউ ৫০টা পেতেন, আর মোট মিলত না।
+     * ⓘ পাতাগুলো জোড়া দেয় [[ExportListing]] — একই অনুরোধ প্রতিটা পাতার জন্য আবার চালিয়ে,
+     * কারণ paginator নিজের কোয়েরি ধরে রাখে না।
+     */
+    private int $lastPage = 1;
+
+    private string $pageName = 'page';
+
+    /** এই পাতার আঁকায় টেবিল ইতিমধ্যে নেওয়া হয়েছে কি না — পাতাপিছু প্রথমটাই */
+    private bool $takenThisPage = false;
 
     /** এই পর্দায় রপ্তানি নেই — বোতামেও নয়, ঠিকানাতেও নয়। */
     public function refuse(): void
@@ -97,9 +113,11 @@ class ListExport
      */
     public function capture(array $columns, iterable $rows, Closure $cell): void
     {
-        if ($this->table !== null || $columns === []) {
+        if ($this->takenThisPage || $columns === []) {
             return;
         }
+
+        $this->takenThisPage = true;
 
         $values = [];
 
@@ -113,11 +131,26 @@ class ListExport
             $values[] = $line;
         }
 
+        if ($rows instanceof LengthAwarePaginator) {
+            $this->paged($rows->lastPage(), $rows->getPageName());
+        }
+
+        $columns = array_map(
+            fn (array $column): array => ['key' => $column['key'], 'label' => $column['label']],
+            $columns,
+        );
+
+        /* ⭐ পরের পাতা — একই কলাম হলে আগের সারিগুলোর পিছনে জোড়া */
+        if ($this->table !== null) {
+            if ($this->table['columns'] === $columns) {
+                array_push($this->table['values'], ...$values);
+            }
+
+            return;
+        }
+
         $this->table = [
-            'columns' => array_map(
-                fn (array $column): array => ['key' => $column['key'], 'label' => $column['label']],
-                $columns,
-            ),
+            'columns' => $columns,
             'values' => $values,
 
             /*
@@ -148,6 +181,9 @@ class ListExport
      */
     public function reset(): void
     {
+        $this->lastPage = 1;
+        $this->pageName = 'page';
+        $this->takenThisPage = false;
         $this->table = null;
 
         // অস্বীকারটাও প্রতি অনুরোধে নতুন — নাহলে একটা রপ্তানি-বিহীন
@@ -163,6 +199,40 @@ class ListExport
     public function captured(): ?array
     {
         return $this->table;
+    }
+
+    /** পাতা ভাগের খবর — [[ReportExport]] নিজের ফলাফল থেকে এটা দেয়। */
+    public function paged(int $lastPage, string $pageName = 'page'): void
+    {
+        $this->lastPage = max(1, $lastPage);
+        $this->pageName = $pageName;
+    }
+
+    public function lastPage(): int
+    {
+        return $this->lastPage;
+    }
+
+    public function pageName(): string
+    {
+        return $this->pageName;
+    }
+
+    /**
+     * সব পাতা জোড়ার শুরু — প্রথম আঁকার টেবিলটা ফেলে দিয়ে, পাতা ১ থেকে।
+     *
+     * ⓘ মানুষটা হয়তো তৃতীয় পাতায় ছিলেন; ফাইলটা তবু শুরু থেকে, ক্রমে।
+     */
+    public function restartFromTheFirstPage(): void
+    {
+        $this->table = null;
+        $this->takenThisPage = false;
+    }
+
+    /** পরের পাতার আঁকা — এবারও প্রথম টেবিলটাই নেওয়া হবে। */
+    public function nextPage(): void
+    {
+        $this->takenThisPage = false;
     }
 
     /**
