@@ -7,10 +7,12 @@ namespace App\Modules\Purchase\Dashboard;
 use App\Core\Contracts\DashboardWidgets;
 use App\Core\Dashboard\Widget;
 use App\Core\Engines\Report\ReportEngine;
+use App\Core\Services\DataScope;
 use App\Core\Support\CompanyContext;
 use App\Core\Support\DocumentStatus;
 use App\Core\Support\Money;
 use App\Modules\Purchase\Models\PurchaseBill;
+use Illuminate\Contracts\Database\Query\Builder;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
@@ -104,7 +106,8 @@ final class PurchaseWidgets implements DashboardWidgets
      */
     private static function marginThisMonth(): ?Widget
     {
-        $row = DB::table('sal_invoices')
+        // ⭐ দেখার শাখা (২৯ সেপ্টেম্বর ২০২৬)
+        $row = self::inView(DB::table('sal_invoices'), 'sal_invoices.branch_id')
             ->where('company_id', CompanyContext::id())
             ->whereIn('status', DocumentStatus::POSTED)
             ->whereBetween('trx_date', [
@@ -150,5 +153,21 @@ final class PurchaseWidgets implements DashboardWidgets
                 __('supplier::field.cost_of_sold') => Money::format($cost),
             ],
         );
+    }
+
+    /**
+     * ⭐ দেখার শাখা — হেডারে যা বাছা (২৯ সেপ্টেম্বর ২০২৬)।
+     *
+     * একটা শাখা বাছা থাকলে কেবল সেটা, শাখাহীন সারি ছাড়া; "সব শাখা"-তে নাগাল,
+     * শাখাহীনসহ ([[DataScope::viewBranchIds()]])। ⛔ কেবল দেখানোর সংখ্যায়।
+     *
+     * @template T of Builder
+     *
+     * @param  T  $query
+     * @return T
+     */
+    private static function inView(Builder $query, string $column): Builder
+    {
+        return app(DataScope::class)->inView($query, $column);
     }
 }

@@ -7,6 +7,7 @@ namespace App\Core\Services;
 use App\Core\Support\CompanyContext;
 use App\Models\User;
 use App\Models\UserDataScope;
+use Illuminate\Contracts\Database\Query\Builder;
 
 /**
  * এই ব্যবহারকারী কোন সারিগুলো দেখতে পাবেন।
@@ -132,6 +133,30 @@ final class DataScope
         $reach = $this->idsFor($user, UserDataScope::BRANCH);
 
         return $reach === null || in_array((int) $current, $reach, true) ? (int) $current : null;
+    }
+
+    /**
+     * ⭐ দেখার শাখায় ছাঁকা — হোম পর্দার প্রতিটা সংখ্যা এটাই ডাকে (২৯–৩০ সেপ্টেম্বর ২০২৬)।
+     *
+     * একটা শাখা বাছা থাকলে কেবল সেটা, শাখাহীন সারি ছাড়া; "সব শাখা"-তে নাগাল, শাখাহীনসহ
+     * ([[viewBranchIds()]])। ⓘ আগে আটটা উইজেট-ফাইলে একই সাত লাইন আলাদা করে লেখা ছিল —
+     * একদিন একটা বদলাত, বাকিগুলো নয় ([[TheDashboardCornersFollowTheBranchTooTest]])।
+     * ⛔ কেবল **দেখার** সংখ্যায় — টাকার যাচাইয়ে (টিল, বাকির সীমা) গোটা কোম্পানিই সত্যি।
+     *
+     * @template T of Builder
+     *
+     * @param  T  $query
+     * @return T
+     */
+    public function inView(Builder $query, string $column): Builder
+    {
+        $user = auth()->user();
+        $ids = $this->viewBranchIds($user);
+        $one = $this->viewsOneBranch($user);
+
+        return $query->when($ids !== null, fn ($q) => $q->where(fn ($w) => $one
+            ? $w->whereIn($column, $ids)
+            : $w->whereIn($column, $ids)->orWhereNull($column)));
     }
 
     /** অনুমতি বদলালে ক্যাশটাও ভুল হয়ে যায়। */

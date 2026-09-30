@@ -9,10 +9,12 @@ use App\Core\Engines\Dashboard\DashboardDefinition;
 use App\Core\Engines\Dashboard\Listing;
 use App\Core\Engines\Dashboard\Stat;
 use App\Core\Engines\Dashboard\Tile;
+use App\Core\Services\DataScope;
 use App\Modules\Hr\Models\Attendance;
 use App\Modules\Hr\Models\Employee;
 use App\Modules\Hr\Models\LeaveApplication;
 use App\Modules\Hr\Models\PayrollRun;
+use Illuminate\Contracts\Database\Query\Builder;
 use Illuminate\Support\Carbon;
 
 /**
@@ -50,13 +52,16 @@ final class HrDashboard implements ProvidesDashboard
             stats: [
                 new Stat(
                     label: __('hr::dashboard.employees'),
-                    value: (string) Employee::query()->count(),
+                    // ⭐ দেখার শাখার কর্মী — গোটা ব্যবসার সারির মুখও এটাই (২৯ সেপ্টেম্বর ২০২৬)
+                    value: (string) self::inView(Employee::query(), 'hr_employees.branch_id')->count(),
                     hint: __('hr::dashboard.employees_hint'),
                     href: route('hr.employee.index'),
                 ),
                 new Stat(
                     label: __('hr::dashboard.present_today'),
-                    value: (string) Attendance::query()->where('work_date', $today)
+                    value: (string) Attendance::query()
+                        ->whereIn('employee_id', self::inView(Employee::query(), 'hr_employees.branch_id')->select('id'))
+                        ->where('work_date', $today)
                         ->where('status', 'present')->count(),
                     hint: __('hr::dashboard.present_hint'),
                     href: route('hr.attendance.index'),
@@ -100,5 +105,21 @@ final class HrDashboard implements ProvidesDashboard
                 ),
             ],
         );
+    }
+
+    /**
+     * ⭐ দেখার শাখা — হেডারে যা বাছা (২৯ সেপ্টেম্বর ২০২৬)।
+     *
+     * একটা শাখা বাছা থাকলে কেবল সেটা, শাখাহীন সারি ছাড়া; "সব শাখা"-তে নাগাল,
+     * শাখাহীনসহ ([[DataScope::viewBranchIds()]])। ⛔ কেবল দেখানোর সংখ্যায়।
+     *
+     * @template T of Builder
+     *
+     * @param  T  $query
+     * @return T
+     */
+    private static function inView(Builder $query, string $column): Builder
+    {
+        return app(DataScope::class)->inView($query, $column);
     }
 }

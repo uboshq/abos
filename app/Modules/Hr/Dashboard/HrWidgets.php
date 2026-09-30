@@ -6,9 +6,11 @@ namespace App\Modules\Hr\Dashboard;
 
 use App\Core\Contracts\DashboardWidgets;
 use App\Core\Dashboard\Widget;
+use App\Core\Services\DataScope;
 use App\Modules\Hr\Models\Attendance;
 use App\Modules\Hr\Models\Employee;
 use App\Modules\Hr\Models\LeaveApplication;
+use Illuminate\Contracts\Database\Query\Builder;
 use Illuminate\Support\Carbon;
 
 /**
@@ -53,7 +55,9 @@ final class HrWidgets implements DashboardWidgets
     /** আজ যাদের হাজিরা "উপস্থিত" হিসেবে বসেছে। */
     private static function presentToday(Carbon $today): int
     {
+        // ⭐ দেখার শাখার কর্মী — হাজিরার সারিতে শাখা নেই, কর্মীর আছে (২৯ সেপ্টেম্বর ২০২৬)
         return Attendance::query()
+            ->whereIn('employee_id', self::inView(Employee::query(), 'hr_employees.branch_id')->select('id'))
             ->whereDate('work_date', $today->toDateString())
             ->where('status', Attendance::PRESENT)
             ->count();
@@ -62,6 +66,22 @@ final class HrWidgets implements DashboardWidgets
     /** আজ যাদের বেতনের খাতায় থাকার কথা। */
     private static function onPayroll(Carbon $today): int
     {
-        return Employee::query()->onPayrollFor($today)->count();
+        return self::inView(Employee::query(), 'hr_employees.branch_id')->onPayrollFor($today)->count();
+    }
+
+    /**
+     * ⭐ দেখার শাখা — হেডারে যা বাছা (২৯ সেপ্টেম্বর ২০২৬)।
+     *
+     * একটা শাখা বাছা থাকলে কেবল সেটা, শাখাহীন সারি ছাড়া; "সব শাখা"-তে নাগাল,
+     * শাখাহীনসহ ([[DataScope::viewBranchIds()]])। ⛔ কেবল দেখানোর সংখ্যায়।
+     *
+     * @template T of Builder
+     *
+     * @param  T  $query
+     * @return T
+     */
+    private static function inView(Builder $query, string $column): Builder
+    {
+        return app(DataScope::class)->inView($query, $column);
     }
 }

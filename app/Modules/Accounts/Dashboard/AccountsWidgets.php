@@ -6,6 +6,7 @@ namespace App\Modules\Accounts\Dashboard;
 
 use App\Core\Contracts\DashboardWidgets;
 use App\Core\Dashboard\Widget;
+use App\Core\Services\DataScope;
 use App\Core\Support\Money;
 use App\Models\LedgerEntry;
 use App\Modules\Accounts\Models\Account;
@@ -13,6 +14,7 @@ use App\Modules\Accounts\Models\CashTill;
 use App\Modules\Accounts\Models\MoneyTransfer;
 use App\Modules\Accounts\Models\Voucher;
 use App\Modules\Accounts\Services\StandardChart;
+use Illuminate\Contracts\Database\Query\Builder;
 
 /**
  * টাকার সংখ্যাগুলো হোম পর্দায়।
@@ -112,7 +114,7 @@ final class AccountsWidgets implements DashboardWidgets
             new Widget(
                 group: 'todo',
                 label: __('accounts::dashboard.pending_transfers'),
-                value: (string) MoneyTransfer::query()->pending()->count(),
+                value: (string) self::inView(MoneyTransfer::query()->pending(), 'money_transfers.branch_id')->count(),
                 href: route('accounts.transfer.index'),
                 permission: 'accounts.transfer.create',
                 tone: 'warn',
@@ -125,18 +127,23 @@ final class AccountsWidgets implements DashboardWidgets
     /** ⓘ public — ফোনের "আজকের সংখ্যা" ([[DashboardTodayController]]) এটাই ডাকে, নিজে গোনে না। */
     public static function cashInHand(): string
     {
-        return self::sumOf(CashTill::query()->active()->pluck('account_id')->all());
+        /*
+         * ⭐ দেখার শাখা (২৯ সেপ্টেম্বর ২০২৬) — টিল ধরে, সারি ধরে নয়: শাখার টিল
+         * কেবল নিজের শাখায়, কোম্পানি-স্তরের টিল (শাখাহীন) কেবল "সব শাখা"-তে।
+         * ⓘ টিলের জের গোটাটাই — টিলের পর্দার সংখ্যার সাথে মেলে।
+         */
+        return self::sumOf(self::inView(CashTill::query()->active(), 'cash_tills.branch_id')->pluck('account_id')->all());
     }
 
     private static function mfsBalance(): string
     {
-        return self::sumOf(Account::query()->ofMoneyKind(Account::MFS)->pluck('id')->all());
+        return self::sumOf(Account::query()->ofMoneyKind(Account::MFS)->pluck('id')->all(), true);
     }
 
     private static function bankBalance(): string
     {
         // ⛔ কেবল ব্যাংক — MFS আলাদা সংখ্যা, একসাথে গুনলে দুইটাই মিথ্যা
-        return self::sumOf(Account::query()->ofMoneyKind(Account::BANK)->pluck('id')->all());
+        return self::sumOf(Account::query()->ofMoneyKind(Account::BANK)->pluck('id')->all(), true);
     }
 
     /**
@@ -154,22 +161,46 @@ final class AccountsWidgets implements DashboardWidgets
     private static function inTransit(): string
     {
         return Money::sumOf(
-            MoneyTransfer::query()->pending()->get(),
+            self::inView(MoneyTransfer::query()->pending(), 'money_transfers.branch_id')->get(),
             fn (MoneyTransfer $transfer) => $transfer->amount,
         );
     }
 
     private static function balanceOf(string $code): string
     {
-        return StandardChart::find($code)?->balanceOn() ?? '0';
+        // ⭐ একটা শাখা বাছা থাকলে কেবল সেই শাখার সারি (২৯ সেপ্টেম্বর ২০২৬)
+        $scope = app(DataScope::class);
+        $branch = $scope->viewsOneBranch(auth()->user()) ? ($scope->viewBranchIds(auth()->user())[0] ?? null) : null;
+
+        return StandardChart::find($code)?->balanceOn(null, $branch) ?? '0';
+    }
+
+    /**
+     * ⭐ দেখার শাখা — হেডারে যা বাছা (২৯ সেপ্টেম্বর ২০২৬)।
+     *
+     * একটা শাখা বাছা থাকলে কেবল সেটা, শাখাহীন সারি ছাড়া; "সব শাখা"-তে নাগাল,
+     * শাখাহীনসহ ([[DataScope::viewBranchIds()]])। ⛔ কেবল দেখানোর সংখ্যায় —
+     * টাকার যাচাইয়ে (টিল শূন্যের নিচে নয়, বাকির সীমা) গোটা কোম্পানিই সত্যি।
+     *
+     * @template T of Builder
+     *
+     * @param  T  $query
+     * @return T
+     */
+    private static function inView(Builder $query, string $column): Builder
+    {
+        return app(DataScope::class)->inView($query, $column);
     }
 
     /**
      * কয়েকটা খাতের মোট ব্যালেন্স — এক কোয়েরিতে, প্রারম্ভিক সহ।
      *
+     * ⓘ `$byBranch` — ব্যাংক আর MFS-এর খাত কোম্পানির, তাই সারি ধরে শাখা
+     * ছাঁকা হয়; টিল আগেই শাখা ধরে বাছা, তাই তার সারিতে আর নয়।
+     *
      * @param  list<int>  $accountIds
      */
-    private static function sumOf(array $accountIds): string
+    private static function sumOf(array $accountIds, bool $byBranch = false): string
     {
         if ($accountIds === []) {
             return '0';
@@ -177,6 +208,7 @@ final class AccountsWidgets implements DashboardWidgets
 
         $row = LedgerEntry::query()
             ->whereIn('account_id', $accountIds)
+            ->when($byBranch, fn ($q) => self::inView($q, 'ledger_entries.branch_id'))
             ->selectRaw('COALESCE(SUM(debit), 0) as d, COALESCE(SUM(credit), 0) as c')
             ->first();
 

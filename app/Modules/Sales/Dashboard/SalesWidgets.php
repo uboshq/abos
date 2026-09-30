@@ -8,11 +8,13 @@ use App\Core\Contracts\DashboardWidgets;
 use App\Core\Dashboard\Widget;
 use App\Core\Engines\Report\ReportEngine;
 use App\Core\Metrics\Metric;
+use App\Core\Services\DataScope;
 use App\Core\Support\CompanyContext;
 use App\Core\Support\DocumentStatus;
 use App\Core\Support\Money;
 use App\Modules\Sales\Metrics\SalesMetrics;
 use App\Modules\Sales\Models\SalesInvoice;
+use Illuminate\Contracts\Database\Query\Builder;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
@@ -207,7 +209,8 @@ final class SalesWidgets implements DashboardWidgets
          * গ্লোবাল স্কোপ পরীক্ষা করে, আর DB::table() ঠিক সেটাই এড়ায়।
          * পাহারা: [[EveryRawQueryNamesItsCompanyTest]]।
          */
-        $sum = fn (Carbon $day) => (string) (DB::table($table)
+        // ⭐ দেখার শাখা — উপরের কার্ডের কাগজগুলো যা মানে, তুলনাটাও তাই (২৯ সেপ্টেম্বর ২০২৬)
+        $sum = fn (Carbon $day) => (string) (self::inView(DB::table($table), $table.'.branch_id')
             ->where('company_id', CompanyContext::id())
             ->whereIn('status', DocumentStatus::POSTED)
             ->whereNull('deleted_at')
@@ -253,7 +256,7 @@ final class SalesWidgets implements DashboardWidgets
         $from = Carbon::today()->subDays(6);
 
         // কোম্পানির ছাঁকনি হাতে — কারণ উপরের `againstLastWeek()`-এ লেখা
-        $byDay = DB::table($table)
+        $byDay = self::inView(DB::table($table), $table.'.branch_id')
             ->where('company_id', CompanyContext::id())
             ->whereIn('status', DocumentStatus::POSTED)
             ->whereNull('deleted_at')
@@ -287,5 +290,21 @@ final class SalesWidgets implements DashboardWidgets
     private static function reportRows(string $key): int
     {
         return app(ReportEngine::class)->run($key, perPage: 1)->totalRows;
+    }
+
+    /**
+     * ⭐ দেখার শাখা — হেডারে যা বাছা (২৯ সেপ্টেম্বর ২০২৬)।
+     *
+     * একটা শাখা বাছা থাকলে কেবল সেটা, শাখাহীন সারি ছাড়া; "সব শাখা"-তে নাগাল,
+     * শাখাহীনসহ ([[DataScope::viewBranchIds()]])। ⛔ কেবল দেখানোর সংখ্যায়।
+     *
+     * @template T of Builder
+     *
+     * @param  T  $query
+     * @return T
+     */
+    private static function inView(Builder $query, string $column): Builder
+    {
+        return app(DataScope::class)->inView($query, $column);
     }
 }

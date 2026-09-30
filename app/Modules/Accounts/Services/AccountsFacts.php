@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace App\Modules\Accounts\Services;
 
+use App\Core\Services\DataScope;
 use App\Models\LedgerEntry;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Models\CashTill;
+use Illuminate\Contracts\Database\Query\Builder;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 
@@ -70,7 +72,8 @@ final class AccountsFacts
     /** @return Collection<int, CashTill> */
     public function tills(): Collection
     {
-        return CashTill::query()->active()->with('account')->get();
+        // ⭐ দেখার শাখার টিল — কোম্পানি-স্তরের (শাখাহীন) টিল কেবল "সব শাখা"-তে (২৯ সেপ্টেম্বর ২০২৬)
+        return $this->inView(CashTill::query()->active(), 'cash_tills.branch_id')->with('account')->get();
     }
 
     /**
@@ -94,7 +97,28 @@ final class AccountsFacts
 
     public function balanceOfCode(string $code): string
     {
-        return StandardChart::find($code)?->balanceOn() ?? '0';
+        // ⭐ একটা শাখা বাছা থাকলে কেবল সেই শাখার সারি (২৯ সেপ্টেম্বর ২০২৬)
+        $scope = app(DataScope::class);
+        $branch = $scope->viewsOneBranch(auth()->user()) ? ($scope->viewBranchIds(auth()->user())[0] ?? null) : null;
+
+        return StandardChart::find($code)?->balanceOn(null, $branch) ?? '0';
+    }
+
+    /**
+     * ⭐ দেখার শাখা — হেডারে যা বাছা (২৯ সেপ্টেম্বর ২০২৬)।
+     *
+     * একটা শাখা বাছা থাকলে কেবল সেটা, শাখাহীন সারি ছাড়া; "সব শাখা"-তে নাগাল,
+     * শাখাহীনসহ ([[DataScope::viewBranchIds()]])। ⛔ এই ক্লাস কেবল **দেখায়** —
+     * টাকার যাচাই ([[CashOnHand]], [[CreditExposure]]) গোটা কোম্পানি পড়ে।
+     *
+     * @template T of Builder
+     *
+     * @param  T  $query
+     * @return T
+     */
+    private function inView(Builder $query, string $column): Builder
+    {
+        return app(DataScope::class)->inView($query, $column);
     }
 
     /** এক ধরনের সব খাতের নিট — স্বাভাবিক দিকে ধনাত্মক। */
@@ -411,8 +435,8 @@ final class AccountsFacts
         }
 
         // একটাই কোয়েরি, খাত ধরে — তারপর তিনটা ঝুড়িতে ভাগ
-        $rows = LedgerEntry::query()
-            ->whereIn('account_id', $ids)
+        // ⭐ দেখার শাখার সারি — খাতগুলো কোম্পানির, টাকাটা শাখার (২৯ সেপ্টেম্বর ২০২৬)
+        $rows = $this->inView(LedgerEntry::query()->whereIn('account_id', $ids), 'ledger_entries.branch_id')
             ->groupBy('account_id')
             ->selectRaw('account_id, COALESCE(SUM(debit), 0) as d, COALESCE(SUM(credit), 0) as c')
             ->get();

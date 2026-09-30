@@ -6,11 +6,13 @@ namespace App\Modules\Accounts\Dashboard;
 
 use App\Core\Contracts\ContributesActivity;
 use App\Core\Dashboard\Happening;
+use App\Core\Services\DataScope;
 use App\Core\Support\DocumentStatus;
 use App\Core\Support\Money;
 use App\Modules\Accounts\Models\CashCount;
 use App\Modules\Accounts\Models\MoneyTransfer;
 use App\Modules\Accounts\Models\Voucher;
+use Illuminate\Contracts\Database\Query\Builder;
 
 /**
  * হিসাবের ঘরে সদ্য যা হয়েছে।
@@ -81,7 +83,8 @@ final class AccountsActivity implements ContributesActivity
      */
     private static function counts(int $limit): array
     {
-        return CashCount::query()
+        // ⭐ দেখার শাখা — এই দুই মডেলে শাখার গ্লোবাল স্কোপ নেই (২৯ সেপ্টেম্বর ২০২৬)
+        return self::inView(CashCount::query(), 'cash_counts.branch_id')
             /*
              * এই দুইটা মডেলে `->posted()` স্কোপটা নেই — তারা
              * `HasDocumentStatus` ব্যবহার করে না, যদিও `status` ঘরটা
@@ -118,7 +121,7 @@ final class AccountsActivity implements ContributesActivity
     /** @return list<Happening> */
     private static function transfers(int $limit): array
     {
-        return MoneyTransfer::query()
+        return self::inView(MoneyTransfer::query(), 'money_transfers.branch_id')
             ->whereIn('status', DocumentStatus::POSTED)
             ->with(['fromTill', 'toTill'])
             ->latest('id')
@@ -135,5 +138,21 @@ final class AccountsActivity implements ContributesActivity
                 sourceId: $transfer->id,
             ))
             ->all();
+    }
+
+    /**
+     * ⭐ দেখার শাখা — হেডারে যা বাছা (২৯ সেপ্টেম্বর ২০২৬)।
+     *
+     * একটা শাখা বাছা থাকলে কেবল সেটা, শাখাহীন সারি ছাড়া; "সব শাখা"-তে নাগাল,
+     * শাখাহীনসহ ([[DataScope::viewBranchIds()]])। ⛔ কেবল দেখানোর সংখ্যায়।
+     *
+     * @template T of Builder
+     *
+     * @param  T  $query
+     * @return T
+     */
+    private static function inView(Builder $query, string $column): Builder
+    {
+        return app(DataScope::class)->inView($query, $column);
     }
 }

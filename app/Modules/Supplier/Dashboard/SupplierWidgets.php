@@ -6,9 +6,11 @@ namespace App\Modules\Supplier\Dashboard;
 
 use App\Core\Contracts\DashboardWidgets;
 use App\Core\Dashboard\Widget;
+use App\Core\Services\DataScope;
 use App\Core\Support\CompanyContext;
 use App\Core\Support\Money;
 use App\Modules\Supplier\Models\Supplier;
+use Illuminate\Contracts\Database\Query\Builder;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -46,7 +48,8 @@ final class SupplierWidgets implements DashboardWidgets
      */
     private static function owedToPrincipals(): ?Widget
     {
-        $owed = (string) (DB::table('ledger_entries')
+        // ⭐ দেখার শাখার সারি (২৯ সেপ্টেম্বর ২০২৬)
+        $owed = (string) (self::inView(DB::table('ledger_entries'), 'ledger_entries.branch_id')
             ->where('company_id', CompanyContext::id())
             ->where('party_type', Supplier::drillSourceType())
             ->selectRaw('COALESCE(SUM(credit) - SUM(debit), 0) as owed')
@@ -67,5 +70,21 @@ final class SupplierWidgets implements DashboardWidgets
             sort: 20,
             icon: 'handover',
         );
+    }
+
+    /**
+     * ⭐ দেখার শাখা — হেডারে যা বাছা (২৯ সেপ্টেম্বর ২০২৬)।
+     *
+     * একটা শাখা বাছা থাকলে কেবল সেটা, শাখাহীন সারি ছাড়া; "সব শাখা"-তে নাগাল,
+     * শাখাহীনসহ ([[DataScope::viewBranchIds()]])। ⛔ কেবল দেখানোর সংখ্যায়।
+     *
+     * @template T of Builder
+     *
+     * @param  T  $query
+     * @return T
+     */
+    private static function inView(Builder $query, string $column): Builder
+    {
+        return app(DataScope::class)->inView($query, $column);
     }
 }
