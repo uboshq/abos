@@ -109,6 +109,20 @@ final class ShiftService
         $counted = $this->money($counted);
 
         return DB::transaction(function () use ($shift, $counted, $narration) {
+            /*
+             * ⛔ সারি আটকে আবার দেখা — চূড়ান্ত অডিট, ৩০ সেপ্টেম্বর ২০২৬।
+             *
+             * উপরের পরখ হাতে ধরা মডেলে। দুইজন (বা একজন দুইবার চেপে) একই শিফট বন্ধ করলে দুজনেই "খোলা"
+             * দেখতেন, আর দ্বিতীয়জনের গোনা টাকা প্রথমজনেরটা মুছে বসত — ক্যাশের গরমিল ধরা হয় ঠিক এই
+             * গোনা থেকে। ⓘ এখন দ্বিতীয়জন তালার অপেক্ষায় থাকেন, তারপর বন্ধ দেখে ফেরেন।
+             * পাহারা: [[AShiftClosedTwiceKeepsTheFirstCountTest]]।
+             */
+            if (! CounterShift::query()->whereKey($shift->id)->lockForUpdate()->firstOrFail()->isOpen()) {
+                throw ValidationException::withMessages([
+                    'shift' => __('sales::validation.shift_already_closed'),
+                ]);
+            }
+
             $shift->update([
                 'closed_at' => now(),
                 'closing_counted' => $counted,
