@@ -7,6 +7,7 @@ namespace App\Modules\Sales\Models;
 use App\Core\Concerns\BelongsToCompany;
 use App\Core\Concerns\HasPublicId;
 use App\Core\Concerns\IsAudited;
+use App\Core\Concerns\ScopedToUserBranch;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
@@ -23,6 +24,12 @@ class GatePass extends Model
     use BelongsToCompany;
     use HasPublicId;
     use IsAudited;
+
+    /*
+     * ⛔ শাখার দেয়াল — চূড়ান্ত অডিট ⛔১৪, ৩০ সেপ্টেম্বর ২০২৬। ⓘ সারিতে `branch_id` বসত, কিন্তু ছাঁকনি ছিল
+     * না: এক শাখার কর্মী অন্য শাখার গেট পাস দেখতেন আর বাতিল করতেন। ⭐ এখন তার চালান আর বিলের মতোই।
+     */
+    use ScopedToUserBranch;
 
     public const ISSUED = 'issued';
 
