@@ -34,9 +34,9 @@ final class GovernanceDashboard implements ProvidesDashboard
                 new Tile(label: __('governance::menu.audit_trail'), href: route('governance.audit.index'),
                     permission: 'governance.audit.view', icon: 'eye'),
                 new Tile(label: __('governance::menu.login_history'), href: route('governance.login.index'),
-                    permission: 'governance.audit.view', icon: 'lock'),
+                    permission: 'governance.login.view', icon: 'lock'),
                 new Tile(label: __('governance::menu.export_log'), href: route('governance.export.index'),
-                    permission: 'governance.audit.view', icon: 'download'),
+                    permission: 'governance.export.view', icon: 'download'),
             ],
 
             stats: [
@@ -63,6 +63,12 @@ final class GovernanceDashboard implements ProvidesDashboard
                     hint: __('governance::dashboard.exports_hint'),
                     href: route('governance.export.index'),
                     tone: Stat::WARN,
+                    /*
+                     * ⛔ চাবিটা রপ্তানির, নিরীক্ষার নয় (৩০ সেপ্টেম্বর ২০২৬) — ১৮
+                     * সেপ্টেম্বরে চাবি চারটায় ভাগ হয়েছিল, এই সংখ্যাটা তখন বাদ পড়ে
+                     * কোনো চাবিই চাইত না। টাইল দুটোও একই দিনে নিজের চাবিতে ফিরল।
+                     */
+                    permission: 'governance.export.view',
                 ),
             ],
 

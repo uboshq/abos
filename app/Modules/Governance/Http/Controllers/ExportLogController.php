@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Governance\Http\Controllers;
 
+use App\Core\Concerns\FiltersByDate;
 use App\Core\Services\MenuBuilder;
 use App\Core\Support\CompanyContext;
 use App\Http\Controllers\Controller;
@@ -13,7 +14,6 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
-use Illuminate\Support\Carbon;
 use Illuminate\View\View;
 
 /**
@@ -31,6 +31,8 @@ use Illuminate\View\View;
  */
 class ExportLogController extends Controller implements HasMiddleware
 {
+    use FiltersByDate;
+
     public function __construct(private readonly MenuBuilder $menu) {}
 
     public static function middleware(): array
@@ -63,10 +65,11 @@ class ExportLogController extends Controller implements HasMiddleware
             ->with(['user', 'branch'])
             ->when($request->query('user'), fn (Builder $q, $id) => $q->where('user_id', (int) $id))
             ->when($request->query('route'), fn (Builder $q, $r) => $q->where('route', $r))
-            ->when($request->query('from'),
-                fn (Builder $q, $d) => $q->whereDate('created_at', '>=', Carbon::parse((string) $d)->toDateString()))
-            ->when($request->query('to'),
-                fn (Builder $q, $d) => $q->whereDate('created_at', '<=', Carbon::parse((string) $d)->toDateString()))
+            /* ⛔ পড়া যায় না এমন তারিখ ছাঁকনি নয় — আগে ৫০০ দিত ([[FiltersByDate::readDate()]]) */
+            ->when($this->readDate($request->query('from')),
+                fn (Builder $q, string $d) => $q->whereDate('created_at', '>=', $d))
+            ->when($this->readDate($request->query('to')),
+                fn (Builder $q, string $d) => $q->whereDate('created_at', '<=', $d))
             ->latestFirst()
             ->paginate(50)
             ->withQueryString();
@@ -74,6 +77,11 @@ class ExportLogController extends Controller implements HasMiddleware
         return view('governance::export.index', [
             'menu' => $this->menu->forUser($request->user()),
             'rows' => $rows,
+            /* ⓘ ঘরে ফেরত যায় কেবল পড়া-যাওয়া তারিখ — কাঁচা মান (`?from[]=x`) ঘরটা ভাঙত */
+            'dates' => [
+                'from' => $this->readDate($request->query('from')),
+                'to' => $this->readDate($request->query('to')),
+            ],
 
             /*
              * ছাঁকনির তালিকাগুলো যা সত্যিই ঘটেছে তা থেকেই।

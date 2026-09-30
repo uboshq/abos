@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Governance\Http\Controllers;
 
+use App\Core\Concerns\FiltersByDate;
 use App\Core\Concerns\SortsLists;
 use App\Core\Engines\Audit\TimeMachine;
 use App\Core\Module\ModuleRegistry;
@@ -30,6 +31,7 @@ use Illuminate\View\View;
  */
 class AuditController extends Controller implements HasMiddleware
 {
+    use FiltersByDate;
     use SortsLists;
 
     public function __construct(
@@ -48,10 +50,11 @@ class AuditController extends Controller implements HasMiddleware
             ->with(['user', 'changes'])
             ->when($request->query('user'), fn (Builder $q, $id) => $q->where('user_id', (int) $id))
             ->when($request->query('action'), fn (Builder $q, $a) => $q->where('action', $a))
-            ->when($request->query('from'),
-                fn (Builder $q, $d) => $q->whereDate('created_at', '>=', Carbon::parse((string) $d)->toDateString()))
-            ->when($request->query('to'),
-                fn (Builder $q, $d) => $q->whereDate('created_at', '<=', Carbon::parse((string) $d)->toDateString()))
+            /* ⛔ পড়া যায় না এমন তারিখ ছাঁকনি নয় — আগে ৫০০ দিত ([[FiltersByDate::readDate()]]) */
+            ->when($this->readDate($request->query('from')),
+                fn (Builder $q, string $d) => $q->whereDate('created_at', '>=', $d))
+            ->when($this->readDate($request->query('to')),
+                fn (Builder $q, string $d) => $q->whereDate('created_at', '<=', $d))
             ->when($request->query('module'), fn (Builder $q, $code) => $q->where(
                 'auditable_type', 'like', 'App\\Modules\\'.str_replace('_', '', ucwords((string) $code, '_')).'\\%'))
             ->when($request->query('q'), function (Builder $q, $term) {
@@ -106,7 +109,12 @@ class AuditController extends Controller implements HasMiddleware
                 ->whereIn('id', AuditTrail::query()->select('user_id')->distinct())
                 ->orderBy('name')
                 ->get(),
-            'filters' => $request->only(['user', 'action', 'from', 'to', 'module', 'q']),
+            /* ⓘ তারিখ ঘরে ফেরে কেবল পড়া-যাওয়া অবস্থায় — কাঁচা মান (`?from[]=x`) ঘরটা ভাঙত */
+            'filters' => [
+                ...$request->only(['user', 'action', 'module', 'q']),
+                'from' => $this->readDate($request->query('from')),
+                'to' => $this->readDate($request->query('to')),
+            ],
         ]);
     }
 

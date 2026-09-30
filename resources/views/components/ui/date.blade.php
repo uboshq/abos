@@ -91,7 +91,16 @@
 @php
     $id = $id ?? $name;
     // মান আসে ISO-তে (2026-08-17) — খালি বা ভুল হলে ঘরটাও খালি থাকে
-    $iso = $value ? \Illuminate\Support\Carbon::parse($value)->toDateString() : '';
+    /*
+     * ⛔ মন্তব্যটা আগেও "ভুল হলে খালি" বলত, কোডটা বলত না — `?from=xyz`
+     * দিলে নিয়ন্ত্রণ ও নিরীক্ষার তিনটা তালিকা ৫০০ দিত (৩০ সেপ্টেম্বর ২০২৬)।
+     * ⓘ কাঁচা মান এখানে আসে ঠিকানা থেকে, `old()` থেকে, পুরনো বুকমার্ক থেকে।
+     */
+    try {
+        $iso = $value ? \Illuminate\Support\Carbon::parse($value)->toDateString() : '';
+    } catch (\InvalidArgumentException) {
+        $iso = '';
+    }
 @endphp
 
 @php

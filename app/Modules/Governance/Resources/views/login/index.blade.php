@@ -97,14 +97,14 @@
                 <label>
                     <span class="sr-only">{{ __('core.table.from_date') }}</span>
                     <x-ui.date name="from"
-                               value="{{ request('from') }}"
+                               value="{{ $dates['from'] ?? '' }}"
                                class="h-(--spacing-field-compact) rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-app) px-2 text-sm" />
                                </label>
 
                 <label>
                     <span class="sr-only">{{ __('core.table.to_date') }}</span>
                     <x-ui.date name="to"
-                               value="{{ request('to') }}"
+                               value="{{ $dates['to'] ?? '' }}"
                                class="h-(--spacing-field-compact) rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-app) px-2 text-sm" />
                                </label>
                                </x-ui.toolbar>
