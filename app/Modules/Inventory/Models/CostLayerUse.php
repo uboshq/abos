@@ -27,6 +27,9 @@ class CostLayerUse extends Model
     protected $fillable = [
         'company_id', 'cost_layer_id', 'product_id', 'source_type', 'source_id',
         'document_no', 'trx_date', 'qty', 'unit_cost', 'amount', 'created_by',
+
+        // ⛔ লট চাওয়া হয়েছিল, স্তরে কুলায়নি — FIFO-তে টানা; কখনো নীরব নয় ([[CostLayerService::issue()]])
+        'fallback',
     ];
 
     protected function casts(): array
@@ -36,6 +39,7 @@ class CostLayerUse extends Model
             'qty' => 'decimal:4',
             'unit_cost' => 'decimal:4',
             'amount' => 'decimal:4',
+            'fallback' => 'boolean',
         ];
     }
 

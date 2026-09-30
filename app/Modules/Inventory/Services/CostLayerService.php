@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Modules\Inventory\Services;
 
+use App\Core\Engines\Audit\AuditEngine;
 use App\Core\Support\CompanyContext;
+use App\Modules\Inventory\Models\Batch;
 use App\Modules\Inventory\Models\CostLayer;
 use App\Modules\Inventory\Models\CostLayerUse;
 use App\Modules\Inventory\Models\Product;
@@ -45,6 +47,14 @@ final class CostLayerService
         int $sourceId,
         ?string $documentNo = null,
         Carbon|string|null $date = null,
+
+        /*
+         * ⭐ মালটা কোন লটের — চূড়ান্ত অডিট, ৩০ সেপ্টেম্বর ২০২৬।
+         *
+         * ⓘ দিলে স্তরটা লট চেনে, আর বিক্রেতা ঐ লট বাছলে খরচ এই স্তর থেকেই আসে ([[issue()]])। `null` মানে
+         * লটহীন মাল — আচরণ আগের মতোই।
+         */
+        ?Batch $batch = null,
     ): CostLayer {
         if (bccomp($qty, '0', 4) <= 0) {
             throw new RuntimeException('A cost layer needs a positive quantity.');
@@ -65,6 +75,9 @@ final class CostLayerService
             'qty_remaining' => $qty,
             'unit_cost' => $unitCost,
             'created_by' => auth()->id(),
+
+            // ⓘ লট থাকলেই ঘরটা লেখা — লটহীন স্তরের সারি হুবহু আগের মতো
+            ...($batch !== null ? ['batch_id' => $batch->id] : []),
         ]);
     }
 
@@ -96,6 +109,7 @@ final class CostLayerService
         int $sourceId,
         ?string $documentNo = null,
         Carbon|string|null $date = null,
+        ?Batch $batch = null,
     ): array {
         if (bccomp($qty, '0', 4) <= 0) {
             throw new RuntimeException('A cost layer needs a positive quantity.');
@@ -145,14 +159,14 @@ final class CostLayerService
          */
         if (bccomp($higher, '0', 4) > 0) {
             $layers[] = $this->receive(
-                $product, $higher, bcadd($low, '0.0001', 4), $sourceType, $sourceId, $documentNo, $date
+                $product, $higher, bcadd($low, '0.0001', 4), $sourceType, $sourceId, $documentNo, $date, $batch
             );
         }
 
         $rest = bcsub($qty, $higher, 4);
 
         if (bccomp($rest, '0', 4) > 0) {
-            $layers[] = $this->receive($product, $rest, $low, $sourceType, $sourceId, $documentNo, $date);
+            $layers[] = $this->receive($product, $rest, $low, $sourceType, $sourceId, $documentNo, $date, $batch);
         }
 
         return $layers;
@@ -166,6 +180,12 @@ final class CostLayerService
      * আর দুইজনেই সেখান থেকেই টানত — স্তরটা ঋণাত্মক হয়ে যেত। স্টকের
      * তাকেও একই সমস্যা, একই সমাধান (StockService::move)।
      *
+     * ── ⭐ লট বাছা থাকলে, ৩০ সেপ্টেম্বর ২০২৬ (চূড়ান্ত অডিট) ─────────────
+     * গুদাম থেকে যে লট বেরোল, খরচও তার **নিজের** স্তর থেকে — নাহলে খাতায় এক লটের দাম আর গুদামে আরেক
+     * লটের মাল। ⛔ লটের স্তরে না কুলালে বাকিটা FIFO-তে, কিন্তু **কখনো নীরবে নয়**: টানের সারিতে
+     * `fallback` চিহ্ন, আর লটের নামে নিরীক্ষার খাতায় একটা ঘটনা। ⓘ এমন হয় কেবল পুরনো স্তরে, যাদের
+     * লট জানা নেই (লট আসার আগের মাল, আমদানি করা ইতিহাস)।
+     *
      * @return array{cost: string, uses: list<CostLayerUse>}
      */
     public function issue(
@@ -175,23 +195,64 @@ final class CostLayerService
         int $sourceId,
         ?string $documentNo = null,
         Carbon|string|null $date = null,
+        ?Batch $batch = null,
     ): array {
         if (bccomp($qty, '0', 4) <= 0) {
             throw new RuntimeException('Issuing stock needs a positive quantity.');
         }
 
-        return DB::transaction(function () use ($product, $qty, $sourceType, $sourceId, $documentNo, $date) {
-            $layers = CostLayer::query()
-                ->where('product_id', $product->id)
-                ->open()
-                ->lockForUpdate()
-                ->get();
+        return DB::transaction(function () use ($product, $qty, $sourceType, $sourceId, $documentNo, $date, $batch) {
+            $cost = '0';
+            $uses = [];
+            $remaining = $qty;
 
-            $drawn = $this->drawFrom($layers, $qty, $product, $sourceType, $sourceId, $documentNo, $date);
+            if ($batch !== null) {
+                $own = CostLayer::query()
+                    ->where('product_id', $product->id)
+                    ->where('batch_id', $batch->id)
+                    ->open()
+                    ->lockForUpdate()
+                    ->get();
 
-            $cost = $drawn['cost'];
-            $uses = $drawn['uses'];
-            $remaining = $drawn['left'];
+                $drawn = $this->drawFrom($own, $remaining, $product, $sourceType, $sourceId, $documentNo, $date);
+
+                $cost = $drawn['cost'];
+                $uses = $drawn['uses'];
+                $remaining = $drawn['left'];
+            }
+
+            if (bccomp($remaining, '0', 4) > 0) {
+                /*
+                 * ⓘ লট বাছা থাকলে FIFO-তে পড়ার সময় আগে **লটহীন** স্তর — অন্য লটের নিজের স্তর খেয়ে ফেললে সেই লট
+                 * বিক্রির দিন আবার ঘাটতিতে পড়ত, আর ভুলটা এক লট থেকে আরেক লটে গড়াত। লটহীন স্তরে না কুলালে তবেই
+                 * বাকি সব, পুরনো আগে। লট না থাকলে আগের FIFO হুবহু।
+                 */
+                $layers = CostLayer::query()
+                    ->where('product_id', $product->id)
+                    ->where('qty_remaining', '>', 0)
+                    ->when($batch !== null, fn ($q) => $q->orderByRaw('CASE WHEN batch_id IS NULL THEN 0 ELSE 1 END'))
+                    ->orderBy('trx_date')
+                    ->orderBy('id')
+                    ->lockForUpdate()
+                    ->get();
+
+                $asked = $remaining;
+                $drawn = $this->drawFrom($layers, $remaining, $product, $sourceType, $sourceId, $documentNo, $date, fallback: $batch !== null);
+
+                $cost = bcadd($cost, $drawn['cost'], 4);
+                $uses = [...$uses, ...$drawn['uses']];
+                $remaining = $drawn['left'];
+
+                if ($batch !== null && $drawn['uses'] !== []) {
+                    app(AuditEngine::class)->recordAction($batch, 'lot_cost_fell_back', sprintf(
+                        '%s: %s of %s drew FIFO cost; lot %s had no cost layer left for it',
+                        $documentNo ?? $sourceType.'#'.$sourceId,
+                        rtrim(rtrim(bcsub($asked, $remaining, 4), '0'), '.'),
+                        $product->name(),
+                        $batch->batch_no,
+                    ));
+                }
+            }
 
             /*
              * স্তরে যত মাল আছে তার বেশি বেরোতে পারে না।
@@ -574,6 +635,9 @@ final class CostLayerService
         int $sourceId,
         ?string $documentNo,
         Carbon|string|null $date,
+
+        // ⛔ লট চাওয়া হয়েছিল, তার স্তরে কুলায়নি — এই টানগুলো FIFO-র, আর সেটা সারিতে লেখা থাকে
+        bool $fallback = false,
     ): array {
         $remaining = $qty;
         $cost = '0';
@@ -602,6 +666,7 @@ final class CostLayerService
                 'unit_cost' => $layer->unit_cost,
                 'amount' => $amount,
                 'created_by' => auth()->id(),
+                ...($fallback ? ['fallback' => true] : []),
             ]);
 
             $layer->qty_remaining = bcsub((string) $layer->qty_remaining, $take, 4);

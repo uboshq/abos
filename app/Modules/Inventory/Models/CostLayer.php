@@ -29,6 +29,9 @@ class CostLayer extends Model
     protected $fillable = [
         'company_id', 'product_id', 'source_type', 'source_id', 'document_no',
         'trx_date', 'qty_in', 'qty_remaining', 'unit_cost', 'created_by',
+
+        // ⭐ স্তরটা কোন লটের — চূড়ান্ত অডিট, ৩০ সেপ্টেম্বর ২০২৬ ([[CostLayerService::issue()]])
+        'batch_id',
     ];
 
     protected function casts(): array
@@ -72,6 +75,11 @@ class CostLayer extends Model
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
+    }
+
+    public function batch(): BelongsTo
+    {
+        return $this->belongsTo(Batch::class);
     }
 
     public function uses(): HasMany
