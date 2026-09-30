@@ -44,7 +44,8 @@ class InsurancePremium extends Model implements Drillable, SettledByAVoucher
         return [
             'period_from' => 'date',
             'period_to' => 'date',
-            'amount' => 'decimal:2',
+            // ⭐ চার ঘর, কলামের মাপেই — `decimal:2` প্রতিবার পড়ায় শেষ দুই ঘর ফেলে দিত ([[TheInsuranceLostItsLastTwoPaisaOnEveryReadTest]])
+            'amount' => 'decimal:4',
             'posted_at' => 'datetime',
         ];
     }

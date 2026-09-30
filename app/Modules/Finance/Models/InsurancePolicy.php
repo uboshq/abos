@@ -59,8 +59,9 @@ class InsurancePolicy extends Model
     protected function casts(): array
     {
         return [
-            'sum_insured' => 'decimal:2',
-            'premium' => 'decimal:2',
+            // ⭐ চার ঘর, কলামের মাপেই — `decimal:2` প্রতিবার পড়ায় শেষ দুই ঘর ফেলে দিত ([[TheInsuranceLostItsLastTwoPaisaOnEveryReadTest]])
+            'sum_insured' => 'decimal:4',
+            'premium' => 'decimal:4',
             'starts_on' => 'date',
             'ends_on' => 'date',
             'is_active' => 'boolean',
