@@ -4,9 +4,9 @@ import android.appwidget.AppWidgetManager
 import android.content.Context
 import android.content.SharedPreferences
 import android.net.Uri
+import android.util.Log
 import android.view.View
 import android.widget.RemoteViews
-import es.antonborri.home_widget.HomeWidgetLaunchIntent
 import es.antonborri.home_widget.HomeWidgetProvider
 
 /**
@@ -34,56 +34,58 @@ class ApprovalsWidgetProvider : HomeWidgetProvider() {
         appWidgetIds: IntArray,
         widgetData: SharedPreferences
     ) {
-        appWidgetIds.forEach { widgetId ->
-            val views = RemoteViews(context.packageName, R.layout.approvals_widget).apply {
-                val count = widgetData.getString(KEY_COUNT, DASH)
-                setTextViewText(R.id.approvals_count, count)
+        /* A courtesy tile must never be able to close the app: this runs in the
+           app's own process, so an exception here ended it (0.4.1). */
+        try {
+            appWidgetIds.forEach { widgetId ->
+                val views = RemoteViews(context.packageName, R.layout.approvals_widget).apply {
+                    val count = widgetData.getString(KEY_COUNT, DASH)
+                    setTextViewText(R.id.approvals_count, count)
 
-                var shown = 0
-                ROWS.forEach { (viewId, key) ->
-                    val text = widgetData.getString(key, null)
-                    if (text.isNullOrEmpty()) {
-                        setViewVisibility(viewId, View.GONE)
-                    } else {
-                        setTextViewText(viewId, text)
-                        setViewVisibility(viewId, View.VISIBLE)
-                        shown++
+                    var shown = 0
+                    ROWS.forEach { (viewId, key) ->
+                        val text = widgetData.getString(key, null)
+                        if (text.isNullOrEmpty()) {
+                            setViewVisibility(viewId, View.GONE)
+                        } else {
+                            setTextViewText(viewId, text)
+                            setViewVisibility(viewId, View.VISIBLE)
+                            shown++
+                        }
                     }
-                }
 
-                // "Nothing waiting" is a sentence somebody can act on. Three
-                // empty lines are a widget that looks broken.
-                //
-                // Only when the app has actually written a count: before the
-                // first sign-in there is no news either way, and claiming an
-                // empty queue would be a claim about a company nobody has
-                // signed into yet.
-                val emptyText = widgetData.getString(KEY_EMPTY, null)
-                val emptyVisible = shown == 0 && count != DASH && !emptyText.isNullOrEmpty()
-                setTextViewText(R.id.approvals_empty, emptyText ?: "")
-                setViewVisibility(R.id.approvals_empty, if (emptyVisible) View.VISIBLE else View.GONE)
+                    // "Nothing waiting" is a sentence somebody can act on. Three
+                    // empty lines are a widget that looks broken.
+                    //
+                    // Only when the app has actually written a count: before the
+                    // first sign-in there is no news either way, and claiming an
+                    // empty queue would be a claim about a company nobody has
+                    // signed into yet.
+                    val emptyText = widgetData.getString(KEY_EMPTY, null)
+                    val emptyVisible = shown == 0 && count != DASH && !emptyText.isNullOrEmpty()
+                    setTextViewText(R.id.approvals_empty, emptyText ?: "")
+                    setViewVisibility(R.id.approvals_empty, if (emptyVisible) View.VISIBLE else View.GONE)
 
-                val more = widgetData.getString(KEY_MORE, "")
-                setTextViewText(R.id.approvals_more, more)
-                setViewVisibility(
-                    R.id.approvals_more,
-                    if (more.isNullOrEmpty()) View.GONE else View.VISIBLE
-                )
-
-                setTextViewText(R.id.approvals_asof, widgetData.getString(KEY_AS_OF, ""))
-
-                // Straight to the inbox: the person tapping a queue wants the
-                // queue, not the home tab with a tile for it.
-                setOnClickPendingIntent(
-                    R.id.approvals_root,
-                    HomeWidgetLaunchIntent.getActivity(
-                        context,
-                        MainActivity::class.java,
-                        Uri.parse("abos://widget/approvals")
+                    val more = widgetData.getString(KEY_MORE, "")
+                    setTextViewText(R.id.approvals_more, more)
+                    setViewVisibility(
+                        R.id.approvals_more,
+                        if (more.isNullOrEmpty()) View.GONE else View.VISIBLE
                     )
-                )
+
+                    setTextViewText(R.id.approvals_asof, widgetData.getString(KEY_AS_OF, ""))
+
+                    // Straight to the inbox: the person tapping a queue wants the
+                    // queue, not the home tab with a tile for it.
+                    setOnClickPendingIntent(
+                        R.id.approvals_root,
+                        WidgetLaunch.open(context, Uri.parse("abos://widget/approvals"))
+                    )
+                }
+                appWidgetManager.updateAppWidget(widgetId, views)
             }
-            appWidgetManager.updateAppWidget(widgetId, views)
+        } catch (t: Throwable) {
+            Log.e("ApprovalsWidgetProvider", "widget update failed", t)
         }
     }
 

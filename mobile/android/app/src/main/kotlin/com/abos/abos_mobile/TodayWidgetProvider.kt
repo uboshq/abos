@@ -4,8 +4,8 @@ import android.appwidget.AppWidgetManager
 import android.content.Context
 import android.content.SharedPreferences
 import android.net.Uri
+import android.util.Log
 import android.widget.RemoteViews
-import es.antonborri.home_widget.HomeWidgetLaunchIntent
 import es.antonborri.home_widget.HomeWidgetProvider
 
 /**
@@ -39,28 +39,30 @@ class TodayWidgetProvider : HomeWidgetProvider() {
         appWidgetIds: IntArray,
         widgetData: SharedPreferences
     ) {
-        appWidgetIds.forEach { widgetId ->
-            val views = RemoteViews(context.packageName, R.layout.today_widget).apply {
-                CELLS.forEach { (viewId, key) ->
-                    setTextViewText(viewId, widgetData.getString(key, DASH))
-                }
-                setTextViewText(R.id.widget_company, widgetData.getString(KEY_COMPANY, ""))
-                setTextViewText(R.id.widget_asof, widgetData.getString(KEY_AS_OF, ""))
+        /* A courtesy tile must never be able to close the app: this runs in the
+           app's own process, so an exception here ended it (0.4.1). */
+        try {
+            appWidgetIds.forEach { widgetId ->
+                val views = RemoteViews(context.packageName, R.layout.today_widget).apply {
+                    CELLS.forEach { (viewId, key) ->
+                        setTextViewText(viewId, widgetData.getString(key, DASH))
+                    }
+                    setTextViewText(R.id.widget_company, widgetData.getString(KEY_COMPANY, ""))
+                    setTextViewText(R.id.widget_asof, widgetData.getString(KEY_AS_OF, ""))
 
-                // The whole widget opens the day's page, not just one number.
-                // Opening the app refreshes these figures on the way, so the
-                // refresh is had for free by the gesture people were going to
-                // make anyway.
-                setOnClickPendingIntent(
-                    R.id.widget_root,
-                    HomeWidgetLaunchIntent.getActivity(
-                        context,
-                        MainActivity::class.java,
-                        Uri.parse("abos://widget/today")
+                    // The whole widget opens the day's page, not just one number.
+                    // Opening the app refreshes these figures on the way, so the
+                    // refresh is had for free by the gesture people were going to
+                    // make anyway.
+                    setOnClickPendingIntent(
+                        R.id.widget_root,
+                        WidgetLaunch.open(context, Uri.parse("abos://widget/today"))
                     )
-                )
+                }
+                appWidgetManager.updateAppWidget(widgetId, views)
             }
-            appWidgetManager.updateAppWidget(widgetId, views)
+        } catch (t: Throwable) {
+            Log.e("TodayWidgetProvider", "widget update failed", t)
         }
     }
 
