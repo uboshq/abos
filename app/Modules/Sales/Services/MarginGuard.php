@@ -292,12 +292,24 @@ final class MarginGuard
     /** কাগজের রায় — কিছু না লিখে, কিছু না ছুঁড়ে। */
     public function judge(SalesInvoice|DeliveryChallan $document): MarginVerdict
     {
-        return $document instanceof SalesInvoice
-            ? $this->evaluate($this->invoiceRows($document), '0')
-            : $this->evaluate(
-                $this->challanRows($document),
-                $this->decimal($document->discount_amount ?? '0'),
-            );
+        if ($document instanceof SalesInvoice) {
+            /*
+             * ⛔ বিলের মাথার ছাড়ও মাপে — চূড়ান্ত অডিট ⛔৬, ৩০ সেপ্টেম্বর ২০২৬।
+             *
+             * ⓘ আগে বিল মাপা হত মাথার ছাড় শূন্য ধরে, আর চালানে পাশ করা সারি বিলে আর মাপাই হত না:
+             * ৯৬ খরচের মাল চালানে ১০০-তে পাশ, বিলে ২০ মাথার ছাড় → ৮০-তে বিক্রি, কোনো দেয়াল ছাড়া।
+             * ⭐ চালান যতটুকু মাথার ছাড় নিয়ে মাপা হয়েছিল বিলে তার বেশি হলে সব সারি আবার, পুরো ছাড়সহ
+             * ([[billDiscountBeyondTheChallan()]])। ⓘ কাউন্টারে চালান আর বিলের ছাড় একই — দ্বিতীয় মাপ নয়।
+             */
+            $beyond = $this->billDiscountBeyondTheChallan($document);
+
+            return $this->evaluate($this->invoiceRows($document, skipJudged: $beyond === null), $beyond ?? '0');
+        }
+
+        return $this->evaluate(
+            $this->challanRows($document),
+            $this->decimal($document->discount_amount ?? '0'),
+        );
     }
 
     /**
@@ -592,7 +604,7 @@ final class MarginGuard
      *
      * @return list<array{index: int, product: Product, qty: string, net: string}>
      */
-    private function invoiceRows(SalesInvoice $invoice): array
+    private function invoiceRows(SalesInvoice $invoice, bool $skipJudged = true): array
     {
         $invoice->loadMissing(['lines.product', 'lines.challanLine.challan']);
 
@@ -603,7 +615,7 @@ final class MarginGuard
             $qty = (string) $line->qty;
             $net = bcsub(bcmul($qty, (string) $line->rate, 4), (string) ($line->discount ?? '0'), 4);
 
-            if ($this->alreadyJudgedOnTheChallan($line, $qty, $net)) {
+            if ($skipJudged && $this->alreadyJudgedOnTheChallan($line, $qty, $net)) {
                 continue;
             }
 
@@ -625,6 +637,36 @@ final class MarginGuard
         }
 
         return $rows;
+    }
+
+    /**
+     * বিলের মাথার ছাড় — যদি সেটা চালানের মাপা ছাড়ের **বেশি** হয়; নাহলে `null` (নতুন কিছু মাপার নেই)।
+     *
+     * ⓘ চালানের মাথার ছাড় (`discount_amount`) দিয়ে চালান আগেই মাপা হয়েছে — কাউন্টারে ঠিক বিলের ছাড়টাই।
+     * বিলে তার বেশি হলে ফেরে পুরো বিলের ছাড়, কারণ তখন সব সারি আবার মাপা হয়।
+     */
+    private function billDiscountBeyondTheChallan(SalesInvoice $invoice): ?string
+    {
+        $bill = $this->decimal($invoice->bill_discount ?? '0');
+
+        if (bccomp($bill, '0', 4) <= 0) {
+            return null;
+        }
+
+        $invoice->loadMissing('lines.challanLine.challan');
+
+        $judged = '0';
+
+        foreach ($invoice->lines as $line) {
+            $challan = $line->challanLine?->challan;
+
+            if ($challan !== null && in_array($challan->status, DocumentStatus::POSTED, true)
+                && bccomp($this->decimal($challan->discount_amount ?? '0'), $judged, 4) > 0) {
+                $judged = $this->decimal($challan->discount_amount ?? '0');
+            }
+        }
+
+        return bccomp($bill, $judged, 4) > 0 ? $bill : null;
     }
 
     private function alreadyJudgedOnTheChallan(SalesInvoiceLine $line, string $qty, string $net): bool
