@@ -32,7 +32,9 @@ final class PayeesOnTheVoucherForm implements OffersChoicesOnAForm
         }
 
         return [
+            // ⭐ হেডারে বাছা শাখার পাওনাদার — মালিক, ১ অক্টোবর ২০২৬ ([[Supplier::scopeInViewedBranch()]])
             'payeesByType' => Supplier::query()
+                ->inViewedBranch()
                 ->where('company_id', CompanyContext::id())
                 ->where('is_active', true)
                 ->whereNotNull('party_type_id')

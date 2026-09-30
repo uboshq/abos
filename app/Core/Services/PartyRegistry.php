@@ -132,6 +132,16 @@ final class PartyRegistry
                     in_array('is_active', $model->getFillable(), true),
                     fn ($q) => $q->where('is_active', true),
                 )
+                /*
+                 * ⭐ হেডারে বাছা শাখার পক্ষ — মালিক, ১ অক্টোবর ২০২৬: *"প্রতিটা শাখা পুরো আলাদা"*।
+                 * ⛔ চেক, নোট, হাত-ঋণ, ভাড়া, জমা আর সম্পদের পিকার এখান থেকে সব শাখার গ্রাহক-সরবরাহকারী পেত।
+                 * ⓘ কোর মডিউলের নাম জানে না, তাই যে পক্ষের মডেল নিজে `inViewedBranch` দেয় তাকেই ছাঁকা হয়
+                 * ([[Customer::scopeInViewedBranch()]]); বাকিদের আচরণ আগের মতো।
+                 */
+                ->when(
+                    method_exists($model, 'scopeInViewedBranch'),
+                    fn ($q) => $q->inViewedBranch(),
+                )
                 ->get();
 
             $groups[] = [
@@ -206,7 +216,7 @@ final class PartyRegistry
      * রিপোর্টগুলোতে কিছু বদলাতে হয় না।
      *
      * @param  iterable<array{0: string, 1: int}>  $pairs  [ধরন, id]
-     * @return array<string, array{0: string, 1: array<string, mixed>}>  "ধরন:id" => [রুট, ঘর]
+     * @return array<string, array{0: string, 1: array<string, mixed>}> "ধরন:id" => [রুট, ঘর]
      */
     public function routesOf(iterable $pairs): array
     {

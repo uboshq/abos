@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Accounts\Services;
 
 use App\Core\Support\CompanyContext;
+use App\Core\Support\ViewedBranch;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -37,6 +38,8 @@ final class DuplicateParties
 
         $rows = DB::table($table)
             ->where('company_id', CompanyContext::id())
+            // ⭐ হেডারে বাছা শাখার পক্ষ — মালিক, ১ অক্টোবর ২০২৬: *"প্রতিটা শাখা পুরো আলাদা"*; মানুষের ঘরে শাখা নেই
+            ->when($table !== 'mdm_people', fn ($q) => ViewedBranch::narrow($q, "{$table}.branch_id"))
             ->whereNull('deleted_at')
             ->orderBy('code')
             ->get(['id', 'code', 'name_en', 'name_bn', "{$phone} as phone", 'is_active']);
