@@ -12,6 +12,7 @@ use App\Modules\Sales\Models\DeliveryChallanLine;
 use App\Modules\Sales\Models\DeliveryEvent;
 use App\Modules\Sales\Models\DeliveryEventLine;
 use App\Modules\Sales\Models\DeliveryState;
+use App\Modules\Sales\Models\GatePass;
 use App\Modules\Sales\Models\SalesReturnLine;
 use App\Modules\Sales\Models\Shipment;
 use App\Modules\Sales\Models\ShipmentLine;
@@ -555,7 +556,7 @@ final class DeliveryStageService
              * ⓘ ট্রিপ বেরোলে আর হাতে "রওনা" বসালে দুইটাই এই পথে আসে — তাই কোনো রওনা কাগজ ছাড়া
              * বেরোয় না ([[GatePassService::issueFor()]])। একই লেনদেনে: গেট পাস না হলে রওনাও না।
              */
-            if ($this->leavesTheGate($state?->stage, $to)) {
+            if ($this->leavesTheGate($state?->stage, $to) && ! $this->sameTripAgain($challan, $extras['shipment_id'] ?? null)) {
                 /*
                  * ⛔ ফেরত পাকা হওয়া চালান আবার গেট পেরোয় না — গভীর অডিট (৯), ৩০ সেপ্টেম্বর ২০২৬।
                  * ⓘ কেবল সত্যিকারের রওনায় (গাড়িতে ওঠার আগের ধাপ বা "পৌঁছায়নি" থেকে); ট্রিপের সন্ধ্যার
@@ -751,6 +752,27 @@ final class DeliveryStageService
                 ]),
             ]);
         }
+    }
+
+    /**
+     * ⛔ একই ট্রিপে আবার "রওনা" মানে সন্ধ্যার শোধরানো, নতুন বেরোনো নয় — ৩০ সেপ্টেম্বর ২০২৬
+     * ([[TheEveningCorrectionPrintedASecondGatePassTest]])।
+     *
+     * ⓘ চালক "পৌঁছেছে" বা "ফেরত" বলে সারিটা আবার "অপেক্ষায়" করলে ধাপ ফেরে "রওনা"-য়, আর আগে
+     * এখান দিয়ে একটা নতুন গেট পাস বেরোত — অথচ গাড়ি একবারই বেরিয়েছিল। ⭐ এই ট্রিপে এই চালানের
+     * গেট পাস আগেই থাকলে (বাতিল হলেও — গাড়িটা তো একবার বেরিয়েছিল) বিল বা গেট পাস কিছুই নতুন নয়।
+     * নতুন ট্রিপ বা হাতের রওনা (ট্রিপ নেই) আগের মতোই নতুন কাগজ পায়।
+     */
+    private function sameTripAgain(DeliveryChallan $challan, mixed $shipmentId): bool
+    {
+        if ($shipmentId === null) {
+            return false;
+        }
+
+        return GatePass::query()
+            ->where('delivery_challan_id', $challan->id)
+            ->where('shipment_id', (int) $shipmentId)
+            ->exists();
     }
 
     private function leavesTheGate(?string $from, string $to): bool
