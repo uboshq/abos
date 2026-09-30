@@ -92,7 +92,22 @@ afterEach(async () => {
     vi.restoreAllMocks()
 })
 
+/*
+ * ⛔ মালিকের অভিযোগ, ৩০ সেপ্টেম্বর ২০২৬: বাঁ পাশের মেনুতে মডিউলে চাপলে
+ * পাতা না খুলে পপআপ আসছিল। ⓘ তাই নিচের তিনটা লিংক, প্রতিটা **একটাই**
+ * নিয়মে আটকায় — বাকি সব শর্ত সে পূরণ করে, যাতে কোনো পাহারা মুছলে ঠিক
+ * তারই পরীক্ষা লাল হয়:
+ *   menu      বাঁ পাশের মেনু (`<aside>`), `<main>`-এর বাইরে — আসল অভিযোগটা
+ *   shellbar  `<main>`-এর বাইরে, কোনো `<nav>`/`<aside>`-এ নয় — কেবল `<main>`-পাহারা আটকায়
+ *   navinmain `<main>`-এর ভিতরে, কিন্তু `<nav>`-এ
+ *   list      `<main>`-এর ভিতরে, কিন্তু ঠিকানাটা তালিকার, কোনো নথির নয়
+ */
 const PAGE = `
+<aside><a id="menu" href="/sales/invoice/11">মেনু</a></aside>
+<div><a id="shellbar" href="/sales/invoice/13">খোলসের লিংক</a></div>
+<main>
+<nav><a id="navinmain" href="/sales/invoice/12">পটি</a></nav>
+<a id="list" href="/sales/invoice">সব চালান</a>
 <div class="table-responsive">
     <table><tbody>
         <tr><td><a id="doc" href="/sales/invoice/7">INV-7</a></td></tr>
@@ -107,6 +122,7 @@ const PAGE = `
         <tr><td><form><a id="inform" href="/sales/invoice/9">বাতিল</a></form></td></tr>
     </tbody></table>
 </div>
+</main>
 `
 
 async function mount () {
@@ -294,6 +310,10 @@ describe('⛔ যেসব ক্লিক পিকে যায় না', ()
         ['বাইরের সাইট', 'outside'],
         ['একই পাতার নোঙর', 'anchor'],
         ['ফর্মের ভিতরের লিংক', 'inform'],
+        ['বাঁ পাশের মেনুর লিংক', 'menu'],
+        ['পাতার বাইরের (খোলসের) লিংক', 'shellbar'],
+        ['পাতার ভিতরের নেভিগেশন-পটি', 'navinmain'],
+        ['তালিকা বা মডিউলের পাতা', 'list'],
     ]
 
     for (const [name, id] of excluded) {

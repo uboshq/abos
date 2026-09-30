@@ -501,6 +501,15 @@ export function peek () {
             /* ⛔ ফর্মের ভিতরের লিংক — বাতিল/ফিরে যাওয়ার লিংক হয় */
             if (link.closest('form') !== null) return false
 
+            /*
+             * ⛔ কেবল পাতার ভিতরের লিংক — মালিকের অভিযোগ, ৩০ সেপ্টেম্বর ২০২৬।
+             * ⚠️ বাঁ পাশের মেনুতে মডিউলে চাপলে পাতা না খুলে পপআপ আসছিল।
+             * মেনু, মডিউল-পটি, মাথার সারি — ওগুলো পথ বদলানোর জন্যই, আর
+             * নিয়মটা ছিল কেবল **তালিকার ডকুমেন্ট-লিংকের** জন্য।
+             */
+            if (link.closest('main') === null) return false
+            if (link.closest('nav, header, aside, [role="navigation"]') !== null) return false
+
             if (link.origin !== window.location.origin) return false
 
             const href = link.getAttribute('href') || ''
@@ -509,6 +518,13 @@ export function peek () {
 
             /* ⓘ একই পাতার নোঙর — পিক করলে পাতাটা নিজের ভিতরে খুলত */
             if (link.pathname === window.location.pathname) return false
+
+            /*
+             * ⛔ কেবল একটা ডকুমেন্ট — ঠিকানার শেষ অংশটা তার নম্বর
+             * (`/sales/invoice/7`)। ⓘ তালিকা, মডিউল আর রিপোর্টের পাতা
+             * (`/sales/invoice`, `/backup/dashboard`) আগের মতোই পুরো পাতায় খোলে।
+             */
+            if (! /\/\d+\/?$/.test(link.pathname)) return false
 
             for (const part of NEVER_PEEK) {
                 if (link.pathname.endsWith(part) || link.pathname.includes(part + '/')) {
