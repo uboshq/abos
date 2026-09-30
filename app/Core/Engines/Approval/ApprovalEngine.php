@@ -126,43 +126,54 @@ final class ApprovalEngine
             );
         }
 
-        $existing = Approval::query()
-            ->where('approvable_type', $document::class)
-            ->where('approvable_id', $document->getKey())
-            ->where('action', $action)
-            ->pending()
-            ->first();
-
-        // একই কাজের জন্য দুইটা অনুরোধ থাকলে অনুমোদনকারী দুইবার একই জিনিস
-        // দেখে, আর একটা অনুমোদন করে অন্যটা ঝুলে থাকে।
-        if ($existing !== null) {
-            return $existing;
-        }
-
         /*
-         * ⭐ প্রথম ধাপের ঘড়ি — ২৪ সেপ্টেম্বর ২০২৬।
+         * ⛔ খোঁজা আর বানানো — কাগজের সারিতে তালা দিয়ে, এক লেনদেনে (৩০ সেপ্টেম্বর ২০২৬)।
          *
-         * ⓘ ধাপে সময়সীমা না বসানো থাকলে `null` — অর্থাৎ
-         * পুরনো প্রবাহগুলো **অবিকল আগের মতো** চলে।
+         * আগে দুটোই তালা ছাড়া, আর অনুমোদনের টেবিলে এর জন্য কোনো unique নেই: ফোন আর
+         * ওয়েব, বা দুইবার চাপ — দুইজনেই "অপেক্ষমাণ নেই" দেখে দুইটা অনুরোধ বানাত।
+         * ⓘ তালাটা কাগজে, অনুমোদনে নয় — যে সারি এখনো নেই তাতে তালা দেওয়া যায় না।
          */
-        $first = $flow->steps->firstWhere('level', 1);
+        return DB::transaction(function () use ($document, $flow, $module, $action, $amount, $payload, $reason, $userId, $stateHash) {
+            $document->newQueryWithoutScopes()->whereKey($document->getKey())->lockForUpdate()->first();
 
-        return Approval::create([
-            'company_id' => CompanyContext::id(),
-            'approvable_type' => $document::class,
-            'approvable_id' => $document->getKey(),
-            'module' => $module,
-            'action' => $action,
-            'amount' => $amount,
-            'status' => Approval::PENDING,
-            'current_level' => 1,
-            'payload' => $payload,
-            'requested_reason' => $reason,
-            'requested_by' => $userId ?? auth()->id(),
-            'requested_at' => now(),
-            'due_at' => $this->sla()->dueFor($first),
-            'state_hash' => $stateHash,
-        ]);
+            $existing = Approval::query()
+                ->where('approvable_type', $document::class)
+                ->where('approvable_id', $document->getKey())
+                ->where('action', $action)
+                ->pending()
+                ->first();
+
+            // একই কাজের জন্য দুইটা অনুরোধ থাকলে অনুমোদনকারী দুইবার একই জিনিস
+            // দেখে, আর একটা অনুমোদন করে অন্যটা ঝুলে থাকে।
+            if ($existing !== null) {
+                return $existing;
+            }
+
+            /*
+             * ⭐ প্রথম ধাপের ঘড়ি — ২৪ সেপ্টেম্বর ২০২৬।
+             *
+             * ⓘ ধাপে সময়সীমা না বসানো থাকলে `null` — অর্থাৎ
+             * পুরনো প্রবাহগুলো **অবিকল আগের মতো** চলে।
+             */
+            $first = $flow->steps->firstWhere('level', 1);
+
+            return Approval::create([
+                'company_id' => CompanyContext::id(),
+                'approvable_type' => $document::class,
+                'approvable_id' => $document->getKey(),
+                'module' => $module,
+                'action' => $action,
+                'amount' => $amount,
+                'status' => Approval::PENDING,
+                'current_level' => 1,
+                'payload' => $payload,
+                'requested_reason' => $reason,
+                'requested_by' => $userId ?? auth()->id(),
+                'requested_at' => now(),
+                'due_at' => $this->sla()->dueFor($first),
+                'state_hash' => $stateHash,
+            ]);
+        });
     }
 
     /**
@@ -509,9 +520,18 @@ final class ApprovalEngine
             throw new RuntimeException('Only the person who asked for an approval can withdraw it.');
         }
 
-        $approval->update(['status' => Approval::CANCELLED, 'decided_at' => now()]);
+        /*
+         * ⛔ তালা দিয়ে আবার পড়া — approve/reject-এর মতোই (৩০ সেপ্টেম্বর ২০২৬)।
+         * আগে হাতে-থাকা কপিতে "অপেক্ষমাণ" দেখে শর্ত ছাড়াই লিখত: এইমাত্র সই হওয়া
+         * অনুমোদনকে প্রত্যাহার "বাতিল" করে দিত, অথচ সইয়ের পরের কাজ হয়ে গেছে।
+         */
+        return DB::transaction(function () use ($approval) {
+            $locked = $this->lockPending($approval);
 
-        return $approval->fresh();
+            $locked->update(['status' => Approval::CANCELLED, 'decided_at' => now()]);
+
+            return $locked->fresh();
+        });
     }
 
     /**
