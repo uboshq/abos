@@ -21,6 +21,7 @@ use App\Modules\Sales\Services\SalesOrderService;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\View;
+use Tests\Concerns\PrintsTheStandardPaper;
 use Tests\TestCase;
 
 /**
@@ -41,6 +42,7 @@ use Tests\TestCase;
  */
 class ACancelledPaperLooksValidTest extends TestCase
 {
+    use PrintsTheStandardPaper;
     use RefreshDatabase;
 
     protected function setUp(): void
@@ -56,7 +58,8 @@ class ACancelledPaperLooksValidTest extends TestCase
          * বিলের ডিফল্ট ক্লাসিক ([[AClassicTableInvoiceCanBeChosenTest]]), তাই নকশাটা এখানে
          * বেঁধে দেওয়া — নইলে পরীক্ষাটা মাপার কাগজই পেত না।
          */
-        app(\App\Core\Services\SettingsService::class)->set('sales.print.design.invoice', 'standard');
+        /* ⓘ ৩০ সেপ্টেম্বর থেকে সব কাগজ-মাপ আর ভাউচারেরও ডিফল্ট নকশা — তাই সবগুলোই বাঁধা ([[PrintsTheStandardPaper]]) */
+        $this->printTheStandardPaper();
 
         $this->actingAs(User::query()->where('email', 'owner@abos.test')->firstOrFail());
     }

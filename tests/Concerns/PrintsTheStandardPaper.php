@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Concerns;
 
 use App\Core\Services\SettingsService;
+use App\Modules\Accounts\Support\VoucherDesigns;
 use App\Modules\Sales\Support\PaperDesigns;
 
 /**
@@ -32,6 +33,11 @@ trait PrintsTheStandardPaper
             foreach (PaperDesigns::SIZES as $size) {
                 $settings->set(PaperDesigns::key($paper, $size), 'standard');
             }
+        }
+
+        /* ⓘ ভাউচারের ডিফল্টও এখন নকশা (ট্যালি ক্লাসিক) — সাধারণ ভাউচার `print.voucher` */
+        foreach (VoucherDesigns::SIZES as $size) {
+            $settings->set(VoucherDesigns::key($size), 'standard');
         }
     }
 }
