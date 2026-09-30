@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Backup\Http\Controllers;
 
 use App\Core\Engines\Audit\AuditEngine;
+use App\Core\Security\WholeDatabaseAccess;
 use App\Core\Services\BackupService;
 use App\Core\Services\MenuBuilder;
 use App\Http\Controllers\Controller;
@@ -61,6 +62,9 @@ class BackupController extends Controller
 
         return view('backup::index', [
             'menu' => $this->menu->forUser($request->user()),
+
+            /* ⓘ নামানোর বোতাম কেবল তাঁর, যিনি সত্যিই নামাতে পারেন ([[WholeDatabaseAccess]]) — চাবি একা যথেষ্ট নয় */
+            'canDownload' => app(WholeDatabaseAccess::class)->allows($request->user()),
 
             /*
              * নতুনটা আগে — প্রশ্নটা প্রায় সবসময় "শেষটা কবে", "প্রথমটা
@@ -161,6 +165,13 @@ class BackupController extends Controller
      */
     public function download(Request $request, string $name): BinaryFileResponse
     {
+        /*
+         * ⛔ গোটা ডাটাবেস কেবল সব কোম্পানির মালিকের — চূড়ান্ত অডিট, ৩০ সেপ্টেম্বর ২০২৬ (⛔১)। ⚠️ চাবিটা
+         * (`backup.download`) প্রতিটা কোম্পানির super_admin নিজে থেকেই পান, অথচ ফাইলে সব কোম্পানির তথ্য।
+         * ⓘ নিয়ম এক জায়গায়: [[WholeDatabaseAccess]]।
+         */
+        abort_unless(app(WholeDatabaseAccess::class)->allows($request->user()), 403);
+
         $wanted = basename($name);
 
         $path = collect($this->backups->all())

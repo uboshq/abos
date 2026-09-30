@@ -344,7 +344,8 @@ class ApprovalFlowController extends Controller implements HasMiddleware
              * ⓘ পাশাপাশি দুইটা লাইনের একটায় ছাঁকনি আছে আর অন্যটায় নেই —
              * সেটা ধরে নেওয়া যায় না, তাই লিখে রাখা।
              */
-            'role' => Role::query()->pluck('name', 'id')->all(),
+            /* ⛔ কেবল এই কোম্পানির রোল — চূড়ান্ত অডিট, ৩০ সেপ্টেম্বর ২০২৬ (⛔১৫): আগে সব কোম্পানির রোল দেখাত, আর ভুল রোল বাছলে সীমা নীরবে অকেজো হত */
+            'role' => Role::query()->where('company_id', CompanyContext::id())->pluck('name', 'id')->all(),
 
             'user' => $this->companyUsers()->pluck('name', 'id')->all(),
         ];
@@ -379,7 +380,7 @@ class ApprovalFlowController extends Controller implements HasMiddleware
     {
         return [
             'choices' => $this->flows->choices(),
-            'roles' => Role::query()->orderBy('name')->get(),
+            'roles' => Role::query()->where('company_id', CompanyContext::id())->orderBy('name')->get(),
 
             // ব্যক্তি ধরে ছক বসানো যায়, কিন্তু রোল ধরে বসানোই টেকে:
             // মানুষ চাকরি ছাড়েন, রোল থেকে যায়

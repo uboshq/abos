@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Approval\Http\Controllers;
 
 use App\Core\Services\MenuBuilder;
+use App\Core\Support\CompanyContext;
 use App\Http\Controllers\Controller;
 use App\Models\ApprovalLimit;
 use App\Models\Branch;
@@ -13,6 +14,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 use Spatie\Permission\Models\Role;
@@ -60,7 +62,8 @@ final class ApprovalLimitController extends Controller implements HasMiddleware
                 ->sortByDesc(fn (ApprovalLimit $l) => $l->weight())
                 ->values(),
 
-            'roles' => Role::query()->orderBy('name')->get(),
+            /* ⛔ কেবল এই কোম্পানির রোল — চূড়ান্ত অডিট, ৩০ সেপ্টেম্বর ২০২৬ (⛔১৫): আগে সব কোম্পানির রোল দেখাত, আর ভুল রোল বাছলে সীমা নীরবে অকেজো হত */
+            'roles' => Role::query()->where('company_id', CompanyContext::id())->orderBy('name')->get(),
             'branches' => Branch::query()->orderBy('name_en')->get(),
             'choices' => $this->flows->choices(),
             'labels' => $this->flows->labels(),
@@ -70,7 +73,8 @@ final class ApprovalLimitController extends Controller implements HasMiddleware
     public function store(Request $request): RedirectResponse
     {
         $data = $request->validate([
-            'role_id' => ['required', 'integer', 'exists:roles,id'],
+            /* ⛔ হাতে বানানো অনুরোধে অন্য কোম্পানির রোলের আইডি — ফেরত (⛔১৫) */
+            'role_id' => ['required', 'integer', Rule::exists('roles', 'id')->where('company_id', CompanyContext::id())],
 
             /*
              * ⓘ খালি মানে *"সব মডিউলে"* — একটা আসল অর্থ, অনুপস্থিতি নয়।
@@ -80,7 +84,8 @@ final class ApprovalLimitController extends Controller implements HasMiddleware
              */
             'module' => ['nullable', 'string', 'max:64'],
             'action' => ['nullable', 'string', 'max:129'],
-            'branch_id' => ['nullable', 'integer', 'exists:branches,id'],
+            /* ⛔ শাখাও এই কোম্পানির — একই ফাঁক (⛔১৫) */
+            'branch_id' => ['nullable', 'integer', Rule::exists('branches', 'id')->where('company_id', CompanyContext::id())],
 
             /*
              * ⛔ খালি সীমা মানে *"সীমা নেই"* — শূন্য নয়।

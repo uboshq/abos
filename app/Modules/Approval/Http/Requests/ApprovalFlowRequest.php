@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Approval\Http\Requests;
 
+use App\Core\Support\CompanyContext;
 use App\Models\ApprovalCondition;
 use App\Models\ApprovalFlowStep;
 use Illuminate\Foundation\Http\FormRequest;
@@ -94,6 +95,43 @@ class ApprovalFlowRequest extends FormRequest
      *
      * @return list<array<string, mixed>>
      */
+    /**
+     * ⛔ সইকারী এই কোম্পানিরই — চূড়ান্ত অডিট, ৩০ সেপ্টেম্বর ২০২৬ (⛔১৫)।
+     *
+     * ⓘ রোল আর ব্যবহারকারী একই ঘরে (`approver_id`, `escalate_to_id`) বসে, তাই `exists` নিয়ম সরাসরি খাটে না — ধরন দেখে
+     * যাচাই। ⚠️ অন্য কোম্পানির রোল বা মানুষ বসলে ধাপটা এমন কারও কাছে ঝুলত যিনি এই কোম্পানিতে সই দেখতেই পান না —
+     * চিরকাল, আর কোনো ত্রুটি দেখা যেত না।
+     *
+     * @return list<\Closure>
+     */
+    public function after(): array
+    {
+        return [function (\Illuminate\Validation\Validator $validator) {
+            foreach ((array) $this->input('steps', []) as $i => $step) {
+                foreach ([['approver_type', 'approver_id'], ['escalate_to_type', 'escalate_to_id']] as [$typeKey, $idKey]) {
+                    $type = $step[$typeKey] ?? null;
+                    $id = (int) ($step[$idKey] ?? 0);
+
+                    if ($type === null || $id < 1) {
+                        continue;
+                    }
+
+                    $mine = match ($type) {
+                        ApprovalFlowStep::BY_ROLE => \Spatie\Permission\Models\Role::query()
+                            ->whereKey($id)->where('company_id', CompanyContext::id())->exists(),
+                        ApprovalFlowStep::BY_USER => \App\Models\User::query()
+                            ->whereKey($id)->whereHas('companies', fn ($q) => $q->whereKey(CompanyContext::id()))->exists(),
+                        default => true,
+                    };
+
+                    if (! $mine) {
+                        $validator->errors()->add("steps.{$i}.{$idKey}", __('validation.exists', ['attribute' => $idKey]));
+                    }
+                }
+            }
+        }];
+    }
+
     public function steps(): array
     {
         return $this->validated()['steps'] ?? [];

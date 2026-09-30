@@ -148,12 +148,12 @@
         @if ($files->isEmpty())
             <p class="text-sm text-(--color-ink-muted)">{{ __('backup::message.nothing_yet') }}</p>
         @else
-            @can('backup.download')
+            @if ($canDownload)
                 {{-- ⚠️ যিনি নামাতে পারেন, তিনি যেন জানেন কী নামাচ্ছেন --}}
                 <p class="mb-2 text-2xs text-(--color-ink-muted)">
                     {{ __('backup::message.download_warning') }}
                 </p>
-            @endcan
+            @endif
 
             <div class="overflow-x-auto">
                 <table class="ui-list w-full text-sm">
@@ -173,12 +173,12 @@
                                     {{ number_format($file['bytes'] / 1024) }} KB
                                 </td>
                                 <td class="text-end">
-                                    @can('backup.download')
+                                    @if ($canDownload)
                                         <a href="{{ route('backup.download', $file['name']) }}"
                                            class="text-2xs underline decoration-dotted underline-offset-2">
                                             {{ __('core.action.export') }}
                                         </a>
-                                    @endcan
+                                    @endif
                                 </td>
                             </tr>
                         @endforeach

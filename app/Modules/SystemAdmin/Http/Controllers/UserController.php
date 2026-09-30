@@ -1368,6 +1368,12 @@ class UserController extends Controller implements HasMiddleware
      */
     public function setTwoStep(Request $request, User $user, MfaService $mfa): RedirectResponse
     {
+        /*
+         * ⛔ চূড়ান্ত অডিট, ৩০ সেপ্টেম্বর ২০২৬ (⛔২): এখানে কোম্পানির যাচাই ছিল না — অন্য কোম্পানির মানুষের তালাও
+         * খোলা যেত। ⓘ ৪০৪, [[mustBeInThisCompany()]]-এর একই কারণে।
+         */
+        $this->mustBeInThisCompany($user);
+
         $data = $request->validate([
             'required' => ['required', 'boolean'],
             'reason' => ['nullable', 'string', 'min:5', 'max:500'],
@@ -1382,6 +1388,17 @@ class UserController extends Controller implements HasMiddleware
         }
 
         // ── ⛔ এখান থেকে নিচে সবটাই তালা খোলার পথ ──────────────────────
+
+        /*
+         * ⛔ সুপার অ্যাডমিনের তালা খোলে কেবল আরেকজন সুপার অ্যাডমিন — চূড়ান্ত অডিট (⛔২)। ⚠️ আগে "User Admin" চাবিই
+         * যথেষ্ট ছিল, আর তাতে মালিকের দ্বিতীয় তালা খুলে তাঁর ফোনের চাবি মুছে ফেলা যেত। ⓘ [[resetTwoStep()]]-এর
+         * একই নিয়ম। ⭐ মালিক নিজে সুপার অ্যাডমিন, তাই তাঁর ক্ষমতা যেমন ছিল তেমন থাকে (৩০ সেপ্টেম্বর: "SURIMPOWER")।
+         */
+        abort_if(
+            $user->hasRole(PermissionSyncer::SUPER_ADMIN_ROLE)
+                && ! $request->user()->hasRole(PermissionSyncer::SUPER_ADMIN_ROLE),
+            403,
+        );
 
         if ((int) $request->user()->id === (int) $user->id) {
             return back()->withErrors(['reason' => __('auth.two_step_reset_not_self')]);
@@ -1411,6 +1428,9 @@ class UserController extends Controller implements HasMiddleware
     public function resetTwoStep(Request $request, User $user, MfaService $mfa): RedirectResponse
     {
         $actor = $request->user();
+
+        /* ⛔ অন্য কোম্পানির মানুষের তালা নয় — চূড়ান্ত অডিট (⛔২) */
+        $this->mustBeInThisCompany($user);
 
         abort_unless($actor->hasRole(PermissionSyncer::SUPER_ADMIN_ROLE), 403);
 
