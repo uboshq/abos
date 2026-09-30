@@ -207,8 +207,14 @@ class StockPlacementController extends Controller implements HasMiddleware
              * নম্বরটা কাগজের, প্রতিটা সারির নয় — তাই দলটা উৎস ধরেই হয়,
              * আর নম্বরটা দল থেকে তুলে আনা হয়।
              */
+            /*
+             * ⛔ বাতিলের উল্টো সারি একই দলে — মালিকের ছবি, ৩০ সেপ্টেম্বর ২০২৬।
+             * ⓘ বাতিল লেখে `purchase_bill:cancel` (ফ্রি: `purchase_bill:free:cancel`), আসা লেখে `purchase_bill`।
+             * নাম ধরে দল হলে দুইটা আলাদা দলে পড়ত, কাটাকাটি হত না, আর বাতিল বিল PBL-0004 চিরকাল
+             * "১৪৪ বসানোর অপেক্ষায়" দেখাত — বসাতে গেলে "বাকি আছে ০"।
+             */
             ->groupBy(
-                'm.source_type', 'm.source_id',
+                DB::raw("REPLACE(m.source_type, ':cancel', '')"), 'm.source_id',
                 'm.product_id', 'p.code', 'p.name_en', 'p.name_bn',
                 'm.warehouse_id', 'w.code', 'w.name_en',
                 'm.batch_id', 'b.batch_no',
@@ -221,7 +227,7 @@ class StockPlacementController extends Controller implements HasMiddleware
             ->havingRaw('SUM(m.unplaced_change) > 0 OR SUM(m.unplaced_free_change) > 0')
             ->orderByRaw('MIN(m.trx_date)')
             ->select([
-                'm.source_type', 'm.source_id',
+                DB::raw("REPLACE(m.source_type, ':cancel', '') as source_type"), 'm.source_id',
                 DB::raw('MAX(m.document_no) as document_no'),
                 DB::raw('MIN(m.trx_date) as trx_date'),
 

@@ -56,9 +56,14 @@ final class GoodsWaitingToBePlaced
          */
         return DB::table('inv_stock_movements')
             ->where('company_id', $companyId)
-            ->groupBy('source_type', 'source_id')
+            /*
+             * ⓘ কাগজ ধরে — পর্দার কার্ডের মতো ([[StockPlacementController::waiting()]]):
+             * ⛔ বাতিলের উল্টো সারি (`…:cancel`) একই দলে, নাহলে বাতিল বিলও "অপেক্ষায়" গোনা হত;
+             * আর ফ্রি মাল (`…:free`) একই বিলের কার্ডে, নাহলে একটা বিল দুইবার গোনা হত।
+             */
+            ->groupBy(DB::raw("REPLACE(REPLACE(source_type, ':cancel', ''), ':free', '')"), 'source_id')
             ->havingRaw('SUM(unplaced_change) > 0 OR SUM(unplaced_free_change) > 0')
-            ->select('source_type', 'source_id')
+            ->select(DB::raw("REPLACE(REPLACE(source_type, ':cancel', ''), ':free', '') as paper"), 'source_id')
             ->get()
             ->count();
     }
