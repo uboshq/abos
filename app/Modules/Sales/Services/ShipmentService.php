@@ -349,7 +349,16 @@ final class ShipmentService
             return;
         }
 
-        $challans = DeliveryChallan::query()->whereIn('id', $ids)->get()->keyBy('id');
+        /*
+         * ⛔ চালানের সারি আটকে — চূড়ান্ত অডিট, ৩০ সেপ্টেম্বর ২০২৬।
+         *
+         * নিচের "অন্য ট্রিপে আছে কি না" প্রশ্নটা তালা ছাড়া হলে দুই ডেসপ্যাচার একই মুহূর্তে একই চালান দুই
+         * গাড়িতে তুলতেন — দুজনেই "কোথাও নেই" দেখতেন। ⓘ এখন দ্বিতীয়জন তালার অপেক্ষায় থাকেন, তারপর
+         * প্রথমজনের ট্রিপ দেখে ফেরেন। প্রতিটা ডাক লেনদেনের ভেতরে (create, update, dispatch)।
+         * ⓘ `orderBy('id')` — দুই ট্রিপে একই চালানগুলো ভিন্ন ক্রমে এলেও তালা একই ক্রমে পড়ে, আটকাআটকি হয় না।
+         * পাহারা: [[TwoTripsCannotTakeOneChallanTest]]।
+         */
+        $challans = DeliveryChallan::query()->whereIn('id', $ids)->orderBy('id')->lockForUpdate()->get()->keyBy('id');
 
         foreach ($ids as $id) {
             $challan = $challans->get($id);
