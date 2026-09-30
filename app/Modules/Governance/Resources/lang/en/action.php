@@ -44,4 +44,6 @@ return [
     'expiry_corrected' => 'Expiry corrected',
     'shift_closed' => 'Shift closed',
     'sent_back' => 'Sent back',
+    'db_restored' => 'Books restored from backup',
+    'db_restore_failed' => 'Books restore failed',
 ];

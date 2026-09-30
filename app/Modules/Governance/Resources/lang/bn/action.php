@@ -51,4 +51,6 @@ return [
     'expiry_corrected' => 'মেয়াদ সংশোধন',
     'shift_closed' => 'শিফট বন্ধ',
     'sent_back' => 'ফেরত পাঠানো',
+    'db_restored' => 'ব্যাকআপ থেকে খাতা ফেরানো',
+    'db_restore_failed' => 'খাতা ফেরানো ব্যর্থ',
 ];

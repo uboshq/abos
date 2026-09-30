@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Console\Commands;
 
+use App\Core\Services\Backup\RestoreRecord;
 use App\Core\Services\BackupService;
 use Illuminate\Console\Command;
 use Throwable;
@@ -28,7 +29,7 @@ class Restore extends Command
 
     protected $description = 'একটা ব্যাকআপ থেকে ডাটাবেজ ফিরিয়ে আনে';
 
-    public function handle(BackupService $backups): int
+    public function handle(BackupService $backups, RestoreRecord $record): int
     {
         $file = $this->argument('file') ?? $backups->latest();
 
@@ -43,6 +44,8 @@ class Restore extends Command
 
             return self::FAILURE;
         }
+
+        $safety = null;
 
         try {
             /*
@@ -75,12 +78,23 @@ class Restore extends Command
                 $this->line('  ফেরানোর আগের অবস্থা রাখা হলো: '.basename($safety['file']));
             }
 
+            /*
+             * ⛔ দাগ — চূড়ান্ত অডিট ⛔১৯: সবচেয়ে ধ্বংসাত্মক কাজটা কোথাও লেখা থাকত না।
+             * ⓘ শুরুর দাগ কেবল লগে ([[RestoreRecord]]), কারণ খাতাটা এখনই মুছবে।
+             */
+            $record->starting($file, $safety['file'] ?? null);
+
             $backups->restore($file);
 
+            $written = $record->restored($file, $safety['file'] ?? null);
+
             $this->info('ফিরিয়ে আনা হয়েছে: '.basename($file));
+            $this->line("  {$written}টা কোম্পানির অডিট খাতায় দাগ রাখা হলো।");
 
             return self::SUCCESS;
         } catch (Throwable $e) {
+            $record->failed($file, $safety['file'] ?? null, $e);
+
             $this->error('ফেরানো ব্যর্থ: '.$e->getMessage());
 
             return self::FAILURE;

@@ -1262,4 +1262,9 @@ return [
         'go_home' => 'Go to the start',
         'code' => 'Code',
     ],
+
+    // One backup, check or restore at a time — [[BackupLock]], 30 September 2026
+    'backup_busy' => 'Another backup, check or restore is running right now. Try again when it has finished.',
+    // The restore trail — [[RestoreRecord]]
+    'restore_reason' => 'Restored from backup: :file · State before the restore: :safety · Run by: :by',
 ];

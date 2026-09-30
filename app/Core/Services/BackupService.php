@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Core\Services;
 
+use App\Core\Services\Backup\BackupLock;
 use App\Core\Services\Backup\PdoDumper;
 use App\Core\Services\Backup\PdoLoader;
 use App\Core\Services\Backup\ShellAvailability;
@@ -35,6 +36,15 @@ final class BackupService
      * @return array{file: string, bytes: int, mirrored: ?string}
      */
     public function run(Carbon $at): array
+    {
+        /* ⛔ একসাথে একটাই — [[BackupLock]], চূড়ান্ত অডিট ⛔১৯ */
+        return BackupLock::hold(fn (): array => $this->take($at));
+    }
+
+    /**
+     * @return array{file: string, bytes: int, mirrored: ?string}
+     */
+    private function take(Carbon $at): array
     {
         $directory = $this->directory();
         $file = $directory.DIRECTORY_SEPARATOR.sprintf(self::NAME, $at->format('Y-m-d-His'));
@@ -68,6 +78,20 @@ final class BackupService
      * @return array{database: string, tables: int}
      */
     public function verify(string $file): array
+    {
+        /*
+         * ⛔ একসাথে একটাই — [[BackupLock]], চূড়ান্ত অডিট ⛔১৯।
+         * ⚠️ নামটা স্থির (`{db}_verify`), আর লাইভে অনুমতিও কেবল ওই নামে —
+         * তাই দুইজন একসাথে ঢুকলে একজনের DROP অন্যজনের টেবিল ফেলত, আর
+         * ভুল গোনায় "পাস" লেখা হত।
+         */
+        return BackupLock::hold(fn (): array => $this->check($file));
+    }
+
+    /**
+     * @return array{database: string, tables: int}
+     */
+    private function check(string $file): array
     {
         if (! is_file($file)) {
             throw new RuntimeException("ডাম্প ফাইলটা নেই: {$file}");
@@ -141,15 +165,26 @@ final class BackupService
      */
     public function restore(string $file): void
     {
-        if (! is_file($file)) {
-            throw new RuntimeException("ডাম্প ফাইলটা নেই: {$file}");
-        }
+        /* ⛔ একসাথে একটাই — রাতের ব্যাকআপের মাঝখানে ফেরানো চললে ডাম্পটা দুই দিনের মিশ্রণ হত */
+        BackupLock::hold(function () use ($file): void {
+            if (! is_file($file)) {
+                throw new RuntimeException("ডাম্প ফাইলটা নেই: {$file}");
+            }
 
-        $database = (string) config('database.connections.mysql.database');
+            $database = (string) config('database.connections.mysql.database');
 
-        $this->mysql("DROP DATABASE IF EXISTS `{$database}`; CREATE DATABASE `{$database}`;");
+            $this->mysql("DROP DATABASE IF EXISTS `{$database}`; CREATE DATABASE `{$database}`;");
 
-        $this->load($file, $database);
+            $this->load($file, $database);
+
+            /*
+             * ⓘ অ্যাপের নিজের সংযোগটা আবার খাতায় বসানো।
+             * ⚠️ চলতি ডাটাবেজ DROP হলে সংযোগের "বর্তমান ডাটাবেজ" খালি হয়ে
+             * যায়; শেলের পথে ঢালা হয় আলাদা প্রসেসে, তাই তারপরের অডিট-দাগ
+             * ("No database selected") ব্যর্থ হত।
+             */
+            DB::connection()->getPdo()->exec('USE `'.str_replace('`', '``', $database).'`');
+        });
     }
 
     /**
