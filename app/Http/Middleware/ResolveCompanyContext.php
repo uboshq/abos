@@ -24,6 +24,15 @@ use Symfony\Component\HttpFoundation\Response;
  */
 class ResolveCompanyContext
 {
+    /**
+     * কোনো কোম্পানির সদস্য নন, এমন কর্মী যেসব পথে যেতে পারেন — বেরোনো আর ভাষা বদল।
+     *
+     * ⛔ ৩০ সেপ্টেম্বর ২০২৬: ডেমো কোম্পানি মোছার পর তিনজন কর্মী কোনো কোম্পানিতে রইলেন না,
+     * আর লগইন করতেই হোম স্ক্রিন ৫০০ দিল ("No company in context … CashTill")। ⓘ প্রোফাইল
+     * এখানে নেই: ওটা অ্যাপের খোলসে আঁকা, আর খোলসটা কোম্পানির মেনু পড়ে।
+     */
+    public const WITHOUT_A_COMPANY = ['logout', 'locale.switch'];
+
     public function handle(Request $request, Closure $next): Response
     {
         $user = $request->user();
@@ -83,6 +92,21 @@ class ResolveCompanyContext
 
             if ($companyId === null) {
                 CompanyContext::clear();
+
+                /*
+                 * ⛔ ভাঙা পাতা নয়, একটা পরিষ্কার কথা — কোম্পানি ছাড়া কোনো পর্দাই চলে না।
+                 * ⓘ ত্রুটির পাতার নিজের খোলস আছে ([[errors/layout]]), তাই সেটা কোম্পানি ছাড়াই আঁকা যায়।
+                 */
+                if (! $request->routeIs(...self::WITHOUT_A_COMPANY)) {
+                    /* ⓘ সাধারণ ৪০৩ পাতা "অনুমতি নেই" বলে — এখানে কারণটাই বলা দরকার */
+                    abort_if($request->expectsJson(), 403, __('core.no_company'));
+
+                    return response()->view('errors.layout', [
+                        'code' => '403',
+                        'title' => __('core.error.title_403'),
+                        'body' => __('core.no_company'),
+                    ], 403);
+                }
 
                 return $next($request);
             }
