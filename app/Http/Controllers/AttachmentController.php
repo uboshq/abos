@@ -180,11 +180,26 @@ class AttachmentController extends Controller
      */
     private function authorizeRemoving(Attachment $attachment, Model $document): void
     {
-        if ((int) $attachment->uploaded_by === (int) auth()->id()) {
+        /*
+         * ⛔ নিজের ফাইল — কিন্তু কাগজে সই হয়ে যাওয়ার **আগে** (৩০ সেপ্টেম্বর ২০২৬,
+         * নিরাপত্তা-অডিট খোঁজ ১০)। ব্যাংক স্লিপ দেখে সই হয়; সইয়ের পরে আপলোডকারী
+         * স্লিপটা সরালে প্রমাণটাই থাকত না। তখন কেবল সম্পাদনার চাবিধারী (তদারকি)।
+         */
+        if ((int) $attachment->uploaded_by === (int) auth()->id() && ! $this->signed($document)) {
             return;
         }
 
         $this->authorize('update', $document);
+    }
+
+    /** কাগজটার কোনো অনুমোদনে সই হয়ে গেছে কি না। */
+    private function signed(Model $document): bool
+    {
+        return Approval::query()
+            ->where('approvable_type', $document::class)
+            ->where('approvable_id', $document->getKey())
+            ->where('status', Approval::APPROVED)
+            ->exists();
     }
 
     /** কাগজটার অপেক্ষমাণ কোনো অনুমোদনে এই মানুষটা অনুরোধকারী বা সিদ্ধান্তদাতা কি না। */
@@ -226,6 +241,13 @@ class AttachmentController extends Controller
     private function authorizeAttaching(Model $document): void
     {
         $this->authorize('create', $document::class);
+
+        /*
+         * ⛔ আর কাগজটা আপনার দেখার মধ্যে থাকতে হবে (৩০ সেপ্টেম্বর ২০২৬, খোঁজ ১০)।
+         * কেবল ধরনের চাবি দেখলে, যাঁর কাছে কাগজটা লুকানো তিনিও আইডি ধরে তাতে ফাইল
+         * জুড়তে পারতেন। ⓘ নামানোর দরজা ([[download()]]) আগে থেকেই `view` চায়।
+         */
+        $this->authorize('view', $document);
     }
 
     /**
