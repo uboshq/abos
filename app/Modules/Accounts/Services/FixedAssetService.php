@@ -6,9 +6,11 @@ namespace App\Modules\Accounts\Services;
 
 use App\Core\Engines\NumberSeries\NumberSeriesEngine;
 use App\Core\Engines\Posting\PostingEngine;
+use App\Core\Services\PartyRegistry;
 use App\Core\Support\CompanyContext;
 use App\Core\Support\Money;
 use App\Models\FinancialYear;
+use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Models\AssetTransfer;
 use App\Modules\Accounts\Models\DepreciationEntry;
 use App\Modules\Accounts\Models\FixedAsset;
@@ -281,6 +283,28 @@ final class FixedAssetService
      * @param  array<string, mixed>  $data
      * @return array{account_id: int, party_type: ?string, party_id: ?int}|null
      */
+    /** @param  array<string, mixed>  $data */
+    private function assertFunderIsOurs(string $how, array $data): void
+    {
+        [$field, $ours] = match ($how) {
+            // ⓘ খাতের কোম্পানি-স্কোপই অন্য কোম্পানির খাত বাদ দেয় ([[BelongsToCompany]])
+            self::FUNDED_MONEY => ['funding_account_id', Account::query()->postable()
+                ->whereKey((int) ($data['funding_account_id'] ?? 0))
+                ->exists()],
+            self::FUNDED_CAPITAL => ['funding_person_id',
+                app(PartyRegistry::class)->exists('person', (int) ($data['funding_person_id'] ?? 0))],
+            self::FUNDED_CREDIT => ['funding_supplier_id',
+                app(PartyRegistry::class)->exists('supplier', (int) ($data['funding_supplier_id'] ?? 0))],
+            default => [null, true],
+        };
+
+        if (! $ours) {
+            throw ValidationException::withMessages([
+                $field => __('accounts::asset.funding_not_found'),
+            ]);
+        }
+    }
+
     private function fundingFrom(array $data): ?array
     {
         $how = (string) ($data['funded_by'] ?? self::FUNDED_ALREADY);
@@ -288,6 +312,13 @@ final class FixedAssetService
         if ($how === self::FUNDED_ALREADY) {
             return null;
         }
+
+        /*
+         * ⛔ অর্থদাতা এই কোম্পানির — চূড়ান্ত অডিট ⛔৯, ৩০ সেপ্টেম্বর ২০২৬
+         * ([[ANoteNamedAPartyFromAnotherCompanyTest]])। ⓘ আগে id-টা কোথাও না কোথাও থাকলেই চলত,
+         * তাই অন্য কোম্পানির বিক্রেতার কাছে দেনা বা অন্য কোম্পানির খাত থেকে টাকা বসত।
+         */
+        $this->assertFunderIsOurs($how, $data);
 
         if ($how === self::FUNDED_MONEY) {
             return [

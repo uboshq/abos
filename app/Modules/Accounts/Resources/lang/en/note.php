@@ -18,6 +18,7 @@ return [
     'new_credit' => 'New credit note',
     'new_debit' => 'New debit note',
     'party' => 'To whom',
+    'party_not_found' => 'This party is not in this company — pick one from the list.',
     'against_no' => 'Against which paper',
     'amount' => 'Amount',
     'tax_amount' => 'VAT',

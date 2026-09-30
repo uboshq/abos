@@ -74,6 +74,7 @@ return [
     'funding_account' => 'From which account',
     'funding_supplier' => 'Which supplier',
     'funding_account_missing' => 'Account :code is not in the chart — install the chart and try again.',
+    'funding_not_found' => 'This does not belong to this company — pick one from the list.',
     'opening_accumulated' => 'Depreciation charged so far',
     'opening_accumulated_hint' => 'Fill this in for a used asset — zero for a new one. It does not go to expense; it sits in retained earnings.',
     'opening_needs_the_chart' => 'Install the standard chart first — there is no retained earnings account.',

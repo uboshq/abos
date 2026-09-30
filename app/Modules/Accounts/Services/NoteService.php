@@ -6,6 +6,7 @@ namespace App\Modules\Accounts\Services;
 
 use App\Core\Engines\NumberSeries\NumberSeriesEngine;
 use App\Core\Engines\Posting\PostingEngine;
+use App\Core\Services\PartyRegistry;
 use App\Core\Support\CompanyContext;
 use App\Core\Support\DocumentStatus;
 use App\Models\IssuedNumber;
@@ -41,6 +42,7 @@ final class NoteService
         $direction = (string) $data['direction'];
 
         $this->assertDirection($direction);
+        $this->assertParty($direction, $data);
 
         $amount = $this->money($data['amount'] ?? '0');
         $tax = $this->money($data['tax_amount'] ?? '0');
@@ -86,6 +88,28 @@ final class NoteService
 
             return $note;
         });
+    }
+
+    /**
+     * ⛔ পক্ষটা এই কোম্পানির সত্যিকারের গ্রাহক (ক্রেডিট) বা বিক্রেতা (ডেবিট) — চূড়ান্ত অডিট ⛔৯,
+     * ৩০ সেপ্টেম্বর ২০২৬ ([[ANoteNamedAPartyFromAnotherCompanyTest]])।
+     *
+     * ⓘ আগে `party_id` কেবল "ধনাত্মক সংখ্যা" হিসেবে দেখা হত — অস্তিত্বহীন বা অন্য কোম্পানির
+     * গ্রাহকের নামে নোট কাটা যেত, আর খাতায় এমন পক্ষের সারি জমত যাকে কোনো পর্দা চেনে না।
+     * সেবায় দেখা হয়, কন্ট্রোলারে নয় — যে দরজা দিয়েই আসুক।
+     *
+     * @param  array<string, mixed>  $data
+     */
+    private function assertParty(string $direction, array $data): void
+    {
+        $type = $direction === Note::CREDIT ? 'customer' : 'supplier';
+
+        if (($data['party_type'] ?? $type) !== $type
+            || ! app(PartyRegistry::class)->exists($type, (int) ($data['party_id'] ?? 0))) {
+            throw ValidationException::withMessages([
+                'party_id' => __('accounts::note.party_not_found'),
+            ]);
+        }
     }
 
     /**
