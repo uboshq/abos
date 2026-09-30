@@ -10,6 +10,7 @@ use App\Core\Engines\Print\PrintEngine;
 use App\Core\Security\FieldSecurity;
 use App\Core\Services\PaperTrail;
 use App\Core\Services\SettingsService;
+use App\Core\Support\AmountInWords;
 use App\Core\Support\DateFormat;
 use App\Core\Support\DocumentStatus;
 use App\Core\Support\Money;
@@ -94,10 +95,119 @@ class PurchasePrintController extends Controller implements HasMiddleware
             narration: $bill->narration,
         );
 
+        /*
+         * ⭐ নতুন কাগজ — মালিক, ১ অক্টোবর ২০২৬: *"ok template diye daw"*।
+         * ⓘ A4/A5-এ; সরু থার্মাল রোলে আগের সাধারণ কাগজই (ওখানে আট কলাম ধরে না)।
+         * ⓘ Control Panel-এ `purchase.print.design.bill` = `standard` দিলে আগের কাগজ।
+         */
+        $paper = PaperSize::chosen($request->query('paper'), $this->settings->get('purchase.print.paper.bill'));
+        $modern = ! PaperSize::of($paper)->isThermal
+            && ($this->settings->get('purchase.print.design.bill') ?? 'modern') === 'modern';
+
         return $this->pdf(
             $request, $doc, $price ? (string) $bill->total : '0', (string) $bill->document_no,
             document: $bill, kind: 'purchase_bill', paperSetting: 'purchase.print.paper.bill',
+            template: $modern ? 'purchase::print.bill-modern' : 'print.document',
+            extra: $modern ? ['bill' => $this->billFacts($bill, $price)] : [],
         );
+    }
+
+    /**
+     * নতুন কাগজের তথ্য — [[purchase::print.bill-modern]]।
+     *
+     * ⓘ দাম দেখার চাবি না থাকলে দর, ছাড়, টাকা আর মোট কিছুই আসে না ([[showsPurchasePrice()]])।
+     *
+     * @return array<string, mixed>
+     */
+    private function billFacts(PurchaseBill $bill, bool $price): array
+    {
+        $bill->loadMissing(['warehouse', 'creator']);
+        $blank = fn (mixed $v) => $v === null || bccomp((string) $v, '0', 4) === 0;
+
+        $gross = '0';
+        $lineDiscount = '0';
+        $lineTotal = '0';
+        $qtyTotal = '0';
+        $freeTotal = '0';
+        $lines = [];
+
+        foreach ($bill->lines->sortBy('line_no')->values() as $line) {
+            $qty = $line->packedQty('qty');
+            $free = $this->freeOf($line);
+
+            /*
+             * ⓘ অফিসমেট থেকে আসা বিলে দামি+ফ্রি এক স্তূপে (মালিকের সিদ্ধান্ত, ৩০ সেপ্টেম্বর),
+             * আর সারির বিবরণে "40 + 4 free" — কাগজে দুইটা আলাদা দেখানো হয়।
+             */
+            if ($free === '' && preg_match('/^([\d.]+) \+ ([\d.]+) free$/', (string) $line->narration, $m) === 1) {
+                $qty = $m[1];
+                $free = $this->qty($m[2]);
+            }
+
+            $qtyTotal = bcadd($qtyTotal, (string) $qty, 4);
+            $freeTotal = bcadd($freeTotal, $free === '' ? '0' : str_replace(',', '', $free), 4);
+            $gross = bcadd($gross, bcmul((string) $line->qty, (string) $line->rate, 4), 4);
+            $lineDiscount = bcadd($lineDiscount, (string) $line->discount, 4);
+            $lineTotal = bcadd($lineTotal, (string) $line->amount, 4);
+
+            $lines[] = [
+                'code' => (string) ($line->product?->code ?? ''),
+                'name' => (string) ($line->product?->name() ?? ''),
+                'lot' => (string) ($line->batch_no ?? ''),
+                'qty' => $this->qty($qty),
+                'unit' => $line->packedUnitName(),
+                'free' => $free,
+
+                /* ⭐ মালিক (১ অক্টোবর): পরিমাণ আর ফ্রি-র পরে মোট পরিমাণ */
+                'total_qty' => $this->qty(bcadd((string) $qty, $free === '' ? '0' : str_replace(',', '', $free), 4)),
+                'rate' => $price ? $this->money($line->packedRate('rate', 'qty')) : '',
+                'discount' => $price && ! $blank($line->discount) ? $this->money($line->discount) : '',
+                'amount' => $price ? $this->money($line->amount) : '',
+            ];
+        }
+
+        $billDiscount = bcsub((string) $bill->discount, $lineDiscount, 4);
+        $branch = $bill->branch;
+
+        return [
+            'no' => (string) $bill->document_no,
+            'supplier_no' => (string) ($bill->supplier_bill_no ?? ''),
+            'date' => DateFormat::format($bill->trx_date),
+            'received' => DateFormat::format($bill->received_on ?? $bill->trx_date),
+            'due' => $bill->due_on ? DateFormat::format($bill->due_on) : '',
+            'status' => __('purchase::status.'.$bill->status) !== 'purchase::status.'.$bill->status
+                ? (string) __('purchase::status.'.$bill->status) : (string) $bill->status,
+            'vehicle' => (string) ($bill->vehicle_no ?? ''),
+            'branch' => [
+                'name' => (string) ($branch?->name() ?? ''),
+                'address' => (string) (app()->getLocale() === 'bn' ? ($branch?->address_bn ?: $branch?->address_en) : $branch?->address_en),
+                'phone' => (string) ($branch?->phone ?? ''),
+            ],
+            'supplier' => [
+                'name' => (string) ($bill->supplier?->name() ?? ''),
+                'address' => (string) (app()->getLocale() === 'bn' ? ($bill->supplier?->address_bn ?: $bill->supplier?->address_en) : $bill->supplier?->address_en),
+                'phone' => (string) ($bill->supplier?->phone ?? ''),
+            ],
+            'warehouse' => (string) ($bill->warehouse?->name_en ?? ''),
+            'lines' => $lines,
+            'qty_total' => $this->qty($qtyTotal),
+            'free_total' => $blank($freeTotal) ? '' : $this->qty($freeTotal),
+            'all_total' => $this->qty(bcadd($qtyTotal, $freeTotal, 4)),
+            'sums' => $price ? [
+                'gross' => $this->money($gross),
+                'line_discount' => $this->money($lineDiscount),
+                'lines' => $this->money($lineTotal),
+                'bill_discount' => bccomp($billDiscount, '0', 4) > 0 ? $this->money($billDiscount) : '',
+                'tax' => $blank($bill->tax) ? '' : $this->money($bill->tax),
+                'transport' => $blank($bill->transport_cost) ? '' : $this->money($bill->transport_cost),
+                'total' => $this->money($bill->total),
+                'paid' => $this->money($bill->paidAmount()),
+                'due' => $this->money($bill->dueAmount()),
+            ] : [],
+            'words' => $price ? AmountInWords::of(Money::round($bill->total), app()->getLocale()) : '',
+            'note' => trim((string) ($bill->narration ?? '')),
+            'prepared_by' => (string) ($bill->creator?->name ?? ''),
+        ];
     }
 
     /**
@@ -310,6 +420,12 @@ class PurchasePrintController extends Controller implements HasMiddleware
          */
         string $kind = 'purchase_bill',
         string $paperSetting = 'purchase.print.paper.bill',
+
+        /* ⓘ কোন ছাঁচ — ক্রয় বিলের নতুন কাগজ ছাড়া সবাই সাধারণটা */
+        string $template = 'print.document',
+
+        /** @var array<string, mixed> ছাঁচের বাড়তি তথ্য */
+        array $extra = [],
     ): Response {
         /*
          * ⭐ কাগজের মাপ মালিকের বসানো, হাতে লেখা A4 নয় (২০ সেপ্টেম্বর ২০২৬)।
@@ -331,8 +447,9 @@ class PurchasePrintController extends Controller implements HasMiddleware
         }
 
         $pdf = $this->print->render(
-            template: 'print.document',
+            template: $template,
             data: [
+                ...$extra,
                 'doc' => $doc->withWordsFor($amount, app()->getLocale()),
                 'title' => $doc->title.' '.$documentNo,
             ],

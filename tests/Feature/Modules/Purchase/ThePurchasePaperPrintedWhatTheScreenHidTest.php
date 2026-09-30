@@ -65,7 +65,8 @@ final class ThePurchasePaperPrintedWhatTheScreenHidTest extends TestCase
             [['product_id' => Product::query()->value('id'), 'qty' => '10', 'rate' => self::RATE]],
         );
 
-        $this->assertPriceFollowsTheKey(route('purchase.print.bill', $bill));
+        /* ⓘ ১ অক্টোবর থেকে বিলের ডিফল্ট নতুন কাগজ — চাবির নিয়ম সেখানেও একই ([[TheNewPurchaseBillPaperTest]]) */
+        $this->assertPriceFollowsTheKey(route('purchase.print.bill', $bill), 'purchase::print.bill-modern');
     }
 
     public function test_an_order_prints_its_price_only_for_the_cost_key(): void
@@ -78,11 +79,11 @@ final class ThePurchasePaperPrintedWhatTheScreenHidTest extends TestCase
         $this->assertPriceFollowsTheKey(route('purchase.print.order', $order));
     }
 
-    private function assertPriceFollowsTheKey(string $url): void
+    private function assertPriceFollowsTheKey(string $url, string $view = 'print.document'): void
     {
         $this->assertFalse($this->clerk->fresh()->can('inventory.cost.view'), 'কর্মীর আগে থেকেই চাবি আছে — দাবিটা কিছু মাপছে না।');
 
-        [$status, $html, $doc] = $this->printAs($url);
+        [$status, $html, $doc] = $this->printAs($url, $view);
         $this->assertSame(200, $status, '⛔ চাবি ছাড়া কাগজটাই বেরোল না — দাম ঢাকার বদলে দরজা বন্ধ হয়ে গেছে।');
         $this->assertStringNotContainsString(self::RATE, $html, '⛔ ক্রয়মূল্য দেখার চাবি নেই, তবু কাগজে দর ছাপা হলো।');
         $this->assertStringNotContainsString(self::AMOUNT, $html, '⛔ চাবি নেই, তবু সারির অঙ্ক ছাপা হলো।');
@@ -91,7 +92,7 @@ final class ThePurchasePaperPrintedWhatTheScreenHidTest extends TestCase
 
         $this->give('inventory.cost.view');
 
-        [$status, $html, $doc] = $this->printAs($url);
+        [$status, $html, $doc] = $this->printAs($url, $view);
         $this->assertSame(200, $status);
         $this->assertStringContainsString(self::RATE, $html, '⛔ চাবি দেওয়ার পরেও দর ছাপা হলো না — কাগজটা সবার জন্য দাম হারিয়েছে।');
         $this->assertStringContainsString(self::AMOUNT, $html);
@@ -99,11 +100,12 @@ final class ThePurchasePaperPrintedWhatTheScreenHidTest extends TestCase
     }
 
     /** @return array{0: int, 1: string, 2: object} */
-    private function printAs(string $url): array
+    private function printAs(string $url, string $view): array
     {
         $captured = null;
-        View::composer('print.document', function ($view) use (&$captured) {
-            $captured = $view->getData();
+        // ⓘ ছাঁচটা ঠিক যেটা কাগজ আঁকে — অন্যটা ধরলে দাবিটা কিছু মাপত না
+        View::composer($view, function ($seen) use (&$captured) {
+            $captured = $seen->getData();
         });
 
         $this->app['auth']->forgetGuards();
@@ -113,7 +115,7 @@ final class ThePurchasePaperPrintedWhatTheScreenHidTest extends TestCase
 
         // ⓘ পাতাটা আবার আঁকা — কম্পোজারের ভেতরে আঁকলে সে নিজেকেই ডাকত
         View::flushState();
-        $html = view('print.document', $captured)->render();
+        $html = view($view, $captured)->render();
 
         return [$status, $html, $captured['doc']];
     }

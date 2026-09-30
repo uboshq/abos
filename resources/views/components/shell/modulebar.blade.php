@@ -174,9 +174,14 @@
      ⚠️ এটা বসানো হয়েছে কারণ যাচাই করতে গিয়ে আমি তিনবার **ভুল এলিমেন্ট**
      মেপেছি: `aria-label` ধরে খুঁজছিলাম, আর একই লেখা নিচের মোবাইল-নেভেও
      আছে। ⓘ যে চিহ্ন দিয়ে খোঁজা হয় সেটা অনন্য না হলে মাপটাই মিথ্যা। --}}
+{{-- ⭐ মালিক, ১ অক্টোবর ২০২৬: *"menubar open korle topbare menu dekhabena, menubar bondo thakle topbare menu dekhabe"*।
+     ⓘ একই মেনু দুই জায়গায় নয়: বড় পর্দায় বাঁয়ের মেনু খোলা থাকলে এই সারি লুকানো, গুটালে ফেরে।
+     ⓘ বড় পর্দার নিচে (ফোন, ট্যাবলেট) বাঁয়ের মেনু প্যানেলই থাকে না, তাই সারিটা সবসময়।
+     ⚠️ স্থির ক্লাস খোলা অবস্থা ধরে (সাইডবারের ডিফল্টের মতো), Alpine কেবল গুটানোটা সামলায়। --}}
 <div data-module-bar
      class="sticky top-(--spacing-header) z-20 flex min-h-(--spacing-field-compact) shrink-0 items-center gap-2
-            py-1 ps-2 pe-3 md:pe-5 print-hide"
+            py-1 ps-2 pe-3 md:pe-5 print-hide lg:hidden"
+     :class="$store.sidebar.collapsed && 'lg:flex!'"
      style="background:var(--color-modulebar, var(--color-surface-muted));
             border-bottom:1px solid var(--color-modulebar-border, var(--color-border))">
 

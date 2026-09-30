@@ -39,5 +39,8 @@ trait PrintsTheStandardPaper
         foreach (VoucherDesigns::SIZES as $size) {
             $settings->set(VoucherDesigns::key($size), 'standard');
         }
+
+        /* ⓘ ১ অক্টোবর থেকে ক্রয় বিলেরও ডিফল্ট নতুন কাগজ ([[TheNewPurchaseBillPaperTest]]) */
+        $settings->set('purchase.print.design.bill', 'standard');
     }
 }

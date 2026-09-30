@@ -158,7 +158,8 @@ class PurchasePrintTest extends TestCase
     public function test_the_bill_shows_the_money(): void
     {
         $seen = [];
-        View::composer('print.document', function ($view) use (&$seen) {
+        /* ⓘ ১ অক্টোবর থেকে বিলের ডিফল্ট নতুন কাগজ ([[TheNewPurchaseBillPaperTest]]) */
+        View::composer('purchase::print.bill-modern', function ($view) use (&$seen) {
             $seen = $view->getData();
         });
 

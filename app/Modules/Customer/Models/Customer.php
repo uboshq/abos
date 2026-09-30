@@ -243,7 +243,7 @@ class Customer extends Model implements AuthenticatableContract, Drillable
     }
 
     /**
-     * নাম, কোড বা ফোন — তিনটার যেকোনোটা দিয়ে খোঁজা।
+     * নাম, কোড, ফোন, মালিকের নাম, ঠিকানা, পয়েন্ট বা এরিয়া — যেকোনোটা দিয়ে খোঁজা।
      *
      * কাউন্টারে দাঁড়ানো অবস্থায় কেউ গ্রাহকের কোড মনে রাখে না, কিন্তু
      * ফোন নম্বরটা প্রায়ই হাতের কাছে থাকে।
@@ -256,11 +256,25 @@ class Customer extends Model implements AuthenticatableContract, Drillable
 
         $like = '%'.str_replace(['%', '_'], ['\%', '\_'], trim($term)).'%';
 
+        /*
+         * ⭐ মালিক, ১ অক্টোবর ২০২৬: *"কোড, নাম, পয়েন্ট, এরিয়া, ঠিকানা, মালিকের নাম, মোবাইল —
+         * egulo zekono titei hobe"*। ⓘ পয়েন্ট আর এরিয়া গাছে থাকে: গ্রাহকের নিজের জায়গা,
+         * তার উপরের ধাপ, আর তারও উপরের ধাপ — যেকোনোটার নাম মিললেই।
+         */
         return $query->where(function (Builder $q) use ($like) {
             $q->where('name_en', 'like', $like)
                 ->orWhere('name_bn', 'like', $like)
                 ->orWhere('code', 'like', $like)
-                ->orWhere('phone', 'like', $like);
+                ->orWhere('phone', 'like', $like)
+                ->orWhere('owner_name', 'like', $like)
+                ->orWhere('address_en', 'like', $like)
+                ->orWhere('address_bn', 'like', $like)
+                ->orWhereIn('location_id', fn ($s) => $s->select('l.id')->from('mdm_locations as l')
+                    ->leftJoin('mdm_locations as p', 'p.id', '=', 'l.parent_id')
+                    ->leftJoin('mdm_locations as g', 'g.id', '=', 'p.parent_id')
+                    ->where(fn ($w) => $w->where('l.name_en', 'like', $like)->orWhere('l.name_bn', 'like', $like)
+                        ->orWhere('p.name_en', 'like', $like)->orWhere('p.name_bn', 'like', $like)
+                        ->orWhere('g.name_en', 'like', $like)->orWhere('g.name_bn', 'like', $like)));
         });
     }
 

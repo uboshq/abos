@@ -575,6 +575,16 @@ return [
             'default' => PaperSize::A4,
             'group' => 'print',
         ],
+        /* ⭐ ক্রয় বিলের নকশা — নতুনটা মালিকের অনুমোদিত (১ অক্টোবর ২০২৬); `standard` = আগের সাধারণ কাগজ */
+        [
+            'key' => 'purchase.print.design.bill',
+            'label' => 'purchase::settings.design_bill',
+            'type' => 'choice',
+            'options' => ['modern', 'standard'],
+            'option_label' => 'purchase::settings.design_bill_',
+            'default' => 'modern',
+            'group' => 'print',
+        ],
         [
             'key' => 'purchase.print.paper.order',
             'label' => 'purchase::settings.paper_order',
