@@ -47,6 +47,7 @@ final class MoneyTransferService
         private readonly NumberSeriesEngine $numbers,
         private readonly PostingEngine $posting,
         private readonly DocumentApproval $approvals,
+        private readonly CashOnHand $cash,
     ) {}
 
     /**
@@ -62,6 +63,10 @@ final class MoneyTransferService
             $amount = $this->amount($data['amount'] ?? null);
 
             $this->assertDestination($data, $from);
+
+            // ⛔ টিলের খাতে তালা, তারপর জের — চূড়ান্ত অডিট ⛔৭ ([[TwoTransfersEmptiedOneTillTest]])।
+            // ⓘ তালা ছাড়া দুইজন একসাথে পাঠালে দুইজনেই পুরো জের দেখতেন, আর টিল শূন্যের নিচে নামত।
+            $this->cash->lock($from->account);
             $this->assertEnoughInHand($from, $amount);
 
             $trxDate = Carbon::parse($data['trx_date'] ?? now());
@@ -182,17 +187,7 @@ final class MoneyTransferService
      */
     public function confirm(MoneyTransfer $transfer, ?int $receivedBy = null): MoneyTransfer
     {
-        if ($transfer->isConfirmed()) {
-            throw ValidationException::withMessages([
-                'status' => __('accounts::validation.transfer_already_confirmed'),
-            ]);
-        }
-
-        if ($transfer->isCancelled()) {
-            throw ValidationException::withMessages([
-                'status' => __('accounts::validation.transfer_cancelled'),
-            ]);
-        }
+        $this->assertReceivable($transfer);
 
         $destination = $transfer->destinationAccountId();
 
@@ -221,6 +216,10 @@ final class MoneyTransferService
         );
 
         return DB::transaction(function () use ($transfer, $destination, $receivedBy) {
+            // ⛔ সারিতে তালা দিয়ে অবস্থা আবার — পুরনো কপিতে দ্বিতীয় "গ্রহণ" খাতার দরজায় ভাঙত (⛔৭)
+            $this->lockFresh($transfer);
+            $this->assertReceivable($transfer);
+
             /*
              * দ্বিতীয় পা — পথ থেকে গন্তব্যে।
              *
@@ -265,13 +264,13 @@ final class MoneyTransferService
             ]);
         }
 
-        if ($transfer->isCancelled()) {
-            throw ValidationException::withMessages([
-                'status' => __('accounts::validation.already_cancelled'),
-            ]);
-        }
+        $this->assertNotCancelled($transfer);
 
         return DB::transaction(function () use ($transfer, $reason) {
+            // ⛔ সারিতে তালা দিয়ে অবস্থা আবার — একই বাতিল দুইবার বিপরীত দাখিলা বসাত না, ভাঙত (⛔৭)
+            $this->lockFresh($transfer);
+            $this->assertNotCancelled($transfer);
+
             /*
              * দুইটা পা-ই ফেরাতে হয়, আর ক্রমটা উল্টো।
              *
@@ -348,6 +347,41 @@ final class MoneyTransferService
      * ইচ্ছাকৃত: হাতে না থাকা টাকা কেউ হাতে হাতে দিতে পারে না। ভাউচারে
      * বাধা নেই, কারণ সেখানে পুরনো তারিখের এন্ট্রি লেখা স্বাভাবিক।
      */
+    /**
+     * সারিটা তালা দিয়ে আবার পড়া — হাতের কপি বাসি হলে তাজা অবস্থা বসে
+     * ([[DepositClaimService::lockPending()]]-এর ছাঁচ, ৩০ সেপ্টেম্বর ২০২৬)।
+     */
+    private function lockFresh(MoneyTransfer $transfer): void
+    {
+        $fresh = MoneyTransfer::query()->whereKey($transfer->getKey())->lockForUpdate()->firstOrFail();
+
+        $transfer->setRawAttributes($fresh->getAttributes(), true);
+    }
+
+    private function assertReceivable(MoneyTransfer $transfer): void
+    {
+        if ($transfer->isConfirmed()) {
+            throw ValidationException::withMessages([
+                'status' => __('accounts::validation.transfer_already_confirmed'),
+            ]);
+        }
+
+        if ($transfer->isCancelled()) {
+            throw ValidationException::withMessages([
+                'status' => __('accounts::validation.transfer_cancelled'),
+            ]);
+        }
+    }
+
+    private function assertNotCancelled(MoneyTransfer $transfer): void
+    {
+        if ($transfer->isCancelled()) {
+            throw ValidationException::withMessages([
+                'status' => __('accounts::validation.already_cancelled'),
+            ]);
+        }
+    }
+
     private function assertEnoughInHand(CashTill $from, string $amount): void
     {
         $inHand = $from->balance();
