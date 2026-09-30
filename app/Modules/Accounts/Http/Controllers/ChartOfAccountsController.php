@@ -10,6 +10,7 @@ use App\Core\Services\LedgerBalances;
 use App\Core\Services\MenuBuilder;
 use App\Core\Support\CompanyContext;
 use App\Core\Support\RunningBalance;
+use App\Core\Support\ViewedBranch;
 use App\Http\Controllers\Controller;
 use App\Models\LedgerEntry;
 use App\Models\User;
@@ -183,8 +184,16 @@ class ChartOfAccountsController extends Controller implements HasMiddleware
 
     public function show(Request $request, Account $account): View
     {
+        /*
+         * ⭐ হেডারে বাছা শাখা (৩০ সেপ্টেম্বর ২০২৬) — সারি, চলমান জের, মাথার জের
+         * আর সন্তানদের জের, চারটাই একই শাখায়; একটা ভুললে পাতাটা নিজের সাথেই
+         * মিলত না। ⓘ "সব শাখা"-তে `null` = গোটা কোম্পানি ([[ViewedBranch::one()]])।
+         */
+        $branch = ViewedBranch::one();
+
         $entries = LedgerEntry::query()
             ->forAccount($account->id)
+            ->when($branch, fn ($q, int $b) => $q->where('branch_id', $b))
             ->orderBy('trx_date')
             ->orderBy('id')
             ->paginate(50)
@@ -206,6 +215,7 @@ class ChartOfAccountsController extends Controller implements HasMiddleware
             $opening = RunningBalance::sumOf(
                 LedgerEntry::query()
                     ->forAccount($account->id)
+                    ->when($branch, fn ($q, int $b) => $q->where('branch_id', $b))
                     ->orderBy('trx_date')
                     ->orderBy('id')
                     ->forPage(1, ($page - 1) * 50)
@@ -257,14 +267,16 @@ class ChartOfAccountsController extends Controller implements HasMiddleware
          * আগের পথেই নিজে গোনে।
          */
         app(LedgerBalances::class)->preload(
-            $this->everyAccountUnder($account)
+            $this->everyAccountUnder($account),
+            null,
+            $branch,
         );
 
         return view('accounts::coa.show', [
             'menu' => $this->menu->forUser($request->user()),
             'account' => $account,
             'entries' => $entries,
-            'balance' => $account->balanceOn(),
+            'balance' => $account->balanceOn(null, $branch),
             // আগে থেকে আনা সন্তানগুলোই — `children()->get()` লিখলে নতুন
             // মডেল আসত, আর তাদের জের গুনতে গিয়ে আবার নিচে নামা শুরু হত
             'children' => $account->is_group ? $account->children : new Collection,
@@ -376,8 +388,12 @@ class ChartOfAccountsController extends Controller implements HasMiddleware
             return [];
         }
 
+        // ⭐ ছকের জের-কলামও হেডারের শাখায় — খাতের পাতার সাথে এক নিয়মে ([[show()]])
+        $branch = ViewedBranch::one();
+
         $sums = LedgerEntry::query()
             ->whereIn('account_id', $accounts->pluck('id'))
+            ->when($branch, fn ($q, int $b) => $q->where('branch_id', $b))
             ->groupBy('account_id')
             ->selectRaw('account_id, COALESCE(SUM(debit), 0) as d, COALESCE(SUM(credit), 0) as c')
             ->get()

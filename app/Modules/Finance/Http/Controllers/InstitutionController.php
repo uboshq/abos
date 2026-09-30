@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Finance\Http\Controllers;
 
 use App\Core\Services\MenuBuilder;
+use App\Core\Support\ViewedBranch;
 use App\Http\Controllers\Controller;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\Finance\Models\BankFacility;
@@ -68,7 +69,8 @@ class InstitutionController extends Controller implements HasMiddleware
             ->filter(fn (InstitutionAccount $l) => $l->account !== null)
             ->map(fn (InstitutionAccount $l) => [
                 'account' => $l->account,
-                'balance' => $l->account->balanceOn(now()->toDateString()),
+                // ⭐ হেডারে বাছা শাখায় (৩০ সেপ্টেম্বর ২০২৬) — [[ViewedBranch]]
+                'balance' => $l->account->balanceOn(now()->toDateString(), ViewedBranch::one()),
             ])
             ->values();
 

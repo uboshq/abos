@@ -142,7 +142,7 @@
                      'render' => fn ($a) => $a->name()],
                     ['key' => 'balance', 'label' => __('accounts::field.balance'), 'numeric' => true,
                      'width' => '11rem',
-                     'render' => fn ($a) => \App\Core\Support\Money::format($a->balanceOn())],
+                     'render' => fn ($a) => \App\Core\Support\Money::format($a->balanceOn(null, \App\Core\Support\ViewedBranch::one()))],
                     ['key' => 'is_active', 'label' => __('accounts::field.state'), 'width' => '7rem',
                      'render' => fn ($a) => view('accounts::coa.partials.state', ['account' => $a])],
                 ]" />

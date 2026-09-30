@@ -58,7 +58,8 @@
             // অঙ্কটাই লিংক — নিয়ম ১। ব্যবহারকারী কোডে ক্লিক করেন
             // না, তিনি সংখ্যাটা দেখে জানতে চান এটা কোথা থেকে এল।
             'render' => fn ($s) => view('ui.amount-link', [
-                'value' => $s->payable(),
+                // ⭐ হেডারে বাছা শাখায় ([[Supplier::scopeWithPayableInView()]])
+                'value' => bcadd((string) ($s->payable_in_view ?? $s->payable()), '0', 4),
                 'href' => route('supplier.show', $s).'#transactions',
             ]),
         ],

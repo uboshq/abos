@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Finance\Services;
 
 use App\Core\Services\PartyRegistry;
+use App\Core\Support\ViewedBranch;
 use App\Models\LedgerEntry;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Services\StandardChart;
@@ -47,7 +48,8 @@ final class CarrierAndLabourLedger
      */
     public function parties(Account $head, string $from, string $to): Collection
     {
-        $rows = LedgerEntry::query()
+        // ⭐ হেডারে বাছা শাখায় (৩০ সেপ্টেম্বর ২০২৬) — [[ViewedBranch]]
+        $rows = ViewedBranch::narrow(LedgerEntry::query(), 'ledger_entries.branch_id')
             ->where('account_id', $head->id)
             ->where('trx_date', '<=', $to)
             ->selectRaw('party_type, party_id,
@@ -110,7 +112,8 @@ final class CarrierAndLabourLedger
     {
         [$type, $id] = array_pad(explode(':', $partyKey, 2), 2, null);
 
-        $scope = fn () => LedgerEntry::query()
+        // ⭐ হেডারে বাছা শাখায় (৩০ সেপ্টেম্বর ২০২৬) — [[ViewedBranch]] — খোলা, সারি আর চলমান জের তিনটাই একই ছাঁকনিতে
+        $scope = fn () => ViewedBranch::narrow(LedgerEntry::query(), 'ledger_entries.branch_id')
             ->where('account_id', $head->id)
             ->when($type, fn ($q) => $q->where('party_type', $type)->where('party_id', (int) $id),
                 fn ($q) => $q->whereNull('party_type'));

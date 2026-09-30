@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Accounts\Services;
 
 use App\Core\Support\CompanyContext;
+use App\Core\Support\ViewedBranch;
 use App\Modules\Accounts\Models\Account;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
@@ -57,6 +58,13 @@ final class BalanceSheetService
     public function build(?string $asOf = null, ?int $branchId = null): array
     {
         $asOf ??= now()->toDateString();
+
+        /*
+         * ⭐ শাখা না বললে হেডারে বাছা শাখা (৩০ সেপ্টেম্বর ২০২৬) — "সব শাখা"-তে `null`,
+         * গোটা কোম্পানি। ⓘ মূলধনের পাতাও এটাই ডাকে, তাই দুই পাতা একই শাখায় থাকে।
+         * ⛔ এটা দেখানোর হিসাব; কোনো যাচাই এটা ডাকে না।
+         */
+        $branchId ??= ViewedBranch::one();
 
         $balances = $this->balances($asOf, $branchId);
         $accounts = Account::query()->orderBy('code')->get();

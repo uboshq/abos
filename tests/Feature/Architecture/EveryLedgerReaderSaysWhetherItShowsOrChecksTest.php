@@ -45,14 +45,12 @@ final class EveryLedgerReaderSaysWhetherItShowsOrChecksTest extends TestCase
         'app/Modules/Accounts/Services/GroupLedgerService.php' => 'দলগত খতিয়ানের পর্দা',
         'app/Modules/Customer/Http/Controllers/CustomerController.php' => 'গ্রাহকের পাতার বকেয়া (সীমার পাশে গোটা কোম্পানির বকেয়াও — সমন্বয়কারীর সিদ্ধান্ত)',
         'app/Modules/Customer/Services/CustomerMetrics.php' => 'গ্রাহকের পাতার অঙ্ক',
-        'app/Modules/Customer/Sync/CustomerDueSync.php' => 'ফোনে দেখানো বকেয়া',
         'app/Modules/Finance/Http/Controllers/InstitutionController.php' => 'প্রতিষ্ঠানের পাতা',
         'app/Modules/Finance/Services/AccountAnalysis.php' => 'খাত-বিশ্লেষণের পর্দা',
         'app/Modules/Finance/Services/BudgetService.php' => 'বাজেট বনাম আসল — পর্দা',
         'app/Modules/Finance/Services/CarrierAndLabourLedger.php' => 'বাহক আর শ্রমিকের খতিয়ান — পর্দা',
         'app/Modules/Finance/Services/CfoFigures.php' => 'অর্থ-প্রধানের সংখ্যা — পর্দা',
         'app/Modules/Finance/Services/HeadTotals.php' => 'মাথাভিত্তিক যোগফল — পর্দা',
-        'app/Modules/Sales/Services/CustomerPapers.php' => 'গ্রাহকের কাগজে ছাপা বকেয়া',
         'app/Modules/Sales/Services/RouteMetrics.php' => 'রুটের পর্দার অঙ্ক',
         'app/Modules/Sales/Services/SalesCustomerTrade.php' => 'গ্রাহকের কেনাবেচার পর্দা',
         'app/Modules/Supplier/Dashboard/SupplierWidgets.php' => 'ড্যাশবোর্ডের পাওনা',
@@ -81,6 +79,8 @@ final class EveryLedgerReaderSaysWhetherItShowsOrChecksTest extends TestCase
         'app/Modules/Finance/Services/BankCharges.php' => 'ব্যাংক চার্জের পোস্টিং',
         'app/Modules/Finance/Services/BankFacilityService.php' => 'ব্যাংক সুবিধার সীমা',
         'app/Modules/Finance/Services/ProfitDistribution.php' => 'লাভ বণ্টন — পোস্টিং',
+        'app/Modules/Customer/Sync/CustomerDueSync.php' => '⛔ ফোনের বকেয়া বাকির সীমার পাশে বসে — বিক্রয়কর্মী সীমা মেনে অর্ডার নেন; হেডারের শাখা ওয়েবের ধারণা, আর জলচিহ্ন শাখা বদলালে ভাঙত (৩০ সেপ্টেম্বর)',
+        'app/Modules/Sales/Services/CustomerPapers.php' => '⛔ গ্রাহক-পোর্টাল: দেখছেন গ্রাহক নিজে, কর্মী নয় — পুরো পক্ষের খাতাই নিরাপত্তার নকশা; হেডারের শাখা এখানে নেই (৩০ সেপ্টেম্বর)',
         'app/Modules/Sales/Services/CreditExposure.php' => '⛔ বাকির সীমা — মালিকের "সীমা পরম", গোটা কোম্পানি',
         'app/Modules/Sales/Services/DeliveryChallanService.php' => 'চালানে বাকির দেয়াল',
         'app/Modules/Sales/Services/SalesReturnService.php' => 'ফেরতের পোস্টিং',
@@ -105,6 +105,51 @@ final class EveryLedgerReaderSaysWhetherItShowsOrChecksTest extends TestCase
         $this->assertSame([], $stale, "তালিকায় আছে অথচ আর খাতা পড়ে না:\n".implode("\n", $stale));
     }
 
+    /**
+     * দেখায়, কিন্তু ইচ্ছা করে গোটা কোম্পানি — সিদ্ধান্তটা এখানে, কারণসহ।
+     *
+     * @var array<string, string>
+     */
+    private const WHOLE_BY_DECISION = [
+        'app/Modules/Accounts/Services/GroupLedgerService.php' => 'কয়েক কোম্পানির একসাথে লাভ-ক্ষতি — শাখার আইডি কেবল চলতি কোম্পানির, ছাঁকলে বাকি কোম্পানিগুলো শূন্য হত',
+        'app/Modules/Finance/Services/BudgetService.php' => 'বাজেটে শাখা নেই (`fin_budgets`) — এক শাখার খরচ গোটা কোম্পানির বাজেটের পাশে বসলে তুলনাটাই মিথ্যা হত',
+    ];
+
+    /**
+     * ⭐ ধাপ খ (৩০ সেপ্টেম্বর ২০২৬): প্রতিটা দেখানো পাঠক সত্যিই দেখার শাখা মানে।
+     *
+     * ⛔ ২৯ সেপ্টেম্বরে তালিকাটা বানানো হয়েছিল, কিন্তু কেউ মাপেনি তালিকার ফাইলগুলো শাখা
+     * মানে কি না — ২৪টার ২১টা মানত না, আর মালিক "ময়মনসিংহ" বেছে অন্য শাখার টাকা দেখতেন।
+     *
+     * ⓘ মাপ: মন্তব্য বাদে কোডে দেখার শাখার কোনো দরজা ডাকা হয় কি না —
+     * [[ViewedBranch]], [[DataScope::viewBranchIds()]], [[DataScope::viewsOneBranch()]] বা
+     * `inView()`। ⚠️ ডাকা মানেই ঠিক নয়, কিন্তু না-ডাকা মানে নিশ্চিত ভুল; ঠিক-ভুল মাপে
+     * [[OneBranchPickedShowsOnlyThatBranchsMoneyTest]]।
+     */
+    public function test_every_shows_reader_narrows_to_the_viewed_branch(): void
+    {
+        $blind = [];
+
+        foreach (array_keys(self::SHOWS) as $path) {
+            if (array_key_exists($path, self::WHOLE_BY_DECISION)) {
+                continue;
+            }
+
+            $code = $this->codeOf(base_path($path));
+
+            if (preg_match('/ViewedBranch::|viewBranchIds\(|viewsOneBranch\(|->inView\(/', $code) !== 1) {
+                $blind[] = $path;
+            }
+        }
+
+        $this->assertSame([], $blind, implode("\n", [
+            'এই পর্দাগুলো খাতা দেখায়, অথচ হেডারে বাছা শাখা মানে না:', '', ...$blind, '',
+            'ViewedBranch::narrow()/one() দিয়ে ছাঁকুন — বা কারণসহ WHOLE_BY_DECISION-এ তুলুন।',
+        ]));
+        $this->assertSame([], array_values(array_diff(array_keys(self::WHOLE_BY_DECISION), array_keys(self::SHOWS))),
+            'WHOLE_BY_DECISION-এর ফাইল SHOWS-এ নেই — বাসি সিদ্ধান্ত।');
+    }
+
     public function test_no_file_is_both(): void
     {
         $this->assertSame([], array_values(array_intersect(array_keys(self::SHOWS), array_keys(self::CHECKS))));
@@ -124,7 +169,8 @@ final class EveryLedgerReaderSaysWhetherItShowsOrChecksTest extends TestCase
                 continue;
             }
 
-            if (preg_match(self::PATTERN, (string) file_get_contents($file->getPathname())) === 1) {
+            // ⚠️ মন্তব্য বাদে — মন্তব্যে কোনো নাম লিখলেই ফাইলটা "পাঠক" হয়ে যেত
+            if (preg_match(self::PATTERN, $this->codeOf($file->getPathname())) === 1) {
                 $found[] = $path;
             }
         }
@@ -132,5 +178,21 @@ final class EveryLedgerReaderSaysWhetherItShowsOrChecksTest extends TestCase
         sort($found);
 
         return $found;
+    }
+
+    /** ফাইলের কোড, মন্তব্য ছাড়া। */
+    private function codeOf(string $file): string
+    {
+        $code = '';
+
+        foreach (token_get_all((string) file_get_contents($file)) as $token) {
+            if (is_array($token) && in_array($token[0], [T_COMMENT, T_DOC_COMMENT], true)) {
+                continue;
+            }
+
+            $code .= is_array($token) ? $token[1] : $token;
+        }
+
+        return $code;
     }
 }

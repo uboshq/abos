@@ -6,6 +6,7 @@ namespace App\Modules\Accounts\Http\Controllers;
 
 use App\Core\Services\MenuBuilder;
 use App\Core\Support\Money;
+use App\Core\Support\ViewedBranch;
 use App\Http\Controllers\Controller;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Models\CashTill;
@@ -59,7 +60,14 @@ class MoneyCustodyController extends Controller implements HasMiddleware
 
     public function __invoke(Request $request): View
     {
-        $tills = CashTill::query()
+        /*
+         * ⭐ হেডারে বাছা শাখায় (৩০ সেপ্টেম্বর ২০২৬) — কোন টিল, অফিস-নগদ আর ব্যাংকের
+         * জের, পথের টাকা, সব একই শাখায়। ⓘ টিলের জের পুরো ড্রয়ারের ([[CashTill::balance()]]
+         * যাচাইয়ের উপকরণ, গোটা থাকে)।
+         */
+        $branch = ViewedBranch::one();
+
+        $tills = ViewedBranch::narrow(CashTill::query(), 'cash_tills.branch_id')
             ->with(['account', 'holder'])
             ->orderByDesc('is_primary')
             ->orderBy('code')
@@ -78,7 +86,11 @@ class MoneyCustodyController extends Controller implements HasMiddleware
          *
          * ⓘ যেগুলোর টিল আছে সেগুলো বাদ, নাহলে একই টাকা দুইবার দেখাত।
          */
-        $tillAccounts = $tills->pluck('account_id')->filter()->all();
+        /*
+         * ⚠️ বাদ দেওয়ার তালিকা **সব** টিলের — কেবল দেখানোগুলোর নয়। নাহলে অন্য
+         * শাখার টিলের খাত এখানে "অফিসের সিন্দুক" হয়ে ফিরে আসত।
+         */
+        $tillAccounts = CashTill::query()->pluck('account_id')->filter()->all();
 
         $officeCash = Account::query()
             ->ofMoneyKind(Account::CASH)
@@ -100,7 +112,7 @@ class MoneyCustodyController extends Controller implements HasMiddleware
          * কার কাছে যাচ্ছে" প্রশ্নের উত্তর কেবল দলিলেই আছে। আর ওই
          * প্রশ্নটাই এই পর্দার কারণ।
          */
-        $onTheRoad = MoneyTransfer::query()
+        $onTheRoad = ViewedBranch::narrow(MoneyTransfer::query(), 'money_transfers.branch_id')
             ->with(['fromTill', 'toTill', 'toAccount', 'giver'])
             ->pending()
             ->orderBy('trx_date')
@@ -108,10 +120,10 @@ class MoneyCustodyController extends Controller implements HasMiddleware
 
         return view('accounts::custody.index', [
             'menu' => $this->menu->forUser($request->user()),
-            'rows' => $this->rows($tills, $officeCash, $banks),
+            'rows' => $this->rows($tills, $officeCash, $banks, $branch),
             'onTheRoad' => $onTheRoad,
             'transit' => Money::format(
-                StandardChart::find(StandardChart::CASH_IN_TRANSIT)?->balanceOn() ?? '0'
+                StandardChart::find(StandardChart::CASH_IN_TRANSIT)?->balanceOn(null, $branch) ?? '0'
             ),
 
             /*
@@ -138,9 +150,9 @@ class MoneyCustodyController extends Controller implements HasMiddleware
      * @param  Collection<int, Account>  $banks
      * @return list<array<string, mixed>>
      */
-    private function rows($tills, $officeCash, $banks): array
+    private function rows($tills, $officeCash, $banks, ?int $branch = null): array
     {
-        $sentFrom = MoneyTransfer::query()
+        $sentFrom = ViewedBranch::narrow(MoneyTransfer::query(), 'money_transfers.branch_id')
             ->pending()
             ->selectRaw('from_till_id, COALESCE(SUM(amount), 0) as total')
             ->groupBy('from_till_id')
@@ -175,7 +187,7 @@ class MoneyCustodyController extends Controller implements HasMiddleware
                 'name' => $cash->name(),
                 'kind' => __('accounts::custody.kind_office_cash'),
                 'holder' => $cash->keeper?->name,
-                'balance' => Money::format($cash->balanceOn()),
+                'balance' => Money::format($cash->balanceOn(null, $branch)),
                 'sent' => Money::format('0'),
                 'url' => route('accounts.coa.show', $cash),
                 'active' => $cash->is_active,
@@ -197,7 +209,7 @@ class MoneyCustodyController extends Controller implements HasMiddleware
                  * কেবল নগদ কাউন্টারের জন্য।
                  */
                 'holder' => null,
-                'balance' => Money::format($bank->balanceOn()),
+                'balance' => Money::format($bank->balanceOn(null, $branch)),
                 'sent' => Money::format('0'),
                 'url' => route('accounts.coa.index'),
                 'active' => $bank->is_active,

@@ -92,7 +92,8 @@
              * এখানে কেবল টুকরাটা লেখা হয়নি বলে বাকি ছিল।
              */
             'render' => fn ($c) => view('ui.amount-link', [
-                'value' => $c->outstanding(),
+                // ⭐ হেডারে বাছা শাখায় ([[Customer::scopeWithOutstandingInView()]])
+                'value' => bcadd((string) ($c->outstanding_in_view ?? $c->outstanding()), '0', 4),
                 'href' => route('customer.show', $c).'#transactions',
             ]),
         ],

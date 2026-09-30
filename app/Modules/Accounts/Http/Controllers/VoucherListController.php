@@ -6,6 +6,7 @@ namespace App\Modules\Accounts\Http\Controllers;
 
 use App\Core\Concerns\SortsLists;
 use App\Core\Services\MenuBuilder;
+use App\Core\Support\ViewedBranch;
 use App\Http\Controllers\Controller;
 use App\Models\LedgerEntry;
 use App\Modules\Accounts\Models\Voucher;
@@ -218,7 +219,8 @@ class VoucherListController extends Controller implements HasMiddleware
             .' - SUM(CASE WHEN source_type = ? THEN debit ELSE 0 END)';
         $firstDate = 'MIN(CASE WHEN source_type = ? THEN trx_date END)';
 
-        return LedgerEntry::query()
+        // ⭐ হেডারে বাছা শাখায় (৩০ সেপ্টেম্বর ২০২৬) — ভাউচারের ট্যাবগুলো মডেলের দেয়ালে আগেই ছাঁকা
+        return ViewedBranch::narrow(LedgerEntry::query(), 'ledger_entries.branch_id')
             ->whereIn('source_type', [$source, $reversal])
             ->groupBy('source_id')
             ->select('source_id')

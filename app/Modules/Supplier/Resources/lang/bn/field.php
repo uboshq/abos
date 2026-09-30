@@ -55,6 +55,7 @@ return [
     'opening_date' => 'খোলার তারিখ',
 
     'payable' => 'প্রদেয়',
+    'payable_all_branches' => 'সব শাখা মিলিয়ে প্রদেয়',
     'state' => 'অবস্থা',
 
     // বয়সের ধাপ — দিনে

@@ -24,6 +24,7 @@ return [
     'opening_balance' => 'Opening balance',
     'opening_date' => 'Opening date',
     'outstanding' => 'Outstanding',
+    'outstanding_all_branches' => 'Outstanding, all branches',
 
     // Ageing buckets, in days
     'bucket_current' => '0–30 days',

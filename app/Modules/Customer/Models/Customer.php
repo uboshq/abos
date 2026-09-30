@@ -12,6 +12,7 @@ use App\Core\Concerns\IsAudited;
 use App\Core\Contracts\CreditHolds;
 use App\Core\Contracts\Drillable;
 use App\Core\Services\SettingsService;
+use App\Core\Support\ViewedBranch;
 use App\Models\Branch;
 use App\Models\LedgerEntry;
 use App\Models\User;
@@ -427,6 +428,24 @@ class Customer extends Model implements AuthenticatableContract, Drillable
 
         // customers.* না দিলে addSelect শুধু সাব-কোয়েরিটাই আনত
         return $query->addSelect(['customers.*', 'outstanding_net' => $net]);
+    }
+
+    /**
+     * ⭐ তালিকার বকেয়া, হেডারে বাছা শাখায় — **দেখানোর** জন্য আলাদা ঘরে (৩০ সেপ্টেম্বর ২০২৬)।
+     *
+     * ⛔ `outstanding_net`-এ বসানো হয় না: [[outstanding()]] ওই ঘরটা পড়ে, আর ওটা
+     * বাকির সীমার উপকরণ ([[availableLimit()]], বিক্রির পর্দা)। একই মডেলে শাখার
+     * অঙ্ক বসলে সীমা এক শাখার বকেয়া দিয়ে মাপা হত — মালিকের "সীমা পরম" ভাঙত।
+     * তাই নাম আলাদা: `outstanding_in_view`।
+     */
+    public function scopeWithOutstandingInView(Builder $query): Builder
+    {
+        $net = ViewedBranch::narrow(LedgerEntry::query(), 'ledger_entries.branch_id')
+            ->selectRaw('COALESCE(SUM(debit) - SUM(credit), 0)')
+            ->whereColumn('ledger_entries.party_id', 'customers.id')
+            ->where('ledger_entries.party_type', self::drillSourceType());
+
+        return $query->addSelect(['customers.*', 'outstanding_in_view' => $net]);
     }
 
     /**

@@ -10,6 +10,7 @@ use App\Core\Concerns\HasDocumentStatus;
 use App\Core\Concerns\HasPublicId;
 use App\Core\Concerns\IsAudited;
 use App\Core\Contracts\Drillable;
+use App\Core\Support\ViewedBranch;
 use App\Models\Branch;
 use App\Models\LedgerEntry;
 use App\Models\User;
@@ -250,6 +251,22 @@ class Supplier extends Model implements Drillable
 
         // suppliers.* না দিলে addSelect শুধু সাব-কোয়েরিটাই আনত
         return $query->addSelect(['suppliers.*', 'payable_net' => $net]);
+    }
+
+    /**
+     * ⭐ তালিকার প্রদেয়, হেডারে বাছা শাখায় — **দেখানোর** জন্য আলাদা ঘরে (৩০ সেপ্টেম্বর ২০২৬)।
+     *
+     * ⛔ `payable_net`-এ বসানো হয় না: [[payable()]] ওই ঘরটা পড়ে, আর ওটা
+     * [[isOverTheirLimit()]] আর সরাসরি কেনার পর্দার উপকরণ — গোটা কোম্পানির থাকে।
+     */
+    public function scopeWithPayableInView(Builder $query): Builder
+    {
+        $net = ViewedBranch::narrow(LedgerEntry::query(), 'ledger_entries.branch_id')
+            ->selectRaw('COALESCE(SUM(credit) - SUM(debit), 0)')
+            ->whereColumn('ledger_entries.party_id', 'suppliers.id')
+            ->where('ledger_entries.party_type', self::drillSourceType());
+
+        return $query->addSelect(['suppliers.*', 'payable_in_view' => $net]);
     }
 
     /**

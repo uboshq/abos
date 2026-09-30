@@ -8,6 +8,7 @@ use App\Core\Services\MenuBuilder;
 use App\Core\Services\NumberSeriesCatchUp;
 use App\Core\Support\CompanyContext;
 use App\Core\Support\DocumentStatus;
+use App\Core\Support\ViewedBranch;
 use App\Http\Controllers\Controller;
 use App\Models\Approval;
 use App\Models\ErrorEvent;
@@ -69,7 +70,8 @@ class FinanceControlController extends Controller implements HasMiddleware
          * ⓘ উল্টো-পোস্টও খাতার সারি — তাই "কতগুলো কাগজ" গোনা হয় আলাদা
          * source_id ধরে, সারি ধরে নয়। একটা বিলে দশটা লাইন থাকলেও সেটা একটা বিল।
          */
-        $posted = LedgerEntry::query()
+        // ⭐ হেডারে বাছা শাখায় (৩০ সেপ্টেম্বর ২০২৬); ⛔ মাস-শেষের তালিকা গোটা কোম্পানির থাকে
+        $posted = ViewedBranch::narrow(LedgerEntry::query(), 'ledger_entries.branch_id')
             ->where('trx_date', $date->toDateString())
             ->select('source_type')
             ->selectRaw('COUNT(DISTINCT source_id) as documents')

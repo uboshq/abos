@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Finance\Services;
 
 use App\Core\Support\CompanyContext;
+use App\Core\Support\ViewedBranch;
 use App\Modules\Accounts\Models\Account;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -90,7 +91,8 @@ final class HeadTotals
             ? 'COALESCE(SUM(debit) - SUM(credit), 0) as net'
             : 'COALESCE(SUM(credit) - SUM(debit), 0) as net';
 
-        $net = DB::table('ledger_entries')
+        // ⭐ হেডারে বাছা শাখায় (৩০ সেপ্টেম্বর ২০২৬) — [[ViewedBranch]]
+        $net = ViewedBranch::narrow(DB::table('ledger_entries'), 'ledger_entries.branch_id')
             ->where('company_id', CompanyContext::id())
             ->where('account_id', $account->id)
             ->whereBetween('trx_date', [$from, $to])
@@ -165,7 +167,8 @@ final class HeadTotals
             $headOf[$node->id] = $walk->id;
         }
 
-        $rows = DB::table('ledger_entries as l')
+        // ⭐ হেডারে বাছা শাখায় (৩০ সেপ্টেম্বর ২০২৬) — [[ViewedBranch]]
+        $rows = ViewedBranch::narrow(DB::table('ledger_entries as l'), 'l.branch_id')
             ->join('accounts as a', 'a.id', '=', 'l.account_id')
             ->whereIn('a.id', array_keys($headOf))
             /*

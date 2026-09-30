@@ -38,6 +38,7 @@ return [
     'opening_balance' => 'খোলা ব্যালেন্স',
     'opening_date' => 'খোলার তারিখ',
     'outstanding' => 'বকেয়া',
+    'outstanding_all_branches' => 'সব শাখা মিলিয়ে বকেয়া',
 
     // বয়সের ধাপ — দিনে
     'bucket_current' => '০–৩০ দিন',

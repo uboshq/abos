@@ -66,6 +66,16 @@
                 <x-ui.amount :value="$outstanding" href="#transactions" />
             </p>
 
+            {{-- ⭐ এক শাখা বাছা থাকলে ওপরের অঙ্কটা কেবল সেই শাখার (৩০ সেপ্টেম্বর ২০২৬);
+                 সীমা মাপা হয় সব শাখা মিলিয়ে, তাই সেটাও এখানে — নাহলে "বকেয়া ১০ হাজার,
+                 সীমা পার" দেখে মানুষ ধাঁধায় পড়তেন। --}}
+            @if ($outstandingAll !== null)
+                <p class="mt-1 text-2xs text-(--color-ink-muted)" data-due-all-branches>
+                    {{ __('customer::field.outstanding_all_branches') }}:
+                    <span class="num">{{ \App\Core\Support\Money::format($outstandingAll) }}</span>
+                </p>
+            @endif
+
             @if ($creditLimitOn && bccomp((string) $customer->credit_limit, '0', 4) > 0)
                 <p class="mt-2 text-2xs text-(--color-ink-muted)">
                     {{ __('customer::field.credit_limit') }}:

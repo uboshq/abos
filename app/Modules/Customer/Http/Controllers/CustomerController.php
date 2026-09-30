@@ -11,6 +11,7 @@ use App\Core\Services\CustomFieldService;
 use App\Core\Services\MenuBuilder;
 use App\Core\Services\SettingsService;
 use App\Core\Support\RunningBalance;
+use App\Core\Support\ViewedBranch;
 use App\Http\Controllers\Controller;
 use App\Models\Branch;
 use App\Models\LedgerEntry;
@@ -95,7 +96,8 @@ class CustomerController extends Controller implements HasMiddleware
                 'location.parent.parent.parent.parent.parent.parent',
             ])
             // বকেয়া সারির সাথেই আসে, নাহলে ৫০ সারিতে ৫০টা কোয়েরি
-            ->withOutstanding()
+            // ⭐ হেডারে বাছা শাখায় (৩০ সেপ্টেম্বর ২০২৬) — [[Customer::scopeWithOutstandingInView()]]
+            ->withOutstandingInView()
 
             /*
              * কেবল যাঁরা ধারের সীমা ছাড়িয়ে গেছেন।
@@ -192,7 +194,12 @@ class CustomerController extends Controller implements HasMiddleware
      */
     public function show(Request $request, Customer $customer): View
     {
-        $ledger = LedgerEntry::query()
+        /*
+         * ⭐ খাতার সারি আর মাথার বকেয়া — হেডারে বাছা শাখায় (৩০ সেপ্টেম্বর ২০২৬)।
+         * ⚠️ দুটো একই ছাঁকনিতে, নাহলে শেষ সারির চলমান জের মাথার অঙ্কের সাথে মিলত না।
+         * ⛔ সীমার ঘরগুলো ([[Customer::availableLimit()]]) গোটা কোম্পানিতেই থাকে।
+         */
+        $ledger = ViewedBranch::narrow(LedgerEntry::query(), 'ledger_entries.branch_id')
             ->forParty(Customer::drillSourceType(), $customer->id)
             ->orderBy('trx_date')
             ->orderBy('id');
@@ -256,11 +263,24 @@ class CustomerController extends Controller implements HasMiddleware
         return view('customer::show', [
             'menu' => $this->menu->forUser($request->user()),
             'customer' => $customer,
-            'outstanding' => $customer->outstanding(),
+            'outstanding' => $this->dueInView($customer),
+            /* ⓘ এক শাখা বাছা থাকলে সব শাখা মিলিয়ে বকেয়াও — সীমা ওটা দিয়েই মাপা হয় */
+            'outstandingAll' => ViewedBranch::one() !== null ? $customer->outstanding() : null,
             'entries' => $entries,
             'creditLimitOn' => $this->settings->enabled('customer.credit_limit_enabled'),
             'facts' => $this->facts->forRecord(Customer::drillSourceType(), $customer->id),
         ]);
+    }
+
+    /** মাথার বকেয়া — খাতার সারির ঠিক সেই ছাঁকনিতে ([[show()]])। */
+    private function dueInView(Customer $customer): string
+    {
+        $net = ViewedBranch::narrow(LedgerEntry::query(), 'ledger_entries.branch_id')
+            ->forParty(Customer::drillSourceType(), $customer->id)
+            ->selectRaw('COALESCE(SUM(debit) - SUM(credit), 0) as net')
+            ->value('net') ?? 0;
+
+        return bcadd((string) $net, '0', 4);
     }
 
     public function edit(Request $request, Customer $customer): View
@@ -284,8 +304,8 @@ class CustomerController extends Controller implements HasMiddleware
     private function sorts(): array
     {
         return [
-            'due_desc' => fn ($q) => $q->orderByDesc('outstanding_net')->orderBy('name_en'),
-            'due_asc' => fn ($q) => $q->orderBy('outstanding_net')->orderBy('name_en'),
+            'due_desc' => fn ($q) => $q->orderByDesc('outstanding_in_view')->orderBy('name_en'),
+            'due_asc' => fn ($q) => $q->orderBy('outstanding_in_view')->orderBy('name_en'),
             'name' => fn ($q) => $q->orderBy('name_en'),
             'code' => fn ($q) => $q->orderBy('code'),
             'recent' => fn ($q) => $q->orderByDesc('created_at'),

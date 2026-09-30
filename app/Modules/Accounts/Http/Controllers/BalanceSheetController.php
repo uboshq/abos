@@ -4,9 +4,12 @@ declare(strict_types=1);
 
 namespace App\Modules\Accounts\Http\Controllers;
 
+use App\Core\Services\DataScope;
 use App\Core\Services\MenuBuilder;
+use App\Core\Support\ViewedBranch;
 use App\Http\Controllers\Controller;
 use App\Models\Branch;
+use App\Models\UserDataScope;
 use App\Modules\Accounts\Services\BalanceSheetService;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
@@ -45,12 +48,27 @@ class BalanceSheetController extends Controller implements HasMiddleware
     public function show(Request $request): View
     {
         $asOf = $request->query('as_of');
-        $branchId = $request->integer('branch_id') ?: null;
+
+        /*
+         * ⭐ পাতার নিজের ছাঁকনি আগে, না থাকলে হেডারে বাছা শাখা (৩০ সেপ্টেম্বর ২০২৬)।
+         * ⛔ আগে হেডারটা এই পাতা শুনতই না: মালিক "ময়মনসিংহ" বেছে গোটা কোম্পানির
+         * স্থিতিপত্র দেখতেন।
+         *
+         * ⚠️ আর নাগালের বাইরের শাখা হাতে লিখে চাইলে ৪০৪ — [[ReportEngine]]-এর মতোই;
+         * আগে `?branch_id=` দিয়ে অন্য শাখার স্থিতিপত্র খোলা যেত।
+         */
+        $asked = $request->integer('branch_id') ?: null;
+        $scope = app(DataScope::class);
+
+        abort_if($asked !== null && ! $scope->allows($request->user(), UserDataScope::BRANCH, $asked), 404);
+
+        $reach = $scope->idsFor($request->user(), UserDataScope::BRANCH); // ⓘ ড্রপডাউনে নাগাল, বাছাই নয়
 
         return view('accounts::report.balance-sheet', [
             'menu' => $this->menu->forUser($request->user()),
-            'sheet' => $this->sheet->build(is_string($asOf) ? $asOf : null, $branchId),
-            'branchId' => $branchId,
+            // ⓘ না চাইলে শাখাটা সার্ভিস নিজেই হেডার থেকে নেয় — নিয়ম এক জায়গায় ([[BalanceSheetService::build()]])
+            'sheet' => $this->sheet->build(is_string($asOf) ? $asOf : null, $asked),
+            'branchId' => $asked ?? ViewedBranch::one($request->user()),
 
             /*
              * শাখার ছাঁকনি — কিন্তু সতর্কবার্তাসহ (পর্দায় লেখা)।
@@ -60,7 +78,10 @@ class BalanceSheetController extends Controller implements HasMiddleware
              * "নেত্রকোনায় কত মজুদ আর কত বকেয়া" প্রশ্নটা সত্যিকারের —
              * কেবল ওটাকে স্থিতিপত্র বলা যায় না।
              */
-            'branches' => Branch::query()->orderBy('name_en')->get(),
+            'branches' => Branch::query()
+                ->when($reach !== null, fn ($q) => $q->whereIn('id', $reach))
+                ->orderBy('name_en')
+                ->get(),
         ]);
     }
 }

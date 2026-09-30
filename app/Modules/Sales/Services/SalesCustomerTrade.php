@@ -7,6 +7,7 @@ namespace App\Modules\Sales\Services;
 use App\Core\Contracts\CustomerTrade;
 use App\Core\Engines\Drill\DrillResolver;
 use App\Core\Panels\TradeGlance;
+use App\Core\Support\ViewedBranch;
 use App\Models\LedgerEntry;
 use App\Modules\Accounts\Models\Voucher;
 use App\Modules\Customer\Models\Customer;
@@ -106,7 +107,8 @@ final class SalesCustomerTrade implements CustomerTrade
      */
     private function lastPayment(int $customerId): ?array
     {
-        $open = fn (): Builder => LedgerEntry::query()
+        // ⭐ হেডারে বাছা শাখায় (৩০ সেপ্টেম্বর ২০২৬) — [[ViewedBranch]] — কার্ডের বাকি অঙ্ক বিলের দেয়ালে আগেই ছাঁকা
+        $open = fn (): Builder => ViewedBranch::narrow(LedgerEntry::query(), 'ledger_entries.branch_id')
             ->forParty(Customer::drillSourceType(), $customerId)
             ->whereIn('ledger_entries.source_type', self::paymentSources())
             ->where('ledger_entries.credit', '>', 0)

@@ -34,6 +34,7 @@ return [
     'opening_date' => 'Opening date',
 
     'payable' => 'Payable',
+    'payable_all_branches' => 'Payable, all branches',
     'state' => 'Status',
 
     // Ageing buckets, in days

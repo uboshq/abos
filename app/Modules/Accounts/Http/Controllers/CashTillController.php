@@ -9,6 +9,7 @@ use App\Core\Concerns\SortsLists;
 use App\Core\Services\MenuBuilder;
 use App\Core\Support\CompanyContext;
 use App\Core\Support\RunningBalance;
+use App\Core\Support\ViewedBranch;
 use App\Http\Controllers\Controller;
 use App\Models\Branch;
 use App\Models\LedgerEntry;
@@ -46,7 +47,12 @@ class CashTillController extends Controller implements HasMiddleware
 
     public function index(Request $request): View
     {
-        $query = CashTill::query()
+        /*
+         * ⭐ কোন টিলগুলো — হেডারে বাছা শাখার (৩০ সেপ্টেম্বর ২০২৬)। ⓘ প্রতিটা টিলের
+         * জের পুরো ড্রয়ারের, শাখা ধরে কাটা নয় — একটা ড্রয়ার একটাই জায়গায় থাকে;
+         * আর [[CashTill::balance()]] টাকা বেরোনোর যাচাইয়ে লাগে, ওটা গোটা থাকে।
+         */
+        $query = ViewedBranch::narrow(CashTill::query(), 'cash_tills.branch_id')
             ->search($request->query('q'))
             ->when(! $request->boolean('inactive'), fn ($q) => $q->active())
             ->with(['account', 'holder', 'branch']);

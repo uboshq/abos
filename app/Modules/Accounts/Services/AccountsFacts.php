@@ -234,7 +234,8 @@ final class AccountsFacts
          */
         $ids = $parent->selfAndDescendants()->pluck('id');
 
-        $row = LedgerEntry::query()
+        // ⭐ হেডারে বাছা শাখায় (৩০ সেপ্টেম্বর ২০২৬) — অর্থ-প্রধানের পাতার বাকি সংখ্যার সাথে এক নিয়মে
+        $row = $this->inView(LedgerEntry::query(), 'ledger_entries.branch_id')
             ->whereIn('account_id', $ids)
             ->selectRaw('COALESCE(SUM(credit), 0) as c, COALESCE(SUM(debit), 0) as d')
             ->first();

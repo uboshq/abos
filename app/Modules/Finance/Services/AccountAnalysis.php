@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Finance\Services;
 
 use App\Core\Services\PartyRegistry;
+use App\Core\Support\ViewedBranch;
 use App\Models\LedgerEntry;
 use App\Modules\Accounts\Models\Account;
 use Illuminate\Support\Carbon;
@@ -41,9 +42,16 @@ final class AccountAnalysis
 
         $sign = $account->nature === Account::CREDIT ? '-1' : '1';
 
-        $opening = $account->balanceOn(Carbon::parse($from)->subDay()->toDateString());
+        /*
+         * ⭐ হেডারে বাছা শাখায় (৩০ সেপ্টেম্বর ২০২৬) — [[ViewedBranch]]। ⚠️ খোলা জের আর নড়াচড়া
+         * একই নিয়মে — এক শাখা, নইলে গোটা কোম্পানি — নাহলে বন্ধ জের খোলার সাথে মিলত না।
+         */
+        $branch = ViewedBranch::one();
 
-        $base = fn () => LedgerEntry::query()->whereIn('account_id', $ids)->whereBetween('trx_date', [$from, $to]);
+        $opening = $account->balanceOn(Carbon::parse($from)->subDay()->toDateString(), $branch);
+
+        $base = fn () => LedgerEntry::query()->whereIn('account_id', $ids)->whereBetween('trx_date', [$from, $to])
+            ->when($branch, fn ($q, int $b) => $q->where('branch_id', $b));
 
         $byMonth = $base()
             ->selectRaw("DATE_FORMAT(trx_date, '%Y-%m') as ym, SUM(debit) as d, SUM(credit) as c, COUNT(*) as n")

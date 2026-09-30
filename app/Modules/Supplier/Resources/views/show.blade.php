@@ -73,6 +73,15 @@
                 <x-ui.amount :value="$payable" href="#transactions" />
             </p>
 
+            {{-- ⭐ এক শাখা বাছা থাকলে ওপরের অঙ্কটা কেবল সেই শাখার (৩০ সেপ্টেম্বর ২০২৬);
+                 সীমার সতর্কতা সব শাখা মিলিয়ে, তাই সেটাও এখানে। --}}
+            @if ($payableAll !== null)
+                <p class="mt-1 text-2xs text-(--color-ink-muted)" data-payable-all-branches>
+                    {{ __('supplier::field.payable_all_branches') }}:
+                    <span class="num">{{ \App\Core\Support\Money::format($payableAll) }}</span>
+                </p>
+            @endif
+
             @if (bccomp((string) $supplier->credit_limit, '0', 4) > 0)
                 <p class="mt-2 text-2xs text-(--color-ink-muted)">
                     {{ __('supplier::field.credit_limit') }}:

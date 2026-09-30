@@ -4,10 +4,9 @@ declare(strict_types=1);
 
 namespace App\Modules\Customer\Services;
 
-use App\Core\Services\DataScope;
 use App\Core\Support\CompanyContext;
+use App\Core\Support\ViewedBranch;
 use App\Models\User;
-use App\Models\UserDataScope;
 use App\Modules\Customer\Models\Customer;
 use Illuminate\Support\Facades\DB;
 
@@ -22,14 +21,12 @@ use Illuminate\Support\Facades\DB;
  */
 final class CustomerMetrics
 {
-    public function __construct(private readonly DataScope $scope) {}
-
     /**
      * @return array{amount: string, shops: int} টাকা স্ট্রিং, চার ঘর
      */
     public function dues(User $user, string $asOf): array
     {
-        $perShop = DB::table('ledger_entries')
+        $perShop = ViewedBranch::narrow(DB::table('ledger_entries'), 'ledger_entries.branch_id', $user)
             ->join('customers', 'customers.id', '=', 'ledger_entries.party_id')
             ->where('ledger_entries.company_id', CompanyContext::id())
             ->where('ledger_entries.party_type', Customer::drillSourceType())
@@ -39,9 +36,10 @@ final class CustomerMetrics
              * [[ScopedToUserBranch]]-এর একই নিয়ম (শাখাহীন সারিও থাকে),
              * যাতে বিক্রয়ের সংখ্যা আর বকেয়া দুই রকম সীমায় না দাঁড়ায়।
              */
-            ->when($this->scope->idsFor($user, UserDataScope::BRANCH), fn ($q, array $ids) => $q
-                ->where(fn ($w) => $w->whereIn('ledger_entries.branch_id', $ids)
-                    ->orWhereNull('ledger_entries.branch_id')))
+            /*
+             * ⭐ ৩০ সেপ্টেম্বর ২০২৬: নাগালের পাশাপাশি হেডারে বাছা শাখাও — এক শাখা বাছা
+             * থাকলে কেবল সেটা, শাখাহীন সারি ছাড়া ([[ViewedBranch::narrow()]])।
+             */
             ->groupBy('ledger_entries.party_id')
             ->havingRaw('SUM(ledger_entries.debit) - SUM(ledger_entries.credit) > 0')
             ->selectRaw('SUM(ledger_entries.debit) - SUM(ledger_entries.credit) as outstanding');

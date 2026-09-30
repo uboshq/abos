@@ -10,6 +10,7 @@ use App\Core\Services\CustomFieldService;
 use App\Core\Services\MenuBuilder;
 use App\Core\Services\SettingsService;
 use App\Core\Support\RunningBalance;
+use App\Core\Support\ViewedBranch;
 use App\Http\Controllers\Controller;
 use App\Models\Branch;
 use App\Models\LedgerEntry;
@@ -111,7 +112,8 @@ class SupplierController extends Controller implements HasMiddleware
             ->when(! $request->boolean('inactive'), fn ($q) => $q->active())
             ->with(['partyType', 'paymentTerm'])
             // প্রদেয় সারির সাথেই আসে, নাহলে ৫০ সারিতে ৫০টা কোয়েরি
-            ->withPayable();
+            // ⭐ হেডারে বাছা শাখায় (৩০ সেপ্টেম্বর ২০২৬) — [[Supplier::scopeWithPayableInView()]]
+            ->withPayableInView();
 
         $sort = $this->applySort($query, $request, $this->sorts());
 
@@ -205,7 +207,12 @@ class SupplierController extends Controller implements HasMiddleware
      */
     public function show(Request $request, Supplier $supplier): View
     {
-        $ledger = LedgerEntry::query()
+        /*
+         * ⭐ খাতার সারি আর মাথার প্রদেয় — হেডারে বাছা শাখায় (৩০ সেপ্টেম্বর ২০২৬), একই
+         * ছাঁকনিতে; নাহলে শেষ সারির চলমান জের মাথার অঙ্কের সাথে মিলত না। ⛔ সীমার
+         * সতর্কতা ([[Supplier::isOverTheirLimit()]]) গোটা কোম্পানিতেই মাপা হয়।
+         */
+        $ledger = ViewedBranch::narrow(LedgerEntry::query(), 'ledger_entries.branch_id')
             ->forParty(Supplier::drillSourceType(), $supplier->id)
             ->orderBy('trx_date')
             ->orderBy('id');
@@ -270,9 +277,22 @@ class SupplierController extends Controller implements HasMiddleware
         return view('supplier::show', [
             'menu' => $this->menu->forUser($request->user()),
             'supplier' => $supplier->load(['partyType', 'paymentTerm', 'branch']),
-            'payable' => $supplier->payable(),
+            'payable' => $this->payableInView($supplier),
+            /* ⓘ এক শাখা বাছা থাকলে সব শাখা মিলিয়ে প্রদেয়ও — সীমা ওটা দিয়েই মাপা হয় */
+            'payableAll' => ViewedBranch::one() !== null ? $supplier->payable() : null,
             'entries' => $entries,
         ]);
+    }
+
+    /** মাথার প্রদেয় — খাতার সারির ঠিক সেই ছাঁকনিতে ([[show()]])। */
+    private function payableInView(Supplier $supplier): string
+    {
+        $net = ViewedBranch::narrow(LedgerEntry::query(), 'ledger_entries.branch_id')
+            ->forParty(Supplier::drillSourceType(), $supplier->id)
+            ->selectRaw('COALESCE(SUM(credit) - SUM(debit), 0) as net')
+            ->value('net') ?? 0;
+
+        return bcadd((string) $net, '0', 4);
     }
 
     public function edit(Request $request, Supplier $supplier): View
@@ -336,8 +356,8 @@ class SupplierController extends Controller implements HasMiddleware
     private function sorts(): array
     {
         return [
-            'payable_desc' => fn ($q) => $q->orderByDesc('payable_net')->orderBy('name_en'),
-            'payable_asc' => fn ($q) => $q->orderBy('payable_net')->orderBy('name_en'),
+            'payable_desc' => fn ($q) => $q->orderByDesc('payable_in_view')->orderBy('name_en'),
+            'payable_asc' => fn ($q) => $q->orderBy('payable_in_view')->orderBy('name_en'),
             'name' => fn ($q) => $q->orderBy('name_en'),
             'code' => fn ($q) => $q->orderBy('code'),
             'recent' => fn ($q) => $q->orderByDesc('created_at'),
