@@ -51,6 +51,11 @@ final class InvoiceDesigns
         /* ⭐ মালিকের ডিফল্ট, ৩০ সেপ্টেম্বর ২০২৬ — ইংরেজি, আর তার বাংলা রূপ */
         'mono_light' => 'sales::print.invoice-mono_light',
         'mono_light_bn' => 'sales::print.invoice-mono_light_bn',
+        'mono_bold' => 'sales::print.invoice-mono_bold',
+        'brutal_mono' => 'sales::print.invoice-brutal_mono',
+        'world_standard' => 'sales::print.invoice-world_standard',
+        'world_standard_bn' => 'sales::print.invoice-world_standard_bn',
+        'mono_bold_classic' => 'sales::print.invoice-mono_bold_classic',
     ];
 
     /** সেটিংয়ের বাছাইয়ের তালিকা — চলতি নকশা আগে, তারপর ছাঁচগুলো */

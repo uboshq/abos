@@ -191,14 +191,31 @@ final class AClassicTableInvoiceCanBeChosenTest extends TestCase
         $this->assertSame([], $tooWide, "ক্লাসিক বিলে অঙ্ক ঘর ছাড়িয়ে গেছে:\n".implode("\n", $tooWide));
     }
 
-    public function test_a_roll_paper_keeps_the_counter_receipt_even_when_classic_is_chosen(): void
+    /**
+     * ⭐ রোলে কখনো A4-এর ক্লাসিক নয় — থার্মালের নিজের তালিকার নকশা (৩০ সেপ্টেম্বর ২০২৬ থেকে প্রতিটা মাপের
+     * নিজের বাছাই; আগে রোলে সবসময় চলতি রসিদ ছাপত)।
+     */
+    public function test_a_roll_paper_never_gets_the_a4_classic_even_when_classic_is_chosen(): void
     {
         $this->choose('classic_table');
 
-        $seen = $this->printed($this->anInvoice(qty: '1', rate: '100.00'), paper: '80mm');
+        $thermal = \App\Modules\Sales\Support\PaperDesigns::template('invoice', 'thermal',
+            \App\Modules\Sales\Support\PaperDesigns::defaultFor('invoice', 'thermal'));
+        $this->assertNotNull($thermal);
 
-        $this->assertSame(self::STANDARD, $seen['view'],
-            '৮০মিমি রোলে তিন কলামের ক্লাসিক কাগজ গেছে — রোলে ওটা ধরে না।');
+        $drawn = [];
+        foreach ([self::CLASSIC, $thermal] as $view) {
+            View::composer($view, function () use (&$drawn, $view) {
+                $drawn[] = $view;
+            });
+        }
+
+        $this->actingAs($this->user)
+            ->get(route('sales.print.invoice', $this->anInvoice(qty: '1', rate: '100.00')).'?paper=80mm')
+            ->assertOk();
+
+        $this->assertNotContains(self::CLASSIC, $drawn, '৮০মিমি রোলে তিন কলামের ক্লাসিক কাগজ গেছে — রোলে ওটা ধরে না।');
+        $this->assertContains($thermal, $drawn, 'রোলে থার্মালের নিজের নকশা আঁকা হয়নি।');
     }
 
     /**

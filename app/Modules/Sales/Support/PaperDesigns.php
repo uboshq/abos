@@ -38,6 +38,7 @@ final class PaperDesigns
         'distributor_compact', 'ink_saver', 'premium_gold', 'split_copy', 'summary_first',
         'bw_ledger', 'bw_typewriter', 'bw_bilingual', 'classic_table', 'half_page',
         'swiss_grid', 'editorial_serif', 'modern_card', 'seal_boxes', 'statement', 'statement_ledger',
+        'mono_light', 'mono_light_bn', 'mono_bold', 'brutal_mono', 'world_standard', 'world_standard_bn', 'mono_bold_classic',
     ];
 
     /** মালিকের ক্রম — বিলের থার্মাল */
@@ -45,6 +46,7 @@ final class PaperDesigns
         'hero_total', 'qr_first', 'clean_air', 'bold_block', 'big_number', 'supermarket', 'pos_standard',
         'retail_box', 'bank_slip', 'two_language', 'bangla', 'compact', 'ink_saver', 'cut_stub',
         'summary_first', 'ledger_grid', 'account', 'movement', 'seal_boxes', 'serif', 'swiss',
+        'mono_light', 'mono_light_bn', 'mono_bold', 'brutal_mono', 'world_standard', 'world_standard_bn', 'mono_bold_classic',
     ];
 
     /** মালিকের ক্রম — চালান, অর্ডার, আদায় রসিদ (আর ভাউচার, Accounts-এর নিজের তালিকায়) */
@@ -67,10 +69,10 @@ final class PaperDesigns
     {
         /*
          * ⭐ ৩০ সেপ্টেম্বর ২০২৬, পরে: *"ok eigulo kei defolt korte bolo keu select na korle egulotei print hobe"* —
-         * বিল আর চালানের A4 "মোনো ক্লাসিক হালকা"। A5 আর থার্মাল আগের মতো, ঐ মাপের রূপ না আসা পর্যন্ত।
+         * বিল আর চালানের "মোনো ক্লাসিক হালকা" — A4, আর A5 ও থার্মালের রূপ আসার পর তিন মাপেই (abos-3c)।
          */
         return match (true) {
-            in_array($paper, ['invoice', 'challan'], true) && $size === 'a4' => 'mono_light',
+            in_array($paper, ['invoice', 'challan'], true) => 'mono_light',
             $paper === 'invoice' && $size === 'thermal' => 'pos_standard',
             $paper === 'invoice' => 'classic_table',
             default => 'tally_classic',

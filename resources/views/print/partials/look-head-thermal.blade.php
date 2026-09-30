@@ -14,7 +14,8 @@
     $rule = $lk->thermalRule();
     $logoImg = $head['logo'] ? '<img src="'.e($head['logo']).'" style="height: 11mm;" alt="">' : '';
     $all = array_values(array_filter(array_map('strval', (array) ($notices ?? [])), fn ($n) => $n !== ''));
-    $dupText = (string) __('core.print.duplicate_notice');
+    // ⭐ নম্বরসহ লেখা, চেনা শুরুর শব্দে — [[PrintableDocument::isDuplicateNotice()]]
+    $dupText = (string) (collect($all)->first(fn ($n) => \App\Core\Engines\Print\PrintableDocument::isDuplicateNotice($n)) ?? "\0");
     $isDup = in_array($dupText, $all, true);
     $loud = array_values(array_filter($all, fn ($n) => $n !== $dupText));
     $meta = implode(' · ', array_filter([$head['address'], $head['contact']]));

@@ -86,8 +86,8 @@ return [
         'method' => 'কোন পথে',
         'narration' => 'বিবরণ',
         'amount' => 'টাকা',
-        // ⭐ পুরো লেখা, শিরোনামের নিচে — মালিক, ৩০ সেপ্টেম্বর ২০২৬; core.print.duplicate_notice-এর সেই একই কথা
-        'duplicate' => 'DUPLICATE — এই কাগজটি আগেও ছাপা হয়েছে',
+        // ⓘ নম্বরসহ লেখা ("DUPLICATE — Print No. 3") [[InvoicePaperView::duplicateIn()]] বানায়; এটা কেবল ফেরত-লেখা
+        'duplicate' => 'DUPLICATE',
         'received_by' => 'গ্রহণকারী/পরিবহক',
         'prepared_by' => 'প্রস্তুতকারী',
         'bin' => 'BIN:',

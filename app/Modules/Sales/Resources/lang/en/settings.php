@@ -103,6 +103,11 @@ return [
         'bank_form' => 'Bank Form',
         'mono_light' => 'Mono Classic Light',
         'mono_light_bn' => 'Mono Classic Light (Bangla)',
+        'mono_bold' => 'Mono Bold',
+        'brutal_mono' => 'Neo-Brutal Mono',
+        'world_standard' => 'World Standard',
+        'world_standard_bn' => 'World Standard (Bangla)',
+        'mono_bold_classic' => 'Mono Bold Classic',
     ],
     'invoice_info' => [
         'header' => [

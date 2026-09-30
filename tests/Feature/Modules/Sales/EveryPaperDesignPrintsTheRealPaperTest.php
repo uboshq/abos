@@ -138,14 +138,14 @@ final class EveryPaperDesignPrintsTheRealPaperTest extends TestCase
     public function test_the_lists_are_not_empty_where_the_owner_approved_designs(): void
     {
         /* ⛔ ফাঁকা তালিকা হলে উপরের পরীক্ষাগুলো কিছুই না ছেপে সবুজ হত */
-        $this->assertCount(22, PaperDesigns::codes('invoice', 'a4'));
-        $this->assertCount(21, PaperDesigns::codes('invoice', 'a5'));
-        $this->assertCount(21, PaperDesigns::codes('invoice', 'thermal'));
+        $this->assertCount(27, PaperDesigns::codes('invoice', 'a4'));
+        $this->assertCount(28, PaperDesigns::codes('invoice', 'a5'));
+        $this->assertCount(28, PaperDesigns::codes('invoice', 'thermal'));
 
         foreach (['challan', 'order', 'receipt'] as $paper) {
             foreach (PaperDesigns::SIZES as $size) {
                 /* ⓘ চালানের A4-এ মালিকের ডিফল্ট "মোনো ক্লাসিক হালকা"-র দুই রূপ বাড়তি */
-                $this->assertCount($paper === 'challan' && $size === 'a4' ? 22 : 20, PaperDesigns::codes($paper, $size), "{$paper}/{$size}");
+                $this->assertCount($paper === 'challan' ? 22 : 20, PaperDesigns::codes($paper, $size), "{$paper}/{$size}");
             }
         }
 
@@ -163,8 +163,8 @@ final class EveryPaperDesignPrintsTheRealPaperTest extends TestCase
         $invoice = $this->invoice();
 
         $this->assertDrawn('sales::print.invoice-mono_light', route('sales.print.invoice', $invoice).'?paper=a4', 'invoice/a4 default');
-        $this->assertDrawn('sales::print.invoice-a5_classic_table', route('sales.print.invoice', $invoice).'?paper=a5', 'invoice/a5 default');
-        $this->assertDrawn('sales::print.invoice-thermal_pos_standard', route('sales.print.invoice', $invoice).'?paper=80mm', 'invoice/thermal default');
+        $this->assertDrawn('sales::print.invoice-a5_mono_light', route('sales.print.invoice', $invoice).'?paper=a5', 'invoice/a5 default');
+        $this->assertDrawn('sales::print.invoice-thermal_mono_light', route('sales.print.invoice', $invoice).'?paper=80mm', 'invoice/thermal default');
         $this->assertDrawn('sales::print.challan-mono_light', route('sales.print.challan', $challan).'?paper=a4', 'challan/a4 default');
         $this->assertDrawn('print.voucher-tally_classic', route('accounts.voucher.print', $this->voucher()).'?paper=a4', 'voucher/a4 default');
     }

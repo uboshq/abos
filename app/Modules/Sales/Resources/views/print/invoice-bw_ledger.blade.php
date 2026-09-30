@@ -32,7 +32,8 @@
         ? trim((string) ($facts['scan_url'] ?? ''))
         : '';
 
-    $duplicate = __('core.print.duplicate_notice');
+    // ⭐ নম্বরসহ লেখা ("DUPLICATE — Print No. 3"), চেনা শুরুর শব্দে — [[PrintableDocument::duplicateNotice()]]
+    $duplicate = $doc->duplicateNotice() ?? "\0";
     $notices = $doc->notices();
     $isDuplicate = in_array($duplicate, $notices, true);
     $loud = array_values(array_filter($notices, fn (string $n) => $n !== $duplicate));
@@ -148,7 +149,7 @@
                 @endif
             </div>
             @if ($isDuplicate && $show('duplicate'))
-                <div class="dup" data-duplicate>{{ $en('duplicate') }}</div>
+                <div class="dup" data-duplicate>{{ $duplicate }}</div>
             @endif
         </td>
     </tr>

@@ -688,7 +688,7 @@ return [
         'no_price_notice' => 'Prices are not shown on this document',
 
         // Second and later prints of the same paper
-        'duplicate_notice' => 'DUPLICATE — this paper has been printed before',
+        'duplicate_notice' => 'DUPLICATE — Print No. :n',
 
         // A cancelled paper looks exactly like a valid one; the line is the only difference
         'cancelled_notice' => 'CANCELLED — this document has been cancelled and is not valid',

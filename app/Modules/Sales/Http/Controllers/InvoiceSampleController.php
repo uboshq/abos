@@ -88,7 +88,7 @@ class InvoiceSampleController extends Controller implements HasMiddleware
         /* ⓘ DUPLICATE ছাপসহ — সুইচটা বন্ধ করলে নমুনায় সেটা মিলিয়ে দেখা যায় */
         $doc = new PrintableDocument(
             title: __('sales::doc.invoice'),
-            notice: __('core.print.duplicate_notice'),
+            notice: __('core.print.duplicate_notice', ['n' => 2]),
             payments: [[
                 'no' => 1, 'ref' => 'RV-0000', 'date' => $today, 'method' => $s('method'),
                 'narration' => '', 'amount' => '5,000.00',

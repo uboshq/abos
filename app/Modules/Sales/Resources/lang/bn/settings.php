@@ -103,6 +103,11 @@ return [
         'bank_form' => 'ব্যাংক ফর্ম',
         'mono_light' => 'মোনো ক্লাসিক হালকা',
         'mono_light_bn' => 'মোনো ক্লাসিক হালকা (বাংলা)',
+        'mono_bold' => 'মোনো সাহসী',
+        'brutal_mono' => 'নিও-ব্রুটাল সাদা-কালো',
+        'world_standard' => 'বিশ্ব-মানক',
+        'world_standard_bn' => 'বিশ্ব-মানক (বাংলা)',
+        'mono_bold_classic' => 'মোনো সাহসী ক্লাসিক',
     ],
     'invoice_info' => [
         'header' => [

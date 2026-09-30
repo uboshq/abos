@@ -6,7 +6,10 @@ namespace App\Modules\Sales\Support;
 
 use App\Core\Engines\Print\PrintableDocument;
 use App\Core\Engines\Print\PrintProfile;
+use App\Core\Support\DateFormat;
+use App\Core\Support\Money;
 use App\Models\Company;
+use Illuminate\Support\Facades\Lang;
 
 /**
  * বিলের প্রতিটা নকশা যা জিজ্ঞেস করে — একবার গুনে, এক জায়গায়।
@@ -31,6 +34,9 @@ final class InvoicePaperView
 
     /** DUPLICATE ছোট ছাপ — কেবল দ্বিতীয় ছাপা থেকে, আর সুইচ চালু থাকলে */
     public readonly bool $duplicate;
+
+    /** কততম ছাপা — DUPLICATE ছাপে দেখাতে; প্রথম ছাপায় '' */
+    public readonly string $copyNo;
 
     /** বাকি সতর্কবার্তা (যেমন বাতিল) — এগুলো সবসময় বড় করে */
     /** @var list<string> */
@@ -66,10 +72,12 @@ final class InvoicePaperView
         $this->signatures = $this->look->signatures();
         $this->footnote = $this->look->footnote();
 
-        $mark = __('core.print.duplicate_notice');
+        $mark = $doc->duplicateNotice();
         $all = $doc->notices();
-        $this->duplicate = in_array($mark, $all, true) && $this->shows('duplicate');
-        $this->notices = array_values(array_filter($all, fn (string $n) => $n !== $mark));
+        $this->duplicate = $mark !== null && $this->shows('duplicate');
+        // ⓘ কততম ছাপা — লেখার শেষের সংখ্যা; ঘর যে ভাষায় লেখে সেই ভাষায় আবার বানাতে ([[en()]])
+        $this->copyNo = $mark !== null && preg_match('/(\d+)\s*$/', $mark, $m) === 1 ? $m[1] : '';
+        $this->notices = array_values(array_filter($all, fn (string $n) => ! PrintableDocument::isDuplicateNotice($n)));
 
         $this->sums = $facts['sums'];
         $this->showVat = bccomp(str_replace(',', '', (string) $this->sums['vat']), '0', 4) !== 0;
@@ -92,6 +100,18 @@ final class InvoicePaperView
         $this->logo = $profile->shows('logo') ? $company->logoData() : null;
     }
 
+    /**
+     * ⭐ "DUPLICATE — Print No. 3" — নকশাগুলো `en('duplicate')` ডাকে, তাই নম্বর এখানে একবার, ৪১টা ছাঁচে নয়।
+     */
+    private function duplicateIn(string $key, string $locale): ?string
+    {
+        if ($key !== 'duplicate' || $this->copyNo === '') {
+            return null;
+        }
+
+        return (string) __('core.print.duplicate_notice', ['n' => $this->copyNo], $locale);
+    }
+
     /** একটা দেখানো/লুকানোর সুইচ — [[InvoicePrintLook::shows()]] */
     public function shows(string $what): bool
     {
@@ -101,13 +121,13 @@ final class InvoicePaperView
     /** ঘরের নাম, ইংরেজিতে — ক্লাসিকের সেই একই লেখা */
     public function en(string $key, array $replace = []): string
     {
-        return (string) __('sales::print.classic.'.$key, $replace, 'en');
+        return $this->duplicateIn($key, 'en') ?? (string) __('sales::print.classic.'.$key, $replace, 'en');
     }
 
     /** ঘরের নাম, বাংলায় */
     public function bn(string $key, array $replace = []): string
     {
-        return (string) __('sales::print.classic.'.$key, $replace, 'bn');
+        return $this->duplicateIn($key, 'bn') ?? (string) __('sales::print.classic.'.$key, $replace, 'bn');
     }
 
     /** ঘরের নাম, যেকোনো ভাষায় — `en` বা `bn` */
@@ -186,7 +206,7 @@ final class InvoicePaperView
             ];
         }
 
-        $money = fn (string $x) => $x === '' ? '' : \App\Core\Support\Money::format($x);
+        $money = fn (string $x) => $x === '' ? '' : Money::format($x);
 
         return array_map(fn (array $r) => [
             ...$r,
@@ -201,7 +221,7 @@ final class InvoicePaperView
     {
         $key = 'sales::print.classic.scan_hint';
 
-        return \Illuminate\Support\Facades\Lang::has($key, 'bn') ? (string) __($key, [], 'bn') : '';
+        return Lang::has($key, 'bn') ? (string) __($key, [], 'bn') : '';
     }
 
     /** নিচের "ছাপার সময়" লাইন */
@@ -209,6 +229,6 @@ final class InvoicePaperView
     {
         $who = auth()->check() ? ' · '.auth()->user()->name : '';
 
-        return $this->en('printed_at').' '.\App\Core\Support\DateFormat::formatWithTime(now()).$who;
+        return $this->en('printed_at').' '.DateFormat::formatWithTime(now()).$who;
     }
 }

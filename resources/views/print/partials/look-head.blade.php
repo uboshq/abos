@@ -32,7 +32,8 @@
      * বৈধতার প্রশ্ন, আর বাক্সটা চোখে পড়ার জন্যই।
      */
     $all = array_values(array_filter(array_map('strval', (array) ($notices ?? ($notice ?? []))), fn ($n) => $n !== ''));
-    $dupText = (string) __('core.print.duplicate_notice');
+    // ⭐ নম্বরসহ লেখা, চেনা শুরুর শব্দে — [[PrintableDocument::isDuplicateNotice()]]
+    $dupText = (string) (collect($all)->first(fn ($n) => \App\Core\Engines\Print\PrintableDocument::isDuplicateNotice($n)) ?? "\0");
     $dupHtml = in_array($dupText, $all, true)
         ? '<div data-duplicate style="margin-top: 1mm"><span style="background: #b42318; color: #fff; font-weight: bold; font-size: 8pt; padding: 0.6mm 2mm; font-family: hindsiliguri">'.e($dupText).'</span></div>'
         : '';

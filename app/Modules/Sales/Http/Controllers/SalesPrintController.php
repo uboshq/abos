@@ -1459,7 +1459,8 @@ class SalesPrintController extends Controller implements HasMiddleware
         }
 
         if ($job?->isReprint()) {
-            $doc = $doc->withNotice(__('core.print.duplicate_notice'));
+            // ⭐ কততম ছাপা — আগে যতবার + এইবার (মালিক, ৩০ সেপ্টেম্বর ২০২৬)
+            $doc = $doc->withNotice(__('core.print.duplicate_notice', ['n' => $job->printed_count + 1]));
         }
 
         $locale = app()->getLocale();

@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Modules;
 
+use App\Core\Engines\Print\PrintableDocument;
+use App\Core\Services\SettingsService;
 use App\Core\Support\CompanyContext;
 use App\Models\AuditTrail;
 use App\Models\Company;
@@ -46,7 +48,7 @@ class ReprintTest extends TestCase
          * বিলের ডিফল্ট ক্লাসিক ([[AClassicTableInvoiceCanBeChosenTest]]), তাই নকশাটা এখানে
          * বেঁধে দেওয়া — নইলে পরীক্ষাটা মাপার কাগজই পেত না।
          */
-        app(\App\Core\Services\SettingsService::class)->set('sales.print.design.invoice', 'standard');
+        app(SettingsService::class)->set('sales.print.design.invoice', 'standard');
         $this->actingAs(User::query()->where('email', 'owner@abos.test')->firstOrFail());
 
         /*
@@ -98,7 +100,52 @@ class ReprintTest extends TestCase
     {
         $this->print();
 
-        $this->assertSame(__('core.print.duplicate_notice'), $this->print()['doc']->notice);
+        $this->assertSame(__('core.print.duplicate_notice', ['n' => 2]), $this->print()['doc']->notice);
+    }
+
+    /**
+     * ⭐ কততম ছাপা — মালিক, ৩০ সেপ্টেম্বর ২০২৬: *"DUPLICATE likhe koto tom print seta ullek korlei holo"*।
+     * ⓘ তৃতীয়বারে "Print No. 3" — দ্বিতীয়টা একা পাস করত এমন ভুলও ধরে (যেমন নম্বর সবসময় ২)।
+     */
+    public function test_the_third_print_says_it_is_the_third(): void
+    {
+        $this->print();
+        $this->print();
+        $notice = (string) $this->print()['doc']->notice;
+
+        $this->assertSame(__('core.print.duplicate_notice', ['n' => 3]), $notice);
+        $this->assertStringContainsString('3', $notice);
+        $this->assertTrue(PrintableDocument::isDuplicateNotice($notice), 'নম্বরসহ লেখাটা আর DUPLICATE বলে চেনা যায় না।');
+    }
+
+    /**
+     * ⚠️ বাতিল কাগজ আবার ছাপলে দুই কথাই — "বাতিল" আর কততম ছাপা; একটা আরেকটাকে ঢাকে না।
+     * ⓘ নম্বরওয়ালা লেখা বাতিলের বার্তার সাথে এক লাইনে জোড়া থাকে, তাই আলাদা করে চেনাটাই আসল পরীক্ষা।
+     */
+    public function test_a_cancelled_reprint_says_cancelled_and_its_number(): void
+    {
+        $this->print();
+        $this->invoice = app(SalesInvoiceService::class)->cancel($this->invoice->fresh(), 'test');
+
+        $doc = $this->print()['doc'];
+
+        $this->assertContains(__('core.print.cancelled_notice'), $doc->notices());
+        $this->assertSame(__('core.print.duplicate_notice', ['n' => 2]), $doc->duplicateNotice());
+    }
+
+    /**
+     * ⛔ দুই ভাষার লেখাই চিহ্ন দিয়ে শুরু — নইলে কেউ অনুবাদ বদলালে ছাঁচগুলো DUPLICATE আর চিনত না, আর কাগজ থেকে
+     * দাগটা চুপচাপ উঠে যেত ([[PrintableDocument::isDuplicateNotice()]])।
+     */
+    public function test_both_languages_start_with_the_duplicate_mark(): void
+    {
+        foreach (['en', 'bn'] as $locale) {
+            $this->assertStringStartsWith(
+                PrintableDocument::DUPLICATE_MARK,
+                (string) __('core.print.duplicate_notice', ['n' => 7], $locale),
+                "{$locale}: DUPLICATE-এর লেখা চিহ্ন দিয়ে শুরু হয় না।",
+            );
+        }
     }
 
     /** গোনাটা বাড়ে, আর সেটাই সিদ্ধান্তের ভিত্তি। */

@@ -127,7 +127,7 @@ abstract class PaperSampleController extends Controller implements HasMiddleware
             lines: $lines,
             totals: $totals,
             signatures: $signatures,
-            notice: __('core.print.duplicate_notice'),
+            notice: __('core.print.duplicate_notice', ['n' => 2]),
         );
     }
 

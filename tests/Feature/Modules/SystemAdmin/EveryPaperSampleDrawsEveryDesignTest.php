@@ -89,6 +89,33 @@ final class EveryPaperSampleDrawsEveryDesignTest extends TestCase
         }
     }
 
+    /**
+     * ⭐ প্রতিটা নকশা কাগজে কততম ছাপা লেখে — মালিক, ৩০ সেপ্টেম্বর ২০২৬: *"DUPLICATE likhe koto tom print seta ullek
+     * korlei holo"*। ⓘ নমুনা দ্বিতীয় ছাপা ধরে বানানো, তাই প্রতিটা কাগজে "… Print No. 2"।
+     * ⚠️ চিহ্ন (`data-duplicate`) থাকলেই হবে না — নকশা নম্বর ফেলে কেবল "DUPLICATE" লিখলে সুইচের দাবি সবুজই থাকত।
+     */
+    public function test_every_design_prints_which_copy_it_is(): void
+    {
+        // ⓘ নকশা নিজের ভাষায় লেখে (ইংরেজি নকশা ইংরেজিতে, বাংলা নকশা বাংলায়) — তাই দুই ভাষার যেকোনোটা
+        $expected = array_map(fn (string $l) => e((string) __('core.print.duplicate_notice', ['n' => 2], $l)), ['en', 'bn']);
+        $routes = ['invoice' => 'sales.invoice_sample'] + self::SALES;
+
+        foreach ($routes as $paper => $route) {
+            foreach (PaperDesigns::SIZES as $size) {
+                foreach (PaperDesigns::codes($paper, $size) as $code) {
+                    $html = (string) $this->get(route($route, ['design' => $code, 'size' => $size]))->assertOk()->getContent();
+                    // ⚠️ লেখাটা DUPLICATE-এর নিজের ঘরে (শিরোনামের নিচে) থাকতে হবে — কাগজের কোথাও থাকলেই হবে না:
+                    // মাথা চিনতে না পারলে লেখাটা নিচের বড় সতর্ক-বাক্সে চলে যেত, আর মালিক ঠিক সেটাই না চেয়েছিলেন।
+                    $inMark = false;
+                    foreach ($expected as $text) {
+                        $inMark = $inMark || preg_match('/data-duplicate[^>]*>(?:\s*<[^>]+>)*[\s\-]*'.preg_quote($text, '/').'/u', $html) === 1;
+                    }
+                    $this->assertTrue($inMark, "{$paper} · {$size} · {$code}: কততম ছাপা DUPLICATE-এর ঘরে নেই।");
+                }
+            }
+        }
+    }
+
     public function test_an_unknown_design_falls_back_to_the_first_in_the_list(): void
     {
         foreach (self::SALES as $route) {

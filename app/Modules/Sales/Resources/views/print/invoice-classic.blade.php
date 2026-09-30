@@ -25,7 +25,8 @@
     $pad = 1.5;
 
     /* ⭐ DUPLICATE ছোট ছাপ কোণে; বাকি সতর্কবার্তা (যেমন বাতিল) আগের মতো বড় বাক্সে */
-    $duplicate = __('core.print.duplicate_notice');
+    // ⭐ নম্বরসহ লেখা ("DUPLICATE — Print No. 3"), চেনা শুরুর শব্দে — [[PrintableDocument::duplicateNotice()]]
+    $duplicate = $doc->duplicateNotice() ?? "\0";
     $notices = $doc->notices();
     $isDuplicate = in_array($duplicate, $notices, true);
 
@@ -176,7 +177,7 @@
             <div class="big-title">{{ $en('heading') }}</div>
 
             @if ($isDuplicate && $show('duplicate'))
-                <div class="dup-mark" data-duplicate>{{ $en('duplicate') }}</div>
+                <div class="dup-mark" data-duplicate>{{ $duplicate }}</div>
             @endif
         </td>
     </tr>

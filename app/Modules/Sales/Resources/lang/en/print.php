@@ -79,8 +79,8 @@ return [
         'method' => 'Payment Method',
         'narration' => 'Narration',
         'amount' => 'Amount',
-        // ⭐ পুরো লেখা, শিরোনামের নিচে — মালিক, ৩০ সেপ্টেম্বর ২০২৬; core.print.duplicate_notice-এর সেই একই কথা
-        'duplicate' => 'DUPLICATE — this paper has been printed before',
+        // ⓘ নম্বরসহ লেখা ("DUPLICATE — Print No. 3") [[InvoicePaperView::duplicateIn()]] বানায়; এটা কেবল ফেরত-লেখা
+        'duplicate' => 'DUPLICATE',
         'received_by' => 'Received by',
         'prepared_by' => 'Prepared by',
         'bin' => 'BIN:',
