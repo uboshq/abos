@@ -13,6 +13,7 @@ use App\Modules\Hr\Models\Employee;
 use App\Modules\Hr\Models\LeaveApplication;
 use App\Modules\Hr\Models\LeaveType;
 use App\Modules\Hr\Services\LeaveService;
+use App\Modules\Hr\Support\BranchReach;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
@@ -43,7 +44,8 @@ class LeaveController extends Controller implements HasMiddleware
 
     public function index(Request $request): View
     {
-        $query = LeaveApplication::query()
+        // ⭐ শাখার দেয়াল — কেবল নাগালের কর্মীদের আবেদন (চূড়ান্ত অডিট ⛔১৭, [[BranchReach]])
+        $query = $this->reach()->throughEmployee(LeaveApplication::query(), $request->user())
             ->with(['employee', 'leaveType', 'decider'])
             ->when($request->boolean('pending'), fn ($q) => $q->pending());
 
@@ -91,7 +93,7 @@ class LeaveController extends Controller implements HasMiddleware
     {
         return view('hr::leave.create', [
             'menu' => $this->menu->forUser($request->user()),
-            'employees' => Employee::query()->active()->orderBy('code')->get(),
+            'employees' => $this->reach()->employees(Employee::query(), $request->user())->active()->orderBy('code')->get(),
             'types' => LeaveType::query()->active()->orderBy('code')->get(),
         ]);
     }
@@ -111,8 +113,11 @@ class LeaveController extends Controller implements HasMiddleware
             'reason' => ['nullable', 'string', 'max:500'],
         ]);
 
+        $employee = Employee::query()->findOrFail($data['employee_id']);
+        abort_unless($this->reach()->reaches($request->user(), $employee), 403);
+
         $this->leave->apply(
-            Employee::query()->findOrFail($data['employee_id']),
+            $employee,
             LeaveType::query()->findOrFail($data['leave_type_id']),
             $data['from_date'],
             $data['to_date'],
@@ -127,7 +132,7 @@ class LeaveController extends Controller implements HasMiddleware
     public function approve(Request $request, int $application): RedirectResponse
     {
         $this->leave->approve(
-            LeaveApplication::query()->findOrFail($application),
+            $this->reachable($request, $application),
             $request->user(),
             $request->string('remarks')->toString() ?: null,
         );
@@ -142,7 +147,7 @@ class LeaveController extends Controller implements HasMiddleware
         ])['remarks'];
 
         $this->leave->reject(
-            LeaveApplication::query()->findOrFail($application),
+            $this->reachable($request, $application),
             $request->user(),
             $remarks,
         );
@@ -150,9 +155,9 @@ class LeaveController extends Controller implements HasMiddleware
         return back()->with('saved', __('hr::message.leave_rejected'));
     }
 
-    public function cancel(int $application): RedirectResponse
+    public function cancel(Request $request, int $application): RedirectResponse
     {
-        $this->leave->cancel(LeaveApplication::query()->findOrFail($application));
+        $this->leave->cancel($this->reachable($request, $application));
 
         return back()->with('saved', __('hr::message.leave_cancelled'));
     }
@@ -232,5 +237,24 @@ class LeaveController extends Controller implements HasMiddleware
         }
 
         return back()->with('saved', __('hr::message.leave_types_installed'));
+    }
+
+    /**
+     * আবেদনটা — কেবল কর্মী নাগালে থাকলে; নইলে ৪০৩ (চূড়ান্ত অডিট ⛔১৭)।
+     *
+     * ⛔ আগে `findOrFail` যেকোনো শাখার আবেদন খুলত: ঢাকায় সীমিত ব্যবস্থাপক নেত্রকোনার ছুটি অনুমোদন করতে পারতেন।
+     */
+    private function reachable(Request $request, int $application): LeaveApplication
+    {
+        $found = LeaveApplication::query()->with('employee')->findOrFail($application);
+
+        abort_unless($this->reach()->reaches($request->user(), $found->employee), 403);
+
+        return $found;
+    }
+
+    private function reach(): BranchReach
+    {
+        return app(BranchReach::class);
     }
 }

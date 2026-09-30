@@ -10,6 +10,7 @@ use App\Http\Controllers\Controller;
 use App\Modules\Hr\Models\Attendance;
 use App\Modules\Hr\Models\Employee;
 use App\Modules\Hr\Services\AttendanceService;
+use App\Modules\Hr\Support\BranchReach;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
@@ -65,7 +66,8 @@ class AttendanceController extends Controller implements HasMiddleware
     {
         $date = $this->chosenDate($request);
 
-        $employees = Employee::query()
+        // ⭐ শাখার দেয়াল — কেবল নাগালের কর্মী (চূড়ান্ত অডিট ⛔১৭, [[BranchReach]])
+        $employees = $this->reach()->employees(Employee::query(), $request->user())
             ->onPayrollFor($date)
             ->with(['department', 'designation'])
             ->orderBy('code')
@@ -78,7 +80,7 @@ class AttendanceController extends Controller implements HasMiddleware
          * উনিশটা আবার বাছতে হয় না — আর ভুল করে খালি রেখে সংরক্ষণ করলেও
          * আগেরগুলো মুছে যায় না।
          */
-        $existing = Attendance::query()
+        $existing = $this->reach()->throughEmployee(Attendance::query(), $request->user())
             ->whereDate('work_date', $date->toDateString())
             ->get()
             ->keyBy('employee_id');
@@ -101,6 +103,15 @@ class AttendanceController extends Controller implements HasMiddleware
             'rows.*.is_late' => ['nullable', 'boolean'],
             'rows.*.remarks' => ['nullable', 'string', 'max:191'],
         ]);
+
+        /*
+         * ⛔ নাগালের বাইরের কর্মীর হাজিরা নয় — চূড়ান্ত অডিট ⛔১৭। ⚠️ চুপচাপ বাদ দেওয়া নয়: তাহলে "৫ জন বসানো" দেখাত
+         * অথচ বসত ৪ জন, আর কেউ বুঝত না কেন; পুরো অনুরোধটাই ফেরে।
+         */
+        $reachable = $this->reach()->employees(Employee::query(), $request->user())
+            ->whereKey(array_keys($data['rows']))
+            ->count();
+        abort_unless($reachable === count($data['rows']), 403);
 
         $marked = $this->attendance->markDay($data['work_date'], $data['rows']);
 
@@ -129,7 +140,7 @@ class AttendanceController extends Controller implements HasMiddleware
          * লেখা থাকলে ফল হত একটা সাধারণ Collection, আর পেজার কিছুই
          * দেখাতে পারত না।
          */
-        $rows = Employee::query()
+        $rows = $this->reach()->employees(Employee::query(), $request->user())
             ->onPayrollFor($month->copy()->endOfMonth())
             ->orderBy('code')
             ->paginate(50)
@@ -168,5 +179,10 @@ class AttendanceController extends Controller implements HasMiddleware
         return filled($month)
             ? Carbon::parse((string) $month.'-01')
             : now()->startOfMonth();
+    }
+
+    private function reach(): BranchReach
+    {
+        return app(BranchReach::class);
     }
 }
