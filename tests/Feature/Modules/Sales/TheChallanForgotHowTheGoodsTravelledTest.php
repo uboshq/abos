@@ -16,6 +16,7 @@ use App\Modules\Sales\Services\DeliveryChallanService;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\View;
+use Tests\Concerns\PrintsTheStandardPaper;
 use Tests\TestCase;
 
 /**
@@ -32,6 +33,7 @@ use Tests\TestCase;
  */
 final class TheChallanForgotHowTheGoodsTravelledTest extends TestCase
 {
+    use PrintsTheStandardPaper;
     use RefreshDatabase;
 
     private Warehouse $warehouse;
@@ -46,6 +48,9 @@ final class TheChallanForgotHowTheGoodsTravelledTest extends TestCase
 
         $this->warehouse = Warehouse::query()->where('is_default', true)->firstOrFail();
         $this->actingAs(User::query()->where('email', 'owner@abos.test')->firstOrFail());
+
+        /* ⓘ এই দাবিগুলো সাধারণ কাগজের তথ্য মাপে — নকশা নয় ([[PrintsTheStandardPaper]]) */
+        $this->printTheStandardPaper();
     }
 
     /** ⭐ "নিজস্ব পরিবহন" — পাতায়, চালানের ছাপায়, গেটপাসে। */

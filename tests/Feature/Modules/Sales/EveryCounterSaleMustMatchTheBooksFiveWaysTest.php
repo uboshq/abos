@@ -32,6 +32,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\View;
 use Illuminate\Testing\TestResponse;
+use Tests\Concerns\PrintsTheStandardPaper;
 use Tests\TestCase;
 
 /**
@@ -64,6 +65,7 @@ use Tests\TestCase;
  */
 final class EveryCounterSaleMustMatchTheBooksFiveWaysTest extends TestCase
 {
+    use PrintsTheStandardPaper;
     use RefreshDatabase;
 
     private Company $company;
@@ -105,6 +107,9 @@ final class EveryCounterSaleMustMatchTheBooksFiveWaysTest extends TestCase
         ]);
 
         $this->dealer = $this->newDealer('0');
+
+        /* ⓘ এই দাবিগুলো সাধারণ কাগজের তথ্য মাপে — নকশা নয় ([[PrintsTheStandardPaper]]) */
+        $this->printTheStandardPaper();
     }
 
     // ══ ⓵ নগদে বিক্রি ═════════════════════════════════════════════════════

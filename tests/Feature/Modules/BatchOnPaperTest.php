@@ -21,6 +21,7 @@ use App\Modules\Sales\Services\SalesInvoiceService;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\View;
+use Tests\Concerns\PrintsTheStandardPaper;
 use Tests\TestCase;
 
 /**
@@ -33,6 +34,7 @@ use Tests\TestCase;
  */
 class BatchOnPaperTest extends TestCase
 {
+    use PrintsTheStandardPaper;
     use RefreshDatabase;
 
     private Product $product;
@@ -62,6 +64,9 @@ class BatchOnPaperTest extends TestCase
 
         $this->product = Product::query()->firstOrFail();
         $this->product->forceFill(['track_batch' => true])->save();
+
+        /* ⓘ এই দাবিগুলো সাধারণ কাগজের তথ্য মাপে — নকশা নয় ([[PrintsTheStandardPaper]]) */
+        $this->printTheStandardPaper();
     }
 
     private function lot(string $batchNo, string $expiry, string $qty): Batch

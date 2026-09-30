@@ -19,6 +19,7 @@ use App\Modules\Sales\Models\DeliveryChallanLine;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\View;
+use Tests\Concerns\PrintsTheStandardPaper;
 use Tests\TestCase;
 
 /**
@@ -50,6 +51,7 @@ use Tests\TestCase;
  */
 final class TheDriverCouldReadEveryPriceOnThePaperTest extends TestCase
 {
+    use PrintsTheStandardPaper;
     use RefreshDatabase;
 
     private User $user;
@@ -63,6 +65,9 @@ final class TheDriverCouldReadEveryPriceOnThePaperTest extends TestCase
         CompanyContext::set($company->id, $company->defaultBranch()?->id);
 
         $this->user = User::query()->where('email', 'owner@abos.test')->firstOrFail();
+
+        /* ⓘ এই দাবিগুলো সাধারণ কাগজের তথ্য মাপে — নকশা নয় ([[PrintsTheStandardPaper]]) */
+        $this->printTheStandardPaper();
     }
 
     // ── আসল দাবি ──────────────────────────────────────────────────────

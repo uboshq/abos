@@ -21,6 +21,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\View;
 use Mpdf\Mpdf;
 use ReflectionMethod;
+use Tests\Concerns\PrintsTheStandardPaper;
 use Tests\TestCase;
 
 /**
@@ -60,6 +61,7 @@ use Tests\TestCase;
  */
 final class NoPrintedFigureOverflowsItsColumnTest extends TestCase
 {
+    use PrintsTheStandardPaper;
     use RefreshDatabase;
 
     /**
@@ -127,6 +129,9 @@ final class NoPrintedFigureOverflowsItsColumnTest extends TestCase
         $this->customer->forceFill(['credit_limit' => '0'])->save();
         $this->warehouse = Warehouse::query()->where('is_default', true)->firstOrFail();
         $this->product = Product::query()->firstOrFail();
+
+        /* ⓘ এই দাবিগুলো সাধারণ কাগজের তথ্য মাপে — নকশা নয় ([[PrintsTheStandardPaper]]) */
+        $this->printTheStandardPaper();
     }
 
     /**
