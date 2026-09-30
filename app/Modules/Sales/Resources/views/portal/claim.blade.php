@@ -10,7 +10,7 @@
     <p class="mb-4 text-sm text-(--color-ink-muted)">{{ __('sales::portal.claim_hint') }}</p>
 
     <form method="POST" action="{{ route('sales.portal.claim.store') }}"
-          x-data="{ method: '{{ old('method', 'bank') }}' }"
+          x-data="{ method: @js(old('method', 'bank')) }"
           class="grid gap-3 rounded-(--radius-card) border border-(--color-border)
                  bg-(--color-surface-card) p-4">
         @csrf

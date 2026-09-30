@@ -28,7 +28,7 @@
     @endif
 
     <form method="POST" action="{{ route('accounts.asset.store') }}"
-          x-data="{ method: '{{ old('method', \App\Modules\Accounts\Models\FixedAsset::STRAIGHT_LINE) }}' }"
+          x-data="{ method: @js(old('method', \App\Modules\Accounts\Models\FixedAsset::STRAIGHT_LINE)) }"
           class="grid gap-3 rounded-(--radius-card) border border-(--color-border)
                  bg-(--color-surface-card) p-4 md:grid-cols-2 lg:grid-cols-4">
         @csrf
@@ -132,7 +132,7 @@
              ⓘ শেষ বিকল্পটা ("আগেই বসানো") না রাখলে পুরনো অভ্যাসে যিনি
              ভাউচার কেটে আসেন, তাঁর কেনা দুইবার খাতায় উঠত। --}}
         <fieldset class="md:col-span-2 lg:col-span-4"
-                  x-data="{ funded: '{{ old('funded_by', \App\Modules\Accounts\Services\FixedAssetService::FUNDED_CAPITAL) }}' }">
+                  x-data="{ funded: @js(old('funded_by', \App\Modules\Accounts\Services\FixedAssetService::FUNDED_CAPITAL)) }">
             <legend class="text-sm font-medium">{{ __('accounts::asset.funded_by') }}</legend>
             <p class="mb-2 text-2xs text-(--color-ink-muted)">{{ __('accounts::asset.funded_by_note') }}</p>
 

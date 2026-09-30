@@ -25,7 +25,7 @@
          বন্ধ করে দেয় (AlpineAttributesAreWellFormedTest এই ভুলটাই
          ধরে, ক্রয়ের পর্দা একবার এভাবেই মরেছিল)। --}}
     <form method="POST" action="{{ route('accounts.loan.store') }}"
-          x-data="{ kind: '{{ old('kind', \App\Modules\Accounts\Models\Loan::TERM) }}', busy: false }"
+          x-data="{ kind: @js(old('kind', \App\Modules\Accounts\Models\Loan::TERM)), busy: false }"
           @submit="busy ? $event.preventDefault() : (busy = true)"
           class="max-w-screen-2xl space-y-4">
         @csrf

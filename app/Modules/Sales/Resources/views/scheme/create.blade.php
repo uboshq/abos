@@ -28,7 +28,7 @@
     <section data-boxed class="rounded-(--radius-card) border border-(--color-border)
                     bg-(--color-surface-card) p-4">
         <form method="POST" action="{{ route('sales.scheme.store') }}"
-              x-data="{ appliesTo: '{{ old('applies_to', \App\Modules\Sales\Models\Scheme::ALL) }}' }"
+              x-data="{ appliesTo: @js(old('applies_to', \App\Modules\Sales\Models\Scheme::ALL)) }"
               class="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
             @csrf
 

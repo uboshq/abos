@@ -43,7 +43,7 @@
 
             <h2 class="mb-3 font-semibold">{{ __('core.custom_field.add') }}</h2>
 
-            <div x-data="{ type: '{{ old('type', 'text') }}' }" class="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            <div x-data="{ type: @js(old('type', 'text')) }" class="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
                 <x-ui.select name="entity" :label="__('core.custom_field.entity')"
                              :options="collect($entities)->mapWithKeys(fn ($label, $key) => [$key => __('core.source.'.$key).' — '.$label])"
                              :selected="old('entity')" placeholder="-" required />
