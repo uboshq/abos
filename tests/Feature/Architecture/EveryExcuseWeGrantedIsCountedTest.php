@@ -46,6 +46,8 @@ final class EveryExcuseWeGrantedIsCountedTest extends TestCase
         'EveryMasterNamesItsDuplicateGuardTest::EXEMPT',
         'EveryPolicyRuleIsActuallyReachedTest::REACHED_WITHOUT_A_ROUTE',
         'EveryPortalScreenAsksTheNarrowPathTest::HANDLED',
+        // ⚠️ কোম্পানি না-ছাঁকা `exists` — Accounts-এর বাইরে বাকি, সংখ্যা কেবল কমে (চূড়ান্ত অডিট ⛔১০)
+        'EveryExistsRuleNamesItsCompanyTest::NOT_YET',
         'EveryRawQueryNamesItsCompanyTest::DECLARED',
         // ⚠️ দেয়াল ছাড়া চলা রিপোর্ট — সারিগুলো কোনো শাখার নয় (অডিট ২৭ সেপ্টেম্বর, §৩)
         'EveryReportStandsBehindTheBranchWallTest::SAME_FOR_EVERYONE',
@@ -241,7 +243,13 @@ final class EveryExcuseWeGrantedIsCountedTest extends TestCase
      *   +২  MoneyIsNeverAFloat::FLOAT_IS_DELIBERATE — PaperLook আর থার্মালের partial: কাগজের মাপ
      *       (মিমি, pt), টাকা নয়; নতুন নকশার A5 আর থার্মাল রূপ ভগ্নাংশে ছোট হয়
      */
-    private const CEILING = 251;
+    /*
+     * ── ⚠️ ২৫১ → ২৬৫, ৩০ সেপ্টেম্বর ২০২৬ (abos-10) ─────────────────────
+     *   +১৪  EveryExistsRuleNamesItsCompanyTest::NOT_YET — নতুন পাহারা (চূড়ান্ত অডিট ⛔১০) যে ১৪টা
+     *        ফাইলে কোম্পানি না-ছাঁকা `exists` আগে থেকেই পেয়েছে। নতুন ফাঁক নয় — পুরনো ফাঁক প্রথমবার
+     *        গোনা; Accounts-এর সবগুলো সারানো, বাকিগুলো সারালে সংখ্যা আর এই ছাদ দুইটাই নামবে।
+     */
+    private const CEILING = 265;
 
     /*
      * ── ⚠️ ২২২ → ২২৪, ২৩ সেপ্টেম্বর ২০২৬ ───────────────────────────

@@ -174,7 +174,7 @@ class FixedAssetController extends Controller implements HasMiddleware
         $data = $request->validate([
             'name' => ['required', 'string', 'max:191'],
             'tag_no' => ['nullable', 'string', 'max:64'],
-            'asset_account_id' => ['required', 'integer', 'exists:accounts,id'],
+            'asset_account_id' => ['required', 'integer', Rule::exists('accounts', 'id')->where('company_id', CompanyContext::id())],
             'cost' => ['required', 'numeric', 'gt:0'],
             'salvage' => ['nullable', 'numeric', 'min:0'],
             'acquired_on' => ['required', 'date'],
@@ -198,15 +198,15 @@ class FixedAssetController extends Controller implements HasMiddleware
             'funded_by' => ['required', Rule::in(FixedAssetService::FUNDING_WAYS)],
             'funding_person_id' => [
                 Rule::requiredIf(fn () => $request->input('funded_by') === FixedAssetService::FUNDED_CAPITAL),
-                'nullable', 'integer', 'exists:mdm_people,id',
+                'nullable', 'integer', Rule::exists('mdm_people', 'id')->where('company_id', CompanyContext::id()),
             ],
             'funding_account_id' => [
                 Rule::requiredIf(fn () => $request->input('funded_by') === FixedAssetService::FUNDED_MONEY),
-                'nullable', 'integer', 'exists:accounts,id',
+                'nullable', 'integer', Rule::exists('accounts', 'id')->where('company_id', CompanyContext::id()),
             ],
             'funding_supplier_id' => [
                 Rule::requiredIf(fn () => $request->input('funded_by') === FixedAssetService::FUNDED_CREDIT),
-                'nullable', 'integer', 'exists:suppliers,id',
+                'nullable', 'integer', Rule::exists('suppliers', 'id')->where('company_id', CompanyContext::id()),
             ],
         ]);
 
@@ -268,7 +268,7 @@ class FixedAssetController extends Controller implements HasMiddleware
     {
         $data = $request->validate([
             'disposal_amount' => ['required', 'numeric', 'min:0'],
-            'into_account_id' => ['required', 'integer', 'exists:accounts,id'],
+            'into_account_id' => ['required', 'integer', Rule::exists('accounts', 'id')->where('company_id', CompanyContext::id())],
             'disposed_on' => ['required', 'date'],
         ]);
 

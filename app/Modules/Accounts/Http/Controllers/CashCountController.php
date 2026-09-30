@@ -6,6 +6,7 @@ namespace App\Modules\Accounts\Http\Controllers;
 
 use App\Core\Concerns\SortsLists;
 use App\Core\Services\MenuBuilder;
+use App\Core\Support\CompanyContext;
 use App\Http\Controllers\Controller;
 use App\Modules\Accounts\Models\CashCount;
 use App\Modules\Accounts\Models\CashTill;
@@ -14,6 +15,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 /**
@@ -100,7 +102,7 @@ class CashCountController extends Controller implements HasMiddleware
     public function store(Request $request): RedirectResponse
     {
         $validated = $request->validate([
-            'cash_till_id' => ['required', 'integer'],
+            'cash_till_id' => ['required', 'integer', Rule::exists('cash_tills', 'id')->where('company_id', CompanyContext::id())],
             'trx_date' => ['required', 'date', 'before_or_equal:today'],
             'narration' => ['nullable', 'string', 'max:500'],
             'counts' => ['required', 'array'],

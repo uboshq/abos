@@ -18,6 +18,7 @@ use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
 use Illuminate\Support\Collection;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 /**
@@ -111,11 +112,11 @@ class MoneyTransferController extends Controller implements HasMiddleware
     {
         $validated = $request->validate([
             'trx_date' => ['required', 'date', 'before_or_equal:today'],
-            'from_till_id' => ['required', 'integer'],
+            'from_till_id' => ['required', 'integer', Rule::exists('cash_tills', 'id')->where('company_id', CompanyContext::id())],
             // একটাই ঘর, দুই ধরনের গন্তব্য — "till:3" বা "account:12"
             'destination' => ['required', 'string', 'regex:/^(till|account):\d+$/'],
-            'given_by' => ['nullable', 'integer', 'exists:users,id'],
-            'received_by' => ['nullable', 'integer', 'exists:users,id'],
+            'given_by' => ['nullable', 'integer', Rule::exists('company_user', 'user_id')->where('company_id', CompanyContext::id())],
+            'received_by' => ['nullable', 'integer', Rule::exists('company_user', 'user_id')->where('company_id', CompanyContext::id())],
             'amount' => ['required', 'numeric', 'gt:0'],
             'narration' => ['nullable', 'string', 'max:500'],
         ]);

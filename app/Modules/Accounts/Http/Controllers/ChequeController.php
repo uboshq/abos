@@ -182,7 +182,7 @@ class ChequeController extends Controller implements HasMiddleware
     public function deposit(Request $request, Cheque $cheque): RedirectResponse
     {
         $data = $request->validate([
-            'bank_account_id' => ['nullable', 'integer'],
+            'bank_account_id' => ['nullable', 'integer', Rule::exists('accounts', 'id')->where('company_id', CompanyContext::id())],
         ]);
 
         $this->cheques->deposit($cheque, $data['bank_account_id'] ?? null);
@@ -193,7 +193,7 @@ class ChequeController extends Controller implements HasMiddleware
     public function clear(Request $request, Cheque $cheque): RedirectResponse
     {
         $data = $request->validate([
-            'bank_account_id' => ['nullable', 'integer'],
+            'bank_account_id' => ['nullable', 'integer', Rule::exists('accounts', 'id')->where('company_id', CompanyContext::id())],
         ]);
 
         $this->cheques->clear($cheque, $data['bank_account_id'] ?? null);

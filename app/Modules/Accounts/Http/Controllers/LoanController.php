@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Accounts\Http\Controllers;
 
 use App\Core\Services\MenuBuilder;
+use App\Core\Support\CompanyContext;
 use App\Http\Controllers\Controller;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Models\Loan;
@@ -179,8 +180,8 @@ class LoanController extends Controller implements HasMiddleware
             'sanctioned' => ['required', 'numeric', 'gt:0'],
             'interest_rate' => ['required', 'numeric', 'min:0', 'max:100'],
             'start_date' => ['required', 'date'],
-            'principal_account_id' => ['required', 'integer', 'exists:accounts,id'],
-            'interest_account_id' => ['required', 'integer', 'exists:accounts,id'],
+            'principal_account_id' => ['required', 'integer', Rule::exists('accounts', 'id')->where('company_id', CompanyContext::id())],
+            'interest_account_id' => ['required', 'integer', Rule::exists('accounts', 'id')->where('company_id', CompanyContext::id())],
             'security' => ['nullable', 'string', 'max:500'],
             'narration' => ['nullable', 'string', 'max:500'],
 
@@ -196,7 +197,7 @@ class LoanController extends Controller implements HasMiddleware
             'first_instalment_on' => ['nullable', 'date'],
 
             // টাকাটা কোথায় ঢুকল — টার্ম লোনে বাধ্যতামূলক
-            'into_account_id' => ['nullable', 'integer', 'exists:accounts,id'],
+            'into_account_id' => ['nullable', 'integer', Rule::exists('accounts', 'id')->where('company_id', CompanyContext::id())],
         ]);
 
         if ($data['kind'] === Loan::TERM) {
@@ -271,7 +272,7 @@ class LoanController extends Controller implements HasMiddleware
     {
         $data = $request->validate([
             'amount' => ['required', 'numeric', 'gt:0'],
-            'into_account_id' => ['required', 'integer', 'exists:accounts,id'],
+            'into_account_id' => ['required', 'integer', Rule::exists('accounts', 'id')->where('company_id', CompanyContext::id())],
             'trx_date' => ['nullable', 'date', 'before_or_equal:today'],
         ]);
 
@@ -294,7 +295,7 @@ class LoanController extends Controller implements HasMiddleware
             ->firstOrFail();
 
         $data = $request->validate([
-            'from_account_id' => ['required', 'integer', 'exists:accounts,id'],
+            'from_account_id' => ['required', 'integer', Rule::exists('accounts', 'id')->where('company_id', CompanyContext::id())],
             'trx_date' => ['nullable', 'date', 'before_or_equal:today'],
 
             /*
@@ -322,7 +323,7 @@ class LoanController extends Controller implements HasMiddleware
     {
         $data = $request->validate([
             'amount' => ['required', 'numeric', 'gt:0'],
-            'from_account_id' => ['required', 'integer', 'exists:accounts,id'],
+            'from_account_id' => ['required', 'integer', Rule::exists('accounts', 'id')->where('company_id', CompanyContext::id())],
             'trx_date' => ['nullable', 'date', 'before_or_equal:today'],
         ]);
 

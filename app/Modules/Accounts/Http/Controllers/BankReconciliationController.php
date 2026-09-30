@@ -6,6 +6,7 @@ namespace App\Modules\Accounts\Http\Controllers;
 
 use App\Core\Services\ImportRunner;
 use App\Core\Services\MenuBuilder;
+use App\Core\Support\CompanyContext;
 use App\Http\Controllers\Controller;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Models\BankReconciliation;
@@ -15,6 +16,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 /**
@@ -124,7 +126,7 @@ class BankReconciliationController extends Controller implements HasMiddleware
     public function store(Request $request): RedirectResponse
     {
         $data = $request->validate([
-            'bank_account_id' => ['required', 'integer', 'exists:accounts,id'],
+            'bank_account_id' => ['required', 'integer', Rule::exists('accounts', 'id')->where('company_id', CompanyContext::id())],
             'statement_date' => ['required', 'date'],
             'statement_balance' => ['required', 'numeric'],
             'narration' => ['nullable', 'string', 'max:500'],

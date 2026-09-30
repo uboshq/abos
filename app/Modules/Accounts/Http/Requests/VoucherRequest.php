@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Modules\Accounts\Http\Requests;
 
-use App\Core\Services\PartyRegistry;
 use App\Core\Contracts\KnowsWhereAPersonsMoneyBelongs;
 use App\Core\Contracts\TurnsATypedNameIntoAParty;
+use App\Core\Services\PartyRegistry;
 use App\Core\Support\CompanyContext;
 use App\Core\Support\Money;
 use App\Modules\Accounts\Models\Account;
@@ -398,7 +398,7 @@ class VoucherRequest extends FormRequest
              * দুই দিক থেকেই বন্ধ দরজা।
              */
             'carried_by' => ['nullable', 'integer',
-                Rule::exists('users', 'id')],
+                Rule::exists('company_user', 'user_id')->where('company_id', CompanyContext::id())],
             'moved_at' => ['nullable', 'date_format:H:i'],
 
             /*
@@ -423,7 +423,7 @@ class VoucherRequest extends FormRequest
              */
             'charge_borne_by' => ['nullable', Rule::in(['us', 'them'])],
             'transfer_mode_id' => ['nullable', 'integer',
-                Rule::exists('mdm_transfer_modes', 'id')],
+                Rule::exists('mdm_transfer_modes', 'id')->where('company_id', CompanyContext::id())],
 
             'from_branch' => ['nullable', 'string', 'max:120'],
             'from_account_name' => ['nullable', 'string', 'max:120'],

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Accounts\Http\Requests;
 
+use App\Core\Support\CompanyContext;
 use App\Modules\Accounts\Models\Account;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -81,7 +82,7 @@ class AccountRequest extends FormRequest
              * [[AccountService::assertCashHasAKeeper()]]-এ — যেখানে
              * জানা যায় খাতটা আদৌ নগদ কি না।
              */
-            'held_by' => ['nullable', 'integer', Rule::exists('users', 'id')],
+            'held_by' => ['nullable', 'integer', Rule::exists('company_user', 'user_id')->where('company_id', CompanyContext::id())],
 
             'is_active' => ['nullable', 'boolean'],
         ];
