@@ -157,6 +157,16 @@ Route::prefix('v1')
         Route::get('/me', MeController::class)->name('me');
 
         /*
+         * ⭐ কোম্পানি ও শাখা বদল — ফোনের সুইচার (১ অক্টোবর ২০২৬)।
+         *
+         * ⓘ `/me`-র মতোই `can:` নেই: এটা নিজের জায়গা বদলানো, ব্যবসার ডেটা নয় —
+         * ওয়েবের `company.switch`/`branch.switch`-ও কেবল লগইন চায়। ⛔ পাহারা
+         * নিয়মে: সদস্যপদ আর শাখার নাগাল ([[User::switchCompany()]]), আর
+         * `abilities:app` — refresh টোকেনে খোলে না।
+         */
+        Route::post('/workspace', \App\Http\Controllers\Api\WorkspaceApiController::class)->name('workspace');
+
+        /*
          * "আজ কেমন গেল" — চুক্তি §৮। ⚠️ `can:` নেই, ইচ্ছা করে: প্রতিটা ঘর
          * নিজের চাবি দেখে, আর চাবি না থাকলে ঘরটাই যায় না
          * ([[DashboardTodayController]])।
@@ -172,13 +182,13 @@ Route::prefix('v1')
          * ([[ApprovalApiController]]), আর বেতন ফোনে আসেই না।
          */
         Route::get('/approvals/pending', [ApprovalApiController::class, 'pending'])
-            ->middleware('can:approval.decide')
+            ->middleware(['can:approval.decide', \App\Http\Middleware\RefuseModulesOffOnThePhone::class.':approval'])
             ->name('approvals.pending');
         Route::post('/approvals/{approval}/approve', [ApprovalApiController::class, 'approve'])
-            ->middleware('can:approval.decide')
+            ->middleware(['can:approval.decide', \App\Http\Middleware\RefuseModulesOffOnThePhone::class.':approval'])
             ->name('approvals.approve');
         Route::post('/approvals/{approval}/reject', [ApprovalApiController::class, 'reject'])
-            ->middleware('can:approval.decide')
+            ->middleware(['can:approval.decide', \App\Http\Middleware\RefuseModulesOffOnThePhone::class.':approval'])
             ->name('approvals.reject');
 
         /*
@@ -259,12 +269,16 @@ Route::prefix('v1')
                 ->name('conflicts.resolve');
 
             Route::post('/{module}/push', [SyncController::class, 'push'])
+                ->middleware(\App\Http\Middleware\RefuseModulesOffOnThePhone::class)
                 ->name('push');
             Route::get('/{module}/pull', [SyncController::class, 'pull'])
+                ->middleware(\App\Http\Middleware\RefuseModulesOffOnThePhone::class)
                 ->name('pull');
             Route::post('/{module}/pull-complete', [SyncController::class, 'pullComplete'])
+                ->middleware(\App\Http\Middleware\RefuseModulesOffOnThePhone::class)
                 ->name('pull-complete');
             Route::get('/{module}/last-sync', [SyncController::class, 'lastSync'])
+                ->middleware(\App\Http\Middleware\RefuseModulesOffOnThePhone::class)
                 ->name('last-sync');
         });
     });

@@ -10,6 +10,7 @@ use App\Core\Engines\Report\ReportEngine;
 use App\Core\Engines\Report\ReportResult;
 use App\Core\Module\ModuleDefinition;
 use App\Core\Module\ModuleRegistry;
+use App\Core\Services\PhoneModules;
 use App\Core\Services\SettingsService;
 use App\Core\Support\CompanyContext;
 use App\Http\Controllers\Controller;
@@ -93,6 +94,11 @@ final class ReportApiController extends Controller
                 continue;
             }
 
+            /* ⭐ ফোনে বন্ধ মডিউলের রিপোর্ট তালিকাতেই নেই — [[PhoneModules]] */
+            if ($module !== null && ! app(PhoneModules::class)->isReachable($module->code)) {
+                continue;
+            }
+
             $list[] = [
                 'key' => $key,
                 'module' => $module?->code,
@@ -121,6 +127,14 @@ final class ReportApiController extends Controller
         $definition = $this->reports->get($key);
 
         abort_if($this->switchedOff($this->moduleOfEachReport()[$key] ?? null), 404);
+
+        /*
+         * ⛔ ফোনে বন্ধ মডিউল — ৪০৩ `module_off` ([[PhoneModules]])। ⓘ রপ্তানিও এই
+         * দরজা দিয়েই যায় ([[ReportExportApiController]]), তাই একটা দেয়ালেই দুইটা।
+         */
+        app(PhoneModules::class)
+            ->refuseUnlessReachable(($this->moduleOfEachReport()[$key] ?? null)?->code);
+
         abort_unless($this->mayRun($user, $definition), 403);
 
         /*

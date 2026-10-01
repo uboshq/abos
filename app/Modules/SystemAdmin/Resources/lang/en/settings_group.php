@@ -21,4 +21,6 @@ return [
 
     'screens' => 'Which screens appear',
     'counter' => 'Counter',
+    /* ⭐ ফোনের মডিউল-সুইচ — [[PhoneModules]], ১ অক্টোবর ২০২৬ */
+    'mobile' => 'Mobile app',
 ];

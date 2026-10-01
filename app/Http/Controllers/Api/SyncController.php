@@ -6,6 +6,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Core\Engines\Sync\SyncRegistry;
 use App\Core\Engines\Sync\SyncService;
+use App\Core\Services\PhoneModules;
 use App\Http\Controllers\Controller;
 use App\Models\SyncConflict;
 use App\Models\User;
@@ -43,7 +44,17 @@ class SyncController extends Controller
      */
     public function capabilities(): JsonResponse
     {
-        return response()->json($this->registry->capabilities());
+        /*
+         * ⭐ ফোনে বন্ধ মডিউল তালিকায় নেই — ফোন যা টানার পরিকল্পনা করে, দরজাও ঠিক
+         * তা-ই খোলে ([[RefuseModulesOffOnThePhone]], [[PhoneModules]])। ⓘ নইলে ফোন বন্ধ
+         * মডিউল টানতে গিয়ে প্রতিবার ৪০৩ পেত।
+         */
+        $phone = app(PhoneModules::class);
+
+        return response()->json(array_values(array_filter(
+            $this->registry->capabilities(),
+            fn (array $row): bool => $phone->isReachable((string) $row['module']),
+        )));
     }
 
     /**

@@ -137,7 +137,14 @@ final class SettingsService
             }
         }
 
-        return $this->definitions = $definitions + $this->menuSwitches($definitions);
+        /*
+         * ⭐ ফোনের মডিউল-সুইচ — `mobile.modules.<code>`, নিয়ম ধরে তৈরি (১ অক্টোবর ২০২৬)।
+         * ⓘ মেনুর সুইচের মতোই: কোনো মডিউল ঘোষণা করে না, তবু চেনা — নইলে `set()` অচেনা
+         * বলে ফিরিয়ে দিত। `'tab' => 'mobile'` কন্ট্রোল প্যানেলে নিজের ট্যাব বানায় ([[PhoneModules]])।
+         */
+        return $this->definitions = $definitions
+            + $this->menuSwitches($definitions)
+            + PhoneModules::definitionsFor($this->registry);
     }
 
     /**

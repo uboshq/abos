@@ -4,12 +4,15 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api;
 
+use App\Core\Services\DataScope;
 use App\Core\Services\MenuBuilder;
+use App\Core\Services\PhoneModules;
 use App\Core\Support\CompanyContext;
 use App\Http\Controllers\Controller;
 use App\Models\Branch;
 use App\Models\Company;
 use App\Models\User;
+use App\Models\UserDataScope;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -56,7 +59,11 @@ use Illuminate\Http\Request;
  */
 class MeController extends Controller
 {
-    public function __construct(private readonly MenuBuilder $menu) {}
+    public function __construct(
+        private readonly MenuBuilder $menu,
+        private readonly PhoneModules $phone,
+        private readonly DataScope $scope,
+    ) {}
 
     public function __invoke(Request $request): JsonResponse
     {
@@ -67,6 +74,24 @@ class MeController extends Controller
             'user' => $this->identity($user),
             'company' => $this->company(),
             'branch' => $this->branch(),
+
+            /*
+             * ⭐ কোথায় কোথায় যাওয়া যায় — ফোনের কোম্পানি/শাখা বাছাইয়ের তালিকা (১ অক্টোবর ২০২৬)।
+             *
+             * ⓘ বদলানোর দরজা [[WorkspaceApiController]]; তালিকা আর দরজা একই নিয়ম মানে —
+             * সদস্যপদ ([[User::companies()]]) আর শাখার নাগাল ([[DataScope]]), ওয়েবের
+             * হেডারের মতোই ([[ShellFacts]])। ⛔ ক্রমিক আইডি নয়, কেবল `public_id`।
+             */
+            'companies' => $this->companies($user),
+            'branches' => $this->branches($user),
+            'viewAllBranches' => (bool) ($user->view_all_branches ?? true),
+
+            /*
+             * ⭐ এই কোম্পানির ফোনে কোন মডিউল চালু — [[PhoneModules]]।
+             * ⓘ মেনু এমনিতেই ছাঁকা; তালিকাটা যায় যাতে অ্যাপ মেনুর বাইরের নিজের
+             * টাইল আর গভীর লিংকও একই সুইচে আটকাতে পারে।
+             */
+            'phoneModules' => $this->phone->onCodes(),
 
             /*
              * কার্যকর অনুমতির তালিকা — রোলের নাম নয়, চাবিগুলো।
@@ -150,6 +175,52 @@ class MeController extends Controller
     }
 
     /**
+     * মানুষটার সচল কোম্পানিগুলো — ওয়েবের সুইচারের তালিকা ([[ShellFacts::companies()]])।
+     *
+     * @return list<array<string, mixed>>
+     */
+    private function companies(User $user): array
+    {
+        return $user->companies()
+            ->orderBy('name_en')
+            ->get()
+            ->map(fn (Company $company): array => [
+                'public_id' => $company->public_id,
+                'code' => $company->code,
+                'name' => $company->name(),
+            ])
+            ->values()
+            ->all();
+    }
+
+    /**
+     * চলতি কোম্পানির সচল শাখা, মানুষটার নাগালের ভেতরে — [[ShellFacts::branches()]]-এর নিয়ম।
+     *
+     * @return list<array<string, mixed>>
+     */
+    private function branches(User $user): array
+    {
+        if (CompanyContext::id() === null) {
+            return [];
+        }
+
+        $allowed = $this->scope->idsFor($user, UserDataScope::BRANCH);
+
+        return Branch::query()
+            ->active()
+            ->when($allowed !== null, fn ($q) => $q->whereIn('id', $allowed))
+            ->orderBy('name_en')
+            ->get()
+            ->map(fn (Branch $branch): array => [
+                'public_id' => $branch->public_id,
+                'code' => $branch->code,
+                'name' => $branch->name(),
+            ])
+            ->values()
+            ->all();
+    }
+
+    /**
      * মেনু — ওয়েবের সাথে হুবহু একই ইঞ্জিন থেকে।
      *
      * ── ⚠️ URL পাঠানো হয় না, রুটের **নাম** পাঠানো হয় ─────────────────
@@ -188,7 +259,14 @@ class MeController extends Controller
                     $module['groups'] ?? [],
                 ),
             ],
-            $this->menu->forUser($user),
+            /*
+             * ⭐ ফোনে বন্ধ মডিউল মেনুতে আসে না — [[PhoneModules::isOn()]]।
+             * ⓘ ওয়েবের মেনু ছোঁয়া হয় না; এটা কেবল ফোনের উত্তর।
+             */
+            array_values(array_filter(
+                $this->menu->forUser($user),
+                fn (array $module): bool => $this->phone->isOn((string) $module['code']),
+            )),
         );
     }
 }

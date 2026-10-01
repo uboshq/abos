@@ -6,6 +6,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Core\Engines\Print\PaperSize;
 use App\Core\Services\PaperTrail;
+use App\Core\Services\PhoneModules;
 use App\Http\Controllers\Controller;
 use App\Http\Middleware\RefuseSwitchedOffScreens;
 use App\Http\Middleware\RefuseWorkWithoutALicence;
@@ -117,6 +118,13 @@ final class DocumentApiController extends Controller
         $user = $request->user();
 
         [$documentType, $class] = $this->printable()[$type] ?? abort(404);
+
+        /*
+         * ⛔ ফোনে বন্ধ মডিউলের কাগজ — ৪০৩ `module_off` ([[PhoneModules]])। মডিউল
+         * মডেলের নামস্থান থেকে (`App\Modules\Sales\…` → sales), হাতে লেখা তালিকা নয়।
+         */
+        $phone = app(PhoneModules::class);
+        $phone->refuseUnlessReachable($phone->moduleOfClass($class)?->code);
 
         /*
          * ⛔ কেবল `public_id` (চুক্তি §৩ ক) — ক্রমিক সংখ্যা এখানে কিছুই খোঁজে না।
