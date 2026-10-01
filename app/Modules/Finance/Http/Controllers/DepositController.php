@@ -106,7 +106,7 @@ class DepositController extends Controller implements HasMiddleware
              * ক্লিক করে আসেন — ড্যাশবোর্ডের টালির লিংকে ওটা নেই, তাই
              * ঐ সংখ্যাটার সাথে এখনো হুবহু মেলে।
              */
-            'deposits' => Deposit::query()
+            'deposits' => Deposit::query()->inViewedBranch()
                 ->with(['kind', 'movements'])
                 ->when($kind !== null, fn ($q) => $q->where('kind_id', $kind->id))
                 ->orderByRaw('CASE WHEN status = ? THEN 0 ELSE 1 END', [Deposit::ACTIVE])
@@ -159,8 +159,8 @@ class DepositController extends Controller implements HasMiddleware
 
             // ⓘ ট্যাবের পাশের গোনা — খোঁজায় ছাঁকা হয় না, ট্যাবের মোট সংখ্যা
             'counts' => [
-                'active' => Deposit::query()->issuedBy($issuer)->open()->count(),
-                'closed' => Deposit::query()->issuedBy($issuer)
+                'active' => Deposit::query()->inViewedBranch()->issuedBy($issuer)->open()->count(),
+                'closed' => Deposit::query()->inViewedBranch()->issuedBy($issuer)
                     ->where('status', '!=', Deposit::ACTIVE)->count(),
 
                 /*
@@ -168,12 +168,12 @@ class DepositController extends Controller implements HasMiddleware
                  * মেয়াদ বা বন্ধক নিয়ে আর কিছু করার নেই, আর গুনলে সংখ্যাটা
                  * রোজ বাড়ত আর কেউ ওটার দিকে তাকাত না।
                  */
-                'maturing' => Deposit::query()->issuedBy($issuer)->open()
+                'maturing' => Deposit::query()->inViewedBranch()->issuedBy($issuer)->open()
                     ->whereNotNull('matures_on')
                     ->where('matures_on', '<=', $maturingBy)
                     ->count(),
 
-                'pledged' => Deposit::query()->issuedBy($issuer)->open()
+                'pledged' => Deposit::query()->inViewedBranch()->issuedBy($issuer)->open()
                     ->whereNotNull('pledged_to_loan_id')
                     ->count(),
 
@@ -212,7 +212,7 @@ class DepositController extends Controller implements HasMiddleware
             'institutions' => $tab !== 'institution' ? [] : $this->byInstitution($issuer),
 
             'issuerCounts' => collect(DepositKind::ISSUERS)
-                ->mapWithKeys(fn (string $one) => [$one => Deposit::query()
+                ->mapWithKeys(fn (string $one) => [$one => Deposit::query()->inViewedBranch()
                     ->issuedBy($one)
                     ->when($tab === 'closed',
                         fn ($q) => $q->where('status', '!=', Deposit::ACTIVE),
@@ -224,7 +224,7 @@ class DepositController extends Controller implements HasMiddleware
                     ->count()])
                 ->all(),
 
-            'deposits' => Deposit::query()
+            'deposits' => Deposit::query()->inViewedBranch()
                 ->issuedBy($issuer)
                 ->when($tab === 'closed',
                     fn ($q) => $q->where('status', '!=', Deposit::ACTIVE),
@@ -325,7 +325,7 @@ class DepositController extends Controller implements HasMiddleware
     {
         $rows = [];
 
-        $deposits = Deposit::query()->issuedBy($issuer)->open()->get();
+        $deposits = Deposit::query()->inViewedBranch()->issuedBy($issuer)->open()->get();
 
         /*
          * ⚠️ নামগুলো একবারেই তোলা, সারি ধরে নয়। ⓘ আর সম্পর্কটা

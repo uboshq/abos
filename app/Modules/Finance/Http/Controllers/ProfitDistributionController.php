@@ -170,7 +170,7 @@ final class ProfitDistributionController implements HasMiddleware
              * দিয়েই ঠিক করে নিজে দেখা যাবে কি না।
              */
             'outstanding' => $this->distribution->outstanding(),
-            'history' => ProfitShare::query()
+            'history' => ProfitShare::query()->inViewedBranch()
                 ->posted()
                 ->with('person')
                 ->orderByDesc('trx_date')

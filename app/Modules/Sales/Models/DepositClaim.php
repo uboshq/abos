@@ -7,6 +7,7 @@ namespace App\Modules\Sales\Models;
 use App\Core\Concerns\BelongsToCompany;
 use App\Core\Concerns\HasPublicId;
 use App\Core\Concerns\IsAudited;
+use App\Core\Concerns\ListedInViewedBranch;
 use App\Models\Branch;
 use App\Models\User;
 use App\Modules\Accounts\Models\Account;
@@ -32,6 +33,7 @@ class DepositClaim extends Model
     use BelongsToCompany;
     use HasPublicId;
     use IsAudited;
+    use ListedInViewedBranch;
     use SoftDeletes;
 
     /** গ্রাহক তুলেছেন, ডিপো এখনো দেখেনি। */

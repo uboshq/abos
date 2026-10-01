@@ -7,6 +7,7 @@ namespace App\Modules\Finance\Models;
 use App\Core\Concerns\BelongsToCompany;
 use App\Core\Concerns\HasPublicId;
 use App\Core\Concerns\IsAudited;
+use App\Core\Concerns\ListedInViewedBranch;
 use App\Models\User;
 use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Builder;
@@ -26,6 +27,7 @@ class InsurancePolicy extends Model
     use BelongsToCompany;
     use HasPublicId;
     use IsAudited;
+    use ListedInViewedBranch;
 
     public const VEHICLE = 'vehicle';
 

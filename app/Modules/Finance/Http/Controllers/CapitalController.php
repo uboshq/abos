@@ -96,7 +96,7 @@ class CapitalController extends Controller implements HasMiddleware
              * ⓘ `person`-ও সাথেই — প্রতিটা সারিতে নামটা দেখানো হয়, আর
              * আলাদা করে আনলে পঞ্চাশ সারির পাতায় পঞ্চাশটা বাড়তি কোয়েরি হত।
              */
-            'entries' => CapitalEntry::query()->with(['account', 'person'])
+            'entries' => CapitalEntry::query()->inViewedBranch()->with(['account', 'person'])
                 ->when($personId, fn ($q, $id) => $q->where('person_id', $id))
                 /*
                  * ⭐ খোঁজা — টুলবারের ঘরটা সত্যিই কাজ করে (১৯ সেপ্টেম্বর ২০২৬)।

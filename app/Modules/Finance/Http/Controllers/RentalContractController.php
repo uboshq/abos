@@ -125,7 +125,7 @@ class RentalContractController extends Controller implements HasMiddleware
             : ($request->query('tab') === 'closed' || $request->boolean('closed')
                 ? 'closed' : 'running');
 
-        $query = RentalContract::query()
+        $query = RentalContract::query()->inViewedBranch()
             ->with(['account', 'expenseAccount'])
             ->when(
                 $tab === 'running',
@@ -166,7 +166,7 @@ class RentalContractController extends Controller implements HasMiddleware
         }
 
         if ($subject !== null) {
-            $query = RentalContract::query()
+            $query = RentalContract::query()->inViewedBranch()
                 ->with(['account', 'expenseAccount'])
                 ->forSubject($subject['type'], $subject['id'])
                 ->orderBy('ends_on');
@@ -196,13 +196,13 @@ class RentalContractController extends Controller implements HasMiddleware
              * জামানতের নয় লাখ ষাট হাজার ফেরত নিতে ভুলে যাওয়া এভাবেই
              * ঘটে — কাগজটা কোথাও থাকে, তারিখটা কারো মনে থাকে না।
              */
-            'endingSoon' => RentalContract::query()->endingSoon()->orderBy('ends_on')->get(),
+            'endingSoon' => RentalContract::query()->inViewedBranch()->endingSoon()->orderBy('ends_on')->get(),
             'tab' => $tab,
 
             // ⓘ ট্যাবের পাশের গোনা — খোঁজায় ছাঁকা নয়, মোট কয়টা চুক্তি
             'counts' => [
-                'running' => RentalContract::query()->active()->count(),
-                'closed' => RentalContract::query()->where('status', RentalContract::CLOSED)->count(),
+                'running' => RentalContract::query()->inViewedBranch()->active()->count(),
+                'closed' => RentalContract::query()->inViewedBranch()->where('status', RentalContract::CLOSED)->count(),
 
                 // ⓘ কতজন মানুষ — ঠিক যতটা সারি ওই ট্যাবে
                 'people' => count($this->peopleRows()),
@@ -435,7 +435,7 @@ class RentalContractController extends Controller implements HasMiddleware
     {
         $rows = [];
 
-        $contracts = RentalContract::query()
+        $contracts = RentalContract::query()->inViewedBranch()
             ->whereNotNull('party_type')
             ->whereNotNull('party_id')
             ->get();

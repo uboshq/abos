@@ -51,6 +51,8 @@ class RentalContractService
 
         return DB::transaction(function () use ($data, $deposit, $rent, $adjustment, $term, $starts) {
             $contract = RentalContract::create([
+                // ⭐ কোন শাখার চুক্তি — না বসালে তালিকার শাখার দেয়াল ওটাকে কোনো শাখায় দেখাত না (১ অক্টোবর ২০২৬)
+                'branch_id' => \App\Core\Support\CompanyContext::branchId(),
                 /*
                  * ⭐ নথি নম্বর — ১৫ সেপ্টেম্বর ২০২৬-এ যোগ হলো।
                  *
@@ -268,6 +270,7 @@ class RentalContractService
             $this->vouchers->post($voucher);
 
             return RentalAdjustment::create([
+                'branch_id' => $contract->branch_id,
                 'rental_contract_id' => $contract->id,
                 'for_month' => $month->toDateString(),
                 'rent' => $rent,

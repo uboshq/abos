@@ -7,6 +7,7 @@ namespace App\Modules\Finance\Models;
 use App\Core\Concerns\BelongsToCompany;
 use App\Core\Concerns\HasPublicId;
 use App\Core\Concerns\IsAudited;
+use App\Core\Concerns\ListedInViewedBranch;
 use App\Core\Contracts\Drillable;
 use App\Core\Contracts\SettledByAVoucher;
 use App\Core\Support\DocumentStatus;
@@ -32,6 +33,7 @@ class Withdrawal extends Model implements Drillable, SettledByAVoucher
     use HasFactory;
     use HasPublicId;
     use IsAudited;
+    use ListedInViewedBranch;
 
     /**
      * তিনটা আলাদা জিনিস, আর হিসাবে তিনটার ফল আলাদা।

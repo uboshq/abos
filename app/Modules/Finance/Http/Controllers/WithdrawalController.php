@@ -75,7 +75,7 @@ class WithdrawalController extends Controller implements HasMiddleware
             'tab' => $tab,
             'month' => is_string($month) && $month !== '' ? $month : now()->format('Y-m'),
             'standing' => $standing,
-            'rows' => Withdrawal::query()->with(['moneyAccount', 'voucher', 'person'])
+            'rows' => Withdrawal::query()->inViewedBranch()->with(['moneyAccount', 'voucher', 'person'])
                 ->when($term !== '', fn ($q) => $q->where(
                     fn ($w) => $w->where('document_no', 'like', "%{$term}%")
                         ->orWhere('reason', 'like', "%{$term}%")
@@ -89,7 +89,7 @@ class WithdrawalController extends Controller implements HasMiddleware
 
             // ⓘ ট্যাবের পাশের গোনা — খোঁজায় ছাঁকা নয়, মোট কয়টা
             'counts' => [
-                'rows' => Withdrawal::query()->count(),
+                'rows' => Withdrawal::query()->inViewedBranch()->count(),
                 'standing' => count($standing),
             ],
             /*

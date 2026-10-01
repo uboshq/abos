@@ -7,6 +7,7 @@ namespace App\Modules\Finance\Models;
 use App\Core\Concerns\BelongsToCompany;
 use App\Core\Concerns\HasPublicId;
 use App\Core\Concerns\IsAudited;
+use App\Core\Concerns\ListedInViewedBranch;
 use App\Core\Contracts\Drillable;
 use App\Core\Contracts\SettledByAVoucher;
 use App\Models\User;
@@ -44,6 +45,7 @@ class CapitalEntry extends Model implements Drillable, SettledByAVoucher
     use HasFactory;
     use HasPublicId;
     use IsAudited;
+    use ListedInViewedBranch;
 
     public const OWNER = 'owner';
 

@@ -43,7 +43,7 @@ class DepositClaimController extends Controller implements HasMiddleware
 
         return view('sales::claim.index', [
             'menu' => $this->menu->forUser($request->user()),
-            'claims' => DepositClaim::query()
+            'claims' => DepositClaim::query()->inViewedBranch()
                 ->with(['customer', 'bankAccount', 'decider'])
                 ->when($status !== 'all', fn ($q) => $q->where('status', $status))
                 /*
@@ -60,7 +60,7 @@ class DepositClaimController extends Controller implements HasMiddleware
                 ->orderByDesc('claimed_on')->orderByDesc('id')
                 ->paginate(50)->withQueryString(),
             'status' => $status,
-            'pendingCount' => DepositClaim::query()->pending()->count(),
+            'pendingCount' => DepositClaim::query()->inViewedBranch()->pending()->count(),
             // `money()` নিজেই দল ছাঁকে, তাই আলাদা `postable()` লাগে না
             // ⭐ অন্য শাখার টিলের খাত বাদ (৩০ সেপ্টেম্বর ২০২৬) — [[Account::scopeNotAnotherBranchsTill()]]
             'moneyAccounts' => Account::query()->notAnotherBranchsTill()

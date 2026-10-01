@@ -100,8 +100,8 @@ class BankFacilityController extends Controller implements HasMiddleware
 
             // ⓘ ট্যাবের পাশের গোনা — খোঁজায় ছাঁকা হয় না, ট্যাবের মোট সংখ্যা
             'counts' => [
-                'active' => BankFacility::query()->where('status', '!=', DocumentStatus::CLOSED)->count(),
-                'closed' => BankFacility::query()->where('status', DocumentStatus::CLOSED)->count(),
+                'active' => BankFacility::query()->inViewedBranch()->where('status', '!=', DocumentStatus::CLOSED)->count(),
+                'closed' => BankFacility::query()->inViewedBranch()->where('status', DocumentStatus::CLOSED)->count(),
             ],
             /*
              * ⭐ পাতা ভাগ — ১৭ সেপ্টেম্বর ২০২৬, নিরীক্ষার ধাপ ২।
@@ -127,7 +127,7 @@ class BankFacilityController extends Controller implements HasMiddleware
      */
     private function facilityList(string $tab, string $term): LengthAwarePaginator
     {
-        return BankFacility::query()
+        return BankFacility::query()->inViewedBranch()
             // ⓘ তালিকায় প্রতিষ্ঠানের কলাম আছে — নাহলে প্রতি সারিতে একটা কোয়েরি
             ->with('institution')
             ->when($tab === 'closed',

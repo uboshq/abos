@@ -7,6 +7,7 @@ namespace App\Modules\Finance\Models;
 use App\Core\Concerns\BelongsToCompany;
 use App\Core\Concerns\HasPublicId;
 use App\Core\Concerns\IsAudited;
+use App\Core\Concerns\ListedInViewedBranch;
 use App\Core\Contracts\Drillable;
 use App\Modules\MasterData\Models\Person;
 use Illuminate\Database\Eloquent\Builder;
@@ -34,6 +35,7 @@ class HandLoanAccount extends Model implements Drillable
     use HasFactory;
     use HasPublicId;
     use IsAudited;
+    use ListedInViewedBranch;
 
     /** চলছে — টাকা বাইরে বা ভেতরে আছে */
     public const ACTIVE = 'active';

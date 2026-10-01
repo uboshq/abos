@@ -7,6 +7,7 @@ namespace App\Modules\Finance\Models;
 use App\Core\Concerns\BelongsToCompany;
 use App\Core\Concerns\HasPublicId;
 use App\Core\Concerns\IsAudited;
+use App\Core\Concerns\ListedInViewedBranch;
 use App\Core\Contracts\Drillable;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Models\Loan;
@@ -56,6 +57,7 @@ class Deposit extends Model implements Drillable
     use HasFactory;
     use HasPublicId;
     use IsAudited;
+    use ListedInViewedBranch;
 
     /** ব্যবসার নামে — স্থিতিপত্রে সম্পদ */
     public const BUSINESS = 'business';

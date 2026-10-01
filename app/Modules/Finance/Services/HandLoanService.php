@@ -336,7 +336,7 @@ final class HandLoanService
          *
          * তালিকাটা দশে গোনা (খোলা হিসাব), তাই মেমরিতে সাজানোই সৎ ও সহজ।
          */
-        $accounts = HandLoanAccount::query()->open()
+        $accounts = HandLoanAccount::query()->inViewedBranch()->open()
             ->withCount('movements')
             ->with('person')
             ->get()

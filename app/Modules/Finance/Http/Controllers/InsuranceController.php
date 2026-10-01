@@ -151,11 +151,11 @@ class InsuranceController extends Controller implements HasMiddleware
     private function filtered(string $tab): Builder
     {
         return match ($tab) {
-            'due' => InsurancePolicy::query()->dueForRenewal(),
-            'unpaid' => InsurancePolicy::query()->whereHas('premiums',
+            'due' => InsurancePolicy::query()->inViewedBranch()->dueForRenewal(),
+            'unpaid' => InsurancePolicy::query()->inViewedBranch()->whereHas('premiums',
                 fn ($q) => $q->where('status', InsurancePremium::DRAFT)),
-            'inactive' => InsurancePolicy::query()->where('is_active', false),
-            default => InsurancePolicy::query(),
+            'inactive' => InsurancePolicy::query()->inViewedBranch()->where('is_active', false),
+            default => InsurancePolicy::query()->inViewedBranch(),
         };
     }
 

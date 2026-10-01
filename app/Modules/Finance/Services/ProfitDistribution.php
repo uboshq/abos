@@ -169,6 +169,8 @@ final class ProfitDistribution
 
             foreach ($rows as $row) {
                 $shares[] = ProfitShare::query()->create([
+                    // ⭐ ঘোষণার শাখা — তালিকার শাখার দেয়ালের জন্য (১ অক্টোবর ২০২৬)
+                    'branch_id' => CompanyContext::branchId(),
                     'document_no' => $documentNo,
                     'trx_date' => $data['trx_date'],
                     'person_id' => $row['person_id'],
