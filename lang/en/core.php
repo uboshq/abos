@@ -937,6 +937,8 @@ return [
         'view_grid' => 'As cards',
         'density' => 'Density',
         'refresh' => 'Refresh',
+        // ⭐ টুলবারের "…" — কম-ব্যবহৃত বোতাম এক জায়গায় (নকশার পর্যালোচনা, ১ অক্টোবর ২০২৬)
+        'more' => 'More',
         'group' => 'Group',
         'freeze' => 'Freeze',
     ],

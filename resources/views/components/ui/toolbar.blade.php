@@ -574,88 +574,6 @@
                 </span>
             @endif
 
-            {{-- ঘন সারি — একই পর্দায় বেশি সারি। তালিকা কম্পোনেন্ট
-                 compact প্রপটা এখান থেকেই পায়। --}}
-            @if ($density)
-                <button type="submit" name="compact" value="{{ $isCompact ? '0' : '1' }}"
-                        aria-pressed="{{ $isCompact ? 'true' : 'false' }}"
-                        aria-label="{{ __('core.toolbar.density') }}"
-                        @class([
-                            'flex min-h-(--spacing-touch) items-center gap-1.5 rounded-(--radius-field) px-2
-                             text-sm transition-colors hover:bg-(--color-surface-hover)',
-                            'text-(--color-brand-500)' => $isCompact,
-                            'text-(--color-ink-muted) hover:text-(--color-ink)' => ! $isCompact,
-                        ])>
-                    {{-- ঘন সারির নিজের ছবি।
-
-                         এটা আর তালিকা-দৃশ্যের বোতামটা হুবহু একই তিন-দাগের
-                         পথ আঁকত — পাশাপাশি দুটো বোতাম, একই ছবি, আলাদা কাজ।
-                         যে দুটো জিনিস দেখতে এক, ব্যবহারকারী ধরে নেয় সে দুটো
-                         একই জিনিস, আর একটাতে চেপে অন্যটা আশা করে।
-
-                         এখানে দাগগুলো ঘন, আর উপরে-নিচে দুটো তীর ভেতরের দিকে
-                         — "সারিগুলো কাছে আনো"। --}}
-                    <svg viewBox="0 0 24 24" aria-hidden="true" class="size-4 shrink-0 fill-current">
-                        <path d="M12 2 8.5 5.5 10 7l2-2 2 2 1.5-1.5L12 2Zm0 20 3.5-3.5L14 17l-2 2-2-2-1.5 1.5L12 22ZM4 9h16v1.6H4V9Zm0 3.2h16v1.6H4v-1.6Z"/>
-                    </svg>
-                    <span class="hidden xl:inline">{{ __('core.toolbar.density') }}</span>
-                </button>
-            @endif
-
-            {{-- Columns — কোন কলামগুলো দেখা যাবে।
-
-                 টিকগুলো ফর্মের ভেতরেই, তাই "প্রয়োগ" চাপলে বাকি সব
-                 (খোঁজা, সাজানো, ফিল্টার) অক্ষত রেখে পাতা ফিরে আসে। আলাদা
-                 JavaScript নেই — যে টুলবার ফর্ম জমা দিয়ে চলে, তার কলাম
-                 বাছাইও ফর্মেই থাকা উচিত। --}}
-            @if ($columnKeys->isNotEmpty())
-                <div x-data="{ open: false }" class="relative">
-                    <button type="button" @click="open = ! open" @click.outside="open = false"
-                            @keydown.escape.window="open = false"
-                            :aria-expanded="open.toString()"
-                            aria-label="{{ __('core.toolbar.columns') }}"
-                            class="flex min-h-(--spacing-touch) items-center gap-1.5 rounded-(--radius-field) px-2
-                                   text-sm text-(--color-ink-muted) transition-colors
-                                   hover:bg-(--color-surface-hover) hover:text-(--color-ink)">
-                        <svg viewBox="0 0 24 24" aria-hidden="true" class="size-4 shrink-0 fill-current">
-                            <path d="M3 4h4v16H3V4Zm6 0h6v16H9V4Zm8 0h4v16h-4V4Z"/>
-                        </svg>
-                        <span class="hidden xl:inline">{{ __('core.toolbar.columns') }}</span>
-                        @if ($hiddenColumns->isNotEmpty())
-                            <span class="rounded-full bg-(--color-brand-500) px-1.5 text-[10px] font-semibold text-white">
-                                {{ $columnKeys->count() - $hiddenColumns->count() }}/{{ $columnKeys->count() }}
-                            </span>
-                        @endif
-                    </button>
-
-                    <div x-show="open" x-cloak x-transition.opacity
-                         class="absolute end-0 z-30 mt-1 w-60 rounded-(--radius-card) border
-                                border-(--color-border) bg-(--color-surface-card) p-2 shadow-lg">
-                        @foreach ($columns as $column)
-                            @php $key = $column['key']; @endphp
-                            <label class="flex min-h-(--spacing-touch) cursor-pointer items-center gap-2
-                                          rounded-(--radius-field) px-2 text-sm hover:bg-(--color-surface-hover)">
-                                <input type="checkbox" name="show[]" value="{{ $key }}"
-                                       @checked(! $hiddenColumns->contains($key))
-                                       class="size-4 shrink-0">
-                                <span class="truncate">{{ $column['label'] }}</span>
-                            </label>
-                        @endforeach
-
-                        {{-- একটাও না রাখলে খালি টেবিল — সেটা কেউ চায় না, আর
-                             সার্ভার তখন সবগুলোই দেখায়। এখানে বলে দেওয়া হয়
-                             যাতে "কাজ করেনি" মনে না হয়। --}}
-                        <p class="px-2 pt-1 text-2xs text-(--color-ink-muted)">
-                            {{ __('core.toolbar.columns_note') }}
-                        </p>
-
-                        <x-ui.button type="submit" tone="secondary" class="mt-2 w-full">
-                            {{ __('core.action.apply') }}
-                        </x-ui.button>
-                    </div>
-                </div>
-            @endif
-
             {{-- Export — যা সত্যিই বেরোয়।
 
                  CSV আর ছাপা, দুটোই। Word দেওয়া হয়নি: একটা টেবিলকে .doc
@@ -734,55 +652,6 @@
                 </div>
             @endif
 
-            {{-- Share — এই পাতার লিংক, ফাইল নয়।
-
-                 লিংকটাই সঠিক জিনিস: খোঁজা, সাজানো, ফিল্টার আর কোন কলামগুলো
-                 দেখা যাচ্ছে — সব ঠিকানার ভেতরে, তাই যে খুলবে সে হুবহু এই
-                 পর্দাটাই দেখবে। ফাইল পাঠালে সে একটা মুহূর্তের ছবি পেত, আর
-                 কাল সেটা ভুল হয়ে যেত।
-
-                 <b>যাকে পাঠানো হচ্ছে তার লগইন লাগবে</b> — লিংকটা এই
-                 প্রতিষ্ঠানের ভেতরের। বাইরের কাউকে পাঠাতে হলে CSV। --}}
-            @if ($share)
-                <div x-data="shareMenu({ url: @js($shareUrl) })" class="relative">
-                    <button type="button" @click="open = ! open" @click.outside="open = false"
-                            @keydown.escape.window="open = false"
-                            :aria-expanded="open.toString()"
-                            aria-label="{{ __('core.toolbar.share') }}"
-                            class="flex min-h-(--spacing-touch) items-center gap-1.5 rounded-(--radius-field) px-2
-                                   text-sm text-(--color-ink-muted) transition-colors
-                                   hover:bg-(--color-surface-hover) hover:text-(--color-ink)">
-                        <svg viewBox="0 0 24 24" aria-hidden="true" class="size-4 shrink-0 fill-current">
-                            <path d="M18 16a3 3 0 0 0-2.2 1l-6-3.5a3 3 0 0 0 0-1l6-3.5a3 3 0 1 0-1-1.7l-6 3.5a3 3 0 1 0 0 4.4l6 3.5A3 3 0 1 0 18 16Z"/>
-                        </svg>
-                        <span class="hidden xl:inline">{{ __('core.toolbar.share') }}</span>
-                    </button>
-
-                    <div x-show="open" x-cloak x-transition.opacity
-                         class="absolute end-0 z-30 mt-1 w-56 overflow-hidden rounded-(--radius-card)
-                                border border-(--color-border) bg-(--color-surface-card) shadow-lg">
-                        <a href="https://wa.me/?text={{ urlencode($shareUrl) }}"
-                           target="_blank" rel="noopener"
-                           class="block px-3 py-2 text-sm hover:bg-(--color-surface-hover)">
-                            WhatsApp
-                        </a>
-                        <a href="mailto:?body={{ urlencode($shareUrl) }}"
-                           class="block px-3 py-2 text-sm hover:bg-(--color-surface-hover)">
-                            {{ __('core.toolbar.share_email') }}
-                        </a>
-                        <button type="button"
-                                @click="copy()"
-                                aria-label="{{ __('core.toolbar.share_copy') }}"
-                                class="block w-full px-3 py-2 text-start text-sm hover:bg-(--color-surface-hover)">
-                            <span x-show="! copied">{{ __('core.toolbar.share_copy') }}</span>
-                            <span x-show="copied" x-cloak class="text-(--color-badge-success-ink)">
-                                {{ __('core.toolbar.share_copied') }}
-                            </span>
-                        </button>
-                    </div>
-                </div>
-            @endif
-
             @if ($print && $printHref)
                 {{-- ⓘ ক্রম বদলে তবেই ছাপা — `printHref`-এর ব্যাখ্যা উপরে।
                      ⚠️ এটা `<a>`, `<button>` নয়: বোতাম হলে সে ফর্মটা জমা
@@ -825,21 +694,116 @@
                 <span data-print-on-load hidden></span>
             @endif
 
-            @if ($refresh)
-                {{-- ফর্মটা আবার জমা দেয়, তাই খোঁজা-সাজানো-ফিল্টার সব অক্ষত
-                     থেকে শুধু ডেটা নতুন করে আসে। পাতা রিলোড করলে ওগুলো
-                     থাকত, কিন্তু ব্রাউজার ফর্ম-জমা আবার পাঠাতে চায় কি না
-                     জিজ্ঞেস করত। --}}
-                <button type="submit"
-                        aria-label="{{ __('core.toolbar.refresh') }}"
-                        class="flex min-h-(--spacing-touch) items-center gap-1.5 rounded-(--radius-field) px-2
-                               text-sm text-(--color-ink-muted) transition-colors
-                               hover:bg-(--color-surface-hover) hover:text-(--color-ink)">
-                    <svg viewBox="0 0 24 24" aria-hidden="true" class="size-4 shrink-0 fill-current">
-                        <path d="M12 5V2L8 6l4 4V7a5 5 0 1 1-5 5H5a7 7 0 1 0 7-7Z"/>
-                    </svg>
-                    <span class="hidden xl:inline">{{ __('core.toolbar.refresh') }}</span>
-                </button>
+            {{-- ⭐ "…" — কম-ব্যবহৃত বোতাম এক জায়গায় (নকশার পর্যালোচনা, মালিক, ১ অক্টোবর ২০২৬, ধাপ ৭ · ৪)।
+
+                 ⓘ রোজ লাগে খোঁজা, নতুন, ছাপা — ওগুলো বাইরে। ঘনত্ব, কলাম, শেয়ার আর নতুন করে আনা কালেভদ্রে, তবু
+                 টুলবারের অর্ধেক জায়গা নিত। ⓘ প্রতিটা ভেতরের বোতাম নিজের লেবেল রাখে, প্যানেল `x-show` — তাই
+                 কিবোর্ডে Tab-এ পৌঁছানো যায়, Esc-এ বন্ধ, আর পাতার HTML-এ সবগুলো থাকে (পাহারা আর স্ক্রিন-রিডার দুটোই পায়)। --}}
+            @if ($density || $columnKeys->isNotEmpty() || $share || $refresh)
+                <div x-data="{ more: false, cols: false }" class="relative" data-toolbar-more>
+                    <button type="button" @click="more = ! more" @click.outside="more = false"
+                            @keydown.escape.window="more = false"
+                            :aria-expanded="more.toString()"
+                            aria-haspopup="true"
+                            aria-label="{{ __('core.toolbar.more') }}"
+                            class="flex min-h-(--spacing-touch) items-center gap-1.5 rounded-(--radius-field) px-2
+                                   text-sm text-(--color-ink-muted) transition-colors
+                                   hover:bg-(--color-surface-hover) hover:text-(--color-ink)">
+                        <svg viewBox="0 0 24 24" aria-hidden="true" class="size-4 shrink-0 fill-current">
+                            <path d="M5 10a2 2 0 1 1 0 4 2 2 0 0 1 0-4Zm7 0a2 2 0 1 1 0 4 2 2 0 0 1 0-4Zm7 0a2 2 0 1 1 0 4 2 2 0 0 1 0-4Z"/>
+                        </svg>
+                        @if ($hiddenColumns->isNotEmpty() || $isCompact)
+                            <span class="size-1.5 rounded-full bg-(--color-brand-500)" aria-hidden="true"></span>
+                        @endif
+                    </button>
+
+                    <div x-show="more" x-cloak x-transition.opacity
+                         class="absolute end-0 z-30 mt-1 w-64 overflow-hidden rounded-(--radius-card) border
+                                border-(--color-border) bg-(--color-surface-card) py-1 shadow-lg">
+                        {{-- ঘন সারি — একই পর্দায় বেশি সারি। তালিকা কম্পোনেন্ট compact প্রপটা এখান থেকেই পায়। --}}
+                        @if ($density)
+                            <button type="submit" name="compact" value="{{ $isCompact ? '0' : '1' }}"
+                                    aria-pressed="{{ $isCompact ? 'true' : 'false' }}"
+                                    aria-label="{{ __('core.toolbar.density') }}"
+                                    @class([
+                                        'flex min-h-(--spacing-touch) w-full items-center gap-2 px-3 text-start text-sm hover:bg-(--color-surface-hover)',
+                                        'text-(--color-brand-500)' => $isCompact,
+                                    ])>
+                                <svg viewBox="0 0 24 24" aria-hidden="true" class="size-4 shrink-0 fill-current">
+                                    <path d="M12 2 8.5 5.5 10 7l2-2 2 2 1.5-1.5L12 2Zm0 20 3.5-3.5L14 17l-2 2-2-2-1.5 1.5L12 22ZM4 9h16v1.6H4V9Zm0 3.2h16v1.6H4v-1.6Z"/>
+                                </svg>
+                                {{ __('core.toolbar.density') }}
+                            </button>
+                        @endif
+
+                        {{-- Columns — টিকগুলো ফর্মের ভেতরেই, তাই "প্রয়োগ" চাপলে খোঁজা-সাজানো-ছাঁকনি অক্ষত রেখে পাতা ফেরে। --}}
+                        @if ($columnKeys->isNotEmpty())
+                            <button type="button" @click="cols = ! cols" :aria-expanded="cols.toString()"
+                                    aria-label="{{ __('core.toolbar.columns') }}"
+                                    class="flex min-h-(--spacing-touch) w-full items-center gap-2 px-3 text-start text-sm hover:bg-(--color-surface-hover)">
+                                <svg viewBox="0 0 24 24" aria-hidden="true" class="size-4 shrink-0 fill-current">
+                                    <path d="M3 4h4v16H3V4Zm6 0h6v16H9V4Zm8 0h4v16h-4V4Z"/>
+                                </svg>
+                                {{ __('core.toolbar.columns') }}
+                                @if ($hiddenColumns->isNotEmpty())
+                                    <span class="ms-auto rounded-full bg-(--color-brand-500) px-1.5 text-[10px] font-semibold text-white">
+                                        {{ $columnKeys->count() - $hiddenColumns->count() }}/{{ $columnKeys->count() }}
+                                    </span>
+                                @endif
+                            </button>
+                            <div x-show="cols" x-cloak class="max-h-72 overflow-y-auto border-y border-(--color-border) px-2 py-1">
+                                @foreach ($columns as $column)
+                                    @php $key = $column['key']; @endphp
+                                    <label class="flex min-h-(--spacing-touch) cursor-pointer items-center gap-2
+                                                  rounded-(--radius-field) px-2 text-sm hover:bg-(--color-surface-hover)">
+                                        <input type="checkbox" name="show[]" value="{{ $key }}"
+                                               @checked(! $hiddenColumns->contains($key))
+                                               class="size-4 shrink-0">
+                                        <span class="truncate">{{ $column['label'] }}</span>
+                                    </label>
+                                @endforeach
+                                <p class="px-2 pt-1 text-2xs text-(--color-ink-muted)">{{ __('core.toolbar.columns_note') }}</p>
+                                <x-ui.button type="submit" tone="secondary" class="my-2 w-full">{{ __('core.action.apply') }}</x-ui.button>
+                            </div>
+                        @endif
+
+                        {{-- Share — এই পাতার লিংক, ফাইল নয়; যাকে পাঠানো হচ্ছে তার লগইন লাগবে। --}}
+                        @if ($share)
+                            <div x-data="shareMenu({ url: @js($shareUrl) })">
+                                <a href="https://wa.me/?text={{ urlencode($shareUrl) }}" target="_blank" rel="noopener"
+                                   aria-label="{{ __('core.toolbar.share') }} — WhatsApp"
+                                   class="flex min-h-(--spacing-touch) items-center gap-2 px-3 text-sm hover:bg-(--color-surface-hover)">
+                                    <svg viewBox="0 0 24 24" aria-hidden="true" class="size-4 shrink-0 fill-current">
+                                        <path d="M18 16a3 3 0 0 0-2.2 1l-6-3.5a3 3 0 0 0 0-1l6-3.5a3 3 0 1 0-1-1.7l-6 3.5a3 3 0 1 0 0 4.4l6 3.5A3 3 0 1 0 18 16Z"/>
+                                    </svg>
+                                    WhatsApp
+                                </a>
+                                <a href="mailto:?body={{ urlencode($shareUrl) }}"
+                                   class="flex min-h-(--spacing-touch) items-center gap-2 px-3 ps-9 text-sm hover:bg-(--color-surface-hover)">
+                                    {{ __('core.toolbar.share_email') }}
+                                </a>
+                                <button type="button" @click="copy()"
+                                        aria-label="{{ __('core.toolbar.share_copy') }}"
+                                        class="flex min-h-(--spacing-touch) w-full items-center gap-2 px-3 ps-9 text-start text-sm hover:bg-(--color-surface-hover)">
+                                    <span x-show="! copied">{{ __('core.toolbar.share_copy') }}</span>
+                                    <span x-show="copied" x-cloak class="text-(--color-badge-success-ink)">{{ __('core.toolbar.share_copied') }}</span>
+                                </button>
+                            </div>
+                        @endif
+
+                        {{-- নতুন করে আনা — ফর্মটা আবার জমা দেয়, তাই খোঁজা-সাজানো-ছাঁকনি অক্ষত থেকে শুধু ডেটা নতুন আসে। --}}
+                        @if ($refresh)
+                            <button type="submit"
+                                    aria-label="{{ __('core.toolbar.refresh') }}"
+                                    class="flex min-h-(--spacing-touch) w-full items-center gap-2 px-3 text-start text-sm hover:bg-(--color-surface-hover)">
+                                <svg viewBox="0 0 24 24" aria-hidden="true" class="size-4 shrink-0 fill-current">
+                                    <path d="M12 5V2L8 6l4 4V7a5 5 0 1 1-5 5H5a7 7 0 1 0 7-7Z"/>
+                                </svg>
+                                {{ __('core.toolbar.refresh') }}
+                            </button>
+                        @endif
+                    </div>
+                </div>
             @endif
 
             {{-- সংরক্ষিত দৃশ্য — ন'টা রূপে এখানে।
