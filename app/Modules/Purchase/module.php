@@ -179,6 +179,11 @@ return [
             // ⭐ কাগজের খাতা — রিপোর্ট সেন্টার ধাপ ৬ (মালিক, ১ অক্টোবর ২০২৬)
             ['label' => 'purchase::register.title', 'icon' => 'list', 'route' => 'purchase.report.show',
                 'route_params' => ['slug' => 'register'], 'permission' => 'purchase.report'],
+            // ⭐ ক্রয় বিশ্লেষণ ও দরের বিশ্লেষণ — রিপোর্ট সেন্টার ধাপ ৩ ([[PurchaseAnalysisReports]])
+            ['label' => 'purchase::analysis.title', 'icon' => 'scale', 'route' => 'purchase.report.show',
+                'route_params' => ['slug' => 'analysis'], 'permission' => 'purchase.report'],
+            ['label' => 'purchase::analysis.price_title', 'icon' => 'scale', 'route' => 'purchase.report.show',
+                'route_params' => ['slug' => 'price-analysis'], 'permission' => 'purchase.report'],
             ['label' => 'purchase::menu.pending_orders', 'icon' => 'clock', 'route' => 'purchase.report.show',
                 'route_params' => ['slug' => 'pending-orders'], 'permission' => 'purchase.report'],
             /*
@@ -544,6 +549,7 @@ return [
     'reports' => [
         PurchaseReports::class,
         \App\Modules\Purchase\Reports\PurchaseRegisterReports::class,
+        \App\Modules\Purchase\Reports\PurchaseAnalysisReports::class,
         SettlementReport::class,
         ReturnOnCapitalReport::class,
     ],
