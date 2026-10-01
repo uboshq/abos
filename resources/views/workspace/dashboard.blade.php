@@ -418,8 +418,10 @@
                               bg-(--color-surface-card) px-3 py-2">
                         <div class="truncate text-2xs text-(--color-ink-muted)">{{ $row['name'] }}</div>
                         <div class="mt-0.5 truncate text-xs text-(--color-ink-muted)">{{ $row['stat']->label }}</div>
+                        {{-- ⓘ মান কাটা নয়, ভাঙে — নকশার পর্যালোচনা, ১ অক্টোবর ২০২৬ (ধাপ ৭ · ১): আটটা সরু ঘরে
+                             "২৬ দিন আগে" কেটে "২৬ দিন…" হত, আর কেউ বুঝত না কত দিন কী। সংখ্যা ছোট, লেখা দুই লাইনে। --}}
                         <div @class([
-                            'mt-1 truncate text-lg font-semibold tabular-nums',
+                            'mt-1 break-words text-lg font-semibold leading-tight tabular-nums',
                             'text-(--color-badge-warning-ink)' => $row['stat']->tone === \App\Core\Engines\Dashboard\Stat::WARN,
                             'text-(--color-badge-danger-ink)' => $row['stat']->tone === \App\Core\Engines\Dashboard\Stat::BAD,
                         ])>{{ $row['stat']->value ?? '—' }}</div>

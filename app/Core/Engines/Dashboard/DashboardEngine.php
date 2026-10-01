@@ -91,9 +91,23 @@ final class DashboardEngine
             /** @var class-string<ProvidesDashboard> $provider */
             $provider = $module->dashboard;
 
+            /*
+             * ⭐ প্রত্যেক ভূমিকার নিজের কাজের টাইল — নকশার পর্যালোচনা, মালিক, ১ অক্টোবর ২০২৬ (ধাপ ৭ · ১)।
+             *
+             * ⛔ আগে প্রতিটা মডিউলের টাইল সবাই পেতেন, কেবল সংখ্যাটা "—" দিয়ে ঢাকা: বিক্রয়কর্মীর হোমে ব্যাকআপ,
+             * রেস্তোরাঁ, বেতন, সিস্টেমের ঘর — পড়ার কিছু নেই, চাপলে ৪০৩। ⓘ এখন যে মডিউলের ড্যাশবোর্ড তিনি খুলতে
+             * পারেন না, বা যার প্রথম সংখ্যাটাই তাঁর জন্য ঢাকা, সেই টাইল আসেই না। মালিক (সুপার অ্যাডমিন) সব পান।
+             * ⓘ মডিউলের নিজের পর্দার ভেতরে ঢাকার নিয়ম ([[allowed()]]) বদলায়নি — সেখানে কাঠামো এক রাখাই ঠিক।
+             */
+            $gate = $this->permissionFor($module->code);
+
+            if ($gate !== null && ! $user?->can($gate)) {
+                continue;
+            }
+
             $stats = $this->allowed($provider::dashboard()->stats, $user);
 
-            if ($stats === []) {
+            if ($stats === [] || $stats[0]->value === Stat::HIDDEN) {
                 continue;
             }
 
