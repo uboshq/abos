@@ -202,6 +202,14 @@ class GiveCostLayersTheirLot extends Command
 
         $this->line('   লট ধরে স্তরে বাকি ≠ তাকের মাল: '.count($gaps).' টা লট');
 
+        /*
+         * ⓘ সমন্বয়কের প্রশ্ন: কতটা বিক্রি FIFO-তে পড়বে? — যে লটের নিজের স্তরে তাকের চেয়ে কম, তার ঘাটতিটুকু বেচলে
+         * লটের দাম মেলে না, FIFO-তে পড়ে (চিহ্ন আর ঘটনাসহ)। এটা তারই আগাম মাপ।
+         */
+        $short = array_filter($gaps, fn ($g) => bccomp($g['layers'], $g['stock'], 4) < 0);
+        $shortQty = array_reduce($short, fn ($sum, $g) => bcadd($sum, bcsub($g['stock'], $g['layers'], 4), 4), '0');
+        $this->line('   লটের স্তরে তাকের চেয়ে কম (বেচলে FIFO-তে পড়বে): '.count($short).' টা লট, মোট '.$shortQty.' একক');
+
         foreach (array_slice($gaps, 0, max(0, (int) $this->option('show'))) as $gap) {
             $this->line("   {$gap['lot']}  {$gap['product']}  স্তর {$gap['layers']}  তাক {$gap['stock']}");
         }

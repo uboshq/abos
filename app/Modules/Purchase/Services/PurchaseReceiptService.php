@@ -413,6 +413,9 @@ final class PurchaseReceiptService
                     sourceId: $receipt->id,
                     documentNo: $receipt->document_no,
                     date: $receipt->trx_date,
+
+                    // ⭐ স্তরও লট চেনে — বাছা লট বেচলে খরচ এই স্তর থেকে (চূড়ান্ত অডিট, [[CostLayerService::issue()]])
+                    batch: $batch,
                 );
             }
 

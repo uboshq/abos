@@ -106,9 +106,15 @@ final class TheOldCostLayersLearnTheirLotTest extends TestCase
             floor: '-3', date: now()->toDateString(), documentNo: 'OUT-1', batch: $lot,
         );
 
+        // ⓘ উল্টো ফারাক: তাকে ৫, স্তরে ২ — এই লটের ৩টা বেচলে FIFO-তে পড়বে
+        $short = $this->lot('L-SHORT');
+        $this->arrive('test_in', 2, '5', $short);
+        $this->layer('test_in', 2, '2');
+
         $this->artisan('abos:cost-layer-lots', ['--company' => CompanyContext::id()])
-            ->expectsOutputToContain('তাকের মাল: 1 টা লট')
+            ->expectsOutputToContain('তাকের মাল: 2 টা লট')
             ->expectsOutputToContain('L-GAP  Old Layer Proof Oil  স্তর 10.0000  তাক 7.0000')
+            ->expectsOutputToContain('বেচলে FIFO-তে পড়বে): 1 টা লট, মোট 3.0000 একক')
             ->assertSuccessful();
     }
 

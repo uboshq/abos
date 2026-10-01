@@ -515,6 +515,9 @@ final class PurchaseBillService
                    বসলে FIFO-র ক্রম আর মজুদের ক্রম আলাদা হয়ে যেত, আর
                    কোন স্তর থেকে কত বেরোল সেটা কেউ মেলাতে পারত না। */
                 date: $movedOn,
+
+                // ⭐ স্তরও লট চেনে (চূড়ান্ত অডিট, [[CostLayerService::issue()]])
+                batch: $batch,
             );
         }
     }

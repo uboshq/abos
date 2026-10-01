@@ -101,6 +101,9 @@ final class OpeningStockService
                 sourceId: $movement->id,
                 documentNo: self::DOCUMENT_NO,
                 date: $date,
+
+                // ⭐ স্তরও লট চেনে (চূড়ান্ত অডিট, [[CostLayerService::issue()]])
+                batch: $batch,
             );
 
             $this->opening->forInventory(

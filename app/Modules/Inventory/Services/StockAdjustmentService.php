@@ -271,6 +271,9 @@ final class StockAdjustmentService
                     sourceId: $movement->id,
                     documentNo: $movement->document_no,
                     date: $date,
+
+                    // ⭐ উদ্বৃত্তের স্তরও লট চেনে (চূড়ান্ত অডিট, [[CostLayerService::issue()]])
+                    batch: $batch,
                 );
 
                 $amount = bcmul($difference, $unitCost, 4);

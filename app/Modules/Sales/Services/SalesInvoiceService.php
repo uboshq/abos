@@ -16,12 +16,15 @@ use App\Models\FinancialYear;
 use App\Models\IssuedNumber;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Services\StandardChart;
+use App\Modules\Inventory\Models\Batch;
 use App\Modules\Inventory\Models\Product;
+use App\Modules\Inventory\Models\StockMovement;
 use App\Modules\Inventory\Models\Warehouse;
 use App\Modules\Inventory\Services\CostLayerService;
 use App\Modules\Inventory\Services\ReadsPackedQuantities;
 use App\Modules\Inventory\Services\StockService;
 use App\Modules\Sales\Events\InvoiceConfirmed;
+use App\Modules\Sales\Models\DeliveryChallan;
 use App\Modules\Sales\Models\DeliveryChallanLine;
 use App\Modules\Sales\Models\PricingRule;
 use App\Modules\Sales\Models\SalesInvoice;
@@ -1059,6 +1062,9 @@ final class SalesInvoiceService
     {
         $cost = '0';
 
+        // ⭐ তাক থেকে কোন লট কতটা বেরিয়েছে — খরচও সেই লটের স্তর থেকে ([[lotsThatLeft()]])
+        $lots = $this->lotsThatLeft($invoice);
+
         foreach ($invoice->lines as $line) {
             /*
              * রান্না করা খাবারের খরচ তার **উপকরণের** স্তর থেকে।
@@ -1083,14 +1089,7 @@ final class SalesInvoiceService
                 continue;
             }
 
-            $taken = $this->costs->issue(
-                product: $line->product,
-                qty: (string) $line->qty,
-                sourceType: SalesInvoice::STOCK_SOURCE,
-                sourceId: $invoice->id,
-                documentNo: $invoice->document_no,
-                date: $invoice->trx_date,
-            );
+            $taken = $this->costByLot($invoice, $line, $lots);
 
             /*
              * লাইনের দরটা গড়, কারণ একটা লাইন একাধিক চালান থেকে আসতে
@@ -1126,6 +1125,147 @@ final class SalesInvoiceService
      * ওটাই খাদ্য-খরচের রিপোর্টের মূল সংখ্যা, আর ওটা সারিতেই লেখা
      * থাকলে রিপোর্টকে আর হিসাব কষতে হয় না।
      */
+    /**
+     * একটা লাইনের খরচ, লট ধরে — চূড়ান্ত অডিট, ৩০ সেপ্টেম্বর ২০২৬।
+     *
+     * ⓘ যে লট তাক থেকে বেরিয়েছে তার যতটা এই লাইনে পড়ে, ততটা সেই লটের স্তর থেকে; বাকিটা (লটহীন মাল) আগের মতো
+     * FIFO-তে। ⛔ লটের স্তরে না কুলালে [[CostLayerService::issue()]] নিজেই FIFO-তে পড়ে আর চিহ্ন রাখে — নীরবে নয়।
+     *
+     * @param  array<int, array<int, string>>  $lots  পণ্য → [লট → এখনো ভাগ না হওয়া পরিমাণ]; ভাগ হলে কমে
+     * @return array{cost: string, uses: list<\App\Modules\Inventory\Models\CostLayerUse>}
+     */
+    private function costByLot(SalesInvoice $invoice, SalesInvoiceLine $line, array &$lots): array
+    {
+        $productId = (int) $line->product->id;
+        $left = (string) $line->qty;
+        $taken = ['cost' => '0', 'uses' => []];
+
+        foreach ($lots[$productId] ?? [] as $batchId => $available) {
+            if (bccomp($left, '0', 4) <= 0) {
+                break;
+            }
+
+            $piece = bccomp($available, $left, 4) >= 0 ? $left : $available;
+
+            if (bccomp($piece, '0', 4) <= 0) {
+                continue;
+            }
+
+            $taken = $this->addCost($taken, $this->costs->issue(
+                product: $line->product,
+                qty: $piece,
+                sourceType: SalesInvoice::STOCK_SOURCE,
+                sourceId: $invoice->id,
+                documentNo: $invoice->document_no,
+                date: $invoice->trx_date,
+                batch: Batch::query()->findOrFail($batchId),
+            ));
+
+            $lots[$productId][$batchId] = bcsub($available, $piece, 4);
+            $left = bcsub($left, $piece, 4);
+        }
+
+        if (bccomp($left, '0', 4) > 0) {
+            $taken = $this->addCost($taken, $this->costs->issue(
+                product: $line->product,
+                qty: $left,
+                sourceType: SalesInvoice::STOCK_SOURCE,
+                sourceId: $invoice->id,
+                documentNo: $invoice->document_no,
+                date: $invoice->trx_date,
+            ));
+        }
+
+        return $taken;
+    }
+
+    /**
+     * @param  array{cost: string, uses: list<mixed>}  $sum
+     * @param  array{cost: string, uses: list<mixed>}  $piece
+     * @return array{cost: string, uses: list<mixed>}
+     */
+    private function addCost(array $sum, array $piece): array
+    {
+        return ['cost' => bcadd($sum['cost'], $piece['cost'], 4), 'uses' => [...$sum['uses'], ...$piece['uses']]];
+    }
+
+    /**
+     * এই বিলের মাল তাক থেকে কোন লটে বেরিয়েছে — পণ্য → [লট → পরিমাণ]।
+     *
+     * ⓘ মাল বেরোয় চালানে (বা চালান-ছাড়া বিলে বিলের নিজের নামে), তাই দুই উৎসই দেখা হয়। একই চালানের অংশ আগে অন্য
+     * বিলে গিয়ে থাকলে সেই বিল যে লট থেকে খরচ টেনেছে তা বাদ — নাহলে একই লট দুই বিলে গোনা হত।
+     * ⚠️ জানা সীমা: অন্য বিলের টান লটের স্তরে না কুলিয়ে লটহীন স্তরে পড়ে থাকলে সেই অংশ বাদ যায় না — তখন এই বিলটাও
+     * লট চায়, না কুলালে FIFO-তে পড়ে, আর চিহ্ন রাখে।
+     *
+     * @return array<int, array<int, string>>
+     */
+    private function lotsThatLeft(SalesInvoice $invoice): array
+    {
+        $challanIds = $invoice->lines
+            ->map(fn (SalesInvoiceLine $l) => $l->challanLine?->delivery_challan_id)
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
+
+        $out = StockMovement::query()
+            ->where(fn ($q) => $q
+                ->where(fn ($w) => $w->where('source_type', SalesInvoice::STOCK_SOURCE)->where('source_id', $invoice->id))
+                ->when($challanIds !== [], fn ($q) => $q->orWhere(fn ($w) => $w
+                    ->where('source_type', DeliveryChallan::STOCK_SOURCE)->whereIn('source_id', $challanIds))))
+            ->whereNotNull('batch_id')
+            ->where('floor_change', '<', 0)
+            ->groupBy('product_id', 'batch_id')
+            ->orderBy('batch_id')
+            ->selectRaw('product_id, batch_id, -SUM(floor_change) as qty')
+            ->get();
+
+        $lots = [];
+
+        foreach ($out as $row) {
+            $lots[(int) $row->product_id][(int) $row->batch_id] = bcadd((string) $row->qty, '0', 4);
+        }
+
+        if ($lots === [] || $challanIds === []) {
+            return $lots;
+        }
+
+        // ⓘ একই চালানের অন্য (বাতিল নয়) বিল যে লট থেকে খরচ টেনেছে
+        $others = SalesInvoiceLine::query()
+            ->whereHas('challanLine', fn ($q) => $q->whereIn('delivery_challan_id', $challanIds))
+            ->where('sales_invoice_id', '<>', $invoice->id)
+            ->whereHas('invoice', fn ($q) => $q->where('status', '<>', DocumentStatus::CANCELLED))
+            ->distinct()
+            ->pluck('sales_invoice_id')
+            ->all();
+
+        if ($others === []) {
+            return $lots;
+        }
+
+        $drawn = DB::table('inv_cost_layer_uses as u')
+            ->join('inv_cost_layers as l', 'l.id', '=', 'u.cost_layer_id')
+            ->where('u.source_type', SalesInvoice::STOCK_SOURCE)
+            ->whereIn('u.source_id', $others)
+            ->where('u.fallback', false)
+            ->whereNotNull('l.batch_id')
+            ->groupBy('u.product_id', 'l.batch_id')
+            ->selectRaw('u.product_id, l.batch_id, SUM(u.qty) as qty')
+            ->get();
+
+        foreach ($drawn as $row) {
+            $p = (int) $row->product_id;
+            $b = (int) $row->batch_id;
+
+            if (isset($lots[$p][$b])) {
+                $rest = bcsub($lots[$p][$b], bcadd((string) $row->qty, '0', 4), 4);
+                $lots[$p][$b] = bccomp($rest, '0', 4) > 0 ? $rest : '0.0000';
+            }
+        }
+
+        return $lots;
+    }
+
     private function cookedCost(SalesInvoice $invoice, SalesInvoiceLine $line): string
     {
         $needs = $this->recipes->needsFor((int) $line->product->id, (string) $line->qty);
