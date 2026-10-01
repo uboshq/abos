@@ -7,6 +7,7 @@ import '../../features/attendance/attendance_screen.dart';
 import '../../features/auth/login_screen.dart';
 import '../../features/customers/customer_detail_screen.dart';
 import '../../features/customers/customer_list_screen.dart';
+import '../../features/customers/deposit_request_screen.dart';
 import '../../features/customers/due_list_screen.dart';
 import '../../features/home/home_shell.dart';
 import '../../features/orders/new_order_screen.dart';
@@ -112,6 +113,18 @@ final goRouterProvider = Provider<GoRouter>((ref) {
                     customerId: state.pathParameters['id'] ?? '',
                   ),
                 ),
+                routes: [
+                  // স্লিপসহ জমার অনুরোধ (0.4.3) — দোকানের পাতা থেকে
+                  GoRoute(
+                    path: 'deposit',
+                    builder: (context, state) => ModuleGateView(
+                      path: 'customers',
+                      child: DepositRequestScreen(
+                        customerId: state.pathParameters['id'] ?? '',
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),

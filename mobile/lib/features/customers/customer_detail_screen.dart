@@ -210,6 +210,12 @@ class _Actions extends StatelessWidget {
             icon: const Icon(Icons.location_on_outlined),
             label: const Text('ঠিকানা'),
           ),
+        // ⭐ স্লিপসহ জমার অনুরোধ (0.4.3)
+        OutlinedButton.icon(
+          onPressed: () => context.push('/home/customers/${customer.id}/deposit'),
+          icon: const Icon(Icons.receipt_long_outlined),
+          label: const Text('জমার অনুরোধ'),
+        ),
         FilledButton.icon(
           onPressed: () => context.go('/home/new-order'),
           icon: const Icon(Icons.add_shopping_cart_outlined),
