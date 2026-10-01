@@ -123,6 +123,22 @@ final class LoanService
         }
 
         /*
+         * ⛔ এক লেনদেন, ঋণের সারিতে তালা — চূড়ান্ত অডিট ⛔৮, ৩০ সেপ্টেম্বর ২০২৬
+         * ([[TwoDrawsPassedTheCashCreditLimitTest]])। ⓘ আগে সীমা দেখা হত তালা ছাড়া, লেনদেনের
+         * বাইরে: দুইজন একসাথে ৬০০ তুললে দুইজনেই "১,০০০ খালি" দেখতেন আর খাতায় ১,২০০ বসত।
+         * আর খাতায় বসানো আটকালে তোলার সারিটা একা পড়ে থাকত।
+         */
+        DB::transaction(function () use ($loan, $amount, $intoAccountId, $date): void {
+            Loan::query()->whereKey($loan->getKey())->lockForUpdate()->first();
+
+            $this->draw($loan, $amount, $intoAccountId, $date);
+        });
+    }
+
+    /** তালার ভিতরে তোলা — সীমা তাজা বাকি দেখে, তারপর সারি আর দাখিলা। */
+    private function draw(Loan $loan, string $amount, int $intoAccountId, Carbon|string|null $date): void
+    {
+        /*
          * সীমার বাইরে তোলা যায় না।
          *
          * CC-র পুরো ব্যাপারটাই একটা সীমা। ওটা না দেখলে ব্যাংক নিজেই
