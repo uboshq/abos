@@ -13,6 +13,7 @@ import '../../features/orders/new_order_screen.dart';
 import '../../features/orders/order_prefill.dart';
 import '../../features/orders/order_list_screen.dart';
 import '../../features/products/product_list_screen.dart';
+import '../../features/scan/paper_scan_screen.dart';
 import '../../features/splash/splash_screen.dart';
 import '../../features/reports/reports_screen.dart';
 import '../../features/stock/stock_list_screen.dart';
@@ -139,6 +140,11 @@ final goRouterProvider = Provider<GoRouter>((ref) {
             path: 'orders',
             builder: (context, state) =>
                 const ModuleGateView(path: 'orders', child: OrderListScreen()),
+          ),
+          GoRoute(
+            path: 'scan',
+            builder: (context, state) =>
+                const ModuleGateView(path: 'scan', child: PaperScanScreen()),
           ),
           GoRoute(
             path: 'sync-status',

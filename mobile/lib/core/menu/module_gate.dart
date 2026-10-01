@@ -36,6 +36,7 @@ class ModuleGate {
     'dues': 'customer',
     'orders': 'sales',
     'new-order': 'sales',
+    'scan': 'sales',
     'today': 'sales',
     'products': 'inventory',
     'stock': 'inventory',

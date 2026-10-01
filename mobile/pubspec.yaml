@@ -10,7 +10,7 @@ publish_to: "none"
 # package installer refuses an "upgrade" whose versionCode is not greater --
 # which is exactly the path a phone in a shop takes in the morning. A plain
 # counter that only ever goes up, never derived from the version name.
-version: 0.4.2+7
+version: 0.4.3+8
 
 environment:
   sdk: ">=3.4.0 <4.0.0"
@@ -111,6 +111,9 @@ dependencies:
   # FileProvider, which is the only way to share a file: from Android 7 a
   # bare file path handed to another app is a FileUriExposedException.
   open_filex: ^4.7.0
+  # চালান/গেট পাসের QR পড়া (0.4.3)। ফোনের ভেতরেই পড়ে (Android-এ ML Kit-এর
+  # বাঁধা মডেল) — কোনো সার্ভার বা বাইরের সেবায় ছবি যায় না। BSD-3।
+  mobile_scanner: ^6.0.2
 
 
 dev_dependencies:

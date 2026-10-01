@@ -39,6 +39,12 @@
     <uses-feature android:name="android.hardware.bluetooth"
         android:required="false" />
 
+    <!-- চালান/গেট পাসের QR পড়ার ক্যামেরা (0.4.3) — কেবল "কাগজ স্ক্যান" পর্দা খুললে চায়।
+         ক্যামেরা ছাড়া ফোনেও বাকি সব চলে, তাই required নয়। -->
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-feature android:name="android.hardware.camera"
+        android:required="false" />
+
     <!--
       Installing the app's own update (docs/Contract section 6, rule kha).
 

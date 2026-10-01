@@ -52,6 +52,8 @@ class RouteRegistry {
     'approval.inbox.index': 'approvals',
     'customer.index': 'customers',
     'sales.order.index': 'orders',
+    // কাগজের QR স্ক্যান (0.4.3) — ডেলিভারি দেখার চাবি যাঁর, তাঁর টাইল।
+    'sales.delivery.index': 'scan',
     'inventory.product.index': 'products',
     'inventory.stock.index': 'stock',
   };
