@@ -50,18 +50,35 @@ final class TheQuotationAndOrderMenusSitAfterTheDashboardTest extends TestCase
         $this->assertTrue($quotations < $orders && $orders < $delivery,
             '⛔ ক্রম ভুল — উদ্ধৃতি, তারপর বিক্রয় আদেশ, তারপর বাকি সারি।');
 
-        /* ⭐ Delivery Processing (ডিসপ্যাচ রেজিস্টারসহ), তারপর সরাসরি বিক্রয়, তারপর ইনভয়েস, তারপর মূল্য
-           নির্ধারণ — মালিকের নকশা, ২৮ সেপ্টেম্বর ২০২৬ (রাত) */
-        $shipments = strpos($html, e(route('sales.shipment.index')));
-        $direct = strpos($html, e(route('sales.direct.create')));
-        $invoices = strpos($html, e(route('sales.invoice.index')));
-        // ⓘ রুট ধরে মাপা — ভাঁজের নাম পাতার অন্য জায়গায় আঁকা হয়, তাই নামের অবস্থান ক্রম বলে না
-        $pricing = strpos($html, e(route('sales.price_list.index')));
+        /*
+         * ⭐ বাকি ক্রম — মালিকের নির্দেশ, ১ অক্টোবর ২০২৬: অর্ডার → নতুন DO → DO তালিকা (ভাঁজ) → সরাসরি বিক্রয় →
+         * ইনভয়েস তালিকা → ডেলিভারি চালান → ডেলিভারি প্রসেসিং → মূল্য নির্ধারণ → বিক্রয় ফেরত → যে কাগজ বেরোয়নি।
+         * ⓘ রুট ধরে মাপা — ভাঁজের নাম পাতার অন্য জায়গায় আঁকা হয়, তাই নামের অবস্থান ক্রম বলে না।
+         */
+        $at = fn (string $url) => strpos($html, e($url));
+        $order = [
+            'order_track' => $at(route('sales.order.track')),
+            'do_new' => $at(route('sales.planned', ['screen' => 'do_new'])),
+            'do_drafts' => $at(route('sales.direct.drafts')),
+            'do_all' => $at(route('sales.do.index', ['tab' => 'cancelled'])),
+            'direct' => $at(route('sales.direct.create')),
+            'invoices' => $at(route('sales.invoice.index')),
+            'challans' => $at(route('sales.challan.index')),
+            'dispatch' => $at(route('sales.shipment.index')),
+            'pricing' => $at(route('sales.price_list.index')),
+            'returns' => $at(route('sales.return.index')),
+            'not_printed' => $at(route('sales.print_queue.index')),
+        ];
 
-        $this->assertNotFalse($shipments, 'প্রস্তুতিটাই ভুল — ডিসপ্যাচ রেজিস্টারের সারি নেই।');
-        $this->assertTrue($direct !== false && $invoices !== false && $pricing !== false
-            && $shipments < $direct && $direct < $invoices && $invoices < $pricing,
-            '⛔ ক্রম ভুল — Delivery Processing, সরাসরি বিক্রয়, ইনভয়েস, মূল্য নির্ধারণ। '.json_encode(compact('shipments', 'direct', 'invoices', 'pricing')));
+        foreach ($order as $row => $position) {
+            $this->assertNotFalse($position, "⛔ '{$row}' সারিটা মেনুতে নেই।");
+        }
+
+        $sorted = $order;
+        asort($sorted);
+        $this->assertSame(array_keys($order), array_keys($sorted), '⛔ মেনুর ক্রম মালিকের দেওয়া ক্রম নয়: '.json_encode($order));
+
+        $this->assertStringContainsString(e(__('core.menu.delivery_orders')), $html, '⛔ "DO তালিকা" ভাঁজ নেই।');
 
         foreach (PlannedScreenController::SCREENS as $screen) {
             $this->assertStringContainsString(e(route('sales.planned', ['screen' => $screen])), $html,

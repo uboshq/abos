@@ -147,40 +147,50 @@ return [
                 'route_params' => ['screen' => 'order_history'], 'permission' => 'sales.order.view'],
             ['label' => 'sales::menu.order_track', 'cluster' => 'sales_orders', 'icon' => 'search', 'route' => 'sales.order.track',
                 'permission' => 'sales.order.view', 'setting' => 'sales.screen_orders'],
+            /*
+             * ⭐ মেনুর ক্রম — মালিকের নির্দেশ, ১ অক্টোবর ২০২৬ (আগের রাতের পরিকল্পনা, "যেটা প্ল্যান হয়েছিল সেভাবেই"):
+             * ড্যাশবোর্ড → উদ্ধৃতি → অর্ডার → নতুন DO → DO তালিকা → সরাসরি বিক্রয় → ইনভয়েস তালিকা → ডেলিভারি চালান
+             * → ডেলিভারি প্রসেসিং → মূল্য নির্ধারণ → বিক্রয় ফেরত → যে কাগজ বেরোয়নি।
+             * ⓘ "DO তালিকায় DO মেনু ভাঁজ করা থাকবে" — DO-র ধাপগুলো ([[DeliveryOrderTabs]]) এক ভাঁজে। কেবল ক্রম আর
+             * নাম বদলেছে; প্রতিটা সারির রুট আর চাবি আগের মতোই।
+             */
+            ['label' => 'sales::planned.do_new', 'icon' => 'book', 'route' => 'sales.planned',
+                'route_params' => ['screen' => 'do_new'], 'permission' => 'sales.order.view'],
+
+            // ⓘ "DO তালিকা" ভাঁজ — পাতার ধাপের ট্যাবগুলোই, একই ঠিকানায় ([[DeliveryOrderTabs::href()]])
+            ['label' => 'sales::do.tab.drafts', 'cluster' => 'delivery_orders', 'icon' => 'book', 'route' => 'sales.direct.drafts',
+                'permission' => 'sales.challan.create', 'setting' => 'sales.screen_direct'],
+            ['label' => 'sales::do.tab.approval', 'cluster' => 'delivery_orders', 'icon' => 'book', 'route' => 'sales.direct.drafts',
+                'route_params' => ['tab' => 'approval'], 'permission' => 'sales.challan.create', 'setting' => 'sales.screen_direct'],
+            ['label' => 'sales::do.tab.awaiting', 'cluster' => 'delivery_orders', 'icon' => 'book', 'route' => 'sales.do.index',
+                'route_params' => ['tab' => 'awaiting'], 'permission' => 'sales.challan.view'],
+            ['label' => 'sales::do.tab.delivered', 'cluster' => 'delivery_orders', 'icon' => 'book', 'route' => 'sales.do.index',
+                'route_params' => ['tab' => 'delivered'], 'permission' => 'sales.challan.view'],
+            ['label' => 'sales::do.tab.all', 'cluster' => 'delivery_orders', 'icon' => 'book', 'route' => 'sales.do.index',
+                'permission' => 'sales.challan.view'],
+            ['label' => 'sales::do.tab.cancelled', 'cluster' => 'delivery_orders', 'icon' => 'book', 'route' => 'sales.do.index',
+                'route_params' => ['tab' => 'cancelled'], 'permission' => 'sales.challan.view'],
+
+            /* ⭐ সরাসরি বিক্রয় — মাঝের সব ধাপ এক চাপে, সোজা বিলে (মালিক, ২৮ সেপ্টেম্বর ২০২৬) */
+            ['label' => 'sales::menu.direct', 'icon' => 'sales', 'route' => 'sales.direct.create', 'permission' => 'sales.challan.create',
+                'setting' => 'sales.screen_direct'],
 
             /*
-             * ⭐ ক্রমটা কাগজের নিজের ধারা ধরে — মালিকের নির্দেশ, ২১ সেপ্টেম্বর ২০২৬।
-             *
-             * ── ⓘ কেন এই ক্রম ─────────────────────────────────────────
-             * বিক্রয়ে কাগজগুলো একটার পর একটা জন্মায়: আদেশ আসে → মাল
-             * যায় (চালান) → গাড়ি ছাড়ে (শিপমেন্ট) → বিল হয় → ফেরত এলে
-             * ফেরত। মেনুটা সেই ধারাতেই সাজানো, যাতে নতুন কর্মীও উপর
-             * থেকে নিচে পড়ে কাজের ক্রমটা বুঝে নিতে পারেন।
-             *
-             * ⚠️ এটা ১৯ সেপ্টেম্বরের সিদ্ধান্তের উল্টো — তখন মালিক
-             * বলেছিলেন *"Dashboard er por 'Invoice list'"*, আর সারিটা
-             * সবার উপরে বসেছিল। ⓘ এক ক্লিকের সুবিধাটা তবু যায়নি:
-             * ড্যাশবোর্ডের নিজের টাইলেই ইনভয়েস তালিকা আছে
-             * ([[SalesDashboard]])। তাই মেনু ধারা মানে, আর দ্রুত-পথটা
-             * ড্যাশবোর্ডে থাকে।
+             * ⓘ ইনভয়েস তালিকা — সব বিল (কাউন্টার, সরাসরি বিক্রয়, চালান থেকে বানানো), কেবল বাতিলগুলো একটা বোতামের পেছনে।
+             * ⛔ দুই মেনুতে একই তালিকা রাখা হয় না — মালিকের নিজের নিয়ম (*"ekoi jinis dui jaygay dorkar nai"*)।
              */
-            /* ⭐ ডেলিভারি অর্ডার — প্রতিটা বিক্রির চালান, ধাপের ট্যাবে; খসড়ার তালিকা এর ভিতরে
-               (মালিকের অনুমোদিত নকশা, ধাপ ৩, ২৮ সেপ্টেম্বর ২০২৬) */
-            /*
-             * ⭐ Delivery Processing — মালিকের নকশা, ২৮ সেপ্টেম্বর ২০২৬ (রাত): Create DO, DO List,
-             * চালান, পরিবহন, লোডিং, ডিসপ্যাচ, ডেলিভারি নিশ্চিত — কাগজের ধারায়। ⓘ নিশ্চিতকরণের পরে DO
-             * নিজে চালান; গেট পাস রওনায়; বিল ডেলিভারি নিশ্চিতের পরে। "মেনুতে এখন, কোড পরে" — যে
-             * পর্দা তৈরি হয়নি সে [[PlannedScreenController]]-এর সৎ পাতায়।
-             */
-            ['label' => 'sales::planned.do_new', 'cluster' => 'delivery_processing', 'icon' => 'book', 'route' => 'sales.planned',
-                'route_params' => ['screen' => 'do_new'], 'permission' => 'sales.order.view'],
-            ['label' => 'sales::menu.do_list', 'cluster' => 'delivery_processing', 'icon' => 'book', 'route' => 'sales.do.index',
-                'permission' => 'sales.challan.view'],
-            ['label' => 'sales::menu.challans', 'cluster' => 'delivery_processing', 'icon' => 'challan', 'route' => 'sales.challan.index',
+            ['label' => 'sales::menu.invoices', 'icon' => 'receipt', 'route' => 'sales.invoice.index', 'permission' => 'sales.invoice.view'],
+
+            ['label' => 'sales::menu.challans', 'icon' => 'challan', 'route' => 'sales.challan.index',
                 'permission' => 'sales.challan.view', 'setting' => 'sales.screen_challans'],
+
+            /*
+             * ⭐ ডেলিভারি প্রসেসিং — পরিবহন বরাদ্দ, লোডিং শিট, গেট পাস, ডিসপ্যাচ রেজিস্টার, ডেলিভারি নিশ্চিতকরণ।
+             * ⓘ যে পর্দা তৈরি হয়নি সে [[PlannedScreenController]]-এর সৎ পাতায় ("মেনুতে এখন, কোড পরে")।
+             */
             ['label' => 'sales::planned.transport_assign', 'cluster' => 'delivery_processing', 'icon' => 'share', 'route' => 'sales.planned',
                 'route_params' => ['screen' => 'transport_assign'], 'permission' => 'sales.order.view'],
-            // ⭐ লোডিং শিট — এখন আসল পাতা ([[LoadingSheetController]], ২৯ সেপ্টেম্বর ২০২৬)
+            // ⭐ লোডিং শিট — আসল পাতা ([[LoadingSheetController]], ২৯ সেপ্টেম্বর ২০২৬)
             ['label' => 'sales::loading.title', 'cluster' => 'delivery_processing', 'icon' => 'challan', 'route' => 'sales.loading_sheet.index',
                 'permission' => 'sales.shipment.view', 'setting' => 'sales.screen_shipments'],
             // ⭐ গেট পাস — রওনার মুহূর্তে নিজে তৈরি, এখানে তালিকা ([[GatePassService]])
@@ -191,21 +201,6 @@ return [
                 'permission' => 'sales.shipment.view', 'setting' => 'sales.screen_shipments'],
             ['label' => 'sales::menu.delivery_confirmation', 'cluster' => 'delivery_processing', 'icon' => 'check-circle', 'route' => 'sales.delivery.index',
                 'permission' => 'sales.delivery.view', 'setting' => 'sales.screen_challans'],
-
-            /* ⭐ সরাসরি বিক্রয় — ইনভয়েসের ঠিক আগে: মাঝের সব ধাপ এক চাপে, সোজা বিলে (মালিক, ২৮ সেপ্টেম্বর ২০২৬) */
-            ['label' => 'sales::menu.direct', 'icon' => 'sales', 'route' => 'sales.direct.create', 'permission' => 'sales.challan.create',
-                'setting' => 'sales.screen_direct'],
-
-            /*
-             * ⓘ ইনভয়েস তালিকা — মাল যাওয়ার পরে, কারণ বিলটাও তখনই
-             * সত্যি হয়। তালিকাটা সব বিল দেখায় (কাউন্টার, সরাসরি
-             * বিক্রয়, চালান থেকে বানানো), কেবল বাতিলগুলো একটা বোতামের
-             * পেছনে।
-             *
-             * ⛔ দুই মেনুতে একই তালিকা রাখা হয় না — মালিকের নিজের নিয়ম
-             * (*"ekoi jinis dui jaygay dorkar nai"*)।
-             */
-            ['label' => 'sales::menu.invoices', 'icon' => 'receipt', 'route' => 'sales.invoice.index', 'permission' => 'sales.invoice.view'],
 
             /* ⓘ শিপমেন্ট এখন "ডিসপ্যাচ রেজিস্টার" নামে Delivery Processing ভাঁজে */
 
