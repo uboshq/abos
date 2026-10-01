@@ -110,7 +110,7 @@
                                     @unless ($blind)
                                         <td class="cell-input num text-end"
                                             data-label="{{ __('inventory::field.book_qty') }}">
-                                            {{ $bookQty[$product->id] ?? '0' }}
+                                            {{ \App\Core\Support\Money::quantity($bookQty[$product->id] ?? '0') }}
                                         </td>
                                     @endunless
 

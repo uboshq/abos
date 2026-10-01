@@ -158,7 +158,8 @@ final class ReportExport
 
         return match ($column->type) {
             ReportColumn::MONEY => Money::format((string) $value, $column->decimals()),
-            ReportColumn::QUANTITY => Money::format((string) $value, $column->decimals()),
+            // ⓘ পর্দার একই রূপ ([[ReportResult::number()]]) — ফাইলে ৩,৭৯৬, "3,796.000" নয়
+            ReportColumn::QUANTITY => ReportResult::number((string) $value, $column),
             ReportColumn::DATE => DateFormat::format($value),
             default => (string) $value,
         };

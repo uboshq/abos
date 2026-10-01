@@ -93,7 +93,7 @@
                                     {{ $line->product?->name() ?? '—' }}
                                 </td>
                                 <td class="num text-end" data-label="{{ __('purchase::field.quantity') }}">
-                                    {{ $line->qty }}
+                                    {{ \App\Core\Support\Money::quantity($line->qty) }}
                                 </td>
                                 <td data-label="{{ __('purchase::field.specification') }}">
                                     {{ $line->specification ?: '—' }}

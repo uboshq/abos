@@ -97,7 +97,7 @@
                                 {{-- ⓘ সীমা বলা না থাকলে ড্যাশ, শূন্য নয় — ⚠️ শূন্য
                                      লিখলে মনে হত চুক্তিতে কিছুই দেওয়া যাবে না। --}}
                                 <td class="num text-end" data-label="{{ __('purchase::field.qty_limit') }}">
-                                    {{ $line->qty_limit !== null ? $line->qty_limit : '—' }}
+                                    {{ $line->qty_limit !== null ? \App\Core\Support\Money::quantity($line->qty_limit) : '—' }}
                                 </td>
                                 <td class="num text-end" data-label="{{ __('purchase::field.value_limit') }}">
                                     {{ $line->value_limit !== null

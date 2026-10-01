@@ -171,7 +171,7 @@
                     <div>
                         <div class="mb-1 flex items-baseline justify-between text-xs">
                             <span class="text-(--color-ink-muted)">{{ __('inventory::overview.'.$key) }}</span>
-                            <span class="font-semibold tabular-nums">{{ $qty }}</span>
+                            <span class="font-semibold tabular-nums">{{ \App\Core\Support\Money::quantity($qty) }}</span>
                         </div>
                         <div class="h-2 overflow-hidden rounded-full bg-(--color-surface-hover)">
                             <div class="h-full {{ $colour }}" style="width:{{ $share }}%"></div>
@@ -200,9 +200,9 @@
                     ['key' => 'name', 'label' => __('inventory::field.product'),
                      'render' => fn ($p) => $p->name()],
                     ['key' => 'available', 'label' => __('inventory::overview.available'), 'width' => '7rem',
-                     'render' => fn ($p) => $p->available_qty],
+                     'render' => fn ($p) => \App\Core\Support\Money::quantity($p->available_qty)],
                     ['key' => 'reorder', 'label' => __('inventory::overview.reorder_level'), 'width' => '7rem',
-                     'render' => fn ($p) => $p->reorder_level],
+                     'render' => fn ($p) => \App\Core\Support\Money::quantity($p->reorder_level)],
                 ]" />
         </div>
 

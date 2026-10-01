@@ -66,7 +66,7 @@ final class ReportResult
     {
         $value = $section->totals[$column->key] ?? null;
 
-        return $value === null ? '' : Money::format($value, $column->decimals());
+        return $value === null ? '' : self::number($value, $column);
     }
 
     /** উপরের কয়টা সারি দেখানো হচ্ছে — পুরো তালিকা হলে false */
@@ -223,16 +223,31 @@ final class ReportResult
              * ঠিক-মাঝামাঝি অঙ্কে (x.xx5) মোট আর সারি দুই দিকে গোল হত —
              * এক পর্দায় দুইটা সংখ্যা, যোগ করলে মেলে না।
              */
-            return Money::format($value, $column->decimals());
+            return self::number($value, $column);
         }
 
         return (string) $value;
+    }
+
+    /**
+     * একটা সংখ্যা দেখানোর রূপ — টাকা ঠিক দশমিকে, **পরিমাণ ভগ্নাংশ থাকলে তবেই দশমিকে**।
+     *
+     * ⭐ মালিক, ৩০ সেপ্টেম্বর ২০২৬ (Profit by Product-এর ছবিতে "3796.0000"): *"dosomiker pore eto sunno
+     * keno … zetate sudu dosomiker pore vanga sonkha thake setatei sudu hobe"*। ⓘ পরিমাণ তাই
+     * [[Money::quantity()]]-এ — ৩,৭৯৬ বা ১২.৫; টাকা আগের মতোই দুই ঘরে। পর্দা, মোট, শাখার মোট আর ফাইল সব
+     * এখান দিয়ে যায়, যাতে একই সংখ্যা দুই জায়গায় দুই রকম না দেখায়।
+     */
+    public static function number(mixed $value, ReportColumn $column): string
+    {
+        return $column->type === ReportColumn::QUANTITY
+            ? Money::quantity($value)
+            : Money::format($value, $column->decimals());
     }
 
     public function formatTotal(ReportColumn $column): string
     {
         $value = $this->totals[$column->key] ?? null;
 
-        return $value === null ? '' : Money::format($value, $column->decimals());
+        return $value === null ? '' : self::number($value, $column);
     }
 }

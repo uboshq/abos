@@ -95,9 +95,12 @@ final class TheCountingEngineHadNoDoorTest extends TestCase
             ]))
             ->getContent();
 
-        $this->assertStringContainsString('7777', $open,
+        // ⓘ পরিমাণ এখন দেখানোর রূপে — ৭,৭৭৭ (মালিক, ১ অক্টোবর ২০২৬: দশমিকের শূন্য নয়, লাখ-কোটির কমা)
+        $this->assertStringContainsString('7,777', $open,
             'সাধারণ শিটে খাতার সংখ্যাটাই নেই — তাহলে মেলানোর কিছু থাকে না।');
 
+        // ⚠️ দুই রূপেই নেই — কাঁচা আর দেখানোর; একটা লুকিয়ে অন্যটা রেখে দিলে অন্ধ গণনা অন্ধ থাকত না
+        $this->assertStringNotContainsString('7,777', $blind, 'অন্ধ গণনার শিটে খাতার সংখ্যাটা (দেখানোর রূপে) রয়ে গেছে।');
         $this->assertStringNotContainsString('7777', $blind,
             'অন্ধ গণনার শিটেও খাতার সংখ্যাটা পাতায় রয়ে গেছে, আর ওটাই '
             .'অন্ধ গণনার একমাত্র কারণ ছিল।');

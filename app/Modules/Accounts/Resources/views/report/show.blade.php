@@ -425,7 +425,8 @@
                                             @if ($index === 0)
                                                 {{ __('core.report.branch_total') }} — {{ $section->branchName }}
                                             @elseif ($column->total && isset($section->totals[$column->key]))
-                                                {{ \App\Core\Support\Money::format($section->totals[$column->key]) }}
+                                                {{-- ⓘ পরিমাণের মোটও দশমিক ছাড়া ([[ReportResult::number()]]) --}}
+                                                {{ \App\Core\Engines\Report\ReportResult::number($section->totals[$column->key], $column) }}
                                             @endif
                                         </td>
                                     @endforeach
@@ -460,7 +461,7 @@
                                     @if ($index === 0)
                                         {{ $result->isSplitByBranch() ? __('core.report.grand_total') : __('core.print.total') }}
                                     @elseif ($column->total && isset($result->totals[$column->key]))
-                                        {{ \App\Core\Support\Money::format($result->totals[$column->key]) }}
+                                        {{ \App\Core\Engines\Report\ReportResult::number($result->totals[$column->key], $column) }}
                                     @endif
                                 </td>
                             @endforeach

@@ -95,10 +95,10 @@
                                 </td>
 
                                 <td class="num text-end" data-label="{{ __('inventory::field.book_qty') }}">
-                                    {{ $line->book_qty }}
+                                    {{ \App\Core\Support\Money::quantity($line->book_qty) }}
                                 </td>
                                 <td class="num text-end" data-label="{{ __('inventory::field.counted_qty') }}">
-                                    {{ $line->counted_qty }}
+                                    {{ \App\Core\Support\Money::quantity($line->counted_qty) }}
                                 </td>
 
                                 {{-- ⓘ মিলে গেলে রং নেই — ⚠️ প্রতিটা সারি রঙিন হলে
@@ -108,7 +108,7 @@
                                         'font-semibold text-(--color-badge-danger-ink)' => $off,
                                     ])
                                     data-label="{{ __('inventory::field.difference') }}">
-                                    {{ $line->difference }}
+                                    {{ \App\Core\Support\Money::quantity($line->difference) }}
                                 </td>
                             </tr>
                         @endforeach

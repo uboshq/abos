@@ -61,15 +61,15 @@
 
                 <div>
                     <dt class="text-xs text-(--color-ink-muted)">{{ __('inventory::field.qc_inspected') }}</dt>
-                    <dd class="num">{{ $inspection->inspected_qty }}</dd>
+                    <dd class="num">{{ \App\Core\Support\Money::quantity($inspection->inspected_qty) }}</dd>
                 </div>
                 <div>
                     <dt class="text-xs text-(--color-ink-muted)">{{ __('inventory::field.qc_accepted') }}</dt>
-                    <dd class="num">{{ $inspection->accepted_qty }}</dd>
+                    <dd class="num">{{ \App\Core\Support\Money::quantity($inspection->accepted_qty) }}</dd>
                 </div>
                 <div>
                     <dt class="text-xs text-(--color-ink-muted)">{{ __('inventory::field.qc_rejected') }}</dt>
-                    <dd class="num">{{ $inspection->rejected_qty }}</dd>
+                    <dd class="num">{{ \App\Core\Support\Money::quantity($inspection->rejected_qty) }}</dd>
                 </div>
                 <div>
                     <dt class="text-xs text-(--color-ink-muted)">{{ __('inventory::field.inspected_by') }}</dt>

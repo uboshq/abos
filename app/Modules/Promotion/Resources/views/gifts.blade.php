@@ -28,7 +28,7 @@
                     </span>
                     <span class="tabular-nums">
                         {{ $row->benefit?->giftProduct?->name() ?? '—' }}:
-                        {{ __('promotion::field.issued') }} {{ $row->issued_qty ?? '0' }} / {{ __('promotion::field.owed') }} {{ $row->benefit_amount }}
+                        {{ __('promotion::field.issued') }} {{ \App\Core\Support\Money::quantity($row->issued_qty ?? '0') }} / {{ __('promotion::field.owed') }} {{ $row->benefit_amount }}
                     </span>
                 </div>
 

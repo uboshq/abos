@@ -108,7 +108,7 @@
                                     @endif
                                 </td>
                                 <td class="num text-end" data-label="{{ __('purchase::field.quantity') }}">
-                                    {{ $line->qty }}
+                                    {{ \App\Core\Support\Money::quantity($line->qty) }}
                                 </td>
 
                                 {{-- ⓘ দর না বসানো থাকলে একটা ড্যাশ, শূন্য নয় —

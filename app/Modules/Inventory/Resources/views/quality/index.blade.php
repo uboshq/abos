@@ -18,9 +18,9 @@
         ['key' => 'warehouse', 'label' => __('inventory::field.warehouse'),
          'render' => fn ($i) => $i->warehouse?->name() ?? '—'],
         ['key' => 'inspected_qty', 'label' => __('inventory::field.quantity'), 'numeric' => true,
-         'width' => '7rem', 'render' => fn ($i) => $i->inspected_qty],
+         'width' => '7rem', 'render' => fn ($i) => \App\Core\Support\Money::quantity($i->inspected_qty)],
         ['key' => 'rejected_qty', 'label' => __('inventory::field.qc_rejected'), 'numeric' => true,
-         'width' => '7rem', 'render' => fn ($i) => $i->rejected_qty],
+         'width' => '7rem', 'render' => fn ($i) => \App\Core\Support\Money::quantity($i->rejected_qty)],
         ['key' => 'status', 'label' => __('inventory::field.state'), 'width' => '9rem',
          'render' => fn ($i) => view('inventory::quality.partials.status', ['inspection' => $i])],
     ];

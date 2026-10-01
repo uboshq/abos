@@ -18,6 +18,11 @@
             ? \App\Core\Support\Money::format($value) : '' }}
         @break
 
+    @case (\App\Core\Engines\Report\ReportColumn::QUANTITY)
+        {{-- ⛔ আগে এই ধরনের কোনো ঘর ছিল না — কাঁচা "3796.0000" ছাপা হত (মালিক, ৩০ সেপ্টেম্বর ২০২৬);
+             ⭐ এখন ৩,৭৯৬ বা ১২.৫ ([[ReportResult::number()]]) --}}
+        {{ $value === null || $value === '' ? '' : \App\Core\Engines\Report\ReportResult::number($value, $column) }}
+        @break
     @case (\App\Core\Engines\Report\ReportColumn::PERCENT)
         {{--
             খালি মানে শূন্য নয়।

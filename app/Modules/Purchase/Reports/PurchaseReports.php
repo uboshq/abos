@@ -121,9 +121,9 @@ final class PurchaseReports
                 ],
                 ['key' => 'supplier_name', 'label' => 'purchase::field.supplier'],
                 ['key' => 'product_name', 'label' => 'purchase::field.product'],
-                ['key' => 'ordered_qty', 'label' => 'purchase::field.ordered', 'type' => ReportColumn::MONEY],
-                ['key' => 'received_qty', 'label' => 'purchase::field.received', 'type' => ReportColumn::MONEY],
-                ['key' => 'pending_qty', 'label' => 'purchase::field.pending', 'type' => ReportColumn::MONEY],
+                ['key' => 'ordered_qty', 'label' => 'purchase::field.ordered', 'type' => ReportColumn::QUANTITY],
+                ['key' => 'received_qty', 'label' => 'purchase::field.received', 'type' => ReportColumn::QUANTITY],
+                ['key' => 'pending_qty', 'label' => 'purchase::field.pending', 'type' => ReportColumn::QUANTITY],
             ],
         );
     }
@@ -187,8 +187,8 @@ final class PurchaseReports
                 ],
                 ['key' => 'supplier_name', 'label' => 'purchase::field.supplier'],
                 ['key' => 'product_name', 'label' => 'purchase::field.product'],
-                ['key' => 'received_qty', 'label' => 'purchase::field.received', 'type' => ReportColumn::MONEY],
-                ['key' => 'unbilled_qty', 'label' => 'purchase::field.unbilled', 'type' => ReportColumn::MONEY],
+                ['key' => 'received_qty', 'label' => 'purchase::field.received', 'type' => ReportColumn::QUANTITY],
+                ['key' => 'unbilled_qty', 'label' => 'purchase::field.unbilled', 'type' => ReportColumn::QUANTITY],
                 ['key' => 'unbilled_value', 'label' => 'purchase::field.unbilled_value', 'type' => ReportColumn::MONEY],
             ],
         );

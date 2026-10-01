@@ -409,9 +409,9 @@ final class StockReports
                 ['key' => 'batch_no', 'label' => 'inventory::field.batch_no', 'width' => '8rem'],
                 ['key' => 'held_days', 'label' => 'inventory::field.held_days', 'width' => '6rem'],
                 ['key' => 'expiry_date', 'label' => 'inventory::field.expiry_date', 'type' => ReportColumn::DATE, 'width' => '7rem'],
-                ['key' => 'on_hand', 'label' => 'inventory::field.floor', 'type' => ReportColumn::MONEY],
-                ['key' => 'free_on_hand', 'label' => 'inventory::field.free', 'type' => ReportColumn::MONEY],
-                ['key' => 'unplaced', 'label' => 'inventory::field.unplaced', 'type' => ReportColumn::MONEY],
+                ['key' => 'on_hand', 'label' => 'inventory::field.floor', 'type' => ReportColumn::QUANTITY],
+                ['key' => 'free_on_hand', 'label' => 'inventory::field.free', 'type' => ReportColumn::QUANTITY],
+                ['key' => 'unplaced', 'label' => 'inventory::field.unplaced', 'type' => ReportColumn::QUANTITY],
             ],
         );
     }
@@ -494,7 +494,7 @@ final class StockReports
                 ['key' => 'product_code', 'label' => 'inventory::field.code', 'width' => '7rem'],
                 ['key' => 'product_name', 'label' => 'inventory::field.product'],
                 ['key' => 'batch_no', 'label' => 'inventory::field.batch_no', 'width' => '8rem'],
-                ['key' => 'on_hand', 'label' => 'inventory::field.floor', 'type' => ReportColumn::MONEY],
+                ['key' => 'on_hand', 'label' => 'inventory::field.floor', 'type' => ReportColumn::QUANTITY],
                 ['key' => 'mrp', 'label' => 'inventory::field.mrp', 'type' => ReportColumn::MONEY],
             ],
         );
@@ -540,9 +540,9 @@ final class StockReports
                 ],
                 ['key' => 'product_name', 'label' => 'inventory::field.product'],
                 ['key' => 'warehouse_name', 'label' => 'inventory::field.warehouse'],
-                ['key' => 'floor_change', 'label' => 'inventory::field.floor', 'type' => ReportColumn::MONEY],
-                ['key' => 'reserved_change', 'label' => 'inventory::field.reserved', 'type' => ReportColumn::MONEY],
-                ['key' => 'hold_change', 'label' => 'inventory::field.hold', 'type' => ReportColumn::MONEY],
+                ['key' => 'floor_change', 'label' => 'inventory::field.floor', 'type' => ReportColumn::QUANTITY],
+                ['key' => 'reserved_change', 'label' => 'inventory::field.reserved', 'type' => ReportColumn::QUANTITY],
+                ['key' => 'hold_change', 'label' => 'inventory::field.hold', 'type' => ReportColumn::QUANTITY],
             ],
         );
     }
@@ -606,11 +606,11 @@ final class StockReports
                     'source_type' => 'party_type_literal',
                     'source_id' => 'product_id',
                 ],
-                ['key' => 'floor', 'label' => 'inventory::field.floor', 'type' => ReportColumn::MONEY],
-                ['key' => 'reserved', 'label' => 'inventory::field.reserved', 'type' => ReportColumn::MONEY],
-                ['key' => 'hold', 'label' => 'inventory::field.hold', 'type' => ReportColumn::MONEY],
-                ['key' => 'unplaced', 'label' => 'inventory::field.unplaced', 'type' => ReportColumn::MONEY],
-                ['key' => 'available', 'label' => 'inventory::field.available', 'type' => ReportColumn::MONEY],
+                ['key' => 'floor', 'label' => 'inventory::field.floor', 'type' => ReportColumn::QUANTITY],
+                ['key' => 'reserved', 'label' => 'inventory::field.reserved', 'type' => ReportColumn::QUANTITY],
+                ['key' => 'hold', 'label' => 'inventory::field.hold', 'type' => ReportColumn::QUANTITY],
+                ['key' => 'unplaced', 'label' => 'inventory::field.unplaced', 'type' => ReportColumn::QUANTITY],
+                ['key' => 'available', 'label' => 'inventory::field.available', 'type' => ReportColumn::QUANTITY],
             ],
         );
     }
@@ -657,7 +657,7 @@ final class StockReports
                     'source_id' => 'product_id',
                 ],
                 ['key' => 'reason_name', 'label' => 'inventory::field.reason'],
-                ['key' => 'held', 'label' => 'inventory::field.hold', 'type' => ReportColumn::MONEY],
+                ['key' => 'held', 'label' => 'inventory::field.hold', 'type' => ReportColumn::QUANTITY],
             ],
         );
     }

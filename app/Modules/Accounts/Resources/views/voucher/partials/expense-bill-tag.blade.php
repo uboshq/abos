@@ -151,7 +151,7 @@
                                     {{ $bill->goods_summary }}
                                 @endif
                             </td>
-                            <td class="num p-2 text-end">{{ $bill->total_qty }}</td>
+                            <td class="num p-2 text-end">{{ \App\Core\Support\Money::quantity($bill->total_qty) }}</td>
                             <td class="num p-2 text-end text-(--color-ink-muted)">
                                 {{ bccomp((string) $bill->already_charged, '0', 4) > 0 ? number_format((string) $bill->already_charged, 2) : '—' }}
                             </td>

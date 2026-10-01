@@ -84,9 +84,9 @@ final class SalesReports
                 ],
                 ['key' => 'customer_name', 'label' => 'sales::field.customer'],
                 ['key' => 'product_name', 'label' => 'sales::field.product'],
-                ['key' => 'ordered_qty', 'label' => 'sales::field.ordered', 'type' => ReportColumn::MONEY],
-                ['key' => 'delivered_qty', 'label' => 'sales::field.delivered', 'type' => ReportColumn::MONEY],
-                ['key' => 'pending_qty', 'label' => 'sales::field.pending', 'type' => ReportColumn::MONEY],
+                ['key' => 'ordered_qty', 'label' => 'sales::field.ordered', 'type' => ReportColumn::QUANTITY],
+                ['key' => 'delivered_qty', 'label' => 'sales::field.delivered', 'type' => ReportColumn::QUANTITY],
+                ['key' => 'pending_qty', 'label' => 'sales::field.pending', 'type' => ReportColumn::QUANTITY],
             ],
         );
     }
@@ -148,8 +148,8 @@ final class SalesReports
                 ],
                 ['key' => 'customer_name', 'label' => 'sales::field.customer'],
                 ['key' => 'product_name', 'label' => 'sales::field.product'],
-                ['key' => 'delivered_qty', 'label' => 'sales::field.delivered', 'type' => ReportColumn::MONEY],
-                ['key' => 'uninvoiced_qty', 'label' => 'sales::field.uninvoiced', 'type' => ReportColumn::MONEY],
+                ['key' => 'delivered_qty', 'label' => 'sales::field.delivered', 'type' => ReportColumn::QUANTITY],
+                ['key' => 'uninvoiced_qty', 'label' => 'sales::field.uninvoiced', 'type' => ReportColumn::QUANTITY],
                 ['key' => 'uninvoiced_value', 'label' => 'sales::field.uninvoiced_value', 'type' => ReportColumn::MONEY],
             ],
         );
