@@ -222,6 +222,12 @@ return [
             ['label' => 'inventory::menu.stock_value', 'icon' => 'scale', 'route' => 'inventory.report.show',
                 'route_params' => ['slug' => 'stock-value'], 'permission' => 'inventory.report'],
 
+            // ⭐ মজুদের অবস্থা ও চলাচল — রিপোর্ট সেন্টার ধাপ ৩ ([[InventoryAnalysisReports]])
+            ['label' => 'inventory::stockview.position', 'icon' => 'scale', 'route' => 'inventory.report.show',
+                'route_params' => ['slug' => 'stock-position'], 'permission' => 'inventory.report'],
+            ['label' => 'inventory::stockview.movement', 'icon' => 'list', 'route' => 'inventory.report.show',
+                'route_params' => ['slug' => 'movement-summary'], 'permission' => 'inventory.report'],
+
             // ⭐ গণনা বনাম খাতা — রিপোর্ট সেন্টার ধাপ ৬ ([[InventoryControlReports]])
             ['label' => 'inventory::control.count_vs_book', 'icon' => 'scale', 'route' => 'inventory.report.show',
                 'route_params' => ['slug' => 'count-vs-book'], 'permission' => 'inventory.report'],
@@ -711,6 +717,7 @@ return [
         StockReports::class,
         // ⭐ রিপোর্ট সেন্টার — মজুদের নিয়ন্ত্রণ (মালিক, ১ অক্টোবর ২০২৬)
         \App\Modules\Inventory\Reports\InventoryControlReports::class,
+        \App\Modules\Inventory\Reports\InventoryAnalysisReports::class,
     ],
 
     /*

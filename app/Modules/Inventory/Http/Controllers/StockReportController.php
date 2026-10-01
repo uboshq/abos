@@ -68,6 +68,9 @@ class StockReportController extends Controller implements HasMiddleware
 
         // ⭐ রিপোর্ট সেন্টার — মজুদের নিয়ন্ত্রণ ([[InventoryControlReports]])
         'count-vs-book' => 'inventory.count_vs_book',
+        // ⭐ রিপোর্ট সেন্টার ধাপ ৩ ([[InventoryAnalysisReports]])
+        'stock-position' => 'inventory.stock_position',
+        'movement-summary' => 'inventory.movement_summary',
         'stock-alerts' => 'inventory.stock_alerts',
         'slow-dead' => 'inventory.slow_dead',
 
