@@ -319,6 +319,7 @@ class StockController extends Controller implements HasMiddleware
             ->select('product_id')
             ->where('company_id', CompanyContext::id())
             ->when($warehouse, fn (Builder $q, Warehouse $w) => $q->where('warehouse_id', $w->id))
+            ->tap($this->inViewedBranch(...))
             ->groupBy('product_id')
             ->havingRaw($this->anyBoxIsNotEmpty());
     }
@@ -366,7 +367,21 @@ class StockController extends Controller implements HasMiddleware
             ->selectRaw("COALESCE(SUM({$column}), 0)")
             ->whereColumn('product_id', 'inv_products.id')
             ->where('company_id', CompanyContext::id())
-            ->when($warehouse, fn (Builder $q, Warehouse $w) => $q->where('warehouse_id', $w->id));
+            ->when($warehouse, fn (Builder $q, Warehouse $w) => $q->where('warehouse_id', $w->id))
+            ->tap($this->inViewedBranch(...));
+    }
+
+    /**
+     * ⭐ এক শাখা বাছা থাকলে কেবল সেই শাখার গুদামের মাল — মালিকের নির্দেশ, ১ অক্টোবর ২০২৬:
+     * *"প্রতিটা শাখা পুরোপুরি আলাদা"*। ⓘ কাঁচা কোয়েরি, তাই গুদামের দেয়াল নিজে চলে না।
+     */
+    private function inViewedBranch(Builder $query): void
+    {
+        $ids = Warehouse::idsInViewedBranch();
+
+        if ($ids !== null) {
+            $query->whereIn('warehouse_id', $ids);
+        }
     }
 
     /**

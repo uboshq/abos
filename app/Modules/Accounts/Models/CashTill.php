@@ -10,6 +10,7 @@ use App\Core\Concerns\HasDocumentStatus;
 use App\Core\Concerns\HasPublicId;
 use App\Core\Concerns\IsAudited;
 use App\Core\Contracts\Drillable;
+use App\Core\Support\ViewedBranch;
 use App\Models\Branch;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
@@ -35,6 +36,27 @@ class CashTill extends Model implements Drillable
     use IsAudited;
     use SoftDeletes;
 
+    /**
+     * ⭐ হেডারে এক শাখা বাছা থাকলে কেবল সেই শাখার টিল — মালিকের নির্দেশ, ১ অক্টোবর ২০২৬:
+     * *"প্রতিটা শাখা পুরোপুরি আলাদা"*। "সব শাখা"-য় আগের মতো সব।
+     *
+     * ⓘ শাখা পেরোনো হস্তান্তর কেবল "সব শাখা"-য় বসানো যায় — এক শাখার দেখায় অন্য শাখার টিল
+     * নেই। ⚠️ হস্তান্তরের কাগজ দুই দিকের টিল নাম ধরে দেখায় ([[MoneyTransfer::fromTill()]]),
+     * তাই সেই সম্পর্ক দেয়ালের বাইরে। টাকা বেরোনোর যাচাই নিজের টিলেই চলে।
+     * ⛔ যাচাইয়ের পথ — কোড খালি কি না, প্রধান টিল, হেফাজতের নিয়ম, মাস-শেষের তালিকা — গোটা
+     * কোম্পানি পড়ে, দেয়ালের বাইরে।
+     */
+    protected static function booted(): void
+    {
+        static::addGlobalScope('viewed-branch', function (Builder $builder): void {
+            $branch = ViewedBranch::one();
+
+            if ($branch !== null) {
+                $builder->where($builder->getModel()->getTable().'.branch_id', $branch);
+            }
+        });
+    }
+
     protected $fillable = [
         'company_id', 'branch_id', 'account_id', 'code',
         'name_en', 'name_bn', 'holder_id', 'limit_amount',
@@ -52,7 +74,8 @@ class CashTill extends Model implements Drillable
 
     public function account(): BelongsTo
     {
-        return $this->belongsTo(Account::class);
+        // ⓘ টিলের নিজের খাত সবসময় খুঁজে পাওয়া চাই — অন্য শাখার হস্তান্তর গ্রহণেও ([[Account::booted()]])
+        return $this->belongsTo(Account::class)->withoutGlobalScope('viewed-branch-till');
     }
 
     public function holder(): BelongsTo
@@ -132,7 +155,7 @@ class CashTill extends Model implements Drillable
             return true;
         }
 
-        return self::query()
+        return self::query()->withoutGlobalScope('viewed-branch')
             ->active()
             ->heldBy($userId)
             ->where('account_id', $accountId)
@@ -150,7 +173,7 @@ class CashTill extends Model implements Drillable
      */
     public static function heldByAnyone(): bool
     {
-        return self::query()->active()->whereNotNull('holder_id')->exists()
+        return self::query()->withoutGlobalScope('viewed-branch')->active()->whereNotNull('holder_id')->exists()
             || Account::query()->where('money_kind', Account::CASH)->whereNotNull('held_by')->exists();
     }
 

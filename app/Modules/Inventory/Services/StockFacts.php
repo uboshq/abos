@@ -12,6 +12,7 @@ use App\Models\LedgerEntry;
 use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Inventory\Models\Product;
 use App\Modules\Inventory\Models\StockMovement;
+use App\Modules\Inventory\Models\Warehouse;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -157,6 +158,19 @@ final class StockFacts
     {
         if (! FieldSecurity::visible(StockMovement::class, 'unit_cost')) {
             return null;
+        }
+
+        /*
+         * ⭐ এক শাখা বাছা থাকলে সেই শাখার মজুদের খাতের জের — মালিকের নির্দেশ, ১ অক্টোবর ২০২৬:
+         * *"প্রতিটা শাখা পুরোপুরি আলাদা"*। ⓘ স্তরগুলো কোম্পানির (শাখা বা গুদাম নেই), তাই ওখান
+         * থেকে শাখার ভাগ বের হয় না; খাতা প্রতিটা ঢোকা-বেরোনো কেনা দরে শাখা ধরে রাখে।
+         */
+        $branch = ViewedBranch::one();
+
+        if ($branch !== null) {
+            $inventory = StandardChart::find(StandardChart::INVENTORY);
+
+            return $inventory === null ? '0.00' : bcadd($inventory->balanceOn(null, $branch), '0', 2);
         }
 
         $total = DB::table('inv_cost_layers')
@@ -598,7 +612,7 @@ final class StockFacts
                  from inv_stock_movements m
                  where m.product_id = inv_products.id
                    and m.company_id = inv_products.company_id
-                   and m.trx_date >= '{$from}'{$extra})";
+                   and m.trx_date >= '{$from}'{$extra}{$this->viewedWarehouses()})";
     }
 
     /**
@@ -624,6 +638,25 @@ final class StockFacts
         return '(select COALESCE(SUM(m.floor_change - m.reserved_change - m.hold_change), 0)
                  from inv_stock_movements m
                  where m.product_id = inv_products.id
-                   and m.company_id = inv_products.company_id)';
+                   and m.company_id = inv_products.company_id'.$this->viewedWarehouses().')';
+    }
+
+    /**
+     * ⭐ এক শাখা বাছা থাকলে কেবল সেই শাখার গুদামের চলাচল — মালিকের নির্দেশ, ১ অক্টোবর ২০২৬:
+     * *"প্রতিটা শাখা পুরোপুরি আলাদা"*। "সব শাখা"-য় খালি — আগের মতো গোটা কোম্পানি।
+     *
+     * ⓘ কাঁচা SQL, তাই গুদামের দেয়াল ([[ScopedToUserWarehouse]]) নিজে চলে না; তালিকাটা তার
+     * কাছ থেকেই আসে ([[Warehouse::idsInViewedBranch()]])। সংখ্যাগুলো int, তাই সোজা বসানো নিরাপদ।
+     * ⚠️ গুদামহীন শাখায় `1 = 0` — "কিছুই নয়", গোটা কোম্পানি নয়।
+     */
+    private function viewedWarehouses(): string
+    {
+        $ids = Warehouse::idsInViewedBranch();
+
+        if ($ids === null) {
+            return '';
+        }
+
+        return $ids === [] ? ' and 1 = 0' : ' and m.warehouse_id in ('.implode(',', $ids).')';
     }
 }

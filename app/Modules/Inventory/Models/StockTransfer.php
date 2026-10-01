@@ -69,12 +69,13 @@ class StockTransfer extends Model implements Drillable
 
     public function fromWarehouse(): BelongsTo
     {
-        return $this->belongsTo(Warehouse::class, 'from_warehouse_id');
+        // ⓘ দুই দিকের গুদাম নাম ধরে — শাখার আর নাগালের দেয়ালের বাইরে ([[ScopedToUserWarehouse]])
+        return $this->belongsTo(Warehouse::class, 'from_warehouse_id')->withoutGlobalScopes(['user-warehouse', Warehouse::VIEWED_BRANCH]);
     }
 
     public function toWarehouse(): BelongsTo
     {
-        return $this->belongsTo(Warehouse::class, 'to_warehouse_id');
+        return $this->belongsTo(Warehouse::class, 'to_warehouse_id')->withoutGlobalScopes(['user-warehouse', Warehouse::VIEWED_BRANCH]);
     }
 
     public function branch(): BelongsTo

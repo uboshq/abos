@@ -184,8 +184,9 @@ class MoneyTransferController extends Controller implements HasMiddleware
     {
         return [
             /*
-             * ⭐ "কোন টিল থেকে" — হেডারে বাছা শাখার (৩০ সেপ্টেম্বর ২০২৬); "কোন টিলে" — সবগুলো,
-             * কারণ এক শাখা থেকে আরেক শাখায় টাকা পাঠানো বৈধ কাজ।
+             * ⭐ "কোন টিল থেকে" — হেডারে বাছা শাখার (৩০ সেপ্টেম্বর ২০২৬); "কোন টিলে" — টিলের নিজের
+             * শাখার দেয়ালে ([[CashTill::booted()]]): এক শাখা বাছা থাকলে কেবল সেই শাখার, "সব শাখা"-য়
+             * সবগুলো। ⓘ শাখা পেরোনো হস্তান্তর তাই কেবল "সব শাখা"-য় বসে (মালিক, ১ অক্টোবর ২০২৬)।
              */
             'fromTills' => ViewedBranch::narrow(CashTill::query(), 'cash_tills.branch_id')->active()->with('account')->orderByDesc('is_primary')->orderBy('code')->get(),
             'tills' => CashTill::query()->active()->with('account')->orderByDesc('is_primary')->orderBy('code')->get(),

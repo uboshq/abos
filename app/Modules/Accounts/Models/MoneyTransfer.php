@@ -52,12 +52,13 @@ class MoneyTransfer extends Model implements Drillable
 
     public function fromTill(): BelongsTo
     {
-        return $this->belongsTo(CashTill::class, 'from_till_id');
+        // ⓘ দুই দিকের টিল নাম ধরে — শাখার দেয়ালের বাইরে ([[CashTill::booted()]])
+        return $this->belongsTo(CashTill::class, 'from_till_id')->withoutGlobalScope('viewed-branch');
     }
 
     public function toTill(): BelongsTo
     {
-        return $this->belongsTo(CashTill::class, 'to_till_id');
+        return $this->belongsTo(CashTill::class, 'to_till_id')->withoutGlobalScope('viewed-branch');
     }
 
     public function toAccount(): BelongsTo

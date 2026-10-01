@@ -5,8 +5,12 @@ declare(strict_types=1);
 namespace App\Core\Concerns;
 
 use App\Core\Services\DataScope;
+use App\Core\Support\CompanyContext;
+use App\Core\Support\ViewedBranch;
+use App\Models\User;
 use App\Models\UserDataScope;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\DB;
 
 /**
  * গুদাম ধরে সারি ছাঁকা — ভাগ চ (RLS)-এর দ্বিতীয় দেয়াল।
@@ -62,6 +66,9 @@ use Illuminate\Database\Eloquent\Builder;
  */
 trait ScopedToUserWarehouse
 {
+    /** দেখার শাখার দেয়ালের নাম — ইঞ্জিন এটা তুলে গোনে। */
+    public const VIEWED_BRANCH = 'viewed-branch-warehouse';
+
     public static function bootScopedToUserWarehouse(): void
     {
         static::addGlobalScope('user-warehouse', function (Builder $builder): void {
@@ -78,6 +85,33 @@ trait ScopedToUserWarehouse
             }
 
             $builder->getModel()->applyWarehouseScope($builder, $ids);
+        });
+
+        /*
+         * ⭐ হেডারে এক শাখা বাছা থাকলে কেবল সেই শাখার গুদাম — মালিকের নির্দেশ, ১ অক্টোবর
+         * ২০২৬: *"প্রতিটা শাখা পুরোপুরি আলাদা, এক শাখার কিছু আরেক শাখায় নয়"*।
+         * ⓘ গুদাম, মজুদের চলাচল আর লট — তিনটাই এই এক দেয়ালে, তাই প্রতিটা পিকার আর মজুদের
+         * পাতা একসাথে ছাঁকা। "সব শাখা"-য় আগের মতো। ⚠️ শাখাহীন গুদাম এক-শাখার দেখায় নেই।
+         *
+         * ⓘ নাগালের দেয়াল থেকে আলাদা নামে, ইচ্ছাকৃত: এটা **দেখানোর** দেয়াল, আর যে সম্পর্ক
+         * দুই শাখা জোড়ে (স্থানান্তরের দুই গুদাম, [[StockTransfer::toWarehouse()]]) সে দুটোই তোলে।
+         * ⚠️ মজুদের চলাচল ২৯ সেপ্টেম্বর থেকেই সারির নিজের শাখায় ছাঁকা ([[ScopedToUserBranch]]);
+         * এখানে যোগ হলো গুদাম আর লট, যাদের শাখার ঘর নেই বা গুদাম দিয়ে বোঝা যায়।
+         */
+        static::addGlobalScope(self::VIEWED_BRANCH, function (Builder $builder): void {
+            $user = auth()->user();
+
+            if ($user === null) {
+                return;
+            }
+
+            $viewed = ViewedBranch::one($user instanceof User ? $user : null);
+
+            $ids = $viewed === null ? null : self::warehousesOfBranch($viewed);
+
+            if ($ids !== null) {
+                $builder->getModel()->applyWarehouseScope($builder, $ids);
+            }
         });
     }
 
@@ -138,6 +172,31 @@ trait ScopedToUserWarehouse
      */
     public static function acrossWarehouses(): Builder
     {
-        return static::query()->withoutGlobalScope('user-warehouse');
+        return static::query()->withoutGlobalScopes(['user-warehouse', self::VIEWED_BRANCH]);
+    }
+
+    /**
+     * একটা শাখার গুদামগুলো — কাঁচা কোয়েরিতে, যাতে এই দেয়াল নিজেকে ডেকে না বসে।
+     *
+     * ⚠️ `null` যখন শাখাটা চলতি কোম্পানির নয় — ব্যবহারকারী-পর্দা অন্য কোম্পানির গুদাম পড়ে
+     * ([[CompanyContext::forCompany()]]), আর তখন এই কোম্পানির হেডারের শাখা সেখানে প্রশ্নই নয়।
+     *
+     * @return list<int>|null
+     */
+    private static function warehousesOfBranch(int $branchId): ?array
+    {
+        $ours = DB::table('branches')->where('id', $branchId)->where('company_id', CompanyContext::id())->exists();
+
+        if (! $ours) {
+            return null;
+        }
+
+        return DB::table('inv_warehouses')
+            ->where('company_id', CompanyContext::id())
+            ->where('branch_id', $branchId)
+            ->whereNull('deleted_at')
+            ->pluck('id')
+            ->map(fn ($id) => (int) $id)
+            ->all();
     }
 }

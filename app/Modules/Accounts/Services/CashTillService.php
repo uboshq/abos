@@ -58,7 +58,7 @@ final class CashTillService implements ProvisionsCompany
      */
     public function provisionCompany(): void
     {
-        if (CashTill::query()->exists()) {
+        if (CashTill::query()->withoutGlobalScope('viewed-branch')->exists()) {
             return;
         }
 
@@ -208,7 +208,7 @@ final class CashTillService implements ProvisionsCompany
     public function makePrimary(CashTill $till): CashTill
     {
         return DB::transaction(function () use ($till) {
-            CashTill::query()
+            CashTill::query()->withoutGlobalScope('viewed-branch')
                 ->primary()
                 ->whereKeyNot($till->id)
                 ->get()
@@ -263,7 +263,8 @@ final class CashTillService implements ProvisionsCompany
      */
     public function ensurePrimaryTill(string $nameEn = 'Main Cash', string $nameBn = 'প্রধান নগদ'): CashTill
     {
-        $existing = CashTill::query()->primary()->first();
+        // ⓘ প্রধান টিল কোম্পানির একটাই — হেডারের শাখা যা-ই হোক ([[CashTill::booted()]])
+        $existing = CashTill::query()->withoutGlobalScope('viewed-branch')->primary()->first();
 
         if ($existing !== null) {
             return $existing;
@@ -294,7 +295,7 @@ final class CashTillService implements ProvisionsCompany
 
     private function assertCodeIsFree(string $code, ?int $exceptId = null): void
     {
-        $taken = CashTill::query()
+        $taken = CashTill::query()->withoutGlobalScope('viewed-branch')
             ->where('code', $code)
             ->when($exceptId, fn ($q, $id) => $q->whereKeyNot($id))
             ->withTrashed()

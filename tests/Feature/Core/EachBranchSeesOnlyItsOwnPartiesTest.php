@@ -29,7 +29,8 @@ use Tests\TestCase;
  * একই মালিক, হেডারে ময়মনসিংহ → নেত্রকোনা → সব শাখা। প্রতিটা তালিকা আর পিকারে কেবল
  * সেই শাখার পক্ষ; শাখাহীন কেবল "সব শাখা"-য়।
  *
- * ⚠️ টাকা পাঠানোর "কোন টিলে" সবার জন্য খোলা থাকে — এক শাখা থেকে আরেক শাখায় পাঠানো বৈধ।
+ * ⚠️ টাকা পাঠানোর "কোন টিলে" সব শাখার টিল দেখায় কেবল "সব শাখা"-য় — শাখা পেরোনো হস্তান্তর ওখানেই বসে
+ * (১ অক্টোবর ২০২৬, [[EachBranchIsFullySeparateTest]])।
  */
 final class EachBranchSeesOnlyItsOwnPartiesTest extends TestCase
 {
@@ -116,14 +117,21 @@ final class EachBranchSeesOnlyItsOwnPartiesTest extends TestCase
         }
     }
 
-    public function test_the_transfer_destination_stays_open_to_every_branch(): void
+    public function test_the_transfer_destination_opens_to_every_branch_only_under_all_branches(): void
     {
+        /*
+         * ⓘ ১ অক্টোবর ২০২৬ মালিক নিয়মটা বদলালেন: *"প্রতিটা শাখা পুরোপুরি আলাদা"*। শাখা পেরোনো
+         * হস্তান্তর এখন কেবল "সব শাখা"-য় বসে; এক শাখার দেখায় "কোন টিলে"-তে কেবল নিজের টিল।
+         */
         $this->choose($this->mymensingh->id);
+        $one = $this->idsOn(route('accounts.transfer.create'), 'tills');
 
-        $ids = $this->idsOn(route('accounts.transfer.create'), 'tills');
+        $this->choose('all');
+        $every = $this->idsOn(route('accounts.transfer.create'), 'tills');
 
         foreach (['mms', 'ntk', 'none'] as $where) {
-            $this->assertContains($this->till[$where], $ids, "⛔ \"কোন টিলে\" থেকে {$where}-এর টিল হারিয়ে গেল — অন্য শাখায় টাকা পাঠানো যেত না।");
+            $this->assertSame($where === 'mms', in_array($this->till[$where], $one, true), "⛔ ময়মনসিংহ বেছে \"কোন টিলে\"-তে {$where}-এর টিল ভুল জায়গায়।");
+            $this->assertContains($this->till[$where], $every, "⛔ \"সব শাখা\"-য় \"কোন টিলে\" থেকে {$where}-এর টিল হারাল।");
         }
     }
 

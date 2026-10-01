@@ -90,6 +90,32 @@ class Account extends Model implements Drillable
     /** @var list<string> */
     public const MONEY_KINDS = [self::CASH, self::BANK, self::MFS];
 
+    /**
+     * ⭐ এক শাখা বাছা থাকলে অন্য শাখার (আর শাখাহীন) টিলের নগদ খাত দেখায় না — মালিকের নির্দেশ,
+     * ১ অক্টোবর ২০২৬: *"প্রতিটা শাখা পুরোপুরি আলাদা"*। হিসাবের ছক, ঋণ, মূলধন, উত্তোলন,
+     * ভাড়া, খাত-বিশ্লেষণ, মাস্টার ডাটার খাত-পিকার — সব এক দেয়ালে ([[scopeNotAnotherBranchsTill()]]
+     * একই নিয়ম, এখন সব কোয়েরিতে)।
+     *
+     * ⓘ কেবল টিলের খাত সরে; ব্যাংক, MFS, অফিসের সিন্দুক আর বাকি সব খাত থাকে। "সব শাখা"-য় কিছুই
+     * বাদ নয়। ⚠️ খাতার সারি নয়, খাত — জের আর পোস্টিং ([[PostingEngine]]-এর কাঁচা যাচাই) গোটা
+     * কোম্পানির থাকে।
+     */
+    protected static function booted(): void
+    {
+        static::addGlobalScope('viewed-branch-till', function (Builder $builder): void {
+            $branch = ViewedBranch::one();
+
+            if ($branch === null) {
+                return;
+            }
+
+            $builder->whereNotIn($builder->getModel()->getTable().'.id', CashTill::query()->withoutGlobalScope('viewed-branch')
+                ->whereNotNull('account_id')
+                ->where(fn ($w) => $w->whereNull('branch_id')->orWhere('branch_id', '!=', $branch))
+                ->select('account_id'));
+        });
+    }
+
     protected $fillable = [
         'company_id', 'parent_id', 'code', 'name_en', 'name_bn',
         'type', 'nature', 'is_group', 'money_kind', 'held_by', 'is_system',
@@ -206,7 +232,8 @@ class Account extends Model implements Drillable
             return $query;
         }
 
-        return $query->whereNotIn($query->getModel()->getTable().'.id', CashTill::query()
+        // ⚠️ টিলের নিজের শাখার দেয়ালের বাইরে পড়তে হয় — নাহলে বাদ দেওয়ার তালিকাটাই খালি হত
+        return $query->whereNotIn($query->getModel()->getTable().'.id', CashTill::query()->withoutGlobalScope('viewed-branch')
             ->whereNotNull('account_id')
             ->where(fn ($w) => $w->whereNull('branch_id')->orWhere('branch_id', '!=', $branch))
             ->select('account_id'));

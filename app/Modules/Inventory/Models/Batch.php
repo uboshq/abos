@@ -123,7 +123,7 @@ class Batch extends Model implements Drillable
          * ⭐ পরীক্ষায় ধরা পড়েছে, লাইভে নয়: দ্বিতীয় গুদামের লটটা
          * তালিকায় উঠে এসেছিল।
          */
-        $unscoped = fn (Builder $m) => $m->withoutGlobalScope('user-warehouse');
+        $unscoped = fn (Builder $m) => $m->withoutGlobalScopes(['user-warehouse', self::VIEWED_BRANCH]);
 
         $builder->where(fn (Builder $q) => $q
             ->whereHas('movements', fn (Builder $m) => $unscoped($m)->whereIn('warehouse_id', $ids))

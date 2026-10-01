@@ -11,6 +11,7 @@ use App\Core\Concerns\IsAudited;
 use App\Core\Concerns\IsMasterRecord;
 use App\Core\Concerns\ScopedToUserWarehouse;
 use App\Core\Contracts\Drillable;
+use App\Core\Support\ViewedBranch;
 use App\Models\Branch;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -45,6 +46,23 @@ class Warehouse extends Model implements Drillable
     public function warehouseScopeColumn(): string
     {
         return 'id';
+    }
+
+    /**
+     * ⭐ কাঁচা মজুদ-কোয়েরির জন্য: এক শাখা বাছা থাকলে সেই শাখার গুদামগুলো, নইলে `null` ("সব শাখা")।
+     *
+     * ⓘ দেয়াল একটাই — [[ScopedToUserWarehouse]]; এটা কেবল `DB::table(...)` পথে তার ফল পৌঁছে দেয়,
+     * কারণ ওই পথে গ্লোবাল স্কোপ চলে না। ⚠️ খালি তালিকা মানে "কিছুই নয়", "সব" নয়।
+     *
+     * @return list<int>|null
+     */
+    public static function idsInViewedBranch(): ?array
+    {
+        if (ViewedBranch::one() === null) {
+            return null;
+        }
+
+        return static::query()->pluck('id')->map(fn ($id) => (int) $id)->all();
     }
 
     protected $table = 'inv_warehouses';

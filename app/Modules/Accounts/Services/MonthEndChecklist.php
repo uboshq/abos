@@ -118,7 +118,7 @@ final class MonthEndChecklist
     /** প্রতিটা চালু ক্যাশ টিলের মাসে অন্তত একবার নিশ্চিত গোনা হয়েছে। */
     private function cashCounted(CarbonImmutable $from, CarbonImmutable $to): array
     {
-        $tills = CashTill::query()->where('is_active', true)->pluck('id');
+        $tills = CashTill::query()->withoutGlobalScope('viewed-branch')->where('is_active', true)->pluck('id');
 
         if ($tills->isEmpty()) {
             return $this->row('cash_counted', 0, 'accounts.count.index', applicable: false);
