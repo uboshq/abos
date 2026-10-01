@@ -298,6 +298,10 @@ return [
              */
             ['label' => 'sales::menu.by_brand', 'icon' => 'star', 'route' => 'sales.report.show',
                 'route_params' => ['slug' => 'by-brand'], 'permission' => 'sales.report'],
+
+            /* ⭐ মাসওয়ারি বিক্রয় — মালিক, ১ অক্টোবর ২০২৬ ([[MonthlySalesReport]]) */
+            ['label' => 'sales::monthly.title', 'icon' => 'calendar', 'route' => 'sales.report.show',
+                'route_params' => ['slug' => 'monthly'], 'permission' => 'sales.report'],
             ['label' => 'sales::margin.report_title', 'icon' => 'reports', 'route' => 'sales.margin.report.show',
                 'route_params' => ['slug' => 'margin'], 'permission' => 'sales.margin.report'],
             ['label' => 'sales::return_reason.report_title', 'icon' => 'refresh', 'route' => 'sales.return.report.show',

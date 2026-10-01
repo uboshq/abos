@@ -31,6 +31,7 @@ final class SalesReports
         $engine->register(self::byCustomer());
         $engine->register(self::byProduct());
         $engine->register(self::byBrand());
+        $engine->register(MonthlySalesReport::definition());
     }
 
     /** যে অর্ডারগুলোর মাল এখনো পুরো যায়নি। */

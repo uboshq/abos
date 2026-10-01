@@ -8,6 +8,7 @@ use App\Core\Engines\Report\ReportEngine;
 use App\Core\Services\MenuBuilder;
 use App\Http\Controllers\Controller;
 use App\Models\Branch;
+use App\Models\FinancialYear;
 use App\Modules\MasterData\Models\PartyType;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
@@ -21,6 +22,7 @@ class SalesReportController extends Controller implements HasMiddleware
      * @var array<string, string>
      */
     private const SLUGS = [
+        'monthly' => 'sales.monthly',
         'pending-orders' => 'sales.pending_orders',
         'uninvoiced' => 'sales.uninvoiced',
         'by-customer' => 'sales.by_customer',
@@ -45,6 +47,20 @@ class SalesReportController extends Controller implements HasMiddleware
         $key = self::SLUGS[$slug];
         $definition = $this->reports->get($key);
 
+        $asked = $request->only($definition->requestKeys());
+
+        /*
+         * ⭐ মাসওয়ারি বিক্রয় খুললেই চলতি অর্থবছর — ইঞ্জিনের ডিফল্ট "এই মাস" এখানে একটাই সারি দিত
+         * (মালিক, ১ অক্টোবর ২০২৬)। ⓘ বছরের সারি না থাকলে ইঞ্জিনের ডিফল্টই।
+         */
+        if ($slug === 'monthly' && blank($asked['from'] ?? null)) {
+            $from = FinancialYear::forDate(now())?->starts_on?->toDateString();
+
+            if ($from !== null) {
+                $asked['from'] = $from;
+            }
+        }
+
         $result = $this->reports->run(
             $key,
             /*
@@ -57,7 +73,7 @@ class SalesReportController extends Controller implements HasMiddleware
              *
              * ⓘ যে ঘোষণা থেকে ঘরটা আঁকা হয়, এখন সেখান থেকেই পড়া হয়।
              */
-            $request->only($definition->requestKeys()),
+            $asked,
             page: max(1, (int) $request->query('page', 1)),
             // ⭐ "সব শাখা"-তে শাখা ধরে ভাগ + সর্বমোট — ভাগ হবে কি না ইঞ্জিন ঠিক করে ([[ReportEngine::branchPlan()]])
             byBranch: true,
