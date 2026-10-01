@@ -59,6 +59,14 @@ return [
      */
     'depends_on' => ['master_data', 'inventory', 'customer'],
 
+    /*
+     * ⭐ Sales এই মডিউল চেনে না, চুক্তি চেনে — বন্ধ থাকলে কোরের খালি বাস্তবায়ন বসে।
+     */
+    'bindings' => [
+        // ⭐ অর্ডারের লাইনে কয়টা ফ্রি — ১ অক্টোবর ২০২৬ ([[PromotionFreeGoods]])
+        \App\Core\Contracts\FreeGoodsOffers::class => \App\Modules\Promotion\Services\PromotionFreeGoods::class,
+    ],
+
     'menu' => [
         'dashboard' => [
             ['label' => 'promotion::dashboard.title', 'icon' => 'dashboard', 'route' => 'module.dashboard',

@@ -124,6 +124,7 @@ class EveryRouteIsGuardedTest extends TestCase
         'sales.portal.login' => 'গ্রাহকের দরজা — গ্রাহক পোর্টালের লগইন পর্দা',
         'sales.portal.login.attempt' => 'গ্রাহকের দরজা; এখানেও চাবির বদলে throttle',
         'sales.scan' => 'কাগজের QR-এর দরজা (মালিক, ৩০ সেপ্টেম্বর ২০২৬) — নিজে কিছু দেখায় না, বদলায় না; কর্মী হলে ডেলিভারির পাতায়, গ্রাহক হলে পোর্টালে, কেউ না হলে দুই লগইনের বোতাম ([[DeliveryScanController::open()]])',
+        'sales.qr' => 'সই-করা কাগজের QR (মালিক, ১ অক্টোবর ২০২৬) — নিজে কিছু দেখায় না, সই মিললে কেবল sales.scan-এ পাঠায়; ভুল বা বাতিল কাগজের টোকেনে ৪০৪ ([[QrScanController::open()]])',
 
         /*
          * Sanctum-এর নিজের রুট, আমাদের `routes/` ফাইলের কোনোটাতে নেই —

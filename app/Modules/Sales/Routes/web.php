@@ -48,6 +48,9 @@ use Illuminate\Support\Facades\Route;
  */
 Route::get('/scan/{publicId}', [DeliveryScanController::class, 'open'])->where('publicId', '[0-9a-fA-F-]{36}')->name('scan');
 
+/* ⭐ সই-করা QR — ছাপা কাগজের নতুন QR এখানে আসে, তারপর উপরের দরজায় (১ অক্টোবর ২০২৬, [[QrScanController]]) */
+Route::get('/q/{token}', [\App\Modules\Sales\Http\Controllers\QrScanController::class, 'open'])->where('token', '[A-Za-z0-9_-]{38}')->name('qr');
+
 Route::middleware('auth')->prefix('sales')->group(function () {
 
     /*
@@ -145,6 +148,9 @@ Route::middleware('auth')->prefix('sales')->group(function () {
     });
 
     Route::prefix('orders')->name('order.')->group(function () {
+        // ⭐ পাঠানোর আগের হিসাব আর লাইনের অফার — JSON (১ অক্টোবর ২০২৬, [[OrderStandingController]])
+        Route::get('/standing/{customer}', [\App\Modules\Sales\Http\Controllers\OrderStandingController::class, 'standing'])->name('standing');
+        Route::post('/offers', [\App\Modules\Sales\Http\Controllers\OrderStandingController::class, 'offers'])->name('offers');
         Route::get('/', [SalesOrderController::class, 'index'])->name('index');
         /*
          * ⭐ আদেশ কোথায় দাঁড়িয়ে — মালিকের চাওয়া, ১৯ সেপ্টেম্বর ২০২৬।

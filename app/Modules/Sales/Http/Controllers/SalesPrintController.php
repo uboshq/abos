@@ -360,8 +360,9 @@ class SalesPrintController extends Controller implements HasMiddleware
              * চালানের `public_id` — দাম নেই, টোকেন নেই, আর খুলতে লগইন লাগে। কাউন্টারের বিলে চালান
              * নেই, তখন খালি, আর ছাঁচ QR আঁকে না।
              */
-            'scan_url' => $challan?->public_id !== null && Route::has('sales.scan')
-                ? route('sales.scan', $challan->public_id)
+            // ⭐ সই-করা টোকেন (১ অক্টোবর ২০২৬) — [[PaperToken]]
+            'scan_url' => $challan?->public_id !== null && Route::has('sales.qr')
+                ? route('sales.qr', app(\App\Modules\Sales\Services\PaperToken::class)->for($challan))
                 : '',
         ];
     }
@@ -643,6 +644,10 @@ class SalesPrintController extends Controller implements HasMiddleware
             signatures: ['core.print.storekeeper', 'core.print.driver', 'core.print.gate_officer'],
             showMoney: false,
             notice: __('core.print.no_price_notice'),
+            // ⭐ গেটম্যান এটাই স্ক্যান করেন — চালানের সই-করা টোকেন ([[PaperToken]], [[QrScanController::gateOut()]])
+            qrUrl: $challan->public_id !== null && Route::has('sales.qr')
+                ? route('sales.qr', app(\App\Modules\Sales\Services\PaperToken::class)->for($challan))
+                : null,
         );
 
         return $this->pdf($request, $doc, '0', $gatePass->document_no, document: $gatePass,

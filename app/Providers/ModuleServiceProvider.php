@@ -48,6 +48,9 @@ class ModuleServiceProvider extends ServiceProvider
     {
         $this->app->bind(RecipeBook::class, NoRecipeBook::class);
 
+        // ⓘ অফারের মডিউল বন্ধ থাকলে অর্ডারের লাইনে ফ্রি নেই ([[FreeGoodsOffers]])
+        $this->app->bind(\App\Core\Contracts\FreeGoodsOffers::class, \App\Core\Services\NoFreeGoodsOffers::class);
+
         // ⓘ বিক্রয় বন্ধ থাকলে ডিও বা খসড়া বিল নেই — আটকে থাকা টাকা শূন্য
         $this->app->bind(CreditHolds::class, NoCreditHolds::class);
 

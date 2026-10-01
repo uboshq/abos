@@ -76,8 +76,9 @@ final class ChallanPaperFacts
             'total' => Money::format($challan->total),
             'words' => AmountInWords::of((string) $challan->total, 'en'),
             'words_bn' => AmountInWords::of((string) $challan->total, 'bn'),
-            'scan_url' => $challan->public_id !== null && Route::has('sales.scan')
-                ? route('sales.scan', $challan->public_id)
+            // ⭐ সই-করা টোকেন (১ অক্টোবর ২০২৬) — QR-এ কেবল অস্বচ্ছ টোকেন, বাতিলে মরে ([[PaperToken]])
+            'scan_url' => $challan->public_id !== null && Route::has('sales.qr')
+                ? route('sales.qr', app(\App\Modules\Sales\Services\PaperToken::class)->for($challan))
                 : '',
         ];
     }

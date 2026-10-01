@@ -58,6 +58,14 @@ final class PrintableDocument
          * @var list<array{no: int, ref: string, date: string, method: string, narration: string, amount: string}>
          */
         public readonly array $payments = [],
+
+        /**
+         * ⭐ কাগজের QR — সই-করা ঠিকানা (১ অক্টোবর ২০২৬, মালিক: "এক কাগজে এক QR")।
+         *
+         * ⓘ গেট পাসে গেটম্যান এটাই স্ক্যান করে "মাল বেরোল" চাপেন। ⛔ এখানে কেবল অস্বচ্ছ
+         * টোকেনের ঠিকানা আসে, চালান নম্বর বা দোকানের নাম নয় ([[PaperToken]])। খালি থাকলে আঁকা হয় না।
+         */
+        public readonly ?string $qrUrl = null,
     ) {}
 
     /**
@@ -104,6 +112,7 @@ final class PrintableDocument
             narration: $this->narration,
             notice: implode(' · ', $stacked),
             payments: $this->payments,
+            qrUrl: $this->qrUrl,
         );
     }
 
@@ -177,6 +186,7 @@ final class PrintableDocument
              * কাগজ আঁকত না। [[AClassicTableInvoiceCanBeChosenTest]] এখন কাগজটাই আঁকে।
              */
             payments: $this->payments,
+            qrUrl: $this->qrUrl,
         );
     }
 }

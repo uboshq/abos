@@ -304,6 +304,14 @@
         </div>
     @endif
 
+    @if (filled($doc->qrUrl))
+        {{-- ⭐ এক কাগজে এক QR — গেটম্যান/ডেলিভারিম্যান অ্যাপে স্ক্যান করেন ([[PaperToken]]) --}}
+        <div style="text-align: center; margin-top: {{ $thermal ? 2 : 4 }}mm;" data-scan-qr>
+            <img src="data:image/svg+xml;base64,{{ base64_encode(\App\Core\Support\QrCode::svg($doc->qrUrl, scale: 4, quiet: 2)) }}"
+                 style="width: {{ $thermal ? 22 : 26 }}mm; height: {{ $thermal ? 22 : 26 }}mm;" alt="">
+        </div>
+    @endif
+
     @if ($doc->signatures !== [] && $profile->shows('signatures'))
         <table class="signatures">
             <tr>
