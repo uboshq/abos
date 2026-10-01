@@ -78,7 +78,7 @@ class DestinationController extends Controller
              */
             'drives' => $this->drives->drives(),
 
-            'drivers' => DestinationFactory::DRIVERS,
+            'drivers' => DestinationFactory::AVAILABLE,
         ]);
     }
 
@@ -86,7 +86,7 @@ class DestinationController extends Controller
     {
         $data = $request->validate([
             'name' => ['required', 'string', 'max:120'],
-            'driver' => ['required', Rule::in(DestinationFactory::DRIVERS)],
+            'driver' => ['required', Rule::in(DestinationFactory::AVAILABLE)],
             'kind' => ['required', Rule::in(['primary', 'secondary', 'offsite', 'offline'])],
             'path' => ['required_if:driver,local', 'nullable', 'string', 'max:500'],
         ]);

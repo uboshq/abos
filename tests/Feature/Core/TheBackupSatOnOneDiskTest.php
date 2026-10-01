@@ -8,6 +8,7 @@ use App\Core\Services\BackupService;
 use App\Core\Services\StatusNotices;
 use App\Core\Support\CompanyContext;
 use App\Models\Company;
+use App\Models\User;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
@@ -50,6 +51,12 @@ class TheBackupSatOnOneDiskTest extends TestCase
 
         $company = Company::query()->where('code', 'TDEPOT')->firstOrFail();
         CompanyContext::set($company->id, $company->defaultBranch()?->id);
+
+        /*
+         * ⓘ ১ অক্টোবর ২০২৬ থেকে ব্যাকআপের ফিতা কেবল যিনি ব্যাকআপ দেখেন তাঁর পর্দায়
+         * ([[TheBackupAuditFoundFiveHolesTest]]) — তাই এখানে মালিক।
+         */
+        $this->actingAs(User::query()->where('email', 'owner@abos.test')->firstOrFail());
 
         $this->main = storage_path('framework/testing/backup-main');
         $this->mirror = storage_path('framework/testing/backup-mirror');

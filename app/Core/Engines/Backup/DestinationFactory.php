@@ -32,6 +32,15 @@ final class DestinationFactory
      */
     public const DRIVERS = ['local', 'sftp', 's3'];
 
+    /**
+     * ⭐ যেগুলোর চালক সত্যিই লেখা — পর্দা আর যাচাই কেবল এগুলোই দেয় (১ অক্টোবর ২০২৬)।
+     *
+     * ⛔ আগে ফর্ম `sftp`/`s3` দিত, অথচ চালক নেই আর হোস্ট/চাবির ঘরও নেই। সারিটা বসত, রাতে
+     * কপি ব্যর্থ হত, আর একমাত্র গন্তব্য হলে রানটা `local_only` বলে চুপ থাকত। [[DRIVERS]]
+     * পরিকল্পনার তালিকা হয়ে থাকল; চালক লেখা হলে এখানে যোগ হবে।
+     */
+    public const AVAILABLE = ['local'];
+
     public function make(string $driver, array $config): Destination
     {
         return match ($driver) {

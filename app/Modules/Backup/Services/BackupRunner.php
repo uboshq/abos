@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Backup\Services;
 
 use App\Core\Engines\Backup\DestinationFactory;
+use App\Core\Security\WholeDatabaseAccess;
 use App\Core\Services\BackupService;
 use App\Core\Services\NotificationService;
 use App\Core\Support\CompanyContext;
@@ -100,15 +101,26 @@ final class BackupRunner
             $told[] = (int) $user->id;
         }
 
-        $this->notify->sendMany(
-            $who,
-            'backup.failed',
-            __('backup::message.notify_failed'),
-            __('backup::message.notify_failed_body', [
-                'reason' => $reason ?? __('backup::message.notify_failed_no_reason'),
-            ]),
-            route('backup.index'),
-        );
+        /*
+         * ⛔ কাঁচা কারণ (mysqldump-এর stderr, সার্ভারের পথ) কেবল যিনি গোটা ডাটাবেস নামাতে পারেন
+         * তাঁর কাছে — বাকিরা জানেন যে ব্যর্থ, আর কোথায় দেখতে হবে (১ অক্টোবর ২০২৬, bb-র নিরীক্ষা)।
+         * ⓘ ব্যর্থতার চিঠি সবাই আগের মতোই পান — চুপ থাকা কোনো উত্তর নয়।
+         */
+        $access = app(WholeDatabaseAccess::class);
+
+        foreach ($who->partition(fn (User $user) => $access->allows($user)) as $i => $group) {
+            $this->notify->sendMany(
+                $group,
+                'backup.failed',
+                __('backup::message.notify_failed'),
+                __('backup::message.notify_failed_body', [
+                    'reason' => $i === 0
+                        ? ($reason ?? __('backup::message.notify_failed_no_reason'))
+                        : __('backup::message.failed_detail_hidden'),
+                ]),
+                route('backup.index'),
+            );
+        }
     }
 
     /**
@@ -194,7 +206,12 @@ final class BackupRunner
              */
             'status' => match (true) {
                 $failed === [] && $ok !== [] => 'success',
-                $failed !== [] && $ok !== [] => 'partial',
+                /*
+                 * ⛔ কোনো গন্তব্যেই যায়নি অথচ গন্তব্য ছিল — এটাও `partial`, `local_only` নয়
+                 * (১ অক্টোবর ২০২৬)। ⓘ `local_only` মানে "গন্তব্যই বসানো নেই", একটা স্থায়ী
+                 * সতর্কতা; আর একমাত্র গন্তব্যটা রোজ ব্যর্থ হলে আগে কাউকে কিছু বলা হত না।
+                 */
+                $failed !== [] => 'partial',
                 default => 'local_only',
             },
         ]);
@@ -257,7 +274,7 @@ final class BackupRunner
                 'destinations_failed' => $failed,
                 'status' => match (true) {
                     $failed === [] && $ok !== [] => 'success',
-                    $failed !== [] && $ok !== [] => 'partial',
+                    $failed !== [] => 'partial', // ⓘ সব কপি ব্যর্থ হলেও — উপরের runNow()-এর মন্তব্য
                     default => 'local_only',
                 },
             ]);

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Modules\Backup;
 
+use App\Core\Security\WholeDatabaseAccess;
 use App\Core\Support\CompanyContext;
 use App\Models\Company;
 use App\Models\Notification as Bell;
@@ -82,13 +83,34 @@ final class ABackupFailedAtTwoInTheMorningTest extends TestCase
 
         CompanyContext::set($this->company->id);
 
+        /*
+         * ⓘ ১ অক্টোবর ২০২৬ থেকে কাঁচা কারণ কেবল যিনি গোটা ডাটাবেস নামাতে পারেন তাঁর খবরে
+         * ([[WholeDatabaseAccess]]) — মালিক। বাকিরা জানেন ব্যর্থ, আর কোথায় দেখতে হবে।
+         */
+        $owner = User::query()->where('email', 'owner@abos.test')->firstOrFail();
+
         $body = (string) Bell::query()
             ->withoutGlobalScope('company')
             ->where('type', 'backup.failed')
+            ->where('user_id', $owner->id)
             ->value('body');
 
         $this->assertStringContainsString('1045', $body,
-            '⛔ কারণটা খবরের সাথে যায়নি — তাহলে জানতে হলে সার্ভারে ঢুকে লগ পড়তে হবে।');
+            '⛔ কারণটা মালিকের খবরের সাথে যায়নি — তাহলে জানতে হলে সার্ভারে ঢুকে লগ পড়তে হবে।');
+
+        $others = Bell::query()
+            ->withoutGlobalScope('company')
+            ->where('type', 'backup.failed')
+            ->where('user_id', '!=', $owner->id)
+            ->pluck('body', 'user_id');
+
+        foreach ($others as $userId => $other) {
+            $user = User::query()->withoutGlobalScope('company')->findOrFail($userId);
+
+            if (! app(WholeDatabaseAccess::class)->allows($user)) {
+                $this->assertStringNotContainsString('1045', (string) $other, "⛔ {$user->name} গোটা ডাটাবেস নামাতে পারেন না, তবু mysqldump-এর কাঁচা ভুল পেলেন।");
+            }
+        }
     }
 
     /**

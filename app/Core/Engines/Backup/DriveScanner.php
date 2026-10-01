@@ -148,9 +148,61 @@ final class DriveScanner
          * কারণটা সেখানেই লেখা: `storage/` নিজেও ব্যাকআপের অংশ, তাই
          * ব্যাকআপ ওখানে রাখলে সে নিজেকে ভেতরে নিয়ে বসত।
          */
-        $app = strtolower(str_replace('\\', '/', base_path()));
+        /*
+         * ⛔ পথটা সত্যি কোথায় — তার ওপর বিচার, লেখা অক্ষরের ওপর নয় (১ অক্টোবর ২০২৬, bb-র নিরীক্ষা)।
+         *
+         * ⓘ আগে কেবল "অ্যাপের পথ দিয়ে শুরু কি না" দেখা হত। ফলে `public` (আপেক্ষিক — কনসোলে অ্যাপের
+         * গোড়া থেকে খোলে), `/tmp/../<অ্যাপ>/public` বা অ্যাপে ফেরা symlink পার পেত, আর রাতের ডাম্প
+         * ওয়েব থেকে নামানো যায় এমন ফোল্ডারে বসত। ⓘ উল্টো দিকে `…/abos-backups`-এর মতো পাশের
+         * ফোল্ডার কেবল নামের শুরু মেলায় আটকাত।
+         */
+        if (! preg_match('#^([a-z]:)?/#', $clean)) {
+            return false; // আপেক্ষিক পথ নয়
+        }
 
-        return ! str_starts_with($clean, $app);
+        // ⓘ আসল অক্ষরে খোলা (লিনাক্সে বড়-ছোট হাতের ফারাক আছে), তুলনা ছোট হাতে
+        $real = $this->resolve(str_replace('\\', '/', trim($path)));
+
+        foreach ([base_path(), public_path()] as $root) {
+            $root = $this->resolve(str_replace('\\', '/', $root));
+
+            if ($real === $root || str_starts_with($real, $root.'/')) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * `.`/`..` মিলিয়ে, আর ডিস্কে যতটা আছে ততটা `realpath()` দিয়ে (symlink খুলে) — ছোট হাতের, `/` দিয়ে।
+     */
+    private function resolve(string $path): string
+    {
+        $parts = [];
+
+        foreach (explode('/', $path) as $i => $part) {
+            if ($part === '..') {
+                if (count($parts) > 1) {
+                    array_pop($parts);
+                }
+            } elseif ($part !== '.' && ($part !== '' || $i === 0)) {
+                $parts[] = $part;
+            }
+        }
+
+        $probe = implode('/', $parts) === '' ? '/' : implode('/', $parts);
+        $tail = [];
+
+        // ⓘ যে অংশটা এখনো নেই (নতুন ফোল্ডার), তার আগের অংশ পর্যন্ত আসল পথে খোলা
+        while (! file_exists($probe) && dirname($probe) !== $probe) {
+            array_unshift($tail, basename($probe));
+            $probe = dirname($probe);
+        }
+
+        $base = rtrim(str_replace('\\', '/', realpath($probe) ?: $probe), '/');
+
+        return strtolower($tail === [] ? $base : $base.'/'.implode('/', $tail));
     }
 
     /**

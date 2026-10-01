@@ -19,4 +19,5 @@ return [
     'notify_failed' => '⛔ Last night the backup failed',
     'notify_failed_body' => 'Reason: :reason — until this is put right, every day of work is going unbacked.',
     'notify_failed_no_reason' => 'no reason was recorded',
+    'failed_detail_hidden' => 'the backup was not made — only a super admin sees the details',
 ];

@@ -124,8 +124,13 @@ class BackupController extends Controller
         try {
             $run = $this->runner->runNow($request->user(), 'manual');
         } catch (Throwable $e) {
+            // ⛔ কাঁচা কারণ কেবল গোটা-ডাটাবেসের মানুষের জন্য — [[BackupRunner::tellSomeone()]]
+            $reason = app(WholeDatabaseAccess::class)->allows($request->user())
+                ? $e->getMessage()
+                : __('backup::message.failed_detail_hidden');
+
             return back()->withErrors([
-                'backup' => __('core.backup.failed', ['reason' => $e->getMessage()]),
+                'backup' => __('core.backup.failed', ['reason' => $reason]),
             ]);
         }
 

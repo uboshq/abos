@@ -289,6 +289,11 @@ final class StatusNotices
      */
     private function backupNotice(): ?array
     {
+        // ⛔ কেবল যিনি ব্যাকআপ দেখেন — বিক্রয়কর্মীর পর্দায় লাল ফিতা কোনো কাজের নয় (১ অক্টোবর ২০২৬)
+        if (! auth()->user()?->can('backup.view')) {
+            return null;
+        }
+
         $latest = app(BackupService::class)->latest();
 
         $stale = $latest === null
@@ -335,6 +340,10 @@ final class StatusNotices
      */
     private function mirrorNotice(): ?array
     {
+        if (! auth()->user()?->can('backup.view')) {
+            return null;
+        }
+
         $backups = app(BackupService::class);
 
         if ($backups->mirrorPath() === null) {

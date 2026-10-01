@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Backup\Http\Controllers;
 
+use App\Core\Security\WholeDatabaseAccess;
 use App\Core\Services\BackupService;
 use App\Core\Services\MenuBuilder;
 use App\Http\Controllers\Controller;
@@ -72,6 +73,9 @@ class RecoveryController extends Controller
             'menu' => $this->menu->forUser($request->user()),
             'runs' => $runs,
             'since' => BackupRun::query()->min('started_at'),
+
+            // ⛔ কাঁচা কারণ (mysqldump-এর stderr, সার্ভারের পথ) কেবল গোটা-ডাটাবেসের মানুষের জন্য
+            'seesRawErrors' => app(WholeDatabaseAccess::class)->allows($request->user()),
         ]);
     }
 
