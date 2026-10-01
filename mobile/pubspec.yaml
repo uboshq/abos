@@ -120,3 +120,8 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+
+  # The login screen's brand (web public/brand/, copied as-is).
+  assets:
+    - assets/branding/abos-icon-transparent.png
+    - assets/branding/abos-logo-lockup-transparent.png
