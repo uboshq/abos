@@ -13,6 +13,7 @@ use App\Modules\Accounts\Http\Controllers\ChartOfAccountsController;
 use App\Modules\Accounts\Http\Controllers\ChequeController;
 use App\Modules\Accounts\Http\Controllers\FinanceControlController;
 use App\Modules\Accounts\Http\Controllers\FixedAssetController;
+use App\Modules\Accounts\Http\Controllers\FinalAccountsReportController;
 use App\Modules\Accounts\Http\Controllers\GroupReportController;
 use App\Modules\Accounts\Http\Controllers\InterCompanyController;
 use App\Modules\Accounts\Http\Controllers\LoanController;
@@ -273,6 +274,16 @@ Route::middleware('auth')->prefix('accounts')->group(function () {
         Route::get('/create', [InterCompanyController::class, 'create'])->name('create');
         Route::post('/', [InterCompanyController::class, 'store'])->name('store');
     });
+
+    /*
+     * ⭐ লাভ-ক্ষতি আর নগদ প্রবাহ — নিজের দরজা, catch-all-এর আগে (১ অক্টোবর ২০২৬)। ⓘ লিংক বানানো
+     * হয় আগের মতোই `report.show` দিয়ে; ঠিকানাটা প্রথমে এই রুটে মেলে। কারণ [[FinalAccountsReportController]]-এ।
+     */
+    foreach (FinalAccountsReportController::SLUGS as $finalSlug) {
+        Route::get('/reports/'.$finalSlug, [FinalAccountsReportController::class, 'show'])
+            ->defaults('slug', $finalSlug)
+            ->name('report.final.'.str_replace('-', '_', $finalSlug));
+    }
 
     Route::get('/reports/{slug}', [ReportController::class, 'show'])->name('report.show');
 

@@ -220,7 +220,7 @@ return [
             ['label' => 'accounts::menu.posting_monitor', 'cluster' => 'control', 'icon' => 'refresh', 'route' => 'accounts.control.posting', 'permission' => 'accounts.report'],
             ['label' => 'accounts::menu.month_end', 'cluster' => 'control', 'icon' => 'calendar', 'route' => 'accounts.control.month_end', 'permission' => 'accounts.report'],
             ['label' => 'accounts::menu.background_jobs', 'cluster' => 'control', 'icon' => 'clock', 'route' => 'accounts.control.jobs', 'permission' => 'accounts.report'],
-            ['label' => 'accounts::menu.profit_loss', 'icon' => 'star', 'route' => 'accounts.report.show', 'route_params' => ['slug' => 'profit-loss'], 'permission' => 'accounts.report.final'],
+            ['label' => 'accounts::menu.profit_loss', 'icon' => 'star', 'route' => 'accounts.report.final.profit_loss', 'permission' => 'accounts.report.final'],
             /*
              * স্থিতিপত্রের নিজের রুট — সাধারণ রিপোর্টের slug নয়।
              *
@@ -229,7 +229,7 @@ return [
              * মোট শূন্য না হয়ে। মালিক ৩০ আগস্ট ২০২৬-এ ধরিয়ে দিলেন।
              */
             ['label' => 'accounts::menu.balance_sheet', 'icon' => 'grid', 'route' => 'accounts.balance_sheet', 'permission' => 'accounts.report.final'],
-            ['label' => 'accounts::menu.cash_flow', 'icon' => 'refresh', 'route' => 'accounts.report.show', 'route_params' => ['slug' => 'cash-flow'], 'permission' => 'accounts.report.final'],
+            ['label' => 'accounts::menu.cash_flow', 'icon' => 'refresh', 'route' => 'accounts.report.final.cash_flow', 'permission' => 'accounts.report.final'],
             /*
              * ⓘ চূড়ান্ত হিসাবগুলোর পরেই, আর সেটা ইচ্ছাকৃত: গ্রুপের ছবিটা
              * এক কোম্পানির লাভ-ক্ষতি ও স্থিতিপত্র পড়ার **পরের** প্রশ্ন,
