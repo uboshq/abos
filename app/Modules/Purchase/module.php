@@ -176,6 +176,9 @@ return [
             ['label' => 'purchase::menu.returns', 'icon' => 'refresh', 'route' => 'purchase.return.index', 'permission' => 'purchase.return.view'],
         ],
         'reports' => [
+            // ⭐ কাগজের খাতা — রিপোর্ট সেন্টার ধাপ ৬ (মালিক, ১ অক্টোবর ২০২৬)
+            ['label' => 'purchase::register.title', 'icon' => 'list', 'route' => 'purchase.report.show',
+                'route_params' => ['slug' => 'register'], 'permission' => 'purchase.report'],
             ['label' => 'purchase::menu.pending_orders', 'icon' => 'clock', 'route' => 'purchase.report.show',
                 'route_params' => ['slug' => 'pending-orders'], 'permission' => 'purchase.report'],
             /*
@@ -540,6 +543,7 @@ return [
 
     'reports' => [
         PurchaseReports::class,
+        \App\Modules\Purchase\Reports\PurchaseRegisterReports::class,
         SettlementReport::class,
         ReturnOnCapitalReport::class,
     ],

@@ -38,6 +38,9 @@ class PurchaseReportController extends Controller implements HasMiddleware
      */
     private const SLUGS = [
         'pending-orders' => ['key' => 'purchase.pending_orders', 'permission' => 'purchase.report'],
+
+        // ⭐ কাগজের খাতা — রিপোর্ট সেন্টার ধাপ ৬ ([[PurchaseRegisterReports]])
+        'register' => ['key' => 'purchase.register', 'permission' => 'purchase.report'],
         'uninvoiced' => ['key' => 'purchase.uninvoiced', 'permission' => 'purchase.report'],
         'by-supplier' => ['key' => 'purchase.by_supplier', 'permission' => 'purchase.report'],
 
