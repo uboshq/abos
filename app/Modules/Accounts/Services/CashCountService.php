@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Accounts\Services;
 
+use App\Core\Concerns\ReadsTheRowUnderLock;
 use App\Core\Engines\Approval\DocumentApproval;
 use App\Core\Engines\NumberSeries\NumberSeriesEngine;
 use App\Core\Support\CompanyContext;
@@ -31,6 +32,8 @@ use Illuminate\Validation\ValidationException;
  */
 final class CashCountService
 {
+    use ReadsTheRowUnderLock;
+
     public function __construct(
         private readonly NumberSeriesEngine $numbers,
         private readonly VoucherService $vouchers,
@@ -92,11 +95,7 @@ final class CashCountService
      */
     public function approve(CashCount $count): CashCount
     {
-        if ($count->isApproved()) {
-            throw ValidationException::withMessages([
-                'status' => __('accounts::validation.count_already_approved'),
-            ]);
-        }
+        $this->assertNotApproved($count);
 
         /*
          * ⭐ অনুমোদন — মালিকের সিদ্ধান্ত, ১৮ সেপ্টেম্বর ২০২৬।
@@ -121,6 +120,14 @@ final class CashCountService
         );
 
         return DB::transaction(function () use ($count) {
+            /*
+             * ⛔ সারিতে তালা দিয়ে অবস্থা আবার — ১ অক্টোবর ২০২৬ ([[ACashShortfallWasForgivenTwiceTest]])।
+             * ⓘ উপরের যাচাই হাতের কপি থেকে, লেনদেনের বাইরে: পুরনো পাতা থেকে দ্বিতীয় অনুমোদনে ঘাটতির
+             * সমন্বয় আবার বসত — ১,০০০ টাকার ঘাটতি ২,০০০ হয়ে মুছত।
+             */
+            $this->lockFresh($count);
+            $this->assertNotApproved($count);
+
             if (! $count->matches()) {
                 $count->forceFill(['adjustment_voucher_id' => $this->adjustmentFor($count)->id])->save();
             }
@@ -239,5 +246,14 @@ final class CashCountService
         }
 
         return $year;
+    }
+
+    private function assertNotApproved(CashCount $count): void
+    {
+        if ($count->isApproved()) {
+            throw ValidationException::withMessages([
+                'status' => __('accounts::validation.count_already_approved'),
+            ]);
+        }
     }
 }
