@@ -104,6 +104,15 @@ final class LoanSchedule
                 $part = $left;
             }
 
+            /*
+             * ⛔ আসল কখনো ঋণাত্মক নয় — abos-63-এর তালিকা (abos-bb-র নিরীক্ষার বাকি), ২ অক্টোবর ২০২৬
+             * ([[NoInstalmentRepaysANegativePrincipalTest]])। ⓘ সুদ কিস্তির চেয়ে বড় হলে (খুব উঁচু হার, গোলের তফাত)
+             * সেই কিস্তি কেবল সুদের; ঋণাত্মক আসল মানে কিস্তি দিয়ে ঋণ **বাড়ত**।
+             */
+            if (bccomp($part, '0', 4) < 0) {
+                $part = '0';
+            }
+
             $rows[] = [
                 'no' => $n,
                 'due_date' => $due->toDateString(),
@@ -135,6 +144,14 @@ final class LoanSchedule
             // শেষ কিস্তিতে বাকিটা, একই কারণে — ভাগের গরমিল জমতে দেওয়া হয় না
             $p = $n === $months ? $principalLeft : $perPrincipal;
             $i = $n === $months ? $interestLeft : $perInterest;
+
+            /*
+             * ⛔ যা বাকি তার বেশি নয় — ২ অক্টোবর ২০২৬ ([[NoInstalmentRepaysANegativePrincipalTest]])। ⓘ ভাগটা
+             * পয়সায় উপরে গোল হয়; অনেক কিস্তির ছোট ঋণে (৳১, ১৫০ কিস্তি → ০.০১ করে) আগের কিস্তিগুলো আসলের বেশি
+             * নিয়ে নিত, আর শেষ কিস্তির আসল দাঁড়াত −০.৪৯।
+             */
+            $p = bccomp($p, $principalLeft, 4) > 0 ? $principalLeft : $p;
+            $i = bccomp($i, $interestLeft, 4) > 0 ? $interestLeft : $i;
 
             $rows[] = [
                 'no' => $n,
