@@ -45,31 +45,20 @@
          * নয় — কারণ ওটা এক চাপে চালান ও বিল দুইটাই বানায়, আর মেনুর
          * সারিটাও ঠিক এই অনুমতিই চায়।
          */
+        /*
+         * ⭐ মালিক, ১ অক্টোবর ২০২৬: *"তৈরি করুন বোতামে থাকবে — সরাসরি বিক্রয়, সরাসরি ক্রয়,
+         * ভাউচার (সব), গ্রাহক, সরবরাহকারী, পণ্য"*। ⓘ অর্ডার এখান থেকে সরেছে; অর্ডার তার
+         * নিজের মেনুতে। ভাউচারের পাঁচ ধরনই আলাদা সারিতে — রুটে `{type}` লাগে।
+         * ⭐ সরাসরি বিক্রয়ের অনুমতি `sales.challan.create` (চালান+বিল এক চাপে); সরাসরি
+         * ক্রয়ের `purchase.bill.create` — মেনুর সারি দুটো ঠিক এই চাবিই চায়।
+         */
         ['route' => 'sales.direct.create', 'label' => 'core.create.direct_sale', 'can' => 'sales.challan.create'],
-        ['route' => 'sales.order.create', 'label' => 'core.create.sales_order', 'can' => 'sales.order.create'],
-        /*
-         * ⭐ মালিকের নির্দেশ, ১৯ সেপ্টেম্বর ২০২৬:
-         *   · বিক্রয় বিল আর ক্রয় বিল এখানে নেই — বিল জন্মায় সরাসরি বিক্রয়/ক্রয়ে
-         *     আর মাল গ্রহণে, আপনা থেকে; তালিকার "নতুন" বোতামও সরেছে।
-         *   · "আদায়" আর "পরিশোধ" এখন হিসাবের **রসিদ** ও **পরিশোধ** ভাউচার —
-         *     *"যেহেতু accounts-এর কাজ"*, আর বাইরের সবার খাতা ব্যাংকের মতো
-         *     Dr/Cr। লেবেল পুরনোটাই, কারণ মানুষ কাজটাকে ঐ নামেই চেনেন।
-         */
-        ['route' => 'accounts.voucher.create', 'params' => ['type' => 'receipt'],
-         'label' => 'core.create.collection', 'can' => 'accounts.voucher.create'],
-        ['route' => 'purchase.order.create', 'label' => 'core.create.purchase_order', 'can' => 'purchase.order.create'],
-        ['route' => 'accounts.voucher.create', 'params' => ['type' => 'payment'],
-         'label' => 'core.create.payment', 'can' => 'accounts.voucher.create'],
-        /*
-         * ⭐ ভাউচারের রুটে একটা ধরন লাগে — `/accounts/vouchers/{type}/create`।
-         *
-         * পাঁচটা ধরনের মধ্যে এখানে কেবল **journal**, কারণ বাকিগুলোতে
-         * এই মেনু দিয়েই অন্য পথে পৌঁছানো যায়: receipt = আদায়,
-         * payment = প্রদান, contra = টাকা স্থানান্তর। **journal-ই একমাত্র
-         * সমন্বয়ের দাখিলা, যার আর কোনো দরজা নেই।**
-         */
-        ['route' => 'accounts.voucher.create', 'params' => ['type' => 'journal'],
-         'label' => 'core.create.voucher', 'can' => 'accounts.voucher.create'],
+        ['route' => 'purchase.direct.create', 'label' => 'purchase::menu.direct', 'can' => 'purchase.bill.create'],
+        ['route' => 'accounts.voucher.create', 'params' => ['type' => 'receipt'], 'label' => 'accounts::approval.receipt', 'can' => 'accounts.voucher.create'],
+        ['route' => 'accounts.voucher.create', 'params' => ['type' => 'payment'], 'label' => 'accounts::approval.payment', 'can' => 'accounts.voucher.create'],
+        ['route' => 'accounts.voucher.create', 'params' => ['type' => 'expense'], 'label' => 'accounts::approval.expense', 'can' => 'accounts.voucher.create'],
+        ['route' => 'accounts.voucher.create', 'params' => ['type' => 'journal'], 'label' => 'accounts::approval.journal', 'can' => 'accounts.voucher.create'],
+        ['route' => 'accounts.voucher.create', 'params' => ['type' => 'contra'], 'label' => 'accounts::approval.contra', 'can' => 'accounts.voucher.create'],
         ['route' => 'customer.create', 'label' => 'core.create.customer', 'can' => 'customer.create'],
         ['route' => 'supplier.create', 'label' => 'core.create.supplier', 'can' => 'supplier.create'],
         ['route' => 'inventory.product.create', 'label' => 'core.create.product', 'can' => 'inventory.product.create'],
