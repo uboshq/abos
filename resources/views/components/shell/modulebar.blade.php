@@ -178,7 +178,10 @@
      ⓘ একই মেনু দুই জায়গায় নয়: বড় পর্দায় বাঁয়ের মেনু খোলা থাকলে এই সারি লুকানো, গুটালে ফেরে।
      ⓘ বড় পর্দার নিচে (ফোন, ট্যাবলেট) বাঁয়ের মেনু প্যানেলই থাকে না, তাই সারিটা সবসময়।
      ⚠️ স্থির ক্লাস খোলা অবস্থা ধরে (সাইডবারের ডিফল্টের মতো), Alpine কেবল গুটানোটা সামলায়। --}}
+{{-- ⛔ `x-data` নিজেই — বারটা কোনো Alpine উপাদানের ভেতরে নয়, তাই এটা ছাড়া `:class` চলতই না,
+     আর মেনু গুটালেও সারিটা ফিরত না (মালিক, ১ অক্টোবর: "top menubar ekdom bad dile keno")। --}}
 <div data-module-bar
+     x-data
      class="sticky top-(--spacing-header) z-20 flex min-h-(--spacing-field-compact) shrink-0 items-center gap-2
             py-1 ps-2 pe-3 md:pe-5 print-hide lg:hidden"
      :class="$store.sidebar.collapsed && 'lg:flex!'"
