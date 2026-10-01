@@ -24,6 +24,7 @@ return [
         'evening' => 'Good evening',
     ],
     'sign_in_to_workspace' => 'Sign in to your workspace',
+    'awaits_you' => "Today's books are waiting for you",
     'sign_in' => 'Sign in',
     'authenticating' => 'Authenticating…',
 

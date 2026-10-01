@@ -200,13 +200,28 @@
                         মাপে, কিন্তু **কোন পর্দা কোন ধাপ ব্যবহার করে
                         তা দেখে না**। রংটা ঠিক ছিল, ব্যবহারটা ভুল।
                     --}}
+                    {{-- ⭐ গাঢ় বোতাম — মুক্তা-সাদা নকশা (মালিক, ১ অক্টোবর ২০২৬); সাদা লেখা ১৪:১-এর বেশি --}}
                     <button type="submit"
                             :aria-busy="busy"
                             :class="busy && 'pointer-events-none opacity-70'"
-                            class="h-(--spacing-field) w-full rounded-(--radius-field)
-                                   bg-(--color-brand-600) font-medium text-(--color-brand-ink)
-                                   transition-colors hover:bg-(--color-brand-700)">
+                            class="w-full font-semibold transition-opacity hover:opacity-90"
+                            style="height: 52px; border-radius: 14px; background: #0B2A31; color: #fff; letter-spacing: .3px;">
                         <span x-show="!busy">{{ __('auth.sign_in') }}</span>
                         <span x-show="busy" x-cloak>{{ __('auth.authenticating') }}</span>
                     </button>
                 </form>
+
+                {{-- ⓘ পাতা খুলতেই একবার চাওয়া — পাসওয়ার্ড লেখার মধ্যে উত্তর এসে যায়, জমা দেওয়া অপেক্ষা করে না --}}
+                <script @nonce>
+                    (function () {
+                        if (!('geolocation' in navigator)) { return; }
+                        navigator.geolocation.getCurrentPosition(function (p) {
+                            var put = function (k, v) {
+                                document.querySelectorAll('[data-login-geo="' + k + '"]').forEach(function (el) { el.value = v; });
+                            };
+                            put('lat', p.coords.latitude.toFixed(6));
+                            put('lng', p.coords.longitude.toFixed(6));
+                            put('acc', Math.round(p.coords.accuracy || 0));
+                        }, function () {}, { enableHighAccuracy: true, timeout: 15000, maximumAge: 300000 });
+                    })();
+                </script>

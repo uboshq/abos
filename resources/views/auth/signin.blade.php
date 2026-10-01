@@ -40,7 +40,22 @@
     একটামাত্র সোনালি চুল-দাগ রাখা হয়েছে লোগোর নিচে: ওটুকু না থাকলে
     পাতাটা যেকোনো লগইন পাতার মতো দেখাত, ABOS-এর মতো নয়।
 --}}
-<body class="min-h-dvh bg-(--color-surface-app)">
+{{--
+    ⭐ মুক্তা-সাদা জমিন — মালিকের বাছাই, ১ অক্টোবর ২০২৬ ("প্রিমিয়াম ২", নমুনার পাতা থেকে)।
+    ⓘ নরম টিয়া বৃত্ত আর ABOS-এর "A" চিহ্নের হালকা জলছাপ; সবই `aria-hidden`, ক্লিক ধরে না।
+    ⚠️ রংগুলো inline — নতুন CSS বানানো ছাড়াই লাইভে বসে।
+--}}
+<body class="relative min-h-dvh overflow-x-hidden" style="background: #EEF5F7;">
+
+    <div aria-hidden="true" class="pointer-events-none fixed inset-0 overflow-hidden">
+        <div style="position: absolute; width: 640px; height: 640px; border-radius: 50%; left: -200px; top: -260px; opacity: .55;
+                    background: radial-gradient(circle at 35% 35%, #BFF0F8, #8EDCEA 60%, #6CCBDD);"></div>
+        <div style="position: absolute; width: 520px; height: 520px; border-radius: 50%; right: -170px; bottom: -230px; opacity: .7;
+                    background: radial-gradient(circle at 40% 40%, #D3F4EC, #A7E3D6);"></div>
+        <div style="position: absolute; width: 170px; height: 170px; border-radius: 50%; right: 18%; top: 9%; opacity: .8; background: #CFEFF5;"></div>
+        <img src="{{ asset('brand/abos-icon-transparent.png') }}" alt=""
+             style="position: absolute; width: 520px; max-width: 90vw; height: auto; left: 4%; bottom: -120px; opacity: .07; transform: rotate(-12deg);">
+    </div>
 
     <div class="relative mx-auto flex min-h-dvh w-full max-w-md flex-col justify-center px-4 py-10">
 
@@ -53,8 +68,13 @@
             {{ app()->getLocale() === 'bn' ? 'English' : 'বাংলা' }}
         </a>
 
-        {{-- ব্র্যান্ড — চিহ্ন, শব্দ, তারপর একটা দাগ --}}
-        <div class="mb-7 text-center">
+        {{-- ⭐ কাচের মতো সাদা কার্ড — লোগো, সম্ভাষণ আর ফর্ম এক কার্ডে (মুক্তা-সাদা নকশা) --}}
+        <div class="px-6 py-8 sm:px-8"
+             style="border-radius: 28px; border: 1px solid #E3EDF0; background: rgba(255,255,255,.86);
+                    box-shadow: 0 40px 90px rgba(11,60,72,.12); backdrop-filter: blur(6px);">
+
+        {{-- ব্র্যান্ড — পুরো লকআপ, তারপর সম্ভাষণ --}}
+        <div class="mb-6 text-center">
             {{--
                 লোগোটাই পূর্ণ পাতায় ফেরার পথ।
 
@@ -87,19 +107,10 @@
                class="mx-auto block w-fit rounded-(--radius-field) transition-opacity hover:opacity-80
                       focus-visible:outline-2 focus-visible:outline-offset-4
                       focus-visible:outline-(--color-brand-600)">
-                <img src="{{ asset('brand/abos-icon-transparent.png') }}"
-                     alt="" aria-hidden="true"
-                     width="512" height="456" class="mx-auto mb-4 h-14 w-auto">
-
-                <img src="{{ asset('brand/abos-wordmark-transparent.png') }}"
+                <img src="{{ asset('brand/abos-logo-lockup-transparent.png') }}"
                      alt="{{ __('core.brand.name') }}"
-                     width="556" height="198" class="mx-auto h-9 w-auto">
+                     width="748" height="239" class="mx-auto h-11 w-auto">
             </a>
-
-            {{-- সোনালি চুল-দাগ — মাঝ থেকে দুই দিকে মিলিয়ে যায় --}}
-            <div class="mx-auto mt-5 h-px w-28"
-                 style="background: linear-gradient(90deg,
-                        transparent, var(--color-brand-gold), transparent);"></div>
 
             @php
                 /*
@@ -116,18 +127,15 @@
                 $words = explode(' ', $greeting, 2);
             @endphp
 
-            <p class="mt-5 text-base font-semibold text-(--color-ink)">
-                {{ $words[0] }}
-                @isset($words[1])
-                    <span class="text-(--color-brand-600)">{{ $words[1] }}</span>
-                @endisset
+            <p class="mt-5 font-semibold" style="font-size: 30px; line-height: 1.2; color: #0B2A31;">
+                {{ $greeting }}
             </p>
+            <p class="mt-1 text-sm" style="color: #5B7B83;">{{ __('auth.awaits_you') }}</p>
         </div>
 
-        {{-- কার্ড — পাতার আসল কাজ, তাই <main> --}}
+        {{-- ফর্ম — পাতার আসল কাজ, তাই <main> --}}
         <main>
-            <div class="rounded-2xl border border-(--color-border) bg-(--color-surface-card)
-                        px-5 py-6 shadow-sm sm:px-6">
+            <div>
 
                 {{--
                     সার্ভার চলছে কিনা — এখানেও।
@@ -144,6 +152,7 @@
                 @include('auth._form')
             </div>
         </main>
+        </div>
 
         {{--
             পাদটীকা — কে বানাল, কার নামে, আর কোন সংস্করণ।
