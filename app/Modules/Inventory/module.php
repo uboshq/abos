@@ -227,6 +227,9 @@ return [
                 'route_params' => ['slug' => 'stock-position'], 'permission' => 'inventory.report'],
             ['label' => 'inventory::stockview.movement', 'icon' => 'list', 'route' => 'inventory.report.show',
                 'route_params' => ['slug' => 'movement-summary'], 'permission' => 'inventory.report'],
+            // ⭐ মাসওয়ারি মাল আসা-যাওয়া — মালিক, ১ অক্টোবর ২০২৬: "ekhoni lagbe"
+            ['label' => 'inventory::stockview.monthly', 'icon' => 'list', 'route' => 'inventory.report.show',
+                'route_params' => ['slug' => 'monthly-movement'], 'permission' => 'inventory.report'],
 
             // ⭐ গণনা বনাম খাতা — রিপোর্ট সেন্টার ধাপ ৬ ([[InventoryControlReports]])
             ['label' => 'inventory::control.count_vs_book', 'icon' => 'scale', 'route' => 'inventory.report.show',

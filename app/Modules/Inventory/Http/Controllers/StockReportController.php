@@ -71,6 +71,8 @@ class StockReportController extends Controller implements HasMiddleware
         // ⭐ রিপোর্ট সেন্টার ধাপ ৩ ([[InventoryAnalysisReports]])
         'stock-position' => 'inventory.stock_position',
         'movement-summary' => 'inventory.movement_summary',
+        // ⭐ মাসওয়ারি মাল আসা-যাওয়া — মালিক, ১ অক্টোবর ২০২৬ ([[InventoryAnalysisReports::monthly()]])
+        'monthly-movement' => 'inventory.monthly_movement',
         'stock-alerts' => 'inventory.stock_alerts',
         'slow-dead' => 'inventory.slow_dead',
         'lot-trace' => 'inventory.lot_trace',
