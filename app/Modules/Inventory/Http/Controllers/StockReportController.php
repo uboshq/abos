@@ -66,6 +66,11 @@ class StockReportController extends Controller implements HasMiddleware
         'reserved' => 'inventory.reserved',
         'replenishment' => 'inventory.replenishment',
 
+        // ⭐ রিপোর্ট সেন্টার — মজুদের নিয়ন্ত্রণ ([[InventoryControlReports]])
+        'count-vs-book' => 'inventory.count_vs_book',
+        'stock-alerts' => 'inventory.stock_alerts',
+        'slow-dead' => 'inventory.slow_dead',
+
         /* ⓘ খাদ্য-খরচ এখানে ছিল — ১৫ সেপ্টেম্বর ২০২৬-এ রেস্তোরাঁয় গেছে
            ([[App\Modules\Restaurant\Http\Controllers\RestaurantReportController]]),
            মালিকের দাগানো অনুযায়ী। প্রশ্নটা রান্না করা খাবারের, মজুদের নয়। */

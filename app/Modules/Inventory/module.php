@@ -222,6 +222,18 @@ return [
             ['label' => 'inventory::menu.stock_value', 'icon' => 'scale', 'route' => 'inventory.report.show',
                 'route_params' => ['slug' => 'stock-value'], 'permission' => 'inventory.report'],
 
+            // ⭐ গণনা বনাম খাতা — রিপোর্ট সেন্টার ধাপ ৬ ([[InventoryControlReports]])
+            ['label' => 'inventory::control.count_vs_book', 'icon' => 'scale', 'route' => 'inventory.report.show',
+                'route_params' => ['slug' => 'count-vs-book'], 'permission' => 'inventory.report'],
+
+            // ⭐ মজুদের সতর্কতা — রিপোর্ট সেন্টার ধাপ ৪ ([[InventoryControlReports]])
+            ['label' => 'inventory::control.stock_alerts', 'icon' => 'alert-triangle', 'route' => 'inventory.report.show',
+                'route_params' => ['slug' => 'stock-alerts'], 'permission' => 'inventory.report'],
+
+            // ⭐ ধীর ও অচল মাল — রিপোর্ট সেন্টার ধাপ ৪ ([[InventoryControlReports]])
+            ['label' => 'inventory::control.slow_dead', 'icon' => 'clock', 'route' => 'inventory.report.show',
+                'route_params' => ['slug' => 'slow-dead'], 'permission' => 'inventory.report'],
+
             /* ⭐ গুদামভিত্তিক মজুদ ও সমন্বয়ের ইতিহাস — ২১ সেপ্টেম্বর ২০২৬ */
             ['label' => 'inventory::menu.stock_by_warehouse', 'icon' => 'building', 'route' => 'inventory.report.show',
                 'route_params' => ['slug' => 'stock-by-warehouse'], 'permission' => 'inventory.report'],
@@ -697,6 +709,8 @@ return [
 
     'reports' => [
         StockReports::class,
+        // ⭐ রিপোর্ট সেন্টার — মজুদের নিয়ন্ত্রণ (মালিক, ১ অক্টোবর ২০২৬)
+        \App\Modules\Inventory\Reports\InventoryControlReports::class,
     ],
 
     /*
