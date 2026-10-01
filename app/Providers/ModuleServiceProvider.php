@@ -53,6 +53,9 @@ class ModuleServiceProvider extends ServiceProvider
 
         // ⓘ বিক্রয় বন্ধ থাকলে বিল বা আদায় নেই — গ্রাহকের সারাংশ কেবল খাতা আর সীমা দেখায়
         $this->app->bind(\App\Core\Contracts\CustomerTrade::class, \App\Core\Services\NoCustomerTrade::class);
+
+        // ⓘ বিক্রয় বন্ধ থাকলে গ্রাহকের তালিকায় টপ/বটম বিক্রি আর "ভালো কাস্টমার" কাউকে পায় না ([[CustomerSalesFilters]])
+        $this->app->bind(\App\Core\Contracts\CustomerSalesFilters::class, \App\Core\Services\NoCustomerSalesFilters::class);
     }
 
     /**

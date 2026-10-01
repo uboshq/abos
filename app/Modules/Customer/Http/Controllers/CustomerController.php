@@ -18,6 +18,7 @@ use App\Models\LedgerEntry;
 use App\Modules\Customer\Http\Requests\CustomerRequest;
 use App\Modules\Customer\Models\Customer;
 use App\Modules\Customer\Services\CustomerService;
+use App\Modules\Customer\Support\CustomerListFilters;
 use App\Modules\MasterData\Models\Location;
 use App\Modules\MasterData\Models\PartyType;
 use Illuminate\Contracts\Database\Query\Builder;
@@ -70,7 +71,6 @@ class CustomerController extends Controller implements HasMiddleware
     {
         $query = Customer::query()->inViewedBranch()
             ->search($request->query('q'))
-            ->when($request->boolean('inactive') === false, fn ($q) => $q->active())
             /*
              * এলাকা ও পয়েন্ট — সারির সাথেই, আর গাছের উপরের ধাপগুলোসহ।
              *
@@ -127,6 +127,13 @@ class CustomerController extends Controller implements HasMiddleware
 
         $sort = $this->applySort($query, $request, $this->sorts());
 
+        /*
+         * ⭐ ছাঁকনি — মালিক, ১ অক্টোবর ২০২৬: তারিখ, বকেয়া, অগ্রিম, এরিয়া, পয়েন্ট, অবস্থা, দ্রুত দৃশ্য, টপ/বটম
+         * ([[CustomerListFilters]])। ⓘ সাজানোর **পরে**, কারণ টপ/বটম নিজের ক্রম বসায়; অবস্থার ছাঁকনিও ওখানে
+         * (পুরনো `?inactive=1` লিংক এখনো "সব" খোলে)।
+         */
+        $rankTitle = app(CustomerListFilters::class)->apply($query, $request);
+
         $customers = $query
             // পেজিনেশন বাধ্যতামূলক (সেকশন ৯) — শেয়ার্ড হোস্টে পুরো তালিকা
             // এক রেসপন্সে পাঠানো মানে টাইমআউট।
@@ -154,6 +161,9 @@ class CustomerController extends Controller implements HasMiddleware
             'sort' => $sort,
             'distributorType' => $distributorType,
             'partyTypeFilter' => $request->integer('party_type') ?: null,
+            'rankTitle' => $rankTitle,
+            'areas' => Location::query()->atLevel(Location::TERRITORY)->where('is_active', true)->orderBy('name_en')->get(),
+            'points' => Location::query()->atLevel(Location::POINT)->where('is_active', true)->orderBy('name_en')->get(),
         ]);
     }
 

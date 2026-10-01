@@ -68,6 +68,12 @@
     'filterLabels' => [],
 
     /*
+     * ⭐ চিপে মানের নাম — চাবি → [মান → লেখা] (মালিক, ১ অক্টোবর ২০২৬)।
+     * ⓘ এরিয়া বা পয়েন্টের ঠিকানায় আইডি থাকে; চিপে "এরিয়া: 12" কেউ পড়তে পারত না। না দিলে মানটাই ওঠে।
+     */
+    'filterValues' => [],
+
+    /*
      * ছাপার আগে যে ঠিকানায় যেতে হবে — খতিয়ানের জন্য।
      *
      * ── ⭐ মালিকের নিয়ম, ২১ সেপ্টেম্বর ২০২৬ ──────────────────────────
@@ -168,8 +174,9 @@
      * `2026-09-01` কাঁচা মানটা কেউ পড়ে না — ওই সহায়কটাই ১১০ জায়গায়
      * ব্যবহৃত, আর এটা ১১১তম।
      */
-    $chipText = function (string $key, $value) use ($filterLabels): string {
+    $chipText = function (string $key, $value) use ($filterLabels, $filterValues): string {
         $value = is_array($value) ? implode(', ', $value) : (string) $value;
+        $value = (string) ($filterValues[$key][$value] ?? $value);
 
         $names = (array) __('core.toolbar.filter_names');
         $name = $filterLabels[$key] ?? ($names[$key] ?? null);

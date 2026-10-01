@@ -135,12 +135,37 @@
                 <input type="hidden" name="party_type" value="{{ $partyTypeFilter }}">
             @endif
 
-            <x-ui.toolbar :title="$distributorType && (string) $partyTypeFilter === (string) $distributorType->id
+            @php
+                /*
+                 * ⭐ ছাঁকনির চিপ — নাম আর মানের লেখা (মালিক, ১ অক্টোবর ২০২৬; [[CustomerListFilters]])।
+                 * ⓘ এরিয়া-পয়েন্টের ঠিকানায় আইডি; চিপে জায়গার নাম।
+                 */
+                $filterKeys = ['created_from', 'created_to', 'due_min', 'due_max', 'advance_min', 'advance_max',
+                    'area', 'point', 'status', 'quick', 'rank', 'rank_n', 'rank_by', 'sales_from', 'sales_to'];
+                $filterLabels = collect($filterKeys)->mapWithKeys(fn ($k) => [$k => __('customer::filter.'.$k)])->all();
+                $filterValues = [
+                    'area' => $areas->mapWithKeys(fn ($l) => [(string) $l->id => $l->name()])->all(),
+                    'point' => $points->mapWithKeys(fn ($l) => [(string) $l->id => $l->name()])->all(),
+                    'status' => collect(['active', 'inactive', 'all'])->mapWithKeys(fn ($v) => [$v => __('customer::filter.'.$v)])->all(),
+                    'quick' => collect(['due', 'advance', 'good', 'over_limit'])->mapWithKeys(fn ($v) => [$v => __('customer::filter.quick_'.$v)])->all(),
+                    'rank' => ['top' => __('customer::filter.top'), 'bottom' => __('customer::filter.bottom')],
+                    'rank_by' => ['sales' => __('customer::filter.by_sales'), 'due' => __('customer::filter.by_due')],
+                ];
+                $here = fn (array $set) => route('customer.index', array_filter(
+                    array_merge(request()->except(['page', 'inactive', ...array_keys($set)]), $set),
+                    fn ($v) => $v !== null && $v !== '',
+                ));
+                $status = request()->boolean('inactive') ? 'all' : (string) request('status', 'active');
+            @endphp
+
+            <x-ui.toolbar :title="$rankTitle ?? ($distributorType && (string) $partyTypeFilter === (string) $distributorType->id
                     ? __('customer::menu.distributors')
-                    : __('customer::menu.customers')" :count="trans_choice('customer::message.count', $customers->total(), ['count' => $customers->total()])"
+                    : __('customer::menu.customers'))" :count="trans_choice('customer::message.count', $customers->total(), ['count' => $customers->total()])"
                 :columns="$columns"
                 :search-placeholder="__('customer::message.search_placeholder')"
                 :sort="$sortOptions"
+                :filter-labels="$filterLabels"
+                :filter-values="$filterValues"
                 view>
         <x-slot:actions>
             {{-- ⭐ পরিবেশক তালিকা — মালিকের চাওয়া, ১৬ সেপ্টেম্বর ২০২৬।
@@ -172,12 +197,66 @@
                     </x-ui.button>
                 @endcan
         </x-slot:actions>
-                {{-- নিষ্ক্রিয় গ্রাহকও দেখা যাবে, কিন্তু ডিফল্টে নয়: তালিকাটা
-                     রোজকার কাজের, আর নিষ্ক্রিয়রা সেখানে শুধু ভিড় বাড়ায়। --}}
-                <label class="flex min-h-(--spacing-touch) items-center gap-2 text-sm">
-                    <input type="checkbox" name="inactive" value="1" @checked($showInactive) class="size-4">
-                    {{ __('customer::action.show_inactive') }}
-                </label>
+                {{-- ⭐ ছাঁকনি — মালিক, ১ অক্টোবর ২০২৬: *"eivabe hoy jani, khali ekta diyecho"*। ⓘ উপরে এক ক্লিকের দৃশ্য,
+                     নিচে ঘরগুলো; সব মিলে একসাথে চলে, খোঁজার সাথেও, আর রপ্তানি-ছাপা একই কোয়েরি পায়
+                     ([[CustomerListFilters]])। নিষ্ক্রিয়রা ডিফল্টে লুকানো — তালিকাটা রোজকার কাজের। --}}
+                <div class="flex w-full flex-wrap items-center gap-1 text-xs" data-customer-quick>
+                    <span class="text-(--color-ink-muted)">{{ __('customer::filter.quick') }}:</span>
+                    @foreach (['active', 'inactive', 'all'] as $s)
+                        <a href="{{ $here(['status' => $s]) }}" @class(['rounded-(--radius-pill) px-2.5 py-0.5',
+                            'bg-(--color-accent-600) text-(--color-accent-ink)' => $status === $s,
+                            'bg-(--color-surface-selected)' => $status !== $s])>{{ __('customer::filter.'.$s) }}</a>
+                    @endforeach
+                    @foreach (['due', 'advance', 'good', 'over_limit'] as $v)
+                        <a href="{{ $here(['quick' => request('quick') === $v ? null : $v]) }}"
+                           @if ($v === 'good') title="{{ __('customer::filter.good_rule', ['days' => \App\Modules\Customer\Support\CustomerListFilters::SALES_DAYS]) }}" @endif
+                           @class(['rounded-(--radius-pill) px-2.5 py-0.5',
+                            'bg-(--color-accent-600) text-(--color-accent-ink)' => request('quick') === $v,
+                            'bg-(--color-surface-selected)' => request('quick') !== $v])>{{ __('customer::filter.quick_'.$v) }}</a>
+                    @endforeach
+                </div>
+
+                <input type="hidden" name="status" value="{{ $status }}">
+                @if (request()->filled('quick'))
+                    <input type="hidden" name="quick" value="{{ request('quick') }}">
+                @endif
+
+                <div class="grid w-full grid-cols-2 gap-2 text-sm sm:grid-cols-4 lg:grid-cols-6">
+                    @foreach (['created_from', 'created_to'] as $k)
+                        <label class="grid gap-1"><span class="text-xs text-(--color-ink-muted)">{{ __('customer::filter.'.$k) }}</span>
+                            <input type="date" name="{{ $k }}" value="{{ request($k) }}" class="h-(--spacing-field-compact) rounded-(--radius-field) border border-(--color-border) px-2"></label>
+                    @endforeach
+                    @foreach (['due_min', 'due_max', 'advance_min', 'advance_max'] as $k)
+                        <label class="grid gap-1"><span class="text-xs text-(--color-ink-muted)">{{ __('customer::filter.'.$k) }}</span>
+                            <input type="number" min="0" step="any" inputmode="decimal" name="{{ $k }}" value="{{ request($k) }}" class="h-(--spacing-field-compact) rounded-(--radius-field) border border-(--color-border) px-2"></label>
+                    @endforeach
+                    @foreach (['area' => $areas, 'point' => $points] as $k => $places)
+                        <label class="grid gap-1"><span class="text-xs text-(--color-ink-muted)">{{ __('customer::filter.'.$k) }}</span>
+                            <select name="{{ $k }}" class="h-(--spacing-field-compact) rounded-(--radius-field) border border-(--color-border) px-2">
+                                <option value="">{{ __('customer::filter.any') }}</option>
+                                @foreach ($places as $place)
+                                    <option value="{{ $place->id }}" @selected((string) request($k) === (string) $place->id)>{{ $place->name() }}</option>
+                                @endforeach
+                            </select></label>
+                    @endforeach
+                    <label class="grid gap-1"><span class="text-xs text-(--color-ink-muted)">{{ __('customer::filter.rank') }}</span>
+                        <select name="rank" class="h-(--spacing-field-compact) rounded-(--radius-field) border border-(--color-border) px-2">
+                            <option value="">{{ __('customer::filter.any') }}</option>
+                            <option value="top" @selected(request('rank') === 'top')>{{ __('customer::filter.top') }}</option>
+                            <option value="bottom" @selected(request('rank') === 'bottom')>{{ __('customer::filter.bottom') }}</option>
+                        </select></label>
+                    <label class="grid gap-1"><span class="text-xs text-(--color-ink-muted)">{{ __('customer::filter.rank_n') }}</span>
+                        <input type="number" min="1" max="500" name="rank_n" value="{{ request('rank_n') }}" placeholder="{{ \App\Modules\Customer\Support\CustomerListFilters::RANK_DEFAULT }}" class="h-(--spacing-field-compact) rounded-(--radius-field) border border-(--color-border) px-2"></label>
+                    <label class="grid gap-1"><span class="text-xs text-(--color-ink-muted)">{{ __('customer::filter.rank_by') }}</span>
+                        <select name="rank_by" class="h-(--spacing-field-compact) rounded-(--radius-field) border border-(--color-border) px-2">
+                            <option value="">{{ __('customer::filter.by_sales') }}</option>
+                            <option value="due" @selected(request('rank_by') === 'due')>{{ __('customer::filter.by_due') }}</option>
+                        </select></label>
+                    @foreach (['sales_from', 'sales_to'] as $k)
+                        <label class="grid gap-1"><span class="text-xs text-(--color-ink-muted)">{{ __('customer::filter.'.$k) }}</span>
+                            <input type="date" name="{{ $k }}" value="{{ request($k) }}" class="h-(--spacing-field-compact) rounded-(--radius-field) border border-(--color-border) px-2"></label>
+                    @endforeach
+                </div>
             </x-ui.toolbar>
         </form>
 
