@@ -92,7 +92,7 @@ class InterCompanyController extends Controller implements HasMiddleware
          * ⚠️ নাহলে ঠিকানায় যেকোনো আইডি বসিয়ে অন্য ক্রেতার খাতের নাম
          * পড়া যেত, যদিও লেখা আটকাত সেবা স্তর।
          */
-        if ($chosen !== null && ! $user->companies()->whereKey($chosen)->exists()) {
+        if ($chosen !== null && ! $user->canInCompany($chosen, 'accounts.inter_company')) {
             abort(403);
         }
 
@@ -124,10 +124,13 @@ class InterCompanyController extends Controller implements HasMiddleware
              * টেবিলে কোনো দেয়াল নেই (সে নিজেই কোম্পানি), তাই ঢালাও
              * তালিকা অন্য ক্রেতার নাম এনে ফেলত।
              */
+            // ⛔ যেখানে চাবিও আছে কেবল সেগুলো — সদস্যপদ যথেষ্ট নয় ([[InterCompanyService::assertBothAreMine()]])
             'companies' => $user->companies()
                 ->where('companies.id', '!=', $own)
                 ->orderBy('companies.name_en')
-                ->get(['companies.id', 'companies.name_en', 'companies.name_bn']),
+                ->get(['companies.id', 'companies.name_en', 'companies.name_bn'])
+                ->filter(fn ($company) => $user->canInCompany((int) $company->id, 'accounts.inter_company'))
+                ->values(),
 
             'money' => $this->moneyAccounts(),
         ]);

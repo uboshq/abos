@@ -250,6 +250,57 @@ final class OneCompanyPaidForAnotherAndNeitherBookSaidSoTest extends TestCase
     }
 
     /**
+     * ⛔ ওদের খাতায় লিখতে ওদের কোম্পানিতেও চাবি চাই — সদস্যপদ যথেষ্ট নয় (১ অক্টোবর ২০২৬, ⛔২১)।
+     *
+     * ⓘ একই মানুষ, একই কাজ: alpha-তে চাবি আছে, beta-তে কেবল সদস্য → ফেরে, beta-র খাতায় কিছু
+     * বসে না; beta-তেও চাবি পেলে → বসে। আগে প্রথম চেষ্টাটাই beta-র খাতায় দাখিলা বসাত।
+     */
+    public function test_a_plain_member_there_cannot_write_their_books_until_given_the_key_there(): void
+    {
+        [, $alpha, $beta] = $this->cast();
+
+        $clerk = User::query()
+            ->whereHas('companies', fn ($q) => $q->whereKey($alpha->id))
+            ->whereDoesntHave('companies', fn ($q) => $q->whereKey($beta->id))
+            ->firstOrFail();
+
+        $clerk->companies()->attach($beta->id, ['is_active' => true]);
+        CompanyContext::forCompany((int) $alpha->id, fn () => $clerk->givePermissionTo('accounts.inter_company'));
+        $clerk->unsetRelation('roles')->unsetRelation('permissions');
+
+        $theirVouchers = fn () => DB::table('vouchers')->where('company_id', $beta->id)->count();
+        $before = $theirVouchers();
+
+        $write = fn () => app(InterCompanyService::class)->record($clerk->fresh(), [
+            'counter_company_id' => $beta->id,
+            'trx_date' => now()->toDateString(),
+            'amount' => '100.0000',
+            'purpose' => 'চাবি যাচাই',
+            'from_account_id' => $this->money($alpha)->id,
+            'to_account_id' => $this->money($beta)->id,
+        ]);
+
+        CompanyContext::set((int) $alpha->id);
+
+        try {
+            $write();
+            $this->fail('⛔ beta-তে চাবি ছাড়া কেবল সদস্য হয়েও beta-র খাতায় লেখা গেল।');
+        } catch (ValidationException $e) {
+            $this->assertArrayHasKey('counter_company_id', $e->errors());
+        }
+
+        CompanyContext::set((int) $alpha->id);
+        $this->assertSame($before, $theirVouchers(), '⛔ ফেরানো চেষ্টাও beta-র খাতায় কিছু বসাল।');
+
+        CompanyContext::forCompany((int) $beta->id, fn () => $clerk->givePermissionTo('accounts.inter_company'));
+        CompanyContext::set((int) $alpha->id);
+
+        $transfer = $write();
+
+        $this->assertTrue($transfer->isBalanced(), 'beta-তে চাবি পাওয়ার পর দুই খাতায় বসল না — দাবিটা ভুল কারণে আটকাচ্ছিল।');
+    }
+
+    /**
      * ⛔ পর্দাটা নিজের চাবি ছাড়া খোলে না।
      *
      * ⚠️ দাবিটা আলাদা করে দরকার, কারণ `accounts.%` ঢালাও নিয়মে চাবিটা

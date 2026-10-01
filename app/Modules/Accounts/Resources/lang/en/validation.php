@@ -54,6 +54,7 @@ return [
     'inter_company_needs_receiving_account' => 'On their side choose a money, expense or liability account (not income or equity).',
     'inter_company_same' => 'A company cannot send money to itself.',
     'inter_company_not_mine' => 'You must belong to both companies.',
+    'inter_company_no_key_there' => 'You do not have the inter-company key in that company.',
     'inter_company_needs_money_account' => 'Choose a money account (cash, bank or MFS).',
     'inter_company_no_control' => 'The inter-company current account (:code) is not in this company\'s chart.',
     'inter_company_amount' => 'The amount must be more than zero.',

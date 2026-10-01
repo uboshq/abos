@@ -303,6 +303,18 @@ final class InterCompanyService
             ]);
         }
 
+        /*
+         * ⛔ সদস্যপদ যথেষ্ট নয় — ওই কোম্পানিতেও চাবিটা চাই (১ অক্টোবর ২০২৬, ⛔২১-এর শেষ যাচাই)।
+         * ⓘ এই কাজ ওদের খাতায় একটা দাখিলা বসায়। আগে A-র হিসাবরক্ষক B-র কেবল সাধারণ সদস্য
+         * হয়েও B-র খাতায় লিখতে পারতেন — চাবিটা জিজ্ঞেস হত কেবল চলতি কোম্পানিতে।
+         * [[User::canInCompany()]] — শাখা-কোম্পানির দরজাগুলোর একই নিয়ম।
+         */
+        if (! $user->canInCompany($counterId, 'accounts.inter_company')) {
+            throw ValidationException::withMessages([
+                'counter_company_id' => __('accounts::validation.inter_company_no_key_there'),
+            ]);
+        }
+
         return Company::query()->withoutGlobalScopes()->findOrFail($counterId);
     }
 

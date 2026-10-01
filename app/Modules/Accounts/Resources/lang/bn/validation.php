@@ -66,6 +66,7 @@ return [
     'inter_company_needs_receiving_account' => 'তাদের দিকে টাকার খাত, খরচের খাত বা দায়ের খাত বাছুন (আয় বা মূলধন নয়)।',
     'inter_company_same' => 'নিজের কোম্পানিকে টাকা পাঠানো যায় না।',
     'inter_company_not_mine' => 'দুইটা কোম্পানিতেই আপনার সদস্যপদ থাকতে হবে।',
+    'inter_company_no_key_there' => 'ওই কোম্পানিতে আপনার আন্তঃকোম্পানি লেনদেনের অনুমতি নেই।',
     'inter_company_needs_money_account' => 'টাকার খাত বাছুন (নগদ, ব্যাংক বা এমএফএস)।',
     'inter_company_no_control' => 'ভাই-কোম্পানির চলতি হিসাবের খাত (:code) এই কোম্পানির ছকে নেই।',
     'inter_company_amount' => 'টাকার অঙ্ক শূন্যের বেশি হতে হবে।',
