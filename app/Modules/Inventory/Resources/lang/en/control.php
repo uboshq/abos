@@ -25,4 +25,8 @@ return [
     'out_year' => 'Out, last 365 days',
     'turns' => 'Turns a year',
     'value' => 'Value',
+
+    'lot_trace' => 'Lot Trace',
+    'qty_in' => 'In',
+    'qty_out' => 'Out',
 ];

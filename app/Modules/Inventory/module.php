@@ -240,6 +240,10 @@ return [
             ['label' => 'inventory::control.slow_dead', 'icon' => 'clock', 'route' => 'inventory.report.show',
                 'route_params' => ['slug' => 'slow-dead'], 'permission' => 'inventory.report'],
 
+            // ⭐ লটের গতিপথ — রিপোর্ট সেন্টার ধাপ ৪ ([[InventoryControlReports]])
+            ['label' => 'inventory::control.lot_trace', 'icon' => 'list', 'route' => 'inventory.report.show',
+                'route_params' => ['slug' => 'lot-trace'], 'permission' => 'inventory.report'],
+
             /* ⭐ গুদামভিত্তিক মজুদ ও সমন্বয়ের ইতিহাস — ২১ সেপ্টেম্বর ২০২৬ */
             ['label' => 'inventory::menu.stock_by_warehouse', 'icon' => 'building', 'route' => 'inventory.report.show',
                 'route_params' => ['slug' => 'stock-by-warehouse'], 'permission' => 'inventory.report'],

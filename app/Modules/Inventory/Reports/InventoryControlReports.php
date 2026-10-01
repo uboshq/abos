@@ -22,6 +22,71 @@ final class InventoryControlReports
         $engine->register(self::countVsBook());
         $engine->register(self::stockAlerts());
         $engine->register(self::slowAndDead());
+        $engine->register(self::lotTrace());
+    }
+
+    /**
+     * লটের গতিপথ — ধাপ ৪: *"লট ও মেয়াদ: মেয়াদ শেষ / শেষের পথে, লটের গতিপথ"* (মেয়াদের অংশ [[StockReports::expiring()]])।
+     *
+     * একটা লট কোথা থেকে এল, কোন গুদামে গেল, কাকে কোন কাগজে বেচা হলো — প্রতিটা চলাচল এক সারি, কাগজটা খোলা যায়।
+     * ⓘ `batch_id` দিলে কেবল সেই লট (রিকলের প্রশ্ন: *"এই লটের মাল কোথায় কোথায় গেছে"*); না দিলে সময়ের সব লটের চলাচল।
+     * ⓘ ঢোকা/বেরোনো "হাতে"-র মাপে (তাকে + বসানো বাকি + আটকে), ফ্রি আলাদা — বসানো বা আটকানো তাই শূন্য সারি নয়, বাদ।
+     */
+    public static function lotTrace(): ReportDefinition
+    {
+        $qty = '(m.floor_change + m.unplaced_change + m.hold_change)';
+        $free = '(m.free_change + m.unplaced_free_change)';
+
+        return new ReportDefinition(
+            key: 'inventory.lot_trace',
+            permission: 'inventory.report',
+            title: 'inventory::control.lot_trace',
+            filters: ['date_range', 'branch', 'batch_id', 'product_id', 'warehouse_id'],
+            query: fn (array $f) => DB::table('inv_stock_movements as m')
+                ->join('inv_batches as b', 'b.id', '=', 'm.batch_id')
+                ->join('inv_products as p', 'p.id', '=', 'm.product_id')
+                ->join('inv_warehouses as w', 'w.id', '=', 'm.warehouse_id')
+                ->where('m.company_id', $f['company_id'])
+                ->tap(ReportEngine::branchWall($f, 'w.branch_id'))
+                ->whereBetween('m.trx_date', [$f['from'], $f['to']])
+                ->whereRaw("({$qty} <> 0 OR {$free} <> 0)")
+                ->when(! empty($f['batch_id']), fn ($q) => $q->where('m.batch_id', (int) $f['batch_id']))
+                ->when(! empty($f['product_id']), fn ($q) => $q->where('m.product_id', (int) $f['product_id']))
+                ->when(! empty($f['warehouse_id']), fn ($q) => $q->where('m.warehouse_id', (int) $f['warehouse_id']))
+                ->orderBy('b.batch_no')
+                ->orderBy('m.trx_date')
+                ->orderBy('m.id')
+                ->select([
+                    'b.batch_no',
+                    'b.expiry_date',
+                    DB::raw("CONCAT(p.code, ' - ', ".self::name('p').') as product_name'),
+                    'm.trx_date',
+                    'm.document_no',
+                    'm.source_type',
+                    'm.source_id',
+                    DB::raw(self::name('w').' as warehouse_name'),
+                    DB::raw("CASE WHEN {$qty} > 0 THEN {$qty} ELSE 0 END as qty_in"),
+                    DB::raw("CASE WHEN {$qty} < 0 THEN -{$qty} ELSE 0 END as qty_out"),
+                    DB::raw("{$free} as free_change"),
+                ]),
+            columns: [
+                ['key' => 'batch_no', 'label' => 'inventory::field.batch_no', 'width' => '8rem'],
+                ['key' => 'expiry_date', 'label' => 'inventory::field.expiry_date', 'type' => ReportColumn::DATE, 'width' => '7rem'],
+                ['key' => 'product_name', 'label' => 'inventory::field.product'],
+                ['key' => 'trx_date', 'label' => 'core.print.date', 'type' => ReportColumn::DATE, 'width' => '7rem'],
+                [
+                    'key' => 'document_no',
+                    'label' => 'core.table.document',
+                    'type' => ReportColumn::DOCUMENT,
+                    'source_type' => 'source_type',
+                    'source_id' => 'source_id',
+                ],
+                ['key' => 'warehouse_name', 'label' => 'inventory::field.warehouse', 'width' => '9rem'],
+                ['key' => 'qty_in', 'label' => 'inventory::control.qty_in', 'type' => ReportColumn::QUANTITY],
+                ['key' => 'qty_out', 'label' => 'inventory::control.qty_out', 'type' => ReportColumn::QUANTITY],
+                ['key' => 'free_change', 'label' => 'inventory::field.free', 'type' => ReportColumn::QUANTITY],
+            ],
+        );
     }
 
     /** ধীর মালের সীমা — শেষ বেরোনোর পর এতদিন */

@@ -73,6 +73,7 @@ class StockReportController extends Controller implements HasMiddleware
         'movement-summary' => 'inventory.movement_summary',
         'stock-alerts' => 'inventory.stock_alerts',
         'slow-dead' => 'inventory.slow_dead',
+        'lot-trace' => 'inventory.lot_trace',
 
         /* ⓘ খাদ্য-খরচ এখানে ছিল — ১৫ সেপ্টেম্বর ২০২৬-এ রেস্তোরাঁয় গেছে
            ([[App\Modules\Restaurant\Http\Controllers\RestaurantReportController]]),
