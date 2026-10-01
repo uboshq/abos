@@ -207,6 +207,21 @@ final class SalesReturnService
         );
 
         return DB::transaction(function () use ($return) {
+            // ⛔ দ্বিতীয় ক্লিক বা একই বিলে আরেক ফেরত — তালার ভিতরে সব আবার মাপা ([[lockAndReread()]])
+            $this->lockAndReread($return, andTheBill: true);
+
+            if ($return->status !== DocumentStatus::DRAFT) {
+                throw ValidationException::withMessages([
+                    'status' => __('sales::validation.only_draft_confirms', ['no' => $return->document_no]),
+                ]);
+            }
+
+            $this->bills->checkDocument($return);
+
+            foreach ($return->lines as $line) {
+                $this->assertWithinSold($line);
+            }
+
             foreach ($return->lines as $line) {
                 $this->freeBack($return, $line, '1');
 
@@ -258,6 +273,15 @@ final class SalesReturnService
         $date = $onDate === null ? now() : Carbon::parse($onDate);
 
         return DB::transaction(function () use ($return, $reason, $date) {
+            // ⛔ দ্বিতীয় ক্লিক — তালার ভিতরে অবস্থা আবার ([[lockAndReread()]])
+            $this->lockAndReread($return);
+
+            if ($return->status === DocumentStatus::CANCELLED) {
+                throw ValidationException::withMessages([
+                    'status' => __('sales::validation.already_cancelled', ['no' => $return->document_no]),
+                ]);
+            }
+
             if ($return->status === DocumentStatus::CONFIRMED) {
                 $return->loadMissing(['lines.product', 'lines.batch', 'warehouse']);
 
@@ -675,6 +699,33 @@ final class SalesReturnService
     /**
      * যত বেচা হয়েছে তার বেশি ফেরত নয়।
      */
+    /**
+     * ⛔ দুই ক্লিক, একই ফেরত বা একই বিল — চূড়ান্ত অডিট ⛔৩, ৩০ সেপ্টেম্বর ২০২৬।
+     *
+     * ⓘ "এখনো খসড়া কি না" আর "বিলে কত বেচা, কত ফিরেছে" দেখা হত লেনদেনের বাইরে। একই বিলের সারিতে
+     * দুইটা ফেরত (৬ + ৬, বেচা ১০) একসাথে এলে দুইটাই "১০ জায়গা আছে" দেখে পাকা হত; একই ফেরত দুইবার
+     * নিশ্চিত হলে মাল দুইবার তাকে উঠত। ⭐ এখন ফেরতের সারিতে তালা আর অবস্থা তাজা পড়া; বিল থাকলে বিলের
+     * সারিতেও তালা — একই বিলের সব ফেরত এক লাইনে দাঁড়ায় ([[DepositClaimService::lockPending()]]-এর ছাঁচ)।
+     */
+    private function lockAndReread(SalesReturn $return, bool $andTheBill = false): void
+    {
+        $fresh = SalesReturn::query()
+            ->withoutGlobalScopes()
+            ->whereKey($return->getKey())
+            ->lockForUpdate()
+            ->firstOrFail();
+
+        $return->setRawAttributes($fresh->getAttributes(), true);
+
+        if ($andTheBill && $return->sales_invoice_id !== null) {
+            SalesInvoice::query()
+                ->withoutGlobalScopes()
+                ->whereKey($return->sales_invoice_id)
+                ->lockForUpdate()
+                ->first();
+        }
+    }
+
     private function assertWithinSold(SalesReturnLine $line): void
     {
         $invoiceLine = $line->invoiceLine;

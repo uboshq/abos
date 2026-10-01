@@ -314,6 +314,15 @@ final class DeliveryChallanService
                 );
             }
 
+            // ⛔ দ্বিতীয় ক্লিক — তালার ভিতরে অবস্থা আবার ([[lockAndReread()]])
+            $this->lockAndReread($challan);
+
+            if ($challan->status !== DocumentStatus::DRAFT) {
+                throw ValidationException::withMessages([
+                    'status' => __('sales::validation.only_draft_confirms', ['no' => $challan->document_no]),
+                ]);
+            }
+
             foreach ($challan->lines as $line) {
                 $qty = (string) $line->delivered_qty;
 
@@ -386,6 +395,17 @@ final class DeliveryChallanService
         $date = $onDate === null ? now() : Carbon::parse($onDate);
 
         return DB::transaction(function () use ($challan, $reason, $date) {
+            // ⛔ দ্বিতীয় ক্লিক — তালার ভিতরে অবস্থা আবার, আর এর মধ্যে বিল হয়ে গেল কি না ([[lockAndReread()]])
+            $this->lockAndReread($challan);
+
+            if ($challan->status === DocumentStatus::CANCELLED) {
+                throw ValidationException::withMessages([
+                    'status' => __('sales::validation.already_cancelled', ['no' => $challan->document_no]),
+                ]);
+            }
+
+            $this->assertNotInvoiced($challan);
+
             if ($challan->status === DocumentStatus::CONFIRMED) {
                 /*
                  * গাড়ির ভাড়ার দাখিলাও ফেরে।
@@ -856,6 +876,25 @@ final class DeliveryChallanService
     /**
      * বিল হয়ে যাওয়া চালান বাতিল করা যায় না — ক্রমটা উল্টো দিকে।
      */
+    /**
+     * ⛔ দুই ক্লিক, একই চালান — চূড়ান্ত অডিট ⛔৪, ৩০ সেপ্টেম্বর ২০২৬।
+     *
+     * ⓘ নিশ্চিত/বাতিলের "এখনো খসড়া কি না" দেখা হত লেনদেনের বাইরে, হাতের পুরনো মডেলে। দুইটা অনুরোধ
+     * একসাথে এলে দুইটাই "খসড়া" দেখত, আর মাল দুইবার বেরোত (বা বাতিলে দুইবার ফিরত)। ⭐ এখন লেনদেনের
+     * ভিতরে সারিতে তালা, আর অবস্থাটা তাজা পড়া — দ্বিতীয়জন প্রথমজনের কমিটের পরের অবস্থা দেখে
+     * ([[DepositClaimService::lockPending()]]-এর ছাঁচ)। ⓘ কাউকে আটকায় না — কেবল একই কাজ দ্বিতীয়বার।
+     */
+    private function lockAndReread(DeliveryChallan $challan): void
+    {
+        $fresh = DeliveryChallan::query()
+            ->withoutGlobalScopes()
+            ->whereKey($challan->getKey())
+            ->lockForUpdate()
+            ->firstOrFail();
+
+        $challan->setRawAttributes($fresh->getAttributes(), true);
+    }
+
     private function assertNotInvoiced(DeliveryChallan $challan): void
     {
         $invoiced = DeliveryChallanLine::query()
