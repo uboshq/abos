@@ -1492,6 +1492,15 @@ class DirectSaleController extends Controller implements HasMiddleware
         $held = DirectSaleService::isHeldForSignature($draft);
         $saved = (array) ($held ? $draft->counter_screen : $draft->counter_draft);
 
+        /*
+         * ⛔ মালিক, ১ অক্টোবর ২০২৬: *"পেন্ডিং বিল কাউন্টারে ওপেন হচ্ছে না"* — পর্দার ছবি
+         * (`counter_draft`) ছাড়া রাখা খসড়া (ছবি-ব্যবস্থার আগের, বা অন্য পথে বানানো) বাছলে
+         * পাতা চুপচাপ একটা খালি নতুন বিল খুলত। ⭐ ছবি না থাকলে খসড়ার নিজের সারি থেকে পর্দা।
+         */
+        if ($saved === []) {
+            $saved = $this->screenFromDraft($draft);
+        }
+
         if ($saved === []) {
             return null;
         }
@@ -1507,6 +1516,58 @@ class DirectSaleController extends Controller implements HasMiddleware
             'approvalUrl' => $held ? $this->approvalUrlFor($draft) : null,
             'stage' => $held ? 'approval' : 'draft',
             'challanUrl' => null,
+        ];
+    }
+
+    /**
+     * খসড়ার নিজের সারি থেকে কাউন্টারের পর্দা — ছবি ছাড়া রাখা খসড়ার জন্য ([[resumeFrom()]])।
+     *
+     * ⓘ আকার কাউন্টারের নিজের ছবির মতোই (`screen.lines[]`): পণ্য, একক, পরিমাণ, ফ্রি, দর, ছাড়ের %, লট।
+     *
+     * @return array<string, mixed>
+     */
+    private function screenFromDraft(SalesInvoice $draft): array
+    {
+        $draft->loadMissing(['lines.product.unit', 'lines.challanLine.batch']);
+
+        if ($draft->lines->isEmpty()) {
+            return [];
+        }
+
+        $lines = $draft->lines->sortBy('line_no')->values()->map(function ($line, int $i) {
+            $cl = $line->challanLine;
+            $qty = (string) ($cl?->delivered_qty ?? $line->qty);
+            $gross = bcmul($qty, (string) $line->rate, 4);
+            $pct = $cl?->discount_percent !== null
+                ? (string) $cl->discount_percent
+                : (bccomp($gross, '0', 4) > 0 ? bcmul(bcdiv((string) $line->discount, $gross, 8), '100', 4) : '0');
+
+            return [
+                'key' => $i + 1,
+                'id' => (int) $line->product_id,
+                'name' => (string) ($line->product?->name() ?? ''),
+                'unit' => (string) ($line->product?->unit?->name() ?? ''),
+                'vatRate' => 0,
+                'vatInclusive' => false,
+                'qty' => $qty,
+                'freeQty' => (string) ($cl?->free_qty ?? '0'),
+                'rate' => (string) $line->rate,
+                'discountPercent' => $pct,
+                'unitId' => '',
+                'gifts' => [],
+                'batchId' => $cl?->batch_id ? (string) $cl->batch_id : '',
+                'batchNo' => (string) ($cl?->batch?->batch_no ?? ''),
+            ];
+        })->all();
+
+        return [
+            'screen' => [
+                'customerId' => (string) $draft->customer_id,
+                'creditTerm' => $draft->due_on ? 'credit' : 'cash',
+                'dueOn' => $draft->due_on?->toDateString() ?? '',
+                'lines' => $lines,
+            ],
+            'fields' => [],
         ];
     }
 
