@@ -74,6 +74,31 @@ class ANoticeThatRanAllDayAndNobodyReadItTest extends TestCase
             'কিছু পড়ে না থাকলেও ব্যাজ দেখাচ্ছে — তাহলে ওটা আরেকটা স্থায়ী নোটিশ।');
     }
 
+    /**
+     * ⭐ ব্যাজ পাঁচ মিনিট ধরে রাখা — প্রতিটা পাতায় গোটা কোম্পানির চলাচল গোনা হত (১ অক্টোবর ২০২৬)।
+     *
+     * ⓘ একই মানুষ: একটা কাগজ → ১; আরেকটা এল → পাঁচ মিনিটের ভেতরে এখনো ১ (গোনা হয়নি);
+     * পাঁচ মিনিট পরে → ২। ⚠️ শেষ ধাপটাই প্রমাণ যে সংখ্যাটা আটকে যায় না।
+     */
+    public function test_the_badge_is_counted_at_most_once_in_five_minutes(): void
+    {
+        $this->clearTheFloor();
+
+        $paper = fn (int $id) => app(StockService::class)->move(
+            product: $this->product, warehouse: $this->warehouse,
+            sourceType: 'bill', sourceId: $id, unplaced: '5',
+        );
+
+        $paper(81);
+        $this->assertSame(1, $this->placementRow()['badge'] ?? null, 'প্রস্তুতিটাই ভুল — একটা কাগজেও সংখ্যা নেই।');
+
+        $paper(82);
+        $this->assertSame(1, $this->placementRow()['badge'] ?? null, '⛔ পাঁচ মিনিটের ভেতরে আবার গোনা হলো — প্রতিটা পাতায় গোটা চলাচল দলবদ্ধ হচ্ছে।');
+
+        $this->travel(301)->seconds();
+        $this->assertSame(2, $this->placementRow()['badge'] ?? null, '⛔ পাঁচ মিনিট পরেও পুরনো সংখ্যা — ব্যাজ আটকে গেছে।');
+    }
+
     /** আর মাল অপেক্ষায় থাকলে সংখ্যাটা সারিতেই দেখা যায়। */
     public function test_when_goods_wait_the_row_carries_the_count(): void
     {

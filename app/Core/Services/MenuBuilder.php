@@ -9,6 +9,7 @@ use App\Core\Module\ModuleRegistry;
 use App\Core\Support\CompanyContext;
 use App\Models\BranchModule;
 use App\Models\User;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Str;
 
@@ -543,8 +544,16 @@ final class MenuBuilder
             return null;
         }
 
+        /*
+         * ⭐ পাঁচ মিনিট ধরে রাখা — মেনু প্রতিটা পাতায় আঁকা হয়, আর গোনাটা গোটা কোম্পানির চলাচল
+         * দলবদ্ধ করে (১ অক্টোবর ২০২৬, নিরীক্ষার কাজ)। ⓘ চাবিতে কোম্পানি, মানুষ আর দেখার শাখা —
+         * একজনের সংখ্যা আরেকজনের পর্দায় যায় না। ⚠️ সংখ্যাটা সাজসজ্জা; কাজ সারার পর পাঁচ মিনিট
+         * পুরনো থাকতে পারে, পর্দা নিজে সবসময় তাজা গোনে।
+         */
+        $key = sprintf('menu-badge:%s:%s:%s:%s', $counter, CompanyContext::id() ?? '-', auth()->id() ?? '-', CompanyContext::branchId() ?? '-');
+
         try {
-            $count = (int) app($counter)->pendingCount();
+            $count = (int) Cache::remember($key, 300, fn () => (int) app($counter)->pendingCount());
         } catch (\Throwable) {
             return null;
         }

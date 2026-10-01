@@ -57,6 +57,11 @@ final class GoodsWaitingToBePlaced
         return DB::table('inv_stock_movements')
             ->where('company_id', $companyId)
             /*
+             * ⭐ কেবল যে সারি বসার-অপেক্ষার ঘর নাড়ায় — বাকিগুলো যোগফলে শূন্য যোগ করে, তাই ফল
+             * হুবহু একই, কেবল দলবদ্ধ করার সারি কম (১ অক্টোবর ২০২৬; মেনু প্রতিটা পাতায় গোনে)।
+             */
+            ->where(fn ($q) => $q->where('unplaced_change', '!=', 0)->orWhere('unplaced_free_change', '!=', 0))
+            /*
              * ⓘ কাগজ ধরে — পর্দার কার্ডের মতো ([[StockPlacementController::waiting()]]):
              * ⛔ বাতিলের উল্টো সারি (`…:cancel`) একই দলে, নাহলে বাতিল বিলও "অপেক্ষায়" গোনা হত;
              * আর ফ্রি মাল (`…:free`) একই বিলের কার্ডে, নাহলে একটা বিল দুইবার গোনা হত।
