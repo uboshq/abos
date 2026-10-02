@@ -74,7 +74,12 @@ trait ScopedToUserWarehouse
         static::addGlobalScope('user-warehouse', function (Builder $builder): void {
             $user = auth()->user();
 
-            if ($user === null) {
+            /*
+             * ⓘ কর্মীর গুদামের ছাঁকনি কেবল কর্মীর — ডিলার পোর্টালের কর্তা গ্রাহক ([[Customer]]), আর
+             * [[DataScope::idsFor()]] কেবল User নেয়। ⛔ আগে এখানে TypeError: পোর্টালে DO জমা দিলে মজুদ আটকানোর
+             * কাজ ৫০০ দিত (abos-2c-এর ধরা, ৩ অক্টোবর ২০২৬)। পোর্টালের নিজের দরজা নিজের ছাঁকনি রাখে।
+             */
+            if (! $user instanceof User) {
                 return;
             }
 
