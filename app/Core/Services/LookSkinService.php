@@ -162,7 +162,7 @@ final class LookSkinService
             'note' => $note,
             'reverted_from' => $revertedFrom,
             'published_at' => now(),
-            'published_by' => $by ?? auth()->id(),
+            'published_by' => $by ?? \App\Core\Support\Actor::userId(),
         ]);
     }
 }

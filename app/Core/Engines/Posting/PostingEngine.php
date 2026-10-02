@@ -68,7 +68,7 @@ final class PostingEngine
         $claimKey = $this->assertNotAlreadyPosted($sourceType, $sourceId);
 
         $branchId = $branchId ?? CompanyContext::branchId();
-        $userId = $userId ?? auth()->id();
+        $userId = $userId ?? \App\Core\Support\Actor::userId();
 
         return DB::transaction(function () use ($lines, $sourceType, $sourceId, $trxDate, $documentNo, $branchId, $userId, $financialYear, $claimKey) {
             /*
@@ -198,7 +198,7 @@ final class PostingEngine
         $this->period->assertOpen($reversalDate);
 
         $financialYear = $this->resolveFinancialYear($reversalDate);
-        $userId = $userId ?? auth()->id();
+        $userId = $userId ?? \App\Core\Support\Actor::userId();
 
         /*
          * উল্টো এন্ট্রিও প্রতিটা দাখিলার জন্য একবারই — দুইবার বাতিল করলে

@@ -69,7 +69,7 @@ final class StatusNotices
          * সিদ্ধান্তের অধিকার নেই তিনিও দেখে ফেলতেন কিছু ঝুলে আছে।
          */
         return Cache::remember(
-            "abos.notice.{$companyId}.".(auth()->id() ?? 0),
+            "abos.notice.{$companyId}.".(\App\Core\Support\Actor::userId() ?? 0),
             self::TTL,
             fn () => array_values(array_filter([
                 /*

@@ -550,7 +550,7 @@ final class MenuBuilder
          * একজনের সংখ্যা আরেকজনের পর্দায় যায় না। ⚠️ সংখ্যাটা সাজসজ্জা; কাজ সারার পর পাঁচ মিনিট
          * পুরনো থাকতে পারে, পর্দা নিজে সবসময় তাজা গোনে।
          */
-        $key = sprintf('menu-badge:%s:%s:%s:%s', $counter, CompanyContext::id() ?? '-', auth()->id() ?? '-', CompanyContext::branchId() ?? '-');
+        $key = sprintf('menu-badge:%s:%s:%s:%s', $counter, CompanyContext::id() ?? '-', \App\Core\Support\Actor::userId() ?? '-', CompanyContext::branchId() ?? '-');
 
         try {
             $count = (int) Cache::remember($key, 300, fn () => (int) app($counter)->pendingCount());

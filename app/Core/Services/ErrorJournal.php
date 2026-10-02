@@ -191,7 +191,7 @@ final class ErrorJournal
     private function userId(): ?int
     {
         try {
-            return auth()->id();
+            return \App\Core\Support\Actor::userId();
         } catch (Throwable) {
             return null;
         }

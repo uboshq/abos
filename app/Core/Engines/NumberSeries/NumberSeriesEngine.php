@@ -106,7 +106,7 @@ final class NumberSeriesEngine
                 'sequence' => $sequence,
                 'source_type' => $sourceType,
                 'source_id' => $sourceId,
-                'issued_by' => auth()->id(),
+                'issued_by' => \App\Core\Support\Actor::userId(),
                 'issued_at' => now(),
             ]);
 

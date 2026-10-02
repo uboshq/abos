@@ -191,7 +191,7 @@ final class PaperTrail
             'how' => $how,
             'share_id' => $share?->id,
             'from_ip' => $fromIp,
-            'created_by' => auth()->id(),
+            'created_by' => \App\Core\Support\Actor::userId(),
         ]);
     }
 
@@ -249,7 +249,7 @@ final class PaperTrail
                  */
                 'token' => bin2hex(random_bytes(32)),
                 'expires_at' => Carbon::now()->addDays(DocumentShare::LIVES_DAYS),
-                'created_by' => auth()->id(),
+                'created_by' => \App\Core\Support\Actor::userId(),
             ]);
 
             $this->record($documentType, $documentId, $paper, DocumentDelivery::SHARED, $documentNo, $share);

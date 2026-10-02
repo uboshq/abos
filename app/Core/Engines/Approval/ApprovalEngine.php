@@ -168,7 +168,7 @@ final class ApprovalEngine
                 'current_level' => 1,
                 'payload' => $payload,
                 'requested_reason' => $reason,
-                'requested_by' => $userId ?? auth()->id(),
+                'requested_by' => $userId ?? \App\Core\Support\Actor::userId(),
                 'requested_at' => now(),
                 'due_at' => $this->sla()->dueFor($first),
                 'state_hash' => $stateHash,

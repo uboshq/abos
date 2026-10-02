@@ -200,7 +200,7 @@ final class DocumentApproval
              * ওগুলোতেও কাগজ নিশ্চিত হয়, আর তখন সৎ উত্তর একটাই: **যিনি
              * কাগজটা লিখেছিলেন**।
              */
-            userId: auth()->id() ?? $this->authorOf($document),
+            userId: \App\Core\Support\Actor::userId() ?? $this->authorOf($document),
         );
     }
 

@@ -105,7 +105,7 @@ final class NoticeLifecycle
                     : $priority->needsAcknowledgementByDefault(),
 
                 'ack_deadline' => $data['ack_deadline'] ?? null,
-                'created_by' => auth()->id(),
+                'created_by' => \App\Core\Support\Actor::userId(),
             ]);
         });
     }
@@ -201,7 +201,7 @@ final class NoticeLifecycle
             return;
         }
 
-        $me = auth()->id();
+        $me = \App\Core\Support\Actor::userId();
 
         /*
          * ⓘ লেখক জানা না থাকলে নিয়মটা খাটে না।
@@ -297,7 +297,7 @@ final class NoticeLifecycle
 
         return $this->moveTo($notice, NoticeStatus::RECALLED, [
             'recalled_at' => now(),
-            'recalled_by' => auth()->id(),
+            'recalled_by' => \App\Core\Support\Actor::userId(),
             'recall_reason' => $why,
             'in_ticker' => false,
         ]);
@@ -418,7 +418,7 @@ final class NoticeLifecycle
                 'body' => (string) $notice->body,
                 'priority' => $notice->priority?->value,
                 'change_note' => $why,
-                'created_by' => auth()->id(),
+                'created_by' => \App\Core\Support\Actor::userId(),
             ]);
 
             $notice->fill(array_intersect_key($data, array_flip([

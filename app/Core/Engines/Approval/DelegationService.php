@@ -64,7 +64,7 @@ final class DelegationService
             'modules' => $modules,
             'actions' => $actions,
             'reason' => $reason,
-            'created_by' => auth()->id(),
+            'created_by' => \App\Core\Support\Actor::userId(),
         ]);
     }
 

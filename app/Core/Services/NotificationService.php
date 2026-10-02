@@ -58,7 +58,7 @@ final class NotificationService
          * নিজেকে "আপনার দাবি অনুমোদিত" পাঠাত। ওরকম একটা খবর ঘণ্টায়
          * বসে থাকে, কিছু জানায় না, শুধু সংখ্যাটা বাড়ায়।
          */
-        if ($userId === auth()->id()) {
+        if ($userId === \App\Core\Support\Actor::userId()) {
             return null;
         }
 
