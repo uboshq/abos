@@ -10,6 +10,7 @@ import 'core/auth/auth_controller.dart';
 import 'core/auth/auth_state.dart';
 import 'core/launcher_widgets/launcher_widget_refresh.dart';
 import 'core/launcher_widgets/widget_sync_observer.dart';
+import 'core/push/push_service.dart';
 import 'core/router/app_router.dart';
 import 'core/sync_engine/background_sync.dart';
 import 'core/sync_engine/reference_cache.dart';
@@ -36,6 +37,12 @@ Future<void> main() async {
 
   final authController = AuthController();
   await authController.restoreSession();
+
+  // ⭐ অ্যাপ বন্ধ থাকলেও বার্তা (0.4.7) — Firebase না উঠলেও অ্যাপ চলে ([[PushService.init]])।
+  await PushService.instance.init();
+  if (authController.isSignedIn) {
+    unawaited(PushService.instance.register());
+  }
 
   // A session that was restored rather than signed into never passed
   // through login(), so the home-screen widgets are filled here. Not
@@ -77,6 +84,22 @@ class _AbosAppState extends ConsumerState<AbosApp> {
     )..start();
 
     _listenForWidgetTaps();
+
+    // ⭐ বার্তায় চাপলে ট্র্যাকিং; নতুন করে ঢুকলে এই ফোনের টোকেন আবার জমা (অন্য কেউ এই ফোনে ঢুকে থাকলে
+    // সার্ভার আগের জনের সারি থেকে টোকেন সরায় — [[PushTokenController]])।
+    PushService.instance.listenForTaps(_openFromPush);
+    ref.listenManual<AuthState>(authStateProvider, (previous, next) {
+      if (previous?.status != AuthStatus.signedIn && next.status == AuthStatus.signedIn) {
+        unawaited(PushService.instance.register());
+      }
+    });
+  }
+
+  void _openFromPush(String path) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      ref.read(goRouterProvider).go(path);
+    });
   }
 
   /// A tap on a home-screen widget opens the page behind it: the approvals
