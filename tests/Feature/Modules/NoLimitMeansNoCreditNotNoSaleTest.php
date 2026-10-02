@@ -286,23 +286,23 @@ class NoLimitMeansNoCreditNotNoSaleTest extends TestCase
         $this->sellDirect('200');
     }
 
-    // ── ⚠️ সুইচ বন্ধ থাকলে কিছুই বদলায়নি ───────────────────────────────
+    // ── ⛔ সুইচ বন্ধ থাকলেও সীমা নেই মানে বাকি নেই ─────────────────────
 
     /**
-     * ডিফল্ট আচরণ অক্ষত — লিমিট নাই মানে সীমাহীন।
+     * ⛔ সুইচ বন্ধেও লিমিট নাই মানে বাকি নাই — মালিকের চূড়ান্ত কথা, ১ অক্টোবর ২০২৬ ("THATS FINAL")।
      *
-     * ⛔ এটা না মাপলে সারাইটা নীরবে নিয়ম বদলে দিত, আর লাইভে TDEPOT-এর
-     * ৩২ জনের ৩১ জনই পরদিন সকালে আটকে যেতেন। ⓘ সুইচটা কখন টেপা হবে
-     * সেটা মালিকের সিদ্ধান্ত, কোডের নয়।
+     * ⓘ আগে এই দাবি উল্টো বলত (বন্ধ সুইচে সীমাহীন), আর ঠিক সেই পথেই ডেমোর S-0009 দেয়াল পার হয়ে সইয়ের সারিতে
+     * গিয়েছিল ([[NoLimitMeansNoCreditForAnyoneTest]])। পুরো টাকা গুনে দিলে আগের মতোই চলে — এই ফাইলের
+     * নগদের দাবিগুলো সেটা মাপে।
      */
-    public function test_with_the_switch_off_a_missing_limit_still_means_unlimited(): void
+    public function test_with_the_switch_off_a_missing_limit_still_means_no_credit(): void
     {
         $this->zeroBlocks(false);
         $this->limit(null);
 
-        $result = $this->sellDirect('0');
+        $this->expectException(ValidationException::class);
 
-        $this->assertSame(DocumentStatus::CONFIRMED, $result['invoice']->status);
+        $this->sellDirect('0');
     }
 
     /**

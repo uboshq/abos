@@ -64,6 +64,8 @@ class EventBusTest extends TestCase
         $this->customer = Customer::query()->first() ?? app(CustomerService::class)->create([
             'name_en' => 'Event Test Customer', 'credit_limit' => 0, 'credit_days' => 0,
         ]);
+        // ⛔ ১ অক্টোবর ২০২৬ থেকে শূন্য সীমা মানে বাকি নেই (মালিকের চূড়ান্ত কথা) — তাই এই পরীক্ষার গ্রাহকের সত্যিকারের বড় সীমা
+        $this->customer->forceFill(['credit_limit' => '1000000000'])->save();
     }
 
     /**

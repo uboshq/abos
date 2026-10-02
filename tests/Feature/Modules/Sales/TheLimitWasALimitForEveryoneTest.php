@@ -319,12 +319,19 @@ final class TheLimitWasALimitForEveryoneTest extends TestCase
             '⛔ ৫,০০০ টাকার আদেশ ১,০০০ সীমায় আটকে গেছে — আদেশ আন্দাজের জিনিস।');
     }
 
-    /** ⭐ কোম্পানি সুইচ বন্ধ রাখলে সীমা কিছুই আটকায় না — মালিকের দেওয়া একমাত্র বিকল্প। */
-    public function test_with_the_company_switch_off_nothing_is_stopped(): void
+    /**
+     * ⛔ কোম্পানি সুইচ বন্ধ থাকলেও সীমা আটকায় — মালিকের চূড়ান্ত কথা, ১ অক্টোবর ২০২৬ ("THATS FINAL")।
+     *
+     * ⓘ আগে এই দাবি উল্টো বলত (সুইচ বন্ধ = কিছুই আটকায় না)। ডেমোর S-0009 ঠিক সেই পথে দেয়াল পার হয়েছিল
+     * ([[NoLimitMeansNoCreditForAnyoneTest]]); এখন সুইচটা দেয়াল নরম করে না ([[CreditExposure::isOn()]])।
+     */
+    public function test_even_with_the_company_switch_off_the_limit_stops(): void
     {
         app(SettingsService::class)->set('customer.credit_limit_enabled', false);
 
-        $this->assertSame(DocumentStatus::CONFIRMED, $this->sell(15)['invoice']->status);
+        $this->expectException(ValidationException::class);
+
+        $this->sell(15);
     }
 
     /**

@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Tests\Feature\Modules\Customer;
 
 use App\Core\Engines\Posting\PostingEngine;
-use App\Core\Services\SettingsService;
 use App\Core\Support\CompanyContext;
 use App\Models\Company;
 use App\Models\User;
@@ -145,9 +144,9 @@ final class TheCustomerListFiltersWhatTheOwnerAskedTest extends TestCase
         $this->bill($this->c['route_due'], '100', 45);        // ⛔ ৪৫ দিনের অপরিশোধিত বিল, বাকির দিন খালি = ৩০
         $this->bill($this->c['advance'], '100', 120);         // ⛔ ৯০ দিনে কেনেনি
 
-        // ⓘ শূন্য সীমা = সীমাহীন (ডিফল্ট সুইচ) — ৫,০০০ বকেয়া তাই সীমার ভেতরে
-        app(SettingsService::class)->set('customer.zero_limit_blocks', false);
-        $this->c['old_due']->forceFill(['credit_days' => 60])->saveQuietly();
+        // ⓘ সত্যিকারের সীমা, যাতে ৫,০০০ বকেয়া সীমার ভেতরে থাকে — ১ অক্টোবর ২০২৬ থেকে শূন্য সীমা মানে বাকি নেই
+        //   (মালিকের চূড়ান্ত কথা), কোনো সুইচে নয়; আগে এখানে "শূন্য = সীমাহীন" ধরা হত
+        $this->c['old_due']->forceFill(['credit_days' => 60, 'credit_limit' => '100000'])->saveQuietly();
         $this->bill($this->c['old_due'], '100', 45);          // ভালো: ৪৫ দিন, কিন্তু তাঁর বাকির দিন ৬০
 
         $this->sees(['quick' => 'good'], ['clean', 'old_due'], ['route_due', 'advance']);

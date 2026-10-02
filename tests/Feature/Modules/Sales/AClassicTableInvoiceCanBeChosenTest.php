@@ -76,7 +76,8 @@ final class AClassicTableInvoiceCanBeChosenTest extends TestCase
          * ৫০ হাজার, আর ১২ কোটির বিল ধারের দেয়ালে আটকাত — এই পরীক্ষা ছাপা
          * মাপে, ধারের দেয়াল নয়।
          */
-        Customer::query()->firstOrFail()->forceFill(['credit_limit' => '0'])->save();
+        // ⛔ ১ অক্টোবর ২০২৬ থেকে শূন্য সীমা মানে বাকি নেই (মালিকের চূড়ান্ত কথা) — তাই এই পরীক্ষার গ্রাহকের সত্যিকারের বড় সীমা (১,০০০ কোটি)
+        Customer::query()->firstOrFail()->forceFill(['credit_limit' => '10000000000'])->save();
 
         /* ⓘ ৩০ সেপ্টেম্বর ২০২৬ থেকে ডিফল্ট "মোনো ক্লাসিক হালকা" — এই ফাইল ক্লাসিকটাকে মাপে, তাই বেছে নেয় */
         $this->choose('classic_table');

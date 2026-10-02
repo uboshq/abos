@@ -56,7 +56,8 @@ final class EveryPaperDesignPrintsTheRealPaperTest extends TestCase
         CompanyContext::set($company->id, $company->defaultBranch()?->id);
         $this->actingAs(User::query()->where('email', 'owner@abos.test')->firstOrFail());
 
-        Customer::query()->firstOrFail()->forceFill(['credit_limit' => '0'])->save();
+        // ⛔ ১ অক্টোবর ২০২৬ থেকে শূন্য সীমা মানে বাকি নেই (মালিকের চূড়ান্ত কথা) — তাই এই পরীক্ষার গ্রাহকের সত্যিকারের বড় সীমা
+        Customer::query()->firstOrFail()->forceFill(['credit_limit' => '10000000000'])->save();
     }
 
     public function test_every_invoice_design_prints_a_real_bill_in_its_size(): void

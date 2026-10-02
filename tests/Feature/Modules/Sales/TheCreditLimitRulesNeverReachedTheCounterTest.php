@@ -88,22 +88,25 @@ final class TheCreditLimitRulesNeverReachedTheCounterTest extends TestCase
      *
      * ⭐ তাই সুইচটা **দুই দিকেই** ঘুরিয়ে দেখা হয়।
      */
-    public function test_the_rules_follow_the_settings_both_ways(): void
+    public function test_the_screen_enforces_the_limit_whatever_the_switches_say(): void
     {
         $settings = app(SettingsService::class);
 
         /*
-         * ⓘ ২৬ সেপ্টেম্বর ২০২৬ থেকে সুইচ একটাই — `credit_limit_enabled`।
-         * `block_over_limit` ("পার হতে দাও") মালিকের নির্দেশে তোলা হয়েছে।
+         * ⛔ ১ অক্টোবর ২০২৬ থেকে সীমা পরম — মালিকের চূড়ান্ত কথা। ⓘ আগে এই দাবি দেখত পর্দা সুইচ মানে কি না; এখন
+         * উল্টো: দুই সুইচ যাই থাকুক, পর্দা সেবার মতোই আটকায় (`enabled` ও `zeroBlocks` সবসময় সত্য) — নইলে পর্দা
+         * বিক্রি তুলতে দিত আর সংরক্ষণে সেবা আটকাত ([[CreditExposure::isOn()]], [[DirectSaleController]])।
          */
-        $settings->set('customer.credit_limit_enabled', true);
-        $this->assertStringContainsString('&quot;enabled&quot;:true', $this->counterHtml(),
-            '⛔ সুইচটা চালু, তবু পর্দা `enabled: true` পায়নি।');
+        foreach ([true, false] as $on) {
+            $settings->set('customer.credit_limit_enabled', $on);
+            $settings->set('customer.zero_limit_blocks', $on);
+            $html = $this->counterHtml();
 
-        $settings->set('customer.credit_limit_enabled', false);
-        $this->assertStringContainsString('&quot;enabled&quot;:false', $this->counterHtml(),
-            '⛔ সুইচটা বন্ধ, তবু পর্দা `enabled: false` পায়নি — অর্থাৎ মানটা '
-            .'সেটিংস থেকে আসছে না, আর কোম্পানির সিদ্ধান্ত পর্দায় পৌঁছায় না।');
+            $this->assertStringContainsString('&quot;enabled&quot;:true', $html,
+                '⛔ সুইচ '.($on ? 'চালু' : 'বন্ধ').', আর পর্দা সীমা বন্ধ ভাবছে — সেবা তবু আটকাবে।');
+            $this->assertStringContainsString('&quot;zeroBlocks&quot;:true', $html,
+                '⛔ সুইচ '.($on ? 'চালু' : 'বন্ধ').', আর পর্দা শূন্য সীমাকে সীমাহীন ভাবছে।');
+        }
     }
 
     /**

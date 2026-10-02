@@ -112,7 +112,8 @@ final class OneSaleOnePageOneConfirmationTest extends TestCase
         app(CashTillService::class)->ensurePrimaryTill();
 
         $this->customer = Customer::query()->where('name_en', 'Rahim Traders')->firstOrFail();
-        $this->customer->forceFill(['credit_limit' => '0'])->save();
+        // ⛔ ১ অক্টোবর ২০২৬ থেকে শূন্য সীমা মানে বাকি নেই (মালিকের চূড়ান্ত কথা) — তাই এই পরীক্ষার গ্রাহকের সত্যিকারের বড় সীমা
+        $this->customer->forceFill(['credit_limit' => '1000000000'])->save();
 
         $this->warehouse = Warehouse::query()->where('is_default', true)->firstOrFail();
         $this->products = Product::query()->orderBy('id')->limit(2)->get()->all();

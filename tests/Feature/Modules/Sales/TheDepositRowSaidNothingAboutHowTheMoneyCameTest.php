@@ -50,7 +50,8 @@ final class TheDepositRowSaidNothingAboutHowTheMoneyCameTest extends TestCase
         $this->actingAs(User::query()->where('email', 'owner@abos.test')->firstOrFail());
 
         /* ⓘ বাকির দেয়াল এই পরীক্ষার বিষয় নয় — ডেমো গ্রাহকের সীমা তুলে দেওয়া, দেয়াল নয় */
-        Customer::query()->firstOrFail()->forceFill(['credit_limit' => '0'])->save();
+        // ⛔ ১ অক্টোবর ২০২৬ থেকে শূন্য সীমা মানে বাকি নেই (মালিকের চূড়ান্ত কথা) — তাই এই পরীক্ষার গ্রাহকের সত্যিকারের বড় সীমা
+        Customer::query()->firstOrFail()->forceFill(['credit_limit' => '10000000000'])->save();
     }
 
     /** ⛔ ঠিক লাইভের অবস্থা: কাউন্টারের নগদ, `money_account_id` খালি, পদ্ধতির কোড `CASH` */

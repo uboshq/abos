@@ -452,7 +452,8 @@ class DirectSaleController extends Controller implements HasMiddleware
              */
             'creditRules' => [
                 'enabled' => $this->credit->isOn(),
-                'zeroBlocks' => $this->settings->enabled('customer.zero_limit_blocks'),
+                // ⛔ শূন্য মানে শূন্য, সবসময় — দেয়ালের হুবহু ([[Customer::wouldExceedCreditLimit()]], ১ অক্টোবর ২০২৬)
+                'zeroBlocks' => true,
             ],
 
             /*

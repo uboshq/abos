@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Modules\Sales\Services;
 
 use App\Core\Contracts\CreditHolds;
-use App\Core\Services\SettingsService;
 use App\Core\Support\CompanyContext;
 use App\Core\Support\DocumentStatus;
 use App\Core\Support\Money;
@@ -47,8 +46,7 @@ use Illuminate\Validation\ValidationException;
  * কারো চাবি সীমা পার করায় না, সুপার অ্যাডমিনেরও না — মালিক ২৬
  * সেপ্টেম্বর ক বেছেছেন। ⓘ একমাত্র পথ গ্রাহকের সীমা বাড়ানো, আর সেই বদল
  * খাতায় ওঠে (আগে কত, পরে কত) ও অনুমোদনে যায়। কোম্পানি চাইলে পুরো সীমা
- * বন্ধ রাখতে পারে `customer.credit_limit_enabled` দিয়ে — সুইচটা কেবল
- * সুপার অ্যাডমিনের।
+ * ⛔ বন্ধ রাখার সুইচও আর নেই (১ অক্টোবর ২০২৬, [[isOn()]]) — শূন্য সীমা মানে বাকি নয়।
  */
 final class CreditExposure implements CreditHolds
 {
@@ -63,8 +61,6 @@ final class CreditExposure implements CreditHolds
      */
     private bool $readLatest = false;
 
-    public function __construct(private readonly SettingsService $settings) {}
-
     /**
      * [[CreditHolds]] — গ্রাহকের পাতার জন্য, একই হিসাব।
      *
@@ -76,10 +72,16 @@ final class CreditExposure implements CreditHolds
         return $this->pendingFor([$customerId])[$customerId] ?? '0';
     }
 
-    /** এই প্রতিষ্ঠানে বাকির সীমা চালু কি না — একটাই সুইচ। */
+    /**
+     * ⛔ বাকির সীমা সবসময় চালু — মালিকের চূড়ান্ত কথা, ১ অক্টোবর ২০২৬ ("THATS FINAL")।
+     *
+     * ⓘ আগে `customer.credit_limit_enabled` বন্ধ করলে দেয়ালটাই উঠে যেত। মালিকের নিয়ম: সীমা কেউ পার
+     * করতে পারবে না, কোনো পথে নয় — একমাত্র পথ সুপার অ্যাডমিন আগে গ্রাহকের সীমা বাড়ান। তাই সুইচটা
+     * আর দেয়াল নরম করে না ([[NoLimitMeansNoCreditForAnyoneTest]])।
+     */
     public function isOn(): bool
     {
-        return $this->settings->enabled('customer.credit_limit_enabled');
+        return true;
     }
 
     /**

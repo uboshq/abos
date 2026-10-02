@@ -53,7 +53,11 @@ class ANumberNobodyIsWatchingTest extends TestCase
     /** সীমা বসিয়ে তার চেয়ে বেশি টাকার বিল করা — অর্থাৎ ছাড়িয়ে যাওয়া। */
     private function pushOverTheLimit(Customer $customer, string $limit, string $sale): void
     {
-        $customer->update(['credit_limit' => $limit]);
+        /*
+         * ⛔ ১ অক্টোবর ২০২৬ থেকে সীমার দেয়াল সবসময় চালু, কোনো সুইচে নয় (মালিকের চূড়ান্ত কথা) — তাই "সীমা ছাড়িয়েছেন"
+         * অবস্থাটা আর বিক্রি দিয়ে বানানো যায় না। ⓘ বাস্তবে এটা হয় সীমা **পরে কমালে**: বিক্রি বড় সীমায়, তারপর সীমা নামে।
+         */
+        $customer->update(['credit_limit' => '1000000000']);
 
         $service = app(SalesInvoiceService::class);
 
@@ -67,6 +71,8 @@ class ANumberNobodyIsWatchingTest extends TestCase
         );
 
         $service->confirm($invoice);
+
+        $customer->update(['credit_limit' => $limit]);
     }
 
     /** @return list<Widget> */
@@ -110,19 +116,20 @@ class ANumberNobodyIsWatchingTest extends TestCase
     }
 
     /**
-     * সীমা শূন্য মানে সীমাহীন, "কিছুই বাকি রাখা যাবে না" নয়।
+     * ⛔ সীমা শূন্য মানে বাকি নেই — তাই শূন্য সীমার গ্রাহকের যেকোনো বকেয়াই সীমা ছাড়ানো।
      *
-     * উল্টোটা ধরলে সীমা না-বসানো প্রতিটা গ্রাহক এই তালিকায় এসে
-     * পড়তেন, আর তালিকাটা তখন কেউ খুলেও দেখতেন না।
+     * ⓘ আগে উল্টো ছিল ("শূন্য = সীমাহীন, কখনো ছাড়ায় না")। মালিকের চূড়ান্ত কথা, ১ অক্টোবর ২০২৬: সীমা না থাকলে
+     * বাকি নেই ([[NoLimitMeansNoCreditForAnyoneTest]]) — তাই এই তালিকায় তাঁর আসাই সত্য।
      */
-    public function test_a_customer_with_no_limit_is_never_over_it(): void
+    public function test_a_customer_with_no_limit_and_a_due_is_over_it(): void
     {
         $customer = Customer::query()->firstOrFail();
-        $customer->update(['credit_limit' => 0]);
 
         $this->pushOverTheLimit($customer, '0', '9000');
 
-        $this->assertSame('0', $this->overLimitWidget()->value);
+        $this->assertContains($customer->id, Customer::query()->overCreditLimit()->pluck('id')->all(),
+            '⛔ শূন্য সীমার গ্রাহকের ৯,০০০ বকেয়া, অথচ "সীমা ছাড়িয়েছেন" তালিকায় নেই।');
+        $this->assertGreaterThanOrEqual(1, (int) $this->overLimitWidget()->value);
     }
 
     /**

@@ -126,7 +126,8 @@ final class NoPrintedFigureOverflowsItsColumnTest extends TestCase
          * এখানকার ১২ কোটির বিল বাকির দেয়ালে আটকাত — এই পাহারা ছাপার ঘর মাপে, দেয়াল নয়।
          * ⛔ দেয়াল ঢিলা করা হয়নি; কেবল এই পরীক্ষার গ্রাহকের সীমা।
          */
-        $this->customer->forceFill(['credit_limit' => '0'])->save();
+        // ⛔ ১ অক্টোবর ২০২৬ থেকে শূন্য সীমা মানে বাকি নেই (মালিকের চূড়ান্ত কথা) — তাই এই পরীক্ষার গ্রাহকের সত্যিকারের বড় সীমা (১,০০০ কোটি)
+        $this->customer->forceFill(['credit_limit' => '10000000000'])->save();
         $this->warehouse = Warehouse::query()->where('is_default', true)->firstOrFail();
         $this->product = Product::query()->firstOrFail();
 

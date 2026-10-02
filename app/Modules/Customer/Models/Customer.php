@@ -11,7 +11,6 @@ use App\Core\Concerns\HasPublicId;
 use App\Core\Concerns\IsAudited;
 use App\Core\Contracts\CreditHolds;
 use App\Core\Contracts\Drillable;
-use App\Core\Services\SettingsService;
 use App\Core\Support\ViewedBranch;
 use App\Models\Branch;
 use App\Models\LedgerEntry;
@@ -481,11 +480,9 @@ class Customer extends Model implements AuthenticatableContract, Drillable
     /**
      * যাঁদের বকেয়া ধারের সীমা ছাড়িয়ে গেছে।
      *
-     * ── কেন শূন্য সীমা বাদ ──────────────────────────────────────────
-     * শূন্য মানে সীমাহীন, "কিছুই বাকি রাখা যাবে না" নয় — ঠিক যেমন
-     * `wouldExceedCreditLimit()` ধরে। বাদ না দিলে সীমা না-বসানো
-     * প্রতিটা গ্রাহক এই তালিকায় এসে পড়তেন, আর তালিকাটা তখন কেউ
-     * খুলে দেখতেন না।
+     * ── শূন্য সীমাও গোনা হয় ─────────────────────────────────────────
+     * শূন্য মানে শূন্য — সীমা না থাকা গ্রাহকের যেকোনো বকেয়াই সীমা ছাড়ানো, ঠিক যেমন
+     * `wouldExceedCreditLimit()` ধরে (মালিকের চূড়ান্ত কথা, ১ অক্টোবর ২০২৬)।
      *
      * ── কেন SQL-এ, PHP-তে নয় ────────────────────────────────────────
      * সংখ্যাটা ড্যাশবোর্ডে গোনা হয় আর তালিকায় ছাঁকা হয়। দুই জায়গায়
@@ -500,48 +497,29 @@ class Customer extends Model implements AuthenticatableContract, Drillable
             ->where('ledger_entries.party_type', self::drillSourceType());
 
         /*
-         * শূন্য লিমিটওয়ালারা এখানে আসেন কেবল সুইচ চালু থাকলে।
-         *
-         * সুইচ বন্ধ থাকলে শূন্য মানে সীমাহীন, তাই তাঁরা কেউই "সীমা
-         * ছাড়িয়েছেন" নন। চালু থাকলে যাঁদের এক পয়সাও বকেয়া আছে
-         * তাঁরা সবাই ছাড়িয়েছেন — কারণ সীমাটাই শূন্য।
+         * ⛔ শূন্য মানে শূন্য, সবসময় — মালিকের চূড়ান্ত কথা, ১ অক্টোবর ২০২৬ ("THATS FINAL")।
+         * ⓘ সীমা না থাকা গ্রাহকের এক পয়সা বকেয়াও সীমা ছাড়ানো; আগে এটা
+         * `customer.zero_limit_blocks` সুইচে বাঁধা ছিল, সেটা আর দেয়াল নরম করে না।
          */
-        if (app(SettingsService::class)->enabled('customer.zero_limit_blocks')) {
-            return $query->whereRaw('('.$net->toRawSql().') > customers.credit_limit');
-        }
-
-        return $query
-            ->where('credit_limit', '>', 0)
-            ->whereRaw('('.$net->toRawSql().') > customers.credit_limit');
+        return $query->whereRaw('('.$net->toRawSql().') > COALESCE(customers.credit_limit, 0)');
     }
 
     /**
      * এই বিলটা করলে ক্রেডিট লিমিট ছাড়াবে কি না।
      *
-     * ── শূন্যের অর্থ দুই রকম, আর সেটা মালিকের সুইচে ──────────────────
-     * ডিফল্টে **শূন্য মানে সীমাহীন**। কারণটা পুরনো, আর এখনো সত্যি:
-     * শূন্যকে "কিছুই বাকি নয়" ধরলে যাঁদের লিমিট বসানোই হয়নি তাঁরা
-     * সবাই আটকে যেতেন — নতুন গ্রাহকের প্রথম বিলটাও।
-     *
-     * `customer.zero_limit_blocks` চালু করলে **শূন্য মানে শূন্য**: বাকি
-     * কিছুই নয়, হয় আগে টাকা নয় নগদে বিল। সুইচটা ডিফল্ট বন্ধ, আর
-     * মালিক নিজের বেছে নেওয়া দিনে টিপবেন — "কাদের লিমিট নেই" তালিকা
-     * দেখে লিমিট বসানোর পর।
-     *
-     * সুইচ ছাড়া নিয়মটা উল্টে দিলে পরদিন সকালেই ডিপো অচল হত।
+     * ⛔ শূন্য মানে শূন্য — কোনো সুইচ নেই। বকেয়া আর এই বিলের বাকি মিলে সীমা পেরোলে না।
      */
     public function wouldExceedCreditLimit(string $additional): bool
     {
-        $limit = (string) $this->credit_limit;
-
-        if (bccomp($limit, '0', 4) === 0) {
-            if (! app(SettingsService::class)->enabled('customer.zero_limit_blocks')) {
-                return false;
-            }
-
-            // শূন্য মানে শূন্য — বকেয়া থাকুক বা না থাকুক, নতুন বাকি নয়
-            return bccomp(bcadd($this->outstanding(), $additional, 4), '0', 4) > 0;
-        }
+        /*
+         * ⛔ শূন্য (বা খালি) মানে শূন্য, সবসময় — মালিকের চূড়ান্ত কথা, ১ অক্টোবর ২০২৬: সীমা না থাকলে
+         * বাকি নয়, হয় টাকা নিন নয় বিল কমান। ⓘ আগে এটা `customer.zero_limit_blocks` সুইচে বাঁধা ছিল,
+         * আর সুইচ বন্ধ থাকায় ডেমোতে শূন্য-সীমার গ্রাহকের ৪১,৬৫১ টাকার বাকি বিল দেয়াল পার হয়ে সইয়ের
+         * সারিতে গিয়েছিল (S-0009)। সুইচটা আর দেয়াল নরম করে না
+         * ([[NoLimitMeansNoCreditForAnyoneTest]])।
+         */
+        $limit = (string) ($this->credit_limit ?? '0');
+        $limit = $limit === '' ? '0' : $limit;
 
         return bccomp(bcadd($this->outstanding(), $additional, 4), $limit, 4) > 0;
     }

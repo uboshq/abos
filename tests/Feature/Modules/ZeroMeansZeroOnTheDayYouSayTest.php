@@ -198,23 +198,22 @@ class ZeroMeansZeroOnTheDayYouSayTest extends TestCase
     // ── তিন · সুইচটা মালিকের ────────────────────────────────────────
 
     /**
-     * সুইচ বন্ধ থাকলে শূন্য মানে সীমাহীন — আজকের আচরণ অটুট।
+     * ⛔ সুইচ বন্ধ থাকলেও শূন্য মানে শূন্য — মালিকের চূড়ান্ত কথা, ১ অক্টোবর ২০২৬ ("THATS FINAL")।
      *
-     * এটাই সবচেয়ে জরুরি পরীক্ষা: কাজটা ডিপোর রোজকার চলা বদলায় না,
-     * যতক্ষণ মালিক নিজে সুইচটা না টেপেন।
+     * ⓘ আগে এই দাবি উল্টো বলত (বন্ধ সুইচে শূন্য = সীমাহীন), আর ঠিক সেই পথেই ডেমোর S-0009 —
+     * সীমা নেই, টাকা নেই — দেয়াল পার হয়ে সইয়ের সারিতে গিয়েছিল
+     * ([[NoLimitMeansNoCreditForAnyoneTest]])। সুইচটা আর দেয়াল নরম করে না।
      */
-    public function test_with_the_switch_off_zero_still_means_no_limit(): void
+    public function test_with_the_switch_off_zero_still_means_no_credit(): void
     {
-        /*
-         * ⚠️ অডিট §১.২, ২৭ সেপ্টেম্বর ২০২৬: সুইচের ডিফল্ট এখন **চালু**।
-         * ⓘ এই দাবিটা বন্ধ সুইচের, তাই বন্ধটা এখানে স্পষ্ট করে টেপা হয়।
-         */
         app(SettingsService::class)->set('customer.zero_limit_blocks', false);
 
         $this->actingAs(User::query()->where('email', 'sales@abos.test')->firstOrFail());
 
-        $this->assertFalse($this->dealer->wouldExceedCreditLimit('100000'));
-        $this->assertSame(DocumentStatus::CONFIRMED, $this->bill('10')->status);
+        $this->assertTrue($this->dealer->fresh()->wouldExceedCreditLimit('1'), '⛔ সুইচ বন্ধে শূন্য সীমা আবার সীমাহীন হয়ে গেছে।');
+
+        $this->expectException(ValidationException::class);
+        $this->bill('10');
     }
 
     /** সুইচ চালু করলে শূন্য মানে শূন্য — বাকিতে কিছুই নয়। */
