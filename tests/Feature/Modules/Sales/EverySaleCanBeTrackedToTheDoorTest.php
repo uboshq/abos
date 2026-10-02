@@ -110,6 +110,58 @@ final class EverySaleCanBeTrackedToTheDoorTest extends TestCase
         $this->getJson('/api/v1/sales/tracking/challan/'.$challan->public_id)->assertOk();
     }
 
+    /** ⭐ টিকচিহ্নের দাগ — রওনার পরে গেট পাস আর রওনায় টিক, পৌঁছানো "এখন", রং ঠিক */
+    public function test_the_milestones_tick_up_to_where_the_sale_is_and_no_further(): void
+    {
+        $challan = $this->challan();
+        app(DeliveryStageService::class)->move($challan, DeliveryStage::DISPATCHED, ['note' => 'test']);
+        $this->phone();
+
+        $ms = collect($this->getJson('/api/v1/sales/tracking/challan/'.$challan->public_id)->assertOk()->json('milestones'))
+            ->keyBy('key');
+
+        foreach (['order_created', 'challan_draft', 'challan_confirmed', 'stock_allocated', 'transport_assigned',
+            'loading_started', 'loading_completed', 'gate_pass_generated', 'dispatched'] as $done) {
+            $this->assertSame('done', $ms[$done]['state'] ?? null, "⛔ {$done}-এ টিক নেই, অথচ মাল রওনা হয়েছে।");
+        }
+        $this->assertSame('current', $ms['delivered']['state'], 'পরের ধাপটাই "এখন" নয়।');
+        $this->assertSame('delivered', $ms['delivered']['category']);
+        $this->assertNotNull($ms['gate_pass_generated']['at'], 'গেট পাসের সময় নেই।');
+        $this->assertSame(1, $ms->where('state', 'current')->count(), '⛔ একসাথে দুই জায়গায় "এখন"।');
+    }
+
+    /** ⭐ অনুমোদনের স্তর কোম্পানির নিজের নামে — কোডে বাঁধা নয় */
+    public function test_the_company_s_own_approval_steps_appear_by_name(): void
+    {
+        $challan = $this->challan();
+        $flow = \App\Models\ApprovalFlow::query()->create([
+            'company_id' => $this->company->id, 'code' => 'ZQ-TRACK', 'module' => 'sales', 'action' => 'zq_track',
+            'document_type' => 'DeliveryChallan', 'is_active' => true,
+        ]);
+        foreach ([1 => 'হিসাব বিভাগ', 2 => 'জেনারেল ম্যানেজার'] as $level => $name) {
+            \App\Models\ApprovalFlowStep::query()->create([
+                'approval_flow_id' => $flow->id, 'level' => $level, 'step_name' => $name,
+                'approver_type' => 'role', 'approver_id' => 1,
+            ]);
+        }
+        \App\Models\Approval::query()->create([
+            'company_id' => $this->company->id, 'approvable_type' => DeliveryChallan::class, 'approvable_id' => $challan->id,
+            'module' => 'sales', 'action' => 'zq_track', 'status' => \App\Models\Approval::PENDING, 'current_level' => 1,
+            'requested_by' => User::query()->where('email', 'owner@abos.test')->value('id'), 'requested_at' => now(),
+        ]);
+        app()->forgetInstance(\App\Core\Engines\Approval\ApprovalEngine::class);
+        $this->phone();
+
+        $ms = collect($this->getJson('/api/v1/sales/tracking/challan/'.$challan->public_id)->assertOk()->json('milestones'));
+        $first = $ms->firstWhere('label', 'হিসাব বিভাগ');
+        $second = $ms->firstWhere('label', 'জেনারেল ম্যানেজার');
+
+        $this->assertNotNull($first, '⛔ কোম্পানির নিজের স্তরের নাম দাগে নেই।');
+        $this->assertSame(['current', 'pending'], [$first['state'], $first['category']], 'অপেক্ষার স্তর কমলা আর "এখন" নয়।');
+        $this->assertSame('todo', $second['state']);
+        $this->assertSame('approval', $this->rowFor($challan)['step'], 'তালিকায় সইয়ের অপেক্ষা দেখায় না।');
+    }
+
     /** ⭐ ওয়েবেও — মালিক: "web eo eta dite bolo"; একই হিসাব, একই ধাপ */
     public function test_the_web_shows_the_same_sale_and_its_story(): void
     {
@@ -126,6 +178,8 @@ final class EverySaleCanBeTrackedToTheDoorTest extends TestCase
 
         $this->get(route('sales.tracking.show', ['challan', $challan->public_id]))->assertOk()
             ->assertSee('data-tracking-event', false)
+            ->assertSee('data-milestone="dispatched" data-state="done"', false)
+            ->assertSee('#22C55E', false)
             ->assertSee((string) $challan->document_no);
 
         // DO তালিকার "ডেলিভারি ট্র্যাকিং" ট্যাব এখানেই আসে

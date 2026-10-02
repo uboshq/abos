@@ -4,6 +4,7 @@
     ⓘ ফোনের সাথে একই হিসাব ([[SaleTracking]]) — দুই জায়গায় দুই রকম ধাপ কখনো নয়।
     ⓘ মালিকের নিয়ম: টেবিল নয়, এক লাইনে এক জিনিস; নম্বরে চাপলে পপ-আপে সময়রেখা ([[shell/peek]])।
 --}}
+@php $trackingColours = \App\Modules\Sales\Services\SaleTracking::COLOURS; @endphp
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ __('sales::tracking.title') }}</x-slot:title>
 
@@ -35,14 +36,15 @@
         </div>
 
         @forelse ($list['rows'] as $row)
-            <div data-tracking-row class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-3">
+            <div data-tracking-row class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-3"
+                 style="border-left: 4px solid {{ $trackingColours[$row['category']] ?? '#9CA3AF' }}">
                 <a href="{{ route('sales.tracking.show', [$row['kind'], $row['id']]) }}"
                    class="font-semibold text-(--color-brand-500) hover:underline">{{ $row['no'] }}</a>
                 <div class="text-sm">{{ $row['customer'] }}</div>
                 <div class="text-sm text-(--color-ink-muted)">{{ $row['date'] }}</div>
                 <div class="num text-sm">{{ \App\Core\Support\Money::format($row['total']) }}</div>
                 <div class="mt-1 flex flex-wrap gap-2 text-sm">
-                    <span class="font-medium">{{ __('sales::tracking.step.'.$row['step']) }}</span>
+                    <span class="font-medium" style="color: {{ $trackingColours[$row['category']] ?? '#111827' }}">{{ __('sales::tracking.step.'.$row['step']) }}</span>
                     @if ($row['billed'])
                         <span class="text-(--color-ink-muted)">· {{ __('sales::tracking.step.billed') }}</span>
                     @endif

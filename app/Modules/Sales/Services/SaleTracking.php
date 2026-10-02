@@ -46,6 +46,22 @@ final class SaleTracking
 {
     public const STEPS = ['ordered', 'draft', 'approval', 'warehouse', 'gate_out', 'partial', 'delivered', 'cancelled'];
 
+    /**
+     * ⭐ ৯ রং — মালিকের আদেশ, ২ অক্টোবর ২০২৬; অ্যাপের `trackingColours` হুবহু একই।
+     * ⓘ পাতায় ইনলাইন রং, Tailwind শ্রেণি নয় — বান্ডলে না থাকা শ্রেণি নীরবে রংহীন হত।
+     */
+    public const COLOURS = [
+        'draft' => '#9CA3AF', 'pending' => '#F97316', 'approved' => '#2563EB', 'processing' => '#7C3AED',
+        'loading' => '#EAB308', 'dispatched' => '#22C55E', 'delivered' => '#15803D', 'rejected' => '#DC2626',
+        'hold' => '#111827',
+    ];
+
+    /** তালিকার ধাপ → ৯ রঙের কোনটা ([[milestones()]]-এর একই রং) */
+    public const CATEGORY_OF_STEP = [
+        'ordered' => 'approved', 'draft' => 'draft', 'approval' => 'pending', 'warehouse' => 'processing',
+        'gate_out' => 'dispatched', 'partial' => 'dispatched', 'delivered' => 'delivered', 'cancelled' => 'rejected',
+    ];
+
     public function __construct(private readonly DeliveryStageService $stages) {}
 
     /**
@@ -130,7 +146,7 @@ final class SaleTracking
             'rows' => $rows
                 ->when($step !== null && in_array($step, self::STEPS, true), fn ($c) => $c->where('step', $step))
                 ->take($limit)
-                ->map(fn (array $r) => array_diff_key($r, ['sort' => true]))
+                ->map(fn (array $r) => array_diff_key($r, ['sort' => true]) + ['category' => self::CATEGORY_OF_STEP[$r['step']]])
                 ->values()->all(),
             'counts' => $counts,
         ];
@@ -153,7 +169,17 @@ final class SaleTracking
         }
 
         if ($sale instanceof SalesOrder) {
-            return $this->head($sale, 'ordered', false) + ['events' => $events->values()->all()];
+            // ⓘ চালান হয়নি — অর্ডার তৈরিতে টিক, বাকি সামনে, পরেরটা "এখন"
+            $milestones = [$this->mile('order_created', 'approved', true, $sale->created_at, $sale->creator?->name)];
+            foreach (['challan_draft' => 'draft', 'challan_confirmed' => 'approved', 'stock_allocated' => 'processing',
+                'transport_assigned' => 'processing', 'loading_started' => 'loading', 'loading_completed' => 'loading',
+                'invoice_generated' => 'processing', 'gate_pass_generated' => 'dispatched', 'dispatched' => 'dispatched',
+                'delivered' => 'delivered'] as $key => $category) {
+                $milestones[] = $this->mile($key, $category, false, null, null);
+            }
+            $milestones[1]['state'] = 'current';
+
+            return $this->head($sale, 'ordered', false) + ['events' => $events->values()->all(), 'milestones' => $milestones];
         }
 
         $challan = $sale->loadMissing(['customer', 'creator']);
@@ -199,7 +225,152 @@ final class SaleTracking
 
         return $this->head($challan, $step, $this->invoicesOf($challan)->isNotEmpty()) + [
             'events' => $events->sortBy(fn (array $e) => $e['at'] ?? '')->values()->all(),
+            'milestones' => $this->milestones($challan, $order, $pass),
         ];
+    }
+
+    /**
+     * ⭐ টিকচিহ্নের অগ্রগতি-দাগ — মালিকের আদেশ, ২ অক্টোবর ২০২৬ (সমন্বয়কের মারফত)।
+     *
+     * ── ধাপ, ক্রমে ──────────────────────────────────────────────────────────
+     * অর্ডার তৈরি → (কোম্পানির নিজের অনুমোদন-স্তর, নাম ধরে) → চালানের খসড়া → চালান নিশ্চিত →
+     * মাল বরাদ্দ → পরিবহন ঠিক → লোডিং শুরু → লোডিং শেষ → বিল তৈরি → গেট পাস → রওনা → পৌঁছেছে।
+     * ⓘ অনুমোদনের স্তর কোডে বাঁধা নয় — [[ApprovalEngine::stepsFor()]]-এর `step_name`; কোম্পানি ছক বদলালে
+     * দাগও বদলায়।
+     *
+     * ── ৯ রং (`category`) ────────────────────────────────────────────────────
+     * draft ধূসর · pending কমলা · approved নীল · processing বেগুনি · loading হলুদ ·
+     * dispatched সবুজ · delivered গাঢ় সবুজ · rejected লাল · hold কালো।
+     *
+     * ── অবস্থা (`state`) ──────────────────────────────────────────────────────
+     * done (টিক) · current (এখন এখানে) · todo (সামনে) · rejected (ফেরত/বাতিল) · hold (থামানো)।
+     * ⓘ পরের কোনো ধাপ হয়ে গেলে আগের ধাপ ঘটনা ছাড়াও "হয়েছে" — যেমন লোডিং না চেপে সরাসরি রওনা;
+     * সময় তখন নেই (null), মিথ্যা সময় বসানো হয় না।
+     *
+     * @return list<array{key: string, label: string, category: string, state: string, at: ?string, by: ?string}>
+     */
+    public function milestones(DeliveryChallan $challan, ?SalesOrder $order, ?GatePass $pass): array
+    {
+        $rank = [DeliveryStage::PENDING => 0, DeliveryStage::ALLOCATED => 1, DeliveryStage::PICKING => 2,
+            DeliveryStage::PACKED => 3, DeliveryStage::DISPATCHED => 4, DeliveryStage::PARTIALLY_DELIVERED => 5,
+            DeliveryStage::DELIVERED => 6];
+        $state = DeliveryState::query()->where('delivery_challan_id', $challan->id)->value('stage');
+        $posted = in_array($challan->status, DocumentStatus::POSTED, true);
+        $now = $rank[(string) $state] ?? ($posted ? 1 : 0);
+        $reached = fn (string $stage): ?array => $this->firstEvent($challan, $stage);
+        $invoice = $this->invoicesOf($challan)->first();
+        $m = [];
+
+        $first = $order ?? $challan;
+        $m[] = $this->mile('order_created', 'approved', true, $first->created_at, $first->creator?->name);
+
+        foreach ($this->approvalsOf($challan) as $approval) {
+            $byLevel = $approval->decisions->groupBy('level');
+
+            foreach (app(\App\Core\Engines\Approval\ApprovalEngine::class)->stepsFor($approval) as $level) {
+                $n = (int) $level->level;
+                $decision = $byLevel->get($n)?->sortByDesc('id')->first();
+                $label = trim((string) ($level->step_name ?? '')) ?: __('sales::tracking.milestone.approval_level', ['level' => $n]);
+
+                [$category, $done, $st] = match (true) {
+                    $decision?->decision === 'rejected' => ['rejected', false, 'rejected'],
+                    $approval->status === Approval::APPROVED || $n < (int) $approval->current_level
+                        || $decision?->decision === 'approved' => ['approved', true, 'done'],
+                    $approval->status === Approval::PENDING && $n === (int) $approval->current_level => ['pending', false, 'current'],
+                    default => ['pending', false, 'todo'],
+                };
+
+                $m[] = ['key' => 'approval_'.$approval->id.'_'.$n, 'label' => $label, 'category' => $category, 'state' => $st,
+                    'at' => $done || $st === 'rejected' ? $this->iso($decision?->decided_at) : null,
+                    'by' => $done || $st === 'rejected' ? $decision?->user?->name : null];
+            }
+        }
+
+        $m[] = $this->mile('challan_draft', 'draft', true, $challan->created_at, $challan->creator?->name);
+        $m[] = $this->mile('challan_confirmed', 'approved', $posted, $reached(DeliveryStage::ALLOCATED)['at'] ?? null, $reached(DeliveryStage::ALLOCATED)['by'] ?? null);
+        $m[] = $this->mile('stock_allocated', 'processing', $posted && $now >= 1, $reached(DeliveryStage::ALLOCATED)['at'] ?? null, null);
+        $m[] = $this->mile('transport_assigned', 'processing', TransportRule::named($challan), null, null);
+        $m[] = $this->mile('loading_started', 'loading', $now >= 2, $reached(DeliveryStage::PICKING)['at'] ?? null, $reached(DeliveryStage::PICKING)['by'] ?? null);
+        $m[] = $this->mile('loading_completed', 'loading', $now >= 3, $reached(DeliveryStage::PACKED)['at'] ?? null, $reached(DeliveryStage::PACKED)['by'] ?? null);
+        $m[] = $this->mile('invoice_generated', 'processing', $invoice !== null, $invoice?->updated_at, $invoice?->creator?->name);
+        $m[] = $this->mile('gate_pass_generated', 'dispatched', $pass !== null, $pass?->issued_at, $pass?->issuer?->name);
+        $m[] = $this->mile('dispatched', 'dispatched', $now >= 4, $reached(DeliveryStage::DISPATCHED)['at'] ?? null, $reached(DeliveryStage::DISPATCHED)['by'] ?? null);
+        $m[] = $this->mile('delivered', 'delivered', $now >= 6, $reached(DeliveryStage::DELIVERED)['at'] ?? null, $reached(DeliveryStage::DELIVERED)['by'] ?? null);
+
+        // ── এখন কোথায়, আর থেমে আছে কি না ──────────────────────────────────
+        $stopped = match (true) {
+            $challan->status === DocumentStatus::CANCELLED || $state === DeliveryStage::CANCELLED => 'rejected',
+            $state === DeliveryStage::FAILED => 'hold',
+            $challan->status === DocumentStatus::DRAFT && $this->isPaused($challan) => 'hold',
+            default => null,
+        };
+        $rejectedAlready = collect($m)->contains(fn (array $x) => $x['state'] === 'rejected');
+        // ⛔ অনুমোদনের স্তর আগেই "এখন" হলে আর কোনোটা নয় — একসাথে দুই জায়গায় "এখন" কখনো নয়
+        $currentAlready = collect($m)->contains(fn (array $x) => $x['state'] === 'current');
+
+        foreach ($m as $i => $x) {
+            if ($x['state'] !== 'todo') {
+                continue;
+            }
+            if ($rejectedAlready || ($currentAlready && $stopped === null)) {
+                break;
+            }
+            $m[$i]['state'] = $stopped ?? 'current';
+            if ($stopped !== null) {
+                $m[$i]['category'] = $stopped;
+            } elseif ($x['key'] === 'delivered' && $state === DeliveryStage::PARTIALLY_DELIVERED) {
+                $m[$i]['category'] = 'delivered';
+            }
+            break;
+        }
+
+        return array_values($m);
+    }
+
+    /** @return array{key: string, label: string, category: string, state: string, at: ?string, by: ?string} */
+    private function mile(string $key, string $category, bool $done, mixed $at, ?string $by): array
+    {
+        return [
+            'key' => $key,
+            'label' => __('sales::tracking.milestone.'.$key),
+            'category' => $category,
+            'state' => $done ? 'done' : 'todo',
+            'at' => $done ? $this->iso($at) : null,
+            'by' => $done ? $by : null,
+        ];
+    }
+
+    private function iso(mixed $at): ?string
+    {
+        return $at instanceof Carbon ? $at->toIso8601String() : ($at ? Carbon::parse((string) $at)->toIso8601String() : null);
+    }
+
+    /** @return array{at: ?string, by: ?string}|null এই ধাপে প্রথম পৌঁছানোর ঘটনা */
+    private function firstEvent(DeliveryChallan $challan, string $stage): ?array
+    {
+        $event = $this->stageEvents($challan)->firstWhere('to_stage', $stage);
+
+        return $event === null ? null : ['at' => $this->iso($event->occurred_at), 'by' => $event->creator?->name];
+    }
+
+    /** @var array<int, Collection<int, \App\Modules\Sales\Models\DeliveryEvent>> */
+    private array $eventCache = [];
+
+    /** @return Collection<int, \App\Modules\Sales\Models\DeliveryEvent> */
+    private function stageEvents(DeliveryChallan $challan): Collection
+    {
+        return $this->eventCache[$challan->id] ??= $this->stages->timeline($challan);
+    }
+
+    /** কাউন্টারে থামিয়ে রাখা খসড়া — [[DirectSaleService::pauseDraft()]] */
+    private function isPaused(DeliveryChallan $challan): bool
+    {
+        $invoiceIds = DB::table('sal_challan_lines as cl')
+            ->join('sal_invoice_lines as il', 'il.delivery_challan_line_id', '=', 'cl.id')
+            ->where('cl.delivery_challan_id', $challan->id)->distinct()->pluck('il.sales_invoice_id');
+
+        return $invoiceIds->isNotEmpty() && SalesInvoice::query()->whereIn('id', $invoiceIds)
+            ->whereNotNull('draft_paused_at')->exists();
     }
 
     // ── যন্ত্রপাতি ──────────────────────────────────────────────────────
@@ -351,6 +522,7 @@ final class SaleTracking
             'customer' => $sale->customer?->name(),
             'total' => bcadd((string) $sale->total, '0', 2),
             'step' => $step,
+            'category' => self::CATEGORY_OF_STEP[$step],
             'billed' => $billed,
         ];
     }
