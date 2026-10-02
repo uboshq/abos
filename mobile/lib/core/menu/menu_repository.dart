@@ -231,6 +231,15 @@ class MenuRepository {
             icon: Icons.add_shopping_cart_outlined,
             routeName: 'new-order',
           ),
+        // ⭐ ডেলিভারি ট্র্যাকিং (0.4.6, মালিক ২ অক্টোবর ২০২৬) — SR-এর অর্ডার দেখার চাবি, বা গুদাম/ডেলিভারির চাবি।
+        // মেনু-সারি নয়: ওয়েবের সারিটা `sales.screen_orders`-এর পেছনে, আর গুদামের মানুষ ওটা পান না।
+        if (user.can('sales.order.view') || user.can('sales.delivery.view'))
+          const MenuItem(
+            key: 'sales.tracking',
+            label: 'ডেলিভারি ট্র্যাকিং',
+            icon: Icons.local_shipping_outlined,
+            routeName: 'tracking',
+          ),
         // First tile on the grid for whoever can see the day's sales — it is
         // the question asked most often and from the furthest away.
         if (user.can('sales.order.view'))

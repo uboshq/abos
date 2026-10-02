@@ -92,10 +92,11 @@ class _UpdateNotice extends StatelessWidget {
                 const SizedBox(width: AppSpacing.sm),
                 Expanded(
                   child: Text(
-                    release.note ??
-                        'নতুন একটা সংস্করণ এসেছে${release.versionName == null ? '' : ' (${release.versionName})'}।',
+                    'নতুন সংস্করণ এসেছে${release.versionName == null ? '' : ' (${release.versionName})'}।',
                     style: const TextStyle(
-                        fontSize: 12.5, color: AppColors.pending),
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.pending),
                   ),
                 ),
                 IconButton(
@@ -105,6 +106,14 @@ class _UpdateNotice extends StatelessWidget {
                 ),
               ],
             ),
+            // ⭐ কী নতুন — মালিক, ২ অক্টোবর ২০২৬: "ki ki update holo ta dekhabe"।
+            // এক লাইনে এক জিনিস ([[AppRelease.whatsNew]])।
+            for (final line in release.whatsNew)
+              Padding(
+                padding: const EdgeInsets.only(left: 26, right: AppSpacing.sm, top: 2),
+                child: Text('• $line',
+                    style: const TextStyle(fontSize: 12.5, color: AppColors.pending)),
+              ),
             // docs/Contract section 6, rule kha: the app downloads, checks
             // and hands over its own update. No link, no browser.
             Padding(

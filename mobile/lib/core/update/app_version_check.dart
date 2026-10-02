@@ -84,6 +84,14 @@ class AppRelease {
   /// this one is Bangla; English is the fallback rather than the reverse.
   String? get note => noteBn ?? noteEn;
 
+  /// ⭐ নতুন কী এল — এক লাইনে এক জিনিস। সার্ভারের নোট `|` বা নতুন লাইনে ভাগ করা
+  /// (`.env`-এর ANDROID_NOTE_BN এক লাইনের, তাই `|`)। নোট না থাকলে ফাঁকা।
+  List<String> get whatsNew => (note ?? '')
+      .split(RegExp(r'\s*[|\n]\s*'))
+      .map((line) => line.trim())
+      .where((line) => line.isNotEmpty)
+      .toList(growable: false);
+
   factory AppRelease.fromJson(Map<String, dynamic> json) {
     final note = json['note'];
     return AppRelease(

@@ -37,6 +37,7 @@ class ModuleGate {
     'orders': 'sales',
     'new-order': 'sales',
     'scan': 'sales',
+    'tracking': 'sales',
     'today': 'sales',
     'products': 'inventory',
     'stock': 'inventory',

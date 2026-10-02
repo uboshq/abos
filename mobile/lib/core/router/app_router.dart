@@ -10,6 +10,7 @@ import '../../features/customers/customer_list_screen.dart';
 import '../../features/customers/deposit_request_screen.dart';
 import '../../features/customers/due_list_screen.dart';
 import '../../features/home/home_shell.dart';
+import '../../features/orders/delivery_tracking_screen.dart';
 import '../../features/orders/new_order_screen.dart';
 import '../../features/orders/order_prefill.dart';
 import '../../features/orders/order_list_screen.dart';
@@ -153,6 +154,11 @@ final goRouterProvider = Provider<GoRouter>((ref) {
             path: 'orders',
             builder: (context, state) =>
                 const ModuleGateView(path: 'orders', child: OrderListScreen()),
+          ),
+          GoRoute(
+            path: 'tracking',
+            builder: (context, state) =>
+                const ModuleGateView(path: 'tracking', child: DeliveryTrackingScreen()),
           ),
           GoRoute(
             path: 'scan',
