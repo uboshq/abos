@@ -28,6 +28,7 @@
 
     <form method="POST"
           action="{{ $employee->exists ? route('hr.employee.update', $employee) : route('hr.employee.store') }}"
+          enctype="multipart/form-data"
           class="space-y-4">
         @csrf
         @if ($employee->exists) @method('PUT') @endif
@@ -69,6 +70,28 @@
         {{-- ⭐ মানুষটা — জন্মতারিখ, পরিবার, ঠিকানা, বিপদে কাকে ডাকতে হবে। মালিকের অনুমোদিত প্রোফাইল-নকশা,
              ২ অক্টোবর ২০২৬। সবই ঐচ্ছিক: পুরনো কর্মীদের এগুলো কেউ লেখেনি, আর বানানো জন্মতারিখ খালি ঘরের চেয়ে খারাপ। --}}
         <section data-boxed data-person class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
+            {{-- ⭐ ছবি — মালিক, ২ অক্টোবর ২০২৬। ⛔ asset() নয়, attachment.download: ওই রুট আগে কর্মীর view নীতি
+                 জিজ্ঞেস করে, নাহলে ঠিকানা অনুমান করেই অন্য কোম্পানির লোক ছবি দেখতেন। `face` স্ক্যানার বর্গাকারে কাটতে দেয়। --}}
+            <div data-photo-field class="mb-4 flex flex-wrap items-center gap-4">
+                @if ($employee->exists && $employee->photo)
+                    <img src="{{ route('attachment.download', $employee->photo) }}" alt="{{ $employee->name() }}"
+                         class="shrink-0 rounded-full border border-(--color-border) object-cover" style="width: 4rem; height: 4rem" />
+                @endif
+                <div class="min-w-0 flex-1">
+                    <label for="photo" class="mb-1 block text-sm font-medium">{{ __('hr::field.photo') }}</label>
+                    <input id="photo" name="photo" type="file" accept="image/jpeg,image/png,image/webp"
+                           x-on:change="$store.scanner.begin($el, 'face')"
+                           class="w-full rounded-(--radius-field) border border-(--color-border)
+                                  bg-(--color-surface-card) px-3 py-2 text-sm
+                                  file:mr-3 file:rounded-(--radius-field) file:border-0
+                                  file:bg-(--color-surface-app) file:px-3 file:py-1 file:text-sm" />
+                    @error('photo')
+                        <p class="mt-1 text-2xs text-(--color-danger)">{{ $message }}</p>
+                    @enderror
+                    <p class="mt-1 text-2xs text-(--color-ink-muted)">{{ __('hr::field.photo_hint') }}</p>
+                </div>
+            </div>
+
             <div class="grid gap-3 md:grid-cols-3">
                 <x-ui.field name="date_of_birth" type="date" :label="__('hr::field.date_of_birth')"
                             :value="old('date_of_birth', $employee->date_of_birth?->toDateString())" />

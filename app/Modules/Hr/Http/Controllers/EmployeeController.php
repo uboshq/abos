@@ -17,6 +17,7 @@ use App\Models\UserDataScope;
 use App\Modules\Hr\Models\Employee;
 use App\Modules\Hr\Models\LeaveType;
 use App\Modules\Hr\Services\AttendanceService;
+use App\Modules\Hr\Services\EmployeePhotoService;
 use App\Modules\Hr\Services\EmployeeService;
 use App\Modules\Hr\Services\LeaveService;
 use App\Modules\Hr\Services\SalaryStructureService;
@@ -125,7 +126,9 @@ class EmployeeController extends Controller implements HasMiddleware
 
     public function store(Request $request): RedirectResponse
     {
+        $this->checkPhoto($request);
         $employee = $this->employees->create($this->validated($request));
+        $this->savePhoto($request, $employee);
 
         return redirect()
             ->route('hr.employee.salary', $employee)
@@ -138,7 +141,7 @@ class EmployeeController extends Controller implements HasMiddleware
 
         $seesSalary = (bool) $request->user()?->can('viewSalary', $employee);
 
-        $employee->load(['department', 'designation', 'employmentType', 'branch', 'creator', 'user',
+        $employee->load(['department', 'designation', 'employmentType', 'branch', 'creator', 'user', 'photo',
             'reportsTo.designation', 'reports' => fn ($q) => $q->active()->with('designation')->orderBy('name_en')]);
 
         /*
@@ -191,11 +194,39 @@ class EmployeeController extends Controller implements HasMiddleware
     {
         $this->authorize('update', $employee);
 
+        $this->checkPhoto($request);
         $this->employees->update($employee, $this->validated($request, $employee));
+        $this->savePhoto($request, $employee);
 
         return redirect()
             ->route('hr.employee.show', $employee)
             ->with('saved', __('hr::message.employee_updated'));
+    }
+
+    /**
+     * ⭐ ছবি — মালিক, ২ অক্টোবর ২০২৬। সারি সেভের **আগে** যাচাই, যাতে ভুল ফাইলে ফর্মের বাকিটাও না বসে আর মানুষ
+     * একবারেই ভুলটা দেখেন। ⚠️ `mimes` ব্রাউজারের কথা মানে; [[EmployeePhotoService::looksLikeAnImage()]] ফাইলের ভেতরটা পড়ে।
+     */
+    private function checkPhoto(Request $request): void
+    {
+        if (! $request->hasFile('photo')) {
+            return;
+        }
+
+        $request->validate([
+            'photo' => ['file', 'mimes:jpeg,jpg,png,webp', 'max:'.(int) (EmployeePhotoService::MAX_BYTES / 1024)],
+        ]);
+
+        if (! app(EmployeePhotoService::class)->looksLikeAnImage($request->file('photo'))) {
+            throw \Illuminate\Validation\ValidationException::withMessages(['photo' => __('hr::validation.photo_only')]);
+        }
+    }
+
+    private function savePhoto(Request $request, Employee $employee): void
+    {
+        if ($request->hasFile('photo')) {
+            app(EmployeePhotoService::class)->replace($employee, $request->file('photo'), $request->user()?->id);
+        }
     }
 
     /** চাকরির অবসান — মোছা নয়, কারণ পুরনো বেতনশিটে নামটা লাগে। */

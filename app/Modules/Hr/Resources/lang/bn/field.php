@@ -96,4 +96,6 @@ return [
     'emergency_relation' => 'সম্পর্ক',
     'emergency_mobile' => 'জরুরি মোবাইল',
     'reports_to' => 'যাঁর অধীনে',
+    'photo' => 'ছবি',
+    'photo_hint' => 'JPG, PNG বা WebP — বড় ছবি নিজেই ছোট হয়ে যায়। নতুন ছবি দিলে আগেরটার জায়গা নেয়।',
 ];

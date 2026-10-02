@@ -81,4 +81,6 @@ return [
     'emergency_relation' => 'Relation',
     'emergency_mobile' => 'Emergency Mobile',
     'reports_to' => 'Reports To',
+    'photo' => 'Photo',
+    'photo_hint' => 'JPG, PNG or WebP — a large photo is made smaller. A new photo replaces the old one.',
 ];

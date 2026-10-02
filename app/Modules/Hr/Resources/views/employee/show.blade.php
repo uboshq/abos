@@ -51,10 +51,17 @@
         <div class="h-24 bg-(--color-brand-500)"></div>
 
         <div class="flex flex-wrap items-end gap-4 px-4 pb-4" style="margin-top: -3rem">
-            <div class="grid size-24 shrink-0 place-items-center rounded-full
-                        bg-(--color-brand-50) text-4xl font-bold text-(--color-brand-700) shadow"
-                 style="border: 4px solid var(--color-surface-card)"
-                 aria-hidden="true">{{ $initial }}</div>
+            {{-- ⭐ ছবি থাকলে ছবি, না থাকলে আদ্যক্ষর। ⛔ attachment.download — কর্মীর view নীতি পেরিয়েই ছবি আসে --}}
+            @if ($employee->photo)
+                <img data-profile-photo src="{{ route('attachment.download', $employee->photo) }}" alt="{{ $employee->name() }}"
+                     class="size-24 shrink-0 rounded-full object-cover shadow"
+                     style="border: 4px solid var(--color-surface-card)" />
+            @else
+                <div class="grid size-24 shrink-0 place-items-center rounded-full
+                            bg-(--color-brand-50) text-4xl font-bold text-(--color-brand-700) shadow"
+                     style="border: 4px solid var(--color-surface-card)"
+                     aria-hidden="true">{{ $initial }}</div>
+            @endif
 
             <div class="min-w-0 flex-1">
                 <h1 class="truncate text-2xl font-semibold text-(--color-ink)">{{ $employee->name() }}</h1>

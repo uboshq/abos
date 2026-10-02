@@ -11,6 +11,7 @@ use App\Core\Concerns\IsAudited;
 use App\Core\Concerns\IsMasterRecord;
 use App\Core\Concerns\SharedAcrossCompaniesWhenAsked;
 use App\Core\Contracts\Drillable;
+use App\Models\Attachment;
 use App\Models\Branch;
 use App\Models\User;
 use App\Modules\MasterData\Models\Department;
@@ -131,6 +132,17 @@ class Employee extends Model implements Drillable
     public function reportsTo(): BelongsTo
     {
         return $this->belongsTo(self::class, 'reports_to_employee_id');
+    }
+
+    /**
+     * ⭐ প্রোফাইলের ছবি — [[EmployeePhotoService]] বসায়; দেখানো কেবল `attachment.download` দিয়ে।
+     * ⓘ `$fillable`-এ নেই, ইচ্ছা করে: ফর্মের সাধারণ ঘর দিয়ে অন্য কারও সংযুক্তির id বসানো যেত।
+     *
+     * @return BelongsTo<Attachment, $this>
+     */
+    public function photo(): BelongsTo
+    {
+        return $this->belongsTo(Attachment::class, 'photo_attachment_id');
     }
 
     /** @return HasMany<Employee, $this> যাঁরা এঁর অধীনে */

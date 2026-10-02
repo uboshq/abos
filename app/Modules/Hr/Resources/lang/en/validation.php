@@ -30,4 +30,5 @@ return [
     'unknown_attendance_status' => 'That attendance status is not one we know.',
     'branch_out_of_reach' => 'That branch is outside your reach — if you placed someone there, you could no longer see them yourself.',
     'reports_to_loop' => 'That would make the reporting line loop back — nobody can report to themselves or to someone below them.',
+    'photo_only' => 'It must be a photo — JPG, PNG or WebP. Renaming a file does not make it one.',
 ];
