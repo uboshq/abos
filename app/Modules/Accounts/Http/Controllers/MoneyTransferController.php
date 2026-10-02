@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Accounts\Http\Controllers;
 
+use App\Core\Concerns\GrandTotals;
 use App\Core\Concerns\SortsLists;
 use App\Core\Services\MenuBuilder;
 use App\Core\Support\CompanyContext;
@@ -32,6 +33,7 @@ use Illuminate\View\View;
  */
 class MoneyTransferController extends Controller implements HasMiddleware
 {
+    use GrandTotals;
     use SortsLists;
 
     public function __construct(
@@ -56,11 +58,15 @@ class MoneyTransferController extends Controller implements HasMiddleware
 
         $sort = $this->applySort($query, $request, $this->sorts());
 
+        // ⭐ সর্বমোট — ছাঁকা তালিকার সব পাতা মিলে, পাতা ভাঙার আগে ([[GrandTotals]])
+        $grand = $this->grandTotals($query, ['amount' => 't.amount']);
+
         $transfers = $query->paginate(50)->withQueryString();
 
         return view('accounts::transfer.index', [
             'menu' => $this->menu->forUser($request->user()),
             'transfers' => $transfers,
+            'grand' => $grand,
             'sortOptions' => $this->sortLabels(),
             'sort' => $sort,
             // যেগুলো এই ব্যবহারকারীর গ্রহণের অপেক্ষায়

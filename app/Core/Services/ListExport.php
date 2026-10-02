@@ -36,6 +36,14 @@ class ListExport
     private ?array $table = null;
 
     /**
+     * ⭐ সর্বমোটের সারি — গোটা ছাঁকা তালিকার, ফাইলের শেষে একবার (মালিক, ১ অক্টোবর ২০২৬: "kono list er niche grand total nai keno")।
+     * ⓘ প্রতিটা পাতার আঁকায় একই সারি আসে, তাই শেষেরটাই রাখা হয় ([[x-ui.table]] দেয়)।
+     *
+     * @var list<string>|null
+     */
+    private ?array $footer = null;
+
+    /**
      * এই পর্দাটা রপ্তানি করতে দেয় না।
      *
      * ── কেন পতাকাটা লাগল ────────────────────────────────────────────
@@ -185,6 +193,7 @@ class ListExport
         $this->pageName = 'page';
         $this->takenThisPage = false;
         $this->table = null;
+        $this->footer = null;
 
         // অস্বীকারটাও প্রতি অনুরোধে নতুন — নাহলে একটা রপ্তানি-বিহীন
         // পর্দা দেখার পর পরের পর্দার রপ্তানিও নীরবে বন্ধ থাকত
@@ -199,6 +208,16 @@ class ListExport
     public function captured(): ?array
     {
         return $this->table;
+    }
+
+    /**
+     * সর্বমোটের সারি — ধরা টেবিলের কলামের ক্রমে, প্রথম ঘরে লেবেল।
+     *
+     * @param  list<mixed>  $values
+     */
+    public function footer(array $values): void
+    {
+        $this->footer = array_map(fn ($v) => $this->text($v), $values);
     }
 
     /** পাতা ভাগের খবর — [[ReportExport]] নিজের ফলাফল থেকে এটা দেয়। */
@@ -259,6 +278,10 @@ class ListExport
             $csv .= $this->line($row);
         }
 
+        if ($this->footer !== null) {
+            $csv .= $this->line($this->footer);
+        }
+
         return $csv;
     }
 
@@ -287,6 +310,7 @@ class ListExport
             'columns' => $this->table['columns'],
             'rows' => $rows,
             'total' => $this->table['total'] ?? count($rows),
+            'grand_total' => $this->footer === null ? null : array_combine($keys, $this->footer),
         ], JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT | JSON_THROW_ON_ERROR);
     }
 
@@ -378,6 +402,10 @@ class ListExport
 
         foreach ($this->table['values'] as $value) {
             $rows .= $this->xlsxRow($r++, $value);
+        }
+
+        if ($this->footer !== null) {
+            $rows .= $this->xlsxRow($r, $this->footer);
         }
 
         return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'

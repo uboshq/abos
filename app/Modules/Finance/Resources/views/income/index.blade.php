@@ -27,27 +27,20 @@
         $incomeColumns = [
             ['key' => 'head', 'label' => __('finance::field.head'),
              'render' => fn ($r) => view('finance::partials.head-link', ['account' => $r['account']])],
-            ['key' => 'now', 'label' => __('finance::field.this_period'), 'numeric' => true,
+            ['key' => 'now', 'total' => 'money', 'label' => __('finance::field.this_period'), 'numeric' => true,
              'width' => '11rem',
              'render' => fn ($r) => view('ui.amount-link', [
                  'value' => $r['now'],
                  'href' => route('accounts.coa.show', $r['account']).'#transactions',
              ])],
-            ['key' => 'before', 'label' => __('finance::field.period_before'), 'numeric' => true,
+            ['key' => 'before', 'total' => 'money', 'label' => __('finance::field.period_before'), 'numeric' => true,
              'width' => '11rem',
              'render' => fn ($r) => \App\Core\Support\Money::format($r['before'])],
             ['key' => 'change', 'label' => __('finance::field.change'), 'numeric' => true,
              'width' => '10rem',
              'render' => fn ($r) => view('finance::expense.partials.change',
                  ['row' => $r, 'upIsGood' => true])],
-            /* খাতের খতিয়ান — খোলার মতো রেকর্ড; দেখার অনুমতি না থাকলে লিংক নয় */
-            ['key' => 'do', 'label' => __('core.table.actions'), 'width' => '7rem',
-             'render' => fn ($r) => auth()->user()?->can('view', $r['account'])
-                 ? new \Illuminate\Support\HtmlString('<a href="'.e(route('accounts.coa.show', $r['account']).'#transactions').'"'
-                     .' class="inline-flex min-h-(--spacing-touch) items-center rounded-(--radius-field) px-2 text-sm'
-                     .' text-(--color-link) transition-colors hover:bg-(--color-surface-hover) print-hide">'
-                     .e(__('core.action.view')).'</a>')
-                 : '—'],
+            /* ⓘ খাতের খতিয়ান — সারির চোখের বোতাম ([[x-ui.table]] :view-url), দেখার অনুমতি না থাকলে বোতাম নয় */
         ];
     @endphp
 
@@ -103,6 +96,8 @@
         </h2>
 
         <x-ui.table
+            :grand="['now' => collect($heads)->reduce(fn ($s, $r) => bcadd($s, (string) $r['now'], 4), '0'), 'before' => collect($heads)->reduce(fn ($s, $r) => bcadd($s, (string) $r['before'], 4), '0')]"
+            :view-url="fn ($r) => auth()->user()?->can('view', $r['account']) ? route('accounts.coa.show', $r['account']).'#transactions' : null"
             :compact="request()->boolean('compact')"
             :empty="filled(request('q')) ? __('core.empty.no_results') : __('finance::message.no_income_yet')"
             :rows="$heads"

@@ -69,7 +69,7 @@
         ['key' => 'profit_base', 'label' => __('finance::field.out_of'), 'numeric' => true,
          'render' => fn ($r) => $money($r->profit_base)],
 
-        ['key' => 'amount', 'label' => __('finance::field.gets'), 'numeric' => true,
+        ['key' => 'amount', 'total' => 'money', 'label' => __('finance::field.gets'), 'numeric' => true,
          'render' => fn ($r) => $money($r->amount)],
     ];
 @endphp
@@ -240,6 +240,8 @@
                 <h2 class="mb-3 font-semibold">{{ __('finance::field.past_distributions') }}</h2>
 
                 <x-ui.table :rows="$history" :columns="$historyColumns"
+                            :grand="$grand ?? []"
+                            :view-url="fn ($r) => $r->voucher_id ? route('accounts.voucher.show', $r->voucher_id) : null"
                             :empty="__('finance::message.no_distribution_yet')" />
 
                 <x-ui.pager :rows="$history" />

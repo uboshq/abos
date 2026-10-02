@@ -33,7 +33,10 @@
     </nav>
 
     <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
-        <x-ui.table :rows="$rows" :empty="__('purchase::schedule.none')" :columns="[
+        <x-ui.table :rows="$rows" :empty="__('purchase::schedule.none')"
+            :grand="$grand ?? []"
+            :view-url="fn ($bill) => route('purchase.bill.show', $bill)"
+            :columns="[
             ['key' => 'due', 'label' => __('purchase::schedule.due_on'), 'width' => '9rem',
              'render' => fn ($bill) => view('purchase::payment-schedule.partials.when',
                  ['bill' => $bill, 'today' => $today])],
@@ -41,9 +44,9 @@
              'render' => fn ($bill) => view('purchase::payment-schedule.partials.bill', ['bill' => $bill])],
             ['key' => 'supplier', 'label' => __('purchase::schedule.supplier'),
              'render' => fn ($bill) => view('purchase::payment-schedule.partials.supplier', ['bill' => $bill])],
-            ['key' => 'total', 'label' => __('purchase::schedule.total'), 'numeric' => true, 'width' => '9rem',
+            ['key' => 'total', 'total' => 'money', 'label' => __('purchase::schedule.total'), 'numeric' => true, 'width' => '9rem',
              'render' => fn ($bill) => Money::format($bill->total)],
-            ['key' => 'amount', 'label' => __('purchase::schedule.due'), 'numeric' => true, 'width' => '9rem',
+            ['key' => 'amount', 'total' => 'money', 'raw' => fn ($bill) => $bill->dueAmount(), 'label' => __('purchase::schedule.due'), 'numeric' => true, 'width' => '9rem',
              'render' => fn ($bill) => Money::format($bill->dueAmount())],
             ['key' => 'pay', 'label' => '', 'width' => '7rem',
              'render' => fn ($bill) => view('purchase::payment-schedule.partials.pay', ['bill' => $bill])],

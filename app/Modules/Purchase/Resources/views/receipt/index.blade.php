@@ -30,6 +30,7 @@
 
         [
             'key' => 'total',
+            'total' => 'money',
             'label' => __('purchase::field.total'),
             'numeric' => true,
             'width' => '10rem',
@@ -80,6 +81,8 @@
         </form>
 
         <x-ui.table
+            :grand="$grand ?? []"
+            :view-url="fn ($d) => route('purchase.receipt.show', $d)"
             :empty="$q ? __('core.empty.no_results') : __('purchase::message.no_receipts')"
             :rows="$receipts"
             :compact="request()->boolean('compact')"

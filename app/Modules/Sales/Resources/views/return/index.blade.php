@@ -18,7 +18,7 @@
          'render' => fn ($r) => $r->customer?->location?->name() ?? '—'],
         ['key' => 'reason', 'label' => __('sales::field.reason'), 'width' => '10rem',
          'render' => fn ($r) => $r->reasonCode?->name() ?: '—'],
-        ['key' => 'total', 'label' => __('sales::field.total'), 'numeric' => true, 'width' => '10rem',
+        ['key' => 'total', 'total' => 'money', 'label' => __('sales::field.total'), 'numeric' => true, 'width' => '10rem',
          'render' => fn ($r) => \App\Core\Support\Money::format($r->total)],
         ['key' => 'status', 'label' => __('sales::field.state'), 'width' => '8rem',
          'render' => fn ($r) => view('sales::components.status-badge', ['document' => $r])],
@@ -58,6 +58,8 @@
         </form>
 
         <x-ui.table
+            :grand="$grand ?? []"
+            :view-url="fn ($d) => route('sales.return.show', $d)"
             :empty="$q ? __('core.empty.no_results') : __('sales::message.no_returns')"
             :rows="$returns"
             :compact="request()->boolean('compact')"

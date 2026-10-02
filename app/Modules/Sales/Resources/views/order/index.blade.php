@@ -32,6 +32,7 @@
         ],
         [
             'key' => 'total',
+            'total' => 'money',
             'label' => __('sales::field.total'),
             'numeric' => true,
             'width' => '10rem',
@@ -82,6 +83,8 @@
         </form>
 
         <x-ui.table
+            :grand="$grand"
+            :view-url="fn ($d) => route('sales.order.show', $d)"
             :empty="$q ? __('core.empty.no_results') : __('sales::message.no_orders')"
             :rows="$orders"
             :compact="request()->boolean('compact')"

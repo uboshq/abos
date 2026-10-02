@@ -495,6 +495,9 @@ return [
     'table' => [
         'range' => ':from - :to of :total',
         'page_total' => 'This page',
+        // ⭐ Grand total and View — on every list (owner, 1 Oct 2026; [[x-ui.table]])
+        'grand_total' => 'Grand total',
+        'view' => 'View',
         'title_field' => 'Title',
         'code' => 'Code',
         'name' => 'Name',

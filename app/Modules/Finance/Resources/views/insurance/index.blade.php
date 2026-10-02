@@ -30,9 +30,9 @@
          'render' => fn ($p) => view('finance::institution.partials.link', [
              'id' => $p->institution_id, 'label' => $p->institution?->label() ?? '—',
          ])],
-        ['key' => 'sum_insured', 'label' => __('finance::insurance.sum_insured'), 'numeric' => true, 'width' => '9rem',
+        ['key' => 'sum_insured', 'total' => 'money', 'label' => __('finance::insurance.sum_insured'), 'numeric' => true, 'width' => '9rem',
          'render' => fn ($p) => Money::format($p->sum_insured)],
-        ['key' => 'premium', 'label' => __('finance::insurance.premium'), 'numeric' => true, 'width' => '8rem',
+        ['key' => 'premium', 'total' => 'money', 'label' => __('finance::insurance.premium'), 'numeric' => true, 'width' => '8rem',
          'render' => fn ($p) => Money::format($p->premium)],
         ['key' => 'ends_on', 'label' => __('finance::insurance.ends_on'), 'width' => '9rem',
          'render' => fn ($p) => view('finance::insurance.partials.renewal', ['policy' => $p])],
@@ -94,6 +94,8 @@
 
     <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
         <x-ui.table :rows="$policies" :columns="$columns"
+                    :grand="$grand ?? []"
+                    :view-url="fn ($p) => route('finance.insurance.show', $p)"
                     :empty="__('finance::insurance.none_yet')" />
 
         <x-ui.pager :rows="$policies" />

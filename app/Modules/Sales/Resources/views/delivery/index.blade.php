@@ -43,6 +43,8 @@
         [
             'key' => 'total',
             'label' => __('sales::delivery.column.total'),
+            'total' => 'money',
+            'raw' => fn ($s) => $s->challan?->total ?? '0',
             'numeric' => true,
             'width' => '9rem',
             'render' => fn ($s) => \App\Core\Support\Money::format($s->challan?->total ?? '0'),
@@ -108,6 +110,8 @@
         </form>
 
         <x-ui.table
+            :grand="$grand ?? []"
+            :view-url="fn ($s) => $s->delivery_challan_id ? route('sales.challan.show', $s->delivery_challan_id) : null"
             :empty="$q !== '' ? __('core.empty.no_results') : __('sales::delivery.empty')"
             :rows="$rows"
             :compact="request()->boolean('compact')"

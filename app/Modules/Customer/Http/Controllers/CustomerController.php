@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Customer\Http\Controllers;
 
 use App\Core\Concerns\AuthorizesResource;
+use App\Core\Concerns\GrandTotals;
 use App\Core\Concerns\SortsLists;
 use App\Core\Panels\FactRegistry;
 use App\Core\Services\CustomFieldService;
@@ -38,6 +39,7 @@ use Illuminate\View\View;
 class CustomerController extends Controller implements HasMiddleware
 {
     use AuthorizesResource;
+    use GrandTotals;
     use SortsLists;
 
     public function __construct(
@@ -134,6 +136,9 @@ class CustomerController extends Controller implements HasMiddleware
          */
         $rankTitle = app(CustomerListFilters::class)->apply($query, $request);
 
+        // ⭐ সর্বমোট — ছাঁকা তালিকার সব পাতা মিলে, পাতা ভাঙার আগে ([[GrandTotals]])
+        $grand = $this->grandTotals($query, ['outstanding' => 't.outstanding_in_view']);
+
         $customers = $query
             // পেজিনেশন বাধ্যতামূলক (সেকশন ৯) — শেয়ার্ড হোস্টে পুরো তালিকা
             // এক রেসপন্সে পাঠানো মানে টাইমআউট।
@@ -155,6 +160,7 @@ class CustomerController extends Controller implements HasMiddleware
         return view('customer::index', [
             'menu' => $this->menu->forUser($request->user()),
             'customers' => $customers,
+            'grand' => $grand,
             'q' => $request->query('q'),
             'showInactive' => $request->boolean('inactive'),
             'sortOptions' => $this->sortLabels(),

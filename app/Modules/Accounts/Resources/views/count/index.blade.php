@@ -12,12 +12,12 @@
          'render' => fn ($c) => view('accounts::count.partials.number', ['count' => $c])],
         ['key' => 'cash_till_id', 'label' => __('accounts::menu.cash_tills'),
          'render' => fn ($c) => $c->till?->name()],
-        ['key' => 'counted_amount', 'label' => __('accounts::field.counted'), 'numeric' => true,
+        ['key' => 'counted_amount', 'total' => 'money', 'label' => __('accounts::field.counted'), 'numeric' => true,
          'width' => '10rem', 'render' => fn ($c) => view('ui.amount-link', [
              'value' => $c->counted_amount,
              'href' => route('accounts.count.show', $c),
          ])],
-        ['key' => 'difference', 'label' => __('accounts::field.difference'), 'numeric' => true,
+        ['key' => 'difference', 'total' => 'money', 'label' => __('accounts::field.difference'), 'numeric' => true,
          'width' => '10rem', 'render' => fn ($c) => view('accounts::count.partials.difference', ['count' => $c])],
         ['key' => 'status', 'label' => __('accounts::field.state'), 'width' => '8rem',
          'render' => fn ($c) => view('accounts::count.partials.status', ['count' => $c])],
@@ -49,6 +49,8 @@
         </form>
 
         <x-ui.table
+            :grand="$grand ?? []"
+            :view-url="fn ($c) => route('accounts.count.show', $c)"
             :compact="request()->boolean('compact')"
             :empty="$q ? __('core.empty.no_results') : __('accounts::message.no_counts')"
             :rows="$counts"

@@ -29,6 +29,7 @@
         ],
         [
             'key' => 'balance',
+            'total' => 'money',
             'label' => __('accounts::field.in_hand'),
             'numeric' => true,
             'width' => '11rem',
@@ -83,6 +84,8 @@
         </form>
 
         <x-ui.table
+            :grand="['balance' => $total]"
+            :view-url="fn ($t) => route('accounts.till.show', $t)"
             :compact="request()->boolean('compact')"
             :empty="$q ? __('core.empty.no_results') : __('accounts::message.no_tills')"
             :rows="$tills"

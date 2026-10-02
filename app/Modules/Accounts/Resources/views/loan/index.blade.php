@@ -20,13 +20,13 @@
          'render' => fn ($l) => $l->lender],
         ['key' => 'kind', 'label' => __('accounts::field.loan_kind'), 'width' => '9rem',
          'render' => fn ($l) => $l->kindLabel()],
-        ['key' => 'sanctioned', 'label' => __('accounts::field.sanctioned'),
+        ['key' => 'sanctioned', 'total' => 'money', 'label' => __('accounts::field.sanctioned'),
          'numeric' => true, 'width' => '10rem',
          'render' => fn ($l) => \App\Core\Support\Money::format($l->sanctioned)],
         ['key' => 'rate', 'label' => __('accounts::field.interest_rate'),
          'numeric' => true, 'width' => '7rem',
          'render' => fn ($l) => rtrim(rtrim((string) $l->interest_rate, '0'), '.')],
-        ['key' => 'outstanding', 'label' => __('accounts::message.loan_outstanding'),
+        ['key' => 'outstanding', 'total' => 'money', 'raw' => fn ($l) => $l->outstanding(), 'label' => __('accounts::message.loan_outstanding'),
          'numeric' => true, 'width' => '11rem',
          'render' => fn ($l) => $l->isSettled()
              ? __('accounts::message.loan_settled')
@@ -69,6 +69,8 @@
         </form>
 
         <x-ui.table
+            :grand="$grand ?? []"
+            :view-url="fn ($l) => route('accounts.loan.show', $l)"
             :compact="request()->boolean('compact')"
             :empty="$q ? __('core.empty.no_results') : __('accounts::message.no_loans')"
             :rows="$loans"

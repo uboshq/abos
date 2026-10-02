@@ -56,6 +56,11 @@
                             {{ $column['label'] }}
                         </th>
                     @endforeach
+                    @if ($viewUrl ?? null)
+                        <th class="text-end" style="width: 3.5rem" scope="col">
+                            <span class="sr-only">{{ __('core.table.view') }}</span>
+                        </th>
+                    @endif
                 </tr>
             </thead>
 
@@ -94,6 +99,24 @@
                                 {{ $cell($row, $column, $loop->parent->index) }}
                             </td>
                         @endforeach
+                        {{-- ⭐ "দেখুন" — সাধারণ লিংক, তাই মালিকের নিয়মে তালিকার উপর পপআপে খোলে ([[peek]]);
+                             লেবেলে কাগজের নম্বর, যাতে স্ক্রিন-রিডার বলে কোনটা খুলবে। --}}
+                        @if ($viewUrl ?? null)
+                            @php $viewHref = ($viewUrl)($row); @endphp
+                            <td data-label="{{ __('core.table.view') }}" class="text-end">
+                                @if ($viewHref)
+                                    <a href="{{ $viewHref }}" data-row-view
+                                       aria-label="{{ __('core.table.view') }} {{ data_get($row, 'document_no') }}"
+                                       title="{{ __('core.table.view') }}"
+                                       class="inline-flex size-8 items-center justify-center rounded-(--radius-field)
+                                              text-(--color-ink-muted) hover:bg-(--color-surface-hover) hover:text-(--color-brand-500)">
+                                        <svg viewBox="0 0 24 24" aria-hidden="true" class="size-4 fill-current">
+                                            <path d="M12 5c5 0 9 4.5 10 7-1 2.5-5 7-10 7S3 14.5 2 12c1-2.5 5-7 10-7Zm0 2.5A4.5 4.5 0 1 0 12 16.5 4.5 4.5 0 0 0 12 7.5Zm0 2a2.5 2.5 0 1 1 0 5 2.5 2.5 0 0 1 0-5Z"/>
+                                        </svg>
+                                    </a>
+                                @endif
+                            </td>
+                        @endif
                     </tr>
                 @endforeach
             </tbody>
@@ -103,6 +126,30 @@
                  আঠালো, তাই লম্বা তালিকাতেও সংখ্যাটা চোখের সামনে থাকে;
                  কোন কলামের যোগ তা বোঝা যায় কারণ ওটা ঠিক নিজের কলামেই
                  বসে। --}}
+            {{-- ⭐ সর্বমোট — গোটা ছাঁকা তালিকার (মালিক, ১ অক্টোবর ২০২৬); কয়েক পাতা হলে তার উপরে "এই পাতা"।
+                 ⓘ সংখ্যা সারির মতোই সাজানো (টাকা টাকার মতো, পরিমাণ পরিমাণের মতো), ঋণাত্মক লাল। --}}
+            @if (isset($hasGrand) && $hasGrand())
+                <tfoot class="sticky bottom-0 z-[1]" data-grand-total>
+                    @foreach (array_filter([$showsPageTotal() ? $pageLine() : null, $grandLine()]) as $k => $line)
+                        <tr @class(['font-semibold' => $loop->last]) @if ($loop->last) data-grand-total-row @endif>
+                            @foreach ($normalised as $i => $column)
+                                <td data-label="{{ $column['label'] }}" @class(['num' => $column['numeric'],
+                                    'text-(--color-danger)' => $column['total'] !== null && \App\View\Components\Ui\Table::negative($line[$i])])>
+                                    @if ($i === 0 && $column['total'] === null)
+                                        <span class="text-(--color-ink-muted)">{{ $line[$i] }}</span>
+                                    @else
+                                        {{ $line[$i] }}
+                                    @endif
+                                </td>
+                            @endforeach
+                            @if ($viewUrl ?? null)
+                                <td></td>
+                            @endif
+                        </tr>
+                    @endforeach
+                </tfoot>
+            @endif
+
             @if ($totals !== [])
                 <tfoot class="sticky bottom-0 z-[1]">
                     <tr>

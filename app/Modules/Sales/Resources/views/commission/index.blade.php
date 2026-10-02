@@ -18,7 +18,7 @@
         ['key' => 'rate', 'label' => __('sales::field.commission_rate'),
          'numeric' => true, 'width' => '9rem',
          'render' => fn ($c) => $c->describeRate()],
-        ['key' => 'amount', 'label' => __('accounts::field.amount'),
+        ['key' => 'amount', 'total' => 'money', 'label' => __('accounts::field.amount'),
          'numeric' => true, 'width' => '11rem',
          'render' => fn ($c) => \App\Core\Support\Money::format($c->amount)],
         ['key' => 'state', 'label' => __('accounts::field.state'), 'width' => '11rem',
@@ -89,6 +89,7 @@
 
         <div class="overflow-x-auto">
             <x-ui.table :rows="$claims"
+                        :grand="$grand ?? []"
                         :columns="$columns"
                         :compact="request()->boolean('compact')"
                         :empty="request('q') || request('status') || request('supplier')

@@ -47,7 +47,7 @@
          'render' => fn ($f) => __('finance::field.facility_' . $f->kind)],
         /* ⓘ চুক্তিটা `numeric`, `align`/`money` নয় — কম্পোনেন্টের
              নিজের নিয়ম ([[App\View\Components\Ui\Table]])। */
-        ['key' => 'limit_amount', 'label' => __('finance::field.limit_amount'), 'numeric' => true,
+        ['key' => 'limit_amount', 'total' => 'money', 'label' => __('finance::field.limit_amount'), 'numeric' => true,
          'render' => fn ($f) => \App\Core\Support\Money::format($f->limit_amount)],
 
         /* ⚠️ `null` মানে "প্রশ্নটাই অপ্রাসঙ্গিক", শূন্য নয় —
@@ -183,6 +183,8 @@
         @endif
 
         <x-ui.table
+            :grand="$grand ?? []"
+            :view-url="fn ($f) => route('finance.bank_facility.show', $f)"
             :compact="request()->boolean('compact')"
             :empty="filled(request('q')) ? __('core.empty.no_results') : __('finance::message.no_facilities')"
             :rows="$facilities"

@@ -15,7 +15,7 @@
          'render' => fn ($r) => $r->user?->name],
         ['key' => 'time', 'label' => __('sales::field.time'), 'width' => '9rem',
          'render' => fn ($r) => $r->opened_at?->format('H:i').'-'.$r->closed_at?->format('H:i')],
-        ['key' => 'counted', 'label' => __('sales::message.shift_counted'),
+        ['key' => 'counted', 'total' => 'money', 'raw' => fn ($r) => $r->closing_counted, 'label' => __('sales::message.shift_counted'),
          'numeric' => true, 'width' => '11rem',
          'render' => fn ($r) => \App\Core\Support\Money::format($r->closing_counted)],
         ['key' => 'view', 'label' => '', 'width' => '6rem',
@@ -149,6 +149,7 @@
         <div data-boxed class="table-responsive rounded-(--radius-card) border border-(--color-border)
                     bg-(--color-surface-card)">
         <x-ui.table :rows="$closed"
+                    :grand="['counted' => $closed->reduce(fn ($s, $r) => bcadd($s, (string) $r->closing_counted, 4), '0')]"
                     :columns="$columns"
                     :empty="__('core.empty.no_results')" />
         </div>

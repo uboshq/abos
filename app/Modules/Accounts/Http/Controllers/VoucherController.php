@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Accounts\Http\Controllers;
 
+use App\Core\Concerns\GrandTotals;
 use App\Core\Concerns\SortsLists;
 use App\Core\Engines\Attachment\AttachmentEngine;
 use App\Core\Engines\Drill\DrillResolver;
@@ -39,6 +40,7 @@ use Illuminate\View\View;
  */
 class VoucherController extends Controller implements HasMiddleware
 {
+    use GrandTotals;
     use SortsLists;
 
     public function __construct(
@@ -117,6 +119,9 @@ class VoucherController extends Controller implements HasMiddleware
 
         $sort = $this->applySort($query, $request, $this->sorts());
 
+        // ⭐ সর্বমোট — ছাঁকা তালিকার সব পাতা মিলে, পাতা ভাঙার আগে ([[GrandTotals]])
+        $grand = $this->grandTotals($query, ['amount' => 't.amount']);
+
         $vouchers = $query->paginate(50)->withQueryString();
 
         /*
@@ -136,6 +141,7 @@ class VoucherController extends Controller implements HasMiddleware
             'menu' => $this->menu->forUser($request->user()),
             'type' => $type,
             'vouchers' => $vouchers,
+            'grand' => $grand,
             'q' => $request->query('q'),
             'sortOptions' => $this->sortLabels(),
             'sort' => $sort,

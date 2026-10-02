@@ -15,7 +15,7 @@
          'render' => fn ($r) => $r->supplier?->name()],
         ['key' => 'reason', 'label' => __('purchase::field.reason'), 'width' => '10rem',
          'render' => fn ($r) => $r->reasonCode?->name() ?: '—'],
-        ['key' => 'total', 'label' => __('purchase::field.total'), 'numeric' => true, 'width' => '10rem',
+        ['key' => 'total', 'total' => 'money', 'label' => __('purchase::field.total'), 'numeric' => true, 'width' => '10rem',
          'render' => fn ($r) => \App\Core\Support\Money::format($r->total)],
         ['key' => 'status', 'label' => __('purchase::field.state'), 'width' => '8rem',
          'render' => fn ($r) => view('purchase::components.status-badge', ['document' => $r])],
@@ -55,6 +55,8 @@
         </form>
 
         <x-ui.table
+            :grand="$grand ?? []"
+            :view-url="fn ($d) => route('purchase.return.show', $d)"
             :empty="$q ? __('core.empty.no_results') : __('purchase::message.no_returns')"
             :rows="$returns"
             :compact="request()->boolean('compact')"

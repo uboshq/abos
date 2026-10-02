@@ -30,7 +30,7 @@
          'render' => fn ($n) => $n->against_no ?: '—'],
         ['key' => 'reason', 'label' => __('accounts::note.reason'), 'width' => '12rem',
          'render' => fn ($n) => __('accounts::note.reason_'.$n->reason)],
-        ['key' => 'total', 'label' => __('accounts::note.total'), 'numeric' => true, 'width' => '10rem',
+        ['key' => 'total', 'total' => 'money', 'label' => __('accounts::note.total'), 'numeric' => true, 'width' => '10rem',
          'render' => fn ($n) => Money::format($n->total)],
         ['key' => 'status', 'label' => __('core.table.status'), 'width' => '8rem',
          'render' => fn ($n) => view('accounts::note.partials.status', ['note' => $n])],
@@ -88,7 +88,9 @@
     </p>
 
     <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
-        <x-ui.table :rows="$rows" :columns="$columns" :empty="__('accounts::note.none_yet')" />
+        <x-ui.table :rows="$rows" :columns="$columns" :empty="__('accounts::note.none_yet')"
+                    :grand="$grand ?? []"
+                    :view-url="fn ($n) => route('accounts.note.show', $n)" />
 
         <x-ui.pager :rows="$rows" />
     </div>

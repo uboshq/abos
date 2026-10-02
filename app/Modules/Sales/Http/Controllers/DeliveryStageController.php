@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Sales\Http\Controllers;
 
+use App\Core\Concerns\GrandTotals;
 use App\Core\Services\MenuBuilder;
 use App\Http\Controllers\Controller;
 use App\Core\Support\CompanyContext;
@@ -32,6 +33,8 @@ use Illuminate\View\View;
  */
 class DeliveryStageController extends Controller implements HasMiddleware
 {
+    use GrandTotals;
+
     public function __construct(
         private readonly DeliveryStageService $stages,
         private readonly MenuBuilder $menu,
@@ -55,14 +58,16 @@ class DeliveryStageController extends Controller implements HasMiddleware
          * ⓘ `whereHas('challan')` — চালানের কোম্পানি ও শাখার ছাঁকনি দুইটাই
          * এখানে খাটে; ধাপের সারির নিজের কেবল কোম্পানির ছাঁকনি আছে।
          */
-        $rows = DeliveryState::query()
+        $list = DeliveryState::query()
             ->inTab($tab)
             ->whereHas('challan', fn (Builder $q) => $q->search($term === '' ? null : $term))
             ->with(['challan.customer', 'challan.vehicle'])
             ->orderByDesc('stage_at')
-            ->orderByDesc('id')
-            ->paginate(50)
-            ->withQueryString();
+            ->orderByDesc('id');
+
+        // ⭐ সর্বমোট — ছাঁকা তালিকার সব পাতা মিলে, সারির টাকা চালানের ([[GrandTotals]])
+        $grand = $this->grandTotals($list, ['total' => '(SELECT COALESCE(c.total, 0) FROM sal_challans c WHERE c.id = t.delivery_challan_id)']);
+        $rows = $list->paginate(50)->withQueryString();
 
         /*
          * ⭐ সারির "পরের ধাপ" — কেবল ধাপ বদলানোর চাবিধারীর জন্য (কোঅর্ডিনেটর, ২৯ সেপ্টেম্বর ২০২৬)।
@@ -86,6 +91,7 @@ class DeliveryStageController extends Controller implements HasMiddleware
         return view('sales::delivery.index', [
             'menu' => $this->menu->forUser($request->user()),
             'rows' => $rows,
+            'grand' => $grand,
             'next' => $next,
             'vehicles' => $canMove
                 ? Vehicle::query()->where('is_active', true)->orderBy('registration_no')->get()

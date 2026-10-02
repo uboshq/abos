@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Hr\Http\Controllers;
 
+use App\Core\Concerns\GrandTotals;
 use App\Core\Services\MenuBuilder;
 use App\Http\Controllers\Controller;
 use App\Modules\Hr\Models\PayrollRun;
@@ -20,6 +21,8 @@ use Illuminate\View\View;
  */
 class PayrollController extends Controller implements HasMiddleware
 {
+    use GrandTotals;
+
     public function __construct(
         private readonly PayrollService $payroll,
         private readonly MenuBuilder $menu,
@@ -37,7 +40,8 @@ class PayrollController extends Controller implements HasMiddleware
     {
         return view('hr::payroll.index', [
             'menu' => $this->menu->forUser($request->user()),
-            'runs' => PayrollRun::query()
+            // ⭐ সর্বমোট — ছাঁকা তালিকার সব পাতা মিলে ([[GrandTotals]]); পাতা ভাঙার আগে, কারণ paginate() কোয়েরিতে সীমা বসায়
+            'grand' => $this->grandTotals($list = PayrollRun::query()
                 ->with('branch')
                 /*
                  * ⭐ খোঁজা — টুলবারের ঘরটা সত্যিই কাজ করে (১৯ সেপ্টেম্বর ২০২৬)।
@@ -47,9 +51,10 @@ class PayrollController extends Controller implements HasMiddleware
                     fn ($w) => $w->where('document_no', 'like', "%{$term}%")
                         ->orWhere('narration', 'like', "%{$term}%"),
                 ))
-                ->orderByDesc('month')->orderByDesc('id')
-                // ⓘ withQueryString — পরের পাতায় গেলে খোঁজা আর ঘনত্ব হারায় না
-                ->paginate(50)->withQueryString(),
+                ->orderByDesc('month')->orderByDesc('id'),
+                ['gross_total' => 't.gross_total', 'deduction_total' => 't.deduction_total', 'net_total' => 't.net_total']),
+            // ⓘ withQueryString — পরের পাতায় গেলে খোঁজা আর ঘনত্ব হারায় না
+            'runs' => $list->paginate(50)->withQueryString(),
         ]);
     }
 

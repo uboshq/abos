@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Finance\Http\Controllers;
 
+use App\Core\Concerns\GrandTotals;
 use App\Core\Services\MenuBuilder;
 use App\Core\Support\CompanyContext;
 use App\Http\Controllers\Controller;
@@ -34,6 +35,8 @@ use Illuminate\View\View;
  */
 class WithdrawalController extends Controller implements HasMiddleware
 {
+    use GrandTotals;
+
     public function __construct(
         private readonly MenuBuilder $menu,
         private readonly WithdrawalService $withdrawals,
@@ -75,7 +78,8 @@ class WithdrawalController extends Controller implements HasMiddleware
             'tab' => $tab,
             'month' => is_string($month) && $month !== '' ? $month : now()->format('Y-m'),
             'standing' => $standing,
-            'rows' => Withdrawal::query()->inViewedBranch()->with(['moneyAccount', 'voucher', 'person'])
+            // ⭐ সর্বমোট — ছাঁকা তালিকার সব পাতা মিলে ([[GrandTotals]]); পাতা ভাঙার আগে, কারণ paginate() কোয়েরিতে সীমা বসায়
+            'grand' => $this->grandTotals($list = Withdrawal::query()->inViewedBranch()->with(['moneyAccount', 'voucher', 'person'])
                 ->when($term !== '', fn ($q) => $q->where(
                     fn ($w) => $w->where('document_no', 'like', "%{$term}%")
                         ->orWhere('reason', 'like', "%{$term}%")
@@ -85,7 +89,8 @@ class WithdrawalController extends Controller implements HasMiddleware
                             ->orWhere('mobile', 'like', "%{$term}%")),
                 ))
                 // ⓘ পাতা বদলালে খোঁজা আর ট্যাব হারায় না
-                ->orderByDesc('trx_date')->orderByDesc('id')->paginate(50)->withQueryString(),
+                ->orderByDesc('trx_date')->orderByDesc('id'), ['amount' => 't.amount']),
+            'rows' => $list->paginate(50)->withQueryString(),
 
             // ⓘ ট্যাবের পাশের গোনা — খোঁজায় ছাঁকা নয়, মোট কয়টা
             'counts' => [

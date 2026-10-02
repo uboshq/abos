@@ -56,7 +56,7 @@
          'render' => fn ($d) => view('finance::deposit.partials.where', ['deposit' => $d])],
         ['key' => 'held_by', 'label' => __('finance::field.held_by'), 'width' => '9rem',
          'render' => fn ($d) => view('finance::deposit.partials.holder', ['deposit' => $d])],
-        ['key' => 'principal', 'label' => __('finance::field.principal'), 'numeric' => true,
+        ['key' => 'principal', 'total' => 'money', 'label' => __('finance::field.principal'), 'numeric' => true,
          'width' => '11rem',
          'render' => fn ($d) => view('ui.amount-link', [
              'value' => $d->principal,
@@ -230,6 +230,8 @@
             @include('finance::deposit.partials.institutions', ['institutions' => $institutions])
         @else
         <x-ui.table
+            :grand="$grand ?? []"
+            :view-url="fn ($d) => route('finance.deposit.show', ['issuer' => $issuer, 'deposit' => $d->id])"
             :compact="request()->boolean('compact')"
             :empty="filled(request('q')) ? __('core.empty.no_results') : __('finance::message.no_deposit_yet')"
             :rows="$deposits"

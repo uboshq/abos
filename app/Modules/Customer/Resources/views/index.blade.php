@@ -71,6 +71,8 @@
         ['key' => 'phone', 'label' => __('customer::field.phone'), 'width' => '9rem'],
         [
             'key' => 'outstanding',
+            'total' => 'money',
+            'raw' => fn ($c) => $c->outstanding_in_view ?? $c->outstanding(),
             'label' => __('customer::field.outstanding'),
             'numeric' => true,
             'width' => '10rem',
@@ -261,6 +263,8 @@
         </form>
 
         <x-ui.table
+            :grand="$grand ?? []"
+            :view-url="fn ($d) => route('customer.show', $d)"
             :empty="$q ? __('core.empty.no_results') : __('customer::message.none_yet')"
             :rows="$customers"
             :compact="request()->boolean('compact')"

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Purchase\Http\Controllers;
 
+use App\Core\Concerns\GrandTotals;
 use App\Core\Services\MenuBuilder;
 use App\Core\Support\DocumentStatus;
 use App\Http\Controllers\Controller;
@@ -39,6 +40,8 @@ use Illuminate\View\View;
  */
 class PaymentScheduleController extends Controller implements HasMiddleware
 {
+    use GrandTotals;
+
     /** @var list<string> */
     public const TABS = ['all', 'overdue', 'week', 'month', 'later'];
 
@@ -88,13 +91,15 @@ class PaymentScheduleController extends Controller implements HasMiddleware
         $tab = in_array($request->query('tab'), self::TABS, true) ? (string) $request->query('tab') : 'all';
         $today = Carbon::today();
 
-        $rows = $this->outstanding($tab, $today)
+        $list = $this->outstanding($tab, $today)
             ->with('supplier')
             ->withPaid()
             ->orderByRaw(self::WHEN)
-            ->orderBy('pur_bills.id')
-            ->paginate(50)
-            ->withQueryString();
+            ->orderBy('pur_bills.id');
+
+        // ⭐ সর্বমোট — ট্যাবের সব পাতা মিলে, বিলের তালিকার হুবহু হিসাবে ([[GrandTotals]])
+        $grand = $this->grandTotals($list, ['total' => 't.total', 'amount' => 'GREATEST(t.total - COALESCE(t.paid_total, 0) - COALESCE(t.voucher_paid_total, 0), 0)']);
+        $rows = $list->paginate(50)->withQueryString();
 
         return view('purchase::payment-schedule.index', [
             'menu' => $this->menu->forUser($request->user()),
@@ -102,6 +107,7 @@ class PaymentScheduleController extends Controller implements HasMiddleware
             'today' => $today,
             'buckets' => $this->buckets($today),
             'rows' => $rows,
+            'grand' => $grand,
         ]);
     }
 

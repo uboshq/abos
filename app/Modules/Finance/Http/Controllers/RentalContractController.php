@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Finance\Http\Controllers;
 
+use App\Core\Concerns\GrandTotals;
 use App\Core\Engines\Attachment\AttachmentEngine;
 use App\Core\Engines\Attachment\AttachmentException;
 use App\Core\Services\MenuBuilder;
@@ -38,6 +39,8 @@ use Illuminate\Support\Collection;
  */
 class RentalContractController extends Controller implements HasMiddleware
 {
+    use GrandTotals;
+
     public function __construct(
         private readonly RentalContractService $contracts,
         private readonly MenuBuilder $menu,
@@ -187,6 +190,7 @@ class RentalContractController extends Controller implements HasMiddleware
                 : app(RentalSubjects::class)->describe($subject['type'], $subject['id']),
 
             'menu' => $this->menu->forUser($request->user()),
+            'grand' => $this->grandTotals($query, ['monthly_rent' => 't.monthly_rent', 'cash' => 't.monthly_rent - t.monthly_adjustment', 'monthly_adjustment' => 't.monthly_adjustment']),
             'contracts' => $query->paginate(50)->withQueryString(),
 
             /*

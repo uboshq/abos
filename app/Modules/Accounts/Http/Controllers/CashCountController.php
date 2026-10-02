@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Accounts\Http\Controllers;
 
+use App\Core\Concerns\GrandTotals;
 use App\Core\Concerns\SortsLists;
 use App\Core\Services\MenuBuilder;
 use App\Core\Support\CompanyContext;
@@ -28,6 +29,7 @@ use Illuminate\View\View;
  */
 class CashCountController extends Controller implements HasMiddleware
 {
+    use GrandTotals;
     use SortsLists;
 
     public function __construct(
@@ -51,11 +53,15 @@ class CashCountController extends Controller implements HasMiddleware
 
         $sort = $this->applySort($query, $request, $this->sorts());
 
+        // ⭐ সর্বমোট — ছাঁকা তালিকার সব পাতা মিলে, পাতা ভাঙার আগে ([[GrandTotals]])
+        $grand = $this->grandTotals($query, ['counted_amount' => 't.counted_amount', 'difference' => 't.difference']);
+
         $counts = $query->paginate(50)->withQueryString();
 
         return view('accounts::count.index', [
             'menu' => $this->menu->forUser($request->user()),
             'counts' => $counts,
+            'grand' => $grand,
             'q' => $request->query('q'),
             'sortOptions' => $this->sortLabels(),
             'sort' => $sort,

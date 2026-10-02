@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Finance\Http\Controllers;
 
+use App\Core\Concerns\GrandTotals;
 use App\Core\Services\MenuBuilder;
 use App\Core\Support\CompanyContext;
 use App\Http\Controllers\Controller;
@@ -28,6 +29,8 @@ use Illuminate\View\View;
  */
 class InsuranceController extends Controller implements HasMiddleware
 {
+    use GrandTotals;
+
     /** @var list<string> */
     private const TABS = ['all', 'due', 'unpaid', 'inactive'];
 
@@ -53,6 +56,8 @@ class InsuranceController extends Controller implements HasMiddleware
             'menu' => $this->menu->forUser($request->user()),
             'tab' => $tab,
             'counts' => collect(self::TABS)->mapWithKeys(fn ($t) => [$t => $this->filtered($t)->count()]),
+            // ⭐ সর্বমোট — ট্যাবের সব পাতা মিলে ([[GrandTotals]])
+            'grand' => $this->grandTotals($this->filtered($tab), ['sum_insured' => 't.sum_insured', 'premium' => 't.premium']),
             'policies' => $this->filtered($tab)
                 ->with(['institution', 'premiums'])
                 ->orderBy('ends_on')

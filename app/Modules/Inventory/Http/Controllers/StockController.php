@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Inventory\Http\Controllers;
 
+use App\Core\Concerns\GrandTotals;
 use App\Core\Concerns\SortsLists;
 use App\Core\Services\MenuBuilder;
 use App\Core\Support\CompanyContext;
@@ -35,6 +36,7 @@ use Illuminate\View\View;
  */
 class StockController extends Controller implements HasMiddleware
 {
+    use GrandTotals;
     use SortsLists;
 
     /**
@@ -217,11 +219,27 @@ class StockController extends Controller implements HasMiddleware
 
         $sort = $this->applySort($query, $request, $this->sorts());
 
+        /*
+         * ⭐ সর্বমোট — ছাঁকা তালিকার সব পাতা মিলে (মালিক, ১ অক্টোবর ২০২৬; [[GrandTotals]])।
+         * ⓘ মূল্য কেবল দাম দেখার চাবিতে — স্তরের ঘর দুইটা তখনই কোয়েরিতে থাকে।
+         */
+        $grand = $this->grandTotals($query, [
+            'floor' => 't.floor_total',
+            'reserved' => 't.reserved_total',
+            'hold' => 't.hold_total',
+            'available' => 't.floor_total - t.reserved_total - t.hold_total',
+            'free' => 't.free_total',
+            'free_available' => 't.free_total - t.free_reserved_total',
+            'unplaced' => 't.unplaced_total',
+            'unplaced_free' => 't.unplaced_free_total',
+        ] + ($this->maySeeCost($request) ? ['stock_value' => 'CASE WHEN t.layer_qty_total > 0 THEN TRUNCATE((t.floor_total + t.unplaced_total + t.free_total + t.unplaced_free_total) * TRUNCATE(t.layer_value_total / t.layer_qty_total, 4), 4) ELSE 0 END'] : []));
+
         $products = $query->paginate(50)->withQueryString();
 
         return view('inventory::stock.index', [
             'menu' => $this->menu->forUser($request->user()),
             'products' => $products,
+            'grand' => $grand,
 
             /*
              * ⭐ প্রতিটা পণ্যের প্যাকের সিঁড়ি — পরিমাণ ভেঙে দেখানোর জন্য

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Accounts\Http\Controllers;
 
+use App\Core\Concerns\GrandTotals;
 use App\Core\Services\MenuBuilder;
 use App\Core\Services\PartyRegistry;
 use App\Core\Support\DocumentStatus;
@@ -27,6 +28,8 @@ use Illuminate\View\View;
  */
 class NoteController extends Controller implements HasMiddleware
 {
+    use GrandTotals;
+
     public function __construct(
         private readonly NoteService $notes,
         private readonly PartyRegistry $parties,
@@ -47,7 +50,7 @@ class NoteController extends Controller implements HasMiddleware
             ? (string) $request->query('direction')
             : Note::CREDIT;
 
-        $rows = Note::query()
+        $list = Note::query()
             ->ofDirection($direction)
             ->when($request->query('q'), fn ($q, $term) => $q
                 ->where(fn ($w) => $w
@@ -55,9 +58,11 @@ class NoteController extends Controller implements HasMiddleware
                     ->orWhere('against_no', 'like', "%{$term}%")
                     ->orWhere('narration', 'like', "%{$term}%")))
             ->orderByDesc('trx_date')
-            ->orderByDesc('id')
-            ->paginate(50)
-            ->withQueryString();
+            ->orderByDesc('id');
+
+        // ⭐ সর্বমোট — ছাঁকা তালিকার সব পাতা মিলে ([[GrandTotals]]); পাতা ভাঙার আগে, কারণ paginate() কোয়েরিতে সীমা বসায়
+        $grand = $this->grandTotals($list, ['total' => 't.total']);
+        $rows = $list->paginate(50)->withQueryString();
 
         /*
          * ⓘ পক্ষের নাম একবারে — সারি প্রতি একটা প্রশ্ন করলে পঞ্চাশ সারির
@@ -69,6 +74,7 @@ class NoteController extends Controller implements HasMiddleware
             'menu' => $this->menu->forUser($request->user()),
             'direction' => $direction,
             'rows' => $rows,
+            'grand' => $grand,
             'names' => $this->parties->labelsOf($pairs),
 
             // ⭐ নামটা যেন তাঁর নিজের পাতায় নিয়ে যায় — মালিকের নিয়ম

@@ -6,6 +6,7 @@ namespace App\Modules\Sales\Http\Controllers;
 
 use App\Core\Concerns\AuthorizesResource;
 use App\Core\Concerns\FiltersByDate;
+use App\Core\Concerns\GrandTotals;
 use App\Core\Concerns\SortsLists;
 use App\Core\Services\MenuBuilder;
 use App\Core\Support\DocumentStatus;
@@ -32,6 +33,7 @@ class CollectionController extends Controller implements HasMiddleware
 {
     use AuthorizesResource;
     use FiltersByDate;
+    use GrandTotals;
     use SortsLists;
 
     public function __construct(
@@ -91,6 +93,7 @@ class CollectionController extends Controller implements HasMiddleware
 
         return view('sales::collection.index', [
             'menu' => $this->menu->forUser($request->user()),
+            'grand' => $this->grandTotals($query, ['amount' => 't.amount']),
             'collections' => $query->paginate(50)->withQueryString(),
             'totals' => [
                 'rows' => (clone $totalled)->count(),

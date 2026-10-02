@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\View\Components\Ui;
 
 use App\Core\Services\ListExport;
+use App\Core\Support\Money;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\View\Component;
 use Illuminate\View\View;
 use InvalidArgumentException;
@@ -73,6 +75,25 @@ class Table extends Component
          * মানে না।
          */
         public ?string $totalsLabel = null,
+
+        /*
+         * ⭐ সর্বমোট — গোটা ছাঁকা তালিকার, সব পাতার (মালিক, ১ অক্টোবর ২০২৬: *"kono list er niche grand total nai keno"*)।
+         *
+         * কলামের চাবি => কাঁচা সংখ্যা। ⓘ কন্ট্রোলার দেয় ([[GrandTotals]]) — একই ছাঁকা কোয়েরি থেকে একটা যোগের প্রশ্ন,
+         * তাই সংখ্যাটা ছাঁকনি আর শাখার দেয়াল মানে, আর পর্দার সারির যোগের সাথে মেলে। ⛔ কম্পোনেন্ট নিজে গোটা
+         * তালিকা গোনে না — সে কেবল এই পাতা দেখে। কোন কলাম যোগ হবে তা কলাম নিজে বলে (`'total' => 'money'|'quantity'`)।
+         *
+         * @var array<string, string|int|float|null>
+         */
+        public array $grand = [],
+
+        /*
+         * ⭐ "দেখুন" — প্রতিটা সারিতে চোখের বোতাম, কাগজটা খোলে (মালিক, ১ অক্টোবর ২০২৬: *"view botam ba icon dite dawni keno"*)।
+         *
+         * সারি => ঠিকানা। ⓘ এটা একটা সাধারণ লিংক, তাই মালিকের নিয়মে তালিকার উপর পপআপে খোলে ([[peek]]); Ctrl-ক্লিকে নতুন
+         * ট্যাব। ⓘ একবার এখানে — বিশটা তালিকায় হাতে লেখা নয়; রপ্তানিতে যায় না (ওটা বোতাম, তথ্য নয়)।
+         */
+        public ?\Closure $viewUrl = null,
     ) {
         foreach ($columns as $index => $column) {
             if (is_string($column)) {
@@ -100,6 +121,12 @@ class Table extends Component
                 // কম্পোনেন্ট নিজে রেন্ডার করতে হত — Customer মডিউল লিখতে
                 // গিয়ে ঠিক সেটাই ঘটেছিল, আর সেটাই ছিল ভিত্তির ফাঁকের চিহ্ন।
                 'render' => $column['render'] ?? null,
+
+                // ⭐ সর্বমোটের ধরন — 'money' বা 'quantity'; না দিলে যোগ নয়
+                'total' => in_array($column['total'] ?? null, ['money', 'quantity'], true) ? $column['total'] : null,
+
+                // ⓘ "এই পাতা"-র যোগের জন্য সারির কাঁচা সংখ্যা; না দিলে সারির একই নামের ঘর
+                'raw' => $column['raw'] ?? null,
             ];
         }
 
@@ -163,9 +190,91 @@ class Table extends Component
 
         if ($export->wanted()) {
             $export->capture($this->normalised, $this->rows, $this->cell(...));
+
+            // ⭐ সর্বমোট ফাইলের শেষেও — পর্দায় যা, ফাইলেও তাই
+            if ($this->hasGrand()) {
+                $export->footer($this->grandLine());
+            }
         }
 
         return view('components.ui.table');
+    }
+
+    /** কোনো কলাম যোগ চায়, আর কন্ট্রোলার সর্বমোট দিয়েছে */
+    public function hasGrand(): bool
+    {
+        return $this->grand !== [] && collect($this->normalised)->contains(fn ($c) => $c['total'] !== null);
+    }
+
+    /**
+     * "এই পাতা"-র সারি দরকার কি না — তালিকা কয়েক পাতায় ভাগ হলে তবেই; এক পাতায় সর্বমোটই এই পাতা।
+     */
+    public function showsPageTotal(): bool
+    {
+        return $this->hasGrand()
+            && $this->rows instanceof LengthAwarePaginator
+            && $this->rows->lastPage() > 1;
+    }
+
+    /**
+     * সর্বমোটের সারি, কলামের ক্রমে — প্রথম ঘরে লেবেল (প্রথম কলামটা নিজে যোগের হলে লেবেল ঐ সারির শুরুতে আলাদা নয়)।
+     *
+     * @return list<string>
+     */
+    public function grandLine(): array
+    {
+        return $this->line(fn (array $c) => $this->grand[$c['key']] ?? null, __('core.table.grand_total'));
+    }
+
+    /** @return list<string> */
+    public function pageLine(): array
+    {
+        return $this->line(function (array $c) {
+            $sum = '0';
+
+            foreach ($this->rows as $row) {
+                $value = $c['raw'] instanceof \Closure ? ($c['raw'])($row) : data_get($row, $c['key']);
+                $sum = bcadd($sum, is_numeric($value) ? (string) $value : '0', 4);
+            }
+
+            return $sum;
+        }, __('core.table.page_total'));
+    }
+
+    /**
+     * @param  \Closure(array): mixed  $value
+     * @return list<string>
+     */
+    private function line(\Closure $value, string $label): array
+    {
+        $out = [];
+
+        foreach ($this->normalised as $i => $column) {
+            if ($column['total'] === null) {
+                $out[] = $i === 0 ? $label : '';
+
+                continue;
+            }
+
+            $amount = $value($column);
+            $out[] = $amount === null ? '' : self::format((string) $amount, $column['total']);
+        }
+
+        return $out;
+    }
+
+    /** টাকা টাকার মতো, পরিমাণ পরিমাণের মতো — সারির ঘরের একই চেহারা */
+    public static function format(string $amount, string $kind): string
+    {
+        return $kind === 'money'
+            ? Money::format($amount)
+            : Money::quantity($amount);
+    }
+
+    /** সংখ্যাটা ঋণাত্মক কি না — লাল রঙের জন্য */
+    public static function negative(string $formatted): bool
+    {
+        return str_starts_with(trim($formatted), '-') || str_starts_with(trim($formatted), '(');
     }
 
     /**

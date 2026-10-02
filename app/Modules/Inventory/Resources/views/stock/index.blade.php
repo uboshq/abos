@@ -127,6 +127,8 @@
         ],
         [
             'key' => 'floor',
+            'total' => 'quantity',
+            'raw' => fn ($p) => $p->floor_total,
             'label' => __('inventory::field.floor'),
             'numeric' => true,
             'width' => '10rem',
@@ -138,6 +140,8 @@
         ],
         [
             'key' => 'reserved',
+            'total' => 'quantity',
+            'raw' => fn ($p) => $p->reserved_total,
             'label' => __('inventory::field.reserved'),
             'numeric' => true,
             'width' => '8rem',
@@ -148,6 +152,8 @@
         ],
         [
             'key' => 'hold',
+            'total' => 'quantity',
+            'raw' => fn ($p) => $p->hold_total,
             'label' => __('inventory::field.hold'),
             'numeric' => true,
             'width' => '8rem',
@@ -168,6 +174,8 @@
         ],
         [
             'key' => 'available',
+            'total' => 'quantity',
+            'raw' => $available,
             'label' => __('inventory::field.available'),
             'numeric' => true,
             'width' => '9rem',
@@ -178,6 +186,8 @@
         ],
         [
             'key' => 'free',
+            'total' => 'quantity',
+            'raw' => fn ($p) => $p->free_total,
             'label' => __('inventory::field.free'),
             'numeric' => true,
             'width' => '8rem',
@@ -188,6 +198,8 @@
         ],
         [
             'key' => 'free_available',
+            'total' => 'quantity',
+            'raw' => $freeAvailable,
             'label' => __('inventory::field.free_available'),
             'numeric' => true,
             'width' => '9rem',
@@ -198,6 +210,8 @@
         ],
         [
             'key' => 'unplaced',
+            'total' => 'quantity',
+            'raw' => fn ($p) => $p->unplaced_total,
             'label' => __('inventory::field.unplaced'),
             'numeric' => true,
             'width' => '8rem',
@@ -208,6 +222,8 @@
         ],
         [
             'key' => 'unplaced_free',
+            'total' => 'quantity',
+            'raw' => fn ($p) => $p->unplaced_free_total,
             'label' => __('inventory::field.unplaced_free'),
             'numeric' => true,
             'width' => '9rem',
@@ -264,6 +280,8 @@
 
         $columns[] = [
             'key' => 'stock_value',
+            'total' => 'money',
+            'raw' => fn ($p) => ($c = $unitCost($p)) === null ? '0' : bcmul($onHand($p), $c, 4),
             'label' => __('inventory::field.stock_value'),
             'numeric' => true,
             'width' => '10rem',
@@ -396,7 +414,9 @@
             :rows="$products"
             :compact="request()->boolean('compact')"
             :columns="$columns"
-            :totals="$totals" />
+            :grand="$grand ?? []"
+            :view-url="fn ($p) => route('inventory.product.show', $p).'#movements'"
+            :totals="isset($grand) ? [] : $totals" />
 
         <x-ui.pager :rows="$products" />
     </div>

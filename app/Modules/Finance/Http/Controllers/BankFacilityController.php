@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Finance\Http\Controllers;
 
+use App\Core\Concerns\GrandTotals;
 use App\Core\Engines\Attachment\AttachmentEngine;
 use App\Core\Engines\Attachment\AttachmentException;
 use App\Core\Services\MenuBuilder;
@@ -34,6 +35,8 @@ use Illuminate\View\View;
  */
 class BankFacilityController extends Controller implements HasMiddleware
 {
+    use GrandTotals;
+
     /*
      * ⛔ কোড তিনটা এখানে ধ্রুবক, কারণ ছকের মালিক `Accounts/`।
      *
@@ -115,6 +118,7 @@ class BankFacilityController extends Controller implements HasMiddleware
              * কারণ ছাড়াই।
              */
             'facilities' => $facilities,
+            'grand' => $this->grandTotals($this->facilityQuery($tab, $term), ['limit_amount' => 't.limit_amount']),
             'renewals' => $this->facilities->dueForRenewal(),
         ]);
     }
@@ -126,6 +130,12 @@ class BankFacilityController extends Controller implements HasMiddleware
      * কোয়েরি চালানো মানে একদিন দুইটা আলাদা তালিকা।
      */
     private function facilityList(string $tab, string $term): LengthAwarePaginator
+    {
+        return $this->facilityQuery($tab, $term)->paginate(50)->withQueryString();
+    }
+
+    /** ⓘ তালিকার কোয়েরি, পাতা ভাঙার আগে — সর্বমোটও ঠিক এটাই যোগ করে ([[GrandTotals]]) */
+    private function facilityQuery(string $tab, string $term): Builder
     {
         return BankFacility::query()->inViewedBranch()
             // ⓘ তালিকায় প্রতিষ্ঠানের কলাম আছে — নাহলে প্রতি সারিতে একটা কোয়েরি
@@ -145,7 +155,7 @@ class BankFacilityController extends Controller implements HasMiddleware
                     ->orWhere('document_no', 'like', "%{$term}%")
                     ->orWhere('note', 'like', "%{$term}%"),
             ))
-            ->latest('id')->paginate(50)->withQueryString();
+            ->latest('id');
     }
 
     /**

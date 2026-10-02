@@ -124,7 +124,7 @@
          'render' => fn ($e) => $e->share_percent === null
              ? '—'
              : $trim((string) $e->share_percent).'%'],
-        ['key' => 'amount', 'label' => __('finance::field.amount'), 'numeric' => true, 'width' => '10rem',
+        ['key' => 'amount', 'total' => 'money', 'label' => __('finance::field.amount'), 'numeric' => true, 'width' => '10rem',
          'render' => fn ($e) => \App\Core\Support\Money::format($e->amount)],
         /* ⚠️ চওড়া, কারণ ভিতরে খাতের ঘর, নম্বরের ঘর আর বোতাম —
            তিনটা। সরু রাখলে লেখাগুলো লম্বালম্বি ভেঙে যায়। */
@@ -273,6 +273,8 @@
             </h2>
 
             <x-ui.table
+                :grand="$grand ?? []"
+                :view-url="fn ($e) => $e->voucher_id ? route('accounts.voucher.show', $e->voucher_id) : null"
                 :compact="request()->boolean('compact')"
                 :empty="request('q') ? __('core.empty.no_results') : __('finance::message.no_capital_yet')"
                 :rows="$entries"

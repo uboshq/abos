@@ -29,11 +29,11 @@
          */
         ['key' => 'subject', 'label' => __('finance::field.rental_subject'),
          'render' => fn ($c) => view('finance::rental.partials.place', ['contract' => $c])],
-        ['key' => 'monthly_rent', 'label' => __('finance::field.rental_rent'), 'numeric' => true,
+        ['key' => 'monthly_rent', 'total' => 'money', 'label' => __('finance::field.rental_rent'), 'numeric' => true,
          'render' => fn ($c) => \App\Core\Support\Money::format($c->monthly_rent)],
-        ['key' => 'cash', 'label' => __('finance::field.rental_cash'), 'numeric' => true,
+        ['key' => 'cash', 'total' => 'money', 'raw' => fn ($c) => $c->monthlyCash(), 'label' => __('finance::field.rental_cash'), 'numeric' => true,
          'render' => fn ($c) => \App\Core\Support\Money::format($c->monthlyCash())],
-        ['key' => 'monthly_adjustment', 'label' => __('finance::field.rental_from_deposit'), 'numeric' => true,
+        ['key' => 'monthly_adjustment', 'total' => 'money', 'label' => __('finance::field.rental_from_deposit'), 'numeric' => true,
          'render' => fn ($c) => \App\Core\Support\Money::format($c->monthly_adjustment)],
         /* ⭐ যে সংখ্যাটার জন্য এই পর্দা — ফেরত পাওয়ার টাকা */
         ['key' => 'deposit_left', 'label' => __('finance::field.rental_deposit_left'), 'numeric' => true,
@@ -180,6 +180,8 @@
             @include('finance::rental.partials.people', ['people' => $people])
         @else
             <x-ui.table :rows="$contracts"
+                        :grand="$grand ?? []"
+                        :view-url="fn ($c) => route('finance.rental.show', $c)"
                         :columns="$rentColumns"
                         :compact="request()->boolean('compact')"
                         :empty="request('q') ? __('core.empty.no_results') : __('finance::message.no_rentals')" />

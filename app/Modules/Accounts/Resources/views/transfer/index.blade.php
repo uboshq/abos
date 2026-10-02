@@ -16,7 +16,7 @@
          'render' => fn ($t) => $t->fromTill?->name() . ($t->giver ? ' — ' . $t->giver->name : '')],
         ['key' => 'to_till_id', 'label' => __('accounts::field.moved_to'),
          'render' => fn ($t) => $t->destinationName() . ($t->receiver ? ' — ' . $t->receiver->name : '')],
-        ['key' => 'amount', 'label' => __('accounts::field.amount'), 'numeric' => true, 'width' => '10rem',
+        ['key' => 'amount', 'total' => 'money', 'label' => __('accounts::field.amount'), 'numeric' => true, 'width' => '10rem',
          'render' => fn ($t) => \App\Core\Support\Money::format($t->amount)],
         ['key' => 'status', 'label' => __('accounts::field.state'), 'width' => '9rem',
          'render' => fn ($t) => view('accounts::transfer.partials.status', ['transfer' => $t])],
@@ -86,6 +86,8 @@
         </form>
 
         <x-ui.table
+            :grand="$grand ?? []"
+            :view-url="fn ($d) => route('accounts.transfer.show', $d)"
             :compact="request()->boolean('compact')"
             :empty="$q ? __('core.empty.no_results') : __('accounts::message.no_transfers')"
             :rows="$transfers"

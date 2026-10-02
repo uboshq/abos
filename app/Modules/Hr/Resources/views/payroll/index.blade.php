@@ -7,11 +7,11 @@
          'render' => fn ($r) => $r->month->format('M Y')],
         ['key' => 'employee_count', 'label' => __('hr::field.employee_count'), 'numeric' => true,
          'width' => '7rem', 'render' => fn ($r) => $r->employee_count],
-        ['key' => 'gross_total', 'label' => __('hr::field.gross'), 'numeric' => true, 'width' => '10rem',
+        ['key' => 'gross_total', 'total' => 'money', 'label' => __('hr::field.gross'), 'numeric' => true, 'width' => '10rem',
          'render' => fn ($r) => \App\Core\Support\Money::format($r->gross_total)],
-        ['key' => 'deduction_total', 'label' => __('hr::field.deductions'), 'numeric' => true,
+        ['key' => 'deduction_total', 'total' => 'money', 'label' => __('hr::field.deductions'), 'numeric' => true,
          'width' => '10rem', 'render' => fn ($r) => \App\Core\Support\Money::format($r->deduction_total)],
-        ['key' => 'net_total', 'label' => __('hr::field.net'), 'numeric' => true, 'width' => '10rem',
+        ['key' => 'net_total', 'total' => 'money', 'label' => __('hr::field.net'), 'numeric' => true, 'width' => '10rem',
          'render' => fn ($r) => \App\Core\Support\Money::format($r->net_total)],
         ['key' => 'status', 'label' => __('hr::field.status'), 'width' => '8rem',
          'render' => fn ($r) => __('core.status.' . $r->status)],
@@ -47,6 +47,8 @@
         </form>
 
         <x-ui.table
+            :grand="$grand ?? []"
+            :view-url="fn ($r) => route('hr.payroll.show', $r)"
             :compact="request()->boolean('compact')"
             :empty="request('q') ? __('core.empty.no_results') : __('hr::message.no_runs')"
             :rows="$runs"

@@ -62,7 +62,7 @@
          'render' => fn ($v) => view('accounts::voucher.partials.number', ['voucher' => $v])],
         ...$flowColumns,
         ['key' => 'narration', 'label' => __('core.table.narration')],
-        ['key' => 'amount', 'label' => __('accounts::field.amount'), 'numeric' => true, 'width' => '10rem',
+        ['key' => 'amount', 'total' => 'money', 'label' => __('accounts::field.amount'), 'numeric' => true, 'width' => '10rem',
          'render' => fn ($v) => \App\Core\Support\Money::format($v->amount)],
         ['key' => 'status', 'label' => __('accounts::field.state'), 'width' => '8rem',
          'render' => fn ($v) => view('accounts::voucher.partials.status', [
@@ -145,6 +145,8 @@
         @endif
 
         <x-ui.table
+            :grand="$grand ?? []"
+            :view-url="fn ($d) => route('accounts.voucher.show', $d)"
             :compact="request()->boolean('compact')"
             :empty="$q ? __('core.empty.no_results') : __('accounts::message.no_vouchers')"
             :rows="$vouchers"

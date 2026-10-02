@@ -64,6 +64,7 @@
 
         [
             'key' => 'total',
+            'total' => 'money',
             'label' => __('purchase::field.total'),
             'numeric' => true,
             'width' => '10rem',
@@ -74,6 +75,8 @@
         ],
         [
             'key' => 'paid_total',
+            'total' => 'money',
+            'raw' => fn ($d) => $d->paidAmount(),
             'label' => __('purchase::field.bill_paid'),
             'numeric' => true,
             'width' => '9rem',
@@ -81,6 +84,8 @@
         ],
         [
             'key' => 'due',
+            'total' => 'money',
+            'raw' => fn ($d) => $d->dueAmount(),
             'label' => __('purchase::field.bill_due'),
             'numeric' => true,
             'width' => '9rem',
@@ -130,6 +135,8 @@
         </form>
 
         <x-ui.table
+            :grand="$grand ?? []"
+            :view-url="fn ($d) => route('purchase.bill.show', $d)"
             :empty="$q ? __('core.empty.no_results') : __('purchase::message.no_bills')"
             :rows="$bills"
             :compact="request()->boolean('compact')"

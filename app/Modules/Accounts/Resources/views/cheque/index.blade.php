@@ -14,7 +14,7 @@
          'render' => fn ($c) => view('accounts::cheque.partials.date', ['cheque' => $c])],
         ['key' => 'bank_name', 'label' => __('accounts::field.bank_name'),
          'render' => fn ($c) => $c->bank_name ?: '—'],
-        ['key' => 'amount', 'label' => __('accounts::field.amount'),
+        ['key' => 'amount', 'total' => 'money', 'label' => __('accounts::field.amount'),
          'numeric' => true, 'width' => '11rem',
          'render' => fn ($c) => \App\Core\Support\Money::format($c->amount)],
         ['key' => 'state', 'label' => __('accounts::field.state'), 'width' => '11rem',
@@ -133,6 +133,7 @@
         </form>
 
         <x-ui.table :rows="$cheques"
+                    :grand="$grand ?? []"
                     :columns="$columns"
                     :compact="request()->boolean('compact')"
                     :empty="$q ? __('core.empty.no_results') : __('accounts::message.no_cheques')" />

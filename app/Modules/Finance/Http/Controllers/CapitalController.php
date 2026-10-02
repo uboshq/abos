@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Finance\Http\Controllers;
 
+use App\Core\Concerns\GrandTotals;
 use App\Modules\Accounts\Services\BalanceSheetService;
 use App\Core\Engines\Attachment\AttachmentEngine;
 use App\Core\Engines\Attachment\AttachmentException;
@@ -37,6 +38,8 @@ use Illuminate\View\View;
  */
 class CapitalController extends Controller implements HasMiddleware
 {
+    use GrandTotals;
+
     public function __construct(
         private readonly MenuBuilder $menu,
         private readonly CapitalService $capital,
@@ -96,7 +99,8 @@ class CapitalController extends Controller implements HasMiddleware
              * ⓘ `person`-ও সাথেই — প্রতিটা সারিতে নামটা দেখানো হয়, আর
              * আলাদা করে আনলে পঞ্চাশ সারির পাতায় পঞ্চাশটা বাড়তি কোয়েরি হত।
              */
-            'entries' => CapitalEntry::query()->inViewedBranch()->with(['account', 'person'])
+            // ⭐ সর্বমোট — ছাঁকা তালিকার সব পাতা মিলে ([[GrandTotals]]); পাতা ভাঙার আগে, কারণ paginate() কোয়েরিতে সীমা বসায়
+            'grand' => $this->grandTotals($list = CapitalEntry::query()->inViewedBranch()->with(['account', 'person'])
                 ->when($personId, fn ($q, $id) => $q->where('person_id', $id))
                 /*
                  * ⭐ খোঁজা — টুলবারের ঘরটা সত্যিই কাজ করে (১৯ সেপ্টেম্বর ২০২৬)।
@@ -111,7 +115,8 @@ class CapitalController extends Controller implements HasMiddleware
                             ->orWhere('name_bn', 'like', "%{$term}%")
                             ->orWhere('code', 'like', "%{$term}%")),
                 ))
-                ->orderByDesc('trx_date')->orderByDesc('id')->paginate(50)->withQueryString(),
+                ->orderByDesc('trx_date')->orderByDesc('id'), ['amount' => 't.amount']),
+            'entries' => $list->paginate(50)->withQueryString(),
             /*
              * ⓘ মুনাফাটা স্থিতিপত্র থেকে — **একটাই উৎস**।
              *

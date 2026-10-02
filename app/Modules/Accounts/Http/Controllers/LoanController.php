@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Accounts\Http\Controllers;
 
+use App\Core\Concerns\GrandTotals;
 use App\Core\Services\MenuBuilder;
 use App\Core\Support\CompanyContext;
 use App\Http\Controllers\Controller;
@@ -31,6 +32,8 @@ use Illuminate\View\View;
  */
 class LoanController extends Controller implements HasMiddleware
 {
+    use GrandTotals;
+
     public function __construct(
         private readonly LoanService $loans,
         private readonly MenuBuilder $menu,
@@ -48,7 +51,7 @@ class LoanController extends Controller implements HasMiddleware
 
     public function index(Request $request): View
     {
-        $loans = Loan::query()
+        $list = Loan::query()
             /*
              * খোঁজা — কাগজের নম্বর, ঋণদাতা আর ব্যাংকের হিসাব নম্বর।
              *
@@ -60,11 +63,20 @@ class LoanController extends Controller implements HasMiddleware
                     ->orWhere('lender', 'like', "%{$term}%")
                     ->orWhere('account_no', 'like', "%{$term}%")
             ))
-            ->orderByDesc('id')->paginate(50)->withQueryString();
+            ->orderByDesc('id');
+
+        /*
+         * ⭐ সর্বমোট — ছাঁকা তালিকার সব পাতা মিলে ([[GrandTotals]])। ⓘ বকেয়া সারি ধরে হিসাব হয় ([[Loan::outstanding()]]),
+         * তাই সেটা গোটা তালিকা হেঁটে — ঋণ হাতে গোনা কয়েকটা।
+         */
+        $grand = $this->grandTotals($list, ['sanctioned' => 't.sanctioned']) + ['outstanding' => (clone $list)->get()
+            ->reduce(fn (string $sum, Loan $l) => bcadd($sum, (string) $l->outstanding(), 4), '0')];
+        $loans = $list->paginate(50)->withQueryString();
 
         return view('accounts::loan.index', [
             'menu' => $this->menu->forUser($request->user()),
             'loans' => $loans,
+            'grand' => $grand,
             'q' => $request->query('q'),
 
             /*

@@ -38,6 +38,7 @@
         ],
         [
             'key' => 'amount',
+            'total' => 'money',
             'label' => __('sales::field.total'),
             'numeric' => true,
             'width' => '10rem',
@@ -88,6 +89,8 @@
         </form>
 
         <x-ui.table
+            :grand="$grand ?? []"
+            :view-url="fn ($d) => route('sales.collection.show', $d)"
             :empty="$q ? __('core.empty.no_results') : __('sales::message.no_collections')"
             :rows="$collections"
             :compact="request()->boolean('compact')"

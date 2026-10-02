@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Sales\Http\Controllers;
 
 use App\Core\Concerns\FiltersByDate;
+use App\Core\Concerns\GrandTotals;
 use App\Core\Concerns\SortsLists;
 use App\Core\Services\MenuBuilder;
 use App\Http\Controllers\Controller;
@@ -23,6 +24,7 @@ use Illuminate\View\View;
 class DeliveryOrderController extends Controller implements HasMiddleware
 {
     use FiltersByDate;
+    use GrandTotals;
     use SortsLists;
 
     public function __construct(
@@ -56,6 +58,7 @@ class DeliveryOrderController extends Controller implements HasMiddleware
 
         return view('sales::do.index', [
             'menu' => $this->menu->forUser($request->user()),
+            'grand' => $this->grandTotals($query, ['total' => 't.total']),
             'orders' => $query->paginate(50)->withQueryString(),
             'tab' => $tab,
             'q' => $request->query('q'),

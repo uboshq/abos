@@ -52,6 +52,8 @@
         ['key' => 'phone', 'label' => __('supplier::field.phone'), 'width' => '9rem'],
         [
             'key' => 'payable',
+            'total' => 'money',
+            'raw' => fn ($s) => $s->payable_in_view ?? $s->payable(),
             'label' => __('supplier::field.payable'),
             'numeric' => true,
             'width' => '10rem',
@@ -139,6 +141,8 @@
             লেখা হিসেবে পাতায় ছাপা হয়। তাই ব্যাখ্যাটা এখানে, বাইরে।
         --}}
         <x-ui.table
+            :grand="$grand ?? []"
+            :view-url="fn ($d) => route('supplier.show', $d)"
             :empty="$q ? __('core.empty.no_results') : __('supplier::message.none_yet')"
             :rows="$suppliers"
             :compact="request()->boolean('compact')"

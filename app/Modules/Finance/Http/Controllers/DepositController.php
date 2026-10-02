@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Finance\Http\Controllers;
 
+use App\Core\Concerns\GrandTotals;
 use App\Core\Engines\Attachment\AttachmentEngine;
 use App\Core\Engines\Attachment\AttachmentException;
 use App\Core\Services\MenuBuilder;
@@ -41,6 +42,8 @@ use Illuminate\View\View;
  */
 class DepositController extends Controller implements HasMiddleware
 {
+    use GrandTotals;
+
     public function __construct(
         private readonly MenuBuilder $menu,
         private readonly DepositService $deposits,
@@ -224,7 +227,8 @@ class DepositController extends Controller implements HasMiddleware
                     ->count()])
                 ->all(),
 
-            'deposits' => Deposit::query()->inViewedBranch()
+            // ⭐ সর্বমোট — ছাঁকা তালিকার সব পাতা মিলে ([[GrandTotals]]); পাতা ভাঙার আগে, কারণ paginate() কোয়েরিতে সীমা বসায়
+            'grand' => $this->grandTotals($list = Deposit::query()->inViewedBranch()
                 ->issuedBy($issuer)
                 ->when($tab === 'closed',
                     fn ($q) => $q->where('status', '!=', Deposit::ACTIVE),
@@ -246,9 +250,8 @@ class DepositController extends Controller implements HasMiddleware
                 ->orderByRaw('CASE WHEN status = ? THEN 0 ELSE 1 END', [Deposit::ACTIVE])
                 ->orderByRaw('matures_on IS NULL')
                 ->orderBy('matures_on')
-                ->orderByDesc('id')
-                ->paginate(50)
-                ->withQueryString(),
+                ->orderByDesc('id'), ['principal' => 't.principal']),
+            'deposits' => $list->paginate(50)->withQueryString(),
         ]);
     }
 

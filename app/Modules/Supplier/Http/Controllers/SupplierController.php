@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Supplier\Http\Controllers;
 
 use App\Core\Concerns\AuthorizesResource;
+use App\Core\Concerns\GrandTotals;
 use App\Core\Concerns\SortsLists;
 use App\Core\Services\CustomFieldService;
 use App\Core\Services\MenuBuilder;
@@ -34,6 +35,8 @@ use Illuminate\View\View;
  */
 class SupplierController extends Controller implements HasMiddleware
 {
+    use GrandTotals;
+
     public function __construct(
         private readonly SupplierService $suppliers,
         private readonly MenuBuilder $menu,
@@ -117,6 +120,9 @@ class SupplierController extends Controller implements HasMiddleware
 
         $sort = $this->applySort($query, $request, $this->sorts());
 
+        // ⭐ সর্বমোট — ছাঁকা তালিকার সব পাতা মিলে, পাতা ভাঙার আগে ([[GrandTotals]])
+        $grand = $this->grandTotals($query, ['payable' => 't.payable_in_view']);
+
         $suppliers = $query
             // পেজিনেশন বাধ্যতামূলক (সেকশন ৯)
             ->paginate(50)
@@ -125,6 +131,7 @@ class SupplierController extends Controller implements HasMiddleware
         return view('supplier::index', [
             'menu' => $this->menu->forUser($request->user()),
             'suppliers' => $suppliers,
+            'grand' => $grand,
             'q' => $request->query('q'),
             'showInactive' => $request->boolean('inactive'),
             'sortOptions' => $this->sortLabels(),

@@ -15,7 +15,7 @@
          'render' => fn ($p) => $p->supplier?->name()],
         ['key' => 'account', 'label' => __('purchase::field.account'), 'width' => '11rem',
          'render' => fn ($p) => $p->account?->name()],
-        ['key' => 'amount', 'label' => __('purchase::field.amount'), 'numeric' => true, 'width' => '10rem',
+        ['key' => 'amount', 'total' => 'money', 'label' => __('purchase::field.amount'), 'numeric' => true, 'width' => '10rem',
          'render' => fn ($p) => \App\Core\Support\Money::format($p->amount)],
         ['key' => 'status', 'label' => __('purchase::field.state'), 'width' => '8rem',
          'render' => fn ($p) => view('purchase::components.status-badge', ['document' => $p])],
@@ -55,6 +55,8 @@
         </form>
 
         <x-ui.table
+            :grand="$grand ?? []"
+            :view-url="fn ($d) => route('purchase.payment.show', $d)"
             :empty="$q ? __('core.empty.no_results') : __('purchase::message.no_payments')"
             :rows="$payments"
             :compact="request()->boolean('compact')"

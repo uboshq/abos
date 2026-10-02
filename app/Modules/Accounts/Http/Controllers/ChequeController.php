@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Accounts\Http\Controllers;
 
+use App\Core\Concerns\GrandTotals;
 use App\Core\Concerns\SortsLists;
 use App\Core\Services\MenuBuilder;
 use App\Core\Services\PartyRegistry;
@@ -30,6 +31,7 @@ use Illuminate\View\View;
  */
 class ChequeController extends Controller implements HasMiddleware
 {
+    use GrandTotals;
     use SortsLists;
 
     public function __construct(
@@ -74,6 +76,7 @@ class ChequeController extends Controller implements HasMiddleware
 
         return view('accounts::cheque.index', [
             'menu' => $this->menu->forUser($request->user()),
+            'grand' => $this->grandTotals($query, ['amount' => 't.amount']),
             'cheques' => $query->paginate(50)->withQueryString(),
             'q' => $request->query('q'),
             /*

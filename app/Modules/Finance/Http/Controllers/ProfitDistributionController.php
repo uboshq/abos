@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Finance\Http\Controllers;
 
+use App\Core\Concerns\GrandTotals;
 use App\Core\Services\MenuBuilder;
 use App\Modules\Finance\Models\CapitalEntry;
 use App\Modules\Finance\Models\ProfitShare;
@@ -35,6 +36,8 @@ use Illuminate\View\View;
  */
 final class ProfitDistributionController implements HasMiddleware
 {
+    use GrandTotals;
+
     public function __construct(
         private readonly MenuBuilder $menu,
         private readonly CapitalService $capital,
@@ -170,7 +173,8 @@ final class ProfitDistributionController implements HasMiddleware
              * দিয়েই ঠিক করে নিজে দেখা যাবে কি না।
              */
             'outstanding' => $this->distribution->outstanding(),
-            'history' => ProfitShare::query()->inViewedBranch()
+            // ⭐ সর্বমোট — সব পাতার বণ্টন মিলে ([[GrandTotals]]); পাতা ভাঙার আগে, কারণ paginate() কোয়েরিতে সীমা বসায়
+            'grand' => $this->grandTotals($list = ProfitShare::query()->inViewedBranch()
                 ->posted()
                 ->with('person')
                 ->orderByDesc('trx_date')
@@ -183,9 +187,8 @@ final class ProfitDistributionController implements HasMiddleware
                  * সারিগুলো খাতায় আছে, পর্দায় নেই, আর কিছুই ভাঙে না।
                  *
                  * ⓘ ধরা পড়েছে `EveryListScreenPaginates`-এ।
-                 */
-                ->paginate(50)
-                ->withQueryString(),
+                 */, ['amount' => 't.amount']),
+            'history' => $list->paginate(50)->withQueryString(),
             'profit' => null,
             'preview' => null,
         ];
