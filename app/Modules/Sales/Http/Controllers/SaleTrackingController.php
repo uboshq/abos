@@ -56,19 +56,51 @@ class SaleTrackingController extends Controller
         return response()->json($this->tracking->story($sale));
     }
 
-    /** `GET /sales/tracking` — ওয়েবের একই তালিকা (মালিক: "web eo eta dite bolo") */
+    /**
+     * `GET /sales/tracking` — ওয়েবের তালিকা, সাধারণ টুলবার আর টেবিলে (মালিক: "Delivery tracking টুলবার dibe")।
+     * ⓘ খোঁজা, ধাপ (ট্যাব), তারিখ, গ্রাহক, শাখা, সাজানো; কলাম, রপ্তানি, ছাপা টেবিল নিজেই করে ([[x-ui.table]])।
+     */
     public function page(Request $request, MenuBuilder $menu): View
     {
         $this->mayTrack($request);
 
         $step = in_array($request->query('step'), SaleTracking::STEPS, true) ? (string) $request->query('step') : null;
         $term = trim((string) $request->query('q', '')) ?: null;
+        $date = fn (string $key): ?string => ($v = trim((string) $request->query($key, ''))) !== '' && strtotime($v) !== false
+            ? date('Y-m-d', (int) strtotime($v)) : null;
+        $dates = ['from' => $date('from'), 'to' => $date('to')];
+        if ($dates['from'] !== null && $dates['to'] !== null && $dates['from'] > $dates['to']) {
+            $dates = ['from' => $dates['to'], 'to' => $dates['from']];
+        }
+        $sort = in_array($request->query('sort'), ['recent', 'oldest', 'largest', 'customer'], true) ? (string) $request->query('sort') : 'recent';
+
+        $list = $this->tracking->list($term, $step, ((int) $request->query('customer')) ?: null, 500, [
+            ...$dates,
+            'branch_id' => ((int) $request->query('branch')) ?: null,
+            'sort' => $sort,
+        ]);
+
+        $rows = collect($list['rows']);
+        $page = max(1, (int) $request->query('page', 1));
+        $paginator = new \Illuminate\Pagination\LengthAwarePaginator(
+            $rows->forPage($page, 50)->values(), $rows->count(), 50, $page,
+            ['path' => $request->url(), 'query' => $request->query()],
+        );
 
         return view('sales::tracking.index', [
             'menu' => $menu->forUser($request->user()),
-            'list' => $this->tracking->list($term, $step, null),
+            'list' => $list,
+            'rows' => $paginator,
+            'grand' => ['total' => $rows->reduce(fn (string $sum, array $r) => bcadd($sum, (string) $r['total'], 2), '0.00')],
             'step' => $step,
             'q' => $term,
+            'dates' => $dates,
+            'sortOptions' => [
+                'recent' => __('sales::sort.recent'), 'oldest' => __('sales::sort.oldest'),
+                'largest' => __('sales::sort.largest'), 'customer' => __('sales::sort.customer'),
+            ],
+            'customers' => Customer::query()->inViewedBranch()->active()->orderBy('name_en')->get(['id', 'name_en', 'name_bn', 'code']),
+            'branches' => \App\Models\Branch::query()->orderBy('name_en')->get(),
         ]);
     }
 

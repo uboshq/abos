@@ -184,6 +184,20 @@ final class EverySaleCanBeTrackedToTheDoorTest extends TestCase
             ->assertSee('#22C55E', false)
             ->assertSee((string) $challan->document_no);
 
+        // ⭐ সাধারণ টুলবার — মালিক: "Delivery tracking টুলবার dibe" (রপ্তানি, গ্রাহক, তারিখ, সাজানো)
+        $html = $this->get(route('sales.tracking.index'))->assertOk()->getContent();
+        $this->assertStringContainsString('export=csv', $html, 'টুলবারে রপ্তানি নেই।');
+        $this->assertStringContainsString('name="customer"', $html, 'গ্রাহকের ছাঁকনি নেই।');
+        $this->assertStringContainsString('name="branch"', $html, 'শাখার ছাঁকনি নেই।');
+
+        $other = Customer::query()->whereKeyNot($this->customer->id)->firstOrFail();
+        $this->get(route('sales.tracking.index', ['customer' => $other->id]))->assertOk()
+            ->assertDontSee(route('sales.tracking.show', ['challan', $challan->public_id]), false);
+        $this->get(route('sales.tracking.index', ['from' => now()->addDay()->toDateString()]))->assertOk()
+            ->assertDontSee(route('sales.tracking.show', ['challan', $challan->public_id]), false);
+        $this->get(route('sales.tracking.index', ['sort' => 'largest', 'customer' => $this->customer->id]))->assertOk()
+            ->assertSee(route('sales.tracking.show', ['challan', $challan->public_id]), false);
+
         // DO তালিকার "ডেলিভারি ট্র্যাকিং" ট্যাব এখানেই আসে
         $this->assertSame(route('sales.tracking.index'), app(\App\Modules\Sales\Services\DeliveryOrderTabs::class)->href('tracking'));
     }

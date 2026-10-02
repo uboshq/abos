@@ -8,6 +8,8 @@ return [
     'search' => 'Sale no, DO or shop',
     'find' => 'Find',
     'all' => 'All',
+    'yes' => 'Yes',
+    'branch' => 'Branch',
     'history' => 'Who did what, and when',
     'notice' => [
         'title' => ':no — :step',

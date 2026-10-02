@@ -69,9 +69,20 @@ final class SaleTracking
      *
      * @return array{rows: list<array<string, mixed>>, counts: array<string, int>}
      */
-    public function list(?string $term, ?string $step, ?int $customerId, int $limit = 100): array
+    /**
+     * @param  array{from?: ?string, to?: ?string, branch_id?: ?int, sort?: ?string}  $filter  ওয়েবের টুলবারের ছাঁকনি
+     *         (মালিক, ২ অক্টোবর ২০২৬: "Delivery tracking টুলবার dibe") — দুই উৎসেই একই নিয়মে
+     */
+    public function list(?string $term, ?string $step, ?int $customerId, int $limit = 100, array $filter = []): array
     {
-        $challans = DeliveryChallan::query()
+        $narrow = function ($q) use ($filter) {
+            return $q
+                ->when($filter['from'] ?? null, fn ($w, $d) => $w->where('trx_date', '>=', $d))
+                ->when($filter['to'] ?? null, fn ($w, $d) => $w->where('trx_date', '<=', $d))
+                ->when($filter['branch_id'] ?? null, fn ($w, $b) => $w->where('branch_id', $b));
+        };
+
+        $challans = $narrow(DeliveryChallan::query())
             ->with('customer')
             ->when($customerId, fn ($q, $id) => $q->where('customer_id', $id))
             ->when($term, fn ($q, $t) => $q->where(fn ($w) => $w
@@ -84,7 +95,7 @@ final class SaleTracking
             ->get();
 
         // যে আদেশের কোনো (বাতিল নয়) চালান নেই — "অর্ডার" ধাপ
-        $orders = SalesOrder::query()
+        $orders = $narrow(SalesOrder::query())
             ->with('customer')
             ->where('status', '<>', DocumentStatus::CANCELLED)
             ->whereNotExists(fn ($q) => $q->selectRaw('1')->from('sal_challans as c')
@@ -134,7 +145,14 @@ final class SaleTracking
             ]);
         }
 
-        $rows = $rows->sortByDesc(fn (array $r) => ($r['sort'][0] ?? '').sprintf('%012d', $r['sort'][1]))->values();
+        $key = fn (array $r) => ($r['sort'][0] ?? '').sprintf('%012d', $r['sort'][1]);
+        $rows = match ($filter['sort'] ?? 'recent') {
+            'oldest' => $rows->sortBy($key),
+            'largest' => $rows->sortByDesc(fn (array $r) => (float) $r['total']),
+            'customer' => $rows->sortBy(fn (array $r) => mb_strtolower((string) $r['customer']).$key($r)),
+            default => $rows->sortByDesc($key),
+        };
+        $rows = $rows->values();
         $counts = array_fill_keys(['all', ...self::STEPS], 0);
         $counts['all'] = $rows->count();
 

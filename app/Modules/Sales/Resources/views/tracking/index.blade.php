@@ -1,61 +1,106 @@
 {{--
     ডেলিভারি ট্র্যাকিং — প্রতিটা বিক্রি এখন কোথায় (মালিক, ২ অক্টোবর ২০২৬: *"Delivery Traking"*, ফোন আর ওয়েব দুই জায়গায়)।
 
-    ⓘ ফোনের সাথে একই হিসাব ([[SaleTracking]]) — দুই জায়গায় দুই রকম ধাপ কখনো নয়।
-    ⓘ মালিকের নিয়ম: টেবিল নয়, এক লাইনে এক জিনিস; নম্বরে চাপলে পপ-আপে সময়রেখা ([[shell/peek]])।
+    ⭐ সাধারণ টুলবার আর টেবিল — মালিক: *"Delivery tracking টুলবার dibe"*: খোঁজা, ছাঁকনি (ধাপ, তারিখ, গ্রাহক, শাখা),
+    সাজানো, কলাম, রপ্তানি, ছাপা, ঘনত্ব, শেয়ার, নতুন করে আনা; নিচে সর্বমোট, সারিতে "দেখুন"।
+    ⓘ ফোনের সাথে একই হিসাব ([[SaleTracking]]) — দুই জায়গায় দুই রকম ধাপ কখনো নয়। ধাপের ট্যাব থাকে।
+    ⓘ প্রতি ৩০ সেকেন্ডে কেবল টেবিলটা নিজে নতুন ([[screens.js::liveRefresh]]) — খোঁজা আর ছাঁকনি যেমন ছিল তেমনই।
 --}}
-@php $trackingColours = \App\Modules\Sales\Services\SaleTracking::COLOURS; @endphp
+@php
+    $trackingColours = \App\Modules\Sales\Services\SaleTracking::COLOURS;
+
+    $columns = [
+        [
+            'key' => 'date',
+            'label' => __('sales::field.date'),
+            'width' => '7rem',
+            'render' => fn ($r) => $r['date'] ? \App\Core\Support\DateFormat::format($r['date']) : '—',
+        ],
+        [
+            'key' => 'no',
+            'label' => __('sales::field.document_no'),
+            'width' => '11rem',
+            'render' => fn ($r) => new \Illuminate\Support\HtmlString(
+                '<a href="'.e(route('sales.tracking.show', [$r['kind'], $r['id']])).'" class="font-semibold text-(--color-brand-500) hover:underline">'.e($r['no']).'</a>'),
+        ],
+        [
+            'key' => 'customer',
+            'label' => __('sales::field.customer'),
+            'render' => fn ($r) => $r['customer'] ?? '—',
+        ],
+        [
+            'key' => 'total',
+            'total' => 'money',
+            'label' => __('sales::field.total'),
+            'numeric' => true,
+            'width' => '10rem',
+            'render' => fn ($r) => \App\Core\Support\Money::format($r['total']),
+        ],
+        [
+            'key' => 'step',
+            'label' => __('sales::field.state'),
+            'width' => '10rem',
+            'render' => fn ($r) => new \Illuminate\Support\HtmlString(
+                '<span class="font-medium" style="color: '.e($trackingColours[$r['category']] ?? '#111827').'">'
+                .e(__('sales::tracking.step.'.$r['step'])).'</span>'),
+        ],
+        [
+            'key' => 'billed',
+            'label' => __('sales::tracking.step.billed'),
+            'width' => '7rem',
+            'render' => fn ($r) => $r['billed'] ? __('sales::tracking.yes') : '—',
+        ],
+    ];
+@endphp
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ __('sales::tracking.title') }}</x-slot:title>
 
-    <div class="mx-auto grid max-w-3xl gap-3">
-        <form method="GET" action="{{ route('sales.tracking.index') }}" class="flex flex-wrap gap-2">
+    {{-- ধাপের ট্যাব — রং আর সংখ্যাসহ --}}
+    <div class="mb-3 flex flex-wrap gap-2" data-tracking-steps>
+        @foreach (['all', ...\App\Modules\Sales\Services\SaleTracking::STEPS] as $key)
+            @php $on = ($step ?? 'all') === $key; @endphp
+            <a href="{{ route('sales.tracking.index', array_filter([...request()->except(['step', 'page']), 'step' => $key === 'all' ? null : $key])) }}"
+               data-no-peek
+               @class([
+                   'rounded-(--radius-field) border px-3 py-1.5 text-sm',
+                   'border-(--color-brand-500) text-(--color-brand-500)' => $on,
+                   'border-(--color-border)' => ! $on,
+               ])
+               @if ($key !== 'all' && ! $on) style="border-left: 4px solid {{ $trackingColours[\App\Modules\Sales\Services\SaleTracking::CATEGORY_OF_STEP[$key]] }}" @endif>
+                {{ $key === 'all' ? __('sales::tracking.all') : __('sales::tracking.step.'.$key) }}
+                ({{ $list['counts'][$key] ?? 0 }})
+            </a>
+        @endforeach
+    </div>
+
+    <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
+        <form method="GET" class="contents">
             @if ($step)
                 <input type="hidden" name="step" value="{{ $step }}">
             @endif
-            <input type="search" name="q" value="{{ $q }}" placeholder="{{ __('sales::tracking.search') }}"
-                   class="h-(--spacing-field) min-w-0 flex-1 rounded-(--radius-field) border border-(--color-border)
-                          bg-(--color-surface-app) px-3">
-            <x-ui.button type="submit">{{ __('sales::tracking.find') }}</x-ui.button>
+            <x-ui.toolbar :title="__('sales::tracking.title')" :columns="$columns"
+                          :search-placeholder="__('sales::tracking.search')" :sort="$sortOptions" :quiet="['step']">
+                <x-ui.date-range :dates="$dates" />
+                <x-ui.select name="customer" :label="__('sales::field.customer')"
+                             :options="$customers->mapWithKeys(fn ($c) => [$c->id => $c->name()])"
+                             :selected="request('customer')" placeholder="—" />
+                <x-ui.select name="branch" :label="__('sales::tracking.branch')"
+                             :options="$branches->mapWithKeys(fn ($b) => [$b->id => $b->name()])"
+                             :selected="request('branch')" placeholder="—" />
+            </x-ui.toolbar>
         </form>
 
-        <div class="flex flex-wrap gap-2" data-tracking-steps>
-            @foreach (['all', ...\App\Modules\Sales\Services\SaleTracking::STEPS] as $key)
-                @php $on = ($step ?? 'all') === $key; @endphp
-                <a href="{{ route('sales.tracking.index', array_filter(['step' => $key === 'all' ? null : $key, 'q' => $q])) }}"
-                   data-no-peek
-                   @class([
-                       'rounded-(--radius-field) border px-3 py-1.5 text-sm',
-                       'border-(--color-brand-500) text-(--color-brand-500)' => $on,
-                       'border-(--color-border)' => ! $on,
-                   ])>
-                    {{ $key === 'all' ? __('sales::tracking.all') : __('sales::tracking.step.'.$key) }}
-                    ({{ $list['counts'][$key] ?? 0 }})
-                </a>
-            @endforeach
-        </div>
-
         {{-- ⭐ প্রতি ৩০ সেকেন্ডে নিজে নতুন — কেবল এই ঘরটা ([[screens.js::liveRefresh]]) --}}
-        <div class="grid gap-3" data-live
-             x-data="liveRefresh({ url: '{{ request()->fullUrl() }}', seconds: 30 })">
-        @forelse ($list['rows'] as $row)
-            <div data-tracking-row class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-3"
-                 style="border-left: 4px solid {{ $trackingColours[$row['category']] ?? '#9CA3AF' }}">
-                <a href="{{ route('sales.tracking.show', [$row['kind'], $row['id']]) }}"
-                   class="font-semibold text-(--color-brand-500) hover:underline">{{ $row['no'] }}</a>
-                <div class="text-sm">{{ $row['customer'] }}</div>
-                <div class="text-sm text-(--color-ink-muted)">{{ $row['date'] }}</div>
-                <div class="num text-sm">{{ \App\Core\Support\Money::format($row['total']) }}</div>
-                <div class="mt-1 flex flex-wrap gap-2 text-sm">
-                    <span class="font-medium" style="color: {{ $trackingColours[$row['category']] ?? '#111827' }}">{{ __('sales::tracking.step.'.$row['step']) }}</span>
-                    @if ($row['billed'])
-                        <span class="text-(--color-ink-muted)">· {{ __('sales::tracking.step.billed') }}</span>
-                    @endif
-                </div>
-            </div>
-        @empty
-            <p class="text-sm text-(--color-ink-muted)">{{ __('sales::tracking.empty') }}</p>
-        @endforelse
+        <div data-live x-data="liveRefresh({ url: '{{ request()->fullUrl() }}', seconds: 30 })">
+            <x-ui.table
+                :grand="$grand"
+                :view-url="fn ($r) => route('sales.tracking.show', [$r['kind'], $r['id']])"
+                :empty="$q ? __('core.empty.no_results') : __('sales::tracking.empty')"
+                :rows="$rows"
+                :compact="request()->boolean('compact')"
+                :columns="$columns" />
+
+            <x-ui.pager :rows="$rows" />
         </div>
     </div>
 </x-layouts.app>
