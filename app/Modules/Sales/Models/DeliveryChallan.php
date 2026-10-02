@@ -158,6 +158,38 @@ class DeliveryChallan extends Model implements Drillable, ShowsItselfForSigning
             : '';
     }
 
+    /**
+     * ⭐ মাল কীভাবে গেল — পুরো তথ্য, এক জায়গায় (মালিক, ২ অক্টোবর ২০২৬: *"Gate Pass e transport driver details nai"*)।
+     *
+     * ⓘ গেট পাসের কাগজ আর অ্যাপের স্ক্যান-পর্দা দুটোই এখান থেকে পড়ে — তাই চালানে যা বসানো, গেট পাসে হুবহু তা।
+     * ধরন: `customer_self` (ক্রেতা নিজে নিলেন — `driver_name` তখন যিনি নিলেন), `vehicle` (গাড়ি — বহরের বা লেখা
+     * নম্বর), `carrier` (কেবল বাহক/কোম্পানি, গাড়ির নম্বর ছাড়া — সরাসরি ডেলিভারি), না থাকলে null।
+     *
+     * @return array{mode: ?string, vehicle_no: string, vehicle_type: ?string, driver_name: ?string, driver_phone: ?string, carrier: string, cost: ?string}
+     */
+    public function transportFacts(): array
+    {
+        $plate = $this->vehiclePlate();
+        $carrier = $this->own_transport ? '' : $this->transportLabel();
+        $cost = $this->transport_cost !== null && bccomp((string) $this->transport_cost, '0', 4) > 0
+            ? (string) $this->transport_cost : null;
+
+        return [
+            'mode' => match (true) {
+                (bool) $this->own_transport => 'customer_self',
+                $plate !== '' => 'vehicle',
+                $carrier !== '' => 'carrier',
+                default => null,
+            },
+            'vehicle_no' => $plate,
+            'vehicle_type' => $this->vehicle?->vehicleType?->name(),
+            'driver_name' => filled($this->driver_name) ? (string) $this->driver_name : $this->vehicle?->driver_name,
+            'driver_phone' => filled($this->driver_phone) ? (string) $this->driver_phone : $this->vehicle?->driver_phone,
+            'carrier' => $carrier,
+            'cost' => $cost,
+        ];
+    }
+
     public function order(): BelongsTo
     {
         return $this->belongsTo(SalesOrder::class, 'sales_order_id');

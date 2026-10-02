@@ -714,8 +714,25 @@ class SalesPrintController extends Controller implements HasMiddleware
      */
     public function gatePassDocument(Request $request, GatePass $gatePass): Response
     {
-        $challan = $gatePass->challan()->with(['lines.product.unit', 'customer', 'warehouse'])->firstOrFail();
+        $challan = $gatePass->challan()->with(['lines.product.unit', 'customer', 'warehouse', 'vehicle.vehicleType'])->firstOrFail();
         $gatePass->loadMissing('issuer');
+
+        /*
+         * ⭐ পরিবহনের পুরো তথ্য — মালিক, ২ অক্টোবর ২০২৬: *"Gate Pass e transport driver details nai"*।
+         * ⓘ চালানের "মাল কীভাবে যাবে" থেকে, হুবহু ([[DeliveryChallan::transportFacts()]]) — A5, A4, থার্মাল সব নকশা
+         * এই একই মেটা আঁকে। ক্রেতা নিজে নিলে লেখা থাকে "গ্রাহক নিজে নিয়েছেন" আর যিনি নিলেন।
+         */
+        $t = $challan->transportFacts();
+        $self = $t['mode'] === 'customer_self';
+        $transport = array_filter([
+            'sales::field.transport_mode' => $t['mode'] === null ? null : __('sales::field.transport_mode_'.$t['mode']),
+            'sales::field.carrier' => $t['carrier'] ?: null,
+            'sales::field.vehicle_no' => $t['vehicle_no'] ?: (string) $gatePass->vehicle_no,
+            'sales::field.vehicle_type' => $t['vehicle_type'],
+            ($self ? 'sales::field.collected_by' : 'sales::field.driver_name') => $t['driver_name'] ?: $gatePass->driver_name,
+            'sales::field.driver_phone' => $t['driver_phone'] ?: $gatePass->driver_phone,
+            'sales::field.transport_cost' => $t['cost'] === null ? null : \App\Core\Support\Money::format($t['cost']),
+        ], fn ($v) => filled($v));
 
         $doc = new PrintableDocument(
             title: __('sales::doc.gate_pass'),
@@ -723,8 +740,7 @@ class SalesPrintController extends Controller implements HasMiddleware
                 'core.print.document_no' => $gatePass->document_no,
                 'sales::gate_pass.column.challan' => $challan->document_no,
                 'sales::field.customer' => $challan->customer?->name() ?? '',
-                'sales::field.vehicle_no' => (string) $gatePass->vehicle_no,
-                'sales::field.driver_name' => trim(($gatePass->driver_name ?? '').' '.($gatePass->driver_phone ?? '')),
+                ...$transport,
                 'sales::gate_pass.column.issued_by' => trim(($gatePass->issuer?->name ?? '').' · '.DateFormat::format($gatePass->issued_at), ' ·'),
             ],
             lines: $this->productLines(

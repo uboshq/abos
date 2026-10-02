@@ -421,6 +421,13 @@ return [
     'money_received' => 'Money received',
     'carrier_phone' => 'Carrier mobile',
     'driver_phone' => 'Driver mobile',
+    // ⭐ গেট পাসে পরিবহনের পুরো তথ্য — ২ অক্টোবর ২০২৬ ([[DeliveryChallan::transportFacts()]])
+    'transport_mode' => 'Transport',
+    'transport_mode_vehicle' => 'Vehicle',
+    'transport_mode_customer_self' => 'Collected by the customer',
+    'transport_mode_carrier' => 'Direct delivery (carrier)',
+    'vehicle_type' => 'Vehicle type',
+    'collected_by' => 'Collected by',
     'no_lot' => 'No lot',
     'tab_drafts' => 'Drafts',
     'tab_awaiting_approval' => 'Awaiting approval',

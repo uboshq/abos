@@ -155,13 +155,22 @@ class QrScanController extends Controller
                 'free_qty' => bcadd((string) ($l->free_qty ?? '0'), '0', 4),
                 'lot' => $l->batch?->batch_no,
             ])->values()->all(),
-            'transport' => [
-                'named' => TransportRule::named($challan),
-                'vehicle' => $challan->vehiclePlate(),
-                'driver' => $challan->driver_name,
-                'carrier' => $challan->carrier_name,
-                'own' => (bool) $challan->own_transport,
-            ],
+            // ⭐ গেট পাসের কাগজের হুবহু তথ্য ([[DeliveryChallan::transportFacts()]], ২ অক্টোবর ২০২৬)
+            'transport' => (function () use ($challan): array {
+                $t = $challan->transportFacts();
+
+                return [
+                    'named' => TransportRule::named($challan),
+                    'mode' => $t['mode'],
+                    'vehicle' => $t['vehicle_no'],
+                    'vehicle_type' => $t['vehicle_type'],
+                    'driver' => $t['driver_name'],
+                    'driver_phone' => $t['driver_phone'],
+                    'carrier' => $t['carrier'],
+                    'cost' => $t['cost'],
+                    'own' => (bool) $challan->own_transport,
+                ];
+            })(),
             'gate_out' => $out !== null ? $this->outFacts($out) : null,
             'bill_total' => $seesMoney || $mayMove
                 ? $invoices->reduce(fn (string $sum, $i) => bcadd($sum, (string) $i->total, 4), '0.0000')

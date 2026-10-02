@@ -109,6 +109,17 @@
                 <x-ui.field name="driver_name" :label="__('sales::field.driver_name')"
                             :value="old('driver_name', $challan->driver_name)" />
 
+                {{-- ⭐ গেট পাসে পরিবহনের পুরো তথ্য — মালিক, ২ অক্টোবর ২০২৬: *"Gate Pass e transport driver details nai"* --}}
+                <x-ui.field name="driver_phone" type="tel" :label="__('sales::field.driver_phone')"
+                            :value="old('driver_phone', $challan->driver_phone)" />
+
+                <x-ui.field name="carrier_name" :label="__('sales::field.carrier_name')"
+                            :value="old('carrier_name', $challan->carrier_name)" />
+
+                <x-ui.field name="transport_cost" type="number" step="0.01" inputmode="decimal" numeric
+                            :label="__('sales::field.transport_cost')"
+                            :value="old('transport_cost', $challan->transport_cost)" />
+
                 {{-- ⭐ ধাপ ৫, ২৮ সেপ্টেম্বর ২০২৬: গাড়ি না লাগলে বলার জায়গা — নিশ্চিত করতে তিনটার একটা লাগে ([[TransportRule]]) --}}
                 <label class="flex min-h-(--spacing-touch) items-center gap-2 text-sm">
                     <input type="hidden" name="own_transport" value="0">

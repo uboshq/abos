@@ -143,6 +143,13 @@ final class DeliveryChallanService
                 'driver_name' => $data['driver_name'] ?? null,
                 // ⓘ কাউন্টার পাঠায়, আগে এখানে চুপচাপ হারাত — নিশ্চিতকরণের পাতায় চালকের ফোন আসত না
                 'driver_phone' => $data['driver_phone'] ?? null,
+                /*
+                 * ⭐ বাহক আর ভাড়াও — মালিক, ২ অক্টোবর ২০২৬: *"Gate Pass e transport driver details nai"*।
+                 * ⛔ আগে কেবল কাউন্টার (সরাসরি বিক্রয়) এগুলো রাখত; অফিসের চালানে চুপচাপ হারাত, তাই গেট পাসে কখনো আসত না।
+                 */
+                'carrier_id' => $data['carrier_id'] ?? null,
+                'carrier_name' => $data['carrier_name'] ?? null,
+                'transport_cost' => $data['transport_cost'] ?? null,
                 'own_transport' => (bool) ($data['own_transport'] ?? false), // ⓘ ধাপ ৫ — [[TransportRule]]
                 'narration' => $data['narration'] ?? null,
                 'status' => DocumentStatus::DRAFT,
@@ -188,6 +195,13 @@ final class DeliveryChallanService
                 'driver_name' => $data['driver_name'] ?? null,
                 // ⓘ কাউন্টার পাঠায়, আগে এখানে চুপচাপ হারাত — নিশ্চিতকরণের পাতায় চালকের ফোন আসত না
                 'driver_phone' => $data['driver_phone'] ?? null,
+                /*
+                 * ⭐ বাহক আর ভাড়াও — মালিক, ২ অক্টোবর ২০২৬: *"Gate Pass e transport driver details nai"*।
+                 * ⛔ আগে কেবল কাউন্টার (সরাসরি বিক্রয়) এগুলো রাখত; অফিসের চালানে চুপচাপ হারাত, তাই গেট পাসে কখনো আসত না।
+                 */
+                'carrier_id' => $data['carrier_id'] ?? null,
+                'carrier_name' => $data['carrier_name'] ?? null,
+                'transport_cost' => $data['transport_cost'] ?? null,
                 'own_transport' => (bool) ($data['own_transport'] ?? false), // ⓘ ধাপ ৫ — [[TransportRule]]
                 'narration' => $data['narration'] ?? null,
                 'financial_year_id' => $this->resolveFinancialYear($trxDate)->id,

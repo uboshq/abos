@@ -380,6 +380,13 @@ return [
     'money_received' => 'কোন কাগজে টাকা এল',
     'carrier_phone' => 'বাহকের মোবাইল',
     'driver_phone' => 'চালকের মোবাইল',
+    // ⭐ গেট পাসে পরিবহনের পুরো তথ্য — ২ অক্টোবর ২০২৬ ([[DeliveryChallan::transportFacts()]])
+    'transport_mode' => 'পরিবহনের ধরন',
+    'transport_mode_vehicle' => 'গাড়ি',
+    'transport_mode_customer_self' => 'গ্রাহক নিজে নিয়েছেন',
+    'transport_mode_carrier' => 'সরাসরি ডেলিভারি (বাহক)',
+    'vehicle_type' => 'গাড়ির ধরন',
+    'collected_by' => 'যিনি নিলেন',
     'no_lot' => 'লট নেই',
     'tab_drafts' => 'খসড়া',
     'tab_awaiting_approval' => 'অনুমোদনের অপেক্ষায়',
