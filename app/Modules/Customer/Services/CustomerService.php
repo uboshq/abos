@@ -186,6 +186,52 @@ final class CustomerService
     }
 
     /**
+     * ⭐ একটা গ্রাহকের নতুন বাকির সীমা — একসাথে অনেকের সীমা বসানোর জন্য ([[CustomerLimitImporter]]), ২ অক্টোবর ২০২৬।
+     *
+     * ⓘ মালিকের প্রয়োজন: erp-এ UB-র ৪১৪ জনের সবার সীমা ০, আর ০ মানে বাকি নেই (১ অক্টোবরের চূড়ান্ত কথা)। ধরে ধরে
+     * সম্পাদনা মানে ৪১৪ বার সংরক্ষণ, ৪১৪ সই, তারপর আবার ৪১৪ বার সংরক্ষণ।
+     *
+     * ⭐ নিয়মটা সম্পাদনারই ([[assertRaiseIsSigned()]]), কেবল ফলটা ব্যতিক্রম নয় — কথা:
+     *   · কমানো বা সমান → সাথে সাথে বসে (`applied` / `same`) — কমাতে সই লাগে না।
+     *   · বাড়ানো, আর ঠিক এই অঙ্কে সই আগেই পড়েছে → বসে (`applied`)।
+     *   · বাড়ানো, সই নেই → ঠিক এই অঙ্কে অনুরোধ বসে (`awaiting`); শেষ সই পড়লে নিজে বসে
+     *     ([[ApplyTheLimitOnTheLastSignature]])। ⛔ ছক না থাকলে আগের মতোই পরিষ্কার কথায় থামে।
+     */
+    public function proposeLimit(Customer $customer, string $after): string
+    {
+        $after = bcadd($after, '0', 4);
+        $before = bcadd((string) ($customer->credit_limit ?? '0'), '0', 4);
+
+        if (bccomp($after, $before, 4) === 0) {
+            return 'same';
+        }
+
+        if (bccomp($after, $before, 4) > 0) {
+            try {
+                $this->assertRaiseIsSigned($customer, $before, $after);
+            } catch (ValidationException $e) {
+                $waiting = Approval::query()
+                    ->where('approvable_type', $customer->getMorphClass())
+                    ->where('approvable_id', $customer->getKey())
+                    ->where('action', 'credit_limit')
+                    ->where('status', Approval::PENDING)
+                    ->where('amount', $after)
+                    ->exists();
+
+                if (! $waiting) {
+                    throw $e;
+                }
+
+                return 'awaiting';
+            }
+        }
+
+        $customer->forceFill(['credit_limit' => $after])->save();
+
+        return 'applied';
+    }
+
+    /**
      * নিষ্ক্রিয় করা — মোছা নয় (নিয়ম ৫)।
      *
      * যে গ্রাহকের বিল বা আদায় আছে তাকে মুছে ফেললে ওই লেনদেনগুলো কার,

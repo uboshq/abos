@@ -96,7 +96,9 @@ final class TheSignatureWasForOneLakhAndFiftyWereSetTest extends TestCase
             // ⓘ এটাই চাওয়া।
         }
 
-        $this->assertSame('100000.0000', (string) $this->customer->fresh()->credit_limit);
+        // ⓘ ২ অক্টোবর ২০২৬ থেকে শেষ সই পড়লে সই করা অঙ্কটা নিজে বসে ([[ApplyTheLimitOnTheLastSignature]]) — তাই সীমা
+        //   এখন ২ লাখ; দাবিটা অটুট: ৫০ লাখ কখনো নয়
+        $this->assertSame('200000.0000', (string) $this->customer->fresh()->credit_limit);
     }
 
     public function test_one_taka_more_than_signed_is_refused(): void
@@ -259,21 +261,21 @@ final class TheSignatureWasForOneLakhAndFiftyWereSetTest extends TestCase
      * বসানো নেই, তাই ডিফল্ট **বন্ধ**, আর সুইচটা মালিক নিজের দিনে টেপেন।
      * ⭐ এই দাবি দুইটাই পাহারা দেয়: ডিফল্ট বন্ধ, আর টিপলে শূন্য সত্যিই থামায়।
      */
-    public function test_zero_limit_blocks_is_off_by_default_and_blocks_credit_once_turned_on(): void
+    public function test_a_zero_limit_blocks_credit_whatever_the_switch_says(): void
     {
+        /*
+         * ⛔ ১ অক্টোবর ২০২৬ থেকে শূন্য মানে শূন্য, কোনো সুইচে নয় — মালিকের চূড়ান্ত কথা ("THATS FINAL"),
+         * [[NoLimitMeansNoCreditForAnyoneTest]]। ⓘ আগে এই দাবি বলত "ডিফল্ট বন্ধ, টিপলে থামায়"।
+         */
         $settings = app(SettingsService::class);
-
-        $this->assertFalse($settings->enabled('customer.zero_limit_blocks'),
-            'সুইচটা ডিফল্টেই চালু — মালিকের সিদ্ধান্তের আগেই ডিপো থেমে যেত।');
-
         $this->customer->update(['credit_limit' => '0']);
 
-        $this->assertFalse($this->customer->fresh()->wouldExceedCreditLimit('1'));
+        foreach ([false, true] as $on) {
+            $settings->set('customer.zero_limit_blocks', $on);
 
-        $settings->set('customer.zero_limit_blocks', true);
-
-        $this->assertTrue($this->customer->fresh()->wouldExceedCreditLimit('1'),
-            'সুইচ চালু, তবু শূন্য সীমার গ্রাহকের কাছে বাকি যাচ্ছে।');
+            $this->assertTrue($this->customer->fresh()->wouldExceedCreditLimit('1'),
+                '⛔ সুইচ '.($on ? 'চালু' : 'বন্ধ').', আর শূন্য সীমার গ্রাহকের কাছে বাকি যাচ্ছে।');
+        }
     }
 
     // ── সহায়ক ─────────────────────────────────────────────────────────

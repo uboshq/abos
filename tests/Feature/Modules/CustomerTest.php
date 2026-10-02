@@ -207,19 +207,17 @@ class CustomerTest extends TestCase
         $this->assertFalse(app(OpeningBalanceService::class)->exists('customer', $customer->id));
     }
 
-    public function test_a_zero_credit_limit_means_unlimited_not_blocked(): void
+    public function test_a_zero_credit_limit_means_no_credit_even_with_the_switch_off(): void
     {
         /*
-         * ⚠️ অডিট §১.২, ২৭ সেপ্টেম্বর ২০২৬: `customer.zero_limit_blocks`-এর
-         * ডিফল্ট এখন **চালু** — শূন্য মানে বাকি নয়। ⓘ এই দাবিটা কেবল
-         * সুইচ **বন্ধ** করা কোম্পানির জন্য সত্যি, তাই সুইচটা এখানে স্পষ্ট
-         * করে বন্ধ করা হয়। ডিফল্টের দাবি: [[TheSignatureWasForOneLakhAndFiftyWereSetTest]]।
+         * ⛔ ১ অক্টোবর ২০২৬ থেকে শূন্য মানে শূন্য, কোনো সুইচে নয় — মালিকের চূড়ান্ত কথা ("THATS FINAL")।
+         * ⓘ আগে এই দাবি বলত "সুইচ বন্ধ থাকলে শূন্য = সীমাহীন" ([[NoLimitMeansNoCreditForAnyoneTest]])।
          */
         app(SettingsService::class)->set('customer.zero_limit_blocks', false);
 
         $customer = $this->make(['credit_limit' => 0]);
 
-        $this->assertFalse($customer->wouldExceedCreditLimit('999999.0000'));
+        $this->assertTrue($customer->wouldExceedCreditLimit('1'));
     }
 
     public function test_a_real_credit_limit_is_enforced_on_the_total_not_the_bill(): void

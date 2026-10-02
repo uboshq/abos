@@ -261,6 +261,8 @@ return [
 
     'imports' => [
         'customer' => CustomerImporter::class,
+        // ⭐ বাকির সীমা — একসাথে অনেকের, সই মেনে (২ অক্টোবর ২০২৬; [[CustomerLimitImporter]])
+        'customer_limit' => \App\Modules\Customer\Imports\CustomerLimitImporter::class,
     ],
 
     // Report engine এগুলো boot-এ নিবন্ধন করে, তাই রিপোর্ট যোগ করতে
@@ -379,5 +381,12 @@ return [
             'default' => false,
             'group' => 'print',
         ],
+    ],
+
+    /*
+     * ⭐ সীমা বাড়ানোর শেষ সই পড়লে নতুন সীমা নিজে বসে — ২ অক্টোবর ২০২৬ ([[ApplyTheLimitOnTheLastSignature]])।
+     */
+    'listeners' => [
+        \App\Core\Events\ApprovalDecided::class => [\App\Modules\Customer\Listeners\ApplyTheLimitOnTheLastSignature::class],
     ],
 ];
