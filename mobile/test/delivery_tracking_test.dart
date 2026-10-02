@@ -19,11 +19,17 @@ class _FakeApi implements TrackingApi {
   }
 
   @override
-  Future<(TrackedSale, List<TrackingEvent>)> story(TrackedSale s) async => (
+  Future<(TrackedSale, List<TrackingEvent>, List<Milestone>)> story(TrackedSale s) async => (
         sale,
         [
           TrackingEvent(at: DateTime(2026, 10, 2, 9), step: 'draft', by: 'করিম', text: 'ডিও DC-0007 লেখা হলো'),
           TrackingEvent(at: DateTime(2026, 10, 2, 11), step: 'gate_out', by: 'গেটম্যান', text: 'গেট পাস GP-3, গাড়ি ঢাকা-১২'),
+        ],
+        const [
+          Milestone(key: 'order_created', label: 'অর্ডার তৈরি', category: 'approved', state: 'done'),
+          Milestone(key: 'approval_1_1', label: 'হিসাব বিভাগ', category: 'approved', state: 'done'),
+          Milestone(key: 'dispatched', label: 'রওনা', category: 'dispatched', state: 'done'),
+          Milestone(key: 'delivered', label: 'পৌঁছেছে', category: 'delivered', state: 'current'),
         ],
       );
 }
@@ -41,6 +47,12 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('ডিও DC-0007 লেখা হলো'), findsOneWidget);
     expect(find.text('গেট পাস GP-3, গাড়ি ঢাকা-১২'), findsOneWidget);
+
+    // ⭐ টিকচিহ্নের দাগ — কোম্পানির নিজের স্তরের নাম, হয়ে যাওয়ায় টিক, পরেরটা "এখন"
+    expect(find.text('হিসাব বিভাগ'), findsOneWidget);
+    expect(find.byKey(const ValueKey('milestone-dispatched-done')), findsOneWidget);
+    expect(find.byKey(const ValueKey('milestone-delivered-current')), findsOneWidget);
+    expect(find.text('✓'), findsNWidgets(3));
   });
 
   testWidgets('a step chip asks the server for that step', (tester) async {

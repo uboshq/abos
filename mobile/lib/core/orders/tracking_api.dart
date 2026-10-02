@@ -1,3 +1,5 @@
+import 'dart:ui' show Color;
+
 import '../api_client/api_client.dart';
 import '../records/money.dart';
 
@@ -15,6 +17,7 @@ class TrackedSale {
     required this.total,
     required this.step,
     required this.billed,
+    this.category,
   });
 
   final String kind;
@@ -26,6 +29,9 @@ class TrackedSale {
   final String step;
   final bool billed;
 
+  /// ৯ রঙের কোনটা — সার্ভার বলে; পুরনো সার্ভারে না থাকলে null।
+  final String? category;
+
   factory TrackedSale.fromJson(Map<String, dynamic> json) => TrackedSale(
         kind: json['kind']?.toString() ?? 'challan',
         id: json['id']?.toString() ?? '',
@@ -35,6 +41,7 @@ class TrackedSale {
         total: Money.valueOrZero(json['total']),
         step: json['step']?.toString() ?? '',
         billed: json['billed'] == true,
+        category: json['category']?.toString(),
       );
 }
 
@@ -53,6 +60,51 @@ class TrackingEvent {
         text: json['text']?.toString() ?? '',
       );
 }
+
+/// টিকচিহ্নের দাগের এক ধাপ — সার্ভারের [[SaleTracking::milestones()]]।
+class Milestone {
+  const Milestone({
+    required this.key,
+    required this.label,
+    required this.category,
+    required this.state,
+    this.at,
+    this.by,
+  });
+
+  final String key;
+  final String label;
+
+  /// ৯ রঙের কোনটা — [trackingColours]।
+  final String category;
+
+  /// done · current · todo · rejected · hold
+  final String state;
+  final DateTime? at;
+  final String? by;
+
+  factory Milestone.fromJson(Map<String, dynamic> json) => Milestone(
+        key: json['key']?.toString() ?? '',
+        label: json['label']?.toString() ?? '',
+        category: json['category']?.toString() ?? 'draft',
+        state: json['state']?.toString() ?? 'todo',
+        at: DateTime.tryParse(json['at']?.toString() ?? '')?.toLocal(),
+        by: json['by']?.toString(),
+      );
+}
+
+/// ⭐ ৯ রং — মালিকের আদেশ, ২ অক্টোবর ২০২৬; সার্ভারের `SaleTracking::COLOURS` হুবহু।
+const Map<String, Color> trackingColours = {
+  'draft': Color(0xFF9CA3AF),
+  'pending': Color(0xFFF97316),
+  'approved': Color(0xFF2563EB),
+  'processing': Color(0xFF7C3AED),
+  'loading': Color(0xFFEAB308),
+  'dispatched': Color(0xFF22C55E),
+  'delivered': Color(0xFF15803D),
+  'rejected': Color(0xFFDC2626),
+  'hold': Color(0xFF111827),
+};
 
 class TrackingList {
   const TrackingList(this.rows, this.counts);
@@ -77,7 +129,7 @@ const Map<String, String> trackingStepLabels = {
 abstract class TrackingApi {
   Future<TrackingList> list({String? query, String? step});
 
-  Future<(TrackedSale, List<TrackingEvent>)> story(TrackedSale sale);
+  Future<(TrackedSale, List<TrackingEvent>, List<Milestone>)> story(TrackedSale sale);
 }
 
 class ServerTrackingApi implements TrackingApi {
@@ -103,7 +155,7 @@ class ServerTrackingApi implements TrackingApi {
   }
 
   @override
-  Future<(TrackedSale, List<TrackingEvent>)> story(TrackedSale sale) async {
+  Future<(TrackedSale, List<TrackingEvent>, List<Milestone>)> story(TrackedSale sale) async {
     final response = await ApiClient.dio.get<Map<String, dynamic>>('/sales/tracking/${sale.kind}/${sale.id}');
     final body = response.data ?? const {};
     return (
@@ -111,6 +163,10 @@ class ServerTrackingApi implements TrackingApi {
       [
         for (final e in (body['events'] as List?) ?? const [])
           if (e is Map) TrackingEvent.fromJson(Map<String, dynamic>.from(e)),
+      ],
+      [
+        for (final m in (body['milestones'] as List?) ?? const [])
+          if (m is Map) Milestone.fromJson(Map<String, dynamic>.from(m)),
       ],
     );
   }

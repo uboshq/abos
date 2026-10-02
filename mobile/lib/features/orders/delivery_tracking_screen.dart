@@ -11,7 +11,8 @@ import '../../core/theme/app_spacing.dart';
 ///
 /// <p>⭐ মালিক, ২ অক্টোবর ২০২৬। ⓘ মালিকের নিয়ম: এক লাইনে এক জিনিস, টেবিল নয়।
 class DeliveryTrackingScreen extends StatefulWidget {
-  const DeliveryTrackingScreen({super.key, this.api = const ServerTrackingApi()});
+  const DeliveryTrackingScreen(
+      {super.key, this.api = const ServerTrackingApi()});
 
   final TrackingApi api;
 
@@ -44,13 +45,15 @@ class _DeliveryTrackingScreenState extends State<DeliveryTrackingScreen> {
       _error = null;
     });
     try {
-      final list = await widget.api.list(query: _search.text.trim(), step: _step);
+      final list =
+          await widget.api.list(query: _search.text.trim(), step: _step);
       if (mounted) setState(() => _list = list);
     } catch (e) {
       if (mounted) {
         setState(() => _error = errorMessageFor(e,
             fallback: 'তালিকা আনা গেল না। নিচে টেনে আবার চেষ্টা করুন।',
-            whenAbsent: 'সার্ভারে ডেলিভারি ট্র্যাকিং এখনো আসেনি — অফিসে জানান।'));
+            whenAbsent:
+                'সার্ভারে ডেলিভারি ট্র্যাকিং এখনো আসেনি — অফিসে জানান।'));
       }
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -81,7 +84,8 @@ class _DeliveryTrackingScreenState extends State<DeliveryTrackingScreen> {
               decoration: InputDecoration(
                 hintText: 'বিক্রয় নম্বর, ডিও বা দোকান',
                 prefixIcon: const Icon(Icons.search),
-                suffixIcon: IconButton(icon: const Icon(Icons.arrow_forward), onPressed: _load),
+                suffixIcon: IconButton(
+                    icon: const Icon(Icons.arrow_forward), onPressed: _load),
               ),
             ),
             const SizedBox(height: AppSpacing.sm),
@@ -89,9 +93,13 @@ class _DeliveryTrackingScreenState extends State<DeliveryTrackingScreen> {
               spacing: AppSpacing.xs,
               runSpacing: AppSpacing.xs,
               children: [
-                for (final key in ['all', ...trackingStepLabels.keys.where((k) => k != 'billed')])
+                for (final key in [
+                  'all',
+                  ...trackingStepLabels.keys.where((k) => k != 'billed')
+                ])
                   ChoiceChip(
-                    label: Text('${key == 'all' ? 'সব' : trackingStepLabels[key]} (${counts[key] ?? 0})'),
+                    label: Text(
+                        '${key == 'all' ? 'সব' : trackingStepLabels[key]} (${counts[key] ?? 0})'),
                     selected: (_step ?? 'all') == key,
                     onSelected: (_) {
                       setState(() => _step = key == 'all' ? null : key);
@@ -107,7 +115,8 @@ class _DeliveryTrackingScreenState extends State<DeliveryTrackingScreen> {
                 color: AppColors.dangerSurface,
                 child: Padding(
                   padding: const EdgeInsets.all(AppSpacing.md),
-                  child: Text(_error!, style: const TextStyle(color: AppColors.danger)),
+                  child: Text(_error!,
+                      style: const TextStyle(color: AppColors.danger)),
                 ),
               ),
             if (list != null && list.rows.isEmpty && !_busy)
@@ -124,14 +133,23 @@ class _DeliveryTrackingScreenState extends State<DeliveryTrackingScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(sale.no, style: const TextStyle(fontWeight: FontWeight.w700)),
+                        Text(sale.no,
+                            style:
+                                const TextStyle(fontWeight: FontWeight.w700)),
                         if (sale.customer != null) Text(sale.customer!),
                         if (sale.date != null)
-                          Text(sale.date!, style: const TextStyle(color: AppColors.onSurfaceMuted)),
+                          Text(sale.date!,
+                              style: const TextStyle(
+                                  color: AppColors.onSurfaceMuted)),
                         Text(Money.taka(sale.total)),
                         Text(
-                          [trackingStepLabels[sale.step] ?? sale.step, if (sale.billed) 'বিল হয়েছে'].join(' · '),
-                          style: TextStyle(color: _colour(sale.step), fontWeight: FontWeight.w600),
+                          [
+                            trackingStepLabels[sale.step] ?? sale.step,
+                            if (sale.billed) 'বিল হয়েছে'
+                          ].join(' · '),
+                          style: TextStyle(
+                              color: _saleColour(sale),
+                              fontWeight: FontWeight.w600),
                         ),
                       ],
                     ),
@@ -144,6 +162,10 @@ class _DeliveryTrackingScreenState extends State<DeliveryTrackingScreen> {
     );
   }
 }
+
+/// সার্ভারের ৯ রং ([trackingColours]); পুরনো সার্ভারে category না এলে ধাপ থেকে আন্দাজ।
+Color _saleColour(TrackedSale sale) =>
+    trackingColours[sale.category] ?? _colour(sale.step);
 
 Color _colour(String step) => switch (step) {
       'delivered' => AppColors.success,
@@ -166,6 +188,7 @@ class _StoryScreen extends StatefulWidget {
 class _StoryScreenState extends State<_StoryScreen> {
   TrackedSale? _sale;
   List<TrackingEvent> _events = const [];
+  List<Milestone> _milestones = const [];
   String? _error;
 
   @override
@@ -176,15 +199,20 @@ class _StoryScreenState extends State<_StoryScreen> {
 
   Future<void> _load() async {
     try {
-      final (sale, events) = await widget.api.story(widget.sale);
+      final (sale, events, milestones) = await widget.api.story(widget.sale);
       if (mounted) {
         setState(() {
           _sale = sale;
           _events = events;
+          _milestones = milestones;
+          _error = null;
         });
       }
     } catch (e) {
-      if (mounted) setState(() => _error = errorMessageFor(e, fallback: 'সময়রেখা আনা গেল না।'));
+      if (mounted) {
+        setState(() =>
+            _error = errorMessageFor(e, fallback: 'সময়রেখা আনা গেল না।'));
+      }
     }
   }
 
@@ -194,41 +222,165 @@ class _StoryScreenState extends State<_StoryScreen> {
     final when = DateFormat('dd/MM/yyyy hh:mm a');
     return Scaffold(
       appBar: AppBar(title: Text(sale.no)),
-      body: ListView(
-        padding: const EdgeInsets.all(AppSpacing.md),
+      // ⭐ টেনে নামালে নতুন — মালিকের আদেশ (ধাপ ২)
+      body: RefreshIndicator(
+        onRefresh: _load,
+        child: ListView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.all(AppSpacing.md),
+          children: [
+            if (sale.customer != null)
+              Text(sale.customer!,
+                  style: const TextStyle(fontWeight: FontWeight.w700)),
+            Text(Money.taka(sale.total)),
+            Text(
+              [
+                trackingStepLabels[sale.step] ?? sale.step,
+                if (sale.billed) 'বিল হয়েছে'
+              ].join(' · '),
+              style: TextStyle(
+                  color: _saleColour(sale), fontWeight: FontWeight.w600),
+            ),
+            const Divider(),
+            // ⭐ টিকচিহ্নের অগ্রগতি-দাগ — হয়েছে ✓, এখন গোল-দাগ, ফেরত ✕, থামানো ■, সামনে ফাঁপা
+            for (var i = 0; i < _milestones.length; i++)
+              _MilestoneRow(
+                  milestone: _milestones[i],
+                  last: i == _milestones.length - 1,
+                  when: when),
+            if (_milestones.isNotEmpty) ...[
+              const SizedBox(height: AppSpacing.sm),
+              const Text('কে কখন কী করলেন',
+                  style: TextStyle(fontWeight: FontWeight.w700)),
+            ],
+            if (_error != null)
+              Text(_error!, style: const TextStyle(color: AppColors.danger)),
+            if (_sale == null && _error == null)
+              const LinearProgressIndicator(),
+            for (final e in _events)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(Icons.circle, size: 10, color: _colour(e.step)),
+                    const SizedBox(width: AppSpacing.sm),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(e.text,
+                              style:
+                                  const TextStyle(fontWeight: FontWeight.w600)),
+                          Text(
+                            [
+                              if (e.at != null) when.format(e.at!),
+                              if (e.by != null) e.by!
+                            ].join(' · '),
+                            style: const TextStyle(
+                                fontSize: 12, color: AppColors.onSurfaceMuted),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _MilestoneRow extends StatelessWidget {
+  const _MilestoneRow(
+      {required this.milestone, required this.last, required this.when});
+
+  final Milestone milestone;
+  final bool last;
+  final DateFormat when;
+
+  @override
+  Widget build(BuildContext context) {
+    final m = milestone;
+    final colour = trackingColours[m.category] ?? const Color(0xFF9CA3AF);
+    final filled =
+        m.state == 'done' || m.state == 'rejected' || m.state == 'hold';
+    final lit = m.state != 'todo';
+    return IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          if (sale.customer != null) Text(sale.customer!, style: const TextStyle(fontWeight: FontWeight.w700)),
-          Text(Money.taka(sale.total)),
-          Text(
-            [trackingStepLabels[sale.step] ?? sale.step, if (sale.billed) 'বিল হয়েছে'].join(' · '),
-            style: TextStyle(color: _colour(sale.step), fontWeight: FontWeight.w600),
-          ),
-          const Divider(),
-          if (_error != null) Text(_error!, style: const TextStyle(color: AppColors.danger)),
-          if (_sale == null && _error == null) const LinearProgressIndicator(),
-          for (final e in _events)
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Icon(Icons.circle, size: 10, color: _colour(e.step)),
-                  const SizedBox(width: AppSpacing.sm),
+          SizedBox(
+            width: 26,
+            child: Column(
+              children: [
+                Container(
+                  key: ValueKey('milestone-${m.key}-${m.state}'),
+                  width: 22,
+                  height: 22,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: filled ? colour : Colors.white,
+                    border: Border.all(
+                        color: lit ? colour : const Color(0xFFD1D5DB),
+                        width: 2),
+                  ),
+                  child: Text(
+                    switch (m.state) {
+                      'done' => '✓',
+                      'rejected' => '✕',
+                      'hold' => '■',
+                      _ => ''
+                    },
+                    style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700),
+                  ),
+                ),
+                if (!last)
                   Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(e.text, style: const TextStyle(fontWeight: FontWeight.w600)),
-                        Text(
-                          [if (e.at != null) when.format(e.at!), if (e.by != null) e.by!].join(' · '),
-                          style: const TextStyle(fontSize: 12, color: AppColors.onSurfaceMuted),
-                        ),
-                      ],
+                    child: Container(
+                      width: 2,
+                      color:
+                          m.state == 'done' ? colour : const Color(0xFFE5E7EB),
                     ),
                   ),
+              ],
+            ),
+          ),
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    m.label,
+                    style: TextStyle(
+                      fontWeight: lit ? FontWeight.w700 : FontWeight.w400,
+                      color: m.state == 'current'
+                          ? colour
+                          : (lit ? null : AppColors.onSurfaceMuted),
+                    ),
+                  ),
+                  if (m.at != null || m.by != null)
+                    Text(
+                      [
+                        if (m.at != null) when.format(m.at!),
+                        if (m.by != null) m.by!
+                      ].join(' · '),
+                      style: const TextStyle(
+                          fontSize: 12, color: AppColors.onSurfaceMuted),
+                    ),
                 ],
               ),
             ),
+          ),
         ],
       ),
     );
