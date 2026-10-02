@@ -129,6 +129,8 @@ final class AuditReports
             permission: 'governance.audit.view',
             title: 'governance::audit_report.periods_title',
             filters: ['date_range'],
+            // ⓘ মাসের তালা কোম্পানির — `period_locks`-এ শাখার ঘরই নেই, তাই সব শাখা একই তালা দেখে
+            branchless: ReportDefinition::NO_BRANCH_DATA,
             query: fn (array $f) => self::trail($f, branch: false)
                 ->where('a.auditable_type', PeriodLock::class)
                 ->whereIn('a.action', [AuditTrail::CREATED, AuditTrail::DELETED])

@@ -99,6 +99,7 @@ final class EveryReportStandsBehindTheBranchWallTest extends TestCase
         'promotion.register' => 'the offer register: code, name, dates, who approved — company-wide setup, no figures from any branch',
         'system_admin.notice_register' => 'notices are company-wide announcements; `notices` has no branch_id and no money',
         'system_admin.notice_signatures' => 'read/sign counts of company-wide notices; no branch owns a notice',
+        'governance.periods' => 'months closed and reopened: a period lock is company-wide (period_locks has no branch_id), so every branch sees the same locks',
     ];
 
     protected function setUp(): void
