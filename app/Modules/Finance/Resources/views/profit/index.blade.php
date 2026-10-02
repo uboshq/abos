@@ -164,7 +164,8 @@
                         <span class="num font-semibold">{{ $money($previewTotal) }}</span>
                     </p>
 
-                    @if ($preview !== [])
+                    {{-- ⓘ ঘোষণা কেবল যাঁর পোস্টের চাবি আছে — পাতা খোলে দেখার চাবিতে; বোতাম চাপলে ৪০৩ দেখানোর চেয়ে না দেখানো সৎ --}}
+                    @if ($preview !== [] && auth()->user()?->can('finance.capital.post'))
                         <form method="POST" action="{{ route('finance.profit.declare') }}" class="mt-3">
                             @csrf
                             <input type="hidden" name="profit" value="{{ $profit }}">
@@ -212,6 +213,7 @@
                         <span class="num font-semibold">{{ $money($owedTotal) }}</span>
                     </p>
 
+                    @can('finance.capital.post')
                     <form method="POST" action="{{ route('finance.profit.capitalise') }}" class="mt-3 space-y-3">
                         @csrf
 
@@ -232,6 +234,7 @@
                             {{ __('finance::action.capitalise_now') }}
                         </button>
                     </form>
+                    @endcan
                 </section>
             @endif
 

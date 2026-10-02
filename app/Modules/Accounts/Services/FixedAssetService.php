@@ -628,13 +628,16 @@ final class FixedAssetService
 
             if (bccomp($difference, '0', 4) !== 0) {
                 /*
-                 * লাভ হলে ক্রেডিট, লোকসান হলে ডেবিট — দুইটাই খরচের
-                 * খাতে, কারণ অবচয়ের খাতেই এই তফাতটা মানানসই: দুইটাই
-                 * বলে "ক্ষয়ের হিসাবটা কতটা ঠিক ছিল"।
+                 * ⭐ লাভ নিজের আয়ের খাতে, লোকসান নিজের খরচের খাতে — চেকলিস্ট (অডিট ২৭ সেপ্টেম্বর) §২,
+                 * ২ অক্টোবর ২০২৬ ([[TheAssetSaleGainHidInTheDepreciationTest]])। ⛔ আগে দুইটাই অবচয়ের খাতে বসত —
+                 * লাভ হলে অবচয় ঋণাত্মক দেখাত, আর লাভ-ক্ষতিতে এককালীন বিক্রির লাভটা চালু খরচ কমানোর মতো পড়ত।
                  */
-                $lines[] = bccomp($difference, '0', 4) > 0
-                    ? ['account_id' => $asset->expense_account_id, 'credit' => $difference]
-                    : ['account_id' => $asset->expense_account_id, 'debit' => bcmul($difference, '-1', 4)];
+                $gain = bccomp($difference, '0', 4) > 0;
+                $head = $this->disposalHead($gain ? StandardChart::ASSET_DISPOSAL_GAIN : StandardChart::ASSET_DISPOSAL_LOSS);
+
+                $lines[] = $gain
+                    ? ['account_id' => $head->id, 'credit' => $difference]
+                    : ['account_id' => $head->id, 'debit' => bcmul($difference, '-1', 4)];
             }
 
             /*
@@ -659,5 +662,24 @@ final class FixedAssetService
 
             return $asset->refresh();
         });
+    }
+
+    /**
+     * সম্পদ বিক্রির লাভ বা লোকসানের খাত — ছকে না থাকলে পরিষ্কার কথা।
+     *
+     * ⓘ খাত দুইটা ২ অক্টোবর ২০২৬-এ ছকে এল; পুরনো কোম্পানিতে `abos:sync-chart` চালালে বসে। ⛔ চুপচাপ অবচয়ের
+     * খাতে ফিরে যাওয়া হয় না — তাহলে ভুলটাই নীরবে ফিরে আসত।
+     */
+    private function disposalHead(string $code): Account
+    {
+        $account = Account::query()->postable()->where('code', $code)->first();
+
+        if ($account === null) {
+            throw ValidationException::withMessages([
+                'amount' => __('accounts::asset.disposal_head_missing', ['code' => $code]),
+            ]);
+        }
+
+        return $account;
     }
 }

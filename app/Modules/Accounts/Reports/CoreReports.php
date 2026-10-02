@@ -679,6 +679,8 @@ final class CoreReports
                  * কোনো জায়গা নেই; ওটা টাকা সরানো, খরচ নয়।
                  */
                 ->whereIn('accounts.type', [Account::EXPENSE, Account::INCOME])
+                // ⛔ বছর বন্ধের দাখিলা বাদ — নইলে বছরের শেষ দিন পড়লে আয়-খরচ শূন্য দেখাত ([[YearEndService::closingSources()]])
+                ->whereNotIn('ledger_entries.source_type', YearEndService::closingSources())
                 ->groupBy('ledger_entries.cost_center_id', 'c.code', 'c.name_en', 'c.name_bn')
                 ->orderByRaw('SUM(CASE WHEN accounts.type = ? THEN ledger_entries.debit - ledger_entries.credit ELSE 0 END) DESC', [Account::EXPENSE])
                 ->select([
@@ -737,6 +739,8 @@ final class CoreReports
                 ->whereBetween('ledger_entries.trx_date', [$f['from'], $f['to']])
                 ->tap(ReportEngine::branchWall($f, 'ledger_entries.branch_id'))
                 ->where('accounts.type', Account::EXPENSE)
+                // ⛔ বছর বন্ধের দাখিলা বাদ — নইলে বছরের শেষ দিন পড়লে আয়-খরচ শূন্য দেখাত ([[YearEndService::closingSources()]])
+                ->whereNotIn('ledger_entries.source_type', YearEndService::closingSources())
 
                 /*
                  * ⓘ গ্রুপ বাদ — গ্রুপে দাখিলা বসে না, তাই সারিও আসবে না।
@@ -787,6 +791,8 @@ final class CoreReports
                 ->whereBetween('ledger_entries.trx_date', [$f['from'], $f['to']])
                 ->tap(ReportEngine::branchWall($f, 'ledger_entries.branch_id'))
                 ->where('accounts.type', Account::INCOME)
+                // ⛔ বছর বন্ধের দাখিলা বাদ — নইলে বছরের শেষ দিন পড়লে আয়-খরচ শূন্য দেখাত ([[YearEndService::closingSources()]])
+                ->whereNotIn('ledger_entries.source_type', YearEndService::closingSources())
 
                 // ⓘ গ্রুপে দাখিলা বসে না — শর্তটা তবু লেখা, দাবিটা পড়ে বোঝা যাক
                 ->where('accounts.is_group', false)

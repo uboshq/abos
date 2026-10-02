@@ -529,6 +529,16 @@ final class StandardChart implements ProvisionsCompany
      */
     public const INTEREST_INCOME = '4310';
 
+    /**
+     * ⭐ সম্পদ বিক্রির লাভ আর লোকসান — নিজের খাত, চেকলিস্ট (অডিট ২৭ সেপ্টেম্বর) §২, ২ অক্টোবর ২০২৬।
+     *
+     * ⛔ আগে দুইটাই অবচয়ের খরচের খাতে বসত ([[FixedAssetService::dispose()]]) — লাভ হলে "অবচয়" ঋণাত্মক দেখাত,
+     * আর লাভ-ক্ষতিতে বিক্রির লাভটা চালু ব্যবসার খরচ কমানোর মতো পড়ত। ⓘ এটা এককালীন ঘটনা, তাই আলাদা লাইনে।
+     */
+    public const ASSET_DISPOSAL_GAIN = '4350';
+
+    public const ASSET_DISPOSAL_LOSS = '5320';
+
     /** @var list<string> */
     public const SYSTEM_CODES = [
         self::CASH_IN_HAND, self::BANK, self::MOBILE_MONEY, self::CASH_IN_TRANSIT,
@@ -542,6 +552,7 @@ final class StandardChart implements ProvisionsCompany
         self::SALARY_EXPENSE, self::SALARY_PAYABLE,
         self::PROVIDENT_FUND_PAYABLE, self::EMPLOYEE_ADVANCE,
         self::COMMISSION_CLAIM, self::COMMISSION_WRITTEN_OFF,
+        self::ASSET_DISPOSAL_GAIN, self::ASSET_DISPOSAL_LOSS,
     ];
 
     public function __construct(private readonly AccountService $accounts) {}
@@ -1050,6 +1061,8 @@ final class StandardChart implements ProvisionsCompany
              * ফুলে যেত এমন টাকায় যা কেউ দেবে না।
              */
             ['4340', 'Commission Earned', 'কমিশন আয়', $I, '4000', false, []],
+            // ⭐ সম্পদ বিক্রির লাভ — ধ্রুবকের মন্তব্যে কারণ
+            ['4350', 'Gain on Sale of Assets', 'সম্পদ বিক্রির লাভ', $I, '4000', false, []],
 
             // ── খরচ ───────────────────────────────────────────────────
             ['5000', 'Expenses', 'খরচ', $X, null, true, []],
@@ -1129,6 +1142,8 @@ final class StandardChart implements ProvisionsCompany
              * লাভ-লোকসানে দুইটা আলাদা লাইনে বসে।
              */
             ['5310', 'Interest Expense', 'সুদ ব্যয়', $X, '5000', false, []],
+            // ⭐ সম্পদ বিক্রির লোকসান — ধ্রুবকের মন্তব্যে কারণ
+            ['5320', 'Loss on Sale of Assets', 'সম্পদ বিক্রির লোকসান', $X, '5000', false, []],
             ['5400', 'Bad Debt', 'অনাদায়ী পাওনা', $X, '5000', false, []],
         ];
     }

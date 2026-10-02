@@ -8,6 +8,7 @@ use App\Core\Support\CompanyContext;
 use App\Models\LedgerEntry;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Models\CostCenter;
+use App\Modules\Accounts\Services\YearEndService;
 use App\Modules\Finance\Models\Budget;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Carbon;
@@ -255,6 +256,8 @@ final class BudgetService
         $row = LedgerEntry::query()
             ->forAccount($account->id)
             ->whereBetween('trx_date', [$from, $to])
+            // ⛔ বছর বন্ধের দাখিলা বাদ — নইলে বছরের শেষ দিন পড়লে আয়-খরচ শূন্য দেখাত ([[YearEndService::closingSources()]])
+            ->whereNotIn('source_type', YearEndService::closingSources())
             ->when($centerId !== null, fn ($q) => $q->where('cost_center_id', $centerId))
             ->when($exactCenter && $centerId === null, fn ($q) => $q->whereNull('cost_center_id'))
             ->selectRaw('COALESCE(SUM(debit), 0) as d, COALESCE(SUM(credit), 0) as c')

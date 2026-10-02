@@ -128,6 +128,8 @@ final class AccountsFacts
             ->join('accounts', 'accounts.id', '=', 'ledger_entries.account_id')
             ->where('accounts.type', $type)
             ->whereBetween('ledger_entries.trx_date', [$from->toDateString(), $to->toDateString()])
+            // ⛔ বছর বন্ধের দাখিলা বাদ — নইলে বছরের শেষ দিন পড়লে আয়-খরচ শূন্য দেখাত ([[YearEndService::closingSources()]])
+            ->whereNotIn('ledger_entries.source_type', YearEndService::closingSources())
             ->selectRaw('COALESCE(SUM(ledger_entries.debit), 0) as d, COALESCE(SUM(ledger_entries.credit), 0) as c')
             ->first();
 

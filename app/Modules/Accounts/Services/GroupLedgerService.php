@@ -166,6 +166,10 @@ final class GroupLedgerService
             ->join('accounts', 'accounts.id', '=', 'ledger_entries.account_id')
             ->whereIn('ledger_entries.company_id', $companyIds)
             ->whereBetween('ledger_entries.trx_date', [$from, $to])
+            // ⛔ বছর বন্ধের দাখিলা বাদ — নইলে বছরের শেষ দিন পড়লে আয়-খরচ শূন্য দেখাত ([[YearEndService::closingSources()]])
+            // ⓘ কেবল আয়-খরচের সারিতে — সঞ্চিত মুনাফার (মূলধন) দিকটা থাকে, নইলে মালিকানার জের বদলাত
+            ->where(fn ($q) => $q->whereNotIn('ledger_entries.source_type', YearEndService::closingSources())
+                ->orWhereNotIn('accounts.type', [Account::INCOME, Account::EXPENSE]))
 
             /*
              * ⭐ `nature`-ও গোষ্ঠীতে, আর সেটা ইচ্ছাকৃত।

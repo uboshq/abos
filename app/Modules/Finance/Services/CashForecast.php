@@ -72,11 +72,25 @@ final class CashForecast
             fn ($w) => $w->whereNull('due_on')->orWhere('due_on', '<=', $horizon),
         );
 
-        foreach (SalesInvoice::query()->posted()->withCollected()->tap($withinHorizon)->get() as $invoice) {
+        /*
+         * ⛔ কেবল যে কাগজে এখনো টাকা বাকি — চেকলিস্ট (অডিট ২৭ সেপ্টেম্বর) §২, ২ অক্টোবর ২০২৬
+         * ([[TheForecastLoadedEveryPaidBillTest]])। ⓘ মেয়াদোত্তীর্ণ সব কাগজ "এখন" ঘরে আসে, তাই আগে
+         * কোম্পানির **প্রতিটা** শোধ হয়ে যাওয়া পুরনো বিলও মেমরিতে উঠত — যোগফলে শূন্য দিত, কিন্তু বছর
+         * গড়ালে পাতাটাই থামত। এখন বাকির হিসাব ([[SalesInvoice::dueAmount()]]-এর একই তিন ভাগ) SQL-এ।
+         */
+        $invoices = SalesInvoice::query()->posted()->withCollected()->tap($withinHorizon);
+
+        foreach (SalesInvoice::query()->fromSub($invoices, 'sal_invoices')
+            ->whereRaw('sal_invoices.total - sal_invoices.collected_total - sal_invoices.voucher_total - sal_invoices.returned_total > 0')
+            ->get() as $invoice) {
             $this->add($sums, $this->bucketOf($invoice->due_on, $today), 'receivables', $invoice->dueAmount());
         }
 
-        foreach (PurchaseBill::query()->posted()->withPaid()->tap($withinHorizon)->get() as $bill) {
+        $bills = PurchaseBill::query()->posted()->withPaid()->tap($withinHorizon);
+
+        foreach (PurchaseBill::query()->fromSub($bills, 'pur_bills')
+            ->whereRaw('pur_bills.total - pur_bills.paid_total - pur_bills.voucher_paid_total > 0')
+            ->get() as $bill) {
             $this->add($sums, $this->bucketOf($bill->due_on, $today), 'payables', $bill->dueAmount());
         }
 

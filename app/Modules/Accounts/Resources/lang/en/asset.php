@@ -85,4 +85,5 @@ return [
     'moved' => 'Moved — the books of both branches now agree',
     'already_there' => 'It is already at that branch',
     'move_history' => 'Where it has been',
+    'disposal_head_missing' => 'The account for gain or loss on asset sales (:code) is not in the chart — update the chart (abos:sync-chart).',
 ];
