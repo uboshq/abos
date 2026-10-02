@@ -176,7 +176,20 @@ final class AnotherBranchesPayslipWasOneAddressAwayTest extends TestCase
                 'joining_date' => '2026-02-01',
                 'branch_id' => $this->netrokona->id,
                 'payment_method' => 'cash',
+                'photo' => $this->png(),
             ])
             ->assertSessionHasErrors('branch_id');
+    }
+
+    /** ⓘ ছবি বাধ্যতামূলক (মালিক, ৩ অক্টোবর ২০২৬) — ছবি ছাড়া ফর্ম ছবির ভুলেই থামত, আসল দাবি পর্যন্ত পৌঁছাত না */
+    private function png(): \Illuminate\Http\UploadedFile
+    {
+        $image = imagecreatetruecolor(40, 40);
+        imagefill($image, 0, 0, imagecolorallocate($image, 20, 120, 200));
+        $path = tempnam(sys_get_temp_dir(), 'pic');
+        imagepng($image, $path);
+        imagedestroy($image);
+
+        return new \Illuminate\Http\UploadedFile($path, 'face.png', 'image/png', null, true);
     }
 }

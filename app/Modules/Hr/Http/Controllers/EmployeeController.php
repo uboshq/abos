@@ -194,7 +194,7 @@ class EmployeeController extends Controller implements HasMiddleware
     {
         $this->authorize('update', $employee);
 
-        $this->checkPhoto($request);
+        $this->checkPhoto($request, $employee);
         $this->employees->update($employee, $this->validated($request, $employee));
         $this->savePhoto($request, $employee);
 
@@ -207,9 +207,18 @@ class EmployeeController extends Controller implements HasMiddleware
      * ⭐ ছবি — মালিক, ২ অক্টোবর ২০২৬। সারি সেভের **আগে** যাচাই, যাতে ভুল ফাইলে ফর্মের বাকিটাও না বসে আর মানুষ
      * একবারেই ভুলটা দেখেন। ⚠️ `mimes` ব্রাউজারের কথা মানে; [[EmployeePhotoService::looksLikeAnImage()]] ফাইলের ভেতরটা পড়ে।
      */
-    private function checkPhoto(Request $request): void
+    private function checkPhoto(Request $request, ?Employee $employee = null): void
     {
         if (! $request->hasFile('photo')) {
+            /*
+             * ⛔ ছবি বাধ্যতামূলক — মালিক, ৩ অক্টোবর ২০২৬: "Chobi Mendetory"।
+             * ⓘ নতুন কর্মী ছবি ছাড়া নয়; পুরনো কর্মীর ছবি না থাকলে পরের সম্পাদনায় দিতে হয় — এভাবে সবার ছবি ধীরে
+             * ধীরে আসে। ছবি একবার থাকলে প্রতিবার আবার তুলতে হয় না।
+             */
+            if ($employee?->photo_attachment_id === null) {
+                throw \Illuminate\Validation\ValidationException::withMessages(['photo' => __('hr::validation.photo_required')]);
+            }
+
             return;
         }
 

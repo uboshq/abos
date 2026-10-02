@@ -106,6 +106,35 @@ final class TheProfileHadALetterWhereTheFaceGoesTest extends TestCase
         $this->assertNull($karim->fresh()->photo_attachment_id, '⛔ ভেতরে ছবি নয়, তবু কর্মীর ছবি হিসেবে বসেছে।');
     }
 
+    /**
+     * ⛔ ছবি বাধ্যতামূলক — মালিক, ৩ অক্টোবর ২০২৬: "Chobi Mendetory"।
+     * নতুন কর্মী ছবি ছাড়া নয়; ছবিহীন পুরনো কর্মীর সম্পাদনাও নয়; ছবি একবার থাকলে আবার তুলতে হয় না।
+     */
+    public function test_the_photo_is_required_until_there_is_one(): void
+    {
+        $this->actingAs($this->clerk)->post(route('hr.employee.store'), [
+            'code' => 'E-NEW', 'name_en' => 'No Face', 'joining_date' => '2024-03-01', 'payment_method' => 'cash',
+        ])->assertSessionHasErrors('photo');
+        $this->assertFalse(Employee::query()->where('code', 'E-NEW')->exists(), '⛔ ছবি ছাড়াই নতুন কর্মী বসে গেছে।');
+
+        $this->actingAs($this->clerk)->post(route('hr.employee.store'), [
+            'code' => 'E-NEW', 'name_en' => 'With Face', 'joining_date' => '2024-03-01', 'payment_method' => 'cash',
+            'photo' => $this->png('face.png'),
+        ])->assertSessionHasNoErrors();
+        $this->assertNotNull(Employee::query()->where('code', 'E-NEW')->value('photo_attachment_id'), 'ছবিসহ নতুন কর্মীর ছবি বসেনি।');
+
+        $old = $this->employee('E-OLD', 'Old Hand');
+        $this->actingAs($this->clerk)->put(route('hr.employee.update', $old), $this->form($old) + ['mobile' => '01700000000'])
+            ->assertSessionHasErrors('photo');
+        $this->assertNull($old->fresh()->mobile, '⛔ ছবিহীন কর্মীর সম্পাদনা ছবি ছাড়াই বসে গেছে।');
+
+        $this->actingAs($this->clerk)->put(route('hr.employee.update', $old), $this->form($old) + ['photo' => $this->png('old.png')])
+            ->assertSessionHasNoErrors();
+        $this->actingAs($this->clerk)->put(route('hr.employee.update', $old), $this->form($old) + ['mobile' => '01700000000'])
+            ->assertSessionHasNoErrors();
+        $this->assertSame('01700000000', $old->fresh()->mobile, 'ছবি থাকার পরও প্রতিবার ছবি চাইছে।');
+    }
+
     private function employee(string $code, string $name): Employee
     {
         return Employee::query()->create([

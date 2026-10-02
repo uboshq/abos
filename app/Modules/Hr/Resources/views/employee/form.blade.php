@@ -78,8 +78,9 @@
                          class="shrink-0 rounded-full border border-(--color-border) object-cover" style="width: 4rem; height: 4rem" />
                 @endif
                 <div class="min-w-0 flex-1">
-                    <label for="photo" class="mb-1 block text-sm font-medium">{{ __('hr::field.photo') }}</label>
-                    <input id="photo" name="photo" type="file" accept="image/jpeg,image/png,image/webp"
+                    {{-- ⛔ বাধ্যতামূলক (মালিক, ৩ অক্টোবর ২০২৬) — ছবি আগে থেকে থাকলে নয়; আসল পাহারা কন্ট্রোলারে --}}
+                    <label for="photo" class="mb-1 block text-sm font-medium">{{ __('hr::field.photo') }}@unless ($employee->photo_attachment_id) <span class="text-(--color-danger)">*</span>@endunless</label>
+                    <input id="photo" name="photo" type="file" accept="image/jpeg,image/png,image/webp" @unless ($employee->photo_attachment_id) required @endunless
                            x-on:change="$store.scanner.begin($el, 'face')"
                            class="w-full rounded-(--radius-field) border border-(--color-border)
                                   bg-(--color-surface-card) px-3 py-2 text-sm

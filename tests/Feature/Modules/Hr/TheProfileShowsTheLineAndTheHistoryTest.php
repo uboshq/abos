@@ -34,6 +34,7 @@ final class TheProfileShowsTheLineAndTheHistoryTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        \Illuminate\Support\Facades\Storage::fake('local');
 
         $this->company = Company::create(['code' => 'LIN', 'name_en' => 'Line Co']);
         $this->branch = Branch::query()->create(['company_id' => $this->company->id, 'code' => 'DHK', 'name_en' => 'Dhaka', 'is_active' => true]);
@@ -125,7 +126,7 @@ final class TheProfileShowsTheLineAndTheHistoryTest extends TestCase
     {
         return $changes + [
             'code' => $employee->code, 'name_en' => $employee->name_en, 'joining_date' => '2024-03-01',
-            'payment_method' => 'cash', 'designation_id' => $employee->designation_id,
+            'payment_method' => 'cash', 'designation_id' => $employee->designation_id, 'photo' => $this->png(),
         ];
     }
 
@@ -136,5 +137,17 @@ final class TheProfileShowsTheLineAndTheHistoryTest extends TestCase
         $end = strpos($html, $to, $start);
 
         return substr($html, $start, $end === false ? null : $end - $start);
+    }
+
+    /** ⓘ ছবি বাধ্যতামূলক (মালিক, ৩ অক্টোবর ২০২৬) — ছবি ছাড়া ফর্ম ছবির ভুলেই থামত, আসল দাবি পর্যন্ত পৌঁছাত না */
+    private function png(): \Illuminate\Http\UploadedFile
+    {
+        $image = imagecreatetruecolor(40, 40);
+        imagefill($image, 0, 0, imagecolorallocate($image, 20, 120, 200));
+        $path = tempnam(sys_get_temp_dir(), 'pic');
+        imagepng($image, $path);
+        imagedestroy($image);
+
+        return new \Illuminate\Http\UploadedFile($path, 'face.png', 'image/png', null, true);
     }
 }
