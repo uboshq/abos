@@ -98,6 +98,9 @@ final class ThePhoneCouldNotPrintWhatItSawTest extends TestCase
     /** @var list<PrintableDocument|null> ছাপার ভিউ যা যা পেল, ক্রমে */
     private array $drawn = [];
 
+    /** @var list<array<string, mixed>|null> নতুন ক্রয়-বিলের কাগজ যা পেয়েছে */
+    private array $billFacts = [];
+
     protected function setUp(): void
     {
         parent::setUp();
@@ -119,6 +122,16 @@ final class ThePhoneCouldNotPrintWhatItSawTest extends TestCase
 
         View::composer('print.document', function ($view): void {
             $this->drawn[] = $view->getData()['doc'] ?? null;
+        });
+
+        /*
+         * ⚠️ ১ অক্টোবর ২০২৬ থেকে ক্রয়-বিল নিজের নতুন কাগজে আঁকা ([[purchase::print.bill-modern]], 66f81eab),
+         * `print.document`-এ নয় — তখন থেকে উপরের কান কিছুই শুনত না, আর ক্রয়মূল্যের দাবিটা অন্ধ ছিল (abos-2c ধরল, ২ অক্টোবর)।
+         * তাই নতুন কাগজেরও কান: কাগজের `doc` আর তার নিজের তথ্য (`bill`) দুটোই।
+         */
+        View::composer('purchase::print.bill-modern', function ($view): void {
+            $this->drawn[] = $view->getData()['doc'] ?? null;
+            $this->billFacts[] = $view->getData()['bill'] ?? null;
         });
 
         $engine = app(ReportEngine::class);
@@ -357,10 +370,20 @@ final class ThePhoneCouldNotPrintWhatItSawTest extends TestCase
         $bill = $this->purchaseBill();
         $this->grant('purchase.bill.view');
 
+        $this->billFacts = [];
         $this->assertPricelessPaper('PurchaseBill', $bill->public_id);
+
+        /* ⛔ নতুন কাগজ সত্যিই আঁকা হয়েছে, আর তার নিজের তথ্যেও দাম নেই — দর, টাকা, মোট, কথায় টাকা */
+        $facts = $this->billFacts[0] ?? null;
+        $this->assertIsArray($facts, '⛔ নতুন ক্রয়-বিলের কাগজ আঁকাই হয়নি — দাবিটা কিছু মাপছে না।');
+        $this->assertSame('', $facts['lines'][0]['rate'] ?? 'missing', '⛔ চাবি ছাড়াই নতুন কাগজের সারিতে দর।');
+        $this->assertSame('', $facts['lines'][0]['amount'] ?? 'missing', '⛔ চাবি ছাড়াই নতুন কাগজের সারিতে টাকা।');
+        $this->assertSame([], $facts['sums'], '⛔ চাবি ছাড়াই নতুন কাগজে মোটের ঘর।');
+        $this->assertSame('', $facts['words'], '⛔ চাবি ছাড়াই নতুন কাগজে কথায় টাকা।');
 
         $this->grant(self::COST_KEY);
         $this->drawn = [];
+        $this->billFacts = [];
 
         $bytes = $this->phone($this->pdfUrl('PurchaseBill', $bill->public_id))
             ->assertOk()->assertHeader('Content-Type', 'application/pdf')->getContent();
@@ -370,6 +393,8 @@ final class ThePhoneCouldNotPrintWhatItSawTest extends TestCase
         $this->assertInstanceOf(PrintableDocument::class, $doc);
         $this->assertTrue($doc->showMoney);
         $this->assertStringContainsString('100', (string) ($doc->lines[0]['rate'] ?? ''), '⛔ চাবিওয়ালার কাগজে দরটাই নেই।');
+        $this->assertStringContainsString('100', (string) ($this->billFacts[0]['lines'][0]['rate'] ?? ''), '⛔ চাবিওয়ালার নতুন কাগজে দরটাই নেই।');
+        $this->assertNotSame([], $this->billFacts[0]['sums'] ?? [], '⛔ চাবিওয়ালার নতুন কাগজে মোট নেই।');
     }
 
     /**
