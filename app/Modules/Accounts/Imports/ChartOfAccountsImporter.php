@@ -78,6 +78,23 @@ final class ChartOfAccountsImporter implements Importer
             ]);
         }
 
+        /*
+         * ⛔ কোড ছাড়া একই খাত দুইবার নয় — abos-63-এর তালিকা (abos-bb-র নিরীক্ষার বাকি), ২ অক্টোবর ২০২৬
+         * ([[TheChartImportedTwiceMadeEveryHeadTwiceTest]])। ⓘ কোড খালি থাকলে খাত নতুন কোড পায়, তাই কোডের
+         * অনন্যতা কিছুই ধরত না — একই ফাইল দুইবার তুললে প্রতিটা খাত দুইবার হত, আর টাকা দুই জায়গায় ভাগ হত।
+         * একই অভিভাবকের নিচে একই নাম থাকলে সারিটা ফেরত যায়।
+         */
+        if ($errors === [] && blank($row['code'] ?? '') && filled($row['name_en'] ?? '')) {
+            $twin = Account::query()
+                ->whereRaw('LOWER(TRIM(name_en)) = ?', [mb_strtolower(trim((string) $row['name_en']))])
+                ->where('parent_id', $this->parent($row['parent'] ?? '')?->id)
+                ->first();
+
+            if ($twin !== null) {
+                $errors[] = __('accounts::import.account_already_there', ['name' => $row['name_en'], 'code' => $twin->code]);
+            }
+        }
+
         // সার্ভিসের নিজের পূর্বশর্ত — কোডের অনন্যতা, অভিভাবক-গ্রুপ, ধরন।
         // এখানে না দেখলে সারিটা check-এ সবুজ দেখাত, import-এ ভাঙত।
         if ($errors === []) {

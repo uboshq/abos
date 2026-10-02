@@ -87,6 +87,8 @@ final class ChequeService
         }
 
         return DB::transaction(function () use ($data, $direction, $amount) {
+            $this->assertNotAlreadyRegistered($direction, $data);
+
             $cheque = Cheque::query()->create([
                 'company_id' => CompanyContext::id(),
                 'branch_id' => CompanyContext::branchId(),
@@ -641,6 +643,42 @@ final class ChequeService
                 'status' => __('accounts::validation.cheque_already_decided', [
                     'no' => $cheque->cheque_no,
                 ]),
+            ]);
+        }
+    }
+
+    /**
+     * ⛔ একই চেক দুইবার খাতায় নয় — abos-63-এর তালিকা (abos-bb-র নিরীক্ষার বাকি), ২ অক্টোবর ২০২৬
+     * ([[OneChequeWasRegisteredTwiceTest]])।
+     *
+     * ⓘ আগে কোনো যাচাই ছিল না: একই কাগজ দুইবার তুললে পাশের দিন দুইবার জমা হত (গৃহীত), বা দায় দুইবার বসত
+     * (দেওয়া)। চেক চেনা যায় দিক + নম্বর + ব্যাংক দিয়ে — গৃহীতের ব্যাংক লেখা নামে, দেওয়ার ব্যাংক নিজের খাতে।
+     * ⓘ বাতিলও গোনা হয় — টেবিলের `acc_cheques_unique_no` তাই করে; এখানে ছাড় দিলে মানুষ পেতেন ৫০০-এর পাতা।
+     * ⚠️ সূচকটা ব্যাংকের নাম খালি থাকলে কিছুই ধরে না (NULL ≠ NULL) — দেওয়া চেকে ঠিক তাই হয়; এই যাচাই সেটাও ধরে।
+     * লেনদেনের ভিতরে, তালাসহ পড়া।
+     *
+     * @param  array<string, mixed>  $data
+     */
+    private function assertNotAlreadyRegistered(string $direction, array $data): void
+    {
+        $number = trim((string) ($data['cheque_no'] ?? ''));
+
+        if ($number === '') {
+            return;
+        }
+
+        $twin = Cheque::query()
+            ->where('direction', $direction)
+            ->where('cheque_no', $number)
+            ->when($direction === Cheque::ISSUED,
+                fn ($q) => $q->where('bank_account_id', $data['bank_account_id'] ?? null),
+                fn ($q) => $q->whereRaw("LOWER(TRIM(COALESCE(bank_name, ''))) = ?", [mb_strtolower(trim((string) ($data['bank_name'] ?? '')))]))
+            ->lockForUpdate()
+            ->first();
+
+        if ($twin !== null) {
+            throw ValidationException::withMessages([
+                'cheque_no' => __('accounts::validation.cheque_already_registered', ['no' => $number, 'doc' => $twin->document_no]),
             ]);
         }
     }

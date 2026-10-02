@@ -79,6 +79,22 @@ final class BankStatementImporter implements Importer
             $errors[] = __('accounts::import.bad_date', ['value' => (string) ($row['trx_date'] ?? '')]);
         }
 
+        /*
+         * ⛔ ঋণাত্মক বা ভাঙা অঙ্ক নয় — abos-63-এর তালিকা (abos-bb-র নিরীক্ষার বাকি), ২ অক্টোবর ২০২৬
+         * ([[ABankStatementLostItsMinusSignTest]])। ⓘ [[BankStatementService::amountOf()]] অঙ্ক আর দশমিক ছাড়া সব
+         * ফেলে দেয় — "-৫০০" নীরবে ৫০০ হত, অর্থাৎ জমার ঘরে লেখা তোলা **জমা** হয়ে বসত; আর "1.2.3" আমদানিটাই ভাঙত।
+         * দিকটা কলামেই বলা হয় (তোলা/জমা), তাই চিহ্নওয়ালা অঙ্ক ফেরত যায়, পরিষ্কার কথায়।
+         */
+        foreach (['debit', 'credit'] as $side) {
+            if ($this->badAmount((string) ($row[$side] ?? ''))) {
+                $errors[] = __('accounts::import.bad_statement_amount', ['value' => (string) ($row[$side] ?? '')]);
+            }
+        }
+
+        if ($errors !== []) {
+            return $errors;
+        }
+
         $debit = $this->lines->amountOf($row['debit'] ?? '');
         $credit = $this->lines->amountOf($row['credit'] ?? '');
 
@@ -121,5 +137,23 @@ final class BankStatementImporter implements Importer
                 ? null
                 : $this->lines->amountOf($row['balance'] ?? ''),
         );
+    }
+
+    /** চিহ্ন (− বা বন্ধনী) থাকলে, বা দুইটা দশমিক — অঙ্কটা ভরসার নয়। কমা আর মুদ্রার চিহ্ন চলে। */
+    private function badAmount(string $value): bool
+    {
+        $value = trim($value);
+
+        if ($value === '') {
+            return false;
+        }
+
+        if (preg_match('/[-−(]/u', $value) === 1) {
+            return true;
+        }
+
+        $clean = (string) preg_replace('/[^0-9.]/u', '', $value);
+
+        return $clean === '' || substr_count($clean, '.') > 1 || ! is_numeric($clean);
     }
 }

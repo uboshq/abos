@@ -23,4 +23,6 @@ return [
     'bad_date' => 'Could not read the date :value — write it as day/month/year',
     'no_amount_on_line' => 'The line carries no money — one of debit or credit is needed',
     'both_sides_filled' => 'Both debit and credit carry money — the columns are mismatched',
+    'bad_statement_amount' => 'The amount is unreadable or negative (:value) — put withdrawals in the withdrawn column and deposits in the deposited column, without a sign.',
+    'account_already_there' => '":name" already exists under this parent (code :code) — not created twice.',
 ];

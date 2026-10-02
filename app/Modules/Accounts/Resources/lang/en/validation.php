@@ -118,4 +118,5 @@ return [
     'unknown_account' => 'That account is not in this company chart.',
     'group_takes_no_money' => '":name" is a head, not an account — money posted there shows up in no balance. Pick one of the accounts under it.',
     'not_a_money_account' => ':name is not a cash or bank account — money does not land there.',
+    'cheque_already_registered' => 'Cheque :no is already registered (:doc) — the same cheque cannot be entered twice.',
 ];
