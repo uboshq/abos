@@ -65,6 +65,12 @@ final class CustomerSync implements SyncsToDevices
     {
         $query = Customer::query()
             /*
+             * ⭐ বাছা শাখার গ্রাহকই — মালিক, ২ অক্টোবর ২০২৬: *"APp e sob branch er data ek branch e dekhay"*।
+             * ওয়েবের তালিকার একই নিয়ম ([[Customer::scopeInViewedBranch()]]): এক শাখা বাছলে কেবল সেটা,
+             * "সব শাখা"-য় সব। ⓘ শাখা বদলালে ফোন পুরনোটা মুছে নতুন করে টানে ([[WorkspaceApiController]])।
+             */
+            ->inViewedBranch()
+            /*
              * নিষ্ক্রিয় গ্রাহকও যায়, আর সেটা ইচ্ছাকৃত: ফোনে ইতিমধ্যে
              * নেমে যাওয়া একটা সারি বাদ দিলে সেটা **চিরকাল পুরনো অবস্থায়
              * থেকে যেত**, কারণ ডেল্টা-সিঙ্কে "এটা আর নেই" বলার একমাত্র

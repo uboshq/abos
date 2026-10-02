@@ -75,6 +75,8 @@ final class CustomerDueSync implements SyncsToDevices
             ->where('ledger_entries.party_type', Customer::drillSourceType());
 
         $query = Customer::query()
+            // ⭐ বাছা শাখার গ্রাহকই — [[CustomerSync::pull()]]-এর একই নিয়ম (মালিক, ২ অক্টোবর ২০২৬)
+            ->inViewedBranch()
             ->withOutstanding()
             ->addSelect(['due_moved_at' => $lastMoved])
             ->orderBy('due_moved_at')

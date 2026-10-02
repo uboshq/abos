@@ -84,6 +84,7 @@ final class WorkspaceApiController extends Controller
         }
 
         $companyChanged = (int) $user->current_company_id !== (int) $company->id;
+        $branchBefore = [(int) $user->current_branch_id, (bool) $user->view_all_branches];
 
         /*
          * ⓘ "সব শাখা" আর একই কোম্পানি — কাজের শাখা যেমন ছিল তেমনই (ওয়েবের মতো)।
@@ -102,7 +103,16 @@ final class WorkspaceApiController extends Controller
 
         $user->forceFill(['view_all_branches' => $branchId === null])->save();
 
-        if ($companyChanged) {
+        /*
+         * ⭐ শাখা বদলালেও নতুন করে — মালিক, ২ অক্টোবর ২০২৬: *"APp e sob branch er data ek branch e dekhay"*।
+         * ⛔ আগে কেবল কোম্পানি বদলালে ফোন ক্যাশ মুছত; শাখা বদলালে আগের শাখার সারিগুলো ফোনে থেকে যেত, আর
+         * সার্ভারের ওয়াটারমার্ক এগিয়ে থাকায় নতুন শাখার পুরনো সারিও আর আসত না।
+         */
+        $user->refresh();
+        $viewChanged = $companyChanged
+            || $branchBefore !== [(int) $user->current_branch_id, (bool) $user->view_all_branches];
+
+        if ($viewChanged) {
             $deviceId = $this->deviceOf($request);
 
             if ($deviceId !== null) {
@@ -129,7 +139,13 @@ final class WorkspaceApiController extends Controller
                 'name' => $branch->name(),
             ],
             'viewAllBranches' => (bool) $user->view_all_branches,
-            'companyChanged' => $companyChanged,
+            /*
+             * ⚠️ বসানো অ্যাপগুলো (০.৪.৬ পর্যন্ত) এই পতাকা পেলেই ক্যাশ মুছে পুরোটা টানে — শাখা বদলেও ঠিক সেটাই
+             * দরকার, তাই নতুন অ্যাপ ছাড়াই ঠিক হয়। আসল প্রশ্ন দুটো আলাদা ঘরে: কোম্পানি বদলাল কি না, আর নতুন করে কি না।
+             */
+            'companyChanged' => $viewChanged,
+            'companyMoved' => $companyChanged,
+            'startOver' => $viewChanged,
         ]);
     }
 

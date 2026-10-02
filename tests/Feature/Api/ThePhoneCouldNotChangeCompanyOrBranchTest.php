@@ -292,8 +292,40 @@ final class ThePhoneCouldNotChangeCompanyOrBranchTest extends TestCase
         $this->assertTrue($owner->view_all_branches);
         $this->assertSame($this->branch('NTK')->id, $owner->current_branch_id, '"all" changes what is seen, not where one works');
 
-        // ⓘ একই কোম্পানির ভেতরে শাখা বদল — জলচিহ্ন থাকে, নইলে প্রতি বদলে গোটা তালিকা আবার নামত
-        $this->assertSame(1, $this->watermarks(self::DEVICE));
+        /*
+         * ⭐ শাখা বদলালেও নতুন করে — মালিক, ২ অক্টোবর ২০২৬: *"APp e sob branch er data ek branch e dekhay"*।
+         * ⚠️ আগে এখানে উল্টো দাবি ছিল ("জলচিহ্ন থাকে, নইলে প্রতি বদলে গোটা তালিকা নামত") — আর ঠিক সেটাই
+         * আগের শাখার সারি ফোনে রেখে দিত। এখন বদলের পর জলচিহ্ন নেই, আর ফোনকে বলা হয় নতুন করে টানতে।
+         */
+        $this->assertSame(0, $this->watermarks(self::DEVICE), '⛔ শাখা বদলেও জলচিহ্ন রয়ে গেল — আগের শাখার সারি ফোনে থাকবে।');
+    }
+
+    public function test_a_branch_switch_tells_the_phone_to_start_over_and_brings_only_that_branchs_customers(): void
+    {
+        $tdepot = $this->company('TDEPOT');
+        $ntk = $this->branch('NTK');
+        $other = Branch::acrossAllCompanies()->where('company_id', $tdepot->id)->where('id', '<>', $ntk->id)->firstOrFail();
+
+        $customers = Customer::query()->withoutGlobalScopes()->where('company_id', $tdepot->id)->take(2)->get();
+        $this->assertCount(2, $customers, 'প্রস্তুতিটাই ভুল — দুটো গ্রাহক লাগে।');
+        $customers[0]->forceFill(['branch_id' => $ntk->id])->saveQuietly();
+        $customers[1]->forceFill(['branch_id' => $other->id])->saveQuietly();
+
+        $tokens = $this->signIn('owner@abos.test');
+        $this->switchTo($tokens['accessToken'], ['company' => $tdepot->public_id, 'branch' => $ntk->public_id])
+            ->assertOk()
+            ->assertJsonPath('startOver', true)
+            ->assertJsonPath('companyChanged', true);   // ⓘ বসানো অ্যাপ এটা দেখেই ক্যাশ মোছে
+
+        $this->app['auth']->forgetGuards();
+        $pulled = array_map(fn (array $r) => (string) $r['entityId'], array_filter(
+            $this->withToken($tokens['accessToken'])
+                ->getJson('/api/v1/sync/customer/pull?limit=1000&deviceId='.self::DEVICE)->assertOk()->json('records'),
+            fn (array $r) => ($r['entityType'] ?? null) === 'Customer',
+        ));
+
+        $this->assertContains((string) $customers[0]->public_id, $pulled, 'বাছা শাখার গ্রাহক আসেনি।');
+        $this->assertNotContains((string) $customers[1]->public_id, $pulled, '⛔ অন্য শাখার গ্রাহক এই শাখার ফোনে এল।');
     }
 
     public function test_bad_input_is_a_json_422_not_a_redirect(): void
