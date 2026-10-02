@@ -5,10 +5,14 @@ declare(strict_types=1);
 namespace App\Modules\Supplier\Dashboard;
 
 use App\Core\Contracts\ProvidesDashboard;
+use App\Core\Engines\Dashboard\Breakdown;
 use App\Core\Engines\Dashboard\DashboardDefinition;
 use App\Core\Engines\Dashboard\Listing;
 use App\Core\Engines\Dashboard\Stat;
 use App\Core\Engines\Dashboard\Tile;
+use App\Core\Support\Money;
+use App\Modules\Accounts\Services\AccountsFacts;
+use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Supplier\Models\Supplier;
 use Illuminate\Support\Carbon;
 
@@ -64,6 +68,8 @@ final class SupplierDashboard implements ProvidesDashboard
                 ),
             ],
 
+            panels: self::mostOwed(),
+
             listings: [
                 new Listing(
                     label: __('supplier::dashboard.newest'),
@@ -81,5 +87,45 @@ final class SupplierDashboard implements ProvidesDashboard
                 ),
             ],
         );
+    }
+
+    /**
+     * ⭐ সবচেয়ে বেশি যাঁদের দিতে হবে — শীর্ষ পাঁচ (মালিকের ড্যাশবোর্ড নকশা, ২ অক্টোবর ২০২৬)।
+     *
+     * ⓘ সংজ্ঞা হিসাবের ড্যাশবোর্ডের "কাকে কত দিতে হবে"-র একটাই ([[AccountsFacts::topDue()]], খাত ২১১১-এর জের),
+     * তাই দুই পর্দা কখনো দুই উত্তর দেয় না। ⛔ টাকার অঙ্ক — কেবল পরিশোধ দেখার চাবি থাকলে; সরবরাহকারীর তালিকা
+     * দেখার চাবি দিয়ে দেনার অঙ্ক খোলে না। চাবি না থাকলে চার্টটাই নেই।
+     *
+     * @return list<Breakdown>
+     */
+    private static function mostOwed(): array
+    {
+        // ⓘ নতুন ড্যাশবোর্ডের অংশ — বাকিগুলোর সাথে একসাথে চালু হবে (config abos.dashboards_v2)
+        if (! config('abos.dashboards_v2') || ! auth()->user()?->can('purchase.payment.view')) {
+            return [];
+        }
+
+        $rows = app(AccountsFacts::class)->topDue('supplier', StandardChart::PAYABLE, 5);
+
+        if ($rows === []) {
+            return [];
+        }
+
+        // ⓘ হেডারে বাছা শাখার সরবরাহকারী — তালিকার বাকি ঘরগুলোর মতোই ([[EveryPartyListFollowsTheViewedBranchTest]])
+        $names = Supplier::query()->inViewedBranch()->whereIn('id', array_column($rows, 'party_id'))->get()->keyBy('id');
+        $rows = array_values(array_filter($rows, fn (array $row) => $names->has($row['party_id'])));
+
+        if ($rows === []) {
+            return [];
+        }
+
+        return [new Breakdown(
+            label: __('supplier::dashboard.most_owed'),
+            parts: array_map(fn (array $row) => [
+                'label' => $names[$row['party_id']]?->name() ?? '—',
+                'value' => Money::format($row['amount']),
+            ], $rows),
+            hint: __('supplier::dashboard.most_owed_hint'),
+        )];
     }
 }

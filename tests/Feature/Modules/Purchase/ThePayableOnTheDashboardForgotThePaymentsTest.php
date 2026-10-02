@@ -120,6 +120,7 @@ final class ThePayableOnTheDashboardForgotThePaymentsTest extends TestCase
     public function test_the_dashboard_payable_is_what_is_still_owed_not_what_was_billed(): void
     {
         $dashboardBefore = $this->dashboardPayable();
+        $barBefore = $this->thisMonthBar();
         $ledgerBefore = $this->ledgerPayable();
         $suppliersBefore = $this->allSuppliersOwed();
 
@@ -222,6 +223,21 @@ final class ThePayableOnTheDashboardForgotThePaymentsTest extends TestCase
             ->get(route('module.dashboard', ['module' => 'purchase']))
             ->assertOk()
             ->assertSee(Money::format($this->ledgerPayable()), false);
+
+        // ── ৭. কেনা বনাম পরিশোধের চার্ট — এ মাসের দণ্ড ঠিক ৩,০০০ আর ১,০০০ বাড়ে (২ অক্টোবর ২০২৬) ──
+        [$boughtNow, $paidNow] = $this->thisMonthBar();
+        $this->assertSame(self::BOUGHT, bcsub($boughtNow, $barBefore[0], 4), '⛔ চার্টের এ মাসের "কেনা" দণ্ড ৩,০০০ বাড়েনি।');
+        $this->assertSame(self::PAID, bcsub($paidNow, $barBefore[1], 4), '⛔ চার্টের এ মাসের "পরিশোধ" দণ্ড ১,০০০ বাড়েনি।');
+    }
+
+    /** @return array{0: string, 1: string} এ মাসের [কেনা, পরিশোধ] — চার্টের শেষ দণ্ড */
+    private function thisMonthBar(): array
+    {
+        $panel = PurchaseDashboard::dashboard()->panels[0] ?? null;
+        $this->assertInstanceOf(\App\Core\Engines\Dashboard\Series::class, $panel, '⛔ ক্রয়ের ড্যাশবোর্ডে কেনা-বনাম-পরিশোধের চার্ট নেই।');
+        $last = $panel->points[array_key_last($panel->points)];
+
+        return [bcadd($last['first'], '0', 4), bcadd($last['second'], '0', 4)];
     }
 
     /**

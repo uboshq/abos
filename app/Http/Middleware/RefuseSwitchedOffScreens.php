@@ -90,14 +90,6 @@ final class RefuseSwitchedOffScreens
          * ⓘ উপরের মন্তব্যেই কথাটা লেখা — *"সুইচটা ছিল আড়াল, বাধা নয়"*।
          * ⭐ তাই একই দরজায় দুইটা স্তরই দেখা হয়, একই উত্তর নিয়ে (৪০৪)।
          */
-        $module = $this->moduleFor($name, $route->parameters());
-
-        if ($module !== null && $this->switchedOffInThisBranch($module)) {
-            abort(404, __('core.message.screen_switched_off'));
-        }
-
-        $setting = $this->switchFor($name, $route->parameters());
-
         /*
          * ৪০৪, ৪০৩ নয় — বন্ধ পর্দা এই কোম্পানির জন্য সত্যিই নেই।
          *
@@ -106,11 +98,33 @@ final class RefuseSwitchedOffScreens
          * দিলে একই ঘটনার দুই রকম উত্তর যেত, আর কোনটা সত্যি তা বলার
          * উপায় থাকত না।
          */
-        if ($setting !== null && ! $this->settings->get($setting, true)) {
+        if ($this->refuses($name, $route->parameters())) {
             abort(404, __('core.message.screen_switched_off'));
         }
 
         return $next($request);
+    }
+
+    /**
+     * এই দরজাটা এখানে বন্ধ কি না — শাখার সুইচ বা কোম্পানির সুইচ।
+     *
+     * ⭐ প্রকাশ্য, কারণ দরজায় লিংক দেখায় এমন জায়গাগুলোও (হোমের "গোটা ব্যবসা" সারি) **এই একই প্রশ্ন**
+     * করে — ২ অক্টোবর ২০২৬। ⛔ আগে সারিটা বন্ধ মডিউলের ঘরও দেখাত, আর চাপলে ৪০৪; দুই জায়গায় দুই
+     * নিয়ম থাকলে একদিন আবার আলাদা হত, তাই উত্তরটা কেবল এখানে।
+     *
+     * @param  array<string, mixed>  $params
+     */
+    public function refuses(string $name, array $params = []): bool
+    {
+        $module = $this->moduleFor($name, $params);
+
+        if ($module !== null && $this->switchedOffInThisBranch($module)) {
+            return true;
+        }
+
+        $setting = $this->switchFor($name, $params);
+
+        return $setting !== null && ! $this->settings->get($setting, true);
     }
 
     /**

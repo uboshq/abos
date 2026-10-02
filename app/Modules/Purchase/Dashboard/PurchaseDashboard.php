@@ -7,6 +7,7 @@ namespace App\Modules\Purchase\Dashboard;
 use App\Core\Contracts\ProvidesDashboard;
 use App\Core\Engines\Dashboard\DashboardDefinition;
 use App\Core\Engines\Dashboard\Listing;
+use App\Core\Engines\Dashboard\Series;
 use App\Core\Engines\Dashboard\Stat;
 use App\Core\Engines\Dashboard\Tile;
 use App\Core\Support\DocumentStatus;
@@ -119,6 +120,8 @@ final class PurchaseDashboard implements ProvidesDashboard
                 ),
             ],
 
+            panels: [self::boughtAgainstPaid()],
+
             listings: [
                 new Listing(
                     label: __('purchase::dashboard.biggest_payables'),
@@ -136,6 +139,51 @@ final class PurchaseDashboard implements ProvidesDashboard
                     href: route('purchase.bill.index'),
                 ),
             ],
+        );
+    }
+
+    /**
+     * ⭐ মাসে মাসে কেনা বনাম পরিশোধ — গত ছয় মাস (মালিকের ড্যাশবোর্ড নকশা, ২ অক্টোবর ২০২৬)।
+     *
+     * ⓘ দুইটা দণ্ড পাশাপাশি দেখালেই বোঝা যায় দেনা বাড়ছে না কমছে: কেনা বেশি, পরিশোধ কম মানে দেনা জমছে।
+     * ⓘ সংজ্ঞা উপরের দুইটা সংখ্যার মতোই — নিশ্চিত বিলের `total`, পরিশোধের `amount` — তাই এ মাসের দণ্ড আর
+     * "এই মাসে কেনা / পরিশোধ" কখনো দুই কথা বলে না। দুইটা কোয়েরি, মাস ধরে ভাগ; ফাঁকা মাসও শূন্য নিয়ে থাকে।
+     */
+    private static function boughtAgainstPaid(): Series
+    {
+        $start = Carbon::today()->startOfMonth()->subMonths(5);
+        $expr = "DATE_FORMAT(trx_date, '%Y-%m')";
+
+        $bought = PurchaseBill::query()->whereIn('status', DocumentStatus::POSTED)
+            ->where('trx_date', '>=', $start->toDateString())
+            ->selectRaw("{$expr} as ym, COALESCE(SUM(total), 0) as amount")->groupByRaw($expr)
+            ->toBase()->pluck('amount', 'ym');
+
+        $paid = Payment::query()->where('trx_date', '>=', $start->toDateString())
+            ->selectRaw("{$expr} as ym, COALESCE(SUM(amount), 0) as amount")->groupByRaw($expr)
+            ->toBase()->pluck('amount', 'ym');
+
+        $points = [];
+
+        for ($month = $start->copy(); $month->lessThanOrEqualTo(Carbon::today()); $month->addMonth()) {
+            $ym = $month->format('Y-m');
+            $in = (string) ($bought[$ym] ?? '0');
+            $out = (string) ($paid[$ym] ?? '0');
+
+            $points[] = [
+                'label' => $month->translatedFormat('M'),
+                'first' => $in,
+                'second' => $out,
+                'firstTitle' => Money::format($in),
+                'secondTitle' => Money::format($out),
+            ];
+        }
+
+        return new Series(
+            label: __('purchase::dashboard.bought_against_paid'),
+            points: $points,
+            firstLabel: __('purchase::dashboard.bought'),
+            secondLabel: __('purchase::dashboard.paid'),
         );
     }
 }

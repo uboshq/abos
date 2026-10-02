@@ -77,7 +77,7 @@ final class DashboardEngine
      * এই পাতাটা **চওড়া**: বারো বিষয়ের একটা করে সংখ্যা, আর কোনটায়
      * নামতে হবে সেই সিদ্ধান্ত। দুইটা আলাদা প্রশ্ন, তাই দুইটা পর্দা।
      *
-     * @return list<array{module: string, name: string, stat: Stat}>
+     * @return list<array{module: string, name: string, stat: Stat, panel: Series|Breakdown|null}>
      */
     public function overall(?User $user): array
     {
@@ -105,7 +105,8 @@ final class DashboardEngine
                 continue;
             }
 
-            $stats = $this->allowed($provider::dashboard()->stats, $user);
+            $definition = $provider::dashboard();
+            $stats = $this->allowed($definition->stats, $user);
 
             if ($stats === [] || $stats[0]->value === Stat::HIDDEN) {
                 continue;
@@ -115,6 +116,15 @@ final class DashboardEngine
                 'module' => $module->code,
                 'name' => $module->name[app()->getLocale()] ?? $module->name['en'],
                 'stat' => $stats[0],
+
+                /*
+                 * ⭐ মডিউলের প্রধান চার্ট — হোমের কমান্ড সেন্টারে, মালিকের নকশা, ১ অক্টোবর ২০২৬।
+                 *
+                 * ⓘ বাড়তি কোয়েরি নেই: সংজ্ঞাটা উপরের লাইনেই তৈরি হয়, আগে শুধু প্রথম সংখ্যাটা রেখে বাকিটা
+                 * ফেলে দেওয়া হত। ⚠️ মডিউলের নিজের পর্দার দরজা ([[permissionFor()]]) পেরোলেই আসে — সেখানে
+                 * যে চার্ট তিনি দেখেন, হোমেও ঠিক সেটাই; নতুন কোনো দরজা খোলে না।
+                 */
+                'panel' => $definition->panels[0] ?? null,
             ];
         }
 

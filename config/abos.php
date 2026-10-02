@@ -169,4 +169,13 @@ return [
     'ledger_seal' => [
         'key' => env('LEDGER_SEAL_KEY', ''),
     ],
+
+    /*
+     * ⭐ নতুন মডিউল ড্যাশবোর্ড (মালিকের অনুমোদিত নকশা, ২ অক্টোবর ২০২৬) — একসাথে চালু হবে।
+     *
+     * ⓘ মালিকের নির্দেশ: *"ektane sob deshboard sesh kore tar por eksathe switch dibe"*। প্রতিটা ধাপ
+     * main-এ বন্ধ অবস্থায় যায় (প্রতিটা ডেপ্লয় পুরো main নেয়), আর শেষ কমিটটা এই ডিফল্ট `true` করে।
+     * ⚠️ বন্ধ থাকলে পুরনো ড্যাশবোর্ড হুবহু আগের মতো — পরীক্ষায় বাঁধা।
+     */
+    'dashboards_v2' => (bool) env('ABOS_DASHBOARDS_V2', false),
 ];

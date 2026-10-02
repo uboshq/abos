@@ -101,7 +101,66 @@
          * দেয় ("unexpected endforeach"), তাই খুঁজে পেতে সময় লাগে।
          */
         $nothing = $groups === [] || array_filter($groups) === [];
+
+        /*
+         * ⭐ টাকার অবস্থানের কার্ড — কমান্ড সেন্টারের মাথায়, ডান পাশে।
+         * মালিকের নকশা, ১ অক্টোবর ২০২৬।
+         *
+         * ⓘ ভাগওয়ালা টাকার কার্ডটাই অবস্থান (হাতে নগদ · MFS · ব্যাংক ·
+         * পথে)। অবস্থান কোনো কালপর্বের নয় — "এই মাসে হাতে কত" বলে কিছু
+         * নেই — তাই আজ/মাস/বছর যেটাই বাছা হোক, কার্ডটা একই জায়গায়
+         * থাকে, আর নিচের সারি থেকে বাদ যায় যাতে একই সংখ্যা দুইবার না আসে।
+         *
+         * ⚠️ হিসাব মডিউল বন্ধ বা অনুমতি না থাকলে কার্ডটা আসেই না, আর
+         * মাথার সারিতে তখন শুধু শিরোনাম থাকে।
+         */
+        $position = null;
+
+        foreach (\App\Core\Dashboard\Widget::PERIODS as $positionGroup) {
+            foreach ($groups[$positionGroup] ?? [] as $candidate) {
+                if ($candidate->tone === 'money' && $candidate->parts !== []) {
+                    $position = $candidate;
+
+                    break 2;
+                }
+            }
+        }
     @endphp
+
+    {{-- ── কমান্ড সেন্টারের মাথা ─────────────────────────────────────
+         বাঁয়ে শিরোনাম, ডানে টাকার অবস্থান — মালিকের নকশা, ১ অক্টোবর ২০২৬। --}}
+    <section data-command-head class="mb-6 flex flex-col gap-4 lg:flex-row" style="justify-content: space-between">
+        <div class="flex min-w-0 flex-col justify-center gap-1">
+            <h2 class="text-2xl font-semibold text-(--color-ink)">{{ __('home.command_center') }}</h2>
+            <p class="text-sm text-(--color-ink-body)">{{ __('home.command_center_flow') }}</p>
+        </div>
+
+        @if ($position)
+            <a href="{{ $position->href }}" data-money-position
+               class="block w-full shrink-0 rounded-(--radius-card) p-5 text-(--color-ink-inverse) shadow-lg
+                      transition-shadow hover:shadow-xl"
+               style="background: linear-gradient(135deg, var(--color-brand-700), var(--color-brand-900)); max-width: 40rem"
+               @if ($position->definition) title="{{ $position->definition }}" @endif>
+                <p class="flex items-center gap-1.5 text-sm text-white/70">
+                    @if ($position->icon)
+                        <x-ui.icon :name="$position->icon" :size="15" />
+                    @endif
+                    {{ $position->label }}
+                </p>
+
+                <p class="tabular mt-1 text-4xl font-semibold">{{ $position->value }}</p>
+
+                <div class="mt-4 grid grid-cols-2 gap-x-8 gap-y-3 border-t border-white/15 pt-3 sm:grid-cols-4">
+                    @foreach ($position->parts as $partLabel => $partValue)
+                        <div class="min-w-0">
+                            <p class="truncate text-2xs text-white/60">{{ $partLabel }}</p>
+                            <p class="tabular mt-0.5 font-semibold">{{ $partValue }}</p>
+                        </div>
+                    @endforeach
+                </div>
+            </a>
+        @endif
+    </section>
 
     {{-- ── গোটা ব্যবসা এক সারিতে ───────────────────────────────────
          প্রতিটা মডিউলের মাথার সংখ্যাটা, পাশাপাশি। মালিকের নির্দেশ,
@@ -123,85 +182,17 @@
     @foreach ([$period] as $group)
         @if (! empty($groups[$group]))
         @php
-            $widgets = $groups[$group];
-
             /*
-             * প্রধান কার্ড — "আজ"-এর সবচেয়ে বড় টাকার সংখ্যাটা।
-             *
-             * ── কেন প্রথমটা নয় ─────────────────────────────────────
-             * প্রথমে "প্রথম টাকার উইজেট" নেওয়া হয়েছিল, আর সাধারণ
-             * সকালে সেটা "আজকের বিক্রয় ০.০০" — গোটা সারি জুড়ে একটা
-             * বিশাল শূন্য। প্রধান কার্ডের কাজ চোখকে শুরুর জায়গা দেওয়া,
-             * আর শূন্য কোনো শুরু নয়।
-             *
-             * ── সব শূন্য হলে প্রধান কার্ড নেই ───────────────────────
-             * তখন সবগুলো সমান কার্ডই থাকে। দিনের শুরুতে কিছুই ঘটেনি —
-             * পর্দাটা সেটাই বলুক, একটা বড় শূন্য দিয়ে নয়।
+             * ⭐ টাকার অবস্থান এখন মাথার সারিতে (উপরে) — এখানে আর নয়,
+             * আর প্রধান কার্ডও নেই: সব কার্ড সমান, চারটা করে এক লাইনে।
+             * মালিকের নকশা, ১ অক্টোবর ২০২৬। আগের "সবচেয়ে বড় টাকার কার্ড" বাছাইয়ের নিয়মটা
+             * বাদ গেছে; `$leadIndex` এখন সবসময় false।
              */
+            $widgets = array_values(array_filter($groups[$group], fn ($w) => $w !== $position));
             $leadIndex = false;
-
-            /*
-             * প্রধান কার্ড — টাকা **কোথায় আছে**, কোনটা বড় সেটা নয়।
-             *
-             * ── আগে যা ছিল, আর কেন সেটা ভুল ─────────────────────────
-             * নিয়মটা ছিল "সবচেয়ে বড় টাকার সংখ্যাটা"। ভালো একটা দিনে
-             * আজকের বিক্রয় হাতের নগদকে ছাড়িয়ে যায়, আর তখন প্রধান
-             * কার্ডটা নিজে থেকেই বদলে যেত — একই পর্দা দুই দিনে দুই
-             * প্রশ্নের উত্তর দিত, আর মালিককে প্রতিবার পড়ে বুঝতে হত
-             * এবার কোনটা বড় করে দেখানো হয়েছে।
-             *
-             * মালিক পর্দায় এসে প্রথম যে প্রশ্নটা করেন সেটা **"টাকা
-             * কত"** — "আজ কত বেচলাম" নয়। বিক্রয় একটা প্রবাহ, টাকা
-             * একটা অবস্থান; দিন শেষে সিদ্ধান্তগুলো অবস্থানটা দেখেই
-             * নেওয়া হয়।
-             *
-             * ভাগওয়ালা কার্ডটাই সেই অবস্থান (নগদ কাউন্টারে · ব্যাংক ও
-             * MFS · পথে), আর ওই ভাগগুলো আছে বলেই সে বড় জায়গার দাবিদার
-             * — ছোট কার্ডে তিনটা ঘর পাশাপাশি বসেই না।
-             */
-            if (in_array($group, \App\Core\Dashboard\Widget::PERIODS, true)) {
-                $position = collect($widgets)
-                    ->filter(fn ($w) => $w->tone === 'money' && $w->parts !== []);
-
-                /*
-                 * অবস্থানের কার্ড না থাকলে তবেই সবচেয়ে বড়টা।
-                 *
-                 * হিসাব মডিউল বন্ধ থাকলে বা তার অনুমতি না থাকলে ওই
-                 * কার্ডটাই আসে না — তখন চোখের শুরুটা যা আছে তার
-                 * মধ্যে সবচেয়ে বড়টাই।
-                 */
-                $biggest = $position->isNotEmpty() ? $position : collect($widgets)
-                    ->filter(fn ($w) => $w->tone === 'money' && $pending($w))
-                    ->sortByDesc(fn ($w) => (float) preg_replace('/[^0-9.]/', '',
-                        strtr($w->value, ['০' => '0', '১' => '1', '২' => '2', '৩' => '3', '৪' => '4',
-                            '৫' => '5', '৬' => '6', '৭' => '7', '৮' => '8', '৯' => '9'])));
-
-                $leadIndex = $biggest->isEmpty() ? false : $biggest->keys()->first();
-
-                /*
-                 * প্রধান কার্ডটা সারির শুরুতে।
-                 *
-                 * ── কেন ক্রম বদলাতে হলো ────────────────────────────
-                 * উইজেটগুলো মডিউলের `sort` ধরে আসে, আর তাতে হিসাবের
-                 * কার্ডটা বিক্রয়ের দুইটার পরে পড়ত — ফলে সবচেয়ে বড়
-                 * কার্ডটা দুইটা ছোট কার্ডের **নিচে** বসত, আর চোখের
-                 * শুরুর জায়গাটাই মাঝখানে চলে যেত।
-                 *
-                 * বাকিগুলোর নিজেদের ক্রম অটুট থাকে — কেবল প্রধানটাকে
-                 * সামনে তোলা হয়।
-                 */
-                if ($leadIndex !== false) {
-                    $lead = $widgets[$leadIndex];
-
-                    unset($widgets[$leadIndex]);
-
-                    $widgets = [$lead, ...array_values($widgets)];
-                    $leadIndex = 0;
-                }
-            }
         @endphp
 
-        <section class="mb-6">
+        <section data-period-cards class="mb-6">
             <h2 class="mb-2 text-sm font-semibold text-(--color-ink-muted)">{{ $titles[$group] }}</h2>
 
             {{--
@@ -215,7 +206,7 @@
                 আজ কত আদায়" — তিনটা একসাথে দেখা যেত না।
             --}}
             {{-- ⭐ এক লাইনে — বড় কার্ড দুই ঘর + চারটা ছোট = ছয় (মালিক, ২৯ সেপ্টেম্বর ২০২৬) --}}
-            <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-6">
+            <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                 @foreach ($widgets as $i => $widget)
                     @php
                         $lead = $i === $leadIndex;
@@ -430,6 +421,90 @@
             </div>
         </div>
     @endif
+
+    {{-- ⭐ ব্যবসার চিত্র — প্রতিটা মডিউলের প্রধান চার্ট, তিনটা করে এক সারিতে (মালিকের নকশা, ১ অক্টোবর ২০২৬)।
+         ⓘ চার্টটা মডিউলের নিজের ড্যাশবোর্ডের প্রথমটা — হোমে আলাদা কোনো হিসাব নেই, তাই দুই পর্দা কখনো দুই কথা বলে না।
+         ⓘ পুরো কার্ডটাই মডিউলের ড্যাশবোর্ডের দরজা: চার্ট থেকে বিস্তারিত, সেখান থেকে লেনদেন। --}}
+    @php
+        $pictures = array_values(array_filter($overall ?? [], fn (array $row) => ($row['panel'] ?? null) !== null));
+    @endphp
+
+    @if ($pictures !== [])
+        <section data-business-pictures class="mb-6">
+            <h2 class="mb-2 text-sm font-semibold text-(--color-ink-muted)">{{ __('home.business_pictures') }}</h2>
+
+            <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                @foreach ($pictures as $row)
+                    @php $panel = $row['panel']; @endphp
+
+                    <a href="{{ route('module.dashboard', ['module' => $row['module']]) }}" data-boxed
+                       class="block min-w-0 rounded-(--radius-card) border border-(--color-border)
+                              bg-(--color-surface-card) shadow-(--shadow-card) transition-colors
+                              hover:bg-(--color-surface-hover)">
+                        <div class="flex items-baseline justify-between gap-3 border-b border-(--color-border) px-4 py-3">
+                            <span class="min-w-0">
+                                <span class="block truncate text-sm font-semibold text-(--color-ink)">{{ $row['name'] }}</span>
+                                <span class="block truncate text-2xs text-(--color-ink-muted)">{{ $panel->label }}</span>
+                            </span>
+                            <span class="shrink-0 text-xs text-(--color-link)">{{ __('home.details') }} →</span>
+                        </div>
+
+                        @if ($panel instanceof \App\Core\Engines\Dashboard\Series)
+                            @php $peak = $panel->peak(); @endphp
+
+                            <div class="flex items-end gap-2 px-4 pt-4" style="height: 9rem">
+                                @foreach ($panel->points as $point)
+                                    <div class="flex h-full flex-1 items-end justify-center gap-0.5">
+                                        @foreach ([['first', 'bg-(--color-brand-500)', $panel->firstLabel], ['second', 'bg-(--color-brand-700)/25', $panel->secondLabel]] as [$side, $fill, $name])
+                                            <div class="w-1/2 rounded-t {{ $fill }}"
+                                                 style="height:{{ max(2, (int) round((float) $point[$side] / $peak * 100)) }}%"
+                                                 title="{{ $point['label'] }} · {{ $name }}: {{ $point[$side.'Title'] ?? $point[$side] }}"></div>
+                                        @endforeach
+                                    </div>
+                                @endforeach
+                            </div>
+
+                            <div class="flex gap-2 px-4 pt-1">
+                                @foreach ($panel->points as $point)
+                                    <div class="min-w-0 flex-1 truncate text-center text-2xs text-(--color-ink-muted)">{{ $point['label'] }}</div>
+                                @endforeach
+                            </div>
+
+                            <div class="flex items-center gap-4 px-4 py-2 text-2xs text-(--color-ink-muted)">
+                                <span class="flex items-center gap-1.5">
+                                    <span class="inline-block size-2.5 rounded-sm bg-(--color-brand-500)"></span>{{ $panel->firstLabel }}
+                                </span>
+                                <span class="flex items-center gap-1.5">
+                                    <span class="inline-block size-2.5 rounded-sm bg-(--color-brand-700)/25"></span>{{ $panel->secondLabel }}
+                                </span>
+                            </div>
+                        @else
+                            @php
+                                /* ⚠️ মানটা প্রায়ই সাজানো টাকা ("1,234.00", বাংলা অঙ্ক) — (float) কমায় থেমে যেত আর দণ্ড ভুল মাপের হত */
+                                $num = fn ($v) => (float) str_replace(',', '', strtr((string) $v, ['০' => '0', '১' => '1', '২' => '2', '৩' => '3', '৪' => '4', '৫' => '5', '৬' => '6', '৭' => '7', '৮' => '8', '৯' => '9']));
+                                $total = max(1.0, array_sum(array_map(fn ($part) => $num($part['value']), $panel->parts)));
+                            @endphp
+
+                            <div class="space-y-3 px-4 py-3">
+                                @foreach (array_slice($panel->parts, 0, 5) as $part)
+                                    <div>
+                                        <div class="mb-1 flex items-baseline justify-between gap-3 text-xs">
+                                            <span class="min-w-0 truncate text-(--color-ink-muted)">{{ $part['label'] }}</span>
+                                            <span class="shrink-0 font-semibold tabular-nums">{{ $part['value'] }}</span>
+                                        </div>
+                                        <div class="h-2 overflow-hidden rounded-full bg-(--color-surface-hover)">
+                                            <div class="h-full bg-(--color-brand-500)"
+                                                 style="width:{{ min(100, max(0, (int) round($num($part['value']) / $total * 100))) }}%"></div>
+                                        </div>
+                                    </div>
+                                @endforeach
+                            </div>
+                        @endif
+                    </a>
+                @endforeach
+            </div>
+        </section>
+    @endif
     {{-- ── যা করা বাকি ───────────────────────────────────────────────
          কার্ডের ছক নয়, সারির তালিকা — আর শূন্যগুলো এক লাইনে গুটানো।
 
@@ -475,54 +550,61 @@
 
              টপবারে ঠিক এই নিয়মটাই আগে লেখা আছে — সেখানে flex, এখানে
              grid, কারণ একই। --}}
-        <section class="min-w-0">
-            <h2 class="mb-2 text-sm font-semibold text-(--color-ink-muted)">{{ $titles['todo'] }}</h2>
+        {{-- ⭐ ব্যতিক্রম কেন্দ্র — "যা করা বাকি" এখন কার্ডে, গুরুত্বের চিহ্ন আর পদক্ষেপের বোতামসহ, গোটা সারি জুড়ে।
+             মালিকের নকশা, ১ অক্টোবর ২০২৬। ⓘ উৎস বদলায়নি: মডিউলের নিজের করণীয় উইজেট, অনুমতি ছেঁকে।
+             ⚠️ চিহ্ন রঙে একা নয় — আইকন আর লেখা দুইটাই থাকে, রঙ না চিনলেও পড়া যায়। --}}
+        <section data-exception-center class="min-w-0 lg:col-span-2">
+            <h2 class="mb-2 text-sm font-semibold text-(--color-ink-muted)">{{ __('home.exceptions_title') }}</h2>
 
-            <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border)
-                        bg-(--color-surface-card) shadow-(--shadow-card)">
-                @foreach ($waiting as $widget)
-                    <a href="{{ $widget->href }}"
-                       class="flex items-center gap-3 border-b border-(--color-border) px-4 py-3
-                              transition-colors last:border-b-0 hover:bg-(--color-surface-hover)">
-                        {{-- আইকনটা সারির চরিত্রের রঙে — বিশটা সারি একই
-                             রকম দেখালে কোনটা টাকার আর কোনটা মালের তা
-                             পড়ে বের করতে হয়। আইকন না দিলে ঘরটাই থাকে না। --}}
-                        @if ($widget->icon)
-                            <span @class([
-                                'grid size-8 shrink-0 place-items-center rounded-(--radius-field)',
-                                'bg-(--color-badge-warning-bg) text-(--color-badge-warning-ink)'
-                                    => $widget->tone === 'warn',
-                                'bg-(--color-badge-success-bg) text-(--color-badge-success-ink)'
-                                    => $widget->tone === 'good',
-                                'bg-(--color-surface-app) text-(--color-brand-600)'
-                                    => ! in_array($widget->tone, ['warn', 'good'], true),
+            <div data-boxed class="rounded-(--radius-card) border border-(--color-border)
+                        bg-(--color-surface-card) p-4 shadow-(--shadow-card)">
+                @if ($waiting->isNotEmpty())
+                    <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                        @foreach ($waiting as $widget)
+                            @php $warn = $widget->tone === 'warn'; @endphp
+
+                            <div @class([
+                                'flex min-w-0 flex-col gap-2 rounded-(--radius-card) border border-(--color-border) p-3',
+                                'bg-(--color-badge-warning-bg)/40' => $warn,
+                                'bg-(--color-surface-sunken)' => ! $warn,
                             ])>
-                                <x-ui.icon :name="$widget->icon" :size="16" />
-                            </span>
-                        @endif
-
-                        <span class="min-w-0 flex-1">
-                            <span class="block truncate text-sm font-medium">{{ $widget->label }}</span>
-                            @if ($widget->hint)
-                                <span class="block truncate text-2xs text-(--color-ink-muted)">
-                                    {{ $widget->hint }}
+                                <span @class([
+                                    'inline-flex w-fit items-center gap-1.5 rounded-full px-2 py-0.5 text-2xs font-semibold',
+                                    'bg-(--color-badge-warning-bg) text-(--color-badge-warning-ink)' => $warn,
+                                    'bg-(--color-badge-info-bg) text-(--color-badge-info-ink)' => ! $warn,
+                                ])>
+                                    <x-ui.icon :name="$warn ? 'bell' : 'clock'" :size="12" />
+                                    {{ $warn ? __('home.severity_warn') : __('home.severity_attention') }}
                                 </span>
-                            @endif
-                        </span>
 
-                        <span @class([
-                            'tabular text-lg font-semibold',
-                            'text-(--color-badge-warning-ink)' => $widget->tone === 'warn',
-                            'text-(--color-ink)' => $widget->tone !== 'warn',
-                        ])>{{ $widget->value }}</span>
+                                <div class="flex items-baseline justify-between gap-3">
+                                    <span class="min-w-0">
+                                        <span class="block text-sm font-semibold text-(--color-ink)">{{ $widget->label }}</span>
+                                        @if ($widget->hint)
+                                            <span class="block truncate text-2xs text-(--color-ink-muted)">{{ $widget->hint }}</span>
+                                        @endif
+                                    </span>
+                                    <span @class([
+                                        'tabular shrink-0 text-xl font-semibold',
+                                        'text-(--color-badge-warning-ink)' => $warn,
+                                        'text-(--color-ink)' => ! $warn,
+                                    ])>{{ $widget->value }}</span>
+                                </div>
 
-                        <x-ui.icon name="chevron_right" :size="16"
-                                   class="text-(--color-ink-disabled) rtl:rotate-180" />
-                    </a>
-                @endforeach
+                                <a href="{{ $widget->href }}"
+                                   class="inline-flex w-fit items-center gap-1 rounded-(--radius-field) border border-(--color-border)
+                                          bg-(--color-surface-card) px-3 py-1.5 text-xs font-semibold text-(--color-link)
+                                          hover:bg-(--color-surface-hover)">
+                                    {{ __('home.open') }}
+                                    <x-ui.icon name="chevron_right" :size="14" class="rtl:rotate-180" />
+                                </a>
+                            </div>
+                        @endforeach
+                    </div>
+                @endif
 
                 @if ($quiet->isNotEmpty())
-                    <p class="flex items-center gap-2 px-4 py-3 text-sm text-(--color-ink-muted)">
+                    <p @class(['flex items-center gap-2 text-sm text-(--color-ink-muted)', 'mt-3' => $waiting->isNotEmpty()])>
                         <x-ui.icon name="check_circle" :size="16" class="text-(--color-success)" />
                         {{ trans_choice('core.dashboard.nothing_pending', $quiet->count(),
                             ['count' => $quiet->count()]) }}

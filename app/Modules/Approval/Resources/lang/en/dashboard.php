@@ -19,4 +19,10 @@ return [
     'action' => 'Action',
     'amount' => 'Amount',
     'nothing_waiting' => 'Nothing is waiting on a decision.',
+    'how_long' => 'How long it has been waiting',
+    'how_long_hint' => 'Pending approvals, counted from when they were sent',
+    'under_a_day' => 'Under a day',
+    'one_to_three' => '1–3 days',
+    'three_to_seven' => '3–7 days',
+    'over_a_week' => 'Over a week',
 ];

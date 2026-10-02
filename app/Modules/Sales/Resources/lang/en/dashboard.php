@@ -27,4 +27,5 @@ return [
     'status_hint' => 'A draft invoice is not money yet — nothing shipped, nothing posted',
     'biggest_dues' => 'Largest outstanding',
     'nothing_due' => 'Nothing outstanding.',
+    'this_year_months' => 'Billed and collected in :year — January to December',
 ];

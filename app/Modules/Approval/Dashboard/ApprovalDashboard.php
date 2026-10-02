@@ -5,11 +5,13 @@ declare(strict_types=1);
 namespace App\Modules\Approval\Dashboard;
 
 use App\Core\Contracts\ProvidesDashboard;
+use App\Core\Engines\Dashboard\Breakdown;
 use App\Core\Engines\Dashboard\DashboardDefinition;
 use App\Core\Engines\Dashboard\Listing;
 use App\Core\Engines\Dashboard\Stat;
 use App\Core\Engines\Dashboard\Tile;
 use App\Models\Approval;
+use Illuminate\Support\Carbon;
 
 /**
  * অনুমোদন মডিউলের ড্যাশবোর্ড।
@@ -58,6 +60,8 @@ final class ApprovalDashboard implements ProvidesDashboard
                 ),
             ],
 
+            panels: [self::howLongWaiting()],
+
             listings: [
                 new Listing(
                     label: __('approval::dashboard.waiting_now'),
@@ -74,6 +78,38 @@ final class ApprovalDashboard implements ProvidesDashboard
                     href: route('approval.inbox.index'),
                 ),
             ],
+        );
+    }
+
+    /**
+     * ⭐ কত দিন ধরে অপেক্ষায় — মালিকের ড্যাশবোর্ড নকশা (২ অক্টোবর ২০২৬)।
+     *
+     * ⓘ "অপেক্ষমাণ" সংখ্যাটা বলে কত; এটা বলে **কতক্ষণ** — আর আটকে থাকার আসল খরচ সময়ে। উপরের ঘরের একই
+     * ছাঁকনি (অবস্থা অপেক্ষমাণ), এক কোয়েরিতে বয়স ধরে ভাগ — বয়স জমা দেওয়ার মুহূর্ত (`requested_at`) থেকে; যোগফল সবসময় ঐ সংখ্যার সমান।
+     */
+    private static function howLongWaiting(): Breakdown
+    {
+        $now = Carbon::now();
+        $day = $now->copy()->subDay();
+        $three = $now->copy()->subDays(3);
+        $seven = $now->copy()->subDays(7);
+
+        $row = Approval::query()->where('status', Approval::PENDING)
+            ->selectRaw('SUM(CASE WHEN requested_at >= ? THEN 1 ELSE 0 END) as fresh', [$day])
+            ->selectRaw('SUM(CASE WHEN requested_at < ? AND requested_at >= ? THEN 1 ELSE 0 END) as days', [$day, $three])
+            ->selectRaw('SUM(CASE WHEN requested_at < ? AND requested_at >= ? THEN 1 ELSE 0 END) as week', [$three, $seven])
+            ->selectRaw('SUM(CASE WHEN requested_at < ? THEN 1 ELSE 0 END) as stale', [$seven])
+            ->toBase()->first();
+
+        return new Breakdown(
+            label: __('approval::dashboard.how_long'),
+            parts: [
+                ['label' => __('approval::dashboard.under_a_day'), 'value' => (string) (int) ($row->fresh ?? 0)],
+                ['label' => __('approval::dashboard.one_to_three'), 'value' => (string) (int) ($row->days ?? 0)],
+                ['label' => __('approval::dashboard.three_to_seven'), 'value' => (string) (int) ($row->week ?? 0)],
+                ['label' => __('approval::dashboard.over_a_week'), 'value' => (string) (int) ($row->stale ?? 0)],
+            ],
+            hint: __('approval::dashboard.how_long_hint'),
         );
     }
 }

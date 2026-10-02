@@ -20,4 +20,7 @@ return [
     'open_orders_hint' => 'অর্ডার দেওয়া, মাল আসেনি — দেনা নয়, প্রতিশ্রুতি',
     'biggest_payables' => 'সবচেয়ে বড় দেনা',
     'nothing_payable' => 'কোনো দেনা নেই।',
+    'bought_against_paid' => 'কেনা বনাম পরিশোধ — গত ছয় মাস',
+    'bought' => 'কেনা',
+    'paid' => 'পরিশোধ',
 ];

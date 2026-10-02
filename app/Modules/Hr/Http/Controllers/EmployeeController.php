@@ -15,11 +15,15 @@ use App\Models\Branch;
 use App\Models\User;
 use App\Models\UserDataScope;
 use App\Modules\Hr\Models\Employee;
+use App\Modules\Hr\Models\LeaveType;
+use App\Modules\Hr\Services\AttendanceService;
 use App\Modules\Hr\Services\EmployeeService;
+use App\Modules\Hr\Services\LeaveService;
 use App\Modules\Hr\Services\SalaryStructureService;
 use App\Modules\MasterData\Models\Department;
 use App\Modules\MasterData\Models\Designation;
 use App\Modules\MasterData\Models\EmploymentType;
+use Illuminate\Support\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
@@ -40,6 +44,8 @@ class EmployeeController extends Controller implements HasMiddleware
         private readonly SalaryStructureService $salaries,
         private readonly MenuBuilder $menu,
         private readonly SettingsService $settings,
+        private readonly AttendanceService $attendance,
+        private readonly LeaveService $leaves,
     ) {}
 
     public static function middleware(): array
@@ -134,11 +140,35 @@ class EmployeeController extends Controller implements HasMiddleware
 
         $employee->load(['department', 'designation', 'employmentType', 'branch', 'creator']);
 
+        /*
+         * ⭐ হাজিরা ও ছুটি — প্রোফাইলের দ্বিতীয় কার্ড, মালিকের অনুমোদিত নকশা (১ অক্টোবর ২০২৬)।
+         *
+         * ⓘ মাসটা ঠিকানায় (`?month=2026-09`), যাতে "সেপ্টেম্বরটা দেখো" বলে লিংক পাঠানো যায়; ভুল লেখা
+         * এলে চলতি মাস। ⚠️ নিজ নিজ চাবি — হাজিরা `hr.attendance.view`, ছুটি `hr.leave.view`; প্রোফাইল
+         * খোলার চাবি দিয়ে বাকি দুইটা খোলে না। শাখার বেড়া উপরের `authorize('view')`-এ আগেই পেরোনো।
+         */
+        $month = preg_match('/^\d{4}-(0[1-9]|1[0-2])$/', (string) $request->query('month'))
+            ? Carbon::createFromFormat('Y-m-d', $request->query('month').'-01')->startOfMonth()
+            : now()->startOfMonth();
+
+        $seesAttendance = (bool) $request->user()?->can('hr.attendance.view');
+        $seesLeave = (bool) $request->user()?->can('hr.leave.view');
+
         return view('hr::employee.show', [
             'menu' => $this->menu->forUser($request->user()),
             'employee' => $employee,
             'components' => $seesSalary ? $this->salaries->componentsOn($employee, now()) : [],
             'totals' => $seesSalary ? $this->salaries->totalsOn($employee, now()) : null,
+            'month' => $month,
+            'attendance' => $seesAttendance ? [
+                'summary' => $this->attendance->monthlySummary($employee, $month),
+                'days' => $this->attendance->days($employee, $month),
+            ] : null,
+            'leave' => $seesLeave
+                ? LeaveType::query()->active()->orderBy('code')->get()
+                    ->map(fn (LeaveType $type) => ['type' => $type] + $this->leaves->balance($employee, $type, $month->copy()->endOfMonth()))
+                    ->all()
+                : null,
         ]);
     }
 

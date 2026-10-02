@@ -13,6 +13,7 @@ use App\Core\Engines\Dashboard\Stat;
 use App\Core\Engines\Dashboard\Tile;
 use App\Core\Support\Money;
 use App\Modules\Inventory\Services\StockFacts;
+use Illuminate\Support\Carbon;
 
 /**
  * মজুদ মডিউলের ড্যাশবোর্ড।
@@ -44,6 +45,19 @@ final class InventoryDashboard implements ProvidesDashboard
 
         // ⭐ চার্ট টাকায়, কেনা দরে (মালিক, ১ অক্টোবর ২০২৬); খরচের চাবি না থাকলে null — তখন আগের পরিমাণে
         $valueFlow = $facts->monthlyValueFlow();
+
+        /*
+         * ⭐ নতুন ড্যাশবোর্ডে এ বছরের জানুয়ারি–ডিসেম্বর — মালিকের নির্দেশ, ২ অক্টোবর ২০২৬ ("১২ মাসের দিবে January to Dec")।
+         * ⓘ জানুয়ারি থেকে এই মাস পর্যন্ত একই হিসাব ([[StockFacts::monthlyValueFlow()]]), বাকি মাসগুলো শূন্য নিয়ে — বছরের
+         * ছকটা পুরো দেখা যায়। ⚠️ StockFacts নিজে বদলায়নি; সুইচ বন্ধ থাকলে আগের মতো শেষ সাত মাস।
+         */
+        if ($valueFlow !== null && config('abos.dashboards_v2')) {
+            $valueFlow = $facts->monthlyValueFlow(Carbon::today()->month);
+
+            for ($month = Carbon::today()->startOfMonth()->addMonth(); $month->year === Carbon::today()->year; $month->addMonth()) {
+                $valueFlow[] = ['month' => $month->translatedFormat('M'), 'in' => '0.00', 'out' => '0.00'];
+            }
+        }
 
         return new DashboardDefinition(
             title: __('inventory::dashboard.title'),

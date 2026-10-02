@@ -154,6 +154,25 @@ final class AttendanceService
     }
 
     /**
+     * একজনের এক মাসের দিনগুলো — কর্মীর প্রোফাইলের হাজিরার ক্যালেন্ডারের জন্য (১ অক্টোবর ২০২৬)।
+     *
+     * ⓘ [[monthlySummary()]]-এর একই সারি, দিন ধরে — তাই ক্যালেন্ডার আর উপরের গোনা কখনো আলাদা হয় না।
+     * ⚠️ যে দিনের সারি নেই সেটা এখানে নেই; "লেখা হয়নি" আর "অনুপস্থিত" এক কথা নয় ([[unpaidDays()]]-এর নিয়ম)।
+     *
+     * @return array<string, array{status: string, late: bool}> তারিখ (Y-m-d) => অবস্থা
+     */
+    public function days(Employee $employee, Carbon $month): array
+    {
+        $out = [];
+
+        foreach ($this->rowsFor($employee, $month) as $row) {
+            $out[$row->work_date->toDateString()] = ['status' => (string) $row->status, 'late' => (bool) $row->is_late];
+        }
+
+        return $out;
+    }
+
+    /**
      * @return Collection<int, Attendance>
      */
     private function rowsFor(Employee $employee, Carbon $month): Collection

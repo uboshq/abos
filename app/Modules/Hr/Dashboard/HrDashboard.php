@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Hr\Dashboard;
 
 use App\Core\Contracts\ProvidesDashboard;
+use App\Core\Engines\Dashboard\Breakdown;
 use App\Core\Engines\Dashboard\DashboardDefinition;
 use App\Core\Engines\Dashboard\Listing;
 use App\Core\Engines\Dashboard\Stat;
@@ -87,6 +88,8 @@ final class HrDashboard implements ProvidesDashboard
                 ),
             ],
 
+            panels: [self::todaysRoll($today)],
+
             listings: [
                 new Listing(
                     label: __('hr::dashboard.pending_leave'),
@@ -104,6 +107,47 @@ final class HrDashboard implements ProvidesDashboard
                     href: route('hr.leave.index'),
                 ),
             ],
+        );
+    }
+
+    /**
+     * ⭐ আজকের হাজিরা, ভাগে ভাগে — মালিকের ড্যাশবোর্ড নকশা (২ অক্টোবর ২০২৬)।
+     *
+     * ⓘ উপরের "আজ উপস্থিত" ঘরের একই ছাঁকনি (দেখার শাখার কর্মী, আজকের তারিখ), এক কোয়েরিতে ভাগ করা।
+     * ⓘ দেরিতে আসা মানুষ উপস্থিতও — তাই "দেরি" আলাদা ভাগ, উপস্থিত থেকে বাদ দিয়ে, যাতে যোগফল কর্মীসংখ্যার সমান থাকে।
+     * ⚠️ "লেখা হয়নি" অনুপস্থিত নয় — বেতনের নিয়মও তাই বলে ([[AttendanceService::unpaidDays()]])।
+     */
+    private static function todaysRoll(string $today): Breakdown
+    {
+        $staff = self::inView(Employee::query()->whereNull('leaving_date'), 'hr_employees.branch_id');
+        $headcount = (clone $staff)->count();
+
+        $rows = Attendance::query()
+            ->whereIn('employee_id', (clone $staff)->select('id'))
+            ->where('work_date', $today)
+            ->selectRaw('status, is_late, COUNT(*) as n')
+            ->groupBy('status', 'is_late')
+            ->toBase()->get();
+
+        $count = fn (callable $match) => (int) $rows->filter($match)->sum('n');
+
+        $late = $count(fn ($r) => $r->status === Attendance::PRESENT && (bool) $r->is_late);
+        $present = $count(fn ($r) => $r->status === Attendance::PRESENT) - $late;
+        $leave = $count(fn ($r) => $r->status === Attendance::LEAVE);
+        $absent = $count(fn ($r) => $r->status === Attendance::ABSENT);
+        $off = $count(fn ($r) => $r->status === Attendance::HOLIDAY);
+        $unwritten = max(0, $headcount - $present - $late - $leave - $absent - $off);
+
+        return new Breakdown(
+            label: __('hr::dashboard.todays_roll'),
+            parts: [
+                ['label' => __('hr::kind.present'), 'value' => (string) $present],
+                ['label' => __('hr::dashboard.late'), 'value' => (string) $late],
+                ['label' => __('hr::kind.leave'), 'value' => (string) $leave],
+                ['label' => __('hr::kind.absent'), 'value' => (string) $absent],
+                ['label' => __('hr::dashboard.not_written'), 'value' => (string) $unwritten],
+            ],
+            hint: __('hr::dashboard.todays_roll_hint', ['count' => $headcount]),
         );
     }
 

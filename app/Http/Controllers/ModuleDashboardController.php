@@ -64,7 +64,11 @@ class ModuleDashboardController extends Controller
 
         $dashboard = $this->engine->for($module, $user);
 
-        return view('dashboard.module', [
+        /*
+         * ⭐ নতুন রূপ সুইচের পেছনে — মালিক: "সব ড্যাশবোর্ড শেষ করে একসাথে সুইচ" (২ অক্টোবর ২০২৬)।
+         * ⓘ সংজ্ঞা একটাই, কেবল সাজানো আলাদা; বন্ধ থাকলে পুরনো পর্দা হুবহু ([[config abos.dashboards_v2]])।
+         */
+        return view(config('abos.dashboards_v2') ? 'dashboard.module-v2' : 'dashboard.module', [
             'menu' => $this->menu->forUser($user),
             'module' => $module,
             'dashboard' => $dashboard,

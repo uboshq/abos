@@ -153,7 +153,10 @@ final class SalesDashboard implements ProvidesDashboard
 
             panels: [
                 new Series(
-                    label: __('sales::dashboard.six_months'),
+                    // ⭐ নতুন ড্যাশবোর্ডে জানুয়ারি–ডিসেম্বর (মালিক, ২ অক্টোবর ২০২৬); সুইচ বন্ধ থাকলে আগের মতো ছয় মাস
+                    label: config('abos.dashboards_v2')
+                        ? __('sales::dashboard.this_year_months', ['year' => Carbon::today()->year])
+                        : __('sales::dashboard.six_months'),
                     points: self::monthly(),
                     firstLabel: __('sales::dashboard.billed'),
                     secondLabel: __('sales::dashboard.collected'),
@@ -209,9 +212,15 @@ final class SalesDashboard implements ProvidesDashboard
     private static function monthly(): array
     {
         $out = [];
-        $cursor = Carbon::today()->startOfMonth()->subMonths(5);
 
-        for ($i = 0; $i < 6; $i++) {
+        /*
+         * ⭐ নতুন ড্যাশবোর্ডে এ বছরের জানুয়ারি থেকে ডিসেম্বর — মালিকের নির্দেশ, ২ অক্টোবর ২০২৬
+         * ("১২ মাসের দিবে January to Dec")। ভবিষ্যতের মাসগুলো শূন্য নিয়ে থাকে, যাতে বছরের ছকটা পুরো দেখা যায়।
+         */
+        $year = (bool) config('abos.dashboards_v2');
+        $cursor = $year ? Carbon::today()->startOfYear() : Carbon::today()->startOfMonth()->subMonths(5);
+
+        for ($i = 0; $i < ($year ? 12 : 6); $i++) {
             $from = $cursor->copy()->startOfMonth()->toDateString();
             $to = $cursor->copy()->endOfMonth()->toDateString();
 

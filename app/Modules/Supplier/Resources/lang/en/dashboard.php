@@ -15,4 +15,6 @@ return [
     'new_hint' => 'Added this month',
     'newest' => 'Recently added',
     'none' => 'No suppliers yet.',
+    'most_owed' => 'Suppliers we owe the most',
+    'most_owed_hint' => 'Top five suppliers · balance of account 2111, same as the Accounts dashboard',
 ];

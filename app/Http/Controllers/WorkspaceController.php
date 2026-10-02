@@ -12,6 +12,7 @@ use App\Core\Support\Accent;
 use App\Core\Support\CompanyContext;
 use App\Core\Support\LookRegistry;
 use App\Core\Support\Ui;
+use App\Http\Middleware\RefuseSwitchedOffScreens;
 use App\Models\Company;
 use App\Models\LookSkin;
 use App\Models\User;
@@ -34,6 +35,7 @@ class WorkspaceController extends Controller
         private readonly DashboardRegistry $widgets,
         private readonly DashboardEngine $engine,
         private readonly ActivityRegistry $activity,
+        private readonly RefuseSwitchedOffScreens $doors,
     ) {}
 
     /**
@@ -81,7 +83,15 @@ class WorkspaceController extends Controller
              * চওড়া — বারো বিষয়ের একটা করে, আর কোথায় নামতে হবে সেই
              * সিদ্ধান্ত।
              */
-            'overall' => $this->engine->overall($request->user()),
+            /*
+             * ⛔ বন্ধ দরজার ঘর নয় — ২ অক্টোবর ২০২৬। শাখায় বা কোম্পানিতে যে মডিউল বন্ধ, তার ড্যাশবোর্ড
+             * ৪০৪ দেয়; সারিতে তার ঘর রাখলে চাপলেই ভাঙা পাতা। ⓘ প্রশ্নটা দরজার পাহারাদারকেই করা হয়
+             * ([[RefuseSwitchedOffScreens::refuses()]]), যাতে সারি আর দরজা কখনো দুই কথা না বলে।
+             */
+            'overall' => array_values(array_filter(
+                $this->engine->overall($request->user()),
+                fn (array $row) => ! $this->doors->refuses('module.dashboard', ['module' => $row['module']]),
+            )),
 
             /*
              * সদ্য যা হয়েছে — করণীয়ের পাশে।

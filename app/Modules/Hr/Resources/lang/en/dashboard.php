@@ -19,4 +19,8 @@ return [
     'from_date' => 'From',
     'days' => 'Days',
     'no_pending_leave' => 'No leave is waiting on a decision.',
+    'todays_roll' => "Today's attendance",
+    'todays_roll_hint' => ':count employees · "Not written" is not absent',
+    'late' => 'Late',
+    'not_written' => 'Not written',
 ];

@@ -20,4 +20,7 @@ return [
     'open_orders_hint' => 'Ordered, not yet received — a promise, not a debt',
     'biggest_payables' => 'Largest payables',
     'nothing_payable' => 'Nothing payable.',
+    'bought_against_paid' => 'Bought against paid — last six months',
+    'bought' => 'Bought',
+    'paid' => 'Paid',
 ];
