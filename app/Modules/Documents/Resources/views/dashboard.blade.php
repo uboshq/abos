@@ -56,7 +56,8 @@
 
         <h2 class="mb-2 text-sm font-semibold text-(--color-ink)">{{ __('documents::page.sections_heading') }}</h2>
 
-        <div data-boxed class="mb-4 overflow-hidden rounded-(--radius-card) border border-(--color-border)
+        {{-- ⓘ ১০৮০p — টেবিল বাক্সের চেয়ে চওড়া হলে বাক্সের ভিতরেই সরে, ডানের ঘর কাটা পড়ে না (আগে overflow-hidden কেটে দিত) --}}
+        <div data-boxed class="mb-4 overflow-x-auto rounded-(--radius-card) border border-(--color-border)
                         bg-(--color-surface-card)">
             <table class="ui-list table-cards w-full border-collapse">
                 <thead>

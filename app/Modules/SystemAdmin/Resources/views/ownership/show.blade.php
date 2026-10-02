@@ -19,7 +19,8 @@
                           :subtitle="__('system_admin::message.ownership_intro')" />
     </x-slot:header>
 
-    <div class="max-w-xl space-y-4">
+    {{-- ⓘ ১০৮০p-তে পুরো চওড়া — মালিক, ২ অক্টোবর ২০২৬: "sob porda 1080p korbe mendetory" (tools/screen-sweep-1080.py) --}}
+    <div class="space-y-4">
 
         {{-- ⛔ কেন কাজটা হলো না, সেটা বলার ঘর — ১৫ সেপ্টেম্বর ২০২৬।
 

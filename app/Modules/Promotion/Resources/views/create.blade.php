@@ -17,7 +17,8 @@
 
     <x-ui.errors />
 
-    <form method="POST" action="{{ route('promotion.store') }}" class="max-w-2xl space-y-4">
+    {{-- ⓘ ১০৮০p-তে পুরো চওড়া — মালিক, ২ অক্টোবর ২০২৬: "sob porda 1080p korbe mendetory" (tools/screen-sweep-1080.py) --}}
+    <form method="POST" action="{{ route('promotion.store') }}" class="space-y-4">
         @csrf
 
         <div data-boxed class="space-y-4 rounded-(--radius-card) border border-(--color-border)
