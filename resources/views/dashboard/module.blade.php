@@ -46,8 +46,18 @@
     {{-- ── সংখ্যা ─────────────────────────────────────────────────── --}}
     @if ($dashboard->stats !== [])
         {{-- ⭐ ছয়টা হলে বড় পর্দায় এক লাইনে — মালিক, ১ অক্টোবর ২০২৬ (মজুদের ড্যাশবোর্ড); সংখ্যা একটু ছোট, যাতে সরু ঘরে ভাঙে না --}}
-        @php $six = count($dashboard->stats) === 6; @endphp
-        <div @class(['mb-3 grid gap-3 sm:grid-cols-2', 'lg:grid-cols-3 xl:grid-cols-6' => $six, 'xl:grid-cols-4' => ! $six])>
+        {{-- ⭐ নয়-দশটা হলে বড় পর্দায় দুই লাইনে (৫ + ৪) — মালিক, ১ অক্টোবর ২০২৬ (হিসাবের ড্যাশবোর্ড) --}}
+        @php
+            $six = count($dashboard->stats) === 6;
+            $five = in_array(count($dashboard->stats), [9, 10], true);
+        @endphp
+        {{-- ⓘ `data-stat-grid` — পরীক্ষা সংখ্যার ঘরটাই ধরে, টাইলের ঘর নয় --}}
+        <div data-stat-grid @class([
+            'mb-3 grid gap-3 sm:grid-cols-2',
+            'lg:grid-cols-3 xl:grid-cols-6' => $six,
+            'lg:grid-cols-3 xl:grid-cols-5' => $five,
+            'xl:grid-cols-4' => ! $six && ! $five,
+        ])>
             @foreach ($dashboard->stats as $stat)
                 <{{ $stat->href ? 'a' : 'div' }}
                     @if ($stat->href) href="{{ $stat->href }}" @endif
@@ -57,8 +67,8 @@
                     <div class="text-xs text-(--color-ink-muted)">{{ $stat->label }}</div>
                     <div @class([
                         'mt-1 font-semibold tabular-nums',
-                        'text-2xl' => ! $six,
-                        'text-xl' => $six,
+                        'text-2xl' => ! $six && ! $five,
+                        'text-xl' => $six || $five,
                         'text-(--color-badge-success-ink)' => $stat->tone === \App\Core\Engines\Dashboard\Stat::GOOD,
                         'text-(--color-badge-warning-ink)' => $stat->tone === \App\Core\Engines\Dashboard\Stat::WARN,
                         'text-(--color-badge-danger-ink)' => $stat->tone === \App\Core\Engines\Dashboard\Stat::BAD,
