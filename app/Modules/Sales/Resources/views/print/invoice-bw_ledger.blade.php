@@ -287,7 +287,7 @@
     </tr>
 </table>
 
-<div class="footnote">{{ $footnote }}</div>
+<div class="footnote">{!! nl2br(e($footnote)) !!}</div>
 
 @if ($qr !== '')
     <table style="width: 100%; margin-top: 4mm">

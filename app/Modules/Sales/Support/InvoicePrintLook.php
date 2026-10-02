@@ -67,6 +67,26 @@ final class InvoicePrintLook
         return $header;
     }
 
+    /**
+     * ⭐ চালান, আদেশ আর রসিদের মাথা — বিলের তথ্যের পাতায় বসানো নাম, ঠিকানা, ফোন আর ই-মেইল (মালিক, ৩ অক্টোবর ২০২৬:
+     * চালানে *"Adress nai"*)। ⓘ আগে এই কাগজগুলো কেবল কোম্পানির প্রোফাইল পড়ত, তাই বিলের পাতায় বসানো ঠিকানা কেবল
+     * বিলে উঠত। কাঠামো [[PaperLook::head()]]-এর মতোই, যাতে নকশাগুলো কিছু না বদলেই পড়ে।
+     *
+     * @return array{name: string, address: string, contact: string, tax: string, logo: ?string}
+     */
+    public function paperHead(Company $company, bool $withLogo = true): array
+    {
+        $head = \App\Core\Engines\Print\PaperLook::head($company, $withLogo);
+        $own = $this->header($company);
+
+        return [
+            ...$head,
+            'name' => $own['name'],
+            'address' => $own['address'],
+            'contact' => implode(' · ', array_filter([$own['phone'], $own['email']])),
+        ];
+    }
+
     /** একটা দেখানো/লুকানোর সুইচ */
     public function shows(string $what): bool
     {
@@ -121,10 +141,11 @@ final class InvoicePrintLook
     }
 
     /** নিচের লাল বাক্য — খালি থাকলে ভাষার ফাইলেরটা */
-    public function footnote(): string
+    public function footnote(bool $thermal = false): string
     {
-        $set = trim((string) $this->settings->get('sales.print.invoice_footnote'));
+        /* ⭐ মালিক, ৩ অক্টোবর ২০২৬: A4/A5-এ তিন দফা, সরু রোলে এক লাইন — দুইটাই বিলের তথ্যের পাতায় বদলানো যায় */
+        $set = trim((string) $this->settings->get($thermal ? 'sales.print.invoice_footnote_thermal' : 'sales.print.invoice_footnote'));
 
-        return $set !== '' ? $set : (string) __('sales::print.classic.footnote', [], 'bn');
+        return $set !== '' ? $set : (string) __($thermal ? 'sales::print.classic.footnote_thermal' : 'sales::print.classic.footnote', [], 'bn');
     }
 }

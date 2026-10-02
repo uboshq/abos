@@ -10,7 +10,7 @@
 @endphp
 
 @include('print.partials.look-head-thermal', [
-    'L' => $look->look, 'head' => \App\Core\Engines\Print\PaperLook::head($company, $profile->shows('logo')),
+    'L' => $look->look, 'head' => app(\App\Modules\Sales\Support\InvoicePrintLook::class)->paperHead($company, $profile->shows('logo')),
     'title' => mb_strtoupper($t('sales::paper_design.money_receipt')), 'no' => $facts['no'], 'date' => $facts['date'],
     'labels' => ['no' => $t('core.print.document_no'), 'date' => $t('core.print.date')],
     'notices' => $doc->notices(),

@@ -1128,3 +1128,27 @@ export function productPacks ({ rows = [], base = 0, baseName = '', names = {}, 
 
     }
 }
+
+/*
+ * ⭐ ছবি বাছলেই পাশে দেখা — মালিক, ৩ অক্টোবর ২০২৬: বিলের লোগো *"upload hole ekhane dekhar bebosta koro"*।
+ *
+ * ⓘ সংরক্ষণের আগেই বাছা ফাইলটা দেখায় (ব্রাউজারের নিজের অস্থায়ী ঠিকানা, সার্ভারে কিছু যায় না)।
+ * ব্যবহার: `x-data="imagePreview({ current: '…' })"`, ফাইলের ঘরে `@change="pick($event)"`, ছবিতে `:src="url"`।
+ */
+export function imagePreview ({ current = '' } = {}) {
+    return {
+        url: current,
+        picked: false,
+
+        pick (event) {
+            const file = event.target.files && event.target.files[0]
+
+            if (this.picked && this.url) {
+                URL.revokeObjectURL(this.url)
+            }
+
+            this.picked = Boolean(file)
+            this.url = file ? URL.createObjectURL(file) : current
+        },
+    }
+}

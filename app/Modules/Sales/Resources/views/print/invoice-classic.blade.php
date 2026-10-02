@@ -336,7 +336,7 @@
     </tr>
 </table>
 
-<div class="footnote">{{ $footnote }}</div>
+<div class="footnote">{!! nl2br(e($footnote)) !!}</div>
 
 <div class="printed">
     {{ $en('printed_at') }} {{ \App\Core\Support\DateFormat::formatWithTime(now()) }}

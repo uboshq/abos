@@ -60,21 +60,30 @@
         <section data-boxed data-invoice-logo
                  class="grid gap-4 rounded-(--radius-card) border border-(--color-border)
                         bg-(--color-surface-card) p-4 sm:grid-cols-2">
-            <div>
+            {{-- ⭐ ফাইল বাছলেই এখানে দেখায়, সংরক্ষণের আগেই (মালিক, ৩ অক্টোবর ২০২৬: "upload hole ekhane dekhar bebosta koro") --}}
+            <div x-data="imagePreview({ current: @js((string) ($invoiceLogo ?? '')) })" data-logo-preview>
                 <h2 class="mb-2 text-sm font-semibold">{{ __('system_admin::settings.invoice_logo') }}</h2>
 
-                @if ($invoiceLogo)
-                    <img src="{{ $invoiceLogo }}" alt="" class="mb-2 h-14 w-auto">
-                @elseif ($company->logoUrl())
-                    <img src="{{ $company->logoUrl() }}" alt="" class="mb-2 h-14 w-auto opacity-60">
-                    <p class="mb-2 text-xs text-(--color-ink-muted)">{{ __('system_admin::settings.invoice_logo_using_profile') }}</p>
-                @else
-                    <p class="mb-2 text-sm text-(--color-ink-muted)">{{ __('system_admin::settings.invoice_info_no_logo') }}</p>
-                @endif
+                <div x-show="picked" x-cloak class="mb-2">
+                    <img :src="url" alt="" class="h-20 w-auto rounded border border-(--color-border) bg-white p-1">
+                    <p class="mt-1 text-xs text-(--color-ink-muted)">{{ __('system_admin::settings.invoice_logo_picked') }}</p>
+                </div>
+
+                <div x-show="! picked">
+                    @if ($invoiceLogo)
+                        <img src="{{ $invoiceLogo }}" alt="" class="mb-2 h-20 w-auto rounded border border-(--color-border) bg-white p-1" data-saved-logo>
+                    @elseif ($company->logoUrl())
+                        <img src="{{ $company->logoUrl() }}" alt="" class="mb-2 h-14 w-auto opacity-60">
+                        <p class="mb-2 text-xs text-(--color-ink-muted)">{{ __('system_admin::settings.invoice_logo_using_profile') }}</p>
+                    @else
+                        <p class="mb-2 text-sm text-(--color-ink-muted)">{{ __('system_admin::settings.invoice_info_no_logo') }}</p>
+                    @endif
+                </div>
 
                 <label class="block text-sm">
                     <span class="mb-1 block">{{ __('system_admin::settings.invoice_logo_upload') }}</span>
-                    <input type="file" name="invoice_logo" accept="image/png,image/jpeg,image/webp" class="block w-full text-sm">
+                    <input type="file" name="invoice_logo" accept="image/png,image/jpeg,image/webp" class="block w-full text-sm"
+                           @change="pick($event)">
                 </label>
                 @error('invoice_logo')
                     <span class="mt-1 block text-xs text-(--color-danger)">{{ $message }}</span>
@@ -156,6 +165,18 @@
                                         <option value="{{ $option }}" @selected($field['value'] !== null && (string) $field['value'] === (string) $option)>{{ $option }}</option>
                                     @endforeach
                                 </select>
+                            </label>
+                        @elseif ($part === 'note')
+                            {{-- ⭐ নির্দেশনা কয়েক লাইনের — বড় ঘর, সাধারণ লেখা ভরা, যাতে বদলে নেওয়া যায় (মালিক, ৩ অক্টোবর ২০২৬) --}}
+                            <label class="block text-sm sm:col-span-2">
+                                <span class="mb-1 block">{{ $field['name'] }}</span>
+                                <textarea name="settings[{{ $field['key'] }}]" maxlength="600" rows="5"
+                                          @if ($branch !== null) placeholder="{{ filled($field['inherited']) ? $field['inherited'] : ($field['default_text'] ?? '') }}" @endif
+                                          class="w-full rounded-(--radius-field) border border-(--color-border)
+                                                 bg-(--color-surface-card) px-3 py-2">{{ $old ?? ($field['value'] ?? ($branch === null ? ($field['default_text'] ?? '') : '')) }}</textarea>
+                                @error('settings.'.$field['key'])
+                                    <span class="mt-1 block text-xs text-(--color-danger)">{{ $message }}</span>
+                                @enderror
                             </label>
                         @else
                             <label @class(['block text-sm', 'sm:col-span-2' => $part === 'note'])>

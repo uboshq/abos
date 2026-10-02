@@ -13,7 +13,7 @@
     $lang = $look->lang();
     $t = fn (string $key) => (string) __($key, [], $lang);
     $up = fn (string $key) => mb_strtoupper($t($key));
-    $head = \App\Core\Engines\Print\PaperLook::head($company, $profile->shows('logo'));
+    $head = app(\App\Modules\Sales\Support\InvoicePrintLook::class)->paperHead($company, $profile->shows('logo'));
     $ac = $look->accent();
     $money = $doc->pricesChosen ?? ($doc->showMoney && $profile->shows('prices')); /* ⭐ ছাপার বোতামে বাছা থাকলে সেটাই — টাকাসহ/টাকা ছাড়া (২ অক্টোবর ২০২৬) */
     $sh = fn (string $what) => (bool) ($facts['shows'][$what] ?? true); /* ⭐ চালানের সুইচ (৩ অক্টোবর ২০২৬) */ /* ⛔ নিয়ম আর মালিকের দামের সুইচ দুইটাই — সাধারণ কাগজের মতো ([[document-body]]); ৩০ সেপ্টেম্বর ২০২৬ */
@@ -133,7 +133,7 @@
     <div style="margin-top: 2.88mm; font-size: 7.2pt"><span class="cap">{{ $up('core.table.narration') }}</span><br>{{ $doc->narration }}</div>
 @endif
 
-@if ($footnote !== '')<div style="margin-top: 2.88mm; text-align: center; font-weight: bold; font-family: hindsiliguri; font-size: 7.6pt; color: #b42318">{{ $footnote }}</div>@endif
+@if ($footnote !== '')<div style="margin-top: 2.88mm; text-align: center; font-weight: bold; font-family: hindsiliguri; font-size: 7.6pt; color: #b42318">{!! nl2br(e($footnote)) !!}</div>@endif
 
 @php
     $roles = array_map(fn (string $k) => $t($k), $doc->signatures);

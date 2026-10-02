@@ -147,7 +147,8 @@ return [
         'signature_count' => 'How many signature boxes',
         'signature_label' => 'Signature box :n (blank = the sample name)',
     ],
-    'invoice_footnote' => 'Red line under the classic invoice (blank = the standard line)',
+    'invoice_footnote' => 'Note under the invoice and challan — A4/A5 (each point on a new line)',
+    'invoice_footnote_thermal' => 'Note under the invoice and challan — thermal roll (one line)',
     'vat_enabled' => 'VAT on sales (off: no VAT box, and the server takes no VAT)',
     'paper_gate_pass' => 'Gate pass paper',
 ];

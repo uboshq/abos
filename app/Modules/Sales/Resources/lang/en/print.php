@@ -88,7 +88,8 @@ return [
         'tin' => 'TIN:',
         'approved_by' => 'Approved by',
         'printed_at' => 'Printing Time:',
-        'footnote' => 'Please check the goods before signing — quantity claims are not accepted after signature.',
+        'footnote' => "Instructions to the customer:\n1. While the driver is at your point, count every item against the challan.\n2. If anything is short or wrong, contact the depot manager or the company representative at once and get their assurance before letting the driver go.\n3. No complaint is accepted after the driver has left.",
+        'footnote_thermal' => 'Check the goods against the challan while the driver is with you; call the depot manager or company representative at once if anything is wrong. No complaint is accepted after the driver leaves.',
     ],
     // Two challan print buttons (owner, 2 Oct 2026)
     'challan_with_amounts' => 'Challan — with amounts',

@@ -56,6 +56,7 @@ return [
     'off' => 'Off',
     'invoice_logo' => 'Invoice logo',
     'invoice_logo_upload' => 'Upload a new logo (PNG, JPG or WebP)',
+    'invoice_logo_picked' => 'Chosen picture — press "Save" to put it on the bills',
     'invoice_logo_remove' => 'Remove the invoice logo (the profile logo prints instead)',
     'invoice_logo_remove_branch' => 'Remove the logo of this branch (the company invoice logo prints instead)',
     'invoice_logo_using_profile' => 'No separate invoice logo — the company profile logo is printing now.',

@@ -13,7 +13,7 @@
     $bn = $lang === 'bn';
     $t = fn (string $key) => (string) __($key, [], $lang);
     $up = fn (string $key) => $bn ? $t($key) : mb_strtoupper($t($key));
-    $head = \App\Core\Engines\Print\PaperLook::head($company, $profile->shows('logo'));
+    $head = app(\App\Modules\Sales\Support\InvoicePrintLook::class)->paperHead($company, $profile->shows('logo'));
     $look = app(\App\Modules\Sales\Support\InvoicePrintLook::class);
     $money = $doc->pricesChosen ?? ($doc->showMoney && $profile->shows('prices')); /* ⭐ ছাপার বোতামে বাছা থাকলে সেটাই — টাকাসহ/টাকা ছাড়া (২ অক্টোবর ২০২৬) */
     $sh = fn (string $what) => (bool) ($facts['shows'][$what] ?? true); /* ⭐ চালানের সুইচ (৩ অক্টোবর ২০২৬) */ /* ⛔ নিয়ম আর মালিকের দামের সুইচ দুইটাই — সাধারণ কাগজের মতো ([[document-body]]); ৩০ সেপ্টেম্বর ২০২৬ */
@@ -182,7 +182,7 @@
     </tr>
 </table>
 
-@if ($look->footnote() !== '')<div class="footnote">{{ $look->footnote() }}</div>@endif
+@if ($look->footnote() !== '')<div class="footnote">{!! nl2br(e($look->footnote())) !!}</div>@endif
 
 <table class="signatures" data-signatures>
     <tr>

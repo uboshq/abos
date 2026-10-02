@@ -53,7 +53,7 @@ class InvoiceInfoController extends Controller implements HasMiddleware
     private const PARTS = ['header', 'show', 'challan_show', 'signature', 'note'];
 
     /** লেখার ঘরের সীমা — ঠিকানা সবচেয়ে লম্বা, আর এক লাইনের কাগজে এর বেশি ধরেও না */
-    private const MAX_TEXT = 300;
+    private const MAX_TEXT = 600;
 
     public function __construct(
         private readonly SettingsService $settings,
@@ -230,6 +230,9 @@ class InvoiceInfoController extends Controller implements HasMiddleware
                 'value' => $branch === null ? $this->settings->get($key) : $this->branches->own($key, $branch),
                 'inherited' => $this->settings->get($key),
                 'name' => $this->label($definition),
+
+                /* ⓘ সাধারণ লেখা — ঘর খালি থাকলে এটাই ছাপা হয়; পাতায় ভরা দেখায়, যাতে বদলে নেওয়া যায় */
+                'default_text' => isset($definition['default_text']) ? (string) __($definition['default_text'], [], 'bn') : null,
             ];
         }
 

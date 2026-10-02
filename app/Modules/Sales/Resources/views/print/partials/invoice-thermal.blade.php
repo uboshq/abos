@@ -338,7 +338,7 @@
 @endif
 
 <div class="rule"></div>
-<div class="footnote bn">{{ $v->footnote }}</div>
+<div class="footnote bn">{!! nl2br(e($v->footnoteThermal)) !!}</div>
 
 @if ($st['seal'])
     <table class="seals" style="width: 100%; margin-top: 3mm"><tr>

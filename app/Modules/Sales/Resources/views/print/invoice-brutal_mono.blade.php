@@ -99,7 +99,7 @@
         <td class="box">@include('sales::print.partials.invoice-sums', ['v' => $v, 'paper' => $paper])</td>
     </tr>
 </table>
-<div class="footnote bn">{{ $v->footnote }}</div>
+<div class="footnote bn">{!! nl2br(e($v->footnote)) !!}</div>
 
 {{-- ── সই-সিলের বাক্স ────────────────────────────────────────────────── --}}
 <table class="signatures">

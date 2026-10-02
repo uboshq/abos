@@ -17,7 +17,7 @@
 @endphp
 
 @include('print.partials.look-head-thermal', [
-    'L' => $look->look, 'head' => \App\Core\Engines\Print\PaperLook::head($company, $profile->shows('logo')),
+    'L' => $look->look, 'head' => app(\App\Modules\Sales\Support\InvoicePrintLook::class)->paperHead($company, $profile->shows('logo')),
     'title' => mb_strtoupper($t('sales::doc.challan')), 'no' => $facts['no'], 'date' => $facts['date'],
     'labels' => ['no' => $t('core.print.document_no'), 'date' => $t('core.print.date')],
     'notices' => $doc->notices(),
@@ -77,7 +77,7 @@
     <div style="margin-top: 1.5mm">{!! $look->thermalAmount($t('core.print.total'), $facts['total'], $lang === 'bn' ? $facts['words_bn'] : $facts['words']) !!}</div>
 @endif
 @if (filled($doc->narration))<div class="small" style="margin-top: 1mm">{{ $doc->narration }}</div>@endif
-@if ($look_->footnote() !== '')<div class="c bn" style="font-weight: bold; font-size: 7.5pt; margin-top: 1.5mm">{{ $look_->footnote() }}</div>@endif
+@if ($look_->footnote(true) !== '')<div class="c bn" style="font-weight: bold; font-size: 7.5pt; margin-top: 1.5mm">{!! nl2br(e($look_->footnote(true))) !!}</div>@endif
 
 <table class="signatures" data-signatures><tr>
     @foreach ($doc->signatures as $k)

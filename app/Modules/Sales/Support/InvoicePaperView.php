@@ -32,6 +32,9 @@ final class InvoicePaperView
 
     public readonly string $footnote;
 
+    /** সরু রোলের ছোট নির্দেশনা — মালিক, ৩ অক্টোবর ২০২৬ */
+    public readonly string $footnoteThermal;
+
     /** DUPLICATE ছোট ছাপ — কেবল দ্বিতীয় ছাপা থেকে, আর সুইচ চালু থাকলে */
     public readonly bool $duplicate;
 
@@ -71,6 +74,7 @@ final class InvoicePaperView
         $this->head = $this->look->header($company);
         $this->signatures = $this->look->signatures();
         $this->footnote = $this->look->footnote();
+        $this->footnoteThermal = $this->look->footnote(true);
 
         $mark = $doc->duplicateNotice();
         $all = $doc->notices();

@@ -56,6 +56,7 @@ return [
     'off' => 'বন্ধ',
     'invoice_logo' => 'বিলের লোগো',
     'invoice_logo_upload' => 'নতুন লোগো তুলুন (PNG, JPG বা WebP)',
+    'invoice_logo_picked' => 'বাছা ছবি — "সংরক্ষণ" চাপলে বিলে বসবে',
     'invoice_logo_remove' => 'বিলের লোগো মুছুন (তখন প্রোফাইলের লোগো)',
     'invoice_logo_remove_branch' => 'এই শাখার লোগো মুছুন (তখন কোম্পানির বিলের লোগো)',
     'invoice_logo_using_profile' => 'বিলের আলাদা লোগো নেই — এখন কোম্পানির প্রোফাইলের লোগো ছাপা হচ্ছে।',

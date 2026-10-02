@@ -87,7 +87,7 @@
         <td class="side" style="width: 60%; padding-right: 5mm">
             @if ($v->shows('amount_words'))<div class="words" data-words><strong>{{ $v->en('in_words') }}</strong> {{ $facts['words'] }}</div>@endif
             <div style="margin-top: 2mm">@include('sales::print.partials.invoice-payments', ['v' => $v, 'doc' => $doc])</div>
-            <div class="footnote">{{ $v->footnote }}</div>
+            <div class="footnote">{!! nl2br(e($v->footnote)) !!}</div>
             <div style="margin-top: 2mm; text-align: left">@include('sales::print.partials.invoice-qr', ['v' => $v, 'width' => '18mm'])</div>
         </td>
         <td class="side">@include('sales::print.partials.invoice-sums', ['v' => $v, 'paper' => $paper])</td>

@@ -226,7 +226,7 @@
     </div>
 @endif
 
-<div class="footnote bn">{{ $footnote }}</div>
+<div class="footnote bn">{!! nl2br(e($footnote)) !!}</div>
 
 @if ($qr !== '')
     <table style="width: 100%; margin-top: 4mm">

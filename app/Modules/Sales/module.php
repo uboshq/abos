@@ -969,6 +969,19 @@ return [
             'group' => 'invoice_info',
             'per_branch' => true,
             'part' => 'note',
+            // ⓘ ঘর খালি হলে এই লেখাই ভরা থাকে, যাতে ব্যবহারকারী বদলে নিতে পারেন (মালিক, ৩ অক্টোবর ২০২৬)
+            'default_text' => 'sales::print.classic.footnote',
+        ],
+        [
+            // ⭐ সরু রোলের ছোট নির্দেশনা — মালিক, ৩ অক্টোবর ২০২৬: "dui kagoje dui rokom"
+            'key' => 'sales.print.invoice_footnote_thermal',
+            'label' => 'sales::settings.invoice_footnote_thermal',
+            'type' => 'string',
+            'default' => null,
+            'group' => 'invoice_info',
+            'per_branch' => true,
+            'part' => 'note',
+            'default_text' => 'sales::print.classic.footnote_thermal',
         ],
         [
             // ⭐ গেট পাসের কাগজ — মালিক: আধা পাতা (A5), ২৮ সেপ্টেম্বর ২০২৬ ([[SalesPrintController::gatePassDocument()]])

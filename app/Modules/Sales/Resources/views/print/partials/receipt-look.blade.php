@@ -11,7 +11,7 @@
     $lang = $look->lang();
     $t = fn (string $key) => (string) __($key, [], $lang);
     $up = fn (string $key) => mb_strtoupper($t($key));
-    $head = \App\Core\Engines\Print\PaperLook::head($company, $profile->shows('logo'));
+    $head = app(\App\Modules\Sales\Support\InvoicePrintLook::class)->paperHead($company, $profile->shows('logo'));
     $ac = $look->accent();
     $card = $look->card();
     $from = $facts['from'];

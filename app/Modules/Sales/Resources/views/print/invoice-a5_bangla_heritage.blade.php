@@ -97,7 +97,7 @@
     </table>
 
     @if ($v->shows('amount_words'))<div class="words" data-words><strong>{{ $bn('in_words') }}</strong> {{ $facts['words'] }}</div>@endif
-    <div class="footnote">{{ $v->footnote }}</div>
+    <div class="footnote">{!! nl2br(e($v->footnote)) !!}</div>
     @include('sales::print.partials.invoice-signatures', ['v' => $v])
     <div class="printed">{{ $v->printedAt() }}</div>
 </div>

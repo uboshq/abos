@@ -94,7 +94,7 @@
     </tr>
 </table>
 
-<div class="footnote">{{ $v->footnote }}</div>
+<div class="footnote">{!! nl2br(e($v->footnote)) !!}</div>
 @include('sales::print.partials.invoice-signatures', ['v' => $v])
 <div class="printed">{{ $v->printedAt() }}</div>
 <div class="foot-rule"></div>

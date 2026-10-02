@@ -95,7 +95,7 @@
     </tr>
 </table>
 
-<div class="footnote">{{ $v->footnote }}</div>
+<div class="footnote">{!! nl2br(e($v->footnote)) !!}</div>
 
 <table style="width: 100%">
     <tr>
