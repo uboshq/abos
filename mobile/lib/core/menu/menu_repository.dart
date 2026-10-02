@@ -31,9 +31,12 @@ import 'route_registry.dart';
 /// permission-filtered the identical way, so it degrades to "the same menu,
 /// no icons any fresher than the last sign-in" rather than to nothing.
 class HomeMenu {
-  const HomeMenu({required this.items, this.profile});
+  const HomeMenu({required this.items, this.profile, this.me});
 
   final List<MenuItem> items;
+
+  /// `/me`-র মানুষটা — পদবি আর ছবিসহ; অফলাইনে null।
+  final AuthUser? me;
 
   /// Null when `/me` could not be reached and the menu is the local
   /// fallback — see [MenuRepository.homeFor].
@@ -109,6 +112,7 @@ class MenuRepository {
       return HomeMenu(
         items: ordered(items, response.user),
         profile: response.profile,
+        me: response.user,
       );
     } catch (_) {
       return HomeMenu(items: ordered(_localFallback(user), user));

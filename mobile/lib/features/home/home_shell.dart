@@ -79,6 +79,10 @@ class _HomeShellState extends ConsumerState<HomeShell> {
   OrgSnapshot? _org;
   SessionProfile? _profile;
 
+  /// `/me`-র পদবি আর ছবি — লগইনের উত্তরে নেই, তাই আলাদা রাখা ([[HomeMenu.me]])।
+  String? _designation;
+  String? _avatarUrl;
+
   /// Bumped after a move, so the day's figures are asked for again — they
   /// belong to the company and branch they were fetched for.
   int _generation = 0;
@@ -127,6 +131,10 @@ class _HomeShellState extends ConsumerState<HomeShell> {
       _items = ModuleGate.visible(home.items, modules);
       _menuLoading = false;
       if (profile != null) _profile = profile;
+      if (home.me != null) {
+        _designation = home.me!.designation;
+        _avatarUrl = home.me!.avatarUrl;
+      }
       if (fresh != null && !fresh.isEmpty) _org = fresh;
     });
     if (fresh != null && !fresh.isEmpty) {
@@ -188,7 +196,8 @@ class _HomeShellState extends ConsumerState<HomeShell> {
           title: headerNamesOrg ? org.company : user.name,
           subtitle: headerNamesOrg
               ? (org.branch.isNotEmpty ? org.branch : null)
-              : (user.roles.isEmpty ? null : user.roles.join(', ')),
+              // ⭐ পদবি, রোল নয় (মালিক, ২ অক্টোবর ২০২৬)
+              : _designation,
           onTap: (_profile?.canSwitch ?? false) ? _openPicker : null,
         ),
         actions: [
@@ -225,7 +234,7 @@ class _HomeShellState extends ConsumerState<HomeShell> {
                             'অফিসে জানান — আপনার অ্যাকাউন্টে কোনো অনুমতি বসানো নেই।',
                       )
                     : _MenuGrid(items: _items),
-            _MoreTab(user: user, org: org),
+            _MoreTab(user: user, org: org, designation: _designation, avatarUrl: _avatarUrl),
           ],
         ),
       ),
@@ -416,7 +425,10 @@ class _PendingBadge extends StatelessWidget {
 /// shared phone one stray tap must not cost somebody their session and the
 /// login that follows.
 class _MoreTab extends ConsumerWidget {
-  const _MoreTab({required this.user, required this.org});
+  const _MoreTab({required this.user, required this.org, this.designation, this.avatarUrl});
+
+  final String? designation;
+  final String? avatarUrl;
 
   final AuthUser user;
   final OrgSnapshot? org;
@@ -428,18 +440,21 @@ class _MoreTab extends ConsumerWidget {
       children: [
         Card(
           child: ListTile(
+            // ⭐ ছবি আর পদবি — মালিক, ২ অক্টোবর ২০২৬: "profile photo dekhay na, role nadekiye designation dekhabe"
             leading: CircleAvatar(
+              key: const ValueKey('profile-avatar'),
               backgroundColor: AppColors.primary,
               foregroundColor: AppColors.onPrimary,
+              foregroundImage: avatarUrl == null ? null : NetworkImage(avatarUrl!),
               child: Text(user.name.isEmpty ? '?' : user.name.characters.first),
             ),
             title: Text(user.name,
                 style: const TextStyle(fontWeight: FontWeight.w700)),
             subtitle: Text([
-              if (user.roles.isNotEmpty) user.roles.join(', '),
+              if (designation != null) designation!,
               if (user.email.isNotEmpty) user.email,
             ].join('\n')),
-            isThreeLine: user.roles.isNotEmpty && user.email.isNotEmpty,
+            isThreeLine: designation != null && user.email.isNotEmpty,
           ),
         ),
         if (org != null && !org!.isEmpty) ...[

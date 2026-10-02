@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/auth/auth_exceptions.dart';
 import '../../core/auth/auth_state.dart';
@@ -59,9 +60,11 @@ class _Words {
   String get back => bn ? 'ফিরে যান' : 'Go back';
   String get remember => bn ? 'মনে রাখুন' : 'Remember me';
   String get forgot => bn ? 'পাসওয়ার্ড ভুলে গেছেন?' : 'Forgot password?';
+  // ⭐ মালিক, ২ অক্টোবর ২০২৬: "forget passworads kaj korena app e" — আগে কেবল এই বাক্য ছিল, কোনো পথ নয়।
   String get forgotBody => bn
-      ? 'আপনার কোম্পানির প্রশাসককে বলুন — তিনি নতুন পাসওয়ার্ড বসিয়ে দেবেন।'
-      : "Ask your company's administrator — they will set a new password for you.";
+      ? 'নিচের বোতাম চাপলে ব্রাউজারে পাসওয়ার্ড বদলের পাতা খুলবে — ইমেইল দিলে লিংক আসবে। ইমেইল না থাকলে কোম্পানির প্রশাসককে বলুন।'
+      : "Tap below to open the reset page in your browser — enter your email and a link will arrive. No email? Ask your company's administrator.";
+  String get forgotOpen => bn ? 'ইমেইলে লিংক নিন' : 'Get a link by email';
   String get ok => bn ? 'ঠিক আছে' : 'OK';
   String get mfaPrompt => bn
       ? 'আপনার অথেনটিকেটর অ্যাপ থেকে ৬-সংখ্যার কোডটি দিন।'
@@ -167,6 +170,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         content: Text(w.forgotBody),
         actions: [
           TextButton(onPressed: () => Navigator.of(context).pop(), child: Text(w.ok)),
+          FilledButton(
+            key: const ValueKey('login-forgot-open'),
+            onPressed: () {
+              Navigator.of(context).pop();
+              launchUrl(forgotPasswordUrl(AppConfig.apiBaseUrl), mode: LaunchMode.externalApplication);
+            },
+            child: Text(w.forgotOpen),
+          ),
         ],
       ),
     );
@@ -546,4 +557,12 @@ class _Circle extends StatelessWidget {
           decoration: BoxDecoration(shape: BoxShape.circle, gradient: gradient, color: color),
         ),
       );
+}
+
+/// ওয়েবের পাসওয়ার্ড-রিসেটের পাতা — API-র ঠিকানা থেকে (`…/api/v1` বাদ দিয়ে `…/forgot-password`)।
+/// ⓘ অ্যাপ নিজে রিসেট করে না: ইমেইল-লিংক, throttle আর সব পাহারা ওয়েবের একটাই পথে ([[PasswordResetController]])।
+Uri forgotPasswordUrl(String apiBaseUrl) {
+  final api = Uri.parse(apiBaseUrl);
+  final root = api.path.replaceFirst(RegExp(r'/api/v\d+/?$'), '');
+  return api.replace(path: '$root/forgot-password', query: null);
 }

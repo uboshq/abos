@@ -26,6 +26,8 @@ class MeApi {
         permissions: ((body['permissions'] as List?) ?? const [])
             .map((e) => e.toString())
             .toList(),
+        designation: AuthUser.fromJson(userJson).designation,
+        avatarUrl: AuthUser.fromJson(userJson).avatarUrl,
       ),
       profile: SessionProfile.fromJson(body),
       menu: ((body['menu'] as List?) ?? const [])

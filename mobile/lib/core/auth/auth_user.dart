@@ -12,6 +12,8 @@ class AuthUser {
     required this.email,
     required this.roles,
     required this.permissions,
+    this.designation,
+    this.avatarUrl,
   });
 
   final String id;
@@ -19,6 +21,13 @@ class AuthUser {
   final String email;
   final List<String> roles;
   final List<String> permissions;
+
+  /// ⭐ পদবি — রোল নয় (মালিক, ২ অক্টোবর ২০২৬: "role nadekiye designation dekhabe")। `/me` পাঠায়;
+  /// গ্রুপের মালিকের এক পদবি সব কোম্পানিতে। না থাকলে null — ফাঁক ভরাতে রোল বসে না।
+  final String? designation;
+
+  /// প্রোফাইলের ছবির পুরো ঠিকানা, বা null।
+  final String? avatarUrl;
 
   bool hasRole(String role) => roles.contains(role);
   bool can(String permission) => permissions.contains(permission);
@@ -39,7 +48,14 @@ class AuthUser {
         permissions: ((json['permissions'] as List?) ?? const [])
             .map((e) => e.toString())
             .toList(),
+        designation: _text(json['designation']),
+        avatarUrl: _text(json['avatar_url']),
       );
+
+  static String? _text(Object? v) {
+    final s = v?.toString().trim() ?? '';
+    return s.isEmpty ? null : s;
+  }
 
   Map<String, dynamic> toJson() => {
         'id': id,
@@ -47,5 +63,7 @@ class AuthUser {
         'email': email,
         'roles': roles,
         'permissions': permissions,
+        if (designation != null) 'designation': designation,
+        if (avatarUrl != null) 'avatar_url': avatarUrl,
       };
 }
