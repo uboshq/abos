@@ -23,7 +23,9 @@
 
 @if ($target === null)
     {{ $slot }}
-@elseif ($target['resolved'] && $target['route'])
+{{-- ⚠️ ঠিকানাটা সত্যিই আছে কি না — একটা মডিউল নেই-এমন রুট ঘোষণা করলে (২ অক্টোবর ২০২৬: ReasonCode →
+     master_data.reason.show) গোটা রিপোর্ট ৫০০ দিত; এখন সেই এক ঘর কেবল লেখা হয়ে থাকে --}}
+@elseif ($target['resolved'] && $target['route'] && \Illuminate\Support\Facades\Route::has($target['route'][0]))
     <a href="{{ route($target['route'][0], $target['route'][1] ?? []) }}"
        {{ $attributes->merge(['class' => 'text-(--color-brand-500) underline-offset-2 hover:underline']) }}
        title="{{ $target['label'] }}">

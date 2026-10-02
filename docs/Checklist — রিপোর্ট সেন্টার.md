@@ -46,7 +46,7 @@
 ### ধাপ ৬ — খাতা ও নিরীক্ষা
 - [x] কাগজের খাতা: বিক্রয় (ইনভয়েস/অর্ডার/সরাসরি/ফেরত), ক্রয় (আদেশ/গ্রহণ/বিল/ফেরত) — অবস্থা, বয়স, আদেশ→গ্রহণ→বিলের মিল · ক্রয়ের অর্ধেক 6206e8f9 (ThePurchaseRegisterShowsEachPaperAndHowFarItGotTest); বিক্রয়ের অর্ধেক — SalesRegisterReports (TheSalesRegisterShowsEachPaperAndHowFarItGotTest)
 - [x] গণনা বনাম খাতা, কম-বেশি · 39ef48d6 · TheCountIsSetAgainstTheBookTest
-- [ ] নিরীক্ষা: কে কোন কাগজ/ভাউচার বদলাল-বাতিল করল, পেছনের তারিখ, মাস বন্ধ খোলা
+- [x] নিরীক্ষা: কে কোন কাগজ/ভাউচার বদলাল-বাতিল করল, পেছনের তারিখ, মাস বন্ধ খোলা · AuditReports — বদল ও বাতিল, পেছনের তারিখ, মাস বন্ধ-খোলা (TheAuditRegisterNamesWhoChangedWhatTest)
 - [ ] পার্টির খাতা বনাম মূল খাতা, শাখা-শাখা দেনা-পাওনা
 
 ## ২. পরে (শেষ ছোঁয়া)

@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Modules\Governance\Http\Controllers\AuditController;
+use App\Modules\Governance\Http\Controllers\AuditReportController;
 use App\Modules\Governance\Http\Controllers\ErrorLogController;
 use App\Modules\Governance\Http\Controllers\ExportLogController;
 use App\Modules\Governance\Http\Controllers\LoginHistoryController;
@@ -18,6 +19,9 @@ use Illuminate\Support\Facades\Route;
  */
 Route::middleware('auth')->prefix('governance')->group(function () {
     Route::get('/audit', [AuditController::class, 'index'])->name('audit.index');
+
+    // ⭐ নিরীক্ষার খাতা — রিপোর্ট সেন্টার ধাপ ৬ ([[AuditReports]])
+    Route::get('/reports/{slug}', [AuditReportController::class, 'show'])->name('report.show');
 
     Route::get('/audit/{trail}', [AuditController::class, 'show'])
         ->whereNumber('trail')->name('audit.show');

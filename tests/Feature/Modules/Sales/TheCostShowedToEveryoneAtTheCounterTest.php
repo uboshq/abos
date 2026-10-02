@@ -150,6 +150,8 @@ final class TheCostShowedToEveryoneAtTheCounterTest extends TestCase
             [
                 'customer_id' => Customer::query()->where('name_en', 'Rahim Traders')->firstOrFail()->id,
                 'warehouse_id' => $warehouse->id,
+                // ⓘ মাল কীভাবে যাবে — চালান আর গেট পাস ছাপার আগে লাগে ([[RequireTransportBeforePrint]])
+                'own_transport' => '1',
             ],
             [['product_id' => $product->id, 'qty' => '3', 'rate' => '52.10', 'free_qty' => '0']],
         );

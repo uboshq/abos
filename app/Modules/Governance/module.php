@@ -56,6 +56,13 @@ return [
 
         'reports' => [
             ['label' => 'governance::menu.audit_trail', 'icon' => 'list', 'route' => 'governance.audit.index', 'permission' => 'governance.audit.view'],
+            // ⭐ নিরীক্ষার খাতা — রিপোর্ট সেন্টার ধাপ ৬ (মালিক, ১ অক্টোবর ২০২৬)
+            ['label' => 'governance::audit_report.changes_title', 'icon' => 'edit', 'route' => 'governance.report.show',
+                'route_params' => ['slug' => 'changes'], 'permission' => 'governance.audit.view'],
+            ['label' => 'governance::audit_report.backdated_title', 'icon' => 'clock', 'route' => 'governance.report.show',
+                'route_params' => ['slug' => 'backdated'], 'permission' => 'governance.audit.view'],
+            ['label' => 'governance::audit_report.periods_title', 'icon' => 'calendar', 'route' => 'governance.report.show',
+                'route_params' => ['slug' => 'periods'], 'permission' => 'governance.audit.view'],
 
             /*
              * রপ্তানির খাতা — অডিটের ঠিক পাশে।
@@ -164,5 +171,10 @@ return [
      */
     'integrity' => [
         GovernanceChecks::class,
+    ],
+
+    // ⭐ নিরীক্ষার খাতা — Report engine boot-এ নিবন্ধন করে
+    'reports' => [
+        \App\Modules\Governance\Reports\AuditReports::class,
     ],
 ];
