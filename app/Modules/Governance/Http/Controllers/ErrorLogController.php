@@ -117,4 +117,23 @@ class ErrorLogController extends Controller implements HasMiddleware
 
         return back()->with('saved', __('governance::message.error_acknowledged'));
     }
+
+    /**
+     * ⭐ সব দেখা হয়েছে — তালিকা পরিষ্কার (মালিক, ১ অক্টোবর ২০২৬: *"poriskar koro"*)।
+     *
+     * ⓘ মোছা নয়: প্রতিটা খোলা সারি "দেখা হয়েছে" হয় — কে, কখন — আর তালিকা থেকে সরে যায়; "দেখা গুলোও" টিক দিলে
+     * ইতিহাসে ফেরে। একই ভুল আবার ঘটলে সারিটা আবার খোলে, তাই নতুন ভাঙন চাপা পড়ে না।
+     * ⓘ কেবল নিজের নাগালের সারি ([[CompanylessRows::errors()]]) — একটা-একটা "দেখা হয়েছে"-র একই সীমা।
+     */
+    public function acknowledgeAll(Request $request): RedirectResponse
+    {
+        $count = $this->companyless->errors($request->user())
+            ->open()
+            ->update([
+                'acknowledged_at' => now(),
+                'acknowledged_by' => $request->user()?->getKey(),
+            ]);
+
+        return back()->with('saved', trans_choice('governance::message.errors_all_acknowledged', $count, ['count' => $count]));
+    }
 }

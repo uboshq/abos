@@ -78,6 +78,15 @@
         </p>
     @endif
 
+    {{-- ⭐ সব দেখা হয়েছে — তালিকা পরিষ্কার (মালিক, ১ অক্টোবর ২০২৬)। মোছা নয়: সারিগুলো "দেখা হয়েছে" হয়ে সরে যায়,
+         "দেখা গুলোও" টিক দিলে ইতিহাসে থাকে; একই ভুল আবার ঘটলে সারিটা আবার খোলে। --}}
+    @if (request('only') !== 'all' && $rows->total() > 0)
+        <form method="POST" action="{{ route('governance.error.acknowledge_all') }}" class="mb-3 flex justify-end">
+            @csrf
+            <x-ui.button type="submit" tone="secondary">{{ __('governance::action.acknowledge_all') }}</x-ui.button>
+        </form>
+    @endif
+
     <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
         <form method="GET" class="contents">
             {{-- খাতাটা রপ্তানি হয় না — ভিতরের পথ ও ট্রেস বাইরে যাওয়ার জিনিস নয় --}}

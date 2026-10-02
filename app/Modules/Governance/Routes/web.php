@@ -80,6 +80,8 @@ Route::middleware('auth')->prefix('governance')->group(function () {
     Route::get('/errors', [ErrorLogController::class, 'index'])->name('error.index');
     Route::post('/errors/{error}/seen', [ErrorLogController::class, 'acknowledge'])
         ->whereNumber('error')->name('error.acknowledge');
+    // ⭐ সব দেখা হয়েছে — তালিকা পরিষ্কার (মালিক, ১ অক্টোবর ২০২৬)
+    Route::post('/errors/seen-all', [ErrorLogController::class, 'acknowledgeAll'])->name('error.acknowledge_all');
 
     /*
      * নিজের খোলা সেশনগুলো — অনুমতি ছাড়া, কারণ এগুলো নিজেরই।

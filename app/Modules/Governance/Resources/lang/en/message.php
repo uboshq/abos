@@ -31,6 +31,7 @@ return [
     'errors_today' => ':count fault(s) in the last 24 hours.',
     'no_errors' => 'Nothing has broken.',
     'error_acknowledged' => 'Marked as seen.',
+    'errors_all_acknowledged' => '{0} Nothing to clear.|{1} 1 row marked as seen — the list is clear.|[2,*] :count rows marked as seen — the list is clear.',
     'seen_by' => 'seen · :name',
     'sessions_why' => 'Everywhere your login is still open. Changing the password does not close an old one — it has to be ended here.',
     'this_device' => 'This device',

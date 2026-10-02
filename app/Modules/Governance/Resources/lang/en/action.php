@@ -16,6 +16,7 @@ return [
     'only_failed' => 'Only failures',
     'mark_seen' => 'Seen',
     'show_seen_too' => 'Include seen',
+    'acknowledge_all' => 'Mark all seen — clear the list',
     'portal_enabled' => 'Portal opened',
     'portal_disabled' => 'Portal closed',
     'portal_password_set' => 'Portal password set',

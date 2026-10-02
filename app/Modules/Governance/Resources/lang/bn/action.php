@@ -16,6 +16,7 @@ return [
     'only_failed' => 'কেবল ব্যর্থ',
     'mark_seen' => 'দেখেছি',
     'show_seen_too' => 'দেখা হয়ে গেছে এমনগুলোও',
+    'acknowledge_all' => 'সব দেখা হয়েছে — তালিকা পরিষ্কার',
     'portal_enabled' => 'পোর্টাল চালু',
     'portal_disabled' => 'পোর্টাল বন্ধ',
     'portal_password_set' => 'পোর্টালের পাসওয়ার্ড বসানো',
