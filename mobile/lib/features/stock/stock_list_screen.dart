@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 
+import '../../core/records/list_queries.dart';
 import '../../core/records/money.dart';
 import '../../core/records/stock_record.dart';
 import '../../core/sync_engine/reference_sync.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/empty_state.dart';
+import '../../core/widgets/list_controls.dart';
 
 /// Hand-on-shelf quantities — reachable only from a menu tile gated on
 /// `inventory.stock.view` (see menu_repository.dart), so a role without that
@@ -26,6 +28,10 @@ class StockListScreen extends StatefulWidget {
 class _StockListScreenState extends State<StockListScreen> {
   bool _refreshing = false;
   String _query = '';
+  // ফিল্টার আর সাজানো — শুধু স্ক্রিন খোলা থাকা পর্যন্ত। শূন্য মজুদ শুরুতেই
+  // লুকানো (মালিকের চাওয়া) — দেখুন StockListQuery.defaultFilters।
+  String _sort = StockListQuery.defaultSort;
+  ListFilters _filters = StockListQuery.defaultFilters;
 
   Future<void> _refresh() async {
     setState(() => _refreshing = true);
@@ -46,12 +52,9 @@ class _StockListScreenState extends State<StockListScreen> {
     final all = StockRecord.all();
     // A stock row whose product has not been pulled yet has no name to search
     // by; it is still listed (the quantity is real), it simply cannot match a
-    // typed query.
-    final filtered = all
-        .where((row) => row.product?.matches(_query) ?? _query.trim().isEmpty)
-        .toList()
-      ..sort((a, b) =>
-          (a.product?.name ?? '').compareTo(b.product?.name ?? ''));
+    // typed query — StockListQuery.apply keeps that rule.
+    final filtered = StockListQuery.apply(all,
+        query: _query, sort: _sort, filters: _filters);
 
     return Scaffold(
       appBar: AppBar(title: const Text('হাতে থাকা মজুদ')),
@@ -66,6 +69,14 @@ class _StockListScreenState extends State<StockListScreen> {
               ),
               onChanged: (value) => setState(() => _query = value),
             ),
+          ),
+          ListControls(
+            sortOptions: StockListQuery.sortOptions,
+            sort: _sort,
+            onSort: (value) => setState(() => _sort = value),
+            filterGroups: StockListQuery.filterGroups,
+            filters: _filters,
+            onFilters: (value) => setState(() => _filters = value),
           ),
           if (_refreshing) const LinearProgressIndicator(),
           Expanded(
@@ -92,10 +103,14 @@ class _StockListScreenState extends State<StockListScreen> {
                     )
                   : filtered.isEmpty
                       ? ListView(
-                          children: const [
+                          children: [
                             EmptyState(
                               icon: Icons.search_off,
                               title: 'কোনো মিল পাওয়া যায়নি',
+                              // ফিল্টার চালু থাকলে খালি তালিকার কারণ সেটাও হতে পারে।
+                              message: _filters.isEmpty
+                                  ? null
+                                  : 'ফিল্টার মুছে আবার দেখুন।',
                             ),
                           ],
                         )

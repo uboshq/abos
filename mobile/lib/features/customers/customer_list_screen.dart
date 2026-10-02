@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/records/customer_record.dart';
+import '../../core/records/list_queries.dart';
 import '../../core/sync_engine/reference_sync.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/empty_state.dart';
+import '../../core/widgets/list_controls.dart';
 
 /// Every customer this device has pulled, each with what the shop owes.
 ///
@@ -28,6 +30,9 @@ class CustomerListScreen extends StatefulWidget {
 class _CustomerListScreenState extends State<CustomerListScreen> {
   bool _refreshing = false;
   String _query = '';
+  // ফিল্টার আর সাজানো — শুধু স্ক্রিন খোলা থাকা পর্যন্ত (দেখুন ListControls)।
+  String _sort = CustomerListQuery.defaultSort;
+  ListFilters _filters = const {};
 
   Future<void> _refresh() async {
     setState(() => _refreshing = true);
@@ -49,8 +54,8 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
     // null after a clean pull, and an empty list then means an empty list.
     final trouble = ReferenceSync.troubleSentence;
     final all = CustomerRecord.all();
-    final filtered =
-        all.where((customer) => customer.matches(_query)).toList();
+    final filtered = CustomerListQuery.apply(all,
+        query: _query, sort: _sort, filters: _filters);
 
     return Scaffold(
       appBar: AppBar(title: const Text('গ্রাহক')),
@@ -65,6 +70,14 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
               ),
               onChanged: (value) => setState(() => _query = value),
             ),
+          ),
+          ListControls(
+            sortOptions: CustomerListQuery.sortOptions,
+            sort: _sort,
+            onSort: (value) => setState(() => _sort = value),
+            filterGroups: CustomerListQuery.filterGroups(all),
+            filters: _filters,
+            onFilters: (value) => setState(() => _filters = value),
           ),
           if (_refreshing) const LinearProgressIndicator(),
           Expanded(
@@ -98,10 +111,14 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
                     )
                   : filtered.isEmpty
                       ? ListView(
-                          children: const [
+                          children: [
                             EmptyState(
                               icon: Icons.search_off,
                               title: 'কোনো মিল পাওয়া যায়নি',
+                              // ফিল্টার চালু থাকলে খালি তালিকার কারণ সেটাও হতে পারে।
+                              message: _filters.isEmpty
+                                  ? null
+                                  : 'ফিল্টার মুছে আবার দেখুন।',
                             ),
                           ],
                         )

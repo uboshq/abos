@@ -3,9 +3,11 @@ import 'package:intl/intl.dart';
 
 import '../../core/api_client/network_errors.dart';
 import '../../core/orders/tracking_api.dart';
+import '../../core/records/list_queries.dart';
 import '../../core/records/money.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
+import '../../core/widgets/list_controls.dart';
 
 /// ডেলিভারি ট্র্যাকিং — প্রতিটা বিক্রি এখন কোথায়, আর চাপলে কে কখন কী করলেন (0.4.6)।
 ///
@@ -23,6 +25,9 @@ class DeliveryTrackingScreen extends StatefulWidget {
 class _DeliveryTrackingScreenState extends State<DeliveryTrackingScreen> {
   final _search = TextEditingController();
   String? _step;
+  // ⭐ সাজান (মালিক, ২ অক্টোবর) — শুধু হাতে আসা সারির ক্রম, সার্ভারে যায় না।
+  // ফিল্টারের কাজ ধাপের chip আর খোঁজ আগেই করে, তাই এখানে ফিল্টার বোতাম নেই।
+  String _sort = TrackingListQuery.defaultSort;
   TrackingList? _list;
   bool _busy = false;
   String? _error;
@@ -70,6 +75,8 @@ class _DeliveryTrackingScreenState extends State<DeliveryTrackingScreen> {
   Widget build(BuildContext context) {
     final list = _list;
     final counts = list?.counts ?? const {};
+    final rows = TrackingListQuery.apply(list?.rows ?? const <TrackedSale>[],
+        sort: _sort);
     return Scaffold(
       appBar: AppBar(title: const Text('ডেলিভারি ট্র্যাকিং')),
       body: RefreshIndicator(
@@ -109,6 +116,13 @@ class _DeliveryTrackingScreenState extends State<DeliveryTrackingScreen> {
               ],
             ),
             const SizedBox(height: AppSpacing.sm),
+            ListControls(
+              padding: EdgeInsets.zero,
+              sortOptions: TrackingListQuery.sortOptions,
+              sort: _sort,
+              onSort: (value) => setState(() => _sort = value),
+            ),
+            const SizedBox(height: AppSpacing.sm),
             if (_busy) const LinearProgressIndicator(),
             if (_error != null)
               Card(
@@ -124,7 +138,7 @@ class _DeliveryTrackingScreenState extends State<DeliveryTrackingScreen> {
                 padding: EdgeInsets.all(AppSpacing.lg),
                 child: Text('কোনো বিক্রি নেই।', textAlign: TextAlign.center),
               ),
-            for (final sale in list?.rows ?? const <TrackedSale>[])
+            for (final sale in rows)
               Card(
                 child: InkWell(
                   onTap: () => _open(sale),

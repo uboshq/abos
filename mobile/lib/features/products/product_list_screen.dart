@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../core/records/list_queries.dart';
 import '../../core/records/money.dart';
 import '../../core/records/product_record.dart';
 import '../../core/records/stock_record.dart';
@@ -7,6 +8,7 @@ import '../../core/sync_engine/reference_sync.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/empty_state.dart';
+import '../../core/widgets/list_controls.dart';
 
 /// The product catalogue, with the price a person is allowed to see.
 ///
@@ -31,6 +33,9 @@ class ProductListScreen extends StatefulWidget {
 class _ProductListScreenState extends State<ProductListScreen> {
   bool _refreshing = false;
   String _query = '';
+  // ফিল্টার আর সাজানো — শুধু স্ক্রিন খোলা থাকা পর্যন্ত (দেখুন ListControls)।
+  String _sort = ProductListQuery.defaultSort;
+  ListFilters _filters = const {};
 
   Future<void> _refresh() async {
     setState(() => _refreshing = true);
@@ -49,7 +54,8 @@ class _ProductListScreenState extends State<ProductListScreen> {
     // null after a clean pull, and an empty list then means an empty list.
     final trouble = ReferenceSync.troubleSentence;
     final all = ProductRecord.all();
-    final filtered = all.where((product) => product.matches(_query)).toList();
+    final filtered = ProductListQuery.apply(all,
+        query: _query, sort: _sort, filters: _filters);
 
     return Scaffold(
       appBar: AppBar(title: const Text('পণ্যের তালিকা')),
@@ -64,6 +70,14 @@ class _ProductListScreenState extends State<ProductListScreen> {
               ),
               onChanged: (value) => setState(() => _query = value),
             ),
+          ),
+          ListControls(
+            sortOptions: ProductListQuery.sortOptions,
+            sort: _sort,
+            onSort: (value) => setState(() => _sort = value),
+            filterGroups: ProductListQuery.filterGroups(all),
+            filters: _filters,
+            onFilters: (value) => setState(() => _filters = value),
           ),
           if (_refreshing) const LinearProgressIndicator(),
           Expanded(
@@ -94,10 +108,14 @@ class _ProductListScreenState extends State<ProductListScreen> {
                     )
                   : filtered.isEmpty
                       ? ListView(
-                          children: const [
+                          children: [
                             EmptyState(
                               icon: Icons.search_off,
                               title: 'কোনো মিল পাওয়া যায়নি',
+                              // ফিল্টার চালু থাকলে খালি তালিকার কারণ সেটাও হতে পারে।
+                              message: _filters.isEmpty
+                                  ? null
+                                  : 'ফিল্টার মুছে আবার দেখুন।',
                             ),
                           ],
                         )

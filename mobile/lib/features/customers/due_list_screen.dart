@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 
 import '../../core/records/customer_record.dart';
+import '../../core/records/list_queries.dart';
 import '../../core/records/money.dart';
 import '../../core/sync_engine/reference_sync.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/empty_state.dart';
+import '../../core/widgets/list_controls.dart';
 
 /// Who owes what — the whole round's debt on one page.
 ///
@@ -22,7 +24,8 @@ import '../../core/widgets/empty_state.dart';
 ///
 /// <p><b>Sorted by what is owed, largest first</b> — not alphabetically.
 /// A list of eighty shops sorted by name is a list nobody reads to the end;
-/// the four that matter are at the top of this one.
+/// the four that matter are at the top of this one. That stays the default;
+/// সাজান can change it for this visit only (মালিক, ২ অক্টোবর — DueListQuery).
 class DueListScreen extends StatefulWidget {
   const DueListScreen({super.key});
 
@@ -33,6 +36,9 @@ class DueListScreen extends StatefulWidget {
 class _DueListScreenState extends State<DueListScreen> {
   bool _refreshing = false;
   String _query = '';
+  // ফিল্টার আর সাজানো — শুধু স্ক্রিন খোলা থাকা পর্যন্ত (দেখুন ListControls)।
+  String _sort = DueListQuery.defaultSort;
+  ListFilters _filters = const {};
 
   Future<void> _refresh() async {
     setState(() => _refreshing = true);
@@ -50,9 +56,11 @@ class _DueListScreenState extends State<DueListScreen> {
     // Why the last pull brought nothing down, when that is what happened —
     // null after a clean pull, and an empty list then means an empty list.
     final trouble = ReferenceSync.troubleSentence;
-    final rows = _owing()..sort((a, b) => b.due.outstanding.compareTo(a.due.outstanding));
-    final filtered =
-        rows.where((row) => row.customer.matches(_query)).toList();
+    final rows = _owing();
+    final filtered = DueListQuery.apply(rows,
+        query: _query, sort: _sort, filters: _filters);
+    // ⓘ মোট সবসময় পুরো তালিকার — ফিল্টারে কটা দোকান লুকালেও মোট বকেয়া বদলায়
+    // না, কারণ এই সংখ্যাটার জন্যই মালিক পাতাটা খোলেন।
     final total = rows.fold<double>(0, (sum, row) => sum + row.due.outstanding);
 
     return Scaffold(
@@ -70,6 +78,15 @@ class _DueListScreenState extends State<DueListScreen> {
               onChanged: (value) => setState(() => _query = value),
             ),
           ),
+          if (rows.isNotEmpty)
+            ListControls(
+              sortOptions: DueListQuery.sortOptions,
+              sort: _sort,
+              onSort: (value) => setState(() => _sort = value),
+              filterGroups: DueListQuery.filterGroups(rows),
+              filters: _filters,
+              onFilters: (value) => setState(() => _filters = value),
+            ),
           if (_refreshing) const LinearProgressIndicator(),
           Expanded(
             child: RefreshIndicator(
@@ -99,10 +116,14 @@ class _DueListScreenState extends State<DueListScreen> {
                     )
                   : filtered.isEmpty
                       ? ListView(
-                          children: const [
+                          children: [
                             EmptyState(
                               icon: Icons.search_off,
                               title: 'কোনো মিল পাওয়া যায়নি',
+                              // ফিল্টার চালু থাকলে খালি তালিকার কারণ সেটাও হতে পারে।
+                              message: _filters.isEmpty
+                                  ? null
+                                  : 'ফিল্টার মুছে আবার দেখুন।',
                             ),
                           ],
                         )
@@ -132,22 +153,15 @@ class _DueListScreenState extends State<DueListScreen> {
   /// <p>A shop whose `CustomerDue` has not arrived yet is also absent, and
   /// that is not the same as owing nothing. The two entity types have
   /// separate watermarks, so one can lag the other by a sync.
-  List<_DueRow> _owing() {
-    final rows = <_DueRow>[];
+  List<DueRow> _owing() {
+    final rows = <DueRow>[];
     for (final customer in CustomerRecord.all()) {
       final due = CustomerDueRecord.forCustomer(customer.id);
       if (due == null || due.outstanding <= 0) continue;
-      rows.add(_DueRow(customer: customer, due: due));
+      rows.add(DueRow(customer: customer, due: due));
     }
     return rows;
   }
-}
-
-class _DueRow {
-  const _DueRow({required this.customer, required this.due});
-
-  final CustomerRecord customer;
-  final CustomerDueRecord due;
 }
 
 /// The one number an owner opens this page for.
@@ -186,7 +200,7 @@ class _TotalStrip extends StatelessWidget {
 class _DueTile extends StatelessWidget {
   const _DueTile({required this.row});
 
-  final _DueRow row;
+  final DueRow row;
 
   @override
   Widget build(BuildContext context) {
