@@ -24,4 +24,8 @@ return [
     'late' => 'দেরিতে',
     'not_written' => 'লেখা হয়নি',
     'salary_cost' => 'বেতন খরচ — গত ছয় মাস',
+    'by_department' => 'বিভাগ অনুযায়ী কর্মী',
+    'by_department_hint' => 'চলতি :count জন কর্মী',
+    'no_department' => 'বিভাগ বসানো হয়নি',
+    'other_departments' => 'অন্যান্য বিভাগ',
 ];

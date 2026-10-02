@@ -25,4 +25,6 @@ return [
     'one_to_three' => '১–৩ দিন',
     'three_to_seven' => '৩–৭ দিন',
     'over_a_week' => '৭ দিনের বেশি',
+    'by_module' => 'মডিউল অনুযায়ী অপেক্ষমাণ',
+    'by_module_hint' => 'কোন কাজে সই আটকে আছে',
 ];

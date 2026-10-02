@@ -51,5 +51,21 @@ final class TheWaitIsCountedInDaysTest extends TestCase
 
         $this->assertSame($dashboard->stats[0]->value, (string) array_sum(array_map('intval', $ages)),
             'বয়সের ভাগের যোগফল উপরের "অপেক্ষমাণ" সংখ্যার সমান নয়।');
+
+        // ── নতুন ড্যাশবোর্ড: মডিউল অনুযায়ী — একই ছাঁকনি, মডিউলের নিজের নাম, যোগফল একই (৩ অক্টোবর ২০২৬) ──
+        Approval::query()->create([
+            'company_id' => $company->id, 'approvable_type' => 'test', 'approvable_id' => 99,
+            'module' => 'purchase', 'action' => 'bill', 'amount' => '100', 'status' => Approval::PENDING,
+            'current_level' => 1, 'requested_by' => $owner->id, 'requested_at' => now(),
+        ]);
+
+        config(['abos.dashboards_v2' => true]);
+        $panel = collect(ApprovalDashboard::dashboard()->panels)->firstWhere('label', __('approval::dashboard.by_module'));
+        $this->assertNotNull($panel, 'মডিউল অনুযায়ী অপেক্ষমাণের চার্ট নেই।');
+
+        $registry = app(\App\Core\Module\ModuleRegistry::class);
+        $name = fn (string $code) => $registry->get($code)->name[app()->getLocale()] ?? $registry->get($code)->name['en'];
+        $this->assertSame([$name('sales') => '5', $name('purchase') => '1'], array_column($panel->parts, 'value', 'label'),
+            '⛔ মডিউলের ভাগ ভুল — অনুমোদিতটাও গোনা, বা মডিউলের নাম ভুল।');
     }
 }

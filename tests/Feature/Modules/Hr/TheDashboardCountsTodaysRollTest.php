@@ -73,6 +73,38 @@ final class TheDashboardCountsTodaysRollTest extends TestCase
     }
 
     /**
+     * ⭐ বিভাগ অনুযায়ী চালু কর্মী — বিভাগহীনরাও আলাদা ভাগে, ছেড়ে যাওয়া কর্মী বাদ, যোগফল = চলতি কর্মী (নতুন ড্যাশবোর্ড)।
+     */
+    public function test_every_current_employee_lands_in_one_department(): void
+    {
+        config(['abos.dashboards_v2' => true]);
+
+        $company = Company::create(['code' => 'DEP', 'name_en' => 'Dept Co']);
+        $branch = Branch::query()->create(['company_id' => $company->id, 'code' => 'B1', 'name_en' => 'Main', 'is_active' => true]);
+        CompanyContext::set($company->id, $branch->id);
+        $owner = User::factory()->create(['current_company_id' => $company->id]);
+        $owner->companies()->attach($company->id);
+        $this->actingAs($owner);
+
+        $sales = \App\Modules\MasterData\Models\Department::query()->create(['company_id' => $company->id, 'code' => 'SAL', 'name_en' => 'Sales', 'name_bn' => 'Sales', 'is_active' => true]);
+
+        foreach ([['A', $sales->id, null], ['B', $sales->id, null], ['C', null, null], ['D', $sales->id, '2026-01-31']] as [$code, $dept, $left]) {
+            Employee::query()->create([
+                'company_id' => $company->id, 'branch_id' => $branch->id, 'code' => 'E-'.$code, 'name_en' => 'Person '.$code,
+                'joining_date' => '2024-01-01', 'leaving_date' => $left, 'department_id' => $dept,
+            ]);
+        }
+
+        $panel = collect(HrDashboard::dashboard()->panels)->firstWhere('label', __('hr::dashboard.by_department'));
+        $this->assertNotNull($panel, 'বিভাগ অনুযায়ী কর্মীর চার্ট নেই।');
+        $this->assertSame(
+            ['Sales' => '2', __('hr::dashboard.no_department') => '1'],
+            array_column($panel->parts, 'value', 'label'),
+            '⛔ বিভাগের ভাগ ভুল — ছেড়ে যাওয়া কর্মী গোনা, বা বিভাগহীন কেউ হারিয়ে গেছে।',
+        );
+    }
+
+    /**
      * ⭐ বেতন খরচ — গত ছয় মাস, কেবল নিশ্চিত বেতনশিট, আর কেবল `hr.payroll.view`-এ (নতুন ড্যাশবোর্ড, ২ অক্টোবর ২০২৬)।
      * ⛔ একই মানুষ চাবি ছাড়া → চার্টই নেই; চাবিসহ → এ মাসের দণ্ডে নিশ্চিত শিটের অঙ্ক, খসড়া বাদ।
      */

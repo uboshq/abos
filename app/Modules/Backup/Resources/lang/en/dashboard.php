@@ -16,4 +16,7 @@ return [
     'last_verified_hint' => 'Whether the last backup was actually restored into a database and counted.',
     'verified_yes' => 'Yes, tested',
     'verified_no' => 'Not tested',
+    'months_of_copies' => 'Backups month by month — last six months',
+    'copies_safe' => 'Reached every destination',
+    'copies_trouble' => 'Trouble (partial, this machine only, or failed)',
 ];

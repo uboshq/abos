@@ -60,7 +60,7 @@ final class ApprovalDashboard implements ProvidesDashboard
                 ),
             ],
 
-            panels: [self::howLongWaiting()],
+            panels: [self::howLongWaiting(), ...self::byModule()],
 
             listings: [
                 new Listing(
@@ -111,5 +111,47 @@ final class ApprovalDashboard implements ProvidesDashboard
             ],
             hint: __('approval::dashboard.how_long_hint'),
         );
+    }
+
+    /**
+     * ⭐ কোন মডিউলে কতটা আটকে — মালিকের ড্যাশবোর্ড নকশা, ৩ অক্টোবর ২০২৬।
+     *
+     * ⓘ বাঁয়ের "কত দিন ধরে"-র একই ছাঁকনি (অবস্থা অপেক্ষমাণ), তাই দুই ভাগের যোগফল সবসময় এক। নাম মডিউলের নিজের
+     * নাম ([[ModuleRegistry]]) — অনুমোদনের সারির `module` থেকে; চেনা না গেলে কোডটাই। বড় থেকে ছোট।
+     * ⓘ নতুন ড্যাশবোর্ডের অংশ — বাকিগুলোর সাথে একসাথে চালু হবে (config abos.dashboards_v2)।
+     *
+     * @return list<Breakdown>
+     */
+    private static function byModule(): array
+    {
+        if (! config('abos.dashboards_v2')) {
+            return [];
+        }
+
+        $rows = Approval::query()->where('status', Approval::PENDING)
+            ->selectRaw('module, COUNT(*) as n')
+            ->groupBy('module')
+            ->orderByDesc('n')
+            ->toBase()->get();
+
+        if ($rows->isEmpty()) {
+            return [];
+        }
+
+        $registry = app(\App\Core\Module\ModuleRegistry::class);
+        $locale = app()->getLocale();
+
+        return [new Breakdown(
+            label: __('approval::dashboard.by_module'),
+            parts: $rows->map(function ($r) use ($registry, $locale) {
+                $module = $r->module !== null ? $registry->get((string) $r->module) : null;
+
+                return [
+                    'label' => $module ? ($module->name[$locale] ?? $module->name['en']) : (string) ($r->module ?? '—'),
+                    'value' => (string) (int) $r->n,
+                ];
+            })->all(),
+            hint: __('approval::dashboard.by_module_hint'),
+        )];
     }
 }

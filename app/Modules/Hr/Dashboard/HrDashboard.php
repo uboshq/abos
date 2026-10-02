@@ -91,7 +91,7 @@ final class HrDashboard implements ProvidesDashboard
                 ),
             ],
 
-            panels: [self::todaysRoll($today), ...self::salaryCost()],
+            panels: [self::todaysRoll($today), ...self::byDepartment(), ...self::salaryCost()],
 
             listings: [
                 new Listing(
@@ -152,6 +152,53 @@ final class HrDashboard implements ProvidesDashboard
             ],
             hint: __('hr::dashboard.todays_roll_hint', ['count' => $headcount]),
         );
+    }
+
+    /**
+     * ⭐ বিভাগ অনুযায়ী চালু কর্মী — মালিকের ড্যাশবোর্ড নকশা, ৩ অক্টোবর ২০২৬।
+     *
+     * ⓘ উপরের "কর্মী" সংখ্যার একই ভিত (দেখার শাখা), কেবল চলতি কর্মী (`leaving_date` নেই); বিভাগহীনরা আলাদা ভাগে,
+     * যাতে যোগফল কর্মীসংখ্যার সমান থাকে আর কেউ চুপচাপ হারিয়ে না যান। বড় থেকে ছোট, প্রথম ছয়টা; বাকি "অন্যান্য"-তে।
+     * ⓘ নতুন ড্যাশবোর্ডের অংশ — বাকিগুলোর সাথে একসাথে চালু হবে (config abos.dashboards_v2)।
+     *
+     * @return list<Breakdown>
+     */
+    private static function byDepartment(): array
+    {
+        if (! config('abos.dashboards_v2')) {
+            return [];
+        }
+
+        $rows = self::inView(Employee::query()->whereNull('leaving_date'), 'hr_employees.branch_id')
+            ->selectRaw('department_id, COUNT(*) as n')
+            ->groupBy('department_id')
+            ->toBase()->get();
+
+        if ($rows->isEmpty()) {
+            return [];
+        }
+
+        $names = \App\Modules\MasterData\Models\Department::query()
+            ->whereIn('id', $rows->pluck('department_id')->filter()->all())
+            ->get()->mapWithKeys(fn ($d) => [$d->id => $d->name()]);
+
+        $parts = $rows->map(fn ($r) => [
+            'label' => $r->department_id === null ? __('hr::dashboard.no_department') : ($names[$r->department_id] ?? '—'),
+            'n' => (int) $r->n,
+        ])->sortByDesc('n')->values();
+
+        $shown = $parts->take(6);
+        $rest = $parts->slice(6)->sum('n');
+
+        if ($rest > 0) {
+            $shown->push(['label' => __('hr::dashboard.other_departments'), 'n' => $rest]);
+        }
+
+        return [new Breakdown(
+            label: __('hr::dashboard.by_department'),
+            parts: $shown->map(fn ($p) => ['label' => $p['label'], 'value' => (string) $p['n']])->all(),
+            hint: __('hr::dashboard.by_department_hint', ['count' => $parts->sum('n')]),
+        )];
     }
 
     /**

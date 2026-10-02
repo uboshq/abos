@@ -24,4 +24,8 @@ return [
     'late' => 'Late',
     'not_written' => 'Not written',
     'salary_cost' => 'Salary cost — last six months',
+    'by_department' => 'Employees by department',
+    'by_department_hint' => ':count current employees',
+    'no_department' => 'No department set',
+    'other_departments' => 'Other departments',
 ];

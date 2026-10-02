@@ -6,6 +6,7 @@ namespace App\Modules\Backup\Dashboard;
 
 use App\Core\Contracts\ProvidesDashboard;
 use App\Core\Engines\Dashboard\DashboardDefinition;
+use App\Core\Engines\Dashboard\Series;
 use App\Core\Engines\Dashboard\Stat;
 use App\Core\Engines\Dashboard\Tile;
 use App\Core\Services\BackupService;
@@ -95,6 +96,52 @@ final class BackupDashboard implements ProvidesDashboard
                     href: route('backup.index'),
                 ),
             ],
+
+            panels: self::monthsOfCopies(),
         );
+    }
+
+    /**
+     * ⭐ মাসে মাসে ব্যাকআপ — নিরাপদে বাইরে গেছে বনাম সমস্যা, গত ছয় মাস (মালিকের ড্যাশবোর্ড নকশা, ৩ অক্টোবর ২০২৬)।
+     *
+     * ⓘ "নিরাপদ" মানে কেবল `success` — প্রতিটা গন্তব্যে পৌঁছেছে। `partial`, `local_only`, `failed` তিনটাই সমস্যা:
+     * কপিটা হয় নেই, নয় ওই একই মেশিনে — ঠিক যেদিন ব্যাকআপ লাগে, সেদিন কাজে আসে না ([[BackupRunner]])।
+     * ⓘ চলমান (`running`) রান কোনো দিকেই গোনা নয়। ⓘ নতুন ড্যাশবোর্ডের অংশ (config abos.dashboards_v2)।
+     *
+     * @return list<Series>
+     */
+    private static function monthsOfCopies(): array
+    {
+        if (! config('abos.dashboards_v2')) {
+            return [];
+        }
+
+        $start = Carbon::today()->startOfMonth()->subMonths(5);
+        $expr = "DATE_FORMAT(started_at, '%Y-%m')";
+
+        $rows = BackupRun::query()
+            ->where('started_at', '>=', $start->toDateTimeString())
+            ->whereIn('status', ['success', 'partial', 'local_only', 'failed'])
+            ->selectRaw("{$expr} as ym, SUM(CASE WHEN status = 'success' THEN 1 ELSE 0 END) as safe, SUM(CASE WHEN status = 'success' THEN 0 ELSE 1 END) as trouble")
+            ->groupByRaw($expr)
+            ->toBase()->get()->keyBy('ym');
+
+        $points = [];
+
+        for ($month = $start->copy(); $month->lessThanOrEqualTo(Carbon::today()); $month->addMonth()) {
+            $row = $rows[$month->format('Y-m')] ?? null;
+            $points[] = [
+                'label' => $month->translatedFormat('M'),
+                'first' => (string) (int) ($row->safe ?? 0),
+                'second' => (string) (int) ($row->trouble ?? 0),
+            ];
+        }
+
+        return [new Series(
+            label: __('backup::dashboard.months_of_copies'),
+            points: $points,
+            firstLabel: __('backup::dashboard.copies_safe'),
+            secondLabel: __('backup::dashboard.copies_trouble'),
+        )];
     }
 }

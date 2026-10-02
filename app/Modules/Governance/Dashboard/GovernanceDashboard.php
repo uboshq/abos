@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Governance\Dashboard;
 
 use App\Core\Contracts\ProvidesDashboard;
+use App\Core\Engines\Dashboard\Breakdown;
 use App\Core\Engines\Dashboard\DashboardDefinition;
 use App\Core\Engines\Dashboard\Listing;
 use App\Core\Engines\Dashboard\Stat;
@@ -72,6 +73,8 @@ final class GovernanceDashboard implements ProvidesDashboard
                 ),
             ],
 
+            panels: [...self::whatWasDone(), ...self::loginsToday()],
+
             listings: [
                 new Listing(
                     label: __('governance::dashboard.latest_changes'),
@@ -89,5 +92,96 @@ final class GovernanceDashboard implements ProvidesDashboard
                 ),
             ],
         );
+    }
+
+    /**
+     * ⭐ নিরীক্ষা কার্যকলাপ — এ মাসে কী ধরনের কাজ কতবার (মালিকের ড্যাশবোর্ড নকশা, ৩ অক্টোবর ২০২৬)।
+     *
+     * ⓘ উপরের "আজ বদল" ঘরের একই খাতা ([[AuditTrail]]), এ মাসের শুরু থেকে; কাজের নাম খাতার নিজের ভাষায়
+     * ([[AuditTrail::actionInWords()]]) — চাবি কখনো নয়। বড় থেকে ছোট, প্রথম ছয়টা; বাকি "অন্যান্য"-তে, যোগফল মাসের মোট।
+     * ⓘ নতুন ড্যাশবোর্ডের অংশ — বাকিগুলোর সাথে একসাথে চালু হবে (config abos.dashboards_v2)।
+     *
+     * @return list<Breakdown>
+     */
+    private static function whatWasDone(): array
+    {
+        if (! config('abos.dashboards_v2')) {
+            return [];
+        }
+
+        $rows = AuditTrail::query()
+            ->where('created_at', '>=', Carbon::today()->startOfMonth())
+            ->selectRaw('action, COUNT(*) as n')
+            ->groupBy('action')
+            ->orderByDesc('n')
+            ->toBase()->get();
+
+        if ($rows->isEmpty()) {
+            return [];
+        }
+
+        $parts = $rows->take(6)->map(fn ($r) => ['label' => AuditTrail::actionInWords($r->action), 'value' => (string) (int) $r->n])->all();
+        $rest = (int) $rows->slice(6)->sum('n');
+
+        if ($rest > 0) {
+            $parts[] = ['label' => __('governance::dashboard.other_actions'), 'value' => (string) $rest];
+        }
+
+        return [new Breakdown(
+            label: __('governance::dashboard.this_month_actions'),
+            parts: $parts,
+            hint: __('governance::dashboard.this_month_actions_hint', ['count' => (int) $rows->sum('n')]),
+        )];
+    }
+
+    /**
+     * ⭐ লগইন নিরাপত্তা — আজ কতজন ঢুকলেন, কত চেষ্টা কেন আটকাল (মালিকের ড্যাশবোর্ড নকশা, ৩ অক্টোবর ২০২৬)।
+     *
+     * ⛔ সারিগুলো কেবল [[CompanylessRows::logins()]] দিয়ে — ঢোকার খাতার পর্দার একই দেয়াল: এই কোম্পানির সারি, এই
+     * কোম্পানির মানুষের নামে কোম্পানিহীন চেষ্টা, আর অচেনা নামের চেষ্টা কেবল সুপার অ্যাডমিনকে। নিজে ছাঁকনি লিখলে
+     * অন্য কোম্পানির আক্রমণকারীর আইপি-র গোনা এখানে চলে আসত।
+     * ⛔ কেবল `governance.login.view` — খাতা দেখার চাবি ছাড়া সংখ্যাও নয়।
+     * ⓘ নকশায় এটা সিস্টেম প্রশাসনের পাতায় ছিল; ঢোকার খাতার দেয়ালটা এই মডিউলের, তাই এখানে।
+     * ⓘ নতুন ড্যাশবোর্ডের অংশ — বাকিগুলোর সাথে একসাথে চালু হবে (config abos.dashboards_v2)।
+     *
+     * @return list<Breakdown>
+     */
+    private static function loginsToday(): array
+    {
+        $viewer = auth()->user();
+
+        if (! config('abos.dashboards_v2') || ! $viewer?->can('governance.login.view')) {
+            return [];
+        }
+
+        $rows = app(\App\Modules\Governance\Services\CompanylessRows::class)->logins($viewer)
+            ->where('created_at', '>=', Carbon::today())
+            ->selectRaw('succeeded, reason, COUNT(*) as n')
+            ->groupBy('succeeded', 'reason')
+            ->toBase()->get();
+
+        $count = fn (callable $match) => (int) $rows->filter($match)->sum('n');
+        $failed = fn (array $reasons) => $count(fn ($r) => ! $r->succeeded && in_array($r->reason, $reasons, true));
+
+        $parts = [
+            ['label' => __('governance::dashboard.login_ok'), 'value' => (string) $count(fn ($r) => (bool) $r->succeeded)],
+            ['label' => __('governance::dashboard.login_wrong_password'), 'value' => (string) $failed([\App\Models\LoginAttempt::WRONG_PASSWORD])],
+            ['label' => __('governance::dashboard.login_unknown'), 'value' => (string) $failed([\App\Models\LoginAttempt::UNKNOWN])],
+            ['label' => __('governance::dashboard.login_code'), 'value' => (string) $failed([\App\Models\LoginAttempt::NEEDS_CODE, \App\Models\LoginAttempt::WRONG_CODE])],
+            ['label' => __('governance::dashboard.login_locked'), 'value' => (string) $failed([\App\Models\LoginAttempt::LOCKED, \App\Models\LoginAttempt::INACTIVE])],
+        ];
+
+        $known = [\App\Models\LoginAttempt::WRONG_PASSWORD, \App\Models\LoginAttempt::UNKNOWN, \App\Models\LoginAttempt::NEEDS_CODE, \App\Models\LoginAttempt::WRONG_CODE, \App\Models\LoginAttempt::LOCKED, \App\Models\LoginAttempt::INACTIVE];
+        $other = $count(fn ($r) => ! $r->succeeded && ! in_array($r->reason, $known, true));
+
+        if ($other > 0) {
+            $parts[] = ['label' => __('governance::dashboard.login_other'), 'value' => (string) $other];
+        }
+
+        return [new Breakdown(
+            label: __('governance::dashboard.logins_today'),
+            parts: $parts,
+            hint: __('governance::dashboard.logins_today_hint'),
+        )];
     }
 }

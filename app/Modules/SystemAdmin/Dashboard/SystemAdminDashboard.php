@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\SystemAdmin\Dashboard;
 
 use App\Core\Contracts\ProvidesDashboard;
+use App\Core\Engines\Dashboard\Breakdown;
 use App\Core\Engines\Dashboard\DashboardDefinition;
 use App\Core\Engines\Dashboard\Listing;
 use App\Core\Engines\Dashboard\Stat;
@@ -88,6 +89,8 @@ final class SystemAdminDashboard implements ProvidesDashboard
                 ),
             ],
 
+            panels: self::whoCanGetIn(),
+
             listings: [
                 new Listing(
                     label: __('system_admin::dashboard.newest_users'),
@@ -116,6 +119,45 @@ final class SystemAdminDashboard implements ProvidesDashboard
      * **চেষ্টা হয়েছিল**, আর প্রশ্নটা হলো **ফাইলটা আছে কি না**। ওই
      * দুইটার পার্থক্য ঠিক সেদিন ধরা পড়ত যেদিন ফেরাতে হত।
      */
+    /**
+     * ⭐ ব্যবহারকারীর অবস্থা — এই কোম্পানির মানুষেরা কে সত্যিই ঢোকেন (মালিকের ড্যাশবোর্ড নকশা, ৩ অক্টোবর ২০২৬)।
+     *
+     * ⓘ প্রতিজন ঠিক একটা ভাগে: বন্ধ → কখনো ঢোকেননি → ৩০ দিন ঢোকেননি → সক্রিয়; যোগফল উপরের "ব্যবহারকারী" সংখ্যার সমান
+     * (একই ছাঁকনি — এই কোম্পানির পিভট)। ⚠️ "৩০ দিন ঢোকেননি" খোলা দরজা: চালু লগইন যা কেউ দেখছেন না।
+     * ⛔ কেবল `system_admin.user.manage` — ব্যবহারকারীর তালিকা যে চাবিতে খোলে।
+     * ⓘ নতুন ড্যাশবোর্ডের অংশ — বাকিগুলোর সাথে একসাথে চালু হবে (config abos.dashboards_v2)।
+     *
+     * @return list<Breakdown>
+     */
+    private static function whoCanGetIn(): array
+    {
+        if (! config('abos.dashboards_v2') || ! auth()->user()?->can('system_admin.user.manage')) {
+            return [];
+        }
+
+        $since = Carbon::now()->subDays(30);
+
+        $row = User::query()
+            ->whereHas('companies', fn ($q) => $q->whereKey(CompanyContext::id()))
+            ->selectRaw('SUM(CASE WHEN is_active = 0 THEN 1 ELSE 0 END) as off')
+            ->selectRaw('SUM(CASE WHEN is_active = 1 AND last_login_at IS NULL THEN 1 ELSE 0 END) as never')
+            ->selectRaw('SUM(CASE WHEN is_active = 1 AND last_login_at < ? THEN 1 ELSE 0 END) as idle', [$since])
+            ->selectRaw('SUM(CASE WHEN is_active = 1 AND last_login_at >= ? THEN 1 ELSE 0 END) as live', [$since])
+            ->selectRaw('SUM(CASE WHEN mfa_secret IS NOT NULL AND mfa_confirmed_at IS NOT NULL THEN 1 ELSE 0 END) as two_step')
+            ->toBase()->first();
+
+        return [new Breakdown(
+            label: __('system_admin::dashboard.who_gets_in'),
+            parts: [
+                ['label' => __('system_admin::dashboard.users_live'), 'value' => (string) (int) ($row->live ?? 0)],
+                ['label' => __('system_admin::dashboard.users_idle'), 'value' => (string) (int) ($row->idle ?? 0)],
+                ['label' => __('system_admin::dashboard.users_never'), 'value' => (string) (int) ($row->never ?? 0)],
+                ['label' => __('system_admin::dashboard.users_off'), 'value' => (string) (int) ($row->off ?? 0)],
+            ],
+            hint: __('system_admin::dashboard.who_gets_in_hint', ['count' => (int) ($row->two_step ?? 0)]),
+        )];
+    }
+
     private static function lastBackup(): ?int
     {
         $path = (string) config('abos.backup.path', env('ABOS_BACKUP_PATH', ''));
