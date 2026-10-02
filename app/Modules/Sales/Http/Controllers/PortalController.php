@@ -368,9 +368,12 @@ class PortalController extends Controller
             'reference' => ['nullable', 'string', 'max:64'],
             'bank_account_id' => ['nullable', 'integer', 'exists:accounts,id'],
             'note' => ['nullable', 'string', 'max:500'],
+            // ⭐ স্লিপের ছবি — ১ অক্টোবর ২০২৬; ধরন আর মাপ দেখে [[DepositSlip]] (কেবল ছবি/PDF, ৫ MB)
+            'slip' => ['nullable', 'file', 'max:'.intdiv(\App\Core\Engines\Attachment\AttachmentEngine::SLIP_MAX_BYTES, 1024)],
         ]);
 
-        $this->claims->raise($customer, $data);
+        unset($data['slip']);
+        app(\App\Modules\Sales\Services\DepositSlip::class)->raise($customer, $data, $request->file('slip'));
 
         return redirect()
             ->route('sales.portal.home')
@@ -393,6 +396,15 @@ class PortalController extends Controller
         return view('sales::portal.claim-show', [
             'customer' => $customer,
             'claim' => $claim,
+            'hasSlip' => app(\App\Modules\Sales\Services\DepositSlip::class)->of($claim) !== null,
         ]);
+    }
+
+    /** নিজের দাবির স্লিপ — অন্যের দাবিতে ৪০৩, ঠিক [[showOwnClaim()]]-এর মতো */
+    public function ownClaimSlip(DepositClaim $claim): \Symfony\Component\HttpFoundation\StreamedResponse
+    {
+        abort_if($claim->customer_id !== $this->customer()->id, 403);
+
+        return app(\App\Modules\Sales\Services\DepositSlip::class)->stream($claim);
     }
 }

@@ -5,6 +5,11 @@
     ভেতরে ফর্ম বসানো যায় (`<td>`-র ভেতরে `<form>` বৈধ), আর সেটাই
     দরকার: দিনে বিশটা দাবিতে যাওয়া-আসা করলে কেউ তালিকাটা খুলত না।
 --}}
+{{-- ⭐ স্লিপ দেখে তবেই সিদ্ধান্ত — ১ অক্টোবর ২০২৬ ([[DepositSlip]]) --}}
+@if (app(\App\Modules\Sales\Services\DepositSlip::class)->of($claim) !== null)
+    <a href="{{ route('sales.claim.slip', $claim) }}" target="_blank" data-slip-link
+       class="mb-1 inline-block text-sm text-(--color-brand-500) hover:underline">{{ __('sales::slip.view') }}</a>
+@endif
 @if ($claim->isPending())
     @can('sales.claim.decide')
         <div class="flex flex-wrap items-end gap-2">

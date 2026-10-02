@@ -207,7 +207,8 @@ final class AuditEngine
             $trail = AuditTrail::create([
                 'company_id' => $companyId,
                 'branch_id' => $this->branchIdFor($subject, $companyId),
-                'user_id' => auth()->id(),
+                // ⛔ কেবল কর্মী — পোর্টালের গ্রাহকের id এখানে বসলে অন্য কর্মীর নামে চড়ত ([[Actor]])
+                'user_id' => \App\Core\Support\Actor::userId(),
                 'action' => $action,
                 'auditable_type' => $subject::class,
                 'auditable_id' => $subject->getKey(),

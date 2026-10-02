@@ -42,6 +42,11 @@
             @endif
         </dl>
 
+        @if ($hasSlip ?? false)
+            <a href="{{ route('sales.portal.claim.slip', $claim) }}" target="_blank" data-slip-link
+               class="mt-3 inline-block text-sm text-(--color-brand-500) hover:underline">{{ __('sales::slip.view') }}</a>
+        @endif
+
         @if ($claim->decision_reason)
             <p class="mt-3 rounded-(--radius-field) bg-(--color-badge-danger-bg) px-3 py-2 text-sm
                       text-(--color-badge-danger-ink)">

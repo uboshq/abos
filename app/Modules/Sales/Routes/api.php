@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Middleware\RefuseModulesOffOnThePhone;
 use App\Http\Middleware\ResolveCompanyContext;
+use App\Modules\Sales\Http\Controllers\DepositRequestController;
 use App\Modules\Sales\Http\Controllers\OrderStandingController;
 use App\Modules\Sales\Http\Controllers\QrScanController;
 use Illuminate\Support\Facades\Route;
@@ -32,4 +33,9 @@ Route::prefix('v1/sales')
         Route::get('/scan/{token}', [QrScanController::class, 'show'])->middleware('can:sales.delivery.view')->name('scan');
         Route::post('/scan/{token}/gate-out', [QrScanController::class, 'gateOut'])->middleware('can:sales.delivery.update')->name('scan.gate_out');
         Route::post('/scan/{token}/deliver', [QrScanController::class, 'deliver'])->middleware('can:sales.delivery.update')->name('scan.deliver');
+
+        // ⭐ স্লিপসহ জমার অনুরোধ — SR দোকানির ব্যাংক স্লিপের ছবি পাঠান ([[DepositRequestController]])
+        Route::get('/deposit-requests/accounts', [DepositRequestController::class, 'accounts'])->name('deposit_request.accounts');
+        Route::get('/deposit-requests', [DepositRequestController::class, 'apiIndex'])->name('deposit_request.index');
+        Route::post('/deposit-requests', [DepositRequestController::class, 'apiStore'])->name('deposit_request.store');
     });

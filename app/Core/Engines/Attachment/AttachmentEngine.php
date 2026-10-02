@@ -163,7 +163,8 @@ final class AttachmentEngine
             'checksum' => hash_file('sha256', Storage::disk($this->disk)->path($kept['path'])),
             'version' => $version,
             'replaces_id' => $replacesId,
-            'uploaded_by' => $userId ?? auth()->id(),
+            // ⛔ কেবল কর্মী — পোর্টালে গ্রাহক তুললে null ([[Actor]])
+            'uploaded_by' => $userId ?? \App\Core\Support\Actor::userId(),
         ]);
     }
 

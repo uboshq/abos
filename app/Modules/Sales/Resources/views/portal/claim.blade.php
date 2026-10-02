@@ -9,7 +9,7 @@
     <h1 class="mb-1 text-lg font-semibold">{{ __('sales::portal.claim_title') }}</h1>
     <p class="mb-4 text-sm text-(--color-ink-muted)">{{ __('sales::portal.claim_hint') }}</p>
 
-    <form method="POST" action="{{ route('sales.portal.claim.store') }}"
+    <form method="POST" action="{{ route('sales.portal.claim.store') }}" enctype="multipart/form-data"
           x-data="{ method: @js(old('method', 'bank')) }"
           class="grid gap-3 rounded-(--radius-card) border border-(--color-border)
                  bg-(--color-surface-card) p-4">
@@ -60,6 +60,13 @@
                     <option value="{{ $bank->id }}">{{ $bank->label() }}</option>
                 @endforeach
             </select>
+        </label>
+
+        {{-- ⭐ স্লিপের ছবি — ১ অক্টোবর ২০২৬ ([[DepositSlip]]); ফোনে খুললে সরাসরি ক্যামেরা --}}
+        <label class="block" x-show="method !== 'cash'">
+            <span class="mb-1 block text-sm font-medium">{{ __('sales::slip.slip') }}</span>
+            <input type="file" name="slip" accept="image/jpeg,image/png,image/webp,application/pdf"
+                   capture="environment" data-slip-input class="block w-full text-sm">
         </label>
 
         <label class="block">

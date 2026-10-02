@@ -302,6 +302,7 @@ class EveryRouteIsGuardedTest extends TestCase
         'sales.portal.claim.create' => 'নিজের জমার দাবি তোলার ফর্ম',
         'sales.portal.claim.store' => 'নিজের জমার দাবি',
         'sales.portal.claim.show' => 'নিজের দাবি — মালিকানা কন্ট্রোলারে যাচাই হয়',
+        'sales.portal.claim.slip' => 'নিজের দাবির ব্যাংক স্লিপ — অন্যের দাবিতে ৪০৩ ([[PortalController::ownClaimSlip()]])',
         'sales.portal.scan' => 'QR থেকে নিজের চালান — অন্যের চালান ৪০৪ ([[ScannedPaper::dealer()]])',
         'sales.portal.scan.received' => 'নিজের চালানের মাল পাওয়া নিশ্চিত — কেবল রওনার পরে, অন্যেরটা ৪০৪',
         /*
