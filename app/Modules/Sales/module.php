@@ -269,6 +269,9 @@ return [
                 'setting' => 'sales.screen_pos'],
         ],
         'reports' => [
+            // ⭐ কাগজের খাতা — রিপোর্ট সেন্টার ধাপ ৬ (মালিক, ১ অক্টোবর ২০২৬)
+            ['label' => 'sales::register.title', 'icon' => 'list', 'route' => 'sales.report.show',
+                'route_params' => ['slug' => 'register'], 'permission' => 'sales.report'],
             ['label' => 'sales::menu.pending_orders', 'icon' => 'clock', 'route' => 'sales.report.show',
                 'route_params' => ['slug' => 'pending-orders'], 'permission' => 'sales.report'],
             ['label' => 'sales::menu.undelivered', 'icon' => 'alert-triangle', 'route' => 'sales.report.show',
@@ -623,6 +626,8 @@ return [
 
     'reports' => [
         SalesReports::class,
+        // ⭐ কাগজের খাতা — রিপোর্ট সেন্টার ধাপ ৬, বিক্রয়ের অর্ধেক
+        \App\Modules\Sales\Reports\SalesRegisterReports::class,
         \App\Modules\Sales\Reports\MarginReport::class,
         \App\Modules\Sales\Reports\SalesReturnReasonReports::class,
     ],

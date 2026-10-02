@@ -24,6 +24,8 @@ class SalesReportController extends Controller implements HasMiddleware
     private const SLUGS = [
         'monthly' => 'sales.monthly',
         'pending-orders' => 'sales.pending_orders',
+        // ⭐ কাগজের খাতা — রিপোর্ট সেন্টার ধাপ ৬ ([[SalesRegisterReports]])
+        'register' => 'sales.register',
         'uninvoiced' => 'sales.uninvoiced',
         'by-customer' => 'sales.by_customer',
         'by-product' => 'sales.by_product',
