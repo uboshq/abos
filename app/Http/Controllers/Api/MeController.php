@@ -127,7 +127,30 @@ class MeController extends Controller
 
             // রোলের নাম দেখানোর জন্য — সিদ্ধান্তের জন্য নয় (উপরে দেখুন)
             'roles' => $user->getRoleNames()->values(),
+
+            /*
+             * ⭐ পদবি আর ছবি — মালিক, ২ অক্টোবর ২০২৬: *"app e profile photo dekhay na, role nadekiye designation dekhabe"*।
+             * ⓘ ওয়েবের ফুটারের একই নিয়ম ([[x-shell.statusbar]]): HR-এর কর্মী-রেকর্ডের পদবি ([[FactRegistry]]),
+             * আর গ্রুপের মালিকের এক পদবি সব কোম্পানিতে ([[Ownership::groupOwnerTitle()]])। ⛔ পদবি না থাকলে খালি —
+             * ফাঁক ভরাতে রোল নয় (মালিক: "namer sate podobi rakbe roll noy")।
+             * ⓘ ছবির ঠিকানা পুরো (https://…), ফোন নিজে জুড়ে নিতে পারে না।
+             */
+            'designation' => $this->designationOf($user),
+            'avatar_url' => ($url = $user->avatarUrl()) === null ? null : url($url),
         ];
+    }
+
+    private function designationOf(User $user): ?string
+    {
+        $ownership = app(\App\Core\Services\Ownership::class);
+
+        if ($ownership->isGroupOwner($user) && ($title = $ownership->groupOwnerTitle()) !== null) {
+            return $title;
+        }
+
+        $value = app(\App\Core\Panels\FactRegistry::class)->forRecord('user', (int) $user->id)[0]->value ?? null;
+
+        return filled($value) ? (string) $value : null;
     }
 
     /**

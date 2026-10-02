@@ -106,6 +106,30 @@ class ThePhoneCouldNotAskWhoItWasTest extends TestCase
     }
 
     /**
+     * ⭐ পদবি আর ছবি — মালিক, ২ অক্টোবর ২০২৬: *"app e profile photo dekhay na, role nadekiye designation dekhabe"*।
+     * ⓘ ওয়েবের ফুটারের একই নিয়ম: গ্রুপের মালিক সব কোম্পানিতে এক পদবি; বাকিরা HR-এর পদবি; না থাকলে খালি — রোল নয়।
+     */
+    public function test_me_names_the_designation_not_the_role_and_the_photo(): void
+    {
+        config(['abos.owner_emails' => ['sales@abos.test']]);
+        app(\App\Core\Services\SettingsService::class)->set('group.owner_title_bn', 'গ্রুপ চেয়ারম্যান ও সিইও');
+        app(\App\Core\Services\SettingsService::class)->set('group.owner_title_en', 'Group Chairman & CEO');
+        User::query()->where('email', 'sales@abos.test')->update(['avatar_path' => null]);
+
+        $user = $this->me($this->login()->json('accessToken'))->assertOk()->json('user');
+
+        $this->assertContains($user['designation'], ['গ্রুপ চেয়ারম্যান ও সিইও', 'Group Chairman & CEO'], '⛔ মালিকের পদবি ফোনে যায়নি।');
+        $this->assertNotContains($user['designation'], $user['roles'], '⛔ পদবির জায়গায় রোল।');
+        $this->assertArrayHasKey('avatar_url', $user);
+        $this->assertNull($user['avatar_url'], 'ছবি না থাকলে ঠিকানাও নেই।');
+
+        config(['abos.owner_emails' => []]);
+        $this->app['auth']->forgetGuards();
+        $plain = $this->me($this->login()->json('accessToken'))->assertOk()->json('user');
+        $this->assertNotSame('গ্রুপ চেয়ারম্যান ও সিইও', $plain['designation'], '⛔ মালিক নন, অথচ মালিকের পদবি পেলেন।');
+    }
+
+    /**
      * ⚠️ ভেতরের ক্রমিক আইডি কোনোদিন যায় না।
      *
      * সিঙ্কের কোডে কারণটা লেখা: ক্রমিক আইডি হাতে পেলে কেউ **গুনে
