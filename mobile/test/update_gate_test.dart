@@ -103,7 +103,9 @@ void main() {
           verdict: UpdateVerdict.available, release: release)));
       await tester.pumpAndSettle();
 
-      expect(find.text('নতুন সংস্করণ এসেছে।'), findsOneWidget);
+      // ⓘ ০.৪.৬ থেকে: শিরোনামে সংস্করণ, নোট নিচে এক লাইনে এক জিনিস ("কী নতুন")
+      expect(find.text('নতুন সংস্করণ এসেছে (0.5.0)।'), findsOneWidget);
+      expect(find.text('• নতুন সংস্করণ এসেছে।'), findsOneWidget);
       expect(find.text('অ্যাপের ভেতর'), findsOneWidget,
           reason: 'a notice is not a wall — the app underneath is still '
               'correct, which is the whole difference between the two');
@@ -117,7 +119,8 @@ void main() {
       await tester.tap(find.byIcon(Icons.close));
       await tester.pumpAndSettle();
 
-      expect(find.text('নতুন সংস্করণ এসেছে।'), findsNothing);
+      expect(find.text('নতুন সংস্করণ এসেছে (0.5.0)।'), findsNothing);
+      expect(find.text('• নতুন সংস্করণ এসেছে।'), findsNothing);
       expect(find.text('অ্যাপের ভেতর'), findsOneWidget);
     });
 
