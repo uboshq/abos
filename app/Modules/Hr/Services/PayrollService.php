@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Hr\Services;
 
+use App\Core\Concerns\ReadsTheRowUnderLock;
 use App\Core\Engines\Approval\DocumentApproval;
 use App\Core\Engines\NumberSeries\NumberSeriesEngine;
 use App\Core\Engines\Posting\PostingEngine;
@@ -39,6 +40,8 @@ use Illuminate\Validation\ValidationException;
  */
 final class PayrollService
 {
+    use ReadsTheRowUnderLock;
+
     public function __construct(
         private readonly SalaryStructureService $salaries,
         private readonly AttendanceService $attendance,
@@ -187,6 +190,13 @@ final class PayrollService
         );
 
         return DB::transaction(function () use ($run) {
+            /*
+             * ⛔ সারিতে তালা দিয়ে তাজা অবস্থা — ১ অক্টোবর ২০২৬ ([[APayrollWasCancelledAfterItWasConfirmedTest]])।
+             * ⓘ পুরনো কপি থেকে "নিশ্চিত" চাপলে বাতিল হয়ে যাওয়া রানও খাতায় বসত।
+             */
+            $this->lockFresh($run);
+            $this->assertDraft($run);
+
             $lines = $this->ledgerLines($run);
 
             $this->posting->post(
@@ -212,13 +222,17 @@ final class PayrollService
      */
     public function cancel(PayrollRun $run, string $reason): PayrollRun
     {
-        if ($run->status === DocumentStatus::CANCELLED) {
-            throw ValidationException::withMessages([
-                'status' => __('hr::validation.already_cancelled'),
-            ]);
-        }
+        $this->assertNotCancelled($run);
 
         return DB::transaction(function () use ($run, $reason) {
+            /*
+             * ⛔ সারিতে তালা দিয়ে তাজা অবস্থা — ১ অক্টোবর ২০২৬ ([[APayrollWasCancelledAfterItWasConfirmedTest]])।
+             * ⓘ হাতের কপিতে "খসড়া" থাকলে বিপরীত দাখিলা হত না, অথচ ততক্ষণে আরেকজন নিশ্চিত করে বেতন খাতায়
+             * বসিয়েছেন — রান বাতিল, খরচ রয়ে যেত। উল্টাবে কি না, সেটা তাজা অবস্থা বলে।
+             */
+            $this->lockFresh($run);
+            $this->assertNotCancelled($run);
+
             if ($run->status === DocumentStatus::CONFIRMED) {
                 $this->posting->reverse(
                     sourceType: PayrollRun::SOURCE_TYPE,
@@ -340,9 +354,15 @@ final class PayrollService
             /** @var SalaryHead $head */
             $head = $component['head'];
 
-            $amount = $head->prorated_by_attendance
-                ? bcmul($component['amount'], $factor, 4)
-                : $component['amount'];
+            /*
+             * ⛔ পয়সায় গোল — এখানেই, একবার (চেকলিস্ট অডিট ২৭ সেপ্টেম্বর §২, ২ অক্টোবর ২০২৬;
+             * [[TheBankFileAndTheBooksPaidTheSameSalaryTest]])। ⓘ আগে উপস্থিতির ভাগে চার ঘরের অঙ্ক থাকত
+             * (৳১০,০০০ × ২৩/৩০ = ৭,৬৬৬.৬৬৬৭), খাতায় সেটাই বসত, আর ব্যাংক-ফাইল প্রতিজনকে দুই ঘরে গোল করত — খাতার
+             * "প্রদেয় বেতন"-এ ভগ্নাংশ পয়সা চিরকাল ঝুলে থাকত। এখন বেতনশিট, খাতা আর ফাইল একই অঙ্ক।
+             */
+            $amount = Money::round($head->prorated_by_attendance
+                ? bcmul($component['amount'], $factor, 10)
+                : $component['amount'], 2);
 
             PayslipLine::create([
                 'company_id' => $run->company_id,
@@ -405,7 +425,8 @@ final class PayrollService
             return '0';
         }
 
-        return bcdiv($paid, $daysInMonth, 6);
+        // ⓘ দশ ঘর — ছয় ঘরে ৳১০,০০০ × ২৩/৩০ গোল হত ৭,৬৬৬.৬৬, আসল ৭,৬৬৬.৬৭ ([[build]]-এর পয়সার গোল)
+        return bcdiv($paid, $daysInMonth, 10);
     }
 
     /**
@@ -552,6 +573,15 @@ final class PayrollService
                 'month' => __('hr::validation.month_already_run', [
                     'month' => $monthStart->format('M Y'),
                 ]),
+            ]);
+        }
+    }
+
+    private function assertNotCancelled(PayrollRun $run): void
+    {
+        if ($run->status === DocumentStatus::CANCELLED) {
+            throw ValidationException::withMessages([
+                'status' => __('hr::validation.already_cancelled'),
             ]);
         }
     }
