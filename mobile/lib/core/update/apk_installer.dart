@@ -119,12 +119,43 @@ class ApkInstaller {
   }
 
   /// Hands the file to the system package installer, which asks the person.
+  ///
+  /// <p>⛔ The answer is read, not assumed (2 Oct 2026). `OpenFilex.open` does
+  /// not throw when Android declines: it returns a result. Ignoring it meant a
+  /// phone whose installer never opened (HyperOS/MIUI is the known case) left
+  /// the button looking as if it had worked, with nothing on screen. The owner
+  /// pressed "এখনই আপডেট করুন" and nothing happened.
   static Future<void> install(File file) async {
-    await OpenFilex.open(
+    final result = await OpenFilex.open(
       file.path,
       type: 'application/vnd.android.package-archive',
     );
+    switch (result.type) {
+      case ResultType.done:
+        return;
+      case ResultType.permissionDenied:
+        throw const InstallPermissionMissing();
+      default:
+        throw InstallerRefused('${result.type.name}: ${result.message}');
+    }
   }
+}
+
+/// Android would not let this app hand a package over: the "install unknown
+/// apps" switch is off, even though [ApkInstaller.canInstall] said otherwise.
+class InstallPermissionMissing implements Exception {
+  const InstallPermissionMissing();
+}
+
+/// The installer did not open, for a reason Android named. The text is shown
+/// small, for the office; the person gets a Bangla sentence.
+class InstallerRefused implements Exception {
+  const InstallerRefused(this.detail);
+
+  final String detail;
+
+  @override
+  String toString() => detail;
 }
 
 /// The server named an address that is not https.

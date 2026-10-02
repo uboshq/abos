@@ -259,6 +259,51 @@ void main() {
     });
   });
 
+  /// ⛔ ২ অক্টোবর ২০২৬, মালিকের ফোন: "এখনই আপডেট করুন" চাপলে কিছুই হল না। ফাইল ঠিক ছিল, কিন্তু
+  /// বসানোর পর্দা খোলেনি — আর OpenFilex ফেলে না, ফল ফেরায়; ফলটা পড়া হত না, তাই পর্দায় কোনো কথাই নেই।
+  group('when the installer does not open', () {
+    UpdateActions refusing(Object error) {
+      final base = actions();
+      return UpdateActions(
+        canInstall: base.canInstall,
+        cached: base.cached,
+        freeBytes: base.freeBytes,
+        download: base.download,
+        lengthOf: base.lengthOf,
+        sha256Of: base.sha256Of,
+        install: (file) async => throw error,
+        delete: base.delete,
+      );
+    }
+
+    test('a refusal is said, with what Android said, never read as success', () async {
+      final result = await UpdateInstallFlow.run(release,
+          actions: refusing(const InstallerRefused('noAppToOpen: No APP found which can open this file')));
+      expect(result.outcome, UpdateOutcome.installerRefused);
+      expect(result.detail, contains('noAppToOpen'));
+    });
+
+    test('a missing install permission sends the person to the switch', () async {
+      final result = await UpdateInstallFlow.run(release, actions: refusing(const InstallPermissionMissing()));
+      expect(result.outcome, UpdateOutcome.needsPermission);
+    });
+
+    testWidgets('the button shows the sentence, not silence', (tester) async {
+      await tester.pumpWidget(MaterialApp(
+        home: Scaffold(
+          body: UpdateDownloadButton(
+            release: release,
+            actions: refusing(const InstallerRefused('error: boom')),
+          ),
+        ),
+      ));
+      await tester.tap(find.text('নতুন সংস্করণ নামান'));
+      await tester.pumpAndSettle();
+      expect(find.textContaining('ফোন বসানোর পর্দা খুলতে দিল না'), findsOneWidget);
+      expect(find.textContaining('error: boom'), findsOneWidget);
+    });
+  });
+
   group('the comparisons', () {
     test('a hash is the same hash in upper or lower hex', () {
       expect(sha256Matches(hash.toUpperCase(), hash), isTrue);

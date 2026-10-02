@@ -33,6 +33,9 @@ enum UpdateOutcome {
   /// No connection, or it dropped part way.
   offline,
 
+  /// The file is verified, but Android's install prompt did not open.
+  installerRefused,
+
   /// The release cannot be verified at all: no https address, no hash or no
   /// size. Nothing was downloaded.
   notInstallable,
@@ -42,9 +45,12 @@ enum UpdateOutcome {
 }
 
 class UpdateResult {
-  const UpdateResult(this.outcome, {this.megabytesNeeded});
+  const UpdateResult(this.outcome, {this.megabytesNeeded, this.detail});
 
   final UpdateOutcome outcome;
+
+  /// What Android said, for the office. Only with [UpdateOutcome.installerRefused].
+  final String? detail;
 
   /// Only with [UpdateOutcome.notEnoughSpace].
   final int? megabytesNeeded;
@@ -207,8 +213,12 @@ class UpdateInstallFlow {
     try {
       await actions.install(file);
       return const UpdateResult(UpdateOutcome.handedToInstaller);
-    } catch (_) {
-      return const UpdateResult(UpdateOutcome.failed);
+    } on InstallPermissionMissing {
+      return const UpdateResult(UpdateOutcome.needsPermission);
+    } on InstallerRefused catch (refused) {
+      return UpdateResult(UpdateOutcome.installerRefused, detail: refused.detail);
+    } catch (e) {
+      return UpdateResult(UpdateOutcome.installerRefused, detail: '$e');
     }
   }
 }
