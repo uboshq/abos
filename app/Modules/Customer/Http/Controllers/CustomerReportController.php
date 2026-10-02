@@ -53,6 +53,8 @@ class CustomerReportController extends Controller implements HasMiddleware
          */
         'no-limit' => 'customer.no_limit',
         'ageing' => 'customer.ageing',
+        // ⭐ খাতা মেলানো — রিপোর্ট সেন্টার ধাপ ৬ (মালিক, ১ অক্টোবর ২০২৬)
+        'ledger-check' => 'customer.ledger_check',
     ];
 
     public function __construct(

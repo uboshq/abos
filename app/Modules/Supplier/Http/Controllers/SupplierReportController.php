@@ -35,6 +35,8 @@ class SupplierReportController extends Controller implements HasMiddleware
     private const SLUGS = [
         'payable-list' => 'supplier.payable_list',
         'ageing' => 'supplier.ageing',
+        // ⭐ খাতা মেলানো — রিপোর্ট সেন্টার ধাপ ৬ (মালিক, ১ অক্টোবর ২০২৬)
+        'ledger-check' => 'supplier.ledger_check',
 
         /*
          * পরিশোধের সময়সূচি — "এই সপ্তাহে কার টাকা দিতে হবে"।

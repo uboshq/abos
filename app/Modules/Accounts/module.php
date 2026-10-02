@@ -215,6 +215,8 @@ return [
                 'route_params' => ['slug' => 'income-by-head'], 'permission' => 'accounts.report'],
             ['label' => 'accounts::menu.ledger', 'icon' => 'list', 'route' => 'accounts.report.show', 'route_params' => ['slug' => 'ledger'], 'permission' => 'accounts.report'],
             ['label' => 'accounts::menu.trial_balance', 'icon' => 'scale', 'route' => 'accounts.report.show', 'route_params' => ['slug' => 'trial-balance'], 'permission' => 'accounts.report'],
+            // ⭐ খাতা মেলানো — রিপোর্ট সেন্টার ধাপ ৬ (মালিক, ১ অক্টোবর ২০২৬)
+            ['label' => 'accounts::branch_dues.title', 'icon' => 'scale', 'route' => 'accounts.report.show', 'route_params' => ['slug' => 'branch-dues'], 'permission' => 'accounts.report'],
 
             /*
              * খাতা নিজেই মেলে কি না — রেওয়ামিলের ঠিক নিচে।
@@ -641,6 +643,7 @@ return [
     // কোর ফাইলে মডিউলের নাম লিখতে হয় না।
     'reports' => [
         CoreReports::class,
+        \App\Modules\Accounts\Reports\BranchDuesReports::class,
     ],
 
     // হোম পর্দার টাকার সংখ্যাগুলো

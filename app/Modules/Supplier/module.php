@@ -65,6 +65,9 @@ return [
                 'route' => 'supplier.service.index', 'permission' => 'supplier.view'],
         ],
         'reports' => [
+            // ⭐ খাতা মেলানো — রিপোর্ট সেন্টার ধাপ ৬ (মালিক, ১ অক্টোবর ২০২৬)
+            ['label' => 'supplier::ledger_check.title', 'icon' => 'scale', 'route' => 'supplier.report.show',
+                'route_params' => ['slug' => 'ledger-check'], 'permission' => 'supplier.report'],
             ['label' => 'supplier::menu.payable_list', 'icon' => 'wallet', 'route' => 'supplier.report.show',
                 'route_params' => ['slug' => 'payable-list'], 'permission' => 'supplier.report'],
             ['label' => 'supplier::menu.ageing', 'icon' => 'clock', 'route' => 'supplier.report.show',
@@ -149,6 +152,7 @@ return [
     // কোনো কোর ফাইলে নাম লিখতে হয় না (সেকশন ১৯.৭)।
     'reports' => [
         PartyReports::class,
+        \App\Modules\Supplier\Reports\LedgerCheckReports::class,
     ],
 
     /*

@@ -84,6 +84,8 @@ class ReportController extends Controller implements HasMiddleware
         'inflow' => 'accounts.inflow',
         'ledger' => 'accounts.ledger',
         'trial-balance' => 'accounts.trial_balance',
+        // ⭐ খাতা মেলানো — রিপোর্ট সেন্টার ধাপ ৬ (মালিক, ১ অক্টোবর ২০২৬)
+        'branch-dues' => 'accounts.branch_dues',
         'profit-loss' => 'accounts.profit_loss',
         'balance-sheet' => 'accounts.balance_sheet',
         'cash-flow' => 'accounts.cash_flow',
