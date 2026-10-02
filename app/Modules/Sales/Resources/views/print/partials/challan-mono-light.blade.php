@@ -14,14 +14,15 @@
     $up = fn (string $key) => $bn ? $t($key) : mb_strtoupper($t($key));
     $head = \App\Core\Engines\Print\PaperLook::head($company, $profile->shows('logo'));
     $look = app(\App\Modules\Sales\Support\InvoicePrintLook::class);
-    $money = $doc->showMoney && $profile->shows('prices'); /* ⛔ নিয়ম আর মালিকের দামের সুইচ দুইটাই — সাধারণ কাগজের মতো ([[document-body]]); ৩০ সেপ্টেম্বর ২০২৬ */
+    $money = $doc->pricesChosen ?? ($doc->showMoney && $profile->shows('prices')); /* ⭐ ছাপার বোতামে বাছা থাকলে সেটাই — টাকাসহ/টাকা ছাড়া (২ অক্টোবর ২০২৬) */
+    $sh = fn (string $what) => (bool) ($facts['shows'][$what] ?? true); /* ⭐ চালানের সুইচ (৩ অক্টোবর ২০২৬) */ /* ⛔ নিয়ম আর মালিকের দামের সুইচ দুইটাই — সাধারণ কাগজের মতো ([[document-body]]); ৩০ সেপ্টেম্বর ২০২৬ */
     $to = $facts['to'];
     $tr = $facts['transport'];
     $all = $doc->notices();
     // ⓘ "আগেও ছাপা" — দুই ভাষার লেখাই "DUPLICATE" দিয়ে শুরু, আর শেষে কততম ছাপা আসতে পারে; তাই শুরুর শব্দে চেনা
     $dup = $doc->duplicateNotice();
     $loud = array_values(array_filter($all, fn ($n) => $n !== $dup));
-    $qrUrl = $look->shows('qr') ? $facts['scan_url'] : '';
+    $qrUrl = $look->shows('qr') && $sh('qr') ? $facts['scan_url'] : '';
     $titleCss = $bn ? 'font-family: hindsiliguri; font-size: 28pt;' : 'font-family: '.($titleFont ?? 'playfair').', freeserif; font-size: 21pt; letter-spacing: 0.6mm;';
 @endphp
 
@@ -88,10 +89,12 @@
         </td>
         <td data-transport>
             <div class="cap">{{ $up('sales::field.carrier') }}</div>
+            @if ($sh('transport'))
             <div class="party">{{ $tr['carrier'] !== '' ? $tr['carrier'] : '—' }}</div>
             @if ($tr['vehicle'] !== '')<div>{{ $t('sales::field.vehicle_no') }}: {{ $tr['vehicle'] }}</div>@endif
             @if ($tr['driver'] !== '')<div>{{ $t('sales::field.driver_name') }}: {{ $tr['driver'] }}</div>@endif
             @if ($tr['driver_phone'] !== '')<div>{{ $t('sales::field.driver_phone') }}: {{ $tr['driver_phone'] }}</div>@endif
+            @endif
             {{-- ⭐ কবে যাবে — গাড়ি ছাড়ার তথ্য, তাই পরিবহনের ঘরে (মালিক, ৩০ সেপ্টেম্বর ২০২৬) --}}
             <div>{{ $t('sales::field.ship_date') }}: <strong>{{ $facts['ship_date'] }}</strong></div>
         </td>
@@ -99,7 +102,7 @@
             <div class="cap">{{ $up('sales::paper_design.challan_details') }}</div>
             <div>{{ $t('core.print.document_no') }} <strong>{{ $facts['no'] }}</strong></div>
             <div>{{ $t('core.print.date') }}: {{ $facts['date'] }}</div>
-            @if ($facts['order_no'] !== '')<div>{{ rtrim($t('sales::print.classic.order_no'), ': ') }}: {{ $facts['order_no'] }}</div>@endif
+            @if ($facts['order_no'] !== '' && $sh('order_no'))<div>{{ rtrim($t('sales::print.classic.order_no'), ': ') }}: {{ $facts['order_no'] }}</div>@endif
             @if ($facts['warehouse'] !== '')<div>{{ $t('sales::field.warehouse') }}: <span style="font-family: hindsiliguri">{{ $facts['warehouse'] }}</span></div>@endif
             @if ($facts['created_by'] !== '')<div>{{ $t('sales::print.classic.created_by') }} {{ $facts['created_by'] }}</div>@endif
         </td>
@@ -111,7 +114,8 @@
         <th style="width: 8mm">#</th>
         <th>{{ $up('sales::print.classic.product') }}</th>
         <th class="num" style="width: 24mm">{{ $up('sales::print.classic.qty') }}</th>
-        <th class="num" style="width: 16mm">{{ $up('sales::print.classic.free') }}</th>
+        @if ($sh('free'))<th class="num" style="width: 16mm">{{ $up('sales::print.classic.free') }}</th>@endif
+        @if ($sh('total_qty'))<th class="num" style="width: 16mm" data-total-qty>{{ $up('sales::print.classic.total_qty') }}</th>@endif
         @if ($money)
             <th class="num" style="width: 22mm">{{ $up('sales::print.classic.rate') }}</th>
             <th class="num" style="width: 28mm">{{ $up('core.print.amount') }}</th>
@@ -126,7 +130,8 @@
                 @if ($under !== '')<div style="font-size: 7.5pt" class="muted">{{ $under }}</div>@endif
             </td>
             <td class="num">{{ $line['qty'] }} <span style="font-family: hindsiliguri">{{ $line['unit'] ?? '' }}</span></td>
-            <td class="num">{{ filled($line['free'] ?? '') ? $line['free'] : '—' }}</td>
+            @if ($sh('free'))<td class="num">{{ filled($line['free'] ?? '') ? $line['free'] : '—' }}</td>@endif
+            @if ($sh('total_qty'))<td class="num">{{ $line['total_qty'] ?? '' }} <span style="font-family: hindsiliguri">{{ $line['unit'] ?? '' }}</span></td>@endif
             @if ($money)
                 <td class="num">{{ $line['rate'] }}</td>
                 <td class="num">{{ $line['amount'] }}</td>
@@ -137,13 +142,21 @@
         <td></td>
         <td>{{ $up('core.print.total') }} ({{ $facts['items'] }})</td>
         <td class="num" style="font-family: hindsiliguri">{{ $facts['total_qty'] }}</td>
-        <td></td>
+        @if ($sh('free'))<td></td>@endif
+        @if ($sh('total_qty'))<td class="num" style="font-family: hindsiliguri" data-total-qty-sum>{{ $facts['total_qty_with_free'] ?? '' }}</td>@endif
         @if ($money)
             <td></td>
-            <td class="num">{{ $facts['total'] }}</td>
+            <td class="num">{{ $facts['lines_total'] ?? $facts['total'] }}</td>
         @endif
     </tr>
 </table>
+@if ($money && ! empty($facts['money_rows']))
+    <table style="width: 100%; margin-top: 2mm" data-money-rows>
+        @foreach ($facts['money_rows'] as $label => $value)
+            <tr><td style="text-align: right; font-size: 8pt; padding: 0.5mm 2mm;">{{ $t($label) }}</td><td class="num" style="width: 34mm; font-size: 8pt; padding: 0.5mm 2mm;">{{ $value }}</td></tr>
+        @endforeach
+    </table>
+@endif
 
 <table style="width: 100%; margin-top: 5mm">
     <tr>

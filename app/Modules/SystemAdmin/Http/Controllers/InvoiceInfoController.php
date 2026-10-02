@@ -50,7 +50,7 @@ class InvoiceInfoController extends Controller implements HasMiddleware
     public const GROUP = 'invoice_info';
 
     /** ভাগগুলোর ক্রম — ঘোষণায় অচেনা `part` এলে শেষে বসে, হারায় না */
-    private const PARTS = ['header', 'show', 'signature', 'note'];
+    private const PARTS = ['header', 'show', 'challan_show', 'signature', 'note'];
 
     /** লেখার ঘরের সীমা — ঠিকানা সবচেয়ে লম্বা, আর এক লাইনের কাগজে এর বেশি ধরেও না */
     private const MAX_TEXT = 300;

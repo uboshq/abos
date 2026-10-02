@@ -26,7 +26,10 @@ final class InvoicePrintLook
 
     /** দেখানো/লুকানোর সুইচ — প্রতিটা `sales.print.show.{name}`, ডিফল্টে চালু */
     public const SHOWS = ['bin', 'invoice_type', 'duplicate', 'order_no', 'transport', 'free', 'total_qty',
-        'grand_total_row', 'previous_due', 'amount_words', 'deposits', 'qr'];
+        'grand_total_row', 'previous_due', 'amount_words', 'deposits', 'qr', 'product_code', 'lot'];
+
+    /** চালানের নিজের সুইচ — [[challanShows()]] */
+    public const CHALLAN_SHOWS = ['product_code', 'lot', 'free', 'total_qty', 'qr', 'transport', 'order_no', 'prices'];
 
     public const MAX_BOXES = 4;
 
@@ -68,6 +71,15 @@ final class InvoicePrintLook
     public function shows(string $what): bool
     {
         return (bool) $this->settings->get("sales.print.show.{$what}");
+    }
+
+    /**
+     * চালানে কী ছাপা হবে — শাখা ধরে (মালিক, ৩ অক্টোবর ২০২৬)। ⓘ চালানের আলাদা সারি, বিলের সুইচ থেকে স্বাধীন:
+     * গুদামের কাগজে কোড চাই, বিলে নয় — এমনও হয়।
+     */
+    public function challanShows(string $what): bool
+    {
+        return (bool) $this->settings->get("sales.print.challan_show.{$what}");
     }
 
     /** কয়টা সইয়ের ঘর — ২ থেকে ৪, বাইরের মান সীমায় টেনে আনা */

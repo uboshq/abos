@@ -40,14 +40,19 @@ final class ChallanPaperFacts
 
         // ⓘ মোট পরিমাণ একক ধরে — "৪ বস্তা, ১৪ পিস"; ভিন্ন একক যোগ করা অর্থহীন
         $byUnit = [];
+        // ⭐ পরিমাণ + ফ্রি, একক ধরে — "মোট পরিমাণ" কলামের নিচের ঘর (মালিক, ২ অক্টোবর ২০২৬)
+        $withFree = [];
         foreach ($challan->lines as $line) {
             $unit = (string) $line->packedUnitName();
-            $byUnit[$unit] = bcadd($byUnit[$unit] ?? '0', (string) $line->packedQty('delivered_qty'), 4);
+            $packed = (string) $line->packedQty('delivered_qty');
+            $byUnit[$unit] = bcadd($byUnit[$unit] ?? '0', $packed, 4);
+            $withFree[$unit] = bcadd($withFree[$unit] ?? '0', bcadd($packed, self::freeInPacks($line), 4), 4);
         }
-        $totalQty = implode(', ', array_map(
+        $join = fn (array $sums) => implode(', ', array_map(
             fn (string $unit, string $qty) => trim(self::qty($qty).' '.$unit),
-            array_keys($byUnit), $byUnit,
+            array_keys($sums), $sums,
         ));
+        $totalQty = $join($byUnit);
 
         return [
             'no' => (string) $challan->document_no,
@@ -73,6 +78,7 @@ final class ChallanPaperFacts
             ],
             'items' => (string) $challan->lines->count(),
             'total_qty' => $totalQty,
+            'total_qty_with_free' => $join($withFree),
             'total' => Money::format($challan->total),
             'words' => AmountInWords::of((string) $challan->total, 'en'),
             'words_bn' => AmountInWords::of((string) $challan->total, 'bn'),
@@ -81,6 +87,17 @@ final class ChallanPaperFacts
                 ? route('sales.qr', app(\App\Modules\Sales\Services\PaperToken::class)->for($challan))
                 : '',
         ];
+    }
+
+    /** ফ্রি প্যাকের এককে — [[SalesPrintController::freeInPacks()]]-এর একই নিয়ম */
+    private static function freeInPacks($line): string
+    {
+        $free = (string) ($line->free_qty ?? '0');
+        $base = (string) ($line->delivered_qty ?? '0');
+
+        return $line->wasEnteredInAPack() && bccomp($base, '0', 6) !== 0
+            ? bcdiv(bcmul($free, (string) $line->entered_qty, 8), $base, 4)
+            : $free;
     }
 
     private static function qty(string $value): string

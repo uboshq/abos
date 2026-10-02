@@ -72,6 +72,7 @@ return [
     'invoice_info_part' => [
         'header' => 'Invoice heading',
         'show' => 'What is printed',
+        'challan_show' => 'What the challan prints',
         'signature' => 'Signature boxes',
         'note' => 'Bottom line',
     ],

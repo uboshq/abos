@@ -72,6 +72,7 @@ return [
     'invoice_info_part' => [
         'header' => 'বিলের মাথা',
         'show' => 'কী ছাপা হবে',
+        'challan_show' => 'চালানে কী ছাপা হবে',
         'signature' => 'সইয়ের ঘর',
         'note' => 'নিচের লাইন',
     ],

@@ -66,6 +66,12 @@ final class PrintableDocument
          * টোকেনের ঠিকানা আসে, চালান নম্বর বা দোকানের নাম নয় ([[PaperToken]])। খালি থাকলে আঁকা হয় না।
          */
         public readonly ?string $qrUrl = null,
+
+        /**
+         * ⭐ ছাপার মুহূর্তে বেছে নেওয়া — টাকাসহ (true) না টাকা ছাড়া (false); null মানে বাছা হয়নি, তখন কাগজের
+         * সাধারণ নিয়ম (`showMoney` আর দামের সুইচ)। ⓘ চালান, মালিক, ২ অক্টোবর ২০২৬ — বাছা থাকলে সেটাই চূড়ান্ত।
+         */
+        public readonly ?bool $pricesChosen = null,
     ) {}
 
     /**
@@ -113,6 +119,7 @@ final class PrintableDocument
             notice: implode(' · ', $stacked),
             payments: $this->payments,
             qrUrl: $this->qrUrl,
+            pricesChosen: $this->pricesChosen,
         );
     }
 
@@ -187,6 +194,7 @@ final class PrintableDocument
              */
             payments: $this->payments,
             qrUrl: $this->qrUrl,
+            pricesChosen: $this->pricesChosen,
         );
     }
 }

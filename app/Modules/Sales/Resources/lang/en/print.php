@@ -90,4 +90,7 @@ return [
         'printed_at' => 'Printing Time:',
         'footnote' => 'Please check the goods before signing — quantity claims are not accepted after signature.',
     ],
+    // Two challan print buttons (owner, 2 Oct 2026)
+    'challan_with_amounts' => 'Challan — with amounts',
+    'challan_without_amounts' => 'Challan — without amounts',
 ];

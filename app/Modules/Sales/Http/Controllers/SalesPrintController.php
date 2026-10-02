@@ -12,6 +12,7 @@ use App\Core\Services\PaperTrail;
 use App\Core\Services\BranchSettings;
 use App\Core\Services\SettingsService;
 use App\Core\Support\DateFormat;
+use App\Core\Support\AmountInWords;
 use App\Core\Support\DocumentStatus;
 use App\Core\Support\Money;
 use App\Http\Controllers\Controller;
@@ -163,7 +164,8 @@ class SalesPrintController extends Controller implements HasMiddleware
              * ⓘ ততদিন বিলে ভাগটা চালু, আর সেটাই মালিকের চাওয়া — তিনি
              * বিলের কাগজ দেখিয়েই বলেছেন।
              */
-            lines: $this->productLines(
+            // ⭐ পণ্যের কোড বিলের সুইচে (মালিক, ৩ অক্টোবর ২০২৬) — [[withoutCodeUnlessShown()]]
+            lines: $this->withoutCodeUnlessShown(fn (string $what) => app(\App\Modules\Sales\Support\InvoicePrintLook::class)->shows($what), $this->productLines(
                 $invoice->lines,
                 'qty',
                 $this->lotsForInvoice($invoice),
@@ -177,7 +179,7 @@ class SalesPrintController extends Controller implements HasMiddleware
                  * কারণটা দুই ফাইল দূরে।
                  */
                 band: $this->profileFor($request, 'sales.print.paper.invoice')->shows('band'),
-            ),
+            )),
 
             /*
              * ⭐ বিলের নিচে টাকার পুরো গল্প — মালিকের নমুনা, ২২ সেপ্টেম্বর ২০২৬।
@@ -251,9 +253,43 @@ class SalesPrintController extends Controller implements HasMiddleware
      *
      * @return array{template?: string, extra?: array<string, mixed>}
      */
-    private function challanDesign(Request $request, DeliveryChallan $challan): array
+    private function challanDesign(Request $request, DeliveryChallan $challan, ?array $money = null): array
     {
-        return $this->paperDesign($request, 'challan', 'sales.print.paper.challan', fn () => ChallanPaperFacts::of($challan));
+        return $this->paperDesign($request, 'challan', 'sales.print.paper.challan',
+            fn () => [...ChallanPaperFacts::of($challan), ...($money ?? [])]);
+    }
+
+    /**
+     * ⭐ টাকাসহ চালান = ইনভয়েসের হুবহু হিসাব — মালিক, ২ অক্টোবর ২০২৬: *"Amount print hole Invoice er same same hisab thakbe"*।
+     *
+     * ⛔ চালানের নিজের `total` কেবল পরিমাণ × দর — ছাড়, ভ্যাট, রাউন্ডিং ধরে না; তাই সেটা ইনভয়েসের মোটের সাথে মেলে না।
+     * ⓘ চালানের ইনভয়েস থাকলে তার নিজের হিসাব, বিলের কাগজের একই কোডে ([[totals()]]): সারির যোগ (চালানের), তারপর
+     * ছাড়/ভ্যাট/রাউন্ডিংয়ের সারি, আর শেষে মোট ও কথায় = ইনভয়েসের মোট। ইনভয়েস না থাকলে (অফিসের পুরনো চালান) চালানেরটাই।
+     *
+     * @return array{lines_total: string, money_rows: array<string, string>, total: string, words: string, words_bn: string}|array{}
+     */
+    private function challanMoney(DeliveryChallan $challan): array
+    {
+        $invoice = SalesInvoice::query()
+            ->where('status', '<>', DocumentStatus::CANCELLED)
+            ->whereHas('lines.challanLine', fn ($q) => $q->where('delivery_challan_id', $challan->id))
+            ->first();
+
+        if ($invoice === null) {
+            return [];
+        }
+
+        // ⓘ উপমোট থেকে রাউন্ডিং পর্যন্ত ইনভয়েসের সারি; মোটটা আলাদা ঘরে (নকশার মোটের বাক্স)
+        $rows = $this->totals($invoice);
+        unset($rows['core.print.total']);
+
+        return [
+            'lines_total' => $this->money($challan->total),
+            'money_rows' => $rows,
+            'total' => $this->money($invoice->total),
+            'words' => AmountInWords::of((string) $invoice->total, 'en'),
+            'words_bn' => AmountInWords::of((string) $invoice->total, 'bn'),
+        ];
     }
 
     /**
@@ -534,7 +570,8 @@ class SalesPrintController extends Controller implements HasMiddleware
         $doc = new PrintableDocument(
             title: __('sales::doc.invoice'),
             meta: $this->invoiceMeta($invoice),
-            lines: $this->productLines($invoice->lines, 'qty', $this->lotsForInvoice($invoice)),
+            lines: $this->withoutCodeUnlessShown(fn (string $what) => app(\App\Modules\Sales\Support\InvoicePrintLook::class)->shows($what),
+                $this->productLines($invoice->lines, 'qty', $this->lotsForInvoice($invoice))),
             totals: $this->totals($invoice),
             signatures: [],
             narration: $invoice->narration,
@@ -553,20 +590,48 @@ class SalesPrintController extends Controller implements HasMiddleware
 
         $challan->load(['lines.product.unit', 'customer', 'warehouse']);
 
+        /*
+         * ⭐ টাকাসহ না টাকা ছাড়া — মালিক, ২ অক্টোবর ২০২৬: *"Challan Print er age Amount soho print hobe na amount chara"*।
+         * ⓘ ছাপার বোতাম (`?prices=1|0`) বললে সেটাই; না বললে শাখার চালানের সুইচ ([[InvoicePrintLook::challanShows()]])।
+         * ⓘ কোনটা ছাপা হলো, ছাপার খাতায় লেখা থাকে ([[PaperTrail::record()]] — `variant`)।
+         */
+        $look = app(\App\Modules\Sales\Support\InvoicePrintLook::class);
+        $chosen = $request->has('prices') ? $request->boolean('prices') : null;
+        $withMoney = $chosen ?? $look->challanShows('prices');
+        $money = $withMoney ? $this->challanMoney($challan) : [];
+        $request->attributes->set('print_variant', $withMoney ? 'with_amounts' : 'without_amounts');
+
+        $lines = $this->productLines(
+            $challan->lines,
+            'delivered_qty',
+            // ⓘ লট ও মেয়াদ — চালানের সুইচে (ডিফল্ট চালু, লট সবসময়)
+            $look->challanShows('lot') ? $this->lots->forDocument(DeliveryChallan::STOCK_SOURCE, $challan->id) : [],
+        );
+
+        // ⭐ পণ্যের কোড — সুইচ বন্ধ থাকলে কাগজের কোথাও নয় (মালিক, ৩ অক্টোবর ২০২৬: *"product id dewar dorkar nai"*)
+        $lines = $this->withoutCodeUnlessShown(fn (string $what) => $look->challanShows($what), $lines);
+
         $doc = new PrintableDocument(
             title: __('sales::doc.challan'),
             meta: $this->challanMeta($challan),
-            lines: $this->productLines(
-                $challan->lines,
-                'delivered_qty',
-                $this->lots->forDocument(DeliveryChallan::STOCK_SOURCE, $challan->id),
-            ),
-            totals: ['core.print.total' => $this->money($challan->total)],
+            lines: $lines,
+            totals: $money === []
+                ? ['core.print.total' => $this->money($challan->total)]
+                : [...$money['money_rows'], 'core.print.total' => $money['total']],
             signatures: ['core.print.delivered_by', 'core.print.driver', 'core.print.received_by'],
+            showMoney: $withMoney,
             narration: $challan->narration,
+            pricesChosen: $chosen,
         );
 
-        $design = $this->challanDesign($request, $challan);
+        $design = $this->challanDesign($request, $challan, [
+            ...$money,
+            // ⓘ চালানের সুইচগুলো নকশার কাছে — কী আঁকবে, কী নয়
+            'shows' => array_combine(
+                \App\Modules\Sales\Support\InvoicePrintLook::CHALLAN_SHOWS,
+                array_map(fn (string $what) => $look->challanShows($what), \App\Modules\Sales\Support\InvoicePrintLook::CHALLAN_SHOWS),
+            ),
+        ]);
 
         // চালানও — একই কারণে: দুইটা একরকম চালান মানে দুইবার মাল দাবি
         return $this->pdf(
@@ -1138,6 +1203,11 @@ class SalesPrintController extends Controller implements HasMiddleware
      */
     private function lotsForInvoice(SalesInvoice $invoice): array
     {
+        // ⭐ লট ও মেয়াদ — বিলের সুইচে (ডিফল্ট চালু, লট সবসময়; মালিক, ৩ অক্টোবর ২০২৬)
+        if (! app(\App\Modules\Sales\Support\InvoicePrintLook::class)->shows('lot')) {
+            return [];
+        }
+
         $challanIds = $invoice->lines
             ->map(fn ($line) => $line->challanLine?->delivery_challan_id)
             ->filter()
@@ -1181,6 +1251,33 @@ class SalesPrintController extends Controller implements HasMiddleware
      * "অন্যান্য" নামে ঢোকালে কাগজে এমন একটা শব্দ ছাপা হত যা মালিকের
      * ব্র্যান্ডের তালিকায় নেই।
      */
+    /**
+     * ⭐ পণ্যের কোড — সুইচ বন্ধ থাকলে সারির কোডের ঘর খালি, তাই কোনো নকশায় কোথাও ছাপা হয় না
+     * (মালিক, ৩ অক্টোবর ২০২৬: *"print e product id dewar dorkar nai"*)।
+     *
+     * @param  \Closure(string): bool  $shows
+     * @param  list<array<string, mixed>>  $rows
+     * @return list<array<string, mixed>>
+     */
+    private function withoutCodeUnlessShown(\Closure $shows, array $rows): array
+    {
+        return $shows('product_code') ? $rows : array_map(fn (array $row) => [...$row, 'code' => ''], $rows);
+    }
+
+    /**
+     * ফ্রি পরিমাণ প্যাকের এককে — বিলের [[classicItems()]]-এর হুবহু নিয়ম: প্যাকে লেখা সারিতে ফ্রি × লেখা ÷ ভিত্তি।
+     * ⚠️ `packedQty('free_qty')` চলে না — প্যাকে লেখা সারিতে সেটা ঘর না দেখে লেখা পরিমাণই ফেরত দেয়।
+     */
+    private function freeInPacks($line, string $qtyField): string
+    {
+        $free = (string) ($line->free_qty ?? '0');
+        $base = (string) ($line->{$qtyField} ?? '0');
+
+        return method_exists($line, 'wasEnteredInAPack') && $line->wasEnteredInAPack() && bccomp($base, '0', 6) !== 0
+            ? bcdiv(bcmul($free, (string) $line->entered_qty, 8), $base, 4)
+            : $free;
+    }
+
     private function productLines($lines, string $qtyField, array $lots = [], bool $band = false): array
     {
         /*
@@ -1226,6 +1323,12 @@ class SalesPrintController extends Controller implements HasMiddleware
              * আগের মতো।
              */
             'free' => $this->freeOf($line),
+
+            /*
+             * ⭐ মোট পরিমাণ = পরিমাণ + ফ্রি, প্যাকের এককেই — মালিক, ২ অক্টোবর ২০২৬: *"Challan e total qty nai"*।
+             * ⓘ ফ্রি ঘরটা ভিত্তি-এককে লেখা ([[freeOf()]]), তাই যোগের জন্য ফ্রিও প্যাকে আনা — বিলের মোট পরিমাণের একই নিয়ম।
+             */
+            'total_qty' => $this->qty(bcadd((string) $line->packedQty($qtyField), $this->freeInPacks($line, $qtyField), 4)),
 
             /* ⓘ দলের নাম — খালি হলে পর্দা ভাগটাই আঁকে না */
             'group' => $band ? $this->brandOf($line) : '',

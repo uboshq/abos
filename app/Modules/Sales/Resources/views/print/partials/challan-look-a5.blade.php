@@ -15,7 +15,8 @@
     $up = fn (string $key) => mb_strtoupper($t($key));
     $head = \App\Core\Engines\Print\PaperLook::head($company, $profile->shows('logo'));
     $ac = $look->accent();
-    $money = $doc->showMoney && $profile->shows('prices'); /* ⛔ নিয়ম আর মালিকের দামের সুইচ দুইটাই — সাধারণ কাগজের মতো ([[document-body]]); ৩০ সেপ্টেম্বর ২০২৬ */
+    $money = $doc->pricesChosen ?? ($doc->showMoney && $profile->shows('prices')); /* ⭐ ছাপার বোতামে বাছা থাকলে সেটাই — টাকাসহ/টাকা ছাড়া (২ অক্টোবর ২০২৬) */
+    $sh = fn (string $what) => (bool) ($facts['shows'][$what] ?? true); /* ⭐ চালানের সুইচ (৩ অক্টোবর ২০২৬) */ /* ⛔ নিয়ম আর মালিকের দামের সুইচ দুইটাই — সাধারণ কাগজের মতো ([[document-body]]); ৩০ সেপ্টেম্বর ২০২৬ */
     $cards = $look->look['cards'] ?? 'tint';
     $r = ($look->look['radius'] ?? 0).'mm';
     $cardCss = match ($cards) {
@@ -35,7 +36,7 @@
     'L' => $look->look, 'head' => $head, 'title' => $up('sales::doc.challan'),
     'no' => $facts['no'], 'date' => $facts['date'],
     'labels' => ['no' => $t('core.print.document_no'), 'date' => $t('core.print.date')],
-    'qr' => $look_->shows('qr') ? $facts['scan_url'] : '',
+    'qr' => $look_->shows('qr') && $sh('qr') ? $facts['scan_url'] : '',
     'qrHint' => $t('sales::print.classic.scan_hint'),
     'notices' => $doc->notices(),
 ])
@@ -53,13 +54,15 @@
         <td style="width: 2%"></td>
         <td style="width: 32%; vertical-align: top; {{ $cardCss }}" data-transport>
             <div class="cap" style="color: {{ $look->capColor() }}">{{ $up('sales::field.carrier') }}</div>
+            @if ($sh('transport'))
             <div style="font-size: 8.1pt; font-weight: bold; margin-top: 0.58mm">{{ $tr['carrier'] !== '' ? $tr['carrier'] : '—' }}</div>
             @if ($tr['vehicle'] !== '')<div style="font-size: 7.2pt">{{ $t('sales::field.vehicle_no') }}: {{ $tr['vehicle'] }}</div>@endif
             @if ($tr['driver'] !== '' || $tr['driver_phone'] !== '')<div style="font-size: 7.2pt">{{ $t('sales::field.driver_name') }}: {{ trim($tr['driver'].' '.$tr['driver_phone']) }}</div>@endif
+            @endif
         </td>
         <td style="width: 2%"></td>
         <td style="vertical-align: top; {{ $cardCss }}">
-            @if ($facts['order_no'] !== '')<div class="cap" style="color: {{ $look->capColor() }}">{{ $up('sales::print.classic.order_no') }}</div><div style="font-size: 8.1pt; font-weight: bold; margin-bottom: 0.86mm">{{ $facts['order_no'] }}</div>@endif
+            @if ($facts['order_no'] !== '' && $sh('order_no'))<div class="cap" style="color: {{ $look->capColor() }}">{{ $up('sales::print.classic.order_no') }}</div><div style="font-size: 8.1pt; font-weight: bold; margin-bottom: 0.86mm">{{ $facts['order_no'] }}</div>@endif
             @if ($facts['warehouse'] !== '')<div class="cap" style="color: {{ $look->capColor() }}">{{ $up('sales::field.warehouse') }}</div><div style="font-size: 7.6pt; margin-bottom: 0.86mm">{{ $facts['warehouse'] }}</div>@endif
             <div class="cap" style="color: {{ $look->capColor() }}">{{ $up('sales::field.ship_date') }}</div><div style="font-size: 7.6pt">{{ $facts['ship_date'] }}</div>
         </td>
@@ -72,7 +75,8 @@
         <th style="{{ $look->th() }} width: 5.76mm">#</th>
         <th style="{{ $look->th() }}">{{ $up('sales::print.classic.product') }}</th>
         <th class="num" style="{{ $look->th() }} width: 17.28mm">{{ $up('sales::print.classic.qty') }}</th>
-        <th class="num" style="{{ $look->th() }} width: 11.52mm">{{ $up('sales::print.classic.free') }}</th>
+        @if ($sh('free'))<th class="num" style="{{ $look->th() }} width: 11.52mm">{{ $up('sales::print.classic.free') }}</th>@endif
+        @if ($sh('total_qty'))<th class="num" style="{{ $look->th() }} width: 15.84mm" data-total-qty>{{ $up('sales::print.classic.total_qty') }}</th>@endif
         @if ($money)
             <th class="num" style="{{ $look->th() }} width: 15.84mm">{{ $up('sales::print.classic.rate') }}</th>
             <th class="num" style="{{ $look->th() }} width: 20.16mm">{{ $up('core.print.amount') }}</th>
@@ -87,7 +91,8 @@
                 @if ($under !== '')<div style="font-size: 6.5pt" class="muted">{{ $under }}</div>@endif
             </td>
             <td class="num" style="{{ $look->td($i) }}">{{ $line['qty'] }} <span class="bn">{{ $line['unit'] ?? '' }}</span></td>
-            <td class="num" style="{{ $look->td($i) }}">{{ $line['free'] ?? '' }}</td>
+            @if ($sh('free'))<td class="num" style="{{ $look->td($i) }}">{{ $line['free'] ?? '' }}</td>@endif
+            @if ($sh('total_qty'))<td class="num" style="{{ $look->td($i) }}">{{ $line['total_qty'] ?? '' }} <span class="bn">{{ $line['unit'] ?? '' }}</span></td>@endif
             @if ($money)
                 <td class="num" style="{{ $look->td($i) }}">{{ $line['rate'] }}</td>
                 <td class="num" style="{{ $look->td($i) }}">{{ $line['amount'] }}</td>
@@ -97,13 +102,22 @@
     <tr class="total">
         <td colspan="2" style="{{ $look->totalRow() }}">{{ $up('core.print.total') }} ({{ $facts['items'] }})</td>
         <td class="num bn" style="{{ $look->totalRow() }} font-family: hindsiliguri">{{ $facts['total_qty'] }}</td>
-        <td style="{{ $look->totalRow() }}"></td>
+        @if ($sh('free'))<td style="{{ $look->totalRow() }}"></td>@endif
+        @if ($sh('total_qty'))<td class="num bn" style="{{ $look->totalRow() }} font-family: hindsiliguri" data-total-qty-sum>{{ $facts['total_qty_with_free'] ?? '' }}</td>@endif
         @if ($money)
             <td style="{{ $look->totalRow() }}"></td>
-            <td class="num" style="{{ $look->totalRow() }}">{{ $facts['total'] }}</td>
+            <td class="num" style="{{ $look->totalRow() }}">{{ $facts['lines_total'] ?? $facts['total'] }}</td>
         @endif
     </tr>
 </table>
+
+@if ($money && ! empty($facts['money_rows']))
+    <table style="width: 100%; margin-top: 2mm" data-money-rows>
+        @foreach ($facts['money_rows'] as $label => $value)
+            <tr><td style="text-align: right; font-size: 7.6pt; padding: 0.4mm 1.4mm;">{{ $t($label) }}</td><td class="num" style="width: 34mm; font-size: 7.6pt; padding: 0.4mm 1.4mm;">{{ $value }}</td></tr>
+        @endforeach
+    </table>
+@endif
 
 @if ($money)
     <table style="width: 100%; margin-top: 2.88mm">

@@ -46,6 +46,8 @@ class DocumentDelivery extends Model
     protected $fillable = [
         'company_id', 'branch_id', 'document_type', 'document_id', 'document_no',
         'paper', 'how', 'share_id', 'from_ip', 'created_by',
+        // ⭐ কোন রূপ — চালান টাকাসহ/টাকা ছাড়া (২ অক্টোবর ২০২৬)
+        'variant',
     ];
 
     public function share(): BelongsTo

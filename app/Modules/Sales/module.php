@@ -906,12 +906,28 @@ return [
             'key' => "sales.print.show.{$what}",
             'label' => "sales::settings.invoice_info.show.{$what}",
             'type' => 'boolean',
-            'default' => true,
+            // ⭐ পণ্যের কোড ডিফল্টে বন্ধ — মালিক, ৩ অক্টোবর ২০২৬: *"print e product id dewar dorkar nai"*
+            'default' => $what !== 'product_code',
             'group' => 'invoice_info',
             'per_branch' => true,
             'part' => 'show',
         ], ['bin', 'invoice_type', 'duplicate', 'order_no', 'transport', 'free', 'total_qty',
-            'grand_total_row', 'previous_due', 'amount_words', 'deposits', 'qr']),
+            'grand_total_row', 'previous_due', 'amount_words', 'deposits', 'qr', 'product_code', 'lot']),
+
+        /*
+         * ⭐ চালানে কী ছাপা হবে — আলাদা সারি (মালিক, ৩ অক্টোবর ২০২৬; [[InvoicePrintLook::challanShows()]])।
+         * ⓘ `prices` = চালানের ডিফল্ট — টাকাসহ না টাকা ছাড়া; ছাপার বোতামে প্রতিবার বদলানো যায়।
+         * ⓘ পণ্যের কোড ডিফল্টে বন্ধ, বাকি সব চালু — আজকের চালান যেমন ছিল।
+         */
+        ...array_map(fn (string $what) => [
+            'key' => "sales.print.challan_show.{$what}",
+            'label' => "sales::settings.invoice_info.challan_show.{$what}",
+            'type' => 'boolean',
+            'default' => $what !== 'product_code',
+            'group' => 'invoice_info',
+            'per_branch' => true,
+            'part' => 'challan_show',
+        ], ['product_code', 'lot', 'free', 'total_qty', 'qr', 'transport', 'order_no', 'prices']),
 
         /*
          * ⓘ সইয়ের ঘর — কয়টা (২–৪), আর প্রতিটার নাম। খালি নাম = নমুনার বাংলা নাম

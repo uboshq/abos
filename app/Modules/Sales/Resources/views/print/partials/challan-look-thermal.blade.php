@@ -7,9 +7,11 @@
     $look = new \App\Core\Engines\Print\PaperLook($look);
     $lang = $look->lang();
     $t = fn (string $key) => (string) __($key, [], $lang);
-    $money = $doc->showMoney && $profile->shows('prices'); /* ⛔ নিয়ম আর মালিকের দামের সুইচ দুইটাই — সাধারণ কাগজের মতো ([[document-body]]); ৩০ সেপ্টেম্বর ২০২৬ */
+    $money = $doc->pricesChosen ?? ($doc->showMoney && $profile->shows('prices')); /* ⭐ ছাপার বোতামে বাছা থাকলে সেটাই — টাকাসহ/টাকা ছাড়া (২ অক্টোবর ২০২৬) */
+    $sh = fn (string $what) => (bool) ($facts['shows'][$what] ?? true); /* ⭐ চালানের সুইচ (৩ অক্টোবর ২০২৬) */ /* ⛔ নিয়ম আর মালিকের দামের সুইচ দুইটাই — সাধারণ কাগজের মতো ([[document-body]]); ৩০ সেপ্টেম্বর ২০২৬ */
     $look_ = app(\App\Modules\Sales\Support\InvoicePrintLook::class);
-    $qrUrl = $look_->shows('qr') ? $facts['scan_url'] : '';
+    $qrUrl = $look_->shows('qr') && $sh('qr') ? $facts['scan_url'] : '';
+    $cols = 2 + ($sh('free') ? 1 : 0) + ($sh('total_qty') ? 1 : 0) + ($money ? 1 : 0);
     $to = $facts['to'];
     $tr = $facts['transport'];
 @endphp
@@ -21,7 +23,7 @@
     'notices' => $doc->notices(),
 ])
 <table class="kv">
-    @if ($facts['order_no'] !== '')<tr><td>{{ $t('sales::print.classic.order_no') }}</td><td class="num">{{ $facts['order_no'] }}</td></tr>@endif
+    @if ($facts['order_no'] !== '' && $sh('order_no'))<tr><td>{{ $t('sales::print.classic.order_no') }}</td><td class="num">{{ $facts['order_no'] }}</td></tr>@endif
     @if ($facts['warehouse'] !== '')<tr><td>{{ $t('sales::field.warehouse') }}</td><td class="num" style="font-family: hindsiliguri">{{ $facts['warehouse'] }}</td></tr>@endif
 </table>
 
@@ -31,7 +33,7 @@
 @if ($to['point'] !== '')<div class="small">{{ $t('sales::print.classic.point') }} {{ $to['point'] }}</div>@endif
 @if ($to['address'] !== '')<div class="small">{{ $to['address'] }}</div>@endif
 @if ($to['phone'] !== '')<div class="small">{{ $to['phone'] }}</div>@endif
-@if ($tr['carrier'] !== '' || $tr['vehicle'] !== '')
+@if ($sh('transport') && ($tr['carrier'] !== '' || $tr['vehicle'] !== ''))
     <div class="small" data-transport>{{ implode(' · ', array_filter([$tr['carrier'], $tr['vehicle'], trim($tr['driver'].' '.$tr['driver_phone'])])) }}</div>
 @endif
 
@@ -40,26 +42,36 @@
     <tr>
         <th>{{ $t('sales::print.classic.product') }}</th>
         <th class="num" style="width: 15mm">{{ $t('sales::print.classic.qty') }}</th>
-        <th class="num" style="width: 11mm">{{ $t('sales::print.classic.free') }}</th>
+        @if ($sh('free'))<th class="num" style="width: 10mm">{{ $t('sales::print.classic.free') }}</th>@endif
+        @if ($sh('total_qty'))<th class="num" style="width: 14mm" data-total-qty>{{ $t('sales::print.classic.total_qty') }}</th>@endif
         @if ($money)<th class="num" style="width: 19mm">{{ $t('core.print.amount') }}</th>@endif
     </tr>
     @foreach ($doc->lines as $i => $line)
         <tr>
             <td>{{ $i + 1 }}. {{ $line['name'] }}</td>
             <td class="num">{{ $line['qty'] }} <span class="bn">{{ $line['unit'] ?? '' }}</span></td>
-            <td class="num">{{ filled($line['free'] ?? '') ? $line['free'] : '—' }}</td>
+            @if ($sh('free'))<td class="num">{{ filled($line['free'] ?? '') ? $line['free'] : '—' }}</td>@endif
+            @if ($sh('total_qty'))<td class="num">{{ $line['total_qty'] ?? '' }}</td>@endif
             @if ($money)<td class="num">{{ $line['amount'] }}</td>@endif
         </tr>
         @php $under = implode(' · ', array_filter([$money ? '@ '.$line['rate'] : '', $line['code'] ?? '', $line['note'] ?? ''])); @endphp
-        @if ($under !== '')<tr class="sub"><td colspan="{{ $money ? 4 : 3 }}">{{ $under }}</td></tr>@endif
+        @if ($under !== '')<tr class="sub"><td colspan="{{ $cols }}">{{ $under }}</td></tr>@endif
     @endforeach
     <tr class="tot">
         <td>{{ $t('core.print.total') }} ({{ $facts['items'] }})</td>
         <td class="num" style="font-family: hindsiliguri">{{ $facts['total_qty'] }}</td>
-        <td></td>
-        @if ($money)<td class="num">{{ $facts['total'] }}</td>@endif
+        @if ($sh('free'))<td></td>@endif
+        @if ($sh('total_qty'))<td class="num" style="font-family: hindsiliguri" data-total-qty-sum>{{ $facts['total_qty_with_free'] ?? '' }}</td>@endif
+        @if ($money)<td class="num">{{ $facts['lines_total'] ?? $facts['total'] }}</td>@endif
     </tr>
 </table>
+@if ($money && ! empty($facts['money_rows']))
+    <table style="width: 100%; margin-top: 2mm" data-money-rows>
+        @foreach ($facts['money_rows'] as $label => $value)
+            <tr><td style="text-align: right; font-size: 7.5pt; padding: 0.3mm 0;">{{ $t($label) }}</td><td class="num" style="width: 34mm; font-size: 7.5pt; padding: 0.3mm 0;">{{ $value }}</td></tr>
+        @endforeach
+    </table>
+@endif
 
 @if ($money)
     <div style="margin-top: 1.5mm">{!! $look->thermalAmount($t('core.print.total'), $facts['total'], $lang === 'bn' ? $facts['words_bn'] : $facts['words']) !!}</div>
