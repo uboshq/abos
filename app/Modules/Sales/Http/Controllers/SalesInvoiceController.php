@@ -22,7 +22,6 @@ use App\Modules\Sales\Models\SalesInvoice;
 use App\Modules\Sales\Services\ChallanBills;
 use App\Modules\Sales\Services\DirectSaleService;
 use App\Modules\Sales\Services\SalesInvoiceService;
-use App\Modules\Sales\Services\TransportRule;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
@@ -347,9 +346,7 @@ class SalesInvoiceController extends Controller implements HasMiddleware
              */
             // ⓘ `counter_draft` = "খসড়া রাখুন" ([[DirectSaleService::hold()]]); সইয়ে পাঠানো বিক্রিতে থাকে না —
             // ⚠️ isHeldForSignature() নয়: সব সই হয়ে গেলে সেটা মিথ্যা, আর তখনই বোতাম লাগে
-            if ($invoice->counter_draft !== null) {
-                app(TransportRule::class)->assertNamedForHeld($invoice);
-            }
+            // ⓘ মাল কীভাবে যাবে — প্রশ্নটা এখন ছাপার দরজায়, নিশ্চিতে নয় (মালিকের অনুমোদিত বদল, ১ অক্টোবর ২০২৬; [[RequireTransportBeforePrint]])
 
             app(DirectSaleService::class)->finishHeld($invoice);
 

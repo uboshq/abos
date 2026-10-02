@@ -227,7 +227,8 @@ final class EveryPaperDesignPrintsTheRealPaperTest extends TestCase
     {
         $service = app(DeliveryChallanService::class);
 
-        return $service->confirm($service->create($this->header(), [[
+        // ⓘ মাল কীভাবে যাবে — ছাপার আগে লাগে ([[RequireTransportBeforePrint]])
+        return $service->confirm($service->create([...$this->header(), 'own_transport' => true], [[
             'product_id' => Product::query()->value('id'), 'delivered_qty' => '2', 'rate' => '150',
         ]]));
     }

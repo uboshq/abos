@@ -21,7 +21,6 @@ use App\Modules\Sales\Http\Requests\DeliveryChallanRequest;
 use App\Modules\Sales\Models\DeliveryChallan;
 use App\Modules\Sales\Models\SalesOrder;
 use App\Modules\Sales\Services\DeliveryChallanService;
-use App\Modules\Sales\Services\TransportRule;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
@@ -176,8 +175,7 @@ class DeliveryChallanController extends Controller implements HasMiddleware
 
     public function confirm(DeliveryChallan $challan): RedirectResponse
     {
-        // ⛔ মাল কীভাবে যাবে, না বলে পাকা নয় — ধাপ ৫, ২৮ সেপ্টেম্বর ২০২৬ ([[TransportRule]])
-        app(TransportRule::class)->assertNamed($challan);
+        // ⓘ মাল কীভাবে যাবে — প্রশ্নটা এখন ছাপার দরজায়, নিশ্চিতে নয় (মালিকের অনুমোদিত বদল, ১ অক্টোবর ২০২৬; [[RequireTransportBeforePrint]])
 
         $this->service->confirm($challan);
 

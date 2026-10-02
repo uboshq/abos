@@ -366,18 +366,28 @@ Route::middleware('auth')->prefix('sales')->group(function () {
     Route::get('/print/order-sample', [OrderSampleController::class, 'show'])->name('order_sample');
     Route::get('/print/receipt-sample', [ReceiptSampleController::class, 'show'])->name('receipt_sample');
 
+    // ⭐ "মাল কীভাবে যাবে" — নিশ্চিতের পরে, ছাপার আগে; ঠিকানার শেষে নম্বর, তাই তালিকা থেকে পপআপে খোলে
+    Route::get('/transport/invoice/{invoice}', [\App\Modules\Sales\Http\Controllers\ChallanTransportController::class, 'forInvoice'])
+        ->whereNumber('invoice')->name('invoice.transport');
+    Route::get('/transport/challan/{challan}', [\App\Modules\Sales\Http\Controllers\ChallanTransportController::class, 'forChallan'])
+        ->whereNumber('challan')->name('challan.transport');
+    Route::put('/transport/challan/{challan}', [\App\Modules\Sales\Http\Controllers\ChallanTransportController::class, 'update'])
+        ->whereNumber('challan')->name('challan.transport.update');
+
     Route::prefix('print')->name('print.')->group(function () {
         Route::get('/invoice/{invoice}', [SalesPrintController::class, 'invoice'])
             ->whereNumber('invoice')->name('invoice');
         Route::get('/invoice/{invoice}/draft', [SalesPrintController::class, 'draft'])
             ->whereNumber('invoice')->name('draft');
         Route::get('/challan/{challan}', [SalesPrintController::class, 'challan'])
-            ->whereNumber('challan')->name('challan');
+            ->whereNumber('challan')->name('challan')
+            // ⭐ মাল কীভাবে যাবে, না বলে চালান ছাপা নয় (মালিক, ১ অক্টোবর ২০২৬; [[RequireTransportBeforePrint]])
+            ->middleware(\App\Modules\Sales\Http\Middleware\RequireTransportBeforePrint::class);
         Route::get('/challan/{challan}/gatepass', [SalesPrintController::class, 'gatepass'])
-            ->whereNumber('challan')->name('gatepass');
+            ->whereNumber('challan')->name('gatepass')->middleware(\App\Modules\Sales\Http\Middleware\RequireTransportBeforePrint::class);
         // ⭐ গেট পাস — নিজের কাগজ, রওনার মুহূর্তে তৈরি ([[GatePassService]])
         Route::get('/gate-pass/{gatePass}', [SalesPrintController::class, 'gatePassDocument'])
-            ->whereNumber('gatePass')->name('gate_pass');
+            ->whereNumber('gatePass')->name('gate_pass')->middleware(\App\Modules\Sales\Http\Middleware\RequireTransportBeforePrint::class);
         // ⭐ লোডিং শিট — ট্রিপ ধরে ([[LoadingSheetController]])
         Route::get('/loading-sheet/{shipment}', [SalesPrintController::class, 'loadingSheet'])
             ->whereNumber('shipment')->name('loading_sheet');

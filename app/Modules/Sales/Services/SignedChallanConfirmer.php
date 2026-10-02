@@ -89,7 +89,7 @@ final class SignedChallanConfirmer
         try {
             Auth::setUser($maker);
 
-            app(TransportRule::class)->assertNamed($challan);
+            // ⓘ মাল কীভাবে যাবে — প্রশ্নটা এখন ছাপার দরজায়, নিশ্চিতে নয় (মালিকের অনুমোদিত বদল, ১ অক্টোবর ২০২৬; [[RequireTransportBeforePrint]])
 
             $this->challans->confirm($challan->fresh());
         } catch (HeldForApproval) {

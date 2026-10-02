@@ -38,6 +38,14 @@
                         </x-ui.button>
                     @endcan
                 @endif
+                {{-- ⭐ মাল কীভাবে যাবে — নিশ্চিতের পরে, ছাপার আগে (মালিকের অনুমোদিত বদল, ১ অক্টোবর ২০২৬) --}}
+                @if (! in_array($challan->status, [\App\Core\Support\DocumentStatus::CANCELLED], true))
+                    @can('sales.challan.create')
+                        <x-ui.button tone="secondary" :href="route('sales.challan.transport', $challan)" data-transport-button>
+                            {{ __('sales::transport.button') }}
+                        </x-ui.button>
+                    @endcan
+                @endif
                 <x-ui.print-menu :documents="[
                     ['label' => __('sales::doc.challan'), 'url' => route('sales.print.challan', $challan), 'paper_setting' => 'sales.print.paper.challan', 'type' => 'sales_challan', 'id' => $challan->id, 'no' => $challan->document_no, 'share' => ['route' => 'sales.print.challan', 'params' => ['challan' => $challan->id]]],
                     ['label' => __('sales::doc.gatepass'), 'url' => route('sales.print.gatepass', $challan), 'paper_setting' => 'sales.print.paper.challan'],

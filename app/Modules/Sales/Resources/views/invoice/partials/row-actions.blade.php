@@ -39,6 +39,17 @@
         'url' => route('sales.invoice.show', $invoice),
     ];
 
+    /*
+     * ⭐ "মাল কীভাবে যাবে" — নিশ্চিতের পরে, ছাপার আগে (মালিকের অনুমোদিত বদল, ১ অক্টোবর ২০২৬)।
+     * ⓘ চালান নিশ্চিতের একই চাবি; ঠিকানার শেষে নম্বর, তাই পপআপে খোলে। চালান খোঁজে সার্ভার — সারিপ্রতি প্রশ্ন নয়।
+     */
+    if (! $isCancelled && auth()->user()?->can('sales.challan.create')) {
+        $items[] = [
+            'label' => __('sales::transport.button'),
+            'url' => route('sales.invoice.transport', $invoice),
+        ];
+    }
+
     if ($isDraft && auth()->user()?->can('sales.invoice.create')) {
         $items[] = [
             'label' => __('core.action.edit'),

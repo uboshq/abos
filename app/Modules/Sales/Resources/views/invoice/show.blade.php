@@ -60,6 +60,14 @@
                      ([[SalesPrintController]]), কারণ বোতাম লুকানো আর
                      দরজা বন্ধ করা এক জিনিস নয় — ঠিকানা টাইপ করেও আসা যায়। --}}
                 @unless ($draft)
+                    {{-- ⭐ মাল কীভাবে যাবে — নিশ্চিতের পরে, ছাপার আগে (মালিকের অনুমোদিত বদল, ১ অক্টোবর ২০২৬) --}}
+                    @if (! in_array($invoice->status, [\App\Core\Support\DocumentStatus::CANCELLED], true))
+                        @can('sales.challan.create')
+                            <x-ui.button tone="secondary" :href="route('sales.invoice.transport', $invoice)" data-transport-button>
+                                {{ __('sales::transport.button') }}
+                            </x-ui.button>
+                        @endcan
+                    @endif
                     <x-ui.print-menu :documents="[
                         [
                             'label' => __('sales::doc.invoice'),

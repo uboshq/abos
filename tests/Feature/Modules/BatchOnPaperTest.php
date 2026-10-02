@@ -96,6 +96,8 @@ class BatchOnPaperTest extends TestCase
                 'customer_id' => $this->customer->id,
                 'warehouse_id' => $this->warehouse->id,
                 'trx_date' => now()->toDateString(),
+                // ⓘ মাল কীভাবে যাবে — ছাপার আগে লাগে ([[RequireTransportBeforePrint]])
+                'own_transport' => true,
             ],
             [['product_id' => $this->product->id, 'delivered_qty' => $qty, 'rate' => '100']],
         );
@@ -220,6 +222,8 @@ class BatchOnPaperTest extends TestCase
                 'customer_id' => $this->customer->id,
                 'warehouse_id' => $this->warehouse->id,
                 'trx_date' => now()->toDateString(),
+                // ⓘ মাল কীভাবে যাবে — ছাপার আগে লাগে ([[RequireTransportBeforePrint]])
+                'own_transport' => true,
             ],
             [['product_id' => $plain->id, 'delivered_qty' => '2', 'rate' => '100']],
         );

@@ -33,7 +33,6 @@ use App\Modules\Sales\Services\CreditExposure;
 use App\Modules\Sales\Services\DirectSaleService;
 use App\Modules\Sales\Services\SaleNumber;
 use App\Modules\Sales\Services\MarginGuard;
-use App\Modules\Sales\Services\TransportRule;
 use App\Modules\Supplier\Models\Supplier;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -937,18 +936,8 @@ class DirectSaleController extends Controller implements HasMiddleware
          * কোথায় বসবে তা বদলায়। ⚠️ `approval_failed` — বিলটা হয়নি, তাই পর্দা
          * কার্ট ফেরায় ঠিক ত্রুটির মতো ([[direct-sale.js]] `hasErrors`)।
          */
-        /*
-         * ⛔ মাল কীভাবে যাবে, না বলে নিশ্চিত নয় — মালিকের পরিকল্পনা, ধাপ ৫, ২৮ সেপ্টেম্বর ২০২৬।
-         *
-         * ⓘ খসড়ায় লাগে না। ⚠️ সইয়ে যাওয়া বিক্রিও এখানেই থামে, সই চাওয়ার আগে —
-         * নইলে শেষ সইয়ের পরে এসে আটকাত ([[HeldCounterSaleFinisher]])। ⓘ নিয়মটা দরজায়,
-         * সেবায় নয়: সেবার `complete()` আরও অনেকে ডাকে (পরীক্ষা, আমদানি), আর নিয়মের
-         * প্রশ্ন মানুষের "নিশ্চিত" চাপার — [[TransportRule]], দরজার তালিকা
-         * [[EveryChallanConfirmAsksHowTheGoodsTravelTest]]-এ।
-         */
-        if (($data['save_as_draft'] ?? '') !== '1') {
-            app(TransportRule::class)->assertNamed($data);
-        }
+        // ⓘ মাল কীভাবে যাবে — প্রশ্নটা এখন ছাপার দরজায়, নিশ্চিতে নয় (মালিকের অনুমোদিত বদল, ১ অক্টোবর ২০২৬; [[RequireTransportBeforePrint]])
+        //    কাউন্টারের "মাল কীভাবে যাবে" ঘর থাকল, ঐচ্ছিক — দিলে চালানে বসে, না দিলে ছাপার আগে চাওয়া হয়।
 
         try {
             $result = $this->sales->complete(
