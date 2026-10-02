@@ -10,14 +10,23 @@
     ⓘ ভূমিকা ধরে ধরে রং দিলে মানুষকে একটা রঙের অভিধান মুখস্থ করতে হত,
     আর সাদাকালো প্রিন্টে সেটা হারিয়ে যেত।
 --}}
-@forelse ($user->roles as $role)
-    <x-ui.badge tone="info" class="me-1">
-        {{ \App\Core\Support\RoleLabel::for($role->name) }}
-    </x-ui.badge>
-@empty
+{{--
+    ⛔ চিপগুলো পরের লাইনে নামে — মালিক, ২ অক্টোবর ২০২৬ (ছবিতে "demo user"-এর এগারোটা ভূমিকা পর্দার ডানে বেরিয়ে
+    যাচ্ছিল, শেষেরগুলো কাটা, আর পাশের "কোম্পানি" কলাম পর্দার বাইরে)। ⓘ টেবিলের ঘর লাইন ভাঙে না, তাই এখানে নিজে
+    `flex-wrap` আর `white-space: normal` (সরাসরি style — শ্রেণিটা তৈরি-করা CSS-এ নেই, আর এই কাজে npm build লাগে না); সর্বোচ্চ চওড়া বাঁধা, যাতে একজনের লম্বা তালিকা গোটা টেবিল টেনে না নেয়।
+--}}
+@if ($user->roles->isNotEmpty())
+    <div class="flex flex-wrap gap-1" style="max-width: 34rem; white-space: normal" data-role-chips>
+        @foreach ($user->roles as $role)
+            <x-ui.badge tone="info">
+                {{ \App\Core\Support\RoleLabel::for($role->name) }}
+            </x-ui.badge>
+        @endforeach
+    </div>
+@else
     {{--
         ⚠️ ভূমিকাহীন মানুষ ঢুকতে পারেন, কিন্তু কিছুই করতে পারেন না — আর
         সেটা একটা **সমস্যা**, ফাঁকা ঘর নয়। ⓘ তাই ড্যাশ নয়, কথাটা লেখা।
     --}}
     <span class="text-2xs text-(--color-ink-muted)">{{ __('system_admin::message.no_role') }}</span>
-@endforelse
+@endif

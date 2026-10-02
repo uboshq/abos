@@ -55,7 +55,8 @@ final class TheQuotationAndOrderMenusSitAfterTheDashboardTest extends TestCase
          * ইনভয়েস তালিকা → ডেলিভারি চালান → ডেলিভারি প্রসেসিং → মূল্য নির্ধারণ → বিক্রয় ফেরত → যে কাগজ বেরোয়নি।
          * ⓘ রুট ধরে মাপা — ভাঁজের নাম পাতার অন্য জায়গায় আঁকা হয়, তাই নামের অবস্থান ক্রম বলে না।
          */
-        $at = fn (string $url) => strpos($html, e($url));
+        // ⓘ পুরো লিংক, শেষের উদ্ধৃতিসহ — `/sales/direct` নিজেই `/sales/direct/drafts`-এর শুরু, তাই কেবল ঠিকানা খুঁজলে খসড়ার লিংক মিলত
+        $at = fn (string $url) => strpos($html, 'href="'.e($url).'"');
         $order = [
             'order_track' => $at(route('sales.order.track')),
             'do_new' => $at(route('sales.planned', ['screen' => 'do_new'])),
