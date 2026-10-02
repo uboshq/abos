@@ -61,7 +61,7 @@ final class GatePassService
             'vehicle_no' => $trip?->vehicle_no ?: ($challan->vehiclePlate() ?: null),
             'driver_name' => $trip?->driver_name ?: $challan->driver_name,
             'driver_phone' => $challan->driver_phone,
-            'issued_by' => auth()->id(),
+            'issued_by' => \App\Core\Support\Actor::userId(),
             'issued_at' => $event->occurred_at ?? now(),
             'status' => GatePass::ISSUED,
         ]);
@@ -90,7 +90,7 @@ final class GatePassService
             $pass->update([
                 'status' => GatePass::CANCELLED,
                 'cancel_reason' => mb_substr($reason, 0, 500),
-                'cancelled_by' => auth()->id(),
+                'cancelled_by' => \App\Core\Support\Actor::userId(),
                 'cancelled_at' => now(),
             ]);
 

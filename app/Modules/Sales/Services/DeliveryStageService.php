@@ -539,7 +539,7 @@ final class DeliveryStageService
                 'receiver_name' => $extras['receiver_name'] ?? null,
                 'receiver_phone' => $extras['receiver_phone'] ?? null,
                 'occurred_at' => $now,
-                'created_by' => auth()->id(),
+                'created_by' => \App\Core\Support\Actor::userId(),
             ]);
 
             foreach ($lines as $lineId => $qty) {
@@ -581,14 +581,14 @@ final class DeliveryStageService
                     'delivery_challan_id' => $challan->id,
                     'stage' => $to,
                     'stage_at' => $now,
-                    'updated_by' => auth()->id(),
+                    'updated_by' => \App\Core\Support\Actor::userId(),
                 ]);
             }
 
             $state->update([
                 'stage' => $to,
                 'stage_at' => $now,
-                'updated_by' => auth()->id(),
+                'updated_by' => \App\Core\Support\Actor::userId(),
             ]);
 
             return $state;

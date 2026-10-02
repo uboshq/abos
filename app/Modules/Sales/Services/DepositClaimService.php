@@ -148,7 +148,7 @@ final class DepositClaimService
             $claim->update([
                 'status' => DepositClaim::ACCEPTED,
                 'collection_id' => $collection->id,
-                'decided_by' => auth()->id(),
+                'decided_by' => \App\Core\Support\Actor::userId(),
                 'decided_at' => now(),
             ]);
 
@@ -178,7 +178,7 @@ final class DepositClaimService
             $claim->update([
                 'status' => DepositClaim::REJECTED,
                 'decision_reason' => $reason,
-                'decided_by' => auth()->id(),
+                'decided_by' => \App\Core\Support\Actor::userId(),
                 'decided_at' => now(),
             ]);
 

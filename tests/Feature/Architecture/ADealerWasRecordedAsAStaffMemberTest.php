@@ -21,6 +21,20 @@ final class ADealerWasRecordedAsAStaffMemberTest extends TestCase
 {
     private const DIRS = ['app/Core/Engines', 'app/Core/Services'];
 
+    /**
+     * ⭐ পোর্টালের পথে পড়া মডিউলের ফাইল — দোকানির স্ক্যান অবস্থা-সারি বানাতে পারে (`ensure()` → `write()`),
+     * রওনা হলে গেট পাসও; দাবি তোলেন দোকানি। ⓘ বাকি মডিউলগুলো কেবল কর্মীর পথে, তাই তালিকায় নেই।
+     */
+    private const PORTAL_PATH = [
+        'app/Modules/Sales/Services/DeliveryStageService.php',
+        'app/Modules/Sales/Services/GatePassService.php',
+        'app/Modules/Sales/Services/DepositClaimService.php',
+        'app/Modules/Sales/Services/DepositSlip.php',
+        'app/Modules/Sales/Services/DispatchBill.php',
+        'app/Modules/Sales/Http/Controllers/PortalController.php',
+        'app/Modules/Sales/Http/Controllers/DeliveryScanController.php',
+    ];
+
     public function test_no_core_engine_or_service_asks_auth_for_a_bare_id(): void
     {
         $found = [];
@@ -38,6 +52,14 @@ final class ADealerWasRecordedAsAStaffMemberTest extends TestCase
                 foreach ($this->hits((string) file_get_contents($file->getPathname())) as $line) {
                     $found[] = str_replace(base_path().DIRECTORY_SEPARATOR, '', $file->getPathname()).':'.$line;
                 }
+            }
+        }
+
+        foreach (self::PORTAL_PATH as $path) {
+            $this->assertFileExists(base_path($path), "পোর্টালের পথের ফাইলটা সরেছে — তালিকা হালনাগাদ করুন: {$path}");
+            $looked++;
+            foreach ($this->hits((string) file_get_contents(base_path($path))) as $line) {
+                $found[] = $path.':'.$line;
             }
         }
 
