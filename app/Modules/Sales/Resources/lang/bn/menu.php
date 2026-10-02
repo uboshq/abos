@@ -19,6 +19,8 @@ return [
     'uninvoiced' => 'মাল এসেছে, বিল আসেনি',
     'by_supplier' => 'সরবরাহকারীভিত্তিক ক্রয়',
     'challans' => 'ডেলিভারি চালান',
+    // ⭐ "Billing Documents" ভাঁজের ভিতরে — মালিক, ২ অক্টোবর ২০২৬
+    'challan_list' => 'ডেলিভারি চালান তালিকা',
     'invoices' => 'ইনভয়েস তালিকা',
     'collections' => 'আদায়',
     'undelivered' => 'মাল গেছে, বিল হয়নি',

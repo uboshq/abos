@@ -142,7 +142,8 @@ return [
         'vouchers' => 'Vouchers',
         'quotations' => 'Quotations',
         'sales_orders' => 'Orders',
-        'delivery_orders' => 'DO list',
+        'delivery_orders' => 'Delivery Order (DO)', // ⭐ the owner, 2 Oct 2026
+        'billing_documents' => 'Billing Documents',
         'delivery_processing' => 'Delivery Processing',
         'pricing' => 'Pricing',
         'notice' => 'Notices',

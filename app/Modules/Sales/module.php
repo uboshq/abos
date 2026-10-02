@@ -145,9 +145,6 @@ return [
                Partial, Back, History; "মেনুতে এখন, কোড পরে"। আদেশের খোঁজ শেষে থাকে। */
             ['label' => 'sales::planned.order_history', 'cluster' => 'sales_orders', 'icon' => 'receipt', 'route' => 'sales.planned',
                 'route_params' => ['screen' => 'order_history'], 'permission' => 'sales.order.view'],
-            // ⭐ "ডেলিভারি ট্র্যাকিং" — মালিক, ২ অক্টোবর ২০২৬; আদেশের সাথে সরাসরি বিক্রয়/DO-ও ([[SaleTracking]])
-            ['label' => 'sales::tracking.title', 'cluster' => 'sales_orders', 'icon' => 'search', 'route' => 'sales.tracking.index',
-                'permission' => 'sales.order.view', 'setting' => 'sales.screen_orders'],
             /*
              * ⭐ মেনুর ক্রম — মালিকের নির্দেশ, ১ অক্টোবর ২০২৬ (আগের রাতের পরিকল্পনা, "যেটা প্ল্যান হয়েছিল সেভাবেই"):
              * ড্যাশবোর্ড → উদ্ধৃতি → অর্ডার → নতুন DO → DO তালিকা → সরাসরি বিক্রয় → ইনভয়েস তালিকা → ডেলিভারি চালান
@@ -155,22 +152,28 @@ return [
              * ⓘ "DO তালিকায় DO মেনু ভাঁজ করা থাকবে" — DO-র ধাপগুলো ([[DeliveryOrderTabs]]) এক ভাঁজে। কেবল ক্রম আর
              * নাম বদলেছে; প্রতিটা সারির রুট আর চাবি আগের মতোই।
              */
-            ['label' => 'sales::planned.do_new', 'icon' => 'book', 'route' => 'sales.planned',
-                'route_params' => ['screen' => 'do_new'], 'permission' => 'sales.order.view'],
-
-            // ⓘ "DO তালিকা" ভাঁজ — পাতার ধাপের ট্যাবগুলোই, একই ঠিকানায় ([[DeliveryOrderTabs::href()]])
-            ['label' => 'sales::do.tab.drafts', 'cluster' => 'delivery_orders', 'icon' => 'book', 'route' => 'sales.direct.drafts',
-                'permission' => 'sales.challan.create', 'setting' => 'sales.screen_direct'],
-            ['label' => 'sales::do.tab.approval', 'cluster' => 'delivery_orders', 'icon' => 'book', 'route' => 'sales.direct.drafts',
-                'route_params' => ['tab' => 'approval'], 'permission' => 'sales.challan.create', 'setting' => 'sales.screen_direct'],
-            ['label' => 'sales::do.tab.awaiting', 'cluster' => 'delivery_orders', 'icon' => 'book', 'route' => 'sales.do.index',
-                'route_params' => ['tab' => 'awaiting'], 'permission' => 'sales.challan.view'],
-            ['label' => 'sales::do.tab.delivered', 'cluster' => 'delivery_orders', 'icon' => 'book', 'route' => 'sales.do.index',
-                'route_params' => ['tab' => 'delivered'], 'permission' => 'sales.challan.view'],
-            ['label' => 'sales::do.tab.all', 'cluster' => 'delivery_orders', 'icon' => 'book', 'route' => 'sales.do.index',
+            /*
+             * ⭐ "Delivery Order (DO)" ভাঁজ — মালিক, ২ অক্টোবর ২০২৬: *"নতুন DO = ernam hobe 'Delivery Order' … Er vitore
+             * order er moto vaj thakbe"*। পাঁচ সারি, অর্ডারের ভাঁজের মতো; নতুন DO লেখার বোতাম তালিকার পাতার ভিতরে
+             * (*"Er vitorei thakbe DO Creat & List"*)। DO-র ধাপের ট্যাবগুলো (খসড়া, সই, অপেক্ষা …) তালিকার পাতাতেই থাকে।
+             */
+            ['label' => 'sales::planned.do_list', 'cluster' => 'delivery_orders', 'icon' => 'book', 'route' => 'sales.do.index',
                 'permission' => 'sales.challan.view'],
-            ['label' => 'sales::do.tab.cancelled', 'cluster' => 'delivery_orders', 'icon' => 'book', 'route' => 'sales.do.index',
-                'route_params' => ['tab' => 'cancelled'], 'permission' => 'sales.challan.view'],
+            ['label' => 'sales::planned.do_pending', 'cluster' => 'delivery_orders', 'icon' => 'book', 'route' => 'sales.do.index',
+                'route_params' => ['tab' => 'awaiting'], 'permission' => 'sales.challan.view'],
+            ['label' => 'sales::planned.do_partial', 'cluster' => 'delivery_orders', 'icon' => 'book', 'route' => 'sales.planned',
+                'route_params' => ['screen' => 'do_partial'], 'permission' => 'sales.order.view'],
+            ['label' => 'sales::planned.do_back', 'cluster' => 'delivery_orders', 'icon' => 'book', 'route' => 'sales.planned',
+                'route_params' => ['screen' => 'do_back'], 'permission' => 'sales.order.view'],
+            ['label' => 'sales::planned.do_history', 'cluster' => 'delivery_orders', 'icon' => 'book', 'route' => 'sales.do.index',
+                'route_params' => ['tab' => 'delivered'], 'permission' => 'sales.challan.view'],
+
+            /*
+             * ⭐ "DO তালিকা"-র জায়গায় "ডেলিভারি ট্র্যাকিং" — মালিক, ২ অক্টোবর ২০২৬: *"DO তালিকা bad diye er jaygay
+             * ডেলিভারি ট্র্যাকিং hobe ekhanei sob bosbe"*। প্রতিটা বিক্রি কোথায় দাঁড়িয়ে, এক পাতায় ([[SaleTracking]])।
+             */
+            ['label' => 'sales::tracking.title', 'icon' => 'search', 'route' => 'sales.tracking.index',
+                'permission' => 'sales.order.view'],
 
             /* ⭐ সরাসরি বিক্রয় — মাঝের সব ধাপ এক চাপে, সোজা বিলে (মালিক, ২৮ সেপ্টেম্বর ২০২৬) */
             ['label' => 'sales::menu.direct', 'icon' => 'sales', 'route' => 'sales.direct.create', 'permission' => 'sales.challan.create',
@@ -180,9 +183,15 @@ return [
              * ⓘ ইনভয়েস তালিকা — সব বিল (কাউন্টার, সরাসরি বিক্রয়, চালান থেকে বানানো), কেবল বাতিলগুলো একটা বোতামের পেছনে।
              * ⛔ দুই মেনুতে একই তালিকা রাখা হয় না — মালিকের নিজের নিয়ম (*"ekoi jinis dui jaygay dorkar nai"*)।
              */
-            ['label' => 'sales::menu.invoices', 'icon' => 'receipt', 'route' => 'sales.invoice.index', 'permission' => 'sales.invoice.view'],
-
-            ['label' => 'sales::menu.challans', 'icon' => 'challan', 'route' => 'sales.challan.index',
+            /*
+             * ⭐ "Billing Documents" ভাঁজ — মালিক, ২ অক্টোবর ২০২৬: *"ইনভয়েস তালিকা ও ডেলিভারি চালান টার ভিতরে ভাজ হয়ে
+             * থাকবে — খসরা তালিকা, ইনভয়েস তালিকা, ডেলিভারি চালান তালিকা"*। কেবল জায়গা বদল; রুট আর চাবি আগের মতো।
+             */
+            ['label' => 'sales::menu.direct_drafts', 'cluster' => 'billing_documents', 'icon' => 'receipt', 'route' => 'sales.direct.drafts',
+                'permission' => 'sales.challan.create', 'setting' => 'sales.screen_direct'],
+            ['label' => 'sales::menu.invoices', 'cluster' => 'billing_documents', 'icon' => 'receipt', 'route' => 'sales.invoice.index',
+                'permission' => 'sales.invoice.view'],
+            ['label' => 'sales::menu.challan_list', 'cluster' => 'billing_documents', 'icon' => 'challan', 'route' => 'sales.challan.index',
                 'permission' => 'sales.challan.view', 'setting' => 'sales.screen_challans'],
 
             /*

@@ -16,6 +16,8 @@ return [
     'uninvoiced' => 'Received, Not Invoiced',
     'by_supplier' => 'Purchases by Supplier',
     'challans' => 'Delivery Challans',
+    // ⭐ inside the "Billing Documents" fold — the owner, 2 Oct 2026
+    'challan_list' => 'Delivery challan list',
     'invoices' => 'Invoice List',
     'collections' => 'Collections',
     'undelivered' => 'Delivered, Not Invoiced',

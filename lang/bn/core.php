@@ -152,7 +152,8 @@ return [
         'vouchers' => 'ভাউচার',
         'quotations' => 'উদ্ধৃতি',
         'sales_orders' => 'অর্ডার',
-        'delivery_orders' => 'DO তালিকা',
+        'delivery_orders' => 'ডেলিভারি অর্ডার (DO)', // ⭐ মালিক, ২ অক্টোবর ২০২৬: "নতুন DO = ernam hobe 'Delivery Order'"
+        'billing_documents' => 'বিলিং ডকুমেন্টস',
         'delivery_processing' => 'ডেলিভারি প্রসেসিং',
         'pricing' => 'মূল্য নির্ধারণ',
         'notice' => 'নোটিশ',

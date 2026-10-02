@@ -76,6 +76,14 @@
             <x-ui.toolbar :title="__('sales::menu.delivery_orders')" :count="__('sales::do.note.'.$tab)"
                 :columns="$columns" :search-placeholder="__('sales::message.challan_search')"
                           :sort="$sortOptions">
+                {{-- ⭐ নতুন DO এই তালিকার ভিতরেই — মালিক, ২ অক্টোবর ২০২৬: "Er vitorei thakbe DO Creat & List" --}}
+                <x-slot:actions>
+                    @can('sales.order.view')
+                        <x-ui.button tone="primary" icon="plus" :href="route('sales.planned', ['screen' => 'do_new'])">
+                            {{ __('sales::planned.do_new') }}
+                        </x-ui.button>
+                    @endcan
+                </x-slot:actions>
                 <x-ui.date-range :dates="$dates" />
             </x-ui.toolbar>
         </form>

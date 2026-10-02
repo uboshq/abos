@@ -30,7 +30,8 @@ final class PlannedScreenController extends Controller implements HasMiddleware
         // ⓘ 'order_new' আর 'order_list' নিজের রুটে সরেছে — পুরনো আদেশের পাতা (২৮ সেপ্টেম্বর ২০২৬)
         'order_pending', 'order_partial', 'order_back', 'order_history',
         // ⓘ 'loading_sheet' নিজের পাতায় সরেছে ([[LoadingSheetController]], ২৯ সেপ্টেম্বর ২০২৬)
-        'do_new', 'transport_assign',
+        // ⓘ 'do_new' এখন DO তালিকার পাতার বোতামে; আংশিক আর ব্যাক DO — মালিক, ২ অক্টোবর ২০২৬
+        'do_new', 'do_partial', 'do_back', 'transport_assign',
         'pricing_customer', 'pricing_channel', 'pricing_territory',
         'pricing_special', 'pricing_dynamic',
     ];
