@@ -113,7 +113,13 @@ final class SerialNumberService
             $out = [];
 
             foreach ($clean as $serial) {
-                $piece = SerialNumber::query()->numbered($serial)->first();
+                /*
+                 * ⛔ সারিতে তালা দিয়ে পড়া — abos-63-এর তালিকা (abos-bb-র নিরীক্ষার বাকি), ২ অক্টোবর ২০২৬
+                 * ([[OneSerialWasSoldToTwoCustomersTest]])। ⓘ লেনদেনের ভিতরে হলেও সাধারণ পড়া: দুই কাউন্টার একই মুহূর্তে
+                 * একই নম্বর বেচলে দুইজনেই "গুদামে" দেখত, আর দুইজনেই বেচত — নিচের "আগেই বেরিয়েছে" পাহারা কেবল পরের
+                 * জনকে ধরত, একসাথের জনকে নয়।
+                 */
+                $piece = SerialNumber::query()->numbered($serial)->lockForUpdate()->first();
 
                 if ($piece === null) {
                     throw ValidationException::withMessages([

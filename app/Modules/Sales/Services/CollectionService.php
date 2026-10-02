@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Sales\Services;
 
+use App\Core\Concerns\ReadsTheRowUnderLock;
 use App\Core\Engines\Approval\DocumentApproval;
 use App\Core\Engines\NumberSeries\NumberSeriesEngine;
 use App\Core\Engines\Posting\PostingEngine;
@@ -40,6 +41,8 @@ use Illuminate\Validation\ValidationException;
  */
 final class CollectionService
 {
+    use ReadsTheRowUnderLock;
+
     public function __construct(
         private readonly NumberSeriesEngine $numbers,
         private readonly PostingEngine $posting,
@@ -195,6 +198,19 @@ final class CollectionService
 
         return DB::transaction(function () use ($collection) {
             /*
+             * ⛔ আদায়ের সারিতেও তালা, অবস্থা তাজা — abos-63-এর তালিকা (abos-bb-র নিরীক্ষার বাকি), ২ অক্টোবর ২০২৬
+             * ([[ACollectionWasConfirmedOrCancelledTwiceTest]])। ⓘ উপরের "খসড়া কি না" হাতের কপি থেকে: দুই ট্যাব থেকে
+             * একই আদায় নিশ্চিত হলে দ্বিতীয়টাও খাতায় বসতে যেত।
+             */
+            $this->lockFresh($collection);
+
+            if ($collection->status !== DocumentStatus::DRAFT) {
+                throw ValidationException::withMessages([
+                    'status' => __('sales::validation.only_draft_confirms', ['no' => $collection->document_no]),
+                ]);
+            }
+
+            /*
              * ⛔ তালা দিয়ে আবার — ২৯ সেপ্টেম্বর ২০২৬ (অডিটে প্রমাণিত)। ⓘ উপরের যাচাই
              * সইয়ের আগের; খসড়া থাকতে বিল বাতিল হলে বা অন্য আদায় বসলে সেই ছবি
              * পুরনো। বিলের সারিতে তালা দিয়ে অবস্থা আর বাকি আবার দেখা হয়, খাতায়
@@ -241,6 +257,19 @@ final class CollectionService
         $date = $onDate === null ? now() : Carbon::parse($onDate);
 
         return DB::transaction(function () use ($collection, $reason, $date) {
+            /*
+             * ⛔ তালা দিয়ে অবস্থা তাজা — ২ অক্টোবর ২০২৬ ([[ACollectionWasConfirmedOrCancelledTwiceTest]])। ⓘ পুরনো
+             * পাতা থেকে দ্বিতীয় বাতিল উপরের যাচাই পার হত আর উল্টো দাখিলা আবার বসাতে যেত; আর খসড়া অবস্থায় খোলা পাতা
+             * থেকে বাতিল হলে মাঝে নিশ্চিত হওয়া দাখিলাটা উল্টাতই না।
+             */
+            $this->lockFresh($collection);
+
+            if ($collection->status === DocumentStatus::CANCELLED) {
+                throw ValidationException::withMessages([
+                    'status' => __('sales::validation.already_cancelled', ['no' => $collection->document_no]),
+                ]);
+            }
+
             if ($collection->status === DocumentStatus::CONFIRMED) {
                 $this->posting->reverse(
                     sourceType: Collection::drillSourceType(),

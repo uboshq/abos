@@ -18,4 +18,10 @@ return [
     'the_whole_ledger' => 'The whole ledger',
     'dr_cr_detail' => 'Debit :debit · credit :credit · difference :diff',
     'orphan_detail' => 'Account #:account is missing',
+    'paper_gone' => 'Every entry still has its paper',
+    'paper_gone_q' => 'Are there ledger entries whose paper was deleted while the entries were never reversed?',
+    'paper_gone_broken' => 'The money is still in the books but its paper can no longer be opened — restore the paper or reverse the entries.',
+    'paper_gone_detail' => ':type #:id — the paper is gone',
+    'and_more_what' => 'More',
+    'and_more' => 'The first hundred are shown; :more more (:total in all).',
 ];

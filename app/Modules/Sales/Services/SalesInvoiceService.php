@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Sales\Services;
 
+use App\Core\Concerns\ReadsTheRowUnderLock;
 use App\Core\Contracts\RecipeBook;
 use App\Core\Engines\Approval\ApprovalEngine;
 use App\Core\Engines\NumberSeries\NumberSeriesEngine;
@@ -56,6 +57,7 @@ use Illuminate\Validation\ValidationException;
 final class SalesInvoiceService
 {
     use CalculatesSalesLines;
+    use ReadsTheRowUnderLock;
     use ReadsPackedQuantities;
 
     public function __construct(
@@ -517,6 +519,20 @@ final class SalesInvoiceService
                     payingNow: $this->money($payingNow),
                     exceptInvoiceId: (int) $invoice->id,
                 );
+            }
+
+            /*
+             * ⛔ বিলের সারিতেও তালা, অবস্থা তাজা — abos-63-এর তালিকা (abos-bb-র নিরীক্ষার বাকি), ২ অক্টোবর ২০২৬
+             * ([[TheSameBillWasConfirmedFromTwoTabsTest]])। ⓘ উপরের "খসড়া কি না" হাতের কপি থেকে, লেনদেনের বাইরে:
+             * দুই ট্যাব থেকে একই বিল নিশ্চিত হলে দ্বিতীয়টাও ঢুকত আর মাল আবার বের করতে যেত — খাতার দরজা শেষে
+             * আটকাত, কিন্তু ভাঙা পাতায়। ⚠️ গ্রাহকের তালার **পরে** — সীমার তালা লেনদেনের প্রথম পড়া থাকতেই হয়।
+             */
+            $this->lockFresh($invoice);
+
+            if ($invoice->status !== DocumentStatus::DRAFT) {
+                throw ValidationException::withMessages([
+                    'status' => __('sales::validation.only_draft_confirms', ['no' => $invoice->document_no]),
+                ]);
             }
 
             /*

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Purchase\Services;
 
+use App\Core\Concerns\ReadsTheRowUnderLock;
 use App\Core\Engines\Approval\DocumentApproval;
 use App\Core\Engines\NumberSeries\NumberSeriesEngine;
 use App\Core\Engines\Posting\PostingEngine;
@@ -53,6 +54,8 @@ use Illuminate\Validation\ValidationException;
  */
 final class PurchaseBillService
 {
+    use ReadsTheRowUnderLock;
+
     use BringsInLots;
     use CalculatesLineTotals;
     use ReadsPackedQuantities;
@@ -354,6 +357,19 @@ final class PurchaseBillService
         );
 
         return DB::transaction(function () use ($bill) {
+            /*
+             * ⛔ বিলের সারিতে তালা, অবস্থা তাজা — abos-63-এর তালিকা (abos-bb-র নিরীক্ষার বাকি), ২ অক্টোবর ২০২৬
+             * ([[ThePurchaseBillWasConfirmedFromTwoTabsTest]])। ⓘ উপরের "খসড়া কি না" হাতের কপি থেকে: দুই ট্যাব থেকে
+             * একই বিল নিশ্চিত হলে দ্বিতীয়টাও মাল আবার ঢোকাতে আর খাতায় আবার বসাতে যেত।
+             */
+            $this->lockFresh($bill);
+
+            if ($bill->status !== DocumentStatus::DRAFT) {
+                throw ValidationException::withMessages([
+                    'status' => __('purchase::validation.only_draft_confirms', ['no' => $bill->document_no]),
+                ]);
+            }
+
             $this->bringInDirectLines($bill);
             $this->postToLedger($bill);
             $this->applySalesPrices($bill);

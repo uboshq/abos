@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Purchase\Services;
 
+use App\Core\Concerns\ReadsTheRowUnderLock;
 use App\Core\Engines\Approval\DocumentApproval;
 use App\Core\Engines\Approval\HeldForApproval;
 use App\Core\Engines\NumberSeries\NumberSeriesEngine;
@@ -50,6 +51,8 @@ use Illuminate\Validation\ValidationException;
  */
 final class PurchaseReceiptService
 {
+    use ReadsTheRowUnderLock;
+
     use BringsInLots;
     use CalculatesLineTotals;
     use ReadsPackedQuantities;
@@ -325,6 +328,19 @@ final class PurchaseReceiptService
         );
 
         $confirmed = DB::transaction(function () use ($receipt) {
+            /*
+             * ⛔ মাল গ্রহণের সারিতে তালা, অবস্থা তাজা — abos-63-এর তালিকা (abos-bb-র নিরীক্ষার বাকি), ২ অক্টোবর ২০২৬
+             * ([[ThePurchaseBillWasConfirmedFromTwoTabsTest]])। ⓘ উপরের "খসড়া কি না" হাতের কপি থেকে: দুই ট্যাব থেকে
+             * একই মাল গ্রহণ নিশ্চিত হলে দ্বিতীয়টাও মাল আবার গুদামে তুলতে যেত।
+             */
+            $this->lockFresh($receipt);
+
+            if ($receipt->status !== DocumentStatus::DRAFT) {
+                throw ValidationException::withMessages([
+                    'status' => __('purchase::validation.only_draft_confirms', ['no' => $receipt->document_no]),
+                ]);
+            }
+
             /*
              * ⛔ আদেশের সীমা আবার — ঠিক এখানে, মাল ঢোকার আগের মুহূর্তে।
              *
