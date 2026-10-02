@@ -81,7 +81,10 @@
              প্রতিটা ঘর একটা প্রশ্ন: খাতটা কী (→ খতিয়ান), ব্যাংকটা কে (→
              প্রতিষ্ঠান), আর "৭ বার" মানে কোন সাতটা (→ নিচের তালিকা, ঐ
              ব্যাংকে ছাঁকা)। --}}
-        <x-ui.table :rows="$byBank" :empty="__('finance::bank_charge.none')" :columns="[
+        <x-ui.table :rows="$byBank" :empty="__('finance::bank_charge.none')"
+            :grand="['count' => (string) $byBank->sum('count'), 'amount' => $total]"
+            :view-url="fn ($b) => $b['bank'] ? route('accounts.coa.show', $b['bank']).'#transactions' : null"
+            :columns="[
             ['key' => 'bank', 'label' => __('finance::bank_charge.bank'),
              'render' => fn ($b) => view('finance::bank-charge.partials.bank-link', [
                  'id' => $b['bank']?->id, 'label' => $b['bank']?->label() ?? '',
@@ -90,11 +93,11 @@
              'render' => fn ($b) => view('finance::institution.partials.link', [
                  'id' => $b['institution_id'], 'label' => $b['institution'] ?? '—',
              ])],
-            ['key' => 'count', 'label' => __('finance::bank_charge.times'), 'numeric' => true, 'width' => '6rem',
+            ['key' => 'count', 'total' => 'quantity', 'label' => __('finance::bank_charge.times'), 'numeric' => true, 'width' => '6rem',
              'render' => fn ($b) => view('finance::bank-charge.partials.count-link', [
                  'bank' => $b['bank'], 'keep' => $keep, 'text' => $b['count'],
              ])],
-            ['key' => 'amount', 'label' => __('finance::bank_charge.amount'), 'numeric' => true, 'width' => '10rem',
+            ['key' => 'amount', 'total' => 'money', 'label' => __('finance::bank_charge.amount'), 'numeric' => true, 'width' => '10rem',
              'render' => fn ($b) => view('finance::bank-charge.partials.count-link', [
                  'bank' => $b['bank'], 'keep' => $keep, 'text' => Money::format($b['amount']),
              ])],
@@ -114,7 +117,9 @@
     @endif
 
     <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
-        <x-ui.table :rows="$rows" :empty="__('finance::bank_charge.none')" :columns="[
+        <x-ui.table :rows="$rows" :empty="__('finance::bank_charge.none')"
+            :grand="['amount' => $bank_id ? (string) ($byBank->first(fn ($b) => $b['bank']?->id === (int) $bank_id)['amount'] ?? '0') : $total]"
+            :columns="[
             ['key' => 'date', 'label' => __('finance::bank_charge.date'), 'width' => '7rem',
              'render' => fn ($e) => $e->trx_date?->format('d M Y')],
             ['key' => 'document', 'label' => __('finance::bank_charge.document'), 'width' => '9rem',
@@ -125,7 +130,8 @@
              ])],
             ['key' => 'narration', 'label' => __('finance::bank_charge.narration'),
              'render' => fn ($e) => $e->narration ?: '—'],
-            ['key' => 'amount', 'label' => __('finance::bank_charge.amount'), 'numeric' => true, 'width' => '9rem',
+            ['key' => 'amount', 'total' => 'money', 'raw' => fn ($e) => bcsub((string) $e->debit, (string) $e->credit, 4),
+             'label' => __('finance::bank_charge.amount'), 'numeric' => true, 'width' => '9rem',
              'render' => fn ($e) => Money::format(bcsub((string) $e->debit, (string) $e->credit, 4))],
         ]" />
 

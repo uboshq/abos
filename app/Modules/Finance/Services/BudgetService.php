@@ -109,6 +109,33 @@ final class BudgetService
     }
 
     /**
+     * ছকের সর্বমোট — বছরের প্রতিটা মাস আর পুরো বছর, সব খাত মিলে (ছকের একই ছাঁকনি)।
+     * ⓘ পাতা ভাগ জোড়া ধরে, তাই ছকের সারি যোগ করলে কেবল এই পাতা হত — এটা গোটা বছরের।
+     *
+     * @return array<string, string>  m1..m12 আর total
+     */
+    public function planTotals(int $year, ?int $costCenterId = null): array
+    {
+        $byMonth = Budget::query()
+            ->where('year', $year)
+            ->when($costCenterId, fn ($q, $id) => $q->where('cost_center_id', $id))
+            ->toBase()
+            ->selectRaw('month, COALESCE(SUM(amount), 0) as amount')
+            ->groupBy('month')
+            ->pluck('amount', 'month');
+
+        $totals = [];
+        $year = '0';
+
+        foreach (range(1, 12) as $m) {
+            $totals['m'.$m] = (string) ($byMonth[$m] ?? '0');
+            $year = bcadd($year, $totals['m'.$m], 4);
+        }
+
+        return $totals + ['total' => $year];
+    }
+
+    /**
      * এক বছরের পরিকল্পনা — খাত (আর বিভাগ) ধরে এক সারি, বারো মাস পাশাপাশি।
      *
      * ── ⚠️ পাতা ভাগ সারিতে নয়, জোড়ায় ───────────────────────────────

@@ -17,10 +17,11 @@
 
     foreach (range(1, 12) as $m) {
         $columns[] = ['key' => 'm'.$m, 'label' => __('finance::budget.month_short.'.$m), 'numeric' => true,
+                      'total' => 'money', 'raw' => fn ($r) => $r['months'][$m],
                       'render' => fn ($r) => $money($r['months'][$m])];
     }
 
-    $columns[] = ['key' => 'total', 'label' => __('finance::budget.total'), 'numeric' => true,
+    $columns[] = ['key' => 'total', 'total' => 'money', 'label' => __('finance::budget.total'), 'numeric' => true,
                   'render' => fn ($r) => \App\Core\Support\Money::format($r['total'])];
 
     if (auth()->user()?->can('finance.budget.create')) {
@@ -51,7 +52,9 @@
         </h2>
 
         <div class="overflow-x-auto">
-            <x-ui.table :compact="true" :empty="__('finance::budget.no_plan')" :rows="$plan" :columns="$columns" />
+            <x-ui.table :compact="true" :empty="__('finance::budget.no_plan')" :rows="$plan" :columns="$columns"
+                        :grand="$planGrand ?? []"
+                        :view-url="fn ($r) => route('accounts.coa.show', $r['account']).'#transactions'" />
         </div>
 
         <x-ui.pager :rows="$plan" />

@@ -52,6 +52,8 @@ class BudgetController extends Controller implements HasMiddleware
             'center' => $center,
             'centers' => $this->centerList(),
             'plan' => $this->budgets->plan($year, $center),
+            // ⭐ সর্বমোট — সব পাতার খাত মিলে, মাস ধরে ([[BudgetService::planTotals()]])
+            'planGrand' => $this->budgets->planTotals($year, $center),
         ]);
     }
 

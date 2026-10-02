@@ -148,6 +148,31 @@ final class EveryDocumentListShowsAGrandTotalAndAViewButtonTest extends TestCase
             '⛔ মজুদের সারিতে "দেখুন" নেই, বা অন্য পণ্যে নিয়ে যায়।');
     }
 
+    /**
+     * ⭐ বাজেটের ছক — সর্বমোট মাস ধরে আর বছরের, সব খাত মিলে ([[BudgetService::planTotals()]]); সারির "দেখুন" খাতের খতিয়ানে।
+     */
+    public function test_the_budget_grid_totals_each_month_and_the_year(): void
+    {
+        $year = (int) now()->year;
+        $heads = DB::table('accounts')->where('company_id', CompanyContext::id())
+            ->where('is_group', false)->where('code', 'like', '52%')->orderBy('id')->limit(2)->pluck('id');
+        $this->assertCount(2, $heads, 'দৃশ্যটাই বানানো যায়নি — দুইটা খরচের খাত নেই।');
+
+        foreach ([[$heads[0], 1, '100'], [$heads[1], 1, '50'], [$heads[1], 12, '7']] as [$account, $month, $amount]) {
+            DB::table('fin_budgets')->insert([
+                'company_id' => CompanyContext::id(), 'year' => $year, 'month' => $month,
+                'account_id' => $account, 'amount' => $amount, 'created_at' => now(), 'updated_at' => now(),
+            ]);
+        }
+
+        $html = (string) $this->get(route('finance.budget.index', ['year' => $year]))->assertOk()->getContent();
+
+        $this->assertSame([$this->money('150'), $this->money('7'), $this->money('157')], $this->grandCells($html),
+            '⛔ বাজেটের সর্বমোট: জানুয়ারি ১৫০, ডিসেম্বর ৭, বছর ১৫৭ নয়।');
+        $this->assertMatchesRegularExpression('/<a href="'.preg_quote(route('accounts.coa.show', $heads[0]).'#transactions', '/').'"[^>]*data-row-view/', $html,
+            '⛔ বাজেটের সারিতে "দেখুন" খাতের খতিয়ানে নিয়ে যায় না।');
+    }
+
     /** @return list<string> সর্বমোটের সারির যোগের ঘর — বাঁ থেকে ডানে, খালি বাদে */
     private function grandCells(string $html): array
     {
