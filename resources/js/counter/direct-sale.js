@@ -2553,7 +2553,8 @@ export default function directSale({
 
         /* ⛔ সীমা কত পার হচ্ছে — না হলে শূন্য। "সীমা পার — ৳…" সারির জন্য। */
         get creditOver() {
-            return this.creditLeft < 0 ? -this.creditLeft : 0;
+            // ⓘ বাকি না বাড়ালে "সীমা পার" নয় — নিশ্চিতের পাহারার একই শর্ত
+            return this.creditUnpaid > 0 && this.creditLeft < 0 ? -this.creditLeft : 0;
         },
 
         /*
@@ -2636,7 +2637,12 @@ export default function directSale({
 
             const asDraft = event?.submitter?.value === '1';
 
-            if (! asDraft && this.creditApplies && this.creditLeft < 0) {
+            /*
+             * ⛔ থামে কেবল যখন এই বিক্রি বাকি বাড়ায় — সেবার `unpaid <= 0` হলে ছাড়ার হুবহু ([[CreditExposure::assertRoom()]])।
+             * ⓘ মালিকের ডেমো, S-0010 (৩ অক্টোবর ২০২৬): পুরনো বকেয়া সীমার ওপরে, অথচ পুরো বিল আর তারও বেশি জমা — পর্দা
+             * "১২,০০০ বেশি" বলে আটকাত, সেবা ছেড়ে দিত। পুরনো বকেয়া এই বিক্রির দোষ নয়।
+             */
+            if (! asDraft && this.creditApplies && this.creditUnpaid > 0 && this.creditLeft < 0) {
                 event.preventDefault();
                 this.creditBlocked = true;
                 this.soundTheAlarm();

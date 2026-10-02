@@ -637,6 +637,37 @@ describe('সীমার কড়া দেয়াল — আটকে থ�
         expect(e.stopped).toBe(false)
     })
 
+    /*
+     * ⛔ পুরনো বকেয়া সীমার ওপরে, অথচ এই বিক্রি এক টাকাও বাকি বাড়ায় না — মালিকের ডেমো, S-0010 (৩ অক্টোবর ২০২৬)।
+     *
+     * Appel Enterprise: সীমা ০, আগের বকেয়া ১২,০০০, বিল ৩,৩১,৯৪৮, জমা ৩,৫৬,০০০। ⚠️ পর্দা আগে বলত "অবশিষ্ট ০, ১২,০০০
+     * বেশি" আর ফর্ম আটকাত — অথচ সেবা `unpaid <= 0` দেখে ছেড়ে দিত ([[CreditExposure::assertRoom()]])। ⓘ এক টাকা কম দিলে
+     * বাকি বাড়ে, তখন থামে।
+     */
+    it('পুরনো বকেয়া সীমার ওপরে, তবু পুরো জমার বিক্রি যায়; এক টাকা কম দিলে থামে', () => {
+        const old = () => {
+            const c = held({ customers: { 7: { limit: 0, due: 12000, held: 0, days: 30, name: 'Appel' } }, creditRules: { enabled: true, zeroBlocks: true } })
+            cartOf(c, 331948)
+            c.parkDraft = () => {}
+            c.soundTheAlarm = () => {}
+
+            return c
+        }
+
+        const paid = old()
+        paid.deposits = [{ amount: '332000' }, { amount: '12000' }, { amount: '12000' }]
+        const e = submitEvent()
+        paid.guardSubmit(e)
+        expect(e.stopped).toBe(false)
+        expect(paid.creditBlocked).toBe(false)
+
+        const short = old()
+        short.deposits = [{ amount: '331947' }]
+        const f = submitEvent()
+        short.guardSubmit(f)
+        expect(f.stopped).toBe(true)
+    })
+
     /* ⓘ পপ-আপের লেখা — খোলা ১,০০০, বেশি ৫০০ */
     it('পপ-আপ বলে কত খোলা আর কত বেশি', () => {
         const c = held()
