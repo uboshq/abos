@@ -12,6 +12,7 @@ return [
     'deactivated' => 'Product deactivated.',
     'activated' => 'Product is active again.',
     'warehouse_created' => 'Warehouse added.',
+    'warehouse_needs_branch' => 'Which branch is this warehouse in? Pick one: "All branches" is selected and the company has several.',
     'warehouse_updated' => 'Warehouse updated.',
     'code_auto' => 'Leave blank and the code will be filled in.',
     'barcode_hint' => 'What the scanner sends. Must be unique.',

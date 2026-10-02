@@ -8,6 +8,7 @@ use App\Core\Concerns\AuthorizesResource;
 use App\Core\Concerns\SortsLists;
 use App\Core\Services\MenuBuilder;
 use App\Core\Support\CompanyContext;
+use App\Core\Support\ViewedBranch;
 use App\Http\Controllers\Controller;
 use App\Models\Branch;
 use App\Modules\Inventory\Models\StorageLocation;
@@ -20,6 +21,7 @@ use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
 /**
@@ -83,14 +85,15 @@ class WarehouseController extends Controller implements HasMiddleware
     {
         return view('inventory::warehouse.form', [
             'menu' => $this->menu->forUser($request->user()),
-            'warehouse' => new Warehouse(['is_active' => true]),
+            // ⓘ হেডারে বাছা শাখাই আগে থেকে বসানো — যে শাখায় দাঁড়িয়ে বানাচ্ছেন, গুদাম সেই শাখার ([[withBranch()]])
+            'warehouse' => new Warehouse(['is_active' => true, 'branch_id' => ViewedBranch::one()]),
             'branches' => Branch::query()->active()->orderBy('name_en')->get(),
         ]);
     }
 
     public function store(Request $request): RedirectResponse
     {
-        $this->warehouses->create($this->validated($request));
+        $this->warehouses->create($this->withBranch($this->validated($request)));
 
         return redirect()
             ->route('inventory.warehouse.index')
@@ -157,6 +160,32 @@ class WarehouseController extends Controller implements HasMiddleware
         $data['is_default'] = $request->boolean('is_default');
 
         return $data;
+    }
+
+    /**
+     * ⭐ নতুন গুদামের শাখা — মালিক, ২ অক্টোবর ২০২৬: *"godawn create korar poreo list e godawn asteche na"*।
+     *
+     * ⛔ কী হচ্ছিল: ফর্মে শাখার ঘর ফাঁকা থাকত ("-"), ফাঁকা রেখে বানালে গুদাম কোনো শাখার নয়; আর হেডারে এক শাখা বাছা
+     * থাকলে তালিকা কেবল সেই শাখার গুদাম দেখায় ([[ScopedToUserWarehouse]], প্রতিটা শাখা আলাদা) — নতুন গুদাম উধাও।
+     * ⭐ এখন: ফাঁকা এলে হেডারের শাখা; "সব শাখা"-য় কোম্পানির একটাই শাখা থাকলে সেটা; একাধিক হলে জিজ্ঞেস — অনুমান নয়।
+     *
+     * @param  array<string, mixed>  $data
+     * @return array<string, mixed>
+     */
+    private function withBranch(array $data): array
+    {
+        if (! empty($data['branch_id'])) {
+            return $data;
+        }
+
+        $branches = Branch::query()->active()->pluck('id');
+        $branch = ViewedBranch::one() ?? ($branches->count() === 1 ? (int) $branches->first() : null);
+
+        if ($branch === null && $branches->count() > 1) {
+            throw ValidationException::withMessages(['branch_id' => __('inventory::message.warehouse_needs_branch')]);
+        }
+
+        return [...$data, 'branch_id' => $branch];
     }
 
     /**
