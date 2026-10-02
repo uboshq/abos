@@ -37,6 +37,14 @@
     AddType application/vnd.android.package-archive .apk
 </IfModule>
 
+# ⚠️ লিংক একই থাকে বলে পুরনো ফাইল কোনো ক্যাশে থেকে যেতে পারে (২ অক্টোবর ২০২৬:
+# max-age=172800 ছিল, মালিকের ফোনে আপডেট আটকাল) — তাই অ্যাপের ফাইল প্রতিবার সার্ভারে মিলিয়ে নেওয়া।
+<IfModule mod_headers.c>
+    <FilesMatch "\.apk$">
+        Header set Cache-Control "no-cache, must-revalidate"
+    </FilesMatch>
+</IfModule>
+
 # ── PHP-র সংস্করণ বাইরে না বলা — ২৭ সেপ্টেম্বর ২০২৬ (অডিট §৯) ──
 #
 # ⓘ লাইভের cPanel-এ `expose_php` বন্ধ করার ঘর নেই (MultiPHP INI-র সাধারণ
