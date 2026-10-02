@@ -400,6 +400,37 @@ class PortalController extends Controller
         ]);
     }
 
+    /**
+     * ⭐ নিজের বিক্রি কোথায় — ডেলিভারি ট্র্যাকিং, দোকানির চোখে (মালিক, ২ অক্টোবর ২০২৬)।
+     * ⓘ কেবল নিজের — তালিকা গ্রাহকের id ধরে ছাঁকা ([[SaleTracking::list()]])।
+     */
+    public function tracking(): View
+    {
+        $customer = $this->customer();
+
+        return view('sales::portal.tracking', [
+            'customer' => $customer,
+            'list' => app(\App\Modules\Sales\Services\SaleTracking::class)->list(null, null, (int) $customer->id),
+        ]);
+    }
+
+    /** নিজের একটা বিক্রির দাগ — অন্যের বিক্রিতে ৪০৩ */
+    public function trackingStory(string $kind, string $id): View
+    {
+        $customer = $this->customer();
+        $sale = match ($kind) {
+            'challan' => \App\Modules\Sales\Models\DeliveryChallan::query()->where('public_id', $id)->firstOrFail(),
+            'order' => \App\Modules\Sales\Models\SalesOrder::query()->where('public_id', $id)->firstOrFail(),
+            default => abort(404),
+        };
+        abort_if((int) $sale->customer_id !== (int) $customer->id, 403);
+
+        return view('sales::portal.tracking-show', [
+            'customer' => $customer,
+            'sale' => app(\App\Modules\Sales\Services\SaleTracking::class)->story($sale),
+        ]);
+    }
+
     /** নিজের দাবির স্লিপ — অন্যের দাবিতে ৪০৩, ঠিক [[showOwnClaim()]]-এর মতো */
     public function ownClaimSlip(DepositClaim $claim): \Symfony\Component\HttpFoundation\StreamedResponse
     {

@@ -486,5 +486,9 @@ Route::prefix('portal')->name('portal.')->group(function () {
             ->whereNumber('claim')->name('claim.show');
         Route::get('/claims/{claim}/slip', [PortalController::class, 'ownClaimSlip'])
             ->whereNumber('claim')->name('claim.slip');
+        // ⭐ নিজের বিক্রি কোথায় — ডেলিভারি ট্র্যাকিং ([[PortalController::tracking()]])
+        Route::get('/tracking', [PortalController::class, 'tracking'])->name('tracking');
+        Route::get('/tracking/{kind}/{id}', [PortalController::class, 'trackingStory'])
+            ->where('kind', 'challan|order')->whereUuid('id')->name('tracking.show');
     });
 });

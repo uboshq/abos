@@ -156,6 +156,9 @@ Route::prefix('v1')
          */
         Route::get('/me', MeController::class)->name('me');
 
+        // ⭐ ফোনের FCM টোকেন — নিজের ফোনে নিজের টোকেন ([[PushTokenController]], ২ অক্টোবর ২০২৬)
+        Route::post('/devices/push-token', \App\Http\Controllers\Api\PushTokenController::class)->name('devices.push_token');
+
         /*
          * ⭐ কোম্পানি ও শাখা বদল — ফোনের সুইচার (১ অক্টোবর ২০২৬)।
          *

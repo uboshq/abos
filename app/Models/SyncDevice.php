@@ -35,6 +35,8 @@ class SyncDevice extends Model
 
     protected $fillable = [
         'company_id', 'user_id', 'device_id', 'app_version', 'platform', 'last_seen_at',
+        // ⭐ ফোনের FCM টোকেন — ২ অক্টোবর ২০২৬ ([[PushTokenController]])
+        'push_token', 'push_token_at',
     ];
 
     protected function casts(): array

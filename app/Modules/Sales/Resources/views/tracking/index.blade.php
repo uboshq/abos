@@ -35,6 +35,9 @@
             @endforeach
         </div>
 
+        {{-- ⭐ প্রতি ৩০ সেকেন্ডে নিজে নতুন — কেবল এই ঘরটা ([[screens.js::liveRefresh]]) --}}
+        <div class="grid gap-3" data-live
+             x-data="liveRefresh({ url: '{{ request()->fullUrl() }}', seconds: 30 })">
         @forelse ($list['rows'] as $row)
             <div data-tracking-row class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-3"
                  style="border-left: 4px solid {{ $trackingColours[$row['category']] ?? '#9CA3AF' }}">
@@ -53,5 +56,6 @@
         @empty
             <p class="text-sm text-(--color-ink-muted)">{{ __('sales::tracking.empty') }}</p>
         @endforelse
+        </div>
     </div>
 </x-layouts.app>

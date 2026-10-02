@@ -9,6 +9,10 @@ return [
     'find' => 'Find',
     'all' => 'All',
     'history' => 'Who did what, and when',
+    'notice' => [
+        'title' => ':no — :step',
+        'body' => ':customer',
+    ],
     'empty' => 'No sales.',
     'step' => [
         'ordered' => 'Order received',

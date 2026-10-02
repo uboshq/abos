@@ -28,6 +28,16 @@ return [
         'region' => env('AWS_DEFAULT_REGION', 'us-east-1'),
     ],
 
+    /*
+     * ⭐ অ্যাপ বন্ধ থাকলেও ফোনে বার্তা — Firebase Cloud Messaging (২ অক্টোবর ২০২৬, [[FcmSender]])।
+     * ⛔ `credentials` কেবল ফাইলের **পথ** — চাবিটা ওয়েব রুটের বাইরের গোপন ফাইলে, এখানে বা .env-এ কখনো নয়।
+     * ফাঁকা থাকলে পুশ চুপচাপ বন্ধ।
+     */
+    'firebase' => [
+        'credentials' => env('FIREBASE_CREDENTIALS', ''),
+        'project_id' => env('FIREBASE_PROJECT_ID', ''),
+    ],
+
     'slack' => [
         'notifications' => [
             'bot_user_oauth_token' => env('SLACK_BOT_USER_OAUTH_TOKEN'),

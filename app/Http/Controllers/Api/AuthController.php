@@ -261,6 +261,13 @@ class AuthController extends Controller
 
         $deviceId = trim((string) $request->input('deviceId', ''));
 
+        // ⭐ বের হলে এই ফোনে আর বার্তা নয় — FCM টোকেন মোছা ([[PushTokenController]], ২ অক্টোবর ২০২৬)
+        if ($deviceId !== '') {
+            \App\Models\SyncDevice::query()->withoutGlobalScopes()
+                ->where('device_id', $deviceId)->where('user_id', $user->id)
+                ->update(['push_token' => null, 'push_token_at' => null]);
+        }
+
         $tokens = $user->tokens();
 
         if ($deviceId !== '') {

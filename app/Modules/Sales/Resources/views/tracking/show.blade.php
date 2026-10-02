@@ -6,7 +6,9 @@
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ __('sales::tracking.title') }} — {{ $sale['no'] }}</x-slot:title>
 
-    <div class="mx-auto grid max-w-3xl gap-3" data-tracking-story>
+    {{-- ⭐ প্রতি ৩০ সেকেন্ডে নিজে নতুন — পপ-আপের ভেতরেও, তাই ঠিকানাটা হাতে ([[screens.js::liveRefresh]]) --}}
+    <div class="mx-auto grid max-w-3xl gap-3" data-tracking-story data-live
+         x-data="liveRefresh({ url: '{{ route('sales.tracking.show', [$sale['kind'], $sale['id']]) }}', seconds: 30 })">
         <div>
             <h1 class="text-lg font-semibold">{{ $sale['no'] }}</h1>
             <div class="text-sm">{{ $sale['customer'] }}</div>

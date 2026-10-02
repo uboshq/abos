@@ -32,6 +32,21 @@ class DeliveryEvent extends Model
 
     protected $table = 'sal_delivery_events';
 
+    /**
+     * ⭐ ধাপ বদলালে বার্তা — ডেলিভারি ট্র্যাকিং, ধাপ ২ (মালিকের আদেশ, ২ অক্টোবর ২০২৬)।
+     *
+     * ⓘ প্রতিটা ধাপ-বদলে ঠিক একটা ঘটনা-সারি হয় ([[DeliveryStageService::write()]]) — ওয়েব, QR, পোর্টাল, চালান,
+     * ট্রিপ, সব পথ এখান দিয়েই; তাই একটা হুকে সব। ⛔ লেনদেন পাকা হওয়ার পরে — ফিরিয়ে নেওয়া বদলের খবর যায় না।
+     */
+    protected static function booted(): void
+    {
+        static::created(function (self $event): void {
+            \Illuminate\Support\Facades\DB::afterCommit(
+                fn () => app(\App\Modules\Sales\Services\TrackingNotices::class)->stageChanged($event),
+            );
+        });
+    }
+
     protected $fillable = [
         'company_id', 'delivery_challan_id', 'from_stage', 'to_stage',
         'source', 'shipment_id', 'reason_code_id', 'note',

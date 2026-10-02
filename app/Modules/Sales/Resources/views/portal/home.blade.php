@@ -19,6 +19,13 @@
         {{ __('sales::portal.claim_title') }}
     </a>
 
+    {{-- ⭐ নিজের অর্ডার কোথায় — ডেলিভারি ট্র্যাকিং (মালিক, ২ অক্টোবর ২০২৬) --}}
+    <a href="{{ route('sales.portal.tracking') }}" data-portal-tracking
+       class="mb-6 block rounded-(--radius-field) border border-(--color-brand-500) px-4 py-3 text-center
+              font-medium text-(--color-brand-500)">
+        {{ __('sales::tracking.title') }}
+    </a>
+
     <h2 class="mb-2 text-sm font-semibold">{{ __('sales::portal.my_claims') }}</h2>
 
     @if ($claims->isEmpty())

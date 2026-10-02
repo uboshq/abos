@@ -9,6 +9,10 @@ return [
     'find' => 'খুঁজুন',
     'all' => 'সব',
     'history' => 'কে কখন কী করলেন',
+    'notice' => [
+        'title' => ':no — :step',
+        'body' => ':customer',
+    ],
     'empty' => 'কোনো বিক্রি নেই।',
     'step' => [
         'ordered' => 'অর্ডার এসেছে',

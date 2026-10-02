@@ -57,6 +57,12 @@ final class NotificationKinds
              * ⓘ পায় কেবল চালান যিনি বানিয়েছিলেন ([[SignedChallanConfirmer]])।
              */
             'sales.signed_challan_stuck' => 'core.notify.kind.signed_challan_stuck',
+
+            /*
+             * ⭐ ডেলিভারির ধাপ বদলাল — ২ অক্টোবর ২০২৬ ([[TrackingNotices]])।
+             * ⓘ পান দোকানের এলাকার SR/ASM/DSM/RSM আর মালিক; কেউ চাইলে বন্ধ রাখতে পারেন।
+             */
+            'sales.delivery_stage' => 'core.notify.kind.delivery_stage',
         ];
     }
 

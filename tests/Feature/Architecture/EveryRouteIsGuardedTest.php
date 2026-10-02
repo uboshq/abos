@@ -226,6 +226,7 @@ class EveryRouteIsGuardedTest extends TestCase
          * টোকেন দিয়ে নিজেকে চিরকাল নবায়ন করা যায় না।
          */
         'api.auth.refresh' => 'নিজের টোকেন নবায়ন — abilities:refresh চায়, access টোকেনে খোলে না',
+        'api.devices.push_token' => 'নিজের ফোনে নিজের FCM টোকেন — সারিটা এই ব্যবহারকারীর এই deviceId-র, অন্যেরটায় ৪০৪',
         'api.auth.logout' => 'নিজের টোকেন বাতিল — ঢুকতে পারলে বেরোতেও পারতে হবে',
 
         /*
@@ -302,6 +303,8 @@ class EveryRouteIsGuardedTest extends TestCase
         'sales.portal.claim.create' => 'নিজের জমার দাবি তোলার ফর্ম',
         'sales.portal.claim.store' => 'নিজের জমার দাবি',
         'sales.portal.claim.show' => 'নিজের দাবি — মালিকানা কন্ট্রোলারে যাচাই হয়',
+        'sales.portal.tracking' => 'নিজের বিক্রি কোথায় — তালিকা নিজের গ্রাহক-id ধরে ছাঁকা ([[PortalController::tracking()]])',
+        'sales.portal.tracking.show' => 'নিজের একটা বিক্রির দাগ — অন্যের বিক্রিতে ৪০৩',
         'sales.portal.claim.slip' => 'নিজের দাবির ব্যাংক স্লিপ — অন্যের দাবিতে ৪০৩ ([[PortalController::ownClaimSlip()]])',
         'sales.portal.scan' => 'QR থেকে নিজের চালান — অন্যের চালান ৪০৪ ([[ScannedPaper::dealer()]])',
         'sales.portal.scan.received' => 'নিজের চালানের মাল পাওয়া নিশ্চিত — কেবল রওনার পরে, অন্যেরটা ৪০৪',

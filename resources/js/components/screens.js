@@ -231,3 +231,38 @@ export function recipeForm({ lines = [] } = {}) {
         },
     };
 }
+
+/*
+ * ⭐ নিজে থেকে নতুন — ডেলিভারি ট্র্যাকিং, মালিকের আদেশ, ২ অক্টোবর ২০২৬ ("প্রতি ৩০ সেকেন্ডে")।
+ *
+ *   <div x-data="liveRefresh({ url: '…', seconds: 30 })" data-live> … </div>
+ *
+ * ⓘ পুরো পাতা নয়, কেবল এই ঘরটা — একই ঠিকানা আবার এনে তার `[data-live]`-এর ভেতরটা বসায়। তাই খোঁজার ঘরে
+ * লেখা থাকে, পপ-আপ খোলাই থাকে। ⚠️ ঠিকানাটা হাতে দেওয়া, `location` নয়: পপ-আপের ভেতরে পাতার ঠিকানা
+ * তালিকার, সময়রেখার নয়।
+ * ⛔ ট্যাব লুকানো থাকলে বা কেউ এই ঘরের ভেতরে লিখছেন — আনা হয় না; ভুল হলে চুপ, পরের বার আবার।
+ */
+export function liveRefresh({ url = '', seconds = 30 } = {}) {
+    return {
+        timer: null,
+        init() {
+            this.timer = setInterval(() => this.pull(), Math.max(5, seconds) * 1000)
+        },
+        destroy() {
+            clearInterval(this.timer)
+        },
+        async pull() {
+            if (document.hidden || !url) return
+            const active = document.activeElement
+            if (active && this.$el.contains(active) && /^(INPUT|TEXTAREA|SELECT)$/.test(active.tagName)) return
+            try {
+                const response = await fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' }, credentials: 'same-origin' })
+                if (!response.ok) return
+                const fresh = new DOMParser().parseFromString(await response.text(), 'text/html').querySelector('[data-live]')
+                if (fresh) this.$el.innerHTML = fresh.innerHTML
+            } catch (e) {
+                // সংযোগ নেই — পুরনোটা থাকুক, পরের বার আবার
+            }
+        },
+    }
+}

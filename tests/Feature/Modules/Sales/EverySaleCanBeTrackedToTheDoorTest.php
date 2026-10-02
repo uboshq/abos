@@ -169,6 +169,8 @@ final class EverySaleCanBeTrackedToTheDoorTest extends TestCase
         app(DeliveryStageService::class)->move($challan, DeliveryStage::DISPATCHED, ['note' => 'test']);
 
         $page = $this->get(route('sales.tracking.index'))->assertOk();
+        // ⭐ প্রতি ৩০ সেকেন্ডে নিজে নতুন — মালিকের আদেশ (ধাপ ২)
+        $page->assertSee('data-live', false)->assertSee('liveRefresh(', false)->assertSee('seconds: 30', false);
         $page->assertSee((string) ($challan->sale_no ?: $challan->document_no))
             ->assertSee(__('sales::tracking.step.gate_out'))
             ->assertSee(route('sales.tracking.show', ['challan', $challan->public_id]), false);
