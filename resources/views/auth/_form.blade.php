@@ -51,6 +51,12 @@
                       class="mt-6 space-y-4">
                     @csrf
 
+                    {{-- ⭐ কোথা থেকে ঢুকলেন — ব্রাউজার লোকেশন দিলে, ঢোকার খাতার জন্য (মালিক, ১ অক্টোবর ২০২৬; [[LoginPlace]]).
+                         না দিলে ঘরগুলো খালি যায়, আর লগইন আগের মতোই। --}}
+                    <input type="hidden" name="geo_lat" value="" data-login-geo="lat">
+                    <input type="hidden" name="geo_lng" value="" data-login-geo="lng">
+                    <input type="hidden" name="geo_acc" value="" data-login-geo="acc">
+
                     <div>
                         <label for="identifier" class="mb-1 block text-sm font-medium text-(--color-ink)">
                             {{ __('auth.identifier') }}
@@ -210,6 +216,21 @@
                         <span x-show="busy" x-cloak>{{ __('auth.authenticating') }}</span>
                     </button>
                 </form>
+
+                {{-- ⓘ পাতা খুলতেই একবার চাওয়া — পাসওয়ার্ড লেখার মধ্যে উত্তর এসে যায়, জমা দেওয়া অপেক্ষা করে না --}}
+                <script @nonce>
+                    (function () {
+                        if (!('geolocation' in navigator)) { return; }
+                        navigator.geolocation.getCurrentPosition(function (p) {
+                            var put = function (k, v) {
+                                document.querySelectorAll('[data-login-geo="' + k + '"]').forEach(function (el) { el.value = v; });
+                            };
+                            put('lat', p.coords.latitude.toFixed(6));
+                            put('lng', p.coords.longitude.toFixed(6));
+                            put('acc', Math.round(p.coords.accuracy || 0));
+                        }, function () {}, { enableHighAccuracy: true, timeout: 15000, maximumAge: 300000 });
+                    })();
+                </script>
 
                 {{-- ⓘ পাতা খুলতেই একবার চাওয়া — পাসওয়ার্ড লেখার মধ্যে উত্তর এসে যায়, জমা দেওয়া অপেক্ষা করে না --}}
                 <script @nonce>

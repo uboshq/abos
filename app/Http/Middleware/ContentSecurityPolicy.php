@@ -249,7 +249,8 @@ class ContentSecurityPolicy
             $response->headers->set('Permissions-Policy', implode(', ', [
                 'camera=()',
                 'microphone=()',
-                'geolocation=()',
+                // ⭐ নিজের পাতা কেবল — লগইনে লোকেশন চাওয়া, ঢোকার খাতার জন্য (মালিক, ১ অক্টোবর ২০২৬; [[LoginPlace]])
+                'geolocation=(self)',
                 'payment=()',
                 'usb=()',
                 'serial=()',

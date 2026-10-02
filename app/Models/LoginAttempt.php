@@ -60,12 +60,17 @@ class LoginAttempt extends Model
     protected $fillable = [
         'company_id', 'user_id', 'identifier', 'succeeded',
         'reason', 'ip_address', 'user_agent',
+        // ⭐ কোথা থেকে — ব্রাউজার লোকেশন দিলে (মালিক, ১ অক্টোবর ২০২৬; [[LoginPlace]])
+        'latitude', 'longitude', 'accuracy_m', 'place',
     ];
 
     protected function casts(): array
     {
         return [
             'succeeded' => 'boolean',
+            'latitude' => 'decimal:6',
+            'longitude' => 'decimal:6',
+            'accuracy_m' => 'integer',
             'created_at' => 'datetime',
         ];
     }

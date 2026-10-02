@@ -44,6 +44,21 @@
          'render' => fn ($r) => $r->reason ? __('governance::message.why_'.$r->reason) : ''],
 
         ['key' => 'ip_address', 'label' => __('governance::field.where_from'), 'width' => '10rem'],
+
+        /*
+         * ⭐ জায়গা — মালিক, ১ অক্টোবর ২০২৬: *"jaygar nam soho dekhabe, zemon bridge more, mymensingh"*।
+         * ⓘ ব্রাউজার লোকেশন দিলে নাম ([[LoginPlace]]) আর ম্যাপের লিংক; নাম তখনো না এলে কেবল লিংক।
+         * না দিলে "দেয়নি" — খালি ঘর দেখে কেউ ভাববেন না যে ব্যবস্থাটা ভাঙা।
+         */
+        ['key' => 'place', 'label' => __('governance::field.place'), 'width' => '16rem',
+         'render' => fn ($r) => $r->latitude === null
+             ? new \Illuminate\Support\HtmlString('<span class="text-(--color-ink-muted)">'.e(__('governance::message.no_place')).'</span>')
+             : new \Illuminate\Support\HtmlString(
+                 e($r->place ?: __('governance::message.place_pending'))
+                 .' <a class="text-(--color-brand-600) underline-offset-4 hover:underline" target="_blank" rel="noopener noreferrer" href="'
+                 .e('https://www.openstreetmap.org/?mlat='.$r->latitude.'&mlon='.$r->longitude.'#map=17/'.$r->latitude.'/'.$r->longitude)
+                 .'">'.e(__('governance::message.on_map')).'</a>'
+                 .($r->accuracy_m ? ' <span class="text-(--color-ink-muted)">±'.e((string) $r->accuracy_m).' '.e(__('governance::message.metres')).'</span>' : ''))],
     ];
 @endphp
 

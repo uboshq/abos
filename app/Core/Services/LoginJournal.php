@@ -61,7 +61,13 @@ class LoginJournal
     private function write(string $identifier, ?User $user, bool $succeeded, ?string $reason, ?int $companyId = null): ?LoginAttempt
     {
         try {
-            return LoginAttempt::create([
+            /*
+             * ⭐ কোথা থেকে — ব্রাউজার লোকেশন দিলে (মালিক, ১ অক্টোবর ২০২৬, [[LoginPlace]])। ⓘ না দিলে ঘরগুলো
+             * পাঠানোই হয় না; নামটা উত্তর পাঠানোর পরে বসে, যাতে লগইন বাইরের সেবার জন্য অপেক্ষা না করে।
+             */
+            $where = app(LoginPlace::class)->fromRequest(request());
+
+            $row = LoginAttempt::create([...$where, ...[
                 /*
                  * কোম্পানিটা ব্যবহারকারীর নিজের, `CompanyContext` থেকে নয়।
                  *
@@ -86,7 +92,14 @@ class LoginJournal
                 'reason' => $reason,
                 'ip_address' => request()->ip(),
                 'user_agent' => substr((string) request()->userAgent(), 0, 255) ?: null,
-            ]);
+            ]]);
+
+            if ($where !== []) {
+                $id = (int) $row->getKey();
+                dispatch(fn () => app(LoginPlace::class)->fill($id))->afterResponse();
+            }
+
+            return $row;
         } catch (\Throwable $e) {
             report($e);
 
