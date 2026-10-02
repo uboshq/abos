@@ -20,7 +20,7 @@ use Tests\TestCase;
  * খরচের বিশ্লেষণ — কোন খাতে হঠাৎ বাড়ল, সবচেয়ে বড় খরচ কত। রিপোর্ট সেন্টার ধাপ ৪, ২ অক্টোবর ২০২৬
  * ([[ExpenseAnalysisReport]])।
  *
- * নতুন একটা খাত, যাতে ডেমোর কিছু নেই। দশ দিনের সময়: এই সময়ে ১০০ আর ৪০০; ঠিক আগের দশ দিনে ২০০; তারও আগে
+ * নতুন একটা খাত, যাতে ডেমোর কিছু নেই। দশ দিনের সময়: এই সময়ে ১০০ আর ৪০০; ঠিক আগের দশ দিনে ৯০০ (এই সময়ের যেকোনোটার চেয়ে বড় — "সবচেয়ে বড়" যেন আগের সময় থেকে না আসে); তারও আগে
  * ৭,০০০ — যেটা কোনো ঘরেই পড়ার কথা নয়।
  */
 final class TheExpenseThatJumpedIsNamedTest extends TestCase
@@ -44,7 +44,7 @@ final class TheExpenseThatJumpedIsNamedTest extends TestCase
         ])->save());
         $cash = Account::query()->ofMoneyKind(Account::CASH)->postable()->active()->orderBy('id')->firstOrFail();
 
-        foreach ([[0, '400'], [2, '100'], [15, '200'], [25, '7000']] as [$ago, $amount]) {
+        foreach ([[0, '400'], [2, '100'], [15, '900'], [25, '7000']] as [$ago, $amount]) {
             app(PostingEngine::class)->post(
                 sourceType: 'test:expense', sourceId: random_int(1, 9_999_999), trxDate: now()->subDays($ago)->toDateString(),
                 lines: [['account_id' => $head->id, 'debit' => $amount], ['account_id' => $cash->id, 'credit' => $amount]],
@@ -58,9 +58,9 @@ final class TheExpenseThatJumpedIsNamedTest extends TestCase
 
         $this->assertNotNull($row, 'প্রস্তুতিটাই ভুল — খাতের সারি নেই।');
         $this->assertSame(0, bccomp((string) $row['spent'], '500', 2), '⛔ এই সময়ের খরচ ভুল — আগের সময় ঢুকে পড়েছে?');
-        $this->assertSame(0, bccomp((string) $row['previous'], '200', 2), '⛔ আগের সময়ের খরচ ভুল — তারও আগের ৭,০০০ ঢুকেছে?');
-        $this->assertSame(0, bccomp((string) $row['change'], '150', 1), '⛔ বদল ১৫০% হওয়ার কথা।');
-        $this->assertSame(0, bccomp((string) $row['biggest'], '400', 2), '⛔ সবচেয়ে বড় খরচ ৪০০ — আগের সময়ের কিছু নয়।');
+        $this->assertSame(0, bccomp((string) $row['previous'], '900', 2), '⛔ আগের সময়ের খরচ ভুল — তারও আগের ৭,০০০ ঢুকেছে?');
+        $this->assertSame(0, bccomp((string) $row['change'], '-44.4', 1), '⛔ বদল −৪৪.৪% হওয়ার কথা (৯০০ থেকে ৫০০)।');
+        $this->assertSame(0, bccomp((string) $row['biggest'], '400', 2), '⛔ সবচেয়ে বড় খরচ ৪০০ — আগের সময়ের ৯০০ নয়।');
         $this->assertSame(2, (int) $row['entries'], '⛔ এই সময়ে দাখিলা দুটো।');
 
         $this->get(route('accounts.report.show', ['slug' => 'expense-analysis']))->assertOk();
