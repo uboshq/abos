@@ -51,7 +51,8 @@ final class DeliveryOrderTabs
             'new' => route('sales.direct.create'),
             'drafts' => route('sales.direct.drafts'),
             'approval' => route('sales.direct.drafts', ['tab' => 'approval']),
-            'tracking' => route('sales.delivery.index'),
+            // ⭐ ডেলিভারি ট্র্যাকিং — প্রতিটা বিক্রি কোথায় (মালিক, ২ অক্টোবর ২০২৬, [[SaleTracking]])
+            'tracking' => route('sales.tracking.index'),
             default => route('sales.do.index', ['tab' => $tab]),
         };
     }

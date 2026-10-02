@@ -282,6 +282,11 @@ Route::middleware('auth')->prefix('sales')->group(function () {
      * ⭐ ডেলিভারির ধাপ — NEXUS §২১–২২। ⓘ ধাপ মাল নড়ায় না; নড়ায় চালান আর
      * ট্রিপ, ধাপ কেবল বলে কোথায় আছে ([[DeliveryStageService]])।
      */
+    // ⭐ ডেলিভারি ট্র্যাকিং — প্রতিটা বিক্রি কোথায়, কে কখন (মালিক, ২ অক্টোবর ২০২৬; ফোনেরই হিসাব, [[SaleTracking]])
+    Route::get('/tracking', [\App\Modules\Sales\Http\Controllers\SaleTrackingController::class, 'page'])->name('tracking.index');
+    Route::get('/tracking/{kind}/{id}', [\App\Modules\Sales\Http\Controllers\SaleTrackingController::class, 'story'])
+        ->where('kind', 'challan|order')->whereUuid('id')->name('tracking.show');
+
     Route::prefix('deliveries')->name('delivery.')->group(function () {
         /* ⭐ QR থেকে কর্মী — চাবি controller-এ (can:sales.delivery.view); `{challan}`-এর আগে */
         Route::get('/scan/{publicId}', [DeliveryScanController::class, 'staff'])->where('publicId', '[0-9a-fA-F-]{36}')->name('scan');

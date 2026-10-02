@@ -58,7 +58,8 @@ final class TheQuotationAndOrderMenusSitAfterTheDashboardTest extends TestCase
         // ⓘ পুরো লিংক, শেষের উদ্ধৃতিসহ — `/sales/direct` নিজেই `/sales/direct/drafts`-এর শুরু, তাই কেবল ঠিকানা খুঁজলে খসড়ার লিংক মিলত
         $at = fn (string $url) => strpos($html, 'href="'.e($url).'"');
         $order = [
-            'order_track' => $at(route('sales.order.track')),
+            // ⓘ ২ অক্টোবর ২০২৬ থেকে "ডেলিভারি ট্র্যাকিং" — একই জায়গায়, নতুন পাতা ([[SaleTracking]])
+            'order_track' => $at(route('sales.tracking.index')),
             'do_new' => $at(route('sales.planned', ['screen' => 'do_new'])),
             'do_drafts' => $at(route('sales.direct.drafts')),
             'do_all' => $at(route('sales.do.index', ['tab' => 'cancelled'])),

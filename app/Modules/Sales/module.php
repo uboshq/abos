@@ -145,7 +145,8 @@ return [
                Partial, Back, History; "মেনুতে এখন, কোড পরে"। আদেশের খোঁজ শেষে থাকে। */
             ['label' => 'sales::planned.order_history', 'cluster' => 'sales_orders', 'icon' => 'receipt', 'route' => 'sales.planned',
                 'route_params' => ['screen' => 'order_history'], 'permission' => 'sales.order.view'],
-            ['label' => 'sales::menu.order_track', 'cluster' => 'sales_orders', 'icon' => 'search', 'route' => 'sales.order.track',
+            // ⭐ "ডেলিভারি ট্র্যাকিং" — মালিক, ২ অক্টোবর ২০২৬; আদেশের সাথে সরাসরি বিক্রয়/DO-ও ([[SaleTracking]])
+            ['label' => 'sales::tracking.title', 'cluster' => 'sales_orders', 'icon' => 'search', 'route' => 'sales.tracking.index',
                 'permission' => 'sales.order.view', 'setting' => 'sales.screen_orders'],
             /*
              * ⭐ মেনুর ক্রম — মালিকের নির্দেশ, ১ অক্টোবর ২০২৬ (আগের রাতের পরিকল্পনা, "যেটা প্ল্যান হয়েছিল সেভাবেই"):

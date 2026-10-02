@@ -8,6 +8,7 @@ use App\Http\Middleware\ResolveCompanyContext;
 use App\Modules\Sales\Http\Controllers\DepositRequestController;
 use App\Modules\Sales\Http\Controllers\OrderStandingController;
 use App\Modules\Sales\Http\Controllers\QrScanController;
+use App\Modules\Sales\Http\Controllers\SaleTrackingController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -38,4 +39,9 @@ Route::prefix('v1/sales')
         Route::get('/deposit-requests/accounts', [DepositRequestController::class, 'accounts'])->name('deposit_request.accounts');
         Route::get('/deposit-requests', [DepositRequestController::class, 'apiIndex'])->name('deposit_request.index');
         Route::post('/deposit-requests', [DepositRequestController::class, 'apiStore'])->name('deposit_request.store');
+
+        // ⭐ ডেলিভারি ট্র্যাকিং — বিক্রি কোথায়, কে কখন ([[SaleTrackingController]]); চাবি দুইয়ের যেকোনো একটা, পদ্ধতিতে
+        Route::get('/tracking', [SaleTrackingController::class, 'index'])->name('tracking.index');
+        Route::get('/tracking/{kind}/{id}', [SaleTrackingController::class, 'show'])
+            ->where('kind', 'challan|order')->whereUuid('id')->name('tracking.show');
     });

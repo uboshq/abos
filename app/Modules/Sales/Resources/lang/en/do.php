@@ -12,7 +12,7 @@ return [
         'delivered' => 'Delivered',
         'all' => 'All DOs',
         'cancelled' => 'Cancelled',
-        'tracking' => 'DO tracking',
+        'tracking' => 'Delivery tracking',
     ],
     'note' => [
         'awaiting' => 'Confirmed, goods not yet with the customer',

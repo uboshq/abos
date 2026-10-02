@@ -359,6 +359,15 @@ class EveryRouteIsGuardedTest extends TestCase
          * এখানে দরকার OR, তাই শর্তটা পদ্ধতির ভেতরে।
          */
         'accounts.voucher.due' => 'accounts.voucher.create অথবা accounts.voucher.update — abort_unless() due()-এর শুরুতে',
+
+        /*
+         * ⭐ ডেলিভারি ট্র্যাকিং (মালিক, ২ অক্টোবর ২০২৬) — গুদাম/ডেলিভারির মানুষের চাবি
+         * `sales.delivery.view`, SR-এর `sales.order.view`; দুই দলই নিজের বিক্রি কোথায় তা দেখেন।
+         */
+        'sales.tracking.index' => 'sales.delivery.view অথবা sales.order.view — mayTrack() পদ্ধতির শুরুতে',
+        'sales.tracking.show' => 'sales.delivery.view অথবা sales.order.view — mayTrack() পদ্ধতির শুরুতে',
+        'api.sales.tracking.index' => 'sales.delivery.view অথবা sales.order.view — mayTrack() পদ্ধতির শুরুতে',
+        'api.sales.tracking.show' => 'sales.delivery.view অথবা sales.order.view — mayTrack() পদ্ধতির শুরুতে',
     ];
 
     /**

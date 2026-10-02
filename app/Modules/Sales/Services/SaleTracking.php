@@ -1,0 +1,357 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Modules\Sales\Services;
+
+use App\Core\Support\DocumentStatus;
+use App\Models\Approval;
+use App\Modules\Sales\Models\DeliveryChallan;
+use App\Modules\Sales\Models\DeliveryState;
+use App\Modules\Sales\Models\GatePass;
+use App\Modules\Sales\Models\SalesInvoice;
+use App\Modules\Sales\Models\SalesOrder;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
+
+/**
+ * একটা বিক্রি এখন কোথায় — ফোনের "ডেলিভারি ট্র্যাকিং" (মালিক, ২ অক্টোবর ২০২৬: *"Etar Nam 'Delivery Traking' Daw"*)।
+ *
+ * ── ⭐ মালিকের চাওয়া ─────────────────────────────────────────────────────
+ * ১৯ সেপ্টেম্বর: *"অ্যাপ ১০০% হওয়ার পর সব customer তার নিজের, employee তার অধীনের সকল order
+ * ট্রেস করতে পারবে"*; ২ অক্টোবর: "Order Traking"।
+ *
+ * ── ⚠️ কেন কেবল বিক্রয় আদেশ নয় ──────────────────────────────────────────
+ * ADI-র বিক্রি বেশিরভাগ সরাসরি বিক্রয়/DO — বিল আর চালান, বিক্রয় আদেশ ছাড়াই
+ * ([[DeliveryOrderTabs]]: "প্রতিটি বিক্রির চালান = একটি DO")। ⛔ ওয়েবের [[OrderTracking]]
+ * কেবল `sal_orders` ধরে — ফোনে ওটা দিলে মালিকের আসল বিক্রিগুলোই বাদ পড়ত। তাই এখানে দুই উৎস:
+ * চালান (DO) — প্রতিটাই একটা বিক্রি; আর যে আদেশের এখনো চালান হয়নি — "অর্ডার" ধাপে।
+ *
+ * ── ধাপ (এক কথায়, ফোনের এক লাইনে) ─────────────────────────────────────────
+ *   ordered   — আদেশ এসেছে, DO হয়নি
+ *   draft     — কাউন্টারে খসড়া
+ *   approval  — সইয়ের অপেক্ষায় (চালান, বিল বা বিলের বিপরীতে জমা — [[DirectSaleService::whereHeld()]])
+ *   warehouse — পাকা, গুদামে (বরাদ্দ/তোলা/প্যাক)
+ *   gate_out  — গেট পেরিয়েছে ([[DeliveryStage::DISPATCHED]])
+ *   partial   — কিছু পৌঁছেছে
+ *   delivered — পৌঁছেছে
+ *   cancelled — বাতিল
+ * ⓘ বিল হয়েছে কি না আলাদা পতাকা (`billed`) — ধাপের সাথে মেশানো নয়, কারণ বিল আগে-পরে দুইই হয়।
+ *
+ * ⓘ দেয়াল: কোম্পানি আর শাখার সাধারণ স্কোপ (মডেলের নিজের)। কর্মীর "নিজের অধীনের" দেয়াল আসবে
+ * SR-এর নিজের-দোকানি দেয়ালের সাথে — আজ চাবিওয়ালা সবাই সব দেখেন, ওয়েবের ট্র্যাকিংয়ের মতোই।
+ */
+final class SaleTracking
+{
+    public const STEPS = ['ordered', 'draft', 'approval', 'warehouse', 'gate_out', 'partial', 'delivered', 'cancelled'];
+
+    public function __construct(private readonly DeliveryStageService $stages) {}
+
+    /**
+     * তালিকা — সর্বশেষ আগে, `$limit` পর্যন্ত। ধাপের ছাঁকনি PHP-তে (ধাপ কয়েকটা টেবিল মিলিয়ে ঠিক হয়)।
+     *
+     * @return array{rows: list<array<string, mixed>>, counts: array<string, int>}
+     */
+    public function list(?string $term, ?string $step, ?int $customerId, int $limit = 100): array
+    {
+        $challans = DeliveryChallan::query()
+            ->with('customer')
+            ->when($customerId, fn ($q, $id) => $q->where('customer_id', $id))
+            ->when($term, fn ($q, $t) => $q->where(fn ($w) => $w
+                ->where('document_no', 'like', "%{$t}%")
+                ->orWhere('sale_no', 'like', "%{$t}%")
+                ->orWhereHas('customer', fn ($c) => $c->where('name_en', 'like', "%{$t}%")
+                    ->orWhere('name_bn', 'like', "%{$t}%")->orWhere('code', 'like', "%{$t}%"))))
+            ->orderByDesc('trx_date')->orderByDesc('id')
+            ->limit($limit)
+            ->get();
+
+        // যে আদেশের কোনো (বাতিল নয়) চালান নেই — "অর্ডার" ধাপ
+        $orders = SalesOrder::query()
+            ->with('customer')
+            ->where('status', '<>', DocumentStatus::CANCELLED)
+            ->whereNotExists(fn ($q) => $q->selectRaw('1')->from('sal_challans as c')
+                ->whereColumn('c.sales_order_id', 'sal_orders.id')
+                ->where('c.status', '<>', DocumentStatus::CANCELLED))
+            ->when($customerId, fn ($q, $id) => $q->where('customer_id', $id))
+            ->when($term, fn ($q, $t) => $q->where(fn ($w) => $w
+                ->where('document_no', 'like', "%{$t}%")
+                ->orWhereHas('customer', fn ($c) => $c->where('name_en', 'like', "%{$t}%")
+                    ->orWhere('name_bn', 'like', "%{$t}%")->orWhere('code', 'like', "%{$t}%"))))
+            ->orderByDesc('trx_date')->orderByDesc('id')
+            ->limit($limit)
+            ->get();
+
+        $steps = $this->stepsOf($challans);
+        $billed = $this->billedChallans($challans->modelKeys());
+
+        $rows = collect();
+
+        foreach ($challans as $challan) {
+            $rows->push([
+                'kind' => 'challan',
+                'id' => (string) $challan->public_id,
+                'no' => (string) ($challan->sale_no ?: $challan->document_no),
+                'document_no' => (string) $challan->document_no,
+                'date' => $challan->trx_date?->toDateString(),
+                'customer' => $challan->customer?->name(),
+                'total' => bcadd((string) $challan->total, '0', 2),
+                'step' => $steps[$challan->id],
+                'billed' => isset($billed[$challan->id]),
+                'sort' => [$challan->trx_date?->toDateString(), (int) $challan->id],
+            ]);
+        }
+
+        foreach ($orders as $order) {
+            $rows->push([
+                'kind' => 'order',
+                'id' => (string) $order->public_id,
+                'no' => (string) $order->document_no,
+                'document_no' => (string) $order->document_no,
+                'date' => $order->trx_date?->toDateString(),
+                'customer' => $order->customer?->name(),
+                'total' => bcadd((string) $order->total, '0', 2),
+                'step' => 'ordered',
+                'billed' => false,
+                'sort' => [$order->trx_date?->toDateString(), (int) $order->id],
+            ]);
+        }
+
+        $rows = $rows->sortByDesc(fn (array $r) => ($r['sort'][0] ?? '').sprintf('%012d', $r['sort'][1]))->values();
+        $counts = array_fill_keys(['all', ...self::STEPS], 0);
+        $counts['all'] = $rows->count();
+
+        foreach ($rows as $r) {
+            $counts[$r['step']]++;
+        }
+
+        return [
+            'rows' => $rows
+                ->when($step !== null && in_array($step, self::STEPS, true), fn ($c) => $c->where('step', $step))
+                ->take($limit)
+                ->map(fn (array $r) => array_diff_key($r, ['sort' => true]))
+                ->values()->all(),
+            'counts' => $counts,
+        ];
+    }
+
+    /**
+     * একটা বিক্রির সময়রেখা — কে কখন কী করলেন, পুরনো আগে।
+     *
+     * @return array<string, mixed>
+     */
+    public function story(DeliveryChallan|SalesOrder $sale): array
+    {
+        $events = collect();
+        $order = $sale instanceof SalesOrder ? $sale : $sale->salesOrder;
+
+        if ($order !== null) {
+            $order->loadMissing('creator');
+            $events->push($this->event($order->created_at, 'ordered', $order->creator?->name,
+                __('sales::tracking.ordered', ['no' => $order->document_no])));
+        }
+
+        if ($sale instanceof SalesOrder) {
+            return $this->head($sale, 'ordered', false) + ['events' => $events->values()->all()];
+        }
+
+        $challan = $sale->loadMissing(['customer', 'creator']);
+        $events->push($this->event($challan->created_at, 'draft', $challan->creator?->name,
+            __('sales::tracking.do_written', ['no' => $challan->document_no])));
+
+        foreach ($this->approvalsOf($challan) as $approval) {
+            $events->push($this->event($approval->requested_at ?? $approval->created_at, 'approval',
+                $approval->requester?->name, __('sales::tracking.sent_for_signature')));
+
+            foreach ($approval->decisions as $decision) {
+                // ⓘ সিদ্ধান্তের তিন মান — approved, rejected, forwarded ([[ApprovalEngine]])
+                $kind = in_array($decision->decision, ['approved', 'rejected', 'forwarded'], true) ? $decision->decision : 'other';
+                $events->push($this->event($decision->decided_at, 'approval', $decision->user?->name,
+                    __('sales::tracking.decision.'.$kind).($decision->remarks ? ' — '.$decision->remarks : '')));
+            }
+        }
+
+        foreach ($this->stages->timeline($challan) as $event) {
+            $events->push($this->event($event->occurred_at, $this->stepFromStage((string) $event->to_stage),
+                $event->creator?->name,
+                trim(__('sales::delivery.stage.'.$event->to_stage)
+                    .($event->receiver_name ? ' — '.__('sales::tracking.received_by', ['name' => $event->receiver_name]) : '')
+                    .($event->note ? ' · '.$event->note : ''))));
+        }
+
+        $pass = GatePass::query()->withoutGlobalScope('user-branch')
+            ->where('delivery_challan_id', $challan->id)
+            ->where('status', '<>', DocumentStatus::CANCELLED)
+            ->with('issuer')->latest('id')->first();
+
+        if ($pass !== null) {
+            $events->push($this->event($pass->issued_at, 'gate_out', $pass->issuer?->name,
+                __('sales::tracking.gate_pass', ['no' => $pass->document_no, 'vehicle' => $pass->vehicle_no ?: '—'])));
+        }
+
+        foreach ($this->invoicesOf($challan) as $invoice) {
+            $events->push($this->event($invoice->updated_at, 'billed', $invoice->creator?->name,
+                __('sales::tracking.billed', ['no' => $invoice->document_no, 'total' => bcadd((string) $invoice->total, '0', 2)])));
+        }
+
+        $step = $this->stepsOf(collect([$challan]))[$challan->id];
+
+        return $this->head($challan, $step, $this->invoicesOf($challan)->isNotEmpty()) + [
+            'events' => $events->sortBy(fn (array $e) => $e['at'] ?? '')->values()->all(),
+        ];
+    }
+
+    // ── যন্ত্রপাতি ──────────────────────────────────────────────────────
+
+    /**
+     * চালান → ধাপ, এক প্রশ্নে পুরো পাতা।
+     *
+     * @param  Collection<int, DeliveryChallan>  $challans
+     * @return array<int, string>
+     */
+    private function stepsOf(Collection $challans): array
+    {
+        if ($challans->isEmpty()) {
+            return [];
+        }
+
+        $ids = $challans->map(fn (DeliveryChallan $c) => (int) $c->id)->values()->all();
+        $stages = DeliveryState::query()->whereIn('delivery_challan_id', $ids)->pluck('stage', 'delivery_challan_id');
+        $held = $this->heldChallans($ids);
+        $out = [];
+
+        foreach ($challans as $c) {
+            $out[$c->id] = match (true) {
+                $c->status === DocumentStatus::CANCELLED => 'cancelled',
+                isset($held[$c->id]) => 'approval',
+                $c->status === DocumentStatus::DRAFT => 'draft',
+                default => $this->stepFromStage((string) ($stages[$c->id] ?? DeliveryStage::ALLOCATED)),
+            };
+        }
+
+        return $out;
+    }
+
+    private function stepFromStage(string $stage): string
+    {
+        return match ($stage) {
+            DeliveryStage::DISPATCHED => 'gate_out',
+            DeliveryStage::PARTIALLY_DELIVERED => 'partial',
+            DeliveryStage::DELIVERED => 'delivered',
+            DeliveryStage::CANCELLED, DeliveryStage::FAILED => 'cancelled',
+            DeliveryStage::PENDING => 'draft',
+            default => 'warehouse',
+        };
+    }
+
+    /**
+     * সইয়ের অপেক্ষায় থাকা চালান — চালানের নিজের, তার বিলের, বা বিলের বিপরীতে জমার অনুমোদন।
+     *
+     * @param  list<int>  $ids
+     * @return array<int, true>
+     */
+    private function heldChallans(array $ids): array
+    {
+        $invoiceOf = DB::table('sal_challan_lines as cl')
+            ->join('sal_invoice_lines as il', 'il.delivery_challan_line_id', '=', 'cl.id')
+            ->whereIn('cl.delivery_challan_id', $ids)
+            ->select('cl.delivery_challan_id', 'il.sales_invoice_id')->distinct()->get();
+
+        $heldInvoices = $invoiceOf->isEmpty() ? collect() : DirectSaleService::awaitingApproval(
+            SalesInvoice::query()->whereIn('sal_invoices.id', $invoiceOf->pluck('sales_invoice_id')->unique()),
+        )->pluck('id')->flip();
+
+        $direct = Approval::query()->pending()
+            ->where('approvable_type', DeliveryChallan::class)
+            ->whereIn('approvable_id', $ids)->pluck('approvable_id')->flip();
+
+        $out = [];
+
+        foreach ($ids as $id) {
+            if (isset($direct[$id])) {
+                $out[$id] = true;
+            }
+        }
+
+        foreach ($invoiceOf as $pair) {
+            if (isset($heldInvoices[$pair->sales_invoice_id])) {
+                $out[(int) $pair->delivery_challan_id] = true;
+            }
+        }
+
+        return $out;
+    }
+
+    /**
+     * @param  list<int>  $ids
+     * @return array<int, true>
+     */
+    private function billedChallans(array $ids): array
+    {
+        if ($ids === []) {
+            return [];
+        }
+
+        return DB::table('sal_challan_lines as cl')
+            ->join('sal_invoice_lines as il', 'il.delivery_challan_line_id', '=', 'cl.id')
+            ->join('sal_invoices as i', 'i.id', '=', 'il.sales_invoice_id')
+            ->whereIn('cl.delivery_challan_id', $ids)
+            ->whereIn('i.status', DocumentStatus::POSTED)
+            ->distinct()->pluck('cl.delivery_challan_id')
+            ->mapWithKeys(fn ($id) => [(int) $id => true])->all();
+    }
+
+    /** @return Collection<int, SalesInvoice> */
+    private function invoicesOf(DeliveryChallan $challan): Collection
+    {
+        return SalesInvoice::query()
+            ->whereIn('status', DocumentStatus::POSTED)
+            ->whereHas('lines.challanLine', fn ($q) => $q->where('delivery_challan_id', $challan->id))
+            ->with('creator')->orderBy('id')->get();
+    }
+
+    /** @return Collection<int, Approval> */
+    private function approvalsOf(DeliveryChallan $challan): Collection
+    {
+        $invoiceIds = DB::table('sal_challan_lines as cl')
+            ->join('sal_invoice_lines as il', 'il.delivery_challan_line_id', '=', 'cl.id')
+            ->where('cl.delivery_challan_id', $challan->id)->distinct()->pluck('il.sales_invoice_id');
+
+        return Approval::query()
+            ->where(fn ($q) => $q
+                ->where(fn ($w) => $w->where('approvable_type', DeliveryChallan::class)->where('approvable_id', $challan->id))
+                ->orWhere(fn ($w) => $w->where('approvable_type', SalesInvoice::class)->whereIn('approvable_id', $invoiceIds)))
+            ->with(['requester', 'decisions.user'])
+            ->orderBy('id')->get();
+    }
+
+    /** @return array{at: ?string, step: string, by: ?string, text: string} */
+    private function event(mixed $at, string $step, ?string $by, string $text): array
+    {
+        return [
+            'at' => $at instanceof Carbon ? $at->toIso8601String() : ($at ? Carbon::parse((string) $at)->toIso8601String() : null),
+            'step' => $step,
+            'by' => $by,
+            'text' => $text,
+        ];
+    }
+
+    /** @return array<string, mixed> */
+    private function head(DeliveryChallan|SalesOrder $sale, string $step, bool $billed): array
+    {
+        $sale->loadMissing('customer');
+
+        return [
+            'kind' => $sale instanceof SalesOrder ? 'order' : 'challan',
+            'id' => (string) $sale->public_id,
+            'no' => (string) ($sale instanceof DeliveryChallan && $sale->sale_no ? $sale->sale_no : $sale->document_no),
+            'document_no' => (string) $sale->document_no,
+            'date' => $sale->trx_date?->toDateString(),
+            'customer' => $sale->customer?->name(),
+            'total' => bcadd((string) $sale->total, '0', 2),
+            'step' => $step,
+            'billed' => $billed,
+        ];
+    }
+}
