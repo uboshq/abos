@@ -179,6 +179,9 @@ return [
             // ⭐ কাগজের খাতা — রিপোর্ট সেন্টার ধাপ ৬ (মালিক, ১ অক্টোবর ২০২৬)
             ['label' => 'purchase::register.title', 'icon' => 'list', 'route' => 'purchase.report.show',
                 'route_params' => ['slug' => 'register'], 'permission' => 'purchase.report'],
+            // ⭐ পরিশোধের সূচি — আজ কাকে দিতে হবে, সপ্তাহে কত যাবে (রিপোর্ট সেন্টার ধাপ ৪)
+            ['label' => 'purchase::due.title', 'icon' => 'calendar', 'route' => 'purchase.report.show',
+                'route_params' => ['slug' => 'payment-due'], 'permission' => 'purchase.report'],
             // ⭐ ক্রয় বিশ্লেষণ ও দরের বিশ্লেষণ — রিপোর্ট সেন্টার ধাপ ৩ ([[PurchaseAnalysisReports]])
             ['label' => 'purchase::analysis.title', 'icon' => 'scale', 'route' => 'purchase.report.show',
                 'route_params' => ['slug' => 'analysis'], 'permission' => 'purchase.report'],
@@ -552,6 +555,8 @@ return [
         \App\Modules\Purchase\Reports\PurchaseAnalysisReports::class,
         SettlementReport::class,
         ReturnOnCapitalReport::class,
+        // ⭐ পরিশোধের সূচি — রিপোর্ট সেন্টার ধাপ ৪ (২ অক্টোবর ২০২৬)
+        \App\Modules\Purchase\Reports\PaymentDueReport::class,
     ],
 
     'dashboard' => PurchaseDashboard::class,

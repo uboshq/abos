@@ -42,6 +42,9 @@ class PurchaseReportController extends Controller implements HasMiddleware
         // ⭐ কাগজের খাতা — রিপোর্ট সেন্টার ধাপ ৬ ([[PurchaseRegisterReports]])
         'register' => ['key' => 'purchase.register', 'permission' => 'purchase.report'],
 
+        // ⭐ পরিশোধের সূচি — রিপোর্ট সেন্টার ধাপ ৪ ([[PaymentDueReport]])
+        'payment-due' => ['key' => 'purchase.payment_due', 'permission' => 'purchase.report'],
+
         // ⭐ ক্রয় বিশ্লেষণ — রিপোর্ট সেন্টার ধাপ ৩ ([[PurchaseAnalysisReports]])
         'analysis' => ['key' => 'purchase.analysis', 'permission' => 'purchase.report'],
         'price-analysis' => ['key' => 'purchase.price_analysis', 'permission' => 'purchase.report'],
