@@ -9,6 +9,7 @@ use App\Core\Engines\Print\PrintableDocument;
 use App\Core\Engines\Print\PrintEngine;
 use App\Core\Engines\Print\PrintProfile;
 use App\Core\Services\PaperTrail;
+use App\Core\Services\BranchSettings;
 use App\Core\Services\SettingsService;
 use App\Core\Support\DateFormat;
 use App\Core\Support\DocumentStatus;
@@ -72,7 +73,32 @@ class SalesPrintController extends Controller implements HasMiddleware
 
         // ছাপা · নামানো · পাঠানো · খোলা — সব কাগজের এক হিসাব
         private readonly PaperTrail $trail,
+
+        // ⭐ কাগজের শাখার মাপ, নকশা, মাথার তথ্য, সই, পাদটীকা, লোগো — না বসালে কোম্পানির
+        private readonly BranchSettings $branch,
     ) {}
+
+    /**
+     * ⭐ প্রতিটা কাগজ তার নিজের শাখার সেটিংয়ে আঁকা — মালিক, ৩০ সেপ্টেম্বর ২০২৬:
+     * *"protiti branch er jonno alada alada hobe … karon alada alada branch e alada type business hote pare"*।
+     *
+     * ⓘ এক জায়গায়, প্রতিটা কাজের আগে: রুটে বাঁধা ডকুমেন্টের শাখা ধরে [[BranchSettings::during()]]।
+     * ⚠️ কেবল `pdf()` মোড়ালে চলত না — নকশা আর মাপ তার **আগেই** পড়া হয় (invoice(), paperDesign())।
+     * ডকুমেন্টে শাখা না থাকলে কোম্পানির সেটিং, আগের মতোই।
+     *
+     * @param  array<string, mixed>  $parameters
+     */
+    public function callAction($method, $parameters): mixed
+    {
+        $document = collect($parameters)->first(
+            fn ($value) => $value instanceof \Illuminate\Database\Eloquent\Model && $value->getAttribute('branch_id') !== null,
+        );
+
+        return $this->branch->during(
+            $document === null ? null : (int) $document->getAttribute('branch_id'),
+            fn () => $this->{$method}(...array_values($parameters)),
+        );
+    }
 
     public static function middleware(): array
     {
@@ -164,7 +190,7 @@ class SalesPrintController extends Controller implements HasMiddleware
                 $invoice,
                 roll: PaperSize::of(PaperSize::chosen(
                     $request->query('paper'),
-                    $this->settings->get('sales.print.paper.invoice'),
+                    $this->branch->get('sales.print.paper.invoice'),
                 ))->isThermal,
             ),
 
@@ -201,11 +227,11 @@ class SalesPrintController extends Controller implements HasMiddleware
          * ⭐ ছাঁচ আসে কাগজ-মাপের নিজের বাছাই থেকে ([[PaperDesigns]]) — মালিক, ৩০ সেপ্টেম্বর ২০২৬:
          * A4 · A5 · থার্মাল তিনটারই নিজের নকশা। `standard` বা অচেনা → চলতি কাগজ।
          */
-        $chosenPaper = PaperSize::chosen($request->query('paper'), $this->settings->get('sales.print.paper.invoice'));
+        $chosenPaper = PaperSize::chosen($request->query('paper'), $this->branch->get('sales.print.paper.invoice'));
         $designSize = PaperDesigns::sizeOf($chosenPaper, PaperSize::of($chosenPaper)->isThermal);
         $designTemplate = PaperDesigns::template(
             'invoice', $designSize,
-            (string) $this->settings->get(PaperDesigns::key('invoice', $designSize)),
+            (string) $this->branch->get(PaperDesigns::key('invoice', $designSize)),
         );
         $classic = $designTemplate !== null;
 
@@ -239,9 +265,9 @@ class SalesPrintController extends Controller implements HasMiddleware
      */
     private function paperDesign(Request $request, string $kind, string $paperSetting, \Closure $facts): array
     {
-        $paper = PaperSize::chosen($request->query('paper'), $this->settings->get($paperSetting));
+        $paper = PaperSize::chosen($request->query('paper'), $this->branch->get($paperSetting));
         $size = PaperDesigns::sizeOf($paper, PaperSize::of($paper)->isThermal);
-        $template = PaperDesigns::template($kind, $size, (string) $this->settings->get(PaperDesigns::key($kind, $size)));
+        $template = PaperDesigns::template($kind, $size, (string) $this->branch->get(PaperDesigns::key($kind, $size)));
 
         return $template === null ? [] : ['template' => $template, 'extra' => ['facts' => $facts()]];
     }
@@ -1376,7 +1402,7 @@ class SalesPrintController extends Controller implements HasMiddleware
      */
     private function profileFor(Request $request, string $paperSetting, string $target = 'invoice'): PrintProfile
     {
-        $paper = PaperSize::chosen($request->query('paper'), $this->settings->get($paperSetting));
+        $paper = PaperSize::chosen($request->query('paper'), $this->branch->get($paperSetting));
 
         if ($target === 'invoice' && PaperSize::of($paper)->isThermal) {
             $target = 'pos';
@@ -1414,7 +1440,7 @@ class SalesPrintController extends Controller implements HasMiddleware
          * ⭐ কাগজের মাপ: ঠিকানায় যা চাওয়া হয়েছে, নয়তো মালিকের বসানো মাপ।
          * ⓘ কারণটা [[PaperSize::chosen()]]-এ — আগে এখানে হাতে লেখা A4 ছিল।
          */
-        $paper = PaperSize::chosen($request->query('paper'), $this->settings->get($paperSetting));
+        $paper = PaperSize::chosen($request->query('paper'), $this->branch->get($paperSetting));
 
         /*
          * বাতিল করা কাগজের গায়ে "বাতিল" — সবার আগে।

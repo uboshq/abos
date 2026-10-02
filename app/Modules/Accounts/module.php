@@ -668,6 +668,7 @@ return [
          */
         [
             'key' => 'accounts.print.paper.voucher',
+            'per_branch' => true,
             'label' => 'accounts::settings.paper_voucher',
             'type' => 'choice',
             'options' => PaperSize::all(),
@@ -685,6 +686,7 @@ return [
             'type' => 'choice',
             'options' => ['standard', ...VoucherDesigns::codes($size)],
             'option_label' => 'accounts::settings.design.',
+            'per_branch' => true,
 
             /* ⭐ ডিফল্ট ট্যালি ক্লাসিক — মালিকের "OK", ৩০ সেপ্টেম্বর ২০২৬; ফাইল না থাকলে চলতি ভাউচার */
             'default' => 'tally_classic',

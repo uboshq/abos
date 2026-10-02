@@ -6,8 +6,8 @@ namespace App\Modules\Accounts\Http\Controllers;
 
 use App\Core\Engines\Print\PaperSize;
 use App\Core\Engines\Print\PrintEngine;
+use App\Core\Services\BranchSettings;
 use App\Core\Services\PaperTrail;
-use App\Core\Services\SettingsService;
 use App\Core\Support\AmountInWords;
 use App\Core\Support\DateFormat;
 use App\Core\Support\Money;
@@ -44,11 +44,11 @@ class VoucherPrintController extends Controller implements HasMiddleware
     public function __construct(
         private readonly PrintEngine $print,
 
-        // কোন কাগজে ছাপা হবে — মালিকের বসানো মাপ
-        private readonly SettingsService $settings,
-
         // ছাপা · নামানো · পাঠানো · খোলা — সব কাগজের এক হিসাব
         private readonly PaperTrail $trail,
+
+        // ⭐ শাখার নিজের মাপ ও নকশা — মালিক, ৩০ সেপ্টেম্বর ২০২৬: "প্রতিটা শাখা আলাদা ব্যবসা হতে পারে"
+        private readonly BranchSettings $branch,
     ) {}
 
     public static function middleware(): array
@@ -72,10 +72,19 @@ class VoucherPrintController extends Controller implements HasMiddleware
         $voucher->load(['lines.account', 'creator', 'approver', 'branch']);
 
         /*
+         * ⭐ কাগজটা তার শাখার সেটিংয়ে আঁকা হয় ([[BranchSettings::during()]]) — মাপ, নকশা, লোগো।
+         * ⓘ শাখা কিছু না বসালে কোম্পানিরটা; আর শেষে আগের অবস্থায় ফেরে, ব্যতিক্রম হলেও।
+         */
+        return $this->branch->during($voucher->branch_id, fn (): Response => $this->printed($request, $voucher));
+    }
+
+    private function printed(Request $request, Voucher $voucher): Response
+    {
+        /*
          * ⭐ কাগজের মাপ মালিকের বসানো, হাতে লেখা A4 নয় (২০ সেপ্টেম্বর ২০২৬)।
          * ⓘ ঠিকানায় চাওয়া মাপ আগে, তারপর সেটিং — কারণ [[PaperSize::chosen()]]-এ।
          */
-        $paper = PaperSize::chosen($request->query('paper'), $this->settings->get('accounts.print.paper.voucher'));
+        $paper = PaperSize::chosen($request->query('paper'), $this->branch->get('accounts.print.paper.voucher'));
 
         /*
          * টেমপ্লেটটা আগে থেকেই ছিল — `resources/views/print/voucher.blade.php`।
@@ -91,7 +100,7 @@ class VoucherPrintController extends Controller implements HasMiddleware
          * ⓘ থার্মাল মাপগুলো (৮০/৫৮মিমি) এক ট্যাব; বাকিরা A5 বা A4।
          */
         $size = PaperSize::of($paper)->isThermal ? 'thermal' : ($paper === PaperSize::A5 ? 'a5' : 'a4');
-        $template = VoucherDesigns::template($size, (string) $this->settings->get(VoucherDesigns::key($size))) ?? 'print.voucher';
+        $template = VoucherDesigns::template($size, (string) $this->branch->get(VoucherDesigns::key($size))) ?? 'print.voucher';
 
         $pdf = $this->print->render(
             template: $template,

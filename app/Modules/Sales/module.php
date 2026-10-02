@@ -795,6 +795,7 @@ return [
          */
         [
             'key' => 'sales.print.paper.invoice',
+            'per_branch' => true,
             'label' => 'sales::settings.paper_invoice',
             'type' => 'choice',
             'options' => PaperSize::all(),
@@ -819,6 +820,7 @@ return [
             /* ⓘ তালিকা একটাই — [[InvoiceDesigns]]; নতুন নকশা সেখানে এক সারি */
             'options' => InvoiceDesigns::options(),
             'option_label' => 'sales::settings.design.',
+            'per_branch' => true,
 
             /* ⭐ ছাপার নিয়ন্ত্রণের "বিল → A4" ট্যাবে এই নকশাগুলোর কার্ড ([[PrintControlController::designsFor()]]) */
             'print_designs' => ['paper' => 'invoice', 'size' => 'a4', 'sample_route' => 'sales.invoice_sample'],
@@ -840,6 +842,7 @@ return [
                 'type' => 'choice',
                 'options' => ['standard', ...PaperDesigns::codes($paper, $size)],
                 'option_label' => 'sales::settings.design.',
+                'per_branch' => true,
                 'default' => PaperDesigns::defaultFor($paper, $size),
                 'group' => 'print_paper',
                 'print_designs' => array_filter([
@@ -871,6 +874,7 @@ return [
             'type' => 'string',
             'default' => null,
             'group' => 'invoice_info',
+            'per_branch' => true,
             'part' => 'header',
         ], ['name', 'address', 'phone', 'email', 'website']),
 
@@ -886,6 +890,7 @@ return [
             'type' => 'boolean',
             'default' => true,
             'group' => 'invoice_info',
+            'per_branch' => true,
             'part' => 'show',
         ], ['bin', 'invoice_type', 'duplicate', 'order_no', 'transport', 'free', 'total_qty',
             'grand_total_row', 'previous_due', 'amount_words', 'deposits', 'qr']),
@@ -902,6 +907,7 @@ return [
             'options' => ['2', '3', '4'],
             'default' => '3',
             'group' => 'invoice_info',
+            'per_branch' => true,
             'part' => 'signature',
         ],
         ...array_map(fn (int $n) => [
@@ -911,6 +917,7 @@ return [
             'type' => 'string',
             'default' => null,
             'group' => 'invoice_info',
+            'per_branch' => true,
             'part' => 'signature',
         ], [1, 2, 3, 4]),
 
@@ -926,11 +933,13 @@ return [
             'type' => 'string',
             'default' => null,
             'group' => 'invoice_info',
+            'per_branch' => true,
             'part' => 'note',
         ],
         [
             // ⭐ গেট পাসের কাগজ — মালিক: আধা পাতা (A5), ২৮ সেপ্টেম্বর ২০২৬ ([[SalesPrintController::gatePassDocument()]])
             'key' => 'sales.print.paper.gate_pass',
+            'per_branch' => true,
             'label' => 'sales::settings.paper_gate_pass',
             'type' => 'choice',
             'options' => PaperSize::all(),
@@ -939,6 +948,7 @@ return [
         ],
         [
             'key' => 'sales.print.paper.challan',
+            'per_branch' => true,
             'label' => 'sales::settings.paper_challan',
             'type' => 'choice',
             'options' => PaperSize::all(),
@@ -947,6 +957,7 @@ return [
         ],
         [
             'key' => 'sales.print.paper.order',
+            'per_branch' => true,
             'label' => 'sales::settings.paper_order',
             'type' => 'choice',
             'options' => PaperSize::all(),
@@ -955,6 +966,7 @@ return [
         ],
         [
             'key' => 'sales.print.paper.receipt',
+            'per_branch' => true,
             'label' => 'sales::settings.paper_receipt',
             'type' => 'choice',
             'options' => PaperSize::all(),

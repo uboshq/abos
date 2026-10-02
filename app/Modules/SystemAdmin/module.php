@@ -564,6 +564,20 @@ return [
             'default' => true,
             'group' => 'print',
         ],
+        /*
+         * ⭐ বিলের লোগো, প্রোফাইলের লোগো থেকে আলাদা — মালিক, ৩০ সেপ্টেম্বর ২০২৬: *"INVOICE LOGO ALADA UPLOAD MUST"*।
+         * ⓘ পথটা `public` ডিস্কে (`invoice-logos/…`); খালি মানে প্রোফাইলের লোগো। শাখা ধরে আলাদা ([[BranchSettings::invoiceLogoPath()]])।
+         * ⓘ গ্রুপ `invoice_info`-র `part` `logo` — "Set Your Invoice Information" পাতা নিজের তোলার ঘরে আঁকে, সাধারণ ঘরে নয়।
+         */
+        [
+            'key' => 'print.invoice_logo',
+            'label' => 'system_admin::settings.invoice_logo',
+            'type' => 'string',
+            'default' => null,
+            'group' => 'invoice_info',
+            'part' => 'logo',
+            'per_branch' => true,
+        ],
         [
             'key' => 'print.default_paper',
             'label' => 'system_admin::settings.default_paper',

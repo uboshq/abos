@@ -25,11 +25,29 @@
     @include('system_admin::control-panel.partials.tabs')
     @include('system_admin::print-control.partials.papers', ['current' => $paper])
 
+    {{-- ── কোন শাখার — মালিক, ৩০ সেপ্টেম্বর ২০২৬: শাখা ধরে আলাদা নকশা ─────────── --}}
+    <nav aria-label="{{ __('system_admin::settings.invoice_info_for') }}" data-branch-picker
+         class="mb-3 flex flex-wrap items-center gap-1">
+        <span class="me-2 text-xs text-(--color-ink-muted)">{{ __('system_admin::settings.invoice_info_for') }}</span>
+        @foreach ([null, ...$branches] as $one)
+            @php $id = $one?->id; @endphp
+            <a href="{{ route('system_admin.print_control', array_filter(['paper' => $paper, 'size' => $size, 'branch' => $id])) }}"
+               @class([
+                   'rounded-(--radius-field) px-3 py-1 text-sm transition-colors',
+                   'bg-(--color-surface-sunken) font-semibold' => $branch === $id,
+                   'text-(--color-ink-muted) hover:bg-(--color-surface-hover)' => $branch !== $id,
+               ])
+               @if ($branch === $id) aria-current="page" @endif>
+                {{ $one === null ? __('system_admin::settings.invoice_info_company') : $one->name() }}
+            </a>
+        @endforeach
+    </nav>
+
     {{-- ── মাপ — প্রতিটার নিজের ঠিকানা ─────────────────────────────── --}}
     <nav aria-label="{{ __('system_admin::settings.print_sizes') }}"
          class="mb-4 flex gap-1 border-b border-(--color-border)">
         @foreach ($sizes as $one)
-            <a href="{{ route('system_admin.print_control', ['paper' => $paper, 'size' => $one]) }}"
+            <a href="{{ route('system_admin.print_control', array_filter(['paper' => $paper, 'size' => $one, 'branch' => $branch])) }}"
                @class([
                    'min-h-(--spacing-touch) px-3 py-2 text-sm transition-colors',
                    'border-b-2 border-(--color-brand-600) font-semibold' => $size === $one,
@@ -56,6 +74,7 @@
             @method('PUT')
             <input type="hidden" name="paper" value="{{ $paper }}">
             <input type="hidden" name="size" value="{{ $size }}">
+            <input type="hidden" name="branch" value="{{ $branch }}">
 
             {{-- ── নকশা, আর তার নমুনা ────────────────────────────────── --}}
             <section data-boxed
@@ -64,6 +83,15 @@
                 <p class="mb-3 text-xs text-(--color-ink-muted)">
                     {{ count($cards) > 1 ? __('system_admin::settings.print_pick_design_note') : __('system_admin::settings.print_only_standard') }}
                 </p>
+
+                {{-- ⓘ শাখায় প্রথম বিকল্প "কোম্পানির মতো" — বাছলে শাখার বদল মোছে, কোম্পানির নকশাই ছাপে --}}
+                @if ($branch !== null && count($cards) > 0)
+                    <label class="mb-3 flex items-center gap-2 text-sm" data-design-inherit>
+                        <input type="radio" name="design" value="" @checked($chosen === '') class="size-4">
+                        <span>{{ __('system_admin::settings.invoice_info_inherit') }}
+                            ({{ $companyChoiceName }})</span>
+                    </label>
+                @endif
 
                 <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                     @foreach ($cards as $card)

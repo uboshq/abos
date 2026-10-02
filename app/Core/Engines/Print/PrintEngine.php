@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace App\Core\Engines\Print;
 
+use App\Core\Services\BranchSettings;
 use App\Core\Services\SettingsService;
 use App\Core\Support\CompanyContext;
 use App\Models\Company;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\View;
 use Mpdf\Config\ConfigVariables;
 use Mpdf\Config\FontVariables;
@@ -56,7 +58,7 @@ final class PrintEngine
     ): string {
         $size = PaperSize::of($paper);
         $locale = $locale ?? app()->getLocale();
-        $company = $company ?? $this->currentCompany();
+        $company = $this->withInvoiceLogo($company ?? $this->currentCompany());
 
         $view = $this->resolveTemplate($template);
 
@@ -113,7 +115,7 @@ final class PrintEngine
     ): string {
         $size = PaperSize::of($paper);
         $locale = $locale ?? app()->getLocale();
-        $company = $company ?? $this->currentCompany();
+        $company = $this->withInvoiceLogo($company ?? $this->currentCompany());
 
         $view = $this->resolveTemplate($template);
 
@@ -304,6 +306,24 @@ final class PrintEngine
                 'B' => 'PlayfairDisplay-Black.ttf',
             ],
         ];
+    }
+
+    /**
+     * ⭐ বিলের লোগো — মালিক, ৩০ সেপ্টেম্বর ২০২৬: *"INVOICE LOGO ALADA UPLOAD MUST"*, শাখা ধরে আলাদা।
+     *
+     * ⓘ ক্রম: কাগজের শাখার বিলের লোগো → কোম্পানির বিলের লোগো → প্রোফাইলের লোগো ([[BranchSettings::invoiceLogoPath()]])।
+     * ⚠️ একটা **কপি**-তে বসে, সংরক্ষণ হয় না — প্রোফাইলের লোগো ডাটাবেসে যেমন আছে তেমন থাকে। ছাঁচগুলো আগের মতোই
+     * `$company->logoData()` ডাকে, তাই কোনো নকশা ছুঁতে হয়নি। ফাইলটা না থাকলে প্রোফাইলেরটাই।
+     */
+    private function withInvoiceLogo(Company $company): Company
+    {
+        $path = app(BranchSettings::class)->invoiceLogoPath();
+
+        if ($path === null || ! Storage::disk('public')->exists($path)) {
+            return $company;
+        }
+
+        return (clone $company)->forceFill(['logo_path' => $path]);
     }
 
     private function currentCompany(): Company

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Sales\Support;
 
-use App\Core\Services\SettingsService;
+use App\Core\Services\BranchSettings;
 use App\Models\Company;
 
 /**
@@ -33,7 +33,11 @@ final class InvoicePrintLook
     /** খালি রাখা ঘরের নাম — নমুনার বাংলা নাম, ঘরের ক্রমে; চতুর্থটার নেই */
     private const DEFAULT_LABELS = ['received_by', 'prepared_by', 'approved_by'];
 
-    public function __construct(private readonly SettingsService $settings) {}
+    /**
+     * ⭐ শাখা ধরে পড়া — মালিক, ৩০ সেপ্টেম্বর ২০২৬: আলাদা শাখায় আলাদা ব্যবসা, তাই বিলের তথ্যও আলাদা।
+     * ⓘ ছাপার সময় কাগজের শাখার বদল ([[BranchSettings::during()]]); বদল না থাকলে কোম্পানির সেটিং।
+     */
+    public function __construct(private readonly BranchSettings $settings) {}
 
     /**
      * কাগজের মাথা — বদল থাকলে সেটা, নাহলে প্রোফাইলের মান (ইংরেজিতে, নমুনার মতো)।

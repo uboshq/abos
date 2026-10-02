@@ -7,9 +7,12 @@ namespace App\Modules\SystemAdmin\Http\Controllers;
 use App\Core\Engines\Print\PrintEngine;
 use App\Core\Engines\Print\PrintProfile;
 use App\Core\Engines\Print\PrintSample;
+use App\Core\Services\BranchSettings;
 use App\Core\Services\MenuBuilder;
 use App\Core\Services\SettingsService;
+use App\Core\Support\CompanyContext;
 use App\Http\Controllers\Controller;
+use App\Models\Branch;
 use App\Modules\SystemAdmin\Support\ControlPanelTabs;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -54,6 +57,7 @@ class PrintControlController extends Controller implements HasMiddleware
         private readonly MenuBuilder $menu,
         private readonly ControlPanelTabs $tabs,
         private readonly PrintEngine $print,
+        private readonly BranchSettings $branches,
     ) {}
 
     /** ⓘ একই চাবি (`settings.manage`) — কাগজে কী থাকবে সেটা প্রতিষ্ঠানের সিদ্ধান্ত */
@@ -69,7 +73,18 @@ class PrintControlController extends Controller implements HasMiddleware
         $target = self::targetFor($paper, $size);
         $designs = $this->designsFor($paper, $size);
 
+        /* ⭐ শাখা ধরে আলাদা নকশা — মালিক, ৩০ সেপ্টেম্বর ২০২৬ ("PRINT TAMPLATE ALADA HOBE … ALADA TYPE BUSINESS") */
+        $branch = $this->branchFrom($request->query('branch'));
+        $companyChoice = $designs === null ? 'standard' : (string) $this->settings->get($designs['key']);
+        $branchChoice = $branch !== null && $designs !== null ? $this->branches->own($designs['key'], $branch) : null;
+
         return view('system_admin::print-control.edit', [
+            'branches' => Branch::query()->where('company_id', CompanyContext::id())->orderBy('code')->get(['id', 'company_id', 'code', 'name_en', 'name_bn']),
+            'branch' => $branch,
+            'companyChoice' => $companyChoice,
+
+            /* ⓘ নামটা ঘোষণার option_label থেকে — এই পাতা কোনো মডিউলের ভাষা-ফাইল নিজে জানে না */
+            'companyChoiceName' => $designs === null ? '' : (string) __($designs['option_label'].$companyChoice),
             'menu' => $this->menu->forUser($request->user()),
             'tabs' => $this->tabs->all(),
             'tab' => 'print',
@@ -82,7 +97,8 @@ class PrintControlController extends Controller implements HasMiddleware
 
             /* ⓘ নতুন নকশা থাকলে "সাধারণ"-এর পুরনো সুইচগুলোও (অংশ, কলাম) পর্দায় নয় — ওগুলো কেবল সাধারণ কাগজের */
             'hasDesigns' => array_diff($designs['options'] ?? [], ['standard']) !== [],
-            'chosen' => $designs === null ? 'standard' : (string) $this->settings->get($designs['key']),
+            /* ⓘ শাখায়: শাখার নিজের বাছাই, না থাকলে '' ("কোম্পানির মতো") */
+            'chosen' => $branch === null ? $companyChoice : (string) ($branchChoice ?? ''),
             'profile' => $target === null ? null : $this->profileData($target),
         ]);
     }
@@ -138,8 +154,16 @@ class PrintControlController extends Controller implements HasMiddleware
 
         $designs = $this->designsFor($paper, $size);
         $design = $request->input('design');
+        $branch = $this->branchFrom($request->input('branch'));
 
-        if ($designs !== null && is_string($design) && in_array($design, $designs['options'], true)) {
+        if ($designs !== null && $branch !== null) {
+            /* ⓘ শাখা: '' = কোম্পানির মতো (বদল মোছা), তালিকার নাম = শাখার নিজের বাছাই */
+            if ($design === '' || $design === null) {
+                $this->branches->reset($designs['key'], $branch);
+            } elseif (is_string($design) && in_array($design, $designs['options'], true)) {
+                $this->branches->set($designs['key'], $branch, $design);
+            }
+        } elseif ($designs !== null && is_string($design) && in_array($design, $designs['options'], true)) {
             $this->settings->set($designs['key'], $design);
         }
 
@@ -151,7 +175,7 @@ class PrintControlController extends Controller implements HasMiddleware
         }
 
         return redirect()
-            ->route('system_admin.print_control', ['paper' => $paper, 'size' => $size])
+            ->route('system_admin.print_control', array_filter(['paper' => $paper, 'size' => $size, 'branch' => $branch]))
             ->with('saved', __('system_admin::settings.print_saved'));
     }
 
@@ -183,6 +207,18 @@ class PrintControlController extends Controller implements HasMiddleware
             $paper === 'invoice' && $size === 'thermal' => 'pos',
             default => $paper,
         };
+    }
+
+    /** চাওয়া শাখা — কেবল এই কোম্পানির; অন্যথায় null (কোম্পানি) */
+    private function branchFrom(mixed $asked): ?int
+    {
+        if (! is_numeric($asked)) {
+            return null;
+        }
+
+        $id = (int) $asked;
+
+        return Branch::query()->whereKey($id)->where('company_id', CompanyContext::id())->exists() ? $id : null;
     }
 
     private static function paperFrom(mixed $asked): string

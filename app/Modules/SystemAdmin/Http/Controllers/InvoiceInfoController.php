@@ -4,11 +4,14 @@ declare(strict_types=1);
 
 namespace App\Modules\SystemAdmin\Http\Controllers;
 
+use App\Core\Engines\Image\ImageEngine;
 use App\Core\Engines\NumberSeries\NumberSeriesEngine;
+use App\Core\Services\BranchSettings;
 use App\Core\Services\MenuBuilder;
 use App\Core\Services\SettingsService;
 use App\Core\Support\CompanyContext;
 use App\Http\Controllers\Controller;
+use App\Models\Branch;
 use App\Models\Company;
 use App\Models\NumberSeries;
 use App\Modules\SystemAdmin\Support\ControlPanelTabs;
@@ -18,6 +21,8 @@ use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
 /**
@@ -55,6 +60,7 @@ class InvoiceInfoController extends Controller implements HasMiddleware
         private readonly MenuBuilder $menu,
         private readonly ControlPanelTabs $tabs,
         private readonly NumberSeriesEngine $numbers,
+        private readonly BranchSettings $branches,
     ) {}
 
     /** ⓘ ছাপার নিয়ন্ত্রণের চাবিটাই — একই প্রশ্ন, প্রতিষ্ঠান তার কাগজ কেমন চায় */
@@ -67,12 +73,25 @@ class InvoiceInfoController extends Controller implements HasMiddleware
     {
         $company = Company::query()->findOrFail(CompanyContext::id());
 
+        /*
+         * ⭐ কোন শাখার — মালিক, ৩০ সেপ্টেম্বর ২০২৬: *"inv info, iNVOICE lOGO protiti branch ER JONNO ALADA ALADA HOBE"*।
+         * ⓘ null = কোম্পানি (সব শাখার মূল); একটা শাখা = তার নিজের বদল, খালি ঘর "কোম্পানির মতো"।
+         */
+        $branch = $this->branchFrom($request->query('branch'));
+        $logo = $this->branches->invoiceLogoPath($branch);
+
         return view('system_admin::print-control.invoice-info', [
+            'branches' => Branch::query()->where('company_id', $company->id)->orderBy('code')->get(['id', 'company_id', 'code', 'name_en', 'name_bn']),
+            'branch' => $branch,
+            'invoiceLogo' => $logo !== null && Storage::disk('public')->exists($logo) ? Storage::disk('public')->url($logo) : null,
+            'ownLogo' => $branch === null
+                ? $this->settings->get(BranchSettings::INVOICE_LOGO) !== null
+                : $this->branches->own(BranchSettings::INVOICE_LOGO, $branch) !== null,
             'menu' => $this->menu->forUser($request->user()),
             'tabs' => $this->tabs->all(),
             'tab' => 'print',
             'papers' => PrintControlController::paperTabs(),
-            'parts' => $this->parts(),
+            'parts' => $this->parts($branch),
             'company' => $company,
             'next' => $this->nextSaleNumber(),
 
@@ -89,6 +108,14 @@ class InvoiceInfoController extends Controller implements HasMiddleware
      */
     public function update(Request $request): RedirectResponse
     {
+        $branch = $this->branchFrom($request->input('branch'));
+
+        /* ⭐ বিলের লোগো — কোম্পানির পাতার সেই একই দরজা: ছবি, ১২ MB পর্যন্ত, ইঞ্জিন ছোট করে */
+        $request->validate([
+            'invoice_logo' => ['nullable', 'image', 'mimes:png,jpg,jpeg,webp', 'max:12288'],
+            'remove_invoice_logo' => ['nullable', 'boolean'],
+        ]);
+
         /*
          * ⚠️ পুরো অ্যারেটা একবারে — চাবিতে ডট আছে, আর `input('settings.a.b')` ডটকে পথ ধরে
          * নিত; প্রতিটা মান null আসত, কিছুই সেভ হত না, নীরবে ([[SettingsController::update()]])।
@@ -113,13 +140,36 @@ class InvoiceInfoController extends Controller implements HasMiddleware
             return back()->withInput()->withErrors($errors);
         }
 
-        DB::transaction(function () use ($definitions, $sent, $request) {
+        DB::transaction(function () use ($definitions, $sent, $request, $branch) {
             foreach ($definitions as $key => $definition) {
-                if (! $this->settings->mayChange($key, $request->user())) {
+                if (! $this->settings->mayChange($key, $request->user()) || ($definition['part'] ?? null) === 'logo') {
                     continue;
                 }
 
                 $raw = $sent[$key] ?? null;
+
+                /*
+                 * ⓘ শাখার বেলায় প্রতিটা ঘরের তৃতীয় একটা মান আছে — "কোম্পানির মতো" (খালি)। ⛔ চেকবক্সে সেটা বলা যায়
+                 * না, তাই শাখায় সুইচগুলো বাছাইয়ের ঘর: "" = কোম্পানির মতো, "1" = চালু, "0" = বন্ধ।
+                 */
+                if ($branch !== null) {
+                    if (! $this->branches->isPerBranch($key)) {
+                        continue;
+                    }
+
+                    $value = trim((string) $raw);
+
+                    match (true) {
+                        $value === '' => $this->branches->reset($key, $branch),
+                        $definition['type'] === 'boolean' => $this->branches->set($key, $branch, $value === '1'),
+                        $definition['type'] === 'choice' => in_array($value, (array) ($definition['options'] ?? []), true)
+                            ? $this->branches->set($key, $branch, $value)
+                            : null,
+                        default => $this->branches->set($key, $branch, $value),
+                    };
+
+                    continue;
+                }
 
                 match ($definition['type']) {
                     /* ⓘ চেকবক্স বন্ধ থাকলে ব্রাউজার ঘরটাই পাঠায় না — তাই "আছে কি নেই" */
@@ -135,10 +185,12 @@ class InvoiceInfoController extends Controller implements HasMiddleware
                         : $this->settings->set($key, trim((string) $raw)),
                 };
             }
+
+            $this->keepInvoiceLogo($request, $branch);
         });
 
         return redirect()
-            ->route('system_admin.print_control.invoice_info')
+            ->route('system_admin.print_control.invoice_info', array_filter(['branch' => $branch]))
             ->with('saved', __('system_admin::settings.invoice_info_saved'));
     }
 
@@ -160,20 +212,92 @@ class InvoiceInfoController extends Controller implements HasMiddleware
      *
      * @return array<string, list<array<string, mixed>>>
      */
-    private function parts(): array
+    private function parts(?int $branch = null): array
     {
         $parts = array_fill_keys(self::PARTS, []);
 
         foreach ($this->definitions() as $key => $definition) {
+            /* ⓘ লোগো নিজের তোলার ঘরে আঁকা হয়, সাধারণ লেখার ঘরে নয় */
+            if (($definition['part'] ?? null) === 'logo') {
+                continue;
+            }
+
             $parts[$definition['part'] ?? 'note'][] = [
                 ...$definition,
                 'key' => $key,
-                'value' => $this->settings->get($key),
+
+                /* ⓘ শাখায়: কেবল শাখার নিজের বসানো মান (null = কোম্পানির মতো); পাশে কোম্পানিরটা, দেখানোর জন্য */
+                'value' => $branch === null ? $this->settings->get($key) : $this->branches->own($key, $branch),
+                'inherited' => $this->settings->get($key),
                 'name' => $this->label($definition),
             ];
         }
 
         return array_filter($parts);
+    }
+
+    /**
+     * চাওয়া শাখা — কেবল এই কোম্পানির; অচেনা বা অন্য কোম্পানির হলে null (কোম্পানি)।
+     * ⛔ অন্য কোম্পানির শাখার আইডি দিয়ে তার বিলের চেহারা বদলানো যায় না।
+     */
+    private function branchFrom(mixed $asked): ?int
+    {
+        if (! is_numeric($asked)) {
+            return null;
+        }
+
+        $id = (int) $asked;
+
+        return Branch::query()->whereKey($id)->where('company_id', CompanyContext::id())->exists() ? $id : null;
+    }
+
+    /**
+     * বিলের লোগো তোলা বা মোছা — কোম্পানির পাতার সেই একই ইঞ্জিনে ছোট করে ([[CompanyController::keepLogo()]])।
+     * ⓘ কোম্পানিতে সেটিংয়ে, শাখায় শাখার বদলে; পথটা `public` ডিস্কে।
+     */
+    private function keepInvoiceLogo(Request $request, ?int $branch): void
+    {
+        $save = fn (?string $path) => match (true) {
+            $path === null && $branch === null => $this->settings->reset(BranchSettings::INVOICE_LOGO),
+            $path === null => $this->branches->reset(BranchSettings::INVOICE_LOGO, (int) $branch),
+            $branch === null => $this->settings->set(BranchSettings::INVOICE_LOGO, $path),
+            default => $this->branches->set(BranchSettings::INVOICE_LOGO, $branch, $path),
+        };
+
+        if ($request->boolean('remove_invoice_logo')) {
+            $save(null);
+
+            return;
+        }
+
+        $file = $request->file('invoice_logo');
+
+        if ($file === null) {
+            return;
+        }
+
+        $name = CompanyContext::id().'-'.($branch ?? 'co').'-'.now()->format('Ymd-His');
+        $source = $file->getRealPath();
+
+        if ($source !== false) {
+            try {
+                $mark = (new ImageEngine)->mark($source);
+                $path = 'invoice-logos/'.$name.'.'.$mark['extension'];
+                Storage::disk('public')->put($path, $mark['bytes']);
+                $save($path);
+
+                return;
+            } catch (\Throwable) {
+                // নিচে পড়ে যায়।
+            }
+        }
+
+        /* ⛔ ছোট করা গেল না, অথচ ফাইলটা বড় — প্রতিটা কাগজে base64 হয়ে বসত; নীরবে রাখা যায় না */
+        if ((int) $file->getSize() > 2 * 1024 * 1024) {
+            throw ValidationException::withMessages(['invoice_logo' => __('core.image.logo_not_processed')]);
+        }
+
+        $save($file->storeAs('invoice-logos', $name.'.'.$file->extension(), ['disk' => 'public']));
     }
 
     /** ঘরের নাম — সইয়ের চারটা ঘর একই নাম নেয়, কেবল ক্রমিক আলাদা */
