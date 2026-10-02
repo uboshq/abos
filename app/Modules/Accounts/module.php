@@ -160,6 +160,10 @@ return [
             ['label' => 'accounts::menu.inflow', 'icon' => 'refresh', 'route' => 'accounts.report.show',
                 'route_params' => ['slug' => 'inflow'], 'permission' => 'accounts.report'],
 
+            // ⭐ মাসওয়ারি টাকা আসা-যাওয়া — মাস ধরে কোথা থেকে এল, কোথায় গেল, কত রইল (১ অক্টোবর ২০২৬)
+            ['label' => 'accounts::menu.monthly_cash', 'icon' => 'calendar', 'route' => 'accounts.report.show',
+                'route_params' => ['slug' => 'monthly-cash'], 'permission' => 'accounts.report'],
+
             /*
              * কোন কেন্দ্রে কত — "কোন রুট লাভজনক" প্রশ্নের কাগজ।
              *

@@ -40,6 +40,8 @@ final class CoreReports
         $engine->register(self::expenseByHead());
         // ⭐ আয়ের আয়না — ২০ সেপ্টেম্বর ২০২৬ (অর্থের মানচিত্র §১০)
         $engine->register(self::incomeByHead());
+        // ⭐ মাসওয়ারি টাকা আসা-যাওয়া — মালিকের নির্দেশ, ১ অক্টোবর ২০২৬
+        $engine->register(MonthlyCashReport::definition());
     }
 
     /**

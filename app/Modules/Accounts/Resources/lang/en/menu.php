@@ -34,6 +34,7 @@ return [
     'settings' => 'Settings',
     'loans' => 'Loans',
     'inflow' => 'Money In',
+    'monthly_cash' => 'Monthly cash in & out',
 
     // মাস বন্ধ ও খোলা
     'periods' => 'Close a Month',

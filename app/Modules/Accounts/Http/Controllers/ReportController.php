@@ -10,6 +10,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Branch;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Models\CostCenter;
+use App\Modules\Accounts\Reports\MonthlyCashReport;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
@@ -83,6 +84,8 @@ class ReportController extends Controller implements HasMiddleware
         'profit-loss' => 'accounts.profit_loss',
         'balance-sheet' => 'accounts.balance_sheet',
         'cash-flow' => 'accounts.cash_flow',
+        // ⭐ মাসওয়ারি টাকা আসা-যাওয়া (১ অক্টোবর ২০২৬)
+        'monthly-cash' => MonthlyCashReport::KEY,
     ];
 
     /** যেগুলোতে চূড়ান্ত হিসাবের অনুমতি লাগে। */
@@ -114,6 +117,11 @@ class ReportController extends Controller implements HasMiddleware
 
         $key = self::SLUGS[$slug];
         $definition = $this->reports->get($key);
+
+        // ⓘ মাসওয়ারি হিসাব এক মাসে অর্থহীন — ডিফল্ট চলতি অর্থবছর (মালিকের চাওয়া, ১ অক্টোবর ২০২৬)
+        if ($key === MonthlyCashReport::KEY && ! $request->filled('from')) {
+            $request->merge(['from' => MonthlyCashReport::yearStart()]);
+        }
 
         $result = $this->reports->run(
             $key,
@@ -154,7 +162,10 @@ class ReportController extends Controller implements HasMiddleware
                 ? Branch::query()->active()->orderBy('name_en')->get()
                 : collect(),
             'accounts' => $definition->hasFilter('account')
-                ? Account::query()->postable()->active()->orderBy('code')->get()
+                ? Account::query()->postable()->active()
+                    // ⓘ টাকার হিসাবে কেবল টাকার খাত বাছার মানে আছে
+                    ->when($key === MonthlyCashReport::KEY, fn ($q) => $q->money())
+                    ->orderBy('code')->get()
                 : collect(),
 
             /*

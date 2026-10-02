@@ -214,4 +214,5 @@ return [
     'recon_search' => 'Bank account name, code or number, or note',
     'year_reopened' => ':name is open again — the closing entry has been reversed.',
     'reopen_note' => 'The closing entry is reversed, not deleted — the history stays.',
+    'monthly_cash_net' => 'Net cash for the period — transfers between the accounts shown are netted out',
 ];
