@@ -168,6 +168,10 @@ return [
             ['label' => 'accounts::menu.cheque_register', 'icon' => 'book', 'route' => 'accounts.report.show',
                 'route_params' => ['slug' => 'cheque-register'], 'permission' => 'accounts.report'],
 
+            // ⭐ খরচের বিশ্লেষণ — কোন খাতে হঠাৎ বাড়ল, সবচেয়ে বড় খরচ কত (রিপোর্ট সেন্টার ধাপ ৪)
+            ['label' => 'accounts::expense.title', 'icon' => 'reports', 'route' => 'accounts.report.show',
+                'route_params' => ['slug' => 'expense-analysis'], 'permission' => 'accounts.report'],
+
             /*
              * কোন কেন্দ্রে কত — "কোন রুট লাভজনক" প্রশ্নের কাগজ।
              *

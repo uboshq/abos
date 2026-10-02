@@ -44,6 +44,8 @@ final class CoreReports
         $engine->register(MonthlyCashReport::definition());
         // ⭐ চেকের খাতা — রিপোর্ট সেন্টার ধাপ ৪ (২ অক্টোবর ২০২৬)
         ChequeReports::registerAll($engine);
+        // ⭐ খরচের বিশ্লেষণ — আগের সময়ের সাথে তুলনা, সবচেয়ে বড় খরচ (রিপোর্ট সেন্টার ধাপ ৪)
+        $engine->register(ExpenseAnalysisReport::definition());
     }
 
     /**

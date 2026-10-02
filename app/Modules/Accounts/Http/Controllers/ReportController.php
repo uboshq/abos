@@ -11,6 +11,7 @@ use App\Models\Branch;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Models\CostCenter;
 use App\Modules\Accounts\Reports\ChequeReports;
+use App\Modules\Accounts\Reports\ExpenseAnalysisReport;
 use App\Modules\Accounts\Reports\MonthlyCashReport;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
@@ -89,6 +90,8 @@ class ReportController extends Controller implements HasMiddleware
         'monthly-cash' => MonthlyCashReport::KEY,
         // ⭐ চেকের খাতা — আগামী তারিখের, আজ জমার, ফেরত (২ অক্টোবর ২০২৬)
         'cheque-register' => ChequeReports::KEY,
+        // ⭐ খরচের বিশ্লেষণ — কোন খাতে হঠাৎ বাড়ল (২ অক্টোবর ২০২৬)
+        'expense-analysis' => ExpenseAnalysisReport::KEY,
     ];
 
     /** যেগুলোতে চূড়ান্ত হিসাবের অনুমতি লাগে। */
