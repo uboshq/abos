@@ -138,7 +138,8 @@ class EmployeeController extends Controller implements HasMiddleware
 
         $seesSalary = (bool) $request->user()?->can('viewSalary', $employee);
 
-        $employee->load(['department', 'designation', 'employmentType', 'branch', 'creator']);
+        $employee->load(['department', 'designation', 'employmentType', 'branch', 'creator', 'user',
+            'reportsTo.designation', 'reports' => fn ($q) => $q->active()->with('designation')->orderBy('name_en')]);
 
         /*
          * ⭐ হাজিরা ও ছুটি — প্রোফাইলের দ্বিতীয় কার্ড, মালিকের অনুমোদিত নকশা (১ অক্টোবর ২০২৬)।
@@ -169,6 +170,9 @@ class EmployeeController extends Controller implements HasMiddleware
                     ->map(fn (LeaveType $type) => ['type' => $type] + $this->leaves->balance($employee, $type, $month->copy()->endOfMonth()))
                     ->all()
                 : null,
+
+            // ⭐ চাকরির ইতিহাস — নিরীক্ষার খাতা থেকে ([[JobHistory]]); প্রোফাইল খোলার চাবিতেই, কারণ পদবি-বিভাগ এখানে আগে থেকেই খোলা
+            'history' => app(\App\Modules\Hr\Services\JobHistory::class)->of($employee),
         ]);
     }
 
@@ -245,6 +249,39 @@ class EmployeeController extends Controller implements HasMiddleware
             'email' => ['nullable', 'email', 'max:120'],
             'national_id' => ['nullable', 'string', 'max:32'],
 
+            // ⭐ প্রোফাইলের মানুষটা — মালিকের অনুমোদিত নকশা, ২ অক্টোবর ২০২৬। সবই ঐচ্ছিক: পুরনো কর্মীদের এগুলো কেউ লেখেনি।
+            'date_of_birth' => ['nullable', 'date', 'before:today'],
+            'mother_name' => ['nullable', 'string', 'max:150'],
+            'blood_group' => ['nullable', Rule::in(Employee::BLOOD_GROUPS)],
+            'present_address' => ['nullable', 'string', 'max:500'],
+            'permanent_address' => ['nullable', 'string', 'max:500'],
+            'emergency_name' => ['nullable', 'string', 'max:150'],
+            'emergency_relation' => ['nullable', 'string', 'max:60'],
+            'emergency_mobile' => ['nullable', 'string', 'max:20'],
+
+            /*
+             * ⭐ যাঁর অধীনে — একই কোম্পানির কর্মী, নিজে নন, আর চক্র নয়।
+             * ⛔ কোম্পানির দেয়াল ছাড়া এক কোম্পানির কর্মীকে অন্য কোম্পানির ম্যানেজারের নিচে বসানো যেত, আর প্রোফাইলে
+             * সেই ম্যানেজারের নাম-পদবি পড়া যেত। ⛔ চক্র (ক→খ→ক) হলে রিপোর্টিং লাইন আঁকতে গিয়ে ঘুরতেই থাকত।
+             */
+            'reports_to_employee_id' => ['nullable', 'integer',
+                Rule::exists('hr_employees', 'id')->where('company_id', $companyId)->whereNull('deleted_at'),
+                function (string $attribute, mixed $value, \Closure $fail) use ($employee): void {
+                    if ($employee === null) {
+                        return;
+                    }
+
+                    $seen = [];
+                    for ($id = (int) $value; $id > 0 && ! isset($seen[$id]); $id = (int) Employee::query()->whereKey($id)->value('reports_to_employee_id')) {
+                        if ($id === (int) $employee->id) {
+                            $fail(__('hr::validation.reports_to_loop'));
+
+                            return;
+                        }
+                        $seen[$id] = true;
+                    }
+                }],
+
             'branch_id' => ['nullable', 'integer',
                 Rule::exists('branches', 'id')->where('company_id', $companyId),
                 // ⓘ নিজের নাগালের বাইরের শাখায় কর্মী বসানো যায় না — নাহলে
@@ -305,6 +342,12 @@ class EmployeeController extends Controller implements HasMiddleware
             'employmentTypes' => EmploymentType::query()->active()->orderBy('code')->get(),
             'paymentMethods' => Employee::PAYMENT_METHODS,
             'taggableUsers' => $this->taggableUsers($employee),
+            'bloodGroups' => Employee::BLOOD_GROUPS,
+
+            // ⓘ যাঁর অধীনে বসানো যায় — এই কোম্পানির চালু কর্মীরা, নিজে বাদ (শাখার বেড়া মডেলের স্কোপে)
+            'managers' => Employee::query()->active()
+                ->when($employee->exists, fn ($q) => $q->whereKeyNot($employee->id))
+                ->with('designation')->orderBy('name_en')->get(),
         ];
     }
 

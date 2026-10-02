@@ -49,6 +49,14 @@
     $designation = $user
         ? (app(\App\Core\Panels\FactRegistry::class)->forRecord('user', $user->id)[0]->value ?? null)
         : null;
+
+    /*
+     * ⭐ গ্রুপের মালিকের পদবি সব কোম্পানিতে একটাই — মালিকের সিদ্ধান্ত, ২ অক্টোবর ২০২৬।
+     * ⓘ পদবিটা গোটা ব্যবস্থার একটা সেটিং (group.owner_title_bn|en, কন্ট্রোল প্যানেলে সুপার অ্যাডমিন বদলান); কোনো কোম্পানির কর্মী-সারিতে অন্য পদবি থাকলেও এখানে বদলায় না ([[Ownership::isGroupOwner()]], কেবল পরিচয়)।
+     */
+    if (app(\App\Core\Services\Ownership::class)->isGroupOwner($user)) {
+        $designation = app(\App\Core\Services\Ownership::class)->groupOwnerTitle() ?? $designation;
+    }
 @endphp
 
 <footer data-footer class="fixed inset-x-0 bottom-0 z-20 hidden h-(--spacing-status-bar) items-center gap-4

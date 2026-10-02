@@ -120,6 +120,33 @@ final class Ownership
             ->get();
     }
 
+    /**
+     * ইনি কি গ্রুপের মালিক — `config('abos.owner_emails')`-এ যাঁর ইমেইল আছে?
+     *
+     * ⭐ কেবল পরিচয় দেখানোর জন্য: পদবি সব কোম্পানিতে একটাই (২ অক্টোবর ২০২৬)। ⛔ কোনো দরজা বা অনুমতি এর ওপর নয় —
+     * সেগুলো super_admin রোলে ([[isOwnerIn()]])। ⛔ তালিকা খালি হলে কেউই নন।
+     */
+    public function isGroupOwner(?User $user): bool
+    {
+        $email = mb_strtolower(trim((string) $user?->email));
+
+        return $email !== '' && in_array($email, (array) config('abos.owner_emails', []), true);
+    }
+
+    /**
+     * ⭐ গ্রুপের মালিকের পদবি, পর্দার ভাষায় — একটাই সেটিং, সব কোম্পানিতে (২ অক্টোবর ২০২৬)।
+     * ⓘ `group.owner_title_bn|en` গোটা ব্যবস্থার সেটিং; ফাঁকা থাকলে অন্য ভাষারটা, দুইটাই ফাঁকা হলে null।
+     */
+    public function groupOwnerTitle(): ?string
+    {
+        $settings = app(SettingsService::class);
+        $bn = trim((string) $settings->get('group.owner_title_bn'));
+        $en = trim((string) $settings->get('group.owner_title_en'));
+        $title = app()->getLocale() === 'bn' ? ($bn !== '' ? $bn : $en) : ($en !== '' ? $en : $bn);
+
+        return $title !== '' ? $title : null;
+    }
+
     /** ইনি কি এই কোম্পানির সক্রিয় owner? */
     public function isOwnerIn(User $user, int $companyId): bool
     {

@@ -48,6 +48,9 @@ class Employee extends Model implements Drillable
     protected $fillable = [
         'company_id', 'branch_id', 'code', 'name_en', 'name_bn',
         'father_name', 'mobile', 'email', 'national_id',
+        // ⭐ প্রোফাইলের মানুষটা ও রিপোর্টিং লাইন — মালিকের অনুমোদিত নকশা, ২ অক্টোবর ২০২৬
+        'date_of_birth', 'mother_name', 'blood_group', 'present_address', 'permanent_address',
+        'emergency_name', 'emergency_relation', 'emergency_mobile', 'reports_to_employee_id',
         'user_id', 'department_id', 'designation_id', 'employment_type_id',
         'joining_date', 'leaving_date',
         'payment_method', 'bank_name', 'bank_branch',
@@ -59,6 +62,7 @@ class Employee extends Model implements Drillable
     {
         return [
             'joining_date' => 'date',
+            'date_of_birth' => 'date',
             'leaving_date' => 'date',
             'is_active' => 'boolean',
 
@@ -94,6 +98,9 @@ class Employee extends Model implements Drillable
      */
     public const PAYMENT_METHODS = ['cash', 'bank', 'mfs'];
 
+    /** ⓘ রক্তের আটটা গ্রুপ — বাছাই থেকে, হাতে লেখা নয়, যাতে "B +ve" আর "B+" দুই রকম না হয় */
+    public const BLOOD_GROUPS = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
+
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
@@ -113,6 +120,23 @@ class Employee extends Model implements Drillable
     public function department(): BelongsTo
     {
         return $this->belongsTo(Department::class);
+    }
+
+    /**
+     * ⭐ যাঁর অধীনে কাজ করেন — প্রোফাইলের রিপোর্টিং লাইন।
+     * ⓘ কোম্পানির দেয়াল এখানে নয়, কন্ট্রোলারের যাচাইয়ে আর [[BelongsToCompany]]-র স্কোপে।
+     *
+     * @return BelongsTo<Employee, $this>
+     */
+    public function reportsTo(): BelongsTo
+    {
+        return $this->belongsTo(self::class, 'reports_to_employee_id');
+    }
+
+    /** @return HasMany<Employee, $this> যাঁরা এঁর অধীনে */
+    public function reports(): HasMany
+    {
+        return $this->hasMany(self::class, 'reports_to_employee_id');
     }
 
     /** @return BelongsTo<Designation, $this> */

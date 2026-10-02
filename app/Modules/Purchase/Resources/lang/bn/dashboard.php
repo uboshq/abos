@@ -21,6 +21,9 @@ return [
     'biggest_payables' => 'সবচেয়ে বড় দেনা',
     'nothing_payable' => 'কোনো দেনা নেই।',
     'bought_against_paid' => 'কেনা বনাম পরিশোধ — গত ছয় মাস',
+    'top_suppliers' => ':year সালে সবচেয়ে বেশি কেনা — সরবরাহকারী',
+    'top_suppliers_hint' => 'নিশ্চিত বিলের মোট, প্রথম পাঁচজন',
+    'bought_against_paid_year' => ':year সালের কেনা ও পরিশোধ — জানুয়ারি থেকে ডিসেম্বর',
     'bought' => 'কেনা',
     'paid' => 'পরিশোধ',
 ];

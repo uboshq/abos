@@ -11,9 +11,12 @@ use App\Core\Engines\Dashboard\Listing;
 use App\Core\Engines\Dashboard\Series;
 use App\Core\Engines\Dashboard\Stat;
 use App\Core\Engines\Dashboard\Tile;
+use App\Core\Services\DataScope;
+use App\Core\Support\CompanyContext;
 use App\Core\Support\Money;
 use App\Modules\Inventory\Services\StockFacts;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 
 /**
  * মজুদ মডিউলের ড্যাশবোর্ড।
@@ -231,6 +234,7 @@ final class InventoryDashboard implements ProvidesDashboard
                     ],
                     hint: __('inventory::overview.states_hint'),
                 ),
+                ...self::expiryWindows(),
             ],
 
             listings: [
@@ -290,5 +294,60 @@ final class InventoryDashboard implements ProvidesDashboard
                 ),
             ],
         );
+    }
+
+    /**
+     * ⭐ মেয়াদ নিয়ন্ত্রণ — মাল আছে এমন কয়টা লটের মেয়াদ কবে (মালিকের ড্যাশবোর্ড নকশা, ২ অক্টোবর ২০২৬)।
+     *
+     * ⓘ সংজ্ঞা "মেয়াদ পেরোচ্ছে" রিপোর্টের ([[StockReports::expiring()]]) মতোই: মেয়াদের তারিখ আছে, তাকে মাল > ০,
+     * আর "আজ" অ্যাপের ঘড়ি থেকে — ডাটাবেজের নয়। ⓘ পেরিয়ে যাওয়াটা প্রথম ভাগ, কারণ ওটা নিয়েই এখন কিছু করতে হয়।
+     * ⓘ লটের সংখ্যা, টাকা নয় — দাম দেখানোর চাবি এখানে লাগে না, তাই খরচ কারও চোখে পড়ে না।
+     * ⓘ দেখার শাখা মেনে ([[DataScope::inView()]]) — হেডারে বাছা শাখার চলাচলই গোনা।
+     * ⓘ নতুন ড্যাশবোর্ডের অংশ — বাকিগুলোর সাথে একসাথে চালু হবে (config abos.dashboards_v2)।
+     *
+     * @return list<Breakdown>
+     */
+    private static function expiryWindows(): array
+    {
+        if (! config('abos.dashboards_v2')) {
+            return [];
+        }
+
+        $movements = app(DataScope::class)->inView(
+            DB::table('inv_stock_movements')->where('company_id', CompanyContext::id()),
+            'branch_id',
+        )->whereNotNull('batch_id')
+            ->selectRaw('batch_id, SUM(floor_change) as on_hand')
+            ->groupBy('batch_id');
+
+        $days = DB::table('inv_batches as b')
+            ->joinSub($movements, 'm', 'm.batch_id', '=', 'b.id')
+            ->where('b.company_id', CompanyContext::id())
+            ->whereNull('b.deleted_at')
+            ->whereNotNull('b.expiry_date')
+            ->where('m.on_hand', '>', 0)
+            ->selectRaw('DATEDIFF(b.expiry_date, ?) as days_left', [Carbon::today()->toDateString()])
+            ->pluck('days_left')
+            ->map(fn ($d) => (int) $d);
+
+        $windows = [
+            'expired' => fn (int $d) => $d < 0,
+            'within_7' => fn (int $d) => $d >= 0 && $d <= 7,
+            'within_30' => fn (int $d) => $d > 7 && $d <= 30,
+            'within_90' => fn (int $d) => $d > 30 && $d <= 90,
+            'later' => fn (int $d) => $d > 90,
+        ];
+
+        $parts = [];
+
+        foreach ($windows as $key => $match) {
+            $parts[] = ['label' => __('inventory::dashboard.expiry_'.$key), 'value' => (string) $days->filter($match)->count()];
+        }
+
+        return [new Breakdown(
+            label: __('inventory::dashboard.expiry_title'),
+            parts: $parts,
+            hint: __('inventory::dashboard.expiry_hint', ['count' => $days->count()]),
+        )];
     }
 }

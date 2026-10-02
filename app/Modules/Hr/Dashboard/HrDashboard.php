@@ -8,9 +8,12 @@ use App\Core\Contracts\ProvidesDashboard;
 use App\Core\Engines\Dashboard\Breakdown;
 use App\Core\Engines\Dashboard\DashboardDefinition;
 use App\Core\Engines\Dashboard\Listing;
+use App\Core\Engines\Dashboard\Series;
 use App\Core\Engines\Dashboard\Stat;
 use App\Core\Engines\Dashboard\Tile;
 use App\Core\Services\DataScope;
+use App\Core\Support\DocumentStatus;
+use App\Core\Support\Money;
 use App\Modules\Hr\Models\Attendance;
 use App\Modules\Hr\Models\Employee;
 use App\Modules\Hr\Models\LeaveApplication;
@@ -88,7 +91,7 @@ final class HrDashboard implements ProvidesDashboard
                 ),
             ],
 
-            panels: [self::todaysRoll($today)],
+            panels: [self::todaysRoll($today), ...self::salaryCost()],
 
             listings: [
                 new Listing(
@@ -149,6 +152,55 @@ final class HrDashboard implements ProvidesDashboard
             ],
             hint: __('hr::dashboard.todays_roll_hint', ['count' => $headcount]),
         );
+    }
+
+    /**
+     * ⭐ বেতন খরচ — গত ছয় মাস, মোট আয় বনাম হাতে পাওয়া (মালিকের ড্যাশবোর্ড নকশা, ২ অক্টোবর ২০২৬)।
+     *
+     * ⓘ নিশ্চিত বেতনশিটের `gross_total` আর `net_total` — বেতনশিটের পর্দা যা বলে, এখানেও তাই; দুইটার ফাঁক = কর্তন।
+     * ⛔ টাকার অঙ্ক — কেবল `hr.payroll.view` যাঁর আছে; হাজিরার চাবিতে বেতনের খরচ খোলে না।
+     * ⓘ নতুন ড্যাশবোর্ডের অংশ — বাকিগুলোর সাথে একসাথে চালু হবে (config abos.dashboards_v2)।
+     *
+     * @return list<Series>
+     */
+    private static function salaryCost(): array
+    {
+        if (! config('abos.dashboards_v2') || ! auth()->user()?->can('hr.payroll.view')) {
+            return [];
+        }
+
+        $start = Carbon::today()->startOfMonth()->subMonths(5);
+        $expr = "DATE_FORMAT(month, '%Y-%m')";
+
+        $rows = self::inView(PayrollRun::query(), 'hr_payroll_runs.branch_id')
+            ->whereIn('status', DocumentStatus::POSTED)
+            ->where('month', '>=', $start->toDateString())
+            ->selectRaw("{$expr} as ym, COALESCE(SUM(gross_total), 0) as gross, COALESCE(SUM(net_total), 0) as net")
+            ->groupByRaw($expr)
+            ->toBase()->get()->keyBy('ym');
+
+        $points = [];
+
+        for ($month = $start->copy(); $month->lessThanOrEqualTo(Carbon::today()); $month->addMonth()) {
+            $row = $rows[$month->format('Y-m')] ?? null;
+            $gross = (string) ($row->gross ?? '0');
+            $net = (string) ($row->net ?? '0');
+
+            $points[] = [
+                'label' => $month->translatedFormat('M'),
+                'first' => $gross,
+                'second' => $net,
+                'firstTitle' => Money::format($gross),
+                'secondTitle' => Money::format($net),
+            ];
+        }
+
+        return [new Series(
+            label: __('hr::dashboard.salary_cost'),
+            points: $points,
+            firstLabel: __('hr::field.gross'),
+            secondLabel: __('hr::field.net'),
+        )];
     }
 
     /**

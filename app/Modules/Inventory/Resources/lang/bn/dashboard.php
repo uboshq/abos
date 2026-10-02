@@ -8,4 +8,12 @@ return [
 
     'below_reorder' => 'ফুরিয়ে আসছে',
     'on_hold' => 'আটকানো মাল',
+    // ⭐ মেয়াদ নিয়ন্ত্রণ — ২ অক্টোবর ২০২৬
+    'expiry_title' => 'মেয়াদ নিয়ন্ত্রণ — লট',
+    'expiry_hint' => 'মাল আছে এমন :count টা লট, মেয়াদ কবে',
+    'expiry_expired' => 'মেয়াদ পেরিয়েছে',
+    'expiry_within_7' => '৭ দিনের মধ্যে',
+    'expiry_within_30' => '৮–৩০ দিন',
+    'expiry_within_90' => '৩১–৯০ দিন',
+    'expiry_later' => '৯০ দিনের পরে',
 ];

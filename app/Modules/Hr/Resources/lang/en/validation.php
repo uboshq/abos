@@ -29,4 +29,5 @@ return [
     'leave_already_cancelled' => 'This application was already withdrawn.',
     'unknown_attendance_status' => 'That attendance status is not one we know.',
     'branch_out_of_reach' => 'That branch is outside your reach — if you placed someone there, you could no longer see them yourself.',
+    'reports_to_loop' => 'That would make the reporting line loop back — nobody can report to themselves or to someone below them.',
 ];

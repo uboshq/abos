@@ -66,6 +66,30 @@
             </div>
         </section>
 
+        {{-- ⭐ মানুষটা — জন্মতারিখ, পরিবার, ঠিকানা, বিপদে কাকে ডাকতে হবে। মালিকের অনুমোদিত প্রোফাইল-নকশা,
+             ২ অক্টোবর ২০২৬। সবই ঐচ্ছিক: পুরনো কর্মীদের এগুলো কেউ লেখেনি, আর বানানো জন্মতারিখ খালি ঘরের চেয়ে খারাপ। --}}
+        <section data-boxed data-person class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
+            <div class="grid gap-3 md:grid-cols-3">
+                <x-ui.field name="date_of_birth" type="date" :label="__('hr::field.date_of_birth')"
+                            :value="old('date_of_birth', $employee->date_of_birth?->toDateString())" />
+                <x-ui.field name="mother_name" :label="__('hr::field.mother_name')"
+                            :value="old('mother_name', $employee->mother_name)" />
+                <x-ui.select name="blood_group" :label="__('hr::field.blood_group')"
+                             :options="collect($bloodGroups)->mapWithKeys(fn ($g) => [$g => $g])"
+                             :selected="old('blood_group', $employee->blood_group)" placeholder="-" />
+                <x-ui.field name="present_address" :label="__('hr::field.present_address')"
+                            :value="old('present_address', $employee->present_address)" />
+                <x-ui.field name="permanent_address" :label="__('hr::field.permanent_address')"
+                            :value="old('permanent_address', $employee->permanent_address)" />
+                <x-ui.field name="emergency_name" :label="__('hr::field.emergency_name')"
+                            :value="old('emergency_name', $employee->emergency_name)" />
+                <x-ui.field name="emergency_relation" :label="__('hr::field.emergency_relation')"
+                            :value="old('emergency_relation', $employee->emergency_relation)" />
+                <x-ui.field name="emergency_mobile" :label="__('hr::field.emergency_mobile')"
+                            :value="old('emergency_mobile', $employee->emergency_mobile)" />
+            </div>
+        </section>
+
         {{-- কাজ --}}
         <section data-boxed class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
             <div class="grid gap-3 md:grid-cols-3">
@@ -81,6 +105,10 @@
                 <x-ui.select name="employment_type_id" :label="__('hr::field.employment_type')"
                              :options="$employmentTypes->mapWithKeys(fn ($t) => [$t->id => $t->name()])"
                              :selected="old('employment_type_id', $employee->employment_type_id)" placeholder="-" />
+                {{-- ⭐ রিপোর্টিং লাইন — নিজে তালিকায় নেই; চক্র কন্ট্রোলারে আটকায় --}}
+                <x-ui.select name="reports_to_employee_id" :label="__('hr::field.reports_to')"
+                             :options="$managers->mapWithKeys(fn ($m) => [$m->id => $m->name().($m->designation ? ' · '.$m->designation->name() : '')])"
+                             :selected="old('reports_to_employee_id', $employee->reports_to_employee_id)" placeholder="-" />
                 <x-ui.field name="joining_date" type="date" :label="__('hr::field.joining_date')"
                             :value="old('joining_date', $employee->joining_date?->toDateString())" required />
                 <x-ui.field name="leaving_date" type="date" :label="__('hr::field.leaving_date')"

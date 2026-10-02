@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Purchase\Dashboard;
 
 use App\Core\Contracts\ProvidesDashboard;
+use App\Core\Engines\Dashboard\Breakdown;
 use App\Core\Engines\Dashboard\DashboardDefinition;
 use App\Core\Engines\Dashboard\Listing;
 use App\Core\Engines\Dashboard\Series;
@@ -120,7 +121,7 @@ final class PurchaseDashboard implements ProvidesDashboard
                 ),
             ],
 
-            panels: [self::boughtAgainstPaid()],
+            panels: [self::boughtAgainstPaid(), ...self::topSuppliers()],
 
             listings: [
                 new Listing(
@@ -149,9 +150,54 @@ final class PurchaseDashboard implements ProvidesDashboard
      * ⓘ সংজ্ঞা উপরের দুইটা সংখ্যার মতোই — নিশ্চিত বিলের `total`, পরিশোধের `amount` — তাই এ মাসের দণ্ড আর
      * "এই মাসে কেনা / পরিশোধ" কখনো দুই কথা বলে না। দুইটা কোয়েরি, মাস ধরে ভাগ; ফাঁকা মাসও শূন্য নিয়ে থাকে।
      */
+    /**
+     * ⭐ এ বছর কার কাছ থেকে সবচেয়ে বেশি কেনা — প্রথম পাঁচ সরবরাহকারী (মালিকের ড্যাশবোর্ড নকশা, ২ অক্টোবর ২০২৬)।
+     *
+     * ⓘ সংজ্ঞা পাশের চার্টের মতোই — নিশ্চিত বিলের `total`, একই কোয়েরির ভিত, তাই দুইটা কখনো দুই কথা বলে না।
+     * ⛔ বিলের অঙ্ক — কেবল `purchase.bill.view` যাঁর আছে; চাবি না থাকলে চার্টটাই নেই।
+     * ⓘ নতুন ড্যাশবোর্ডের অংশ — বাকিগুলোর সাথে একসাথে চালু হবে (config abos.dashboards_v2)।
+     *
+     * @return list<Breakdown>
+     */
+    private static function topSuppliers(): array
+    {
+        if (! config('abos.dashboards_v2') || ! auth()->user()?->can('purchase.bill.view')) {
+            return [];
+        }
+
+        $rows = PurchaseBill::query()->whereIn('status', DocumentStatus::POSTED)
+            ->where('trx_date', '>=', Carbon::today()->startOfYear()->toDateString())
+            ->whereNotNull('supplier_id')
+            ->selectRaw('supplier_id, COALESCE(SUM(total), 0) as amount')
+            ->groupBy('supplier_id')
+            ->orderByDesc('amount')
+            ->limit(5)
+            ->with('supplier')
+            ->get();
+
+        if ($rows->isEmpty()) {
+            return [];
+        }
+
+        return [new Breakdown(
+            label: __('purchase::dashboard.top_suppliers', ['year' => Carbon::today()->year]),
+            parts: $rows->map(fn (PurchaseBill $row) => [
+                'label' => $row->supplier?->name() ?? '—',
+                'value' => Money::format((string) $row->amount),
+            ])->all(),
+            hint: __('purchase::dashboard.top_suppliers_hint'),
+        )];
+    }
+
     private static function boughtAgainstPaid(): Series
     {
-        $start = Carbon::today()->startOfMonth()->subMonths(5);
+        /*
+         * ⭐ নতুন ড্যাশবোর্ডে এ বছরের জানুয়ারি–ডিসেম্বর — বিক্রয় ও মজুদের মতোই (মালিক, ২ অক্টোবর ২০২৬:
+         * "১২ মাসের দিবে January to Dec")। ভবিষ্যতের মাসগুলো শূন্য নিয়ে। সুইচ বন্ধে আগের মতো ছয় মাস।
+         */
+        $year = (bool) config('abos.dashboards_v2');
+        $start = $year ? Carbon::today()->startOfYear() : Carbon::today()->startOfMonth()->subMonths(5);
+        $last = $year ? Carbon::today()->endOfYear() : Carbon::today();
         $expr = "DATE_FORMAT(trx_date, '%Y-%m')";
 
         $bought = PurchaseBill::query()->whereIn('status', DocumentStatus::POSTED)
@@ -165,7 +211,7 @@ final class PurchaseDashboard implements ProvidesDashboard
 
         $points = [];
 
-        for ($month = $start->copy(); $month->lessThanOrEqualTo(Carbon::today()); $month->addMonth()) {
+        for ($month = $start->copy(); $month->lessThanOrEqualTo($last); $month->addMonth()) {
             $ym = $month->format('Y-m');
             $in = (string) ($bought[$ym] ?? '0');
             $out = (string) ($paid[$ym] ?? '0');
@@ -180,7 +226,9 @@ final class PurchaseDashboard implements ProvidesDashboard
         }
 
         return new Series(
-            label: __('purchase::dashboard.bought_against_paid'),
+            label: $year
+                ? __('purchase::dashboard.bought_against_paid_year', ['year' => Carbon::today()->year])
+                : __('purchase::dashboard.bought_against_paid'),
             points: $points,
             firstLabel: __('purchase::dashboard.bought'),
             secondLabel: __('purchase::dashboard.paid'),

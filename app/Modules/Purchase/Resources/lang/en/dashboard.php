@@ -21,6 +21,9 @@ return [
     'biggest_payables' => 'Largest payables',
     'nothing_payable' => 'Nothing payable.',
     'bought_against_paid' => 'Bought against paid — last six months',
+    'top_suppliers' => 'Bought most from in :year — suppliers',
+    'top_suppliers_hint' => 'Confirmed bills, top five',
+    'bought_against_paid_year' => 'Bought and paid in :year — January to December',
     'bought' => 'Bought',
     'paid' => 'Paid',
 ];

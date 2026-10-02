@@ -125,6 +125,9 @@ final class DashboardEngine
                  * যে চার্ট তিনি দেখেন, হোমেও ঠিক সেটাই; নতুন কোনো দরজা খোলে না।
                  */
                 'panel' => $definition->panels[0] ?? null,
+
+                /* ⓘ নতুন হোম (`abos.dashboards_v2`) মডিউলের সব চার্টই দেখায় — একই সংজ্ঞা, একই দরজা, বাড়তি কোয়েরি নেই */
+                'panels' => $definition->panels,
             ];
         }
 

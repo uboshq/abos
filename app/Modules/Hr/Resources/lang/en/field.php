@@ -72,4 +72,13 @@ return [
     'unpaid_days' => 'Unpaid days',
     'marked' => 'Marked',
     'employee' => 'Employee',
+    'date_of_birth' => 'Date of Birth',
+    'mother_name' => 'Mother\'s Name',
+    'blood_group' => 'Blood Group',
+    'present_address' => 'Present Address',
+    'permanent_address' => 'Permanent Address',
+    'emergency_name' => 'Emergency Contact',
+    'emergency_relation' => 'Relation',
+    'emergency_mobile' => 'Emergency Mobile',
+    'reports_to' => 'Reports To',
 ];

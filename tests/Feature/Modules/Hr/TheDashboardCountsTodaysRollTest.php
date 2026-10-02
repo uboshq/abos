@@ -71,4 +71,46 @@ final class TheDashboardCountsTodaysRollTest extends TestCase
 
         $this->assertSame(5, array_sum(array_map('intval', $parts)), 'ভাগগুলোর যোগফল চলতি কর্মীসংখ্যা (৫) নয়।');
     }
+
+    /**
+     * ⭐ বেতন খরচ — গত ছয় মাস, কেবল নিশ্চিত বেতনশিট, আর কেবল `hr.payroll.view`-এ (নতুন ড্যাশবোর্ড, ২ অক্টোবর ২০২৬)।
+     * ⛔ একই মানুষ চাবি ছাড়া → চার্টই নেই; চাবিসহ → এ মাসের দণ্ডে নিশ্চিত শিটের অঙ্ক, খসড়া বাদ।
+     */
+    public function test_the_salary_cost_shows_posted_payroll_only_to_the_payroll_key(): void
+    {
+        config(['abos.dashboards_v2' => true]);
+
+        $company = Company::create(['code' => 'PAY', 'name_en' => 'Pay Co']);
+        $branch = Branch::query()->create(['company_id' => $company->id, 'code' => 'B1', 'name_en' => 'Main', 'is_active' => true]);
+        CompanyContext::set($company->id, $branch->id);
+
+        $clerk = User::factory()->create(['current_company_id' => $company->id]);
+        $clerk->companies()->attach($company->id);
+        $this->actingAs($clerk);
+
+        foreach ([['PR-1', \App\Core\Support\DocumentStatus::CONFIRMED, '50000.00', '45000.00'], ['PR-2', \App\Core\Support\DocumentStatus::DRAFT, '99999.00', '99999.00']] as [$no, $status, $gross, $net]) {
+            \App\Modules\Hr\Models\PayrollRun::query()->create([
+                'company_id' => $company->id, 'branch_id' => $branch->id, 'document_no' => $no,
+                'month' => now()->startOfMonth()->toDateString(), 'trx_date' => now()->toDateString(),
+                'gross_total' => $gross, 'deduction_total' => '0', 'net_total' => $net, 'employee_count' => 1, 'status' => $status,
+            ]);
+        }
+
+        $label = __('hr::dashboard.salary_cost');
+        $labels = fn () => array_map(fn ($p) => $p->label, HrDashboard::dashboard()->panels);
+
+        $this->assertNotContains($label, $labels(), '⛔ বেতনের চাবি ছাড়াই বেতন খরচের চার্ট দেখা গেছে।');
+
+        \Spatie\Permission\Models\Permission::findOrCreate('hr.payroll.view', 'web');
+        $clerk->givePermissionTo('hr.payroll.view');
+        $this->actingAs($clerk->fresh());
+
+        $panel = collect(HrDashboard::dashboard()->panels)->firstWhere('label', $label);
+        $this->assertNotNull($panel, 'বেতনের চাবি থাকা সত্ত্বেও বেতন খরচের চার্ট নেই।');
+        $this->assertCount(6, $panel->points, 'ছয় মাসের দণ্ড নেই।');
+
+        $now = $panel->points[array_key_last($panel->points)];
+        $this->assertSame(0, bccomp((string) $now['first'], '50000', 2), '⛔ এ মাসের মোট আয়ে খসড়া শিটও গোনা — বা নিশ্চিতটা বাদ।');
+        $this->assertSame(0, bccomp((string) $now['second'], '45000', 2), 'এ মাসের হাতে পাওয়া অঙ্ক ভুল।');
+    }
 }

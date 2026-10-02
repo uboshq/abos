@@ -624,6 +624,32 @@ return [
             'default' => 'h:i A',
             'group' => 'general',
         ],
+        /*
+         * ⭐ গ্রুপের মালিকের পদবি — সব কোম্পানিতে একটাই, বদলানো যায় (মালিক, ২ অক্টোবর ২০২৬:
+         * *"eta update er bebosta rakbe"*)।
+         *
+         * ⓘ `'scope' => 'product'` — একটাই সারি (company_id null), তাই এক জায়গায় বদলালে সব কোম্পানিতে একসাথে।
+         * ⛔ কেবল সুপার অ্যাডমিন বদলাতে পারেন। ⓘ কার পদবি: `ABOS_OWNER_EMAILS` ([[Ownership::isGroupOwner()]]);
+         * এটা কেবল পরিচয় — কোনো অনুমতি এর ওপর বসে না।
+         */
+        [
+            'key' => 'group.owner_title_bn',
+            'label' => 'system_admin::settings.owner_title_bn',
+            'type' => 'string',
+            'default' => 'গ্রুপ চেয়ারম্যান ও সিইও',
+            'group' => 'general',
+            'scope' => 'product',
+            'super_admin_only' => true,
+        ],
+        [
+            'key' => 'group.owner_title_en',
+            'label' => 'system_admin::settings.owner_title_en',
+            'type' => 'string',
+            'default' => 'Group Chairman & CEO',
+            'group' => 'general',
+            'scope' => 'product',
+            'super_admin_only' => true,
+        ],
         [
             'key' => 'system.auto_logout_minutes',
             'label' => 'system_admin::settings.auto_logout_minutes',

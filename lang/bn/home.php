@@ -19,4 +19,5 @@ return [
     'status_good' => 'ভালো',
     'status_bad' => 'জরুরি',
     'status_info' => 'তথ্য',
+    'period' => 'সময়',
 ];

@@ -90,4 +90,6 @@ return [
     'notice_escalate_after' => 'Escalate after (hours)',
     'notice_creator_cannot_approve' => 'The writer of a critical notice cannot approve it',
     'super_admin_only' => 'Only a super admin can change this',
+    'owner_title_bn' => "Owner's title (Bengali) — same in every company",
+    'owner_title_en' => "Owner's title (English) — same in every company",
 ];

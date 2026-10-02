@@ -22,6 +22,14 @@
     }
 
     $initial = mb_substr(trim((string) $employee->name()), 0, 1);
+
+    /*
+     * ⭐ গ্রুপের মালিকের পদবি সব কোম্পানিতে একটাই — মালিকের সিদ্ধান্ত, ২ অক্টোবর ২০২৬।
+     * ⓘ এই কোম্পানির সারি অন্য পদবি বললেও এখানে বদলায় না ([[Ownership::isGroupOwner()]], কেবল পরিচয়)।
+     */
+    $title = app(\App\Core\Services\Ownership::class)->isGroupOwner($employee->user)
+        ? (app(\App\Core\Services\Ownership::class)->groupOwnerTitle() ?? $employee->designation?->name())
+        : $employee->designation?->name();
 @endphp
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ $employee->name() }}</x-slot:title>
@@ -51,7 +59,7 @@
             <div class="min-w-0 flex-1">
                 <h1 class="truncate text-2xl font-semibold text-(--color-ink)">{{ $employee->name() }}</h1>
                 <p class="text-sm text-(--color-ink-body)">
-                    {{ collect([$employee->code, $employee->designation?->name(), $employee->department?->name(), $employee->branch?->name()])->filter()->implode(' · ') }}
+                    {{ collect([$employee->code, $title, $employee->department?->name(), $employee->branch?->name()])->filter()->implode(' · ') }}
                 </p>
             </div>
 
@@ -78,6 +86,8 @@
         {{-- ট্যাব — একই পাতার অংশে যায়, তাই লিংক পাঠালেও ঠিক জায়গা খোলে --}}
         <nav class="flex gap-1 overflow-x-auto border-t border-(--color-border) px-4" aria-label="{{ $employee->name() }}">
             <a href="#general" class="whitespace-nowrap border-b-2 border-(--color-brand-500) px-3 py-2.5 text-sm font-semibold text-(--color-brand-700)">{{ __('hr::profile.tab_general') }}</a>
+            <a href="#line" class="whitespace-nowrap px-3 py-2.5 text-sm text-(--color-ink-body) hover:text-(--color-ink)">{{ __('hr::profile.tab_line') }}</a>
+            <a href="#history" class="whitespace-nowrap px-3 py-2.5 text-sm text-(--color-ink-body) hover:text-(--color-ink)">{{ __('hr::profile.tab_history') }}</a>
             @if ($attendance !== null || $leave !== null)
                 <a href="#attendance" class="whitespace-nowrap px-3 py-2.5 text-sm text-(--color-ink-body) hover:text-(--color-ink)">{{ __('hr::profile.tab_attendance') }}</a>
             @endif
@@ -92,13 +102,21 @@
         @foreach ([
             'hr::profile.personal_info' => [
                 'hr::field.father_name' => $employee->father_name,
+                'hr::field.mother_name' => $employee->mother_name,
+                'hr::field.date_of_birth' => $employee->date_of_birth?->format('d M Y'),
+                'hr::field.blood_group' => $employee->blood_group,
                 'hr::field.mobile' => $employee->mobile,
+                'hr::field.email' => $employee->email,
                 'hr::field.national_id' => \App\Core\Security\FieldSecurity::show(
                     $employee, 'national_id', $employee->national_id),
+                'hr::field.present_address' => $employee->present_address,
+                'hr::field.permanent_address' => $employee->permanent_address,
+                'hr::field.emergency_name' => collect([$employee->emergency_name, $employee->emergency_relation ? '('.$employee->emergency_relation.')' : null])->filter()->implode(' '),
+                'hr::field.emergency_mobile' => $employee->emergency_mobile,
             ],
             'hr::profile.job_info' => [
                 'hr::field.department' => $employee->department?->name(),
-                'hr::field.designation' => $employee->designation?->name(),
+                'hr::field.designation' => $title,
                 'hr::field.employment_type' => $employee->employmentType?->name(),
                 'hr::field.branch' => $employee->branch?->name(),
                 'hr::field.joining_date' => $employee->joining_date?->format('d M Y'),
@@ -123,6 +141,101 @@
                 </dl>
             </section>
         @endforeach
+    </div>
+
+    {{-- ── রিপোর্টিং লাইন (নকশা ১০) · চাকরির ইতিহাস (নকশা ৪) ─────────────────
+         ⓘ উপরে যাঁর অধীনে, মাঝে তিনি নিজে, নিচে যাঁরা তাঁর অধীনে — একটা ছোট গাছ।
+         ⓘ ইতিহাস নিরীক্ষার খাতা থেকে ([[JobHistory]]) — আলাদা খাতা নেই, তাই দুই কথা বলার সুযোগও নেই। --}}
+    @php
+        $person = function (\App\Modules\Hr\Models\Employee $e, bool $self = false) {
+            return ['name' => $e->name(), 'title' => $e->designation?->name(), 'initial' => mb_substr(trim((string) $e->name()), 0, 1),
+                'href' => $self ? null : route('hr.employee.show', $e), 'self' => $self];
+        };
+    @endphp
+    <div class="mb-4 grid gap-4 lg:grid-cols-2">
+        <section id="line" data-reporting-line data-boxed class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
+            <h2 class="mb-3 font-semibold">{{ __('hr::profile.line_title') }}</h2>
+
+            <div class="flex flex-col items-center gap-2">
+                @php
+                    $chain = [];
+                    if ($employee->reportsTo) { $chain[] = $person($employee->reportsTo); }
+                    $chain[] = ['name' => $employee->name(), 'title' => $title, 'initial' => $initial, 'href' => null, 'self' => true];
+                @endphp
+
+                @if (! $employee->reportsTo)
+                    <p class="text-2xs text-(--color-ink-muted)">{{ __('hr::profile.nobody_above') }}</p>
+                @endif
+
+                @foreach ($chain as $i => $node)
+                    @if ($i > 0)
+                        <div class="h-4 w-px bg-(--color-border)" aria-hidden="true"></div>
+                    @endif
+                    @if ($node['href'])
+                        <a href="{{ $node['href'] }}" class="flex w-full max-w-xs items-center gap-3 rounded-(--radius-field) border border-(--color-border) px-3 py-2 hover:bg-(--color-surface-hover)">
+                    @else
+                        <div @class(['flex w-full max-w-xs items-center gap-3 rounded-(--radius-field) border px-3 py-2',
+                                     'border-(--color-brand-500) bg-(--color-brand-50)' => $node['self']])>
+                    @endif
+                        <span class="grid size-9 shrink-0 place-items-center rounded-full bg-(--color-brand-50) font-bold text-(--color-brand-700)" aria-hidden="true">{{ $node['initial'] }}</span>
+                        <span class="min-w-0">
+                            <span class="block truncate text-sm font-semibold">{{ $node['name'] }}</span>
+                            <span class="block truncate text-2xs text-(--color-ink-muted)">{{ $node['title'] ?? '—' }}</span>
+                        </span>
+                    @if ($node['href']) </a> @else </div> @endif
+                @endforeach
+
+                <div class="h-4 w-px bg-(--color-border)" aria-hidden="true"></div>
+                <p class="text-2xs text-(--color-ink-muted)">{{ __('hr::profile.team', ['count' => $employee->reports->count()]) }}</p>
+
+                @if ($employee->reports->isEmpty())
+                    <p class="text-sm text-(--color-ink-muted)">{{ __('hr::profile.nobody_below') }}</p>
+                @else
+                    <div class="grid w-full gap-2 sm:grid-cols-2">
+                        @foreach ($employee->reports as $member)
+                            <a href="{{ route('hr.employee.show', $member) }}" class="flex min-w-0 items-center gap-2 rounded-(--radius-field) border border-(--color-border) px-3 py-2 hover:bg-(--color-surface-hover)">
+                                <span class="grid size-7 shrink-0 place-items-center rounded-full bg-(--color-brand-50) text-xs font-bold text-(--color-brand-700)" aria-hidden="true">{{ mb_substr(trim((string) $member->name()), 0, 1) }}</span>
+                                <span class="min-w-0">
+                                    <span class="block truncate text-sm">{{ $member->name() }}</span>
+                                    <span class="block truncate text-2xs text-(--color-ink-muted)">{{ $member->designation?->name() ?? '—' }}</span>
+                                </span>
+                            </a>
+                        @endforeach
+                    </div>
+                @endif
+            </div>
+        </section>
+
+        <section id="history" data-job-history data-boxed class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
+            <h2 class="mb-3 font-semibold">{{ __('hr::profile.history_title') }}</h2>
+
+            <ol class="relative space-y-4 border-l-2 border-(--color-border)" style="padding-left: 1.25rem">
+                @foreach ($history as $event)
+                    @php
+                        /* ⓘ যোগদানের পাশে আজকের পদবি — মাথার লাইনের একই `$title`, তাই মালিকের গ্রুপ-পদবি এখানেও একটাই */
+                        if ($event['field'] === 'joined') { $event['to'] = $title; }
+                    @endphp
+                    <li class="relative">
+                        <span @class(['absolute top-1 size-3 rounded-full', 'bg-(--color-brand-500)' => $loop->first, 'bg-(--color-border)' => ! $loop->first])
+                              style="left: -1.6rem" aria-hidden="true"></span>
+                        <p class="text-2xs text-(--color-ink-muted)">{{ $event['date']->format('d M Y') }}</p>
+                        <p class="text-sm font-semibold">{{ __('hr::profile.event_'.$event['field']) }}</p>
+                        @if ($event['from'] !== null || $event['to'] !== null)
+                            <p class="text-sm text-(--color-ink-body)">
+                                @if ($event['from'] !== null) {{ $event['from'] }} → @endif{{ $event['to'] ?? '—' }}
+                            </p>
+                        @endif
+                        @if ($event['by'])
+                            <p class="text-2xs text-(--color-ink-muted)">{{ __('hr::profile.by', ['name' => $event['by']]) }}</p>
+                        @endif
+                    </li>
+                @endforeach
+            </ol>
+
+            @if (count(array_filter($history, fn ($e) => ! in_array($e['field'], ['joined', 'left'], true))) === 0)
+                <p class="mt-3 text-sm text-(--color-ink-muted)">{{ __('hr::profile.history_none') }}</p>
+            @endif
+        </section>
     </div>
 
     {{-- ── হাজিরা ও ছুটি ──────────────────────────────────────────────────

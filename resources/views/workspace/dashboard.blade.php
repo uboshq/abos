@@ -56,6 +56,31 @@
                 পড়ে বুঝতে হত। একটা সময়ে একটাই — আর কোনটা, সেটা
                 মালিকের হাতে।
             --}}
+            {{-- ⭐ নতুন ড্যাশবোর্ডে সময় একটা ছোট ঘরে — "এ মাস ▾" (মালিকের অনুমোদিত নকশা, ২ অক্টোবর ২০২৬:
+                 জায়গা বাঁচে, ফোনেও এক লাইনে)। ⓘ `<details>` — জাভাস্ক্রিপ্ট ছাড়াই খোলে, শেলের বাকি মেনুর মতো।
+                 সুইচ বন্ধ থাকলে নিচের পুরনো তাবগুলোই। --}}
+            @if (config('abos.dashboards_v2'))
+                <details data-period-menu class="relative">
+                    <summary class="flex h-10 cursor-pointer list-none items-center gap-2 rounded-(--radius-field)
+                                    border border-(--color-border) bg-(--color-surface-card) px-3 text-sm text-(--color-ink)">
+                        <span class="text-2xs text-(--color-ink-muted)">{{ __('home.period') }}</span>
+                        <span class="font-semibold">{{ $titles[$period] }}</span>
+                        <x-ui.icon name="chevron_down" :size="14" class="text-(--color-ink-muted)" />
+                    </summary>
+                    <div class="pops-onto-page absolute end-0 top-full z-50 mt-1 w-48 rounded-(--radius-field)
+                                border border-(--color-border) bg-(--color-surface-card) p-1 shadow-lg">
+                        @foreach (\App\Core\Dashboard\Widget::PERIODS as $option)
+                            <a href="{{ route('dashboard', ['period' => $option]) }}"
+                               @class([
+                                   'block rounded-(--radius-field) px-3 py-2 text-sm',
+                                   'bg-(--color-brand-50) font-semibold text-(--color-brand-700)' => $period === $option,
+                                   'text-(--color-ink-body) hover:bg-(--color-surface-hover)' => $period !== $option,
+                               ])
+                               @if ($period === $option) aria-current="page" @endif>{{ $titles[$option] }}</a>
+                        @endforeach
+                    </div>
+                </details>
+            @else
             <div class="flex rounded-(--radius-field) border border-(--color-border)
                         bg-(--color-surface-card) p-0.5 text-sm">
                 @foreach (\App\Core\Dashboard\Widget::PERIODS as $option)
@@ -71,6 +96,7 @@
                     </a>
                 @endforeach
             </div>
+            @endif
             </x-slot:actions>
         </x-ui.page-header>
     </x-slot:header>
@@ -427,6 +453,14 @@
          ⓘ পুরো কার্ডটাই মডিউলের ড্যাশবোর্ডের দরজা: চার্ট থেকে বিস্তারিত, সেখান থেকে লেনদেন। --}}
     @php
         $pictures = array_values(array_filter($overall ?? [], fn (array $row) => ($row['panel'] ?? null) !== null));
+
+        /* ⓘ নতুন হোম: মডিউলের প্রতিটা চার্ট নিজের কার্ডে (বিক্রির বারো মাস, মজুদের ধারা…) — সুইচ বন্ধে আগের মতো প্রথমটাই */
+        if (config('abos.dashboards_v2')) {
+            $pictures = array_merge([], ...array_map(
+                fn (array $row) => array_map(fn ($panel) => ['panel' => $panel] + $row, $row['panels'] ?? []),
+                $overall ?? [],
+            ));
+        }
     @endphp
 
     @if ($pictures !== [])

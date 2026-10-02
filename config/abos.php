@@ -178,4 +178,16 @@ return [
      * ⚠️ বন্ধ থাকলে পুরনো ড্যাশবোর্ড হুবহু আগের মতো — পরীক্ষায় বাঁধা।
      */
     'dashboards_v2' => (bool) env('ABOS_DASHBOARDS_V2', false),
+
+    /*
+     * ⭐ গ্রুপের মালিক — কেবল পরিচয়ের জন্য (মালিকের সিদ্ধান্ত, ২ অক্টোবর ২০২৬)।
+     *
+     * ⓘ এই ইমেইলের মানুষটির পদবি সব কোম্পানিতে একটাই ("গ্রুপ চেয়ারম্যান ও সিইও"), কোনো কোম্পানির কর্মী-সারি যা-ই বলুক।
+     * ⛔ fail-closed: খালি থাকলে কেউই মালিক নন। ⛔ কোনো অনুমতি এর ওপর বসে না — অনুমতি super_admin রোলেই
+     * ([[Ownership::isGroupOwner()]])।
+     */
+    'owner_emails' => array_values(array_filter(array_map(
+        fn (string $email) => mb_strtolower(trim($email)),
+        explode(',', (string) env('ABOS_OWNER_EMAILS', '')),
+    ))),
 ];

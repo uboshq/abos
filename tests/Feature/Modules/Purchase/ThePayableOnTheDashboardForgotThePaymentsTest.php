@@ -228,6 +228,16 @@ final class ThePayableOnTheDashboardForgotThePaymentsTest extends TestCase
         [$boughtNow, $paidNow] = $this->thisMonthBar();
         $this->assertSame(self::BOUGHT, bcsub($boughtNow, $barBefore[0], 4), '⛔ চার্টের এ মাসের "কেনা" দণ্ড ৩,০০০ বাড়েনি।');
         $this->assertSame(self::PAID, bcsub($paidNow, $barBefore[1], 4), '⛔ চার্টের এ মাসের "পরিশোধ" দণ্ড ১,০০০ বাড়েনি।');
+
+        // ── ৮. নতুন ড্যাশবোর্ড — এ বছরের সবচেয়ে বড় সরবরাহকারীর তালিকায় এই সরবরাহকারী, অঙ্কে অন্তত এই বিল ──
+        config(['abos.dashboards_v2' => true]);
+        $top = collect(PurchaseDashboard::dashboard()->panels)
+            ->firstWhere('label', __('purchase::dashboard.top_suppliers', ['year' => now()->year]));
+        $this->assertNotNull($top, '⛔ নতুন ড্যাশবোর্ডে "সবচেয়ে বেশি কেনা" চার্ট নেই, অথচ এ বছর নিশ্চিত বিল আছে।');
+        $mine = collect($top->parts)->firstWhere('label', $this->supplier->name());
+        $this->assertNotNull($mine, '⛔ এ বছর যাঁর কাছ থেকে কেনা হলো, তিনি তালিকায় নেই।');
+        $this->assertGreaterThanOrEqual(0, bccomp(str_replace(',', '', $mine['value']), self::BOUGHT, 4), '⛔ সরবরাহকারীর অঙ্ক এই বিলের চেয়েও কম।');
+        config(['abos.dashboards_v2' => false]);
     }
 
     /** @return array{0: string, 1: string} এ মাসের [কেনা, পরিশোধ] — চার্টের শেষ দণ্ড */
@@ -235,9 +245,11 @@ final class ThePayableOnTheDashboardForgotThePaymentsTest extends TestCase
     {
         $panel = PurchaseDashboard::dashboard()->panels[0] ?? null;
         $this->assertInstanceOf(\App\Core\Engines\Dashboard\Series::class, $panel, '⛔ ক্রয়ের ড্যাশবোর্ডে কেনা-বনাম-পরিশোধের চার্ট নেই।');
-        $last = $panel->points[array_key_last($panel->points)];
+        /* ⓘ মাসের নাম ধরে, শেষ দণ্ড ধরে নয় — নতুন ড্যাশবোর্ডে (জানুয়ারি–ডিসেম্বর) শেষ দণ্ডটা ডিসেম্বর */
+        $now = array_values(array_filter($panel->points, fn (array $p) => $p['label'] === now()->translatedFormat('M')));
+        $this->assertCount(1, $now, '⛔ চার্টে এ মাসের দণ্ড ঠিক একটা নেই।');
 
-        return [bcadd($last['first'], '0', 4), bcadd($last['second'], '0', 4)];
+        return [bcadd($now[0]['first'], '0', 4), bcadd($now[0]['second'], '0', 4)];
     }
 
     /**

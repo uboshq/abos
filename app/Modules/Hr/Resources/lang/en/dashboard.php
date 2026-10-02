@@ -23,4 +23,5 @@ return [
     'todays_roll_hint' => ':count employees · "Not written" is not absent',
     'late' => 'Late',
     'not_written' => 'Not written',
+    'salary_cost' => 'Salary cost — last six months',
 ];

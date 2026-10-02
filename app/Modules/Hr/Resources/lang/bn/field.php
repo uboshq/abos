@@ -86,4 +86,14 @@ return [
     'unpaid_days' => 'কাটা যাবে',
     'marked' => 'বসানো হয়েছে',
     'employee' => 'কর্মী',
+    // ⭐ প্রোফাইলের মানুষটা ও রিপোর্টিং লাইন — ২ অক্টোবর ২০২৬
+    'date_of_birth' => 'জন্মতারিখ',
+    'mother_name' => 'মাতার নাম',
+    'blood_group' => 'রক্তের গ্রুপ',
+    'present_address' => 'বর্তমান ঠিকানা',
+    'permanent_address' => 'স্থায়ী ঠিকানা',
+    'emergency_name' => 'জরুরি প্রয়োজনে যোগাযোগ',
+    'emergency_relation' => 'সম্পর্ক',
+    'emergency_mobile' => 'জরুরি মোবাইল',
+    'reports_to' => 'যাঁর অধীনে',
 ];

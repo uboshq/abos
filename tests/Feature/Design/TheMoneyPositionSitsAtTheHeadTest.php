@@ -89,6 +89,43 @@ final class TheMoneyPositionSitsAtTheHeadTest extends TestCase
     }
 
     /**
+     * ⭐ নতুন হোম (`abos.dashboards_v2`) — মডিউলের প্রতিটা চার্ট নিজের কার্ডে, প্রথমটা শুধু নয়।
+     * ⛔ সুইচ বন্ধে প্রথমটার পরেরগুলো হোমে আসে না — চালুর আগে পুরনো হোম যেমন ছিল তেমনই।
+     */
+    public function test_the_new_home_shows_every_chart_and_the_old_one_only_the_first(): void
+    {
+        [$owner] = $this->people();
+
+        foreach ([true, false] as $on) {
+            config(['abos.dashboards_v2' => $on]);
+            $response = $this->actingAs($owner)->get(route('dashboard'))->assertOk();
+            $pictures = $this->between((string) $response->getContent(), 'data-business-pictures', '</section>');
+            $later = 0;
+
+            foreach ($response->viewData('overall') as $row) {
+                foreach ($row['panels'] as $i => $panel) {
+                    if ($i === 0) {
+                        $this->assertStringContainsString(e($panel->label), $pictures, "\"{$row['module']}\"-এর প্রথম চার্ট হোমে নেই।");
+
+                        continue;
+                    }
+
+                    if ($panel->label === $row['panels'][0]->label) {
+                        continue;
+                    }
+
+                    $later++;
+                    $on
+                        ? $this->assertStringContainsString(e($panel->label), $pictures, "সুইচ চালু, অথচ \"{$row['module']}\"-এর \"{$panel->label}\" হোমে নেই।")
+                        : $this->assertStringNotContainsString(e($panel->label), $pictures, "⛔ সুইচ বন্ধ, তবু \"{$panel->label}\" হোমে — পুরনো হোম বদলে গেছে।");
+                }
+            }
+
+            $this->assertGreaterThan(0, $later, 'কোনো মডিউলের দ্বিতীয় চার্টই নেই — পরীক্ষাটা কিছু দেখেনি।');
+        }
+    }
+
+    /**
      * ⭐ ব্যতিক্রম কেন্দ্র — যা আটকে আছে তার প্রতিটা একটা কার্ড, আর কার্ডে পদক্ষেপের দরজা।
      * ⛔ যেটার সংখ্যা শূন্য, সেটার কার্ড নেই — শুধু "বাকিগুলোতে কিছু নেই" এক লাইনে।
      */

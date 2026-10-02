@@ -19,4 +19,5 @@ return [
     'status_good' => 'Good',
     'status_bad' => 'Urgent',
     'status_info' => 'Info',
+    'period' => 'Period',
 ];
