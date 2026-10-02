@@ -128,9 +128,28 @@
                  বসে। --}}
             {{-- ⭐ সর্বমোট — গোটা ছাঁকা তালিকার (মালিক, ১ অক্টোবর ২০২৬); কয়েক পাতা হলে তার উপরে "এই পাতা"।
                  ⓘ সংখ্যা সারির মতোই সাজানো (টাকা টাকার মতো, পরিমাণ পরিমাণের মতো), ঋণাত্মক লাল। --}}
-            @if (isset($hasGrand) && $hasGrand())
-                <tfoot class="sticky bottom-0 z-[1]" data-grand-total>
-                    @foreach (array_filter([$showsPageTotal() ? $pageLine() : null, $grandLine()]) as $k => $line)
+            {{-- ⓘ একটাই ফুটার: পর্দার নিজের যোগের সারি (`:totals`, যেমন হেফাজতের "পথে থাকা") আগে, সর্বমোট শেষে —
+                 দুইটা <tfoot> হলে সর্বমোট মাঝে বসত, অথচ সেটা উপরের সব কিছুর যোগ। --}}
+            @php $withGrand = isset($hasGrand) && $hasGrand(); @endphp
+            @if ($withGrand || $totals !== [])
+                <tfoot class="sticky bottom-0 z-[1]" @if ($withGrand) data-grand-total @endif>
+                    @if ($totals !== [])
+                        <tr>
+                            @foreach ($normalised as $i => $column)
+                                <td @class(['num' => $column['numeric']])>
+                                    @if ($i === 0)
+                                        <span class="text-(--color-ink-muted)">{{ $totalsLabel ?? __('core.table.page_total') }}</span>
+                                    @else
+                                        {{ $totals[$column['key']] ?? '' }}
+                                    @endif
+                                </td>
+                            @endforeach
+                            @if ($viewUrl ?? null)
+                                <td></td>
+                            @endif
+                        </tr>
+                    @endif
+                    @foreach ($withGrand ? array_filter([$showsPageTotal() ? $pageLine() : null, $grandLine()]) : [] as $k => $line)
                         <tr @class(['font-semibold' => $loop->last]) @if ($loop->last) data-grand-total-row @endif>
                             @foreach ($normalised as $i => $column)
                                 <td data-label="{{ $column['label'] }}" @class(['num' => $column['numeric'],
@@ -147,22 +166,6 @@
                             @endif
                         </tr>
                     @endforeach
-                </tfoot>
-            @endif
-
-            @if ($totals !== [])
-                <tfoot class="sticky bottom-0 z-[1]">
-                    <tr>
-                        @foreach ($normalised as $i => $column)
-                            <td @class(['num' => $column['numeric']])>
-                                @if ($i === 0)
-                                    <span class="text-(--color-ink-muted)">{{ $totalsLabel ?? __('core.table.page_total') }}</span>
-                                @else
-                                    {{ $totals[$column['key']] ?? '' }}
-                                @endif
-                            </td>
-                        @endforeach
-                    </tr>
                 </tfoot>
             @endif
         </table>

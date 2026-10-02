@@ -32,7 +32,7 @@
          'render' => fn ($r) => $r['kind']],
         ['key' => 'holder', 'label' => __('accounts::custody.holder'), 'width' => '190px',
          'render' => fn ($r) => view('accounts::custody.partials.holder', ['row' => $r])],
-        ['key' => 'balance', 'label' => __('accounts::custody.balance'),
+        ['key' => 'balance', 'total' => 'money', 'raw' => fn ($r) => $r['amount'], 'label' => __('accounts::custody.balance'),
          'numeric' => true, 'width' => '160px',
          'render' => fn ($r) => $r['balance']],
         ['key' => 'sent', 'label' => __('accounts::custody.sent'),
@@ -99,6 +99,8 @@
             {{-- শেষ সারিটা কারও নামের পাশে বসে না, আর সেটাই পুরো কথা:
                  টাকাটা ড্রয়ার ছেড়েছে, কেউ এখনো নেয়নি। --}}
             <x-ui.table :rows="$rows"
+                        :grand="['balance' => collect($rows)->reduce(fn ($s, $r) => bcadd($s, (string) $r['amount'], 4), (string) ($transitAmount ?? '0'))]"
+                        :view-url="fn ($r) => $r['url']"
                         :columns="$columns"
                         {{-- শেষ সারিটার প্রতিটা ঘর ভরা, আর সেটা ইচ্ছাকৃত।
 

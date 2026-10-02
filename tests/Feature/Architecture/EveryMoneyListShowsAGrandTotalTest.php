@@ -23,7 +23,6 @@ final class EveryMoneyListShowsAGrandTotalTest extends TestCase
     /** ধাপে ধাপে আসছে (সমন্বয়কের তালিকা, ১ অক্টোবর ২০২৬) — প্রতিটা সর্বমোট পেলে এখান থেকে নাম কাটা */
     private const PENDING = [
         'Sales/Resources/views/route/index.blade.php',
-        'Accounts/Resources/views/custody/index.blade.php',
         'Sales/Resources/views/crm/opportunity/index.blade.php',
         'Sales/Resources/views/quotation/index.blade.php',
     ];

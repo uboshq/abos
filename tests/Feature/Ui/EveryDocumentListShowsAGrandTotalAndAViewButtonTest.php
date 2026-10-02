@@ -173,6 +173,38 @@ final class EveryDocumentListShowsAGrandTotalAndAViewButtonTest extends TestCase
             '⛔ বাজেটের সারিতে "দেখুন" খাতের খতিয়ানে নিয়ে যায় না।');
     }
 
+    /**
+     * ⭐ টাকার হেফাজত — সর্বমোট = প্রতিটা জায়গার টাকা + পথে থাকা টাকা; আর সেটা "পথে থাকা"-র সারির **নিচে**,
+     * একই ফুটারে (দুইটা ফুটার হলে সর্বমোট মাঝে বসত)।
+     */
+    public function test_the_custody_grand_total_is_every_place_plus_the_road_and_sits_last(): void
+    {
+        // ⓘ পথে ২৫০ — নইলে ডেমোতে পথ শূন্য, আর পথ বাদ দেওয়া যোগও সবুজ থাকত (মিউট্যান্ট বেঁচেছিল)
+        $transit = (int) DB::table('accounts')->where('company_id', CompanyContext::id())
+            ->where('code', \App\Modules\Accounts\Services\StandardChart::CASH_IN_TRANSIT)->value('id');
+        $this->assertGreaterThan(0, $transit, 'দৃশ্যটাই বানানো যায়নি — পথের খাত নেই।');
+        DB::table('ledger_entries')->insert([
+            'company_id' => CompanyContext::id(), 'branch_id' => CompanyContext::branchId(),
+            'financial_year_id' => DB::table('financial_years')->where('company_id', CompanyContext::id())->orderByDesc('id')->value('id'),
+            'account_id' => $transit, 'trx_date' => now()->toDateString(), 'debit' => '250', 'credit' => '0',
+            'source_type' => 'zq_test', 'source_id' => 1, 'created_at' => now(), 'updated_at' => now(),
+        ]);
+
+        $response = $this->get(route('accounts.custody'))->assertOk();
+        $this->assertSame(0, bccomp((string) $response->viewData('transitAmount'), '250', 4), 'দৃশ্যটাই বানানো যায়নি — পথে ২৫০ নেই।');
+        $html = (string) $response->getContent();
+
+        $sum = collect($response->viewData('rows'))
+            ->reduce(fn (string $s, array $r) => bcadd($s, (string) $r['amount'], 4), (string) $response->viewData('transitAmount'));
+
+        $this->assertSame(1, preg_match('/<tfoot[^>]*data-grand-total[^>]*>(.*?)<\/tfoot>/su', $html, $foot), '⛔ হেফাজতে সর্বমোটের ফুটার নেই।');
+        $this->assertSame(1, substr_count($html, '<tfoot'), '⛔ দুইটা ফুটার — সর্বমোট আর "পথে থাকা" আলাদা হয়ে গেছে।');
+        $this->assertLessThan(strpos($foot[1], 'data-grand-total-row'), strpos($foot[1], (string) __('accounts::custody.on_the_road')),
+            '⛔ সর্বমোট "পথে থাকা"-র আগে বসেছে — অথচ সেটা উপরের সব কিছুর যোগ।');
+        $this->assertContains(Table::format($sum, 'money'), $this->grandCells($html) ?: [Table::format('0', 'money')],
+            '⛔ হেফাজতের সর্বমোট সব জায়গা আর পথে থাকা টাকার যোগ নয়।');
+    }
+
     /** @return list<string> সর্বমোটের সারির যোগের ঘর — বাঁ থেকে ডানে, খালি বাদে */
     private function grandCells(string $html): array
     {

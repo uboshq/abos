@@ -118,13 +118,15 @@ class MoneyCustodyController extends Controller implements HasMiddleware
             ->orderBy('trx_date')
             ->get();
 
+        // ⓘ পথে থাকা টাকা — কাঁচা অঙ্কটা সর্বমোটে যায়, লেখা অঙ্কটা ফুটারের সারিতে
+        $transitAmount = (string) (StandardChart::find(StandardChart::CASH_IN_TRANSIT)?->balanceOn(null, $branch) ?? '0');
+
         return view('accounts::custody.index', [
             'menu' => $this->menu->forUser($request->user()),
             'rows' => $this->rows($tills, $officeCash, $banks, $branch),
             'onTheRoad' => $onTheRoad,
-            'transit' => Money::format(
-                StandardChart::find(StandardChart::CASH_IN_TRANSIT)?->balanceOn(null, $branch) ?? '0'
-            ),
+            'transit' => Money::format($transitAmount),
+            'transitAmount' => $transitAmount,
 
             /*
              * আমার গ্রহণের অপেক্ষায় — ইনবক্স।
@@ -166,6 +168,7 @@ class MoneyCustodyController extends Controller implements HasMiddleware
                 'name' => $till->name(),
                 'kind' => __('accounts::custody.kind_till'),
                 'holder' => $till->holder?->name,
+                'amount' => (string) $till->balance(),
                 'balance' => Money::format($till->balance()),
                 'sent' => Money::format((string) ($sentFrom[$till->id] ?? '0')),
                 'url' => route('accounts.till.index'),
@@ -187,6 +190,7 @@ class MoneyCustodyController extends Controller implements HasMiddleware
                 'name' => $cash->name(),
                 'kind' => __('accounts::custody.kind_office_cash'),
                 'holder' => $cash->keeper?->name,
+                'amount' => (string) $cash->balanceOn(null, $branch),
                 'balance' => Money::format($cash->balanceOn(null, $branch)),
                 'sent' => Money::format('0'),
                 'url' => route('accounts.coa.show', $cash),
@@ -209,6 +213,7 @@ class MoneyCustodyController extends Controller implements HasMiddleware
                  * কেবল নগদ কাউন্টারের জন্য।
                  */
                 'holder' => null,
+                'amount' => (string) $bank->balanceOn(null, $branch),
                 'balance' => Money::format($bank->balanceOn(null, $branch)),
                 'sent' => Money::format('0'),
                 'url' => route('accounts.coa.index'),
