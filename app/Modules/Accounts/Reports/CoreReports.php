@@ -46,6 +46,8 @@ final class CoreReports
         ChequeReports::registerAll($engine);
         // ⭐ খরচের বিশ্লেষণ — আগের সময়ের সাথে তুলনা, সবচেয়ে বড় খরচ (রিপোর্ট সেন্টার ধাপ ৪)
         $engine->register(ExpenseAnalysisReport::definition());
+        // ⭐ শাখা পাশাপাশি — নির্বাহী পাতা ও শাখাভিত্তিক লাভ-ক্ষতি (রিপোর্ট সেন্টার ধাপ ২)
+        $engine->register(BranchesSideBySideReport::definition());
     }
 
     /**

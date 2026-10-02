@@ -11,6 +11,7 @@ use App\Models\Branch;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Models\CostCenter;
 use App\Modules\Accounts\Reports\ChequeReports;
+use App\Modules\Accounts\Reports\BranchesSideBySideReport;
 use App\Modules\Accounts\Reports\ExpenseAnalysisReport;
 use App\Modules\Accounts\Reports\MonthlyCashReport;
 use Illuminate\Http\Request;
@@ -92,10 +93,12 @@ class ReportController extends Controller implements HasMiddleware
         'cheque-register' => ChequeReports::KEY,
         // ⭐ খরচের বিশ্লেষণ — কোন খাতে হঠাৎ বাড়ল (২ অক্টোবর ২০২৬)
         'expense-analysis' => ExpenseAnalysisReport::KEY,
+        // ⭐ শাখা পাশাপাশি — বিক্রি, লাভ, টাকা, পাওনা, দেনা, মজুদ (২ অক্টোবর ২০২৬)
+        'branches' => BranchesSideBySideReport::KEY,
     ];
 
     /** যেগুলোতে চূড়ান্ত হিসাবের অনুমতি লাগে। */
-    private const FINAL_ACCOUNTS = ['profit-loss', 'balance-sheet', 'cash-flow'];
+    private const FINAL_ACCOUNTS = ['profit-loss', 'balance-sheet', 'cash-flow', 'branches'];
 
     public function __construct(
         private readonly ReportEngine $reports,

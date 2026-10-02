@@ -233,6 +233,9 @@ return [
             ['label' => 'accounts::menu.month_end', 'cluster' => 'control', 'icon' => 'calendar', 'route' => 'accounts.control.month_end', 'permission' => 'accounts.report'],
             ['label' => 'accounts::menu.background_jobs', 'cluster' => 'control', 'icon' => 'clock', 'route' => 'accounts.control.jobs', 'permission' => 'accounts.report'],
             ['label' => 'accounts::menu.profit_loss', 'icon' => 'star', 'route' => 'accounts.report.final.profit_loss', 'permission' => 'accounts.report.final'],
+            // ⭐ শাখা পাশাপাশি — নির্বাহী পাতা আর শাখাভিত্তিক লাভ-ক্ষতি (রিপোর্ট সেন্টার ধাপ ২, ২ অক্টোবর ২০২৬)
+            ['label' => 'accounts::branches.title', 'icon' => 'building', 'route' => 'accounts.report.show',
+                'route_params' => ['slug' => 'branches'], 'permission' => 'accounts.report.final'],
             /*
              * স্থিতিপত্রের নিজের রুট — সাধারণ রিপোর্টের slug নয়।
              *
