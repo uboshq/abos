@@ -26,6 +26,9 @@ use Illuminate\View\View;
  */
 class LoginController extends Controller
 {
+    /** "মনে রাখুন"-এর আইডির কুকি — কেবল আইডি, পাসওয়ার্ড কখনো নয় */
+    public const REMEMBERED_ID = 'abos_remembered_id';
+
     /**
      * এই ব্রাউজার থেকে আগে কেউ ঢুকেছে কি না।
      *
@@ -136,6 +139,17 @@ class LoginController extends Controller
 
         Auth::login($user, (bool) ($credentials['remember'] ?? false));
         $request->session()->regenerate();
+
+        /*
+         * ⭐ "মনে রাখুন" মানে আইডিও — মালিক, ২ অক্টোবর ২০২৬: *"mone rakun butam thakar poreo id aber likte hoy keno?"*
+         * ⓘ বের হলেও পরের বার ঘরটায় আইডি বসানো থাকে (এক বছর, এনক্রিপ্ট করা কুকি); ⛔ পাসওয়ার্ড কখনো নয়।
+         * বাক্স খালি রেখে ঢুকলে আগের মনে রাখা আইডিও মুছে যায় — অন্যের যন্ত্রে নিজের আইডি থেকে না যায়।
+         */
+        if ((bool) ($credentials['remember'] ?? false)) {
+            Cookie::queue(self::REMEMBERED_ID, (string) $credentials['identifier'], 60 * 24 * 365);
+        } else {
+            Cookie::queue(Cookie::forget(self::REMEMBERED_ID));
+        }
 
         /*
          * সফল ঢোকাটাও খাতায়।

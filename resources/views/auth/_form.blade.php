@@ -64,7 +64,7 @@
                         {{-- autocomplete ছাড়া "Password Manager Support" কথাটা
                              লেখা থাকলেও বাস্তবে কাজ করে না (সেকশন ১৬.৭) --}}
                         <input id="identifier" name="identifier" type="text"
-                               value="{{ old('identifier') }}"
+                               value="{{ old('identifier', request()->cookie(\App\Http\Controllers\Auth\LoginController::REMEMBERED_ID)) }}"
                                autocomplete="username" required autofocus
                                class="h-(--spacing-field) w-full rounded-(--radius-field) border
                                       border-(--color-border) bg-(--color-surface-card) px-3
@@ -160,7 +160,9 @@
                     --}}
                     <div class="flex flex-wrap items-center gap-x-3 gap-y-1">
                         <label class="flex min-h-(--spacing-touch) items-center gap-2 text-sm">
-                            <input type="checkbox" name="remember" value="1" class="size-4">
+                            {{-- ⭐ আগে মনে রাখা থাকলে বাক্সেও টিক — আইডি আবার লিখতে হয় না (মালিক, ২ অক্টোবর ২০২৬) --}}
+                            <input type="checkbox" name="remember" value="1" class="size-4"
+                                   @checked(old('remember', request()->cookie(\App\Http\Controllers\Auth\LoginController::REMEMBERED_ID) !== null))>
                             {{ __('auth.remember_device') }}
                         </label>
 
