@@ -1019,6 +1019,21 @@ final class DirectSaleService
             ]);
         }
 
+        /*
+         * ⛔ রাখা জমায় চেক থাকলে শেষ নয় — চেকলিস্ট (অডিট ২৭ সেপ্টেম্বর) §২, ১ অক্টোবর ২০২৬
+         * ([[AHeldSaleFinishedWithAChequeInItTest]])। ⓘ কাউন্টার নতুন চেক নেয় না
+         * ([[assertNoChequeAtTheCounter()]]), কিন্তু নিয়মের আগে রাখা খসড়ায় হাতে থাকা চেক (১১০৪) থাকতে
+         * পারে — শেষ করলে (হাতে, বা শেষ সই-এ নিজে) সেটা ক্লিয়ারের আগেই গ্রাহকের খাতায় বসত। চেক যায়
+         * চেকের খাতা দিয়ে, ক্লিয়ারের পরে।
+         */
+        foreach ($vouchers as $voucher) {
+            if ($this->isChequeDeposit($voucher)) {
+                throw ValidationException::withMessages([
+                    'deposits' => __('sales::validation.no_cheque_at_counter'),
+                ]);
+            }
+        }
+
         foreach ($vouchers as $voucher) {
             if ($this->voucherApproval->stopping($voucher) !== null) {
                 throw ValidationException::withMessages([
@@ -1935,6 +1950,16 @@ final class DirectSaleService
         }
 
         return $kept === [] ? null : $kept;
+    }
+
+    /** রাখা জমার ভাউচারটা চেক কি না — হাতে থাকা চেকের খাতে (১১০৪) ডেবিট, বা মাধ্যম চেক। */
+    private function isChequeDeposit(Voucher $voucher): bool
+    {
+        $voucher->loadMissing('lines.account');
+
+        return strtolower((string) $voucher->instrument) === 'cheque'
+            || $voucher->lines->contains(fn ($line) => $line->account?->code === StandardChart::CHEQUES_IN_HAND
+                && bccomp((string) $line->debit, '0', 4) > 0);
     }
 
     /**
