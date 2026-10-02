@@ -42,6 +42,8 @@ final class CoreReports
         $engine->register(self::incomeByHead());
         // ⭐ মাসওয়ারি টাকা আসা-যাওয়া — মালিকের নির্দেশ, ১ অক্টোবর ২০২৬
         $engine->register(MonthlyCashReport::definition());
+        // ⭐ চেকের খাতা — রিপোর্ট সেন্টার ধাপ ৪ (২ অক্টোবর ২০২৬)
+        ChequeReports::registerAll($engine);
     }
 
     /**

@@ -164,6 +164,10 @@ return [
             ['label' => 'accounts::menu.monthly_cash', 'icon' => 'calendar', 'route' => 'accounts.report.show',
                 'route_params' => ['slug' => 'monthly-cash'], 'permission' => 'accounts.report'],
 
+            // ⭐ চেকের খাতা — কোন চেক কবে জমা, কোনটা ফেরত, হাতে আগামী তারিখের কত (রিপোর্ট সেন্টার ধাপ ৪)
+            ['label' => 'accounts::menu.cheque_register', 'icon' => 'book', 'route' => 'accounts.report.show',
+                'route_params' => ['slug' => 'cheque-register'], 'permission' => 'accounts.report'],
+
             /*
              * কোন কেন্দ্রে কত — "কোন রুট লাভজনক" প্রশ্নের কাগজ।
              *

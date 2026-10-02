@@ -32,6 +32,8 @@ final class SalesReports
         $engine->register(self::byProduct());
         $engine->register(self::byBrand());
         $engine->register(MonthlySalesReport::definition());
+        // ⭐ আদায়ের সূচি — রিপোর্ট সেন্টার ধাপ ৪ (২ অক্টোবর ২০২৬)
+        $engine->register(CollectionDueReport::definition());
     }
 
     /** যে অর্ডারগুলোর মাল এখনো পুরো যায়নি। */

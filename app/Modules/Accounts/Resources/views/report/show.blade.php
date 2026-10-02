@@ -251,6 +251,9 @@
                     </label>
                 @endif
 
+                {{-- একটা রিপোর্টের নিজের ছাঁকনি (যেমন কারণ ধরে ফেরতের গ্রাহক/পণ্য) — না পাঠালে কিছুই আঁকা হয় না --}}
+                @isset($extraFilters) @include($extraFilters) @endisset
+
                 @if ($branches->isNotEmpty())
                     <label>
                         <span class="sr-only">{{ __('core.company.branch') }}</span>

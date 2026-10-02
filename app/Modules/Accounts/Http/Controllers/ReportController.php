@@ -10,6 +10,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Branch;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Models\CostCenter;
+use App\Modules\Accounts\Reports\ChequeReports;
 use App\Modules\Accounts\Reports\MonthlyCashReport;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
@@ -86,6 +87,8 @@ class ReportController extends Controller implements HasMiddleware
         'cash-flow' => 'accounts.cash_flow',
         // ⭐ মাসওয়ারি টাকা আসা-যাওয়া (১ অক্টোবর ২০২৬)
         'monthly-cash' => MonthlyCashReport::KEY,
+        // ⭐ চেকের খাতা — আগামী তারিখের, আজ জমার, ফেরত (২ অক্টোবর ২০২৬)
+        'cheque-register' => ChequeReports::KEY,
     ];
 
     /** যেগুলোতে চূড়ান্ত হিসাবের অনুমতি লাগে। */
@@ -203,6 +206,9 @@ class ReportController extends Controller implements HasMiddleware
              * ধার করা import দিয়ে নয়। পাহারা: [[BoundariesTest]]।
              */
             'partyTypes' => collect(),
+
+            // ⓘ রিপোর্টের নিজের ছাঁকনি — ভাগের পাতার `$extraFilters` দরজা দিয়ে (চেকের দিক আর অবস্থা)
+            'extraFilters' => $key === ChequeReports::KEY ? 'accounts::report.partials.cheque-filters' : null,
         ]);
     }
 }

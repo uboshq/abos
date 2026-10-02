@@ -35,6 +35,7 @@ return [
     'loans' => 'Loans',
     'inflow' => 'Money In',
     'monthly_cash' => 'Monthly cash in & out',
+    'cheque_register' => 'Cheque register',
 
     // মাস বন্ধ ও খোলা
     'periods' => 'Close a Month',

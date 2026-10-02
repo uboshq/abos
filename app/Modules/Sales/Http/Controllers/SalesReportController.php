@@ -24,6 +24,8 @@ class SalesReportController extends Controller implements HasMiddleware
     private const SLUGS = [
         'monthly' => 'sales.monthly',
         'pending-orders' => 'sales.pending_orders',
+        // ⭐ আদায়ের সূচি — আজ, সপ্তাহ, মাস আর সীমার ব্যবহার (২ অক্টোবর ২০২৬)
+        'collection-due' => 'sales.collection_due',
         // ⭐ কাগজের খাতা — রিপোর্ট সেন্টার ধাপ ৬ ([[SalesRegisterReports]])
         'register' => 'sales.register',
         'uninvoiced' => 'sales.uninvoiced',

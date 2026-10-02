@@ -274,6 +274,9 @@ return [
                 'route_params' => ['slug' => 'register'], 'permission' => 'sales.report'],
             ['label' => 'sales::menu.pending_orders', 'icon' => 'clock', 'route' => 'sales.report.show',
                 'route_params' => ['slug' => 'pending-orders'], 'permission' => 'sales.report'],
+            // ⭐ আদায়ের সূচি — কার কাছে আজ যেতে হবে, সপ্তাহে কত আসার কথা (রিপোর্ট সেন্টার ধাপ ৪)
+            ['label' => 'sales::due.title', 'icon' => 'calendar', 'route' => 'sales.report.show',
+                'route_params' => ['slug' => 'collection-due'], 'permission' => 'sales.report'],
             ['label' => 'sales::menu.undelivered', 'icon' => 'alert-triangle', 'route' => 'sales.report.show',
                 'route_params' => ['slug' => 'uninvoiced'], 'permission' => 'sales.report'],
             ['label' => 'sales::menu.by_customer', 'icon' => 'customer', 'route' => 'sales.report.show',
