@@ -109,12 +109,13 @@ final class ThePhoneShowedEveryModuleTest extends TestCase
             ->assertJsonPath('module', $code);
     }
 
-    public function test_a_new_company_starts_with_the_owners_six(): void
+    /** ⭐ গ্রাহক সপ্তম — মালিক, ২ অক্টোবর ২০২৬: *"ha calu thakbe"* */
+    public function test_a_new_company_starts_with_the_owners_seven(): void
     {
         $body = $this->phone('GET', '/api/v1/me')->assertOk()->json();
 
         $this->assertEqualsCanonicalizing(
-            ['accounts', 'inventory', 'sales', 'purchase', 'approval', 'system_admin'],
+            ['accounts', 'customer', 'inventory', 'sales', 'purchase', 'approval', 'system_admin'],
             $body['phoneModules'],
         );
 
@@ -163,11 +164,14 @@ final class ThePhoneShowedEveryModuleTest extends TestCase
     public function test_a_module_others_stand_on_still_sends_its_data(): void
     {
         /*
-         * ⓘ গ্রাহকের নিজের মেনু বন্ধ (ডিফল্ট), কিন্তু বিক্রয় চালু — আর অর্ডার লিখতে
+         * ⓘ কোম্পানি গ্রাহকের নিজের মেনু বন্ধ করলে বন্ধই থাকে — কিন্তু বিক্রয় চালু, আর অর্ডার লিখতে
          * গ্রাহকের তালিকা লাগে (Sales `depends_on` customer)। ⛔ তথ্য আটকালে বিক্রয়
          * চালু রেখেও ফোনে অর্ডার লেখা যেত না।
          */
-        $this->assertNotContains('customer', $this->menuCodes());
+        $this->assertContains('customer', $this->menuCodes(), 'গ্রাহক এখন ডিফল্টে চালু');
+        $this->flip(['customer' => false])->assertRedirect();
+        $this->assertNotContains('customer', $this->menuCodes(), '⛔ কোম্পানি বন্ধ করল, অথচ গ্রাহক মেনুতে রয়ে গেল।');
+        $this->assertNotContains('customer', $this->phone('GET', '/api/v1/me')->json('phoneModules'));
         $this->phone('GET', '/api/v1/sync/customer/pull?deviceId='.self::DEVICE)->assertOk();
     }
 

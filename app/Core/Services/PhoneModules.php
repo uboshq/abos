@@ -49,8 +49,12 @@ final class PhoneModules
      *
      * ⓘ এটা কেবল **ডিফল্ট**: প্রতিটা কোম্পানি কন্ট্রোল প্যানেল থেকে যেকোনোটা
      * চালু বা বন্ধ করে, আর সেই সারিটাই জেতে।
+     *
+     * ⭐ গ্রাহক যোগ — মালিক, ২ অক্টোবর ২০২৬: *"ha calu thakbe"*। ⚠️ আগে বাদ ছিল: তথ্য আসত
+     * (বিক্রয়ের নির্ভরতা ধরে), কিন্তু ফোনে গ্রাহক আর বকেয়ার টাইল লুকানো থাকত — মালিকের নিজের
+     * ফোনে "গ্রাহক আসছে না"।
      */
-    public const ON_BY_DEFAULT = ['accounts', 'inventory', 'sales', 'purchase', 'approval', 'system_admin'];
+    public const ON_BY_DEFAULT = ['accounts', 'customer', 'inventory', 'sales', 'purchase', 'approval', 'system_admin'];
 
     public function __construct(
         private readonly ModuleRegistry $registry,
