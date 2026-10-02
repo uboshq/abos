@@ -16,6 +16,24 @@
                           :subtitle="__('master_data::message.series_note')" />
     </x-slot:header>
 
+    {{-- ⭐ একাধিক অর্থবছরের সিরিজ থাকলে বছর বাছা — নইলে প্রতিটা কাগজ দুইবার দেখাত (মালিক, ২ অক্টোবর ২০২৬) --}}
+    @if ($years->count() > 1)
+        <nav aria-label="{{ __('master_data::message.series_year') }}" data-series-years class="mb-3 flex flex-wrap items-center gap-1">
+            <span class="me-2 text-xs text-(--color-ink-muted)">{{ __('master_data::message.series_year') }}</span>
+            @foreach ($years as $one)
+                <a href="{{ route('master_data.series.index', ['fy' => $one->id]) }}"
+                   @class([
+                       'rounded-(--radius-field) px-3 py-1 text-sm transition-colors',
+                       'bg-(--color-surface-sunken) font-semibold' => $year?->id === $one->id,
+                       'text-(--color-ink-muted) hover:bg-(--color-surface-hover)' => $year?->id !== $one->id,
+                   ])
+                   @if ($year?->id === $one->id) aria-current="page" @endif>
+                    {{ $one->name }}
+                </a>
+            @endforeach
+        </nav>
+    @endif
+
     @if (session('saved'))
         <div role="status"
              class="mb-4 rounded-(--radius-field) bg-(--color-badge-success-bg) px-3 py-2 text-sm

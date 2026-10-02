@@ -9,6 +9,7 @@ use App\Core\Module\ModuleRegistry;
 use App\Core\Services\MenuBuilder;
 use App\Core\Services\NumberSeriesProvisioner;
 use App\Http\Controllers\Controller;
+use App\Models\FinancialYear;
 use App\Models\NumberSeries;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -111,12 +112,31 @@ class NumberSeriesController extends Controller implements HasMiddleware
          */
         $this->provisioner->provision();
 
+        /*
+         * ⭐ এক বছরের সিরিজ একবার — মালিক, ২ অক্টোবর ২০২৬: *"Sob Dabole keno"*।
+         *
+         * ⓘ প্রতিটা অর্থবছরের নিজের সিরিজ থাকে। দুই বছর খোলা কোম্পানিতে তালিকায় প্রতিটা কাগজ দুইবার আসত,
+         * অথচ সারিতে বছরের নাম ছিল না — দেখতে হুবহু এক, যেন ভুলে দুইবার বসেছে। এখন একটা বছরের সারিই
+         * দেখায় (ডিফল্ট চলতি বছর), আর একাধিক বছর থাকলে উপরে বছর বাছার ঘর।
+         */
+        $years = FinancialYear::query()
+            ->whereIn('id', NumberSeries::query()->select('financial_year_id'))
+            ->orderByDesc('starts_on')
+            ->get(['id', 'name', 'is_current']);
+
+        $year = $years->firstWhere('id', (int) $request->query('fy'))
+            ?? $years->firstWhere('is_current', true)
+            ?? $years->first();
+
         return view('master_data::series.index', [
             'menu' => $this->menu->forUser($request->user()),
             'series' => NumberSeries::query()
+                ->when($year, fn ($q) => $q->where('financial_year_id', $year->id))
                 ->orderBy('module')
                 ->orderBy('doc_type')
                 ->get(),
+            'years' => $years,
+            'year' => $year,
             'labels' => $this->docTypeLabels(),
             // নমুনাটা আসল নম্বরের কোড থেকেই আসে, তাই দুইটা আলাদা হতে
             // পারে না — আগে ভিউ নিজে হাতে জুড়ে দেখাত, আর ছক বদলালে

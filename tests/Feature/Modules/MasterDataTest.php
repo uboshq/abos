@@ -544,6 +544,32 @@ class MasterDataTest extends TestCase
         $this->get(route('master_data.series.index'))->assertOk();
     }
 
+    /**
+     * ⭐ দুই অর্থবছর খোলা থাকলে প্রতিটা কাগজ একবারই — মালিক, ২ অক্টোবর ২০২৬: *"Sob Dabole keno"*।
+     * ⓘ ডিফল্টে চলতি বছর; অন্য বছর উপরের বাছাই থেকে।
+     */
+    public function test_two_open_years_do_not_list_every_series_twice(): void
+    {
+        $this->get(route('master_data.series.index'))->assertOk();   // চলতি বছরের সিরিজ বসুক
+
+        $old = \App\Models\FinancialYear::query()->create([
+            'company_id' => $this->company->id, 'name' => 'FY-OLD-TEST',
+            'starts_on' => now()->subYears(2)->startOfYear()->toDateString(),
+            'ends_on' => now()->subYears(2)->endOfYear()->toDateString(),
+            'is_current' => false,
+        ]);
+
+        $copy = NumberSeries::query()->firstOrFail()->replicate(['public_id', 'branch_key', 'financial_year_key']);
+        $copy->forceFill(['financial_year_id' => $old->id, 'prefix' => 'OLDYRX'])->save();
+
+        $current = $this->get(route('master_data.series.index'))->assertOk();
+        $current->assertDontSee('OLDYRX');
+        $current->assertSee('FY-OLD-TEST');          // বছর বাছার ঘর আছে
+        $current->assertDontSee(route('master_data.series.update', $copy), false);   // আগের বছরের সারি চলতির তালিকায় নেই
+
+        $this->get(route('master_data.series.index', ['fy' => $old->id]))->assertOk()->assertSee('OLDYRX');
+    }
+
     public function test_an_unknown_list_is_a_404(): void
     {
         // রুটগুলো KINDS থেকে তৈরি, তাই অজানা তালিকার কোনো রুটই নেই

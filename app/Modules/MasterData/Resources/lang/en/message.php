@@ -22,6 +22,7 @@ return [
     'series_placeholders' => 'These markers can be used in the format. A format without {SEQ} is refused — without it every document would get the same number.',
 
     'series_note' => 'Every document number comes from here. Changing a prefix applies to new numbers only — numbers already issued never change.',
+    'series_year' => 'Financial year:',
     'default_hint' => 'New transactions pick this automatically. Only one can be the default.',
     'too_many' => ':count locations — more than render as a tree at once. Search above.',
     'count' => '{0} None|{1} 1|[2,*] :count',
