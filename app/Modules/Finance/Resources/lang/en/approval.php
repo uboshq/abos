@@ -11,4 +11,5 @@ declare(strict_types=1);
 
 return [
     'withdrawal' => 'Owner withdrawal',
+    'profit' => 'Profit declaration',
 ];

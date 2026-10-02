@@ -11,4 +11,5 @@ declare(strict_types=1);
 
 return [
     'withdrawal' => 'মালিকের উত্তোলন',
+    'profit' => 'মুনাফা ঘোষণা',
 ];

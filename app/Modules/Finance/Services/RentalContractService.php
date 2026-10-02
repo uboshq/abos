@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Finance\Services;
 
+use App\Core\Concerns\ReadsTheRowUnderLock;
 use App\Core\Engines\NumberSeries\NumberSeriesEngine;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Models\Voucher;
@@ -25,6 +26,8 @@ use Illuminate\Validation\ValidationException;
  */
 class RentalContractService
 {
+    use ReadsTheRowUnderLock;
+
     public function __construct(
         private readonly VoucherService $vouchers,
         private readonly NumberSeriesEngine $numbers,
@@ -138,7 +141,7 @@ class RentalContractService
                             'debit' => $deposit, 'credit' => '0',
                         ],
                         [
-                            'account_id' => (int) $data['money_account_id'],
+                            'account_id' => $this->moneyAccountId($data),
                             'debit' => '0', 'credit' => $deposit,
                         ],
                     ],
@@ -165,11 +168,7 @@ class RentalContractService
      */
     public function adjustMonth(RentalContract $contract, array $data): RentalAdjustment
     {
-        if (! $contract->isActive()) {
-            throw ValidationException::withMessages([
-                'status' => __('finance::validation.rental_closed'),
-            ]);
-        }
+        $this->assertActive($contract);
 
         $month = Carbon::parse((string) ($data['for_month'] ?? now()->toDateString()))->startOfMonth();
 
@@ -191,13 +190,7 @@ class RentalContractService
          * **ঋণাত্মক** হয়ে যেত — একটা সম্পদ খাত, যেটা ঋণাত্মক হতেই
          * পারে না। স্থিতিপত্র তখন চুপচাপ ভুল বলত।
          */
-        if (bccomp($fromDeposit, $contract->depositLeft(), 4) > 0) {
-            throw ValidationException::withMessages([
-                'from_deposit' => __('finance::validation.rental_no_deposit_left', [
-                    'left' => $contract->depositLeft(),
-                ]),
-            ]);
-        }
+        $this->assertDepositCovers($contract, $fromDeposit);
 
         /*
          * ⛔ একই মাস দুইবার নয় — আর এই যাচাইটা **কোডেই থাকতে হবে**।
@@ -216,17 +209,7 @@ class RentalContractService
          * ⭐ দামটা ছোট নয়: একই মাস দুইবার মানে ঐ মাসের ভাড়া দুইবার
          * খরচে বসা, জামানত দুইবার কাটা, আর মুনাফা কম দেখানো।
          */
-        $already = $contract->adjustments()
-            ->where('for_month', $month->toDateString())
-            ->exists();
-
-        if ($already) {
-            throw ValidationException::withMessages([
-                'for_month' => __('finance::validation.rental_month_done_already', [
-                    'month' => $month->translatedFormat('F Y'),
-                ]),
-            ]);
-        }
+        $this->assertMonthNotDone($contract, $month);
 
         if (bccomp($cash, '0', 4) > 0 && blank($data['money_account_id'] ?? null)) {
             throw ValidationException::withMessages([
@@ -235,6 +218,13 @@ class RentalContractService
         }
 
         return DB::transaction(function () use ($contract, $data, $month, $rent, $cash, $fromDeposit) {
+            // ⛔ সারিতে তালা দিয়ে তাজা অবস্থা আবার — দ্বিতীয় ক্লিক টাকা আবার বসাত (চূড়ান্ত অডিট ⛔১১)
+            $this->lockFresh($contract);
+            $this->assertActive($contract);
+            // ⛔ তালার পরে আবার — দুই ক্লিক একসাথে একই মাস দুইবার বসাত, জামানত দুইবার কাটত
+            $this->assertMonthNotDone($contract, $month);
+            $this->assertDepositCovers($contract, $fromDeposit);
+
             $lines = [[
                 'account_id' => $contract->expense_account_id,
                 'debit' => $rent, 'credit' => '0',
@@ -242,7 +232,7 @@ class RentalContractService
 
             if (bccomp($cash, '0', 4) > 0) {
                 $lines[] = [
-                    'account_id' => (int) $data['money_account_id'],
+                    'account_id' => $this->moneyAccountId($data),
                     'debit' => '0', 'credit' => $cash,
                 ];
             }
@@ -303,11 +293,7 @@ class RentalContractService
      */
     public function reviseTerms(RentalContract $contract, array $data): RentalContract
     {
-        if (! $contract->isActive()) {
-            throw ValidationException::withMessages([
-                'status' => __('finance::validation.rental_closed'),
-            ]);
-        }
+        $this->assertActive($contract);
 
         $rent = (string) ($data['monthly_rent'] ?? $contract->monthly_rent);
         $adjustment = (string) ($data['monthly_adjustment'] ?? $contract->monthly_adjustment);
@@ -366,11 +352,7 @@ class RentalContractService
      */
     public function addToDeposit(RentalContract $contract, array $data): RentalContract
     {
-        if (! $contract->isActive()) {
-            throw ValidationException::withMessages([
-                'status' => __('finance::validation.rental_closed'),
-            ]);
-        }
+        $this->assertActive($contract);
 
         $amount = (string) ($data['amount'] ?? '0');
 
@@ -396,7 +378,7 @@ class RentalContractService
                         'debit' => $amount, 'credit' => '0',
                     ],
                     [
-                        'account_id' => (int) $data['money_account_id'],
+                        'account_id' => $this->moneyAccountId($data),
                         'debit' => '0', 'credit' => $amount,
                     ],
                 ],
@@ -423,16 +405,16 @@ class RentalContractService
      */
     public function close(RentalContract $contract, array $data = []): RentalContract
     {
-        if (! $contract->isActive()) {
-            throw ValidationException::withMessages([
-                'status' => __('finance::validation.rental_closed'),
-            ]);
-        }
+        $this->assertActive($contract);
 
         $left = $contract->depositLeft();
         $on = (string) ($data['closed_on'] ?? now()->toDateString());
 
         return DB::transaction(function () use ($contract, $data, $left, $on) {
+            // ⛔ সারিতে তালা দিয়ে তাজা অবস্থা আবার — দ্বিতীয় ক্লিক টাকা আবার বসাত (চূড়ান্ত অডিট ⛔১১)
+            $this->lockFresh($contract);
+            $this->assertActive($contract);
+
             if (bccomp($left, '0', 4) > 0 && filled($data['money_account_id'] ?? null)) {
                 $voucher = $this->vouchers->create(
                     [
@@ -445,7 +427,7 @@ class RentalContractService
                     ],
                     [
                         [
-                            'account_id' => (int) $data['money_account_id'],
+                            'account_id' => $this->moneyAccountId($data),
                             'debit' => $left, 'credit' => '0',
                         ],
                         [
@@ -561,7 +543,20 @@ class RentalContractService
     private function expenseHead(array $data): Account
     {
         if (filled($data['expense_account_id'] ?? null)) {
-            return Account::query()->postable()->findOrFail($data['expense_account_id']);
+            /*
+             * ⛔ এই কোম্পানির খরচের খাতই — abos-63-এর তালিকা (abos-bb-র নিরীক্ষার বাকি), ২ অক্টোবর ২০২৬
+             * ([[ARentalContractNamedAnAccountThatWasNotThereTest]])। ⓘ আগে যেকোনো পোস্টযোগ্য খাত চলত (নগদ খাতে
+             * ভাড়া "খরচ" হত), আর না পেলে ৪০৪-এর ভাঙা পাতা।
+             */
+            $account = Account::query()->postable()->where('type', Account::EXPENSE)->find($data['expense_account_id']);
+
+            if ($account === null) {
+                throw ValidationException::withMessages([
+                    'expense_account_id' => __('finance::validation.rental_account_unknown'),
+                ]);
+            }
+
+            return $account;
         }
 
         return $this->head(StandardChart::RENT);
@@ -578,5 +573,60 @@ class RentalContractService
         }
 
         return $account;
+    }
+
+    private function assertMonthNotDone(RentalContract $contract, Carbon $month): void
+    {
+        $already = $contract->adjustments()
+            ->where('for_month', $month->toDateString())
+            ->exists();
+
+        if ($already) {
+            throw ValidationException::withMessages([
+                'for_month' => __('finance::validation.rental_month_done_already', [
+                    'month' => $month->translatedFormat('F Y'),
+                ]),
+            ]);
+        }
+    }
+
+    private function assertDepositCovers(RentalContract $contract, string $fromDeposit): void
+    {
+        if (bccomp($fromDeposit, $contract->depositLeft(), 4) > 0) {
+            throw ValidationException::withMessages([
+                'from_deposit' => __('finance::validation.rental_no_deposit_left', [
+                    'left' => $contract->depositLeft(),
+                ]),
+            ]);
+        }
+    }
+
+    private function assertActive(RentalContract $contract): void
+    {
+        if (! $contract->isActive()) {
+            throw ValidationException::withMessages([
+                'status' => __('finance::validation.rental_closed'),
+            ]);
+        }
+    }
+
+    /**
+     * ⛔ টাকার খাত এই কোম্পানির টাকার খাতই — নগদ, ব্যাংক বা MFS ([[Account::scopeMoney()]]), ২ অক্টোবর ২০২৬
+     * ([[ARentalContractNamedAnAccountThatWasNotThereTest]])। ⓘ আগে ফর্মের সংখ্যাটা সোজা দাখিলায় বসত — না-থাকা,
+     * অন্য কোম্পানির বা টাকার-নয় এমন খাতও; খাতার দরজা কোথাও আটকালে ভাঙা পাতা, না আটকালে ভুল খাতে টাকা।
+     *
+     * @param  array<string, mixed>  $data
+     */
+    private function moneyAccountId(array $data): int
+    {
+        $account = Account::query()->money()->postable()->active()->find($data['money_account_id'] ?? null);
+
+        if ($account === null) {
+            throw ValidationException::withMessages([
+                'money_account_id' => __('finance::validation.rental_account_unknown'),
+            ]);
+        }
+
+        return (int) $account->id;
     }
 }

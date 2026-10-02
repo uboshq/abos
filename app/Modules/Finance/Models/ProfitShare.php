@@ -41,6 +41,9 @@ class ProfitShare extends Model
 
     public const POSTED = 'posted';
 
+    /** সইকারী ফিরিয়ে দিলেন, বা সই-এর পরে সীমা আর খাটল না ([[ProfitDistribution::finishSigned()]]) — খাতায় কিছু বসেনি। */
+    public const CANCELLED = 'cancelled';
+
     protected $table = 'acc_profit_shares';
 
     protected $fillable = [

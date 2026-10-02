@@ -53,4 +53,7 @@ return [
     'opening_needs_a_liability_account' => 'Bringing in a running loan needs its liability account. A cash credit\'s outstanding lives in the bank account\'s own balance — set it there instead.',
     'opening_needs_the_chart' => 'Install the standard chart first — there is no retained earnings account.',
     'more_than_retained' => 'The books do not hold that much profit. You asked to declare :asked and the retained profit is :have. Sharing profit that was never earned leaves nothing to pay out later.',
+    'profit_signature_refused' => 'The signer turned the profit declaration down. It is cancelled and nothing was posted.',
+    'profit_no_longer_covered' => 'The declaration was signed, but retained profit is now :have, so :asked no longer fits. It is cancelled and nothing was posted; declare again.',
+    'rental_account_unknown' => 'That account is not in this company, or is not the right kind for this — pick one from the list.',
 ];

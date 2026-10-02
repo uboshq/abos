@@ -115,7 +115,10 @@ final class ProfitDistributionController implements HasMiddleware
 
         return redirect()
             ->route('finance.profit.index')
-            ->with('saved', __('finance::message.profit_declared', [
+            // ⓘ সই-এর ছক থাকলে ভাগগুলো খসড়া — "খাতায় বসল" বললে মিথ্যা হত ([[ProfitDistribution::declare()]])
+            ->with('saved', __($shares[0]->status === ProfitShare::DRAFT
+                ? 'finance::message.profit_awaits_signature'
+                : 'finance::message.profit_declared', [
                 'no' => $shares[0]->document_no,
                 'count' => count($shares),
             ]));

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Finance\Services;
 
+use App\Core\Concerns\ReadsTheRowUnderLock;
 use App\Core\Engines\NumberSeries\NumberSeriesEngine;
 use App\Core\Support\CompanyContext;
 use App\Modules\Accounts\Models\Account;
@@ -42,6 +43,8 @@ use Illuminate\Validation\ValidationException;
  */
 final class DepositService
 {
+    use ReadsTheRowUnderLock;
+
     public function __construct(
         private readonly NumberSeriesEngine $numbers,
         private readonly VoucherService $vouchers,
@@ -154,6 +157,10 @@ final class DepositService
         }
 
         return DB::transaction(function () use ($deposit, $data) {
+            // ⛔ সারিতে তালা দিয়ে তাজা অবস্থা আবার — দ্বিতীয় ক্লিক টাকা আবার বসাত (চূড়ান্ত অডিট ⛔১১)
+            $this->lockFresh($deposit);
+            $this->assertOpen($deposit);
+
             $from = $this->money($data['money_account_id']);
 
             $movement = $this->putMoneyIn($deposit, DepositMovement::INSTALMENT,
@@ -178,6 +185,10 @@ final class DepositService
         $this->assertOpen($deposit);
 
         return DB::transaction(function () use ($deposit, $data) {
+            // ⛔ সারিতে তালা দিয়ে তাজা অবস্থা আবার — দ্বিতীয় ক্লিক টাকা আবার বসাত (চূড়ান্ত অডিট ⛔১১)
+            $this->lockFresh($deposit);
+            $this->assertOpen($deposit);
+
             $into = $this->money($data['money_account_id']);
             $amount = (string) $data['amount'];
 
@@ -222,6 +233,10 @@ final class DepositService
         $this->assertOpen($deposit);
 
         return DB::transaction(function () use ($deposit, $data) {
+            // ⛔ সারিতে তালা দিয়ে তাজা অবস্থা আবার — দ্বিতীয় ক্লিক টাকা আবার বসাত (চূড়ান্ত অডিট ⛔১১)
+            $this->lockFresh($deposit);
+            $this->assertOpen($deposit);
+
             $into = $this->money($data['money_account_id']);
             $received = (string) $data['amount'];
             $principal = (string) $deposit->principal;

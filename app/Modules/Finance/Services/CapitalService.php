@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Finance\Services;
 
+use App\Core\Concerns\ReadsTheRowUnderLock;
 use App\Core\Engines\NumberSeries\NumberSeriesEngine;
 use App\Core\Support\CompanyContext;
 use App\Core\Support\DocumentStatus;
@@ -30,6 +31,8 @@ use Illuminate\Validation\ValidationException;
  */
 final class CapitalService
 {
+    use ReadsTheRowUnderLock;
+
     public function __construct(
         private readonly NumberSeriesEngine $numbers,
         private readonly VoucherService $vouchers,
@@ -274,11 +277,7 @@ final class CapitalService
         ?string $reference = null,
         ?string $charge = null,
     ): CapitalEntry {
-        if ($entry->status === CapitalEntry::POSTED) {
-            throw ValidationException::withMessages([
-                'status' => __('finance::validation.capital_already_posted', ['no' => $entry->document_no]),
-            ]);
-        }
+        $this->assertNotPosted($entry);
 
         if ($into->is_group) {
             throw ValidationException::withMessages([
@@ -297,6 +296,10 @@ final class CapitalService
          * মৃত কোড। ⭐ ছয়টা টেস্ট এটাকে ডাকে, আর ওগুলো চালানোই হয়নি।
          */
         return DB::transaction(function () use ($entry, $into, $reference, $charge) {
+            // ⛔ সারিতে তালা দিয়ে তাজা অবস্থা আবার — দ্বিতীয় ক্লিক টাকা আবার বসাত (চূড়ান্ত অডিট ⛔১১)
+            $this->lockFresh($entry);
+            $this->assertNotPosted($entry);
+
             $capital = Account::query()
                 ->where('code', StandardChart::OWNER_CAPITAL)
                 ->firstOrFail();
@@ -650,6 +653,15 @@ final class CapitalService
         if (bccomp((string) ($data['amount'] ?? '0'), '0', 4) <= 0) {
             throw ValidationException::withMessages([
                 'amount' => __('finance::validation.capital_must_be_positive'),
+            ]);
+        }
+    }
+
+    private function assertNotPosted(CapitalEntry $entry): void
+    {
+        if ($entry->status === CapitalEntry::POSTED) {
+            throw ValidationException::withMessages([
+                'status' => __('finance::validation.capital_already_posted', ['no' => $entry->document_no]),
             ]);
         }
     }

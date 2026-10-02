@@ -7,6 +7,7 @@ return [
     'declare_is_final' => 'Declaring is not a draft — it posts to the books, and the only way back is a reversing entry.',
     'no_distribution_yet' => 'No profit has been distributed yet.',
     'profit_declared' => 'Profit distribution :no — :count shares posted.',
+    'profit_awaits_signature' => 'Profit distribution :no — :count shares are waiting for signature. They post by themselves on the last signature.',
     'profit_narration' => 'Profit distribution :no',
     'capitalise_note' => 'What these people have not taken moves from profit payable into capital. No cash moves.',
     'capitalise_narration' => 'Profit added to capital',

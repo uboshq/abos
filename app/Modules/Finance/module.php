@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 use App\Core\Contracts\KnowsWhereAPersonsMoneyBelongs;
+use App\Core\Events\ApprovalDecided;
 use App\Modules\Accounts\Events\AccountFormOpened;
 use App\Modules\Accounts\Events\AccountSaved;
 use App\Modules\Accounts\Events\VoucherPosted;
@@ -9,6 +10,7 @@ use App\Modules\Finance\Dashboard\FinanceDashboard;
 use App\Modules\Finance\Listeners\CapitalFromReceipt;
 use App\Modules\Finance\Listeners\InstitutionFieldOnAccountForm;
 use App\Modules\Finance\Listeners\InstitutionFromAccountForm;
+use App\Modules\Finance\Listeners\PostTheProfitOnTheLastSignature;
 use App\Modules\Finance\Models\BankFacility;
 use App\Modules\Finance\Models\CapitalEntry;
 use App\Modules\Finance\Models\Deposit;
@@ -540,6 +542,8 @@ return [
      */
     'approvals' => [
         'withdrawal' => 'finance::approval.withdrawal',
+        // ⭐ মুনাফা ঘোষণা — সই ছাড়া লাভ ভাগ নয় (মালিকের নিয়ম; [[ProfitDistribution::declare()]], ১ অক্টোবর ২০২৬)
+        'profit' => 'finance::approval.profit',
     ],
 
     /*
@@ -554,7 +558,7 @@ return [
      * মিলিয়ে দেখে। ⛔ একটা টাইপো নীরবে কাগজটাকে bulk-এ
      * ঢুকিয়ে দিত।
      */
-    'moves_money' => ['withdrawal'],
+    'moves_money' => ['withdrawal', 'profit'],
 
     /*
      * ⛔ এই ব্লকটা এতদিন **ছিলই না**, আর সেটা একটা নীরব ফাঁক ছিল।
@@ -647,5 +651,8 @@ return [
         // ⓘ খাতের ফর্মে "কোন প্রতিষ্ঠান" — ঘর আঁকা আর জমা ([[InstitutionFieldOnAccountForm]])
         AccountFormOpened::class => [InstitutionFieldOnAccountForm::class],
         AccountSaved::class => [InstitutionFromAccountForm::class],
+
+        // ⭐ মুনাফা ঘোষণার শেষ সই — খসড়া ঘোষণা খাতায়, "না" হলে বাতিল ([[PostTheProfitOnTheLastSignature]])
+        ApprovalDecided::class => [PostTheProfitOnTheLastSignature::class],
     ],
 ];

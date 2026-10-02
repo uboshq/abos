@@ -467,6 +467,15 @@ final class ApprovalEngine
 
             $this->tell($approval, 'rejected', $remarks);
 
+            /*
+             * ⭐ "না"-ও শেষ সিদ্ধান্ত — কাগজের মালিক-মডিউলকে জানানো, ২ অক্টোবর ২০২৬
+             * ([[AProfitWasSharedWithNobodyToSignTest]])। ⓘ আগে কেবল শেষ "হ্যাঁ"-তে জানানো হত, তাই "না" পাওয়া
+             * কাগজ যে মডিউল নিজে ধরে রাখে (মুনাফা ঘোষণার খসড়া) সেটা চিরকাল অপেক্ষায় ঝুলত আর সীমা আটকে রাখত।
+             * ⚠️ পুরনো শ্রোতারা (বিক্রির শেষ সই, চালান) কেবল `approved` শোনে — তাদের কিছু বদলায় না।
+             */
+            $decided = $approval->fresh();
+            DB::afterCommit(fn () => event(\App\Core\Events\ApprovalDecided::from($decided)));
+
             return $approval->fresh();
         });
     }

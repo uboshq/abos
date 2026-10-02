@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Finance\Services;
 
+use App\Core\Concerns\ReadsTheRowUnderLock;
 use App\Core\Engines\Approval\ApprovalEngine;
 use App\Core\Engines\NumberSeries\NumberSeriesEngine;
 use App\Core\Support\CompanyContext;
@@ -45,6 +46,8 @@ use Illuminate\Validation\ValidationException;
  */
 final class WithdrawalService
 {
+    use ReadsTheRowUnderLock;
+
     public function __construct(
         private readonly NumberSeriesEngine $numbers,
         private readonly VoucherService $vouchers,
@@ -84,6 +87,14 @@ final class WithdrawalService
         $this->assertWithinCap($personId, $amount, $on);
 
         return DB::transaction(function () use ($data, $personId, $amount, $on) {
+            /*
+             * ⛔ মানুষের সারিতে তালা, তারপর মাসের ছাদ আবার — চূড়ান্ত অডিট ⛔১১, ৩০ সেপ্টেম্বর ২০২৬
+             * ([[TwoAtOnceBrokeAFinanceCeilingTest]])। ⓘ উপরের যাচাই তালা ছাড়া, লেনদেনের বাইরে: দুইটা
+             * ৬,০০০ টাকার অনুরোধ একসাথে এলে দুইটাই "১০,০০০ খালি" দেখত আর ছাদ পার হত।
+             */
+            Person::query()->whereKey($personId)->lockForUpdate()->first();
+            $this->assertWithinCap($personId, $amount, $on);
+
             $withdrawal = Withdrawal::query()->create([
                 'company_id' => CompanyContext::id(),
                 'branch_id' => CompanyContext::branchId(),
@@ -146,13 +157,7 @@ final class WithdrawalService
      */
     public function post(Withdrawal $withdrawal, Account $from, ?string $reference = null): Withdrawal
     {
-        if ($withdrawal->isPosted()) {
-            throw ValidationException::withMessages([
-                'status' => __('finance::validation.withdrawal_already_posted', [
-                    'no' => $withdrawal->document_no,
-                ]),
-            ]);
-        }
+        $this->assertNotPosted($withdrawal);
 
         if ($from->is_group) {
             throw ValidationException::withMessages([
@@ -245,6 +250,10 @@ final class WithdrawalService
         }
 
         return DB::transaction(function () use ($withdrawal, $from, $reference) {
+            // ⛔ সারিতে তালা দিয়ে তাজা অবস্থা আবার — দ্বিতীয় ক্লিক টাকা আবার বসাত (চূড়ান্ত অডিট ⛔১১)
+            $this->lockFresh($withdrawal);
+            $this->assertNotPosted($withdrawal);
+
             /*
              * ⭐ লাভের ভাগ ও অন্য উত্তোলন এক খাতে যায় না — ২২ সেপ্টেম্বর ২০২৬।
              *
@@ -523,6 +532,17 @@ final class WithdrawalService
                 'amount' => __('finance::validation.withdrawal_over_cap', [
                     'cap' => Money::format((string) $cap),
                     'left' => Money::format(bcsub((string) $cap, (string) $already, 4)),
+                ]),
+            ]);
+        }
+    }
+
+    private function assertNotPosted(Withdrawal $withdrawal): void
+    {
+        if ($withdrawal->isPosted()) {
+            throw ValidationException::withMessages([
+                'status' => __('finance::validation.withdrawal_already_posted', [
+                    'no' => $withdrawal->document_no,
                 ]),
             ]);
         }

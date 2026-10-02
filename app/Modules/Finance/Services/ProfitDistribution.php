@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Modules\Finance\Services;
 
+use App\Core\Concerns\ReadsTheRowUnderLock;
+use App\Core\Engines\Approval\DocumentApproval;
 use App\Core\Engines\NumberSeries\NumberSeriesEngine;
 use App\Core\Support\CompanyContext;
 use App\Modules\Accounts\Models\Account;
@@ -15,6 +17,7 @@ use App\Modules\Finance\Models\ProfitShare;
 use App\Modules\Finance\Models\Withdrawal;
 use App\Modules\MasterData\Models\Person;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
 
 /**
@@ -45,10 +48,18 @@ use Illuminate\Validation\ValidationException;
  */
 final class ProfitDistribution
 {
+    use ReadsTheRowUnderLock;
+
+    /** সই-এর ছকে এই কাজের নাম — `module.php`-র `approvals`/`moves_money`-তে একই বানান। */
+    public const MODULE = 'finance';
+
+    public const ACTION = 'profit';
+
     public function __construct(
         private readonly CapitalService $capital,
         private readonly NumberSeriesEngine $numbers,
         private readonly VoucherService $vouchers,
+        private readonly DocumentApproval $approval,
     ) {}
 
     /**
@@ -117,6 +128,14 @@ final class ProfitDistribution
 
         return DB::transaction(function () use ($data, $profit, $rows) {
             $retained = $this->account(StandardChart::RETAINED_EARNINGS);
+
+            /*
+             * ⛔ সঞ্চিত মুনাফার খাতে তালা, তারপর সীমা আবার — চূড়ান্ত অডিট ⛔১১, ৩০ সেপ্টেম্বর ২০২৬
+             * ([[TwoAtOnceBrokeAFinanceCeilingTest]])। ⓘ উপরের যাচাই লেনদেনের বাইরে: দুইজন একসাথে
+             * ৬০,০০০ করে ঘোষণা করলে দুইজনেই "১,০০,০০০ আছে" দেখতেন, আর যা আয়ই হয়নি তাও ভাগ হত।
+             */
+            Account::query()->whereKey($retained->id)->lockForUpdate()->first();
+            $this->assertWithinRetainedProfit($profit);
             $payable = $this->account(StandardChart::PROFIT_PAYABLE);
 
             $documentNo = $this->numbers->next('PDS');
@@ -163,7 +182,18 @@ final class ProfitDistribution
                 ]),
             ], $lines);
 
-            $this->vouchers->post($voucher);
+            /*
+             * ⛔ সই ছাড়া লাভ ভাগ নয় — চেকলিস্ট (অডিট ২৭ সেপ্টেম্বর) ঘর ৪, ১ অক্টোবর ২০২৬
+             * ([[AProfitWasSharedWithNobodyToSignTest]])। মালিকের নিয়ম: *যেকোনো টাকা, যেকোনো অঙ্ক —
+             * সই লাগে*। ছক থাকলে ভাউচার আর ভাগগুলো খসড়া থাকে; শেষ সই পড়লে
+             * [[PostTheProfitOnTheLastSignature]] নিজে খাতায় বসায় ([[finishSigned()]])।
+             * ⓘ ছক না থাকলে (সুইচ বন্ধ) আগের মতো সাথে সাথে।
+             */
+            $held = $this->approval->stopping($voucher, self::MODULE, self::ACTION, $total) !== null;
+
+            if (! $held) {
+                $this->vouchers->post($voucher);
+            }
 
             $shares = [];
 
@@ -177,10 +207,10 @@ final class ProfitDistribution
                     'share_percent' => $row['share'],
                     'profit_base' => $profit,
                     'amount' => $row['amount'],
-                    'status' => ProfitShare::POSTED,
+                    'status' => $held ? ProfitShare::DRAFT : ProfitShare::POSTED,
                     'voucher_id' => $voucher->id,
                     'narration' => $data['narration'] ?? null,
-                    'posted_at' => now(),
+                    'posted_at' => $held ? null : now(),
                 ]);
             }
 
@@ -215,7 +245,7 @@ final class ProfitDistribution
      */
     private function assertWithinRetainedProfit(string $profit): void
     {
-        $available = $this->account(StandardChart::RETAINED_EARNINGS)->balanceOn();
+        $available = $this->available();
 
         if (bccomp($profit, $available, 4) > 0) {
             throw ValidationException::withMessages([
@@ -227,6 +257,105 @@ final class ProfitDistribution
         }
     }
 
+
+    /**
+     * সঞ্চিত মুনাফা থেকে সই-এর অপেক্ষায় থাকা ঘোষণাগুলো বাদ দিয়ে যা ঘোষণা করা যায়।
+     *
+     * ⛔ অপেক্ষার ঘোষণা খাতায় বসেনি, তাই জের তাকে দেখে না — না কাটলে দুইটা খসড়া মিলে
+     * আয়ের বেশি ভাগ হত, আর দুইটাই সই পেলে না-অর্জিত লাভ বণ্টন হত। ⓘ যেটা সই পেয়ে বসছে
+     * সেটা নিজেকে বাদ দেয় ([[finishSigned()]])।
+     */
+    private function available(?int $exceptVoucherId = null): string
+    {
+        $waiting = (string) (ProfitShare::query()
+            ->where('status', ProfitShare::DRAFT)
+            ->when($exceptVoucherId !== null, fn ($q) => $q->where('voucher_id', '!=', $exceptVoucherId))
+            ->sum('amount') ?: '0');
+
+        return bcsub($this->account(StandardChart::RETAINED_EARNINGS)->balanceOn(), $waiting, 4);
+    }
+
+    /**
+     * ⭐ শেষ সই পড়ল — খসড়া ঘোষণাটা খাতায় ([[PostTheProfitOnTheLastSignature]])।
+     *
+     * ⓘ সই আর খাতার মাঝে সঞ্চিত মুনাফা কমে যেতে পারে (লোকসানের ভাউচার, আরেকটা ঘোষণা)। তাই
+     * সঞ্চিত মুনাফার খাতে তালা দিয়ে সীমা আবার দেখা হয়; ⛔ না খাটলে ঘোষণাটা বাতিল হয়, খাতায় কিছু
+     * বসে না। সই মানুষের সিদ্ধান্ত, সেটা ফেরে না ([[ApprovalDecided]]) — কিন্তু না-অর্জিত লাভ ভাগও হয় না।
+     */
+    public function finishSigned(Voucher $voucher): void
+    {
+        $refused = DB::transaction(function () use ($voucher): ?string {
+            $retained = $this->account(StandardChart::RETAINED_EARNINGS);
+            Account::query()->whereKey($retained->id)->lockForUpdate()->first();
+            $this->lockFresh($voucher);
+
+            $shares = ProfitShare::query()
+                ->where('voucher_id', $voucher->id)
+                ->where('status', ProfitShare::DRAFT)
+                ->lockForUpdate()
+                ->get();
+
+            if ($shares->isEmpty() || $voucher->isPosted() || $voucher->isCancelled()) {
+                return null;
+            }
+
+            $total = '0';
+
+            foreach ($shares as $share) {
+                $total = bcadd($total, (string) $share->amount, 4);
+            }
+
+            $have = $this->available((int) $voucher->id);
+
+            if (bccomp($total, $have, 4) > 0) {
+                $reason = __('finance::validation.profit_no_longer_covered', ['asked' => $total, 'have' => $have]);
+                $this->drop($voucher, $reason);
+
+                return $reason;
+            }
+
+            $this->vouchers->post($voucher);
+
+            ProfitShare::query()->whereKey($shares->modelKeys())->update([
+                'status' => ProfitShare::POSTED,
+                'posted_at' => now(),
+            ]);
+
+            return null;
+        });
+
+        if ($refused !== null) {
+            Log::warning('A signed profit declaration was not posted', [
+                'company_id' => (int) $voucher->company_id,
+                'voucher_id' => (int) $voucher->id,
+                'reason' => $refused,
+            ]);
+        }
+    }
+
+    /** ⭐ সইকারী "না" বললেন — খসড়া ঘোষণা বাতিল, অঙ্কটা আবার ঘোষণার জন্য ছাড়া পায়। */
+    public function dropRefused(Voucher $voucher, string $reason): void
+    {
+        DB::transaction(function () use ($voucher, $reason): void {
+            $this->lockFresh($voucher);
+
+            if ($voucher->isPosted() || $voucher->isCancelled()) {
+                return;
+            }
+
+            $this->drop($voucher, $reason);
+        });
+    }
+
+    private function drop(Voucher $voucher, string $reason): void
+    {
+        $this->vouchers->cancel($voucher, $reason);
+
+        ProfitShare::query()
+            ->where('voucher_id', $voucher->id)
+            ->where('status', ProfitShare::DRAFT)
+            ->update(['status' => ProfitShare::CANCELLED]);
+    }
 
     /**
      * এই মানুষের ঘোষিত মুনাফার কতটুকু এখনো তোলা হয়নি।
