@@ -7,6 +7,7 @@ namespace App\Modules\Sales\Services;
 use App\Core\Support\DocumentStatus;
 use App\Modules\Sales\Models\SalesOrder;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Database\Eloquent\Builder as EloquentBuilder;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Facades\DB;
 
@@ -41,6 +42,42 @@ final class OrderTracking
     public const BILLED = 'billed';
 
     public const STAGES = [self::PLACED, self::PARTIAL, self::DELIVERED, self::BILLED];
+
+    /*
+     * ⭐ অর্ডার তালিকার ট্যাব — নকশার পর্যালোচনা, ধাপ ৭-এর ২ (মালিক, ১ অক্টোবর ২০২৬: *"ok kore daw"*)।
+     *
+     * ⓘ আগে মেনুতে পাঁচটা আলাদা দরজা ছিল — অর্ডার তালিকা, অপেক্ষমাণ, আংশিক, ব্যাক অর্ডার, ইতিহাস —
+     * অথচ জিনিসটা একটাই তালিকা, কেবল ছাঁকনি আলাদা। এখন মেনুতে একটা সারি, আর ছাঁকনিগুলো পাতার ওপরের
+     * ট্যাব (`?tab=`), সার্ভারে ছাঁকা, বুকমার্ক করা যায়, পাশে গোনা।
+     *
+     * ⚠️ এগুলো ধাপ নয়, দৃশ্য: "ব্যাক অর্ডার" অপেক্ষমাণ বা আংশিক — দুইটার যেকোনোটার সাথেই থাকে।
+     * বাকি চারটা পরস্পরকে বাদ দেয় (বাতিল ছাড়া প্রতিটা আদেশ ঠিক একটায়), ইতিহাসে বাতিলও।
+     *
+     * ⓘ প্রতিটা ট্যাবের চাবি পুরনো মেনু-সারির চাবিই — চারটাই `sales.order.view` চাইত। যে ট্যাব খোলার
+     * চাবি নেই, সে ট্যাব আঁকা হয় না ([[SalesOrderController::listTabs()]])।
+     */
+    public const LIST_ALL = 'all';
+
+    public const LIST_PENDING = 'pending';
+
+    public const LIST_PARTIAL = 'partial';
+
+    public const LIST_BACK = 'back';
+
+    public const LIST_HISTORY = 'history';
+
+    /**
+     * ট্যাবের ক্রম — চাবি → নাম আর খোলার চাবি।
+     *
+     * @var array<string, array{label: string, hint: string, permission: string}>
+     */
+    public const LIST_TABS = [
+        self::LIST_ALL => ['label' => 'sales::order_tabs.all', 'hint' => 'sales::order_tabs.hint_all', 'permission' => 'sales.order.view'],
+        self::LIST_PENDING => ['label' => 'sales::order_tabs.pending', 'hint' => 'sales::order_tabs.hint_pending', 'permission' => 'sales.order.view'],
+        self::LIST_PARTIAL => ['label' => 'sales::order_tabs.partial', 'hint' => 'sales::order_tabs.hint_partial', 'permission' => 'sales.order.view'],
+        self::LIST_BACK => ['label' => 'sales::order_tabs.back', 'hint' => 'sales::order_tabs.hint_back', 'permission' => 'sales.order.view'],
+        self::LIST_HISTORY => ['label' => 'sales::order_tabs.history', 'hint' => 'sales::order_tabs.hint_history', 'permission' => 'sales.order.view'],
+    ];
 
     /**
      * তালিকার সারি — ছাঁকনি, খোঁজা ও ধাপ ধরে।
@@ -173,5 +210,140 @@ final class OrderTracking
             ->selectRaw('COUNT(DISTINCT sal_invoices.id)')
             ->whereColumn('sal_order_lines.sales_order_id', 'sal_orders.id')
             ->where('sal_invoices.status', '<>', DocumentStatus::CANCELLED);
+    }
+
+    /**
+     * অর্ডার তালিকার একটা ট্যাবের ছাঁকনি — তালিকার নিজের কোয়েরির ওপরে (খোঁজা, তারিখ, সাজানো সব থাকে)।
+     *
+     * ⓘ সংখ্যাগুলো সাব-কোয়েরিতে, সারি ধরে নয় — উপরের একই কারণে। ⚠️ নিয়ম [[listTabsOf()]]-এর হুবহু এক,
+     * নাহলে ট্যাবের গোনা আর তালিকার সারি আলাদা কথা বলত।
+     *
+     * @param  EloquentBuilder<SalesOrder>  $orders
+     * @return EloquentBuilder<SalesOrder>
+     */
+    public function applyListTab(EloquentBuilder $orders, string $tab, bool $withCancelled = false): EloquentBuilder
+    {
+        $live = fn (EloquentBuilder $q): EloquentBuilder => $q->where('sal_orders.status', '<>', DocumentStatus::CANCELLED);
+        [$lessThanOrdered, $lessBindings] = $this->deliveredAgainstOrdered('<');
+        [$allGone, $goneBindings] = $this->deliveredAgainstOrdered('>=');
+
+        return match ($tab) {
+            self::LIST_PENDING => $live($orders)->where($this->deliveredQty(), '<=', 0),
+            self::LIST_PARTIAL => $live($orders)->where($this->deliveredQty(), '>', 0)
+                ->whereRaw($lessThanOrdered, $lessBindings),
+            // ⓘ কেবল নিশ্চিত আদেশ — খসড়া আদেশের মাল এখনো কেউ চায়নি, তাই সে "পিছিয়ে" নেই
+            self::LIST_BACK => $live($orders)->where('sal_orders.status', DocumentStatus::CONFIRMED)
+                ->whereExists($this->shortLines()->selectRaw('1')),
+            // ⓘ শেষ হয়ে যাওয়া আদেশ: সব মাল গেছে, নয়তো বাতিল — প্রতিটার পাতায় পুরো পথ ([[SalesOrderController::show()]])
+            self::LIST_HISTORY => $orders->where(fn (EloquentBuilder $q) => $q
+                ->where('sal_orders.status', DocumentStatus::CANCELLED)
+                ->orWhere(fn (EloquentBuilder $done) => $done
+                    ->where($this->deliveredQty(), '>', 0)
+                    ->whereRaw($allGone, $goneBindings))),
+            // ⓘ "সব" — আগের তালিকা হুবহু: বাতিল লুকানো, চাইলে দেখা যায় (নিয়ম ৫)
+            default => $withCancelled ? $orders : $live($orders),
+        };
+    }
+
+    /**
+     * প্রতিটা ট্যাবের গোনা — একটাই কোয়েরি, তারপর PHP-তে ভাগ ([[counts()]]-এর মতোই)।
+     *
+     * @param  EloquentBuilder<SalesOrder>  $orders  খোঁজা আর তারিখ বসানো, ট্যাব আর বাতিলের ছাঁকনি ছাড়া
+     * @return array<string, int>
+     */
+    public function listCounts(EloquentBuilder $orders): array
+    {
+        $rows = DB::query()
+            ->fromSub(
+                $orders->select('sal_orders.id', 'sal_orders.status')
+                    ->selectSub($this->orderedQty(), 'ordered_total')
+                    ->selectSub($this->deliveredQty(), 'delivered_total')
+                    ->selectSub($this->shortLines()->selectRaw('COUNT(*)'), 'short_lines'),
+                'o',
+            )
+            ->get();
+
+        $counts = array_fill_keys(array_keys(self::LIST_TABS), 0);
+
+        foreach ($rows as $row) {
+            foreach ($this->listTabsOf($row) as $tab) {
+                $counts[$tab]++;
+            }
+        }
+
+        return $counts;
+    }
+
+    /**
+     * একটা আদেশ কোন কোন ট্যাবে — [[applyListTab()]]-এর হুবহু নিয়ম।
+     *
+     * @return list<string>
+     */
+    public function listTabsOf(object $row): array
+    {
+        if (($row->status ?? null) === DocumentStatus::CANCELLED) {
+            return [self::LIST_HISTORY];
+        }
+
+        $ordered = (string) ($row->ordered_total ?? '0');
+        $delivered = (string) ($row->delivered_total ?? '0');
+
+        $tabs = [self::LIST_ALL, match (true) {
+            bccomp($delivered, '0', 4) <= 0 => self::LIST_PENDING,
+            bccomp($delivered, $ordered, 4) < 0 => self::LIST_PARTIAL,
+            default => self::LIST_HISTORY,
+        }];
+
+        if (($row->status ?? null) === DocumentStatus::CONFIRMED && (int) ($row->short_lines ?? 0) > 0) {
+            $tabs[] = self::LIST_BACK;
+        }
+
+        return $tabs;
+    }
+
+    /**
+     * যা গেছে বনাম যা চাওয়া হয়েছিল — দুই সাব-কোয়েরির তুলনা, বাঁধনসহ।
+     *
+     * @return array{0: string, 1: list<mixed>}
+     */
+    private function deliveredAgainstOrdered(string $operator): array
+    {
+        $delivered = $this->deliveredQty();
+        $ordered = $this->orderedQty();
+
+        return [
+            '('.$delivered->toSql().') '.$operator.' ('.$ordered->toSql().')',
+            [...$delivered->getBindings(), ...$ordered->getBindings()],
+        ];
+    }
+
+    /**
+     * ব্যাক অর্ডারের সারি — যে লাইনের বাকি মাল গুদামের তাকে নেই।
+     *
+     * ⓘ মানে: (চাওয়া − যা গেছে) > ০, আর সেটা আদেশের গুদামের তাকের মালের (`floor`) চেয়ে বেশি। ⚠️ তাক, বিক্রয়যোগ্য
+     * নয় — আদেশ নিশ্চিত হলে মালটা এই আদেশের নামেই ধরা থাকে, তাই "বিক্রয়যোগ্য" দিয়ে মাপলে প্রতিটা নিশ্চিত
+     * আদেশই নিজের ধরা মালের জন্য ব্যাক অর্ডার দেখাত। গুদাম না থাকলে সব গুদামের তাক।
+     */
+    private function shortLines(): Builder
+    {
+        $sent = DB::table('sal_challan_lines')
+            ->join('sal_challans', 'sal_challans.id', '=', 'sal_challan_lines.delivery_challan_id')
+            ->selectRaw('COALESCE(SUM(sal_challan_lines.delivered_qty), 0)')
+            ->whereColumn('sal_challan_lines.sales_order_line_id', 'sal_order_lines.id')
+            ->where('sal_challans.status', DocumentStatus::CONFIRMED);
+
+        $onShelf = DB::table('inv_stock_movements')
+            ->selectRaw('COALESCE(SUM(inv_stock_movements.floor_change), 0)')
+            ->whereColumn('inv_stock_movements.company_id', 'sal_orders.company_id')
+            ->whereColumn('inv_stock_movements.product_id', 'sal_order_lines.product_id')
+            ->where(fn (Builder $q) => $q->whereNull('sal_orders.warehouse_id')
+                ->orWhereColumn('inv_stock_movements.warehouse_id', 'sal_orders.warehouse_id'));
+
+        $left = 'sal_order_lines.ordered_qty - ('.$sent->toSql().')';
+
+        return DB::table('sal_order_lines')
+            ->whereColumn('sal_order_lines.sales_order_id', 'sal_orders.id')
+            ->whereRaw($left.' > 0', $sent->getBindings())
+            ->whereRaw($left.' > ('.$onShelf->toSql().')', [...$sent->getBindings(), ...$onShelf->getBindings()]);
     }
 }

@@ -87,16 +87,29 @@ class SalesOrderController extends Controller implements HasMiddleware
         ]);
     }
 
-    public function index(Request $request): View
+    public function index(Request $request, OrderTracking $tracking): View
     {
-        $query = SalesOrder::query()
-            ->search($request->query('q'))
-            ->with(['customer.location', 'warehouse'])
-            // বাতিলগুলো লুকানো, মোছা নয় (নিয়ম ৫)
-            ->when(! $request->boolean('cancelled'),
-                fn ($q) => $q->where('status', '<>', DocumentStatus::CANCELLED));
+        /*
+         * ⭐ ট্যাব — অপেক্ষমাণ, আংশিক, ব্যাক অর্ডার, ইতিহাস এক তালিকায় (নকশার পর্যালোচনা, ধাপ ৭-এর ২,
+         * ১ অক্টোবর ২০২৬)। ⓘ অচেনা বা চাবিহীন ট্যাব মানে "সব" — ভুল ঠিকানায় খালি পাতা নয়।
+         */
+        $tab = (string) $request->query('tab', OrderTracking::LIST_ALL);
+        $tab = isset(OrderTracking::LIST_TABS[$tab])
+            && ($request->user()?->can(OrderTracking::LIST_TABS[$tab]['permission']) ?? false)
+            ? $tab : OrderTracking::LIST_ALL;
 
-        $dates = $this->applyDateRange($query, $request);
+        $base = SalesOrder::query()->search($request->query('q'));
+        $dates = $this->applyDateRange($base, $request);
+
+        // ⓘ গোনা খোঁজা আর তারিখ মানে — নাহলে ট্যাব বলত "১২০" আর খুললে দেখাত "৩"
+        $counts = $tracking->listCounts(clone $base);
+
+        // বাতিলগুলো লুকানো, মোছা নয় (নিয়ম ৫) — "সব" ট্যাবে চাইলে দেখা যায়
+        $query = $tracking->applyListTab(
+            (clone $base)->with(['customer.location', 'warehouse']),
+            $tab,
+            $request->boolean('cancelled'),
+        );
 
         $sort = $this->applySort($query, $request, [
             'recent' => fn ($q) => $q->orderByDesc('trx_date')->orderByDesc('id'),
@@ -114,7 +127,40 @@ class SalesOrderController extends Controller implements HasMiddleware
             'sort' => $sort,
             'sortOptions' => $this->sortLabels(),
             'showCancelled' => $request->boolean('cancelled'),
+            'tab' => $tab,
+            'tabs' => $this->listTabs($request, $tab, $counts),
         ]);
+    }
+
+    /**
+     * তালিকার ওপরের ট্যাব — যে ট্যাব খোলার চাবি নেই সে আঁকা হয় না (চাপলে ৪০৩-এর চেয়ে না দেখানো ভালো)।
+     *
+     * ⓘ ঠিকানায় বাকি ছাঁকনি (খোঁজা, তারিখ, সাজানো) থাকে; পাতা নম্বর যায় না, নতুন ট্যাব প্রথম পাতা থেকে।
+     *
+     * @param  array<string, int>  $counts
+     * @return list<array{key: string, label: string, hint: string, url: string, count: int, active: bool}>
+     */
+    private function listTabs(Request $request, string $active, array $counts): array
+    {
+        $keep = $request->except(['tab', 'page']);
+        $tabs = [];
+
+        foreach (OrderTracking::LIST_TABS as $key => $tab) {
+            if (! ($request->user()?->can($tab['permission']) ?? false)) {
+                continue;
+            }
+
+            $tabs[] = [
+                'key' => $key,
+                'label' => __($tab['label']),
+                'hint' => __($tab['hint']),
+                'url' => route('sales.order.index', $key === OrderTracking::LIST_ALL ? $keep : [...$keep, 'tab' => $key]),
+                'count' => $counts[$key] ?? 0,
+                'active' => $key === $active,
+            ];
+        }
+
+        return $tabs;
     }
 
     public function create(Request $request): View

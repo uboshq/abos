@@ -132,6 +132,8 @@ final class TheQuotationAndOrderMenusSitAfterTheDashboardTest extends TestCase
         $this->actingAs($clerk)->get(route('sales.planned', ['screen' => 'order_pending']))->assertForbidden();
 
         $clerk->givePermissionTo('sales.order.view');
-        $this->actingAs($clerk->fresh())->get(route('sales.planned', ['screen' => 'order_pending']))->assertOk();
+        // ⓘ ১ অক্টোবর ২০২৬ থেকে ঠিকানাটা অর্ডার তালিকার "অপেক্ষমাণ" ট্যাবে নামে ([[PlannedScreenController::FOLDED]])
+        $this->actingAs($clerk->fresh())->get(route('sales.planned', ['screen' => 'order_pending']))
+            ->assertRedirect(route('sales.order.index', ['tab' => 'pending']));
     }
 }

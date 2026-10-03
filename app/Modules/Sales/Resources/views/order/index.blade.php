@@ -61,8 +61,15 @@
         </div>
     @endif
 
+    {{-- ⭐ এক তালিকা, পাঁচটা ট্যাব — আগে মেনুর পাঁচটা সারি (নকশার পর্যালোচনা, ধাপ ৭-এর ২, ১ অক্টোবর ২০২৬) --}}
+    <x-ui.list-tabs :tabs="$tabs" :label="__('sales::order_tabs.label')" />
+
     <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
         <form method="GET" class="contents">
+            {{-- ⓘ খুঁজলে ট্যাব বদলায় না --}}
+            @if ($tab !== 'all')
+                <input type="hidden" name="tab" value="{{ $tab }}">
+            @endif
             <x-ui.toolbar :title="__('sales::menu.orders')" :count="__('sales::message.order_note')"
                 :columns="$columns" :search-placeholder="__('sales::message.order_search')"
                           :sort="$sortOptions">
@@ -75,10 +82,13 @@
         </x-slot:actions>
                 <x-ui.date-range :dates="$dates" />
 
-                <label class="flex min-h-(--spacing-touch) items-center gap-2 text-sm">
-                    <input type="checkbox" name="cancelled" value="1" @checked($showCancelled) class="size-4">
-                    {{ __('sales::action.show_cancelled') }}
-                </label>
+                {{-- ⓘ বাতিল দেখানোর বাক্স কেবল "সব"-এ — ইতিহাসে বাতিল এমনিতেই থাকে, বাকি ট্যাবে বাতিলের জায়গা নেই --}}
+                @if ($tab === 'all')
+                    <label class="flex min-h-(--spacing-touch) items-center gap-2 text-sm">
+                        <input type="checkbox" name="cancelled" value="1" @checked($showCancelled) class="size-4">
+                        {{ __('sales::action.show_cancelled') }}
+                    </label>
+                @endif
             </x-ui.toolbar>
         </form>
 

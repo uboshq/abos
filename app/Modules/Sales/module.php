@@ -135,16 +135,13 @@ return [
                 'permission' => 'sales.order.create', 'setting' => 'sales.screen_orders'],
             ['label' => 'sales::planned.order_list', 'cluster' => 'sales_orders', 'icon' => 'receipt', 'route' => 'sales.order.index',
                 'permission' => 'sales.order.view', 'setting' => 'sales.screen_orders'],
-            ['label' => 'sales::planned.order_pending', 'cluster' => 'sales_orders', 'icon' => 'receipt', 'route' => 'sales.planned',
-                'route_params' => ['screen' => 'order_pending'], 'permission' => 'sales.order.view'],
-            ['label' => 'sales::planned.order_partial', 'cluster' => 'sales_orders', 'icon' => 'receipt', 'route' => 'sales.planned',
-                'route_params' => ['screen' => 'order_partial'], 'permission' => 'sales.order.view'],
-            ['label' => 'sales::planned.order_back', 'cluster' => 'sales_orders', 'icon' => 'receipt', 'route' => 'sales.planned',
-                'route_params' => ['screen' => 'order_back'], 'permission' => 'sales.order.view'],
-            /* ⭐ "অর্ডার" ভাঁজ — মালিকের নির্দেশ, ২৮ সেপ্টেম্বর ২০২৬: New Order, Order List, Pending,
-               Partial, Back, History; "মেনুতে এখন, কোড পরে"। আদেশের খোঁজ শেষে থাকে। */
-            ['label' => 'sales::planned.order_history', 'cluster' => 'sales_orders', 'icon' => 'receipt', 'route' => 'sales.planned',
-                'route_params' => ['screen' => 'order_history'], 'permission' => 'sales.order.view'],
+            /*
+             * ⭐ অপেক্ষমাণ, আংশিক, ব্যাক অর্ডার, ইতিহাস — এখন "অর্ডার তালিকা"-র ওপরের ট্যাব, মেনুর আলাদা সারি নয়
+             * (নকশার পর্যালোচনা, ধাপ ৭-এর ২; মালিক, ১ অক্টোবর ২০২৬: *"ok kore daw"*)। ⓘ ২৮ সেপ্টেম্বরের
+             * "মেনুতে এখন, কোড পরে" সারিগুলো একই তালিকার ছাঁকনি ছিল; এখন সত্যিকারের ট্যাব ([[OrderTracking::LIST_TABS]]),
+             * আর পুরনো ঠিকানাগুলো ঠিক ট্যাবে নামে ([[PlannedScreenController::FOLDED]])। ভাঁজে থাকে নতুন অর্ডার,
+             * অর্ডার তালিকা; ট্র্যাকিং নিজের সারিতে।
+             */
             /*
              * ⭐ মেনুর ক্রম — মালিকের নির্দেশ, ১ অক্টোবর ২০২৬ (আগের রাতের পরিকল্পনা, "যেটা প্ল্যান হয়েছিল সেভাবেই"):
              * ড্যাশবোর্ড → উদ্ধৃতি → অর্ডার → নতুন DO → DO তালিকা → সরাসরি বিক্রয় → ইনভয়েস তালিকা → ডেলিভারি চালান
