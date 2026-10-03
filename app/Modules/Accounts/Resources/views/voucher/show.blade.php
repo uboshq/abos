@@ -273,4 +273,7 @@
     --}}
     {{-- ⓘ ব্যাংক বা বিকাশের টাকা হলে কাগজটা স্লিপ — কেবল ছবি বা PDF ([[AttachmentEngine::SLIP]]) --}}
     <x-ui.attachments :document="$voucher" :slip="$bankAccount !== null" />
+
+    {{-- ⭐ সংশোধনের ইতিহাস — পোস্ট হওয়ার পরে কে কী বদলেছেন, আগে আর পরে (মালিক, ৩ অক্টোবর ২০২৬) --}}
+    <x-ui.revisions :document="$voucher" />
 </x-layouts.app>

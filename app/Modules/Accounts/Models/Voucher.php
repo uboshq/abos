@@ -8,8 +8,10 @@ use App\Core\Concerns\BelongsToCompany;
 use App\Core\Concerns\HasDocumentStatus;
 use App\Core\Concerns\HasPublicId;
 use App\Core\Concerns\IsAudited;
+use App\Core\Concerns\KeepsRevisions;
 use App\Core\Concerns\ScopedToUserBranch;
 use App\Core\Contracts\Drillable;
+use App\Core\Contracts\RepostsAfterRevision;
 use App\Core\Contracts\ShowsItselfForSigning;
 use App\Core\Services\PartyRegistry;
 use App\Core\Support\DateFormat;
@@ -31,13 +33,14 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * ধরনটা শুধু ঠিক করে কোন ফর্মে লেখা হবে ও কী ছাপা হবে। সংরক্ষণ ও
  * পোস্টিং সবার এক, কারণ সবগুলোই শেষমেশ ডেবিট-ক্রেডিটের কয়েকটা সারি।
  */
-class Voucher extends Model implements Drillable, ShowsItselfForSigning
+class Voucher extends Model implements Drillable, RepostsAfterRevision, ShowsItselfForSigning
 {
     use BelongsToCompany;
     use HasDocumentStatus;
     use HasFactory;
     use HasPublicId;
     use IsAudited;
+    use KeepsRevisions;
     use ScopedToUserBranch;
     use SoftDeletes;
 
@@ -576,6 +579,48 @@ class Voucher extends Model implements Drillable, ShowsItselfForSigning
 
         return bccomp($t['debit'], $t['credit'], 4) === 0
             && bccomp($t['debit'], '0', 4) > 0;
+    }
+
+    // ── RepostsAfterRevision — পোস্ট হওয়া ভাউচারের সংশোধন, ৩ অক্টোবর ২০২৬ ─────
+    //
+    // ⓘ মালিক: মাস বন্ধের আগে সুপার অ্যাডমিন যেকোনো পোস্ট হওয়া কাগজ সংশোধন করেন — নম্বর একই, খাতা
+    // উল্টে আবার বসে, আগে-পরে দুইটাই থাকে ([[App\Core\Services\RevisionKeeper]])। পথটা
+    // [[VoucherService::editPosted()]]; বাকি সব ডিফল্ট [[KeepsRevisions]]-এ।
+
+    /** @return list<array{0: string, 1: int}> খাতায় ভাউচার নিজের ধরনের নামে বসে */
+    public function revisionLedgerSources(): array
+    {
+        return [[self::SOURCE_TYPES[$this->type], (int) $this->id]];
+    }
+
+    /** ⓘ ছাপার খাতায় ভাউচারের নাম ([[PaperTrail::DOCUMENT_ROUTES]]) — আগে ছাপা হয়েছিল কি না */
+    public function revisionPaperType(): ?string
+    {
+        return 'accounts_voucher';
+    }
+
+    /** ⭐ আবার বসানো ভাউচারের নিজের পোস্টিংয়ের পথে — খাত, ভারসাম্য, টিল, টাকা আছে কি না, সব আবার খাটে */
+    public function repostAfterRevision(): void
+    {
+        app(\App\Modules\Accounts\Services\VoucherService::class)->repostAfterRevision($this);
+    }
+
+    /** @return list<string> সারির ক্রম কেবল দেখানোর — ছবিতে বসালে একটা সারি যোগ হলেই নিচের সব "বদলেছে" দেখাত */
+    protected function revisionLineIgnores(): array
+    {
+        return ['sort_order'];
+    }
+
+    /** @return list<string> */
+    protected function revisionLineWith(): array
+    {
+        return ['account'];
+    }
+
+    /** @return array<string, scalar|null> খাতের নাম — কেবল id দেখে কেউ বলতে পারত না কী বদলেছে */
+    protected function revisionLineExtras(Model $line): array
+    {
+        return ['account' => $line instanceof VoucherLine ? $line->account?->label() : null];
     }
 
     // ── Drillable — নিয়ম ১ ────────────────────────────────────────────

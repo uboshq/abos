@@ -63,6 +63,7 @@ final class EveryLedgerReaderSaysWhetherItShowsOrChecksTest extends TestCase
     private const CHECKS = [
         'app/Core/Engines/Posting/PostingEngine.php' => 'খাতায় লেখা — পোস্টিং',
         'app/Core/Security/LedgerChain.php' => 'খাতার সিল — প্রতিটা সারি দেখতেই হয়',
+        'app/Core/Services/RevisionKeeper.php' => 'সংশোধনের আগে-পরের ছবি — একটা কাগজের নিজের খোলা দাখিলা, গোটা কোম্পানি ধরে; দেখার শাখা খাটলে অন্য শাখার সারি "আগে" থেকে বাদ পড়ত (৩ অক্টোবর ২০২৬)',
         'app/Core/Services/LedgerBalances.php' => 'মূল উপকরণ — ডাকার জন ঠিক করে শাখা',
         'app/Models/Company.php' => 'কোম্পানিতে পোস্টিং আছে কি না',
         'app/Modules/Accounts/Services/NoteAccounts.php' => 'নোটের চলতি খাত — পক্ষের খাতা কোন খাতে আছে, গোটা কোম্পানি ধরে (দেখানো নয়, অনুমতির তালিকা)',

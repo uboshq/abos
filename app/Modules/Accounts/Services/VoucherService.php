@@ -8,12 +8,15 @@ use App\Core\Contracts\SettledByAVoucher;
 use App\Core\Engines\Drill\DrillResolver;
 use App\Core\Engines\NumberSeries\NumberSeriesEngine;
 use App\Core\Engines\Posting\PostingEngine;
+use App\Core\Services\RevisionKeeper;
 use App\Core\Support\CompanyContext;
 use App\Core\Support\DateFormat;
 use App\Core\Support\DocumentStatus;
 use App\Core\Support\Money;
+use App\Models\DocumentRevision;
 use App\Models\FinancialYear;
 use App\Models\IssuedNumber;
+use App\Models\User;
 use App\Modules\Accounts\Events\VoucherPosted;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Models\CashTill;
@@ -225,23 +228,7 @@ final class VoucherService
         $this->assertNoChequeReceived($voucher->type,
             array_key_exists('instrument', $data) ? $data['instrument'] : $voucher->instrument);
 
-        return DB::transaction(function () use ($voucher, $data, $lines) {
-            $trxDate = Carbon::parse($data['trx_date'] ?? $voucher->trx_date);
-
-            $voucher->update([
-                ...$data,
-                // ধরন ও নম্বর কখনো বদলায় না: নম্বরটা সিরিজ থেকে এসেছে আর
-                // ধরন বদলালে ওই সিরিজটাই ভুল হয়ে যেত
-                'type' => $voucher->type,
-                'document_no' => $voucher->document_no,
-                'trx_date' => $trxDate->toDateString(),
-                'financial_year_id' => $this->resolveFinancialYear($trxDate)->id,
-            ]);
-
-            $this->replaceLines($voucher, $lines);
-
-            return $voucher->fresh(['lines']);
-        });
+        return DB::transaction(fn () => $this->writeHeaderAndLines($voucher, $data, $lines));
     }
 
     /**
@@ -316,22 +303,7 @@ final class VoucherService
                 Voucher::SOURCE_TYPES[$voucher->type],
                 $voucher->id,
                 $voucher->trx_date,
-                $voucher->lines->map(fn (VoucherLine $line) => [
-                    'account_id' => $line->account_id,
-                    'debit' => $line->debit,
-                    'credit' => $line->credit,
-                    'party_type' => $line->party_type
-                        ?? (in_array((int) $line->account_id, $ownable, true)
-                            ? $voucher->party_type
-                            : null),
-                    'party_id' => $line->party_id
-                        ?? (in_array((int) $line->account_id, $ownable, true)
-                            ? $voucher->party_id
-                            : null),
-                    'cost_center_id' => $line->cost_center_id,
-                    'narration' => $line->narration ?? $voucher->narration,
-                    'source_line_id' => $line->id,
-                ])->all(),
+                $this->ledgerLines($voucher, $ownable),
                 documentNo: $voucher->document_no,
                 branchId: $voucher->branch_id,
             );
@@ -425,6 +397,113 @@ final class VoucherService
         $settled
             ? $document->settleWith((int) $voucher->id)
             : $document->unsettle((int) $voucher->id);
+    }
+
+    /**
+     * ⭐ পোস্ট হওয়া ভাউচারের সংশোধন — মালিক, ৩ অক্টোবর ২০২৬।
+     *
+     * *"মাস ক্লোজ না হওয়া পর্যন্ত সুপার অ্যাডমিন সব পোস্টেড কাগজ এডিট করতে পারবেন।"*
+     *
+     * ⓘ পাহারা, তালা, এক লেনদেন, আগে-পরের ছবি — সব [[RevisionKeeper::edit()]]-এর। এখানে কেবল
+     * ভাউচারের নিজের অংশ: মাথা আর সারি লেখা। নম্বর আর ধরন বদলায় না ([[writeHeaderAndLines()]]),
+     * অবস্থাও না — পোস্ট হওয়া ভাউচার পোস্ট হয়েই থাকে।
+     *
+     * @param  array<string, mixed>  $data  খসড়ার সম্পাদনার একই যাচাই করা ঘর
+     * @param  list<array<string, mixed>>  $lines
+     */
+    public function editPosted(Voucher $voucher, User $user, string $reason, array $data, array $lines): DocumentRevision
+    {
+        $this->assertNoChequeReceived($voucher->type,
+            array_key_exists('instrument', $data) ? $data['instrument'] : $voucher->instrument);
+
+        return app(RevisionKeeper::class)->edit($voucher, $user, $reason, function (Voucher $locked) use ($data, $lines): void {
+            $this->writeHeaderAndLines($locked, [...$data, 'status' => $locked->status], $lines);
+        });
+    }
+
+    /**
+     * সংশোধনের পরে আবার খাতায় — [[post()]]-এর একই যাচাই, একই সারি; অবস্থা, সই আর ঘটনা নয়।
+     *
+     * ⚠️ অবস্থা আগে থেকেই "পোস্ট হয়েছে", আর অনুমোদনকারী যিনি ছিলেন তিনিই থাকেন — সংশোধনকারীর নাম
+     * সংশোধনের সারিতে ([[DocumentRevision]])। ⓘ `VoucherPosted` আবার ছোড়া হয় না: শ্রোতারা (মূলধনের
+     * খাতা) একই রসিদ দুইবার পেলে দুইবার লিখত।
+     */
+    public function repostAfterRevision(Voucher $voucher): void
+    {
+        $voucher->load('lines.account');
+
+        $this->assertNoChequeReceived($voucher->type, $voucher->instrument);
+        $this->assertLinesArePostable($voucher);
+        $this->assertNoChequeInHandByHand($voucher);
+        $this->assertCashLandsInOwnTill($voucher);
+        $this->assertTheWayMatchesTheAccount($voucher);
+        $this->assertBankReferenceIsFree($voucher);
+        $this->assertMoneyIsThere($voucher);
+
+        $this->posting->post(
+            Voucher::SOURCE_TYPES[$voucher->type],
+            $voucher->id,
+            $voucher->trx_date,
+            $this->ledgerLines($voucher, $this->accountsThatHoldAParty()),
+            documentNo: $voucher->document_no,
+            branchId: $voucher->branch_id,
+        );
+
+        $voucher->forceFill(['amount' => $voucher->totals()['debit']])->save();
+    }
+
+    /**
+     * মাথা আর সারি লেখা — খসড়ার সম্পাদনা আর পোস্ট হওয়া ভাউচারের সংশোধন, দুই পথের একই অংশ।
+     *
+     * @param  array<string, mixed>  $data
+     * @param  list<array<string, mixed>>  $lines
+     */
+    private function writeHeaderAndLines(Voucher $voucher, array $data, array $lines): Voucher
+    {
+        $trxDate = Carbon::parse($data['trx_date'] ?? $voucher->trx_date);
+
+        $voucher->update([
+            ...$data,
+            // ধরন ও নম্বর কখনো বদলায় না: নম্বরটা সিরিজ থেকে এসেছে আর
+            // ধরন বদলালে ওই সিরিজটাই ভুল হয়ে যেত
+            'type' => $voucher->type,
+            'document_no' => $voucher->document_no,
+            'trx_date' => $trxDate->toDateString(),
+            'financial_year_id' => $this->resolveFinancialYear($trxDate)->id,
+        ]);
+
+        $this->replaceLines($voucher, $lines);
+
+        return $voucher->fresh(['lines']);
+    }
+
+    /**
+     * খাতার সারিগুলো — পোস্ট আর সংশোধনের পরে আবার বসানো, দুই পথের একটাই সংজ্ঞা (৩ অক্টোবর ২০২৬)।
+     *
+     * ⛔ দুই জায়গায় লিখলে হেডারের পক্ষ কোন সারিতে নামে সেই নিয়মটা ([[post()]]-এর মন্তব্য) একদিন এক
+     * পথে বদলাত আর অন্যটায় না — আর সংশোধিত ভাউচারের খাতা আসলটার থেকে আলাদা বসত।
+     *
+     * @param  list<int>  $ownable  যে খাতগুলো কারো নামে বসে ([[accountsThatHoldAParty()]])
+     * @return list<array<string, mixed>>
+     */
+    private function ledgerLines(Voucher $voucher, array $ownable): array
+    {
+        return $voucher->lines->map(fn (VoucherLine $line) => [
+            'account_id' => $line->account_id,
+            'debit' => $line->debit,
+            'credit' => $line->credit,
+            'party_type' => $line->party_type
+                ?? (in_array((int) $line->account_id, $ownable, true)
+                    ? $voucher->party_type
+                    : null),
+            'party_id' => $line->party_id
+                ?? (in_array((int) $line->account_id, $ownable, true)
+                    ? $voucher->party_id
+                    : null),
+            'cost_center_id' => $line->cost_center_id,
+            'narration' => $line->narration ?? $voucher->narration,
+            'source_line_id' => $line->id,
+        ])->all();
     }
 
     /**
