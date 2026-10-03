@@ -205,6 +205,8 @@ return [
     'attachment_hint' => 'A photo or scan of the bill - six months later this is what you need.',
     'over_allocated' => 'You have split more than the amount received - the two must match.',
     'no_open_bill' => 'This party has no open bill - the money stays on their account and comes off the next bill.',
+    'party_more' => 'More names - type a name, code or point to narrow the list.',
+    'party_no_match' => 'No name matches what you typed.',
     'received_on_account_hint' => 'Capital, a loan, income, a deposit — what the money came in for. "Deposited to" below is where it was put (cash or which bank). Choose capital and it also appears on the Capital & investment page by itself.',
 
     // What each list's search box looks in — the toolbar shows it as the placeholder.

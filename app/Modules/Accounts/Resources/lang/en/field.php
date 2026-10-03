@@ -8,6 +8,8 @@ return [
     'party_not_listed' => 'Not on the list? Type a name',
     'party_new_name' => 'New name',
     'party_new_hint' => 'It joins the party list, so next time you can pick it',
+    'party_search' => 'Type a name, code, mobile or point',
+    'party_add_typed' => 'Add as a new name:',
     'card_commission' => 'Bank commission',
     'card_bank' => 'The card\'s bank',
     'card_reference' => 'Terminal reference',

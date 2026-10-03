@@ -56,10 +56,13 @@
              partyType: @js($partyType),
              partyId: @js((string) ($was('party_id') ?? '')),
              parties: @js(collect($parties)->flatMap(fn (array $g) => collect($g['options'])
-                 ->map(fn (array $o) => ['type' => $g['type'], 'id' => (int) $o['id'], 'label' => $o['label']]))
+                 ->map(fn (array $o) => ['type' => $g['type'], 'id' => (int) $o['id'], 'label' => $o['label'],
+                     'hint' => $o['hint'] ?? '', 'find' => $o['find'] ?? '']))
                  ->values()),
              dueUrl: @js(route('accounts.voucher.due')),
              picked: @js(old('bill_allocs', [])),
+             adding: @js($errors->has('party_new') || filled(old('party_new'))),
+             newName: @js((string) old('party_new', '')),
              texts: @js([
                  'owed' => __('accounts::field.owed'),
                  'allocated' => __('accounts::field.allocated'),
@@ -131,7 +134,10 @@
                      :selected="$partyType"
                      x-model="partyType" x-on:change="resetParty()" />
 
-        <div x-data="{ adding: @js($errors->has('party_new') || filled(old('party_new'))) }">
+        {{-- ⓘ `adding` এখন [[party-voucher.js]]-এ, আলাদা ছোট x-data-য় নয় — খোঁজার
+             তালিকা থেকে "নতুন নাম হিসেবে যোগ করুন" চাপলে "+" ঘরটা খুলতে হয়, আর
+             দুইটা আলাদা x-data একে অন্যের অবস্থা দেখে না। --}}
+        <div>
             <div class="mb-1 flex items-baseline justify-between gap-2">
                 <span class="text-sm font-medium">
                     {{ $isReceipt ? __('accounts::field.depositor_name') : __('accounts::field.payee_name_party') }}
@@ -162,20 +168,114 @@
             {{-- ⭐ নামের পাশে "+" — ১৯ সেপ্টেম্বর ২০২৬, মালিক: *"তালিকায় নেই? নাম লিখুন
                  eta ডিপোজিটরের নাম er box er pase + bosalei hoy"*। ⓘ চাপলে নিচে নতুন
                  নাম আর মোবাইলের ঘর খোলে; আবার চাপলে বন্ধ। --}}
-            <div class="flex gap-2">
-                <select name="party_id" x-model="partyId" x-on:change="loadDue()"
+            {{--
+                ── ⭐ খোঁজা যায় এমন নামের তালিকা — ৩ অক্টোবর ২০২৬ ─────────────
+
+                মালিকের অভিযোগ: রসিদের "ডিপোজিটরের নাম" আর পরিশোধের "প্রাপকের
+                নাম" একটা লম্বা সাধারণ `<select>` — খোঁজার ঘর নেই, আর ইউবি-র ৪১৪
+                জন গ্রাহকের ভিতরে *নাম খুঁজে পাওয়া যায় না*। ⚠️ একই নামের দুইটা
+                দোকানও ছিল (দুইটা "M/S. Bismillah Store"), আর তালিকা তাঁদের আলাদা
+                করার কোনো উপায় দিত না।
+
+                ⓘ ছাঁচ কাউন্টারের ক্রেতা বাছাই থেকে ([[sales::direct.partials.party]]):
+                বোতাম → ভাসমান প্যানেল → উপরে খোঁজার ঘর → নিচে নাম, আর প্রতিটা
+                নামের নিচে কোড · পয়েন্ট · মোবাইল। ⭐ কীবোর্ড: ↑ ↓ সরায়, Enter বাছে,
+                Esc বন্ধ করে; বোতামে কোনো অক্ষর টাইপ করলে সরাসরি খোঁজা শুরু।
+                মোবাইলে এক চাপে তালিকা খোলে, খোঁজার ঘর উপরে।
+
+                ⛔ সার্ভারের দিকে কিছু বদলায়নি: `party_id` আগের নামেই যায়, এখন
+                লুকানো ঘরে। ⚠️ খোঁজার ঘরের কোনো `name` নেই — থাকলে লেখাটাও ফর্মের
+                সাথে চলে যেত।
+            --}}
+            <div class="relative flex gap-2"
+                 x-on:click.outside="closeList()"
+                 x-on:keydown.escape.prevent.stop="escape()">
+                <input type="hidden" name="party_id"
+                       value="{{ (string) ($was('party_id') ?? '') }}"
+                       x-bind:value="partyId">
+
+                <button type="button" x-ref="trigger"
+                        x-on:click="toggleList()"
+                        x-on:keydown="triggerKey($event)"
+                        aria-haspopup="listbox"
+                        x-bind:aria-expanded="listOpen ? 'true' : 'false'"
                         aria-label="{{ __('accounts::field.party') }}"
-                        class="h-(--spacing-field) min-w-0 flex-1 rounded-(--radius-field) border
-                               border-(--color-border) bg-(--color-surface-card) px-3">
-                    <option value="">—</option>
-                    <template x-for="p in partyOptions" :key="p.id">
-                        <option :value="p.id" x-text="p.label" :selected="$str(p.id) === partyId"></option>
-                    </template>
-                </select>
+                        x-bind:title="pickedHint"
+                        data-party-picker
+                        class="flex h-(--spacing-field) min-w-0 flex-1 items-center gap-2 rounded-(--radius-field)
+                               border border-(--color-border) bg-(--color-surface-card) px-3 text-start">
+                    {{-- ⓘ কোড · পয়েন্ট বোতামে কেবল `title`-এ: ঘরটা সারির এক-চতুর্থাংশ, আর
+                         পাশে বসালে নামটাই কেটে যেত — নামই এখানে আসল কথা। --}}
+                    <span class="min-w-0 flex-1 truncate" x-text="pickedLabel">—</span>
+                    <span class="text-(--color-ink-muted)" aria-hidden="true">▾</span>
+                </button>
+
                 <x-ui.button type="button" tone="secondary" icon="plus"
-                             x-on:click="adding = ! adding"
+                             x-on:click="toggleAdding()"
                              title="{{ __('accounts::field.party_not_listed') }}"
                              aria-label="{{ __('accounts::field.party_not_listed') }}" />
+
+                {{-- ⓘ ভাসমান, প্রবাহের ভিতরে নয় — কাউন্টারের একই পাঠ: জায়গা দখল করলে
+                     খুলতেই নিচের সব ঘর ঠেলে নামত। ⚠️ `inset-x-0` — ঘরটার সমান চওড়া,
+                     তাই ১৯২০×১০৮০-তে চতুর্থ কলামে বসেও ডান দিকে কাটা পড়ে না। --}}
+                <div x-show="listOpen" x-cloak
+                     class="absolute inset-x-0 top-full z-30 mt-1 rounded-(--radius-card)
+                            border-2 border-(--color-brand-500) bg-(--color-surface-card)
+                            p-1.5 text-(--color-ink) shadow-lg">
+                    <input type="search" x-ref="search" x-model="search"
+                           x-on:input="searched()"
+                           x-on:keydown.arrow-down.prevent="moveDown()"
+                           x-on:keydown.arrow-up.prevent="moveUp()"
+                           x-on:keydown.enter.prevent="pickCursor()"
+                           role="combobox" aria-autocomplete="list" aria-controls="party-options"
+                           x-bind:aria-expanded="listOpen ? 'true' : 'false'"
+                           x-bind:aria-activedescendant="activeOption"
+                           autocomplete="off" data-party-search
+                           placeholder="{{ __('accounts::field.party_search') }}"
+                           aria-label="{{ __('accounts::field.party_search') }}"
+                           class="h-(--spacing-field-dense) w-full rounded-(--radius-field)
+                                  border border-(--color-border) bg-(--color-surface-card) px-2 text-sm">
+
+                    <ul id="party-options" role="listbox" x-ref="list"
+                        aria-label="{{ __('accounts::field.party') }}"
+                        class="mt-1.5 max-h-72 overflow-y-auto">
+                        <template x-for="(p, i) in shown" :key="p.id">
+                            <li role="option" :id="'party-opt-' + i"
+                                :aria-selected="isPicked(p) ? 'true' : 'false'"
+                                x-on:click="pickParty(p.id)"
+                                x-on:mousemove="hover(i)"
+                                :class="isCursor(i) ? 'bg-(--color-surface-hover)' : ''"
+                                class="cursor-pointer rounded-(--radius-field) px-2 py-1.5">
+                                <span class="block truncate text-sm"
+                                      :class="isPicked(p) ? 'font-semibold' : ''"
+                                      x-text="p.label"></span>
+                                <span class="num block truncate text-2xs text-(--color-ink-muted)"
+                                      x-show="p.hint !== ''" x-text="p.hint"></span>
+                            </li>
+                        </template>
+
+                        <li x-show="moreHidden" x-cloak
+                            class="px-2 py-1.5 text-2xs text-(--color-ink-muted)">
+                            {{ __('accounts::message.party_more') }}
+                        </li>
+
+                        <li x-show="noMatch" x-cloak
+                            class="px-2 py-1.5 text-2xs text-(--color-ink-muted)">
+                            {{ __('accounts::message.party_no_match') }}
+                        </li>
+                    </ul>
+
+                    {{-- ⭐ তালিকায় নেই — লেখাটাই নতুন নাম হয়ে "+" ঘরে বসে, সমন্বয়কের মাধ্যমে
+                         মালিকের চাওয়া (৩ অক্টোবর ২০২৬)। ⓘ কিছু না মিললে Enter-ও তাই করে। --}}
+                    <button type="button" x-show="hasSearch" x-cloak
+                            x-on:click="addTyped()"
+                            class="mt-1 w-full truncate rounded-(--radius-field) border border-dashed
+                                   border-(--color-border) px-2 py-1.5 text-start text-xs
+                                   hover:bg-(--color-surface-hover)">
+                        + {{ __('accounts::field.party_add_typed') }}
+                        <b x-text="search"></b>
+                    </button>
+                </div>
             </div>
 
             @error('party_id')
@@ -202,14 +302,18 @@
                  থেকে নেওয়া, আর পিছনে একই [[PersonResolver]]। --}}
             <div class="mt-2" x-show="adding" x-cloak>
                 <div class="grid gap-2 sm:grid-cols-2">
+                    {{-- ⓘ `x-model` — তালিকা থেকে "নতুন নাম হিসেবে যোগ করুন" চাপলে লেখাটা
+                         এখানে বসে, আর এখানে লিখলে বোতামেও "+ নাম" দেখা যায়। --}}
                     <x-ui.field name="party_new"
                                 :label="__('accounts::field.party_new_name')"
                                 :value="old('party_new')"
-                                :hint="__('accounts::field.party_new_hint')" />
+                                :hint="__('accounts::field.party_new_hint')"
+                                x-model="newName" x-on:input="newNameTyped()" />
 
                     <x-ui.field name="party_mobile"
                                 :label="__('master_data::field.mobile')"
-                                :value="old('party_mobile')" />
+                                :value="old('party_mobile')"
+                                x-ref="newMobile" />
                 </div>
             </div>
         </div>

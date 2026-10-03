@@ -142,6 +142,11 @@ final class PartyRegistry
                     method_exists($model, 'scopeInViewedBranch'),
                     fn ($q) => $q->inViewedBranch(),
                 )
+                // ⓘ পয়েন্টের নাম খোঁজার জন্য — নিচের [[pickerHint()]]; সারি প্রতি একটা প্রশ্ন নয়
+                ->when(
+                    method_exists($model, 'location'),
+                    fn ($q) => $q->with('location'),
+                )
                 ->get();
 
             /*
@@ -160,10 +165,14 @@ final class PartyRegistry
                         $label = method_exists($row, 'drillLabel') ? $row->drillLabel() : (string) $row->getKey();
                         $note = $notes[(int) $row->getKey()] ?? null;
 
+                        $hint = $this->pickerHint($row);
+
                         return [
                             'id' => (int) $row->getKey(),
                             'label' => $note === null ? $label : $label.' ('.$note.')',
                             'note' => $note,
+                            'hint' => $hint,
+                            'find' => $this->pickerFind($row, $label, $hint),
                         ];
                     })
                     ->sortBy([
@@ -271,6 +280,67 @@ final class PartyRegistry
         }
 
         return $routes;
+    }
+
+    /**
+     * নামের নিচের ছোট লাইন — কোড · পয়েন্ট · মোবাইল।
+     *
+     * ⭐ মালিক, ৩ অক্টোবর ২০২৬: রসিদের ডিপোজিটরের নামের তালিকায় খোঁজার ঘর
+     * নেই, আর ইউবি-তে ৪১৪ জন গ্রাহক — *নাম খুঁজে পাওয়া যায় না*। ⚠️ তালিকায়
+     * একই নামের দুইটা দোকানও আছে (দুইটা "M/S. Bismillah Store") — নাম
+     * একা তাঁদের আলাদা করে না, কোড আর পয়েন্ট করে।
+     *
+     * ⓘ কোর মডিউলের নাম জানে না, তাই কেবল সাধারণ ঘরগুলো পড়া হয়: যে
+     * মডেলে `code`, `phone`/`mobile` বা `location` আছে, তারটাই বসে।
+     */
+    private function pickerHint(Model $row): string
+    {
+        return collect([
+            $row->getAttribute('code'),
+            $this->placeOf($row),
+            $row->getAttribute('phone') ?? $row->getAttribute('mobile'),
+        ])->filter(fn ($v) => filled($v))->map(fn ($v) => (string) $v)->implode(' · ');
+    }
+
+    /**
+     * পয়েন্টের নিজের নাম — কেবল এক ধাপ, পুরো পথ নয়।
+     *
+     * ⛔ `drillLabel()` নয়: সে উপরের সাত ধাপ হেঁটে পথ বানায়, আর এখানে ঐ
+     * শিকল তোলা নেই — উন্নয়নে LazyLoadingViolation, চালু সার্ভারে ৪১৪
+     * সারিতে নীরব N+1। ⓘ তালিকায় দুইটা নাম আলাদা করতে পয়েন্টই যথেষ্ট।
+     */
+    private function placeOf(Model $row): ?string
+    {
+        $place = $row->relationLoaded('location') ? $row->getRelation('location') : null;
+
+        if (! $place instanceof Model) {
+            return null;
+        }
+
+        $bn = $place->getAttribute('name_bn');
+
+        return app()->getLocale() === 'bn' && filled($bn) ? (string) $bn : $place->getAttribute('name_en');
+    }
+
+    /**
+     * খোঁজার লেখা — নাম দুই ভাষাতেই, আর কোড · পয়েন্ট · মোবাইল।
+     *
+     * ⚠️ দুই ভাষার নাম কারণ পর্দায় একটাই দেখা যায়: ইংরেজিতে টাইপ করা
+     * ক্যাশিয়ার বাংলা নামের গ্রাহককে খুঁজে পেতেন না (কাউন্টারের একই পাঠ,
+     * [[direct-sale.js]] `customerMatches`)।
+     */
+    private function pickerFind(Model $row, string $label, string $hint): string
+    {
+        $place = $row->relationLoaded('location') ? $row->getRelation('location') : null;
+
+        return mb_strtolower(collect([
+            $label,
+            $row->getAttribute('name_en'),
+            $row->getAttribute('name_bn'),
+            $hint,
+            $place instanceof Model ? $place->getAttribute('name_en') : null,
+            $place instanceof Model ? $place->getAttribute('name_bn') : null,
+        ])->filter(fn ($v) => filled($v))->map(fn ($v) => (string) $v)->unique()->implode(' '));
     }
 
     private function modelFor(string $type): ?Model
