@@ -61,6 +61,10 @@ final class TheQuotationAndOrderMenusSitAfterTheDashboardTest extends TestCase
          * ⭐ ২ অক্টোবর ২০২৬, মালিক: "নতুন DO"-র জায়গায় "Delivery Order (DO)" ভাঁজ — অর্ডার (DO) তালিকা, অপেক্ষমাণ,
          * আংশিক, ব্যাক, ইতিহাস; আর "DO তালিকা"-র জায়গায় "ডেলিভারি ট্র্যাকিং"।
          */
+        /*
+         * ⭐ ৪ অক্টোবর ২০২৬, মালিক (সমন্বয়কের পরিকল্পনা): আন্তর্জাতিক ধারার ক্রম — DO → সরাসরি বিক্রয় (কাউন্টার,
+         * ডিপো যাচাই, খসড়া) → ডেলিভারি প্রসেসিং → বিল ও চালান → ট্র্যাকিং → ফেরত → দাম → POS ও শিফট।
+         */
         $order = [
             // ⓘ ৩ অক্টোবর ২০২৬: আসল DO কাগজের ডেস্কে ([[DeliveryOrderDeskController]])
             'do_list' => $at(route('sales.delivery_order.index')),
@@ -68,14 +72,21 @@ final class TheQuotationAndOrderMenusSitAfterTheDashboardTest extends TestCase
             'do_partial' => $at(route('sales.delivery_order.index', ['tab' => 'partial'])),
             'do_back' => $at(route('sales.delivery_order.index', ['tab' => 'back'])),
             'do_history' => $at(route('sales.delivery_order.index', ['tab' => 'history'])),
-            'tracking' => $at(route('sales.tracking.index')),
             'direct' => $at(route('sales.direct.create')),
+            'depot_check' => $at(route('sales.direct.depot_check')),
+            'drafts' => $at(route('sales.direct.drafts')),
+            'transport' => $at(route('sales.transport.index')),
+            'loading' => $at(route('sales.loading_sheet.index')),
+            'gate_pass' => $at(route('sales.gate_pass.index')),
+            'dispatch' => $at(route('sales.shipment.index')),
+            'confirm' => $at(route('sales.delivery.index')),
             'invoices' => $at(route('sales.invoice.index')),
             'challans' => $at(route('sales.challan.index')),
-            'dispatch' => $at(route('sales.shipment.index')),
-            'pricing' => $at(route('sales.price_list.index')),
-            'returns' => $at(route('sales.return.index')),
             'not_printed' => $at(route('sales.print_queue.index')),
+            'tracking' => $at(route('sales.tracking.index')),
+            'returns' => $at(route('sales.return.index')),
+            'pricing' => $at(route('sales.price_list.index')),
+            // ⓘ POS আর শিফট শেষে — কিন্তু ওদের নিজের সুইচ ডিফল্টে বন্ধ, তাই এখানে মাপা হয় না
         ];
 
         foreach ($order as $row => $position) {
@@ -90,12 +101,9 @@ final class TheQuotationAndOrderMenusSitAfterTheDashboardTest extends TestCase
         $this->assertStringNotContainsString('href="'.e(route('sales.do.index', ['tab' => 'cancelled'])).'"', $html,
             '⛔ পুরনো "DO তালিকা"-র ধাপগুলো মেনুতে ফিরে এসেছে — ওগুলো তালিকার পাতার ট্যাবে।');
 
-        /* ⭐ "Billing Documents" ভাঁজ — খসড়া, ইনভয়েস, চালান, এই ক্রমে (মালিক, ২ অক্টোবর ২০২৬) */
+        /* ⭐ দুই ভাঁজ — "সরাসরি বিক্রয়" (কাউন্টার, ডিপো যাচাই, খসড়া) আর "Billing Documents" (ইনভয়েস, চালান); ৪ অক্টোবর ২০২৬ */
+        $this->assertStringContainsString(e(__('core.menu.direct_sale')), $html, '⛔ "সরাসরি বিক্রয়" ভাঁজ নেই।');
         $this->assertStringContainsString(e(__('core.menu.billing_documents')), $html, '⛔ "Billing Documents" ভাঁজ নেই।');
-        $drafts = $at(route('sales.direct.drafts'));
-        $this->assertNotFalse($drafts, '⛔ খসড়া তালিকা মেনুতে নেই।');
-        $this->assertTrue($order['direct'] < $drafts && $drafts < $order['invoices'],
-            '⛔ খসড়া তালিকা সরাসরি বিক্রয়ের পরে আর ইনভয়েস তালিকার আগে নয়।');
 
         /* ⓘ নতুন DO এখন তালিকার পাতার বোতামে, মেনুতে নয় — তাই সেটা নিচে আলাদা মাপা */
         foreach (PlannedScreenController::SCREENS as $screen) {

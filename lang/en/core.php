@@ -146,6 +146,7 @@ return [
         'billing_documents' => 'Billing Documents',
         'delivery_processing' => 'Delivery Processing',
         'pricing' => 'Pricing',
+        'direct_sale' => 'Direct sale', // ⭐ fold — counter, depot check, drafts (owner, 4 Oct 2026)
         'notice' => 'Notices',
         'control' => 'Books control',
 

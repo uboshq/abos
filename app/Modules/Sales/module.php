@@ -116,6 +116,11 @@ return [
 
         'transactions' => [
             /*
+             * ⭐ আন্তর্জাতিক ধারার ক্রম — মালিক, ৪ অক্টোবর ২০২৬ (সমন্বয়কের পরিকল্পনা): CRM → দরপত্র → বিক্রয় আদেশ →
+             * ডেলিভারি অর্ডার → সরাসরি বিক্রয় → ডেলিভারি প্রসেসিং → বিল ও চালান → ট্র্যাকিং → ফেরত → দাম → POS ও শিফট।
+             * ⓘ কেবল ক্রম আর ভাঁজ; রুট, চাবি আর পাতা যেমন ছিল। নিচের ব্লকগুলো সেই ক্রমে বসানো (menu_order.py)।
+             */
+            /*
              * ⭐ উদ্ধৃতি আর বিক্রয় আদেশ — ড্যাশবোর্ডের ঠিক পরে, দুইটা ভাঁজে (মালিকের
              * নির্দেশ, ২৮ সেপ্টেম্বর ২০২৬: *"age bosaw, code pore korbo"*)। ⓘ প্রতিটা
              * সারি আপাতত [[PlannedScreenController]]-এর সৎ পাতায় যায়; পর্দা তৈরি
@@ -129,12 +134,14 @@ return [
                 'route_params' => ['screen' => 'quotation_compare'], 'permission' => 'sales.order.view'],
             ['label' => 'sales::planned.quotation_revision', 'cluster' => 'quotations', 'icon' => 'book', 'route' => 'sales.planned',
                 'route_params' => ['screen' => 'quotation_revision'], 'permission' => 'sales.order.view'],
+
             /* ⭐ পুরনো আদেশের পাতা এই ভাঁজে — মালিকের সিদ্ধান্ত, ২৮ সেপ্টেম্বর ২০২৬: "ডেলিভারি অর্ডার"
                এখন প্রতিটা বিক্রির চালান ([[DeliveryOrderTabs]]), আর আদেশ নিজের নামে ফিরল। */
             ['label' => 'sales::planned.order_new', 'cluster' => 'sales_orders', 'icon' => 'receipt', 'route' => 'sales.order.create',
                 'permission' => 'sales.order.create', 'setting' => 'sales.screen_orders'],
             ['label' => 'sales::planned.order_list', 'cluster' => 'sales_orders', 'icon' => 'receipt', 'route' => 'sales.order.index',
                 'permission' => 'sales.order.view', 'setting' => 'sales.screen_orders'],
+
             /*
              * ⭐ অপেক্ষমাণ, আংশিক, ব্যাক অর্ডার, ইতিহাস — এখন "অর্ডার তালিকা"-র ওপরের ট্যাব, মেনুর আলাদা সারি নয়
              * (নকশার পর্যালোচনা, ধাপ ৭-এর ২; মালিক, ১ অক্টোবর ২০২৬: *"ok kore daw"*)। ⓘ ২৮ সেপ্টেম্বরের
@@ -166,21 +173,12 @@ return [
             ['label' => 'sales::planned.do_history', 'cluster' => 'delivery_orders', 'icon' => 'book', 'route' => 'sales.delivery_order.index',
                 'route_params' => ['tab' => 'history'], 'permission' => 'sales.do.view'],
 
-            /*
-             * ⭐ "DO তালিকা"-র জায়গায় "ডেলিভারি ট্র্যাকিং" — মালিক, ২ অক্টোবর ২০২৬: *"DO তালিকা bad diye er jaygay
-             * ডেলিভারি ট্র্যাকিং hobe ekhanei sob bosbe"*। প্রতিটা বিক্রি কোথায় দাঁড়িয়ে, এক পাতায় ([[SaleTracking]])।
-             */
-            ['label' => 'sales::tracking.title', 'icon' => 'search', 'route' => 'sales.tracking.index',
-                'permission' => 'sales.order.view'],
-
             /* ⭐ সরাসরি বিক্রয় — মাঝের সব ধাপ এক চাপে, সোজা বিলে (মালিক, ২৮ সেপ্টেম্বর ২০২৬) */
-            ['label' => 'sales::menu.direct', 'icon' => 'sales', 'route' => 'sales.direct.create', 'permission' => 'sales.challan.create',
+            ['label' => 'sales::menu.direct', 'cluster' => 'direct_sale', 'icon' => 'sales', 'route' => 'sales.direct.create', 'permission' => 'sales.challan.create',
                 'setting' => 'sales.screen_direct'],
-
             /* ⭐ ডিপোর যাচাই — হিসাবে অনুমোদিত DO থেকে সরাসরি বিক্রয়ে (বিক্রয়ের কাজের ধারা, ২ অক্টোবর ২০২৬, ধাপ ঙ) */
-            ['label' => 'sales::counter_source.menu', 'icon' => 'search', 'route' => 'sales.direct.depot_check',
+            ['label' => 'sales::counter_source.menu', 'cluster' => 'direct_sale', 'icon' => 'search', 'route' => 'sales.direct.depot_check',
                 'permission' => 'sales.challan.create', 'setting' => 'sales.screen_direct'],
-
             /*
              * ⓘ ইনভয়েস তালিকা — সব বিল (কাউন্টার, সরাসরি বিক্রয়, চালান থেকে বানানো), কেবল বাতিলগুলো একটা বোতামের পেছনে।
              * ⛔ দুই মেনুতে একই তালিকা রাখা হয় না — মালিকের নিজের নিয়ম (*"ekoi jinis dui jaygay dorkar nai"*)।
@@ -189,12 +187,8 @@ return [
              * ⭐ "Billing Documents" ভাঁজ — মালিক, ২ অক্টোবর ২০২৬: *"ইনভয়েস তালিকা ও ডেলিভারি চালান টার ভিতরে ভাজ হয়ে
              * থাকবে — খসরা তালিকা, ইনভয়েস তালিকা, ডেলিভারি চালান তালিকা"*। কেবল জায়গা বদল; রুট আর চাবি আগের মতো।
              */
-            ['label' => 'sales::menu.direct_drafts', 'cluster' => 'billing_documents', 'icon' => 'receipt', 'route' => 'sales.direct.drafts',
+            ['label' => 'sales::menu.direct_drafts', 'cluster' => 'direct_sale', 'icon' => 'receipt', 'route' => 'sales.direct.drafts',
                 'permission' => 'sales.challan.create', 'setting' => 'sales.screen_direct'],
-            ['label' => 'sales::menu.invoices', 'cluster' => 'billing_documents', 'icon' => 'receipt', 'route' => 'sales.invoice.index',
-                'permission' => 'sales.invoice.view'],
-            ['label' => 'sales::menu.challan_list', 'cluster' => 'billing_documents', 'icon' => 'challan', 'route' => 'sales.challan.index',
-                'permission' => 'sales.challan.view', 'setting' => 'sales.screen_challans'],
 
             /*
              * ⭐ ডেলিভারি প্রসেসিং — পরিবহন বরাদ্দ, লোডিং শিট, গেট পাস, ডিসপ্যাচ রেজিস্টার, ডেলিভারি নিশ্চিতকরণ।
@@ -218,6 +212,40 @@ return [
             ['label' => 'sales::delivery_performance.title', 'cluster' => 'delivery_processing', 'icon' => 'reports', 'route' => 'sales.delivery_performance.index',
                 'permission' => 'sales.delivery.view', 'setting' => 'sales.screen_challans'],
 
+            ['label' => 'sales::menu.invoices', 'cluster' => 'billing_documents', 'icon' => 'receipt', 'route' => 'sales.invoice.index',
+                'permission' => 'sales.invoice.view'],
+            ['label' => 'sales::menu.challan_list', 'cluster' => 'billing_documents', 'icon' => 'challan', 'route' => 'sales.challan.index',
+                'permission' => 'sales.challan.view', 'setting' => 'sales.screen_challans'],
+            /*
+             * যে কাগজ বেরোয়নি।
+             *
+             * ── কেন কাউন্টারের সুইচের পেছনে নয় ──────────────────────
+             * প্রিন্টার আটকায় কাউন্টারেও, অফিসের ডেস্কেও — বিল ও চালান
+             * দুই জায়গা থেকেই ছাপা হয়। `sales.screen_pos`-এর পেছনে
+             * রাখলে যে ডিপো কাউন্টার ব্যবহার করে না তাদের আটকে যাওয়া
+             * কাগজগুলো কোথাও দেখা যেত না।
+             *
+             * সাধারণত সারিটা খালি, আর খালি থাকাই স্বাভাবিক — এটা
+             * রোজকার কাজের পর্দা নয়, প্রিন্টার বিগড়ানোর দিনের।
+             */
+            ['label' => 'sales::menu.print_queue', 'icon' => 'printer', 'route' => 'sales.print_queue.index',
+                'permission' => 'sales.invoice.view'],
+
+            /*
+             * ⭐ "DO তালিকা"-র জায়গায় "ডেলিভারি ট্র্যাকিং" — মালিক, ২ অক্টোবর ২০২৬: *"DO তালিকা bad diye er jaygay
+             * ডেলিভারি ট্র্যাকিং hobe ekhanei sob bosbe"*। প্রতিটা বিক্রি কোথায় দাঁড়িয়ে, এক পাতায় ([[SaleTracking]])।
+             */
+            ['label' => 'sales::tracking.title', 'icon' => 'search', 'route' => 'sales.tracking.index',
+                'permission' => 'sales.order.view'],
+
+            /*
+             * ⭐ "আদায়" বোতাম নেই — মালিকের নির্দেশ, ১৯ সেপ্টেম্বর ২০২৬ (ক্রয়ের
+             * "পরিশোধ"-এর মতোই): গ্রাহকের টাকা নেওয়া হিসাবের রসিদ ভাউচারের কাজ,
+             * আর কাউন্টারের ডিপোজিটও এখন রসিদ ভাউচার। ⓘ পুরনো আদায়ের পাতা ও
+             * রুট থাকল — ইতিহাস, চেক ফেরত আর বিলের পাতার লিংক ওখানেই খোলে।
+             */
+            ['label' => 'sales::menu.returns', 'icon' => 'refresh', 'route' => 'sales.return.index', 'permission' => 'sales.return.view'],
+
             /* ⓘ শিপমেন্ট এখন "ডিসপ্যাচ রেজিস্টার" নামে Delivery Processing ভাঁজে */
 
             /*
@@ -240,29 +268,6 @@ return [
                 'route_params' => ['screen' => 'pricing_dynamic'], 'permission' => 'sales.order.view'],
 
             /*
-             * ⭐ "আদায়" বোতাম নেই — মালিকের নির্দেশ, ১৯ সেপ্টেম্বর ২০২৬ (ক্রয়ের
-             * "পরিশোধ"-এর মতোই): গ্রাহকের টাকা নেওয়া হিসাবের রসিদ ভাউচারের কাজ,
-             * আর কাউন্টারের ডিপোজিটও এখন রসিদ ভাউচার। ⓘ পুরনো আদায়ের পাতা ও
-             * রুট থাকল — ইতিহাস, চেক ফেরত আর বিলের পাতার লিংক ওখানেই খোলে।
-             */
-            ['label' => 'sales::menu.returns', 'icon' => 'refresh', 'route' => 'sales.return.index', 'permission' => 'sales.return.view'],
-
-            /*
-             * যে কাগজ বেরোয়নি।
-             *
-             * ── কেন কাউন্টারের সুইচের পেছনে নয় ──────────────────────
-             * প্রিন্টার আটকায় কাউন্টারেও, অফিসের ডেস্কেও — বিল ও চালান
-             * দুই জায়গা থেকেই ছাপা হয়। `sales.screen_pos`-এর পেছনে
-             * রাখলে যে ডিপো কাউন্টার ব্যবহার করে না তাদের আটকে যাওয়া
-             * কাগজগুলো কোথাও দেখা যেত না।
-             *
-             * সাধারণত সারিটা খালি, আর খালি থাকাই স্বাভাবিক — এটা
-             * রোজকার কাজের পর্দা নয়, প্রিন্টার বিগড়ানোর দিনের।
-             */
-            ['label' => 'sales::menu.print_queue', 'icon' => 'printer', 'route' => 'sales.print_queue.index',
-                'permission' => 'sales.invoice.view'],
-
-            /*
              * ⓘ POS ও শিফ্ট তালিকার শেষে — মালিকের দেওয়া ক্রমে এই দুইটা
              * সারি নেই, আর কাগজের ধারাটা এক টানে পড়া যাওয়াই চাওয়া — মাঝখানে
              * কাউন্টারের দুইটা সারি পড়লে ধারাটা থেমে যেত।
@@ -274,7 +279,6 @@ return [
              */
             ['label' => 'sales::menu.pos', 'icon' => 'cash', 'route' => 'sales.pos.index', 'permission' => 'sales.pos',
                 'setting' => 'sales.screen_pos'],
-
             /*
              * শিফট — কাউন্টারের ঠিক নিচে, একই সুইচের পেছনে।
              *
