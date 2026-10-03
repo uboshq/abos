@@ -436,6 +436,8 @@ class SalesPrintController extends Controller implements HasMiddleware
             )),
             'items' => $this->classicItems($invoice),
             'sums' => array_map(fn (string $v) => $this->money($v), $sums),
+            /* ⭐ ACCOUNT MOVEMENT — বিলের মাসের আসল খাতা, বিবরণসহ ([[monthMovement()]]) */
+            'movement' => $customer === null ? null : $this->monthMovement($customer->id, $invoice->trx_date),
             'words' => $this->sampleWords((string) $invoice->total),
 
             /*
@@ -1142,6 +1144,64 @@ class SalesPrintController extends Controller implements HasMiddleware
      * ⭐ এক জায়গায়, কারণ দুই নকশাই ([[invoiceTotals()]] আর [[classicFacts()]]) এটা ছাপে;
      * ⛔ দুইবার লিখলে একদিন দুই কাগজে একই গ্রাহকের দুই রকম "আগের বকেয়া" ছাপা হত।
      */
+    /**
+     * বিলের মাসে গ্রাহকের খাতা — মালিক, ৩ অক্টোবর ২০২৬: *"ACCOUNT MOVEMENT e current month er transaction dibe
+     * with narration soho"*।
+     *
+     * ⓘ প্রথম সারি মাসের শুরুর জের (তার আগের সব দাখিলার যোগ), তারপর মাসের প্রতিটা দাখিলা — কাগজের নম্বর আর
+     * বিবরণ, ডেবিট, ক্রেডিট, চলমান জের। ⓘ গোটা কোম্পানির খাতা, [[Customer::outstanding()]]-এর একই ছাঁকনি — তাই এই
+     * মাসেই ছাপলে শেষ জের = Outstanding। ⚠️ অঙ্কগুলো কাঁচা (bcmath-এর জন্য); রূপ দেয় [[InvoicePaperView::movement()]]।
+     *
+     * @return list<array{date: string, text: string, debit: string, credit: string, balance: string}>
+     */
+    private function monthMovement(int $customerId, mixed $billDate): array
+    {
+        $from = \Illuminate\Support\Carbon::parse($billDate)->startOfMonth();
+        $next = $from->copy()->addMonth();
+        $party = fn () => \App\Models\LedgerEntry::query()->forParty('customer', $customerId);
+
+        $balance = bcadd((string) ($party()->where('trx_date', '<', $from->toDateString())
+            ->selectRaw('COALESCE(SUM(debit) - SUM(credit), 0) as net')->value('net') ?? 0), '0', 4);
+
+        $entries = $party()
+            ->where('trx_date', '>=', $from->toDateString())
+            ->where('trx_date', '<', $next->toDateString())
+            ->orderBy('trx_date')->orderBy('id')
+            ->get(['id', 'trx_date', 'document_no', 'narration', 'debit', 'credit']);
+
+        /*
+         * ⭐ কয়টা সারি — `sales.print.movement_lines` (০ = সব)। ⓘ শেষের N-টা থাকে; বাদ পড়াগুলো শুরুর জেরে যোগ হয়,
+         * তাই শেষ জের বদলায় না। ⛔ ০-এর নিচে বা ৫০-এর উপরে মান আটকানো — এক পাতার কাগজ।
+         */
+        $limit = max(0, min(50, (int) app(SettingsService::class)->get('sales.print.movement_lines', 0)));
+
+        if ($limit > 0 && $entries->count() > $limit) {
+            foreach ($entries->slice(0, $entries->count() - $limit) as $dropped) {
+                $balance = bcadd($balance, bcsub((string) $dropped->debit, (string) $dropped->credit, 4), 4);
+            }
+
+            $entries = $entries->slice(-$limit)->values();
+            $from = \Illuminate\Support\Carbon::parse($entries->first()->trx_date);
+        }
+
+        $rows = [['date' => DateFormat::format($from), 'text' => '', 'debit' => '', 'credit' => '', 'balance' => $balance]];
+
+        foreach ($entries as $entry) {
+            $debit = bcadd((string) $entry->debit, '0', 4);
+            $credit = bcadd((string) $entry->credit, '0', 4);
+            $balance = bcadd($balance, bcsub($debit, $credit, 4), 4);
+            $rows[] = [
+                'date' => DateFormat::format($entry->trx_date),
+                'text' => trim((string) $entry->document_no.' — '.(string) $entry->narration, ' —'),
+                'debit' => bccomp($debit, '0', 4) === 0 ? '' : $debit,
+                'credit' => bccomp($credit, '0', 4) === 0 ? '' : $credit,
+                'balance' => $balance,
+            ];
+        }
+
+        return $rows;
+    }
+
     private function earlierDue(SalesInvoice $invoice, string $due): string
     {
         $customer = $invoice->customer;

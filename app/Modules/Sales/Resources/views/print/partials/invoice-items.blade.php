@@ -1,6 +1,7 @@
 {{--
     বিলের পণ্যের ছক — সব নকশার ভাগের ([[InvoicePaperView]])। চাই: $v, $facts, $paper;
-    ঐচ্ছিক $upper (মাথার লেখা বড় হাতে), $zebra (একটা বাদে একটা সারিতে `alt`), $lang (`en`/`bn`), $narrow (সরু কলাম)।
+    ঐচ্ছিক $upper (মাথার লেখা বড় হাতে), $zebra (একটা বাদে একটা সারিতে `alt`), $lang (`en`/`bn`), $narrow (সরু কলাম),
+    $inlineLot (কোড · লট নামের পাশে, একই লাইনে — এক সারি এক লাইন; মোনো হালকা A4-এ ২৫ সারি এক পাতায়, মালিক ৩ অক্টোবর ২০২৬)।
 
     ⓘ সুইচ (Free, Total QTY, Grand Total-এর সারি) আর `data-*` চিহ্ন এখানেই, একবার — নকশা কেবল
     `table.items`, `tr.alt`, `tr.grand`, `.sub`, `.free`, `.num` সাজায়।
@@ -8,8 +9,13 @@
 @php
     $upper = $upper ?? true;
     $lang = $lang ?? 'en';
-    /* ⓘ সরু জায়গার নকশায় (পাশের পট্টি, আধা পাতা) সংখ্যার কলাম সরু — নইলে পণ্যের নাম ভাঙে */
-    $w = ($narrow ?? false) ? ['rate' => 17, 'qty' => 15, 'free' => 11, 'total' => 16, 'amount' => 22] : ['rate' => 24, 'qty' => 18, 'free' => 15, 'total' => 20, 'amount' => 29];
+    /*
+     * ⛔→⭐ সংখ্যার কলামে বাঁধা চওড়া নেই — মালিক, ৩ অক্টোবর ২০২৬: *"faka jayga komale ordhek jayga kome emnitei"*।
+     * ⓘ আগে দর ২৪, পরিমাণ ১৮, ফ্রি ১৫, মোট পরিমাণ ২০, টাকা ২৯mm বাঁধা (সরু নকশায় কম): ডানে-সাঁটা "10 Ctn" ১৮mm ঘরে
+     * বসে বাঁয়ে ৮–১০mm ফাঁকা রাখত — কাগজে দর আর পরিমাণের মাঝে, ফ্রি আর মোট পরিমাণের মাঝে দুইটা "খালি কলাম"। ⭐ এখন
+     * সংখ্যার ঘর লেখার মাপে (mPDF নিজে মাপে, `nowrap` তাই সংখ্যা ভাঙে না), বাকি সব জায়গা পণ্যের নামের — নাম কম
+     * ভাঙে, সারি খাটো। ⓘ `$narrow` আর লাগে না; যে নকশা দেয়, তার ক্ষতি নেই।
+     */
     $zebra = $zebra ?? false;
     $h = fn (string $key) => $upper ? mb_strtoupper($v->label($key, $lang)) : $v->label($key, $lang);
 @endphp
@@ -18,11 +24,11 @@
         <tr>
             <th style="width: 8mm">{{ $v->label('sl', $lang) }}</th>
             <th>{{ $h('product') }}</th>
-            <th class="num" style="width: {{ $w['rate'] }}mm">{{ $h('rate') }}</th>
-            <th class="num" style="width: {{ $w['qty'] }}mm">{{ $h('qty') }}</th>
-            @if ($v->free)<th class="num" style="width: {{ $w['free'] }}mm" data-col-free>{{ $h('free') }}</th>@endif
-            @if ($v->totalQty)<th class="num" style="width: {{ $w['total'] }}mm" data-col-total-qty>{{ $h('total_qty') }}</th>@endif
-            <th class="num" style="width: {{ $w['amount'] }}mm">{{ $h('amount') }}</th>
+            <th class="num">{{ $h('rate') }}</th>
+            <th class="num">{{ $h('qty') }}</th>
+            @if ($v->free)<th class="num" data-col-free>{{ $h('free') }}</th>@endif
+            @if ($v->totalQty)<th class="num" data-col-total-qty>{{ $h('total_qty') }}</th>@endif
+            <th class="num">{{ $h('amount') }}</th>
         </tr>
     </thead>
     <tbody>
@@ -31,8 +37,11 @@
                 <td>{{ $index + 1 }}</td>
                 <td class="item-name">
                     {{ $item['name'] }}
-                    @php($under = implode(' · ', array_filter([$item['code'] ?? '', $item['lot'] ?? ''])))
-                    @if ($under !== '')<div class="sub">{{ $under }}</div>@endif
+                    @if ($inlineLot ?? false)
+                        <span class="sub">@include('sales::print.partials.item-code-lot', ['item' => $item, 'inline' => true])</span>
+                    @else
+                        @include('sales::print.partials.item-code-lot', ['item' => $item, 'class' => 'sub'])
+                    @endif
                 </td>
                 <td class="num">{{ $paper->money($item['rate']) }}</td>
                 <td class="num">{{ $item['qty'] }}</td>

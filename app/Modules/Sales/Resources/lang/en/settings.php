@@ -149,6 +149,7 @@ return [
     ],
     'invoice_footnote' => 'Note under the invoice and challan — A4/A5 (each point on a new line)',
     'invoice_footnote_thermal' => 'Note under the invoice and challan — thermal roll (one line)',
+    'movement_lines' => 'Account movement on the bill — how many transactions (0 = the whole month)',
     'vat_enabled' => 'VAT on sales (off: no VAT box, and the server takes no VAT)',
     'paper_gate_pass' => 'Gate pass paper',
 ];

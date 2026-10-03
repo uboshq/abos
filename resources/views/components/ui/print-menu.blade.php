@@ -65,33 +65,74 @@
                     {{ $document['label'] }}
                 </div>
 
-                <div class="flex gap-1 p-2">
-                    @foreach ($papers as $paper)
-                        <a href="{{ $document['url'] }}?paper={{ $paper }}"
-                           target="_blank" rel="noopener"
-                           class="min-w-0 flex-1 truncate rounded-(--radius-field) border px-2 py-1 text-center text-2xs
-                                  transition-colors hover:bg-(--color-surface-hover)
-                                  {{ $paper === $chosen
-                                      ? 'border-(--color-brand-500) font-semibold'
-                                      : 'border-(--color-border)' }}">
-                            {{ \App\Core\Engines\Print\PaperSize::of($paper)->label() }}
-                        </a>
+                {{--
+                    ⭐ মাপ % — মালিকের বাছাই (খ), ১ অক্টোবর ২০২৬ ([[PrintScale]])।
+
+                    ⓘ মাপ বাছা হয় PDF খোলার **আগে**: কাগজের বোতাম আর "মাপ %" একটা GET ফর্মে, তাই একটা চাপ = একটা
+                    আঁকা = একবার গোনা। ⛔ PDF খোলার পরে মাপ বদলে আবার খোলার পথ রাখলে প্রতিটা আবার-খোলা হয় আবার
+                    গোনা হত, নয়তো DUPLICATE ছাড়া বাড়তি কপি। ঘর ফাঁকা = স্বয়ংক্রিয় (একটু উপচানো বিল এক পাতায়);
+                    ব্রাউজারের ▲▼ হলো −/+, আর তালিকায় ৫০·৭৫·১০০·১৫০·২০০। কোনো JS নেই।
+                --}}
+                @php
+                    $action = strtok($document['url'], '?');
+                    parse_str((string) parse_url($document['url'], PHP_URL_QUERY), $carried);
+                    unset($carried['paper'], $carried['scale'], $carried['download']);
+                @endphp
+                <form method="GET" action="{{ $action }}" target="_blank">
+                    @foreach ($carried as $key => $value)
+                        @if (is_scalar($value))
+                            <input type="hidden" name="{{ $key }}" value="{{ $value }}">
+                        @endif
                     @endforeach
-                </div>
+                    {{-- ⓘ ফাইলের বোতামের কাগজ — কাগজের বোতাম নিজের মান পরে পাঠায়, আর সেটাই জেতে --}}
+                    <input type="hidden" name="paper" value="{{ $chosen ?? \App\Core\Engines\Print\PaperSize::A4 }}">
 
-                {{-- ⭐ ফাইল আর পাঠানো — মালিকের কথায়: *"sathe pdf o zate dwa zay"*।
+                    <div class="flex gap-1 p-2">
+                        @foreach ($papers as $paper)
+                            <button type="submit" name="paper" value="{{ $paper }}"
+                               class="min-w-0 flex-1 truncate rounded-(--radius-field) border px-2 py-1 text-center text-2xs
+                                      transition-colors hover:bg-(--color-surface-hover)
+                                      {{ $paper === $chosen
+                                          ? 'border-(--color-brand-500) font-semibold'
+                                          : 'border-(--color-border)' }}">
+                                {{ \App\Core\Engines\Print\PaperSize::of($paper)->label() }}
+                            </button>
+                        @endforeach
+                    </div>
 
-                     ⓘ ফাইলটা ঠিক ঐ কাগজ, নতুন করে আঁকা নয় — কেবল `download=1`,
-                     তাই গ্রাহকের কপি আর আমাদের কপি কোনোদিন আলাদা হয় না। --}}
+                    <label class="flex items-center gap-2 px-3 pb-2 text-2xs text-(--color-ink-muted)">
+                        {{ __('core.print.scale') }}
+                        <input type="number" name="scale" inputmode="numeric"
+                               min="{{ \App\Core\Engines\Print\PrintScale::MIN }}"
+                               max="{{ \App\Core\Engines\Print\PrintScale::MAX }}"
+                               step="{{ \App\Core\Engines\Print\PrintScale::STEP }}"
+                               placeholder="{{ __('core.print.scale_auto') }}"
+                               list="print-scale-{{ $loop->index }}"
+                               class="w-20 rounded-(--radius-field) border border-(--color-border)
+                                      bg-(--color-surface-card) px-2 py-1 text-end text-2xs text-(--color-ink)">
+                        <datalist id="print-scale-{{ $loop->index }}">
+                            @foreach ([50, 75, 100, 150, 200] as $pick)
+                                <option value="{{ $pick }}"></option>
+                            @endforeach
+                        </datalist>
+                    </label>
+
+                    {{-- ⭐ ফাইল — মালিকের কথায়: *"sathe pdf o zate dwa zay"*। ⓘ ফাইলটা ঠিক ঐ কাগজ, একই মাপে, নতুন
+                         করে আঁকা নয় — কেবল `download=1`, তাই গ্রাহকের কপি আর আমাদের কপি কোনোদিন আলাদা হয় না। --}}
+                    @isset($document['share'])
+                        <div class="px-2 pb-2">
+                            <button type="submit" name="download" value="1"
+                                    class="w-full rounded-(--radius-field) border border-(--color-border)
+                                           px-2 py-1 text-center text-2xs transition-colors
+                                           hover:bg-(--color-surface-hover)">
+                                {{ __('core.print.as_file') }}
+                            </button>
+                        </div>
+                    @endisset
+                </form>
+
                 @isset($document['share'])
                     <div class="flex gap-1 px-2 pb-2">
-                        <a href="{{ $document['url'] }}?paper={{ $chosen ?? \App\Core\Engines\Print\PaperSize::A4 }}&download=1"
-                           class="flex-1 rounded-(--radius-field) border border-(--color-border)
-                                  px-2 py-1 text-center text-2xs transition-colors
-                                  hover:bg-(--color-surface-hover)">
-                            {{ __('core.print.as_file') }}
-                        </a>
-
                         <form method="POST" action="{{ route('paper.share') }}" class="flex-1">
                             @csrf
                             <input type="hidden" name="route" value="{{ $document['share']['route'] }}">

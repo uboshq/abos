@@ -129,7 +129,7 @@ final class AClassicTableInvoiceCanBeChosenTest extends TestCase
             'SL#', 'Item Name', 'Rate', 'QTY', 'Free', 'Total QTY', 'Amount', 'data-grand-row',
             'Total Item:', 'Delivery Qty.', 'Invoice Amount In Word:',
             'Grand Total', 'Discount', 'Rounding', 'Net Payable Amount', 'Paid Amount', 'Invoice Due',
-            '(+) Previous Due', 'Outstanding Amount',
+            '(+) Previous Due', 'Outstanding (',
             'Paid - Received Into Accounts', 'Transaction ID', 'Transaction Date', 'Payment Method',
             'Printing Time:',
             $invoice->document_no, self::AMOUNT,
@@ -300,7 +300,7 @@ final class AClassicTableInvoiceCanBeChosenTest extends TestCase
         $text = (string) shell_exec(escapeshellarg($bin).' -layout '.escapeshellarg($file).' -');
         @unlink($file);
 
-        foreach (['INVOICE', 'Bill To,', 'Net Payable Amount', 'Outstanding Amount', 'Paid - Received Into Accounts', '(BDT)', $invoice->document_no] as $expected) {
+        foreach (['INVOICE', 'Bill To,', 'Net Payable Amount', 'Outstanding (', 'Paid - Received Into Accounts', '(BDT)', $invoice->document_no] as $expected) {
             $this->assertStringContainsString($expected, $text, "ছাপা PDF-এ নেই: {$expected}");
         }
     }

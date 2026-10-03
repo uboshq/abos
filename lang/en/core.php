@@ -541,6 +541,8 @@ return [
         'revoke_link' => 'Revoke the link',
         'link_revoked' => 'The link is revoked — it opens nothing now',
         'as_file' => 'Download PDF',
+        'scale' => 'Scale %',
+        'scale_auto' => 'Auto',
         'send_to_customer' => 'Send to customer',
         'printed_times' => 'printed :n×',
         'downloaded_times' => 'downloaded :n×',

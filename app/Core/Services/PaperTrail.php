@@ -191,6 +191,9 @@ final class PaperTrail
             'how' => $how,
             'share_id' => $share?->id,
             'from_ip' => $fromIp,
+            // ⭐ কোন মাপে — স্বয়ংক্রিয় কি না সহ ([[PrintScale]]); ফাইল না আঁকলে (শেয়ার) খালি
+            'scale' => app(\App\Core\Engines\Print\PrintScale::class)->used(),
+            'scale_auto' => app(\App\Core\Engines\Print\PrintScale::class)->wasAuto(),
             // ⭐ কোন রূপ ছাপা হলো — চালান টাকাসহ/টাকা ছাড়া (মালিক, ২ অক্টোবর ২০২৬); ছাপার দরজা অনুরোধে বসায়
             'variant' => request()->attributes->get('print_variant'),
             'created_by' => \App\Core\Support\Actor::userId(),

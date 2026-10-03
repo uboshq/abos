@@ -661,7 +661,13 @@ class DemoSeeder extends Seeder
             ['Niloy Store', 'নিলয় স্টোর', 'Niloy Chandra Das', 'PT-CHR', '+8801811000005',
                 'Charpara, Mymensingh', 'চরপাড়া, ময়মনসিংহ', '0', 0],
         ] as [$en, $bn, $owner, $point, $phone, $addressEn, $addressBn, $limit, $days]) {
-            $customers->create([
+            /*
+             * ⓘ সীমা পরে বসে, সরাসরি — নিরীক্ষা §১.২ (২৭ সেপ্টেম্বর ২০২৬): নতুন গ্রাহক
+             * শূন্য সীমায় জন্মায়, সীমা বাড়ে কেবল সইয়ে। ⚠️ নমুনা-তথ্য বিশ্বস্ত পথ,
+             * কোনো ব্যবহারকারী নয় — তাই এখানে সই চাওয়ার কেউ নেই; সীমাটা
+             * `forceFill` দিয়ে বসে, সেবার দরজা দিয়ে নয়।
+             */
+            $customer = $customers->create([
                 'name_en' => $en,
                 'name_bn' => $bn,
                 'owner_name' => $owner,

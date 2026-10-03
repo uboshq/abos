@@ -88,6 +88,7 @@ return [
         'payments_title' => 'যা পরিশোধ হয়েছে',
         'txn_id' => 'লেনদেন নম্বর',
         'txn_date' => 'লেনদেনের তারিখ',
+        'month_opening' => 'মাসের শুরুর জের',
         'method' => 'কোন পথে',
         'narration' => 'বিবরণ',
         'amount' => 'টাকা',

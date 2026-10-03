@@ -15,6 +15,7 @@ use Mpdf\Config\FontVariables;
 use Mpdf\Mpdf;
 use Mpdf\Output\Destination;
 use RuntimeException;
+use setasign\Fpdi\PdfParser\StreamReader;
 
 /**
  * ছাপার একমাত্র পথ — প্ল্যান সেকশন ২.২, পঞ্চম engine।
@@ -55,6 +56,12 @@ final class PrintEngine
          * করামাত্র ভাউচার ও বেতনশিটের কাগজও বদলে যেত।
          */
         ?string $profile = null,
+
+        /*
+         * ⭐ মাপ % — `null` মানে অনুরোধের `?scale=` ([[PrintScale::fromRequest()]]), সেটাও না থাকলে স্বয়ংক্রিয়।
+         * ⓘ থার্মালে মাপ নেই — রোল নিজের মাপেই লম্বা হয়।
+         */
+        ?int $scale = null,
     ): string {
         $size = PaperSize::of($paper);
         $locale = $locale ?? app()->getLocale();
@@ -83,7 +90,8 @@ final class PrintEngine
             app()->setLocale($previous);
         }
 
-        return $this->toPdf($html, $size, $data['title'] ?? $template, $watermark);
+        return $this->toPdf($html, $size, $data['title'] ?? $template, $watermark,
+            $scale === null ? app(PrintScale::class)->fromRequest() : PrintScale::requested($scale));
     }
 
     /**
@@ -198,7 +206,7 @@ final class PrintEngine
         return $this->write($this->newMpdf($size, max($used, 40)), $html, $title);
     }
 
-    private function toPdf(string $html, PaperSize $size, string $title, ?string $watermark = null): string
+    private function toPdf(string $html, PaperSize $size, string $title, ?string $watermark = null, ?int $scale = null): string
     {
         if ($size->isThermal) {
             /*
@@ -245,22 +253,191 @@ final class PrintEngine
             $mpdf->watermarkTextAlpha = 0.12;
         }
 
-        return $this->write($mpdf, $html, $title);
+        /*
+         * ⭐ মাপ % — মালিকের বাছাই (খ), ১ অক্টোবর ২০২৬ ([[PrintScale]])।
+         *
+         * ⓘ না দিলে আগে ১০০%-এ আঁকা; এক পাতায় হলে সেটাই, আর বেশি হলে [[fitOnOnePage()]] এক পাতায় আঁটে এমন
+         * সবচেয়ে বড় মাপ খোঁজে (৯৫ → ৬০)। ⚠️ HTML একবারই তৈরি (ডাটাবেস বা ছাপার গোনা আবার ছোঁয় না) — কেবল
+         * কাল্পনিক পাতার মাপ বদলায়।
+         *
+         * ── ⛔→⭐ স্পষ্ট মাপেও দুই পাতা — মালিক, ৩ অক্টোবর ২০২৬ ─────────────────────────────────
+         * *"etar print scale custom korle zate dui pristha ek pataay print hoy seta bolecilam but hoyni"*। ⓘ আগে স্পষ্ট
+         * মাপ সবসময় জিতত — ৯০% বললে ৯০%, কাগজ দুই পাতায় গেলেও। ⭐ এখন ছোট করার মাপ (≤ ১০০) মানে "এই মাপ, বা
+         * এক পাতায় আঁটতে যতটা লাগে ততটা ছোট": উপচালে ৫ ধাপে [[PrintScale::MIN]] পর্যন্ত নামে, আর বসানো মাপ
+         * স্বয়ংক্রিয় বলে লেখা হয়। ⓘ বড় করার মাপ (> ১০০) আগের মতোই কয়েক পাতায় — বড় লেখাই সেখানে চাওয়া।
+         */
+        if ($scale !== null && $scale !== PrintScale::NORMAL) {
+            [$pdf, $pages, $used] = $this->laidOut($html, $size, $scale);
+
+            if ($pages > 1 && $scale < PrintScale::NORMAL) {
+                $fitted = $this->fitOnOnePage($html, $size, $title, $watermark, $used * (PrintScale::NORMAL / $scale) ** 2,
+                    $scale - PrintScale::STEP, PrintScale::MIN);
+
+                if ($fitted !== null) {
+                    return $fitted;
+                }
+            }
+
+            app(PrintScale::class)->settle($scale, false);
+
+            return $this->placed($pdf, $size, $title, $watermark);
+        }
+
+        $mpdf->SetTitle($title);
+        $mpdf->SetCreator('ABOS');
+        $mpdf->WriteHTML($html);
+
+        if (count($mpdf->pages) > 1) {
+            $fitted = $this->fitOnOnePage($html, $size, $title, $watermark, $this->pagesUsed($mpdf, $size),
+                PrintScale::AUTO_FROM, $scale === null ? PrintScale::AUTO_FLOOR : PrintScale::MIN);
+
+            if ($fitted !== null) {
+                return $fitted;
+            }
+        }
+
+        app(PrintScale::class)->settle(PrintScale::NORMAL, $scale === null);
+
+        return $mpdf->Output('', Destination::STRING_RETURN);
+    }
+
+    /**
+     * এক পাতায় আঁটে এমন সবচেয়ে বড় মাপ (`$from` → `$floor`, ৫ ধাপে) — না আঁটলে `null`, আর তখন ডাকা মাপে কয়েক পাতা।
+     *
+     * ⓘ স্বয়ংক্রিয়ে ৯৫ → ৬০; স্পষ্ট ছোট মাপে (মালিক, ৩ অক্টোবর ২০২৬) সেই মাপের এক ধাপ নিচ → [[PrintScale::MIN]]।
+     * `$used` সবসময় ১০০%-এর হিসাবে — কত পাতা জুড়ে, শেষ পাতার ভরা অংশসহ ([[pagesUsed()]])।
+     *
+     * ⓘ ক্ষেত্রফল মাপের বর্গে ছোট হয়: ১.৪ পাতার কাগজ ৮৫%-এ ~১.০১। তাই আগে আন্দাজ, তারপর সেখান থেকে নিচে —
+     * প্রতিটা চেষ্টা একটা পুরো আঁকা, আট বার আঁকার বদলে সাধারণত এক-দুইবার। ⛔ তলার মাপেও যে কাগজ আঁটার আশা
+     * নেই (৬০%-এ ০.৩৬-এর বেশি ভাগ দুই পাতার উপরে), সেখানে চেষ্টাই হয় না — ১২০ সারির বিল তাই আগের মতোই দ্রুত।
+     */
+    private function fitOnOnePage(
+        string $html,
+        PaperSize $size,
+        string $title,
+        ?string $watermark,
+        float $used,
+        int $from = PrintScale::AUTO_FROM,
+        int $floor = PrintScale::AUTO_FLOOR,
+    ): ?string {
+        if ($used * ($floor / 100) ** 2 > 1.05) {
+            return null;
+        }
+
+        $guess = (int) (floor(100 / sqrt($used) / PrintScale::STEP) * PrintScale::STEP) + PrintScale::STEP;
+
+        foreach (range($from, $floor, -PrintScale::STEP) as $try) {
+            if ($try > $guess) {
+                continue;
+            }
+
+            [$pdf, $pages] = $this->laidOut($html, $size, $try);
+
+            if ($pages === 1) {
+                app(PrintScale::class)->settle($try, true);
+
+                return $this->placed($pdf, $size, $title, $watermark);
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * কাগজটা কত পাতা জুড়ে — শেষ পাতার ভরা অংশসহ (যেমন ১.৪)। ⓘ `$factor` — কাল্পনিক পাতার ভাগ ([[laidOut()]]);
+     * উত্তর সেই পাতার হিসাবে।
+     */
+    private function pagesUsed(Mpdf $mpdf, PaperSize $size, float $factor = 1.0): float
+    {
+        $body = ($this->sheet($size)[1] - 2 * $size->margin) * $factor;
+        $last = $body > 0 ? max(0.0, min(1.0, ($mpdf->y - $size->margin * $factor) / $body)) : 1.0;
+
+        return count($mpdf->pages) - 1 + $last;
+    }
+
+    /**
+     * কাল্পনিক পাতায় আঁকা — কাগজ ÷ মাপ (৮৫% হলে A4 ÷ ০.৮৫, ২০০% হলে A4 ÷ ২), কিনারাও একই ভাগে, যাতে আসল
+     * কাগজে বসালে কিনারা ঠিক আগের মতো থাকে।
+     *
+     * @return array{0: string, 1: int, 2: float} PDF, তার পাতার সংখ্যা, আর কত পাতা জুড়ে ([[pagesUsed()]])
+     */
+    private function laidOut(string $html, PaperSize $size, int $scale): array
+    {
+        $factor = PrintScale::NORMAL / $scale;
+        $mpdf = $this->newMpdf($size, null, $factor);
+        $mpdf->WriteHTML($html);
+
+        return [$mpdf->Output('', Destination::STRING_RETURN), count($mpdf->pages), $this->pagesUsed($mpdf, $size, $factor)];
+    }
+
+    /**
+     * কাল্পনিক পাতাগুলো আসল কাগজে, মাপমতো — mPDF-এর নিজের FPDI দিয়ে ([[Mpdf::useTemplate()]])।
+     *
+     * ⓘ পাতাটা ছবি নয়, হুবহু PDF-এর লেখা: বাংলা যুক্তাক্ষর, বাছাই করা যায় এমন লেখা, সব থাকে। ⭐ জলছাপ বসে শেষ
+     * কাগজে, প্রতিটা পাতায় — [[toPdf()]]-এর একই কারণে, একই হালকা ভাবে।
+     */
+    private function placed(string $virtual, PaperSize $size, string $title, ?string $watermark): string
+    {
+        $out = $this->newMpdf($size);
+
+        if ($watermark !== null && $watermark !== '') {
+            $out->SetWatermarkText($watermark);
+            $out->showWatermarkText = true;
+            $out->watermarkTextAlpha = 0.12;
+        }
+
+        $out->SetTitle($title);
+        $out->SetCreator('ABOS');
+
+        $pages = $out->setSourceFile(StreamReader::createByString($virtual));
+
+        for ($page = 1; $page <= $pages; $page++) {
+            if ($page > 1) {
+                $out->AddPage();
+            }
+
+            $out->useTemplate($out->importPage($page), 0, 0, ...$this->sheet($size));
+        }
+
+        return $out->Output('', Destination::STRING_RETURN);
+    }
+
+    /**
+     * কাগজের মাপ mm-এ — A4/A5 নাম হিসেবে থাকে, থার্মাল সংখ্যায়।
+     *
+     * @return array{0: float, 1: float}
+     */
+    private function sheet(PaperSize $size): array
+    {
+        if (is_array($size->format)) {
+            return [$size->format[0], $size->format[1]];
+        }
+
+        return match (strtoupper($size->format)) {
+            'A5' => [148.0, 210.0],
+            'LETTER' => [215.9, 279.4],
+            default => [210.0, 297.0],
+        };
     }
 
     /**
      * @param  float|null  $height  থার্মালে মাপা উচ্চতা; A4-তে null, কারণ
      *                              সেখানে মাপটা কাগজের নিজের।
      */
-    private function newMpdf(PaperSize $size, ?float $height = null): Mpdf
+    private function newMpdf(PaperSize $size, ?float $height = null, float $factor = 1.0): Mpdf
     {
+        // ⓘ `$factor` — মাপ %-এর কাল্পনিক পাতা ([[laidOut()]]); ১ মানে আসল কাগজ
         return new Mpdf([
             'mode' => 'utf-8',
-            'format' => $height === null ? $size->format : [$size->format[0], $height],
-            'margin_left' => $size->margin,
-            'margin_right' => $size->margin,
-            'margin_top' => $size->margin,
-            'margin_bottom' => $size->margin,
+            'format' => match (true) {
+                $height !== null => [$size->format[0], $height],
+                $factor === 1.0 => $size->format,
+                default => [$this->sheet($size)[0] * $factor, $this->sheet($size)[1] * $factor],
+            },
+            'margin_left' => $size->margin * $factor,
+            'margin_right' => $size->margin * $factor,
+            'margin_top' => $size->margin * $factor,
+            'margin_bottom' => $size->margin * $factor,
             'default_font_size' => $size->fontSize,
             'default_font' => 'hindsiliguri',
             'tempDir' => storage_path('framework/cache'),

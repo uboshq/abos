@@ -993,6 +993,19 @@ return [
             'default_text' => 'sales::print.classic.footnote_thermal',
         ],
         [
+            /*
+             * ⭐ বিলের ACCOUNT MOVEMENT-এ কয়টা লেনদেন — মালিক, ৩ অক্টোবর ২০২৬: *"koyta ba ki ki tranjecton print hobe
+             * mane koyta line print hobe"*। ০ = বিলের মাসের সব; ১–৫০ = মাসের শেষ এতগুলো (শুরুর জের তখন তার আগের যোগ)।
+             */
+            'key' => 'sales.print.movement_lines',
+            'label' => 'sales::settings.movement_lines',
+            'type' => 'integer',
+            'default' => 0,
+            'group' => 'invoice_info',
+            'per_branch' => true,
+            'part' => 'show',
+        ],
+        [
             // ⭐ গেট পাসের কাগজ — মালিক: আধা পাতা (A5), ২৮ সেপ্টেম্বর ২০২৬ ([[SalesPrintController::gatePassDocument()]])
             'key' => 'sales.print.paper.gate_pass',
             'per_branch' => true,

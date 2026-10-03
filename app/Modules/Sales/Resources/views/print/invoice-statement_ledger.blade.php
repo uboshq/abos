@@ -8,6 +8,10 @@
 
     ⓘ সুইচ আর `data-*` চিহ্ন ভাগের partial-এ। "আগের বকেয়া" বন্ধ হলে সারাংশ আর চলাচল দুইটাই যায় (দুইটার শুরুই
     ওটা)। ⚠️ জমার সুইচ বন্ধ হলেও চলাচলে জমা থাকে — নইলে শেষ জের মোট বকেয়ার সাথে মিলত না, কাগজ মিথ্যা বলত।
+
+    ⭐ এক পাতায় বেশি সারি — মালিক, ৩ অক্টোবর ২০২৬: *"faka jayga komale ordhek jayga kome emnitei"*। ⓘ সংখ্যার কলাম
+    এখন লেখার মাপে ([[sales::print.partials.invoice-items]]), কোড · লট নামের পাশে (`inlineLot`), আর সারি, ঘর ও
+    ফাঁকের মাপ ছোট — নরম ঘর, হিসাবের চলাচল আর QR আগের মতোই। ⓘ মূল লেখা ৮.৫pt, কোনোটা ৮pt-এর নিচে নয়।
 --}}
 @php
     $v = new \App\Modules\Sales\Support\InvoicePaperView($doc, $facts, $company, $profile);
@@ -22,60 +26,60 @@
 @endphp
 
 <style @nonce>
-    body { font-family: hindsiliguri, sans-serif; font-size: 9pt; color: #1f2933; }
+    body { font-family: hindsiliguri, sans-serif; font-size: 8.5pt; color: #1f2933; }
     table { border-collapse: collapse; }
     table.head { width: 100%; }
     table.head td { vertical-align: top; }
-    .co-name { font-size: 15pt; font-weight: bold; }
+    .co-name { font-size: 13pt; font-weight: bold; }
     .co-meta { font-size: 7.5pt; color: #7b8794; }
     .kicker { text-align: right; font-size: 7.5pt; letter-spacing: 0.8mm; color: {{ $accent }}; font-weight: bold; }
-    .no { text-align: right; font-size: 20pt; font-weight: bold; font-family: dejavusans; }
+    .no { text-align: right; font-size: 16pt; font-weight: bold; font-family: dejavusans; }
     .when { text-align: right; font-size: 8.5pt; color: #7b8794; }
     .dup { text-align: right; font-size: 7.5pt; font-weight: bold; color: #7b8794; }
-    .notice { text-align: center; font-weight: bold; border: 0.4mm solid #b42318; color: #b42318; padding: 2mm; margin-top: 3mm; font-size: 11pt; }
-    table.tiles { width: 100%; margin-top: 5mm; }
-    table.tiles td.tile { background: #f3f6f8; padding: 3.5mm 3.5mm; vertical-align: top; }
+    .notice { text-align: center; font-weight: bold; border: 0.4mm solid #b42318; color: #b42318; padding: 1mm; margin-top: 2mm; font-size: 10pt; }
+    table.tiles { width: 100%; margin-top: 3mm; }
+    table.tiles td.tile { background: #f3f6f8; padding: 2mm 3mm; vertical-align: top; }
     table.tiles td.tile-on { background: {{ $accent }}; }
     .tile-cap { font-size: 7pt; color: #7b8794; }
-        .tile-val { font-size: 12.5pt; font-weight: bold; font-family: dejavusans; margin-top: 1mm; }
-        table.two { width: 100%; margin-top: 5mm; }
-    table.two td { width: 50%; vertical-align: top; font-size: 8.5pt; line-height: 1.55; padding-right: 6mm; }
+        .tile-val { font-size: 11pt; font-weight: bold; font-family: dejavusans; margin-top: 0.5mm; }
+        table.two { width: 100%; margin-top: 3mm; }
+    table.two td { width: 50%; vertical-align: top; font-size: 8pt; line-height: 1.3; padding-right: 6mm; }
     .cap { font-size: 7pt; letter-spacing: 0.4mm; color: #7b8794; }
-    .party { font-weight: bold; font-size: 10pt; }
+    .party { font-weight: bold; font-size: 9pt; }
     .sub { font-size: 7.5pt; color: #7b8794; font-weight: normal; }
-    table.items { width: 100%; margin-top: 5mm; }
-    table.items th { font-size: 7pt; color: #7b8794; font-weight: normal; padding: 0 1.5mm 2mm 0; text-align: left; border-bottom: 0.25mm solid #cbd2d9; }
+    table.items { width: 100%; margin-top: 3mm; }
+    table.items th { font-size: 7pt; color: #7b8794; font-weight: normal; padding: 0 1.5mm 1.2mm 0; text-align: left; border-bottom: 0.25mm solid #cbd2d9; }
     table.items th.num { text-align: right; padding-right: 0; }
-    table.items td { padding: 2mm 1.5mm 2mm 0; border-bottom: 0.2mm solid #eef1f4; font-size: 9pt; vertical-align: top; }
+    table.items td { padding: 0.7mm 1.5mm 0.7mm 0; border-bottom: 0.2mm solid #eef1f4; font-size: 8.5pt; line-height: 1.2; vertical-align: top; }
     table.items td.num { padding-right: 0; }
     table.items tr.grand td { font-weight: bold; border-bottom: 0; }
     .free { color: {{ $accent }}; font-weight: bold; }
     .num { text-align: right; white-space: nowrap; }
     td.num { font-family: dejavusans; }
-    table.bottom { width: 100%; margin-top: 4mm; }
+    table.bottom { width: 100%; margin-top: 2.5mm; }
     table.bottom td.side { vertical-align: top; font-size: 8.5pt; }
     .pay-head { font-size: 7pt; color: #7b8794; }
     table.pay { width: 100%; margin-top: 1mm; }
-    table.pay th { font-size: 7pt; color: #7b8794; font-weight: normal; text-align: left; padding: 0.8mm 1mm 0.8mm 0; }
-    table.pay td { font-size: 8.5pt; padding: 0.8mm 1mm 0.8mm 0; }
+    table.pay th { font-size: 7pt; color: #7b8794; font-weight: normal; text-align: left; padding: 0.5mm 1mm 0.5mm 0; }
+    table.pay td { font-size: 8pt; padding: 0.5mm 1mm 0.5mm 0; }
     table.sums { width: 100%; }
-    table.sums td { padding: 1.1mm 0; font-size: 9pt; color: #52606d; }
+    table.sums td { padding: 0.4mm 0; font-size: 8.5pt; color: #52606d; }
     table.sums td.num { color: #1f2933; }
     table.sums tr.net td { font-weight: bold; color: #1f2933; }
-    table.sums tr.owed td { font-weight: bold; color: {{ $accent }}; border-top: 0.25mm solid #cbd2d9; padding-top: 2mm; font-size: 10pt; }
-    .words { margin-top: 3mm; font-size: 8.5pt; color: #52606d; }
-    .section { margin-top: 5mm; font-size: 7pt; letter-spacing: 0.6mm; color: {{ $accent }}; font-weight: bold; }
-    table.ledger { width: 100%; margin-top: 2mm; }
-    table.ledger th { font-size: 7pt; color: #7b8794; font-weight: normal; padding: 0 1.5mm 1.8mm 0; text-align: left; border-bottom: 0.25mm solid #cbd2d9; }
+    table.sums tr.owed td { font-weight: bold; color: {{ $accent }}; border-top: 0.25mm solid #cbd2d9; padding-top: 1.2mm; font-size: 10pt; }
+    .words { margin-top: 1.5mm; font-size: 8pt; color: #52606d; }
+    .section { margin-top: 3mm; font-size: 7pt; letter-spacing: 0.6mm; color: {{ $accent }}; font-weight: bold; }
+    table.ledger { width: 100%; margin-top: 1mm; }
+    table.ledger th { font-size: 7pt; color: #7b8794; font-weight: normal; padding: 0 1.5mm 1mm 0; text-align: left; border-bottom: 0.25mm solid #cbd2d9; }
     table.ledger th.num { text-align: right; padding-right: 0; }
-    table.ledger td { padding: 1.6mm 1.5mm 1.6mm 0; border-bottom: 0.2mm solid #eef1f4; font-size: 9pt; }
+    table.ledger td { padding: 0.6mm 1.5mm 0.6mm 0; border-bottom: 0.2mm solid #eef1f4; font-size: 8.5pt; }
     table.ledger td.num { padding-right: 0; }
     table.ledger tr.close td { font-weight: bold; color: {{ $accent }}; border-bottom: 0; }
     .footnote { margin-top: 5mm; font-size: 9pt; font-weight: bold; color: #b42318; }
-    table.signatures { width: 100%; margin-top: 10mm; }
+    table.signatures { width: 100%; margin-top: 9mm; }
     table.signatures td { padding-right: 8mm; font-size: 9pt; }
     .sig-line { border-top: 0.25mm solid #1f2933; padding-top: 1.2mm; }
-    .printed { margin-top: 4mm; font-size: 7pt; color: #7b8794; }
+    .printed { margin-top: 2mm; font-size: 7pt; color: #7b8794; }
 </style>
 
 <table class="head">
@@ -123,7 +127,7 @@
     </tr>
 </table>
 
-@include('sales::print.partials.invoice-items', ['v' => $v, 'facts' => $facts, 'paper' => $paper, 'upper' => false])
+@include('sales::print.partials.invoice-items', ['v' => $v, 'facts' => $facts, 'paper' => $paper, 'upper' => false, 'inlineLot' => true])
 
 <table class="bottom">
     <tr>
@@ -157,7 +161,7 @@
     </table>
 @endif
 
-<table style="width: 100%; margin-top: 5mm">
+<table style="width: 100%; margin-top: 3mm">
     <tr>
         <td style="vertical-align: top"><div class="footnote" style="margin-top: 0"><div style="text-align: left; font-size: 50%; line-height: 1.35">{!! nl2br(e($v->footnote)) !!}</div></div></td>
         <td style="width: 26mm; text-align: right; vertical-align: top">@include('sales::print.partials.invoice-qr', ['v' => $v, 'width' => '20mm'])</td>

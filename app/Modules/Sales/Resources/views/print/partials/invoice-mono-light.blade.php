@@ -6,6 +6,12 @@
     চাই: $doc, $facts, $company, $paper, $profile, $lang; ঐচ্ছিক $titleFont (ইংরেজি "INVOICE"-এর হরফ)।
     ⚠️ বাংলার শিরোনাম সবসময় হিন্দ শিলিগুড়ি — প্লেফেয়ার-জাতীয় লাতিন হরফে বাংলা অক্ষর নেই, দিলে বাক্স ছাপা হত।
     ⓘ সুইচ আর `data-*` চিহ্ন: বিল-যার-নামে, পরিবহন আর বিলের ঘর এখানে (দুই ভাষায়); ছক, টাকা, জমা, QR, সই ভাগের partial-এ।
+
+    ⭐ ২৫ সারি এক A4 পাতায়, ১০০%-এ, নিচের সব ঘরসহ — মালিক, ৩ অক্টোবর ২০২৬: *"ei pristhay zate 25 item print hoy tar
+    bebosta koro"*। ⛔ আগে ৮টা সারিতেই পাতা ভরত (লটসহ সারি ~১১.৫mm, বাকি ঘর ~১৮০mm) — ১৮ সারির বিলে টাকার ঘর,
+    QR আর বকেয়া দ্বিতীয় পাতায় যেত। ⭐ এখন: কোড · লট নামের পাশে একই লাইনে (`inlineLot`), সারির ফাঁক কম, মাথা আর
+    ঘরের মাঝের ফাঁক কম, QR জমার ছকের পাশে। ⓘ লেখা পড়ার মাপে থাকে — মূল লেখা ৮–৮.৫pt, কোনোটা ৮pt-এর নিচে নয়
+    (কেবল আগের মতো ছোট শিরোনাম-চিহ্ন আর লট)। পরীক্ষা: [[ATwentyFiveLineBillFitsOneSheetTest]]।
 --}}
 @php
     $v = new \App\Modules\Sales\Support\InvoicePaperView($doc, $facts, $company, $profile);
@@ -15,47 +21,48 @@
     $b = $facts['bill_to'];
     $tr = $facts['transport'];
     $bill = $facts['bill'];
-    $titleCss = $bn ? 'font-family: hindsiliguri; font-size: 34pt; letter-spacing: 0;' : 'font-family: '.($titleFont ?? 'playfair').', freeserif; font-size: 38pt; letter-spacing: 2mm;';
+    $titleCss = $bn ? 'font-family: hindsiliguri; font-size: 26pt; letter-spacing: 0;' : 'font-family: '.($titleFont ?? 'playfair').', freeserif; font-size: 28pt; letter-spacing: 1.5mm;';
 @endphp
 
 <style @nonce>
-    body { font-family: hindsiliguri, sans-serif; font-size: 9pt; color: #111; }
+    /* ⭐ ২৫ সারি এক পাতায় (৩ অক্টোবর ২০২৬) — সারির ফাঁক ২.২→০.৬mm, ঘরের মাঝে ৬→২.৫mm, শিরোনাম ৩৮→২৮pt */
+    body { font-family: hindsiliguri, sans-serif; font-size: 8.5pt; color: #111; }
     table { border-collapse: collapse; }
-    .co-name { font-size: 15pt; font-weight: bold; color: #000; }
+    .co-name { font-size: 13pt; font-weight: bold; color: #000; }
     .co-meta { font-size: 7.5pt; color: #555; }
     .title { text-align: right; font-weight: bold; color: #000; line-height: 1; }
-    .dup { text-align: right; font-size: 7.5pt; font-weight: bold; margin-top: 1mm; }
-    .notice { text-align: center; font-weight: bold; border: 0.5mm solid #000; padding: 2mm; margin-top: 3mm; font-size: 11pt; }
+    .dup { text-align: right; font-size: 7.5pt; font-weight: bold; margin-top: 0.5mm; }
+    .notice { text-align: center; font-weight: bold; border: 0.4mm solid #000; padding: 1mm; margin-top: 2mm; font-size: 10pt; }
     .cap { font-size: {{ $bn ? '7.5pt' : '6.8pt' }}; font-weight: bold; letter-spacing: {{ $bn ? '0' : '0.5mm' }}; color: #555; }
-    table.three { width: 100%; margin-top: 6mm; border-top: 1.4mm solid #000; }
-    table.three td { width: 33%; vertical-align: top; font-size: 8.5pt; line-height: 1.5; padding: 3mm 5mm 0 0; }
-    .party { font-weight: bold; font-size: 10pt; }
+    table.three { width: 100%; margin-top: 2.5mm; border-top: 1mm solid #000; }
+    table.three td { width: 33%; vertical-align: top; font-size: 8pt; line-height: 1.25; padding: 1.5mm 4mm 0 0; }
+    .party { font-weight: bold; font-size: 9pt; }
     .sub { font-size: 7.5pt; color: #555; font-weight: normal; }
-    table.items { width: 100%; margin-top: 6mm; }
-    table.items th { color: #000; font-size: {{ $bn ? '8pt' : '7.5pt' }}; font-weight: bold; letter-spacing: {{ $bn ? '0' : '0.3mm' }}; padding: 2mm; text-align: left; border-top: 1mm solid #000; border-bottom: 0.4mm solid #000; }
+    table.items { width: 100%; margin-top: 2.5mm; }
+    table.items th { color: #000; font-size: {{ $bn ? '8pt' : '7.5pt' }}; font-weight: bold; letter-spacing: {{ $bn ? '0' : '0.3mm' }}; padding: 1.2mm 1.5mm; text-align: left; border-top: 0.8mm solid #000; border-bottom: 0.4mm solid #000; }
     table.items th.num { text-align: right; }
-    table.items td { padding: 2.2mm 2mm; border-bottom: 0.2mm solid #c8c8c8; font-size: 9pt; vertical-align: top; }
-    table.items tr.grand td { font-weight: bold; border-top: 0.6mm solid #000; border-bottom: 0.6mm solid #000; }
+    table.items td { padding: 0.6mm 1.5mm; border-bottom: 0.2mm solid #c8c8c8; font-size: 8.5pt; line-height: 1.2; vertical-align: top; }
+    table.items tr.grand td { font-weight: bold; border-top: 0.6mm solid #000; border-bottom: 0.6mm solid #000; padding: 1.2mm 1.5mm; }
     .free { font-weight: bold; }
     .num { text-align: right; white-space: nowrap; }
     td.num { font-family: dejavusans; }
-    table.bottom { width: 100%; margin-top: 5mm; }
+    table.bottom { width: 100%; margin-top: 2.5mm; }
     table.bottom td.side { vertical-align: top; font-size: 8.5pt; }
     .pay-head { font-size: 7.5pt; font-weight: bold; color: #555; }
-    table.pay { width: 100%; margin-top: 1mm; }
-    table.pay th { font-size: 7pt; color: #555; text-align: left; padding: 1mm; border-bottom: 0.3mm solid #000; }
-    table.pay td { font-size: 8.5pt; padding: 1mm; border-bottom: 0.2mm solid #c8c8c8; }
+    table.pay { width: 100%; margin-top: 0.5mm; }
+    table.pay th { font-size: 7pt; color: #555; text-align: left; padding: 0.6mm 1mm; border-bottom: 0.3mm solid #000; }
+    table.pay td { font-size: 8pt; padding: 0.6mm 1mm; border-bottom: 0.2mm solid #c8c8c8; }
     table.sums { width: 100%; }
-    table.sums td { padding: 1.1mm 2mm; font-size: 9pt; }
+    table.sums td { padding: 0.35mm 2mm; font-size: 8.5pt; }
     table.sums tr.net td { font-weight: bold; border-top: 0.3mm solid #000; }
-    table.sums tr.owed td { font-weight: bold; font-size: 12.5pt; padding: 2.5mm 2mm; border-top: 1mm solid #000; border-bottom: 1mm solid #000; }
-    .words { margin-top: 2mm; font-size: 8.5pt; }
-    .footnote { margin-top: 4mm; font-size: 9pt; font-weight: bold; text-align: center; }
-    table.signatures { width: 100%; margin-top: 14mm; }
-    table.signatures td { text-align: center; padding: 0 5mm; font-size: 8.5pt; }
-    .sig-line { border-top: 0.3mm solid #000; padding-top: 1mm; }
-    table.foot { width: 100%; margin-top: 5mm; border-top: 0.3mm solid #000; }
-    table.foot td { padding-top: 1.5mm; font-size: 7pt; color: #555; }
+    table.sums tr.owed td { font-weight: bold; font-size: 11pt; padding: 1.2mm 2mm; border-top: 0.8mm solid #000; border-bottom: 0.8mm solid #000; }
+    .words { margin-top: 1.5mm; font-size: 8pt; }
+    .footnote { margin-top: 2.5mm; font-size: 8.5pt; font-weight: bold; text-align: center; }
+    table.signatures { width: 100%; margin-top: 10mm; }
+    table.signatures td { text-align: center; padding: 0 5mm; font-size: 8pt; }
+    .sig-line { border-top: 0.3mm solid #000; padding-top: 0.8mm; }
+    table.foot { width: 100%; margin-top: 2.5mm; border-top: 0.3mm solid #000; }
+    table.foot td { padding-top: 1mm; font-size: 7pt; color: #555; }
 </style>
 
 <table style="width: 100%">
@@ -110,17 +117,22 @@
     </tr>
 </table>
 
-@include('sales::print.partials.invoice-items', ['v' => $v, 'facts' => $facts, 'paper' => $paper, 'upper' => ! $bn, 'lang' => $lang])
+@include('sales::print.partials.invoice-items', ['v' => $v, 'facts' => $facts, 'paper' => $paper, 'upper' => ! $bn, 'lang' => $lang, 'inlineLot' => true])
 
 <table class="bottom">
     <tr>
-        <td class="side" style="width: 52%; padding-right: 8mm">
-            @include('sales::print.partials.invoice-payments', ['v' => $v, 'doc' => $doc, 'lang' => $lang])
-            @if ($v->shows('amount_words'))
-                <div class="words" data-words><strong>{{ $L('in_words') }}</strong>
-                    {{ $bn ? \App\Core\Support\AmountInWords::of(str_replace(',', '', (string) $v->sums['net_payable']), 'bn') : $facts['words'] }}</div>
-            @endif
-            <div style="margin-top: 4mm">@include('sales::print.partials.invoice-qr', ['v' => $v, 'width' => '20mm'])</div>
+        <td class="side" style="width: 56%; padding-right: 6mm">
+            {{-- ⭐ QR জমার ছকের পাশে, নিচে নয় — ২৫ সারির পাতায় ~২৫mm বাঁচে (৩ অক্টোবর ২০২৬) --}}
+            <table style="width: 100%"><tr>
+                <td style="vertical-align: top; padding-right: 3mm">
+                    @include('sales::print.partials.invoice-payments', ['v' => $v, 'doc' => $doc, 'lang' => $lang])
+                    @if ($v->shows('amount_words'))
+                        <div class="words" data-words><strong>{{ $L('in_words') }}</strong>
+                            {{ $bn ? \App\Core\Support\AmountInWords::of(str_replace(',', '', (string) $v->sums['net_payable']), 'bn') : $facts['words'] }}</div>
+                    @endif
+                </td>
+                @if ($v->qr !== '')<td style="width: 24mm; vertical-align: top">@include('sales::print.partials.invoice-qr', ['v' => $v, 'width' => '20mm'])</td>@endif
+            </tr></table>
         </td>
         <td class="side">@include('sales::print.partials.invoice-sums', ['v' => $v, 'paper' => $paper, 'lang' => $lang])</td>
     </tr>

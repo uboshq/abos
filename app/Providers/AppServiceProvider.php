@@ -6,6 +6,7 @@ use App\Core\Contracts\KnowsWhereAPersonsMoneyBelongs;
 use App\Core\Contracts\TurnsATypedNameIntoAParty;
 use App\Core\Engines\Approval\ApprovalEngine;
 use App\Core\Engines\Drill\DrillResolver;
+use App\Core\Engines\Print\PrintScale;
 use App\Core\Services\DataScope;
 use App\Core\Services\FormIsNotSubmittedTwice;
 use App\Core\Services\LedgerBalances;
@@ -24,7 +25,9 @@ use App\Policies\UserPolicy;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Foundation\Http\Events\RequestHandled;
 use Illuminate\Support\Facades\Blade;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
@@ -165,6 +168,12 @@ class AppServiceProvider extends ServiceProvider
         $this->app->scoped(ListExport::class);
 
         /*
+         * ⭐ ছাপার মাপ % — অনুরোধ-প্রতি একটা ([[PrintScale]]): ইঞ্জিন যা বসায়, উত্তরের মাথা আর ছাপার ইতিহাস তা-ই
+         * পড়ে। ⚠️ scoped না হলে প্রতিবার নতুন বস্তু, আর বসানো মাপটা হারিয়ে যেত।
+         */
+        $this->app->scoped(PrintScale::class);
+
+        /*
          * অনুমোদনের ইঞ্জিনও অনুরোধ প্রতি একটা।
          *
          * ছকগুলো ভেতরে জমিয়ে রাখে (একই ছক বিশবার খোঁজা হয় না)। বাঁধন
@@ -253,6 +262,18 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        /*
+         * ⭐ কোন মাপে ছাপা হলো — `X-Print-Scale: 85; auto` ([[PrintScale]], ১ অক্টোবর ২০২৬)।
+         * ⓘ এক জায়গায়, তাই কোনো ছাপার কন্ট্রোলার ছুঁতে হয়নি; কাগজে কিছু লেখা হয় না (মালিক: কাগজ পরিষ্কার)।
+         */
+        Event::listen(RequestHandled::class, function (RequestHandled $event): void {
+            $scale = app(PrintScale::class);
+
+            if ($scale->used() !== null) {
+                $event->response->headers->set('X-Print-Scale', $scale->used().($scale->wasAuto() ? '; auto' : ''));
+            }
+        });
+
         /*
          * ⛔ লগইনের থলে — "IP + টাইপ করা নাম" ধরে, আর গোটা ঠিকানার একটা উঁচু ছাদ
          * (গভীর অডিট ২৯ সেপ্টেম্বর ২০২৬)।

@@ -186,6 +186,31 @@ final class InvoicePaperView
     {
         $plain = fn ($v) => str_replace(',', '', (string) $v);
 
+        /*
+         * ⭐ বিলের মাসের আসল খাতা, বিবরণসহ — মালিক, ৩ অক্টোবর ২০২৬ ([[SalesPrintController::monthMovement()]])।
+         * ⓘ প্রথম সারির নাম এখানে, কাগজের ভাষায়। ⓘ জের "250.79 Due" / "22,958.21 Advance" — চিহ্ন নয়, নাম
+         * (মালিক, একই দিন: "+- dile bujte kosto hobe")।
+         */
+        if (is_array($this->facts['movement'] ?? null)) {
+            $money = fn (string $x) => $x === '' ? '' : Money::format($x);
+            /* ⓘ ডিলারের কাগজে Dr/Cr নয় — মালিক, ৩ অক্টোবর ২০২৬ (নকশা দেখার সময়): "… Due" / "… Advance" */
+            $side = fn (string $x) => match (bccomp($x, '0', 4)) {
+                1 => Money::format($x).' Due',
+                -1 => Money::format(bcmul($x, '-1', 4)).' Advance',
+                default => Money::format('0'),
+            };
+
+            $rows = array_values($this->facts['movement']);
+
+            return array_map(fn (array $r, int $i) => [
+                ...$r,
+                'text' => $i === 0 ? $this->label('month_opening') : $r['text'],
+                'debit' => $money($r['debit']),
+                'credit' => $money($r['credit']),
+                'balance' => $side($r['balance']),
+            ], $rows, array_keys($rows));
+        }
+
         $balance = $plain($this->sums['previous_due']);
         $rows = [['date' => '', 'text' => $this->label('previous_due'), 'debit' => '', 'credit' => '', 'balance' => $balance]];
 

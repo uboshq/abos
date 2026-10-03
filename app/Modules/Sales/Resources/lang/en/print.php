@@ -81,6 +81,7 @@ return [
         'payments_title' => 'Paid - Received Into Accounts',
         'txn_id' => 'Transaction ID',
         'txn_date' => 'Transaction Date',
+        'month_opening' => 'Opening balance',
         'method' => 'Payment Method',
         'narration' => 'Narration',
         'amount' => 'Amount',
