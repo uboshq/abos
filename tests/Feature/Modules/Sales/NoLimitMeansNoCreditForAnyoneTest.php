@@ -52,8 +52,8 @@ final class NoLimitMeansNoCreditForAnyoneTest extends TestCase
         $this->actingAs(User::query()->where('email', 'owner@abos.test')->firstOrFail());
         app(StandardChart::class)->install();
 
-        // ⛔ ডেমোর অবস্থা — দুই সুইচই বন্ধ; আগে এতেই দেয়াল উঠে যেত
-        app(SettingsService::class)->set('customer.credit_limit_enabled', false);
+        // ⓘ প্রতিষ্ঠানের সুইচ চালু — তখন সীমা পরম, এই ফাইলের দাবি (সুইচ বন্ধের দিক: [[TheCreditSwitchIsTheCompanysOwnChoiceTest]])
+        app(SettingsService::class)->set('customer.credit_limit_enabled', true);
         app(SettingsService::class)->set('customer.zero_limit_blocks', false);
 
         $this->customer = Customer::query()->where('name_en', 'Rahim Traders')->firstOrFail();

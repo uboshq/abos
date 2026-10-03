@@ -320,18 +320,19 @@ final class TheLimitWasALimitForEveryoneTest extends TestCase
     }
 
     /**
-     * ⛔ কোম্পানি সুইচ বন্ধ থাকলেও সীমা আটকায় — মালিকের চূড়ান্ত কথা, ১ অক্টোবর ২০২৬ ("THATS FINAL")।
+     * ⭐ কোম্পানি সুইচ বন্ধ — সীমা যাচাই হয় না (মালিকের বিক্রয়-পরিকল্পনা, সংস্করণ ২, ৪ অক্টোবর ২০২৬): *"কোনো প্রতিষ্ঠান
+     * সীমার বাইরে বাকি দিতে চাইলে নিজের সেটিংস থেকে 'বাকির সীমা' সুইচ বন্ধ রাখবে"*।
      *
-     * ⓘ আগে এই দাবি উল্টো বলত (সুইচ বন্ধ = কিছুই আটকায় না)। ডেমোর S-0009 ঠিক সেই পথে দেয়াল পার হয়েছিল
-     * ([[NoLimitMeansNoCreditForAnyoneTest]]); এখন সুইচটা দেয়াল নরম করে না ([[CreditExposure::isOn()]])।
+     * ⓘ ১ অক্টোবরের "সুইচ বন্ধেও আটকায়" নিয়ম এতে উল্টেছে। চালু থাকলে পরম — এই ফাইলের বাকি দাবি; দুই দিক একসাথে
+     * [[TheCreditSwitchIsTheCompanysOwnChoiceTest]]-এ।
      */
-    public function test_even_with_the_company_switch_off_the_limit_stops(): void
+    public function test_with_the_company_switch_off_the_limit_does_not_stop(): void
     {
         app(SettingsService::class)->set('customer.credit_limit_enabled', false);
+        app()->forgetInstance(\App\Modules\Sales\Services\CreditExposure::class);
 
-        $this->expectException(ValidationException::class);
-
-        $this->sell(15);
+        $this->sell(15); // ⓘ ছুড়ে না দিলেই দাবি পূর্ণ
+        $this->addToAssertionCount(1);
     }
 
     /**

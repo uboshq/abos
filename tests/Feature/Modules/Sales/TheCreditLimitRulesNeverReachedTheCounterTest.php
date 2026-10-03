@@ -88,24 +88,22 @@ final class TheCreditLimitRulesNeverReachedTheCounterTest extends TestCase
      *
      * ⭐ তাই সুইচটা **দুই দিকেই** ঘুরিয়ে দেখা হয়।
      */
-    public function test_the_screen_enforces_the_limit_whatever_the_switches_say(): void
+    public function test_the_screen_follows_the_companys_credit_switch(): void
     {
         $settings = app(SettingsService::class);
 
         /*
-         * ⛔ ১ অক্টোবর ২০২৬ থেকে সীমা পরম — মালিকের চূড়ান্ত কথা। ⓘ আগে এই দাবি দেখত পর্দা সুইচ মানে কি না; এখন
-         * উল্টো: দুই সুইচ যাই থাকুক, পর্দা সেবার মতোই আটকায় (`enabled` ও `zeroBlocks` সবসময় সত্য) — নইলে পর্দা
-         * বিক্রি তুলতে দিত আর সংরক্ষণে সেবা আটকাত ([[CreditExposure::isOn()]], [[DirectSaleController]])।
+         * ⭐ ৪ অক্টোবর ২০২৬ (বিক্রয়-পরিকল্পনা, সংস্করণ ২): বাকির সীমা পরম, তবে প্রতিষ্ঠানের একটা সুইচ — বন্ধ রাখলে
+         * যাচাই হয় না। ⓘ পর্দা সেবার একই প্রশ্ন করে ([[CreditExposure::isOn()]]), তাই সুইচ যা বলে পর্দাও তা-ই;
+         * নইলে পর্দা বিক্রি তুলতে দিত না অথচ সেবা মেনে নিত, বা উল্টো। শূন্য সীমা সবসময় শূন্য (`zeroBlocks`)।
          */
         foreach ([true, false] as $on) {
             $settings->set('customer.credit_limit_enabled', $on);
-            $settings->set('customer.zero_limit_blocks', $on);
             $html = $this->counterHtml();
 
-            $this->assertStringContainsString('&quot;enabled&quot;:true', $html,
-                '⛔ সুইচ '.($on ? 'চালু' : 'বন্ধ').', আর পর্দা সীমা বন্ধ ভাবছে — সেবা তবু আটকাবে।');
-            $this->assertStringContainsString('&quot;zeroBlocks&quot;:true', $html,
-                '⛔ সুইচ '.($on ? 'চালু' : 'বন্ধ').', আর পর্দা শূন্য সীমাকে সীমাহীন ভাবছে।');
+            $this->assertStringContainsString('&quot;enabled&quot;:'.($on ? 'true' : 'false'), $html,
+                '⛔ সুইচ '.($on ? 'চালু' : 'বন্ধ').', অথচ পর্দা উল্টো ভাবছে।');
+            $this->assertStringContainsString('&quot;zeroBlocks&quot;:true', $html);
         }
     }
 

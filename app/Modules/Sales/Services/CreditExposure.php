@@ -74,15 +74,18 @@ final class CreditExposure implements CreditHolds
     }
 
     /**
-     * ⛔ বাকির সীমা সবসময় চালু — মালিকের চূড়ান্ত কথা, ১ অক্টোবর ২০২৬ ("THATS FINAL")।
+     * ⭐ বাকির সীমা চালু কি না — প্রতিষ্ঠানের একমাত্র সুইচ (মালিকের বিক্রয়-পরিকল্পনা, সংস্করণ ২, ৪ অক্টোবর ২০২৬):
+     * *"বাকির সীমা পরম: সীমার বাইরে বাকি যাবে না। কোনো প্রতিষ্ঠান সীমার বাইরে বাকি দিতে চাইলে নিজের সেটিংস থেকে
+     * 'বাকির সীমা' সুইচ বন্ধ রাখবে"*।
      *
-     * ⓘ আগে `customer.credit_limit_enabled` বন্ধ করলে দেয়ালটাই উঠে যেত। মালিকের নিয়ম: সীমা কেউ পার
-     * করতে পারবে না, কোনো পথে নয় — একমাত্র পথ সুপার অ্যাডমিন আগে গ্রাহকের সীমা বাড়ান। তাই সুইচটা
-     * আর দেয়াল নরম করে না ([[NoLimitMeansNoCreditForAnyoneTest]])।
+     * ⓘ চালু (ডিফল্ট) — আজকের মতোই পরম, কারও ছাড় নেই। বন্ধ — কোনো পথে (কাউন্টার, আদেশ, DO, ফোন, পোর্টাল) সীমা
+     * যাচাই হয় না; সব পথ এই একটা প্রশ্নই করে ([[assertRoom()]], [[assertRoomLocked()]], [[check()]])।
+     * ⛔ সুইচ বদলাতে পারেন কেবল সুপার অ্যাডমিন, আর বদল খাতায় ওঠে (`super_admin_only`, [[SettingsService::mayChange()]])।
+     * ⓘ ১ অক্টোবরের "সবসময় চালু" নিয়ম এই নির্দেশে উল্টেছে ([[TheCreditSwitchIsTheCompanysOwnChoiceTest]])।
      */
     public function isOn(): bool
     {
-        return true;
+        return app(\App\Core\Services\SettingsService::class)->enabled('customer.credit_limit_enabled');
     }
 
     /**
@@ -98,6 +101,11 @@ final class CreditExposure implements CreditHolds
      */
     public function check(Customer $customer, string $adding, ?int $exceptDeliveryOrderId = null): array
     {
+        // ⓘ সুইচ বন্ধ — সীমা যাচাই হয় না, DO-র হিসাবের "সীমা" সতর্কতাও চুপ ([[isOn()]])
+        if (! $this->isOn()) {
+            return ['fits' => true, 'short' => '0', 'used_percent' => null];
+        }
+
         $limit = bcadd((string) ($customer->credit_limit ?? '0'), '0', 4);
 
         $exposure = bcadd(
