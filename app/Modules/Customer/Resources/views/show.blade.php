@@ -260,7 +260,7 @@
             ['key' => 'credit', 'label' => __('core.table.credit'), 'numeric' => true, 'width' => '8rem',
              'render' => fn ($e) => \App\Core\Support\Money::isZero($e->credit) ? '' : \App\Core\Support\Money::format($e->credit)],
             ['key' => 'balance', 'label' => __('core.table.balance'), 'numeric' => true, 'width' => '9rem',
-             'render' => fn ($e) => \App\Core\Support\Money::format($e->running_balance)],
+             'render' => fn ($e) => \App\Core\Support\Money::drCr($e->net_balance)],
         ];
     @endphp
 
@@ -270,14 +270,12 @@
             ⭐ টুলবার — মালিকের নির্দেশ, ২১ সেপ্টেম্বর ২০২৬:
             *"lal mak kora joygay eta bosabe, same vabe customer e o"*।
 
-            ── ⛔ যে বোতামগুলো এখানে **নেই**, আর কেন ─────────────────────
-            খোঁজা · ছাঁকনি · সাজানো — তিনটাই ঠিকানায় চাবি বসায়, আর এই
-            পাতার কন্ট্রোলার ঐ চাবিগুলো **পড়েই না**। ⚠️ বসালে তিনটা
-            জীবন্ত দেখতে বোতাম হত যেগুলো চাপলে কিছুই বদলাত না — ঠিক
-            সেই মৃত বোতাম, যার তেইশটা আজ রাতে সারানো হয়েছে।
-
-            ⓘ মালিক নিজেই বলেছেন *"ok za lage ta daw"* — তাই যা সত্যিই
-            কাজ করে কেবল সেটুকুই: কলাম, ঘনত্ব, রপ্তানি, ভাগ, ছাপা, নতুন করে।
+            ── ⭐ খোঁজা আর ছাঁকনি — ৩ অক্টোবর ২০২৬ থেকে সত্যি ─────────────
+            মালিক: *"ফিল্টার অপশন দিতে হবে সার্চ অপশন দিতে হবে"*। কন্ট্রোলার এখন
+            চাবিগুলো পড়ে ([[PartyLedger::filter()]]): নম্বর/বিবরণ/অঙ্ক, তারিখ,
+            কাগজের ধরন, কেবল ডেবিট বা ক্রেডিট। ⓘ আগে বোতামগুলো ইচ্ছে করে লুকানো
+            ছিল, কারণ তখন কন্ট্রোলার পড়ত না — মৃত বোতামের চেয়ে না থাকা ভালো।
+            ⚠️ জের ছাঁকনিতেও খাতার সব লেনদেন থেকে, কখনো শূন্য থেকে নয়।
 
             ── ⭐ ছাপাটা এখানে লিংক, বোতাম নয় ──────────────────────────
             পর্দায় আজকেরটা উপরে, কাগজে ব্যাংকের খাতার মতো পুরনো আগে।
@@ -286,18 +284,20 @@
         --}}
         <form method="GET" class="contents">
             <x-ui.toolbar :title="__('customer::section.transactions')"
-                          :search="false"
-                          :filter="false"
+                          :search-placeholder="__('party_ledger.search')"
                           :columns="$ledgerColumns"
                           {{-- ℹ এই দুইটা ছাঁকনি নয়, দৃশ্যের অবস্থা — না বললে টুলবার
                                "asc" আর "1" লেখা দুইটা কাঁচা চিপ তুলত, আর সরাতে গেলে
                                কাগজের ক্রমটাই হারাত। --}}
                           :quiet="['ledger', 'print']"
-                          :print-href="request()->fullUrlWithQuery(['ledger' => 'asc', 'print' => 1])" />
+                          :print-href="request()->fullUrlWithQuery(['ledger' => 'asc', 'print' => 1])">
+                {{-- ⭐ খোঁজা আর ছাঁকনি — মালিক, ৩ অক্টোবর ২০২৬; কন্ট্রোলার পড়ে [[PartyLedger::filter()]], জের খাতার সব লেনদেন থেকে --}}
+                <x-ui.party-ledger-filters party="customer" />
+            </x-ui.toolbar>
         </form>
 
         <x-ui.table
-            :empty="__('customer::message.no_transactions')"
+            :empty="\App\Core\Support\PartyLedger::filtered(request()) ? __('core.empty.no_results') : __('customer::message.no_transactions')"
             :rows="$entries"
             :compact="request()->boolean('compact')"
             :columns="$ledgerColumns" />

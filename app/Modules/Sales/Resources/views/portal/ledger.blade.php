@@ -18,7 +18,7 @@
         <p class="text-2xs uppercase tracking-wide text-(--color-ink-muted)">
             {{ __('sales::portal.due') }}
         </p>
-        <p class="num text-3xl font-semibold">{{ \App\Core\Support\Money::format($closing) }}</p>
+        <p class="num text-3xl font-semibold">{{ \App\Core\Support\Money::drCr($closing) }}</p>
     </div>
 
     {{--
@@ -118,7 +118,7 @@
                         <td ></td>
                         <td ></td>
                         <td class="num text-end">
-                            {{ \App\Core\Support\Money::format($opening) }}
+                            {{ \App\Core\Support\Money::drCr($opening) }}
                         </td>
                     </tr>
 
@@ -167,7 +167,7 @@
                             </td>
 
                             <td class="num text-end font-medium">
-                                {{ \App\Core\Support\Money::format($row->running_balance) }}
+                                {{ \App\Core\Support\Money::drCr($row->running_balance) }}
                             </td>
                         </tr>
                     @endforeach

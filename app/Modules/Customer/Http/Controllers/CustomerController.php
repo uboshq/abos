@@ -11,7 +11,7 @@ use App\Core\Panels\FactRegistry;
 use App\Core\Services\CustomFieldService;
 use App\Core\Services\MenuBuilder;
 use App\Core\Services\SettingsService;
-use App\Core\Support\RunningBalance;
+use App\Core\Support\PartyLedger;
 use App\Core\Support\ViewedBranch;
 use App\Http\Controllers\Controller;
 use App\Models\Branch;
@@ -220,33 +220,16 @@ class CustomerController extends Controller implements HasMiddleware
             ->orderBy('trx_date')
             ->orderBy('id');
 
-        $page = max(1, (int) $request->query('page', 1));
-        $perPage = 50;
+        /*
+         * ⭐ খোঁজা আর ছাঁকনি — মালিক, ৩ অক্টোবর ২০২৬: "ফিল্টার অপশন দিতে হবে সার্চ অপশন দিতে হবে"।
+         * ⓘ প্রতিটা সারির জের খাতার সব সারি থেকে, ছাঁকনিতেও — কখনো শূন্য থেকে নয় ([[PartyLedger::page()]])।
+         * ⓘ `net_balance` খাতার নিয়মে (ডেবিট − ক্রেডিট), পর্দা লেখে "(Dr)/(Cr)" ([[Money::drCr()]]);
+         * `running_balance` পাতার পুরনো অর্থেই থাকে — অন্য কোনো পড়ুয়া যেন না ভাঙে।
+         */
+        $entries = PartyLedger::page($ledger, $request);
 
-        // চলমান ব্যালেন্স শুরু শূন্য থেকে, তারপর আগের পাতাগুলোর সব সারি —
-        // নাহলে প্রতিটা পাতা শূন্য থেকে শুরু হত আর শেষ পাতার ব্যালেন্স
-        // উপরের বকেয়ার সাথে মিলত না।
-        //
-        // খোলা ব্যালেন্স আলাদা করে যোগ করা হয় না: ওটা এখন লেজারের
-        // সত্যিকারের একটা দাখিলা (OpeningBalanceService), তাই নিজে
-        // থেকেই প্রথম সারি হয়ে আসে।
-        $opening = '0';
-
-        if ($page > 1) {
-            $opening = RunningBalance::sumOf(
-                (clone $ledger)->forPage(1, ($page - 1) * $perPage)->get(),
-                fn (LedgerEntry $e) => $e->debit,
-                fn (LedgerEntry $e) => $e->credit,
-                $opening,
-            );
-        }
-
-        $entries = $ledger->paginate($perPage)->withQueryString();
-
-        $running = new RunningBalance($opening);
-
-        $entries->getCollection()->each(function (LedgerEntry $entry) use ($running) {
-            $entry->running_balance = $running->add($entry->debit, $entry->credit);
+        $entries->getCollection()->each(function (LedgerEntry $entry) {
+            $entry->running_balance = $entry->net_balance;
         });
 
         /*

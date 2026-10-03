@@ -10,7 +10,7 @@ use App\Core\Concerns\SortsLists;
 use App\Core\Services\CustomFieldService;
 use App\Core\Services\MenuBuilder;
 use App\Core\Services\SettingsService;
-use App\Core\Support\RunningBalance;
+use App\Core\Support\PartyLedger;
 use App\Core\Support\ViewedBranch;
 use App\Http\Controllers\Controller;
 use App\Models\Branch;
@@ -224,38 +224,16 @@ class SupplierController extends Controller implements HasMiddleware
             ->orderBy('trx_date')
             ->orderBy('id');
 
-        $page = max(1, (int) $request->query('page', 1));
-        $perPage = 50;
-
         /*
-         * চলমান ব্যালেন্স ক্রেডিট-ধনাত্মক চিহ্নে।
-         *
-         * RunningBalance ডেবিট − ক্রেডিট গোনে, যা সম্পদের জন্য ঠিক।
-         * দেনা ক্রেডিট প্রকৃতির, তাই এখানে দুইটা যুক্তি উল্টে দেওয়া হয়:
-         * ক্রেডিটকে "ডেবিট" আর ডেবিটকে "ক্রেডিট" হিসেবে পাঠানো হয়।
-         * নাহলে প্রতিটা সারিতে ঋণাত্মক সংখ্যা দেখাত।
-         *
-         * শুরুর অঙ্ক শূন্য, আর খোলা ব্যালেন্সের জন্য কোনো কৃত্রিম সারিও
-         * বসানো হয় না: ওটা এখন লেজারের সত্যিকারের একটা দাখিলা, তাই
-         * নিজে থেকেই প্রথম সারি হয়ে আসে (OpeningBalanceService)।
+         * ⭐ খোঁজা আর ছাঁকনি — মালিক, ৩ অক্টোবর ২০২৬: "ফিল্টার অপশন দিতে হবে সার্চ অপশন দিতে হবে"।
+         * ⓘ প্রতিটা সারির জের খাতার সব সারি থেকে, ছাঁকনিতেও — কখনো শূন্য থেকে নয় ([[PartyLedger::page()]])।
+         * ⓘ `net_balance` খাতার নিয়মে (ডেবিট − ক্রেডিট), পর্দা লেখে "(Dr)/(Cr)" ([[Money::drCr()]]);
+         * `running_balance` পাতার পুরনো অর্থেই থাকে — অন্য কোনো পড়ুয়া যেন না ভাঙে।
          */
-        $opening = '0';
+        $entries = PartyLedger::page($ledger, $request);
 
-        if ($page > 1) {
-            $opening = RunningBalance::sumOf(
-                (clone $ledger)->forPage(1, ($page - 1) * $perPage)->get(),
-                fn (LedgerEntry $e) => $e->credit,
-                fn (LedgerEntry $e) => $e->debit,
-                $opening,
-            );
-        }
-
-        $entries = $ledger->paginate($perPage)->withQueryString();
-
-        $running = new RunningBalance($opening);
-
-        $entries->getCollection()->each(function (LedgerEntry $entry) use ($running) {
-            $entry->running_balance = $running->add($entry->credit, $entry->debit);
+        $entries->getCollection()->each(function (LedgerEntry $entry) {
+            $entry->running_balance = bcmul($entry->net_balance, '-1', 4);
         });
 
         /*
