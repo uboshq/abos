@@ -45,5 +45,13 @@ final class ADealerOnThePortalIsNotAStaffMemberTest extends TestCase
 
         // ⓘ মজুদ নড়লে মাসের তালা দেখা হয় — পেছনের তারিখের জানালা কর্মীর, গ্রাহকের ওপর `can()` নয় ([[OpenPeriod]])
         app(\App\Core\Services\OpenPeriod::class)->assertOpen(now()->toDateString());
+
+        // ⓘ মজুদ নড়লে "কে" — গ্রাহকের id users-এর FK ভাঙত; কর্মী নন, তাই খালি ([[Actor::userId()]])
+        $product = \App\Modules\Inventory\Models\Product::query()->orderBy('id')->firstOrFail();
+        $movement = app(\App\Modules\Inventory\Services\StockService::class)->move(
+            product: $product, warehouse: Warehouse::query()->firstOrFail(),
+            sourceType: 'test:portal', sourceId: 1, reserved: '1',
+        );
+        $this->assertNull($movement->created_by, '⛔ গ্রাহকের id কর্মীর ঘরে বসেছে।');
     }
 }

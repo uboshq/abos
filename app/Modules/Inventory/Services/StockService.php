@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Inventory\Services;
 
 use App\Core\Services\OpenPeriod;
+use App\Core\Support\Actor;
 use App\Core\Support\CompanyContext;
 use App\Modules\Inventory\Models\Batch;
 use App\Modules\Inventory\Models\Product;
@@ -197,7 +198,8 @@ final class StockService
                 'source_id' => $sourceId,
                 'document_no' => $documentNo,
                 'narration' => $narration,
-                'created_by' => auth()->id(),
+                // ⓘ কর্মী হলে তাঁর id; ডিলার পোর্টালের গ্রাহক হলে null — users-এর FK ভাঙে না (abos-2c, ৩ অক্টোবর ২০২৬)
+                'created_by' => Actor::userId(),
             ]);
         });
     }
