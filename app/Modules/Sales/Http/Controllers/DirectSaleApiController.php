@@ -16,6 +16,7 @@ use App\Modules\Inventory\Models\Warehouse;
 use App\Modules\Inventory\Services\FreeAllowance;
 use App\Modules\Sales\Http\Requests\DirectSaleRules;
 use App\Modules\Sales\Services\DirectSaleOptions;
+use App\Modules\Sales\Services\DirectSaleOverview;
 use App\Modules\Sales\Services\DirectSaleService;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\JsonResponse;
@@ -110,6 +111,18 @@ class DirectSaleApiController extends Controller implements HasMiddleware
         return response()->json($batch !== null
             ? ['known' => true, ...app(FreeAllowance::class)->onLot($batch, (string) $data['qty'])]
             : ['known' => true, 'allowed' => app(FreeAllowance::class)->on($product, $warehouse, (string) $data['qty'])]);
+    }
+
+    /**
+     * ⭐ `POST /direct/overview` — নিশ্চিতের আগে সারাংশ (মালিক, ৪ অক্টোবর ২০২৬; [[ConfirmOverview]])। বিক্রির একই ঘর, একই
+     * যাচাই — কিন্তু কিছুই লেখে না; ফোন এটা নিচ থেকে ওঠা পাতায় দেখায়, তারপর "নিশ্চিত" বা "খসড়া"।
+     */
+    public function overview(Request $request): JsonResponse
+    {
+        $input = $this->translate($request->all());
+        $data = Validator::make($input, DirectSaleRules::store(CompanyContext::id(), $input))->validate();
+
+        return response()->json(app(DirectSaleOverview::class)->build($data, $data['lines'])->toArray());
     }
 
     /**

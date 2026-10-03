@@ -1,0 +1,12 @@
+<?php
+
+declare(strict_types=1);
+
+// ⭐ নিশ্চিতের আগে সারাংশের পপ-আপ ([[x-ui.confirm-overview]], [[ConfirmOverview]], ৪ অক্টোবর ২০২৬)
+return [
+    'loading' => 'সারাংশ আনা হচ্ছে…',
+    'failed' => 'সারাংশ আনা গেল না — নেট দেখে আবার চেষ্টা করুন।',
+    'confirm' => 'নিশ্চিত করুন',
+    'draft' => 'খসড়া রাখুন',
+    'back' => 'ফিরে যান',
+];

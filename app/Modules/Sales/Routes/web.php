@@ -131,6 +131,8 @@ Route::middleware('auth')->prefix('sales')->group(function () {
     Route::prefix('direct')->name('direct.')->group(function () {
         Route::get('/', [DirectSaleController::class, 'create'])->name('create');
         Route::post('/', [DirectSaleController::class, 'store'])->name('store');
+        // ⭐ নিশ্চিতের আগে সারাংশ — পপ-আপের ভিতর ([[DirectSaleOverviewController]], ৪ অক্টোবর ২০২৬)
+        Route::post('/overview', \App\Modules\Sales\Http\Controllers\DirectSaleOverviewController::class)->name('overview');
 
         /*
          * ⭐ রাখা খসড়া বাতিল — মালিকের নির্দেশ, ২৬ সেপ্টেম্বর ২০২৬: খোলা খসড়া
