@@ -214,6 +214,11 @@ final class ReportResult
             return '';
         }
 
+        // ⓘ জের — "(Dr) 250.79", খালি বিয়োগ নয় ([[ReportColumn::DR_CR]])
+        if ($column->type === ReportColumn::DR_CR) {
+            return Money::drCr($value, $column->decimals());
+        }
+
         if ($column->isNumeric()) {
             /*
              * টাকার অঙ্ক সবসময় ইংরেজি সংখ্যায় (সেকশন ১৮.৪), আর গোল করা

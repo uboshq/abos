@@ -150,7 +150,8 @@
             <span class="flex-1"></span>
 
             <strong class="num text-lg tabular-nums">
-                {{ \App\Core\Support\Money::format($summary['value']) }}
+                {{-- ⓘ `text` দিলে সেটাই — খাতার জের "(Dr) 250.79" ([[PartyLedgerReports]]) --}}
+                {{ $summary['text'] ?? \App\Core\Support\Money::format($summary['value']) }}
             </strong>
         </section>
     @endisset
@@ -377,7 +378,7 @@
                             @foreach ($columns as $column)
                                 <th scope="col"
                                     @class([
-                                        'num' => in_array($column->type, [$money], true),
+                                        'num' => in_array($column->type, [$money, \App\Core\Engines\Report\ReportColumn::DR_CR], true),
                                         'whitespace-nowrap' => $column->type === $date,
                                     ])
                                     @if ($column->width) style="width: {{ $column->width }}" @endif>
@@ -407,7 +408,7 @@
                                         @foreach ($columns as $column)
                                             <td @class([
                                                 'align-middle',
-                                                'num' => in_array($column->type, [$money], true),
+                                                'num' => in_array($column->type, [$money, \App\Core\Engines\Report\ReportColumn::DR_CR], true),
                                                 'whitespace-nowrap' => $column->type === $date,
                                             ])>
                                                 @include('accounts::report.partials.cell', [
@@ -427,7 +428,7 @@
                                 @endif
                                 <tr class="font-semibold">
                                     @foreach ($columns as $index => $column)
-                                        <td @class(['num' => in_array($column->type, [$money], true)])>
+                                        <td @class(['num' => in_array($column->type, [$money, \App\Core\Engines\Report\ReportColumn::DR_CR], true)])>
                                             @if ($index === 0)
                                                 {{ __('core.report.branch_total') }} — {{ $section->branchName }}
                                             @elseif ($column->total && isset($section->totals[$column->key]))
@@ -446,7 +447,7 @@
                                     @foreach ($columns as $column)
                                         <td @class([
                                             'align-middle',
-                                            'num' => in_array($column->type, [$money], true),
+                                            'num' => in_array($column->type, [$money, \App\Core\Engines\Report\ReportColumn::DR_CR], true),
                                             'whitespace-nowrap' => $column->type === $date,
                                         ])>
                                             @include('accounts::report.partials.cell', [
@@ -463,7 +464,7 @@
                     <tfoot>
                         <tr>
                             @foreach ($columns as $index => $column)
-                                <td @class(['num' => in_array($column->type, [$money], true)])>
+                                <td @class(['num' => in_array($column->type, [$money, \App\Core\Engines\Report\ReportColumn::DR_CR], true)])>
                                     @if ($index === 0)
                                         {{ $result->isSplitByBranch() ? __('core.report.grand_total') : __('core.print.total') }}
                                     @elseif ($column->total && isset($result->totals[$column->key]))

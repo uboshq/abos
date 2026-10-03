@@ -18,6 +18,11 @@
             ? \App\Core\Support\Money::format($value) : '' }}
         @break
 
+    @case (\App\Core\Engines\Report\ReportColumn::DR_CR)
+        {{-- ⓘ জের — "(Dr) 250.79" / "(Cr) 22,958.21", খালি বিয়োগ নয় (মালিক, ৩ অক্টোবর ২০২৬) --}}
+        {{ $value === null || $value === '' ? '' : \App\Core\Support\Money::drCr($value) }}
+        @break
+
     @case (\App\Core\Engines\Report\ReportColumn::QUANTITY)
         {{-- ⛔ আগে এই ধরনের কোনো ঘর ছিল না — কাঁচা "3796.0000" ছাপা হত (মালিক, ৩০ সেপ্টেম্বর ২০২৬);
              ⭐ এখন ৩,৭৯৬ বা ১২.৫ ([[ReportResult::number()]]) --}}

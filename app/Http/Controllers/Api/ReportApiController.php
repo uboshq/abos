@@ -295,7 +295,7 @@ final class ReportApiController extends Controller
             return null;
         }
 
-        if (in_array($column->type, [ReportColumn::MONEY, ReportColumn::QUANTITY], true) && is_numeric($value)) {
+        if (in_array($column->type, [ReportColumn::MONEY, ReportColumn::QUANTITY, ReportColumn::DR_CR], true) && is_numeric($value)) {
             return bcadd((string) $value, '0', 4);
         }
 

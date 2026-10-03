@@ -48,6 +48,8 @@ final class CoreReports
         $engine->register(ExpenseAnalysisReport::definition());
         // ⭐ শাখা পাশাপাশি — নির্বাহী পাতা ও শাখাভিত্তিক লাভ-ক্ষতি (রিপোর্ট সেন্টার ধাপ ২)
         $engine->register(BranchesSideBySideReport::definition());
+        // ⭐ কাস্টমার ও সাপ্লায়ার লেজার — মালিক, ৩ অক্টোবর ২০২৬: "একাউন্টসে কাস্টমার লেজার দিতে হবে জরুরি"
+        PartyLedgerReports::registerAll($engine);
     }
 
     /**

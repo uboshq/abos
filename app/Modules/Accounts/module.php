@@ -214,6 +214,9 @@ return [
             ['label' => 'accounts::menu.income_by_head', 'icon' => 'star', 'route' => 'accounts.report.show',
                 'route_params' => ['slug' => 'income-by-head'], 'permission' => 'accounts.report'],
             ['label' => 'accounts::menu.ledger', 'icon' => 'list', 'route' => 'accounts.report.show', 'route_params' => ['slug' => 'ledger'], 'permission' => 'accounts.report'],
+            // ⭐ কাস্টমার ও সাপ্লায়ার লেজার — খতিয়ানের পাশে (মালিক, ৩ অক্টোবর ২০২৬: "একাউন্টসে কাস্টমার লেজার দিতে হবে জরুরি")
+            ['label' => 'accounts::party_ledger.customer_title', 'icon' => 'customer', 'route' => 'accounts.report.show', 'route_params' => ['slug' => 'customer-ledger'], 'permission' => 'accounts.report'],
+            ['label' => 'accounts::party_ledger.supplier_title', 'icon' => 'list', 'route' => 'accounts.report.show', 'route_params' => ['slug' => 'supplier-ledger'], 'permission' => 'accounts.report'],
             ['label' => 'accounts::menu.trial_balance', 'icon' => 'scale', 'route' => 'accounts.report.show', 'route_params' => ['slug' => 'trial-balance'], 'permission' => 'accounts.report'],
             // ⭐ খাতা মেলানো — রিপোর্ট সেন্টার ধাপ ৬ (মালিক, ১ অক্টোবর ২০২৬)
             ['label' => 'accounts::branch_dues.title', 'icon' => 'scale', 'route' => 'accounts.report.show', 'route_params' => ['slug' => 'branch-dues'], 'permission' => 'accounts.report'],

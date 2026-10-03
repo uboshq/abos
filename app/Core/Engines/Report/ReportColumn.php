@@ -24,6 +24,9 @@ final class ReportColumn
 
     public const DOCUMENT = 'document';
 
+    /** খাতার জের, চিহ্ন ছাড়া — "(Dr) 250.79" / "(Cr) 22,958.21" ([[\App\Core\Support\Money::drCr()]]; মালিক, ৩ অক্টোবর ২০২৬) */
+    public const DR_CR = 'dr_cr';
+
     /*
      * শতাংশ — অবদান ও পরিবর্তন।
      *
@@ -73,7 +76,7 @@ final class ReportColumn
 
         $type = $definition['type'] ?? self::TEXT;
 
-        if (! in_array($type, [self::TEXT, self::MONEY, self::QUANTITY, self::DATE, self::DOCUMENT, self::PERCENT], true)) {
+        if (! in_array($type, [self::TEXT, self::MONEY, self::QUANTITY, self::DATE, self::DOCUMENT, self::PERCENT, self::DR_CR], true)) {
             throw new InvalidArgumentException("Report column '{$definition['key']}' has unknown type '{$type}'.");
         }
 
@@ -121,7 +124,7 @@ final class ReportColumn
     public function decimals(): int
     {
         return match ($this->type) {
-            self::MONEY => 2,
+            self::MONEY, self::DR_CR => 2,
             self::QUANTITY => 3,
 
             // শতাংশে দুই ঘরই যথেষ্ট — ৪০.১২% আর ৪০.১২৩৪% একই সিদ্ধান্তে

@@ -190,4 +190,24 @@ final class Money
 
         return $trimmed === '' ? '0' : $trimmed;
     }
+
+    /**
+     * খাতার জের, চিহ্ন ছাড়া — "(Dr) 250.79" / "(Cr) 22,958.21"; শূন্যে কেবল "0.00"।
+     *
+     * ⭐ মালিক, ৩ অক্টোবর ২০২৬: *"+- dile bujte kosto hobe"* — লেজারের জেরে খালি বিয়োগ চিহ্ন কখনো নয়। ⓘ নিয়ম খাতার
+     * (ডেবিট − ক্রেডিট): গ্রাহকে (Dr) = পাওনা, (Cr) = অগ্রিম; সরবরাহকারীতে (Cr) = দেনা, (Dr) = অগ্রিম।
+     * ⓘ রিপোর্টের কলামে [[ReportColumn::DR_CR]]।
+     */
+    public static function drCr(mixed $net, int $decimals = 2): string
+    {
+        $rounded = self::round($net, $decimals);
+        $sign = bccomp($rounded, '0', $decimals);
+        $amount = self::format(ltrim($rounded, '-'), $decimals);
+
+        return match ($sign) {
+            1 => '(Dr) '.$amount,
+            -1 => '(Cr) '.$amount,
+            default => $amount,
+        };
+    }
 }

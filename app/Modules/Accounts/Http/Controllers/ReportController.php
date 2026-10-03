@@ -83,6 +83,9 @@ class ReportController extends Controller implements HasMiddleware
          */
         'inflow' => 'accounts.inflow',
         'ledger' => 'accounts.ledger',
+        // ⭐ কাস্টমার ও সাপ্লায়ার লেজার — মালিক, ৩ অক্টোবর ২০২৬
+        'customer-ledger' => \App\Modules\Accounts\Reports\PartyLedgerReports::CUSTOMER,
+        'supplier-ledger' => \App\Modules\Accounts\Reports\PartyLedgerReports::SUPPLIER,
         'trial-balance' => 'accounts.trial_balance',
         // ⭐ খাতা মেলানো — রিপোর্ট সেন্টার ধাপ ৬ (মালিক, ১ অক্টোবর ২০২৬)
         'branch-dues' => 'accounts.branch_dues',
