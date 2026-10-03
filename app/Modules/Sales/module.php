@@ -608,6 +608,8 @@ return [
         // ⭐ কাউন্টারের ডেলিভারি অর্ডার — মালিকের নির্দেশ, ২৮ সেপ্টেম্বর ২০২৬: আলাদা উপসর্গ (DS),
         // খসড়া আর নিশ্চিত একই সারিতে; উপসর্গটা কন্ট্রোল প্যানেলের নম্বর-সারি থেকে বদলানো যায়
         'DS' => 'sales::doc.counter_do',
+        // ⭐ ডেলিভারি অর্ডার — নিজের কাগজ, নিজের ক্রম (মালিকের বিক্রয়-ধারা, ২ অক্টোবর ২০২৬; [[DeliveryOrder]])
+        'DO' => 'sales::doc.delivery_order',
         'TRP' => 'sales::doc.shipment',
         'INV' => 'sales::doc.invoice',
         'COL' => 'sales::doc.collection',
@@ -665,6 +667,9 @@ return [
      */
     'events' => [
         InvoiceConfirmed::class,
+        // ⭐ ডেলিভারি অর্ডার — সুপারভাইজার পেরোল / থামল (২ অক্টোবর ২০২৬); শোনেন abos-86 (হিসাব, মজুদ)
+        \App\Modules\Sales\Events\DeliveryOrderSupervisorApproved::class,
+        \App\Modules\Sales\Events\DeliveryOrderCancelled::class,
     ],
 
     /*
