@@ -86,6 +86,9 @@
 <x-layouts.app :menu="$menu" :process-band="$processBand ?? []">
     <x-slot:title>{{ __('sales::menu.challans') }}</x-slot:title>
 
+    {{-- ⭐ চালানের ধাপের ট্যাব — আগে আলাদা "DO" পাতায় ছিল; আসল DO-র এখন নিজের ডেস্ক (৩ অক্টোবর ২০২৬, [[DeliveryOrderTabs]]) --}}
+    @include('sales::do.partials.tabs', ['active' => $tab ?? ''])
+
     @if (session('saved'))
         <div role="status"
              class="mb-4 rounded-(--radius-field) bg-(--color-badge-success-bg) px-3 py-2 text-sm

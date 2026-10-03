@@ -39,6 +39,8 @@ return [
         'drafts' => 'খসড়া',
         'pending' => 'অপেক্ষমাণ',
         'moving' => 'চলমান',
+        'partial' => 'আংশিক',
+        'back' => 'ব্যাক (মজুদ কম)',
         'history' => 'ইতিহাস',
     ],
     'status' => [

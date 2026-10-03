@@ -5,12 +5,12 @@ declare(strict_types=1);
 // Delivery orders — every sale's challan, in stage tabs ([[DeliveryOrderTabs]])
 return [
     'tab' => [
-        'new' => 'New DO',
+        'new' => 'New direct sale',
         'drafts' => 'Drafts',
         'approval' => 'Awaiting approval',
         'awaiting' => 'Awaiting delivery',
         'delivered' => 'Delivered',
-        'all' => 'All DOs',
+        'all' => 'All challans',
         'cancelled' => 'Cancelled',
         'tracking' => 'Delivery tracking',
     ],

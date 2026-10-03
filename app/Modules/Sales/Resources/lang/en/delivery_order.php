@@ -39,6 +39,8 @@ return [
         'drafts' => 'Drafts',
         'pending' => 'Pending',
         'moving' => 'Moving',
+        'partial' => 'Partial',
+        'back' => 'Back order',
         'history' => 'History',
     ],
     'status' => [

@@ -22,7 +22,11 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 /**
- * ডেলিভারি অর্ডার — প্রতিটা বিক্রির চালান, নিজের ধাপের ট্যাবে।
+ * প্রতিটা বিক্রির চালান, নিজের ধাপের ট্যাবে — "ডেলিভারি চালান তালিকা"-র ট্যাব।
+ *
+ * ⓘ ৩ অক্টোবর ২০২৬: ট্যাবগুলো আগে আলাদা "DO" পাতায় ছিল (`/sales/do`); আসল ডেলিভারি অর্ডারের এখন নিজের
+ * ডেস্ক, তাই এগুলো চালান-তালিকায় এল, আর পুরনো ঠিকানা একই ট্যাবে পাঠায়। কাউন্টারের রাখা খসড়া চালান-তালিকায়
+ * নয় (মালিক, ২৮ সেপ্টেম্বর) — "খসড়া" ট্যাবে।
  *
  * ⭐ মালিকের সিদ্ধান্ত, ২৮ সেপ্টেম্বর ২০২৬: *"প্রতিটি বিক্রির চালান = একটি DO"*; ট্যাব মালিকের
  * অনুমোদিত নকশার (ধাপ ৩) — নতুন DO · খসড়া · অনুমোদনের অপেক্ষায় · ডেলিভারির অপেক্ষায় ·
@@ -88,7 +92,7 @@ final class EveryDeliveryOrderSitsInTheTabOfItsStageTest extends TestCase
 
     private function tab(string $tab): string
     {
-        return $this->get(route('sales.do.index', ['tab' => $tab]))->assertOk()->getContent();
+        return $this->get(route('sales.challan.index', ['tab' => $tab]))->assertOk()->getContent();
     }
 
     public function test_every_sale_sits_in_the_tab_of_its_stage_and_nowhere_it_should_not(): void
@@ -110,10 +114,11 @@ final class EveryDeliveryOrderSitsInTheTabOfItsStageTest extends TestCase
         $this->assertStringContainsString(e($sold->document_no), $this->tab('delivered'), '⛔ পৌঁছানো DO ডেলিভার্ড ট্যাবে নেই।');
         $this->assertStringNotContainsString(e($sold->document_no), $this->tab('awaiting'), '⛔ পৌঁছানোর পরেও অপেক্ষায়।');
 
-        /* ⓷ "সব DO" খসড়াসহ সব; বাতিল করা খসড়া কেবল "বাতিল"-এ */
+        /* ⓷ "সব চালান" — পাকা সব, কাউন্টারের রাখা খসড়া নয় (সেটা "খসড়া" ট্যাবে); বাতিল করা খসড়া কেবল "বাতিল"-এ */
         $all = $this->tab('all');
-        $this->assertStringContainsString(e($draft->document_no), $all, '⛔ খসড়া DO "সব DO"-তে নেই।');
+        $this->assertStringNotContainsString(e($draft->document_no), $all, '⛔ কাউন্টারের রাখা খসড়া চালান-তালিকায় এল।');
         $this->assertStringContainsString(e($sold->document_no), $all);
+        $this->get(route('sales.direct.drafts'))->assertOk()->assertSee(e($draft->document_no), false);
 
         $invoice = SalesInvoice::query()->where('customer_id', $this->customer->id)->latest('id')->firstOrFail();
         $this->post(route('sales.direct.discard', $invoice), ['reason' => 'ক্রেতা আসেননি'])->assertSessionHasNoErrors();
@@ -129,16 +134,15 @@ final class EveryDeliveryOrderSitsInTheTabOfItsStageTest extends TestCase
         $this->sell($this->customer, ['save_as_draft' => '1']);
 
         $drafts = $this->get(route('sales.direct.drafts'))->assertOk();
-        $drafts->assertSee(e(route('sales.do.index', ['tab' => 'awaiting'])), false);
+        $drafts->assertSee(e(route('sales.challan.index', ['tab' => 'awaiting'])), false);
         $drafts->assertSee(e(route('sales.delivery.index')), false);
         $drafts->assertSee(__('sales::do.tab.new'));
 
-        $page = $this->get(route('sales.do.index'))->assertOk();
+        $page = $this->get(route('sales.challan.index'))->assertOk();
         $page->assertSee(e(route('sales.direct.drafts')), false);
         $page->assertSee(e(route('sales.direct.drafts', ['tab' => 'approval'])), false);
 
-        /* ⓘ মেনুতে খসড়ার আলাদা সারি নেই — ট্যাবেই; আর পুরনো আদেশের পাতা "বিক্রয় আদেশ" ভাঁজে */
-        $page->assertDontSee(__('sales::menu.direct_drafts'));
+        /* ⓘ পুরনো আদেশের পাতা "বিক্রয় আদেশ" ভাঁজে। (খসড়া তালিকার মেনু-সারি এখন "Billing Documents" ভাঁজে — মালিক, ২ অক্টোবর ২০২৬) */
         $page->assertSee(e(route('sales.order.index')), false);
     }
 
@@ -148,11 +152,16 @@ final class EveryDeliveryOrderSitsInTheTabOfItsStageTest extends TestCase
         $clerk = User::factory()->create(['current_company_id' => $this->company->id]);
         $clerk->companies()->attach($this->company->id, ['is_active' => true]);
 
+        $this->actingAs($clerk)->get(route('sales.challan.index'))->assertForbidden();
         $this->actingAs($clerk)->get(route('sales.do.index'))->assertForbidden();
 
         $clerk->givePermissionTo('sales.challan.view');
 
-        $this->actingAs($clerk->fresh())->get(route('sales.do.index'))->assertOk()
+        // ⓘ পুরনো ঠিকানা একই ট্যাবে পৌঁছায় — বুকমার্ক হারায় না
+        $this->actingAs($clerk->fresh())->get(route('sales.do.index', ['tab' => 'delivered', 'q' => 'x']))
+            ->assertStatus(301)->assertRedirect(route('sales.challan.index', ['tab' => 'delivered', 'q' => 'x']));
+
+        $this->actingAs($clerk->fresh())->get(route('sales.challan.index'))->assertOk()
             /* ⓘ বেচার চাবি নেই, তাই কাউন্টারের ট্যাবও নেই — চাপলে ৪০৩ দেখানোর চেয়ে না দেখানো */
             ->assertDontSee(e(route('sales.direct.drafts')), false);
     }

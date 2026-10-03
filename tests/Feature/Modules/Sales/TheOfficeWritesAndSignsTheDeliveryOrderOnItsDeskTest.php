@@ -131,6 +131,44 @@ final class TheOfficeWritesAndSignsTheDeliveryOrderOnItsDeskTest extends TestCas
             fn ($e) => bccomp('240', (string) $e->payload['total'], 4) === 0);
     }
 
+    /**
+     * ⭐ "আংশিক" — মাল গেছে, চাওয়ার চেয়ে কম; "ব্যাক" — মজুদের অভাবে বাকি (abos-86-এর হোল্ড আর হিসাবের সতর্কতা)।
+     * প্রতিটা DO দুই দিক থেকে: নিজের ট্যাবে আছে, অন্যটায় নেই; সাধারণ DO কোনোটায় নেই।
+     */
+    public function test_partial_and_back_tabs_each_show_only_their_own(): void
+    {
+        $this->actingAs($this->member(['sales.do.view']));
+        $service = app(DeliveryOrderService::class);
+        $make = fn () => $service->create([], [['product_id' => $this->product->id, 'qty' => '10']], $this->dealer);
+
+        $partial = $make();
+        $partial->forceFill(['status' => DeliveryOrderStatus::INVOICED])->save();
+        \App\Modules\Sales\Models\DeliveryOrderStockHold::query()->forceCreate([
+            'company_id' => $this->company->id, 'branch_id' => $partial->branch_id,
+            'delivery_order_id' => $partial->id, 'delivery_order_line_id' => $partial->lines()->value('id'),
+            'product_id' => $this->product->id,
+            'warehouse_id' => \App\Modules\Inventory\Models\Warehouse::query()->where('is_default', true)->value('id'),
+            'wanted_qty' => '10', 'qty' => '10', 'consumed_qty' => '6', 'kind' => 'firm',
+            'held_at' => now(), 'released_at' => now(), 'release_reason' => 'consumed',
+        ]);
+
+        $back = $make();
+        $back->forceFill([
+            'status' => DeliveryOrderStatus::ACCOUNTS_HELD,
+            'accounts_warnings' => [['kind' => 'stock_short', 'line_id' => $back->lines()->value('id'), 'wanted' => '10', 'available' => '0']],
+        ])->save();
+
+        $plain = $make();
+
+        $partialTab = $this->get(route('sales.delivery_order.index', ['tab' => 'partial']))->assertOk();
+        $partialTab->assertSee((string) $partial->document_no)->assertDontSee((string) $back->document_no)
+            ->assertDontSee((string) $plain->document_no);
+
+        $backTab = $this->get(route('sales.delivery_order.index', ['tab' => 'back']))->assertOk();
+        $backTab->assertSee((string) $back->document_no)->assertDontSee((string) $partial->document_no)
+            ->assertDontSee((string) $plain->document_no);
+    }
+
     // ── যন্ত্রপাতি ──────────────────────────────────────────────────────
 
     /** @param  list<string>  $keys */

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Sales\Services;
 
+use App\Core\Support\CompanyContext;
 use App\Core\Support\DocumentStatus;
 use App\Modules\Sales\Models\DeliveryChallan;
 use Illuminate\Database\Eloquent\Builder;
@@ -53,7 +54,8 @@ final class DeliveryOrderTabs
             'approval' => route('sales.direct.drafts', ['tab' => 'approval']),
             // ⭐ ডেলিভারি ট্র্যাকিং — প্রতিটা বিক্রি কোথায় (মালিক, ২ অক্টোবর ২০২৬, [[SaleTracking]])
             'tracking' => route('sales.tracking.index'),
-            default => route('sales.do.index', ['tab' => $tab]),
+            // ⭐ ধাপের ট্যাব এখন "ডেলিভারি চালান তালিকা"-রই — আসল DO-র নিজের ডেস্ক আছে (৩ অক্টোবর ২০২৬)
+            default => route('sales.challan.index', ['tab' => $tab]),
         };
     }
 
@@ -75,7 +77,19 @@ final class DeliveryOrderTabs
             'delivered' => $query->where('sal_challans.status', '<>', DocumentStatus::CANCELLED)
                 ->whereExists($delivered),
             'cancelled' => $query->where('sal_challans.status', DocumentStatus::CANCELLED),
-            default => $query->where('sal_challans.status', '<>', DocumentStatus::CANCELLED),
+            /*
+             * ⓘ "সব চালান" — কাউন্টারের রাখা খসড়া বাদ, মালিকের নির্দেশ (২৮ সেপ্টেম্বর ২০২৬): *"খসড়া challan
+             * r Invoice list e zabena"*; ওগুলো "খসড়া" ট্যাবে ([[DirectSaleService::trueDrafts()]])।
+             */
+            default => $query->where('sal_challans.status', '<>', DocumentStatus::CANCELLED)
+                ->whereNot(fn ($q) => $q->where('sal_challans.status', DocumentStatus::DRAFT)
+                    ->whereExists(fn ($e) => $e->selectRaw('1')
+                        ->from('sal_challan_lines as cl')
+                        ->join('sal_invoice_lines as il', 'il.delivery_challan_line_id', '=', 'cl.id')
+                        ->join('sal_invoices as i', 'i.id', '=', 'il.sales_invoice_id')
+                        ->whereColumn('cl.delivery_challan_id', 'sal_challans.id')
+                        ->where('i.company_id', CompanyContext::id())
+                        ->where('i.status', DocumentStatus::DRAFT))),
         };
     }
 

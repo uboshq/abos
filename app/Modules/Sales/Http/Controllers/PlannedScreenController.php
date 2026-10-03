@@ -33,7 +33,7 @@ final class PlannedScreenController extends Controller implements HasMiddleware
         // ⓘ 'loading_sheet' নিজের পাতায় সরেছে ([[LoadingSheetController]], ২৯ সেপ্টেম্বর ২০২৬)
         // ⓘ 'do_new' নিজের পাতায় সরেছে — DO ডেস্কের বোতাম ([[DeliveryOrderDeskController]], ৩ অক্টোবর ২০২৬); আংশিক আর ব্যাক DO — মালিক, ২ অক্টোবর ২০২৬
         // ⓘ 'transport_assign' নিজের পাতায় সরেছে ([[TransportAssignmentController]], ৩ অক্টোবর ২০২৬)
-        'do_partial', 'do_back',
+        // ⓘ 'do_partial' আর 'do_back' DO ডেস্কের ট্যাবে সরেছে ([[DeliveryOrderDeskController]], ৩ অক্টোবর ২০২৬)
         'pricing_customer', 'pricing_channel', 'pricing_territory',
         'pricing_special', 'pricing_dynamic',
     ];

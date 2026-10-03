@@ -72,7 +72,7 @@ final class EveryDocumentListShowsAGrandTotalAndAViewButtonTest extends TestCase
         foreach ([
             'sales.invoice.index' => ['ZQV', 'sales.invoice.show', 'sal_invoices'],
             'sales.challan.index' => [$challan->document_no, 'sales.challan.show', 'sal_challans'],
-            'sales.do.index' => [$challan->document_no, 'sales.challan.show', 'sal_challans'],
+            // ⓘ পুরনো 'sales.do.index' এখন চালান-তালিকার ট্যাবে পাঠায় (৩ অক্টোবর ২০২৬) — নিজে তালিকা নয়
             'sales.order.index' => ['ZQV', 'sales.order.show', 'sal_orders'],
         ] as $list => [$q, $show, $table]) {
             $html = (string) $this->get(route($list, ['q' => $q]))->assertOk()->getContent();

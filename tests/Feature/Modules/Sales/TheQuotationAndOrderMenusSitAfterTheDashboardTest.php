@@ -65,8 +65,8 @@ final class TheQuotationAndOrderMenusSitAfterTheDashboardTest extends TestCase
             // ⓘ ৩ অক্টোবর ২০২৬: আসল DO কাগজের ডেস্কে ([[DeliveryOrderDeskController]])
             'do_list' => $at(route('sales.delivery_order.index')),
             'do_pending' => $at(route('sales.delivery_order.index', ['tab' => 'pending'])),
-            'do_partial' => $at(route('sales.planned', ['screen' => 'do_partial'])),
-            'do_back' => $at(route('sales.planned', ['screen' => 'do_back'])),
+            'do_partial' => $at(route('sales.delivery_order.index', ['tab' => 'partial'])),
+            'do_back' => $at(route('sales.delivery_order.index', ['tab' => 'back'])),
             'do_history' => $at(route('sales.delivery_order.index', ['tab' => 'history'])),
             'tracking' => $at(route('sales.tracking.index')),
             'direct' => $at(route('sales.direct.create')),

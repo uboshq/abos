@@ -55,6 +55,11 @@ class DeliveryChallanController extends Controller implements HasMiddleware
 
     public function index(Request $request): View
     {
+        // ⭐ ধাপের ট্যাব — আগের আলাদা "DO" পাতার, এখন এই তালিকারই (৩ অক্টোবর ২০২৬, [[DeliveryOrderTabs]])
+        $tabs = app(\App\Modules\Sales\Services\DeliveryOrderTabs::class);
+        $tab = in_array($request->query('tab'), \App\Modules\Sales\Services\DeliveryOrderTabs::LISTED, true)
+            ? (string) $request->query('tab') : null;
+
         $query = DeliveryChallan::query()
             ->search($request->query('q'))
             /*
@@ -73,8 +78,9 @@ class DeliveryChallanController extends Controller implements HasMiddleware
                     ->where('i.status', DocumentStatus::DRAFT)))
             ->with(['customer.location', 'warehouse'])
             // বাতিলগুলো লুকানো, মোছা নয় (নিয়ম ৫)
-            ->when(! $request->boolean('cancelled'),
-                fn ($q) => $q->where('status', '<>', DocumentStatus::CANCELLED));
+            ->when(! $request->boolean('cancelled') && $tab !== 'cancelled',
+                fn ($q) => $q->where('status', '<>', DocumentStatus::CANCELLED))
+            ->when($tab !== null, fn ($q) => $q->whereIn('sal_challans.id', $tabs->query($tab)->select('sal_challans.id')));
 
         // ধাপের পটির হিসাব অবস্থার ছাঁকনির আগে — কারণটা
         // [[ProcessBand::forStatuses()]]-এ লেখা
@@ -107,6 +113,7 @@ class DeliveryChallanController extends Controller implements HasMiddleware
             'sortOptions' => $this->sortLabels(),
             'showCancelled' => $request->boolean('cancelled'),
             'stage' => $stage,
+            'tab' => $tab,
             'processBand' => ProcessBand::forStatuses(
                 $bandBase,
                 [

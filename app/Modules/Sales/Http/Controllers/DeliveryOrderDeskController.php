@@ -9,6 +9,7 @@ use App\Core\Concerns\GrandTotals;
 use App\Core\Concerns\SortsLists;
 use App\Core\Engines\Approval\ApprovalEngine;
 use App\Core\Services\MenuBuilder;
+use App\Core\Support\CompanyContext;
 use App\Http\Controllers\Controller;
 use App\Models\Approval;
 use App\Modules\Customer\Models\Customer;
@@ -38,7 +39,7 @@ class DeliveryOrderDeskController extends Controller implements HasMiddleware
     use SortsLists;
 
     /**
-     * ট্যাব → কোন অবস্থাগুলো। ⓘ "আংশিক" আর "ব্যাক" আসবে abos-86-এর মজুদ-আটকানোর সাথে।
+     * ট্যাব → কোন অবস্থাগুলো। ⓘ "আংশিক" আর "ব্যাক" অবস্থা নয়, মজুদের ঘটনা — [[tab()]]-এ আলাদা শর্ত।
      *
      * @var array<string, list<string>|null>
      */
@@ -47,6 +48,10 @@ class DeliveryOrderDeskController extends Controller implements HasMiddleware
         'drafts' => [DeliveryOrderStatus::DRAFT],
         'pending' => [DeliveryOrderStatus::SUBMITTED, DeliveryOrderStatus::SUPERVISOR_PENDING, DeliveryOrderStatus::ACCOUNTS_HELD],
         'moving' => [DeliveryOrderStatus::SUPERVISOR_APPROVED, DeliveryOrderStatus::ACCOUNTS_APPROVED, DeliveryOrderStatus::DEPOT_CHECK],
+        // ⭐ মাল কিছু গেছে, পুরোটা নয় — মালিকের "Partial DO" ([[DeliveryOrderStock::consume()]])
+        'partial' => null,
+        // ⭐ মজুদের অভাবে বাকি — হিসাবের যাচাইয়ে stock_short ([[DeliveryOrderAccounts]], abos-86)
+        'back' => null,
         'history' => [DeliveryOrderStatus::INVOICED, DeliveryOrderStatus::REJECTED, DeliveryOrderStatus::CANCELLED],
     ];
 
@@ -175,9 +180,25 @@ class DeliveryOrderDeskController extends Controller implements HasMiddleware
     /** @param  Builder<DeliveryOrder>  $query */
     private function tab(Builder $query, string $tab): Builder
     {
-        $statuses = self::TABS[$tab] ?? null;
-
-        return $statuses === null ? $query : $query->whereIn('status', $statuses);
+        return match ($tab) {
+            /*
+             * ⓘ চালানে যা বেরোল তা হোল্ডে `consumed_qty`; সুপারভাইজারের শেষ পরিমাণ `wanted_qty`।
+             * কম বেরোলে (ডিপো কম দিল বা মজুদ কম ছিল) — আংশিক। বাতিল বা ফেরত DO নয়।
+             */
+            'partial' => $query->whereNotIn('status', [DeliveryOrderStatus::CANCELLED, DeliveryOrderStatus::REJECTED])
+                ->whereExists(fn ($q) => $q->selectRaw('1')->from('sal_do_stock_holds as h')
+                    ->whereColumn('h.delivery_order_id', 'sal_delivery_orders.id')
+                    ->where('h.company_id', CompanyContext::id())
+                    ->where('h.consumed_qty', '>', 0)
+                    ->whereColumn('h.consumed_qty', '<', 'h.wanted_qty')),
+            /*
+             * ⓘ চালু DO যার হিসাবের যাচাইয়ে কোনো লাইনের মজুদ কম পড়েছে — শূন্য বা আংশিক, দুটোই
+             * (abos-86: `accounts_warnings` → kind `stock_short`)।
+             */
+            'back' => $query->whereNotIn('status', DeliveryOrderStatus::CLOSED)
+                ->whereJsonContains('accounts_warnings', ['kind' => 'stock_short']),
+            default => self::TABS[$tab] === null ? $query : $query->whereIn('status', self::TABS[$tab]),
+        };
     }
 
     private function pendingApproval(DeliveryOrder $order): ?Approval
