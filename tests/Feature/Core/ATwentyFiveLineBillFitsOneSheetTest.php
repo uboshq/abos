@@ -69,6 +69,35 @@ final class ATwentyFiveLineBillFitsOneSheetTest extends TestCase
         }
     }
 
+    /**
+     * ⭐ বিল + হিসাবের বিবরণী — Special for DB আর বাকি এগারোটা নকশা, মালিক, ৩ অক্টোবর ২০২৬: *"obosoi ek page 25 item
+     * diye korbe"*। ⓘ লক্ষ্যের বাক্সসহ (সবচেয়ে ভরা রূপ), ১০০%-এ এক পাতা।
+     */
+    public function test_every_invoice_with_statement_design_fits_twenty_five_lines_on_one_sheet(): void
+    {
+        $designs = array_filter(\App\Modules\Sales\Support\InvoiceDesigns::ALL,
+            fn (string $code) => $code === 'special_db' || str_starts_with($code, 'acct_'), ARRAY_FILTER_USE_KEY);
+
+        $this->assertGreaterThanOrEqual(1, count($designs), 'খোঁজাটাই ভেঙেছে — বিবরণীর কোনো নকশা পাওয়া যায়নি।');
+
+        $spills = [];
+
+        foreach ($designs as $code => $template) {
+            app()->forgetScopedInstances();
+            $data = $this->data(25);
+            $data['facts']['target'] = ['month' => "Oct'26", 'target' => '300,000.00', 'achieved' => '170,000.00',
+                'remaining' => '130,000.00', 'closes_on' => '25-10-2026', 'bank_days' => '16'];
+
+            $pdf = app(PrintEngine::class)->render(template: $template, data: $data, paper: PaperSize::A4, profile: 'invoice', scale: 100);
+
+            if ($this->pages($pdf) !== 1 || app(PrintScale::class)->used() !== 100) {
+                $spills[] = "{$code}: ".$this->pages($pdf).' পাতা, মাপ '.app(PrintScale::class)->used().'%';
+            }
+        }
+
+        $this->assertSame([], $spills, "⛔ ২৫ সারি ১০০%-এ এক পাতায় আঁটে না:\n".implode("\n", $spills));
+    }
+
     /** ⛔→⭐ স্পষ্ট ৯৫% — ৯৫%-এ কাগজ উপচায়, তাই আরও ছোট হয়ে এক পাতায়; বসানো মাপ ৯৫-এর নিচে, স্বয়ংক্রিয়। */
     public function test_an_explicit_scale_that_still_spills_keeps_shrinking_to_one_sheet(): void
     {

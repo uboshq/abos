@@ -59,6 +59,19 @@ final class InvoiceDesigns
 
         /* ⭐ Special for DB — বিল + হিসাবের বিবরণী, বাঁয়ে সাদা ফিতা (মালিকের নাম, ৩ অক্টোবর ২০২৬) */
         'special_db' => 'sales::print.invoice-special_db',
+
+        /* ⭐ বিল + হিসাবের বিবরণী — বাকি দশ নকশা (ক্যানভাসের ১–১০, ২খ সহ), মালিক, ৩ অক্টোবর ২০২৬: "ok ekhon sogulo desine live e daw" */
+        'acct_classic' => 'sales::print.invoice-acct_classic',
+        'acct_sidebar' => 'sales::print.invoice-acct_sidebar',
+        'acct_sidebar_light' => 'sales::print.invoice-acct_sidebar_light',
+        'acct_formal' => 'sales::print.invoice-acct_formal',
+        'acct_card' => 'sales::print.invoice-acct_card',
+        'acct_tear_off' => 'sales::print.invoice-acct_tear_off',
+        'acct_tiles' => 'sales::print.invoice-acct_tiles',
+        'acct_statement_first' => 'sales::print.invoice-acct_statement_first',
+        'acct_t_account' => 'sales::print.invoice-acct_t_account',
+        'acct_typewriter' => 'sales::print.invoice-acct_typewriter',
+        'acct_visual' => 'sales::print.invoice-acct_visual',
     ];
 
     /** সেটিংয়ের বাছাইয়ের তালিকা — চলতি নকশা আগে, তারপর ছাঁচগুলো */

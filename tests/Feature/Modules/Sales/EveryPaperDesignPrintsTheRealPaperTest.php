@@ -139,7 +139,7 @@ final class EveryPaperDesignPrintsTheRealPaperTest extends TestCase
     public function test_the_lists_are_not_empty_where_the_owner_approved_designs(): void
     {
         /* ⛔ ফাঁকা তালিকা হলে উপরের পরীক্ষাগুলো কিছুই না ছেপে সবুজ হত */
-        $this->assertCount(28, PaperDesigns::codes('invoice', 'a4'));
+        $this->assertCount(39, PaperDesigns::codes('invoice', 'a4'));
         $this->assertCount(29, PaperDesigns::codes('invoice', 'a5'));
         $this->assertCount(28, PaperDesigns::codes('invoice', 'thermal'));
 
