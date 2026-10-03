@@ -65,6 +65,7 @@ final class EveryLedgerReaderSaysWhetherItShowsOrChecksTest extends TestCase
         'app/Core/Security/LedgerChain.php' => 'খাতার সিল — প্রতিটা সারি দেখতেই হয়',
         'app/Core/Services/LedgerBalances.php' => 'মূল উপকরণ — ডাকার জন ঠিক করে শাখা',
         'app/Models/Company.php' => 'কোম্পানিতে পোস্টিং আছে কি না',
+        'app/Modules/Accounts/Services/NoteAccounts.php' => 'নোটের চলতি খাত — পক্ষের খাতা কোন খাতে আছে, গোটা কোম্পানি ধরে (দেখানো নয়, অনুমতির তালিকা)',
         'app/Providers/AppServiceProvider.php' => 'LedgerBalances-এর বাঁধন',
         'app/Modules/Accounts/Database/Migrations/2026_09_09_100000_the_delivery_cost_had_nowhere_to_land.php' => 'তথ্য-সারাইয়ের মাইগ্রেশন',
         'app/Modules/Accounts/Database/Migrations/2026_10_24_100000_one_payable_head_held_three_different_debts.php' => 'তথ্য-সারাইয়ের মাইগ্রেশন',
