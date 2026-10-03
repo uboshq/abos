@@ -33,6 +33,14 @@
     </nav>
 
     <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
+        {{-- ⭐ সাধারণ টুলবার (মালিক, ৩ অক্টোবর ২০২৬: "sob jaygay toolbar dibe") — ভাগটা লুকানো ঘরে;
+             ⓘ খোঁজার ঘর নেই: সূচির নিয়ন্ত্রক খোঁজে না, আর কাজ না করা খোঁজার ঘর একটা মরা বোতাম --}}
+        <form method="GET" class="contents">
+            <input type="hidden" name="tab" value="{{ $tab }}">
+            <x-ui.toolbar :title="__('purchase::schedule.title')" :search="false" :filter="false"
+                          :count="trans_choice('core.count.records', $rows->total(), ['count' => $rows->total()])" />
+        </form>
+
         <x-ui.table :rows="$rows" :empty="__('purchase::schedule.none')"
             :grand="$grand ?? []"
             :view-url="fn ($bill) => route('purchase.bill.show', $bill)"

@@ -88,6 +88,15 @@
     </p>
 
     <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
+        {{-- ⭐ সাধারণ টুলবার — খোঁজা, কলাম, রপ্তানি, ছাপা (মালিক, ৩ অক্টোবর ২০২৬: "sob jaygay toolbar dibe");
+             ⓘ ট্যাবটা লুকানো ঘরে, যাতে খুঁজলে ক্রেডিট/ডেবিট না হারায় --}}
+        <form method="GET" class="contents">
+            <input type="hidden" name="direction" value="{{ $direction }}">
+            <x-ui.toolbar :title="$tabs[$direction] ?? __('accounts::note.title')" :filter="false"
+                          :count="trans_choice('core.count.records', $rows->total(), ['count' => $rows->total()])"
+                          :columns="$columns" />
+        </form>
+
         <x-ui.table :rows="$rows" :columns="$columns" :empty="__('accounts::note.none_yet')"
                     :grand="$grand ?? []"
                     :view-url="fn ($n) => route('accounts.note.show', $n)" />

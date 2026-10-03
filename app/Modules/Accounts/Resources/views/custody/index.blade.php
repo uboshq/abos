@@ -95,6 +95,9 @@
          ওগুলো বইত (§১৯.৮)। টোকেন ও মাপ হুবহু একই। --}}
     <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border)
                 bg-(--color-surface-card) shadow-(--shadow-card)">
+        {{-- ⭐ সাধারণ টুলবার (মালিক, ৩ অক্টোবর ২০২৬: "sob jaygay toolbar dibe"); খোঁজার ঘর নেই — এই পাতার নিয়ন্ত্রক খোঁজে না --}}
+        <x-ui.toolbar :title="__('accounts::custody.title')" :search="false" :filter="false" :columns="$columns" />
+
         <div class="table-responsive">
             {{-- শেষ সারিটা কারও নামের পাশে বসে না, আর সেটাই পুরো কথা:
                  টাকাটা ড্রয়ার ছেড়েছে, কেউ এখনো নেয়নি। --}}

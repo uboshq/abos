@@ -117,6 +117,10 @@
     @endif
 
     <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
+        {{-- ⭐ সাধারণ টুলবার (মালিক, ৩ অক্টোবর ২০২৬: "sob jaygay toolbar dibe"); খোঁজার ঘর নেই — এই পাতার নিয়ন্ত্রক খোঁজে না --}}
+        <x-ui.toolbar :title="__('finance::bank_charge.title')" :search="false" :filter="false"
+                      :count="trans_choice('core.count.records', $rows->total(), ['count' => $rows->total()])" />
+
         <x-ui.table :rows="$rows" :empty="__('finance::bank_charge.none')"
             :grand="['amount' => $bank_id ? (string) ($byBank->first(fn ($b) => $b['bank']?->id === (int) $bank_id)['amount'] ?? '0') : $total]"
             :columns="[

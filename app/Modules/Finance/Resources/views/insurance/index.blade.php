@@ -93,6 +93,14 @@
     </nav>
 
     <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
+        {{-- ⭐ সাধারণ টুলবার (মালিক, ৩ অক্টোবর ২০২৬: "sob jaygay toolbar dibe") — ট্যাবটা লুকানো ঘরে;
+             ⓘ খোঁজার ঘর নেই: বীমার নিয়ন্ত্রক খোঁজে না, আর কাজ না করা খোঁজার ঘর একটা মরা বোতাম --}}
+        <form method="GET" class="contents">
+            <input type="hidden" name="tab" value="{{ $tab }}">
+            <x-ui.toolbar :title="__('finance::insurance.title')" :search="false" :columns="$columns" :filter="false"
+                          :count="trans_choice('core.count.records', $policies->total(), ['count' => $policies->total()])" />
+        </form>
+
         <x-ui.table :rows="$policies" :columns="$columns"
                     :grand="$grand ?? []"
                     :view-url="fn ($p) => route('finance.insurance.show', $p)"

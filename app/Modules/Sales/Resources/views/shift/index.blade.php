@@ -148,6 +148,10 @@
 
         <div data-boxed class="table-responsive rounded-(--radius-card) border border-(--color-border)
                     bg-(--color-surface-card)">
+        {{-- ⭐ সাধারণ টুলবার (মালিক, ৩ অক্টোবর ২০২৬: "sob jaygay toolbar dibe"); খোঁজার ঘর নেই — এই পাতার নিয়ন্ত্রক খোঁজে না --}}
+        <x-ui.toolbar :title="__('sales::message.shift_today')" :search="false" :filter="false" :columns="$columns"
+                      :count="trans_choice('core.count.records', $closed->count(), ['count' => $closed->count()])" />
+
         <x-ui.table :rows="$closed"
                     :grand="['counted' => $closed->reduce(fn ($s, $r) => bcadd($s, (string) $r->closing_counted, 4), '0')]"
                     :columns="$columns"

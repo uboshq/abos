@@ -63,6 +63,9 @@
 
     <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border)
                 bg-(--color-surface-card)">
+        {{-- ⭐ সাধারণ টুলবার (মালিক, ৩ অক্টোবর ২০২৬: "sob jaygay toolbar dibe"); খোঁজার ঘর নেই — এই পাতার নিয়ন্ত্রক খোঁজে না --}}
+        <x-ui.toolbar :title="__('sales::price_list.title')" :search="false" :filter="false" :columns="$columns" />
+
         <x-ui.table :rows="$products" :columns="$columns" :empty="__('sales::price_list.no_products')" />
     </div>
 

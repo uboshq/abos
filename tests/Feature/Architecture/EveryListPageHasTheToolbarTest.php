@@ -19,22 +19,15 @@ final class EveryListPageHasTheToolbarTest extends TestCase
 {
     /** বসানো বাকি (৩ অক্টোবর ২০২৬) — বসলে নাম কাটা */
     private const PENDING = [
-        'Accounts/Resources/views/custody/index.blade.php',
         'Accounts/Resources/views/inter-company/index.blade.php',
-        'Accounts/Resources/views/note/index.blade.php',
         'Accounts/Resources/views/period/index.blade.php',
         'Approval/Resources/views/limit/index.blade.php',
         'Finance/Resources/views/account-analysis/index.blade.php',
-        'Finance/Resources/views/bank-charge/index.blade.php',
         'Finance/Resources/views/budget/index.blade.php',
         'Finance/Resources/views/carrier-labour/index.blade.php',
         'Finance/Resources/views/institution/index.blade.php',
-        'Finance/Resources/views/insurance/index.blade.php',
         'Finance/Resources/views/profit/index.blade.php',
-        'Purchase/Resources/views/payment-schedule/index.blade.php',
-        'Sales/Resources/views/price_list/index.blade.php',
         'Sales/Resources/views/route/index.blade.php',
-        'Sales/Resources/views/shift/index.blade.php',
         'Sales/Resources/views/target/index.blade.php',
     ];
 
