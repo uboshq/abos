@@ -31,7 +31,8 @@ class SaleTrackingController extends Controller
         $this->mayTrack($request);
 
         $customer = trim((string) $request->query('customer', ''));
-        $customerId = $customer === '' ? null : (int) Customer::query()
+        // ⓘ ফোনে বাছা শাখার গ্রাহকই ([[ViewedBranch]])
+        $customerId = $customer === '' ? null : (int) Customer::query()->inViewedBranch()
             ->when(Str::isUuid($customer), fn ($q) => $q->where('public_id', $customer), fn ($q) => $q->whereKey((int) $customer))
             ->firstOrFail()->id;
 

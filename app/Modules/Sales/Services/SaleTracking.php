@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Sales\Services;
 
+use App\Core\Support\CompanyContext;
 use App\Core\Support\DocumentStatus;
 use App\Models\Approval;
 use App\Modules\Sales\Models\DeliveryChallan;
@@ -148,7 +149,8 @@ final class SaleTracking
         $key = fn (array $r) => ($r['sort'][0] ?? '').sprintf('%012d', $r['sort'][1]);
         $rows = match ($filter['sort'] ?? 'recent') {
             'oldest' => $rows->sortBy($key),
-            'largest' => $rows->sortByDesc(fn (array $r) => (float) $r['total']),
+            // ⓘ টাকা bcmath-এ তুলনা — float নয় ([[MoneyIsNeverAFloatTest]])
+            'largest' => $rows->sort(fn (array $a, array $b) => bccomp((string) $b['total'], (string) $a['total'], 4)),
             'customer' => $rows->sortBy(fn (array $r) => mb_strtolower((string) $r['customer']).$key($r)),
             default => $rows->sortByDesc($key),
         };
@@ -385,6 +387,8 @@ final class SaleTracking
     {
         $invoiceIds = DB::table('sal_challan_lines as cl')
             ->join('sal_invoice_lines as il', 'il.delivery_challan_line_id', '=', 'cl.id')
+            ->join('sal_invoices as i', 'i.id', '=', 'il.sales_invoice_id')
+            ->where('i.company_id', CompanyContext::id()) // ⓘ লাইনে কোম্পানি নেই — বিলের কোম্পানি ধরে
             ->where('cl.delivery_challan_id', $challan->id)->distinct()->pluck('il.sales_invoice_id');
 
         return $invoiceIds->isNotEmpty() && SalesInvoice::query()->whereIn('id', $invoiceIds)
@@ -444,6 +448,8 @@ final class SaleTracking
     {
         $invoiceOf = DB::table('sal_challan_lines as cl')
             ->join('sal_invoice_lines as il', 'il.delivery_challan_line_id', '=', 'cl.id')
+            ->join('sal_invoices as i', 'i.id', '=', 'il.sales_invoice_id')
+            ->where('i.company_id', CompanyContext::id()) // ⓘ লাইনে কোম্পানি নেই — বিলের কোম্পানি ধরে
             ->whereIn('cl.delivery_challan_id', $ids)
             ->select('cl.delivery_challan_id', 'il.sales_invoice_id')->distinct()->get();
 
@@ -485,6 +491,7 @@ final class SaleTracking
         return DB::table('sal_challan_lines as cl')
             ->join('sal_invoice_lines as il', 'il.delivery_challan_line_id', '=', 'cl.id')
             ->join('sal_invoices as i', 'i.id', '=', 'il.sales_invoice_id')
+            ->where('i.company_id', CompanyContext::id())
             ->whereIn('cl.delivery_challan_id', $ids)
             ->whereIn('i.status', DocumentStatus::POSTED)
             ->distinct()->pluck('cl.delivery_challan_id')
@@ -505,6 +512,8 @@ final class SaleTracking
     {
         $invoiceIds = DB::table('sal_challan_lines as cl')
             ->join('sal_invoice_lines as il', 'il.delivery_challan_line_id', '=', 'cl.id')
+            ->join('sal_invoices as i', 'i.id', '=', 'il.sales_invoice_id')
+            ->where('i.company_id', CompanyContext::id()) // ⓘ লাইনে কোম্পানি নেই — বিলের কোম্পানি ধরে
             ->where('cl.delivery_challan_id', $challan->id)->distinct()->pluck('il.sales_invoice_id');
 
         return Approval::query()

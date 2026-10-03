@@ -99,7 +99,8 @@ final class EveryStepOfASaleReachesTheRightPeopleTest extends TestCase
 
         $this->get(route('sales.portal.tracking.show', ['challan', $mine->public_id]))->assertOk()
             ->assertSee('data-tracking-milestones', false);
-        $this->get(route('sales.portal.tracking.show', ['challan', $theirs->public_id]))->assertForbidden();
+        // ⓘ সরু পথ — অন্যের বিক্রি খোঁজাতেই নেই, তাই ৪০৪ ([[CustomerPapers::trackedSale()]])
+        $this->get(route('sales.portal.tracking.show', ['challan', $theirs->public_id]))->assertNotFound();
     }
 
     // ── যন্ত্রপাতি ──────────────────────────────────────────────────────

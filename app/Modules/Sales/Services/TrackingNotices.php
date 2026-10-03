@@ -98,6 +98,8 @@ final class TrackingNotices
 
         $invoiceIds = \Illuminate\Support\Facades\DB::table('sal_challan_lines as cl')
             ->join('sal_invoice_lines as il', 'il.delivery_challan_line_id', '=', 'cl.id')
+            ->join('sal_invoices as i', 'i.id', '=', 'il.sales_invoice_id')
+            ->where('i.company_id', $challan->company_id) // ⓘ লাইনে কোম্পানি নেই — চালানের নিজের কোম্পানি
             ->where('cl.delivery_challan_id', $challan->id)->distinct()->pluck('il.sales_invoice_id');
 
         $approvals = \App\Models\Approval::query()->withoutGlobalScopes()

@@ -414,16 +414,12 @@ class PortalController extends Controller
         ]);
     }
 
-    /** নিজের একটা বিক্রির দাগ — অন্যের বিক্রিতে ৪০৩ */
+    /** নিজের একটা বিক্রির দাগ — অন্যের বিক্রি ৪০৪ */
     public function trackingStory(string $kind, string $id): View
     {
         $customer = $this->customer();
-        $sale = match ($kind) {
-            'challan' => \App\Modules\Sales\Models\DeliveryChallan::query()->where('public_id', $id)->firstOrFail(),
-            'order' => \App\Modules\Sales\Models\SalesOrder::query()->where('public_id', $id)->firstOrFail(),
-            default => abort(404),
-        };
-        abort_if((int) $sale->customer_id !== (int) $customer->id, 403);
+        // ⓘ সরু পথ — অন্যের বিক্রি খোঁজাতেই নেই, ৪০৪ ([[CustomerPapers::trackedSale()]])
+        $sale = $this->papers->trackedSale($kind, $id);
 
         return view('sales::portal.tracking-show', [
             'customer' => $customer,
