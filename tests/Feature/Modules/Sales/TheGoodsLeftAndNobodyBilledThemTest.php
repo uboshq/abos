@@ -135,21 +135,24 @@ final class TheGoodsLeftAndNobodyBilledThemTest extends TestCase
             '⛔ সোজা পৌঁছানোর পথে গেট পাস নেই — মাল কাগজ ছাড়া গেট পেরোল।');
     }
 
-    /** ⭐ কাউন্টারে "এখনই হাতে হাতে" — এক চাপে পৌঁছেছে, গেট পাস, একটাই বিল; প্রাপক খালি হলে গ্রাহক। */
-    public function test_the_counter_hands_over_now_in_one_press(): void
+    /**
+     * ⛔ কাউন্টারে "এখনই হাতে হাতে" আর নেই — মালিক, ৩ অক্টোবর ২০২৬: *"ekhane thakbena kotobar bolechi"*।
+     * ⓘ পুরনো ফর্ম বা API `hand_over=now` পাঠালেও মাল অপেক্ষায় থাকে, গেট পাস নয়; আর পাতায় ঘরগুলোই নেই।
+     */
+    public function test_the_counter_no_longer_hands_over_even_if_asked(): void
     {
-        $this->sell(['hand_over' => 'now'])->assertSessionHasNoErrors();
+        $this->sell(['hand_over' => 'now', 'receiver_name' => 'রহিম', 'transport_mode' => 'own'])->assertSessionHasNoErrors();
 
-        $bill = SalesInvoice::query()->latest('id')->firstOrFail();
-        $challan = $this->challanOf($bill);
+        $challan = $this->challanOf(SalesInvoice::query()->latest('id')->firstOrFail());
 
-        $this->assertSame(DeliveryStage::DELIVERED, $this->stageOf($challan), '⛔ হাতে হাতে দেওয়া হলো, অথচ মাল "পৌঁছেছে" নয়।');
-        $this->assertSame(1, GatePass::query()->where('delivery_challan_id', $challan->id)->count(), '⛔ গেট পাস নেই।');
-        $this->assertSame(1, $this->billsOf($challan)->count(), '⛔ হাতে হাতে দেওয়ায় দ্বিতীয় বিল হয়েছে।');
-        $this->assertSame((string) $this->customer->name_bn ?: (string) $this->customer->name_en,
-            (string) DB::table('sal_delivery_events')->where('delivery_challan_id', $challan->id)
-                ->where('to_stage', DeliveryStage::DELIVERED)->value('receiver_name'),
-            '⛔ প্রাপক খালি ছিল, অথচ গ্রাহকের নাম বসেনি।');
+        $this->assertNotSame(DeliveryStage::DELIVERED, $this->stageOf($challan), '⛔ কাউন্টার এখনও হাতে হাতে দিয়ে দিল।');
+        $this->assertSame(0, GatePass::query()->where('delivery_challan_id', $challan->id)->count(), '⛔ কাউন্টার থেকেই গেট পাস বেরোল।');
+
+        $page = $this->get(route('sales.direct.create'))->assertOk();
+
+        foreach (['hand_over', 'receiver_name', 'receiver_phone', 'transport_mode'] as $name) {
+            $page->assertDontSee('name="'.$name.'"', false);
+        }
     }
 
     /** ⭐ "পরে পাঠানো" (ডিফল্ট) — মাল অপেক্ষায়, গেট পাস নেই; রওনায় আসবে। */

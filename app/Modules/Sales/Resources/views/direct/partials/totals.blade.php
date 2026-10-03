@@ -639,36 +639,8 @@
 
                      ⚠️ Alpine দিয়ে করলে আরেকটা দৌড় থাকত: `:value`
                      বাঁধাই পরের টিকে বসে, অথচ ফর্ম জমা হয় **এখনই**। --}}
-                {{-- ⭐ দুই পথ — মালিক, ২৯ সেপ্টেম্বর ২০২৬: এখনই হাতে হাতে (চালান, বিল, গেট পাস আর
-                     "পৌঁছেছে" এক চাপে), নয়তো পরে পাঠানো (ডেলিভারির তালিকায় যায়, রওনায় গেট পাস)।
-                     ⓘ সাধারণ HTML — CSP-Alpine-এ কিছু বাঁধা নেই; খালি প্রাপক মানে গ্রাহক নিজে। --}}
-                @php($handOver = old('hand_over', $resume['fields']['hand_over'] ?? 'later'))
-                <fieldset class="mt-2 rounded-(--radius-field) border border-(--color-border) px-2 py-1.5 text-2xs">
-                    <legend class="px-1 text-(--color-ink-muted)">{{ __('sales::field.hand_over') }}</legend>
-                    <div class="flex flex-wrap gap-x-4 gap-y-1">
-                        <label class="flex items-center gap-1.5">
-                            <input type="radio" name="hand_over" value="later" class="size-4" @checked($handOver !== 'now')>
-                            {{ __('sales::field.hand_over_later') }}
-                        </label>
-                        <label class="flex items-center gap-1.5">
-                            <input type="radio" name="hand_over" value="now" class="size-4" @checked($handOver === 'now')>
-                            {{ __('sales::field.hand_over_now') }}
-                        </label>
-                    </div>
-                    <div class="mt-1.5 grid grid-cols-2 gap-2">
-                        <input type="text" name="receiver_name" maxlength="191" autocomplete="off"
-                               value="{{ old('receiver_name', $resume['fields']['receiver_name'] ?? '') }}"
-                               placeholder="{{ __('sales::delivery.field.receiver_name') }} — {{ __('sales::field.hand_over_receiver_hint') }}"
-                               class="h-(--spacing-field-compact) min-w-0 rounded-(--radius-field) border border-(--color-border)
-                                      bg-(--color-surface-card) px-2 text-2xs">
-                        <input type="text" inputmode="tel" name="receiver_phone" maxlength="32"
-                               value="{{ old('receiver_phone', $resume['fields']['receiver_phone'] ?? '') }}"
-                               placeholder="{{ __('sales::delivery.field.receiver_phone') }}"
-                               class="num h-(--spacing-field-compact) min-w-0 rounded-(--radius-field) border border-(--color-border)
-                                      bg-(--color-surface-card) px-2 text-2xs">
-                    </div>
-                </fieldset>
-
+                {{-- ⛔ "মাল কীভাবে যাবে" এখানে নেই — মালিক, ৩ অক্টোবর ২০২৬: *"ekhane thakbena kotobar bolechi"*। পরিবহন
+                     ডেলিভারি প্রসেসিংয়ে, নয়তো চালান বা বিল ছাপার আগে পপআপে ([[RequireTransportBeforePrint]])। --}}
                 <div class="mt-2 grid grid-cols-3 gap-2">
                     {{-- ⓘ খসড়াটা এক ঘর, নিশ্চিত দুই ঘর — চাপটা ডানে,
                          আর রোজকার কাজটাই বড়। --}}
