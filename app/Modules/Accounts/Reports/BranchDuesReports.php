@@ -57,13 +57,17 @@ final class BranchDuesReports
 
         $name = app()->getLocale() === 'bn' ? "COALESCE(NULLIF(b.name_bn, ''), b.name_en)" : 'b.name_en';
 
+        $branchName = 'COALESCE('.$name.', '.DB::getPdo()->quote((string) __('accounts::branch_dues.no_branch')).')';
+
         return DB::query()->fromSub($byBranch, 's')
             ->leftJoin('branches as b', 'b.id', '=', 's.branch_id')
-            ->selectRaw('COALESCE('.$name.', '.DB::getPdo()->quote((string) __('accounts::branch_dues.no_branch')).') as branch_name')
+            ->selectRaw($branchName.' as branch_name')
             ->selectRaw('s.debit')
             ->selectRaw('s.credit')
             ->selectRaw('s.debit - s.credit as net')
             ->orderByRaw('ABS(s.debit - s.credit) DESC')
-            ->orderBy('branch_name');
+            /* ⛔ নাম নয়, অভিব্যক্তি — রিপোর্টের খোঁজা ক্রমটা `ROW_NUMBER() OVER (ORDER BY …)`-এ তোলে, আর সেখানে
+               একই SELECT-এর ডাকনাম চেনা যায় না ([[TheReportSearchBrokeOnTheLiveServerTest]]) */
+            ->orderByRaw($branchName);
     }
 }

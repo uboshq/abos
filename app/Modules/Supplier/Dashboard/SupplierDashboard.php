@@ -42,27 +42,27 @@ final class SupplierDashboard implements ProvidesDashboard
             stats: [
                 new Stat(
                     label: __('supplier::dashboard.total'),
-                    value: (string) Supplier::query()->inViewedBranch()->count(),
+                    value: (string) Supplier::query()->inViewedBranch()->onlySuppliers()->count(),
                     hint: __('supplier::dashboard.total_hint'),
                     href: route('supplier.index'),
                 ),
                 new Stat(
                     label: __('supplier::dashboard.active'),
-                    value: (string) Supplier::query()->inViewedBranch()->where('is_active', true)->count(),
+                    value: (string) Supplier::query()->inViewedBranch()->onlySuppliers()->where('is_active', true)->count(),
                     hint: __('supplier::dashboard.active_hint'),
                     href: route('supplier.index'),
                     tone: Stat::GOOD,
                 ),
                 new Stat(
                     label: __('supplier::dashboard.inactive'),
-                    value: (string) Supplier::query()->inViewedBranch()->where('is_active', false)->count(),
+                    value: (string) Supplier::query()->inViewedBranch()->onlySuppliers()->where('is_active', false)->count(),
                     hint: __('supplier::dashboard.inactive_hint'),
                     href: route('supplier.index'),
                     tone: Stat::WARN,
                 ),
                 new Stat(
                     label: __('supplier::dashboard.new_this_month'),
-                    value: (string) Supplier::query()->inViewedBranch()->where('created_at', '>=', $month)->count(),
+                    value: (string) Supplier::query()->inViewedBranch()->onlySuppliers()->where('created_at', '>=', $month)->count(),
                     hint: __('supplier::dashboard.new_hint'),
                     href: route('supplier.index'),
                 ),
@@ -81,7 +81,7 @@ final class SupplierDashboard implements ProvidesDashboard
                         ['key' => 'phone', 'label' => __('supplier::field.phone'), 'width' => '9rem',
                             'render' => fn ($s) => $s->phone ?? '—'],
                     ],
-                    rows: Supplier::query()->inViewedBranch()->latest('id')->limit(8)->get(),
+                    rows: Supplier::query()->inViewedBranch()->onlySuppliers()->latest('id')->limit(8)->get(),
                     empty: __('supplier::dashboard.none'),
                     href: route('supplier.index'),
                 ),
@@ -112,7 +112,7 @@ final class SupplierDashboard implements ProvidesDashboard
         }
 
         // ⓘ হেডারে বাছা শাখার সরবরাহকারী — তালিকার বাকি ঘরগুলোর মতোই ([[EveryPartyListFollowsTheViewedBranchTest]])
-        $names = Supplier::query()->inViewedBranch()->whereIn('id', array_column($rows, 'party_id'))->get()->keyBy('id');
+        $names = Supplier::query()->inViewedBranch()->onlySuppliers()->whereIn('id', array_column($rows, 'party_id'))->get()->keyBy('id');
         $rows = array_values(array_filter($rows, fn (array $row) => $names->has($row['party_id'])));
 
         if ($rows === []) {

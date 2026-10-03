@@ -52,6 +52,8 @@ final class SupplierWidgets implements DashboardWidgets
         $owed = (string) (self::inView(DB::table('ledger_entries'), 'ledger_entries.branch_id')
             ->where('company_id', CompanyContext::id())
             ->where('party_type', Supplier::drillSourceType())
+            // ⭐ কেবল মূল কোম্পানি (পণ্যের সরবরাহকারী) — প্রদেয় তালিকার একই নিয়মে, সেবাদাতা বাদ (মালিক, ২ অক্টোবর ২০২৬)
+            ->whereIn('party_id', Supplier::onlySuppliersIds())
             ->selectRaw('COALESCE(SUM(credit) - SUM(debit), 0) as owed')
             ->value('owed') ?? '0');
 

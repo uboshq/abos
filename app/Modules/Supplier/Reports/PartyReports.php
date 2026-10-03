@@ -70,8 +70,10 @@ final class PartyReports
                  * কোড লিখতে হত; ছাঁকনি হলে কোম্পানি নিজে একটা ধরন যোগ
                  * করলেই তার খতিয়ান পেয়ে যায়।
                  */
+                // ⭐ ধরন বাছা না থাকলে কেবল পণ্যের সরবরাহকারী — সেবাদাতা আলাদা (মালিক, ২ অক্টোবর ২০২৬); তাঁদের দেখতে ধরন বাছুন
                 ->when($f['party_type_id'] ?? null,
-                    fn ($q, $type) => $q->where('suppliers.party_type_id', $type))
+                    fn ($q, $type) => $q->where('suppliers.party_type_id', $type),
+                    fn ($q) => $q->whereIn('suppliers.id', Supplier::onlySuppliersIds()))
                 // শুরুর তারিখ ধরা হয় না: বকেয়া একটা মুহূর্তের অবস্থা,
                 // পরিসরের নয় — "কত দিন থেকে বাকি" প্রশ্নটা ageing-এর
                 ->where('ledger_entries.trx_date', '<=', $f['to'])
@@ -185,9 +187,11 @@ final class PartyReports
                     ->where('pur_bills.status', DocumentStatus::CONFIRMED)
                     ->whereNull('pur_bills.deleted_at')
                     ->tap(ReportEngine::branchWall($f, 'pur_bills.branch_id'))
+                    // ⭐ ধরন বাছা না থাকলে কেবল পণ্যের সরবরাহকারী (মালিক, ২ অক্টোবর ২০২৬)
                     ->when(
                         $f['party_type_id'] ?? null,
-                        fn ($q, $type) => $q->where('suppliers.party_type_id', $type)
+                        fn ($q, $type) => $q->where('suppliers.party_type_id', $type),
+                        fn ($q) => $q->whereIn('suppliers.id', Supplier::onlySuppliersIds()),
                     )
 
                     /*
@@ -276,8 +280,10 @@ final class PartyReports
                     ->where('ledger_entries.party_type', Supplier::drillSourceType())
                     ->tap(ReportEngine::branchWall($f, 'ledger_entries.branch_id'))
                     /* একই ছাঁকনি — বয়সের তালিকাতেও প্রশ্নটা একই */
+                    // ⭐ ধরন বাছা না থাকলে কেবল পণ্যের সরবরাহকারী (মালিক, ২ অক্টোবর ২০২৬)
                     ->when($f['party_type_id'] ?? null,
-                        fn ($q, $type) => $q->where('suppliers.party_type_id', $type))
+                        fn ($q, $type) => $q->where('suppliers.party_type_id', $type),
+                        fn ($q) => $q->whereIn('suppliers.id', Supplier::onlySuppliersIds()))
                     ->where('ledger_entries.trx_date', '<=', $f['to'])
                     ->groupBy('ledger_entries.party_id', 'suppliers.code', 'suppliers.name_en', 'suppliers.name_bn')
                     ->havingRaw('SUM(ledger_entries.credit) - SUM(ledger_entries.debit) <> 0')

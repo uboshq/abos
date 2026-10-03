@@ -120,7 +120,11 @@ class SixSpecialLedgersAreOneFilterTest extends TestCase
     }
 
     /**
-     * ছাঁকনিটা সত্যিই ছাঁকে — অন্য ধরনের সরবরাহকারী বাদ পড়ে।
+     * ছাঁকনিটা সত্যিই ছাঁকে — এক ধরন বাছলে অন্য ধরনের কেউ নেই।
+     *
+     * ⓘ সবার তালিকা আর ছাঁকা তালিকা এক হলে ছাঁকনিটা কিছুই করেনি — একটা ছাঁকনি যা সব সারি ফেরত দেয় সেটাও
+     * "কাজ করে" বলে মনে হয়। ⭐ ২ অক্টোবর ২০২৬ থেকে ধরন না বাছলে কেবল পণ্যের সরবরাহকারী (নিচে), তাই দুই
+     * সেবাদাতা-ধরন একে অন্যের সাথে মেলানো হয়।
      */
     public function test_the_filter_actually_filters(): void
     {
@@ -139,51 +143,43 @@ class SixSpecialLedgersAreOneFilterTest extends TestCase
         $this->owe($suppliers[0], '12000');
         $this->owe($suppliers[1], '8000');
 
-        $everyone = $this->payableNames();
         $onlyTransport = $this->payableNames($transport->id);
+        $onlyLabour = $this->payableNames($labour->id);
 
-        $this->assertNotEmpty($everyone, 'কোনো বকেয়াই নেই — পরীক্ষাটার মানে থাকে না।');
-
-        /*
-         * সবার তালিকা আর ছাঁকা তালিকা এক হলে ছাঁকনিটা কিছুই করেনি।
-         *
-         * এটাই আসল পরীক্ষা: একটা ছাঁকনি যা সব সারি ফেরত দেয় সেটাও
-         * "কাজ করে" বলে মনে হয়।
-         */
-        $this->assertNotEquals($everyone, $onlyTransport,
-            'ছাঁকনি দিয়েও একই তালিকা এসেছে — ছাঁকনিটা কিছুই ছাঁকছে না।');
-
-        $this->assertNotContains($suppliers[1]->name_en, $onlyTransport,
-            'শ্রমিক ঠিকাদার ট্রান্সপোর্টের তালিকায় আছে।');
+        $this->assertTrue($this->listed($suppliers[0], $onlyTransport), 'ট্রান্সপোর্টের তালিকায় ট্রান্সপোর্ট নেই।');
+        $this->assertFalse($this->listed($suppliers[1], $onlyTransport), 'শ্রমিক ঠিকাদার ট্রান্সপোর্টের তালিকায় আছে।');
+        $this->assertTrue($this->listed($suppliers[1], $onlyLabour), 'শ্রমিকের তালিকায় শ্রমিক ঠিকাদার নেই।');
     }
 
     /**
-     * ছাঁকনি না দিলে কাউকে বাদ দেওয়া হয় না।
+     * ⭐ ধরন না বাছলে কেবল পণ্যের সরবরাহকারী — মালিক, ২ অক্টোবর ২০২৬: *"Service Providers & Suppliers sob
+     * jaygay alada thakbe"*। সেবাদাতার বকেয়া হারায় না — তার ধরন বাছলেই আসে।
      *
-     * উল্টো ভুলটাও সহজ: ঘরটা খালি থাকলে `null` নিয়ে কোয়েরি চালিয়ে
-     * ফেললে কোনো সারিই আসত না, আর ডিফল্ট পর্দাটাই খালি দেখাত।
+     * ⚠️ ২ অক্টোবরের আগে এখানে দাবি ছিল "খালি ছাঁকনি কাউকে বাদ দেয় না"; মালিকের নিয়মে সেটা বদলেছে।
+     * ⓘ উল্টো ভুলটাও ধরা: খালি ঘরে `null` নিয়ে কোয়েরি চালালে পণ্যের সরবরাহকারীও আসত না।
      */
-    public function test_leaving_it_empty_hides_nobody(): void
+    public function test_leaving_it_empty_shows_the_product_suppliers_only(): void
     {
         $type = $this->partyType('TRANS2', 'Transport');
 
-        $supplier = Supplier::query()->orderBy('id')->first();
+        $suppliers = Supplier::query()->orderBy('id')->take(2)->get();
 
-        if ($supplier === null) {
-            $this->markTestSkipped('সিডারে সরবরাহকারী নেই।');
+        if ($suppliers->count() < 2) {
+            $this->markTestSkipped('সিডারে দুইটা সরবরাহকারী নেই।');
         }
 
-        $supplier->forceFill(['party_type_id' => $type->id])->save();
-        $this->owe($supplier, '5000');
+        [$vendor, $carrier] = [$suppliers[0], $suppliers[1]];
+        $vendor->forceFill(['party_type_id' => null])->save();
+        $carrier->forceFill(['party_type_id' => $type->id])->save();
+        $this->owe($vendor, '5000');
+        $this->owe($carrier, '3000');
 
         $withNothing = $this->payableNames();
-        $withNull = $this->payableNames(null);
 
-        $this->assertSame($withNothing, $withNull,
-            'ছাঁকনি খালি রাখলে তালিকা বদলে যাচ্ছে।');
-
-        $this->assertNotEmpty($withNothing,
-            'ছাঁকনি না দিয়েও তালিকা খালি — ডিফল্ট পর্দাই ফাঁকা দেখাবে।');
+        $this->assertSame($withNothing, $this->payableNames(null), 'ছাঁকনি খালি রাখলে তালিকা বদলে যাচ্ছে।');
+        $this->assertTrue($this->listed($vendor, $withNothing), '⛔ ছাঁকনি না দিয়ে পণ্যের সরবরাহকারীও আসেনি।');
+        $this->assertFalse($this->listed($carrier, $withNothing), '⛔ সেবাদাতা সরবরাহকারীর তালিকায় মিশে আছে।');
+        $this->assertTrue($this->listed($carrier, $this->payableNames($type->id)), '⛔ ধরন বাছার পরেও সেবাদাতার বকেয়া নেই।');
     }
 
     /**
@@ -206,6 +202,18 @@ class SixSpecialLedgersAreOneFilterTest extends TestCase
 
         $this->assertEmpty($notOffered,
             'মজুদের রিপোর্টেও পক্ষের ধরনের ঘর বসেছে — ওখানে প্রশ্নটার মানে নেই।');
+    }
+
+    /**
+     * তালিকায় এই সরবরাহকারী আছেন কি — সারিতে "কোড — নাম" ([[PartyReports]])।
+     *
+     * ⚠️ নাম ধরে খুঁজলে কখনো মিলত না, তাই "নেই" দাবিটা সবসময় সবুজ থাকত — কোড ধরে।
+     *
+     * @param  list<string>  $names
+     */
+    private function listed(Supplier $supplier, array $names): bool
+    {
+        return collect($names)->contains(fn (string $n) => str_starts_with($n, $supplier->code.' — '));
     }
 
     /**

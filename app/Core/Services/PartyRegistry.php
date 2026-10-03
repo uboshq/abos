@@ -144,17 +144,32 @@ final class PartyRegistry
                 )
                 ->get();
 
+            /*
+             * ⭐ এক ধরনের ভেতরে দুই রকম — মালিক, ২ অক্টোবর ২০২৬: সরবরাহকারী আর সেবাদাতা এক নয়।
+             * ⓘ কোর মডিউলের নাম জানে না, তাই মডেল নিজে বলে কোন সারির পাশে কী লেখা ([[Supplier::pickerNotes()]]):
+             * নোট-ওয়ালা সারি নামের পাশে "(সেবাদাতা)", আর তালিকায় পরে; নোট ছাড়া সারি আগে। ধরন একটাই থাকে —
+             * কাগজে `party_type` বদলায় না, তাই পুরনো ভাউচার আর পর্দার গঠন অটুট।
+             */
+            $notes = method_exists($model, 'pickerNotes') ? $model::pickerNotes() : [];
+
             $groups[] = [
                 'type' => $type,
                 'label' => __($labelKey),
                 'options' => $rows
-                    ->map(fn (Model $row) => [
-                        'id' => (int) $row->getKey(),
-                        'label' => method_exists($row, 'drillLabel')
-                            ? $row->drillLabel()
-                            : (string) $row->getKey(),
+                    ->map(function (Model $row) use ($notes) {
+                        $label = method_exists($row, 'drillLabel') ? $row->drillLabel() : (string) $row->getKey();
+                        $note = $notes[(int) $row->getKey()] ?? null;
+
+                        return [
+                            'id' => (int) $row->getKey(),
+                            'label' => $note === null ? $label : $label.' ('.$note.')',
+                            'note' => $note,
+                        ];
+                    })
+                    ->sortBy([
+                        fn (array $a, array $b) => ($a['note'] !== null) <=> ($b['note'] !== null),
+                        fn (array $a, array $b) => strnatcasecmp($a['label'], $b['label']),
                     ])
-                    ->sortBy('label', SORT_NATURAL | SORT_FLAG_CASE)
                     ->values()
                     ->all(),
             ];

@@ -11,6 +11,7 @@ use App\Core\Support\CompanyContext;
 use App\Core\Support\DocumentStatus;
 use App\Models\IssuedNumber;
 use App\Modules\Accounts\Services\OpeningBalanceService;
+use App\Modules\MasterData\Models\PartyType;
 use App\Modules\Supplier\Models\Supplier;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -32,6 +33,18 @@ final class SupplierService
         private readonly OpeningBalanceService $openings,
     ) {}
 
+    /** নম্বরের সিরিজ — সেবাদাতা SPD, পণ্যের সরবরাহকারী SUP (মালিক, ২ অক্টোবর ২০২৬) */
+    public static function seriesFor(int|string|null $partyTypeId): string
+    {
+        if ($partyTypeId === null || $partyTypeId === '') {
+            return 'SUP';
+        }
+
+        $code = PartyType::query()->whereKey($partyTypeId)->value('code');
+
+        return $code !== null && $code !== Supplier::VENDOR_CODE ? 'SPD' : 'SUP';
+    }
+
     /**
      * @param  array<string, mixed>  $data
      */
@@ -46,7 +59,12 @@ final class SupplierService
             // নাহলে সেভ ব্যর্থ হলেও কোডটা খরচ হয়ে যেত
             $givenCode = filled($data['code'] ?? null);
 
-            $data['code'] = $givenCode ? trim((string) $data['code']) : $this->numbers->next('SUP');
+            /*
+             * ⭐ সেবাদাতার নিজের সিরিজ — মালিক, ২ অক্টোবর ২০২৬: *"suppliyer iD - SUP001, সেবাদাতা - ID= SPD-001"*।
+             * ⓘ ধরন দেখে, তালিকার একই নিয়মে ([[Supplier::scopeOnlyServiceProviders()]]): ধরন বসানো আর সেটা পণ্যের
+             * সরবরাহকারী (VENDOR) নয় → সেবাদাতা; ধরন ফাঁকা হলে সরবরাহকারী।
+             */
+            $data['code'] = $givenCode ? trim((string) $data['code']) : $this->numbers->next(self::seriesFor($data['party_type_id'] ?? null));
 
             $this->assertCodeIsFree($data['code']);
 

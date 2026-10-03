@@ -108,7 +108,8 @@ class CommissionClaimController extends Controller implements HasMiddleware
         return view('sales::commission.create', [
             'menu' => $this->menu->forUser($request->user()),
             'customers' => Customer::query()->inViewedBranch()->active()->orderBy('name_en')->get(['id', 'code', 'name_en', 'name_bn']),
-            'suppliers' => Supplier::query()->inViewedBranch()->active()->orderBy('name_en')->get(['id', 'code', 'name_en', 'name_bn']),
+            // ⭐ কমিশন দাবি হয় মূল কোম্পানির কাছে — কেবল সরবরাহকারী, সেবাদাতা নয় (মালিক, ২ অক্টোবর ২০২৬)
+            'suppliers' => Supplier::query()->inViewedBranch()->active()->onlySuppliers()->orderBy('name_en')->get(['id', 'code', 'name_en', 'name_bn']),
         ]);
     }
 

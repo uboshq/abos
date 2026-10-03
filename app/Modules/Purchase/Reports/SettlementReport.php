@@ -113,6 +113,8 @@ final class SettlementReport
 
         return DB::table('suppliers')
             ->where('suppliers.company_id', $company)
+            // ⭐ কেবল পণ্যের সরবরাহকারী — সেবাদাতা নয় (মালিক, ২ অক্টোবর ২০২৬; [[Supplier::onlySuppliersIds()]])
+            ->whereIn('suppliers.id', Supplier::onlySuppliersIds())
             ->leftJoinSub(self::goodsIn($company, $from, $to), 'gi', 'gi.supplier_id', '=', 'suppliers.id')
             ->leftJoinSub(self::soldFromThem($company, $from, $to), 'sf', 'sf.supplier_id', '=', 'suppliers.id')
             ->leftJoinSub(self::money($company, $from, $to), 'mo', 'mo.party_id', '=', 'suppliers.id')

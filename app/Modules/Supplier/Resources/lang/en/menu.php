@@ -11,6 +11,7 @@ return [
     'ageing' => 'Payable Ageing',
 
     'party' => 'Supplier',
+    'service_provider' => 'service provider',
 
     // কোম্পানির নিষ্পত্তির কাগজ
     'settlement' => 'Principal Settlement',

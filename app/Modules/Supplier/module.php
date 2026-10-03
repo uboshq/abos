@@ -129,6 +129,8 @@ return [
 
     'doc_types' => [
         'SUP' => 'supplier::doc.supplier_code',
+        // ⭐ সেবাদাতার নিজের সিরিজ — মালিক, ২ অক্টোবর ২০২৬ ([[SupplierService::seriesFor()]])
+        'SPD' => 'supplier::doc.service_provider_code',
     ],
 
     'drill_sources' => [

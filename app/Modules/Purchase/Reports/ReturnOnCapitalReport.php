@@ -158,6 +158,8 @@ final class ReturnOnCapitalReport
 
         return DB::table('suppliers')
             ->where('suppliers.company_id', $company)
+            // ⭐ কেবল পণ্যের সরবরাহকারী — সেবাদাতা নয় (মালিক, ২ অক্টোবর ২০২৬; [[Supplier::onlySuppliersIds()]])
+            ->whereIn('suppliers.id', Supplier::onlySuppliersIds())
             ->leftJoinSub(self::advance($company, $to), 'ad', 'ad.party_id', '=', 'suppliers.id')
             ->leftJoinSub(self::claims($company, $to), 'cl', 'cl.supplier_id', '=', 'suppliers.id')
             ->leftJoinSub(self::stock($company), 'st', 'st.supplier_id', '=', 'suppliers.id')

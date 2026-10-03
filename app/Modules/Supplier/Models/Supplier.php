@@ -242,6 +242,33 @@ class Supplier extends Model implements Drillable
         );
     }
 
+    /**
+     * কাঁচা কোয়েরির জন্য — কেবল পণ্যের সরবরাহকারীর id, [[scopeOnlySuppliers()]]-এর একই নিয়মে।
+     *
+     * ⭐ মালিক, ২ অক্টোবর ২০২৬: *"Suppliers tara kebol zader product sales kori, r zader sahazo niye kori tara
+     * sarvice provider … duto ki ek?"* — না। পক্ষ-ধরা রিপোর্টে (পুঁজির উপর ফেরত, নিষ্পত্তি) সেবাদাতার সারি নেই:
+     * তাঁদের মজুদ, দাবি বা মার্জিন নেই। ⓘ কাগজ-ধরা রিপোর্ট (খাতা, বিশ্লেষণ) কাগজ যেমন আছে দেখায় — নইলে পুরনো
+     * কোনো ভুল-পক্ষের বিল খাতা থেকে হারাত।
+     */
+    public static function onlySuppliersIds(): \Illuminate\Database\Query\Builder
+    {
+        return static::query()->withoutGlobalScopes()->onlySuppliers()->select('suppliers.id')->toBase();
+    }
+
+    /**
+     * পক্ষ বাছার তালিকায় সেবাদাতার পাশে লেখা ([[PartyRegistry::forPicker()]]) — id => "সেবাদাতা"।
+     *
+     * @return array<int, string>
+     */
+    public static function pickerNotes(): array
+    {
+        $note = (string) __('supplier::menu.service_provider');
+
+        return static::query()->onlyServiceProviders()->pluck('id')
+            ->mapWithKeys(fn ($id) => [(int) $id => $note])
+            ->all();
+    }
+
     public function scopeWithPayable(Builder $query): Builder
     {
         $net = LedgerEntry::query()
