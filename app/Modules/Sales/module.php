@@ -343,6 +343,9 @@ return [
              */
             ['label' => 'sales::target.title', 'icon' => 'scale', 'route' => 'sales.target.index',
                 'permission' => 'sales.target.view'],
+            // ⭐ ডিলারের মাসিক আদায়ের লক্ষ্য — বিলের "টার্গেট রিমাইন্ডার" (মালিক, ৩ অক্টোবর ২০২৬)
+            ['label' => 'sales::customer_target.title', 'icon' => 'scale', 'route' => 'sales.customer_target.index',
+                'permission' => 'sales.customer_target.view'],
 
             /*
              * ডিলারের কমিশন — লক্ষ্যমাত্রার পাশে।
@@ -398,6 +401,9 @@ return [
          */
         'sales.target.view',
         'sales.target.manage',
+        // ⭐ ডিলারের মাসিক আদায়ের লক্ষ্য (৩ অক্টোবর ২০২৬)
+        'sales.customer_target.view',
+        'sales.customer_target.manage',
 
         /*
          * ডিলারের কমিশন — দেখা, দেওয়া, আর সীমা ছাড়ানো।
@@ -632,6 +638,11 @@ return [
         'sales_invoice' => SalesInvoice::class,
         'collection' => Collection::class,
         'sales_return' => SalesReturn::class,
+    ],
+
+    // ডিলারের মাসিক লক্ষ্য একসাথে অনেকের (৩ অক্টোবর ২০২৬; [[CustomerTargetImporter]])
+    'imports' => [
+        'customer_target' => \App\Modules\Sales\Imports\CustomerTargetImporter::class,
     ],
 
     'reports' => [

@@ -261,6 +261,12 @@ Route::middleware('auth')->prefix('sales')->group(function () {
         Route::post('/', [SalesTargetController::class, 'store'])->name('store');
     });
 
+    // ⭐ ডিলারের মাসিক আদায়ের লক্ষ্য — বিলের "টার্গেট রিমাইন্ডার" (মালিক, ৩ অক্টোবর ২০২৬)
+    Route::prefix('dealer-targets')->name('customer_target.')->group(function () {
+        Route::get('/', [\App\Modules\Sales\Http\Controllers\CustomerTargetController::class, 'index'])->name('index');
+        Route::post('/', [\App\Modules\Sales\Http\Controllers\CustomerTargetController::class, 'store'])->name('store');
+    });
+
     Route::prefix('shipments')->name('shipment.')->group(function () {
         Route::get('/', [ShipmentController::class, 'index'])->name('index');
         Route::get('/create', [ShipmentController::class, 'create'])->name('create');
