@@ -416,6 +416,8 @@ class SalesPrintController extends Controller implements HasMiddleware
             ],
             'transport' => [
                 'carrier' => (string) ($challan?->carrier_name ?? ''),
+                // ⓘ ড্রাইভারের নাম — চালানে ছিল, বিলে আসত না ("Special for DB", মালিক, ৩ অক্টোবর ২০২৬)
+                'driver_name' => (string) ($challan?->driver_name ?? ''),
                 'driver_phone' => (string) ($challan?->driver_phone ?? ''),
                 'vehicle' => $vehicle,
                 'delivery_date' => $challan === null
@@ -436,6 +438,8 @@ class SalesPrintController extends Controller implements HasMiddleware
             )),
             'items' => $this->classicItems($invoice),
             'sums' => array_map(fn (string $v) => $this->money($v), $sums),
+            /* ⭐ টার্গেট রিমাইন্ডার — ডিলারের মাসিক আদায়ের লক্ষ্য, বিলের দিন ধরে; না থাকলে null ([[targetFacts()]]) */
+            'target' => $customer === null ? null : $this->targetFacts((int) $customer->id, $invoice->trx_date),
             /* ⭐ ACCOUNT MOVEMENT — বিলের মাসের আসল খাতা, বিবরণসহ ([[monthMovement()]]) */
             'movement' => $customer === null ? null : $this->monthMovement($customer->id, $invoice->trx_date),
             'words' => $this->sampleWords((string) $invoice->total),
@@ -1154,6 +1158,31 @@ class SalesPrintController extends Controller implements HasMiddleware
      *
      * @return list<array{date: string, text: string, debit: string, credit: string, balance: string}>
      */
+    /**
+     * ⭐ বিলের "টার্গেট রিমাইন্ডার" — মালিক, ৩ অক্টোবর ২০২৬ ([[CustomerTargetService::reminderFor()]])।
+     *
+     * ⓘ বিলের দিন ধরে: পুরনো বিল আবার ছাপলে সেই মাসের সেই দিনের হিসাব — আজকের নয়। লক্ষ্য না থাকলে `null`।
+     *
+     * @return array{month: string, target: string, achieved: string, remaining: string, closes_on: string, bank_days: string}|null
+     */
+    private function targetFacts(int $customerId, mixed $billDate): ?array
+    {
+        $r = app(\App\Modules\Sales\Services\CustomerTargetService::class)->reminderFor($customerId, \Illuminate\Support\Carbon::parse($billDate));
+
+        if ($r === null) {
+            return null;
+        }
+
+        return [
+            'month' => $r['month']->format("F'y"),
+            'target' => $this->money($r['target']),
+            'achieved' => $this->money($r['achieved']),
+            'remaining' => $this->money($r['remaining']),
+            'closes_on' => DateFormat::format($r['closes_on']),
+            'bank_days' => (string) $r['bank_days'],
+        ];
+    }
+
     private function monthMovement(int $customerId, mixed $billDate): array
     {
         $from = \Illuminate\Support\Carbon::parse($billDate)->startOfMonth();

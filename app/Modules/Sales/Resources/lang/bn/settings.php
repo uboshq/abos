@@ -72,6 +72,7 @@ return [
         'seal_boxes' => 'সিলমোহরের ঘর',
         'statement' => 'বিল + হিসাবের বিবরণী',
         'statement_ledger' => 'আধুনিক বিবরণী',
+        'special_db' => 'Special for DB',
         'half_page' => 'আধা পাতা',
         'hero_total' => 'বড় অঙ্ক আগে',
         'qr_first' => 'QR আগে',

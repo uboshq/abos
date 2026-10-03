@@ -1,0 +1,106 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Tests\Feature\Modules\Sales;
+
+use App\Core\Engines\Print\PrintableDocument;
+use App\Core\Engines\Print\PrintProfile;
+use App\Core\Support\CompanyContext;
+use App\Models\Company;
+use App\Models\User;
+use App\Modules\Sales\Support\InvoiceDesigns;
+use App\Modules\Sales\Support\InvoicePaperView;
+use Database\Seeders\DemoSeeder;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\TestCase;
+
+/**
+ * "Special for DB" — বিল + হিসাবের বিবরণী, মালিক, ৩ অক্টোবর ২০২৬ (`invoice-special_db`)।
+ *
+ * ⓘ দুই ভাগ: নমুনা কাগজে নকশাটা পুরো আঁকে — শিরোনাম, ড্রাইভারের নাম, টার্গেট রিমাইন্ডার, শেষ লাইন "Due"; আর
+ * শেষ লাইনের ভাষা অঙ্কের চিহ্ন মেনে চলে — বাকি হলে Due, অগ্রিম হলে Advance, শূন্যে No Due, বেশি দিলে "Extra Paid"
+ * ([[InvoicePaperView::balanceWord()]], [[billLeftWord()]])।
+ */
+final class TheSpecialForDbBillSpeaksTheDealersWordsTest extends TestCase
+{
+    use RefreshDatabase;
+
+    private Company $company;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->seed(DemoSeeder::class);
+
+        $this->company = Company::query()->where('code', 'TDEPOT')->firstOrFail();
+        CompanyContext::set($this->company->id, $this->company->defaultBranch()?->id);
+        $this->actingAs(User::query()->where('email', 'owner@abos.test')->firstOrFail());
+    }
+
+    public function test_the_design_is_listed_and_draws_the_whole_page(): void
+    {
+        $this->assertArrayHasKey('special_db', InvoiceDesigns::ALL, '⛔ নকশাটা তালিকায় নেই — বাছাই করা যেত না।');
+
+        $paper = $this->get(route('sales.invoice_sample', ['design' => 'special_db']))->assertOk()->getContent();
+
+        foreach (['INVOICE', 'With Accounts Statement', 'Karim', 'TARGET REMINDER', 'INVOICE SUMMARY', 'data-balance-word', 'Special for DB'] as $must) {
+            $this->assertStringContainsString($must, (string) $paper, "⛔ নকশায় «{$must}» নেই।");
+        }
+
+        $this->assertMatchesRegularExpression('/data-balance-word>\s*Due\s*</', (string) $paper, '⛔ নমুনার বকেয়া ধনাত্মক — শেষ লাইন "Due" হওয়ার কথা।');
+        $this->assertStringNotContainsString('Outstanding', (string) $paper, '⛔ মালিক "Outstanding" চাননি — Due / Advance।');
+    }
+
+    public function test_the_last_line_follows_the_sign(): void
+    {
+        $this->assertSame(['Due', '12,500.00'], $this->bottom(['outstanding' => '12,500.00']));
+        $this->assertSame(['Advance', '8,789.00'], $this->bottom(['outstanding' => '-8,789.00']), '⛔ অগ্রিমে "Advance", চিহ্ন ছাড়া অঙ্ক।');
+        $this->assertSame(['No Due', '0.00'], $this->bottom(['outstanding' => '0.00']));
+    }
+
+    public function test_paying_more_than_the_bill_says_extra_paid(): void
+    {
+        $v = $this->paperView(['net_payable' => '14,500.00', 'paid' => '15,000.00', 'invoice_due' => '0.00']);
+        $this->assertSame('Extra Paid', $v->billLeftWord());
+        $this->assertSame('500.00', $v->billLeftAmount());
+
+        $v = $this->paperView(['net_payable' => '14,500.00', 'paid' => '5,000.00', 'invoice_due' => '9,500.00']);
+        $this->assertSame('Invoice Due', $v->billLeftWord());
+        $this->assertSame('9,500.00', $v->billLeftAmount());
+    }
+
+    public function test_no_target_means_no_box(): void
+    {
+        $this->assertNull($this->paperView([], target: null)->target(), '⛔ লক্ষ্য নেই, অথচ বাক্সের অঙ্ক আছে।');
+    }
+
+    // ── সহায়ক ───────────────────────────────────────────────────────────
+
+    /** @return array{0: string, 1: string} */
+    private function bottom(array $sums): array
+    {
+        $v = $this->paperView($sums);
+
+        return [$v->balanceWord(), $v->balanceAmount()];
+    }
+
+    private function paperView(array $sums, ?array $target = null): InvoicePaperView
+    {
+        $facts = [
+            'bill_to' => ['name' => 'X', 'point' => '', 'phone' => '', 'address' => ''],
+            'transport' => ['carrier' => '', 'driver_name' => '', 'driver_phone' => '', 'vehicle' => '', 'delivery_date' => ''],
+            'bill' => ['bill_date' => '', 'bill_no' => 'S-1', 'order_no' => '', 'type' => '', 'created_by' => ''],
+            'items' => ['rows' => [], 'totals' => ['qty' => '', 'free' => '', 'total_qty' => '', 'amount' => '0.00']],
+            'sums' => [
+                'grand_total' => '0.00', 'discount' => '0.00', 'vat' => '0.00', 'rounding' => '0.00', 'net_payable' => '0.00',
+                'paid' => '0.00', 'invoice_due' => '0.00', 'previous_due' => '0.00', 'outstanding' => '0.00', ...$sums,
+            ],
+            'target' => $target,
+            'words' => '',
+            'scan_url' => '',
+        ];
+
+        return new InvoicePaperView(new PrintableDocument(title: 'Invoice'), $facts, $this->company, PrintProfile::everything());
+    }
+}

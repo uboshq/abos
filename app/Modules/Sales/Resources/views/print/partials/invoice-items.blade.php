@@ -59,7 +59,8 @@
                 <td class="num">{{ $facts['items']['totals']['qty'] }}</td>
                 @if ($v->free)<td class="num">{{ $facts['items']['totals']['free'] }}</td>@endif
                 @if ($v->totalQty)<td class="num">{{ $facts['items']['totals']['total_qty'] }}</td>@endif
-                <td class="num">{{ $paper->money($facts['items']['totals']['amount']) }}</td>
+                {{-- ⓘ `grand-amount` — নকশা চাইলে কেবল টাকার ঘরটা আলাদা করে ("Special for DB", ৩ অক্টোবর ২০২৬) --}}
+                <td class="num grand-amount">{{ $paper->money($facts['items']['totals']['amount']) }}</td>
             </tr>
         @endif
     </tbody>

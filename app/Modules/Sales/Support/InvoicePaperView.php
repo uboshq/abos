@@ -260,4 +260,79 @@ final class InvoicePaperView
 
         return $this->en('printed_at').' '.DateFormat::formatWithTime(now()).$who;
     }
+
+    /*
+     * ── ⭐ ডিলারের ভাষায় শেষ লাইন — মালিক, ৩ অক্টোবর ২০২৬ ("Special for DB" নকশা দেখার সময়) ─────────────────
+     * "Outstanding" বা Dr/Cr নয়: বাকি থাকলে **Due**, বেশি দেওয়া থাকলে **Advance**, শূন্যে **No Due**; আর এই বিলে বিলের
+     * চেয়ে বেশি দিলে "Invoice Due"-র জায়গায় **Extra Paid**। ⓘ অঙ্ক `sums`-এরই — আলাদা করে গোনা নয়; অন্য নকশাও নিতে পারে।
+     */
+
+    /** শেষ লাইনের নাম — `outstanding`-এর চিহ্ন দেখে। */
+    public function balanceWord(): string
+    {
+        return match ($this->sign($this->sums['outstanding'] ?? '0')) {
+            1 => 'Due',
+            -1 => 'Advance',
+            default => 'No Due',
+        };
+    }
+
+    /** শেষ লাইনের অঙ্ক — চিহ্ন ছাড়া, কারণ নামটাই দিক বলে। */
+    public function balanceAmount(): string
+    {
+        return Money::format($this->absolute($this->sums['outstanding'] ?? '0'));
+    }
+
+    /** এই বিলের ঘরের নাম — বেশি দিলে Extra Paid। */
+    public function billLeftWord(): string
+    {
+        return $this->sign($this->extraPaid()) > 0 ? 'Extra Paid' : 'Invoice Due';
+    }
+
+    /** এই বিলের ঘরের অঙ্ক — বাকি, বা যতটা বেশি দেওয়া হয়েছে। */
+    public function billLeftAmount(): string
+    {
+        $extra = $this->extraPaid();
+
+        return $this->sign($extra) > 0 ? Money::format($extra) : (string) ($this->sums['invoice_due'] ?? Money::format('0'));
+    }
+
+    /**
+     * লক্ষ্যের বাক্স — ডিলারের লক্ষ্য না থাকলে `null`, আর তখন বাক্সটাই আঁকা হয় না ([[CustomerTargetService::reminderFor()]])।
+     *
+     * @return array{month: string, target: string, achieved: string, remaining: string, closes_on: string, bank_days: string}|null
+     */
+    public function target(): ?array
+    {
+        $t = $this->facts['target'] ?? null;
+
+        return is_array($t) ? $t : null;
+    }
+
+    private function extraPaid(): string
+    {
+        return bcsub($this->plain($this->sums['paid'] ?? '0'), $this->plain($this->sums['net_payable'] ?? '0'), 4);
+    }
+
+    private function sign(string $formatted): int
+    {
+        $v = $this->plain($formatted);
+
+        return bccomp($v, '0.005', 4) > 0 ? 1 : (bccomp($v, '-0.005', 4) < 0 ? -1 : 0);
+    }
+
+    private function absolute(string $formatted): string
+    {
+        $v = $this->plain($formatted);
+
+        return bccomp($v, '0', 4) < 0 ? bcmul($v, '-1', 4) : $v;
+    }
+
+    /** ছাপার অঙ্ক থেকে কমা আর ফাঁকা বাদ — `sums` আগেই ছাপার রূপে আসে */
+    private function plain(string $formatted): string
+    {
+        $v = str_replace([',', ' '], '', trim($formatted));
+
+        return is_numeric($v) ? bcadd($v, '0', 4) : '0.0000';
+    }
 }

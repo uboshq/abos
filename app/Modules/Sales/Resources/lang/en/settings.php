@@ -72,6 +72,7 @@ return [
         'seal_boxes' => 'Seal Boxes',
         'statement' => 'Invoice & Statement',
         'statement_ledger' => 'Modern Statement',
+        'special_db' => 'Special for DB',
         'half_page' => 'Half Page',
         'hero_total' => 'Big Total First',
         'qr_first' => 'QR First',

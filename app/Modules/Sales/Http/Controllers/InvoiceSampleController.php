@@ -65,7 +65,7 @@ class InvoiceSampleController extends Controller implements HasMiddleware
 
         $facts = [
             'bill_to' => ['name' => $s('customer'), 'point' => $s('point'), 'phone' => '01700-000000', 'address' => $s('address')],
-            'transport' => ['carrier' => $s('carrier'), 'driver_phone' => '01800-000000', 'vehicle' => 'Truck DM-TA-11-0000',
+            'transport' => ['carrier' => $s('carrier'), 'driver_name' => 'Karim', 'driver_phone' => '01800-000000', 'vehicle' => 'Truck DM-TA-11-0000',
                 'delivery_date' => $today],
             'bill' => ['bill_date' => $today, 'bill_no' => 'S-0000', 'order_no' => 'SO-0000',
                 'type' => __('sales::print.classic.credit', [], 'en'), 'created_by' => $s('creator')],
@@ -82,6 +82,9 @@ class InvoiceSampleController extends Controller implements HasMiddleware
                 'net_payable' => '14,500.00', 'paid' => '5,000.00', 'invoice_due' => '9,500.00',
                 'previous_due' => '3,000.00', 'outstanding' => '12,500.00'],
             'words' => $s('words'),
+            // ⓘ লক্ষ্যের বাক্স — নমুনায় সবসময়, যাতে নকশাটা পুরো দেখা যায় ([[SalesPrintController::targetFacts()]])
+            'target' => ['month' => now()->format("F'y"), 'target' => '300,000.00', 'achieved' => '170,000.00',
+                'remaining' => '130,000.00', 'closes_on' => DateFormat::format(now()->copy()->day(25)), 'bank_days' => '16'],
             'scan_url' => route('sales.scan', '00000000-0000-7000-8000-000000000000'),
         ];
 
