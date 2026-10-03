@@ -45,6 +45,16 @@ class AConstantThatFilteredNothingTest extends TestCase
 
     private User $owner;
 
+    /**
+     * ⛔ সীমাবদ্ধ মানুষটা ডেমোর হিসাবরক্ষক, মালিক নন।
+     *
+     * ⓘ ৩ অক্টোবর ২০২৬ থেকে সুপার অ্যাডমিনের কোনো সীমা নেই
+     * ([[TheOwnerLostTheWarehouseHeJustMadeTest]]) — মালিকের নামে সারি বসালে ছাঁকনি
+     * ঘুমায়, আর এই ফাইলের প্রতিটা দাবি আবার "ধ্রুবকটা আছে, ছাঁকনিটা নেই" হয়ে যেত।
+     * ⭐ মালিক এখানে কেবল পর্দা থেকে অন্যের সীমা বসান — যেভাবে লাইভে বসে।
+     */
+    private User $clerk;
+
     private Warehouse $main;
 
     private Warehouse $second;
@@ -58,6 +68,7 @@ class AConstantThatFilteredNothingTest extends TestCase
         CompanyContext::set($this->company->id, $this->company->defaultBranch()?->id);
 
         $this->owner = User::query()->where('email', 'owner@abos.test')->firstOrFail();
+        $this->clerk = User::query()->where('email', 'accounts@abos.test')->firstOrFail();
 
         $this->main = Warehouse::query()->withoutGlobalScopes()
             ->where('company_id', $this->company->id)->orderBy('id')->firstOrFail();
@@ -76,7 +87,7 @@ class AConstantThatFilteredNothingTest extends TestCase
     {
         UserDataScope::query()->create([
             'company_id' => $this->company->id,
-            'user_id' => $this->owner->id,
+            'user_id' => $this->clerk->id,
             'scope_type' => UserDataScope::WAREHOUSE,
             'scope_id' => $house->id,
         ]);
@@ -92,9 +103,9 @@ class AConstantThatFilteredNothingTest extends TestCase
      */
     public function test_a_person_with_no_limit_sees_every_warehouse(): void
     {
-        $this->actingAs($this->owner);
+        $this->actingAs($this->clerk);
 
-        $this->assertFalse(app(DataScope::class)->isLimited($this->owner, UserDataScope::WAREHOUSE));
+        $this->assertFalse(app(DataScope::class)->isLimited($this->clerk, UserDataScope::WAREHOUSE));
         $this->assertGreaterThanOrEqual(2, Warehouse::query()->count());
     }
 
@@ -108,7 +119,7 @@ class AConstantThatFilteredNothingTest extends TestCase
     public function test_the_warehouse_list_itself_is_filtered(): void
     {
         $this->limitTo($this->second);
-        $this->actingAs($this->owner);
+        $this->actingAs($this->clerk);
 
         $codes = Warehouse::query()->pluck('code')->all();
 
@@ -122,7 +133,7 @@ class AConstantThatFilteredNothingTest extends TestCase
     {
         $this->seedMovements();
         $this->limitTo($this->second);
-        $this->actingAs($this->owner);
+        $this->actingAs($this->clerk);
 
         $seen = StockMovement::query()->pluck('warehouse_id')->unique()->values()->all();
 
@@ -140,7 +151,7 @@ class AConstantThatFilteredNothingTest extends TestCase
     {
         $this->seedMovements();
         $this->limitTo($this->second);
-        $this->actingAs($this->owner);
+        $this->actingAs($this->clerk);
 
         /*
          * নিজের সারিগুলো ধরে গোনা, মোট নয়।
@@ -171,7 +182,7 @@ class AConstantThatFilteredNothingTest extends TestCase
     public function test_the_user_screen_offers_the_warehouse_boxes(): void
     {
         $this->actingAs($this->owner)
-            ->get(route('system_admin.user.edit', $this->owner))
+            ->get(route('system_admin.user.edit', $this->clerk))
             ->assertOk()
             ->assertSee('warehouse_scope['.$this->company->id.'][]', false)
             ->assertSee($this->second->code);
@@ -182,7 +193,7 @@ class AConstantThatFilteredNothingTest extends TestCase
     {
         $this->seedMovements();
 
-        $user = $this->owner->fresh(['roles', 'companies']);
+        $user = $this->clerk->fresh(['roles', 'companies']);
 
         $this->actingAs($this->owner)
             ->put(route('system_admin.user.update', $user), [
@@ -200,7 +211,7 @@ class AConstantThatFilteredNothingTest extends TestCase
 
         $this->assertSame(
             [$this->second->id],
-            app(DataScope::class)->idsFor($this->owner, UserDataScope::WAREHOUSE),
+            app(DataScope::class)->idsFor($this->clerk, UserDataScope::WAREHOUSE),
         );
     }
 

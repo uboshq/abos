@@ -49,6 +49,17 @@ final class DataScope
             return $this->cache[$key];
         }
 
+        /*
+         * ⭐ সুপার অ্যাডমিনের কোনো সীমা নেই — মালিক, ৩ অক্টোবর ২০২৬: ডেমোতে নতুন গুদাম চারবার যোগ হলো,
+         * তালিকায় একটাও নেই। ⓘ ২৯ সেপ্টেম্বর মালিক নিজের নামে তখনকার একমাত্র গুদামটা টিক দিয়েছিলেন —
+         * "সব" মানেই তখন একটা; পরে বানানো প্রতিটা গুদাম তালিকার বাইরে পড়ল। "পুরো তালিকা = সীমা নেই"
+         * ([[a-full-scope-list-is-no-limit]]) নতুন সারি এলেই ভেঙে যায়, তাই সুপার অ্যাডমিন সারি পড়ার আগেই ছাড়।
+         * ⚠️ হেডারে বাছা শাখা আলাদা জিনিস ([[ViewedBranch]]) — সেটা সবার মতো তাঁর বেলাতেও খাটে।
+         */
+        if ($this->isSuperAdmin($userId, $companyId)) {
+            return $this->cache[$key] = null;
+        }
+
         $ids = UserDataScope::query()
             ->withoutGlobalScopes()
             ->where('company_id', $companyId)
@@ -59,6 +70,18 @@ final class DataScope
             ->all();
 
         return $this->cache[$key] = $ids === [] ? null : $ids;
+    }
+
+    /** এই কোম্পানিতে সুপার অ্যাডমিন কি না — কাঁচা কোয়েরিতে, যাতে কোনো দেয়াল নিজেকে ডেকে না বসে */
+    private function isSuperAdmin(int $userId, int $companyId): bool
+    {
+        return \Illuminate\Support\Facades\DB::table('model_has_roles')
+            ->join('roles', 'roles.id', '=', 'model_has_roles.role_id')
+            ->where('model_has_roles.model_id', $userId)
+            ->where('model_has_roles.model_type', (new User)->getMorphClass())
+            ->where('model_has_roles.company_id', $companyId)
+            ->where('roles.name', PermissionSyncer::SUPER_ADMIN_ROLE)
+            ->exists();
     }
 
     /** এই ব্যবহারকারীর জন্য কোনো সীমা বসানো আছে কি না। */

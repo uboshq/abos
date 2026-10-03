@@ -43,7 +43,14 @@ class WhoGetsToSeeWhichRowsTest extends TestCase
 
     private Branch $netrokona;
 
-    private User $owner;
+    /**
+     * ⛔ যাঁর সীমা মাপা হয় তিনি ডেমোর হিসাবরক্ষক, মালিক নন।
+     *
+     * ⓘ ৩ অক্টোবর ২০২৬ থেকে সুপার অ্যাডমিনের কোনো সীমা নেই
+     * ([[TheOwnerLostTheWarehouseHeJustMadeTest]])। মালিকের নামে সারি বসালে দেয়ালটা
+     * চুপ থাকত, আর "সীমাবদ্ধ মানুষ কেবল নিজের শাখা দেখেন" দাবিটা আর কাউকে মাপত না।
+     */
+    private User $clerk;
 
     protected function setUp(): void
     {
@@ -53,7 +60,7 @@ class WhoGetsToSeeWhichRowsTest extends TestCase
         $this->company = Company::query()->where('code', 'TDEPOT')->firstOrFail();
         CompanyContext::set($this->company->id, $this->company->defaultBranch()?->id);
 
-        $this->owner = User::query()->where('email', 'owner@abos.test')->firstOrFail();
+        $this->clerk = User::query()->where('email', 'accounts@abos.test')->firstOrFail();
 
         $this->dhaka = $this->company->defaultBranch();
         $this->netrokona = Branch::query()->create([
@@ -103,17 +110,17 @@ class WhoGetsToSeeWhichRowsTest extends TestCase
     public function test_a_person_with_no_limit_set_sees_everything(): void
     {
         $this->seedVouchers();
-        $this->actingAs($this->owner);
+        $this->actingAs($this->clerk);
 
         $this->assertSame(2, Voucher::query()->whereIn('document_no', ['JV-'.$this->dhaka->code, 'JV-RLS-B'])->count());
-        $this->assertFalse(app(DataScope::class)->isLimited($this->owner, UserDataScope::BRANCH));
+        $this->assertFalse(app(DataScope::class)->isLimited($this->clerk, UserDataScope::BRANCH));
     }
 
     public function test_a_limited_person_sees_only_their_branch(): void
     {
         $this->seedVouchers();
-        $this->limitTo($this->owner, $this->netrokona);
-        $this->actingAs($this->owner);
+        $this->limitTo($this->clerk, $this->netrokona);
+        $this->actingAs($this->clerk);
 
         $seen = Voucher::query()->pluck('document_no')->all();
 
@@ -142,8 +149,8 @@ class WhoGetsToSeeWhichRowsTest extends TestCase
             'status' => DocumentStatus::DRAFT,
         ]);
 
-        $this->limitTo($this->owner, $this->netrokona);
-        $this->actingAs($this->owner);
+        $this->limitTo($this->clerk, $this->netrokona);
+        $this->actingAs($this->clerk);
 
         $this->assertContains('JV-HEADOFFICE', Voucher::query()->pluck('document_no')->all());
     }
@@ -158,7 +165,7 @@ class WhoGetsToSeeWhichRowsTest extends TestCase
     public function test_nothing_is_hidden_when_no_one_is_logged_in(): void
     {
         $this->seedVouchers();
-        $this->limitTo($this->owner, $this->netrokona);
+        $this->limitTo($this->clerk, $this->netrokona);
 
         auth()->logout();
 
@@ -170,8 +177,8 @@ class WhoGetsToSeeWhichRowsTest extends TestCase
     public function test_a_report_can_deliberately_look_across_branches(): void
     {
         $this->seedVouchers();
-        $this->limitTo($this->owner, $this->netrokona);
-        $this->actingAs($this->owner);
+        $this->limitTo($this->clerk, $this->netrokona);
+        $this->actingAs($this->clerk);
 
         $this->assertSame(2, Voucher::acrossBranches()
             ->whereIn('document_no', ['JV-'.$this->dhaka->code, 'JV-RLS-B'])->count());
@@ -181,9 +188,9 @@ class WhoGetsToSeeWhichRowsTest extends TestCase
     public function test_two_branches_can_be_given_to_one_person(): void
     {
         $this->seedVouchers();
-        $this->limitTo($this->owner, $this->netrokona);
-        $this->limitTo($this->owner, $this->dhaka);
-        $this->actingAs($this->owner);
+        $this->limitTo($this->clerk, $this->netrokona);
+        $this->limitTo($this->clerk, $this->dhaka);
+        $this->actingAs($this->clerk);
 
         $this->assertSame(2, Voucher::query()
             ->whereIn('document_no', ['JV-'.$this->dhaka->code, 'JV-RLS-B'])->count());
@@ -194,28 +201,28 @@ class WhoGetsToSeeWhichRowsTest extends TestCase
     {
         $scope = app(DataScope::class);
 
-        $this->actingAs($this->owner);
-        $this->assertTrue($scope->allows($this->owner, UserDataScope::BRANCH, $this->dhaka->id));
+        $this->actingAs($this->clerk);
+        $this->assertTrue($scope->allows($this->clerk, UserDataScope::BRANCH, $this->dhaka->id));
 
-        $this->limitTo($this->owner, $this->netrokona);
+        $this->limitTo($this->clerk, $this->netrokona);
 
-        $this->assertTrue($scope->allows($this->owner, UserDataScope::BRANCH, $this->netrokona->id));
-        $this->assertFalse($scope->allows($this->owner, UserDataScope::BRANCH, $this->dhaka->id));
+        $this->assertTrue($scope->allows($this->clerk, UserDataScope::BRANCH, $this->netrokona->id));
+        $this->assertFalse($scope->allows($this->clerk, UserDataScope::BRANCH, $this->dhaka->id));
 
         // শাখাহীন সবসময় নাগালে
-        $this->assertTrue($scope->allows($this->owner, UserDataScope::BRANCH, null));
+        $this->assertTrue($scope->allows($this->clerk, UserDataScope::BRANCH, null));
     }
 
     /** একই মানুষকে একই শাখা দুইবার দেওয়া যায় না। */
     public function test_the_same_branch_cannot_be_given_twice(): void
     {
-        $this->limitTo($this->owner, $this->netrokona);
+        $this->limitTo($this->clerk, $this->netrokona);
 
         $this->expectException(QueryException::class);
 
         UserDataScope::query()->create([
             'company_id' => $this->company->id,
-            'user_id' => $this->owner->id,
+            'user_id' => $this->clerk->id,
             'scope_type' => UserDataScope::BRANCH,
             'scope_id' => $this->netrokona->id,
         ]);

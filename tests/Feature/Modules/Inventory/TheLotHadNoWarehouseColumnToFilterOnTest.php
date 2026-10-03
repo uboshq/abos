@@ -14,6 +14,8 @@ use App\Modules\Inventory\Models\Product;
 use App\Modules\Inventory\Models\Warehouse;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Spatie\Permission\Models\Permission;
+use Spatie\Permission\PermissionRegistrar;
 use Tests\TestCase;
 
 /**
@@ -57,7 +59,18 @@ final class TheLotHadNoWarehouseColumnToFilterOnTest extends TestCase
 
         $this->mine = Warehouse::query()->orderBy('id')->firstOrFail();
 
-        $this->keeper = User::query()->where('email', 'owner@abos.test')->firstOrFail();
+        /*
+         * ⛔ গুদামরক্ষক একজন সাধারণ কর্মী, মালিক নন — কেবল রিকলের পাতার চাবি হাতে।
+         *
+         * ⓘ ৩ অক্টোবর ২০২৬ থেকে সুপার অ্যাডমিনের কোনো সীমা নেই
+         * ([[TheOwnerLostTheWarehouseHeJustMadeTest]])। মালিকের নামে সারি বসালে
+         * `idsFor()` null ফেরাত — নিচে যে ফাঁদের কথা লেখা, ঠিক সেটাই।
+         */
+        $this->keeper = User::factory()->create(['current_company_id' => $company->id, 'is_active' => true]);
+        $this->keeper->companies()->attach($company->id, ['is_active' => true]);
+        CompanyContext::forCompany($company->id,
+            fn () => $this->keeper->givePermissionTo(Permission::findOrCreate('sales.challan.view', 'web')));
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
 
         /*
          * ⭐ সীমাটা সত্যিই বসানো হয় — এটাই দাবিগুলোকে দাবি বানায়।

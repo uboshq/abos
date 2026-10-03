@@ -500,13 +500,23 @@ final class TheParkedBillWaitsAtTheSameCounterTest extends TestCase
 
         DB::table('sal_invoices')->where('id', $invoice->id)->update(['branch_id' => $elsewhere->id]);
 
+        /*
+         * ⛔ বিক্রেতা মালিক নন — কাউন্টারের চাবি হাতে একজন সাধারণ কর্মী। ⓘ ৩ অক্টোবর
+         * ২০২৬ থেকে সুপার অ্যাডমিনের কোনো সীমা নেই ([[TheOwnerLostTheWarehouseHeJustMadeTest]]),
+         * তাই মালিকের নামে শাখার সারি বসালে খসড়াটা তাঁর চোখে পড়ত আর দৃশ্যটাই বানানো যেত না।
+         */
+        $seller = User::factory()->create(['current_company_id' => $this->company->id, 'is_active' => true]);
+        $seller->companies()->attach($this->company->id, ['is_active' => true]);
+        $seller->givePermissionTo('sales.challan.create');
+
         UserDataScope::query()->create([
             'company_id' => $this->company->id,
-            'user_id' => $this->owner->id,
+            'user_id' => $seller->id,
             'scope_type' => UserDataScope::BRANCH,
             'scope_id' => $home,
         ]);
         app()->forgetInstance(DataScope::class);
+        $this->actingAs($seller->fresh());
 
         $this->assertNull(SalesInvoice::query()->find($invoice->id),
             'দৃশ্যটাই বানানো যায়নি — অন্য শাখার খসড়াটা বিক্রেতার চোখে পড়ছে।');

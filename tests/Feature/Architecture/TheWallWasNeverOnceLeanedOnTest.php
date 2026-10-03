@@ -263,10 +263,15 @@ final class TheWallWasNeverOnceLeanedOnTest extends TestCase
      * ⚠️ দুইটাই লাগে। ⓘ কেবল একটা বসালে যে মডেলগুলোয় অন্য দেয়ালটা
      * আছে তাদের ছাঁকনি চলত না, আর তারা নীরবে পরীক্ষার বাইরে থেকে
      * যেত — ঠিক লাইভে যা হয়েছিল।
+     *
+     * ⛔ মালিক নন — একজন সাধারণ কর্মী। ⓘ ৩ অক্টোবর ২০২৬ থেকে সুপার অ্যাডমিনের কোনো
+     * সীমা নেই ([[TheOwnerLostTheWarehouseHeJustMadeTest]]); মালিককে দিয়ে মাপলে সারি
+     * বসত, ছাঁকনি ঘুমাত, আর দেয়ালটা কোনোদিন হেলান পেত না — ঠিক এই ফাইলের নামের ভুল।
      */
     private function aUserWithLimits(?int $warehouseId = null): User
     {
-        $user = User::query()->where('email', 'owner@abos.test')->firstOrFail();
+        $user = User::factory()->create(['current_company_id' => $this->company->id, 'is_active' => true]);
+        $user->companies()->attach($this->company->id, ['is_active' => true]);
 
         $rows = [
             UserDataScope::BRANCH => Branch::query()->withoutGlobalScopes()
