@@ -17,7 +17,7 @@
     <form method="POST"
           action="{{ $branch->exists ? route('system_admin.branch.update', $branch->id) : route('system_admin.branch.store') }}"
           data-boxed
-          class="grid max-w-3xl gap-4 rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4 sm:grid-cols-2">
+          class="grid gap-4 rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4 sm:grid-cols-2">
         @csrf
         @if ($branch->exists)
             @method('PUT')

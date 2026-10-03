@@ -21,7 +21,7 @@
           action="{{ $notice->exists
               ? route('system_admin.notice.update', $notice->id)
               : route('system_admin.notice.store') }}"
-          class="max-w-2xl space-y-4">
+          class="space-y-4">
         @csrf
         @if ($notice->exists) @method('PUT') @endif
 

@@ -44,7 +44,7 @@
           action="{{ $isNew ? route('supplier.store') : route('supplier.update', $supplier) }}"
           x-data="{ busy: false }"
           @submit="busy ? $event.preventDefault() : (busy = true)"
-          class="max-w-6xl space-y-4">
+          class="space-y-4">
         @csrf
         @unless ($isNew) @method('PUT') @endunless
 

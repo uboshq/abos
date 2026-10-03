@@ -12,9 +12,10 @@
             :subtitle="$isNew ? null : $warehouse->code" />
     </x-slot:header>
 
+    {{-- ⓘ ১০৮০p-তে পুরো চওড়া — মালিক, ২ অক্টোবর ২০২৬: "sob porda 1080p korbe mendetory" (tools/screen-sweep-1080.py --forms) --}}
     <form method="POST"
           action="{{ $isNew ? route('inventory.warehouse.store') : route('inventory.warehouse.update', $warehouse) }}"
-          class="max-w-2xl space-y-4">
+          class="space-y-4">
         @csrf
         @unless ($isNew) @method('PUT') @endunless
 

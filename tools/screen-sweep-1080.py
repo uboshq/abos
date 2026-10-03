@@ -6,7 +6,9 @@
 
   ক) পাশে স্ক্রল নেই        — document.scrollWidth <= জানালার চওড়া
   খ) পুরো চওড়া ব্যবহার      — মাঝখানে সরু কলাম নয় (max-w-* রেখে দুই পাশে ফাঁকা)
-  গ) টুলবার এক লাইনে        — টুলবারের কোনো সারি ভেঙে নিচে নামেনি
+  গ) টুলবার ঠিক              — দুই সারি নকশামাফিক (১ম: শিরোনাম + "নতুন", ২য়: সরঞ্জাম); ভাঙা
+                               মানে সরঞ্জামের সারি নিজেই একাধিক লাইনে, বা টুলবারের কিছু ডানে কাটা
+                               (abos-63, ৩ অক্টোবর ২০২৬)। পুরনো "মোট লাইন" গোনা: --toolbar-lines N
   ঘ) ছক ধরে যায়            — নাহলে নিজের বাক্সের ভিতরে স্ক্রল করে, পাতা ঠেলে না
   ঙ) ডানে কিছু কাটা নেই      — কোনো দৃশ্যমান জিনিস ডান কিনারার বাইরে নয়
 
@@ -18,6 +20,15 @@
     py tools/screen-sweep-1080.py --base http://127.0.0.1:8791 --email owner@abos.test
     py tools/screen-sweep-1080.py ... --only /sales/        (কেবল যে ঠিকানায় এই টুকরো আছে)
     ⚠️ Git Bash-এ `/sales/` একটা Windows পথ হয়ে যায় — আগে MSYS_NO_PATHCONV=1 দিন।
+       (তখন `--out /c/...` এলে টুল নিজেই সেটাকে `C:\\...` বানায়।)
+
+    ফর্মের পাতাও (নতুন/সম্পাদনা) দেখতে:
+    php artisan route:list --json --method=GET > routes.json      (ঐচ্ছিক, কিন্তু নিখুঁত)
+    py tools/screen-sweep-1080.py ... --forms [--routes routes.json]
+       প্রতিটা তালিকার পাতা থেকে "নতুন" লিংক (রুটের নাম *.create) আর প্রথম সারির
+       সম্পাদনা লিংক (*.edit) — তালিকায় না থাকলে প্রথম সারির পাতা (*.show) খুলে সেখান
+       থেকে। কেবল GET, একই নিরাপত্তা-ছাঁকনি; কোনো ফর্ম জমা হয় না। রিপোর্টে আলাদা সারি।
+       --routes না দিলে ঠিকানার শেষ অংশ ধরে চেনা হয় (create/new → নতুন, edit → সম্পাদনা)।
 
     ফল: <out>/report.html (বাংলা), <out>/report.json, <out>/shots/*.png
     কোনো পাতা ভাঙা হলে exit code 1 — তাই জমার আগে চালিয়ে দেখা যায়।
@@ -37,6 +48,7 @@ import hashlib
 import hmac
 import json
 import os
+import re
 import struct
 import sys
 import time
@@ -72,8 +84,9 @@ NOT_A_PAGE = ['export', 'download', '.csv', '.xlsx', '.pdf', '/print']
 # রায়ের সীমা
 WIDTH_RATIO_MIN = 0.90      # খ) মূল কলাম অন্তত ৯০% চওড়া
 TOLERANCE_PX = 2            # উপ-পিক্সেলের গোলমাল
-# গ) টুলবার কত লাইনে বসতে পারে — মালিকের ১০৮০p নিয়মে এক লাইন। (--toolbar-lines দিয়ে বদলায়)
-TOOLBAR_MAX_LINES = 1
+# গ) পুরনো মাপ: টুলবারের মোট সারি এর বেশি হলে ভাঙা। ০ = বন্ধ (ডিফল্ট) — দুই সারি এখন নকশামাফিক;
+# এখন ভাঙা কেবল সরঞ্জামের সারি ভাঙলে বা টুলবারে কিছু কাটা পড়লে। (--toolbar-lines N দিয়ে পুরনোটা)
+TOOLBAR_MAX_LINES = 0
 TRY_CSS = ''
 
 
@@ -154,6 +167,70 @@ def login(page, base: str, email: str, password: str, secret: str) -> tuple[bool
         return False, 'লগইন হয়নি — %s' % (note or 'কারণ পর্দায় লেখা নেই')
 
     return True, here or '/'
+
+
+def fix_drive(path: str) -> str:
+    """Git Bash-এর `/c/x/y` (MSYS_NO_PATHCONV=1 থাকলে অনূদিত হয় না) → `C:\\x\\y`।
+
+    ⚠️ নাহলে Windows-এর Python `/c/...`-কে চলতি ড্রাইভের মূল থেকে পড়ে — রিপোর্ট চলে যেত
+    `E:\\c\\...`-তে, আর কেউ খুঁজে পেত না।
+    """
+    if os.name != 'nt':
+        return path
+    m = re.match(r'^/([A-Za-z])(?:/(.*))?$', path)
+    if not m:
+        return path
+    return m.group(1).upper() + ':\\' + (m.group(2) or '').replace('/', '\\')
+
+
+class Routes:
+    """ঠিকানা → ধরন (create / edit / show), রুটের নাম ধরে — `route:list --json` থেকে।
+
+    ⓘ ফাইল না দিলে ঠিকানার শেষ অংশ ধরে আন্দাজ: create|new → create, edit → edit।
+    """
+
+    def __init__(self, file: str = ''):
+        self.rules: list[tuple[re.Pattern, str]] = []
+        if file:
+            for r in json.loads(Path(fix_drive(file)).read_text(encoding='utf-8')):
+                name = r.get('name') or ''
+                kind = next((k for k in ('create', 'edit', 'show') if name.endswith('.' + k)), None)
+                if not kind or 'GET' not in (r.get('method') or ''):
+                    continue
+                rx = ''
+                for part in (r.get('uri') or '').strip('/').split('/'):
+                    if re.fullmatch(r'\{[^}]+\?\}', part):
+                        rx += '(?:/[^/]+)?'
+                    elif re.fullmatch(r'\{[^}]+\}', part):
+                        rx += '/[^/]+'
+                    else:
+                        rx += '/' + re.escape(part)
+                self.rules.append((re.compile('^' + (rx or '/') + '/?$'), kind))
+
+    def kind(self, url: str) -> str | None:
+        path = urlparse(url).path
+        if self.rules:
+            # ⓘ সবচেয়ে নির্দিষ্টটা আগে: `x/create` আর `x/{id}` দুইটাই মেলে, create জেতে
+            hits = [k for rx, k in self.rules if rx.match(path)]
+            for k in ('create', 'edit', 'show'):
+                if k in hits:
+                    return k
+            return None
+        last = path.rstrip('/').rsplit('/', 1)[-1].lower()
+        if last in ('create', 'new'):
+            return 'create'
+        if last == 'edit':
+            return 'edit'
+        return None
+
+
+def page_links(page) -> dict:
+    """এই পাতার লিংক — পুরো পাতার (নতুন-এর জন্য) আর কেবল মূল অংশের (সারির জন্য), ক্রম ঠিক রেখে।"""
+    return page.evaluate("""() => ({
+        all: [...document.querySelectorAll('a[href]')].map(a => a.href),
+        main: [...document.querySelectorAll('main a[href], [data-command-strip] a[href]')].map(a => a.href),
+        rowView: [...document.querySelectorAll('main a[data-row-view][href], main tbody a[href]')].map(a => a.href),
+    })""")
 
 
 def menu_links(page) -> list[str]:
@@ -371,15 +448,36 @@ MEASURE_JS = r"""
       const kids = laidOut(c).map(k => k.getBoundingClientRect())
       if (kids.length < 2) continue
       const n = rowsOf(kids)
-      if (n > 1 && getComputedStyle(c).flexDirection.startsWith('row')) wrapped.push({ sel: sel(c), rows: n, items: kids.length })
+      if (n > 1 && getComputedStyle(c).flexDirection.startsWith('row')) {
+        // কোন সারির ভিতরে: টুলবারের যে সরাসরি সন্তানের মধ্যে সে আছে — শিরোনাম/"নতুন" থাকলে ১ম সারি
+        let top = c
+        while (top.parentElement && top.parentElement !== tb) top = top.parentElement
+        const row = c === tb ? 'tools' : (top.querySelector('h1, [data-command-bar]') || top.matches('[data-command-bar]') ? 'title' : 'tools')
+        wrapped.push({ sel: sel(c), rows: n, items: kids.length, row })
+      }
+    }
+    // টুলবারের ভিতরে ডানে কাটা/উপচে পড়া — টুলবারের নিজের ডান কিনারা বা পর্দার কিনারা ছাড়ালে
+    const tbClipped = []
+    for (const e of tb.querySelectorAll('h1, button, a, input, select, label, span, svg')) {
+      if (e.closest('#toolbar-filters')) continue
+      const r = e.getBoundingClientRect()
+      if (!visible(e, r)) continue
+      let floating = false
+      for (let a = e; a && a !== tb; a = a.parentElement) {
+        const ps = getComputedStyle(a).position
+        if (ps === 'absolute' || ps === 'fixed') { floating = true; break }
+      }
+      if (floating) continue
+      const edge = Math.min(tr.right, vw)
+      if (r.right > edge + TOL && r.left < edge) tbClipped.push({ sel: sel(e), px: Math.round(r.right - edge), text: (e.innerText || '').trim().slice(0, 30) })
     }
     // মোট লাইন: পাতার বোতাম/ঘরগুলো কয়টা আলাদা উচ্চতায় বসেছে (ছাঁকনির প্যানেল বাদে)
     const leaves = [...tb.querySelectorAll('h1, button, a, input, select, label, [data-record-count]')]
       .filter(e => !e.closest('#toolbar-filters') && !e.closest('[x-cloak]'))
       .map(e => [e, e.getBoundingClientRect()]).filter(([e, r]) => visible(e, r) && r.height > 8)
       .map(([e, r]) => r)
-    out.toolbars.push({ sel: sel(tb), directRows: rowsOf(direct), lines: rowsOf(leaves), wrapped: wrapped.slice(0, 4),
-                        right: Math.round(tr.right) })
+    out.toolbars.push({ sel: sel(tb), directRows: rowsOf(direct), lines: rowsOf(leaves), wrapped: wrapped.slice(0, 6),
+                        clipped: tbClipped.slice(0, 5), right: Math.round(tr.right) })
   }
 
   // ঘ) ছক
@@ -414,12 +512,16 @@ def judge(row: dict) -> list[str]:
         why.append('পাশে স্ক্রল %dpx' % m['pageOverflow'])
     if m.get('widthRatio') is not None and m['widthRatio'] < WIDTH_RATIO_MIN:
         why.append('সরু কলাম — চওড়ার %d%% ব্যবহার' % round(m['widthRatio'] * 100))
-    tall = [t for t in m.get('toolbars', []) if t.get('directRows', 1) > TOOLBAR_MAX_LINES]
+    tall = [t for t in m.get('toolbars', []) if TOOLBAR_MAX_LINES and t.get('directRows', 1) > TOOLBAR_MAX_LINES]
     if tall:
         why.append('টুলবার %d লাইনে (সীমা %d)' % (max(t['directRows'] for t in tall), TOOLBAR_MAX_LINES))
-    wraps = [t for t in m.get('toolbars', []) if t.get('wrapped')]
-    if wraps:
-        why.append('টুলবার এক লাইনে ধরেনি (%d সারি)' % max(w['rows'] for t in wraps for w in t['wrapped']))
+    # ⓘ কেবল সরঞ্জামের সারি — ১ম সারি (শিরোনাম + "নতুন") ভাঙলে প্রমাণে লেখা হয়, রায়ে নয়
+    tool_wraps = [w for t in m.get('toolbars', []) for w in t.get('wrapped', []) if w.get('row', 'tools') == 'tools']
+    if tool_wraps:
+        why.append('টুলবারের সরঞ্জাম-সারি এক লাইনে ধরেনি (%d লাইন)' % max(w['rows'] for w in tool_wraps))
+    tb_cut = [c for t in m.get('toolbars', []) for c in t.get('clipped', [])]
+    if tb_cut:
+        why.append('টুলবারে ডানে কাটা %d টা জিনিস (%dpx)' % (len(tb_cut), max(c['px'] for c in tb_cut)))
     bad_tables = [t for t in m.get('tables', []) if not t['scrolls']]
     if bad_tables:
         why.append('ছক বাক্সের বাইরে (%dpx চওড়া, জায়গা %dpx)' % (bad_tables[0]['width'], bad_tables[0]['room']))
@@ -430,7 +532,7 @@ def judge(row: dict) -> list[str]:
 
 CAUSE_KEYS = [
     ('HTTP', 'http'), ('খোলেনি', 'open'), ('পাশে স্ক্রল', 'overflow'), ('সরু কলাম', 'narrow'),
-    ('টুলবার এক লাইনে ধরেনি', 'toolbar_wrap'), ('টুলবার', 'toolbar'), ('ছক', 'table'), ('ডানে কাটা', 'clipped'),
+    ('টুলবারের সরঞ্জাম-সারি', 'toolbar_wrap'), ('টুলবারে ডানে কাটা', 'toolbar_cut'), ('টুলবার', 'toolbar'), ('ছক', 'table'), ('ডানে কাটা', 'clipped'),
 ]
 
 
@@ -509,6 +611,9 @@ def sweep(args, password: str, secret: str, out: Path) -> dict:
         report['menu_count'] = len(links)
         print('মেনুতে %d টা ঠিকানা' % len(links), flush=True)
 
+        routes = Routes(args.routes) if args.forms else None
+        # ⓘ ফর্মের ঠিকানা → কোন তালিকা থেকে পাওয়া; সম্পাদনার জন্য তালিকা → প্রথম সারির পাতা
+        found: dict = {'create': {}, 'edit': {}, 'show_for': {}}
         n = 0
         for url in links:
             why = skip_reason(url, args.base)
@@ -523,14 +628,85 @@ def sweep(args, password: str, secret: str, out: Path) -> dict:
             row['reasons'] = judge(row)
             row['causes'] = cause_keys(row['reasons'])
             row['verdict'] = 'ভাঙা' if row['reasons'] else 'ঠিক'
+            row['kind'] = 'menu'
             report['pages'].append(row)
             print('  %-5s %-50s %s' % (row['verdict'], row['path'][:50], '; '.join(row['reasons'])), flush=True)
+            if args.forms and row.get('status') == 200:
+                collect_forms(page, url, routes, found, args.base)
             if args.max and n >= args.max:
                 report['capped'] = True
                 break
+
+        if args.forms:
+            n = visit_forms(page, args, routes, found, report, out, n)
         browser.close()
     report['finished'] = datetime.datetime.now().isoformat(timespec='seconds')
     return report
+
+
+def collect_forms(page, list_url: str, routes: Routes, found: dict, base: str) -> None:
+    try:
+        links = page_links(page)
+    except Exception:  # noqa: BLE001
+        return
+    src = urlparse(list_url).path
+    for h in links['all']:
+        if routes.kind(h) == 'create' and urlparse(h).netloc == urlparse(base).netloc:
+            found['create'].setdefault(norm(h), src)
+    # প্রথম সারির সম্পাদনা — মূল অংশে, ক্রমে প্রথমটা
+    for h in links['main']:
+        if routes.kind(h) == 'edit':
+            found['edit'].setdefault(norm(h), src)
+            return
+    # তালিকায় সম্পাদনা নেই — প্রথম সারির পাতাটা মনে রাখা, পরে সেখান থেকে
+    for h in links['rowView']:
+        k = routes.kind(h)
+        if k == 'show' or (not routes.rules and k is None and re.search(r'/\d+/?$', urlparse(h).path)):
+            found['show_for'].setdefault(src, h)
+            return
+
+
+def visit_forms(page, args, routes: Routes, found: dict, report: dict, out: Path, n: int) -> int:
+    # ১) যে তালিকায় সম্পাদনার লিংক ছিল না — প্রথম সারির পাতা খুলে সেখান থেকে (কেবল খোঁজা, মাপা নয়)
+    have_edit_from = set(found['edit'].values())
+    for src, show in found['show_for'].items():
+        if src in have_edit_from or skip_reason(show, args.base):
+            continue
+        try:
+            page.goto(show, wait_until='domcontentloaded', timeout=60_000)
+            for h in page_links(page)['all']:
+                if routes.kind(h) == 'edit' and urlparse(h).netloc == urlparse(args.base).netloc:
+                    found['edit'].setdefault(norm(h), src + ' → ' + urlparse(show).path)
+                    break
+        except Exception:  # noqa: BLE001
+            continue
+
+    # ⓘ একই ফর্ম, শুধু ?parent=… আলাদা — পথ ধরে একবারই (হিসাব তালিকার "নতুন" ছিল ২৫ বার)
+    path_of = lambda u: urlparse(u).path.rstrip('/') or '/'  # noqa: E731
+    seen = {path_of(p['url']) for p in report['pages']}
+    todo = [('create', u, s) for u, s in found['create'].items()] + [('edit', u, s) for u, s in found['edit'].items()]
+    uniq = {k: len({urlparse(u).path.rstrip('/') for u in found[k]}) for k in ('create', 'edit')}
+    report['forms_found'] = uniq
+    print('ফর্ম: %d টা নতুন, %d টা সম্পাদনা' % (uniq['create'], uniq['edit']), flush=True)
+    for kind, url, src in todo:
+        if path_of(url) in seen:
+            continue
+        seen.add(path_of(url))
+        why = skip_reason(url, args.base)
+        if why:
+            report['skipped'].append({'url': url, 'why': why})
+            continue
+        n += 1
+        name = '%03d-%s-%s.png' % (n, kind, (urlparse(url).path.strip('/').replace('/', '_') or 'home')[:70])
+        row = visit(page, url, (out / 'shots' / name) if not args.no_shots else None)
+        row['reasons'] = judge(row)
+        row['causes'] = cause_keys(row['reasons'])
+        row['verdict'] = 'ভাঙা' if row['reasons'] else 'ঠিক'
+        row['kind'] = kind
+        row['from'] = src
+        report['pages'].append(row)
+        print('  %-5s %-6s %-44s %s' % (row['verdict'], kind, row['path'][:44], '; '.join(row['reasons'])), flush=True)
+    return n
 
 
 def esc(s: object) -> str:
@@ -538,7 +714,7 @@ def esc(s: object) -> str:
 
 
 CAUSE_BN = {'http': 'HTTP ত্রুটি', 'open': 'খোলেনি', 'overflow': 'পাশে স্ক্রল', 'narrow': 'সরু কলাম',
-            'toolbar': 'টুলবার এক লাইনের বেশি', 'toolbar_wrap': 'টুলবারের সারি ভেঙেছে', 'table': 'ছক বাক্সের বাইরে', 'clipped': 'ডানে কাটা'}
+            'toolbar': 'টুলবার এক লাইনের বেশি', 'toolbar_wrap': 'সরঞ্জাম-সারি ভেঙেছে', 'toolbar_cut': 'টুলবারে কাটা', 'table': 'ছক বাক্সের বাইরে', 'clipped': 'ডানে কাটা'}
 
 
 def html_report(report: dict, out: Path) -> Path:
@@ -560,13 +736,18 @@ def html_report(report: dict, out: Path) -> Path:
         b.append('<div class="card bad"><b>%d</b><span>%s</span></div>' % (v, esc(CAUSE_BN[k])))
     b.append('</div>')
     b.append('<p class="m">নিয়ম: ক) পাশে স্ক্রল নেই · খ) মূল কলাম অন্তত ৯০%% চওড়া · '
-             'গ) টুলবার %d লাইনে, আর কোনো সারি ভেঙে নিচে নামেনি · '
-             'ঘ) চওড়া ছক নিজের বাক্সে স্ক্রল করে · ঙ) ডানে কিছু কাটা নেই।</p>' % report.get('toolbar_max_lines', 1))
+             'গ) টুলবারের সরঞ্জাম-সারি এক লাইনে, টুলবারে কিছু কাটা নেই (দুই সারি নকশামাফিক)%s · '
+             'ঘ) চওড়া ছক নিজের বাক্সে স্ক্রল করে · ঙ) ডানে কিছু কাটা নেই।</p>' % (
+                 (' + পুরনো সীমা: মোট %d সারি' % report['toolbar_max_lines']) if report.get('toolbar_max_lines') else ''))
     if report.get('try_css'):
         b.append('<p class="m">⚠️ পরীক্ষামূলক CSS বসিয়ে মাপা (সার্ভারে নেই): <code>%s</code></p>' % esc(report['try_css']))
-    b.append('<table><tr><th>রায়</th><th>ঠিকানা</th><th>কোড</th><th>পাশে স্ক্রল</th><th>চওড়া</th>'
+    if report.get('forms_found'):
+        b.append('<p class="m">ফর্মের পাতা খুঁজে পাওয়া: %d টা নতুন, %d টা সম্পাদনা (কেবল দেখা, জমা নয়)।</p>'
+                 % (report['forms_found']['create'], report['forms_found']['edit']))
+    b.append('<table><tr><th>রায়</th><th>ধরন</th><th>ঠিকানা</th><th>কোড</th><th>পাশে স্ক্রল</th><th>চওড়া</th>'
              '<th>টুলবার লাইন</th><th>কারণ ও প্রমাণ</th><th>ছবি</th></tr>')
-    for p in sorted(pages, key=lambda r: (r['verdict'] == 'ঠিক', r['path'])):
+    kind_bn = {'menu': 'মেনু', 'create': 'নতুন', 'edit': 'সম্পাদনা'}
+    for p in sorted(pages, key=lambda r: (r['verdict'] == 'ঠিক', r.get('kind', 'menu') == 'menu', r['path'])):
         m = p.get('m') or {}
         ev = []
         for x in m.get('blame', [])[:3]:
@@ -577,8 +758,12 @@ def html_report(report: dict, out: Path) -> Path:
         for x in m.get('narrow', [])[:2]:
             ev.append('সরু: <code>%s</code> %d/%dpx (max-width %s)' % (esc(x['sel']), x['width'], x['of'], esc(x['maxWidth'])))
         for t in m.get('toolbars', []):
-            for w in t.get('wrapped', [])[:2]:
-                ev.append('টুলবার ভেঙেছে: <code>%s</code> %d সারিতে %d টা জিনিস' % (esc(w['sel']), w['rows'], w['items']))
+            for w in t.get('wrapped', [])[:3]:
+                ev.append('%s ভেঙেছে: <code>%s</code> %d লাইনে %d টা জিনিস' % (
+                    'সরঞ্জাম-সারি' if w.get('row', 'tools') == 'tools' else 'ⓘ ১ম সারি (রায়ে গোনা নয়)',
+                    esc(w['sel']), w['rows'], w['items']))
+            for c in t.get('clipped', [])[:3]:
+                ev.append('টুলবারে কাটা: <code>%s</code> +%dpx «%s»' % (esc(c['sel']), c['px'], esc(c['text'])))
         for t in m.get('tables', [])[:2]:
             ev.append('ছক <code>%s</code> %dpx / জায়গা %dpx — %s' % (
                 esc(t['sel']), t['width'], t['room'],
@@ -589,9 +774,12 @@ def html_report(report: dict, out: Path) -> Path:
             ev.append('পাঠিয়ে দিয়েছে → %s' % esc(p.get('final_url', '')))
         tl = ', '.join(str(t.get('directRows', t['lines'])) for t in m.get('toolbars', [])) or '—'
         shot = '<a href="shots/%s">ছবি</a>' % esc(p['shot']) if p.get('shot') else '—'
-        b.append('<tr class="%s"><td>%s</td><td class="u">%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td>'
+        if p.get('from'):
+            ev.append('পাওয়া গেছে: %s' % esc(p['from']))
+        b.append('<tr class="%s"><td>%s</td><td>%s</td><td class="u">%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td>'
                  '<td><b>%s</b>%s</td><td>%s</td></tr>' % (
-                     'bad' if p['verdict'] != 'ঠিক' else '', esc(p['verdict']), esc(p['path']),
+                     'bad' if p['verdict'] != 'ঠিক' else '', esc(p['verdict']),
+                     esc(kind_bn.get(p.get('kind', 'menu'), '—')), esc(p['path']),
                      esc(p.get('status', '—')), esc(m.get('pageOverflow', '—')),
                      ('%d%%' % round(m['widthRatio'] * 100)) if m.get('widthRatio') is not None else '—', esc(tl),
                      esc('; '.join(p['reasons'])), ('<br>' + '<br>'.join(ev)) if ev else '', shot))
@@ -634,8 +822,12 @@ def main() -> int:
                     help='সাইডবার খোলা না গুটানো অবস্থায় মাপা হবে')
     ap.add_argument('--try-css', default='',
                     help='মাপার আগে পাতায় এই CSS বসানো — একটা সাধারণ সমাধান কাজ করবে কি না, build ছাড়াই দেখা')
+    ap.add_argument('--forms', action='store_true',
+                    help='তালিকা থেকে নতুন (*.create) আর প্রথম সারির সম্পাদনা (*.edit) পাতাও দেখা — কেবল GET')
+    ap.add_argument('--routes', default='',
+                    help='`php artisan route:list --json --method=GET`-এর ফাইল; না দিলে ঠিকানা ধরে আন্দাজ')
     ap.add_argument('--toolbar-lines', type=int, default=TOOLBAR_MAX_LINES,
-                    help='টুলবার সর্বোচ্চ কত লাইনে বসতে পারে (ডিফল্ট ১)')
+                    help='পুরনো মাপ: টুলবারের মোট সারি এর বেশি হলে ভাঙা (ডিফল্ট ০ = বন্ধ; দুই সারি নকশামাফিক)')
     args = ap.parse_args()
     args.base = args.base.rstrip('/')
     TOOLBAR_MAX_LINES = args.toolbar_lines
@@ -652,7 +844,7 @@ def main() -> int:
         return 2
     secret = os.environ.get('ABOS_SWEEP_TOTP', '')
 
-    out = Path(args.out or ('out/sweep-1080-' + datetime.datetime.now().strftime('%Y%m%d-%H%M%S')))
+    out = Path(fix_drive(args.out) if args.out else ('out/sweep-1080-' + datetime.datetime.now().strftime('%Y%m%d-%H%M%S')))
     report = sweep(args, password, secret, out)
     (out / 'report.json').write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding='utf-8')
     page = html_report(report, out)
