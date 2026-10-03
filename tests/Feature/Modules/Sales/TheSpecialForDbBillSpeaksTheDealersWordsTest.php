@@ -11,6 +11,7 @@ use App\Models\Company;
 use App\Models\User;
 use App\Modules\Sales\Support\InvoiceDesigns;
 use App\Modules\Sales\Support\InvoicePaperView;
+use App\Modules\Sales\Support\PaperDesigns;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -41,6 +42,7 @@ final class TheSpecialForDbBillSpeaksTheDealersWordsTest extends TestCase
     public function test_the_design_is_listed_and_draws_the_whole_page(): void
     {
         $this->assertArrayHasKey('special_db', InvoiceDesigns::ALL, '⛔ নকশাটা তালিকায় নেই — বাছাই করা যেত না।');
+        $this->assertContains('special_db', PaperDesigns::codes('invoice', 'a5'), '⛔ A5-এর তালিকায় নেই — মালিক A5-ও চেয়েছেন (৩ অক্টোবর ২০২৬)।');
 
         $paper = $this->get(route('sales.invoice_sample', ['design' => 'special_db']))->assertOk()->getContent();
 
@@ -68,6 +70,64 @@ final class TheSpecialForDbBillSpeaksTheDealersWordsTest extends TestCase
         $v = $this->paperView(['net_payable' => '14,500.00', 'paid' => '5,000.00', 'invoice_due' => '9,500.00']);
         $this->assertSame('Invoice Due', $v->billLeftWord());
         $this->assertSame('9,500.00', $v->billLeftAmount());
+    }
+
+    /**
+     * ⭐ মালিকের ছবি, ৩ অক্টোবর ২০২৬ (সরকার এন্টারপ্রাইজ, S-0001): বিল ৩৯,১০৬.১২, দিলেন ৪০,০০০, আগের বকেয়া ৩০,৬৪২.১৫।
+     * ⛔ "Previous Due" ঘরে বসেছিল ২৯,৭৪৮.২৭ — বাড়তি ৮৯৩.৮৮ কাটার পরের অঙ্ক, শেষ লাইনের সমান; যোগটা মিলত না।
+     */
+    public function test_the_previous_due_is_the_balance_before_this_bill(): void
+    {
+        $v = $this->paperView([
+            'net_payable' => '39,106.12', 'paid' => '40,000.00', 'invoice_due' => '0.00',
+            'previous_due' => '29,748.27', 'outstanding' => '29,748.27',
+        ]);
+
+        $this->assertSame('30,642.15', $v->previousBeforeBill(), '⛔ আগের বকেয়া কাটার পরের অঙ্কে বসেছে।');
+        $this->assertSame(['Extra Paid', '893.88'], [$v->billLeftWord(), $v->billLeftAmount()]);
+        $this->assertSame(['Due', '29,748.27'], [$v->balanceWord(), $v->balanceAmount()]);
+
+        // ⓘ বিলের চেয়ে কম দিলে আগের কথাই — বাকি = প্রদেয় − পরিশোধ
+        $v = $this->paperView([
+            'net_payable' => '14,500.00', 'paid' => '5,000.00', 'invoice_due' => '9,500.00',
+            'previous_due' => '3,000.00', 'outstanding' => '12,500.00',
+        ]);
+        $this->assertSame('3,000.00', $v->previousBeforeBill());
+    }
+
+    public function test_a_name_that_already_says_ms_is_not_prefixed_again(): void
+    {
+        $paper = (string) $this->get(route('sales.invoice_sample', ['design' => 'special_db']))->assertOk()->getContent();
+        $this->assertDoesNotMatchRegularExpression('~M/S\s+M/S~i', $paper);
+
+        $once = view('sales::print.partials.invoice-bill-to', [
+            'v' => $this->paperView([]),
+            'facts' => ['bill_to' => ['name' => 'M/S. SARKAR ENTERPRISE', 'code' => '', 'point' => '', 'address' => '', 'phone' => '']],
+        ])->render();
+        $this->assertSame(1, preg_match_all('~M/S~', $once), "⛔ «M/S» দুবার: {$once}");
+
+        $prefixed = view('sales::print.partials.invoice-bill-to', [
+            'v' => $this->paperView([]),
+            'facts' => ['bill_to' => ['name' => 'SARKAR ENTERPRISE', 'code' => '', 'point' => '', 'address' => '', 'phone' => '']],
+        ])->render();
+        $this->assertStringContainsString('M/S SARKAR', $prefixed, '⛔ নামে M/S না থাকলে কাগজ নিজে বসায় — সেটা হারিয়েছে।');
+    }
+
+    /**
+     * ⭐ মালিকের ছবি, ৩ অক্টোবর ২০২৬: নাম ২–৪ লাইনে, অথচ QTY আর Total QTY কলামে ফাঁকা — Grand Total-এর "168 Ctn, 7 Mbag"
+     * এক লাইনে কলামটা চওড়া করত। এখন প্রতিটা একক নিজের লাইনে।
+     */
+    public function test_the_grand_total_stacks_its_units_so_the_column_stays_narrow(): void
+    {
+        $html = view('sales::print.partials.invoice-items', [
+            'v' => $this->paperView([]),
+            'facts' => ['items' => ['rows' => [], 'totals' => ['qty' => '168 Ctn, 7 Mbag', 'free' => '2 Ctn', 'total_qty' => '170 Ctn, 7 Mbag', 'amount' => '39,106.12']]],
+            'paper' => \App\Core\Engines\Print\PaperSize::of('a4'),
+        ])->render();
+
+        $this->assertStringContainsString('168 Ctn<br>7 Mbag', $html);
+        $this->assertStringContainsString('170 Ctn<br>7 Mbag', $html);
+        $this->assertStringNotContainsString('168 Ctn, 7 Mbag', $html, '⛔ মোট পরিমাণ আবার এক লাইনে — কলাম চওড়া হয়ে নাম ভাঙবে।');
     }
 
     public function test_no_target_means_no_box(): void

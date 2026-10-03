@@ -1,3 +1,4 @@
+{{-- ⓘ A5 সংস্করণ — A4-এর special_db থেকে মাপ ছোট করে (mm ×০.৭২, অক্ষর ×০.৮৫, সীমা ৬.৫pt), গড়ন একই। মালিক, ৩ অক্টোবর ২০২৬: "সেম টেমপ্লেটটা A5 ও দিয়ে দাও"। QR ২৮mm — এর চেয়ে ছোটে ফোন ধরতে দেরি করে। --}}
 {{--
     Special for DB — বিল + হিসাবের বিবরণী, বাঁয়ে সাদা ফিতা। মালিক, ৩ অক্টোবর ২০২৬ (নকশার ক্যানভাস "২গ", নাম মালিকের)।
 
@@ -18,62 +19,62 @@
     $transport = $facts['transport'] ?? [];
 @endphp
 <style @nonce>
-    body { font-family: hindsiliguri, sans-serif; font-size: 8.5pt; color: #15202b; }
+    body { font-family: hindsiliguri, sans-serif; font-size: 7.22pt; color: #15202b; }
     table { border-collapse: collapse; }
     table.page { width: 100%; }
-    td.side { width: 52mm; vertical-align: top; padding: 0 4mm 0 0; border-right: 0.8mm solid {{ $accent }}; }
-    td.main { vertical-align: top; padding: 0 0 0 5mm; }
-    .title { font-size: 24pt; font-weight: bold; color: {{ $accent }}; letter-spacing: 0.6mm; line-height: 1; }
-    .subtitle { font-size: 9pt; font-weight: bold; color: {{ $accent }}; }
-    .no { font-size: 11pt; font-weight: bold; font-family: dejavusans; margin-top: 2mm; }
+    td.side { width: 37.44mm; vertical-align: top; padding: 0 2.88mm 0 0; border-right: 0.58mm solid {{ $accent }}; }
+    td.main { vertical-align: top; padding: 0 0 0 3.6mm; }
+    .title { font-size: 17pt; font-weight: bold; color: {{ $accent }}; letter-spacing: 0.43mm; line-height: 1; }
+    .subtitle { font-size: 7.65pt; font-weight: bold; color: {{ $accent }}; }
+    .no { font-size: 9.35pt; font-weight: bold; font-family: dejavusans; margin-top: 1.44mm; }
     .muted { color: #4a5560; }
-    .cap { font-size: 7.5pt; font-weight: bold; letter-spacing: 0.4mm; color: {{ $accent }}; padding-bottom: 0.8mm; }
-    .box { border: 0.25mm solid #9db4ca; padding: 1.5mm 2mm; }
+    .cap { font-size: 6.5pt; font-weight: bold; letter-spacing: 0.29mm; color: {{ $accent }}; padding-bottom: 0.58mm; }
+    .box { border: 0.18mm solid #9db4ca; padding: 1.08mm 1.44mm; }
     table.kv { width: 100%; }
-    table.kv td { padding: 0.4mm 0; font-size: 8pt; }
+    table.kv td { padding: 0.29mm 0; font-size: 6.8pt; }
     table.kv td.num { text-align: right; font-family: dejavusans; white-space: nowrap; }
     table.kv tr.strong td { font-weight: bold; }
-    table.kv tr.rule td { border-top: 0.25mm solid #9db4ca; padding-top: 0.8mm; }
-    table.kv tr.final td { font-weight: bold; font-size: 10pt; color: {{ $accent }}; border-top: 0.6mm solid {{ $accent }}; border-bottom: 1.2mm double {{ $accent }}; padding: 1mm 0; }
+    table.kv tr.rule td { border-top: 0.18mm solid #9db4ca; padding-top: 0.58mm; }
+    table.kv tr.final td { font-weight: bold; font-size: 8.5pt; color: {{ $accent }}; border-top: 0.43mm solid {{ $accent }}; border-bottom: 0.86mm double {{ $accent }}; padding: 0.72mm 0; }
     table.rows { width: 100%; }
     table.rows td { vertical-align: top; line-height: 1.35; }
-    table.rows td.sec { padding-top: 3.5mm; }
+    table.rows td.sec { padding-top: 2.52mm; }
     .qr { text-align: center; }
     .party { font-weight: bold; }
-    table.head { width: 100%; border-bottom: 0.6mm solid {{ $accent }}; }
-    table.head td { vertical-align: middle; padding-bottom: 2mm; }
-    .co-name { font-size: 14pt; font-weight: bold; color: {{ $accent }}; }
-    .co-meta { font-size: 7.5pt; color: #4a5560; }
-    .dup { font-size: 7.5pt; font-weight: bold; color: #4a5560; }
-    .notice { text-align: center; font-weight: bold; border: 0.4mm solid #b42318; color: #b42318; padding: 1mm; margin-top: 2mm; font-size: 10pt; }
-    table.items { width: 100%; margin-top: 2.5mm; }
-    table.items th { font-size: 7.5pt; font-weight: bold; color: {{ $accent }}; padding: 0.8mm 1.2mm; text-align: left; border-bottom: 0.5mm solid {{ $accent }}; }
+    table.head { width: 100%; border-bottom: 0.43mm solid {{ $accent }}; }
+    table.head td { vertical-align: middle; padding-bottom: 1.44mm; }
+    .co-name { font-size: 11.9pt; font-weight: bold; color: {{ $accent }}; }
+    .co-meta { font-size: 6.5pt; color: #4a5560; }
+    .dup { font-size: 6.5pt; font-weight: bold; color: #4a5560; }
+    .notice { text-align: center; font-weight: bold; border: 0.29mm solid #b42318; color: #b42318; padding: 0.72mm; margin-top: 1.44mm; font-size: 8.5pt; }
+    table.items { width: 100%; margin-top: 1.8mm; }
+    table.items th { font-size: 6.5pt; font-weight: bold; color: {{ $accent }}; padding: 0.58mm 0.86mm; text-align: left; border-bottom: 0.36mm solid {{ $accent }}; }
     table.items th.num { text-align: right; }
-    table.items td { padding: 0.7mm 1.2mm; border-bottom: 0.2mm solid #dde5ec; font-size: 8.5pt; line-height: 1.2; vertical-align: top; }
-    table.items tr.grand td { font-weight: bold; border-top: 0.5mm solid {{ $accent }}; border-bottom: 0.5mm solid {{ $accent }}; }
+    table.items td { padding: 0.5mm 0.86mm; border-bottom: 0.14mm solid #dde5ec; font-size: 7.22pt; line-height: 1.2; vertical-align: top; }
+    table.items tr.grand td { font-weight: bold; border-top: 0.36mm solid {{ $accent }}; border-bottom: 0.36mm solid {{ $accent }}; }
     /* ⓘ মোটের প্রতিটা অঙ্ক নিজের বাক্সে, নিজের কলামের নিচে — মালিক, ৩ অক্টোবর ২০২৬ (S-0001-এর ছবি) */
-    table.items tr.grand td.num { border: 0.4mm solid {{ $accent }}; }
-    table.items tr.grand td.grand-amount { color: {{ $accent }}; font-size: 9.5pt; border: 0.5mm solid {{ $accent }}; border-bottom: 1.2mm double {{ $accent }}; }
-    .sub { font-size: 7pt; color: #4a5560; }
+    table.items tr.grand td.num { border: 0.3mm solid {{ $accent }}; }
+    table.items tr.grand td.grand-amount { color: {{ $accent }}; font-size: 8.07pt; border: 0.36mm solid {{ $accent }}; border-bottom: 0.86mm double {{ $accent }}; }
+    .sub { font-size: 6.5pt; color: #4a5560; }
     .free { font-weight: bold; }
     .num { text-align: right; white-space: nowrap; }
     td.num { font-family: dejavusans; }
-    .words { margin-top: 1.5mm; font-size: 8pt; color: #4a5560; }
-    .section { margin-top: 3.5mm; font-size: 7.5pt; font-weight: bold; letter-spacing: 0.4mm; color: {{ $accent }}; }
-    table.ledger { width: 100%; margin-top: 1mm; }
-    table.ledger th { font-size: 7.5pt; color: #4a5560; font-weight: bold; text-align: left; padding: 0.6mm 1.2mm; border-bottom: 0.4mm solid {{ $accent }}; }
+    .words { margin-top: 1.08mm; font-size: 6.8pt; color: #4a5560; }
+    .section { margin-top: 2.52mm; font-size: 6.5pt; font-weight: bold; letter-spacing: 0.29mm; color: {{ $accent }}; }
+    table.ledger { width: 100%; margin-top: 0.72mm; }
+    table.ledger th { font-size: 6.5pt; color: #4a5560; font-weight: bold; text-align: left; padding: 0.43mm 0.86mm; border-bottom: 0.29mm solid {{ $accent }}; }
     table.ledger th.num { text-align: right; }
-    table.ledger td { padding: 0.6mm 1.2mm; border-bottom: 0.2mm solid #dde5ec; font-size: 8pt; }
-    table.ledger tr.close td { font-weight: bold; border-bottom: 0.5mm solid {{ $accent }}; }
-    table.pay { width: 100%; margin-top: 1mm; }
-    table.pay th { font-size: 7pt; font-weight: bold; color: #4a5560; text-align: left; padding: 0.6mm; border-bottom: 0.3mm solid #15202b; }
-    table.pay td { font-size: 8pt; padding: 0.6mm; border-bottom: 0.2mm solid #dde5ec; }
-    .pay-head { font-size: 7.5pt; font-weight: bold; color: {{ $accent }}; margin-top: 2mm; }
-    .footnote { margin-top: 2mm; font-size: 9pt; font-weight: bold; color: #b42318; }
-    table.signatures { width: 100%; margin-top: 10mm; }
-    table.signatures td { text-align: center; padding: 0 4mm; font-size: 8.5pt; }
-    .sig-line { border-top: 0.25mm solid #15202b; padding-top: 1mm; }
-    .printed { margin-top: 2mm; font-size: 7pt; color: #4a5560; }
+    table.ledger td { padding: 0.43mm 0.86mm; border-bottom: 0.14mm solid #dde5ec; font-size: 6.8pt; }
+    table.ledger tr.close td { font-weight: bold; border-bottom: 0.36mm solid {{ $accent }}; }
+    table.pay { width: 100%; margin-top: 0.72mm; }
+    table.pay th { font-size: 6.5pt; font-weight: bold; color: #4a5560; text-align: left; padding: 0.43mm; border-bottom: 0.22mm solid #15202b; }
+    table.pay td { font-size: 6.8pt; padding: 0.43mm; border-bottom: 0.14mm solid #dde5ec; }
+    .pay-head { font-size: 6.5pt; font-weight: bold; color: {{ $accent }}; margin-top: 1.44mm; }
+    .footnote { margin-top: 1.44mm; font-size: 7.65pt; font-weight: bold; color: #b42318; }
+    table.signatures { width: 100%; margin-top: 7.2mm; }
+    table.signatures td { text-align: center; padding: 0 2.88mm; font-size: 7.22pt; }
+    .sig-line { border-top: 0.18mm solid #15202b; padding-top: 0.72mm; }
+    .printed { margin-top: 1.44mm; font-size: 6.5pt; color: #4a5560; }
 </style>
 
 <table class="page">
@@ -122,7 +123,7 @@
                     </td></tr>
                 @endif
 
-                <tr><td class="sec qr">@include('sales::print.partials.invoice-qr', ['v' => $v, 'width' => '34mm'])</td></tr>
+                <tr><td class="sec qr">@include('sales::print.partials.invoice-qr', ['v' => $v, 'width' => '28mm'])</td></tr>
 
                 <tr><td class="sec">
                     <div class="cap">INVOICE SUMMARY</div>
@@ -153,7 +154,7 @@
                         <div class="co-name">{{ $v->head['name'] }}</div>
                         @include('sales::print.partials.invoice-company', ['v' => $v])
                     </td>
-                    <td style="width: 26mm; text-align: right">@if ($v->logo)<img src="{{ $v->logo }}" style="max-height: 20mm; max-width: 26mm;" alt="">@endif</td>
+                    <td style="width: 18.72mm; text-align: right">@if ($v->logo)<img src="{{ $v->logo }}" style="max-height: 14.4mm; max-width: 18.72mm;" alt="">@endif</td>
                 </tr>
             </table>
 
@@ -167,11 +168,11 @@
                 <div class="section">{{ mb_strtoupper($t('movement')) }}</div>
                 <table class="ledger" data-movement>
                     <tr>
-                        <th style="width: 18mm">{{ $v->label('txn_date') }}</th>
+                        <th style="width: 12.96mm">{{ $v->label('txn_date') }}</th>
                         <th>{{ $t('particulars') }}</th>
-                        <th class="num" style="width: 24mm">{{ $t('debit') }}</th>
-                        <th class="num" style="width: 24mm">{{ $t('credit') }}</th>
-                        <th class="num" style="width: 32mm">{{ $t('balance') }}</th>
+                        <th class="num" style="width: 17.28mm">{{ $t('debit') }}</th>
+                        <th class="num" style="width: 17.28mm">{{ $t('credit') }}</th>
+                        <th class="num" style="width: 23.04mm">{{ $t('balance') }}</th>
                     </tr>
                     @foreach ($v->movement($doc->payments) as $row)
                         <tr @class(['close' => $loop->last])>
@@ -189,7 +190,7 @@
 
             <div class="footnote"><div style="text-align: left; font-size: 50%; line-height: 1.35">{!! nl2br(e($v->footnote)) !!}</div></div>
             @include('sales::print.partials.invoice-signatures', ['v' => $v])
-            <div class="printed">{{ $v->printedAt() }} · Special for DB</div>
+            <div class="printed">{{ $v->printedAt() }} · Special for DB · A5</div>
         </td>
     </tr>
 </table>

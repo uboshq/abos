@@ -52,13 +52,20 @@
         @endforeach
 
         @if ($v->shows('grand_total_row'))
+            {{--
+                ⭐ মোট পরিমাণের প্রতিটা একক নিজের লাইনে — মালিকের ছবি, ৩ অক্টোবর ২০২৬ (S-0001, Special for DB): পণ্যের নাম
+                ২–৪ লাইনে ভাঙছিল, অথচ QTY আর Total QTY কলামে বড় ফাঁকা। ⓘ কারণ এই সারিটা: "168 Ctn, 7 Mbag" `nowrap`-এ এক
+                লাইনে, তাই mPDF গোটা কলামটা ওই মাপে চওড়া করত — প্রতিটা সারিতে "24 Ctn"-এর বাঁয়ে খালি জায়গা। এখন
+                "168 Ctn" / "7 Mbag" দুই লাইনে, কলাম সাধারণ সারির মাপে, বাকি জায়গা নামের।
+            --}}
+            @php($stack = fn (string $units) => implode('<br>', array_map('e', array_map('trim', explode(',', $units)))))
             <tr class="grand" data-grand-row>
                 <td></td>
                 <td>{{ $h('grand_total') }}</td>
                 <td></td>
-                <td class="num">{{ $facts['items']['totals']['qty'] }}</td>
-                @if ($v->free)<td class="num">{{ $facts['items']['totals']['free'] }}</td>@endif
-                @if ($v->totalQty)<td class="num">{{ $facts['items']['totals']['total_qty'] }}</td>@endif
+                <td class="num">{!! $stack((string) $facts['items']['totals']['qty']) !!}</td>
+                @if ($v->free)<td class="num">{!! $stack((string) $facts['items']['totals']['free']) !!}</td>@endif
+                @if ($v->totalQty)<td class="num">{!! $stack((string) $facts['items']['totals']['total_qty']) !!}</td>@endif
                 {{-- ⓘ `grand-amount` — নকশা চাইলে কেবল টাকার ঘরটা আলাদা করে ("Special for DB", ৩ অক্টোবর ২০২৬) --}}
                 <td class="num grand-amount">{{ $paper->money($facts['items']['totals']['amount']) }}</td>
             </tr>

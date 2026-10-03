@@ -283,6 +283,21 @@ final class InvoicePaperView
         return Money::format($this->absolute($this->sums['outstanding'] ?? '0'));
     }
 
+    /**
+     * এই বিলের আগের জের — বিল বসার আর এই টাকা আসার আগে। মালিকের ছবি, ৩ অক্টোবর ২০২৬ (সরকার এন্টারপ্রাইজ, S-0001)।
+     *
+     * ⛔ আগে "আগের বকেয়া" ঘরে বাড়তি টাকা কাটার **পরের** অঙ্ক বসত (২৯,৭৪৮.২৭ — শেষ লাইনের সমান), অথচ আগের বকেয়া ছিল
+     * ৩০,৬৪২.১৫; যোগটা মিলত না। ⓘ এখানে নিজেই গোনা: মোট জের − প্রদেয় + পরিশোধ — তাই "আগের + বিল − পরিশোধ = শেষ জের"
+     * কাগজে সবসময় মেলে। `sums['previous_due']`-ও এখন একই অঙ্ক দেয় (abos-63, 69be60b6); দুইটা আলাদা পথে এক উত্তর।
+     */
+    public function previousBeforeBill(): string
+    {
+        $before = bcadd(bcsub($this->plain($this->sums['outstanding'] ?? '0'), $this->plain($this->sums['net_payable'] ?? '0'), 4),
+            $this->plain($this->sums['paid'] ?? '0'), 4);
+
+        return Money::format($before);
+    }
+
     /** এই বিলের ঘরের নাম — বেশি দিলে Extra Paid। */
     public function billLeftWord(): string
     {

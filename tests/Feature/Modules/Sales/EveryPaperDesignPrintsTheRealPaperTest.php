@@ -140,7 +140,7 @@ final class EveryPaperDesignPrintsTheRealPaperTest extends TestCase
     {
         /* ⛔ ফাঁকা তালিকা হলে উপরের পরীক্ষাগুলো কিছুই না ছেপে সবুজ হত */
         $this->assertCount(28, PaperDesigns::codes('invoice', 'a4'));
-        $this->assertCount(28, PaperDesigns::codes('invoice', 'a5'));
+        $this->assertCount(29, PaperDesigns::codes('invoice', 'a5'));
         $this->assertCount(28, PaperDesigns::codes('invoice', 'thermal'));
 
         foreach (['challan', 'order', 'receipt'] as $paper) {

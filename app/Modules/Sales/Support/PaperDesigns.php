@@ -39,6 +39,8 @@ final class PaperDesigns
         'bw_ledger', 'bw_typewriter', 'bw_bilingual', 'classic_table', 'half_page',
         'swiss_grid', 'editorial_serif', 'modern_card', 'seal_boxes', 'statement', 'statement_ledger',
         'mono_light', 'mono_light_bn', 'mono_bold', 'brutal_mono', 'world_standard', 'world_standard_bn', 'mono_bold_classic',
+        // ⭐ Special for DB — A4-এর সাথে একই গড়ন (মালিক, ৩ অক্টোবর ২০২৬: "সেম টেমপ্লেটটা A5 ও দিয়ে দাও")
+        'special_db',
     ];
 
     /** মালিকের ক্রম — বিলের থার্মাল */
