@@ -236,7 +236,10 @@ final class PackConversion
      * বিকল্পের ড্রপডাউন পর্দায় শুধু জায়গা নিত।
      *
      * @param  iterable<Product>  $products
-     * @return array<int, list<array{id: int, label: string}>>
+     * ⓘ `factor` — এক এককে কত মূল একক; কাউন্টার এটা দিয়ে কার্টনের পরিমাণ লটের পিসের সাথে মেলায়
+     * (মালিক, ৪ অক্টোবর ২০২৬: এক সারিতে লটের মালের বেশি নয়)।
+     *
+     * @return array<int, list<array{id: int, label: string, factor: string}>>
      */
     public function optionsFor(iterable $products): array
     {
@@ -248,7 +251,7 @@ final class PackConversion
             }
 
             $options[$productId] = array_map(
-                fn (array $step) => ['id' => $step['unit']->id, 'label' => $step['unit']->name()],
+                fn (array $step) => ['id' => $step['unit']->id, 'label' => $step['unit']->name(), 'factor' => (string) $step['factor']],
                 $ladder,
             );
         }

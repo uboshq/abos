@@ -210,6 +210,7 @@
                   'creditWall' => __('sales::message.credit_wall_body'),
                   'lotIsRequired' => __('sales::validation.lot_must_be_chosen'),
                   'lotAlreadyInCart' => __('sales::validation.lot_already_in_cart'),
+                  'lotHoldsLess' => __('sales::validation.lot_holds_less'),
                   'itemAlreadyInCart' => __('sales::validation.item_already_in_cart'),
                   'freeNextAt' => __('sales::message.free_next_at'),
                   'freeRatio' => __('sales::message.free_ratio'),

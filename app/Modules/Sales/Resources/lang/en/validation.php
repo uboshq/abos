@@ -24,6 +24,7 @@ return [
     /* ⓘ Reasons in bn/validation.php — the owner chose mandatory lots. */
     'lot_must_be_chosen' => 'This item needs a lot — without one, a return or a recall cannot be traced.',
     'lot_already_in_cart' => 'That lot is already in the cart — pick another, or take that row back up to edit.',
+    'lot_holds_less' => 'Lot :lot holds :have — no more on this row. Pick another lot for the remaining :rest in a new row.',
     'item_already_in_cart' => 'This item is already in the cart — one row per item; take that row back up and change its quantity.',
 
     /* ⓘ The service names the product — reasons in bn/validation.php. */

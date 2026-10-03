@@ -1465,6 +1465,29 @@ export default function directSale({
                 return false;
             }
 
+            /*
+             * ⛔ এক সারিতে লটের মালের বেশি নয় — মালিক, ৪ অক্টোবর ২০২৬ (বিকল্প "ক"): পর্দা নিজে লট ভাগ করে না;
+             * বাকিটার জন্য মানুষ আরেকটা লট বেছে নতুন সারি দেন। ⓘ কার্টনে লিখলে পিসে গুনে মেলানো (`factor`),
+             * কারণ লটের মাল মূল এককে। ⚠️ দেয়াল নয় — সেবা নিজেও থামায় ([[StockService::issue()]])।
+             */
+            const lot = this.entryLots.find(l => String(l.id) === String(this.entry.batchId));
+
+            if (lot) {
+                const unit = this.entryUnits.find(u => String(u.id) === String(this.entry.unitId));
+                const factor = unit ? (this.$num(unit.factor ?? '1') || 1) : 1;
+                const want = Math.round(this.$num(this.entry.qty || '1') * factor * 10000) / 10000;
+                const have = Math.round(this.$num(lot.qty) * 10000) / 10000;
+
+                if (want > have) {
+                    this.lotWarning = String(texts.lotHoldsLess ?? '')
+                        .replace(':lot', lot.no)
+                        .replace(':have', this.qty(String(have)))
+                        .replace(':rest', this.qty(String(Math.round((want - have) * 10000) / 10000)));
+
+                    return false;
+                }
+            }
+
             return true;
         },
 
