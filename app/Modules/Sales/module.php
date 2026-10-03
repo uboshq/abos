@@ -214,6 +214,9 @@ return [
                 'permission' => 'sales.shipment.view', 'setting' => 'sales.screen_shipments'],
             ['label' => 'sales::menu.delivery_confirmation', 'cluster' => 'delivery_processing', 'icon' => 'check-circle', 'route' => 'sales.delivery.index',
                 'permission' => 'sales.delivery.view', 'setting' => 'sales.screen_challans'],
+            // ⭐ ডেলিভারির মাপকাঠি — OTIF, আদেশ থেকে রওনা, দেরির তালিকা ([[DeliveryPerformanceController]], ৪ অক্টোবর ২০২৬)
+            ['label' => 'sales::delivery_performance.title', 'cluster' => 'delivery_processing', 'icon' => 'reports', 'route' => 'sales.delivery_performance.index',
+                'permission' => 'sales.delivery.view', 'setting' => 'sales.screen_challans'],
 
             /* ⓘ শিপমেন্ট এখন "ডিসপ্যাচ রেজিস্টার" নামে Delivery Processing ভাঁজে */
 
