@@ -23,6 +23,23 @@
         : $receipt->lines->map(fn ($l) => [
             'product_id' => (string) $l->product_id,
             'qty' => (string) $l->received_qty,
+
+            /*
+             * ⛔ ফ্রি পরিমাণ সম্পাদনার ফর্মে ফিরে আসে — মালিকের অভিযোগ, ৩ অক্টোবর ২০২৬ (স্টার লাইন):
+             * *"পারচেস চালানে ফ্রি হারা গেছে … ফ্রি আসতেছে না"*।
+             *
+             * ⓘ আগে এই সারিতে `free_qty` ছিলই না — ফ্রি ঘর খালি খুলত, "সংরক্ষণ" চাপলে সেবা পড়ত ০,
+             * আর নিশ্চিত করলে `:free` মজুদে কিছুই ঢুকত না। বিলের ফর্মে একই ফাঁক বন্ধ হয়েছিল আগে।
+             * ⚠️ মূল এককে, কারণ উপরের `qty` আর `rate`-ও মূল এককে আর এখানে কোনো `unit_id` বসে না।
+             * পাহারা: [[TheFreeGoodsVanishedWhenTheReceiptWasEditedTest]]।
+             */
+            'free_qty' => bccomp((string) $l->free_qty, '0', 4) > 0 ? (string) $l->free_qty : '',
+
+            // ⓘ লটের তিনটা ঘরও একই কারণে — না ফিরলে সম্পাদনায় লট নম্বর, মেয়াদ, ছাপা দাম মুছে যেত
+            'batch_no' => (string) ($l->batch_no ?? ''),
+            'expiry_date' => $l->expiry_date?->toDateString() ?? '',
+            'mrp' => $l->mrp === null ? '' : (string) $l->mrp,
+
             'rate' => (string) $l->rate,
 
             // খালি রাখা মানে "দাম বদলাব না" — তাই null-টা খালিই ফেরে,
