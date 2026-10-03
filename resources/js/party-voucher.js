@@ -9,40 +9,15 @@
  * ⓘ এখানে লেখাগুলো বাইরে থেকে আসে, তাই ঐ দুইটা ফাঁদই বন্ধ।
  */
 
-/**
- * একবারে কতগুলো নাম আঁকা হয়।
- *
- * ⓘ ইউবি-তে ৪১৪ জন গ্রাহক — সব আঁকা যায়, কিন্তু যে কোম্পানির হাজার
- * পাঁচেক, তার পর্দা প্রতিটা অক্ষরে থমকাত। ⚠️ বাকিরা হারায় না: তালিকার
- * নিচে লেখা থাকে "আরও আছে — লিখে খুঁজুন"।
+/*
+ * ⓘ খোঁজার নিয়ম আর একবারে কতগুলো আঁকা হয় — এখন [[party-search.js]]-এ, ৩ অক্টোবর
+ * ২০২৬: ক্রেডিট / ডেবিট নোটেও একই খোঁজা লাগল (মালিক: *"ডেবিট নোট পার্টি সার্চ
+ * দেয়ার অপশন নাই"*), আর দুইটা কপি একদিন আলাদা হয়ে যেত। ⚠️ এখান থেকেও রপ্তানি
+ * হয়, যাতে পুরনো `import` ভাঙে না।
  */
-export const SHOWN_AT_ONCE = 100
+import { matchParties, SHOWN_AT_ONCE } from './party-search.js'
 
-/**
- * ⭐ খোঁজা — নাম, কোড, মোবাইল বা পয়েন্টের যেকোনো অংশ, ৩ অক্টোবর ২০২৬।
- *
- * মালিকের অভিযোগ: রসিদের "ডিপোজিটরের নাম" আর পরিশোধের "প্রাপকের নাম"
- * একটা লম্বা সাধারণ তালিকা, খোঁজার ঘর নেই — ইউবি-র ৪১৪ জন গ্রাহকের
- * ভিতরে *নাম খুঁজে পাওয়া যায় না*।
- *
- * ⓘ লেখাটা শব্দে ভাঙা হয়, আর **প্রতিটা** শব্দ মিলতে হয় — "bismillah
- * bazar" লিখলে কেবল বাজারের বিসমিল্লাহ, সব বিসমিল্লাহ নয়। ⚠️ খোঁজা হয়
- * `find`-এ (সার্ভার গড়ে দেয়: দুই ভাষার নাম, কোড, পয়েন্ট, মোবাইল —
- * [[PartyRegistry::pickerFind()]]); না থাকলে নাম আর ছোট লাইনটাই।
- */
-export function matchParties(options, term) {
-    const words = String(term || '').toLowerCase().split(/\s+/).filter(Boolean)
-
-    if (words.length === 0) {
-        return options
-    }
-
-    return options.filter((p) => {
-        const haystack = (p.find || ((p.label || '') + ' ' + (p.hint || ''))).toLowerCase()
-
-        return words.every((w) => haystack.includes(w))
-    })
-}
+export { matchParties, SHOWN_AT_ONCE }
 
 export default function partyVoucher({ partyType, partyId, parties, dueUrl, picked, texts, adding = false, newName = '' }) {
     return {

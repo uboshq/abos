@@ -8,6 +8,7 @@ import { guardOneSubmit } from './one-submit.js'
 import { stockPlacement } from './placement.js'
 import { scannerStore } from './scanner.js'
 import partyVoucher from './party-voucher.js'
+import partySearch from './party-search.js'
 import directSale from './counter/direct-sale.js'
 import directPurchase from './counter/direct-purchase.js'
 import { registerComponents } from './components/index.js'
@@ -73,6 +74,12 @@ document.addEventListener('alpine:init', () => {
      * অ্যাপস্ট্রফি আর Blade-এর পার্সিং দুইবার ভেঙেছে।
      */
     Alpine.data('partyVoucher', partyVoucher)
+
+    /*
+     * ⭐ খোঁজা যায় এমন পক্ষের তালিকা — ৩ অক্টোবর ২০২৬, মালিক: *"ডেবিট নোট
+     * পার্টি সার্চ দেয়ার অপশন নাই"*। ⓘ ব্লেডের দিক [[x-ui.party-search]]।
+     */
+    Alpine.data('partySearch', partySearch)
 
     /*
      * ⭐ কাউন্টারের বিক্রয় — ১৮ সেপ্টেম্বর ২০২৬, নিরীক্ষার ধাপ ৪.১।

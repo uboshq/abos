@@ -43,19 +43,23 @@
         <input type="hidden" name="direction" value="{{ $direction }}">
 
         <div class="grid gap-4 sm:grid-cols-2">
-            <label class="block">
-                <span class="mb-1 block text-2xs text-(--color-ink-muted)">{{ __('accounts::note.party') }}</span>
-                <select name="party_id" required
-                        class="h-(--spacing-field) w-full rounded-(--radius-field) border border-(--color-border)
-                               bg-(--color-surface-card) px-2 text-sm">
-                    <option value="">—</option>
-                    @foreach ($parties as $party)
-                        <option value="{{ $party['id'] }}" @selected(old('party_id') == $party['id'])>
-                            {{ $party['label'] }}
-                        </option>
-                    @endforeach
-                </select>
-            </label>
+            {{--
+                ⭐ "কাকে" — খোঁজা যায় এমন তালিকা, ৩ অক্টোবর ২০২৬।
+
+                মালিক: *"ডেবিট নোট পার্টি সার্চ দেয়ার অপশন নাই"*। ⛔ আগে এটা একটা লম্বা
+                সাধারণ `<select>` ছিল — ইউবি-তে ~৪১৪ জন গ্রাহক, খোঁজার ঘর নেই, আর একই
+                নামের দুইটা "M/S. Bismillah Store" নাম দেখে আলাদা করা যেত না।
+
+                ⓘ এখন নাম, কোড, মোবাইল বা পয়েন্ট লিখে খোঁজা যায়, আর প্রতিটা নামের নিচে
+                কোড · পয়েন্ট · মোবাইল ([[x-ui.party-search]])। ⚠️ ফর্ম আগের মতোই
+                `party_id` পাঠায় — এখন লুকানো ঘরে; ভুল জমার পরে বাছা নামটা ফেরে।
+            --}}
+            <x-ui.party-search name="party_id"
+                               :label="__('accounts::note.party')"
+                               :options="$parties"
+                               :selected="old('party_id')"
+                               required />
+
 
             <x-ui.field name="trx_date" type="date"
                         :label="__('accounts::field.date')"

@@ -63,7 +63,8 @@ final class TheBillNeverSaidWhatWasStillOwedTest extends TestCase
 
         $rows = $this->paperRows($invoice);
 
-        $earlier = $rows[__('sales::print.previous_due')] ?? '0';
+        // ⓘ অগ্রিম হলে সারির নাম "আগের অগ্রিম", অঙ্ক ঋণাত্মক (৩ অক্টোবর ২০২৬)
+        $earlier = $rows[__('sales::print.previous_due')] ?? $rows[__('sales::print.previous_advance')] ?? '0';
         $due = $rows[__('sales::print.invoice_due')] ?? '0';
         $total = $rows[__('sales::print.outstanding')] ?? null;
 
@@ -129,7 +130,7 @@ final class TheBillNeverSaidWhatWasStillOwedTest extends TestCase
         $ascii = strtr($money, ['০' => '0', '১' => '1', '২' => '2', '৩' => '3', '৪' => '4',
             '৫' => '5', '৬' => '6', '৭' => '7', '৮' => '8', '৯' => '9']);
 
-        return (int) round((float) str_replace(',', '', preg_replace('/[^0-9.,]/', '', $ascii) ?? '0') * 100);
+        return (int) round((float) str_replace(',', '', preg_replace('/[^0-9.,-]/', '', $ascii) ?? '0') * 100);
     }
 
     /** @return array<string, string> */
