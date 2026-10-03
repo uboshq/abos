@@ -62,11 +62,12 @@ final class TheQuotationAndOrderMenusSitAfterTheDashboardTest extends TestCase
          * আংশিক, ব্যাক, ইতিহাস; আর "DO তালিকা"-র জায়গায় "ডেলিভারি ট্র্যাকিং"।
          */
         $order = [
-            'do_list' => $at(route('sales.do.index')),
-            'do_pending' => $at(route('sales.do.index', ['tab' => 'awaiting'])),
+            // ⓘ ৩ অক্টোবর ২০২৬: আসল DO কাগজের ডেস্কে ([[DeliveryOrderDeskController]])
+            'do_list' => $at(route('sales.delivery_order.index')),
+            'do_pending' => $at(route('sales.delivery_order.index', ['tab' => 'pending'])),
             'do_partial' => $at(route('sales.planned', ['screen' => 'do_partial'])),
             'do_back' => $at(route('sales.planned', ['screen' => 'do_back'])),
-            'do_history' => $at(route('sales.do.index', ['tab' => 'delivered'])),
+            'do_history' => $at(route('sales.delivery_order.index', ['tab' => 'history'])),
             'tracking' => $at(route('sales.tracking.index')),
             'direct' => $at(route('sales.direct.create')),
             'invoices' => $at(route('sales.invoice.index')),
@@ -97,7 +98,7 @@ final class TheQuotationAndOrderMenusSitAfterTheDashboardTest extends TestCase
             '⛔ খসড়া তালিকা সরাসরি বিক্রয়ের পরে আর ইনভয়েস তালিকার আগে নয়।');
 
         /* ⓘ নতুন DO এখন তালিকার পাতার বোতামে, মেনুতে নয় — তাই সেটা নিচে আলাদা মাপা */
-        foreach (array_diff(PlannedScreenController::SCREENS, ['do_new']) as $screen) {
+        foreach (PlannedScreenController::SCREENS as $screen) {
             $this->assertStringContainsString(e(route('sales.planned', ['screen' => $screen])), $html,
                 "⛔ '{$screen}' সারিটা মেনুতে নেই।");
         }
@@ -106,9 +107,9 @@ final class TheQuotationAndOrderMenusSitAfterTheDashboardTest extends TestCase
     /** ⭐ "DO Create & List" — নতুন DO-র বোতাম DO তালিকার পাতার ভিতরে (মালিক, ২ অক্টোবর ২০২৬) */
     public function test_the_do_list_carries_the_new_do_button(): void
     {
-        $this->get(route('sales.do.index'))->assertOk()
-            ->assertSee('href="'.e(route('sales.planned', ['screen' => 'do_new'])).'"', false)
-            ->assertSee(__('sales::planned.do_new'));
+        $this->get(route('sales.delivery_order.index'))->assertOk()
+            ->assertSee('href="'.e(route('sales.delivery_order.create')).'"', false)
+            ->assertSee(__('sales::delivery_order.new'));
     }
 
     public function test_every_row_opens_and_says_it_is_being_built(): void

@@ -115,6 +115,19 @@ Route::middleware('auth')->prefix('sales')->group(function () {
      */
     Route::get('/do', [\App\Modules\Sales\Http\Controllers\DeliveryOrderController::class, 'index'])->name('do.index');
 
+    /*
+     * ⭐ আসল DO কাগজের ডেস্ক — "DO Create & List" (মালিক, ২ অক্টোবর ২০২৬; [[DeliveryOrderDeskController]])।
+     * ⓘ মেনুর "ডেলিভারি অর্ডার (DO)" ভাঁজ এখানে আসে; উপরের পুরনো `/do` কাউন্টারের চালানের ধাপ।
+     */
+    Route::prefix('delivery-orders')->name('delivery_order.')->group(function () {
+        Route::get('/', [\App\Modules\Sales\Http\Controllers\DeliveryOrderDeskController::class, 'index'])->name('index');
+        Route::get('/create', [\App\Modules\Sales\Http\Controllers\DeliveryOrderDeskController::class, 'create'])->name('create');
+        Route::post('/', [\App\Modules\Sales\Http\Controllers\DeliveryOrderDeskController::class, 'store'])->name('store');
+        Route::get('/{order}', [\App\Modules\Sales\Http\Controllers\DeliveryOrderDeskController::class, 'show'])->whereNumber('order')->name('show');
+        Route::post('/{order}/submit', [\App\Modules\Sales\Http\Controllers\DeliveryOrderDeskController::class, 'submit'])->whereNumber('order')->name('submit');
+        Route::post('/{order}/quantities', [\App\Modules\Sales\Http\Controllers\DeliveryOrderDeskController::class, 'quantities'])->whereNumber('order')->name('quantities');
+    });
+
     Route::prefix('direct')->name('direct.')->group(function () {
         Route::get('/', [DirectSaleController::class, 'create'])->name('create');
         Route::post('/', [DirectSaleController::class, 'store'])->name('store');

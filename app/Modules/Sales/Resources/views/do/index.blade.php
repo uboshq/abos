@@ -78,9 +78,10 @@
                           :sort="$sortOptions">
                 {{-- ⭐ নতুন DO এই তালিকার ভিতরেই — মালিক, ২ অক্টোবর ২০২৬: "Er vitorei thakbe DO Creat & List" --}}
                 <x-slot:actions>
-                    @can('sales.order.view')
-                        <x-ui.button tone="primary" icon="plus" :href="route('sales.planned', ['screen' => 'do_new'])">
-                            {{ __('sales::planned.do_new') }}
+                    {{-- ⓘ আসল DO কাগজ — DO ডেস্কে লেখা হয় ([[DeliveryOrderDeskController]], ৩ অক্টোবর ২০২৬) --}}
+                    @can('sales.do.create')
+                        <x-ui.button tone="primary" icon="plus" :href="route('sales.delivery_order.create')">
+                            {{ __('sales::delivery_order.new') }}
                         </x-ui.button>
                     @endcan
                 </x-slot:actions>

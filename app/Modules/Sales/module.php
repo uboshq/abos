@@ -154,16 +154,17 @@ return [
              * order er moto vaj thakbe"*। পাঁচ সারি, অর্ডারের ভাঁজের মতো; নতুন DO লেখার বোতাম তালিকার পাতার ভিতরে
              * (*"Er vitorei thakbe DO Creat & List"*)। DO-র ধাপের ট্যাবগুলো (খসড়া, সই, অপেক্ষা …) তালিকার পাতাতেই থাকে।
              */
-            ['label' => 'sales::planned.do_list', 'cluster' => 'delivery_orders', 'icon' => 'book', 'route' => 'sales.do.index',
-                'permission' => 'sales.challan.view'],
-            ['label' => 'sales::planned.do_pending', 'cluster' => 'delivery_orders', 'icon' => 'book', 'route' => 'sales.do.index',
-                'route_params' => ['tab' => 'awaiting'], 'permission' => 'sales.challan.view'],
+            // ⓘ আসল DO কাগজের ডেস্কে — ৩ অক্টোবর ২০২৬ ([[DeliveryOrderDeskController]]); আংশিক আর ব্যাক আসবে abos-86-এর মজুদ-আটকানোর সাথে
+            ['label' => 'sales::planned.do_list', 'cluster' => 'delivery_orders', 'icon' => 'book', 'route' => 'sales.delivery_order.index',
+                'permission' => 'sales.do.view'],
+            ['label' => 'sales::planned.do_pending', 'cluster' => 'delivery_orders', 'icon' => 'book', 'route' => 'sales.delivery_order.index',
+                'route_params' => ['tab' => 'pending'], 'permission' => 'sales.do.view'],
             ['label' => 'sales::planned.do_partial', 'cluster' => 'delivery_orders', 'icon' => 'book', 'route' => 'sales.planned',
                 'route_params' => ['screen' => 'do_partial'], 'permission' => 'sales.order.view'],
             ['label' => 'sales::planned.do_back', 'cluster' => 'delivery_orders', 'icon' => 'book', 'route' => 'sales.planned',
                 'route_params' => ['screen' => 'do_back'], 'permission' => 'sales.order.view'],
-            ['label' => 'sales::planned.do_history', 'cluster' => 'delivery_orders', 'icon' => 'book', 'route' => 'sales.do.index',
-                'route_params' => ['tab' => 'delivered'], 'permission' => 'sales.challan.view'],
+            ['label' => 'sales::planned.do_history', 'cluster' => 'delivery_orders', 'icon' => 'book', 'route' => 'sales.delivery_order.index',
+                'route_params' => ['tab' => 'history'], 'permission' => 'sales.do.view'],
 
             /*
              * ⭐ "DO তালিকা"-র জায়গায় "ডেলিভারি ট্র্যাকিং" — মালিক, ২ অক্টোবর ২০২৬: *"DO তালিকা bad diye er jaygay
