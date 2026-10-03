@@ -241,7 +241,11 @@
         @foreach ($facts['items']['rows'] as $index => $item)
             <tr>
                 <td class="num">{{ $index + 1 }}</td>
-                <td>{{ $item['name'] }}</td>
+                <td>
+                    {{ $item['name'] }}
+                    {{-- ⓘ কোড · লট — বিলের সুইচ মেনে (মালিক, ৩ অক্টোবর ২০২৬) --}}
+                    @include('sales::print.partials.item-code-lot', ['item' => $item, 'style' => 'font-size: 6.5pt'])
+                </td>
                 <td class="num">{{ $paper->money($item['rate']) }}</td>
                 <td>{{ $item['qty'] }}</td>
                 @if ($showFree)<td>{{ $item['free'] }}</td>@endif

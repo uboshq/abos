@@ -171,8 +171,7 @@
                 <td>{{ str_pad((string) ($index + 1), 2, '0', STR_PAD_LEFT) }}</td>
                 <td style="font-weight: bold">
                     {{ $item['name'] }}
-                    @php($under = implode(' · ', array_filter([$item['code'] ?? '', $item['lot'] ?? ''])))
-                    @if ($under !== '')<div class="sub">{{ $under }}</div>@endif
+                    @include('sales::print.partials.item-code-lot', ['item' => $item, 'class' => 'sub'])
                 </td>
                 <td class="num">{{ $paper->money($item['rate']) }}</td>
                 <td class="num">{{ $item['qty'] }}</td>

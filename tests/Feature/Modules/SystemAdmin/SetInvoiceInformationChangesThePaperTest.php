@@ -47,6 +47,8 @@ final class SetInvoiceInformationChangesThePaperTest extends TestCase
         'amount_words' => 'data-words',
         'deposits' => 'data-deposits',
         'qr' => 'data-scan-qr',
+        'product_code' => 'data-line-code',
+        'lot' => 'data-line-lot',
     ];
 
     private Company $company;
@@ -73,6 +75,11 @@ final class SetInvoiceInformationChangesThePaperTest extends TestCase
 
     public function test_each_switch_turned_off_takes_its_part_off_the_paper(): void
     {
+        /* ⓘ আগে সব সুইচ চালু — পণ্যের কোড ডিফল্টে বন্ধ (মালিক, ১ অক্টোবর ২০২৬), তাই ডিফল্ট কাগজে ওর চিহ্ন থাকে না */
+        $this->put(route('system_admin.print_control.invoice_info.update'), [
+            'settings' => $this->everyShowOnExcept(null),
+        ])->assertRedirect();
+
         $on = $this->get(route('sales.invoice_sample'))->assertOk()->getContent();
 
         foreach (self::MARKS as $switch => $mark) {

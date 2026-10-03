@@ -12,6 +12,7 @@ use App\Core\Services\SettingsService;
 use App\Core\Support\DateFormat;
 use App\Http\Controllers\Controller;
 use App\Modules\Sales\Support\InvoiceDesigns;
+use App\Modules\Sales\Support\InvoicePrintLook;
 use App\Modules\Sales\Support\PaperDesigns;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -63,6 +64,11 @@ class InvoiceSampleController extends Controller implements HasMiddleware
         $s = fn (string $key) => (string) __('sales::print.sample.'.$key, [], 'en');
         $today = DateFormat::format(now());
 
+        /* ⓘ কোড আর লট — বিলের সুইচ মেনে, আসল বিলের মতোই খালি পাঠিয়ে ([[SalesPrintController::withoutCodeUnlessShown()]]) */
+        $look = app(InvoicePrintLook::class);
+        $code = fn (string $c) => $look->shows('product_code') ? $c : '';
+        $lot = $look->shows('lot') ? 'LOT-0001 · 12/2027' : '';
+
         $facts = [
             'bill_to' => ['name' => $s('customer'), 'point' => $s('point'), 'phone' => '01700-000000', 'address' => $s('address')],
             'transport' => ['carrier' => $s('carrier'), 'driver_name' => 'Karim', 'driver_phone' => '01800-000000', 'vehicle' => 'Truck DM-TA-11-0000',
@@ -73,8 +79,8 @@ class InvoiceSampleController extends Controller implements HasMiddleware
             'total_delivery' => '16',
             'items' => [
                 'rows' => [
-                    ['name' => $s('item_one'), 'rate' => '1,200.00', 'qty' => '10 Ctn', 'free' => '1 Ctn', 'total_qty' => '11 Ctn', 'amount' => '12,000.00'],
-                    ['name' => $s('item_two'), 'rate' => '450.00', 'qty' => '6 Bag', 'free' => '', 'total_qty' => '6 Bag', 'amount' => '2,700.00'],
+                    ['name' => $s('item_one'), 'code' => $code('PRD-0001'), 'lot' => $lot, 'rate' => '1,200.00', 'qty' => '10 Ctn', 'free' => '1 Ctn', 'total_qty' => '11 Ctn', 'amount' => '12,000.00'],
+                    ['name' => $s('item_two'), 'code' => $code('PRD-0002'), 'lot' => '', 'rate' => '450.00', 'qty' => '6 Bag', 'free' => '', 'total_qty' => '6 Bag', 'amount' => '2,700.00'],
                 ],
                 'totals' => ['qty' => '10 Ctn, 6 Bag', 'free' => '1 Ctn', 'total_qty' => '11 Ctn, 6 Bag', 'amount' => '14,700.00'],
             ],

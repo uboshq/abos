@@ -239,8 +239,7 @@
                 <td colspan="{{ $v->free ? 4 : 3 }}">
                     @if ($st['items'] !== 'dense')@ {{ $paper->money($item['rate']) }}@endif
                     @if ($v->totalQty && filled($item['free']))<span data-col-total-qty> · {{ $L('total_qty') }} {{ $item['total_qty'] }}</span>@endif
-                    @php $under = implode(' · ', array_filter([$item['code'] ?? '', $item['lot'] ?? ''])); @endphp
-                    @if ($under !== '') · {{ $under }}@endif
+                    @include('sales::print.partials.item-code-lot', ['item' => $item, 'inline' => true])
                 </td>
             </tr>
         @endif

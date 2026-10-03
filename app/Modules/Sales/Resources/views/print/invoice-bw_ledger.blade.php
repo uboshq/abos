@@ -211,8 +211,7 @@
                 <td>{{ $index + 1 }}</td>
                 <td>
                     {{ $item['name'] }}
-                    @php($under = implode(' · ', array_filter([$item['code'] ?? '', $item['lot'] ?? ''])))
-                    @if ($under !== '')<div style="font-size: 7.5pt">{{ $under }}</div>@endif
+                    @include('sales::print.partials.item-code-lot', ['item' => $item, 'style' => 'font-size: 7.5pt'])
                 </td>
                 <td class="num">{{ $paper->money($item['rate']) }}</td>
                 <td class="num">{{ $item['qty'] }}</td>
