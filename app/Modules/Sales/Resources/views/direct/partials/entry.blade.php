@@ -289,6 +289,13 @@
                                           x-text="(picked && picked.unit)"></span>
                                 </span>
                             @endforeach
+
+                            {{-- ⭐ লটের ফ্রি অনুপাত — মজুদের সারিতেই, "24:1" ধাঁচে (মালিক, ৩ অক্টোবর ২০২৬: "এটার পাশে যাবে …
+                                 24:1 এভাবে দিতে হবে")। ⓘ আগে আলাদা সবুজ বাক্সে ছিল, পণ্যের নিচে একটা পুরো সারি নিয়ে। --}}
+                            <span class="text-sm" x-show="freeRatio" x-cloak data-free-ratio>
+                                <span class="text-(--color-ink-muted)">{{ __('sales::field.free_ratio') }}</span>
+                                <span class="num font-bold text-(--color-success)" x-text="freeRatio"></span>
+                            </span>
                         </div>
 
                         {{-- খোঁজার ফল — **ভাসমান**, প্রবাহের ভিতরে নয়।
@@ -563,10 +570,6 @@
                                  ⓘ `role="status"`, `alert` নয় — একই কারণে। --}}
                             {{-- ⭐ লটের ফ্রি অনুপাত — সবুজ বাক্স (মালিকের নির্দেশ, ২৮ সেপ্টেম্বর ২০২৬)।
                                  ⓘ সবুজ, কারণ এটা তথ্য — কত কিনলে কত ফ্রি; সুযোগের হলুদ বার্তা নিচে আলাদা। --}}
-                            <div x-show="freeRatio" x-cloak
-                                 class="col-span-full rounded-(--radius-field) bg-(--color-badge-success-bg)
-                                        px-3 py-1.5 text-xs font-semibold text-(--color-badge-success-ink)"
-                                 x-text="freeRatio" role="status"></div>
 
                             <div x-show="freeHint" x-cloak
                                  class="col-span-full rounded-(--radius-field) bg-(--color-badge-pending-bg)

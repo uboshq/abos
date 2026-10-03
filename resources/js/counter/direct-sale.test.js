@@ -1745,6 +1745,12 @@ describe('ফ্রি অনুপাতের বাক্স', () => {
         expect(c.freeRatioText('144', '0')).toBe('')
         expect(c.freeRatioText(undefined, undefined)).toBe('')
     })
+
+    /* ⭐ মজুদের সারিতে "24:1" — মালিক, ৩ অক্টোবর ২০২৬ (টি টুয়ান্টি: লটে ৭২০ + ৩০ ফ্রি) */
+    it('অনুপাত "24:1" ধাঁচে লেখা হয়', () => {
+        const c = counter({ texts: { freeRatio: ':per:1 (লটে এসেছিল :paid + :free ফ্রি)' } })
+        expect(c.freeRatioText('720', '30')).toBe('24:1 (লটে এসেছিল 720 + 30 ফ্রি)')
+    })
 })
 
 /*

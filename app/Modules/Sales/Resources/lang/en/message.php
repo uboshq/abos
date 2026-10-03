@@ -123,7 +123,7 @@ return [
     'not_for_sales' => 'Not for Sales',
 
     /* ⓘ An opportunity, not a warning — reasons in bn/message.php. */
-    'free_ratio' => 'Free ratio: 1 free per :per (the lot came as :paid + :free free)',
+    'free_ratio' => ':per:1 (the lot came as :paid + :free free)',
     'free_next_at' => 'Take :more more and another free comes with it.',
     'pick_item_to_see_stock' => 'Pick an item to see its stock.',
     'nothing_added' => 'Nothing added yet. Pick an item above and press Add to Cart.',
