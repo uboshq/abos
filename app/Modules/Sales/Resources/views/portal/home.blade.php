@@ -19,6 +19,12 @@
         {{ __('sales::portal.claim_title') }}
     </a>
 
+    {{-- ⭐ নিজের DO — লেখা আর জমা (মালিকের বিক্রয়-ধারা, ২ অক্টোবর ২০২৬) --}}
+    <a href="{{ route('sales.portal.do.index') }}" data-portal-do
+       class="mb-3 block rounded-(--radius-field) bg-(--color-brand-500) px-4 py-3 text-center font-medium text-white">
+        {{ __('sales::delivery_order.title') }}
+    </a>
+
     {{-- ⭐ নিজের অর্ডার কোথায় — ডেলিভারি ট্র্যাকিং (মালিক, ২ অক্টোবর ২০২৬) --}}
     <a href="{{ route('sales.portal.tracking') }}" data-portal-tracking
        class="mb-6 block rounded-(--radius-field) border border-(--color-brand-500) px-4 py-3 text-center

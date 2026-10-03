@@ -1,0 +1,258 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Modules\Sales\Services;
+
+use App\Core\Engines\Approval\ApprovalEngine;
+use App\Core\Engines\NumberSeries\NumberSeriesEngine;
+use App\Models\User;
+use App\Modules\Customer\Models\Customer;
+use App\Modules\Inventory\Models\Product;
+use App\Modules\Sales\Events\DeliveryOrderCancelled;
+use App\Modules\Sales\Events\DeliveryOrderSupervisorApproved;
+use App\Modules\Sales\Models\DeliveryOrder;
+use App\Modules\Sales\Models\SalesOrder;
+use App\Modules\Sales\Support\DeliveryOrderStatus;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
+
+/**
+ * DO লেখা, জমা, বাতিল — মালিকের বিক্রয়-ধারা §২ক (২ অক্টোবর ২০২৬; টুকরো ২)।
+ *
+ * ── ⭐ কে লেখেন ──────────────────────────────────────────────────────────
+ * ডিলার নিজে (পোর্টাল/অ্যাপ — `Customer`), তাঁর SR, আর SR-এর উপরের সবাই (`User`)।
+ * ⛔ ডিলার কেবল নিজের নামে, আর কেবল নিজেরটা দেখেন ও বদলান — `customer_id` তিনি নিজে, ফর্মের ঘর নয়।
+ * ⓘ কর্মীর "কোন ডিলার কার" দেয়াল আসবে abos-bb-র [[DealerOwnership]] থেকে; ততক্ষণ চাবি (`sales.do.create`)।
+ *
+ * ── ⭐ দাম ───────────────────────────────────────────────────────────────
+ * পণ্যের বিক্রয়-দাম থেকে ([[SalePriceBook]]) — ⛔ লেখক দাম বা ছাড় বসান না: হাতে দেওয়া ছাড় মালিকের সইয়ের নিয়মে
+ * পড়ে, আর DO সেই দরজা খোলে না।
+ *
+ * ── ⭐ জমার পরে ─────────────────────────────────────────────────────────
+ * লেখক আর বদলাতে পারেন না (সমন্বয়কের শর্ত); সুপারভাইজারের ছক থাকলে `supervisor_pending`, নাহলে সরাসরি
+ * `supervisor_approved` আর সংকেত ([[DeliveryOrderSupervisorApproved]] → abos-86-এর হিসাব)।
+ */
+final class DeliveryOrderService
+{
+    public const APPROVAL_ACTION = 'delivery_order';
+
+    public function __construct(
+        private readonly NumberSeriesEngine $numbers,
+        private readonly ApprovalEngine $approvals,
+    ) {}
+
+    /**
+     * @param  array{customer_id?: int, sales_order_id?: ?int, warehouse_id?: ?int, trx_date?: string, deliver_on?: ?string, narration?: ?string}  $data
+     * @param  list<array{product_id: int, qty: numeric-string|int|float, free_qty?: numeric-string|int|float, note?: ?string}>  $lines
+     */
+    public function create(array $data, array $lines, User|Customer $by): DeliveryOrder
+    {
+        $customerId = $by instanceof Customer ? (int) $by->id : (int) ($data['customer_id'] ?? 0);
+        $this->assertCustomer($customerId);
+        $orderId = $this->salesOrderFor($data['sales_order_id'] ?? null, $customerId);
+
+        return DB::transaction(function () use ($data, $lines, $by, $customerId, $orderId) {
+            $order = DeliveryOrder::query()->create([
+                'document_no' => $this->numbers->next('DO'),
+                'customer_id' => $customerId,
+                'sales_order_id' => $orderId,
+                'warehouse_id' => $data['warehouse_id'] ?? null,
+                'trx_date' => $data['trx_date'] ?? now()->toDateString(),
+                'deliver_on' => $data['deliver_on'] ?? null,
+                'narration' => $data['narration'] ?? null,
+                'status' => DeliveryOrderStatus::DRAFT,
+                'created_by' => $by instanceof User ? $by->id : null,
+                'created_by_customer_id' => $by instanceof Customer ? $by->id : null,
+            ]);
+
+            $this->writeLines($order, $lines);
+
+            return $order->fresh('lines');
+        });
+    }
+
+    /** ⛔ কেবল খসড়া, আর কেবল যিনি লিখেছিলেন */
+    public function update(DeliveryOrder $order, array $data, array $lines, User|Customer $by): DeliveryOrder
+    {
+        $this->assertWriterMayEdit($order, $by);
+
+        return DB::transaction(function () use ($order, $data, $lines) {
+            $order->fill(array_intersect_key($data, array_flip(['warehouse_id', 'trx_date', 'deliver_on', 'narration'])))->save();
+            $order->lines()->delete();
+            $this->writeLines($order, $lines);
+
+            return $order->fresh('lines');
+        });
+    }
+
+    /** খসড়া → জমা → সুপারভাইজারের ছক (থাকলে) — নাহলে সরাসরি অনুমোদিত */
+    public function submit(DeliveryOrder $order, User|Customer $by): DeliveryOrder
+    {
+        $this->assertWriterMayEdit($order, $by);
+
+        if ($order->lines()->count() === 0) {
+            throw ValidationException::withMessages(['lines' => __('sales::delivery_order.no_lines')]);
+        }
+
+        return DB::transaction(function () use ($order) {
+            $order->forceFill(['status' => DeliveryOrderStatus::SUBMITTED, 'submitted_at' => now()])->save();
+
+            $approval = $this->approvals->request(
+                document: $order,
+                module: 'sales',
+                action: self::APPROVAL_ACTION,
+                amount: (string) $order->total,
+                userId: $order->created_by,
+            );
+
+            if ($approval !== null) {
+                $order->forceFill(['status' => DeliveryOrderStatus::SUPERVISOR_PENDING])->save();
+
+                return $order->fresh();
+            }
+
+            return $this->markSupervisorApproved($order);
+        });
+    }
+
+    /**
+     * ⭐ সুপারভাইজার মজুদ দেখে পরিমাণ বদলান — কেবল সইয়ের অপেক্ষায়, কেবল এখনকার স্তরের অনুমোদনকারী
+     * ([[ApprovalEngine::canDecide()]])। ⓘ কে কোন লাইনে কী থেকে কী করলেন — লাইন অডিট-খাতায় নেই, তাই DO-র
+     * নিজের সারিতে নোট নয়, অনুমোদনের মন্তব্যে লেখা থাকে; মোট আবার গোনা হয় (abos-86 সেটাই পড়েন)।
+     *
+     * @param  array<int, numeric-string|int|float>  $quantities  লাইনের id → নতুন পরিমাণ
+     */
+    public function setApprovedQuantities(DeliveryOrder $order, array $quantities, User $approver): DeliveryOrder
+    {
+        if ($order->status !== DeliveryOrderStatus::SUPERVISOR_PENDING) {
+            throw ValidationException::withMessages(['status' => __('sales::delivery_order.not_awaiting_you')]);
+        }
+
+        $pending = $this->approvals->latestFor($order, self::APPROVAL_ACTION);
+
+        if ($pending === null || ! $pending->isPending() || ! $this->approvals->canDecide($pending, $approver)) {
+            abort(403);
+        }
+
+        return DB::transaction(function () use ($order, $quantities) {
+            foreach ($order->lines()->lockForUpdate()->get() as $line) {
+                if (! array_key_exists($line->id, $quantities)) {
+                    continue;
+                }
+
+                $qty = (string) $quantities[$line->id];
+
+                // ⓘ শূন্য চলে — "এই পণ্য এবার নয়"; ঋণাত্মক নয়, আর চাওয়ার বেশিও নয় (বেশি লাগলে ডিলার নতুন DO লেখেন)
+                if (! is_numeric($qty) || bccomp($qty, '0', 4) < 0 || bccomp($qty, (string) $line->qty, 4) > 0) {
+                    throw ValidationException::withMessages(["lines.{$line->id}" => __('sales::delivery_order.approved_qty_range')]);
+                }
+
+                $line->forceFill(['approved_qty' => $qty])->save();
+            }
+
+            $order->recalculate();
+
+            return $order->fresh('lines');
+        });
+    }
+
+    /** শেষ সই হলো (বা ছক নেই) — অনুমোদিত, আর abos-86-কে সংকেত, লেনদেন পাকা হলে */
+    public function markSupervisorApproved(DeliveryOrder $order): DeliveryOrder
+    {
+        $order->recalculate();
+        $order->forceFill(['status' => DeliveryOrderStatus::SUPERVISOR_APPROVED, 'approved_at' => now()])->save();
+        $fresh = $order->fresh();
+        DB::afterCommit(fn () => event(DeliveryOrderSupervisorApproved::from($fresh)));
+
+        return $fresh;
+    }
+
+    /** সুপারভাইজার ফেরালেন (`rejected`) বা লেখক/কেউ বাতিল করলেন (`cancelled`) */
+    public function stop(DeliveryOrder $order, string $reason, ?string $note, ?User $by): DeliveryOrder
+    {
+        if (in_array($order->status, DeliveryOrderStatus::CLOSED, true)) {
+            return $order;
+        }
+
+        $order->forceFill([
+            'status' => $reason === 'rejected' ? DeliveryOrderStatus::REJECTED : DeliveryOrderStatus::CANCELLED,
+            'cancelled_by' => $by?->id,
+            'cancelled_at' => now(),
+            'cancel_reason' => $note,
+        ])->save();
+        $fresh = $order->fresh();
+        DB::afterCommit(fn () => event(DeliveryOrderCancelled::from($fresh, $reason)));
+
+        return $fresh;
+    }
+
+    // ── যন্ত্রপাতি ──────────────────────────────────────────────────────
+
+    /** @param  list<array<string, mixed>>  $lines */
+    private function writeLines(DeliveryOrder $order, array $lines): void
+    {
+        if ($lines === []) {
+            throw ValidationException::withMessages(['lines' => __('sales::delivery_order.no_lines')]);
+        }
+
+        foreach ($lines as $i => $line) {
+            $qty = (string) ($line['qty'] ?? '0');
+
+            if (! is_numeric($qty) || bccomp($qty, '0', 4) <= 0) {
+                throw ValidationException::withMessages(["lines.{$i}.qty" => __('sales::delivery_order.qty_positive')]);
+            }
+
+            $product = Product::query()->find((int) ($line['product_id'] ?? 0))
+                ?? throw ValidationException::withMessages(["lines.{$i}.product_id" => __('sales::delivery_order.no_product')]);
+
+            $order->lines()->create([
+                'product_id' => $product->id,
+                'qty' => $qty,
+                'rate' => (string) ($product->sale_price ?? '0'),
+                'free_qty' => (string) ($line['free_qty'] ?? '0'),
+                'note' => $line['note'] ?? null,
+            ]);
+        }
+
+        $order->recalculate();
+    }
+
+    private function assertWriterMayEdit(DeliveryOrder $order, User|Customer $by): void
+    {
+        $mine = $by instanceof Customer
+            ? (int) $order->created_by_customer_id === (int) $by->id
+            : $order->created_by_customer_id === null && (int) $order->created_by === (int) $by->id;
+
+        if (! $mine) {
+            abort(403);
+        }
+
+        if (! $order->isEditableByWriter()) {
+            throw ValidationException::withMessages(['status' => __('sales::delivery_order.locked_after_submit')]);
+        }
+    }
+
+    private function assertCustomer(int $customerId): void
+    {
+        if ($customerId <= 0 || ! Customer::query()->whereKey($customerId)->exists()) {
+            throw ValidationException::withMessages(['customer_id' => __('sales::delivery_order.no_customer')]);
+        }
+    }
+
+    /** অর্ডারের রেফারেন্স — একই ডিলারের, এই কোম্পানির; নাহলে ফেরে */
+    private function salesOrderFor(mixed $id, int $customerId): ?int
+    {
+        if ($id === null || $id === '') {
+            return null;
+        }
+
+        $order = SalesOrder::query()->whereKey((int) $id)->where('customer_id', $customerId)->first();
+
+        if ($order === null) {
+            throw ValidationException::withMessages(['sales_order_id' => __('sales::delivery_order.order_elsewhere')]);
+        }
+
+        return (int) $order->id;
+    }
+}

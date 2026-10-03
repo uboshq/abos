@@ -303,6 +303,11 @@ class EveryRouteIsGuardedTest extends TestCase
         'sales.portal.claim.create' => 'নিজের জমার দাবি তোলার ফর্ম',
         'sales.portal.claim.store' => 'নিজের জমার দাবি',
         'sales.portal.claim.show' => 'নিজের দাবি — মালিকানা কন্ট্রোলারে যাচাই হয়',
+        'sales.portal.do.index' => 'নিজের DO — তালিকা নিজের গ্রাহক-id ধরে ছাঁকা ([[PortalDeliveryOrderController]])',
+        'sales.portal.do.create' => 'নিজের নতুন DO-র ফর্ম',
+        'sales.portal.do.store' => 'নিজের নামেই DO — গ্রাহক পোর্টালের নিজের পরিচয় থেকে, ফর্ম থেকে নয়',
+        'sales.portal.do.show' => 'নিজের একটা DO — অন্যেরটায় ৪০৩',
+        'sales.portal.do.submit' => 'নিজের খসড়া জমা — অন্যেরটায় ৪০৩, জমার পরে আর নয়',
         'sales.portal.tracking' => 'নিজের বিক্রি কোথায় — তালিকা নিজের গ্রাহক-id ধরে ছাঁকা ([[PortalController::tracking()]])',
         'sales.portal.tracking.show' => 'নিজের একটা বিক্রির দাগ — অন্যের বিক্রিতে ৪০৩',
         'sales.portal.claim.slip' => 'নিজের দাবির ব্যাংক স্লিপ — অন্যের দাবিতে ৪০৩ ([[PortalController::ownClaimSlip()]])',
@@ -369,6 +374,7 @@ class EveryRouteIsGuardedTest extends TestCase
          */
         'sales.tracking.index' => 'sales.delivery.view অথবা sales.order.view — mayTrack() পদ্ধতির শুরুতে',
         'sales.tracking.show' => 'sales.delivery.view অথবা sales.order.view — mayTrack() পদ্ধতির শুরুতে',
+        'api.sales.delivery_order.approved_quantities' => 'এখনকার স্তরের অনুমোদনকারী — ApprovalEngine::canDecide() setApprovedQuantities()-এর শুরুতে, নাহলে ৪০৩',
         'api.sales.tracking.index' => 'sales.delivery.view অথবা sales.order.view — mayTrack() পদ্ধতির শুরুতে',
         'api.sales.tracking.show' => 'sales.delivery.view অথবা sales.order.view — mayTrack() পদ্ধতির শুরুতে',
     ];

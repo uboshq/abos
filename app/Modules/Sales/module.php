@@ -373,6 +373,9 @@ return [
         'sales.order.create',
         'sales.order.update',
         'sales.order.cancel',
+        // ⭐ ডেলিভারি অর্ডার — লেখা আর দেখা (মালিকের বিক্রয়-ধারা, ২ অক্টোবর ২০২৬; সই আসে কোম্পানির ছক থেকে)
+        'sales.do.view',
+        'sales.do.create',
         'sales.challan.view',
         'sales.challan.create',
         'sales.challan.cancel',
@@ -526,6 +529,7 @@ return [
             'sales.delivery.view',
             'sales.order.view',
             'sales.order.create',
+            'sales.do.view', 'sales.do.create',
             'sales.challan.view',
             'sales.invoice.view',
             'sales.collection.view',
@@ -541,6 +545,7 @@ return [
             'sales.delivery.view',
             'sales.order.view',
             'sales.order.create',
+            'sales.do.view', 'sales.do.create',
             'sales.challan.view',
             'sales.invoice.view',
             'sales.collection.view',
@@ -556,6 +561,7 @@ return [
             'sales.delivery.view',
             'sales.order.view',
             'sales.order.create',
+            'sales.do.view', 'sales.do.create',
             'sales.challan.view',
             'sales.invoice.view',
             'sales.collection.view',
@@ -576,7 +582,7 @@ return [
             'sales.claim.decide',
         ],
         'Field Sales' => [
-            'sales.order.view', 'sales.order.create',
+            'sales.order.view', 'sales.order.create', 'sales.do.view', 'sales.do.create',
             'sales.collection.view', 'sales.collection.create',
         ],
         'Manager' => [
@@ -608,6 +614,8 @@ return [
         // ⭐ কাউন্টারের ডেলিভারি অর্ডার — মালিকের নির্দেশ, ২৮ সেপ্টেম্বর ২০২৬: আলাদা উপসর্গ (DS),
         // খসড়া আর নিশ্চিত একই সারিতে; উপসর্গটা কন্ট্রোল প্যানেলের নম্বর-সারি থেকে বদলানো যায়
         'DS' => 'sales::doc.counter_do',
+        // ⭐ ডেলিভারি অর্ডার — নিজের কাগজ, নিজের ক্রম (মালিকের বিক্রয়-ধারা, ২ অক্টোবর ২০২৬; [[DeliveryOrder]])
+        'DO' => 'sales::doc.delivery_order',
         // ⭐ ডেলিভারি অর্ডার — নিজের কাগজ, নিজের ক্রম (মালিকের বিক্রয়-ধারা, ২ অক্টোবর ২০২৬; [[DeliveryOrder]])
         'DO' => 'sales::doc.delivery_order',
         'TRP' => 'sales::doc.shipment',
@@ -670,6 +678,9 @@ return [
         // ⭐ ডেলিভারি অর্ডার — সুপারভাইজার পেরোল / থামল (২ অক্টোবর ২০২৬); শোনেন abos-86 (হিসাব, মজুদ)
         \App\Modules\Sales\Events\DeliveryOrderSupervisorApproved::class,
         \App\Modules\Sales\Events\DeliveryOrderCancelled::class,
+        // ⭐ ডেলিভারি অর্ডার — সুপারভাইজার পেরোল / থামল (২ অক্টোবর ২০২৬); শোনেন abos-86 (হিসাব, মজুদ)
+        \App\Modules\Sales\Events\DeliveryOrderSupervisorApproved::class,
+        \App\Modules\Sales\Events\DeliveryOrderCancelled::class,
     ],
 
     /*
@@ -713,6 +724,8 @@ return [
             \App\Modules\Sales\Listeners\FinishTheHeldSaleOnTheLastSignature::class,
             // ⭐ অফিসের চালানও — শেষ সইয়ে নিজে পাকা ([[SignedChallanConfirmer]], ২৯ সেপ্টেম্বর ২০২৬)
             \App\Modules\Sales\Listeners\ConfirmTheChallanOnTheLastSignature::class,
+            // ⭐ DO-র সুপারভাইজার — শেষ সইয়ে অনুমোদিত, ফেরতে থামে ([[MoveTheDeliveryOrderOnItsSignature]], ২ অক্টোবর ২০২৬)
+            \App\Modules\Sales\Listeners\MoveTheDeliveryOrderOnItsSignature::class,
         ],
     ],
 
@@ -786,6 +799,8 @@ return [
         'challan' => 'sales::approval.challan',
         'collection' => 'sales::approval.collection',
         'discount' => 'sales::approval.discount',
+        // ⭐ DO-র সুপারভাইজার — কোম্পানির নিজের ছক, ১–৩ স্তর (মালিকের বিক্রয়-ধারা, ২ অক্টোবর ২০২৬)
+        'delivery_order' => 'sales::delivery_order.approval',
     ],
 
     /*

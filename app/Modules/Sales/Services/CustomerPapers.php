@@ -8,7 +8,12 @@ use App\Core\Services\LoginJournal;
 use App\Core\Support\CompanyContext;
 use App\Models\LedgerEntry;
 use App\Modules\Customer\Models\Customer;
+use App\Modules\Inventory\Models\Product;
+use App\Modules\Sales\Models\DeliveryChallan;
+use App\Modules\Sales\Models\DeliveryOrder;
 use App\Modules\Sales\Models\SalesInvoice;
+use App\Modules\Sales\Models\SalesOrder;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 
@@ -158,6 +163,51 @@ final class CustomerPapers
         return LedgerEntry::query()
             ->withoutGlobalScope('user-branch')
             ->forParty('customer', (int) $this->customer()->id);
+    }
+
+    /**
+     * ⭐ নিজের একটা বিক্রি — ডেলিভারি ট্র্যাকিংয়ের দাগ (মালিক, ২ অক্টোবর ২০২৬)।
+     * ⛔ অন্যের বিক্রি খোঁজাতেই আসে না — ৪০৪, "আছে কি নেই" সেটাও বলা হয় না।
+     */
+    public function trackedSale(string $kind, string $publicId): DeliveryChallan|SalesOrder
+    {
+        $query = match ($kind) {
+            'challan' => DeliveryChallan::query(),
+            'order' => SalesOrder::query(),
+            default => abort(404),
+        };
+
+        return $this->mine($query)->where('public_id', $publicId)->firstOrFail();
+    }
+
+    /**
+     * নিজের DO-গুলো — নতুনটা আগে, পাতায় ৫০ ([[PortalDeliveryOrderController]])।
+     *
+     * @return LengthAwarePaginator<int, DeliveryOrder>
+     */
+    public function deliveryOrders(int $perPage = 50): LengthAwarePaginator
+    {
+        return $this->mine(DeliveryOrder::query())
+            ->orderByDesc('trx_date')->orderByDesc('id')
+            ->paginate($perPage)->withQueryString();
+    }
+
+    /** নিজের একটা DO, লাইনসহ — অন্যেরটা ৪০৪ */
+    public function deliveryOrder(string $publicId): DeliveryOrder
+    {
+        return $this->mine(DeliveryOrder::query())->where('public_id', $publicId)->with('lines.product')->firstOrFail();
+    }
+
+    /**
+     * DO-তে চাওয়া যায় এমন পণ্য — সক্রিয়, নামের ক্রমে, দামসহ (দাম পণ্যের, ডিলারের নয়)।
+     * ⓘ কোম্পানির ক্যাটালগ — "কার" প্রশ্ন নেই, তবু এখানে, যাতে পোর্টালের পর্দা নিজে কোয়েরি না লেখে।
+     *
+     * @return Collection<int, Product>
+     */
+    public function orderableProducts(): Collection
+    {
+        return Product::query()->where('is_active', true)->orderBy('name_en')
+            ->get(['id', 'name_en', 'name_bn', 'code', 'sale_price']);
     }
 
     /**

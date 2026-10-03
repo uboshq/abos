@@ -496,6 +496,12 @@ Route::prefix('portal')->name('portal.')->group(function () {
         Route::get('/claims/{claim}/slip', [PortalController::class, 'ownClaimSlip'])
             ->whereNumber('claim')->name('claim.slip');
         // ⭐ নিজের বিক্রি কোথায় — ডেলিভারি ট্র্যাকিং ([[PortalController::tracking()]])
+        // ⭐ ডিলারের নিজের DO — লেখা আর জমা ([[PortalDeliveryOrderController]], ২ অক্টোবর ২০২৬)
+        Route::get('/do', [\App\Modules\Sales\Http\Controllers\PortalDeliveryOrderController::class, 'index'])->name('do.index');
+        Route::get('/do/new', [\App\Modules\Sales\Http\Controllers\PortalDeliveryOrderController::class, 'create'])->name('do.create');
+        Route::post('/do', [\App\Modules\Sales\Http\Controllers\PortalDeliveryOrderController::class, 'store'])->name('do.store');
+        Route::get('/do/{id}', [\App\Modules\Sales\Http\Controllers\PortalDeliveryOrderController::class, 'show'])->whereUuid('id')->name('do.show');
+        Route::post('/do/{id}/submit', [\App\Modules\Sales\Http\Controllers\PortalDeliveryOrderController::class, 'submit'])->whereUuid('id')->name('do.submit');
         Route::get('/tracking', [PortalController::class, 'tracking'])->name('tracking');
         Route::get('/tracking/{kind}/{id}', [PortalController::class, 'trackingStory'])
             ->where('kind', 'challan|order')->whereUuid('id')->name('tracking.show');

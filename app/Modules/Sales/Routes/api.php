@@ -44,4 +44,13 @@ Route::prefix('v1/sales')
         Route::get('/tracking', [SaleTrackingController::class, 'index'])->name('tracking.index');
         Route::get('/tracking/{kind}/{id}', [SaleTrackingController::class, 'show'])
             ->where('kind', 'challan|order')->whereUuid('id')->name('tracking.show');
+
+        // ⭐ ডেলিভারি অর্ডার — লেখা, জমা, সুপারভাইজারের পরিমাণ ([[DeliveryOrderApiController]], ২ অক্টোবর ২০২৬)
+        Route::get('/delivery-orders', [\App\Modules\Sales\Http\Controllers\DeliveryOrderApiController::class, 'index'])->name('delivery_order.index');
+        Route::post('/delivery-orders', [\App\Modules\Sales\Http\Controllers\DeliveryOrderApiController::class, 'store'])->name('delivery_order.store');
+        Route::get('/delivery-orders/{id}', [\App\Modules\Sales\Http\Controllers\DeliveryOrderApiController::class, 'show'])->whereUuid('id')->name('delivery_order.show');
+        Route::put('/delivery-orders/{id}', [\App\Modules\Sales\Http\Controllers\DeliveryOrderApiController::class, 'update'])->whereUuid('id')->name('delivery_order.update');
+        Route::post('/delivery-orders/{id}/submit', [\App\Modules\Sales\Http\Controllers\DeliveryOrderApiController::class, 'submit'])->whereUuid('id')->name('delivery_order.submit');
+        // ⓘ চাবি ছকের — এখনকার স্তরের অনুমোদনকারী ([[DeliveryOrderService::setApprovedQuantities()]])
+        Route::post('/delivery-orders/{id}/approved-quantities', [\App\Modules\Sales\Http\Controllers\DeliveryOrderApiController::class, 'approvedQuantities'])->whereUuid('id')->name('delivery_order.approved_quantities');
     });
