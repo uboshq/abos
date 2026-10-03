@@ -75,6 +75,11 @@
                   'needALine' => __('purchase::message.need_a_line'),
                   'needALot' => __('purchase::message.need_a_lot'),
                   'needACarrier' => __('purchase::message.need_a_carrier'),
+
+                  {{-- ⛔ দর ০ বা বিক্রয়দর ছাড়া — কার্টে নয়, পাঠানোও নয় (মালিক, ৩ অক্টোবর ২০২৬) --}}
+                  'needRate' => __('purchase::message.need_rate'),
+                  'needSalesPrice' => __('purchase::message.need_sales_price'),
+                  'needPricedLines' => __('purchase::message.need_priced_lines'),
               ]),
               {{-- ⭐ সার্ভার কোন সারির লট ফিরিয়েছে — সারির ক্রম ধরে (`lines.{i}.batch_no`),
                    যাতে বার্তাটা ঐ সারির লট-ঘরের নিচেই বসে, কেবল উপরের তালিকায় নয় --}}

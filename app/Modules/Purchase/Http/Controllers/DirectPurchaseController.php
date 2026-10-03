@@ -453,7 +453,8 @@ class DirectPurchaseController extends Controller implements HasMiddleware
             'lines.*.rate' => ['required', 'numeric', 'gt:0'],
             'lines.*.discount' => ['nullable', 'numeric', 'min:0'],
             'lines.*.tax' => ['nullable', 'numeric', 'min:0'],
-            'lines.*.sales_price' => ['nullable', 'numeric', 'min:0'],
+            // ⛔ বিক্রয়দর ছাড়া নয় — মালিক, ৩ অক্টোবর ২০২৬: *"বিক্রয়দর … na dile cart e add hobe na"* ([[DirectPurchaseService::assertPriced()]])
+            'lines.*.sales_price' => ['required', 'numeric', 'gt:0'],
 
             /*
              * দামের নীতি — মুক্ত লেখা নয়, তিনটার একটা।

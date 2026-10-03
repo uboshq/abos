@@ -198,7 +198,7 @@ final class TheCounterPaidTheMillAndTheBooksNeverHeardTest extends TestCase
                 'supplier_bill_no' => 'MILL-'.fake()->unique()->numberBetween(1000, 9999),
                 ...$extra,
             ],
-            [['product_id' => $this->product->id, 'qty' => '10', 'rate' => '60']],
+            [['product_id' => $this->product->id, 'qty' => '10', 'rate' => '60', 'sales_price' => '60']],
         );
     }
 

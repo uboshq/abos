@@ -263,22 +263,70 @@ describe('কার্টের সারি উপরে ফিরিয়ে 
     })
 
     /*
-     * ⛔ আর এটাই আসল দাবি: সারিটা **সরে আসে**, কপি হয় না।
+     * ⛔ আর এটাই আসল দাবি: হালনাগাদে সারি **বাড়ে না** — মালিক, ৩ অক্টোবর ২০২৬।
      *
-     * ⚠️ কপি হলে "কার্টে যোগ করুন" চাপার পর একই পণ্য দুইবার বসত, আর
-     * ব্যবহারকারী ভাবতেন তিনি কেবল বদলেছেন — ⓘ আর ভুলটা ধরা পড়ত
-     * বিলের মোটে, যেখানে কেউ সারি গোনে না।
+     * ⓘ ২৫ সেপ্টেম্বর থেকে সারিটা কার্ট থেকে উঠে আসত; এখন কার্টেই থাকে, আর "হালনাগাদ করুন"
+     * সেটাকেই জায়গায় বদলায় — চাবি একই, ক্রম একই। ⚠️ কপি হলে একই পণ্য দুইবার বসত।
      */
-    it('কার্ট থেকে সরে আসে, কপি হয় না', async () => {
+    it('হালনাগাদে সারি বাড়ে না — একই সারি, নতুন সংখ্যা', async () => {
         const c = filled()
         await c.addToCart()
+        const key = c.lines[0].key
+
         await c.editLine(0)
 
-        expect(c.lines).toHaveLength(0)
+        expect(c.lines).toHaveLength(1)
+        expect(c.editingKey).toBe(key)
 
+        c.entry.qty = '5'
         await c.addToCart()
 
         expect(c.lines).toHaveLength(1)
+        expect(c.lines[0].key).toBe(key)
+        expect(c.lines[0].qty).toBe('5')
+        expect(c.editingKey).toBe(null)
+    })
+
+    /* ⓘ মাঝের সারি বদলালে সে মাঝেই থাকে — শেষে গিয়ে বসে না */
+    it('মাঝের সারি জায়গাতেই থাকে', async () => {
+        const c = counter({ catalogue: [product(), product({ id: 2, name: 'ডাল' }), product({ id: 3, name: 'তেল' })] })
+
+        for (const id of [1, 2, 3]) {
+            c.picked = c.catalogue.find(p => p.id === id)
+            c.entry.qty = '1'
+            c.entry.rate = '50'
+            await c.addToCart()
+        }
+
+        await c.editLine(1)
+        c.entry.rate = '55'
+        await c.addToCart()
+
+        expect(c.lines.map(l => l.id)).toEqual([1, 2, 3])
+        expect(c.lines[1].rate).toBe('55')
+    })
+
+    /* ⛔ নিজের সারির সাথে "আগেই কার্টে আছে" ধাক্কা নয় — কিন্তু অন্য সারির সাথে আছে */
+    it('একই পণ্য নিজের সারিতে আটকায় না, অন্যটায় আটকায়', async () => {
+        const c = counter({
+            catalogue: [product(), product({ id: 2, name: 'ডাল' })],
+            texts: { itemAlreadyInCart: 'আগেই কার্টে আছে' },
+        })
+        c.picked = c.catalogue[0]
+        c.entry.qty = '1'
+        await c.addToCart()
+        c.picked = c.catalogue[1]
+        c.entry.qty = '1'
+        await c.addToCart()
+
+        await c.editLine(1)
+        expect(await c.addToCart()).toBe(true)
+
+        await c.editLine(1)
+        c.picked = c.catalogue[0]
+        expect(await c.addToCart()).toBe(false)
+        expect(c.lotWarning).toBe('আগেই কার্টে আছে')
+        expect(c.lines.map(l => l.id)).toEqual([1, 2])
     })
 
     /*
@@ -298,9 +346,10 @@ describe('কার্টের সারি উপরে ফিরিয়ে 
 
         await c.editLine(0)
 
-        expect(c.lines).toHaveLength(1)
-        expect(c.lines[0].qty).toBe('7')
+        expect(c.lines).toHaveLength(2)
+        expect(c.lines[1].qty).toBe('7')
         expect(c.entry.qty).toBe('3')
+        expect(c.editingKey).toBe(c.lines[0].key)
     })
 
     /* ⓘ ছাড় শতাংশেই ফেরে — কার্টে ওটাই রাখা হয়। */
@@ -387,6 +436,17 @@ describe('বাকির সীমা — কার্টেই আটকায
      * ⛔ সারি ধরে দেখলে ১,২০০-র দুইটা সারি আলাদাভাবে নিরীহ দেখাত
      * (দুইটাই ২,০০০-এর কম), অথচ মিলে ২,৪০০ — সীমা পার।
      */
+    /* ⓘ সম্পাদনায় পুরনো সারিটা কার্টে থাকে — তার অঙ্ক দুইবার গুনে মিথ্যা সতর্কতা নয় (৩ অক্টোবর ২০২৬) */
+    it('সারি সম্পাদনায় একই সারি দুইবার গোনা হয় না', async () => {
+        const c = onCredit()
+        entry(c, 1500)
+        expect(await c.addToCart()).toBe(true)
+
+        await c.editLine(0)
+        expect(await c.addToCart()).toBe(true)
+        expect(c.creditWarning).toBe('')
+    })
+
     it('সারি ধরে নয়, পুরো ঝুড়ি ধরে গোনে', async () => {
         const c = onCredit()
 
@@ -638,34 +698,29 @@ describe('সীমার কড়া দেয়াল — আটকে থ�
     })
 
     /*
-     * ⛔ পুরনো বকেয়া সীমার ওপরে, অথচ এই বিক্রি এক টাকাও বাকি বাড়ায় না — মালিকের ডেমো, S-0010 (৩ অক্টোবর ২০২৬)।
+     * ⭐ বিক্রির পরে মোট বকেয়া সীমার ভিতরে — মালিকের সিদ্ধান্ত, ৩ অক্টোবর ২০২৬: *"চলবে না — আগের বকেয়াও শোধ চাই"*।
      *
-     * Appel Enterprise: সীমা ০, আগের বকেয়া ১২,০০০, বিল ৩,৩১,৯৪৮, জমা ৩,৫৬,০০০। ⚠️ পর্দা আগে বলত "অবশিষ্ট ০, ১২,০০০
-     * বেশি" আর ফর্ম আটকাত — অথচ সেবা `unpaid <= 0` দেখে ছেড়ে দিত ([[CreditExposure::assertRoom()]])। ⓘ এক টাকা কম দিলে
-     * বাকি বাড়ে, তখন থামে।
+     * ডেমো S-0010 (Appel Enterprise): সীমা ০, আগের বকেয়া ১২,০০০, বিল ৩,৩১,৯৪৮। ⚠️ পর্দা আগে জমা ৩,৫৬,০০০-তেও "১২,০০০
+     * বেশি" বলে আটকাত। এখন: বিল + পুরনো বকেয়া (৩,৪৩,৯৪৮) বা বেশি দিলে যায়; কেবল বিলটুকু দিলে, বা এক টাকা কম দিলে, থামে।
      */
-    it('পুরনো বকেয়া সীমার ওপরে, তবু পুরো জমার বিক্রি যায়; এক টাকা কম দিলে থামে', () => {
-        const old = () => {
+    it('পুরনো বকেয়া থাকলে বিল আর বকেয়া দুটো মিলে দিলে যায়, কেবল বিলটুকু দিলে থামে', () => {
+        const old = (deposits) => {
             const c = held({ customers: { 7: { limit: 0, due: 12000, held: 0, days: 30, name: 'Appel' } }, creditRules: { enabled: true, zeroBlocks: true } })
             cartOf(c, 331948)
             c.parkDraft = () => {}
             c.soundTheAlarm = () => {}
+            c.deposits = deposits.map(amount => ({ amount }))
 
-            return c
+            const e = submitEvent()
+            c.guardSubmit(e)
+
+            return e.stopped
         }
 
-        const paid = old()
-        paid.deposits = [{ amount: '332000' }, { amount: '12000' }, { amount: '12000' }]
-        const e = submitEvent()
-        paid.guardSubmit(e)
-        expect(e.stopped).toBe(false)
-        expect(paid.creditBlocked).toBe(false)
-
-        const short = old()
-        short.deposits = [{ amount: '331947' }]
-        const f = submitEvent()
-        short.guardSubmit(f)
-        expect(f.stopped).toBe(true)
+        expect(old(['332000', '12000', '12000'])).toBe(false)
+        expect(old(['343948'])).toBe(false)
+        expect(old(['343947'])).toBe(true)
+        expect(old(['331948'])).toBe(true)
     })
 
     /* ⓘ পপ-আপের লেখা — খোলা ১,০০০, বেশি ৫০০ */
@@ -1737,5 +1792,99 @@ describe('পরিবহনের যোগ বোতাম', () => {
         expect(c.panel).toBe('')
         expect(c.transportAdded).toBe(true)
         expect(c.transportSummary).toContain('500')
+    })
+})
+
+/*
+ * ⛔ যোগের পরে কার্সর পণ্যের ঘরে, তালিকা বন্ধ — মালিক, ৩ অক্টোবর ২০২৬: *"ekta product add er por ro add er
+ * jonno list bose auto, eta biroktikor"*। ⓘ তালিকা কেবল লিখলে, ক্লিকে বা নিচের তীরে।
+ */
+describe('যোগের পরে তালিকা বন্ধ, কার্সর পণ্যের ঘরে', () => {
+    const ready = () => {
+        const c = counter({ catalogue: [product({ code: 'P-1', available: 9 }), product({ id: 2, name: 'ডাল', code: 'P-2', available: 9 })] })
+        const focused = []
+        c.$refs = { search: { focus: () => focused.push('search') }, qty: { focus: () => focused.push('qty') } }
+        c.customerId = '5'
+        c.focused = focused
+
+        return c
+    }
+
+    it('যোগের পরে ঘর খোলা, তালিকা বন্ধ, কার্সর ঘরে', async () => {
+        const c = ready()
+        c.openPicker()
+        c.pick(c.catalogue[0])
+        await c.addToCart()
+
+        expect(c.pickerOpen).toBe(true)
+        expect(c.listVisible).toBe(false)
+        expect(c.visible).toHaveLength(0)
+        expect(c.focused.at(-1)).toBe('search')
+    })
+
+    it('একটা অক্ষর লিখলে তালিকা খোলে', async () => {
+        const c = ready()
+        c.openPicker()
+        c.pick(c.catalogue[0])
+        await c.addToCart()
+        c.term = 'ড'
+
+        expect(c.listVisible).toBe(true)
+        expect(c.visible.map(p => p.id)).toEqual([2])
+    })
+
+    it('ক্লিক বা নিচের তীরে পুরো তালিকা', async () => {
+        const c = ready()
+        c.openPicker()
+        c.pick(c.catalogue[0])
+        await c.addToCart()
+        c.showList()
+
+        expect(c.visible).toHaveLength(2)
+    })
+
+    it('হালনাগাদের পরেও একই — তালিকা বন্ধ, কার্সর ঘরে', async () => {
+        const c = ready()
+        c.pick(c.catalogue[0])
+        await c.addToCart()
+        await c.editLine(0)
+
+        expect(c.focused.at(-1)).toBe('qty')
+
+        await c.addToCart()
+
+        expect(c.listVisible).toBe(false)
+        expect(c.focused.at(-1)).toBe('search')
+    })
+})
+
+/* ⛔ কার্টের সারিতে লেখার ঘর নেই — ব্লেডটাই পড়া হয় (ঘরটা পাতায়, কম্পোনেন্টে নয়) */
+describe('কার্টের সারিতে লেখার ঘর নেই', () => {
+    it('পরিমাণ, দর, ফ্রি, ছাড় — লুকানো ঘর; ✎ আছে', async () => {
+        const { readFileSync } = await import('node:fs')
+        const blade = readFileSync(new URL('../../../app/Modules/Sales/Resources/views/direct/partials/cart.blade.php', import.meta.url), 'utf8')
+        const start = blade.indexOf('x-for="(line, i) in lines"')
+        const end = blade.indexOf('x-for="(gift, g) in line.gifts"')
+        const row = blade.slice(start, end).replace(/\{\{--[\s\S]*?--\}\}/g, '')
+
+        expect(start).toBeGreaterThan(0)
+        expect(end).toBeGreaterThan(start)
+
+        const inputs = row.match(/<input\b[^>]*>/g) || []
+
+        expect(inputs.length).toBeGreaterThan(0)
+        inputs.forEach(i => expect(i).toMatch(/type="hidden"/))
+        expect(row).toMatch(/@click="editLine\(i\)"/)
+    })
+
+    it('খোঁজার ঘর ফোকাসে তালিকা খোলে না — তালিকা listVisible ধরে', async () => {
+        const { readFileSync } = await import('node:fs')
+        const blade = readFileSync(new URL('../../../app/Modules/Sales/Resources/views/direct/partials/entry.blade.php', import.meta.url), 'utf8')
+        const tag = (blade.match(/<input type="search" x-model="term" x-ref="search"[\s\S]*?>/)?.[0] || '')
+
+        expect(tag).not.toBe('')
+        expect(tag).not.toMatch(/@focus=/)
+        expect(tag).toMatch(/@keydown\.down="showList\(\)"/)
+        expect(blade).toMatch(/x-show="listVisible"[^>]*data-product-list/)
     })
 })

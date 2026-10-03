@@ -63,6 +63,8 @@ return [
      */
     'gift_short' => 'Gift',
     'add_to_cart' => 'Add to cart',
+    'edit_line' => 'Edit',
+    'update_line' => 'Update',
     'clear_data' => 'Clear data',
     'receive_goods' => 'Receive goods',
     'close_panel' => 'Close',

@@ -41,7 +41,9 @@
 
                         <tbody>
                             <template x-for="(line, index) in lines" :key="line.key">
-                                <tr class="border-t border-(--color-border)">
+                                {{-- ⓘ উপরে খোলা সারিটা রঙে আলাদা — কোনটা হালনাগাদ হবে, চোখে পড়ে --}}
+                                <tr class="border-t border-(--color-border)"
+                                    :class="line.key === editingKey ? 'bg-(--color-badge-pending-bg)' : ''">
                                     <td class="num" x-text="index + 1"></td>
                                     <td>
                                         <span x-text="line.name"></span>
@@ -151,12 +153,15 @@
                                             </span>
                                         </template>
                                     </td>
+                                    {{-- ── ⛔ কার্টে লেখার ঘর নেই — মালিক, ৩ অক্টোবর ২০২৬ ──────────────
+                                         দর, পরিমাণ, ফ্রি আর ছাড় কেবল দেখা যায়; বদলাতে ✎ — সারিটা উপরের বাক্সে
+                                         ফেরে, যেখানে দর ০ আর বিক্রয়দরের পাহারা আছে ([[editLine()]])। ⚠️ লুকানো
+                                         ঘরগুলো ছাড়া চলে না: পড়ার লেখা জমা দেওয়ার সময় কিছুই পাঠায় না। ⓘ লেখা
+                                         `<span>`-এ, ঘরটা পাশে — `x-text` `<td>`-তে বসালে লুকানো ঘরটা মুছে যেত। --}}
                                     {{-- দর — পরিমাণের আগে, ছবির ক্রম --}}
-                                    <td>
-                                        <input type="number" step="0.01" inputmode="decimal"
-                                               :name="'lines[' + (index) + '][rate]'" x-model="line.rate"
-                                               class="num h-(--spacing-field-dense) w-24 rounded-(--radius-field) border
-                                                      border-(--color-border) bg-(--color-surface-card) px-1 text-end">
+                                    <td class="num text-end">
+                                        <span x-text="money(line.rate)"></span>
+                                        <input type="hidden" :name="'lines[' + (index) + '][rate]'" :value="line.rate">
                                     </td>
 
                                     {{-- ⓘ একক দুইটা লুকানো ঘরে যায়, আর নামটা
@@ -164,22 +169,19 @@
                                          লিখলে কার্টে "১" দেখে বোঝার উপায় থাকত
                                          না ওটা এক বাক্স না এক পিস — আর ওই
                                          ভুলটার দাম একশো গুণ। --}}
-                                    <td>
-                                        <input type="number" step="0.01" inputmode="decimal"
-                                               :name="'lines[' + (index) + '][qty]'" x-model="line.qty"
-                                               class="num h-(--spacing-field-dense) w-20 rounded-(--radius-field) border
-                                                      border-(--color-border) bg-(--color-surface-card) px-1 text-end">
+                                    <td class="num text-end">
+                                        <span x-text="qty(line.qty)"></span>
+                                        <input type="hidden" :name="'lines[' + (index) + '][qty]'" :value="line.qty">
                                         <input type="hidden" :name="'lines[' + (index) + '][unit_id]'" :value="line.unit_id">
                                         <span class="block text-end text-2xs text-(--color-ink-muted)"
                                               x-text="unitName(line.unit_id, line)"></span>
                                     </td>
 
                                     @if ($show['free_qty'])
-                                        <td>
-                                            <input type="number" step="0.01" inputmode="decimal"
-                                                   :name="'lines[' + (index) + '][free_qty]'" x-model="line.free_qty"
-                                                   class="num h-(--spacing-field-dense) w-20 rounded-(--radius-field) border
-                                                          border-(--color-border) bg-(--color-surface-card) px-1 text-end">
+                                        <td class="num text-end">
+                                            <span x-text="line.free_qty ? qty(line.free_qty) : ''"></span>
+                                            <input type="hidden" :name="'lines[' + (index) + '][free_qty]'"
+                                                   :value="line.free_qty || ''">
                                             <input type="hidden" :name="'lines[' + (index) + '][free_unit_id]'"
                                                    :value="line.free_unit_id">
                                             <span class="block text-end text-2xs text-(--color-ink-muted)"
@@ -195,11 +197,10 @@
                                         x-text="line.sales_price ? money(line.sales_price) : '—'"></td>
 
                                     @if ($show['line_discount'])
-                                        <td>
-                                            <input type="number" step="0.01" inputmode="decimal"
-                                                   :name="'lines[' + (index) + '][discount]'" x-model="line.discount"
-                                                   class="num h-(--spacing-field-dense) w-20 rounded-(--radius-field) border
-                                                          border-(--color-border) bg-(--color-surface-card) px-1 text-end">
+                                        <td class="num text-end">
+                                            <span x-text="line.discount ? money(line.discount) : ''"></span>
+                                            <input type="hidden" :name="'lines[' + (index) + '][discount]'"
+                                                   :value="line.discount || ''">
                                         </td>
                                     @endif
 
@@ -244,6 +245,15 @@
                                                            px-2 py-0.5 text-2xs text-(--color-ink-muted)
                                                            hover:text-(--color-ink)">
                                                 {{ __('purchase::action.add_gift') }}
+                                            </button>
+
+                                            {{-- ⭐ সম্পাদনা — উপহার আর ✕-এর মাঝে; ধ্বংসাত্মকটা শেষে থাকে --}}
+                                            <button type="button" @click="editLine(index)" data-edit-line
+                                                    aria-label="{{ __('purchase::action.edit_line') }}"
+                                                    title="{{ __('purchase::action.edit_line') }}"
+                                                    class="rounded-(--radius-field) px-2 py-1 text-(--color-ink-muted)
+                                                           hover:bg-(--color-surface-hover)">
+                                                <x-ui.icon name="edit" class="size-4" />
                                             </button>
 
                                             <button type="button" @click="dropLine(index)"

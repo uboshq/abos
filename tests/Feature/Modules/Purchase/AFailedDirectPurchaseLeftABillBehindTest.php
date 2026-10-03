@@ -142,6 +142,6 @@ final class AFailedDirectPurchaseLeftABillBehindTest extends TestCase
     /** @return list<array<string, mixed>> */
     private function lines(): array
     {
-        return [['product_id' => Product::query()->firstOrFail()->id, 'qty' => '10', 'rate' => '60']];
+        return [['product_id' => Product::query()->firstOrFail()->id, 'qty' => '10', 'rate' => '60', 'sales_price' => '60']];
     }
 }

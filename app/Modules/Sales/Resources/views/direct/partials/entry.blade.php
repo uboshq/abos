@@ -211,7 +211,10 @@
 
                                 <label class="block" x-show="pickerOpen" x-cloak>
                                     <span class="sr-only">{{ __('sales::message.type_or_pick') }}</span>
+                                    {{-- ⓘ তালিকা কেবল লিখলে, ক্লিকে বা নিচের তীরে — ফোকাসে নয় (মালিক, ৩ অক্টোবর ২০২৬) --}}
                                     <input type="search" x-model="term" x-ref="search"
+                                           @click="showList()"
+                                           @keydown.down="showList()"
                                            @keydown.enter.prevent="pickFirst()"
                                            @keydown.escape="pickerOpen = false"
                                            :placeholder="customerId ? @js(__('sales::message.type_or_pick')) : @js(__('sales::message.pick_customer_first'))"
@@ -310,7 +313,7 @@
                         <div class="absolute inset-x-0 top-full z-30 mt-1 max-h-40 space-y-0.5
                                     overflow-y-auto rounded-(--radius-card) border border-(--color-border)
                                     bg-(--color-surface-card) p-1 shadow-lg"
-                             x-show="pickerOpen" x-cloak>
+                             x-show="listVisible" x-cloak data-product-list>
                             <template x-for="p in visible" :key="p.id">
                                 <button type="button" @click="pick(p)"
                                         class="flex w-full items-baseline justify-between gap-2 rounded-(--radius-field)
@@ -449,7 +452,7 @@
                                      করার পথে তিনটা অনুরোধ যেত, আর মাঝেরগুলোর
                                      উত্তর কাজে লাগত না। ⛔ `@change` ঘরটা
                                      ছাড়ার পর একবারই ডাকে। --}}
-                                <input type="number" step="0.01" min="0" x-model="entry.qty"
+                                <input type="number" step="0.01" min="0" x-model="entry.qty" x-ref="qty"
                                        @change="fillFreeFromTheRatio()"
                                        class="num h-(--spacing-field-dense) w-full rounded-(--radius-field) border border-(--color-border)
                                               bg-(--color-surface-app) px-2 text-end text-sm">
@@ -600,7 +603,9 @@
                                     class="h-(--spacing-field-dense) self-end whitespace-nowrap rounded-(--radius-field)
                                            bg-(--color-success) px-2 text-2xs font-semibold leading-tight
                                            text-white disabled:opacity-50">
-                                {{ __('sales::action.add_to_cart') }}
+                                {{-- ⓘ কার্টের সারি উপরে খোলা থাকলে "হালনাগাদ করুন" --}}
+                                <span x-show="editingKey === null">{{ __('sales::action.add_to_cart') }}</span>
+                                <span x-show="editingKey !== null" x-cloak data-update-line>{{ __('sales::action.update_line') }}</span>
                             </button>
 
                         </div>

@@ -57,6 +57,8 @@ return [
      */
     'gift_short' => 'উপহার',
     'add_to_cart' => 'কার্টে দিন',
+    'edit_line' => 'সম্পাদনা',
+    'update_line' => 'হালনাগাদ করুন',
     'clear_data' => 'মুছে ফেলুন',
     'receive_goods' => 'মাল বুঝে নিন',
     'close_panel' => 'বন্ধ',

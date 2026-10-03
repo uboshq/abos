@@ -211,6 +211,7 @@ describe('লট — কেবল লট ধরা সারিতে', () => {
     const add = (c, p) => {
         c.pick(p)
         c.entry.rate = '60'
+        c.entry.sales_price = '72.0'
         c.addToCart()
 
         return c.lines[c.lines.length - 1]
@@ -512,6 +513,7 @@ describe('পাঠানো থামলে পর্দা তার কার
         c.pick(c.catalogue[0])
         c.entry.qty = '1'
         c.entry.rate = '10'
+        c.entry.sales_price = '12.0'
         c.addToCart()
 
         let stopped = false
@@ -532,6 +534,7 @@ describe('পাঠানো থামলে পর্দা তার কার
         c.pick(c.catalogue[0])
         c.entry.qty = '1'
         c.entry.rate = '10'
+        c.entry.sales_price = '12.0'
         c.addToCart()
 
         c.transportCost = '500'
@@ -570,6 +573,7 @@ describe('পাঠানো থামলে পর্দা তার কার
         c.pick(c.catalogue[0])
         c.entry.qty = '1'
         c.entry.rate = '10'
+        c.entry.sales_price = '12.0'
         c.addToCart()
 
         c.transportCost = '500'
@@ -594,6 +598,7 @@ describe('পাঠানো থামলে পর্দা তার কার
         c.pick(c.catalogue[0])
         c.entry.qty = '1'
         c.entry.rate = '10'
+        c.entry.sales_price = '12.0'
         c.addToCart()
 
         let stopped = false
@@ -602,5 +607,250 @@ describe('পাঠানো থামলে পর্দা তার কার
         expect(stopped).toBe(false)
         expect(c.stopped).toBe('')
         expect(c.busy).toBe(true)
+    })
+})
+
+describe('দর ০ বা বিক্রয়দর ছাড়া কার্টে নয় — মালিক, ৩ অক্টোবর ২০২৬', () => {
+    const priced = () => {
+        const c = counter({
+            texts: { paidMoreConfirm: 'বেশি দিচ্ছেন?', needRate: 'ক্রয়দর লিখুন', needSalesPrice: 'বিক্রয়দর লিখুন', needPricedLines: 'সারিতে দর নেই' },
+        })
+        c.$nextTick = fn => fn()
+        c.$root = { querySelector: () => null }
+        c.$refs = {}
+        c.pick(c.catalogue[0])
+
+        return c
+    }
+
+    it('দর ০ হলে সারি যোগ হয় না, বার্তা আসে', () => {
+        const c = priced()
+        c.entry.rate = '0'
+        c.entry.sales_price = '50'
+        c.addToCart()
+
+        expect(c.lines).toHaveLength(0)
+        expect(c.entryError).toBe('ক্রয়দর লিখুন')
+    })
+
+    it('বিক্রয়দর না থাকলে সারি যোগ হয় না', () => {
+        const c = priced()
+        c.entry.rate = '40'
+        c.entry.sales_price = ''
+        c.addToCart()
+
+        expect(c.lines).toHaveLength(0)
+        expect(c.entryError).toBe('বিক্রয়দর লিখুন')
+    })
+
+    it('দুটো থাকলে যোগ হয়, আর বার্তা মুছে যায়', () => {
+        const c = priced()
+        c.entry.rate = '40'
+        c.entry.sales_price = ''
+        c.addToCart()
+        c.entry.sales_price = '48'
+        c.addToCart()
+
+        expect(c.lines).toHaveLength(1)
+        expect(c.entryError).toBe('')
+    })
+
+    it('কার্টে বসার পরে সারির দর ০ করলে পাঠানো থামে', () => {
+        const c = priced()
+        c.entry.rate = '40'
+        c.entry.sales_price = '48'
+        c.addToCart()
+        c.lines[0].rate = '0'
+
+        let stopped = false
+        c.guard({ preventDefault: () => { stopped = true } })
+
+        expect(stopped).toBe(true)
+        expect(c.stopped).toBe('সারিতে দর নেই')
+    })
+})
+
+/*
+ * ⭐ কার্টে লেখার ঘর নেই, সম্পাদনা উপরে — মালিক, ৩ অক্টোবর ২০২৬।
+ *
+ * ⛔ কার্টের ঘরে দর বা পরিমাণ বদলালে উপরের কোনো পাহারা চলত না — দর ০-র দেয়ালও না। ⓘ এখন ✎ চাপলে সারিটা
+ * উপরের বাক্সে বসে, বোতাম হয় "হালনাগাদ করুন", আর চাপলে সারিটা **জায়গাতেই** বদলায়।
+ */
+describe('কার্টের সারি সম্পাদনা — উপরে বসে, জায়গায় বদলায়', () => {
+    const ready = () => {
+        const c = counter({
+            catalogue: [product(), product({ id: 2, name: 'ডাল' })],
+            texts: { paidMoreConfirm: 'বেশি দিচ্ছেন?', needRate: 'ক্রয়দর লিখুন', needSalesPrice: 'বিক্রয়দর লিখুন' },
+        })
+        const focused = []
+        c.$nextTick = fn => fn()
+        c.$root = { querySelector: () => null }
+        c.$refs = {
+            search: { focus: () => focused.push('search') },
+            entryQty: { focus: () => focused.push('entryQty') },
+        }
+        c.focused = focused
+
+        return c
+    }
+
+    const add = (c, p, figures) => {
+        c.pick(p)
+        Object.assign(c.entry, figures)
+        return c.addToCart()
+    }
+
+    it('✎ চাপলে পণ্য, পরিমাণ, ফ্রি, দর, markup, margin আর বিক্রয়দর উপরে বসে', () => {
+        const c = ready()
+        add(c, c.catalogue[0], { qty: '10', free_qty: '2', rate: '100', sales_price: '125' })
+
+        c.editLine(0)
+
+        expect(c.picked?.id).toBe(1)
+        expect(c.entry.qty).toBe('10')
+        expect(c.entry.free_qty).toBe('2')
+        expect(c.entry.rate).toBe('100')
+        expect(c.entry.sales_price).toBe('125')
+        expect(c.entry.markup).toBe('25')
+        expect(c.entry.margin).toBe('20')
+        expect(c.editingKey).toBe(c.lines[0].key)
+        expect(c.focused).toContain('entryQty')
+    })
+
+    it('হালনাগাদে সারি বাড়ে না — একই সারি, একই জায়গায়, নতুন সংখ্যা', () => {
+        const c = ready()
+        add(c, c.catalogue[0], { qty: '10', rate: '100', sales_price: '125' })
+        add(c, c.catalogue[1], { qty: '5', rate: '60', sales_price: '70' })
+        const key = c.lines[0].key
+
+        c.editLine(0)
+        c.entry.qty = '12'
+        c.entry.rate = '95'
+
+        expect(c.addToCart()).toBe(true)
+        expect(c.lines).toHaveLength(2)
+        expect(c.lines[0].key).toBe(key)
+        expect(c.lines[0].id).toBe(1)
+        expect(c.lines[0].qty).toBe('12')
+        expect(c.lines[0].rate).toBe('95')
+        expect(c.lines[1].id).toBe(2)
+        expect(c.editingKey).toBe(null)
+    })
+
+    it('সম্পাদনাতেও দর ০ চলে না — সারিটা আগের মতোই থাকে', () => {
+        const c = ready()
+        add(c, c.catalogue[0], { qty: '10', rate: '100', sales_price: '125' })
+
+        c.editLine(0)
+        c.entry.rate = '0'
+
+        expect(c.addToCart()).toBe(false)
+        expect(c.entryError).toBe('ক্রয়দর লিখুন')
+        expect(c.lines[0].rate).toBe('100')
+        expect(c.editingKey).toBe(c.lines[0].key)
+    })
+
+    it('খোলা সারিটা মুছলে বাক্সও খালি — হালনাগাদ নতুন সারি বানায় না', () => {
+        const c = ready()
+        add(c, c.catalogue[0], { qty: '10', rate: '100', sales_price: '125' })
+
+        c.editLine(0)
+        c.dropLine(0)
+
+        expect(c.editingKey).toBe(null)
+        expect(c.picked).toBe(null)
+        expect(c.lines).toHaveLength(0)
+    })
+
+    /* ⛔ পাল্টা-দাবি: অন্য পণ্য খুঁজে বাছলে সম্পাদনা ছাড়ে, আর সেটা নতুন সারি — খোলা সারি অক্ষত */
+    it('সম্পাদনার মাঝে অন্য পণ্য বাছলে নতুন সারি, আগেরটা অক্ষত', () => {
+        const c = ready()
+        add(c, c.catalogue[0], { qty: '10', rate: '100', sales_price: '125' })
+
+        c.editLine(0)
+        add(c, c.catalogue[1], { qty: '5', rate: '60', sales_price: '70' })
+
+        expect(c.lines).toHaveLength(2)
+        expect(c.lines[0].qty).toBe('10')
+    })
+})
+
+/*
+ * ⛔ যোগের পরে তালিকা নিজে খুলে বসে থাকত — মালিক, ৩ অক্টোবর ২০২৬: *"ekta product add er por ro add er jonno
+ * list bose auto, eta biroktikor"*। ⓘ কার্সর পণ্যের ঘরে থাকে, তালিকা খোলে কেবল লিখলে, ক্লিকে বা নিচের তীরে।
+ */
+describe('যোগের পরে তালিকা বন্ধ, কার্সর পণ্যের ঘরে', () => {
+    const ready = () => {
+        const c = counter({ catalogue: [product({ code: 'P-1' }), product({ id: 2, name: 'ডাল', code: 'P-2' })] })
+        const focused = []
+        c.$nextTick = fn => fn()
+        c.$root = { querySelector: () => null }
+        c.$refs = { search: { focus: () => focused.push('search') } }
+        c.supplierId = '7'
+        c.focused = focused
+
+        return c
+    }
+
+    it('যোগের পরে তালিকা খালি, আর কার্সর খোঁজার ঘরে', () => {
+        const c = ready()
+        c.openBrowsing()
+        c.pickFirst()
+        Object.assign(c.entry, { qty: '1', rate: '10', sales_price: '12' })
+        c.addToCart()
+
+        expect(c.visible).toHaveLength(0)
+        expect(c.focused.at(-1)).toBe('search')
+    })
+
+    it('একটা অক্ষর লিখলে তালিকা খোলে', () => {
+        const c = ready()
+        c.term = 'ড'
+
+        expect(c.visible.map(p => p.id)).toEqual([2])
+    })
+
+    it('ক্লিক বা নিচের তীরে পুরো তালিকা', () => {
+        const c = ready()
+        c.openBrowsing()
+
+        expect(c.visible).toHaveLength(2)
+    })
+})
+
+/*
+ * ⛔ কার্টের সারিতে পরিমাণ, দর, ফ্রি আর ছাড়ের লেখার ঘর নেই — কেবল লুকানো ঘর (সার্ভারে পাঠানোর জন্য)।
+ * ⓘ ব্লেডটাই পড়া হয়: ঘরটা কম্পোনেন্টে নয়, পাতায় — আর একটা `x-model="line.rate"` ফিরলেই দেয়ালটা ফাঁকা।
+ */
+describe('কার্টের সারিতে লেখার ঘর নেই', () => {
+    it('পরিমাণ, দর, ফ্রি, ছাড় — সবই লুকানো ঘর, x-model নেই', async () => {
+        const { readFileSync } = await import('node:fs')
+        const blade = readFileSync(new URL('../../../app/Modules/Purchase/Resources/views/direct/partials/cart.blade.php', import.meta.url), 'utf8')
+        const start = blade.indexOf('x-for="(line, index) in lines"')
+        const end = blade.indexOf('x-for="line in lines"')
+        const row = blade.slice(start, end).replace(/\{\{--[\s\S]*?--\}\}/g, '')
+
+        expect(start).toBeGreaterThan(0)
+        expect(end).toBeGreaterThan(start)
+
+        const inputs = row.match(/<input\b[^>]*>/g) || []
+        const money = inputs.filter(i => /\]\[(qty|rate|free_qty|discount)\]/.test(i))
+
+        expect(money).toHaveLength(4)
+        money.forEach(i => expect(i).toMatch(/type="hidden"/))
+        expect(row).not.toMatch(/x-model="line\.(qty|rate|free_qty|discount)"/)
+        expect(row).toMatch(/@click="editLine\(index\)"/)
+    })
+
+    it('খোঁজার ঘর ফোকাসে তালিকা খোলে না — ক্লিক আর নিচের তীরে খোলে', async () => {
+        const { readFileSync } = await import('node:fs')
+        const blade = readFileSync(new URL('../../../app/Modules/Purchase/Resources/views/direct/partials/entry.blade.php', import.meta.url), 'utf8')
+        const search = blade.match(/<input type="text" x-model="term" x-ref="search"[\s\S]*?>/)?.[0] || ''
+        const tag = search.replace(/\{\{--[\s\S]*?--\}\}/g, '')
+
+        expect(tag).not.toBe('')
+        expect(tag).not.toMatch(/@focus=/)
+        expect(tag).toMatch(/@click="openBrowsing\(\)"/)
+        expect(tag).toMatch(/@keydown\.down="openBrowsing\(\)"/)
     })
 })

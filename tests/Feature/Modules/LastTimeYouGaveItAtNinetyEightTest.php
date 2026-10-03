@@ -80,7 +80,7 @@ class LastTimeYouGaveItAtNinetyEightTest extends TestCase
                 'trx_date' => $on ?? now()->toDateString(),
                 'supplier_bill_no' => 'MEG-'.fake()->unique()->numberBetween(1000, 9999),
             ],
-            [['product_id' => $this->soap->id, 'qty' => '10', 'rate' => $rate]],
+            [['product_id' => $this->soap->id, 'qty' => '10', 'rate' => $rate, 'sales_price' => $rate]],
         );
 
         return $result['bill'];

@@ -113,6 +113,6 @@ final class EditingAPostedBillSaysItWillRepostTest extends TestCase
     /** @return array<string, mixed> */
     private function line(): array
     {
-        return ['product_id' => $this->product->id, 'qty' => '10', 'rate' => '100'];
+        return ['product_id' => $this->product->id, 'qty' => '10', 'rate' => '100', 'sales_price' => '100'];
     }
 }

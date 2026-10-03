@@ -194,7 +194,9 @@
                             class="rounded-(--radius-field) bg-(--color-success) px-0.5 py-1.5 text-2xs
                                    font-medium leading-tight break-words text-(--color-ink-inverse)
                                    hover:bg-(--color-success-hover) disabled:opacity-40">
-                        {{ __('purchase::action.add_to_cart') }}
+                        {{-- ⓘ কার্টের সারি উপরে খোলা থাকলে "হালনাগাদ করুন" — নতুন সারি নয়, সেটাই বদলায় --}}
+                        <span x-show="editingKey === null">{{ __('purchase::action.add_to_cart') }}</span>
+                        <span x-show="editingKey !== null" x-cloak data-update-line>{{ __('purchase::action.update_line') }}</span>
                     </button>
 
                     <button type="button" @click="clearEntry()"

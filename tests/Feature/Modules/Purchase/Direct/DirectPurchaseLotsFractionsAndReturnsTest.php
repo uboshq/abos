@@ -117,11 +117,11 @@ final class DirectPurchaseLotsFractionsAndReturnsTest extends TestCase
             $this->header(['paid_now' => '500']),
             [
                 [
-                    'product_id' => $medicine->id, 'qty' => '60', 'rate' => '12',
+                    'product_id' => $medicine->id, 'qty' => '60', 'rate' => '12', 'sales_price' => '12',
                     'batch_no' => 'NAPA-A', 'expiry_date' => '2027-06-30', 'mrp' => '18.50',
                 ],
                 [
-                    'product_id' => $medicine->id, 'qty' => '40', 'rate' => '15',
+                    'product_id' => $medicine->id, 'qty' => '40', 'rate' => '15', 'sales_price' => '15',
                     'batch_no' => 'NAPA-B', 'expiry_date' => '2027-12-31', 'mrp' => '19.00',
                 ],
             ],
@@ -218,7 +218,7 @@ final class DirectPurchaseLotsFractionsAndReturnsTest extends TestCase
 
         $result = app(DirectPurchaseService::class)->complete(
             $this->header(),
-            [['product_id' => $sugar->id, 'qty' => '0.7', 'rate' => '142.8572']],
+            [['product_id' => $sugar->id, 'qty' => '0.7', 'rate' => '142.8572', 'sales_price' => '142.8572']],
         );
 
         $bill = $result['bill']->fresh();
@@ -276,7 +276,7 @@ final class DirectPurchaseLotsFractionsAndReturnsTest extends TestCase
 
         $bill = app(DirectPurchaseService::class)->complete(
             $this->header(['paid_now' => '200']),
-            [['product_id' => $soap->id, 'qty' => '10', 'rate' => '60']],
+            [['product_id' => $soap->id, 'qty' => '10', 'rate' => '60', 'sales_price' => '60']],
         )['bill']->fresh(['lines']);
 
         $this->assertFiveMatches($beforeBuying, 'ক্রয় (ফেরতের আগে)', [
@@ -345,7 +345,7 @@ final class DirectPurchaseLotsFractionsAndReturnsTest extends TestCase
 
         $bill = app(DirectPurchaseService::class)->complete(
             $this->header(),
-            [['product_id' => $soap->id, 'qty' => '10', 'rate' => '60']],
+            [['product_id' => $soap->id, 'qty' => '10', 'rate' => '60', 'sales_price' => '60']],
         )['bill']->fresh(['lines']);
 
         $states = app(StockService::class)->statesFor($soap, $this->warehouse);
@@ -404,7 +404,7 @@ final class DirectPurchaseLotsFractionsAndReturnsTest extends TestCase
 
         $bill = app(DirectPurchaseService::class)->complete(
             $this->header(),
-            [['product_id' => $soap->id, 'qty' => '10', 'rate' => '60']],
+            [['product_id' => $soap->id, 'qty' => '10', 'rate' => '60', 'sales_price' => '60']],
         )['bill']->fresh(['lines']);
 
         $stock = app(StockService::class);

@@ -100,7 +100,7 @@ final class TheSupplierWasPaidOutOfAnExpenseTest extends TestCase
             'payment_term' => 'cash',
             ...$extra,
             'lines' => [['product_id' => Product::query()->where('track_batch', false)->orderBy('id')->firstOrFail()->id,
-                'qty' => '10', 'rate' => '60', 'tax' => '0']],
+                'qty' => '10', 'rate' => '60', 'sales_price' => '60', 'tax' => '0']],
         ]);
     }
 

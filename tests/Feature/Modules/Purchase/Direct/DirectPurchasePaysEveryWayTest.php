@@ -111,7 +111,7 @@ final class DirectPurchasePaysEveryWayTest extends TestCase
         $before = $this->snapshot();
 
         $result = $this->buy(
-            [['product_id' => $this->product->id, 'qty' => '12', 'rate' => '57.25', 'tax' => '0']],
+            [['product_id' => $this->product->id, 'qty' => '12', 'rate' => '57.25', 'sales_price' => '57.25', 'tax' => '0']],
             ['deposits' => [$this->row('CASH', $till, '687')]],
         );
 
@@ -159,7 +159,7 @@ final class DirectPurchasePaysEveryWayTest extends TestCase
 
         // ── চালান ক — বাকিতে ─────────────────────────────────────────
         $before = $this->snapshot();
-        $first = $this->buy([['product_id' => $this->product->id, 'qty' => '10', 'rate' => '60', 'tax' => '0']])['bill'];
+        $first = $this->buy([['product_id' => $this->product->id, 'qty' => '10', 'rate' => '60', 'sales_price' => '60', 'tax' => '0']])['bill'];
 
         $this->assertFiveMatches($before, 'বাকিতে কেনা — চালান ক', [
             'moves' => [
@@ -176,7 +176,7 @@ final class DirectPurchasePaysEveryWayTest extends TestCase
 
         // ── চালান খ — বাকিতে, অন্য দরে ──────────────────────────────
         $before = $this->snapshot();
-        $second = $this->buy([['product_id' => $this->product->id, 'qty' => '5', 'rate' => '64.50', 'tax' => '0']])['bill'];
+        $second = $this->buy([['product_id' => $this->product->id, 'qty' => '5', 'rate' => '64.50', 'sales_price' => '64.50', 'tax' => '0']])['bill'];
 
         $this->assertFiveMatches($before, 'বাকিতে কেনা — চালান খ', [
             'moves' => [
@@ -254,7 +254,7 @@ final class DirectPurchasePaysEveryWayTest extends TestCase
             'warehouse_id' => $this->warehouse->id,
             'trx_date' => now()->toDateString(),
             'supplier_bill_no' => 'MILL-'.fake()->unique()->numberBetween(10000, 99999),
-            'lines' => [['product_id' => $this->product->id, 'qty' => '20', 'rate' => '45.35', 'tax' => '0']],
+            'lines' => [['product_id' => $this->product->id, 'qty' => '20', 'rate' => '45.35', 'sales_price' => '45.35', 'tax' => '0']],
             'deposits' => [$this->row('BANK', $bank, '907', 'NPSB-907')],
         ];
 
@@ -315,7 +315,7 @@ final class DirectPurchasePaysEveryWayTest extends TestCase
         $before = $this->snapshot();
 
         $this->buy(
-            [['product_id' => $this->product->id, 'qty' => '8', 'rate' => '112.50', 'tax' => '0']],
+            [['product_id' => $this->product->id, 'qty' => '8', 'rate' => '112.50', 'sales_price' => '112.50', 'tax' => '0']],
             ['deposits' => [$this->row('MFS', $bkash, '900', 'TRX8BK900', ['charge_amount' => '5', 'charge_borne_by' => 'us'])]],
         );
 
@@ -353,7 +353,7 @@ final class DirectPurchasePaysEveryWayTest extends TestCase
         $before = $this->snapshot();
 
         $this->buy(
-            [['product_id' => $this->product->id, 'qty' => '15', 'rate' => '70', 'tax' => '0']],
+            [['product_id' => $this->product->id, 'qty' => '15', 'rate' => '70', 'sales_price' => '70', 'tax' => '0']],
             ['deposits' => [$this->row('BANK', $bank, '1050', 'NPSB-1050', ['charge_amount' => '11.50', 'charge_borne_by' => 'us'])]],
         );
 
@@ -396,7 +396,7 @@ final class DirectPurchasePaysEveryWayTest extends TestCase
             'warehouse_id' => $this->warehouse->id,
             'trx_date' => now()->toDateString(),
             'supplier_bill_no' => 'MILL-'.fake()->unique()->numberBetween(10000, 99999),
-            'lines' => [['product_id' => $this->product->id, 'qty' => '8', 'rate' => '112.50', 'tax' => '0']],
+            'lines' => [['product_id' => $this->product->id, 'qty' => '8', 'rate' => '112.50', 'sales_price' => '112.50', 'tax' => '0']],
             'deposits' => [$this->row('MFS', $bkash, '900', 'TRX8BK900X', ['charge_amount' => '900', 'charge_borne_by' => 'us'])],
         ])->assertSessionHasErrors('deposits.0.charge_amount');
 
@@ -428,7 +428,7 @@ final class DirectPurchasePaysEveryWayTest extends TestCase
             'warehouse_id' => $this->warehouse->id,
             'trx_date' => now()->toDateString(),
             'supplier_bill_no' => 'MILL-'.fake()->unique()->numberBetween(10000, 99999),
-            'lines' => [['product_id' => $this->product->id, 'qty' => '8', 'rate' => '112.50', 'tax' => '0']],
+            'lines' => [['product_id' => $this->product->id, 'qty' => '8', 'rate' => '112.50', 'sales_price' => '112.50', 'tax' => '0']],
             'deposits' => [$this->row('CASH', $bkash, '900', 'CASH-IN-BKASH')],
         ])->assertSessionHasErrors('deposits.0.account_id');
 
@@ -460,7 +460,7 @@ final class DirectPurchasePaysEveryWayTest extends TestCase
 
         $before = $this->snapshot();
         $bill = $this->buy(
-            [['product_id' => $this->product->id, 'qty' => '25', 'rate' => '38.40', 'tax' => '0']],
+            [['product_id' => $this->product->id, 'qty' => '25', 'rate' => '38.40', 'sales_price' => '38.40', 'tax' => '0']],
             ['deposits' => [$this->row('CASH', $till, '350')]],
         )['bill'];
 
@@ -538,7 +538,7 @@ final class DirectPurchasePaysEveryWayTest extends TestCase
 
         try {
             $this->buy(
-                [['product_id' => $this->product->id, 'qty' => '10', 'rate' => '60', 'tax' => '0']],
+                [['product_id' => $this->product->id, 'qty' => '10', 'rate' => '60', 'sales_price' => '60', 'tax' => '0']],
                 ['deposits' => [$this->row('CASH', $till, '600')]],
             );
         } catch (ValidationException $e) {

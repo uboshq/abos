@@ -87,7 +87,10 @@
                         <input type="text" x-model="term" x-ref="search"
                                x-show="! picked || browsing" x-cloak
                                :class="picked ? 'w-40 shrink-0' : 'min-w-0 flex-1'"
-                               @focus="browsing = true"
+                               {{-- ⛔ ফোকাসে তালিকা নয় — মালিক, ৩ অক্টোবর ২০২৬: *"ekta product add er por ro add
+                                    er jonno list bose auto, eta biroktikor"*। ⓘ লিখলে, ক্লিকে বা নিচের তীরে খোলে --}}
+                               @click="openBrowsing()"
+                               @keydown.down="openBrowsing()"
                                @keydown.escape="browsing = false"
                                @keydown.enter.prevent="pickFirst()"
                                :placeholder="supplierId ? @js(__('purchase::message.search_product')) : @js(__('purchase::message.pick_supplier_first'))"
@@ -223,7 +226,7 @@
                                 <span class="mb-1 block text-2xs text-(--color-ink-muted)">
                                     {{ __('purchase::field.qty') }}
                                 </span>
-                                <input type="number" step="0.01" inputmode="decimal" x-model="entry.qty"
+                                <input type="number" step="0.01" inputmode="decimal" x-model="entry.qty" x-ref="entryQty"
                                        :disabled="! picked"
                                        class="num h-(--spacing-field) w-full rounded-(--radius-field) border
                                               border-(--color-border) bg-(--color-surface-card) px-2 text-end text-sm
@@ -323,7 +326,7 @@
                                     {{ __('purchase::field.purchase_rate') }}
                                 </span>
                                 <input type="number" step="0.01" inputmode="decimal"
-                                       x-model="entry.rate" @input="rateEdited()" :disabled="! picked"
+                                       x-model="entry.rate" @input="rateEdited()" :disabled="! picked" x-ref="entryRate"
                                        class="num h-(--spacing-field) w-full rounded-(--radius-field) border
                                               border-(--color-border) bg-(--color-surface-card) px-2 text-end text-sm
                                               disabled:opacity-50">
@@ -355,7 +358,7 @@
                                     {{ __('purchase::field.sales_rate') }}
                                 </span>
                                 <input type="number" step="0.01" inputmode="decimal"
-                                       x-model="entry.sales_price" @input="priced('sales_price')"
+                                       x-model="entry.sales_price" @input="priced('sales_price')" x-ref="entrySalesPrice"
                                        :disabled="! picked"
                                        placeholder="{{ __('purchase::message.sales_rate_hint') }}"
                                        class="num h-(--spacing-field) w-full rounded-(--radius-field) border
@@ -363,6 +366,11 @@
                                               disabled:opacity-50">
                             </label>
                         </div>
+
+                        {{-- ⛔ কার্টে না ঢোকার কারণ — দর ০ বা বিক্রয়দর ছাড়া (মালিক, ৩ অক্টোবর ২০২৬) --}}
+                        <p x-show="entryError !== ''" x-cloak role="alert" data-entry-error x-text="entryError"
+                           class="mt-2 rounded-(--radius-field) bg-(--color-badge-danger-bg) px-3 py-2
+                                  text-xs text-(--color-badge-danger-ink)"></p>
 
                         <p x-show="needsRate" x-cloak
                            class="mt-2 rounded-(--radius-field) bg-(--color-badge-pending-bg) px-3 py-2

@@ -119,7 +119,7 @@ final class ABillEditedAfterPostingCouldNotBePostedAgainTest extends TestCase
     /** @return array<string, mixed> */
     private function line(string $qty): array
     {
-        return ['product_id' => $this->product->id, 'qty' => $qty, 'rate' => '100'];
+        return ['product_id' => $this->product->id, 'qty' => $qty, 'rate' => '100', 'sales_price' => '100'];
     }
 
     private function assertBooksAndShelfSay(PurchaseBill $bill, string $qty, string $when): void

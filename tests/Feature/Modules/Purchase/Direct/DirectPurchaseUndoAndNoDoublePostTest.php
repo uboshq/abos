@@ -104,7 +104,7 @@ final class DirectPurchaseUndoAndNoDoublePostTest extends TestCase
     {
         $before = $this->snapshot();
 
-        $bill = $this->buy([['product_id' => $this->rice->id, 'qty' => '10', 'free_qty' => '2', 'rate' => '100']]);
+        $bill = $this->buy([['product_id' => $this->rice->id, 'qty' => '10', 'free_qty' => '2', 'rate' => '100', 'sales_price' => '100']]);
 
         $this->assertFiveMatches('কেনার পরে', $before, $this->snapshot(),
             ledger: [StandardChart::INVENTORY => '1000', StandardChart::PAYABLE => '-1000'],
@@ -146,7 +146,7 @@ final class DirectPurchaseUndoAndNoDoublePostTest extends TestCase
 
         $result = app(DirectPurchaseService::class)->complete(
             $this->header(['paid_now' => '1000', 'paid_from_account_id' => $till->id]),
-            [['product_id' => $this->rice->id, 'qty' => '5', 'rate' => '200']],
+            [['product_id' => $this->rice->id, 'qty' => '5', 'rate' => '200', 'sales_price' => '200']],
         );
         $bill = $result['bill'];
 
@@ -182,14 +182,14 @@ final class DirectPurchaseUndoAndNoDoublePostTest extends TestCase
     {
         $before = $this->snapshot();
 
-        $bill = $this->buy([['product_id' => $this->rice->id, 'qty' => '10', 'rate' => '100']]);
+        $bill = $this->buy([['product_id' => $this->rice->id, 'qty' => '10', 'rate' => '100', 'sales_price' => '100']]);
         $postedIds = $this->billLedgerIds($bill);
         $postedMoves = $this->billStockIds($bill);
 
         $bill = app(PurchaseBillService::class)->update(
             $bill->fresh(),
             $this->header(['supplier_bill_no' => $bill->supplier_bill_no]),
-            [['product_id' => $this->rice->id, 'qty' => '6', 'rate' => '120']],
+            [['product_id' => $this->rice->id, 'qty' => '6', 'rate' => '120', 'sales_price' => '120']],
             repost: true,
         );
 
@@ -225,7 +225,7 @@ final class DirectPurchaseUndoAndNoDoublePostTest extends TestCase
      */
     public function test_edit_and_cancel_are_refused_once_some_of_the_stock_was_used(): void
     {
-        $bill = $this->buy([['product_id' => $this->rice->id, 'qty' => '10', 'rate' => '100']]);
+        $bill = $this->buy([['product_id' => $this->rice->id, 'qty' => '10', 'rate' => '100', 'sales_price' => '100']]);
 
         $stock = app(StockService::class);
         $stock->place($this->rice, $this->warehouse, '10', PurchaseBill::STOCK_SOURCE, $bill->id);
@@ -238,7 +238,7 @@ final class DirectPurchaseUndoAndNoDoublePostTest extends TestCase
         $this->assertRefused(fn () => app(PurchaseBillService::class)->update(
             $bill->fresh(),
             $this->header(['supplier_bill_no' => $bill->supplier_bill_no]),
-            [['product_id' => $this->rice->id, 'qty' => '8', 'rate' => '100']],
+            [['product_id' => $this->rice->id, 'qty' => '8', 'rate' => '100', 'sales_price' => '100']],
             repost: true,
         ), 'সম্পাদনা');
 
@@ -277,7 +277,7 @@ final class DirectPurchaseUndoAndNoDoublePostTest extends TestCase
 
         $bill = app(DirectPurchaseService::class)->complete(
             $this->header(),
-            [['product_id' => $this->rice->id, 'qty' => '10', 'rate' => '100']],
+            [['product_id' => $this->rice->id, 'qty' => '10', 'rate' => '100', 'sales_price' => '100']],
             [['product_id' => $this->bucket->id, 'qty' => '3', 'against_product_id' => $this->rice->id]],
         )['bill'];
 
@@ -406,7 +406,7 @@ final class DirectPurchaseUndoAndNoDoublePostTest extends TestCase
     {
         $bill = app(PurchaseBillService::class)->create(
             $this->header(),
-            [['product_id' => $this->rice->id, 'qty' => '10', 'rate' => '100']],
+            [['product_id' => $this->rice->id, 'qty' => '10', 'rate' => '100', 'sales_price' => '100']],
         );
         $this->assertSame(DocumentStatus::DRAFT, $bill->status);
 
@@ -452,7 +452,7 @@ final class DirectPurchaseUndoAndNoDoublePostTest extends TestCase
     public function test_two_tabs_cancelling_the_same_bill_reverse_it_once(): void
     {
         $before = $this->snapshot();
-        $bill = $this->buy([['product_id' => $this->rice->id, 'qty' => '10', 'rate' => '100']]);
+        $bill = $this->buy([['product_id' => $this->rice->id, 'qty' => '10', 'rate' => '100', 'sales_price' => '100']]);
         $postedIds = $this->billLedgerIds($bill);
         $postedMoves = $this->billStockIds($bill);
 
@@ -783,7 +783,7 @@ final class DirectPurchaseUndoAndNoDoublePostTest extends TestCase
     private function httpPayload(array $overrides = []): array
     {
         return $this->header([
-            'lines' => [['product_id' => $this->rice->id, 'qty' => '10', 'rate' => '100']],
+            'lines' => [['product_id' => $this->rice->id, 'qty' => '10', 'rate' => '100', 'sales_price' => '100']],
             ...$overrides,
         ]);
     }

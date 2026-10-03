@@ -164,8 +164,8 @@ final class DirectPurchaseCostsLandRightTest extends TestCase
             'paid_now' => '500',
             'paid_from_account_id' => $this->till->id,
             'lines' => [
-                ['product_id' => $this->a->id, 'qty' => '10', 'rate' => '100', 'discount' => '50', 'tax' => '142.5'],
-                ['product_id' => $this->b->id, 'qty' => '4', 'rate' => '250', 'discount' => '0', 'tax' => '0'],
+                ['product_id' => $this->a->id, 'qty' => '10', 'rate' => '100', 'sales_price' => '100', 'discount' => '50', 'tax' => '142.5'],
+                ['product_id' => $this->b->id, 'qty' => '4', 'rate' => '250', 'sales_price' => '250', 'discount' => '0', 'tax' => '0'],
             ],
         ]);
 
@@ -230,7 +230,7 @@ final class DirectPurchaseCostsLandRightTest extends TestCase
 
         // ⓘ `tax` ঘরটা পাঠানোই হয় না — "পণ্য অনুযায়ী" পথ
         $bill = $this->buy(['lines' => [
-            ['product_id' => $this->a->id, 'qty' => '10', 'rate' => '115', 'discount' => '50'],
+            ['product_id' => $this->a->id, 'qty' => '10', 'rate' => '115', 'sales_price' => '115', 'discount' => '50'],
         ]]);
 
         $this->assertSame(0, bccomp((string) $bill->tax, '143.4783', 4),
@@ -285,10 +285,10 @@ final class DirectPurchaseCostsLandRightTest extends TestCase
             'payment_term' => 'credit',
             'bill_discount' => '100',
             'lines' => [
-                ['product_id' => $this->a->id, 'qty' => '3', 'rate' => '100', 'tax' => '0'],
-                ['product_id' => $this->b->id, 'qty' => '7', 'rate' => '100', 'tax' => '0'],
-                ['product_id' => $this->c->id, 'qty' => '1', 'rate' => '100', 'tax' => '0'],
-                ['product_id' => $this->g->id, 'qty' => '1', 'rate' => '100', 'tax' => '0'],
+                ['product_id' => $this->a->id, 'qty' => '3', 'rate' => '100', 'sales_price' => '100', 'tax' => '0'],
+                ['product_id' => $this->b->id, 'qty' => '7', 'rate' => '100', 'sales_price' => '100', 'tax' => '0'],
+                ['product_id' => $this->c->id, 'qty' => '1', 'rate' => '100', 'sales_price' => '100', 'tax' => '0'],
+                ['product_id' => $this->g->id, 'qty' => '1', 'rate' => '100', 'sales_price' => '100', 'tax' => '0'],
             ],
         ]);
 
@@ -349,7 +349,7 @@ final class DirectPurchaseCostsLandRightTest extends TestCase
             'payment_term' => 'credit',
             'bill_discount' => '10',
             'bill_discount_mode' => 'percent',
-            'lines' => [['product_id' => $this->a->id, 'qty' => '10', 'rate' => '100']],
+            'lines' => [['product_id' => $this->a->id, 'qty' => '10', 'rate' => '100', 'sales_price' => '100']],
         ]);
 
         $this->assertSame(0, bccomp((string) $bill->tax, '135', 4),
@@ -379,7 +379,7 @@ final class DirectPurchaseCostsLandRightTest extends TestCase
             'trx_date' => now()->toDateString(),
             'payment_term' => 'credit',
             'bill_discount' => '100.01',
-            'lines' => [['product_id' => $this->a->id, 'qty' => '1', 'rate' => '100', 'tax' => '0']],
+            'lines' => [['product_id' => $this->a->id, 'qty' => '1', 'rate' => '100', 'sales_price' => '100', 'tax' => '0']],
         ])->assertSessionHasErrors('bill_discount');
 
         $this->assertSame($bills, PurchaseBill::query()->withTrashed()->count(), '⛔ বাড়তি ছাড়ে থেমেও বিল থেকে গেছে।');
@@ -408,7 +408,7 @@ final class DirectPurchaseCostsLandRightTest extends TestCase
             'warehouse_id' => $this->warehouse->id,
             'trx_date' => now()->toDateString(),
             'payment_term' => 'credit',
-            'lines' => [['product_id' => $this->a->id, 'qty' => '10', 'rate' => '100', 'tax' => '150']],
+            'lines' => [['product_id' => $this->a->id, 'qty' => '10', 'rate' => '100', 'sales_price' => '100', 'tax' => '150']],
         ])->assertSessionHasErrors('lines');
 
         $this->assertSame($bills, PurchaseBill::query()->withTrashed()->count(), '⛔ ভ্যাট বন্ধ, তবু ভ্যাটওয়ালা বিল বসেছে।');
@@ -443,7 +443,7 @@ final class DirectPurchaseCostsLandRightTest extends TestCase
 
         $bill = $this->buy([
             'payment_term' => 'credit',
-            'lines' => [['product_id' => $this->a->id, 'qty' => '10', 'rate' => '100']],
+            'lines' => [['product_id' => $this->a->id, 'qty' => '10', 'rate' => '100', 'sales_price' => '100']],
         ]);
 
         $this->assertSame(0, bccomp((string) $bill->tax, '0', 4), "⛔ ভ্যাট বন্ধ, তবু বিলে ভ্যাট {$bill->tax}।");
@@ -463,7 +463,7 @@ final class DirectPurchaseCostsLandRightTest extends TestCase
 
         $bill = $this->buy([
             'payment_term' => 'credit',
-            'lines' => [['product_id' => $this->a->id, 'qty' => '10', 'rate' => '100']],
+            'lines' => [['product_id' => $this->a->id, 'qty' => '10', 'rate' => '100', 'sales_price' => '100']],
         ]);
 
         $this->assertSame(0, bccomp((string) $bill->tax, '150', 4), "ভ্যাট চালু, অথচ বিলে ভ্যাট {$bill->tax}, হাতে কষা ১৫০।");
@@ -494,7 +494,7 @@ final class DirectPurchaseCostsLandRightTest extends TestCase
             'warehouse_id' => $this->warehouse->id,
             'trx_date' => now()->toDateString(),
             'payment_term' => 'credit',
-            'lines' => [['product_id' => $this->a->id, 'qty' => '10', 'rate' => '100', 'tax' => '150']],
+            'lines' => [['product_id' => $this->a->id, 'qty' => '10', 'rate' => '100', 'sales_price' => '100', 'tax' => '150']],
         ])->assertSessionHasErrors('lines');
     }
 
@@ -542,9 +542,9 @@ final class DirectPurchaseCostsLandRightTest extends TestCase
             'transport_cost' => '100',
             'carrier_name' => 'করিম ট্রান্সপোর্ট',
             'lines' => [
-                ['product_id' => $this->a->id, 'qty' => '3', 'rate' => '80', 'discount' => '30', 'tax' => '31.5'],
-                ['product_id' => $this->b->id, 'qty' => '7', 'rate' => '30', 'tax' => '0'],
-                ['product_id' => $this->c->id, 'qty' => '1', 'rate' => '210', 'tax' => '0'],
+                ['product_id' => $this->a->id, 'qty' => '3', 'rate' => '80', 'sales_price' => '80', 'discount' => '30', 'tax' => '31.5'],
+                ['product_id' => $this->b->id, 'qty' => '7', 'rate' => '30', 'sales_price' => '30', 'tax' => '0'],
+                ['product_id' => $this->c->id, 'qty' => '1', 'rate' => '210', 'sales_price' => '210', 'tax' => '0'],
             ],
         ]);
 
@@ -619,8 +619,8 @@ final class DirectPurchaseCostsLandRightTest extends TestCase
 
         // আগের কেনা — FIFO-র পুরনো স্তর আর উপহার পণ্যের নিজের দর
         $this->buy(['lines' => [
-            ['product_id' => $this->a->id, 'qty' => '10', 'rate' => '100', 'tax' => '0'],
-            ['product_id' => $this->g->id, 'qty' => '5', 'rate' => '40', 'tax' => '0'],
+            ['product_id' => $this->a->id, 'qty' => '10', 'rate' => '100', 'sales_price' => '100', 'tax' => '0'],
+            ['product_id' => $this->g->id, 'qty' => '5', 'rate' => '40', 'sales_price' => '40', 'tax' => '0'],
         ]]);
 
         $before = $this->snapshot();
@@ -628,7 +628,7 @@ final class DirectPurchaseCostsLandRightTest extends TestCase
 
         $bill = $this->buy([
             'lines' => [
-                ['product_id' => $this->a->id, 'qty' => '10', 'rate' => '120', 'free_qty' => '2', 'tax' => '0'],
+                ['product_id' => $this->a->id, 'qty' => '10', 'rate' => '120', 'sales_price' => '120', 'free_qty' => '2', 'tax' => '0'],
             ],
             'gifts' => [
                 ['product_id' => $this->g->id, 'qty' => '3', 'against_product_id' => $this->a->id, 'remarks' => 'মিলের উপহার'],

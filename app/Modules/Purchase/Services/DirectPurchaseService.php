@@ -63,6 +63,36 @@ final class DirectPurchaseService
     ) {}
 
     /**
+     * ⛔ দর ০ বা বিক্রয়দর ছাড়া কোনো সারি নয় — মালিক, ৩ অক্টোবর ২০২৬: *"0 price e add hobe na"*।
+     *
+     * ⓘ পর্দা আগেই থামায় ([[direct-purchase.js]]-এর `addToCart()`/`guard()`); এটা সেই দেয়াল যা পর্দা এড়িয়ে
+     * পাঠালেও থাকে। ⓘ উপহারের সারি (`$gifts`) আলাদা পথে আসে — ওগুলো দর ০-ই, আগের মতো।
+     *
+     * @param  list<array<string, mixed>>  $lines
+     */
+    private function assertPriced(array $lines): void
+    {
+        $errors = [];
+
+        // ⚠️ খালি ঘর '' — bccomp('') PHP 8-এ ব্যতিক্রম ছোঁড়ে, তাই আগে সংখ্যা কি না
+        $positive = fn (mixed $v): bool => is_numeric($v = trim((string) $v)) && bccomp($v, '0', 4) > 0;
+
+        foreach ($lines as $i => $line) {
+            if (! $positive($line['rate'] ?? '')) {
+                $errors["lines.{$i}.rate"] = __('purchase::message.need_rate');
+            }
+
+            if (! $positive($line['sales_price'] ?? '')) {
+                $errors["lines.{$i}.sales_price"] = __('purchase::message.need_sales_price');
+            }
+        }
+
+        if ($errors !== []) {
+            throw ValidationException::withMessages($errors);
+        }
+    }
+
+    /**
      * একটা সরাসরি ক্রয় — বিল, মাল, দাম, আর চাইলে পরিশোধ।
      *
      * @param  array<string, mixed>  $data
@@ -80,6 +110,8 @@ final class DirectPurchaseService
         if ($lines === []) {
             throw ValidationException::withMessages(['lines' => __('purchase::validation.no_lines')]);
         }
+
+        $this->assertPriced($lines);
 
         $lines = $this->spreadBillDiscount($lines, $data);
 

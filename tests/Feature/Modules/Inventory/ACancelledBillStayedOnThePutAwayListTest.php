@@ -52,7 +52,7 @@ final class ACancelledBillStayedOnThePutAwayListTest extends TestCase
             'unit_id' => $product->unit_id,
             'qty' => '10',
             'free_qty' => '2',
-            'rate' => '100',
+            'rate' => '100', 'sales_price' => '100',
             'batch_no' => 'LOT-CANCEL-1',
         ]])['bill'];
 

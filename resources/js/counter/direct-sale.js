@@ -163,6 +163,13 @@ export default function directSale({
         vatEnabled,
         term: '',
         pickerOpen: false,
+
+        /* ⓘ ঘর খোলা থাকলেও পুরো তালিকা কেবল চিহ্ন, ক্লিক বা নিচের তীরে — লিখলে এমনিতেই ছাঁকা তালিকা।
+           ⛔ মালিক, ৩ অক্টোবর ২০২৬: *"ekta product add er por ro add er jonno list bose auto, eta biroktikor"* */
+        listShown: false,
+
+        /* ⭐ কার্টের যে সারিটা উপরে খোলা — `null` মানে নতুন সারি; নইলে সারির `key` ([[editLine()]]) */
+        editingKey: null,
         picked: null,
         showCosting: false,
         /*
@@ -719,8 +726,13 @@ export default function directSale({
          * ⓘ ৩০-এর সীমাটা দুই জায়গাতেই এক। পুরো তালিকা আঁকলে দুই
          * হাজার পণ্যের গুদামে প্রতিটা কীস্ট্রোকে পাতা কাঁপত।
          */
+        /** তালিকাটা পর্দায় — ঘর খোলা, আর হয় কিছু লেখা নয় তালিকা চাওয়া হয়েছে */
+        get listVisible() {
+            return this.pickerOpen && (this.listShown || this.term.trim() !== '');
+        },
+
         get visible() {
-            if (! this.pickerOpen) return [];
+            if (! this.listVisible) return [];
 
             /*
              * ── ⛔ পক্ষ আগে, পণ্য পরে — মালিকের নিয়ম, ৬ সেপ্টেম্বর ২০২৬ ──
@@ -1072,6 +1084,7 @@ export default function directSale({
          */
         openPicker() {
             this.pickerOpen = true;
+            this.listShown = true;
             this.term = '';
             this.$nextTick(() => this.$refs.search?.focus());
         },
@@ -1107,6 +1120,12 @@ export default function directSale({
             this.term = '';
             // বাছা হয়ে গেছে — তালিকাটা আর কিছু বলার নেই
             this.pickerOpen = false;
+            this.listShown = false;
+        },
+
+        /** ঘরে ক্লিক বা নিচের তীর — পুরো তালিকা */
+        showList() {
+            this.listShown = true;
         },
 
         refuse(product) {
@@ -1310,8 +1329,10 @@ export default function directSale({
 
             if (! await this.freeFitsTheRatio()) return false;
 
-            this.lines.push({
-                key: this.nextKey++,
+            /* ⭐ সম্পাদনা — সারিটা জায়গাতেই বদলায়, চাবি একই, ক্রম একই (মালিক, ৩ অক্টোবর ২০২৬) */
+            const at = this.editingKey === null ? -1 : this.lines.findIndex(l => l.key === this.editingKey);
+            const row = {
+                key: at >= 0 ? this.lines[at].key : this.nextKey++,
                 id: this.picked.id,
                 name: this.picked.name,
                 unit: this.picked.unit,
@@ -1331,12 +1352,28 @@ export default function directSale({
                  */
                 batchId: this.entry.batchId || '',
                 batchNo: this.entryLots.find(l => String(l.id) === String(this.entry.batchId))?.no || '',
-            });
+            };
+
+            if (at >= 0) {
+                this.lines.splice(at, 1, row);
+            } else {
+                this.lines.push(row);
+            }
 
             this.clearEntry();
-            this.$nextTick(() => this.$refs.search.focus());
+            this.readyForNext();
 
             return true;
+        },
+
+        /**
+         * ⭐ পরের পণ্যের জন্য তৈরি — কার্সর পণ্যের ঘরে, তালিকা বন্ধ (মালিক, ৩ অক্টোবর ২০২৬)।
+         * ⓘ ঘরটা খোলা থাকে যাতে সরাসরি লেখা যায়; তালিকা আসে লিখলে, ক্লিকে বা নিচের তীরে।
+         */
+        readyForNext() {
+            this.pickerOpen = true;
+            this.listShown = false;
+            this.$nextTick(() => this.$refs.search?.focus());
         },
 
         /**
@@ -1376,11 +1413,11 @@ export default function directSale({
              * নিয়মটা "প্রতি লটে এক সারি" — এক লটে যথেষ্ট না থাকলে আলাদা লট
              * বেছে আলাদা সারি ঠিকই চলে (নিচের পরীক্ষা)।
              *
-             * ⚠️ সারি বদলাতে ([[editLine()]]) সারিটা আগে কার্ট থেকে ওঠে, তাই
-             * নিজের সঙ্গে নিজের ধাক্কা লাগে না।
+             * ⚠️ সারি বদলানোর সময় ([[editLine()]]) সারিটা কার্টেই থাকে, তাই খোলা সারিটা
+             * (`editingKey`) গোনায় নেই — নাহলে নিজের সঙ্গে নিজের ধাক্কা লাগত।
              */
             if (! this.needsLot) {
-                if (this.lines.some(l => String(l.id) === String(this.picked?.id))) {
+                if (this.lines.some(l => l.key !== this.editingKey && String(l.id) === String(this.picked?.id))) {
                     this.lotWarning = texts.itemAlreadyInCart;
 
                     return false;
@@ -1607,14 +1644,14 @@ export default function directSale({
 
             if (! line) return;
 
-            if (this.picked && ! await this.addToCart()) return;
+            if (this.picked && this.editingKey !== line.key && ! await this.addToCart()) return;
 
             /*
-             * ⚠️ `splice` উপরের `addToCart()`-এর **পরে**: ⓘ ওটা তালিকায়
-             * একটা সারি যোগ করে, তাই আগে সরালে সূচকটা এক ঘর সরে যেত আর
-             * ভুল সারিটা তোলা হত।
+             * ⭐ সারিটা কার্টেই থাকে, উপরে কেবল তার কপি — মালিক, ৩ অক্টোবর ২০২৬: বোতাম হয় "হালনাগাদ
+             * করুন", আর চাপলে সারিটা জায়গাতেই বদলায় ([[addToCart()]])। ⓘ আগে সারিটা কার্ট থেকে উঠে আসত,
+             * আর মাঝপথে ছেড়ে দিলে সারিটাই হারাত।
              */
-            this.lines.splice(index, 1);
+            this.editingKey = line.key;
 
             this.picked = this.catalogue.find(p => p.id === line.id) || null;
 
@@ -1636,10 +1673,13 @@ export default function directSale({
 
             this.freeWarning = '';
             this.lotWarning = '';
-            this.$nextTick(() => this.$refs.search?.focus());
+            this.pickerOpen = false;
+            this.listShown = false;
+            this.$nextTick(() => this.$refs.qty?.focus());
         },
 
         clearEntry() {
+            this.editingKey = null;
             this.picked = null;
             this.entry = { qty: '', freeQty: '', rate: '', discountInput: '', unitId: '', gifts: [], batchId: '' };
             this.giftDraft = null;
@@ -1734,6 +1774,13 @@ export default function directSale({
 
             this.entry.gifts.push({ key: this.nextKey++, ...g });
             this.giftDraft = null;
+        },
+
+        /** সারি মোছা — উপরে খোলা সারিটাই মুছলে বাক্সও খালি, নাহলে "হালনাগাদ" এমন সারি খুঁজত যা আর নেই */
+        dropLine(index) {
+            if (this.lines[index]?.key === this.editingKey) this.clearEntry();
+
+            this.lines.splice(index, 1);
         },
 
         removeGift(lineIndex, giftIndex) {
@@ -2501,7 +2548,8 @@ export default function directSale({
          */
         lotAlreadyInCart(batchId) {
             return this.lines.some(
-                l => String(l.id) === String(this.picked?.id) && String(l.batchId) === String(batchId),
+                l => l.key !== this.editingKey
+                    && String(l.id) === String(this.picked?.id) && String(l.batchId) === String(batchId),
             );
         },
 
@@ -2553,8 +2601,7 @@ export default function directSale({
 
         /* ⛔ সীমা কত পার হচ্ছে — না হলে শূন্য। "সীমা পার — ৳…" সারির জন্য। */
         get creditOver() {
-            // ⓘ বাকি না বাড়ালে "সীমা পার" নয় — নিশ্চিতের পাহারার একই শর্ত
-            return this.creditUnpaid > 0 && this.creditLeft < 0 ? -this.creditLeft : 0;
+            return this.creditLeft < 0 ? -this.creditLeft : 0;
         },
 
         /*
@@ -2578,11 +2625,17 @@ export default function directSale({
          * `outstanding` উদ্বৃত্ত জমাকে ঋণাত্মক হতে দেয় (পক্ষের হিসাবে
          * ওটা সত্যি)। ⓘ সীমার প্রশ্নে সেবা ছাঁকনিটা বসায়, তাই এখানেও।
          */
+        /*
+         * ⭐ বিক্রির **পরে** কতটা খোলা থাকে — মালিকের সিদ্ধান্ত, ৩ অক্টোবর ২০২৬: *"চলবে না — আগের বকেয়াও শোধ চাই"*।
+         * ⓘ বাড়তি জমা আগের বকেয়া কমায় (খাতায় সেটাই ঘটে), তাই এখানে বাকি শূন্যে কাটা নয় — সেবার হুবহু
+         * ([[CreditExposure::assertRoom()]]: বকেয়া + আটকে থাকা + বিল − জমা ≤ সীমা)। ডেমো S-0010: ০ − ১২,০০০ − ০ − (৩,৩১,৯৪৮ −
+         * ৩,৫৬,০০০) = ১২,০৫২ → চলে; পুরনো বকেয়া রেখে কেবল বিলটুকু দিলে −১২,০০০ → থামে।
+         */
         get creditLeft() {
             return (Number(this.customer.limit) || 0)
                 - (Number(this.customer.due) || 0)
                 - this.creditHeld
-                - this.creditUnpaid;
+                - (this.netPayable - this.deposit);
         },
 
         /*
@@ -2603,7 +2656,9 @@ export default function directSale({
          * এখানেও যোগ-বিয়োগ সব আগে, ছাঁকনি একবার, শেষে।
          */
         get creditUnpaidWithEntry() {
-            const unpaid = this.netPayable + this.entryNet - this.deposit;
+            /* ⓘ সম্পাদনায় পুরনো সারিটা কার্টে থেকে যায় — তার অঙ্ক বাদ, নইলে একই সারি দুইবার গোনা হত */
+            const open = this.editingKey === null ? null : this.lines.find(l => l.key === this.editingKey);
+            const unpaid = this.netPayable + this.entryNet - (open ? this.lineNet(open) : 0) - this.deposit;
 
             return unpaid > 0 ? unpaid : 0;
         },
@@ -2637,12 +2692,7 @@ export default function directSale({
 
             const asDraft = event?.submitter?.value === '1';
 
-            /*
-             * ⛔ থামে কেবল যখন এই বিক্রি বাকি বাড়ায় — সেবার `unpaid <= 0` হলে ছাড়ার হুবহু ([[CreditExposure::assertRoom()]])।
-             * ⓘ মালিকের ডেমো, S-0010 (৩ অক্টোবর ২০২৬): পুরনো বকেয়া সীমার ওপরে, অথচ পুরো বিল আর তারও বেশি জমা — পর্দা
-             * "১২,০০০ বেশি" বলে আটকাত, সেবা ছেড়ে দিত। পুরনো বকেয়া এই বিক্রির দোষ নয়।
-             */
-            if (! asDraft && this.creditApplies && this.creditUnpaid > 0 && this.creditLeft < 0) {
+            if (! asDraft && this.creditApplies && this.creditLeft < 0) {
                 event.preventDefault();
                 this.creditBlocked = true;
                 this.soundTheAlarm();
@@ -2777,6 +2827,7 @@ export default function directSale({
                 this.panel = '';
             } else if (this.pickerOpen || this.customerPickerOpen) {
                 this.pickerOpen = false;
+                this.listShown = false;
                 this.customerPickerOpen = false;
             } else {
                 this.helping = false;

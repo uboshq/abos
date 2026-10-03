@@ -25,7 +25,8 @@
 
                         <template x-for="(line, i) in lines" :key="line.key">
                         <tbody>
-                                <tr class="border-b border-(--color-border)">
+                                <tr class="border-b border-(--color-border)"
+                                    :class="line.key === editingKey ? 'bg-(--color-badge-pending-bg)' : ''">
                                     <td class="cell" x-text="i + 1"></td>
 
                                     <td class="cell" data-label="{{ __('sales::field.item_name') }}">
@@ -143,7 +144,7 @@
                                                  নাম ও অপারেটর চলে, আর কিছু না চললে সে **চুপচাপ বাঁধাই
                                                  ছেড়ে দেয়** — কনসোলে কিছু আসে না, শুধু ঘরটা খালি থাকে।
                                                  ⓘ পাশের `✕` বোতামটাও তাই করে। --}}
-                                            <button type="button" @click="editLine(i)"
+                                            <button type="button" @click="editLine(i)" data-edit-line
                                                     aria-label="{{ __('sales::action.edit_line') }}"
                                                     title="{{ __('sales::action.edit_line') }}"
                                                     class="rounded-(--radius-field) px-2 py-1 text-(--color-ink-muted)
@@ -151,7 +152,7 @@
                                                 <x-ui.icon name="edit" class="size-4" />
                                             </button>
 
-                                            <button type="button" @click="lines.splice(i, 1)"
+                                            <button type="button" @click="dropLine(i)"
                                                     aria-label="{{ __('sales::action.remove_line') }}"
                                                     class="rounded-(--radius-field) px-2 py-1 text-(--color-ink-muted)
                                                            hover:bg-(--color-surface-hover)">&times;</button>

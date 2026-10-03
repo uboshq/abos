@@ -78,7 +78,7 @@ class TheGiftCartonWentStraightToTheShelfTest extends TestCase
                 'trx_date' => now()->toDateString(),
                 'supplier_bill_no' => 'GIFT-'.fake()->unique()->numberBetween(1000, 9999),
             ],
-            [['product_id' => $this->product->id, 'qty' => '10', 'rate' => '50']],
+            [['product_id' => $this->product->id, 'qty' => '10', 'rate' => '50', 'sales_price' => '50']],
             [['product_id' => $this->product->id, 'qty' => '3', 'remarks' => 'মিল দিয়েছে']],
         );
 
@@ -121,7 +121,7 @@ class TheGiftCartonWentStraightToTheShelfTest extends TestCase
             [[
                 'product_id' => $this->product->id,
                 'qty' => '10',
-                'rate' => '50',
+                'rate' => '50', 'sales_price' => '50',
                 'free_qty' => '2',
             ]],
             [['product_id' => $this->product->id, 'qty' => '3']],

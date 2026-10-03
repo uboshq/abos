@@ -291,7 +291,7 @@ final class ALotTrackedProductCouldNotBeBoughtDirectlyTest extends TestCase
             'lines' => [[
                 'product_id' => $this->product->id,
                 'qty' => '10',
-                'rate' => '60',
+                'rate' => '60', 'sales_price' => '60',
                 'tax' => '0',
                 ...$lot,
             ]],

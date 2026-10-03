@@ -127,7 +127,7 @@ class TheMillSentABucketWithTheSoapTest extends TestCase
                 'trx_date' => now()->toDateString(),
                 'supplier_bill_no' => 'MEG-'.fake()->unique()->numberBetween(1000, 9999),
             ],
-            [['product_id' => $this->soap->id, 'qty' => $qty, 'rate' => $rate]],
+            [['product_id' => $this->soap->id, 'qty' => $qty, 'rate' => $rate, 'sales_price' => $rate]],
             $gifts,
         );
     }

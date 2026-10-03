@@ -184,7 +184,7 @@ final class TheCounterStoppedAndSaidNothingTest extends TestCase
             'lines' => [[
                 'product_id' => $this->plain->id,
                 'qty' => '10',
-                'rate' => '100',
+                'rate' => '100', 'sales_price' => '100',
             ]],
             ...$overrides,
         ];

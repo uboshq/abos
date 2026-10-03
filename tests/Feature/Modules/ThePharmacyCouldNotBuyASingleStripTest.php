@@ -124,7 +124,7 @@ class ThePharmacyCouldNotBuyASingleStripTest extends TestCase
             [[
                 'product_id' => $this->medicine->id,
                 'qty' => '100',
-                'rate' => '12',
+                'rate' => '12', 'sales_price' => '12',
                 'batch_no' => 'NAPA-7781',
                 'expiry_date' => '2027-06-30',
                 'mrp' => '18.50',
@@ -172,7 +172,7 @@ class ThePharmacyCouldNotBuyASingleStripTest extends TestCase
             [[
                 'product_id' => $this->medicine->id,
                 'qty' => '10',
-                'rate' => '12',
+                'rate' => '12', 'sales_price' => '12',
                 'batch_no' => '',
             ]],
         );

@@ -173,4 +173,8 @@ return [
     'need_a_line' => 'Add at least one product first — an empty cart cannot be sent.',
     'need_a_lot' => 'A lot-tracked product needs its lot number — see the line marked below.',
     'need_a_carrier' => 'There is a transport cost but nobody to carry it — pick a carrier or type a name.',
+    // No zero price, no missing sales price (owner, 3 Oct 2026)
+    'need_rate' => 'Type the purchase rate — a line cannot go into the cart at 0.',
+    'need_sales_price' => 'Type the sales rate, or give a markup % or margin % — a line cannot go into the cart without one.',
+    'need_priced_lines' => 'A cart line has no purchase rate or sales rate — fix it, then receive the goods.',
 ];

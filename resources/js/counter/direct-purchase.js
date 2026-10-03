@@ -15,6 +15,7 @@
  */
 
 import { taka } from '../components/money.js'
+import { reprice } from '../pricing.js'
 
 /*
  * সরাসরি ক্রয়ের পর্দা।
@@ -62,6 +63,9 @@ export default function directPurchase({
          * `Rule::requiredIf`)। ⭐ পর্দা কেবল আগেই বলে দেয়।
          */
         stopped: '',
+
+        /* ⭐ কার্টে না ঢোকার কারণ — এন্ট্রির ঠিক নিচে (মালিক, ৩ অক্টোবর ২০২৬: "0 price e add hobe na") */
+        entryError: '',
 
         /* সরবরাহকারীর আগের বকেয়া — সার্ভার থেকে আসে বাছাইয়ের
            মুহূর্তে ([[loadLastRates]])।
@@ -136,6 +140,13 @@ export default function directPurchase({
         supplierPickerOpen: false,
         supplierTerm: '',
         browsing: false,
+
+        /*
+         * ⭐ কার্টের যে সারিটা এখন উপরের বাক্সে খোলা — মালিক, ৩ অক্টোবর ২০২৬:
+         * কার্টে লেখার ঘর নয়, সম্পাদনা (✎) চাপলে সারিটা উপরে ফেরে, আর বোতাম হয় "হালনাগাদ করুন"।
+         * ⓘ `null` মানে নতুন সারি; নইলে সারির `key` — ক্রম নয়, কারণ মাঝের সারি মুছলে ক্রম সরে।
+         */
+        editingKey: null,
 
         /*
          * পণ্যটা বাছার সময় ক্রয়দর কত ছিল।
@@ -530,6 +541,11 @@ export default function directPurchase({
         pick(product) {
             this.picked = product;
             this.entry = this.blankEntry();
+
+            /* ⓘ Enter-এ বাছলেও তালিকা বন্ধ — নাহলে পরের সারির জন্য ঘরে ফিরলে আগের খোলা তালিকা বসে থাকত।
+               ⚠️ সম্পাদনার মাঝে অন্য পণ্য খুঁজে বাছা মানে নতুন সারি — খোলা সারিটা যেমন ছিল তেমনই থাকে। */
+            this.browsing = false;
+            this.editingKey = null;
             this.entry.qty = '1';
             this.entry.unit_id = this.defaultUnit(product.id);
 
@@ -935,8 +951,47 @@ export default function directPurchase({
                 this.entry.discount_mode === 'percent' ? 'amount' : 'percent';
         },
 
+        /**
+         * ⓘ সত্য/মিথ্যা ফেরায় — [[editLine()]]-কে জানতে হয় হাতের সারিটা সত্যিই উঠল কি না।
+         */
         addToCart() {
-            if (! this.picked) return;
+            if (! this.picked) return false;
+
+            /*
+             * ⛔ দর ০ বা বিক্রয়দর ছাড়া কার্টে নয় — মালিক, ৩ অক্টোবর ২০২৬: *"ক্রয়দর, markup %, margin %,
+             * বিক্রয়দর eigulo na dile cart e add hobe na, 0 price e add hobe na"*।
+             * ⓘ markup বা margin দিলে বিক্রয়দর নিজেই বসে (`priced()`), তাই যাচাই বিক্রয়দরের ঘরেই।
+             * ⓘ সার্ভারও একই কথা বলে ([[DirectPurchaseService::assertPriced()]]); উপহারের সারি আলাদা পথে, এখানে নয়।
+             */
+            this.entryError = '';
+
+            if (! (Number(this.entry.rate) > 0)) {
+                this.entryError = texts.needRate || '';
+                this.focusRef('entryRate');
+
+                return false;
+            }
+
+            if (! (Number(this.entry.sales_price) > 0)) {
+                this.entryError = texts.needSalesPrice || '';
+                this.focusRef('entrySalesPrice');
+
+                return false;
+            }
+
+            /*
+             * ⭐ সম্পাদনা — সারিটা **জায়গাতেই** বদলায়, নতুন সারি নয়। ⓘ চাবি, লট আর উপহার যেমন ছিল
+             * তেমনই: লট কার্টের সারিতেই লেখা হয়, আর উপহার ঐ সারির সাথে বাঁধা।
+             */
+            const at = this.editingKey === null ? -1 : this.lines.findIndex(l => l.key === this.editingKey);
+
+            if (at >= 0) {
+                Object.assign(this.lines[at], this.entryFigures());
+                this.clearEntry();
+                this.$nextTick(() => this.$refs.search?.focus());
+
+                return true;
+            }
 
             const lot = this.lotSeed(this.picked);
 
@@ -953,6 +1008,42 @@ export default function directPurchase({
                 mrp: lot.mrp,
                 lot_from: lot.from,
 
+                ...this.entryFigures(),
+
+                /* উপহারের তালিকা সারির সাথেই জন্মায়, চাহিদামতো
+                   নয় — `line.gifts` না থাকলে Alpine-এর x-for
+                   undefined-এ হোঁচট খেত, আর হ্যান্ডলারটা মাঝপথে
+                   থেমে যেত। */
+                gifts: [],
+            });
+
+            const added = this.lines.length - 1;
+            const tracked = !! this.picked.track_batch;
+
+            this.clearEntry();
+
+            /* ⭐ লট ধরা সারিতে কার্সর সোজা লট-ঘরে — বসানো মানটা
+               ঠিক থাকলে Enter, Enter, Enter, আর পরের পণ্য খোঁজা। */
+            if (tracked) {
+                this.$nextTick(() => this.focusLot(added));
+
+                return true;
+            }
+
+            /* ?. — একটা ঘর খুঁজে না পাওয়া কখনো পুরো পর্দা
+               থামানোর কারণ হওয়া উচিত নয়। এখানে ঠিক তা-ই
+               হয়েছিল: focus() এররে Alpine থেমে যেত, কার্টের
+               ঘরগুলোর name বাঁধা হত না, আর সাবমিটে সার্ভার
+               কোনো লাইনই পেত না। ⓘ ফোকাসে তালিকা খোলে না (`browsing` বন্ধ) —
+               কার্সর ঘরে অপেক্ষা করে, লিখলে তবে তালিকা (মালিক, ৩ অক্টোবর ২০২৬)। */
+            this.$nextTick(() => this.$refs.search?.focus());
+
+            return true;
+        },
+
+        /** উপরের বাক্সের সংখ্যাগুলো — নতুন সারি আর হালনাগাদ, দুই পথে একই */
+        entryFigures() {
+            return {
                 qty: this.entry.qty || '1',
                 free_qty: this.entry.free_qty || '',
                 rate: this.entry.rate || '0',
@@ -993,39 +1084,68 @@ export default function directPurchase({
                 pricing_pct: this.entry.anchor === 'markup'
                     ? (this.entry.markup || '')
                     : (this.entry.anchor === 'margin' ? (this.entry.margin || '') : ''),
+            };
+        },
 
-                /* উপহারের তালিকা সারির সাথেই জন্মায়, চাহিদামতো
-                   নয় — `line.gifts` না থাকলে Alpine-এর x-for
-                   undefined-এ হোঁচট খেত, আর হ্যান্ডলারটা মাঝপথে
-                   থেমে যেত। */
-                gifts: [],
-            });
+        /**
+         * ⭐ কার্টের সারিটা উপরের বাক্সে — মালিক, ৩ অক্টোবর ২০২৬: কার্টে লেখার ঘর নেই, সম্পাদনা (✎) চাপলে
+         * পণ্য, পরিমাণ, ফ্রি, দর, markup, margin আর বিক্রয়দর উপরে বসে; "হালনাগাদ করুন" সারিটা জায়গাতেই বদলায়।
+         *
+         * ⓘ উপরে বসলে উপরের সব পাহারা আবার খাটে — দর ০ বা বিক্রয়দর ছাড়া হালনাগাদও হয় না ([[addToCart()]])।
+         * ⚠️ হাতে অর্ধেক লেখা নতুন সারি থাকলে আগে সেটা কার্টে ওঠে; না উঠলে (দর নেই) সম্পাদনা খোলে না —
+         * নাহলে ঐ লেখাটা নীরবে হারাত।
+         */
+        editLine(index) {
+            const line = this.lines[index];
 
-            const added = this.lines.length - 1;
-            const tracked = !! this.picked.track_batch;
+            if (! line) return;
 
-            this.clearEntry();
+            if (this.picked && this.editingKey !== line.key && ! this.addToCart()) return;
 
-            /* ⭐ লট ধরা সারিতে কার্সর সোজা লট-ঘরে — বসানো মানটা
-               ঠিক থাকলে Enter, Enter, Enter, আর পরের পণ্য খোঁজা। */
-            if (tracked) {
-                this.$nextTick(() => this.focusLot(added));
+            const anchor = line.pricing_anchor || '';
+            const entry = {
+                ...this.blankEntry(),
+                qty: line.qty || '',
+                free_qty: line.free_qty || '',
+                rate: line.rate || '',
+                discount: line.discount || '',
+                discount_mode: 'amount',
+                tax: line.tax || '',
+                vat_mode: line.vat_mode || 'amount',
+                unit_id: line.unit_id || '',
+                free_unit_id: line.free_unit_id || '',
+                sales_price: line.sales_price || '',
+                markup: anchor === 'markup' ? (line.pricing_pct || '') : '',
+                margin: anchor === 'margin' ? (line.pricing_pct || '') : '',
+                anchor,
+            };
 
-                return;
-            }
+            /* ⓘ নোঙরহীন বা দাম-নোঙরের সারিতেও markup ও margin দেখা যায় — দামটা ছুঁয়ে নয়, কেবল দুই শতাংশ
+               ⚠️ নোঙরটা বদলায় না: হালনাগাদে সারির নীতি যেমন ছিল তেমনই যায় */
+            const shown = reprice({ ...entry, anchor: anchor || 'sales_price' }, anchor || 'sales_price');
 
-            /* ?. — একটা ঘর খুঁজে না পাওয়া কখনো পুরো পর্দা
-               থামানোর কারণ হওয়া উচিত নয়। এখানে ঠিক তা-ই
-               হয়েছিল: focus() এররে Alpine থেমে যেত, কার্টের
-               ঘরগুলোর name বাঁধা হত না, আর সাবমিটে সার্ভার
-               কোনো লাইনই পেত না। */
-            this.$nextTick(() => this.$refs.search?.focus());
+            if (entry.markup === '' && shown.markup !== undefined) entry.markup = shown.markup;
+            if (entry.margin === '' && shown.margin !== undefined) entry.margin = shown.margin;
+
+            this.picked = this.productOf(line) || {
+                id: line.id, name: line.name, unit: line.unit,
+                tax_rate: line.tax_rate, tax_inclusive: line.tax_inclusive,
+            };
+            this.entry = entry;
+            this.editingKey = line.key;
+            this.lastKnownRate = String(line.rate || '');
+            this.priceAsk = null;
+            this.entryError = '';
+            this.browsing = false;
+            this.term = '';
+            this.focusRef('entryQty');
         },
 
         clearEntry() {
             this.picked = null;
             this.entry = this.blankEntry();
             this.term = '';
+            this.editingKey = null;
         },
 
         clearAll() {
@@ -1462,6 +1582,14 @@ export default function directPurchase({
                 return;
             }
 
+            /* ⛔ কার্টে বসার পরে কেউ সারির দর ০ করলে বা বিক্রয়দর মুছলে — পাঠানো নয় (মালিক, ৩ অক্টোবর ২০২৬) */
+            if (this.lines.some((line) => ! (Number(line.rate) > 0) || ! (Number(line.sales_price) > 0))) {
+                event.preventDefault();
+                this.stopped = texts.needPricedLines || '';
+
+                return;
+            }
+
             /* ⭐ লট ধরা সারিতে লট নেই — পাঠানোর আগেই, সারির নিচে।
                ⛔ কেবল `required`-এর ভরসায় রাখলে ব্রাউজার একটা ভাসমান
                ইশারা দেখাত (কখনো স্ক্রলের বাইরে), আর ঘরটা লুকানো
@@ -1632,6 +1760,9 @@ export default function directPurchase({
          * নিচেরগুলো এক ধাপ ওঠে, আর পুরনো বার্তা ভুল সারির নিচে বসত।
          */
         dropLine(index) {
+            /* ⓘ উপরে খোলা সারিটাই মুছলে বাক্সও খালি — নাহলে "হালনাগাদ" এমন সারি খুঁজত যা আর নেই */
+            if (this.lines[index]?.key === this.editingKey) this.clearEntry();
+
             this.lines.splice(index, 1);
             this.lotErrors = {};
         },
@@ -1682,6 +1813,14 @@ export default function directPurchase({
         toggleBrowsing() {
             this.browsing = ! this.browsing;
             this.$refs.search.focus();
+        },
+
+        /**
+         * পুরো তালিকা খোলা — ঘরে ক্লিক বা নিচের তীর। ⛔ ফোকাসে নয় — মালিক, ৩ অক্টোবর ২০২৬: *"ekta product add
+         * er por ro add er jonno list bose auto, eta biroktikor"*। ⓘ লিখলে তালিকা এমনিতেই আসে (`visible`)।
+         */
+        openBrowsing() {
+            this.browsing = true;
         },
 
         /** তালিকা থেকে বাছা — তালিকাটা বন্ধ হয় */
