@@ -1,7 +1,6 @@
-        <aside class="flex flex-col self-start overflow-hidden rounded-(--radius-card) border
-                      border-(--color-border) bg-(--color-surface-selected) shadow-sm
-                      xl:sticky xl:top-3 xl:max-h-[calc(100dvh-5.5rem)]"
-               style="box-shadow: inset var(--rail-tile-on-edge-w, 2px) 0 0 var(--color-brand-500)">
+        {{-- ⓘ আটকে থাকা (sticky) এখন মোড়কের — ক্রেতা আর বিলের মোট একসাথে ([[direct/index]] `ds-side`) --}}
+        <aside class="ds-gold flex flex-col self-start overflow-hidden rounded-(--radius-card) border
+                      border-(--color-border) bg-(--color-surface-selected) shadow-sm">
 
             <div class="min-h-0 flex-1 overflow-y-auto">
 
@@ -453,8 +452,9 @@
                 **পরিমাণ** — সম্পূর্ণ আলাদা জিনিস। এক রঙে থাকলে চোখ
                 ৳-চিহ্ন খুঁজে খুঁজে আলাদা করত।
             --}}
-            <div class="space-y-1 border-t border-(--color-border) bg-(--color-surface-sunken)
-                        px-3 py-2 text-2xs">
+            {{-- ⭐ টালিতে, পাশাপাশি — মালিকের নমুনা, ৪ অক্টোবর ২০২৬ ("evabe bosiyecho?") --}}
+            <div class="grid gap-1.5 border-t border-(--color-border) bg-(--color-surface-sunken) px-3 py-2"
+                 style="grid-template-columns: repeat(auto-fit, minmax(0, 1fr))" data-count-tiles>
                 @foreach ([
                     ['label' => 'sales::field.total_item', 'expr' => 'counts.totalItem', 'on' => 'total_item'],
                     ['label' => 'sales::field.total_sales_qty', 'expr' => 'counts.totalSalesQty', 'on' => 'sales_qty'],
@@ -462,10 +462,12 @@
                     ['label' => 'sales::field.total_free_plus_sales', 'expr' => 'counts.totalQty', 'on' => 'total_qty'],
                 ] as $row)
                     @if ($show[$row['on']])
-                        <x-sales::panel-row :label="__($row['label'])">
-                            <span class="num font-semibold text-(--color-brand-700)"
-                                  x-text="{{ $row['expr'] }} || '—'"></span>
-                        </x-sales::panel-row>
+                        <div class="min-w-0 rounded-(--radius-field) border border-(--color-border)
+                                    bg-(--color-surface-card) px-1 py-1 text-center">
+                            <span class="block text-2xs leading-tight text-(--color-ink-muted)">{{ __($row['label']) }}</span>
+                            <span class="num block text-sm font-bold text-(--color-ink)"
+                                  x-text="{{ $row['expr'] }} || '0'"></span>
+                        </div>
                     @endif
                 @endforeach
             </div>

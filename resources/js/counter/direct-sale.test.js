@@ -1839,6 +1839,9 @@ describe('যোগের পরে তালিকা বন্ধ, কার�
         c.customerId = '5'
         c.focused = focused
 
+        // ⓘ পরিমাণ আর নিজে ১ বসে না (মালিক, ৪ অক্টোবর ২০২৬) — বিক্রেতার মতো আগে লেখা
+        c.entry.qty = '1'
+
         return c
     }
 
@@ -1918,5 +1921,153 @@ describe('কার্টের সারিতে লেখার ঘর নে
         expect(tag).not.toMatch(/@focus=/)
         expect(tag).toMatch(/@keydown\.down="showList\(\)"/)
         expect(blade).toMatch(/x-show="listVisible"[^>]*data-product-list/)
+    })
+})
+
+/*
+ * ⭐ চূড়ান্ত নকশা — মালিক, ৪ অক্টোবর ২০২৬: পরিমাণ ০ থেকে, ভুল ক্লিকে কিছু ওঠে না; লট আগে, একটা হলে নিজে বসে;
+ * "আর N নিলে ফ্রি" কেবল অনুপাত না মিললে (২৪:১ লটে ২০ বা ৩০-এ হ্যাঁ, ২৪/৪৮-এ না)।
+ */
+describe('চূড়ান্ত নকশা: পরিমাণ ০, লট আগে, ফ্রি-বার্তা কেবল না মিললে', () => {
+    const lotted = (lots) => {
+        const c = counter({
+            catalogue: [product({ id: 1, trackBatch: true, available: 99 }), product({ id: 2, name: 'ডাল', trackBatch: true, available: 99 })],
+            lots: { 1: lots, 2: [] },
+            freeAllowedUrl: '/free-allowed',
+            texts: { freeNextAt: 'আর :more নিলে আরেকটা ফ্রি', freeRatio: '' },
+        })
+        c.customerId = '5'
+        c.$refs = { search: { focus: () => {} }, qty: { focus: () => { c.qtyFocused = true } } }
+
+        return c
+    }
+
+    it('পণ্য বাছলে পরিমাণ ফাঁকা থাকে, আর ফাঁকায় কার্টে কিছু ওঠে না', async () => {
+        const c = lotted([{ id: '11', no: 'L-1', expiry: '', qty: '50' }])
+        c.pick(c.catalogue[0])
+
+        expect(c.entry.qty).toBe('')
+        expect(await c.addToCart()).toBe(false)
+        expect(c.lines).toHaveLength(0)
+        expect(c.qtyFocused).toBe(true)
+    })
+
+    it('একটাই লট থাকলে নিজে বসে', () => {
+        const c = lotted([{ id: '11', no: 'L-1', expiry: '', qty: '50' }])
+        c.pick(c.catalogue[0])
+
+        expect(c.entry.batchId).toBe('11')
+    })
+
+    it('একাধিক লট থাকলে বিক্রেতা বাছেন — নিজে কিছু বসে না', () => {
+        const c = lotted([{ id: '11', no: 'L-1', expiry: '', qty: '50' }, { id: '12', no: 'L-2', expiry: '', qty: '50' }])
+        c.pick(c.catalogue[0])
+
+        expect(c.entry.batchId).toBe('')
+    })
+
+    it('আগের পণ্যের লট পরের পণ্যে থেকে যায় না', () => {
+        const c = lotted([{ id: '11', no: 'L-1', expiry: '', qty: '50' }])
+        c.pick(c.catalogue[0])
+        c.pick(c.catalogue[1])
+
+        expect(c.entry.batchId).toBe('')
+    })
+
+    it('লটের লেখায় ফ্রি অনুপাত — "24:1"', () => {
+        const c = lotted([])
+
+        expect(c.lotLabel({ no: 'L-1', expiry: '2027-01-01', qty: '50', paid: '144', free: '6' })).toContain('24:1')
+        expect(c.lotLabel({ no: 'L-1', expiry: '', qty: '50', paid: '144', free: '0' })).not.toContain(':1')
+    })
+
+    const hintFor = async (qty, short) => {
+        const c = lotted([{ id: '11', no: 'L-1', expiry: '', qty: '500' }])
+        c.pick(c.catalogue[0])
+        c.entry.qty = String(qty)
+        // ⓘ এই ফাইল node-এ চলে — `window` নেই, তাই ঠিকানার গোড়াটা হাতে
+        globalThis.window ??= { location: { origin: 'http://counter.test' } }
+        globalThis.fetch = async () => ({
+            ok: true,
+            json: async () => ({ data: { known: true, allowed: '0', short: String(short), paid: '144', free: '6' } }),
+        })
+        await c.fillFreeFromTheRatio()
+
+        return c.freeHint
+    }
+
+    it('২৪:১ লটে ২০ নিলে বার্তা আসে', async () => {
+        expect(await hintFor(20, 4)).not.toBe('')
+    })
+
+    it('২৪:১ লটে ৩০ নিলে বার্তা আসে', async () => {
+        expect(await hintFor(30, 18)).not.toBe('')
+    })
+
+    it('ঠিক ২৪ বা ৪৮ নিলে বার্তা নেই', async () => {
+        expect(await hintFor(24, 24)).toBe('')
+        expect(await hintFor(48, 24)).toBe('')
+    })
+})
+
+/* ⭐ দ্রুত কাউন্টার — মালিক, ৪ অক্টোবর ২০২৬: "customer select korlei product asbe r lot bachlei qty bosbe" */
+describe('দ্রুত কাউন্টার: ক্রেতা → পণ্য → লট → পরিমাণ', () => {
+    const fast = (lots = []) => {
+        const c = counter({
+            catalogue: [product({ id: 1, trackBatch: true, available: 99 }), product({ id: 2, name: 'ডাল', available: 99 })],
+            customers: { 5: { days: 0 } },
+            lots: { 1: lots },
+        })
+        c.focused = []
+        c.$root = { querySelectorAll: () => [] }
+        c.$refs = {
+            search: { focus: () => c.focused.push('search') },
+            qty: { focus: () => c.focused.push('qty') },
+            lot: { focus: () => c.focused.push('lot') },
+        }
+
+        return c
+    }
+
+    it('ক্রেতা বাছলেই পণ্যের খোঁজ খোলে, কার্সর খোঁজার ঘরে', () => {
+        const c = fast()
+        c.chooseCustomer(5)
+
+        expect(c.pickerOpen).toBe(true)
+        expect(c.focused.at(-1)).toBe('search')
+    })
+
+    it('একাধিক লট — পণ্য বাছলে কার্সর লটের ঘরে', () => {
+        const c = fast([{ id: '11', no: 'L-1', qty: '5' }, { id: '12', no: 'L-2', qty: '5' }])
+        c.customerId = '5'
+        c.pick(c.catalogue[0])
+
+        expect(c.focused.at(-1)).toBe('lot')
+    })
+
+    it('একটাই লট (নিজে বসে) — কার্সর সরাসরি পরিমাণে', () => {
+        const c = fast([{ id: '11', no: 'L-1', qty: '5' }])
+        c.customerId = '5'
+        c.pick(c.catalogue[0])
+
+        expect(c.focused.at(-1)).toBe('qty')
+    })
+
+    it('লট ধরা নয় এমন পণ্য — কার্সর সরাসরি পরিমাণে', () => {
+        const c = fast()
+        c.customerId = '5'
+        c.pick(c.catalogue[1])
+
+        expect(c.focused.at(-1)).toBe('qty')
+    })
+
+    it('লট বাছলেই কার্সর পরিমাণে', () => {
+        const c = fast([{ id: '11', no: 'L-1', qty: '5' }, { id: '12', no: 'L-2', qty: '5' }])
+        c.customerId = '5'
+        c.pick(c.catalogue[0])
+        c.entry.batchId = '12'
+        c.lotChosen()
+
+        expect(c.focused.at(-1)).toBe('qty')
     })
 })

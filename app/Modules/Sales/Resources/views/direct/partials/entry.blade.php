@@ -1,6 +1,5 @@
-                <section data-boxed class="rounded-(--radius-card) border border-(--color-border)
-                                bg-(--color-surface-muted) p-3 shadow-sm"
-                         style="box-shadow: inset var(--rail-tile-on-edge-w, 2px) 0 0 var(--color-badge-draft-ink)">
+                {{-- ⓘ নিজের বাক্স নেই — বিলের ঘরগুলোর সাথে এক সোনালি বাক্সে (মালিক, ৪ অক্টোবর ২০২৬) --}}
+                <section data-boxed class="min-w-0">
 
                     {{-- বাঁ: খোঁজা ও ঘরগুলো।
 
@@ -176,29 +175,31 @@
                                          সেপ্টেম্বর ২০২৬: *"লট বাছার ঘর … eta ase ni laive nai"*। ⓘ ঘর না থাকলে
                                          মনে হত বানানোই হয়নি; নিভে থাকা ঘর বলে দেয় এই পণ্যে লট ধরা হয় না। --}}
                                     <template x-if="picked && ! needsLot">
-                                        <label class="shrink-0">
-                                            <span class="sr-only">{{ __('sales::field.lot') }}</span>
+                                        <label class="ds-lot shrink-0">
+                                            <span class="ds-lot-tag">{{ __('sales::field.lot') }}</span>
                                             <select disabled
-                                                    class="h-(--spacing-field-dense) max-w-40 rounded-(--radius-field)
+                                                    class="h-(--spacing-field-dense) rounded-(--radius-field)
                                                            border border-(--color-border) bg-(--color-surface-muted)
-                                                           px-2 text-xs text-(--color-ink-muted)">
+                                                           px-2 text-sm text-(--color-ink-muted)">
                                                 <option>{{ __('sales::field.no_lot') }}</option>
                                             </select>
                                         </label>
                                     </template>
 
                                     <template x-if="needsLot">
-                                        <label class="shrink-0">
-                                            <span class="sr-only">{{ __('sales::field.lot') }}</span>
+                                        {{-- ⭐ চওড়া, নীল কিনারা, "লট" চিহ্ন — নম্বর · মেয়াদ · তাকে কত · ফ্রি অনুপাত (মালিক, ৪ অক্টোবর ২০২৬) --}}
+                                        <label class="ds-lot shrink-0">
+                                            <span class="ds-lot-tag">{{ __('sales::field.lot') }}</span>
 
                                             {{-- ⓘ লট বদলালেও ফ্রি নতুন করে বসে —
                                                  ⚠️ অনুপাত লটের নিজের, আর দুইটা
                                                  লট দুই অনুপাতে আসতে পারে। --}}
-                                            <select x-model="entry.batchId"
-                                                    @change="fillFreeFromTheRatio()"
-                                                    class="h-(--spacing-field-dense) max-w-40 rounded-(--radius-field)
-                                                           border border-(--color-border) bg-(--color-surface-app)
-                                                           px-2 text-xs">
+                                            {{-- ⭐ লট বাছলেই কার্সর পরিমাণের ঘরে — মালিক, ৪ অক্টোবর ২০২৬ ([[lotChosen()]]) --}}
+                                            <select x-model="entry.batchId" x-ref="lot"
+                                                    @change="lotChosen()"
+                                                    class="h-(--spacing-field-dense) rounded-(--radius-field)
+                                                           border-2 border-(--color-brand-500) bg-(--color-surface-app)
+                                                           px-2 text-sm font-medium">
                                                 <option value="">{{ __('sales::field.lot_pick') }}</option>
 
                                                 <template x-for="lot in entryLots" :key="lot.id">
@@ -459,7 +460,7 @@
                                      করার পথে তিনটা অনুরোধ যেত, আর মাঝেরগুলোর
                                      উত্তর কাজে লাগত না। ⛔ `@change` ঘরটা
                                      ছাড়ার পর একবারই ডাকে। --}}
-                                <input type="number" step="0.01" min="0" x-model="entry.qty" x-ref="qty"
+                                <input type="number" step="0.01" min="0" x-model="entry.qty" x-ref="qty" placeholder="0"
                                        @change="fillFreeFromTheRatio()"
                                        class="num h-(--spacing-field-dense) w-full rounded-(--radius-field) border border-(--color-border)
                                               bg-(--color-surface-app) px-2 text-end text-sm">
@@ -526,10 +527,6 @@
 
                                      ⚠️ বার্তায় সংখ্যাটাই থাকে — ⛔ "বেশি হয়েগেছে" বললে
                                      মানুষ কমাতে কমাতে চেষ্টা করতেন। --}}
-                                <div x-show="freeWarning" x-cloak
-                                     class="col-span-full rounded-(--radius-field) bg-(--color-badge-danger-bg)
-                                            px-3 py-1.5 text-xs text-(--color-badge-danger-ink)"
-                                     x-text="freeWarning" role="alert"></div>
                             @endif
 
                             {{-- ⭐ বাকির সীমা ছাড়ালে — মালিকের নির্দেশ,
@@ -552,10 +549,6 @@
                                  সীমা ছাড়িয়েছে **আর** লট বাছা হয়নি। ⛔ একটা ঘরে
                                  দুইটা বসালে দ্বিতীয়টা প্রথমটাকে মুছে দিত, আর
                                  বিক্রেতা একটা কারণ সারিয়ে আবার আটকে যেতেন। --}}
-                            <div x-show="lotWarning" x-cloak
-                                 class="col-span-full rounded-(--radius-field) bg-(--color-badge-danger-bg)
-                                        px-3 py-1.5 text-xs text-(--color-badge-danger-ink)"
-                                 x-text="lotWarning" role="alert"></div>
 
                             {{-- ⭐ *"আর ৪ নিলে ১ ফ্রি"* — মালিকের নির্দেশ,
                                  ২৫ সেপ্টেম্বর ২০২৬: *"warning masses dibe
@@ -571,19 +564,16 @@
                             {{-- ⭐ লটের ফ্রি অনুপাত — সবুজ বাক্স (মালিকের নির্দেশ, ২৮ সেপ্টেম্বর ২০২৬)।
                                  ⓘ সবুজ, কারণ এটা তথ্য — কত কিনলে কত ফ্রি; সুযোগের হলুদ বার্তা নিচে আলাদা। --}}
 
-                            <div x-show="freeHint" x-cloak
-                                 class="col-span-full rounded-(--radius-field) bg-(--color-badge-pending-bg)
-                                        px-3 py-1.5 text-xs text-(--color-badge-pending-ink)"
-                                 x-text="freeHint" role="status"></div>
+                            {{-- ⓘ তিনটা বার্তা (ফ্রি সীমা · লট · "আর N নিলে") এখন বাক্সের নিচে, পুরো প্রস্থে — [[direct/index]] `ds-msgs` --}}
 
                             {{-- মোট পরিমাণ নিজে থেকেই — বিক্রয় + ফ্রি।
 
                                  হাতে লিখতে দিলে কেউ ভুল যোগ করত, আর গুদাম
                                  থেকে ভুল সংখ্যক মাল বেরোত। --}}
                             <x-sales::entry-field label="sales::field.total_qty" width="w-full">
-                                <input type="text" readonly :value="qty(entryTotalQty)"
-                                       class="num h-(--spacing-field-dense) w-full rounded-(--radius-field) border border-(--color-border)
-                                              bg-(--color-surface-app) px-2 text-end text-sm font-semibold">
+                                <input type="text" readonly :value="qty(entryTotalQty)" data-total-qty
+                                       class="ds-total num h-(--spacing-field-dense) w-full rounded-(--radius-field) border-2
+                                              px-2 text-end text-sm font-bold">
                             </x-sales::entry-field>
                             <x-sales::entry-field label="sales::field.sales_rate" width="w-full">
                                 <input type="number" step="0.0001" min="0" x-model="entry.rate"
@@ -603,11 +593,15 @@
                                  ঘরগুলোর **নিচের কিনারায়** বসে, লেবেলের সারিতে
                                  উঠে না যায়। --}}
                             <button type="button" @click="addToCart()" :disabled="! picked"
-                                    class="h-(--spacing-field-dense) self-end whitespace-nowrap rounded-(--radius-field)
-                                           bg-(--color-success) px-2 text-2xs font-semibold leading-tight
+                                    class="inline-flex h-(--spacing-field-dense) items-center gap-1 self-end whitespace-nowrap
+                                           rounded-(--radius-field) bg-(--color-success) px-3 text-xs font-semibold
                                            text-white disabled:opacity-50">
+                                {{-- ⭐ ছোট "কার্ট", চিহ্নসহ — মালিক, ৪ অক্টোবর ২০২৬: "এত বড় বোতাম না দিয়ে শুধু Cart লেখো" --}}
+                                <svg viewBox="0 0 24 24" aria-hidden="true" class="size-[16px] fill-current">
+                                    <path d="M7 18a2 2 0 1 0 0 4 2 2 0 0 0 0-4ZM1 2v2h2l3.6 7.6-1.4 2.4A2 2 0 0 0 7 17h12v-2H7.4l1.1-2h7.5a2 2 0 0 0 1.7-1l3.6-6.5A1 1 0 0 0 20 4H5.2l-.9-2H1Zm16 16a2 2 0 1 0 0 4 2 2 0 0 0 0-4Z"/>
+                                </svg>
                                 {{-- ⓘ কার্টের সারি উপরে খোলা থাকলে "হালনাগাদ করুন" --}}
-                                <span x-show="editingKey === null">{{ __('sales::action.add_to_cart') }}</span>
+                                <span x-show="editingKey === null">{{ __('sales::action.cart') }}</span>
                                 <span x-show="editingKey !== null" x-cloak data-update-line>{{ __('sales::action.update_line') }}</span>
                             </button>
 

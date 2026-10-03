@@ -198,17 +198,18 @@ final class TheCounterPutsEachNoticeWhereTheOwnerDrewItTest extends TestCase
 
     // ── ⓸ মাথা দুই সারিতে ──────────────────────────────────────────────────
 
-    public function test_the_header_reads_date_terms_pending_then_sale_number_and_do(): void
+    /* ⭐ এক সারি — মালিকের চূড়ান্ত নকশা, ৪ অক্টোবর ২০২৬: তারিখ · বিক্রি নম্বর · রেফারেন্স · বাকির শর্ত · পেন্ডিং */
+    public function test_the_header_reads_date_sale_number_reference_terms_then_pending(): void
     {
         $html = $this->counterPage();
 
         $order = [
             'তারিখ' => 'name="trx_date"',
-            'শর্ত' => 'x-model="creditTerm"',
-            'পেন্ডিং' => 'openPending($event)',
             // ⭐ এক বিক্রি এক নম্বর (মালিক, ২৯ সেপ্টেম্বর ২০২৬) — বিল আর চালানের দুই ঘর একটায় ([[SaleNumber]])
             'বিক্রি নম্বর' => 'name="challan_no"',
-            'DO নম্বর' => 'name="do_no"',
+            'রেফারেন্স নম্বর' => 'name="do_no"',
+            'শর্ত' => 'x-model="creditTerm"',
+            'পেন্ডিং' => 'openPending($event)',
         ];
 
         $last = -1;
@@ -221,8 +222,10 @@ final class TheCounterPutsEachNoticeWhereTheOwnerDrewItTest extends TestCase
             $last = $at;
         }
 
-        $this->assertStringContainsString('sm:grid-cols-[minmax(9.5rem,1.2fr)_1fr_1fr]', $html,
-            '⛔ মাথাটা তিন কলামের নয় — তাহলে ছয়টা ঘর দুই সারিতে ভাগ হয় না।');
+        $this->assertStringContainsString('class="ds-paper min-w-0"', $html,
+            '⛔ মাথাটা এক সারির ছকে নেই।');
+        $this->assertStringContainsString(e(__('sales::field.do_no')), $html, 'প্রস্তুতিটাই ভুল — রেফারেন্সের লেবেল নেই।');
+        $this->assertSame('রেফারেন্স নম্বর', __('sales::field.do_no', [], 'bn'), '⛔ "DO নম্বর" নামটা বদলায়নি।');
 
         // ⚠️ পেন্ডিং ঘর লুকালে দ্বিতীয় সারি উঠে আসত — ঘরটা সবসময় থাকে
         $before = substr($html, 0, (int) strpos($html, 'openPending($event)'));

@@ -43,6 +43,40 @@ final class FreeRatio
     private const ARRIVES_FROM = ['purchase_bill', 'purchase_receipt'];
 
     /**
+     * অনেক লটের অনুপাত একসাথে — কাউন্টারের লট-তালিকার জন্য, একটাই প্রশ্নে (মালিক, ৪ অক্টোবর ২০২৬:
+     * লটের ঘরেই "২৪:১")। ⓘ নিয়মটা [[arrivedIn()]]-এর হুবহু, কেবল লট ধরে ভাগ করা।
+     *
+     * @param  list<int|string>  $batchIds
+     * @return array<string, array{paid: string, free: string}>
+     */
+    public function arrivedInMany(array $batchIds): array
+    {
+        if ($batchIds === []) {
+            return [];
+        }
+
+        return DB::table('inv_stock_movements')
+            ->where('company_id', CompanyContext::id())
+            ->whereIn('batch_id', $batchIds)
+            ->where(function ($q) {
+                foreach (self::ARRIVES_FROM as $source) {
+                    $q->orWhere('source_type', $source)
+                        ->orWhere('source_type', 'like', $source.':%');
+                }
+            })
+            ->groupBy('batch_id')
+            ->selectRaw('batch_id')
+            ->selectRaw('COALESCE(SUM(GREATEST(unplaced_change, 0)), 0) as paid')
+            ->selectRaw('COALESCE(SUM(GREATEST(unplaced_free_change, 0)), 0) as free')
+            ->get()
+            ->mapWithKeys(fn ($row) => [(string) $row->batch_id => [
+                'paid' => (string) $row->paid,
+                'free' => (string) $row->free,
+            ]])
+            ->all();
+    }
+
+    /**
      * এই লটে কত টাকার মাল আর কত ফ্রি এসেছিল।
      *
      * @return array{paid: string, free: string}

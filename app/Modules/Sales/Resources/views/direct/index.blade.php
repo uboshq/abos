@@ -151,6 +151,42 @@
         </div>
     @endif
 
+    {{-- ⭐ সরাসরি বিক্রয়ের চূড়ান্ত নকশা — মালিক, ৪ অক্টোবর ২০২৬ ("ok final ekhoni eti planer 100% live daw")।
+         ⓘ নিজের ছোট CSS, কারণ Tailwind-এর বান্ডেল আগে থেকে বানানো — নতুন `[...]` শ্রেণি ওতে নেই।
+         ⚠️ রং কেবল থিমের টোকেন (`--color-*`), হাতে লেখা রং নয় — নয়টা থিমেই মানায়। --}}
+    <style @nonce>
+        .ds-gold { border-left: 6px solid var(--color-brand-gold) !important; }
+        .ds-top { display: grid; gap: .5rem .75rem; align-items: start; }
+        @media (min-width: 1024px) { .ds-top { grid-template-columns: minmax(0, 1fr) 17rem; } }
+        .ds-msgs { grid-column: 1 / -1; }
+        .ds-paper { display: flex; flex-wrap: wrap; gap: .5rem; padding-bottom: .5rem;
+                    border-bottom: 1px dashed var(--color-border); }
+        .ds-paper > label { min-width: 0; flex: 1 1 7rem; }
+        .ds-paper > .ds-f-date { flex: 0 1 8.5rem; }
+        .ds-paper > .ds-f-no { flex: 0 1 7rem; }
+        .ds-paper > .ds-f-ref { flex: 0 1 5.5rem; }
+        .ds-paper > .ds-f-term { flex: 0 1 8.5rem; }
+        .ds-paper > .ds-f-pend { flex: 1 1 10rem; }
+        .ds-lot { display: inline-flex; align-items: center; gap: .25rem; }
+        .ds-lot select { min-width: 15rem; max-width: 26rem; }
+        .ds-lot-tag { border-radius: var(--radius-field); background: var(--color-brand-50);
+                      color: var(--color-brand-700); padding: .05rem .4rem; font-size: .6rem; font-weight: 700; }
+        .ds-total { border-color: var(--color-brand-gold-deep); background: var(--color-surface-selected); }
+        .ds-rcpt { border: 1px solid var(--color-border); border-radius: var(--radius-card);
+                   background: var(--color-surface-card); padding: .6rem .75rem; box-shadow: var(--shadow-sm, none); }
+        .ds-rt { font-weight: 800; letter-spacing: .1em; font-size: .75rem;
+                 color: var(--color-ink-muted); padding-bottom: .35rem; border-bottom: 2px dashed var(--color-border); }
+        .ds-rkv { display: flex; justify-content: space-between; gap: .5rem; padding: .25rem 0;
+                  border-bottom: 1px dotted var(--color-border); }
+        .ds-cart-scroll { max-height: max(14rem, calc(100dvh - 26rem)); overflow-y: auto; }
+        .ds-cart-scroll thead th { position: sticky; top: 0; z-index: 2; background: var(--color-surface-card); }
+        .ds-side { display: flex; flex-direction: column; gap: .75rem; }
+        @media (min-width: 1280px) {
+            .ds-side { position: sticky; top: .75rem; align-self: start; max-height: calc(100dvh - 5.5rem); }
+            .ds-side > aside { min-height: 0; flex: 1 1 auto; }
+        }
+    </style>
+
     <form method="POST" action="{{ route('sales.direct.store') }}"
           x-data="directSale({
               catalogue: @js($products),
@@ -581,7 +617,8 @@
                 পর্দায় (মাত্র দুই কলাম) ওটা নিজে থেকেই নিচের সারিতে পুরো
                 প্রস্থ নিয়ে নামে — চেপে যাওয়ার বদলে।
             --}}
-            <div class="grid gap-3 lg:grid-cols-[1fr_14rem] lg:items-start">
+            {{-- ⭐ বিলের ঘর আর পণ্য **এক বাক্সে**, ডান কোণে "এই লাইন" — মালিক, ৪ অক্টোবর ২০২৬ --}}
+            <div class="ds-gold ds-top rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-3 shadow-sm">
 
                 {{-- বাক্স ১ · কাগজটা কী — তারিখ · নম্বর · মেয়াদ · DO --}}
             {{-- বাঁ কলাম: কাগজের পরিচয় → পণ্য খোঁজা → লাইনের ঘর → কার্ট
@@ -620,7 +657,7 @@
                      ⛔ না সরালে বাক্সের ভিতরে বাক্স হত — তিনটা
                      সীমানা পাশাপাশি, আর মালিক ঠিক ঐ এলোমেলো
                      রেখাগুলোর কথাই বলছেন। --}}
-                @include('sales::direct.partials.party')
+                @include('sales::direct.partials.party', ['part' => 'paper'])
                 {{--
                     ── পণ্য খোঁজা ও লাইনের ঘর — স্ট্রিপের ঠিক নিচে ──────────
 
@@ -718,150 +755,54 @@
 
                          ⭐ এখন দুইটাই এক মোড়কে, আর মোড়কটাই ছক-ঘর। ⓘ `space-y-2`
                          বোতামগুলোকে প্যানেলের ঠিক নিচে এনে বসায়, ফাঁক ছাড়া। --}}
-                    <div class="space-y-2 lg:col-start-2 lg:col-end-[-1] lg:row-start-1">
-                    <div class="rounded-(--radius-card) border border-(--color-success)/40
-                                bg-(--color-surface-success-tint) p-3 shadow-sm"
-                         style="box-shadow: inset var(--rail-tile-on-edge-w, 2px) 0 0 var(--color-state-on)">
-                        {{--
-                            ── লেবেল বাঁয়ে, অঙ্ক ডানে — এক সারিতে ─────────────
+                    <div class="ds-rcpt space-y-2 lg:col-start-2 lg:col-end-[-1] lg:row-start-1" data-this-line>
+                    {{-- ⭐ মাথার সারি: "এই লাইন" বাঁয়ে, টাকা ডানে সবুজ ঘরে — মালিক, ৪ অক্টোবর ২০২৬:
+                         "এই লাইন bame capiye nit mulo dane daw, background sobuj takuk, নিট মূল্য likhar dorkar nai"।
+                         ⓘ টাকাটা `entryNet` — বাঁয়ের হিসাবের হুবহু একই সংখ্যা। --}}
+                    <div class="ds-rt flex items-center justify-between gap-2">
+                        <span>{{ __('sales::field.this_line') }}</span>
+                        <b class="num rounded-(--radius-card) bg-(--color-success) px-3 py-1 text-2xl text-white"
+                           style="letter-spacing: 0" x-text="'৳' + money(entryNet)"></b>
+                    </div>
 
-                            ── মালিকের নির্দেশ (৩ সেপ্টেম্বর ২০২৬) ────────────
-                            *"Amount daner mark kora box e boro kore rako"* —
-                            অঙ্কটা লেবেলের নিচে ছিল, আর ডান পাশটা খালি পড়ে
-                            ছিল। এখন দুইটা এক সারিতে, আর **বাক্সটা এক সারি
-                            কম উঁচু**।
-
-                            ⚠️ অঙ্কটা **বড়ই থাকল** (`text-2xl`), ছোট করা হয়নি।
-                            কাউন্টারে ওটাই একমাত্র সংখ্যা যেটা দূর থেকে পড়া
-                            হয় — ক্রেতা পাশে দাঁড়িয়ে জিজ্ঞেস করেন *"কত হলো?"*,
-                            আর বিক্রেতা তাকিয়েই বলেন।
-
-                            ⓘ নিচের সারিগুলোও ডান-ঘেঁষা, তাই সব সংখ্যা এখন
-                            **একই খাড়া রেখায়** — চোখকে বাঁয়ে-ডানে লাফাতে হয় না।
-                        --}}
-                        <div class="flex items-baseline justify-between gap-2">
-                            {{-- ⓘ শিরোনাম ও অঙ্ক সবুজই — জমিন বদলেছে, পরিচয় নয়।
-                                 ⚠️ কালিটা `--color-success` নয়, ব্যাজেরটাই: গাঢ়
-                                 থিমে ব্যাজের সবুজ কালি হালকা (`#6ee7b7`), আর
-                                 কার্ডের জমিনে সেটাই পড়া যায় — `--color-success`
-                                 (#047857) গাঢ় কার্ডে ২:১-এরও নিচে নামত। --}}
-                            <p class="text-2xs font-semibold uppercase tracking-wide text-(--color-badge-success-ink)">
-                                {{ __('sales::field.this_line') }}
-                            </p>
-                            <p class="num text-2xl font-bold text-(--color-badge-success-ink)"
-                               x-text="'৳' + money(entryNet)"></p>
+                    {{-- ⓘ বিন্দু-দাগের সারি: পরিমাণ × দর · ফ্রি · ছাড়; সবুজ ঘরে নিট মূল্য; নিচে কার্টে কয়টা আর কত --}}
+                    <dl class="text-xs">
+                        <div class="ds-rkv">
+                            <dt class="num text-(--color-ink-muted)"
+                                x-text="qty($num(entry.qty || 0)) + ' ' + ((picked && picked.unit) || '') + ' × ' + money(entry.rate || 0)"></dt>
+                            <dd class="num" x-text="money(entryBase)"></dd>
                         </div>
 
-                        {{--
-                            ── এই লাইনের অঙ্ক — টাকার পথের ক্রমেই ─────────────
-
-                            ── মালিকের নির্দেশ (৩ সেপ্টেম্বর ২০২৬) ────────────
-                            *"Discount e Amount or % box daw · VAT dropdown
-                            daw · Net Value — VAT-er niche daw"*।
-
-                            ── ক্রমটা কেন এই ─────────────────────────────────
-                            অঙ্কটা যেভাবে সত্যিই গড়ায়, ঠিক সেভাবেই উপর থেকে
-                            নিচে:
-
-                                ছাড়        কত কমল
-                                ভ্যাট       কত কর বসল
-                                নিট মূল্য   শেষ পর্যন্ত কত  ← তাই সবার নিচে
-                                মোট পরিমাণ
-
-                            ⭐ **আর নিট মূল্যটা এখন `entryNet`** — বাঁয়ের ঘরের
-                            "নিট মূল্য"-র হুবহু একই সংখ্যা।
-
-                            ⚠️ আগে এখানে `entryAfterDiscount` ছিল, অর্থাৎ
-                            **এক পর্দায় "নিট মূল্য" নামে দুইটা আলাদা সংখ্যা** —
-                            বাঁয়ে ভ্যাট-সহ, এখানে ভ্যাট ছাড়া। ভ্যাট বন্ধ থাকা
-                            কোম্পানিতে দুইটা মিলত, তাই কেউ কোনোদিন ধরত না;
-                            ভ্যাট চালু হলেই কাউন্টারের লোক দুইটা সংখ্যা দেখে
-                            বুঝতেন না কোনটা সত্যি।
-                        --}}
-                        <dl class="mt-2 space-y-0.5 text-2xs">
-                            {{--
-                                ── মোট টাকা — সবার উপরে ────────────────────
-
-                                মালিকের নির্দেশ (৩ সেপ্টেম্বর ২০২৬):
-                                *"This line Discount er upore Total Amount
-                                bosbe"*।
-
-                                ⭐ এতে সারিগুলো **অঙ্কের গল্পটাই** বলে, উপর
-                                থেকে নিচে:
-
-                                    মোট টাকা    দর × পরিমাণ
-                                    ছাড়         কত কমল
-                                    ভ্যাট        কত কর বসল
-                                    নিট মূল্য     শেষে কত
-
-                                ⓘ আগে শুরুটাই ছিল না — ছাড় দেখা যেত, কিন্তু
-                                **কীসের উপর ছাড়** তা নয়। "৭%" বলতে কত, সেটা
-                                যাচাই করার কোনো উপায় পর্দায় ছিল না।
-                            --}}
-                            <div class="flex justify-between gap-2">
-                                <dt class="text-(--color-ink-muted)">{{ __('sales::field.total_amount') }}</dt>
-                                <dd class="num" x-text="money(entryBase)"></dd>
+                        @if ($show['free_qty'])
+                            <div class="ds-rkv">
+                                <dt class="text-(--color-ink-muted)">{{ __('sales::field.free_short') }}</dt>
+                                <dd class="num" x-text="qty($num(entry.freeQty || 0)) + ' ' + ((picked && picked.unit) || '')"></dd>
                             </div>
+                        @endif
 
-                            {{-- ছাড় — এখানেই লেখা যায়, টাকায় বা শতাংশে --}}
-                            @if ($show['line_discount'])
-                                <div class="flex items-center gap-2">
-                                    <dt class="text-(--color-ink-muted)">{{ __('sales::field.line_discount') }}</dt>
-                                    <dd class="flex flex-1 items-center gap-1">
-                                        <input type="text" inputmode="decimal" x-model="entry.discountInput"
-                                               placeholder="{{ __('sales::field.amount_or_pct') }}"
-                                               class="num h-(--spacing-inline) w-20 rounded-(--radius-field) border
-                                                      border-(--color-border) bg-(--color-surface-card) px-1 text-end">
-                                        <span class="num ms-auto w-16 text-end" x-text="money(entryDiscount)"></span>
-                                    </dd>
-                                </div>
-                            @endif
-
-                            {{-- ⛔ ভ্যাটের সারিটা এই বাক্স থেকে **উঠে গেছে** —
-                                 মালিকের নির্দেশ, ২৪ সেপ্টেম্বর ২০২৬:
-                                 *"This Line box e VAT bad daw"*।
-
-                                 ── ⓘ কিছুই হারায়নি, আর সেটা মেপে দেখা ──────────
-                                 ভ্যাটের ধরন বদলানোর দ্বিতীয় জায়গা আগে থেকেই আছে —
-                                 নিচের যোগফলের প্যানেলে ([[direct/partials/totals]]),
-                                 আর ওখানেরটাই **আসল**: সেটা `name="vat_mode"` নিয়ে
-                                 ফর্মের সাথে জমা যায়, এখানেরটা যেত না।
-
-                                 ⚠️ অর্থাৎ এটা দুইটা নিয়ন্ত্রণের একটা সরানো, একটামাত্র
-                                 নিয়ন্ত্রণ মুছে ফেলা নয় — ⛔ যাচাই করা হয়েছে
-                                 (`grep vatMode`), নাহলে কাউন্টারে ভ্যাটের ধরন আর
-                                 বদলানোই যেত না।
-
-                                 ⓘ ভ্যাটের **অঙ্কটা** অক্ষত: `entryVat` নিট মূল্যের
-                                 ভিতরে আগের মতোই বসে ([[direct-sale.js]])। এখানে কেবল
-                                 সারিটা আর দেখানো হয় না। --}}
-
-                            @foreach ([
-                                'sales::field.net_value' => 'entryNet',
-                                'sales::field.total_qty' => 'entryTotalQty',
-                            ] as $label => $expr)
-                                <div class="flex justify-between gap-2">
-                                    <dt class="text-(--color-ink-muted)">{{ __($label) }}</dt>
-                                    <dd class="num" x-text="money({{ $expr }})"></dd>
-                                </div>
-                            @endforeach
-                        </dl>
-                        <div class="mt-2 border-t border-(--color-badge-success-ink)/20 pt-1 text-2xs">
-                            <div class="flex justify-between">
-                                <span class="text-(--color-ink-muted)">{{ __('sales::field.in_cart') }}</span>
-                                <span class="num" x-text="lines.length + ' ' + @js(__('sales::field.items'))"></span>
+                        {{-- ছাড় — এখানেই লেখা যায়, টাকায় বা শতাংশে --}}
+                        @if ($show['line_discount'])
+                            <div class="ds-rkv items-center">
+                                <dt class="text-(--color-ink-muted)">{{ __('sales::field.line_discount') }}</dt>
+                                <dd class="flex flex-1 items-center gap-1">
+                                    <input type="text" inputmode="decimal" x-model="entry.discountInput"
+                                           placeholder="{{ __('sales::field.amount_or_pct') }}"
+                                           class="num h-(--spacing-inline) w-20 rounded-(--radius-field) border
+                                                  border-(--color-border) bg-(--color-surface-card) px-1 text-end">
+                                    <span class="num ms-auto w-16 text-end" x-text="money(entryDiscount)"></span>
+                                </dd>
                             </div>
-                            <div class="flex justify-between font-semibold">
-                                <span>{{ __('sales::field.running_total') }}</span>
-                                <span class="num" x-text="'৳' + money(subTotal)"></span>
-                            </div>
+                        @endif
+                    </dl>
 
-                            {{-- ⭐ অবশিষ্ট সীমা এখানেও — মালিকের ছবি, ২৬ সেপ্টেম্বর
-                                 ২০২৬: *"চলতি মোট er niche o অবশিষ্ট সীমা bosbe mane dui
-                                 jaygay ei thakbe"*। ⓘ সংখ্যাটা ডানের হিসাবের সারির হুবহু
-                                 একই getter (`creditLeft`), তাই দুই জায়গায় কখনো আলাদা
-                                 দেখাবে না। --}}
-                            <template x-if="hasCustomer && hasCreditLimit">
+                    <div class="text-xs">
+                        <div class="flex justify-between gap-2" data-row="in-cart">
+                            <span class="text-(--color-ink-muted)">{{ __('sales::field.running_total') }}</span>
+                            <span class="num font-semibold"
+                                  x-text="lines.length + ' ' + @js(__('sales::field.items')) + ' · ৳' + money(subTotal)"></span>
+                        </div>
+
+                        <template x-if="hasCustomer && hasCreditLimit">
                                 <div class="flex justify-between">
                                     <span class="text-(--color-ink-muted)">{{ __('sales::field.credit_left') }}</span>
                                     <span class="num font-semibold"
@@ -872,34 +813,13 @@
                                 </div>
                             </template>
 
-                            {{-- ⭐ সীমা অতিক্রমও এখানে — মালিকের ছবি, ২৭ সেপ্টেম্বর ২০২৬
-                                 (সন্ধ্যা): চলতি মোটের নিচে অবশিষ্ট সীমা **আর** সীমা অতিক্রম;
-                                 ডানের প্যানেলেরটাও থাকে। ⓘ একই getter (`creditOver`)। --}}
-                            <template x-if="hasCustomer && hasCreditLimit && creditOver > 0">
+                        <template x-if="hasCustomer && hasCreditLimit && creditOver > 0">
                                 <div class="mt-0.5 flex justify-between rounded-(--radius-field) bg-(--color-danger)
                                             px-1.5 font-bold text-white" data-row="credit-over">
                                     <span>{{ __('sales::message.credit_over') }}</span>
                                     <span class="num" x-text="'৳' + money(creditOver)"></span>
                                 </div>
                             </template>
-
-                            {{-- ⭐ আর কত বাকিতে দেওয়া যাবে — মালিকের নির্দেশ, ২৩ সেপ্টেম্বর ২০২৬।
-
-                                 তাঁর কথা: *"avelable Cr Limit … এই লাইন box e চলতি মোট er niche"*।
-
-                                 ── ⛔ হিসাবটা আগে থেকেই লেখা ছিল, দেখানো হত না ──────────
-                                 `availableCredit` getter-টা কারণসহ লেখা — *"বাকির সীমা
-                                 ৭৫,০০০ একটা চুক্তির সংখ্যা, কাউন্টারের নয়; যাঁর ৭০,০০০
-                                 আগেই বাকি, তাঁর জন্য খোলা আছে মাত্র ৫,০০০"*। ⚠️ অথচ
-                                 সংখ্যাটা কোনো পর্দায় উঠত না — কাজ হয়ে ছিল, জোড়াটা ছিল না।
-
-                                 ⓘ সীমা ০ হলে সারিটা আসে না: শূন্য মানে *"বাকি বন্ধ"*,
-                                 আর সেটা আলাদা কথা — ঐ যুক্তিটাও getter-এর মন্তব্যে লেখা।
-
-                                 ⚠️ ঋণাত্মক হলে লাল: সীমা ইতিমধ্যেই পেরিয়ে গেছে, আর
-                                 ⛔ কাউন্টারে ঐ মুহূর্তটা **চালান নিশ্চিত করার আগেই**
-                                 চোখে পড়া দরকার, পরে নয়। --}}
-                        </div>
                     </div>
 
                     {{-- ⭐ তিনটা বোতাম — ডান কলামে, "এই লাইন" বাক্সের **ঠিক নিচে**।
@@ -1001,6 +921,25 @@
                     {{-- ⓘ সীমার সতর্কতা এখন পপ-আপ (উপরে, `credit-warning`) — মালিকের ছবি,
                          ২৭ সেপ্টেম্বর ২০২৬ (সন্ধ্যা)। এখানের লেখাটা সরানো হলো। --}}
                     </div>{{-- ডান কলামের মোড়ক শেষ --}}
+
+                    {{-- ⭐ বার্তা তিনটা বাক্সের নিচে, পুরো প্রস্থে — মালিক, ৪ অক্টোবর ২০২৬: ⛔ পরিমাণের সারির ভিতরে থাকলে
+                         "এই লাইন" বাক্সটা লম্বা হত। ⓘ "আর N নিলে ফ্রি" কেবল অনুপাত না মিললে ([[fillFreeFromTheRatio()]])। --}}
+                    <div class="ds-msgs space-y-1">
+                        @if ($show['free_qty'])
+                            <div x-show="freeWarning" x-cloak
+                                 class="rounded-(--radius-field) bg-(--color-badge-danger-bg)
+                                        px-3 py-1.5 text-xs text-(--color-badge-danger-ink)"
+                                 x-text="freeWarning" role="alert"></div>
+                        @endif
+                        <div x-show="lotWarning" x-cloak
+                             class="rounded-(--radius-field) bg-(--color-badge-danger-bg)
+                                    px-3 py-1.5 text-xs text-(--color-badge-danger-ink)"
+                             x-text="lotWarning" role="alert"></div>
+                        <div x-show="freeHint" x-cloak
+                             class="rounded-(--radius-field) bg-(--color-badge-pending-bg)
+                                    px-3 py-1.5 text-xs text-(--color-badge-pending-ink)"
+                             x-text="freeHint" role="status"></div>
+                    </div>
                     {{--
                         ── ছবির ঘরটা তুলে দেওয়া হলো (৩ সেপ্টেম্বর ২০২৬) ──────
 
@@ -1074,7 +1013,7 @@
             --}}
             @if ($show['deposit'])
                 <div x-show="deposits.length > 0" x-cloak
-                     class="rounded-(--radius-card) border border-(--color-border)
+                     class="ds-gold rounded-(--radius-card) border border-(--color-border)
                             bg-(--color-surface-card) p-3">
                     <div class="mb-2 flex items-baseline justify-between gap-2">
                         <span class="text-2xs font-semibold text-(--color-ink)">
@@ -1190,7 +1129,11 @@
         {{-- ⓘ বিলের মোট — কাগজের **ফল**, তাই নিজের রং আর দাগ।
              ⚠️ `overflow-hidden` লাগে, নাহলে ভিতরের সারিগুলো গোল কোণের
              বাইরে বেরিয়ে যেত। --}}
-        @include('sales::direct.partials.totals')
+        {{-- ⭐ ক্রেতার বাক্স বিলের মোটের ঠিক উপরে — মালিক, ৪ অক্টোবর ২০২৬। ⚠️ দুইটাই ফর্মের ভিতরে (লুকানো customer_id) --}}
+        <div class="ds-side min-w-0">
+            @include('sales::direct.partials.party', ['part' => 'customer'])
+            @include('sales::direct.partials.totals')
+        </div>
 
     </form>
 

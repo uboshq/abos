@@ -150,7 +150,7 @@ return [
        one. Free stock is only ever the free stock that is available. */
     'free_available' => 'Free',
     'in_cart' => 'In cart',
-    'do_no' => 'DO No.',
+    'do_no' => 'Reference no.',
     'terms' => 'Terms',
 
     /*

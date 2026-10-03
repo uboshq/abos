@@ -29,6 +29,7 @@ return [
     'checkout' => 'Complete sale',
     'exact' => 'Exact',
     'add_to_cart' => 'Add to Cart',
+    'cart' => 'Cart',
     /*
      * ⭐ One word — the owner's instruction (6 Sep 2026):
      * *"Clear Data poriborton kore sudu Clear likho"*.

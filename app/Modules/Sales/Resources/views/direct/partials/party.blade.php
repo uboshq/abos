@@ -124,7 +124,7 @@
                      `15 দিনের ব`, `06-09-20`। ⚠️ কাগজের বাক্সে চারটা **ছোট
                      ঘর**, ক্রেতার বাক্সে পাঁচ সারি **লেখা** — জায়গার দরকার
                      দুই জায়গায় সমান নয়। --}}
-                <div class="grid gap-3 sm:grid-cols-[1fr_1.1fr]">
+                <div class="grid gap-3">
                             {{-- ⓘ ক্রেতা নিজের কলামে — পরিচয়ের সারিটা নিচে
                                  নামলেও এই কলামটাই তার শুরুর রেখা। --}}
                             {{-- বাক্স ১ · ক্রেতা --}}
@@ -159,8 +159,9 @@
                                  গোটা কার্ডের জমিনে ওটা ভুল টোকেন। --}}
                             {{-- ⚠️ `relative` — ক্রেতা খোঁজার প্যানেলটা এর সাপেক্ষে
                                  ভাসে (নিচে দেখুন)। --}}
-                            <div class="relative min-w-0 rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-selected) p-3 shadow-sm"
-                                 style="box-shadow: inset var(--rail-tile-on-edge-w, 2px) 0 0 var(--color-brand-500)">
+                            {{-- ⭐ ক্রেতার বাক্স এখন ডান কলামে, বিলের মোটের উপরে (মালিক, ৪ অক্টোবর ২০২৬) — `part` = customer --}}
+                            @if (($part ?? 'both') !== 'paper')
+                            <div class="ds-gold relative min-w-0 rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-selected) p-3 shadow-sm">
 
                         {{--
                             ── ক্রেতা — কাগজের পরিচয়ের একই বাক্সে, নিচের সারিতে ──
@@ -590,6 +591,7 @@
                              না বসালে চালান সেভ হত ক্রেতা ছাড়াই। --}}
                         <input type="hidden" name="customer_id" x-model="customerId">
                             </div>
+                            @endif
 
                             {{-- ── কাগজের চারটা ঘর — ২×২ ─────────────────────
 
@@ -629,13 +631,15 @@
 
                                  ⚠️ দুইটা বাক্সের উচ্চতা এক হওয়া কোনো নিয়ম
                                  নয় — ভিতরে যা আছে তার সমান হওয়াই নিয়ম। --}}
-                            <div class="grid min-w-0 self-start grid-cols-1 content-start gap-2 sm:grid-cols-[minmax(9.5rem,1.2fr)_1fr_1fr] rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-sunken) p-3 shadow-sm"
-                                 style="box-shadow: inset var(--rail-tile-on-edge-w, 2px) 0 0 var(--color-badge-inventory-ink)">
+                            {{-- ⭐ এক সারি, একদম উপরে: তারিখ · বিক্রি নম্বর · রেফারেন্স · বাকির শর্ত · পেন্ডিং (চওড়া) — মালিক, ৪ অক্টোবর ২০২৬।
+                                 ⓘ বাক্স নেই — সে এখন পণ্যের সাথে এক সোনালি বাক্সে ([[direct/index]] `ds-top`)। --}}
+                            @if (($part ?? 'both') !== 'customer')
+                            <div class="ds-paper min-w-0">
                             {{-- পুরো তারিখটা দেখা যেতে হবে — মালিকের কথা,
                                  ৩ সেপ্টেম্বর ২০২৬: "০৩-০৯-২০:" পর্যন্ত দেখিয়ে
                                  বছরটা কেটে যাচ্ছিল, আর একটা কাটা তারিখ পড়ে
                                  কেউ নিশ্চিত হতে পারেন না কোন বছরের কাগজ। --}}
-                            <label class="min-w-0">
+                            <label class="min-w-0 ds-f-date">
                                 <span class="mb-0.5 block text-2xs font-semibold uppercase tracking-wide
                                              text-(--color-ink-muted)">{{ __('sales::field.challan_date') }}</span>
                                 {{-- ⓘ `dense` — মালিক, ৫ সেপ্টেম্বর ২০২৬:
@@ -649,6 +653,40 @@
                                            :value="old('trx_date', $resume['fields']['trx_date'] ?? now()->toDateString())"
                                            class="w-full text-sm" />
                                            </label>
+
+                            <label class="min-w-0 ds-f-no">
+                                <span class="mb-0.5 block text-2xs font-semibold uppercase tracking-wide
+                                             text-(--color-ink-muted)">{{ __('sales::doc.sale') }}</span>
+                                <input type="text" name="challan_no" maxlength="32"
+                                       value="{{ old('challan_no', $resume['challanNo'] ?? $salePreview ?? '') }}"
+                                       @readonly(! empty($resume)) :readonly="resumeId !== ''"
+                                       placeholder="{{ __('sales::field.on_confirm') }}"
+                                       class="h-(--spacing-field-dense) w-full rounded-(--radius-field) border border-(--color-border)
+                                              bg-(--color-surface-app) px-2 text-sm">
+                            </label>
+
+                            {{-- DO নম্বর — ঐচ্ছিক, আর নিজের সুইচের পেছনে।
+
+                                 ⚠️ এই ঘরটা একবার দুর্ঘটনাক্রমে মুছে গিয়েছিল
+                                 (৩ সেপ্টেম্বর ২০২৬): মেয়াদের দুইটা ঘর একটা
+                                 ড্রপডাউনে বদলাতে গিয়ে প্রতিস্থাপনের সীমা
+                                 বেশি টানা হয়েছিল, আর মাঝের এই ব্লকটাও তার
+                                 ভেতরে পড়ে গিয়েছিল।
+
+                                 [[DirectSaleTest::test_every_field_switch_really_hides_its_field]]
+                                 পরের রানেই ধরে ফেলেছে — "খোলা থাকলেও ঘরটা
+                                 নেই: sales.field_do_no"। স্ক্রিনশটে ধরা
+                                 পড়েনি, কারণ ঘরটা এমনিতেই ঐচ্ছিক আর ফাঁকা
+                                 দেখায়; একটা কম ঘর চোখে পড়ে না। --}}
+                            @if ($show['do_no'])
+                                <label class="min-w-0 ds-f-ref">
+                                    <span class="mb-0.5 block text-2xs font-semibold uppercase tracking-wide
+                                                 text-(--color-ink-muted)">{{ __('sales::field.do_no') }}</span>
+                                    <input type="text" name="do_no" value="{{ old('do_no', $resume['fields']['do_no'] ?? '') }}"
+                                           class="h-(--spacing-field-dense) w-full rounded-(--radius-field) border border-(--color-border)
+                                                  bg-(--color-surface-app) px-2 text-sm">
+                                </label>
+                            @endif
 
                             
                             {{--
@@ -686,7 +724,7 @@
                                 আগের হিসাব বা মিলের সাথে ঠিক করা একটা দিনের জন্য।
                                 বাকি সময় ওটা পর্দাতেই থাকে না।
                             --}}
-                            <label class="min-w-0">
+                            <label class="min-w-0 ds-f-term">
                                 <span class="mb-0.5 block text-2xs font-semibold uppercase tracking-wide
                                              text-(--color-ink-muted)">{{ __('sales::field.terms') }}</span>
                                 {{-- ── পাঁচটা ধরন, ক্রয়ের কাউন্টারের সমান ────────
@@ -731,7 +769,7 @@
                                  ([[openPending()]]); `window` তাই JS-এ, এখানে নয়। --}}
                             {{-- ⚠️ ঘরটা সবসময় থাকে (ক্রেতা না বাছা পর্যন্ত বন্ধ) — ⛔ লুকালে দ্বিতীয় সারির
                                  বিল নম্বর উঠে এসে প্রথম সারিতে বসত, আর মালিকের দুই-সারির ছক ভাঙত। --}}
-                            <label class="min-w-0">
+                            <label class="min-w-0 ds-f-pend">
                                 <span class="mb-0.5 block text-2xs font-semibold uppercase tracking-wide
                                              text-(--color-ink-muted)">{{ __('sales::field.pending_drafts') }}</span>
                                 <select @change="openPending($event)"
@@ -776,41 +814,7 @@
                                  বদলালে সেটাই যায়। ⚠️ খোলা খসড়ায় বন্ধ — সেবা একই বিল-চালান পাকা করে,
                                  নম্বর বদলায় না; "সব মুছুন" চাপলে খোলে। ⓘ ঘরের নাম `challan_no`-ই রইল:
                                  নম্বরটা চালানেই জন্মায়। --}}
-                            <label class="min-w-0">
-                                <span class="mb-0.5 block text-2xs font-semibold uppercase tracking-wide
-                                             text-(--color-ink-muted)">{{ __('sales::doc.sale') }}</span>
-                                <input type="text" name="challan_no" maxlength="32"
-                                       value="{{ old('challan_no', $resume['challanNo'] ?? $salePreview ?? '') }}"
-                                       @readonly(! empty($resume)) :readonly="resumeId !== ''"
-                                       placeholder="{{ __('sales::field.on_confirm') }}"
-                                       class="h-(--spacing-field-dense) w-full rounded-(--radius-field) border border-(--color-border)
-                                              bg-(--color-surface-app) px-2 text-sm">
-                            </label>
-
-                            {{-- DO নম্বর — ঐচ্ছিক, আর নিজের সুইচের পেছনে।
-
-                                 ⚠️ এই ঘরটা একবার দুর্ঘটনাক্রমে মুছে গিয়েছিল
-                                 (৩ সেপ্টেম্বর ২০২৬): মেয়াদের দুইটা ঘর একটা
-                                 ড্রপডাউনে বদলাতে গিয়ে প্রতিস্থাপনের সীমা
-                                 বেশি টানা হয়েছিল, আর মাঝের এই ব্লকটাও তার
-                                 ভেতরে পড়ে গিয়েছিল।
-
-                                 [[DirectSaleTest::test_every_field_switch_really_hides_its_field]]
-                                 পরের রানেই ধরে ফেলেছে — "খোলা থাকলেও ঘরটা
-                                 নেই: sales.field_do_no"। স্ক্রিনশটে ধরা
-                                 পড়েনি, কারণ ঘরটা এমনিতেই ঐচ্ছিক আর ফাঁকা
-                                 দেখায়; একটা কম ঘর চোখে পড়ে না। --}}
-                            @if ($show['do_no'])
-                                <label class="min-w-0">
-                                    <span class="mb-0.5 block text-2xs font-semibold uppercase tracking-wide
-                                                 text-(--color-ink-muted)">{{ __('sales::field.do_no') }}</span>
-                                    <input type="text" name="do_no" value="{{ old('do_no', $resume['fields']['do_no'] ?? '') }}"
-                                           placeholder="{{ __('sales::field.optional') }}"
-                                           class="h-(--spacing-field-dense) w-full rounded-(--radius-field) border border-(--color-border)
-                                                  bg-(--color-surface-app) px-2 text-sm">
-                                </label>
-                            @endif
-
+                            
                             {{-- কেবল "নির্দিষ্ট তারিখ" বাছলে।
 
                                  ⓘ শর্তটা আগে `custom` নামে ছিল; এখন `fixed` —
@@ -848,6 +852,7 @@
                                    :value="termKind === 'credit' ? termDays : ''">
 
                             </div>
+                            @endif
                         </div>
 
                             {{--
@@ -872,7 +877,9 @@
                             --}}
                             {{-- ⓘ গুদামটা লুকানো ঘরে — ছকের কোনো কলাম নেয় না,
                                  কারণ `input[type=hidden]`-এর `display` নেই। --}}
-                            <input type="hidden" name="warehouse_id" value="{{ $warehouse?->id }}">
+                            @if (($part ?? 'both') !== 'customer')
+                                <input type="hidden" name="warehouse_id" value="{{ $warehouse?->id }}">
+                            @endif
                     </div>
 
                 </section>

@@ -1,6 +1,8 @@
-            <section data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border)
+            {{-- ⭐ শিরোনাম নেই, নিজের স্ক্রল, মাথা আটকানো — উপরের বাক্স আর ডান কলাম নড়ে না (মালিক, ৪ অক্টোবর ২০২৬)।
+                 ⓘ এক সারি = এক লট; ছাপা বিলে একই পণ্য এক লাইনে মেলে। --}}
+            <section data-boxed class="ds-gold overflow-hidden rounded-(--radius-card) border border-(--color-border)
                             bg-(--color-surface-card) shadow-sm">
-                <div class="table-responsive">
+                <div class="table-responsive ds-cart-scroll">
                     <table class="ui-lines table-cards w-full text-sm">
                         <thead>
                             <tr>

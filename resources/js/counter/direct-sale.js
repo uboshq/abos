@@ -1030,6 +1030,10 @@ export default function directSale({
             this.customerTerm = '';
             this.customerPickerOpen = false;
 
+            /* ⭐ দ্রুত কাউন্টার — ক্রেতা বাছলেই পণ্যের তালিকা খোলে (মালিক, ৪ অক্টোবর ২০২৬)।
+                 ⓘ খোলা খসড়ার পপ-আপ থাকলে নয় — তখন আগে ঐ প্রশ্নের উত্তর। */
+            if (! this.customerHasOpenDraft && ! this.viewOnly) this.openPicker();
+
             /*
              * ⭐ এক ক্রেতার একটাই খসড়া — মালিকের নির্দেশ, ২৮ সেপ্টেম্বর ২০২৬: *"2ND BAR
              * customer entry dile pop up warning dibe zate khosora theke ene edite kore
@@ -1116,8 +1120,24 @@ export default function directSale({
 
             this.picked = product;
             this.entry.rate = product.rate;
-            this.entry.qty = this.entry.qty || '1';
+            /* ⭐ পরিমাণ ফাঁকা (০) থেকে শুরু — মালিক, ৪ অক্টোবর ২০২৬: ⛔ আগে নিজে ১ বসত, তাই ভুল ক্লিকেও সারি উঠত */
+            this.entry.qty = this.entry.qty || '';
+
+            /* ⭐ পণ্যের পরে লট — একটাই থাকলে নিজে বসে, একাধিক হলে বিক্রেতা বাছেন (মালিক, ৪ অক্টোবর ২০২৬)।
+                 ⚠️ আগের পণ্যের লট এই পণ্যে বৈধ নয়, তাই তালিকায় না থাকলে মুছে যায়। */
+            if (this.needsLot) {
+                const lots = this.entryLots;
+
+                if (! lots.some(l => String(l.id) === String(this.entry.batchId))) {
+                    this.entry.batchId = lots.length === 1 ? String(lots[0].id) : '';
+                }
+            }
+
             this.term = '';
+
+            /* ⭐ পরের ঘরে কার্সর — লট বাছতে হলে লটে, নাহলে সরাসরি পরিমাণে (মালিক, ৪ অক্টোবর ২০২৬) */
+            this.$nextTick(() => (this.needsLot && this.entry.batchId === '' ? this.$refs.lot : this.$refs.qty)?.focus?.());
+
             // বাছা হয়ে গেছে — তালিকাটা আর কিছু বলার নেই
             this.pickerOpen = false;
             this.listShown = false;
@@ -1315,6 +1335,13 @@ export default function directSale({
         async addToCart() {
             if (! this.picked || this.viewOnly) return false;
 
+            /* ⛔ পরিমাণ ০ হলে কিছু ওঠে না — কার্সর পরিমাণের ঘরে যায় (মালিক, ৪ অক্টোবর ২০২৬) */
+            if (! (this.$num(this.entry.qty || '0') > 0)) {
+                this.$refs?.qty?.focus?.();
+
+                return false;
+            }
+
             /* ⛔ খোলা খসড়া থাকলে নতুন বিলের সারিই ওঠে না — মালিকের নির্দেশ,
                  ২৬ সেপ্টেম্বর ২০২৬। ⓘ বার্তাটা লটের ঘরেই, যেখানে চোখ থাকে। */
             if (this.customerHasOpenDraft) {
@@ -1338,7 +1365,7 @@ export default function directSale({
                 unit: this.picked.unit,
                 vatRate: this.picked.vatRate || 0,
                 vatInclusive: !! this.picked.vatInclusive,
-                qty: this.entry.qty || '1',
+                qty: this.entry.qty,
                 freeQty: this.entry.freeQty || '',
                 rate: this.entry.rate || '0',
                 discountPercent: this.entryDiscountPercent,
@@ -1504,6 +1531,12 @@ export default function directSale({
          * যেত, আর তিনি বুঝতেন না কে বদলাচ্ছে। ⓘ তাই কেবল **পরিমাণ বা
          * লট বদলালে** ভরা হয়, ফ্রি-র ঘর ছোঁয়ার পর নয়।
          */
+        /** ⭐ লট বাছা হলো — অনুপাত ধরে ফ্রি, আর কার্সর পরিমাণের ঘরে (মালিক, ৪ অক্টোবর ২০২৬: "lot bachlei qty bosbe")। */
+        lotChosen() {
+            this.fillFreeFromTheRatio();
+            this.$nextTick(() => this.$refs.qty?.focus?.());
+        },
+
         async fillFreeFromTheRatio() {
             this.freeHint = '';
             this.freeRatio = '';
@@ -1542,7 +1575,11 @@ export default function directSale({
                  */
                 const short = this.$num(data.short);
 
-                if (short > 0) {
+                /* ⭐ কেবল অনুপাত না মিললে — মালিক, ৪ অক্টোবর ২০২৬: ২৪:১ লটে ২০ বা ৩০ নিলে বার্তা, ঠিক ২৪/৪৮/৭২-এ নয়।
+                     ⓘ ঠিক গুণিতকে পরের ফ্রি পুরো এক ধাপ দূরে (short = ২৪), তাই শর্তটা short < ধাপ। */
+                const step = this.$num(data.free ?? '0') > 0 ? this.$num(data.paid ?? '0') / this.$num(data.free) : 0;
+
+                if (short > 0 && short < step - 0.0001) {
                     this.freeHint = texts.freeNextAt.replace(':more', this.qty(data.short));
                 }
             } catch (e) {
@@ -2575,6 +2612,12 @@ export default function directSale({
             if (lot.expiry) parts.push(lot.expiry);
 
             parts.push(this.qty(lot.qty));
+
+            /* ⭐ ফ্রি অনুপাতও — "২৪:১" (মালিক, ৪ অক্টোবর ২০২৬); লটে ফ্রি না এলে কিছু নয় */
+            const paid = this.$num(lot.paid ?? '0');
+            const free = this.$num(lot.free ?? '0');
+
+            if (paid > 0 && free > 0) parts.push(String(Math.round((paid / free) * 100) / 100) + ':1');
 
             return parts.join(' · ');
         },

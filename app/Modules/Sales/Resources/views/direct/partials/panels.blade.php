@@ -22,7 +22,7 @@
 
          ⓘ "খরচ" বোতামটাও সরাসরি বিক্রয়ের পর্দা থেকে গেছে, একই কারণে। --}}
 <div x-show="panel" x-cloak
-     class="rounded-(--radius-card) border border-(--color-border)
+     class="ds-gold rounded-(--radius-card) border border-(--color-border)
             bg-(--color-surface-sunken) p-3">
 
     {{-- ── পরিবহন ─────────────────────────────────────────────────────

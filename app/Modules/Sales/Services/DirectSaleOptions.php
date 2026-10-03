@@ -11,6 +11,7 @@ use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Inventory\Models\Batch;
 use App\Modules\Inventory\Models\Product;
 use App\Modules\Inventory\Models\Warehouse;
+use App\Modules\Inventory\Services\FreeRatio;
 use App\Modules\MasterData\Models\PaymentTerm;
 use Illuminate\Support\Facades\DB;
 
@@ -69,17 +70,24 @@ final class DirectSaleOptions
             ->groupBy('batch_id')
             ->pluck('qty', 'batch_id');
 
-        return Batch::query()
+        $batches = Batch::query()
             ->whereIn('product_id', Product::query()->active()->where('track_batch', true)->select('id'))
             ->unexpired()
             ->fefo()
-            ->get()
+            ->get();
+
+        // ⭐ লটের ফ্রি অনুপাত — লটের ঘরেই দেখায় (মালিক, ৪ অক্টোবর ২০২৬); সব লট একটাই প্রশ্নে
+        $came = app(FreeRatio::class)->arrivedInMany($batches->pluck('id')->all());
+
+        return $batches
             ->map(fn (Batch $b) => [
                 'id' => (string) $b->id,
                 'productId' => (string) $b->product_id,
                 'no' => (string) $b->batch_no,
                 'expiry' => $b->expiry_date?->toDateString() ?? '',
                 'qty' => (string) ($balances[$b->id] ?? '0'),
+                'paid' => $came[(string) $b->id]['paid'] ?? '0',
+                'free' => $came[(string) $b->id]['free'] ?? '0',
             ])
             /*
              * ⛔ যে লটে কিছু নেই সে বাছাইয়ের তালিকায় আসে না। ⓘ ওটা বেছে
