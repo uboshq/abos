@@ -478,6 +478,8 @@ return [
         'top_n' => 'Top :count',
         'showing_top' => 'Top :count of :total — the rest are not in this list',
         'new_in_period' => 'New',
+        // ⭐ শুরুর তারিখ ছাড়া গোটা ইতিহাস ([[ReportEngine::ALL_TIME]], মালিক, ৩ অক্টোবর ২০২৬)
+        'all_time' => 'From the start to today',
     ],
 
     'export' => [

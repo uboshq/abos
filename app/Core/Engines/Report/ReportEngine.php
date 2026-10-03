@@ -32,6 +32,18 @@ use RuntimeException;
  */
 final class ReportEngine
 {
+    /** পর্দার এক পাতা — রিপোর্টের পর্দাগুলো এই মাপেই ডাকে */
+    public const SCREEN_ROWS = 100;
+
+    /** ছাপা আর ফাইলের ছাদ — ফোনের রপ্তানি আর নির্ধারিত রিপোর্টের একই সীমা ([[ReportExportApiController::MAX_ROWS]]) */
+    public const WHOLE_DOCUMENT_ROWS = 100000;
+
+    /** ঠিকানায় `from=all` — শুরু থেকে ([[normaliseFilters()]]) */
+    public const ALL_TIME = 'all';
+
+    /** "শুরু থেকে"-র তারিখ — খাতার কোনো সারি এর আগে নয় */
+    public const BEGINNING = '1900-01-01';
+
     /** ঠিক ততদিন আগের পরিসর — গতি বোঝায় */
     public const COMPARE_PREVIOUS = 'previous';
 
@@ -79,10 +91,21 @@ final class ReportEngine
      *
      * @param  array<string, mixed>  $filters
      */
-    public function run(string $key, array $filters = [], int $page = 1, int $perPage = 100, bool $byBranch = false): ReportResult
+    public function run(string $key, array $filters = [], int $page = 1, int $perPage = self::SCREEN_ROWS, bool $byBranch = false): ReportResult
     {
         $report = $this->get($key);
         $filters = $this->normaliseFilters($report, $filters);
+
+        /*
+         * ⭐ ছাপা আর ফাইল গোটা পরিসর নেয়, পর্দার পাতা নয় — মালিক, ৩ অক্টোবর ২০২৬ (কাস্টমার লেজার): ছাপা বেরোত
+         * পাতা ধরে ধরে, প্রতিটা পাতা আলাদা করে ছাপতে হত, আর CSV/Excel-এও কেবল চলতি পাতার ১০০ সারি।
+         * ⓘ এক জায়গায়, তাই রিপোর্টের প্রতিটা পর্দা (১৩টা কন্ট্রোলার) একসাথে সারে। কেবল পর্দার মাপের ডাকে
+         * (`SCREEN_ROWS`) — ড্যাশবোর্ডের গোনা (`perPage: 1`) আর ফোনের নিজের মাপ যেমন ছিল।
+         */
+        if ($perPage === self::SCREEN_ROWS && self::wholeDocumentWanted()) {
+            $page = 1;
+            $perPage = self::WHOLE_DOCUMENT_ROWS;
+        }
 
         $query = $this->queryFor($report, $filters);
 
@@ -541,6 +564,13 @@ final class ReportEngine
     private function normaliseFilters(ReportDefinition $report, array $filters): array
     {
         if ($report->hasFilter('date_range')) {
+            // ⭐ "শুরু থেকে আজ পর্যন্ত" — শুরুর তারিখ লাগে না (মালিক, ৩ অক্টোবর ২০২৬); খোলা জের তখন শূন্য
+            $filters['all_time'] = ($filters['from'] ?? null) === self::ALL_TIME;
+
+            if ($filters['all_time']) {
+                $filters['from'] = self::BEGINNING;
+            }
+
             $filters['from'] = $filters['from'] ?? Carbon::today()->startOfMonth()->toDateString();
             $filters['to'] = $filters['to'] ?? Carbon::today()->toDateString();
 
@@ -890,4 +920,18 @@ final class ReportEngine
             return $row;
         });
     }
+
+    /**
+     * ছাপা (`?print=1`) বা ফাইল (`?export=csv|xlsx|json`) চাওয়া হয়েছে কি না — তখন গোটা পরিসর, পাতা নয়।
+     * ⓘ রিকোয়েস্ট না থাকলে (কনসোল, নির্ধারিত রিপোর্ট) কখনো নয়।
+     */
+    public static function wholeDocumentWanted(): bool
+    {
+        if (! app()->bound('request')) {
+            return false;
+        }
+
+        return request()->boolean('print') || app(\App\Core\Services\ListExport::class)->wanted();
+    }
+
 }

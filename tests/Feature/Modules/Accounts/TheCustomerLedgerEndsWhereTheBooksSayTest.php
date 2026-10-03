@@ -115,6 +115,71 @@ final class TheCustomerLedgerEndsWhereTheBooksSayTest extends TestCase
         $this->assertSame('(Cr) 5,000.00', $this->summary($result)['text']);
     }
 
+    /**
+     * ⭐ মালিক, ৩ অক্টোবর ২০২৬: ছাপা বেরোত পাতা ধরে ধরে — পর্দার ১০০ সারি। এখন "ছাপুন" `?print=1`-এ যায়, আর সেখানে
+     * পরিসরের সব সারি, শেষে শেষ জের; CSV-তেও সব। ⓘ ১৩০টা আদায় — এক পর্দার পাতার বেশি।
+     */
+    public function test_print_and_file_carry_every_row_and_end_on_the_books(): void
+    {
+        $this->happen();
+        $this->travelTo(Carbon::parse('2026-10-02 16:00:00'));
+        for ($i = 1; $i <= 130; $i++) {
+            $this->collect('10');
+        }
+        $this->travelTo(Carbon::parse('2026-10-03 11:00:00'));
+
+        $url = route('accounts.report.show', ['slug' => 'customer-ledger', 'customer_id' => $this->dealer->id, 'from' => '2026-10-01', 'to' => '2026-10-03']);
+
+        // পর্দা: ১০০ সারি, আর "ছাপুন" গোটা পরিসরের ঠিকানায়
+        $screen = (string) $this->get($url)->assertOk()->getContent();
+        $this->assertStringContainsString('print=1', $screen, '⛔ ছাপার বোতাম গোটা পরিসরের ঠিকানায় যায় না — পর্দার পাতাই ছাপবে।');
+
+        // ছাপা: ১৩৩ সারি (খোলা জের + ২ + ১৩০), শেষে শেষ জের = খাতার বকেয়া
+        $print = (string) $this->get($url.'&print=1')->assertOk()->getContent();
+        $this->assertSame(133, substr_count($print, 'data-report-row'), '⛔ ছাপায় সব সারি আসেনি।');
+        $closing = \App\Core\Support\Money::drCr($this->dealer->fresh()->outstanding());
+        $this->assertSame('(Cr) 6,300.00', $closing, 'প্রস্তুতি: −৫,০০০ − ১,৩০০।');
+        $this->assertMatchesRegularExpression('/data-summary-end>\s*[^<]*'.preg_quote($closing, '/').'/u', $print, '⛔ কাগজের শেষে শেষ জের খাতার বকেয়ার সমান নয়।');
+        $this->assertStringContainsString('data-print-on-load', $print, '⛔ গোটা পরিসরের পাতা নিজে ছাপা শুরু করে না।');
+
+        // ফাইল: সব সারি
+        $response = $this->get($url.'&export=csv')->assertOk();
+        $file = (string) ($response->getContent() ?: $response->streamedContent());
+        $this->assertStringContainsString($closing, $file, '⛔ ফাইল শেষ জের পর্যন্ত পৌঁছায়নি — কেবল প্রথম পাতা।');
+    }
+
+    /** ⭐ শুরু থেকে আজ পর্যন্ত — শুরুর তারিখ লাগে না; খোলা জের শূন্য, সেপ্টেম্বরের সারিও আসে, শেষ জের খাতার সমান। */
+    public function test_from_the_start_needs_no_from_date(): void
+    {
+        $this->happen();
+
+        $result = app(ReportEngine::class)->run(PartyLedgerReports::CUSTOMER,
+            ['from' => ReportEngine::ALL_TIME, 'to' => '2026-10-03', 'customer_id' => $this->dealer->id], perPage: 500);
+
+        $this->assertCount(5, $result->rows, 'খোলা জের (শূন্য) + চারটা সারি।');
+        $this->assertSame(0, bccomp((string) $result->rows[0]['balance'], '0', 2));
+        $this->assertSame(0, bccomp($this->summary($result)['value'], $this->dealer->fresh()->outstanding(), 2));
+
+        $page = (string) $this->get(route('accounts.report.show', ['slug' => 'customer-ledger', 'customer_id' => $this->dealer->id, 'from' => 'all']))->assertOk()->getContent();
+        $this->assertStringContainsString(__('core.report.all_time'), $page);
+        $this->assertStringContainsString('(Cr) 5,000.00', $page);
+    }
+
+    /** ⓘ ইঞ্জিনের সারাই — অন্য রিপোর্টও (হিসাবের খতিয়ান) ছাপায় গোটা পরিসর নেয়, কেবল এই লেজার নয়। */
+    public function test_another_report_also_prints_its_whole_range(): void
+    {
+        $this->travelTo(Carbon::parse('2026-10-02 16:00:00'));
+        for ($i = 1; $i <= 105; $i++) {
+            $this->collect('1');
+        }
+        $this->travelTo(Carbon::parse('2026-10-03 11:00:00'));
+
+        $url = route('accounts.report.show', ['slug' => 'ledger', 'account_id' => $this->receivable(), 'from' => '2026-10-01', 'to' => '2026-10-03']);
+
+        $this->assertSame(100, substr_count((string) $this->get($url)->assertOk()->getContent(), 'data-report-row'), 'প্রস্তুতি: পর্দায় এক পাতা।');
+        $this->assertSame(105, substr_count((string) $this->get($url.'&print=1')->assertOk()->getContent(), 'data-report-row'), '⛔ খতিয়ানের ছাপাও পাতা ধরে।');
+    }
+
     public function test_no_customer_chosen_shows_nothing(): void
     {
         $this->happen();

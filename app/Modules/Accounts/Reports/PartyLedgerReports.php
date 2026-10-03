@@ -52,6 +52,8 @@ final class PartyLedgerReports
             permission: 'accounts.report',
             title: $title,
             filters: ['date_range', 'branch', $filter],
+            // ⓘ চলমান জের একটাই ধারা — শাখা ধরে ভাগ করলে জের ভাঙত (ইঞ্জিন `runningBalance`-এ নিজেই বন্ধ রাখে; এখানে জের SQL-এ)
+            splitByBranch: false,
             query: fn (array $f) => self::query($f, $partyType, (int) ($f[$filter] ?? 0)),
             // ⓘ শেষ জের = সব ডেবিট − সব ক্রেডিট, খোলা জেরের সারিসহ — শেষ সারির জেরের সমান
             summary: function (array $totals): array {

@@ -174,8 +174,12 @@
                 খোঁজা ফলেরই হয়। পাতায় ছাঁকলে দশটা সারির পাশে চারশোর
                 যোগফল বসত।
             --}}
+            {{-- ⭐ ছাপা গোটা পরিসর — পর্দায় এক পাতার বেশি সারি থাকলে "ছাপুন" `?print=1`-এ যায়, যেখানে ইঞ্জিন সব সারি আঁকে
+                 আর পাতাটা নিজেই ছাপা শুরু করে (মালিক, ৩ অক্টোবর ২০২৬: কাস্টমার লেজার পাতা ধরে ধরে ছাপতে হত;
+                 [[ReportEngine::wholeDocumentWanted()]])। ⓘ পুরো পরিসর এক পাতায় থাকলে আগের মতো পর্দাটাই ছাপে। --}}
             <x-ui.toolbar :title="__($report->title)" :count="trans_choice('accounts::message.row_count', $result->totalRows, ['count' => $result->totalRows])"
                           :search="$report->searchableColumns() !== []"
+                          :print-href="$result->totalRows > $result->perPage ? request()->fullUrlWithQuery(['print' => 1, 'page' => null]) : null"
                           :columns="$menuColumns">
                 @if ($report->hasFilter('date_range'))
                     {{--
@@ -193,12 +197,25 @@
                         মিথ্যা বলছে, নীরবে।
                     --}}
                     @unless ($report->isAsOfDate())
+                        {{-- ⭐ "শুরু থেকে আজ পর্যন্ত" — শুরুর তারিখ লাগে না (মালিক, ৩ অক্টোবর ২০২৬; [[ReportEngine::ALL_TIME]]) --}}
+                        @if (! empty($filters['all_time']))
+                            <input type="hidden" name="from" value="{{ \App\Core\Engines\Report\ReportEngine::ALL_TIME }}">
+                            <a href="{{ request()->fullUrlWithQuery(['from' => null, 'page' => null]) }}" data-all-time
+                               class="rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-app) px-2 py-1 text-sm font-semibold">
+                                {{ __('core.report.all_time') }} ✕
+                            </a>
+                        @else
                         <label class="flex items-center gap-2 text-sm">
                             <span class="sr-only">{{ __('accounts::field.from_date') }}</span>
                             <x-ui.date name="from"
                                        value="{{ $filters['from'] ?? '' }}"
                                        class="h-(--spacing-field-compact) rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-app) px-2 text-sm" />
                                        </label>
+                            <a href="{{ request()->fullUrlWithQuery(['from' => \App\Core\Engines\Report\ReportEngine::ALL_TIME, 'to' => now()->toDateString(), 'page' => null]) }}" data-all-time
+                               class="text-sm text-(--color-ink-muted) hover:text-(--color-ink)">
+                                {{ __('core.report.all_time') }}
+                            </a>
+                        @endif
                                        @endunless
 
                     <label class="flex items-center gap-2 text-sm">
@@ -404,7 +421,7 @@
                                     </th>
                                 </tr>
                                 @foreach ($section->rows as $row)
-                                    <tr class="transition-colors hover:bg-(--color-surface-hover)">
+                                    <tr class="transition-colors hover:bg-(--color-surface-hover)" data-report-row>
                                         @foreach ($columns as $column)
                                             <td @class([
                                                 'align-middle',
@@ -443,7 +460,7 @@
                     @else
                         <tbody>
                             @foreach ($result->rows as $row)
-                                <tr class="transition-colors hover:bg-(--color-surface-hover)">
+                                <tr class="transition-colors hover:bg-(--color-surface-hover)" data-report-row>
                                     @foreach ($columns as $column)
                                         <td @class([
                                             'align-middle',
@@ -476,6 +493,13 @@
                     </tfoot>
                 </table>
             </div>
+
+            {{-- ⓘ কাগজে শেষ জের শেষেও — উপরের বাক্সটা কেবল প্রথম পাতায় পড়ে (মালিক, ৩ অক্টোবর ২০২৬) --}}
+            @isset($summary)
+                <p class="hidden print:block px-4 py-2 text-end font-semibold" data-summary-end>
+                    {{ $summary['label'] }}: {{ $summary['text'] ?? \App\Core\Support\Money::format($summary['value']) }}
+                </p>
+            @endisset
 
             {{-- ⓘ শাখা ধরে ভাগে প্রতিটা শাখার প্রথম পাতা — পাতা-ভাগ তখন অর্থহীন --}}
             @if (! $result->isSplitByBranch() && $result->totalRows > $result->perPage)
