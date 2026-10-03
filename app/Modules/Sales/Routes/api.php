@@ -46,6 +46,11 @@ Route::prefix('v1/sales')
             ->where('kind', 'challan|order')->whereUuid('id')->name('tracking.show');
 
         // ⭐ ডেলিভারি অর্ডার — লেখা, জমা, সুপারভাইজারের পরিমাণ ([[DeliveryOrderApiController]], ২ অক্টোবর ২০২৬)
+        // ⭐ ফোনের কাউন্টার — ওয়েবের একই যাচাই আর একই দরজা ([[DirectSaleApiController]], ৪ অক্টোবর ২০২৬); টাকা আছে, কেবল অনলাইনে
+        Route::get('/direct/setup', [\App\Modules\Sales\Http\Controllers\DirectSaleApiController::class, 'setup'])->name('direct.setup');
+        Route::get('/direct/free-allowed', [\App\Modules\Sales\Http\Controllers\DirectSaleApiController::class, 'freeAllowed'])->name('direct.free_allowed');
+        Route::post('/direct', [\App\Modules\Sales\Http\Controllers\DirectSaleApiController::class, 'store'])->name('direct.store');
+
         Route::get('/delivery-orders', [\App\Modules\Sales\Http\Controllers\DeliveryOrderApiController::class, 'index'])->name('delivery_order.index');
         Route::post('/delivery-orders', [\App\Modules\Sales\Http\Controllers\DeliveryOrderApiController::class, 'store'])->name('delivery_order.store');
         Route::get('/delivery-orders/{id}', [\App\Modules\Sales\Http\Controllers\DeliveryOrderApiController::class, 'show'])->whereUuid('id')->name('delivery_order.show');
