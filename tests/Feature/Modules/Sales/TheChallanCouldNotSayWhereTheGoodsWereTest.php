@@ -253,8 +253,11 @@ final class TheChallanCouldNotSayWhereTheGoodsWereTest extends TestCase
         $challan = $this->confirmedChallan(twoLines: true);
         [$first] = $challan->lines()->orderBy('line_no')->get()->all();
 
-        $movements = StockMovement::query()->count();
-        $floor = (string) StockMovement::query()->sum('floor_change');
+        /* ⓘ ২ অক্টোবর ২০২৬ থেকে আংশিক পৌঁছানো না-নেওয়া মালের ফেরত বানায় ([[ShortDeliveryReturn]]) — সেই ফেরতের
+           নিজের চলাচল বাদে; ধাপ বদলানো নিজে একটাও চলাচল নয় */
+        $byStage = fn () => StockMovement::query()->where('source_type', 'not like', \App\Modules\Sales\Models\SalesReturn::STOCK_SOURCE.'%');
+        $movements = $byStage()->count();
+        $floor = (string) $byStage()->sum('floor_change');
 
         $stages = app(DeliveryStageService::class);
         $stages->move($challan, DeliveryStage::PICKING);
@@ -264,9 +267,9 @@ final class TheChallanCouldNotSayWhereTheGoodsWereTest extends TestCase
             'receiver_name' => 'রহিম', 'lines' => [$first->id => '1'],
         ]);
 
-        $this->assertSame($movements, StockMovement::query()->count(),
+        $this->assertSame($movements, $byStage()->count(),
             '⛔ ধাপ বদলাতে গিয়ে স্টক চলাচল বসেছে — মাল দুইবার নামত বা উঠত।');
-        $this->assertSame(0, bccomp($floor, (string) StockMovement::query()->sum('floor_change'), 4));
+        $this->assertSame(0, bccomp($floor, (string) $byStage()->sum('floor_change'), 4));
     }
 
     // ── ট্রিপ ──────────────────────────────────────────────────────────

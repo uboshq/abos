@@ -34,6 +34,7 @@ use App\Modules\Sales\Services\CreditExposure;
 use App\Modules\Sales\Services\DirectSaleService;
 use App\Modules\Sales\Services\SaleNumber;
 use App\Modules\Sales\Services\MarginGuard;
+use App\Modules\Sales\Services\SaleEditor;
 use App\Modules\Supplier\Models\Supplier;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -44,6 +45,7 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
 /**
@@ -409,7 +411,8 @@ class DirectSaleController extends Controller implements HasMiddleware
             'transferModes' => TransferMode::query()->orderBy('code')->get(['id', 'name_en'])
                 ->map(fn (TransferMode $m) => ['id' => (string) $m->id, 'label' => (string) $m->name_en])
                 ->values()->all(),
-            'resume' => $this->resumeFrom($request),
+            // ⭐ নিশ্চিত বিক্রি সম্পাদনা (?edit=) আগে, তারপর রাখা খসড়া (?draft=) — [[editFrom()]]
+            'resume' => $this->editFrom($request) ?? $this->resumeFrom($request),
 
             /* ⭐ উৎস থেকে খোলা পর্দা — রাখা খসড়ার একই আকারে ([[sourceScreen()]]), আর মাথার "DO-0012 থেকে" */
             'sourceResume' => $fromSource === null ? null : $this->sourceScreen($fromSource['screen'], $warehouse),
@@ -706,6 +709,8 @@ class DirectSaleController extends Controller implements HasMiddleware
              * যাতে কেউ হাতে বানানো অনুরোধে বিলের সারিতে মেগাবাইট ভরতে না পারে।
              */
             'resume_invoice_id' => ['nullable', 'integer', 'min:1'],
+            // ⭐ নিশ্চিত বিক্রি সম্পাদনা — [[SaleEditor]]
+            'edit_invoice_id' => ['nullable', 'integer', 'min:1'],
 
             /*
              * ⭐ উৎস (DO …) — ডিপোর যাচাই থেকে খোলা পর্দা (বিক্রয়ের কাজের ধারা, ২ অক্টোবর ২০২৬)। ⓘ এখানে কেবল আকার;
@@ -968,6 +973,33 @@ class DirectSaleController extends Controller implements HasMiddleware
          */
         // ⓘ মাল কীভাবে যাবে — প্রশ্নটা এখন ছাপার দরজায়, নিশ্চিতে নয় (মালিকের অনুমোদিত বদল, ১ অক্টোবর ২০২৬; [[RequireTransportBeforePrint]])
         //    কাউন্টারের "মাল কীভাবে যাবে" ঘর থাকল, ঐচ্ছিক — দিলে চালানে বসে, না দিলে ছাপার আগে চাওয়া হয়।
+
+        /*
+         * ⭐ নিশ্চিত বিক্রি গেট পাসের আগে সম্পাদনা — মালিক, ২ অক্টোবর ২০২৬ ([[SaleEditor]])। ⓘ একই পাতা, একই
+         * যাচাই; কেবল শেষ ধাপটা আলাদা: আগের এন্ট্রি উল্টে একই নম্বরে আবার বসে। আটকালে কিছুই বদলায় না।
+         */
+        if (filled($data['edit_invoice_id'] ?? null)) {
+            abort_unless($request->user()?->can('sales.invoice.create'), 403);
+
+            $editing = SalesInvoice::query()->findOrFail((int) $data['edit_invoice_id']);
+
+            try {
+                $edited = app(SaleEditor::class)->edit($editing, $data, $data['lines'], array_values(array_filter(
+                    $data['gifts'] ?? [],
+                    fn (array $gift) => filled($gift['product_id'] ?? null) && (float) ($gift['qty'] ?? 0) > 0,
+                )));
+            } catch (HeldForApproval $held) {
+                return redirect()
+                    ->route('sales.direct.create', ['edit' => $editing->id])
+                    ->withInput()
+                    ->with('approval_notice', (string) collect($held->errors())->flatten()->first())
+                    ->with('approval_failed', true);
+            }
+
+            return redirect()
+                ->route('sales.invoice.show', $edited)
+                ->with('saved', __('sales::message.sale_edited', ['no' => $edited->document_no]));
+        }
 
         try {
             $result = $this->sales->complete(
@@ -1493,6 +1525,55 @@ class DirectSaleController extends Controller implements HasMiddleware
      *
      * @return array{invoiceId: int, invoiceNo: string, challanNo: string, customerId: int, screen: array<mixed>, fields: array<string, mixed>, viewOnly: bool, approvalUrl: string|null}|null
      */
+    /**
+     * ⭐ নিশ্চিত বিক্রি সম্পাদনার পর্দা — `?edit=<বিল>` (মালিক, ২ অক্টোবর ২০২৬; [[SaleEditor]])।
+     *
+     * ⓘ পর্দার ছবি বিক্রির নিজের (`counter_screen`), আগের জমাগুলো বাদে — ⛔ নাহলে "হালনাগাদ" চাপলে একই জমা
+     * আবার ভাউচার হত। সম্পাদনা না চললে (গেট পাস, ফেরত, অন্য পথের বিল) পর্দা কারণটা বলে, খালি নতুন বিল খোলে।
+     *
+     * @return array<string, mixed>|null
+     */
+    private function editFrom(Request $request): ?array
+    {
+        $id = $request->integer('edit');
+
+        if ($id <= 0 || ! $request->user()?->can('sales.invoice.create')) {
+            return null;
+        }
+
+        $sale = SalesInvoice::query()->with('lines.challanLine.challan')->find($id);
+
+        if ($sale === null) {
+            return null;
+        }
+
+        try {
+            $challan = app(SaleEditor::class)->assertEditable($sale);
+        } catch (ValidationException $e) {
+            session()->now('approval_notice', (string) collect($e->errors())->flatten()->first());
+
+            return null;
+        }
+
+        $saved = (array) $sale->counter_screen;
+        $screen = (array) ($saved['screen'] ?? []);
+        $screen['deposits'] = [];
+
+        return [
+            'invoiceId' => (int) $sale->id,
+            'invoiceNo' => (string) $sale->document_no,
+            'challanNo' => (string) $challan->document_no,
+            'customerId' => (int) $sale->customer_id,
+            'screen' => $screen,
+            'fields' => (array) ($saved['fields'] ?? []),
+            'viewOnly' => false,
+            'approvalUrl' => null,
+            'stage' => 'edit',
+            'editInvoiceId' => (int) $sale->id,
+            'challanUrl' => null,
+        ];
+    }
+
     private function resumeFrom(Request $request): ?array
     {
         $id = $request->integer('draft');

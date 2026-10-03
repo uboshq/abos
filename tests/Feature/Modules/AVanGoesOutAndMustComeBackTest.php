@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Modules;
 
+use App\Modules\MasterData\Models\ReasonCode;
+use App\Modules\Sales\Services\SalesReturnService;
 use App\Core\Support\CompanyContext;
 use App\Core\Support\DocumentStatus;
 use App\Models\Company;
@@ -258,22 +260,33 @@ class AVanGoesOutAndMustComeBackTest extends TestCase
         }
     }
 
-    /** চালান বাতিল হলে মাল খাতায় ফেরে, আর তখন ট্রিপ বন্ধ হয়। */
-    public function test_cancelling_the_challan_lets_the_trip_close(): void
+    /**
+     * ফেরত লিখলে মাল খাতায় ফেরে, আর তখন ট্রিপ বন্ধ হয়।
+     *
+     * ⭐ ২ অক্টোবর ২০২৬ থেকে গেট পাসের পরে বিল বা চালান বাতিল নয় — কেবল ফেরত, মালিকের সইসহ
+     * ([[AConfirmedBillCouldStillBeCancelledTest]])। ⓘ আগে এখানে দাবি ছিল "বিল আর চালান বাতিলে ট্রিপ বন্ধ"।
+     */
+    public function test_a_return_for_the_goods_lets_the_trip_close(): void
     {
         $challan = $this->challan();
         $trip = app(ShipmentService::class)->dispatch($this->trip([$challan]));
 
         $this->settleAll($trip, ShipmentLine::RETURNED, 'ক্রেতা নেননি');
 
-        /*
-         * ⓘ রওনাতেই বিল হয় (মালিক, ২৯ সেপ্টেম্বর ২০২৬ — [[DispatchBill]]), তাই পুরো মাল ফিরলে আগে
-         * বিলটা বাতিল, তারপর চালান — ⛔ বিল রেখে চালান বাতিল হলে প্রাপ্য থাকত, মাল থাকত না।
-         */
-        $bill = SalesInvoice::query()->where('sale_no', $challan->fresh()->sale_no)->firstOrFail();
-        app(SalesInvoiceService::class)->cancel($bill, 'মাল ফিরে এসেছে');
-
-        app(DeliveryChallanService::class)->cancel($challan->fresh(), 'মাল ফিরে এসেছে');
+        // ⓘ রওনাতেই বিল ([[DispatchBill]]) — পুরো মাল ফিরলে পুরো বিলের ফেরত
+        $bill = SalesInvoice::query()->where('sale_no', $challan->fresh()->sale_no)->with('lines')->firstOrFail();
+        $returns = app(SalesReturnService::class);
+        $returns->confirm($returns->create([
+            'customer_id' => $bill->customer_id,
+            'warehouse_id' => $bill->warehouse_id,
+            'sales_invoice_id' => $bill->id,
+            'reason_code_id' => ReasonCode::query()->inContext(ReasonCode::SALES_RETURN)->value('id'),
+            'trx_date' => now()->toDateString(),
+        ], $bill->lines->map(fn ($line) => [
+            'product_id' => $line->product_id,
+            'sales_invoice_line_id' => $line->id,
+            'qty' => (string) $line->qty,
+        ])->all()));
 
         $closed = app(ShipmentService::class)->close($trip->fresh());
 

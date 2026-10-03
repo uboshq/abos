@@ -333,8 +333,13 @@ final class TheParkedBillWaitsAtTheSameCounterTest extends TestCase
 
         $this->assertSame(DocumentStatus::CONFIRMED, $invoice->status, '⛔ ফেরানো খসড়াটা পাকা হয়নি।');
         $this->assertSame(DocumentStatus::CONFIRMED, $challan->status, '⛔ ফেরানো খসড়ার চালানটা পাকা হয়নি।');
-        $this->assertSame($invoiceNo, $invoice->document_no, '⛔ পাকা করতে গিয়ে বিলের নম্বর বদলে গেছে।');
-        $this->assertSame($challanNo, $challan->document_no, '⛔ পাকা করতে গিয়ে চালানের নম্বর বদলে গেছে।');
+        /* ⭐ ২ অক্টোবর ২০২৬ থেকে খসড়া DRF নম্বরে থাকে, আসল INV/CHA নম্বর নিশ্চিতের মুহূর্তে — একই দুই কাগজে ([[SaleNumber::draft()]]) */
+        $this->assertStringStartsWith('DRF-', $invoiceNo, 'প্রস্তুতি: রাখা খসড়ার নম্বর DRF ক্রমে নয়।');
+        $this->assertStringStartsWith('DRF-', $challanNo);
+        $tail = substr((string) $invoice->sale_no, 1);
+        $this->assertStringStartsWith('S-', (string) $invoice->sale_no, '⛔ পাকা হয়েও বিক্রির নম্বর পায়নি।');
+        $this->assertSame('INV'.$tail, $invoice->document_no, '⛔ পাকা বিল আসল INV নম্বর পায়নি।');
+        $this->assertSame('CHA'.$tail, $challan->document_no, '⛔ পাকা চালান বিলের একই লেজে CHA পায়নি।');
         $this->assertNull($invoice->counter_draft, '⛔ পাকা বিলটা এখনো "পেন্ডিং"-এ — আবার খোলা যাবে।');
 
         $this->assertSame(1, Voucher::query()->where('origin', Voucher::ORIGIN_COUNTER)
@@ -1104,12 +1109,13 @@ final class TheParkedBillWaitsAtTheSameCounterTest extends TestCase
         $first = (string) $this->challanOf($draft)->document_no;
         $second = (string) $this->challanOf($sold)->document_no;
 
-        $this->assertStringStartsWith('S-', $first, '⛔ খসড়ার চালান S সারিতে নয়।');
-        $this->assertStringStartsWith('S-', $second, '⛔ নিশ্চিত বিক্রির চালান S সারিতে নয়।');
-        $this->assertNotSame($first, $second, '⛔ দুই বিক্রি একই নম্বর পেয়েছে।');
-        $this->assertSame($second, (string) $sold->document_no, '⛔ বিল আর চালান আলাদা নম্বর পেয়েছে — এক বিক্রি, এক নম্বর।');
-        $this->assertSame($second, (string) $sold->sale_no, '⛔ বিলে বিক্রির নম্বর লেখা হয়নি।');
-        $this->assertSame($first, (string) $draft->fresh()->document_no, '⛔ খসড়ার বিল তার চালানের নম্বর পায়নি।');
+        /* ⭐ ২ অক্টোবর ২০২৬ থেকে: খসড়া DRF ক্রমে; নিশ্চিত বিক্রির বিল আর চালান এক নম্বর, উপসর্গ আলাদা — INV-0154 ↔ CHA-0154 */
+        $this->assertStringStartsWith('DRF-', $first, '⛔ খসড়ার চালান খসড়ার ক্রমে নয়।');
+        $this->assertStringStartsWith('CHA-', $second, '⛔ নিশ্চিত বিক্রির চালান CHA নয়।');
+        $this->assertStringStartsWith('S-', (string) $sold->sale_no, '⛔ বিলে বিক্রির নম্বর লেখা হয়নি।');
+        $this->assertSame('INV'.substr($second, 3), (string) $sold->document_no, '⛔ বিল আর চালান আলাদা নম্বর পেয়েছে — এক বিক্রি, এক নম্বর।');
+        $this->assertSame('S'.substr($second, 3), (string) $sold->sale_no);
+        $this->assertStringStartsWith('DRF-', (string) $draft->fresh()->document_no, '⛔ খসড়ার বিল খসড়ার ক্রমে নয়।');
         $this->assertStringStartsWith('S-', (string) $this->get(route('sales.direct.create'))->viewData('salePreview'));
     }
 
@@ -1127,7 +1133,9 @@ final class TheParkedBillWaitsAtTheSameCounterTest extends TestCase
 
         $this->sell(['save_as_draft' => '0', 'challan_no' => $preview])->assertSessionHasNoErrors();
 
-        $this->assertSame($preview, DeliveryChallan::query()->latest('id')->value('document_no'));
+        // ⓘ পর্দার নম্বরটা বিক্রির নম্বর (S); চালান তার লেজে CHA ([[SaleNumber]])
+        $this->assertSame($preview, DeliveryChallan::query()->latest('id')->value('sale_no'));
+        $this->assertSame('CHA'.substr($preview, 1), DeliveryChallan::query()->latest('id')->value('document_no'));
 
         $after = (string) $this->get(route('sales.direct.create'))->assertOk()->viewData('salePreview');
 

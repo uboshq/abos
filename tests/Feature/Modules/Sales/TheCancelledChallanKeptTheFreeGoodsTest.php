@@ -91,7 +91,12 @@ final class TheCancelledChallanKeptTheFreeGoodsTest extends TestCase
             lot: 'TCC-LOT-B', expiry: now()->addYear()->toDateString());
     }
 
-    public function test_cancelling_the_challan_puts_the_free_and_gift_goods_back_in_the_free_pool(): void
+    /*
+     * ⭐ ২ অক্টোবর ২০২৬ থেকে নিশ্চিত বিক্রি বাতিল হয় না — গেট পাসের আগে সম্পাদনা ([[SaleEditor]])। ⓘ আগে দাবি ছিল
+     * "বিল আর চালান বাতিলে ফ্রি ও উপহার ফেরে"; সেই উল্টোটাই এখন সম্পাদনার প্রথম ধাপ ([[DeliveryChallanService::takeBackForEdit()]])।
+     * ⭐ ফ্রি আর উপহার বাদ দিয়ে হালনাগাদ — দুটোই ফ্রি ভাণ্ডারে ফেরে, যে লট থেকে বেরিয়েছিল সেখানেই।
+     */
+    public function test_an_edit_that_drops_the_free_and_the_gift_puts_them_back_in_the_free_pool(): void
     {
         /*
          * বাকিতে: সাবান ৮ @ ৬০ ; ওষুধ লট A থেকে ১০ @ ৫০ আর ফ্রি ১
@@ -122,13 +127,22 @@ final class TheCancelledChallanKeptTheFreeGoodsTest extends TestCase
         $this->assertSame(0, bccomp($this->lotA->fresh()->freeBalance($this->warehouse), '9', 4),
             'বিক্রির পরে লট A-র ফ্রি ১০ − ১ = ৯ হওয়ার কথা');
 
-        // মালিক যেভাবে করেন: আগে বিল, তারপর চালান — পর্দার দরজা দিয়ে
-        $this->post(route('sales.invoice.cancel', $invoice), ['reason' => 'ভুল পার্টি'])
-            ->assertSessionHasNoErrors()->assertRedirect();
-        $this->post(route('sales.challan.cancel', $challan), ['reason' => 'ভুল পার্টি'])
-            ->assertSessionHasNoErrors()->assertRedirect();
+        // ⓘ কাউন্টারের সম্পাদনার দরজা দিয়ে — একই সারি, ফ্রি ০, উপহার নেই
+        $this->post(route('sales.direct.store'), [
+            'own_transport' => '1',
+            'customer_id' => $this->customer->id,
+            'warehouse_id' => $this->warehouse->id,
+            'trx_date' => now()->toDateString(),
+            'payment_term' => 'credit',
+            'edit_invoice_id' => $invoice->id,
+            'lines' => [
+                ['product_id' => $this->soap->id, 'qty' => '8', 'rate' => '60', 'free_qty' => '0'],
+                ['product_id' => $this->medicine->id, 'batch_id' => $this->lotA->id, 'qty' => '10', 'rate' => '50', 'free_qty' => '0'],
+            ],
+        ])->assertSessionHasNoErrors()->assertRedirect(route('sales.invoice.show', $invoice));
 
-        $this->assertSame('cancelled', (string) $challan->fresh()->status);
+        $this->assertSame('confirmed', (string) $challan->fresh()->status);
+        $this->assertSame(0, $challan->fresh()->giftLines()->count(), '⛔ উপহার বাদ দেওয়ার পরেও চালানে আছে।');
 
         // ⭐ ফ্রি ভাণ্ডার প্রস্তুতির অবস্থায়: বিস্কুট ৯ + ১ = ১০ ; ওষুধ ১৯ + ১ = ২০
         $this->assertFreeIs($this->biscuit, '10', 'বাতিলের পরে বিস্কুটের উপহার ফ্রি ভাণ্ডারে ফেরেনি');
@@ -141,9 +155,43 @@ final class TheCancelledChallanKeptTheFreeGoodsTest extends TestCase
         $this->assertSame(0, bccomp($this->lotB->fresh()->freeBalance($this->warehouse), '10', 4),
             'লট B-র ফ্রি '.$this->lotB->fresh()->freeBalance($this->warehouse).', হাতে গোনা ১০ (ছোঁয়া হয়নি)');
 
-        // দামের মাল আগেও ফিরত — এখনো ফেরে: সাবান ১০০, লট A ১০০
-        $this->assertSame(0, bccomp((string) app(StockService::class)->statesFor($this->soap, $this->warehouse)['floor'], '100', 4));
-        $this->assertSame(0, bccomp($this->lotA->fresh()->balance($this->warehouse), '100', 4));
+        // ⓘ দামের মাল আবার বেরিয়েছে, একবারই — সাবান ১০০ − ৮ = ৯২, লট A ১০০ − ১০ = ৯০ (দুইবার নয়, ফেরাও নয়)
+        $this->assertSame(0, bccomp((string) app(StockService::class)->statesFor($this->soap, $this->warehouse)['floor'], '92', 4));
+        $this->assertSame(0, bccomp($this->lotA->fresh()->balance($this->warehouse), '90', 4));
+    }
+
+    /**
+     * ⭐ সম্পাদনায় প্রতিটা লট নিজের দামে — ৩ অক্টোবর ২০২৬ ([[SalesInvoiceService::lotsThatLeft()]])।
+     *
+     * ⛔ সম্পাদনায় মাল ফেরে আর আবার বেরোয় একই চালানের নামে; কেবল বেরোনো সারি গুনলে লট A-র আগের ২ আর নতুন ২ দুটোই
+     * গোনা হত, আর লট B-র ২-টাও A-র দামে (৩০) কাটা যেত। ⓘ হাতে গোনা: A ২ × ৩০ + B ২ × ৩৬ = ১৩২ (ভুলে ১২০)।
+     */
+    public function test_an_edit_takes_each_lots_own_cost(): void
+    {
+        $form = fn (array $lines, array $extra = []) => [
+            'own_transport' => '1',
+            'customer_id' => $this->customer->id,
+            'warehouse_id' => $this->warehouse->id,
+            'trx_date' => now()->toDateString(),
+            'payment_term' => 'credit',
+            'lines' => $lines,
+            ...$extra,
+        ];
+
+        $this->post(route('sales.direct.store'), $form([
+            ['product_id' => $this->medicine->id, 'batch_id' => $this->lotA->id, 'qty' => '2', 'rate' => '50', 'free_qty' => '0'],
+        ]))->assertSessionHasNoErrors();
+
+        $invoice = SalesInvoice::query()->latest('id')->firstOrFail();
+        $this->assertSame(0, bccomp('60', (string) $invoice->cost_of_goods, 4), 'প্রস্তুতি: লট A ২ × ৩০ = ৬০');
+
+        $this->post(route('sales.direct.store'), $form([
+            ['product_id' => $this->medicine->id, 'batch_id' => $this->lotA->id, 'qty' => '2', 'rate' => '50', 'free_qty' => '0'],
+            ['product_id' => $this->medicine->id, 'batch_id' => $this->lotB->id, 'qty' => '2', 'rate' => '50', 'free_qty' => '0'],
+        ], ['edit_invoice_id' => $invoice->id]))->assertSessionHasNoErrors();
+
+        $this->assertSame(0, bccomp('132', (string) $invoice->fresh()->cost_of_goods, 4),
+            '⛔ সম্পাদনার পরে খরচ '.$invoice->fresh()->cost_of_goods.', হাতে গোনা A ৬০ + B ৭২ = ১৩২ — আগের টানও গোনা হয়েছে।');
     }
 
     private function assertFreeIs(Product $product, string $expected, string $why): void

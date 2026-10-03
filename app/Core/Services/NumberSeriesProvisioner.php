@@ -35,6 +35,9 @@ final class NumberSeriesProvisioner
      */
     private const FRIENDLY_PREFIX = [
         'SI' => 'INV',
+
+        /* ⭐ চালান CHA — মালিক, ২ অক্টোবর ২০২৬: *"INV-0154 ↔ CHA-0154"*, বিল আর চালান এক নম্বর, উপসর্গ আলাদা */
+        'DC' => 'CHA',
         'SR' => 'SRT',
         'PI' => 'PUR',
         'PR' => 'PRT',
@@ -123,6 +126,12 @@ final class NumberSeriesProvisioner
      * হলে ব্যতিক্রম ছোড়ে — টাইপো থেকে নীরবে একটা সিরিজ জন্মানোর চেয়ে
      * থেমে যাওয়া ভালো।
      */
+    /** নতুন সিরিজের উপসর্গ — বন্ধুসুলভ নাম থাকলে সেটা, নাহলে ধরনটাই */
+    public function defaultPrefix(string $docType): string
+    {
+        return self::FRIENDLY_PREFIX[$docType] ?? $docType;
+    }
+
     public function knows(string $docType): bool
     {
         foreach ($this->registry->all() as $module) {

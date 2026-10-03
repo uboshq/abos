@@ -70,6 +70,19 @@
                 </a>
             @endif
         </div>
+    {{-- ⭐ নিশ্চিত বিক্রি সম্পাদনা — গেট পাসের আগে (মালিক, ২ অক্টোবর ২০২৬; [[SaleEditor]]) --}}
+    @elseif (! empty($resume) && ($resume['stage'] ?? '') === 'edit')
+        <div role="status" data-editing-sale
+             class="mb-3 flex flex-wrap items-center gap-3 rounded-(--radius-card) border
+                    border-(--color-warning) bg-(--color-badge-pending-bg) p-3">
+            <span class="text-sm font-semibold text-(--color-badge-pending-ink)">
+                ✎ {{ __('sales::field.editing_sale') }}:
+                <span class="num">{{ $resume['invoiceNo'] }}</span>
+                · {{ __('sales::field.challan_no_short') }}
+                <span class="num">{{ $resume['challanNo'] }}</span>
+            </span>
+            <span class="text-xs text-(--color-badge-pending-ink)">{{ __('sales::message.editing_sale_hint') }}</span>
+        </div>
     @elseif (! empty($resume) && ! empty($resume['viewOnly']))
         <div role="status"
              class="mb-3 flex flex-wrap items-center gap-3 rounded-(--radius-card) border
@@ -271,6 +284,10 @@
              নম্বর না বদলে। --}}
         <input type="hidden" name="screen_state" :value="screenSnapshot">
         <input type="hidden" name="resume_invoice_id" :value="resumeId">
+        {{-- ⓘ সম্পাদনার বিল — সার্ভারে আঁকা, Alpine নয়; থাকলে সংরক্ষণ [[SaleEditor]]-এ যায় --}}
+        @if (! empty($resume['editInvoiceId']))
+            <input type="hidden" name="edit_invoice_id" value="{{ $resume['editInvoiceId'] }}">
+        @endif
         {{-- ⓘ উৎস — নতুন বিলে; রাখা খসড়া নিজের উৎস নিজেই মনে রাখে --}}
         @if (! empty($counterSource) && empty($counterSource['fromDraft']))
             <input type="hidden" name="source" value="{{ $counterSource['key'] }}">

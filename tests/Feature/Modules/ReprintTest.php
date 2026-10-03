@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Modules;
 
+use App\Core\Support\DocumentStatus;
 use App\Core\Engines\Print\PrintableDocument;
 use App\Core\Services\SettingsService;
 use App\Core\Support\CompanyContext;
@@ -125,7 +126,7 @@ class ReprintTest extends TestCase
     public function test_a_cancelled_reprint_says_cancelled_and_its_number(): void
     {
         $this->print();
-        $this->invoice = app(SalesInvoiceService::class)->cancel($this->invoice->fresh(), 'test');
+        $this->invoice = $this->cancelledBeforeTheRule($this->invoice->fresh());
 
         $doc = $this->print()['doc'];
 
@@ -274,5 +275,20 @@ class ReprintTest extends TestCase
             ->where('document_type', 'sales_invoice')
             ->where('document_id', $draft->id)
             ->count());
+    }
+
+    /**
+     * ⓘ ২ অক্টোবর ২০২৬-এর আগে নিশ্চিত বিল বাতিল করা যেত — সেই কাগজগুলো খাতায় আছে, আর ছাপলে "বাতিল" বলতেই হয়।
+     * এখন সেবা আর বাতিল করে না ([[SalesInvoiceService::cancel()]]), তাই সেই পুরনো অবস্থাটা সরাসরি বসানো।
+     */
+    private function cancelledBeforeTheRule(SalesInvoice $invoice): SalesInvoice
+    {
+        $invoice->forceFill([
+            'status' => DocumentStatus::CANCELLED,
+            'cancelled_at' => now(),
+            'cancel_reason' => 'ভুল দামে কাটা হয়েছিল',
+        ])->save();
+
+        return $invoice->fresh();
     }
 }

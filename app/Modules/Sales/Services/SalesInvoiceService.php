@@ -343,9 +343,16 @@ final class SalesInvoiceService
              * বিক্রির নম্বর — S-0012, একই বিক্রির দ্বিতীয় বিল S-0012/2। ⓘ চালান ছাড়া বিল
              * (সরাসরি অফিসের বিল) নিজেই নতুন বিক্রি; হাতে লেখা নম্বর তখন আগের মতোই চলে।
              */
+            /*
+             * ⭐ ২ অক্টোবর ২০২৬ থেকে: চালানের বিক্রির নম্বর থাকলে সেটা (INV-0154 ↔ CHA-0154); চালান খসড়া হলে, বা
+             * চালান ছাড়া বিলে, খসড়া DRF নম্বর — আসল নম্বর নিশ্চিতে ([[giveTheSaleItsNumber()]])। হাতে লেখা নম্বর জন্মেই চূড়ান্ত।
+             */
+            $numbers = app(SaleNumber::class);
             $saleNo = $this->saleNumberOfLines($lines)
-                ?? app(SaleNumber::class)->begin(SalesInvoice::class, $given);
-            $documentNo = app(SaleNumber::class)->forPaper(SalesInvoice::class, $saleNo);
+                ?? ($this->hasChallanLines($lines) || ! $numbers->isHandWritten($given) ? null : $numbers->begin(SalesInvoice::class, $given));
+            $documentNo = $saleNo !== null
+                ? $numbers->forPaper(SalesInvoice::class, $saleNo)
+                : $numbers->draft();
 
             $invoice = SalesInvoice::create([
                 'company_id' => CompanyContext::id(),
@@ -565,6 +572,9 @@ final class SalesInvoiceService
                 ]);
             }
 
+            // ⭐ আসল নম্বর এখন — মাল আর খাতা নিচে এই নম্বরেই লেখা হয়
+            $this->giveTheSaleItsNumber($invoice);
+
             /*
              * চালান ছাড়া লাইনের মাল এখনই বেরোয়।
              *
@@ -670,7 +680,23 @@ final class SalesInvoiceService
     }
 
     /**
-     * বাতিল — উল্টো এন্ট্রি, আর চালান ছাড়া বেরোনো মাল স্টকে ফেরে।
+     * ⛔ নিশ্চিত বিল বাতিল বা মোছা যায় না — মালিক, ২ অক্টোবর ২০২৬ ([[docs/বিক্রয়ের কাজের ধারা — ২ অক্টোবর.md]] §৪)।
+     *
+     * *"ইনভয়েসের পরে … মোছা কখনো নয়"*: গেট পাসের আগে কেবল সম্পাদনা (খাতা উল্টে আবার বসে, নম্বর একই), পরে কেবল
+     * ফেরত বা ক্রেডিট নোট, মালিকের সইসহ। ⓘ দেয়ালটা এখানে, সেবায় — কাউন্টার, বিলের পাতা, তালিকার বোতাম,
+     * API, সবাই এই পথেই আসে; বোতাম লুকানো কেবল সুবিধা। খসড়া বিল (ধরা কাউন্টার-বিক্রয়সহ) আগের মতোই বাতিল হয়।
+     */
+    private function assertNotPosted(SalesInvoice $invoice): void
+    {
+        if ($invoice->status === DocumentStatus::CONFIRMED) {
+            throw ValidationException::withMessages([
+                'status' => __('sales::validation.posted_invoice_stays', ['no' => $invoice->document_no]),
+            ]);
+        }
+    }
+
+    /**
+     * বাতিল — কেবল খসড়া ([[assertNotPosted()]]); ধরা মাল ছাড়া পায়।
      */
     public function cancel(SalesInvoice $invoice, string $reason, Carbon|string|null $onDate = null): SalesInvoice
     {
@@ -679,6 +705,8 @@ final class SalesInvoiceService
                 'status' => __('sales::validation.already_cancelled', ['no' => $invoice->document_no]),
             ]);
         }
+
+        $this->assertNotPosted($invoice);
 
         $invoice->loadMissing(['lines.product', 'lines.challanLine', 'warehouse']);
 
@@ -704,6 +732,9 @@ final class SalesInvoiceService
                 ]);
             }
 
+            // ⛔ তালার ভিতরে আবার — হাতে ধরা খসড়ার মধ্যে কেউ নিশ্চিত করে ফেললে
+            $this->assertNotPosted($locked);
+
             /*
              * বাতিল হলে আটকানো মাল ছাড়া পায় — মালিকের নিয়মের অন্য অর্ধেক
              * ("যতক্ষণ না cancel করছি")।
@@ -716,31 +747,7 @@ final class SalesInvoiceService
             }
 
             if ($locked->status === DocumentStatus::CONFIRMED) {
-                foreach ($invoice->lines as $line) {
-                    if ($line->challanLine !== null) {
-                        continue;
-                    }
-
-                    $this->stock->move(
-                        product: $line->product,
-                        warehouse: $invoice->warehouse ?? $this->defaultWarehouse(),
-                        sourceType: SalesInvoice::STOCK_SOURCE.':cancel',
-                        sourceId: $invoice->id,
-                        floor: (string) $line->qty,
-                        date: $date,
-                        documentNo: $invoice->document_no,
-                        narration: $reason,
-                    );
-                }
-
-                $this->putCostBackInLayers($invoice, $date);
-
-                $this->posting->reverse(
-                    sourceType: SalesInvoice::drillSourceType(),
-                    sourceId: $invoice->id,
-                    reversalDate: $date,
-                    reason: $reason,
-                );
+                $this->unpost($invoice, $date, $reason);
             }
 
             $invoice->update([
@@ -752,6 +759,60 @@ final class SalesInvoiceService
 
             return $invoice->fresh(['lines']);
         });
+    }
+
+    /**
+     * ⭐ নিশ্চিত বিক্রি সম্পাদনার প্রথম ধাপ — মালিক, ২ অক্টোবর ২০২৬ ([[SaleEditor]])।
+     *
+     * ⓘ বাতিলের হুবহু উল্টো ([[unpost()]]) — চালান ছাড়া বেরোনো মাল, খরচের স্তর, খাতা — তারপর বিল কাউন্টারের খসড়ার
+     * অবস্থায়, নম্বর অক্ষত। ⛔ একা ডাকার জন্য নয়: বিক্রি-সম্পাদকের লেনদেনের ভিতরে, যেখানে পরের ধাপ আবার নিশ্চিত করে।
+     */
+    public function takeBackForEdit(SalesInvoice $invoice, Carbon $date, string $reason): void
+    {
+        if ($invoice->status !== DocumentStatus::CONFIRMED) {
+            throw ValidationException::withMessages([
+                'status' => __('sales::validation.edit_only_confirmed', ['no' => $invoice->document_no]),
+            ]);
+        }
+
+        $invoice->loadMissing(['lines.product', 'lines.challanLine', 'warehouse']);
+
+        $this->unpost($invoice, $date, $reason);
+
+        // ⓘ কাউন্টারের খসড়ার চিহ্ন — পর্দার ছবি; কাউন্টার এটা দেখেই বিলটা "রাখা" বলে চেনে ([[DirectSaleService::parkedFor()]])
+        $invoice->update(['status' => DocumentStatus::DRAFT, 'counter_draft' => $invoice->counter_screen ?? []]);
+    }
+
+    /**
+     * নিশ্চিত বিলের সব ছাপ উল্টো — বাতিল আর সম্পাদনা, দুই পথের একই অংশ।
+     */
+    private function unpost(SalesInvoice $invoice, Carbon $date, string $reason): void
+    {
+        foreach ($invoice->lines as $line) {
+            if ($line->challanLine !== null) {
+                continue;
+            }
+
+            $this->stock->move(
+                product: $line->product,
+                warehouse: $invoice->warehouse ?? $this->defaultWarehouse(),
+                sourceType: SalesInvoice::STOCK_SOURCE.':cancel',
+                sourceId: $invoice->id,
+                floor: (string) $line->qty,
+                date: $date,
+                documentNo: $invoice->document_no,
+                narration: $reason,
+            );
+        }
+
+        $this->putCostBackInLayers($invoice, $date);
+
+        $this->posting->reverse(
+            sourceType: SalesInvoice::drillSourceType(),
+            sourceId: $invoice->id,
+            reversalDate: $date,
+            reason: $reason,
+        );
     }
 
     /**
@@ -1254,14 +1315,21 @@ final class SalesInvoiceService
             ->values()
             ->all();
 
+        /*
+         * ⛔ ফেরানো সারিও গোনায় — নিশ্চিত বিক্রি সম্পাদনা, ৩ অক্টোবর ২০২৬ ([[SaleEditor]])।
+         * ⓘ সম্পাদনায় মাল ফেরে (`…:cancel`) আর আবার বেরোয় একই নথির নামে; কেবল বেরোনো সারি গুনলে আগের আর নতুন
+         * দুই টানই গোনা হত, আর খরচ স্তর থেকে দ্বিগুণ টানত। ⭐ এখন জাল বেরোনো = বেরোনো − ফেরা।
+         */
+        $sources = fn (string $type) => [$type, $type.':cancel'];
+
         $out = StockMovement::query()
             ->where(fn ($q) => $q
-                ->where(fn ($w) => $w->where('source_type', SalesInvoice::STOCK_SOURCE)->where('source_id', $invoice->id))
+                ->where(fn ($w) => $w->whereIn('source_type', $sources(SalesInvoice::STOCK_SOURCE))->where('source_id', $invoice->id))
                 ->when($challanIds !== [], fn ($q) => $q->orWhere(fn ($w) => $w
-                    ->where('source_type', DeliveryChallan::STOCK_SOURCE)->whereIn('source_id', $challanIds))))
+                    ->whereIn('source_type', $sources(DeliveryChallan::STOCK_SOURCE))->whereIn('source_id', $challanIds))))
             ->whereNotNull('batch_id')
-            ->where('floor_change', '<', 0)
             ->groupBy('product_id', 'batch_id')
+            ->havingRaw('SUM(floor_change) < 0')
             ->orderBy('batch_id')
             ->selectRaw('product_id, batch_id, -SUM(floor_change) as qty')
             ->get();
@@ -1697,6 +1765,48 @@ final class SalesInvoiceService
      * পড়ার মতো বার্তা দেওয়া হয় (উপরে), কারণ তিনি একটা নির্দিষ্ট নম্বর
      * চেয়েছেন; নীরবে অন্য একটা বসিয়ে দিলে সেটা তাঁর কাগজের সাথে মিলত না।
      */
+    /**
+     * খসড়া বিলের আসল নম্বর — নিশ্চিতের লেনদেনের ভিতরে (মালিক, ২ অক্টোবর ২০২৬)।
+     *
+     * ⓘ চালান থেকে বিল হলে চালানের বিক্রির নম্বর (চালান আগে নিশ্চিত হয় — কাউন্টারেও), নাহলে নতুন বিক্রি।
+     */
+    private function giveTheSaleItsNumber(SalesInvoice $invoice): void
+    {
+        if ($invoice->sale_no !== null) {
+            return;
+        }
+
+        $lines = $invoice->lines()->get(['delivery_challan_line_id'])
+            ->map(fn ($l) => ['delivery_challan_line_id' => $l->delivery_challan_line_id])->all();
+
+        $numbers = app(SaleNumber::class);
+        $saleNo = $this->saleNumberOfLines($lines) ?? $numbers->begin(SalesInvoice::class);
+        $documentNo = $numbers->forPaper(SalesInvoice::class, $saleNo);
+
+        $invoice->update(['sale_no' => $saleNo, 'document_no' => $documentNo]);
+
+        IssuedNumber::query()
+            ->whereIn('document_no', [$saleNo, $documentNo])
+            ->whereNull('source_id')
+            ->update(['source_type' => SalesInvoice::drillSourceType(), 'source_id' => $invoice->id]);
+    }
+
+    /**
+     * বিলের কোনো সারি চালান থেকে কি — তাহলে নম্বর চালানেরই, নিজে নতুন বিক্রি নয়।
+     *
+     * @param  list<array<string, mixed>>  $lines
+     */
+    private function hasChallanLines(array $lines): bool
+    {
+        foreach ($lines as $line) {
+            if ((int) ($line['delivery_challan_line_id'] ?? 0) > 0) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     /**
      * বিলের সারির চালান যে বিক্রির — তার নম্বর; চালান ছাড়া হলে null।
      *

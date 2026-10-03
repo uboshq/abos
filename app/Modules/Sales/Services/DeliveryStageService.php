@@ -552,6 +552,14 @@ final class DeliveryStageService
             }
 
             /*
+             * ⭐ কম নিলে বাকিটা নিজে ফেরত — মালিক, ২ অক্টোবর ২০২৬ ([[ShortDeliveryReturn]])। ⓘ একই লেনদেনে:
+             * ফেরত না বসলে আংশিক পৌঁছানোও বসে না, তাই "পৌঁছেছে কম, দেনা পুরো" কখনো থাকে না।
+             */
+            if ($to === DeliveryStage::PARTIALLY_DELIVERED && $lines !== []) {
+                app(ShortDeliveryReturn::class)->for($challan, $event, $lines);
+            }
+
+            /*
              * ⭐ গেট পাস রওনার মুহূর্তে — মালিকের নকশা, ২৮ সেপ্টেম্বর ২০২৬ (রাত)।
              * ⓘ ট্রিপ বেরোলে আর হাতে "রওনা" বসালে দুইটাই এই পথে আসে — তাই কোনো রওনা কাগজ ছাড়া
              * বেরোয় না ([[GatePassService::issueFor()]])। একই লেনদেনে: গেট পাস না হলে রওনাও না।

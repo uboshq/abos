@@ -125,8 +125,17 @@ final class DeliveryChallanService
              * ⭐ একটা বিক্রির একটাই নম্বর (মালিক, ২৯ সেপ্টেম্বর ২০২৬) — DO-তেই জন্ম। ⓘ একই আদেশের
              * আগের DO থাকলে সেই বিক্রিরই নম্বর (দ্বিতীয় চালান S-0012/2); নাহলে নতুন বিক্রি।
              */
-            $saleNo = $this->saleNumberFor($order?->id, trim((string) ($data['document_no'] ?? '')));
-            $documentNo = app(SaleNumber::class)->forPaper(DeliveryChallan::class, $saleNo);
+            $given = trim((string) ($data['document_no'] ?? ''));
+
+            /*
+             * ⭐ ২ অক্টোবর ২০২৬ থেকে খসড়া DRF নম্বরে জন্মায়; আসল CHA নম্বর নিশ্চিতে ([[giveTheSaleItsNumber()]])।
+             * ⓘ হাতে লেখা নম্বর জন্মেই চূড়ান্ত — পুরনো কাগজের বই থেকে বসানো।
+             */
+            $numbers = app(SaleNumber::class);
+            $saleNo = $numbers->isHandWritten($given) ? $this->saleNumberFor($order?->id, $given) : null;
+            $documentNo = $saleNo !== null
+                ? $numbers->forPaper(DeliveryChallan::class, $saleNo)
+                : $numbers->draft();
 
             $challan = DeliveryChallan::create([
                 'company_id' => CompanyContext::id(),
@@ -338,6 +347,9 @@ final class DeliveryChallanService
                 ]);
             }
 
+            // ⭐ আসল নম্বর এখন — মাল আর খাতা নিচে এই নম্বরেই লেখা হয়
+            $this->giveTheSaleItsNumber($challan);
+
             foreach ($challan->lines as $line) {
                 $qty = (string) $line->delivered_qty;
 
@@ -422,104 +434,7 @@ final class DeliveryChallanService
             $this->assertNotInvoiced($challan);
 
             if ($challan->status === DocumentStatus::CONFIRMED) {
-                /*
-                 * গাড়ির ভাড়ার দাখিলাও ফেরে।
-                 *
-                 * ⚠️ না ফিরলে পরিবহনকারীর খাতায় **একটা পাওনা বসে থাকত
-                 * যার কোনো চালান নেই** — আর সেটা ধরা পড়ত মাস শেষে
-                 * মেলানোর সময়, কারণ ছাড়াই। তিনি টাকা চাইতেন, আমরা
-                 * কাগজ খুঁজে পেতাম না।
-                 *
-                 * ⓘ `reverse()` উল্টো সারি বসায়, মূল সারি মোছে না —
-                 * নিয়ম ৫ ও [[NoHardDeleteGuard]] অনুযায়ী। তাই বাতিল
-                 * চালানের ইতিহাসও খতিয়ানে থেকে যায়।
-                 *
-                 * ⚠️ আগে যাচাই করা **বাধ্যতামূলক**: `reverse()` কিছু না
-                 * পেলে `PostingException` ছোঁড়ে। বেশিরভাগ চালানে পরিবহন
-                 * খরচ থাকেই না, তাই যাচাই ছাড়া ডাকলে **ওই চালানগুলোর
-                 * বাতিলই ভেঙে যেত** — আর ভুলটা দেখা দিত কেবল বাতিলের
-                 * মুহূর্তে, অর্থাৎ যখন ব্যবহারকারী তাড়াহুড়োয় আছেন।
-                 */
-                $hasPosting = LedgerEntry::query()
-                    ->where('source_type', DeliveryChallan::STOCK_SOURCE)
-                    ->where('source_id', $challan->id)
-                    ->exists();
-
-                if ($hasPosting) {
-                    $this->posting->reverse(
-                        sourceType: DeliveryChallan::STOCK_SOURCE,
-                        sourceId: $challan->id,
-                        reversalDate: $date,
-                        reason: $reason,
-                    );
-                }
-
-                /*
-                 * মাল ফেরে যে লট থেকে বেরিয়েছিল সেই লটেই।
-                 *
-                 * আগে এখানে লাইন ধরে নতুন করে গোনা হত, আর লট না থাকায়
-                 * সেটা ঠিকই ছিল। লট আসার পর ওটা ভুল হয়ে যেত: FEFO
-                 * আজকের অবস্থা ধরে অন্য লট বাছত, মাল ফিরত এমন বাক্সে
-                 * যেখান থেকে কখনো বেরোয়ইনি, আর রিকলের সময় ভুল ক্রেতার
-                 * কাছে ফোন যেত।
-                 */
-                $this->stock->reverse(
-                    sourceType: DeliveryChallan::STOCK_SOURCE,
-                    sourceId: $challan->id,
-                    reversedType: DeliveryChallan::STOCK_SOURCE.':cancel',
-                    date: $date,
-                    narration: $reason,
-                );
-
-                /*
-                 * ⭐ ফ্রি আর উপহারের মালও ফ্রি ভাণ্ডারে ফেরে, একই লটে — ২৭ সেপ্টেম্বর ২০২৬।
-                 *
-                 * ⛔ কাউন্টার বিক্রিতে ওগুলো বেরোয় আলাদা উৎস-নামে
-                 * ([[DirectSaleService::moveFreeStock()]]: `:free`, `:gift`),
-                 * আর উপরের উল্টানো কেবল দামের মাল ধরত। ⓘ হাতে গোনা: বিস্কুট
-                 * ফ্রি ১০, ১টা উপহার দিয়ে চালান বাতিল → ফ্রি ১০ হওয়ার কথা,
-                 * থাকত ৯ ([[TheCancelledChallanKeptTheFreeGoodsTest]])।
-                 *
-                 * ⓘ কিছু না থাকলে `reverse()` খালি ফেরে — সাধারণ চালানে কিছু বদলায় না।
-                 */
-                foreach ([':free', ':gift'] as $kind) {
-                    $this->stock->reverse(
-                        sourceType: DeliveryChallan::STOCK_SOURCE.$kind,
-                        sourceId: $challan->id,
-                        reversedType: DeliveryChallan::STOCK_SOURCE.$kind.':cancel',
-                        date: $date,
-                        narration: $reason,
-                    );
-                }
-
-                /*
-                 * ধরাটা আলাদা সারিতে ফেরে — লট ধরে নয়, লাইন ধরে।
-                 *
-                 * Reserved পণ্য ও গুদামের সংখ্যা, লটের নয়। আর অর্ডারটা
-                 * এখনো খোলা থাকলেই কেবল ফেরে; বাতিল অর্ডারে ফেরালে ধরা
-                 * থেকে যেত যা কেউ কোনোদিন ছাড়ত না।
-                 */
-                foreach ($challan->lines as $line) {
-                    $reserve = $line->orderLine?->order?->status === DocumentStatus::CONFIRMED
-                        ? (string) $line->delivered_qty
-                        : '0';
-
-                    if (bccomp($reserve, '0', 4) <= 0) {
-                        continue;
-                    }
-
-                    $this->stock->move(
-                        product: $line->product,
-                        warehouse: $challan->warehouse,
-                        sourceType: DeliveryChallan::STOCK_SOURCE.':cancel',
-                        sourceId: $challan->id,
-                        floor: '0',
-                        reserved: $reserve,
-                        date: $date,
-                        documentNo: $challan->document_no,
-                        narration: $reason,
-                    );
-                }
+                $this->unpost($challan, $date, $reason);
             }
 
             $challan->update([
@@ -947,6 +862,157 @@ final class DeliveryChallanService
         }
 
         return $year;
+    }
+
+    /**
+     * খসড়া চালানের আসল নম্বর — নিশ্চিতের লেনদেনের ভিতরে (মালিক, ২ অক্টোবর ২০২৬)।
+     *
+     * ⓘ একই আদেশের আগের নিশ্চিত চালান থাকলে সেই বিক্রিরই নম্বর (CHA-0154-2), নাহলে নতুন বিক্রি। খসড়ার DRF
+     * নম্বরটা ইস্যুর খাতায় থেকে যায়; নতুন নম্বর এই চালানের নামে লেখা হয়।
+     */
+    private function giveTheSaleItsNumber(DeliveryChallan $challan): void
+    {
+        if ($challan->sale_no !== null) {
+            return;
+        }
+
+        $saleNo = $this->saleNumberFor($challan->sales_order_id, '');
+        $documentNo = app(SaleNumber::class)->forPaper(DeliveryChallan::class, $saleNo);
+
+        $challan->update(['sale_no' => $saleNo, 'document_no' => $documentNo]);
+
+        IssuedNumber::query()
+            ->whereIn('document_no', [$saleNo, $documentNo])
+            ->whereNull('source_id')
+            ->update(['source_type' => DeliveryChallan::drillSourceType(), 'source_id' => $challan->id]);
+    }
+
+    /**
+     * ⭐ নিশ্চিত বিক্রি সম্পাদনার প্রথম ধাপ — মালিক, ২ অক্টোবর ২০২৬ ([[SaleEditor]])।
+     *
+     * ⓘ বাতিলের হুবহু উল্টো ([[unpost()]]) — ভাড়ার দাখিলা, মাল (ফ্রি আর উপহারসহ) একই লটে, আদেশের ধরা — তারপর
+     * চালান খসড়ায়, নম্বর অক্ষত। ⛔ একা ডাকার জন্য নয়: বিক্রি-সম্পাদকের লেনদেনের ভিতরে, যেখানে পরের ধাপ আবার
+     * নিশ্চিত করে; বাইরে ডাকলে মাল-ফেরা খসড়া চালান পড়ে থাকত।
+     */
+    public function takeBackForEdit(DeliveryChallan $challan, Carbon $date, string $reason): void
+    {
+        if ($challan->status !== DocumentStatus::CONFIRMED) {
+            throw ValidationException::withMessages([
+                'status' => __('sales::validation.edit_only_confirmed', ['no' => $challan->document_no]),
+            ]);
+        }
+
+        $challan->loadMissing(['lines.product', 'lines.orderLine.order', 'warehouse']);
+
+        $this->unpost($challan, $date, $reason);
+
+        // ⓘ অফার আর ভাড়ার নতুন হিসাব কাউন্টারের হালনাগাদেই বসে ([[update()]])
+        $challan->update(['status' => DocumentStatus::DRAFT]);
+    }
+
+    /**
+     * নিশ্চিত চালানের সব ছাপ উল্টো — বাতিল আর সম্পাদনা, দুই পথের একই অংশ।
+     */
+    private function unpost(DeliveryChallan $challan, Carbon $date, string $reason): void
+    {
+        /*
+         * গাড়ির ভাড়ার দাখিলাও ফেরে।
+         *
+         * ⚠️ না ফিরলে পরিবহনকারীর খাতায় **একটা পাওনা বসে থাকত
+         * যার কোনো চালান নেই** — আর সেটা ধরা পড়ত মাস শেষে
+         * মেলানোর সময়, কারণ ছাড়াই। তিনি টাকা চাইতেন, আমরা
+         * কাগজ খুঁজে পেতাম না।
+         *
+         * ⓘ `reverse()` উল্টো সারি বসায়, মূল সারি মোছে না —
+         * নিয়ম ৫ ও [[NoHardDeleteGuard]] অনুযায়ী। তাই বাতিল
+         * চালানের ইতিহাসও খতিয়ানে থেকে যায়।
+         *
+         * ⚠️ আগে যাচাই করা **বাধ্যতামূলক**: `reverse()` কিছু না
+         * পেলে `PostingException` ছোঁড়ে। বেশিরভাগ চালানে পরিবহন
+         * খরচ থাকেই না, তাই যাচাই ছাড়া ডাকলে **ওই চালানগুলোর
+         * বাতিলই ভেঙে যেত** — আর ভুলটা দেখা দিত কেবল বাতিলের
+         * মুহূর্তে, অর্থাৎ যখন ব্যবহারকারী তাড়াহুড়োয় আছেন।
+         */
+        $hasPosting = LedgerEntry::query()
+            ->where('source_type', DeliveryChallan::STOCK_SOURCE)
+            ->where('source_id', $challan->id)
+            ->exists();
+
+        if ($hasPosting) {
+            $this->posting->reverse(
+                sourceType: DeliveryChallan::STOCK_SOURCE,
+                sourceId: $challan->id,
+                reversalDate: $date,
+                reason: $reason,
+            );
+        }
+
+        /*
+         * মাল ফেরে যে লট থেকে বেরিয়েছিল সেই লটেই।
+         *
+         * আগে এখানে লাইন ধরে নতুন করে গোনা হত, আর লট না থাকায়
+         * সেটা ঠিকই ছিল। লট আসার পর ওটা ভুল হয়ে যেত: FEFO
+         * আজকের অবস্থা ধরে অন্য লট বাছত, মাল ফিরত এমন বাক্সে
+         * যেখান থেকে কখনো বেরোয়ইনি, আর রিকলের সময় ভুল ক্রেতার
+         * কাছে ফোন যেত।
+         */
+        $this->stock->reverse(
+            sourceType: DeliveryChallan::STOCK_SOURCE,
+            sourceId: $challan->id,
+            reversedType: DeliveryChallan::STOCK_SOURCE.':cancel',
+            date: $date,
+            narration: $reason,
+        );
+
+        /*
+         * ⭐ ফ্রি আর উপহারের মালও ফ্রি ভাণ্ডারে ফেরে, একই লটে — ২৭ সেপ্টেম্বর ২০২৬।
+         *
+         * ⛔ কাউন্টার বিক্রিতে ওগুলো বেরোয় আলাদা উৎস-নামে
+         * ([[DirectSaleService::moveFreeStock()]]: `:free`, `:gift`),
+         * আর উপরের উল্টানো কেবল দামের মাল ধরত। ⓘ হাতে গোনা: বিস্কুট
+         * ফ্রি ১০, ১টা উপহার দিয়ে চালান বাতিল → ফ্রি ১০ হওয়ার কথা,
+         * থাকত ৯ ([[TheCancelledChallanKeptTheFreeGoodsTest]])।
+         *
+         * ⓘ কিছু না থাকলে `reverse()` খালি ফেরে — সাধারণ চালানে কিছু বদলায় না।
+         */
+        foreach ([':free', ':gift'] as $kind) {
+            $this->stock->reverse(
+                sourceType: DeliveryChallan::STOCK_SOURCE.$kind,
+                sourceId: $challan->id,
+                reversedType: DeliveryChallan::STOCK_SOURCE.$kind.':cancel',
+                date: $date,
+                narration: $reason,
+            );
+        }
+
+        /*
+         * ধরাটা আলাদা সারিতে ফেরে — লট ধরে নয়, লাইন ধরে।
+         *
+         * Reserved পণ্য ও গুদামের সংখ্যা, লটের নয়। আর অর্ডারটা
+         * এখনো খোলা থাকলেই কেবল ফেরে; বাতিল অর্ডারে ফেরালে ধরা
+         * থেকে যেত যা কেউ কোনোদিন ছাড়ত না।
+         */
+        foreach ($challan->lines as $line) {
+            $reserve = $line->orderLine?->order?->status === DocumentStatus::CONFIRMED
+                ? (string) $line->delivered_qty
+                : '0';
+
+            if (bccomp($reserve, '0', 4) <= 0) {
+                continue;
+            }
+
+            $this->stock->move(
+                product: $line->product,
+                warehouse: $challan->warehouse,
+                sourceType: DeliveryChallan::STOCK_SOURCE.':cancel',
+                sourceId: $challan->id,
+                floor: '0',
+                reserved: $reserve,
+                date: $date,
+                documentNo: $challan->document_no,
+                narration: $reason,
+            );
+        }
     }
 
     /** এই DO-র বিক্রির নম্বর — আদেশের আগের DO-র নম্বর, নাহলে নতুন ([[SaleNumber::begin()]])। */

@@ -18,6 +18,8 @@ return [
     'received' => 'Received',
     'pending' => 'Pending',
     'challan_no_short' => 'Challan No.',
+    'editing_sale' => 'Editing',
+    'edit_sale' => 'Edit sale',
     'pending_group_drafts' => 'Drafts',
     'pending_group_held' => 'Awaiting approval',
     'held_open_approval' => 'Approval page',

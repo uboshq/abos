@@ -74,7 +74,8 @@
      *
      * ⭐ বিস্তারিত পাতায় [[sales::cancel-form]] আছে — কারণের ঘরসহ।
      */
-    if (! $isDraft && ! $isCancelled && auth()->user()?->can('sales.invoice.cancel')) {
+    /* ⛔ নিশ্চিত বিলে বাতিল নেই — মালিক, ২ অক্টোবর ২০২৬; খসড়ায় পাতায় গিয়ে কারণসহ */
+    if ($isDraft && auth()->user()?->can('sales.invoice.cancel')) {
         $items[] = [
             'label' => __('sales::action.cancel_invoice'),
             'url' => route('sales.invoice.show', $invoice).'#cancel',

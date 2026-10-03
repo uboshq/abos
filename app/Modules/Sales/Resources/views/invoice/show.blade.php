@@ -30,6 +30,16 @@
                     </form>
                 @endcan
 
+                {{-- ⭐ নিশ্চিত বিক্রি — গেট পাসের আগে সম্পাদনা, কাউন্টারের পাতায় (মালিক, ২ অক্টোবর ২০২৬; [[SaleEditor]]).
+                     ⓘ বোতাম কেবল যখন সত্যিই চলবে — গেট পাস, ফেরত বা ক্রেডিট নোট থাকলে নেই; দেয়াল সেবাতেই। --}}
+                @if ($invoice->status === \App\Core\Support\DocumentStatus::CONFIRMED
+                    && auth()->user()?->can('sales.invoice.create') && auth()->user()?->can('sales.challan.create')
+                    && rescue(fn () => (bool) app(\App\Modules\Sales\Services\SaleEditor::class)->assertEditable($invoice), false, false))
+                    <x-ui.button tone="secondary" :href="route('sales.direct.create', ['edit' => $invoice->id])" data-edit-sale>
+                        ✎ {{ __('sales::field.edit_sale') }}
+                    </x-ui.button>
+                @endif
+
                 @if ($invoice->status === \App\Core\Support\DocumentStatus::CONFIRMED
                     && bccomp($invoice->dueAmount(), '0', 4) > 0)
                     {{-- ⭐ আদায় এখন হিসাবের রসিদ ভাউচারে (মালিকের নির্দেশ, ১৯ সেপ্টেম্বর ২০২৬) —
@@ -287,7 +297,8 @@
     <x-ui.attachments :document="$invoice" />
 
         @can('delete', $invoice)
-            @if ($invoice->status !== \App\Core\Support\DocumentStatus::CANCELLED)
+            {{-- ⛔ কেবল খসড়া — নিশ্চিত বিল বাতিল হয় না (মালিক, ২ অক্টোবর ২০২৬; দেয়াল [[SalesInvoiceService::cancel()]]-এ) --}}
+            @if ($invoice->status === \App\Core\Support\DocumentStatus::DRAFT)
                 <x-sales::cancel-form :action="route('sales.invoice.cancel', $invoice)" />
             @endif
         @endcan

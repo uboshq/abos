@@ -97,6 +97,9 @@ return [
         'partial_hint' => 'Enter what the customer took on each line; the rest comes back on a sales return.',
     ],
 
+    // ⭐ কম নিলে বাকিটা নিজে ফেরত — [[ShortDeliveryReturn]]
+    'short_return_note' => 'Short delivery — the customer did not take the rest (challan :no)',
+
     'errors' => [
         'unknown_stage' => 'There is no such stage.',
         'not_allowed' => 'Cannot go straight from ":from" to ":to".',

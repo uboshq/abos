@@ -140,18 +140,18 @@ final class EverySalesDoorAsksForItsOwnKeyTest extends TestCase
     {
         $this->actingAs($this->owner);
 
-        /** @var SalesInvoice $invoice */
-        $invoice = app(DirectSaleService::class)->complete(
-            [
-                'customer_id' => $this->customer->id,
-                'warehouse_id' => $this->warehouse->id,
-                'deposit' => '0',
-            ],
-            [['product_id' => $this->product->id, 'qty' => '1', 'rate' => '100']],
-        )['invoice'];
+        /*
+         * ⓘ খসড়া বিল — ২ অক্টোবর ২০২৬ থেকে নিশ্চিত বিল বাতিলই হয় না ([[AConfirmedBillCouldStillBeCancelledTest]]);
+         * দরজার প্রশ্নটা (কোন চাবি) খসড়াতেও একই।
+         */
+        $invoice = app(\App\Modules\Sales\Services\SalesInvoiceService::class)->create([
+            'customer_id' => $this->customer->id,
+            'warehouse_id' => $this->warehouse->id,
+            'trx_date' => now()->toDateString(),
+        ], [['product_id' => $this->product->id, 'qty' => '1', 'rate' => '100']]);
 
         $this->knock('sales.invoice.cancel', 'sales.invoice.cancel', $invoice, ['reason' => 'দরজার পরীক্ষা'],
-            fn () => $invoice->fresh()->status, DocumentStatus::CONFIRMED, DocumentStatus::CANCELLED);
+            fn () => $invoice->fresh()->status, DocumentStatus::DRAFT, DocumentStatus::CANCELLED);
     }
 
     // ── আদায় ─────────────────────────────────────────────────────────────

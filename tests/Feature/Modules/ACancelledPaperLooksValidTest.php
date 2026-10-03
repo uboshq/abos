@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Modules;
 
+use App\Modules\Sales\Models\SalesInvoice;
+use App\Core\Support\DocumentStatus;
 use App\Core\Support\CompanyContext;
 use App\Models\Company;
 use App\Models\User;
@@ -99,9 +101,7 @@ class ACancelledPaperLooksValidTest extends TestCase
 
     public function test_a_cancelled_invoice_says_so(): void
     {
-        $invoice = $this->invoice();
-
-        app(SalesInvoiceService::class)->cancel($invoice, 'ভুল দামে কাটা হয়েছিল');
+        $invoice = $this->cancelledBeforeTheRule($this->invoice());
 
         $this->assertSaysCancelled(route('sales.print.invoice', $invoice), 'বিক্রয় বিল');
     }
@@ -335,5 +335,20 @@ class ACancelledPaperLooksValidTest extends TestCase
             'warehouse_id' => Warehouse::query()->where('is_default', true)->value('id'),
             'trx_date' => now()->toDateString(),
         ];
+    }
+
+    /**
+     * ⓘ ২ অক্টোবর ২০২৬-এর আগে নিশ্চিত বিল বাতিল করা যেত — সেই কাগজগুলো খাতায় আছে, আর ছাপলে "বাতিল" বলতেই হয়।
+     * এখন সেবা আর বাতিল করে না ([[SalesInvoiceService::cancel()]]), তাই সেই পুরনো অবস্থাটা সরাসরি বসানো।
+     */
+    private function cancelledBeforeTheRule(SalesInvoice $invoice): SalesInvoice
+    {
+        $invoice->forceFill([
+            'status' => DocumentStatus::CANCELLED,
+            'cancelled_at' => now(),
+            'cancel_reason' => 'ভুল দামে কাটা হয়েছিল',
+        ])->save();
+
+        return $invoice->fresh();
     }
 }

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Console\Commands;
 
 use App\Core\Support\CompanyContext;
+use App\Core\Support\DocumentStatus;
 use App\Models\Company;
 use App\Modules\Sales\Models\DeliveryChallan;
 use App\Modules\Sales\Models\GatePass;
@@ -100,7 +101,8 @@ class GiveOldSalesOneNumber extends Command
         $renamed = [];
         $orderSale = [];
 
-        foreach (DB::table('sal_challans')->where('company_id', $companyId)->whereNull('sale_no')->orderBy('id')->get(['id', 'document_no', 'sales_order_id']) as $row) {
+        // ⛔ খসড়া নয় — ২ অক্টোবর ২০২৬ থেকে খসড়ার `sale_no` ইচ্ছে করেই খালি (DRF), আসল নম্বর নিশ্চিতে ([[SaleNumber::draft()]])
+        foreach (DB::table('sal_challans')->where('company_id', $companyId)->whereNull('sale_no')->where('status', '<>', DocumentStatus::DRAFT)->orderBy('id')->get(['id', 'document_no', 'sales_order_id']) as $row) {
             $orderId = $row->sales_order_id === null ? null : (int) $row->sales_order_id;
             $saleNo = $orderId !== null && isset($orderSale[$orderId])
                 ? $orderSale[$orderId]
@@ -111,10 +113,10 @@ class GiveOldSalesOneNumber extends Command
             }
 
             $renamed[] = $this->rename('sal_challans', $companyId, (int) $row->id, (string) $row->document_no,
-                $numbers->forPaper(DeliveryChallan::class, $saleNo), $saleNo, 'চালান');
+                $numbers->asOnTheTwentyNinth(DeliveryChallan::class, $saleNo), $saleNo, 'চালান');
         }
 
-        foreach (DB::table('sal_invoices')->where('company_id', $companyId)->whereNull('sale_no')->orderBy('id')->get(['id', 'document_no']) as $row) {
+        foreach (DB::table('sal_invoices')->where('company_id', $companyId)->whereNull('sale_no')->where('status', '<>', DocumentStatus::DRAFT)->orderBy('id')->get(['id', 'document_no']) as $row) {
             $saleNo = DB::table('sal_invoice_lines as il')
                 ->join('sal_challan_lines as cl', 'cl.id', '=', 'il.delivery_challan_line_id')
                 ->join('sal_challans as c', 'c.id', '=', 'cl.delivery_challan_id')
@@ -125,7 +127,7 @@ class GiveOldSalesOneNumber extends Command
                 ->value('c.sale_no') ?? $numbers->begin(SalesInvoice::class);
 
             $renamed[] = $this->rename('sal_invoices', $companyId, (int) $row->id, (string) $row->document_no,
-                $numbers->forPaper(SalesInvoice::class, (string) $saleNo), (string) $saleNo, 'বিল');
+                $numbers->asOnTheTwentyNinth(SalesInvoice::class, (string) $saleNo), (string) $saleNo, 'বিল');
         }
 
         foreach (DB::table('sal_gate_passes')->where('company_id', $companyId)->whereNull('sale_no')->orderBy('id')->get(['id', 'document_no', 'delivery_challan_id']) as $row) {
@@ -136,7 +138,7 @@ class GiveOldSalesOneNumber extends Command
             }
 
             $renamed[] = $this->rename('sal_gate_passes', $companyId, (int) $row->id, (string) $row->document_no,
-                $numbers->forPaper(GatePass::class, (string) $saleNo), (string) $saleNo, 'গেট পাস');
+                $numbers->asOnTheTwentyNinth(GatePass::class, (string) $saleNo), (string) $saleNo, 'গেট পাস');
         }
 
         // ⛔ ফেরতের নিজের নম্বর থাকে — কেবল সূত্র

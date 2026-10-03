@@ -18,6 +18,8 @@ return [
     'received' => 'এসেছে',
     'pending' => 'বাকি',
     'challan_no_short' => 'চালান নম্বর',
+    'editing_sale' => 'সম্পাদনা হচ্ছে',
+    'edit_sale' => 'বিক্রি সম্পাদনা',
     'pending_group_drafts' => 'খসড়া',
     'pending_group_held' => 'অনুমোদনের অপেক্ষায়',
     'held_open_approval' => 'অনুমোদনের পাতা',

@@ -672,15 +672,15 @@ final class TheReturnCameBackAndTheBooksStillAgreedTest extends TestCase
             ledger: [], stock: [[$this->plain, '14', '1040']],
             party: '600', cash: '0', profit: '0');
 
+        /*
+         * ⭐ ২ অক্টোবর ২০২৬ থেকে ফেরত বাতিলের পরেও নিশ্চিত বিল বাতিল হয় না — মালিক: *"ইনভয়েসের পরে … মোছা কখনো
+         * নয়"* ([[AConfirmedBillCouldStillBeCancelledTest]])। ⓘ আগে এখানে দাবি ছিল "আগে ফেরত, তারপর বিল — চলে"।
+         */
         $this->post(route('sales.return.cancel', $return), ['reason' => 'আগে ফেরত বাতিল'])->assertSessionHasNoErrors();
-        $this->post(route('sales.invoice.cancel', $invoice), ['reason' => 'তারপর বিল'])->assertSessionHasNoErrors();
+        $this->post(route('sales.invoice.cancel', $invoice), ['reason' => 'তারপর বিল'])->assertSessionHasErrors('status');
 
-        $this->assertSame(DocumentStatus::CANCELLED, $invoice->fresh()->status, 'ফেরত বাতিলের পরেও বিল বাতিল হয়নি।');
-
-        // ⓘ তাকের পরিমাণ এখানে দাবি করা হয় না: বিল বাতিলে চালানের মাল ফেরে না (চালান আলাদা কাগজ)
-        $this->assertFiveMatches($start, 'ফেরত আর বিল দুটোই বাতিলের পরে',
-            ledger: [], stock: [],
-            party: '0', cash: '0', profit: '0');
+        $this->assertSame(DocumentStatus::CONFIRMED, $invoice->fresh()->status, '⛔ ফেরত বাতিলের পরে নিশ্চিত বিল বাতিল হয়ে গেছে।');
+        unset($start);
     }
 
     /** ⭐ ফর্মে ফ্রি পরিমাণের ঘরটা সত্যিই আছে — না থাকলে উপরের পথটা কেবল সেবায়। */

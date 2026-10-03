@@ -109,7 +109,11 @@ class ACollectionPaidOneBillTwiceTest extends TestCase
             [['sales_invoice_id' => $bill->id, 'amount' => '3550']],
         );
 
-        app(SalesInvoiceService::class)->cancel($bill->fresh(), 'অডিট: আদায়ের খসড়ার পরে বাতিল');
+        /*
+         * ⓘ ২ অক্টোবর ২০২৬ থেকে সেবা নিশ্চিত বিল আর বাতিল করে না; কিন্তু তার আগে বাতিল হওয়া বিল খাতায় আছে, আর তার
+         * পুরনো খসড়া আদায় এখনো পাকা হতে পারে — সেই অবস্থাটা সরাসরি বসানো।
+         */
+        $bill->forceFill(['status' => DocumentStatus::CANCELLED, 'cancelled_at' => now(), 'cancel_reason' => 'অডিট: আদায়ের খসড়ার পরে বাতিল'])->save();
         $this->assertSame(DocumentStatus::CANCELLED, $bill->fresh()->status, 'প্রস্তুতিটাই ভুল — বিলটা বাতিল হয়নি।');
 
         $refused = false;

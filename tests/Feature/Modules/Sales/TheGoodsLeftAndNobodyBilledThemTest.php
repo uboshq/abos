@@ -81,7 +81,9 @@ final class TheGoodsLeftAndNobodyBilledThemTest extends TestCase
 
         $bill = $bills->first();
         $this->assertSame(DocumentStatus::CONFIRMED, $bill->status, '⛔ বিলটা খসড়া রয়ে গেছে — খাতায় প্রাপ্য নেই।');
-        $this->assertSame((string) $challan->sale_no, (string) $bill->document_no, '⛔ বিল বিক্রির নম্বর পায়নি।');
+        // ⓘ ২ অক্টোবর ২০২৬ থেকে বিক্রির নম্বর `sale_no`-তে, কাগজে নিজের উপসর্গ — INV-0154 ↔ CHA-0154 ([[SaleNumber]])
+        $this->assertSame((string) $challan->fresh()->sale_no, (string) $bill->sale_no, '⛔ বিল বিক্রির নম্বর পায়নি।');
+        $this->assertSame('INV'.substr((string) $challan->fresh()->sale_no, 1), (string) $bill->document_no, '⛔ বিলের নম্বর চালানের লেজে নয়।');
         $this->assertSame(0, bccomp((string) $challan->fresh()->total, (string) $bill->total, 2), '⛔ বিলের অঙ্ক চালানের সাথে মেলে না।');
         $this->assertSame(1, GatePass::query()->where('delivery_challan_id', $challan->id)->count());
     }

@@ -242,7 +242,7 @@ final class AClassicTableInvoiceCanBeChosenTest extends TestCase
      */
     public function test_a_cancelled_invoice_says_so_in_a_box(): void
     {
-        $invoice = app(SalesInvoiceService::class)->cancel($this->anInvoice(qty: '1', rate: '100.00'), 'ভুল গ্রাহক');
+        $invoice = $this->cancelledBeforeTheRule($this->anInvoice(qty: '1', rate: '100.00'));
 
         $html = $this->printed($invoice)['html'];
 
@@ -550,5 +550,20 @@ final class AClassicTableInvoiceCanBeChosenTest extends TestCase
         $mpdf->SetFont('dejavusans', '', $fontSize);
 
         return $mpdf->GetStringWidth($text);
+    }
+
+    /**
+     * ⓘ ২ অক্টোবর ২০২৬-এর আগে নিশ্চিত বিল বাতিল করা যেত — সেই কাগজগুলো খাতায় আছে, আর ছাপলে "বাতিল" বলতেই হয়।
+     * এখন সেবা আর বাতিল করে না ([[SalesInvoiceService::cancel()]]), তাই সেই পুরনো অবস্থাটা সরাসরি বসানো।
+     */
+    private function cancelledBeforeTheRule(SalesInvoice $invoice): SalesInvoice
+    {
+        $invoice->forceFill([
+            'status' => DocumentStatus::CANCELLED,
+            'cancelled_at' => now(),
+            'cancel_reason' => 'ভুল দামে কাটা হয়েছিল',
+        ])->save();
+
+        return $invoice->fresh();
     }
 }

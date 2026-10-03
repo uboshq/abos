@@ -72,14 +72,16 @@ final class TheInvoiceListOffersWhatEachRowAllowsTest extends TestCase
      * কেউ শর্তগুলো তুলে দিয়ে সব সারিতে সব কাজ বসিয়ে দিলেও সবুজ থাকত,
      * আর তখন নিশ্চিত বিল সম্পাদনার লিংকটা পর্দায় বসে থাকত — চাপলে ৪০৩।
      */
-    public function test_a_confirmed_row_offers_cancel_but_never_edit(): void
+    public function test_a_confirmed_row_offers_neither_cancel_nor_edit(): void
     {
         $this->invoice('INV-LIVE', DocumentStatus::CONFIRMED);
 
         $text = $this->listText();
 
-        $this->assertStringContainsString(__('sales::action.cancel_invoice', [], 'bn'), $text,
-            '⛔ নিশ্চিত বিলের সারিতে বাতিলের পথ নেই।');
+        /* ⛔ ২ অক্টোবর ২০২৬ থেকে নিশ্চিত বিল বাতিলও হয় না — মালিক: *"ইনভয়েসের পরে … মোছা কখনো নয়"*
+           ([[AConfirmedBillCouldStillBeCancelledTest]]); আগে দাবি ছিল সারিতে বাতিলের পথ আছে */
+        $this->assertStringNotContainsString(__('sales::action.cancel_invoice', [], 'bn'), $text,
+            '⛔ নিশ্চিত বিলের সারিতে বাতিলের পথ দেখা যাচ্ছে।');
 
         $this->assertStringNotContainsString(__('core.action.edit', [], 'bn'), $text, implode("\n", [
             '⛔ নিশ্চিত হওয়া বিলের সারিতে সম্পাদনা দেখা যাচ্ছে।',

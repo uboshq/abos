@@ -231,6 +231,26 @@ final class NumberSeriesEngine
         );
     }
 
+    /**
+     * এই ধরনের উপসর্গ — কিছু খরচ না করে (বিক্রির কাগজে INV/CHA বসাতে, [[SaleNumber::forPaper()]])।
+     *
+     * ⓘ সিরিজ খোঁজা [[isNextNumber()]]-এর একই ক্রমে: শাখা ও বছর, তারপর কোম্পানি-ব্যাপী। সিরিজ না থাকলে
+     * নতুন সিরিজ যে উপসর্গ পেত সেটাই — নম্বর সিরিজের পর্দায় বদলালে পরের কাগজ থেকেই নতুনটা।
+     */
+    public function prefixOf(string $docType, ?int $branchId = null, ?Carbon $date = null): string
+    {
+        $companyId = CompanyContext::id();
+        $branchId = $branchId ?? CompanyContext::branchId();
+        $yearId = FinancialYear::forDate($date ?? Carbon::today())?->id;
+
+        $series = $this->findSeries($companyId, $docType, $branchId, $yearId)
+            ?? $this->findSeries($companyId, $docType, null, $yearId)
+            ?? $this->findSeries($companyId, $docType, $branchId, null)
+            ?? $this->findSeries($companyId, $docType, null, null);
+
+        return $series !== null ? (string) $series->prefix : $this->provisioner->defaultPrefix($docType);
+    }
+
     private function findSeries(?int $companyId, string $docType, ?int $branchId, ?int $financialYearId): ?NumberSeries
     {
         return NumberSeries::query()
