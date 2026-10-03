@@ -154,7 +154,7 @@ final class DirectSaleService
         }
 
         if ($this->counterDepositNeedsApproval($data)) {
-            return $this->hold($data, $lines, $gifts, $customer, $warehouse, asDraft: false);
+            return $this->holdForDiscount($this->hold($data, $lines, $gifts, $customer, $warehouse, asDraft: false));
         }
 
         /*
@@ -174,7 +174,7 @@ final class DirectSaleService
          * ⓘ শেষ সইয়ে বাকিটা [[HeldCounterSaleFinisher]] — অন্য সইয়ের মতোই।
          */
         if (app(MarginGuard::class)->counterSaleNeedsApproval($data, $lines)) {
-            return $this->holdForMargin($this->hold($data, $lines, $gifts, $customer, $warehouse, asDraft: false));
+            return $this->holdForDiscount($this->holdForMargin($this->hold($data, $lines, $gifts, $customer, $warehouse, asDraft: false)));
         }
 
         try {
@@ -196,8 +196,46 @@ final class DirectSaleService
             }
 
             // ⓘ চালানের ভিতরের মার্জিন-দেয়াল থামিয়েছিল কি না — আগে-থেকে-দেখা ফসকালেও অনুরোধ হারায় না
-            return $this->holdForMargin($result);
+            return $this->holdForDiscount($this->holdForMargin($result));
         }
+    }
+
+    /**
+     * ⭐ খসড়া রাখা বিক্রির ছাড়ের সই — লেনদেনের বাইরে, যাতে অনুরোধটা টিকে থাকে (মালিকের নিয়ম, ১ অক্টোবর ২০২৬:
+     * *"bill e kono char maliker onumoti chara dite parbe na"*)।
+     *
+     * ── ⛔ আগে ─────────────────────────────────────────────────────────────
+     * কাউন্টারের বিল লেনদেনের **ভিতরে** নিশ্চিত হত; ছাড়ের দেয়াল সেখানে অনুরোধ লিখে থামত, আর ফেরত-গড়ানোয়
+     * অনুরোধ, চালান, বিল সব মুছত — পর্দা বলত "অনুরোধ পাঠানো হয়েছে", অথচ মালিকের তালিকায় কিছুই নেই। আগে এটা
+     * কেবল ১,০০০ টাকার উপরের ছাড়ে ঘটত; এখন প্রতিটা ছাড়ে ঘটত।
+     *
+     * ── ⭐ এখন ─────────────────────────────────────────────────────────────
+     * বিক্রি খসড়া ([[hold()]]), আর অনুরোধ এখানে, বাইরে। মার্জিন বা জমার সই লাগলেও ছাড়েরটা **একসাথে** চাওয়া
+     * হয় — নাহলে প্রথম সইয়ের পরে শেষ করতে গিয়ে নতুন অনুরোধ জন্মাত, আর সেটাও গড়িয়ে মুছত। শেষ সইয়ে
+     * বাকিটা [[HeldCounterSaleFinisher]]।
+     *
+     * ⓘ ছক নেই বা বন্ধ হলে ([[SalesInvoiceService::assertDiscountApproved()]] fail-closed) বিক্রি খসড়াই থাকে,
+     * কারণটা বার্তায় — সই দেওয়ার কেউ না থাকলে মাল বের হয় না।
+     *
+     * @param  array<string, mixed>  $result  [[hold()]]-এর ফল
+     * @return array<string, mixed>
+     */
+    private function holdForDiscount(array $result): array
+    {
+        try {
+            app(SalesInvoiceService::class)->assertDiscountApproved($result['invoice']->fresh());
+        } catch (ValidationException $e) {
+            if (! array_key_exists('discount', $e->errors())) {
+                throw $e;
+            }
+
+            $result['discount_held'] = true;
+            $result['discount_notice'] = $e instanceof HeldForApproval
+                ? __('sales::message.direct_sale_discount_held', ['invoice' => $result['invoice']->document_no])
+                : (string) collect($e->errors())->flatten()->first();
+        }
+
+        return $result;
     }
 
     /**

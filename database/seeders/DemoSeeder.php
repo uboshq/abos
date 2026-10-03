@@ -400,21 +400,12 @@ class DemoSeeder extends Seeder
         $accountant->switchCompany($alpha->id);
         $salesman->switchCompany($alpha->id);
 
-        // ছাড়ে অনুমোদন — ১,০০০ টাকার উপরে মালিকের সম্মতি লাগবে
-        CompanyContext::forCompany($alpha->id, function () use ($owner) {
-            $flow = ApprovalFlow::create([
-                'module' => 'sales',
-                'action' => 'discount',
-                'threshold_amount' => '1000.0000',
-            ]);
-
-            ApprovalFlowStep::create([
-                'approval_flow_id' => $flow->id,
-                'level' => 1,
-                'approver_type' => ApprovalFlowStep::BY_USER,
-                'approver_id' => $owner->id,
-            ]);
-        });
+        /*
+         * ছাড়ে অনুমোদন — ⭐ যেকোনো ছাড়ে মালিকের সই, সীমা ছাড়া (মালিকের নিয়ম, ১ অক্টোবর ২০২৬)।
+         * ⓘ আগে এখানে হাতে ১,০০০ টাকার সীমার ছক বসত; এখন কোম্পানি খোলার সময়েই [[OwnerSignsDiscounts]] বসায়,
+         * আর মালিক এখানে আগে super_admin হন — তাই আবার ডাকা (দুইবার নিরাপদ)।
+         */
+        app(\App\Modules\Approval\Services\OwnerSignsDiscounts::class)->ensure($alpha);
 
         // সরবরাহকারী, গুদাম, পণ্য আর চারটা অবস্থাতেই কিছু মাল — নাহলে
         // মজুদের পর্দা খুললে ফাঁকা টেবিল, আর ফাঁকা টেবিল দেখে বোঝা যায় না

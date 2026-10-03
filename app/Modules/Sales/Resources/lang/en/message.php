@@ -5,6 +5,7 @@ declare(strict_types=1);
 return [
     'challan_needs_an_order' => 'A challan is written against an order. Goods that leave without one have no paper saying who asked for them.',
 
+    'direct_sale_discount_held' => ':invoice kept as a draft — the bill carries a discount, so it waits for the owner to sign. Once signed, the sale finishes by itself; the goods go out and the invoice can be printed then.',
     'direct_sale_held' => ':invoice kept as a draft — the deposit is waiting for approval. Once signed, confirm the sale from invoice :invoice; the goods go out and the invoice can be printed then.',
     'draft_parked' => 'Draft kept — invoice :invoice, challan :challan. Open it from "Pending" on this screen to confirm.',
     'held_view_only' => 'Awaiting signature — view only. Bring it back to draft to change it.',

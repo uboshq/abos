@@ -305,6 +305,9 @@ class TwoThousandInBkashAndTheRestInCashTest extends TestCase
         $result = app(PosService::class)->checkout([
             'warehouse_id' => $this->warehouse->id,
             'paid' => '900',
+            // ⓘ যেকোনো ছাড়ে মালিকের সই (১ অক্টোবর ২০২৬) — মালিক কাউন্টারে দাঁড়িয়েই নিজের লগইনে সই দেন; এই দাবি বিলের মোট মাপে
+            'approver_email' => 'owner@abos.test',
+            'approver_password' => 'password',
         ], [
             ['product_id' => $this->product->id, 'qty' => '1', 'rate' => '1000', 'discount' => '100'],
         ]);

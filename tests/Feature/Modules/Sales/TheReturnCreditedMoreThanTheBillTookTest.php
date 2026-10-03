@@ -17,6 +17,7 @@ use App\Modules\Sales\Services\SalesReturnService;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Validation\ValidationException;
+use Tests\Concerns\SignsTheDiscountAsTheOwner;
 use Tests\TestCase;
 
 /**
@@ -39,6 +40,7 @@ use Tests\TestCase;
 final class TheReturnCreditedMoreThanTheBillTookTest extends TestCase
 {
     use RefreshDatabase;
+    use SignsTheDiscountAsTheOwner;
 
     private Warehouse $warehouse;
 
@@ -152,6 +154,9 @@ final class TheReturnCreditedMoreThanTheBillTookTest extends TestCase
             ],
             [['product_id' => $this->product->id, 'qty' => '10', 'rate' => '100', 'free_qty' => '0', 'discount_percent' => '10']],
         );
+
+        // ⓘ যেকোনো ছাড়ে মালিকের সই (১ অক্টোবর ২০২৬) — এই দাবি হিসাব মাপে, সই নয় ([[SignsTheDiscountAsTheOwner]]) — শেষ সইয়ে বিক্রি নিজে শেষ
+        $this->ownerSignsTheDiscounts();
 
         return $sale['invoice']->fresh(['lines']);
     }

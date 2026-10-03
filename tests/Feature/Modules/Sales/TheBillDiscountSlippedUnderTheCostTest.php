@@ -32,6 +32,7 @@ use App\Modules\Sales\Services\SalesInvoiceService;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Validation\ValidationException;
+use Tests\Concerns\SignsTheDiscountAsTheOwner;
 use Tests\TestCase;
 
 /**
@@ -51,6 +52,7 @@ use Tests\TestCase;
 final class TheBillDiscountSlippedUnderTheCostTest extends TestCase
 {
     use RefreshDatabase;
+    use SignsTheDiscountAsTheOwner;
 
     private Customer $customer;
 
@@ -99,12 +101,12 @@ final class TheBillDiscountSlippedUnderTheCostTest extends TestCase
         $this->setting(MarginGuard::ACTION, MarginGuard::BLOCK);
         $rice = $this->aProduct('Bill Discount Rice Alone', '96');
 
-        $bill = app(SalesInvoiceService::class)->create([
+        $bill = $this->discountSigned(app(SalesInvoiceService::class)->create([
             'customer_id' => $this->customer->id,
             'warehouse_id' => $this->warehouse->id,
             'trx_date' => now()->toDateString(),
             'bill_discount' => '20',
-        ], [['product_id' => $rice->id, 'qty' => '1', 'rate' => '100']]);
+        ], [['product_id' => $rice->id, 'qty' => '1', 'rate' => '100']]));
 
         $this->assertArrayHasKey('lines', $this->refused(fn () => app(SalesInvoiceService::class)->confirm($bill->fresh()))->errors());
         $this->assertSame(DocumentStatus::DRAFT, $bill->fresh()->status);
@@ -170,6 +172,9 @@ final class TheBillDiscountSlippedUnderTheCostTest extends TestCase
             ->firstOrFail();
 
         app(ApprovalEngine::class)->approve($approval, User::query()->where('email', 'owner@abos.test')->firstOrFail());
+
+        // ⓘ যেকোনো ছাড়ে মালিকের সই (১ অক্টোবর ২০২৬) — এই দাবি হিসাব মাপে, সই নয় ([[SignsTheDiscountAsTheOwner]]) — মার্জিনের সই চালানে একবার, ছাড়ের সই আলাদা ছক
+        $this->assertSame(1, $this->ownerSignsTheDiscounts(), 'দৃশ্যটাই বানানো যায়নি — ছাড়ের সই একসাথে চাওয়া হয়নি।');
 
         $this->assertSame(DocumentStatus::CONFIRMED, $held['invoice']->fresh()->status, '⛔ সইয়ের পরেও বিক্রিটা শেষ হয়নি।');
         $this->assertSame(0, Approval::query()
@@ -246,7 +251,7 @@ final class TheBillDiscountSlippedUnderTheCostTest extends TestCase
 
         $challan = app(DeliveryChallanService::class)->confirm($challan->fresh(['lines']));
 
-        return app(SalesInvoiceService::class)->create([
+        return $this->discountSigned(app(SalesInvoiceService::class)->create([
             'customer_id' => $this->customer->id,
             'warehouse_id' => $this->warehouse->id,
             'trx_date' => now()->toDateString(),
@@ -256,16 +261,34 @@ final class TheBillDiscountSlippedUnderTheCostTest extends TestCase
             'delivery_challan_line_id' => $challan->fresh(['lines'])->lines->first()->id,
             'qty' => '1',
             'rate' => $rate,
-        ]]);
+        ]]));
+    }
+
+    /** যেকোনো ছাড়ে মালিকের সই (১ অক্টোবর ২০২৬) — এই দাবি হিসাব মাপে, সই নয় ([[SignsTheDiscountAsTheOwner]]) — মার্জিনের দেয়াল ছাড়ের সইয়ের পরে মাপা হয় */
+    private function discountSigned(SalesInvoice $bill): SalesInvoice
+    {
+        try {
+            app(SalesInvoiceService::class)->assertDiscountApproved($bill->fresh());
+        } catch (ValidationException $e) {
+            $this->assertArrayHasKey('discount', $e->errors(), 'দৃশ্যটাই বানানো যায়নি: '.json_encode($e->errors(), JSON_UNESCAPED_UNICODE));
+            $this->ownerSignsTheDiscounts();
+        }
+
+        return $bill->fresh();
     }
 
     private function sellAtTheCounter(Product $product, string $rate, string $billDiscount): SalesInvoice
     {
-        return app(DirectSaleService::class)->complete(
+        $invoice = app(DirectSaleService::class)->complete(
             ['customer_id' => $this->customer->id, 'warehouse_id' => $this->warehouse->id, 'deposit' => '0',
                 'discount_amount' => $billDiscount],
             [['product_id' => $product->id, 'qty' => '1', 'rate' => $rate]],
-        )['invoice']->fresh();
+        )['invoice'];
+
+        // ⓘ যেকোনো ছাড়ে মালিকের সই (১ অক্টোবর ২০২৬) — এই দাবি হিসাব মাপে, সই নয় ([[SignsTheDiscountAsTheOwner]]) — শেষ সইয়ে বিক্রি নিজে শেষ
+        $this->ownerSignsTheDiscounts();
+
+        return $invoice->fresh();
     }
 
     private function refused(callable $work): ValidationException

@@ -33,6 +33,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\View;
 use Illuminate\Testing\TestResponse;
 use Tests\Concerns\PrintsTheStandardPaper;
+use Tests\Concerns\SignsTheDiscountAsTheOwner;
 use Tests\TestCase;
 
 /**
@@ -67,6 +68,7 @@ final class EveryCounterSaleMustMatchTheBooksFiveWaysTest extends TestCase
 {
     use PrintsTheStandardPaper;
     use RefreshDatabase;
+    use SignsTheDiscountAsTheOwner;
 
     private Company $company;
 
@@ -801,7 +803,7 @@ final class EveryCounterSaleMustMatchTheBooksFiveWaysTest extends TestCase
      */
     private function sell(array $lines, array $deposits = [], array $extra = []): TestResponse
     {
-        return $this->actingAs($this->owner)->post(route('sales.direct.store'), [
+        $response = $this->actingAs($this->owner)->post(route('sales.direct.store'), [
             'own_transport' => '1', // ⓘ ধাপ ৫ — নিশ্চিতে পরিবহন লাগে ([[TransportRule]]); এই দাবি অন্য কিছু মাপে
             'customer_id' => $this->dealer->id,
             'warehouse_id' => $this->warehouse->id,
@@ -809,6 +811,11 @@ final class EveryCounterSaleMustMatchTheBooksFiveWaysTest extends TestCase
             ...($deposits === [] ? [] : ['deposits' => $deposits]),
             ...$extra,
         ]);
+
+        // ⓘ যেকোনো ছাড়ে মালিকের সই (১ অক্টোবর ২০২৬) — এই দাবি হিসাব মাপে, সই নয় ([[SignsTheDiscountAsTheOwner]]) — শেষ সইয়ে বিক্রি নিজে শেষ
+        $this->ownerSignsTheDiscounts();
+
+        return $response;
     }
 
     /** @param  array<string, mixed>  $more */

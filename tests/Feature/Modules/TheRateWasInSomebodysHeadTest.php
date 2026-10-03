@@ -19,6 +19,7 @@ use App\Modules\Sales\Services\SchemeService;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Validation\ValidationException;
+use Tests\Concerns\SignsTheDiscountAsTheOwner;
 use Tests\TestCase;
 
 /**
@@ -42,6 +43,7 @@ use Tests\TestCase;
 class TheRateWasInSomebodysHeadTest extends TestCase
 {
     use RefreshDatabase;
+    use SignsTheDiscountAsTheOwner;
 
     private Company $company;
 
@@ -104,7 +106,14 @@ class TheRateWasInSomebodysHeadTest extends TestCase
             'trx_date' => $date,
         ], $lines);
 
-        return $service->confirm($invoice)->fresh(['lines', 'customer']);
+        try {
+            return $service->confirm($invoice)->fresh(['lines', 'customer']);
+        } catch (\App\Core\Engines\Approval\HeldForApproval) {
+            // ⓘ যেকোনো ছাড়ে মালিকের সই (১ অক্টোবর ২০২৬) — এই দাবি হিসাব মাপে, সই নয় ([[SignsTheDiscountAsTheOwner]]) — সইয়ের পরে আবার "নিশ্চিত"
+            $this->ownerSignsTheDiscounts();
+
+            return $service->confirm($invoice->fresh())->fresh(['lines', 'customer']);
+        }
     }
 
     private function product(): Product

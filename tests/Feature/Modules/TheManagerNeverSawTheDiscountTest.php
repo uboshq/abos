@@ -42,7 +42,8 @@ use Tests\TestCase;
  * লেনদেন নেই। কাউন্টারের টেস্টগুলো ছাড় দেয় না। **দুইটা সঠিক অংশের
  * মাঝখানে ভুলটা**, আর ঠিক সেখানেই কোনো টেস্ট দাঁড়ানো ছিল না।
  *
- * ডেমোর প্রবাহ: sales/discount, সীমা ৳১,০০০, অনুমোদনকারী মালিক।
+ * ডেমোর প্রবাহ: sales/discount, কোনো সীমা নেই, অনুমোদনকারী মালিক (super_admin) — মালিকের নিয়ম, ১ অক্টোবর ২০২৬:
+ * যেকোনো ছাড়ে মালিকের সই ([[OwnerSignsDiscounts]])।
  */
 class TheManagerNeverSawTheDiscountTest extends TestCase
 {
@@ -146,17 +147,27 @@ class TheManagerNeverSawTheDiscountTest extends TestCase
     }
 
     /** সীমার নিচের ছাড়ে কিছুই আটকায় না — পাহারাটা রোজকার বিক্রি থামায় না। */
-    public function test_a_small_discount_passes_untouched(): void
+    /**
+     * ⛔ ছোট ছাড়ও আর নীরবে পার হয় না — মালিকের নিয়ম, ১ অক্টোবর ২০২৬ (আগে ৳১,০০০-এর নিচে পার হত)।
+     * ৳৫০ ছাড়ও সই চায়: অনুরোধ বসে, বিল খসড়া, কাউন্টারে অপেক্ষায়।
+     */
+    public function test_a_small_discount_also_waits_for_the_owner(): void
     {
-        app(PosService::class)->checkout([
-            'warehouse_id' => $this->warehouse->id,
-            'paid' => '4950',
-        ], [
-            ['product_id' => $this->product->id, 'qty' => '1', 'rate' => '5000', 'discount' => '50'],
-        ]);
+        try {
+            app(PosService::class)->checkout([
+                'warehouse_id' => $this->warehouse->id,
+                'paid' => '4950',
+            ], [
+                ['product_id' => $this->product->id, 'qty' => '1', 'rate' => '5000', 'discount' => '50'],
+            ]);
 
-        $this->assertDatabaseCount('approvals', 0);
-        $this->assertSame(1, SalesInvoice::query()->count());
+            $this->fail('⛔ ৳৫০ ছাড় মালিকের সই ছাড়াই পার হয়ে গেছে।');
+        } catch (ValidationException $e) {
+            $this->assertArrayHasKey('discount', $e->errors());
+        }
+
+        $this->assertDatabaseHas('approvals', ['action' => 'discount', 'status' => Approval::PENDING]);
+        $this->assertSame(DocumentStatus::DRAFT, SalesInvoice::query()->sole()->status);
     }
 
     // ── কাউন্টারে দাঁড়িয়েই অনুমোদন ──────────────────────────────────
@@ -241,7 +252,15 @@ class TheManagerNeverSawTheDiscountTest extends TestCase
      * এটা না থাকলে পুরো ব্যবস্থাটাই সাজানো — যিনি ছাড় দিচ্ছেন তিনিই
      * সম্মতি দিয়ে দিতেন, আর অডিটে দুইবার তাঁরই নাম বসত।
      */
-    public function test_nobody_approves_their_own_discount(): void
+    /**
+     * ⛔ মালিকের নিজের ছাড়ও নীরবে পার হয় না — সই লাগে (মালিক, ২ অক্টোবর ২০২৬: super_admin-এর জন্য কোনো ছাড়
+     * নেই)। ⓘ সইটা তিনি নিজের লগইনে দেন — ইঞ্জিনের পুরনো নিয়মে কেবল super_admin নিজের অনুরোধে সই দিতে পারেন
+     * ([[ApprovalEngine::canDecide()]]); অন্য কেউ নিজের অনুরোধে পারেন না।
+     *
+     * ⓘ আগে এখানে দাবি ছিল "মালিকও নিজেরটা অনুমোদন করতে পারেন না" — সেটা ছিল নাম-ধরা ধাপের (BY_USER) ফল;
+     * এখন ধাপ রোল ধরে, মালিকের সিদ্ধান্তে।
+     */
+    public function test_the_owners_own_discount_waits_until_he_signs_it(): void
     {
         $this->actingAs($this->manager);
 
@@ -249,18 +268,17 @@ class TheManagerNeverSawTheDiscountTest extends TestCase
             app(PosService::class)->checkout([
                 'warehouse_id' => $this->warehouse->id,
                 'paid' => '3500',
-                'approver_email' => $this->manager->email,
-                'approver_password' => 'password',
             ], [
                 ['product_id' => $this->product->id, 'qty' => '1', 'rate' => '5000', 'discount' => '1500'],
             ]);
 
-            $this->fail('নিজের চাওয়া ছাড় নিজেই অনুমোদন করে ফেলেছেন।');
+            $this->fail('⛔ মালিকের নিজের ছাড় সই ছাড়াই পার হয়ে গেছে।');
         } catch (ValidationException $e) {
-            $this->assertArrayHasKey('approver_email', $e->errors());
+            $this->assertArrayHasKey('discount', $e->errors());
         }
 
         $this->assertDatabaseMissing('approvals', ['status' => Approval::APPROVED]);
+        $this->assertSame(DocumentStatus::DRAFT, SalesInvoice::query()->sole()->status);
     }
 
     /** অনুমোদনকারী নন এমন কেউ "হ্যাঁ" বলতে পারেন না। */

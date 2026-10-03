@@ -148,6 +148,8 @@ return [
      */
     'provisions' => [
         \App\Modules\Approval\Services\MoneyFlowDefaults::class,
+        // ⭐ বিক্রয়ের প্রতিটা ছাড়ে মালিকের সই — মালিকের নিয়ম, ১ অক্টোবর ২০২৬ (টাকার ছকের পরে, যাতে এটাই শেষ কথা)
+        \App\Modules\Approval\Services\OwnerSignsDiscounts::class,
     ],
 
     'role_templates' => [

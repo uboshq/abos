@@ -989,10 +989,14 @@ class DirectSaleController extends Controller implements HasMiddleware
          * বিলের নম্বর বলে।
          */
         /* ⭐ মার্জিনের সইয়ে গেছে — চালানের সইয়ের মতোই, কাউন্টারে ফেরে বার্তা নিয়ে (NEXUS §৩২) */
-        if ($result['margin_held'] ?? false) {
+        /* ⭐ ছাড়ের সইয়েও একই — মার্জিন আর ছাড় দুটোই চাওয়া হলে বার্তা দুটোই (মালিকের নিয়ম, ১ অক্টোবর ২০২৬) */
+        if (($result['margin_held'] ?? false) || ($result['discount_held'] ?? false)) {
             return redirect()
                 ->route('sales.direct.create')
-                ->with('approval_notice', $result['margin_notice']);
+                ->with('approval_notice', implode(' ', array_filter([
+                    ($result['margin_held'] ?? false) ? $result['margin_notice'] : null,
+                    ($result['discount_held'] ?? false) ? $result['discount_notice'] : null,
+                ])));
         }
 
         /* ⓘ চালানের সই চাওয়া হয়েছে — বিক্রিটা সইয়ের অপেক্ষায় জমা, কার্ট খোলা রাখা নয় */

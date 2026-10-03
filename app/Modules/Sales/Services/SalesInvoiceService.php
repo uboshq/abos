@@ -7,6 +7,7 @@ namespace App\Modules\Sales\Services;
 use App\Core\Concerns\ReadsTheRowUnderLock;
 use App\Core\Contracts\RecipeBook;
 use App\Core\Engines\Approval\ApprovalEngine;
+use App\Core\Engines\Approval\HeldForApproval;
 use App\Core\Engines\NumberSeries\NumberSeriesEngine;
 use App\Core\Engines\Posting\PostingEngine;
 use App\Core\Services\SettingsService;
@@ -162,6 +163,25 @@ final class SalesInvoiceService
     {
         $discount = (string) ($invoice->discount ?? '0');
 
+        /*
+         * ⛔ বিলের মাথার ছাড়ও একই সইয়ে — চূড়ান্ত অডিট (গ), ১ অক্টোবর ২০২৬।
+         *
+         * ⓘ `discount` কেবল সারির ছাড়; মাথার ছাড় আলাদা ঘরে (`bill_discount`) আর এখানে গোনা হত না। ফলে সারিতে
+         * ১,৫০০ ছাড় সই চাইত, অথচ একই ১,৫০০ বিলের নিচে লিখলে কারও সই ছাড়াই খাতায় উঠত — সই এড়াতে কেবল ঘর বদলানো।
+         * ⭐ এখন দুটো যোগ করে একই সীমা, একই ছক, একই সুইচ (ছক বন্ধ থাকলে আগের মতোই কিছু থামে না)।
+         */
+        $discount = bcadd($discount, (string) ($invoice->bill_discount ?? '0'), 4);
+
+        /*
+         * ⛔ রাউন্ডিং ৳০.৫০-এর বেশি হলে সেটাও ছাড় — মালিক, ১ অক্টোবর ২০২৬: *"রাউন্ডিং 0.5 mane 50 poisa porzonto
+         * accept"*। ⓘ দুই দিকেই (কমানো বা বাড়ানো) — বড় রাউন্ডিং দিয়ে ছাড় লুকানোর পথটাই বন্ধ।
+         */
+        $rounding = ltrim((string) ($invoice->rounding_amount ?? '0'), '-');
+
+        if (bccomp($rounding, '0.5', 4) > 0) {
+            $discount = bcadd($discount, $rounding, 4);
+        }
+
         if (bccomp($discount, '0', 4) <= 0) {
             return;
         }
@@ -193,13 +213,23 @@ final class SalesInvoiceService
             reason: $invoice->narration,
         );
 
+        /*
+         * ⛔ ছক নেই বা বন্ধ — তবু ছাড় যায় না (fail-closed; সমন্বয়ক, ২ অক্টোবর ২০২৬)। মালিকের নিয়ম সব কোম্পানির:
+         * সই ছাড়া কোনো ছাড় নয়। ⓘ আগে এখানে `return` — ছক না থাকলে ছাড় চুপচাপ খাতায় উঠত, আর লাইভে দুই কোম্পানির
+         * কোনো ছাড়ের ছকই ছিল না। [[OwnerSignsDiscounts]] প্রতিটা কোম্পানিতে ছক বসায়; এটা তার পিছনের দেয়াল।
+         */
         if ($approval === null) {
-            return;
+            throw ValidationException::withMessages([
+                'discount' => __('sales::validation.discount_no_signer'),
+            ]);
         }
 
-        throw ValidationException::withMessages([
-            'discount' => __('sales::validation.discount_awaiting'),
-        ]);
+        /*
+         * ⓘ HeldForApproval (ValidationException-ই) — কাউন্টার এটা চেনে: বিক্রিটা খসড়ায় রেখে অনুরোধ লেনদেনের
+         * বাইরে আবার লেখে ([[DirectSaleService::holdForDiscount()]])। ⛔ নাহলে ফেরত-গড়ানোয় অনুরোধটা মুছত, অথচ
+         * পর্দা বলত "অনুরোধ পাঠানো হয়েছে"।
+         */
+        throw HeldForApproval::on($invoice, 'discount', __('sales::validation.discount_awaiting'));
     }
 
     /**

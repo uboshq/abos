@@ -116,6 +116,7 @@ return [
     'no_cheques_in_hand_account' => 'This company has no "Cheques in Hand" account to hold the cheque.',
     'discount_awaiting' => 'This discount needs approval — the request has been sent. The invoice stays a draft; press Confirm again once it is approved.',
     'discount_rejected' => 'The discount was sent back. Lower it and confirm again.',
+    'discount_no_signer' => 'Nobody is set to sign this discount — the discount approval flow is off or missing. By the rule of the owner, no discount goes through unsigned; switch the discount flow on in the approval settings.',
     'approver_unknown' => 'That email and password do not match.',
     'approver_not_allowed' => ':name cannot approve this discount — either they are not an approver, or they asked for it themselves.',
     'approver_too_many' => 'Too many failed tries. Try again in :seconds seconds.',
