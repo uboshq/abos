@@ -95,7 +95,7 @@
     </tr>
 </table>
 
-<div class="footnote">{!! nl2br(e($v->footnote)) !!}</div>
+<div class="footnote"><div style="text-align: left; font-size: 50%; line-height: 1.35">{!! nl2br(e($v->footnote)) !!}</div></div>
 
 <table style="width: 100%">
     <tr>

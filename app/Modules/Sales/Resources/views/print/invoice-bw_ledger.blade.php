@@ -287,7 +287,7 @@
     </tr>
 </table>
 
-<div class="footnote">{!! nl2br(e($footnote)) !!}</div>
+<div class="footnote"><div style="text-align: left; font-size: 50%; line-height: 1.35">{!! nl2br(e($footnote)) !!}</div></div>
 
 @if ($qr !== '')
     <table style="width: 100%; margin-top: 4mm">

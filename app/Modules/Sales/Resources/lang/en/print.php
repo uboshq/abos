@@ -9,6 +9,7 @@ return [
     'invoice_due' => 'Due on this bill',
     'bill_discount' => 'Bill discount',
     'previous_due' => 'Previous due',
+    'previous_advance' => 'Previous advance',
     'outstanding' => 'Total outstanding',
 
     // The paid-against table under the bill — the owner's sample, 22 September 2026.
@@ -72,7 +73,11 @@ return [
         'paid' => 'Paid Amount',
         'invoice_due' => 'Invoice Due',
         'previous_due' => '(+) Previous Due',
-        'total_due' => 'Outstanding Amount',
+        'previous_owed' => '(+) Previous Due',
+        'previous_advance' => '(-) Previous Advance',
+        'total_due' => 'Outstanding (Due)',
+        'total_advance' => 'Outstanding (Advance)',
+        'total_owed' => 'Outstanding (Due)',
         'payments_title' => 'Paid - Received Into Accounts',
         'txn_id' => 'Transaction ID',
         'txn_date' => 'Transaction Date',

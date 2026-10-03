@@ -45,6 +45,13 @@ class ProductRequest extends FormRequest
             Product::class, 'purchase_price')) {
             $this->request->remove('purchase_price');
         }
+
+        /*
+         * ⛔ প্রতিটা পণ্য লট ধরে, বন্ধের পথ নেই — মালিক, ৩ অক্টোবর ২০২৬ ("ok")। পাঠানো `0` বা ফাঁকা যা-ই আসুক।
+         * ⓘ দরজা এখানে, [[ProductService]]-এ নয়: সার্ভিসে বসালে ডেমো-বীজের লটহীন খোলা মজুদ লট-ধরা পণ্যে পড়ত,
+         * আর লটহীন বিক্রির প্রতিটা পরীক্ষা থামত। আগের পণ্য — [[every_product_is_counted_by_lot]] মাইগ্রেশন।
+         */
+        $this->merge(['track_batch' => true]);
     }
 
     public function rules(): array

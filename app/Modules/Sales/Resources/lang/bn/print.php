@@ -17,6 +17,7 @@ return [
     'invoice_due' => 'এই বিলের বকেয়া',
     'bill_discount' => 'বিলের ছাড়',
     'previous_due' => 'আগের বকেয়া',
+    'previous_advance' => 'আগের অগ্রিম',
     'outstanding' => 'সব মিলিয়ে পাওনা',
 
     // ⭐ বিলের নিচে আদায়ের ছক — মালিকের নমুনা, ২২ সেপ্টেম্বর ২০২৬।
@@ -79,7 +80,11 @@ return [
         'paid' => 'পরিশোধিত',
         'invoice_due' => 'এই বিলের বকেয়া',
         'previous_due' => 'আগের বকেয়া',
+        'previous_owed' => 'আগের বকেয়া',
+        'previous_advance' => 'আগের অগ্রিম',
         'total_due' => 'মোট বকেয়া',
+        'total_advance' => 'মোট অগ্রিম',
+        'total_owed' => 'মোট বকেয়া',
         'payments_title' => 'যা পরিশোধ হয়েছে',
         'txn_id' => 'লেনদেন নম্বর',
         'txn_date' => 'লেনদেনের তারিখ',

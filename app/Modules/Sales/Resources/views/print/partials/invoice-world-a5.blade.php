@@ -122,7 +122,7 @@
     </tr>
 </table>
 
-<div class="terms"><strong>{{ __('sales::paper_design.terms', [], $lang) }}:</strong> <span style="font-family: hindsiliguri">{!! nl2br(e($v->footnote)) !!}</span></div>
+<div class="terms"><strong>{{ __('sales::paper_design.terms', [], $lang) }}:</strong> <span style="font-family: hindsiliguri"><div style="text-align: left; font-size: 50%; line-height: 1.35">{!! nl2br(e($v->footnote)) !!}</div></span></div>
 @include('sales::print.partials.invoice-signatures', ['v' => $v])
 <div class="thanks">{{ $D('thanks') }}</div>
 <div class="printed">{{ $v->printedAt() }}</div>

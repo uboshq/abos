@@ -198,9 +198,9 @@
                  ⓘ দুইটা জিনিস এর উপর দাঁড়িয়ে: মেয়াদ ধরা (আর রিকল), আর
                  ফ্রি মালের অনুপাত — কোন লটে কত ফ্রি এসেছিল। --}}
             <label class="mt-3 flex min-h-(--spacing-touch) items-start gap-2 text-sm">
-                <input type="hidden" name="track_batch" value="0">
-                <input type="checkbox" name="track_batch" value="1" class="mt-0.5 size-4"
-                       @checked(old('track_batch', $product->track_batch ?? true))>
+                {{-- ⛔ সবসময় চালু, বন্ধ করা যায় না — মালিক, ৩ অক্টোবর ২০২৬ ("ok"): লট ছাড়া পণ্য হলে ফ্রি আর মেয়াদ দুটোই হারায় --}}
+                <input type="hidden" name="track_batch" value="1">
+                <input type="checkbox" class="mt-0.5 size-4" checked disabled aria-disabled="true">
                 <span>
                     {{ __('inventory::field.track_batch') }}
                     <span class="mt-0.5 block text-2xs text-(--color-ink-muted)">

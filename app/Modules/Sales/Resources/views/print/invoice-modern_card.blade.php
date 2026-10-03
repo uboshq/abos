@@ -103,7 +103,7 @@
 </div>
 
 <div class="card">
-    <div class="footnote">{!! nl2br(e($v->footnote)) !!}</div>
+    <div class="footnote"><div style="text-align: left; font-size: 50%; line-height: 1.35">{!! nl2br(e($v->footnote)) !!}</div></div>
     @include('sales::print.partials.invoice-signatures', ['v' => $v])
 </div>
 <div class="printed">{{ $v->printedAt() }}</div>

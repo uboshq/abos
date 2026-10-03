@@ -382,8 +382,30 @@ class SalesPrintController extends Controller implements HasMiddleware
             'paid' => $paid,
             'invoice_due' => $due,
             'previous_due' => $earlier,
-            'outstanding' => bcadd($earlier, $due, 4),
+            /* ⓘ গ্রাহকের আসল জের — অগ্রিম থাকলে ঋণাত্মক; আগের + এই বিলের বাকি = এটাই ([[earlierDue()]]) */
+            'outstanding' => $invoice->customer !== null ? (string) $invoice->customer->outstanding() : bcadd($earlier, $due, 4),
         ];
+
+        /*
+         * ⭐ বকেয়া না অগ্রিম — মালিক, ৩ অক্টোবর ২০২৬: *"Outstanding due hole Outstanding (Due), r advance thakle
+         * Outstanding (Advance)"*। ⓘ অঙ্কটা নিজের চিহ্নেই ছাপে (অগ্রিম ঋণাত্মক), নামটাও বলে কোন দিকে। নকশাগুলো একই চাবি
+         * (`total_due`) পড়ে, তাই অগ্রিমের বেলায় এই কাগজের জন্যই নামটা বদলানো — ৫০টা নকশা ছুঁতে হয় না।
+         */
+        // ⓘ চিহ্ন যেমন আছে তেমন — মালিক, ৩ অক্টোবর ২০২৬: "na renatok hole renatok ei hobe" (অগ্রিম −৮,৭৮৯.০০)
+        $advance = bccomp($sums['outstanding'], '0', 4) < 0;
+        $earlierAdvance = bccomp($earlier, '0', 4) < 0;
+
+        /* ⚠️ প্রতিবার বসানো, দুই দিকেই — এক প্রসেসে (কিউ, পরীক্ষা) পরের বিলে আগের "অগ্রিম" থেকে না যায় */
+        foreach (['en', 'bn'] as $locale) {
+            app('translator')->addLines(
+                [
+                    'print.classic.total_due' => (string) __('sales::print.classic.'.($advance ? 'total_advance' : 'total_owed'), [], $locale),
+                    /* ⭐ আগের সারিও — মালিক, ৩ অক্টোবর ২০২৬: "Previous Due na ese Previous Advance aste hobe" */
+                    'print.classic.previous_due' => (string) __('sales::print.classic.'.($earlierAdvance ? 'previous_advance' : 'previous_owed'), [], $locale),
+                ],
+                $locale, 'sales',
+            );
+        }
 
         return [
             'bill_to' => [
@@ -1110,14 +1132,12 @@ class SalesPrintController extends Controller implements HasMiddleware
      * সারিটা সবসময় বেশি দেখাত — নীরবে, কারণ প্রতিটা সংখ্যা আলাদা
      * করে ঠিক।
      *
-     * ⓘ তাই বিয়োগ করা হয়, আর ফলটা ঋণাত্মক হলে শূন্য ধরা হয়: গ্রাহক
-     * আগাম টাকা দিয়ে রাখলে "আগের বকেয়া −৫,০০০" লেখা কাগজে বিভ্রান্তি
-     * ছাড়া কিছু দিত না।
+     * ⓘ তাই বিয়োগ করা হয়; অগ্রিম থাকলে ফল ঋণাত্মকই থাকে (৩ অক্টোবর ২০২৬, [[earlierDue()]])।
      *
      * @return array<string, string>
      */
     /**
-     * ⓘ আগের বকেয়া — গ্রাহকের মোট পাওনা থেকে এই বিলের বকেয়া বাদ, শূন্যের নিচে নয়।
+     * ⓘ আগের বকেয়া — গ্রাহকের মোট পাওনা থেকে এই বিলের বকেয়া বাদ, চিহ্নসহ (অগ্রিম ঋণাত্মক)।
      *
      * ⭐ এক জায়গায়, কারণ দুই নকশাই ([[invoiceTotals()]] আর [[classicFacts()]]) এটা ছাপে;
      * ⛔ দুইবার লিখলে একদিন দুই কাগজে একই গ্রাহকের দুই রকম "আগের বকেয়া" ছাপা হত।
@@ -1130,9 +1150,12 @@ class SalesPrintController extends Controller implements HasMiddleware
             return '0';
         }
 
-        $earlier = bcsub($customer->outstanding(), $due, 4);
-
-        return bccomp($earlier, '0', 4) < 0 ? '0' : $earlier;
+        /*
+         * ⭐ চিহ্নসহ — মালিক, ৩ অক্টোবর ২০২৬: *"Previous Due aseni keno"*। গ্রাহকের আগাম টাকা থাকলে আগে শূন্যে থামত,
+         * অথচ "Outstanding" আসল জের ছাপে — তাই আগের সারি ০, শেষ সারি অন্য অঙ্ক, যোগ মিলত না।
+         * ⓘ এখন অগ্রিম ঋণাত্মক ("na renatok hole renatok ei hobe"), আর আগের + এই বিলের বাকি = মোট, সবসময়।
+         */
+        return bcsub($customer->outstanding(), $due, 4);
     }
 
     private function invoiceTotals(SalesInvoice $invoice, bool $roll = false): array
@@ -1172,8 +1195,9 @@ class SalesPrintController extends Controller implements HasMiddleware
         if ($customer !== null) {
             $earlier = $this->earlierDue($invoice, $due);
 
-            if (bccomp($earlier, '0', 4) > 0) {
-                $rows['sales::print.previous_due'] = $this->money($earlier);
+            if (bccomp($earlier, '0', 4) !== 0) {
+                // ⓘ অগ্রিম হলে নাম "আগের অগ্রিম", অঙ্ক চিহ্নসহ (৩ অক্টোবর ২০২৬)
+                $rows[bccomp($earlier, '0', 4) < 0 ? 'sales::print.previous_advance' : 'sales::print.previous_due'] = $this->money($earlier);
             }
 
             $rows['sales::print.outstanding'] = $this->money(bcadd($earlier, $due, 4));
