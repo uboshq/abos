@@ -32,15 +32,17 @@ final class ReportCenterPlan
     {
         return [
             // ── ধাপ ২ — মালিকের পাতা
-            ['key' => 'executive', 'module' => null, 'route' => 'accounts.report.show:executive', 'step' => 2],
-            ['key' => 'branch_profit_loss', 'module' => 'accounts', 'route' => 'accounts.report.show:branch-profit-loss', 'step' => 2],
+            // ⓘ দুইটাই "শাখা পাশাপাশি"-তে — বিক্রি, লাভ, টাকা, পাওনা, দেনা, মজুদ শাখা ধরে ([[BranchesSideBySideReport]], d182ca8b)
+            ['key' => 'executive', 'module' => null, 'route' => 'accounts.report.show:branches', 'step' => 2],
+            ['key' => 'branch_profit_loss', 'module' => 'accounts', 'route' => 'accounts.report.show:branches', 'step' => 2],
 
             // ── ধাপ ৩ — বিশ্লেষণ
             ['key' => 'sales_analysis', 'module' => 'sales', 'route' => 'sales.report.show:analysis', 'step' => 3],
 
             // ── ধাপ ৪ — নিয়ন্ত্রণ
-            ['key' => 'receivable_calendar', 'module' => 'customer', 'route' => 'customer.report.show:due-calendar', 'step' => 4],
-            ['key' => 'payable_calendar', 'module' => 'supplier', 'route' => 'supplier.report.show:due-calendar', 'step' => 4],
+            // ⓘ আদায়ের সূচি ([[CollectionDueReport]], 8a2ca208) আর পরিশোধের সূচি ([[PaymentDueReport]], a90983a1)
+            ['key' => 'receivable_calendar', 'module' => 'sales', 'route' => 'sales.report.show:collection-due', 'step' => 4],
+            ['key' => 'payable_calendar', 'module' => 'purchase', 'route' => 'purchase.report.show:payment-due', 'step' => 4],
             ['key' => 'cash_position', 'module' => 'accounts', 'route' => 'accounts.report.show:cash-position', 'step' => 4],
             ['key' => 'expense_analysis', 'module' => 'accounts', 'route' => 'accounts.report.show:expense-analysis', 'step' => 4],
 
