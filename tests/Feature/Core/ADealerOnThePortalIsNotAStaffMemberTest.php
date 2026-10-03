@@ -19,7 +19,7 @@ use Tests\TestCase;
  * ডিলার পোর্টালের কর্তা গ্রাহক, কর্মী নন — কর্মীর গুদামের ছাঁকনি তাঁর ওপর ভাঙে না। ৩ অক্টোবর ২০২৬ (abos-2c-এর ধরা;
  * [[ScopedToUserWarehouse]])।
  *
- * ⛔ আগে: পোর্টালে DO জমা দিলে মজুদ আটকানোর কাজ গুদাম, মজুদের চলাচল আর লট পড়ত, আর ছাঁকনি `auth()->user()`-কে
+ * ⛔ আগে: পোর্টালে DO জমা দিলে মজুদ আটকানোর কাজ গুদাম, মজুদের চলাচল আর লট পড়ত, আর মাসের তালাও ([[OpenPeriod]], `can()`), আর ছাঁকনি `auth()->user()`-কে
  * কর্মী ধরে [[DataScope::idsFor()]]-এ পাঠাত — গ্রাহক যেতেই TypeError, পাতায় ৫০০।
  */
 final class ADealerOnThePortalIsNotAStaffMemberTest extends TestCase
@@ -42,5 +42,8 @@ final class ADealerOnThePortalIsNotAStaffMemberTest extends TestCase
         $this->assertGreaterThan(0, Warehouse::query()->count(), '⛔ গ্রাহক কর্তা হলে গুদামই দেখা যায় না।');
         StockMovement::query()->count();
         Batch::query()->count();
+
+        // ⓘ মজুদ নড়লে মাসের তালা দেখা হয় — পেছনের তারিখের জানালা কর্মীর, গ্রাহকের ওপর `can()` নয় ([[OpenPeriod]])
+        app(\App\Core\Services\OpenPeriod::class)->assertOpen(now()->toDateString());
     }
 }
