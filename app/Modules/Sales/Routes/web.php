@@ -321,6 +321,12 @@ Route::middleware('auth')->prefix('sales')->group(function () {
         Route::post('/{challan}/stage', [DeliveryStageController::class, 'move'])->whereNumber('challan')->name('move');
     });
 
+    // ⭐ বাতিল-ইনভয়েসের পাতা আর ছাপা (৪ অক্টোবর ২০২৬)
+    Route::get('/cancellations/{cancellation}', [\App\Modules\Sales\Http\Controllers\SalesInvoiceCancellationController::class, 'show'])
+        ->whereNumber('cancellation')->name('cancellation.show');
+    Route::get('/cancellations/{cancellation}/print', [SalesPrintController::class, 'cancellation'])
+        ->whereNumber('cancellation')->name('cancellation.print');
+
     Route::prefix('invoices')->name('invoice.')->group(function () {
         Route::get('/', [SalesInvoiceController::class, 'index'])->name('index');
         Route::get('/create', [SalesInvoiceController::class, 'create'])->name('create');
@@ -330,6 +336,9 @@ Route::middleware('auth')->prefix('sales')->group(function () {
         Route::put('/{invoice}', [SalesInvoiceController::class, 'update'])->whereNumber('invoice')->name('update');
         Route::post('/{invoice}/confirm', [SalesInvoiceController::class, 'confirm'])->whereNumber('invoice')->name('confirm');
         Route::post('/{invoice}/cancel', [SalesInvoiceController::class, 'cancel'])->whereNumber('invoice')->name('cancel');
+        // ⭐ বাতিল-ইনভয়েস — পাকা ইনভয়েসের পুরো উল্টো কাগজ, নিজের নম্বরে (মালিক, ৪ অক্টোবর ২০২৬)
+        Route::post('/{invoice}/cancellation', [\App\Modules\Sales\Http\Controllers\SalesInvoiceCancellationController::class, 'store'])
+            ->whereNumber('invoice')->name('cancellation');
     });
 
     Route::prefix('collections')->name('collection.')->group(function () {

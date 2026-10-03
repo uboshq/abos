@@ -911,9 +911,36 @@ final class DeliveryChallanService
     }
 
     /**
-     * নিশ্চিত চালানের সব ছাপ উল্টো — বাতিল আর সম্পাদনা, দুই পথের একই অংশ।
+     * ⭐ বাতিল-ইনভয়েসের পথ — গেট পাসের আগের চালান; মাল গুদামে ফেরে, চালান বাতিল (মালিক, ৪ অক্টোবর ২০২৬;
+     * [[SalesInvoiceCancellationService]])। ⓘ সম্পাদনার একই উল্টানো ([[unpost()]]); উল্টো সারি বাতিল-ইনভয়েসের নম্বরে।
+     * ⛔ একা ডাকার জন্য নয় — গেট পাস না হওয়ার পাহারা বাতিল-ইনভয়েসের লেনদেনে আগেই।
      */
-    private function unpost(DeliveryChallan $challan, Carbon $date, string $reason): void
+    public function reverseForCancellation(DeliveryChallan $challan, Carbon $date, string $reason, string $paperNo, ?int $userId): void
+    {
+        if ($challan->status !== DocumentStatus::CONFIRMED) {
+            throw ValidationException::withMessages([
+                'status' => __('sales::validation.edit_only_confirmed', ['no' => $challan->document_no]),
+            ]);
+        }
+
+        $challan->loadMissing(['lines.product', 'lines.orderLine.order', 'warehouse']);
+
+        $this->unpost($challan, $date, $reason, $paperNo);
+
+        $challan->update([
+            'status' => DocumentStatus::CANCELLED,
+            'cancelled_by' => $userId,
+            'cancelled_at' => now(),
+            'cancel_reason' => $reason,
+        ]);
+    }
+
+    /**
+     * নিশ্চিত চালানের সব ছাপ উল্টো — বাতিল আর সম্পাদনা, দুই পথের একই অংশ।
+     *
+     * @param  string|null  $paperNo  উল্টো সারির কাগজ-নম্বর — বাতিল-ইনভয়েস হলে তারটা
+     */
+    private function unpost(DeliveryChallan $challan, Carbon $date, string $reason, ?string $paperNo = null): void
     {
         /*
          * গাড়ির ভাড়ার দাখিলাও ফেরে।
@@ -944,6 +971,7 @@ final class DeliveryChallanService
                 sourceId: $challan->id,
                 reversalDate: $date,
                 reason: $reason,
+                documentNo: $paperNo,
             );
         }
 
@@ -1009,7 +1037,7 @@ final class DeliveryChallanService
                 floor: '0',
                 reserved: $reserve,
                 date: $date,
-                documentNo: $challan->document_no,
+                documentNo: $paperNo ?? $challan->document_no,
                 narration: $reason,
             );
         }

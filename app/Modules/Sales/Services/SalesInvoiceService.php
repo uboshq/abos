@@ -784,9 +784,38 @@ final class SalesInvoiceService
     }
 
     /**
-     * নিশ্চিত বিলের সব ছাপ উল্টো — বাতিল আর সম্পাদনা, দুই পথের একই অংশ।
+     * ⭐ বাতিল-ইনভয়েসের পথ — মালিক, ৪ অক্টোবর ২০২৬ ([[SalesInvoiceCancellationService]])।
+     *
+     * ⓘ সম্পাদনার একই উল্টানো ([[unpost()]]), কিন্তু বিল খসড়ায় ফেরে না — বাতিল হয়ে থাকে, আর উল্টো সারিগুলো বাতিল-
+     * ইনভয়েসের নিজের নম্বরে (`$paperNo`)। ⛔ একা ডাকার জন্য নয়: বাতিল-ইনভয়েসের লেনদেন আর তালার ভিতরে, যেখানে গেট পাস,
+     * আদায় আর ফেরতের পাহারা আগেই দাঁড়িয়েছে।
      */
-    private function unpost(SalesInvoice $invoice, Carbon $date, string $reason): void
+    public function reverseForCancellation(SalesInvoice $invoice, Carbon $date, string $reason, string $paperNo, ?int $userId): void
+    {
+        if ($invoice->status !== DocumentStatus::CONFIRMED) {
+            throw ValidationException::withMessages([
+                'status' => __('sales::validation.edit_only_confirmed', ['no' => $invoice->document_no]),
+            ]);
+        }
+
+        $invoice->loadMissing(['lines.product', 'lines.challanLine', 'warehouse']);
+
+        $this->unpost($invoice, $date, $reason, $paperNo);
+
+        $invoice->update([
+            'status' => DocumentStatus::CANCELLED,
+            'cancelled_by' => $userId,
+            'cancelled_at' => now(),
+            'cancel_reason' => $reason,
+        ]);
+    }
+
+    /**
+     * নিশ্চিত বিলের সব ছাপ উল্টো — বাতিল আর সম্পাদনা, দুই পথের একই অংশ।
+     *
+     * @param  string|null  $paperNo  উল্টো সারির কাগজ-নম্বর — বাতিল-ইনভয়েস হলে তারটা; না দিলে বিলেরটা
+     */
+    private function unpost(SalesInvoice $invoice, Carbon $date, string $reason, ?string $paperNo = null): void
     {
         foreach ($invoice->lines as $line) {
             if ($line->challanLine !== null) {
@@ -800,7 +829,7 @@ final class SalesInvoiceService
                 sourceId: $invoice->id,
                 floor: (string) $line->qty,
                 date: $date,
-                documentNo: $invoice->document_no,
+                documentNo: $paperNo ?? $invoice->document_no,
                 narration: $reason,
             );
         }
@@ -812,6 +841,7 @@ final class SalesInvoiceService
             sourceId: $invoice->id,
             reversalDate: $date,
             reason: $reason,
+            documentNo: $paperNo,
         );
     }
 

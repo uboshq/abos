@@ -159,6 +159,19 @@
                     <dt class="text-(--color-ink-muted)">{{ __('sales::field.state') }}</dt>
                     <dd class="mt-0.5"><x-sales::status-badge :document="$invoice" /></dd>
                 </div>
+
+                {{-- ⭐ বাতিল-ইনভয়েসের সূত্র — আসল ইনভয়েস থাকে, পাশে কোন কাগজ এটা উল্টাল (মালিক, ৪ অক্টোবর ২০২৬) --}}
+                @php($cancellation = \App\Modules\Sales\Models\SalesInvoiceCancellation::query()->where('sales_invoice_id', $invoice->id)->first())
+                @if ($cancellation)
+                    <div data-cancellation>
+                        <dt class="text-(--color-ink-muted)">{{ __('sales::cancellation.title') }}</dt>
+                        <dd class="mt-0.5">
+                            <a href="{{ route('sales.cancellation.show', $cancellation) }}" class="font-semibold underline">
+                                {{ __('sales::cancellation.reference', ['cxl' => $cancellation->document_no]) }}
+                            </a>
+                        </dd>
+                    </div>
+                @endif
             </dl>
         </section>
 
@@ -295,6 +308,21 @@
     @endif
 
     <x-ui.attachments :document="$invoice" />
+
+        {{-- ⭐ বাতিল-ইনভয়েস চাওয়া — পাকা ইনভয়েস, এখনো বাতিল-ইনভয়েস নেই (মালিক, ৪ অক্টোবর ২০২৬; পাহারা সার্ভিসে) --}}
+        @can('sales.invoice.cancellation')
+            @if ($invoice->status === \App\Core\Support\DocumentStatus::CONFIRMED && ! $cancellation)
+                <details data-cancellation-form class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
+                    <summary class="cursor-pointer text-sm font-medium">{{ __('sales::cancellation.button') }}</summary>
+
+                    <form method="POST" action="{{ route('sales.invoice.cancellation', $invoice) }}" class="mt-3 space-y-3">
+                        @csrf
+                        <x-ui.field name="reason" :label="__('sales::cancellation.reason_label')" :hint="__('sales::cancellation.reason_hint')" required />
+                        <x-ui.button type="submit" tone="danger">{{ __('sales::cancellation.button') }}</x-ui.button>
+                    </form>
+                </details>
+            @endif
+        @endcan
 
         @can('delete', $invoice)
             {{-- ⛔ কেবল খসড়া — নিশ্চিত বিল বাতিল হয় না (মালিক, ২ অক্টোবর ২০২৬; দেয়াল [[SalesInvoiceService::cancel()]]-এ) --}}

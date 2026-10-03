@@ -104,7 +104,7 @@ class SalesPrintController extends Controller implements HasMiddleware
     public static function middleware(): array
     {
         return [
-            new Middleware('can:sales.invoice.view', only: ['invoice', 'draft']),
+            new Middleware('can:sales.invoice.view', only: ['invoice', 'draft', 'cancellation']),
             new Middleware('can:sales.challan.view', only: ['challan', 'gatepass']),
             new Middleware('can:sales.gate_pass.view', only: ['gatePassDocument']),
             new Middleware('can:sales.shipment.view', only: ['loadingSheet']),
@@ -787,6 +787,38 @@ class SalesPrintController extends Controller implements HasMiddleware
 
         return $this->pdf($request, $doc, '0', $gatePass->document_no, document: $gatePass,
             paperSetting: 'sales.print.paper.gate_pass', target: 'challan');
+    }
+
+    /**
+     * ⭐ বাতিল-ইনভয়েসের কাগজ — নিজের নম্বরে, উল্টানো ইনভয়েসের সারি আর অঙ্ক (মালিক, ৪ অক্টোবর ২০২৬;
+     * [[SalesInvoiceCancellationService]])। ⓘ কাগজের শিরোনামই বলে এটা বাতিল; অঙ্ক বিয়োগ চিহ্ন ছাড়া — কাগজটা পুরোটাই উল্টো।
+     */
+    public function cancellation(Request $request, \App\Modules\Sales\Models\SalesInvoiceCancellation $cancellation): Response
+    {
+        $invoice = SalesInvoice::query()->with(['lines.product.unit', 'customer'])->findOrFail($cancellation->sales_invoice_id);
+        $cancellation->loadMissing(['creator', 'confirmer']);
+
+        $collected = $invoice->collectedAmount();
+
+        $doc = new PrintableDocument(
+            title: __('sales::cancellation.title'),
+            meta: array_filter([
+                'core.print.document_no' => $cancellation->document_no,
+                'core.print.date' => DateFormat::format($cancellation->trx_date),
+                'sales::field.customer' => $invoice->customer?->name() ?? '',
+                'sales::cancellation.of_invoice' => $invoice->document_no.' · '.DateFormat::format($invoice->trx_date),
+                'sales::cancellation.reason' => $cancellation->reason,
+            ], fn ($v) => filled($v)),
+            lines: $this->productLines($invoice->lines, 'qty', $this->lotsForInvoice($invoice)),
+            totals: $this->totals($invoice),
+            signatures: ['core.print.prepared_by', 'core.print.approved_by'],
+            notice: bccomp($collected, '0', 4) > 0
+                ? (string) __('sales::cancellation.advance_note', ['amount' => \App\Core\Support\Money::format($collected)])
+                : null,
+        );
+
+        return $this->pdf($request, $doc, (string) $cancellation->total, $cancellation->document_no, document: $cancellation,
+            type: 'sales_invoice_cancellation', id: (int) $cancellation->id);
     }
 
     /**

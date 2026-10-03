@@ -444,6 +444,8 @@ return [
         'sales.invoice.view',
         'sales.invoice.create',
         'sales.invoice.cancel',
+        // ⭐ বাতিল-ইনভয়েস দেওয়ার চাবি — সাথে মালিকের সইয়ের ধারা (মালিক, ৪ অক্টোবর ২০২৬; [[SalesInvoiceCancellationService]])
+        'sales.invoice.cancellation',
         'sales.collection.view',
         'sales.collection.create',
         'sales.collection.cancel',
@@ -634,6 +636,8 @@ return [
         'DO' => 'sales::doc.delivery_order',
         'TRP' => 'sales::doc.shipment',
         'INV' => 'sales::doc.invoice',
+        // ⭐ বাতিল-ইনভয়েস — নিজের ক্রম, CXL-0001 (মালিক, ৪ অক্টোবর ২০২৬); নম্বরের পর্দা থেকে বদলানো যায়
+        'CXL' => 'sales::cancellation.doc',
         'COL' => 'sales::doc.collection',
         'SR' => 'sales::doc.return',
         'CMC' => 'sales::doc.commission',
@@ -655,6 +659,7 @@ return [
     ],
 
     'drill_sources' => [
+        'sales_invoice_cancellation' => \App\Modules\Sales\Models\SalesInvoiceCancellation::class,
         'commission_claim' => CommissionClaim::class,
         'sales_order' => SalesOrder::class,
         'delivery_challan' => DeliveryChallan::class,
@@ -759,6 +764,8 @@ return [
             \App\Modules\Sales\Listeners\ConfirmTheChallanOnTheLastSignature::class,
             // ⭐ DO-র সুপারভাইজার — শেষ সইয়ে অনুমোদিত, ফেরতে থামে ([[MoveTheDeliveryOrderOnItsSignature]], ২ অক্টোবর ২০২৬)
             \App\Modules\Sales\Listeners\MoveTheDeliveryOrderOnItsSignature::class,
+            // ⭐ বাতিল-ইনভয়েস — শেষ সইয়ে পাকা, প্রত্যাখ্যানে বাতিল (৪ অক্টোবর ২০২৬)
+            \App\Modules\Sales\Listeners\FinishTheCancellationOnTheLastSignature::class,
         ],
     ],
 
@@ -832,6 +839,8 @@ return [
         'challan' => 'sales::approval.challan',
         'collection' => 'sales::approval.collection',
         'discount' => 'sales::approval.discount',
+        // ⭐ বাতিল-ইনভয়েস — সইয়ের ছক প্রতিষ্ঠানের, ঐচ্ছিক (৪ অক্টোবর ২০২৬; [[SalesInvoiceCancellationService]])
+        'cancellation' => 'sales::cancellation.approval',
         // ⭐ DO-র সুপারভাইজার — কোম্পানির নিজের ছক, ১–৩ স্তর (মালিকের বিক্রয়-ধারা, ২ অক্টোবর ২০২৬)
         'delivery_order' => 'sales::delivery_order.approval',
     ],

@@ -149,6 +149,11 @@ final class PostingEngine
         Carbon|string $reversalDate,
         ?string $reason = null,
         ?int $userId = null,
+        /*
+         * ⓘ উল্টো সারির কাগজ-নম্বর — না দিলে মূলটারই (আগের আচরণ)। ⭐ বাতিল-ইনভয়েস নিজের নম্বরে (CXL-…) উল্টায়,
+         * যাতে খতিয়ানে "কোন কাগজ বিলটা উল্টাল" দেখা যায় ([[SalesInvoiceCancellationService]], ৪ অক্টোবর ২০২৬)।
+         */
+        ?string $documentNo = null,
     ): array {
         $reversalType = $sourceType.':reversal';
         $lastReversal = $this->lastRowId($reversalType, $sourceId);
@@ -213,7 +218,7 @@ final class PostingEngine
             ? $reversalType
             : $reversalType.'@'.$original->last()->id;
 
-        return DB::transaction(function () use ($original, $reversalType, $sourceId, $reversalDate, $financialYear, $reason, $userId, $claimKey) {
+        return DB::transaction(function () use ($original, $reversalType, $sourceId, $reversalDate, $financialYear, $reason, $userId, $claimKey, $documentNo) {
             $this->claim($claimKey, $sourceId, $userId);
 
             $created = [];
@@ -234,7 +239,7 @@ final class PostingEngine
                     'source_type' => $reversalType,
                     'source_id' => $sourceId,
                     'source_line_id' => $entry->source_line_id,
-                    'document_no' => $entry->document_no,
+                    'document_no' => $documentNo ?? $entry->document_no,
                     'narration' => $reason ?? __('core.posting.reversal_of', ['document' => $entry->document_no]),
                     'created_by' => $userId,
                 ]);

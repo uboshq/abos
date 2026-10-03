@@ -50,6 +50,8 @@ final class PaperTrail
      */
     public const DOCUMENT_ROUTES = [
         'sales_invoice' => 'sales.print.invoice',
+        // ⭐ বাতিল-ইনভয়েস — নিজের কাগজ (৪ অক্টোবর ২০২৬)
+        'sales_invoice_cancellation' => 'sales.cancellation.print',
         'sales_challan' => 'sales.print.challan',
         'sales_order' => 'sales.print.order',
         'sales_collection' => 'sales.print.receipt',
