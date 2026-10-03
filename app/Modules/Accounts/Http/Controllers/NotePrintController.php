@@ -15,6 +15,7 @@ use App\Core\Support\Money;
 use App\Http\Controllers\Controller;
 use App\Models\DocumentDelivery;
 use App\Modules\Accounts\Models\Note;
+use App\Modules\Accounts\Services\NoteAccounts;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controllers\HasMiddleware;
@@ -99,6 +100,9 @@ final class NotePrintController extends Controller implements HasMiddleware
         $party = $this->parties->paperFacts((string) $note->party_type, (int) $note->party_id)
             ?? ['name' => '', 'code' => '', 'address' => '', 'phone' => ''];
 
+        // ⭐ দুই খাত কাগজেও — সমন্বয়কের শর্ত, ৩ অক্টোবর ২০২৬ ([[NoteAccounts]])
+        ['control' => $control, 'other' => $other] = app(NoteAccounts::class)->of($note);
+
         return [
             'document_no' => (string) $note->document_no,
             'date' => DateFormat::format($note->trx_date),
@@ -111,6 +115,8 @@ final class NotePrintController extends Controller implements HasMiddleware
             'reason' => (string) __('accounts::note.reason_'.$note->reason),
             'narration' => (string) $note->narration,
             'against_no' => (string) $note->against_no,
+            'control_account' => $control->code.' — '.$control->name(),
+            'other_account' => $other->code.' — '.$other->name(),
             'amount' => Money::format($note->amount),
             'tax' => bccomp((string) $note->tax_amount, '0', 4) > 0 ? Money::format($note->tax_amount) : '',
             'total' => Money::format($note->total),

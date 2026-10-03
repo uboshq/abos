@@ -61,11 +61,33 @@ class Note extends Model implements Drillable
         'other',
     ];
 
+    /*
+     * ⭐ পক্ষের চার ধরন — মালিক, ৩ অক্টোবর ২০২৬: *"সব পক্ষেই ডেবিট ক্রেডিট হয়, দুই পক্ষেরই লাগে"*।
+     * ⓘ খাতার `party_type` তিনটা (গ্রাহক, সরবরাহকারী, ব্যক্তি) — সেবাদাতা সরবরাহকারীরই সারি, কেবল ধরন আলাদা;
+     * তাই নোট নিজের ধরনটা আলাদা মনে রাখে ([[NoteAccounts]])।
+     */
+    public const KIND_CUSTOMER = 'customer';
+
+    public const KIND_SUPPLIER = 'supplier';
+
+    public const KIND_SERVICE_PROVIDER = 'service_provider';
+
+    public const KIND_PERSON = 'person';
+
+    /** ধরন => খাতার `party_type` */
+    public const KINDS = [
+        self::KIND_CUSTOMER => 'customer',
+        self::KIND_SUPPLIER => 'supplier',
+        self::KIND_SERVICE_PROVIDER => 'supplier',
+        self::KIND_PERSON => 'person',
+    ];
+
     protected $table = 'acc_notes';
 
     protected $fillable = [
         'company_id', 'branch_id', 'document_no', 'trx_date', 'direction',
-        'party_type', 'party_id', 'against_type', 'against_id', 'against_no',
+        'party_type', 'party_id', 'party_kind', 'control_account_id', 'other_account_id',
+        'against_type', 'against_id', 'against_no',
         'amount', 'tax_amount', 'total', 'reason', 'narration',
         'status', 'confirmed_by', 'confirmed_at',
         'cancel_reason', 'cancelled_by', 'cancelled_at', 'created_by',
@@ -94,6 +116,18 @@ class Note extends Model implements Drillable
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
+    }
+
+    /** পক্ষের খাত — ক্রেডিট নোটে Cr, ডেবিট নোটে Dr ([[NoteAccounts]]) */
+    public function controlAccount(): BelongsTo
+    {
+        return $this->belongsTo(Account::class, 'control_account_id');
+    }
+
+    /** অন্য পাশের খাত */
+    public function otherAccount(): BelongsTo
+    {
+        return $this->belongsTo(Account::class, 'other_account_id');
     }
 
     public function isDraft(): bool

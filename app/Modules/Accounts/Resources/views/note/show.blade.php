@@ -103,6 +103,17 @@
                 <dd class="font-medium">{{ $note->against_no ?: '—' }}</dd>
             </div>
 
+            {{-- ⭐ দুই খাত — পক্ষের আর অন্য পাশের (সমন্বয়কের শর্ত, ৩ অক্টোবর ২০২৬; [[NoteAccounts]]) --}}
+            <div data-note-control>
+                <dt class="text-2xs text-(--color-ink-muted)">{{ __('accounts::note.control_account') }}</dt>
+                <dd class="font-medium">{{ $accounts['control']->code }} — {{ $accounts['control']->name() }}</dd>
+            </div>
+
+            <div data-note-other>
+                <dt class="text-2xs text-(--color-ink-muted)">{{ __('accounts::note.other_account') }}</dt>
+                <dd class="font-medium">{{ $accounts['other']->code }} — {{ $accounts['other']->name() }}</dd>
+            </div>
+
             <div>
                 <dt class="text-2xs text-(--color-ink-muted)">{{ __('accounts::note.amount') }}</dt>
                 <dd class="font-medium tabular-nums">{{ Money::format($note->amount) }}</dd>

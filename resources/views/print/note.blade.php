@@ -71,6 +71,16 @@
             </tr>
         @endif
 
+        {{-- ⭐ দুই খাত — পক্ষের আর অন্য পাশের ([[NoteAccounts]]) --}}
+        <tr>
+            <td class="label">{{ __('accounts::note.control_account') }}</td>
+            <td @unless($thermal) colspan="3" @endunless data-note-control>{{ $note['control_account'] }}</td>
+        </tr>
+        <tr>
+            <td class="label">{{ __('accounts::note.other_account') }}</td>
+            <td @unless($thermal) colspan="3" @endunless data-note-other>{{ $note['other_account'] }}</td>
+        </tr>
+
         <tr>
             <td class="label">{{ __('accounts::print.note_reason') }}</td>
             <td @unless($thermal) colspan="3" @endunless>{{ $note['reason'] }}</td>

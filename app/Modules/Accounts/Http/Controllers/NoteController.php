@@ -11,6 +11,7 @@ use App\Core\Services\PartyRegistry;
 use App\Core\Support\DocumentStatus;
 use App\Http\Controllers\Controller;
 use App\Modules\Accounts\Models\Note;
+use App\Modules\Accounts\Services\NoteAccounts;
 use App\Modules\Accounts\Services\NoteService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -149,18 +150,29 @@ class NoteController extends Controller implements HasMiddleware
             ? (string) $request->query('direction')
             : Note::CREDIT;
 
+        /*
+         * ⭐ আগে পক্ষের ধরন, তারপর পক্ষ, তারপর খাত — মালিক, ৩ অক্টোবর ২০২৬: *"সব পক্ষেই ডেবিট ক্রেডিট হয়"*।
+         * ⓘ তিন ধাপ একই পাতায়, ঠিকানা ধরে (`kind`, `party_id`) — নতুন JS ছাড়া: ধরন বদলালে কেবল ঐ ধরনের পক্ষ,
+         * পক্ষ বাছলে তাঁর চলতি খাতগুলো আর আগে থেকে বাছা খাত ([[NoteAccounts]])। ধরন না দিলে দিকের পুরনো নিয়ম।
+         */
+        $accounts = app(NoteAccounts::class);
+        $kind = array_key_exists((string) $request->query('kind'), Note::KINDS)
+            ? (string) $request->query('kind')
+            : ($direction === Note::CREDIT ? Note::KIND_CUSTOMER : Note::KIND_SUPPLIER);
+        $parties = $accounts->partyOptions($kind);
+        $partyId = $request->integer('party_id');
+        $party = collect($parties)->firstWhere('id', $partyId);
+
         return view('accounts::note.create', [
             'menu' => $this->menu->forUser($request->user()),
             'direction' => $direction,
-
-            /*
-             * ⚠️ ক্রেডিট নোট যায় গ্রাহকের কাছে, ডেবিট নোট সরবরাহকারীর —
-             * তাই পক্ষের তালিকাটাও দিক ধরে ছাঁকা। ⓘ না ছাঁকলে কেউ
-             * গ্রাহকের নামে ডেবিট নোট কেটে ফেলতেন, আর সেটা বইয়ে
-             * প্রদেয়তে গিয়ে বসত — যেখানে গ্রাহকের কোনো জায়গা নেই।
-             */
-            'parties' => collect($this->parties->forPicker())
-                ->firstWhere('type', $direction === Note::CREDIT ? 'customer' : 'supplier')['options'] ?? [],
+            'kind' => $kind,
+            'parties' => $parties,
+            'party' => $party,
+            'controls' => $party === null ? collect() : $accounts->controls($kind, $partyId),
+            'others' => $party === null ? collect() : $accounts->others($kind, $direction),
+            'defaultControl' => $party === null ? null : $accounts->defaultControl($kind, $partyId),
+            'defaultOther' => $party === null ? null : $accounts->defaultOther($kind, $direction, $partyId),
             'reasons' => Note::REASONS,
         ]);
     }
@@ -169,7 +181,11 @@ class NoteController extends Controller implements HasMiddleware
     {
         $data = $request->validate([
             'direction' => ['required', Rule::in(Note::DIRECTIONS)],
+            // ⭐ পক্ষের ধরন আর দুই খাত — যাচাই সেবায়, তালিকা ধরে ([[NoteService::resolve()]])
+            'party_kind' => ['nullable', Rule::in(array_keys(Note::KINDS))],
             'party_id' => ['required', 'integer', 'min:1'],
+            'control_account_id' => ['nullable', 'integer', 'min:1'],
+            'other_account_id' => ['nullable', 'integer', 'min:1'],
             /* ⛔ কাল-পরশুর তারিখে নোট কাটা যায় না — বই ভবিষ্যৎ চেনে না */
             'trx_date' => ['required', 'date', 'before_or_equal:today'],
             'amount' => ['required', 'numeric', 'gt:0'],
@@ -179,8 +195,8 @@ class NoteController extends Controller implements HasMiddleware
             'narration' => ['nullable', 'string', 'max:500'],
         ]);
 
-        // ⓘ পক্ষের ধরনটা দিক থেকেই আসে, ফর্ম থেকে নয় — নাহলে বদলে পাঠানো যেত
-        $data['party_type'] = $data['direction'] === Note::CREDIT ? 'customer' : 'supplier';
+        // ⓘ খাতার পক্ষ-ধরন ফর্ম থেকে নয় — নোটের ধরন থেকে, সেবায় ([[NoteService::resolve()]])
+        unset($data['party_type']);
 
         $note = $this->notes->create($data);
 
@@ -198,6 +214,8 @@ class NoteController extends Controller implements HasMiddleware
                 [$note->party_type.':'.$note->party_id] ?? '—',
             'partyRoute' => $this->parties->routesOf([[$note->party_type, (int) $note->party_id]])
                 [$note->party_type.':'.$note->party_id] ?? null,
+            // ⭐ দুই খাত পর্দায় — সমন্বয়কের শর্ত, ৩ অক্টোবর ২০২৬
+            'accounts' => app(NoteAccounts::class)->of($note),
         ]);
     }
 

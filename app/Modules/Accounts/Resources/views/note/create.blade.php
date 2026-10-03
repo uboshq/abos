@@ -35,72 +35,141 @@
         {{ __('accounts::note.no_goods_move') }}
     </p>
 
-    <form method="POST" action="{{ route('accounts.note.store') }}"
-          class="max-w-screen-2xl rounded-(--radius-card) border border-(--color-border)
-                 bg-(--color-surface-card) p-4">
-        @csrf
+    {{-- ── ধাপ ১ · পক্ষের ধরন — মালিক, ৩ অক্টোবর ২০২৬: *"সব পক্ষেই ডেবিট ক্রেডিট হয়, দুই পক্ষেরই লাগে"* ──
+         ⓘ সাধারণ লিংক — ধরন বদলালে কেবল ঐ ধরনের পক্ষ ([[NoteAccounts::partyOptions()]]); নতুন JS নেই। --}}
+    <nav class="mb-4 flex flex-wrap gap-2" aria-label="{{ __('accounts::note.kind') }}" data-note-kinds>
+        @foreach (array_keys(Note::KINDS) as $option)
+            @php($on = $kind === $option)
+            <a href="{{ route('accounts.note.create', ['direction' => $direction, 'kind' => $option]) }}"
+               @if ($on) aria-current="page" @endif
+               class="rounded-(--radius-field) border px-3 py-1.5 text-sm
+                      {{ $on ? 'border-(--color-brand-600) bg-(--color-brand-600) font-semibold text-white'
+                             : 'border-(--color-border) bg-(--color-surface-card) text-(--color-ink) hover:bg-(--color-surface-hover)' }}">
+                {{ __('accounts::note.kind_'.$option) }}
+            </a>
+        @endforeach
+    </nav>
 
-        <input type="hidden" name="direction" value="{{ $direction }}">
+    @if ($party === null)
+        {{-- ── ধাপ ২ · পক্ষ — কেবল বাছা ধরনের; খোঁজা যায় (নাম, কোড, মোবাইল, পয়েন্ট — [[x-ui.party-search]]) ── --}}
+        <form method="GET" action="{{ route('accounts.note.create') }}" data-note-pick-party
+              class="max-w-screen-2xl rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
+            <input type="hidden" name="direction" value="{{ $direction }}">
+            <input type="hidden" name="kind" value="{{ $kind }}">
 
-        <div class="grid gap-4 sm:grid-cols-2">
-            {{--
-                ⭐ "কাকে" — খোঁজা যায় এমন তালিকা, ৩ অক্টোবর ২০২৬।
+            <div class="grid gap-4 sm:grid-cols-2">
+                <x-ui.party-search name="party_id"
+                                   :label="__('accounts::note.party')"
+                                   :options="$parties"
+                                   :selected="old('party_id')"
+                                   required />
+            </div>
 
-                মালিক: *"ডেবিট নোট পার্টি সার্চ দেয়ার অপশন নাই"*। ⛔ আগে এটা একটা লম্বা
-                সাধারণ `<select>` ছিল — ইউবি-তে ~৪১৪ জন গ্রাহক, খোঁজার ঘর নেই, আর একই
-                নামের দুইটা "M/S. Bismillah Store" নাম দেখে আলাদা করা যেত না।
+            <div class="mt-4">
+                <x-ui.button type="submit" tone="primary">{{ __('accounts::note.next_step') }}</x-ui.button>
+            </div>
+        </form>
+    @else
+        {{-- ── ধাপ ৩ · খাত আর অঙ্ক — পক্ষের চলতি খাত আর অন্য পাশ, আগে থেকে বাছা ([[NoteAccounts]]) ── --}}
+        <form method="POST" action="{{ route('accounts.note.store') }}"
+              class="max-w-screen-2xl rounded-(--radius-card) border border-(--color-border)
+                     bg-(--color-surface-card) p-4">
+            @csrf
 
-                ⓘ এখন নাম, কোড, মোবাইল বা পয়েন্ট লিখে খোঁজা যায়, আর প্রতিটা নামের নিচে
-                কোড · পয়েন্ট · মোবাইল ([[x-ui.party-search]])। ⚠️ ফর্ম আগের মতোই
-                `party_id` পাঠায় — এখন লুকানো ঘরে; ভুল জমার পরে বাছা নামটা ফেরে।
-            --}}
-            <x-ui.party-search name="party_id"
-                               :label="__('accounts::note.party')"
-                               :options="$parties"
-                               :selected="old('party_id')"
-                               required />
+            <input type="hidden" name="direction" value="{{ $direction }}">
+            <input type="hidden" name="party_kind" value="{{ $kind }}">
+            <input type="hidden" name="party_id" value="{{ $party['id'] }}">
 
+            <div class="mb-4 flex flex-wrap items-baseline gap-3 text-sm" data-note-party>
+                <span class="text-2xs text-(--color-ink-muted)">{{ __('accounts::note.party') }}</span>
+                <span class="font-semibold">{{ $party['label'] }}</span>
+                <a href="{{ route('accounts.note.create', ['direction' => $direction, 'kind' => $kind]) }}"
+                   class="text-(--color-brand-600) underline-offset-2 hover:underline">{{ __('accounts::note.change_party') }}</a>
+            </div>
 
-            <x-ui.field name="trx_date" type="date"
-                        :label="__('accounts::field.date')"
-                        :value="old('trx_date', now()->toDateString())" required />
+            @if ($controls->isEmpty())
+                <p role="alert" class="mb-4 rounded-(--radius-field) bg-(--color-badge-danger-bg) px-3 py-2 text-sm text-(--color-badge-danger-ink)">
+                    {{ __('accounts::note.control_none') }}
+                </p>
+            @endif
 
-            <x-ui.field name="amount" type="number" step="0.01"
-                        :label="__('accounts::note.amount')"
-                        :value="old('amount')" required />
+            <div class="grid gap-4 sm:grid-cols-2">
+                <label class="block">
+                    <span class="mb-1 block text-2xs text-(--color-ink-muted)">{{ __('accounts::note.control_account') }}</span>
+                    <select name="control_account_id" required data-note-control
+                            class="h-(--spacing-field) w-full rounded-(--radius-field) border border-(--color-border)
+                                   bg-(--color-surface-card) px-2 text-sm">
+                        @if ($controls->count() > 1)
+                            <option value="">{{ __('accounts::note.choose_account') }}</option>
+                        @endif
+                        @foreach ($controls as $account)
+                            <option value="{{ $account->id }}" @selected((int) old('control_account_id', $defaultControl) === (int) $account->id)>
+                                {{ $account->code }} — {{ $account->name() }}
+                            </option>
+                        @endforeach
+                    </select>
+                </label>
 
-            <x-ui.field name="tax_amount" type="number" step="0.01"
-                        :label="__('accounts::note.tax_amount')"
-                        :value="old('tax_amount')" />
+                <label class="block">
+                    <span class="mb-1 block text-2xs text-(--color-ink-muted)">{{ __('accounts::note.other_account') }}</span>
+                    <select name="other_account_id" required data-note-other
+                            class="h-(--spacing-field) w-full rounded-(--radius-field) border border-(--color-border)
+                                   bg-(--color-surface-card) px-2 text-sm">
+                        @if ($others->count() > 1)
+                            <option value="">{{ __('accounts::note.choose_account') }}</option>
+                        @endif
+                        @foreach ($others as $account)
+                            <option value="{{ $account->id }}" @selected((int) old('other_account_id', $defaultOther) === (int) $account->id)>
+                                {{ $account->code }} — {{ $account->name() }}
+                            </option>
+                        @endforeach
+                    </select>
+                </label>
 
-            <label class="block">
-                <span class="mb-1 block text-2xs text-(--color-ink-muted)">{{ __('accounts::note.reason') }}</span>
-                <select name="reason" required
-                        class="h-(--spacing-field) w-full rounded-(--radius-field) border border-(--color-border)
-                               bg-(--color-surface-card) px-2 text-sm">
-                    @foreach ($reasons as $reason)
-                        <option value="{{ $reason }}" @selected(old('reason') === $reason)>
-                            {{ __('accounts::note.reason_'.$reason) }}
-                        </option>
-                    @endforeach
-                </select>
-            </label>
+                <x-ui.field name="trx_date" type="date"
+                            :label="__('accounts::field.date')"
+                            :value="old('trx_date', now()->toDateString())" required />
 
-            {{-- ⓘ মূল কাগজের নম্বরটা ঐচ্ছিক, কিন্তু প্রায় সবসময় থাকে — আর
-                 ওটাই পরে "কোন বিলের সংশোধন" প্রশ্নের একমাত্র উত্তর --}}
-            <x-ui.field name="against_no"
-                        :label="__('accounts::note.against_no')"
-                        :value="old('against_no')" />
-        </div>
+                <x-ui.field name="amount" type="number" step="0.01"
+                            :label="__('accounts::note.amount')"
+                            :value="old('amount')" required />
 
-        <div class="mt-4">
-            <x-ui.field name="narration"
-                        :label="__('accounts::field.narration')"
-                        :value="old('narration')" />
-        </div>
+                {{-- ⓘ ভ্যাট কেবল কেনা-বেচার পক্ষে — সেবাদাতা আর ব্যক্তির সমন্বয়ে ভ্যাটের খাত নেই --}}
+                @if (in_array($kind, [Note::KIND_CUSTOMER, Note::KIND_SUPPLIER], true))
+                    <x-ui.field name="tax_amount" type="number" step="0.01"
+                                :label="__('accounts::note.tax_amount')"
+                                :value="old('tax_amount')" />
+                @endif
 
-        <div class="mt-4">
-            <x-ui.button type="submit" tone="primary">{{ __('core.action.save') }}</x-ui.button>
-        </div>
-    </form>
+                <label class="block">
+                    <span class="mb-1 block text-2xs text-(--color-ink-muted)">{{ __('accounts::note.reason') }}</span>
+                    <select name="reason" required
+                            class="h-(--spacing-field) w-full rounded-(--radius-field) border border-(--color-border)
+                                   bg-(--color-surface-card) px-2 text-sm">
+                        @foreach ($reasons as $reason)
+                            <option value="{{ $reason }}" @selected(old('reason') === $reason)>
+                                {{ __('accounts::note.reason_'.$reason) }}
+                            </option>
+                        @endforeach
+                    </select>
+                </label>
+
+                {{-- ⓘ মূল কাগজের নম্বরটা ঐচ্ছিক, কিন্তু প্রায় সবসময় থাকে — আর
+                     ওটাই পরে "কোন বিলের সংশোধন" প্রশ্নের একমাত্র উত্তর --}}
+                <x-ui.field name="against_no"
+                            :label="__('accounts::note.against_no')"
+                            :value="old('against_no')" />
+            </div>
+
+            <div class="mt-4">
+                <x-ui.field name="narration"
+                            :label="__('accounts::field.narration')"
+                            :value="old('narration')" />
+            </div>
+
+            <div class="mt-4">
+                <x-ui.button type="submit" tone="primary">{{ __('core.action.save') }}</x-ui.button>
+            </div>
+        </form>
+    @endif
 </x-layouts.app>

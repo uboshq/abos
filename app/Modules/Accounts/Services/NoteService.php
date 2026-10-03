@@ -30,6 +30,7 @@ final class NoteService
     public function __construct(
         private readonly NumberSeriesEngine $numbers,
         private readonly PostingEngine $posting,
+        private readonly NoteAccounts $accounts,
     ) {}
 
     /**
@@ -42,10 +43,15 @@ final class NoteService
         $direction = (string) $data['direction'];
 
         $this->assertDirection($direction);
-        $this->assertParty($direction, $data);
+        [$kind, $controlId, $otherId] = $this->resolve($direction, $data);
 
         $amount = $this->money($data['amount'] ?? '0');
         $tax = $this->money($data['tax_amount'] ?? '0');
+
+        // ⓘ ভ্যাট কেবল কেনা-বেচার পক্ষে (গ্রাহক, সরবরাহকারী) — সেবাদাতা আর ব্যক্তির সমন্বয়ে ভ্যাটের খাত নেই
+        if (bccomp($tax, '0', 4) > 0 && ! in_array($kind, [Note::KIND_CUSTOMER, Note::KIND_SUPPLIER], true)) {
+            throw ValidationException::withMessages(['tax_amount' => __('accounts::note.tax_only_trade')]);
+        }
 
         if (bccomp($amount, '0', 4) <= 0) {
             throw ValidationException::withMessages([
@@ -53,7 +59,7 @@ final class NoteService
             ]);
         }
 
-        return DB::transaction(function () use ($data, $direction, $amount, $tax) {
+        return DB::transaction(function () use ($data, $direction, $amount, $tax, $kind, $controlId, $otherId) {
             /*
              * ⚠️ নম্বরটা লেনদেনের **ভিতরে** নেওয়া হয় — বাইরে নিলে সেভ
              * ভেঙে গেলে নম্বরটা পুড়ে যেত, আর ক্রমে একটা ফাঁক থাকত যার
@@ -67,8 +73,11 @@ final class NoteService
                 'document_no' => $documentNo,
                 'trx_date' => $data['trx_date'],
                 'direction' => $direction,
-                'party_type' => $data['party_type'],
+                'party_type' => Note::KINDS[$kind],
                 'party_id' => (int) $data['party_id'],
+                'party_kind' => $kind,
+                'control_account_id' => $controlId,
+                'other_account_id' => $otherId,
                 'against_type' => ($data['against_type'] ?? '') ?: null,
                 'against_id' => ($data['against_id'] ?? null) ?: null,
                 'against_no' => ($data['against_no'] ?? '') ?: null,
@@ -91,25 +100,58 @@ final class NoteService
     }
 
     /**
-     * ⛔ পক্ষটা এই কোম্পানির সত্যিকারের গ্রাহক (ক্রেডিট) বা বিক্রেতা (ডেবিট) — চূড়ান্ত অডিট ⛔৯,
-     * ৩০ সেপ্টেম্বর ২০২৬ ([[ANoteNamedAPartyFromAnotherCompanyTest]])।
+     * ⭐ পক্ষের ধরন আর দুই খাত — মালিক, ৩ অক্টোবর ২০২৬: *"সব পক্ষেই ডেবিট ক্রেডিট হয়, দুই পক্ষেরই লাগে"*।
      *
-     * ⓘ আগে `party_id` কেবল "ধনাত্মক সংখ্যা" হিসেবে দেখা হত — অস্তিত্বহীন বা অন্য কোম্পানির
-     * গ্রাহকের নামে নোট কাটা যেত, আর খাতায় এমন পক্ষের সারি জমত যাকে কোনো পর্দা চেনে না।
-     * সেবায় দেখা হয়, কন্ট্রোলারে নয় — যে দরজা দিয়েই আসুক।
+     * ⓘ ধরন না দিলে আগের নিয়ম — ক্রেডিট গ্রাহকের, ডেবিট সরবরাহকারীর (পুরনো ফর্ম আর API)। পক্ষটা সত্যিই ঐ ধরনের
+     * আর এই কোম্পানির ([[NoteAccounts::kindMatches()]]); খাত না দিলে একমাত্র চলতি খাতটা, একাধিক হলে বাছতে বলে।
+     * ⛔ তালিকার বাইরের খাত কখনো নয় — ফর্ম এড়িয়ে পাঠালেও।
      *
      * @param  array<string, mixed>  $data
+     * @return array{0: string, 1: int, 2: int}
      */
-    private function assertParty(string $direction, array $data): void
+    private function resolve(string $direction, array $data): array
     {
-        $type = $direction === Note::CREDIT ? 'customer' : 'supplier';
+        $kind = (string) ($data['party_kind'] ?? '');
 
-        if (($data['party_type'] ?? $type) !== $type
-            || ! app(PartyRegistry::class)->exists($type, (int) ($data['party_id'] ?? 0))) {
-            throw ValidationException::withMessages([
-                'party_id' => __('accounts::note.party_not_found'),
-            ]);
+        if ($kind === '') {
+            $kind = $direction === Note::CREDIT ? Note::KIND_CUSTOMER : Note::KIND_SUPPLIER;
         }
+
+        $partyId = (int) ($data['party_id'] ?? 0);
+
+        if (! array_key_exists($kind, Note::KINDS) || ! $this->accounts->kindMatches($kind, $partyId)
+            || (filled($data['party_type'] ?? null) && $data['party_type'] !== Note::KINDS[$kind])) {
+            throw ValidationException::withMessages(['party_id' => __('accounts::note.party_not_found')]);
+        }
+
+        $controls = $this->accounts->controls($kind, $partyId);
+
+        if ($controls->isEmpty()) {
+            throw ValidationException::withMessages(['control_account_id' => __('accounts::note.control_none')]);
+        }
+
+        $controlId = (int) ($data['control_account_id'] ?? 0) ?: (int) $this->accounts->defaultControl($kind, $partyId);
+
+        if ($controlId === 0) {
+            throw ValidationException::withMessages(['control_account_id' => __('accounts::note.control_choose')]);
+        }
+
+        if (! $controls->contains('id', $controlId)) {
+            throw ValidationException::withMessages(['control_account_id' => __('accounts::note.account_not_allowed')]);
+        }
+
+        $otherId = (int) ($data['other_account_id'] ?? 0)
+            ?: (in_array($kind, [Note::KIND_CUSTOMER, Note::KIND_SUPPLIER], true) ? (int) $this->accounts->defaultOther($kind, $direction, $partyId) : 0);
+
+        if ($otherId === 0) {
+            throw ValidationException::withMessages(['other_account_id' => __('accounts::note.other_choose')]);
+        }
+
+        if (! $this->accounts->others($kind, $direction)->contains('id', $otherId)) {
+            throw ValidationException::withMessages(['other_account_id' => __('accounts::note.account_not_allowed')]);
+        }
+
+        return [$kind, $controlId, $otherId];
     }
 
     /**
@@ -138,7 +180,7 @@ final class NoteService
                 sourceType: $note->sourceType(),
                 sourceId: $note->id,
                 trxDate: $note->trx_date,
-                lines: $note->isCredit() ? $this->creditLines($note) : $this->debitLines($note),
+                lines: $this->lines($note),
                 documentNo: $note->document_no,
                 branchId: $note->branch_id,
             );
@@ -191,63 +233,37 @@ final class NoteService
     }
 
     /**
+     * দাখিলা — এক নিয়ম, সব পক্ষে (সমন্বয়কের ঠিক করা হিসাব, ৩ অক্টোবর ২০২৬; [[NoteAccounts]])।
+     *
+     *   ক্রেডিট নোট:  Dr অন্য পাশ (টাকা) · Dr ভ্যাট (থাকলে)  /  Cr পক্ষের খাত (মোট, পক্ষসহ)
+     *   ডেবিট নোট:    Dr পক্ষের খাত (মোট, পক্ষসহ)  /  Cr অন্য পাশ (টাকা) · Cr ভ্যাট (থাকলে)
+     *
+     * ⓘ পুরনো দুই পথ (গ্রাহকের ক্রেডিট, সরবরাহকারীর ডেবিট) হুবহু এর ভেতরেই — একই খাত, একই সারি।
+     *
      * @return list<array<string, mixed>>
      */
-    private function creditLines(Note $note): array
+    private function lines(Note $note): array
     {
-        $lines = [[
-            'account_id' => $this->account(StandardChart::SALES_RETURN)->id,
-            'debit' => (string) $note->amount,
-            'narration' => $note->narration,
-        ]];
+        ['control' => $control, 'other' => $other] = $this->accounts->of($note);
+        $hasTax = bccomp((string) $note->tax_amount, '0', 4) > 0;
+        $side = $note->isCredit() ? 'debit' : 'credit';
+        $flip = $note->isCredit() ? 'credit' : 'debit';
 
-        if (bccomp((string) $note->tax_amount, '0', 4) > 0) {
-            $lines[] = [
-                'account_id' => $this->account(StandardChart::VAT_PAYABLE)->id,
-                'debit' => (string) $note->tax_amount,
-                'narration' => $note->narration,
-            ];
-        }
-
-        $lines[] = [
-            'account_id' => $this->account(StandardChart::RECEIVABLE)->id,
-            'credit' => (string) $note->total,
+        $party = [
+            'account_id' => $control->id,
+            $flip => (string) $note->total,
             'party_type' => $note->party_type,
             'party_id' => $note->party_id,
             'narration' => $note->narration,
         ];
 
-        return $lines;
-    }
+        $lines = [['account_id' => $other->id, $side => (string) $note->amount, 'narration' => $note->narration]];
 
-    /**
-     * @return list<array<string, mixed>>
-     */
-    private function debitLines(Note $note): array
-    {
-        $lines = [[
-            'account_id' => $this->account(StandardChart::PAYABLE)->id,
-            'debit' => (string) $note->total,
-            'party_type' => $note->party_type,
-            'party_id' => $note->party_id,
-            'narration' => $note->narration,
-        ]];
-
-        $lines[] = [
-            'account_id' => $this->account(StandardChart::PURCHASE_PRICE_VARIANCE)->id,
-            'credit' => (string) $note->amount,
-            'narration' => $note->narration,
-        ];
-
-        if (bccomp((string) $note->tax_amount, '0', 4) > 0) {
-            $lines[] = [
-                'account_id' => $this->account(StandardChart::VAT_PAYABLE)->id,
-                'credit' => (string) $note->tax_amount,
-                'narration' => $note->narration,
-            ];
+        if ($hasTax) {
+            $lines[] = ['account_id' => $this->account(StandardChart::VAT_PAYABLE)->id, $side => (string) $note->tax_amount, 'narration' => $note->narration];
         }
 
-        return $lines;
+        return $note->isCredit() ? [...$lines, $party] : [$party, ...$lines];
     }
 
     /**
