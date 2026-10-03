@@ -14,8 +14,6 @@ use App\Core\Support\Money;
 use App\Http\Controllers\Controller;
 use App\Models\NumberSeries;
 use App\Modules\Accounts\Models\Account;
-use App\Modules\Accounts\Models\CashTill;
-use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Customer\Models\Customer;
 use App\Modules\Inventory\Models\Batch;
 use App\Modules\Inventory\Models\Product;
@@ -24,7 +22,6 @@ use App\Modules\Inventory\Services\FreeAllowance;
 use App\Modules\Inventory\Services\PackConversion;
 use App\Modules\Inventory\Services\StockService;
 use App\Modules\MasterData\Models\PaymentMethod;
-use App\Modules\MasterData\Models\PaymentTerm;
 use App\Modules\MasterData\Models\TransferMode;
 use App\Modules\MasterData\Models\Vehicle;
 use App\Modules\Sales\Http\Requests\DirectSaleRules;
@@ -285,28 +282,8 @@ class DirectSaleController extends Controller implements HasMiddleware
             'drivers' => $this->driverSuggestions(),
 
             // ⭐ অন্য শাখার টিলের খাত বাদ (৩০ সেপ্টেম্বর ২০২৬) — [[Account::scopeNotAnotherBranchsTill()]]
-            'moneyAccounts' => Account::query()->notAnotherBranchsTill()
-                ->where('is_group', false)
-                ->whereIn('parent_id', Account::query()
-                    ->whereIn('code', StandardChart::MONEY_PARENTS)->select('id'))
-                ->orderBy('code')
-                ->with('parent:id,code')
-                ->get(['id', 'parent_id', 'code', 'name_en', 'name_bn', 'money_kind'])
-                /*
-                 * ⛔ অন্যের নগদ বাক্স তালিকায় নয় — মালিকের নির্দেশ, ২৮ সেপ্টেম্বর ২০২৬: *"ekjoner
-                 * cash account e r ekjon taka nite parbe na r ta onno joner idte show korbe na"*।
-                 * ⓘ রসিদ ভাউচারের একই নিয়ম ([[CashTill::mayUse()]], [[DepositFormOptions]]); পোস্টের
-                 * সময় সার্ভারও আটকায় ([[VoucherService::assertCashLandsInOwnTill()]])।
-                 */
-                ->filter(fn (Account $a) => ! $a->isCash() || CashTill::mayUse(auth()->id(), (int) $a->id))
-                ->map(fn (Account $a): array => [
-                    'id' => (string) $a->id,
-                    'label' => $a->code.' · '.$a->name(),
-                    /* কোন মায়ের সন্তান — ছাঁকনিটা এটাই দেখে।
-                       ১১০১ নগদ · ১১০২ ব্যাংক · ১১০৫ মোবাইল মানি */
-                    'parent' => (string) ($a->parent?->code ?? ''),
-                ])
-                ->values(),
+            // ⓘ ফোনের কাউন্টারের সাথে একই তালিকা — অন্যের নগদ বাক্স আর অন্য শাখার টিল বাদ ([[DirectSaleOptions::moneyAccounts()]])
+            'moneyAccounts' => collect(app(\App\Modules\Sales\Services\DirectSaleOptions::class)->moneyAccounts()),
 
             /*
              * চার্ট / বাল্ক DO-র শীটের জন্য — আসল পণ্য ও তাদের মজুদ।
@@ -796,39 +773,8 @@ class DirectSaleController extends Controller implements HasMiddleware
      */
     private function lotsFor(?Warehouse $warehouse): array
     {
-        if ($warehouse === null) {
-            return [];
-        }
-
-        $balances = DB::table('inv_stock_movements')
-            ->selectRaw('batch_id, COALESCE(SUM(floor_change), 0) as qty')
-            ->where('company_id', CompanyContext::id())
-            ->where('warehouse_id', $warehouse->id)
-            ->whereNotNull('batch_id')
-            ->groupBy('batch_id')
-            ->pluck('qty', 'batch_id');
-
-        return Batch::query()
-            ->whereIn('product_id', Product::query()->active()->where('track_batch', true)->select('id'))
-            ->unexpired()
-            ->fefo()
-            ->get()
-            ->map(fn (Batch $b) => [
-                'id' => (string) $b->id,
-                'productId' => (string) $b->product_id,
-                'no' => (string) $b->batch_no,
-                'expiry' => $b->expiry_date?->toDateString() ?? '',
-                'qty' => (string) ($balances[$b->id] ?? '0'),
-            ])
-            /*
-             * ⛔ যে লটে কিছু নেই সে বাছাইয়ের তালিকায় আসে না। ⓘ ওটা বেছে
-             * ফেললে সারিটা কার্টে উঠত আর সংরক্ষণের সময় ভেঙে পড়ত —
-             * অর্থাৎ ভুলটা ধরা পড়ত ত্রিশটা সারি তোলার পরে।
-             */
-            ->filter(fn (array $lot) => bccomp($lot['qty'], '0', 4) > 0)
-            ->groupBy('productId')
-            ->map(fn ($rows) => $rows->values()->all())
-            ->all();
+        // ⓘ ফোনের কাউন্টারের সাথে একই তালিকা ([[DirectSaleOptions::lots()]], ৪ অক্টোবর ২০২৬)
+        return app(\App\Modules\Sales\Services\DirectSaleOptions::class)->lots($warehouse);
     }
 
     private function catalogue(?Warehouse $warehouse): Collection
@@ -1603,41 +1549,7 @@ class DirectSaleController extends Controller implements HasMiddleware
      */
     private function paymentTerms(): array
     {
-        $terms = [
-            ['value' => 'cash', 'label' => __('sales::field.term_cash')],
-
-            /*
-             * ⭐ COD এখানে সত্যিই আলাদা কিছু বোঝায়, আর ওটাই ক্রয়ের
-             * সাথে পার্থক্য।
-             *
-             * নগদ  → টাকা ড্রয়ারে, জমার ঘরে বসে
-             * COD  → মাল ভ্যানে গেল, টাকা ফিরবে ডেলিভারিম্যানের সাথে
-             *
-             * ⚠️ দুইটার **তারিখ একই দিন**, তবু একটা আদায় হয়ে গেছে আর
-             * আরেকটা পাওনা — খাতায় দুইটা সম্পূর্ণ আলাদা অবস্থা।
-             */
-            ['value' => 'cod', 'label' => __('sales::field.term_cod')],
-        ];
-
-        $rows = PaymentTerm::query()
-            ->where('is_active', true)
-            ->orderBy('days')
-            ->get(['id', 'code', 'name_en', 'name_bn', 'days']);
-
-        foreach ($rows as $row) {
-            if ((int) $row->days <= 0) {
-                continue;
-            }
-
-            $terms[] = [
-                'value' => 'credit:'.(int) $row->days,
-                'label' => __('sales::field.term_credit', ['count' => (int) $row->days]),
-            ];
-        }
-
-        $terms[] = ['value' => 'month_end', 'label' => __('sales::field.term_month_end')];
-        $terms[] = ['value' => 'fixed', 'label' => __('sales::field.term_fixed')];
-
-        return $terms;
+        // ⓘ ফোনের কাউন্টারের সাথে একই তালিকা ([[DirectSaleOptions::paymentTerms()]])
+        return app(\App\Modules\Sales\Services\DirectSaleOptions::class)->paymentTerms();
     }
 }
