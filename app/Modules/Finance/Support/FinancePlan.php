@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Finance\Support;
 
-use Illuminate\Support\Facades\Route;
+use App\Core\Engines\Map\MapEngine;
 
 /**
  * ফিন্যান্স মডিউলের পুরো পরিকল্পনা — যা হয়েছে আর যা বাকি, এক পাতায়।
@@ -584,9 +584,13 @@ final class FinancePlan
                     ['ব্যাংক বই', 'accounts.report.show:bank-book', null],
                     ['খতিয়ান', 'accounts.report.show:ledger', null],
                     ['রেওয়ামিল', 'accounts.report.show:trial-balance', null],
-                    ['লাভ-ক্ষতি', 'accounts.report.show:profit-loss', null],
-                    ['স্থিতিপত্র', 'accounts.report.show:balance-sheet', null],
-                    ['নগদ প্রবাহ', 'accounts.report.show:cash-flow', null],
+                    /*
+                     * ⓘ তিনটাই নিজের দরজার নামে — ২ অক্টোবর ২০২৬। ঠিকানা হুবহু আগেরটাই (`/accounts/reports/profit-loss`),
+                     * কেবল নামটা বদলাল: স্লাগের সাক্ষী মেনু-সারি, আর মেনু এই তিনটাকে নিজের নামেই ডাকে ([[MapEngine::exists()]])।
+                     */
+                    ['লাভ-ক্ষতি', 'accounts.report.final.profit_loss', null],
+                    ['স্থিতিপত্র', 'accounts.balance_sheet', null],
+                    ['নগদ প্রবাহ', 'accounts.report.final.cash_flow', null],
                     ['আদায়ের তালিকা', 'accounts.report.show:inflow', null],
                     ['কোন কেন্দ্রে কত', 'accounts.report.show:by-cost-centre', null],
                     ['উত্তোলনের রিপোর্ট', 'finance.withdrawal.index', 'কে কত নিলেন, মাস ধরে'],
@@ -641,22 +645,14 @@ final class FinancePlan
      */
     public static function urlFor(?string $route): ?string
     {
-        if ($route === null) {
-            return null;
-        }
-
-        [$name, $param] = array_pad(explode(':', $route, 2), 2, null);
-
-        if (! Route::has($name)) {
-            return null;
-        }
-
-        return match (true) {
-            $param === null => route($name),
-            str_ends_with($name, 'report.show') => route($name, ['slug' => $param]),
-            str_ends_with($name, 'voucher.index') => route($name, ['type' => $param]),
-            default => route($name, [$param]),
-        };
+        /*
+         * ⭐ এখন মানচিত্রের ইঞ্জিন বলে — ২ অক্টোবর ২০২৬, মালিক: *"ফিন্যান্স মানচিত্রের মতো সব জায়গায়"*।
+         *
+         * ⓘ লেখার রীতি একই (`রুট:প্যারামিটার`), আর প্যারামিটারের নাম এখন রুট নিজেই বলে — আগের তিনটা হাতে লেখা
+         * নিয়ম (`slug`, `type`, ক্রমিক) আর লাগে না। ⛔ পার্থক্য একটাই: প্যারামিটারের একজন সাক্ষী চাই (রুটের বাঁধন বা
+         * কোনো মডিউলের মেনু-সারি) — নাহলে নামহীন স্লাগও "হয়েছে" লেখা হত ([[MapEngine::exists()]])।
+         */
+        return app(MapEngine::class)->urlFor($route);
     }
 
     /**

@@ -6,6 +6,7 @@ namespace App\Models;
 
 use App\Core\Concerns\BelongsToCompany;
 use App\Core\Concerns\HasPublicId;
+use App\Core\Support\ScreenAddress;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -96,11 +97,15 @@ class SavedView extends Model
         });
     }
 
-    /** দৃশ্যটার নিজের ঠিকানা — পর্দার পথ, তার সাথে সংরক্ষিত কোয়েরি। */
+    /**
+     * দৃশ্যটার নিজের ঠিকানা — পর্দার পথ, তার সাথে সংরক্ষিত কোয়েরি।
+     *
+     * ⭐ পর্দাটা এখন একটা রিপোর্টও হতে পারে — `sales.report.show:by-customer` ([[ScreenAddress]], রিপোর্ট সেন্টার
+     * ধাপ ১, ২ অক্টোবর ২০২৬)। ⛔ ঠিকানা আর মেলে না (রুট উঠে গেছে) — তাহলে হোম পাতা, ব্যতিক্রম নয়: এই লিংক মেনু
+     * আঁকার সময় বানানো হয়, আর একটা বাসি সারি গোটা পাতা ৫০০ করে দিত।
+     */
     public function url(): string
     {
-        $base = route($this->screen);
-
-        return $this->query === '' ? $base : $base.'?'.$this->query;
+        return ScreenAddress::url((string) $this->screen, (string) $this->query) ?? route('dashboard');
     }
 }

@@ -11,6 +11,7 @@ use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\PaperHistoryController;
 use App\Http\Controllers\PaperShareController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\ReportCenterController;
 use App\Http\Controllers\SavedViewController;
 use App\Http\Controllers\SearchController;
 use App\Http\Controllers\SharedPaperController;
@@ -149,6 +150,14 @@ Route::middleware('auth')->group(function () {
         ->whereNumber('savedView')->name('views.default');
     Route::delete('/views/{savedView}', [SavedViewController::class, 'destroy'])
         ->whereNumber('savedView')->name('views.destroy');
+
+    /*
+     * ⭐ রিপোর্ট সেন্টার — সব মডিউলের রিপোর্ট এক পাতায়, আর নিজের প্রিয় (রিপোর্ট সেন্টার ধাপ ১, ২ অক্টোবর ২০২৬)।
+     *
+     * ⓘ শেলের রুট, কোনো মডিউলের নয়: পাতাটা সব মডিউলের মেনু পড়ে। ⛔ `can:` নেই, ইচ্ছাকৃত — প্রতিটা সারি তার নিজের
+     * চাবিতে ছাঁকা ([[ReportCenterController]]); চাবিহীন মানুষ খালি পাতা পান।
+     */
+    Route::get('/reports', [ReportCenterController::class, 'show'])->name('reports.center');
 
     Route::post('/company/switch', [WorkspaceController::class, 'switchCompany'])->name('company.switch');
     Route::post('/branch/switch', [WorkspaceController::class, 'switchBranch'])->name('branch.switch');

@@ -42,6 +42,15 @@
             {{ __('core.appearance.title') }}
         </a>
 
+        {{-- ⭐ রিপোর্ট সেন্টার — সব মডিউলের রিপোর্ট আর নিজের প্রিয়, এক পাতায় (রিপোর্ট সেন্টার ধাপ ১, ২ অক্টোবর ২০২৬)।
+             ⓘ এখানে, কারণ প্রোফাইলের মেনু দশটা রূপেই আছে আর ফোনেও; সারিগুলো প্রতিটা নিজের চাবিতে ছাঁকা। --}}
+        <a href="{{ route('reports.center') }}" role="menuitem" data-report-center
+           class="flex min-h-(--spacing-touch) items-center gap-2 px-3 text-sm
+                  transition-colors hover:bg-(--color-surface-hover)">
+            <x-ui.icon name="reports" :size="16" />
+            {{ __('report_center.open') }}
+        </a>
+
         {{--
             কোথায় কোথায় লগইন আছি।
 

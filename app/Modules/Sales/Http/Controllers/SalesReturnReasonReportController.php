@@ -81,6 +81,8 @@ class SalesReturnReasonReportController extends Controller implements HasMiddlew
             'accounts' => collect(),
             'partyTypes' => collect(),
             'extraFilters' => 'sales::return.partials.reason-report-filters',
+            // ⓘ দোকান আর পণ্যের ঘর এই রিপোর্ট নিজে আঁকে — সাধারণ ছাঁকনি সেগুলো আবার আঁকে না
+            'ownFilters' => ['customer_id', 'product_id'],
             'customers' => Customer::query()->inViewedBranch()->active()->orderBy('name_en')->get(),
             'products' => Product::query()->soldInViewedBranch()->active()->orderBy('name_en')->get(),
         ]);

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Finance\Http\Controllers;
 
+use App\Core\Engines\Map\MapEngine;
 use App\Core\Services\MenuBuilder;
 use App\Http\Controllers\Controller;
 use App\Modules\Finance\Support\FinancePlan;
@@ -41,10 +42,15 @@ class PlanController extends Controller implements HasMiddleware
      */
     public function index(Request $request): View
     {
+        /*
+         * ⭐ মানচিত্রের ইঞ্জিনে — ২ অক্টোবর ২০২৬, মালিক: *"ফিন্যান্স মানচিত্রের মতো সব জায়গায়"*।
+         *
+         * ⓘ লেখাটা আগের মতোই [[FinancePlan]]-এর; আঁকে [[MapEngine]], রিপোর্ট সেন্টারের সাথে একই নিয়মে। ⛔ "বাকি"
+         * লাইন আর অগ্রগতির সংখ্যা কেবল মালিক/অ্যাডমিন দেখেন; যে পর্দা যিনি খুলতে পারেন না, তার লাইন তাঁর কাছে নেই।
+         */
         return view('finance::plan.index', [
             'menu' => $this->menu->forUser($request->user()),
-            'sections' => FinancePlan::sections(),
-            'tally' => FinancePlan::tally(),
+            'map' => app(MapEngine::class)->draw(FinancePlan::sections(), $request->user()),
         ]);
     }
 }

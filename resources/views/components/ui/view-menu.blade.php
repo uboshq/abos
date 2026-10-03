@@ -51,7 +51,8 @@
 --}}
 @php
     $route = request()->route();
-    $screen = $screen ?: (string) ($route?->getName() ?? '');
+    /* ⭐ রিপোর্টের পাতায় ঠিকানা স্লাগসহ — `sales.report.show:by-customer` (রিপোর্ট সেন্টার ধাপ ১, ২ অক্টোবর ২০২৬) */
+    $screen = $screen ?: (string) (\App\Core\Support\ScreenAddress::of($route) ?? '');
     $user = auth()->user();
 
     /*
@@ -74,10 +75,14 @@
      * মানেই নেই — ওটা তো ওই একটা জিনিসেরই পাতা।
      *
      * অর্থাৎ এটা ফাঁক ঢাকা নয়, জিনিসটার সীমানা।
+     *
+     * ⭐ ব্যতিক্রম রিপোর্ট — ২ অক্টোবর ২০২৬, মালিকের "ছাঁকনি সংরক্ষণ / প্রিয়"। ⓘ রিপোর্টের পাতা একটা রেকর্ডের নয়,
+     * একটা তালিকার — তাই তার ঠিকানা স্লাগসহ ([[ScreenAddress::of()]]), আর লিংক বানানোও সেখানে। ⛔ রেকর্ডের পাতা
+     * আগের মতোই বাইরে।
      */
     $addressable = $route !== null
         && $screen !== ''
-        && $route->parameterNames() === [];
+        && \App\Core\Support\ScreenAddress::url($screen) !== null;
 
     /*
      * এই পর্দার নিজের দৃশ্যগুলো।
@@ -147,7 +152,7 @@
 
             {{-- সব সারি — ছাঁকনি ছাড়া পর্দাটা। এটা সবসময় থাকে, কারণ
                  ছাঁকনি দেওয়ার পর "সবটা আবার দেখি" প্রশ্নটা এমনিতেই আসে। --}}
-            <a href="{{ route($screen) }}" role="menuitem"
+            <a href="{{ \App\Core\Support\ScreenAddress::url($screen) }}" role="menuitem"
                @class([
                    'flex min-h-(--spacing-touch) items-center gap-2 px-3 text-sm',
                    'bg-(--color-surface-selected) font-semibold' => $currentQuery === '',

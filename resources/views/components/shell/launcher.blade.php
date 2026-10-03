@@ -113,6 +113,25 @@
                                  color:var(--color-ink-body)">{{ $module['label'] }}</span>
                 </a>
             @endforeach
+
+            {{-- ⭐ রিপোর্ট সেন্টার — সব মডিউলের রিপোর্ট এক পাতায় (রিপোর্ট সেন্টার ধাপ ১, ২ অক্টোবর ২০২৬)।
+                 ⓘ কেবল যাঁর অন্তত একটা রিপোর্ট আছে — নইলে টালিটা একটা খালি পাতায় নিয়ে যেত। --}}
+            @if (collect($menu)->contains(fn ($m) => collect($m['groups']['reports'] ?? [])->contains(fn ($r) => $r['url'] !== null)))
+                <a href="{{ route('reports.center') }}" role="menuitem" data-report-center
+                   class="transition-colors hover:bg-(--color-surface-muted)"
+                   style="display:flex;flex-direction:column;align-items:center;justify-content:flex-start;
+                          gap:8px;min-height:104px;padding:12px 8px;text-align:center;
+                          border:1px solid var(--color-border);border-radius:10px;
+                          background:var(--color-surface-app)">
+                    <span style="display:grid;place-items:center;width:40px;height:40px;flex:none;
+                                 border-radius:10px;background:var(--color-surface-muted)">
+                        <x-ui.icon name="reports" :size="24" />
+                    </span>
+
+                    <span style="width:100%;font-size:12px;line-height:1.35;overflow-wrap:break-word;
+                                 color:var(--color-ink-body)">{{ __('report_center.open') }}</span>
+                </a>
+            @endif
         </div>
     </div>
 </div>

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\Core\Support\ScreenAddress;
 use App\Models\SavedView;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -77,7 +78,8 @@ class SavedViewController extends Controller
          * মুছে ফেলার পর ছাঁকনিহীন পর্দাটা — মুছে ফেলা দৃশ্যের ছাঁকনি
          * নিয়ে ফিরলে মনে হত কিছুই হয়নি।
          */
-        return redirect()->route($screen)
+        // ⓘ রিপোর্টের ঠিকানায় স্লাগ লাগে — `route($screen)` ওখানে ব্যতিক্রম ছুড়ত ([[ScreenAddress]])
+        return redirect()->to(ScreenAddress::url($screen) ?? route('dashboard'))
             ->with('saved', __('core.view.removed', ['name' => $name]));
     }
 
@@ -106,7 +108,7 @@ class SavedViewController extends Controller
              * আর ড্রপডাউনটাই ভেঙে যেত।
              */
             'screen' => ['required', 'string', 'max:120', function (string $attribute, mixed $value, callable $fail): void {
-                $route = RouteFacade::getRoutes()->getByName((string) $value);
+                $route = RouteFacade::getRoutes()->getByName(ScreenAddress::split((string) $value)[0]);
 
                 if ($route === null) {
                     $fail(__('core.view.unknown_screen'));
@@ -126,7 +128,13 @@ class SavedViewController extends Controller
                  * পাহারাটা এখানেও দরকার: পর্দার শর্ত হাতে বানানো POST
                  * ঠেকায় না।
                  */
-                if ($route->parameterNames() !== []) {
+                /*
+                 * ⭐ রিপোর্ট ছাড়া — `sales.report.show:by-customer` (রিপোর্ট সেন্টার ধাপ ১, ২ অক্টোবর ২০২৬)।
+                 *
+                 * ⓘ রিপোর্টের পাতা একটা রেকর্ডের পাতা নয়, একটা তালিকা — তার ছাঁকনি রাখাই মালিকের "প্রিয়"।
+                 * ⛔ স্লাগ ছাড়া রিপোর্টের নাম, বা রেকর্ডের পাতার নম্বর — দুইটাই আগের মতো ফেরে।
+                 */
+                if (! ScreenAddress::accepts((string) $value)) {
                     $fail(__('core.view.screen_needs_a_record'));
                 }
             }],
