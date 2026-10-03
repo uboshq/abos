@@ -26,7 +26,7 @@ use Illuminate\Support\Facades\DB;
  *   · টাকা (নগদ + ব্যাংক + মোবাইল), পাওনা (১১১০), দেনা (২১১১), মজুদের মূল্য (১১২০) — শেষ দিন পর্যন্ত জমা অঙ্ক।
  *   · প্রতিটা কোড মানে খাতটা **আর তার নিচের সব উপ-খাত** ([[Account::selfAndDescendants()]])।
  *
- * ⛔ লাভ আছে, তাই অনুমতি `accounts.report.final` — লাভ-ক্ষতির পাতার সমান। নিজেই শাখা ধরে ভাগ করে, তাই ইঞ্জিনের
+ * ⛔ লাভ আছে, তাই অনুমতি `accounts.report` আর `accounts.report.final` দুটোই — দরজা যা চায় হুবহু তাই, লাভ-ক্ষতির পাতার সমান। নিজেই শাখা ধরে ভাগ করে, তাই ইঞ্জিনের
  * শাখা-ভাগ বন্ধ (`splitByBranch: false`); শাখার দেয়াল তবু মানে।
  */
 final class BranchesSideBySideReport
@@ -37,7 +37,7 @@ final class BranchesSideBySideReport
     {
         return new ReportDefinition(
             key: self::KEY,
-            permission: 'accounts.report.final',
+            permission: ['accounts.report', 'accounts.report.final'],
             title: 'accounts::branches.title',
             filters: ['date_range'],
             splitByBranch: false,
@@ -101,7 +101,7 @@ final class BranchesSideBySideReport
      */
     private static function family(string $code): array
     {
-        $root = Account::query()->where('code', $code)->first();
+        $root = StandardChart::find($code);
         $ids = $root === null ? [] : $root->selfAndDescendants()->pluck('id')->map(fn ($id) => (int) $id)->all();
 
         return $ids === [] ? [0] : array_values($ids);

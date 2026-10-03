@@ -59,7 +59,7 @@
                     @forelse ($rows as $row)
                         @php
                             $c = $row['customer'];
-                            $left = $row['target'] === null ? null : max(0, (float) bcsub($row['target'], $row['achieved'], 4));
+                            $left = $row['target'] === null ? null : (bccomp($row['achieved'], $row['target'], 4) >= 0 ? '0' : bcsub($row['target'], $row['achieved'], 4));
                         @endphp
                         <tr class="border-b border-(--color-border)" data-target-row="{{ $c->code }}">
                             <td class="px-3 py-1.5">{{ $c->code }} · {{ $c->name() }}</td>
