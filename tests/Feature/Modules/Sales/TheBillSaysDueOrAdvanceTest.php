@@ -71,4 +71,38 @@ final class TheBillSaysDueOrAdvanceTest extends TestCase
         $this->assertSame('মোট বকেয়া', __('sales::print.classic.total_due', [], 'bn'));
         $this->assertSame('(+) Previous Due', __('sales::print.classic.previous_due', [], 'en'), '⛔ আগের বিলের "Previous Advance" পরের বিলে থেকে গেছে।');
     }
+
+    /**
+     * ⭐ বিলের চেয়ে বেশি জমা — মালিকের ছবি, S-0001: বিল ৩৯,১০৬.১২, জমা ৪০,০০০, আগের বকেয়া ৩০,৬৪২.১৫।
+     * ⛔ আগে "Previous Due" ছাপত ২৯,৭৪৮.২৭ (আজকের মোট) — বাড়তি ৮৯৩.৮৮ দুবার বাদ পড়ত।
+     */
+    public function test_money_beyond_the_bill_does_not_hide_the_old_due(): void
+    {
+        $this->seed(DemoSeeder::class);
+        $company = Company::query()->where('code', 'TDEPOT')->firstOrFail();
+        CompanyContext::set($company->id, $company->defaultBranch()?->id);
+        $this->actingAs(User::query()->where('email', 'owner@abos.test')->firstOrFail());
+
+        $service = app(SalesInvoiceService::class);
+        $invoice = $service->confirm($service->create(
+            [
+                'customer_id' => Customer::query()->firstOrFail()->id,
+                'warehouse_id' => Warehouse::query()->where('is_default', true)->firstOrFail()->id,
+                'trx_date' => now()->toDateString(),
+            ],
+            [['product_id' => Product::query()->firstOrFail()->id, 'qty' => '1', 'rate' => '100']],
+        ));
+
+        /* বিল ১০০, জমা ১৫০; আজকের মোট বকেয়া ৮০ → আগের বকেয়া ১৩০ */
+        $invoice->setAttribute('collected_total', '150')->setAttribute('voucher_total', '0');
+        $invoice->setRelation('customer', $invoice->customer->setAttribute('outstanding_net', '80'));
+        $total = (string) $invoice->total;
+
+        $facts = (new ReflectionMethod(SalesPrintController::class, 'classicFacts'))->invoke(app(SalesPrintController::class), $invoice);
+        $previous = str_replace(',', '', (string) $facts['sums']['previous_due']);
+        $this->assertSame(0, bccomp($previous, bcadd('80', bcsub('150', $total, 4), 4), 4), '⛔ বাড়তি জমা আগের বকেয়া লুকিয়েছে।');
+
+        $rows = (new ReflectionMethod(SalesPrintController::class, 'invoiceTotals'))->invoke(app(SalesPrintController::class), $invoice);
+        $this->assertSame(0, bccomp(str_replace(',', '', (string) $rows['sales::print.outstanding']), '80', 4), '⛔ শেষ সারি গ্রাহকের আসল জের নয়।');
+    }
 }

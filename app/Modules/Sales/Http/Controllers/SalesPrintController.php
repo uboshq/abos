@@ -1221,7 +1221,10 @@ class SalesPrintController extends Controller implements HasMiddleware
             $balance = bcadd($balance, bcsub($debit, $credit, 4), 4);
             $rows[] = [
                 'date' => DateFormat::format($entry->trx_date),
-                'text' => trim((string) $entry->document_no.' — '.(string) $entry->narration, ' —'),
+                /* ⓘ বিবরণ নিজেই নম্বর দিয়ে শুরু হলে নম্বর দুবার নয় — মালিকের ছবি: "S-0001 — S-0001 — গ্রাহকের কাছে পাওনা" */
+                'text' => str_starts_with(trim((string) $entry->narration), (string) $entry->document_no)
+                    ? trim((string) $entry->narration)
+                    : trim((string) $entry->document_no.' — '.(string) $entry->narration, ' —'),
                 'debit' => bccomp($debit, '0', 4) === 0 ? '' : $debit,
                 'credit' => bccomp($credit, '0', 4) === 0 ? '' : $credit,
                 'balance' => $balance,
@@ -1244,7 +1247,14 @@ class SalesPrintController extends Controller implements HasMiddleware
          * অথচ "Outstanding" আসল জের ছাপে — তাই আগের সারি ০, শেষ সারি অন্য অঙ্ক, যোগ মিলত না।
          * ⓘ এখন অগ্রিম ঋণাত্মক ("na renatok hole renatok ei hobe"), আর আগের + এই বিলের বাকি = মোট, সবসময়।
          */
-        return bcsub($customer->outstanding(), $due, 4);
+        /*
+         * ⛔ এই বিলের বাকি চিহ্নসহ — মালিকের ছবি, S-0001, ৩ অক্টোবর ২০২৬: বিল ৩৯,১০৬.১২, জমা ৪০,০০০ — বাড়তি
+         * ৮৯৩.৮৮ আগের বকেয়া কমিয়েছে। `dueAmount()` শূন্যে থামে, তাই আগের বকেয়া ছাপত ২৯,৭৪৮.২৭ (আজকের মোট), অথচ
+         * আসল ৩০,৬৪২.১৫। ⓘ তাই এখানে মোট − আদায় − ফেরত, বিয়োগে কোনো থামা নেই।
+         */
+        $own = bcsub(bcsub((string) $invoice->total, $invoice->collectedAmount(), 4), $invoice->returnedAmount(), 4);
+
+        return bcsub($customer->outstanding(), bccomp($due, '0', 4) > 0 ? $due : $own, 4);
     }
 
     private function invoiceTotals(SalesInvoice $invoice, bool $roll = false): array
@@ -1289,7 +1299,8 @@ class SalesPrintController extends Controller implements HasMiddleware
                 $rows[bccomp($earlier, '0', 4) < 0 ? 'sales::print.previous_advance' : 'sales::print.previous_due'] = $this->money($earlier);
             }
 
-            $rows['sales::print.outstanding'] = $this->money(bcadd($earlier, $due, 4));
+            // ⓘ গ্রাহকের আসল জের — বাড়তি জমায় `$due` শূন্যে থামে, তাই আগের + এই বিল দিয়ে নয় (৩ অক্টোবর ২০২৬)
+            $rows['sales::print.outstanding'] = $this->money(bcadd($customer->outstanding(), '0', 4));
         }
 
         return $rows;
