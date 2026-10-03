@@ -60,7 +60,7 @@ final class ApprovalDashboard implements ProvidesDashboard
                 ),
             ],
 
-            panels: [self::howLongWaiting(), ...self::byModule()],
+            panels: [self::howLongWaiting(), ...self::byModule(), ...self::byPerson()],
 
             listings: [
                 new Listing(
@@ -111,6 +111,52 @@ final class ApprovalDashboard implements ProvidesDashboard
             ],
             hint: __('approval::dashboard.how_long_hint'),
         );
+    }
+
+    /**
+     * ⭐ কার কাছে আটকে — অপেক্ষমাণ সই, যাঁর টেবিলে পড়ে আছে তাঁর নামে (মালিকের ড্যাশবোর্ড নকশা, ৩ অক্টোবর ২০২৬)।
+     *
+     * ⓘ বাঁয়ের দুই চার্টের একই ছাঁকনি (অবস্থা অপেক্ষমাণ); নাম `assigned_to`-র মানুষের — কাউকে বসানো না থাকলে
+     * "নির্দিষ্ট কেউ নন" (যে কেউ চাবিধারী সই দিতে পারেন)। বড় থেকে ছোট, প্রথম ছয়জন; বাকিরা "অন্যরা"-তে, যোগফল এক।
+     * ⓘ নাম কেবল এই কোম্পানির মানুষের — অনুমোদনের সারি কোম্পানির স্কোপে, তাই অন্য কোম্পানির টেবিল এখানে আসে না।
+     * ⓘ নতুন ড্যাশবোর্ডের অংশ — বাকিগুলোর সাথে একসাথে চালু হবে (config abos.dashboards_v2)।
+     *
+     * @return list<Breakdown>
+     */
+    private static function byPerson(): array
+    {
+        if (! config('abos.dashboards_v2')) {
+            return [];
+        }
+
+        $rows = Approval::query()->where('status', Approval::PENDING)
+            ->selectRaw('assigned_to, COUNT(*) as n')
+            ->groupBy('assigned_to')
+            ->orderByDesc('n')
+            ->toBase()->get();
+
+        if ($rows->isEmpty()) {
+            return [];
+        }
+
+        $names = \App\Models\User::query()->whereKey($rows->pluck('assigned_to')->filter()->all())->pluck('name', 'id');
+
+        $parts = $rows->take(6)->map(fn ($r) => [
+            'label' => $r->assigned_to === null ? __('approval::dashboard.anyone') : ($names[$r->assigned_to] ?? '—'),
+            'value' => (string) (int) $r->n,
+        ])->all();
+
+        $rest = (int) $rows->slice(6)->sum('n');
+
+        if ($rest > 0) {
+            $parts[] = ['label' => __('approval::dashboard.others'), 'value' => (string) $rest];
+        }
+
+        return [new Breakdown(
+            label: __('approval::dashboard.by_person'),
+            parts: $parts,
+            hint: __('approval::dashboard.by_person_hint'),
+        )];
     }
 
     /**

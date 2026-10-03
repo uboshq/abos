@@ -25,6 +25,10 @@ return [
     'one_to_three' => '1–3 days',
     'three_to_seven' => '3–7 days',
     'over_a_week' => 'Over a week',
+    'by_person' => 'Waiting with whom',
+    'by_person_hint' => 'Whose desk the signature sits on',
+    'anyone' => 'No one in particular',
+    'others' => 'Others',
     'by_module' => 'Waiting, by module',
     'by_module_hint' => 'Where signatures are held up',
 ];

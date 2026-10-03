@@ -91,7 +91,7 @@ final class HrDashboard implements ProvidesDashboard
                 ),
             ],
 
-            panels: [self::todaysRoll($today), ...self::byDepartment(), ...self::salaryCost()],
+            panels: [self::todaysRoll($today), ...self::byDepartment(), ...self::leaveThisMonth(), ...self::comingAndGoing(), ...self::salaryCost()],
 
             listings: [
                 new Listing(
@@ -198,6 +198,69 @@ final class HrDashboard implements ProvidesDashboard
             label: __('hr::dashboard.by_department'),
             parts: $shown->map(fn ($p) => ['label' => $p['label'], 'value' => (string) $p['n']])->all(),
             hint: __('hr::dashboard.by_department_hint', ['count' => $parts->sum('n')]),
+        )];
+    }
+
+    /**
+     * ⭐ ছুটির আবেদন — এ মাস, অবস্থা ধরে (মালিকের ড্যাশবোর্ড নকশা, ৩ অক্টোবর ২০২৬)।
+     *
+     * ⓘ "এ মাসের" মানে ছুটিটা এ মাসে শুরু (`from_date`) — কবে লেখা হলো তা নয়; মালিক জানতে চান এ মাসে কে কে নেই।
+     * ⓘ দেখার শাখার কর্মীদের আবেদন — উপরের "কর্মী" সংখ্যার একই ভিত। ⛔ ছুটির চাবি (`hr.leave.view`) ছাড়া চার্টই নেই।
+     * ⓘ নতুন ড্যাশবোর্ডের অংশ (config abos.dashboards_v2)।
+     *
+     * @return list<Breakdown>
+     */
+    private static function leaveThisMonth(): array
+    {
+        if (! config('abos.dashboards_v2') || ! auth()->user()?->can('hr.leave.view')) {
+            return [];
+        }
+
+        $start = Carbon::today()->startOfMonth();
+
+        $byStatus = LeaveApplication::query()
+            ->whereIn('employee_id', self::inView(Employee::query(), 'hr_employees.branch_id')->select('id'))
+            ->whereBetween('from_date', [$start->toDateString(), $start->copy()->endOfMonth()->toDateString()])
+            ->selectRaw('status, COUNT(*) as n')
+            ->groupBy('status')
+            ->toBase()->pluck('n', 'status');
+
+        return [new Breakdown(
+            label: __('hr::dashboard.leave_this_month'),
+            parts: array_map(fn (string $status) => [
+                'label' => __('hr::dashboard.leave_'.$status),
+                'value' => (string) (int) ($byStatus[$status] ?? 0),
+            ], [LeaveApplication::PENDING, LeaveApplication::APPROVED, LeaveApplication::REJECTED, LeaveApplication::CANCELLED]),
+            hint: __('hr::dashboard.leave_this_month_hint'),
+        )];
+    }
+
+    /**
+     * ⭐ কর্মী চলাচল — এ বছর কতজন এলেন, কতজন গেলেন (মালিকের ড্যাশবোর্ড নকশা, ৩ অক্টোবর ২০২৬)।
+     *
+     * ⓘ যোগদান = `joining_date` এ বছরে; বিদায় = `leaving_date` এ বছরে; দেখার শাখার কর্মী। ⓘ বদলি আর পদোন্নতি
+     * আলাদা খাতায় নেই — প্রোফাইলের চাকরির ইতিহাসে ([[JobHistory]]) আছে, এখানে বানিয়ে গোনা হয় না।
+     * ⓘ নতুন ড্যাশবোর্ডের অংশ (config abos.dashboards_v2)।
+     *
+     * @return list<Breakdown>
+     */
+    private static function comingAndGoing(): array
+    {
+        if (! config('abos.dashboards_v2')) {
+            return [];
+        }
+
+        $from = Carbon::today()->startOfYear()->toDateString();
+        $to = Carbon::today()->endOfYear()->toDateString();
+        $staff = fn () => self::inView(Employee::query(), 'hr_employees.branch_id');
+
+        return [new Breakdown(
+            label: __('hr::dashboard.coming_and_going', ['year' => Carbon::today()->year]),
+            parts: [
+                ['label' => __('hr::dashboard.joined'), 'value' => (string) $staff()->whereBetween('joining_date', [$from, $to])->count()],
+                ['label' => __('hr::dashboard.left'), 'value' => (string) $staff()->whereBetween('leaving_date', [$from, $to])->count()],
+            ],
+            hint: __('hr::dashboard.coming_and_going_hint'),
         )];
     }
 

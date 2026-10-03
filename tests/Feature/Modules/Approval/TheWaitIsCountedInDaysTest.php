@@ -67,5 +67,14 @@ final class TheWaitIsCountedInDaysTest extends TestCase
         $name = fn (string $code) => $registry->get($code)->name[app()->getLocale()] ?? $registry->get($code)->name['en'];
         $this->assertSame([$name('sales') => '5', $name('purchase') => '1'], array_column($panel->parts, 'value', 'label'),
             '⛔ মডিউলের ভাগ ভুল — অনুমোদিতটাও গোনা, বা মডিউলের নাম ভুল।');
+
+        // ── কার কাছে আটকে — বসানো মানুষের নামে, বাকিরা "নির্দিষ্ট কেউ নন"; অনুমোদিতটা গোনায় নেই ──
+        $signer = User::factory()->create(['name' => 'Signing Manager']);
+        Approval::query()->where('approvable_id', 99)->update(['assigned_to' => $signer->id]);
+
+        $people = collect(ApprovalDashboard::dashboard()->panels)->firstWhere('label', __('approval::dashboard.by_person'));
+        $this->assertNotNull($people, '"কার কাছে আটকে" চার্ট নেই।');
+        $this->assertSame([__('approval::dashboard.anyone') => '5', 'Signing Manager' => '1'], array_column($people->parts, 'value', 'label'),
+            '⛔ মানুষের ভাগ ভুল — অনুমোদিতটাও গোনা, বা নাম ভুল।');
     }
 }

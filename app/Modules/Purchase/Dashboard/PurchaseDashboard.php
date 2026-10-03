@@ -139,6 +139,7 @@ final class PurchaseDashboard implements ProvidesDashboard
                     empty: __('purchase::dashboard.nothing_payable'),
                     href: route('purchase.bill.index'),
                 ),
+                ...self::goodsNotYetIn(),
             ],
         );
     }
@@ -150,6 +151,47 @@ final class PurchaseDashboard implements ProvidesDashboard
      * ⓘ সংজ্ঞা উপরের দুইটা সংখ্যার মতোই — নিশ্চিত বিলের `total`, পরিশোধের `amount` — তাই এ মাসের দণ্ড আর
      * "এই মাসে কেনা / পরিশোধ" কখনো দুই কথা বলে না। দুইটা কোয়েরি, মাস ধরে ভাগ; ফাঁকা মাসও শূন্য নিয়ে থাকে।
      */
+    /**
+     * ⭐ মাল আসেনি — খোলা ক্রয়াদেশ, যেটার দেরি সবচেয়ে বেশি সেটা উপরে (মালিকের ড্যাশবোর্ড নকশা, ৩ অক্টোবর ২০২৬)।
+     *
+     * ⓘ উপরের "অপেক্ষমাণ ক্রয়াদেশ" সংখ্যার একই ছাঁকনি (নিশ্চিত, এখনো বন্ধ হয়নি) — সংখ্যা বলে কয়টা, এটা বলে কোনগুলো।
+     * ⓘ আসার তারিখ না লেখা আদেশ শেষে, আদেশের তারিখ ধরে; দেরি দিনে, অ্যাপের ঘড়িতে (ডাটাবেজের নয়)।
+     * ⓘ নতুন ড্যাশবোর্ডের অংশ — বাকিগুলোর সাথে একসাথে চালু হবে (config abos.dashboards_v2)।
+     *
+     * @return list<Listing>
+     */
+    private static function goodsNotYetIn(): array
+    {
+        if (! config('abos.dashboards_v2')) {
+            return [];
+        }
+
+        $today = Carbon::today();
+
+        return [new Listing(
+            label: __('purchase::dashboard.goods_not_in'),
+            columns: [
+                ['key' => 'no', 'label' => __('purchase::field.document_no'),
+                    'render' => fn ($o) => $o->document_no],
+                ['key' => 'party', 'label' => __('purchase::field.supplier'),
+                    'render' => fn ($o) => $o->supplier?->name() ?? '—'],
+                ['key' => 'expected', 'label' => __('purchase::dashboard.expected_on'), 'width' => '10rem',
+                    'render' => fn ($o) => $o->expected_on === null ? '—'
+                        : ($o->expected_on->lt($today)
+                            ? __('purchase::dashboard.late_by', ['days' => (int) $o->expected_on->diffInDays($today)])
+                            : $o->expected_on->format('d M Y'))],
+                ['key' => 'amount', 'label' => __('purchase::field.total'), 'width' => '9rem',
+                    'render' => fn ($o) => Money::format($o->total)],
+            ],
+            rows: PurchaseOrder::query()->where('status', DocumentStatus::CONFIRMED)
+                ->with('supplier')
+                ->orderByRaw('expected_on IS NULL')->orderBy('expected_on')->orderBy('trx_date')
+                ->limit(8)->get(),
+            empty: __('purchase::dashboard.all_goods_in'),
+            href: route('purchase.order.index'),
+        )];
+    }
+
     /**
      * ⭐ এ বছর কার কাছ থেকে সবচেয়ে বেশি কেনা — প্রথম পাঁচ সরবরাহকারী (মালিকের ড্যাশবোর্ড নকশা, ২ অক্টোবর ২০২৬)।
      *

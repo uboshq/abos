@@ -102,6 +102,22 @@ final class TheDashboardCountsTodaysRollTest extends TestCase
             array_column($panel->parts, 'value', 'label'),
             '⛔ বিভাগের ভাগ ভুল — ছেড়ে যাওয়া কর্মী গোনা, বা বিভাগহীন কেউ হারিয়ে গেছে।',
         );
+
+        // ── কর্মী চলাচল — এ বছর: A, B, C যোগদান ২০২৪-এ (গোনায় নেই); D এ বছর বিদায় নিলে "বিদায়"-এ এক ──
+        Employee::query()->where('code', 'E-D')->update(['leaving_date' => now()->startOfYear()->addDay()->toDateString()]);
+        Employee::query()->create([
+            'company_id' => $company->id, 'branch_id' => $branch->id, 'code' => 'E-NEW', 'name_en' => 'Newcomer',
+            'joining_date' => now()->toDateString(),
+        ]);
+
+        $moves = collect(HrDashboard::dashboard()->panels)->firstWhere('label', __('hr::dashboard.coming_and_going', ['year' => now()->year]));
+        $this->assertNotNull($moves, 'কর্মী চলাচলের চার্ট নেই।');
+        $this->assertSame([__('hr::dashboard.joined') => '1', __('hr::dashboard.left') => '1'], array_column($moves->parts, 'value', 'label'),
+            '⛔ যোগদান বা বিদায়ের গোনা ভুল।');
+
+        // ── ছুটির আবেদন — ছুটির চাবি ছাড়া চার্টই নেই ──
+        $this->assertNull(collect(HrDashboard::dashboard()->panels)->firstWhere('label', __('hr::dashboard.leave_this_month')),
+            '⛔ ছুটির চাবি ছাড়াই ছুটির আবেদনের চার্ট।');
     }
 
     /**
