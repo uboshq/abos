@@ -62,9 +62,6 @@ final class CreditExposure implements CreditHolds
      */
     private bool $readLatest = false;
 
-    /** ⓘ [[approvedDeliveryOrders()]] — DO-র টেবিল আছে কি না, একবারই দেখা */
-    private static ?bool $hasOrders = null;
-
     /**
      * [[CreditHolds]] — গ্রাহকের পাতার জন্য, একই হিসাব।
      *
@@ -161,7 +158,7 @@ final class CreditExposure implements CreditHolds
      */
     public function billedAs(DeliveryChallan $challan): string
     {
-        $lines = DB::table('sal_challan_lines')->where('delivery_challan_id', $challan->id)->count();
+        $lines = $challan->lines()->count();
 
         $drafts = DB::table('sal_invoices as i')
             ->where('i.company_id', $challan->company_id)
@@ -225,10 +222,7 @@ final class CreditExposure implements CreditHolds
      */
     private function approvedDeliveryOrders(array $customerIds, ?int $exceptDeliveryOrderId = null): array
     {
-        // ⓘ টেবিলটা একবার দেখা — মাইগ্রেশনের মাঝের অবস্থায় (DO-র টেবিল আসার আগে) দেয়াল যেন না ভাঙে; প্রতি ডাকে নয়
-        self::$hasOrders ??= \Illuminate\Support\Facades\Schema::hasTable('sal_delivery_orders');
-
-        if ($customerIds === [] || ! self::$hasOrders) {
+        if ($customerIds === []) {
             return [];
         }
 

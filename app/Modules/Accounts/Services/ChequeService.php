@@ -10,6 +10,7 @@ use App\Core\Support\CompanyContext;
 use App\Core\Support\DateFormat;
 use App\Core\Support\Money;
 use App\Models\LedgerEntry;
+use App\Modules\Accounts\Events\ChequeCleared;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Models\Cheque;
 use App\Modules\Accounts\Models\Voucher;
@@ -331,6 +332,9 @@ final class ChequeService
                 'cleared_on' => $date,
                 'bank_account_id' => $bank->id,
             ]);
+
+            // ⓘ অন্য মডিউলকে জানানো — লেনদেন পাকা হওয়ার পরে; টাকার জন্য আটকে থাকা DO আবার যাচাই হয় ([[ChequeCleared]])
+            DB::afterCommit(fn () => event(ChequeCleared::from($cheque->fresh())));
 
             return $cheque->fresh();
         });

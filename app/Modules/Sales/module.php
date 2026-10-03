@@ -684,6 +684,8 @@ return [
      */
     'events' => [
         InvoiceConfirmed::class,
+        // ⭐ আদায় পাকা — টাকার জন্য আটকে থাকা DO আবার যাচাই (বিক্রয়ের কাজের ধারা, ২ অক্টোবর ২০২৬)
+        \App\Modules\Sales\Events\CollectionConfirmed::class,
         // ⭐ ডেলিভারি অর্ডার — সুপারভাইজার পেরোল / থামল (২ অক্টোবর ২০২৬); শোনেন abos-86 (হিসাব, মজুদ)
         \App\Modules\Sales\Events\DeliveryOrderSupervisorApproved::class,
         \App\Modules\Sales\Events\DeliveryOrderCancelled::class,
@@ -729,6 +731,15 @@ return [
      * সিদ্ধান্ত ১, ২৭ সেপ্টেম্বর ২০২৬ ([[HeldCounterSaleFinisher]])।
      */
     'listeners' => [
+        /*
+         * ⭐ ডেলিভারি অর্ডারের হিসাব আর মাল — বিক্রয়ের কাজের ধারা, ধাপ গ + ঘ (৩ অক্টোবর ২০২৬)।
+         * সুপারভাইজারের শেষ অনুমোদনে মাল আটকানো আর হিসাবের যাচাই; বাতিলে ছাড়; টাকা এলে আটকে থাকা DO আবার।
+         */
+        \App\Modules\Sales\Events\DeliveryOrderSupervisorApproved::class => [\App\Modules\Sales\Listeners\HoldAndCheckTheDeliveryOrder::class],
+        \App\Modules\Sales\Events\DeliveryOrderCancelled::class => [\App\Modules\Sales\Listeners\ReleaseTheDeliveryOrderStock::class],
+        \App\Modules\Sales\Events\CollectionConfirmed::class => [\App\Modules\Sales\Listeners\RecheckTheHeldDeliveryOrders::class],
+        \App\Modules\Accounts\Events\VoucherPosted::class => [\App\Modules\Sales\Listeners\RecheckTheHeldDeliveryOrders::class],
+        \App\Modules\Accounts\Events\ChequeCleared::class => [\App\Modules\Sales\Listeners\RecheckTheHeldDeliveryOrders::class],
         \App\Core\Events\ApprovalDecided::class => [
             \App\Modules\Sales\Listeners\FinishTheHeldSaleOnTheLastSignature::class,
             // ⭐ অফিসের চালানও — শেষ সইয়ে নিজে পাকা ([[SignedChallanConfirmer]], ২৯ সেপ্টেম্বর ২০২৬)
@@ -1159,6 +1170,17 @@ return [
              * হওয়ামাত্র বেশি দামে বেচাও থেমে যেত, আর মালিক সেটা চাননি।
              */
             'default' => false,
+            'group' => 'entry',
+        ],
+        /*
+         * ⭐ ডেলিভারি অর্ডারের মাল কতক্ষণ — মালিক, ৩ অক্টোবর ২০২৬: *"24h er jonno korakori atkabe, baki 2din
+         * dekhabe but bikroy cholbe"* ([[DeliveryOrderStock]])। সুপারভাইজারের অনুমোদন থেকে গোনা।
+         */
+        [
+            'key' => 'sales.do_hard_hold_hours',
+            'label' => 'sales::settings.do_hard_hold_hours',
+            'type' => 'integer',
+            'default' => 24,
             'group' => 'entry',
         ],
         [

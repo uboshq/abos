@@ -760,5 +760,7 @@ return [
         VoucherPosted::class,
         AccountSaved::class,
         AccountFormOpened::class,
+        // ⭐ চেক পাশ — টাকার জন্য আটকে থাকা DO আবার যাচাই হয় (বিক্রয়ের কাজের ধারা, ২ অক্টোবর ২০২৬)
+        \App\Modules\Accounts\Events\ChequeCleared::class,
     ],
 ];

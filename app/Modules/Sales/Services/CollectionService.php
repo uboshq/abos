@@ -24,6 +24,7 @@ use App\Modules\Sales\Models\Collection;
 use App\Modules\Sales\Models\CollectionLine;
 use App\Modules\Sales\Models\SalesInvoice;
 use Illuminate\Support\Carbon;
+use App\Modules\Sales\Events\CollectionConfirmed;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -241,6 +242,9 @@ final class CollectionService
             );
 
             $collection->update(['status' => DocumentStatus::CONFIRMED]);
+
+            // ⓘ টাকা এল — টাকার জন্য আটকে থাকা DO আবার যাচাই, লেনদেন পাকা হওয়ার পরে ([[CollectionConfirmed]])
+            DB::afterCommit(fn () => event(CollectionConfirmed::from($collection->fresh())));
 
             return $collection->fresh(['lines']);
         });
