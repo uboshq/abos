@@ -98,6 +98,17 @@ final class PurchaseBillService
             ->map(fn (PurchaseReceiptLine $line) => [
                 'product_id' => $line->product_id,
                 'qty' => $line->unbilledQty(),
+
+                /*
+                 * ফ্রিও বিলের সারিতে — কেবল দেখানো আর ছাপার জন্য (সমন্বয়ক, ৩ অক্টোবর ২০২৬)।
+                 *
+                 * ⛔ মজুদ দ্বিতীয়বার ঢোকে না: ফ্রি মাল ঢুকেছে চালানেই (`purchase_receipt:free`), আর বিল
+                 * ফ্রি তোলে কেবল চালান-ছাড়া সারিতে ([[bringInDirectLines()]] → [[bringInFree()]])।
+                 * ⓘ আগের বিলে যতটুকু ফ্রি উঠেছে তা বাদ — বাকি অংশের দ্বিতীয় বিলে একই ফ্রি দুবার দেখাত।
+                 * পাহারা: [[TheBillFromAReceiptForgotTheFreeGoodsTest]]।
+                 */
+                'free_qty' => $this->unbilledFree($line),
+
                 'rate' => (string) $line->rate,
                 'discount' => '0',
                 'tax' => null,
@@ -121,6 +132,18 @@ final class PurchaseBillService
             'due_on' => $receipt->supplier?->dueDateFrom($date)->toDateString(),
             'narration' => __('purchase::message.bill_from_receipt', ['no' => $receipt->document_no]),
         ], $lines);
+    }
+
+    /** চালানের সারির যে ফ্রি এখনো কোনো চালু বিলে ওঠেনি — মূল এককে */
+    private function unbilledFree(PurchaseReceiptLine $line): string
+    {
+        $billed = (string) ($line->billLines()
+            ->whereHas('bill', fn ($q) => $q->where('status', '<>', DocumentStatus::CANCELLED))
+            ->sum('free_qty') ?: '0');
+
+        $left = bcsub((string) $line->free_qty, $billed, 4);
+
+        return bccomp($left, '0', 4) > 0 ? $left : '0';
     }
 
     /**
