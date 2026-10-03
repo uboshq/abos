@@ -144,6 +144,33 @@ final class SearchEngine
     }
 
     /**
+     * ⭐ এই মানুষ কি এই সারিটা আজ খুলতে পারেন — খোঁজার একই দুইটা দরজা।
+     *
+     * ⓘ Ctrl+K-এর খালি বাক্সের সাম্প্রতিক কাগজ ([[StartingPoints::recent()]])
+     * এটা জিজ্ঞেস করে, ২ অক্টোবর ২০২৬। ⛔ আলাদা নিয়ম লিখলে একদিন খোঁজা
+     * একটা কাগজ লুকাত আর সাম্প্রতিক তালিকা সেটাই দেখাত।
+     *
+     * ⚠️ সারিটা আগেই কোম্পানি আর শাখার গ্লোবাল স্কোপ দিয়ে তোলা হয়েছে — এখানে
+     * কেবল রুটের অনুমতি বা পলিসি। ⛔ যে শ্রেণি খোঁজার উৎসই নয়, তার উত্তর না।
+     */
+    public function maySee(User $user, Model $record): bool
+    {
+        $source = $this->sources()[$record::class] ?? null;
+
+        if ($source === null || ! $this->mayOpen($user, $source)) {
+            return false;
+        }
+
+        return $source['ability'] === null || $user->can($source['ability'], $record);
+    }
+
+    /** ⓘ একটা সারিকে ফলাফলের রূপে — খোঁজা যেভাবে দেখায়, হুবহু সেভাবে। */
+    public function hitFor(Model&Drillable $record): SearchHit
+    {
+        return $this->hitFrom($record);
+    }
+
+    /**
      * এই ব্যবহারকারীর জন্য কয়টা উৎস সত্যিই খোঁজা হয়।
      *
      * ⭐ পাহারার জন্য — একটা সবুজ টিককে প্রমাণ করতে হয় সে কী দেখেছে।

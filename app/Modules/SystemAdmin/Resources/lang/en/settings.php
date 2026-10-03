@@ -86,6 +86,7 @@ return [
     'screens_live_in_control_panel' => 'Which screens are visible — that lives in the Control Panel',
     'saved' => '{0}Nothing changed|{1}One setting saved|[2,*]:count settings saved',
 
+    'document_peek' => 'A paper link in a list opens in a popup (peek)',
     'notice_bar_max' => 'Most notices on the bottom bar',
     'notice_remind_after' => 'First reminder (hours)',
     'notice_remind_again' => 'Second reminder (hours)',

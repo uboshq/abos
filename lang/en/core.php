@@ -491,6 +491,7 @@ return [
         'close' => 'Close',
         'loading' => 'Loading…',
         'failed' => 'This could not be shown here — use the link above to open the full page.',
+        'refused' => 'This paper cannot be opened here — you have no permission, it belongs to another company or branch, or it is gone.',
     ],
 
     'table' => [
@@ -726,6 +727,9 @@ return [
     'search' => [
         'type_to_find' => 'Type what you are looking for — a name, a number or a code.',
         'nothing_found' => 'Nothing found.',
+        'recent' => 'Recent papers',
+        'actions' => 'Suggested actions',
+        'new_paper' => 'New :paper',
     ],
 
     'role' => [

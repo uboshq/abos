@@ -51,7 +51,7 @@
                    @keydown.up.prevent="prev()"
                    @keydown.enter.prevent="choose($event)"
                    role="combobox" aria-autocomplete="list"
-                   aria-controls="command-hits" :aria-expanded="hits.length > 0"
+                   aria-controls="command-hits" :aria-expanded="items.length > 0"
                    :aria-activedescendant="activeId"
                    placeholder="{{ __('core.action.search_anything') }}"
                    style="flex:1;border:0;outline:none;background:transparent;
@@ -65,7 +65,7 @@
             {{-- ⚠️ তিনটা অবস্থা, আর তিনটাই আলাদা কথা বলে। ⓘ একটাতে সব
                  মিলিয়ে দিলে "কিছু পাওয়া যায়নি" আর "এখনো কিছু লেখেননি"
                  এক দেখাত, অথচ দুইটার উত্তর সম্পূর্ণ আলাদা। --}}
-            <template x-if="tooShort">
+            <template x-if="hint">
                 <p style="padding:16px;font-size:13px;color:var(--color-ink-muted)">
                     {{ __('core.search.type_to_find') }}
                 </p>
@@ -80,7 +80,59 @@
             {{-- ⓘ `role="option"` লিংকেই — ↵ আর ক্লিক একই জিনিস চাপে
                  (shell.js-এর `choose()`)। --}}
             <div id="command-hits" role="listbox">
-            <template x-for="(hit, i) in hits" :key="hit.url">
+
+            {{-- ⭐ খালি বাক্স: সাম্প্রতিক কাগজ, তারপর প্রস্তাবিত কাজ — ২ অক্টোবর ২০২৬।
+                 ⓘ ক্রমগুলো একটাই তালিকায় (`items`), তাই ↓ ↑ ↵ দুই দলের
+                 সীমানা পেরিয়েও একই রকম চলে। দলের নাম `role="group"`-এ, যাতে
+                 স্ক্রিন-রিডারও দলটা শোনে। --}}
+            <div x-show="recentList.length > 0" role="group" aria-labelledby="command-recent-label">
+                <p id="command-recent-label"
+                   style="margin:0;padding:8px 14px 4px;font-size:11px;font-weight:600;color:var(--color-ink-muted)">
+                    {{ __('core.search.recent') }}
+                </p>
+
+                <template x-for="(hit, i) in recentList" :key="hit.url">
+                    <a :href="hit.url" :id="hitId(i)"
+                       role="option" :aria-selected="isActive(i) ? 'true' : 'false'"
+                       @mousemove="point(i)"
+                       class="hover:bg-(--color-surface-muted) aria-selected:bg-(--color-surface-muted)"
+                       style="display:flex;align-items:baseline;gap:10px;padding:10px 14px;
+                              border-bottom:1px solid var(--color-border);text-decoration:none">
+                        <span style="flex:none;font-size:11px;color:var(--color-ink-muted)"
+                              x-text="hit.type"></span>
+
+                        <span style="flex:none;font-size:12px;color:var(--color-ink-muted)"
+                              x-text="hit.no"></span>
+
+                        <span style="flex:1;font-size:13px;color:var(--color-ink-body)"
+                              x-text="hit.label"></span>
+                    </a>
+                </template>
+            </div>
+
+            <div x-show="actionList.length > 0" role="group" aria-labelledby="command-actions-label">
+                <p id="command-actions-label"
+                   style="margin:0;padding:8px 14px 4px;font-size:11px;font-weight:600;color:var(--color-ink-muted)">
+                    {{ __('core.search.actions') }}
+                </p>
+
+                <template x-for="(act, j) in actionList" :key="act.url">
+                    <a :href="act.url" :id="actionId(j)"
+                       role="option" :aria-selected="isActionActive(j) ? 'true' : 'false'"
+                       @mousemove="pointAction(j)"
+                       class="hover:bg-(--color-surface-muted) aria-selected:bg-(--color-surface-muted)"
+                       style="display:flex;align-items:baseline;gap:10px;padding:10px 14px;
+                              border-bottom:1px solid var(--color-border);text-decoration:none">
+                        <span style="flex:none;font-size:11px;color:var(--color-ink-muted)"
+                              x-text="act.type"></span>
+
+                        <span style="flex:1;font-size:13px;color:var(--color-ink-body)"
+                              x-text="act.label"></span>
+                    </a>
+                </template>
+            </div>
+
+            <template x-for="(hit, i) in hitList" :key="hit.url">
                 <a :href="hit.url" :id="hitId(i)"
                    role="option" :aria-selected="isActive(i) ? 'true' : 'false'"
                    @mousemove="point(i)"

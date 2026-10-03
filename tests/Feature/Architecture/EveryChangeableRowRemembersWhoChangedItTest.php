@@ -107,6 +107,7 @@ class EveryChangeableRowRemembersWhoChangedItTest extends TestCase
         'App\Models\DocumentDelivery' => 'কাগজ বেরোনোর ঘটনা — একবার ঘটে, কেউ বদলায় না (২০ সেপ্টেম্বর ২০২৬)',
 
         // ── ব্যক্তির নিজের সুবিধা, ব্যবসার তথ্য নয় ──────────────────
+        'App\Models\RecentPaper' => 'কে কোন কাগজ শেষ কবে খুলেছেন — Ctrl+K-এর সুবিধা, কেউ সম্পাদনা করে না (২ অক্টোবর ২০২৬)',
         'App\Models\SavedView' => 'নিজের তালিকার নিজের ছাঁকনি',
         'App\Models\LookSkinVersion' => 'পর্দার রূপ — হিসাবের কিছু নয়',
 

@@ -65,6 +65,14 @@
             {{ __('core.peek.failed') }}
         </div>
 
+        {{-- ⛔ ৪০৩ / ৪০৪ — দরজা পিকেও একই, আর কারণটা এক লাইনে। ⓘ সার্ভারের
+             ত্রুটির পাতাটা এখানে বসানো হয় না: ওটা নিজের `<html>` আর
+             পুরো-পর্দার গড়ন নিয়ে আসে (২ অক্টোবর ২০২৬)। --}}
+        <div x-show="refused" data-peek-refused
+             class="px-4 py-6 text-center text-xs text-(--color-danger)">
+            {{ __('core.peek.refused') }}
+        </div>
+
         <div x-ref="body" data-peek-body
              class="min-w-0 overflow-y-auto px-4 py-3"
              style="flex:1 1 auto"></div>

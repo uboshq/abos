@@ -6,6 +6,7 @@ namespace App\Http\Controllers;
 
 use App\Core\Engines\Search\SearchEngine;
 use App\Core\Engines\Search\SearchHit;
+use App\Core\Engines\Search\StartingPoints;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -36,6 +37,26 @@ class SearchController extends Controller
     public function __invoke(Request $request): JsonResponse
     {
         $term = trim((string) $request->query('q', ''));
+
+        /*
+         * ⭐ খালি বাক্স — সাম্প্রতিক কাগজ আর প্রস্তাবিত কাজ, ২ অক্টোবর ২০২৬।
+         *
+         * ⓘ ডিজাইন-চেকলিস্ট, ধাপ ৭ · ৫। ⚠️ কেবল **একেবারে খালি** হলে — এক
+         * অক্ষরে মানুষ খুঁজছেন, তখন পুরনো তালিকা ফিরিয়ে দিলে মনে হত খোঁজাটা
+         * কিছুই শুনছে না। ⛔ দেয়াল [[StartingPoints]]-এ, প্রতিটা সারিতে।
+         */
+        if ($term === '') {
+            $start = app(StartingPoints::class);
+            $user = $request->user();
+
+            $recent = $user === null ? [] : $start->recent($user);
+
+            return response()->json([
+                'hits' => [],
+                'recent' => $recent,
+                'actions' => $user === null ? [] : $start->actions($user, $recent),
+            ]);
+        }
 
         /*
          * ⓘ দুই অক্ষরের নিচে খোঁজা হয় না — একটা অক্ষরে প্রায় সব সারিই

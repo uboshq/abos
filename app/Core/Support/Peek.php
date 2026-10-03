@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Core\Support;
 
+use App\Core\Services\SettingsService;
 use Illuminate\Http\Request;
 
 /**
@@ -35,6 +36,38 @@ final class Peek
 {
     public const HEADER = 'X-Peek';
 
+    /**
+     * ⭐ টুকরোর গায়ের চিহ্ন — "এটা সত্যিই একটা পিক-টুকরো", ২ অক্টোবর ২০২৬।
+     *
+     * ── ⛔ কেন লাগল ─────────────────────────────────────────────────
+     * জানালাটা আগে যা আসত তা-ই বসাত। ⚠️ কিন্তু একটা ঠিকানা সবসময়
+     * [[layouts.app]] দিয়ে আঁকা হয় না: লগইন ফুরিয়ে গেলে লগইনের গোটা
+     * পাতা, ফাইলের ঠিকানায় ফাইল, ত্রুটিতে ত্রুটির নিজের `<html>`। ⛔ তখন
+     * পপআপের ভিতরে আরেকটা গোটা অ্যাপ বসত — মেনু, টপবার, আরেকটা পিকের
+     * জানালা আর তার নিজের ক্লিক-শ্রোতা — আর ৩০২টা পাতার যেকোনোটার
+     * গড়ন ভেঙে যেত।
+     *
+     * ⭐ এখন জানালা কেবল সেই উত্তর বসায় যার একমাত্র মূল উপাদান এই
+     * চিহ্ন বহন করে ([[shell.js::peek]])। বাকি সব আগের মতোই পুরো পাতায়
+     * খোলে।
+     */
+    public const FRAGMENT = 'data-peek-fragment';
+
+    /**
+     * ⭐ এই কোম্পানিতে পিক চালু কি না — কোম্পানির সুইচ `system.document_peek`।
+     *
+     * ⛔ পড়তে না পারলে **বন্ধ**: বন্ধ মানে কেবল "আগের মতো পুরো পাতা",
+     * আর অজানা অবস্থায় সেটাই নিরাপদ দিক।
+     */
+    public static function enabled(): bool
+    {
+        try {
+            return (bool) app(SettingsService::class)->get('system.document_peek', true);
+        } catch (\Throwable) {
+            return false;
+        }
+    }
+
     public static function wanted(?Request $request = null): bool
     {
         $request ??= request();
@@ -57,6 +90,11 @@ final class Peek
             return false;
         }
 
-        return $request->hasHeader(self::HEADER);
+        /*
+         * ⛔ সুইচ বন্ধ থাকলে হেডার এলেও গোটা পাতা। ⓘ পুরনো ট্যাবে পুরনো
+         * জাভাস্ক্রিপ্ট তখনো হেডার পাঠাতে পারে — উত্তরটা তখন চিহ্নহীন,
+         * আর জানালা নিজেই পুরো পাতায় গড়িয়ে পড়ে।
+         */
+        return $request->hasHeader(self::HEADER) && self::enabled();
     }
 }

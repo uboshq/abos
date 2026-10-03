@@ -18,17 +18,22 @@
     পপআপের ভিতরে ওটা পাতার বাইরের জায়গায় নিয়ে যেত।
 --}}
 @if (\App\Core\Support\Peek::wanted())
-    <div class="mx-auto w-full max-w-(--spacing-content-max)">
-        @isset($header)
-            <div class="mb-4">{{ $header }}</div>
-        @endisset
+    {{-- ⭐ একটাই মূল উপাদান, চিহ্নসহ — জানালা কেবল এটাই বসায়
+         ([[App\Core\Support\Peek::FRAGMENT]])। ⚠️ ফর্মগুলোও এর **ভিতরে**:
+         বাইরে থাকলে মূল উপাদান দুইটা হত, আর জানালা উত্তরটা ফিরিয়ে দিত। --}}
+    <div data-peek-fragment>
+        <div class="mx-auto w-full max-w-(--spacing-content-max)">
+            @isset($header)
+                <div class="mb-4">{{ $header }}</div>
+            @endisset
 
-        {{ $slot }}
+            {{ $slot }}
+        </div>
+
+        {{-- ⓘ মেনুর ফর্মগুলো পাতার শেষে বসে (`form="<id>"` দিয়ে ডাকা হয়) —
+             পিকেও ওগুলো লাগে, নাহলে ভিতরের সারি-মেনুর বোতামগুলো মৃত হত --}}
+        @stack('detached-forms')
     </div>
-
-    {{-- ⓘ মেনুর ফর্মগুলো পাতার শেষে বসে (`form="<id>"` দিয়ে ডাকা হয়) —
-         পিকেও ওগুলো লাগে, নাহলে ভিতরের সারি-মেনুর বোতামগুলো মৃত হত --}}
-    @stack('detached-forms')
 @else
 <!DOCTYPE html>
 {{-- অ্যাকসেন্ট রংটা সার্ভারেই বসে, JavaScript-এ নয়। JS-এ করলে পাতাটা
@@ -430,7 +435,11 @@
 
     {{-- পিকের জানালা — একবারই, গোটা অ্যাপের জন্য। ⓘ [[command-center]]-এর
          পাশে, কারণ দুইটাই পাতার নয়, খোলসের অংশ। --}}
-    <x-shell.peek />
+    {{-- ⓘ কোম্পানির সুইচ বন্ধ থাকলে জানালাটাই বসে না — তখন প্রতিটা লিংক
+         আগের মতো সাধারণ লিংক (`system.document_peek`, ২ অক্টোবর ২০২৬) --}}
+    @if (\App\Core\Support\Peek::enabled())
+        <x-shell.peek />
+    @endif
 
     {{-- ছবি তোলার পর্দা — ছবির ঘর চারটা, পর্দাটা একটাই।
          ⓘ কমান্ড সেন্টারের মতোই সব রূপে বসে, কারণ ছবি আপলোডের ঘরও

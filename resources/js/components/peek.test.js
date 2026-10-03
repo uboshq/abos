@@ -152,12 +152,21 @@ const tick = async () => {
     await Alpine.nextTick()
 }
 
-/** সার্ভারের বদলে একটা নকল উত্তর */
-function serverSays (html, status = 200) {
+/*
+ * সার্ভারের বদলে একটা নকল উত্তর।
+ *
+ * ⭐ সফল উত্তর সার্ভারের মতোই চিহ্নওয়ালা টুকরোয় মোড়া (`data-peek-fragment`,
+ * [[App\Core\Support\Peek::FRAGMENT]]) — ২ অক্টোবর ২০২৬ থেকে জানালা কেবল
+ * সেটাই বসায়। ⓘ `raw` দিলে উত্তরটা হুবহু যায় — লগইনের পাতা, গোটা পাতা,
+ * ফাইল: যা সার্ভার টুকরো হিসেবে দেয় না।
+ */
+function serverSays (html, status = 200, { raw = false } = {}) {
+    const ok = status >= 200 && status < 300
+
     return vi.spyOn(globalThis, 'fetch').mockResolvedValue({
-        ok: status >= 200 && status < 300,
+        ok,
         status,
-        text: async () => html,
+        text: async () => (ok && ! raw ? `<div data-peek-fragment>${html}</div>` : html),
     })
 }
 
@@ -227,7 +236,7 @@ describe('সাধারণ ক্লিকে ডকুমেন্টটা �
         expect(full.getAttribute('href')).toContain('/sales/invoice/7')
     })
 
-    it('৪০৩ হলে ফাঁকা বাক্স নয়, সার্ভারের নিজের উত্তরটাই', async () => {
+    it('৪০৩ হলে ফাঁকা বাক্স নয়, এক লাইনের কারণ — ত্রুটির পাতাটা নয়', async () => {
         /*
          * ⛔ খোলস বাদ দেওয়া একটা আঁকার সিদ্ধান্ত, দরজার নয়। ⚠️ পিকে ৪০৩
          * গিলে ফেললে মানুষ ভাবতেন নথিটা ফাঁকা, অথচ আসলে তাঁর অনুমতি নেই —
@@ -239,8 +248,14 @@ describe('সাধারণ ক্লিকে ডকুমেন্টটা �
         click('doc')
         await tick()
 
+        /*
+         * ⓘ ২ অক্টোবর ২০২৬: উত্তরটা এখন এক লাইনের কারণ, সার্ভারের ত্রুটির
+         * পাতা নয় — ঐ পাতা নিজের `<html>` আর পুরো-পর্দার গড়ন নিয়ে আসে।
+         */
         expect(state().open).toBe(true)
-        expect(body().innerHTML).toContain('অনুমতি নেই')
+        expect(state().refused).toBe(true)
+        expect(body().innerHTML).toBe('')
+        expect(dialog().querySelector('[data-peek-refused]').style.display).not.toBe('none')
     })
 
     it('Esc চাপলে বন্ধ হয়, আর ভিতরটা মুছে যায়', async () => {
@@ -381,4 +396,93 @@ describe('ⓘ শ্রোতাটা আবার সরেও যায়', 
 
         expect(fetched).not.toHaveBeenCalled()
     })
+})
+
+/*
+ * ⭐ "পিক শেষ করা" — টুকরো নয় এমন কিছুই পপআপে বসে না, ২ অক্টোবর ২০২৬।
+ *
+ * ── ⛔ যা হত ─────────────────────────────────────────────────────────────
+ * জানালা যা আসত তা-ই `innerHTML`-এ বসাত। ⚠️ লগইন ফুরোলে লগইনের গোটা পাতা,
+ * লেআউট-ছাড়া কোনো পাতা, একটা ফাইল — সব পপআপে ঢুকত, সাথে আরেকটা মেনু আর
+ * **আরেকটা পিকের জানালা**। ⓘ `82a157bb`-এ পিক তুলে রাখার ভয় ("৩০২ পাতার
+ * লেআউট") ঠিক এই দরজা।
+ */
+describe('⛔ টুকরো নয় এমন উত্তর পপআপে বসে না — পুরো পাতায় গড়িয়ে পড়ে', () => {
+    const WHOLE = `<!DOCTYPE html><html><head><title>খাতা</title></head><body>
+        <aside><a href="/sales/invoice">মেনু</a></aside>
+        <div x-data="peek" role="dialog"><div data-peek-body></div></div>
+        <main><h1>গোটা পাতা</h1></main>
+    </body></html>`
+
+    const cases = [
+        ['খোলসসহ গোটা পাতা', WHOLE],
+        ['লগইনের পাতা (চিহ্নহীন)', '<form method="POST" action="/login"><h1>প্রবেশ করুন</h1></form>'],
+        ['ফাইল বা সাদা লেখা', 'PK\u0003\u0004 binary'],
+        ['চিহ্নওয়ালা টুকরোর পাশে আরেকটা উপাদান', '<div data-peek-fragment><h1>এক</h1></div><div>দুই</div>'],
+        ['চিহ্নওয়ালা টুকরোর ভিতরে আরেকটা পিকের জানালা',
+            '<div data-peek-fragment><h1>এক</h1><div x-data="peek" role="dialog"></div></div>'],
+    ]
+
+    for (const [name, html] of cases) {
+        it(`${name}`, async () => {
+            await mount()
+
+            /* ⛔ জীবিত-থাকার মাপটা আগে — ফাইলের মাথার ব্যাখ্যাটা দেখুন */
+            await peeksOnAPlainClick()
+
+            serverSays(html, 200, { raw: true })
+            const went = vi.spyOn(window.location, 'assign').mockImplementation(() => {})
+
+            click('doc')
+            await tick()
+
+            expect(state().open).toBe(false)
+            expect(body().innerHTML).toBe('')
+            expect(dialog().querySelectorAll('[x-data="peek"]').length).toBe(0)
+
+            /* ⭐ আর সে সত্যিই ঐ কাগজের পুরো পাতাতেই গেল — আগের আচরণ */
+            expect(went).toHaveBeenCalled()
+            expect(went.mock.calls[0][0]).toContain('/sales/invoice/7')
+        })
+    }
+
+    it('চিহ্নওয়ালা টুকরোটাই বসে — মোড়কসহ, একবার', async () => {
+        await mount()
+
+        serverSays('<h1>INV-7</h1><p>সাত</p>')
+        const went = vi.spyOn(window.location, 'assign').mockImplementation(() => {})
+
+        click('doc')
+        await tick()
+
+        expect(state().open).toBe(true)
+        expect(went).not.toHaveBeenCalled()
+        expect(body().querySelectorAll('[data-peek-fragment]').length).toBe(1)
+        expect(body().querySelector('[data-peek-fragment] h1').textContent).toBe('INV-7')
+        expect(state().title).toBe('INV-7')
+        expect(warnings).toEqual([])
+    })
+
+    for (const status of [403, 404]) {
+        it(`${status} — পপআপে এক লাইনের কারণ, পাতা বদলায় না, ত্রুটির পাতা বসে না`, async () => {
+            await mount()
+            await peeksOnAPlainClick()
+
+            serverSays(WHOLE, status)
+            const went = vi.spyOn(window.location, 'assign').mockImplementation(() => {})
+
+            click('doc')
+            await tick()
+
+            expect(state().open).toBe(true)
+            expect(state().refused).toBe(true)
+            expect(body().innerHTML).toBe('')
+            expect(went).not.toHaveBeenCalled()
+
+            /* ⓘ বন্ধ করলে কারণটাও মোছে — পরের কাগজে পুরনো "খোলা যায় না" নয় */
+            state().close()
+            await tick()
+            expect(state().refused).toBe(false)
+        })
+    }
 })

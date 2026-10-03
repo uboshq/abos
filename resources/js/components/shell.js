@@ -33,6 +33,14 @@ export function commandCenter ({ url }) {
         busy: false,
         timer: null,
 
+        /*
+         * ⭐ খালি বাক্সের দুইটা তালিকা — ২ অক্টোবর ২০২৬ (ডিজাইন-চেকলিস্ট, ধাপ ৭ · ৫)।
+         * ⓘ সার্ভার বাছে ([[StartingPoints]]): সাম্প্রতিক কাগজ আজকের দেয়াল
+         * দিয়ে, কাজ মেনু আর রুটের অনুমতি দিয়ে। এখানে কেবল দেখানো আর বাছা।
+         */
+        recent: [],
+        actions: [],
+
         // ⓘ বাছা ফলের ক্রম — ফল না থাকলেও ০, পড়ার সময় `hits.length` দেখা হয়
         active: 0,
 
@@ -42,6 +50,82 @@ export function commandCenter ({ url }) {
                 this.$refs.box?.focus()
                 this.$refs.box?.select?.()
             })
+
+            /* ⓘ প্রতিবার খোলায় নতুন করে — এইমাত্র খোলা কাগজটাও যেন তালিকায় থাকে */
+            if (this.blank) this.start()
+        },
+
+        /*
+         * ⭐ খালি বাক্সের তালিকা আনা — `q` ছাড়া একই ঠিকানা।
+         *
+         * ⓘ ব্যর্থ হলে নীরবে খালি: তখন বাক্সটা আগের মতোই "খুঁজতে লিখুন" বলে।
+         */
+        async start () {
+            try {
+                const res = await fetch(url, { headers: { Accept: 'application/json' } })
+                const data = await res.json()
+
+                this.recent = Array.isArray(data.recent) ? data.recent : []
+                this.actions = Array.isArray(data.actions) ? data.actions : []
+            } catch (e) {
+                this.recent = []
+                this.actions = []
+            }
+
+            if (this.blank) this.active = 0
+        },
+
+        /** ⓘ ঘরে কিছুই লেখা নেই — ফাঁকা জায়গাও "কিছু না" */
+        get blank () {
+            return this.q.trim() === ''
+        },
+
+        /*
+         * ⭐ এই মুহূর্তে বাছাই করা যায় এমন সারি — খালি বাক্সে আগে সাম্প্রতিক
+         * কাগজ, তারপর কাজ; লিখলে খোঁজার ফল।
+         *
+         * ⚠️ তীর আর ↵ এই একটা তালিকাই দেখে, তাই খালি বাক্সেও ↓ ↑ ↵ হুবহু
+         * একই রকম চলে — আলাদা কোনো কীবোর্ড-নিয়ম নেই।
+         */
+        get items () {
+            return this.blank ? [...this.recent, ...this.actions] : this.hits
+        },
+
+        get recentList () {
+            return this.blank ? this.recent : []
+        },
+
+        get actionList () {
+            return this.blank ? this.actions : []
+        },
+
+        get hitList () {
+            return this.blank ? [] : this.hits
+        },
+
+        /** ⓘ কাজের সারির ক্রম গোটা তালিকায় — সাম্প্রতিকগুলোর পরে */
+        actionIndex (j) {
+            return this.recentList.length + j
+        },
+
+        actionId (j) {
+            return this.hitId(this.actionIndex(j))
+        },
+
+        isActionActive (j) {
+            return this.isActive(this.actionIndex(j))
+        },
+
+        pointAction (j) {
+            this.point(this.actionIndex(j))
+        },
+
+        /*
+         * ⓘ "খুঁজতে লিখুন" কখন: এক অক্ষর লেখা, অথবা বাক্স খালি **আর**
+         * দেখানোর মতো কিছুই নেই (নতুন মানুষ, কিছুই খোলেননি, কিছুই বানাতে পারেন না)।
+         */
+        get hint () {
+            return this.tooShort && ! (this.blank && this.items.length > 0)
         },
 
         /*
@@ -80,9 +164,9 @@ export function commandCenter ({ url }) {
 
         /** ↓ ↑ — দুই প্রান্তে থামে, ঘুরে অন্য মাথায় যায় না */
         step (by) {
-            if (this.hits.length === 0) return
+            if (this.items.length === 0) return
 
-            this.active = Math.min(Math.max(this.active + by, 0), this.hits.length - 1)
+            this.active = Math.min(Math.max(this.active + by, 0), this.items.length - 1)
 
             this.$nextTick(() => {
                 // ⚠️ `nearest` — নাহলে প্রতিটা চাপে তালিকা লাফাত
@@ -111,7 +195,7 @@ export function commandCenter ({ url }) {
         choose (event) {
             if (event && event.isComposing) return
 
-            if (! this.hits[this.active]) return
+            if (! this.items[this.active]) return
 
             document.getElementById(this.hitId(this.active))?.click()
         },
@@ -131,7 +215,7 @@ export function commandCenter ({ url }) {
 
         /** ⓘ `null` হলে Alpine অ্যাট্রিবিউটটাই সরায় — খালি id নয় */
         get activeId () {
-            return this.hits[this.active] ? this.hitId(this.active) : null
+            return this.items[this.active] ? this.hitId(this.active) : null
         },
 
         get tooShort () {
@@ -438,11 +522,50 @@ export const NEVER_PEEK = [
     '/pdf',
 ]
 
+/*
+ * ⭐ টুকরোর চিহ্ন — সার্ভারের `Peek::FRAGMENT`-এর সাথে হুবহু এক।
+ */
+export const PEEK_FRAGMENT = 'data-peek-fragment'
+
+/*
+ * ⭐ উত্তরটা কি সত্যিই একটা পিক-টুকরো? হলে সেই একটা উপাদান, নাহলে `null`।
+ *
+ * ── ⛔ কেন, ২ অক্টোবর ২০২৬ ─────────────────────────────────────────────
+ * আগে যা আসত তা-ই `innerHTML`-এ বসত। ⚠️ লগইন ফুরোলে লগইনের গোটা পাতা,
+ * ফাইলের ঠিকানায় ফাইল, লেআউট-ছাড়া কোনো পাতা — সবই পপআপে ঢুকত, সাথে
+ * আরেকটা মেনু, আরেকটা টপবার, **আরেকটা পিকের জানালা আর তার ক্লিক-শ্রোতা**।
+ * ⓘ ৩০২টা পাতার লেআউট নিয়ে যে ভয়ে পিক একবার তুলে রাখা হয়েছিল
+ * (`82a157bb`), সেটা ঠিক এই জায়গা।
+ *
+ * ⭐ নিয়ম এখন কড়া: দেহে **একটাই** মূল উপাদান, আর সে চিহ্ন বহন করে।
+ * বাকি সব কিছু `null` — আর `null` মানে পুরো পাতায় গড়িয়ে পড়া, আগের মতো।
+ */
+export function peekFragmentOf (html) {
+    if (typeof html !== 'string' || html.trim() === '') return null
+
+    const doc = new DOMParser().parseFromString(html, 'text/html')
+    const root = doc.body
+
+    if (! root || root.childElementCount !== 1) return null
+
+    const only = root.firstElementChild
+
+    if (! only.hasAttribute(PEEK_FRAGMENT)) return null
+
+    /* ⛔ টুকরোর ভিতরে আরেকটা জানালা — খোলস ঢুকে পড়েছে, বসানো নয় */
+    if (only.querySelector('[x-data="peek"], [x-data^="commandCenter"]') !== null) return null
+
+    return only
+}
+
 export function peek () {
     return {
         open: false,
         busy: false,
         failed: false,
+
+        /* ⓘ ৪০৩/৪০৪ — দরজা বন্ধ; কাগজের বদলে এক লাইনের কারণ */
+        refused: false,
         url: '',
         title: '',
 
@@ -540,9 +663,11 @@ export function peek () {
             this.open = true
             this.busy = true
             this.failed = false
+            this.refused = false
             this.$refs.body.innerHTML = ''
 
-            let html = null
+            let fragment = null
+            let refused = false
 
             try {
                 const res = await fetch(url, {
@@ -552,27 +677,41 @@ export function peek () {
                 })
 
                 /*
-                 * ⛔ ৪০৩ বা ৪০৪ হলে ফাঁকা বাক্স নয় — সার্ভারের নিজের
-                 * উত্তরটাই দেখানো হয়। ⚠️ দরজাটা পিকে বদলায় না, তাই
-                 * ঐ পাতাটাই আসল উত্তর।
+                 * ⛔ ৪০৩ বা ৪০৪ হলে ফাঁকা বাক্স নয়, আর পুরো পাতায় গড়িয়ে
+                 * পড়াও নয় — দরজাটা পিকে বদলায় না, তাই উত্তরটা "খোলা যায়
+                 * না", আর সেটা এক লাইনে বলা হয়। ⚠️ সার্ভারের ত্রুটির পাতাটা
+                 * বসানো হয় না: ওটা নিজের `<html>` নিয়ে আসে (২ অক্টোবর ২০২৬)।
                  */
-                if (res.ok || res.status === 403 || res.status === 404) {
-                    html = await res.text()
+                if (res.status === 403 || res.status === 404) {
+                    refused = true
+                } else if (res.ok) {
+                    fragment = peekFragmentOf(await res.text())
                 }
             } catch (e) {
-                html = null
+                fragment = null
             }
 
             this.busy = false
 
-            /* ⭐ যা আন্দাজে ধরা পড়েনি, তার জন্য পুরনো আচরণটাই রয়ে গেছে */
-            if (html === null) {
+            if (refused) {
+                this.refused = true
+                this.title = ''
+                this.$refs.panel.focus()
+
+                return
+            }
+
+            /*
+             * ⭐ টুকরো নয় এমন যেকোনো উত্তর — লগইনের পাতা, ফাইল, লেআউট-
+             * ছাড়া পাতা — পুরো পাতায় গড়িয়ে পড়ে, পপআপে বসে না।
+             */
+            if (fragment === null) {
                 this.fallback()
 
                 return
             }
 
-            this.$refs.body.innerHTML = html
+            this.$refs.body.appendChild(document.importNode(fragment, true))
             this.title = this.$refs.body.querySelector('h1, h2')?.textContent?.trim() || ''
             this.$refs.panel.focus()
         },
@@ -595,6 +734,7 @@ export function peek () {
             this.open = false
             this.busy = false
             this.failed = false
+            this.refused = false
             this.$refs.body.innerHTML = ''
 
             this.cameFrom?.focus()

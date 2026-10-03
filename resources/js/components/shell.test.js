@@ -314,3 +314,142 @@ describe('A-07 — তীর আর ↵ প্যালেটের ভিতর
         expect(box().getAttribute('aria-controls')).toBe(list.id)
     })
 })
+
+/*
+ * ⭐ খালি বাক্স — সাম্প্রতিক কাগজ আর প্রস্তাবিত কাজ, ২ অক্টোবর ২০২৬।
+ *
+ * ⓘ ডিজাইন-চেকলিস্ট, ধাপ ৭ · ৫। কোন কাগজ, কোন কাজ — সার্ভার বাছে, দেয়াল
+ * দিয়ে ([[StartingPoints]], PHP-তে মাপা)। এখানে মাপা হয় পর্দাটা: খালি
+ * বাক্সে দুইটা দল দেখা যায়, আর ↓ ↑ ↵ দুই দলের সীমানা পেরিয়েও চলে।
+ */
+const RECENT = [
+    { url: '/accounts/vouchers/5', type: 'ভাউচার', no: 'JV-5', label: 'পাঁচ' },
+    { url: '/sales/invoices/9', type: 'বিক্রয় চালান', no: 'INV-9', label: 'নয়' },
+]
+
+const ACTIONS = [
+    { url: '/sales/direct', type: 'বিক্রয়', no: '', label: 'সরাসরি বিক্রয়' },
+    { url: '/purchase/direct', type: 'ক্রয়', no: '', label: 'সরাসরি ক্রয়' },
+]
+
+/** খালি বাক্সের উত্তর — Ctrl+K চাপার **আগে** বসাতে হয়, কারণ খোলার সাথেই অনুরোধ যায় */
+function startsWith (recent, actions) {
+    return vi.spyOn(globalThis, 'fetch').mockResolvedValue({
+        json: async () => ({ hits: [], recent, actions }),
+    })
+}
+
+async function openEmpty (recent = RECENT, actions = ACTIONS) {
+    const fetched = startsWith(recent, actions)
+
+    await mount()
+    press(document.body, 'k', { ctrlKey: true })
+    await tick()
+    await tick()
+
+    return fetched
+}
+
+const hrefs = () => rows().map(a => a.getAttribute('href'))
+const visible = (el) => el !== null && el.style.display !== 'none'
+
+describe('⭐ খালি বাক্স: সাম্প্রতিক কাগজ, তারপর প্রস্তাবিত কাজ', () => {
+    it('Ctrl+K খুললেই দুইটা দল, ঠিক ক্রমে — আর অনুরোধে কোনো q নেই', async () => {
+        const fetched = await openEmpty()
+
+        expect(fetched).toHaveBeenCalled()
+        expect(String(fetched.mock.calls[0][0])).not.toContain('q=')
+
+        expect(hrefs()).toEqual([...RECENT, ...ACTIONS].map(r => r.url))
+
+        expect(visible(dialog().querySelector('#command-recent-label').parentElement)).toBe(true)
+        expect(visible(dialog().querySelector('#command-actions-label').parentElement)).toBe(true)
+
+        /* ⛔ "খুঁজতে লিখুন" তখন নয় — দেখানোর মতো কিছু আছে */
+        expect(dialog().textContent).not.toContain('core.search.type_to_find')
+
+        /* ⓘ প্রথমটা বাছা, আর ঘর জানে কোনটা */
+        expect(selected()).toEqual(['true', 'false', 'false', 'false'])
+        expect(box().getAttribute('aria-activedescendant')).toBe(rows()[0].id)
+        expect(warnings).toEqual([])
+    })
+
+    it('↓ সাম্প্রতিক থেকে কাজে পেরোয়, প্রান্তে থামে; ↵ বাছা কাজটা খোলে', async () => {
+        await openEmpty()
+
+        const opened = []
+        dialog().addEventListener('click', (event) => {
+            const link = event.target.closest('a[href]')
+
+            if (link) {
+                event.preventDefault()
+                opened.push(link.getAttribute('href'))
+            }
+        })
+
+        for (let i = 0; i < 2; i++) press(box(), 'ArrowDown')
+        await tick()
+        expect(selected()).toEqual(['false', 'false', 'true', 'false'])
+        expect(box().getAttribute('aria-activedescendant')).toBe(rows()[2].id)
+
+        for (let i = 0; i < 9; i++) press(box(), 'ArrowDown')
+        await tick()
+        expect(selected()).toEqual(['false', 'false', 'false', 'true'])
+
+        press(box(), 'ArrowUp')
+        press(box(), 'ArrowUp')
+        await tick()
+
+        press(box(), 'Enter')
+        await tick()
+
+        expect(opened).toEqual(['/sales/invoices/9'])
+    })
+
+    it('ইঁদুর কাজের সারিতে গেলে বাছাইও সেখানে', async () => {
+        await openEmpty()
+
+        rows()[3].dispatchEvent(new MouseEvent('mousemove', { bubbles: true }))
+        await tick()
+
+        expect(selected()).toEqual(['false', 'false', 'false', 'true'])
+    })
+
+    it('লিখলে দুইটা দল সরে খোঁজার ফল আসে; মুছলে আবার ফেরে', async () => {
+        await openEmpty()
+
+        await search('sale', HITS)
+        expect(hrefs()).toEqual(HITS.map(h => h.url))
+        expect(visible(dialog().querySelector('#command-recent-label').parentElement)).toBe(false)
+
+        box().value = ''
+        box().dispatchEvent(new Event('input', { bubbles: true }))
+        await tick()
+
+        expect(hrefs()).toEqual([...RECENT, ...ACTIONS].map(r => r.url))
+        expect(selected()[0]).toBe('true')
+    })
+
+    it('দেখানোর মতো কিছু না থাকলে আগের মতোই "খুঁজতে লিখুন"', async () => {
+        await openEmpty([], [])
+
+        expect(rows()).toEqual([])
+        expect(dialog().textContent).toContain('core.search.type_to_find')
+        expect(visible(dialog().querySelector('#command-recent-label').parentElement)).toBe(false)
+
+        /* ⓘ তীর আর ↵ ফাঁকা তালিকায় কিছুই করে না, ভুলও ছোঁড়ে না */
+        press(box(), 'ArrowDown')
+        press(box(), 'Enter')
+        await tick()
+        expect(warnings).toEqual([])
+    })
+
+    it('এক দলই থাকলে অন্য দলের নাম দেখায় না', async () => {
+        await openEmpty([], ACTIONS)
+
+        expect(hrefs()).toEqual(ACTIONS.map(r => r.url))
+        expect(visible(dialog().querySelector('#command-recent-label').parentElement)).toBe(false)
+        expect(visible(dialog().querySelector('#command-actions-label').parentElement)).toBe(true)
+        expect(selected()).toEqual(['true', 'false'])
+    })
+})

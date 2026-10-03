@@ -8,6 +8,7 @@ use App\Http\Middleware\ExportListing;
 use App\Http\Middleware\NormalizeUnicodeInput;
 use App\Http\Middleware\OneSubmitPerForm;
 use App\Http\Middleware\PeekVaries;
+use App\Http\Middleware\RemembersOpenedPapers;
 use App\Http\Middleware\RefuseInactiveAccounts;
 use App\Http\Middleware\RefuseSwitchedOffScreens;
 use App\Http\Middleware\RefuseWorkWithoutALicence;
@@ -290,6 +291,13 @@ return Application::configure(basePath: dirname(__DIR__))
              * একটাকে অন্যটার উত্তর হিসেবে দিত।
              */
             PeekVaries::class,
+
+            /*
+             * ⭐ কাগজের পাতা খুললে মনে রাখা — Ctrl+K-এর খালি বাক্সের
+             * "সাম্প্রতিক কাগজ", ২ অক্টোবর ২০২৬ ([[StartingPoints]])।
+             * ⓘ উত্তর তৈরি হওয়ার পরে কাজ করে, আর ব্যর্থ হলেও পাতা ভাঙে না।
+             */
+            RemembersOpenedPapers::class,
         ]);
 
         /*
