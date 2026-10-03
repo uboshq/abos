@@ -36,7 +36,7 @@ class Approval extends Model implements Drillable
     protected $fillable = [
         'company_id', 'approvable_type', 'approvable_id', 'module', 'action',
         'amount', 'status', 'current_level', 'assigned_to', 'payload', 'state_hash',
-        'requested_reason', 'requested_by', 'requested_at', 'decided_at',
+        'requested_reason', 'requested_by', 'requested_by_customer_id', 'requested_at', 'decided_at',
         'due_at', 'reminded_at', 'escalated_at', 'escalated_to',
     ];
 
@@ -244,6 +244,19 @@ class Approval extends Model implements Drillable
             ->firstWhere('level', $this->current_level);
     }
 
+    /**
+     * ⛔ অনুরোধকারী ঠিক একজন — কর্মী অথবা পোর্টালের গ্রাহক, দুইটাই নয়, কোনোটাই-না নয় (৩ অক্টোবর ২০২৬)।
+     * ⓘ টেবিলে CHECK বসানো যায়নি (FK-র কলাম, MySQL 3823) — তাই পাহারা এখানে, প্রতিটা লেখার আগে।
+     */
+    protected static function booted(): void
+    {
+        static::saving(function (self $approval): void {
+            if (($approval->requested_by === null) === ($approval->requested_by_customer_id === null)) {
+                throw new \LogicException('An approval needs exactly one requester: a staff member or a portal customer.');
+            }
+        });
+    }
+
     public function decisions(): HasMany
     {
         return $this->hasMany(ApprovalDecision::class);
@@ -252,6 +265,29 @@ class Approval extends Model implements Drillable
     public function requester(): BelongsTo
     {
         return $this->belongsTo(User::class, 'requested_by');
+    }
+
+    /**
+     * ⭐ যিনি সই চাইলেন — কর্মী হলে তাঁর নাম, পোর্টালের গ্রাহক হলে গ্রাহকের নাম (৩ অক্টোবর ২০২৬)।
+     * ⓘ গ্রাহকের নাম কোর জানে না — পক্ষের তালিকা থেকে ([[PartyRegistry::labelsOf()]]), যেমন খতিয়ানের সারিতে।
+     */
+    public function requesterName(): string
+    {
+        if ($this->requested_by !== null) {
+            return (string) ($this->requester?->name ?? '—');
+        }
+
+        $id = (int) $this->requested_by_customer_id;
+
+        return $id > 0
+            ? (app(\App\Core\Services\PartyRegistry::class)->labelsOf([['customer', $id]])['customer:'.$id] ?? '—')
+            : '—';
+    }
+
+    /** কর্মীর সাথে কর্মীর তুলনা — পোর্টালের গ্রাহকের অনুরোধ কোনো কর্মীর "নিজের" নয় */
+    public function isRequestedByStaff(User $user): bool
+    {
+        return $this->requested_by !== null && (int) $this->requested_by === (int) $user->getKey();
     }
 
     public function scopePending(Builder $query): Builder

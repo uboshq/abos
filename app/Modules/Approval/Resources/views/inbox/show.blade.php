@@ -116,7 +116,7 @@
                         <dt class="text-2xs uppercase tracking-wide text-(--color-ink-muted)">
                             {{ __('approval::field.requested_by') }}
                         </dt>
-                        <dd class="text-sm">{{ $approval->requester?->name ?? '—' }}</dd>
+                        <dd class="text-sm">{{ $approval->requesterName() }}</dd>
                     </div>
 
                     <div>

@@ -244,7 +244,7 @@
                 ['key' => 'where', 'label' => __('approval::field.where_money'), 'width' => '11rem',
                  'render' => fn ($a) => ($facts[$a->id]['where'] ?? null) ?: '—'],
                 ['key' => 'requested_by', 'label' => __('approval::field.requested_by'), 'width' => '11rem',
-                 'render' => fn ($a) => $a->requester?->name],
+                 'render' => fn ($a) => $a->requesterName()],
                 ['key' => 'amount', 'label' => __('approval::field.amount'), 'numeric' => true, 'width' => '9rem',
                  'render' => fn ($a) => $a->amount === null ? '—' : \App\Core\Support\Money::format($a->amount)],
                 ['key' => 'open', 'label' => '', 'width' => '7rem',

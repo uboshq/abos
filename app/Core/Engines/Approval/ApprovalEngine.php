@@ -102,6 +102,12 @@ final class ApprovalEngine
          * অবিকল আগের মতো চলে।
          */
         ?array $matchOn = null,
+
+        /*
+         * ⭐ পোর্টালের গ্রাহক নিজের নামে সই চাইলে — ৩ অক্টোবর ২০২৬। ⓘ না দিলে কর্তা থেকে: কর্মী হলে
+         * `requested_by`, পোর্টালের গ্রাহক হলে এটা ([[Actor::portalCustomerId()]])। ঠিক একজনই বসে।
+         */
+        ?int $customerId = null,
     ): ?Approval {
         $flow = $this->flowFor($module, $action, class_basename($document));
 
@@ -133,7 +139,10 @@ final class ApprovalEngine
          * ওয়েব, বা দুইবার চাপ — দুইজনেই "অপেক্ষমাণ নেই" দেখে দুইটা অনুরোধ বানাত।
          * ⓘ তালাটা কাগজে, অনুমোদনে নয় — যে সারি এখনো নেই তাতে তালা দেওয়া যায় না।
          */
-        return DB::transaction(function () use ($document, $flow, $module, $action, $amount, $payload, $reason, $userId, $stateHash) {
+        $userId ??= $customerId === null ? \App\Core\Support\Actor::userId() : null;
+        $customerId ??= $userId === null ? \App\Core\Support\Actor::portalCustomerId() : null;
+
+        return DB::transaction(function () use ($document, $flow, $module, $action, $amount, $payload, $reason, $userId, $customerId, $stateHash) {
             $document->newQueryWithoutScopes()->whereKey($document->getKey())->lockForUpdate()->first();
 
             $existing = Approval::query()
@@ -168,7 +177,8 @@ final class ApprovalEngine
                 'current_level' => 1,
                 'payload' => $payload,
                 'requested_reason' => $reason,
-                'requested_by' => $userId ?? \App\Core\Support\Actor::userId(),
+                'requested_by' => $userId,
+                'requested_by_customer_id' => $customerId,
                 'requested_at' => now(),
                 'due_at' => $this->sla()->dueFor($first),
                 'state_hash' => $stateHash,
@@ -772,14 +782,20 @@ final class ApprovalEngine
 
         $limit = $this->selfLimit();
 
+        /*
+         * ⛔ "নিজের অনুরোধ নয়" — পোর্টালের গ্রাহকের অনুরোধে `requested_by` null, আর SQL-এ `null != x` সত্য নয়:
+         * আগের শর্তে পোর্টালের গ্রাহকের অনুরোধ কোনো সুপারভাইজারের ইনবক্সেই আসত না (৩ অক্টোবর ২০২৬)।
+         */
+        $notMine = fn (Builder $q) => $q->whereNull('requested_by')->orWhere('requested_by', '!=', $user->id);
+
         if (bccomp($limit, '0', 4) <= 0) {
-            $query->where('requested_by', '!=', $user->id);
+            $query->where($notMine);
 
             return;
         }
 
-        $query->where(function (Builder $mine) use ($user, $limit): void {
-            $mine->where('requested_by', '!=', $user->id)
+        $query->where(function (Builder $mine) use ($notMine, $limit): void {
+            $mine->where($notMine)
                 // অঙ্ক জানা না থাকলে সীমার নিচে কি না তাও জানা নেই —
                 // সন্দেহে কড়া দিকটাই, তাই `whereNotNull`।
                 ->orWhere(function (Builder $small) use ($limit): void {

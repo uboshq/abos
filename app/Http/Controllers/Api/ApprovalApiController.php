@@ -134,7 +134,7 @@ final class ApprovalApiController extends Controller
                 'amount' => $approval->amount === null ? null : (string) $approval->amount,
                 'currentLevel' => (int) $approval->current_level,
                 'requestedAt' => $approval->requested_at?->toIso8601String(),
-                'requesterName' => $approval->requester?->name,
+                'requesterName' => $approval->requesterName(),
                 'summary' => $this->summaryOf($approval, $fact),
             ];
         })->values();

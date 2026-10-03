@@ -100,10 +100,12 @@ final class DeliveryOrderService
 
             $approval = $this->approvals->request(
                 document: $order,
-                module: 'sales',
-                action: self::APPROVAL_ACTION,
+                // ⓘ নামটা লেখা, ধ্রুবক নয় — ছকের পর্দার পাহারা কোড পড়ে দেখে কে সই চায় ([[EveryApprovalAskedForCanBeConfiguredTest]]); = self::APPROVAL_ACTION
+                module: 'sales', action: 'delivery_order',
                 amount: (string) $order->total,
                 userId: $order->created_by,
+                // ⓘ ডিলারের লেখা DO — সই চাওয়া ডিলারের নিজের নামে (৩ অক্টোবর ২০২৬)
+                customerId: $order->created_by === null ? $order->created_by_customer_id : null,
             );
 
             if ($approval !== null) {

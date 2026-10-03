@@ -75,7 +75,7 @@ final class ApprovalReports
                     'approvals.current_level',
                     DB::raw("'".Approval::drillSourceType()."' as approval_source"),
                     self::whatLabel(),
-                    DB::raw('users.name as requester'),
+                    DB::raw('COALESCE(users.name, req_c.name_bn, req_c.name_en) as requester'),
                 ])
                 /*
                  * কত দিন ধরে ঝুলে আছে — এটাই এই রিপোর্টের আসল কথা।
@@ -181,7 +181,7 @@ final class ApprovalReports
                     'approvals.amount',
                     DB::raw("'".Approval::drillSourceType()."' as approval_source"),
                     self::whatLabel(),
-                    DB::raw('users.name as requester'),
+                    DB::raw('COALESCE(users.name, req_c.name_bn, req_c.name_en) as requester'),
                     /*
                      * কে কে সই দিয়েছেন — সবাই, একটা ঘরে।
                      *
@@ -399,8 +399,13 @@ final class ApprovalReports
     /** তিনটা সারি-ভিত্তিক রিপোর্টের অভিন্ন শুরুটা। */
     private static function base(array $filters): Builder
     {
+        /*
+         * ⓘ leftJoin — পোর্টালের গ্রাহকের অনুরোধে কর্মী নেই (৩ অক্টোবর ২০২৬); join হলে সারিটাই হারাত।
+         * নাম তখন গ্রাহকের ([[requesterName()]]-এর একই কথা, SQL-এ)।
+         */
         return DB::table('approvals')
-            ->join('users', 'users.id', '=', 'approvals.requested_by')
+            ->leftJoin('users', 'users.id', '=', 'approvals.requested_by')
+            ->leftJoin('customers as req_c', 'req_c.id', '=', 'approvals.requested_by_customer_id')
             ->where('approvals.company_id', $filters['company_id']);
     }
 

@@ -208,7 +208,7 @@ final class SaleTracking
 
         foreach ($this->approvalsOf($challan) as $approval) {
             $events->push($this->event($approval->requested_at ?? $approval->created_at, 'approval',
-                $approval->requester?->name, __('sales::tracking.sent_for_signature')));
+                $approval->requesterName(), __('sales::tracking.sent_for_signature')));
 
             foreach ($approval->decisions as $decision) {
                 // ⓘ সিদ্ধান্তের তিন মান — approved, rejected, forwarded ([[ApprovalEngine]])
