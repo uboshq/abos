@@ -53,6 +53,26 @@
         : $bill->lines->map(fn ($l) => [
             'product_id' => (string) $l->product_id,
             'qty' => (string) $l->qty,
+
+            /*
+             * ⛔ ফ্রি পরিমাণ সম্পাদনার ফর্মে ফিরে আসে — মালিকের অভিযোগ, ৩ অক্টোবর ২০২৬ (PBL-1014):
+             * *"গোডাউনে মাল বুঝে নেবে তখন আর ফ্রিটা থাকতেছিল না"*।
+             *
+             * ⓘ আগে এই সারিতে `free_qty` ছিলই না। পর্দার ফ্রি ঘরটা (`show-free`) তাই খালি খুলত, আর
+             * "সংরক্ষণ" চাপলেই সেবা খালি ঘরকে ০ পড়ত ([[CalculatesLineTotals::zeroOrMore()]]) — নিশ্চিত
+             * বিলে পুরনো মাল উল্টে নতুন করে বসত **ফ্রি ছাড়া**, আর বসানোর পর্দায় ফ্রি আর আসত না। নীরবে।
+             *
+             * ⚠️ মূল এককে, কারণ উপরের `qty` আর `rate`-ও মূল এককে আর এখানে কোনো `unit_id` বসে না —
+             * "১ কার্টন ফ্রি" ফেরে "১২" হয়ে, তবে **১২ পিসই** থাকে, ১২ কার্টন নয়।
+             * পাহারা: [[TheFreeGoodsVanishedWhenTheBillWasEditedTest]]।
+             */
+            'free_qty' => bccomp((string) $l->free_qty, '0', 4) > 0 ? (string) $l->free_qty : '',
+
+            // ⓘ লটের তিনটা ঘরও একই কারণে — না ফিরলে লট ধরা পণ্যের বিল সম্পাদনায় "লট নম্বর লাগবে" বলে থামত
+            'batch_no' => (string) ($l->batch_no ?? ''),
+            'expiry_date' => $l->expiry_date?->toDateString() ?? '',
+            'mrp' => $l->mrp === null ? '' : (string) $l->mrp,
+
             'rate' => (string) $l->rate,
             'discount' => (string) $l->discount,
             'tax' => (string) $l->tax,

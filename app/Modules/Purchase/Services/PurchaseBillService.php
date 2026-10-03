@@ -314,7 +314,7 @@ final class PurchaseBillService
             }
 
             $bill->update([
-                'warehouse_id' => $data['warehouse_id'] ?? null,
+                'warehouse_id' => $this->warehouseKept($bill, $data),
                 'trx_date' => $trxDate->toDateString(),
                 'due_on' => $data['due_on'] ?? null,
                 'supplier_bill_no' => $billNo,
@@ -1042,6 +1042,29 @@ final class PurchaseBillService
     }
 
     /**
+     * সম্পাদনায় গুদামটা যেমন ছিল তেমনই — যদি না ডাকটা নিজে নতুন গুদাম বলে।
+     *
+     * ⛔ মালিকের অভিযোগ, ৩ অক্টোবর ২০২৬ (PBL-1014, `warehouse_id` NULL): বিলের সম্পাদনার ফর্মে গুদামের
+     * ঘরই নেই, আর [[PurchaseBillRequest::documentData()]] ওটা পাঠায়ও না। ⚠️ আগে এখানে `?? null` লেখা
+     * ছিল, তাই প্রতিটা সম্পাদনা সরাসরি ক্রয়ের বাছা গুদামটা মুছে দিত, আর নিশ্চিত বিলে উল্টে-বসানো মাল
+     * চলে যেত **প্রধান গুদামে** ([[warehouseFor()]]) — লরি যেখানে নেমেছিল সেখানে নয়।
+     *
+     * ⓘ চাবিটা থাকলে (null-সহ) সেটাই জেতে — কেউ সত্যিই গুদাম বদলাতে বা খালি করতে চাইলে পারেন।
+     *
+     * @param  array<string, mixed>  $data
+     */
+    private function warehouseKept(PurchaseBill $bill, array $data): ?int
+    {
+        if (! array_key_exists('warehouse_id', $data)) {
+            return $bill->warehouse_id === null ? null : (int) $bill->warehouse_id;
+        }
+
+        return $data['warehouse_id'] === null || $data['warehouse_id'] === ''
+            ? null
+            : (int) $data['warehouse_id'];
+    }
+
+    /**
      * নিশ্চিত বিল সম্পাদনা — উল্টে, বদলে, আবার বসিয়ে।
      *
      * ── ⓘ ক্রমটাই সবকিছু ────────────────────────────────────────────
@@ -1087,7 +1110,7 @@ final class PurchaseBillService
             }
 
             $bill->update([
-                'warehouse_id' => $data['warehouse_id'] ?? null,
+                'warehouse_id' => $this->warehouseKept($bill, $data),
                 'trx_date' => $trxDate->toDateString(),
                 'due_on' => $data['due_on'] ?? null,
                 'supplier_bill_no' => $billNo,
