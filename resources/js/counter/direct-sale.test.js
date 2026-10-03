@@ -2071,3 +2071,59 @@ describe('দ্রুত কাউন্টার: ক্রেতা → প�
         expect(c.focused.at(-1)).toBe('qty')
     })
 })
+
+/* ⭐ মালিক, ৪ অক্টোবর ২০২৬ (63-এর মাধ্যমে): পরিমাণ খালি/০ → কার্টে কিছু নয়, "পরিমাণ লিখুন", শব্দ; লটের বেশি → শব্দ */
+describe('পরিমাণ খালি বা লটের বেশি — বার্তা আর শব্দ', () => {
+    const shop = (lots) => {
+        const c = counter({
+            catalogue: [product({ id: 1, trackBatch: true, available: 99 })],
+            lots: { 1: lots },
+            texts: { qtyFirst: 'পরিমাণ লিখুন', lotHoldsLess: 'লট :lot-এ আছে :have' },
+        })
+        c.customerId = '5'
+        c.beeps = 0
+        c.beep = () => { c.beeps++ }
+        c.$refs = { search: { focus: () => {} }, qty: { focus: () => {} }, lot: { focus: () => {} } }
+
+        return c
+    }
+
+    it('পরিমাণ খালি — সারি ওঠে না, বার্তা আর একবার শব্দ', async () => {
+        const c = shop([{ id: '11', no: 'L-1', qty: '50' }])
+        c.pick(c.catalogue[0])
+
+        expect(await c.addToCart()).toBe(false)
+        expect(c.lines).toHaveLength(0)
+        expect(c.lotWarning).toBe('পরিমাণ লিখুন')
+        expect(c.beeps).toBe(1)
+    })
+
+    it('পরিমাণ ০ — একই', async () => {
+        const c = shop([{ id: '11', no: 'L-1', qty: '50' }])
+        c.pick(c.catalogue[0])
+        c.entry.qty = '0'
+
+        expect(await c.addToCart()).toBe(false)
+        expect(c.beeps).toBe(1)
+    })
+
+    it('২৩-এর লটে ৫০ — সারি ওঠে না, শব্দ বাজে', async () => {
+        const c = shop([{ id: '11', no: '23', qty: '23' }])
+        c.pick(c.catalogue[0])
+        c.entry.qty = '50'
+
+        expect(await c.addToCart()).toBe(false)
+        expect(c.lines).toHaveLength(0)
+        expect(c.lotWarning).toContain('23')
+        expect(c.beeps).toBe(1)
+    })
+
+    it('লটে যতটা আছে ততটা — সারি ওঠে, শব্দ নেই', async () => {
+        const c = shop([{ id: '11', no: '23', qty: '23' }])
+        c.pick(c.catalogue[0])
+        c.entry.qty = '23'
+
+        expect(await c.addToCart()).toBe(true)
+        expect(c.beeps).toBe(0)
+    })
+})

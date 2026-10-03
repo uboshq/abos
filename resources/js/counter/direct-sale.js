@@ -1337,6 +1337,9 @@ export default function directSale({
 
             /* ⛔ পরিমাণ ০ হলে কিছু ওঠে না — কার্সর পরিমাণের ঘরে যায় (মালিক, ৪ অক্টোবর ২০২৬) */
             if (! (this.$num(this.entry.qty || '0') > 0)) {
+                /* ⭐ বার্তা আর শব্দও — মালিক, ৪ অক্টোবর ২০২৬ (63-এর মাধ্যমে): "পরিমাণ লিখুন"। ⓘ Enter আর বোতাম দুই পথই এখানে আসে। */
+                this.lotWarning = String(texts.qtyFirst ?? '');
+                this.beep();
                 this.$refs?.qty?.focus?.();
 
                 return false;
@@ -1475,10 +1478,12 @@ export default function directSale({
             if (lot) {
                 const unit = this.entryUnits.find(u => String(u.id) === String(this.entry.unitId));
                 const factor = unit ? (this.$num(unit.factor ?? '1') || 1) : 1;
-                const want = Math.round(this.$num(this.entry.qty || '1') * factor * 10000) / 10000;
+                const want = Math.round(this.$num(this.entry.qty || '0') * factor * 10000) / 10000;
                 const have = Math.round(this.$num(lot.qty) * 10000) / 10000;
 
                 if (want > have) {
+                    /* ⭐ শব্দও বাজে — মালিক, ৪ অক্টোবর ২০২৬: লটের বেশি দিলে চোখের সাথে কানেও ধরা পড়ে */
+                    this.beep();
                     this.lotWarning = String(texts.lotHoldsLess ?? '')
                         .replace(':lot', lot.no)
                         .replace(':have', this.qty(String(have)))
@@ -2606,6 +2611,36 @@ export default function directSale({
         /** এই পণ্যের বাছাইযোগ্য লটগুলো — না থাকলে খালি। */
         get entryLots() {
             return this.picked ? (lotBook[String(this.picked.id)] ?? []) : [];
+        },
+
+        /** ⓘ বাছা লটটা — না বাছা হলে null। */
+        get chosenLot() {
+            return this.entryLots.find(l => String(l.id) === String(this.entry.batchId)) ?? null;
+        },
+
+        /**
+         * ⭐ লটের ঘরের মুখ — মেয়াদ · তাকে কত · ফ্রি অনুপাত (মালিকের ছবি, ৪ অক্টোবর ২০২৬)।
+         * ⓘ নম্বরটা আলাদা, মোটা হরফে; এখানে বাকি টুকরাগুলো। না বাছা হলে কিছু নয়।
+         */
+        get lotFaceParts() {
+            const lot = this.chosenLot;
+
+            if (! lot) return [];
+
+            const parts = [];
+
+            if (lot.expiry) parts.push(String(texts.lotExpiry ?? '') + ' ' + String(lot.expiry).split('-').reverse().join('-'));
+
+            parts.push(String(texts.lotOnShelf ?? '') + ' ' + this.qty(lot.qty) + ' ' + (this.picked?.unit ?? ''));
+
+            const paid = this.$num(lot.paid ?? '0');
+            const free = this.$num(lot.free ?? '0');
+
+            if (paid > 0 && free > 0) {
+                parts.push(String(texts.lotFree ?? '') + ' ' + String(Math.round((paid / free) * 100) / 100) + ':1');
+            }
+
+            return parts;
         },
 
         /** ⓘ পর্দায় ঘরটা দেখাবে কি না — চাল-ডাল-সাবানে আসেই না। */

@@ -183,4 +183,5 @@ return [
     'draft_not_settable' => 'This draft cannot be changed now: it is confirmed or waiting for a signature.',
     'scheme_target_unknown' => 'The chosen target was not found in this company. Pick it again from the list.',
     'target_unknown_staff' => 'One of the staff on the targets is not in this company. Reload the page and set them again.',
+    'qty_first' => 'Enter a quantity — nothing goes to the cart at 0 or blank.',
 ];

@@ -175,37 +175,38 @@
                                          সেপ্টেম্বর ২০২৬: *"লট বাছার ঘর … eta ase ni laive nai"*। ⓘ ঘর না থাকলে
                                          মনে হত বানানোই হয়নি; নিভে থাকা ঘর বলে দেয় এই পণ্যে লট ধরা হয় না। --}}
                                     <template x-if="picked && ! needsLot">
-                                        <label class="ds-lot shrink-0">
-                                            <span class="ds-lot-tag">{{ __('sales::field.lot') }}</span>
-                                            <select disabled
-                                                    class="h-(--spacing-field-dense) rounded-(--radius-field)
-                                                           border border-(--color-border) bg-(--color-surface-muted)
-                                                           px-2 text-sm text-(--color-ink-muted)">
-                                                <option>{{ __('sales::field.no_lot') }}</option>
-                                            </select>
-                                        </label>
+                                        <span class="ds-lot" style="opacity: .6">
+                                            <span class="ds-lot-face">
+                                                <span class="ds-lot-tag">{{ __('sales::field.lot') }}</span>
+                                                <span class="text-(--color-ink-muted)">{{ __('sales::field.no_lot') }}</span>
+                                            </span>
+                                        </span>
                                     </template>
 
                                     <template x-if="needsLot">
                                         {{-- ⭐ চওড়া, নীল কিনারা, "লট" চিহ্ন — নম্বর · মেয়াদ · তাকে কত · ফ্রি অনুপাত (মালিক, ৪ অক্টোবর ২০২৬) --}}
-                                        <label class="ds-lot shrink-0">
-                                            <span class="ds-lot-tag">{{ __('sales::field.lot') }}</span>
+                                        <label class="ds-lot">
+                                            <span class="sr-only">{{ __('sales::field.lot') }}</span>
 
                                             {{-- ⓘ লট বদলালেও ফ্রি নতুন করে বসে —
                                                  ⚠️ অনুপাত লটের নিজের, আর দুইটা
                                                  লট দুই অনুপাতে আসতে পারে। --}}
                                             {{-- ⭐ লট বাছলেই কার্সর পরিমাণের ঘরে — মালিক, ৪ অক্টোবর ২০২৬ ([[lotChosen()]]) --}}
                                             <select x-model="entry.batchId" x-ref="lot"
-                                                    @change="lotChosen()"
-                                                    class="h-(--spacing-field-dense) rounded-(--radius-field)
-                                                           border-2 border-(--color-brand-500) bg-(--color-surface-app)
-                                                           px-2 text-sm font-medium">
+                                                    @change="lotChosen()">
                                                 <option value="">{{ __('sales::field.lot_pick') }}</option>
 
                                                 <template x-for="lot in entryLots" :key="lot.id">
                                                     <option :value="lot.id" x-text="lotLabel(lot)"></option>
                                                 </template>
                                             </select>
+                                            <span class="ds-lot-face" aria-hidden="true">
+                                                <span class="ds-lot-tag">{{ __('sales::field.lot') }}</span>
+                                                <b class="num" x-text="chosenLot ? chosenLot.no : @js(__('sales::field.lot_pick'))"></b>
+                                                <template x-for="(part, n) in lotFaceParts" :key="n">
+                                                    <span><span class="dot">·</span> <span x-text="part"></span></span>
+                                                </template>
+                                            </span>
                                         </label>
                                     </template>
                                 </div>
@@ -448,7 +449,7 @@
                          চওড়া পর্দাতেও অকারণে স্ক্রল করত। ⓘ সর্বনিম্ন মাপই
                          যথেষ্ট — জায়গা থাকলে তারা বাড়ে, না থাকলে মোড়কটা
                          স্ক্রল করে। --}}
-                    <div class="grid items-end gap-2 grid-cols-2 sm:grid-cols-3
+                    <div class="ds-qtyrow grid items-end gap-2 grid-cols-2 sm:grid-cols-3
                                 lg:grid-cols-[3.5rem_4rem_3.5rem_4rem_minmax(4.5rem,1fr)_minmax(5.5rem,1fr)_auto]
                                 gap-x-1.5">
                             <x-sales::entry-field label="sales::field.qty" width="w-full">
@@ -597,7 +598,7 @@
                                            rounded-(--radius-field) bg-(--color-success) px-3 text-xs font-semibold
                                            text-white disabled:opacity-50">
                                 {{-- ⭐ ছোট "কার্ট", চিহ্নসহ — মালিক, ৪ অক্টোবর ২০২৬: "এত বড় বোতাম না দিয়ে শুধু Cart লেখো" --}}
-                                <svg viewBox="0 0 24 24" aria-hidden="true" class="size-[16px] fill-current">
+                                <svg viewBox="0 0 24 24" aria-hidden="true" class="fill-current" style="width: 16px; height: 16px">
                                     <path d="M7 18a2 2 0 1 0 0 4 2 2 0 0 0 0-4ZM1 2v2h2l3.6 7.6-1.4 2.4A2 2 0 0 0 7 17h12v-2H7.4l1.1-2h7.5a2 2 0 0 0 1.7-1l3.6-6.5A1 1 0 0 0 20 4H5.2l-.9-2H1Zm16 16a2 2 0 1 0 0 4 2 2 0 0 0 0-4Z"/>
                                 </svg>
                                 {{-- ⓘ কার্টের সারি উপরে খোলা থাকলে "হালনাগাদ করুন" --}}

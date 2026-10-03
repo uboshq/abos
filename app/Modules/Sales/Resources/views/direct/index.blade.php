@@ -159,7 +159,7 @@
         .ds-top { display: grid; gap: .5rem .75rem; align-items: start; }
         @media (min-width: 1024px) { .ds-top { grid-template-columns: minmax(0, 1fr) 17rem; } }
         .ds-msgs { grid-column: 1 / -1; }
-        .ds-paper { display: flex; flex-wrap: wrap; gap: .5rem; padding-bottom: .5rem;
+        .ds-paper { display: flex; flex-wrap: wrap; gap: .5rem; padding-bottom: .3rem;
                     border-bottom: 1px dashed var(--color-border); }
         .ds-paper > label { min-width: 0; flex: 1 1 7rem; }
         .ds-paper > .ds-f-date { flex: 0 1 8.5rem; }
@@ -167,20 +167,48 @@
         .ds-paper > .ds-f-ref { flex: 0 1 5.5rem; }
         .ds-paper > .ds-f-term { flex: 0 1 8.5rem; }
         .ds-paper > .ds-f-pend { flex: 1 1 10rem; }
-        .ds-lot { display: inline-flex; align-items: center; gap: .25rem; }
-        .ds-lot select { min-width: 15rem; max-width: 26rem; }
-        .ds-lot-tag { border-radius: var(--radius-field); background: var(--color-brand-50);
-                      color: var(--color-brand-700); padding: .05rem .4rem; font-size: .6rem; font-weight: 700; }
+        /* ⭐ লটের ঘর — মালিকের ছবির মতো: নীল কিনারা, "লট" চিহ্ন, নম্বর · মেয়াদ · তাকে · ফ্রি।
+           ⓘ আসল <select> উপরে স্বচ্ছ হয়ে বসে, তাই বাছাই আগের মতোই; চোখে পড়ে সাজানো মুখটা। */
+        .ds-lot { position: relative; display: inline-flex; align-items: center; min-width: 16rem; max-width: 22rem; flex: 0 1 22rem; }
+        .ds-lot-face { display: flex; align-items: center; gap: .4rem; width: 100%; min-width: 0; height: var(--spacing-field-dense);
+                       padding: 0 1.6rem 0 .35rem; border: 1.5px solid var(--color-brand-500); border-radius: var(--radius-field);
+                       box-shadow: inset 4px 0 0 var(--color-brand-500); background: var(--color-surface-app);
+                       font-size: .7rem; white-space: nowrap; overflow: hidden; }
+        .ds-lot-face .dot { color: var(--color-ink-muted); }
+        .ds-lot-face::after { content: ''; position: absolute; right: .6rem; width: .4rem; height: .4rem;
+                              border-right: 2px solid var(--color-brand-500); border-bottom: 2px solid var(--color-brand-500);
+                              transform: rotate(45deg) translateY(-2px); }
+        .ds-lot select { position: absolute; inset: 0; width: 100%; opacity: 0; cursor: pointer; }
+        .ds-lot select:focus-visible + .ds-lot-face, .ds-lot:focus-within .ds-lot-face { outline: 2px solid var(--color-brand-500); outline-offset: 1px; }
+        .ds-lot-tag { border-radius: var(--radius-field); background: var(--color-brand-600);
+                      color: var(--color-brand-ink); padding: .05rem .4rem; font-size: .6rem; font-weight: 700; }
+        /* ⭐ পরিমাণের সারি — ঘরগুলো চেপে একে অন্যের উপর পড়ত (মালিকের ছবি, ৪ অক্টোবর ২০২৬) */
+        @media (min-width: 1024px) {
+            .ds-qtyrow { grid-template-columns: 4.5rem 4.5rem 4.5rem 4.5rem minmax(5rem, 1fr) minmax(5.5rem, 1fr) auto !important; }
+        }
+        .ds-qtyrow > * { min-width: 0; }
+        /* ⓘ বিলের ঘর আর পণ্যের সারির মাঝের ফাঁক কম (মালিক) */
+        .ds-top > .space-y-3 > :not(:last-child) { margin-block-end: .35rem; }
         .ds-total { border-color: var(--color-brand-gold-deep); background: var(--color-surface-selected); }
-        .ds-rcpt { border: 1px solid var(--color-border); border-radius: var(--radius-card);
-                   background: var(--color-surface-card); padding: .6rem .75rem; box-shadow: var(--shadow-sm, none); }
-        .ds-rt { font-weight: 800; letter-spacing: .1em; font-size: .75rem;
-                 color: var(--color-ink-muted); padding-bottom: .35rem; border-bottom: 2px dashed var(--color-border); }
-        .ds-rkv { display: flex; justify-content: space-between; gap: .5rem; padding: .25rem 0;
-                  border-bottom: 1px dotted var(--color-border); }
+        /* ⭐ "এই লাইন" — পুরো বাক্স সবুজ, বাঁয়ে সোনালি দাগ, উচ্চতা পরিমাণের সারি পর্যন্ত (মালিক, ৪ অক্টোবর ২০২৬) */
+        .ds-rcpt { border-radius: var(--radius-card); background: var(--color-success); color: var(--color-brand-ink);
+                   border-left: 6px solid var(--color-brand-gold); padding: .45rem .7rem; }
+        .ds-rcpt > * + * { margin-top: .3rem !important; }
+        .ds-rcpt .text-\(--color-ink-muted\) { color: inherit; opacity: .85; }
+        .ds-rcpt .ds-amt { background: color-mix(in srgb, var(--color-brand-ink) 16%, transparent); }
+        .ds-rcpt input { color: var(--color-ink); }
+        .ds-rcpt .grid > button { background: var(--color-surface-card) !important; }
+        :where(.ds-rcpt .grid > button) { color: var(--color-ink); }
+        .ds-rt { font-weight: 800; letter-spacing: .1em; font-size: .75rem; padding-bottom: .3rem;
+                 border-bottom: 2px dashed color-mix(in srgb, var(--color-brand-ink) 35%, transparent); }
+        .ds-rkv { display: flex; justify-content: space-between; gap: .5rem; padding: .12rem 0;
+                  border-bottom: 1px dotted color-mix(in srgb, var(--color-brand-ink) 30%, transparent); }
         .ds-cart-scroll { max-height: max(14rem, calc(100dvh - 26rem)); overflow-y: auto; }
         .ds-cart-scroll thead th { position: sticky; top: 0; z-index: 2; background: var(--color-surface-card); }
-        .ds-side { display: flex; flex-direction: column; gap: .75rem; }
+        /* ⭐ ক্রেতা আর বিলের মোট জোড়া — মাঝে ফাঁক নেই (মালিক, ৪ অক্টোবর ২০২৬) */
+        .ds-side { display: flex; flex-direction: column; gap: 0; }
+        .ds-side > section .ds-gold { border-bottom-left-radius: 0; border-bottom-right-radius: 0; }
+        .ds-side > aside { border-top-left-radius: 0; border-top-right-radius: 0; border-top-width: 0; }
         @media (min-width: 1280px) {
             .ds-side { position: sticky; top: .75rem; align-self: start; max-height: calc(100dvh - 5.5rem); }
             .ds-side > aside { min-height: 0; flex: 1 1 auto; }
@@ -214,6 +242,10 @@
                   'itemAlreadyInCart' => __('sales::validation.item_already_in_cart'),
                   'freeNextAt' => __('sales::message.free_next_at'),
                   'freeRatio' => __('sales::message.free_ratio'),
+                  'lotExpiry' => __('sales::field.lot_expiry_short'),
+                  'qtyFirst' => __('sales::validation.qty_first'),
+                  'lotOnShelf' => __('sales::field.lot_on_shelf'),
+                  'lotFree' => __('sales::field.free_short'),
                   'openDraftBlocks' => __('sales::validation.open_draft_blocks_new_bill'),
               ]),
               pendingDrafts: @js($pendingDrafts ?? []),
@@ -762,7 +794,7 @@
                          ⓘ টাকাটা `entryNet` — বাঁয়ের হিসাবের হুবহু একই সংখ্যা। --}}
                     <div class="ds-rt flex items-center justify-between gap-2">
                         <span>{{ __('sales::field.this_line') }}</span>
-                        <b class="num rounded-(--radius-card) bg-(--color-success) px-3 py-1 text-2xl text-white"
+                        <b class="ds-amt num rounded-(--radius-card) px-3 py-1 text-2xl"
                            style="letter-spacing: 0" x-text="'৳' + money(entryNet)"></b>
                     </div>
 

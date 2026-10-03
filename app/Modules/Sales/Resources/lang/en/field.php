@@ -151,6 +151,8 @@ return [
     'free_available' => 'Free',
     'in_cart' => 'In cart',
     'do_no' => 'Reference no.',
+    'lot_expiry_short' => 'Exp.',
+    'lot_on_shelf' => 'On shelf',
     'terms' => 'Terms',
 
     /*
