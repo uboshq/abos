@@ -259,6 +259,11 @@ class TwoThousandInBkashAndTheRestInCashTest extends TestCase
      */
     public function test_all_empty_rows_mean_a_credit_sale(): void
     {
+        // ⓘ সীমা না থাকলে বাকি নেই (মালিক, ১ অক্টোবর ২০২৬) — এই দাবি বাকির খাতা মাপে, সীমা নয়
+        \App\Modules\Customer\Models\Customer::query()
+            ->whereKey(app(\App\Core\Services\SettingsService::class)->get('sales.walkin_customer_id'))
+            ->update(['credit_limit' => '5000']);
+
         $result = $this->sell('2300', ['payments' => [
             ['payment_method_id' => $this->cashMethod->id, 'amount' => '0'],
             ['payment_method_id' => '', 'amount' => ''],

@@ -55,6 +55,9 @@ class TheRateWasInSomebodysHeadTest extends TestCase
         $this->company = Company::query()->where('code', 'TDEPOT')->firstOrFail();
         CompanyContext::set($this->company->id, $this->company->defaultBranch()?->id);
         $this->actingAs(User::query()->where('email', 'owner@abos.test')->firstOrFail());
+
+        // ⓘ সীমা না থাকলে বাকি নেই (মালিক, ১ অক্টোবর ২০২৬) — বিলগুলো ১–৫.৫ লাখ, আর এই দাবি কমিশন মাপে, সীমা নয়
+        Customer::query()->whereKey(Customer::query()->value('id'))->update(['credit_limit' => '10000000']);
     }
 
     private function engine(): CommissionEngine

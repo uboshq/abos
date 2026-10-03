@@ -10,6 +10,7 @@ use App\Core\Support\DocumentStatus;
 use App\Core\Support\Money;
 use App\Models\LedgerEntry;
 use App\Modules\Customer\Models\Customer;
+use App\Modules\Sales\Models\DeliveryChallan;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -61,6 +62,9 @@ final class CreditExposure implements CreditHolds
      */
     private bool $readLatest = false;
 
+    /** ⓘ [[approvedDeliveryOrders()]] — DO-র টেবিল আছে কি না, একবারই দেখা */
+    private static ?bool $hasOrders = null;
+
     /**
      * [[CreditHolds]] — গ্রাহকের পাতার জন্য, একই হিসাব।
      *
@@ -85,6 +89,106 @@ final class CreditExposure implements CreditHolds
     }
 
     /**
+     * ⭐ ডেলিভারি অর্ডারের হিসাবের যাচাই — সফটওয়্যার নিজে অনুমোদন দেয়, ২ অক্টোবর ২০২৬ (বিক্রয়ের কাজের ধারা, ধাপ গ)।
+     *
+     * ⓘ দেয়ালের হুবহু হিসাব ([[assertRoom()]]): খাতার বকেয়া + আটকে থাকা ([[pending()]]) + এই কাগজ ≤ সীমা — ছুড়ে না
+     * দিয়ে ফল ফেরত দেয়, কারণ এখানে "না" মানে বিক্রি বন্ধ নয়, DO "টাকার জন্য আটকে" থাকে আর টাকা এলে আবার যাচাই।
+     * ⭐ সীমা ০ হলেও অগ্রিম কুলোলে চলে — বকেয়া ঋণাত্মক (জমা) হলে যোগফল ০-এর নিচে থাকে।
+     * ⛔ চেক কেবল ক্লিয়ার হলে (২৬ সেপ্টেম্বর): পুরনো পথে হাতে আসার দিনই জমায় বসা চেক ক্লিয়ার না হলে টাকাটা ফেরত
+     * যোগ হয় ([[unclearedCheques()]])।
+     *
+     * @return array{fits: bool, short: string, used_percent: ?string}  ⓘ `used_percent` সীমা ০ হলে null
+     */
+    public function check(Customer $customer, string $adding, ?int $exceptDeliveryOrderId = null): array
+    {
+        $limit = bcadd((string) ($customer->credit_limit ?? '0'), '0', 4);
+
+        $exposure = bcadd(
+            bcadd($customer->outstanding(), $this->pending($customer, exceptDeliveryOrderId: $exceptDeliveryOrderId), 4),
+            bcadd($this->unclearedCheques($customer), $adding, 4),
+            4,
+        );
+
+        $short = bcsub($exposure, $limit, 4);
+
+        return [
+            'fits' => bccomp($short, '0', 4) <= 0,
+            'short' => bccomp($short, '0', 4) > 0 ? $short : '0.0000',
+            'used_percent' => bccomp($limit, '0', 4) > 0 ? bcdiv(bcmul($exposure, '100', 4), $limit, 2) : null,
+        ];
+    }
+
+    /**
+     * ক্লিয়ার না হওয়া চেক, যা আগের নিয়মে হাতে আসার দিনই গ্রাহকের জমায় উঠেছিল।
+     *
+     * ⓘ কোনটা আগের নিয়মে উঠেছিল, তা ডেটাই বলে ([[ChequeService::receivedIntoTheBooks()]]-এর তিন পথ): আদায়ের কাগজ,
+     * রসিদ ভাউচার, বা চেকের নিজের দাখিলা। ⚠️ নতুন নিয়মের চেক ক্লিয়ারের আগে খাতায়ই ওঠে না — তাকে আবার যোগ করলে
+     * দুইবার গোনা হত।
+     */
+    public function unclearedCheques(Customer $customer): string
+    {
+        $sum = DB::table('acc_cheques as ch')
+            ->where('ch.company_id', $customer->company_id)
+            ->whereNull('ch.deleted_at')
+            ->where('ch.direction', 'received')
+            ->where('ch.party_type', 'customer')
+            ->where('ch.party_id', $customer->id)
+            ->whereIn('ch.status', ['pending', 'deposited'])
+            ->where(fn ($q) => $q->whereNotNull('ch.collection_id')
+                ->orWhereNotNull('ch.voucher_id')
+                ->orWhereExists(fn ($e) => $e->from('ledger_entries as le')
+                    ->where('le.source_type', 'cheque')
+                    ->whereColumn('le.source_id', 'ch.id')))
+            ->sum('ch.amount');
+
+        return bcadd((string) $sum, '0', 4);
+    }
+
+    /**
+     * ⛔ চালানটা আসলে কত টাকায় বিল হবে — দেয়াল এটাই মাপে, ২ অক্টোবর ২০২৬ (abos-bb-এর ধরা)।
+     *
+     * ── ⛔ কী ভুল ছিল ─────────────────────────────────────────────────────
+     * চালানের সারিতে ছাড় থাকে না — `amount` = পরিমাণ × দর ([[DeliveryChallanService::replaceLines()]]);
+     * সারির ছাড়, বিলের ছাড়, রাউন্ডিং, ভ্যাট আর অফারের ভাগ বসে কেবল বিলে। ⚠️ তাই দেয়াল মাপত ছাড়ের **আগের**
+     * দাম: ১,২০০-র মালে ১০% ছাড়, ১,০৮০ পুরো নগদে — বাকি শূন্য, অথচ "১২০ সীমা পার", আর সীমা ০-এর নগদ ক্রেতা
+     * ছাড় নিলেই আটকাতেন।
+     *
+     * ── ⭐ এক মাপ, দুই হিসাব নয় ─────────────────────────────────────────
+     * চালানের **প্রতিটা** সারি খসড়া বিলে বাঁধা থাকলে সেই বিলগুলোর মোট — বিলের নিজের হিসাবেই গোনা, এখানে
+     * আবার গোনা নয়। ⓘ কাউন্টার এখন চালান নিশ্চিত করার আগে খসড়া বিল বাঁধে ([[DirectSaleService::sellNow()]]),
+     * ধরে রাখা বিক্রয় আগে থেকেই বাঁধত। ⚠️ একটা সারিও বাঁধা না থাকলে চালানের নিজের মোট — আংশিক বিলের
+     * বাকি অংশ নিচে গোনা পড়ত না।
+     */
+    public function billedAs(DeliveryChallan $challan): string
+    {
+        $lines = DB::table('sal_challan_lines')->where('delivery_challan_id', $challan->id)->count();
+
+        $drafts = DB::table('sal_invoices as i')
+            ->where('i.company_id', $challan->company_id)
+            ->whereNull('i.deleted_at')
+            ->where('i.status', DocumentStatus::DRAFT)
+            ->whereExists(fn ($q) => $q->from('sal_invoice_lines as il')
+                ->join('sal_challan_lines as cl', 'cl.id', '=', 'il.delivery_challan_line_id')
+                ->whereColumn('il.sales_invoice_id', 'i.id')
+                ->where('cl.delivery_challan_id', $challan->id));
+
+        $bound = DB::table('sal_invoice_lines as il')
+            ->join('sal_challan_lines as cl', 'cl.id', '=', 'il.delivery_challan_line_id')
+            ->join('sal_invoices as i', 'i.id', '=', 'il.sales_invoice_id')
+            ->where('cl.delivery_challan_id', $challan->id)
+            ->whereNull('i.deleted_at')
+            ->where('i.status', DocumentStatus::DRAFT)
+            ->distinct()
+            ->count('il.delivery_challan_line_id');
+
+        if ($lines === 0 || $bound < $lines) {
+            return (string) $challan->total;
+        }
+
+        return bcadd((string) $drafts->sum('i.total'), '0', 4);
+    }
+
+    /**
      * খাতার বাইরে আটকে থাকা টাকা: বিল না হওয়া চালান + খসড়া বিল।
      *
      * @param  int|null  $exceptInvoiceId  এই বিলটা নিজেকে গোনে না — নইলে
@@ -93,14 +197,56 @@ final class CreditExposure implements CreditHolds
      * @param  int|null  $exceptChallanId  এই চালানের খসড়া বিলগুলোও বাদ —
      *                                     কাউন্টারে ধরে রাখা বিক্রয় শেষ করার
      *                                     সময় চালান আর তার বিল একই টাকা।
+     * @param  int|null  $exceptDeliveryOrderId  এই DO নিজেকে গোনে না — যাচাইয়ের সময় সে নিজেই `adding`।
+     *
+     * ⭐ চতুর্থ ভাগ, ৩ অক্টোবর ২০২৬: হিসাবে অনুমোদিত অথচ বিল না হওয়া ডেলিভারি অর্ডার ([[approvedDeliveryOrders()]])।
+     * ⛔ না গুনলে দুইটা DO আলাদা করে সীমার ভিতরে, মিলে বাইরে — দুটোই অনুমোদিত, মাল দুইবারের।
      */
-    public function pending(Customer $customer, ?int $exceptInvoiceId = null, ?int $exceptChallanId = null): string
+    public function pending(Customer $customer, ?int $exceptInvoiceId = null, ?int $exceptChallanId = null, ?int $exceptDeliveryOrderId = null): string
     {
         return bcadd(
-            $this->unbilledChallans($customer),
-            $this->draftInvoices($customer, $exceptInvoiceId, $exceptChallanId),
+            bcadd(
+                $this->unbilledChallans($customer),
+                $this->draftInvoices($customer, $exceptInvoiceId, $exceptChallanId),
+                4,
+            ),
+            $this->approvedDeliveryOrders([(int) $customer->id], $exceptDeliveryOrderId)[(int) $customer->id] ?? '0',
             4,
         );
+    }
+
+    /**
+     * হিসাবে অনুমোদিত, এখনো বিল হয়নি — ডিপোর যাচাইয়ে বা তার আগে দাঁড়িয়ে থাকা DO-র টাকা।
+     *
+     * ⓘ বিল হলে DO-র `sales_invoice_id` বসে, আর টাকাটা তখন বিলের পথে (খসড়া বা খাতায়) গোনা হয় — এখানে আর নয়।
+     *
+     * @param  list<int>  $customerIds
+     * @return array<int, string>
+     */
+    private function approvedDeliveryOrders(array $customerIds, ?int $exceptDeliveryOrderId = null): array
+    {
+        // ⓘ টেবিলটা একবার দেখা — মাইগ্রেশনের মাঝের অবস্থায় (DO-র টেবিল আসার আগে) দেয়াল যেন না ভাঙে; প্রতি ডাকে নয়
+        self::$hasOrders ??= \Illuminate\Support\Facades\Schema::hasTable('sal_delivery_orders');
+
+        if ($customerIds === [] || ! self::$hasOrders) {
+            return [];
+        }
+
+        $query = DB::table('sal_delivery_orders as d')
+            ->whereIn('d.customer_id', $customerIds)
+            ->where('d.company_id', CompanyContext::id())
+            ->whereNull('d.deleted_at')
+            ->whereNull('d.sales_invoice_id')
+            ->whereIn('d.status', ['accounts_approved', 'depot_check'])
+            ->when($exceptDeliveryOrderId !== null, fn ($q) => $q->where('d.id', '!=', $exceptDeliveryOrderId))
+            ->groupBy('d.customer_id')
+            ->selectRaw('d.customer_id, SUM(d.total) as held');
+
+        if ($this->readLatest) {
+            $query->sharedLock();
+        }
+
+        return $query->pluck('held', 'customer_id')->map(fn ($v) => bcadd((string) $v, '0', 4))->all();
     }
 
     /**
@@ -157,7 +303,10 @@ final class CreditExposure implements CreditHolds
 
         $out = [];
 
-        foreach ([$challans, $drafts] as $part) {
+        // ⭐ চতুর্থ ভাগ — হিসাবে অনুমোদিত, বিল না হওয়া DO ([[pending()]]-এর একই নিয়ম)
+        $orders = $this->approvedDeliveryOrders(array_map('intval', $customerIds));
+
+        foreach ([$challans, $drafts, $orders] as $part) {
             foreach ($part as $customerId => $held) {
                 $out[(int) $customerId] = bcadd($out[(int) $customerId] ?? '0', (string) $held, 4);
             }
@@ -190,18 +339,15 @@ final class CreditExposure implements CreditHolds
         }
 
         /*
-         * ⚠️ বাড়তি টাকা বকেয়া থেকে বিয়োগ হতে দেওয়া হয় না।
+         * ⭐ বিক্রির **পরে** গ্রাহকের মোট বকেয়া সীমার ভিতরে — মালিকের সিদ্ধান্ত, ৩ অক্টোবর ২০২৬।
          *
-         * ⓘ বিলের চেয়ে বেশি গুনলে বাড়তিটা গ্রাহকের খাতায় ক্রেডিট হয়ে বসে
-         * — সেটা পরের হিসাবে এমনিই আসে। ⛔ এখানে বিয়োগ করলে সীমা ছাড়ানো
-         * একজন গ্রাহক বাড়তি টাকা দেখিয়ে **আগের** খসড়া বা চালানের জন্যও
-         * জায়গা করে নিতেন, অথচ সেই টাকা ঐ কাগজের নয়।
+         * মালিককে প্রশ্ন: সীমা ০, পুরনো বকেয়া আছে, নতুন বিলের পুরো টাকা দিলেন কিন্তু আগেরটা নয় — চলবে? উত্তর:
+         * *"চলবে না — আগের বকেয়াও শোধ চাই"*। তাই মাপ: খাতার বকেয়া + আটকে থাকা + এই কাগজ − এখন গোনা টাকা ≤ সীমা।
+         *   · এখনকার জমা আগের বকেয়াও কমায় — খাতায় সেটাই ঘটে (বাড়তি টাকা গ্রাহকের জমা হয়ে বসে)।
+         *   · ডেমো S-0010 (Appel): বকেয়া ১২,০০০ + বিল ৩,৩১,৯৪৮ − জমা ৩,৫৬,০০০ = −১২,০৫২ ≤ ০ → চলে।
+         *   · ⛔ আগে: জমা বিলের সমান হলেই সোজা ছাড় (`unpaid <= 0`), পুরনো বকেয়া যত বড়ই হোক — মালিক সেটা চাননি।
          */
         $unpaid = bcsub($adding, $payingNow, 4);
-
-        if (bccomp($unpaid, '0', 4) <= 0) {
-            return;
-        }
 
         $pending = $this->pending($customer, $exceptInvoiceId, $exceptChallanId);
 
@@ -213,7 +359,8 @@ final class CreditExposure implements CreditHolds
         $used = bcadd($customer->outstanding(), $pending, 4);
         $left = bcsub($limit, $used, 4);
         $left = bccomp($left, '0', 4) > 0 ? $left : '0';
-        $short = bcsub($unpaid, $left, 4);
+        // ⓘ কত বেশি = বিক্রির পরের মোট − সীমা; কম জমা দিলে ঠিক ততটা আরও দিলে চলে
+        $short = bcsub(bcadd($used, $unpaid, 4), $limit === '' ? '0' : $limit, 4);
 
         /*
          * ⚠️ ঘরের নাম `customer_id` — বিলের পর্দাগুলো ঐ ঘরের বার্তা গ্রাহকের

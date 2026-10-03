@@ -257,7 +257,8 @@ final class DeliveryChallanService
         if ($challan->customer !== null) {
             $this->credit->assertRoom(
                 customer: $challan->customer,
-                adding: (string) $challan->total,
+                // ⛔ বিলের মাপে, ছাড়ের পরে — চালানের মোটে ছাড় নেই ([[CreditExposure::billedAs()]])
+                adding: $this->credit->billedAs($challan),
                 payingNow: $payingNow,
                 exceptChallanId: (int) $challan->id,
             );
@@ -322,7 +323,7 @@ final class DeliveryChallanService
             if ($challan->customer !== null) {
                 $this->credit->assertRoomLocked(
                     customer: $challan->customer,
-                    adding: (string) $challan->total,
+                    adding: $this->credit->billedAs($challan),
                     payingNow: $payingNow,
                     exceptChallanId: (int) $challan->id,
                 );

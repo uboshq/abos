@@ -595,6 +595,8 @@ final class EveryCounterSaleMustMatchTheBooksFiveWaysTest extends TestCase
      */
     public function test_the_printed_total_equals_the_ledger_total_even_when_vat_makes_a_fraction_of_a_paisa(): void
     {
+        // ⓘ সীমা না থাকলে বাকি নেই (মালিক, ১ অক্টোবর ২০২৬) — এই দাবি বাকির খাতা মাপে, সীমা নয়
+        $this->dealer->forceFill(['credit_limit' => '5000'])->save();
         $vatted = $this->vattedProduct();
 
         $this->sell([$this->line($vatted, '3', '150', ['discount_percent' => '7'])])

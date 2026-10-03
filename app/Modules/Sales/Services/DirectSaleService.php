@@ -334,6 +334,19 @@ final class DirectSaleService
                 );
             }
 
+            /*
+             * ⛔ নতুন বিক্রয়েও বিলটা আগে, খসড়ায়, চালানে বাঁধা — ২ অক্টোবর ২০২৬ (abos-bb-এর ধরা)।
+             *
+             * ⓘ চালানের দেয়াল মাপে বাঁধা খসড়া বিলের মোট ([[CreditExposure::billedAs()]]) — ছাড়, ভ্যাট আর
+             * রাউন্ডিংসহ, বিলের নিজের হিসাবে। ⚠️ আগে বিল বসত চালানের **পরে**, তাই দেয়াল দেখত ছাড়ের আগের দাম,
+             * আর ছাড় নিয়ে পুরো নগদ দেওয়া সীমা-০-এর ক্রেতা আটকাতেন। ⓘ একই লেনদেন — দেয়াল না বললে সব ফেরে।
+             */
+            $draft = $parked ?? $this->invoices->createForHeldCounterSale(
+                $invoiceHeader,
+                $this->invoiceLines($challan->fresh(['lines'])),
+                (int) $challan->id,
+            );
+
             $challan = $this->challans->confirm($challan->fresh(['lines']), $deposit);
 
             // ফ্রি ও উপহার — চালান নিশ্চিত হওয়ার পর, ফ্রি ভাণ্ডার থেকে
@@ -349,7 +362,8 @@ final class DirectSaleService
                 $invoice = $this->invoices->update($parked, $invoiceHeader, $this->invoiceLines($challan));
                 $invoice->update(['counter_draft' => null]);
             } else {
-                $invoice = $this->invoices->create($invoiceHeader, $this->invoiceLines($challan));
+                // ⓘ উপরে বাঁধা খসড়াটাই — নিশ্চিত চালান থেকে আবার লেখা, নম্বর একই
+                $invoice = $this->invoices->update($draft, $invoiceHeader, $this->invoiceLines($challan));
             }
 
             /*
@@ -575,6 +589,21 @@ final class DirectSaleService
                     'parked' => true,
                 ];
             }
+
+            /*
+             * ⛔ সইয়ের পথে সীমার দেয়াল — সই চাওয়ার **আগে**, ৩ অক্টোবর ২০২৬ (abos-bb-এর ধরা)।
+             *
+             * ⓘ জমার সই বা মার্জিনের আগাম অনুমোদন লাগলে বিক্রি এখানে আসে, [[sellNow()]]-এ নয় — আর আগে দেয়াল আসত কেবল
+             * শেষ সইয়ের পরে ([[finishHeld()]])। ⚠️ মালিকের নিয়ম: সীমার "না" অনুমোদনের আগে — নইলে সীমা পার হওয়া বিক্রি
+             * সইয়ের সারিতে দাঁড়াত। মাপ বাঁধা খসড়া বিলের মোট (ছাড়ের পরে), গোনা টাকাসহ; খসড়া নিজেকে গোনে না।
+             * ⓘ "খসড়া রাখুন" উপরেই ফিরে গেছে — ওখানে দেয়াল নেই (মালিকের ধারা §৫: টাকা আসতে দেরি হলে খসড়া)।
+             */
+            $this->credit->assertRoom(
+                customer: $customer,
+                adding: (string) $invoice->fresh()->total,
+                payingNow: $this->depositTotal($data),
+                exceptInvoiceId: (int) $invoice->id,
+            );
 
             /* ⓘ সইয়ের পথে গেলে আর খসড়া নয় — শেষ হয় শেষ সইয়ের পরে। ⭐ পর্দার ছবিটা
                `counter_screen`-এ: কাউন্টারে কেবল দেখা যায়, আর ফিরিয়ে আনলে আবার খসড়া
