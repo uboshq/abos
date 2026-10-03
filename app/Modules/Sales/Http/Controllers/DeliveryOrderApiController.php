@@ -39,12 +39,18 @@ class DeliveryOrderApiController extends Controller implements HasMiddleware
         ];
     }
 
-    /** `GET /delivery-orders?customer=&status=&page=` — সর্বশেষ আগে, পাতায় ৫০; `next_page` না থাকলে শেষ */
+    /**
+     * `GET /delivery-orders?customer=&status=&scope=&page=` — সর্বশেষ আগে, পাতায় ৫০; `next_page` না থাকলে শেষ।
+     * ⓘ `scope=awaiting_me` — যেগুলো এখন আমার সইয়ের অপেক্ষায় (অনুমোদন-ইঞ্জিনের নিজের ইনবক্স ধরে, [[ApprovalEngine::pendingQueryFor()]])।
+     */
     public function index(Request $request): JsonResponse
     {
         $rows = DeliveryOrder::query()
             ->with('customer')
             ->when(trim((string) $request->query('customer', '')), fn ($q, $c) => $q->where('customer_id', $this->customer($c)->id))
+            ->when($request->query('scope') === 'awaiting_me', fn ($q) => $q->where('status', DeliveryOrderStatus::SUPERVISOR_PENDING)
+                ->whereIn('id', app(ApprovalEngine::class)->pendingQueryFor($request->user())
+                    ->where('approvable_type', (new DeliveryOrder)->getMorphClass())->select('approvable_id')))
             ->when(in_array($request->query('status'), [...DeliveryOrderStatus::FLOW, DeliveryOrderStatus::REJECTED, DeliveryOrderStatus::CANCELLED], true),
                 fn ($q) => $q->where('status', (string) $request->query('status')))
             ->latest('trx_date')->latest('id')->paginate(50);
@@ -173,7 +179,9 @@ class DeliveryOrderApiController extends Controller implements HasMiddleware
             'status_label' => DeliveryOrderStatus::label((string) $o->status),
             'total' => bcadd((string) $o->total, '0', 2),
             'editable' => $o->isEditableByWriter() && (int) $o->created_by === (int) $user?->id,
-            'awaiting_me' => $pending !== null && $user !== null && app(ApprovalEngine::class)->canDecide($pending, $user),
+            'awaiting_me' => $awaitingMe = $pending !== null && $user !== null && app(ApprovalEngine::class)->canDecide($pending, $user),
+            // ⓘ ফোন এটা দিয়েই সই দেয় — `/approvals/{id}/approve|reject`, অনুমোদন-বাক্সের একই দরজা
+            'approval_id' => $awaitingMe ? (string) $pending->public_id : null,
             'lines' => $withLines ? $o->lines->map(fn (DeliveryOrderLine $l) => [
                 'id' => (int) $l->id,
                 'product' => ['id' => (string) $l->product?->public_id, 'name' => $l->product?->name()],

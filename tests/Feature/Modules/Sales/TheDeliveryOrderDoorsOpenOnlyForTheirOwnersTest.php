@@ -100,6 +100,54 @@ final class TheDeliveryOrderDoorsOpenOnlyForTheirOwnersTest extends TestCase
             '⛔ জমার পরে লেখক পরিমাণ বদলে ফেললেন।');
     }
 
+    /** ⭐ ফোনের সুপারভাইজার — "আমার সইয়ের অপেক্ষায়" তালিকায় DO, আর সই অনুমোদন-বাক্সের একই দরজায়; অচেনা কর্মী দেখেন না */
+    public function test_on_the_phone_the_supervisor_sees_it_awaiting_and_signs_a_stranger_does_not_see_it(): void
+    {
+        $supervisor = $this->staff(['sales.do.view', 'approval.decide']);
+        $stranger = $this->staff(['sales.do.view', 'approval.decide']);
+        $flow = \App\Models\ApprovalFlow::query()->create([
+            'company_id' => $this->company->id, 'code' => 'ZQ-DO', 'module' => 'sales',
+            'action' => \App\Modules\Sales\Services\DeliveryOrderService::APPROVAL_ACTION, 'document_type' => 'DeliveryOrder', 'is_active' => true,
+        ]);
+        \App\Models\ApprovalFlowStep::query()->create([
+            'approval_flow_id' => $flow->id, 'level' => 1, 'step_name' => 'এরিয়া ম্যানেজার',
+            'approver_type' => 'user', 'approver_id' => $supervisor->id,
+        ]);
+        app()->forgetInstance(\App\Core\Engines\Approval\ApprovalEngine::class);
+
+        // ⓘ ফোনের পথ — SR (একজন কর্মী) লেখেন আর জমা দেন
+        $writer = $this->staff(['sales.do.view', 'sales.do.create']);
+        $service = app(\App\Modules\Sales\Services\DeliveryOrderService::class);
+        $order = $service->submit($service->create(['customer_id' => $this->dealer->id], [['product_id' => $this->product->id, 'qty' => '5']], $writer), $writer);
+        $this->assertSame(DeliveryOrderStatus::SUPERVISOR_PENDING, $order->status, 'প্রস্তুতিটাই ভুল — সইয়ের অপেক্ষা নেই।');
+
+        Sanctum::actingAs($stranger, [AuthController::APP]);
+        $this->assertSame([], $this->getJson('/api/v1/sales/delivery-orders?scope=awaiting_me')->assertOk()->json('orders'),
+            '⛔ অচেনা কর্মীর "আমার অপেক্ষায়" তালিকায় অন্যের সইয়ের DO।');
+        $this->assertNull($this->getJson('/api/v1/sales/delivery-orders/'.$order->public_id)->assertOk()->json('approval_id'));
+
+        Sanctum::actingAs($supervisor, [AuthController::APP]);
+        $mine = $this->getJson('/api/v1/sales/delivery-orders?scope=awaiting_me')->assertOk()->json('orders');
+        $this->assertSame([(string) $order->public_id], array_column($mine, 'id'));
+        $approval = $this->getJson('/api/v1/sales/delivery-orders/'.$order->public_id)->assertOk()->json('approval_id');
+        $this->assertNotNull($approval, '⛔ সুপারভাইজার সইয়ের দরজা পেলেন না।');
+
+        $this->postJson('/api/v1/approvals/'.$approval.'/approve')->assertOk();
+        $this->assertNotSame(DeliveryOrderStatus::SUPERVISOR_PENDING, $order->fresh()->status, '⛔ ফোনের সইয়েও DO এগোল না।');
+    }
+
+    /** @param  list<string>  $keys */
+    private function staff(array $keys): User
+    {
+        $user = User::factory()->create(['is_active' => true, 'current_company_id' => $this->company->id]);
+        $user->companies()->attach($this->company->id, ['is_active' => true]);
+        foreach ($keys as $key) {
+            $this->grant($user, $key);
+        }
+
+        return $user->fresh();
+    }
+
     private function grant(User $user, string $key): void
     {
         CompanyContext::forCompany($this->company->id,
