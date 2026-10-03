@@ -303,10 +303,16 @@
 
                      ⓘ সবুজ, লাল নয়: উদ্বৃত্ত জমা কোনো সমস্যা নয়, ওটা
                      গ্রাহকের পাওনা — পরের চালানে কাটা যাবে। --}}
-                <template x-if="depositExcess > 0">
+                <template x-if="excessToOldDue > 0">
+                    <x-sales::panel-row :label="__('sales::field.excess_to_old_due')">
+                        <span class="num font-semibold text-(--color-success)" data-excess-old-due
+                              x-text="'৳' + money(excessToOldDue)"></span>
+                    </x-sales::panel-row>
+                </template>
+                <template x-if="excessKept > 0">
                     <x-sales::panel-row :label="__('sales::field.kept_as_advance')">
-                        <span class="num font-semibold text-(--color-success)"
-                              x-text="'৳' + money(depositExcess)"></span>
+                        <span class="num font-semibold text-(--color-success)" data-excess-kept
+                              x-text="'৳' + money(excessKept)"></span>
                     </x-sales::panel-row>
                 </template>
 

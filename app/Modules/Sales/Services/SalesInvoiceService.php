@@ -954,7 +954,7 @@ final class SalesInvoiceService
                 throw ValidationException::withMessages([
                     'lines' => __('sales::validation.price_out_of_range', [
                         'product' => $product->name(),
-                        'tolerance' => rtrim(rtrim((string) $pricing->tolerance, '0'), '.'),
+                        'tolerance' => (string) (float) $pricing->tolerance, // ⓘ ০ হলে "0" — rtrim সবটাই কেটে "%" একা ফেলত (মালিকের ছবি, ৩ অক্টোবর ২০২৬)
                     ]),
                 ]);
             }
@@ -969,7 +969,7 @@ final class SalesInvoiceService
                  */
                 $warnings[] = __('sales::validation.price_out_of_range', [
                     'product' => $product->name(),
-                    'tolerance' => rtrim(rtrim((string) $pricing->tolerance, '0'), '.'),
+                    'tolerance' => (string) (float) $pricing->tolerance, // ⓘ ০ হলে "0" — rtrim সবটাই কেটে "%" একা ফেলত (মালিকের ছবি, ৩ অক্টোবর ২০২৬)
                 ]);
 
                 /*

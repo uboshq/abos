@@ -723,6 +723,32 @@ describe('সীমার কড়া দেয়াল — আটকে থ�
         expect(old(['331948'])).toBe(true)
     })
 
+    /*
+     * ⭐ বাড়তি টাকা আগে আগের বকেয়া কাটে — মালিকের ছবি, ৩ অক্টোবর ২০২৬ (M/S Sarkar Enterprise)।
+     * বকেয়া ৩০,৬৪২.১৫, বিল ৩৯,২৭৭.৬১, জমা ৪০,০০০ → বাড়তি ৭২২.৩৯ পুরোটাই আগের বকেয়ায়, "জমা থাকল" নেই;
+     * বকেয়া না থাকলে একই বাড়তি "জমা থাকল"।
+     */
+    it('বাড়তি জমা আগে আগের বকেয়ায় যায়, বাকিটুকুই খাতায় জমা থাকে', () => {
+        const sarkar = held({ customers: { 7: { limit: 30000, due: 30642.15, held: 0, days: 30, name: 'Sarkar' } } })
+        cartOf(sarkar, 39277.61)
+        sarkar.deposits = [{ amount: '40000' }]
+        expect(sarkar.depositExcess).toBeCloseTo(722.39, 2)
+        expect(sarkar.excessToOldDue).toBeCloseTo(722.39, 2)
+        expect(sarkar.excessKept).toBeCloseTo(0, 2)
+
+        const clean = held({ customers: { 7: { limit: 30000, due: 0, held: 0, days: 30, name: 'Clean' } } })
+        cartOf(clean, 39277.61)
+        clean.deposits = [{ amount: '40000' }]
+        expect(clean.excessToOldDue).toBe(0)
+        expect(clean.excessKept).toBeCloseTo(722.39, 2)
+
+        const small = held({ customers: { 7: { limit: 30000, due: 500, held: 0, days: 30, name: 'Small' } } })
+        cartOf(small, 39277.61)
+        small.deposits = [{ amount: '40000' }]
+        expect(small.excessToOldDue).toBeCloseTo(500, 2)
+        expect(small.excessKept).toBeCloseTo(222.39, 2)
+    })
+
     /* ⓘ পপ-আপের লেখা — খোলা ১,০০০, বেশি ৫০০ */
     it('পপ-আপ বলে কত খোলা আর কত বেশি', () => {
         const c = held()

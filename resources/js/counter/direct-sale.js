@@ -2427,6 +2427,21 @@ export default function directSale({
         },
 
         /*
+         * ⭐ বাড়তি টাকা আগে আগের বকেয়া কাটে — মালিকের ছবি, ৩ অক্টোবর ২০২৬ (M/S Sarkar: বকেয়া ৩০,৬৪২.১৫, বাড়তি
+         * ৭২২.৩৯ — পর্দা বলত "খাতায় জমা থাকল", অথচ টাকাটা আগের বকেয়ায় গেছে, বকেয়া নেমেছে ২৯,৯১৯.৭৬-এ)।
+         * ⓘ যতটা আগের বকেয়ায় যায় সেটা আলাদা সারি; কেবল বকেয়া শোধের পরে যা থাকে, সেটাই "জমা থাকল"।
+         */
+        get excessToOldDue() {
+            const due = Number(this.customer?.due) || 0;
+
+            return due > 0 ? Math.min(this.depositExcess, due) : 0;
+        },
+
+        get excessKept() {
+            return this.depositExcess - this.excessToOldDue;
+        },
+
+        /*
          * ⚠️ `invoiceDue` নয়, না-কাটা সংখ্যাটা।
          *
          * `invoiceDue` শূন্যে থেমে যায় (একটা বিলে ঋণাত্মক

@@ -133,6 +133,7 @@ return [
     'advance' => 'Credit',
     /* More paid than the bill — the rest stays to the customer's credit. */
     'kept_as_advance' => 'Stays on the account',
+    'excess_to_old_due' => 'Goes to the old due',
 
     'available_short' => 'Available',
     'main_stock' => 'Main Stock',
