@@ -43,6 +43,23 @@ final class SalesTargetService
     {
         $first = SalesTarget::monthOf($month);
 
+        /*
+         * ⛔ টার্গেট কেবল এই কোম্পানির কর্মীর — চূড়ান্ত অডিট ⚠️, ১ অক্টোবর ২০২৬।
+         *
+         * ⓘ ফর্মের চাবিটাই কর্মীর নম্বর (`amount[৪২]`), আর আগে কেউ দেখত না নম্বরটা কার: বানানো নম্বর বা অন্য
+         * কোম্পানির লোকের নামে টার্গেট বসত, আর স্কোরবোর্ডে ভূতুড়ে সারি। ⭐ কেবল এই কোম্পানির সদস্য; নাহলে পুরো
+         * ফর্ম ফেরে — আধা-বসানো মাস নয়।
+         */
+        $ids = array_map('intval', array_keys($amounts));
+        $members = User::query()
+            ->whereIn('id', $ids)
+            ->whereHas('companies', fn ($q) => $q->whereKey(CompanyContext::id()))
+            ->pluck('id')->map(fn ($id) => (int) $id)->all();
+
+        if (array_diff($ids, $members) !== []) {
+            throw ValidationException::withMessages(['amount' => __('sales::validation.target_unknown_staff')]);
+        }
+
         return DB::transaction(function () use ($first, $amounts) {
             $saved = 0;
 

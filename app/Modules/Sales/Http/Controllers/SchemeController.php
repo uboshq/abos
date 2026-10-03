@@ -22,6 +22,7 @@ use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
 /**
@@ -233,6 +234,25 @@ class SchemeController extends Controller implements HasMiddleware
 
         if ($data['applies_to'] === Scheme::ALL) {
             $data['target_id'] = null;
+        }
+
+        /*
+         * ⛔ লক্ষ্যটা এই কোম্পানিতে সত্যিই আছে — চূড়ান্ত অডিট ⚠️, ১ অক্টোবর ২০২৬।
+         *
+         * ⓘ আগে কেবল "একটা পূর্ণসংখ্যা" দেখা হত: বানানো নম্বর বা অন্য কোম্পানির ব্র্যান্ডের নম্বরে স্কিম চালু হয়ে
+         * নীরবে কিছুই দিত না (বা অন্যের জিনিসে তাক করত)। ⭐ মডেলগুলোর কোম্পানির দেয়াল ([[BelongsToCompany]]) দিয়ে
+         * খোঁজা — অন্য কোম্পানির সারি এখানে "নেই"। পুরনো স্কিমের বন্ধ পণ্যও চলে: প্রশ্নটা "আছে কি না", "চালু কি না" নয়।
+         */
+        $model = [
+            Scheme::PRODUCT => Product::class,
+            Scheme::CATEGORY => ProductCategory::class,
+            Scheme::BRAND => Brand::class,
+            Scheme::TERRITORY => Location::class,
+            Scheme::DEALER_TIER => PartyType::class,
+        ][$data['applies_to']] ?? null;
+
+        if ($model !== null && ! $model::query()->whereKey((int) $data['target_id'])->exists()) {
+            throw ValidationException::withMessages(['target_id' => __('sales::validation.scheme_target_unknown')]);
         }
 
         return $data;

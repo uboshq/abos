@@ -166,6 +166,15 @@ final class SalesOrderService
          * আটকায় কেবল বিল না হওয়া চালান আর খসড়া বিল।
          */
         return DB::transaction(function () use ($order) {
+            // ⛔ দ্বিতীয় ক্লিক — তালার ভিতরে অবস্থা আবার ([[lockAndReread()]])
+            $this->lockAndReread($order);
+
+            if ($order->status !== DocumentStatus::DRAFT) {
+                throw ValidationException::withMessages([
+                    'status' => __('sales::validation.only_draft_confirms', ['no' => $order->document_no]),
+                ]);
+            }
+
             if ($this->settings->get('sales.reserve_on_order', true)) {
                 $warehouse = $order->warehouse ?? $this->defaultWarehouse();
 
@@ -214,6 +223,15 @@ final class SalesOrderService
         $order->loadMissing(['lines.product', 'warehouse']);
 
         return DB::transaction(function () use ($order, $reason) {
+            // ⛔ দ্বিতীয় ক্লিক — তালার ভিতরে অবস্থা আবার ([[lockAndReread()]])
+            $this->lockAndReread($order);
+
+            if ($order->status === DocumentStatus::CANCELLED) {
+                throw ValidationException::withMessages([
+                    'status' => __('sales::validation.already_cancelled', ['no' => $order->document_no]),
+                ]);
+            }
+
             if ($order->status === DocumentStatus::CONFIRMED && $order->warehouse) {
                 foreach ($order->lines as $line) {
                     $stillReserved = $line->pendingQty();
@@ -359,5 +377,23 @@ final class SalesOrderService
         }
 
         return $year;
+    }
+
+    /**
+     * ⛔ দুই ক্লিক, একই আদেশ — চূড়ান্ত অডিট (abos-8f-এর পড়া), ৩০ সেপ্টেম্বর ২০২৬।
+     *
+     * ⓘ নিশ্চিত/বাতিলের অবস্থা দেখা হত হাতের পুরনো মডেলে, লেনদেনের বাইরে: দুই ক্লিকে প্রতিটা সারির মাল
+     * দুইবার ধরা হত, আর বাতিলে দুইবার ছাড়া (Reserved ঋণাত্মক)। ⭐ এখন লেনদেনের প্রথম কাজ সারিতে তালা আর
+     * অবস্থা তাজা পড়া ([[DepositClaimService::lockPending()]]-এর ছাঁচ)।
+     */
+    private function lockAndReread(SalesOrder $order): void
+    {
+        $fresh = SalesOrder::query()
+            ->withoutGlobalScopes()
+            ->whereKey($order->getKey())
+            ->lockForUpdate()
+            ->firstOrFail();
+
+        $order->setRawAttributes($fresh->getAttributes(), true);
     }
 }

@@ -134,6 +134,9 @@ final class CommissionClaimService
         $date = $onDate ?? now()->toDateString();
 
         return DB::transaction(function () use ($claim, $date) {
+            // ⛔ একই মুহূর্তে আরেকজন — তালার ভিতরে অবস্থা আবার ([[lockPending()]])
+            $this->lockPending($claim);
+
             $this->posting->post(
                 sourceType: CommissionClaim::STOCK_SOURCE.':settled',
                 sourceId: $claim->id,
@@ -184,6 +187,9 @@ final class CommissionClaimService
         $date = $onDate ?? now()->toDateString();
 
         return DB::transaction(function () use ($claim, $reason, $date) {
+            // ⛔ একই মুহূর্তে আরেকজন — তালার ভিতরে অবস্থা আবার ([[lockPending()]])
+            $this->lockPending($claim);
+
             $this->posting->post(
                 sourceType: CommissionClaim::STOCK_SOURCE.':rejected',
                 sourceId: $claim->id,
@@ -304,6 +310,26 @@ final class CommissionClaimService
                 ]),
             ]);
         }
+    }
+
+    /**
+     * ⛔ একই দাবি একসাথে মানা আর নাকচ — চূড়ান্ত অডিট (abos-8f-এর পড়া), ৩০ সেপ্টেম্বর ২০২৬।
+     *
+     * ⓘ "অপেক্ষমাণ কি না" দেখা হত লেনদেনের বাইরে, আর দুই পথের খাতার চাবি আলাদা (`:settled` / `:rejected`) —
+     * তাই পোস্টিং ইঞ্জিনও ধরত না: দুইটাই বসত, দাবির খাতে দ্বিগুণ ক্রেডিট। ⭐ এখন লেনদেনের প্রথম কাজ সারিতে
+     * তালা আর অবস্থা আবার ([[DepositClaimService::lockPending()]]-এর ছাঁচ)।
+     */
+    private function lockPending(CommissionClaim $claim): void
+    {
+        $fresh = CommissionClaim::query()
+            ->withoutGlobalScopes()
+            ->whereKey($claim->getKey())
+            ->lockForUpdate()
+            ->firstOrFail();
+
+        $claim->setRawAttributes($fresh->getAttributes(), true);
+
+        $this->assertPending($claim);
     }
 
     private function assertPending(CommissionClaim $claim): void

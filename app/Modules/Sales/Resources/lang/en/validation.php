@@ -169,4 +169,6 @@ return [
     'return_free_needs_bill' => 'Free goods come back only against the bill that gave them — choose the bill.',
     'invoice_has_live_return' => ':no has a confirmed return (:return) against it. Cancel the return first, then the bill — otherwise the returned part is reversed twice.',
     'draft_not_settable' => 'This draft cannot be changed now: it is confirmed or waiting for a signature.',
+    'scheme_target_unknown' => 'The chosen target was not found in this company. Pick it again from the list.',
+    'target_unknown_staff' => 'One of the staff on the targets is not in this company. Reload the page and set them again.',
 ];
