@@ -244,6 +244,14 @@ class MenuRepository {
             icon: Icons.local_shipping_outlined,
             routeName: 'tracking',
           ),
+        // ⭐ সরাসরি বিক্রয়ের কাউন্টার (0.4.9) — ওয়েবের কাউন্টারের একই চাবি
+        if (user.can('sales.challan.create'))
+          const MenuItem(
+            key: 'sales.direct',
+            label: 'সরাসরি বিক্রয়',
+            icon: Icons.point_of_sale_outlined,
+            routeName: 'counter',
+          ),
         // ⭐ ডেলিভারি অর্ডার (0.4.8) — DO দেখার চাবি যাঁর; লেখা আর সই পর্দার ভিতরে নিজের চাবিতে।
         if (user.can('sales.do.view'))
           const MenuItem(
