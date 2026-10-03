@@ -27,6 +27,22 @@ return [
         'cancelled' => 'Cancelled',
         'billed' => 'Billed',
     ],
+    // ⭐ চালানের সময়রেখা — সাত ধাপ ([[SaleTracking::timeline()]], ৪ অক্টোবর ২০২৬)
+    'timeline' => [
+        'title' => 'Timeline',
+        'created' => 'Created',
+        'vehicle' => 'Vehicle',
+        'loading' => 'Loading',
+        'packed' => 'Packed',
+        'gate_pass' => 'Gate pass',
+        'on_the_way' => 'On the way',
+        'delivered' => 'Delivered',
+        'now' => 'Now',
+        'not_yet' => 'Not yet',
+        'by' => 'By',
+        'car' => 'Vehicle',
+        'driver' => 'Driver',
+    ],
     'milestone' => [
         'order_created' => 'Order created',
         'approval_level' => 'Approval — level :level',

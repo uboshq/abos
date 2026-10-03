@@ -64,6 +64,11 @@
             @endforeach
         </ol>
 
+        {{-- ⭐ চালানের সময়রেখা — সাত ধাপ, গাড়ি আর চালকসহ (৪ অক্টোবর ২০২৬) --}}
+        @if (! empty($sale['timeline']))
+            @include('sales::tracking.partials.timeline', ['timeline' => $sale['timeline']])
+        @endif
+
         <h2 class="text-sm font-semibold">{{ __('sales::tracking.history') }}</h2>
         <ol class="grid gap-2 border-s-2 border-(--color-border) ps-4">
             @foreach ($sale['events'] as $event)

@@ -28,6 +28,22 @@ return [
         'billed' => 'বিল হয়েছে',
     ],
     // ⭐ টিকচিহ্নের দাগ — মালিকের আদেশ, ২ অক্টোবর ২০২৬
+    // ⭐ চালানের সময়রেখা — সাত ধাপ ([[SaleTracking::timeline()]], ৪ অক্টোবর ২০২৬)
+    'timeline' => [
+        'title' => 'সময়রেখা',
+        'created' => 'তৈরি',
+        'vehicle' => 'গাড়ি',
+        'loading' => 'লোডিং',
+        'packed' => 'প্যাক',
+        'gate_pass' => 'গেট পাস',
+        'on_the_way' => 'পথে',
+        'delivered' => 'পৌঁছেছে',
+        'now' => 'এখন',
+        'not_yet' => 'এখনো নয়',
+        'by' => 'করেছেন',
+        'car' => 'গাড়ি',
+        'driver' => 'চালক',
+    ],
     'milestone' => [
         'order_created' => 'অর্ডার তৈরি',
         'approval_level' => 'অনুমোদন — স্তর :level',

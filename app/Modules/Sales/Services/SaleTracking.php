@@ -7,6 +7,7 @@ namespace App\Modules\Sales\Services;
 use App\Core\Support\CompanyContext;
 use App\Core\Support\DocumentStatus;
 use App\Models\Approval;
+use App\Models\AuditTrail;
 use App\Modules\Sales\Models\DeliveryChallan;
 use App\Modules\Sales\Models\DeliveryState;
 use App\Modules\Sales\Models\GatePass;
@@ -244,6 +245,7 @@ final class SaleTracking
         $step = $this->stepsOf(collect([$challan]))[$challan->id];
 
         return $this->head($challan, $step, $this->invoicesOf($challan)->isNotEmpty()) + [
+            'timeline' => $this->timeline($challan),
             'events' => $events->sortBy(fn (array $e) => $e['at'] ?? '')->values()->all(),
             'milestones' => $this->milestones($challan, $order, $pass),
         ];
@@ -309,7 +311,8 @@ final class SaleTracking
         $m[] = $this->mile('challan_draft', 'draft', true, $challan->created_at, $challan->creator?->name);
         $m[] = $this->mile('challan_confirmed', 'approved', $posted, $reached(DeliveryStage::ALLOCATED)['at'] ?? null, $reached(DeliveryStage::ALLOCATED)['by'] ?? null);
         $m[] = $this->mile('stock_allocated', 'processing', $posted && $now >= 1, $reached(DeliveryStage::ALLOCATED)['at'] ?? null, null);
-        $m[] = $this->mile('transport_assigned', 'processing', TransportRule::named($challan), null, null);
+        $transport = $this->transportSet($challan);
+        $m[] = $this->mile('transport_assigned', 'processing', TransportRule::named($challan), $transport['at'] ?? null, $transport['by'] ?? null);
         $m[] = $this->mile('loading_started', 'loading', $now >= 2, $reached(DeliveryStage::PICKING)['at'] ?? null, $reached(DeliveryStage::PICKING)['by'] ?? null);
         $m[] = $this->mile('loading_completed', 'loading', $now >= 3, $reached(DeliveryStage::PACKED)['at'] ?? null, $reached(DeliveryStage::PACKED)['by'] ?? null);
         $m[] = $this->mile('invoice_generated', 'processing', $invoice !== null, $invoice?->updated_at, $invoice?->creator?->name);
@@ -348,6 +351,85 @@ final class SaleTracking
     }
 
     /** @return array{key: string, label: string, category: string, state: string, at: ?string, by: ?string} */
+    /**
+     * ⭐ চালানের সময়রেখা — তৈরি → গাড়ি → লোডিং → প্যাক → গেট পাস → পথে → পৌঁছেছে (মালিকের বিক্রয়-পরিকল্পনা, ৪ অক্টোবর ২০২৬)।
+     *
+     * ⓘ ধাপগুলো [[milestones()]]-এরই — একই হিসাব, কেবল মালিকের সাত ধাপে বাছা, আর প্রতিটায় গাড়ি ও চালক
+     * ([[DeliveryChallan::transportFacts()]])। চালানের পাতা, ট্র্যাকিংয়ের পাতা আর ফোন — তিনটাই এটা পড়ে।
+     *
+     * @return list<array{step: string, label: string, state: string, at: ?string, by: ?string, vehicle: ?string, driver: ?string}>
+     */
+    public function timeline(DeliveryChallan $challan): array
+    {
+        $miles = collect($this->milestones($challan, $challan->salesOrder, $this->passOf($challan)))->keyBy('key');
+        $t = $challan->transportFacts();
+        $driver = trim(implode(' · ', array_filter([$t['driver_name'] ?? null, $t['driver_phone'] ?? null])));
+        $rows = [];
+
+        foreach (self::TIMELINE as $key => $step) {
+            $m = $miles->get($key);
+            // ⓘ গাড়ি আর চালক — গাড়ির ধাপ থেকে পৌঁছানো পর্যন্ত, যেখানে মাল গাড়িতে
+            $carries = in_array($step, ['vehicle', 'gate_pass', 'on_the_way', 'delivered'], true) && ($m['state'] ?? 'todo') !== 'todo';
+            $rows[] = [
+                'step' => $step,
+                'label' => __('sales::tracking.timeline.'.$step),
+                'state' => (string) ($m['state'] ?? 'todo'),
+                'at' => $m['at'] ?? null,
+                'by' => $m['by'] ?? null,
+                'vehicle' => $carries ? (($t['mode'] ?? null) === 'customer_self' ? __('sales::field.transport_mode_customer_self') : ($t['vehicle_no'] ?: null)) : null,
+                'driver' => $carries && $driver !== '' ? $driver : null,
+            ];
+        }
+
+        return $rows;
+    }
+
+    /** সময়রেখার সাত ধাপ — milestones()-এর চাবি → মালিকের নাম */
+    public const TIMELINE = [
+        'challan_draft' => 'created',
+        'transport_assigned' => 'vehicle',
+        'loading_started' => 'loading',
+        'loading_completed' => 'packed',
+        'gate_pass_generated' => 'gate_pass',
+        'dispatched' => 'on_the_way',
+        'delivered' => 'delivered',
+    ];
+
+    /** মাল কীভাবে যাবে — যে ঘরগুলোর একটা বসলেই "গাড়ি" ধাপ হলো ([[TransportRule::named()]]-এর ঘর) */
+    private const TRANSPORT_FIELDS = ['vehicle_id', 'vehicle_no', 'own_transport', 'carrier_id', 'carrier_name', 'driver_name'];
+
+    /**
+     * গাড়ি কখন আর কে বসালেন — চালানের অডিট-খাতা থেকে (আলাদা কলাম নেই, আর দরকারও নেই)।
+     * ⓘ প্রথম যে সম্পাদনায় পরিবহনের কোনো ঘর ভরল; তৈরির সময়েই দেওয়া থাকলে তৈরির সময় আর লেখক
+     * (তৈরিতে অডিট ঘর ধরে রাখে না — [[IsAudited]])।
+     *
+     * @return array{at: mixed, by: ?string}|null
+     */
+    private function transportSet(DeliveryChallan $challan): ?array
+    {
+        if (! TransportRule::named($challan)) {
+            return null;
+        }
+
+        $trail = AuditTrail::query()
+            ->where('auditable_type', $challan::class)->where('auditable_id', $challan->id)
+            ->whereHas('changes', fn ($q) => $q->whereIn('field', self::TRANSPORT_FIELDS)
+                ->whereNotNull('new_value')->whereNotIn('new_value', ['', '0']))
+            ->with('user')->orderBy('id')->first();
+
+        return $trail !== null
+            ? ['at' => $trail->created_at, 'by' => $trail->user?->name]
+            : ['at' => $challan->created_at, 'by' => $challan->creator?->name];
+    }
+
+    private function passOf(DeliveryChallan $challan): ?GatePass
+    {
+        return GatePass::query()->withoutGlobalScope('user-branch')
+            ->where('delivery_challan_id', $challan->id)
+            ->where('status', '<>', DocumentStatus::CANCELLED)
+            ->with('issuer')->latest('id')->first();
+    }
+
     private function mile(string $key, string $category, bool $done, mixed $at, ?string $by): array
     {
         return [

@@ -130,6 +130,9 @@
              এটাই একমাত্র প্রমাণ --}}
         <x-ui.attachments :document="$challan" />
 
+        {{-- ⭐ চালানের সময়রেখা — তৈরি → গাড়ি → লোডিং → প্যাক → গেট পাস → পথে → পৌঁছেছে, সময়, কে, গাড়ি আর চালকসহ (৪ অক্টোবর ২০২৬) --}}
+        @include('sales::tracking.partials.timeline', ['timeline' => app(\App\Modules\Sales\Services\SaleTracking::class)->timeline($challan)])
+
         {{-- NEXUS 21-22: delivery stage timeline; the partial checks sales.delivery.view itself --}}
         @include('sales::delivery.partials.timeline', ['challan' => $challan])
 
