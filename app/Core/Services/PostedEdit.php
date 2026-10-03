@@ -6,6 +6,7 @@ namespace App\Core\Services;
 
 use App\Core\Contracts\RevisableDocument;
 use App\Core\Support\CompanyContext;
+use App\Core\Services\SettingsService;
 use App\Models\FinancialYear;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
@@ -38,10 +39,26 @@ final class PostedEdit
     /** সুপার অ্যাডমিনের নিয়মে পুরোটা — চারটা প্রশ্নই। */
     public function assertMay(Model&RevisableDocument $document, User $user): void
     {
+        $this->assertSwitchedOn($document);
         $this->assertPosted($document);
         $this->assertSameCompany($document);
         $this->assertSuperAdmin($document, $user);
         $this->assertPeriodOpen($document);
+    }
+
+    /**
+     * ⛔ পাকা কাগজের সম্পাদনা প্রতিষ্ঠানের সুইচের পেছনে, ডিফল্ট বন্ধ — মালিকের পরিকল্পনা ২, ৪ অক্টোবর ২০২৬:
+     * আন্তর্জাতিক মানে পাকা কাগজ বদলায় না (ভুল হলে উল্টো কাগজ)। ⓘ আগে-পরের ইতিহাস ([[RevisionKeeper]]) থাকে —
+     * সুইচ চালু থাকলে সম্পাদনা আগের মতোই চলে, আর উল্টো কাগজেও ঐ ইতিহাস কাজে লাগে।
+     * ⓘ সব পথে খাটে: [[RevisionKeeper]] এটা প্রতিবার নিজে ডাকে, ডাকনেওয়ালার নিজের নিয়ম থাকলেও।
+     */
+    public function assertSwitchedOn(Model&RevisableDocument $document): void
+    {
+        if (! (bool) app(SettingsService::class)->get('system.edit_posted_papers', false)) {
+            throw ValidationException::withMessages([
+                'edit' => __('revision.switched_off', ['no' => $document->revisionNumber()]),
+            ]);
+        }
     }
 
     public function assertPosted(Model&RevisableDocument $document): void

@@ -87,6 +87,7 @@ return [
     'saved' => '{0}Nothing changed|{1}One setting saved|[2,*]:count settings saved',
 
     'document_peek' => 'A paper link in a list opens in a popup (peek)',
+    'edit_posted_papers' => 'Posted papers can be edited (before the month close, super admin only, before and after kept)',
     'notice_bar_max' => 'Most notices on the bottom bar',
     'notice_remind_after' => 'First reminder (hours)',
     'notice_remind_again' => 'Second reminder (hours)',

@@ -120,6 +120,8 @@ final class RevisionKeeper
         return DB::transaction(function () use ($document, $user, $reason, $work, $authorize) {
             $this->lockFresh($document);
 
+            /* ⛔ প্রতিষ্ঠানের সুইচ বন্ধ থাকলে কোনো পথেই নয় — ডিফল্ট বন্ধ (মালিকের পরিকল্পনা ২, ৪ অক্টোবর ২০২৬) */
+            $this->edits->assertSwitchedOn($document);
             $this->edits->assertPosted($document);
             $this->edits->assertSameCompany($document);
 

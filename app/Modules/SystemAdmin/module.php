@@ -744,6 +744,19 @@ return [
         ],
 
         /*
+         * ⭐ পাকা কাগজের সম্পাদনা — ডিফল্ট বন্ধ (মালিকের পরিকল্পনা ২, ৪ অক্টোবর ২০২৬: আন্তর্জাতিক মানে পাকা কাগজ
+         * বদলায় না)। ⓘ চালু থাকলে ৩ অক্টোবরের নিয়ম খাটে: মাস বন্ধের আগে পর্যন্ত সুপার অ্যাডমিন, আগে-পরে সহ
+         * ([[PostedEdit]], [[RevisionKeeper]])।
+         */
+        [
+            'key' => 'system.edit_posted_papers',
+            'label' => 'system_admin::settings.edit_posted_papers',
+            'type' => 'boolean',
+            'default' => false,
+            'group' => 'general',
+        ],
+
+        /*
          * ⓘ `system.notice` এই তালিকায় আর নেই — ২৩ সেপ্টেম্বর ২০২৬।
          *
          * ⭐ মালিক বললেন *"etar jonno alada menu koro"*, আর ঘরটা

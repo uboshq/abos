@@ -8,6 +8,7 @@ declare(strict_types=1);
  */
 return [
     // ── refusals ─────────────────────────────────────────────────────────
+    'switched_off' => ':no is posted — editing posted papers is switched off in this company. Issue a reversing paper, or switch editing on in the settings.',
     'not_posted' => ':no is not posted yet — a draft is changed through the ordinary edit.',
     'other_company' => ':no belongs to another company — only papers of the company you are working in can be revised.',
     'not_super_admin' => 'Only this company\'s super admin can revise the posted paper :no.',

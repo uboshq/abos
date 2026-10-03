@@ -63,6 +63,36 @@ class ASuperAdminEditsAPostedPaperTest extends TestCase
         $this->accountant = User::query()->where('email', 'accounts@abos.test')->firstOrFail();
 
         app(StandardChart::class)->install();
+
+        // ⓘ পাকা কাগজের সম্পাদনা ডিফল্ট বন্ধ (৪ অক্টোবর ২০২৬) — এই ফাইল চালু অবস্থার নিয়মগুলো মাপে
+        app(\App\Core\Services\SettingsService::class)->set('system.edit_posted_papers', true);
+    }
+
+    /**
+     * ⛔ সুইচ বন্ধ থাকলে কেউই নয় — মালিক নিজেও, খোলা মাসেও; চালু করলে একই মানুষ পারেন (মালিকের পরিকল্পনা ২,
+     * ৪ অক্টোবর ২০২৬: আন্তর্জাতিক মানে পাকা কাগজ বদলায় না)। ⓘ ডিফল্ট বন্ধ, তাই লাইভে কিছু বদলায়নি।
+     */
+    public function test_editing_a_posted_paper_is_off_unless_the_company_switches_it_on(): void
+    {
+        $this->assertFalse((bool) collect(app(\App\Core\Module\ModuleRegistry::class)->all())
+            ->flatMap(fn ($m) => $m->settings)->firstWhere('key', 'system.edit_posted_papers')['default'],
+            '⛔ সুইচের ডিফল্ট চালু — লাইভে পাকা কাগজ হঠাৎ বদলানো যেত।');
+
+        $voucher = $this->journal(Carbon::today());
+
+        app(\App\Core\Services\SettingsService::class)->set('system.edit_posted_papers', false);
+        try {
+            $this->revise($voucher, $this->owner, '750');
+            $this->fail('⛔ সুইচ বন্ধ, তবু পাকা কাগজ বদলেছে।');
+        } catch (ValidationException $e) {
+            $this->assertStringContainsString('সম্পাদনা বন্ধ', (string) collect($e->errors())->flatten()->first());
+        }
+        $this->assertSame(0, $this->revisionsOf($voucher), '⛔ সুইচ বন্ধ, তবু সংশোধন লেখা হয়েছে।');
+        $this->assertSame('500.0000', $this->net($voucher, $this->receivable()), '⛔ সুইচ বন্ধ, তবু খাতা বদলেছে।');
+
+        app(\App\Core\Services\SettingsService::class)->set('system.edit_posted_papers', true);
+        $this->revise($voucher->fresh(), $this->owner, '750');
+        $this->assertSame(1, $this->revisionsOf($voucher), '⛔ চালু করার পরেও একই মালিক সম্পাদনা করতে পারেননি।');
     }
 
     // ── সহায়ক ────────────────────────────────────────────────────────────
