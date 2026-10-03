@@ -29,6 +29,12 @@ return [
     'paid_by' => 'প্রদানকারীর স্বাক্ষর',
     'received_by' => 'গ্রহণকারীর স্বাক্ষর',
     'prepared_by' => 'প্রস্তুতকারী',
+    'note_ref' => 'বিপরীতে',
+    'note_reason' => 'কারণ',
+    'note_in_words' => 'কথায়',
+    'note_party_code' => 'কোড',
+    'note_address' => 'ঠিকানা',
+    'note_phone' => 'ফোন',
     'approved_by' => 'অনুমোদনকারী',
 
     /*

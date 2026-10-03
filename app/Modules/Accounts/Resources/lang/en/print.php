@@ -31,6 +31,12 @@ return [
     'paid_by' => 'Paid by',
     'received_by' => 'Received by',
     'prepared_by' => 'Prepared by',
+    'note_ref' => 'Against',
+    'note_reason' => 'Reason',
+    'note_in_words' => 'In words',
+    'note_party_code' => 'Code',
+    'note_address' => 'Address',
+    'note_phone' => 'Phone',
     'approved_by' => 'Approved by',
 
     /*

@@ -21,6 +21,7 @@ use App\Modules\Accounts\Http\Controllers\MoneyCustodyController;
 use App\Modules\Accounts\Http\Controllers\MoneyTransferController;
 use App\Modules\Accounts\Http\Controllers\MoneyTransferPrintController;
 use App\Modules\Accounts\Http\Controllers\NoteController;
+use App\Modules\Accounts\Http\Controllers\NotePrintController;
 use App\Modules\Accounts\Http\Controllers\PeriodLockController;
 use App\Modules\Accounts\Http\Controllers\ReportController;
 use App\Modules\Accounts\Http\Controllers\VoucherController;
@@ -367,6 +368,9 @@ Route::middleware('auth')->prefix('accounts')->group(function () {
             ->whereNumber('note')->name('confirm');
         Route::post('/{note}/cancel', [NoteController::class, 'cancel'])
             ->whereNumber('note')->name('cancel');
+        // ⭐ ছাপা — মালিক, ৩ অক্টোবর ২০২৬: নোটের কোনো ছাপা ছিল না ([[NotePrintController]])
+        Route::get('/{note}/print', NotePrintController::class)
+            ->whereNumber('note')->name('print');
     });
 
     Route::prefix('reconciliations')->name('reconciliation.')->group(function () {

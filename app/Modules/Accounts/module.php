@@ -715,6 +715,24 @@ return [
             'default' => PaperSize::A4,
             'group' => 'print',
         ],
+        // ⭐ ডেবিট/ক্রেডিট নোটের কাগজ — মালিক, ৩ অক্টোবর ২০২৬ ([[NotePrintController]])
+        [
+            'key' => 'accounts.print.paper.note',
+            'per_branch' => true,
+            'label' => 'accounts::settings.paper_note',
+            'type' => 'choice',
+            'options' => PaperSize::all(),
+            'default' => PaperSize::A4,
+            'group' => 'print',
+        ],
+        [
+            'key' => 'accounts.print.note_footnote',
+            'per_branch' => true,
+            'label' => 'accounts::settings.note_footnote',
+            'type' => 'string',
+            'default' => '',
+            'group' => 'print',
+        ],
         [
             'key' => 'accounts.backdate_days',
             'label' => 'accounts::settings.backdate_days',

@@ -343,6 +343,46 @@ final class PartyRegistry
         ])->filter(fn ($v) => filled($v))->map(fn ($v) => (string) $v)->unique()->implode(' '));
     }
 
+    /**
+     * কাগজে পক্ষের পরিচয় — নাম, কোড, ঠিকানা, ফোন (ডেবিট/ক্রেডিট নোটের ছাপা, ৩ অক্টোবর ২০২৬)।
+     *
+     * ⓘ কোর মডিউলের নাম জানে না, তাই মডেলের নিজের পদ্ধতি বা ঘর যা থাকে তাই — `name()`/`drillLabel()`, `code`,
+     * `address()`/`address`, `mobile`/`phone`। না থাকলে খালি; অন্য কোম্পানির সারি কখনো নয়।
+     *
+     * @return array{name: string, code: string, address: string, phone: string}|null
+     */
+    public function paperFacts(string $type, int $id): ?array
+    {
+        $model = $this->modelFor($type);
+
+        if ($model === null || $id <= 0) {
+            return null;
+        }
+
+        $row = $model::query()
+            ->whereKey($id)
+            ->when(
+                in_array('company_id', $model->getFillable(), true),
+                fn ($q) => $q->where('company_id', CompanyContext::id()),
+            )
+            ->first();
+
+        if ($row === null) {
+            return null;
+        }
+
+        $name = method_exists($row, 'name') ? (string) $row->name()
+            : (method_exists($row, 'drillLabel') ? (string) $row->drillLabel() : (string) $row->getKey());
+        $address = method_exists($row, 'address') ? (string) $row->address() : (string) ($row->getAttribute('address') ?? '');
+
+        return [
+            'name' => $name,
+            'code' => (string) ($row->getAttribute('code') ?? ''),
+            'address' => $address,
+            'phone' => (string) ($row->getAttribute('mobile') ?? $row->getAttribute('phone') ?? ''),
+        ];
+    }
+
     private function modelFor(string $type): ?Model
     {
         if (! $this->knows($type)) {

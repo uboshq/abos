@@ -18,6 +18,16 @@
                               ? __('accounts::note.credit_note')
                               : __('accounts::note.debit_note')">
             <x-slot:actions>
+                {{-- ⭐ ছাপা — মাপ, ফাইল আর কতবার ছাপা হলো ([[NotePrintController]]); মালিক, ৩ অক্টোবর ২০২৬ --}}
+                <x-ui.print-menu :documents="[[
+                    'label' => $note->document_no,
+                    'url' => route('accounts.note.print', $note),
+                    'paper_setting' => 'accounts.print.paper.note',
+                    'type' => 'accounts_note',
+                    'id' => $note->id,
+                    'no' => $note->document_no,
+                ]]" />
+
                 @can('accounts.note.manage')
                     @if ($note->isDraft())
                         <form method="POST" action="{{ route('accounts.note.confirm', $note) }}">

@@ -34,6 +34,9 @@
          'render' => fn ($n) => Money::format($n->total)],
         ['key' => 'status', 'label' => __('core.table.status'), 'width' => '8rem',
          'render' => fn ($n) => view('accounts::note.partials.status', ['note' => $n])],
+        /* ⭐ সারি থেকেই ছাপা — মালিক, ৩ অক্টোবর ২০২৬ */
+        ['key' => 'print', 'label' => __('core.action.print'), 'width' => '6rem',
+         'render' => fn ($n) => view('accounts::note.partials.print', ['note' => $n])],
     ];
 @endphp
 

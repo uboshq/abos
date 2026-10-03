@@ -34,4 +34,6 @@ return [
         'seal_boxes' => 'Seal Boxes',
     ],
     'paper_transfer' => 'Paper for the money handover slip',
+    'paper_note' => 'Paper for debit and credit notes',
+    'note_footnote' => 'Footnote on debit and credit notes',
 ];

@@ -59,6 +59,7 @@ final class PaperTrail
         'purchase_return' => 'purchase.print.return',
         'accounts_voucher' => 'accounts.voucher.print',
         'accounts_transfer' => 'accounts.transfer.print',
+        'accounts_note' => 'accounts.note.print',
         'hr_payslip' => 'hr.payslip.print',
         'inventory_transfer' => 'inventory.transfer.print',
     ];
