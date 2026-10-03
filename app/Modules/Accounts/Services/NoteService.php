@@ -201,13 +201,16 @@ final class NoteService
      * ⚠️ কারণ বাধ্যতামূলক: কারণ ছাড়া বাতিল করা কাগজ পরে কেউ ব্যাখ্যা
      * করতে পারে না, আর নোট এমনিতেই একটা ব্যাখ্যার কাগজ।
      */
-    public function cancel(Note $note, string $reason): Note
+    /**
+     * @param  string|null  $paperNo  উল্টো সারির কাগজ-নম্বর — উল্টো কাগজ (REV-…) হলে তারটা ([[AccountsReversalService]])
+     */
+    public function cancel(Note $note, string $reason, ?string $paperNo = null): Note
     {
         if ($note->isCancelled()) {
             return $note;
         }
 
-        return DB::transaction(function () use ($note, $reason) {
+        return DB::transaction(function () use ($note, $reason, $paperNo) {
             /*
              * ⓘ ফেরানোর তারিখ **আজ**, কাগজের তারিখ নয় — বন্ধ হয়ে যাওয়া
              * মাসে ফিরিয়ে নিলে ঐ মাসের বন্ধ করা হিসাব বদলে যেত।
@@ -218,6 +221,7 @@ final class NoteService
                     sourceId: $note->id,
                     reversalDate: Carbon::today(),
                     reason: $reason,
+                    documentNo: $paperNo,
                 );
             }
 

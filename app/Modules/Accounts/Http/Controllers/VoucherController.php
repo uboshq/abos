@@ -586,6 +586,17 @@ class VoucherController extends Controller implements HasMiddleware
             'cancel_reason' => ['required', 'string', 'min:3', 'max:500'],
         ]);
 
+        /*
+         * ⭐ পাকা ভাউচার — উল্টো কাগজ, নিজের নম্বরে (মালিকের সংস্করণ ২, ৪ অক্টোবর ২০২৬: পাকা কাগজ বদলায় না)।
+         * ⓘ খসড়া খাতায় বসেনি — তার বাতিল আগের মতো সাধারণ।
+         */
+        if ($voucher->isPosted() && ! $voucher->isCancelled()) {
+            $paper = app(\App\Modules\Accounts\Services\AccountsReversalService::class)
+                ->reverseVoucher($voucher, $request->user(), $validated['cancel_reason']);
+
+            return back()->with('saved', __('accounts::reversal.saved', ['no' => $voucher->document_no, 'rev' => $paper->document_no]));
+        }
+
         $this->vouchers->cancel($voucher, $validated['cancel_reason']);
 
         return back()->with('saved', __('accounts::message.voucher_cancelled', ['no' => $voucher->document_no]));

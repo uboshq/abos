@@ -456,6 +456,8 @@ return [
         'JV' => 'accounts::doc.journal_voucher',
         'CV' => 'accounts::doc.contra_voucher',
         'MT' => 'accounts::doc.money_transfer',
+        // ⭐ উল্টো কাগজ — পাকা ভাউচার আর নোটের, নিজের ক্রম REV-0001 (মালিকের সংস্করণ ২, ৪ অক্টোবর ২০২৬)
+        'REV' => 'accounts::reversal.doc',
         'CC' => 'accounts::doc.cash_count',
 
         /*

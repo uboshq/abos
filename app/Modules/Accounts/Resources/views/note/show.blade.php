@@ -56,6 +56,9 @@
         </x-ui.page-header>
     </x-slot:header>
 
+    {{-- ⭐ উল্টো কাগজের সূত্র (মালিকের সংস্করণ ২, ৪ অক্টোবর ২০২৬) --}}
+    @include('accounts::partials.reversal-reference', ['type' => 'note', 'id' => $note->id])
+
     @if (session('saved'))
         <p role="status" class="mb-3 rounded-(--radius-field) bg-(--color-badge-success-bg) px-3 py-2
                                 text-sm text-(--color-badge-success-ink)">{{ session('saved') }}</p>

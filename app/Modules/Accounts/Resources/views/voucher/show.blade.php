@@ -133,6 +133,9 @@
         </x-ui.page-header>
     </x-slot:header>
 
+    {{-- ⭐ উল্টো কাগজের সূত্র (মালিকের সংস্করণ ২, ৪ অক্টোবর ২০২৬) --}}
+    @include('accounts::partials.reversal-reference', ['type' => 'voucher', 'id' => $voucher->id])
+
     @if (session('saved'))
         <div role="status"
              class="mb-4 rounded-(--radius-field) bg-(--color-badge-success-bg) px-3 py-2 text-sm

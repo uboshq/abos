@@ -513,7 +513,10 @@ final class VoucherService
      * মুছে দিলে ছাপা কাগজের নম্বরটা আর কোনো রেকর্ডের সাথে মিলত না, আর
      * অডিটে দেখা যেত একটা নম্বর ইস্যু হয়েছে কিন্তু কিছুই ঘটেনি।
      */
-    public function cancel(Voucher $voucher, string $reason, ?string $onDate = null): Voucher
+    /**
+     * @param  string|null  $paperNo  উল্টো সারির কাগজ-নম্বর — উল্টো কাগজ (REV-…) হলে তারটা ([[AccountsReversalService]]); না দিলে ভাউচারেরটা
+     */
+    public function cancel(Voucher $voucher, string $reason, ?string $onDate = null, ?string $paperNo = null): Voucher
     {
         if ($voucher->isCancelled()) {
             throw ValidationException::withMessages([
@@ -527,7 +530,7 @@ final class VoucherService
             ]);
         }
 
-        return DB::transaction(function () use ($voucher, $reason, $onDate) {
+        return DB::transaction(function () use ($voucher, $reason, $onDate, $paperNo) {
             // খসড়া কখনো লেজারে বসেনি, তাই ফেরানোরও কিছু নেই
             if ($voucher->isPosted()) {
                 $this->posting->reverse(
@@ -535,6 +538,7 @@ final class VoucherService
                     $voucher->id,
                     $onDate ?? now()->toDateString(),
                     $reason,
+                    documentNo: $paperNo,
                 );
             }
 

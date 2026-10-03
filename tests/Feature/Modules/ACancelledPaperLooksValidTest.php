@@ -224,6 +224,7 @@ class ACancelledPaperLooksValidTest extends TestCase
             'sales.print.receipt' => 'আদায়ের রসিদ — একই কন্ট্রোলারের একই সেলাই (SalesPrintController::paper)',
             'sales.print.delivery_order' => 'ডেলিভারি অর্ডার — একই সেলাই, অর্ডারের সারিতে ধরা',
             'sales.print.gate_pass' => 'গেট পাস — একই সেলাই (pdf()-এ document: $gatePass, বাতিলে status cancelled)',
+            'sales.cancellation.print' => 'বাতিল-ইনভয়েস — নিজেই উল্টো কাগজ, বাতিল হয় না; শিরোনামই বলে (TheCancellationInvoiceUndoesAWrongInvoiceTest)',
             'sales.print.loading_sheet' => 'লোডিং শিট — একই সেলাই (pdf()-এ document: $shipment, বাতিলে status cancelled)',
             'purchase.print.order' => 'ক্রয়ের চারটা কাগজ — PurchasePrintController-এ একই সেলাই',
             'purchase.print.bill' => 'ক্রয়ের চারটা কাগজ — একই সেলাই',

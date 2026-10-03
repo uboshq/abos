@@ -232,6 +232,14 @@ class NoteController extends Controller implements HasMiddleware
             'cancel_reason' => ['required', 'string', 'max:500'],
         ]);
 
+        // ⭐ পাকা নোট — উল্টো কাগজ (বাতিল-নোট), নিজের নম্বরে (মালিকের সংস্করণ ২, ৪ অক্টোবর ২০২৬); খসড়া আগের মতো
+        if ($note->isConfirmed()) {
+            $paper = app(\App\Modules\Accounts\Services\AccountsReversalService::class)
+                ->reverseNote($note, $request->user(), $data['cancel_reason']);
+
+            return back()->with('saved', __('accounts::reversal.saved', ['no' => $note->document_no, 'rev' => $paper->document_no]));
+        }
+
         $this->notes->cancel($note, $data['cancel_reason']);
 
         return back()->with('saved', __('accounts::note.cancelled'));

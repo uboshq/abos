@@ -47,4 +47,7 @@ return [
     'sent_back' => 'Sent back',
     'db_restored' => 'Books restored from backup',
     'db_restore_failed' => 'Books restore failed',
+    // ⭐ উল্টো কাগজ আর বাতিল-ইনভয়েস (মালিকের সংস্করণ ২, ৪ অক্টোবর ২০২৬)
+    'reversed' => 'Reversed by a reversal paper',
+    'cancelled_by_cxl' => 'Reversed by a cancellation invoice',
 ];
