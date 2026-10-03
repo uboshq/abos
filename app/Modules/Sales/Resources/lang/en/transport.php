@@ -13,6 +13,7 @@ return [
     'hint_own' => 'No vehicle needed',
     'hint_direct' => 'No vehicle needed — delivered close by',
     'driver_phone' => 'Driver phone',
+    'saved_for' => ':no — transport is set.',
     'saved' => 'How the goods go — saved. The challan and gate pass can now be printed.',
     'locked' => 'A gate pass is issued — the goods have left; transport can no longer change.',
     'cancelled' => 'A cancelled challan has no transport to set.',

@@ -198,8 +198,9 @@ return [
              * ⭐ ডেলিভারি প্রসেসিং — পরিবহন বরাদ্দ, লোডিং শিট, গেট পাস, ডিসপ্যাচ রেজিস্টার, ডেলিভারি নিশ্চিতকরণ।
              * ⓘ যে পর্দা তৈরি হয়নি সে [[PlannedScreenController]]-এর সৎ পাতায় ("মেনুতে এখন, কোড পরে")।
              */
-            ['label' => 'sales::planned.transport_assign', 'cluster' => 'delivery_processing', 'icon' => 'share', 'route' => 'sales.planned',
-                'route_params' => ['screen' => 'transport_assign'], 'permission' => 'sales.order.view'],
+            // ⭐ পরিবহন বরাদ্দ — আসল পাতা ([[TransportAssignmentController]], মালিক, ৩ অক্টোবর ২০২৬)
+            ['label' => 'sales::planned.transport_assign', 'cluster' => 'delivery_processing', 'icon' => 'share', 'route' => 'sales.transport.index',
+                'permission' => 'sales.challan.view', 'setting' => 'sales.screen_shipments'],
             // ⭐ লোডিং শিট — আসল পাতা ([[LoadingSheetController]], ২৯ সেপ্টেম্বর ২০২৬)
             ['label' => 'sales::loading.title', 'cluster' => 'delivery_processing', 'icon' => 'challan', 'route' => 'sales.loading_sheet.index',
                 'permission' => 'sales.shipment.view', 'setting' => 'sales.screen_shipments'],

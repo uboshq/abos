@@ -51,6 +51,30 @@
             'render' => fn ($r) => $r['billed'] ? __('sales::tracking.yes') : '—',
         ],
     ];
+
+    /*
+     * ⭐ সারি থেকেই "পৌঁছেছে" — মালিক, ৩ অক্টোবর ২০২৬: "sob jaygathekei"। রওনা হওয়া চালানে, ধাপ বদলানোর চাবিতে
+     * ([[DeliveryRowActions]]); ফর্ম যায় পুরনো `sales.delivery.move`-এ। পুরো পাতার এক প্রশ্নে।
+     */
+    $challanRows = \App\Modules\Sales\Models\DeliveryChallan::query()
+        ->whereIn('public_id', collect($rows->items())->where('kind', 'challan')->pluck('id'))
+        ->with('customer')->get()->keyBy('public_id');
+    $arrive = app(\App\Modules\Sales\Services\DeliveryRowActions::class)->forChallans($challanRows->pluck('id'));
+
+    if ($arrive !== []) {
+        $columns[] = [
+            'key' => 'arrive',
+            'label' => __('sales::delivery.column.next'),
+            'width' => '10rem',
+            'render' => function ($r) use ($challanRows, $arrive) {
+                $own = $r['kind'] === 'challan' ? ($challanRows[$r['id']] ?? null) : null;
+
+                return $own !== null && isset($arrive[$own->id])
+                    ? view('sales::delivery.partials.row-action', ['challan' => $own, 'choices' => $arrive[$own->id]['choices'], 'trip' => null, 'vehicles' => collect()])
+                    : '';
+            },
+        ];
+    }
 @endphp
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ __('sales::tracking.title') }}</x-slot:title>

@@ -83,6 +83,23 @@
             'render' => fn ($d) => view('sales::invoice.partials.row-actions', ['invoice' => $d]),
         ],
     ];
+
+    /*
+     * ⭐ সারি থেকেই "পৌঁছেছে" — মালিক, ৩ অক্টোবর ২০২৬: "sob jaygathekei"। বিলের চালান রওনা হয়ে থাকলে, ধাপ বদলানোর
+     * চাবিতে ([[DeliveryRowActions::forInvoices()]]); ফর্ম যায় চালানের পুরনো `sales.delivery.move`-এ।
+     */
+    $arrive = app(\App\Modules\Sales\Services\DeliveryRowActions::class)->forInvoices(collect($invoices->items())->pluck('id'));
+
+    if ($arrive !== []) {
+        array_splice($columns, count($columns) - 1, 0, [[
+            'key' => 'arrive',
+            'label' => __('sales::delivery.column.next'),
+            'width' => '10rem',
+            'render' => fn ($d) => isset($arrive[$d->id])
+                ? view('sales::delivery.partials.row-action', ['challan' => $arrive[$d->id]['challan'], 'choices' => $arrive[$d->id]['choices'], 'trip' => null, 'vehicles' => collect()])
+                : '',
+        ]]);
+    }
 @endphp
 
 <x-layouts.app :menu="$menu" :process-band="$processBand ?? []">

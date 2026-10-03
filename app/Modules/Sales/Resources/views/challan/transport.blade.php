@@ -25,6 +25,9 @@
             <form method="POST" action="{{ route('sales.challan.transport.update', $challan) }}" class="grid gap-3" data-no-peek>
                 @csrf
                 @method('PUT')
+                @if (request('from') === 'transport')
+                    <input type="hidden" name="from" value="transport">
+                @endif
 
                 <fieldset class="grid gap-2">
                     <legend class="mb-1 text-sm font-medium">{{ __('sales::transport.mode') }}</legend>

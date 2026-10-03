@@ -64,6 +64,23 @@
             'render' => fn ($d) => view('sales::delivery.partials.summary', ['summary' => $delivery[$d->id] ?? null]),
         ],
     ];
+
+    /*
+     * ⭐ সারি থেকেই "পৌঁছেছে" — মালিক, ৩ অক্টোবর ২০২৬: "sob jaygathekei"। কেবল রওনার পরে আর ধাপ বদলানোর চাবিতে
+     * ([[DeliveryRowActions]]); ফর্ম যায় পুরনো `sales.delivery.move`-এ, আর পাশের ⋯-এ আংশিক/পৌঁছায়নি।
+     */
+    $arrive = app(\App\Modules\Sales\Services\DeliveryRowActions::class)->forChallans(collect($challans->items())->pluck('id'));
+
+    if ($arrive !== []) {
+        $columns[] = [
+            'key' => 'arrive',
+            'label' => __('sales::delivery.column.next'),
+            'width' => '10rem',
+            'render' => fn ($d) => isset($arrive[$d->id])
+                ? view('sales::delivery.partials.row-action', ['challan' => $d, 'choices' => $arrive[$d->id]['choices'], 'trip' => null, 'vehicles' => collect()])
+                : '',
+        ];
+    }
 @endphp
 
 <x-layouts.app :menu="$menu" :process-band="$processBand ?? []">

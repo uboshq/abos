@@ -101,6 +101,11 @@ final class ChallanTransportController extends Controller implements HasMiddlewa
 
         $challan->forceFill($fields)->save();
 
+        // ⓘ পরিবহন বরাদ্দের তালিকা থেকে এলে সেখানেই ফেরা — পরের চালানটা ধরতে ([[TransportAssignmentController]])
+        if ($request->input('from') === 'transport') {
+            return redirect()->route('sales.transport.index')->with('saved', __('sales::transport.saved_for', ['no' => $challan->document_no]));
+        }
+
         return redirect()->route('sales.challan.show', $challan)->with('saved', __('sales::transport.saved'));
     }
 

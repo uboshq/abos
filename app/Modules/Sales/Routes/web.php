@@ -427,6 +427,9 @@ Route::middleware('auth')->prefix('sales')->group(function () {
         Route::post('/{shipment}/confirm', [LoadingSheetController::class, 'confirm'])->whereNumber('shipment')->name('confirm');
     });
 
+    // ⭐ পরিবহন বরাদ্দ — নিশ্চিত চালান তিন ট্যাবে; সারির বোতাম চালানের পরিবহন-পপআপ খোলে ([[TransportAssignmentController]])
+    Route::get('/transport', [\App\Modules\Sales\Http\Controllers\TransportAssignmentController::class, 'index'])->name('transport.index');
+
     // ⭐ গেট পাস — তালিকা, দেখা, কারণসহ বাতিল; তৈরির দরজা নেই ([[GatePassController]])
     Route::prefix('gate-passes')->name('gate_pass.')->group(function () {
         Route::get('/', [GatePassController::class, 'index'])->name('index');
