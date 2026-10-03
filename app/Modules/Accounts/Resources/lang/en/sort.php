@@ -7,5 +7,7 @@ return [
     'latest' => 'Newest first',
     'oldest' => 'Oldest first',
     'amount' => 'Largest amount first',
+    'party' => 'By party',
+    'point' => 'By point',
     'biggest_difference' => 'Biggest difference first',
 ];

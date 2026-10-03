@@ -383,6 +383,98 @@ final class PartyRegistry
         ];
     }
 
+    /**
+     * পক্ষের জায়গা — গ্রাহকের পয়েন্ট (মালিকের নিয়ম, ২৮ সেপ্টেম্বর ২০২৬: গ্রাহকের পরেই পয়েন্ট, সব তালিকায়)।
+     *
+     * ⓘ যে মডেলের `location()` আছে তার জায়গার নাম; বাকিদের (সরবরাহকারী, ব্যক্তি) জায়গা নেই — চাবিটাই থাকে না।
+     *
+     * @param  iterable<array{0: string|null, 1: int|string|null}>  $pairs
+     * @return array<string, string> "ধরন:আইডি" => জায়গা
+     */
+    public function placesOf(iterable $pairs): array
+    {
+        $byType = [];
+
+        foreach ($pairs as [$type, $id]) {
+            if ($type !== null && $type !== '' && (int) $id > 0) {
+                $byType[$type][] = (int) $id;
+            }
+        }
+
+        $places = [];
+
+        foreach ($byType as $type => $ids) {
+            $model = $this->modelFor($type);
+
+            if ($model === null || ! method_exists($model, 'location')) {
+                continue;
+            }
+
+            foreach ($model::query()->with('location')->whereKey(array_unique($ids))->get() as $row) {
+                $place = $row->location;
+
+                if ($place !== null) {
+                    $places[$type.':'.$row->getKey()] = method_exists($place, 'name') ? (string) $place->name()
+                        : (string) (app()->getLocale() === 'bn' && filled($place->name_bn ?? null) ? $place->name_bn : ($place->name_en ?? ''));
+                }
+            }
+        }
+
+        return $places;
+    }
+
+    /**
+     * লেখার সাথে মেলে এমন পক্ষ — নাম (দুই ভাষা), কোড, বা জায়গার নাম; তালিকার খোঁজার জন্য।
+     *
+     * @param  list<string>  $types
+     * @return array<string, list<int>> ধরন => আইডি
+     */
+    public function matching(string $term, array $types): array
+    {
+        $term = trim($term);
+
+        if ($term === '') {
+            return [];
+        }
+
+        $like = '%'.$term.'%';
+        $found = [];
+
+        foreach (array_unique($types) as $type) {
+            $model = $this->modelFor($type);
+
+            if ($model === null) {
+                continue;
+            }
+
+            $columns = array_values(array_intersect(['name_en', 'name_bn', 'name', 'code'], $model->getFillable()));
+
+            $ids = $model::query()
+                ->when(
+                    in_array('company_id', $model->getFillable(), true),
+                    fn ($q) => $q->where('company_id', CompanyContext::id()),
+                )
+                ->where(function ($q) use ($columns, $like, $model) {
+                    foreach ($columns as $column) {
+                        $q->orWhere($column, 'like', $like);
+                    }
+
+                    if (method_exists($model, 'location')) {
+                        $q->orWhereHas('location', fn ($l) => $l->where('name_en', 'like', $like)->orWhere('name_bn', 'like', $like));
+                    }
+                })
+                ->pluck($model->getKeyName())
+                ->map(fn ($id) => (int) $id)
+                ->all();
+
+            if ($ids !== []) {
+                $found[$type] = $ids;
+            }
+        }
+
+        return $found;
+    }
+
     private function modelFor(string $type): ?Model
     {
         if (! $this->knows($type)) {

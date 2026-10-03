@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Accounts\Http\Controllers;
 
 use App\Core\Concerns\GrandTotals;
+use App\Core\Concerns\SortsLists;
 use App\Core\Services\MenuBuilder;
 use App\Core\Services\PartyRegistry;
 use App\Core\Support\DocumentStatus;
@@ -29,6 +30,7 @@ use Illuminate\View\View;
 class NoteController extends Controller implements HasMiddleware
 {
     use GrandTotals;
+    use SortsLists;
 
     public function __construct(
         private readonly NoteService $notes,
@@ -50,15 +52,23 @@ class NoteController extends Controller implements HasMiddleware
             ? (string) $request->query('direction')
             : Note::CREDIT;
 
+        /* ⭐ পক্ষের নাম, কোড আর পয়েন্ট দিয়েও খোঁজা — মালিক, ৩ অক্টোবর ২০২৬ ([[PartyRegistry::matching()]]) */
+        $parties = $request->filled('q') ? $this->parties->matching((string) $request->query('q'), $this->parties->types()) : [];
+
         $list = Note::query()
             ->ofDirection($direction)
             ->when($request->query('q'), fn ($q, $term) => $q
-                ->where(fn ($w) => $w
-                    ->where('document_no', 'like', "%{$term}%")
-                    ->orWhere('against_no', 'like', "%{$term}%")
-                    ->orWhere('narration', 'like', "%{$term}%")))
-            ->orderByDesc('trx_date')
-            ->orderByDesc('id');
+                ->where(function ($w) use ($term, $parties) {
+                    $w->where('document_no', 'like', "%{$term}%")
+                        ->orWhere('against_no', 'like', "%{$term}%")
+                        ->orWhere('narration', 'like', "%{$term}%");
+
+                    foreach ($parties as $type => $ids) {
+                        $w->orWhere(fn ($p) => $p->where('party_type', $type)->whereIn('party_id', $ids));
+                    }
+                }));
+
+        $this->applySort($list, $request, $this->sorts($list));
 
         // ⭐ সর্বমোট — ছাঁকা তালিকার সব পাতা মিলে ([[GrandTotals]]); পাতা ভাঙার আগে, কারণ paginate() কোয়েরিতে সীমা বসায়
         $grand = $this->grandTotals($list, ['total' => 't.total']);
@@ -76,6 +86,8 @@ class NoteController extends Controller implements HasMiddleware
             'rows' => $rows,
             'grand' => $grand,
             'names' => $this->parties->labelsOf($pairs),
+            'places' => $this->parties->placesOf($pairs),
+            'sortOptions' => $this->sortLabels(),
 
             // ⭐ নামটা যেন তাঁর নিজের পাতায় নিয়ে যায় — মালিকের নিয়ম
             'routes' => $this->parties->routesOf($pairs),
@@ -84,6 +96,51 @@ class NoteController extends Controller implements HasMiddleware
                 Note::DEBIT => Note::query()->ofDirection(Note::DEBIT)->count(),
             ],
         ]);
+    }
+
+    /**
+     * সাজানো — তারিখ, অঙ্ক, পক্ষ, পয়েন্ট।
+     *
+     * ⓘ পক্ষ আর পয়েন্টের নাম অন্য মডিউলে, তাই সেগুলো দিয়ে সাজাতে ছাঁকা তালিকার সারিগুলোর নাম একবারে এনে ক্রম
+     * বানানো হয় ([[PartyRegistry::labelsOf()]], [[placesOf()]]) — নোট অল্প, প্রতিটা পক্ষে আলাদা জোড় নয়।
+     *
+     * @return array<string, \Closure>
+     */
+    private function sorts(\Illuminate\Database\Eloquent\Builder $list): array
+    {
+        $byNames = function ($query, bool $places) use ($list) {
+            $rows = (clone $list)->get(['id', 'party_type', 'party_id']);
+            $pairs = $rows->map(fn (Note $n) => [$n->party_type, (int) $n->party_id]);
+            $names = $places ? $this->parties->placesOf($pairs) : $this->parties->labelsOf($pairs);
+
+            $ordered = $rows
+                ->sortBy(fn (Note $n) => mb_strtolower($names[$n->party_type.':'.$n->party_id] ?? "\u{FFFF}"))
+                ->pluck('id')->all();
+
+            $ordered === []
+                ? $query->orderByDesc('id')
+                : $query->orderByRaw('FIELD(id, '.implode(',', array_map('intval', $ordered)).')');
+        };
+
+        return [
+            'latest' => fn ($q) => $q->orderByDesc('trx_date')->orderByDesc('id'),
+            'oldest' => fn ($q) => $q->orderBy('trx_date')->orderBy('id'),
+            'amount' => fn ($q) => $q->orderByDesc('total')->orderByDesc('id'),
+            'party' => fn ($q) => $byNames($q, false),
+            'point' => fn ($q) => $byNames($q, true),
+        ];
+    }
+
+    /** @return array<string, string> */
+    private function sortLabels(): array
+    {
+        return [
+            'latest' => __('accounts::sort.latest'),
+            'oldest' => __('accounts::sort.oldest'),
+            'amount' => __('accounts::sort.amount'),
+            'party' => __('accounts::sort.party'),
+            'point' => __('accounts::sort.point'),
+        ];
     }
 
     public function create(Request $request): View

@@ -18,7 +18,8 @@
     $columns = [
         ['key' => 'document_no', 'label' => __('core.print.document_no'), 'width' => '9rem',
          'render' => fn ($n) => view('accounts::note.partials.number', ['note' => $n])],
-        ['key' => 'trx_date', 'label' => __('accounts::note.reason'), 'width' => '7rem',
+        /* ⛔ শিরোনাম ছিল "কারণ" — তারিখের ঘরে, তাই "কারণ" দুইবার দেখাত (মালিকের ছবি, ৩ অক্টোবর ২০২৬) */
+        ['key' => 'trx_date', 'label' => __('core.print.date'), 'width' => '7rem',
          'render' => fn ($n) => $n->trx_date?->format('d M Y')],
 
         /* ⭐ পক্ষের নাম তাঁর নিজের পাতায় যায় — মালিকের নিয়ম, ২০ সেপ্টেম্বর ২০২৬ */
@@ -26,6 +27,9 @@
          'render' => fn ($n) => view('accounts::note.partials.party', [
              'note' => $n, 'names' => $names, 'routes' => $routes,
          ])],
+        /* ⭐ "কাকে"-র পরেই পয়েন্ট — মালিকের নিয়ম, ২৮ সেপ্টেম্বর ২০২৬ (সব তালিকায়); গ্রাহকের পয়েন্ট, অন্যদের জায়গা না থাকলে — */
+        ['key' => 'point', 'label' => __('accounts::note.point'), 'width' => '9rem',
+         'render' => fn ($n) => $places[$n->party_type.':'.$n->party_id] ?? '—'],
         ['key' => 'against_no', 'label' => __('accounts::note.against_no'), 'width' => '10rem',
          'render' => fn ($n) => $n->against_no ?: '—'],
         ['key' => 'reason', 'label' => __('accounts::note.reason'), 'width' => '12rem',
@@ -97,7 +101,7 @@
             <input type="hidden" name="direction" value="{{ $direction }}">
             <x-ui.toolbar :title="$tabs[$direction] ?? __('accounts::note.title')" :filter="false"
                           :count="trans_choice('core.count.records', $rows->total(), ['count' => $rows->total()])"
-                          :columns="$columns" />
+                          :columns="$columns" :sort="$sortOptions" />
         </form>
 
         <x-ui.table :rows="$rows" :columns="$columns" :empty="__('accounts::note.none_yet')"

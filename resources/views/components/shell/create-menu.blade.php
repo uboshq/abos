@@ -59,6 +59,9 @@
         ['route' => 'accounts.voucher.create', 'params' => ['type' => 'expense'], 'label' => 'accounts::approval.expense', 'can' => 'accounts.voucher.create'],
         ['route' => 'accounts.voucher.create', 'params' => ['type' => 'journal'], 'label' => 'accounts::approval.journal', 'can' => 'accounts.voucher.create'],
         ['route' => 'accounts.voucher.create', 'params' => ['type' => 'contra'], 'label' => 'accounts::approval.contra', 'can' => 'accounts.voucher.create'],
+        // ⭐ ডেবিট আর ক্রেডিট নোট — মালিক, ৩ অক্টোবর ২০২৬; নোট বানানোর চাবি `accounts.note.manage`
+        ['route' => 'accounts.note.create', 'params' => ['direction' => 'debit'], 'label' => 'accounts::note.debit_note', 'can' => 'accounts.note.manage'],
+        ['route' => 'accounts.note.create', 'params' => ['direction' => 'credit'], 'label' => 'accounts::note.credit_note', 'can' => 'accounts.note.manage'],
         ['route' => 'customer.create', 'label' => 'core.create.customer', 'can' => 'customer.create'],
         ['route' => 'supplier.create', 'label' => 'core.create.supplier', 'can' => 'supplier.create'],
         ['route' => 'inventory.product.create', 'label' => 'core.create.product', 'can' => 'inventory.product.create'],
