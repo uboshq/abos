@@ -296,6 +296,13 @@ return [
             // ⭐ আদায়ের সূচি — কার কাছে আজ যেতে হবে, সপ্তাহে কত আসার কথা (রিপোর্ট সেন্টার ধাপ ৪)
             ['label' => 'sales::due.title', 'icon' => 'calendar', 'route' => 'sales.report.show',
                 'route_params' => ['slug' => 'collection-due'], 'permission' => 'sales.report'],
+            // ⭐ পরিকল্পনা সংস্করণ ২ §৯ — খোলা আদেশ ও ব্যাক অর্ডার, সীমায় আটকানো আদেশ, বিক্রয় খাতা (৪ অক্টোবর ২০২৬)
+            ['label' => 'sales::order_book.open_title', 'icon' => 'list', 'route' => 'sales.report.show',
+                'route_params' => ['slug' => 'open-orders'], 'permission' => 'sales.report'],
+            ['label' => 'sales::order_book.blocked_title', 'icon' => 'alert-triangle', 'route' => 'sales.report.show',
+                'route_params' => ['slug' => 'credit-blocked'], 'permission' => 'sales.report'],
+            ['label' => 'sales::order_book.invoice_title', 'icon' => 'book', 'route' => 'sales.report.show',
+                'route_params' => ['slug' => 'invoice-book'], 'permission' => 'sales.report'],
             ['label' => 'sales::menu.undelivered', 'icon' => 'alert-triangle', 'route' => 'sales.report.show',
                 'route_params' => ['slug' => 'uninvoiced'], 'permission' => 'sales.report'],
             ['label' => 'sales::menu.by_customer', 'icon' => 'customer', 'route' => 'sales.report.show',
@@ -688,6 +695,8 @@ return [
         \App\Modules\Sales\Reports\SalesRegisterReports::class,
         \App\Modules\Sales\Reports\MarginReport::class,
         \App\Modules\Sales\Reports\SalesReturnReasonReports::class,
+        // ⭐ খোলা আদেশ ও ব্যাক অর্ডার, সীমায় আটকানো আদেশ, বিক্রয় খাতা — পরিকল্পনা সংস্করণ ২ §৯ (৪ অক্টোবর ২০২৬)
+        \App\Modules\Sales\Reports\SalesOrderBookReports::class,
     ],
 
     /*

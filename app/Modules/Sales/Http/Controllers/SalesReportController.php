@@ -28,6 +28,10 @@ class SalesReportController extends Controller implements HasMiddleware
         'collection-due' => 'sales.collection_due',
         // ⭐ কাগজের খাতা — রিপোর্ট সেন্টার ধাপ ৬ ([[SalesRegisterReports]])
         'register' => 'sales.register',
+        // ⭐ পরিকল্পনা সংস্করণ ২ §৯ (৪ অক্টোবর ২০২৬; [[SalesOrderBookReports]])
+        'open-orders' => 'sales.open_orders',
+        'credit-blocked' => 'sales.credit_blocked',
+        'invoice-book' => 'sales.invoice_book',
         'uninvoiced' => 'sales.uninvoiced',
         'by-customer' => 'sales.by_customer',
         'by-product' => 'sales.by_product',
