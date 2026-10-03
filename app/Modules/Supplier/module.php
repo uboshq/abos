@@ -152,6 +152,14 @@ return [
 
     // Report engine এগুলো boot-এ নিবন্ধন করে, তাই রিপোর্ট যোগ করতে
     // কোনো কোর ফাইলে নাম লিখতে হয় না (সেকশন ১৯.৭)।
+    /*
+     * ⭐ রিপোর্টের সাধারণ ছাঁকনি — সরবরাহকারী তাঁর মডিউলের ([[ReportFilters]], রিপোর্ট সেন্টার ধাপ ১)।
+     * ⓘ পর্দা বাছাই-ঘর আঁকে, আর ইঞ্জিন ঠিকানার মান এই তালিকা দিয়ে মেলায় — বাইরের নম্বর এলে রিপোর্টই ফেরে।
+     */
+    'report_filters' => [
+        'supplier_id' => \App\Modules\Supplier\Reports\Filters\SupplierFilter::class,
+    ],
+
     'reports' => [
         PartyReports::class,
         \App\Modules\Supplier\Reports\LedgerCheckReports::class,

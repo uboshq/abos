@@ -450,6 +450,19 @@ return [
     ],
 
     'report' => [
+        'filter_not_allowed' => ':filter — that choice is not on the list, or is outside what you may see. Pick from the list.',
+        'filters' => [
+            'any' => 'All',
+            'clear' => 'Clear filters',
+            'warehouse_id' => 'Warehouse',
+            'product_id' => 'Product',
+            'brand_id' => 'Brand',
+            'category_id' => 'Category',
+            'location_id' => 'Area',
+            'supplier_id' => 'Supplier',
+            'customer_id' => 'Shop',
+            'salesman_id' => 'Salesman',
+        ],
         'no_branch' => 'Head office / no branch',
         'branch_total' => 'Branch total',
         'more_in_branch' => 'This branch has :count more rows — choose the branch to see them all, page by page.',

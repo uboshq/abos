@@ -656,6 +656,14 @@ return [
         'customer_target' => \App\Modules\Sales\Imports\CustomerTargetImporter::class,
     ],
 
+    /*
+     * ⭐ রিপোর্টের সাধারণ ছাঁকনি — বিক্রয়কর্মী বিক্রয়ের, কোরের নয় (সমন্বয়কের শর্ত ক) ([[ReportFilters]], রিপোর্ট সেন্টার ধাপ ১)।
+     * ⓘ পর্দা বাছাই-ঘর আঁকে, আর ইঞ্জিন ঠিকানার মান এই তালিকা দিয়ে মেলায় — বাইরের নম্বর এলে রিপোর্টই ফেরে।
+     */
+    'report_filters' => [
+        'salesman_id' => \App\Modules\Sales\Reports\Filters\SalesmanFilter::class,
+    ],
+
     'reports' => [
         SalesReports::class,
         // ⭐ কাগজের খাতা — রিপোর্ট সেন্টার ধাপ ৬, বিক্রয়ের অর্ধেক

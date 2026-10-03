@@ -720,6 +720,15 @@ return [
      */
     'moves_money' => ['count'],
 
+    /*
+     * ⭐ রিপোর্টের সাধারণ ছাঁকনি — গুদাম আর পণ্য মজুদের ([[ReportFilters]], রিপোর্ট সেন্টার ধাপ ১)।
+     * ⓘ পর্দা বাছাই-ঘর আঁকে, আর ইঞ্জিন ঠিকানার মান এই তালিকা দিয়ে মেলায় — বাইরের নম্বর এলে রিপোর্টই ফেরে।
+     */
+    'report_filters' => [
+        'warehouse_id' => \App\Modules\Inventory\Reports\Filters\WarehouseFilter::class,
+        'product_id' => \App\Modules\Inventory\Reports\Filters\ProductFilter::class,
+    ],
+
     'reports' => [
         StockReports::class,
         // ⭐ রিপোর্ট সেন্টার — মজুদের নিয়ন্ত্রণ (মালিক, ১ অক্টোবর ২০২৬)

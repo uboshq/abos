@@ -385,4 +385,14 @@ return [
             'group' => 'entry',
         ],
     ],
+
+    /*
+     * ⭐ রিপোর্টের সাধারণ ছাঁকনি — ব্র্যান্ড, শ্রেণি আর এলাকা মাস্টার-ডাটার ([[ReportFilters]], রিপোর্ট সেন্টার ধাপ ১)।
+     * ⓘ পর্দা বাছাই-ঘর আঁকে, আর ইঞ্জিন ঠিকানার মান এই তালিকা দিয়ে মেলায় — বাইরের নম্বর এলে রিপোর্টই ফেরে।
+     */
+    'report_filters' => [
+        'brand_id' => \App\Modules\MasterData\Reports\Filters\BrandFilter::class,
+        'category_id' => \App\Modules\MasterData\Reports\Filters\CategoryFilter::class,
+        'location_id' => \App\Modules\MasterData\Reports\Filters\LocationFilter::class,
+    ],
 ];

@@ -13,6 +13,7 @@ use App\Core\Contracts\OffersChoicesOnAForm;
 use App\Core\Contracts\ProvidesDashboard;
 use App\Core\Contracts\ProvidesMetrics;
 use App\Core\Contracts\ProvisionsCompany;
+use App\Core\Contracts\ReportFilterSource;
 use App\Core\Events\DomainEvent;
 use Illuminate\Contracts\Auth\UserProvider;
 use InvalidArgumentException;
@@ -476,6 +477,16 @@ final class ModuleDefinition
          * সেটা আগের মতোই বন্ধ করা যায়। ⛔ গোটা মডিউলটাই কেবল নয়।
          */
         public readonly bool $essential = false,
+
+        /**
+         * রিপোর্টের সাধারণ ছাঁকনির বাছাই-তালিকা — চাবি → উৎস ([[ReportFilters]], রিপোর্ট সেন্টার ধাপ ১)।
+         *
+         * ⓘ যে মডিউলের জিনিস সে-ই বলে: গুদাম মজুদের, ব্র্যান্ড মাস্টার-ডাটার, বিক্রয়কর্মী বিক্রয়ের — কোর কারও
+         * নাম জানে না (§১৯.৭)। ⓘ শেষে, ডিফল্টসহ — নাম ধরে ডাকা প্রতিটা জায়গা অবিকল চলে।
+         *
+         * @var array<string, class-string<ReportFilterSource>>
+         */
+        public readonly array $reportFilters = [],
     ) {}
 
     /**
@@ -670,6 +681,7 @@ final class ModuleDefinition
              * নেনইনি।
              */
             essential: (bool) ($raw['essential'] ?? false),
+            reportFilters: self::validateReportFilters($raw['report_filters'] ?? [], $path),
         );
     }
 
@@ -1199,6 +1211,32 @@ final class ModuleDefinition
         }
 
         return $providers;
+    }
+
+    /**
+     * রিপোর্টের ছাঁকনির ঘোষণা — বুট-টাইমেই যাচাই। ⛔ ভুল ক্লাস ধরা না পড়লে রিপোর্টের পর্দা খুলতেই ভাঙত, আর
+     * সেটা প্রথম দেখতেন মালিক।
+     *
+     * @param  array<mixed>  $filters
+     * @return array<string, class-string<ReportFilterSource>>
+     */
+    private static function validateReportFilters(array $filters, string $path): array
+    {
+        foreach ($filters as $key => $class) {
+            if (! is_string($key) || ! preg_match('/^[a-z][a-z0-9_]*_id$/', $key)) {
+                throw new InvalidArgumentException(
+                    "{$path}: report filter key '".(is_string($key) ? $key : gettype($key))."' must be a snake_case name ending in _id."
+                );
+            }
+
+            if (! is_string($class) || ! class_exists($class) || ! is_subclass_of($class, ReportFilterSource::class)) {
+                throw new InvalidArgumentException(
+                    "{$path}: report filter '{$key}' must name a class implementing the ReportFilterSource contract."
+                );
+            }
+        }
+
+        return $filters;
     }
 
     private static function validateProvisions(array $provisions, string $path): array
