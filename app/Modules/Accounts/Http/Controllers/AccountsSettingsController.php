@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Accounts\Http\Controllers;
 
 use App\Core\Services\MenuBuilder;
+use App\Core\Services\SettingOptions;
 use App\Core\Services\SettingsService;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\RedirectResponse;
@@ -70,7 +71,13 @@ class AccountsSettingsController extends Controller implements HasMiddleware
                 default => $raw,
             };
 
-            if ($value !== null) {
+            /*
+             * ⛔ তালিকার বাইরের মান নয় — ৩ অক্টোবর ২০২৬। ⓘ এই পাতা ভাউচারের কাগজ ও নকশার
+             * বাছাইয়ের ঘরও লেখার ঘর হিসেবে আঁকে; লাইভে কন্ট্রোল প্যানেল থেকে ঠিক এমন অচেনা মান
+             * (`"0"`) বসে মালিকের ছাপার নকশা নীরবে বন্ধ হয়েছিল। ভুল মান এলে "যা ছিল তাই থাক" —
+             * না ছাঁকলে [[SettingsService::set()]]-এর পাহারা ব্যতিক্রম ছুঁড়ত।
+             */
+            if ($value !== null && SettingOptions::allows($definition, $value)) {
                 $this->settings->set($key, $value);
             }
         }

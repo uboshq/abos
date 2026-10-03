@@ -187,7 +187,10 @@
                                                         data-was="{{ $setting['value'] }}"
                                                         class="h-(--spacing-field) w-full max-w-56 rounded-(--radius-field)
                                                                border border-(--color-border) bg-(--color-surface-card) px-3">
-                                                    @foreach (is_callable($setting['options']) ? call_user_func($setting['options']) : $setting['options'] as $value => $sample)
+                                                    {{-- ⛔ সাদা তালিকায় (`['a4','a5']`) চাবিটা ক্রমিক নম্বর — মান পাঠাতে হয়, নম্বর নয় (৩ অক্টোবর ২০২৬: লাইভে "0" বসেছিল) --}}
+                                                    @php($choices = is_callable($setting['options']) ? call_user_func($setting['options']) : $setting['options'])
+                                                    @foreach ($choices as $key => $sample)
+                                                        @php($value = array_is_list($choices) ? $sample : $key)
                                                         <option value="{{ $value }}"
                                                                 @selected((string) $setting['value'] === (string) $value)>
                                                             {{ $sample }}

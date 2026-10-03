@@ -7,6 +7,7 @@ namespace App\Modules\SystemAdmin\Http\Controllers;
 use App\Core\Module\ModuleRegistry;
 use App\Core\Services\MenuBuilder;
 use App\Core\Services\MenuSwitches;
+use App\Core\Services\SettingOptions;
 use App\Core\Services\SettingsService;
 use App\Http\Controllers\Controller;
 use App\Modules\SystemAdmin\Support\ControlPanelTabs;
@@ -293,6 +294,19 @@ class ControlPanelController extends Controller implements HasMiddleware
                 // অনুপস্থিতিই "বন্ধ"
                 'boolean' => filter_var($raw, FILTER_VALIDATE_BOOLEAN),
                 'integer' => $raw === null || $raw === '' ? null : (int) $raw,
+
+                /*
+                 * ⛔ বাছাইয়ের ঘরে তালিকার বাইরের কিছু নয় — ২৯ সেপ্টেম্বর ২০২৬।
+                 *
+                 * ⓘ এই পর্দা বাছাইয়ের ঘরে মানের বদলে **ক্রমিক নম্বর**
+                 * পাঠাত (`0`, `1`…) — আর সেটাই বসে যেত: কাগজের মাপ `a4`
+                 * থেকে `0`। ⚠️ মডিউলের ট্যাব থাকতে ক্ষতিটা এক মডিউলে
+                 * আটকে থাকত; এখন সব ভাঁজ এক ফর্মে, তাই যেকোনো সংরক্ষণে
+                 * সাতাশটা ঘর নষ্ট হত। ঘরটা সারানো হয়েছে
+                 * ([[partials/settings]]); এই পাহারা পুরনো খোলা পাতার জন্য —
+                 * অচেনা মান এলে "যা ছিল তাই থাক", ঠিক [[SettingsController]]-এর মতো।
+                 */
+                'choice' => SettingOptions::allows($definition, $raw) ? $raw : null,
                 default => $raw,
             };
 
@@ -300,7 +314,35 @@ class ControlPanelController extends Controller implements HasMiddleware
                 continue;
             }
 
-            if ($this->settings->get($key) === $value) {
+            /*
+             * ⛔ তালিকা আছে এমন **যেকোনো** ঘরে তালিকার বাইরের কিছু নয় — ৩ অক্টোবর ২০২৬।
+             *
+             * ⓘ লাইভে মালিক বিক্রয় ট্যাব দুইবার সংরক্ষণ করলেন (১৩:৩২ কোম্পানি ৪, ১৪:০৮
+             * কোম্পানি ৫), আর প্রতিবার ~১৮টা বাছাইয়ের সারিতে `"0"` বসল — কাগজের মাপ, ছাপার
+             * নকশা, সইয়ের সংখ্যা, মার্জিনের নিয়ম। ⛔ অচেনা নকশা মানে চলতি কাগজ, তাই মালিকের
+             * বাছা নকশাগুলো নীরবে ছাপা বন্ধ হলো। কারণ: লাইভের পাতা তালিকার **ক্রমিক নম্বর**
+             * পাঠাত, আর এই লুপ `default => $raw` দিয়ে সেটাই বসাত।
+             *
+             * ⚠️ উপরের `choice` শাখাটা কেবল `choice` ধরনের — কিন্তু তালিকা `select`
+             * (`promotion.combines_default`) আর লেখার ধরনেও আসে (`sales.price_policy`,
+             * `company.date_format`)। ⓘ তাই ছাঁকনিটা ধরন দেখে নয়, **তালিকা দেখে**; আর
+             * অচেনা মান মানে "যা ছিল তাই থাক" — পুরনো খোলা পাতা থেকে এলেও।
+             */
+            if (! SettingOptions::allows($definition, $value)) {
+                continue;
+            }
+
+            /*
+             * ⭐ টেক্সট ধরে তুলনা, কড়া নয় — ২৯ সেপ্টেম্বর ২০২৬।
+             *
+             * ⓘ ডিফল্ট সংখ্যা (`5000`), আর ফর্ম পাঠায় স্ট্রিং (`'5000'`)।
+             * ⛔ কড়া তুলনায় প্রতিটা সংরক্ষণে এমন প্রতিটা ঘর "বদলেছে" ধরা
+             * হত — সব ভাঁজ এক ফর্মে বলে একটা সুইচ টিপলেই দশটা সারি বসত,
+             * আর সুপার-অ্যাডমিনের ঘর থাকলে অকারণে "বদলানো গেল না" লেখা
+             * আসত। ⓘ নিয়মটা [[SettingsController::asStored()]]-এর আয়না:
+             * সবই টেক্সট কলামে যায়।
+             */
+            if ($this->asStored($this->settings->get($key)) === $this->asStored($value)) {
                 continue;
             }
 
@@ -369,6 +411,20 @@ class ControlPanelController extends Controller implements HasMiddleware
             $changed,
             ['count' => $changed],
         ));
+    }
+
+    /**
+     * একটা মান টেক্সট কলামে যেভাবে বসত — তুলনার জন্য।
+     *
+     * ⓘ তালিকা/json মান `(string)`-এ ভাঙত, তাই json করে তুলনা।
+     */
+    private function asStored(mixed $value): string
+    {
+        return match (true) {
+            is_bool($value) => $value ? '1' : '0',
+            is_array($value), is_object($value) => (string) json_encode($value),
+            default => (string) $value,
+        };
     }
 
     /**

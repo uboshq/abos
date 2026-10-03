@@ -94,6 +94,21 @@ final class BranchSettings
         $definition = $this->assertBranchable($key, $branchId);
         $type = (string) ($definition['type'] ?? 'string');
 
+        /*
+         * ⛔ শাখার সারিতেও তালিকার বাইরের মান নয় — ৩ অক্টোবর ২০২৬, [[SettingsService::set()]]-এর একই পাহারা।
+         * ⓘ লাইভে কোম্পানির সারিতে `"0"` বসে মালিকের ছাপার নকশা নীরবে বন্ধ হয়েছিল; নকশা আর কাগজ শাখা ধরেও
+         * বসে, তাই এই দরজাটা খোলা রাখলে একই ঘটনা শাখার স্তরে ফিরে আসত।
+         */
+        if (! SettingOptions::allows($definition, $value)) {
+            throw new InvalidArgumentException(sprintf(
+                "Setting '%s' cannot be '%s' for branch %d: it offers only [%s].",
+                $key,
+                is_scalar($value) ? (string) $value : get_debug_type($value),
+                $branchId,
+                implode(', ', SettingOptions::of($definition) ?? []),
+            ));
+        }
+
         DB::transaction(function () use ($key, $branchId, $value, $type) {
             BranchSetting::query()->updateOrCreate(
                 ['company_id' => CompanyContext::id(), 'branch_id' => $branchId, 'key' => $key],

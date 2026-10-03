@@ -175,8 +175,26 @@ final class EveryPaperDesignPrintsTheRealPaperTest extends TestCase
         $challan = $this->challan();
         $settings = app(SettingsService::class);
 
+        $key = PaperDesigns::key('challan', 'a4');
+
         foreach (['standard', 'no_such_design'] as $code) {
-            $settings->set(PaperDesigns::key('challan', 'a4'), $code);
+            /*
+             * ⓘ অচেনা নকশা `set()` দিয়ে আর বসানো যায় না — ৩ অক্টোবর ২০২৬ থেকে সেবাটা তালিকার বাইরের মান
+             * ফিরিয়ে দেয় ([[SettingOptions]])। ⚠️ তবু ফিরে-পড়াটা দরকার: লাইভে কন্ট্রোল প্যানেল সারিতে
+             * সোজা `"0"` বসিয়েছিল, আর পুরনো সারি বা পরে তালিকা থেকে সরা নকশা এভাবেই আসে। ⭐ তাই
+             * অচেনাটা বসে **কাঁচা সারি** হয়ে — ঠিক লাইভের মতো।
+             */
+            if ($code === 'standard') {
+                $settings->set($key, $code);
+            } else {
+                $definition = $settings->definitions()[$key];
+                \App\Models\Setting::query()->updateOrCreate(
+                    ['company_id' => CompanyContext::id(), 'key' => $key],
+                    ['module' => $definition['module'], 'group' => $definition['group'], 'type' => $definition['type'], 'value' => $code],
+                );
+                $settings->flush();
+            }
+
             $this->assertDrawn('print.document', route('sales.print.challan', $challan).'?paper=a4', "challan/a4/{$code}");
         }
 

@@ -6,6 +6,7 @@ namespace App\Modules\SystemAdmin\Http\Controllers;
 
 use App\Core\Module\ModuleRegistry;
 use App\Core\Services\MenuBuilder;
+use App\Core\Services\SettingOptions;
 use App\Core\Services\SettingsService;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\RedirectResponse;
@@ -164,12 +165,25 @@ class SettingsController extends Controller implements HasMiddleware
                  * পুরনো ট্যাব থেকে অচেনা মান এসে বসলে ছাপা ভেঙে পড়ত, আর
                  * কারণটা সেটিংসের পাতায় দেখে বোঝা যেত না।
                  */
-                'choice' => in_array($raw, (array) ($definition['options'] ?? []), true) ? $raw : null,
+                'choice' => SettingOptions::allows($definition, $raw) ? $raw : null,
 
                 default => $raw,
             };
 
             if ($value === null) {
+                continue;
+            }
+
+            /*
+             * ⛔ তালিকা আছে এমন যেকোনো ঘরে তালিকার বাইরের কিছু নয় — ৩ অক্টোবর ২০২৬।
+             *
+             * ⓘ লাইভে কন্ট্রোল প্যানেলের বিক্রয় ট্যাব সংরক্ষণে ~১৮টা বাছাইয়ের সারিতে `"0"`
+             * বসেছিল, আর মালিকের ছাপার নকশা নীরবে বন্ধ হয়েছিল। ⚠️ এই পর্দায় তালিকাওয়ালা কিছু
+             * ঘর লেখার ঘর হয়ে আঁকা (`sales.price_policy`, `company.date_format`,
+             * `promotion.combines_default`) — হাতে লেখা ভুল মান এলে "যা ছিল তাই থাক"।
+             * ⓘ না ছাঁকলে [[SettingsService::set()]]-এর পাহারা ব্যতিক্রম ছুঁড়ত, আর পাতা ৫০০ দিত।
+             */
+            if (! SettingOptions::allows($definition, $value)) {
                 continue;
             }
 
