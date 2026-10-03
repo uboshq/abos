@@ -10,6 +10,7 @@ import '../../features/customers/customer_list_screen.dart';
 import '../../features/customers/deposit_request_screen.dart';
 import '../../features/customers/due_list_screen.dart';
 import '../../features/home/home_shell.dart';
+import '../../features/delivery_orders/delivery_order_screens.dart';
 import '../../features/orders/delivery_tracking_screen.dart';
 import '../../features/orders/new_order_screen.dart';
 import '../../features/orders/order_prefill.dart';
@@ -154,6 +155,18 @@ final goRouterProvider = Provider<GoRouter>((ref) {
             path: 'orders',
             builder: (context, state) =>
                 const ModuleGateView(path: 'orders', child: OrderListScreen()),
+          ),
+          // ⭐ ডেলিভারি অর্ডার (0.4.8) — লেখা, জমা, সুপারভাইজারের পরিমাণ আর সই; "নতুন DO" কেবল লেখার চাবিতে
+          GoRoute(
+            path: 'delivery-orders',
+            builder: (context, state) => ModuleGateView(
+              path: 'delivery-orders',
+              child: Consumer(
+                builder: (context, ref, _) => DeliveryOrderListScreen(
+                  canWrite: ref.watch(authStateProvider).user?.can('sales.do.create') ?? false,
+                ),
+              ),
+            ),
           ),
           GoRoute(
             path: 'tracking',

@@ -244,6 +244,14 @@ class MenuRepository {
             icon: Icons.local_shipping_outlined,
             routeName: 'tracking',
           ),
+        // ⭐ ডেলিভারি অর্ডার (0.4.8) — DO দেখার চাবি যাঁর; লেখা আর সই পর্দার ভিতরে নিজের চাবিতে।
+        if (user.can('sales.do.view'))
+          const MenuItem(
+            key: 'sales.delivery_order',
+            label: 'ডেলিভারি অর্ডার',
+            icon: Icons.assignment_outlined,
+            routeName: 'delivery-orders',
+          ),
         // First tile on the grid for whoever can see the day's sales — it is
         // the question asked most often and from the furthest away.
         if (user.can('sales.order.view'))
