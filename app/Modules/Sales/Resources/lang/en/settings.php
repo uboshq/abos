@@ -167,4 +167,5 @@ return [
     'movement_lines' => 'Account movement on the bill — how many transactions (0 = the whole month)',
     'vat_enabled' => 'VAT on sales (off: no VAT box, and the server takes no VAT)',
     'paper_gate_pass' => 'Gate pass paper',
+    'free_by_lot_ratio' => 'Free goods capped by the lot’s purchase ratio (off: free only from schemes, up to the free pool)',
 ];

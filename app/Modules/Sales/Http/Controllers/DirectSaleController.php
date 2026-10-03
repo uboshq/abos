@@ -569,6 +569,11 @@ class DirectSaleController extends Controller implements HasMiddleware
          * ⓘ লট না বললে পুরনো পথ অবিকল — অন্য পর্দা (চালান, পোর্টাল)
          * এখনো লট পাঠায় না, আর তাদের কিছু বদলায় না।
          */
+        // ⭐ সুইচ বন্ধ (আন্তর্জাতিক মান, ৪ অক্টোবর ২০২৬) — লটের অনুপাতে কিছু বাঁধা নয়; পর্দা নিজে কিছু বসায় না, সতর্কও করে না
+        if (! (bool) $this->settings->get('sales.free_by_lot_ratio', true)) {
+            return response()->json(['data' => ['known' => false]]);
+        }
+
         $batch = isset($data['batch_id'])
             ? Batch::query()->where('product_id', $product->id)->find($data['batch_id'])
             : null;

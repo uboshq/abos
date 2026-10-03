@@ -23,9 +23,11 @@ use App\Modules\Inventory\Services\IssuedLots;
 use App\Modules\MasterData\Models\Location;
 use App\Modules\Sales\Models\Collection;
 use App\Modules\Sales\Models\DeliveryChallan;
+use App\Modules\Sales\Models\DeliveryChallanLine;
 use App\Modules\Sales\Models\GatePass;
 use App\Modules\Sales\Models\PrintJob;
 use App\Modules\Sales\Models\SalesInvoice;
+use App\Modules\Sales\Models\SalesInvoiceLine;
 use App\Modules\Sales\Models\SalesOrder;
 use App\Modules\Sales\Models\Shipment;
 use App\Modules\Sales\Services\PrintQueue;
@@ -149,7 +151,7 @@ class SalesPrintController extends Controller implements HasMiddleware
          * **চালান-সহ** বিলে জাগে — আর সেটাই কাউন্টারের একমাত্র পথ।
          */
         /* ⓘ `brandRow`-ও সাথে — নাহলে প্রতিটা সারিতে একটা করে কোয়েরি যেত */
-        $invoice->load(['lines.product.unit', 'lines.product.brandRow', 'lines.challanLine', 'customer', 'branch']);
+        $invoice->load(['lines.product.unit', 'lines.product.brandRow', 'lines.challanLine.batch', 'customer', 'branch']);
 
         $doc = new PrintableDocument(
             title: __('sales::doc.invoice'),
@@ -407,6 +409,8 @@ class SalesPrintController extends Controller implements HasMiddleware
             );
         }
 
+        $items = $this->classicItems($invoice);
+
         return [
             'bill_to' => [
                 'name' => (string) ($customer?->name('en') ?? ''),
@@ -431,12 +435,13 @@ class SalesPrintController extends Controller implements HasMiddleware
                 'type' => $type,
                 'created_by' => (string) ($invoice->creator?->name ?? ''),
             ],
-            'total_items' => (string) $invoice->lines->count(),
+            // ⓘ ছাপা লাইন ধরে — একই পণ্যের লট-সারি মিলে এক লাইন ([[classicItems()]])
+            'total_items' => (string) count($items['rows']),
             'total_delivery' => $this->qty($invoice->lines->reduce(
                 fn (string $sum, $line) => bcadd($sum, (string) $line->packedQty('qty'), 4),
                 '0',
             )),
-            'items' => $this->classicItems($invoice),
+            'items' => $items,
             'sums' => array_map(fn (string $v) => $this->money($v), $sums),
             /* ⭐ টার্গেট রিমাইন্ডার — ডিলারের মাসিক আদায়ের লক্ষ্য, বিলের দিন ধরে; না থাকলে null ([[targetFacts()]]) */
             'target' => $customer === null ? null : $this->targetFacts((int) $customer->id, $invoice->trx_date),
@@ -473,7 +478,19 @@ class SalesPrintController extends Controller implements HasMiddleware
      */
     private function classicItems(SalesInvoice $invoice): array
     {
-        $invoice->loadMissing(['lines.product.unit', 'lines.enteredUnit', 'lines.challanLine']);
+        $invoice->loadMissing(['lines.product.unit', 'lines.enteredUnit', 'lines.challanLine.batch']);
+
+        /*
+         * ⭐ একই পণ্যের লট-সারি মিলে কাগজে এক লাইন — মালিক, ৪ অক্টোবর ২০২৬: *"print e ek line dekhabe"*।
+         * ⓘ কাউন্টারে প্রতি লটে এক সারি (এক সারিতে লটের মালের বেশি নয়), কিন্তু গ্রাহকের কাগজে পণ্যটা একবার —
+         * পরিমাণ, ফ্রি আর টাকা যোগ হয়ে; লট নম্বরগুলো নিচে "L1 · L2"। ⚠️ মেলে কেবল একই দর আর একই এককে —
+         * আলাদা দর এক লাইনে বসালে লাইনের দর মিথ্যা বলত। ⓘ কোড আর লট দেখায় কেবল বিলের সুইচ চালু থাকলে
+         * ([[InvoicePrintLook::SHOWS]]); আগে এই সারিতে কোড-লট ছিলই না, তাই সুইচ চালু করলেও আসল বিলে আসত না।
+         */
+        $look = app(\App\Modules\Sales\Support\InvoicePrintLook::class);
+        $showCode = $look->shows('product_code');
+        $showLot = $look->shows('lot');
+        $merged = [];
 
         $rows = [];
         $sum = ['qty' => [], 'free' => [], 'total_qty' => []];
@@ -503,13 +520,41 @@ class SalesPrintController extends Controller implements HasMiddleware
             $gross = bcmul((string) $line->qty, (string) $line->rate, 4);
             $amount = bcadd($amount, $gross, 4);
 
+            $rate = $line->packedRate('rate', 'qty');
+            $key = $line->product_id.'|'.$short.'|'.$rate;
+            $lot = (string) ($line->challanLine?->batch?->batch_no ?? '');
+
+            if (! isset($merged[$key])) {
+                $merged[$key] = [
+                    'name' => (string) ($line->product?->name('en') ?? ''),
+                    'code' => $showCode ? (string) ($line->product?->code ?? '') : '',
+                    'lots' => [],
+                    'short' => $short,
+                    'rate' => $rate,
+                    'qty' => '0', 'free' => '0', 'total' => '0', 'gross' => '0',
+                ];
+            }
+
+            $merged[$key]['qty'] = bcadd($merged[$key]['qty'], $qty, 4);
+            $merged[$key]['free'] = bcadd($merged[$key]['free'], $free, 4);
+            $merged[$key]['total'] = bcadd($merged[$key]['total'], $total, 4);
+            $merged[$key]['gross'] = bcadd($merged[$key]['gross'], $gross, 4);
+
+            if ($showLot && $lot !== '' && ! in_array($lot, $merged[$key]['lots'], true)) {
+                $merged[$key]['lots'][] = $lot;
+            }
+        }
+
+        foreach ($merged as $row) {
             $rows[] = [
-                'name' => (string) ($line->product?->name('en') ?? ''),
-                'rate' => $this->money($line->packedRate('rate', 'qty')),
-                'qty' => trim($this->qty($qty).' '.$short),
-                'free' => bccomp($free, '0', 4) > 0 ? trim($this->qty($free).' '.$short) : '',
-                'total_qty' => trim($this->qty($total).' '.$short),
-                'amount' => $this->money($gross),
+                'name' => $row['name'],
+                'code' => $row['code'],
+                'lot' => implode(' · ', $row['lots']),
+                'rate' => $this->money($row['rate']),
+                'qty' => trim($this->qty($row['qty']).' '.$row['short']),
+                'free' => bccomp($row['free'], '0', 4) > 0 ? trim($this->qty($row['free']).' '.$row['short']) : '',
+                'total_qty' => trim($this->qty($row['total']).' '.$row['short']),
+                'amount' => $this->money($row['gross']),
             ];
         }
 
@@ -593,7 +638,7 @@ class SalesPrintController extends Controller implements HasMiddleware
          * ⭐ ধরা পড়েছে সত্যিকারের একটা বিক্রয় করে, কারণ পাহারাটা কেবল
          * **চালান-সহ** বিলে জাগে — আর সেটাই কাউন্টারের একমাত্র পথ।
          */
-        $invoice->load(['lines.product.unit', 'lines.challanLine', 'customer', 'branch']);
+        $invoice->load(['lines.product.unit', 'lines.challanLine.batch', 'customer', 'branch']);
 
         $doc = new PrintableDocument(
             title: __('sales::doc.invoice'),
@@ -616,7 +661,7 @@ class SalesPrintController extends Controller implements HasMiddleware
     {
         $this->assertNotAnUnfinishedCounterSale($challan);
 
-        $challan->load(['lines.product.unit', 'customer', 'warehouse']);
+        $challan->load(['lines.product.unit', 'lines.batch', 'customer', 'warehouse']);
 
         /*
          * ⭐ টাকাসহ না টাকা ছাড়া — মালিক, ২ অক্টোবর ২০২৬: *"Challan Print er age Amount soho print hobe na amount chara"*।
@@ -681,7 +726,7 @@ class SalesPrintController extends Controller implements HasMiddleware
     {
         $this->assertNotAnUnfinishedCounterSale($challan);
 
-        $challan->load(['lines.product.unit', 'customer', 'warehouse']);
+        $challan->load(['lines.product.unit', 'lines.batch', 'customer', 'warehouse']);
 
         $doc = new PrintableDocument(
             title: __('sales::doc.gatepass'),
@@ -1506,7 +1551,84 @@ class SalesPrintController extends Controller implements HasMiddleware
             'group' => $band ? $this->brandOf($line) : '',
         ])->values()->all();
 
-        return $band ? $this->closeEachBand($rows, $lines) : $rows;
+        return $band ? $this->closeEachBand($rows, $lines) : $this->joinLotRows($rows, $lines->values(), $qtyField, $lots !== []);
+    }
+
+    /**
+     * ⭐ একই পণ্যের লট-সারি মিলে কাগজে এক লাইন — মালিক, ৪ অক্টোবর ২০২৬: *"print e ek line dekhabe"*।
+     *
+     * ⓘ কাউন্টারে প্রতি লটে এক সারি; কাগজে পণ্যটা একবার — পরিমাণ, ফ্রি, মোট আর টাকা যোগ হয়ে, প্রথম সারির জায়গায়।
+     * লটের সুইচ চালু থাকলে নিচের ঘরে ঐ লাইনের নিজের লটগুলো "L1 · L2" (আগে সেখানে পণ্যের **সব** লট বসত, প্রতিটা সারিতে)।
+     * ⚠️ মেলে কেবল লট-ধরা সারি, আর একই একক ও দরে — লট ছাড়া সারি আর আলাদা দর আগের মতোই আলাদা লাইন।
+     * ⓘ দলের ভাগ (`band`) চালু থাকলে মেলানো হয় না — উপ-মোট সারির ক্রম ধরে বসে ([[closeEachBand()]])।
+     *
+     * @param  list<array<string, string>>  $rows
+     * @return list<array<string, string>>
+     */
+    private function joinLotRows(array $rows, $lines, string $qtyField, bool $showLots): array
+    {
+        $at = [];
+        $sums = [];
+        $out = [];
+
+        foreach ($rows as $i => $row) {
+            $line = $lines[$i] ?? null;
+            $lot = $line === null ? '' : $this->lotNoOf($line);
+
+            if ($lot === '') {
+                $out[] = $row;
+
+                continue;
+            }
+
+            $key = $line->product_id.'|'.$row['unit'].'|'.$row['rate'];
+            $qty = (string) $line->packedQty($qtyField);
+            $free = $this->freeInPacks($line, $qtyField);
+
+            if (! isset($at[$key])) {
+                $at[$key] = count($out);
+                $sums[$key] = ['qty' => '0', 'free' => '0', 'amount' => '0', 'base_free' => '0', 'lots' => []];
+                $out[] = $row;
+            }
+
+            $sums[$key]['qty'] = bcadd($sums[$key]['qty'], $qty, 4);
+            $sums[$key]['free'] = bcadd($sums[$key]['free'], $free, 4);
+            $sums[$key]['base_free'] = bcadd($sums[$key]['base_free'], (string) ($line->free_qty ?? (method_exists($line, 'challanLine') ? $line->challanLine?->free_qty : null) ?? '0'), 4);
+            $sums[$key]['amount'] = bcadd($sums[$key]['amount'], (string) $line->amount, 4);
+
+            if (! in_array($lot, $sums[$key]['lots'], true)) {
+                $sums[$key]['lots'][] = $lot;
+            }
+        }
+
+        foreach ($at as $key => $index) {
+            $s = $sums[$key];
+
+            $out[$index] = [
+                ...$out[$index],
+                'qty' => $this->qty($s['qty']),
+                'amount' => $this->money($s['amount']),
+                'free' => bccomp($s['base_free'], '0', 4) > 0 ? $this->qty($s['base_free']) : '',
+                'total_qty' => $this->qty(bcadd($s['qty'], $s['free'], 4)),
+                'note' => $showLots ? implode(' · ', $s['lots']) : '',
+            ];
+        }
+
+        return array_values($out);
+    }
+
+    /** সারির লট নম্বর — চালানের সারির নিজের, বা বিলের সারির চালান-সারির; লট না থাকলে খালি */
+    private function lotNoOf(object $line): string
+    {
+        if ($line instanceof DeliveryChallanLine) {
+            return (string) ($line->batch?->batch_no ?? '');
+        }
+
+        if ($line instanceof SalesInvoiceLine) {
+            return (string) ($line->challanLine?->batch?->batch_no ?? '');
+        }
+
+        return '';
     }
 
     /**

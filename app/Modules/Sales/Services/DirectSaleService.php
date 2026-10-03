@@ -1926,6 +1926,14 @@ final class DirectSaleService
 
     private function assertFreeStaysWithinTheRatio(array $lines, Warehouse $warehouse): void
     {
+        /*
+         * ⭐ সুইচ বন্ধ (আন্তর্জাতিক মান) — ফ্রি কেনার লটের অনুপাতে বাঁধা নয় (মালিক, ৪ অক্টোবর ২০২৬, সংস্করণ ২)।
+         * ⓘ ফ্রি-ভাণ্ডারের সীমা তবু খাটে — মাল বের করার সময় ([[giveAway()]]), যতটা আছে তার বেশি নয়।
+         */
+        if (! (bool) $this->settings->get('sales.free_by_lot_ratio', true)) {
+            return;
+        }
+
         $allowance = app(FreeAllowance::class);
 
         foreach ($lines as $line) {
