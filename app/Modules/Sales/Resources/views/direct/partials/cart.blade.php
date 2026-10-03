@@ -58,6 +58,8 @@
                                         {{-- বাছা প্যাকের একক — সার্ভার এটা দেখেই
                                              "২ বাক্স"-কে পিসে নামায়, দর সহ --}}
                                         <input type="hidden" :name="'lines[' + (i) + '][unit_id]'" :value="line.unitId || ''">
+                                        {{-- ⭐ উৎসের (DO-র) কোন সারি — সেবা এটা ধরে অনুমোদিতের সাথে মেলায় --}}
+                                        <input type="hidden" :name="'lines[' + (i) + '][source_line_id]'" :value="line.sourceLineId || ''">
                                     </td>
 
                                     {{-- ⛔ কার্টের ঘরগুলো আর লেখার নয় — মালিকের নির্দেশ,

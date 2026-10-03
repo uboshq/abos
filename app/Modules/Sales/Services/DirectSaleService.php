@@ -29,6 +29,7 @@ use App\Modules\MasterData\Services\MethodFitsAccount;
 use App\Modules\Sales\Models\DeliveryChallan;
 use App\Modules\Sales\Models\DeliveryChallanGiftLine;
 use App\Modules\Sales\Models\SalesInvoice;
+use App\Modules\Sales\Contracts\CounterSaleSource;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use App\Core\Support\DocumentStatus;
@@ -105,6 +106,8 @@ final class DirectSaleService
         $customer = $this->resolveCustomer($data['customer_id'] ?? null);
         $warehouse = $this->resolveWarehouse($data['warehouse_id'] ?? null);
 
+        // ⭐ উৎস থেকে এলে (DO …) — DO-র বাইরে যাওয়ার "না" সবার আগে ([[precheckSource()]])
+        $this->precheckSource($data, $lines, $customer, $warehouse);
         $this->assertFreeStaysWithinTheRatio($lines, $warehouse);
         $this->assertEveryTrackedLineNamesItsLot($lines);
         $this->assertNoChequeAtTheCounter($data);
@@ -283,6 +286,10 @@ final class DirectSaleService
             $parked = $this->parkedFor($data, $customer);
             $this->assertNoOtherOpenDraft($customer, $parked);
 
+            // ⭐ উৎস থেকে এলে (DO …) — তালা দিয়ে আবার "খোলার মতো?", আর অনুমোদিতের বেশি নয় ([[guardSource()]])
+            $source = $this->sourceFor($data, $parked);
+            $counted = $source === null ? null : $this->guardSource($source, $lines, $customer, $warehouse, $parked);
+
             $challan = $this->challanFor($parked, $data, $lines, $customer, $warehouse, $trxDate);
 
             /*
@@ -374,6 +381,12 @@ final class DirectSaleService
              * গুনে দাঁড়িয়ে।
              */
             $invoice = $this->invoices->confirm($invoice, $deposit);
+
+            /* ⭐ ধাপ চ — ইনভয়েস আর চালান একসাথে, আর একই লেনদেনে উৎস "বিল হয়েছে" ([[settleSource()]]) */
+            if ($source !== null && $counted !== null) {
+                $this->stampSource($invoice, $source);
+                $this->settleSource($source, $counted, $challan, $invoice);
+            }
 
             /* ⭐ পর্দার ছবি থাকে — মাল পৌঁছানো পর্যন্ত বিক্রিটা Pending-এর "ডেলিভারির অপেক্ষায়"
                ভাগে কাউন্টারেই কেবল দেখার জন্য খোলে (মালিকের অনুমোদিত নকশা, ২৮ সেপ্টেম্বর ২০২৬) */
@@ -538,6 +551,10 @@ final class DirectSaleService
             $parked = $this->parkedFor($data, $customer);
             $this->assertNoOtherOpenDraft($customer, $parked);
 
+            // ⭐ উৎস থেকে এলে খসড়াতেও একই পাহারা — অনুমোদিতের বেশি খসড়াতেও নয়; পাকা হয় পরে ([[finishHeld()]])
+            $source = $this->sourceFor($data, $parked);
+            $counted = $source === null ? null : $this->guardSource($source, $lines, $customer, $warehouse, $parked);
+
             $challan = $this->challanFor($parked, $data, $lines, $customer, $warehouse, $trxDate);
 
             $this->stampExtras($challan, $data, $lines);
@@ -577,6 +594,12 @@ final class DirectSaleService
              * রাখে** ([[CreditExposure::pending()]] খসড়া বিল গোনে)। ⛔ দেয়াল
              * পাকা করার মুহূর্তে — চালান নিশ্চিত হয় [[DeliveryChallanService::confirm()]]-এ।
              */
+            /* ⭐ খসড়া বিল উৎস মনে রাখে — পাকা হলে ওটাকেই "বিল হয়েছে" লেখা হয়; ডিপো কম দিলে আটকানো মালও কমে */
+            if ($source !== null && $counted !== null) {
+                $this->stampSource($invoice, $source);
+                $this->resizeSourceStock($source, $counted);
+            }
+
             if ($asDraft) {
                 $invoice->update(['counter_draft' => $this->screenOf($data)]);
 
@@ -945,6 +968,16 @@ final class DirectSaleService
             $invoice->update(['counter_draft' => null]);
             $this->invoices->cancel($invoice, $reason);
 
+            /*
+             * ⭐ উৎস থেকে আসা খসড়া বাতিল — উৎস ডিপো যাচাই থেকে আবার "হিসাবে অনুমোদিত"-এ (সমন্বয়ক, ৩ অক্টোবর ২০২৬)।
+             * ⓘ চুক্তিতে ([[CounterSaleSource]]) এই কাজ নেই, আর চুক্তি বদলানো হয়নি — উৎস `leaveDepotCheck()` দিলে তবেই।
+             */
+            $source = ($invoice->counter_source ?? null) === null ? null : app(CounterSaleSources::class)->forInvoice($invoice);
+
+            if ($source !== null && method_exists($source, 'leaveDepotCheck')) {
+                $source->leaveDepotCheck();
+            }
+
             $challan = $challanId === null ? null : DeliveryChallan::query()->find($challanId);
 
             if ($challan !== null && $challan->status === DocumentStatus::DRAFT) {
@@ -1021,6 +1054,282 @@ final class DirectSaleService
             'screen' => is_array($screen) ? $screen : [],
             'fields' => $fields,
         ];
+    }
+
+    // ── ⭐ উৎস থেকে কাউন্টারে — বিক্রয়ের কাজের ধারা, ২ অক্টোবর ২০২৬, ধাপ ঙ+চ ([[CounterSaleSource]]) ──────────
+
+    /**
+     * এই বিক্রিটা কোন উৎস থেকে — পর্দা বললে (`source`, `source_id`), নাহলে রাখা খসড়া যা মনে রেখেছে।
+     *
+     * ⛔ রাখা খসড়ার উৎস আর পর্দার উৎস আলাদা হলে থামে — একটা খসড়া এক কাগজেরই। ⛔ উৎস না পেলে (মোছা, বাতিল,
+     * অন্য কোম্পানি বা শাখার) থামে — উৎসের নাম নিয়ে এসে উৎস ছাড়া বিক্রি হয় না।
+     *
+     * @param  array<string, mixed>  $data
+     */
+    private function sourceFor(array $data, ?SalesInvoice $parked): ?CounterSaleSource
+    {
+        $sources = app(CounterSaleSources::class);
+        $key = trim((string) ($data['source'] ?? ''));
+        $id = (int) ($data['source_id'] ?? 0);
+        $parkedKey = (string) ($parked?->counter_source ?? '');
+
+        if ($parked !== null && $key !== ''
+            && ($key !== $parkedKey || $id !== (int) $parked->counter_source_id)) {
+            throw ValidationException::withMessages(['source' => __('sales::counter_source.mismatch')]);
+        }
+
+        if ($parked !== null && $parkedKey !== '') {
+            return $sources->forInvoice($parked)
+                ?? throw ValidationException::withMessages(['source' => __('sales::counter_source.gone')]);
+        }
+
+        if ($key === '') {
+            return null;
+        }
+
+        return $sources->find($key, $id)
+            ?? throw ValidationException::withMessages(['source' => __('sales::counter_source.gone')]);
+    }
+
+    /**
+     * ⛔ উৎসের তিন পাহারা, লেনদেনের ভিতরে, তালা দিয়ে:
+     * ⓵ উৎস এখনো কাউন্টারে খোলার মতো ([[CounterSaleSource::assertReadyForCounter()]]) — বিল হয়ে গেলে দ্বিতীয় বিক্রি নয়;
+     * ⓶ অন্য কোনো খোলা খসড়া এই উৎস ধরে নেই — এক কাগজ, এক বিল;
+     * ⓷ একই ক্রেতা, আর প্রতিটা সারি উৎসের সারি ধরে অনুমোদিতের বেশি নয় ([[countAgainstSource()]])।
+     *
+     * @param  list<array<string, mixed>>  $lines
+     * @return array{approved: array<int, string>, used: array<int, string>}
+     */
+    private function guardSource(CounterSaleSource $source, array $lines, Customer $customer, Warehouse $warehouse, ?SalesInvoice $parked): array
+    {
+        $source->assertReadyForCounter();
+
+        $sources = app(CounterSaleSources::class);
+        $id = $sources->identify($source);
+        $screen = $source->counterScreen();
+
+        $other = SalesInvoice::acrossBranches()
+            ->where('counter_source', $id['key'])
+            ->where('counter_source_id', $id['id'])
+            ->where('status', DocumentStatus::DRAFT)
+            ->when($parked !== null, fn ($q) => $q->whereKeyNot($parked->id))
+            ->first(['id', 'document_no']);
+
+        if ($other !== null) {
+            throw ValidationException::withMessages([
+                'source' => __('sales::counter_source.taken_by_draft', ['ref' => $screen['ref'], 'no' => $other->document_no]),
+            ]);
+        }
+
+        return $this->fitsSource($screen, $lines, $customer, $warehouse);
+    }
+
+    /**
+     * ⓘ আগাম যাচাই — তালা ছাড়া, কাগজ বানানোর আগে ([[complete()]])। ⭐ উৎসের "না" আগে আসে: ফ্রির অনুপাত বা লটের
+     * প্রশ্ন ওঠার আগেই বিক্রেতা জানেন DO-র বাইরে যাচ্ছেন। আসল পাহারা লেনদেনের ভিতরে ([[guardSource()]])।
+     *
+     * @param  array<string, mixed>  $data
+     * @param  list<array<string, mixed>>  $lines
+     */
+    private function precheckSource(array $data, array $lines, Customer $customer, Warehouse $warehouse): void
+    {
+        $key = trim((string) ($data['source'] ?? ''));
+
+        if ($key === '') {
+            return;
+        }
+
+        $source = app(CounterSaleSources::class)->find($key, (int) ($data['source_id'] ?? 0))
+            ?? throw ValidationException::withMessages(['source' => __('sales::counter_source.gone')]);
+
+        $this->fitsSource($source->counterScreen(), $lines, $customer, $warehouse);
+    }
+
+    /**
+     * ⛔ একই ক্রেতা, একই গুদাম (আটকানো মাল ওখানেই — সমন্বয়ক, ৩ অক্টোবর ২০২৬), আর সারিগুলো অনুমোদিতের ভিতরে।
+     *
+     * @param  array{ref: string, customer_id: int, warehouse_id: int|null, lines: list<array<string, mixed>>}  $screen
+     * @param  list<array<string, mixed>>  $lines
+     * @return array{approved: array<int, string>, used: array<int, string>}
+     */
+    private function fitsSource(array $screen, array $lines, Customer $customer, Warehouse $warehouse): array
+    {
+        if ((int) $screen['customer_id'] !== (int) $customer->id) {
+            throw ValidationException::withMessages([
+                'customer_id' => __('sales::counter_source.other_customer', ['ref' => $screen['ref']]),
+            ]);
+        }
+
+        if (($screen['warehouse_id'] ?? null) !== null && (int) $screen['warehouse_id'] !== (int) $warehouse->id) {
+            $theirs = Warehouse::query()->find($screen['warehouse_id']);
+
+            throw ValidationException::withMessages([
+                'warehouse_id' => __('sales::counter_source.other_warehouse', [
+                    'ref' => $screen['ref'],
+                    'warehouse' => $theirs?->name() ?? (string) $screen['warehouse_id'],
+                ]),
+            ]);
+        }
+
+        return $this->countAgainstSource($screen, $lines);
+    }
+
+    /**
+     * বিলের সারি উৎসের সারির বিপরীতে — পরিমাণ পণ্যের এককে (প্যাক নামিয়ে), ফ্রি যেমন আছে; উৎসের সারি ধরে মোট।
+     *
+     * ⓘ `source_line_id` থাকলে সেই সারি (একই পণ্য হতে হবে)। না থাকলে — বিক্রেতা সারি মুছে কম পরিমাণে আবার
+     * বসালে আইডি হারায় — একই পণ্যের উৎস-সারিগুলোতে ক্রমে ভরা, বাকিটা শেষটায় ([[allot()]])।
+     * ⛔ উৎসে নেই এমন পণ্য, বা কোনো উৎস-সারির মোট পরিমাণ **বা ফ্রি** অনুমোদিতের বেশি — থামে (সমন্বয়কের নিয়ম,
+     * ২ ও ৩ অক্টোবর ২০২৬: বেশি লাগলে DO আবার সুপারভাইজারের কাছে)। ⭐ কম চলে — বাকিটা ব্যাক অর্ডার।
+     *
+     * @param  array{ref: string, lines: list<array<string, mixed>>}  $screen
+     * @param  list<array<string, mixed>>  $lines
+     * @return array{approved: array<int, string>, used: array<int, string>}
+     */
+    private function countAgainstSource(array $screen, array $lines): array
+    {
+        $approved = [];
+        $approvedFree = [];
+        $productOf = [];
+
+        foreach ($screen['lines'] as $row) {
+            $sid = (int) $row['source_line_id'];
+            $approved[$sid] = bcadd((string) $row['qty'], '0', 4);
+            $approvedFree[$sid] = bcadd((string) ($row['free_qty'] ?? '0'), '0', 4);
+            $productOf[$sid] = (int) $row['product_id'];
+        }
+
+        $used = array_fill_keys(array_keys($approved), '0');
+        $usedFree = $used;
+
+        foreach ($lines as $line) {
+            $productId = (int) $line['product_id'];
+            $product = Product::query()->find($productId);
+            $qty = $product === null
+                ? bcadd((string) $line['qty'], '0', 4)
+                : bcadd($this->packed($product, (string) $line['qty'], $line['unit_id'] ?? null)['qty'], '0', 4);
+            $free = bcadd((string) (($line['free_qty'] ?? '0') ?: '0'), '0', 4);
+            $sid = (int) ($line['source_line_id'] ?? 0);
+            $notOnSource = fn () => ValidationException::withMessages(['lines' => __('sales::counter_source.not_on_source', [
+                'product' => $product?->name() ?? (string) $productId, 'ref' => $screen['ref'],
+            ])]);
+
+            if ($sid > 0) {
+                if (! isset($approved[$sid]) || $productOf[$sid] !== $productId) {
+                    throw $notOnSource();
+                }
+
+                $used[$sid] = bcadd($used[$sid], $qty, 4);
+                $usedFree[$sid] = bcadd($usedFree[$sid], $free, 4);
+
+                continue;
+            }
+
+            $same = array_keys(array_filter($productOf, fn (int $p) => $p === $productId));
+
+            if ($same === []) {
+                throw $notOnSource();
+            }
+
+            $this->allot($same, $approved, $used, $qty);
+            $this->allot($same, $approvedFree, $usedFree, $free);
+        }
+
+        foreach ([[$used, $approved, 'more_than_approved'], [$usedFree, $approvedFree, 'free_more_than_approved']] as [$given, $limit, $word]) {
+            foreach ($given as $sid => $qty) {
+                if (bccomp($qty, $limit[$sid], 4) > 0) {
+                    throw ValidationException::withMessages(['lines' => __('sales::counter_source.'.$word, [
+                        'product' => Product::query()->find($productOf[$sid])?->name() ?? (string) $productOf[$sid],
+                        'approved' => rtrim(rtrim($limit[$sid], '0'), '.'),
+                        'asked' => rtrim(rtrim($qty, '0'), '.'),
+                        'ref' => $screen['ref'],
+                    ])]);
+                }
+            }
+        }
+
+        return ['approved' => $approved, 'used' => $used];
+    }
+
+    /**
+     * আইডি ছাড়া সারি — একই পণ্যের উৎস-সারিগুলোতে ক্রমে ভরা; যা না ধরে তা শেষটায় (তখন সেখানে বেশি হয়, আর থামে)।
+     *
+     * @param  list<int>  $same
+     * @param  array<int, string>  $limit
+     * @param  array<int, string>  $used
+     */
+    private function allot(array $same, array $limit, array &$used, string $qty): void
+    {
+        foreach ($same as $i => $candidate) {
+            if (bccomp($qty, '0', 4) <= 0) {
+                return;
+            }
+
+            $room = bcsub($limit[$candidate], $used[$candidate], 4);
+            $take = $i === array_key_last($same) || bccomp($qty, $room, 4) <= 0
+                ? $qty
+                : (bccomp($room, '0', 4) > 0 ? $room : '0');
+
+            $used[$candidate] = bcadd($used[$candidate], $take, 4);
+            $qty = bcsub($qty, $take, 4);
+        }
+    }
+
+    /** খসড়া বা পাকা বিল উৎস মনে রাখে — `counter_source`, `counter_source_id` */
+    private function stampSource(SalesInvoice $invoice, CounterSaleSource $source): void
+    {
+        $id = app(CounterSaleSources::class)->identify($source);
+
+        $invoice->forceFill(['counter_source' => $id['key'], 'counter_source_id' => $id['id']])->save();
+    }
+
+    /**
+     * ⭐ ধাপ চ — নিশ্চিতের **একই লেনদেনে**: আটকানো মাল ফেরে (যা বেরোল ততটা "উঠল"), তারপর উৎস "বিল হয়েছে"।
+     *
+     * ⓘ মজুদের অংশ abos-86-এর [[DeliveryOrderStock]] — কেবল ডেলিভারি অর্ডারের, আর ক্লাসটা না থাকলেও এই পথ চলে
+     * (`class_exists`/`method_exists`)। ⛔ [[CounterSaleSource::markInvoiced()]] অন্য বিলে আগে বিল হয়ে থাকলে
+     * থামে — তখন পুরো বিক্রি ফেরে।
+     *
+     * @param  array{approved: array<int, string>, used: array<int, string>}  $counted
+     */
+    private function settleSource(CounterSaleSource $source, array $counted, DeliveryChallan $challan, SalesInvoice $invoice): void
+    {
+        $this->resizeSourceStock($source, $counted);
+
+        $stock = 'App\\Modules\\Sales\\Services\\DeliveryOrderStock';
+
+        if ($source instanceof \App\Modules\Sales\Models\DeliveryOrder && class_exists($stock) && method_exists($stock, 'consume')) {
+            app($stock)->consume($source, $challan->fresh(['lines']));
+        }
+
+        $source->markInvoiced($invoice);
+    }
+
+    /**
+     * ডিপো কম দিল — আটকানো মালও কমে, যাতে বাকিটা অন্য বিক্রিতে যায় (abos-86-এর [[DeliveryOrderStock::resize()]])।
+     * ⓘ কেবল যে সারিগুলো কম; বাড়ানো কখনো নয়।
+     *
+     * @param  array{approved: array<int, string>, used: array<int, string>}  $counted
+     */
+    private function resizeSourceStock(CounterSaleSource $source, array $counted): void
+    {
+        $stock = 'App\\Modules\\Sales\\Services\\DeliveryOrderStock';
+
+        if (! $source instanceof \App\Modules\Sales\Models\DeliveryOrder || ! class_exists($stock) || ! method_exists($stock, 'resize')) {
+            return;
+        }
+
+        $less = [];
+
+        foreach ($counted['used'] as $sid => $qty) {
+            if (bccomp($qty, $counted['approved'][$sid], 4) < 0) {
+                $less[$sid] = $qty;
+            }
+        }
+
+        if ($less !== []) {
+            app($stock)->resize($source, $less);
+        }
     }
 
     /**
@@ -1115,6 +1424,28 @@ final class DirectSaleService
                 $this->credit->lockCustomer((int) $invoice->customer_id);
             }
 
+            /*
+             * ⭐ উৎস থেকে আসা বিক্রি (DO …) — সই হয়ে গেলেও উৎসটা আবার দেখা, তালা দিয়ে: এখনো খোলার মতো কি না, আর
+             * চালানের মাল অনুমোদিতের বেশি নয় (পণ্য ধরে — চালানের সারি উৎসের সারি চেনে না)। ⛔ উৎস হারালে শেষ নয়।
+             */
+            $source = null;
+            $counted = null;
+
+            if (($invoice->counter_source ?? null) !== null) {
+                $source = app(CounterSaleSources::class)->forInvoice($invoice);
+
+                if ($source === null) {
+                    throw ValidationException::withMessages(['source' => __('sales::counter_source.gone')]);
+                }
+
+                $source->assertReadyForCounter();
+                $counted = $this->fitsSource($source->counterScreen(), $challan->lines->map(fn ($line) => [
+                    'product_id' => (int) $line->product_id,
+                    'qty' => (string) $line->delivered_qty,
+                    'free_qty' => (string) ($line->free_qty ?? '0'),
+                ])->all(), Customer::query()->findOrFail($invoice->customer_id), $challan->warehouse);
+            }
+
             $deposit = array_reduce(
                 $vouchers,
                 fn (string $sum, Voucher $v) => bcadd($sum, (string) $v->amount, 4),
@@ -1127,6 +1458,11 @@ final class DirectSaleService
             $this->moveFreeStock($challan->fresh(['lines.product', 'giftLines.product']), $challan->warehouse);
 
             $invoice = $this->invoices->confirm($invoice->fresh(['lines']), $deposit);
+
+            // ⭐ ধাপ চ — সইয়ের পরে পাকা হলেও উৎস একই লেনদেনে "বিল হয়েছে" ([[settleSource()]])
+            if ($source !== null && $counted !== null) {
+                $this->settleSource($source, $counted, $challan, $invoice);
+            }
 
             // ⓘ পাকা হলে আর "রাখা খসড়া" নয় — চিহ্ন থেকে গেলে ভবিষ্যতের কোনো তালিকা এটাকে খোলা খসড়া ভাবত
             if ($invoice->counter_draft !== null) {

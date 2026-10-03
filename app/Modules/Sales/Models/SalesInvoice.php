@@ -71,6 +71,8 @@ class SalesInvoice extends Model implements Drillable, ShowsItselfForSigning
         'counter_draft',
         // ⓘ সইয়ের অপেক্ষার বিক্রির পর্দা — কাউন্টারে কেবল দেখার জন্য ([[DirectSaleService::withdrawHeld()]])
         'counter_screen',
+        // ⭐ কোন কাগজ থেকে কাউন্টারে এল (DO …) — খসড়া পাকা হলে উৎসটা "বিল হয়েছে" ([[CounterSaleSources::forInvoice()]])
+        'counter_source', 'counter_source_id',
 
         'customer_id', 'warehouse_id', 'trx_date', 'due_on',
         'subtotal', 'discount', 'tax', 'rounding_amount', 'total', 'cost_of_goods',
@@ -93,6 +95,7 @@ class SalesInvoice extends Model implements Drillable, ShowsItselfForSigning
             'parked_at' => 'datetime',
             'counter_draft' => 'array',
             'counter_screen' => 'array',
+            'counter_source_id' => 'integer',
             'subtotal' => 'decimal:4',
             'discount' => 'decimal:4',
             'bill_discount' => 'decimal:4',

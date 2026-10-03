@@ -29,6 +29,7 @@ use App\Modules\MasterData\Models\TransferMode;
 use App\Modules\MasterData\Models\Vehicle;
 use App\Modules\Sales\Models\DeliveryChallan;
 use App\Modules\Sales\Models\SalesInvoice;
+use App\Modules\Sales\Services\CounterSaleSources;
 use App\Modules\Sales\Services\CreditExposure;
 use App\Modules\Sales\Services\DirectSaleService;
 use App\Modules\Sales\Services\SaleNumber;
@@ -76,9 +77,27 @@ class DirectSaleController extends Controller implements HasMiddleware
         return [new Middleware('can:sales.challan.create')];
     }
 
-    public function create(Request $request): View
+    public function create(Request $request): View|RedirectResponse
     {
-        $warehouse = $this->warehouse($request);
+        /*
+         * ⭐ ডিপোর যাচাই থেকে — `?source=do&source_id=12` (বিক্রয়ের কাজের ধারা, ২ অক্টোবর ২০২৬, ধাপ ঙ)। ⓘ উৎসের
+         * সারি আগে থেকে ভরা, লট কাউন্টারে বাছা ([[sourceScreen()]]); ⛔ না পেলে ৪০৪ — দেয়াল মডেলের নিজের স্কোপে।
+         */
+        $fromSource = null;
+
+        if ($request->filled('source')) {
+            $fromSource = $this->openFromSource($request);
+
+            if ($fromSource instanceof RedirectResponse) {
+                return $fromSource;
+            }
+        }
+
+        // ⓘ উৎস নিজের গুদাম বললে সেটাই — পর্দা অন্য গুদাম না চাইলে
+        $sourceWarehouse = $fromSource['screen']['warehouse_id'] ?? null;
+        $warehouse = $sourceWarehouse !== null && ! $request->filled('warehouse_id')
+            ? (Warehouse::query()->find($sourceWarehouse) ?? $this->warehouse($request))
+            : $this->warehouse($request);
         /*
          * withOutstanding() — নিচের customerTerms-এর জন্য, আর কারণটা গোনার।
          *
@@ -392,6 +411,10 @@ class DirectSaleController extends Controller implements HasMiddleware
                 ->values()->all(),
             'resume' => $this->resumeFrom($request),
 
+            /* ⭐ উৎস থেকে খোলা পর্দা — রাখা খসড়ার একই আকারে ([[sourceScreen()]]), আর মাথার "DO-0012 থেকে" */
+            'sourceResume' => $fromSource === null ? null : $this->sourceScreen($fromSource['screen'], $warehouse),
+            'counterSource' => $fromSource === null ? $this->sourceOfDraft($request) : $fromSource['banner'],
+
             /*
              * বাকির শর্তগুলো — মাস্টার ডাটা থেকে, হাতে লেখা তালিকা থেকে নয়।
              *
@@ -683,6 +706,14 @@ class DirectSaleController extends Controller implements HasMiddleware
              * যাতে কেউ হাতে বানানো অনুরোধে বিলের সারিতে মেগাবাইট ভরতে না পারে।
              */
             'resume_invoice_id' => ['nullable', 'integer', 'min:1'],
+
+            /*
+             * ⭐ উৎস (DO …) — ডিপোর যাচাই থেকে খোলা পর্দা (বিক্রয়ের কাজের ধারা, ২ অক্টোবর ২০২৬)। ⓘ এখানে কেবল আকার;
+             * উৎস আছে কি না, কার, এখনো খোলার মতো কি না, আর অনুমোদিতের বেশি কি না — সব সেবায়, তালা দিয়ে
+             * ([[DirectSaleService::guardSource()]])।
+             */
+            'source' => ['nullable', 'string', 'max:16', 'required_with:source_id'],
+            'source_id' => ['nullable', 'integer', 'min:1', 'required_with:source'],
             'screen_state' => ['nullable', 'string', 'max:500000'],
 
             // ⭐ বিক্রি নম্বর (S) — হাতে দেওয়া হলে সেটাই; অনন্যতা সেবায় ([[SaleNumber::begin()]])
@@ -900,6 +931,8 @@ class DirectSaleController extends Controller implements HasMiddleware
              */
             'lines.*.rate' => ['required', 'numeric', 'gt:0'],
             'lines.*.discount_percent' => ['nullable', 'numeric', 'min:0', 'max:100'],
+            // ⓘ উৎসের কোন সারি — না থাকলে সেবা পণ্য ধরে মেলায় (সারি মুছে আবার বসালে আইডি হারায়)
+            'lines.*.source_line_id' => ['nullable', 'integer', 'min:1'],
 
             /*
              * ⭐ লট — মালিকের সিদ্ধান্ত, ২৫ সেপ্টেম্বর ২০২৬: বাছা বাধ্যতামূলক।
@@ -1558,6 +1591,169 @@ class DirectSaleController extends Controller implements HasMiddleware
                 'lines' => $lines,
             ],
             'fields' => [],
+        ];
+    }
+
+    /**
+     * ⭐ ডিপোর যাচাই থেকে কাউন্টারে — `?source=do&source_id=12` (বিক্রয়ের কাজের ধারা, ২ অক্টোবর ২০২৬, ধাপ ঙ)।
+     *
+     * ⓘ ক্রম: উৎস খোঁজা (⛔ না পেলে ৪০৪ — কোম্পানি ও শাখার দেয়াল মডেলের নিজের স্কোপে) → এই উৎসের খসড়া আগে থেকে
+     * থাকলে সেটাই খোলে (এক কাগজ, এক বিল) → "খোলার মতো?"।
+     * ⛔ GET কিছুই বদলায় না (সমন্বয়ক, ৩ অক্টোবর ২০২৬) — ডিপো যাচাইয়ে তোলা তালিকার বোতামের POST-এ
+     * ([[DepotCheckController::open()]])। খোলার মতো না হলে (বিল হয়ে গেছে, বাতিল …) তালিকায়, কারণসহ।
+     *
+     * @return array{screen: array<string, mixed>, banner: array<string, mixed>}|RedirectResponse
+     */
+    private function openFromSource(Request $request): array|RedirectResponse
+    {
+        $key = (string) $request->query('source', '');
+        $id = (int) $request->query('source_id', 0);
+        $source = app(CounterSaleSources::class)->find($key, $id);
+
+        abort_if($source === null, 404);
+
+        $draft = SalesInvoice::query()
+            ->where('counter_source', $key)
+            ->where('counter_source_id', $id)
+            ->where('status', 'draft')
+            ->orderByDesc('id')
+            ->value('id');
+
+        if ($draft !== null) {
+            return redirect()->route('sales.direct.create', ['draft' => (int) $draft]);
+        }
+
+        try {
+            $source->assertReadyForCounter();
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return redirect()->route('sales.direct.depot_check')->withErrors($e->errors());
+        }
+
+        $screen = $source->counterScreen();
+
+        return [
+            'screen' => $screen,
+            'banner' => ['key' => $key, 'id' => $id, 'ref' => (string) $screen['ref'], 'fromDraft' => false],
+        ];
+    }
+
+    /**
+     * উৎসের সারি থেকে কাউন্টারের পর্দা — রাখা খসড়ার হুবহু আকারে ([[screenFromDraft()]]), তাই পাতার জাভাস্ক্রিপ্ট
+     * নতুন কিছু শেখে না: `resume`-এর মতোই ভরে, কেবল `invoiceId` খালি (নতুন বিল)।
+     *
+     * ⭐ লট কাউন্টারের নিয়মে — লট ধরা পণ্যে FEFO ধরে, মজুদ যতটা আছে ততটা প্রতিটা লটে ([[lotsFor()]]-এর একই ক্রম);
+     * না কুলোলে বাকিটা লট ছাড়া সারিতে — বিক্রেতা দেখেন, আর নিশ্চিতের আগে বাদ দেন বা লট বাছেন। ⓘ প্রতিটা ভাগ
+     * উৎসের একই সারির (`sourceLineId`), তাই সেবা মোট ধরে মেলায়।
+     *
+     * @param  array{ref: string, customer_id: int, warehouse_id: int|null, lines: list<array<string, mixed>>}  $screen
+     * @return array<string, mixed>
+     */
+    private function sourceScreen(array $screen, ?Warehouse $warehouse): array
+    {
+        $products = Product::query()->with(['unit', 'tax'])
+            ->whereIn('id', collect($screen['lines'])->pluck('product_id')->all())
+            ->get()->keyBy('id');
+        $lots = $this->lotsFor($warehouse);
+        $plain = fn (string $n): string => str_contains($n, '.') ? rtrim(rtrim($n, '0'), '.') : $n;
+
+        $lines = [];
+        $key = 1;
+
+        foreach ($screen['lines'] as $row) {
+            $left = bcadd((string) $row['qty'], '0', 4);
+
+            if (bccomp($left, '0', 4) <= 0) {
+                continue;
+            }
+
+            $product = $products->get((int) $row['product_id']);
+            $chunks = [];
+
+            if ($product?->track_batch) {
+                foreach ($lots[(int) $product->id] ?? [] as $lot) {
+                    if (bccomp($left, '0', 4) <= 0) {
+                        break;
+                    }
+
+                    $take = bccomp($left, (string) $lot['qty'], 4) <= 0 ? $left : bcadd((string) $lot['qty'], '0', 4);
+                    $chunks[] = ['qty' => $take, 'batchId' => (string) $lot['id'], 'batchNo' => (string) $lot['no']];
+                    $left = bcsub($left, $take, 4);
+                }
+            }
+
+            if (bccomp($left, '0', 4) > 0) {
+                $chunks[] = ['qty' => $left, 'batchId' => '', 'batchNo' => ''];
+            }
+
+            foreach ($chunks as $i => $chunk) {
+                $lines[] = [
+                    'key' => $key++,
+                    'id' => (int) $row['product_id'],
+                    'name' => (string) ($product?->name() ?? ''),
+                    'unit' => (string) ($product?->unit?->name() ?? ''),
+                    'vatRate' => (float) ($product?->tax?->rate ?? 0),
+                    'vatInclusive' => (bool) ($product?->tax?->is_inclusive ?? false),
+                    'qty' => $plain($chunk['qty']),
+                    // ⓘ ফ্রি প্রথম ভাগে — অনুপাতের দেয়াল সেবায় যেমন আছে
+                    'freeQty' => $i === 0 ? $plain(bcadd((string) ($row['free_qty'] ?? '0'), '0', 4)) : '0',
+                    'rate' => $plain(bcadd((string) $row['rate'], '0', 4)),
+                    'discountPercent' => $plain(bcadd((string) ($row['discount_percent'] ?? '0'), '0', 4)),
+                    'unitId' => '',
+                    'gifts' => [],
+                    'batchId' => $chunk['batchId'],
+                    'batchNo' => $chunk['batchNo'],
+                    'sourceLineId' => (int) $row['source_line_id'],
+                ];
+            }
+        }
+
+        // ⓘ ক্রেতার নিজের বাকির মেয়াদ, ড্রপডাউনে থাকলে — ক্রেতা বাছলে পর্দা যা বসাত ([[direct-sale.js]] chooseCustomer)
+        $days = (int) (Customer::query()->inViewedBranch()->whereKey($screen['customer_id'])->value('credit_days') ?? 0);
+        $term = $days > 0 && collect($this->paymentTerms())->contains('value', 'credit:'.$days) ? 'credit:'.$days : 'cash';
+
+        return [
+            'invoiceId' => '',
+            'invoiceNo' => '',
+            'challanNo' => '',
+            'customerId' => (int) $screen['customer_id'],
+            'screen' => [
+                'customerId' => (string) $screen['customer_id'],
+                'creditTerm' => $term,
+                'dueOn' => '',
+                'lines' => $lines,
+                'nextKey' => $key,
+            ],
+            'fields' => [],
+            'viewOnly' => false,
+            'approvalUrl' => null,
+            'stage' => 'source',
+            'challanUrl' => null,
+        ];
+    }
+
+    /**
+     * `?draft=ID` — খসড়াটা কোনো উৎস থেকে এসে থাকলে মাথার "DO-0012 থেকে"। ⓘ পাকা করার সময় উৎস সেবা নিজেই
+     * খসড়া থেকে পড়ে ([[DirectSaleService::sourceFor()]]), তাই এখানে কেবল দেখানো।
+     *
+     * @return array{key: string, id: int, ref: string, fromDraft: bool}|null
+     */
+    private function sourceOfDraft(Request $request): ?array
+    {
+        $id = $request->integer('draft');
+
+        if ($id <= 0) {
+            return null;
+        }
+
+        $draft = SalesInvoice::query()->whereNotNull('counter_source')
+            ->find($id, ['id', 'company_id', 'counter_source', 'counter_source_id']);
+        $source = $draft === null ? null : app(CounterSaleSources::class)->forInvoice($draft);
+
+        return $source === null ? null : [
+            'key' => (string) $draft->counter_source,
+            'id' => (int) $draft->counter_source_id,
+            'ref' => (string) $source->counterScreen()['ref'],
+            'fromDraft' => true,
         ];
     }
 

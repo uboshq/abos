@@ -125,6 +125,19 @@
         </form>
     @endif
 
+    {{-- ⭐ উৎস থেকে খোলা — "DO-0012 থেকে" (বিক্রয়ের কাজের ধারা, ২ অক্টোবর ২০২৬, ধাপ ঙ)। ⓘ সারি আগে থেকে ভরা; কম দেওয়া
+         চলে, ⛔ অনুমোদিতের বেশি নয় — পাহারা সেবায় ([[DirectSaleService::guardSource()]])। --}}
+    @if (! empty($counterSource))
+        <div role="status"
+             class="mb-3 flex flex-wrap items-center gap-3 rounded-(--radius-card) border
+                    border-(--color-border) bg-(--color-badge-info-bg) p-3">
+            <span class="text-sm font-semibold text-(--color-badge-info-ink)">
+                {{ __('sales::counter_source.from', ['ref' => $counterSource['ref']]) }}
+            </span>
+            <span class="text-xs text-(--color-badge-info-ink)">{{ __('sales::counter_source.banner_hint') }}</span>
+        </div>
+    @endif
+
     <form method="POST" action="{{ route('sales.direct.store') }}"
           x-data="directSale({
               catalogue: @js($products),
@@ -154,7 +167,7 @@
                   'openDraftBlocks' => __('sales::validation.open_draft_blocks_new_bill'),
               ]),
               pendingDrafts: @js($pendingDrafts ?? []),
-              resume: @js($resume ?? null),
+              resume: @js($resume ?? $sourceResume ?? null),
               pendingUrl: @js(route('sales.direct.create')),
               transferModes: @js($transferModes ?? []),
               freeAllowedUrl: @js(route('sales.direct.free_allowed')),
@@ -258,6 +271,11 @@
              নম্বর না বদলে। --}}
         <input type="hidden" name="screen_state" :value="screenSnapshot">
         <input type="hidden" name="resume_invoice_id" :value="resumeId">
+        {{-- ⓘ উৎস — নতুন বিলে; রাখা খসড়া নিজের উৎস নিজেই মনে রাখে --}}
+        @if (! empty($counterSource) && empty($counterSource['fromDraft']))
+            <input type="hidden" name="source" value="{{ $counterSource['key'] }}">
+            <input type="hidden" name="source_id" value="{{ $counterSource['id'] }}">
+        @endif
 
         {{--
             ── মজুদ নেই — পর্দার মাঝখানে, লাল, শব্দসহ ──────────────────────

@@ -177,6 +177,10 @@ return [
             ['label' => 'sales::menu.direct', 'icon' => 'sales', 'route' => 'sales.direct.create', 'permission' => 'sales.challan.create',
                 'setting' => 'sales.screen_direct'],
 
+            /* ⭐ ডিপোর যাচাই — হিসাবে অনুমোদিত DO থেকে সরাসরি বিক্রয়ে (বিক্রয়ের কাজের ধারা, ২ অক্টোবর ২০২৬, ধাপ ঙ) */
+            ['label' => 'sales::counter_source.menu', 'icon' => 'search', 'route' => 'sales.direct.depot_check',
+                'permission' => 'sales.challan.create', 'setting' => 'sales.screen_direct'],
+
             /*
              * ⓘ ইনভয়েস তালিকা — সব বিল (কাউন্টার, সরাসরি বিক্রয়, চালান থেকে বানানো), কেবল বাতিলগুলো একটা বোতামের পেছনে।
              * ⛔ দুই মেনুতে একই তালিকা রাখা হয় না — মালিকের নিজের নিয়ম (*"ekoi jinis dui jaygay dorkar nai"*)।

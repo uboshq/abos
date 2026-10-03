@@ -158,6 +158,13 @@ Route::middleware('auth')->prefix('sales')->group(function () {
          * বলে। দেয়ালটা [[DirectSaleService]]-এই থাকে।
          */
         Route::get('/free-allowed', [DirectSaleController::class, 'freeAllowed'])->name('free_allowed');
+
+        /*
+         * ⭐ ডিপোর যাচাই — হিসাবে অনুমোদিত DO, "যাচাই করে বিক্রয়ে খুলুন" (বিক্রয়ের কাজের ধারা, ২ অক্টোবর ২০২৬, ধাপ ঙ)।
+         * ⓘ কেবল দেখা; খোলা কাউন্টারেই (`create?source=do`)। চাবি কাউন্টারের ([[DepotCheckController]])।
+         */
+        Route::get('/depot-check', [\App\Modules\Sales\Http\Controllers\DepotCheckController::class, 'index'])->name('depot_check');
+        Route::post('/depot-check/open', [\App\Modules\Sales\Http\Controllers\DepotCheckController::class, 'open'])->name('depot_check.open');
     });
 
     Route::prefix('orders')->name('order.')->group(function () {
