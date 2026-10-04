@@ -5,6 +5,7 @@ import { abosDate } from './date.js'
 import { listKeys } from './list-keys.js'
 import { searchAsYouType } from './search-as-you-type.js'
 import { guardOneSubmit } from './one-submit.js'
+import { guardConfirmOverview } from './confirm-overview.js'
 import { stockPlacement } from './placement.js'
 import { scannerStore } from './scanner.js'
 import partyVoucher from './party-voucher.js'
@@ -148,6 +149,8 @@ wireActions()
 /*
  * ⛔ একটা ফর্ম একবারই জমা — পাহারা আর তার পুরো ইতিহাস [[one-submit.js]]-এ।
  */
+// ⭐ নিশ্চিতের আগে সারাংশের পপ-আপ — একবার-জমার পাহারার আগে (capture), মালিক ৪ অক্টোবর ২০২৬ ([[confirm-overview.js]])
+guardConfirmOverview()
 guardOneSubmit()
 
 window.Alpine = Alpine
