@@ -58,6 +58,9 @@ Route::middleware('auth')->prefix('purchase')->group(function () {
         Route::get('/', [DirectPurchaseController::class, 'create'])->name('create');
         Route::post('/', [DirectPurchaseController::class, 'store'])->name('store');
 
+        // ⭐ নিশ্চিতের আগে সারাংশ — পপ-আপের ভিতর ([[DirectPurchaseOverviewController]], ৪ অক্টোবর ২০২৬)
+        Route::post('/overview', \App\Modules\Purchase\Http\Controllers\DirectPurchaseOverviewController::class)->name('overview');
+
         /*
          * এই সরবরাহকারীর কাছ থেকে গতবারের দরগুলো — একবারে সব পণ্যের।
          *

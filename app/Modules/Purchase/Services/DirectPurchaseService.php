@@ -254,11 +254,14 @@ final class DirectPurchaseService
      * ⓘ শতাংশে লিখলে অঙ্কটা **এখানেই** কষা হয় — পর্দার কষা সংখ্যা বিশ্বাস
      * করা হয় না।
      *
+     * ⓘ `public` — "নিশ্চিত করুন"-এর আগের সারাংশও ঠিক এই ভাগটাই দেখায় ([[DirectPurchaseOverview]], ৪ অক্টোবর ২০২৬);
+     * দ্বিতীয় একটা অঙ্ক লিখলে সারাংশ আর বিল একদিন আলাদা কথা বলত।
+     *
      * @param  list<array<string, mixed>>  $lines
      * @param  array<string, mixed>  $data
      * @return list<array<string, mixed>>
      */
-    private function spreadBillDiscount(array $lines, array $data): array
+    public function spreadBillDiscount(array $lines, array $data): array
     {
         $given = (string) ($data['bill_discount'] ?? '');
 

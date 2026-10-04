@@ -29,7 +29,8 @@
         </div>
     @endif
 
-    <form method="POST" action="{{ route('purchase.direct.store') }}"
+    {{-- ⓘ `data-confirm-overview` — নিশ্চিতের আগে সারাংশের পপ-আপ ([[confirm-overview.js]], ৪ অক্টোবর ২০২৬) --}}
+    <form method="POST" action="{{ route('purchase.direct.store') }}" data-confirm-overview="{{ route('purchase.direct.overview') }}"
           x-data="directPurchase({
               catalogue: @js($products),
               vatEnabled: {{ $show['vat'] ? 'true' : 'false' }},
@@ -617,5 +618,8 @@
              বোঝা যেত না। --}}
         @include('purchase::direct.partials.totals')
     </form>
+
+    {{-- ⭐ নিশ্চিতের আগে সারাংশের পপ-আপ — এই পাতায় খসড়ার বোতাম নেই, তাই পপ-আপেও নেই --}}
+    <x-ui.confirm-overview :draft="false" />
 
 </x-layouts.app>

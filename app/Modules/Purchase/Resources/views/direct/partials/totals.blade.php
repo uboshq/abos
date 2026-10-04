@@ -336,7 +336,7 @@
                  মুহূর্তে চোখ বোতামেই থাকে, উপরের ছকে নয়। ⚠️ অঙ্কটা
                  বোতামে না থাকলে মানুষটাকে চোখ সরিয়ে মেলাতে হত, আর
                  বেশিরভাগ দিন সেটা করা হত না। --}}
-            <x-ui.button type="submit" tone="primary" class="w-full"
+            <x-ui.button type="submit" tone="primary" class="w-full" data-overview-trigger
                          ::class="(busy || lines.length === 0) && 'pointer-events-none opacity-50'">
                 {{ __('purchase::action.receive_goods') }} ·
                 <span class="num">৳<span x-text="money(netPayable)"></span></span>
