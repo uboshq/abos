@@ -162,6 +162,22 @@ final class AConfirmedSaleCouldNotBeCorrectedTest extends TestCase
         $this->assertStringNotContainsString('data-edit-sale', $banner(), '⛔ গেট পাসের পরেও ব্যানারে সম্পাদনার বোতাম।');
     }
 
+    /**
+     * ⭐ সম্পাদনা ফিরে এলে কারণটা পাতার মাথায়, লাল — 63, ৪ অক্টোবর ২০২৬ (মালিক "edit hoy na" বলছিলেন, কারণ চাপা ছিল)।
+     */
+    public function test_a_refused_edit_says_why_at_the_top(): void
+    {
+        $sale = $this->sell('2');
+        $edit = route('sales.direct.create', ['edit' => $sale->id]);
+
+        $this->get($edit)->assertOk()->assertDontSee('data-edit-refused', false);
+
+        $this->from($edit)->post(route('sales.direct.store'), ['edit_invoice_id' => $sale->id, 'lines' => []])
+            ->assertRedirect($edit);
+
+        $this->get($edit)->assertOk()->assertSee('data-edit-refused', false);
+    }
+
     // ── যন্ত্রপাতি ──────────────────────────────────────────────────────
 
     private function sell(string $qty): SalesInvoice

@@ -204,6 +204,7 @@ return [
     'key_cancel' => 'Void bill',
     'key_many' => 'Many items at once',
     'key_customer2' => 'Find customer',
+    'edit_refused' => 'The edit did not go through',
     'key_enter' => 'In the quantity box — line to cart',
 
     'terms' => 'Terms',

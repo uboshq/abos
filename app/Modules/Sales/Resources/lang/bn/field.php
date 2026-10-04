@@ -240,6 +240,7 @@ return [
     'key_cancel' => 'বিল বাতিল',
     'key_many' => 'অনেক পণ্য একসাথে',
     'key_customer2' => 'ক্রেতা খুঁজুন',
+    'edit_refused' => 'সম্পাদনা হয়নি',
     'key_enter' => 'পরিমাণের ঘরে — সারি কার্টে',
 
     'total_sales_qty' => 'পরিমাণ',

@@ -425,6 +425,17 @@
           class="grid gap-3 xl:grid-cols-[1fr_17rem]">
         @csrf
 
+        {{-- ⭐ সম্পাদনা ফিরে এলে কারণটা মাথায়, লাল, শব্দসহ — 63, ৪ অক্টোবর ২০২৬: মালিক দুবার "হালনাগাদ" চেপে
+             ফিরে এসেছিলেন, আর কারণটা ডানের বাক্সের একদম নিচে চাপা পড়ে ছিল ("edit hoy na")।
+             ⓘ নিচের তালিকাটাও থাকে — মালিক আগে ওখানেই চেয়েছিলেন। --}}
+        @if ($errors->any() && ($resume['stage'] ?? '') === 'edit')
+            <div role="alert" data-edit-refused x-init="beep()" style="grid-column: 1 / -1"
+                 class="rounded-(--radius-card) border border-(--color-danger) bg-(--color-badge-danger-bg) px-3 py-2
+                        text-sm font-semibold text-(--color-badge-danger-ink)">
+                ⛔ {{ __('sales::field.edit_refused') }}: {{ implode(' · ', $errors->all()) }}
+            </div>
+        @endif
+
         {{-- ⭐ রাখা খসড়া — মালিকের নকশা, ২৬ সেপ্টেম্বর ২০২৬: "খসড়া রাখুন"
              বিলটা রাখে, আর পাকা হয় এই পর্দাতেই ফিরে এসে।
 
