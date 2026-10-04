@@ -10,10 +10,13 @@ use App\Models\User;
 use App\Modules\Customer\Models\Customer;
 use App\Modules\Inventory\Models\Product;
 use App\Modules\Inventory\Models\Warehouse;
+use App\Modules\Inventory\Services\CostLayerService;
+use App\Modules\Inventory\Services\StockService;
 use App\Modules\Inventory\Services\StockTransferService;
 use App\Modules\MasterData\Models\Unit;
 use App\Modules\Purchase\Services\PurchaseBillService;
 use App\Modules\Purchase\Services\PurchaseOrderService;
+use App\Modules\Sales\Models\SalesInvoice;
 use App\Modules\Sales\Services\DirectSaleService;
 use App\Modules\Sales\Services\SalesInvoiceService;
 use App\Modules\Supplier\Models\Supplier;
@@ -234,7 +237,10 @@ class PackedDocumentTest extends TestCase
      */
     public function test_the_printed_invoice_speaks_in_boxes(): void
     {
-        $seen = $this->printed('sales.print.invoice', $this->invoiceInBoxes('2', '800'));
+        // ⓘ ২ বাক্স = ২০০ পিস; ডেমো গুদামে বিক্রয়যোগ্য তার কম, আর পাকা করার দেয়াল সেটা মাপে
+        $this->stockUp('200');
+
+        $seen = $this->printed('sales.print.invoice', $this->confirmed($this->invoiceInBoxes('2', '800')));
         $line = $seen['doc']->lines[0];
 
         $this->assertSame('2', $line['qty']);
@@ -251,7 +257,7 @@ class PackedDocumentTest extends TestCase
             [['product_id' => $this->product->id, 'qty' => '4', 'rate' => '25']],
         );
 
-        $seen = $this->printed('sales.print.invoice', $invoice);
+        $seen = $this->printed('sales.print.invoice', $this->confirmed($invoice));
         $line = $seen['doc']->lines[0];
 
         $this->assertSame('4', $line['qty']);
@@ -302,6 +308,44 @@ class PackedDocumentTest extends TestCase
         ];
     }
 
+    /**
+     * ছাপার আগে বিলটা পাকা — মালিকের নিয়ম, ২৫ সেপ্টেম্বর ২০২৬: *"খসড়া print
+     * hobe na"* ([[SalesInvoice::isNotFinalYet()]], [[SalesPrintController::invoice()]])।
+     *
+     * ⚠️ এই ফাইলটা নিয়মের আগের — তখন খসড়া বিলও ছাপা যেত। ⛔ এখন খসড়া ছাপতে
+     * চাইলে পাতা বার্তাসহ ফিরে যায়, আর দাবিগুলো প্যাকের কথা বলার আগেই থামত।
+     */
+    private function confirmed(SalesInvoice $invoice): SalesInvoice
+    {
+        return app(SalesInvoiceService::class)->confirm($invoice);
+    }
+
+    /**
+     * গুদামে বাড়তি মাল — পিসে, আর তার দরসহ।
+     *
+     * ⓘ বিল পাকা হলে বিক্রয়যোগ্যের দেয়াল ([[SalesInvoiceService::assertEnoughToSell()]])
+     * আর বিক্রীত মালের ব্যয় দুইটাই মাপা হয়; ⚠️ দেয়াল বন্ধ করে দিলে দাবিটা
+     * বাস্তব পথ দেখাত না, তাই মালটাই আনা হয়।
+     */
+    private function stockUp(string $pieces): void
+    {
+        app(StockService::class)->move(
+            product: $this->product,
+            warehouse: $this->warehouse,
+            sourceType: 'test.opening',
+            sourceId: $this->product->id,
+            floor: $pieces,
+        );
+
+        app(CostLayerService::class)->receive(
+            product: $this->product,
+            qty: $pieces,
+            unitCost: '6.00',
+            sourceType: 'test.opening',
+            sourceId: $this->product->id,
+        );
+    }
+
     private function invoiceInBoxes(string $qty, string $rate)
     {
         return app(SalesInvoiceService::class)->create(
@@ -322,6 +366,12 @@ class PackedDocumentTest extends TestCase
      */
     private function directSaleOfOneBox(): array
     {
+        /*
+         * ⓘ ১ বাক্স = ১০০ পিস, নিজের মজুদ থেকে — অডিট গ১১ (৪ অক্টোবর ২০২৬) থেকে চালান বেচে "পাওয়া যায়" থেকে,
+         * আর ডেমোর আদেশ এই পণ্যের কিছু মাল ধরে রেখেছে; তাকে থাকলেও সেটা অন্যের।
+         */
+        $this->stockUp('100');
+
         return app(DirectSaleService::class)->complete(
             [...$this->header(), 'paid' => '0'],
             [[
