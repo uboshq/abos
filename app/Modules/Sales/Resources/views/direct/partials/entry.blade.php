@@ -593,7 +593,8 @@
                                  ⓘ `self-end` — লেবেলবিহীন বোতামটা যেন পাশের
                                  ঘরগুলোর **নিচের কিনারায়** বসে, লেবেলের সারিতে
                                  উঠে না যায়। --}}
-                            <button type="button" @click="addToCart()" :disabled="! picked"
+                            {{-- ⓘ কেবল-দেখার বিলে লুকানো — চাপলে কিছু হত না (63, ৪ অক্টোবর ২০২৬); সম্পাদনা ব্যানারের ✎ দিয়ে --}}
+                            <button type="button" @click="addToCart()" :disabled="! picked" x-show="! viewOnly"
                                     class="inline-flex h-(--spacing-field-dense) items-center gap-1 self-end whitespace-nowrap
                                            rounded-(--radius-field) bg-(--color-success) px-3 text-xs font-semibold
                                            text-white disabled:opacity-50">

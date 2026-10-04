@@ -143,6 +143,25 @@ final class AConfirmedSaleCouldNotBeCorrectedTest extends TestCase
         $this->get(route('sales.direct.create', ['edit' => $sale->id]))->assertOk()->assertDontSee('data-editing-sale', false);
     }
 
+    /**
+     * ⭐ পেন্ডিং থেকে খোলা "ডেলিভারির অপেক্ষায়" ব্যানারেও ✎ — গেট পাসের আগে আছে, পরে নেই; একই ব্যবহারকারী, একই বিল
+     * (মালিক, ৪ অক্টোবর ২০২৬, 63-এর মাধ্যমে: তিনি "হালনাগাদ করুন" চাপছিলেন আর কিছুই হচ্ছিল না)।
+     */
+    public function test_the_delivery_banner_offers_the_edit_until_the_gate_pass(): void
+    {
+        $sale = $this->sell('2');
+        $banner = fn () => (string) $this->get(route('sales.direct.create', ['draft' => $sale->id]))->assertOk()->getContent();
+
+        $before = $banner();
+        $this->assertStringContainsString('data-delivery-banner', $before, 'প্রস্তুতিটাই ভুল — বিলটা ডেলিভারির অপেক্ষার ব্যানারে খোলেনি।');
+        $this->assertStringContainsString('data-edit-sale', $before, '⛔ গেট পাসের আগে ব্যানারে সম্পাদনার বোতাম নেই।');
+        $this->assertStringContainsString(e(route('sales.direct.create', ['edit' => $sale->id])), $before, '⛔ বোতামটা ?edit= পথে যায় না।');
+
+        app(DeliveryStageService::class)->move($this->challanOf($sale), DeliveryStage::DISPATCHED);
+
+        $this->assertStringNotContainsString('data-edit-sale', $banner(), '⛔ গেট পাসের পরেও ব্যানারে সম্পাদনার বোতাম।');
+    }
+
     // ── যন্ত্রপাতি ──────────────────────────────────────────────────────
 
     private function sell(string $qty): SalesInvoice

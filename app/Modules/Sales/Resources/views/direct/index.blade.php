@@ -50,7 +50,16 @@
          অপেক্ষার বিক্রি আগে খসড়ায় ফেরে, তারপর বাতিল বা বদল। --}}
     {{-- ⭐ ডেলিভারির অপেক্ষায় — পাকা বিক্রি, কেবল দেখা; "ডেলিভারি নিশ্চিত" চালানের পাতায় --}}
     @if (! empty($resume) && ($resume['stage'] ?? '') === 'delivery')
-        <div role="status"
+        {{-- ⭐ গেট পাসের আগে সম্পাদনা এখান থেকেও — বিলের পাতার হুবহু একই শর্তে (63, ৪ অক্টোবর ২০২৬; [[SaleEditor]]).
+             ⓘ মালিক পেন্ডিং থেকে খুলে "হালনাগাদ করুন" চাপছিলেন, আর কিছুই হচ্ছিল না। --}}
+        @php
+            $deliveryInvoice = \App\Modules\Sales\Models\SalesInvoice::query()->find($resume['invoiceId']);
+            $canEditSale = $deliveryInvoice !== null
+                && $deliveryInvoice->status === \App\Core\Support\DocumentStatus::CONFIRMED
+                && auth()->user()?->can('sales.invoice.create') && auth()->user()?->can('sales.challan.create')
+                && rescue(fn () => (bool) app(\App\Modules\Sales\Services\SaleEditor::class)->assertEditable($deliveryInvoice), false, false);
+        @endphp
+        <div role="status" data-delivery-banner
              class="mb-3 flex flex-wrap items-center gap-3 rounded-(--radius-card) border
                     border-(--color-border) bg-(--color-badge-info-bg) p-3">
             <span class="text-sm font-semibold text-(--color-badge-info-ink)">
@@ -62,6 +71,13 @@
                 @endif
             </span>
             <span class="text-xs text-(--color-badge-info-ink)">{{ __('sales::message.delivery_view_only') }}</span>
+            @if ($canEditSale)
+                <a href="{{ route('sales.direct.create', ['edit' => $resume['invoiceId']]) }}" data-edit-sale data-no-peek
+                   class="ms-auto rounded-(--radius-field) border border-(--color-brand-600) bg-(--color-surface-card) px-4 py-1.5
+                          text-xs font-semibold text-(--color-brand-700)">
+                    ✎ {{ __('sales::field.edit_sale') }}
+                </a>
+            @endif
             @if ($resume['challanUrl'])
                 <a href="{{ $resume['challanUrl'] }}"
                    class="ms-auto rounded-(--radius-field) bg-(--color-brand-600) px-4 py-1.5 text-xs font-semibold

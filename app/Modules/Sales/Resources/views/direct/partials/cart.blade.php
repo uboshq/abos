@@ -149,7 +149,7 @@
                                                  নাম ও অপারেটর চলে, আর কিছু না চললে সে **চুপচাপ বাঁধাই
                                                  ছেড়ে দেয়** — কনসোলে কিছু আসে না, শুধু ঘরটা খালি থাকে।
                                                  ⓘ পাশের `✕` বোতামটাও তাই করে। --}}
-                                            <button type="button" @click="editLine(i)" data-edit-line
+                                            <button type="button" @click="editLine(i)" data-edit-line x-show="! viewOnly"
                                                     aria-label="{{ __('sales::action.edit_line') }}"
                                                     title="{{ __('sales::action.edit_line') }}"
                                                     class="rounded-(--radius-field) px-2 py-1 text-(--color-ink-muted)
