@@ -874,6 +874,8 @@ return [
          */
         \App\Modules\Sales\Events\DeliveryOrderSupervisorApproved::class => [\App\Modules\Sales\Listeners\HoldAndCheckTheDeliveryOrder::class],
         \App\Modules\Sales\Events\DeliveryOrderCancelled::class => [\App\Modules\Sales\Listeners\ReleaseTheDeliveryOrderStock::class],
+        // ⭐ অনুমোদিত বিক্রয় আদেশ — মাল ধরা, তারপর নিশ্চিত (SO+DO মেশানো, ধাপ ৪, ৪ অক্টোবর ২০২৬; [[HoldTheStockForTheApprovedOrder]])
+        \App\Modules\Sales\Events\SalesOrderApproved::class => [\App\Modules\Sales\Listeners\HoldTheStockForTheApprovedOrder::class],
         \App\Modules\Sales\Events\CollectionConfirmed::class => [\App\Modules\Sales\Listeners\RecheckTheHeldDeliveryOrders::class],
         \App\Modules\Accounts\Events\VoucherPosted::class => [\App\Modules\Sales\Listeners\RecheckTheHeldDeliveryOrders::class],
         \App\Modules\Accounts\Events\ChequeCleared::class => [\App\Modules\Sales\Listeners\RecheckTheHeldDeliveryOrders::class],

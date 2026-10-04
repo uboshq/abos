@@ -11,6 +11,7 @@ use App\Core\Support\Money;
 use App\Models\LedgerEntry;
 use App\Modules\Customer\Models\Customer;
 use App\Modules\Sales\Models\DeliveryChallan;
+use App\Modules\Sales\Support\SalesOrderStatus;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -215,9 +216,70 @@ final class CreditExposure implements CreditHolds
                 $this->draftInvoices($customer, $exceptInvoiceId, $exceptChallanId),
                 4,
             ),
-            $this->approvedDeliveryOrders([(int) $customer->id], $exceptDeliveryOrderId)[(int) $customer->id] ?? '0',
+            bcadd(
+                $this->approvedDeliveryOrders([(int) $customer->id], $exceptDeliveryOrderId)[(int) $customer->id] ?? '0',
+                $this->openOrders([(int) $customer->id])[(int) $customer->id] ?? '0',
+                4,
+            ),
             4,
         );
+    }
+
+    /**
+     * ⭐ পঞ্চম ভাগ — খোলা নিশ্চিত বিক্রয় আদেশ, যতটা এখনো যায়নি (SO+DO মেশানো, ধাপ ৪, উত্তর ৪; ৪ অক্টোবর ২০২৬)।
+     *
+     * ⓘ কেবল নতুন ধারার আদেশ (`hold_mode = holds`), অনুমোদিত বা নিশ্চিত — পুরনো ধারার আদেশের হয়ে DO-ই গোনা হয়
+     * ([[approvedDeliveryOrders()]]); দুইটাই গুনলে একই বিক্রি দুবার।
+     *
+     * ⓘ অঙ্ক = সারির টাকা × (আদেশ − পাকা চালানে যাওয়া) ÷ আদেশ। ⛔ পাকা চালানে যা গেছে তা "বিল না হওয়া চালান"-এ গোনা
+     * হয় ([[unbilledChallans()]]) — আবার গুনলে দুবার। ⓘ খসড়া চালানের অংশ আদেশেই থাকে, কারণ চালানের ভাগ কেবল পাকা
+     * চালান গোনে; বাদ দিলে ঐটুকু কোথাও গোনা হত না।
+     *
+     * @param  list<int>  $customerIds
+     * @return array<int, string>  ক্রেতা → এখনো না-যাওয়া আদেশের দাম
+     */
+    private function openOrders(array $customerIds): array
+    {
+        if ($customerIds === []) {
+            return [];
+        }
+
+        $delivered = DB::table('sal_challan_lines as cl')
+            ->join('sal_challans as c', 'c.id', '=', 'cl.delivery_challan_id')
+            ->whereColumn('cl.sales_order_line_id', 'ol.id')
+            ->whereNull('c.deleted_at')
+            ->whereIn('c.status', DocumentStatus::POSTED)
+            ->selectRaw('COALESCE(SUM(cl.delivered_qty), 0)');
+
+        $query = DB::table('sal_order_lines as ol')
+            ->join('sal_orders as o', 'o.id', '=', 'ol.sales_order_id')
+            ->whereIn('o.customer_id', $customerIds)
+            ->where('o.company_id', CompanyContext::id())
+            ->whereNull('o.deleted_at')
+            ->where('o.hold_mode', SalesOrderStatus::HOLD_HOLDS)
+            ->whereIn('o.status', [SalesOrderStatus::APPROVED, SalesOrderStatus::CONFIRMED])
+            ->where('ol.ordered_qty', '>', 0)
+            ->select(['o.customer_id', 'ol.ordered_qty', 'ol.amount'])
+            ->selectSub($delivered, 'delivered');
+
+        if ($this->readLatest) {
+            $query->sharedLock();
+        }
+
+        $out = [];
+
+        foreach ($query->get() as $row) {
+            $left = bcsub((string) $row->ordered_qty, (string) $row->delivered, 4);
+
+            if (bccomp($left, '0', 4) <= 0) {
+                continue;
+            }
+
+            $value = bcdiv(bcmul((string) $row->amount, $left, 6), (string) $row->ordered_qty, 4);
+            $out[(int) $row->customer_id] = bcadd($out[(int) $row->customer_id] ?? '0', $value, 4);
+        }
+
+        return $out;
     }
 
     /**
@@ -308,7 +370,10 @@ final class CreditExposure implements CreditHolds
         // ⭐ চতুর্থ ভাগ — হিসাবে অনুমোদিত, বিল না হওয়া DO ([[pending()]]-এর একই নিয়ম)
         $orders = $this->approvedDeliveryOrders(array_map('intval', $customerIds));
 
-        foreach ([$challans, $drafts, $orders] as $part) {
+        // ⭐ পঞ্চম ভাগ — খোলা নিশ্চিত বিক্রয় আদেশের না-যাওয়া অংশ ([[openOrders()]])
+        $salesOrders = $this->openOrders(array_map('intval', $customerIds));
+
+        foreach ([$challans, $drafts, $orders, $salesOrders] as $part) {
             foreach ($part as $customerId => $held) {
                 $out[(int) $customerId] = bcadd($out[(int) $customerId] ?? '0', (string) $held, 4);
             }

@@ -9,6 +9,7 @@ use App\Modules\Accounts\Events\ChequeCleared;
 use App\Modules\Accounts\Events\VoucherPosted;
 use App\Modules\Sales\Events\CollectionConfirmed;
 use App\Modules\Sales\Services\DeliveryOrderAccounts;
+use App\Modules\Sales\Services\SalesOrderService;
 
 /**
  * ⭐ গ্রাহকের টাকা এল — তাঁর "টাকার জন্য আটকে" DO নিজে আবার যাচাই। বিক্রয়ের কাজের ধারা, ধাপ গ (৩ অক্টোবর ২০২৬)।
@@ -26,6 +27,9 @@ final class RecheckTheHeldDeliveryOrders
 
         if ($customerId !== null) {
             $this->accounts->recheckCustomer($customerId);
+
+            // ⭐ বাকির সীমায় আটকে থাকা বিক্রয় আদেশও — পুরনোটা আগে (SO+DO মেশানো, ধাপ ৪, ৪ অক্টোবর ২০২৬; [[SalesOrderService::recheckCustomer()]])
+            app(SalesOrderService::class)->recheckCustomer($customerId);
         }
     }
 
