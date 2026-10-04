@@ -137,7 +137,16 @@ class WorkSentToTheBackgroundHasSomethingToRunItTest extends TestCase
 
         $haystack = $deploy.$infra;
 
-        $found = false;
+        /*
+         * ⓘ ভাগ করা হোস্টিংয়ে worker নেই, তাই কিউ খালি করে নির্ধারিত কাজ — `routes/console.php`-এ
+         * `Schedule::command('queue:work --stop-when-empty …')`, প্রতি মিনিটে (cc1d727e)। এই পাহারা কেবল infra/ দেখত,
+         * তাই প্রথম ShouldQueue (SendPushToUser) আসতেই লাল হলো, যদিও চালানোর ব্যবস্থা ছিল।
+         * ⚠️ মন্তব্যে "queue:work" লিখে পার পাওয়া যায় না — আসল `Schedule::command(` ডাকটাই খোঁজা হয়।
+         */
+        $console = File::exists(base_path('routes/console.php')) ? File::get(base_path('routes/console.php')) : '';
+        $scheduled = preg_match('/^\s*Schedule::command\(\s*[\'"]queue:work\b/m', $console) === 1;
+
+        $found = $scheduled;
 
         foreach (self::PROVISION_MARKS as $mark) {
             if (str_contains($haystack, $mark)) {
@@ -152,7 +161,7 @@ class WorkSentToTheBackgroundHasSomethingToRunItTest extends TestCase
             array_map(fn (string $f): string => "  · {$f}", $queued),
             [
                 '',
-                'কিন্তু `infra/`-তে কোথাও worker চালানোর ব্যবস্থা নেই।',
+                'কিন্তু `infra/`-তে কোথাও worker চালানোর ব্যবস্থা নেই, আর routes/console.php-ও `queue:work` নির্ধারণ করে না।',
                 'ফলে কাজগুলো `jobs` টেবিলে গিয়ে বসে থাকবে, আর **কোনো',
                 'ত্রুটি দেখা যাবে না** — পর্দা বলবে "হয়ে গেছে"।',
                 '',
