@@ -10,6 +10,7 @@ use App\Core\Engines\Report\ReportEngine;
 use App\Core\Support\DocumentStatus;
 use App\Modules\Sales\Models\SalesInvoice;
 use App\Modules\Sales\Support\DeliveryOrderStatus;
+use App\Modules\Sales\Support\SalesOrderStatus;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Facades\DB;
 
@@ -99,18 +100,44 @@ final class SalesOrderBookReports
             permission: 'sales.report',
             title: 'sales::order_book.blocked_title',
             filters: ['branch', 'customer_id'],
-            query: fn (array $f): Builder => DB::table('sal_delivery_orders as o')
-                ->join('customers as cu', 'cu.id', '=', 'o.customer_id')
-                ->where('o.company_id', $f['company_id'])
-                ->tap(ReportEngine::branchWall($f, 'o.branch_id'))
-                ->whereNull('o.deleted_at')
-                ->where('o.status', DeliveryOrderStatus::ACCOUNTS_HELD)
-                ->when($f['customer_id'] ?? null, fn ($q, $id) => $q->where('o.customer_id', (int) $id))
-                ->orderBy('o.accounts_held_at')
-                ->select(['o.trx_date', 'o.document_no', 'o.total', 'o.accounts_short', 'cu.credit_limit'])
-                ->selectRaw(self::name('cu').' as customer_name')
-                ->selectRaw('DATE(o.accounts_held_at) as held_on')
-                ->selectRaw('DATEDIFF(?, DATE(o.accounts_held_at)) as days_held', [now()->toDateString()]),
+            /*
+             * ⭐ দুই কাগজ এক তালিকায় — সমন্বয়ক, ৪ অক্টোবর ২০২৬ (DO বিক্রয় আদেশে মেশানো, ধাপ ৩)।
+             *
+             * ⓘ সুইচ (`sales.orders_replace_do`) বন্ধ কোম্পানিতে সীমায় আটকে থাকে DO (`accounts_held`); চালু কোম্পানিতে বিক্রয়
+             * আদেশ (`credit_held`) — আর চালুর আগের আটকে থাকা DO নিজের নম্বরে শেষ হয়, তাই সেগুলোও থাকে। ⚠️ দুই অংশই সবসময়
+             * পড়া হয়: সুইচ দেখে একটা লুকালে, সুইচ বদলের দিন আগের ধারার আটকে থাকা কাগজ তালিকা থেকে হারাত — অথচ টাকার
+             * অপেক্ষা তখনো চলছে। ⓘ নতুন ধারার বাইরে `credit_held` আদেশ জন্মায়ই না, তাই এক কোম্পানির জন্য উত্তর তার নিজের ধারার।
+             */
+            query: function (array $f): Builder {
+                $deliveryOrders = DB::table('sal_delivery_orders as o')
+                    ->join('customers as cu', 'cu.id', '=', 'o.customer_id')
+                    ->where('o.company_id', $f['company_id'])
+                    ->tap(ReportEngine::branchWall($f, 'o.branch_id'))
+                    ->whereNull('o.deleted_at')
+                    ->where('o.status', DeliveryOrderStatus::ACCOUNTS_HELD)
+                    ->when($f['customer_id'] ?? null, fn ($q, $id) => $q->where('o.customer_id', (int) $id))
+                    ->select(['o.trx_date', 'o.document_no', 'o.total', 'o.accounts_short', 'cu.credit_limit'])
+                    ->selectRaw(self::name('cu').' as customer_name')
+                    ->selectRaw('o.accounts_held_at as held_at')
+                    ->selectRaw('DATE(o.accounts_held_at) as held_on')
+                    ->selectRaw('DATEDIFF(?, DATE(o.accounts_held_at)) as days_held', [now()->toDateString()]);
+
+                $salesOrders = DB::table('sal_orders as s')
+                    ->join('customers as cu', 'cu.id', '=', 's.customer_id')
+                    ->where('s.company_id', $f['company_id'])
+                    ->tap(ReportEngine::branchWall($f, 's.branch_id'))
+                    ->whereNull('s.deleted_at')
+                    ->where('s.status', SalesOrderStatus::CREDIT_HELD)
+                    ->when($f['customer_id'] ?? null, fn ($q, $id) => $q->where('s.customer_id', (int) $id))
+                    ->select(['s.trx_date', 's.document_no', 's.total', 's.credit_short as accounts_short', 'cu.credit_limit'])
+                    ->selectRaw(self::name('cu').' as customer_name')
+                    ->selectRaw('s.credit_held_at as held_at')
+                    ->selectRaw('DATE(s.credit_held_at) as held_on')
+                    ->selectRaw('DATEDIFF(?, DATE(s.credit_held_at)) as days_held', [now()->toDateString()]);
+
+                // ⓘ পুরনোটা আগে — যার অপেক্ষা সবচেয়ে লম্বা
+                return $deliveryOrders->unionAll($salesOrders)->orderBy('held_at');
+            },
             columns: [
                 ['key' => 'trx_date', 'label' => 'core.print.date', 'type' => ReportColumn::DATE, 'width' => '7rem'],
                 ['key' => 'document_no', 'label' => 'core.table.document', 'width' => '8rem'],

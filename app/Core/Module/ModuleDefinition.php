@@ -592,6 +592,15 @@ final class ModuleDefinition
                  * সবচেয়ে সম্ভাব্য কারণ, আর টাইপোর শাস্তি একটা হারিয়ে
                  * যাওয়া মেনু সারি হওয়া উচিত নয়।
                  */
+                // ⓘ উল্টো সুইচও ঘোষিত হতে হবে — টাইপো হলে সারিটা কখনো সরত না, আর কেউ জানত না ([[MenuSwitches::itemIsOn()]])
+                if (isset($item['hidden_when'])
+                    && ! in_array($item['hidden_when'], array_column($raw['settings'] ?? [], 'key'), true)) {
+                    throw new InvalidArgumentException(
+                        "{$path}: menu item '{$item['route']}' hides on setting '{$item['hidden_when']}', which "
+                        .'this module does not declare. The item would never hide, and nothing would say why.'
+                    );
+                }
+
                 if (isset($item['setting']) && $host === null) {
                     $declared = array_column($raw['settings'] ?? [], 'key');
 

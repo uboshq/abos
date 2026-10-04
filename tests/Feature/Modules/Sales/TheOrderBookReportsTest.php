@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Feature\Modules\Sales;
 
 use App\Core\Engines\Report\ReportEngine;
+use App\Core\Services\SettingsService;
 use App\Core\Support\CompanyContext;
 use App\Models\Company;
 use App\Models\User;
@@ -18,7 +19,9 @@ use App\Modules\Sales\Models\SalesInvoice;
 use App\Modules\Sales\Reports\SalesOrderBookReports;
 use App\Modules\Sales\Services\DirectSaleService;
 use App\Modules\Sales\Services\SalesInvoiceCancellationService;
+use App\Modules\Sales\Services\SalesOrderService;
 use App\Modules\Sales\Support\DeliveryOrderStatus;
+use App\Modules\Sales\Support\SalesOrderStatus;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -106,6 +109,42 @@ final class TheOrderBookReportsTest extends TestCase
         $this->assertSame(0, bccomp((string) $rows[$wrong->document_no]['due'], '0', 4), '⛔ বাতিল ইনভয়েসে বাকি দেখাচ্ছে।');
         $this->assertSame(0, bccomp((string) $rows[$kept->document_no]['total'], '30', 4));
         $this->assertNull($rows[$kept->document_no]['cxl_no']);
+    }
+
+    /**
+     * ⭐ সীমায় আটকে থাকা আদেশ — কোম্পানি যে ধারায় চলুক: সুইচ বন্ধে DO, চালুতে বিক্রয় আদেশ, আর আগের আটকে থাকা DO-ও থাকে।
+     * একই গ্রাহক, সুইচ বন্ধ তারপর চালু (সমন্বয়ক, ৪ অক্টোবর ২০২৬; DO বিক্রয় আদেশে মেশানো, ধাপ ৩)।
+     */
+    public function test_a_held_order_shows_whichever_flow_the_company_runs(): void
+    {
+        $settings = app(SettingsService::class);
+        $settings->set('sales.orders_replace_do', false);
+
+        $do = $this->order('DO-T-5', DeliveryOrderStatus::ACCOUNTS_HELD, '7000');
+        $do->forceFill(['accounts_short' => '700', 'accounts_held_at' => now()->subDays(3)])->save();
+
+        $this->assertContains('DO-T-5', array_column($this->book(SalesOrderBookReports::CREDIT_BLOCKED), 'document_no'),
+            '⛔ সুইচ বন্ধে সীমায় আটকে থাকা DO তালিকায় নেই।');
+
+        // ── একই গ্রাহক, এবার নতুন ধারা: আদেশ জমায় সীমায় আটকায়
+        $settings->set('sales.orders_replace_do', true);
+        $settings->set('customer.credit_limit_enabled', true);
+        Customer::query()->whereKey($this->dealer->id)->update(['credit_limit' => '0']);
+
+        $orders = app(SalesOrderService::class);
+        $so = $orders->create([
+            'customer_id' => $this->dealer->id,
+            'warehouse_id' => Warehouse::query()->where('is_default', true)->value('id'),
+            'trx_date' => now()->toDateString(),
+        ], [['product_id' => $this->biscuit->id, 'ordered_qty' => '10000', 'rate' => (string) $this->biscuit->sale_price]]);
+        $so = $orders->submit($so->fresh(['lines']));
+        $this->assertSame(SalesOrderStatus::CREDIT_HELD, $so->status, 'প্রস্তুতিটাই ভুল — আদেশ সীমায় আটকায়নি।');
+
+        $rows = collect($this->book(SalesOrderBookReports::CREDIT_BLOCKED))->keyBy('document_no');
+        $this->assertTrue($rows->has($so->document_no), '⛔ সুইচ চালুতে সীমায় আটকে থাকা বিক্রয় আদেশ তালিকায় নেই।');
+        $this->assertTrue($rows->has('DO-T-5'), '⛔ সুইচ চালুর পরে আগের আটকে থাকা DO তালিকা থেকে হারিয়েছে।');
+        $this->assertSame(0, bccomp((string) $rows[$so->document_no]['accounts_short'], (string) $so->credit_short, 4), '⛔ কত কম, ভুল।');
+        $this->assertSame('DO-T-5', $rows->keys()->first(), '⛔ পুরনো অপেক্ষা আগে আসার কথা।');
     }
 
     public function test_the_three_pages_open(): void

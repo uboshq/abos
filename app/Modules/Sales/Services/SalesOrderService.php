@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Sales\Services;
 
+use App\Core\Engines\Approval\ApprovalEngine;
 use App\Core\Engines\Approval\DocumentApproval;
 use App\Core\Engines\NumberSeries\NumberSeriesEngine;
 use App\Core\Services\SettingsService;
@@ -12,11 +13,14 @@ use App\Core\Support\CompanyContext;
 use App\Core\Support\DocumentStatus;
 use App\Models\FinancialYear;
 use App\Models\IssuedNumber;
+use App\Models\User;
+use App\Modules\Customer\Models\Customer;
 use App\Modules\Inventory\Models\Product;
 use App\Modules\Inventory\Models\StockMovement;
 use App\Modules\Inventory\Models\Warehouse;
 use App\Modules\Inventory\Services\ReadsPackedQuantities;
 use App\Modules\Inventory\Services\StockService;
+use App\Modules\Sales\Events\SalesOrderApproved;
 use App\Modules\Sales\Events\SalesOrderCancelled;
 use App\Modules\Sales\Events\SalesOrderClosed;
 use App\Modules\Sales\Models\SalesOrder;
@@ -46,11 +50,25 @@ final class SalesOrderService
     use CalculatesSalesLines;
     use ReadsPackedQuantities;
 
+    /**
+     * ⭐ নতুন ধারার সইয়ের ছক — কোম্পানির একটাই `order` ছক (সমন্বয়কের উত্তর ৫: সুইচ চালু → কেবল বিক্রয় আদেশ)।
+     *
+     * ⓘ কোডে আক্ষরিক `'order'` লেখা থাকে — ছকের পর্দার পাহারা কোড পড়ে কে সই চায় ([[EveryApprovalAskedForCanBeConfiguredTest]])।
+     */
+    public const APPROVAL_ACTION = 'order';
+
+    /**
+     * ⭐ কোম্পানির সুইচ — DO বিক্রয় আদেশে মেশে (মালিক, ৪ অক্টোবর ২০২৬; নকশার §৫)। ⚠️ ডিফল্ট বন্ধ: বন্ধ থাকলে সব আজকের মতো।
+     */
+    public const REPLACES_DO = 'sales.orders_replace_do';
+
     public function __construct(
         private readonly NumberSeriesEngine $numbers,
         private readonly StockService $stock,
         private readonly SettingsService $settings,
         private readonly DocumentApproval $approvals,
+        private readonly ApprovalEngine $engine,
+        private readonly CreditExposure $credit,
     ) {}
 
     /**
@@ -127,6 +145,14 @@ final class SalesOrderService
      */
     public function confirm(SalesOrder $order): SalesOrder
     {
+        /*
+         * ⭐ নতুন ধারা — সুইচ চালু কোম্পানিতে "নিশ্চিত" মানে "জমা" ([[submit()]]): বাকির যাচাই, তারপর সুপারভাইজার।
+         * ⓘ আজকের বোতাম, মোবাইলের সিঙ্ক আর উদ্ধৃতির রূপান্তর সবাই এখানে আসে — তাই কারো পথ বদলাতে হয় না।
+         */
+        if ($this->replacesDo()) {
+            return $this->submit($order);
+        }
+
         if ($order->status !== DocumentStatus::DRAFT) {
             throw ValidationException::withMessages([
                 'status' => __('sales::validation.only_draft_confirms', ['no' => $order->document_no]),
@@ -280,6 +306,310 @@ final class SalesOrderService
 
             return $fresh;
         });
+    }
+
+    /**
+     * কোম্পানি নতুন ধারায় চলে কি না — DO বিক্রয় আদেশে মেশানো ([[REPLACES_DO]], ডিফল্ট বন্ধ)।
+     */
+    public function replacesDo(): bool
+    {
+        return (bool) $this->settings->get(self::REPLACES_DO, false);
+    }
+
+    /**
+     * ⭐ জমা — নতুন ধারা: খসড়া → জমা → বাকির যাচাই → সীমায় আটকে | সুপারভাইজারের সই | অনুমোদিত।
+     *
+     * ── সমন্বয়কের উত্তর ১ (৪ অক্টোবর ২০২৬): বাকির যাচাই জমার মুহূর্তে, সুপারভাইজারের আগে ──────────────
+     * ⓘ পরিকল্পনা ২-এর কথা: *"জমা দিলে বাকির সীমা যাচাই, তারপর অনুমোদন"*। আবার যাচাই চালানে আর গেট পাসে (দেয়াল আজকের মতোই)।
+     * ⚠️ কুলোয় না → `credit_held`, কত কম (`credit_short`), প্রথম আটকানোর মুহূর্ত (`credit_held_at`) — সই চাওয়াই হয় না;
+     * টাকা এলে [[recheckCredit()]] (abos-86-এর শ্রোতা ডাকে) আবার যাচাই করে সই চায়।
+     *
+     * ⓘ জমার পরে লেখক আর বদলাতে পারেন না (খসড়াই কেবল বদলায়); প্রতিটা লাইনের চাওয়া পরিমাণ `requested_qty`-তে থাকে —
+     * সুপারভাইজার কমালে `ordered_qty` কমে ([[setApprovedQuantities()]])। ⓘ মাল আটকানো এই ধারায় হোল্ডে (`hold_mode =
+     * holds`, abos-86) — আজকের মতো মজুদের খাতায় সরাসরি `reserved` নয়।
+     *
+     * ⚠️ তালা: আগে গ্রাহক ([[CreditExposure::lockCustomer()]]), তারপর আদেশ — DO-র যাচাইয়ের একই ক্রম।
+     */
+    public function submit(SalesOrder $order): SalesOrder
+    {
+        if (! $this->replacesDo()) {
+            throw ValidationException::withMessages([
+                'status' => __('sales::order_status.submit_needs_switch', ['no' => $order->document_no]),
+            ]);
+        }
+
+        $order->loadMissing('lines');
+
+        if ($order->lines->isEmpty()) {
+            throw ValidationException::withMessages(['lines' => __('sales::validation.no_lines')]);
+        }
+
+        return DB::transaction(function () use ($order) {
+            $customer = $this->credit->lockCustomer((int) $order->customer_id);
+
+            // ⛔ দ্বিতীয় ক্লিক — তালার ভিতরে অবস্থা আবার ([[lockAndReread()]])
+            $this->lockAndReread($order);
+
+            if ($order->status !== SalesOrderStatus::DRAFT) {
+                throw ValidationException::withMessages([
+                    'status' => __('sales::order_status.only_draft_submits', ['no' => $order->document_no]),
+                ]);
+            }
+
+            foreach ($order->lines()->get() as $line) {
+                if ($line->requested_qty === null) {
+                    $line->forceFill(['requested_qty' => $line->ordered_qty])->save();
+                }
+            }
+
+            $order->forceFill([
+                'status' => SalesOrderStatus::SUBMITTED,
+                'submitted_at' => now(),
+                'hold_mode' => SalesOrderStatus::HOLD_HOLDS,
+            ])->save();
+
+            return $this->checkCreditThenAsk($order, $customer);
+        });
+    }
+
+    /**
+     * ⭐ সীমায় আটকে থাকা আদেশ আবার যাচাই — টাকা এলে (abos-86-এর শ্রোতা ডাকে: আদায়, রসিদ ভাউচার, চেক পাশ)।
+     *
+     * @return string আদেশের নতুন অবস্থা (আটকে না থাকলে যা ছিল তাই)
+     */
+    public function recheckCredit(SalesOrder $order): string
+    {
+        return DB::transaction(function () use ($order): string {
+            $customer = $this->credit->lockCustomer((int) $order->customer_id);
+            $this->lockAndReread($order);
+
+            if ($order->status !== SalesOrderStatus::CREDIT_HELD) {
+                return (string) $order->status;
+            }
+
+            return (string) $this->checkCreditThenAsk($order, $customer)->status;
+        });
+    }
+
+    /**
+     * গ্রাহকের সব সীমায়-আটকে আদেশ, পুরনোটা আগে — একটা না কুলোলেও পরেরটা দেখা হয় (ছোটটা হয়তো কুলোয়)।
+     *
+     * @return int কয়টা আর আটকে নেই
+     */
+    public function recheckCustomer(int $customerId): int
+    {
+        $moved = 0;
+
+        $held = SalesOrder::query()
+            ->where('customer_id', $customerId)
+            ->where('status', SalesOrderStatus::CREDIT_HELD)
+            ->orderBy('credit_held_at')->orderBy('id')
+            ->get();
+
+        foreach ($held as $order) {
+            if ($this->recheckCredit($order) !== SalesOrderStatus::CREDIT_HELD) {
+                $moved++;
+            }
+        }
+
+        return $moved;
+    }
+
+    /**
+     * ⭐ সুপারভাইজার মজুদ দেখে পরিমাণ কমান — কেবল সইয়ের অপেক্ষায়, কেবল এখনকার স্তরের অনুমোদনকারী
+     * ([[ApprovalEngine::canDecide()]]); ০ থেকে চাওয়া পরিমাণ পর্যন্ত, বাড়ানো নয় (DO-র হুবহু নিয়ম)।
+     *
+     * ⓘ চূড়ান্ত পরিমাণ `ordered_qty`-তেই বসে (নকশার §১.৪) — চালান, ট্যাব, রিপোর্ট সবাই ওটাই পড়ে; চাওয়াটা `requested_qty`-তে
+     * থাকে। ⓘ লাইনের টাকা আবার গোনা ([[CalculatesSalesLines::lineFigures()]]): ছাড় আর হাতে দেওয়া ভ্যাট পরিমাণের অনুপাতে,
+     * নাহলে পণ্যের হার থেকে; প্যাকের লেখা (`entered_*`) মুছে মূল এককে — কমানো পরিমাণ পুরো প্যাকে না-ও পড়তে পারে।
+     *
+     * @param  array<int, numeric-string|int|float>  $quantities  লাইনের id → নতুন পরিমাণ
+     */
+    public function setApprovedQuantities(SalesOrder $order, array $quantities, User $approver): SalesOrder
+    {
+        if ($order->status !== SalesOrderStatus::AWAITING_APPROVAL) {
+            throw ValidationException::withMessages([
+                'status' => __('sales::order_status.not_awaiting_you', ['no' => $order->document_no]),
+            ]);
+        }
+
+        $pending = $this->engine->latestFor($order, self::APPROVAL_ACTION);
+
+        if ($pending === null || ! $pending->isPending() || ! $this->engine->canDecide($pending, $approver)) {
+            abort(403);
+        }
+
+        return DB::transaction(function () use ($order, $quantities) {
+            $this->lockAndReread($order);
+
+            if ($order->status !== SalesOrderStatus::AWAITING_APPROVAL) {
+                throw ValidationException::withMessages([
+                    'status' => __('sales::order_status.not_awaiting_you', ['no' => $order->document_no]),
+                ]);
+            }
+
+            foreach ($order->lines()->with('product')->lockForUpdate()->get() as $line) {
+                if (! array_key_exists($line->id, $quantities)) {
+                    continue;
+                }
+
+                $qty = trim((string) $quantities[$line->id]);
+                $asked = (string) ($line->requested_qty ?? $line->ordered_qty);
+
+                if (! is_numeric($qty) || bccomp($qty, '0', 4) < 0 || bccomp($qty, $asked, 4) > 0) {
+                    throw ValidationException::withMessages([
+                        "lines.{$line->id}" => __('sales::order_status.approved_qty_range', ['asked' => $asked]),
+                    ]);
+                }
+
+                $qty = bcadd($qty, '0', 4);
+                $was = (string) $line->ordered_qty;
+
+                if (bccomp($qty, $was, 4) === 0) {
+                    continue;
+                }
+
+                $share = fn (string $amount): string => bccomp($was, '0', 4) > 0
+                    ? bcdiv(bcmul($amount, $qty, 8), $was, 4)
+                    : '0';
+
+                $figures = $this->lineFigures(
+                    $qty,
+                    (string) $line->rate,
+                    $share((string) $line->discount),
+                    $line->tax_variance === null ? null : $share((string) $line->tax),
+                    $line->product?->tax,
+                );
+
+                $line->forceFill([
+                    'ordered_qty' => $qty,
+                    'entered_qty' => null,
+                    'entered_unit_id' => null,
+                    'discount' => $figures['discount'],
+                    'tax' => $figures['tax'],
+                    'tax_variance' => $figures['tax_variance'],
+                    'amount' => $figures['amount'],
+                ])->save();
+            }
+
+            $this->retotal($order);
+
+            return $order->fresh(['lines']);
+        });
+    }
+
+    /**
+     * শেষ সই হলো (বা ছক নেই) — `approved`, আর abos-86-কে সংকেত ([[SalesOrderApproved]]), লেনদেন পাকা হলে।
+     */
+    public function markApproved(SalesOrder $order): SalesOrder
+    {
+        $order->forceFill(['status' => SalesOrderStatus::APPROVED, 'approved_at' => now()])->save();
+        $fresh = $order->fresh(['lines']);
+        DB::afterCommit(fn () => event(SalesOrderApproved::from($fresh)));
+
+        return $fresh;
+    }
+
+    /**
+     * ⭐ সীমানা abos-86-এর জন্য — মাল আটকানোর পরে `approved` → `confirmed` (নকশার ধাপ ৪, `HoldAndCheckTheOrder`)।
+     *
+     * ⓘ কেবল `approved` থেকে; অন্য অবস্থায় কিছুই নয়।
+     *
+     * @param  list<array<string, mixed>>|null  $warnings  সতর্কবার্তা (নকশার পাঁচ ধরন)
+     */
+    public function markConfirmed(SalesOrder $order, ?array $warnings = null): SalesOrder
+    {
+        if ($order->status !== SalesOrderStatus::APPROVED) {
+            return $order;
+        }
+
+        $order->forceFill(['status' => SalesOrderStatus::CONFIRMED, 'credit_warnings' => $warnings ?: null])->save();
+
+        return $order->fresh(['lines']);
+    }
+
+    /**
+     * সুপারভাইজার ফেরালেন — `rejected`, কারণসহ (থাকলে), আর বাতিলের সংকেত ([[SalesOrderCancelled]], হোল্ড ছাড়ার জন্য)।
+     */
+    public function reject(SalesOrder $order, ?string $note, ?User $by): SalesOrder
+    {
+        if (in_array($order->status, SalesOrderStatus::FINISHED, true)) {
+            return $order;
+        }
+
+        $order->forceFill([
+            'status' => SalesOrderStatus::REJECTED,
+            'cancelled_by' => $by?->id,
+            'cancelled_at' => now(),
+            'cancel_reason' => $note,
+        ])->save();
+
+        $fresh = $order->fresh(['lines']);
+        DB::afterCommit(fn () => event(SalesOrderCancelled::from($fresh, (string) ($note ?? 'rejected'))));
+
+        return $fresh;
+    }
+
+    /**
+     * বাকির যাচাই, তারপর সই চাওয়া — জমা আর আবার-যাচাই দুই পথেরই শেষ ধাপ। ⚠️ ডাকা হয় গ্রাহক আর আদেশে তালা দিয়ে, লেনদেনের ভিতরে।
+     *
+     * ⓘ সূত্র দেয়ালের হুবহু ([[CreditExposure::check()]]): বকেয়া + আটকে থাকা + ক্লিয়ার না হওয়া চেক + এই আদেশ ≤ সীমা।
+     * কোম্পানির বাকির সীমার সুইচ বন্ধ থাকলে ([[CreditExposure::isOn()]]) যাচাই নেই — সোজা সইয়ের পথে।
+     */
+    private function checkCreditThenAsk(SalesOrder $order, Customer $customer): SalesOrder
+    {
+        $result = $this->credit->isOn()
+            ? $this->credit->check($customer, (string) $order->total)
+            : ['fits' => true, 'short' => '0.0000'];
+
+        if (! $result['fits']) {
+            $order->forceFill([
+                'status' => SalesOrderStatus::CREDIT_HELD,
+                'credit_short' => $result['short'],
+                // ⓘ প্রথমবার আটকানোর মুহূর্তই থাকে — বারবার যাচাইয়ে বদলায় না
+                'credit_held_at' => $order->credit_held_at ?? now(),
+                'credit_checked_at' => now(),
+            ])->save();
+
+            return $order->fresh(['lines']);
+        }
+
+        $order->forceFill(['credit_short' => null, 'credit_checked_at' => now()])->save();
+
+        $approval = $this->engine->request(
+            document: $order,
+            // ⓘ নামটা লেখা, ধ্রুবক নয় — ছকের পর্দার পাহারা কোড পড়ে ([[EveryApprovalAskedForCanBeConfiguredTest]]); = self::APPROVAL_ACTION
+            module: 'sales', action: 'order',
+            amount: (string) $order->total,
+            userId: $order->created_by,
+            // ⓘ ডিলারের লেখা আদেশ — সই চাওয়া ডিলারের নিজের নামে (DO-র একই নিয়ম, ৩ অক্টোবর ২০২৬)
+            customerId: $order->created_by === null ? $order->created_by_customer_id : null,
+        );
+
+        if ($approval !== null) {
+            $order->forceFill(['status' => SalesOrderStatus::AWAITING_APPROVAL])->save();
+
+            return $order->fresh(['lines']);
+        }
+
+        return $this->markApproved($order);
+    }
+
+    /** আদেশের মোট — লাইনগুলো থেকে আবার (সুপারভাইজার পরিমাণ কমানোর পরে)। */
+    private function retotal(SalesOrder $order): void
+    {
+        $totals = ['subtotal' => '0', 'discount' => '0', 'tax' => '0', 'total' => '0'];
+
+        foreach ($order->lines()->get() as $line) {
+            $totals = $this->addToTotals($totals, [
+                'base' => bcmul((string) $line->ordered_qty, (string) $line->rate, 4),
+                'discount' => (string) $line->discount,
+                'tax' => (string) $line->tax,
+                'amount' => (string) $line->amount,
+            ]);
+        }
+
+        $order->forceFill($totals)->save();
     }
 
     /**

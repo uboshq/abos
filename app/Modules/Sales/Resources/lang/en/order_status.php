@@ -38,7 +38,7 @@ return [
     ],
 
     'source' => [
-        'portal' => 'Dealer portal',
+        'portal' => 'Customer portal',
         'sr' => 'Salesman\'s phone',
         'counter' => 'Counter',
         'office' => 'Office',
@@ -71,5 +71,12 @@ return [
     'only_confirmed_closes' => ':no is not reserved — only a reserved order can be closed.',
     'short_close_needs_reason' => ':no is not fully billed — write a reason to close it short.',
     'nothing_went_cancel_instead' => 'Nothing has gone out on :no — cancel it instead of closing.',
+    // ⭐ নতুন ধারা — জমা, বাকির যাচাই, সুপারভাইজার (ধাপ ৩, ৪ অক্টোবর ২০২৬)
+    'setting_replace_do' => 'The sales order does the DO\'s job (submit, credit check, supervisor\'s signature)',
+    'submit_needs_switch' => ':no — the new submit flow is not switched on in this company.',
+    'only_draft_submits' => ':no is not a draft — only a draft can be submitted.',
+    'not_awaiting_you' => ':no is not awaiting a signature — its quantities cannot change now.',
+    'approved_qty_range' => 'The quantity must be between 0 and the requested :asked — it cannot go up.',
+
     'closed_cannot_cancel' => ':no is closed — a closed order cannot be cancelled.',
 ];

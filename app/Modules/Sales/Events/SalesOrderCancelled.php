@@ -28,6 +28,8 @@ final class SalesOrderCancelled extends DomainEvent
                 'customer_id' => (int) $order->customer_id,
                 'hold_mode' => (string) ($order->hold_mode ?? 'ledger'),
                 'reason' => $reason,
+                // ⓘ `rejected` (সুপারভাইজার ফেরালেন) নাকি `cancelled` — শ্রোতা দুইটাতেই হোল্ড ছাড়ে
+                'status' => (string) $order->status,
             ],
             companyId: (int) $order->company_id,
         );

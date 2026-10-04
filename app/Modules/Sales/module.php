@@ -165,16 +165,17 @@ return [
              * (*"Er vitorei thakbe DO Creat & List"*)। DO-র ধাপের ট্যাবগুলো (খসড়া, সই, অপেক্ষা …) তালিকার পাতাতেই থাকে।
              */
             // ⓘ আসল DO কাগজের ডেস্কে — ৩ অক্টোবর ২০২৬ ([[DeliveryOrderDeskController]]); আংশিক আর ব্যাক আসবে abos-86-এর মজুদ-আটকানোর সাথে
+            // ⭐ বিক্রয় আদেশ DO-র কাজ নিলে (`sales.orders_replace_do`) ভাঁজটা মেনু থেকে সরে — খোলা DO-র পাতা আর লিংক চলে (৪ অক্টোবর ২০২৬)
             ['label' => 'sales::planned.do_list', 'cluster' => 'delivery_orders', 'icon' => 'book', 'route' => 'sales.delivery_order.index',
-                'permission' => 'sales.do.view'],
+                'permission' => 'sales.do.view', 'hidden_when' => 'sales.orders_replace_do'],
             ['label' => 'sales::planned.do_pending', 'cluster' => 'delivery_orders', 'icon' => 'book', 'route' => 'sales.delivery_order.index',
-                'route_params' => ['tab' => 'pending'], 'permission' => 'sales.do.view'],
+                'route_params' => ['tab' => 'pending'], 'permission' => 'sales.do.view', 'hidden_when' => 'sales.orders_replace_do'],
             ['label' => 'sales::planned.do_partial', 'cluster' => 'delivery_orders', 'icon' => 'book', 'route' => 'sales.delivery_order.index',
-                'route_params' => ['tab' => 'partial'], 'permission' => 'sales.do.view'],
+                'route_params' => ['tab' => 'partial'], 'permission' => 'sales.do.view', 'hidden_when' => 'sales.orders_replace_do'],
             ['label' => 'sales::planned.do_back', 'cluster' => 'delivery_orders', 'icon' => 'book', 'route' => 'sales.delivery_order.index',
-                'route_params' => ['tab' => 'back'], 'permission' => 'sales.do.view'],
+                'route_params' => ['tab' => 'back'], 'permission' => 'sales.do.view', 'hidden_when' => 'sales.orders_replace_do'],
             ['label' => 'sales::planned.do_history', 'cluster' => 'delivery_orders', 'icon' => 'book', 'route' => 'sales.delivery_order.index',
-                'route_params' => ['tab' => 'history'], 'permission' => 'sales.do.view'],
+                'route_params' => ['tab' => 'history'], 'permission' => 'sales.do.view', 'hidden_when' => 'sales.orders_replace_do'],
 
             /* ⭐ সরাসরি বিক্রয় — মাঝের সব ধাপ এক চাপে, সোজা বিলে (মালিক, ২৮ সেপ্টেম্বর ২০২৬) */
             ['label' => 'sales::menu.direct', 'cluster' => 'direct_sale', 'icon' => 'sales', 'route' => 'sales.direct.create', 'permission' => 'sales.challan.create',
@@ -767,6 +768,8 @@ return [
         // ⭐ বিক্রয় আদেশ বাতিল / বন্ধ (৪ অক্টোবর ২০২৬); শোনেন abos-86 (নতুন ধারার হোল্ড ছাড়া)
         \App\Modules\Sales\Events\SalesOrderCancelled::class,
         \App\Modules\Sales\Events\SalesOrderClosed::class,
+        // ⭐ বিক্রয় আদেশের শেষ সই (নতুন ধারা); শোনেন abos-86 (হোল্ড, তারপর `confirmed`)
+        \App\Modules\Sales\Events\SalesOrderApproved::class,
     ],
 
     /*
@@ -821,6 +824,8 @@ return [
             \App\Modules\Sales\Listeners\ConfirmTheChallanOnTheLastSignature::class,
             // ⭐ DO-র সুপারভাইজার — শেষ সইয়ে অনুমোদিত, ফেরতে থামে ([[MoveTheDeliveryOrderOnItsSignature]], ২ অক্টোবর ২০২৬)
             \App\Modules\Sales\Listeners\MoveTheDeliveryOrderOnItsSignature::class,
+            // ⭐ বিক্রয় আদেশের সুপারভাইজার — নতুন ধারা ([[MoveTheOrderOnItsSignature]], ৪ অক্টোবর ২০২৬)
+            \App\Modules\Sales\Listeners\MoveTheOrderOnItsSignature::class,
             // ⭐ বাতিল-ইনভয়েস — শেষ সইয়ে পাকা, প্রত্যাখ্যানে বাতিল (৪ অক্টোবর ২০২৬)
             \App\Modules\Sales\Listeners\FinishTheCancellationOnTheLastSignature::class,
         ],
@@ -1448,6 +1453,19 @@ return [
             'type' => 'boolean',
             'default' => true,
             'group' => 'screens',
+        ],
+        /*
+         * ⭐ DO বিক্রয় আদেশে মেশানো — কোম্পানির সুইচ (মালিক, ৪ অক্টোবর ২০২৬; নকশার §৫)।
+         *
+         * ⓘ চালু হলে আদেশ নতুন ধারায়: জমা → বাকির যাচাই → সুপারভাইজার → অনুমোদিত ([[SalesOrderService::submit()]])।
+         * ⚠️ ডিফল্ট বন্ধ — বন্ধ থাকলে সব আজকের মতো। চালু হবে কেবল নকশার ধাপ ১৩-এর কমান্ডে, আগে ডেমোতে।
+         */
+        [
+            'key' => 'sales.orders_replace_do',
+            'label' => 'sales::order_status.setting_replace_do',
+            'type' => 'boolean',
+            'default' => false,
+            'group' => 'entry',
         ],
         [
             'key' => 'sales.screen_orders',

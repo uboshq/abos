@@ -220,6 +220,17 @@ final class MenuSwitches
             return false;
         }
 
+        /*
+         * ⭐ উল্টো সুইচ — `hidden_when`: সুইচ **চালু** হলে সারিটা মেনু থেকে সরে (৪ অক্টোবর ২০২৬, DO বিক্রয় আদেশে মেশানো)।
+         *
+         * ⓘ `setting` বলে "চালু হলে দেখাও", আর দরজাও সেটা মানে ([[RefuseSwitchedOffScreens]]) — বন্ধ সারির ঠিকানা ৪০৪।
+         * ⚠️ এটা কেবল মেনুর, দরজার নয়: নতুন ধারা চালু হলে DO-র ভাঁজ সরে, অথচ খোলা DO নিজের নম্বরে শেষ হয় আর তাদের পুরনো
+         * লিংক খুলতেই হবে। তাই পাতা খোলা থাকে, কেবল নতুন কেউ মেনু থেকে সেখানে যায় না।
+         */
+        if (isset($item['hidden_when']) && (bool) $settings->get((string) $item['hidden_when'], false)) {
+            return false;
+        }
+
         return (bool) $settings->get($this->forItem($item), true);
     }
 
