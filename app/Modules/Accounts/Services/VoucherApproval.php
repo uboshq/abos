@@ -89,18 +89,11 @@ final class VoucherApproval
          * ⛔ ব্যাংক ও MFS-এ টাকা প্রতিষ্ঠানের খাতে যায়, তাই সেখানে
          * সই আগের মতোই লাগে।
          */
-        if ($voucher->type === Voucher::RECEIPT && $this->landsInCash($voucher)) {
+        $action = $this->actionFor($voucher);
+
+        if ($action === null) {
             return null;
         }
-
-        $action = match (true) {
-            // ⓘ ২০ সেপ্টেম্বর: ক্রয়ের কাউন্টারের পরিশোধও কাউন্টারের নিজের ছকে
-            $voucher->origin === Voucher::ORIGIN_COUNTER && $voucher->type === Voucher::PAYMENT => self::COUNTER_PAYMENT,
-
-            $voucher->origin === Voucher::ORIGIN_COUNTER => self::COUNTER_DEPOSIT,
-
-            default => (string) $voucher->type,
-        };
 
         $latest = $this->approvals->latestFor($voucher, $action);
 
@@ -233,6 +226,63 @@ final class VoucherApproval
              */
             userId: auth()->id() ?? $voucher->created_by,
         );
+    }
+
+    /**
+     * কোন ছকে সই চাওয়া হয় — `null` মানে এই ভাউচারে সই লাগেই না (নিজের বাক্সে নগদ রসিদ)।
+     *
+     * ⓘ [[stopping()]] থেকে হুবহু তোলা (৪ অক্টোবর ২০২৬) — "পোস্ট"-এর আগের সারাংশও ([[VoucherOverview]]) একই প্রশ্ন
+     * করে, আর দুই জায়গায় দুই উত্তর হলে সারাংশ "সই লাগবে না" বলত অথচ পোস্ট আটকে যেত।
+     */
+    public function actionFor(Voucher $voucher): ?string
+    {
+        if ($voucher->type === Voucher::RECEIPT && $this->landsInCash($voucher)) {
+            return null;
+        }
+
+        return match (true) {
+            // ⓘ ২০ সেপ্টেম্বর: ক্রয়ের কাউন্টারের পরিশোধও কাউন্টারের নিজের ছকে
+            $voucher->origin === Voucher::ORIGIN_COUNTER && $voucher->type === Voucher::PAYMENT => self::COUNTER_PAYMENT,
+
+            $voucher->origin === Voucher::ORIGIN_COUNTER => self::COUNTER_DEPOSIT,
+
+            default => (string) $voucher->type,
+        };
+    }
+
+    /**
+     * ⭐ "পোস্ট" চাপলে সই কী বলবে — কিছু না লিখে (৪ অক্টোবর ২০২৬; [[VoucherOverview]])।
+     *
+     * ⓘ [[stopping()]]-এর একই ধাপ, একই ক্রমে; কেবল শেষের `request()`-এর বদলে [[ApprovalEngine::requires()]] — কারণ
+     * `request()` অনুরোধ লেখে, আর সারাংশ দেখতে গিয়ে সইয়ের সারিতে কাগজ চলে যাওয়া চলে না।
+     *
+     * @return 'signed'|'rejected'|'awaiting'|null  `null` = সই লাগে না
+     */
+    public function waitFor(Voucher $voucher): ?string
+    {
+        $action = $this->actionFor($voucher);
+
+        if ($action === null) {
+            return null;
+        }
+
+        $latest = $this->approvals->latestFor($voucher, $action);
+
+        if ($latest?->status === Approval::APPROVED
+            && $latest->stillCovers((string) $voucher->amount, app(DocumentFingerprint::class)->of($voucher))) {
+            return 'signed';
+        }
+
+        if ($latest?->status === Approval::REJECTED && ! $this->changedSince($voucher, $latest)) {
+            return 'rejected';
+        }
+
+        if ($latest?->status === Approval::PENDING) {
+            return 'awaiting';
+        }
+
+        return $this->approvals->requires(self::MODULE, $action, (string) $voucher->amount, class_basename(Voucher::class),
+            ApprovalEngine::fieldsOf($voucher)) ? 'awaiting' : null;
     }
 
     /**

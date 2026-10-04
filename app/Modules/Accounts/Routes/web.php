@@ -151,6 +151,9 @@ Route::middleware('auth')->prefix('accounts')->group(function () {
             ->whereNumber('voucher')->name('update');
         Route::post('/{voucher}/post', [VoucherController::class, 'post'])
             ->whereNumber('voucher')->name('post');
+        // ⭐ পোস্টের আগে সারাংশ — পপ-আপের ভিতর ([[VoucherOverviewController]], ৪ অক্টোবর ২০২৬)
+        Route::post('/{voucher}/overview', \App\Modules\Accounts\Http\Controllers\VoucherOverviewController::class)
+            ->whereNumber('voucher')->name('overview');
         Route::post('/{voucher}/cancel', [VoucherController::class, 'cancel'])
             ->whereNumber('voucher')->name('cancel');
 

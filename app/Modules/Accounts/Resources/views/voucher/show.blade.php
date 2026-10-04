@@ -78,6 +78,7 @@
                         @endif
 
                         <form method="POST" action="{{ route('accounts.voucher.post', $voucher) }}"
+                              data-confirm-overview="{{ route('accounts.voucher.overview', $voucher) }}"
                               class="flex items-end gap-2">
                             @csrf
                             {{-- ⛔ `required` নেই — ২৭ সেপ্টেম্বর ২০২৬, লাইভে RCV-0001।
@@ -92,7 +93,7 @@
                                             :value="old('instrument_no')"
                                             class="w-56" />
                             @endif
-                            <x-ui.button type="submit" tone="primary">
+                            <x-ui.button type="submit" tone="primary" data-overview-trigger>
                                 {{ __('accounts::action.post_now') }}
                             </x-ui.button>
                         </form>
@@ -279,4 +280,6 @@
 
     {{-- ⭐ সংশোধনের ইতিহাস — পোস্ট হওয়ার পরে কে কী বদলেছেন, আগে আর পরে (মালিক, ৩ অক্টোবর ২০২৬) --}}
     <x-ui.revisions :document="$voucher" />
+    {{-- ⭐ পোস্টের আগে সারাংশের পপ-আপ ([[confirm-overview.js]], ৪ অক্টোবর ২০২৬) — ভাউচারটা আগেই খসড়া, তাই "খসড়া রাখুন" নেই --}}
+    <x-ui.confirm-overview :draft="false" />
 </x-layouts.app>
