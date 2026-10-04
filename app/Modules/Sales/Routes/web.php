@@ -10,16 +10,20 @@ use App\Modules\Sales\Http\Controllers\DeliveryChallanController;
 use App\Modules\Sales\Http\Controllers\DepositClaimController;
 use App\Modules\Sales\Http\Controllers\DirectSaleController;
 use App\Modules\Sales\Http\Controllers\InvoiceSampleController;
+use App\Modules\Sales\Http\Controllers\LeadController;
 use App\Modules\Sales\Http\Controllers\LotTraceController;
+use App\Modules\Sales\Http\Controllers\OpportunityController;
 use App\Modules\Sales\Http\Controllers\OrderSampleController;
 use App\Modules\Sales\Http\Controllers\PortalController;
 use App\Modules\Sales\Http\Controllers\PosController;
 use App\Modules\Sales\Http\Controllers\PrintQueueController;
+use App\Modules\Sales\Http\Controllers\RouteAccountController;
 use App\Modules\Sales\Http\Controllers\MarginReportController;
 use App\Modules\Sales\Http\Controllers\GatePassController;
 use App\Modules\Sales\Http\Controllers\LoadingSheetController;
 use App\Modules\Sales\Http\Controllers\ReceiptSampleController;
 use App\Modules\Sales\Http\Controllers\SalesInvoiceController;
+use App\Modules\Sales\Http\Controllers\SalesOverviewController;
 use App\Modules\Sales\Http\Controllers\DeliveryScanController;
 use App\Modules\Sales\Http\Controllers\DeliveryStageController;
 use App\Modules\Sales\Http\Controllers\SalesOrderController;
@@ -197,6 +201,30 @@ Route::middleware('auth')->prefix('sales')->group(function () {
         Route::get('/{quotation}/paper', [SalesQuotationController::class, 'paper'])->whereNumber('quotation')->name('paper');
     });
 
+    /*
+     * ⭐ লিড ও সুযোগ — NEXUS §৭। ⓘ আদেশের আগে, কারণ কাজের ধারায় খোঁজ আগে।
+     * ⚠️ `{lead}`/`{opportunity}` সংখ্যা — কন্ট্রোলার নিজে খোঁজে (দেখার দেয়াল)।
+     */
+    Route::prefix('leads')->name('lead.')->group(function () {
+        Route::get('/', [LeadController::class, 'index'])->name('index');
+        Route::get('/create', [LeadController::class, 'create'])->name('create');
+        Route::post('/', [LeadController::class, 'store'])->name('store');
+        Route::get('/{lead}', [LeadController::class, 'show'])->whereNumber('lead')->name('show');
+        Route::get('/{lead}/edit', [LeadController::class, 'edit'])->whereNumber('lead')->name('edit');
+        Route::put('/{lead}', [LeadController::class, 'update'])->whereNumber('lead')->name('update');
+        Route::post('/{lead}/convert', [LeadController::class, 'convert'])->whereNumber('lead')->name('convert');
+    });
+
+    Route::prefix('opportunities')->name('opportunity.')->group(function () {
+        Route::get('/', [OpportunityController::class, 'index'])->name('index');
+        Route::get('/pipeline', [OpportunityController::class, 'pipeline'])->name('pipeline');
+        Route::get('/create', [OpportunityController::class, 'create'])->name('create');
+        Route::post('/', [OpportunityController::class, 'store'])->name('store');
+        Route::get('/{opportunity}', [OpportunityController::class, 'show'])->whereNumber('opportunity')->name('show');
+        Route::get('/{opportunity}/edit', [OpportunityController::class, 'edit'])->whereNumber('opportunity')->name('edit');
+        Route::put('/{opportunity}', [OpportunityController::class, 'update'])->whereNumber('opportunity')->name('update');
+    });
+
     Route::prefix('orders')->name('order.')->group(function () {
         // ⭐ পাঠানোর আগের হিসাব আর লাইনের অফার — JSON (১ অক্টোবর ২০২৬, [[OrderStandingController]])
         Route::get('/standing/{customer}', [\App\Modules\Sales\Http\Controllers\OrderStandingController::class, 'standing'])->name('standing');
@@ -321,6 +349,19 @@ Route::middleware('auth')->prefix('sales')->group(function () {
     Route::prefix('dealer-targets')->name('customer_target.')->group(function () {
         Route::get('/', [\App\Modules\Sales\Http\Controllers\CustomerTargetController::class, 'index'])->name('index');
         Route::post('/', [\App\Modules\Sales\Http\Controllers\CustomerTargetController::class, 'store'])->name('store');
+    });
+
+    // রুটের খাতা — তালিকা, একটা রুট, সাপ্তাহিক ছক আর মাসের লক্ষ্য (NEXUS §২৭)
+    Route::prefix('routes')->name('route.')->group(function () {
+        Route::get('/', [RouteAccountController::class, 'index'])->name('index');
+        Route::get('/{location}', [RouteAccountController::class, 'show'])
+            ->whereNumber('location')->name('show');
+        Route::post('/{location}/visits', [RouteAccountController::class, 'assign'])
+            ->whereNumber('location')->name('visit.assign');
+        Route::post('/visits/{visit}/end', [RouteAccountController::class, 'end'])
+            ->whereNumber('visit')->name('visit.end');
+        Route::post('/{location}/target', [RouteAccountController::class, 'target'])
+            ->whereNumber('location')->name('target');
     });
 
     Route::prefix('shipments')->name('shipment.')->group(function () {
@@ -495,6 +536,8 @@ Route::middleware('auth')->prefix('sales')->group(function () {
         Route::post('/{return}/cancel', [SalesReturnController::class, 'cancel'])->whereNumber('return')->name('cancel');
     });
 
+    // ⭐ বিক্রয়ের সারসংক্ষেপ — প্রতিটা কার্ড নিজের চাবি দেখে ([[SalesOverview]])
+    Route::get('/overview', [SalesOverviewController::class, 'index'])->name('overview');
     Route::get('/reports/{slug}', [SalesReportController::class, 'show'])->name('report.show');
 
     // ⭐ লোডিং শিট — খোলা ট্রিপ, শিট, আর "লোডিং নিশ্চিত" ([[LoadingSheetController]])
