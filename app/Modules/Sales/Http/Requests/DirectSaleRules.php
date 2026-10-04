@@ -180,8 +180,21 @@ final class DirectSaleRules
              * না — দোকান এক জায়গায়, গুদাম আরেক জায়গায়, আর মাঝে মাঝে
              * সরাসরি বাজারে। কাগজে ভুল ঠিকানা ছাপা মানে গাড়ি ভুল জায়গায়।
              */
-            'ship_to' => ['nullable', 'string', 'max:191'],
-            'ship_date' => ['nullable', 'date'],
+            'ship_to' => ['nullable', 'string', 'max:191',
+                Rule::requiredIf(fn (): bool => ($input['delivery_mode'] ?? null) === 'send_later')],
+            'ship_date' => ['nullable', 'date',
+                Rule::requiredIf(fn (): bool => ($input['delivery_mode'] ?? null) === 'send_later')],
+
+            /*
+             * ⭐ মাল কীভাবে যাবে আর গাড়ি ও ভাড়া — মালিক, ৪ অক্টোবর ২০২৬ (সংস্করণ ২; D365 Store Commerce / SAP-এর
+             * কাউন্টারের ধাঁচ)। ⓘ সবগুলো ঐচ্ছিক — না পাঠালে আজকের আচরণ, হুবহু (ফোন আর পুরনো পর্দা পাঠায় না)।
+             * "পরে পাঠানো হবে" হলে ঠিকানা আর তারিখ বাধ্যতামূলক (উপরে)।
+             * ভাড়া কে দেবে — আন্তর্জাতিক freight terms: us = Prepaid (আমাদের খরচ), us_add_to_bill = Prepaid & Add
+             * (খরচ, আর বিলে আদায়), customer = Collect (ক্রেতা চালককে দেন — খাতায় কিছু নয়), none = ভাড়া নেই।
+             */
+            'delivery_mode' => ['nullable', 'in:take_now,send_later,pickup_later'],
+            'vehicle_owner' => ['nullable', 'in:own,hired,customer,none'],
+            'fare_paid_by' => ['nullable', 'in:us,us_add_to_bill,customer,none'],
 
             /*
              * কাউন্টারে নেওয়া টাকার বিবরণ — অঙ্কটা আগে থেকেই ছিল।

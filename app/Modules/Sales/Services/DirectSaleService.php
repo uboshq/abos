@@ -1743,6 +1743,11 @@ final class DirectSaleService
             'ship_to' => ($data['ship_to'] ?? '') ?: null,
             'ship_date' => ($data['ship_date'] ?? '') ?: null,
 
+            // ⭐ মাল কীভাবে যাবে · গাড়ি কার · ভাড়া কে দেবে (মালিক, ৪ অক্টোবর ২০২৬) — খালি মানে আজকের আচরণ
+            'delivery_mode' => ($data['delivery_mode'] ?? '') ?: null,
+            'vehicle_owner' => ($data['vehicle_owner'] ?? '') ?: null,
+            'fare_paid_by' => ($data['fare_paid_by'] ?? '') ?: null,
+
             /*
              * জমার ধরন কেবল টাকা এলেই লেখা হয়।
              *
@@ -2115,14 +2120,20 @@ final class DirectSaleService
      * ⚠️ খরচ (`expense_amount`) এখানে নেই, ইচ্ছাকৃত: সেটা গ্রাহকের বিলে যাবে
      * কি না মালিকের সিদ্ধান্তের অপেক্ষায়।
      *
+     * ⭐ বিলে যোগ করা গাড়িভাড়াও এখানে — "Prepaid & Add" (মালিক, ৪ অক্টোবর ২০২৬): আমরা চালককে দিই, তারপর ক্রেতার
+     * বিলে আলাদা লাইনে। ⓘ কেবল `fare_paid_by = us_add_to_bill` হলে; বাকি তিন রকমে বিলে ভাড়া নেই।
+     *
      * @param  array<string, mixed>  $data
-     * @return array{bill_discount: string, rounding_amount: string}
+     * @return array{bill_discount: string, rounding_amount: string, freight_charge: string}
      */
     private function billFigures(array $data): array
     {
         return [
             'bill_discount' => $this->money($data['discount_amount'] ?? '0'),
             'rounding_amount' => $this->signedMoney($data['rounding_amount'] ?? '0'),
+            'freight_charge' => ($data['fare_paid_by'] ?? null) === 'us_add_to_bill'
+                ? $this->money($data['transport_cost'] ?? '0')
+                : '0',
         ];
     }
 

@@ -373,6 +373,8 @@ final class SalesInvoiceService
                  */
                 'rounding_amount' => $data['rounding_amount'] ?? '0',
                 'bill_discount' => $data['bill_discount'] ?? '0',
+                // ⭐ বিলে যোগ করা গাড়িভাড়া ("Prepaid & Add", ৪ অক্টোবর ২০২৬) — মোটের ভিতরে ([[replaceLines()]])
+                'freight_charge' => $data['freight_charge'] ?? '0',
                 'status' => DocumentStatus::DRAFT,
                 'created_by' => auth()->id(),
             ]);
@@ -424,6 +426,7 @@ final class SalesInvoiceService
 
                 // ⓘ রাউন্ডিংয়ের একই কারণে: চাবি না এলে আগেরটাই থাকে
                 'bill_discount' => $data['bill_discount'] ?? $invoice->bill_discount,
+                'freight_charge' => $data['freight_charge'] ?? $invoice->freight_charge,
             ]);
 
             $this->replaceLines($invoice, $lines);
@@ -910,7 +913,9 @@ final class SalesInvoiceService
             ]);
         }
 
-        $net = bcsub(bcsub($total, (string) $invoice->tax, 4), '0', 4);
+        // ⓘ বিলে যোগ করা গাড়িভাড়া বিক্রয় নয় — নিজের আয়ের খাতে (IFRS ১৫, আমরা মূল পক্ষ; ৪ অক্টোবর ২০২৬)
+        $freight = (string) ($invoice->freight_charge ?? '0');
+        $net = bcsub(bcsub($total, (string) $invoice->tax, 4), $freight, 4);
         $cost = (string) $invoice->cost_of_goods;
 
         $lines = [
@@ -933,6 +938,14 @@ final class SalesInvoiceService
                 'account_id' => $this->account(StandardChart::VAT_PAYABLE)->id,
                 'credit' => (string) $invoice->tax,
                 'narration' => __('sales::message.output_vat', ['no' => $invoice->document_no]),
+            ];
+        }
+
+        if (bccomp($freight, '0', 4) > 0) {
+            $lines[] = [
+                'account_id' => $this->account(StandardChart::FREIGHT_INCOME)->id,
+                'credit' => $freight,
+                'narration' => __('sales::message.freight_charged', ['no' => $invoice->document_no]),
             ];
         }
 
@@ -1162,6 +1175,13 @@ final class SalesInvoiceService
         }
 
         $totals['total'] = bcsub(bcadd($totals['total'], $rounding, 4), $billDiscount, 4);
+
+        /*
+         * ⭐ বিলে যোগ করা গাড়িভাড়া — মোটের ভিতরে, ছাড়ের পরে (মালিক, ৪ অক্টোবর ২০২৬; "Prepaid & Add")।
+         * ⓘ ছাড় ভাড়ায় খাটে না — ছাড় মালের দামে। মোটে থাকায় বাকির সীমাও ভাড়াসহ মাপে, আর খাতায় আলাদা
+         * আয়ের খাতে বসে ([[postToLedger()]])।
+         */
+        $totals['total'] = bcadd($totals['total'], $this->money((string) ($invoice->freight_charge ?? '0')), 4);
 
         $invoice->update([...$totals, 'cost_of_goods' => $cost]);
 

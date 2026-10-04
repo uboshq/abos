@@ -17,6 +17,7 @@ return [
     'editing_sale_hint' => 'Update reverses the earlier entries and posts the new ones — the invoice and challan keep their numbers.',
     'sale_edited' => ':no updated — earlier entries reversed and posted again, same number.',
     'draft_discarded' => 'Draft :no cancelled.',
+    'bill_voided' => 'The bill is voided — the reason stays in the audit.',
     'held_sale_finished' => ':no confirmed — the goods are out, and the invoice and deposit are on the books.',
     'held_explain' => 'Until approval the challan and invoice stay drafts, no goods have left, and the invoice is not printed.',
 
@@ -74,6 +75,7 @@ return [
     'receivable' => ':no — receivable from the customer',
     'sale' => ':no — sale',
     'output_vat' => ':no — output VAT',
+    'freight_charged' => ':no — freight charged to the customer',
     'cost_of_goods' => ':no — cost of goods sold',
     'stock_out' => ':no — inventory reduced',
     'money_in' => ':no — money received',

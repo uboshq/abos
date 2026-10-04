@@ -78,6 +78,11 @@ final class TransportRule
             return true;
         }
 
+        // ⭐ নতুন কাউন্টার (৪ অক্টোবর ২০২৬): "গাড়ি কার — ক্রেতার নিজের / গাড়ি নেই" বাছাটাও একটা উত্তর
+        if (in_array($get('vehicle_owner'), ['customer', 'none'], true)) {
+            return true;
+        }
+
         foreach (['vehicle_id', 'vehicle_no', 'carrier_id', 'carrier_name'] as $key) {
             if (trim((string) $get($key)) !== '') {
                 return true;

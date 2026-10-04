@@ -543,6 +543,15 @@ final class StandardChart implements ProvisionsCompany
      */
     public const ASSET_DISPOSAL_GAIN = '4350';
 
+    /**
+     * ⭐ পরিবহন ভাড়া আদায় — ক্রেতার বিলে যোগ করা গাড়িভাড়া (মালিক, ৪ অক্টোবর ২০২৬, সংস্করণ ২; "Prepaid & Add")।
+     *
+     * ⓘ আমরা চালককে দিই (খরচ, আগের মতো [[DeliveryChallanService::postTransportCost()]]), তারপর বিলে যোগ করি —
+     * এটা আয়, বিক্রয়ের পাশে আলাদা লাইনে। ⛔ খরচের খাতে Cr বসালে দুইটা একে অন্যকে কাটত; IFRS ১৫-এ আমরাই
+     * মূল পক্ষ, তাই খরচ আর আয় দুইটাই পুরো অঙ্কে (gross)।
+     */
+    public const FREIGHT_INCOME = '4360';
+
     public const ASSET_DISPOSAL_LOSS = '5320';
 
     /** @var list<string> */
@@ -558,7 +567,7 @@ final class StandardChart implements ProvisionsCompany
         self::SALARY_EXPENSE, self::SALARY_PAYABLE,
         self::PROVIDENT_FUND_PAYABLE, self::EMPLOYEE_ADVANCE,
         self::COMMISSION_CLAIM, self::COMMISSION_WRITTEN_OFF,
-        self::ASSET_DISPOSAL_GAIN, self::ASSET_DISPOSAL_LOSS,
+        self::ASSET_DISPOSAL_GAIN, self::ASSET_DISPOSAL_LOSS, self::FREIGHT_INCOME,
     ];
 
     public function __construct(private readonly AccountService $accounts) {}
@@ -1069,6 +1078,8 @@ final class StandardChart implements ProvisionsCompany
             ['4340', 'Commission Earned', 'কমিশন আয়', $I, '4000', false, []],
             // ⭐ সম্পদ বিক্রির লাভ — ধ্রুবকের মন্তব্যে কারণ
             ['4350', 'Gain on Sale of Assets', 'সম্পদ বিক্রির লাভ', $I, '4000', false, []],
+            // ⭐ ক্রেতার কাছ থেকে আদায় করা গাড়িভাড়া — বিক্রয়ের পাশে, আলাদা ([[FREIGHT_INCOME]])
+            ['4360', 'Freight Income', 'পরিবহন ভাড়া আদায়', $I, '4000', false, []],
 
             // ── খরচ ───────────────────────────────────────────────────
             ['5000', 'Expenses', 'খরচ', $X, null, true, []],

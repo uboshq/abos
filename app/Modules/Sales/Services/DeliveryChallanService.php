@@ -606,6 +606,15 @@ final class DeliveryChallanService
             return;
         }
 
+        /*
+         * ⭐ ভাড়া কে দেবে — মালিক, ৪ অক্টোবর ২০২৬ (আন্তর্জাতিক freight terms)। ⓘ "ক্রেতা দেবেন" (Collect) মানে ক্রেতা
+         * চালককে সরাসরি দেন — আমাদের খাতায় কিছু নয়, কাগজে কেবল তথ্য; "নেই" মানে ভাড়াই নেই। খালি, "আমরা" আর
+         * "আমরা, বিলে যোগ" — খরচটা আমাদের, আগের মতো (বিলের আদায় আলাদা, [[SalesInvoiceService::postToLedger()]])।
+         */
+        if (in_array($challan->fare_paid_by, ['customer', 'none'], true)) {
+            return;
+        }
+
         $expense = StandardChart::find(StandardChart::VEHICLE_HIRE);
 
         /*

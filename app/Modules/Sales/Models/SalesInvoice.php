@@ -76,6 +76,8 @@ class SalesInvoice extends Model implements Drillable, ShowsItselfForSigning
 
         'customer_id', 'warehouse_id', 'trx_date', 'due_on',
         'subtotal', 'discount', 'tax', 'rounding_amount', 'total', 'cost_of_goods',
+        // ⭐ বিলে যোগ করা গাড়িভাড়া ("Prepaid & Add") — মোটের ভিতরে, খাতায় আলাদা আয় ([[StandardChart::FREIGHT_INCOME]])
+        'freight_charge',
 
         /*
          * ⭐ বিলের ছাড় — সারির ছাড় (`discount`) থেকে আলাদা, ২৭ সেপ্টেম্বর ২০২৬।
@@ -101,6 +103,7 @@ class SalesInvoice extends Model implements Drillable, ShowsItselfForSigning
             'bill_discount' => 'decimal:4',
             'tax' => 'decimal:4',
             'rounding_amount' => 'decimal:4',
+            'freight_charge' => 'decimal:4',
             'total' => 'decimal:4',
             'cost_of_goods' => 'decimal:4',
         ];
