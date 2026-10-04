@@ -17,4 +17,7 @@ return [
     'none' => 'No suppliers yet.',
     'most_owed' => 'Suppliers we owe the most',
     'most_owed_hint' => 'Top five suppliers · balance of account 2111, same as the Accounts dashboard',
+
+    'ageing' => 'Payable ageing — suppliers',
+    'ageing_hint' => 'Total owed :total — the ageing report\'s own figures',
 ];

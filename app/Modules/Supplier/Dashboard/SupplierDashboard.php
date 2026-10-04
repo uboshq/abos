@@ -68,7 +68,7 @@ final class SupplierDashboard implements ProvidesDashboard
                 ),
             ],
 
-            panels: self::mostOwed(),
+            panels: [...self::mostOwed(), ...self::ageing()],
 
             listings: [
                 new Listing(
@@ -126,6 +126,36 @@ final class SupplierDashboard implements ProvidesDashboard
                 'value' => Money::format($row['amount']),
             ], $rows),
             hint: __('supplier::dashboard.most_owed_hint'),
+        )];
+    }
+
+    /**
+     * ⭐ দেনা-এর বয়স — চলতি, ৩০, ৬০, ৯০+ দিন (মালিকের ড্যাশবোর্ড নকশা, ৩ অক্টোবর ২০২৬)।
+     *
+     * ⓘ নিজের হিসাব নয়: "বয়স" রিপোর্টের ([[supplier.ageing]]) পুরো ফলের যোগফল — রিপোর্ট আর চার্ট কখনো দুই কথা বলে না,
+     * আর রিপোর্টের শাখার দেয়াল ([[ReportEngine::branchWall()]]) এখানেও খাটে; হেডারে বাছা শাখা থাকলে সেটাই।
+     * ⛔ রিপোর্টের নিজের চাবি (`supplier.report`) ছাড়া চার্টই নেই — রিপোর্ট যেখানে বন্ধ, ড্যাশবোর্ডেও বন্ধ।
+     * ⓘ নতুন ড্যাশবোর্ডের অংশ — বাকিগুলোর সাথে একসাথে চালু হবে (config abos.dashboards_v2)।
+     *
+     * @return list<Breakdown>
+     */
+    private static function ageing(): array
+    {
+        if (! config('abos.dashboards_v2') || ! auth()->user()?->can('supplier.report')) {
+            return [];
+        }
+
+        $totals = app(\App\Core\Engines\Report\ReportEngine::class)
+            ->run('supplier.ageing', ['to' => \Illuminate\Support\Carbon::today()->toDateString(), 'branch_id' => \App\Core\Support\ViewedBranch::one()], 1, 1)
+            ->totals;
+
+        return [new Breakdown(
+            label: __('supplier::dashboard.ageing'),
+            parts: array_map(fn (string $bucket) => [
+                'label' => __('supplier::field.'.$bucket),
+                'value' => \App\Core\Support\Money::format($totals[$bucket] ?? '0'),
+            ], ['bucket_current', 'bucket_30', 'bucket_60', 'bucket_90']),
+            hint: __('supplier::dashboard.ageing_hint', ['total' => \App\Core\Support\Money::format($totals['outstanding'] ?? '0')]),
         )];
     }
 }

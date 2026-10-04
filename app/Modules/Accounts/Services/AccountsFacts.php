@@ -458,4 +458,56 @@ final class AccountsFacts
 
         return $out;
     }
+
+    /**
+     * ⭐ নগদ প্রবাহ — মাসে মাসে কত টাকা এল আর গেল, নগদ + ব্যাংক + MFS মিলিয়ে (মালিকের ড্যাশবোর্ড নকশা, ৩ অক্টোবর ২০২৬)।
+     *
+     * ⓘ খাত [[moneyPositions()]]-এর একই তিন ঝুড়ি; ডেবিট = এল, ক্রেডিট = গেল; দেখার শাখার সারি।
+     * ⛔ নিজের মধ্যে স্থানান্তর বাদ — যে কাগজের প্রতিটা সারি টাকার খাতেই (নগদ থেকে ব্যাংকে জমা, বিকাশ থেকে নগদ),
+     * সেটা টাকা আসাও নয়, যাওয়াও নয়। ⚠️ না বাদ দিলে একটা জমাই দুই দণ্ডে বসত আর মাসটা আসলের দ্বিগুণ ব্যস্ত দেখাত।
+     *
+     * @return list<array{month: string, in: string, out: string}>  পুরনো থেকে নতুন
+     */
+    public function moneyFlowByMonth(int $months = 6): array
+    {
+        $ids = [];
+
+        foreach ([StandardChart::CASH_IN_HAND, StandardChart::BANK, StandardChart::MOBILE_MONEY] as $code) {
+            foreach (StandardChart::find($code)?->selfAndDescendants()->pluck('id') ?? [] as $id) {
+                $ids[] = (int) $id;
+            }
+        }
+
+        $start = Carbon::today()->startOfMonth()->subMonths($months - 1);
+        $rows = collect();
+
+        if ($ids !== []) {
+            $expr = "DATE_FORMAT(ledger_entries.trx_date, '%Y-%m')";
+
+            $rows = $this->inView(LedgerEntry::query()->whereIn('ledger_entries.account_id', $ids), 'ledger_entries.branch_id')
+                ->where('ledger_entries.trx_date', '>=', $start->toDateString())
+                // ⓘ একই কাগজে টাকার খাতের বাইরের অন্তত একটা সারি — নাহলে কাগজটা নিজের মধ্যে স্থানান্তর
+                ->whereExists(fn ($q) => $q->selectRaw('1')->from('ledger_entries as other')
+                    ->whereColumn('other.company_id', 'ledger_entries.company_id')
+                    ->whereColumn('other.source_type', 'ledger_entries.source_type')
+                    ->whereColumn('other.source_id', 'ledger_entries.source_id')
+                    ->whereNotIn('other.account_id', $ids))
+                ->selectRaw("{$expr} as ym, COALESCE(SUM(ledger_entries.debit), 0) as d, COALESCE(SUM(ledger_entries.credit), 0) as c")
+                ->groupByRaw($expr)
+                ->toBase()->get()->keyBy('ym');
+        }
+
+        $out = [];
+
+        for ($month = $start->copy(); $month->lessThanOrEqualTo(Carbon::today()); $month->addMonth()) {
+            $row = $rows[$month->format('Y-m')] ?? null;
+            $out[] = [
+                'month' => $month->translatedFormat('M'),
+                'in' => bcadd((string) ($row->d ?? '0'), '0', 2),
+                'out' => bcadd((string) ($row->c ?? '0'), '0', 2),
+            ];
+        }
+
+        return $out;
+    }
 }

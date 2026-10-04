@@ -19,4 +19,10 @@ return [
     'new_hint' => 'Added this month',
     'newest' => 'Recently added',
     'none' => 'No customers yet.',
+
+    'growth' => 'Customer growth — last six months',
+    'growth_added' => 'Added',
+    'growth_still_on' => 'Still active',
+    'ageing' => 'Receivable ageing — customers',
+    'ageing_hint' => 'Total owed :total — the ageing report\'s own figures',
 ];

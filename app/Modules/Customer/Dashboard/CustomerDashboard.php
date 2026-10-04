@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Customer\Dashboard;
 
 use App\Core\Contracts\ProvidesDashboard;
+use App\Core\Engines\Dashboard\Breakdown;
 use App\Core\Engines\Dashboard\DashboardDefinition;
 use App\Core\Engines\Dashboard\Listing;
 use App\Core\Engines\Dashboard\Stat;
@@ -69,6 +70,8 @@ final class CustomerDashboard implements ProvidesDashboard
                 ),
             ],
 
+            panels: [...self::growth(), ...self::ageing()],
+
             listings: [
                 new Listing(
                     label: __('customer::dashboard.newest'),
@@ -86,5 +89,78 @@ final class CustomerDashboard implements ProvidesDashboard
                 ),
             ],
         );
+    }
+
+    /**
+     * ⭐ পাওনা-এর বয়স — চলতি, ৩০, ৬০, ৯০+ দিন (মালিকের ড্যাশবোর্ড নকশা, ৩ অক্টোবর ২০২৬)।
+     *
+     * ⓘ নিজের হিসাব নয়: "বয়স" রিপোর্টের ([[customer.ageing]]) পুরো ফলের যোগফল — রিপোর্ট আর চার্ট কখনো দুই কথা বলে না,
+     * আর রিপোর্টের শাখার দেয়াল ([[ReportEngine::branchWall()]]) এখানেও খাটে; হেডারে বাছা শাখা থাকলে সেটাই।
+     * ⛔ রিপোর্টের নিজের চাবি (`customer.report`) ছাড়া চার্টই নেই — রিপোর্ট যেখানে বন্ধ, ড্যাশবোর্ডেও বন্ধ।
+     * ⓘ নতুন ড্যাশবোর্ডের অংশ — বাকিগুলোর সাথে একসাথে চালু হবে (config abos.dashboards_v2)।
+     *
+     * @return list<Breakdown>
+     */
+    private static function ageing(): array
+    {
+        if (! config('abos.dashboards_v2') || ! auth()->user()?->can('customer.report')) {
+            return [];
+        }
+
+        $totals = app(\App\Core\Engines\Report\ReportEngine::class)
+            ->run('customer.ageing', ['to' => \Illuminate\Support\Carbon::today()->toDateString(), 'branch_id' => \App\Core\Support\ViewedBranch::one()], 1, 1)
+            ->totals;
+
+        return [new Breakdown(
+            label: __('customer::dashboard.ageing'),
+            parts: array_map(fn (string $bucket) => [
+                'label' => __('customer::field.'.$bucket),
+                'value' => \App\Core\Support\Money::format($totals[$bucket] ?? '0'),
+            ], ['bucket_current', 'bucket_30', 'bucket_60', 'bucket_90']),
+            hint: __('customer::dashboard.ageing_hint', ['total' => \App\Core\Support\Money::format($totals['outstanding'] ?? '0')]),
+        )];
+    }
+
+    /**
+     * ⭐ গ্রাহক বৃদ্ধি — গত ছয় মাসে কতজন যোগ হলেন, আর তাঁদের কতজন এখনো চালু (মালিকের ড্যাশবোর্ড নকশা, ৩ অক্টোবর ২০২৬)।
+     *
+     * ⓘ উপরের "এ মাসে নতুন" সংখ্যার একই ভিত (দেখার শাখার গ্রাহক, যোগ হওয়ার দিন) — এ মাসের দণ্ড আর ঐ সংখ্যা এক।
+     * ⓘ দুই দণ্ড একই মাপের (মানুষ): দ্বিতীয়টা প্রথমটার ভেতরের ভাগ, তাই ফাঁকটা বলে কতজন যোগ হয়েই বন্ধ হলেন।
+     * ⓘ নতুন ড্যাশবোর্ডের অংশ — বাকিগুলোর সাথে একসাথে চালু হবে (config abos.dashboards_v2)।
+     *
+     * @return list<Series>
+     */
+    private static function growth(): array
+    {
+        if (! config('abos.dashboards_v2')) {
+            return [];
+        }
+
+        $start = \Illuminate\Support\Carbon::today()->startOfMonth()->subMonths(5);
+        $expr = "DATE_FORMAT(created_at, '%Y-%m')";
+
+        $rows = Customer::query()->inViewedBranch()
+            ->where('created_at', '>=', $start)
+            ->selectRaw("{$expr} as ym, COUNT(*) as added, SUM(CASE WHEN is_active = 1 THEN 1 ELSE 0 END) as still_on")
+            ->groupByRaw($expr)
+            ->toBase()->get()->keyBy('ym');
+
+        $points = [];
+
+        for ($month = $start->copy(); $month->lessThanOrEqualTo(\Illuminate\Support\Carbon::today()); $month->addMonth()) {
+            $row = $rows[$month->format('Y-m')] ?? null;
+            $points[] = [
+                'label' => $month->translatedFormat('M'),
+                'first' => (string) (int) ($row->added ?? 0),
+                'second' => (string) (int) ($row->still_on ?? 0),
+            ];
+        }
+
+        return [new \App\Core\Engines\Dashboard\Series(
+            label: __('customer::dashboard.growth'),
+            points: $points,
+            firstLabel: __('customer::dashboard.growth_added'),
+            secondLabel: __('customer::dashboard.growth_still_on'),
+        )];
     }
 }

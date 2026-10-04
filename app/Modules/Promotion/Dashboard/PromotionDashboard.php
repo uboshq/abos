@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Promotion\Dashboard;
 
 use App\Core\Contracts\ProvidesDashboard;
+use App\Core\Engines\Dashboard\Breakdown;
 use App\Core\Engines\Dashboard\DashboardDefinition;
 use App\Core\Engines\Dashboard\Stat;
 use App\Core\Engines\Dashboard\Tile;
@@ -83,6 +84,78 @@ final class PromotionDashboard implements ProvidesDashboard
                     tone: Stat::WARN,
                 ),
             ],
+
+            panels: [...self::usedThisMonth(), ...self::endingSoon($today)],
         );
+    }
+
+    /**
+     * ⭐ ক্যাম্পেইনের ফল — এ মাসে কোন অফার কতবার লাগল (মালিকের ড্যাশবোর্ড নকশা, ৩ অক্টোবর ২০২৬)।
+     *
+     * ⓘ অফার যে খাতায় লেগেছে সেটাই ([[PromotionApplication]]) — ফিরিয়ে নেওয়া (`reversed_at`) বাদ। গোনা, টাকা নয়:
+     * অফারের `worth` গিফটের ক্রয়মূল্য থেকে আসে, আর ক্রয়মূল্য খরচের চাবির পেছনে।
+     * ⓘ "আগে বনাম চলাকালীন বিক্রি" এখানে নয় — এই মডিউল বিক্রয় চেনে না (`depends_on`), চেনা উচিতও নয়।
+     * ⓘ নতুন ড্যাশবোর্ডের অংশ — বাকিগুলোর সাথে একসাথে চালু হবে (config abos.dashboards_v2)।
+     *
+     * @return list<Breakdown>
+     */
+    private static function usedThisMonth(): array
+    {
+        if (! config('abos.dashboards_v2')) {
+            return [];
+        }
+
+        $rows = \App\Modules\Promotion\Models\PromotionApplication::query()
+            ->whereNull('reversed_at')
+            ->where('created_at', '>=', Carbon::today()->startOfMonth())
+            ->selectRaw('promotion_id, COUNT(*) as n')
+            ->groupBy('promotion_id')
+            ->orderByDesc('n')
+            ->limit(6)
+            ->toBase()->get();
+
+        if ($rows->isEmpty()) {
+            return [];
+        }
+
+        $names = Promotion::query()->whereKey($rows->pluck('promotion_id')->all())->get()->keyBy('id');
+
+        return [new Breakdown(
+            label: __('promotion::dashboard.used_this_month'),
+            parts: $rows->map(fn ($r) => [
+                'label' => $names[$r->promotion_id]?->name() ?? '—',
+                'value' => (string) (int) $r->n,
+            ])->all(),
+            hint: __('promotion::dashboard.used_this_month_hint'),
+        )];
+    }
+
+    /**
+     * ⭐ শেষ হতে যাচ্ছে — চালু অফার কত দিনের মধ্যে ফুরাবে (মালিকের ড্যাশবোর্ড নকশা, ৩ অক্টোবর ২০২৬)।
+     *
+     * ⓘ "চালু" মানে উপরের "এখন চলছে" ঘরের একই শর্ত ([[Promotion::scopeLiveOn()]]); প্রতিটা অফার ঠিক একটা ভাগে।
+     * ⓘ নতুন ড্যাশবোর্ডের অংশ (config abos.dashboards_v2)।
+     *
+     * @return list<Breakdown>
+     */
+    private static function endingSoon(Carbon $today): array
+    {
+        if (! config('abos.dashboards_v2')) {
+            return [];
+        }
+
+        $days = Promotion::query()->liveOn($today)->pluck('ends_on')
+            ->map(fn ($end) => (int) $today->diffInDays(Carbon::parse($end)));
+
+        return [new Breakdown(
+            label: __('promotion::dashboard.ending_soon'),
+            parts: [
+                ['label' => __('promotion::dashboard.within_7'), 'value' => (string) $days->filter(fn ($d) => $d <= 7)->count()],
+                ['label' => __('promotion::dashboard.within_15'), 'value' => (string) $days->filter(fn ($d) => $d > 7 && $d <= 15)->count()],
+                ['label' => __('promotion::dashboard.within_30'), 'value' => (string) $days->filter(fn ($d) => $d > 15 && $d <= 30)->count()],
+                ['label' => __('promotion::dashboard.later'), 'value' => (string) $days->filter(fn ($d) => $d > 30)->count()],
+            ],
+            hint: __('promotion::dashboard.ending_soon_hint'),
+        )];
     }
 }

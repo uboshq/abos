@@ -37,4 +37,8 @@ return [
     'contributor' => 'Contributor',
     'amount' => 'Amount',
     'no_capital' => 'No capital entries yet.',
+
+    'cash_flow' => 'Cash flow — last six months (cash, bank, MFS)',
+    'cash_in' => 'In',
+    'cash_out' => 'Out',
 ];

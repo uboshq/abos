@@ -280,6 +280,7 @@ final class FinanceDashboard implements ProvidesDashboard
             ],
 
             panels: array_values(array_filter([
+                ...self::cashFlow($facts),
                 /*
                  * ── এই মাসে টাকা কোন খাতে গেল ───────────────────────
                  *
@@ -373,6 +374,35 @@ final class FinanceDashboard implements ProvidesDashboard
             href: route('finance.budget.actual'),
             tone: $over ? Stat::BAD : Stat::NEUTRAL,
             permission: 'finance.budget.view',
+        )];
+    }
+
+    /**
+     * ⭐ নগদ প্রবাহ — গত ছয় মাস, এল বনাম গেল (মালিকের ড্যাশবোর্ড নকশা, ৩ অক্টোবর ২০২৬)।
+     *
+     * ⓘ হিসাব [[AccountsFacts::moneyFlowByMonth()]]-এ, উপরের নগদ/ব্যাংক/MFS ঘরের একই খাত; নিজের মধ্যে স্থানান্তর বাদ।
+     * ⛔ ঐ তিন ঘরের একই চাবি (`accounts.view`) — চাবি ছাড়া চার্টই নেই।
+     * ⓘ নতুন ড্যাশবোর্ডের অংশ — বাকিগুলোর সাথে একসাথে চালু হবে (config abos.dashboards_v2)।
+     *
+     * @return list<\App\Core\Engines\Dashboard\Series>
+     */
+    private static function cashFlow(AccountsFacts $facts): array
+    {
+        if (! config('abos.dashboards_v2') || ! auth()->user()?->can('accounts.view')) {
+            return [];
+        }
+
+        return [new \App\Core\Engines\Dashboard\Series(
+            label: __('finance::dashboard.cash_flow'),
+            points: array_map(fn (array $m) => [
+                'label' => $m['month'],
+                'first' => $m['in'],
+                'second' => $m['out'],
+                'firstTitle' => Money::format($m['in']),
+                'secondTitle' => Money::format($m['out']),
+            ], $facts->moneyFlowByMonth(6)),
+            firstLabel: __('finance::dashboard.cash_in'),
+            secondLabel: __('finance::dashboard.cash_out'),
         )];
     }
 }
