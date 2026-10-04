@@ -204,6 +204,7 @@ return [
     'key_cancel' => 'Void bill',
     'key_many' => 'Many items at once',
     'key_customer2' => 'Find customer',
+    'free_beyond_pool' => 'Free pool holds :pool — the other :rest from own stock, at the promotion cost',
     'edit_refused' => 'The edit did not go through',
     'key_enter' => 'In the quantity box — line to cart',
 

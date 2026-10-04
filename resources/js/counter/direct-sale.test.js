@@ -2239,3 +2239,48 @@ describe('কাউন্টারের ৮টা বোতাম: ভাড়
         expect(c.panelHasFooter).toBe(false)
     })
 })
+
+/* ⭐ ফ্রি-ভাণ্ডারের বাইরে — কোম্পানি সুইচ sales.free_beyond_pool (মালিক, ৪ অক্টোবর ২০২৬; সার্ভার af) */
+describe('ফ্রি-ভাণ্ডারের বাইরে: সুইচ চালু হলে হলুদ সতর্কতা, বন্ধ হলে আগের দেয়াল', () => {
+    const shop = (data) => {
+        const c = counter({
+            catalogue: [product({ id: 1, trackBatch: true, available: 99 })],
+            lots: { 1: [{ id: '11', no: 'L-1', qty: '500' }] },
+            freeAllowedUrl: '/free-allowed',
+            texts: { freeBeyondPool: 'ভাণ্ডারে :pool — বাকি :rest নিজের মাল থেকে', freeBeyondRatio: 'সর্বোচ্চ :allowed' },
+        })
+        c.customerId = '5'
+        c.beep = () => {}
+        c.$refs = { search: { focus: () => {} }, qty: { focus: () => {} }, lot: { focus: () => {} } }
+        globalThis.window ??= { location: { origin: 'http://counter.test' } }
+        globalThis.fetch = async () => ({ ok: true, json: async () => ({ data }) })
+        c.pick(c.catalogue[0])
+        c.entry.qty = '24'
+        c.entry.freeQty = '5'
+
+        return c
+    }
+
+    it('সুইচ চালু — সারি ওঠে, লাল নয়, হলুদে ভাণ্ডার আর বাকিটা', async () => {
+        const c = shop({ known: true, allowed: '1', beyond_pool: true, pool: '2' })
+
+        expect(await c.addToCart()).toBe(true)
+        expect(c.freeWarning).toBe('')
+        expect(c.freeBeyondNote).toBe('ভাণ্ডারে 2 — বাকি 3 নিজের মাল থেকে')
+    })
+
+    it('সুইচ চালু, ভাণ্ডারেই ধরে — কোনো সতর্কতা নয়', async () => {
+        const c = shop({ known: true, allowed: '1', beyond_pool: true, pool: '9' })
+
+        expect(await c.addToCart()).toBe(true)
+        expect(c.freeBeyondNote).toBe('')
+    })
+
+    it('সুইচ বন্ধ (ঘর দুইটা নেই) — আগের মতোই লাল দেয়াল, সারি ওঠে না', async () => {
+        const c = shop({ known: true, allowed: '1' })
+
+        expect(await c.addToCart()).toBe(false)
+        expect(c.freeWarning).toBe('সর্বোচ্চ 1')
+        expect(c.freeBeyondNote).toBe('')
+    })
+})

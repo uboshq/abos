@@ -313,6 +313,7 @@ export default function directSale({
         priceProduct: null,
         reprintNo: '',
         voidReason: '',
+        freeBeyondNote: '',
         transportAdded: false,
         driverName: '',
         driverPhone: '',
@@ -1762,6 +1763,7 @@ export default function directSale({
 
         async freeFitsTheRatio() {
             this.freeWarning = '';
+            this.freeBeyondNote = '';
 
             const free = this.$num(this.entry.freeQty);
             const qty = this.$num(this.entry.qty || '1');
@@ -1785,6 +1787,24 @@ export default function directSale({
                 const { data } = await answer.json();
 
                 if (! data || ! data.known) return true;
+
+                /*
+                 * ⭐ ফ্রি-ভাণ্ডারের বাইরে যেতে দেওয়া — কোম্পানি সুইচ `sales.free_beyond_pool` (মালিক, ৪ অক্টোবর ২০২৬; সার্ভার af)।
+                 * ⓘ সার্ভার তখন `beyond_pool` আর এই লটের ভাণ্ডার `pool` পাঠায়; থামানো নয়, হলুদ সতর্কতা — ভাণ্ডারে N, বাকি M
+                 * নিজের মাল থেকে, প্রচারের খরচে। সুইচ বন্ধে ঘর দুইটা আসে না, তাই নিচের দেয়াল আগের মতোই।
+                 */
+                if (data.beyond_pool) {
+                    const pool = this.$num(data.pool ?? '0');
+                    const rest = Math.max(0, Math.round((free - pool) * 10000) / 10000);
+
+                    if (rest > 0) {
+                        this.freeBeyondNote = String(texts.freeBeyondPool ?? '')
+                            .replace(':pool', this.qty(String(pool)))
+                            .replace(':rest', this.qty(String(rest)));
+                    }
+
+                    return true;
+                }
 
                 const allowed = this.$num(data.allowed);
 

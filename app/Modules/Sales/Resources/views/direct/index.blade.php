@@ -306,6 +306,7 @@
                   'freeRatio' => __('sales::message.free_ratio'),
                   'lotExpiry' => __('sales::field.lot_expiry_short'),
                   'qtyFirst' => __('sales::validation.qty_first'),
+                  'freeBeyondPool' => __('sales::field.free_beyond_pool'),
                   'invoiceIndex' => route('sales.invoice.index'),
                   'modes' => ['take_now' => __('sales::field.mode_take_now'), 'pickup_later' => __('sales::field.mode_pickup_later'), 'send_later' => __('sales::field.mode_send_later')],
                   'owners' => ['own' => __('sales::field.owner_own'), 'hired' => __('sales::field.owner_hired'), 'customer' => __('sales::field.owner_customer'), 'none' => __('sales::field.owner_none')],
@@ -1063,6 +1064,11 @@
                                  class="rounded-(--radius-field) bg-(--color-badge-danger-bg)
                                         px-3 py-1.5 text-xs text-(--color-badge-danger-ink)"
                                  x-text="freeWarning" role="alert"></div>
+                            {{-- ⭐ ফ্রি-ভাণ্ডারের বাইরে — হলুদ, থামায় না (সুইচ `sales.free_beyond_pool`, ৪ অক্টোবর ২০২৬) --}}
+                            <div x-show="freeBeyondNote" x-cloak data-free-beyond-pool
+                                 class="rounded-(--radius-field) bg-(--color-badge-pending-bg)
+                                        px-3 py-1.5 text-xs font-semibold text-(--color-badge-pending-ink)"
+                                 x-text="freeBeyondNote" role="status"></div>
                         @endif
                         <div x-show="lotWarning" x-cloak
                              class="rounded-(--radius-field) bg-(--color-badge-danger-bg)
