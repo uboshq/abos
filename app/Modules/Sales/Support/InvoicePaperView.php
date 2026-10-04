@@ -62,6 +62,9 @@ final class InvoicePaperView
     /** @var array<string, mixed> */
     public readonly array $sums;
 
+    /** @var array<string, string> চিহ্নসহ অঙ্ক — দিক বোঝার আর যোগ মেলানোর জন্য, ছাপার জন্য নয় */
+    public readonly array $signed;
+
     private readonly InvoicePrintLook $look;
 
     /**
@@ -84,6 +87,8 @@ final class InvoicePaperView
         $this->notices = array_values(array_filter($all, fn (string $n) => ! PrintableDocument::isDuplicateNotice($n)));
 
         $this->sums = $facts['sums'];
+        // ⓘ হিসাব চিহ্নসহ অঙ্কে — কাগজের `sums`-এ অগ্রিম চিহ্ন ছাড়া (মালিক, ৪ অক্টোবর ২০২৬)
+        $this->signed = $facts['signed_sums'] ?? $facts['sums'];
         $this->showVat = bccomp(str_replace(',', '', (string) $this->sums['vat']), '0', 4) !== 0;
         $this->free = $this->shows('free');
         $this->totalQty = $this->shows('total_qty');
@@ -215,7 +220,7 @@ final class InvoicePaperView
             ], $rows, array_keys($rows));
         }
 
-        $balance = $plain($this->sums['previous_due']);
+        $balance = $plain($this->signed['previous_due']);
         $rows = [['date' => '', 'text' => $this->label('previous_due'), 'debit' => '', 'credit' => '', 'balance' => $balance]];
 
         $balance = bcadd($balance, $plain($this->sums['net_payable']), 4);
@@ -274,7 +279,7 @@ final class InvoicePaperView
     /** শেষ লাইনের নাম — `outstanding`-এর চিহ্ন দেখে। */
     public function balanceWord(): string
     {
-        return match ($this->sign($this->sums['outstanding'] ?? '0')) {
+        return match ($this->sign($this->signed['outstanding'] ?? '0')) {
             1 => 'Due',
             -1 => 'Advance',
             default => 'No Due',
@@ -284,7 +289,7 @@ final class InvoicePaperView
     /** শেষ লাইনের অঙ্ক — চিহ্ন ছাড়া, কারণ নামটাই দিক বলে। */
     public function balanceAmount(): string
     {
-        return Money::format($this->absolute($this->sums['outstanding'] ?? '0'));
+        return Money::format($this->absolute($this->signed['outstanding'] ?? '0'));
     }
 
     /**
@@ -296,7 +301,7 @@ final class InvoicePaperView
      */
     public function previousBeforeBill(): string
     {
-        $before = bcadd(bcsub($this->plain($this->sums['outstanding'] ?? '0'), $this->plain($this->sums['net_payable'] ?? '0'), 4),
+        $before = bcadd(bcsub($this->plain($this->signed['outstanding'] ?? '0'), $this->plain($this->sums['net_payable'] ?? '0'), 4),
             $this->plain($this->sums['paid'] ?? '0'), 4);
 
         return Money::format($before);

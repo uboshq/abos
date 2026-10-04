@@ -442,7 +442,17 @@ class SalesPrintController extends Controller implements HasMiddleware
                 '0',
             )),
             'items' => $items,
-            'sums' => array_map(fn (string $v) => $this->money($v), $sums),
+            /*
+             * ⭐ নামে "Advance" থাকলে অঙ্কে "−" নয় — মালিক, ৪ অক্টোবর ২০২৬: *"advance likle r - dewar dorkar nai"*
+             * (INV-0002: "(-) Previous Advance −50,026.88", "Outstanding (Advance) −81.81")। নামটাই দিক বলে, তাই কাগজে
+             * আগের জের আর শেষ জের চিহ্ন ছাড়া। ⓘ হিসাবের জন্য চিহ্নসহ অঙ্ক আলাদা থাকে (`signed_sums`, [[InvoicePaperView]])।
+             */
+            'sums' => array_map(fn (string $v) => $this->money($v), [
+                ...$sums,
+                'previous_due' => ltrim((string) $sums['previous_due'], '-'),
+                'outstanding' => ltrim((string) $sums['outstanding'], '-'),
+            ]),
+            'signed_sums' => array_map(fn (string $v) => $this->money($v), $sums),
             /* ⭐ টার্গেট রিমাইন্ডার — ডিলারের মাসিক আদায়ের লক্ষ্য, বিলের দিন ধরে; না থাকলে null ([[targetFacts()]]) */
             'target' => $customer === null ? null : $this->targetFacts((int) $customer->id, $invoice->trx_date),
             /* ⭐ ACCOUNT MOVEMENT — বিলের মাসের আসল খাতা, বিবরণসহ ([[monthMovement()]]) */

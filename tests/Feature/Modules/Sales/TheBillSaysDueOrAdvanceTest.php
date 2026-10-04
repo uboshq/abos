@@ -52,10 +52,13 @@ final class TheBillSaysDueOrAdvanceTest extends TestCase
         /* গ্রাহকের জের −৫,০০০ — অর্থাৎ তাঁর অগ্রিম */
         $invoice->setRelation('customer', $invoice->customer->setAttribute('outstanding_net', '-5000'));
         $advance = $facts($invoice);
-        $this->assertSame(0, bccomp(str_replace(',', '', (string) $advance['sums']['outstanding']), '-5000', 4), '⛔ অগ্রিমের ঋণাত্মক চিহ্ন হারিয়েছে।');
+        // ⓘ হিসাব চিহ্নসহ (`signed_sums`) — কাগজে চিহ্ন ছাড়া (মালিক, ৪ অক্টোবর ২০২৬: "advance likle r - dewar dorkar nai")
+        $this->assertSame(0, bccomp(str_replace(',', '', (string) $advance['signed_sums']['outstanding']), '-5000', 4), '⛔ অগ্রিমের ঋণাত্মক চিহ্ন হিসাব থেকে হারিয়েছে।');
+        $this->assertStringNotContainsString('-', (string) $advance['sums']['outstanding'], '⛔ "Advance" লেখা ঘরে এখনো "−"।');
+        $this->assertStringNotContainsString('-', (string) $advance['sums']['previous_due'], '⛔ "Previous Advance" লেখা ঘরে এখনো "−"।');
         /* ⭐ আগের সারিও চিহ্নসহ — "Previous Due aseni keno": আগের + এই বিলের বাকি = শেষ সারি */
         $this->assertSame(0, bccomp(
-            bcadd(str_replace(',', '', (string) $advance['sums']['previous_due']), $invoice->dueAmount(), 4), '-5000', 4),
+            bcadd(str_replace(',', '', (string) $advance['signed_sums']['previous_due']), $invoice->dueAmount(), 4), '-5000', 4),
             '⛔ আগের বকেয়া শূন্যে থেমেছে — যোগ শেষ সারির সাথে মেলে না।');
         /* ⭐ "Previous Due na ese Previous Advance aste hobe" */
         $this->assertSame('(-) Previous Advance', __('sales::print.classic.previous_due', [], 'en'));
