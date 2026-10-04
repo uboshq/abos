@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { lineMargin, marginLabel } from './margin.js'
+import { freeFromStock, lineMargin, marginLabel } from './margin.js'
 
 /*
  * কার্টের মার্জিন — দেয়ালের একই নিয়ম পর্দায় ([[MarginGuard::isBelow()]])।
@@ -47,6 +47,44 @@ describe('lineMargin', () => {
     it('calls a fully discounted line below whenever it has a cost', () => {
         expect(lineMargin({ qty: '1', net: 0 }, entry, 0)).toEqual({ unknown: false, percent: null, below: true })
         expect(lineMargin({ qty: '1', net: 0 }, { cost: '0' }, 0).below).toBe(false)
+    })
+})
+
+/*
+ * ⭐ বাছা লটের খরচ — মালিকের প্রশ্ন, ৪ অক্টোবর ২০২৬: "মার্জিন এত বেশি দেখায় কেন?" পুরনো সস্তা স্তর (১০০) দেখে
+ * ১৫৬.২৫-এর সারি 36% দেখাত, অথচ নতুন লটের খরচ ১৫০ — আসল মার্জিন 4%।
+ */
+describe('lineMargin by lot', () => {
+    const entry = { cost: '100', lots: { 9: '150' }, other: '120' }
+
+    it('uses the cost of the chosen lot', () => {
+        expect(lineMargin({ qty: '1', batchId: '9', net: 156.25 }, entry, 0).percent).toBeCloseTo(4, 6)
+    })
+
+    it('falls back to other for a lot without its own layer, and to FIFO without a lot', () => {
+        expect(lineMargin({ qty: '1', batchId: '5', net: 200 }, entry, 0).percent).toBeCloseTo(40, 6)
+        expect(lineMargin({ qty: '1', batchId: '', net: 200 }, entry, 0).percent).toBeCloseTo(50, 6)
+    })
+})
+
+/*
+ * ⭐ ফ্রির খরচ — মালিকের সিদ্ধান্ত "ক", ৪ অক্টোবর ২০২৬। ভাণ্ডারের ফ্রি শূন্যে, নিজের মাল থেকে যাওয়া ফ্রি লটের খরচে।
+ */
+describe('free in the margin', () => {
+    const entry = { cost: '100', lots: { 9: '150' }, other: '120' }
+
+    it('adds the cost of free taken from own stock', () => {
+        expect(lineMargin({ qty: '1', batchId: '9', freeFromStock: 0, net: 156.25 }, entry, 0).percent).toBeCloseTo(4, 6)
+        expect(lineMargin({ qty: '1', batchId: '9', freeFromStock: 1, net: 156.25 }, entry, 0).percent).toBeCloseTo(-92, 6)
+    })
+
+    it('takes from own stock only what the pool lacks, and only with the switch on', () => {
+        const pool = { lots: { 9: '2' }, any: '0' }
+
+        expect(freeFromStock('3', '9', pool, true)).toBe(1)
+        expect(freeFromStock('2', '9', pool, true)).toBe(0)
+        expect(freeFromStock('3', '9', pool, false)).toBe(0)
+        expect(freeFromStock('1', '', pool, true)).toBe(1)
     })
 })
 

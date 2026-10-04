@@ -151,6 +151,8 @@ class DirectSaleController extends Controller implements HasMiddleware
                 $request->user(),
                 // ⚠️ ক্যাটালগের সারি মডেল নয় (stdClass) — খরচের সিঁড়ি পণ্যের মডেল চায়
                 Product::query()->whereIn('id', collect($catalogue)->pluck('id'))->get(),
+                // ⓘ ফ্রি ভাণ্ডার গুদাম ধরে — সিদ্ধান্ত "ক", ৪ অক্টোবর ২০২৬
+                $warehouse,
             ),
 
             /*

@@ -28,7 +28,7 @@
  */
 
 import { taka } from '../components/money.js'
-import { lineMargin, marginLabel } from './margin.js'
+import { freeFromStock, lineMargin, marginLabel } from './margin.js'
 
 /*
  * ⓘ জমার খালি খসড়া — তিন জায়গায় লাগে (শুরু, "যোগ করুন"-এর পরে, "সব
@@ -2105,7 +2105,9 @@ export default function directSale({
         marginOf(line) {
             const net = this.lineAfterDiscount(line) - (this.isInclusive(line) ? this.lineVat(line) : 0);
 
-            return lineMargin({ qty: line.qty, unitId: line.unitId, net }, (margin.costs || {})[line.id], margin.floor);
+            const extra = freeFromStock(line.freeQty, line.batchId, (margin.pools || {})[line.id], !! margin.beyond);
+
+            return lineMargin({ qty: line.qty, unitId: line.unitId, batchId: line.batchId, freeFromStock: extra, net }, (margin.costs || {})[line.id], margin.floor);
         },
 
         marginShown(line) {

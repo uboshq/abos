@@ -14,6 +14,10 @@ use App\Core\Support\DocumentStatus;
 use App\Core\Support\Money;
 use App\Models\ApprovalFlow;
 use App\Modules\Inventory\Models\CostLayer;
+use App\Modules\Inventory\Models\CostLayerUse;
+use App\Modules\Inventory\Models\StockMovement;
+use App\Modules\Inventory\Models\Warehouse;
+use App\Modules\Inventory\Services\StockService;
 use App\Modules\Inventory\Models\Product;
 use App\Modules\Inventory\Services\PackConversion;
 use App\Modules\Inventory\Services\ReadsPackedQuantities;
@@ -91,11 +95,14 @@ final class MarginGuard
      * টানে, ঠিক যেমন আসল `issue()` টানে। ⛔ না রাখলে দুই সারিই সবচেয়ে
      * পুরনো (প্রায়ই সবচেয়ে সস্তা) স্তরটা দেখত।
      *
-     * @var array<int, string>
+     * ⭐ স্তর ধরে, পণ্য ধরে নয় — ৪ অক্টোবর ২০২৬: লট বাছা সারি নিজের লটের স্তর থেকে টানে, তাই "আগের সারি কতটা
+     * নিল" একটা সংখ্যায় আর বলা যায় না।
+     *
+     * @var array<int, string>  স্তরের id → এই কাগজে আগে টানা পরিমাণ
      */
     private array $drawn = [];
 
-    /** @var array<int, list<array{qty: string, cost: string}>> */
+    /** @var array<int, list<array{id: int, batch: int|null, qty: string, cost: string}>> */
     private array $layers = [];
 
     public function __construct(
@@ -225,6 +232,10 @@ final class MarginGuard
             $rows[] = [
                 'index' => $index,
                 'product' => $product,
+                // ⓘ কাউন্টারে বাছা লট — বিল এই লটের স্তর থেকেই খরচ নেবে
+                'batch' => ($line['batch_id'] ?? '') === '' || $line['batch_id'] === null ? null : (int) $line['batch_id'],
+                'free' => $this->decimal($line['free_qty'] ?? '0'),
+                'warehouse' => ($data['warehouse_id'] ?? null) === null ? null : (int) $data['warehouse_id'],
                 'qty' => $pack['qty'],
                 'net' => $this->withoutInclusiveVat(
                     $product,
@@ -319,7 +330,7 @@ final class MarginGuard
      * খরচের সংখ্যা যাওয়াই চলে না, লুকানো ঘরেও না (পাতার উৎসে দেখা যায়)।
      *
      * @param  iterable<Product>  $products
-     * @return array<int, array{cost: string|null, factors: array<int, string>}>
+     * @return array<int, array{cost: string|null, lots: array<int, string|null>, other: string|null, factors: array<int, string>}>
      */
     public function screenCosts(iterable $products): array
     {
@@ -338,11 +349,8 @@ final class MarginGuard
         $this->layers = array_fill_keys($ids, []);
 
         foreach (CostLayer::query()->whereIn('product_id', $ids)->open()
-            ->get(['product_id', 'qty_remaining', 'unit_cost']) as $layer) {
-            $this->layers[(int) $layer->product_id][] = [
-                'qty' => (string) $layer->qty_remaining,
-                'cost' => (string) $layer->unit_cost,
-            ];
+            ->get(['id', 'product_id', 'batch_id', 'qty_remaining', 'unit_cost']) as $layer) {
+            $this->layers[(int) $layer->product_id][] = $this->layerRow($layer);
         }
 
         foreach ($products as $product) {
@@ -354,8 +362,30 @@ final class MarginGuard
                 $factors[(int) $step['unit']->id] = (string) $step['factor'];
             }
 
+            /*
+             * ⭐ লট ধরে খরচ — মালিকের প্রশ্ন, ৪ অক্টোবর ২০২৬: "মার্জিন এত বেশি দেখায় কেন?"
+             *
+             * ⛔ আগে পর্দা পণ্যের সবচেয়ে পুরনো স্তরের দাম দেখাত, বাছা লটের নয় — অথচ বিল খরচ নেয় বাছা লটের স্তর থেকে
+             * ([[CostLayerService::issue()]])। পুরনো স্তর সস্তা হলে মার্জিন ফুলে দেখাত (৭.৮৫%, ১৪.৫৫%), আসলে ৪%।
+             *
+             * ⓘ `lots` — যে লটের নিজের স্তর আছে, তার এক এককের খরচ। `other` — যে লটের নিজের স্তর নেই (`issue()` তখন
+             * আগে লটহীন স্তর, তারপর পুরনো আগে)। `cost` — লট ছাড়া সারি, আগের মতো FIFO।
+             */
+            $lots = [];
+
+            foreach (array_unique(array_filter(array_column($this->layers[(int) $product->id] ?? [], 'batch'))) as $batchId) {
+                $this->drawn = [];
+                $lots[(int) $batchId] = $this->costOf($product, '1', (int) $batchId);
+            }
+
+            $this->drawn = [];
+            $other = $this->costOf($product, '1', 0);
+            $this->drawn = [];
+
             $out[(int) $product->id] = [
                 'cost' => $this->costOf($product, '1'),
+                'lots' => $lots,
+                'other' => $other,
                 'factors' => $factors,
             ];
         }
@@ -375,12 +405,21 @@ final class MarginGuard
      * @param  iterable<Product>  $products
      * @return array{costs: array<int, array{cost: string|null, factors: array<int, string>}>, floor: string, words: array<string, string>}
      */
-    public function screen(?Authenticatable $user, iterable $products): array
+    public function screen(?Authenticatable $user, iterable $products, ?Warehouse $warehouse = null): array
     {
         $allowed = $user !== null && method_exists($user, 'can') && $user->can(self::COST_KEY);
 
         return [
             'costs' => $allowed ? $this->screenCosts($products) : [],
+
+            /*
+             * ⭐ ফ্রির খরচ — সিদ্ধান্ত "ক" ([[freeCost()]])। ⓘ ভাণ্ডারের ফ্রি শূন্যে; নিজের মাল থেকে দেওয়া ফ্রি কেবল সুইচ চালু
+             * থাকলে, আর তখন পর্দার জানা দরকার ভাণ্ডারে কত আছে। চাবি ছাড়া এগুলোও যায় না।
+             */
+            'beyond' => $allowed && (bool) $this->settings->get('sales.free_beyond_pool', false),
+            'pools' => $allowed && (bool) $this->settings->get('sales.free_beyond_pool', false)
+                ? $this->screenPools($products, $warehouse)
+                : [],
             'floor' => $this->floor(),
             'words' => [
                 'margin' => __('sales::margin.screen_margin'),
@@ -388,6 +427,37 @@ final class MarginGuard
                 'unknown' => __('sales::margin.screen_cost_unknown'),
             ],
         ];
+    }
+
+    /**
+     * পর্দার জন্য ফ্রি ভাণ্ডার — পণ্য → ['lots' => [লট → পরিমাণ], 'any' => লট ছাড়া পরিমাণ]।
+     *
+     * @param  iterable<Product>  $products
+     * @return array<int, array{lots: array<int, string>, any: string}>
+     */
+    private function screenPools(iterable $products, ?Warehouse $warehouse): array
+    {
+        $products = collect($products)->values();
+        $warehouseId = $warehouse?->id ?? (int) Warehouse::query()->where('is_default', true)->value('id');
+        $out = [];
+
+        $byLot = StockMovement::query()
+            ->whereIn('product_id', $products->pluck('id'))
+            ->where('warehouse_id', $warehouseId)
+            ->whereNotNull('batch_id')
+            ->groupBy('product_id', 'batch_id')
+            ->selectRaw('product_id, batch_id, COALESCE(SUM(free_change), 0) as total')
+            ->get();
+
+        foreach ($products as $product) {
+            $out[(int) $product->id] = [
+                'lots' => $byLot->where('product_id', $product->id)
+                    ->mapWithKeys(fn ($r) => [(int) $r->batch_id => (string) $r->total])->all(),
+                'any' => $this->freePool((int) $product->id, null, $warehouseId),
+            ];
+        }
+
+        return $out;
     }
 
     /** এই কোম্পানির সীমা, শতাংশে (০ = খরচের নিচে নয়)। */
@@ -431,7 +501,19 @@ final class MarginGuard
         $cost = '0';
 
         foreach ($rows as $row) {
-            $lineCost = $this->costOf($row['product'], $row['qty']);
+            $lineCost = $this->costOf($row['product'], $row['qty'], $row['batch'] ?? null);
+
+            /*
+             * ⭐ ফ্রির খরচও মার্জিনে — মালিকের সিদ্ধান্ত "ক", ৪ অক্টোবর ২০২৬ (আন্তর্জাতিক নিয়ম)।
+             *
+             * ⓘ মার্জিন = (নিট বিক্রি − [বিক্রির পরিমাণ + ফ্রি] × বাছা লটের খরচ) ÷ নিট বিক্রি। ⭐ লটের সরবরাহকারী-ফ্রি ভাণ্ডার
+             * থেকে আসা ফ্রির খরচ শূন্য — ওটা বিনা দামে এসেছিল। নিজের মাল থেকে দেওয়া ফ্রি (`sales.free_beyond_pool`) স্তরের
+             * খরচে, ঠিক যেমন খাতায় প্রচারের খরচে (৫২২২) ওঠে ([[DirectSaleService::giveFromStock()]])।
+             */
+            if ($lineCost !== null) {
+                $freeCost = $this->freeCost($row);
+                $lineCost = $freeCost === null ? null : bcadd($lineCost, $freeCost, 4);
+            }
 
             $lines[] = new MarginLine(
                 index: $row['index'],
@@ -517,7 +599,10 @@ final class MarginGuard
      * ⓘ রান্না করা খাবার: উপকরণের স্তর থেকে, ঠিক [[SalesInvoiceService::cookedCost()]]
      * যেমন করে।
      */
-    private function costOf(Product $product, string $qty): ?string
+    /**
+     * @param  int|null  $batchId  বাছা লট — `null` লট ছাড়া (FIFO), `0` এমন লট যার নিজের স্তর নেই
+     */
+    private function costOf(Product $product, string $qty, ?int $batchId = null): ?string
     {
         if (bccomp($qty, '0', 4) <= 0) {
             return '0';
@@ -545,10 +630,10 @@ final class MarginGuard
             return $total;
         }
 
-        return $this->drawFromLayers((int) $product->id, $qty);
+        return $this->drawFromLayers((int) $product->id, $qty, $batchId);
     }
 
-    private function drawFromLayers(int $productId, string $qty): ?string
+    private function drawFromLayers(int $productId, string $qty, ?int $batchId = null): ?string
     {
         /*
          * ⓘ `CostLayer`-এর কোম্পানির স্কোপ নিজেই বসে (`BelongsToCompany`) —
@@ -557,27 +642,39 @@ final class MarginGuard
         $this->layers[$productId] ??= CostLayer::query()
             ->where('product_id', $productId)
             ->open()
-            ->get(['qty_remaining', 'unit_cost'])
-            ->map(fn (CostLayer $l) => ['qty' => (string) $l->qty_remaining, 'cost' => (string) $l->unit_cost])
+            ->get(['id', 'batch_id', 'qty_remaining', 'unit_cost'])
+            ->map(fn (CostLayer $l) => $this->layerRow($l))
             ->all();
 
-        $skip = $this->drawn[$productId] ?? '0';
+        /*
+         * ⭐ [[CostLayerService::issue()]]-এর হুবহু ক্রম — ৪ অক্টোবর ২০২৬।
+         *
+         * ⓘ লট বাছা থাকলে আগে সেই লটের নিজের স্তর; না কুলালে আগে লটহীন স্তর, তারপর অন্য সব — পুরনো আগে। লট ছাড়া
+         * আগের মতো সোজা FIFO। ⛔ আগে এখানে সবসময় সোজা FIFO ছিল, তাই মার্জিন মাপা হত এমন খরচে যা বিল নেয় না।
+         */
+        $all = $this->layers[$productId];
+        $order = $all;
+
+        if ($batchId !== null) {
+            $own = array_filter($all, fn (array $l) => $l['batch'] === $batchId);
+            $rest = array_filter($all, fn (array $l) => $l['batch'] !== $batchId);
+            $order = [
+                ...array_values($own),
+                ...array_values(array_filter($rest, fn (array $l) => $l['batch'] === null)),
+                ...array_values(array_filter($rest, fn (array $l) => $l['batch'] !== null)),
+            ];
+        }
+
         $left = $qty;
         $cost = '0';
 
-        foreach ($this->layers[$productId] as $layer) {
+        foreach ($order as $layer) {
             if (bccomp($left, '0', 4) <= 0) {
                 break;
             }
 
-            $available = $layer['qty'];
-
             // আগের সারিগুলো এই স্তর থেকে যতটা নিয়েছে, সেটা বাদ
-            if (bccomp($skip, '0', 4) > 0) {
-                $used = bccomp($skip, $available, 4) >= 0 ? $available : $skip;
-                $skip = bcsub($skip, $used, 4);
-                $available = bcsub($available, $used, 4);
-            }
+            $available = bcsub($layer['qty'], $this->drawn[$layer['id']] ?? '0', 4);
 
             if (bccomp($available, '0', 4) <= 0) {
                 continue;
@@ -586,11 +683,87 @@ final class MarginGuard
             $take = bccomp($available, $left, 4) >= 0 ? $left : $available;
             $cost = bcadd($cost, bcmul($take, $layer['cost'], 4), 4);
             $left = bcsub($left, $take, 4);
+            $this->drawn[$layer['id']] = bcadd($this->drawn[$layer['id']] ?? '0', $take, 4);
         }
 
-        $this->drawn[$productId] = bcadd($this->drawn[$productId] ?? '0', bcsub($qty, $left, 4), 4);
-
         return bccomp($left, '0', 4) > 0 ? null : $cost;
+    }
+
+    /**
+     * সারির ফ্রির খরচ — ভাণ্ডারের ফ্রি শূন্যে, নিজের মালের ফ্রি স্তরের খরচে; `null` মানে খরচ অজানা।
+     *
+     * ⓘ বিলের সারিতে চালান আগেই মাল বের করে ফেলেছে, তাই সেখানে আসল খরচ (`free_cost`) — আন্দাজ নয়।
+     *
+     * @param  array<string, mixed>  $row
+     */
+    private function freeCost(array $row): ?string
+    {
+        $free = $this->decimal($row['free'] ?? '0');
+
+        if (bccomp($free, '0', 4) <= 0) {
+            return '0';
+        }
+
+        if (array_key_exists('free_cost', $row)) {
+            return (string) $row['free_cost'];
+        }
+
+        if (! (bool) $this->settings->get('sales.free_beyond_pool', false)) {
+            return '0';
+        }
+
+        $pool = $this->freePool((int) $row['product']->id, $row['batch'] ?? null, $row['warehouse'] ?? null);
+        $fromStock = bccomp($pool, $free, 4) >= 0 ? '0' : bcsub($free, bccomp($pool, '0', 4) > 0 ? $pool : '0', 4);
+
+        return bccomp($fromStock, '0', 4) > 0 ? $this->costOf($row['product'], $fromStock, $row['batch'] ?? null) : '0';
+    }
+
+    /** লটের (বা লট ছাড়া পণ্যের) সরবরাহকারী-ফ্রি ভাণ্ডারে এখন কত — তালা ছাড়া, কেবল মাপার জন্য। */
+    private function freePool(int $productId, ?int $batchId, ?int $warehouseId): string
+    {
+        $warehouseId ??= (int) Warehouse::query()->where('is_default', true)->value('id');
+
+        if ($batchId !== null) {
+            return (string) StockMovement::query()
+                ->where('batch_id', $batchId)
+                ->where('warehouse_id', $warehouseId)
+                ->selectRaw('COALESCE(SUM(free_change), 0) as total')
+                ->value('total');
+        }
+
+        $product = Product::query()->find($productId);
+        $warehouse = Warehouse::query()->find($warehouseId);
+
+        return $product === null ? '0' : app(StockService::class)->freeAvailableQty($product, $warehouse);
+    }
+
+    /**
+     * চালান নিজের মাল থেকে যে ফ্রি দিয়েছিল তার আসল খরচ, এই সারির ফ্রির ভাগে — চালানের ঐ পণ্যের সব ফ্রি সারির অনুপাতে।
+     */
+    private function freeCostOnTheChallan(int $challanId, int $productId, string $free, string $productFree): string
+    {
+        if (bccomp($productFree, '0', 4) <= 0) {
+            return '0';
+        }
+
+        $spent = (string) CostLayerUse::query()
+            ->where('source_type', DeliveryChallan::STOCK_SOURCE.':free')
+            ->where('source_id', $challanId)
+            ->where('product_id', $productId)
+            ->sum('amount');
+
+        return bcdiv(bcmul($spent, $free, 6), $productFree, 4);
+    }
+
+    /** @return array{id: int, batch: int|null, qty: string, cost: string} */
+    private function layerRow(CostLayer $layer): array
+    {
+        return [
+            'id' => (int) $layer->id,
+            'batch' => $layer->batch_id === null ? null : (int) $layer->batch_id,
+            'qty' => (string) $layer->qty_remaining,
+            'cost' => (string) $layer->unit_cost,
+        ];
     }
 
     /**
@@ -631,6 +804,9 @@ final class MarginGuard
             $rows[] = [
                 'index' => $index,
                 'product' => $line->product,
+                // ⓘ বিলের লট আসে তার চালানের সারি থেকে — [[SalesInvoiceService::costByLot()]] যেমন নেয়
+                'batch' => $line->challanLine?->batch_id === null ? null : (int) $line->challanLine->batch_id,
+                ...$this->invoiceFree($line),
                 'qty' => $qty,
                 'net' => bcsub((string) $line->amount, (string) ($line->tax ?? '0'), 4),
             ];
@@ -645,6 +821,34 @@ final class MarginGuard
      * ⓘ চালানের মাথার ছাড় (`discount_amount`) দিয়ে চালান আগেই মাপা হয়েছে — কাউন্টারে ঠিক বিলের ছাড়টাই।
      * বিলে তার বেশি হলে ফেরে পুরো বিলের ছাড়, কারণ তখন সব সারি আবার মাপা হয়।
      */
+    /**
+     * বিলের সারির ফ্রি — চালানের সারি থেকে; চালান পাকা হলে আসল খরচ (মাল আগেই বেরিয়েছে), নাহলে আগের নিয়মে।
+     *
+     * @return array<string, mixed>
+     */
+    private function invoiceFree(SalesInvoiceLine $line): array
+    {
+        $challanLine = $line->challanLine;
+        $free = (string) ($challanLine?->free_qty ?? '0');
+
+        if ($challanLine === null || bccomp($free, '0', 4) <= 0) {
+            return ['free' => '0'];
+        }
+
+        $challan = $challanLine->challan;
+
+        if ($challan === null || ! in_array($challan->status, DocumentStatus::POSTED, true)) {
+            return ['free' => $free, 'warehouse' => $challan?->warehouse_id === null ? null : (int) $challan->warehouse_id];
+        }
+
+        $productFree = (string) $challan->lines()->where('product_id', $challanLine->product_id)->sum('free_qty');
+
+        return [
+            'free' => $free,
+            'free_cost' => $this->freeCostOnTheChallan((int) $challan->id, (int) $challanLine->product_id, $free, $productFree),
+        ];
+    }
+
     private function billDiscountBeyondTheChallan(SalesInvoice $invoice): ?string
     {
         $bill = $this->decimal($invoice->bill_discount ?? '0');
@@ -711,6 +915,9 @@ final class MarginGuard
             $rows[] = [
                 'index' => $index,
                 'product' => $line->product,
+                'batch' => $line->batch_id === null ? null : (int) $line->batch_id,
+                'free' => (string) ($line->free_qty ?? '0'),
+                'warehouse' => $challan->warehouse_id === null ? null : (int) $challan->warehouse_id,
                 'qty' => $qty,
                 'net' => $this->withoutInclusiveVat(
                     $line->product,

@@ -603,11 +603,24 @@ final class ASaleBelowCostNoLongerSlipsThroughSilentlyTest extends TestCase
         $this->assertSame(MarginGuard::WARN, $guard->action(), 'ⓘ ভিত্তি: কেউ কিছু না বাছলে "সতর্ক"।');
         $this->assertSame(0, bccomp($guard->floor(), '0', 4));
 
-        $this->setting(MarginGuard::ACTION, 'aproval');
+        /*
+         * ⓘ ৩ অক্টোবর ২০২৬ থেকে (aef34470) `set()` তালিকার বাইরের মান নেয়ই না — টাইপো লেখার দরজায় থামে।
+         * ⚠️ তবু আগে থেকে বসে থাকা টাইপো (পুরনো সারি, হাতে বসানো) পাহারাটা নরম করবে না — সেটা "block" পড়ে।
+         */
+        try {
+            $this->setting(MarginGuard::ACTION, 'aproval');
+            $this->fail('⛔ তালিকার বাইরের মান সেটিংয়ে বসে গেল।');
+        } catch (\InvalidArgumentException) {
+            // প্রত্যাশিত
+        }
+
+        $this->setting(MarginGuard::ACTION, MarginGuard::BLOCK);
+        \App\Models\Setting::query()->where('company_id', $this->company->id)->where('key', MarginGuard::ACTION)
+            ->update(['value' => 'aproval']);
         app(SettingsService::class)->flush();
 
         $this->assertSame(MarginGuard::BLOCK, app(MarginGuard::class)->action(),
-            '⛔ অচেনা মান পাহারাটা নরম করেছে।');
+            '⛔ আগে থেকে বসা অচেনা মান পাহারাটা নরম করেছে।');
     }
 
     /**
