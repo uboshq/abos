@@ -179,6 +179,9 @@ Route::middleware('auth')->prefix('sales')->group(function () {
     Route::prefix('quotations')->name('quotation.')->group(function () {
         Route::get('/', [SalesQuotationController::class, 'index'])->name('index');
         Route::get('/create', [SalesQuotationController::class, 'create'])->name('create');
+        // ⭐ তুলনা আর সংস্করণ — মেনুর "আগে বসানো" দুই সারি এখন আসল পাতা (মালিকের আন্তর্জাতিক পরিকল্পনা, ৪ অক্টোবর ২০২৬)
+        Route::get('/compare', [SalesQuotationController::class, 'compare'])->name('compare');
+        Route::get('/revisions', [SalesQuotationController::class, 'revisions'])->name('revisions');
         Route::post('/', [SalesQuotationController::class, 'store'])->name('store');
         Route::get('/{quotation}', [SalesQuotationController::class, 'show'])->whereNumber('quotation')->name('show');
         Route::get('/{quotation}/edit', [SalesQuotationController::class, 'edit'])->whereNumber('quotation')->name('edit');

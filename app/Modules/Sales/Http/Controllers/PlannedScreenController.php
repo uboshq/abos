@@ -27,7 +27,7 @@ final class PlannedScreenController extends Controller implements HasMiddleware
 {
     /** @var list<string> */
     public const SCREENS = [
-        'quotation_new', 'quotation_list', 'quotation_compare', 'quotation_revision',
+        // ⓘ 'quotation_new', 'quotation_list', 'quotation_compare', 'quotation_revision' নিজের পাতায় সরেছে ([[MOVED]], ৪ অক্টোবর ২০২৬)
         // ⓘ 'order_new' আর 'order_list' নিজের রুটে সরেছে — পুরনো আদেশের পাতা (২৮ সেপ্টেম্বর ২০২৬)
         // ⓘ 'order_pending', 'order_partial', 'order_back', 'order_history' — এখন অর্ডার তালিকার ট্যাব ([[FOLDED]])
         // ⓘ 'loading_sheet' নিজের পাতায় সরেছে ([[LoadingSheetController]], ২৯ সেপ্টেম্বর ২০২৬)
@@ -53,6 +53,21 @@ final class PlannedScreenController extends Controller implements HasMiddleware
         'order_history' => 'history',
     ];
 
+    /**
+     * ⭐ পুরনো ঠিকানা → আসল পাতা — উদ্ধৃতির চার সারি (মালিকের আন্তর্জাতিক পরিকল্পনা, ৪ অক্টোবর ২০২৬)।
+     *
+     * ⓘ নতুন, তালিকা, তুলনা, সংস্করণ এখন [[SalesQuotationController]]-এর নিজের পাতা; ⚠️ বুকমার্ক আর পুরনো লিংক মরে না,
+     * ঠিক পাতায় নামে। চাবির পাহারা [[FOLDED]]-এর মতোই — রিডাইরেক্টের আগে এই পাতার চাবি, পরে আসল পাতার নিজের চাবি।
+     *
+     * @var array<string, string>
+     */
+    public const MOVED = [
+        'quotation_new' => 'sales.quotation.create',
+        'quotation_list' => 'sales.quotation.index',
+        'quotation_compare' => 'sales.quotation.compare',
+        'quotation_revision' => 'sales.quotation.revisions',
+    ];
+
     public function __construct(private readonly MenuBuilder $menu) {}
 
     public static function middleware(): array
@@ -64,6 +79,10 @@ final class PlannedScreenController extends Controller implements HasMiddleware
     {
         if (isset(self::FOLDED[$screen])) {
             return redirect()->route('sales.order.index', ['tab' => self::FOLDED[$screen]]);
+        }
+
+        if (isset(self::MOVED[$screen])) {
+            return redirect()->route(self::MOVED[$screen]);
         }
 
         abort_unless(in_array($screen, self::SCREENS, true), 404);

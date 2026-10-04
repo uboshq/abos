@@ -235,34 +235,110 @@ final class SalesQuotationService
     }
 
     /**
-     * আবার খসড়ায় — দর বা সারি বদলাতে।
+     * বদল — ডিলার দেখার আগে "আবার খসড়ায়", দেখার পরে নতুন সংস্করণ।
      *
-     * ⓘ সইয়ের ছক "না" বললে, বা ডিলার দর নিয়ে দরকষাকষি করলে কাগজটা
-     * আটকে থাকত। ⚠️ খসড়ায় ফিরলে আগের সই আর খাটে না: আবার জমা দিলে
+     * ── ⓘ ডিলার দেখার আগে (জমা, অনুমোদিত) ──────────────────────────────
+     * কাগজটা এখনো ঘরের ভিতরে, তাই একই নম্বরে খসড়ায় ফেরে। ⚠️ আগের সই আর খাটে না: আবার জমা দিলে
      * `submitted_at` বদলায়, ছাপ বদলায়, আর নতুন সই লাগে।
      *
-     * ⓘ "গৃহীত"-ও ফেরে: ডিলার রাজি হলেন, অথচ আদেশ কাটার আগেই মেয়াদ
-     * পেরোল — তখন মেয়াদ বাড়ানোর একমাত্র পথ এটাই। ⛔ না থাকলে পর্দার
-     * সতর্কবার্তা "আবার খসড়ায় নিন" বলত, আর বোতামটা কোথাও থাকত না।
-     * আদেশ হয়ে যাওয়া উদ্ধৃতি ফেরে না — আদেশটা তখনো বেঁচে।
+     * ── ⭐ ডিলার দেখার পরে (পাঠানো, গৃহীত, প্রত্যাখ্যাত) — নতুন সংস্করণ ─────
+     * মালিক, ৪ অক্টোবর ২০২৬ (*"অবশ্যই ইন্টারন্যাশনাল স্ট্যান্ডার্ড"*): ডিলারের হাতে যাওয়া দর মোছা হয় না।
+     * একই মূল নম্বরে শেষে `-R১, -R২ …` দিয়ে নতুন খসড়া জন্মায় — সারি, দর, ছাড়, শর্ত হুবহু; আজকের তারিখ আর
+     * কোম্পানির সাধারণ মেয়াদ ([[defaultValidDays()]])। পুরনোটা "নতুন সংস্করণে বদলেছে" — কেবল পড়ার জন্য।
+     *
+     * ⭐ মেয়াদ পেরোনো উদ্ধৃতিকে আদেশে নেওয়ার একমাত্র পথ এটাই: নতুন সংস্করণ, নতুন মেয়াদ, নতুন করে জমা।
+     *
+     * ── ⛔ দুইবার নয় ─────────────────────────────────────────────────────
+     * সারিটা তালায় পড়া হয়, অবস্থা তালার **ভিতরে** দেখা — দুই ক্লিকের দ্বিতীয়টা পুরনো সংস্করণ পায় আর থামে;
+     * (মূল, সংস্করণ) ইউনিক বলে ডাটাবেসও আটকায়। আদেশ হয়ে যাওয়া উদ্ধৃতি বদলায় না — আদেশটা তখনো বেঁচে।
+     *
+     * @return SalesQuotation যে কাগজে এখন কাজ চলবে — একই, বা নতুন সংস্করণ
      */
     public function revise(SalesQuotation $quotation): SalesQuotation
     {
-        $this->assertIn($quotation, [
-            SalesQuotation::SUBMITTED, SalesQuotation::APPROVED,
-            SalesQuotation::SENT, SalesQuotation::ACCEPTED, SalesQuotation::REJECTED,
-        ], 'quotation_not_revisable');
+        return DB::transaction(function () use ($quotation) {
+            /** @var SalesQuotation $locked */
+            $locked = SalesQuotation::query()->whereKey($quotation->getKey())->lockForUpdate()->firstOrFail();
 
-        $quotation->update([
+            $this->assertIn($locked, [
+                SalesQuotation::SUBMITTED, SalesQuotation::APPROVED,
+                SalesQuotation::SENT, SalesQuotation::ACCEPTED, SalesQuotation::REJECTED,
+            ], 'quotation_not_revisable');
+
+            if ($locked->revisesInPlace()) {
+                $locked->update([
+                    'status' => SalesQuotation::DRAFT,
+                    'submitted_at' => null,
+                    'approved_at' => null,
+                    'sent_at' => null,
+                    'answered_at' => null,
+                    'answer_note' => null,
+                ]);
+
+                return $locked->fresh(['lines']);
+            }
+
+            return $this->newRevision($locked);
+        });
+    }
+
+    /**
+     * পুরনো সংস্করণ থেকে নতুনটা — একই সারি ও দর, নতুন তারিখ ও মেয়াদ।
+     *
+     * ⓘ সারিগুলো হুবহু নকল (`replicate`), দামের নীতি আবার চালানো হয় না: নতুন সংস্করণ মানে "আগেরটা থেকে
+     * শুরু", আর বদলানো দর সম্পাদনায় ([[update()]]) বসার সময় নীতি দেখা হয়ই। ⚠️ মোটও হুবহু — নাহলে বদলের আগেই
+     * তুলনার পর্দা "মোট বদলেছে" বলত।
+     */
+    private function newRevision(SalesQuotation $old): SalesQuotation
+    {
+        $old->load('lines');
+
+        $rootId = $old->rootId();
+        $root = $rootId === (int) $old->getKey() ? $old : SalesQuotation::query()->findOrFail($rootId);
+
+        $next = (int) SalesQuotation::query()
+            ->where(fn ($q) => $q->whereKey($rootId)->orWhere('root_quotation_id', $rootId))
+            ->max('revision_no') + 1;
+
+        $today = Carbon::today();
+
+        $revision = SalesQuotation::create([
+            'company_id' => $old->company_id,
+            'branch_id' => $old->branch_id,
+            'financial_year_id' => $this->resolveFinancialYear($today)->id,
+            'document_no' => $root->document_no.'-R'.$next,
+            'root_quotation_id' => $rootId,
+            'revision_no' => $next,
+            'revised_from_id' => $old->id,
+            'customer_id' => $old->customer_id,
+            'trx_date' => $today->toDateString(),
+            'valid_until' => $today->copy()->addDays($this->defaultValidDays())->toDateString(),
+            'price_list_id' => $old->price_list_id,
+            'payment_term_id' => $old->payment_term_id,
+            'delivery_terms' => $old->delivery_terms,
+            'subtotal' => $old->subtotal,
+            'discount' => $old->discount,
+            'header_discount' => $old->header_discount,
+            'tax' => $old->tax,
+            'total' => $old->total,
+            'narration' => $old->narration,
             'status' => SalesQuotation::DRAFT,
-            'submitted_at' => null,
-            'approved_at' => null,
-            'sent_at' => null,
-            'answered_at' => null,
-            'answer_note' => null,
+            'created_by' => auth()->id(),
         ]);
 
-        return $quotation->fresh(['lines']);
+        foreach ($old->lines as $line) {
+            $copy = $line->replicate(['public_id']);
+            $copy->sales_quotation_id = $revision->id;
+            $copy->save();
+        }
+
+        $old->update([
+            'status' => SalesQuotation::REVISED,
+            'superseded_at' => now(),
+            'superseded_by' => auth()->id(),
+        ]);
+
+        return $revision->fresh(['lines']);
     }
 
     /**
@@ -575,6 +651,13 @@ final class SalesQuotationService
      */
     private function assertIn(SalesQuotation $quotation, array $allowed, string $message): void
     {
+        // ⛔ পুরনো সংস্করণ কেবল পড়ার জন্য — বার্তাটা বলে কেন, আর কাজ কোন কাগজে চলবে
+        if ($quotation->isSuperseded() && ! in_array(SalesQuotation::REVISED, $allowed, true)) {
+            throw ValidationException::withMessages([
+                'status' => __('sales::quotation.error.superseded', ['no' => $quotation->document_no]),
+            ]);
+        }
+
         if (! in_array($quotation->status, $allowed, true)) {
             throw ValidationException::withMessages([
                 'status' => __('sales::quotation.error.'.$message, ['no' => $quotation->document_no]),

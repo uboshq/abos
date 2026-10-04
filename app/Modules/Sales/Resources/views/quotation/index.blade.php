@@ -1,5 +1,8 @@
 {{--
     বিক্রয় উদ্ধৃতি — তালিকা।
+
+    ⭐ ওপরে ট্যাব — সব · খসড়া · পাঠানো · গৃহীত · মেয়াদোত্তীর্ণ · আদেশ হয়েছে · হারানো (মালিকের আন্তর্জাতিক পরিকল্পনা,
+    ৪ অক্টোবর ২০২৬)। ⓘ পুরনো সংস্করণ কোনো ট্যাবে নেই — চালুটার পাতায় ইতিহাস, আর "সংস্করণ" পর্দায়।
 --}}
 @php
     $columns = [
@@ -31,6 +34,7 @@
         ],
         [
             'key' => 'total',
+            'total' => 'money',
             'label' => __('sales::field.total'),
             'numeric' => true,
             'width' => '10rem',
@@ -59,8 +63,14 @@
         </div>
     @endif
 
+    <x-ui.list-tabs :tabs="$tabs" :label="__('sales::quotation.tab_label')" />
+
     <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
         <form method="GET" class="contents">
+            {{-- ⓘ খুঁজলে ট্যাব বদলায় না --}}
+            @if ($tab !== 'all')
+                <input type="hidden" name="tab" value="{{ $tab }}">
+            @endif
             <x-ui.toolbar :title="__('sales::quotation.menu')" :count="__('sales::quotation.list_note')"
                 :columns="$columns" :search-placeholder="__('sales::quotation.search')"
                           :sort="$sortOptions">
@@ -72,29 +82,12 @@
                 @endcan
         </x-slot:actions>
                 <x-ui.date-range :dates="$dates" />
-
-                <label class="flex min-h-(--spacing-touch) items-center gap-2 text-sm">
-                    <span class="sr-only">{{ __('sales::field.state') }}</span>
-                    <select name="state"
-                            class="h-(--spacing-field-compact) rounded-(--radius-field) border border-(--color-border)
-                                   bg-(--color-surface-card) px-2">
-                        <option value="">{{ __('sales::quotation.state_all') }}</option>
-                        @foreach (\App\Modules\Sales\Models\SalesQuotation::STATES as $option)
-                            <option value="{{ $option }}" @selected($state === $option)>
-                                {{ __('sales::quotation.status.'.$option) }}
-                            </option>
-                        @endforeach
-                    </select>
-                </label>
-
-                <label class="flex min-h-(--spacing-touch) items-center gap-2 text-sm">
-                    <input type="checkbox" name="cancelled" value="1" @checked($showCancelled) class="size-4">
-                    {{ __('sales::quotation.action.show_cancelled') }}
-                </label>
             </x-ui.toolbar>
         </form>
 
         <x-ui.table
+            :grand="$grand"
+            :view-url="fn ($d) => route('sales.quotation.show', $d)"
             :empty="$q ? __('core.empty.no_results') : __('sales::quotation.empty')"
             :rows="$quotations"
             :compact="request()->boolean('compact')"

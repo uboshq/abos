@@ -47,10 +47,13 @@
                         </form>
                     @endif
 
+                    {{-- ⭐ ডিলার দেখার আগে "আবার খসড়ায়" (একই নম্বর), পরে "নতুন সংস্করণ" (-R১, -R২ …) — ৪ অক্টোবর ২০২৬ --}}
                     @if (in_array($status, [Q::SUBMITTED, Q::APPROVED, Q::SENT, Q::ACCEPTED, Q::REJECTED], true))
                         <form method="POST" action="{{ route('sales.quotation.revise', $quotation) }}">
                             @csrf
-                            <x-ui.button type="submit" tone="secondary">{{ __('sales::quotation.action.revise') }}</x-ui.button>
+                            <x-ui.button type="submit" tone="secondary" data-revise="{{ $quotation->revisesInPlace() ? 'in-place' : 'new' }}">
+                                {{ __($quotation->revisesInPlace() ? 'sales::quotation.action.revise' : 'sales::quotation.action.new_revision') }}
+                            </x-ui.button>
                         </form>
                     @endif
                 @endcan
@@ -62,6 +65,12 @@
                             <x-ui.button type="submit" tone="primary">{{ __('sales::quotation.action.convert') }}</x-ui.button>
                         </form>
                     @endcan
+                @endif
+
+                @if ($family->count() > 1)
+                    <x-ui.button tone="secondary" :href="route('sales.quotation.compare', ['family' => $quotation->id])">
+                        {{ __('sales::quotation.action.compare') }}
+                    </x-ui.button>
                 @endif
 
                 <x-ui.print-menu :documents="[
@@ -87,6 +96,19 @@
                  class="rounded-(--radius-field) bg-(--color-badge-warning-bg) px-3 py-2 text-sm
                         text-(--color-badge-warning-ink)">
                 {{ __('sales::quotation.expired_banner', ['date' => \App\Core\Support\DateFormat::format($quotation->valid_until)]) }}
+            </div>
+        @endif
+
+        {{-- ⛔ পুরনো সংস্করণ — কেবল পড়ার জন্য; চালুটার দিকে আঙুল --}}
+        @if ($quotation->isSuperseded())
+            <div role="status" data-superseded
+                 class="rounded-(--radius-field) bg-(--color-badge-warning-bg) px-3 py-2 text-sm
+                        text-(--color-badge-warning-ink)">
+                {{ __('sales::quotation.superseded_banner') }}
+                @php($current = $family->last())
+                @if ($current && $current->isNot($quotation))
+                    @include('sales::components.doc-link', ['document' => $current, 'route' => 'sales.quotation.show'])
+                @endif
             </div>
         @endif
 
@@ -194,6 +216,35 @@
                 </div>
             @endif
         @endcan
+
+        {{--
+            ⭐ সংস্করণের ইতিহাস — মূল থেকে চালু পর্যন্ত, প্রতিটা এক লাইনে (মালিকের পর্দা ডান দিক কাটে, ১ অক্টোবর ২০২৬)।
+            ⓘ কেবল একাধিক সংস্করণ থাকলে — একা কাগজে খালি বাক্স কেবল ভিড় বাড়াত।
+        --}}
+        @if ($family->count() > 1)
+            <section data-boxed data-quotation-history
+                     class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
+                <h2 class="border-b border-(--color-border) bg-(--color-section-head) px-4 py-3 font-semibold">
+                    {{ __('sales::quotation.revisions.history') }}
+                </h2>
+
+                <ol class="divide-y divide-(--color-border)">
+                    @foreach ($family as $member)
+                        <li data-revision="{{ $member->revision_no }}" @class(['px-4 py-2 text-sm', 'bg-(--color-surface-sunken)' => $member->is($quotation)])>
+                            <span class="block font-semibold">
+                                {{ $member->revision_no === 0 ? __('sales::quotation.revisions.original') : __('sales::quotation.revisions.number', ['n' => $member->revision_no]) }}
+                                @if ($member->is($quotation))
+                                    <span class="text-2xs font-normal text-(--color-ink-muted)">· {{ __('sales::quotation.revisions.this_one') }}</span>
+                                @endif
+                            </span>
+                            <span class="block">@include('sales::components.doc-link', ['document' => $member, 'route' => 'sales.quotation.show'])</span>
+                            <span class="block text-2xs text-(--color-ink-muted)">{{ \App\Core\Support\DateFormat::format($member->trx_date) }} · {{ \App\Core\Support\Money::format($member->total) }}</span>
+                            <span class="block">@include('sales::quotation.partials.status', ['quotation' => $member])</span>
+                        </li>
+                    @endforeach
+                </ol>
+            </section>
+        @endif
 
         {{-- ডিলারের পাঠানো কাগজ বা সই করা কপি — দর নিয়ে প্রশ্ন উঠলে এটাই প্রমাণ --}}
         <x-ui.attachments :document="$quotation" />

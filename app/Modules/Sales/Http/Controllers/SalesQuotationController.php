@@ -6,6 +6,7 @@ namespace App\Modules\Sales\Http\Controllers;
 
 use App\Core\Concerns\AuthorizesResource;
 use App\Core\Concerns\FiltersByDate;
+use App\Core\Concerns\GrandTotals;
 use App\Core\Concerns\SortsLists;
 use App\Core\Engines\Print\PaperSize;
 use App\Core\Engines\Print\PrintableDocument;
@@ -25,6 +26,7 @@ use App\Modules\Sales\Http\Requests\SalesQuotationRequest;
 use App\Modules\Sales\Models\SalesQuotation;
 use App\Modules\Sales\Models\SalesQuotationLine;
 use App\Modules\Sales\Services\SalesQuotationService;
+use App\Modules\Sales\Support\QuotationComparison;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -43,6 +45,7 @@ class SalesQuotationController extends Controller implements HasMiddleware
 {
     use AuthorizesResource;
     use FiltersByDate;
+    use GrandTotals;
     use SortsLists;
 
     public function __construct(
@@ -58,22 +61,32 @@ class SalesQuotationController extends Controller implements HasMiddleware
             new Middleware('can:delete,quotation', only: ['cancel']),
             new Middleware('can:convert,quotation', only: ['convert']),
             new Middleware('can:view,quotation', only: ['paper']),
+            // ⓘ তুলনা আর সংস্করণ — তালিকার মতোই পুরো ধরনের উপর, কোনো একটা কাগজ নয়
+            new Middleware('can:viewAny,'.SalesQuotation::class, only: ['compare', 'revisions']),
         ];
     }
 
+    /**
+     * তালিকা — ওপরে ট্যাব: সব · খসড়া · পাঠানো · গৃহীত · মেয়াদোত্তীর্ণ · আদেশ হয়েছে · হারানো।
+     *
+     * ⭐ মালিকের আন্তর্জাতিক পরিকল্পনা, ৪ অক্টোবর ২০২৬ — মেনুর "উদ্ধৃতির তালিকা" এখন এই পাতা। ⓘ অচেনা ট্যাব মানে
+     * "সব"; গোনা খোঁজা আর তারিখ মানে, নাহলে ট্যাব বলত "১২" আর খুললে দেখাত "৩"।
+     */
     public function index(Request $request): View
     {
-        $state = (string) $request->query('state', '');
+        $tab = (string) $request->query('tab', 'all');
+        $tab = array_key_exists($tab, SalesQuotation::TABS) ? $tab : 'all';
 
-        $query = SalesQuotation::query()
-            ->search($request->query('q'))
-            ->with(['customer', 'order'])
-            ->inState($state)
-            // বাতিলগুলো লুকানো, মোছা নয় (নিয়ম ৫) — ছাঁকনিতে চাইলে দেখায়
-            ->when($state === '' && ! $request->boolean('cancelled'),
-                fn ($q) => $q->where('status', '<>', SalesQuotation::CANCELLED));
+        $base = SalesQuotation::query()->search($request->query('q'));
+        $dates = $this->applyDateRange($base, $request);
 
-        $dates = $this->applyDateRange($query, $request);
+        $counts = [];
+
+        foreach (array_keys(SalesQuotation::TABS) as $key) {
+            $counts[$key] = (clone $base)->inTab($key)->count();
+        }
+
+        $query = (clone $base)->with(['customer', 'order'])->inTab($tab);
 
         $sort = $this->applySort($query, $request, [
             'recent' => fn ($q) => $q->orderByDesc('trx_date')->orderByDesc('id'),
@@ -82,8 +95,11 @@ class SalesQuotationController extends Controller implements HasMiddleware
             'customer' => fn ($q) => $q->orderBy('customer_id')->orderByDesc('trx_date'),
         ]);
 
+        $keep = $request->except(['tab', 'page']);
+
         return view('sales::quotation.index', [
             'menu' => $this->menu->forUser($request->user()),
+            'grand' => $this->grandTotals($query, ['total' => 't.total']),
             'quotations' => $query->paginate(50)->withQueryString(),
             'q' => $request->query('q'),
             'dates' => $dates,
@@ -94,8 +110,95 @@ class SalesQuotationController extends Controller implements HasMiddleware
                 'largest' => __('sales::sort.largest'),
                 'customer' => __('sales::sort.customer'),
             ],
-            'state' => $state,
-            'showCancelled' => $request->boolean('cancelled'),
+            'tab' => $tab,
+            'tabs' => array_map(fn (string $key) => [
+                'key' => $key,
+                'label' => __('sales::quotation.tab.'.$key),
+                'hint' => __('sales::quotation.tab_hint.'.$key),
+                'url' => route('sales.quotation.index', $key === 'all' ? $keep : [...$keep, 'tab' => $key]),
+                'count' => $counts[$key],
+                'active' => $key === $tab,
+            ], array_keys(SalesQuotation::TABS)),
+        ]);
+    }
+
+    /**
+     * তুলনা — দুই থেকে ছয়টা উদ্ধৃতি পাশাপাশি, সারি ধরে, বদল রঙে ([[QuotationComparison]])।
+     *
+     * ⓘ দুইভাবে আসা যায়: `?family=<id>` — একই উদ্ধৃতির সব সংস্করণ; বা `?ids[]=…` — তালিকা থেকে বেছে।
+     * দুইটার কম হলে বাছার পাতা (খোঁজা আর টিক)।
+     *
+     * ⛔ চাওয়া একটা id-ও না পেলে ৪০৪ — অন্য কোম্পানির কাগজ (কোম্পানির দেয়াল মডেলের স্কোপে) নীরবে বাদ দিয়ে
+     * বাকিগুলো দেখালে পর্দা মিথ্যা বলত "এই কয়টাই চেয়েছিলেন"।
+     */
+    public function compare(Request $request): View
+    {
+        $ids = collect((array) $request->query('ids', []))
+            ->map(fn ($id) => (int) $id)->filter(fn (int $id) => $id > 0)->unique()->values();
+
+        if ($request->filled('family')) {
+            $anchor = SalesQuotation::query()->findOrFail((int) $request->query('family'));
+            $ids = $anchor->family()->pluck('id')->map(fn ($id) => (int) $id)->values();
+        }
+
+        abort_if($ids->count() > QuotationComparison::MAX, 422, __('sales::quotation.compare.too_many', ['max' => QuotationComparison::MAX]));
+
+        $quotations = SalesQuotation::query()
+            ->whereKey($ids->all())
+            ->with(['lines.product', 'lines.enteredUnit', 'customer', 'paymentTerm'])
+            ->orderBy('id')
+            ->get();
+
+        abort_if($quotations->count() !== $ids->count(), 404);
+
+        $picker = null;
+
+        if ($quotations->count() < 2) {
+            $picker = SalesQuotation::query()
+                ->search($request->query('q'))
+                ->with('customer')
+                ->latest('id')
+                ->limit(50)
+                ->get();
+        }
+
+        return view('sales::quotation.compare', [
+            'menu' => $this->menu->forUser($request->user()),
+            'quotations' => $quotations,
+            'comparison' => $quotations->count() >= 2 ? QuotationComparison::of($quotations) : null,
+            'picker' => $picker,
+            'chosen' => $ids->all(),
+            'q' => $request->query('q'),
+        ]);
+    }
+
+    /**
+     * সংস্করণ — যে উদ্ধৃতির অন্তত একটা নতুন সংস্করণ হয়েছে, মূল ধরে এক সারি করে।
+     *
+     * ⓘ প্রতিটা সারিতে মূল নম্বর, গ্রাহক, কয়টা সংস্করণ, শেষটার নম্বর ও অবস্থা, আর "তুলনা" — পুরো ইতিহাস এক চাপে।
+     */
+    public function revisions(Request $request): View
+    {
+        $roots = SalesQuotation::query()
+            ->whereNull('root_quotation_id')
+            ->whereIn('id', SalesQuotation::query()->whereNotNull('root_quotation_id')->select('root_quotation_id'))
+            ->search($request->query('q'))
+            ->with('customer')
+            ->latest('id')
+            ->paginate(50)
+            ->withQueryString();
+
+        $latest = SalesQuotation::query()
+            ->whereIn('root_quotation_id', $roots->pluck('id'))
+            ->get()
+            ->groupBy('root_quotation_id')
+            ->map(fn ($family) => $family->sortByDesc('revision_no')->first());
+
+        return view('sales::quotation.revisions', [
+            'menu' => $this->menu->forUser($request->user()),
+            'roots' => $roots,
+            'latest' => $latest,
+            'q' => $request->query('q'),
         ]);
     }
 
@@ -126,11 +229,13 @@ class SalesQuotationController extends Controller implements HasMiddleware
 
     public function show(Request $request, SalesQuotation $quotation): View
     {
-        $quotation->load(['lines.product.unit', 'lines.enteredUnit', 'customer', 'priceList', 'paymentTerm', 'order', 'creator']);
+        $quotation->load(['lines.product.unit', 'lines.enteredUnit', 'customer', 'priceList', 'paymentTerm', 'order', 'creator', 'supersededBy']);
 
         return view('sales::quotation.show', [
             'menu' => $this->menu->forUser($request->user()),
             'quotation' => $quotation,
+            // ⭐ সংস্করণের ইতিহাস — মূল থেকে শেষ পর্যন্ত, এই পাতারটা চিহ্নিত
+            'family' => $quotation->family()->get(),
         ]);
     }
 
@@ -199,11 +304,21 @@ class SalesQuotationController extends Controller implements HasMiddleware
         return $this->back($quotation, 'rejected');
     }
 
+    /**
+     * বদল — ডিলার দেখার আগে একই কাগজ খসড়ায়, পরে নতুন সংস্করণ ([[SalesQuotationService::revise()]])।
+     * ⓘ যেটায় এখন কাজ চলবে, পাতা সেখানেই যায়।
+     */
     public function revise(SalesQuotation $quotation): RedirectResponse
     {
-        $this->service->revise($quotation);
+        $working = $this->service->revise($quotation);
 
-        return $this->back($quotation, 'revised');
+        if ((int) $working->getKey() === (int) $quotation->getKey()) {
+            return $this->back($quotation, 'revised');
+        }
+
+        return redirect()
+            ->route('sales.quotation.show', $working)
+            ->with('saved', __('sales::quotation.message.new_revision', ['no' => $working->document_no, 'old' => $quotation->document_no]));
     }
 
     public function cancel(Request $request, SalesQuotation $quotation): RedirectResponse

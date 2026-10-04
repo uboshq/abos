@@ -38,7 +38,8 @@ final class TheQuotationAndOrderMenusSitAfterTheDashboardTest extends TestCase
 
     public function test_both_folds_sit_in_the_sales_bar_before_the_delivery_orders(): void
     {
-        $html = $this->get(route('sales.planned', ['screen' => 'quotation_list']))->assertOk()->getContent();
+        // ⓘ ৪ অক্টোবর ২০২৬ থেকে উদ্ধৃতির তালিকা আসল পাতা ([[PlannedScreenController::MOVED]]) — বার সেখান থেকেই পড়া
+        $html = $this->get(route('sales.quotation.index'))->assertOk()->getContent();
 
         $quotations = strpos($html, e(__('core.menu.quotations')));
         $orders = strpos($html, e(__('core.menu.sales_orders')));

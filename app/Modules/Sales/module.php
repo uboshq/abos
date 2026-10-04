@@ -123,25 +123,20 @@ return [
              */
             /*
              * ⭐ উদ্ধৃতি আর বিক্রয় আদেশ — ড্যাশবোর্ডের ঠিক পরে, দুইটা ভাঁজে (মালিকের
-             * নির্দেশ, ২৮ সেপ্টেম্বর ২০২৬: *"age bosaw, code pore korbo"*)। ⓘ প্রতিটা
-             * সারি আপাতত [[PlannedScreenController]]-এর সৎ পাতায় যায়; পর্দা তৈরি
-             * হলে সারিটা নিজের রুটে সরবে।
+             * নির্দেশ, ২৮ সেপ্টেম্বর ২০২৬: *"age bosaw, code pore korbo"*)।
+             * ⭐ ৪ অক্টোবর ২০২৬ (মালিকের আন্তর্জাতিক পরিকল্পনা): উদ্ধৃতির চার সারি এখন আসল পাতা — নতুন, তালিকা (ট্যাবসহ),
+             * তুলনা, সংস্করণ — উদ্ধৃতির নিজের চাবি আর নিজের সুইচে। ⓘ পুরনো `sales.planned` ঠিকানা ঠিক পাতায় নামে
+             * ([[PlannedScreenController::MOVED]])। আগের পঞ্চম "উদ্ধৃতি" সারি (একই তালিকায় যেত) উঠে গেছে —
+             * একই পাতা দুই সারিতে নয় (মালিকের নিয়ম)। যে ডিপো দর লিখে দেয় না, তার মেনুতে ভাঁজটাই আসে না (নিয়ম ৭)।
              */
-            ['label' => 'sales::planned.quotation_new', 'cluster' => 'quotations', 'icon' => 'book', 'route' => 'sales.planned',
-                'route_params' => ['screen' => 'quotation_new'], 'permission' => 'sales.order.view'],
-            ['label' => 'sales::planned.quotation_list', 'cluster' => 'quotations', 'icon' => 'book', 'route' => 'sales.planned',
-                'route_params' => ['screen' => 'quotation_list'], 'permission' => 'sales.order.view'],
-            ['label' => 'sales::planned.quotation_compare', 'cluster' => 'quotations', 'icon' => 'book', 'route' => 'sales.planned',
-                'route_params' => ['screen' => 'quotation_compare'], 'permission' => 'sales.order.view'],
-            ['label' => 'sales::planned.quotation_revision', 'cluster' => 'quotations', 'icon' => 'book', 'route' => 'sales.planned',
-                'route_params' => ['screen' => 'quotation_revision'], 'permission' => 'sales.order.view'],
-            /*
-             * ⭐ উদ্ধৃতি — আদেশের ঠিক আগে, কাগজের ধারায়: দর বলা → রাজি → আদেশ (NEXUS §৮)।
-             * ⓘ নিজের সুইচ (নিয়ম ৭) — যে ডিপো দর লিখে দেয় না, তার মেনুতে সারিটা আসে না।
-             */
-            // ⓘ "উদ্ধৃতি" ভাঁজের ভিতরে — বারে একই নামের দুই ঘর নয় (মেনুতে আগে বসানো চারটা পর্দার সাথে)
-            ['label' => 'sales::quotation.menu', 'icon' => 'book', 'route' => 'sales.quotation.index',
-                'permission' => 'sales.quotation.view', 'setting' => 'sales.screen_quotations', 'cluster' => 'quotations'],
+            ['label' => 'sales::planned.quotation_new', 'cluster' => 'quotations', 'icon' => 'book', 'route' => 'sales.quotation.create',
+                'permission' => 'sales.quotation.create', 'setting' => 'sales.screen_quotations'],
+            ['label' => 'sales::planned.quotation_list', 'cluster' => 'quotations', 'icon' => 'book', 'route' => 'sales.quotation.index',
+                'permission' => 'sales.quotation.view', 'setting' => 'sales.screen_quotations'],
+            ['label' => 'sales::planned.quotation_compare', 'cluster' => 'quotations', 'icon' => 'book', 'route' => 'sales.quotation.compare',
+                'permission' => 'sales.quotation.view', 'setting' => 'sales.screen_quotations'],
+            ['label' => 'sales::planned.quotation_revision', 'cluster' => 'quotations', 'icon' => 'book', 'route' => 'sales.quotation.revisions',
+                'permission' => 'sales.quotation.view', 'setting' => 'sales.screen_quotations'],
 
             /* ⭐ পুরনো আদেশের পাতা এই ভাঁজে — মালিকের সিদ্ধান্ত, ২৮ সেপ্টেম্বর ২০২৬: "ডেলিভারি অর্ডার"
                এখন প্রতিটা বিক্রির চালান ([[DeliveryOrderTabs]]), আর আদেশ নিজের নামে ফিরল। */

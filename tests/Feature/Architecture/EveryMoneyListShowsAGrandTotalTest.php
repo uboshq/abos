@@ -24,7 +24,6 @@ final class EveryMoneyListShowsAGrandTotalTest extends TestCase
     private const PENDING = [
         'Sales/Resources/views/route/index.blade.php',
         'Sales/Resources/views/crm/opportunity/index.blade.php',
-        'Sales/Resources/views/quotation/index.blade.php',
     ];
 
     /** টাকা দেখায়, কিন্তু যোগটা মিথ্যা বা অর্থহীন হত — কারণসহ; সর্বমোট এখানে ইচ্ছাকৃতভাবে নেই */

@@ -16,6 +16,7 @@
         \App\Modules\Sales\Models\SalesQuotation::SUBMITTED => 'pending',
         \App\Modules\Sales\Models\SalesQuotation::APPROVED,
         \App\Modules\Sales\Models\SalesQuotation::SENT => 'info',
+        \App\Modules\Sales\Models\SalesQuotation::REVISED => 'draft',
         \App\Modules\Sales\Models\SalesQuotation::REJECTED,
         \App\Modules\Sales\Models\SalesQuotation::EXPIRED,
         \App\Modules\Sales\Models\SalesQuotation::CANCELLED => 'danger',
