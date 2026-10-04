@@ -80,9 +80,19 @@ export function guardConfirmOverview (root = document, fetcher = (...args) => fe
                 return
             }
 
+            const wantsDraft = button.hasAttribute('data-overview-draft')
+
+            // ⓘ কাউন্টারের মতো ফর্মে খসড়া নিজেই এক জমা-বোতাম (`name="save_as_draft" value="1"`) — HTML কেবল চাপা
+            // বোতামের মান পাঠায়, তাই খসড়া মানে ঐ বোতাম দিয়েই জমা (তাতে পপ-আপ নেই)
+            const draftButton = form.querySelector('button[name="save_as_draft"][value="1"]:not([data-overview-trigger])')
+            if (wantsDraft && draftButton && typeof form.requestSubmit === 'function') {
+                form.requestSubmit(draftButton)
+                return
+            }
+
             const draft = form.querySelector('input[name="save_as_draft"]')
             if (draft) {
-                draft.value = button.hasAttribute('data-overview-draft') ? '1' : '0'
+                draft.value = wantsDraft ? '1' : '0'
             }
 
             form.dataset.overviewSeen = '1'

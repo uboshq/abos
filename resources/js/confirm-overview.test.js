@@ -107,6 +107,27 @@ describe('নিশ্চিতের আগে সারাংশ', () => {
         expect(root.querySelector('[data-overview-confirm]').disabled).toBe(true)
     })
 
+    it('কাউন্টারের আকার — খসড়া এক জমা-বোতাম: পপ-আপের "খসড়া" ঐ বোতাম দিয়েই জমা দেয়, "নিশ্চিত" নিশ্চিতের বোতাম দিয়ে', async () => {
+        const form = page()
+        form.querySelector('input[name="save_as_draft"]').remove()
+        const trigger = form.querySelector('[data-overview-trigger]')
+        trigger.setAttribute('name', 'save_as_draft')
+        trigger.setAttribute('value', '0')
+        const draftButton = form.querySelector('[data-draft-direct]')
+        draftButton.setAttribute('name', 'save_as_draft')
+        draftButton.setAttribute('value', '1')
+
+        submitWith(form, trigger)
+        await tick()
+        root.querySelector('[data-overview-draft]').click()
+        expect(form.submitted).toEqual([draftButton])
+
+        submitWith(form, trigger)
+        await tick()
+        root.querySelector('[data-overview-confirm]').click()
+        expect(form.submitted).toEqual([draftButton, trigger])
+    })
+
     it('খসড়ার বোতাম সরাসরি জমা দেয় — সারাংশ নয়', async () => {
         const form = page()
         const event = submitWith(form, form.querySelector('[data-draft-direct]'))

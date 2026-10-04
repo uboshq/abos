@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Sales\Http\Controllers;
 
+use App\Core\Engines\Overview\ConfirmOverview;
 use App\Core\Support\CompanyContext;
 use App\Http\Controllers\Controller;
 use App\Modules\Sales\Http\Requests\DirectSaleRules;
@@ -32,7 +33,20 @@ class DirectSaleOverviewController extends Controller implements HasMiddleware
     public function __invoke(Request $request, DirectSaleOverview $overview): View
     {
         $input = $request->all();
-        $data = Validator::make($input, DirectSaleRules::store(CompanyContext::id(), $input))->validate();
+        $check = Validator::make($input, DirectSaleRules::store(CompanyContext::id(), $input));
+
+        // ⚠️ `validate()` নয় — পপ-আপের অনুরোধ JSON চায় না, তাই ছুঁড়লে উত্তর হত পেছনে ফেরা, আর পপ-আপে ঢুকত পুরো
+        // কাউন্টার-পাতা। ভুলগুলো তাই সারাংশেই — "থামবে" সুরে, পপ-আপের "নিশ্চিত" বন্ধ
+        if ($check->fails()) {
+            $sheet = ConfirmOverview::titled(__('overview.not_ready'));
+            foreach (array_unique($check->errors()->all()) as $message) {
+                $sheet->note($message, 'stop');
+            }
+
+            return view('ui.confirm-overview-body', ['overview' => $sheet->toArray()]);
+        }
+
+        $data = $check->validated();
 
         return view('ui.confirm-overview-body', ['overview' => $overview->build($data, $data['lines'])->toArray()]);
     }

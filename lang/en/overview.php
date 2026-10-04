@@ -9,4 +9,5 @@ return [
     'confirm' => 'Confirm',
     'draft' => 'Keep as draft',
     'back' => 'Go back',
+    'not_ready' => 'Something on the form is missing or wrong. Fix it and press again',
 ];

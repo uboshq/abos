@@ -146,6 +146,30 @@ final class TheSaleIsShownBeforeItIsConfirmedTest extends TestCase
             ->assertSee('1,000');
     }
 
+    /** ⛔ ফর্মে ভুল — পপ-আপে পুরো পাতা নয় (পেছনে ফেরার ৩০২ নয়), ভুলের কথা আর "নিশ্চিত হবে না" */
+    public function test_a_broken_form_shows_its_mistakes_in_the_popup_not_a_whole_page(): void
+    {
+        $this->grant('sales.challan.create');
+
+        $response = $this->actingAs($this->seller->fresh())
+            ->post(route('sales.direct.overview'), ['warehouse_id' => $this->warehouse->id], ['X-Requested-With' => 'XMLHttpRequest', 'Accept' => 'text/html'])
+            ->assertOk()
+            ->assertSee('data-overview-blocks="1"', false)
+            ->assertSee(__('overview.not_ready'));
+
+        $this->assertStringNotContainsString('<html', $response->getContent(), '⛔ পপ-আপে পুরো পাতা ঢুকল।');
+    }
+
+    /** ⭐ কাউন্টার-পাতায় পপ-আপ বসানো — ফর্ম সারাংশের ঠিকানা জানে, পাতায় পপ-আপের খোলস আছে */
+    public function test_the_counter_page_carries_the_popup_and_the_overview_address(): void
+    {
+        $this->actingAs(User::query()->where('email', 'owner@abos.test')->firstOrFail())
+            ->get(route('sales.direct.create'))->assertOk()
+            ->assertSee('data-confirm-overview="'.route('sales.direct.overview').'"', false)
+            ->assertSee('data-confirm-overview-dialog', false)
+            ->assertSee('data-overview-trigger', false);
+    }
+
     /** @param  array<string, mixed>  $line */
     private function sale(array $line = []): array
     {
