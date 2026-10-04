@@ -150,9 +150,12 @@ final class LedgerChain
         $version = self::sealVersion();
         $hash = self::hash($previous, $entry->getAttributes(), $version);
 
+        $entries = (int) DB::table('ledger_chain_heads')->where('company_id', $companyId)->value('entries') + 1;
+
         DB::table('ledger_chain_heads')->where('company_id', $companyId)->update([
             'last_hash' => $hash,
-            'entries' => DB::raw('entries + 1'),
+            'entries' => $entries,
+            ...self::headSealColumns($companyId, $hash, $entries),
         ]);
 
         return [$previous, $hash, $version];
@@ -271,6 +274,40 @@ final class LedgerChain
     }
 
     /**
+     * ⭐ মাথার নিজের সিল — অডিট গ৮, ৪ অক্টোবর ২০২৬।
+     *
+     * ── ⛔ কী ভাঙা ছিল ─────────────────────────────────────────────
+     * প্রতিটা সারি সিল করা, কিন্তু মাথা (শেষ ছাপ আর সারির সংখ্যা) নয়। ডাটাবেজে ঢুকতে পারা কেউ শেষের কয়েকটা
+     * সারি মুছে মাথার দুইটা ঘর মিলিয়ে দিলে [[self::verify()]] বলত "অক্ষত" — চেইনের বাকিটা তো সত্যিই ঠিক।
+     * মাথাটা মুছে দিলে বলত "এই কোম্পানি কিছু পোস্টই করেনি"।
+     * ⭐ এখন মাথার তিনটা কথা (কোম্পানি · শেষ ছাপ · সংখ্যা) সারির মতোই চাবিতে সিল — চাবি ছাড়া মাথা বদলানো যায় না।
+     */
+    public static function headSeal(int $companyId, ?string $lastHash, int $entries, int $version): string
+    {
+        return hash_hmac('sha256', 'head|'.$companyId.'|'.($lastHash ?? '').'|'.$entries, self::keyFor($version));
+    }
+
+    /**
+     * মাথার সিলের ঘর — কলামটা থাকলে। ⓘ ডিপ্লয়ের মাঝের কয়েক সেকেন্ড (নতুন কোড, পুরনো টেবিল) খাতায় লেখা যেন না থামে।
+     *
+     * @return array<string, mixed>
+     */
+    public static function headSealColumns(int $companyId, ?string $lastHash, int $entries): array
+    {
+        // ⓘ কেবল "আছে" মনে রাখা — মাইগ্রেশনের আগের কোনো পোস্টিং "নেই" মনে রাখলে পরের সব মাথা সিল ছাড়া থাকত
+        static $hasColumn = false;
+        $hasColumn = $hasColumn || \Illuminate\Support\Facades\Schema::hasColumn('ledger_chain_heads', 'head_seal');
+
+        if (! $hasColumn) {
+            return [];
+        }
+
+        $version = self::sealVersion();
+
+        return ['head_seal' => self::headSeal($companyId, $lastHash, $entries, $version), 'head_seal_version' => $version];
+    }
+
+    /**
      * চেইনটা আবার সিল করা — **কেবল আমাদের নিজের, ইচ্ছাকৃত বদলের পরে**।
      *
      * ── ⛔ এটা কোনো "সারানোর" যন্ত্র নয় ──────────────────────────────
@@ -386,15 +423,14 @@ final class LedgerChain
          * করেই দেখে (শেষ ছাপ ও গোনা সংখ্যা দুইটাই), তাই বাদ দিলে ধরা
          * পড়ত — কিন্তু ততক্ষণে আরও কয়েকটা সারি লেখা হয়ে গেছে।
          */
+        $entries = LedgerEntry::withoutGlobalScopes()
+            ->where('company_id', $companyId)
+            ->whereNotNull('row_hash')
+            ->count();
+
         DB::table('ledger_chain_heads')->updateOrInsert(
             ['company_id' => $companyId],
-            [
-                'last_hash' => $last,
-                'entries' => LedgerEntry::withoutGlobalScopes()
-                    ->where('company_id', $companyId)
-                    ->whereNotNull('row_hash')
-                    ->count(),
-            ],
+            ['last_hash' => $last, 'entries' => $entries, ...self::headSealColumns((int) $companyId, $last, $entries)],
         );
 
         return $sealed;
@@ -512,11 +548,12 @@ final class LedgerChain
 
         /** @var array{0: int, 1: int}|null ⓘ [সারি, সংস্করণ] — চাবিটা হাতে নেই */
         $keylessAt = null;
+        $newest = 0; // ⓘ এ পর্যন্ত দেখা সবচেয়ে নতুন সিল-সংস্করণ — অডিট গ৮
 
         LedgerEntry::withoutGlobalScopes()
             ->where('company_id', $companyId)
             ->orderBy('id')
-            ->chunkById(500, function ($rows) use (&$previous, &$checked, &$hashed, &$brokenAt, &$unsealedAt, &$keylessAt): bool {
+            ->chunkById(500, function ($rows) use (&$previous, &$checked, &$hashed, &$brokenAt, &$unsealedAt, &$keylessAt, &$newest): bool {
                 foreach ($rows as $row) {
                     $checked++;
 
@@ -553,6 +590,18 @@ final class LedgerChain
                      * ঝামেলা" বলে উড়িয়ে দেওয়া হত।
                      */
                     $version = (int) ($row->seal_version ?? self::SEAL_APP_KEY);
+
+                    /*
+                     * ⛔ সংস্করণ কখনো পেছায় না — অডিট গ৮। নতুন চাবিতে সিল হওয়া সারির পরে পুরনো চাবির সারি মানে কেউ
+                     * পুরনো (হয়তো ফাঁস হওয়া) চাবিতে ফিরে গিয়ে সিল বানিয়েছে।
+                     */
+                    if ($version < $newest) {
+                        $brokenAt = (int) $row->id;
+
+                        return false;
+                    }
+
+                    $newest = $version;
 
                     if (! self::hasKeyFor($version)) {
                         $keylessAt = [(int) $row->id, $version];
@@ -618,11 +667,15 @@ final class LedgerChain
          * নয়, কেবল খালি।
          */
         if ($head === null) {
-            return ['ok' => true, 'checked' => $checked, 'expected' => $checked, 'broken_at' => null, 'reason' => null];
+            /* ⛔ সারি আছে অথচ মাথা নেই — মাথাটা মুছে ফেলা হয়েছে (অডিট গ৮) */
+            return $hashed > 0
+                ? ['ok' => false, 'checked' => $hashed, 'expected' => 0, 'broken_at' => null, 'reason' => self::TAIL]
+                : ['ok' => true, 'checked' => $checked, 'expected' => $checked, 'broken_at' => null, 'reason' => null];
         }
 
         $tailIntact = ($head->last_hash ?? null) === $previous
-            && (int) $head->entries === $hashed;
+            && (int) $head->entries === $hashed
+            && self::headHolds($companyId, $head);
 
         return [
             'ok' => $tailIntact,
@@ -631,5 +684,24 @@ final class LedgerChain
             'broken_at' => null,
             'reason' => $tailIntact ? null : self::TAIL,
         ];
+    }
+
+    /**
+     * মাথার সিল মেলে কি না — অডিট গ৮। ⓘ কলামটা না থাকলে (পুরনো টেবিল) আগের আচরণ; থাকলে সিল খালি মানেও ভাঙা,
+     * কারণ মাইগ্রেশন প্রতিটা মাথা সিল করে দেয়।
+     */
+    private static function headHolds(int $companyId, object $head): bool
+    {
+        if (! property_exists($head, 'head_seal')) {
+            return true;
+        }
+
+        $version = (int) ($head->head_seal_version ?? self::SEAL_APP_KEY);
+
+        if ($head->head_seal === null || ! self::hasKeyFor($version)) {
+            return false;
+        }
+
+        return hash_equals(self::headSeal($companyId, $head->last_hash, (int) $head->entries, $version), (string) $head->head_seal);
     }
 }

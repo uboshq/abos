@@ -222,6 +222,51 @@ class TheBooksCouldBeEditedAndNobodyWouldKnowTest extends TestCase
     }
 
     /**
+     * ⛔ শেষ সারি কেটে মাথাটাও মিলিয়ে দিলে — অডিট গ৮, ৪ অক্টোবর ২০২৬।
+     * আগে মাথা সিল ছাড়া ছিল: শেষ ছাপ আর সংখ্যা হাতে বসিয়ে দিলে যাচাই সবুজ। এখন মাথার নিজের সিল মেলে না।
+     */
+    public function test_removing_the_tail_and_fixing_the_head_by_hand_is_caught(): void
+    {
+        $ids = $this->postThreeLines();
+        $last = DB::table('ledger_entries')->where('id', end($ids))->first();
+
+        DB::table('ledger_entries')->where('id', $last->id)->delete();
+        DB::table('ledger_chain_heads')->where('company_id', $this->depot->id)->update([
+            'last_hash' => $last->prev_hash,
+            'entries' => DB::raw('entries - 1'),
+        ]);
+
+        $result = LedgerChain::verify($this->depot->id);
+
+        $this->assertFalse($result['ok'], '⛔ শেষ সারি কেটে মাথা মিলিয়ে দিলে চেইন সবুজ।');
+        $this->assertSame(LedgerChain::TAIL, $result['reason']);
+    }
+
+    /** ⛔ মাথাটাই মুছে দিলে "কিছু পোস্ট হয়নি" নয় — ভাঙা (অডিট গ৮)। */
+    public function test_deleting_the_head_is_caught(): void
+    {
+        $this->postThreeLines();
+
+        DB::table('ledger_chain_heads')->where('company_id', $this->depot->id)->delete();
+
+        $result = LedgerChain::verify($this->depot->id);
+
+        $this->assertFalse($result['ok'], '⛔ মাথা মুছে দিলে চেইন সবুজ।');
+        $this->assertSame(LedgerChain::TAIL, $result['reason']);
+    }
+
+    /** ⭐ ছোঁয়া হয়নি এমন খাতায় মাথার সিল মেলে — নিষেধ যেন সত্যিকে লাল না করে। */
+    public function test_an_untouched_head_carries_a_seal_that_holds(): void
+    {
+        $this->postThreeLines();
+
+        $head = DB::table('ledger_chain_heads')->where('company_id', $this->depot->id)->first();
+
+        $this->assertNotNull($head->head_seal, '⛔ পোস্টিংয়ের পরে মাথা সিল ছাড়া।');
+        $this->assertTrue(LedgerChain::verify($this->depot->id)['ok']);
+    }
+
+    /**
      * ⭐ সিল ছাড়া একটা ভুয়া সারি ঢোকালে — ২১ সেপ্টেম্বর ২০২৬।
      *
      * ── ⛔ এই পরীক্ষাটা না থাকায় পাহারাটার গায়ে একটা গর্ত ছিল ───────
