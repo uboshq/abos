@@ -60,6 +60,42 @@
                  জায়গা বাঁচে, ফোনেও এক লাইনে)। ⓘ `<details>` — জাভাস্ক্রিপ্ট ছাড়াই খোলে, শেলের বাকি মেনুর মতো।
                  সুইচ বন্ধ থাকলে নিচের পুরনো তাবগুলোই। --}}
             @if (config('abos.dashboards_v2'))
+            {{-- ⭐ "লেআউট সাজান" — কোন অংশ দেখা যাবে আর কোনটা আগে (মালিক, ৪ অক্টোবর ২০২৬); কেবল নিজের জন্য।
+                 ⓘ `<details>` — সময়ের ঘরের মতোই জাভাস্ক্রিপ্ট ছাড়া খোলে। --}}
+            <details data-layout-menu class="relative">
+                <summary class="flex h-10 cursor-pointer list-none items-center gap-2 rounded-(--radius-field)
+                                border border-(--color-border) bg-(--color-surface-card) px-3 text-sm text-(--color-ink)">
+                    <x-ui.icon name="settings" :size="14" class="text-(--color-ink-muted)" />
+                    <span class="font-semibold">{{ __('home.layout') }}</span>
+                </summary>
+                <form method="POST" action="{{ route('home.layout') }}"
+                      class="pops-onto-page absolute end-0 top-full z-50 mt-1 w-72 space-y-2 rounded-(--radius-field)
+                             border border-(--color-border) bg-(--color-surface-card) p-3 shadow-lg">
+                    @csrf
+                    <input type="hidden" name="period" value="{{ $period }}">
+                    <p class="text-2xs text-(--color-ink-muted)">{{ __('home.layout_hint') }}</p>
+                    @foreach (\App\Core\Dashboard\HomeLayout::PARTS as $part)
+                        @php $unit = in_array($part, ['exceptions', 'happenings'], true) ? 'work' : $part; @endphp
+                        <div class="flex items-center gap-2 text-sm">
+                            <input type="checkbox" name="show[{{ $part }}]" value="1" @checked($layout->shows($part)) class="size-4">
+                            <span class="min-w-0 flex-1 truncate">{{ __('home.layout_part_'.$part) }}</span>
+                            @if ($part !== 'happenings')
+                                <input type="number" name="position[{{ $unit }}]" min="1" max="4" value="{{ $layout->position($unit) }}"
+                                       aria-label="{{ __('home.layout_position') }}"
+                                       class="num h-8 w-14 rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-app) px-2 text-end text-sm">
+                            @else
+                                <span class="w-14 text-center text-2xs text-(--color-ink-muted)">↑</span>
+                            @endif
+                        </div>
+                    @endforeach
+                    <div class="flex justify-between gap-2 pt-1">
+                        <button type="submit" name="reset" value="1"
+                                class="rounded-(--radius-field) border border-(--color-border) px-3 py-1.5 text-xs">{{ __('home.layout_reset') }}</button>
+                        <button type="submit"
+                                class="rounded-(--radius-field) bg-(--color-brand-600) px-4 py-1.5 text-xs font-semibold text-white">{{ __('home.layout_save') }}</button>
+                    </div>
+                </form>
+            </details>
                 <details data-period-menu class="relative">
                     <summary class="flex h-10 cursor-pointer list-none items-center gap-2 rounded-(--radius-field)
                                     border border-(--color-border) bg-(--color-surface-card) px-3 text-sm text-(--color-ink)">
@@ -205,8 +241,11 @@
          এসে প্রথম যে প্রশ্নটা করেন সেটা "টাকা কত" — ওটার উত্তর বড় ও
          আলাদা দেখালে বাকিগুলো আর প্রতিযোগিতা করে না।            --}}
     {{-- একটা সময়ে একটাই দল — উপরের তাব যেটা বলে --}}
+    {{-- ⭐ সাজানো যায় এমন ভাগগুলো এক খাড়া সারিতে — ক্রম CSS `order` দিয়ে, লুকানো অংশ আঁকাই হয় না ([[HomeLayout]]) --}}
+    <div data-home-units style="display: flex; flex-direction: column">
+    <div data-home-unit="period" style="order: {{ $layout->position('period') }}">
     @foreach ([$period] as $group)
-        @if (! empty($groups[$group]))
+        @if (! empty($groups[$group]) && $layout->shows('period'))
         @php
             /*
              * ⭐ টাকার অবস্থান এখন মাথার সারিতে (উপরে) — এখানে আর নয়,
@@ -418,10 +457,12 @@
         </section>
         @endif
     @endforeach
+    </div>
 
     {{-- ⭐ "সোজা কথা" (প্রতিটা মডিউলের মাথার সংখ্যা) এখন "আজ"-এর নিচে — মালিকের নির্দেশ,
          ২৯ সেপ্টেম্বর ২০২৬: "আজ"-এর সারিটা এক লাইনে, সবার উপরে। --}}
-    @if (! empty($overall))
+    <div data-home-unit="overall" style="order: {{ $layout->position('overall') }}">
+    @if (! empty($overall) && $layout->shows('overall'))
         <div class="mb-4">
             <h2 class="mb-2 text-xs font-semibold text-(--color-ink-muted)">
                 {{ __('core.dashboard.across_the_business') }}
@@ -447,6 +488,7 @@
             </div>
         </div>
     @endif
+    </div>
 
     {{-- ⭐ ব্যবসার চিত্র — প্রতিটা মডিউলের প্রধান চার্ট, তিনটা করে এক সারিতে (মালিকের নকশা, ১ অক্টোবর ২০২৬)।
          ⓘ চার্টটা মডিউলের নিজের ড্যাশবোর্ডের প্রথমটা — হোমে আলাদা কোনো হিসাব নেই, তাই দুই পর্দা কখনো দুই কথা বলে না।
@@ -463,7 +505,8 @@
         }
     @endphp
 
-    @if ($pictures !== [])
+    <div data-home-unit="pictures" style="order: {{ $layout->position('pictures') }}">
+    @if ($pictures !== [] && $layout->shows('pictures'))
         <section data-business-pictures class="mb-6">
             <h2 class="mb-2 text-sm font-semibold text-(--color-ink-muted)">{{ __('home.business_pictures') }}</h2>
 
@@ -534,6 +577,7 @@
                                 @endforeach
                             </div>
                         @endif
+    </div>
                     </a>
                 @endforeach
             </div>
@@ -561,9 +605,10 @@
         সরু পর্দায় একটার নিচে আরেকটা — পাশাপাশি রাখলে দুইটাই এত সরু হত
         যে প্রতিটা সারির লেখা দুই লাইনে ভেঙে যেত।
     --}}
+    <div data-home-unit="work" style="order: {{ $layout->position('work') }}">
     <div class="mb-6 grid gap-4 lg:grid-cols-2">
 
-    @if (! empty($groups['todo']))
+    @if (! empty($groups['todo']) && $layout->shows('exceptions'))
         @php
             $todo = collect($groups['todo']);
             $waiting = $todo->filter($pending);
@@ -665,7 +710,7 @@
         নতুন কোম্পানিতে সত্যিই কিছু ঘটেনি। "কিছু হয়নি" লেখা একটা খালি
         কার্ড পাশের করণীয় তালিকাটাকে অর্ধেক করে দিত, কোনো তথ্য না দিয়ে।
     --}}
-    @if ($happenings !== [])
+    @if ($happenings !== [] && $layout->shows('happenings'))
         <section class="min-w-0">
             <h2 class="mb-2 text-sm font-semibold text-(--color-ink-muted)">
                 {{ __('core.dashboard.just_happened') }}
@@ -731,6 +776,8 @@
     @endif
 
     </div>
+    </div>
+    </div>{{-- data-home-units --}}
 
     @if ($nothing)
         {{--

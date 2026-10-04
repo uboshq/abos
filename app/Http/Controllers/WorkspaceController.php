@@ -102,7 +102,44 @@ class WorkspaceController extends Controller
              * আদায়, ক্রয় ও নগদ গণনার চারটা তালিকা আলাদা করে খুলতে হত।
              */
             'happenings' => $this->activity->forUser($request->user()),
+
+            // ⭐ হোমের সাজ — ব্যবহারকারীর নিজের ক্রম আর লুকানো অংশ (মালিক, ৪ অক্টোবর ২০২৬)
+            'layout' => \App\Core\Dashboard\HomeLayout::for($request->user()),
         ]);
+    }
+
+    /**
+     * ⭐ "লেআউট সাজান" রাখা — ক্রম আর কোন অংশ দেখা যাবে; কেবল নিজের জন্য (মালিক, ৪ অক্টোবর ২০২৬)।
+     * ⓘ "আগের মতো" চাপলে ঘরটা খালি — তখন সব দেখা, আগের ক্রমে।
+     */
+    public function saveLayout(Request $request): \Illuminate\Http\RedirectResponse
+    {
+        $data = $request->validate([
+            'position' => ['nullable', 'array'],
+            'position.*' => ['nullable', 'integer', 'min:1', 'max:9'],
+            'show' => ['nullable', 'array'],
+            'reset' => ['nullable', 'boolean'],
+        ]);
+
+        $user = $request->user();
+
+        if ($request->boolean('reset')) {
+            $user->forceFill(['home_layout' => null])->save();
+
+            return redirect()->route('dashboard');
+        }
+
+        $positions = (array) ($data['position'] ?? []);
+        $order = \App\Core\Dashboard\HomeLayout::UNITS;
+        usort($order, fn (string $a, string $b) => [(int) ($positions[$a] ?? 9), array_search($a, \App\Core\Dashboard\HomeLayout::UNITS, true)]
+            <=> [(int) ($positions[$b] ?? 9), array_search($b, \App\Core\Dashboard\HomeLayout::UNITS, true)]);
+
+        $shown = array_keys(array_filter((array) ($data['show'] ?? [])));
+        $hidden = array_values(array_diff(\App\Core\Dashboard\HomeLayout::PARTS, $shown));
+
+        $user->forceFill(['home_layout' => \App\Core\Dashboard\HomeLayout::from($order, $hidden)->toArray()])->save();
+
+        return redirect()->route('dashboard', array_filter(['period' => $request->input('period')]));
     }
 
     /**

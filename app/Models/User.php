@@ -148,6 +148,8 @@ class User extends Authenticatable
             'is_active' => 'boolean',
             'view_all_branches' => 'boolean',
             'last_login_at' => 'datetime',
+            // ⓘ হোমের সাজ — ক্রম আর লুকানো অংশ ([[HomeLayout]], ৪ অক্টোবর ২০২৬)
+            'home_layout' => 'array',
 
             /*
              * গোপন চাবি ও পুনরুদ্ধার কোড — ডাটাবেজে এনক্রিপ্টেড।

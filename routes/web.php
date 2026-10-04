@@ -27,6 +27,8 @@ use Illuminate\Support\Facades\Route;
 
 Route::middleware('auth')->group(function () {
     Route::get('/', [WorkspaceController::class, 'dashboard'])->name('dashboard');
+    // ⭐ হোমের সাজ — কেবল নিজের (মালিক, ৪ অক্টোবর ২০২৬: "লেআউট সাজান")
+    Route::post('/home/layout', [WorkspaceController::class, 'saveLayout'])->name('home.layout');
 
     /*
      * ⭐ কাগজের অবস্থা — আর এই পর্দাটা তালার বাইরে।
