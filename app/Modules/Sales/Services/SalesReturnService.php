@@ -166,22 +166,7 @@ final class SalesReturnService
             ]);
         }
 
-        $return->loadMissing(['lines.product', 'lines.invoiceLine', 'lines.reasonCode', 'lines.batch', 'warehouse', 'reasonCode']);
-
-        if ($return->lines->isEmpty()) {
-            throw ValidationException::withMessages(['lines' => __('sales::validation.no_lines')]);
-        }
-
-        /*
-         * ⛔ নিয়মের আগের খসড়াগুলো কারণ ছাড়াই পড়ে আছে — খাতায় বসার আগে
-         * আবার দেখা, নাহলে নিয়ম চালুর পরেও "কারণ নেই" ফেরত জন্মাত।
-         */
-        $this->reasons->checkDocument($return);
-        $this->bills->checkDocument($return);
-
-        foreach ($return->lines as $line) {
-            $this->assertWithinSold($line);
-        }
+        $this->assertReadyToConfirm($return);
 
         /*
          * ⭐ অনুমোদন — মালিকের সিদ্ধান্ত, ১৮ সেপ্টেম্বর ২০২৬।
@@ -260,6 +245,48 @@ final class SalesReturnService
 
             return $return->fresh(['lines']);
         });
+    }
+
+    /**
+     * ⭐ নিশ্চিতের দরজা কোন কারণে থামাবে — কিছু না লিখে (৪ অক্টোবর ২০২৬)।
+     *
+     * ⓘ "নিশ্চিত করুন"-এর আগের সারাংশ ([[SalesPaperOverview::salesReturn()]]) এটাই দেখায়; ভিতরে [[assertReadyToConfirm()]] — দরজার নিজের, তালা ছাড়া
+     * পাহারাগুলো, হুবহু একই ক্রমে। সইয়ের পাহারা নয়, কারণ সেটা অনুরোধ লেখে।
+     *
+     * @return list<string>  থামার কারণগুলো; খালি মানে কিছুই থামাবে না
+     */
+    public function whatWouldStopTheConfirm(SalesReturn $return): array
+    {
+        try {
+            $this->assertReadyToConfirm($return);
+        } catch (ValidationException $e) {
+            return array_values($e->validator->errors()->all());
+        }
+
+        return [];
+    }
+
+    /**
+     * নিশ্চিতের আগের পাহারা — [[confirm()]] থেকে হুবহু তোলা (৪ অক্টোবর ২০২৬), যাতে সারাংশও ঠিক এগুলোই দেখে।
+     */
+    private function assertReadyToConfirm(SalesReturn $return): void
+    {
+        $return->loadMissing(['lines.product', 'lines.invoiceLine', 'lines.reasonCode', 'lines.batch', 'warehouse', 'reasonCode']);
+
+        if ($return->lines->isEmpty()) {
+            throw ValidationException::withMessages(['lines' => __('sales::validation.no_lines')]);
+        }
+
+        /*
+         * ⛔ নিয়মের আগের খসড়াগুলো কারণ ছাড়াই পড়ে আছে — খাতায় বসার আগে
+         * আবার দেখা, নাহলে নিয়ম চালুর পরেও "কারণ নেই" ফেরত জন্মাত।
+         */
+        $this->reasons->checkDocument($return);
+        $this->bills->checkDocument($return);
+
+        foreach ($return->lines as $line) {
+            $this->assertWithinSold($line);
+        }
     }
 
     public function cancel(SalesReturn $return, string $reason, Carbon|string|null $onDate = null): SalesReturn

@@ -10,9 +10,9 @@
                         {{ __('core.action.edit') }}
                     </x-ui.button>
 
-                    <form method="POST" action="{{ route('purchase.return.confirm', $return) }}">
+                    <form method="POST" action="{{ route('purchase.return.confirm', $return) }}" data-confirm-overview="{{ route('purchase.return.overview', $return) }}">
                         @csrf
-                        <x-ui.button type="submit" tone="primary">{{ __('purchase::action.confirm') }}</x-ui.button>
+                        <x-ui.button type="submit" tone="primary" data-overview-trigger>{{ __('purchase::action.confirm') }}</x-ui.button>
                     </form>
                 @endcan
                 {{--
@@ -111,4 +111,6 @@
             @endif
         @endcan
     </div>
+    {{-- ⭐ নিশ্চিতের আগে সারাংশের পপ-আপ ([[confirm-overview.js]], ৪ অক্টোবর ২০২৬) — ফেরতটা আগেই খসড়া, তাই "খসড়া রাখুন" নেই --}}
+    <x-ui.confirm-overview :draft="false" />
 </x-layouts.app>

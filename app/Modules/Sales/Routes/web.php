@@ -488,6 +488,8 @@ Route::middleware('auth')->prefix('sales')->group(function () {
         Route::get('/{return}/edit', [SalesReturnController::class, 'edit'])->whereNumber('return')->name('edit');
         Route::put('/{return}', [SalesReturnController::class, 'update'])->whereNumber('return')->name('update');
         Route::post('/{return}/confirm', [SalesReturnController::class, 'confirm'])->whereNumber('return')->name('confirm');
+        // ⭐ নিশ্চিতের আগে সারাংশ — পপ-আপের ভিতর ([[SalesPaperOverviewController]], ৪ অক্টোবর ২০২৬)
+        Route::post('/{return}/overview', [\App\Modules\Sales\Http\Controllers\SalesPaperOverviewController::class, 'salesReturn'])->whereNumber('return')->name('overview');
         Route::post('/{return}/cancel', [SalesReturnController::class, 'cancel'])->whereNumber('return')->name('cancel');
     });
 

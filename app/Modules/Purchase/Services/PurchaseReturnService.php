@@ -134,23 +134,7 @@ final class PurchaseReturnService
             ]);
         }
 
-        $return->loadMissing(['lines.product', 'lines.billLine', 'warehouse']);
-
-        if ($return->lines->isEmpty()) {
-            throw ValidationException::withMessages(['lines' => __('purchase::validation.no_lines')]);
-        }
-
-        /*
-         * খাতায় বসানোর মুহূর্তে আবার পরীক্ষা।
-         *
-         * খসড়া অবস্থায় লেখার পর অন্য কেউ ওই বিলের বাকিটা ফেরত দিয়ে
-         * দিতে পারে, বা মালটা বিক্রি হয়ে যেতে পারে। মাল আর টাকা নড়ে
-         * এখানেই, তাই শেষ পাহারাটাও এখানে।
-         */
-        foreach ($return->lines as $line) {
-            $this->assertWithinBilled($line);
-            $this->assertEnoughInStock($line->product, $return->warehouse, (string) $line->qty);
-        }
+        $this->assertReadyToConfirm($return);
 
         // মাল ফেরত মানে সরবরাহকারীর কাছে দায় কমে — ছক বসানো থাকলে
         // সেটাও একটা সিদ্ধান্ত, আর সিদ্ধান্তে সই লাগে।
@@ -231,6 +215,49 @@ final class PurchaseReturnService
 
             return $return->fresh(['lines']);
         });
+    }
+
+    /**
+     * ⭐ নিশ্চিতের দরজা কোন কারণে থামাবে — কিছু না লিখে (৪ অক্টোবর ২০২৬)।
+     *
+     * ⓘ "নিশ্চিত করুন"-এর আগের সারাংশ ([[PurchaseReturnOverview]]) এটাই দেখায়; ভিতরে [[assertReadyToConfirm()]] — দরজার নিজের, তালা ছাড়া
+     * পাহারাগুলো, হুবহু একই ক্রমে। সইয়ের পাহারা নয়, কারণ সেটা অনুরোধ লেখে।
+     *
+     * @return list<string>  থামার কারণগুলো; খালি মানে কিছুই থামাবে না
+     */
+    public function whatWouldStopTheConfirm(PurchaseReturn $return): array
+    {
+        try {
+            $this->assertReadyToConfirm($return);
+        } catch (ValidationException $e) {
+            return array_values($e->validator->errors()->all());
+        }
+
+        return [];
+    }
+
+    /**
+     * নিশ্চিতের আগের পাহারা — [[confirm()]] থেকে হুবহু তোলা (৪ অক্টোবর ২০২৬), যাতে সারাংশও ঠিক এগুলোই দেখে।
+     */
+    private function assertReadyToConfirm(PurchaseReturn $return): void
+    {
+        $return->loadMissing(['lines.product', 'lines.billLine', 'warehouse']);
+
+        if ($return->lines->isEmpty()) {
+            throw ValidationException::withMessages(['lines' => __('purchase::validation.no_lines')]);
+        }
+
+        /*
+         * খাতায় বসানোর মুহূর্তে আবার পরীক্ষা।
+         *
+         * খসড়া অবস্থায় লেখার পর অন্য কেউ ওই বিলের বাকিটা ফেরত দিয়ে
+         * দিতে পারে, বা মালটা বিক্রি হয়ে যেতে পারে। মাল আর টাকা নড়ে
+         * এখানেই, তাই শেষ পাহারাটাও এখানে।
+         */
+        foreach ($return->lines as $line) {
+            $this->assertWithinBilled($line);
+            $this->assertEnoughInStock($line->product, $return->warehouse, (string) $line->qty);
+        }
     }
 
     public function cancel(PurchaseReturn $return, string $reason, Carbon|string|null $onDate = null): PurchaseReturn

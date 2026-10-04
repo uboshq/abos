@@ -13,6 +13,7 @@ use App\Modules\Customer\Models\Customer;
 use App\Modules\Sales\Models\Collection;
 use App\Modules\Sales\Models\DeliveryChallan;
 use App\Modules\Sales\Models\SalesInvoice;
+use App\Modules\Sales\Models\SalesReturn;
 use Illuminate\Validation\ValidationException;
 
 /**
@@ -33,6 +34,7 @@ final class SalesPaperOverview
         private readonly ApprovalEngine $approvals,
         private readonly SalesInvoiceService $invoices,
         private readonly CollectionService $collections,
+        private readonly SalesReturnService $returns,
     ) {}
 
     public function challan(DeliveryChallan $challan): ConfirmOverview
@@ -167,6 +169,52 @@ final class SalesPaperOverview
 
         if ($this->approvals->requires('sales', 'collection', $amount, class_basename(Collection::class))) {
             $o->note(__('sales::overview_confirm.collection_signature'), 'warn');
+        }
+
+        return $o;
+    }
+
+    /**
+     * ⭐ বিক্রি ফেরত — কোন বিলের, কোন মাল কত, কেন; ফেরতের মোট আর ক্রেতার বকেয়া ফেরতের পরে।
+     * ⓘ "নিশ্চিত হবে না" দরজার নিজের পাহারা থেকে ([[SalesReturnService::whatWouldStopTheConfirm()]]): কারণ, বিল, আর বেচার
+     * বেশি ফেরত নয়।
+     */
+    public function salesReturn(SalesReturn $return): ConfirmOverview
+    {
+        $return->loadMissing(['customer', 'warehouse', 'invoice', 'reasonCode', 'lines.product', 'lines.batch', 'lines.reasonCode']);
+
+        $o = ConfirmOverview::titled(__('sales::overview_confirm.return_title', ['no' => $return->document_no]))
+            ->head(__('sales::field.customer'), $return->customer?->name())
+            ->head(__('sales::field.date'), DateFormat::format($return->trx_date))
+            ->head(__('sales::overview_confirm.return_of_bill'), $return->invoice?->document_no)
+            ->head(__('sales::field.warehouse'), $return->warehouse?->name())
+            ->head(__('sales::overview_confirm.return_reason'), $return->reasonCode?->name());
+
+        foreach ($return->lines as $line) {
+            $o->line((string) $line->product?->name(), [
+                $line->batch !== null ? __('sales::overview_confirm.lot', ['lot' => $line->batch->batch_no]) : null,
+                Money::quantity((string) $line->qty).' × '.Money::format((string) $line->rate),
+                $line->reasonCode !== null ? __('sales::overview_confirm.return_line_reason', ['reason' => $line->reasonCode->name()]) : null,
+            ], Money::format((string) $line->amount));
+        }
+
+        $total = (string) $return->total;
+        $o->total(__('sales::overview_confirm.return_total'), Money::format($total), strong: true);
+
+        if ($return->customer !== null) {
+            $before = (string) $return->customer->outstanding();
+            $after = bcsub($before, $total, 4);
+            $o->money(__('sales::overview_confirm.old_due'), Money::format($before));
+            $o->money(bccomp($after, '0', 4) < 0 ? __('sales::overview_confirm.advance_after_return') : __('sales::overview_confirm.due_after_return'),
+                Money::format(bccomp($after, '0', 4) < 0 ? bcmul($after, '-1', 4) : $after));
+        }
+
+        foreach ($this->returns->whatWouldStopTheConfirm($return) as $message) {
+            $o->note($message, 'stop');
+        }
+
+        if ($this->approvals->requires('sales', 'return', $total, class_basename(SalesReturn::class))) {
+            $o->note(__('sales::overview_confirm.return_signature'), 'warn');
         }
 
         return $o;

@@ -23,4 +23,10 @@ return [
     'owed' => 'Left owed to the supplier',
     'transport' => 'Freight (:who), added to the cost of the goods',
     'signature' => 'This bill needs a signature. Confirming saves it as a draft awaiting signature; until it is signed, the goods do not enter stock or the books.',
+    'return_title' => 'Purchase return :no: overview',
+    'return_of_bill' => 'Return of bill',
+    'return_reason' => 'Reason',
+    'return_total' => 'Return total',
+    'return_lowers_debt' => 'What we owe the supplier drops by',
+    'return_signature' => 'This return needs a signature. Confirming saves it as a draft awaiting signature; until it is signed the goods do not leave the warehouse or reach the books.',
 ];

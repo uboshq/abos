@@ -206,6 +206,8 @@ Route::middleware('auth')->prefix('purchase')->group(function () {
         Route::get('/{return}/edit', [PurchaseReturnController::class, 'edit'])->whereNumber('return')->name('edit');
         Route::put('/{return}', [PurchaseReturnController::class, 'update'])->whereNumber('return')->name('update');
         Route::post('/{return}/confirm', [PurchaseReturnController::class, 'confirm'])->whereNumber('return')->name('confirm');
+        // ⭐ নিশ্চিতের আগে সারাংশ — পপ-আপের ভিতর ([[PurchaseReturnOverviewController]], ৪ অক্টোবর ২০২৬)
+        Route::post('/{return}/overview', \App\Modules\Purchase\Http\Controllers\PurchaseReturnOverviewController::class)->whereNumber('return')->name('overview');
         Route::post('/{return}/cancel', [PurchaseReturnController::class, 'cancel'])->whereNumber('return')->name('cancel');
     });
 

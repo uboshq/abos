@@ -43,4 +43,12 @@ return [
     'due_after' => 'Due after this collection',
     'advance_after' => 'Advance after this collection',
     'collection_signature' => 'This collection needs a signature. Confirming saves it as a draft awaiting signature; the money does not reach the books until it is signed.',
+    'return_title' => 'Sales return :no: overview',
+    'return_of_bill' => 'Return of invoice',
+    'return_reason' => 'Reason',
+    'return_line_reason' => 'Reason: :reason',
+    'return_total' => 'Return total',
+    'due_after_return' => 'Due after this return',
+    'advance_after_return' => 'Advance after this return',
+    'return_signature' => 'This return needs a signature. Confirming saves it as a draft awaiting signature; until it is signed the goods do not come back into stock or the books.',
 ];
