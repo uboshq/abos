@@ -49,6 +49,9 @@ final class CounterSaleSources
             $map[$do::counterSourceKey()] = $do;
         }
 
+        // ⭐ বিক্রয় আদেশ — চাবি `so` (নকশা "DO বিক্রয় আদেশে মেশানো", ধাপ ৬); খোলা DO শেষ না হওয়া পর্যন্ত দুইটাই
+        $map[\App\Modules\Sales\Models\SalesOrder::counterSourceKey()] = \App\Modules\Sales\Models\SalesOrder::class;
+
         foreach (self::$extra as $key => $class) {
             $map[$key] = $class;
         }

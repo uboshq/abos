@@ -7,6 +7,8 @@ namespace App\Modules\Sales\Http\Controllers;
 use App\Core\Concerns\GrandTotals;
 use App\Core\Services\MenuBuilder;
 use App\Http\Controllers\Controller;
+use App\Modules\Sales\Models\SalesOrder;
+use App\Modules\Sales\Support\SalesOrderStatus;
 use App\Modules\Sales\Services\CounterSaleSources;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -68,6 +70,20 @@ final class DepotCheckController extends Controller implements HasMiddleware
             // ⓘ সর্বমোট — গোটা ছাঁকা তালিকার, সব পাতার ([[GrandTotals]])
             'grand' => $query === null ? [] : $this->grandTotals($query, ['total' => 't.total']),
             'ready' => $ready,
+
+            /*
+             * ⭐ বিক্রয় আদেশও — নতুন ধারার সংরক্ষিত আদেশ, যার চালান এখনো পুরো হয়নি (নকশা "DO বিক্রয় আদেশে মেশানো", ধাপ ৬)।
+             * ⓘ খোলা DO নিজের নম্বরে শেষ হয়, তাই দুই তালিকা পাশাপাশি; আংশিক চালানের পরে আদেশ আবার এখানে আসে।
+             */
+            'salesOrders' => SalesOrder::query()
+                ->where('status', SalesOrderStatus::CONFIRMED)
+                ->where('hold_mode', SalesOrderStatus::HOLD_HOLDS)
+                ->where('delivery_status', '<>', SalesOrderStatus::FULL)
+                ->when($q !== '', fn ($query) => $query->search($q))
+                ->with(['customer', 'lines'])
+                ->orderBy('id')
+                ->paginate(50, pageName: 'orders_page')
+                ->withQueryString(),
         ]);
     }
 

@@ -23,8 +23,16 @@ return [
     'unavailable' => 'Delivery orders are not switched on yet — this list fills by itself when they are.',
     'search' => 'DO number or customer',
     'open' => 'Check and open in the sale',
+    // ⭐ বিক্রয় আদেশ — কাউন্টারের দ্বিতীয় উৎস (নকশা "DO বিক্রয় আদেশে মেশানো", ধাপ ৬)
+    'orders_title' => 'Sales orders — depot check',
+    'orders_subtitle' => 'Reserved orders not yet fully delivered — check and open at the counter; the rest stays open on the order',
+    'orders_empty' => 'No sales order is waiting for the depot check.',
+    'order_not_ready' => ':no cannot open at the counter — it is :status; only a reserved order of the new flow opens.',
+    'order_nothing_open' => 'Nothing is left to deliver on any line of :no.',
+
     'column' => [
         'do' => 'DO',
+        'so' => 'Order',
         'date' => 'Date',
         'customer' => 'Customer',
         'lines' => 'Products',

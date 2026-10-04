@@ -66,6 +66,21 @@
             'render' => fn ($o) => new HtmlString(view('sales::depot_check.partials.open', ['order' => $o])->render()),
         ],
     ];
+
+    // ⭐ বিক্রয় আদেশের তালিকা — একই ঘর, কেবল উৎসের চাবি `so`, অবস্থা অগ্রগতিসহ, আর সতর্কবার্তা আদেশের নিজের (নকশার ধাপ ৬)
+    $orderColumns = array_map(function (array $column) {
+        return match ($column['key']) {
+            'document_no' => [...$column, 'label' => __('sales::counter_source.column.so')],
+            'status' => [...$column, 'render' => fn ($o) => \App\Modules\Sales\Support\SalesOrderStatus::deliveryLabel((string) $o->delivery_status)],
+            'warnings' => [...$column, 'render' => fn ($o) => new HtmlString(collect((array) ($o->credit_warnings ?? []))
+                ->filter(fn ($w) => is_array($w))
+                ->map(fn (array $w) => '<span class="block text-2xs text-(--color-badge-pending-ink)">⚠️ '
+                    .e(DepotCheckController::warningText($w)).'</span>')
+                ->implode('') ?: '—')],
+            'action' => [...$column, 'render' => fn ($o) => new HtmlString(view('sales::depot_check.partials.open', ['order' => $o, 'sourceKey' => 'so'])->render())],
+            default => $column,
+        };
+    }, $columns);
 @endphp
 
 <x-layouts.app :menu="$menu">
@@ -96,5 +111,20 @@
             :columns="$columns" />
 
         <x-ui.pager :rows="$orders" />
+    </div>
+
+    {{-- ⭐ বিক্রয় আদেশ — নতুন ধারায় DO-র কাজ আদেশই করে; অংশে অংশে, বাকিটা আবার এখানে (নকশার ধাপ ৬) --}}
+    <div data-boxed data-depot-orders
+         class="mt-4 overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
+        <x-ui.toolbar :title="__('sales::counter_source.orders_title')" :count="__('sales::counter_source.orders_subtitle')"
+                      :columns="$orderColumns" />
+
+        <x-ui.table
+            :view-url="fn ($o) => route('sales.order.show', $o)"
+            :empty="__('sales::counter_source.orders_empty')"
+            :rows="$salesOrders"
+            :columns="$orderColumns" />
+
+        <x-ui.pager :rows="$salesOrders" />
     </div>
 </x-layouts.app>

@@ -13,6 +13,7 @@ use App\Models\User;
 use App\Modules\Customer\Models\Customer;
 use App\Modules\Inventory\Models\Warehouse;
 use App\Modules\Sales\Contracts\CounterSaleSource;
+use App\Modules\Sales\Services\DeliveryOrderStock;
 use App\Modules\Sales\Support\DeliveryOrderStatus;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -202,6 +203,31 @@ class DeliveryOrder extends Model implements CounterSaleSource
 
         $locked->forceFill(['status' => DeliveryOrderStatus::INVOICED, 'sales_invoice_id' => $invoice->getKey()])->save();
         $this->setRawAttributes($locked->getAttributes(), true);
+    }
+
+    /** ⓘ DO নিজে বিক্রয় আদেশ নয় — চালান কোনো আদেশে বাঁধা হয় না ([[CounterSaleSource::orderLink()]]) */
+    public function orderLink(): ?int
+    {
+        return null;
+    }
+
+    /**
+     * ডিপো কম দিল — আটকানো মালও কমে, যাতে বাকিটা অন্য বিক্রিতে যায় (abos-86-এর [[DeliveryOrderStock::resize()]])।
+     * ⓘ আগে এই ডাক কাউন্টারে ছিল (`instanceof DeliveryOrder`), এখন DO-র নিজের — নকশার ধাপ ৬।
+     *
+     * @param  array<int, string>  $less
+     */
+    public function resizeCounterStock(array $less): void
+    {
+        if ($less !== []) {
+            app(DeliveryOrderStock::class)->resize($this, $less);
+        }
+    }
+
+    /** বিক্রয় নিশ্চিতের একই লেনদেনে — যা বেরোল ততটা "উঠল", বাকিটা ছাড় ([[DeliveryOrderStock::consume()]]) */
+    public function consumeCounterStock(DeliveryChallan $challan): void
+    {
+        app(DeliveryOrderStock::class)->consume($this, $challan);
     }
 
     /** লাইনের চূড়ান্ত পরিমাণে আবার গোনা — অনুমোদনকারী পরিমাণ বদলালে মোটও বদলায় (abos-86 এটাই পড়েন) */

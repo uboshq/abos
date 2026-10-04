@@ -28,8 +28,10 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * যায় না। না ধরলে একই শেষ কার্টনটা দুইজনকে বেচা হত, আর ভুলটা ধরা পড়ত মাল
  * দিতে গিয়ে — ক্রেতার সামনে।
  */
-class SalesOrder extends Model implements Drillable
+class SalesOrder extends Model implements \App\Modules\Sales\Contracts\CounterSaleSource, Drillable
 {
+    // ⭐ কাউন্টারের উৎস, চাবি `so` — অংশে অংশে (নকশা "DO বিক্রয় আদেশে মেশানো", ধাপ ৬; [[OpensAtTheCounter]])
+    use \App\Modules\Sales\Models\Concerns\OpensAtTheCounter;
     use BelongsToCompany;
     use \App\Modules\Sales\Models\Concerns\CarriesTheSalesChannel;
     use HasDocumentStatus;

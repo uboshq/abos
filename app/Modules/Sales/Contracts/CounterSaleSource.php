@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Sales\Contracts;
 
+use App\Modules\Sales\Models\DeliveryChallan;
 use App\Modules\Sales\Models\SalesInvoice;
 
 /**
@@ -46,4 +47,25 @@ interface CounterSaleSource
      * কিছুই হয় না; অন্য বিলে ডাকলে `ValidationException` (একটা উৎস একবারই বিল হয়)।
      */
     public function markInvoiced(SalesInvoice $invoice): void;
+
+    /**
+     * ⭐ এই উৎস কি একটা বিক্রয় আদেশ — তাহলে তার id (নকশা "DO বিক্রয় আদেশে মেশানো" §৩.৪, ধাপ ৬)।
+     *
+     * ⓘ কাউন্টার তখন চালানে `sales_order_id` আর প্রতিটা লাইনে `sales_order_line_id = source_line_id` বসায় — যাতে বেশি-চালানের
+     * পাহারা ([[DeliveryChallanService::resolveOrderLine()]]), আদেশের ট্যাব আর [[OrderProgress]] চালানটা দেখে। DO `null` দেয়।
+     */
+    public function orderLink(): ?int;
+
+    /**
+     * ⭐ মজুদের কাজ উৎসের নিজের — ডিপো কম দিল: যে সারিগুলো কম (`source_line_id` → এবার কত), তাদের আটকানো মাল ছোট করা।
+     *
+     * ⓘ আগে কাউন্টার নিজে জানত কোন উৎসের কোন মজুদ-সেবা (`instanceof DeliveryOrder`) — এখন প্রতিটা উৎস নিজেরটা করে;
+     * বিক্রয় আদেশ কিছুই করে না (বাকিটা আদেশে খোলা, হোল্ডসহ)।
+     *
+     * @param  array<int, string>  $less
+     */
+    public function resizeCounterStock(array $less): void;
+
+    /** ⭐ বিক্রয় নিশ্চিতের একই লেনদেনে — যা বেরোল ততটা আটকানো মাল "উঠল"। বিক্রয় আদেশে মাল ওঠে চালানের ধাপে, তাই কিছু নয়। */
+    public function consumeCounterStock(DeliveryChallan $challan): void;
 }

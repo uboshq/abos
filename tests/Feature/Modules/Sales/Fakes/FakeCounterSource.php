@@ -8,6 +8,7 @@ use App\Core\Concerns\BelongsToCompany;
 use App\Core\Concerns\HasPublicId;
 use App\Core\Concerns\ScopedToUserBranch;
 use App\Modules\Sales\Contracts\CounterSaleSource;
+use App\Modules\Sales\Models\DeliveryChallan;
 use App\Modules\Sales\Models\SalesInvoice;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Validation\ValidationException;
@@ -96,4 +97,14 @@ final class FakeCounterSource extends Model implements CounterSaleSource
 
         self::$marked[] = ['source' => (int) $this->getKey(), 'invoice' => (int) $invoice->getKey()];
     }
+
+    /** ⓘ নকল উৎস কোনো আদেশ নয়, আর তার কোনো মজুদ নেই (চুক্তির নতুন তিন কাজ, নকশার ধাপ ৬) */
+    public function orderLink(): ?int
+    {
+        return null;
+    }
+
+    public function resizeCounterStock(array $less): void {}
+
+    public function consumeCounterStock(DeliveryChallan $challan): void {}
 }

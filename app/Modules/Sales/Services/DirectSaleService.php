@@ -64,6 +64,15 @@ final class DirectSaleService
     use ReadsPackedQuantities;
 
     /**
+     * ⭐ এই বিক্রির চালান কোন বিক্রয় আদেশে বাঁধা — উৎসের [[CounterSaleSource::orderLink()]] আর তার পর্দার সারি
+     * (নকশা "DO বিক্রয় আদেশে মেশানো", ধাপ ৬)। ⓘ [[sourceFor()]] প্রতিটা বিক্রির শুরুতে মোছে, [[guardSource()]] বসায়,
+     * [[challanFor()]] পড়ে — সেবাটা এক অনুরোধের বেশি বাঁচলেও আগের বিক্রির বাঁধন পরেরটায় যায় না।
+     *
+     * @var array{order: int, lines: list<array<string, mixed>>}|null
+     */
+    private ?array $orderTie = null;
+
+    /**
      * কাউন্টারের জমায় যে ব্যাংক/মোবাইলের ঘরগুলো ভাউচারে যায় — এক জায়গায় লেখা।
      *
      * ⓘ রসিদ ভাউচারের money-movement পর্দার হুবহু ঘর। ⚠️ নাম আলাদা লিখলে
@@ -1029,6 +1038,11 @@ final class DirectSaleService
             // ⓘ হাতে লেখা বিক্রি নম্বর — খালি হলে S-সিরিজ ([[SaleNumber::begin()]]); DS সারি ২৯ সেপ্টেম্বর ২০২৬-এ উঠে গেছে
             $header['document_no'] = trim((string) ($data['challan_no'] ?? '')) ?: null;
 
+            // ⭐ উৎস বিক্রয় আদেশ হলে চালান তার সাথে বাঁধা ([[orderTie]], নকশার ধাপ ৬)
+            if ($this->orderTie !== null) {
+                $header['sales_order_id'] = $this->orderTie['order'];
+            }
+
             return $this->challans->create($header, $this->challanLines($lines));
         }
 
@@ -1086,6 +1100,7 @@ final class DirectSaleService
      */
     private function sourceFor(array $data, ?SalesInvoice $parked): ?CounterSaleSource
     {
+        $this->orderTie = null;
         $sources = app(CounterSaleSources::class);
         $key = trim((string) ($data['source'] ?? ''));
         $id = (int) ($data['source_id'] ?? 0);
@@ -1138,6 +1153,9 @@ final class DirectSaleService
                 'source' => __('sales::counter_source.taken_by_draft', ['ref' => $screen['ref'], 'no' => $other->document_no]),
             ]);
         }
+
+        $orderId = $source->orderLink();
+        $this->orderTie = $orderId === null ? null : ['order' => $orderId, 'lines' => $screen['lines']];
 
         return $this->fitsSource($screen, $lines, $customer, $warehouse);
     }
@@ -1314,11 +1332,8 @@ final class DirectSaleService
     {
         $this->resizeSourceStock($source, $counted);
 
-        $stock = 'App\\Modules\\Sales\\Services\\DeliveryOrderStock';
-
-        if ($source instanceof \App\Modules\Sales\Models\DeliveryOrder && class_exists($stock) && method_exists($stock, 'consume')) {
-            app($stock)->consume($source, $challan->fresh(['lines']));
-        }
+        // ⭐ মজুদের কাজ উৎসের নিজের ([[CounterSaleSource::consumeCounterStock()]], নকশার ধাপ ৬)
+        $source->consumeCounterStock($challan->fresh(['lines']));
 
         $source->markInvoiced($invoice);
     }
@@ -1331,12 +1346,7 @@ final class DirectSaleService
      */
     private function resizeSourceStock(CounterSaleSource $source, array $counted): void
     {
-        $stock = 'App\\Modules\\Sales\\Services\\DeliveryOrderStock';
-
-        if (! $source instanceof \App\Modules\Sales\Models\DeliveryOrder || ! class_exists($stock) || ! method_exists($stock, 'resize')) {
-            return;
-        }
-
+        // ⓘ কোন উৎসের কোন মজুদ-সেবা — উৎস নিজে জানে; কাউন্টার কেবল কোন সারি কত কম তা বলে (নকশার ধাপ ৬)
         $less = [];
 
         foreach ($counted['used'] as $sid => $qty) {
@@ -1345,8 +1355,9 @@ final class DirectSaleService
             }
         }
 
+        // ⭐ মজুদের কাজ উৎসের নিজের ([[CounterSaleSource::resizeCounterStock()]], নকশার ধাপ ৬)
         if ($less !== []) {
-            app($stock)->resize($source, $less);
+            $source->resizeCounterStock($less);
         }
     }
 
@@ -1692,7 +1703,36 @@ final class DirectSaleService
              * ⓘ লট ধরা নয় এমন পণ্যে `null`, আর সেটাই ঠিক।
              */
             'batch_id' => ($line['batch_id'] ?? '') === '' ? null : (int) $line['batch_id'],
+
+            // ⭐ বিক্রয় আদেশের সারি — পর্দার `source_line_id`, না থাকলে একই পণ্যের প্রথম খোলা সারি ([[orderTie]])
+            'sales_order_line_id' => $this->orderLineFor($line),
         ], $lines));
+    }
+
+    /**
+     * কাউন্টারের এক সারি আদেশের কোন সারি — পর্দা যা বলে, নাহলে একই পণ্যের প্রথম খোলা সারি; আদেশ না থাকলে `null`।
+     *
+     * @param  array<string, mixed>  $line
+     */
+    private function orderLineFor(array $line): ?int
+    {
+        if ($this->orderTie === null) {
+            return null;
+        }
+
+        $sid = (int) ($line['source_line_id'] ?? 0);
+
+        if ($sid > 0) {
+            return $sid;
+        }
+
+        foreach ($this->orderTie['lines'] as $row) {
+            if ((int) $row['product_id'] === (int) $line['product_id']) {
+                return (int) $row['source_line_id'];
+            }
+        }
+
+        return null;
     }
 
     /**
