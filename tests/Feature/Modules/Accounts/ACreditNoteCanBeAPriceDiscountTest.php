@@ -45,7 +45,8 @@ final class ACreditNoteCanBeAPriceDiscountTest extends TestCase
         $accounts = app(NoteAccounts::class);
         $codes = $accounts->others(Note::KIND_CUSTOMER, Note::CREDIT)->pluck('code')->all();
 
-        $this->assertSame([StandardChart::SALES_RETURN, StandardChart::DISCOUNT_GIVEN], $codes);
+        // ⓘ ড্যামেজ দাবি তৃতীয় পছন্দ, শেষে — মালিক, ৪ অক্টোবর ২০২৬ ([[ADamageBillGoesToTheDealerButNeverCountsAsMoneyInTest]])
+        $this->assertSame([StandardChart::SALES_RETURN, StandardChart::DISCOUNT_GIVEN, StandardChart::DAMAGE_CLAIM], $codes);
         $this->assertSame((int) StandardChart::find(StandardChart::SALES_RETURN)->id,
             $accounts->defaultOther(Note::KIND_CUSTOMER, Note::CREDIT, (int) $this->customer->id), '⛔ ডিফল্ট বদলে গেছে।');
         $this->assertSame([StandardChart::SALES], $accounts->others(Note::KIND_CUSTOMER, Note::DEBIT)->pluck('code')->all(), '⛔ ডেবিট নোট বদলেছে।');

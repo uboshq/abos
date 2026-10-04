@@ -58,6 +58,7 @@ class Note extends Model implements Drillable
         'damaged_goods',      // মাল নষ্ট, কিন্তু ফেরত যাচ্ছে না
         'short_delivery',     // গুনতিতে কম, কাগজে পুরো
         'agreed_discount',    // পরে ছাড়ের কথা হলো
+        'damage_claim',       // ⭐ কোম্পানির পাস করা ড্যামেজ বিল — ডিলারকে দেওয়া, কোম্পানির কাছে দাবি (৪ অক্টোবর ২০২৬)
         'other',
     ];
 

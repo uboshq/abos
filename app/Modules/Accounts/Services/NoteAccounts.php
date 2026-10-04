@@ -87,12 +87,18 @@ final class NoteAccounts
         return match ($kind) {
             /*
              * ⭐ গ্রাহকের ক্রেডিট নোট — মাল ফেরত হলে বিক্রয় ফেরত (৪১১০), কেবল দামের ছাড় হলে দেওয়া ছাড় (৫৩০০); মালিকের পরিকল্পনা
-             * সংস্করণ ২, ৪ অক্টোবর ২০২৬। ⓘ কোড ধরে সাজানো, তাই ডিফল্ট ([[defaultOther()]]) আগের মতোই ৪১১০ — আজকের আচরণ বদলায় না।
+             * সংস্করণ ২, ৪ অক্টোবর ২০২৬। ⓘ চাওয়া ক্রমেই সাজানো ([[byCodes()]]), তাই ডিফল্ট ([[defaultOther()]]) আগের মতোই ৪১১০ — আজকের আচরণ বদলায় না।
+             */
+            /*
+             * ⭐ ড্যামেজ দাবি (১১৫১) — তৃতীয় পছন্দ, দুই দিকেই: ডিলারের ক্রেডিট নোটে Dr দাবি, কোম্পানির ডেবিট নোটে Cr দাবি
+             * (মালিক, ৪ অক্টোবর ২০২৬; [[StandardChart::DAMAGE_CLAIM]])। ⓘ তালিকার শেষে, তাই ডিফল্ট বদলায় না।
              */
             Note::KIND_CUSTOMER => $this->byCodes($direction === Note::CREDIT
-                ? [StandardChart::SALES_RETURN, StandardChart::DISCOUNT_GIVEN]
+                ? [StandardChart::SALES_RETURN, StandardChart::DISCOUNT_GIVEN, StandardChart::DAMAGE_CLAIM]
                 : [StandardChart::SALES]),
-            Note::KIND_SUPPLIER => $this->byCodes([StandardChart::PURCHASE_PRICE_VARIANCE]),
+            Note::KIND_SUPPLIER => $this->byCodes($direction === Note::DEBIT
+                ? [StandardChart::PURCHASE_PRICE_VARIANCE, StandardChart::DAMAGE_CLAIM]
+                : [StandardChart::PURCHASE_PRICE_VARIANCE]),
             Note::KIND_SERVICE_PROVIDER => Account::query()->postable()->ofType([Account::EXPENSE])->orderBy('code')->get(),
             Note::KIND_PERSON => Account::query()->postable()->ofType([Account::INCOME, Account::EXPENSE])->orderBy('code')->get(),
             default => collect(),
@@ -191,6 +197,12 @@ final class NoteAccounts
      */
     private function byCodes(array $codes): Collection
     {
-        return Account::query()->postable()->whereIn('code', $codes)->orderBy('code')->get();
+        /*
+         * ⓘ যে ক্রমে চাওয়া হয়েছে সেই ক্রমে — প্রথমটাই ডিফল্ট ([[defaultOther()]])। ⛔ কোড ধরে সাজালে ড্যামেজ দাবি (১১৫১)
+         * বিক্রয় ফেরতের (৪১১০) আগে বসত, আর প্রতিটা নতুন ক্রেডিট নোট চুপচাপ ড্যামেজ দাবিতে পড়ত (৪ অক্টোবর ২০২৬)।
+         */
+        return Account::query()->postable()->whereIn('code', $codes)->get()
+            ->sortBy(fn (Account $a) => array_search((string) $a->code, $codes, true))
+            ->values();
     }
 }

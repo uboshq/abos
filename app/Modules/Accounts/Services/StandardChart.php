@@ -455,6 +455,16 @@ final class StandardChart implements ProvisionsCompany
     public const COMMISSION_CLAIM = '1150';
 
     /**
+     * ⭐ ড্যামেজ দাবি — কোম্পানির কাছে পাওনা (মালিক, ৪ অক্টোবর ২০২৬: "Damage Bill compani theke pas hoye eseche tai seta
+     * dilar ledger e dite hobe but eta inflow hisebe count hobe na")।
+     *
+     * ⓘ ডিলারকে ক্রেডিট নোট: Dr এই খাত / Cr ডিলার। কোম্পানিকে (সরবরাহকারী) ডেবিট নোট: Dr সরবরাহকারী / Cr এই খাত।
+     * কোম্পানি টাকা কাটলে খাতটা শূন্যে মেলে। ⛔ কোনো দিকেই নগদ বা ব্যাংক নেই — তাই আদায়ে বা inflow-তে আসে না।
+     * ⓘ কমিশনের দাবির (১১৫০) পাশে, কিন্তু আলাদা: দুইটা আলাদা দাবি, আলাদা করে মেলে।
+     */
+    public const DAMAGE_CLAIM = '1151';
+
+    /**
      * যে দাবিটা কোম্পানি মানল না।
      *
      * ── কেন এই খাতটা থাকতেই হবে ────────────────────────────────────
@@ -765,6 +775,9 @@ final class StandardChart implements ProvisionsCompany
              * কোম্পানির দেওয়ার কথা।
              */
             ['1150', 'Commission Claimable', 'কোম্পানির কাছে কমিশনের দাবি', $A, '1100', false, []],
+
+            // ⭐ ড্যামেজ দাবি — কোম্পানির কাছে পাওনা, নগদ নয় (৪ অক্টোবর ২০২৬; [[DAMAGE_CLAIM]])
+            ['1151', 'Damage Claim Receivable', 'ড্যামেজ দাবি — কোম্পানির কাছে পাওনা', $A, '1100', false, []],
 
             /*
              * সরিয়ে রাখা টাকা — FD, DPS, বন্ড।

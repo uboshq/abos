@@ -44,6 +44,7 @@ return [
     'reason_damaged_goods' => 'মাল নষ্ট, ফেরত যাচ্ছে না',
     'reason_short_delivery' => 'গুনতিতে কম এসেছে',
     'reason_agreed_discount' => 'পরে ছাড়ের কথা হয়েছে',
+    'reason_damage_claim' => 'ড্যামেজ দাবি — কোম্পানির পাস করা ড্যামেজ বিল',
     'reason_other' => 'অন্য কারণ',
     'saved' => 'নোটটি খসড়া হিসেবে সংরক্ষিত — নিশ্চিত করলে বইয়ে বসবে',
     'confirm' => 'নিশ্চিত করুন',

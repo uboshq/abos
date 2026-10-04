@@ -44,6 +44,7 @@ return [
     'reason_damaged_goods' => 'Goods damaged, not coming back',
     'reason_short_delivery' => 'Short on the count',
     'reason_agreed_discount' => 'A discount agreed later',
+    'reason_damage_claim' => 'Damage claim — a damage bill the company passed',
     'reason_other' => 'Another reason',
     'saved' => 'Saved as a draft — it reaches the books when you confirm it',
     'confirm' => 'Confirm',
