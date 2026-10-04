@@ -105,6 +105,7 @@ final class DirectSaleOverview
 
         $s = $this->standing->for($customer, bccomp($left, '0', 4) > 0 ? $left : '0');
         $s = $this->withoutTheBillBeingEdited($s, $customer, $data, bccomp($left, '0', 4) > 0 ? $left : '0');
+        $s = $this->withoutTheDraftBeingFinished($s, $customer, $data, bccomp($left, '0', 4) > 0 ? $left : '0');
         $o->money(__('sales::overview_confirm.old_due'), Money::format($s['due']));
         if (bccomp($s['advance'], '0', 4) > 0) {
             $o->money(__('sales::overview_confirm.advance'), Money::format($s['advance']), 'good');
@@ -164,6 +165,40 @@ final class DirectSaleOverview
         return array_merge($s, [
             'due' => bccomp($ledger, '0', 4) > 0 ? $ledger : '0.0000',
             'advance' => bccomp($ledger, '0', 4) < 0 ? bcmul($ledger, '-1', 4) : '0.0000',
+            'exposure' => $exposure,
+            'to_pay' => bccomp($over, '0', 4) > 0 ? $over : '0.0000',
+            'over_limit' => bccomp($over, '0', 4) > 0,
+        ]);
+    }
+
+    /**
+     * রাখা খসড়া পাকা করার সময় খসড়াটা "আটকে থাকা" থেকে বাদ — মালিক, ৪ অক্টোবর ২০২৬ (DRF-0014, M/S Bokthiyar
+     * Enterprise: অগ্রিম ৪৪,৫৮৯.৫৫, বিল ৪৪,৫০৩.৭৩, তবু "সীমা পার ৪৪,৪১৭.৯১")।
+     *
+     * ⛔ খসড়া বিল [[CreditExposure::pending()]]-এ গোনা হয় (রাখা খসড়া সীমা আটকে রাখে), আর পাকা করার সময় একই বিল
+     * "এই বিলে বাকি"-তেও — তাই সারাংশে বিলটা দুবার উঠত, আর অগ্রিমে পুরো ঢাকা বিলও "নিশ্চিত হবে না" দেখাত। ⭐ সেবা
+     * নিজে খসড়াটা বাদ দিয়ে মাপে ([[DirectSaleService::hold()]]-এ `exceptInvoiceId`); সারাংশও এখন ঠিক তা-ই।
+     *
+     * @param  array<string, mixed>  $s
+     * @param  array<string, mixed>  $data
+     * @return array<string, mixed>
+     */
+    private function withoutTheDraftBeingFinished(array $s, Customer $customer, array $data, string $left): array
+    {
+        $id = (int) ($data['resume_invoice_id'] ?? 0);
+
+        if ($id <= 0 || ! SalesInvoice::query()->whereKey($id)->where('customer_id', $customer->id)
+            ->where('status', \App\Core\Support\DocumentStatus::DRAFT)->exists()) {
+            return $s;
+        }
+
+        $held = bcadd($this->credit->pending($customer, $id), '0', 4);
+        $ledger = bcsub((string) $s['due'], (string) $s['advance'], 4);
+        $exposure = bcadd(bcadd($ledger, $held, 4), $left, 4);
+        $over = bcsub($exposure, (string) $s['limit'], 4);
+
+        return array_merge($s, [
+            'held' => $held,
             'exposure' => $exposure,
             'to_pay' => bccomp($over, '0', 4) > 0 ? $over : '0.0000',
             'over_limit' => bccomp($over, '0', 4) > 0,
