@@ -101,6 +101,7 @@ return [
         'sales.order' => 'বিক্রয় আদেশ',
         'sales.reprint' => 'আবার ছাপা',
         'sales.return' => 'বিক্রয় ফেরত',
+        'sales.route' => 'রুটের খাতা',
         'sales.scheme' => 'স্কিম',
         'sales.shipment' => 'চালান পাঠানো',
         'sales.target' => 'লক্ষ্যমাত্রা',

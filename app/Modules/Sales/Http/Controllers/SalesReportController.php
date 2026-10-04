@@ -37,6 +37,7 @@ class SalesReportController extends Controller implements HasMiddleware
         'by-product' => 'sales.by_product',
         'by-brand' => 'sales.by_brand',
         'by-channel' => 'sales.by_channel',
+        'by-route' => 'sales.by_route',
     ];
 
     public function __construct(

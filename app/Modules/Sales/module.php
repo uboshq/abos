@@ -23,6 +23,7 @@ use App\Modules\Sales\Models\SalesQuotation;
 use App\Modules\Sales\Models\SalesReturn;
 use App\Modules\Sales\Models\Shipment;
 use App\Modules\Sales\Panels\SalesFacts;
+use App\Modules\Sales\Reports\RouteReports;
 use App\Modules\Sales\Reports\SalesChannelReports;
 use App\Modules\Sales\Reports\SalesReports;
 use App\Modules\Sales\Support\InvoiceDesigns;
@@ -353,6 +354,8 @@ return [
                 'route_params' => ['slug' => 'by-reason'], 'permission' => 'sales.return.report'],
             ['label' => 'sales::channel.report_title', 'icon' => 'share', 'route' => 'sales.report.show',
                 'route_params' => ['slug' => 'by-channel'], 'permission' => 'sales.report'],
+            ['label' => 'sales::route.report_title', 'icon' => 'reports', 'route' => 'sales.report.show',
+                'route_params' => ['slug' => 'by-route'], 'permission' => 'sales.report'],
 
             /*
              * রিকল — এই লটটা কাদের কাছে গেছে।
@@ -384,6 +387,10 @@ return [
             // ⭐ ডিলারের মাসিক আদায়ের লক্ষ্য — বিলের "টার্গেট রিমাইন্ডার" (মালিক, ৩ অক্টোবর ২০২৬)
             ['label' => 'sales::customer_target.title', 'icon' => 'scale', 'route' => 'sales.customer_target.index',
                 'permission' => 'sales.customer_target.view'],
+
+            /* রুটের খাতা — লক্ষ্যমাত্রার পাশে: দুইটাই মাস ধরে দেখা হয় (NEXUS §২৭) */
+            ['label' => 'sales::route.title', 'icon' => 'globe', 'route' => 'sales.route.index',
+                'permission' => 'sales.route.view'],
 
             /*
              * ডিলারের কমিশন — লক্ষ্যমাত্রার পাশে।
@@ -456,6 +463,17 @@ return [
         // ⭐ ডিলারের মাসিক আদায়ের লক্ষ্য (৩ অক্টোবর ২০২৬)
         'sales.customer_target.view',
         'sales.customer_target.manage',
+
+        /*
+         * রুটের খাতা — দেখা আর ছক/লক্ষ্য বসানো আলাদা চাবি (NEXUS §২৭)।
+         *
+         * নিজের রুটের লক্ষ্য নিজে বদলাতে পারলে ওটা আর লক্ষ্য নয়, ইচ্ছা।
+         * ⚠️ দেখার চাবিও আপাতত কেবল ম্যানেজারের ধাপে — রুটের পাতায় সব
+         * ডিলারের বাকি, আর বিক্রয়কর্মী কেবল নিজের ডিলার দেখবেন (মালিক,
+         * ২৬ সেপ্টেম্বর); সেই ছাঁকনি বাঁধনের কাজ।
+         */
+        'sales.route.view',
+        'sales.route.manage',
 
         /*
          * ডিলারের কমিশন — দেখা, দেওয়া, আর সীমা ছাড়ানো।
@@ -667,6 +685,7 @@ return [
             'sales.shipment.cancel',
             'sales.quotation.view',
             'sales.delivery.view',
+            'sales.route.view',
             'sales.order.view', 'sales.challan.view', 'sales.invoice.view',
             'sales.collection.view', 'sales.return.view', 'sales.shipment.view',
             'sales.report',
@@ -747,6 +766,7 @@ return [
         \App\Modules\Sales\Reports\MarginReport::class,
         \App\Modules\Sales\Reports\SalesReturnReasonReports::class,
         SalesChannelReports::class,
+        RouteReports::class,
         // ⭐ খোলা আদেশ ও ব্যাক অর্ডার, সীমায় আটকানো আদেশ, বিক্রয় খাতা — পরিকল্পনা সংস্করণ ২ §৯ (৪ অক্টোবর ২০২৬)
         \App\Modules\Sales\Reports\SalesOrderBookReports::class,
     ],

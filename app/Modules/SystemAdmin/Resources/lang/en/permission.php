@@ -77,6 +77,7 @@ return [
         'sales.quotation' => 'Sales quotations',
         'sales.reprint' => 'Reprint',
         'sales.return' => 'Sales returns',
+        'sales.route' => 'Route accounts',
         'sales.scheme' => 'Schemes',
         'sales.shipment' => 'Shipments',
         'sales.target' => 'Targets',

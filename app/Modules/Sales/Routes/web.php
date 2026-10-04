@@ -15,6 +15,7 @@ use App\Modules\Sales\Http\Controllers\OrderSampleController;
 use App\Modules\Sales\Http\Controllers\PortalController;
 use App\Modules\Sales\Http\Controllers\PosController;
 use App\Modules\Sales\Http\Controllers\PrintQueueController;
+use App\Modules\Sales\Http\Controllers\RouteAccountController;
 use App\Modules\Sales\Http\Controllers\MarginReportController;
 use App\Modules\Sales\Http\Controllers\GatePassController;
 use App\Modules\Sales\Http\Controllers\LoadingSheetController;
@@ -320,6 +321,19 @@ Route::middleware('auth')->prefix('sales')->group(function () {
     Route::prefix('dealer-targets')->name('customer_target.')->group(function () {
         Route::get('/', [\App\Modules\Sales\Http\Controllers\CustomerTargetController::class, 'index'])->name('index');
         Route::post('/', [\App\Modules\Sales\Http\Controllers\CustomerTargetController::class, 'store'])->name('store');
+    });
+
+    // রুটের খাতা — তালিকা, একটা রুট, সাপ্তাহিক ছক আর মাসের লক্ষ্য (NEXUS §২৭)
+    Route::prefix('routes')->name('route.')->group(function () {
+        Route::get('/', [RouteAccountController::class, 'index'])->name('index');
+        Route::get('/{location}', [RouteAccountController::class, 'show'])
+            ->whereNumber('location')->name('show');
+        Route::post('/{location}/visits', [RouteAccountController::class, 'assign'])
+            ->whereNumber('location')->name('visit.assign');
+        Route::post('/visits/{visit}/end', [RouteAccountController::class, 'end'])
+            ->whereNumber('visit')->name('visit.end');
+        Route::post('/{location}/target', [RouteAccountController::class, 'target'])
+            ->whereNumber('location')->name('target');
     });
 
     Route::prefix('shipments')->name('shipment.')->group(function () {
