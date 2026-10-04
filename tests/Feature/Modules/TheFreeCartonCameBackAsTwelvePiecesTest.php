@@ -168,6 +168,7 @@ class TheFreeCartonCameBackAsTwelvePiecesTest extends TestCase
             'free_qty' => '1',
             'free_unit_id' => $this->carton->id,
             'rate' => '1200',
+            'sales_price' => '2400', // ⓘ বিক্রয়দর ছাড়া কেনা নয় — মালিক, ৩ অক্টোবর ২০২৬
         ]);
 
         // মজুদের ঘরগুলো মূল এককে — ওখানেই প্রতিটা হিসাব চলে
@@ -194,6 +195,7 @@ class TheFreeCartonCameBackAsTwelvePiecesTest extends TestCase
             'free_qty' => '1',
             'free_unit_id' => $this->piece->id,
             'rate' => '1200',
+            'sales_price' => '2400', // ⓘ বিক্রয়দর ছাড়া কেনা নয় — মালিক, ৩ অক্টোবর ২০২৬
         ]);
 
         $this->assertQty('120', $line->qty);
@@ -223,6 +225,7 @@ class TheFreeCartonCameBackAsTwelvePiecesTest extends TestCase
             'unit_id' => $this->carton->id,
             'free_qty' => '1',
             'rate' => '1200',
+            'sales_price' => '2400', // ⓘ বিক্রয়দর ছাড়া কেনা নয় — মালিক, ৩ অক্টোবর ২০২৬
         ]);
 
         $this->assertQty('12', $line->free_qty);
@@ -242,11 +245,11 @@ class TheFreeCartonCameBackAsTwelvePiecesTest extends TestCase
         $this->product->forceFill(['tax_id' => $this->fifteenPercentVat()->id])->save();
 
         // ঘরটা পাঠানোই হলো না — "পণ্য অনুযায়ী"
-        $byProduct = $this->buy(['qty' => '10', 'rate' => '100']);
+        $byProduct = $this->buy(['qty' => '10', 'rate' => '100', 'sales_price' => '200']);
         $this->assertQty('150', $byProduct->tax);
 
         // আর ০ পাঠানো হলো — "ভ্যাট নেই"
-        $none = $this->buy(['qty' => '10', 'rate' => '100', 'tax' => '0']);
+        $none = $this->buy(['qty' => '10', 'rate' => '100', 'sales_price' => '200', 'tax' => '0']);
         $this->assertQty('0', $none->tax);
 
         /*
@@ -340,7 +343,7 @@ class TheFreeCartonCameBackAsTwelvePiecesTest extends TestCase
                 'warehouse_id' => $this->warehouse->id,
                 'trx_date' => now()->toDateString(),
             ],
-            [['product_id' => $this->product->id, 'qty' => '10', 'rate' => '100']],
+            [['product_id' => $this->product->id, 'qty' => '10', 'rate' => '100', 'sales_price' => '200']],
         );
 
         $bill = $result['bill']->fresh();
@@ -398,7 +401,7 @@ class TheFreeCartonCameBackAsTwelvePiecesTest extends TestCase
                 'vessel' => 'MV Banglar Joyjatra',
                 'port_of_entry' => 'Chattogram',
             ],
-            [['product_id' => $this->product->id, 'qty' => '5', 'rate' => '100']],
+            [['product_id' => $this->product->id, 'qty' => '5', 'rate' => '100', 'sales_price' => '200']],
         );
 
         $bill = $result['bill']->fresh();
@@ -434,7 +437,7 @@ class TheFreeCartonCameBackAsTwelvePiecesTest extends TestCase
                 'trx_date' => $billedOn,
                 'received_on' => $arrivedOn,
             ],
-            [['product_id' => $this->product->id, 'qty' => '4', 'rate' => '100']],
+            [['product_id' => $this->product->id, 'qty' => '4', 'rate' => '100', 'sales_price' => '200']],
         );
 
         $bill = $result['bill']->fresh();
@@ -474,7 +477,7 @@ class TheFreeCartonCameBackAsTwelvePiecesTest extends TestCase
                 'warehouse_id' => $this->warehouse->id,
                 'trx_date' => $billedOn,
             ],
-            [['product_id' => $this->product->id, 'qty' => '4', 'rate' => '100']],
+            [['product_id' => $this->product->id, 'qty' => '4', 'rate' => '100', 'sales_price' => '200']],
         );
 
         $movement = StockMovement::query()
@@ -541,6 +544,7 @@ class TheFreeCartonCameBackAsTwelvePiecesTest extends TestCase
                 'product_id' => $this->product->id,
                 'qty' => '1',
                 'rate' => '50',
+                'sales_price' => '100', // ⓘ বিক্রয়দর ছাড়া কেনা নয় — মালিক, ৩ অক্টোবর ২০২৬
             ]],
         ];
     }
@@ -566,7 +570,7 @@ class TheFreeCartonCameBackAsTwelvePiecesTest extends TestCase
                 'payment_term' => 'month_end',
                 'due_on' => '2026-09-30',
             ],
-            [['product_id' => $this->product->id, 'qty' => '2', 'rate' => '100']],
+            [['product_id' => $this->product->id, 'qty' => '2', 'rate' => '100', 'sales_price' => '200']],
         );
 
         $bill = $result['bill']->fresh();
@@ -611,7 +615,7 @@ class TheFreeCartonCameBackAsTwelvePiecesTest extends TestCase
                 'warehouse_id' => $this->warehouse->id,
                 'trx_date' => now()->toDateString(),
             ],
-            [['product_id' => $this->product->id, 'qty' => '1', 'rate' => '10']],
+            [['product_id' => $this->product->id, 'qty' => '1', 'rate' => '10', 'sales_price' => '20']],
         );
 
         $this->assertNull($result['bill']->fresh()->payment_term);
@@ -638,6 +642,7 @@ class TheFreeCartonCameBackAsTwelvePiecesTest extends TestCase
                 'free_qty' => '3',
                 'free_unit_id' => $this->piece->id,
                 'rate' => '1200',
+                'sales_price' => '2400', // ⓘ বিক্রয়দর ছাড়া কেনা নয় — মালিক, ৩ অক্টোবর ২০২৬
             ]],
         ]);
 

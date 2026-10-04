@@ -119,14 +119,16 @@ class TheRateOutranThePriceAndNobodyToldTheCounterTest extends TestCase
      * ⚠️ "এই বিলে দাম ঠিক করিনি" আর "কত দামে কিনলাম ভুলে যাও" —
      * এক কথা নয়। ⓘ দ্বিতীয়টা সিদ্ধান্তই নয়, ঘটনা।
      */
-    public function test_the_rate_is_remembered_even_when_no_price_was_decided(): void
+    public function test_the_rate_is_remembered_with_every_purchase(): void
     {
+        // ⓘ ৩ অক্টোবর ২০২৬ থেকে বিক্রয়দর ছাড়া সরাসরি কেনাই যায় না — "দাম ঠিক না করে" কেনার পথটা আর নেই; দাবির মূল
+        // কথাটা থাকে: যে দামে কেনা হলো, সেটা পণ্যে বসে
         $this->product->forceFill(['purchase_price' => '0', 'sale_price' => '0'])->save();
 
         $this->post(route('purchase.direct.store'), $this->payload([
             'rate' => '137.50',
-            // ⛔ বিক্রয়দর লেখা হয়নি — ঘরটা ইচ্ছাকৃতভাবে খালি
-        ]))->assertRedirect();
+            'sales_price' => '200',
+        ]))->assertRedirect()->assertSessionHasNoErrors();
 
         $this->product->refresh();
 
@@ -148,10 +150,15 @@ class TheRateOutranThePriceAndNobodyToldTheCounterTest extends TestCase
     public function test_an_empty_price_does_not_wipe_the_price_that_was_there(): void
     {
         $this->product->forceFill(['sale_price' => '250'])->save();
+        $bills = PurchaseBill::query()->count();
 
+        // ⓘ ৩ অক্টোবর ২০২৬ থেকে খালি বিক্রয়দর দরজাতেই ফেরে — ⚠️ সেটা দেখা জরুরি: নইলে "দাম মোছেনি" কেবল এই কারণে
+        // সত্যি হত যে কিছুই জমা হয়নি, আর পরীক্ষাটা কোনোদিন কিছু দেখত না
         $this->post(route('purchase.direct.store'), $this->payload([
             'rate' => '100',
-        ]))->assertRedirect();
+        ]))->assertRedirect()->assertSessionHasErrors('lines.0.sales_price');
+
+        $this->assertSame($bills, PurchaseBill::query()->count(), '⛔ বিক্রয়দর ছাড়া একটা কেনা জমা হয়ে গেল।');
 
         $this->product->refresh();
 

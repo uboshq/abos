@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Modules;
 
+use App\Core\Support\AlpineLiteral;
 use App\Core\Support\CompanyContext;
 use App\Models\Company;
 use App\Models\FinancialYear;
@@ -12,7 +13,6 @@ use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Supplier\Models\Supplier;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Js;
 use Spatie\Permission\Models\Permission;
 use Tests\TestCase;
 
@@ -231,7 +231,8 @@ class TheDueOnTheBuyingScreenSaysWhoseDebtItIsTest extends TestCase
          * মন্তব্যের উপর দাঁড়িয়ে থাকত।
          */
         $this->assertStringContainsString(
-            Js::from(__('purchase::field.previous_due'))->toHtml(), $html,
+            // ⓘ `@js` এখন [[AlpineLiteral]] (d9aeeb94, CSP-Alpine) — পাতা যা ছাপে, পরীক্ষাও ঠিক তা-ই খোঁজে
+            (string) AlpineLiteral::from(__('purchase::field.previous_due')), $html,
             'আগের বকেয়ার সারিটা কার্ডে নেই');
 
         $this->assertStringContainsString('previousDue < 0', $html,

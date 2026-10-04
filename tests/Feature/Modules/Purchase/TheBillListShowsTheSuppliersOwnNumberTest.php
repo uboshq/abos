@@ -60,7 +60,7 @@ final class TheBillListShowsTheSuppliersOwnNumberTest extends TestCase
         $this->assertSame($this->labels([
             'date', 'inv_number', 'supp_inv_no', 'supplier', 'branch', 'warehouse', 'items',
             'due_on', 'total', 'bill_paid', 'bill_due', 'state', 'created_by',
-        ]), $this->headers($html), 'কলামগুলো মালিকের ক্রমে নেই।');
+        ]) + [13 => (string) __('core.table.view')], $this->headers($html), 'কলামগুলো মালিকের ক্রমে নেই।');
     }
 
     /** ⭐ হেডারে একটা শাখা বাছা — শাখার কলাম নেই, বাকিগুলো একই ক্রমে */
@@ -74,7 +74,7 @@ final class TheBillListShowsTheSuppliersOwnNumberTest extends TestCase
         $this->assertSame($this->labels([
             'date', 'inv_number', 'supp_inv_no', 'supplier', 'warehouse', 'items',
             'due_on', 'total', 'bill_paid', 'bill_due', 'state', 'created_by',
-        ]), $this->headers($html), 'এক শাখা বাছার পরও শাখার কলাম আছে, বা বাকিগুলোর ক্রম ভেঙেছে।');
+        ]) + [12 => (string) __('core.table.view')], $this->headers($html), 'এক শাখা বাছার পরও শাখার কলাম আছে, বা বাকিগুলোর ক্রম ভেঙেছে।');
     }
 
     public function test_the_row_shows_what_each_column_promises(): void
