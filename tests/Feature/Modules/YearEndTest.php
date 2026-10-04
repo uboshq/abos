@@ -141,6 +141,51 @@ class YearEndTest extends TestCase
         $this->assertSame('20000.0000', bcsub($after, $before, 4));
     }
 
+    /**
+     * ⛔ প্রতিটা শাখা নিজের শাখায় বন্ধ হয় — অডিট গ১০, ৪ অক্টোবর ২০২৬।
+     * আগে সব শাখার আয় এক যোগফলে বন্ধ হত, দাখিলা বসত যিনি বন্ধ করছেন তাঁর শাখায় — দ্বিতীয় শাখার আয়-খাত
+     * সেখানে শূন্য হত না, আর তার লাভ প্রথম শাখার সঞ্চিত মুনাফায় উঠত।
+     */
+    public function test_each_branch_closes_in_its_own_branch(): void
+    {
+        $branches = \App\Models\Branch::query()->where('company_id', $this->company->id)->orderBy('id')->limit(2)->pluck('id')->all();
+
+        if (count($branches) < 2) {
+            $branches[] = \App\Models\Branch::query()->create([
+                'company_id' => $this->company->id, 'code' => 'YE2', 'name_en' => 'Second', 'name_bn' => 'দ্বিতীয়', 'is_active' => true,
+            ])->id;
+        }
+
+        [$first, $second] = $branches;
+        $cash = app(CashTillService::class)->ensurePrimaryTill()->account;
+        $sales = StandardChart::find(StandardChart::SALES);
+        $date = $this->year->starts_on->copy()->addMonths(3)->toDateString();
+
+        foreach ([[$first, '10000', 71], [$second, '4000', 72]] as [$branch, $amount, $n]) {
+            app(PostingEngine::class)->post(sourceType: 'test_sale', sourceId: $n, trxDate: $date, lines: [
+                ['account_id' => $cash->id, 'debit' => $amount],
+                ['account_id' => $sales->id, 'credit' => $amount],
+            ], branchId: $branch);
+        }
+
+        $net = fn (int $account, int $branch) => (string) LedgerEntry::query()
+            ->where('account_id', $account)->where('branch_id', $branch)
+            ->whereDate('trx_date', '<=', $this->year->ends_on)
+            ->selectRaw('COALESCE(SUM(credit) - SUM(debit), 0) as n')->value('n');
+
+        $equity = StandardChart::find(StandardChart::RETAINED_EARNINGS);
+        $secondSales = $net($sales->id, $second);
+        $secondEquity = $net($equity->id, $second);
+
+        CompanyContext::set($this->company->id, $first);
+        $this->service()->close($this->year);
+
+        $this->assertSame(0, bccomp($net($sales->id, $second), '0', 4), '⛔ দ্বিতীয় শাখার বিক্রয়-খাত নিজের শাখায় শূন্য হয়নি: '.$net($sales->id, $second));
+        $this->assertSame(0, bccomp(bcsub($net($equity->id, $second), $secondEquity, 4), $secondSales, 4),
+            '⛔ দ্বিতীয় শাখার লাভ তার সঞ্চিত মুনাফায় যায়নি: '.$net($equity->id, $second));
+        $this->assertSame(0, bccomp($net($sales->id, $first), '0', 4));
+    }
+
     public function test_a_loss_moves_retained_earnings_the_other_way(): void
     {
         $this->trade(income: '10000.0000', expense: '25000.0000');

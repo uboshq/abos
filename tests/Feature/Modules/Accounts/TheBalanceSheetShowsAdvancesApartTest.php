@@ -69,6 +69,39 @@ final class TheBalanceSheetShowsAdvancesApartTest extends TestCase
         $this->get(route('accounts.balance_sheet'))->assertOk()->assertSee(__('accounts::field.customer_advance'))->assertSee(__('accounts::field.supplier_advance'));
     }
 
+    /**
+     * ⛔ আগের বছর বন্ধ না হলে তার লাভ হারাত — অডিট গ১১, ৪ অক্টোবর ২০২৬।
+     * আগে চলতি ফল গোনা হত কেবল এই বছরের শুরু থেকে; আগের খোলা বছরের ৭০০ টাকার লাভ কোথাও আসত না, আর
+     * স্থিতিপত্র ঠিক ৭০০-তে "মেলে না" দেখাত।
+     */
+    public function test_an_unclosed_earlier_years_profit_is_not_lost(): void
+    {
+        $current = \App\Models\FinancialYear::query()->where('company_id', $this->company->id)
+            ->where('starts_on', '<=', now()->toDateString())->where('ends_on', '>=', now()->toDateString())->firstOrFail();
+        $lastDay = $current->starts_on->copy()->subDay();
+
+        \App\Models\FinancialYear::query()->firstOrCreate(
+            ['company_id' => $this->company->id, 'starts_on' => $lastDay->copy()->subYear()->addDay()->toDateString()],
+            ['name' => 'আগের বছর', 'ends_on' => $lastDay->toDateString(), 'is_closed' => false, 'is_current' => false],
+        );
+
+        $before = app(BalanceSheetService::class)->build();
+        $this->assertTrue($before['agrees'], 'প্রস্তুতি ভুল — শুরুতেই স্থিতিপত্র মেলে না: '.$before['difference']);
+
+        $cash = (int) DB::table('accounts')->where('company_id', $this->company->id)->where('money_kind', 'cash')->where('is_group', false)->orderBy('id')->value('id');
+        $income = (int) DB::table('accounts')->where('company_id', $this->company->id)->where('is_group', false)->where('type', 'income')->orderBy('id')->value('id');
+
+        app(PostingEngine::class)->post(sourceType: 'test_last_year', sourceId: 7801, trxDate: $lastDay->toDateString(),
+            lines: [['account_id' => $cash, 'debit' => '700'], ['account_id' => $income, 'credit' => '700']],
+            branchId: $this->company->defaultBranch()?->id);
+
+        $sheet = app(BalanceSheetService::class)->build();
+
+        $this->assertTrue($sheet['agrees'], '⛔ আগের খোলা বছরের লাভ হারিয়েছে — তফাত '.$sheet['difference']);
+        $this->assertSame(0, bccomp(bcsub((string) $sheet['profit'], (string) $before['profit'], 4), '700', 4),
+            '⛔ চলতি ফলে আগের বছরের ৭০০ আসেনি।');
+    }
+
     // ── সহায়ক ───────────────────────────────────────────────────────────
 
     private function book(int $n, array $lines): void

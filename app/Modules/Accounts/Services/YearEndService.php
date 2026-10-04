@@ -93,7 +93,9 @@ final class YearEndService
             'profit' => $this->netResult($year),
             // কয়টা খাত শূন্য হবে — বন্ধের দাখিলায় শেষ লাইনটা সঞ্চিত
             // মুনাফার, তাই সেটা বাদ
-            'closing' => max(0, count($this->closingLines($year)) - 1),
+            // ⓘ সঞ্চিত মুনাফার সারি বাদে — শাখা ধরে সেগুলো একাধিক (অডিট গ১০)
+            'closing' => count(array_filter($this->closingLines($year),
+                fn (array $l) => (int) $l['account_id'] !== (int) StandardChart::find(StandardChart::RETAINED_EARNINGS)?->id)),
             'drafts' => $this->draftCount($year),
             'next' => $this->nextYearFor($year),
         ];
@@ -466,20 +468,33 @@ final class YearEndService
     private function closingLines(FinancialYear $year): array
     {
         $lines = [];
-        $net = '0';
+
+        /*
+         * ⭐ শাখা ধরে — অডিট গ১০, ৪ অক্টোবর ২০২৬।
+         * ⛔ আগে সব শাখার আয়-ব্যয় এক যোগফলে বন্ধ হত, আর দাখিলা বসত যিনি বন্ধ করছেন তাঁর শাখায়: ঢাকার আয়-খাত
+         * ঢাকায় শূন্য হত না, সঞ্চিত মুনাফা পুরোটা এক শাখায় উঠত — পরের বছর প্রতিটা শাখার স্থিতিপত্র ভুল।
+         * ⭐ এখন প্রতিটা খাত·শাখা নিজের শাখাতেই শূন্য হয়, আর প্রতিটা শাখার লাভ সেই শাখার সঞ্চিত মুনাফায়।
+         *
+         * @var array<string, string> $net শাখা => ডেবিট − ক্রেডিট
+         */
+        $net = [];
 
         foreach ([Account::INCOME, Account::EXPENSE] as $type) {
-            foreach ($this->balancesByAccount($year, $type) as $accountId => $signed) {
+            foreach ($this->balancesByAccount($year, $type) as $row) {
+                $signed = $row['signed'];
+
                 if (bccomp($signed, '0', 4) === 0) {
                     continue;
                 }
 
                 // signed = ডেবিট − ক্রেডিট। শূন্য করতে উল্টো দিকে বসাতে হয়।
-                $lines[] = bccomp($signed, '0', 4) > 0
-                    ? ['account_id' => $accountId, 'credit' => $signed, 'narration' => $this->narration()]
-                    : ['account_id' => $accountId, 'debit' => bcmul($signed, '-1', 4), 'narration' => $this->narration()];
+                $lines[] = (bccomp($signed, '0', 4) > 0
+                    ? ['account_id' => $row['account_id'], 'credit' => $signed]
+                    : ['account_id' => $row['account_id'], 'debit' => bcmul($signed, '-1', 4)])
+                    + ['branch_id' => $row['branch_id'], 'narration' => $this->narration()];
 
-                $net = bcadd($net, $signed, 4);
+                $key = (string) ($row['branch_id'] ?? '');
+                $net[$key] = bcadd($net[$key] ?? '0', $signed, 4);
             }
         }
 
@@ -502,9 +517,16 @@ final class YearEndService
          * লোকসান — তখন সঞ্চিত মুনাফা কমে (ডেবিট)। ঋণাত্মক মানে লাভ,
          * তখন সঞ্চিত মুনাফা বাড়ে (ক্রেডিট)।
          */
-        $lines[] = bccomp($net, '0', 4) > 0
-            ? ['account_id' => $equity->id, 'debit' => $net, 'narration' => $this->narration()]
-            : ['account_id' => $equity->id, 'credit' => bcmul($net, '-1', 4), 'narration' => $this->narration()];
+        foreach ($net as $branch => $sum) {
+            if (bccomp($sum, '0', 4) === 0) {
+                continue;
+            }
+
+            $lines[] = (bccomp($sum, '0', 4) > 0
+                ? ['account_id' => $equity->id, 'debit' => $sum]
+                : ['account_id' => $equity->id, 'credit' => bcmul($sum, '-1', 4)])
+                + ['branch_id' => $branch === '' ? null : (int) $branch, 'narration' => $this->narration()];
+        }
 
         return $lines;
     }
@@ -604,14 +626,19 @@ final class YearEndService
      */
     private function balancesByAccount(FinancialYear $year, string $type): array
     {
+        // ⓘ খাত·শাখা ধরে — বন্ধের দাখিলা প্রতিটা শাখায় আলাদা বসে (অডিট গ১০)
         return LedgerEntry::query()
             ->join('accounts', 'accounts.id', '=', 'ledger_entries.account_id')
             ->where('accounts.type', $type)
             ->whereBetween('ledger_entries.trx_date', [$year->starts_on, $year->ends_on])
-            ->groupBy('ledger_entries.account_id')
-            ->selectRaw('ledger_entries.account_id, SUM(ledger_entries.debit) - SUM(ledger_entries.credit) as signed')
-            ->pluck('signed', 'account_id')
-            ->map(fn ($v) => (string) $v)
+            ->groupBy('ledger_entries.account_id', 'ledger_entries.branch_id')
+            ->selectRaw('ledger_entries.account_id, ledger_entries.branch_id, SUM(ledger_entries.debit) - SUM(ledger_entries.credit) as signed')
+            ->get()
+            ->map(fn ($r) => [
+                'account_id' => (int) $r->account_id,
+                'branch_id' => $r->branch_id === null ? null : (int) $r->branch_id,
+                'signed' => (string) $r->signed,
+            ])
             ->all();
     }
 

@@ -283,13 +283,16 @@ final class BalanceSheetService
      */
     private function profitSoFar(string $asOf, ?int $branchId): string
     {
-        $from = $this->yearStart($asOf);
-
         $row = DB::table('ledger_entries')
             ->join('accounts', 'accounts.id', '=', 'ledger_entries.account_id')
             ->where('ledger_entries.company_id', CompanyContext::id())
             ->whereIn('accounts.type', [Account::INCOME, Account::EXPENSE])
-            ->where('ledger_entries.trx_date', '>=', $from)
+            /*
+             * ⛔ বছরের শুরু থেকে নয়, শুরু থেকেই — অডিট গ১১, ৪ অক্টোবর ২০২৬।
+             * আগের বছর বন্ধ না হলে তার লাভ আয়-ব্যয়ের খাতেই পড়ে থাকে, সঞ্চিত মুনাফায় যায়নি। বছরের শুরু থেকে
+             * গুনলে সেই লাভ কোথাও আসত না, আর স্থিতিপত্র ঠিক ওই অঙ্কে "মেলে না" দেখাত। ⓘ বন্ধ বছরের আয়-ব্যয়
+             * বন্ধের দাখিলাতেই শূন্য হয়ে আছে, তাই শুরু থেকে গুনলেও তা দুবার আসে না।
+             */
             ->where('ledger_entries.trx_date', '<=', $asOf)
             ->when($branchId, fn ($q) => $q->where('ledger_entries.branch_id', $branchId))
             ->selectRaw('
@@ -299,32 +302,6 @@ final class BalanceSheetService
             ->first();
 
         return bcsub((string) $row->income, (string) $row->expense, 4);
-    }
-
-    /**
-     * ওই তারিখটা যে অর্থবছরে পড়ে, তার শুরু।
-     *
-     * অর্থবছর না পেলে ওই তারিখের ১ জুলাই — বাংলাদেশের অর্থবছর জুলাই
-     * থেকে। ধরে নেওয়াটা ঠিক নয়, কিন্তু বিকল্পটা আরও খারাপ: বছর বসানো
-     * না থাকলে স্থিতিপত্রটাই খুলত না।
-     */
-    private function yearStart(string $asOf): string
-    {
-        $year = DB::table('financial_years')
-            ->where('company_id', CompanyContext::id())
-            ->where('starts_on', '<=', $asOf)
-            ->where('ends_on', '>=', $asOf)
-            ->value('starts_on');
-
-        if ($year !== null) {
-            return (string) $year;
-        }
-
-        $date = Carbon::parse($asOf);
-
-        return $date->month >= 7
-            ? $date->copy()->setDate((int) $date->year, 7, 1)->toDateString()
-            : $date->copy()->setDate((int) $date->year - 1, 7, 1)->toDateString();
     }
 
     /**
