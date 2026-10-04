@@ -161,26 +161,7 @@ final class SalesInvoiceService
      */
     public function assertDiscountApproved(SalesInvoice $invoice): void
     {
-        $discount = (string) ($invoice->discount ?? '0');
-
-        /*
-         * ⛔ বিলের মাথার ছাড়ও একই সইয়ে — চূড়ান্ত অডিট (গ), ১ অক্টোবর ২০২৬।
-         *
-         * ⓘ `discount` কেবল সারির ছাড়; মাথার ছাড় আলাদা ঘরে (`bill_discount`) আর এখানে গোনা হত না। ফলে সারিতে
-         * ১,৫০০ ছাড় সই চাইত, অথচ একই ১,৫০০ বিলের নিচে লিখলে কারও সই ছাড়াই খাতায় উঠত — সই এড়াতে কেবল ঘর বদলানো।
-         * ⭐ এখন দুটো যোগ করে একই সীমা, একই ছক, একই সুইচ (ছক বন্ধ থাকলে আগের মতোই কিছু থামে না)।
-         */
-        $discount = bcadd($discount, (string) ($invoice->bill_discount ?? '0'), 4);
-
-        /*
-         * ⛔ রাউন্ডিং ৳০.৫০-এর বেশি হলে সেটাও ছাড় — মালিক, ১ অক্টোবর ২০২৬: *"রাউন্ডিং 0.5 mane 50 poisa porzonto
-         * accept"*। ⓘ দুই দিকেই (কমানো বা বাড়ানো) — বড় রাউন্ডিং দিয়ে ছাড় লুকানোর পথটাই বন্ধ।
-         */
-        $rounding = ltrim((string) ($invoice->rounding_amount ?? '0'), '-');
-
-        if (bccomp($rounding, '0.5', 4) > 0) {
-            $discount = bcadd($discount, $rounding, 4);
-        }
+        $discount = $this->discountAwaitingSignature($invoice);
 
         if (bccomp($discount, '0', 4) <= 0) {
             return;
@@ -230,6 +211,39 @@ final class SalesInvoiceService
          * পর্দা বলত "অনুরোধ পাঠানো হয়েছে"।
          */
         throw HeldForApproval::on($invoice, 'discount', __('sales::validation.discount_awaiting'));
+    }
+
+    /**
+     * কত টাকার ছাড় সই চায় — সারির ছাড় (অফার বাদে) + বিলের মাথার ছাড় + ৳০.৫০-এর বেশি রাউন্ডিং।
+     *
+     * ⓘ [[assertDiscountApproved()]] থেকে হুবহু তোলা (৪ অক্টোবর ২০২৬), কারণ "নিশ্চিত করুন"-এর আগের সারাংশও
+     * ([[SalesPaperOverview]]) ঠিক এই অঙ্কটাই বলে — ⛔ ঐ পাহারা নিজে সইয়ের অনুরোধ লেখে, তাই সারাংশ তাকে ডাকতে পারে না,
+     * আর দ্বিতীয় একটা হিসাব লিখলে একদিন সারাংশ আর পাহারা আলাদা অঙ্ক বলত।
+     */
+    public function discountAwaitingSignature(SalesInvoice $invoice): string
+    {
+        $discount = (string) ($invoice->discount ?? '0');
+
+        /*
+         * ⛔ বিলের মাথার ছাড়ও একই সইয়ে — চূড়ান্ত অডিট (গ), ১ অক্টোবর ২০২৬।
+         *
+         * ⓘ `discount` কেবল সারির ছাড়; মাথার ছাড় আলাদা ঘরে (`bill_discount`) আর এখানে গোনা হত না। ফলে সারিতে
+         * ১,৫০০ ছাড় সই চাইত, অথচ একই ১,৫০০ বিলের নিচে লিখলে কারও সই ছাড়াই খাতায় উঠত — সই এড়াতে কেবল ঘর বদলানো।
+         * ⭐ এখন দুটো যোগ করে একই সীমা, একই ছক, একই সুইচ (ছক বন্ধ থাকলে আগের মতোই কিছু থামে না)।
+         */
+        $discount = bcadd($discount, (string) ($invoice->bill_discount ?? '0'), 4);
+
+        /*
+         * ⛔ রাউন্ডিং ৳০.৫০-এর বেশি হলে সেটাও ছাড় — মালিক, ১ অক্টোবর ২০২৬: *"রাউন্ডিং 0.5 mane 50 poisa porzonto
+         * accept"*। ⓘ দুই দিকেই (কমানো বা বাড়ানো) — বড় রাউন্ডিং দিয়ে ছাড় লুকানোর পথটাই বন্ধ।
+         */
+        $rounding = ltrim((string) ($invoice->rounding_amount ?? '0'), '-');
+
+        if (bccomp($rounding, '0.5', 4) > 0) {
+            $discount = bcadd($discount, $rounding, 4);
+        }
+
+        return $discount;
     }
 
     /**

@@ -22,9 +22,9 @@
                         </x-ui.button>
                     @endunless
 
-                    <form method="POST" action="{{ route('sales.invoice.confirm', $invoice) }}">
+                    <form method="POST" action="{{ route('sales.invoice.confirm', $invoice) }}" data-confirm-overview="{{ route('sales.invoice.overview', $invoice) }}">
                         @csrf
-                        <x-ui.button type="submit" tone="primary">
+                        <x-ui.button type="submit" tone="primary" data-overview-trigger>
                             {{ $held ? __('sales::action.finish_held') : __('sales::action.confirm') }}
                         </x-ui.button>
                     </form>
@@ -331,4 +331,6 @@
             @endif
         @endcan
     </div>
+    {{-- ⭐ নিশ্চিতের আগে সারাংশের পপ-আপ ([[confirm-overview.js]], ৪ অক্টোবর ২০২৬) — কাগজটা আগেই খসড়া, তাই "খসড়া রাখুন" নেই --}}
+    <x-ui.confirm-overview :draft="false" />
 </x-layouts.app>

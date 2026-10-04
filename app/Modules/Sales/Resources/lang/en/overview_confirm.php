@@ -27,4 +27,11 @@ return [
     'confirm' => 'Confirm',
     'draft' => 'Keep as draft',
     'back' => 'Go back',
+    'challan_title' => 'Challan :no: overview',
+    'challan_total' => 'Challan total',
+    'challan_signature' => 'This challan needs a signature. Confirming saves it as a draft awaiting signature; the goods do not leave the warehouse until it is signed.',
+    'invoice_title' => 'Invoice :no: overview',
+    'discount_amount' => 'Discount: :amount',
+    'vat_total' => 'VAT',
+    'discount_signed' => 'The discount is already signed.',
 ];

@@ -226,6 +226,8 @@ Route::middleware('auth')->prefix('sales')->group(function () {
         Route::get('/{challan}/edit', [DeliveryChallanController::class, 'edit'])->whereNumber('challan')->name('edit');
         Route::put('/{challan}', [DeliveryChallanController::class, 'update'])->whereNumber('challan')->name('update');
         Route::post('/{challan}/confirm', [DeliveryChallanController::class, 'confirm'])->whereNumber('challan')->name('confirm');
+        // ⭐ নিশ্চিতের আগে সারাংশ — পপ-আপের ভিতর ([[SalesPaperOverviewController]], ৪ অক্টোবর ২০২৬)
+        Route::post('/{challan}/overview', [\App\Modules\Sales\Http\Controllers\SalesPaperOverviewController::class, 'challan'])->whereNumber('challan')->name('overview');
         Route::post('/{challan}/cancel', [DeliveryChallanController::class, 'cancel'])->whereNumber('challan')->name('cancel');
     });
 
@@ -367,6 +369,8 @@ Route::middleware('auth')->prefix('sales')->group(function () {
         Route::get('/{invoice}/edit', [SalesInvoiceController::class, 'edit'])->whereNumber('invoice')->name('edit');
         Route::put('/{invoice}', [SalesInvoiceController::class, 'update'])->whereNumber('invoice')->name('update');
         Route::post('/{invoice}/confirm', [SalesInvoiceController::class, 'confirm'])->whereNumber('invoice')->name('confirm');
+        // ⭐ নিশ্চিতের আগে সারাংশ — পপ-আপের ভিতর ([[SalesPaperOverviewController]], ৪ অক্টোবর ২০২৬)
+        Route::post('/{invoice}/overview', [\App\Modules\Sales\Http\Controllers\SalesPaperOverviewController::class, 'invoice'])->whereNumber('invoice')->name('overview');
         Route::post('/{invoice}/cancel', [SalesInvoiceController::class, 'cancel'])->whereNumber('invoice')->name('cancel');
         // ⭐ বাতিল-ইনভয়েস — পাকা ইনভয়েসের পুরো উল্টো কাগজ, নিজের নম্বরে (মালিক, ৪ অক্টোবর ২০২৬)
         Route::post('/{invoice}/cancellation', [\App\Modules\Sales\Http\Controllers\SalesInvoiceCancellationController::class, 'store'])
