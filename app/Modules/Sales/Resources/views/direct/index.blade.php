@@ -182,9 +182,43 @@
         .ds-lot select:focus-visible + .ds-lot-face, .ds-lot:focus-within .ds-lot-face { outline: 2px solid var(--color-brand-500); outline-offset: 1px; }
         .ds-lot-tag { border-radius: var(--radius-field); background: var(--color-brand-600);
                       color: var(--color-brand-ink); padding: .05rem .4rem; font-size: .6rem; font-weight: 700; }
+        /* ⭐ নমুনা ৩-এর ৮টা বোতাম — হালকা জমিন, রঙিন কিনারা, নিচে শর্টকাট (রং থিমের টোকেন থেকে) */
+        .ds-b8 { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 2.6rem;
+                 border-radius: var(--radius-field); border: 1.5px solid var(--b8-ink); background: var(--b8-bg);
+                 color: var(--b8-ink); font-size: .68rem; font-weight: 800; line-height: 1.1; text-align: center; padding: .15rem .1rem; }
+        .ds-b8 small { font-size: .52rem; font-weight: 700; opacity: .8; margin-top: .1rem; }
+        .ds-b8.is-on { box-shadow: 0 0 0 2px var(--b8-ink); }
+        .ds-b8-success { --b8-bg: var(--color-badge-success-bg); --b8-ink: var(--color-badge-success-ink); }
+        .ds-b8-pending { --b8-bg: var(--color-badge-pending-bg); --b8-ink: var(--color-badge-pending-ink); }
+        .ds-b8-info { --b8-bg: var(--color-badge-info-bg); --b8-ink: var(--color-badge-info-ink); }
+        .ds-b8-draft { --b8-bg: var(--color-badge-draft-bg); --b8-ink: var(--color-badge-draft-ink); }
+        .ds-b8-inventory { --b8-bg: var(--color-badge-inventory-bg); --b8-ink: var(--color-badge-inventory-ink); }
+        .ds-b8-neutral { --b8-bg: var(--color-surface-app); --b8-ink: var(--color-ink); }
+        .ds-b8-danger { --b8-bg: var(--color-badge-danger-bg); --b8-ink: var(--color-badge-danger-ink); }
+        /* পপ-আপ */
+        .ds-dialog { width: 100%; max-width: 46rem; max-height: calc(100dvh - 3rem); overflow-y: auto; }
+        .ds-kbd { font-size: .55rem; font-weight: 700; color: var(--color-ink-muted); border: 1px solid var(--color-border);
+                  border-bottom-width: 2px; border-radius: .3rem; padding: 0 .35rem; }
+        .ds-seg { display: grid; grid-auto-columns: minmax(0, 1fr); grid-auto-flow: column; gap: .25rem;
+                  border: 1px solid var(--color-border); border-radius: var(--radius-field); padding: .15rem; background: var(--color-surface-app); }
+        .ds-seg > button { min-height: 2rem; border-radius: var(--radius-field); font-size: .68rem; font-weight: 700;
+                           color: var(--color-ink-muted); line-height: 1.1; padding: .1rem .3rem; }
+        .ds-seg > button.is-on { background: var(--color-surface-card); color: var(--color-brand-700);
+                                 box-shadow: inset 0 -2px 0 var(--color-brand-600), 0 1px 2px var(--color-border); }
+        .ds-rkv-plain { display: flex; justify-content: space-between; gap: .5rem; padding: .15rem 0; border-bottom: 1px dotted var(--color-border); }
+        /* ⭐ নিচের চারটা কার্ড — আগের নকশার মতো (মালিক, ৪ অক্টোবর ২০২৬) */
+        .ds-cards { display: grid; gap: .6rem; grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr)); }
+        .ds-card { display: block; text-align: start; border-radius: var(--radius-card); border: 1px solid var(--b8-ink);
+                   border-left: 6px solid var(--color-brand-gold); background: var(--b8-bg); padding: .4rem .7rem; min-width: 0; }
+        .ds-card-h { display: flex; justify-content: space-between; font-weight: 800; font-size: .72rem; color: var(--b8-ink); }
+        .ds-card-r { display: flex; justify-content: space-between; gap: .5rem; font-size: .65rem; color: var(--color-ink); margin-top: .15rem; }
+        .ds-card-r > span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        /* ⭐ বিলের মোট — ক্রেতার সাথে জোড়া, তবু আলাদা: উপরে সোনালি দাগ, মাথায় নিজের জমিন (মালিক) */
+        .ds-side > aside { border-top: 4px solid var(--color-brand-gold) !important; }
+        .ds-side > aside > div:first-child > div:first-child { background: var(--color-surface-app); }
         /* ⭐ পরিমাণের সারি — ঘরগুলো চেপে একে অন্যের উপর পড়ত (মালিকের ছবি, ৪ অক্টোবর ২০২৬) */
         @media (min-width: 1024px) {
-            .ds-qtyrow { grid-template-columns: 4.5rem 4.5rem 4.5rem 4.5rem minmax(5rem, 1fr) minmax(5.5rem, 1fr) auto !important; }
+            .ds-qtyrow { grid-template-columns: 4.5rem 4.5rem 4.5rem 4.5rem minmax(5rem, 1fr) minmax(5.5rem, 1fr) auto auto !important; }
         }
         .ds-qtyrow > * { min-width: 0; }
         /* ⓘ বিলের ঘর আর পণ্যের সারির মাঝের ফাঁক কম (মালিক) */
@@ -215,7 +249,8 @@
         }
     </style>
 
-    <form method="POST" action="{{ route('sales.direct.store') }}"
+    {{-- ⓘ `data-confirm-overview` — নিশ্চিতের আগে সারাংশের পপ-আপ (abos-2c) এই ফর্ম চেনে --}}
+    <form method="POST" action="{{ route('sales.direct.store') }}" data-confirm-overview
           x-data="directSale({
               catalogue: @js($products),
               margin: @js($margin),
@@ -244,6 +279,10 @@
                   'freeRatio' => __('sales::message.free_ratio'),
                   'lotExpiry' => __('sales::field.lot_expiry_short'),
                   'qtyFirst' => __('sales::validation.qty_first'),
+                  'invoiceIndex' => route('sales.invoice.index'),
+                  'modes' => ['take_now' => __('sales::field.mode_take_now'), 'pickup_later' => __('sales::field.mode_pickup_later'), 'send_later' => __('sales::field.mode_send_later')],
+                  'owners' => ['own' => __('sales::field.owner_own'), 'hired' => __('sales::field.owner_hired'), 'customer' => __('sales::field.owner_customer'), 'none' => __('sales::field.owner_none')],
+                  'fares' => ['us' => __('sales::field.fare_us'), 'us_add_to_bill' => __('sales::field.fare_us_add_to_bill'), 'customer' => __('sales::field.fare_customer'), 'none' => __('sales::field.fare_none')],
                   'lotOnShelf' => __('sales::field.lot_on_shelf'),
                   'lotFree' => __('sales::field.free_short'),
                   'openDraftBlocks' => __('sales::validation.open_draft_blocks_new_bill'),
@@ -314,10 +353,15 @@
           --}}
           @keydown.window.f1.prevent="helping = ! helping"
           @keydown.window.f2.prevent="openPanel('deposit')"
-          @keydown.window.f6.prevent="openChartEntry()"
-          @keydown.window.f7.prevent="customerPickerOpen = true"
-          @keydown.window.f8.prevent="openPicker()"
-          @keydown.window.f9.prevent="picked && addToCart()"
+          @keydown.window.f3.prevent="openPanel('price')"
+          @keydown.window.f4.prevent="openPanel('transport')"
+          @keydown.window.f6.prevent="openPanel('drafts')"
+          @keydown.window.f7.prevent="openPanel('delivery')"
+          @keydown.window.f8.prevent="openPanel('reprint')"
+          @keydown.window.f9.prevent="openPanel('return')"
+          @keydown.window.ctrl.x="cancelKey($event)"
+          @keydown.window.ctrl.b.prevent="openChartEntry()"
+          @keydown.window.ctrl.k.prevent="customerPickerOpen = true"
 
           {{--
               ── Enter দিয়েও কার্টে যোগ — মালিকের নির্দেশ (৩ সেপ্টেম্বর ২০২৬)
@@ -540,11 +584,17 @@
                 <dl class="space-y-1 text-sm">
                     @foreach ([
                         'F1' => 'sales::message.key_help',
-                        'F2' => 'sales::message.key_paid',
-                        'F6' => 'sales::message.key_chart',
-                        'F7' => 'sales::message.key_customer',
-                        'F8' => 'sales::message.key_search',
-                        'F9' => 'sales::message.key_add_line',
+                        'F2' => 'sales::field.btn_money',
+                        'F3' => 'sales::field.key_price',
+                        'F4' => 'sales::field.key_transport',
+                        'F6' => 'sales::field.key_drafts',
+                        'F7' => 'sales::field.key_delivery',
+                        'F8' => 'sales::field.key_reprint',
+                        'F9' => 'sales::field.key_return',
+                        'Ctrl+X' => 'sales::field.key_cancel',
+                        'Ctrl+B' => 'sales::field.key_many',
+                        'Ctrl+K' => 'sales::field.key_customer2',
+                        'Enter' => 'sales::field.key_enter',
                         'F10' => 'sales::message.key_checkout',
                         'Esc' => 'sales::message.key_close',
                     ] as $key => $label)
@@ -1025,6 +1075,34 @@
                 @include('sales::direct.partials.panels')
             </div>
 
+            {{-- ⭐ যা যোগ হলো — চারটা ছোট কার্ড, আগের নকশার মতো (মালিক, ৪ অক্টোবর ২০২৬); চাপলে নিজের পপ-আপ।
+                 ⓘ গাড়ি ও ভাড়ার লাইনটা এখানে, "ফেরত"-এর জায়গায় (মালিকের ছবি)। --}}
+            <div class="ds-cards" data-counter-cards>
+                @if ($show['deposit'])
+                    <button type="button" @click="openPanel('deposit')" class="ds-card ds-b8-success">
+                        <span class="ds-card-h"><span>{{ __('sales::field.card_money') }}</span><span class="num" x-text="deposits.length"></span></span>
+                        <span class="ds-card-r">
+                            <span x-text="deposits.length ? depositMethodName(deposits[deposits.length - 1].methodId) : @js(__('sales::field.card_nothing'))"></span>
+                            <b class="num" x-show="deposits.length > 0" x-text="'৳' + money(deposit)"></b>
+                        </span>
+                    </button>
+                @endif
+                <button type="button" @click="openPanel('delivery')" class="ds-card ds-b8-inventory">
+                    <span class="ds-card-h"><span>{{ __('sales::field.btn_delivery') }}</span><span>✓</span></span>
+                    <span class="ds-card-r"><span x-text="deliveryModeLabel"></span></span>
+                </button>
+                <button type="button" @click="openPanel('note')" class="ds-card ds-b8-info">
+                    <span class="ds-card-h"><span>{{ __('sales::field.note') }}</span><span x-show="noteText !== ''" x-cloak>✓</span></span>
+                    <span class="ds-card-r"><span x-text="noteText || @js(__('sales::field.card_nothing'))"></span></span>
+                </button>
+                @if ($show['transport'])
+                    <button type="button" @click="openPanel('transport')" class="ds-card ds-b8-pending" data-transport-line>
+                        <span class="ds-card-h"><span>{{ __('sales::field.btn_transport') }}</span><span x-show="transportLine !== ''" x-cloak>✓</span></span>
+                        <span class="ds-card-r"><span x-text="transportLine || @js(__('sales::field.card_nothing'))"></span></span>
+                    </button>
+                @endif
+            </div>
+
             {{--
                 ── নেওয়া জমাগুলোর তালিকা — চার্টের নিচে, বাম পাশে ──────────
 
@@ -1045,7 +1123,9 @@
                 নেই, আর একটা স্থায়ী খালি বাক্স রোজ চোখের সামনে থাকত।
             --}}
             @if ($show['deposit'])
-                <div x-show="deposits.length > 0" x-cloak
+                {{-- ⓘ ছকটা লুকানো — জমার আসল ঘরগুলো এখানেই থাকে বলে সার্ভারে যায়; চোখে পড়ে নিচের কার্ড আর
+                     "টাকা নিন" পপ-আপের তালিকা (মালিক, ৪ অক্টোবর ২০২৬) --}}
+                <div hidden data-deposit-fields
                      class="ds-gold rounded-(--radius-card) border border-(--color-border)
                             bg-(--color-surface-card) p-3">
                     <div class="mb-2 flex items-baseline justify-between gap-2">
@@ -1170,4 +1250,17 @@
 
     </form>
 
+    {{-- ⭐ বিল বাতিলের ফর্ম (af-এর `sales.direct.void`) — ⓘ পথ না থাকলে আঁকা হয় না, তখন বাতিল মানে পর্দা খালি ([[voidBill()]]) --}}
+    @if (Route::has('sales.direct.void'))
+        @push('detached-forms')
+            <form id="ds-void-form" method="POST" action="{{ route('sales.direct.void') }}" hidden data-no-peek>
+                @csrf
+                <input type="hidden" name="reason">
+                <input type="hidden" name="customer_id">
+                <input type="hidden" name="resume_invoice_id">
+                <input type="hidden" name="lines">
+                <input type="hidden" name="total">
+            </form>
+        @endpush
+    @endif
 </x-layouts.app>

@@ -52,8 +52,9 @@
 
                          ⓘ `--color-brand-700` — থিমের নিজের রয়্যাল ব্লু।
                          হার্ডকোড করলে নয়টা থিমের বাকিগুলোয় বেমানান হত। --}}
-                    <span class="num rounded-(--radius-field) bg-(--color-brand-50)
-                                 px-2 py-0.5 text-2xl font-bold text-(--color-brand-700)"
+                    {{-- ⭐ গাঢ় রঙে — মালিক, ৪ অক্টোবর ২০২৬ ("solid color diye hilite koro") --}}
+                    <span class="num rounded-(--radius-field) bg-(--color-brand-600)
+                                 px-3 py-1 text-2xl font-bold text-(--color-brand-ink) shadow-sm"
                           x-text="'৳' + money(grossTotal)"></span>
                 </div>
 
@@ -263,6 +264,13 @@
                         <input type="hidden" name="rounding_amount" :value="roundingValue">
                     </x-sales::panel-row>
                 @endif
+
+                {{-- ⭐ "আমরা দিয়ে বিলে যোগ" হলে ভাড়াটা বিলে আলাদা লাইনে (সার্ভারে `freight_charge`, af) --}}
+                <div x-show="freightOnBill > 0" x-cloak>
+                    <x-sales::panel-row :label="__('sales::field.fare_on_bill')">
+                        <span class="num" x-text="money(freightOnBill)"></span>
+                    </x-sales::panel-row>
+                </div>
 
                 <x-sales::panel-row :label="__('sales::field.net_payable')" strong>
                     <span class="num text-sm" x-text="'৳' + money(netPayable)"></span>
@@ -535,64 +543,53 @@
                                 leading-tight text-white transition-colors';
                 @endphp
 
-                <div class="grid grid-cols-3 gap-1">
-                    {{-- ১ · জমা যোগ --}}
+                {{-- ⭐ ৮টা বোতাম, চারটা করে দুই সারি — মালিকের অনুমোদিত নমুনা ৩ (৪ অক্টোবর ২০২৬, 63-এর মাধ্যমে)।
+                     ⓘ প্রতিটা চাপলে পপ-আপ ([[direct/partials/panels]])। "আরও", "সব মুছুন", "অগ্রিম জমা" বাদ;
+                     চার্ট এন্ট্রি এখন কার্ট-বোতামের পাশে "অনেক পণ্য", নোট ক্রেতার ঘরের নিচে "✎ মন্তব্য"। --}}
+                <div class="grid grid-cols-4 gap-1" data-counter-buttons>
                     @if ($show['deposit'])
-                        <button type="button" @click="openPanel('deposit')"
-                                :class="panel === 'deposit' ? 'ring-2 ring-(--color-ink)' : ''"
-                                class="{{ $btnBase }} bg-(--color-success) hover:bg-(--color-success-hover)">
-                            {{ __('sales::action.add_deposit') }}
-                        </button>
-                    @endif
-
-                    {{-- ২ · নোট যোগ --}}
-                    <button type="button" @click="openPanel('note')"
-                            :class="panel === 'note' ? 'ring-2 ring-(--color-ink)' : ''"
-                            class="{{ $btnBase }} bg-(--color-info) hover:opacity-90">
-                        {{ __('sales::action.add_note') }}
+                    <button type="button" @click="openPanel('deposit')" class="ds-b8 ds-b8-success"
+                            :class="panel === 'deposit' ? 'is-on' : ''">
+                        <span>{{ __('sales::field.btn_money') }}</span>
+                        <small>F2</small>
                     </button>
-
-                    {{-- ৩ · শিপমেন্ট --}}
-                    @if ($show['shipment'])
-                        <button type="button" @click="openPanel('shipment')"
-                                :class="panel === 'shipment' ? 'ring-2 ring-(--color-ink)' : ''"
-                                class="{{ $btnBase }} bg-(--color-brand-600) hover:bg-(--color-brand-700)">
-                            {{ __('sales::action.shipment') }}
-                        </button>
                     @endif
-
-                    {{-- ৪ · চার্ট — নিজের বোতাম আঁকে, তাই ক্লাসটা পাঠানো হয় --}}
-                    {{-- ⓘ `class="contents"` — মোড়কটা ছকে নিজের ঘর নেয় না,
-                         তাই ভেতরের বোতামটাই ঘরটা ভরে। F6 এই ref ধরেই
-                         বোতামটা চাপে। --}}
-                    <div x-ref="chartEntry" class="contents">
-                        <x-sales::bulk-sheet :products="$sheetProducts" :stock="$sheetStock"
-                                             :free-qty="$show['free_qty']"
-                                             button-class="{{ $btnBase }} bg-(--color-accent-pink) hover:bg-(--color-accent-pink-hover)" />
-                    </div>
-
-                    {{-- ৫ · পরিবহন --}}
                     @if ($show['transport'])
-                        <button type="button" @click="openPanel('transport')"
-                                :class="panel === 'transport' ? 'ring-2 ring-(--color-ink)' : ''"
-                                class="{{ $btnBase }} bg-(--color-warning) text-(--color-warning-ink)
-                                       hover:bg-(--color-warning-hover)">
-                            {{ __('sales::action.transportation') }}
-                            <span x-show="transportAdded" x-cloak class="ms-1" x-text="transportSummary"></span>
-                        </button>
+                    <button type="button" @click="openPanel('transport')" class="ds-b8 ds-b8-pending"
+                            :class="panel === 'transport' ? 'is-on' : ''">
+                        <span>{{ __('sales::field.btn_transport') }}</span>
+                        <small>F4</small>
+                    </button>
                     @endif
-
-                    {{--
-                        ৬ · সব মুছুন — লাল, আর ফেরানো যায় না।
-
-                        ⚠️ পাশের "এই লাইন" বাক্সে আরেকটা বোতামে ইংরেজিতে
-                        "Clear Data" লেখা, আর ওটা কেবল চলতি লাইনটা মোছে।
-                        এটা পুরো চালান মোছে — তাই পার্থক্যটা লেখা নয়,
-                        রঙ বলে।
-                    --}}
-                    <button type="button" @click="clearAll()"
-                            class="{{ $btnBase }} bg-(--color-danger) hover:bg-(--color-danger-hover)">
-                        {{ __('sales::action.clear_full') }}
+                    <button type="button" @click="openPanel('price')" class="ds-b8 ds-b8-info"
+                            :class="panel === 'price' ? 'is-on' : ''">
+                        <span>{{ __('sales::field.btn_price') }}</span>
+                        <small>F3</small>
+                    </button>
+                    <button type="button" @click="openPanel('return')" class="ds-b8 ds-b8-draft"
+                            :class="panel === 'return' ? 'is-on' : ''">
+                        <span>{{ __('sales::field.btn_return') }}</span>
+                        <small>F9</small>
+                    </button>
+                    <button type="button" @click="openPanel('delivery')" class="ds-b8 ds-b8-inventory"
+                            :class="panel === 'delivery' ? 'is-on' : ''">
+                        <span>{{ __('sales::field.btn_delivery') }}</span>
+                        <small><span x-text="'F7 · ' + deliveryModeLabel"></span></small>
+                    </button>
+                    <button type="button" @click="openPanel('drafts')" class="ds-b8 ds-b8-neutral"
+                            :class="panel === 'drafts' ? 'is-on' : ''">
+                        <span>{{ __('sales::field.btn_drafts') }}</span>
+                        <small>F6</small>
+                    </button>
+                    <button type="button" @click="openPanel('reprint')" class="ds-b8 ds-b8-neutral"
+                            :class="panel === 'reprint' ? 'is-on' : ''">
+                        <span>{{ __('sales::field.btn_reprint') }}</span>
+                        <small>F8</small>
+                    </button>
+                    <button type="button" @click="openPanel('cancel')" class="ds-b8 ds-b8-danger"
+                            :class="panel === 'cancel' ? 'is-on' : ''">
+                        <span>{{ __('sales::field.btn_cancel') }}</span>
+                        <small>Ctrl+X</small>
                     </button>
                 </div>
 
@@ -659,7 +656,7 @@
                         {{ __('sales::action.save_draft') }}
                     </x-ui.button>
 
-                    <x-ui.button type="submit" tone="primary" class="col-span-2 py-2" x-ref="confirm"
+                    <x-ui.button type="submit" tone="primary" class="col-span-2 py-2" x-ref="confirm" data-overview-trigger
                                  name="save_as_draft" value="0"
                                  ::disabled="! canConfirm">
                         {{ __('sales::action.confirm') }}

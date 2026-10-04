@@ -2127,3 +2127,115 @@ describe('পরিমাণ খালি বা লটের বেশি — �
         expect(c.beeps).toBe(0)
     })
 })
+
+/* ⭐ নমুনা ৩-এর বোতাম আর পপ-আপ — মালিক, ৪ অক্টোবর ২০২৬ (63-এর মাধ্যমে) */
+describe('কাউন্টারের ৮টা বোতাম: ভাড়া, মাল যাওয়া, দাম, বাতিল', () => {
+    const shop = () => {
+        const c = counter({
+            catalogue: [product({ id: 1, name: 'চাল', code: 'P-1', rate: '50', available: 9 }), product({ id: 2, name: 'ডাল', code: 'P-2', available: 9 })],
+            texts: {
+                modes: { take_now: 'এখনই নেবেন', pickup_later: 'পরে নিয়ে যাবেন', send_later: 'পরে পাঠাব' },
+                owners: { own: 'নিজেদের', hired: 'ভাড়া করা', customer: 'ক্রেতার নিজের', none: 'গাড়ি নেই' },
+                fares: { us: 'আমরা দেব', us_add_to_bill: 'আমরা দিয়ে বিলে যোগ', customer: 'ক্রেতা চালককে দেবেন', none: 'ভাড়া নেই' },
+            },
+        })
+        c.customerId = '5'
+        c.$refs = { search: { focus: () => {} }, qty: { focus: () => {} }, lot: { focus: () => {} }, priceSearch: { focus: () => {} } }
+        c.$root = { querySelector: () => null, querySelectorAll: () => [] }
+
+        return c
+    }
+
+    it('"আমরা দিয়ে বিলে যোগ" — ভাড়া বিলের মোটে ওঠে; "ক্রেতা চালককে" হলে ওঠে না', () => {
+        const c = shop()
+        c.lines = [{ key: 1, id: 1, qty: '2', rate: '50', freeQty: '', discountPercent: '', vatRate: 0, gifts: [] }]
+        const before = c.netPayable
+        c.transportCost = '1200'
+
+        c.farePaidBy = 'us_add_to_bill'
+        expect(c.netPayable).toBe(before + 1200)
+
+        c.farePaidBy = 'customer'
+        expect(c.netPayable).toBe(before)
+    })
+
+    it('গাড়ি ও ভাড়ার এক লাইন — কার গাড়ি · নম্বর · চালক · ভাড়া — কে দেবে', () => {
+        const c = shop()
+        expect(c.transportLine).toBe('')
+
+        c.vehicleOwner = 'hired'
+        c.vehicleNo = 'ঢাকা মেট্রো ন ১২'
+        c.driverName = 'রহিম'
+        c.transportCost = '1200'
+        c.farePaidBy = 'us_add_to_bill'
+
+        expect(c.transportLine).toBe('ভাড়া করা · ঢাকা মেট্রো ন ১২ · রহিম · ৳1,200.00 — আমরা দিয়ে বিলে যোগ')
+    })
+
+    it('ক্রেতার নিজের বা গাড়ি নেই — পুরনো "পরিবহন লাগবে না" ঘরে ১', () => {
+        const c = shop()
+        c.vehicleOwner = 'own'
+        expect(c.ownTransport).toBe('0')
+        c.vehicleOwner = 'customer'
+        expect(c.ownTransport).toBe('1')
+        c.vehicleOwner = 'none'
+        expect(c.ownTransport).toBe('1')
+    })
+
+    it('মাল কীভাবে নেবে — শুরুতে "এখনই নেবেন"', () => {
+        const c = shop()
+        expect(c.deliveryModeLabel).toBe('এখনই নেবেন')
+        c.deliveryMode = 'send_later'
+        expect(c.deliveryModeLabel).toBe('পরে পাঠাব')
+    })
+
+    it('দাম দেখুন — নাম বা কোডে খোঁজে, "বিলে তুলুন" পণ্যটা হাতে দেয় আর পপ-আপ বন্ধ', () => {
+        const c = shop()
+        c.openPanel('price')
+        c.priceTerm = 'p-2'
+        expect(c.priceMatches.map(p => p.id)).toEqual([2])
+
+        c.pricePick(c.priceMatches[0])
+        c.priceToBill()
+
+        expect(c.panel).toBe('')
+        expect(c.picked.id).toBe(2)
+    })
+
+    it('Ctrl+X — লেখার ঘরে আসল "কাটা", বাইরে বিল বাতিলের পপ-আপ', () => {
+        const c = shop()
+        let prevented = false
+
+        c.cancelKey({ target: { tagName: 'INPUT' }, preventDefault: () => { prevented = true } })
+        expect(c.panel).toBe('')
+        expect(prevented).toBe(false)
+
+        c.cancelKey({ target: { tagName: 'BODY' }, preventDefault: () => { prevented = true } })
+        expect(c.panel).toBe('cancel')
+        expect(prevented).toBe(true)
+    })
+
+    it('বিল বাতিল — কারণ ছাড়া কিছুই হয় না; সার্ভারের পথ না থাকলে কারণসহ পর্দা খালি', () => {
+        const c = shop()
+        c.lines = [{ key: 1, id: 1, qty: '2', rate: '50', freeQty: '', discountPercent: '', vatRate: 0, gifts: [] }]
+        c.panel = 'cancel'
+
+        c.voidBill()
+        expect(c.lines).toHaveLength(1)
+
+        c.voidReason = 'গ্রাহক কিনবেন না'
+        c.voidBill()
+        expect(c.lines).toHaveLength(0)
+        expect(c.panel).toBe('')
+    })
+
+    it('পপ-আপের নিচের "বন্ধ করুন" — গাড়ি আর বাতিলে নিজের বোতাম থাকে, তাই নেই', () => {
+        const c = shop()
+        c.panel = 'price'
+        expect(c.panelHasFooter).toBe(true)
+        c.panel = 'transport'
+        expect(c.panelHasFooter).toBe(false)
+        c.panel = 'cancel'
+        expect(c.panelHasFooter).toBe(false)
+    })
+})

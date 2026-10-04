@@ -302,6 +302,17 @@ export default function directSale({
          */
         drivers: drivers ?? [],
         transportCost: '',
+
+        /* ⭐ নমুনা ৩-এর পপ-আপের মান (মালিক, ৪ অক্টোবর ২০২৬) — সার্ভারের নাম af-এর সাথে মেলানো */
+        deliveryMode: '',
+        vehicleOwner: '',
+        farePaidBy: '',
+        vehicleNo: '',
+        noteText: '',
+        priceTerm: '',
+        priceProduct: null,
+        reprintNo: '',
+        voidReason: '',
         transportAdded: false,
         driverName: '',
         driverPhone: '',
@@ -817,12 +828,126 @@ export default function directSale({
         openPanel(name) {
             this.panel = this.panel === name ? '' : name;
 
-            if (! this.panel) return;
+            /* ⓘ এখন পপ-আপ — পাতা সরাতে হয় না; দাম দেখায় কার্সর সরাসরি খোঁজার ঘরে */
+            if (this.panel === 'price') {
+                this.priceProduct = null;
+                this.$nextTick(() => this.$refs.priceSearch?.focus?.());
+            }
+        },
 
-            this.$nextTick(() => this.$refs.actionPanel?.scrollIntoView({
-                behavior: 'smooth',
-                block: 'nearest',
-            }));
+        closePanel() {
+            this.panel = '';
+        },
+
+        /* ⓘ CSP-এর Alpine ভিতরে `encodeURIComponent`, `.includes()` চেনে না — তাই হিসাবগুলো এখানে */
+        get reprintUrl() {
+            return String(texts.invoiceIndex ?? '') + '?q=' + encodeURIComponent(String(this.reprintNo ?? ''));
+        },
+
+        get panelHasFooter() {
+            return this.panel !== 'transport' && this.panel !== 'cancel';
+        },
+
+        /** ⓘ পুরনো "পরিবহন লাগবে না" — গাড়ি ক্রেতার নিজের বা নেই হলে '1' (af) */
+        get ownTransport() {
+            return this.vehicleOwner === 'customer' || this.vehicleOwner === 'none' ? '1' : '0';
+        },
+
+        /** ⭐ "আমরা দিয়ে বিলে যোগ" হলে ভাড়া বিলে ওঠে — ছাড়ের পরে, ছাড় তাতে খাটে না (af-এর `freight_charge`) */
+        get freightOnBill() {
+            return this.farePaidBy === 'us_add_to_bill' ? (Number(this.transportCost) || 0) : 0;
+        },
+
+        get deliveryModeLabel() {
+            return String((texts.modes ?? {})[this.deliveryMode || 'take_now'] ?? '');
+        },
+
+        /** ⭐ গাড়ি ও ভাড়ার এক লাইন — নিচের কার্ডে (মালিকের ছবি): কার গাড়ি · নম্বর · চালক · ভাড়া — কে দেবে */
+        get transportLine() {
+            if (! this.vehicleOwner && ! this.transportAdded) return '';
+
+            const parts = [];
+
+            if (this.vehicleOwner) parts.push(String((texts.owners ?? {})[this.vehicleOwner] ?? ''));
+            if (this.vehicleNo) parts.push(this.vehicleNo);
+            if (this.driverName) parts.push(this.driverName);
+
+            const fare = Number(this.transportCost) || 0;
+            let line = parts.filter(Boolean).join(' · ');
+
+            if (fare > 0) line += (line ? ' · ' : '') + '৳' + this.money(fare);
+            if (this.farePaidBy) line += ' — ' + String((texts.fares ?? {})[this.farePaidBy] ?? '');
+
+            return line;
+        },
+
+        /** দাম দেখুন — নাম বা কোডে, ছয়টা পর্যন্ত */
+        get priceMatches() {
+            const t = String(this.priceTerm ?? '').trim().toLowerCase();
+
+            if (t === '') return [];
+
+            return this.catalogue
+                .filter(p => String(p.name ?? '').toLowerCase().includes(t) || String(p.code ?? '').toLowerCase().includes(t))
+                .slice(0, 6);
+        },
+
+        get priceLots() {
+            return this.priceProduct ? (lotBook[String(this.priceProduct.id)] ?? []) : [];
+        },
+
+        pricePick(p) {
+            this.priceProduct = p;
+        },
+
+        /** "বিলে তুলুন" — পপ-আপ বন্ধ, পণ্যটা হাতে (লট, তারপর পরিমাণ — আগের মতোই) */
+        priceToBill() {
+            const p = this.priceProduct;
+
+            if (! p) return;
+
+            this.panel = '';
+            this.priceProduct = null;
+            this.pick(p);
+        },
+
+        openDraftItem(d) {
+            window.location.assign(d.url || (pendingUrl + '?draft=' + encodeURIComponent(String(d.id))));
+        },
+
+        /** Ctrl+X — লেখার ঘরে থাকলে আসল "কাটা" চলে, বাইরে থাকলে বিল বাতিলের পপ-আপ */
+        cancelKey(event) {
+            const tag = String(event?.target?.tagName ?? '');
+
+            if (['INPUT', 'TEXTAREA', 'SELECT'].includes(tag)) return;
+
+            event?.preventDefault?.();
+            this.openPanel('cancel');
+        },
+
+        /**
+         * ⭐ বিল বাতিল — কারণ লাগবেই (মালিক, নমুনা ৩)। ⓘ সার্ভারের পথ থাকলে (af-এর `sales.direct.void`) সেখানে যায়,
+         * অডিটে কারণসহ; রাখা খসড়া হলে সেটাই বাতিল। পথ না থাকলে পর্দা খালি।
+         */
+        voidBill() {
+            if (this.voidReason === '') return;
+
+            const form = typeof document !== 'undefined' ? document.getElementById('ds-void-form') : null;
+
+            if (! form) {
+                this.clearAll();
+                this.voidReason = '';
+                this.panel = '';
+
+                return;
+            }
+
+            form.elements.reason.value = this.voidReason;
+            form.elements.customer_id.value = this.customerId || '';
+            form.elements.resume_invoice_id.value = this.resumeId || '';
+            form.elements.lines.value = String(this.lines.length);
+            form.elements.total.value = String(this.netPayable);
+            form.submit();
         },
 
         get canConfirm() {
@@ -2074,6 +2199,7 @@ export default function directSale({
             return this.grossTotal
                 - this.discountValue
                 + this.expenseValue
+                + this.freightOnBill
                 + this.roundingValue;
         },
 

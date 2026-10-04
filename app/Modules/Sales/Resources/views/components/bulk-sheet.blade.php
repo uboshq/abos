@@ -36,6 +36,8 @@
      */
     'buttonClass' => 'rounded-(--radius-field) border border-(--color-border) px-3 py-1.5 text-sm
                       transition-colors hover:bg-(--color-surface-hover)',
+    // ⓘ বোতামের লেখা — কাউন্টারে "অনেক পণ্য" (মালিক, ৪ অক্টোবর ২০২৬); না দিলে আগের লেখা
+    'label' => null,
 ])
 
 @php
@@ -75,7 +77,7 @@
                })">
 
     <button type="button" @click="open = true" class="{{ $buttonClass }}">
-        {{ __('sales::bulk.open') }}
+        {{ $label ?? __('sales::bulk.open') }}
     </button>
 
     {{-- পুরো পর্দা জুড়ে, কারণ শীটটাই তখন কাজ — আর ছোট বাক্সে চারশো সারি

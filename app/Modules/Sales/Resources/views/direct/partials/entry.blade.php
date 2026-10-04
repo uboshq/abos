@@ -606,6 +606,14 @@
                                 <span x-show="editingKey !== null" x-cloak data-update-line>{{ __('sales::action.update_line') }}</span>
                             </button>
 
+                            {{-- ⭐ "অনেক পণ্য" (আগের চার্ট এন্ট্রি) — কার্ট-বোতামের ঠিক পরে (মালিক, ৪ অক্টোবর ২০২৬)। Ctrl+B --}}
+                            <div x-ref="chartEntry" class="self-end">
+                                <x-sales::bulk-sheet :products="$sheetProducts" :stock="$sheetStock"
+                                                     :free-qty="$show['free_qty']"
+                                                     :label="__('sales::field.btn_many')"
+                                                     button-class="h-(--spacing-field-dense) whitespace-nowrap rounded-(--radius-field) border border-(--color-brand-500) bg-(--color-surface-app) px-2 text-xs font-semibold text-(--color-brand-700)" />
+                            </div>
+
                         </div>
                     </div>
 
