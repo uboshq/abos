@@ -50,4 +50,5 @@ return [
     // ⭐ উল্টো কাগজ আর বাতিল-ইনভয়েস (মালিকের সংস্করণ ২, ৪ অক্টোবর ২০২৬)
     'reversed' => 'Reversed by a reversal paper',
     'cancelled_by_cxl' => 'Reversed by a cancellation invoice',
+    'counter_bill_voided' => 'Counter bill voided',
 ];

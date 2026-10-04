@@ -140,6 +140,8 @@ Route::middleware('auth')->prefix('sales')->group(function () {
          * নিজের (নিয়ামকের `can:sales.challan.create`) — খসড়াটা ঐ কাউন্টারেরই।
          */
         Route::post('/drafts/{invoice}/discard', [DirectSaleController::class, 'discard'])->name('discard');
+        // ⭐ বিল বাতিল (Ctrl+X) — পাকা হওয়ার আগে, কারণসহ, অডিটে (মালিক, ৪ অক্টোবর ২০২৬)
+        Route::post('/void', [DirectSaleController::class, 'void'])->name('void');
 
         /*
          * ⭐ রাখা খসড়ার তালিকা — মালিকের নির্দেশ, ২৮ সেপ্টেম্বর ২০২৬: *"সরাসরি

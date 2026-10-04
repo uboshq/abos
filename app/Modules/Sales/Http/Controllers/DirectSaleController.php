@@ -947,6 +947,47 @@ class DirectSaleController extends Controller implements HasMiddleware
      * যাতে কাউন্টারের Pending ড্রপডাউন আর এই তালিকা কখনো আলাদা কথা না বলে।
      * ⚠️ মডেলের স্কোপ কোম্পানি ও শাখা বসায়, তাই অন্যের খসড়া আসে না।
      */
+    /**
+     * ⭐ বিল বাতিল (Ctrl+X) — পাকা হওয়ার আগে, কারণ বাধ্যতামূলক, অডিটে (মালিক, ৪ অক্টোবর ২০২৬; "সব মুছুন"-এর জায়গায়)।
+     *
+     * ⓘ দুই অবস্থা: রাখা খসড়া খোলা থাকলে সেটাই বাতিল ([[DirectSaleService::discardParked()]], কারণসহ, বিলের
+     * নিজের অডিটে); আর না রাখা কার্ট — সার্ভারে কোনো কাগজ নেই, তাই ঘটনাটা ক্রেতার অডিটে বসে: কারণ, কয়টা সারি,
+     * কত টাকা। ⛔ কারণ ছাড়া নয় — মালিকের কথায়, কাউন্টারে বিল মুছে দেওয়া নীরবে হলে চোখের আড়ালে বিক্রি মুছত।
+     * ⓘ পাকা বিলে এই দরজা কিছুই করে না — পাকা বিল ভুল হলে বাতিল-ইনভয়েস ([[SalesInvoiceCancellationService]])।
+     */
+    public function void(Request $request): RedirectResponse|\Illuminate\Http\JsonResponse
+    {
+        abort_unless($request->user()?->can('sales.invoice.create'), 403);
+
+        $data = $request->validate([
+            'reason' => ['required', 'string', 'max:500'],
+            'customer_id' => ['nullable', 'integer'],
+            'resume_invoice_id' => ['nullable', 'integer'],
+            'lines' => ['nullable', 'integer', 'min:0'],
+            'total' => ['nullable', 'numeric'],
+        ]);
+
+        if (filled($data['resume_invoice_id'] ?? null)) {
+            $this->sales->discardParked(SalesInvoice::query()->findOrFail((int) $data['resume_invoice_id']), $data['reason']);
+        } else {
+            $customer = \App\Modules\Customer\Models\Customer::query()
+                ->find((int) ($data['customer_id'] ?? 0) ?: (int) $this->settings->get('sales.walkin_customer_id', 0));
+
+            if ($customer !== null) {
+                app(\App\Core\Engines\Audit\AuditEngine::class)->record($customer, 'counter_bill_voided', [
+                    'lines' => [(int) ($data['lines'] ?? 0), 0],
+                    'total' => [(string) ($data['total'] ?? '0'), '0'],
+                ], $data['reason']);
+            }
+        }
+
+        if ($request->expectsJson()) {
+            return response()->json(['data' => ['voided' => true]]);
+        }
+
+        return redirect()->route('sales.direct.create')->with('saved', __('sales::message.bill_voided'));
+    }
+
     public function drafts(Request $request): View
     {
         $q = trim((string) $request->query('q', ''));
