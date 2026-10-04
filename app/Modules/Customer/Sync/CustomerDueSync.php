@@ -6,6 +6,8 @@ namespace App\Modules\Customer\Sync;
 
 use App\Core\Contracts\SyncsToDevices;
 use App\Core\Engines\Sync\PushedChange;
+use App\Core\Engines\Sync\SyncBatch;
+use App\Core\Engines\Sync\SyncPosition;
 use App\Core\Engines\Sync\SyncRecord;
 use App\Core\Engines\Sync\SyncRejection;
 use App\Models\LedgerEntry;
@@ -59,7 +61,7 @@ final class CustomerDueSync implements SyncsToDevices
     /**
      * @return list<SyncRecord>
      */
-    public function pull(User $user, ?Carbon $since, int $limit): array
+    public function pull(User $user, ?Carbon $since, int $limit, ?SyncPosition $after = null): SyncBatch
     {
         /*
          * এই গ্রাহকের খাতায় শেষ কবে কিছু নড়েছে।
@@ -101,7 +103,14 @@ final class CustomerDueSync implements SyncsToDevices
             });
         }
 
-        return $query->get()->map(function (Customer $customer): SyncRecord {
+        // ⭐ পরের পাতা — (বকেয়া শেষ নড়া, গ্রাহক) জোড়ার পর থেকে, একই উপ-প্রশ্ন দিয়ে ([[SyncPosition]], গ১৮)।
+        // ⓘ খাতায় কিছু নেই এমন গ্রাহকের সময় NULL — সাজানোয় সবার আগে, আর [[SyncPosition::after()]] ঠিক তাই ধরে।
+        $after?->after($query, $lastMoved->toSql(), 'customers.id', $lastMoved->getBindings());
+
+        $rows = $query->get();
+        $last = $rows->last();
+
+        return SyncBatch::of($rows->map(function (Customer $customer): SyncRecord {
             $outstanding = $customer->outstanding();
 
             return new SyncRecord(
@@ -130,7 +139,7 @@ final class CustomerDueSync implements SyncsToDevices
                 ],
                 updatedAt: $this->movedAt($customer),
             );
-        })->all();
+        })->all(), $rows->count(), $limit, $last === null ? null : SyncPosition::of($last->due_moved_at, $last->id));
     }
 
     /**

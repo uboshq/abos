@@ -332,10 +332,27 @@ final class SyncService
         SyncState::query()->withoutGlobalScopes()->where('device_id', $deviceId)->delete();
     }
 
-    public function pull(User $user, string $deviceId, string $module, int $limit): array
+    /**
+     * ── ⭐ পাতা ধরে — Inventory অডিট গ১৮, ৪ অক্টোবর ২০২৬ ────────────────────
+     * আগে পরের পাতা চাওয়ার উপায় ছিল না: প্রতি ডাকে জলচিহ্নের পরের একই প্রথম `$limit` সারি, আর "আরও আছে" —
+     * ১,০০০-এর বেশি পণ্য বা গ্রাহকের দোকানে বাকিগুলো ফোনে কোনোদিন আসত না, আর জলচিহ্ন কোনোদিন লেখা হত না।
+     * ⭐ এখন প্রতিটা উত্তরে `cursor` — প্রতিটা হ্যান্ডলারের (সময়, id) অবস্থান ([[SyncPosition]]), বা "শেষ"।
+     *   · নতুন অ্যাপ সেটা ফেরত পাঠায় (`$paged`): সার্ভার কিছু মনে রাখে না, একই কার্সরে একই পাতা — হারানো উত্তরের পরে
+     *     আবার চাওয়া নিরাপদ, ঠিক আগের মতো।
+     *   · পুরনো অ্যাপ (০.৪.১০ পর্যন্ত) কার্সর চেনে না: কার্সরটা এই যন্ত্রের `sync_states.page_cursor`-এ থাকে, আর প্রতি
+     *     টানায় পরের পাতা আসে। ⚠️ দাম: একটা উত্তর হারালে ঐ পাতাটা এই পালায় আর আসে না (সারিগুলো পরের বদলে আসে) —
+     *     নতুন অ্যাপে এই দাম নেই।
+     * ⓘ জলচিহ্ন (`since`) এক পালা জুড়ে নড়ে না — কেবল পুরোটা পেলে ([[recordSuccessfulPull()]]), আর তখন কার্সর মোছে।
+     *
+     * @return array{records: list<array<string, mixed>>, hasMore: bool, unreadable: list<string>, cursor: ?string}
+     */
+    public function pull(User $user, string $deviceId, string $module, int $limit, ?string $cursor = null, bool $paged = false): array
     {
         $since = $this->cursorFor($deviceId, $module);
         $handlers = $this->registry->forModule($module);
+
+        $positions = $this->decodeCursor($paged ? $cursor : $this->storedPageCursor($deviceId, $module));
+        $next = [];
 
         $records = [];
         $unreadable = [];
@@ -365,11 +382,24 @@ final class SyncService
                 continue;
             }
 
+            $type = $handler::entityType();
+
+            // ⓘ এই পালায় এই ধরন শেষ — আবার টানলে একই সারি দ্বিতীয়বার আসত
+            if (($positions[$type] ?? null) === self::DONE) {
+                $next[$type] = self::DONE;
+
+                continue;
+            }
+
+            $after = SyncPosition::fromArray($positions[$type] ?? null);
+
             try {
-                $batch = $handler->pull($user, $since, $limit);
+                $batch = $handler->pull($user, $since, $limit, $after);
             } catch (Throwable $failure) {
                 report($failure);
-                $unreadable[] = $handler::entityType();
+                $unreadable[] = $type;
+                // ⓘ পড়া গেল না — অবস্থান যেখানে ছিল সেখানেই, পরের টানায় একই পাতা আবার
+                $next[$type] = $positions[$type] ?? null;
 
                 continue;
             }
@@ -382,20 +412,82 @@ final class SyncService
              * "আর নেই" ভুল করে বললে ওয়াটারমার্ক এগিয়ে যেত আর বাকি
              * রেকর্ডগুলো চিরতরে বাদ পড়ত।
              */
-            if (count($batch) >= $limit) {
+            if ($batch->full && $batch->last !== null) {
                 $hasMore = true;
+                $next[$type] = $batch->last->toArray();
+            } else {
+                $next[$type] = self::DONE;
             }
 
-            foreach ($batch as $record) {
+            foreach ($batch->records as $record) {
                 $records[] = $record->toArray();
             }
+        }
+
+        $nextCursor = $hasMore || $unreadable !== [] ? $this->encodeCursor($next) : null;
+
+        if (! $paged) {
+            $this->storePageCursor($deviceId, $module, $nextCursor);
         }
 
         return [
             'records' => $records,
             'hasMore' => $hasMore,
             'unreadable' => $unreadable,
+            'cursor' => $nextCursor,
         ];
+    }
+
+    private const DONE = 'done';
+
+    /** @param  array<string, mixed>  $positions */
+    private function encodeCursor(array $positions): string
+    {
+        return rtrim(strtr(base64_encode(json_encode(['v' => 1, 'p' => $positions], JSON_THROW_ON_ERROR)), '+/', '-_'), '=');
+    }
+
+    /**
+     * ⓘ অচেনা বা ভাঙা কার্সর মানে গোড়া থেকে — ভুল কার্সরে সারি বাদ পড়ার চেয়ে দ্বিতীয়বার আসা ভালো (ফোনের ক্যাশ
+     * `entityType:entityId` ধরে বসায়, দ্বিতীয়বার এলে একই ঘরে একই মান)।
+     *
+     * @return array<string, mixed>
+     */
+    private function decodeCursor(?string $cursor): array
+    {
+        if ($cursor === null || $cursor === '') {
+            return [];
+        }
+
+        $json = base64_decode(strtr($cursor, '-_', '+/'), true);
+        $data = $json === false ? null : json_decode($json, true);
+
+        return is_array($data) && ($data['v'] ?? null) === 1 && is_array($data['p'] ?? null) ? $data['p'] : [];
+    }
+
+    private function storedPageCursor(string $deviceId, string $module): ?string
+    {
+        return SyncState::query()->where('device_id', $deviceId)->where('module', $module)->value('page_cursor');
+    }
+
+    private function storePageCursor(string $deviceId, string $module, ?string $cursor): void
+    {
+        $state = SyncState::query()->where('device_id', $deviceId)->where('module', $module)->first();
+
+        if ($state === null) {
+            if ($cursor === null) {
+                return;
+            }
+
+            SyncState::query()->create([
+                'company_id' => CompanyContext::id(), 'device_id' => $deviceId, 'module' => $module, 'page_cursor' => $cursor,
+            ]);
+
+            return;
+        }
+
+        if ($state->page_cursor !== $cursor) {
+            $state->forceFill(['page_cursor' => $cursor])->save();
+        }
     }
 
     /**
@@ -414,7 +506,8 @@ final class SyncService
     {
         SyncState::query()->updateOrCreate(
             ['device_id' => $deviceId, 'module' => $module],
-            ['company_id' => CompanyContext::id(), 'last_synced_at' => now()],
+            // ⓘ পালা শেষ — কার্সরও শেষ ([[pull()]], গ১৮)
+            ['company_id' => CompanyContext::id(), 'last_synced_at' => now(), 'page_cursor' => null],
         );
     }
 

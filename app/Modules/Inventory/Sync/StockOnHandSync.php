@@ -6,6 +6,8 @@ namespace App\Modules\Inventory\Sync;
 
 use App\Core\Contracts\SyncsToDevices;
 use App\Core\Engines\Sync\PushedChange;
+use App\Core\Engines\Sync\SyncBatch;
+use App\Core\Engines\Sync\SyncPosition;
 use App\Core\Engines\Sync\SyncRecord;
 use App\Core\Engines\Sync\SyncRejection;
 use App\Models\User;
@@ -59,7 +61,7 @@ final class StockOnHandSync implements SyncsToDevices
     /**
      * @return list<SyncRecord>
      */
-    public function pull(User $user, ?Carbon $since, int $limit): array
+    public function pull(User $user, ?Carbon $since, int $limit, ?SyncPosition $after = null): SyncBatch
     {
         /*
          * পণ্য ধরে যোগফল, আর সেই সাথে শেষ নড়াচড়ার সময়।
@@ -104,13 +106,21 @@ final class StockOnHandSync implements SyncsToDevices
                 MAX(created_at) as moved_at
             ')
             ->when($since !== null, fn ($q) => $q->havingRaw('MAX(created_at) > ?', [$since]))
+            /*
+             * ⭐ পরের পাতা — (শেষ নড়া, পণ্য) জোড়ার পর থেকে ([[SyncPosition]], গ১৮)। ⓘ দল-বাঁধা প্রশ্ন, তাই শর্তটা HAVING-এ,
+             * [[SyncPosition::after()]]-এর একই যুক্তি — MAX(created_at) কখনো NULL নয় (দলে অন্তত একটা চলাচল থাকে)।
+             */
+            ->when($after !== null && $after->at !== null, fn ($q) => $q->havingRaw(
+                '(MAX(created_at) > ? OR (MAX(created_at) = ? AND product_id > ?))',
+                [$after->at, $after->at, $after->id],
+            ))
             ->orderByRaw('MAX(created_at)')
             ->orderBy('product_id')
             ->limit($limit)
             ->get();
 
         if ($rows->isEmpty()) {
-            return [];
+            return SyncBatch::empty();
         }
 
         /*
@@ -166,7 +176,10 @@ final class StockOnHandSync implements SyncsToDevices
             );
         }
 
-        return $records;
+        // ⚠️ "ভরা" আর শেষ অবস্থান **সারি** থেকে — মুছে ফেলা পণ্যের সারি উপরে বাদ পড়ে, রেকর্ড গুনলে পাতা কম দেখাত ([[SyncBatch]])
+        $last = $rows->last();
+
+        return SyncBatch::of($records, $rows->count(), $limit, SyncPosition::of((string) $last->moved_at, (int) $last->product_id));
     }
 
     public function acceptsPush(): bool

@@ -5,7 +5,8 @@ declare(strict_types=1);
 namespace App\Core\Contracts;
 
 use App\Core\Engines\Sync\PushedChange;
-use App\Core\Engines\Sync\SyncRecord;
+use App\Core\Engines\Sync\SyncBatch;
+use App\Core\Engines\Sync\SyncPosition;
 use App\Models\User;
 use Illuminate\Support\Carbon;
 
@@ -87,13 +88,12 @@ interface SyncsToDevices
      *
      * `$since` null মানে এই ডিভাইস কখনো কিছু পায়নি — পুরোটা যাবে।
      *
-     * ⚠️ **`$limit` মানার দায়িত্ব হ্যান্ডলারের**, আর ফেরত তালিকাটা
-     * `updatedAt` ধরে সাজানো থাকতে হবে। না সাজালে পাতা-ভাগ অর্থহীন:
-     * পরের ডাকে একই রেকর্ড আবার আসত আর অন্যগুলো কোনোদিন আসত না।
-     *
-     * @return list<SyncRecord>
+     * ⚠️ **`$limit` মানার দায়িত্ব হ্যান্ডলারের**, আর তালিকাটা (সময়, id) ধরে সাজানো থাকতে হবে — সেই একই জোড়া
+     * দিয়ে `$after`-এর পরের সারি ([[SyncPosition::after()]]) আর পাতার শেষ অবস্থান ([[SyncBatch::of()]])।
+     * ⛔ গ১৮ (৪ অক্টোবর ২০২৬): আগে পরের পাতা চাওয়ার উপায় ছিল না — প্রতি ডাকে একই প্রথম `$limit` সারি ফিরত, আর
+     * বাকিগুলো ফোনে কোনোদিন আসত না।
      */
-    public function pull(User $user, ?Carbon $since, int $limit): array;
+    public function pull(User $user, ?Carbon $since, int $limit, ?SyncPosition $after = null): SyncBatch;
 
     /**
      * এই ধরনটা ফোন থেকে আসতে পারে কি না।

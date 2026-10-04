@@ -146,7 +146,14 @@ class SyncController extends Controller
          */
         $limit = max(1, min(1000, (int) $request->query('limit', '500')));
 
-        return response()->json($this->sync->pull($user, $deviceId, $module, $limit));
+        /*
+         * ⭐ পরের পাতা — গ১৮ (৪ অক্টোবর ২০২৬)। নতুন অ্যাপ `cursor` পাঠায় (প্রথম পাতায় খালি) — সার্ভার কিছু মনে রাখে না;
+         * পুরনো অ্যাপ ঘরটা পাঠায়ই না, তখন কার্সর এই যন্ত্রের `sync_states`-এ ([[SyncService::pull()]])।
+         */
+        $paged = $request->query->has('cursor');
+        $cursor = $paged ? (string) $request->query('cursor', '') : null;
+
+        return response()->json($this->sync->pull($user, $deviceId, $module, $limit, $cursor, $paged));
     }
 
     /**

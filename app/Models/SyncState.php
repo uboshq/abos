@@ -45,6 +45,8 @@ class SyncState extends Model
 
     protected $fillable = [
         'company_id', 'device_id', 'module', 'last_synced_at',
+        // ⭐ পুরনো অ্যাপের পাতার কার্সর — [[SyncService::pull()]], গ১৮ (৪ অক্টোবর ২০২৬)
+        'page_cursor',
     ];
 
     protected function casts(): array

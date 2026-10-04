@@ -6,6 +6,8 @@ namespace App\Modules\Inventory\Sync;
 
 use App\Core\Contracts\SyncsToDevices;
 use App\Core\Engines\Sync\PushedChange;
+use App\Core\Engines\Sync\SyncBatch;
+use App\Core\Engines\Sync\SyncPosition;
 use App\Core\Engines\Sync\SyncRecord;
 use App\Core\Engines\Sync\SyncRejection;
 use App\Core\Security\FieldSecurity;
@@ -62,7 +64,7 @@ final class ProductSync implements SyncsToDevices
     /**
      * @return list<SyncRecord>
      */
-    public function pull(User $user, ?Carbon $since, int $limit): array
+    public function pull(User $user, ?Carbon $since, int $limit, ?SyncPosition $after = null): SyncBatch
     {
         /*
          * ⭐ প্যাকগুলোও একসাথে — ধাপ ৭, ২২ সেপ্টেম্বর ২০২৬।
@@ -89,7 +91,12 @@ final class ProductSync implements SyncsToDevices
          */
         $showsCost = FieldSecurity::visible(Product::class, 'purchase_price');
 
-        return $query->get()->map(fn (Product $product) => new SyncRecord(
+        // ⭐ পরের পাতা — (সময়, id) জোড়ার পর থেকে ([[SyncPosition]], গ১৮)
+        $after?->after($query, $query->qualifyColumn('updated_at'), $query->qualifyColumn('id'));
+
+        $rows = $query->get();
+
+        return SyncBatch::of($rows->map(fn (Product $product) => new SyncRecord(
             entityType: self::entityType(),
             entityId: (string) $product->public_id,
             payload: array_filter([
@@ -135,7 +142,7 @@ final class ProductSync implements SyncsToDevices
                 'isActive' => (bool) $product->is_active,
             ], fn ($value) => $value !== null),
             updatedAt: $product->updated_at ?? $product->created_at ?? now(),
-        ))->all();
+        ))->all(), $rows->count(), $limit, $rows->isEmpty() ? null : SyncPosition::of($rows->last()->updated_at, $rows->last()->id));
     }
 
     /**

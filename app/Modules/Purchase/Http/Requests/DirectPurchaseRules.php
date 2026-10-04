@@ -98,7 +98,7 @@ final class DirectPurchaseRules
             'paid_now' => ['nullable', 'numeric', 'min:0'],
             'paid_from_account_id' => ['nullable', 'integer',
                 Rule::exists('accounts', 'id')->where('company_id', $companyId),
-                Rule::requiredIf(fn () => (float) ($input['paid_now'] ?? 0) > 0)],
+                Rule::requiredIf(fn () => self::moreThanZero($input['paid_now'] ?? null))],
 
             /*
              * ── একাধিক জমা ───────────────────────────────────────────
@@ -130,7 +130,7 @@ final class DirectPurchaseRules
              */
             'carrier_id' => ['nullable', 'integer',
                 Rule::exists('suppliers', 'id')->where('company_id', $companyId),
-                Rule::requiredIf(fn () => (float) ($input['transport_cost'] ?? 0) > 0
+                Rule::requiredIf(fn () => self::moreThanZero($input['transport_cost'] ?? null)
                     && blank($input['carrier_name'] ?? null))],
             'carrier_name' => ['nullable', 'string', 'max:120'],
             'transport_cost' => ['nullable', 'numeric', 'min:0'],
@@ -309,6 +309,17 @@ final class DirectPurchaseRules
         if ($missing !== []) {
             throw ValidationException::withMessages($missing);
         }
+    }
+
+    /**
+     * টাকার ঘর শূন্যের বেশি কি না — bcmath-এ, float নয় ([[MoneyIsNeverAFloatTest]])। ⓘ নিয়ামক থেকে তোলার সময় এখানে
+     * দশমিক-সংখ্যায় রূপান্তর করে শূন্যের সাথে তুলনা ছিল; আচরণ হুবহু একই — খালি বা অসংখ্যা মানে "না"।
+     */
+    private static function moreThanZero(mixed $value): bool
+    {
+        $value = trim((string) ($value ?? ''));
+
+        return is_numeric($value) && bccomp($value, '0', 4) > 0;
     }
 
     /** @return array<string, string> */

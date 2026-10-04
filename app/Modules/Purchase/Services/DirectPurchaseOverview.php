@@ -54,7 +54,7 @@ final class DirectPurchaseOverview
         // ⓘ `complete()`-এর বাছাই — পণ্য আর পরিমাণ ছাড়া সারি বিলে যায় না, তাই সারাংশেও না
         $lines = array_values(array_filter(
             (array) ($data['lines'] ?? []),
-            fn ($line) => is_array($line) && filled($line['product_id'] ?? null) && (float) ($line['qty'] ?? 0) > 0,
+            fn ($line) => is_array($line) && filled($line['product_id'] ?? null) && $this->moreThanZero($line['qty'] ?? null),
         ));
         $lines = $this->purchases->spreadBillDiscount($lines, $data);
 
@@ -84,7 +84,7 @@ final class DirectPurchaseOverview
 
         foreach ((array) ($data['gifts'] ?? []) as $gift) {
             $product = is_array($gift) ? Product::query()->find((int) ($gift['product_id'] ?? 0)) : null;
-            if ($product !== null && (float) ($gift['qty'] ?? 0) > 0) {
+            if ($product !== null && $this->moreThanZero($gift['qty'] ?? null)) {
                 $o->line($product->name(), [__('purchase::overview_confirm.gift', ['qty' => Money::quantity((string) $gift['qty'])])]);
             }
         }
@@ -118,6 +118,14 @@ final class DirectPurchaseOverview
         }
 
         return $o;
+    }
+
+    /** শূন্যের বেশি কি না — bcmath-এ ([[MoneyIsNeverAFloatTest]]); খালি বা অসংখ্যা মানে "না" */
+    private function moreThanZero(mixed $value): bool
+    {
+        $value = trim((string) ($value ?? ''));
+
+        return is_numeric($value) && bccomp($value, '0', 4) > 0;
     }
 
     /** @param  array<string, mixed>  $data */

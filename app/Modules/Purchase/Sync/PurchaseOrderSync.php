@@ -6,6 +6,8 @@ namespace App\Modules\Purchase\Sync;
 
 use App\Core\Contracts\SyncsToDevices;
 use App\Core\Engines\Sync\PushedChange;
+use App\Core\Engines\Sync\SyncBatch;
+use App\Core\Engines\Sync\SyncPosition;
 use App\Core\Engines\Sync\SyncRecord;
 use App\Core\Engines\Sync\SyncRejection;
 use App\Core\Support\DocumentStatus;
@@ -61,7 +63,7 @@ final class PurchaseOrderSync implements SyncsToDevices
     /**
      * @return list<SyncRecord>
      */
-    public function pull(User $user, ?Carbon $since, int $limit): array
+    public function pull(User $user, ?Carbon $since, int $limit, ?SyncPosition $after = null): SyncBatch
     {
         /*
          * ⓘ কেবল নিশ্চিত আদেশ — ⛔ খসড়া মানে কেউ এখনো সরবরাহকারীকে
@@ -81,6 +83,8 @@ final class PurchaseOrderSync implements SyncsToDevices
                 DocumentStatus::CANCELLED,
             ])
             ->when($since !== null, fn ($q) => $q->where('updated_at', '>', $since))
+            // ⭐ পরের পাতা — (সময়, id) জোড়ার পর থেকে ([[SyncPosition]], গ১৮)
+            ->when($after !== null, fn ($q) => $after->after($q, $q->qualifyColumn('updated_at'), $q->qualifyColumn('id')))
             ->orderBy('updated_at')
             ->orderBy('id')
             ->limit($limit)
@@ -122,7 +126,9 @@ final class PurchaseOrderSync implements SyncsToDevices
             );
         }
 
-        return $records;
+        $last = $orders->last();
+
+        return SyncBatch::of($records, $orders->count(), $limit, $last === null ? null : SyncPosition::of($last->updated_at, $last->id));
     }
 
     public function acceptsPush(): bool

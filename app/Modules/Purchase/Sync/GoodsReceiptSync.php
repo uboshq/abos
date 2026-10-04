@@ -6,6 +6,8 @@ namespace App\Modules\Purchase\Sync;
 
 use App\Core\Contracts\SyncsToDevices;
 use App\Core\Engines\Sync\PushedChange;
+use App\Core\Engines\Sync\SyncBatch;
+use App\Core\Engines\Sync\SyncPosition;
 use App\Core\Engines\Sync\SyncRejection;
 use App\Core\Support\DocumentStatus;
 use App\Models\User;
@@ -65,9 +67,9 @@ final class GoodsReceiptSync implements SyncsToDevices
      *
      * @return list<\App\Core\Engines\Sync\SyncRecord>
      */
-    public function pull(User $user, ?Carbon $since, int $limit): array
+    public function pull(User $user, ?Carbon $since, int $limit, ?SyncPosition $after = null): SyncBatch
     {
-        return [];
+        return SyncBatch::empty();
     }
 
     public function acceptsPush(): bool

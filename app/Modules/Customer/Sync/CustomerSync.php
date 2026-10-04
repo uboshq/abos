@@ -6,6 +6,8 @@ namespace App\Modules\Customer\Sync;
 
 use App\Core\Contracts\SyncsToDevices;
 use App\Core\Engines\Sync\PushedChange;
+use App\Core\Engines\Sync\SyncBatch;
+use App\Core\Engines\Sync\SyncPosition;
 use App\Core\Engines\Sync\SyncRecord;
 use App\Core\Engines\Sync\SyncRejection;
 use App\Models\User;
@@ -61,7 +63,7 @@ final class CustomerSync implements SyncsToDevices
      *
      * @return list<SyncRecord>
      */
-    public function pull(User $user, ?Carbon $since, int $limit): array
+    public function pull(User $user, ?Carbon $since, int $limit, ?SyncPosition $after = null): SyncBatch
     {
         $query = Customer::query()
             /*
@@ -84,7 +86,12 @@ final class CustomerSync implements SyncsToDevices
             $query->where('updated_at', '>', $since);
         }
 
-        return $query->get()->map(fn (Customer $customer) => new SyncRecord(
+        // ⭐ পরের পাতা — (সময়, id) জোড়ার পর থেকে ([[SyncPosition]], গ১৮)
+        $after?->after($query, $query->qualifyColumn('updated_at'), $query->qualifyColumn('id'));
+
+        $rows = $query->get();
+
+        return SyncBatch::of($rows->map(fn (Customer $customer) => new SyncRecord(
             entityType: self::entityType(),
             entityId: (string) $customer->public_id,
             /*
@@ -113,7 +120,7 @@ final class CustomerSync implements SyncsToDevices
                 'isActive' => (bool) $customer->is_active,
             ],
             updatedAt: $customer->updated_at ?? $customer->created_at ?? now(),
-        ))->all();
+        ))->all(), $rows->count(), $limit, $rows->isEmpty() ? null : SyncPosition::of($rows->last()->updated_at, $rows->last()->id));
     }
 
     public function acceptsPush(): bool
