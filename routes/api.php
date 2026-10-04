@@ -182,6 +182,15 @@ Route::prefix('v1')
         Route::get('/dashboard/today', DashboardTodayController::class)->name('dashboard.today');
 
         /*
+         * ⭐ মডিউলের ড্যাশবোর্ড — মজুদ, বিক্রি, হিসাব … (মালিক, ৪ অক্টোবর ২০২৬; [[DashboardApiController]])। ওয়েবের একই
+         * ইঞ্জিন, একই দরজা: চাবি মডিউলের নিজের মেনু-সারি থেকে, পদ্ধতির ভেতরে — রুটে `can:` নেই, ইচ্ছা করে।
+         * ⚠️ `today`-এর পরে, যাতে `{module}` ওটা গিলে না ফেলে।
+         */
+        Route::get('/dashboard', [\App\Http\Controllers\Api\DashboardApiController::class, 'index'])->name('dashboard.index');
+        Route::get('/dashboard/{module}', [\App\Http\Controllers\Api\DashboardApiController::class, 'show'])
+            ->where('module', '[a-z_]+')->name('dashboard.module');
+
+        /*
          * অনুমোদন — চুক্তি §৫। ⚠️ সিঙ্ক নয়: অফলাইনে কাজ করে না।
          *
          * ⓘ এখানে `can:` আছে, আর সেটা ওয়েবের সমান চাবি: ইনবক্সের মেনু আর
