@@ -45,6 +45,9 @@ export function guardConfirmOverview (root = document, fetcher = (...args) => fe
         }
 
         const data = new FormData(form)
+        // ⛔ এক-জমার চিহ্ন সারাংশে যায় না — নাহলে পাহারা ([[OneSubmitPerForm]]) চিহ্নটা এখানেই খরচ করে, আর আসল
+        // "নিশ্চিত"/"হালনাগাদ" ফেরে "জমা হয়েছে — একটু পরে তালিকায় দেখুন" বলে, কিছুই না বদলে (INV-0002, ৪ অক্টোবর ২০২৬)
+        data.delete('_once')
         const token = form.querySelector('input[name="_token"]')?.value ?? ''
 
         body.textContent = dialog.dataset.loading ?? ''

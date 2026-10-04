@@ -17,6 +17,7 @@ function page () {
     root.innerHTML = `
         <form method="post" data-confirm-overview="/sales/direct/overview">
             <input type="hidden" name="_token" value="tok">
+            <input type="hidden" name="_once" value="once-1">
             <input type="hidden" name="save_as_draft" value="0">
             <button type="submit" data-overview-trigger>নিশ্চিত করুন</button>
             <button type="submit" data-draft-direct>খসড়া রাখুন</button>
@@ -67,6 +68,18 @@ describe('নিশ্চিতের আগে সারাংশ', () => {
         expect(calls[0].init.headers['X-CSRF-TOKEN']).toBe('tok')
         expect(root.querySelector('[data-confirm-overview-body]').textContent).toContain('নিট বিল')
         expect(form.submitted).toHaveLength(0)
+    })
+
+    /* ⛔ INV-0002 (৪ অক্টোবর ২০২৬): সারাংশ এক-জমার চিহ্ন খরচ করে ফেলত, আসল জমা ফিরত "জমা হয়েছে — একটু পরে…" বলে */
+    it('সারাংশের অনুরোধে এক-জমার চিহ্ন যায় না — আসল জমার জন্য সেটা অক্ষত থাকে', async () => {
+        const form = page()
+
+        submitWith(form, form.querySelector('[data-overview-trigger]'))
+        await tick()
+
+        expect(calls[0].init.body.get('_once')).toBeNull()
+        expect(calls[0].init.body.get('save_as_draft')).toBe('0')
+        expect(form.querySelector('input[name="_once"]').value).toBe('once-1')
     })
 
     it('পপ-আপের "নিশ্চিত" আসল জমা দেয়, আর দ্বিতীয় জমা আর থামে না', async () => {
