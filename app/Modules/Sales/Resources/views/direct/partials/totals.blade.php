@@ -471,7 +471,7 @@
                 ] as $row)
                     @if ($show[$row['on']])
                         <div class="min-w-0 rounded-(--radius-field) border border-(--color-border)
-                                    bg-(--color-surface-card) px-1 py-1 text-center">
+                                    bg-(--color-surface-card) px-1 py-1 text-center" data-tile="{{ $row['on'] }}">
                             <span class="block text-2xs leading-tight text-(--color-ink-muted)">{{ __($row['label']) }}</span>
                             <span class="num block text-sm font-bold text-(--color-ink)"
                                   x-text="{{ $row['expr'] }} || '0'"></span>

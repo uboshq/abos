@@ -41,7 +41,8 @@
                                              আর বিক্রেতা ভাবতেন ভুল করে দুইবার
                                              বসেছে। --}}
                                         <template x-if="line.batchNo">
-                                            <span class="block text-2xs text-(--color-ink-muted)"
+                                            {{-- ⭐ নাম · লট · মার্জিন এক লাইনে — মালিক, ৪ অক্টোবর ২০২৬ ("eigulo ek line daw") --}}
+                                            <span class="ms-2 inline-block rounded-full border border-(--color-brand-500) bg-(--color-brand-50) px-2 text-2xs font-semibold text-(--color-brand-700)"
                                                   x-text="@js(__('sales::field.lot')) + ' ' + line.batchNo"></span>
                                         </template>
 

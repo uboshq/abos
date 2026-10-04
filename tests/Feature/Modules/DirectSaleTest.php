@@ -635,6 +635,14 @@ class DirectSaleTest extends TestCase
          */
         $markers = [
             'sales.field_line_discount' => '/x-model="entry\.discountInput"|\[discount_percent\]/u',
+            /*
+             * ⓘ টালির নাম ছোট — মালিক, ৪ অক্টোবর ২০২৬: "আইটেম", "পরিমাণ"। ⛔ "পরিমাণ" পরিমাণের ঘরেরও নাম,
+             * তাই লেখা ধরে খুঁজলে সুইচ বন্ধেও মিলত — টালির নিজের চিহ্ন ধরে খোঁজা।
+             */
+            'sales.field_total_item' => '/data-tile="total_item"/u',
+            'sales.field_sales_qty' => '/data-tile="sales_qty"/u',
+            'sales.field_free_qty_total' => '/data-tile="free_qty_total"/u',
+            'sales.field_total_qty' => '/data-tile="total_qty"/u',
         ];
 
         foreach ($cases as $key => $label) {

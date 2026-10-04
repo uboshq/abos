@@ -186,7 +186,7 @@ return [
     'invoice_due' => 'বিলের বকেয়া',
     'previous_balance' => 'আগের বকেয়া',
     'outstanding' => 'মোট বকেয়া',
-    'total_item' => 'মোট আইটেম',
+    'total_item' => 'আইটেম',
     'lot_expiry_short' => 'মেয়াদ',
     'lot_on_shelf' => 'তাকে',
     'btn_money' => 'টাকা নিন',
@@ -242,7 +242,7 @@ return [
     'key_customer2' => 'ক্রেতা খুঁজুন',
     'key_enter' => 'পরিমাণের ঘরে — সারি কার্টে',
 
-    'total_sales_qty' => 'বিক্রয় পরিমাণ',
+    'total_sales_qty' => 'পরিমাণ',
     'total_free_qty' => 'মোট ফ্রি',
     'discount_amount' => 'ছাড়',
     'proprietor' => 'স্বত্বাধিকারী',

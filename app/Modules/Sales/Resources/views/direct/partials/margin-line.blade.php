@@ -15,8 +15,9 @@
 --}}
 @can('sales.cost.view')
     <template x-if="marginShown(line)">
-        <span class="block text-2xs"
-              :class="marginBelow(line) ? 'text-(--color-badge-danger-ink)' : 'text-(--color-ink-muted)'"
+        {{-- ⭐ গোল ছোট চিপ — মালিক, ৪ অক্টোবর ২০২৬ ("hilite kore round box"); সীমার নিচে লাল, নাহলে সবুজ --}}
+        <span class="ms-1 inline-block rounded-full px-2 text-2xs font-semibold"
+              :class="marginBelow(line) ? 'bg-(--color-badge-danger-bg) text-(--color-badge-danger-ink)' : 'bg-(--color-badge-success-bg) text-(--color-badge-success-ink)'"
               x-text="marginText(line)"></span>
     </template>
 @endcan
