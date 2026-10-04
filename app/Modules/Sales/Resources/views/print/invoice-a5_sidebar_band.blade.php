@@ -97,7 +97,7 @@
             @include('sales::print.partials.invoice-sums', ['v' => $v, 'paper' => $paper])
             @include('sales::print.partials.invoice-payments', ['v' => $v, 'doc' => $doc])
             @if ($v->shows('amount_words'))<div class="words" data-words><strong>{{ $v->en('in_words') }}</strong> {{ $facts['words'] }}</div>@endif
-            <div class="footnote"><div style="text-align: left; font-size: 50%; line-height: 1.35">{!! nl2br(e($v->footnote)) !!}</div></div>
+            <div class="footnote"><div style="text-align: left; font-size: 80%; line-height: 1.35">{!! nl2br(e($v->footnote)) !!}</div></div>
             @include('sales::print.partials.invoice-signatures', ['v' => $v])
             <div class="printed">{{ $v->printedAt() }}</div>
         </td>

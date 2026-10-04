@@ -341,7 +341,7 @@
     </tr>
 </table>
 
-<div class="footnote"><div style="text-align: left; font-size: 50%; line-height: 1.35">{!! nl2br(e($footnote)) !!}</div></div>
+<div class="footnote"><div style="text-align: left; font-size: 80%; line-height: 1.35">{!! nl2br(e($footnote)) !!}</div></div>
 
 <div class="printed">
     {{ $en('printed_at') }} {{ \App\Core\Support\DateFormat::formatWithTime(now()) }}

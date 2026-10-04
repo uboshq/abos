@@ -123,6 +123,7 @@ return [
         'world_standard' => 'বিশ্ব-মানক',
         'world_standard_bn' => 'বিশ্ব-মানক (বাংলা)',
         'mono_bold_classic' => 'মোনো সাহসী ক্লাসিক',
+        'mono_bold_classic_bn' => 'মোনো সাহসী ক্লাসিক (বাংলা)',
     ],
     'invoice_info' => [
         'header' => [

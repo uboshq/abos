@@ -163,7 +163,7 @@
 
 <table style="width: 100%; margin-top: 3mm">
     <tr>
-        <td style="vertical-align: top"><div class="footnote" style="margin-top: 0"><div style="text-align: left; font-size: 50%; line-height: 1.35">{!! nl2br(e($v->footnote)) !!}</div></div></td>
+        <td style="vertical-align: top"><div class="footnote" style="margin-top: 0"><div style="text-align: left; font-size: 80%; line-height: 1.35">{!! nl2br(e($v->footnote)) !!}</div></div></td>
         <td style="width: 26mm; text-align: right; vertical-align: top">@include('sales::print.partials.invoice-qr', ['v' => $v, 'width' => '20mm'])</td>
     </tr>
 </table>

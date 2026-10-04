@@ -133,7 +133,7 @@
     <div style="margin-top: 2.88mm; font-size: 7.2pt"><span class="cap">{{ $up('core.table.narration') }}</span><br>{{ $doc->narration }}</div>
 @endif
 
-@if ($footnote !== '')<div style="margin-top: 2.88mm; text-align: center; font-weight: bold; font-family: hindsiliguri; font-size: 7.6pt; color: #b42318"><div style="text-align: left; font-size: 50%; line-height: 1.35">{!! nl2br(e($footnote)) !!}</div></div>@endif
+@if ($footnote !== '')<div style="margin-top: 2.88mm; text-align: center; font-weight: bold; font-family: hindsiliguri; font-size: 7.6pt; color: #b42318"><div style="text-align: left; font-size: 80%; line-height: 1.35">{!! nl2br(e($footnote)) !!}</div></div>@endif
 
 @php
     $roles = array_map(fn (string $k) => $t($k), $doc->signatures);

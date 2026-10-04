@@ -89,6 +89,6 @@
     </tr>
 </table>
 
-<div class="footnote"><div style="text-align: left; font-size: 50%; line-height: 1.35">{!! nl2br(e($v->footnote)) !!}</div></div>
+<div class="footnote"><div style="text-align: left; font-size: 80%; line-height: 1.35">{!! nl2br(e($v->footnote)) !!}</div></div>
 @include('sales::print.partials.invoice-signatures', ['v' => $v])
 <table class="foot"><tr><td>{{ $v->printedAt() }}</td></tr></table>

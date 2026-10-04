@@ -26,7 +26,7 @@
     .party { font-weight: bold; font-size: 8.5pt; }
     .sub { font-size: 6.5pt; color: #555; font-weight: normal; }
     table.items { width: 100%; margin-top: 4.32mm; }
-    table.items th { background: #000; color: #fff; font-size: 6.5pt; font-weight: bold; letter-spacing: 0.22mm; padding: 1.44mm; text-align: left; }
+    table.items th { color: #000; border-top: 0.6mm solid #000; border-bottom: 0.3mm solid #000; font-size: 6.5pt; font-weight: bold; letter-spacing: 0.22mm; padding: 1.44mm; text-align: left; }
     table.items th.num { text-align: right; }
     table.items td { padding: 1.58mm 1.44mm; border-bottom: 0.14mm solid #c8c8c8; font-size: 7.6pt; vertical-align: top; }
     table.items tr.grand td { font-weight: bold; border-top: 0.43mm solid #000; border-bottom: 0.43mm solid #000; }
@@ -42,7 +42,7 @@
     table.sums { width: 100%; }
     table.sums td { padding: 0.79mm 1.44mm; font-size: 7.6pt; }
     table.sums tr.net td { font-weight: bold; border-top: 0.22mm solid #000; }
-    table.sums tr.owed td { background: #000; color: #fff; font-weight: bold; font-size: 9.3pt; padding: 1.8mm 1.44mm; }
+    table.sums tr.owed td { border-top: 0.6mm solid #000; border-bottom: 0.6mm solid #000; font-weight: bold; font-size: 9.3pt; padding: 1.8mm 1.44mm; }
     .words { margin-top: 1.44mm; font-size: 7.2pt; }
     .footnote { margin-top: 2.88mm; font-size: 7.6pt; font-weight: bold; text-align: center; }
     table.signatures { width: 100%; margin-top: 10.08mm; }
@@ -91,14 +91,17 @@
         <td class="side" style="width: 52%; padding-right: 5.76mm">
             @include('sales::print.partials.invoice-payments', ['v' => $v, 'doc' => $doc])
             @if ($v->shows('amount_words'))<div class="words" data-words><strong>{{ $v->en('in_words') }}</strong> {{ $facts['words'] }}</div>@endif
-            <div style="margin-top: 2.88mm">@include('sales::print.partials.invoice-qr', ['v' => $v, 'width' => '16mm'])</div>
         </td>
         <td class="side">@include('sales::print.partials.invoice-sums', ['v' => $v, 'paper' => $paper])</td>
     </tr>
 </table>
 
-<div class="footnote"><div style="text-align: left; font-size: 50%; line-height: 1.35">{!! nl2br(e($v->footnote)) !!}</div></div>
-@include('sales::print.partials.invoice-signatures', ['v' => $v])
+<div class="footnote"><div style="text-align: left; font-size: 80%; line-height: 1.35">{!! nl2br(e($v->footnote)) !!}</div></div>
+{{-- ⭐ QR সইয়ের সারির ডানে, "অনুমোদনকারী"-র পাশে — মালিক, ৪ অক্টোবর ২০২৬ (আগে নিচে বাঁয়ে) --}}
+<table style="width: 100%"><tr>
+    <td style="vertical-align: bottom">@include('sales::print.partials.invoice-signatures', ['v' => $v])</td>
+    @if ($v->qr !== '')<td style="width: 19mm; vertical-align: bottom; padding-left: 2mm">@include('sales::print.partials.invoice-qr', ['v' => $v, 'width' => '16mm'])</td>@endif
+</tr></table>
 
 <table class="foot">
     <tr>

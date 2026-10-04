@@ -123,6 +123,7 @@ return [
         'world_standard' => 'World Standard',
         'world_standard_bn' => 'World Standard (Bangla)',
         'mono_bold_classic' => 'Mono Bold Classic',
+        'mono_bold_classic_bn' => 'Mono Bold Classic (Bangla)',
     ],
     'invoice_info' => [
         'header' => [

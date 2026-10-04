@@ -65,7 +65,8 @@
     table.pay th { font-size: 7pt; font-weight: bold; text-align: left; padding: 0.4mm 0.8mm; border-bottom: 0.3mm dashed #000000; }
     table.pay td { font-size: 7.5pt; padding: 0.4mm 0.8mm; }
     .footnote { margin-top: 2mm; font-family: hindsiliguri, sans-serif; font-size: 9pt; font-weight: bold; }
-    table.signatures { width: 100%; margin-top: 10mm; }
+    /* ⓘ ৬mm — নির্দেশনার লেখা বড় হওয়ায় (৪ অক্টোবর ২০২৬) ২৫ সারির বিল যেন এখনো ১০০%-এ এক পাতায় আঁটে */
+    table.signatures { width: 100%; margin-top: 6mm; }
     table.signatures td { text-align: center; padding: 0 5mm; font-size: 8pt; font-family: hindsiliguri, sans-serif; }
     .sig-line { border-top: 0.3mm dashed #000000; padding-top: 1mm; }
     table.printed { width: 100%; margin-top: 1.5mm; }
@@ -170,7 +171,7 @@
 
 @include('sales::print.partials.invoice-payments', ['v' => $v, 'doc' => $doc])
 
-<div class="footnote"><div style="text-align: left; font-size: 50%; line-height: 1.35">{!! nl2br(e($v->footnote)) !!}</div></div>
+<div class="footnote"><div style="text-align: left; font-size: 70%; line-height: 1.35">{!! nl2br(e($v->footnote)) !!}</div></div>
 @include('sales::print.partials.invoice-signatures', ['v' => $v])
 <table class="printed">
     <tr>

@@ -181,7 +181,7 @@
     </tr>
 </table>
 
-@if ($look->footnote() !== '')<div class="footnote"><div style="text-align: left; font-size: 50%; line-height: 1.35">{!! nl2br(e($look->footnote())) !!}</div></div>@endif
+@if ($look->footnote() !== '')<div class="footnote"><div style="text-align: left; font-size: 80%; line-height: 1.35">{!! nl2br(e($look->footnote())) !!}</div></div>@endif
 
 <table class="signatures" data-signatures>
     <tr>

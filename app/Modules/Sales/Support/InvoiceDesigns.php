@@ -56,6 +56,8 @@ final class InvoiceDesigns
         'world_standard' => 'sales::print.invoice-world_standard',
         'world_standard_bn' => 'sales::print.invoice-world_standard_bn',
         'mono_bold_classic' => 'sales::print.invoice-mono_bold_classic',
+        /* ⭐ তার বাংলা রূপ — মালিক, ৪ অক্টোবর ২০২৬: "eita banglateo zate kora zay" */
+        'mono_bold_classic_bn' => 'sales::print.invoice-mono_bold_classic_bn',
 
         /* ⭐ Special for DB — বিল + হিসাবের বিবরণী, বাঁয়ে সাদা ফিতা (মালিকের নাম, ৩ অক্টোবর ২০২৬) */
         'special_db' => 'sales::print.invoice-special_db',

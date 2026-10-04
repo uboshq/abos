@@ -61,7 +61,8 @@
     .words { margin-top: 1.5mm; font-size: 8pt; color: #4a5560; }
     .section { margin-top: 3.5mm; font-size: 7.5pt; font-weight: bold; letter-spacing: 0.4mm; color: {{ $accent }}; }
     /* ⭐ হিসাবের চলাচল কথায়-লেখা টাকা থেকে একটু নিচে, সরু দাগে আলাদা — মালিক, ৪ অক্টোবর ২০২৬ ("kicuta namiye daw") */
-    .section.movement { margin-top: 6mm; padding-top: 2mm; border-top: 0.3mm solid #dfe5ea; }
+    /* ⚠️ mPDF টেবিলের ঘরের ভিতরে margin/padding দুটোই ফেলে দেয় (৪ অক্টোবর ২০২৬, লাইভে ফাঁক আসেনি) — ফাঁকটা নিচে একটা খালি লাইন */
+    .section.movement { margin-top: 0; }
     table.ledger { width: 100%; margin-top: 1mm; }
     table.ledger th { font-size: 7.5pt; color: #4a5560; font-weight: bold; text-align: left; padding: 0.6mm 1.2mm; border-bottom: 0.4mm solid {{ $accent }}; }
     table.ledger th.num { text-align: right; }
@@ -71,7 +72,7 @@
     table.pay th { font-size: 7pt; font-weight: bold; color: #4a5560; text-align: left; padding: 0.6mm; border-bottom: 0.3mm solid #15202b; }
     table.pay td { font-size: 8pt; padding: 0.6mm; border-bottom: 0.2mm solid #dde5ec; }
     .pay-head { font-size: 7.5pt; font-weight: bold; color: {{ $accent }}; margin-top: 2mm; }
-    .footnote { margin-top: 2mm; font-size: 9pt; font-weight: bold; color: #b42318; }
+    .footnote { margin-top: 2mm; font-size: 9pt; font-weight: bold; color: #b42318; font-family: hindsiliguri; }
     table.signatures { width: 100%; margin-top: 10mm; }
     table.signatures td { text-align: center; padding: 0 4mm; font-size: 8.5pt; }
     .sig-line { border-top: 0.25mm solid #15202b; padding-top: 1mm; }
@@ -166,6 +167,7 @@
             @if ($v->shows('amount_words'))<div class="words" data-words><strong>{{ $v->en('in_words') }}</strong> {{ $facts['words'] }}</div>@endif
 
             @if ($v->shows('previous_due'))
+                <div style="font-size: 4pt; line-height: 18pt">&nbsp;</div>
                 <div class="section movement">{{ mb_strtoupper($t('movement')) }}</div>
                 <table class="ledger" data-movement>
                     <tr>
@@ -189,7 +191,7 @@
 
             @include('sales::print.partials.invoice-payments', ['v' => $v, 'doc' => $doc])
 
-            <div class="footnote"><div style="text-align: left; font-size: 50%; line-height: 1.35">{!! nl2br(e($v->footnote)) !!}</div></div>
+            <div class="footnote"><div style="text-align: left; font-size: 80%; line-height: 1.35">{!! nl2br(e($v->footnote)) !!}</div></div>
             @include('sales::print.partials.invoice-signatures', ['v' => $v])
             <div class="printed">{{ $v->printedAt() }} · Special for DB</div>
         </td>
