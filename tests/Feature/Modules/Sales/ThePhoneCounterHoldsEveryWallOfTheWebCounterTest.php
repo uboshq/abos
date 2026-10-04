@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Feature\Modules\Sales;
 
 use App\Core\Support\CompanyContext;
+use App\Core\Support\DocumentStatus;
 use App\Http\Controllers\Api\AuthController;
 use App\Models\Company;
 use App\Models\User;
@@ -17,6 +18,8 @@ use App\Modules\Inventory\Models\Product;
 use App\Modules\Inventory\Models\StockMovement;
 use App\Modules\Inventory\Models\Warehouse;
 use App\Modules\Inventory\Services\StockService;
+use App\Modules\Sales\Models\DeliveryChallan;
+use App\Modules\Sales\Models\SalesInvoice;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
@@ -139,6 +142,90 @@ final class ThePhoneCounterHoldsEveryWallOfTheWebCounterTest extends TestCase
 
         $draft = $this->postJson('/api/v1/sales/direct', [...$this->sale(), 'save_as_draft' => '1'])->assertCreated()->json();
         $this->assertSame('parked', $draft['status'], '⛔ সীমা পেরোনো খসড়াও আটকে গেল — খসড়ায় দেয়াল নেই (মালিক, ২৭ সেপ্টেম্বর)।');
+    }
+
+    // ── ⭐ ওয়েবের ৮ বোতাম ফোনেও — মালিক, ৪ অক্টোবর ২০২৬ ─────────────────
+
+    /** টাকা নেওয়ার পদ্ধতি আর বাহক — ওয়েবের একই তালিকা, public_id দিয়ে */
+    public function test_the_setup_carries_the_payment_ways_and_the_carriers_the_web_counter_offers(): void
+    {
+        $this->asSeller();
+
+        $setup = $this->getJson('/api/v1/sales/direct/setup')->assertOk()->json();
+
+        $web = app(\App\Modules\Sales\Services\DirectSaleOptions::class)->depositMethods();
+        $this->assertCount($web->count(), $setup['depositMethods'], '⛔ ফোনের পদ্ধতির তালিকা ওয়েবের থেকে আলাদা।');
+        $this->assertArrayHasKey('carriers', $setup);
+        foreach ($setup['depositMethods'] as $method) {
+            $this->assertFalse(ctype_digit((string) $method['id']), '⛔ ক্রমিক id ফোনে গেল।');
+        }
+    }
+
+    /** খসড়া রাখা → তালিকায় → খুলে একই সারি → আবার পাঠালে একই খসড়াই পাকা হয়, দ্বিতীয় বিল নয় */
+    public function test_a_kept_draft_is_listed_opened_with_its_lines_and_finished_as_the_same_bill(): void
+    {
+        $this->asSeller();
+        $parked = $this->postJson('/api/v1/sales/direct', [...$this->sale(), 'save_as_draft' => '1'])->assertCreated()->json();
+
+        $listed = $this->getJson('/api/v1/sales/direct/drafts')->assertOk()->json('drafts');
+        $this->assertContains($parked['invoice']['id'], array_column($listed, 'id'), '⛔ রাখা খসড়া তালিকায় নেই।');
+
+        $opened = $this->getJson('/api/v1/sales/direct/drafts/'.$parked['invoice']['id'])->assertOk()->json();
+        $this->assertSame((string) $this->customer->public_id, $opened['customer']);
+        $this->assertSame((string) $this->product->public_id, $opened['lines'][0]['product']);
+        $this->assertSame((string) $this->lot->public_id, $opened['lines'][0]['lot']);
+        $this->assertEqualsWithDelta(10.0, (float) $opened['lines'][0]['qty'], 0.0001);
+
+        $invoices = SalesInvoice::query()->count();
+        $done = $this->postJson('/api/v1/sales/direct', [...$this->sale(), 'resume' => $parked['invoice']['id']])->assertCreated()->json();
+
+        $this->assertSame('done', $done['status']);
+        $this->assertSame($parked['invoice']['id'], $done['invoice']['id'], '⛔ খসড়া খুলে পাঠালে নতুন বিল হলো, খসড়াটা পড়ে রইল।');
+        $this->assertSame($invoices, SalesInvoice::query()->count());
+    }
+
+    /** বাতিল — একই বিক্রেতা: বিল বানানোর চাবি ছাড়া ৪০৩; দিলে খসড়া বাতিল হয়, না-জমা বিল অডিটে লেখা হয় */
+    public function test_voiding_needs_the_bill_key_cancels_a_kept_draft_and_records_an_unsaved_bill(): void
+    {
+        $this->asSeller();
+        $parked = $this->postJson('/api/v1/sales/direct', [...$this->sale(), 'save_as_draft' => '1'])->assertCreated()->json();
+
+        $this->postJson('/api/v1/sales/direct/void', ['reason' => 'ভুল গ্রাহক', 'resume' => $parked['invoice']['id']])->assertForbidden();
+
+        $this->grant('sales.invoice.create');
+        Sanctum::actingAs($this->seller->fresh(), [AuthController::APP]);
+
+        $this->postJson('/api/v1/sales/direct/void', ['resume' => $parked['invoice']['id']])->assertStatus(422);
+        $this->postJson('/api/v1/sales/direct/void', ['reason' => 'ভুল গ্রাহক', 'resume' => $parked['invoice']['id']])
+            ->assertOk()->assertJson(['voided' => true, 'draft' => true]);
+        $this->assertSame(DocumentStatus::CANCELLED, SalesInvoice::query()->where('public_id', $parked['invoice']['id'])->value('status'),
+            '⛔ খসড়া বাতিল হলো না।');
+
+        $this->postJson('/api/v1/sales/direct/void', [
+            'reason' => 'ক্রেতা চলে গেলেন', 'customer' => (string) $this->customer->public_id, 'lines' => 2, 'total' => '500',
+        ])->assertOk()->assertJson(['voided' => true, 'draft' => false]);
+        $this->assertTrue(\Illuminate\Support\Facades\DB::table('audit_trails')->where('action', 'counter_bill_voided')->exists(),
+            '⛔ না-জমা বিলের বাতিল অডিটে লেখা হয়নি।');
+    }
+
+    /** ডেলিভারি — "পরে পাঠানো" হলে ঠিকানা আর তারিখ ছাড়া নয়; দিলে চালানে মোড, গাড়ি আর ভাড়া বসে */
+    public function test_send_later_needs_an_address_and_a_date_and_the_challan_keeps_how_the_goods_go(): void
+    {
+        $this->asSeller();
+
+        $this->postJson('/api/v1/sales/direct', [...$this->sale(), 'own_transport' => '0', 'delivery_mode' => 'send_later'])
+            ->assertStatus(422)->assertJsonValidationErrors(['ship_to', 'ship_date']);
+
+        $done = $this->postJson('/api/v1/sales/direct', [
+            ...$this->sale(), 'own_transport' => '0', 'delivery_mode' => 'send_later',
+            'ship_to' => 'বাজার রোড, দোকান ৪', 'ship_date' => now()->addDay()->toDateString(),
+            'vehicle_owner' => 'hired', 'fare_paid_by' => 'customer',
+        ])->assertCreated()->json();
+
+        $challan = DeliveryChallan::query()->where('document_no', $done['challan']['no'])->firstOrFail();
+        $this->assertSame('send_later', $challan->delivery_mode);
+        $this->assertSame('hired', $challan->vehicle_owner);
+        $this->assertSame('customer', $challan->fare_paid_by);
     }
 
     // ── যন্ত্রপাতি ──────────────────────────────────────────────────────

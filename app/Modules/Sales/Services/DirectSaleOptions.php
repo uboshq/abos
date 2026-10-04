@@ -12,7 +12,10 @@ use App\Modules\Inventory\Models\Batch;
 use App\Modules\Inventory\Models\Product;
 use App\Modules\Inventory\Models\Warehouse;
 use App\Modules\Inventory\Services\FreeRatio;
+use App\Modules\MasterData\Models\PaymentMethod;
 use App\Modules\MasterData\Models\PaymentTerm;
+use App\Modules\Sales\Models\SalesInvoice;
+use App\Modules\Supplier\Models\Supplier;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -138,5 +141,124 @@ final class DirectSaleOptions
         $terms[] = ['value' => 'fixed', 'label' => __('sales::field.term_fixed')];
 
         return $terms;
+    }
+
+    /**
+     * কাউন্টারে টাকা নেওয়ার পদ্ধতি — চেক বাদ (চেক কেবল চেকের খাতা দিয়ে)।
+     * ⓘ [[DirectSaleController::create()]] থেকে হুবহু তোলা (৪ অক্টোবর ২০২৬) — ফোনের কাউন্টারও এই তালিকা পড়ে।
+     *
+     * @return \Illuminate\Support\Collection<int, array<string, mixed>>
+     */
+    public function depositMethods(): \Illuminate\Support\Collection
+    {
+        return PaymentMethod::query()
+            ->active()
+
+            /*
+             * ⛔ চেক কাউন্টারে নেই — মালিকের নির্দেশ, ২৬ সেপ্টেম্বর ২০২৬।
+             * ⓘ চেক নেয় কেবল হিসাব বিভাগ; সেবাতেও একই বাধা
+             * ([[DirectSaleService::assertNoChequeAtTheCounter()]])।
+             * ⚠️ `kind` খালি থাকলে উপায়টা থাকে — ধরনহীন পুরনো সারি চেক নয়।
+             */
+            ->where(fn ($q) => $q->whereNull('kind')->orWhere('kind', '!=', 'cheque'))
+            ->orderBy('code')
+            ->get()
+            ->map(fn (PaymentMethod $m): array => [
+                'id' => (string) $m->id,
+                'label' => $m->name(),
+                'accountId' => $m->account_id === null ? '' : (string) $m->account_id,
+                'needsReference' => (bool) $m->needs_reference,
+                /*
+                 * ⚠️ ধরনটা এখনো নাও থাকতে পারে, আর সেটা ইচ্ছাকৃত।
+                 *
+                 * `kind` কলামটা যোগ হচ্ছে (নগদ · ব্যাংক · MFS · চেক), আর
+                 * ওটাই ঠিক করে দেবে খাতের তালিকায় কোনগুলো দেখা যাবে।
+                 * Eloquent অনুপস্থিত কলামে `null` ফেরায়, ব্যতিক্রম নয় —
+                 * তাই কলামটা আসার আগেও পর্দা ভাঙে না, কেবল ছাঁকনিটা
+                 * চুপ করে থাকে (সব খাত দেখায়)।
+                 *
+                 * ⓘ **এটা "method না বাছা"র চেয়ে আলাদা অবস্থা** — তখন
+                 * একটাও খাত দেখা যায় না, মালিকের নির্দেশমতো।
+                 */
+                'kind' => $m->kind,
+            ])
+            ->values();
+    }
+
+    /**
+     * বাহক — পরিবহনকারী পক্ষ, বাছা শাখার। ⓘ [[DirectSaleController::create()]] থেকে হুবহু তোলা (৪ অক্টোবর ২০২৬)।
+     *
+     * @return \Illuminate\Support\Collection<int, array<string, mixed>>
+     */
+    public function carriers(): \Illuminate\Support\Collection
+    {
+        return Supplier::query()->inViewedBranch()
+            ->active()
+            // RENTAL পক্ষের ধরনটা বাদ (৪ সেপ্টেম্বর, মালিকের চূড়ান্ত তালিকা) —
+            // ভাড়ার গাড়িও পরিবহনকারী, তাই আলাদা ধরন নয়। এখন শুধু TRANSPORT।
+            ->whereHas('partyType', fn ($q) => $q->whereIn('code', ['TRANSPORT']))
+            ->orderBy('name_en')
+            ->get(['id', 'code', 'name_en', 'name_bn', 'phone', 'contact_phone'])
+            ->map(fn (Supplier $s): array => [
+                'id' => (string) $s->id,
+                'label' => $s->name(),
+                // ⓘ বাহকের নম্বর পক্ষের খাতা থেকে — মালিকের ছবি, ২৭ সেপ্টেম্বর ২০২৬ (রাত)
+                'phone' => (string) ($s->phone ?: $s->contact_phone ?: ''),
+            ])
+            ->values();
+    }
+
+    /**
+     * খসড়ার নিজের সারি থেকে কাউন্টারের পর্দা — ছবি ছাড়া রাখা খসড়ার জন্য ([[resumeFrom()]])।
+     *
+     * ⓘ আকার কাউন্টারের নিজের ছবির মতোই (`screen.lines[]`): পণ্য, একক, পরিমাণ, ফ্রি, দর, ছাড়ের %, লট।
+     *
+     * @return array<string, mixed>
+     *
+     * ⓘ [[DirectSaleController]] থেকে হুবহু তোলা (৪ অক্টোবর ২০২৬) — ফোনের কাউন্টারও রাখা খসড়া খোলে ([[DirectSaleApiController::draft()]])।
+     */
+    public function screenFromDraft(SalesInvoice $draft): array
+    {
+        $draft->loadMissing(['lines.product.unit', 'lines.challanLine.batch']);
+
+        if ($draft->lines->isEmpty()) {
+            return [];
+        }
+
+        $lines = $draft->lines->sortBy('line_no')->values()->map(function ($line, int $i) {
+            $cl = $line->challanLine;
+            $qty = (string) ($cl?->delivered_qty ?? $line->qty);
+            $gross = bcmul($qty, (string) $line->rate, 4);
+            $pct = $cl?->discount_percent !== null
+                ? (string) $cl->discount_percent
+                : (bccomp($gross, '0', 4) > 0 ? bcmul(bcdiv((string) $line->discount, $gross, 8), '100', 4) : '0');
+
+            return [
+                'key' => $i + 1,
+                'id' => (int) $line->product_id,
+                'name' => (string) ($line->product?->name() ?? ''),
+                'unit' => (string) ($line->product?->unit?->name() ?? ''),
+                'vatRate' => 0,
+                'vatInclusive' => false,
+                'qty' => $qty,
+                'freeQty' => (string) ($cl?->free_qty ?? '0'),
+                'rate' => (string) $line->rate,
+                'discountPercent' => $pct,
+                'unitId' => '',
+                'gifts' => [],
+                'batchId' => $cl?->batch_id ? (string) $cl->batch_id : '',
+                'batchNo' => (string) ($cl?->batch?->batch_no ?? ''),
+            ];
+        })->all();
+
+        return [
+            'screen' => [
+                'customerId' => (string) $draft->customer_id,
+                'creditTerm' => $draft->due_on ? 'credit' : 'cash',
+                'dueOn' => $draft->due_on?->toDateString() ?? '',
+                'lines' => $lines,
+            ],
+            'fields' => [],
+        ];
     }
 }

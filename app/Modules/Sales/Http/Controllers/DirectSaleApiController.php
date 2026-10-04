@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Modules\Sales\Http\Controllers;
 
 use App\Core\Engines\Approval\HeldForApproval;
+use App\Core\Engines\Audit\AuditEngine;
+use App\Core\Services\SettingsService;
 use App\Core\Support\CompanyContext;
 use App\Core\Support\Money;
 use App\Http\Controllers\Controller;
@@ -14,10 +16,13 @@ use App\Modules\Inventory\Models\Batch;
 use App\Modules\Inventory\Models\Product;
 use App\Modules\Inventory\Models\Warehouse;
 use App\Modules\Inventory\Services\FreeAllowance;
+use App\Modules\MasterData\Models\PaymentMethod;
 use App\Modules\Sales\Http\Requests\DirectSaleRules;
+use App\Modules\Sales\Models\SalesInvoice;
 use App\Modules\Sales\Services\DirectSaleOptions;
 use App\Modules\Sales\Services\DirectSaleOverview;
 use App\Modules\Sales\Services\DirectSaleService;
+use App\Modules\Supplier\Models\Supplier;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -84,7 +89,107 @@ class DirectSaleApiController extends Controller implements HasMiddleware
                 },
             ], $this->options->moneyAccounts()),
             'lots' => (object) $lots,
+
+            /*
+             * ⭐ ওয়েবের কাউন্টারের বাকি তালিকা — একই জায়গা থেকে ([[DirectSaleOptions::depositMethods()]],
+             * [[DirectSaleOptions::carriers()]]); ফোনের ৮ বোতাম (মালিক, ৪ অক্টোবর ২০২৬)। ⓘ id-গুলো public_id, ক্রমিক নয়।
+             */
+            'depositMethods' => $this->publicMethods(),
+            'carriers' => $this->publicCarriers(),
         ]);
+    }
+
+    /**
+     * `GET /direct/drafts` — রাখা খসড়া, খোলার জন্য (ওয়েবের "খসড়া" তালিকার একই প্রশ্ন, [[DirectSaleService::trueDrafts()]])।
+     */
+    public function drafts(Request $request): JsonResponse
+    {
+        $drafts = DirectSaleService::trueDrafts()
+            ->with(['customer', 'lines'])
+            ->orderByDesc('id')
+            ->limit(50)
+            ->get();
+
+        return response()->json(['drafts' => $drafts->map(fn (SalesInvoice $d) => [
+            'id' => (string) $d->public_id,
+            'no' => (string) $d->document_no,
+            'customer' => (string) ($d->customer?->name() ?? ''),
+            'date' => $d->trx_date?->toDateString(),
+            'total' => (string) $d->total,
+            'lines' => $d->lines->count(),
+        ])->values()]);
+    }
+
+    /**
+     * `GET /direct/drafts/{id}` — একটা খসড়া কাউন্টারে আবার বসানোর জন্য: সারিগুলো ফোনের আকারে।
+     * ⓘ ওয়েবের একই রূপান্তর ([[DirectSaleOptions::screenFromDraft()]]), কেবল ভেতরের id → public_id।
+     */
+    public function draft(string $id): JsonResponse
+    {
+        $draft = DirectSaleService::trueDrafts()->where('public_id', $id)->first();
+
+        abort_if($draft === null, 404);
+
+        $screen = (array) ($this->options->screenFromDraft($draft)['screen'] ?? []);
+        $lines = array_values((array) ($screen['lines'] ?? []));
+        $productIds = Product::query()->whereKey(array_column($lines, 'id'))->pluck('public_id', 'id');
+        $lotIds = Batch::query()->whereKey(array_filter(array_column($lines, 'batchId')))->pluck('public_id', 'id');
+
+        return response()->json([
+            'id' => (string) $draft->public_id,
+            'no' => (string) $draft->document_no,
+            'customer' => (string) ($draft->customer?->public_id ?? ''),
+            'customerName' => (string) ($draft->customer?->name() ?? ''),
+            'lines' => array_map(fn (array $l) => [
+                'product' => (string) ($productIds[(int) $l['id']] ?? ''),
+                'name' => (string) $l['name'],
+                'lot' => $l['batchId'] !== '' ? (string) ($lotIds[(int) $l['batchId']] ?? '') : null,
+                'lotNo' => (string) $l['batchNo'],
+                'qty' => (string) $l['qty'],
+                'freeQty' => (string) $l['freeQty'],
+                'rate' => (string) $l['rate'],
+                'discountPercent' => (string) $l['discountPercent'],
+            ], $lines),
+        ]);
+    }
+
+    /**
+     * `POST /direct/void` — বিল বাতিল, কারণসহ (ওয়েবের Ctrl+X, [[DirectSaleController::void()]]-এর একই দুই পথ):
+     * খোলা খসড়া হলে খসড়াটাই বাতিল ([[DirectSaleService::discardParked()]]), নইলে না-জমা বিলটা অডিটে লেখা।
+     * ⓘ চাবি ওয়েবের মতোই — কাউন্টারের চাবির উপর `sales.invoice.create`।
+     */
+    public function void(Request $request): JsonResponse
+    {
+        abort_unless($request->user()?->can('sales.invoice.create'), 403);
+
+        $data = $request->validate([
+            'reason' => ['required', 'string', 'max:500'],
+            'customer' => ['nullable', 'string', 'max:64'],
+            'resume' => ['nullable', 'string', 'max:64'],
+            'lines' => ['nullable', 'integer', 'min:0'],
+            'total' => ['nullable', 'numeric'],
+        ]);
+
+        if (filled($data['resume'] ?? null)) {
+            $draft = DirectSaleService::trueDrafts()->where('public_id', $data['resume'])->first();
+            abort_if($draft === null, 404);
+            $this->sales->discardParked($draft, $data['reason']);
+
+            return response()->json(['voided' => true, 'draft' => true]);
+        }
+
+        $customer = filled($data['customer'] ?? null)
+            ? Customer::query()->where('public_id', $data['customer'])->first()
+            : Customer::query()->find((int) app(SettingsService::class)->get('sales.walkin_customer_id', 0));
+
+        if ($customer !== null) {
+            app(AuditEngine::class)->record($customer, 'counter_bill_voided', [
+                'lines' => [(int) ($data['lines'] ?? 0), 0],
+                'total' => [(string) ($data['total'] ?? '0'), '0'],
+            ], $data['reason']);
+        }
+
+        return response()->json(['voided' => true, 'draft' => false]);
     }
 
     /** `GET /direct/free-allowed?product=&warehouse=&qty=&lot=` — স্কিমের ফ্রি কত; ওয়েবের একই প্রশ্ন ([[FreeAllowance]]) */
@@ -204,11 +309,50 @@ class DirectSaleApiController extends Controller implements HasMiddleware
         $out['deposits'] = array_map(fn ($d) => is_array($d) ? [
             ...$d,
             'account_id' => $this->idOf(Account::class, $d['account'] ?? null, 'deposits'),
+            // ⭐ টাকা নেওয়ার পদ্ধতি — ঐচ্ছিক, ওয়েবের মতোই ([[DirectSaleOptions::depositMethods()]])
+            'payment_method_id' => filled($d['method'] ?? null) ? $this->idOf(PaymentMethod::class, $d['method'], 'deposits') : null,
         ] : $d, array_values((array) ($in['deposits'] ?? [])));
 
-        unset($out['customer'], $out['warehouse']);
+        // ⭐ গাড়ি ও ভাড়ার বাহক, আর আবার খোলা খসড়া — public_id → ভেতরের id (৪ অক্টোবর ২০২৬)
+        if (filled($in['carrier'] ?? null)) {
+            $out['carrier_id'] = $this->idOf(Supplier::class, $in['carrier'], 'carrier');
+        }
+        if (filled($in['resume'] ?? null)) {
+            $out['resume_invoice_id'] = $this->idOf(SalesInvoice::class, $in['resume'], 'resume');
+        }
+
+        unset($out['customer'], $out['warehouse'], $out['carrier'], $out['resume']);
 
         return $out;
+    }
+
+    /** @return list<array<string, mixed>> */
+    private function publicMethods(): array
+    {
+        $rows = $this->options->depositMethods();
+        $methods = PaymentMethod::query()->whereKey($rows->pluck('id')->map(fn ($id) => (int) $id)->all())->pluck('public_id', 'id');
+        $accounts = Account::query()->whereKey($rows->pluck('accountId')->filter()->map(fn ($id) => (int) $id)->all())->pluck('public_id', 'id');
+
+        return $rows->map(fn (array $m) => [
+            'id' => (string) ($methods[(int) $m['id']] ?? ''),
+            'label' => $m['label'],
+            'kind' => $m['kind'] ?? null,
+            'account' => $m['accountId'] === '' ? null : (string) ($accounts[(int) $m['accountId']] ?? ''),
+            'needsReference' => (bool) $m['needsReference'],
+        ])->values()->all();
+    }
+
+    /** @return list<array<string, mixed>> */
+    private function publicCarriers(): array
+    {
+        $rows = $this->options->carriers();
+        $ids = Supplier::query()->whereKey($rows->pluck('id')->map(fn ($id) => (int) $id)->all())->pluck('public_id', 'id');
+
+        return $rows->map(fn (array $c) => [
+            'id' => (string) ($ids[(int) $c['id']] ?? ''),
+            'label' => $c['label'],
+            'phone' => $c['phone'],
+        ])->values()->all();
     }
 
     /** @param  class-string<Model>  $model */

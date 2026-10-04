@@ -21,7 +21,6 @@ use App\Modules\Inventory\Models\Warehouse;
 use App\Modules\Inventory\Services\FreeAllowance;
 use App\Modules\Inventory\Services\PackConversion;
 use App\Modules\Inventory\Services\StockService;
-use App\Modules\MasterData\Models\PaymentMethod;
 use App\Modules\MasterData\Models\TransferMode;
 use App\Modules\MasterData\Models\Vehicle;
 use App\Modules\Sales\Http\Requests\DirectSaleRules;
@@ -33,7 +32,6 @@ use App\Modules\Sales\Services\DirectSaleService;
 use App\Modules\Sales\Services\SaleNumber;
 use App\Modules\Sales\Services\MarginGuard;
 use App\Modules\Sales\Services\SaleEditor;
-use App\Modules\Supplier\Models\Supplier;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -234,38 +232,8 @@ class DirectSaleController extends Controller implements HasMiddleware
              * (`CollectionService::resolveMoneyAccount` ওটা ফিরিয়ে দেয়),
              * আর তিনটা মাথাই — নগদ · ব্যাংক · মোবাইল মানি।
              */
-            'depositMethods' => PaymentMethod::query()
-                ->active()
-
-                /*
-                 * ⛔ চেক কাউন্টারে নেই — মালিকের নির্দেশ, ২৬ সেপ্টেম্বর ২০২৬।
-                 * ⓘ চেক নেয় কেবল হিসাব বিভাগ; সেবাতেও একই বাধা
-                 * ([[DirectSaleService::assertNoChequeAtTheCounter()]])।
-                 * ⚠️ `kind` খালি থাকলে উপায়টা থাকে — ধরনহীন পুরনো সারি চেক নয়।
-                 */
-                ->where(fn ($q) => $q->whereNull('kind')->orWhere('kind', '!=', 'cheque'))
-                ->orderBy('code')
-                ->get()
-                ->map(fn (PaymentMethod $m): array => [
-                    'id' => (string) $m->id,
-                    'label' => $m->name(),
-                    'accountId' => $m->account_id === null ? '' : (string) $m->account_id,
-                    'needsReference' => (bool) $m->needs_reference,
-                    /*
-                     * ⚠️ ধরনটা এখনো নাও থাকতে পারে, আর সেটা ইচ্ছাকৃত।
-                     *
-                     * `kind` কলামটা যোগ হচ্ছে (নগদ · ব্যাংক · MFS · চেক), আর
-                     * ওটাই ঠিক করে দেবে খাতের তালিকায় কোনগুলো দেখা যাবে।
-                     * Eloquent অনুপস্থিত কলামে `null` ফেরায়, ব্যতিক্রম নয় —
-                     * তাই কলামটা আসার আগেও পর্দা ভাঙে না, কেবল ছাঁকনিটা
-                     * চুপ করে থাকে (সব খাত দেখায়)।
-                     *
-                     * ⓘ **এটা "method না বাছা"র চেয়ে আলাদা অবস্থা** — তখন
-                     * একটাও খাত দেখা যায় না, মালিকের নির্দেশমতো।
-                     */
-                    'kind' => $m->kind,
-                ])
-                ->values(),
+            // ⓘ ফোনের কাউন্টারের সাথে একই তালিকা ([[DirectSaleOptions::depositMethods()]], ৪ অক্টোবর ২০২৬)
+            'depositMethods' => app(\App\Modules\Sales\Services\DirectSaleOptions::class)->depositMethods(),
 
             /*
              * ── বাহকের তালিকা — পরিবহনকারী ও ভাড়ার গাড়ি ────────────────
@@ -282,20 +250,8 @@ class DirectSaleController extends Controller implements HasMiddleware
              * দুইটাই সেটিংসের সারি, তাই কোডে কোনো নাম লেখা নেই: কোড দিয়ে
              * খোঁজা হয়, আর কোম্পানি চাইলে আরও ধরন যোগ করতে পারে।
              */
-            'carriers' => Supplier::query()->inViewedBranch()
-                ->active()
-                // RENTAL পক্ষের ধরনটা বাদ (৪ সেপ্টেম্বর, মালিকের চূড়ান্ত তালিকা) —
-                // ভাড়ার গাড়িও পরিবহনকারী, তাই আলাদা ধরন নয়। এখন শুধু TRANSPORT।
-                ->whereHas('partyType', fn ($q) => $q->whereIn('code', ['TRANSPORT']))
-                ->orderBy('name_en')
-                ->get(['id', 'code', 'name_en', 'name_bn', 'phone', 'contact_phone'])
-                ->map(fn (Supplier $s): array => [
-                    'id' => (string) $s->id,
-                    'label' => $s->name(),
-                    // ⓘ বাহকের নম্বর পক্ষের খাতা থেকে — মালিকের ছবি, ২৭ সেপ্টেম্বর ২০২৬ (রাত)
-                    'phone' => (string) ($s->phone ?: $s->contact_phone ?: ''),
-                ])
-                ->values(),
+            // ⓘ ফোনের কাউন্টারের সাথে একই তালিকা ([[DirectSaleOptions::carriers()]], ৪ অক্টোবর ২০২৬)
+            'carriers' => app(\App\Modules\Sales\Services\DirectSaleOptions::class)->carriers(),
 
             /*
              * ── চালকের পরামর্শ — একবার লিখলে পরের বার আসে ─────────────
@@ -1297,7 +1253,7 @@ class DirectSaleController extends Controller implements HasMiddleware
          * পাতা চুপচাপ একটা খালি নতুন বিল খুলত। ⭐ ছবি না থাকলে খসড়ার নিজের সারি থেকে পর্দা।
          */
         if ($saved === []) {
-            $saved = $this->screenFromDraft($draft);
+            $saved = app(\App\Modules\Sales\Services\DirectSaleOptions::class)->screenFromDraft($draft);
         }
 
         if ($saved === []) {
@@ -1315,58 +1271,6 @@ class DirectSaleController extends Controller implements HasMiddleware
             'approvalUrl' => $held ? $this->approvalUrlFor($draft) : null,
             'stage' => $held ? 'approval' : 'draft',
             'challanUrl' => null,
-        ];
-    }
-
-    /**
-     * খসড়ার নিজের সারি থেকে কাউন্টারের পর্দা — ছবি ছাড়া রাখা খসড়ার জন্য ([[resumeFrom()]])।
-     *
-     * ⓘ আকার কাউন্টারের নিজের ছবির মতোই (`screen.lines[]`): পণ্য, একক, পরিমাণ, ফ্রি, দর, ছাড়ের %, লট।
-     *
-     * @return array<string, mixed>
-     */
-    private function screenFromDraft(SalesInvoice $draft): array
-    {
-        $draft->loadMissing(['lines.product.unit', 'lines.challanLine.batch']);
-
-        if ($draft->lines->isEmpty()) {
-            return [];
-        }
-
-        $lines = $draft->lines->sortBy('line_no')->values()->map(function ($line, int $i) {
-            $cl = $line->challanLine;
-            $qty = (string) ($cl?->delivered_qty ?? $line->qty);
-            $gross = bcmul($qty, (string) $line->rate, 4);
-            $pct = $cl?->discount_percent !== null
-                ? (string) $cl->discount_percent
-                : (bccomp($gross, '0', 4) > 0 ? bcmul(bcdiv((string) $line->discount, $gross, 8), '100', 4) : '0');
-
-            return [
-                'key' => $i + 1,
-                'id' => (int) $line->product_id,
-                'name' => (string) ($line->product?->name() ?? ''),
-                'unit' => (string) ($line->product?->unit?->name() ?? ''),
-                'vatRate' => 0,
-                'vatInclusive' => false,
-                'qty' => $qty,
-                'freeQty' => (string) ($cl?->free_qty ?? '0'),
-                'rate' => (string) $line->rate,
-                'discountPercent' => $pct,
-                'unitId' => '',
-                'gifts' => [],
-                'batchId' => $cl?->batch_id ? (string) $cl->batch_id : '',
-                'batchNo' => (string) ($cl?->batch?->batch_no ?? ''),
-            ];
-        })->all();
-
-        return [
-            'screen' => [
-                'customerId' => (string) $draft->customer_id,
-                'creditTerm' => $draft->due_on ? 'credit' : 'cash',
-                'dueOn' => $draft->due_on?->toDateString() ?? '',
-                'lines' => $lines,
-            ],
-            'fields' => [],
         ];
     }
 
