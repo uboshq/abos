@@ -196,6 +196,8 @@
                  color: var(--b8-ink); font-size: .68rem; font-weight: 800; line-height: 1.1; text-align: center; padding: .15rem .1rem; }
         .ds-b8 small { font-size: .52rem; font-weight: 700; opacity: .8; margin-top: .1rem; }
         .ds-b8.is-on { box-shadow: 0 0 0 2px var(--b8-ink); }
+        /* ⭐ লাইনের ভিতরের বোতাম — "দাম দেখুন" মন্তব্যের লাইনে (মালিক, ৪ অক্টোবর ২০২৬) */
+        .ds-b8-inline { padding: .15rem .6rem; min-height: 1.9rem; }
         .ds-b8-success { --b8-bg: var(--color-badge-success-bg); --b8-ink: var(--color-badge-success-ink); }
         .ds-b8-pending { --b8-bg: var(--color-badge-pending-bg); --b8-ink: var(--color-badge-pending-ink); }
         .ds-b8-info { --b8-bg: var(--color-badge-info-bg); --b8-ink: var(--color-badge-info-ink); }

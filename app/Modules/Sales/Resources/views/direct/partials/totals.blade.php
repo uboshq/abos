@@ -546,47 +546,51 @@
                 {{-- ⭐ ৮টা বোতাম, চারটা করে দুই সারি — মালিকের অনুমোদিত নমুনা ৩ (৪ অক্টোবর ২০২৬, 63-এর মাধ্যমে)।
                      ⓘ প্রতিটা চাপলে পপ-আপ ([[direct/partials/panels]])। "আরও", "সব মুছুন", "অগ্রিম জমা" বাদ;
                      চার্ট এন্ট্রি এখন কার্ট-বোতামের পাশে "অনেক পণ্য", নোট ক্রেতার ঘরের নিচে "✎ মন্তব্য"। --}}
+                {{-- ⭐ বোতামের ক্রম — মালিক, ৪ অক্টোবর ২০২৬ (ছবিসহ): সারি ১ "টাকা নিন, গাড়ি ও ভাড়া, মাল কীভাবে নেবে, ফেরত নিন";
+                     সারি ২ "খসড়া রাখুন, খসড়া খুলুন, আবার ছাপুন, বিল বাতিল"; সারি ৩ "নিশ্চিত করুন" একা, পুরো প্রস্থে।
+                     ⓘ "দাম দেখুন" এখানে নেই — ক্রেতার ঘরের নিচে, মন্তব্যের লাইনের একদম ডানে ([[direct/partials/party]])। --}}
                 <div class="grid grid-cols-4 gap-1" data-counter-buttons>
                     @if ($show['deposit'])
-                    <button type="button" @click="openPanel('deposit')" class="ds-b8 ds-b8-success"
+                    <button type="button" @click="openPanel('deposit')" class="ds-b8 ds-b8-success" data-counter-button="deposit"
                             :class="panel === 'deposit' ? 'is-on' : ''">
                         <span>{{ __('sales::field.btn_money') }}</span>
                         <small>F2</small>
                     </button>
                     @endif
                     @if ($show['transport'])
-                    <button type="button" @click="openPanel('transport')" class="ds-b8 ds-b8-pending"
+                    <button type="button" @click="openPanel('transport')" class="ds-b8 ds-b8-pending" data-counter-button="transport"
                             :class="panel === 'transport' ? 'is-on' : ''">
                         <span>{{ __('sales::field.btn_transport') }}</span>
                         <small>F4</small>
                     </button>
                     @endif
-                    <button type="button" @click="openPanel('price')" class="ds-b8 ds-b8-info"
-                            :class="panel === 'price' ? 'is-on' : ''">
-                        <span>{{ __('sales::field.btn_price') }}</span>
-                        <small>F3</small>
-                    </button>
-                    <button type="button" @click="openPanel('return')" class="ds-b8 ds-b8-draft"
-                            :class="panel === 'return' ? 'is-on' : ''">
-                        <span>{{ __('sales::field.btn_return') }}</span>
-                        <small>F9</small>
-                    </button>
-                    <button type="button" @click="openPanel('delivery')" class="ds-b8 ds-b8-inventory"
+                    <button type="button" @click="openPanel('delivery')" class="ds-b8 ds-b8-inventory" data-counter-button="delivery"
                             :class="panel === 'delivery' ? 'is-on' : ''">
                         <span>{{ __('sales::field.btn_delivery') }}</span>
                         <small><span x-text="'F7 · ' + deliveryModeLabel"></span></small>
                     </button>
-                    <button type="button" @click="openPanel('drafts')" class="ds-b8 ds-b8-neutral"
+                    <button type="button" @click="openPanel('return')" class="ds-b8 ds-b8-draft" data-counter-button="return"
+                            :class="panel === 'return' ? 'is-on' : ''">
+                        <span>{{ __('sales::field.btn_return') }}</span>
+                        <small>F9</small>
+                    </button>
+
+                    {{-- সারি ২ — "খসড়া রাখুন" ফর্মের নিজের submit (নাম আর মান কেবল চাপলে যায় — নিচের ব্যাখ্যা দেখুন) --}}
+                    <button type="submit" name="save_as_draft" value="1" class="ds-b8 ds-b8-neutral" data-counter-button="save_draft"
+                            :disabled="! canConfirm">
+                        <span>{{ __('sales::action.save_draft') }}</span>
+                    </button>
+                    <button type="button" @click="openPanel('drafts')" class="ds-b8 ds-b8-neutral" data-counter-button="drafts"
                             :class="panel === 'drafts' ? 'is-on' : ''">
                         <span>{{ __('sales::field.btn_drafts') }}</span>
                         <small>F6</small>
                     </button>
-                    <button type="button" @click="openPanel('reprint')" class="ds-b8 ds-b8-neutral"
+                    <button type="button" @click="openPanel('reprint')" class="ds-b8 ds-b8-neutral" data-counter-button="reprint"
                             :class="panel === 'reprint' ? 'is-on' : ''">
                         <span>{{ __('sales::field.btn_reprint') }}</span>
                         <small>F8</small>
                     </button>
-                    <button type="button" @click="openPanel('cancel')" class="ds-b8 ds-b8-danger"
+                    <button type="button" @click="openPanel('cancel')" class="ds-b8 ds-b8-danger" data-counter-button="cancel"
                             :class="panel === 'cancel' ? 'is-on' : ''">
                         <span>{{ __('sales::field.btn_cancel') }}</span>
                         <small>Ctrl+X</small>
@@ -646,17 +650,9 @@
                      বাঁধাই পরের টিকে বসে, অথচ ফর্ম জমা হয় **এখনই**। --}}
                 {{-- ⛔ "মাল কীভাবে যাবে" এখানে নেই — মালিক, ৩ অক্টোবর ২০২৬: *"ekhane thakbena kotobar bolechi"*। পরিবহন
                      ডেলিভারি প্রসেসিংয়ে, নয়তো চালান বা বিল ছাপার আগে পপআপে ([[RequireTransportBeforePrint]])। --}}
-                <div class="mt-2 grid grid-cols-3 gap-2">
-                    {{-- ⓘ খসড়াটা এক ঘর, নিশ্চিত দুই ঘর — চাপটা ডানে,
-                         আর রোজকার কাজটাই বড়। --}}
-                    {{-- ⓘ ধূসর — মালিকের ছবি, ২৭ সেপ্টেম্বর ২০২৬ (সন্ধ্যা): "খসড়া রাখুন" ছাই রং --}}
-                    <x-ui.button type="submit" tone="neutral" class="py-2"
-                                 name="save_as_draft" value="1"
-                                 ::disabled="! canConfirm">
-                        {{ __('sales::action.save_draft') }}
-                    </x-ui.button>
-
-                    <x-ui.button type="submit" tone="primary" class="col-span-2 py-2" x-ref="confirm" data-overview-trigger
+                {{-- ⭐ সারি ৩ — "নিশ্চিত করুন" একা, পুরো প্রস্থে (মালিক, ৪ অক্টোবর ২০২৬)। "খসড়া রাখুন" উপরে, সারি ২-এ। --}}
+                <div class="mt-2 grid grid-cols-1 gap-2">
+                    <x-ui.button type="submit" tone="primary" class="py-2" x-ref="confirm" data-overview-trigger
                                  name="save_as_draft" value="0"
                                  ::disabled="! canConfirm">
                         {{ __('sales::action.confirm') }}

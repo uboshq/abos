@@ -590,11 +590,20 @@
                              আর তালিকা কোনো ফর্ম-ঘর নয়, তাই মানটা এখানে বসাতে হয়।
                              না বসালে চালান সেভ হত ক্রেতা ছাড়াই। --}}
                         {{-- ⭐ মন্তব্য (আগের নোট যোগ) — ক্রেতার ঘরের নিচে; বিলে ছাপা হয় (মালিক, ৪ অক্টোবর ২০২৬) --}}
-                        <button type="button" @click="openPanel('note')"
-                                class="mt-1 text-2xs font-semibold text-(--color-brand-700)" data-memo>
-                            {{ __('sales::field.btn_memo') }}
-                            <span x-show="noteText !== ''" x-cloak>✓</span>
-                        </button>
+                        {{-- ⭐ "দাম দেখুন" মন্তব্যের লাইনের একদম ডানে — মালিক, ৪ অক্টোবর ২০২৬ (ছবিসহ) --}}
+                        <div class="mt-1 flex items-center justify-between gap-2">
+                            <button type="button" @click="openPanel('note')"
+                                    class="text-2xs font-semibold text-(--color-brand-700)" data-memo>
+                                {{ __('sales::field.btn_memo') }}
+                                <span x-show="noteText !== ''" x-cloak>✓</span>
+                            </button>
+
+                            <button type="button" @click="openPanel('price')" class="ds-b8 ds-b8-info ds-b8-inline" data-counter-button="price"
+                                    :class="panel === 'price' ? 'is-on' : ''">
+                                <span>{{ __('sales::field.btn_price') }}</span>
+                                <small>F3</small>
+                            </button>
+                        </div>
 
                         <input type="hidden" name="customer_id" x-model="customerId">
                             </div>
