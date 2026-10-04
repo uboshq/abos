@@ -34,4 +34,13 @@ return [
     'discount_amount' => 'Discount: :amount',
     'vat_total' => 'VAT',
     'discount_signed' => 'The discount is already signed.',
+    'collection_title' => 'Collection :no: overview',
+    'into_account' => 'Into account',
+    'instrument' => 'How',
+    'against_bill' => 'Invoice :no',
+    'bill_due_now' => 'Due on the invoice now: :amount',
+    'collection_total' => 'Collection total',
+    'due_after' => 'Due after this collection',
+    'advance_after' => 'Advance after this collection',
+    'collection_signature' => 'This collection needs a signature. Confirming saves it as a draft awaiting signature; the money does not reach the books until it is signed.',
 ];

@@ -34,4 +34,13 @@ return [
     'discount_amount' => 'ছাড়: :amount',
     'vat_total' => 'ভ্যাট',
     'discount_signed' => 'ছাড়ে সই হয়ে আছে।',
+    'collection_title' => 'টাকা আদায় :no — সারাংশ',
+    'into_account' => 'কোন খাতে জমা',
+    'instrument' => 'কীভাবে',
+    'against_bill' => 'বিল :no',
+    'bill_due_now' => 'বিলের এখনকার বাকি: :amount',
+    'collection_total' => 'আদায়ের মোট',
+    'due_after' => 'আদায়ের পরে বকেয়া',
+    'advance_after' => 'আদায়ের পরে অগ্রিম জমা',
+    'collection_signature' => 'এই আদায়ে সই লাগবে — নিশ্চিত চাপলে খসড়া হয়ে সইয়ের অপেক্ষায় যাবে; সই না হওয়া পর্যন্ত টাকা খাতায় উঠবে না।',
 ];

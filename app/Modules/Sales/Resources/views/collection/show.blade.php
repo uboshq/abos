@@ -10,9 +10,9 @@
                         {{ __('core.action.edit') }}
                     </x-ui.button>
 
-                    <form method="POST" action="{{ route('sales.collection.confirm', $collection) }}">
+                    <form method="POST" action="{{ route('sales.collection.confirm', $collection) }}" data-confirm-overview="{{ route('sales.collection.overview', $collection) }}">
                         @csrf
-                        <x-ui.button type="submit" tone="primary">{{ __('sales::action.confirm') }}</x-ui.button>
+                        <x-ui.button type="submit" tone="primary" data-overview-trigger>{{ __('sales::action.confirm') }}</x-ui.button>
                     </form>
                 @endcan
                 <x-ui.print-menu :documents="[
@@ -88,4 +88,6 @@
             @endif
         @endcan
     </div>
+    {{-- ⭐ নিশ্চিতের আগে সারাংশের পপ-আপ ([[confirm-overview.js]], ৪ অক্টোবর ২০২৬) — আদায়টা আগেই খসড়া, তাই "খসড়া রাখুন" নেই --}}
+    <x-ui.confirm-overview :draft="false" />
 </x-layouts.app>

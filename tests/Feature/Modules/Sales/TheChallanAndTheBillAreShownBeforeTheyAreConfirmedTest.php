@@ -17,6 +17,7 @@ use App\Modules\Inventory\Models\StockMovement;
 use App\Modules\Inventory\Models\Warehouse;
 use App\Modules\Sales\Models\DeliveryChallan;
 use App\Modules\Sales\Models\SalesInvoice;
+use App\Modules\Sales\Services\CollectionService;
 use App\Modules\Sales\Services\CreditExposure;
 use App\Modules\Sales\Services\DeliveryChallanService;
 use App\Modules\Sales\Services\SalesInvoiceService;
@@ -135,6 +136,35 @@ final class TheChallanAndTheBillAreShownBeforeTheyAreConfirmedTest extends TestC
 
         $this->get(route('sales.invoice.show', $invoice))->assertOk()
             ->assertSee('data-confirm-overview="'.route('sales.invoice.overview', $invoice).'"', false)
+            ->assertSee('data-confirm-overview-dialog', false)
+            ->assertSee('data-overview-trigger', false);
+    }
+
+    /**
+     * ⭐ টাকা আদায় — মোট, আদায়ের পরের বকেয়া, কিছু লেখে না; আর দরজার নিজের পাহারা: নিয়মের আগে লেখা চেকের খসড়া
+     * "নিশ্চিত হবে না" ([[CollectionService::whatWouldStopTheConfirm()]])।
+     */
+    public function test_the_collection_overview_shows_the_due_after_and_stops_an_old_cheque_draft(): void
+    {
+        $collection = app(CollectionService::class)->create([
+            'customer_id' => $this->customer->id, 'trx_date' => now()->toDateString(), 'amount' => '500', 'instrument' => 'cash',
+        ], [])->fresh();
+
+        $this->post(route('sales.collection.overview', $collection))->assertOk()
+            ->assertSee('data-overview-blocks="0"', false)
+            ->assertSee(__('sales::overview_confirm.collection_total'))
+            ->assertSee('500.00');
+        $this->assertSame(DocumentStatus::DRAFT, $collection->fresh()->status, '⛔ সারাংশ দেখতে গিয়েই আদায় নিশ্চিত হয়ে গেল।');
+
+        // ⓘ চেক কেবল চেকের খাতা দিয়ে — নিয়মের আগে লেখা খসড়াতেও দরজা থামায়, সারাংশও আগেই বলে
+        $collection->forceFill(['instrument' => 'cheque'])->save();
+
+        $this->post(route('sales.collection.overview', $collection))->assertOk()
+            ->assertSee('data-overview-blocks="1"', false)
+            ->assertSee(__('accounts::validation.cheque_only_through_register'));
+
+        $this->get(route('sales.collection.show', $collection))->assertOk()
+            ->assertSee('data-confirm-overview="'.route('sales.collection.overview', $collection).'"', false)
             ->assertSee('data-confirm-overview-dialog', false)
             ->assertSee('data-overview-trigger', false);
     }

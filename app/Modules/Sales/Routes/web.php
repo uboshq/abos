@@ -385,6 +385,8 @@ Route::middleware('auth')->prefix('sales')->group(function () {
         Route::get('/{collection}/edit', [CollectionController::class, 'edit'])->whereNumber('collection')->name('edit');
         Route::put('/{collection}', [CollectionController::class, 'update'])->whereNumber('collection')->name('update');
         Route::post('/{collection}/confirm', [CollectionController::class, 'confirm'])->whereNumber('collection')->name('confirm');
+        // ⭐ নিশ্চিতের আগে সারাংশ — পপ-আপের ভিতর ([[SalesPaperOverviewController]], ৪ অক্টোবর ২০২৬)
+        Route::post('/{collection}/overview', [\App\Modules\Sales\Http\Controllers\SalesPaperOverviewController::class, 'collection'])->whereNumber('collection')->name('overview');
         Route::post('/{collection}/cancel', [CollectionController::class, 'cancel'])->whereNumber('collection')->name('cancel');
 
         // চেকের খাতা থেকে আদায়ে-পোস্ট-করা চেকের ফেরত — param চেক, collection নয়

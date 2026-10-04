@@ -10,6 +10,7 @@ use App\Core\Support\DateFormat;
 use App\Core\Support\Money;
 use App\Models\Approval;
 use App\Modules\Customer\Models\Customer;
+use App\Modules\Sales\Models\Collection;
 use App\Modules\Sales\Models\DeliveryChallan;
 use App\Modules\Sales\Models\SalesInvoice;
 use Illuminate\Validation\ValidationException;
@@ -31,6 +32,7 @@ final class SalesPaperOverview
         private readonly CreditExposure $credit,
         private readonly ApprovalEngine $approvals,
         private readonly SalesInvoiceService $invoices,
+        private readonly CollectionService $collections,
     ) {}
 
     public function challan(DeliveryChallan $challan): ConfirmOverview
@@ -118,6 +120,54 @@ final class SalesPaperOverview
         }
 
         $this->discountSignature($o, $invoice);
+
+        return $o;
+    }
+
+    /**
+     * ⭐ টাকা আদায় — কার কাছ থেকে, কোন খাতে, কোন বিলে কত বসবে, আর আদায়ের পরে বকেয়া কত।
+     * ⓘ "নিশ্চিত হবে না" দরজার নিজের পাহারা থেকে ([[CollectionService::whatWouldStopTheConfirm()]]): চেক এই পথে নয়,
+     * আর বিলের বাকির বেশি বসানো যায় না।
+     */
+    public function collection(Collection $collection): ConfirmOverview
+    {
+        $collection->loadMissing(['customer', 'account', 'lines.invoice']);
+
+        $o = ConfirmOverview::titled(__('sales::overview_confirm.collection_title', ['no' => $collection->document_no]))
+            ->head(__('sales::field.customer'), $collection->customer?->name())
+            ->head(__('sales::field.date'), DateFormat::format($collection->trx_date))
+            ->head(__('sales::overview_confirm.into_account'), $collection->account?->name())
+            ->head(__('sales::overview_confirm.instrument'), filled($collection->instrument)
+                ? trim($collection->instrument.' '.$collection->instrument_no) : null);
+
+        foreach ($collection->lines as $line) {
+            if ($line->invoice === null) {
+                continue;
+            }
+            $o->line(__('sales::overview_confirm.against_bill', ['no' => $line->invoice->document_no]), [
+                __('sales::overview_confirm.bill_due_now', ['amount' => Money::format($line->invoice->dueAmount())]),
+            ], Money::format((string) $line->amount));
+        }
+
+        $amount = (string) $collection->amount;
+        $o->total(__('sales::overview_confirm.collection_total'), Money::format($amount), strong: true);
+
+        if ($collection->customer !== null) {
+            $before = (string) $collection->customer->outstanding();
+            $after = bcsub($before, $amount, 4);
+            $o->money(__('sales::overview_confirm.old_due'), Money::format($before));
+            $o->money(bccomp($after, '0', 4) < 0 ? __('sales::overview_confirm.advance_after') : __('sales::overview_confirm.due_after'),
+                Money::format(bccomp($after, '0', 4) < 0 ? bcmul($after, '-1', 4) : $after),
+                bccomp($after, '0', 4) < 0 ? 'good' : 'plain');
+        }
+
+        foreach ($this->collections->whatWouldStopTheConfirm($collection) as $message) {
+            $o->note($message, 'stop');
+        }
+
+        if ($this->approvals->requires('sales', 'collection', $amount, class_basename(Collection::class))) {
+            $o->note(__('sales::overview_confirm.collection_signature'), 'warn');
+        }
 
         return $o;
     }

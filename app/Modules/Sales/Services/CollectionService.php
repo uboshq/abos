@@ -324,6 +324,27 @@ final class CollectionService
     }
 
     /**
+     * নিশ্চিতের দরজা কোন কারণে থামাবে — কিছু না লিখে (৪ অক্টোবর ২০২৬)।
+     *
+     * ⓘ "নিশ্চিত করুন"-এর আগের সারাংশ ([[SalesPaperOverview::collection()]]) এটাই দেখায়। ⓘ ডাকে দরজার নিজের দুই
+     * পাহারা — [[assertNoCheque()]] আর [[assertStillFits()]] (তালা ছাড়া) — দুটোই কেবল পড়ে; সইয়ের পাহারা নয়, কারণ সেটা
+     * অনুরোধ লেখে।
+     *
+     * @return list<string>  থামার কারণগুলো; খালি মানে কিছুই থামাবে না
+     */
+    public function whatWouldStopTheConfirm(Collection $collection): array
+    {
+        try {
+            $this->assertNoCheque($collection->instrument);
+            $this->assertStillFits($collection);
+        } catch (ValidationException $e) {
+            return array_values($e->validator->errors()->all());
+        }
+
+        return [];
+    }
+
+    /**
      * আদায়ের কাগজে চেক নয় — মালিকের নিয়ম, ২৬ সেপ্টেম্বর ২০২৬।
      *
      * ⛔ এই কাগজ নিশ্চিত হলেই Dr নগদ/ব্যাংক / Cr গ্রাহক বসে — চেকে সেটা
