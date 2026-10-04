@@ -20,4 +20,8 @@ return [
     'payment' => 'Payment voucher',
     'journal' => 'Journal voucher',
     'contra' => 'Contra voucher',
+    // ⭐ গ১ — ৪ অক্টোবর ২০২৬
+    'note' => 'Credit or debit note',
+    'cheque_clear' => 'Cheque cleared',
+    'cheque_bounce' => 'Cheque bounced',
 ];

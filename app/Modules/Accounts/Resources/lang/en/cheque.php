@@ -22,4 +22,6 @@ return [
     'state_cleared' => 'Cleared',
     'state_bounced' => 'Bounced',
     'state_cancelled' => 'Cancelled',
+    // ⭐ গ১ — সইয়ের জন্য থামা চেক (৪ অক্টোবর ২০২৬)
+    'awaiting_signature' => 'The cheque is awaiting its signature — it reaches the books on the last one.',
 ];

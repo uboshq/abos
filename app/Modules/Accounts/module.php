@@ -628,6 +628,11 @@ return [
         'payment' => 'accounts::approval.payment',
         'journal' => 'accounts::approval.journal',
         'contra' => 'accounts::approval.contra',
+
+        // ⭐ গ১ — ভাউচার ছাড়াই টাকা নাড়ানো হিসাবের কাগজ (Accounts-Finance অডিট, ৪ অক্টোবর ২০২৬; [[AccountsSignature]])
+        'note' => 'accounts::approval.note',
+        'cheque_clear' => 'accounts::approval.cheque_clear',
+        'cheque_bounce' => 'accounts::approval.cheque_bounce',
     ],
 
     /*
@@ -642,7 +647,7 @@ return [
      * মিলিয়ে দেখে। ⛔ একটা টাইপো নীরবে কাগজটাকে bulk-এ
      * ঢুকিয়ে দিত।
      */
-    'moves_money' => ['expense', 'counter_deposit', 'counter_payment', 'transfer', 'receipt', 'payment', 'journal', 'contra', 'year_end'],
+    'moves_money' => ['expense', 'counter_deposit', 'counter_payment', 'transfer', 'receipt', 'payment', 'journal', 'contra', 'year_end', 'note', 'cheque_clear', 'cheque_bounce'],
 
     // রিপোর্ট সরবরাহকারী — কোর নিজে থেকে ডেকে নেবে (সেকশন ১৯.৩)।
     // কোর ফাইলে মডিউলের নাম লিখতে হয় না।
@@ -785,5 +790,10 @@ return [
         AccountFormOpened::class,
         // ⭐ চেক পাশ — টাকার জন্য আটকে থাকা DO আবার যাচাই হয় (বিক্রয়ের কাজের ধারা, ২ অক্টোবর ২০২৬)
         \App\Modules\Accounts\Events\ChequeCleared::class,
+    ],
+
+    // ⭐ শেষ সই পড়লে হিসাবের কাগজ নিজেই শেষ হয় — গ১ ([[AccountsSignature]])
+    'listeners' => [
+        \App\Core\Events\ApprovalDecided::class => [\App\Modules\Accounts\Listeners\FinishTheAccountsPaperOnTheLastSignature::class],
     ],
 ];

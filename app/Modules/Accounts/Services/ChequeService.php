@@ -308,6 +308,23 @@ final class ChequeService
 
         $amount = (string) $cheque->amount;
 
+        /*
+         * ⭐ সই — গ১, Accounts-Finance অডিট, ৪ অক্টোবর ২০২৬ ([[AccountsSignature]])।
+         *
+         * ⛔ আগে চেক পাশ সই ছাড়াই ব্যাংকে টাকা বসাত। ⓘ থামলে চেকটা যেমন ছিল তেমনই থাকে; শেষ সই পড়লে
+         * [[FinishTheAccountsPaperOnTheLastSignature]] এই মেথডটাই আবার ডাকে।
+         *
+         * ⚠️ বাছা ব্যাংক সই চাওয়ার **আগে** চেকে বসে — সইয়ের ছাপ কাগজের তখনকার চেহারার; পরে বদলালে ছাপ মিলত না আর
+         * শেষ সইয়ের পরে আবার সই চাওয়া হত।
+         */
+        if ((int) $cheque->bank_account_id !== (int) $bank->id) {
+            $cheque->update(['bank_account_id' => $bank->id]);
+        }
+
+        if (app(AccountsSignature::class)->holds($cheque, AccountsSignature::CHEQUE_CLEAR, $amount)) {
+            return $cheque->fresh();
+        }
+
         return DB::transaction(function () use ($cheque, $bank, $date, $amount) {
             /*
              * ⭐ নতুন চেকে পাশের দিনই ডিলারের বকেয়া কমে — এর আগে খাতায়
@@ -380,6 +397,14 @@ final class ChequeService
 
         $date = $onDate ?? now()->toDateString();
         $amount = (string) $cheque->amount;
+
+        /*
+         * ⭐ সই — গ১ ([[AccountsSignature]])। ⓘ ফেরতের কারণটাই সইয়ের অনুরোধের কারণ; শেষ সই পড়লে
+         * [[FinishTheAccountsPaperOnTheLastSignature]] ঐ কারণ নিয়েই এই মেথড আবার ডাকে।
+         */
+        if (app(AccountsSignature::class)->holds($cheque, AccountsSignature::CHEQUE_BOUNCE, $amount, $reason)) {
+            return $cheque->fresh();
+        }
 
         if ($cheque->direction === Cheque::RECEIVED && ! $this->receivedIntoTheBooks($cheque)) {
             return DB::transaction(function () use ($cheque, $reason, $date, $amount) {

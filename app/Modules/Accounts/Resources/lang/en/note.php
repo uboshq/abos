@@ -58,4 +58,6 @@ return [
     'unknown_direction' => 'That is not a direction a note can have',
     'missing_account' => 'The chart has no account :code — install it first',
     'no_goods_move' => 'No goods move. If goods come back it is a return, not a note.',
+    // ⭐ গ১ — সইয়ের জন্য থামা নোট (৪ অক্টোবর ২০২৬)
+    'awaiting_signature' => 'The note is awaiting its signature — it reaches the books on the last one.',
 ];

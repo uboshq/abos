@@ -199,7 +199,13 @@ class ChequeController extends Controller implements HasMiddleware
             'bank_account_id' => ['nullable', 'integer', Rule::exists('accounts', 'id')->where('company_id', CompanyContext::id())],
         ]);
 
-        $this->cheques->clear($cheque, $data['bank_account_id'] ?? null);
+        $was = $cheque->status;
+        $cheque = $this->cheques->clear($cheque, $data['bank_account_id'] ?? null);
+
+        // ⓘ সইয়ের জন্য থামলে অবস্থা বদলায় না — "পাশ হলো" বলা মিথ্যা হত ([[AccountsSignature]])
+        if ($cheque->status === $was) {
+            return back()->with('saved', __('accounts::cheque.awaiting_signature'));
+        }
 
         return back()->with('saved', __('accounts::message.cheque_cleared'));
     }
@@ -210,7 +216,12 @@ class ChequeController extends Controller implements HasMiddleware
             'bounce_reason' => ['required', 'string', 'min:3', 'max:255'],
         ]);
 
-        $this->cheques->bounce($cheque, $data['bounce_reason']);
+        $was = $cheque->status;
+        $cheque = $this->cheques->bounce($cheque, $data['bounce_reason']);
+
+        if ($cheque->status === $was) {
+            return back()->with('saved', __('accounts::cheque.awaiting_signature'));
+        }
 
         return back()->with('saved', __('accounts::message.cheque_bounced'));
     }

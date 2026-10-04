@@ -1,0 +1,54 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Modules\Accounts\Listeners;
+
+use App\Core\Events\ApprovalDecided;
+use App\Models\Approval;
+use App\Modules\Accounts\Models\Cheque;
+use App\Modules\Accounts\Models\Note;
+use App\Modules\Accounts\Services\AccountsSignature;
+use App\Modules\Accounts\Services\ChequeService;
+use App\Modules\Accounts\Services\NoteService;
+
+/**
+ * ⭐ শেষ সই পড়লে হিসাবের কাগজটা নিজেই শেষ হয় — গ১, Accounts-Finance অডিট, ৪ অক্টোবর ২০২৬ ([[AccountsSignature]])।
+ *
+ * ⓘ মালিকের সিদ্ধান্ত (২৭ সেপ্টেম্বর): শেষ সইয়ের পর কাউকে আবার "পাকা করুন" চাপতে হবে না। ফেরত দিলে কাগজটা খসড়াই
+ * থাকে — যিনি লিখেছেন তিনি শুধরে আবার পাঠান, বা বাতিল করেন।
+ */
+final class FinishTheAccountsPaperOnTheLastSignature
+{
+    public function handle(ApprovalDecided $event): void
+    {
+        if (($event->payload['module'] ?? null) !== AccountsSignature::MODULE
+            || ! in_array((string) ($event->payload['action'] ?? ''), AccountsSignature::ACTIONS, true)) {
+            return;
+        }
+
+        $approval = Approval::query()->find((int) ($event->payload['approval_id'] ?? 0));
+
+        if ($approval?->status !== Approval::APPROVED) {
+            return;
+        }
+
+        $paper = $approval->approvable;
+
+        // ⓘ খসড়া থাকলেই — একই সই দুইবার ঘটনা পাঠালে বা কেউ হাতে আগেই পাকা করলে দ্বিতীয়বার কিছু হয় না
+        if ($paper instanceof Note && $paper->isDraft()) {
+            app(NoteService::class)->confirm($paper);
+
+            return;
+        }
+
+        // ⓘ চেক যে অবস্থায় থামেছিল সেখানেই থাকলে — অন্য পথে আগেই পাশ বা ফেরত হলে কিছু হয় না
+        if ($paper instanceof Cheque && in_array($paper->status, [Cheque::PENDING, Cheque::DEPOSITED, Cheque::CLEARED], true)) {
+            match ($approval->action) {
+                AccountsSignature::CHEQUE_CLEAR => $paper->status !== Cheque::CLEARED ? app(ChequeService::class)->clear($paper) : null,
+                AccountsSignature::CHEQUE_BOUNCE => app(ChequeService::class)->bounce($paper, (string) $approval->requested_reason),
+                default => null,
+            };
+        }
+    }
+}

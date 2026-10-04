@@ -221,9 +221,10 @@ class NoteController extends Controller implements HasMiddleware
 
     public function confirm(Note $note): RedirectResponse
     {
-        $this->notes->confirm($note);
+        $note = $this->notes->confirm($note);
 
-        return back()->with('saved', __('accounts::note.confirmed'));
+        // ⓘ সইয়ের জন্য থামলে নোটটা খসড়াই থাকে — "পাকা হলো" বলা মিথ্যা হত ([[AccountsSignature]])
+        return back()->with('saved', $note->isDraft() ? __('accounts::note.awaiting_signature') : __('accounts::note.confirmed'));
     }
 
     public function cancel(Request $request, Note $note): RedirectResponse

@@ -63,6 +63,42 @@ class EveryApprovalAskedForCanBeConfiguredTest extends TestCase
             }
 
             /*
+             * ⭐ কাজের নাম ক্লাসের ধ্রুবকে — `module: 'sales', action: self::APPROVAL_ACTION` (৪ অক্টোবর ২০২৬; [[MarginGuard]],
+             * [[SalesInvoiceCancellationService]])। ⓘ ধ্রুবকের মান ক্লাস থেকেই পড়া হয়, আন্দাজে নয়।
+             */
+            preg_match_all("/module:\s*'([a-z_]+)'\s*,\s*action:\s*self::([A-Z_]+)/", $code, $byConstant, PREG_SET_ORDER);
+
+            if ($byConstant !== []
+                && preg_match('/^namespace\s+([^;]+);/m', $code, $ns3) === 1
+                && preg_match('/^(?:final\s+|abstract\s+)?class\s+(\w+)/m', $code, $cls3) === 1
+                && class_exists($ns3[1].'\\'.$cls3[1])
+            ) {
+                $constants = (new \ReflectionClass($ns3[1].'\\'.$cls3[1]))->getConstants();
+
+                foreach ($byConstant as $one) {
+                    if (is_string($constants[$one[2]] ?? null)) {
+                        $asked[] = $one[1].'.'.$constants[$one[2]];
+                    }
+                }
+            }
+
+            // ⓘ অন্য ক্লাসের ধ্রুবক — `action: SalesQuotation::APPROVAL_ACTION`; ক্লাসটা ফাইলের `use` সারি থেকে
+            preg_match_all("/module:\s*'([a-z_]+)'\s*,\s*action:\s*([A-Z]\w*)::([A-Z_]+)/", $code, $byOther, PREG_SET_ORDER);
+            preg_match_all('/^use\s+([^;]+);/m', $code, $uses);
+
+            foreach ($byOther as $one) {
+                foreach ($uses[1] as $used) {
+                    if (str_ends_with($used, '\\'.$one[2]) && class_exists($used)) {
+                        $value = (new \ReflectionClass($used))->getConstants()[$one[3]] ?? null;
+
+                        if (is_string($value)) {
+                            $asked[] = $one[1].'.'.$value;
+                        }
+                    }
+                }
+            }
+
+            /*
              * ⭐ ধ্রুবক দিয়ে চাওয়া — `self::MODULE, self::ACTION` (২৮ সেপ্টেম্বর ২০২৬)।
              *
              * ⛔ উপরের regex কেবল লেখা নাম দেখে। [[PromotionApprovalChain::open()]]
@@ -81,6 +117,28 @@ class EveryApprovalAskedForCanBeConfiguredTest extends TestCase
 
                     if (is_string($constants['MODULE'] ?? null) && is_string($constants['ACTION'] ?? null)) {
                         $asked[] = $constants['MODULE'].'.'.$constants['ACTION'];
+                    }
+                }
+            }
+
+            /*
+             * ⭐ একাধিক কাজের সই-সহায়ক — `MODULE` আর `ACTIONS` তালিকা (৪ অক্টোবর ২০২৬; [[AccountsSignature]], [[FinanceSignature]])।
+             * ⓘ কাজের নাম ধ্রুবক দিয়ে যায় (`holds($paper, self::NOTE, …)`), তাই উপরের লেখা-নামের খোঁজ দেখত না। তালিকার প্রতিটা
+             * কাজই সেবা থেকে চাওয়া হয় — তালিকায় না থাকলে শেষ সইয়ের শ্রোতাও তাকে চিনত না।
+             */
+            if (str_contains($code, 'self::MODULE') && str_contains($code, 'ACTIONS')
+                && preg_match('/^namespace\s+([^;]+);/m', $code, $ns2) === 1
+                && preg_match('/^(?:final\s+|abstract\s+)?class\s+(\w+)/m', $code, $cls2) === 1
+            ) {
+                $class = $ns2[1].'\\'.$cls2[1];
+
+                if (class_exists($class)) {
+                    $constants = (new \ReflectionClass($class))->getConstants();
+
+                    if (is_string($constants['MODULE'] ?? null) && is_array($constants['ACTIONS'] ?? null)) {
+                        foreach ($constants['ACTIONS'] as $action) {
+                            $asked[] = $constants['MODULE'].'.'.$action;
+                        }
                     }
                 }
             }

@@ -175,6 +175,18 @@ final class NoteService
             ]);
         }
 
+        /*
+         * ⭐ সই — গ১, Accounts-Finance অডিট, ৪ অক্টোবর ২০২৬ ([[AccountsSignature]])।
+         *
+         * ⛔ আগে নোট সই ছাড়াই খাতায় বসত: গ্রাহকের পাওনা কমানো বা সরবরাহকারীর দেনা কমানো — টাকা নড়ে, অথচ ভাউচারের
+         * সইয়ের নিয়ম এখানে পৌঁছাত না। ⓘ থামলে নোটটা খসড়াই থাকে; শেষ সই পড়লে
+         * [[FinishTheAccountsPaperOnTheLastSignature]] এই মেথডটাই আবার ডাকে, আর তখন সই পাওয়া বলে এগোয়।
+         */
+        if (app(AccountsSignature::class)->holds($note, AccountsSignature::NOTE,
+            bcadd((string) $note->amount, (string) ($note->tax_amount ?? '0'), 4), $note->narration)) {
+            return $note;
+        }
+
         return DB::transaction(function () use ($note) {
             $this->posting->post(
                 sourceType: $note->sourceType(),
