@@ -723,6 +723,68 @@ class VoucherRequest extends FormRequest
                 }
             },
 
+            /*
+             * ⭐ দুই পাশে কোন ধরনের খাত — সার্ভারও জানে (গ৪, Accounts-Finance অডিট, ৪ অক্টোবর ২০২৬)।
+             *
+             * ⛔ আগে পর্দার তালিকাই ছিল একমাত্র বেড়া: হাতে বানানো অনুরোধে পরিশোধ "পাওনা খাত থেকে", রসিদ "খরচের
+             * খাতে" বসত — খরচ আর পরিশোধের অনুমোদন এড়িয়ে। ⓘ নিয়ম পর্দার তালিকারই হুবহু
+             * ([[DepositFormOptions::sidesFor()]]); যেখানে পর্দা সব খাত দেখায়, সেখানে এখানেও বাধা নেই।
+             */
+            function (Validator $validator): void {
+                if ($this->isJournal() || $validator->errors()->hasAny(['from_account_id', 'to_account_id'])) {
+                    return;
+                }
+
+                $from = Account::query()->find((int) $this->input('from_account_id'));
+                $to = Account::query()->find((int) $this->input('to_account_id'));
+
+                if ($from === null || $to === null) {
+                    return;
+                }
+
+                $money = fn (Account $a): bool => $a->isMoney();
+                $expense = fn (Account $a): bool => $a->type === Account::EXPENSE;
+                $moneyOrOwed = function (Account $a) use ($money): bool {
+                    $payable = StandardChart::find(StandardChart::PAYABLE_GROUP);
+
+                    return $money($a) || ($payable !== null && $payable->selfAndDescendants()->contains('id', $a->id));
+                };
+
+                $type = $this->route('voucher')?->type ?? $this->input('type');
+
+                [$fromRule, $toRule] = match ($type) {
+                    Voucher::RECEIPT => [null, [$money, 'account_must_be_money']],
+                    Voucher::PAYMENT => [[$money, 'account_must_be_money'], null],
+                    Voucher::EXPENSE => [[$moneyOrOwed, 'account_must_be_money_or_owed'], [$expense, 'account_must_be_expense']],
+                    Voucher::CONTRA => [[$money, 'account_must_be_money'], [$money, 'account_must_be_money']],
+                    default => [null, null],
+                };
+
+                foreach (['from_account_id' => [$fromRule, $from], 'to_account_id' => [$toRule, $to]] as $field => [$rule, $account]) {
+                    if ($rule !== null && ! $rule[0]($account)) {
+                        $validator->errors()->add($field, __('accounts::validation.'.$rule[1], ['account' => $account->label()]));
+                    }
+                }
+            },
+
+            /*
+             * ⭐ মাথার পক্ষ এই কোম্পানির, আর সত্যিই আছে (গ৪) — জাবেদার সারির পক্ষ যেমন [[checkParty()]]-এ।
+             *
+             * ⛔ আগে সহজ ফর্মের পক্ষ যাচাই হত না: অন্য কোম্পানির বা ভুয়া গ্রাহকের নামে পাওনা বসত।
+             */
+            function (Validator $validator): void {
+                if ($this->isJournal()) {
+                    return;
+                }
+
+                $type = trim((string) $this->input('party_type', ''));
+                $id = (int) $this->input('party_id', 0);
+
+                if ($type !== '' && $id > 0 && ! app(PartyRegistry::class)->exists($type, $id)) {
+                    $validator->errors()->add('party_id', __('accounts::validation.party_unknown'));
+                }
+            },
+
             function (Validator $validator): void {
                 if (! $this->isJournal()) {
                     return;

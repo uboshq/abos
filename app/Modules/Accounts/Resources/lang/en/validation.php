@@ -89,6 +89,11 @@ return [
     // জাবেদার সারিতে পক্ষ — তিন কোণা সমন্বয়ের জন্য
     'party_half_written' => 'A party needs both its kind and its name — otherwise there is no telling later whose money it was.',
     'party_unknown' => 'That party could not be found.',
+    // ⭐ গ৪ — দুই পাশে কোন ধরনের খাত, সার্ভারেও (৪ অক্টোবর ২০২৬)
+    'account_must_be_money' => 'Only a cash, bank or MFS account goes here — not ":account".',
+    'account_must_be_expense' => 'Only an expense account goes here — not ":account".',
+    'account_must_be_money_or_owed' => 'An expense is paid from a money account or a payable — not from ":account".',
+    'transfer_bank_only' => 'A transfer goes only to a counter or a bank — not to ":account".',
 
     // মাস বন্ধ ও খোলা
     'cannot_close_this_month' => 'This month cannot be closed — today’s sales would stop.',

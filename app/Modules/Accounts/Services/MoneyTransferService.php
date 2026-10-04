@@ -343,6 +343,22 @@ final class MoneyTransferService
                 'to_till_id' => __('accounts::validation.same_till_both_sides'),
             ]);
         }
+
+        /*
+         * ⭐ খাত হলে কেবল এই কোম্পানির চালু ব্যাংক খাত (গ৪, Accounts-Finance অডিট, ৪ অক্টোবর ২০২৬) — পর্দার
+         * তালিকার হুবহু ([[MoneyTransferController::options()]])।
+         *
+         * ⛔ আগে হাতে বানানো অনুরোধে "account:খরচের খাত" পাঠালে নগদ সই ছাড়াই খরচে বা সরবরাহকারীর খাতে বসত।
+         */
+        if (filled($toAccount)) {
+            $account = Account::query()->whereKey((int) $toAccount)->first();
+
+            if ($account === null || ! $account->isBank() || ! $account->is_active || $account->is_group) {
+                throw ValidationException::withMessages([
+                    'to_account_id' => __('accounts::validation.transfer_bank_only', ['account' => $account?->label() ?? '#'.$toAccount]),
+                ]);
+            }
+        }
     }
 
     /**
