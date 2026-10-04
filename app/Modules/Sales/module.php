@@ -197,6 +197,13 @@ return [
              * ⭐ ডেলিভারি প্রসেসিং — পরিবহন বরাদ্দ, লোডিং শিট, গেট পাস, ডিসপ্যাচ রেজিস্টার, ডেলিভারি নিশ্চিতকরণ।
              * ⓘ যে পর্দা তৈরি হয়নি সে [[PlannedScreenController]]-এর সৎ পাতায় ("মেনুতে এখন, কোড পরে")।
              */
+            /*
+             * ⭐ চালান তালিকা ডেলিভারি প্রসেসিং-এর প্রথম সারি — মালিক, ৪ অক্টোবর ২০২৬ (*"etai ki int standard?"* → *"ok ekhoni
+             * koro"*)। আন্তর্জাতিক মানে (SAP SD, D365) চালান = Outbound Delivery, মাল পাঠানোর কাগজ; বিলিং-এ থাকে কেবল বিলের
+             * কাগজ। ⓘ ২ অক্টোবরের "বিলিং ভাঁজে চালান" সাজ এতে বদলাল; রুট আর চাবি আগের মতো।
+             */
+            ['label' => 'sales::menu.challan_list', 'cluster' => 'delivery_processing', 'icon' => 'challan', 'route' => 'sales.challan.index',
+                'permission' => 'sales.challan.view', 'setting' => 'sales.screen_challans'],
             // ⭐ পরিবহন বরাদ্দ — আসল পাতা ([[TransportAssignmentController]], মালিক, ৩ অক্টোবর ২০২৬)
             ['label' => 'sales::planned.transport_assign', 'cluster' => 'delivery_processing', 'icon' => 'share', 'route' => 'sales.transport.index',
                 'permission' => 'sales.challan.view', 'setting' => 'sales.screen_shipments'],
@@ -214,11 +221,15 @@ return [
             // ⭐ ডেলিভারির মাপকাঠি — OTIF, আদেশ থেকে রওনা, দেরির তালিকা ([[DeliveryPerformanceController]], ৪ অক্টোবর ২০২৬)
             ['label' => 'sales::delivery_performance.title', 'cluster' => 'delivery_processing', 'icon' => 'reports', 'route' => 'sales.delivery_performance.index',
                 'permission' => 'sales.delivery.view', 'setting' => 'sales.screen_challans'],
+            // ⓘ ৪ অক্টোবর ২০২৬: উপরের সারিতে আলাদা ট্যাব নয় — ডেলিভারি প্রসেসিং ভাঁজে, পরিবহনের শেষ ধাপের পরে
+            ['label' => 'sales::tracking.title', 'cluster' => 'delivery_processing', 'icon' => 'search', 'route' => 'sales.tracking.index',
+                'permission' => 'sales.order.view'],
 
             ['label' => 'sales::menu.invoices', 'cluster' => 'billing_documents', 'icon' => 'receipt', 'route' => 'sales.invoice.index',
                 'permission' => 'sales.invoice.view'],
-            ['label' => 'sales::menu.challan_list', 'cluster' => 'billing_documents', 'icon' => 'challan', 'route' => 'sales.challan.index',
-                'permission' => 'sales.challan.view', 'setting' => 'sales.screen_challans'],
+            // ⭐ বাতিল-ইনভয়েস — বিলিং-এর নিজের কাগজ (আন্তর্জাতিক মান, ৪ অক্টোবর ২০২৬); ইনভয়েস তালিকারই ছাঁকনি, আলাদা পাতা নয়
+            ['label' => 'sales::menu.cancelled_invoices', 'cluster' => 'billing_documents', 'icon' => 'receipt', 'route' => 'sales.invoice.index',
+                'route_params' => ['stage' => 'cancelled', 'cancelled' => 1], 'permission' => 'sales.invoice.view'],
             /*
              * যে কাগজ বেরোয়নি।
              *
@@ -231,15 +242,14 @@ return [
              * সাধারণত সারিটা খালি, আর খালি থাকাই স্বাভাবিক — এটা
              * রোজকার কাজের পর্দা নয়, প্রিন্টার বিগড়ানোর দিনের।
              */
-            ['label' => 'sales::menu.print_queue', 'icon' => 'printer', 'route' => 'sales.print_queue.index',
+            // ⓘ ৪ অক্টোবর ২০২৬: উপরের সারিতে আলাদা ট্যাব নয় — বিলিং ভাঁজে (SAP-এর "output monitor"-এর জায়গা)
+            ['label' => 'sales::menu.print_queue', 'cluster' => 'billing_documents', 'icon' => 'printer', 'route' => 'sales.print_queue.index',
                 'permission' => 'sales.invoice.view'],
 
             /*
              * ⭐ "DO তালিকা"-র জায়গায় "ডেলিভারি ট্র্যাকিং" — মালিক, ২ অক্টোবর ২০২৬: *"DO তালিকা bad diye er jaygay
              * ডেলিভারি ট্র্যাকিং hobe ekhanei sob bosbe"*। প্রতিটা বিক্রি কোথায় দাঁড়িয়ে, এক পাতায় ([[SaleTracking]])।
              */
-            ['label' => 'sales::tracking.title', 'icon' => 'search', 'route' => 'sales.tracking.index',
-                'permission' => 'sales.order.view'],
 
             /*
              * ⭐ "আদায়" বোতাম নেই — মালিকের নির্দেশ, ১৯ সেপ্টেম্বর ২০২৬ (ক্রয়ের

@@ -22,6 +22,7 @@ return [
     // ⭐ "Billing Documents" ভাঁজের ভিতরে — মালিক, ২ অক্টোবর ২০২৬
     'challan_list' => 'ডেলিভারি চালান তালিকা',
     'invoices' => 'ইনভয়েস তালিকা',
+    'cancelled_invoices' => 'বাতিল-ইনভয়েস (CXL)',
     'collections' => 'আদায়',
     'undelivered' => 'মাল গেছে, বিল হয়নি',
     'by_customer' => 'গ্রাহকভিত্তিক বিক্রয়',

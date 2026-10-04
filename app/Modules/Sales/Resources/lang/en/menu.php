@@ -19,6 +19,7 @@ return [
     // ⭐ inside the "Billing Documents" fold — the owner, 2 Oct 2026
     'challan_list' => 'Delivery challan list',
     'invoices' => 'Invoice List',
+    'cancelled_invoices' => 'Cancellation Invoices (CXL)',
     'collections' => 'Collections',
     'undelivered' => 'Delivered, Not Invoiced',
     'by_customer' => 'Sales by Customer',

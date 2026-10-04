@@ -76,15 +76,17 @@ final class TheQuotationAndOrderMenusSitAfterTheDashboardTest extends TestCase
             'direct' => $at(route('sales.direct.create')),
             'depot_check' => $at(route('sales.direct.depot_check')),
             'drafts' => $at(route('sales.direct.drafts')),
+            // ⭐ ৪ অক্টোবর ২০২৬, মালিক: আন্তর্জাতিক মানে চালান ডেলিভারি প্রসেসিং-এর প্রথম সারি, ট্র্যাকিং তার শেষে;
+            // বিলিং-এ কেবল বিলের কাগজ (ইনভয়েস, বাতিল-ইনভয়েস, যে কাগজ বেরোয়নি)
+            'challans' => $at(route('sales.challan.index')),
             'transport' => $at(route('sales.transport.index')),
             'loading' => $at(route('sales.loading_sheet.index')),
             'gate_pass' => $at(route('sales.gate_pass.index')),
             'dispatch' => $at(route('sales.shipment.index')),
             'confirm' => $at(route('sales.delivery.index')),
-            'invoices' => $at(route('sales.invoice.index')),
-            'challans' => $at(route('sales.challan.index')),
-            'not_printed' => $at(route('sales.print_queue.index')),
             'tracking' => $at(route('sales.tracking.index')),
+            'invoices' => $at(route('sales.invoice.index')),
+            'not_printed' => $at(route('sales.print_queue.index')),
             'returns' => $at(route('sales.return.index')),
             'pricing' => $at(route('sales.price_list.index')),
             // ⓘ POS আর শিফট শেষে — কিন্তু ওদের নিজের সুইচ ডিফল্টে বন্ধ, তাই এখানে মাপা হয় না
