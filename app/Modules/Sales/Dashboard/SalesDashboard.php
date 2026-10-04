@@ -160,6 +160,8 @@ final class SalesDashboard implements ProvidesDashboard
                     points: self::monthly(),
                     firstLabel: __('sales::dashboard.billed'),
                     secondLabel: __('sales::dashboard.collected'),
+                    // ⓘ বিল বনাম আদায় — পাশাপাশি স্তম্ভই আন্তর্জাতিক রীতি (মালিক, ৪ অক্টোবর ২০২৬: "vino rokomer graph")
+                    chart: 'bars',
                 ),
 
                 new Breakdown(

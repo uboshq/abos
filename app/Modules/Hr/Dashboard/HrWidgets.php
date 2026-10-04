@@ -84,4 +84,23 @@ final class HrWidgets implements DashboardWidgets
     {
         return app(DataScope::class)->inView($query, $column);
     }
+
+    /**
+     * ⭐ কর্মী তালিকার স্বাস্থ্য — মোবাইল, বিভাগ আর পদ ভরা; একই মোবাইল দুইজনের হলে দ্বিতীয়বার ([[MasterHealth]])।
+     *
+     * @return list<Widget>
+     */
+    public static function health(): array
+    {
+        return [\App\Core\Dashboard\MasterHealth::widget(
+            label: __('hr::menu.employees'),
+            href: route('hr.employee.index'),
+            permission: 'hr.employee.view',
+            rows: Employee::query(),
+            complete: fn ($q) => $q->whereNotNull('hr_employees.mobile')->where('hr_employees.mobile', '<>', '')
+                ->whereNotNull('hr_employees.department_id')->whereNotNull('hr_employees.designation_id'),
+            sameColumn: 'mobile',
+            sort: 40,
+        )];
+    }
 }

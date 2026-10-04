@@ -59,4 +59,34 @@ class DashboardRegistry
 
         return $grouped;
     }
+
+    /**
+     * ⭐ মাস্টার তালিকার স্বাস্থ্য — যে মডিউল `health()` দেয় (মালিকের নকশা §১২, ৪ অক্টোবর ২০২৬; [[MasterHealth]])।
+     *
+     * ⓘ আলাদা ডাক, `widgets()` নয় — হোম প্রতিবার খোলায় পাঁচটা তালিকা গোনার দরকার নেই। চাবি মেলানো এখানেই, যেমন উপরে।
+     *
+     * @return list<Widget>
+     */
+    public function health(?User $user): array
+    {
+        $out = [];
+
+        foreach ($this->modules->all() as $module) {
+            foreach ($module->widgets as $provider) {
+                if (! method_exists($provider, 'health')) {
+                    continue;
+                }
+
+                foreach ($provider::health() as $widget) {
+                    if ($user?->can($widget->permission) === true) {
+                        $out[] = $widget;
+                    }
+                }
+            }
+        }
+
+        usort($out, fn (Widget $a, Widget $b) => [$a->sort, $a->label] <=> [$b->sort, $b->label]);
+
+        return $out;
+    }
 }

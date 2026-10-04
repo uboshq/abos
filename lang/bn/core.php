@@ -331,6 +331,13 @@ return [
         'this_month' => 'এই মাসে',
         'this_year' => 'এই বছর',
         'against_last' => 'গত :day-এর তুলনায়',
+        // ⓘ দণ্ডের মাথার ছোট মান ([[Series::short()]], ৪ অক্টোবর ২০২৬)
+        'chart_total' => 'মোট',
+        'short_thousand' => 'হা',
+        'short_lakh' => 'লা',
+        'short_crore' => 'কো',
+        // ⓘ মাস্টার তালিকার স্বাস্থ্য ([[MasterHealth]], ৪ অক্টোবর ২০২৬)
+        'health_hint' => 'অসম্পূর্ণ :missing · একই ফোন/নাম :same · বন্ধ :off',
         'oldest_is' => 'সবচেয়ে পুরনোটা :days দিন',
         'needs_doing' => 'যা করা বাকি',
         'just_happened' => 'সদ্য যা হয়েছে',

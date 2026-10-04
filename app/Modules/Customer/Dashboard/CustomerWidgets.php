@@ -100,4 +100,25 @@ final class CustomerWidgets implements DashboardWidgets
             icon: 'wallet',
         );
     }
+
+    /**
+     * ⭐ গ্রাহক তালিকার স্বাস্থ্য — ফোন, এলাকা আর ঠিকানা ভরা; একই ফোন দুইজনের হলে দ্বিতীয়বার ([[MasterHealth]])।
+     *
+     * @return list<Widget>
+     */
+    public static function health(): array
+    {
+        return [\App\Core\Dashboard\MasterHealth::widget(
+            label: __('customer::menu.customers'),
+            href: route('customer.index'),
+            permission: 'customer.view',
+            // ⓘ হেডারে বাছা শাখার গ্রাহক — বাকি সব তালিকার মতো ([[Customer::scopeInViewedBranch()]])
+            rows: Customer::query()->inViewedBranch(),
+            complete: fn ($q) => $q->whereNotNull('customers.location_id')
+                ->whereNotNull('customers.phone')->where('customers.phone', '<>', '')
+                ->where(fn ($a) => $a->where('customers.address_bn', '<>', '')->orWhere('customers.address_en', '<>', '')),
+            sameColumn: 'phone',
+            sort: 10,
+        )];
+    }
 }

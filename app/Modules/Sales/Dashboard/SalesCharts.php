@@ -56,6 +56,7 @@ final class SalesCharts
                 ['label' => __('sales::dashboard.funnel_invoices'), 'value' => (string) $invoices],
             ],
             hint: __('sales::dashboard.funnel_hint'),
+            chart: 'funnel',
         );
     }
 }

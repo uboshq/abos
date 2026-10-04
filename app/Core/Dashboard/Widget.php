@@ -31,7 +31,8 @@ final class Widget
      * মেয়াদ পেরোনো বকেয়া — এগুলো কেউ ইচ্ছাকৃতভাবে ফেলে রাখে না, শুধু
      * ভুলে যায়।
      */
-    public const GROUPS = ['today', 'month', 'year', 'todo'];
+    // ⓘ 'health' — মাস্টার তালিকার স্বাস্থ্য; হোমে বসে না, মাস্টার ডেটার পর্দায় ([[MasterHealth]], ৪ অক্টোবর ২০২৬)
+    public const GROUPS = ['today', 'month', 'year', 'todo', 'health'];
 
     /**
      * যে তিনটা দলের মধ্যে পর্দার উপরের সারিটা বদলায়।

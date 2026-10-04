@@ -231,7 +231,7 @@ final class SalesWidgets implements DashboardWidgets
          * পাহারা: [[EveryRawQueryNamesItsCompanyTest]]।
          */
         // ⭐ দেখার শাখা — উপরের কার্ডের কাগজগুলো যা মানে, তুলনাটাও তাই (২৯ সেপ্টেম্বর ২০২৬)
-        $sum = fn (Carbon $day) => (string) (self::inView(DB::table($table), $table.'.branch_id')
+        $sum = fn (Carbon $day) => (string) (self::homeFilter(self::inView(DB::table($table), $table.'.branch_id'), $table)
             ->where('company_id', CompanyContext::id())
             ->whereIn('status', DocumentStatus::POSTED)
             ->whereNull('deleted_at')
@@ -277,7 +277,7 @@ final class SalesWidgets implements DashboardWidgets
         $from = Carbon::today()->subDays(6);
 
         // কোম্পানির ছাঁকনি হাতে — কারণ উপরের `againstLastWeek()`-এ লেখা
-        $byDay = self::inView(DB::table($table), $table.'.branch_id')
+        $byDay = self::homeFilter(self::inView(DB::table($table), $table.'.branch_id'), $table)
             ->where('company_id', CompanyContext::id())
             ->whereIn('status', DocumentStatus::POSTED)
             ->whereNull('deleted_at')
@@ -327,5 +327,20 @@ final class SalesWidgets implements DashboardWidgets
     private static function inView(Builder $query, string $column): Builder
     {
         return app(DataScope::class)->inView($query, $column);
+    }
+
+    /**
+     * ⭐ হোমের ছাঁকনি — কেবল বিক্রির কার্ডে; আদায়ের কার্ড বদলায় না (মালিক, ৪ অক্টোবর ২০২৬: "বিক্রি আর বকেয়া")।
+     *
+     * @template T of Builder
+     *
+     * @param  T  $query
+     * @return T
+     */
+    private static function homeFilter(Builder $query, string $table): Builder
+    {
+        $filter = \App\Core\Dashboard\HomeFilter::current();
+
+        return $filter !== null && $table === 'sal_invoices' ? $filter->onInvoices($query, $table) : $query;
     }
 }

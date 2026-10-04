@@ -100,23 +100,17 @@ final class ThePrintButtonGoesTheOtherWayFirstTest extends TestCase
     }
 
     /**
-     * ⭐ আর টুলবারে খোঁজা-ছাঁকনির ঘর নেই, কারণ কন্ট্রোলার ওগুলো পড়ে না।
+     * ⭐ খোঁজার ঘর আছে — কারণ এখন সেটা কাজ করে (৩ অক্টোবর ২০২৬, 5b82ec7c: খতিয়ানে খোঁজা আর ছাঁকনি)।
      *
-     * ⓘ মালিক বলেছিলেন *"ok za lage ta daw"* — যা কাজ করে কেবল সেটুকু।
-     * ⛔ খোঁজার ঘরটা বসালে সেটা দেখতে জীবন্ত হত, টাইপ করে এন্টার দিলে
-     * পাতাটা নতুন করে আসত, আর তালিকা **যেমন ছিল তেমনই** থাকত।
+     * ⓘ মালিক বলেছিলেন *"ok za lage ta daw"* — যা কাজ করে কেবল সেটুকু। আগে কন্ট্রোলার `q` পড়ত না, তাই ঘরটা
+     * মৃত বোতাম হত আর এই দাবি সেটা আটকাত। ⓘ এখন [[PartyLedger]] `q` পড়ে, আর খোঁজায় সারি সত্যিই কমে —
+     * সেই প্রমাণ [[TheLedgerShowsDrAndCrAndCanBeSearchedTest]]-এ। ⛔ তাই এখন উল্টো: ঘরটা না থাকলেই লাল।
      */
     #[DataProvider('parties')]
-    public function test_the_dead_controls_are_not_offered(string $party): void
+    public function test_the_search_box_is_offered_now_that_it_works(string $party): void
     {
-        $html = $this->page($party);
-
-        $this->assertStringNotContainsString('name="q"', $html, implode("\n", [
-            '⛔ খতিয়ানের টুলবারে খোঁজার ঘর বসানো হয়েছে।',
-            '',
-            '⚠️ এই পাতার কন্ট্রোলার `q` পড়ে না, তাই ঘরটা একটা মৃত বোতাম —',
-            'দেখতে কাজ করে, চাপলে কিছুই বদলায় না।',
-        ]));
+        $this->assertStringContainsString('name="q"', $this->page($party),
+            '⛔ খতিয়ানে খোঁজা কাজ করে, অথচ টুলবারে খোঁজার ঘর নেই।');
     }
 
     /**

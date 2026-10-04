@@ -11,7 +11,6 @@ use App\Models\User;
 use App\Modules\Customer\Models\Customer;
 use App\Modules\Customer\Services\CustomerMetrics;
 use App\Modules\Inventory\Models\Product;
-use App\Modules\MasterData\Models\Location;
 use App\Modules\Sales\Models\SalesInvoice;
 use App\Modules\Sales\Models\SalesInvoiceLine;
 use App\Modules\Sales\Models\SalesOrder;
@@ -453,9 +452,8 @@ final class SalesAnalytics
      */
     public function byTerritory(string $from, string $to): array
     {
-        $level = in_array(Location::TERRITORY, Location::activeLadder(), true)
-            ? Location::TERRITORY
-            : Location::AREA;
+        // ⓘ নিয়মটা [[SalesArea]]-য় — হোমের ছাঁকনিও ওটাই ডাকে, যাতে দুই উত্তর না হয় (৪ অক্টোবর ২০২৬)
+        $level = SalesArea::level();
 
         $perCustomer = $this->posted($from, $to)
             ->selectRaw('customer_id, COUNT(*) as n, COALESCE(SUM(total), 0) as amount')
@@ -464,16 +462,12 @@ final class SalesAnalytics
             ->get();
 
         $placeOf = Customer::query()->whereIn('id', $perCustomer->pluck('customer_id'))->pluck('location_id', 'id');
-        $tree = Location::query()->get(['id', 'parent_id', 'level', 'name_en', 'name_bn'])->keyBy('id');
+        $tree = SalesArea::tree();
 
         $buckets = [];
 
         foreach ($perCustomer as $r) {
-            $node = $tree->get($placeOf[$r->customer_id] ?? null);
-
-            for ($depth = 0; $node !== null && $node->level !== $level && $depth < 10; $depth++) {
-                $node = $tree->get($node->parent_id);
-            }
+            $node = SalesArea::of($placeOf[$r->customer_id] ?? null, $tree, $level);
 
             $key = $node?->id ?? 0;
             $buckets[$key] ??= ['name' => $node?->name() ?? __('sales::overview.unplaced'), 'count' => 0, 'amount' => '0'];

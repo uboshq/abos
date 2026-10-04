@@ -30,4 +30,13 @@ return [
     'layout_position' => 'Order',
     'layout_reset' => 'As before',
     'layout_save' => 'Keep',
+    'filter' => 'Filter',
+    'filter_all' => 'All',
+    'filter_warehouse' => 'Warehouse',
+    'filter_area' => 'Area',
+    'filter_seller' => 'SR (who made the bill)',
+    'filter_apply' => 'Show',
+    'filter_clear' => 'Clear',
+    'filter_on' => 'Filter on',
+    'filter_scope' => 'Only sales and dues change; a due belongs to the customer, so only the area applies to it.',
 ];

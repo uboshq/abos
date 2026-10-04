@@ -71,7 +71,7 @@ final class AccountsWidgets implements DashboardWidgets
             new Widget(
                 group: 'month',
                 label: __('core.accounting.receivable'),
-                value: Money::format(self::balanceOf(StandardChart::RECEIVABLE)),
+                value: Money::format(self::receivable()),
                 href: route('accounts.coa.index'),
                 permission: 'accounts.view',
                 tone: 'money',
@@ -164,6 +164,25 @@ final class AccountsWidgets implements DashboardWidgets
             self::inView(MoneyTransfer::query()->pending(), 'money_transfers.branch_id')->get(),
             fn (MoneyTransfer $transfer) => $transfer->amount,
         );
+    }
+
+    /**
+     * ⭐ বকেয়া — হোমের ছাঁকনিতে এলাকা বাছা থাকলে কেবল সেই এলাকার গ্রাহকের খাতা (মালিক, ৪ অক্টোবর ২০২৬)।
+     * ⓘ বকেয়া গ্রাহকের, বিলের নয় — গুদাম বা SR একে বদলায় না ([[HomeFilter::dueCustomers()]])।
+     */
+    private static function receivable(): string
+    {
+        $customers = \App\Core\Dashboard\HomeFilter::current()?->dueCustomers();
+
+        if ($customers === null) {
+            return self::balanceOf(StandardChart::RECEIVABLE);
+        }
+
+        return bcadd((string) (self::inView(LedgerEntry::query(), 'ledger_entries.branch_id')
+            ->where('party_type', 'customer')
+            ->whereIn('party_id', $customers ?: [0])
+            ->selectRaw('COALESCE(SUM(debit) - SUM(credit), 0) as net')
+            ->value('net') ?? '0'), '0', 4);
     }
 
     private static function balanceOf(string $code): string

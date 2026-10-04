@@ -58,6 +58,15 @@
      * *"এই মাল বিনামূল্যে এসেছে"*, অথচ সত্যিটা হলো **দাম জানা নেই**,
      * আর ধরে-নেওয়া দরই এই পুরো ইঞ্জিনটার শত্রু।
      */
+    /*
+     * ⭐ মূল্যের পরিমাণ — কেবল কেনা মাল (গ১৯, Inventory অডিট, ৪ অক্টোবর ২০২৬)।
+     *
+     * ⛔ সরবরাহকারীর ফ্রি মালের খরচ শূন্য: মাল গ্রহণে খরচের স্তর বসে কেবল কেনা পরিমাণে, ফ্রি যায় আলাদা খোপে স্তর ছাড়া
+     * ([[PurchaseReceiptService]])। ⚠️ আগে `$onHand` (ফ্রিসহ) × গড় দর গোনা হত — ১০০টা ৮০ টাকায় আর ২০টা ফ্রি হলে
+     * খাতায় ৮,০০০, তালিকায় ৯,৬০০। ⓘ পরিমাণের ঘরগুলো বদলায় না — ফ্রি মাল তাকে আছে, কেবল তার দাম নেই।
+     */
+    $paidOnHand = fn ($p) => bcadd((string) $p->floor_total, (string) $p->unplaced_total, 4);
+
     $unitCost = function ($p) {
         $qty = (string) ($p->layer_qty_total ?? '0');
 
@@ -281,14 +290,14 @@
         $columns[] = [
             'key' => 'stock_value',
             'total' => 'money',
-            'raw' => fn ($p) => ($c = $unitCost($p)) === null ? '0' : bcmul($onHand($p), $c, 4),
+            'raw' => fn ($p) => ($c = $unitCost($p)) === null ? '0' : bcmul($paidOnHand($p), $c, 4),
             'label' => __('inventory::field.stock_value'),
             'numeric' => true,
             'width' => '10rem',
             'render' => fn ($p) => ($c = $unitCost($p)) === null
                 ? '—'
                 : view('ui.amount-link', [
-                    'value' => bcmul($onHand($p), $c, 4),
+                    'value' => bcmul($paidOnHand($p), $c, 4),
                     'href' => route('inventory.product.show', $p).'#movements',
                 ]),
         ];

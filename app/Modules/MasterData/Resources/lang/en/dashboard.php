@@ -11,4 +11,12 @@ return [
     'locations_hint' => 'The whole tree, country down to route',
     'how_full' => 'How full the lists are',
     'how_full_hint' => 'An empty list shows up far away — as a blank dropdown on the product form',
+    'quality_score' => 'Data quality',
+    'quality_score_hint' => ':complete of :active active rows have every needed field',
+    'missing' => 'Incomplete rows — by list',
+    'missing_hint' => 'A needed field is blank: customer phone/area/address, product unit/category, employee mobile/department/designation',
+    'same' => 'Same phone or name — by list',
+    'same_hint' => 'Active rows with exactly the same phone or name — likely one party entered twice',
+    'inactive' => 'Inactive rows — by list',
+    'inactive_hint' => 'Inactive rows are not counted but stay in the list',
 ];

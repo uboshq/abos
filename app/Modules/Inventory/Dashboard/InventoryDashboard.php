@@ -203,6 +203,8 @@ final class InventoryDashboard implements ProvidesDashboard
                         ),
                         firstLabel: __('inventory::overview.moved_in'),
                         secondLabel: __('inventory::overview.moved_out'),
+                        // ⓘ ঢোকা আর বেরোনোর ধারা — ভরা রেখা (মালিক, ৪ অক্টোবর ২০২৬: "vino rokomer graph")
+                        chart: 'area',
                     )
                     : new Series(
                         label: __('inventory::overview.flow'),
@@ -216,6 +218,8 @@ final class InventoryDashboard implements ProvidesDashboard
                         ),
                         firstLabel: __('inventory::overview.moved_in'),
                         secondLabel: __('inventory::overview.moved_out'),
+                        // ⓘ ঢোকা আর বেরোনোর ধারা — ভরা রেখা (মালিক, ৪ অক্টোবর ২০২৬: "vino rokomer graph")
+                        chart: 'area',
                     ),
 
                 /*

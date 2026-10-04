@@ -60,6 +60,40 @@
                  জায়গা বাঁচে, ফোনেও এক লাইনে)। ⓘ `<details>` — জাভাস্ক্রিপ্ট ছাড়াই খোলে, শেলের বাকি মেনুর মতো।
                  সুইচ বন্ধ থাকলে নিচের পুরনো তাবগুলোই। --}}
             @if (config('abos.dashboards_v2'))
+            {{-- ⭐ হোমের ফিল্টার — গুদাম, এলাকা, SR; বদলায় কেবল বিক্রি আর বকেয়া (মালিক, ৪ অক্টোবর ২০২৬; [[HomeFilter]]) --}}
+            <details data-home-filter class="relative">
+                <summary @class([
+                    'flex h-10 cursor-pointer list-none items-center gap-2 rounded-(--radius-field) border px-3 text-sm',
+                    'border-(--color-brand-600) bg-(--color-brand-50) text-(--color-brand-700)' => $filter->active(),
+                    'border-(--color-border) bg-(--color-surface-card) text-(--color-ink)' => ! $filter->active(),
+                ])>
+                    <x-ui.icon name="filter" :size="14" />
+                    <span class="font-semibold">{{ __('home.filter') }}</span>
+                </summary>
+                <form method="GET" action="{{ route('dashboard') }}"
+                      class="pops-onto-page absolute end-0 top-full z-50 mt-1 w-72 space-y-2 rounded-(--radius-field)
+                             border border-(--color-border) bg-(--color-surface-card) p-3 shadow-lg">
+                    <input type="hidden" name="period" value="{{ $period }}">
+                    @foreach (['warehouse' => 'warehouses', 'area' => 'areas', 'seller' => 'sellers'] as $key => $list)
+                        <label class="block text-xs text-(--color-ink-muted)">
+                            {{ __('home.filter_'.$key) }}
+                            <select name="{{ $key }}" data-filter-{{ $key }}
+                                    class="mt-1 h-9 w-full rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-2 text-sm text-(--color-ink)">
+                                <option value="">{{ __('home.filter_all') }}</option>
+                                @foreach ($filterChoices[$list] as $id => $name)
+                                    <option value="{{ $id }}" @selected($filter->{$key} === (int) $id)>{{ $name }}</option>
+                                @endforeach
+                            </select>
+                        </label>
+                    @endforeach
+                    <div class="flex justify-between gap-2 pt-1">
+                        <a href="{{ route('dashboard', ['period' => $period]) }}"
+                           class="rounded-(--radius-field) border border-(--color-border) px-3 py-1.5 text-xs">{{ __('home.filter_clear') }}</a>
+                        <button type="submit"
+                                class="rounded-(--radius-field) bg-(--color-brand-600) px-4 py-1.5 text-xs font-semibold text-white">{{ __('home.filter_apply') }}</button>
+                    </div>
+                </form>
+            </details>
             {{-- ⭐ "লেআউট সাজান" — কোন অংশ দেখা যাবে আর কোনটা আগে (মালিক, ৪ অক্টোবর ২০২৬); কেবল নিজের জন্য।
                  ⓘ `<details>` — সময়ের ঘরের মতোই জাভাস্ক্রিপ্ট ছাড়া খোলে। --}}
             <details data-layout-menu class="relative">
@@ -106,7 +140,7 @@
                     <div class="pops-onto-page absolute end-0 top-full z-50 mt-1 w-48 rounded-(--radius-field)
                                 border border-(--color-border) bg-(--color-surface-card) p-1 shadow-lg">
                         @foreach (\App\Core\Dashboard\Widget::PERIODS as $option)
-                            <a href="{{ route('dashboard', ['period' => $option]) }}"
+                            <a href="{{ route('dashboard', ['period' => $option] + $filter->query()) }}"
                                @class([
                                    'block rounded-(--radius-field) px-3 py-2 text-sm',
                                    'bg-(--color-brand-50) font-semibold text-(--color-brand-700)' => $period === $option,
@@ -241,6 +275,21 @@
          এসে প্রথম যে প্রশ্নটা করেন সেটা "টাকা কত" — ওটার উত্তর বড় ও
          আলাদা দেখালে বাকিগুলো আর প্রতিযোগিতা করে না।            --}}
     {{-- একটা সময়ে একটাই দল — উপরের তাব যেটা বলে --}}
+    @if ($filter->active())
+        {{-- ⓘ ফিল্টার চালু — কী বাছা আর কী বদলেছে, এক লাইনে; ভুলে চালু রেখে সংখ্যা ভুল পড়া না হয় --}}
+        <div data-home-filter-on class="mb-4 flex flex-wrap items-center gap-2 rounded-(--radius-field) border border-(--color-brand-600)
+                    bg-(--color-brand-50) px-3 py-2 text-sm text-(--color-brand-700)">
+            <span class="font-semibold">{{ __('home.filter_on') }}:</span>
+            @foreach (['warehouse' => 'warehouses', 'area' => 'areas', 'seller' => 'sellers'] as $key => $list)
+                @if ($filter->{$key} !== null)
+                    <span>{{ __('home.filter_'.$key) }} — {{ $filterChoices[$list][$filter->{$key}] ?? '' }}</span>
+                @endif
+            @endforeach
+            <span class="text-xs text-(--color-ink-muted)">· {{ __('home.filter_scope') }}</span>
+            <a href="{{ route('dashboard', ['period' => $period]) }}" class="ms-auto text-xs font-semibold underline">{{ __('home.filter_clear') }}</a>
+        </div>
+    @endif
+
     {{-- ⭐ সাজানো যায় এমন ভাগগুলো এক খাড়া সারিতে — ক্রম CSS `order` দিয়ে, লুকানো অংশ আঁকাই হয় না ([[HomeLayout]]) --}}
     <div data-home-units style="display: flex; flex-direction: column">
     <div data-home-unit="period" style="order: {{ $layout->position('period') }}">
@@ -510,7 +559,8 @@
         <section data-business-pictures class="mb-6">
             <h2 class="mb-2 text-sm font-semibold text-(--color-ink-muted)">{{ __('home.business_pictures') }}</h2>
 
-            <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            {{-- ⭐ এক সারিতে যতগুলো ধরে (মালিক, ৪ অক্টোবর ২০২৬: "ei chart gulo ekline dilei hoy") — কার্ড সরু হলেও ১৫rem-এর নিচে নয় --}}
+            <div data-pictures-row class="grid gap-4" style="grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr))">
                 @foreach ($pictures as $row)
                     @php $panel = $row['panel']; @endphp
 
@@ -526,63 +576,14 @@
                             <span class="shrink-0 text-xs text-(--color-link)">{{ __('home.details') }} →</span>
                         </div>
 
-                        @if ($panel instanceof \App\Core\Engines\Dashboard\Series)
-                            @php $peak = $panel->peak(); @endphp
-
-                            <div class="flex items-end gap-2 px-4 pt-4" style="height: 9rem">
-                                @foreach ($panel->points as $point)
-                                    <div class="flex h-full flex-1 items-end justify-center gap-0.5">
-                                        @foreach ([['first', 'bg-(--color-brand-500)', $panel->firstLabel], ['second', 'bg-(--color-brand-700)/25', $panel->secondLabel]] as [$side, $fill, $name])
-                                            <div class="w-1/2 rounded-t {{ $fill }}"
-                                                 style="height:{{ max(2, (int) round((float) $point[$side] / $peak * 100)) }}%"
-                                                 title="{{ $point['label'] }} · {{ $name }}: {{ $point[$side.'Title'] ?? $point[$side] }}"></div>
-                                        @endforeach
-                                    </div>
-                                @endforeach
-                            </div>
-
-                            <div class="flex gap-2 px-4 pt-1">
-                                @foreach ($panel->points as $point)
-                                    <div class="min-w-0 flex-1 truncate text-center text-2xs text-(--color-ink-muted)">{{ $point['label'] }}</div>
-                                @endforeach
-                            </div>
-
-                            <div class="flex items-center gap-4 px-4 py-2 text-2xs text-(--color-ink-muted)">
-                                <span class="flex items-center gap-1.5">
-                                    <span class="inline-block size-2.5 rounded-sm bg-(--color-brand-500)"></span>{{ $panel->firstLabel }}
-                                </span>
-                                <span class="flex items-center gap-1.5">
-                                    <span class="inline-block size-2.5 rounded-sm bg-(--color-brand-700)/25"></span>{{ $panel->secondLabel }}
-                                </span>
-                            </div>
-                        @else
-                            @php
-                                /* ⚠️ মানটা প্রায়ই সাজানো টাকা ("1,234.00", বাংলা অঙ্ক) — (float) কমায় থেমে যেত আর দণ্ড ভুল মাপের হত */
-                                $num = fn ($v) => (float) str_replace(',', '', strtr((string) $v, ['০' => '0', '১' => '1', '২' => '2', '৩' => '3', '৪' => '4', '৫' => '5', '৬' => '6', '৭' => '7', '৮' => '8', '৯' => '9']));
-                                $total = max(1.0, array_sum(array_map(fn ($part) => $num($part['value']), $panel->parts)));
-                            @endphp
-
-                            <div class="space-y-3 px-4 py-3">
-                                @foreach (array_slice($panel->parts, 0, 5) as $part)
-                                    <div>
-                                        <div class="mb-1 flex items-baseline justify-between gap-3 text-xs">
-                                            <span class="min-w-0 truncate text-(--color-ink-muted)">{{ $part['label'] }}</span>
-                                            <span class="shrink-0 font-semibold tabular-nums">{{ $part['value'] }}</span>
-                                        </div>
-                                        <div class="h-2 overflow-hidden rounded-full bg-(--color-surface-hover)">
-                                            <div class="h-full bg-(--color-brand-500)"
-                                                 style="width:{{ min(100, max(0, (int) round($num($part['value']) / $total * 100))) }}%"></div>
-                                        </div>
-                                    </div>
-                                @endforeach
-                            </div>
-                        @endif
-    </div>
+                        {{-- ⭐ ধরন অনুযায়ী আঁকা, প্রতিটা দাগে মান ([[x-dashboard.chart]], মালিক ৪ অক্টোবর ২০২৬) --}}
+                        <x-dashboard.chart :panel="$panel" compact />
                     </a>
                 @endforeach
             </div>
         </section>
     @endif
+    </div>
     {{-- ── যা করা বাকি ───────────────────────────────────────────────
          কার্ডের ছক নয়, সারির তালিকা — আর শূন্যগুলো এক লাইনে গুটানো।
 

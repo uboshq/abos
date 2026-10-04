@@ -33,6 +33,8 @@ final class MasterDataDashboard implements ProvidesDashboard
 {
     public static function dashboard(): DashboardDefinition
     {
+        $health = self::health();
+
         return new DashboardDefinition(
             title: __('master_data::dashboard.title'),
             subtitle: __('master_data::dashboard.subtitle'),
@@ -85,6 +87,8 @@ final class MasterDataDashboard implements ProvidesDashboard
                     hint: __('master_data::dashboard.locations_hint'),
                     href: route('master_data.location.index'),
                 ),
+
+                ...$health['stats'],
             ],
 
             panels: [
@@ -97,8 +101,66 @@ final class MasterDataDashboard implements ProvidesDashboard
                         ['label' => __('master_data::menu.taxes'), 'value' => (string) Tax::query()->count()],
                     ],
                     hint: __('master_data::dashboard.how_full_hint'),
+                    // ⓘ তালিকা ধরে গোনা — খাড়া স্তম্ভ (মালিক, ৪ অক্টোবর ২০২৬: "vino rokomer graph")
+                    chart: 'columns',
                 ),
+
+                ...$health['panels'],
             ],
         );
+    }
+
+    /**
+     * ⭐ ডেটার মান — মালিকের ড্যাশবোর্ড নকশা §১২ ("Data Governance & Data Quality", ৪ অক্টোবর ২০২৬)।
+     *
+     * ⓘ প্রতিটা তালিকার মান সেই মডিউলই গোনে ([[MasterHealth]], [[DashboardRegistry::health()]]) — মাস্টার ডেটা
+     * গ্রাহক বা পণ্য চেনে না। ⓘ মোট মান = সব চালু সারির মধ্যে সম্পূর্ণ সারির ভাগ (সারি ধরে ওজন, তালিকা ধরে গড় নয় —
+     * দশটা গুদাম আর দশ হাজার গ্রাহক সমান ভারী নয়)। ⓘ কেবল নতুন ড্যাশবোর্ডে (config abos.dashboards_v2)।
+     *
+     * @return array{stats: list<Stat>, panels: list<Breakdown>}
+     */
+    private static function health(): array
+    {
+        if (! config('abos.dashboards_v2')) {
+            return ['stats' => [], 'panels' => []];
+        }
+
+        $lists = app(\App\Core\Dashboard\DashboardRegistry::class)->health(auth()->user());
+
+        if ($lists === []) {
+            return ['stats' => [], 'panels' => []];
+        }
+
+        $active = array_sum(array_map(fn ($w) => (int) $w->parts['active'], $lists));
+        $complete = array_sum(array_map(fn ($w) => (int) $w->parts['complete'], $lists));
+        $score = $active === 0 ? 100 : intdiv(100 * $complete, $active);
+
+        $stats = [new Stat(
+            label: __('master_data::dashboard.quality_score'),
+            value: $score.'%',
+            hint: __('master_data::dashboard.quality_score_hint', ['complete' => $complete, 'active' => $active]),
+            tone: $score >= 95 ? Stat::GOOD : ($score >= 80 ? Stat::WARN : Stat::BAD),
+        )];
+
+        foreach ($lists as $list) {
+            $stats[] = new Stat(
+                label: $list->label,
+                value: $list->value,
+                hint: (string) $list->hint,
+                href: $list->href,
+                tone: $list->tone === 'good' ? Stat::GOOD : Stat::WARN,
+            );
+        }
+
+        $part = fn (string $key) => array_map(fn ($w) => ['label' => $w->label, 'value' => $w->parts[$key]], $lists);
+
+        return ['stats' => $stats, 'panels' => [
+            new Breakdown(label: __('master_data::dashboard.missing'), parts: $part('missing'),
+                hint: __('master_data::dashboard.missing_hint'), chart: 'hbars'),
+            new Breakdown(label: __('master_data::dashboard.same'), parts: $part('same'),
+                hint: __('master_data::dashboard.same_hint')),
+            new Breakdown(label: __('master_data::dashboard.inactive'), parts: $part('inactive'),
+                hint: __('master_data::dashboard.inactive_hint')),
+        ]];
     }
 }

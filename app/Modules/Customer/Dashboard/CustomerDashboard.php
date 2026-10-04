@@ -118,6 +118,8 @@ final class CustomerDashboard implements ProvidesDashboard
                 'value' => \App\Core\Support\Money::format($totals[$bucket] ?? '0'),
             ], ['bucket_current', 'bucket_30', 'bucket_60', 'bucket_90']),
             hint: __('customer::dashboard.ageing_hint', ['total' => \App\Core\Support\Money::format($totals['outstanding'] ?? '0')]),
+            // ⓘ বকেয়ার বয়স — বয়সের ধাপ ধরে খাড়া স্তম্ভ (মালিক, ৪ অক্টোবর ২০২৬: "vino rokomer graph")
+            chart: 'columns',
         )];
     }
 

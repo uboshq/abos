@@ -276,6 +276,13 @@ return [
         'this_month' => 'This month',
         'this_year' => 'This year',
         'against_last' => 'against last :day',
+        // ⓘ দণ্ডের মাথার ছোট মান ([[Series::short()]], ৪ অক্টোবর ২০২৬)
+        'chart_total' => 'Total',
+        'short_thousand' => 'K',
+        'short_lakh' => 'L',
+        'short_crore' => 'Cr',
+        // ⓘ মাস্টার তালিকার স্বাস্থ্য ([[MasterHealth]], ৪ অক্টোবর ২০২৬)
+        'health_hint' => 'incomplete :missing · same phone/name :same · inactive :off',
         'oldest_is' => 'oldest is :days days old',
         'needs_doing' => 'Needs doing',
         'just_happened' => 'Just happened',

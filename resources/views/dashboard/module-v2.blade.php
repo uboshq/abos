@@ -87,56 +87,10 @@
                     ])>
                         <h2 class="border-b border-(--color-border) px-4 py-3 text-sm font-semibold text-(--color-ink)">{{ $panel->label }}</h2>
 
-                        @if ($series)
-                            @php $peak = $panel->peak(); @endphp
-                            <div class="flex items-end gap-3 px-4 pt-6" style="height: var(--spacing-chart)">
-                                @foreach ($panel->points as $point)
-                                    <div class="flex h-full flex-1 items-end justify-center gap-1">
-                                        @foreach ([['first', 'bg-(--color-brand-500)', $panel->firstLabel], ['second', 'bg-(--color-brand-700)/25', $panel->secondLabel]] as [$side, $fill, $name])
-                                            <div class="flex h-full w-1/2 flex-col items-center justify-end">
-                                                @isset($point[$side.'Note'])
-                                                    <span class="mb-0.5 whitespace-nowrap text-2xs leading-none tabular-nums text-(--color-ink-muted)">{{ $point[$side.'Note'] }}</span>
-                                                @endisset
-                                                <div class="w-full rounded-t {{ $fill }}"
-                                                     style="height:{{ max(2, (int) round((float) $point[$side] / $peak * 100)) }}%"
-                                                     title="{{ $point['label'] }} · {{ $name }}: {{ $point[$side.'Title'] ?? $point[$side] }}"></div>
-                                            </div>
-                                        @endforeach
-                                    </div>
-                                @endforeach
-                            </div>
-                            <div class="flex gap-3 px-4 pt-1">
-                                @foreach ($panel->points as $point)
-                                    <div class="min-w-0 flex-1 truncate text-center text-2xs text-(--color-ink-muted)">{{ $point['label'] }}</div>
-                                @endforeach
-                            </div>
-                            <div class="flex items-center gap-4 px-4 py-3 text-2xs text-(--color-ink-muted)">
-                                <span class="flex items-center gap-1.5"><span class="inline-block size-2.5 rounded-sm bg-(--color-brand-500)"></span>{{ $panel->firstLabel }}</span>
-                                <span class="flex items-center gap-1.5"><span class="inline-block size-2.5 rounded-sm bg-(--color-brand-700)/25"></span>{{ $panel->secondLabel }}</span>
-                            </div>
-                        @else
-                            @php
-                                /* ⚠️ মানটা প্রায়ই সাজানো টাকা ("1,234.00", বাংলা অঙ্ক) — (float) কমায় থেমে যেত আর দণ্ড ভুল মাপের হত */
-                                $num = fn ($v) => (float) str_replace(',', '', strtr((string) $v, ['০' => '0', '১' => '1', '২' => '2', '৩' => '3', '৪' => '4', '৫' => '5', '৬' => '6', '৭' => '7', '৮' => '8', '৯' => '9']));
-                                $total = max(1.0, array_sum(array_map(fn ($part) => $num($part['value']), $panel->parts)));
-                            @endphp
-                            <div class="space-y-3 p-4">
-                                @foreach ($panel->parts as $part)
-                                    <div>
-                                        <div class="mb-1 flex items-baseline justify-between gap-3 text-sm">
-                                            <span class="min-w-0 truncate text-(--color-ink-body)">{{ $part['label'] }}</span>
-                                            <span class="shrink-0 font-semibold tabular-nums">{{ $part['value'] }}</span>
-                                        </div>
-                                        <div class="h-2 overflow-hidden rounded-full bg-(--color-brand-50)">
-                                            <div class="h-full rounded-full bg-(--color-brand-500)"
-                                                 style="width:{{ min(100, max(0, (int) round($num($part['value']) / $total * 100))) }}%"></div>
-                                        </div>
-                                    </div>
-                                @endforeach
-                            </div>
-                            @if ($panel->hint)
-                                <p class="border-t border-(--color-border) px-4 py-2 text-2xs text-(--color-ink-muted)">{{ $panel->hint }}</p>
-                            @endif
+                        {{-- ⭐ ধরন অনুযায়ী আঁকা, প্রতিটা দাগে মান ([[x-dashboard.chart]], মালিক ৪ অক্টোবর ২০২৬) --}}
+                        <x-dashboard.chart :panel="$panel" />
+                        @if (! $series && $panel->hint)
+                            <p class="border-t border-(--color-border) px-4 py-2 text-2xs text-(--color-ink-muted)">{{ $panel->hint }}</p>
                         @endif
                     </section>
                 @endforeach

@@ -26,12 +26,21 @@ final class Series
      *
      * @param  list<array{label: string, first: string, second: string, firstNote?: string, secondNote?: string, firstTitle?: string, secondTitle?: string}>  $points
      */
+    /** ⓘ সময়ের ধারার তিন আন্তর্জাতিক রূপ — রেখা, ভরা রেখা, পাশাপাশি স্তম্ভ */
+    public const CHARTS = ['line', 'area', 'bars'];
+
     public function __construct(
         public readonly string $label,
         public readonly array $points,
         public readonly string $firstLabel,
         public readonly string $secondLabel,
+        /** ⭐ চার্টের ধরন — `line` (ডিফল্ট), `area` বা `bars` (মালিক, ৪ অক্টোবর ২০২৬: "vino rokomer graph") */
+        public readonly string $chart = 'line',
     ) {
+        if (! in_array($chart, self::CHARTS, true)) {
+            throw new InvalidArgumentException("Series '{$label}' asks for an unknown chart '{$chart}'.");
+        }
+
         if ($points === []) {
             throw new InvalidArgumentException("Series '{$label}' has no points, so it can only draw an empty box.");
         }
@@ -60,5 +69,27 @@ final class Series
         }
 
         return $peak > 0 ? $peak : 1.0;
+    }
+
+    /**
+     * ⭐ দণ্ডের মাথার মান — মালিক, ৪ অক্টোবর ২০২৬: *"sob chart ei velue dio"*।
+     *
+     * ⓘ পুরো অঙ্ক দণ্ডের মাথায় ধরে না ("1,23,45,678.00"), তাই হাজার/লাখ/কোটিতে এক দশমিক: ১২.৩ লা।
+     * ⓘ পুরো অঙ্কটা দণ্ডের title-এ থেকে যায়; এটা কেবল চোখে পড়ার জন্য — হিসাবে কোথাও ব্যবহার হয় না।
+     */
+    public static function short(int|float|string|null $value): string
+    {
+        $v = (float) str_replace(',', '', (string) $value);
+        $abs = abs($v);
+
+        foreach ([[1e7, 'crore'], [1e5, 'lakh'], [1e3, 'thousand']] as [$size, $unit]) {
+            if ($abs >= $size) {
+                $n = round($v / $size, 1);
+
+                return rtrim(rtrim(number_format($n, 1, '.', ''), '0'), '.').' '.__('core.dashboard.short_'.$unit);
+            }
+        }
+
+        return rtrim(rtrim(number_format(round($v, 1), 1, '.', ''), '0'), '.');
     }
 }

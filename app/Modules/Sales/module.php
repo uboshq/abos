@@ -104,6 +104,8 @@ return [
 
         // ⭐ গ্রাহকের তালিকার টপ/বটম বিক্রি আর "ভালো কাস্টমার" (মালিক, ১ অক্টোবর ২০২৬)
         \App\Core\Contracts\CustomerSalesFilters::class => \App\Modules\Sales\Services\SalesCustomerFilters::class,
+        // ⓘ হোমের ছাঁকনির গুদাম, এলাকা আর SR — বিক্রয় জানে (মালিক, ৪ অক্টোবর ২০২৬; [[HomeSalesFilters]])
+        \App\Core\Contracts\HomeSalesFilters::class => \App\Modules\Sales\Services\SalesHomeFilters::class,
 
         // ⛔ কুপন কেবল পাকা কাগজের সত্যিকারের সারিতে — প্রমোশন বিক্রয়কে চেনে না, চুক্তি চেনে (গভীর অডিট, ২৯ সেপ্টেম্বর ২০২৬)
         \App\Core\Contracts\CouponPapers::class => \App\Modules\Sales\Services\SalesCouponPapers::class,

@@ -50,6 +50,14 @@ class WorkspaceController extends Controller
     {
         $menu = $this->menu->forUser($request->user());
 
+        // ⭐ হোমের ছাঁকনি — কেবল নতুন ড্যাশবোর্ডে; তালিকার বাইরের নম্বর নেয় না (মালিক, ৪ অক্টোবর ২০২৬)
+        $filterChoices = config('abos.dashboards_v2')
+            ? app(\App\Core\Contracts\HomeSalesFilters::class)->choices()
+            : ['warehouses' => [], 'areas' => [], 'sellers' => []];
+        $filter = config('abos.dashboards_v2')
+            ? \App\Core\Dashboard\HomeFilter::fromRequest($request, $filterChoices, app(\App\Core\Contracts\HomeSalesFilters::class))
+            : \App\Core\Dashboard\HomeFilter::none();
+
         return view('workspace.dashboard', [
             'menu' => $menu,
 
@@ -71,7 +79,10 @@ class WorkspaceController extends Controller
              */
             'roleLivesIn' => $menu === [] ? $this->whereTheirRolesAre($request->user()) : [],
 
-            'groups' => $this->widgets->forUser($request->user()),
+            // ⭐ হোমের ছাঁকনি — কেবল এই কার্ডগুলো গোনার সময় চালু; বদলায় শুধু বিক্রি আর বকেয়া ([[HomeFilter]])
+            'groups' => $filter->during(fn () => $this->widgets->forUser($request->user())),
+            'filter' => $filter,
+            'filterChoices' => $filterChoices,
 
             /*
              * ── গোটা ব্যবসার এক সারি ─────────────────────────────────

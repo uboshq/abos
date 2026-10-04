@@ -234,7 +234,8 @@ class StockController extends Controller implements HasMiddleware
             'free_available' => 't.free_total - t.free_reserved_total',
             'unplaced' => 't.unplaced_total',
             'unplaced_free' => 't.unplaced_free_total',
-        ] + ($this->maySeeCost($request) ? ['stock_value' => 'CASE WHEN t.layer_qty_total > 0 THEN TRUNCATE((t.floor_total + t.unplaced_total + t.free_total + t.unplaced_free_total) * TRUNCATE(t.layer_value_total / t.layer_qty_total, 4), 4) ELSE 0 END'] : []));
+        // ⛔ মূল্যে কেবল কেনা মাল — ফ্রি মালের খরচ শূন্য, তার স্তরই নেই (গ১৯, Inventory অডিট, ৪ অক্টোবর ২০২৬)
+        ] + ($this->maySeeCost($request) ? ['stock_value' => 'CASE WHEN t.layer_qty_total > 0 THEN TRUNCATE((t.floor_total + t.unplaced_total) * TRUNCATE(t.layer_value_total / t.layer_qty_total, 4), 4) ELSE 0 END'] : []));
 
         $products = $query->paginate(50)->withQueryString();
 

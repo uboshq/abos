@@ -89,4 +89,24 @@ final class SupplierWidgets implements DashboardWidgets
     {
         return app(DataScope::class)->inView($query, $column);
     }
+
+    /**
+     * ⭐ সরবরাহকারী তালিকার স্বাস্থ্য — ফোন আর ঠিকানা ভরা; একই ফোন দুইজনের হলে দ্বিতীয়বার ([[MasterHealth]])।
+     *
+     * @return list<Widget>
+     */
+    public static function health(): array
+    {
+        return [\App\Core\Dashboard\MasterHealth::widget(
+            label: __('supplier::menu.suppliers'),
+            href: route('supplier.index'),
+            permission: 'supplier.view',
+            // ⓘ হেডারে বাছা শাখার সরবরাহকারী — বাকি সব তালিকার মতো ([[Supplier::scopeInViewedBranch()]])
+            rows: Supplier::query()->inViewedBranch(),
+            complete: fn ($q) => $q->whereNotNull('suppliers.phone')->where('suppliers.phone', '<>', '')
+                ->where(fn ($a) => $a->where('suppliers.address_bn', '<>', '')->orWhere('suppliers.address_en', '<>', '')),
+            sameColumn: 'phone',
+            sort: 20,
+        )];
+    }
 }

@@ -212,10 +212,14 @@ final class SalesMetrics implements ProvidesMetrics
 
     public static function invoiceTotal(string $from, string $to): string
     {
-        return Money::of(SalesInvoice::query()
+        $query = SalesInvoice::query()
             ->posted()
-            ->whereBetween('trx_date', [$from, $to])
-            ->sum('total'));
+            ->whereBetween('trx_date', [$from, $to]);
+
+        // ⭐ হোমের ছাঁকনি (গুদাম/এলাকা/SR) — কেবল হোমের সংখ্যা গোনার সময়টুকু চালু ([[HomeFilter::during()]], ৪ অক্টোবর ২০২৬)
+        \App\Core\Dashboard\HomeFilter::current()?->onInvoices($query, 'sal_invoices');
+
+        return Money::of($query->sum('total'));
     }
 
     /**

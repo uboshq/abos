@@ -80,4 +80,34 @@ final class InventoryWidgets implements DashboardWidgets
     {
         return app(ReportEngine::class)->run($key, perPage: 1)->totalRows;
     }
+
+    /**
+     * ⭐ পণ্য আর গুদাম তালিকার স্বাস্থ্য ([[MasterHealth]]) — পণ্যে একক আর শ্রেণি ভরা, একই নাম দুইবার হলে দ্বিতীয়বার;
+     * গুদামে ঠিকানা ভরা, একই নাম দুইবার হলে দ্বিতীয়বার।
+     *
+     * @return list<Widget>
+     */
+    public static function health(): array
+    {
+        return [
+            \App\Core\Dashboard\MasterHealth::widget(
+                label: __('inventory::menu.products'),
+                href: route('inventory.product.index'),
+                permission: 'inventory.product.view',
+                rows: Product::query(),
+                complete: fn ($q) => $q->whereNotNull('inv_products.unit_id')->whereNotNull('inv_products.category_id'),
+                sameColumn: 'name_en',
+                sort: 30,
+            ),
+            \App\Core\Dashboard\MasterHealth::widget(
+                label: __('inventory::menu.warehouses'),
+                href: route('inventory.warehouse.index'),
+                permission: 'inventory.warehouse.view',
+                rows: \App\Modules\Inventory\Models\Warehouse::query(),
+                complete: fn ($q) => $q->where(fn ($a) => $a->where('inv_warehouses.address_bn', '<>', '')->orWhere('inv_warehouses.address_en', '<>', '')),
+                sameColumn: 'name_en',
+                sort: 50,
+            ),
+        ];
+    }
 }

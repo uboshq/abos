@@ -30,4 +30,13 @@ return [
     'layout_position' => 'ক্রম',
     'layout_reset' => 'আগের মতো',
     'layout_save' => 'রাখুন',
+    'filter' => 'ফিল্টার',
+    'filter_all' => 'সব',
+    'filter_warehouse' => 'গুদাম',
+    'filter_area' => 'এলাকা',
+    'filter_seller' => 'SR (বিল যিনি কেটেছেন)',
+    'filter_apply' => 'দেখাও',
+    'filter_clear' => 'মুছুন',
+    'filter_on' => 'ফিল্টার চালু',
+    'filter_scope' => 'বদলেছে কেবল বিক্রি আর বকেয়া; বকেয়া গ্রাহকের, তাই তাতে খাটে কেবল এলাকা।',
 ];
