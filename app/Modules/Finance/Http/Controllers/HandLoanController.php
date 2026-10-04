@@ -455,9 +455,12 @@ class HandLoanController extends Controller implements HasMiddleware
             'note' => ['nullable', 'string', 'max:500'],
         ]);
 
-        $this->loans->move($handLoan, $data);
+        $movement = $this->loans->move($handLoan, $data);
 
-        return back()->with('saved', __('finance::message.hand_loan_moved'));
+        // ⓘ সইয়ের অপেক্ষায় থাকলে সেটাই বলা — "হয়ে গেছে" শুনে কেউ খাতায় টাকা খুঁজতেন (অডিট গ১)
+        return back()->with('saved', $movement->voucher?->isDraft()
+            ? __('finance::message.awaiting_signature')
+            : __('finance::message.hand_loan_moved'));
     }
 
     public function settle(HandLoanAccount $handLoan): RedirectResponse

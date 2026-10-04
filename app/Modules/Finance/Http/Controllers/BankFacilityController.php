@@ -22,6 +22,7 @@ use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
@@ -308,23 +309,31 @@ class BankFacilityController extends Controller implements HasMiddleware
             'note' => ['nullable', 'string', 'max:500'],
         ]);
 
-        $facility = $this->facilities->open($data);
-
         /*
-         * ⭐ আগে থেকেই চলছে — তবে আজকের বকেয়াটা খাতায় তুলতে হয়।
+         * ⛔ সারি আর খোলা বকেয়া এক লেনদেনে — অডিট ম২৪, ৪ অক্টোবর ২০২৬।
          *
-         * ⓘ নতুন ঋণে এটা চলে না: তখন টাকা আসে রসিদ ভাউচারে, আর
-         * সেই পথটাই ব্যাংক হিসাব বাড়ায়। ⚠️ দুইটাই করলে টাকাটা
-         * দুইবার আসত।
+         * ⓘ আগে দুইটা আলাদা ধাপ: খোলা বকেয়া বসাতে গিয়ে আটকালে (দায়ের খাত নেই, মাস বন্ধ) সুবিধার সারিটা
+         * অর্ধেক অবস্থায় থেকে যেত, আর প্রতিবার আবার চেষ্টায় আরেকটা সারি — একই ঋণ তিনবার।
+         *
+         * ⭐ আগে থেকেই চলছে — তবে আজকের বকেয়াটা খাতায় তুলতে হয়। ⓘ নতুন ঋণে এটা চলে না: তখন টাকা আসে রসিদ
+         * ভাউচারে, আর সেই পথটাই ব্যাংক হিসাব বাড়ায়। ⚠️ দুইটাই করলে টাকাটা দুইবার আসত।
          */
-        if ($request->boolean('already_running')) {
-            $this->facilities->openingFor($facility, (string) ($data['opening_drawn'] ?? '0'));
-        }
+        [$facility, $held] = DB::transaction(function () use ($request, $data): array {
+            $facility = $this->facilities->open($data);
+
+            $held = $request->boolean('already_running')
+                && $this->facilities->openingFor($facility, (string) ($data['opening_drawn'] ?? '0'));
+
+            return [$facility, $held];
+        });
 
         $this->keepThePaper($request, $facility);
 
         return redirect()->route('finance.bank_facility.show', $facility)
-            ->with('saved', __('finance::message.facility_opened'));
+            ->with('saved', $held
+                // ⓘ খোলা বকেয়া সইয়ের অপেক্ষায় (অডিট গ১)
+                ? __('finance::message.awaiting_signature')
+                : __('finance::message.facility_opened'));
     }
 
     public function show(Request $request, BankFacility $bankFacility): View

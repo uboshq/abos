@@ -87,6 +87,14 @@ class Deposit extends Model implements Drillable
 
     public const ACTIVE = 'active';
 
+    /**
+     * ⛔ খোলা হয়েছে, কিন্তু টাকা যাওয়ার সই এখনো পড়েনি — অডিট গ১, ৪ অক্টোবর ২০২৬।
+     *
+     * ⓘ চালু নয়, তাই কোনো মোটে গোনা হয় না ([[scopeOpen()]]); শেষ সই পড়লে চালু, "না" হলে বাতিল
+     * ([[DepositService::finishSigned()]])।
+     */
+    public const AWAITING = 'awaiting';
+
     /** মেয়াদ শেষ বা ভাঙা হয়েছে — একটা ব্যবসায়িক ঘটনা */
     public const CLOSED = 'closed';
 

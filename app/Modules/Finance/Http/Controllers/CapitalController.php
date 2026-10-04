@@ -69,8 +69,6 @@ class CapitalController extends Controller implements HasMiddleware
              * থেকে উধাও হওয়া — আর সেটা ব্যাখ্যা করতে হয়।
              */
             new Middleware('can:finance.capital.delete', only: ['destroy']),
-
-            new Middleware('can:finance.capital.post', only: ['post']),
         ];
     }
 
@@ -351,48 +349,14 @@ orm]]): *"সম্পাদনা
         }
     }
 
-    /**
-     * টাকাটা এসেছে — খাতায় বসাও।
+    /*
+     * ⛔ `post()` আর নেই — অডিট গ১৫, ৪ অক্টোবর ২০২৬।
      *
-     * কোন খাতে এসেছে সেটা এখানেই জিজ্ঞেস করা হয়, লেখার সময় নয়:
-     * তখনো জানা ছিল না।
+     * ⓘ পর্দা মূলধন নেয় রসিদের ভাউচারে (রসিদের সই সহ, [[capital/partials/state]]), অথচ এই পুরনো ঠিকানা
+     * (`POST /finance/capital/{entry}/post`) টাইপ করলে যেকোনো খাতে, সই ছাড়া মূলধন বসত — বিক্রয় খাতেও।
+     * কোনো পর্দা এটা ডাকত না; তাই দরজাটাই তুলে দেওয়া হলো। সেবার পথ ([[CapitalService::post()]]) এখন
+     * টাকার খাত আর রসিদের সই মানে।
      */
-    public function post(Request $request, CapitalEntry $entry): RedirectResponse
-    {
-        $data = $request->validate([
-            'received_into_account_id' => ['required', 'integer',
-                'exists:accounts,id'],
-
-            /*
-             * ব্যাংক বা বিকাশ যা কেটে রেখেছে।
-             *
-             * ⓘ `nullable`, কারণ বেশিরভাগ জমায় চার্জ থাকে না, আর
-             * প্রতিবার শূন্য লিখতে বাধ্য করা মানে রোজকার কাজে একটা
-             * বাড়তি ধাপ। ⚠️ "চার্জ মোটের চেয়ে ছোট" শর্তটা এখানে নয়,
-             * [[CapitalService::lines()]]-এ — সেখানে মোট অঙ্কটা জানা।
-             */
-            'charge' => ['nullable', 'numeric', 'gte:0'],
-            /*
-             * ব্যাংক বা MFS হলে যে নম্বরটা লাগে — চেক নম্বর, TrxID।
-             *
-             * ⛔ `required` **নয়**, আর সেটা ইচ্ছাকৃত: নগদে নম্বর হয় না,
-             * আর কখন নম্বর লাগবে সেটা ইতিমধ্যেই এক জায়গায় জানা —
-             * [[App\Modules\Accounts\Services\VoucherService::assertBankReferenceIsFree]]।
-             * এখানে `required` করলে নিয়মটা দুই জায়গায় থাকত, আর একদিন
-             * দুইটা আলাদা কথা বলত (নগদেও চাওয়া, বা ব্যাংকে না চাওয়া)।
-             */
-            'instrument_no' => ['nullable', 'string', 'max:64'],
-        ]);
-
-        $this->capital->post(
-            $entry,
-            Account::query()->findOrFail($data['received_into_account_id']),
-            ($data['instrument_no'] ?? '') ?: null,
-            ($data['charge'] ?? '') !== '' ? (string) $data['charge'] : null,
-        );
-
-        return back()->with('saved', __('finance::message.capital_posted', ['no' => $entry->document_no]));
-    }
 
     /**
      * কোন কোম্পানির, কোন শাখার খাতায় লেখা হচ্ছে।

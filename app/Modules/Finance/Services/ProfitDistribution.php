@@ -8,10 +8,13 @@ use App\Core\Concerns\ReadsTheRowUnderLock;
 use App\Core\Engines\Approval\DocumentApproval;
 use App\Core\Engines\NumberSeries\NumberSeriesEngine;
 use App\Core\Support\CompanyContext;
+use App\Core\Support\DocumentStatus;
+use App\Models\LedgerEntry;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Models\Voucher;
 use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Accounts\Services\VoucherService;
+use App\Modules\Accounts\Services\YearEndService;
 use App\Modules\Finance\Models\CapitalEntry;
 use App\Modules\Finance\Models\ProfitShare;
 use App\Modules\Finance\Models\Withdrawal;
@@ -60,6 +63,9 @@ final class ProfitDistribution
         private readonly NumberSeriesEngine $numbers,
         private readonly VoucherService $vouchers,
         private readonly DocumentApproval $approval,
+
+        // ⛔ লাভকে মূলধনে নেওয়াও সই ছাড়া নয় — অডিট গ১৪, ৪ অক্টোবর ২০২৬
+        private readonly FinanceSignature $signature,
     ) {}
 
     /**
@@ -116,7 +122,7 @@ final class ProfitDistribution
         $profit = (string) $data['profit'];
 
         $this->assertPositive($profit);
-        $this->assertWithinRetainedProfit($profit);
+        $this->assertSharesWithinWhole();
 
         $rows = $this->preview($profit);
 
@@ -126,7 +132,27 @@ final class ProfitDistribution
             ]);
         }
 
-        return DB::transaction(function () use ($data, $profit, $rows) {
+        /*
+         * ⛔ সীমা মাপা হয় যা খাতায় যাবে তার উপর — অডিট গ১৩, ৪ অক্টোবর ২০২৬।
+         *
+         * ⓘ আগে সীমা দেখা হত চাওয়া অঙ্কে, অথচ খাতায় যেত ভাগগুলোর যোগফল। অংশের যোগ ১০০ পেরোলে (৬০ + ৬০)
+         * বা একজন দুই সারিতে থাকলে ১০ লাখের ঘোষণায় ১২ লাখ বেরোত — সঞ্চিত মুনাফার চেয়েও বেশি। ⭐ এখন
+         * যোগফলটাই মাপা হয়, আর সেটা চাওয়ার বেশি হলে ঘোষণাই হয় না।
+         */
+        $total = $this->totalOf($rows);
+
+        if (bccomp($total, $profit, 4) > 0) {
+            throw ValidationException::withMessages([
+                'profit' => __('finance::validation.shares_pay_more_than_declared', [
+                    'asked' => $profit,
+                    'total' => $total,
+                ]),
+            ]);
+        }
+
+        $this->assertWithinRetainedProfit($total);
+
+        return DB::transaction(function () use ($data, $profit, $rows, $total) {
             $retained = $this->account(StandardChart::RETAINED_EARNINGS);
 
             /*
@@ -135,7 +161,7 @@ final class ProfitDistribution
              * ৬০,০০০ করে ঘোষণা করলে দুইজনেই "১,০০,০০০ আছে" দেখতেন, আর যা আয়ই হয়নি তাও ভাগ হত।
              */
             Account::query()->whereKey($retained->id)->lockForUpdate()->first();
-            $this->assertWithinRetainedProfit($profit);
+            $this->assertWithinRetainedProfit($total);
             $payable = $this->account(StandardChart::PROFIT_PAYABLE);
 
             $documentNo = $this->numbers->next('PDS');
@@ -148,12 +174,6 @@ final class ProfitDistribution
              * দেওয়ার পরে নয়। ⚠️ চাওয়া অঙ্কটা ডেবিটে বসালে দাখিলাটা
              * মিলত না, আর ভাউচার পোস্টই হত না।
              */
-            $total = '0';
-
-            foreach ($rows as $row) {
-                $total = bcadd($total, $row['amount'], 4);
-            }
-
             $lines = [
                 ['account_id' => $retained->id, 'debit' => $total, 'credit' => '0'],
             ];
@@ -257,6 +277,73 @@ final class ProfitDistribution
         }
     }
 
+
+    /**
+     * ⛔ চুক্তির অংশের যোগ ১০০-র বেশি নয় — অডিট গ১৩, ৪ অক্টোবর ২০২৬।
+     *
+     * ⓘ ৬০% আর ৬০% লেখা থাকলে ভাগ বসত চাওয়ার ১২০% — একজনের টাকা আরেকজনের নামে নয়, এমন টাকা যা নেই।
+     * ⚠️ এটা বণ্টন থামায়, মূলধনের সারি নয়: শোধরাতে হয় চুক্তির অংশ, আর সেটা মানুষের সিদ্ধান্ত।
+     */
+    private function assertSharesWithinWhole(): void
+    {
+        $agreed = '0';
+
+        foreach ($this->capital->positions() as $position) {
+            if (($position['share_source'] ?? null) === 'agreed') {
+                $agreed = bcadd($agreed, (string) $position['share'], 4);
+            }
+        }
+
+        if (bccomp($agreed, '100', 4) > 0) {
+            throw ValidationException::withMessages([
+                'profit' => __('finance::validation.shares_over_a_hundred', ['total' => $agreed]),
+            ]);
+        }
+    }
+
+    /** @param  list<array{amount: string}>  $rows */
+    private function totalOf(array $rows): string
+    {
+        $total = '0';
+
+        foreach ($rows as $row) {
+            $total = bcadd($total, $row['amount'], 4);
+        }
+
+        return $total;
+    }
+
+    /**
+     * ⭐ ফল থেকে বণ্টনযোগ্য মুনাফা — আয় বিয়োগ ব্যয় (বন্ধ আর চলতি সব বছর), বিয়োগ আগের ঘোষণা।
+     *
+     * ── ⛔ কেন ৩৩০০-এর কাঁচা জের নয় (অডিট গ১৩, ৪ অক্টোবর ২০২৬) ─────────────
+     * খোলা জেরের সমতার অঙ্ক — খোলা মজুদ, চলতি ঋণের খোলা বকেয়া, স্থায়ী সম্পদ — সবই সঞ্চিত মুনাফায় বসে
+     * ([[OpeningBalanceService]], [[BankFacilityService::openingFor()]])। তাই নতুন কোম্পানি ৫০ লাখের খোলা
+     * মজুদকে "লাভ" ঘোষণা করে নগদে তুলে নিতে পারত। ⓘ এই মাপে কেবল সত্যিকারের ফল: আয়-ব্যয়ের খাতের সব
+     * সারি, বছর বন্ধের দাখিলা বাদ (ওটা কেবল ফলটাকে ৩৩০০-এ সরায়, [[YearEndService::closingSources()]])।
+     *
+     * ── ⚠️ মালিকের সিদ্ধান্ত বাকি — তাই এখনো সীমা নয় ───────────────────────
+     * ABOS-এর আগের বছরগুলোর সত্যিকারের সঞ্চিত মুনাফাও খোলা জেরেই এসেছে, আর এই মাপে সেটা নেই — অর্থাৎ
+     * এটা সীমা হলে পুরনো লাভ আর কোনোদিন বাঁটা যেত না। আর চলতি বছরের না-বন্ধ লাভও এই মাপে আছে, যা আজকের
+     * সীমায় নেই (মধ্য-বছরের বণ্টন)। দুইটাই মালিকের কথা; তাঁর উত্তর এলে [[available()]] এটা ডাকবে।
+     */
+    public function distributableFromResults(): string
+    {
+        $results = (string) (LedgerEntry::query()
+            ->join('accounts', 'accounts.id', '=', 'ledger_entries.account_id')
+            ->where('ledger_entries.company_id', CompanyContext::id())
+            ->whereIn('accounts.type', [Account::INCOME, Account::EXPENSE])
+            ->whereNotIn('ledger_entries.source_type', YearEndService::closingSources())
+            ->selectRaw('COALESCE(SUM(ledger_entries.credit) - SUM(ledger_entries.debit), 0) as net')
+            ->value('net') ?? '0');
+
+        $declared = (string) (ProfitShare::query()
+            ->whereIn('status', [ProfitShare::POSTED, ProfitShare::DRAFT])
+            ->whereHas('voucher', fn ($v) => $v->where('status', '!=', DocumentStatus::CANCELLED))
+            ->sum('amount') ?: '0');
+
+        return bcsub($results, $declared, 4);
+    }
 
     /**
      * সঞ্চিত মুনাফা থেকে সই-এর অপেক্ষায় থাকা ঘোষণাগুলো বাদ দিয়ে যা ঘোষণা করা যায়।
@@ -370,7 +457,7 @@ final class ProfitDistribution
      * ⛔ খসড়া গোনা হয় না — দুই পাশেই। তাহলে না-বসা টাকা
      * দিয়ে দায় বাড়ত বা কমত।
      */
-    public function outstandingFor(int $personId): string
+    public function outstandingFor(int $personId, ?int $exceptVoucherId = null): string
     {
         $declared = (string) (ProfitShare::query()
             ->posted()
@@ -392,9 +479,17 @@ final class ProfitDistribution
          * অংশীদার ব্যবসাকে টাকা দেবেন।
          */
         $capitalised = (string) (CapitalEntry::query()
-            ->posted()
             ->where('person_id', $personId)
             ->where('in_kind', CapitalEntry::PROFIT)
+
+            /*
+             * ⛔ সই-এর অপেক্ষায় থাকা মূলধনে-নেওয়াও আর পাওনা নয় — অডিট গ১৪, ৪ অক্টোবর ২০২৬। ⓘ না কাটলে
+             * অপেক্ষার সময় একই টাকা নগদে তোলা যেত, বা আরেকবার মূলধনে নেওয়া যেত। শেষ সই-এ যেটা বসছে সেটা
+             * নিজেকে বাদ দেয় ([[finishCapitalise()]])।
+             */
+            ->where(fn ($q) => $q->where('status', CapitalEntry::POSTED)
+                ->orWhere(fn ($d) => $d->where('status', CapitalEntry::DRAFT)->whereNotNull('voucher_id')
+                    ->when($exceptVoucherId !== null, fn ($e) => $e->where('voucher_id', '!=', $exceptVoucherId))))
             ->sum('amount') ?: '0');
 
         return bcsub(bcsub($declared, $taken, 4), $capitalised, 4);
@@ -482,9 +577,26 @@ final class ProfitDistribution
             ]);
         }
 
-        return DB::transaction(function () use ($data, $kind, $rows) {
+        return DB::transaction(function () use ($data, $kind) {
             $payable = $this->account(StandardChart::PROFIT_PAYABLE);
             $capital = $this->account(StandardChart::OWNER_CAPITAL);
+
+            /*
+             * ⛔ প্রদেয় মুনাফার খাতে তালা, তারপর বাকিটা আবার গোনা — অডিট গ১৪, ৪ অক্টোবর ২০২৬।
+             *
+             * ⓘ আগে বাকিটা গোনা হত লেনদেনের বাইরে, তালা ছাড়া: দুই চাপে দুইজনেই একই বাকি দেখতেন, আর মূলধন
+             * দ্বিগুণ হত — প্রদেয় মুনাফা ঋণাত্মক। ⚠️ লাভের ভাগ তোলাও এই একই তালা নেয়
+             * ([[WithdrawalService::post()]]), তাই তোলা আর মূলধনে নেওয়া একসাথে একই টাকা পায় না।
+             */
+            Account::query()->whereKey($payable->id)->lockForUpdate()->first();
+
+            $rows = $this->outstanding();
+
+            if ($rows === []) {
+                throw ValidationException::withMessages([
+                    'trx_date' => __('finance::validation.nothing_left_to_capitalise'),
+                ]);
+            }
 
             $lines = [];
 
@@ -516,7 +628,11 @@ final class ProfitDistribution
                 'narration' => $data['narration'] ?? __('finance::message.capitalise_narration'),
             ], $lines);
 
-            $this->vouchers->post($voucher);
+            /*
+             * ⛔ সই ছাড়া মূলধনে নয় — অডিট গ১৪, ৪ অক্টোবর ২০২৬। ⓘ ছক থাকলে ভাউচার আর সারিগুলো খসড়া; শেষ সই
+             * পড়লে [[finishCapitalise()]] তালার নিচে বাকিটা আবার দেখে খাতায় বসায়।
+             */
+            $held = $this->signature->postOrHold($voucher, FinanceSignature::CAPITALISE, $this->totalOf($rows));
 
             $entries = [];
 
@@ -553,15 +669,82 @@ final class ProfitDistribution
                     'trx_date' => $data['trx_date'],
                     'amount' => $row['amount'],
                     'narration' => $data['narration'] ?? null,
-                    'status' => CapitalEntry::POSTED,
+                    'status' => $held ? CapitalEntry::DRAFT : CapitalEntry::POSTED,
                     'voucher_id' => $voucher->id,
-                    'posted_at' => now(),
+                    'posted_at' => $held ? null : now(),
                     'created_by' => auth()->id(),
                 ]);
             }
 
             return $entries;
         });
+    }
+
+    /**
+     * ⭐ শেষ সই পড়ল — অপেক্ষার মূলধনে-নেওয়া খাতায় ([[FinishTheFinancePaperOnTheLastSignature]])।
+     *
+     * ⓘ সই আর খাতার মাঝে কেউ লাভের ভাগ তুলে থাকতে পারেন; তাই প্রদেয় মুনাফার খাতে তালা দিয়ে প্রতিজনের বাকি
+     * আবার দেখা হয়। ⛔ না খাটলে বাতিল — সই মানুষের সিদ্ধান্ত, কিন্তু একই টাকা দুইবার দেওয়া যায় না।
+     */
+    public function finishCapitalise(Voucher $voucher): void
+    {
+        DB::transaction(function () use ($voucher): void {
+            Account::query()->whereKey($this->account(StandardChart::PROFIT_PAYABLE)->id)->lockForUpdate()->first();
+            $this->lockFresh($voucher);
+
+            if (! $voucher->isDraft()) {
+                return;
+            }
+
+            $entries = CapitalEntry::query()
+                ->where('voucher_id', $voucher->id)
+                ->where('status', CapitalEntry::DRAFT)
+                ->where('in_kind', CapitalEntry::PROFIT)
+                ->lockForUpdate()
+                ->get();
+
+            foreach ($entries as $entry) {
+                $left = $this->outstandingFor((int) $entry->person_id, (int) $voucher->id);
+
+                if (bccomp((string) $entry->amount, $left, 4) > 0) {
+                    $this->dropCapitalised($voucher, __('finance::validation.profit_no_longer_covered', [
+                        'asked' => (string) $entry->amount,
+                        'have' => $left,
+                    ]));
+
+                    return;
+                }
+            }
+
+            $this->vouchers->post($voucher);
+
+            CapitalEntry::query()->whereKey($entries->modelKeys())->update([
+                'status' => CapitalEntry::POSTED,
+                'posted_at' => now(),
+            ]);
+        });
+    }
+
+    /** ⭐ সইকারী "না" বললেন — ভাউচার বাতিল, খসড়া সারিগুলো সরে যায়; পাওনাটা আবার পাওনা। */
+    public function dropCapitalise(Voucher $voucher, string $reason): void
+    {
+        DB::transaction(function () use ($voucher, $reason): void {
+            $this->lockFresh($voucher);
+
+            if ($voucher->isDraft()) {
+                $this->dropCapitalised($voucher, $reason);
+            }
+        });
+    }
+
+    private function dropCapitalised(Voucher $voucher, string $reason): void
+    {
+        $this->vouchers->cancel($voucher, $reason);
+
+        CapitalEntry::query()
+            ->where('voucher_id', $voucher->id)
+            ->where('status', CapitalEntry::DRAFT)
+            ->delete();
     }
 
     /**

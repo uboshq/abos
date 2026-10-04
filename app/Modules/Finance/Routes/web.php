@@ -99,8 +99,7 @@ Route::middleware('auth')->prefix('finance')->group(function () {
         Route::delete('/{entry}', [CapitalController::class, 'destroy'])
             ->whereNumber('entry')->name('destroy');
 
-        Route::post('/{entry}/post', [CapitalController::class, 'post'])
-            ->whereNumber('entry')->name('post');
+        // ⛔ `/{entry}/post` আর নেই — সই ছাড়া, যেকোনো খাতে মূলধন বসানোর পুরনো দরজা (অডিট গ১৫, ৪ অক্টোবর ২০২৬)
     });
 
     /*

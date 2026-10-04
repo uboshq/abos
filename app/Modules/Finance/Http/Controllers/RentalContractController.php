@@ -352,7 +352,9 @@ class RentalContractController extends Controller implements HasMiddleware
 
         return redirect()
             ->route('finance.rental.show', $contract)
-            ->with('saved', __('finance::message.rental_opened'));
+            ->with('saved', $contract->status === RentalContract::AWAITING
+                ? __('finance::message.awaiting_signature')
+                : __('finance::message.rental_opened'));
     }
 
     /** এক মাসের ভাড়া — নগদের অংশ আর জামানতের অংশ। */
@@ -369,7 +371,10 @@ class RentalContractController extends Controller implements HasMiddleware
             'instrument_no' => ['nullable', 'string', 'max:64'],
         ]));
 
-        return back()->with('saved', __('finance::message.rental_month_done'));
+        // ⓘ সইয়ের অপেক্ষায় থাকলে সেটাই বলা (অডিট গ১)
+        return back()->with('saved', $this->contracts->isWaiting($contract)
+            ? __('finance::message.awaiting_signature')
+            : __('finance::message.rental_month_done'));
     }
 
     /**
@@ -402,7 +407,10 @@ class RentalContractController extends Controller implements HasMiddleware
             'paid_on' => ['nullable', 'date'],
         ]));
 
-        return back()->with('saved', __('finance::message.rental_topped_up'));
+        // ⓘ সইয়ের অপেক্ষায় থাকলে সেটাই বলা (অডিট গ১)
+        return back()->with('saved', $this->contracts->isWaiting($contract)
+            ? __('finance::message.awaiting_signature')
+            : __('finance::message.rental_topped_up'));
     }
 
     /**
@@ -422,7 +430,10 @@ class RentalContractController extends Controller implements HasMiddleware
             'instrument_no' => ['nullable', 'string', 'max:64'],
         ]));
 
-        return back()->with('saved', __('finance::message.rental_closed_done'));
+        // ⓘ সইয়ের অপেক্ষায় থাকলে সেটাই বলা (অডিট গ১)
+        return back()->with('saved', $this->contracts->isWaiting($contract)
+            ? __('finance::message.awaiting_signature')
+            : __('finance::message.rental_closed_done'));
     }
 
     /**

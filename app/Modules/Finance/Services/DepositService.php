@@ -7,6 +7,7 @@ namespace App\Modules\Finance\Services;
 use App\Core\Concerns\ReadsTheRowUnderLock;
 use App\Core\Engines\NumberSeries\NumberSeriesEngine;
 use App\Core\Support\CompanyContext;
+use App\Core\Support\DocumentStatus;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Models\Voucher;
 use App\Modules\Accounts\Services\StandardChart;
@@ -49,6 +50,9 @@ final class DepositService
         private readonly NumberSeriesEngine $numbers,
         private readonly VoucherService $vouchers,
         private readonly InstitutionService $institutions,
+
+        // ⛔ সই ছাড়া জমায় টাকা নড়ে না — অডিট গ১, ৪ অক্টোবর ২০২৬ ([[FinanceSignature]])
+        private readonly FinanceSignature $signature,
     ) {}
 
     /**
@@ -65,7 +69,7 @@ final class DepositService
     {
         return DB::transaction(function () use ($data) {
             $kind = DepositKind::query()->findOrFail($data['kind_id']);
-            $from = $this->money($data['funded_from_account_id']);
+            $from = $this->money($data['funded_from_account_id'], 'funded_from_account_id');
 
             $this->assertSane($kind, $data);
 
@@ -129,8 +133,16 @@ final class DepositService
                 'created_by' => auth()->id(),
             ]);
 
-            $this->putMoneyIn($deposit, DepositMovement::OPENED, (string) $data['principal'], $from,
+            $opened = $this->putMoneyIn($deposit, DepositMovement::OPENED, (string) $data['principal'], $from,
                 (string) $data['opened_on'], null, ($data['instrument_no'] ?? '') ?: null);
+
+            /*
+             * ⛔ সই-এর আগে জমাটা "চালু" নয় — অডিট গ১, ৪ অক্টোবর ২০২৬। ⓘ চালু হলে তালিকা, মোট আর মেয়াদের
+             * সতর্কতায় এমন টাকা গোনা হত যা এখনো ব্যাংকে যায়নি; শেষ সই পড়লে [[finishSigned()]] চালু করে।
+             */
+            if ($this->waits($opened)) {
+                $deposit->forceFill(['status' => Deposit::AWAITING])->save();
+            }
 
             return $deposit->fresh();
         });
@@ -167,9 +179,12 @@ final class DepositService
                 (string) $data['amount'], $from, (string) $data['moved_on'], $data['note'] ?? null,
                 ($data['instrument_no'] ?? '') ?: null);
 
-            $deposit->forceFill([
-                'principal' => bcadd((string) $deposit->principal, (string) $data['amount'], 4),
-            ])->save();
+            // ⛔ সই-এর অপেক্ষার কিস্তি মূলধন বাড়ায় না — বাড়ায় শেষ সই ([[finishSigned()]])
+            if (! $this->waits($movement)) {
+                $deposit->forceFill([
+                    'principal' => bcadd((string) $deposit->principal, (string) $data['amount'], 4),
+                ])->save();
+            }
 
             return $movement;
         });
@@ -208,7 +223,7 @@ final class DepositService
                 ],
             );
 
-            $this->vouchers->post($voucher);
+            $this->signature->postOrHold($voucher, FinanceSignature::DEPOSIT, $amount);
 
             return $this->write($deposit, DepositMovement::PAYOUT, $amount, $into,
                 (string) $data['moved_on'], $voucher->id, $data['note'] ?? null);
@@ -231,11 +246,13 @@ final class DepositService
     public function close(Deposit $deposit, array $data): DepositMovement
     {
         $this->assertOpen($deposit);
+        $this->assertNotPledged($deposit);
 
         return DB::transaction(function () use ($deposit, $data) {
             // ⛔ সারিতে তালা দিয়ে তাজা অবস্থা আবার — দ্বিতীয় ক্লিক টাকা আবার বসাত (চূড়ান্ত অডিট ⛔১১)
             $this->lockFresh($deposit);
             $this->assertOpen($deposit);
+            $this->assertNotPledged($deposit);
 
             $into = $this->money($data['money_account_id']);
             $received = (string) $data['amount'];
@@ -285,15 +302,18 @@ final class DepositService
                 $lines,
             );
 
-            $this->vouchers->post($voucher);
+            $held = $this->signature->postOrHold($voucher, FinanceSignature::DEPOSIT, $received);
 
             $movement = $this->write($deposit, DepositMovement::CLOSED, $received, $into,
                 (string) $data['moved_on'], $voucher->id, $data['note'] ?? null);
 
-            $deposit->forceFill([
-                'status' => Deposit::CLOSED,
-                'closed_on' => $data['moved_on'],
-            ])->save();
+            // ⛔ সই-এর আগে জমাটা "বন্ধ" নয় — বন্ধ করে শেষ সই ([[finishSigned()]])
+            if (! $held) {
+                $deposit->forceFill([
+                    'status' => Deposit::CLOSED,
+                    'closed_on' => $data['moved_on'],
+                ])->save();
+            }
 
             return $movement;
         });
@@ -423,7 +443,7 @@ final class DepositService
             ],
         );
 
-        $this->vouchers->post($voucher);
+        $this->signature->postOrHold($voucher, FinanceSignature::DEPOSIT, $amount);
 
         return $this->write($deposit, $kind, $amount, $from, $on, $voucher->id, $note);
     }
@@ -482,17 +502,97 @@ final class DepositService
     /**
      * টাকার খাত — মাথা নয়, আর সত্যিই নগদ বা ব্যাংক।
      */
-    private function money(mixed $id): Account
+    private function money(mixed $id, string $field = 'money_account_id'): Account
     {
-        $account = Account::query()->find($id);
+        // ⛔ টাকার খাতই — নগদ, ব্যাংক বা MFS (অডিট ম২৩); আগে যেকোনো খাত থেকে "জমা" খোলা যেত
+        return $this->signature->moneyAccount($id, $field);
+    }
 
-        if ($account === null || $account->is_group) {
+    /**
+     * ⭐ শেষ সই পড়ল — অপেক্ষার চলাচলটা খাতায়, আর তার ফল জমার সারিতে ([[FinishTheFinancePaperOnTheLastSignature]])।
+     *
+     * ⓘ খোলা হলে জমাটা চালু, কিস্তি হলে মূলধন বাড়ে, ভাঙা হলে বন্ধ — ঠিক যা সই না থাকলে সাথে সাথে হত।
+     */
+    public function finishSigned(Voucher $voucher): void
+    {
+        DB::transaction(function () use ($voucher): void {
+            $movement = DepositMovement::query()->where('voucher_id', $voucher->id)->first();
+
+            if ($movement === null) {
+                return;
+            }
+
+            $deposit = $movement->deposit;
+            $this->lockFresh($deposit);
+            $this->lockFresh($voucher);
+
+            if (! $voucher->isDraft() || $deposit->isCancelled()) {
+                return;
+            }
+
+            $this->vouchers->post($voucher);
+
+            match ($movement->kind) {
+                DepositMovement::OPENED => $deposit->status === Deposit::AWAITING
+                    ? $deposit->forceFill(['status' => Deposit::ACTIVE])->save() : null,
+                DepositMovement::INSTALMENT => $deposit->forceFill([
+                    'principal' => bcadd((string) $deposit->principal, (string) $movement->amount, 4),
+                ])->save(),
+                DepositMovement::CLOSED => $deposit->forceFill([
+                    'status' => Deposit::CLOSED,
+                    'closed_on' => $movement->moved_on,
+                ])->save(),
+                default => null,
+            };
+        });
+    }
+
+    /**
+     * ⭐ সইকারী "না" বললেন — খসড়া ভাউচার বাতিল। ⓘ খোলাটাই "না" হলে জমাটা কোনোদিন ছিল না, তাই বাতিল।
+     */
+    public function dropRefused(Voucher $voucher, string $reason): void
+    {
+        DB::transaction(function () use ($voucher, $reason): void {
+            $movement = DepositMovement::query()->where('voucher_id', $voucher->id)->first();
+            $this->lockFresh($voucher);
+
+            if (! $voucher->isDraft()) {
+                return;
+            }
+
+            $this->vouchers->cancel($voucher, $reason);
+
+            $deposit = $movement?->deposit;
+
+            if ($deposit !== null && $movement->kind === DepositMovement::OPENED && $deposit->status === Deposit::AWAITING) {
+                $deposit->forceFill([
+                    'status' => Deposit::CANCELLED,
+                    'cancel_reason' => $reason,
+                    'cancelled_at' => now(),
+                ])->save();
+            }
+        });
+    }
+
+    /** চলাচলের ভাউচারটা কি সই-এর অপেক্ষায় (খসড়া)? */
+    private function waits(DepositMovement $movement): bool
+    {
+        return Voucher::query()->whereKey($movement->voucher_id)->value('status') === DocumentStatus::DRAFT;
+    }
+
+    /**
+     * ⛔ ঋণের বিপরীতে বাঁধা জমা ভাঙা যায় না — অডিট ম২৩, ৪ অক্টোবর ২০২৬।
+     *
+     * ⓘ পর্দা আগে থেকেই বলত *"ভাঙা যাবে না"* ([[Deposit::isLocked()]]), অথচ সেবা ভাঙতে দিত — ব্যাংক যে টাকা
+     * জামানত হিসেবে ধরে রেখেছে, খাতায় সেটা নগদে ফিরে আসত।
+     */
+    private function assertNotPledged(Deposit $deposit): void
+    {
+        if ($deposit->isLocked()) {
             throw ValidationException::withMessages([
-                'money_account_id' => __('finance::validation.not_a_postable_account'),
+                'status' => __('finance::validation.deposit_is_pledged', ['no' => $deposit->document_no]),
             ]);
         }
-
-        return $account;
     }
 
     /**
@@ -515,6 +615,21 @@ final class DepositService
         if ($deposit->status !== Deposit::ACTIVE) {
             throw ValidationException::withMessages([
                 'status' => __('finance::validation.deposit_already_closed', ['no' => $deposit->document_no]),
+            ]);
+        }
+
+        /*
+         * ⛔ একটা চলাচল সই-এর অপেক্ষায় থাকলে আরেকটা নয় — অডিট গ১, ৪ অক্টোবর ২০২৬। ⓘ অপেক্ষার ভাঙার পাশে
+         * নতুন কিস্তি বসলে সই পড়ার পর টাকাটা একটা বন্ধ জমায় ঢুকত।
+         */
+        $waiting = DepositMovement::query()
+            ->where('deposit_id', $deposit->id)
+            ->whereHas('voucher', fn ($v) => $v->where('status', DocumentStatus::DRAFT))
+            ->exists();
+
+        if ($waiting) {
+            throw ValidationException::withMessages([
+                'status' => __('finance::validation.awaits_signature_first'),
             ]);
         }
     }

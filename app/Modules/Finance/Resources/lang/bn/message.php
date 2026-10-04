@@ -183,4 +183,7 @@ return [
     'notice_maturing_body' => 'মেয়াদপূর্তি :date · আর :days দিন। না দেখলে ব্যাংক আপনা থেকেই নতুন মেয়াদে বসিয়ে দেবে।',
     'notice_hand_loan' => ':person-এর হাতধারের তারিখ',
     'notice_hand_loan_body' => 'তারিখ :date · :days দিন।',
+
+    // ⛔ সইয়ের অপেক্ষায় — অডিট গ১, ৪ অক্টোবর ২০২৬ ([[FinanceSignature]])
+    'awaiting_signature' => 'সইয়ের জন্য পাঠানো হয়েছে — শেষ সই পড়লে খাতায় বসবে, "না" হলে বাতিল।',
 ];

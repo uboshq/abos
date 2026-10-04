@@ -4,10 +4,13 @@ declare(strict_types=1);
 
 namespace App\Modules\Finance\Services;
 
+use App\Core\Concerns\ReadsTheRowUnderLock;
+use App\Core\Engines\Approval\DocumentApproval;
 use App\Core\Engines\NumberSeries\NumberSeriesEngine;
 use App\Core\Engines\Posting\PostingEngine;
 use App\Core\Support\CompanyContext;
 use App\Core\Support\DocumentStatus;
+use App\Modules\Accounts\Models\Voucher;
 use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Finance\Models\BankFacility;
 use App\Modules\Finance\Models\Institution;
@@ -28,6 +31,8 @@ use Illuminate\Validation\ValidationException;
  */
 class BankFacilityService
 {
+    use ReadsTheRowUnderLock;
+
     /**
      * আগে থেকে চলতে থাকা ঋণের খোলা ব্যালেন্সের উৎস।
      *
@@ -41,6 +46,9 @@ class BankFacilityService
         private readonly NumberSeriesEngine $numbers,
         private readonly InstitutionService $institutions,
         private readonly PostingEngine $posting,
+
+        // ⛔ চলতি ঋণের খোলা বকেয়াও সই ছাড়া খাতায় নয় — অডিট গ১, ৪ অক্টোবর ২০২৬
+        private readonly DocumentApproval $approval,
     ) {}
 
     /**
@@ -222,10 +230,10 @@ class BankFacilityService
      * ⛔ দুইবার বসার পথ নেই: উৎসের নামে সুবিধার আইডি আছে, আর
      * পোস্টিং ইঞ্জিন একই উৎসে দ্বিতীয়বার বসতে দেয় না।
      */
-    public function openingFor(BankFacility $facility, string $outstanding): void
+    public function openingFor(BankFacility $facility, string $outstanding): bool
     {
         if (bccomp($outstanding, '0', 4) <= 0) {
-            return;
+            return false;
         }
 
         /*
@@ -248,6 +256,14 @@ class BankFacilityService
             ]);
         }
 
+        /*
+         * ⛔ সই ছাড়া খাতায় নয় — অডিট গ১, ৪ অক্টোবর ২০২৬। ⓘ খোলা বকেয়া দায় বাড়ায় আর সঞ্চিত মুনাফা কমায়;
+         * ছক থাকলে অপেক্ষা, শেষ সই পড়লে [[finishSigned()]] এই পথটাই আবার ডাকে, আর তখন সইটা পাওয়া।
+         */
+        if ($this->approval->stopping($facility, FinanceSignature::MODULE, FinanceSignature::BANK_FACILITY, $outstanding) !== null) {
+            return true;
+        }
+
         $this->posting->post(
             sourceType: self::OPENING_SOURCE,
             sourceId: (int) $facility->id,
@@ -258,6 +274,31 @@ class BankFacilityService
             ],
             documentNo: $facility->document_no,
         );
+
+        return false;
+    }
+
+    /**
+     * ⭐ শেষ সই পড়ল — খোলা বকেয়াটা খাতায় ([[FinishTheFinancePaperOnTheLastSignature]])।
+     *
+     * ⓘ সারিতে তালা, আর আগে বসে গিয়ে থাকলে কিছু নয় — একই উৎসে দ্বিতীয় দাখিলা পোস্টিং ইঞ্জিন এমনিতেই
+     * নেয় না, কিন্তু সেই ব্যতিক্রম সইকারীর ঘাড়ে ফেরা উচিত নয়।
+     */
+    public function finishSigned(BankFacility $facility): void
+    {
+        DB::transaction(function () use ($facility): void {
+            $this->lockFresh($facility);
+
+            $already = DB::table('ledger_entries')
+                ->where('company_id', CompanyContext::id())
+                ->where('source_type', self::OPENING_SOURCE)
+                ->where('source_id', (int) $facility->id)
+                ->exists();
+
+            if (! $already) {
+                $this->openingFor($facility, (string) ($facility->opening_drawn ?? '0'));
+            }
+        });
     }
 
     /**
@@ -276,37 +317,26 @@ class BankFacilityService
     public function instalmentStanding(BankFacility $facility): array
     {
         $opening = (int) ($facility->opening_instalments_paid ?? 0);
-        $each = (string) ($facility->instalment_amount ?? '0');
         $count = (int) ($facility->instalments ?? 0);
 
-        $repaid = '0';
+        /*
+         * ⛔ শোধ মানে শোধের ভাউচারগুলোর আসল — দায়ের খাতের "ডেবিট − ক্রেডিট" নয় (অডিট গ১৬, ৪ অক্টোবর ২০২৬)।
+         *
+         * ⓘ আগের যোগফলে টাকা তোলার ক্রেডিটও ঢুকত: নতুন ঋণে ২৫ লাখ তোলা (ক্রেডিট) আর বারো কিস্তির আসল
+         * (ডেবিট) মিলে ঋণাত্মক, আর পর্দা বলত "০ দেওয়া"। ⭐ এখন ভাউচার ধরে: যে ভাউচার দায় কমায় সেটাই শোধ;
+         * বাতিল ভাউচার নিজের উল্টো সারিতে শূন্যে নামে, তাই গোনা হয় না।
+         */
+        $repaid = $this->repayments($facility)['repaid'];
 
-        if ($facility->liability_account_id !== null) {
-            /*
-             * ⓘ দায়ের খাতে ডেবিট মানে দায় কমা — অর্থাৎ শোধ।
-             * ⚠️ খোলা ব্যালেন্সের সারিটা ক্রেডিট, তাই সে নিজেই এই
-             * যোগফলে পড়ে না।
-             */
-            $repaid = (string) (DB::table('ledger_entries')
-                ->where('company_id', CompanyContext::id())
-                ->where('account_id', (int) $facility->liability_account_id)
-
-                /*
-                 * ⛔ খোলা ব্যালেন্সের সারিটা বাদ — সে দায় বসায়, শোধ করে না।
-                 * ⚠️ না বাদ দিলে পুরনো ঋণে যোগফল ঋণাত্মক হয়ে যেত, আর
-                 * পর্দা বলত একটা কিস্তিও দেওয়া হয়নি।
-                 */
-                ->where('source_type', '<>', self::OPENING_SOURCE)
-                ->sum(DB::raw('debit - credit')) ?? '0');
-        }
-
-        if (bccomp($repaid, '0', 4) < 0) {
-            $repaid = '0';
-        }
-
-        $fromLedger = bccomp($each, '0', 4) > 0
-            ? (int) bcdiv($repaid, $each, 0)
-            : 0;
+        /*
+         * ⛔ কিস্তি গোনা হয় আসল ধরে, "শোধ ÷ কিস্তি" নয় — অডিট গ১৬, ৪ অক্টোবর ২০২৬।
+         *
+         * ⓘ দায়ের খাতে বসে কেবল **আসল**, আর কিস্তির অঙ্কে (EMI) সুদও আছে — তাই ভাগ করলে সংখ্যাটা সবসময় কম
+         * আসত: বারোটা কিস্তির পরেও নতুন ঋণ বলত "০ বা ৮ দেওয়া", আর আগাম শোধের চার্জ ([[settlementToday()]])
+         * ফুলে যেত। ⭐ এখন সূচির আসলের যোগফল মিলিয়ে গোনা হয় ([[LoanSchedule::build()]]); সূচি না থাকলে
+         * কয়টা শোধের ভাউচার এসেছে সেটাই।
+         */
+        $fromLedger = $this->instalmentsCovered($facility, $repaid, $opening);
 
         $paid = $opening + $fromLedger;
 
@@ -495,17 +525,23 @@ class BankFacilityService
      */
     public function standing(\Illuminate\Support\Collection $facilities): array
     {
-        $accounts = $facilities
-            ->map(fn (BankFacility $f) => $this->accountOf($f))
-            ->filter()
-            ->unique()
-            ->values();
+        /*
+         * ⛔ এক খাতে কয়েকটা ঋণ থাকলে প্রত্যেকে কেবল নিজের সারি — অডিট গ১৬, ৪ অক্টোবর ২০২৬।
+         *
+         * ⓘ সব মেয়াদি ঋণ একই দায়ের খাতে (২২১১) বসে, আর আগে খাতের পুরো জের প্রতিটা ঋণের নামে দেখাত — দুইটা
+         * ২৫ লাখের ঋণ প্রত্যেকে "ব্যবহৃত ৫০ লাখ, বাকি ০"। ⭐ এখন খাতা-সারি ঋণের নামে বাঁধা ([[ownEntries()]]),
+         * আর গোনা হয় সুবিধা ধরে; খাতে একটাই ঋণ থাকলে আগের মতো পুরো খাত।
+         */
+        $balances = [];
 
-        $balances = $accounts->isEmpty() ? collect() : DB::table('ledger_entries')
-            ->where('company_id', CompanyContext::id())
-            ->whereIn('account_id', $accounts->all())
-            ->groupBy('account_id')
-            ->pluck(DB::raw('SUM(credit - debit)'), 'account_id');
+        foreach ($facilities as $facility) {
+            $account = $this->accountOf($facility);
+
+            if ($account !== null) {
+                $balances[(int) $facility->id] = (string) ($this->ownEntries($facility, $account)
+                    ->sum(DB::raw('credit - debit')) ?? '0');
+            }
+        }
 
         /* ⓘ কার খোলা বকেয়া ইতিমধ্যে খাতায় বসেছে — এক কোয়েরিতে */
         $opened = DB::table('ledger_entries')
@@ -523,7 +559,7 @@ class BankFacilityService
             $account = $this->accountOf($facility);
 
             // ⓘ CC-তে টাকা বেরোলে ব্যাংকের জের ঋণাত্মক, আর ঋণ ততটাই
-            $ledger = (string) ($balances[$account] ?? '0');
+            $ledger = (string) ($balances[(int) $facility->id] ?? '0');
 
             /*
              * ⛔ খোলা বকেয়া দুইবার গোনা যাবে না — ২০ সেপ্টেম্বর ২০২৬।
@@ -554,6 +590,121 @@ class BankFacilityService
         }
 
         return $standing;
+    }
+
+    /**
+     * ⭐ এই সুবিধার খাতা-সারি — নিজের খাতে, আর খাতটা অন্য ঋণের সাথে ভাগ হলে কেবল নিজের নামে বাঁধাগুলো।
+     *
+     * ── ⓘ "নিজের নামে" মানে কী ─────────────────────────────────────────
+     *   · খোলা বকেয়া — উৎসটাই এই সুবিধা ([[OPENING_SOURCE]], আইডি)।
+     *   · ভাউচার — যেটা এই সুবিধার বিপরীতে লেখা (`against_type = bank_facility`), সুবিধার পাতার
+     *     "কিস্তি দিন" বোতাম ঠিক এই জোড়া নিয়েই ভাউচার খোলে।
+     *
+     * ⚠️ খাতে একটাই সুবিধা থাকলে আগের মতো পুরো খাত — পুরনো, জোড়া-ছাড়া ভাউচারগুলো হারায় না। ⛔ ভাগ হলে
+     * জোড়া-ছাড়া সারি কারও নামে বসে না: কোন ঋণের টাকা সেটা খাতা জানে না, আর ভুল ঋণে বসানোর চেয়ে না বসানো
+     * ভালো — ভুল সংখ্যা দেখে মানুষ আগাম শোধ করেন।
+     */
+    private function ownEntries(BankFacility $facility, int $account): \Illuminate\Database\Query\Builder
+    {
+        $query = DB::table('ledger_entries')
+            ->where('company_id', CompanyContext::id())
+            ->where('account_id', $account);
+
+        if (! $this->sharesItsAccount($facility, $account)) {
+            return $query;
+        }
+
+        return $query->where(fn ($q) => $q
+            ->where(fn ($o) => $o->where('source_type', self::OPENING_SOURCE)->where('source_id', (int) $facility->id))
+            ->orWhere(fn ($v) => $v
+                ->whereIn('source_type', [
+                    ...array_values(Voucher::SOURCE_TYPES),
+                    ...array_map(fn (string $t) => $t.':reversal', array_values(Voucher::SOURCE_TYPES)),
+                ])
+                ->whereIn('source_id', Voucher::query()
+                    ->where('against_type', BankFacility::drillSourceType())
+                    ->where('against_id', (int) $facility->id)
+                    ->select('id'))));
+    }
+
+    /**
+     * এই ঋণের শোধ — কোন কোন ভাউচার দায় কমিয়েছে, আর মোট কত আসল।
+     *
+     * ⓘ খাতা-সারি ভাউচার ধরে জোড়া হয় (উল্টো সারি `…:reversal` সহ), আর যে ভাউচারের নিট ডেবিট সেটাই শোধ।
+     * টাকা তোলা (নিট ক্রেডিট) আর বাতিল ভাউচার (নিট শূন্য) বাদ পড়ে নিজে থেকেই।
+     *
+     * @return array{repaid: string, count: int}
+     */
+    private function repayments(BankFacility $facility): array
+    {
+        if ($facility->liability_account_id === null) {
+            return ['repaid' => '0', 'count' => 0];
+        }
+
+        $rows = $this->ownEntries($facility, (int) $facility->liability_account_id)
+            ->where('source_type', '<>', self::OPENING_SOURCE)
+            ->groupBy('source_type', 'source_id')
+            ->get(['source_type', 'source_id', DB::raw('SUM(debit - credit) as net')]);
+
+        $byPaper = [];
+
+        foreach ($rows as $row) {
+            $key = preg_replace('/:reversal$/', '', (string) $row->source_type).'#'.$row->source_id;
+            $byPaper[$key] = bcadd($byPaper[$key] ?? '0', (string) $row->net, 4);
+        }
+
+        $repaid = '0';
+        $count = 0;
+
+        foreach ($byPaper as $net) {
+            if (bccomp($net, '0', 4) > 0) {
+                $repaid = bcadd($repaid, $net, 4);
+                $count++;
+            }
+        }
+
+        return ['repaid' => $repaid, 'count' => $count];
+    }
+
+    /** একই খাতে আরেকটা সুবিধা আছে কি — বন্ধগুলোও, কারণ তাদের পুরনো সারিও ঐ খাতেই। */
+    private function sharesItsAccount(BankFacility $facility, int $account): bool
+    {
+        return BankFacility::query()
+            ->whereKeyNot($facility->getKey())
+            ->get()
+            ->contains(fn (BankFacility $other) => $this->accountOf($other) === $account);
+    }
+
+    /**
+     * শোধ হওয়া আসলে কয়টা কিস্তি ঢাকে — সূচির আসল মিলিয়ে।
+     *
+     * ⓘ খোলার দিনে যতগুলো দেওয়া ছিল তার পরের কিস্তি থেকে গোনা শুরু, কারণ খাতায় শোধ বসে তার পরের গুলোর।
+     * ⚠️ কিস্তিপ্রতি এক টাকার ছাড় রাখা হয় — সূচি দুই দশমিকে গোল করে, আর ব্যাংক মাসিক হার ছেঁটে নেয়।
+     */
+    private function instalmentsCovered(BankFacility $facility, string $repaid, int $opening): int
+    {
+        $schedule = $this->schedule($facility);
+
+        if ($schedule !== null) {
+            $covered = 0;
+            $sum = '0';
+
+            foreach (array_slice($schedule['rows'], $opening) as $row) {
+                $sum = bcadd($sum, (string) $row['principal'], 2);
+
+                // ⓘ কিস্তিপ্রতি এক টাকার ছাড় — ব্যাংক মাসিক হার ছেঁটে গোনে ([[LoanSchedule]]-এর টীকা)
+                if (bccomp($sum, bcadd($repaid, (string) ($covered + 1), 4), 4) > 0) {
+                    break;
+                }
+
+                $covered++;
+            }
+
+            return $covered;
+        }
+
+        // ⓘ সূচি নেই (লিজ, হার/সংখ্যা লেখা নেই) — কয়টা শোধের ভাউচার এসেছে
+        return $this->repayments($facility)['count'];
     }
 
     /**

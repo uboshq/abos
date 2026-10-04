@@ -8,6 +8,7 @@ use App\Modules\Accounts\Events\AccountSaved;
 use App\Modules\Accounts\Events\VoucherPosted;
 use App\Modules\Finance\Dashboard\FinanceDashboard;
 use App\Modules\Finance\Listeners\CapitalFromReceipt;
+use App\Modules\Finance\Listeners\FinishTheFinancePaperOnTheLastSignature;
 use App\Modules\Finance\Listeners\InstitutionFieldOnAccountForm;
 use App\Modules\Finance\Listeners\InstitutionFromAccountForm;
 use App\Modules\Finance\Listeners\PostTheProfitOnTheLastSignature;
@@ -544,6 +545,19 @@ return [
         'withdrawal' => 'finance::approval.withdrawal',
         // ⭐ মুনাফা ঘোষণা — সই ছাড়া লাভ ভাগ নয় (মালিকের নিয়ম; [[ProfitDistribution::declare()]], ১ অক্টোবর ২০২৬)
         'profit' => 'finance::approval.profit',
+
+        /*
+         * ⛔ অর্থের বাকি টাকার কাজ — অডিট গ১, ৪ অক্টোবর ২০২৬ ([[FinanceSignature]])।
+         *
+         * ⓘ এগুলো ভাউচার বানিয়ে সাথে সাথে খাতায় বসাত, সই ছাড়া — হিসাবের পর্দায় যে টাকায় সই লাগে, অর্থের
+         * পর্দা দিয়ে সেই টাকাই সই ছাড়া নড়ত। ছক না বসালে আগের মতোই সাথে সাথে; নতুন কোম্পানিতে ছক নিজে বসে
+         * (`moves_money` → [[MoneyFlowDefaults]])।
+         */
+        'hand_loan' => 'finance::approval.hand_loan',
+        'deposit' => 'finance::approval.deposit',
+        'rental' => 'finance::approval.rental',
+        'bank_facility' => 'finance::approval.bank_facility',
+        'capitalise' => 'finance::approval.capitalise',
     ],
 
     /*
@@ -558,7 +572,7 @@ return [
      * মিলিয়ে দেখে। ⛔ একটা টাইপো নীরবে কাগজটাকে bulk-এ
      * ঢুকিয়ে দিত।
      */
-    'moves_money' => ['withdrawal', 'profit'],
+    'moves_money' => ['withdrawal', 'profit', 'hand_loan', 'deposit', 'rental', 'bank_facility', 'capitalise'],
 
     /*
      * ⛔ এই ব্লকটা এতদিন **ছিলই না**, আর সেটা একটা নীরব ফাঁক ছিল।
@@ -653,6 +667,7 @@ return [
         AccountSaved::class => [InstitutionFromAccountForm::class],
 
         // ⭐ মুনাফা ঘোষণার শেষ সই — খসড়া ঘোষণা খাতায়, "না" হলে বাতিল ([[PostTheProfitOnTheLastSignature]])
-        ApprovalDecided::class => [PostTheProfitOnTheLastSignature::class],
+        // ⭐ অর্থের বাকি টাকার কাজের শেষ সই — খসড়া খাতায়, "না" হলে বাতিল; উত্তোলনের "না" বাতিল করে ([[FinishTheFinancePaperOnTheLastSignature]])
+        ApprovalDecided::class => [PostTheProfitOnTheLastSignature::class, FinishTheFinancePaperOnTheLastSignature::class],
     ],
 ];

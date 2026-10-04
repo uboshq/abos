@@ -12,4 +12,11 @@ declare(strict_types=1);
 return [
     'withdrawal' => 'Owner withdrawal',
     'profit' => 'Profit declaration',
+
+    // Finance's other money actions — audit 4 Oct 2026 ([[FinanceSignature]])
+    'hand_loan' => 'Hand loan given or repaid',
+    'deposit' => 'Deposit — opening, instalment, profit, encashment',
+    'rental' => 'Rent deposit, monthly rent and refund',
+    'bank_facility' => 'Running loan brought in',
+    'capitalise' => 'Year-end profit moved to capital',
 ];

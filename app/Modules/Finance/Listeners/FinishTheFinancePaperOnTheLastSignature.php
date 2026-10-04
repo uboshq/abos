@@ -1,0 +1,79 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Modules\Finance\Listeners;
+
+use App\Core\Events\ApprovalDecided;
+use App\Models\Approval;
+use App\Modules\Accounts\Models\Voucher;
+use App\Modules\Finance\Models\BankFacility;
+use App\Modules\Finance\Models\Withdrawal;
+use App\Modules\Finance\Services\BankFacilityService;
+use App\Modules\Finance\Services\DepositService;
+use App\Modules\Finance\Services\FinanceSignature;
+use App\Modules\Finance\Services\HandLoanService;
+use App\Modules\Finance\Services\ProfitDistribution;
+use App\Modules\Finance\Services\RentalContractService;
+use App\Modules\Finance\Services\WithdrawalService;
+
+/**
+ * ⭐ অর্থের টাকার কাগজে শেষ সই পড়ল — খাতায়; "না" হলে বাতিল (অডিট গ১, ম২৮, ৪ অক্টোবর ২০২৬)।
+ *
+ * ⓘ যুক্তি সবটা যার কাগজ তার সেবায় (`finishSigned()` / `dropRefused()`); এখানে কেবল কোন কাজ, কোন কাগজ, কী
+ * সিদ্ধান্ত — [[PostTheProfitOnTheLastSignature]]-এর ছাঁচ। মালিকের নিয়ম: *যেকোনো টাকা, যেকোনো অঙ্ক — সই লাগে*।
+ *
+ * ⚠️ উত্তোলনে কেবল "না" — "হ্যাঁ"-র পরে টাকা কোন খাত থেকে যাবে সেটা মানুষ বলেন ([[WithdrawalService::post()]])।
+ */
+final class FinishTheFinancePaperOnTheLastSignature
+{
+    public function handle(ApprovalDecided $event): void
+    {
+        // ⓘ নাম লেখা, ধ্রুবক নয় — প্রতিটা সই-এ চলে, আগে থেকে চলা প্রক্রিয়ায় নতুন ক্লাস না পেলেও অন্য সই ভাঙবে না
+        if (($event->payload['module'] ?? null) !== 'finance') {
+            return;
+        }
+
+        $action = (string) ($event->payload['action'] ?? '');
+
+        if ($action !== 'withdrawal' && ! in_array($action, FinanceSignature::ACTIONS, true)) {
+            return;
+        }
+
+        $approval = Approval::query()->find((int) ($event->payload['approval_id'] ?? 0));
+
+        if ($approval === null || ! in_array($approval->status, [Approval::APPROVED, Approval::REJECTED], true)) {
+            return;
+        }
+
+        $yes = $approval->status === Approval::APPROVED;
+        $paper = $approval->approvable;
+        $why = __('finance::validation.signature_refused');
+
+        match (true) {
+            $paper instanceof Withdrawal => $yes ? null : app(WithdrawalService::class)->dropRefused($paper),
+            $paper instanceof BankFacility => $yes ? app(BankFacilityService::class)->finishSigned($paper) : null,
+            $paper instanceof Voucher => $this->voucher($action, $paper, $yes, $why),
+            default => null,
+        };
+    }
+
+    private function voucher(string $action, Voucher $voucher, bool $yes, string $why): void
+    {
+        match ($action) {
+            FinanceSignature::HAND_LOAN => $yes
+                ? app(HandLoanService::class)->finishSigned($voucher)
+                : app(HandLoanService::class)->dropRefused($voucher, $why),
+            FinanceSignature::DEPOSIT => $yes
+                ? app(DepositService::class)->finishSigned($voucher)
+                : app(DepositService::class)->dropRefused($voucher, $why),
+            FinanceSignature::RENTAL => $yes
+                ? app(RentalContractService::class)->finishSigned($voucher)
+                : app(RentalContractService::class)->dropRefused($voucher, $why),
+            FinanceSignature::CAPITALISE => $yes
+                ? app(ProfitDistribution::class)->finishCapitalise($voucher)
+                : app(ProfitDistribution::class)->dropCapitalise($voucher, $why),
+            default => null,
+        };
+    }
+}

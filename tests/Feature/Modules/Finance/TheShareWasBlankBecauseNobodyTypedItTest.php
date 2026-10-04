@@ -96,7 +96,8 @@ final class TheShareWasBlankBecauseNobodyTypedItTest extends TestCase
             'share_percent' => $share ?? '',
         ]);
 
-        $cash = Account::query()->postable()->where('name_en', 'like', '%Cash%')->orderBy('code')->firstOrFail();
+        // ⓘ সত্যিকারের টাকার খাত — অডিট গ১৫ (৪ অক্টোবর ২০২৬) থেকে মূলধন কেবল টাকার খাতে আসে; নামে "Cash" থাকা যথেষ্ট নয়
+        $cash = Account::query()->money()->postable()->active()->orderBy('code')->firstOrFail();
 
         app(CapitalService::class)->post($entry, $cash);
     }

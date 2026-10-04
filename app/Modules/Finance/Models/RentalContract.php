@@ -50,8 +50,16 @@ class RentalContract extends Model implements Drillable
      */
     public const CLOSED = 'closed';
 
+    /**
+     * ⛔ খোলা হয়েছে, কিন্তু জামানতের টাকা যাওয়ার সই এখনো পড়েনি — অডিট গ১, ৪ অক্টোবর ২০২৬।
+     *
+     * ⓘ চলছে না, তাই মাসের সমন্বয় বা বাড়ানো যায় না; শেষ সই পড়লে চলে, "না" হলে চুক্তিটা ভুল করে
+     * বসানো চুক্তির মতোই সরে যায় ([[RentalContractService::dropRefused()]])।
+     */
+    public const AWAITING = 'awaiting';
+
     /** @var list<string> */
-    public const STATES = [self::ACTIVE, self::CLOSED];
+    public const STATES = [self::ACTIVE, self::CLOSED, self::AWAITING];
 
     protected $table = 'fin_rental_contracts';
 

@@ -166,4 +166,7 @@ return [
     'notice_maturing_body' => 'Matures :date · :days days to go. Miss it and the bank rolls the money over on its own.',
     'notice_hand_loan' => 'A hand loan with :person is due',
     'notice_hand_loan_body' => 'Due :date · :days days.',
+
+    // Waiting for its signature — audit 4 Oct 2026 ([[FinanceSignature]])
+    'awaiting_signature' => 'Sent for signature — it posts on the last signature, and is cancelled if refused.',
 ];

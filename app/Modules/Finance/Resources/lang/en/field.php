@@ -350,4 +350,8 @@ return [
     'rental_new_person' => 'New landlord',
     /* The rental screen names the role instead of the relation - 21 September 2026. */
     'rental_tab_people' => 'Landlords',
+
+    // Vouchers named for the loan — audit 4 Oct 2026
+    'facility_pay_instalment' => 'Pay an instalment',
+    'facility_draw' => 'Loan money received',
 ];

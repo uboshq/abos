@@ -6,6 +6,7 @@ namespace App\Modules\Finance\Services;
 
 use App\Core\Concerns\ReadsTheRowUnderLock;
 use App\Core\Engines\Approval\ApprovalEngine;
+use App\Core\Engines\Approval\DocumentApproval;
 use App\Core\Engines\NumberSeries\NumberSeriesEngine;
 use App\Core\Support\CompanyContext;
 use App\Core\Support\DocumentStatus;
@@ -59,6 +60,15 @@ final class WithdrawalService
          * `app()` ডাকলে পরীক্ষায় বদলানো যেত না।
          */
         private readonly ProfitDistribution $profits,
+
+        /*
+         * ⛔ পোস্টের মুহূর্তে সইয়ের প্রশ্ন — অডিট ম২৮, ৪ অক্টোবর ২০২৬। ⓘ অনুরোধের দিন ছক না থাকলে আগে
+         * আর কেউ জিজ্ঞেস করত না; পরে ছক বসলেও সেই খসড়া সই ছাড়াই পোস্ট হত।
+         */
+        private readonly DocumentApproval $signatures,
+
+        // ⓘ টাকার খাতের নিয়ম এক জায়গায় ([[FinanceSignature::moneyAccount()]])
+        private readonly FinanceSignature $finance,
     ) {}
 
     /**
@@ -159,93 +169,39 @@ final class WithdrawalService
     {
         $this->assertNotPosted($withdrawal);
 
-        if ($from->is_group) {
-            throw ValidationException::withMessages([
-                'money_account_id' => __('finance::validation.not_a_postable_account'),
-            ]);
-        }
+        /*
+         * ⛔ টাকা বেরোয় টাকার খাত থেকেই — অডিট ছ৫, ৪ অক্টোবর ২০২৬। ⓘ আগে কেবল "দল নয়" দেখা হত, তাই
+         * বিক্রয় বা খরচের খাত থেকেও "উত্তোলন" বসত — নগদ কমত না, অথচ মালিকের নামে টাকা উঠত।
+         */
+        $from = $this->finance->moneyAccount($from->getKey());
 
         /*
-         * ⛔ ঘোষণা না হওয়া লাভ তোলা যায় না — ২২ সেপ্টেম্বর ২০২৬।
+         * ⛔ সইয়ের প্রশ্ন পোস্টের মুহূর্তে, কোম্পানির আজকের ছক ধরে — অডিট ম২৮, ৪ অক্টোবর ২০২৬।
          *
-         * ⓘ লাভের ভাগ তোলা মানে [[StandardChart::PROFIT_PAYABLE]] থেকে
-         * ডেবিট। ⚠️ কিন্তু ঘোষণাই না হলে ওই খাতে তাঁর নামে কিছুই
-         * নেই — তখন ডেবিট করলে **ख़ণাত্মক দায়** তৈরি হত, অর্থাৎ
-         * খাতা বলত অংশীদার ব্যবসাকে টাকা দেবেন।
+         * ⓘ আগে কেবল অনুরোধের দিনের সারিটা দেখা হত ([[ApprovalEngine::latestFor()]]): সেদিন ছক না থাকলে
+         * সারিই নেই, আর পরে ছক বসলেও খসড়াটা সই ছাড়াই পোস্ট হত। ⭐ এখন [[DocumentApproval::stopping()]] —
+         * সই পাওয়া থাকলে এগোয়, অপেক্ষায় থাকলে থামে, ছক থাকলে আর অনুরোধ না থাকলে এখনই চায়।
          *
-         * ⭐ আটকানো হয়, নীরবে অন্য খাতে পাঠানো হয় না: ঘোষণা ছাড়া
-         * তোলা টাকা সত্যিই উত্তোলন, আর সেটা ব্যবহারকারীর বলার
-         * কথা, কোডের আন্দাজের নয়।
+         * ── ⓘ দুইটা আলাদা বার্তা, আর কেন ───────────────────────────────
+         * *"অনুমোদনের অপেক্ষায়"* শুনে মানুষ অপেক্ষা করেন; "না" হলে অপেক্ষার কিছু নেই — করার কাজ নতুন
+         * অনুরোধ (২৭ সেপ্টেম্বর ২০২৬-এর ভুল: প্রত্যাখ্যানের পরেও পোস্ট হত, [[TheRejectedRequestStillLetTheMoneyOutTest]])।
+         *
+         * ⚠️ বাতিল অনুরোধ ("না" পাওয়া) আগে থামে — সইয়ের প্রশ্নের আগে, নাহলে বাতিল কাগজের জন্য নতুন একটা
+         * অনুরোধ বসে যেত।
          */
-        if ($withdrawal->kind === Withdrawal::PROFIT_SHARE) {
-            $left = $this->profits->outstandingFor((int) $withdrawal->person_id);
+        $this->assertNotCancelled($withdrawal);
 
-            if (bccomp((string) $withdrawal->amount, $left, 4) > 0) {
-                throw ValidationException::withMessages([
-                    'amount' => __('finance::validation.more_than_declared', [
-                        'left' => Money::format($left),
+        $stopping = $this->signatures->stopping(
+            $withdrawal, FinanceSignature::MODULE, 'withdrawal', (string) $withdrawal->amount, $withdrawal->reason,
+        );
+
+        if ($stopping !== null) {
+            throw ValidationException::withMessages([
+                'status' => __($stopping->status === Approval::REJECTED
+                    ? 'finance::validation.withdrawal_was_rejected'
+                    : 'finance::validation.withdrawal_awaits_approval', [
+                        'no' => $withdrawal->document_no,
                     ]),
-                ]);
-            }
-        }
-
-        /*
-         * ⛔ ঘোষণা না হওয়া লাভ তোলা যায় না — ২২ সেপ্টেম্বর ২০২৬।
-         *
-         * ⓘ লাভের ভাগ তোলা মানে [[StandardChart::PROFIT_PAYABLE]] থেকে
-         * ডেবিট। ⚠️ কিন্তু ঘোষণাই না হলে ওই খাতে তাঁর নামে কিছুই
-         * নেই — তখন ডেবিট করলে **ख़ণাত্মক দায়** তৈরি হত, অর্থাৎ
-         * খাতা বলত অংশীদার ব্যবসাকে টাকা দেবেন।
-         *
-         * ⭐ আটকানো হয়, নীরবে অন্য খাতে পাঠানো হয় না: ঘোষণা ছাড়া
-         * তোলা টাকা সত্যিই উত্তোলন, আর সেটা ব্যবহারকারীর বলার
-         * কথা, কোডের আন্দাজের নয়।
-         */
-        $pending = $this->approvals->latestFor($withdrawal, 'withdrawal');
-
-        /*
-         * অনুমোদন ঝুলে থাকলে টাকা যায় না।
-         *
-         * ── কেন সেবাই আটকায়, পর্দা নয় ───────────────────────────────
-         * বোতামটা লুকিয়ে রাখলে ঠিকানা টাইপ করেই পোস্ট করা যেত, আর
-         * অনুমোদনের গোটা ব্যবস্থাটা সাজসজ্জা হয়ে যেত।
-         */
-        if ($pending !== null && $pending->isPending()) {
-            throw ValidationException::withMessages([
-                'status' => __('finance::validation.withdrawal_awaits_approval', [
-                    'no' => $withdrawal->document_no,
-                ]),
-            ]);
-        }
-
-        /*
-         * ⛔ "না" বলা অনুরোধের টাকাও বেরিয়ে যেত — ২৭ সেপ্টেম্বর ২০২৬।
-         *
-         * ── ⚠️ যা ভাঙা ছিল ─────────────────────────────────────────
-         * উপরের পাহারাটা একাই দাঁড়িয়ে ছিল, আর [[Approval::isPending()]]
-         * সত্য হয় **কেবল** `pending` অবস্থায়। ⓘ অর্থাৎ প্রশ্নটা ছিল
-         * *"সিদ্ধান্ত কি এখনো বাকি?"*, অথচ প্রশ্নটা হওয়া উচিত ছিল
-         * *"সিদ্ধান্তটা কি হ্যাঁ?"*।
-         *
-         * ⛔ ফলে ব্যবস্থাপক স্পষ্ট করে প্রত্যাখ্যান করার **পরেই** পোস্ট
-         * করা যেত — ভাউচার, খতিয়ান, সব বসে যেত। ⚠️ আর সেটা নীরব:
-         * প্রত্যাখ্যানটা লেখা থাকে অন্য টেবিলে, তাই ভাউচারটা দেখতে
-         * হুবহু অনুমোদিত উত্তোলনের মতোই।
-         *
-         * ── ⭐ কেন আলাদা বার্তা, উপরের শর্তে জুড়ে দেওয়া নয় ─────────
-         * *"অনুমোদনের অপেক্ষায়"* শুনে মানুষ অপেক্ষা করেন। ⓘ কিন্তু
-         * এখানে অপেক্ষার কিছু নেই — উত্তরটা এসে গেছে, আর উত্তরটা "না"।
-         * ⚠️ দুইটা এক বার্তায় ফেললে কেউ অনন্তকাল ইনবক্সের দিকে তাকিয়ে
-         * থাকতেন, অথচ করার কাজ ছিল নতুন করে অনুরোধ করা।
-         *
-         * ⓘ `$pending === null` অর্থাৎ প্রবাহ বসানোই নেই — সেই দশাটা
-         * এখানে ছোঁয়া হয়নি, ওটা নিরীক্ষার §1.3-এ আলাদাভাবে বদলাচ্ছে।
-         */
-        if ($pending !== null && $pending->status === Approval::REJECTED) {
-            throw ValidationException::withMessages([
-                'status' => __('finance::validation.withdrawal_was_rejected', [
-                    'no' => $withdrawal->document_no,
-                ]),
             ]);
         }
 
@@ -253,6 +209,33 @@ final class WithdrawalService
             // ⛔ সারিতে তালা দিয়ে তাজা অবস্থা আবার — দ্বিতীয় ক্লিক টাকা আবার বসাত (চূড়ান্ত অডিট ⛔১১)
             $this->lockFresh($withdrawal);
             $this->assertNotPosted($withdrawal);
+            $this->assertNotCancelled($withdrawal);
+
+            /*
+             * ⛔ ঘোষণা না হওয়া লাভ তোলা যায় না — আর যাচাইটা তালার নিচে (অডিট গ১৪/ম২৮, ৪ অক্টোবর ২০২৬)।
+             *
+             * ⓘ লাভের ভাগ তোলা মানে [[StandardChart::PROFIT_PAYABLE]] থেকে ডেবিট; ঘোষণা না থাকলে ঋণাত্মক দায়।
+             * ⚠️ আগে বাকিটা দেখা হত লেনদেনের বাইরে, তালা ছাড়া — দুইটা তোলা, বা তোলা আর মূলধনে নেওয়া
+             * ([[ProfitDistribution::capitalise()]]) একসাথে একই বাকি দেখত, আর দুইটাই পার হত। ⭐ এখন দুই পথই
+             * প্রদেয় মুনাফার খাতে তালা দিয়ে বাকিটা আবার গোনে। আটকানো হয়, অন্য খাতে পাঠানো হয় না।
+             */
+            if ($withdrawal->kind === Withdrawal::PROFIT_SHARE) {
+                $payable = StandardChart::find(StandardChart::PROFIT_PAYABLE);
+
+                if ($payable !== null) {
+                    Account::query()->whereKey($payable->id)->lockForUpdate()->first();
+                }
+
+                $left = $this->profits->outstandingFor((int) $withdrawal->person_id);
+
+                if (bccomp((string) $withdrawal->amount, $left, 4) > 0) {
+                    throw ValidationException::withMessages([
+                        'amount' => __('finance::validation.more_than_declared', [
+                            'left' => Money::format($left),
+                        ]),
+                    ]);
+                }
+            }
 
             /*
              * ⭐ লাভের ভাগ ও অন্য উত্তোলন এক খাতে যায় না — ২২ সেপ্টেম্বর ২০২৬।
@@ -507,15 +490,23 @@ final class WithdrawalService
             return;
         }
 
-        $month = Carbon::parse($on);
+        /*
+         * ⛔ মাসটা অনুরোধের মাস — আজ, লেখা তারিখ নয় (অডিট ম২৮, ৪ অক্টোবর ২০২৬)।
+         *
+         * ⓘ আগে লেখা তারিখের মাস ধরা হত, তাই এই মাসের সীমা ফুরালে গত মাসের তারিখ লিখে আবার তোলা যেত — প্রতি
+         * মাসে সীমার দ্বিগুণ। ⭐ এখন এই মাসে চাওয়া সব (যে তারিখই লেখা থাক) আর এই মাসের তারিখের সব —
+         * দুইটাই গোনা হয়।
+         */
+        $month = now();
+        $from = $month->copy()->startOfMonth();
+        $to = $month->copy()->endOfMonth();
 
         $already = Withdrawal::query()
             ->where('person_id', $personId)
             ->where('status', '!=', DocumentStatus::CANCELLED)
-            ->whereBetween('trx_date', [
-                $month->copy()->startOfMonth()->toDateString(),
-                $month->copy()->endOfMonth()->toDateString(),
-            ])
+            ->where(fn ($q) => $q
+                ->whereBetween('trx_date', [$from->toDateString(), $to->toDateString()])
+                ->orWhereBetween('created_at', [$from->toDateTimeString(), $to->toDateTimeString()]))
             ->sum('amount');
 
         $after = bcadd((string) $already, $amount, 4);
@@ -532,6 +523,33 @@ final class WithdrawalService
                 'amount' => __('finance::validation.withdrawal_over_cap', [
                     'cap' => Money::format((string) $cap),
                     'left' => Money::format(bcsub((string) $cap, (string) $already, 4)),
+                ]),
+            ]);
+        }
+    }
+
+    /**
+     * ⭐ সইকারী "না" বললেন — অনুরোধটা বাতিল (অডিট ম২৮, ৪ অক্টোবর ২০২৬; [[FinishTheFinancePaperOnTheLastSignature]])।
+     *
+     * ⓘ আগে "না" পাওয়া অনুরোধ খসড়া হয়েই থাকত — মাসের সীমায় গোনা হত, আর তালিকায় দেখতে "এখনো চলছে"।
+     */
+    public function dropRefused(Withdrawal $withdrawal): void
+    {
+        DB::transaction(function () use ($withdrawal): void {
+            $this->lockFresh($withdrawal);
+
+            if ($withdrawal->status === DocumentStatus::DRAFT) {
+                $withdrawal->forceFill(['status' => DocumentStatus::CANCELLED])->save();
+            }
+        });
+    }
+
+    private function assertNotCancelled(Withdrawal $withdrawal): void
+    {
+        if ($withdrawal->status === DocumentStatus::CANCELLED) {
+            throw ValidationException::withMessages([
+                'status' => __('finance::validation.withdrawal_was_rejected', [
+                    'no' => $withdrawal->document_no,
                 ]),
             ]);
         }

@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace App\Modules\Finance\Services;
 
+use App\Core\Concerns\ReadsTheRowUnderLock;
 use App\Core\Services\PartyRegistry;
 use App\Core\Support\CompanyContext;
+use App\Core\Support\DocumentStatus;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Models\Voucher;
 use App\Modules\Accounts\Services\StandardChart;
@@ -42,7 +44,14 @@ use Illuminate\Validation\ValidationException;
  */
 final class HandLoanService
 {
-    public function __construct(private readonly VoucherService $vouchers) {}
+    use ReadsTheRowUnderLock;
+
+    public function __construct(
+        private readonly VoucherService $vouchers,
+
+        // ⛔ সই ছাড়া হাতধার নয় — অডিট গ১, ৪ অক্টোবর ২০২৬ ([[FinanceSignature]])
+        private readonly FinanceSignature $signature,
+    ) {}
 
     /**
      * একজন মানুষ — এবার তালিকা থেকে বাছা।
@@ -205,7 +214,11 @@ final class HandLoanService
                 ],
             );
 
-            $this->vouchers->post($voucher);
+            /*
+             * ⛔ সই ছাড়া টাকা নড়ে না — অডিট গ১, ৪ অক্টোবর ২০২৬। ছক থাকলে ভাউচার খসড়া থাকে, আর
+             * [[balanceOf()]] অপেক্ষার চলাচল গোনে না; শেষ সই পড়লে [[finishSigned()]] খাতায় বসায়।
+             */
+            $this->signature->postOrHold($voucher, FinanceSignature::HAND_LOAN, $amount);
 
             return HandLoanMovement::query()->create([
                 'company_id' => CompanyContext::id(),
@@ -233,6 +246,13 @@ final class HandLoanService
     {
         $balance = $this->balanceOf($account);
 
+        // ⛔ সই-এর অপেক্ষায় টাকা থাকলে "চুকে গেছে" নয় — সই পড়লে টাকাটা একটা বন্ধ খাতায় বসত
+        if ($this->waiting($account)) {
+            throw ValidationException::withMessages([
+                'status' => __('finance::validation.awaits_signature_first'),
+            ]);
+        }
+
         if (bccomp($balance, '0', 4) !== 0) {
             throw ValidationException::withMessages([
                 'status' => __('finance::validation.hand_loan_not_clear', [
@@ -251,6 +271,16 @@ final class HandLoanService
     {
         $row = HandLoanMovement::query()
             ->where('account_id', $account->id)
+
+            /*
+             * ⛔ কেবল খাতায় বসা টাকা — অডিট গ১ ও ম২২, ৪ অক্টোবর ২০২৬।
+             *
+             * ⓘ সই-এর অপেক্ষার (খসড়া) ভাউচারের টাকা এখনো নড়েনি, আর হিসাবের পর্দা থেকে বাতিল করা ভাউচারের
+             * টাকা ফিরে এসেছে — দুইটাই আগে গোনা হত, তাই খাতা আর এই পাতা দুই কথা বলত। ⚠️ ভাউচার ছাড়া
+             * পুরনো সারি (খোলার আমদানি) আগের মতোই গোনা হয়।
+             */
+            ->where(fn ($q) => $q->whereNull('voucher_id')
+                ->orWhereHas('voucher', fn ($v) => $v->where('status', DocumentStatus::CONFIRMED)))
             ->selectRaw('
                 COALESCE(SUM(CASE WHEN direction = ? THEN amount ELSE 0 END), 0) as gone,
                 COALESCE(SUM(CASE WHEN direction = ? THEN amount ELSE 0 END), 0) as came
@@ -440,15 +470,47 @@ final class HandLoanService
      */
     private function money(mixed $id): Account
     {
-        $account = Account::query()->find($id);
+        // ⛔ টাকার খাতই — নগদ, ব্যাংক বা MFS (অডিট ম২৩); আগে বিক্রয় বা খরচের খাত থেকেও "ধার দেওয়া" যেত
+        return $this->signature->moneyAccount($id);
+    }
 
-        if ($account === null || $account->is_group) {
-            throw ValidationException::withMessages([
-                'money_account_id' => __('finance::validation.not_a_postable_account'),
-            ]);
-        }
+    /**
+     * ⭐ শেষ সই পড়ল — অপেক্ষার চলাচলটা খাতায় ([[FinishTheFinancePaperOnTheLastSignature]])।
+     *
+     * ⓘ সারিতে তালা দিয়ে তাজা অবস্থা: দুইবার খবর এলেও খাতায় একবারই বসে।
+     */
+    public function finishSigned(Voucher $voucher): void
+    {
+        DB::transaction(function () use ($voucher): void {
+            $this->lockFresh($voucher);
 
-        return $account;
+            if (! $voucher->isDraft()) {
+                return;
+            }
+
+            $this->vouchers->post($voucher);
+        });
+    }
+
+    /** ⭐ সইকারী "না" বললেন — খসড়া ভাউচার বাতিল; চলাচলটা থাকে, কিন্তু টাকা হিসেবে গোনা হয় না। */
+    public function dropRefused(Voucher $voucher, string $reason): void
+    {
+        DB::transaction(function () use ($voucher, $reason): void {
+            $this->lockFresh($voucher);
+
+            if ($voucher->isDraft()) {
+                $this->vouchers->cancel($voucher, $reason);
+            }
+        });
+    }
+
+    /** কোনো চলাচল এখনো সই-এর অপেক্ষায় কি না। */
+    private function waiting(HandLoanAccount $account): bool
+    {
+        return HandLoanMovement::query()
+            ->where('account_id', $account->id)
+            ->whereHas('voucher', fn ($v) => $v->where('status', DocumentStatus::DRAFT))
+            ->exists();
     }
 
     private function assertOpen(HandLoanAccount $account): void

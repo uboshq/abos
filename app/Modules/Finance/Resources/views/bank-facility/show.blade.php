@@ -62,6 +62,37 @@
         </div>
     </section>
 
+    {{-- ⛔ ঋণের টাকা ঋণের নামে — অডিট গ১৬, ৪ অক্টোবর ২০২৬।
+
+         ⓘ সব মেয়াদি ঋণ একই দায়ের খাতে বসে, তাই খাতা নিজে জানে না কোন কিস্তি কোন ঋণের। বোতাম দুইটা
+         ভাউচার খোলে `against_type=bank_facility` নিয়ে ([[insurance/partials/pay]]-এর ছাঁচ), আর
+         [[BankFacilityService::standing()]] ও কিস্তির গোনা কেবল এই ঋণের নামের সারি ধরে। --}}
+    @if ($facility->isBalanceSheetDebt() && $facility->liability_account_id !== null
+        && $facility->status !== \App\Core\Support\DocumentStatus::CLOSED)
+        @can('accounts.voucher.create')
+            <div class="mb-4 flex flex-wrap gap-2">
+                <x-ui.button tone="primary"
+                             :href="route('accounts.voucher.create', [
+                                 'type' => 'payment',
+                                 'against_type' => \App\Modules\Finance\Models\BankFacility::drillSourceType(),
+                                 'against_id' => $facility->getKey(),
+                                 'narration' => __('finance::field.facility_pay_instalment').' — '.$facility->drillLabel(),
+                             ])">
+                    {{ __('finance::field.facility_pay_instalment') }}
+                </x-ui.button>
+                <x-ui.button tone="secondary"
+                             :href="route('accounts.voucher.create', [
+                                 'type' => 'receipt',
+                                 'against_type' => \App\Modules\Finance\Models\BankFacility::drillSourceType(),
+                                 'against_id' => $facility->getKey(),
+                                 'narration' => __('finance::field.facility_draw').' — '.$facility->drillLabel(),
+                             ])">
+                    {{ __('finance::field.facility_draw') }}
+                </x-ui.button>
+            </div>
+        @endcan
+    @endif
+
     {{-- ⭐ আজ শোধ করলে কত — মালিকের নির্দেশ, ২০ সেপ্টেম্বর ২০২৬।
          ⓘ চার্জ লেখা না থাকলে সারিটা আসে না — শূন্য চার্জ দেখানো
          আর চার্জ না থাকা এক কথা নয়। --}}

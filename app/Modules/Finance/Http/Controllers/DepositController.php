@@ -530,11 +530,14 @@ class DepositController extends Controller implements HasMiddleware
             'note' => ['nullable', 'string', 'max:500'],
         ]);
 
-        $data['kind'] === DepositMovement::INSTALMENT
+        $movement = $data['kind'] === DepositMovement::INSTALMENT
             ? $this->deposits->instalment($deposit, $data)
             : $this->deposits->payout($deposit, $data);
 
-        return back()->with('saved', __('finance::message.deposit_moved', ['no' => $deposit->document_no]));
+        // ⓘ সইয়ের অপেক্ষায় থাকলে সেটাই বলা (অডিট গ১)
+        return back()->with('saved', $movement->voucher?->isDraft()
+            ? __('finance::message.awaiting_signature')
+            : __('finance::message.deposit_moved', ['no' => $deposit->document_no]));
     }
 
     public function close(Request $request, string $issuer, Deposit $deposit): RedirectResponse
@@ -549,9 +552,11 @@ class DepositController extends Controller implements HasMiddleware
             'note' => ['nullable', 'string', 'max:500'],
         ]);
 
-        $this->deposits->close($deposit, $data);
+        $movement = $this->deposits->close($deposit, $data);
 
-        return back()->with('saved', __('finance::message.deposit_closed', ['no' => $deposit->document_no]));
+        return back()->with('saved', $movement->voucher?->isDraft()
+            ? __('finance::message.awaiting_signature')
+            : __('finance::message.deposit_closed', ['no' => $deposit->document_no]));
     }
 
     /**

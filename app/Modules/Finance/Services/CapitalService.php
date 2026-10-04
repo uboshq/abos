@@ -11,6 +11,7 @@ use App\Core\Support\DocumentStatus;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Models\Voucher;
 use App\Modules\Accounts\Services\StandardChart;
+use App\Modules\Accounts\Services\VoucherApproval;
 use App\Modules\Accounts\Services\VoucherService;
 use App\Modules\Finance\Models\CapitalEntry;
 use App\Modules\Finance\Models\Withdrawal;
@@ -37,6 +38,9 @@ final class CapitalService
         private readonly NumberSeriesEngine $numbers,
         private readonly VoucherService $vouchers,
         private readonly ProfitSplit $split,
+
+        // ⛔ পুরনো সরাসরি-পোস্টের পথও রসিদের একই সই মানে — অডিট গ১৫, ৪ অক্টোবর ২০২৬
+        private readonly VoucherApproval $receiptApproval,
     ) {}
 
     /**
@@ -279,9 +283,13 @@ final class CapitalService
     ): CapitalEntry {
         $this->assertNotPosted($entry);
 
-        if ($into->is_group) {
+        /*
+         * ⛔ টাকা আসে টাকার খাতেই — অডিট গ১৫, ৪ অক্টোবর ২০২৬। ⓘ আগে কেবল "দল নয়" দেখা হত, তাই বিক্রয় বা
+         * খরচের খাতেও "মূলধন এল" বসত — নগদ বাড়ত না, অথচ মালিকের অংশ বাড়ত।
+         */
+        if (! Account::query()->money()->postable()->active()->whereKey($into->getKey())->exists()) {
             throw ValidationException::withMessages([
-                'received_into_account_id' => __('finance::validation.not_a_postable_account'),
+                'received_into_account_id' => __('finance::validation.not_a_money_account'),
             ]);
         }
 
@@ -314,11 +322,26 @@ final class CapitalService
                             'no' => $entry->document_no,
                         ]),
                     'instrument_no' => $reference,
+
+                    // ⓘ রসিদের পর্দার একই জোড়া — পোস্ট হলে সারিটা নিজে নিষ্পন্ন ([[CapitalEntry::settleWith()]])
+                    'against_type' => 'capital_entry',
+                    'against_id' => $entry->id,
                 ],
                 [
                     ...$this->lines($entry, $into, $capital, $charge),
                 ],
             );
+
+            /*
+             * ⛔ সই ছাড়া মূলধন খাতায় নয় — অডিট গ১৫, ৪ অক্টোবর ২০২৬।
+             *
+             * ⓘ পর্দা মূলধন নেয় রসিদের ভাউচারে, আর সেখানে রসিদের সই লাগে ([[VoucherApproval]]); এই পুরনো পথটা
+             * সই ছাড়াই সরাসরি বসাত। ⭐ এখন একই প্রশ্ন একই জায়গায়: ছক থাকলে রসিদটা খসড়া থেকে সই-এর অপেক্ষায়
+             * যায়, আর হিসাবের পর্দা থেকে সই-এর পরে পোস্ট হলে সারিটা নিজে নিষ্পন্ন হয়।
+             */
+            if ($this->receiptApproval->stopping($voucher->fresh(['lines.account'])) !== null) {
+                return $entry->fresh();
+            }
 
             $this->vouchers->post($voucher);
 
@@ -375,9 +398,16 @@ final class CapitalService
              */
             ->where(fn ($q) => $q->whereNull('voucher_id')
                 ->orWhereHas('voucher', fn ($v) => $v->where('status', '!=', DocumentStatus::CANCELLED)))
-            ->selectRaw('person_id, contributor_type, MAX(share_percent) as share, SUM(amount) as total')
-            ->groupBy('person_id', 'contributor_type')
+
+            /*
+             * ⛔ দল কেবল মানুষ ধরে — অডিট গ১৩, ৪ অক্টোবর ২০২৬। ⓘ আগে `(person_id, contributor_type)` ধরে, তাই
+             * একজন দুই পরিচয়ে মূলধন দিলে দুই সারি — আর লাভ ভাগে দুইবার, ১০ লাখের ঘোষণায় ১২ লাখ বেরোত।
+             */
+            ->selectRaw('person_id, SUM(amount) as total')
+            ->groupBy('person_id')
             ->get();
+
+        $latest = $this->latestTerms($given->pluck('person_id')->map(fn ($id) => (int) $id)->all());
 
         // নামগুলো একবারেই, প্রতি সারিতে একটা কোয়েরি নয়
         $people = Person::query()->whereKey($given->pluck('person_id'))->get()->keyBy('id');
@@ -392,16 +422,17 @@ final class CapitalService
             }
 
             $taken = $this->withdrawnBy((int) $row->person_id);
+            $terms = $latest[(int) $row->person_id] ?? ['type' => '', 'share' => null];
 
             $out[] = [
                 'person_id' => (int) $row->person_id,
                 'name' => $person->name(),
-                'type' => (string) $row->contributor_type,
+                'type' => $terms['type'],
                 'contributed' => (string) $row->total,
                 'withdrawn' => $taken,
                 'net' => bcsub((string) $row->total, $taken, 4),
-                'share' => $row->share !== null ? (string) $row->share : null,
-                'share_source' => $row->share !== null ? 'agreed' : null,
+                'share' => $terms['share'],
+                'share_source' => $terms['share'] !== null ? 'agreed' : null,
             ];
         }
 
@@ -488,6 +519,42 @@ final class CapitalService
         }
 
         return $out;
+    }
+
+    /**
+     * ⭐ প্রতিজনের চলতি শর্ত — সবশেষ পোস্ট হওয়া সারির পরিচয়, আর সবশেষ লেখা চুক্তির অংশ (অডিট ম২৬, ৪ অক্টোবর ২০২৬)।
+     *
+     * ⛔ আগে অংশ ছিল `MAX(share_percent)` — চুক্তি ৪০% থেকে ২০%-এ নামলেও পুরনো ৪০%-ই খাটত, আর অংশের যোগ
+     * ১০০ পেরোত। ⓘ নতুন চুক্তি মানে পুরনোটা আর নেই; তাই তারিখে (একই দিনে সারির ক্রমে) সবশেষটা।
+     *
+     * @param  list<int>  $personIds
+     * @return array<int, array{type: string, share: string|null}>
+     */
+    private function latestTerms(array $personIds): array
+    {
+        $rows = CapitalEntry::query()
+            ->posted()
+            ->whereIn('person_id', $personIds)
+            ->where(fn ($q) => $q->whereNull('voucher_id')
+                ->orWhereHas('voucher', fn ($v) => $v->where('status', '!=', DocumentStatus::CANCELLED)))
+            ->orderByDesc('trx_date')
+            ->orderByDesc('id')
+            ->get(['person_id', 'contributor_type', 'share_percent']);
+
+        $out = [];
+
+        foreach ($rows as $row) {
+            $id = (int) $row->person_id;
+
+            $out[$id] ??= ['type' => (string) $row->contributor_type, 'share' => null, 'share_seen' => false];
+
+            if (! $out[$id]['share_seen'] && $row->share_percent !== null) {
+                $out[$id]['share'] = (string) $row->share_percent;
+                $out[$id]['share_seen'] = true;
+            }
+        }
+
+        return array_map(fn (array $t) => ['type' => $t['type'], 'share' => $t['share']], $out);
     }
 
     /**
@@ -615,6 +682,13 @@ final class CapitalService
         $sum = Withdrawal::query()
             ->where('person_id', $personId)
             ->posted()
+
+            /*
+             * ⛔ কেবল মূলধন তোলা — অডিট ম২৬, ৪ অক্টোবর ২০২৬। ⓘ বেতন একটা খরচ, আর লাভের ভাগ তোলা ঘোষিত দায়
+             * (২১৯০) শোধ; কোনোটাই মূলধন কমায় না। আগে তিনটাই গোনা হত, তাই বেতন নেওয়া অংশীদারের নিট মূলধন
+             * আর লাভের অংশ — দুইটাই নীরবে কমত।
+             */
+            ->where('kind', Withdrawal::DRAWING)
             ->sum('amount');
 
         return (string) ($sum ?: '0.0000');

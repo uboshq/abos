@@ -6,6 +6,7 @@ namespace App\Modules\Finance\Services;
 
 use App\Core\Concerns\ReadsTheRowUnderLock;
 use App\Core\Engines\NumberSeries\NumberSeriesEngine;
+use App\Core\Support\DocumentStatus;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Models\Voucher;
 use App\Modules\Accounts\Services\StandardChart;
@@ -31,6 +32,9 @@ class RentalContractService
     public function __construct(
         private readonly VoucherService $vouchers,
         private readonly NumberSeriesEngine $numbers,
+
+        // ⛔ সই ছাড়া ভাড়ার টাকা নড়ে না — অডিট গ১, ৪ অক্টোবর ২০২৬ ([[FinanceSignature]])
+        private readonly FinanceSignature $signature,
     ) {}
 
     /**
@@ -127,6 +131,10 @@ class RentalContractService
                             'who' => $contract->counterparty,
                         ]),
 
+                        // ⓘ কোন চুক্তির টাকা — শেষ সই পড়লে [[finishSigned()]] এই জোড়া ধরে চুক্তিটা খোঁজে
+                        'against_type' => RentalContract::drillSourceType(),
+                        'against_id' => $contract->id,
+
                         /*
                          * ⓘ ভাড়ার জামানত প্রায়ই চেকে যায়, তাই এই পথে
                          * নম্বরটা সবচেয়ে বেশি লাগে। ⛔ তবু ঐচ্ছিক —
@@ -147,7 +155,13 @@ class RentalContractService
                     ],
                 );
 
-                $this->vouchers->post($voucher);
+                /*
+                 * ⛔ সই-এর আগে চুক্তি চলে না — অডিট গ১, ৪ অক্টোবর ২০২৬। ⓘ জামানত না গেলে মাস কাটা বা
+                 * ফেরত পাওয়ার কিছুই নেই; শেষ সই চুক্তিটা চালায় ([[finishSigned()]])।
+                 */
+                if ($this->signature->postOrHold($voucher, FinanceSignature::RENTAL, $deposit)) {
+                    $contract->update(['status' => RentalContract::AWAITING]);
+                }
             }
 
             return $contract->fresh();
@@ -221,6 +235,7 @@ class RentalContractService
             // ⛔ সারিতে তালা দিয়ে তাজা অবস্থা আবার — দ্বিতীয় ক্লিক টাকা আবার বসাত (চূড়ান্ত অডিট ⛔১১)
             $this->lockFresh($contract);
             $this->assertActive($contract);
+            $this->assertNothingWaiting($contract);
             // ⛔ তালার পরে আবার — দুই ক্লিক একসাথে একই মাস দুইবার বসাত, জামানত দুইবার কাটত
             $this->assertMonthNotDone($contract, $month);
             $this->assertDepositCovers($contract, $fromDeposit);
@@ -257,7 +272,8 @@ class RentalContractService
                 $lines,
             );
 
-            $this->vouchers->post($voucher);
+            // ⓘ মাসের সারি থাকে (মাস আর জামানত আটকে রাখে); "না" হলে [[dropRefused()]] সারিটা সরায়
+            $this->signature->postOrHold($voucher, FinanceSignature::RENTAL, $rent);
 
             return RentalAdjustment::create([
                 'branch_id' => $contract->branch_id,
@@ -363,6 +379,10 @@ class RentalContractService
         }
 
         return DB::transaction(function () use ($contract, $data, $amount) {
+            $this->lockFresh($contract);
+            $this->assertActive($contract);
+            $this->assertNothingWaiting($contract);
+
             $voucher = $this->vouchers->create(
                 [
                     'type' => Voucher::PAYMENT,
@@ -371,6 +391,8 @@ class RentalContractService
                         'who' => $contract->counterparty,
                     ]),
                     'instrument_no' => ($data['instrument_no'] ?? '') ?: null,
+                    'against_type' => RentalContract::drillSourceType(),
+                    'against_id' => $contract->id,
                 ],
                 [
                     [
@@ -384,11 +406,12 @@ class RentalContractService
                 ],
             );
 
-            $this->vouchers->post($voucher);
-
-            $contract->update([
-                'deposit_amount' => bcadd((string) $contract->deposit_amount, $amount, 4),
-            ]);
+            // ⛔ সই-এর আগে জামানত বাড়ে না — বাড়ায় শেষ সই ([[finishSigned()]])
+            if (! $this->signature->postOrHold($voucher, FinanceSignature::RENTAL, $amount)) {
+                $contract->update([
+                    'deposit_amount' => bcadd((string) $contract->deposit_amount, $amount, 4),
+                ]);
+            }
 
             return $contract->fresh();
         });
@@ -414,6 +437,7 @@ class RentalContractService
             // ⛔ সারিতে তালা দিয়ে তাজা অবস্থা আবার — দ্বিতীয় ক্লিক টাকা আবার বসাত (চূড়ান্ত অডিট ⛔১১)
             $this->lockFresh($contract);
             $this->assertActive($contract);
+            $this->assertNothingWaiting($contract);
 
             if (bccomp($left, '0', 4) > 0 && filled($data['money_account_id'] ?? null)) {
                 $voucher = $this->vouchers->create(
@@ -424,6 +448,8 @@ class RentalContractService
                             'who' => $contract->counterparty,
                         ]),
                         'instrument_no' => ($data['instrument_no'] ?? '') ?: null,
+                        'against_type' => RentalContract::drillSourceType(),
+                        'against_id' => $contract->id,
                     ],
                     [
                         [
@@ -437,7 +463,13 @@ class RentalContractService
                     ],
                 );
 
-                $this->vouchers->post($voucher);
+                /*
+                 * ⛔ সই-এর আগে চুক্তি শেষ নয়, জামানতও কমে না — অডিট গ১, ৪ অক্টোবর ২০২৬। ⓘ শেষ সই
+                 * [[finishSigned()]] দুইটাই করে; ততক্ষণ চুক্তি চলে, আর অপেক্ষার ফেরত নতুন কিছু বসতে দেয় না।
+                 */
+                if ($this->signature->postOrHold($voucher, FinanceSignature::RENTAL, $left)) {
+                    return $contract->fresh();
+                }
 
                 /*
                  * ⭐ ফেরতটা জামানতের অঙ্ক থেকেই বাদ যায় — ঠিক যেভাবে
@@ -470,6 +502,122 @@ class RentalContractService
 
             return $contract->fresh();
         });
+    }
+
+    /**
+     * ⭐ শেষ সই পড়ল — অপেক্ষার ভাউচারটা খাতায়, আর তার ফল চুক্তিতে ([[FinishTheFinancePaperOnTheLastSignature]])।
+     *
+     * ⓘ চুক্তির জোড়া (`against`) থাকলে: অপেক্ষার চুক্তি চালু হয়, বাড়ানো জামানতে যোগ হয়, ফেরত চুক্তি শেষ
+     * করে — সই না থাকলে সাথে সাথে যা হত, ঠিক তাই। জোড়া না থাকলে মাসের সমন্বয়, যার সারি আগেই বসে আছে।
+     */
+    public function finishSigned(Voucher $voucher): void
+    {
+        DB::transaction(function () use ($voucher): void {
+            $contract = $this->contractOf($voucher);
+
+            if ($contract !== null) {
+                $this->lockFresh($contract);
+            }
+
+            $this->lockFresh($voucher);
+
+            if (! $voucher->isDraft()) {
+                return;
+            }
+
+            $this->vouchers->post($voucher);
+
+            if ($contract === null) {
+                return;
+            }
+
+            $on = $this->sideOf($voucher, (int) $contract->account_id);
+
+            match (true) {
+                $contract->status === RentalContract::AWAITING => $contract->update(['status' => RentalContract::ACTIVE]),
+                $voucher->type === Voucher::PAYMENT => $contract->update([
+                    'deposit_amount' => bcadd((string) $contract->deposit_amount, $on, 4),
+                ]),
+                default => $contract->update([
+                    'deposit_amount' => bcsub((string) $contract->deposit_amount, $on, 4),
+                    'status' => RentalContract::CLOSED,
+                    'closed_on' => $voucher->trx_date->toDateString(),
+                ]),
+            };
+        });
+    }
+
+    /**
+     * ⭐ সইকারী "না" বললেন — খসড়া ভাউচার বাতিল।
+     *
+     * ⓘ মাসের সারি সরে যায় (মাস আর জামানত আবার খালি); খোলার জামানতই "না" হলে চুক্তিটা ভুল করে বসানো
+     * চুক্তির মতো সরে যায় ([[RentalContract::CLOSED]]-এর টীকা)। বাড়ানো বা ফেরত "না" হলে চুক্তি যেমন ছিল।
+     */
+    public function dropRefused(Voucher $voucher, string $reason): void
+    {
+        DB::transaction(function () use ($voucher, $reason): void {
+            $this->lockFresh($voucher);
+
+            if (! $voucher->isDraft()) {
+                return;
+            }
+
+            $this->vouchers->cancel($voucher, $reason);
+
+            RentalAdjustment::query()->where('voucher_id', $voucher->id)->delete();
+
+            $contract = $this->contractOf($voucher);
+
+            if ($contract !== null && $contract->status === RentalContract::AWAITING) {
+                $contract->delete();
+            }
+        });
+    }
+
+    private function contractOf(Voucher $voucher): ?RentalContract
+    {
+        if ($voucher->against_type !== RentalContract::drillSourceType()) {
+            return null;
+        }
+
+        return RentalContract::query()->find($voucher->against_id);
+    }
+
+    /** ভাউচারে চুক্তির খাতের অঙ্ক — পরিশোধে ডেবিট (জামানত গেল), রসিদে ক্রেডিট (ফেরত এল)। */
+    private function sideOf(Voucher $voucher, int $accountId): string
+    {
+        $net = '0';
+
+        foreach ($voucher->lines()->where('account_id', $accountId)->get() as $line) {
+            $net = bcadd($net, bcsub((string) $line->debit, (string) $line->credit, 4), 4);
+        }
+
+        return ltrim($net, '-');
+    }
+
+    /**
+     * ⛔ এই চুক্তির কোনো টাকা সই-এর অপেক্ষায় থাকলে আরেকটা নয় — অডিট গ১, ৪ অক্টোবর ২০২৬।
+     *
+     * ⓘ অপেক্ষার ফেরতের পাশে মাস কাটা বা জামানত বাড়ানো বসলে সই পড়ার পর টাকাটা একটা শেষ চুক্তিতে ঢুকত।
+     */
+    private function assertNothingWaiting(RentalContract $contract): void
+    {
+        if ($this->isWaiting($contract)) {
+            throw ValidationException::withMessages([
+                'status' => __('finance::validation.awaits_signature_first'),
+            ]);
+        }
+    }
+
+    /** এই চুক্তির কোনো টাকা সইয়ের অপেক্ষায় কি — পর্দার বার্তার জন্যও ([[RentalContractController]])। */
+    public function isWaiting(RentalContract $contract): bool
+    {
+        return Voucher::query()
+            ->where('status', DocumentStatus::DRAFT)
+            ->where(fn ($q) => $q
+                ->where(fn ($v) => $v->where('against_type', RentalContract::drillSourceType())->where('against_id', $contract->id))
+                ->orWhereIn('id', RentalAdjustment::query()->where('rental_contract_id', $contract->id)->whereNotNull('voucher_id')->select('voucher_id')))
+            ->exists();
     }
 
     /**

@@ -171,7 +171,8 @@ final class TheRejectedRequestStillLetTheMoneyOutTest extends TestCase
         $fresh = $withdrawal->fresh();
 
         $this->assertFalse($fresh->isPosted(), 'সারিটা নিজেকে "খাতায় বসেছে" বলছে।');
-        $this->assertSame(DocumentStatus::DRAFT, $fresh->status);
+        // ⭐ "না" পাওয়া অনুরোধ বাতিল — আর খসড়া হয়ে ঝুলে থাকে না (অডিট ম২৮, ৪ অক্টোবর ২০২৬)
+        $this->assertSame(DocumentStatus::CANCELLED, $fresh->status, '⛔ "না" পাওয়া অনুরোধ এখনো খসড়া — মাসের সীমায় গোনা হচ্ছে।');
         $this->assertNull($fresh->voucher_id, 'সারিটা একটা ভাউচারের দিকে তাকিয়ে আছে।');
         $this->assertNull($fresh->posted_at);
     }

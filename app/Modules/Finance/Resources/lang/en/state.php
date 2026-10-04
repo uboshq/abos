@@ -19,4 +19,7 @@ return [
      */
     'pledged' => 'Pledged against :loan — cannot be broken',
     'pledged_short' => 'Pledged',
+
+    // Waiting for its signature — audit 4 Oct 2026
+    'awaiting' => 'Awaiting signature',
 ];
