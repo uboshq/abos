@@ -22,10 +22,11 @@
     $papers = \App\Core\Engines\Print\PaperSize::all();
 @endphp
 
-<div x-data="{ open: false }" class="relative print-hide">
+{{-- ⓘ "বাইরে চাপলে বন্ধ" পুরো মেনুর উপর — মালিক, ৪ অক্টোবর ২০২৬: "মাপ % kaj korena, click korlei udaw"।
+     ⛔ আগে এটা কেবল বোতামে ছিল, তাই মেনুর ভিতরে (মাপের ঘরে) চাপাও "বাইরে" ধরা হত। --}}
+<div x-data="{ open: false }" @click.outside="open = false" class="relative print-hide">
     <button type="button"
             @click="open = ! open"
-            @click.outside="open = false"
             :aria-expanded="open ? 'true' : 'false'"
             class="flex min-h-(--spacing-touch) items-center gap-1.5 rounded-(--radius-field)
                    border border-(--color-border) px-3 text-sm transition-colors

@@ -660,6 +660,7 @@ return [
 
         'paper' => [
             'a4' => 'A4',
+            'a5' => 'A5',
             '80_mm' => '80 mm (thermal)',
             '58_mm' => '58 mm (thermal)',
         ],
