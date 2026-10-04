@@ -154,6 +154,7 @@ class EveryListScreenPaginatesTest extends TestCase
         'sales.shift.index' => 'বাঁধা — tills কাউন্টারের সংখ্যায়, closed কেবল আজকের (whereDate); কাল আবার শূন্য থেকে',
         'sales.target.index' => 'বাঁধা — একটা সারি মানে একজন বিক্রয়কর্মী; আর স্কোরবোর্ডের কাজই তুলনা, অর্ধেক দল পরের পাতায় গেলে র‍্যাঙ্কিং অর্থ হারায়',
         'inventory.stock.overview' => 'বাঁধা — ড্যাশবোর্ড; সবই সংখ্যা, নয়তো আগে থেকেই ৮-এ বাঁধা (lowStock, recentMovements)',
+        'sales.overview' => 'বাঁধা — ড্যাশবোর্ড; কার্ডগুলো যোগফল, দৈনিক ধারা ৩০ দিন ও মাসিক ১২ মাসে বাঁধা (SalesAnalytics::DAYS/MONTHS), সেরা গ্রাহক/পণ্য/ধীর পণ্য limit(SalesAnalytics::TOP = 10); বিক্রেতা, এরিয়া আর শাখার সারি বাড়ে কর্মী, এরিয়া আর শাখার সংখ্যায়, লেনদেনে নয়। ⚠️ পাতা ভাগ করলে ভাগগুলোর যোগফল আর নিট বিক্রয় মিলত না (TheSalesScreenCountsWhatTheBooksSayTest)',
     ];
 
     /**

@@ -113,6 +113,8 @@ return [
         'dashboard' => [
             ['label' => 'sales::dashboard.title', 'icon' => 'dashboard', 'route' => 'module.dashboard',
                 'route_params' => ['module' => 'sales'], 'permission' => 'sales.invoice.view'],
+            ['label' => 'sales::overview.title', 'icon' => 'reports', 'route' => 'sales.overview',
+                'permission' => 'sales.report'],
         ],
 
         'transactions' => [

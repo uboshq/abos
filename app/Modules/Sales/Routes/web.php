@@ -20,6 +20,7 @@ use App\Modules\Sales\Http\Controllers\GatePassController;
 use App\Modules\Sales\Http\Controllers\LoadingSheetController;
 use App\Modules\Sales\Http\Controllers\ReceiptSampleController;
 use App\Modules\Sales\Http\Controllers\SalesInvoiceController;
+use App\Modules\Sales\Http\Controllers\SalesOverviewController;
 use App\Modules\Sales\Http\Controllers\DeliveryScanController;
 use App\Modules\Sales\Http\Controllers\DeliveryStageController;
 use App\Modules\Sales\Http\Controllers\SalesOrderController;
@@ -493,6 +494,8 @@ Route::middleware('auth')->prefix('sales')->group(function () {
         Route::post('/{return}/cancel', [SalesReturnController::class, 'cancel'])->whereNumber('return')->name('cancel');
     });
 
+    // ⭐ বিক্রয়ের সারসংক্ষেপ — প্রতিটা কার্ড নিজের চাবি দেখে ([[SalesOverview]])
+    Route::get('/overview', [SalesOverviewController::class, 'index'])->name('overview');
     Route::get('/reports/{slug}', [SalesReportController::class, 'show'])->name('report.show');
 
     // ⭐ লোডিং শিট — খোলা ট্রিপ, শিট, আর "লোডিং নিশ্চিত" ([[LoadingSheetController]])

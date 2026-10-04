@@ -172,7 +172,7 @@ final class SalesMetrics implements ProvidesMetrics
      *
      * @return array{0: string, 1: string}
      */
-    private static function financialYear(): array
+    public static function financialYear(): array
     {
         $year = auth()->user()?->currentCompany?->currentFinancialYear();
 
@@ -210,7 +210,7 @@ final class SalesMetrics implements ProvidesMetrics
         );
     }
 
-    private static function invoiceTotal(string $from, string $to): string
+    public static function invoiceTotal(string $from, string $to): string
     {
         return Money::of(SalesInvoice::query()
             ->posted()
