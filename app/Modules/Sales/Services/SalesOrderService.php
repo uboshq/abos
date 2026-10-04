@@ -906,4 +906,62 @@ final class SalesOrderService
 
         $order->setRawAttributes($fresh->getAttributes(), true);
     }
+
+    /**
+     * ⭐ "নিশ্চিত করুন" চাপলে কী হবে — কিছু না লিখে (মালিক, ৪ অক্টোবর ২০২৬; [[SalesPaperOverview::order()]])।
+     *
+     * ⓘ দুই পথ, [[confirm()]]-এর একই ভাগে:
+     *   · সুইচ চালু ([[REPLACES_DO]]) — "নিশ্চিত" মানে জমা ([[submit()]]): সীমা পার হলে থামে না, আদেশ টাকার অপেক্ষায়
+     *     দাঁড়ায়; জায়গা থাকলে সইয়ে যায় (ছক থাকলে)। সীমার মাপ [[checkCreditThenAsk()]]-এর হুবহু — [[CreditExposure::check()]]।
+     *   · সুইচ বন্ধ — পুরনো নিশ্চিত: মাল আটকানো চালু থাকলে প্রতিটা সারিতে মজুদ ([[assertEnoughToSell()]]), আর সই।
+     * ⛔ সইয়ের প্রশ্ন [[ApprovalEngine::requires()]] দিয়ে, `request()` নয় — দেখতে গিয়ে অনুরোধ লেখা চলে না।
+     *
+     * @return array{submits: bool, stops: list<string>, credit_short: ?string, signature: bool}
+     */
+    public function whatTheConfirmWouldDo(SalesOrder $order): array
+    {
+        $order->loadMissing(['lines.product', 'warehouse', 'customer']);
+        $submits = $this->replacesDo();
+        $stops = [];
+
+        if ($order->status !== DocumentStatus::DRAFT) {
+            $stops[] = $submits
+                ? __('sales::order_status.only_draft_submits', ['no' => $order->document_no])
+                : __('sales::validation.only_draft_confirms', ['no' => $order->document_no]);
+        }
+
+        if ($order->lines->isEmpty()) {
+            $stops[] = __('sales::validation.no_lines');
+        }
+
+        $short = null;
+
+        if ($submits && $order->customer !== null && $this->credit->isOn()) {
+            $result = $this->credit->check($order->customer, (string) $order->total);
+            $short = $result['fits'] ? null : (string) $result['short'];
+        }
+
+        if (! $submits && $stops === [] && $this->settings->get('sales.reserve_on_order', true)) {
+            $warehouse = $order->warehouse ?? $this->defaultWarehouse();
+
+            try {
+                if ($warehouse === null) {
+                    throw ValidationException::withMessages(['warehouse_id' => __('sales::validation.unknown_warehouse')]);
+                }
+
+                foreach ($order->lines as $line) {
+                    $this->assertEnoughToSell($line->product, $warehouse, (string) $line->ordered_qty);
+                }
+            } catch (ValidationException $e) {
+                $stops = [...$stops, ...array_values($e->validator->errors()->all())];
+            }
+        }
+
+        return [
+            'submits' => $submits,
+            'stops' => $stops,
+            'credit_short' => $short,
+            'signature' => $this->engine->requires('sales', self::APPROVAL_ACTION, (string) $order->total, class_basename(SalesOrder::class)),
+        ];
+    }
 }

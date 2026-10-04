@@ -169,6 +169,43 @@ final class TheChallanAndTheBillAreShownBeforeTheyAreConfirmedTest extends TestC
             ->assertSee('data-overview-trigger', false);
     }
 
+    /**
+     * ⭐ বিক্রয় আদেশ — দুই পথ ([[SalesOrderService::whatTheConfirmWouldDo()]]):
+     *   সুইচ বন্ধ: মাল আটকানোর আগে মজুদ নেই → "নিশ্চিত হবে না";
+     *   সুইচ চালু: "নিশ্চিত" মানে জমা — সীমা পার হলেও থামে না, বলে "টাকার অপেক্ষায় থাকবে" (`warn`, blocks নয়);
+     *   আর কিছুই লেখা হয় না (খসড়াই থাকে), পাতায় পপ-আপ বসানো।
+     */
+    public function test_the_order_overview_knows_both_paths_and_writes_nothing(): void
+    {
+        app(SettingsService::class)->set('sales.reserve_on_order', true);
+        app(SettingsService::class)->set(\App\Modules\Sales\Services\SalesOrderService::REPLACES_DO, false);
+        app(\App\Modules\Sales\Services\SalesOrderService::class)->create(
+            ['customer_id' => $this->customer->id, 'warehouse_id' => $this->warehouse->id, 'trx_date' => now()->toDateString()],
+            [['product_id' => $this->product->id, 'ordered_qty' => '100000', 'rate' => '10']],
+        );
+        $order = \App\Modules\Sales\Models\SalesOrder::query()->latest('id')->firstOrFail();
+
+        // ⛔ মজুদের চেয়ে বেশি — পুরনো নিশ্চিতের দরজা থামাত, সারাংশ আগেই বলে
+        $this->post(route('sales.order.overview', $order))->assertOk()
+            ->assertSee('data-overview-blocks="1"', false)
+            ->assertSee($order->document_no);
+
+        app(SettingsService::class)->set(\App\Modules\Sales\Services\SalesOrderService::REPLACES_DO, true);
+        app()->forgetInstance(\App\Modules\Sales\Services\SalesOrderService::class);
+        $this->customer->forceFill(['credit_limit' => '100'])->save();
+
+        $this->post(route('sales.order.overview', $order))->assertOk()
+            ->assertSee('data-overview-blocks="0"', false)
+            ->assertSee(__('sales::overview_confirm.order_submits'))
+            ->assertSee('data-overview-note="warn"', false);
+
+        $this->assertSame(DocumentStatus::DRAFT, $order->fresh()->status, '⛔ সারাংশ দেখতে গিয়েই আদেশ জমা হয়ে গেল।');
+
+        $this->get(route('sales.order.show', $order))->assertOk()
+            ->assertSee('data-confirm-overview="'.route('sales.order.overview', $order).'"', false)
+            ->assertSee('data-overview-trigger', false);
+    }
+
     private function challan(): DeliveryChallan
     {
         return app(DeliveryChallanService::class)->create(

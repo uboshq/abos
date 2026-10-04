@@ -8,6 +8,7 @@ use App\Http\Controllers\Controller;
 use App\Modules\Sales\Models\Collection;
 use App\Modules\Sales\Models\DeliveryChallan;
 use App\Modules\Sales\Models\SalesInvoice;
+use App\Modules\Sales\Models\SalesOrder;
 use App\Modules\Sales\Models\SalesReturn;
 use App\Modules\Sales\Services\SalesPaperOverview;
 use Illuminate\Routing\Controllers\HasMiddleware;
@@ -18,7 +19,7 @@ use Illuminate\View\View;
  * ⭐ রাখা চালান আর বিলের "নিশ্চিত করুন"-এর আগের সারাংশ — পপ-আপের ভিতরে যা আঁকা হয় (মালিক, ৪ অক্টোবর ২০২৬;
  * [[confirm-overview.js]], [[SalesPaperOverview]])। কিছুই লেখে না।
  *
- * ⓘ চাবি নিশ্চিতের দরজারই — চালানে `sales.challan.create`, বিলে `sales.invoice.create`, আদায়ে `sales.collection.create`, ফেরতে `sales.return.create` ([[DeliveryChallanController]],
+ * ⓘ চাবি নিশ্চিতের দরজারই — চালানে `sales.challan.create`, বিলে `sales.invoice.create`, আদায়ে `sales.collection.create`, ফেরতে `sales.return.create`, আদেশে `sales.order.create` ([[DeliveryChallanController]],
  * [[SalesInvoiceController]]-এর `confirm`); আর কাগজটা দেখার অধিকার (`view` নীতি — শাখা, নিজের ক্রেতা), যাতে
  * অন্য শাখার চালানের সারাংশ ঠিকানা বদলে খোলা না যায়।
  */
@@ -31,7 +32,15 @@ class SalesPaperOverviewController extends Controller implements HasMiddleware
             new Middleware('can:sales.invoice.create', only: ['invoice']),
             new Middleware('can:sales.collection.create', only: ['collection']),
             new Middleware('can:sales.return.create', only: ['salesReturn']),
+            new Middleware('can:sales.order.create', only: ['order']),
         ];
+    }
+
+    public function order(SalesOrder $order, SalesPaperOverview $overview): View
+    {
+        $this->authorize('view', $order);
+
+        return view('ui.confirm-overview-body', ['overview' => $overview->order($order)->toArray()]);
     }
 
     public function salesReturn(SalesReturn $return, SalesPaperOverview $overview): View

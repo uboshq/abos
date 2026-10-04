@@ -13,6 +13,7 @@ use App\Modules\Customer\Models\Customer;
 use App\Modules\Sales\Models\Collection;
 use App\Modules\Sales\Models\DeliveryChallan;
 use App\Modules\Sales\Models\SalesInvoice;
+use App\Modules\Sales\Models\SalesOrder;
 use App\Modules\Sales\Models\SalesReturn;
 use Illuminate\Validation\ValidationException;
 
@@ -35,6 +36,7 @@ final class SalesPaperOverview
         private readonly SalesInvoiceService $invoices,
         private readonly CollectionService $collections,
         private readonly SalesReturnService $returns,
+        private readonly SalesOrderService $orders,
     ) {}
 
     public function challan(DeliveryChallan $challan): ConfirmOverview
@@ -215,6 +217,50 @@ final class SalesPaperOverview
 
         if ($this->approvals->requires('sales', 'return', $total, class_basename(SalesReturn::class))) {
             $o->note(__('sales::overview_confirm.return_signature'), 'warn');
+        }
+
+        return $o;
+    }
+
+    /**
+     * ⭐ বিক্রয় আদেশ — সারি, মোট, ক্রেতার বকেয়া আর সীমা, আর "নিশ্চিত" চাপলে কী ঘটবে ([[SalesOrderService::whatTheConfirmWouldDo()]]):
+     * সুইচ চালু থাকলে জমা — সীমা পার হলে আদেশ টাকার অপেক্ষায় দাঁড়াবে (থামে না, তাই `warn`); বন্ধ থাকলে পুরনো নিশ্চিত —
+     * মজুদ না থাকলে "নিশ্চিত হবে না"।
+     */
+    public function order(SalesOrder $order): ConfirmOverview
+    {
+        $order->loadMissing(['customer', 'warehouse', 'lines.product']);
+        $what = $this->orders->whatTheConfirmWouldDo($order);
+
+        $o = ConfirmOverview::titled(__('sales::overview_confirm.order_title', ['no' => $order->document_no]))
+            ->head(__('sales::field.customer'), $order->customer?->name())
+            ->head(__('sales::field.date'), DateFormat::format($order->trx_date))
+            ->head(__('sales::field.warehouse'), $order->warehouse?->name());
+
+        foreach ($order->lines as $line) {
+            $o->line((string) $line->product?->name(), [
+                Money::quantity((string) $line->ordered_qty).' × '.Money::format((string) $line->rate),
+            ], Money::format((string) $line->amount));
+        }
+
+        $o->total(__('sales::overview_confirm.order_total'), Money::format((string) $order->total), strong: true);
+
+        if ($order->customer !== null) {
+            $this->standing($o, $order->customer, null);
+        }
+
+        foreach ($what['stops'] as $message) {
+            $o->note($message, 'stop');
+        }
+
+        if ($what['submits']) {
+            $o->note(__('sales::overview_confirm.order_submits'), 'info');
+        }
+
+        if ($what['credit_short'] !== null) {
+            $o->note(__('sales::overview_confirm.order_credit_held', ['amount' => Money::format($what['credit_short'])]), 'warn');
+        } elseif ($what['signature']) {
+            $o->note(__('sales::overview_confirm.order_signature'), 'warn');
         }
 
         return $o;

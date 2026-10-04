@@ -51,4 +51,9 @@ return [
     'due_after_return' => 'Due after this return',
     'advance_after_return' => 'Advance after this return',
     'return_signature' => 'This return needs a signature. Confirming saves it as a draft awaiting signature; until it is signed the goods do not come back into stock or the books.',
+    'order_title' => 'Sales order :no: overview',
+    'order_total' => 'Order total',
+    'order_submits' => 'Confirming submits the order; the credit limit and signature are checked after that.',
+    'order_credit_held' => 'Over the limit by :amount. Submitted, the order waits for money and moves on by itself once it comes.',
+    'order_signature' => 'This order needs a signature. Confirming sends it for signature.',
 ];
