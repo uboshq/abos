@@ -84,6 +84,26 @@ final class TheKeptDraftWasCountedTwiceTest extends TestCase
             ->assertSee('data-overview-blocks="1"', false);
     }
 
+    /**
+     * ⭐ পর্দার নিজের হিসাবও — মালিক, ৪ অক্টোবর ২০২৬: সারাংশ ঠিক হওয়ার পরেও DRF-0014 খুললে কাউন্টারের পপ-আপ "অবশিষ্ট সীমা
+     * ৳85.82, বিল ৳44,417.91 বেশি" দেখাত — `customerTerms.held`-এ খসড়াটা নিজেই বসে ছিল ([[direct-sale.js]] `creditLeft`)।
+     * দাবি — একই খসড়া: খুললে নিজের অঙ্ক `held`-এ নেই; না খুলে নতুন বিলে খসড়াটা তখনো আটকায়।
+     */
+    public function test_the_counter_opened_on_the_draft_does_not_hold_the_draft_against_itself(): void
+    {
+        $this->post(route('sales.direct.store'), [...$this->form(), 'save_as_draft' => '1'])->assertSessionHasNoErrors();
+        $draft = SalesInvoice::query()->latest('id')->firstOrFail();
+        $this->assertSame(DocumentStatus::DRAFT, $draft->status, 'প্রস্তুতিটাই ভুল — খসড়া রাখা হয়নি।');
+
+        $fresh = $this->get(route('sales.direct.create'))->assertOk()->viewData('customerTerms');
+        $this->assertEqualsWithDelta((float) $draft->total, $fresh[$this->customer->id]['held'], 0.001,
+            'নতুন বিলে রাখা খসড়াটা সীমা আটকায় — এটা থাকতেই হবে।');
+
+        $opened = $this->get(route('sales.direct.create', ['draft' => $draft->id]))->assertOk()->viewData('customerTerms');
+        $this->assertEqualsWithDelta(0.0, $opened[$this->customer->id]['held'], 0.001,
+            'খসড়াটা খুলে পাকা করার সময় সে নিজেকেই আটকে রাখছে — বিলটা দুবার গোনা হচ্ছে।');
+    }
+
     /** @return array<string, mixed> */
     private function form(): array
     {

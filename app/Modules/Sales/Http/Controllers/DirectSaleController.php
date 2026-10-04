@@ -125,6 +125,22 @@ class DirectSaleController extends Controller implements HasMiddleware
         $held = $this->credit->pendingFor($customers->pluck('id')->map(fn ($id) => (int) $id)->all());
 
         /*
+         * ⭐ খোলা খসড়া নিজেকে আটকায় না — মালিক, ৪ অক্টোবর ২০২৬ (DRF-0014, M/S Bokthiyar: অগ্রিম ৪৪,৫৮৯.৫৫, বিল
+         * ৪৪,৫০৩.৭৩, তবু "অবশিষ্ট সীমা ৳85.82, বিল ৳44,417.91 বেশি")। খসড়াটা `held`-এ থাকে, আর পর্দায় খুললে একই বিল
+         * কার্টেও — তাই দুবার গোনা হত। ⓘ সেবা আর সারাংশ খসড়াটা বাদ দিয়ে মাপে ([[DirectSaleOverview]]
+         * `withoutTheDraftBeingFinished()`), পর্দাও এখন তা-ই।
+         */
+        $finishing = $request->integer('draft') > 0
+            ? SalesInvoice::query()->whereKey($request->integer('draft'))
+                ->where('status', \App\Core\Support\DocumentStatus::DRAFT)->first(['id', 'customer_id'])
+            : null;
+        $finishingFor = $finishing === null ? null : $customers->firstWhere('id', (int) $finishing->customer_id);
+
+        if ($finishingFor !== null) {
+            $held[(int) $finishingFor->id] = (float) $this->credit->pending($finishingFor, (int) $finishing->id);
+        }
+
+        /*
          * ⭐ সম্পাদনার বিল ক্রেতার বকেয়া থেকে বাদ — মালিক, ৪ অক্টোবর ২০২৬ (INV-0002: "বিলের টাকা জমা আছে, তবু আটকাচ্ছে")।
          * ⓘ সম্পাদনা পুরনো বিল উল্টে নতুন বসায় ([[SaleEditor]]); পুরনোটা তখনো খাতায়, তাই পর্দার সীমার হিসাব
          * ([[direct-sale.js]] `creditLeft`) একই বিল দুবার গুনে ৪৭,৭০৬ টাকা "সীমা পার" দেখাত, অথচ সেবা পার হতে দিত।
