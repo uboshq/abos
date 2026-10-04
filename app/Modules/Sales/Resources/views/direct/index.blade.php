@@ -178,14 +178,16 @@
         .ds-paper { display: flex; flex-wrap: wrap; gap: .5rem; padding-bottom: .3rem;
                     border-bottom: 1px dashed var(--color-border); }
         .ds-paper > label { min-width: 0; flex: 1 1 7rem; }
-        .ds-paper > .ds-f-date { flex: 0 1 8.5rem; }
-        .ds-paper > .ds-f-no { flex: 0 1 7rem; }
-        .ds-paper > .ds-f-ref { flex: 0 1 5.5rem; }
-        .ds-paper > .ds-f-term { flex: 0 1 8.5rem; }
-        .ds-paper > .ds-f-pend { flex: 1 1 10rem; }
+        /* ⭐ এক সারিতেই — সরু পর্দায়ও "পেন্ডিং" নিচে নামে না (মালিকের ছবি, ৪ অক্টোবর ২০২৬); ঘরগুলো ছোট হয়, ভাঙে না */
+        @media (min-width: 1024px) { .ds-paper { flex-wrap: nowrap; } .ds-paper > label { flex-basis: auto; } }
+        .ds-paper > .ds-f-date { flex: 0 1 8.5rem; min-width: 6.8rem; }
+        .ds-paper > .ds-f-no { flex: 0 1 7rem; min-width: 4.5rem; }
+        .ds-paper > .ds-f-ref { flex: 0 1 5.5rem; min-width: 3.5rem; }
+        .ds-paper > .ds-f-term { flex: 0 1 8.5rem; min-width: 5rem; }
+        .ds-paper > .ds-f-pend { flex: 1 1 10rem; min-width: 6rem; }
         /* ⭐ লটের ঘর — মালিকের ছবির মতো: নীল কিনারা, "লট" চিহ্ন, নম্বর · মেয়াদ · তাকে · ফ্রি।
            ⓘ আসল <select> উপরে স্বচ্ছ হয়ে বসে, তাই বাছাই আগের মতোই; চোখে পড়ে সাজানো মুখটা। */
-        .ds-lot { position: relative; display: inline-flex; align-items: center; min-width: 16rem; max-width: 22rem; flex: 0 1 22rem; }
+        .ds-lot { position: relative; display: inline-flex; align-items: center; min-width: 11rem; max-width: 22rem; flex: 0 1 22rem; }
         .ds-lot-face { display: flex; align-items: center; gap: .4rem; width: 100%; min-width: 0; height: var(--spacing-field-dense);
                        padding: 0 1.6rem 0 .35rem; border: 1.5px solid var(--color-brand-500); border-radius: var(--radius-field);
                        box-shadow: inset 4px 0 0 var(--color-brand-500); background: var(--color-surface-app);
@@ -199,7 +201,7 @@
         .ds-lot-tag { border-radius: var(--radius-field); background: var(--color-brand-600);
                       color: var(--color-brand-ink); padding: .05rem .4rem; font-size: .6rem; font-weight: 700; }
         /* ⭐ নমুনা ৩-এর ৮টা বোতাম — হালকা জমিন, রঙিন কিনারা, নিচে শর্টকাট (রং থিমের টোকেন থেকে) */
-        .ds-b8 { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 2.6rem;
+        .ds-b8 { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 2.3rem;
                  border-radius: var(--radius-field); border: 1.5px solid var(--b8-ink); background: var(--b8-bg);
                  color: var(--b8-ink); font-size: .68rem; font-weight: 800; line-height: 1.1; text-align: center; padding: .15rem .1rem; }
         .ds-b8 small { font-size: .52rem; font-weight: 700; opacity: .8; margin-top: .1rem; }
@@ -224,6 +226,8 @@
         .ds-rkv-plain { display: flex; justify-content: space-between; gap: .5rem; padding: .15rem 0; border-bottom: 1px dotted var(--color-border); }
         /* ⭐ নিচের চারটা কার্ড — আগের নকশার মতো (মালিক, ৪ অক্টোবর ২০২৬) */
         .ds-cards { display: grid; gap: .6rem; grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr)); }
+        @media (min-width: 1024px) { .ds-cards { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+        .ds-paper > label > span:first-child { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .ds-card { display: block; text-align: start; border-radius: var(--radius-card); border: 1px solid var(--b8-ink);
                    border-left: 6px solid var(--color-brand-gold); background: var(--b8-bg); padding: .4rem .7rem; min-width: 0; }
         .ds-card-h { display: flex; justify-content: space-between; font-weight: 800; font-size: .72rem; color: var(--b8-ink); }
@@ -234,7 +238,9 @@
         .ds-side > aside > div:first-child > div:first-child { background: var(--color-surface-app); }
         /* ⭐ পরিমাণের সারি — ঘরগুলো চেপে একে অন্যের উপর পড়ত (মালিকের ছবি, ৪ অক্টোবর ২০২৬) */
         @media (min-width: 1024px) {
-            .ds-qtyrow { grid-template-columns: 4.5rem 4.5rem 4.5rem 4.5rem minmax(5rem, 1fr) minmax(5.5rem, 1fr) auto auto !important; }
+            /* ⓘ ভগ্নাংশে, নিচে সীমা — সরু পর্দায় ঘর ছোট হয়, সারি পাশে কাটে না (মালিকের ছবি, ৪ অক্টোবর ২০২৬) */
+            .ds-qtyrow { grid-template-columns: minmax(3rem, .9fr) minmax(3.2rem, .9fr) minmax(3rem, .9fr) minmax(3.2rem, .9fr)
+                                                minmax(3.8rem, 1.1fr) minmax(4.2rem, 1.2fr) auto auto !important; }
         }
         .ds-qtyrow > * { min-width: 0; }
         /* ⓘ বিলের ঘর আর পণ্যের সারির মাঝের ফাঁক কম (মালিক) */
@@ -254,6 +260,17 @@
         .ds-rkv { display: flex; justify-content: space-between; gap: .5rem; padding: .12rem 0;
                   border-bottom: 1px dotted color-mix(in srgb, var(--color-brand-ink) 30%, transparent); }
         .ds-cart-scroll { max-height: max(14rem, calc(100dvh - 26rem)); overflow-y: auto; }
+        /* ⭐ পর্দা স্থির — মালিক, ৪ অক্টোবর ২০২৬ ("counter skin fixt thakbe"): বাঁ কলাম পর্দার উচ্চতায় বাঁধা, কার্ট বাকি
+           জায়গাটুকু নিয়ে নিজে স্ক্রল করে; ⓘ পাতা আর নড়ে না। ৬.৪rem = উপরের বার + নিচের স্ট্যাটাস বার + পাতার নিচের ফাঁক (১৬২৩×৮৬০ আর ১৯২০×১০৮০-এ মাপা)। */
+        @media (min-width: 1280px) {
+            .ds-left { display: flex; flex-direction: column; height: calc(100dvh - 6.4rem); }
+            .ds-left > * { flex: none; }
+            .ds-left > section[data-boxed].ds-gold { flex: 1 1 auto; min-height: 8rem; display: flex; flex-direction: column; }
+            .ds-left .ds-cart-scroll { flex: 1 1 auto; min-height: 0; max-height: none; }
+        }
+        /* ⓘ ডান কলাম ঘন — ভিতরে আর স্ক্রল না আসে */
+        .ds-side > aside .space-y-1 > :not(:last-child) { margin-block-end: .1rem; }
+        .ds-side > section .ds-gold { padding-bottom: .3rem; }
         .ds-cart-scroll thead th { position: sticky; top: 0; z-index: 2; background: var(--color-surface-card); }
         /* ⭐ ক্রেতা আর বিলের মোট জোড়া — মাঝে ফাঁক নেই (মালিক, ৪ অক্টোবর ২০২৬) */
         .ds-side { display: flex; flex-direction: column; gap: 0; }
@@ -264,7 +281,7 @@
         .ds-side > section .ds-gold { border-bottom-left-radius: 0; border-bottom-right-radius: 0; }
         .ds-side > aside { border-top-left-radius: 0; border-top-right-radius: 0; border-top-width: 0; }
         @media (min-width: 1280px) {
-            .ds-side { position: sticky; top: .75rem; align-self: start; max-height: calc(100dvh - 5.5rem); }
+            .ds-side { position: sticky; top: .75rem; align-self: start; max-height: calc(100dvh - 6.4rem); }
             .ds-side > aside { min-height: 0; flex: 1 1 auto; }
         }
     </style>
@@ -661,7 +678,7 @@
         </div>
 
         {{-- ══ বাঁ দিক: স্ট্রিপ · এন্ট্রি · কার্ট ══════════════════════ --}}
-        <div class="min-w-0 space-y-3">
+        <div class="ds-left min-w-0 space-y-3">
             {{--
                 ── কাগজের পরিচয় — দুইটা বাক্স, পাশাপাশি, এক সারিতে ─────────
 
