@@ -865,23 +865,28 @@ final class VoucherService
             return;
         }
 
-        $cash = $voucher->lines
+        /*
+         * ⭐ প্রতিটা নগদ সারি — গ৩, Accounts-Finance অডিট, ৪ অক্টোবর ২০২৬।
+         *
+         * ⛔ আগে কেবল প্রথম নগদ সারি দেখা হত: "Dr নিজের বাক্স / Cr সহকর্মীর বাক্স" লিখলে প্রথমটা নিজের, নিয়ম
+         * খুশি — আর সহকর্মীর বাক্স খালি হত সই ছাড়া।
+         */
+        $cashLines = $voucher->lines
             ->map(fn (VoucherLine $line) => $line->account)
-            ->first(fn (?Account $a) => $a !== null && $a->isCash());
+            ->filter(fn (?Account $a) => $a !== null && $a->isCash())
+            ->unique('id');
 
-        if ($cash === null) {
-            return;
+        foreach ($cashLines as $cash) {
+            if (CashTill::mayUse($userId, (int) $cash->id)) {
+                continue;
+            }
+
+            throw ValidationException::withMessages([
+                'lines' => CashTill::heldByAnyone()
+                    ? __('accounts::validation.cash_not_your_till', ['account' => $cash->label()])
+                    : __('accounts::validation.no_till_of_your_own'),
+            ]);
         }
-
-        if (CashTill::mayUse($userId, (int) $cash->id)) {
-            return;
-        }
-
-        throw ValidationException::withMessages([
-            'lines' => CashTill::heldByAnyone()
-                ? __('accounts::validation.cash_not_your_till', ['account' => $cash->label()])
-                : __('accounts::validation.no_till_of_your_own'),
-        ]);
     }
 
     /**

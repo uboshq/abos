@@ -7,7 +7,7 @@ namespace App\Modules\Accounts\Services;
 use App\Core\Engines\Approval\ApprovalEngine;
 use App\Core\Engines\Approval\DocumentFingerprint;
 use App\Models\Approval;
-use App\Modules\Accounts\Models\Account;
+use App\Modules\Accounts\Models\CashTill;
 use App\Modules\Accounts\Models\Voucher;
 use App\Modules\Accounts\Models\VoucherLine;
 
@@ -278,8 +278,24 @@ final class VoucherApproval
      */
     private function landsInCash(Voucher $voucher): bool
     {
-        return $voucher->lines
-            ->map(fn (VoucherLine $line) => $line->account)
-            ->contains(fn (?Account $a) => $a !== null && $a->isCash());
+        /*
+         * ⭐ নগদ কেবল **ঢুকছে** — গ৩, Accounts-Finance অডিট, ৪ অক্টোবর ২০২৬।
+         *
+         * ⛔ আগে কোনো একটা সারি নগদে পড়লেই ছাড় মিলত। তাই রসিদের নামে "নিজের বাক্স থেকে সরবরাহকারীকে" লিখলে
+         * আসলে টাকা বেরোত, অথচ সই লাগত না; এক বাক্স থেকে আরেক বাক্সেও তাই।
+         *
+         * ⓘ এখন কোনো নগদ সারিতে ক্রেডিট নয় (টাকা কেবল ঢোকে), আর প্রতিটা বাক্সই এই মানুষটার
+         * নিজের ([[CashTill::mayUse()]] — পোস্টের পাহারার সাথে একই নিয়ম)।
+         */
+        $cash = $voucher->lines->filter(fn (VoucherLine $line) => $line->account !== null && $line->account->isCash());
+
+        if ($cash->isEmpty()) {
+            return false;
+        }
+
+        $userId = auth()->id() === null ? null : (int) auth()->id();
+
+        return $cash->every(fn (VoucherLine $line) => bccomp((string) $line->credit, '0', 4) === 0
+            && CashTill::mayUse($userId, (int) $line->account_id));
     }
 }
