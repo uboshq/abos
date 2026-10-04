@@ -58,8 +58,8 @@ class ReferenceSync {
       // reason kept somewhere, a phone whose token expired shows "এখনো কোনো
       // গ্রাহক সিঙ্ক হয়নি — নিচে টেনে আবার চেষ্টা করুন" and goes on saying
       // it after every pull, forever. See [lastFailure].
-      _lastFailure = SyncAttemptFailure.from(error,
-          direction: SyncDirection.pull);
+      _lastFailure =
+          SyncAttemptFailure.from(error, direction: SyncDirection.pull);
       rethrow;
     }
 
@@ -76,8 +76,8 @@ class ReferenceSync {
         // mode as a dropped connection, and one module's bad record must not
         // take every other module in this loop down with it.
         debugPrint('ABOS reference sync: $module pull failed ($error)');
-        failure ??= SyncAttemptFailure.from(error,
-            direction: SyncDirection.pull);
+        failure ??=
+            SyncAttemptFailure.from(error, direction: SyncDirection.pull);
         outcomes.add(ReferenceSyncOutcome(
             module: module, recordCount: 0, caughtUp: false));
       }
@@ -121,27 +121,78 @@ class ReferenceSync {
   static void rememberFailureForTest(SyncAttemptFailure failure) =>
       _lastFailure = failure;
 
-  /// One module, one call to `GET /sync/{module}/pull`.
+  /// ⛔ Inventory audit গ১৮, 4 Oct 2026: a module with more than 1,000 rows never finished — every call brought the
+  /// same first page back with `hasMore`, so the rest never reached the phone and the watermark was never written.
+  /// ⭐ The server now returns a `cursor` with each page; sending it back (an empty one for the first page) asks for
+  /// the page after it. The server keeps nothing for a phone that sends a cursor, and the same cursor brings the same
+  /// page — so a lost reply is simply asked for again.
+  @visibleForTesting
+  static const int maxPagesPerPass = 100;
+
+  /// One module, every page of it in one pass — `GET /sync/{module}/pull` until `hasMore` is false.
   static Future<ReferenceSyncOutcome> _pullOnce(String module) async {
     final deviceId = await TokenStorage.instance.deviceId();
 
-    final response = await ApiClient.dio.get<Map<String, dynamic>>(
-      '/sync/$module/pull',
-      queryParameters: {'deviceId': deviceId, 'limit': 1000},
+    var cursor = '';
+    var hasMore = false;
+    var recordCount = 0;
+    var unreadable = <String>[];
+
+    for (var page = 0; page < maxPagesPerPass; page++) {
+      final response = await ApiClient.dio.get<Map<String, dynamic>>(
+        '/sync/$module/pull',
+        queryParameters: {
+          'deviceId': deviceId,
+          'limit': 1000,
+          'cursor': cursor
+        },
+      );
+      final body = response.data ?? const {};
+      final records = (body['records'] as List?) ?? const [];
+      hasMore = body['hasMore'] as bool? ?? false;
+      unreadable = ((body['unreadable'] as List?) ?? const [])
+          .map((e) => e.toString())
+          .toList();
+      recordCount += await _store(records);
+
+      final next = body['cursor'] as String?;
+      // ⓘ Stop on a failed handler (the next pass starts over), or when the server has nothing more — or names no
+      // next page, which an older server never does: then one page per pass, as before.
+      if (!hasMore || unreadable.isNotEmpty || next == null || next.isEmpty) {
+        break;
+      }
+      cursor = next;
+    }
+
+    // See the class doc comment: only a fully-caught-up module may advance the
+    // watermark. A partial batch is stored (the data is still good — the push
+    // side keeps unsent rows the same way) but left to be re-fetched, not
+    // marked done. The server is required to withhold the watermark itself
+    // when `unreadable` is non-empty, but this file checks its own copy of
+    // that rule rather than trusting the server never to change.
+    final fullyCaughtUp = !hasMore && unreadable.isEmpty;
+    if (fullyCaughtUp) {
+      await ApiClient.dio.post<void>(
+        '/sync/$module/pull-complete',
+        queryParameters: {'deviceId': deviceId},
+      );
+    }
+
+    return ReferenceSyncOutcome(
+      module: module,
+      recordCount: recordCount,
+      caughtUp: fullyCaughtUp,
+      unreadableEntityTypes: unreadable,
     );
-    final body = response.data ?? const {};
-    final records = (body['records'] as List?) ?? const [];
-    final hasMore = body['hasMore'] as bool? ?? false;
+  }
 
-    // A pull does not fail whole when one entity handler throws — it returns
-    // what it could read and names what it could not, here. An empty list is
-    // the only shape that means "everything came through"; **a 200 with real
-    // records in it still is not a complete delta**, and treating it as one is
-    // the same "0 records, all caught up" trap in a second disguise.
-    final unreadable = ((body['unreadable'] as List?) ?? const [])
-        .map((e) => e.toString())
-        .toList();
-
+  /// One page into the cache; returns how many records it held.
+  ///
+  /// <p>A pull does not fail whole when one entity handler throws — it returns
+  /// what it could read and names what it could not (`unreadable`). An empty
+  /// list there is the only shape that means "everything came through"; **a 200
+  /// with real records in it still is not a complete delta**.
+  static Future<int> _store(List<dynamic> records) async {
     await ReferenceCache.instance.init();
     for (final record in records) {
       if (record is! Map) continue;
@@ -162,27 +213,7 @@ class ReferenceSync {
         updatedAt: DateTime.tryParse(updatedAt) ?? DateTime.now(),
       );
     }
-
-    // See the class doc comment: only a fully-caught-up module may advance the
-    // watermark. A partial batch is stored (the data is still good — the push
-    // side keeps unsent rows the same way) but left to be re-fetched, not
-    // marked done. The server is required to withhold the watermark itself
-    // when `unreadable` is non-empty, but this file checks its own copy of
-    // that rule rather than trusting the server never to change.
-    final fullyCaughtUp = !hasMore && unreadable.isEmpty;
-    if (fullyCaughtUp) {
-      await ApiClient.dio.post<void>(
-        '/sync/$module/pull-complete',
-        queryParameters: {'deviceId': deviceId},
-      );
-    }
-
-    return ReferenceSyncOutcome(
-      module: module,
-      recordCount: records.length,
-      caughtUp: fullyCaughtUp,
-      unreadableEntityTypes: unreadable,
-    );
+    return records.length;
   }
 }
 

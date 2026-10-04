@@ -64,14 +64,45 @@ void main() {
         'hasMore': hasMore,
       };
 
+  // ⛔ Inventory audit গ১৮, 4 Oct 2026: a module bigger than one page never finished — the same first page came back
+  // forever. ⭐ The phone now sends the server's cursor back and keeps going within one pass.
+  group('a module bigger than one page', () {
+    test('pulls every page in one pass, then marks it complete once', () async {
+      stub
+        ..on('/sync/capabilities', [
+          {'module': 'customers', 'entityType': 'Customer'},
+        ])
+        ..onCursor('/sync/customers/pull', '', {
+          ...pullBody([customerRecord('c1', 'রহিম')], hasMore: true),
+          'cursor': 'page-2',
+        })
+        ..onCursor('/sync/customers/pull', 'page-2', {
+          ...pullBody([customerRecord('c2', 'করিম')]),
+          'cursor': null,
+        })
+        ..on('/sync/customers/pull-complete', <String, dynamic>{});
+
+      final outcomes = await ReferenceSync.syncAll();
+
+      expect(stub.cursors, ['', 'page-2'],
+          reason: '⛔ the second page was never asked for');
+      expect(outcomes.single.recordCount, 2);
+      expect(outcomes.single.caughtUp, isTrue);
+      expect(
+          stub.paths.where((p) => p.endsWith('/pull-complete')), hasLength(1));
+      expect(CustomerRecord.byId('c1')?.name, 'রহিম');
+      expect(CustomerRecord.byId('c2')?.name, 'করিম',
+          reason: '⛔ the second page never reached the cache');
+    });
+  });
+
   group('a clean pull', () {
     setUp(() {
       stub
         ..on('/sync/capabilities', [
           {'module': 'customers', 'entityType': 'Customer'},
         ])
-        ..on(
-            '/sync/customers/pull',
+        ..on('/sync/customers/pull',
             pullBody([customerRecord('c1', 'রহিম স্টোর')]))
         ..on('/sync/customers/pull-complete', <String, dynamic>{});
     });
@@ -226,6 +257,13 @@ class _StubAdapter implements HttpClientAdapter {
   /// one of those shapes would be testing a server that does not exist.
   void on(String path, Object body) => _bodies[path] = body;
 
+  /// A page that answers only when the phone sends this `cursor` — the paged pull of গ১৮.
+  void onCursor(String path, String cursor, Object body) =>
+      _bodies['$path?cursor=$cursor'] = body;
+
+  /// The `cursor` each pull carried, in order.
+  final List<String?> cursors = [];
+
   void fail(String path, int statusCode) => _failures[path] = statusCode;
 
   @override
@@ -233,6 +271,9 @@ class _StubAdapter implements HttpClientAdapter {
       Future<void>? cancelFuture) async {
     final path = options.path;
     paths.add(path);
+    final cursor = options.queryParameters['cursor']?.toString();
+    if (path.endsWith('/pull')) cursors.add(cursor);
+    final paged = _bodies['$path?cursor=$cursor'];
 
     final failure = _failures[path];
     if (failure != null) {
@@ -246,7 +287,7 @@ class _StubAdapter implements HttpClientAdapter {
     }
 
     return ResponseBody.fromString(
-      jsonEncode(_bodies[path] ?? const <String, dynamic>{}),
+      jsonEncode(paged ?? _bodies[path] ?? const <String, dynamic>{}),
       200,
       headers: {
         Headers.contentTypeHeader: [Headers.jsonContentType],
