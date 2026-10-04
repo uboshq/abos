@@ -31,6 +31,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 class SalesReturn extends Model implements Drillable
 {
     use BelongsToCompany;
+    use \App\Modules\Sales\Models\Concerns\CarriesTheSalesChannel;
     use HasDocumentStatus;
     use HasPublicId;
     use IsAudited;

@@ -33,6 +33,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 class SalesInvoice extends Model implements Drillable, ShowsItselfForSigning
 {
     use BelongsToCompany;
+    use \App\Modules\Sales\Models\Concerns\CarriesTheSalesChannel;
     use HasDocumentStatus;
     use HasPublicId;
     use IsAudited;

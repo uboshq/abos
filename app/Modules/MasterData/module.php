@@ -16,6 +16,7 @@ use App\Modules\MasterData\Models\Person;
 use App\Modules\MasterData\Models\PriceList;
 use App\Modules\MasterData\Models\ProductCategory;
 use App\Modules\MasterData\Models\ReasonCode;
+use App\Modules\MasterData\Models\SalesChannel;
 use App\Modules\MasterData\Models\Tax;
 use App\Modules\MasterData\Models\TransferMode;
 use App\Modules\MasterData\Models\Unit;
@@ -102,6 +103,7 @@ return [
             ['label' => 'master_data::menu.payment_terms', 'icon' => 'calendar', 'route' => 'master_data.term.index', 'permission' => 'master_data.view'],
             ['label' => 'master_data::menu.price_lists', 'icon' => 'list', 'route' => 'master_data.price_list.index', 'permission' => 'master_data.view'],
             ['label' => 'master_data::menu.party_types', 'icon' => 'people', 'route' => 'master_data.party_type.index', 'permission' => 'master_data.view'],
+            ['label' => 'master_data::sales_channel.title', 'icon' => 'share', 'route' => 'master_data.sales_channel.index', 'permission' => 'master_data.view'],
             ['label' => 'master_data::menu.reason_codes', 'icon' => 'help', 'route' => 'master_data.reason.index', 'permission' => 'master_data.view'],
 
             /*
@@ -260,6 +262,7 @@ return [
         'payment_term' => PaymentTerm::class,
         'price_list' => PriceList::class,
         'party_type' => PartyType::class,
+        'sales_channel' => SalesChannel::class,
         'reason_code' => ReasonCode::class,
         'currency' => Currency::class,
         'department' => Department::class,
@@ -309,6 +312,7 @@ return [
         ['model' => Tax::class, 'name' => ['name_en', 'name_bn']],
         ['model' => PaymentTerm::class, 'name' => ['name_en', 'name_bn']],
         ['model' => PartyType::class, 'name' => ['name_en', 'name_bn']],
+        ['model' => SalesChannel::class, 'name' => ['name_en', 'name_bn']],
         ['model' => PriceList::class, 'name' => ['name_en', 'name_bn']],
         ['model' => ReasonCode::class, 'name' => ['name_en', 'name_bn']],
         ['model' => Currency::class, 'name' => ['name_en', 'name_bn']],

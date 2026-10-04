@@ -521,6 +521,7 @@ final class MasterListService implements ProvisionsCompany
         'units', 'taxes', 'payment-terms', 'party-types', 'price-lists',
         'reason-codes', 'currencies', 'departments', 'designations',
         'employment-types', 'vehicle-types', 'payment-methods', 'transfer-modes',
+        'sales-channels',
     ];
 
     public function installDefaults(): array
@@ -786,6 +787,13 @@ final class MasterListService implements ProvisionsCompany
             ['DEPOSIT', 'Cash / Cheque deposit', 'নগদ / চেক জমা', ['applies_to' => 'bank']],
             ['PO_DD', 'Pay Order / Demand Draft', 'পে-অর্ডার / ডিমান্ড ড্রাফট', ['applies_to' => 'bank']],
         ]);
+
+        /*
+         * ⭐ বিক্রয়ের পথ — NEXUS §২৮। যোগমুখী (যা নেই কেবল তা), তাই
+         * seed()-এর "একটাও থাকলে থামো" নিয়ম এখানে খাটে না।
+         * ⓘ app() দিয়ে, কনস্ট্রাক্টরে নয় — ওটা এই সার্ভিসটাই চায়, চক্র হত।
+         */
+        $made['sales-channels'] = app(\App\Modules\MasterData\Services\SalesChannelDefaults::class)->installMissing();
 
         $this->linkIssueReasonsToAccounts();
 

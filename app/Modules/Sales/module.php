@@ -23,6 +23,7 @@ use App\Modules\Sales\Models\SalesQuotation;
 use App\Modules\Sales\Models\SalesReturn;
 use App\Modules\Sales\Models\Shipment;
 use App\Modules\Sales\Panels\SalesFacts;
+use App\Modules\Sales\Reports\SalesChannelReports;
 use App\Modules\Sales\Reports\SalesReports;
 use App\Modules\Sales\Support\InvoiceDesigns;
 use App\Modules\Sales\Support\PaperDesigns;
@@ -350,6 +351,8 @@ return [
                 'route_params' => ['slug' => 'margin'], 'permission' => 'sales.margin.report'],
             ['label' => 'sales::return_reason.report_title', 'icon' => 'refresh', 'route' => 'sales.return.report.show',
                 'route_params' => ['slug' => 'by-reason'], 'permission' => 'sales.return.report'],
+            ['label' => 'sales::channel.report_title', 'icon' => 'share', 'route' => 'sales.report.show',
+                'route_params' => ['slug' => 'by-channel'], 'permission' => 'sales.report'],
 
             /*
              * রিকল — এই লটটা কাদের কাছে গেছে।
@@ -743,6 +746,7 @@ return [
         \App\Modules\Sales\Reports\SalesRegisterReports::class,
         \App\Modules\Sales\Reports\MarginReport::class,
         \App\Modules\Sales\Reports\SalesReturnReasonReports::class,
+        SalesChannelReports::class,
         // ⭐ খোলা আদেশ ও ব্যাক অর্ডার, সীমায় আটকানো আদেশ, বিক্রয় খাতা — পরিকল্পনা সংস্করণ ২ §৯ (৪ অক্টোবর ২০২৬)
         \App\Modules\Sales\Reports\SalesOrderBookReports::class,
     ],

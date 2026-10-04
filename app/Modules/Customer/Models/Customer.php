@@ -61,7 +61,7 @@ class Customer extends Model implements AuthenticatableContract, Drillable
 
     protected $fillable = [
         'company_id', 'branch_id', 'location_id', 'code', 'name_en', 'name_bn', 'owner_name',
-        'phone', 'email', 'address_en', 'address_bn', 'customer_type', 'party_type_id',
+        'phone', 'email', 'address_en', 'address_bn', 'customer_type', 'party_type_id', 'channel_id',
         'credit_limit', 'credit_days', 'opening_balance', 'opening_date',
         'receivable_account_id', 'status', 'is_active', 'created_by',
     ];
@@ -157,6 +157,12 @@ class Customer extends Model implements AuthenticatableContract, Drillable
     public function partyType(): BelongsTo
     {
         return $this->belongsTo(PartyType::class, 'party_type_id');
+    }
+
+    /** বিক্রয়ের পথ — কাগজে বিক্রির দিনেরটাই বসে (CarriesTheSalesChannel), তাই এটা বদলালে ইতিহাস বদলায় না। */
+    public function channel(): BelongsTo
+    {
+        return $this->belongsTo(\App\Modules\MasterData\Models\SalesChannel::class, 'channel_id')->withTrashed();
     }
 
     /**

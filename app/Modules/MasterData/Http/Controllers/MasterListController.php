@@ -24,6 +24,7 @@ use App\Modules\MasterData\Models\Person;
 use App\Modules\MasterData\Models\PriceList;
 use App\Modules\MasterData\Models\ProductCategory;
 use App\Modules\MasterData\Models\ReasonCode;
+use App\Modules\MasterData\Models\SalesChannel;
 use App\Modules\MasterData\Models\Tax;
 use App\Modules\MasterData\Models\TransferMode;
 use App\Modules\MasterData\Models\Unit;
@@ -234,6 +235,18 @@ class MasterListController extends Controller implements HasMiddleware
                 'applies_to' => ['type' => 'select', 'label' => 'master_data::field.applies_to', 'options' => 'applies', 'labels' => 'applies'],
             ],
             'columns' => ['applies_to'],
+        ],
+
+        /*
+         * বিক্রয়ের পথ — NEXUS §২৮। বাড়তি ঘর নেই; পথটা কাগজে বসে
+         * CarriesTheSalesChannel দিয়ে, এখানে কেবল তালিকা।
+         */
+        'sales-channels' => [
+            'model' => SalesChannel::class,
+            'route' => 'sales_channel',
+            'title' => 'master_data::sales_channel.title',
+            'fields' => [],
+            'columns' => [],
         ],
 
         'reason-codes' => [

@@ -37,6 +37,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 class DeliveryChallan extends Model implements Drillable, ShowsItselfForSigning
 {
     use BelongsToCompany;
+    use \App\Modules\Sales\Models\Concerns\CarriesTheSalesChannel;
     use TellsTheDeliveryStage;
     use HasDocumentStatus;
     use HasPublicId;

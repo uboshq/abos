@@ -356,6 +356,7 @@ class CustomerController extends Controller implements HasMiddleware
             // "both" ধরনগুলোও আসে: একটা প্রতিষ্ঠান একইসাথে গ্রাহক ও
             // সরবরাহকারী হতে পারে, আর দুইবার লিখতে বলার মানে নেই
             'partyTypes' => PartyType::query()->for(PartyType::CUSTOMER)->active()->orderBy('code')->get(),
+            'salesChannels' => \App\Modules\MasterData\Models\SalesChannel::query()->active()->defaultFirst()->get(),
             'requireBangla' => $this->settings->enabled('customer.require_bn_name'),
             'creditLimitOn' => $this->settings->enabled('customer.credit_limit_enabled'),
         ];

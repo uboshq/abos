@@ -143,6 +143,20 @@
                              placeholder="—"
                              x-model="partyType" />
 
+                {{-- বিক্রয়ের পথ — নতুন গ্রাহকে ডিফল্ট পথটা আগে থেকে বাছা; বন্ধ হয়ে যাওয়া নিজের পথটা
+                     তালিকায় থাকে, নাহলে সেভ চাপলে ঘরটা নীরবে খালি হয়ে যেত। --}}
+                @php
+                    $channelChoices = $salesChannels;
+                    if ($customer->channel && ! $channelChoices->contains('id', $customer->channel_id)) {
+                        $channelChoices = $channelChoices->push($customer->channel);
+                    }
+                @endphp
+                <x-ui.select name="channel_id" :label="__('customer::channel.field')"
+                             :options="$channelChoices->mapWithKeys(fn ($c) => [$c->id => $c->name()])"
+                             :selected="old('channel_id', $customer->channel_id ?? ($customer->exists ? null : $salesChannels->firstWhere('is_default', true)?->id))"
+                             :hint="__('customer::channel.hint')"
+                             placeholder="—" />
+
                 {{-- ⛔ পয়েন্টের তারাটা ধরন দেখে ওঠে-নামে।
 
                      ⓘ পরিবেশক ছাড়া বাকি সবার জন্য পয়েন্ট ঐচ্ছিক — নতুন

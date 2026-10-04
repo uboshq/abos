@@ -141,6 +141,7 @@
                     'customer::field.phone' => $customer->phone,
                     'customer::field.email' => $customer->email,
                     'customer::field.type' => $customer->typeName(),
+                    'customer::channel.field' => $customer->channel?->name() ?? __('customer::channel.none'),
                     'core.company.branch' => $customer->branch?->name(),
                     'customer::field.address' => $customer->address(),
                 ] as $label => $value)

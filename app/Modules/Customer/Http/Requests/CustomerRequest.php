@@ -70,6 +70,24 @@ class CustomerRequest extends FormRequest
                 Rule::exists('mdm_party_types', 'id')->where('company_id', CompanyContext::id()),
             ],
 
+            /*
+             * বিক্রয়ের পথ — নিজের কোম্পানির, সক্রিয়। ⓘ গ্রাহকের নিজের পুরনো
+             * পথ বন্ধ হয়ে গেলেও রাখা যায়, নাহলে তাঁর অন্য কোনো ঘর আর সম্পাদনা করা যেত না।
+             */
+            'channel_id' => [
+                'nullable', 'integer',
+                Rule::exists('mdm_sales_channels', 'id')
+                    ->where('company_id', CompanyContext::id())
+                    ->whereNull('deleted_at')
+                    ->where(function ($q) {
+                        $q->where('is_active', true);
+                        $current = $this->route('customer')?->channel_id;
+                        if ($current !== null) {
+                            $q->orWhere('id', $current);
+                        }
+                    }),
+            ],
+
             // পুরনো মুক্ত লেখাটা এখনো নেওয়া হয়, কিন্তু ফর্মে ঘরটা নেই:
             // মাইগ্রেশনে যে সারিগুলোর নাম মেলেনি সেগুলোর তথ্য যেন
             // ইমপোর্ট বা API দিয়ে ফেরানো যায়
