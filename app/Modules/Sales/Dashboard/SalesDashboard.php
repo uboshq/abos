@@ -167,6 +167,8 @@ final class SalesDashboard implements ProvidesDashboard
                     parts: self::byStatus(),
                     hint: __('sales::dashboard.status_hint'),
                 ),
+                // ⭐ নতুন চার্ট (বিক্রয়ের ফানেল) — আলাদা ফাইলে ([[SalesCharts]]), নতুন ড্যাশবোর্ডে
+                ...SalesCharts::all(),
             ],
 
             listings: [

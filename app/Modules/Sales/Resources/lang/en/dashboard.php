@@ -28,4 +28,10 @@ return [
     'biggest_dues' => 'Largest outstanding',
     'nothing_due' => 'Nothing outstanding.',
     'this_year_months' => 'Billed and collected in :year — January to December',
+    'funnel' => 'Sales funnel — this month',
+    'funnel_quotes' => 'Quotations',
+    'funnel_orders' => 'Orders',
+    'funnel_challans' => 'Challans',
+    'funnel_invoices' => 'Invoices',
+    'funnel_hint' => 'Number of papers — where sales stall',
 ];

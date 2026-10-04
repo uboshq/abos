@@ -34,4 +34,10 @@ return [
     'biggest_dues' => 'সবচেয়ে বড় বকেয়া',
     'nothing_due' => 'কোনো বকেয়া নেই।',
     'this_year_months' => ':year সালের বিল ও আদায় — জানুয়ারি থেকে ডিসেম্বর',
+    'funnel' => 'বিক্রয়ের ফানেল — এ মাসে',
+    'funnel_quotes' => 'উদ্ধৃতি',
+    'funnel_orders' => 'অর্ডার',
+    'funnel_challans' => 'চালান',
+    'funnel_invoices' => 'বিল',
+    'funnel_hint' => 'কাগজের সংখ্যা — কোন ধাপে বিক্রি আটকে যাচ্ছে',
 ];
