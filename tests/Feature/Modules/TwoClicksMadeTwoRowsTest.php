@@ -80,6 +80,23 @@ class TwoClicksMadeTwoRowsTest extends TestCase
         return Brand::query()->where('name_en', $name)->count();
     }
 
+    /**
+     * ⛔ নিশ্চিতের আগের সারাংশ টোকেন খরচ করে না — মালিক, ৪ অক্টোবর ২০২৬ (INV-0002)।
+     * পপ-আপ একই ফর্ম সারাংশের দরজায় পাঠায়; আগে টোকেনটা সেখানেই খরচ হত, আর আসল "নিশ্চিত" ফিরত
+     * "জমা হয়েছে — একটু পরে তালিকায় দেখুন" বলে, কিছুই জমা না করে। কাউন্টারের প্রতিটা বিক্রি এভাবে আটকাত।
+     */
+    public function test_the_overview_does_not_spend_the_forms_token(): void
+    {
+        $token = app(FormIsNotSubmittedTwice::class)->newToken();
+
+        $this->actingAs($this->owner)
+            ->post(route('sales.direct.overview'), [FormIsNotSubmittedTwice::FIELD => $token])
+            ->assertOk();
+
+        $this->assertTrue(app(FormIsNotSubmittedTwice::class)->claim($token, $this->owner->id, 'sales.direct.store'),
+            '⛔ সারাংশ দেখতেই টোকেন খরচ — আসল জমা "দ্বিতীয় চাপ" হয়ে ফিরবে।');
+    }
+
     /* ── রোগটা ─────────────────────────────────────────────────────── */
 
     /**

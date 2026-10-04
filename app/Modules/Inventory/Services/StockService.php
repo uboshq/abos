@@ -1076,6 +1076,28 @@ final class StockService
             ]);
         }
 
+        /*
+         * ⭐ ফ্রি মাল নিজের উৎস-নামে অপেক্ষা করে (`…:free`) — ৪ অক্টোবর ২০২৬, af-এর ধরা।
+         * ⛔ কাগজ·লটের দল-সীমা (অডিট গ১৪) আসার পর মূল উৎস-নামে এক চাপে টাকার মাল আর ফ্রি দুইটা বসাতে গেলে ফ্রির
+         * অপেক্ষা ০ দেখাত ("বাকি আছে ০") — কারণ ফ্রি বসে আছে `purchase_bill:free`-এ। পর্দা আগে থেকেই দুই চাপে বসায়
+         * ([[StockPlacementController]]); অন্য ডাকনেওয়ালারা (পরীক্ষা, ইমপোর্ট) এক চাপে ডাকে।
+         * ⭐ তাই এখানেই ভাগ: ফ্রির অংশটা `…:free` দলে, টাকার অংশ নিজের দলে — দুই দলই তাদের নিজের সারি পায়, আর
+         * কাগজটা অপেক্ষার তালিকা থেকে ঠিকঠাক সরে।
+         */
+        if ($wantsFree && ! str_contains($sourceType, ':free')
+            && $this->waitingFreeUnder($product, $warehouse, $sourceType.':free', $sourceId, $batch)) {
+            // ⓘ এক লেনদেনে — অর্ধেক বসানো কাগজ কখনো থাকে না
+            return DB::transaction(function () use ($product, $warehouse, $qty, $sourceType, $sourceId, $date, $documentNo, $batch, $freeQty, $location, $wantsPaid) {
+                $paid = $wantsPaid
+                    ? $this->place($product, $warehouse, $qty, $sourceType, $sourceId, $date, $documentNo, $batch, '0', $location)
+                    : null;
+
+                $free = $this->place($product, $warehouse, '0', $sourceType.':free', $sourceId, $date, $documentNo, $batch, $freeQty, $location);
+
+                return $paid ?? $free;
+            });
+        }
+
         return DB::transaction(function () use (
             $product, $warehouse, $qty, $sourceType, $sourceId, $date, $documentNo, $batch, $freeQty, $location,
             $wantsPaid, $wantsFree
@@ -1160,6 +1182,22 @@ final class StockService
     }
 
     /** দুই অঙ্কের ছোটটা — শূন্যের নিচে নয়। */
+    /** ফ্রির নিজের দলে (`…:free`) কিছু অপেক্ষায় আছে কি না — [[place()]]-এর ভাগের প্রশ্ন */
+    private function waitingFreeUnder(Product $product, Warehouse $warehouse, string $sourceType, int $sourceId, ?Batch $batch): bool
+    {
+        $waiting = StockMovement::query()
+            ->forProduct($product->id)
+            ->inWarehouse($warehouse->id)
+            ->whereIn('source_type', [$sourceType, $sourceType.':cancel'])
+            ->where('source_id', $sourceId)
+            ->when($batch === null,
+                fn ($q) => $q->whereNull('batch_id'),
+                fn ($q) => $q->where('batch_id', $batch->id))
+            ->sum('unplaced_free_change');
+
+        return bccomp((string) $waiting, '0', 4) > 0;
+    }
+
     private function smaller(string $a, string $b): string
     {
         $min = bccomp($a, $b, 4) <= 0 ? $a : $b;

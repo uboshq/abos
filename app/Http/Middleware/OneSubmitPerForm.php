@@ -55,6 +55,16 @@ class OneSubmitPerForm
             return $next($request);
         }
 
+        /*
+         * ⛔ নিশ্চিতের আগের সারাংশ (`….overview`) কিছু জমা করে না — সে কেবল দেখায়। ৪ অক্টোবর ২০২৬, মালিকের INV-0002:
+         * পপ-আপ একই ফর্ম (টোকেনসহ) সারাংশের দরজায় পাঠাত, আর টোকেনটা **সেখানেই খরচ হত**; তারপর আসল "নিশ্চিত"
+         * এলে এটা ভাবত দ্বিতীয় চাপ, আর "জমা হয়েছে — একটু পরে তালিকায় দেখুন" বলে ফিরিয়ে দিত — কিছুই জমা না করে।
+         * ⭐ তাই সারাংশের দরজায় টোকেন ছোঁয়া হয় না; একবারের পাহারা খাটে আসল জমায়।
+         */
+        if (str_ends_with((string) $request->route()?->getName(), '.overview')) {
+            return $next($request);
+        }
+
         if (! $this->forms->claim($token, $request->user()?->id, $request->route()?->getName())) {
             return $this->alreadyDone($token);
         }
