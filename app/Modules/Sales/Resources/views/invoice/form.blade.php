@@ -23,7 +23,8 @@
             'product_id' => (string) $l->product_id,
             'qty' => (string) $l->qty,
             'rate' => (string) $l->rate,
-            'discount' => (string) $l->discount,
+            // ⓘ কেবল নিজের ছাড় — অফারের ভাগ সার্ভার চালান থেকে আবার গোনে ([[ChallanOfferShare]])
+            'discount' => bcsub((string) $l->discount, (string) ($l->promotion_discount ?? '0'), 4),
             'tax' => (string) $l->tax,
             'link' => (string) ($l->delivery_challan_line_id ?? ''),
         ])->all();

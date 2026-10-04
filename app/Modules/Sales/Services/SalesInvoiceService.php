@@ -222,7 +222,17 @@ final class SalesInvoiceService
      */
     public function discountAwaitingSignature(SalesInvoice $invoice): string
     {
-        $discount = (string) ($invoice->discount ?? '0');
+        /*
+         * ⭐ অফারের ছাড় বাদ দিয়ে — কেবল মানুষের নিজের ছাড় সই চায় (অডিট §১১, ২৯ সেপ্টেম্বর ২০২৬)।
+         * ⓘ অফারটা নিজের ছক পেরিয়ে সই নিয়েই চালু হয় ([[PromotionApprovalChain]]), আর বসাতেও
+         * ইঞ্জিন আবার মেলায় ([[PromotionDesk::apply()]])। ⛔ এখানে আবার ধরলে একই টাকায় দুইবার সই
+         * লাগত। ⓘ অফার না থাকলে ভাগ শূন্য — আগের আচরণ হুবহু।
+         */
+        $discount = bcsub(
+            (string) ($invoice->discount ?? '0'),
+            (string) ($invoice->lines()->sum('promotion_discount') ?: '0'),
+            4,
+        );
 
         /*
          * ⛔ বিলের মাথার ছাড়ও একই সইয়ে — চূড়ান্ত অডিট (গ), ১ অক্টোবর ২০২৬।
@@ -1039,7 +1049,15 @@ final class SalesInvoiceService
 
             // ভ্যাট না পাঠালে পণ্যের নিজের হার থেকে গোনা — কাউন্টারের পর্দা
             // ভ্যাট দেখাত কিন্তু কখনো পাঠাত না, আর বিলে বসত শূন্য
-            $figures = $this->lineFigures($qty, $rate, $line['discount'] ?? '0', $line['tax'] ?? null, $product->tax);
+            /*
+             * ⭐ চালানের অফারের ছাড়ের ভাগ — পর্দা পাঠায় না, এখানে প্রতিবার চালান থেকে গোনা হয়
+             * ([[ChallanOfferShare]], অডিট §১১, ২৯ সেপ্টেম্বর ২০২৬)।
+             * ⓘ সারির `discount` = মানুষের নিজের ছাড় + এই ভাগ; ভাগটা আলাদা ঘরেও থাকে, তাই খসড়া
+             * আবার সংরক্ষণে পর্দা কেবল নিজের অংশ পাঠায় আর ভাগ দুইবার যোগ হয় না।
+             */
+            $promotion = app(\App\Modules\Sales\Services\ChallanOfferShare::class)->of($challanLine, $qty, (int) $invoice->id);
+
+            $figures = $this->lineFigures($qty, $rate, bcadd($this->money($line['discount'] ?? '0'), $promotion, 4), $line['tax'] ?? null, $product->tax);
 
             /*
              * দরটা মান দাম থেকে কতটা সরে আছে — নীতিটা যা বলে।
@@ -1129,6 +1147,7 @@ final class SalesInvoiceService
                 'rate' => $rate,
                 'price_variance' => $priceVariance,
                 'discount' => $figures['discount'],
+                'promotion_discount' => $promotion,
                 'tax' => $figures['tax'],
                 'tax_variance' => $figures['tax_variance'],
                 'amount' => $figures['amount'],

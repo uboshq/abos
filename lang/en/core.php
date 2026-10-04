@@ -1301,6 +1301,9 @@ return [
         'code' => 'Code',
     ],
 
+    // Offers switched off — [[NoSalesOffers]], 29 September 2026
+    'offers_off' => 'Offers (the promotion module) are not switched on for this company.',
+
     // One backup, check or restore at a time — [[BackupLock]], 30 September 2026
     'backup_busy' => 'Another backup, check or restore is running right now. Try again when it has finished.',
     // The restore trail — [[RestoreRecord]]

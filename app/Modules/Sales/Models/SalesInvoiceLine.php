@@ -26,6 +26,10 @@ class SalesInvoiceLine extends Model
         'sales_invoice_id', 'product_id', 'delivery_challan_line_id',
         'qty', 'entered_qty', 'entered_unit_id',
         'rate', 'price_variance', 'discount', 'tax', 'tax_variance', 'amount', 'unit_cost',
+
+        // ⭐ `discount`-এর যে ভাগ চালানের অফার থেকে এল — [[ChallanOfferShare]], ২৯ সেপ্টেম্বর ২০২৬
+        'promotion_discount',
+
         'line_no', 'narration',
     ];
 
@@ -36,6 +40,7 @@ class SalesInvoiceLine extends Model
             'entered_qty' => 'decimal:4',
             'rate' => 'decimal:4',
             'discount' => 'decimal:4',
+            'promotion_discount' => 'decimal:4',
             'tax' => 'decimal:4',
             'amount' => 'decimal:4',
             'unit_cost' => 'decimal:4',

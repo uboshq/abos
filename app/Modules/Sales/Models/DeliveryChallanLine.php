@@ -36,6 +36,10 @@ class DeliveryChallanLine extends Model
         'delivery_challan_id', 'product_id', 'batch_id', 'sales_order_line_id',
         'delivered_qty', 'entered_qty', 'entered_unit_id',
         'free_qty', 'rate', 'discount_percent',
+
+        // ⭐ অফারের ছাড়, টাকায় — [[ChallanOffers]], ২৯ সেপ্টেম্বর ২০২৬
+        'promotion_discount',
+
         'amount', 'line_no', 'narration',
     ];
 
@@ -46,6 +50,7 @@ class DeliveryChallanLine extends Model
             'entered_qty' => 'decimal:4',
             'free_qty' => 'decimal:4',
             'discount_percent' => 'decimal:4',
+            'promotion_discount' => 'decimal:4',
             'rate' => 'decimal:4',
             'amount' => 'decimal:4',
         ];

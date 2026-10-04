@@ -259,6 +259,11 @@ Route::middleware('auth')->prefix('sales')->group(function () {
         // ⭐ নিশ্চিতের আগে সারাংশ — পপ-আপের ভিতর ([[SalesPaperOverviewController]], ৪ অক্টোবর ২০২৬)
         Route::post('/{challan}/overview', [\App\Modules\Sales\Http\Controllers\SalesPaperOverviewController::class, 'challan'])->whereNumber('challan')->name('overview');
         Route::post('/{challan}/cancel', [DeliveryChallanController::class, 'cancel'])->whereNumber('challan')->name('cancel');
+
+        // ⭐ খসড়া চালানে অফার বসানো ও তোলা — অডিট §১১ ([[ChallanOffers]])
+        Route::post('/{challan}/offers', [\App\Modules\Sales\Http\Controllers\ChallanOfferController::class, 'store'])->whereNumber('challan')->name('offer.store');
+        Route::delete('/{challan}/offers/{line}/{offer}', [\App\Modules\Sales\Http\Controllers\ChallanOfferController::class, 'destroy'])
+            ->whereNumber(['challan', 'line', 'offer'])->name('offer.destroy');
     });
 
     /*

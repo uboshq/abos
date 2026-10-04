@@ -216,6 +216,13 @@ final class DeliveryChallanService
                 'financial_year_id' => $this->resolveFinancialYear($trxDate)->id,
             ]);
 
+            /*
+             * ⭐ সারি নতুন করে বসার আগে অফারগুলো ওঠে — অডিট §১১, ২৯ সেপ্টেম্বর ২০২৬।
+             * ⓘ নিচের replaceLines() সারিগুলো মুছে নতুন বসায়; বসানো অফার পুরনো সারির আইডিতে
+             * অনাথ হত আর বাজেট ঐ টাকা খরচ ধরে রাখত ([[ChallanOffers::reverseAll()]])।
+             */
+            app(\App\Modules\Sales\Services\ChallanOffers::class)->reverseAll($challan);
+
             $this->replaceLines($challan, $lines);
 
             return $challan->fresh(['lines']);
@@ -513,6 +520,12 @@ final class DeliveryChallanService
             }
 
             $this->assertNotInvoiced($challan);
+
+            /*
+             * ⭐ বাতিলে অফারও ফেরে — ছাড়, বাজেট, কুপন, পয়েন্ট ([[PromotionReversal::forSource()]])।
+             * ⓘ খসড়া বা পাকা দুই অবস্থাতেই; বসানো না থাকলে কিছুই হয় না।
+             */
+            app(\App\Modules\Sales\Services\ChallanOffers::class)->reverseAll($challan);
 
             if ($challan->status === DocumentStatus::CONFIRMED) {
                 $this->unpost($challan, $date, $reason);

@@ -61,9 +61,11 @@ return [
     'depends_on' => ['master_data', 'inventory', 'customer', 'accounts'],
 
     /*
-     * ⭐ Sales এই মডিউল চেনে না, চুক্তি চেনে — বন্ধ থাকলে কোরের খালি বাস্তবায়ন বসে।
+     * ⭐ বিক্রয়ের কাগজে অফার — Sales এই মডিউল চেনে না, চুক্তি চেনে (২৯ সেপ্টেম্বর ২০২৬)।
+     * ⓘ মডিউল বন্ধ থাকলে কোরের খালি বাস্তবায়ন বসে ([[NoSalesOffers]])।
      */
     'bindings' => [
+        \App\Core\Contracts\SalesOffers::class => \App\Modules\Promotion\Services\PromotionSalesOffers::class,
         // ⭐ অর্ডারের লাইনে কয়টা ফ্রি — ১ অক্টোবর ২০২৬ ([[PromotionFreeGoods]])
         \App\Core\Contracts\FreeGoodsOffers::class => \App\Modules\Promotion\Services\PromotionFreeGoods::class,
     ],

@@ -52,4 +52,9 @@ return [
     'gift_lot_is_another_products' => 'That lot belongs to a different product. If the '
         .'gift product and the lot product differ, both stock figures go wrong and '
         .'nothing breaks to say so.',
+
+    // Offers on sales papers — 29 September 2026
+    'not_found' => 'The offer was not found — it may have been deleted or belong to another company.',
+    'not_a_bill_discount' => ':code is not a money discount (goods, points or credit) — it does not sit on a bill line. Give goods offers from the gift screen.',
+    'not_applied_here' => 'The offer is not applied on this line — it may already have been taken off.',
 ];

@@ -159,7 +159,31 @@ class DeliveryChallanController extends Controller implements HasMiddleware
             // ⭐ বিল হয়ে থাকলে বোতামের বদলে বিলের লিংক ([[ChallanBills]])
             'bills' => $bills->of($challan),
             'leftToBill' => $bills->leftToBill($challan),
+            'offerPanel' => $this->offerPanel($request, $challan),
         ]);
+    }
+
+    /**
+     * ⭐ অফারের প্যানেল — অফারের ব্যবস্থা চালু আর চাবি থাকলে (অডিট §১১, ২৯ সেপ্টেম্বর ২০২৬)।
+     *
+     * ⓘ `null` মানে প্যানেলটাই আঁকা হয় না। ⚠️ কাউন্টারের বা পাকা চালানে প্যানেলটা আসে,
+     * কিন্তু কেবল দেখার জন্য (`editable` মিথ্যা) — বসানো হয় কেবল অফিসের খসড়ায়।
+     *
+     * @return array{editable: bool, counter: bool, rows: list<array<string, mixed>>}|null
+     */
+    private function offerPanel(Request $request, DeliveryChallan $challan): ?array
+    {
+        $offers = app(\App\Modules\Sales\Services\ChallanOffers::class);
+
+        if (! $offers->enabled() || ! $request->user()?->can('promotion.apply')) {
+            return null;
+        }
+
+        return [
+            'editable' => $offers->editable($challan),
+            'counter' => $offers->isCounterDraft($challan),
+            'rows' => $offers->panel($challan),
+        ];
     }
 
     public function edit(Request $request, DeliveryChallan $challan): View

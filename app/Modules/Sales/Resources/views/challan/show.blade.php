@@ -126,6 +126,11 @@
             </div>
         </section>
 
+        {{-- ⭐ অফার — চালু আর চাবি থাকলে ([[DeliveryChallanController::offerPanel()]]) --}}
+        @if ($offerPanel ?? null)
+            @include('sales::challan.partials.offers')
+        @endif
+
         {{-- গ্রাহকের সই করা চালানের কপি — ডেলিভারি নিয়ে প্রশ্ন উঠলে
              এটাই একমাত্র প্রমাণ --}}
         <x-ui.attachments :document="$challan" />
