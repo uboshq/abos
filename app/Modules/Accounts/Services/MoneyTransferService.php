@@ -7,11 +7,13 @@ namespace App\Modules\Accounts\Services;
 use App\Core\Engines\Approval\DocumentApproval;
 use App\Core\Engines\NumberSeries\NumberSeriesEngine;
 use App\Core\Engines\Posting\PostingEngine;
+use App\Core\Services\PermissionSyncer;
 use App\Core\Support\CompanyContext;
 use App\Core\Support\DateFormat;
 use App\Core\Support\DocumentStatus;
 use App\Core\Support\Money;
 use App\Models\FinancialYear;
+use App\Models\User;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Models\CashTill;
 use App\Modules\Accounts\Models\MoneyTransfer;
@@ -188,6 +190,7 @@ final class MoneyTransferService
     public function confirm(MoneyTransfer $transfer, ?int $receivedBy = null): MoneyTransfer
     {
         $this->assertReceivable($transfer);
+        $this->assertMayReceive($transfer);
 
         $destination = $transfer->destinationAccountId();
 
@@ -270,6 +273,8 @@ final class MoneyTransferService
             // ⛔ সারিতে তালা দিয়ে অবস্থা আবার — একই বাতিল দুইবার বিপরীত দাখিলা বসাত না, ভাঙত (⛔৭)
             $this->lockFresh($transfer);
             $this->assertNotCancelled($transfer);
+            // ⓘ তালার পরে — অন্যজন এইমাত্র গ্রহণ করে থাকলে পাঠানো ব্যক্তি আর ফেরাতে পারেন না
+            $this->assertMayCancel($transfer);
 
             /*
              * দুইটা পা-ই ফেরাতে হয়, আর ক্রমটা উল্টো।
@@ -371,6 +376,82 @@ final class MoneyTransferService
                 'status' => __('accounts::validation.transfer_cancelled'),
             ]);
         }
+    }
+
+    /**
+     * ⭐ গ্রহণ দেন কেবল গ্রহীতা বাক্সের মালিক (গ৫, Accounts-Finance অডিট, ৪ অক্টোবর ২০২৬)।
+     *
+     * ⛔ আগে "গ্রহণ" চাবি থাকলেই যে কেউ পারতেন — পাঠানো ক্যাশিয়ার নিজেও। তাতে দুই ধাপের পুরো মানে হারাত: পথের
+     * টাকা অন্যের বাক্সে বসত, অথচ সেই মানুষটা টাকা হাতে পাননি।
+     *
+     *  · বাক্সের মালিক বসানো থাকলে — কেবল তিনি।
+     *  · মালিক না থাকলে, কিন্তু গ্রহীতার নাম লেখা থাকলে — কেবল তিনি।
+     *  · ব্যাংকে জমা বা নামহীন বাক্স — চাবিওয়ালা যে কেউ, তবে পাঠানো ব্যক্তি নন (দুই হাতের নিয়ম)।
+     *
+     * ⓘ মালিক (super admin) সব পারেন — তাঁর ক্ষমতা কোনো সংশোধনে কমে না।
+     */
+    private function assertMayReceive(MoneyTransfer $transfer): void
+    {
+        $user = auth()->user();
+
+        if ($user instanceof User && $this->isSuperAdmin($user)) {
+            return;
+        }
+
+        $userId = (int) auth()->id();
+        $expected = $transfer->toTill?->holder_id ?? ($transfer->to_till_id !== null ? $transfer->received_by : null);
+
+        if ($expected !== null) {
+            if ((int) $expected !== $userId) {
+                throw ValidationException::withMessages([
+                    'status' => __('accounts::validation.transfer_not_your_box'),
+                ]);
+            }
+
+            return;
+        }
+
+        if (in_array($userId, array_map('intval', array_filter([$transfer->created_by, $transfer->given_by])), true)) {
+            throw ValidationException::withMessages([
+                'status' => __('accounts::validation.transfer_sender_cannot_receive'),
+            ]);
+        }
+    }
+
+    /**
+     * ⭐ গ্রহণের পরে বাতিল করেন কেবল যাঁর হাতে নগদ এখন (গ৫) — বাক্সের মালিক, গ্রহীতা বা যিনি গ্রহণ দিয়েছেন।
+     *
+     * ⛔ আগে পাঠানো ব্যক্তি "তৈরি" চাবি দিয়েই বাতিল করতেন: খাতায় টাকা তাঁর বাক্সে ফিরত, অথচ নগদ অন্যের হাতে।
+     * গ্রহণের আগে পাঠানো ব্যক্তি আগের মতোই ফেরাতে পারেন — টাকা তখনো পথে, কারও হাতে ওঠেনি।
+     */
+    private function assertMayCancel(MoneyTransfer $transfer): void
+    {
+        if (! $transfer->isConfirmed()) {
+            return;
+        }
+
+        $user = auth()->user();
+
+        if ($user instanceof User && $this->isSuperAdmin($user)) {
+            return;
+        }
+
+        $holders = array_map('intval', array_filter([
+            $transfer->toTill?->holder_id,
+            $transfer->received_by,
+            $transfer->confirmed_by,
+        ]));
+
+        if (! in_array((int) auth()->id(), $holders, true)) {
+            throw ValidationException::withMessages([
+                'status' => __('accounts::validation.transfer_cancel_only_receiver'),
+            ]);
+        }
+    }
+
+    private function isSuperAdmin(User $user): bool
+    {
+        return $user->hasRole(PermissionSyncer::SUPER_ADMIN_ROLE);
     }
 
     private function assertNotCancelled(MoneyTransfer $transfer): void

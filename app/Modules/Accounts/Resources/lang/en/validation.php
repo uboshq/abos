@@ -75,10 +75,15 @@ return [
     'not_enough_in_hand' => 'Only :have is in hand — more than that cannot be handed over.',
     'transfer_already_confirmed' => 'This transfer has already been received.',
     'transfer_cancelled' => 'A cancelled transfer cannot be received.',
+    // ⭐ গ৫ — গ্রহণ কেবল বাক্সের মালিক, গ্রহণের পরে বাতিল কেবল যাঁর হাতে টাকা (৪ অক্টোবর ২০২৬)
+    'transfer_not_your_box' => 'You do not hold this cash box — its holder receives the money.',
+    'transfer_sender_cannot_receive' => 'The sender cannot receive their own transfer — someone else must receive it.',
+    'transfer_cancel_only_receiver' => 'Already received — only the person now holding the money can cancel it.',
     'count_already_approved' => 'This count has already been approved.',
     'no_adjustment_account' => 'There is no :type account to post the difference to. Add one to the chart.',
     'loan_amount_positive' => 'The amount must be more than zero.',
     'loan_over_limit' => 'Only :available is left on the limit — no more than that can be drawn.',
+    'instalment_below_interest' => 'An instalment cannot be less than this month\'s interest (:interest).',
     'instalment_already_paid' => 'This instalment has already been paid.',
 
     // জাবেদার সারিতে পক্ষ — তিন কোণা সমন্বয়ের জন্য
