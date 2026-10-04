@@ -405,6 +405,7 @@ class EveryRouteIsGuardedTest extends TestCase
         'notifications.settings.update' => 'নিজের পছন্দ সংরক্ষণ',
 
         'dashboard' => 'হোম পর্দা — সংখ্যাগুলো নিজেরাই অনুমতি দেখে ছাঁকা হয় (DashboardRegistry)',
+        'home.layout' => 'নিজের হোমের সাজ — কেবল নিজের users.home_layout ঘর বদলায় (request->user()), অন্য কারও নয়; ব্যবসার কোনো ডেটা নয় ([[HomeLayout]])',
 
         /*
          * ⭐ নোটিশ — ২২ সেপ্টেম্বর ২০২৬, মালিকের কাজ।
