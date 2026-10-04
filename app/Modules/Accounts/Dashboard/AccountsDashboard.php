@@ -277,6 +277,9 @@ final class AccountsDashboard implements ProvidesDashboard
                     ],
                     hint: __('accounts::dashboard.month_so_far_hint'),
                 ),
+                ...self::trialBalance($facts),
+                ...self::papersThisMonth(),
+                ...self::incomeAndExpense($facts),
             ],
 
             listings: [
@@ -365,5 +368,88 @@ final class AccountsDashboard implements ProvidesDashboard
                 ),
             ],
         );
+    }
+
+    /**
+     * ⭐ রেওয়ামিল এক নজরে — মোট ডেবিট আর মোট ক্রেডিট; সমান হলে "মিলেছে", নাহলে পার্থক্য (মালিকের ড্যাশবোর্ড নকশা,
+     * ৩ অক্টোবর ২০২৬)। ⓘ নতুন ড্যাশবোর্ডের অংশ (config abos.dashboards_v2), কেবল accounts.view-এ।
+     *
+     * @return list<Breakdown>
+     */
+    private static function trialBalance(AccountsFacts $facts): array
+    {
+        if (! config('abos.dashboards_v2') || ! auth()->user()?->can('accounts.view')) {
+            return [];
+        }
+
+        $totals = $facts->trialBalanceTotals();
+        $gap = bcsub($totals['debit'], $totals['credit'], 2);
+
+        return [new Breakdown(
+            label: __('accounts::dashboard.trial_balance'),
+            parts: [
+                ['label' => __('accounts::dashboard.total_debit'), 'value' => Money::format($totals['debit'])],
+                ['label' => __('accounts::dashboard.total_credit'), 'value' => Money::format($totals['credit'])],
+            ],
+            hint: bccomp($gap, '0', 2) === 0
+                ? __('accounts::dashboard.trial_balance_ok')
+                : __('accounts::dashboard.trial_balance_off', ['gap' => Money::format(ltrim($gap, '-'))]),
+        )];
+    }
+
+    /**
+     * ⭐ এ মাসের ভাউচার কোন অবস্থায় — খসড়া, পোস্ট হয়েছে, বাতিল (মালিকের ড্যাশবোর্ড নকশা)। ⓘ খসড়া মানে খাতায় এখনো
+     * ওঠেনি — দিনশেষে সংখ্যাটা শূন্যে নামার কথা। দেখার শাখা মানে (মডেলের নিজের পাহারা)।
+     *
+     * @return list<Breakdown>
+     */
+    private static function papersThisMonth(): array
+    {
+        if (! config('abos.dashboards_v2') || ! auth()->user()?->can('accounts.view')) {
+            return [];
+        }
+
+        $counts = Voucher::query()
+            ->whereBetween('trx_date', [\Illuminate\Support\Carbon::today()->startOfMonth()->toDateString(), \Illuminate\Support\Carbon::today()->toDateString()])
+            ->selectRaw('status, COUNT(*) as n')
+            ->groupBy('status')
+            ->toBase()->pluck('n', 'status');
+
+        $posted = (int) ($counts[\App\Core\Support\DocumentStatus::CONFIRMED] ?? 0) + (int) ($counts[\App\Core\Support\DocumentStatus::CLOSED] ?? 0);
+
+        return [new Breakdown(
+            label: __('accounts::dashboard.papers_this_month'),
+            parts: [
+                ['label' => __('accounts::dashboard.papers_draft'), 'value' => (string) (int) ($counts[\App\Core\Support\DocumentStatus::DRAFT] ?? 0)],
+                ['label' => __('accounts::dashboard.papers_posted'), 'value' => (string) $posted],
+                ['label' => __('accounts::dashboard.papers_cancelled'), 'value' => (string) (int) ($counts[\App\Core\Support\DocumentStatus::CANCELLED] ?? 0)],
+            ],
+            hint: __('accounts::dashboard.papers_this_month_hint'),
+        )];
+    }
+
+    /**
+     * ⭐ আয় আর ব্যয় — গত ছয় মাস (খাতার চলাচল; মালিকের ড্যাশবোর্ড নকশা)। ⓘ দুই দণ্ড একই মাপের (টাকা), এক অক্ষ।
+     *
+     * @return list<\App\Core\Engines\Dashboard\Series>
+     */
+    private static function incomeAndExpense(AccountsFacts $facts): array
+    {
+        if (! config('abos.dashboards_v2') || ! auth()->user()?->can('accounts.view')) {
+            return [];
+        }
+
+        return [new \App\Core\Engines\Dashboard\Series(
+            label: __('accounts::dashboard.income_expense_months'),
+            points: array_map(fn (array $m) => [
+                'label' => $m['month'],
+                'first' => $m['income'],
+                'second' => $m['expense'],
+                'firstTitle' => Money::format($m['income']),
+                'secondTitle' => Money::format($m['expense']),
+            ], $facts->incomeExpenseByMonth(6)),
+            firstLabel: __('accounts::dashboard.income'),
+            secondLabel: __('accounts::dashboard.expense'),
+        )];
     }
 }

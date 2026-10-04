@@ -510,4 +510,46 @@ final class AccountsFacts
 
         return $out;
     }
+
+    /**
+     * ⭐ রেওয়ামিল এক নজরে — আজ পর্যন্ত সব খাতের মোট ডেবিট আর মোট ক্রেডিট (মালিকের ড্যাশবোর্ড নকশা, ৩ অক্টোবর ২০২৬)।
+     * ⓘ দুইটা সমান হলে খাতা মিলেছে; না মিললে পার্থক্যটাই খোঁজার জায়গা। দেখার শাখা মানে।
+     *
+     * @return array{debit: string, credit: string}
+     */
+    public function trialBalanceTotals(): array
+    {
+        $row = $this->inView(LedgerEntry::query(), 'ledger_entries.branch_id')
+            ->where('ledger_entries.trx_date', '<=', Carbon::today()->toDateString())
+            ->selectRaw('COALESCE(SUM(ledger_entries.debit), 0) as d, COALESCE(SUM(ledger_entries.credit), 0) as c')
+            ->toBase()->first();
+
+        return [
+            'debit' => bcadd((string) ($row->d ?? '0'), '0', 2),
+            'credit' => bcadd((string) ($row->c ?? '0'), '0', 2),
+        ];
+    }
+
+    /**
+     * ⭐ আয় আর ব্যয় — মাসে মাসে (খাতার চলাচল; মালিকের ড্যাশবোর্ড নকশা)। ⓘ [[netOfType()]]-এর একই হিসাব, বছর বন্ধের
+     * দাখিলা বাদ — তাই উপরের "এ মাসে" ভাগের সাথে এ মাসের দণ্ড হুবহু এক।
+     *
+     * @return list<array{month: string, income: string, expense: string}>
+     */
+    public function incomeExpenseByMonth(int $months = 6): array
+    {
+        $out = [];
+        $start = Carbon::today()->startOfMonth()->subMonths($months - 1);
+
+        for ($month = $start->copy(); $month->lessThanOrEqualTo(Carbon::today()); $month->addMonth()) {
+            $to = $month->copy()->endOfMonth()->min(Carbon::today());
+            $out[] = [
+                'month' => $month->translatedFormat('M'),
+                'income' => bcadd($this->netOfType(Account::INCOME, $month->copy(), $to), '0', 2),
+                'expense' => bcadd($this->netOfType(Account::EXPENSE, $month->copy(), $to), '0', 2),
+            ];
+        }
+
+        return $out;
+    }
 }
