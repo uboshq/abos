@@ -60,6 +60,8 @@
     td.num { font-family: dejavusans; }
     .words { margin-top: 1.5mm; font-size: 8pt; color: #4a5560; }
     .section { margin-top: 3.5mm; font-size: 7.5pt; font-weight: bold; letter-spacing: 0.4mm; color: {{ $accent }}; }
+    /* ⭐ হিসাবের চলাচল কথায়-লেখা টাকা থেকে একটু নিচে, সরু দাগে আলাদা — মালিক, ৪ অক্টোবর ২০২৬ ("kicuta namiye daw") */
+    .section.movement { margin-top: 6mm; padding-top: 2mm; border-top: 0.3mm solid #dfe5ea; }
     table.ledger { width: 100%; margin-top: 1mm; }
     table.ledger th { font-size: 7.5pt; color: #4a5560; font-weight: bold; text-align: left; padding: 0.6mm 1.2mm; border-bottom: 0.4mm solid {{ $accent }}; }
     table.ledger th.num { text-align: right; }
@@ -164,7 +166,7 @@
             @if ($v->shows('amount_words'))<div class="words" data-words><strong>{{ $v->en('in_words') }}</strong> {{ $facts['words'] }}</div>@endif
 
             @if ($v->shows('previous_due'))
-                <div class="section">{{ mb_strtoupper($t('movement')) }}</div>
+                <div class="section movement">{{ mb_strtoupper($t('movement')) }}</div>
                 <table class="ledger" data-movement>
                     <tr>
                         <th style="width: 18mm">{{ $v->label('txn_date') }}</th>
