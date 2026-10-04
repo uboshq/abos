@@ -19,6 +19,7 @@ import '../../features/orders/order_list_screen.dart';
 import '../../features/products/product_list_screen.dart';
 import '../../features/scan/paper_scan_screen.dart';
 import '../../features/splash/splash_screen.dart';
+import '../../features/dashboards/dashboards_screen.dart';
 import '../../features/reports/reports_screen.dart';
 import '../../features/stock/stock_list_screen.dart';
 import '../../features/today/today_screen.dart';
@@ -67,8 +68,7 @@ final goRouterProvider = Provider<GoRouter>((ref) {
     },
     routes: [
       GoRoute(path: '/', builder: (context, state) => const SplashScreen()),
-      GoRoute(
-          path: '/login', builder: (context, state) => const LoginScreen()),
+      GoRoute(path: '/login', builder: (context, state) => const LoginScreen()),
       // ⭐ Every screen under /home sits behind [ModuleGateView]: a module
       // the company switched off for the phone shows "এই অংশটা এখন বন্ধ"
       // however it was reached — tile, saved link or a widget's tap.
@@ -78,13 +78,18 @@ final goRouterProvider = Provider<GoRouter>((ref) {
         routes: [
           GoRoute(
             path: 'approvals',
-            builder: (context, state) =>
-                const ModuleGateView(path: 'approvals', child: ApprovalInboxScreen()),
+            builder: (context, state) => const ModuleGateView(
+                path: 'approvals', child: ApprovalInboxScreen()),
           ),
           GoRoute(
             path: 'attendance',
-            builder: (context, state) =>
-                const ModuleGateView(path: 'attendance', child: AttendanceScreen()),
+            builder: (context, state) => const ModuleGateView(
+                path: 'attendance', child: AttendanceScreen()),
+          ),
+          // ⭐ মডিউলের ড্যাশবোর্ড — মালিক, ৪ অক্টোবর ২০২৬; দরজা সার্ভারের (চাবি, ফোনে চালু)
+          GoRoute(
+            path: 'dashboards',
+            builder: (context, state) => const DashboardsScreen(),
           ),
           GoRoute(
             path: 'reports',
@@ -103,8 +108,8 @@ final goRouterProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: 'customers',
-            builder: (context, state) =>
-                const ModuleGateView(path: 'customers', child: CustomerListScreen()),
+            builder: (context, state) => const ModuleGateView(
+                path: 'customers', child: CustomerListScreen()),
             routes: [
               GoRoute(
                 // The public_id in the path, never a sequential one — the
@@ -133,8 +138,8 @@ final goRouterProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: 'products',
-            builder: (context, state) =>
-                const ModuleGateView(path: 'products', child: ProductListScreen()),
+            builder: (context, state) => const ModuleGateView(
+                path: 'products', child: ProductListScreen()),
           ),
           GoRoute(
             path: 'stock',
@@ -160,7 +165,8 @@ final goRouterProvider = Provider<GoRouter>((ref) {
           // ⭐ সরাসরি বিক্রয়ের কাউন্টার (0.4.9) — ওয়েবের কাউন্টারের চাবি; টাকা আছে, তাই কেবল অনলাইনে
           GoRoute(
             path: 'counter',
-            builder: (context, state) => const ModuleGateView(path: 'counter', child: CounterScreen()),
+            builder: (context, state) =>
+                const ModuleGateView(path: 'counter', child: CounterScreen()),
           ),
           // ⭐ ডেলিভারি অর্ডার (0.4.8) — লেখা, জমা, সুপারভাইজারের পরিমাণ আর সই; "নতুন DO" কেবল লেখার চাবিতে
           GoRoute(
@@ -169,15 +175,19 @@ final goRouterProvider = Provider<GoRouter>((ref) {
               path: 'delivery-orders',
               child: Consumer(
                 builder: (context, ref, _) => DeliveryOrderListScreen(
-                  canWrite: ref.watch(authStateProvider).user?.can('sales.do.create') ?? false,
+                  canWrite: ref
+                          .watch(authStateProvider)
+                          .user
+                          ?.can('sales.do.create') ??
+                      false,
                 ),
               ),
             ),
           ),
           GoRoute(
             path: 'tracking',
-            builder: (context, state) =>
-                const ModuleGateView(path: 'tracking', child: DeliveryTrackingScreen()),
+            builder: (context, state) => const ModuleGateView(
+                path: 'tracking', child: DeliveryTrackingScreen()),
           ),
           GoRoute(
             path: 'scan',

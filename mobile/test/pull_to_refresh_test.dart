@@ -44,6 +44,7 @@ void main() {
     'approval_inbox_screen.dart',
     'attendance_screen.dart',
     'reports_screen.dart',
+    'dashboards_screen.dart',
     'sync_status_screen.dart',
   };
 

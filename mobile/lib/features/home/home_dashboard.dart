@@ -70,6 +70,23 @@ class HomeDashboard extends StatelessWidget {
       onOpenSales: () => context.go('/home/orders'),
       onOpenDues: () => context.go('/home/dues'),
       onOpenApprovals: () => context.go('/home/approvals'),
+      // ⓘ সংখ্যাগুলোর নিচে — আজকের অঙ্কই পর্দার প্রথম জিনিস থাকে
+      trailing: [
+        const SizedBox(height: AppSpacing.sm),
+        // ⭐ ব্যবসার ড্যাশবোর্ড — মজুদ, বিক্রি, হিসাব … (মালিক, ৪ অক্টোবর ২০২৬: "egulo nadile bujbo kikore kihocche")
+        Card(
+          key: const Key('home-dashboards'),
+          child: ListTile(
+            leading:
+                const Icon(Icons.insights_outlined, color: AppColors.primary),
+            title: const Text('ব্যবসার ড্যাশবোর্ড',
+                style: TextStyle(fontWeight: FontWeight.w700)),
+            subtitle: const Text('মজুদ, বিক্রি, হিসাব — ওয়েবের একই সংখ্যা'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => context.go('/home/dashboards'),
+          ),
+        ),
+      ],
       leading: (context, today) => [
         _GreetingCard(user: user, today: today, now: now),
         if (quick.isNotEmpty) ...[

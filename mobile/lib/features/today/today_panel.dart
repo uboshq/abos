@@ -23,6 +23,7 @@ class TodayPanel extends StatefulWidget {
     this.lastKnown,
     this.showOrigin = true,
     this.leading,
+    this.trailing = const <Widget>[],
     this.onOpenSales,
     this.onOpenDues,
     this.onOpenApprovals,
@@ -42,6 +43,10 @@ class TodayPanel extends StatefulWidget {
   /// Widgets drawn above the figures inside the same scroll view, given the
   /// record on screen (null until anything has arrived). The home tab puts
   /// its greeting and quick actions here so one pull refreshes the lot.
+  /// Widgets drawn **below** the figures — the home tab's door to the module dashboards. Below, so today's numbers stay
+  /// the first thing on screen.
+  final List<Widget> trailing;
+
   final List<Widget> Function(BuildContext context, TodayRecord? today)?
       leading;
 
@@ -174,6 +179,7 @@ class _TodayPanelState extends State<TodayPanel> {
                       onTap: widget.onOpenApprovals,
                     ),
                 ],
+                ...widget.trailing,
               ],
             ),
           ),
@@ -239,8 +245,8 @@ class _Notice extends StatelessWidget {
           const SizedBox(width: AppSpacing.sm),
           Expanded(
             child: Text(text,
-                style: const TextStyle(
-                    fontSize: 12.5, color: AppColors.warning)),
+                style:
+                    const TextStyle(fontSize: 12.5, color: AppColors.warning)),
           ),
         ],
       ),
@@ -276,16 +282,16 @@ class _OriginLine extends StatelessWidget {
           Expanded(
             child: Text(origin,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                    fontWeight: FontWeight.w700, fontSize: 14)),
+                style:
+                    const TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
           )
         else
           const Spacer(),
         if (asOf != null)
           Text(
             'হিসাব ${DateFormat('dd/MM/yyyy hh:mm a').format(asOf)} পর্যন্ত',
-            style: const TextStyle(
-                fontSize: 12, color: AppColors.onSurfaceMuted),
+            style:
+                const TextStyle(fontSize: 12, color: AppColors.onSurfaceMuted),
           ),
       ],
     );
@@ -376,9 +382,8 @@ class _CollectionsDuesCard extends StatelessWidget {
                     label: 'মোট বকেয়া',
                     value: Money.taka(dues!.amount),
                     colour: AppColors.danger,
-                    detail: dues!.shops == null
-                        ? null
-                        : '${dues!.shops} টি দোকান',
+                    detail:
+                        dues!.shops == null ? null : '${dues!.shops} টি দোকান',
                   ),
                 ),
             ],
@@ -408,8 +413,8 @@ class _ApprovalsCard extends StatelessWidget {
               color: AppColors.warningSurface,
               borderRadius: BorderRadius.circular(10),
             ),
-            child: const Icon(Icons.fact_check_outlined,
-                color: AppColors.warning),
+            child:
+                const Icon(Icons.fact_check_outlined, color: AppColors.warning),
           ),
           const SizedBox(width: AppSpacing.md),
           Expanded(
