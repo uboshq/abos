@@ -589,10 +589,21 @@ class DirectSaleController extends Controller implements HasMiddleware
             ? Batch::query()->where('product_id', $product->id)->find($data['batch_id'])
             : null;
 
+        /*
+         * ⭐ ফ্রি-ভাণ্ডারের বাইরেও ফ্রি (সুইচ `sales.free_beyond_pool`, ৪ অক্টোবর ২০২৬) — পর্দা জানে, তাই লাল দেয়ালের জায়গায়
+         * হলুদ সতর্কতা: *"ফ্রি ভাণ্ডারে আছে N — বাকি M নিজের মাল থেকে, প্রচারের খরচে"*। ⓘ `pool` = এই লটের ফ্রি-ভাণ্ডারে কত।
+         */
+        $beyond = (bool) $this->settings->get('sales.free_beyond_pool', false)
+            ? ['beyond_pool' => true, 'pool' => $batch !== null
+                ? app(\App\Modules\Inventory\Services\BatchAllocator::class)->lockedFreeBalance($batch, $warehouse)
+                : app(\App\Modules\Inventory\Services\StockService::class)->freeAvailableQty($product, $warehouse)]
+            : [];
+
         if ($batch !== null) {
             return response()->json(['data' => [
                 'known' => true,
                 ...app(FreeAllowance::class)->onLot($batch, (string) $data['qty']),
+                ...$beyond,
             ]]);
         }
 
@@ -606,6 +617,7 @@ class DirectSaleController extends Controller implements HasMiddleware
                      অনুপাত ধরে বলব সেটাই জানা নেই। ⚠️ শূন্য বললে পর্দা
                      ভাবত "আর কিছু লাগবে না", তাই খালি। */
                 'short' => '',
+                ...$beyond,
             ],
         ]);
     }

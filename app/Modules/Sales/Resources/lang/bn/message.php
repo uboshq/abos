@@ -77,6 +77,7 @@ return [
     'sale' => ':no — বিক্রয়',
     'output_vat' => ':no — প্রদেয় ভ্যাট',
     'freight_charged' => ':no — পরিবহন ভাড়া আদায়',
+    'free_from_own_stock' => ':no — ফ্রি মাল নিজের মজুদ থেকে (প্রচারের খরচ)',
     'cost_of_goods' => ':no — বিক্রীত পণ্যের ব্যয়',
     'stock_out' => ':no — মজুদ কমল',
     'money_in' => ':no — টাকা জমা',

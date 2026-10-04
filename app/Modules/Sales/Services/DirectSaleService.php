@@ -1939,6 +1939,11 @@ final class DirectSaleService
             return;
         }
 
+        // ⭐ ফ্রি-ভাণ্ডারের বাইরেও ফ্রি চালু (মালিক, ৪ অক্টোবর ২০২৬) — অনুপাত তখন কেবল পরামর্শ; বাড়তিটা লটের মাল থেকে ([[giveAway()]])
+        if ((bool) $this->settings->get('sales.free_beyond_pool', false)) {
+            return;
+        }
+
         $allowance = app(FreeAllowance::class);
 
         foreach ($lines as $line) {
@@ -2019,6 +2024,9 @@ final class DirectSaleService
                 $gift->remarks,
             );
         }
+
+        // ⓘ নিজের মাল থেকে দেওয়া ফ্রির খরচ — একই লেনদেনে, একবারে ([[giveFromStock()]])
+        $this->bookFreeFromStock($challan);
     }
 
     /**
@@ -2037,6 +2045,114 @@ final class DirectSaleService
      * কিছু নেই, বাছারও কিছু নেই।
      */
     private function giveAway(
+        DeliveryChallan $challan,
+        Warehouse $warehouse,
+        Product $product,
+        string $qty,
+        string $sourceType,
+        ?string $narration = null,
+        ?Batch $chosen = null,
+    ): void {
+        /*
+         * ⭐ ফ্রি-ভাণ্ডারের বাইরেও ফ্রি — মালিক, ৪ অক্টোবর ২০২৬: *"lote free thakle auto bosbe, na thakle free dite parbe"*
+         * (সুইচ `sales.free_beyond_pool`, ডিফল্ট বন্ধ)। ⓘ চালু থাকলে ভাণ্ডারে যতটা আছে ততটা আগের পথে, বাকিটা ঐ লটের নিজের
+         * মাল থেকে ([[giveFromStock()]]) — লটের তালা আর "লটে যা আছে তার বেশি নয়" সীমা সেখানেও খাটে।
+         */
+        if ((bool) $this->settings->get('sales.free_beyond_pool', false)) {
+            $pool = $chosen !== null
+                ? $this->batches->lockedFreeBalance($chosen, $warehouse)
+                : $this->stock->freeAvailableQty($product, $warehouse);
+            $fromPool = bccomp($pool, $qty, 4) >= 0 ? $qty : (bccomp($pool, '0', 4) > 0 ? $pool : '0');
+            $extra = bcsub($qty, $fromPool, 4);
+
+            if (bccomp($extra, '0', 4) > 0) {
+                if (bccomp($fromPool, '0', 4) > 0) {
+                    $this->giveFromPool($challan, $warehouse, $product, $fromPool, $sourceType, $narration, $chosen);
+                }
+
+                $this->giveFromStock($challan, $warehouse, $product, $extra, $sourceType, $narration, $chosen);
+
+                return;
+            }
+        }
+
+        $this->giveFromPool($challan, $warehouse, $product, $qty, $sourceType, $narration, $chosen);
+    }
+
+    /** @var array<string, string> উৎস-নাম ধরে নিজের মাল থেকে দেওয়া ফ্রির খরচ — শেষে একবারে খাতায় ([[bookFreeFromStock()]]) */
+    private array $freeFromStockCost = [];
+
+    /**
+     * ফ্রির বাড়তিটা লটের নিজের মাল (তাক) থেকে — একই উৎস-নামে, তাই চালান বাতিল বা সম্পাদনায় আগের পথেই ফেরে।
+     *
+     * ⓘ খরচ খরচের স্তর থেকে, বিক্রির একই FIFO-তে; স্তরে না কুলালে কেনা দামে ([[GiftIssuer::bookTheCost()]]-এর একই নিয়ম)।
+     * খাতায় Dr প্রচারের খরচ / Cr মজুদ — ফ্রি আয় নয়, খরচ (IFRS ১৫)।
+     */
+    private function giveFromStock(
+        DeliveryChallan $challan,
+        Warehouse $warehouse,
+        Product $product,
+        string $qty,
+        string $sourceType,
+        ?string $narration,
+        ?Batch $chosen,
+    ): void {
+        $this->stock->issue(
+            product: $product,
+            warehouse: $warehouse,
+            sourceType: $sourceType,
+            sourceId: (int) $challan->id,
+            qty: $qty,
+            date: $challan->trx_date,
+            documentNo: $challan->document_no,
+            narration: $narration,
+            batch: $chosen,
+        );
+
+        $layers = app(\App\Modules\Inventory\Services\CostLayerService::class);
+
+        $cost = bccomp($layers->qtyOnHand($product), $qty, 4) >= 0
+            ? $layers->issue(
+                product: $product,
+                qty: $qty,
+                sourceType: $sourceType,
+                sourceId: (int) $challan->id,
+                documentNo: $challan->document_no,
+                date: $challan->trx_date,
+                batch: $chosen,
+            )['cost']
+            : bcmul((string) ($product->purchase_price ?? '0'), $qty, 4);
+
+        $this->freeFromStockCost[$sourceType] = bcadd($this->freeFromStockCost[$sourceType] ?? '0', $cost, 4);
+    }
+
+    /** নিজের মাল থেকে দেওয়া ফ্রির খরচ খাতায় — উৎস-নাম ধরে একবার, Dr প্রচারের খরচ / Cr মজুদ */
+    private function bookFreeFromStock(DeliveryChallan $challan): void
+    {
+        foreach ($this->freeFromStockCost as $sourceType => $cost) {
+            if (bccomp($cost, '0', 4) <= 0) {
+                continue;
+            }
+
+            app(\App\Core\Engines\Posting\PostingEngine::class)->post(
+                sourceType: $sourceType,
+                sourceId: (int) $challan->id,
+                trxDate: $challan->trx_date,
+                lines: [
+                    ['account_id' => (int) StandardChart::find(StandardChart::PROMOTION_EXPENSE)?->id, 'debit' => $cost,
+                        'narration' => __('sales::message.free_from_own_stock', ['no' => $challan->document_no])],
+                    ['account_id' => (int) StandardChart::find(StandardChart::INVENTORY)?->id, 'credit' => $cost,
+                        'narration' => __('sales::message.free_from_own_stock', ['no' => $challan->document_no])],
+                ],
+                documentNo: $challan->document_no,
+                branchId: $challan->branch_id,
+            );
+        }
+
+        $this->freeFromStockCost = [];
+    }
+
+    private function giveFromPool(
         DeliveryChallan $challan,
         Warehouse $warehouse,
         Product $product,

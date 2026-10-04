@@ -1342,6 +1342,19 @@ return [
         ],
         [
             /*
+             * ⭐ ফ্রি-ভাণ্ডারের বাইরেও ফ্রি — মালিক, ৪ অক্টোবর ২০২৬: *"free dewal ta tule daw othoba control panel e switch daw.
+             * lote free thakle auto bosbe, na thakle free dite parbe"*। ⓘ চালু: ফ্রি-ভাণ্ডারে যতটা আছে ততটা সেখান থেকে, বাকিটা ঐ লটের
+             * নিজের মাল থেকে — খাতায় প্রচারের খরচ (৫২২২), আয় নয় (IFRS ১৫)। লটের অনুপাতের দেয়ালও তখন থামায় না।
+             * বন্ধ (ডিফল্ট): আজকের দেয়াল, হুবহু।
+             */
+            'key' => 'sales.free_beyond_pool',
+            'label' => 'sales::settings.free_beyond_pool',
+            'type' => 'boolean',
+            'default' => false,
+            'group' => 'limits',
+        ],
+        [
+            /*
              * রাউন্ডিং কতটুকু পর্যন্ত — মালিকের নির্দেশ (৩ সেপ্টেম্বর ২০২৬)।
              *
              * ── কেন সীমা ছাড়া ঘরটা বিপজ্জনক ──────────────────────────

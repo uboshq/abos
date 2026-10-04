@@ -76,6 +76,7 @@ return [
     'sale' => ':no — sale',
     'output_vat' => ':no — output VAT',
     'freight_charged' => ':no — freight charged to the customer',
+    'free_from_own_stock' => ':no — free goods out of our own stock (promotion cost)',
     'cost_of_goods' => ':no — cost of goods sold',
     'stock_out' => ':no — inventory reduced',
     'money_in' => ':no — money received',

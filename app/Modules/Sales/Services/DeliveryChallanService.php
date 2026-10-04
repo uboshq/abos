@@ -1025,6 +1025,13 @@ final class DeliveryChallanService
          * ⓘ কিছু না থাকলে `reverse()` খালি ফেরে — সাধারণ চালানে কিছু বদলায় না।
          */
         foreach ([':free', ':gift'] as $kind) {
+            /*
+             * ⭐ নিজের মাল থেকে দেওয়া ফ্রি (সুইচ `sales.free_beyond_pool`, ৪ অক্টোবর ২০২৬; [[DirectSaleService::giveFromStock()]])
+             * — মাল নিচের উল্টানোয় তাকে ফেরে (একই উৎস-নাম), খরচ এখানে: স্তরে ফেরত আর প্রচারের খরচের দাখিলা উল্টো।
+             * ⓘ ফ্রি-ভাণ্ডার থেকে দেওয়া ফ্রিতে তাকের মাল নেই — তখন এখানে কিছুই হয় না।
+             */
+            $this->takeBackFreeFromStock($challan, DeliveryChallan::STOCK_SOURCE.$kind, $date, $reason, $paperNo);
+
             $this->stock->reverse(
                 sourceType: DeliveryChallan::STOCK_SOURCE.$kind,
                 sourceId: $challan->id,
@@ -1060,6 +1067,63 @@ final class DeliveryChallanService
                 date: $date,
                 documentNo: $paperNo ?? $challan->document_no,
                 narration: $reason,
+            );
+        }
+    }
+
+    /**
+     * নিজের মাল থেকে দেওয়া ফ্রির খরচ ফেরত — স্তরে, আর প্রচারের খরচের দাখিলা উল্টো ([[unpost()]]-এর অংশ, ৪ অক্টোবর ২০২৬)।
+     *
+     * ⓘ কতটা ফিরবে তা মাপা হয় **এখন বাইরে থাকা** তাকের মাল দিয়ে (উৎস + তার ফেরত সারি), তাই বারবার সম্পাদনায় দুইবার ফেরে না।
+     */
+    private function takeBackFreeFromStock(DeliveryChallan $challan, string $sourceType, Carbon $date, string $reason, ?string $paperNo): void
+    {
+        $out = StockMovement::query()
+            ->whereIn('source_type', [$sourceType, $sourceType.':cancel'])
+            ->where('source_id', $challan->id)
+            ->selectRaw('product_id, COALESCE(SUM(floor_change), 0) as floor')
+            ->groupBy('product_id')
+            ->pluck('floor', 'product_id');
+
+        foreach ($out as $productId => $floor) {
+            $back = bcmul((string) $floor, '-1', 4);
+
+            if (bccomp($back, '0', 4) <= 0) {
+                continue;
+            }
+
+            $drew = \App\Modules\Inventory\Models\CostLayerUse::query()
+                ->where('source_type', $sourceType)->where('source_id', $challan->id)
+                ->where('product_id', $productId)->where('qty', '>', 0)->exists();
+
+            if ($drew) {
+                app(\App\Modules\Inventory\Services\CostLayerService::class)->returnToLayers(
+                    product: Product::query()->findOrFail($productId),
+                    qty: $back,
+                    issuedSourceType: $sourceType,
+                    issuedSourceId: (int) $challan->id,
+                    sourceType: $sourceType.':cancel',
+                    sourceId: (int) $challan->id,
+                    documentNo: $paperNo ?? $challan->document_no,
+                    date: $date,
+                    returnedBy: [(int) $challan->id],
+                );
+            }
+        }
+
+        // ⓘ খোলা দাখিলা — শেষ উল্টো সারির পরে বসা ([[RevisionKeeper::openLedgerRows()]]-এর একই নিয়ম); বারবার সম্পাদনায় একটাই উল্টানো
+        $lastReversal = LedgerEntry::query()->where('source_type', $sourceType.':reversal')->where('source_id', $challan->id)->max('id');
+        $open = LedgerEntry::query()->where('source_type', $sourceType)->where('source_id', $challan->id)
+            ->when($lastReversal !== null, fn ($q) => $q->where('id', '>', (int) $lastReversal))
+            ->exists();
+
+        if ($open) {
+            $this->posting->reverse(
+                sourceType: $sourceType,
+                sourceId: $challan->id,
+                reversalDate: $date,
+                reason: $reason,
+                documentNo: $paperNo,
             );
         }
     }
