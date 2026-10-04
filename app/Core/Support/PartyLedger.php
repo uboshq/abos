@@ -65,8 +65,12 @@ final class PartyLedger
         $first = $items->first();
         $last = $items->last();
 
-        /* ⓘ প্রথম দেখানো সারির আগের সব কিছু — ছাঁকনির বাইরেরগুলোও */
-        $opening = (string) ((clone $base)->where(fn ($q) => $q
+        /*
+         * ⓘ প্রথম দেখানো সারির আগের সব কিছু — ছাঁকনির বাইরেরগুলোও।
+         * ⛔ `reorder()` — ডাকনেওয়ালার ভিত্তিতে `ORDER BY` থাকে (গ্রাহকের পাতা), আর লাইভের ONLY_FULL_GROUP_BY
+         * যোগফলের সাথে ক্রম মানে না: ৪ অক্টোবর ২০২৬ গ্রাহক ৪২৪-এর পাতা ৫০০ দিয়েছিল।
+         */
+        $opening = (string) ((clone $base)->reorder()->where(fn ($q) => $q
             ->where('ledger_entries.trx_date', '<', $first->trx_date)
             ->orWhere(fn ($w) => $w->where('ledger_entries.trx_date', $first->trx_date)->where('ledger_entries.id', '<', $first->id)))
             ->selectRaw('COALESCE(SUM(debit) - SUM(credit), 0) as net')->value('net') ?? '0');
