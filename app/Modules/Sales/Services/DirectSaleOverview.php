@@ -104,6 +104,7 @@ final class DirectSaleOverview
         $o->money(__('sales::overview_confirm.left_on_bill'), Money::format(bccomp($left, '0', 4) > 0 ? $left : '0'));
 
         $s = $this->standing->for($customer, bccomp($left, '0', 4) > 0 ? $left : '0');
+        $s = $this->withoutTheBillBeingEdited($s, $customer, $data, bccomp($left, '0', 4) > 0 ? $left : '0');
         $o->money(__('sales::overview_confirm.old_due'), Money::format($s['due']));
         if (bccomp($s['advance'], '0', 4) > 0) {
             $o->money(__('sales::overview_confirm.advance'), Money::format($s['advance']), 'good');
@@ -126,6 +127,47 @@ final class DirectSaleOverview
         }
 
         return $o;
+    }
+
+    /**
+     * সম্পাদনার সময় পুরনো বিলটা খাতা থেকে বাদ — মালিক, ৪ অক্টোবর ২০২৬ (INV-0002, "বিলের টাকা জমা আছে, তবু আটকাচ্ছে")।
+     *
+     * ── ⛔ কী ভাঙা ছিল ─────────────────────────────────────────────
+     * সম্পাদনায় পুরনো বিলটা আগে উল্টে যায়, তারপর নতুনটা বসে ([[SaleEditor::edit()]])। কিন্তু সারাংশ ক্রেতার খাতা
+     * পড়ত **এখনকার** অবস্থায় — পুরনো বিল তখনো খাতায় — তাই একই বিল দুবার গোনা হত: ১,০০,০০০ জমার ক্রেতার
+     * ৪৮,৮৬৬ টাকার বিল বদলাতে গেলে "সীমা পার ৪৭,৭০৬" দেখিয়ে নিশ্চিত বন্ধ, অথচ সেবা নিজে পার হতে দিত।
+     * ⭐ এখন পুরনো বিলের খাতায় বসা অঙ্কটা বাদ দিয়ে বকেয়া, অগ্রিম আর সীমা গোনা হয় — সেবা যা দেখবে, তা-ই।
+     *
+     * @param  array<string, mixed>  $s  [[OrderStanding::for()]]-এর ফল
+     * @param  array<string, mixed>  $data
+     * @return array<string, mixed>
+     */
+    private function withoutTheBillBeingEdited(array $s, Customer $customer, array $data, string $left): array
+    {
+        $id = (int) ($data['edit_invoice_id'] ?? 0);
+
+        if ($id <= 0) {
+            return $s;
+        }
+
+        $old = SalesInvoice::query()->whereKey($id)->where('customer_id', $customer->id)
+            ->where('status', \App\Core\Support\DocumentStatus::CONFIRMED)->value('total');
+
+        if ($old === null) {
+            return $s;
+        }
+
+        $ledger = bcsub(bcadd($customer->outstanding(), '0', 4), (string) $old, 4);
+        $exposure = bcadd(bcadd($ledger, (string) $s['held'], 4), $left, 4);
+        $over = bcsub($exposure, (string) $s['limit'], 4);
+
+        return array_merge($s, [
+            'due' => bccomp($ledger, '0', 4) > 0 ? $ledger : '0.0000',
+            'advance' => bccomp($ledger, '0', 4) < 0 ? bcmul($ledger, '-1', 4) : '0.0000',
+            'exposure' => $exposure,
+            'to_pay' => bccomp($over, '0', 4) > 0 ? $over : '0.0000',
+            'over_limit' => bccomp($over, '0', 4) > 0,
+        ]);
     }
 
     private function paying(array $data): string
