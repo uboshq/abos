@@ -139,7 +139,9 @@ final class EveryPaperDesignPrintsTheRealPaperTest extends TestCase
     public function test_the_lists_are_not_empty_where_the_owner_approved_designs(): void
     {
         /* ⛔ ফাঁকা তালিকা হলে উপরের পরীক্ষাগুলো কিছুই না ছেপে সবুজ হত */
-        $this->assertCount(39, PaperDesigns::codes('invoice', 'a4'));
+        // ⓘ ৪০ — "মোনো সাহসী ক্লাসিক (বাংলা)" যোগ হয়েছে (মালিক, ৪ অক্টোবর ২০২৬); নাম ধরেও, যাতে বাদ পড়লে ধরা পড়ে
+        $this->assertCount(40, PaperDesigns::codes('invoice', 'a4'));
+        $this->assertContains('mono_bold_classic_bn', PaperDesigns::codes('invoice', 'a4'), '⛔ বাংলা মোনো সাহসী ক্লাসিক তালিকায় নেই।');
         $this->assertCount(29, PaperDesigns::codes('invoice', 'a5'));
         $this->assertCount(28, PaperDesigns::codes('invoice', 'thermal'));
 
