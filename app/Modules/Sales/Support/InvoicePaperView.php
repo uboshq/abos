@@ -193,18 +193,22 @@ final class InvoicePaperView
          */
         if (is_array($this->facts['movement'] ?? null)) {
             $money = fn (string $x) => $x === '' ? '' : Money::format($x);
-            /* ⓘ ডিলারের কাগজে Dr/Cr নয় — মালিক, ৩ অক্টোবর ২০২৬ (নকশা দেখার সময়): "… Due" / "… Advance" */
-            $side = fn (string $x) => match (bccomp($x, '0', 4)) {
-                1 => Money::format($x).' Due',
-                -1 => Money::format(bcmul($x, '-1', 4)).' Advance',
-                default => Money::format('0'),
-            };
+            /*
+             * ⭐ জের আসল অঙ্কে, খাতার নিয়মে — মালিক, ৪ অক্টোবর ২০২৬: *"Balance ta actual amount ta likho"*। দলের খাতার
+             * একই লেখা: "(Dr) 250.79" / "(Cr) 1,160.19" ([[Money::drCr()]]; মালিক, ৩ অক্টোবর: কখনো +/− নয়)।
+             */
+            $side = fn (string $x) => Money::drCr($x);
+
+            /* ⭐ বিবরণ: নম্বর — কাগজের ধরন ("SL-3064 — Sales Invoice"); ধরন অজানা হলে খাতার নিজের বিবরণ */
+            $text = fn (array $r) => isset($r['kind']) && $r['kind'] !== null
+                ? trim(($r['doc'] ?? '').' — '.$this->label('movement_'.$r['kind']), ' —')
+                : $r['text'];
 
             $rows = array_values($this->facts['movement']);
 
             return array_map(fn (array $r, int $i) => [
                 ...$r,
-                'text' => $i === 0 ? $this->label('month_opening') : $r['text'],
+                'text' => $i === 0 ? $this->label('month_opening') : $text($r),
                 'debit' => $money($r['debit']),
                 'credit' => $money($r['credit']),
                 'balance' => $side($r['balance']),

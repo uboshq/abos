@@ -986,8 +986,9 @@ return [
             'key' => "sales.print.show.{$what}",
             'label' => "sales::settings.invoice_info.show.{$what}",
             'type' => 'boolean',
-            // ⭐ পণ্যের কোড ডিফল্টে বন্ধ — মালিক, ৩ অক্টোবর ২০২৬: *"print e product id dewar dorkar nai"*
-            'default' => $what !== 'product_code',
+            // ⭐ পণ্যের কোড আর লট ডিফল্টে বন্ধ — মালিক, ৩ অক্টোবর ২০২৬: *"print e product id dewar dorkar nai"*; ৪ অক্টোবর:
+            // *"invoice challan print e lot & product code /id print er dorkar nai"*। ⓘ চাইলে কন্ট্রোল প্যানেলে চালু করা যায়।
+            'default' => ! in_array($what, ['product_code', 'lot'], true),
             'group' => 'invoice_info',
             'per_branch' => true,
             'part' => 'show',
@@ -1003,7 +1004,7 @@ return [
             'key' => "sales.print.challan_show.{$what}",
             'label' => "sales::settings.invoice_info.challan_show.{$what}",
             'type' => 'boolean',
-            'default' => $what !== 'product_code',
+            'default' => ! in_array($what, ['product_code', 'lot'], true), // ⭐ কোড আর লট বন্ধ — মালিক, ৪ অক্টোবর ২০২৬
             'group' => 'invoice_info',
             'per_branch' => true,
             'part' => 'challan_show',

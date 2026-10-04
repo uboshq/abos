@@ -1273,7 +1273,7 @@ class SalesPrintController extends Controller implements HasMiddleware
             ->where('trx_date', '>=', $from->toDateString())
             ->where('trx_date', '<', $next->toDateString())
             ->orderBy('trx_date')->orderBy('id')
-            ->get(['id', 'trx_date', 'document_no', 'narration', 'debit', 'credit']);
+            ->get(['id', 'trx_date', 'source_type', 'document_no', 'narration', 'debit', 'credit']);
 
         /*
          * ⭐ কয়টা সারি — `sales.print.movement_lines` (০ = সব)। ⓘ শেষের N-টা থাকে; বাদ পড়াগুলো শুরুর জেরে যোগ হয়,
@@ -1305,10 +1305,35 @@ class SalesPrintController extends Controller implements HasMiddleware
                 'debit' => bccomp($debit, '0', 4) === 0 ? '' : $debit,
                 'credit' => bccomp($credit, '0', 4) === 0 ? '' : $credit,
                 'balance' => $balance,
+                /* ⭐ কাগজের ধরন — বিবরণ সেখান থেকে, কাগজের ভাষায় ([[InvoicePaperView::movement()]]) */
+                'doc' => (string) $entry->document_no,
+                'kind' => $this->movementKind((string) $entry->source_type, bccomp($credit, '0', 4) > 0),
             ];
         }
 
         return $rows;
+    }
+
+    /**
+     * খাতার সারির ধরন, ছাপার এক শব্দে — মালিক, ৪ অক্টোবর ২০২৬: *"SL-3064 — গ্রাহকের কাছে পাওনা ei sobdo ta na likhe smart
+     * ekta vasa likho"*। ⓘ জানা নেই এমন ধরনে `null` — তখন খাতার নিজের বিবরণই থাকে।
+     */
+    private function movementKind(string $source, bool $credit): ?string
+    {
+        if (str_ends_with($source, ':reversal') || str_ends_with($source, ':cancel')) {
+            return 'reversal';
+        }
+
+        return match ($source) {
+            'sales_invoice' => 'sales_invoice',
+            'sales_return' => 'sales_return',
+            'receipt_voucher' => 'receipt',
+            'payment_voucher' => 'payment',
+            'note' => $credit ? 'credit_note' : 'debit_note',
+            'journal_voucher' => 'journal',
+            'opening_balance', 'opening' => 'opening',
+            default => null,
+        };
     }
 
     private function earlierDue(SalesInvoice $invoice, string $due): string
