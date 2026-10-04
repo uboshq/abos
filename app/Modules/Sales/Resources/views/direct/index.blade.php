@@ -88,17 +88,7 @@
         </div>
     {{-- ⭐ নিশ্চিত বিক্রি সম্পাদনা — গেট পাসের আগে (মালিক, ২ অক্টোবর ২০২৬; [[SaleEditor]]) --}}
     @elseif (! empty($resume) && ($resume['stage'] ?? '') === 'edit')
-        <div role="status" data-editing-sale
-             class="mb-3 flex flex-wrap items-center gap-3 rounded-(--radius-card) border
-                    border-(--color-warning) bg-(--color-badge-pending-bg) p-3">
-            <span class="text-sm font-semibold text-(--color-badge-pending-ink)">
-                ✎ {{ __('sales::field.editing_sale') }}:
-                <span class="num">{{ $resume['invoiceNo'] }}</span>
-                · {{ __('sales::field.challan_no_short') }}
-                <span class="num">{{ $resume['challanNo'] }}</span>
-            </span>
-            <span class="text-xs text-(--color-badge-pending-ink)">{{ __('sales::message.editing_sale_hint') }}</span>
-        </div>
+        {{-- ⓘ সম্পাদনার বার্তা এখন বাঁ কলামের ভিতরে, এক লাইনে (মালিক, ৪ অক্টোবর ২০২৬: "skin na vange, scrol korte na hoy") --}}
     @elseif (! empty($resume) && ! empty($resume['viewOnly']))
         <div role="status"
              class="mb-3 flex flex-wrap items-center gap-3 rounded-(--radius-card) border
@@ -425,16 +415,6 @@
           class="grid gap-3 xl:grid-cols-[1fr_17rem]">
         @csrf
 
-        {{-- ⭐ সম্পাদনা ফিরে এলে কারণটা মাথায়, লাল, শব্দসহ — 63, ৪ অক্টোবর ২০২৬: মালিক দুবার "হালনাগাদ" চেপে
-             ফিরে এসেছিলেন, আর কারণটা ডানের বাক্সের একদম নিচে চাপা পড়ে ছিল ("edit hoy na")।
-             ⓘ নিচের তালিকাটাও থাকে — মালিক আগে ওখানেই চেয়েছিলেন। --}}
-        @if ($errors->any() && ($resume['stage'] ?? '') === 'edit')
-            <div role="alert" data-edit-refused x-init="beep()" style="grid-column: 1 / -1"
-                 class="rounded-(--radius-card) border border-(--color-danger) bg-(--color-badge-danger-bg) px-3 py-2
-                        text-sm font-semibold text-(--color-badge-danger-ink)">
-                ⛔ {{ __('sales::field.edit_refused') }}: {{ implode(' · ', $errors->all()) }}
-            </div>
-        @endif
 
         {{-- ⭐ রাখা খসড়া — মালিকের নকশা, ২৬ সেপ্টেম্বর ২০২৬: "খসড়া রাখুন"
              বিলটা রাখে, আর পাকা হয় এই পর্দাতেই ফিরে এসে।
@@ -690,6 +670,28 @@
 
         {{-- ══ বাঁ দিক: স্ট্রিপ · এন্ট্রি · কার্ট ══════════════════════ --}}
         <div class="ds-left min-w-0 space-y-3">
+            {{-- ⭐ সম্পাদনা চলছে — এক লাইনের পট্টি, বাঁ কলামের ভিতরে; কলামটা পর্দার উচ্চতায় বাঁধা, তাই পাতা নড়ে না,
+                 কার্ট একটু ছোট হয় (মালিক, ৪ অক্টোবর ২০২৬)। ⓘ পুরো কথাটা পট্টির title-এ। --}}
+            @if (! empty($resume) && ($resume['stage'] ?? '') === 'edit')
+                <div role="status" data-editing-sale title="{{ __('sales::message.editing_sale_hint') }}"
+                     class="flex items-center gap-2 overflow-hidden whitespace-nowrap rounded-(--radius-field) border
+                            border-(--color-warning) bg-(--color-badge-pending-bg) px-3 py-1 text-xs text-(--color-badge-pending-ink)">
+                    <b class="shrink-0">✎ {{ __('sales::field.editing_sale') }}:
+                        <span class="num">{{ $resume['invoiceNo'] }}</span> · {{ __('sales::field.challan_no_short') }}
+                        <span class="num">{{ $resume['challanNo'] }}</span></b>
+                    <span class="truncate">— {{ __('sales::message.editing_sale_hint') }}</span>
+                </div>
+            @endif
+            {{-- ⭐ সম্পাদনা ফিরে এলে কারণটা মাথায়, লাল, শব্দসহ — 63, ৪ অক্টোবর ২০২৬: মালিক দুবার "হালনাগাদ" চেপে
+                 ফিরে এসেছিলেন, আর কারণটা ডানের বাক্সের একদম নিচে চাপা পড়ে ছিল ("edit hoy na")।
+                 ⓘ নিচের তালিকাটাও থাকে — মালিক আগে ওখানেই চেয়েছিলেন। --}}
+            @if ($errors->any() && ($resume['stage'] ?? '') === 'edit')
+                <div role="alert" data-edit-refused x-init="beep()"
+                     class="rounded-(--radius-card) border border-(--color-danger) bg-(--color-badge-danger-bg) px-3 py-2
+                            text-sm font-semibold text-(--color-badge-danger-ink)">
+                    ⛔ {{ __('sales::field.edit_refused') }}: {{ implode(' · ', $errors->all()) }}
+                </div>
+            @endif
             {{--
                 ── কাগজের পরিচয় — দুইটা বাক্স, পাশাপাশি, এক সারিতে ─────────
 
