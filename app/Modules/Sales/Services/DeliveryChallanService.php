@@ -353,7 +353,18 @@ final class DeliveryChallanService
             // ⭐ আসল নম্বর এখন — মাল আর খাতা নিচে এই নম্বরেই লেখা হয়
             $this->giveTheSaleItsNumber($challan);
 
-            foreach ($challan->lines as $line) {
+            /*
+             * ⭐ আদেশ নিজে যতটা ধরে আছে — মজুদের খাতা থেকে, এক কোয়েরিতে (SO+DO নকশার ধাপ ৫, abos-bb, ৪ অক্টোবর ২০২৬;
+             * [[SalesOrderService::heldByThisOrder()]])।
+             *
+             * ⛔ আগে ধরে নেওয়া হত আদেশের "অর্ডার − আগে ডেলিভার" পুরোটাই ধরা আছে। অথচ সুইচ বন্ধে নিশ্চিত হওয়া আদেশ
+             * কিছুই ধরে না — তার চালান তখন অন্য কাগজের ধরা মাল ছেড়ে দিত।
+             */
+            $own = $challan->sales_order_id !== null && $challan->order !== null
+                ? app(SalesOrderService::class)->heldByThisOrder($challan->order)
+                : [];
+
+            foreach ($challan->lines->sortBy('line_no') as $line) {
                 $qty = (string) $line->delivered_qty;
 
                 /*
@@ -365,7 +376,7 @@ final class DeliveryChallanService
                  * দেখাত।
                  */
                 $release = $line->orderLine !== null
-                    ? $this->releasableQty($line->orderLine, $qty)
+                    ? $this->ownShare($own, (int) $line->product_id, $qty)
                     : '0';
 
                 /*
@@ -687,24 +698,24 @@ final class DeliveryChallanService
         );
     }
 
-    private function releasableQty(SalesOrderLine $orderLine, string $qty): string
+    /**
+     * এই চালান-সারি আদেশের ধরা থেকে কতটা ছাড়বে — সারির পরিমাণ আর ঐ পণ্যের অবশিষ্ট ধরার ছোটটা; যতটা দেওয়া হলো
+     * ভাগ থেকে কমে, যাতে একই পণ্যের পরের সারি বাকিটুকুই পায় ([[SalesOrderService::ownShare()]]-এর একই নিয়ম)।
+     *
+     * @param  array<int, string>  $own  পণ্য → আদেশের অবশিষ্ট ধরা
+     */
+    private function ownShare(array &$own, int $productId, string $qty): string
     {
-        // এই চালানের নিজের সারিগুলো এখনো স্টকে বসেনি, তাই আগেরগুলো গোনা
-        $alreadyDelivered = $orderLine->challanLines()
-            ->whereHas('challan', fn ($q) => $q->where('status', DocumentStatus::CONFIRMED))
-            ->sum('delivered_qty');
+        $left = $own[$productId] ?? '0';
+        $take = bccomp($qty, $left, 4) > 0 ? $left : $qty;
 
-        $stillReserved = bcsub(
-            (string) $orderLine->ordered_qty,
-            (string) ($alreadyDelivered ?: '0'),
-            4,
-        );
-
-        if (bccomp($stillReserved, '0', 4) <= 0) {
+        if (bccomp($take, '0', 4) <= 0) {
             return '0';
         }
 
-        return bccomp($qty, $stillReserved, 4) > 0 ? $stillReserved : $qty;
+        $own[$productId] = bcsub($left, $take, 4);
+
+        return $take;
     }
 
     private function resolveOrderLine(
@@ -745,8 +756,8 @@ final class DeliveryChallanService
          * ⛔ কিন্তু **৬০ + ৫০ = ১১০ চলবে না**।
          *
          * ── ⚠️ কেন এতদিন ধরা পড়েনি ──────────────────────────────────
-         * এই ফাইলেই [[releasableQty()]] আছে আর সে-ও `$alreadyDelivered`
-         * যোগ করে — পড়ে মনে হত পাহারা আছে। কিন্তু সে সীমা দেয়
+         * এই ফাইলে তখন `releasableQty()` ছিল (৪ অক্টোবর ২০২৬ থেকে [[ownShare()]]) আর সে-ও `$alreadyDelivered`
+         * যোগ করত — পড়ে মনে হত পাহারা আছে। কিন্তু সে সীমা দেয়
          * **রিজার্ভেশন ছাড়ার** উপর, ডেলিভারির উপর নয়: মাল বেরোনো
          * আটকাত না, কেবল রিজার্ভ ঋণাত্মক হতে দিত না।
          * ⓘ *যোগফলটা আছে* আর *পাহারা আছে* এক কথা নয়।
@@ -755,7 +766,7 @@ final class DeliveryChallanService
          * এটাই ছিল একমাত্র ফাঁক। ছাঁচটা [[PurchaseBillService]]-এর
          * হুবহু নকল, যাতে দুই পাশে দুই নিয়ম না দাঁড়ায়।
          *
-         * ── কেন গোনায় খসড়াও থাকে, `releasableQty()`-র মতো কেবল
+         * ── কেন গোনায় খসড়াও থাকে, রিজার্ভ ছাড়ার মতো কেবল
          *    নিশ্চিত করাগুলো নয় ────────────────────────────────────
          * দুইটা প্রশ্ন আলাদা। *"রিজার্ভ কতটা ছাড়ব"* — কেবল যা সত্যিই
          * গেছে। *"আর কতটা পাঠানো যায়"* — যা যাওয়ার পথে, তা-ও।
@@ -1048,9 +1059,25 @@ final class DeliveryChallanService
          * এখনো খোলা থাকলেই কেবল ফেরে; বাতিল অর্ডারে ফেরালে ধরা
          * থেকে যেত যা কেউ কোনোদিন ছাড়ত না।
          */
-        foreach ($challan->lines as $line) {
+        /*
+         * ⭐ ঠিক যতটা এই চালান ছেড়েছিল ততটাই — পণ্য ধরে, খাতা থেকে (SO+DO নকশার ধাপ ৫, ৪ অক্টোবর ২০২৬)।
+         *
+         * ⛔ আগে ফিরত পুরো `delivered_qty`। যে চালান কিছুই ছাড়েনি (আদেশ কিছু ধরেনি), তার বাতিলে মাল নতুন করে ধরা
+         * পড়ত, আর আদেশের পাঠক ([[SalesOrderService::heldByThisOrder()]]) এমন ধরা দেখাত যা কেউ কোনোদিন বসায়নি।
+         */
+        $released = StockMovement::query()
+            ->where('source_type', DeliveryChallan::STOCK_SOURCE)
+            ->where('source_id', $challan->id)
+            ->where('warehouse_id', $challan->warehouse_id)
+            ->groupBy('product_id')
+            ->selectRaw('product_id, COALESCE(SUM(reserved_change), 0) as moved')
+            ->pluck('moved', 'product_id')
+            ->map(fn ($moved) => bcmul((string) $moved, '-1', 4))
+            ->all();
+
+        foreach ($challan->lines->unique('product_id') as $line) {
             $reserve = $line->orderLine?->order?->status === DocumentStatus::CONFIRMED
-                ? (string) $line->delivered_qty
+                ? ($released[(int) $line->product_id] ?? '0')
                 : '0';
 
             if (bccomp($reserve, '0', 4) <= 0) {
