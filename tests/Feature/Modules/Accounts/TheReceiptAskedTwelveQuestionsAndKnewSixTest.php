@@ -403,15 +403,36 @@ class TheReceiptAskedTwelveQuestionsAndKnewSixTest extends TestCase
      */
     public function test_a_receipt_can_say_which_document_it_settles(): void
     {
+        /*
+         * ⓘ ৪ অক্টোবর ২০২৬ থেকে (গ২, Accounts-Finance অডিট) "বিপরীতে" কাগজটা সত্যিই থাকতে হয়, খোলা থাকতে হয়, আর অঙ্ক মিলতে
+         * হয় ([[VoucherService::assertAgainstFits()]])। ⛔ আগে এখানে না-থাকা কাগজ (৪২) দিয়েই দাবিটা সবুজ হত — ঠিক যে
+         * ফাঁকটা অডিট ধরেছে। তাই এখন একটা আসল খসড়া মূলধনের সারি, আর রসিদ পোস্ট হলে সেটা নিষ্পন্ন।
+         */
+        $person = \App\Modules\MasterData\Models\Person::query()->firstOrCreate(
+            ['company_id' => $this->company->id, 'name_en' => 'Twelve Questions Partner'],
+            ['code' => 'P-TWELVE', 'name_bn' => 'বারো প্রশ্নের অংশীদার', 'is_active' => true],
+        );
+        $entry = \App\Modules\Finance\Models\CapitalEntry::query()->create([
+            'branch_id' => $this->company->defaultBranch()?->id,
+            'document_no' => 'CAP-TWELVE',
+            'person_id' => $person->id,
+            'contributor_type' => \App\Modules\Finance\Models\CapitalEntry::PARTNER,
+            'entry_type' => \App\Modules\Finance\Models\CapitalEntry::CONTRIBUTION,
+            'trx_date' => now()->toDateString(),
+            'amount' => '1000',
+            'status' => \App\Modules\Finance\Models\CapitalEntry::DRAFT,
+        ]);
+
         $this->postReceipt([
             'against_type' => 'capital_entry',
-            'against_id' => 42,
-        ])->assertRedirect();
+            'against_id' => $entry->id,
+        ])->assertRedirect()->assertSessionHasNoErrors();
 
         $voucher = Voucher::query()->latest('id')->firstOrFail();
 
         $this->assertSame('capital_entry', $voucher->against_type);
-        $this->assertSame(42, (int) $voucher->against_id);
+        $this->assertSame((int) $entry->id, (int) $voucher->against_id);
+        $this->assertSame(\App\Modules\Finance\Models\CapitalEntry::POSTED, $entry->fresh()->status, '⛔ রসিদ পোস্ট হলো, অথচ মূলধনের সারি খসড়াই রইল।');
     }
 
     /**

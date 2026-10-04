@@ -26,7 +26,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * ⓘ তাই এই সারিটা টাকার দ্বিতীয় কপি নয়; সে কেবল বলে **কোন মাসটা করা
  * হয়েছে**, আর একই মাস দুইবার করা আটকায়।
  */
-class RentalAdjustment extends Model implements Drillable, SettledByAVoucher
+class RentalAdjustment extends Model implements Drillable, SettledByAVoucher, \App\Core\Contracts\SettlementTerms
 {
     use BelongsToCompany;
     use HasFactory;
@@ -152,5 +152,19 @@ class RentalAdjustment extends Model implements Drillable, SettledByAVoucher
     public function drillRoute(): array
     {
         return ['finance.rental.show', ['contract' => $this->rental_contract_id]];
+    }
+
+    /**
+     * ⭐ গ২ — কোন ভাউচার এই কাগজটা মেটাতে পারে ([[SettlementTerms]], Accounts-Finance অডিট, ৪ অক্টোবর ২০২৬)।
+     *
+     * ⛔ আগে লুকানো "বিপরীতে" ঘরে যা লেখা হত তা-ই মানা হত — অঙ্ক, পক্ষ, ধরন, অবস্থা কিছুই দেখা হত না।
+     */
+    public function settlementTerms(): array
+    {
+        return [
+            'voucher_type' => 'payment',
+            'amount' => (string) $this->paid_cash,
+            'open' => $this->voucher_id === null,
+        ];
     }
 }

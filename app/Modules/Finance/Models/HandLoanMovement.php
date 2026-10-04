@@ -26,7 +26,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * চিহ্ন দিয়ে চললে ওই প্রশ্নটাই ওঠে না। **ঘটনাটার মানে ব্যালেন্স বলে,
  * চলাচল নয়।**
  */
-class HandLoanMovement extends Model implements Drillable, SettledByAVoucher
+class HandLoanMovement extends Model implements Drillable, SettledByAVoucher, \App\Core\Contracts\SettlementTerms
 {
     use BelongsToCompany;
     use HasFactory;
@@ -170,5 +170,19 @@ class HandLoanMovement extends Model implements Drillable, SettledByAVoucher
          * তা নয়। ⓘ সেই ফাঁকটাও এখন বন্ধ।
          */
         return ['finance.hand_loan.show', ['handLoan' => $this->account_id]];
+    }
+
+    /**
+     * ⭐ গ২ — কোন ভাউচার এই কাগজটা মেটাতে পারে ([[SettlementTerms]], Accounts-Finance অডিট, ৪ অক্টোবর ২০২৬)।
+     *
+     * ⛔ আগে লুকানো "বিপরীতে" ঘরে যা লেখা হত তা-ই মানা হত — অঙ্ক, পক্ষ, ধরন, অবস্থা কিছুই দেখা হত না।
+     */
+    public function settlementTerms(): array
+    {
+        return [
+            'voucher_type' => $this->direction === self::OUT ? 'payment' : 'receipt',
+            'amount' => (string) $this->amount,
+            'open' => $this->voucher_id === null,
+        ];
     }
 }

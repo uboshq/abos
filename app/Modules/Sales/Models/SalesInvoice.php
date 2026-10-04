@@ -30,7 +30,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * নাহলে লাভ-ক্ষতির হিসাবে আয় থাকত কিন্তু তার পেছনের খরচ থাকত না, আর
  * মুনাফা বাস্তবের চেয়ে বেশি দেখাত।
  */
-class SalesInvoice extends Model implements Drillable, ShowsItselfForSigning
+class SalesInvoice extends Model implements Drillable, ShowsItselfForSigning, \App\Core\Contracts\SettlementTerms
 {
     use BelongsToCompany;
     use \App\Modules\Sales\Models\Concerns\CarriesTheSalesChannel;
@@ -426,5 +426,24 @@ class SalesInvoice extends Model implements Drillable, ShowsItselfForSigning
     public function drillRoute(): array
     {
         return ['sales.invoice.show', ['invoice' => $this->id]];
+    }
+
+    /**
+     * ⭐ গ২ — কোন ভাউচার এই কাগজটা মেটাতে পারে ([[SettlementTerms]], Accounts-Finance অডিট, ৪ অক্টোবর ২০২৬)।
+     *
+     * ⛔ আগে লুকানো "বিপরীতে" ঘরে যা লেখা হত তা-ই মানা হত — অঙ্ক, পক্ষ, ধরন, অবস্থা কিছুই দেখা হত না।
+     */
+    public function settlementTerms(): array
+    {
+        // ⓘ আংশিক আদায় চলে — অঙ্কটা সর্বোচ্চ; আর পক্ষ বাধ্যতামূলক: পক্ষহীন রসিদ বিলের বাকি কমাত, গ্রাহকের খাতা নয়
+        return [
+            'voucher_type' => 'receipt',
+            'amount' => $this->dueAmount(),
+            'up_to' => true,
+            'party_type' => 'customer',
+            'party_id' => (int) $this->customer_id,
+            'party_required' => true,
+            'open' => $this->status === \App\Core\Support\DocumentStatus::CONFIRMED && bccomp($this->dueAmount(), '0', 4) > 0,
+        ];
     }
 }

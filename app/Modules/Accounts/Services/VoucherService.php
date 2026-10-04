@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Accounts\Services;
 
 use App\Core\Contracts\SettledByAVoucher;
+use App\Core\Contracts\SettlementTerms;
 use App\Core\Engines\Drill\DrillResolver;
 use App\Core\Engines\NumberSeries\NumberSeriesEngine;
 use App\Core\Engines\Posting\PostingEngine;
@@ -298,6 +299,7 @@ final class VoucherService
         return DB::transaction(function () use ($voucher, $ownable) {
             // ⚠️ লেনদেনের ভিতরে, খাতায় তোলার আগে — তালা আর মাপা একই লেনদেনে
             $this->assertMoneyIsThere($voucher);
+            $this->assertAgainstFits($voucher);
 
             $this->posting->post(
                 Voucher::SOURCE_TYPES[$voucher->type],
@@ -327,6 +329,92 @@ final class VoucherService
 
             return $voucher->fresh(['lines']);
         });
+    }
+
+    /**
+     * ⭐ "কোন কাগজের বিপরীতে" — কাগজটা নিজেই বলে কোন ভাউচার তাকে মেটাতে পারে (গ২, Accounts-Finance অডিট,
+     * ৪ অক্টোবর ২০২৬; [[SettlementTerms]])।
+     *
+     * ⛔ আগে ঘরটায় যা লেখা থাকত তা-ই মানা হত: ১ টাকার রসিদে ৫ লাখের মূলধন "এসেছে", সইয়ের অপেক্ষায় থাকা উত্তোলন
+     * "পরিশোধিত", এক গ্রাহকের টাকায় আরেক গ্রাহকের বিল শোধ।
+     *
+     * ⓘ মাপা হয়:
+     *  · কাগজটা আছে, এই কোম্পানিতে।
+     *  · এখনো খোলা।
+     *  · ভাউচারের ধরন মেলে।
+     *  · অঙ্ক হুবহু, বা বিলের বেলায় বাকির বেশি নয়।
+     *  · পক্ষ মেলে।
+     *
+     * ⓘ অঙ্ক = আসল টাকা: পরিশোধে ব্যাংক চার্জ আলাদা ডেবিট সারিতে বসে ([[paidWithCharge()]]), তাই সেটা বাদ। রসিদে
+     * চার্জ টাকার ভেতর থেকেই কাটে, তাই ডেবিটের মোটই অঙ্ক।
+     *
+     * ⓘ তালাসহ পড়া, লেনদেনের ভিতরে — একই বিলের দুই রসিদ একসাথে এলে দুইজনেই পুরো বাকি দেখত।
+     *
+     * ⓘ কাউন্টারের ভাউচার এখানে মাপা হয় না: কাগজ আর টাকা কাউন্টার একসাথেই লেখে, আর বিলের চেয়ে বেশি টাকা সেখানে
+     * অগ্রিম হিসেবে ইচ্ছাকৃত। ঘরটা ফর্মে নেই, তাই হাতে পাঠিয়েও ঐ পথে ঢোকা যায় না ([[create()]]-এর `origin`)।
+     *
+     * ⓘ যে কাগজ কেবল সূত্র — কিছু মেটায় না (ঋণ সুবিধা, ভাড়ার চুক্তি) — তার কেবল থাকা মাপা হয়। ⛔ আর যে কাগজ মেটে
+     * ([[SettledByAVoucher]]) অথচ শর্ত বলে না, তার বিপরীতে লেখাই যায় না — নীরবে মেনে নিলে ফাঁকটা ফিরত।
+     */
+    private function assertAgainstFits(Voucher $voucher): void
+    {
+        $type = (string) ($voucher->against_type ?? '');
+        $id = (int) ($voucher->against_id ?? 0);
+
+        if (($type === '' && $id <= 0) || $voucher->origin === Voucher::ORIGIN_COUNTER) {
+            return;
+        }
+
+        $class = app(DrillResolver::class)->map()[$type] ?? null;
+        $model = $class === null ? null : new $class;
+        $document = $model instanceof Model && $id > 0 ? $model->newQuery()->lockForUpdate()->find($id) : null;
+
+        if ($document === null) {
+            throw ValidationException::withMessages(['against_id' => __('accounts::validation.against_unknown')]);
+        }
+
+        if (! $document instanceof SettlementTerms) {
+            if ($document instanceof SettledByAVoucher) {
+                throw ValidationException::withMessages(['against_id' => __('accounts::validation.against_unknown')]);
+            }
+
+            return;
+        }
+
+        $terms = $document->settlementTerms();
+
+        if (! $terms['open']) {
+            throw ValidationException::withMessages(['against_id' => __('accounts::validation.against_closed')]);
+        }
+
+        if ($terms['voucher_type'] !== $voucher->type) {
+            throw ValidationException::withMessages(['against_id' => __('accounts::validation.against_wrong_type')]);
+        }
+
+        $debit = $voucher->totals()['debit'];
+        $paid = $voucher->type === Voucher::RECEIPT ? $debit : bcsub($debit, (string) ($voucher->charge_amount ?? '0'), 4);
+        $cmp = bccomp($paid, (string) $terms['amount'], 4);
+
+        if (($terms['up_to'] ?? false) ? $cmp > 0 : $cmp !== 0) {
+            throw ValidationException::withMessages(['against_id' => __('accounts::validation.against_wrong_amount', [
+                'amount' => Money::format($paid),
+                'expected' => Money::format((string) $terms['amount']),
+            ])]);
+        }
+
+        $partyType = $terms['party_type'] ?? null;
+
+        if ($partyType === null) {
+            return;
+        }
+
+        $hasParty = $voucher->party_type !== null && $voucher->party_id !== null;
+
+        if ($hasParty
+            ? ($voucher->party_type !== $partyType || (int) $voucher->party_id !== (int) ($terms['party_id'] ?? 0))
+            : ($terms['party_required'] ?? false)) {
+            throw ValidationException::withMessages(['against_id' => __('accounts::validation.against_wrong_party')]);
+        }
     }
 
     /**

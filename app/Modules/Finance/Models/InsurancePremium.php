@@ -21,7 +21,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * [[App\Modules\Accounts\Services\VoucherService]] `drill_sources` দিয়ে
  * ক্লাসটা খুঁজে [[settleWith()]] ডাকে — পোস্টিংয়ের একই লেনদেনে।
  */
-class InsurancePremium extends Model implements Drillable, SettledByAVoucher
+class InsurancePremium extends Model implements Drillable, SettledByAVoucher, \App\Core\Contracts\SettlementTerms
 {
     use BelongsToCompany;
     use HasPublicId;
@@ -125,5 +125,27 @@ class InsurancePremium extends Model implements Drillable, SettledByAVoucher
             ]);
 
         $this->refresh();
+    }
+
+    /**
+     * ⭐ গ২ — কোন ভাউচার এই কাগজটা মেটাতে পারে ([[SettlementTerms]], Accounts-Finance অডিট, ৪ অক্টোবর ২০২৬)।
+     *
+     * ⛔ আগে লুকানো "বিপরীতে" ঘরে যা লেখা হত তা-ই মানা হত — অঙ্ক, পক্ষ, ধরন, অবস্থা কিছুই দেখা হত না।
+     */
+    public function settlementTerms(): array
+    {
+        // ⓘ সইয়ের অপেক্ষায় বা ফেরত পাওয়া কাগজ খোলা নয় — সইয়ের পথ ভাউচার দিয়ে এড়ানো যায় না
+        $latest = \App\Models\Approval::query()
+            ->where('approvable_type', static::class)
+            ->where('approvable_id', $this->getKey())
+            ->latest('id')
+            ->first();
+        $signed = $latest === null || $latest->status === \App\Models\Approval::APPROVED;
+
+        return [
+            'voucher_type' => 'payment',
+            'amount' => (string) $this->amount,
+            'open' => $this->status === self::DRAFT && $this->voucher_id === null && $signed,
+        ];
     }
 }

@@ -26,7 +26,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * চিহ্ন দিয়ে চালালে "এ পর্যন্ত কত জমেছে" প্রশ্নের উত্তরে মুনাফাও
  * যোগ হয়ে যেত, আর মেয়াদান্তে ব্যাংকের কাগজের সাথে মিলত না।
  */
-class DepositMovement extends Model implements Drillable, SettledByAVoucher
+class DepositMovement extends Model implements Drillable, SettledByAVoucher, \App\Core\Contracts\SettlementTerms
 {
     use BelongsToCompany;
     use HasFactory;
@@ -171,5 +171,20 @@ class DepositMovement extends Model implements Drillable, SettledByAVoucher
     public function drillRoute(): array
     {
         return ['finance.deposit.show', ['issuer' => $this->deposit?->kind?->issuer ?? 'bank', 'deposit' => $this->deposit_id]];
+    }
+
+    /**
+     * ⭐ গ২ — কোন ভাউচার এই কাগজটা মেটাতে পারে ([[SettlementTerms]], Accounts-Finance অডিট, ৪ অক্টোবর ২০২৬)।
+     *
+     * ⛔ আগে লুকানো "বিপরীতে" ঘরে যা লেখা হত তা-ই মানা হত — অঙ্ক, পক্ষ, ধরন, অবস্থা কিছুই দেখা হত না।
+     */
+    public function settlementTerms(): array
+    {
+        // ⓘ জমায় টাকা ঢোকা (খোলা, কিস্তি) মানে ব্যাংক থেকে বেরোনো — পরিশোধ; ফেরত আর বন্ধ মানে রসিদ
+        return [
+            'voucher_type' => in_array($this->kind, [self::OPENED, self::INSTALMENT], true) ? 'payment' : 'receipt',
+            'amount' => (string) $this->amount,
+            'open' => $this->voucher_id === null,
+        ];
     }
 }

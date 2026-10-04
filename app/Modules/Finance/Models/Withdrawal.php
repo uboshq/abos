@@ -27,7 +27,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * লিখলে ব্যবসার মুনাফা কম দেখাত, আর বছরশেষে কে কত নিল তা বলার উপায়
  * থাকত না — অথচ অংশীদারি ব্যবসায় ওই সংখ্যাটাই সবচেয়ে বেশি দরকারি।
  */
-class Withdrawal extends Model implements Drillable, SettledByAVoucher
+class Withdrawal extends Model implements Drillable, SettledByAVoucher, \App\Core\Contracts\SettlementTerms
 {
     use BelongsToCompany;
     use HasFactory;
@@ -235,5 +235,29 @@ class Withdrawal extends Model implements Drillable, SettledByAVoucher
     public function drillRoute(): array
     {
         return ['finance.withdrawal.index', ['highlight' => $this->id]];
+    }
+
+    /**
+     * ⭐ গ২ — কোন ভাউচার এই কাগজটা মেটাতে পারে ([[SettlementTerms]], Accounts-Finance অডিট, ৪ অক্টোবর ২০২৬)।
+     *
+     * ⛔ আগে লুকানো "বিপরীতে" ঘরে যা লেখা হত তা-ই মানা হত — অঙ্ক, পক্ষ, ধরন, অবস্থা কিছুই দেখা হত না।
+     */
+    public function settlementTerms(): array
+    {
+        // ⓘ সইয়ের অপেক্ষায় বা ফেরত পাওয়া কাগজ খোলা নয় — সইয়ের পথ ভাউচার দিয়ে এড়ানো যায় না
+        $latest = \App\Models\Approval::query()
+            ->where('approvable_type', static::class)
+            ->where('approvable_id', $this->getKey())
+            ->latest('id')
+            ->first();
+        $signed = $latest === null || $latest->status === \App\Models\Approval::APPROVED;
+
+        return [
+            'voucher_type' => 'payment',
+            'amount' => (string) $this->amount,
+            'party_type' => $this->person_id === null ? null : 'person',
+            'party_id' => $this->person_id === null ? null : (int) $this->person_id,
+            'open' => $this->status === DocumentStatus::DRAFT && $this->voucher_id === null && $signed,
+        ];
     }
 }

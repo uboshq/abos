@@ -29,7 +29,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * নিজে থেকেই মেলে: প্রদেয়ের সংখ্যাটা কোথাও জমা থাকে না, খতিয়ান থেকে গোনা
  * হয়। জমা রাখলে বিল বাতিল হলে দুই জায়গায় বদলাতে হত, আর একটা বাদ পড়ত।
  */
-class PurchaseBill extends Model implements Drillable
+class PurchaseBill extends Model implements Drillable, \App\Core\Contracts\SettlementTerms
 {
     use BelongsToCompany;
     use HasDocumentStatus;
@@ -459,5 +459,23 @@ class PurchaseBill extends Model implements Drillable
     public function drillRoute(): array
     {
         return ['purchase.bill.show', ['bill' => $this->id]];
+    }
+
+    /**
+     * ⭐ গ২ — কোন ভাউচার এই কাগজটা মেটাতে পারে ([[SettlementTerms]], Accounts-Finance অডিট, ৪ অক্টোবর ২০২৬)।
+     *
+     * ⛔ আগে লুকানো "বিপরীতে" ঘরে যা লেখা হত তা-ই মানা হত — অঙ্ক, পক্ষ, ধরন, অবস্থা কিছুই দেখা হত না।
+     */
+    public function settlementTerms(): array
+    {
+        return [
+            'voucher_type' => 'payment',
+            'amount' => $this->dueAmount(),
+            'up_to' => true,
+            'party_type' => 'supplier',
+            'party_id' => (int) $this->supplier_id,
+            'party_required' => true,
+            'open' => $this->status === \App\Core\Support\DocumentStatus::CONFIRMED && bccomp($this->dueAmount(), '0', 4) > 0,
+        ];
     }
 }
