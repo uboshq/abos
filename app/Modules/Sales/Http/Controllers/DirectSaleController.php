@@ -124,6 +124,16 @@ class DirectSaleController extends Controller implements HasMiddleware
          */
         $held = $this->credit->pendingFor($customers->pluck('id')->map(fn ($id) => (int) $id)->all());
 
+        /*
+         * ⭐ সম্পাদনার বিল ক্রেতার বকেয়া থেকে বাদ — মালিক, ৪ অক্টোবর ২০২৬ (INV-0002: "বিলের টাকা জমা আছে, তবু আটকাচ্ছে")।
+         * ⓘ সম্পাদনা পুরনো বিল উল্টে নতুন বসায় ([[SaleEditor]]); পুরনোটা তখনো খাতায়, তাই পর্দার সীমার হিসাব
+         * ([[direct-sale.js]] `creditLeft`) একই বিল দুবার গুনে ৪৭,৭০৬ টাকা "সীমা পার" দেখাত, অথচ সেবা পার হতে দিত।
+         */
+        $editing = $request->integer('edit') > 0
+            ? SalesInvoice::query()->whereKey($request->integer('edit'))
+                ->where('status', \App\Core\Support\DocumentStatus::CONFIRMED)->first(['id', 'customer_id', 'total'])
+            : null;
+
         // শীট আর প্যাকের ড্রপডাউন — একই তালিকা, তাই একবারই তোলা
         $sheetProducts = Product::query()->soldInViewedBranch()->active()->with('unit')->orderBy('name_en')->get();
 
@@ -319,7 +329,8 @@ class DirectSaleController extends Controller implements HasMiddleware
              */
             'customerTerms' => $customers->mapWithKeys(fn (Customer $c) => [$c->id => [
                 'limit' => (float) $c->credit_limit,
-                'due' => (float) $c->outstanding(),
+                'due' => (float) $c->outstanding()
+                    - ($editing !== null && (int) $editing->customer_id === (int) $c->id ? (float) $editing->total : 0),
                 'held' => (float) ($held[(int) $c->id] ?? 0),
                 'days' => (int) $c->credit_days,
                 'name' => $c->name(),
