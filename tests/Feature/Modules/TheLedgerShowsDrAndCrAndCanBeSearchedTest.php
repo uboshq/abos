@@ -128,6 +128,53 @@ final class TheLedgerShowsDrAndCrAndCanBeSearchedTest extends TestCase
         $this->assertStringContainsString('(Dr) '.Money::format('250.79'), $portal, 'ডিলারের পোর্টালে "(Dr)" নেই।');
     }
 
+    /**
+     * ⭐ পার্টির পাতায় কেবল লেনদেন খোলা, বাকি সব 👁-এর পপ-আপে — মালিক, ৩ অক্টোবর ২০২৬।
+     * ⓘ মাথার বকেয়ার কার্ডও (Dr)/(Cr) পড়ে, চিহ্ন নয়; সরবরাহকারীর দেনা (Cr)।
+     */
+    public function test_the_party_page_opens_only_its_ledger_and_the_rest_waits_behind_the_eye(): void
+    {
+        $customer = $this->customer('EYE-C');
+        $this->entry('customer', $customer->id, '2026-08-01', '250.79', '0', 'sales_invoice', 'INV-EYE-1');
+        $this->assertOnlyTheLedgerIsOpen(
+            (string) $this->get(route('customer.show', $customer))->assertOk()->getContent(),
+            '(Dr) '.Money::format('250.79'), 'গ্রাহক',
+        );
+
+        $vendor = Supplier::query()->onlySuppliers()->firstOrFail();
+        $start = $this->netOf('supplier', $vendor->id);
+        $this->entry('supplier', $vendor->id, '2026-08-01', '0', bcadd('500', bcmul($start, '1', 4), 4), 'purchase_bill', 'BILL-EYE');
+        $this->assertOnlyTheLedgerIsOpen(
+            (string) $this->get(route('supplier.show', $vendor))->assertOk()->getContent(),
+            '(Cr) '.Money::format('500'), 'সরবরাহকারী',
+        );
+    }
+
+    private function assertOnlyTheLedgerIsOpen(string $html, string $balance, string $who): void
+    {
+        // ⓘ ভাঙা ব্লেড-মন্তব্য পাতায় লেখা হয়ে বসে — একবার ঠিক এটাই হয়েছিল (`{{--`-এর একটা বন্ধনী হারিয়ে)
+        $this->assertStringNotContainsString('{-- ', $html, "⛔ {$who}: একটা ব্লেড-মন্তব্য পাতায় লেখা হয়ে দেখা যাচ্ছে।");
+
+        $dom = new \DOMDocument;
+        libxml_use_internal_errors(true);
+        $dom->loadHTML('<?xml encoding="utf-8"?>'.$html);
+        libxml_clear_errors();
+        $xpath = new \DOMXPath($dom);
+
+        $this->assertSame(1, $xpath->query('//*[@data-party-eye]')->length, "{$who}: 👁 বোতাম নেই।");
+
+        $details = $xpath->query('//*[@data-party-details]')->item(0);
+        $this->assertNotNull($details, "{$who}: বাকি তথ্যের পপ-আপ নেই।");
+        $this->assertSame('open', $details->getAttribute('x-show'), "{$who}: পপ-আপটা শুরুতেই খোলা।");
+
+        $this->assertSame(1, $xpath->query('//*[@id="transactions"]')->length, "{$who}: লেনদেনের ছক নেই।");
+        $this->assertSame(0, $xpath->query('.//*[@id="transactions"]', $details)->length, "⛔ {$who}: লেনদেনও 👁-এর পেছনে চলে গেছে।");
+
+        $card = $xpath->query('.//*[@data-balance-drcr]', $details)->item(0);
+        $this->assertNotNull($card, "⛔ {$who}: বকেয়ার কার্ড পপ-আপের বাইরে, পাতায় খোলা।");
+        $this->assertSame($balance, trim($card->textContent), "⛔ {$who}: মাথার কার্ডে (Dr)/(Cr) নয়।");
+    }
+
     private function assertBareZero(string $html, string $who): void
     {
         $this->assertMatchesRegularExpression('/>\s*'.preg_quote(Money::format('0'), '/').'\s*</', $html, "{$who}: শোধের পরে জের 0.00 নয়।");

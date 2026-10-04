@@ -12,6 +12,10 @@
     <x-slot:header>
         <x-ui.page-header :title="$customer->name()" :subtitle="$customer->code">
             <x-slot:actions>
+                {{-- ⭐ 👁 — বাকি সব (বকেয়া, পরিচয়, আচরণ, পোর্টাল) এক পপ-আপে; পাতায় খোলা থাকে কেবল লেনদেন (মালিক, ৩ অক্টোবর ২০২৬) --}}
+                <x-ui.button tone="secondary" type="button" x-data @click="$dispatch('party-eye')" data-party-eye>
+                    👁 {{ __('customer::action.details') }}
+                </x-ui.button>
                 @can('update', $customer)
                     <x-ui.button tone="secondary" :href="route('customer.edit', $customer)">
                         {{ __('core.action.edit') }}
@@ -38,7 +42,6 @@
 
          বাকি ন'টা রূপে এখানে কিছুই আঁকা হয় না; ওখানে একই তথ্য নিচের
          ঘরগুলোর সাথে সারি হিসেবে বসে। জায়গাটা রূপের সিদ্ধান্ত, পাতার নয়। --}}
-    <x-ui.record-facts :facts="$facts" region="head" />
 
     @if (session('saved'))
         <div role="status"
@@ -49,6 +52,18 @@
     @endif
 
     <x-ui.errors />
+
+    {{-- ⭐ পার্টির পাতায় কেবল লেনদেনের ছক খোলা — বাকিটা 👁 চাপলে এই পপ-আপে (মালিক, ৩ অক্টোবর ২০২৬:
+         "লেনদেন টেবিল খোলা, বাকি 👁-এর পেছনে")। ⓘ ঘরগুলো পাতাতেই থাকে, কেবল লুকানো। --}}
+    <div x-data="{ open: false }" @party-eye.window="open = true" @keydown.escape.window="open = false">
+    <div x-show="open" x-cloak @click.self="open = false" data-party-details
+         class="fixed inset-0 z-40 flex items-start justify-center overflow-y-auto bg-black/40 p-4">
+    <div class="w-full max-w-5xl rounded-(--radius-card) bg-(--color-surface-app) p-4 shadow-lg">
+        <div class="mb-3 flex justify-end">
+            <button type="button" @click="open = false" class="px-2 text-lg leading-none text-(--color-ink-muted)"
+                    aria-label="{{ __('core.action.close') }}">&times;</button>
+        </div>
+    <x-ui.record-facts :facts="$facts" region="head" />
 
     <div class="grid gap-4 lg:grid-cols-3">
 
@@ -63,7 +78,8 @@
             {{-- অঙ্কটাই লিংক — নিচের টেবিলে ঠিক সেই লেনদেনগুলো আছে
                  যেগুলো যোগ হয়ে এই সংখ্যাটা হয়েছে (নিয়ম ১) --}}
             <p class="mt-1 text-2xl font-semibold">
-                <x-ui.amount :value="$outstanding" href="#transactions" />
+                {{-- ⭐ (Dr)/(Cr), চিহ্ন নয় — মালিক, ৩ অক্টোবর ২০২৬ ("+- dile bujte kosto hobe"); (Dr) = গ্রাহক দেবেন --}}
+                <a href="#transactions" @click="open = false" class="num" data-balance-drcr>{{ \App\Core\Support\Money::drCr($outstanding) }}</a>
             </p>
 
             {{-- ⭐ এক শাখা বাছা থাকলে ওপরের অঙ্কটা কেবল সেই শাখার (৩০ সেপ্টেম্বর ২০২৬);
@@ -263,6 +279,10 @@
              'render' => fn ($e) => \App\Core\Support\Money::drCr($e->net_balance)],
         ];
     @endphp
+
+    </div>
+    </div>
+    </div>
 
     <section id="transactions" data-boxed class="scroll-mt-24 mt-4 overflow-hidden rounded-(--radius-card) border border-(--color-border)
                     bg-(--color-surface-card)">

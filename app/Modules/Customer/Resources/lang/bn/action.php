@@ -14,4 +14,5 @@ return [
     'portal_enable' => 'পোর্টাল চালু করুন',
     'portal_reset' => 'নতুন পাসওয়ার্ড দিন',
     'portal_disable' => 'বন্ধ করুন',
+    'details' => 'বিস্তারিত',
 ];

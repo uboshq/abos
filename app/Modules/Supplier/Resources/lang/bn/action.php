@@ -14,4 +14,5 @@ return [
     'statement' => 'হিসাব বিবরণী',
     'deactivate' => 'নিষ্ক্রিয় করুন',
     'activate' => 'সক্রিয় করুন',
+    'details' => 'বিস্তারিত',
 ];

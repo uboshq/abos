@@ -14,4 +14,5 @@ return [
     'portal_enable' => 'Open the portal',
     'portal_reset' => 'Set a new password',
     'portal_disable' => 'Close it',
+    'details' => 'Details',
 ];

@@ -11,4 +11,5 @@ return [
     'statement' => 'Statement',
     'deactivate' => 'Deactivate',
     'activate' => 'Activate',
+    'details' => 'Details',
 ];
