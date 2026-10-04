@@ -73,6 +73,12 @@ class SalesOrder extends Model implements Drillable
         return $this->belongsTo(Customer::class);
     }
 
+    /** ⓘ যে উদ্ধৃতি থেকে এই আদেশ এসেছে — না এলে নাল ([[SalesQuotationService::convert()]]) */
+    public function quotation(): BelongsTo
+    {
+        return $this->belongsTo(SalesQuotation::class, 'sales_quotation_id');
+    }
+
     public function warehouse(): BelongsTo
     {
         return $this->belongsTo(Warehouse::class);

@@ -74,6 +74,7 @@ return [
         'sales.discount' => 'Discounts',
         'sales.invoice' => 'Sales invoices',
         'sales.order' => 'Sales orders',
+        'sales.quotation' => 'Sales quotations',
         'sales.reprint' => 'Reprint',
         'sales.return' => 'Sales returns',
         'sales.scheme' => 'Schemes',
@@ -126,6 +127,7 @@ return [
         'run' => 'Run',
         'schedule' => 'Schedule',
         'transfer' => 'Transfer',
+        'convert' => 'Convert to order',
     ],
 
     'column_subject' => 'Item',

@@ -23,6 +23,7 @@ use App\Modules\Sales\Http\Controllers\SalesInvoiceController;
 use App\Modules\Sales\Http\Controllers\DeliveryScanController;
 use App\Modules\Sales\Http\Controllers\DeliveryStageController;
 use App\Modules\Sales\Http\Controllers\SalesOrderController;
+use App\Modules\Sales\Http\Controllers\SalesQuotationController;
 use App\Modules\Sales\Http\Controllers\SalesPrintController;
 use App\Modules\Sales\Http\Controllers\SalesReportController;
 use App\Modules\Sales\Http\Controllers\SalesReturnController;
@@ -169,6 +170,28 @@ Route::middleware('auth')->prefix('sales')->group(function () {
          */
         Route::get('/depot-check', [\App\Modules\Sales\Http\Controllers\DepotCheckController::class, 'index'])->name('depot_check');
         Route::post('/depot-check/open', [\App\Modules\Sales\Http\Controllers\DepotCheckController::class, 'open'])->name('depot_check.open');
+    });
+
+    /*
+     * ⭐ বিক্রয় উদ্ধৃতি — NEXUS §৮। ওদেশের আগে, কারণ কাগজটাও আদেশের আগের ধাপ।
+     * ⓘ প্রতিটা ধাপ POST — অবস্থা বদলায়; কাগজ (`paper`) GET, কারণ ছাপা কিছু বদলায় না।
+     */
+    Route::prefix('quotations')->name('quotation.')->group(function () {
+        Route::get('/', [SalesQuotationController::class, 'index'])->name('index');
+        Route::get('/create', [SalesQuotationController::class, 'create'])->name('create');
+        Route::post('/', [SalesQuotationController::class, 'store'])->name('store');
+        Route::get('/{quotation}', [SalesQuotationController::class, 'show'])->whereNumber('quotation')->name('show');
+        Route::get('/{quotation}/edit', [SalesQuotationController::class, 'edit'])->whereNumber('quotation')->name('edit');
+        Route::put('/{quotation}', [SalesQuotationController::class, 'update'])->whereNumber('quotation')->name('update');
+        Route::post('/{quotation}/submit', [SalesQuotationController::class, 'submit'])->whereNumber('quotation')->name('submit');
+        Route::post('/{quotation}/approve', [SalesQuotationController::class, 'approve'])->whereNumber('quotation')->name('approve');
+        Route::post('/{quotation}/send', [SalesQuotationController::class, 'send'])->whereNumber('quotation')->name('send');
+        Route::post('/{quotation}/accept', [SalesQuotationController::class, 'accept'])->whereNumber('quotation')->name('accept');
+        Route::post('/{quotation}/reject', [SalesQuotationController::class, 'reject'])->whereNumber('quotation')->name('reject');
+        Route::post('/{quotation}/revise', [SalesQuotationController::class, 'revise'])->whereNumber('quotation')->name('revise');
+        Route::post('/{quotation}/cancel', [SalesQuotationController::class, 'cancel'])->whereNumber('quotation')->name('cancel');
+        Route::post('/{quotation}/convert', [SalesQuotationController::class, 'convert'])->whereNumber('quotation')->name('convert');
+        Route::get('/{quotation}/paper', [SalesQuotationController::class, 'paper'])->whereNumber('quotation')->name('paper');
     });
 
     Route::prefix('orders')->name('order.')->group(function () {

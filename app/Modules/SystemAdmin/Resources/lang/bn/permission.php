@@ -97,6 +97,7 @@ return [
         'sales.cost' => 'ক্রয়মূল্য দেখা',
         'sales.discount' => 'ছাড়',
         'sales.invoice' => 'বিক্রয় বিল',
+        'sales.quotation' => 'বিক্রয় উদ্ধৃতি',
         'sales.order' => 'বিক্রয় আদেশ',
         'sales.reprint' => 'আবার ছাপা',
         'sales.return' => 'বিক্রয় ফেরত',
@@ -151,6 +152,7 @@ return [
         'restore' => 'পুনরুদ্ধার',
         'run' => 'চালানো',
         'schedule' => 'সময়সূচি',
+        'convert' => 'আদেশে রূপান্তর',
         'transfer' => 'হস্তান্তর',
     ],
 

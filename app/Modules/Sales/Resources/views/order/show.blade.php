@@ -61,6 +61,19 @@
                     <dt class="text-(--color-ink-muted)">{{ __('sales::field.state') }}</dt>
                     <dd class="mt-0.5"><x-sales::status-badge :document="$order" /></dd>
                 </div>
+
+                @if ($order->quotation)
+                    <div>
+                        <dt class="text-(--color-ink-muted)">{{ __('sales::quotation.doc') }}</dt>
+                        <dd class="mt-0.5">
+                            @can('view', $order->quotation)
+                                @include('sales::components.doc-link', ['document' => $order->quotation, 'route' => 'sales.quotation.show'])
+                            @else
+                                {{ $order->quotation->document_no }}
+                            @endcan
+                        </dd>
+                    </div>
+                @endif
             </dl>
         </section>
 

@@ -19,6 +19,7 @@ use App\Modules\Sales\Models\DeliveryChallan;
 use App\Modules\Sales\Models\SalesInvoice;
 use App\Modules\Sales\Models\SalesInvoiceLine;
 use App\Modules\Sales\Models\SalesOrder;
+use App\Modules\Sales\Models\SalesQuotation;
 use App\Modules\Sales\Models\SalesReturn;
 use App\Modules\Sales\Models\Shipment;
 use App\Modules\Sales\Panels\SalesFacts;
@@ -134,6 +135,13 @@ return [
                 'route_params' => ['screen' => 'quotation_compare'], 'permission' => 'sales.order.view'],
             ['label' => 'sales::planned.quotation_revision', 'cluster' => 'quotations', 'icon' => 'book', 'route' => 'sales.planned',
                 'route_params' => ['screen' => 'quotation_revision'], 'permission' => 'sales.order.view'],
+            /*
+             * ⭐ উদ্ধৃতি — আদেশের ঠিক আগে, কাগজের ধারায়: দর বলা → রাজি → আদেশ (NEXUS §৮)।
+             * ⓘ নিজের সুইচ (নিয়ম ৭) — যে ডিপো দর লিখে দেয় না, তার মেনুতে সারিটা আসে না।
+             */
+            // ⓘ "উদ্ধৃতি" ভাঁজের ভিতরে — বারে একই নামের দুই ঘর নয় (মেনুতে আগে বসানো চারটা পর্দার সাথে)
+            ['label' => 'sales::quotation.menu', 'icon' => 'book', 'route' => 'sales.quotation.index',
+                'permission' => 'sales.quotation.view', 'setting' => 'sales.screen_quotations', 'cluster' => 'quotations'],
 
             /* ⭐ পুরনো আদেশের পাতা এই ভাঁজে — মালিকের সিদ্ধান্ত, ২৮ সেপ্টেম্বর ২০২৬: "ডেলিভারি অর্ডার"
                এখন প্রতিটা বিক্রির চালান ([[DeliveryOrderTabs]]), আর আদেশ নিজের নামে ফিরল। */
@@ -395,6 +403,15 @@ return [
         // ⭐ ডেলিভারি অর্ডার — লেখা আর দেখা (মালিকের বিক্রয়-ধারা, ২ অক্টোবর ২০২৬; সই আসে কোম্পানির ছক থেকে)
         'sales.do.view',
         'sales.do.create',
+        /*
+         * উদ্ধৃতি — পাঁচটা চাবি। ⚠️ রূপান্তর আলাদা, কারণ ওটা একটা আদেশ
+         * জন্ম দেয় — আর নীতি আদেশ তৈরির চাবিও চায় ([[SalesQuotationPolicy]])।
+         */
+        'sales.quotation.view',
+        'sales.quotation.create',
+        'sales.quotation.update',
+        'sales.quotation.cancel',
+        'sales.quotation.convert',
         'sales.challan.view',
         'sales.challan.create',
         'sales.challan.cancel',
@@ -547,6 +564,11 @@ return [
          * ⚠️ SR→ASM→RSM→DSM-এর বাঁধন এখনো কোডে নেই; আপাতত কেবল চাবির তালিকা।
          */
         'ASM' => [
+            'sales.quotation.view',
+            'sales.quotation.create',
+            'sales.quotation.update',
+            'sales.quotation.cancel',
+            'sales.quotation.convert',
             'sales.delivery.view',
             'sales.order.view',
             'sales.order.create',
@@ -563,6 +585,11 @@ return [
          * ⚠️ স্তরের বাঁধন এখনো কোডে নেই; আপাতত কেবল চাবির তালিকা।
          */
         'RSM' => [
+            'sales.quotation.view',
+            'sales.quotation.create',
+            'sales.quotation.update',
+            'sales.quotation.cancel',
+            'sales.quotation.convert',
             'sales.delivery.view',
             'sales.order.view',
             'sales.order.create',
@@ -579,6 +606,11 @@ return [
          * ⚠️ স্তরের বাঁধন এখনো কোডে নেই; আপাতত কেবল চাবির তালিকা।
          */
         'DSM' => [
+            'sales.quotation.view',
+            'sales.quotation.create',
+            'sales.quotation.update',
+            'sales.quotation.cancel',
+            'sales.quotation.convert',
             'sales.delivery.view',
             'sales.order.view',
             'sales.order.create',
@@ -603,6 +635,7 @@ return [
             'sales.claim.decide',
         ],
         'Field Sales' => [
+            'sales.quotation.view', 'sales.quotation.create', 'sales.quotation.update',
             'sales.order.view', 'sales.order.create', 'sales.do.view', 'sales.do.create',
             'sales.collection.view', 'sales.collection.create',
         ],
@@ -617,6 +650,7 @@ return [
             'sales.order.update',
             'sales.shipment.create',
             'sales.shipment.cancel',
+            'sales.quotation.view',
             'sales.delivery.view',
             'sales.order.view', 'sales.challan.view', 'sales.invoice.view',
             'sales.collection.view', 'sales.return.view', 'sales.shipment.view',
@@ -631,6 +665,7 @@ return [
         'S' => 'sales::doc.sale',
         // ⭐ খসড়ার নিজের ক্রম — আসল INV/CHA নম্বর কেবল নিশ্চিতে, সরকারি ক্রমে ফাঁক নয় (মালিক, ২ অক্টোবর ২০২৬)
         'DRF' => 'sales::doc.draft',
+        'QTN' => 'sales::quotation.doc',
         'DC' => 'sales::doc.challan',
         // ⭐ গেট পাস — রওনার মুহূর্তে নিজে জন্মায় ([[GatePassService]]); সিরিজ কোম্পানি-প্রতি
         'GP' => 'sales::doc.gate_pass',
@@ -669,6 +704,7 @@ return [
         'sales_invoice_cancellation' => \App\Modules\Sales\Models\SalesInvoiceCancellation::class,
         'commission_claim' => CommissionClaim::class,
         'sales_order' => SalesOrder::class,
+        'sales_quotation' => SalesQuotation::class,
         'delivery_challan' => DeliveryChallan::class,
         'shipment' => Shipment::class,
         'sales_invoice' => SalesInvoice::class,
@@ -845,6 +881,7 @@ return [
         'return' => 'sales::approval.return',
         'margin' => 'sales::margin.approval',
         'order' => 'sales::approval.order',
+        'quotation' => 'sales::quotation.approval',
         'challan' => 'sales::approval.challan',
         'collection' => 'sales::approval.collection',
         'discount' => 'sales::approval.discount',
@@ -1403,6 +1440,22 @@ return [
              * মডিউল নিজে বলে, কোর শুধু গুনে দেখে (১৯.৭)।
              */
             'holds' => SalesOrder::class,
+        ],
+        [
+            'key' => 'sales.screen_quotations',
+            'label' => 'sales::quotation.settings.screen',
+            'type' => 'boolean',
+            'default' => true,
+            'group' => 'screens',
+            'holds' => SalesQuotation::class,
+        ],
+        [
+            // ⓘ ফর্মে মেয়াদ না দিলে কত দিন — এক ডিপোর দর সপ্তাহে বদলায়, আরেকটার মাসে
+            'key' => 'sales.quotation_valid_days',
+            'label' => 'sales::quotation.settings.valid_days',
+            'type' => 'integer',
+            'default' => 15,
+            'group' => 'entry',
         ],
         [
             'key' => 'sales.screen_challans',
