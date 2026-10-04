@@ -1,4 +1,5 @@
 import '../api_client/api_client.dart';
+import '../widgets/confirm_overview_sheet.dart';
 
 /// ফোনের কাউন্টার — `/sales/direct` (0.4.9, মালিক ৪ অক্টোবর ২০২৬: *"direct sales er counter banaw app e"*)।
 ///
@@ -143,6 +144,17 @@ abstract class DirectSaleApi {
     double deposit = 0,
     String? note,
   });
+
+  /// নিশ্চিতের আগে সারাংশ — একই ঘর, কিছুই লেখা হয় না (মালিক, ৪ অক্টোবর ২০২৬)
+  Future<ConfirmOverviewData> overview({
+    required String customerId,
+    String? warehouseId,
+    required String paymentTerm,
+    required List<CounterLine> lines,
+    String? depositAccountId,
+    double deposit = 0,
+    String? note,
+  });
 }
 
 class ServerDirectSaleApi implements DirectSaleApi {
@@ -168,8 +180,8 @@ class ServerDirectSaleApi implements DirectSaleApi {
     return allowed == null ? null : double.tryParse(allowed.toString())?.floor();
   }
 
-  @override
-  Future<CounterResult> sell({
+  /// ⓘ বিক্রি আর সারাংশ — একই ঘর; "credit:30" → শর্ত credit, মেয়াদ ৩০ দিন (ওয়েবের কাউন্টারের মতোই)
+  static Map<String, dynamic> _payload({
     required String customerId,
     String? warehouseId,
     required String paymentTerm,
@@ -178,10 +190,9 @@ class ServerDirectSaleApi implements DirectSaleApi {
     String? depositAccountId,
     double deposit = 0,
     String? note,
-  }) async {
-    // ⓘ "credit:30" → শর্ত credit, মেয়াদ ৩০ দিন — ওয়েবের কাউন্টার ঠিক এভাবেই ভাগ করে
+  }) {
     final parts = paymentTerm.split(':');
-    final response = await ApiClient.dio.post<Map<String, dynamic>>('/sales/direct', data: {
+    return {
       'customer': customerId,
       if (warehouseId != null) 'warehouse': warehouseId,
       'payment_term': parts.first,
@@ -193,7 +204,41 @@ class ServerDirectSaleApi implements DirectSaleApi {
           {'account': depositAccountId, 'amount': deposit.toStringAsFixed(2)},
         ],
       if (note != null && note.trim().isNotEmpty) 'narration': note.trim(),
-    });
+    };
+  }
+
+  @override
+  Future<CounterResult> sell({
+    required String customerId,
+    String? warehouseId,
+    required String paymentTerm,
+    required List<CounterLine> lines,
+    required bool draft,
+    String? depositAccountId,
+    double deposit = 0,
+    String? note,
+  }) async {
+    final response = await ApiClient.dio.post<Map<String, dynamic>>('/sales/direct', data: _payload(
+      customerId: customerId, warehouseId: warehouseId, paymentTerm: paymentTerm, lines: lines, draft: draft,
+      depositAccountId: depositAccountId, deposit: deposit, note: note,
+    ));
     return CounterResult.fromJson(response.data ?? const {});
+  }
+
+  @override
+  Future<ConfirmOverviewData> overview({
+    required String customerId,
+    String? warehouseId,
+    required String paymentTerm,
+    required List<CounterLine> lines,
+    String? depositAccountId,
+    double deposit = 0,
+    String? note,
+  }) async {
+    final response = await ApiClient.dio.post<Map<String, dynamic>>('/sales/direct/overview', data: _payload(
+      customerId: customerId, warehouseId: warehouseId, paymentTerm: paymentTerm, lines: lines, draft: false,
+      depositAccountId: depositAccountId, deposit: deposit, note: note,
+    ));
+    return ConfirmOverviewData.fromJson(response.data ?? const {});
   }
 }

@@ -1,6 +1,7 @@
 import 'package:abos_mobile/core/orders/direct_sale_api.dart';
 import 'package:abos_mobile/core/records/customer_record.dart';
 import 'package:abos_mobile/core/records/product_record.dart';
+import 'package:abos_mobile/core/widgets/confirm_overview_sheet.dart';
 import 'package:abos_mobile/features/direct_sale/counter_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -13,6 +14,38 @@ class _FakeApi implements DirectSaleApi {
   String? sentTerm;
   Object? failWith;
   CounterResult answer = const CounterResult(status: 'done', notice: 'চালান S-0007 আর বিল S-0007 হলো।');
+  int overviews = 0;
+  bool overLimit = false;
+
+  @override
+  Future<ConfirmOverviewData> overview({
+    required String customerId,
+    String? warehouseId,
+    required String paymentTerm,
+    required List<CounterLine> lines,
+    String? depositAccountId,
+    double deposit = 0,
+    String? note,
+  }) async {
+    overviews++;
+    return ConfirmOverviewData.fromJson({
+      'title': 'বিক্রির সারাংশ',
+      'head': [
+        {'label': 'ক্রেতা', 'value': 'রহিম স্টোর'},
+      ],
+      'lines': [
+        {'title': 'কসমস বিস্কুট', 'details': ['লট: LOT-A', '10 × 40.00'], 'amount': '400.00'},
+      ],
+      'totals': [
+        {'label': 'নিট বিল', 'amount': '400.00', 'strong': true},
+      ],
+      'money': const [],
+      'notes': [
+        if (overLimit) {'text': 'সীমা পার — ৳ 300.00', 'tone': 'stop'},
+      ],
+      'blocks': overLimit,
+    });
+  }
 
   @override
   Future<CounterSetup> setup({String? warehouseId}) async => const CounterSetup(
@@ -133,6 +166,13 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('counter-confirm')));
     await tester.pumpAndSettle();
 
+    // ⭐ আগে সারাংশ — তখনো বিক্রি নয়
+    expect(find.byKey(const ValueKey('overview-sheet')), findsOneWidget);
+    expect(find.text('নিট বিল: ৳ 400.00'), findsOneWidget);
+    expect(api.sentDraft, isNull, reason: '⛔ সারাংশ দেখানোর আগেই বিক্রি হয়ে গেল');
+    await tester.tap(find.byKey(const ValueKey('overview-confirm')));
+    await tester.pumpAndSettle();
+
     expect(api.sentCustomer, 'cus-1');
     expect(api.sentDraft, isFalse);
     expect(api.sentTerm, 'cash');
@@ -163,6 +203,36 @@ void main() {
     await _add(tester, qty: '10');
     await tester.tap(find.byKey(const ValueKey('counter-confirm')));
     await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('overview-confirm')));
+    await tester.pumpAndSettle();
     expect(find.text('বিক্রি হলো না'), findsOneWidget);
+  });
+
+  testWidgets('from the overview, go back sends nothing; over the limit confirm is off but a draft goes', (tester) async {
+    final api = _FakeApi()..overLimit = true;
+    await _pump(tester, api);
+    await tester.tap(find.byKey(const ValueKey('counter-customer')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('রহিম স্টোর').last);
+    await tester.pumpAndSettle();
+    await _pickProduct(tester, 'কসমস বিস্কুট');
+    await _add(tester, qty: '10');
+
+    await tester.tap(find.byKey(const ValueKey('counter-confirm')));
+    await tester.pumpAndSettle();
+    expect(find.text('সীমা পার — ৳ 300.00'), findsOneWidget);
+    final confirm = tester.widget<FilledButton>(find.byKey(const ValueKey('overview-confirm')));
+    expect(confirm.onPressed, isNull, reason: '⛔ সীমা পার, তবু সারাংশের "নিশ্চিত" চালু');
+
+    await tester.tap(find.byKey(const ValueKey('overview-back')));
+    await tester.pumpAndSettle();
+    expect(api.sentDraft, isNull, reason: '⛔ "ফিরে যান" চাপতেই কিছু পাঠানো হলো');
+
+    await tester.tap(find.byKey(const ValueKey('counter-confirm')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('overview-draft')));
+    await tester.pumpAndSettle();
+    expect(api.sentDraft, isTrue);
+    expect(api.overviews, 2);
   });
 }

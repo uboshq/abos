@@ -7,6 +7,7 @@ import '../../core/records/customer_record.dart';
 import '../../core/records/product_record.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
+import '../../core/widgets/confirm_overview_sheet.dart';
 
 /// সরাসরি বিক্রয়ের কাউন্টার — ফোনে (0.4.9, মালিক ৪ অক্টোবর ২০২৬: *"direct sales er counter banaw app e"*)।
 ///
@@ -240,6 +241,47 @@ class _CounterScreenState extends State<CounterScreen> {
     }
   }
 
+  /// "নিশ্চিত করুন" — আগে সার্ভারের সারাংশ ([[ConfirmOverview]]), তারপর মানুষের সিদ্ধান্ত
+  Future<void> _review() async {
+    final customer = _customer;
+    if (customer == null || _cart.isEmpty) {
+      setState(() => _error = customer == null ? 'ক্রেতা বাছুন।' : 'কার্টে অন্তত একটা পণ্য দিন।');
+      return;
+    }
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
+    ConfirmOverviewData? data;
+    try {
+      data = await widget.api.overview(
+        customerId: customer.id,
+        warehouseId: _warehouseId,
+        paymentTerm: _term,
+        lines: List.of(_cart),
+        depositAccountId: _depositAccountId,
+        deposit: double.tryParse(_deposit.text.trim()) ?? 0,
+        note: _note.text,
+      );
+    } catch (e) {
+      if (mounted) setState(() => _busy = false);
+      if (mounted) await _popup('সারাংশ আনা গেল না', errorMessageFor(e, fallback: 'নেট আছে কি না দেখে আবার চেষ্টা করুন।'));
+      return;
+    }
+    if (!mounted) return;
+    setState(() => _busy = false);
+    final choice = await showConfirmOverview(context, data);
+    if (!mounted) return;
+    switch (choice) {
+      case OverviewChoice.confirm:
+        await _sell(draft: false);
+      case OverviewChoice.draft:
+        await _sell(draft: true);
+      case OverviewChoice.back || null:
+        break; // ⓘ কার্টে ফেরা — কিছুই বদলায় না
+    }
+  }
+
   Future<void> _popup(String title, String text) => showDialog<void>(
         context: context,
         builder: (dialogContext) => AlertDialog(
@@ -435,7 +477,8 @@ class _CounterScreenState extends State<CounterScreen> {
           const SizedBox(height: AppSpacing.md),
           FilledButton(
             key: const ValueKey('counter-confirm'),
-            onPressed: _busy ? null : () => _sell(draft: false),
+            // ⭐ আগে সারাংশ — মালিক, ৪ অক্টোবর ২০২৬; সারাংশ থেকেই "নিশ্চিত" বা "খসড়া"
+            onPressed: _busy ? null : _review,
             child: const Text('নিশ্চিত করুন'),
           ),
           const SizedBox(height: AppSpacing.xs),
