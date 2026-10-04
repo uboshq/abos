@@ -241,6 +241,10 @@
         .ds-cart-scroll thead th { position: sticky; top: 0; z-index: 2; background: var(--color-surface-card); }
         /* ⭐ ক্রেতা আর বিলের মোট জোড়া — মাঝে ফাঁক নেই (মালিক, ৪ অক্টোবর ২০২৬) */
         .ds-side { display: flex; flex-direction: column; gap: 0; }
+        /* ⭐ ডান কলাম ১০% চওড়া — মালিক, ৪ অক্টোবর ২০২৬ ("halka mota koro 10%"): ১৭rem → ১৮.৭rem */
+        @media (min-width: 1280px) {
+            form[data-confirm-overview] { grid-template-columns: minmax(0, 1fr) 18.7rem !important; }
+        }
         .ds-side > section .ds-gold { border-bottom-left-radius: 0; border-bottom-right-radius: 0; }
         .ds-side > aside { border-top-left-radius: 0; border-top-right-radius: 0; border-top-width: 0; }
         @media (min-width: 1280px) {
@@ -250,7 +254,7 @@
     </style>
 
     {{-- ⓘ `data-confirm-overview` — নিশ্চিতের আগে সারাংশের পপ-আপ (abos-2c) এই ফর্ম চেনে --}}
-    <form method="POST" action="{{ route('sales.direct.store') }}" data-confirm-overview
+    <form method="POST" action="{{ route('sales.direct.store') }}" data-confirm-overview="{{ route('sales.direct.overview') }}"
           x-data="directSale({
               catalogue: @js($products),
               margin: @js($margin),
@@ -1249,6 +1253,9 @@
         </div>
 
     </form>
+
+    {{-- ⭐ নিশ্চিতের আগে সারাংশের পপ-আপ — মালিক, ৪ অক্টোবর ২০২৬ ([[confirm-overview.js]]) --}}
+    <x-ui.confirm-overview />
 
     {{-- ⭐ বিল বাতিলের ফর্ম (af-এর `sales.direct.void`) — ⓘ পথ না থাকলে আঁকা হয় না, তখন বাতিল মানে পর্দা খালি ([[voidBill()]]) --}}
     @if (Route::has('sales.direct.void'))
