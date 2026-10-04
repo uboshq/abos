@@ -582,7 +582,16 @@ final class PurchaseReturnService
              * ভুল হত।
              */
             $rate = match (true) {
-                $billLine !== null => (string) $billLine->rate,
+                /*
+                 * ⭐ বিলের **নিট** দর — ছাড় বাদে (অডিট গ১৮, ৪ অক্টোবর ২০২৬)।
+                 *
+                 * ── ⛔ কী ভাঙা ছিল ─────────────────────────────────────
+                 * দর আসত বিলের তালিকা-দর থেকে, ছাড়ের আগের। ১০০ টাকার মাল ১০ ছাড়ে ৯০-এ কিনে ফেরত দিলে
+                 * সরবরাহকারীর দেনা কমত ১০০ — অথচ তাঁকে দিতে হত ৯০; আর মজুদ বেরোত ৯০-এ, তাই বাকি ১০
+                 * "মূল্যপার্থক্য" খাতে ভুয়া লাভ। ⓘ বিলের ছাড় সারিতে ভাগ হয়ে বসে (মালিক, ২৭ সেপ্টেম্বর),
+                 * তাই সারির `discount`-ই পুরো ছাড়।
+                 */
+                $billLine !== null => $this->netRate($billLine),
 
                 // হাতে লেখা দর — যে এককে লেখা, সেখান থেকে নামে
                 filled($line['rate'] ?? null) => $this->packed(
@@ -597,7 +606,7 @@ final class PurchaseReturnService
             };
 
             $amount = bcmul($qty, $rate, 4);
-            $tax = $this->money($line['tax'] ?? '0');
+            $tax = $this->returnTax($line['tax'] ?? null, $qty, $billLine);
 
             PurchaseReturnLine::create([
                 'company_id' => $return->company_id,
@@ -622,6 +631,67 @@ final class PurchaseReturnService
             'tax' => $taxTotal,
             'total' => bcadd($subtotal, $taxTotal, 4),
         ]);
+    }
+
+    /** বিলের সারির এককপ্রতি নিট দর — (পরিমাণ × দর − ছাড়) ÷ পরিমাণ। */
+    private function netRate(PurchaseBillLine $billLine): string
+    {
+        $qty = (string) $billLine->qty;
+
+        if (bccomp($qty, '0', 4) <= 0) {
+            return (string) $billLine->rate;
+        }
+
+        $net = bcsub(bcmul($qty, (string) $billLine->rate, 4), (string) ($billLine->discount ?? '0'), 4);
+
+        return bcdiv($net, $qty, 4);
+    }
+
+    /**
+     * ফেরতের ভ্যাট — বিলে যতটা দেওয়া হয়েছিল, তার আনুপাতিক অংশের বেশি নয় (অডিট গ১৮, ৪ অক্টোবর ২০২৬)।
+     *
+     * ── ⛔ কী ভাঙা ছিল ─────────────────────────────────────────────
+     * ঘরটা যা লেখা হত তা-ই নিত। ৳১০০-র মাল ফেরতে ভ্যাট ৫ লাখ লিখলে সরবরাহকারীর দেনা ৫ লাখ কমত — কোনো
+     * সই বা চিহ্ন ছাড়া। ⭐ এখন:
+     * - বিলের সারি ধরে ফেরত: খালি রাখলে আনুপাতিক অংশ নিজে বসে; লেখা অঙ্ক তার বেশি হলে থামে।
+     * - ভ্যাট বন্ধ কোম্পানিতে ([[CalculatesLineTotals::lineFigures()]]-এর একই সুইচ) শূন্য ছাড়া কিছু নয়।
+     * ⓘ বিল ছাড়া হাতে লেখা ফেরতে মেলানোর কিছু নেই — সেখানে লেখা অঙ্কই থাকে, আর সেই ফেরত সইয়ের পথে যায়।
+     */
+    private function returnTax(mixed $entered, string $qty, ?PurchaseBillLine $billLine): string
+    {
+        $blank = $entered === null || trim((string) $entered) === '';
+        $tax = $this->money($blank ? '0' : $entered);
+
+        if (! (bool) app(\App\Core\Services\SettingsService::class)->get('purchase.vat_enabled', false)) {
+            if (bccomp($tax, '0', 4) !== 0) {
+                throw ValidationException::withMessages([
+                    'lines' => __('purchase::validation.vat_is_off'),
+                ]);
+            }
+
+            return '0.0000';
+        }
+
+        if ($billLine === null) {
+            return $tax;
+        }
+
+        $billed = (string) $billLine->qty;
+        $share = bccomp($billed, '0', 4) > 0
+            ? bcdiv(bcmul((string) ($billLine->tax ?? '0'), $qty, 4), $billed, 4)
+            : '0.0000';
+
+        if ($blank) {
+            return $share;
+        }
+
+        if (bccomp($tax, $share, 2) > 0) {
+            throw ValidationException::withMessages([
+                'lines' => __('purchase::validation.return_tax_over_bill', ['max' => bcadd($share, '0', 2)]),
+            ]);
+        }
+
+        return $tax;
     }
 
     /**

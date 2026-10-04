@@ -135,4 +135,12 @@ return [
     'lot_short_for_count' => 'Lot :lot now holds :held — the counted shortage of :short cannot be booked; goods left this lot after the count, count it again.',
     // An unshelved lot — [[Batch::floorBalance()]], 29 September 2026
     'chosen_lot_not_shelved' => ':waiting of lot :lot are not on the shelf yet — only :available are. Put the goods on the shelf first, then sell.',
+    // ⭐ Audit G1, G2, G11, G14 — 4 October 2026
+    'not_enough_available_to_sell' => 'Only :available of :product in :warehouse is available to sell — the rest is reserved for other orders, held, or on the way.',
+    'chosen_lot_held' => ':held of lot :lot are held (inspection or another reason) — only :available can be sold. Pick another lot, or lower the quantity.',
+    'release_needs_quantity' => 'How much to release has to be a positive number.',
+    'release_not_from_here' => 'Goods held for ":reason" cannot be released from this screen — goods on the way are released when the transfer arrives or is cancelled, and rejected or damaged goods leave through a disposal or return paper.',
+    'release_lot_not_this_product' => 'Lot :lot does not belong to this product.',
+    'place_needs_lot' => ':product is kept by lot — say which lot is being placed.',
+    'place_source_unknown' => 'Goods from this paper do not wait to be placed.',
 ];

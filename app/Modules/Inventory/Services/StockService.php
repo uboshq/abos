@@ -115,6 +115,32 @@ final class StockService
          * স্মৃতি — "কার্টনটা ঐ তাকে রাখা হয়েছিল" — আর ওটুকুই সৎ।
          */
         ?StorageLocation $location = null,
+
+        /*
+         * ⭐ বিক্রি "পাওয়া যায়" থেকে, কেবল তাক থেকে নয় — অডিট গ১১, ৪ অক্টোবর ২০২৬।
+         *
+         * ── ⛔ কী ভাঙা ছিল ─────────────────────────────────────────────
+         * চালান নিশ্চিত হওয়ার সময় নিচের পাহারা দেখত কেবল `floor`। অন্য ডিলারের DO-র জন্য সংরক্ষিত মাল,
+         * পরিদর্শনে বাতিল হয়ে আটকানো মাল, স্থানান্তরের ট্রাকে ওঠা মাল — সবই তাকে আছে, তাই কাউন্টার সবই বেচে
+         * দিত। ⚠️ ট্রাক পৌঁছালে উৎসের মজুদ ঋণাত্মক, আর বাতিল ওষুধ ডিলারের হাতে।
+         *
+         * ── ⭐ এখন ─────────────────────────────────────────────────────
+         * `true` হলে এই সারি `available = floor − reserved − hold` যতটা কমায়, ততটা সত্যিই পাওয়া যেতে হবে —
+         * তালাসহ গুনে, একই লেনদেনে। ⓘ সারিটা নিজে যতটা সংরক্ষণ ছাড়ে (আদেশের ধরা মাল), সেটুকু নিজেই ফেরত দেয়,
+         * তাই কেবল তার **বাইরের** পরিমাণটাই মাপা হয়।
+         *
+         * ⓘ ডিফল্ট `false` — গণনার ঘাটতি, ফেরত, স্থানান্তর আগের মতোই: তাকে যা নেই সেটা ঘাটতি, বিক্রি নয়।
+         */
+        bool $fromAvailable = false,
+
+        /*
+         * ⓘ এই বিক্রিরই নিজের অন্য সংরক্ষণ — `[[source_type, source_id], …]`, যেমন DO-র কড়া আটকানো
+         * ([[DeliveryOrderStock]]), যা চালানের পরে একই লেনদেনে ফেরে। ⛔ না গুনলে DO-র নিজের মালই
+         * নিজের চালানকে "পাওয়া যায় না" বলত।
+         *
+         * @var list<array{0: string, 1: int}>
+         */
+        array $ownReservations = [],
     ): StockMovement {
         $this->assertSomethingMoves(
             $floor, $reserved, $hold, $free, $freeReserved, $unplaced, $unplacedFree,
@@ -159,7 +185,8 @@ final class StockService
         return DB::transaction(function () use (
             $product, $warehouse, $sourceType, $sourceId,
             $floor, $reserved, $hold, $reason, $date, $documentNo, $narration,
-            $free, $freeReserved, $batch, $unplaced, $unplacedFree, $location
+            $free, $freeReserved, $batch, $unplaced, $unplacedFree, $location,
+            $fromAvailable, $ownReservations
         ) {
             /*
              * তাকে যা নেই তা বের করা যায় না।
@@ -170,6 +197,11 @@ final class StockService
              */
             if (bccomp($floor, '0', 4) < 0) {
                 $this->assertEnoughOnFloor($product, $warehouse, $floor);
+            }
+
+            // ⭐ গ১১ — বিক্রি হলে "পাওয়া যায়"-ও, তালাসহ ([[assertEnoughAvailable()]])
+            if ($fromAvailable) {
+                $this->assertEnoughAvailable($product, $warehouse, $floor, $reserved, $hold, $ownReservations);
             }
 
             // ফ্রি ভাণ্ডারেও একই নিয়ম — যে ফ্রি মাল নেই তা দেওয়া যায় না।
@@ -264,6 +296,10 @@ final class StockService
          * নেই, আর একটা আইডি জোর করে বসালে চলাচলের সারিটা মিথ্যা বলত।
          */
         ?Batch $batch = null,
+
+        /* ⭐ গ১১ — বিক্রির ডাকে "পাওয়া যায়"-এর পাহারা; অর্থ [[move()]]-এর একই নামের ঘরে */
+        bool $fromAvailable = false,
+        array $ownReservations = [],
     ): array {
         $out = bcmul($qty, '-1', 4);
 
@@ -280,6 +316,8 @@ final class StockService
                 documentNo: $documentNo,
                 narration: $narration,
                 reason: $reason,
+                fromAvailable: $fromAvailable,
+                ownReservations: $ownReservations,
             )];
         }
 
@@ -315,20 +353,38 @@ final class StockService
              */
             return DB::transaction(function () use (
                 $product, $warehouse, $sourceType, $sourceId, $qty, $out, $reserved, $hold,
-                $date, $documentNo, $narration, $reason, $batch
+                $date, $documentNo, $narration, $reason, $batch, $fromAvailable, $ownReservations
             ) {
                 Batch::query()->whereKey($batch->id)->lockForUpdate()->first();
 
-                // ⛔ তাকের মাল — তোলার-অপেক্ষারটা নয় ([[Batch::floorBalance()]]); তালাসহ গোনা
-                $have = $this->lockedLotSum($batch, $warehouse, 'floor_change');
+                /*
+                 * ⛔ তাকের মাল — তোলার-অপেক্ষারটা নয় ([[Batch::floorBalance()]]); তালাসহ গোনা।
+                 *
+                 * ⭐ আর এই লটে যা আটকানো, সেটাও বাদ — অডিট গ২, ৪ অক্টোবর ২০২৬। ⛔ লট A-র ১০টা পরিদর্শনে
+                 * বাতিল হয়ে আটকানো থাকলেও এখানে গোনা হত পুরো তাক, আর বাতিল মাল ডিলারের কাছে যেত। ⓘ কেবল যে
+                 * আটকানো সারিতে লট লেখা আছে সেটুকু — লট ছাড়া আটকানো পণ্যের মোটে বসে, আর সেটা মাপে [[move()]]।
+                 */
+                $shelf = $this->lockedLotSum($batch, $warehouse, 'floor_change');
+                $have = $this->lockedLotSum($batch, $warehouse, 'floor_change - hold_change');
 
                 if (bccomp($have, $qty, 4) < 0) {
+                    // ⭐ গ২ — মাল তাকে আছে, কিন্তু এই লটে আটকানো: কারণটা আলাদা, করণীয়ও আলাদা
+                    if (bccomp($shelf, $qty, 4) >= 0) {
+                        throw ValidationException::withMessages([
+                            'qty' => __('inventory::validation.chosen_lot_held', [
+                                'lot' => $batch->batch_no,
+                                'available' => rtrim(rtrim($have, '0'), '.') ?: '0',
+                                'held' => rtrim(rtrim(bcsub($shelf, $have, 4), '0'), '.'),
+                            ]),
+                        ]);
+                    }
+
                     /*
                      * ⓘ মাল আছে, কিন্তু এখনো তাকে তোলা হয়নি — কারণটা আলাদা করে বলা হয়
                      * (২৯ সেপ্টেম্বর ২০২৬): নাহলে কাউন্টার ভাবত লট খালি, অথচ করণীয় হলো
                      * আগে তাকে তোলা, অন্য লট বাছা নয়।
                      */
-                    $waiting = bcsub($this->lockedLotSum($batch, $warehouse, 'floor_change + unplaced_change'), $have, 4);
+                    $waiting = $this->lockedLotSum($batch, $warehouse, 'unplaced_change');
 
                     if (bccomp($waiting, '0', 4) > 0) {
                         throw ValidationException::withMessages([
@@ -361,6 +417,8 @@ final class StockService
                     narration: $narration,
                     reason: $reason,
                     batch: $batch,
+                    fromAvailable: $fromAvailable,
+                    ownReservations: $ownReservations,
                 )];
             });
         }
@@ -395,6 +453,8 @@ final class StockService
                 narration: $narration,
                 reason: $reason,
                 batch: $slice['batch'],
+                fromAvailable: $fromAvailable,
+                ownReservations: $ownReservations,
             );
         }
 
@@ -579,6 +639,14 @@ final class StockService
          */
         ?Batch $batch = null,
         ?string $documentNo = null,
+
+        /*
+         * ⭐ কোন কাগজের আটকানো — অডিট গ৩, ৪ অক্টোবর ২০২৬। ডিফল্ট আগের মতোই `HOLD` আর পণ্যের id।
+         * ⓘ পরিদর্শনের অপেক্ষার আটকানো নিজের কাগজের নামে বসে ([[QualityInspectionService::WAITING_SOURCE]]), যাতে
+         * রায়ের সময় ঠিক ততটাই ফেরে, আর সাধারণ "ছাড়ো" পর্দা ওটা ছুঁতে না পারে ([[release()]])।
+         */
+        ?string $sourceType = null,
+        ?int $sourceId = null,
     ): StockMovement {
         if (bccomp($qty, '0', 4) <= 0) {
             throw ValidationException::withMessages([
@@ -592,57 +660,180 @@ final class StockService
             ]);
         }
 
-        // যা বেচা যায় তার বেশি আটকানো যায় না — নাহলে Available ঋণাত্মক
-        // হয়ে যেত, আর ঋণাত্মক "বিক্রয়যোগ্য" বলে কিছু নেই
-        $available = $this->availableQty($product, $warehouse);
+        return DB::transaction(function () use (
+            $product, $warehouse, $qty, $reason, $date, $narration, $batch, $documentNo, $sourceType, $sourceId
+        ) {
+            /*
+             * যা বেচা যায় তার বেশি আটকানো যায় না — নাহলে Available ঋণাত্মক হয়ে যেত, আর ঋণাত্মক
+             * "বিক্রয়যোগ্য" বলে কিছু নেই। ⓘ তালাসহ গোনা (৪ অক্টোবর ২০২৬) — দুই আটকানো একসাথে এলে দুজনেই
+             * পুরনো সংখ্যা দেখত।
+             */
+            $available = (string) StockMovement::query()
+                ->forProduct($product->id)
+                ->inWarehouse($warehouse->id)
+                ->lockForUpdate()
+                ->selectRaw('COALESCE(SUM(floor_change - reserved_change - hold_change), 0) as available')
+                ->value('available');
 
-        if (bccomp($qty, $available, 4) > 0) {
-            throw ValidationException::withMessages([
-                'qty' => __('inventory::validation.not_enough_available', [
-                    'available' => $available,
-                ]),
-            ]);
-        }
+            if (bccomp($qty, $available, 4) > 0) {
+                throw ValidationException::withMessages([
+                    'qty' => __('inventory::validation.not_enough_available', [
+                        'available' => $available,
+                    ]),
+                ]);
+            }
 
-        return $this->move(
-            product: $product,
-            warehouse: $warehouse,
-            sourceType: self::HOLD,
-            sourceId: $product->id,
-            hold: $qty,
-            reason: $reason,
-            date: $date,
-            documentNo: $documentNo,
-            narration: $narration,
-            batch: $batch,
-        );
+            /*
+             * ⭐ লট বলা থাকলে সেই লটেও — অডিট গ২। ⛔ লটে যা নেই তা লটের নামে আটকালে লটের বিক্রয়যোগ্য
+             * সংখ্যা ঋণাত্মক হত, আর ছাড়ার দিন অন্য লটের মাল "ফিরত"।
+             */
+            if ($batch !== null) {
+                $inLot = $this->lockedLotSum($batch, $warehouse, 'floor_change - hold_change');
+
+                if (bccomp($qty, $inLot, 4) > 0) {
+                    throw ValidationException::withMessages([
+                        'qty' => __('inventory::validation.chosen_lot_short', [
+                            'lot' => $batch->batch_no,
+                            'available' => rtrim(rtrim($inLot, '0'), '.') ?: '0',
+                        ]),
+                    ]);
+                }
+            }
+
+            return $this->move(
+                product: $product,
+                warehouse: $warehouse,
+                sourceType: $sourceType ?? self::HOLD,
+                sourceId: $sourceId ?? $product->id,
+                hold: $qty,
+                reason: $reason,
+                date: $date,
+                documentNo: $documentNo,
+                narration: $narration,
+                batch: $batch,
+            );
+        });
     }
 
-    /** আটকানো মাল ছেড়ে দেওয়া। */
+    /**
+     * আটকানো মাল ছেড়ে দেওয়া — যে কারণে, যে লটে, যে কাগজে আটকানো ছিল, ঠিক সেখান থেকে।
+     *
+     * ── ⛔ কী ভাঙা ছিল — অডিট গ১, ৪ অক্টোবর ২০২৬ ─────────────────────────
+     * সীমাটা ছিল গুদামে পণ্যের **মোট** আটকানো। ফলে "দাম বাড়ার অপেক্ষা" কারণে ছাড়তে গিয়ে আসলে ছাড়া যেত
+     * স্থানান্তরের ট্রাকের মাল (`HOLD-TRN`) বা পরিদর্শনে বাতিল মাল (`HOLD-REJ`) — আর পরদিন সেই মাল কাউন্টারে
+     * বিক্রি। ⚠️ ট্রাক পৌঁছালে উৎসের মজুদ ঋণাত্মক হত, বাতিল ওষুধ যেত ডিলারের হাতে।
+     *
+     * ── ⭐ এখন ─────────────────────────────────────────────────────────────
+     * সীমা = এই কারণ · এই লট (না বললে লট-ছাড়া সারি) · এই কাগজের (ডিফল্ট `HOLD`) আটকানোর যোগফল, তালাসহ।
+     * ⓘ স্থানান্তর আর অপেক্ষমাণ পরিদর্শন নিজের কাগজের নামে আটকায়, তাই এখান দিয়ে ছোঁয়াই যায় না।
+     */
     public function release(
         Product $product,
         Warehouse $warehouse,
         string $qty,
         ReasonCode $reason,
         Carbon|string|null $date = null,
+        ?Batch $batch = null,
+        ?string $sourceType = null,
+        ?int $sourceId = null,
     ): StockMovement {
-        $held = $this->holdQty($product, $warehouse);
-
-        if (bccomp($qty, $held, 4) > 0) {
+        // ⛔ ছ১ — শূন্য বা ঋণাত্মক "ছাড়" আসলে একটা যাচাইহীন আটকানো হত
+        if (! is_numeric($qty) || bccomp($qty, '0', 4) <= 0) {
             throw ValidationException::withMessages([
-                'qty' => __('inventory::validation.not_that_much_held', ['held' => $held]),
+                'qty' => __('inventory::validation.release_needs_quantity'),
             ]);
         }
 
-        return $this->move(
-            product: $product,
-            warehouse: $warehouse,
-            sourceType: self::HOLD,
-            sourceId: $product->id,
-            hold: bcmul($qty, '-1', 4),
-            reason: $reason,
-            date: $date,
-        );
+        if ($reason->context !== ReasonCode::HOLD) {
+            throw ValidationException::withMessages([
+                'reason_code_id' => __('inventory::validation.wrong_reason_context'),
+            ]);
+        }
+
+        return DB::transaction(function () use ($product, $warehouse, $qty, $reason, $date, $batch, $sourceType, $sourceId) {
+            $held = (string) StockMovement::query()
+                ->forProduct($product->id)
+                ->inWarehouse($warehouse->id)
+                ->where('reason_code_id', $reason->id)
+                ->where('source_type', $sourceType ?? self::HOLD)
+                ->when($sourceId !== null, fn ($q) => $q->where('source_id', $sourceId))
+                ->when($batch === null,
+                    fn ($q) => $q->whereNull('batch_id'),
+                    fn ($q) => $q->where('batch_id', $batch->id))
+                ->lockForUpdate()
+                ->selectRaw('COALESCE(SUM(hold_change), 0) as held')
+                ->value('held');
+
+            if (bccomp($qty, $held, 4) > 0) {
+                throw ValidationException::withMessages([
+                    'qty' => __('inventory::validation.not_that_much_held', [
+                        'held' => rtrim(rtrim(bccomp($held, '0', 4) > 0 ? $held : '0', '0'), '.') ?: '0',
+                    ]),
+                ]);
+            }
+
+            return $this->move(
+                product: $product,
+                warehouse: $warehouse,
+                sourceType: $sourceType ?? self::HOLD,
+                sourceId: $sourceId ?? $product->id,
+                hold: bcmul($qty, '-1', 4),
+                reason: $reason,
+                date: $date,
+                batch: $batch,
+            );
+        });
+    }
+
+    /**
+     * একটা কাগজ এখনো যতটা সংরক্ষণ ধরে আছে, ঠিক ততটা ছেড়ে দেওয়া — পণ্য·গুদাম ধরে, তালাসহ (অডিট গ১২, ৪ অক্টোবর ২০২৬)।
+     *
+     * ⓘ হিসাবটা খাতার সারি থেকে, কাগজের আজকের লাইন থেকে নয়: ধরে রাখা বিল ফিরিয়ে এনে লাইন বদলালে লাইন গুনে
+     * ছাড়া ভুল পরিমাণ ফেরাত ([[ParkedStockReservation::release()]])। কিছু ধরা না থাকলে কিছুই লেখা হয় না —
+     * তাই দুইবার ডাকলেও দ্বিতীয়বার কিছু ফেরে না।
+     *
+     * @return list<StockMovement>
+     */
+    public function releaseReservedBy(string $sourceType, int $sourceId, ?string $documentNo = null): array
+    {
+        return DB::transaction(function () use ($sourceType, $sourceId, $documentNo) {
+            $rows = StockMovement::query()
+                ->where('source_type', $sourceType)
+                ->where('source_id', $sourceId)
+                ->lockForUpdate()
+                ->groupBy('product_id', 'warehouse_id')
+                ->selectRaw('product_id, warehouse_id, COALESCE(SUM(reserved_change), 0) as still')
+                ->get();
+
+            $movements = [];
+
+            foreach ($rows as $row) {
+                $still = (string) $row->still;
+
+                if (bccomp($still, '0', 4) <= 0) {
+                    continue;
+                }
+
+                $product = Product::query()->find((int) $row->product_id);
+                $warehouse = Warehouse::query()->withoutGlobalScopes()->find((int) $row->warehouse_id);
+
+                if ($product === null || $warehouse === null) {
+                    continue;
+                }
+
+                $movements[] = $this->move(
+                    product: $product,
+                    warehouse: $warehouse,
+                    sourceType: $sourceType,
+                    sourceId: $sourceId,
+                    reserved: bcmul($still, '-1', 4),
+                    date: now(),
+                    documentNo: $documentNo,
+                );
+            }
+
+            return $movements;
+        });
     }
 
     // ── অবস্থাগুলো ─────────────────────────────────────────────────────
@@ -865,39 +1056,115 @@ final class StockService
             ]);
         }
 
-        $state = $this->statesFor($product, $warehouse);
-
-        if (bccomp($qty, $state['unplaced'], 4) > 0) {
+        /*
+         * ⭐ লট — পণ্যের নিজের, আর লট-ধরা পণ্যে বাধ্যতামূলক (অডিট গ১৪, ৪ অক্টোবর ২০২৬)।
+         * ⛔ অন্য পণ্যের লট বসিয়ে দিলে সেই লটের মাল বাড়ত যা কোনোদিন আসেনি; লট ছাড়া বসালে লট-ধরা পণ্যের
+         * মাল চিরকাল "লট ধরা শুরুর আগের" হয়ে অবিক্রেয় থাকত।
+         */
+        if ($batch !== null && (int) $batch->product_id !== (int) $product->id) {
             throw ValidationException::withMessages([
-                'qty' => __('inventory::validation.more_than_unplaced', [
-                    'waiting' => $state['unplaced'],
+                'batch_id' => __('inventory::validation.lot_of_another_product', [
+                    'lot' => $batch->batch_no,
+                    'product' => $product->name(),
                 ]),
             ]);
         }
 
-        if (bccomp($freeQty, $state['unplaced_free'], 4) > 0) {
+        if ($batch === null && $product->track_batch) {
             throw ValidationException::withMessages([
-                'free_qty' => __('inventory::validation.more_than_unplaced', [
-                    'waiting' => $state['unplaced_free'],
-                ]),
+                'batch_id' => __('inventory::validation.place_needs_lot', ['product' => $product->name()]),
             ]);
         }
 
-        return $this->move(
-            product: $product,
-            warehouse: $warehouse,
-            sourceType: $sourceType,
-            sourceId: $sourceId,
-            narration: __('inventory::message.placed_narration'),
-            floor: $wantsPaid ? $qty : '0',
-            date: $date,
-            documentNo: $documentNo,
-            free: $wantsFree ? $freeQty : '0',
-            batch: $batch,
-            unplaced: $wantsPaid ? bcmul($qty, '-1', 4) : '0',
-            unplacedFree: $wantsFree ? bcmul($freeQty, '-1', 4) : '0',
-            location: $location,
-        );
+        return DB::transaction(function () use (
+            $product, $warehouse, $qty, $sourceType, $sourceId, $date, $documentNo, $batch, $freeQty, $location,
+            $wantsPaid, $wantsFree
+        ) {
+            /*
+             * ⛔ কতটা বসানো যায় — এই কাগজের, এই লটের অপেক্ষা থেকে, তালাসহ (অডিট গ১৪)।
+             *
+             * ── কী ভাঙা ছিল ─────────────────────────────────────────────
+             * সীমা ছিল গুদামে পণ্যের **মোট** অপেক্ষা, তালা ছাড়া। দুইটা বিলের মাল অপেক্ষায় থাকলে একটা বিলেই
+             * দুইটার যোগফল বসানো যেত — এক লটে বেশি উঠত, অন্য বিল চিরকাল অপেক্ষায়; আর দুজন একসাথে বসালে
+             * দুজনেই পুরোটা দেখতেন, অপেক্ষা ঋণাত্মক হত, শূন্য থেকে মাল জন্মাত।
+             *
+             * ⭐ এখন দুইটা সীমার ছোটটা: কাগজ·পণ্য·গুদাম·লটের দল ([[StockPlacementController::waiting()]]-এর
+             * হুবহু দল — বাতিলের `…:cancel` সারিসহ), আর পণ্যের মোট (ক্রয় ফেরত অপেক্ষার ঘর থেকে নিলে নিজের
+             * কাগজের নামে নেয়, দলে নয় — মোটটা সেটা ধরে)। ⓘ দুইটাই `FOR UPDATE`।
+             */
+            $group = StockMovement::query()
+                ->forProduct($product->id)
+                ->inWarehouse($warehouse->id)
+                ->whereIn('source_type', [$sourceType, $sourceType.':cancel'])
+                ->where('source_id', $sourceId)
+                ->when($batch === null,
+                    fn ($q) => $q->whereNull('batch_id'),
+                    fn ($q) => $q->where('batch_id', $batch->id))
+                ->lockForUpdate()
+                ->selectRaw('COALESCE(SUM(unplaced_change), 0) as unplaced, COALESCE(SUM(unplaced_free_change), 0) as unplaced_free')
+                ->first();
+
+            $whole = StockMovement::query()
+                ->forProduct($product->id)
+                ->inWarehouse($warehouse->id)
+                ->lockForUpdate()
+                ->selectRaw('COALESCE(SUM(unplaced_change), 0) as unplaced, COALESCE(SUM(unplaced_free_change), 0) as unplaced_free')
+                ->first();
+
+            $waiting = $this->smaller((string) ($group->unplaced ?? '0'), (string) ($whole->unplaced ?? '0'));
+            $waitingFree = $this->smaller((string) ($group->unplaced_free ?? '0'), (string) ($whole->unplaced_free ?? '0'));
+
+            if (bccomp($qty, $waiting, 4) > 0) {
+                throw ValidationException::withMessages([
+                    'qty' => __('inventory::validation.more_than_unplaced', [
+                        'waiting' => $waiting,
+                    ]),
+                ]);
+            }
+
+            if (bccomp($freeQty, $waitingFree, 4) > 0) {
+                throw ValidationException::withMessages([
+                    'free_qty' => __('inventory::validation.more_than_unplaced', [
+                        'waiting' => $waitingFree,
+                    ]),
+                ]);
+            }
+
+            $movement = $this->move(
+                product: $product,
+                warehouse: $warehouse,
+                sourceType: $sourceType,
+                sourceId: $sourceId,
+                narration: __('inventory::message.placed_narration'),
+                floor: $wantsPaid ? $qty : '0',
+                date: $date,
+                documentNo: $documentNo,
+                free: $wantsFree ? $freeQty : '0',
+                batch: $batch,
+                unplaced: $wantsPaid ? bcmul($qty, '-1', 4) : '0',
+                unplacedFree: $wantsFree ? bcmul($freeQty, '-1', 4) : '0',
+                location: $location,
+            );
+
+            /*
+             * ⭐ পরিদর্শনের অপেক্ষার মাল তাকে উঠলেও বিক্রয়যোগ্য নয় — অডিট গ৩, ৪ অক্টোবর ২০২৬।
+             * ⓘ গ্রহণে মাল অপেক্ষার ঘরে নামে, তাই কাগজ খোলার দিন আটকানোর মতো কিছু তাকে থাকে না; তাকে ওঠার এই
+             * মুহূর্তেই, একই লেনদেনে, খোলা পরিদর্শন তার অংশটা আটকায় ([[QualityInspectionService::holdWhileWaiting()]])।
+             */
+            if ($wantsPaid) {
+                app(QualityInspectionService::class)->holdPlacedGoods($sourceType, $sourceId, $product, $warehouse, $batch);
+            }
+
+            return $movement;
+        });
+    }
+
+    /** দুই অঙ্কের ছোটটা — শূন্যের নিচে নয়। */
+    private function smaller(string $a, string $b): string
+    {
+        $min = bccomp($a, $b, 4) <= 0 ? $a : $b;
+
+        return bccomp($min, '0', 4) > 0 ? bcadd($min, '0', 4) : '0.0000';
     }
 
     /**
@@ -1044,8 +1311,8 @@ final class StockService
     /**
      * একটা লটের একটা গুদামে যোগফল — তালাসহ, সর্বশেষ কমিট ধরে ([[issue()]]-এর বাছা লট, ⛔৫)।
      *
-     * ⓘ `$column` কেবল এই ক্লাসের ভেতর থেকে আসে (`floor_change` বা `floor_change + unplaced_change`) —
-     * ব্যবহারকারীর লেখা কখনো নয়।
+     * ⓘ `$column` কেবল এই ক্লাসের ভেতর থেকে আসে (`floor_change`, `floor_change - hold_change`,
+     * `unplaced_change`, `hold_change`) — ব্যবহারকারীর লেখা কখনো নয়।
      */
     private function lockedLotSum(Batch $batch, Warehouse $warehouse, string $column): string
     {
@@ -1055,6 +1322,64 @@ final class StockService
             ->lockForUpdate()
             ->selectRaw('COALESCE(SUM('.$column.'), 0) as total')
             ->value('total');
+    }
+
+    /**
+     * ⭐ বিক্রি যতটা "পাওয়া যায়" কমায়, ততটা সত্যিই পাওয়া যায় — অডিট গ১১, ৪ অক্টোবর ২০২৬।
+     *
+     * ⓘ সারিটা `available`-কে বদলায় `floor − reserved − hold` পরিমাণে। ⭐ আদেশের ধরা মাল ছাড়লে
+     * (`reserved` ঋণাত্মক) সেটুকু নিজেই ফিরে আসে, তাই আদেশের ভিতরের পরিমাণে কিছুই মাপা হয় না — মাপা হয় কেবল
+     * তার বাইরেরটা। ⛔ যোগফল `FOR UPDATE`-এ, [[assertEnoughOnFloor()]]-এর মতোই: সাধারণ `SUM` লেনদেনের
+     * পুরনো snapshot দেখতে পারত, আর দুই কাউন্টার একই "পাওয়া যায়" দুইবার বেচত।
+     *
+     * @param  list<array{0: string, 1: int}>  $ownReservations
+     */
+    private function assertEnoughAvailable(
+        Product $product,
+        Warehouse $warehouse,
+        string $floor,
+        string $reserved,
+        string $hold,
+        array $ownReservations,
+    ): void {
+        $takes = bcsub(bcadd($reserved, $hold, 4), $floor, 4);
+
+        if (bccomp($takes, '0', 4) <= 0) {
+            return;
+        }
+
+        $available = (string) StockMovement::query()
+            ->forProduct($product->id)
+            ->inWarehouse($warehouse->id)
+            ->lockForUpdate()
+            ->selectRaw('COALESCE(SUM(floor_change - reserved_change - hold_change), 0) as available')
+            ->value('available');
+
+        // ⓘ এই বিক্রিরই অন্য সংরক্ষণ — যতটা এখনো ধরা আছে, ততটা এই বিক্রির জন্যই রাখা
+        foreach ($ownReservations as [$type, $id]) {
+            $mine = (string) StockMovement::query()
+                ->forProduct($product->id)
+                ->inWarehouse($warehouse->id)
+                ->where('source_type', $type)
+                ->where('source_id', $id)
+                ->lockForUpdate()
+                ->selectRaw('COALESCE(SUM(reserved_change), 0) as reserved')
+                ->value('reserved');
+
+            if (bccomp($mine, '0', 4) > 0) {
+                $available = bcadd($available, $mine, 4);
+            }
+        }
+
+        if (bccomp($takes, $available, 4) > 0) {
+            throw ValidationException::withMessages([
+                'qty' => __('inventory::validation.not_enough_available_to_sell', [
+                    'product' => $product->name(),
+                    'warehouse' => $warehouse->name(),
+                    'available' => rtrim(rtrim(bccomp($available, '0', 4) > 0 ? $available : '0', '0'), '.') ?: '0',
+                ]),
+            ]);
+        }
     }
 
     private function assertEnoughOnFloor(Product $product, Warehouse $warehouse, string $floor): void

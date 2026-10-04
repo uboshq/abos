@@ -79,6 +79,12 @@ final class StockAdjustmentService
         ReasonCode $reason,
         Carbon|string|null $date = null,
         ?string $narration = null,
+
+        /*
+         * ⓘ কোন লট থেকে — সবার শেষে, ডিফল্ট `null` মানে আগের আচরণ (আগে-মেয়াদ নিয়ম)। ⭐ পরিদর্শনে বাতিল মাল
+         * বিনাশে ঠিক বাতিল লটটাই যায় (অডিট গ২, ৪ অক্টোবর ২০২৬, [[QualityInspectionService::dispose()]])।
+         */
+        ?Batch $batch = null,
     ): ?StockMovement {
         if (bccomp($qty, '0', 4) <= 0) {
             throw ValidationException::withMessages([
@@ -112,6 +118,7 @@ final class StockAdjustmentService
             reason: $reason,
             date: $date,
             narration: $narration,
+            batch: $batch,
         );
     }
 

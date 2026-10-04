@@ -9,6 +9,7 @@ use App\Core\Support\CompanyContext;
 use App\Modules\Inventory\Models\Batch;
 use App\Modules\Inventory\Models\Product;
 use App\Modules\Inventory\Models\QualityInspection;
+use App\Modules\Inventory\Models\StockMovement;
 use App\Modules\Inventory\Models\Warehouse;
 use App\Modules\MasterData\Models\ReasonCode;
 use Illuminate\Support\Carbon;
@@ -42,6 +43,15 @@ use Illuminate\Validation\ValidationException;
  */
 final class QualityInspectionService
 {
+    /**
+     * ⭐ রায়ের অপেক্ষার আটকানো এই কাগজের নামে বসে — অডিট গ৩, ৪ অক্টোবর ২০২৬।
+     *
+     * ⓘ সাধারণ আটকানো বসে `HOLD` নামে ([[StockService::HOLD]]); এটা আলাদা, যাতে রায়ের সময় ঠিক ততটাই ফেরে যতটা
+     * এই কাগজ আটকেছিল, আর মজুদের "ছাড়ো" পর্দা অপেক্ষার মাল ছুঁতে না পারে ([[StockService::release()]])।
+     * ⚠️ নামটা খাতায় বসে — কখনো বদলানো যাবে না।
+     */
+    public const WAITING_SOURCE = 'quality_inspection';
+
     public function __construct(
         private readonly NumberSeriesEngine $numbers,
         private readonly StockService $stock,
@@ -49,11 +59,16 @@ final class QualityInspectionService
     ) {}
 
     /**
-     * পরিদর্শনের কাগজ খোলা — রায় এখনো নয়।
+     * পরিদর্শনের কাগজ খোলা — রায় এখনো নয়, কিন্তু মাল আর বিক্রয়যোগ্য নয়।
      *
      * ⓘ মাল আসার সাথে সাথেই কাগজটা খোলা যায়, আর তখন সেটা *"দেখা
-     * বাকি"* তালিকায় বসে। ⚠️ রায় না হওয়া পর্যন্ত মজুদে কিছুই বদলায়
-     * না — কাগজ খোলাটা একটা পর্যবেক্ষণের ঘোষণা, সিদ্ধান্ত নয়।
+     * বাকি"* তালিকায় বসে।
+     *
+     * ── ⛔ কী ভাঙা ছিল — অডিট গ৩, ৪ অক্টোবর ২০২৬ ─────────────────────────
+     * আগে লেখা ছিল *"রায় না হওয়া পর্যন্ত মজুদে কিছুই বদলায় না"*। ফলে পরিদর্শনের অপেক্ষার মাল তাকে উঠেই
+     * বিক্রি হত — পরিদর্শকের দেখার আগেই ডিলারের কাছে, আর পরে "বাতিল" রায় দিতে গেলে ত্রুটি (বাতিল করার মতো
+     * মাল আর নেই)। ⭐ এখন খুললেই যতটা তাকে আছে ততটা `HOLD-RET` কারণে আটকায়, বাকিটা তাকে ওঠার মুহূর্তে
+     * ([[holdPlacedGoods()]]); রায়ে পুরো অপেক্ষার আটকানো ফেরে, আর রায়ের নিজের আটকানো বসে ([[decide()]])।
      *
      * @param  array<string, mixed>  $data
      */
@@ -78,7 +93,7 @@ final class QualityInspectionService
 
             $warehouse = Warehouse::query()->find($data['warehouse_id'] ?? null);
 
-            return QualityInspection::create([
+            $inspection = QualityInspection::create([
                 'company_id' => CompanyContext::id(),
                 'branch_id' => $warehouse->branch_id ?? CompanyContext::branchId(),
                 'document_no' => $this->numbers->next('QC'),
@@ -97,7 +112,122 @@ final class QualityInspectionService
                 'inspected_by' => $data['inspected_by'] ?? auth()->id(),
                 'created_by' => auth()->id(),
             ]);
+
+            // ⭐ গ৩ — যতটা এখনই তাকে আছে, ততটা আটকানো; একই লেনদেনে, তাই কাগজ ছাড়া আটকানো বা আটকানো ছাড়া কাগজ নয়
+            $this->holdWhileWaiting($inspection);
+
+            return $inspection;
         });
+    }
+
+    /**
+     * ⭐ তাকে উঠল — এই কাগজ·পণ্য·গুদাম·লটের খোলা পরিদর্শন তার অংশটা আটকায় (অডিট গ৩)।
+     *
+     * ⓘ ডাকে [[StockService::place()]], বসানোর একই লেনদেনে। ⛔ বসানো আর আটকানো দুই লেনদেনে হলে মাঝের
+     * মুহূর্তে মালটা বিক্রয়যোগ্য থাকত — ঠিক যে ফাঁকটা বন্ধ করা হচ্ছে।
+     */
+    public function holdPlacedGoods(string $sourceType, int $sourceId, Product $product, Warehouse $warehouse, ?Batch $batch): void
+    {
+        $open = QualityInspection::query()
+            ->where('status', QualityInspection::PENDING)
+            ->where('source_type', $sourceType)
+            ->where('source_id', $sourceId)
+            ->where('product_id', $product->id)
+            ->where('warehouse_id', $warehouse->id)
+            ->when($batch === null,
+                fn ($q) => $q->whereNull('batch_id'),
+                fn ($q) => $q->where('batch_id', $batch->id))
+            ->orderBy('id')
+            ->lockForUpdate()
+            ->get();
+
+        foreach ($open as $inspection) {
+            $this->holdWhileWaiting($inspection);
+        }
+    }
+
+    /**
+     * যতটা আটকানো উচিত আর যতটা আটকানো আছে — তফাতটুকু আটকানো।
+     *
+     * ⓘ উৎস (গ্রহণের কাগজ) থাকলে সীমা = সেই কাগজের এই মালের যতটা তাকে উঠেছে; না থাকলে (হাতে খোলা কাগজ,
+     * মাল আগেই তাকে) পুরো পরিদর্শিত পরিমাণ। ⚠️ দুই ক্ষেত্রেই যা বিক্রয়যোগ্য তার বেশি নয় — যা আগেই বেরিয়ে
+     * গেছে তা আটকানোর কিছু নেই, আর [[StockService::hold()]] সেখানে থামত।
+     */
+    private function holdWhileWaiting(QualityInspection $inspection): void
+    {
+        $inspection->loadMissing(['product', 'warehouse', 'batch']);
+
+        if (! $inspection->isPending() || $inspection->product === null || $inspection->warehouse === null) {
+            return;
+        }
+
+        $target = (string) $inspection->inspected_qty;
+
+        if (filled($inspection->source_type) && (int) $inspection->source_id > 0) {
+            $shelved = (string) StockMovement::query()
+                ->forProduct((int) $inspection->product_id)
+                ->inWarehouse((int) $inspection->warehouse_id)
+                ->where('source_type', $inspection->source_type)
+                ->where('source_id', $inspection->source_id)
+                ->when($inspection->batch_id === null,
+                    fn ($q) => $q->whereNull('batch_id'),
+                    fn ($q) => $q->where('batch_id', $inspection->batch_id))
+                ->lockForUpdate()
+                ->selectRaw('COALESCE(SUM(floor_change), 0) as shelved')
+                ->value('shelved');
+
+            $target = $this->lesser($target, $shelved);
+        }
+
+        $more = bcsub($target, $this->waitingHeld($inspection), 4);
+
+        $sellable = $this->stock->availableQty($inspection->product, $inspection->warehouse);
+        $more = $this->lesser($more, $sellable);
+
+        if ($inspection->batch !== null) {
+            $more = $this->lesser($more, bcsub(
+                $inspection->batch->floorBalance($inspection->warehouse),
+                (string) StockMovement::query()->where('batch_id', $inspection->batch_id)
+                    ->inWarehouse((int) $inspection->warehouse_id)->sum('hold_change'),
+                4,
+            ));
+        }
+
+        if (bccomp($more, '0', 4) <= 0) {
+            return;
+        }
+
+        $this->stock->hold(
+            product: $inspection->product,
+            warehouse: $inspection->warehouse,
+            qty: $more,
+            reason: $this->reasonFor(QualityInspection::QUARANTINE),
+            date: now(),
+            narration: $inspection->remarks,
+            batch: $inspection->batch,
+            documentNo: $inspection->document_no,
+            sourceType: self::WAITING_SOURCE,
+            sourceId: (int) $inspection->id,
+        );
+    }
+
+    /** এই কাগজের রায়ের অপেক্ষার আটকানো, এখন কতটা — তালাসহ। */
+    private function waitingHeld(QualityInspection $inspection): string
+    {
+        return (string) StockMovement::query()
+            ->where('source_type', self::WAITING_SOURCE)
+            ->where('source_id', $inspection->id)
+            ->lockForUpdate()
+            ->selectRaw('COALESCE(SUM(hold_change), 0) as held')
+            ->value('held');
+    }
+
+    /** দুই অঙ্কের ছোটটা, শূন্যের নিচে নয়। */
+    private function lesser(string $a, string $b): string
+    {
+        $min = bccomp($a, $b, 4) <= 0 ? $a : $b;
+
+        return bccomp($min, '0', 4) > 0 ? bcadd($min, '0', 4) : '0';
     }
 
     /**
@@ -162,6 +292,27 @@ final class QualityInspectionService
             }
 
             $inspection->loadMissing(['product', 'warehouse', 'batch']);
+
+            /*
+             * ⭐ রায়ের অপেক্ষার আটকানো আগে পুরোটা ফেরে — অডিট গ৩, ৪ অক্টোবর ২০২৬।
+             * ⓘ তারপর রায় নিজের আটকানো বসায় (নিচে)। ⛔ উল্টো ক্রমে হলে মাঝখানে একই মাল দুইবার আটকানো থাকত, আর
+             * "যা বিক্রয়যোগ্য তার বেশি নয়" পাহারা রায়টাকেই ফিরিয়ে দিত। দুইটাই এক লেনদেনে, তাই মাঝের কোনো
+             * মুহূর্তে মালটা বিক্রয়যোগ্য দেখায় না।
+             */
+            $waiting = $this->waitingHeld($inspection);
+
+            if (bccomp($waiting, '0', 4) > 0 && $inspection->warehouse !== null && $inspection->product !== null) {
+                $this->stock->release(
+                    product: $inspection->product,
+                    warehouse: $inspection->warehouse,
+                    qty: $waiting,
+                    reason: $this->reasonFor(QualityInspection::QUARANTINE),
+                    date: now(),
+                    batch: $inspection->batch,
+                    sourceType: self::WAITING_SOURCE,
+                    sourceId: (int) $inspection->id,
+                );
+            }
 
             $held = $this->holdFor($result, $acceptedQty, $rejectedQty);
 
@@ -276,7 +427,7 @@ final class QualityInspectionService
             ]);
         }
 
-        $inspection->loadMissing(['product', 'warehouse']);
+        $inspection->loadMissing(['product', 'warehouse', 'batch']);
 
         $product = $inspection->product;
         $warehouse = $inspection->warehouse;
@@ -319,16 +470,21 @@ final class QualityInspectionService
 
             $inspection->disposed_qty = $locked->disposed_qty;
 
-            /* ⓘ প্রথমে আটকানো ছাড়া — কারণটা ঐ আটকানোরই */
+            /*
+             * ⓘ প্রথমে আটকানো ছাড়া — কারণটা ঐ আটকানোরই।
+             * ⭐ লটও ঐ কাগজের (অডিট গ২, ৪ অক্টোবর ২০২৬): ⛔ আগে লট ছাড়া ছাড়া হত আর বাদ যেত আগে-মেয়াদ
+             * নিয়মে বাছা **অন্য** লট থেকে — বাতিল লট A তাকে থেকে যেত, ভালো লট B খাতা থেকে যেত।
+             */
             $this->stock->release(
                 product: $product,
                 warehouse: $warehouse,
                 qty: $qty,
                 reason: $this->reasonFor($inspection->status),
                 date: now(),
+                batch: $inspection->batch,
             );
 
-            /* ⓘ তারপর তাক থেকে বাদ, আর ক্ষতিটা খতিয়ানে */
+            /* ⓘ তারপর তাক থেকে বাদ, আর ক্ষতিটা খতিয়ানে — ঠিক ঐ লট থেকে */
             $this->adjustments->issue(
                 product: $product,
                 warehouse: $warehouse,
@@ -336,6 +492,7 @@ final class QualityInspectionService
                 reason: $writeOff,
                 date: now(),
                 narration: $narration ?? $inspection->document_no,
+                batch: $inspection->batch,
             );
 
             $inspection->forceFill([

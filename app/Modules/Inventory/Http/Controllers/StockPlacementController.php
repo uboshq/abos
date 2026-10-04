@@ -19,6 +19,7 @@ use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
 /**
@@ -43,6 +44,15 @@ use Illuminate\View\View;
  */
 class StockPlacementController extends Controller implements HasMiddleware
 {
+    /**
+     * ⭐ যে কাগজগুলোর মাল বসার অপেক্ষায় নামে — অডিট গ১৪, ৪ অক্টোবর ২০২৬।
+     *
+     * ⓘ ক্রয় বিল আর মাল গ্রহণ (`purchase_bill`, `purchase_receipt`), সাথে তাদের ফ্রি ও উপহারের লেজ। ⚠️ নামগুলো
+     * লেখা, ক্লাস নয় — মজুদ ক্রয়ের উপর নির্ভর করে না ([[BoundariesTest]])। নতুন কোনো কাগজ অপেক্ষার ঘরে মাল
+     * নামালে তার নাম এখানেও বসাতে হবে, নইলে পর্দা তাকে দেখাবে কিন্তু বসাতে দেবে না — নিরাপদ দিকে ভুল।
+     */
+    private const PLACEABLE_SOURCES = '/^(purchase_bill|purchase_receipt)(:free|:gift)?$/';
+
     public function __construct(
         private readonly StockService $stock,
         private readonly MenuBuilder $menu,
@@ -490,6 +500,23 @@ class StockPlacementController extends Controller implements HasMiddleware
             $data['lines'] = array_filter($data['lines'],
                 fn ($key) => (string) $key === $only || str_starts_with((string) $key, $only.'_'),
                 ARRAY_FILTER_USE_KEY);
+        }
+
+        /*
+         * ⛔ কেবল যে কাগজের মাল সত্যিই বসার অপেক্ষায় নামে — অডিট গ১৪, ৪ অক্টোবর ২০২৬।
+         *
+         * ⓘ ফর্মের `source_type` একটা লুকানো ঘর, আর লুকানো ঘর বদলানো যায়। ⚠️ বদলে অন্য কাগজের নাম বসালে বসানোর
+         * সারি লেখা হত এমন কাগজের নামে যার মাল কোনোদিন অপেক্ষায় ছিল না — ড্রিল-ডাউন মিথ্যা, আর সেই কাগজের
+         * উল্টানোর হিসাবও ভুল। ⭐ বাকি পাহারা (এই কাগজ·লটের অপেক্ষার বেশি নয়, তালাসহ) [[StockService::place()]]-এ।
+         */
+        foreach ($data['lines'] as $line) {
+            foreach (array_filter([$line['source_type'] ?? null, $line['free_source_type'] ?? null]) as $source) {
+                if (! preg_match(self::PLACEABLE_SOURCES, (string) $source)) {
+                    throw ValidationException::withMessages([
+                        'lines' => __('inventory::validation.place_source_unknown'),
+                    ]);
+                }
+            }
         }
 
         $placed = 0;

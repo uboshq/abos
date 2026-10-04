@@ -128,6 +128,18 @@ final class CashCountService
             $this->lockFresh($count);
             $this->assertNotApproved($count);
 
+            /*
+             * ⭐ এই গণনার পরে অনুমোদিত অন্য গণনার সমন্বয় বাদ — অডিট গ৭, ৪ অক্টোবর ২০২৬।
+             *
+             * ── ⛔ কী ভাঙা ছিল ─────────────────────────────────────────────
+             * একই দিনে একই বাক্স দুবার গোনা হলে দুটো গণনাই একই ঘাটতি দেখায় (খাতা তখনো বদলায়নি)। প্রথমটা
+             * অনুমোদনে ঘাটতি খরচে বসায়; দ্বিতীয়টা পুরনো পার্থক্য নিয়েই আবার বসাত — ১,০০০-এর ঘাটতি ২,০০০
+             * হয়ে খরচে উঠত।
+             * ⭐ এখন: এই গণনা লেখার পরে অন্য যে গণনা (এই বাক্স, এই তারিখ বা আগের) অনুমোদিত হয়ে খাতা বদলেছে,
+             * তার সমন্বয়টা "খাতা বলে"-তে যোগ হয়, আর পার্থক্য আবার গোনা হয়। মিলে গেলে কিছুই বসে না।
+             */
+            $this->allowForLaterAdjustments($count);
+
             if (! $count->matches()) {
                 $count->forceFill(['adjustment_voucher_id' => $this->adjustmentFor($count)->id])->save();
             }
@@ -140,6 +152,32 @@ final class CashCountService
 
             return $count->fresh();
         });
+    }
+
+    /** অন্য গণনার পরের সমন্বয় ধরে "খাতা বলে" আর পার্থক্য নতুন করে — [[approve()]]-এর তালার ভেতরে ডাকা। */
+    private function allowForLaterAdjustments(CashCount $count): void
+    {
+        $since = CashCount::query()
+            ->where('cash_till_id', $count->cash_till_id)
+            ->whereKeyNot($count->getKey())
+            ->where('status', DocumentStatus::CONFIRMED)
+            ->whereNotNull('adjustment_voucher_id')
+            ->where('trx_date', '<=', $count->trx_date->toDateString())
+            ->where('approved_at', '>=', $count->created_at)
+            ->lockForUpdate()
+            ->get(['difference'])
+            ->reduce(fn (string $sum, CashCount $c) => bcadd($sum, (string) $c->difference, 4), '0');
+
+        if (bccomp($since, '0', 4) === 0) {
+            return;
+        }
+
+        $expected = bcadd((string) $count->expected_amount, $since, 4);
+
+        $count->forceFill([
+            'expected_amount' => $expected,
+            'difference' => bcsub((string) $count->counted_amount, $expected, 4),
+        ])->save();
     }
 
     /**

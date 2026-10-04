@@ -336,10 +336,7 @@ final class TheStrandedStockHadNowhereToGoTest extends TestCase
     /** @return list<\App\Modules\Inventory\Models\StockMovement> */
     private function giveItALot(string $qty): array
     {
-        $batch = Batch::query()->firstOrCreate(
-            ['product_id' => $this->product->id, 'batch_no' => 'LOT-OPENING'],
-            ['expiry_date' => now()->addYear()->toDateString()],
-        );
+        $batch = $this->openingLot();
 
         return app(StrandedStock::class)->giveItALot(
             product: $this->product, warehouse: $this->warehouse,
@@ -347,7 +344,26 @@ final class TheStrandedStockHadNowhereToGoTest extends TestCase
         );
     }
 
-    /** @return array{challan: mixed, invoice: mixed, change: string} */
+    private function openingLot(): Batch
+    {
+        return Batch::query()->firstOrCreate(
+            ['product_id' => $this->product->id, 'batch_no' => 'LOT-OPENING'],
+            ['expiry_date' => now()->addYear()->toDateString()],
+        );
+    }
+
+    /**
+     * বিক্রি — লটটা বলে দিয়ে।
+     *
+     * ⚠️ ২৫ সেপ্টেম্বর ২০২৬ থেকে লট ধরা পণ্যে লট বাছা বাধ্যতামূলক (মালিকের
+     * সিদ্ধান্ত, [[DirectSaleService::assertEveryTrackedLineNamesItsLot()]])।
+     * ⛔ লট না বললে দুইটা দাবিই ভুল কারণে চলত: "লট বসানোর পর বেচা যায়"
+     * থামত "লট বাছতে হবে" বার্তায়, আর "আগের মাল বেচা যায় না" সবুজ থাকত
+     * ঐ একই বার্তায় — লট-ছাড়া মালের দেয়ালে পৌঁছানোর আগেই।
+     * ⓘ তাই দুইটাতেই একই লট, যেটায় এই পর্দা মাল বসায়।
+     *
+     * @return array{challan: mixed, invoice: mixed, change: string}
+     */
     private function sell(string $qty): array
     {
         return app(DirectSaleService::class)->complete(
@@ -355,7 +371,13 @@ final class TheStrandedStockHadNowhereToGoTest extends TestCase
                 'customer_id' => Customer::query()->where('name_en', 'Rahim Traders')->firstOrFail()->id,
                 'warehouse_id' => $this->warehouse->id,
             ],
-            [['product_id' => $this->product->id, 'qty' => $qty, 'rate' => '100', 'free_qty' => '0']],
+            [[
+                'product_id' => $this->product->id,
+                'batch_id' => $this->openingLot()->id,
+                'qty' => $qty,
+                'rate' => '100',
+                'free_qty' => '0',
+            ]],
         );
     }
 }

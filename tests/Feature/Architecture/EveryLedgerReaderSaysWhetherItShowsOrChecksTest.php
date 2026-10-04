@@ -71,6 +71,7 @@ final class EveryLedgerReaderSaysWhetherItShowsOrChecksTest extends TestCase
         'app/Modules/Accounts/Database/Migrations/2026_09_09_100000_the_delivery_cost_had_nowhere_to_land.php' => 'তথ্য-সারাইয়ের মাইগ্রেশন',
         'app/Modules/Accounts/Database/Migrations/2026_10_24_100000_one_payable_head_held_three_different_debts.php' => 'তথ্য-সারাইয়ের মাইগ্রেশন',
         'app/Modules/Accounts/Integrity/AccountsChecks.php' => 'অখণ্ডতার পরীক্ষা',
+        'app/Modules/Accounts/Services/BankReconciliationService.php' => 'ব্যাংক মেলানো — খাতের পুরো জের, গোটা কোম্পানি ধরে (অডিট গ৬, ৪ অক্টোবর ২০২৬)',
         'app/Modules/Accounts/Models/Account.php' => 'মূল উপকরণ — balanceOn() শাখা নেয়, ডাকার জন ঠিক করে',
         'app/Modules/Accounts/Models/CashTill.php' => 'টিলের জের — টাকা বেরোনোর যাচাইয়ে',
         'app/Modules/Accounts/Models/Loan.php' => 'ঋণের বাকি — কিস্তির নিয়মে',

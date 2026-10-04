@@ -186,7 +186,8 @@
              ⓘ পুনঃকাজের জন্য আলাদা বোতাম নেই, আর দরকারও নেই: ওটা
              আটকানো **ছেড়ে দেওয়া**, আর তার দরজা মজুদের পর্দায় আগে
              থেকেই আছে। --}}
-        @can('decide', $inspection)
+        {{-- ⭐ বিনাশের নিজের নিয়ম (অডিট গ৪, ৪ অক্টোবর ২০২৬) — ⛔ `decide` কেবল অপেক্ষমাণ কাগজে খোলে, তাই ফর্মটা কখনো দেখা যেত না --}}
+        @can('dispose', $inspection)
             @if (in_array($inspection->status, [
                 \App\Modules\Inventory\Models\QualityInspection::REJECTED,
                 \App\Modules\Inventory\Models\QualityInspection::QUARANTINE,

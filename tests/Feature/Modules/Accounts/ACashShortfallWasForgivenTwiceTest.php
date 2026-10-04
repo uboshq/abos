@@ -79,4 +79,26 @@ final class ACashShortfallWasForgivenTwiceTest extends TestCase
             '⛔ ঘাটতির সমন্বয় ভাউচার দুইবার বসেছে।');
         $this->assertSame(0, bccomp('9000', $this->till->fresh()->balance(), 4), '⛔ টিলের জের ৯,০০০ নয় — ঘাটতি দুইবার মুছেছে: '.$this->till->fresh()->balance());
     }
+
+    /**
+     * ⛔ একই দিনে দুটো গণনা, দুটোই অনুমোদিত — অডিট গ৭, ৪ অক্টোবর ২০২৬।
+     * দুটো গণনাই একই ১,০০০ ঘাটতি দেখে (খাতা তখনো বদলায়নি)। আগে দুটোই নিজের পুরনো পার্থক্যে সমন্বয় বসাত
+     * — ঘাটতি ২,০০০ হয়ে খরচে উঠত, আর বাক্সের জের ৮,০০০, অথচ হাতে ৯,০০০।
+     */
+    public function test_two_counts_of_one_shortfall_write_it_off_once(): void
+    {
+        $service = app(CashCountService::class);
+
+        $first = $service->record(['cash_till_id' => $this->till->id, 'trx_date' => '2026-08-10'], [1000 => 9]);
+        $second = $service->record(['cash_till_id' => $this->till->id, 'trx_date' => '2026-08-10'], [1000 => 9]);
+        $this->assertSame(0, bccomp('-1000', (string) $second->difference, 4), 'প্রস্তুতি ভুল — দ্বিতীয় গণনা ঘাটতি দেখছে না।');
+
+        $service->approve($first);
+        $done = $service->approve($second->fresh());
+
+        $this->assertNull($done->adjustment_voucher_id, '⛔ দ্বিতীয় গণনা একই ঘাটতি আবার খরচে বসাল।');
+        $this->assertSame(0, bccomp('0', (string) $done->difference, 4), 'দ্বিতীয় গণনার পার্থক্য এখন শূন্য হওয়ার কথা: '.$done->difference);
+        $this->assertSame(0, bccomp('9000', $this->till->fresh()->balance(), 4),
+            '⛔ বাক্সের জের ৯,০০০ নয়: '.$this->till->fresh()->balance());
+    }
 }

@@ -62,7 +62,13 @@ class QualityInspectionController extends Controller implements HasMiddleware
              * তাদের একটাও নয়। ⛔ এই লাইনটা না থাকলে রুটটা **খোলা**
              * থাকত, আর যে কেউ মাল বাতিল করে দিতে পারত।
              */
-            new Middleware('can:decide,inspection', only: ['decide', 'dispose']),
+            new Middleware('can:decide,inspection', only: ['decide']),
+
+            /*
+             * ⭐ বিনাশের নিজের নিয়ম — অডিট গ৪, ৪ অক্টোবর ২০২৬। ⛔ আগে এটাও `decide` দেখত, যা কেবল অপেক্ষমাণ
+             * কাগজে খোলে; বিনাশ চলে কেবল রায়-হওয়া কাগজে — তাই দরজাটা সবার জন্য বন্ধ ছিল।
+             */
+            new Middleware('can:dispose,inspection', only: ['dispose']),
         ];
     }
 

@@ -354,7 +354,7 @@ final class DirectSaleService
                 (int) $challan->id,
             );
 
-            $challan = $this->challans->confirm($challan->fresh(['lines']), $deposit);
+            $challan = $this->challans->confirm($challan->fresh(['lines']), $deposit, DeliveryOrderStock::reservationsOf($source)); // ⓘ গ১১: DO-র নিজের আটকানো এই বিক্রিরই
 
             // ফ্রি ও উপহার — চালান নিশ্চিত হওয়ার পর, ফ্রি ভাণ্ডার থেকে
             $this->moveFreeStock($challan->fresh(['lines.product', 'giftLines.product']), $warehouse);
@@ -1453,7 +1453,7 @@ final class DirectSaleService
             );
 
             // ⓘ গোনা টাকাসহ — নইলে নগদে দেওয়া বিক্রয়ও চালানের সীমায় আটকাত
-            $challan = $this->challans->confirm($challan, $deposit);
+            $challan = $this->challans->confirm($challan, $deposit, DeliveryOrderStock::reservationsOf($source)); // ⓘ গ১১: DO-র নিজের আটকানো এই বিক্রিরই
 
             $this->moveFreeStock($challan->fresh(['lines.product', 'giftLines.product']), $challan->warehouse);
 
@@ -2053,7 +2053,7 @@ final class DirectSaleService
          * আলাদা হত — ঠিক যে ভুলটা সারানো হলো।
          */
         if ($chosen !== null) {
-            $have = $chosen->freeBalance($warehouse);
+            $have = $this->batches->lockedFreeBalance($chosen, $warehouse); // ⓘ গ১৩: তালাসহ — দুই কাউন্টার একই শেষ ফ্রি কার্টন দিত
 
             if (bccomp($have, $qty, 4) < 0) {
                 throw ValidationException::withMessages([

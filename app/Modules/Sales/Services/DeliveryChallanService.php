@@ -229,8 +229,11 @@ final class DeliveryChallanService
      * @param  string  $payingNow  এই মালের জন্য **এখনই** গোনা টাকা — কেবল
      *                             কাউন্টার পাঠায়। ⓘ অফিসের ডিও-তে শূন্য:
      *                             মাল যায়, টাকা আসে পরে।
+     * @param  list<array{0: string, 1: int}>  $ownReservations  এই বিক্রিরই অন্য সংরক্ষণ (যেমন DO-র কড়া
+     *                             আটকানো, [[DeliveryOrderStock::reservationsOf()]]) — "পাওয়া যায়"-এর পাহারায় এগুলো
+     *                             এই চালানের জন্যই রাখা বলে গোনা হয় (অডিট গ১১, ৪ অক্টোবর ২০২৬)।
      */
-    public function confirm(DeliveryChallan $challan, string $payingNow = '0'): DeliveryChallan
+    public function confirm(DeliveryChallan $challan, string $payingNow = '0', array $ownReservations = []): DeliveryChallan
     {
         if ($challan->status !== DocumentStatus::DRAFT) {
             throw ValidationException::withMessages([
@@ -316,7 +319,7 @@ final class DeliveryChallanService
          */
         app(MarginGuard::class)->assertMargin($challan);
 
-        return DB::transaction(function () use ($challan, $payingNow) {
+        return DB::transaction(function () use ($challan, $payingNow, $ownReservations) {
             /*
              * ⛔ একই দেয়াল আবার — এবার গ্রাহকের সারিতে তালা দিয়ে, ২৭ সেপ্টেম্বর ২০২৬।
              *
@@ -391,6 +394,15 @@ final class DeliveryChallanService
                      * সারিতে ঘরটা খালি — তাই তাদের কিছুই বদলায় না।
                      */
                     batch: $line->batch,
+
+                    /*
+                     * ⭐ "পাওয়া যায়" থেকে, তাক থেকে নয় — অডিট গ১১, ৪ অক্টোবর ২০২৬।
+                     * ⛔ আগে কেবল তাক দেখা হত: অন্য ডিলারের DO-র সংরক্ষিত মাল, পরিদর্শনে বাতিল মাল, স্থানান্তরের
+                     * ট্রাকের মাল — সবই কাউন্টারে বিক্রি হয়ে যেত। ⓘ আদেশের যতটা উপরে ছাড়া হচ্ছে, সেটুকু নিজেই
+                     * ফেরে; মাপা হয় কেবল তার বাইরেরটা, তালাসহ ([[StockService::move()]])।
+                     */
+                    fromAvailable: true,
+                    ownReservations: $ownReservations,
                 );
 
                 $this->assertWithinPrintedPrice($line, $movements);

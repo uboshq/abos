@@ -290,6 +290,22 @@ final class DeliveryOrderStock
     }
 
     /**
+     * ⭐ এই উৎসের বিক্রির নিজের সংরক্ষণ — চালানের "পাওয়া যায়" পাহারার জন্য (অডিট গ১১, ৪ অক্টোবর ২০২৬)।
+     *
+     * ⓘ DO-র কড়া আটকানো ফেরে চালান নিশ্চিত হওয়ার **পরে**, একই লেনদেনে ([[consume()]])। ⛔ তাই নিশ্চিতের মুহূর্তে
+     * ওটা না গুনলে DO-র নিজের আটকানো মালই নিজের চালানকে "পাওয়া যায় না" বলত
+     * ([[DeliveryChallanService::confirm()]]-এর `ownReservations`)। অন্য কোনো উৎসে খালি তালিকা।
+     *
+     * @return list<array{0: string, 1: int}>
+     */
+    public static function reservationsOf(mixed $source): array
+    {
+        return $source instanceof DeliveryOrder
+            ? [[DeliveryOrderStockHold::STOCK_SOURCE, (int) $source->id]]
+            : [];
+    }
+
+    /**
      * ⚠️ সফটওয়্যারের কাজ, কোনো মানুষের দেখা নয় — তাই "ব্যবহারকারীর গুদাম" ছাঁকনি ছাড়া, কেবল DO-র কোম্পানি ধরে।
      * ⓘ ধরা পড়েছে ৩ অক্টোবর ২০২৬ (abos-2c): ডিলার পোর্টালে জমা দিলে কর্তা গ্রাহক, ব্যবহারকারী নন — ছাঁকনিটা ভেঙে ৫০০।
      */

@@ -10,6 +10,7 @@ use App\Core\Services\MenuBuilder;
 use App\Core\Support\CompanyContext;
 use App\Core\Support\Money;
 use App\Http\Controllers\Controller;
+use App\Modules\Inventory\Models\Batch;
 use App\Modules\Inventory\Models\Product;
 use App\Modules\Inventory\Models\Warehouse;
 use App\Modules\Inventory\Services\PackConversion;
@@ -25,6 +26,7 @@ use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
 /**
@@ -582,9 +584,40 @@ class StockController extends Controller implements HasMiddleware
         return back()->with('saved', __('inventory::message.held'));
     }
 
+    /**
+     * সাধারণ "ছাড়ো" — কেবল যা এই পর্দার আটকানো, আর যা ফিরে বিক্রয়যোগ্য হওয়ার মতো।
+     *
+     * ── ⛔ কী ভাঙা ছিল — অডিট গ১, ৪ অক্টোবর ২০২৬ ─────────────────────────
+     * বোতামটা দেখত কেবল গুদামে মোট কত আটকানো; কেন আটকানো, দেখত না। পথে থাকা স্থানান্তরের মাল (`HOLD-TRN`)
+     * বা পরিদর্শনে বাতিল মাল (`HOLD-REJ`) এখান দিয়ে ছেড়ে কাউন্টারে বেচা যেত।
+     *
+     * ── ⭐ এখন ─────────────────────────────────────────────────────────────
+     * ⛔ `returns_to_stock = false` কারণ (বাতিল, নষ্ট) আর পথের কারণ এখানে চলে না — ওদের নিজের কাগজ আছে
+     * (বিনাশ, ফেরত, স্থানান্তর পৌঁছানো বা বাতিল)। ⓘ সীমা কারণ আর লট ধরে ([[StockService::release()]])।
+     */
     public function storeRelease(Request $request): RedirectResponse
     {
         $data = $this->validatedMovement($request, ReasonCode::HOLD, 'qty');
+
+        if (! $data['reason']->returns_to_stock || $data['reason']->code === 'HOLD-TRN') {
+            throw ValidationException::withMessages([
+                'reason_code_id' => __('inventory::validation.release_not_from_here', ['reason' => $data['reason']->name()]),
+            ]);
+        }
+
+        // ⓘ লট বললে সেই লটের আটকানো — লট-ধরা কোয়ারেন্টাইন পুনঃকাজে ছাড়ার জন্য; না বললে লট-ছাড়া আটকানো
+        $request->validate([
+            'batch_id' => ['nullable', 'integer',
+                Rule::exists('inv_batches', 'id')->where('company_id', CompanyContext::id())],
+        ]);
+
+        $batch = $request->filled('batch_id') ? Batch::query()->findOrFail($request->integer('batch_id')) : null;
+
+        if ($batch !== null && (int) $batch->product_id !== (int) $data['product']->id) {
+            throw ValidationException::withMessages([
+                'batch_id' => __('inventory::validation.release_lot_not_this_product', ['lot' => $batch->batch_no]),
+            ]);
+        }
 
         $this->stock->release(
             product: $data['product'],
@@ -592,6 +625,7 @@ class StockController extends Controller implements HasMiddleware
             qty: (string) $request->input('qty'),
             reason: $data['reason'],
             date: $request->input('trx_date'),
+            batch: $batch,
         );
 
         return back()->with('saved', __('inventory::message.released'));

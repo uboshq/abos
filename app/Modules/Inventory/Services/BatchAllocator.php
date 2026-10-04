@@ -96,8 +96,17 @@ class BatchAllocator
                 break;
             }
 
-            // ⛔ তাকের মাল — তোলার-অপেক্ষারটা বিক্রি হয় না ([[Batch::floorBalance()]])
-            $available = $free ? $batch->freeBalance($warehouse) : $batch->floorBalance($warehouse);
+            /*
+             * ⛔ তাকের মাল — তোলার-অপেক্ষারটা বিক্রি হয় না ([[Batch::floorBalance()]])।
+             *
+             * ⭐ অডিট গ২ ও গ১৩, ৪ অক্টোবর ২০২৬:
+             *   · এই লটে যা আটকানো (পরিদর্শনে বাতিল, কোয়ারেন্টাইন), সেটা বাদ — ⛔ আগে লট A-র ১০টা বাতিল
+             *     হয়ে আটকানো থাকলেও আগে-মেয়াদ নিয়মে লট A-ই বাছা হত, আর বাতিল মাল চলে যেত;
+             *   · গোনা `FOR UPDATE`-এ — ⛔ লটের সারিতে তালা পড়লেও সাধারণ `SUM` লেনদেনের পুরনো snapshot পড়তে
+             *     পারত, আর দুই বিক্রি একসাথে একই লট শূন্যের নিচে নিত ([[StockService::issue()]]-এর বাছা লটের
+             *     সেই একই সারাই)।
+             */
+            $available = $this->lockedBalance($batch, $warehouse, $free);
 
             if (bccomp($available, '0', 4) <= 0) {
                 continue;
@@ -129,6 +138,37 @@ class BatchAllocator
         }
 
         return $taken;
+    }
+
+    /**
+     * একটা লটে এক গুদামে কতটা নেওয়া যায় — তালাসহ, সর্বশেষ কমিট ধরে।
+     *
+     * ⓘ বিক্রির ভাণ্ডারে তাক থেকে লটের আটকানো বাদ; ফ্রি ভাণ্ডারে আটকানো নেই, তাই কেবল ফ্রি তাক।
+     */
+    private function lockedBalance(Batch $batch, Warehouse $warehouse, bool $free): string
+    {
+        return (string) StockMovement::query()
+            ->where('batch_id', $batch->id)
+            ->where('warehouse_id', $warehouse->id)
+            ->lockForUpdate()
+            ->selectRaw($free
+                ? 'COALESCE(SUM(free_change), 0) as total'
+                : 'COALESCE(SUM(floor_change - hold_change), 0) as total')
+            ->value('total');
+    }
+
+    /**
+     * ⭐ বাছা লটের ফ্রি মাল — লটের সারিতে তালা, তারপর তালাসহ গোনা (অডিট গ১৩, ৪ অক্টোবর ২০২৬)।
+     *
+     * ⓘ কাউন্টারের ফ্রি সারিতে লট বাছা থাকলে [[DirectSaleService]] এটা জিজ্ঞেস করে। ⛔ আগে সে
+     * [[Batch::freeBalance()]] পড়ত তালা ছাড়া — দুই কাউন্টার একই লটের শেষ ফ্রি কার্টন দুজনেই দিত।
+     * ⚠️ লেনদেনের ভিতরে ডাকতে হয়; তালাটা টেকে লেনদেন শেষ পর্যন্ত।
+     */
+    public function lockedFreeBalance(Batch $batch, Warehouse $warehouse): string
+    {
+        Batch::query()->whereKey($batch->id)->lockForUpdate()->first();
+
+        return $this->lockedBalance($batch, $warehouse, free: true);
     }
 
     /**
@@ -219,8 +259,11 @@ class BatchAllocator
                 break;
             }
 
-            // ⓘ পর্দার দেখা আর আসল বাছাই একই সংখ্যা দেখে — তাকের মাল
-            $available = $batch->floorBalance($warehouse);
+            // ⓘ পর্দার দেখা আর আসল বাছাই একই সংখ্যা দেখে — তাকের মাল, লটের আটকানো বাদ (গ২)
+            $available = bcsub($batch->floorBalance($warehouse), (string) StockMovement::query()
+                ->where('batch_id', $batch->id)
+                ->where('warehouse_id', $warehouse->id)
+                ->sum('hold_change'), 4);
 
             if (bccomp($available, '0', 4) <= 0) {
                 continue;

@@ -17,6 +17,7 @@ return [
     'unknown_receipt_line' => 'That receipt line is not in this company\'s list.',
     'no_financial_year' => ':date does not fall in any open financial year.',
     'vat_is_off' => 'VAT is off for this company - a line cannot carry VAT. To turn it on: Control panel, VAT on / off.',
+    'return_tax_over_bill' => 'The VAT on a return cannot exceed this share of the VAT on the bill: :max.',
     'discount_over_line' => 'A discount cannot exceed the line amount.',
     'bill_discount_over_total' => 'The bill discount cannot exceed the goods total (:total).',
     'not_a_number' => 'Please enter a number.',

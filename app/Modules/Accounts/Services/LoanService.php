@@ -221,6 +221,17 @@ final class LoanService
              * আর সুদের অঙ্ক বছরের কর হিসাবেও যায়।
              */
             $interest = (string) $instalment->interest;
+
+            /*
+             * ⛔ সুদের চেয়ে কম দেওয়া যায় না — অডিট গ১৭, ৪ অক্টোবর ২০২৬। আগে আসল হত ঋণাত্মক, আর খাতায় বসত
+             * "ঋণ খাতে ঋণাত্মক ডেবিট" — অর্থাৎ কিস্তি দিয়ে ঋণ **বাড়ত**।
+             */
+            if (bccomp($paid, '0', 4) <= 0 || bccomp($paid, $interest, 4) < 0) {
+                throw ValidationException::withMessages([
+                    'amount' => __('accounts::validation.instalment_below_interest', ['interest' => $interest]),
+                ]);
+            }
+
             $principal = bcsub($paid, $interest, 4);
 
             /*
@@ -234,11 +245,15 @@ final class LoanService
                 sourceType: LoanInstalment::drillSourceType(),
                 sourceId: $instalment->id,
                 trxDate: $this->dateFor($date),
-                lines: [
+                /*
+                 * ⭐ শূন্যের সারি বাদ — অডিট গ১৭। বিনা সুদের ঋণে সুদের সারি শূন্য, আর ইঞ্জিন শূন্য সারি নেয় না;
+                 * তাই আগে এমন ঋণের একটা কিস্তিও দেওয়া যেত না। পুরো কিস্তি সুদ হলে আসলের সারিও শূন্য।
+                 */
+                lines: array_values(array_filter([
                     ['account_id' => $loan->principal_account_id, 'debit' => $principal],
                     ['account_id' => $loan->interest_account_id, 'debit' => $interest],
                     ['account_id' => $fromAccountId, 'credit' => $paid],
-                ],
+                ], fn (array $l) => bccomp((string) ($l['debit'] ?? $l['credit']), '0', 4) > 0)),
                 documentNo: $loan->document_no.'/'.$instalment->no,
             );
 

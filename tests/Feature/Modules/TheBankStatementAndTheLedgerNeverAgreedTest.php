@@ -206,6 +206,46 @@ class TheBankStatementAndTheLedgerNeverAgreedTest extends TestCase
         $this->assertSame('10000.0000', $summary['difference']);
     }
 
+    /**
+     * ⛔ দ্বিতীয় মাস — অডিট গ৬, ৪ অক্টোবর ২০২৬।
+     * আগস্ট মিলিয়ে বন্ধ করার পরে সেপ্টেম্বরের তালিকা থেকে আগস্টের সারি বাদ যায় (ঠিকই), কিন্তু আগে সেই সঙ্গে
+     * খাতার জের থেকেও বাদ যেত — তাই সঠিক কাগজের জের দিলেও সেপ্টেম্বর কোনোদিন মিলত না।
+     */
+    public function test_the_second_month_agrees_with_the_right_statement(): void
+    {
+        $this->move('2026-08-01', '50000', intoBank: true);
+        $august = $this->open('2026-08-31', '50000');
+        $this->recons->mark($august, $this->lineIds($august));
+        $this->recons->confirm($august);
+
+        $this->move('2026-09-10', '7000', intoBank: true);
+        $september = $this->open('2026-09-30', '57000');
+        $this->recons->mark($september, $this->lineIds($september));
+
+        $summary = $this->recons->summary($september);
+
+        $this->assertSame('57000.0000', $summary['ledger'], 'সেপ্টেম্বরের খাতার জের আগস্টের মেলানো টাকা হারিয়েছে।');
+        $this->assertTrue($summary['agrees'], 'দ্বিতীয় মাস সঠিক কাগজেও মিলল না: তফাত '.$summary['difference']);
+    }
+
+    /**
+     * ⛔ ভাউচার নয় এমন চলাচলও খাতার জেরে — অডিট গ৬। ব্যাংকে সরাসরি বসা টাকা (এখানে পুঁজি থেকে, ভাউচার
+     * ছাড়া — আদায়, চেক পাশ, স্থানান্তরের মতো) আগে জেরে আসতই না, তাই কাগজের সাথে কোনোদিন মিলত না।
+     */
+    public function test_money_that_reached_the_bank_without_a_voucher_counts(): void
+    {
+        $this->putMoneyIn($this->bank, '25000', '2026-08-02');
+        $this->move('2026-08-05', '5000', intoBank: true);
+
+        $recon = $this->open('2026-08-31', '30000');
+        $this->recons->mark($recon, $this->lineIds($recon));
+
+        $summary = $this->recons->summary($recon);
+
+        $this->assertSame('30000.0000', $summary['ledger']);
+        $this->assertTrue($summary['agrees'], 'ভাউচার-ছাড়া টাকা জেরে আসেনি: তফাত '.$summary['difference']);
+    }
+
     /** সঠিক জের দিলে ওই একই অবস্থাতেই মিলে যায়। */
     public function test_with_the_right_statement_balance_the_same_case_agrees(): void
     {

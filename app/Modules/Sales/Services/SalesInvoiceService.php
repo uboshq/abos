@@ -502,12 +502,11 @@ final class SalesInvoiceService
          * আর কেউ ধরতে পারত না, কারণ কোথাও কিছু ভাঙত না; কেবল
          * "বিক্রয়যোগ্য" সংখ্যাটা রোজ একটু একটু করে মিথ্যা হত।
          *
-         * ⓘ শর্তটা `parked_at`-এ, কারণ সংরক্ষণটা কেবল ধরে রাখা বিলেই
-         * বসে ([[ParkedStockReservation]])।
+         * ⛔ আগে শর্ত ছিল `parked_at`-এ — কিন্তু ফিরিয়ে আনলে (`resume`) ওটা মুছে যায়, তাই আবার খুলে বেচা বিলের
+         * সংরক্ষণ চিরকাল থেকে যেত (অডিট গ১২, ৪ অক্টোবর ২০২৬)। ⭐ এখন সবসময় ডাকা হয়: এই বিলের নামে খাতায় যতটা
+         * ধরা আছে ততটাই ফেরে, কিছু না থাকলে কিছুই নয় ([[ParkedStockReservation::release()]])।
          */
-        if ($invoice->parked_at !== null) {
-            app(ParkedStockReservation::class)->release($invoice);
-        }
+        app(ParkedStockReservation::class)->release($invoice);
 
         /*
          * লেনদেনের বাইরে, ইচ্ছাকৃতভাবে।
@@ -745,9 +744,8 @@ final class SalesInvoiceService
              * ⓘ নিচের ব্লকটা কেবল CONFIRMED বিলের স্টক ফেরায়, আর ধরে রাখা বিল
              * DRAFT অবস্থায় থাকে — দুইটা আলাদা প্রশ্ন, তাই আলাদা জায়গা।
              */
-            if ($locked->parked_at !== null) {
-                app(ParkedStockReservation::class)->release($invoice);
-            }
+            // ⭐ গ১২ — `parked_at` দেখে নয়: ফিরিয়ে আনা বিলে ওটা মোছা, অথচ সংরক্ষণ তখনো খাতায়; ধরা না থাকলে কিছুই হয় না
+            app(ParkedStockReservation::class)->release($invoice);
 
             if ($locked->status === DocumentStatus::CONFIRMED) {
                 $this->unpost($invoice, $date, $reason);

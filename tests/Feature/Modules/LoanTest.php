@@ -241,6 +241,46 @@ class LoanTest extends TestCase
         $this->service()->payInstalment($first->fresh(), $this->moneyAccount()->id, '2026-08-02');
     }
 
+    /**
+     * ⛔ বিনা সুদের ঋণের কিস্তি — অডিট গ১৭, ৪ অক্টোবর ২০২৬।
+     * আগে সুদের সারি শূন্য হত, আর ইঞ্জিন শূন্য সারি ফেরায় — তাই এমন ঋণের একটা কিস্তিও দেওয়া যেত না।
+     */
+    public function test_an_interest_free_loan_can_pay_its_instalment(): void
+    {
+        $this->actingAs($this->user);
+
+        $loan = $this->term(['interest_rate' => '0', 'sanctioned' => '120000', 'tenure_months' => 12]);
+        $first = $loan->instalments->first();
+        $this->assertSame(0, bccomp('0', (string) $first->interest, 4), 'পরীক্ষাটা বিনা সুদের ঋণ মাপছে না।');
+
+        $this->service()->payInstalment($first, $this->moneyAccount()->id, '2026-08-01');
+
+        $this->assertTrue($first->fresh()->isPaid());
+        $this->assertSame(0, bccomp('110000', $this->liabilityFromLedger(), 4),
+            'বিনা সুদের কিস্তির পরে দায় '.$this->liabilityFromLedger().', হওয়ার কথা ১,১০,০০০।');
+    }
+
+    /** ⛔ সুদের চেয়ে কম দিলে থামে — আগে আসল ঋণাত্মক হয়ে খাতায় "ঋণ খাতে ঋণাত্মক ডেবিট" বসত (অডিট গ১৭)। */
+    public function test_an_instalment_below_the_interest_is_refused(): void
+    {
+        $this->actingAs($this->user);
+
+        $loan = $this->term();
+        $first = $loan->instalments->first();
+        $less = bcsub((string) $first->interest, '1', 4);
+        $rows = LedgerEntry::query()->count();
+
+        try {
+            $this->service()->payInstalment($first, $this->moneyAccount()->id, '2026-08-01', $less);
+            $this->fail('সুদের চেয়ে কম কিস্তি নেওয়া হলো।');
+        } catch (ValidationException $e) {
+            $this->assertArrayHasKey('amount', $e->errors());
+        }
+
+        $this->assertSame($rows, LedgerEntry::query()->count(), 'থামার পরেও খাতায় সারি বসেছে।');
+        $this->assertSame(0, LedgerEntry::query()->where('debit', '<', 0)->orWhere('credit', '<', 0)->count());
+    }
+
     public function test_a_term_loan_ends_at_zero_when_every_instalment_is_paid(): void
     {
         $this->actingAs($this->user);

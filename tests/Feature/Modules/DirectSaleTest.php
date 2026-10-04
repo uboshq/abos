@@ -125,13 +125,45 @@ class DirectSaleTest extends TestCase
          * ⛔ লাইনটা তুলে দিলে পরীক্ষাগুলো লাল হবে — সেটাই প্রমাণ যে
          * ধাপটা সত্যিকারের।
          */
+        /*
+         * ⚠️ বিল যে লটে মাল তুলেছে, সেই লটেই বসানো — অডিট গ১৪, ৪ অক্টোবর ২০২৬ থেকে বসানো চলে কাগজ·লট ধরে।
+         * লট না বললে এখন "এত মাল অপেক্ষায় নেই — বাকি ০", কারণ বিলের মাল একটা লটে অপেক্ষা করছে।
+         */
+        $lot = \App\Modules\Inventory\Models\StockMovement::query()
+            ->where('source_type', PurchaseBill::STOCK_SOURCE)
+            ->where('source_id', $bill->id)
+            ->where('product_id', $product->id)
+            ->value('batch_id');
+
+        $this->placeLikeTheScreen($product, $bill, '1', $qty, $lot !== null ? Batch::query()->findOrFail($lot) : null);
+    }
+
+    /**
+     * বসানো — পর্দা যেভাবে চাপে: টাকার মাল বিলের নিজের উৎসে, ফ্রি মাল `…:free` উৎসে
+     * ([[StockPlacementController]]-এর জোড়া সারি)।
+     *
+     * ⚠️ অডিট গ১৪ (৪ অক্টোবর ২০২৬) থেকে বসানো চলে কাগজ·উৎস·লটের দল ধরে। এক চাপে দুইটা দিলে ফ্রি অংশ বিলের
+     * নিজের উৎসে খোঁজা হত — সেখানে ফ্রির অপেক্ষা শূন্য, তাই "বাকি ০"।
+     */
+    private function placeLikeTheScreen(Product $product, PurchaseBill $bill, string $paid, string $free, ?Batch $batch): void
+    {
         app(StockService::class)->place(
             product: $product,
             warehouse: $this->warehouse,
-            qty: '1',
+            qty: $paid,
             sourceType: PurchaseBill::STOCK_SOURCE,
             sourceId: $bill->id,
-            freeQty: $qty,
+            batch: $batch,
+        );
+
+        app(StockService::class)->place(
+            product: $product,
+            warehouse: $this->warehouse,
+            qty: '0',
+            sourceType: PurchaseBill::STOCK_SOURCE.':free',
+            sourceId: $bill->id,
+            batch: $batch,
+            freeQty: $free,
         );
     }
 
@@ -170,15 +202,7 @@ class DirectSaleTest extends TestCase
 
         $batch = Batch::query()->where('product_id', $product->id)->where('batch_no', 'DS-FREE-1')->firstOrFail();
 
-        app(StockService::class)->place(
-            product: $product,
-            warehouse: $this->warehouse,
-            qty: $paid,
-            sourceType: PurchaseBill::STOCK_SOURCE,
-            sourceId: $bill->id,
-            batch: $batch,
-            freeQty: $free,
-        );
+        $this->placeLikeTheScreen($product, $bill, $paid, $free, $batch);
 
         return $batch->refresh();
     }

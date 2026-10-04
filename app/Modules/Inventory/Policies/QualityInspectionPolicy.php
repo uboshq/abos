@@ -59,4 +59,22 @@ class QualityInspectionPolicy
     {
         return $user->can('inventory.qc.decide') && $document->isPending();
     }
+
+    /**
+     * ⭐ বাতিল মাল বিনাশ — রায়েরই চাবি, কিন্তু রায় হয়ে যাওয়া কাগজে (অডিট গ৪, ৪ অক্টোবর ২০২৬)।
+     *
+     * ── ⛔ কী ভাঙা ছিল ─────────────────────────────────────────────────
+     * বিনাশের রুট পাহারা দিত `decide` নিয়ম, আর সে খোলে কেবল **অপেক্ষমাণ** কাগজে — অথচ বিনাশ চলে কেবল
+     * **বাতিল বা কোয়ারেন্টাইন** কাগজে। ফলে সবার জন্য ৪০৩: বাতিল মাল চিরকাল আটকে থাকত, বা লোকে ঘুরপথ
+     * নিতেন (ছাড়ো, তারপর বের করো) — আর সেই মাঝের মুহূর্তে বাতিল মাল বিক্রয়যোগ্য।
+     *
+     * ⓘ চাবি একই (`inventory.qc.decide`) — বিনাশ রায়ের ধারাবাহিকতা, আলাদা ক্ষমতা নয়।
+     */
+    public function dispose(User $user, QualityInspection $document): bool
+    {
+        return $user->can('inventory.qc.decide') && in_array($document->status, [
+            QualityInspection::REJECTED,
+            QualityInspection::QUARANTINE,
+        ], true);
+    }
 }

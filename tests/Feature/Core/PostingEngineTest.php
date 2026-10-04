@@ -199,6 +199,29 @@ class PostingEngineTest extends TestCase
         ]);
     }
 
+    /**
+     * ⛔ ঋণাত্মক অঙ্ক খাতায় ঋণাত্মক সারি হয়ে বসে না — উল্টো পাশে ধনাত্মক হয় (অডিট গ১৭, ৪ অক্টোবর ২০২৬)।
+     * ⓘ "ডেবিট −৪০" আর "ক্রেডিট ৪০" একই কথা; দুই পাশের যোগফলও একই থাকে।
+     */
+    public function test_a_negative_amount_lands_on_the_other_side(): void
+    {
+        $this->engine->post('journal_voucher', 23, '2026-08-04', [
+            ['account_id' => 10, 'debit' => 100],
+            ['account_id' => 11, 'debit' => -40],
+            ['account_id' => 20, 'credit' => 60],
+        ]);
+
+        $rows = LedgerEntry::query()->where('source_id', 23)->get();
+
+        $this->assertSame(0, $rows->filter(fn ($r) => bccomp((string) $r->debit, '0', 4) < 0 || bccomp((string) $r->credit, '0', 4) < 0)->count(),
+            'খাতায় ঋণাত্মক সারি বসেছে।');
+
+        $flipped = $rows->firstWhere('account_id', 11);
+        $this->assertSame(0, bccomp('0', (string) $flipped->debit, 4));
+        $this->assertSame(0, bccomp('40', (string) $flipped->credit, 4), 'ডেবিট −৪০ ক্রেডিট ৪০ হয়নি।');
+        $this->assertSame(0, bccomp((string) $rows->sum('debit'), (string) $rows->sum('credit'), 4));
+    }
+
     public function test_posting_into_a_closed_year_is_refused(): void
     {
         FinancialYear::query()->update(['is_closed' => true]);

@@ -64,13 +64,18 @@ final class TheGoodsCameInAndNobodyWroteDownWhoLookedTest extends TestCase
 
     // ── ১ · কাগজ খোলায় মজুদ নড়ে না ───────────────────────────────────
 
-    public function test_opening_a_paper_moves_no_stock(): void
+    /*
+     * ⚠️ ৪ অক্টোবর ২০২৬ (অডিট গ৩) পর্যন্ত এখানে উল্টো দাবি ছিল — *"কাগজ খোলায় মজুদ নড়ে না"*। ⛔ সেটাই ছিল
+     * ফাঁক: পরিদর্শনের অপেক্ষার মাল তাকে উঠেই বিক্রি হত, পরিদর্শক দেখার আগেই। ⭐ এখন খুললেই আটকায়, আর
+     * রায়ে ফেরে (নিচের ২–৪ দাবি রায়ের পরের অবস্থা মাপে, তাই বদলায়নি)। ⓘ কাগজ খোলার চাবি আলাদা, আর
+     * আটকানোটা কাগজের নামে — রায় ছাড়া কোনো পর্দা ওটা ছাড়তে পারে না।
+     */
+    public function test_opening_a_paper_holds_the_goods_until_the_verdict(): void
     {
         $this->open('50');
 
-        $this->assertSame(0, bccomp($this->heldQty(), '0', 4),
-            'কেবল কাগজ খুলতেই মাল আটকে গেছে — তাহলে যে কেউ কাগজ খুলে '
-            .'গুদামের মাল বিক্রির বাইরে পাঠিয়ে দিতে পারতেন।');
+        $this->assertSame(0, bccomp($this->heldQty(), '50', 4),
+            'কাগজ খোলার পরেও মাল বিক্রয়যোগ্য — পরিদর্শকের দেখার আগেই সেটা কাউন্টার থেকে বেরিয়ে যেত।');
     }
 
     public function test_the_sheet_only_offers_products_that_ask_for_inspection(): void
@@ -144,6 +149,9 @@ final class TheGoodsCameInAndNobodyWroteDownWhoLookedTest extends TestCase
          */
         $inspection = $this->open('50');
 
+        // ⓘ অডিট গ৩ (৪ অক্টোবর ২০২৬) থেকে কাগজ খুললেই মাল আটকে যায় — ব্যর্থ রায় তার বাইরে কিছু আটকাবে না
+        $before = $this->heldQty();
+
         $this->actingAs($this->owner)
             ->from(route('inventory.qc.show', $inspection))
             ->post(route('inventory.qc.decide', $inspection), [
@@ -156,8 +164,8 @@ final class TheGoodsCameInAndNobodyWroteDownWhoLookedTest extends TestCase
         $this->assertTrue($inspection->fresh()->isPending(),
             'যোগফল না মিললেও রায়টা বসে গেছে।');
 
-        $this->assertSame(0, bccomp($this->heldQty(), '0', 4),
-            'ব্যর্থ রায়েও মাল আটকে গেছে।');
+        $this->assertSame(0, bccomp($this->heldQty(), $before, 4),
+            'ব্যর্থ রায়েও আটকানো মাল বদলে গেছে।');
     }
 
     public function test_a_decided_paper_cannot_be_decided_again(): void
