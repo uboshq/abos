@@ -4,10 +4,16 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Modules\Inventory;
 
+use App\Core\Module\ModuleRegistry;
+use App\Core\Services\SettingsService;
 use App\Core\Support\CompanyContext;
 use App\Models\Company;
 use App\Models\User;
+use App\Modules\Inventory\Imports\ProductImporter;
+use App\Modules\Inventory\Models\Batch;
 use App\Modules\Inventory\Models\Product;
+use App\Modules\Inventory\Models\StockMovement;
+use App\Modules\Inventory\Models\Warehouse;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -69,6 +75,9 @@ final class TheLotSwitchExistedButNoScreenCouldReachItTest extends TestCase
      */
     public function test_the_switch_can_be_turned_off_again(): void
     {
+        // ⓘ পণ্য-প্রতি বাছাই কেবল কোম্পানির সুইচ বন্ধ থাকলে (৪ অক্টোবর ২০২৬) — নিচের আলাদা দাবি চালু অবস্থা মাপে
+        app(SettingsService::class)->set('inventory.lots_always', false);
+
         $product = Product::query()->orderBy('id')->firstOrFail();
 
         $this->save($product, lots: true);
@@ -115,6 +124,90 @@ final class TheLotSwitchExistedButNoScreenCouldReachItTest extends TestCase
         $tag = substr($html, $at, 120);
 
         $this->assertStringContainsString('checked', $tag, 'নতুন পণ্যে লট ডিফল্টে চালু নেই।');
+    }
+
+    /**
+     * ⛔ কোম্পানির সুইচ ডিফল্টে চালু, আর চালু থাকলে কোনো পণ্য লট ছাড়ে না — ৩ অক্টোবরের "লট সবসময়" লাইভে যেমন ছিল।
+     * ⓘ একই মানুষ, একই পণ্য: সুইচ চালু থাকলে `0` পাঠালেও লট থাকে, বন্ধ করলে তবেই নামে।
+     */
+    public function test_the_company_switch_starts_on_and_then_no_product_drops_its_lots(): void
+    {
+        $default = collect(app(ModuleRegistry::class)->all())
+            ->flatMap(fn ($m) => $m->settings)->firstWhere('key', 'inventory.lots_always')['default'] ?? null;
+        $this->assertTrue($default, '⛔ সুইচের ডিফল্ট চালু নয় — লাইভে লট হঠাৎ ঐচ্ছিক হয়ে যেত।');
+
+        $product = Product::query()->orderBy('id')->firstOrFail();
+        $this->save($product, lots: true);
+        $this->save($product, lots: false);
+        $this->assertTrue((bool) $product->fresh()->track_batch, '⛔ সুইচ চালু, তবু পণ্যের লট বন্ধ হয়েছে।');
+
+        app(SettingsService::class)->set('inventory.lots_always', false);
+        $this->save($product, lots: false);
+        $this->assertFalse((bool) $product->fresh()->track_batch, 'সুইচ বন্ধ, তবু পণ্য নিজে বাছতে পারছে না।');
+    }
+
+    /**
+     * ⛔ কোনো লটে মজুদ থাকলে লট বন্ধ হয় না — মজুদ শূন্য হলে তবেই (মালিকের পরিকল্পনা ২, ৪ অক্টোবর ২০২৬)।
+     * ⓘ একই পণ্য দুইবার: মজুদ থাকা অবস্থায় না, শূন্য হওয়ার পরে হ্যাঁ — নাহলে দাবিটা "কখনোই না" দিয়েও সবুজ থাকত।
+     */
+    public function test_a_product_with_stock_in_a_lot_keeps_its_lots(): void
+    {
+        app(SettingsService::class)->set('inventory.lots_always', false);
+
+        $product = Product::query()->orderBy('id')->firstOrFail();
+        $this->save($product, lots: true);
+
+        $warehouse = Warehouse::query()->orderBy('id')->firstOrFail();
+        $batch = Batch::query()->create([
+            'company_id' => $product->company_id, 'branch_id' => $warehouse->branch_id,
+            'product_id' => $product->id, 'batch_no' => 'LOT-SW-1',
+        ]);
+        $move = fn (string $qty) => StockMovement::query()->create([
+            'company_id' => $product->company_id, 'branch_id' => $warehouse->branch_id,
+            'product_id' => $product->id, 'warehouse_id' => $warehouse->id, 'batch_id' => $batch->id,
+            'trx_date' => now()->toDateString(), 'floor_change' => $qty,
+            'source_type' => 'test', 'source_id' => 0, 'document_no' => 'LOT-SW',
+        ]);
+
+        $move('5');
+        $this->put(route('inventory.product.update', $product), $this->fields($product, lots: false))
+            ->assertSessionHasErrors('track_batch');
+        $this->assertTrue((bool) $product->fresh()->track_batch, '⛔ লটে ৫টা মজুদ, তবু লট বন্ধ হয়েছে।');
+
+        $move('-5');
+        $this->save($product, lots: false);
+        $this->assertFalse((bool) $product->fresh()->track_batch, 'লটের মজুদ শূন্য, তবু লট বন্ধ করা গেল না।');
+    }
+
+    /** ⭐ ইমপোর্টও সুইচ মানে — চালু থাকলে লটসহ, বন্ধ থাকলে আগের মতো (৪ অক্টোবর ২০২৬)। */
+    public function test_the_import_follows_the_company_switch(): void
+    {
+        $import = function (string $code): Product {
+            app(ProductImporter::class)->import([
+                'code' => $code, 'name_en' => 'Lot switch '.$code, 'name_bn' => '', 'barcode' => '',
+                'brand' => '', 'category' => '', 'unit' => '', 'tax' => '',
+                'purchase_price' => '', 'sale_price' => '', 'reorder_level' => '',
+            ]);
+
+            return Product::query()->where('code', $code)->firstOrFail();
+        };
+
+        $this->assertTrue((bool) $import('LOTSW-ON')->track_batch, '⛔ সুইচ চালু, তবু ইমপোর্টের পণ্য লট ছাড়া বসেছে।');
+
+        app(SettingsService::class)->set('inventory.lots_always', false);
+        $this->assertFalse((bool) $import('LOTSW-OFF')->track_batch, 'সুইচ বন্ধ, তবু ইমপোর্ট লট জোর করছে।');
+    }
+
+    /** @return array<string, mixed> */
+    private function fields(Product $product, bool $lots): array
+    {
+        return [
+            'code' => $product->code,
+            'name_en' => $product->name_en,
+            'name_bn' => $product->name_bn,
+            'unit_id' => $product->unit_id,
+            'track_batch' => $lots ? '1' : '0',
+        ];
     }
 
     /** পণ্যটা পর্দা থেকে সংরক্ষণ করা — কেবল সুইচটা বদলে। */

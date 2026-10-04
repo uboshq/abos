@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Inventory\Http\Requests;
 
 use App\Core\Security\FieldSecurity;
+use App\Core\Services\SettingsService;
 use App\Core\Support\CompanyContext;
 use App\Modules\Inventory\Models\Product;
 use Illuminate\Foundation\Http\FormRequest;
@@ -51,7 +52,10 @@ class ProductRequest extends FormRequest
          * ⓘ দরজা এখানে, [[ProductService]]-এ নয়: সার্ভিসে বসালে ডেমো-বীজের লটহীন খোলা মজুদ লট-ধরা পণ্যে পড়ত,
          * আর লটহীন বিক্রির প্রতিটা পরীক্ষা থামত। আগের পণ্য — [[every_product_is_counted_by_lot]] মাইগ্রেশন।
          */
-        $this->merge(['track_batch' => true]);
+        /* ⓘ ৪ অক্টোবর ২০২৬ (মালিকের পরিকল্পনা ২): কোম্পানির সুইচ `inventory.lots_always`, ডিফল্ট চালু — বন্ধ থাকলে পণ্য নিজে বাছে */
+        if ((bool) app(SettingsService::class)->get('inventory.lots_always', true)) {
+            $this->merge(['track_batch' => true]);
+        }
     }
 
     public function rules(): array

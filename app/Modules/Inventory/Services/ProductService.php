@@ -10,6 +10,7 @@ use App\Core\Support\DocumentStatus;
 use App\Models\IssuedNumber;
 use App\Modules\Inventory\Models\Product;
 use App\Modules\Inventory\Models\ProductUnit;
+use App\Modules\Inventory\Models\StockMovement;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -78,6 +79,27 @@ final class ProductService
     }
 
     /**
+     * ⛔ কোনো লটে মজুদ থাকলে লট বন্ধ নয় — মালিকের পরিকল্পনা ২, ৪ অক্টোবর ২০২৬ (সমন্বয়কের শর্ত)।
+     * ⓘ বন্ধ হলে ঐ মজুদ কোন চালানের, কবে মেয়াদ, কত ফ্রি এসেছিল — কোনো প্রশ্নের উত্তর থাকত না, আর
+     * লটহীন বিক্রি লটের মজুদ ছুঁতই না। প্রতিটা লটের পাঁচ ঘরের যোগফল ধরে মাপা, তাক থেকে আটকানো পর্যন্ত।
+     */
+    private function assertNoStockInAnyLot(Product $product): void
+    {
+        $held = StockMovement::query()
+            ->where('product_id', $product->id)
+            ->whereNotNull('batch_id')
+            ->select('batch_id')
+            ->groupBy('batch_id')
+            ->havingRaw('ABS(SUM(COALESCE(floor_change, 0) + COALESCE(hold_change, 0) + COALESCE(free_change, 0)'
+                .' + COALESCE(unplaced_change, 0) + COALESCE(unplaced_free_change, 0))) > 0.00005')
+            ->exists();
+
+        if ($held) {
+            throw ValidationException::withMessages(['track_batch' => __('inventory::message.lot_off_has_stock')]);
+        }
+    }
+
+    /**
      * @param  array<string, mixed>  $data
      */
     public function update(Product $product, array $data): Product
@@ -109,6 +131,10 @@ final class ProductService
         // ⓘ কোন এককটা base ছিল — বদলানোর আগেই ধরে রাখা, কারণটা
         // [[ProductPackService::defaults()]]-এ
         $wasBase = $product->unit_id === null ? null : (int) $product->unit_id;
+
+        if (array_key_exists('track_batch', $data) && ! (bool) $data['track_batch'] && (bool) $product->track_batch) {
+            $this->assertNoStockInAnyLot($product);
+        }
 
         [$data, $branches] = $this->splitBranches($data);
 

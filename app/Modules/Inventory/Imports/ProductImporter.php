@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Inventory\Imports;
 
 use App\Core\Contracts\Importer;
+use App\Core\Services\SettingsService;
 use App\Modules\Inventory\Models\Product;
 use App\Modules\Inventory\Services\ProductService;
 use App\Modules\MasterData\Models\Brand;
@@ -110,7 +111,14 @@ final class ProductImporter implements Importer
      */
     public function import(array $row): void
     {
-        $this->products->create($this->payload($row));
+        $data = $this->payload($row);
+
+        /* ⭐ ইমপোর্টও কোম্পানির লটের সুইচ মানে — চালু থাকলে প্রতিটা পণ্য লট ধরে (৪ অক্টোবর ২০২৬) */
+        if ((bool) app(SettingsService::class)->get('inventory.lots_always', true)) {
+            $data['track_batch'] = true;
+        }
+
+        $this->products->create($data);
     }
 
     /**

@@ -199,8 +199,14 @@
                  ফ্রি মালের অনুপাত — কোন লটে কত ফ্রি এসেছিল। --}}
             <label class="mt-3 flex min-h-(--spacing-touch) items-start gap-2 text-sm">
                 {{-- ⛔ সবসময় চালু, বন্ধ করা যায় না — মালিক, ৩ অক্টোবর ২০২৬ ("ok"): লট ছাড়া পণ্য হলে ফ্রি আর মেয়াদ দুটোই হারায় --}}
-                <input type="hidden" name="track_batch" value="1">
-                <input type="checkbox" class="mt-0.5 size-4" checked disabled aria-disabled="true">
+                @if ((bool) app(\App\Core\Services\SettingsService::class)->get('inventory.lots_always', true))
+                    <input type="hidden" name="track_batch" value="1">
+                    <input type="checkbox" class="mt-0.5 size-4" checked disabled aria-disabled="true">
+                @else
+                    {{-- ⓘ কোম্পানির সুইচ বন্ধ (৪ অক্টোবর ২০২৬) — পণ্য নিজে বাছে; নতুন পণ্যে ডিফল্ট টিক --}}
+                    <input type="hidden" name="track_batch" value="0">
+                    <input type="checkbox" name="track_batch" value="1" class="mt-0.5 size-4" @checked(old('track_batch', $isNew ? true : (bool) $product->track_batch))>
+                @endif
                 <span>
                     {{ __('inventory::field.track_batch') }}
                     <span class="mt-0.5 block text-2xs text-(--color-ink-muted)">

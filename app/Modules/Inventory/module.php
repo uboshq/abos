@@ -887,6 +887,19 @@ return [
             'group' => 'entry',
         ],
         [
+            /*
+             * ⭐ প্রতিটা পণ্য লট ধরে — ডিফল্ট চালু (মালিক, ৩ অক্টোবর ২০২৬: "লট সবসময়"), তাই লাইভ যেমন ছিল।
+             * ⓘ মালিকের পরিকল্পনা ২, ৪ অক্টোবর ২০২৬: বন্ধ করলে প্রতিটা পণ্য নিজে বেছে নেয়
+             * (চাল-ডাল-সাবানের মতো মালে লট লাগে না)। ⛔ তবু কোনো লটে মজুদ থাকলে সেই পণ্যের লট বন্ধ হয় না
+             * ([[ProductService::update()]])। ইমপোর্টও এই সুইচ মানে ([[ProductImporter]])।
+             */
+            'key' => 'inventory.lots_always',
+            'label' => 'inventory::settings.lots_always',
+            'type' => 'boolean',
+            'default' => true,
+            'group' => 'entry',
+        ],
+        [
             // ব্র্যান্ডের ঘরটা সব ব্যবসায় লাগে না (নিয়ম ৭)
             'key' => 'inventory.brand_enabled',
             'label' => 'inventory::settings.brand_enabled',
