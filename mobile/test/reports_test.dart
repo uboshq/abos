@@ -15,12 +15,25 @@ void main() {
     'title': 'দৈনিক বিক্রয়',
     'columns': [
       {'key': 'trx_date', 'label': 'তারিখ', 'type': 'date', 'total': false},
-      {'key': 'document_no', 'label': 'নম্বর', 'type': 'document', 'total': false},
+      {
+        'key': 'document_no',
+        'label': 'নম্বর',
+        'type': 'document',
+        'total': false
+      },
       {'key': 'amount', 'label': 'টাকা', 'type': 'money', 'total': true},
     ],
     'rows': [
-      {'trx_date': '2026-09-16', 'document_no': 'SI-2609-0031', 'amount': '1275.0000'},
-      {'trx_date': '2026-09-16', 'document_no': 'SI-2609-0032', 'amount': '860.5000'},
+      {
+        'trx_date': '2026-09-16',
+        'document_no': 'SI-2609-0031',
+        'amount': '1275.0000'
+      },
+      {
+        'trx_date': '2026-09-16',
+        'document_no': 'SI-2609-0032',
+        'amount': '860.5000'
+      },
     ],
     'totals': {'amount': '45200.0000'},
     'page': 1,
@@ -134,7 +147,7 @@ void main() {
           loadList: () async => const [
             ReportSummary({'key': 'sales.daily', 'title': 'দৈনিক বিক্রয়'}),
           ],
-          open: (key, p) async => page,
+          open: (key, p, f) async => page,
         ),
       ));
       await tester.pumpAndSettle();
@@ -150,6 +163,51 @@ void main() {
       expect(find.text('৳45,200'), findsOneWidget);
       expect(find.text('412 টির মধ্যে 1–2'), findsOneWidget);
       expect(find.text('পাতা 1 / 5'), findsOneWidget);
+    });
+
+    // ⭐ তারিখ ধরে — মালিক, ৪ অক্টোবর ২০২৬। A report that declares `date_range` opens on this month and says so;
+    // one that does not sends no dates and shows no range button.
+    testWidgets('a dated report asks for this month and shows the range',
+        (tester) async {
+      final asked = <Map<String, dynamic>>[];
+      await tester.pumpWidget(MaterialApp(
+        home: ReportViewScreen(
+          report: const ReportSummary({
+            'key': 'accounts.party_ledger',
+            'title': 'খতিয়ান',
+            'filters': ['date_range']
+          }),
+          today: () => DateTime(2026, 10, 4, 15, 30),
+          open: (key, p, f) async {
+            asked.add(f);
+            return page;
+          },
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      expect(asked.single, {'from': '2026-10-01', 'to': '2026-10-04'});
+      expect(find.byKey(const Key('report-range')), findsOneWidget);
+      expect(find.text('01/10/2026 — 04/10/2026'), findsOneWidget);
+    });
+
+    testWidgets('an undated report sends no dates and offers no range',
+        (tester) async {
+      final asked = <Map<String, dynamic>>[];
+      await tester.pumpWidget(MaterialApp(
+        home: ReportViewScreen(
+          report:
+              const ReportSummary({'key': 'inventory.stock', 'title': 'মজুদ'}),
+          open: (key, p, f) async {
+            asked.add(f);
+            return page;
+          },
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      expect(asked.single, isEmpty);
+      expect(find.byKey(const Key('report-range')), findsNothing);
     });
   });
 }

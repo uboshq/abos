@@ -65,9 +65,28 @@ void main() {
     expect(find.text('মেসার্স রহমান ট্রেডার্স'), findsOneWidget);
   });
 
+  // ⭐ সইয়ের আগে আসল কাগজ — মালিক, ৪ অক্টোবর ২০২৬। The paper opens from the card when the server named it
+  // (`documentId`, its public_id); a request whose paper is gone offers nothing to open.
+  testWidgets('a card with its paper offers the PDF, one without does not',
+      (tester) async {
+    await tester.pumpWidget(screen(
+      load: () async => ApprovalPage(rows: [
+        ApprovalRecord(
+            {...row, 'documentId': '01a0c3f0-0000-7000-8000-0000000000b7'}),
+        ApprovalRecord(
+            {...row, 'id': 'no-paper', 'documentNo': 'PB-2609-0008'}),
+      ]),
+    ));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(Key('approval-paper-${row['id']}')), findsOneWidget);
+    expect(find.byKey(const Key('approval-paper-no-paper')), findsNothing);
+    expect(find.text('কাগজ দেখুন'), findsOneWidget);
+  });
+
   testWidgets('an empty inbox is good news, not an error', (tester) async {
-    await tester.pumpWidget(
-        screen(load: () async => const ApprovalPage(rows: [])));
+    await tester
+        .pumpWidget(screen(load: () async => const ApprovalPage(rows: [])));
     await tester.pumpAndSettle();
 
     expect(find.text('কিছু অপেক্ষা করছে না'), findsOneWidget);
@@ -165,8 +184,8 @@ void main() {
 
   group('salary never reaches a phone', () {
     test('a payroll row is recognised so it can be dropped', () {
-      expect(const ApprovalRecord({'documentType': 'Payroll'}).isPayroll,
-          isTrue);
+      expect(
+          const ApprovalRecord({'documentType': 'Payroll'}).isPayroll, isTrue);
       expect(const ApprovalRecord(row).isPayroll, isFalse);
     });
 

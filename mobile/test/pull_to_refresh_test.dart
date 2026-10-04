@@ -123,7 +123,8 @@ void main() {
   testWidgets('অনুমোদন', (t) async {
     await expectPullable(
       t,
-      ApprovalInboxScreen(loadPending: () async => const ApprovalPage(rows: [])),
+      ApprovalInboxScreen(
+          loadPending: () async => const ApprovalPage(rows: [])),
     );
   });
 
@@ -144,9 +145,10 @@ void main() {
     // report again was the only way on.
     await tester.pumpWidget(MaterialApp(
       home: ReportsScreen(
-        loadList: () async =>
-            const [ReportSummary({'key': 'sales.daily', 'title': 'দৈনিক বিক্রয়'})],
-        open: (_, __) async => const ReportPage({
+        loadList: () async => const [
+          ReportSummary({'key': 'sales.daily', 'title': 'দৈনিক বিক্রয়'})
+        ],
+        open: (_, __, ___) async => const ReportPage({
           'columns': [
             {'key': 'amount', 'label': 'টাকা', 'type': 'money'},
           ],

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 
 import '../../core/api_client/network_errors.dart';
 import '../../core/records/report_record.dart';
@@ -17,7 +18,8 @@ class ReportsScreen extends StatefulWidget {
   const ReportsScreen({super.key, this.loadList, this.open});
 
   final Future<List<ReportSummary>> Function()? loadList;
-  final Future<ReportPage> Function(String key, int page)? open;
+  final Future<ReportPage> Function(
+      String key, int page, Map<String, dynamic> filters)? open;
 
   @override
   State<ReportsScreen> createState() => _ReportsScreenState();
@@ -136,10 +138,17 @@ class _ReportsScreenState extends State<ReportsScreen> {
 
 /// One report, drawn entirely from what the server said its columns are.
 class ReportViewScreen extends StatefulWidget {
-  const ReportViewScreen({super.key, required this.report, this.open});
+  const ReportViewScreen(
+      {super.key, required this.report, this.open, this.today});
 
   final ReportSummary report;
-  final Future<ReportPage> Function(String key, int page)? open;
+
+  /// Injected in tests. ⓘ The filters go with every call — the date range lives here, on this screen.
+  final Future<ReportPage> Function(
+      String key, int page, Map<String, dynamic> filters)? open;
+
+  /// The day "today" is, injected in tests so a date range does not depend on when the test runs.
+  final DateTime Function()? today;
 
   @override
   State<ReportViewScreen> createState() => _ReportViewScreenState();
@@ -151,9 +160,47 @@ class _ReportViewScreenState extends State<ReportViewScreen> {
   bool _busy = false;
   int _pageNo = 1;
 
+  /// ⭐ তারিখ ধরে — মালিক, ৪ অক্টোবর ২০২৬: *"all ledger & report date veue print share"*। Only for a report whose
+  /// definition declares `date_range` ([[ReportSummary.takesDateRange]]); the server validates it (422 on a wrong one).
+  /// ⓘ Starts on the first of this month.
+  DateTimeRange? _range;
+
+  static final DateFormat _wire = DateFormat('yyyy-MM-dd');
+  static final DateFormat _shown = DateFormat('dd/MM/yyyy');
+
   @override
   void initState() {
     super.initState();
+    if (widget.report.takesDateRange) {
+      final now = (widget.today ?? DateTime.now)();
+      final day = DateTime(now.year, now.month, now.day);
+      _range = DateTimeRange(start: DateTime(day.year, day.month, 1), end: day);
+    }
+    _load();
+  }
+
+  Map<String, dynamic> get _filters {
+    final range = _range;
+    return range == null
+        ? const {}
+        : {'from': _wire.format(range.start), 'to': _wire.format(range.end)};
+  }
+
+  Future<void> _pickRange() async {
+    final now = (widget.today ?? DateTime.now)();
+    final picked = await showDateRangePicker(
+      context: context,
+      firstDate: DateTime(2020),
+      lastDate: DateTime(now.year, now.month, now.day),
+      initialDateRange: _range,
+      helpText: 'কোন তারিখ থেকে কোন তারিখ',
+      saveText: 'দেখান',
+    );
+    if (picked == null || !mounted) return;
+    setState(() {
+      _range = picked;
+      _pageNo = 1;
+    });
     _load();
   }
 
@@ -164,9 +211,11 @@ class _ReportViewScreenState extends State<ReportViewScreen> {
     });
     try {
       final result = await (widget.open ??
-          (String k, int p) => ReportsApi.run(k, page: p))(
+          (String k, int p, Map<String, dynamic> f) =>
+              ReportsApi.run(k, page: p, filters: f))(
         widget.report.key,
         _pageNo,
+        _filters,
       );
       if (mounted) setState(() => _page = result);
     } catch (error) {
@@ -192,6 +241,21 @@ class _ReportViewScreenState extends State<ReportViewScreen> {
       body: Column(
         children: [
           if (_busy) const LinearProgressIndicator(),
+          if (_range != null)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.md, AppSpacing.sm, AppSpacing.md, 0),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: OutlinedButton.icon(
+                  key: const Key('report-range'),
+                  onPressed: _busy ? null : _pickRange,
+                  icon: const Icon(Icons.date_range_outlined, size: 18),
+                  label: Text(
+                      '${_shown.format(_range!.start)} — ${_shown.format(_range!.end)}'),
+                ),
+              ),
+            ),
           if (page != null)
             Container(
               width: double.infinity,
