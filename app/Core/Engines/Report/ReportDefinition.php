@@ -162,6 +162,13 @@ final class ReportDefinition
          * তুলনায়। ভাগ অর্থহীন হলে রিপোর্ট নিজে `false` দেয় — কারণসহ।
          */
         public readonly bool $splitByBranch = true,
+
+        /*
+         * ⭐ শুরুর জের — চলমান জের এই অঙ্ক থেকে শুরু হয়, শূন্য থেকে নয় (অডিট গ৯, ৪ অক্টোবর ২০২৬)।
+         * ⛔ না থাকলে ৫ লাখ নগদ থাকা অবস্থায় মাসের ২ তারিখে ২০,০০০ দিলে ক্যাশ বই দেখাত "−২০,০০০"।
+         * ⓘ `fn (array $filters): string` — পরিসরের শুরুর আগের ডেবিট − ক্রেডিট, একই ছাঁকনিতে।
+         */
+        public readonly ?Closure $opening = null,
     ) {
         if ($branchless !== null && ! in_array($branchless, [self::WHOLE_COMPANY, self::NO_BRANCH_DATA], true)) {
             throw new \InvalidArgumentException("Report '{$key}' declares an unknown branchless kind '{$branchless}'.");

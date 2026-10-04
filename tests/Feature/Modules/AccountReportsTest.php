@@ -253,6 +253,29 @@ class AccountReportsTest extends TestCase
             ->assertSee('name="from"', false);
     }
 
+    /**
+     * ⛔ ক্যাশ বই আগের জের থেকে শুরু হয় — অডিট গ৯, ৪ অক্টোবর ২০২৬।
+     * আগে চলমান জের পরিসরের প্রথম দিনে শূন্য থেকে গোনা হত: আগের মাসে ৭,৫০০ নগদ ঢুকলেও আগস্টের ক্যাশ বই
+     * সেটা জানত না, আর শেষ জের খাতার আসল নগদের চেয়ে ৭,৫০০ কম দেখাত।
+     */
+    public function test_the_cash_book_starts_from_the_balance_before_the_range(): void
+    {
+        $svc = app(VoucherService::class);
+        $svc->post($svc->create(
+            ['type' => Voucher::CONTRA, 'trx_date' => '2026-07-15', 'narration' => 'আগের মাসের',
+                'instrument_no' => 'RPT-CONTRA-OPEN'],
+            $svc->twoLineEntry(Voucher::CONTRA, $this->bank, $this->till->account_id, '7500', 'আগের মাসের'),
+        ));
+
+        $rows = $this->report('accounts.cash_book')->rows;
+        $last = end($rows);
+
+        // ৭,৫০০ (আগের) + ২০,০০০ − ৬,০০০ − ৫,০০০ = ১৬,৫০০ — খাতার আসল নগদ
+        $this->assertSame(0, bccomp((string) $last['balance'], '16500', 2),
+            '⛔ ক্যাশ বইয়ের শেষ জের '.$last['balance'].', খাতার নগদ ১৬,৫০০ — আগের জের বাদ পড়েছে।');
+        $this->assertSame(0, bccomp((string) $rows[0]['balance'], '27500', 2), '⛔ প্রথম সারির জের আগের ৭,৫০০ থেকে শুরু হয়নি।');
+    }
+
     public function test_the_trial_balance_carries_everything_before_the_from_date(): void
     {
         $before = $this->report('accounts.trial_balance')->totals['debit'];

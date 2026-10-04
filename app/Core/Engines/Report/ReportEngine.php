@@ -870,7 +870,9 @@ final class ReportEngine
         int $page,
         int $perPage,
     ): Collection {
-        $opening = '0';
+        // ⭐ পরিসরের আগের জের থেকে — অডিট গ৯ ([[ReportDefinition::$opening]])
+        $opening = $report->opening !== null ? bcadd((string) ($report->opening)($filters), '0', 4) : '0';
+        $before = $opening;
 
         if ($page > 1) {
             /*
@@ -902,11 +904,11 @@ final class ReportEngine
              * যায় — টাকার অঙ্ক bcmath ছাড়া জোড়া লাগে না, আর নিয়মটা দুই
              * জায়গায় লিখলে একদিন দুইটা আলাদা উত্তর দিত।
              */
-            $opening = RunningBalance::sumOf(
+            $opening = bcadd($before, RunningBalance::sumOf(
                 $sums === null ? [] : [$sums],
                 fn ($row) => ((array) $row)['debit'] ?? 0,
                 fn ($row) => ((array) $row)['credit'] ?? 0,
-            );
+            ), 4);
         }
 
         // হিসাবটা RunningBalance-এ, এখানে নয় — গ্রাহকের পর্দাতেও একই

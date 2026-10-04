@@ -183,6 +183,12 @@ final class CoreReports
             title: 'accounts::menu.ledger',
             filters: ['date_range', 'branch', 'account'],
             runningBalance: true,
+            // ⭐ শুরুর জের — অডিট গ৯, ৪ অক্টোবর ২০২৬
+            opening: fn (array $f) => self::openingOf(DB::table('ledger_entries')
+                ->where('company_id', $f['company_id'])
+                ->when($f['account_id'] ?? null, fn ($q, $account) => $q->where('account_id', $account))
+                ->tap(ReportEngine::branchWall($f, 'branch_id'))
+                ->where('trx_date', '<', $f['from']), 'debit', 'credit'),
             query: fn (array $f) => DB::table('ledger_entries')
                 ->where('company_id', $f['company_id'])
                 ->when($f['account_id'] ?? null, fn ($q, $account) => $q->where('account_id', $account))
@@ -371,6 +377,12 @@ final class CoreReports
         );
     }
 
+    /** পরিসরের আগের জের — ডেবিট − ক্রেডিট ([[ReportDefinition::$opening]]; অডিট গ৯) */
+    private static function openingOf(\Illuminate\Database\Query\Builder $before, string $debit, string $credit): string
+    {
+        return (string) ($before->selectRaw("COALESCE(SUM({$debit}), 0) - COALESCE(SUM({$credit}), 0) as net")->value('net') ?? '0');
+    }
+
     /**
      * দুইটা বই একই আকারের, শুধু ফিল্টারটা আলাদা।
      *
@@ -387,6 +399,14 @@ final class CoreReports
             title: $title,
             filters: ['date_range', 'branch'],
             runningBalance: true,
+            // ⭐ শুরুর জের — অডিট গ৯: ৫ লাখ নগদে মাসের ২ তারিখের ২০,০০০ খরচ আর "−২০,০০০" নয়
+            opening: fn (array $f) => self::openingOf(DB::table('ledger_entries')
+                ->leftJoin('accounts', 'accounts.id', '=', 'ledger_entries.account_id')
+                ->where('ledger_entries.company_id', $f['company_id'])
+                ->whereIn('accounts.money_kind', (array) $kind)
+                ->where('accounts.is_group', false)
+                ->tap(ReportEngine::branchWall($f, 'ledger_entries.branch_id'))
+                ->where('ledger_entries.trx_date', '<', $f['from']), 'ledger_entries.debit', 'ledger_entries.credit'),
             query: fn (array $f) => DB::table('ledger_entries')
                 ->leftJoin('accounts', 'accounts.id', '=', 'ledger_entries.account_id')
                 ->where('ledger_entries.company_id', $f['company_id'])
