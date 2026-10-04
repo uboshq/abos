@@ -350,6 +350,12 @@ final class StandardChart implements ProvisionsCompany
     /** নমুনা বিলানো — উপহার নয়, প্রচার; তাই বিপণনের খাতে। */
     public const MARKETING = '5209';
 
+    /**
+     * ⭐ প্রচারের খরচ — অফারে দেওয়া উপহার মাল, খরচের দামে (FIFO), আয়ে নয় (IFRS 15; মালিকের পরিকল্পনা সংস্করণ ২, ৪ অক্টোবর ২০২৬)।
+     * ⓘ আগে উপহার তাক থেকে কমত অথচ খাতায় কিছুই উঠত না — মজুদের খাত বেশি দেখাত, খরচ উঠত না ([[GiftIssuer]])।
+     */
+    public const PROMOTION_EXPENSE = '5222';
+
     /*
      * পরিবহনের পাঁচটা খাত — ৪ সেপ্টেম্বর ২০২৬, মালিকের সিদ্ধান্ত।
      *
@@ -1104,6 +1110,8 @@ final class StandardChart implements ProvisionsCompany
             ['5219', 'Unloading', 'আনলোডিং', $X, '5200', false, []],
             ['5220', 'Labour (Hammali)', 'হাম্মালি', $X, '5200', false, []],
             ['5221', 'Insurance Premium', 'বীমা প্রিমিয়াম', $X, '5200', false, []],
+            // ⭐ অফারের উপহার মাল — খরচের দামে (৪ অক্টোবর ২০২৬; [[PROMOTION_EXPENSE]])
+            ['5222', 'Promotion Expense', 'প্রচারের খরচ', $X, '5200', false, []],
             ['5210', 'Bank Charges', 'ব্যাংক চার্জ', $X, '5200', false, []],
 
             ['5211', 'Mobile Banking Charges', 'মোবাইল ব্যাংকিং চার্জ', $X, '5200', false, []],

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Promotion\Services;
 
+use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Inventory\Models\SerialNumber;
 use App\Modules\Inventory\Services\StockService;
 use App\Modules\Promotion\Models\PromotionApplication;
@@ -108,6 +109,49 @@ final class PromotionReversal
             documentNo: $gift->code,
             batch: $gift->batch,
         );
+
+        /*
+         * ⭐ খরচও ফেরে — যে স্তর থেকে যতটা গিয়েছিল ঠিক ততটা ([[CostLayerService::returnToLayers()]]), খাতায় Dr মজুদ / Cr প্রচারের
+         * খরচ (৪ অক্টোবর ২০২৬; [[GiftIssuer::bookTheCost()]]-এর উল্টো)। ⓘ আগের উপহারে স্তর টানা হয়নি — তখন ফেরার কিছু নেই, শূন্য।
+         */
+        // ⓘ তিন রকম: খাতায় খরচ ওঠেনি (৪ অক্টোবরের আগের উপহার) → উল্টানোর কিছু নেই; স্তর থেকে টেনেছিল → স্তরে ফেরত, সেই মূল্য;
+        // কেনা দামে দিয়েছিল ([[GiftIssuer::bookTheCost()]]) → সেই এককের দামে
+        $booked = \App\Models\LedgerEntry::query()->where('source_type', GiftIssuer::LEDGER_SOURCE)->where('source_id', $gift->id)->exists();
+        $drew = \App\Modules\Inventory\Models\CostLayerUse::query()
+            ->where('source_type', 'promotion:gift')->where('source_id', $gift->id)->where('qty', '>', 0)->exists();
+
+        $value = match (true) {
+            $drew => app(\App\Modules\Inventory\Services\CostLayerService::class)->returnToLayers(
+                product: $gift->product,
+                qty: $back,
+                issuedSourceType: 'promotion:gift',
+                issuedSourceId: (int) $gift->id,
+                sourceType: 'promotion:gift-return',
+                sourceId: (int) $gift->id,
+                documentNo: $gift->code,
+                date: $at,
+            ),
+            $booked => bcmul((string) $gift->unit_cost, $back, 4),
+            default => '0',
+        };
+
+        if (! $booked) {
+            $value = '0';
+        }
+
+        if (bccomp($value, '0', 4) > 0) {
+            app(\App\Core\Engines\Posting\PostingEngine::class)->post(
+                GiftIssuer::LEDGER_SOURCE.'_return',
+                (int) $gift->id,
+                $at->toDateString(),
+                [
+                    ['account_id' => (int) StandardChart::find(StandardChart::INVENTORY)?->id, 'debit' => $value, 'credit' => '0'],
+                    ['account_id' => (int) StandardChart::find(StandardChart::PROMOTION_EXPENSE)?->id, 'debit' => '0', 'credit' => $value],
+                ],
+                documentNo: $gift->code,
+                branchId: \App\Core\Support\CompanyContext::branchId(),
+            );
+        }
 
         /*
          * ⓘ সিরিয়াল-রাখা পিসগুলোও ফেরে — `returned`, `in_stock` নয়।

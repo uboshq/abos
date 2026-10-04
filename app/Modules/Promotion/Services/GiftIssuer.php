@@ -5,11 +5,14 @@ declare(strict_types=1);
 namespace App\Modules\Promotion\Services;
 
 use App\Core\Engines\NumberSeries\NumberSeriesEngine;
+use App\Core\Engines\Posting\PostingEngine;
 use App\Core\Support\CompanyContext;
 use App\Modules\Inventory\Models\Batch;
 use App\Modules\Inventory\Models\Product;
 use App\Modules\Inventory\Models\SerialNumber;
 use App\Modules\Inventory\Models\Warehouse;
+use App\Modules\Accounts\Services\StandardChart;
+use App\Modules\Inventory\Services\CostLayerService;
 use App\Modules\Inventory\Services\SerialNumberService;
 use App\Modules\Inventory\Services\StockService;
 use App\Modules\Promotion\Models\PromotionApplication;
@@ -41,6 +44,10 @@ use Illuminate\Validation\ValidationException;
 final class GiftIssuer
 {
     private const SERIES = 'GIFT';
+
+    /** খাতায় উপহারের খরচ এই নামে; ফেরত এর `:reversal` নয়, নিজের নামে ([[PromotionReversal]]) */
+    public const LEDGER_SOURCE = 'promotion_gift';
+
 
     public function __construct(
         private readonly StockService $stock,
@@ -147,6 +154,8 @@ final class GiftIssuer
                     'issued_on' => ($date ?? Carbon::now())->toDateString(),
                 ]);
             }
+
+            $this->bookTheCost($issue, $product, $qty, $batch, $date ?? Carbon::now());
 
             return $issue;
         });
@@ -337,4 +346,52 @@ final class GiftIssuer
             }
         }
     }
+
+    /**
+     * ⭐ উপহারের খরচ খাতায় — FIFO স্তর থেকে, Dr প্রচারের খরচ / Cr মজুদ (মালিকের পরিকল্পনা সংস্করণ ২, ৪ অক্টোবর ২০২৬; IFRS 15:
+     * ফ্রি মাল আয়ে নয়, প্রচারের খরচে)।
+     *
+     * ⛔ আগে উপহার কেবল তাক থেকে কমত: খাতার মজুদ (১১২০) বেশি দেখাত, খরচ উঠত না, আর খরচের স্তরে মালটা থেকে যেত —
+     * পরের বিক্রি ঐ দামে আবার টানত। ⓘ এখন বিক্রির একই পথে স্তর থেকে টানা ([[CostLayerService::issue()]]), আর উপহারের
+     * এককের দামও সেই খরচ। স্তর না কুলালে কেনা দামে (নিচে) — উপহার থামে না।
+     */
+    private function bookTheCost(PromotionGiftIssue $issue, Product $product, string $qty, ?Batch $batch, Carbon $date): void
+    {
+        $layers = app(CostLayerService::class);
+
+        /*
+         * ⓘ স্তরে কুলালে FIFO খরচ, স্তর থেকে টেনে; না কুলালে আগের মতো কেনা দামে, স্তর না ছুঁয়ে — খরচের স্তর ছাড়া তাকে
+         * আসা মাল (পুরনো খোলা মজুদ) উপহারে দেওয়া আগে চলত, এখনো চলে; কেবল খাতায় খরচটা এখন ওঠে।
+         */
+        $cost = bccomp($layers->qtyOnHand($product), $qty, 4) >= 0
+            ? $layers->issue(
+                product: $product,
+                qty: $qty,
+                sourceType: 'promotion:gift',
+                sourceId: (int) $issue->id,
+                documentNo: $issue->code,
+                date: $date,
+                batch: $batch,
+            )['cost']
+            : bcmul((string) ($product->purchase_price ?? '0'), $qty, 4);
+
+        $issue->forceFill(['unit_cost' => bcdiv($cost, $qty, 4)])->save();
+
+        if (bccomp($cost, '0', 4) <= 0) {
+            return;
+        }
+
+        app(PostingEngine::class)->post(
+            self::LEDGER_SOURCE,
+            (int) $issue->id,
+            $date->toDateString(),
+            [
+                ['account_id' => (int) StandardChart::find(StandardChart::PROMOTION_EXPENSE)?->id, 'debit' => $cost, 'credit' => '0'],
+                ['account_id' => (int) StandardChart::find(StandardChart::INVENTORY)?->id, 'debit' => '0', 'credit' => $cost],
+            ],
+            documentNo: $issue->code,
+            branchId: CompanyContext::branchId(),
+        );
+    }
+
 }

@@ -85,6 +85,7 @@ final class EveryLedgerReaderSaysWhetherItShowsOrChecksTest extends TestCase
         'app/Modules/Finance/Services/ProfitDistribution.php' => 'লাভ বণ্টন — পোস্টিং',
         'app/Modules/Customer/Sync/CustomerDueSync.php' => '⛔ ফোনের বকেয়া বাকির সীমার পাশে বসে — বিক্রয়কর্মী সীমা মেনে অর্ডার নেন; হেডারের শাখা ওয়েবের ধারণা, আর জলচিহ্ন শাখা বদলালে ভাঙত (৩০ সেপ্টেম্বর)',
         'app/Modules/Sales/Services/CustomerPapers.php' => '⛔ গ্রাহক-পোর্টাল: দেখছেন গ্রাহক নিজে, কর্মী নয় — পুরো পক্ষের খাতাই নিরাপত্তার নকশা; হেডারের শাখা এখানে নেই (৩০ সেপ্টেম্বর)',
+        'app/Modules/Promotion/Services/PromotionReversal.php' => 'উপহার ফেরতে — উপহারের খরচ খাতায় উঠেছিল কি না, তবেই উল্টানো (৪ অক্টোবর ২০২৬); একটা কাগজের নিজের সারি, শাখা নয়',
         'app/Modules/Sales/Services/CreditExposure.php' => '⛔ বাকির সীমা — মালিকের "সীমা পরম", গোটা কোম্পানি',
         'app/Modules/Sales/Services/CustomerTargetService.php' => '⛔ ডিলারের মাসের লক্ষ্য — টাকা আদায় ডিলার ধরে (মালিক, ২ অক্টোবর); হেডারের শাখা বদলালে অর্জন বদলাত, অথচ ডিলারের লক্ষ্য একটাই',
         'app/Modules/Sales/Http/Controllers/SalesPrintController.php' => '⛔ ছাপা বিলে ডিলারের মাসের খাতা আর লক্ষ্য — কাগজ যায় ডিলারের হাতে; কে কোন শাখা বেছে ছাপলেন তাতে বিবরণী বদলালে কাগজটাই মিথ্যা হত (৩ অক্টোবর)',
