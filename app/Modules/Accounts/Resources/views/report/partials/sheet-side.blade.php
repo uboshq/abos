@@ -31,7 +31,8 @@
             <div class="flex items-baseline justify-between px-4 py-1.5 ps-8 text-sm">
                 <a href="{{ route('accounts.coa.show', $line['account']) }}#transactions"
                    class="truncate text-(--color-link) hover:underline">
-                    {{ $line['account']->name() }}
+                    {{-- ⓘ অগ্রিমের লাইন নিজের নামে, লিংক পক্ষের খাতে ([[BalanceSheetService::withAdvance()]]) --}}
+                    {{ $line['label'] ?? $line['account']->name() }}
                 </a>
                 <span class="tabular-nums">{{ $money($line['amount']) }}</span>
             </div>

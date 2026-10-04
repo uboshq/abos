@@ -69,8 +69,30 @@ final class BalanceSheetService
         $balances = $this->balances($asOf, $branchId);
         $accounts = Account::query()->orderBy('code')->get();
 
+        /*
+         * ⭐ অগ্রিম আলাদা লাইনে — উপস্থাপনে, খাতায় নয় (মালিকের পরিকল্পনা সংস্করণ ২, ৪ অক্টোবর ২০২৬; সমন্বয়কের সিদ্ধান্ত (ক):
+         * "ERP-তে অগ্রিম নেই", খাতা যেমন আছে)। ⓘ পাওনার খাতে যে গ্রাহকদের জের Cr, তাঁদের যোগফল দায়ের দিকে "গ্রাহকের অগ্রিম";
+         * দেনার খাতে যে সরবরাহকারীদের জের Dr, তাঁদের যোগফল সম্পদের দিকে "সরবরাহকারীর অগ্রিম"। পাওনা আর দেনা তাই নিজের
+         * নিজের মোট দেখায়, নিট নয় — দুই দিকে একই অঙ্ক বাড়ে, স্থিতিপত্র মেলে।
+         */
+        $receivable = $accounts->firstWhere('code', StandardChart::RECEIVABLE);
+        $payable = $accounts->firstWhere('code', StandardChart::PAYABLE);
+        $customerAdvance = $receivable === null ? '0' : $this->partyAdvances((int) $receivable->id, $asOf, $branchId, creditSide: true);
+        $supplierAdvance = $payable === null ? '0' : $this->partyAdvances((int) $payable->id, $asOf, $branchId, creditSide: false);
+
+        if ($receivable !== null) {
+            $balances[$receivable->id] = bcadd($balances[$receivable->id] ?? '0', $customerAdvance, 4);
+        }
+
+        if ($payable !== null) {
+            $balances[$payable->id] = bcsub($balances[$payable->id] ?? '0', $supplierAdvance, 4);
+        }
+
         $assets = $this->side($accounts, $balances, Account::ASSET);
         $liabilities = $this->side($accounts, $balances, Account::LIABILITY);
+
+        $assets = $this->withAdvance($assets, $accounts, $receivable, $payable, $supplierAdvance, __('accounts::field.supplier_advance'));
+        $liabilities = $this->withAdvance($liabilities, $accounts, $payable, $receivable, $customerAdvance, __('accounts::field.customer_advance'));
         $equity = $this->side($accounts, $balances, Account::EQUITY);
 
         /*
@@ -314,6 +336,63 @@ final class BalanceSheetService
     private function signed(string $net, bool $creditSide): string
     {
         return $creditSide ? bcmul($net, '-1', 4) : $net;
+    }
+
+    /**
+     * এক খাতে পক্ষ ধরে উল্টো দিকের জেরের যোগফল — পাওনায় Cr জেরের গ্রাহক, দেনায় Dr জেরের সরবরাহকারী (ধনাত্মক অঙ্কে)।
+     */
+    private function partyAdvances(int $accountId, string $asOf, ?int $branchId, bool $creditSide): string
+    {
+        $nets = DB::table('ledger_entries')
+            ->where('company_id', CompanyContext::id())
+            ->where('account_id', $accountId)
+            ->whereNotNull('party_id')
+            ->where('trx_date', '<=', $asOf)
+            ->when($branchId, fn ($q) => $q->where('branch_id', $branchId))
+            ->groupBy('party_type', 'party_id')
+            ->selectRaw('SUM(debit) - SUM(credit) as net')
+            ->pluck('net');
+
+        $sum = '0';
+
+        foreach ($nets as $net) {
+            $net = (string) $net;
+
+            if ($creditSide ? bccomp($net, '0', 4) < 0 : bccomp($net, '0', 4) > 0) {
+                $sum = bcadd($sum, $creditSide ? bcmul($net, '-1', 4) : $net, 4);
+            }
+        }
+
+        return $sum;
+    }
+
+    /**
+     * অগ্রিমের লাইন যে মাথায় তার উল্টো খাত বসে (গ্রাহকের অগ্রিম → দেনার মাথা, সরবরাহকারীর অগ্রিম → পাওনার মাথা); লিংক
+     * পক্ষের খাতেই — অঙ্কটা ওখান থেকে আসে।
+     *
+     * @param  list<array<string, mixed>>  $side
+     * @return list<array<string, mixed>>
+     */
+    private function withAdvance(array $side, Collection $accounts, ?Account $home, ?Account $source, string $amount, string $label): array
+    {
+        if ($home === null || $source === null || bccomp($amount, '0', 4) === 0) {
+            return $side;
+        }
+
+        $head = $home;
+
+        while ($head->parent_id !== null && ($parent = $accounts->firstWhere('id', $head->parent_id)) !== null && $parent->parent_id !== null) {
+            $head = $parent;
+        }
+
+        foreach ($side as $i => $group) {
+            if ((int) $group['head']->id === (int) $head->id) {
+                $side[$i]['lines'][] = ['account' => $source, 'label' => $label, 'amount' => $amount];
+                $side[$i]['total'] = bcadd($group['total'], $amount, 4);
+            }
+        }
+
+        return $side;
     }
 
     /** @param  list<array<string, mixed>>  $side */

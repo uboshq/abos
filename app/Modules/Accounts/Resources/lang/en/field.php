@@ -322,4 +322,7 @@ return [
     'deposited' => 'Paid in by the bank',
     'running_balance' => 'Running balance at the bank',
     'pick_a_project' => 'Pick a project',
+    // ⭐ স্থিতিপত্রে অগ্রিম আলাদা লাইনে — উপস্থাপনে, খাতায় নয় (৪ অক্টোবর ২০২৬)
+    'customer_advance' => 'Customer advances',
+    'supplier_advance' => 'Supplier advances',
 ];
