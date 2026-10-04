@@ -97,6 +97,8 @@ return [
         'sales.cost' => 'ক্রয়মূল্য দেখা',
         'sales.discount' => 'ছাড়',
         'sales.invoice' => 'বিক্রয় বিল',
+        'sales.lead' => 'লিড',
+        'sales.opportunity' => 'সুযোগ',
         'sales.quotation' => 'বিক্রয় উদ্ধৃতি',
         'sales.order' => 'বিক্রয় আদেশ',
         'sales.reprint' => 'আবার ছাপা',

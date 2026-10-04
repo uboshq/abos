@@ -16,6 +16,7 @@ use App\Modules\Sales\Services\SalesDefaults;
 use App\Modules\Sales\Models\Collection;
 use App\Modules\Sales\Models\CommissionClaim;
 use App\Modules\Sales\Models\DeliveryChallan;
+use App\Modules\MasterData\Models\OpportunityStage;
 use App\Modules\Sales\Models\SalesInvoice;
 use App\Modules\Sales\Models\SalesInvoiceLine;
 use App\Modules\Sales\Models\SalesOrder;
@@ -125,6 +126,14 @@ return [
              * ডেলিভারি অর্ডার → সরাসরি বিক্রয় → ডেলিভারি প্রসেসিং → বিল ও চালান → ট্র্যাকিং → ফেরত → দাম → POS ও শিফট।
              * ⓘ কেবল ক্রম আর ভাঁজ; রুট, চাবি আর পাতা যেমন ছিল। নিচের ব্লকগুলো সেই ক্রমে বসানো (menu_order.py)।
              */
+            /*
+             * ⭐ লিড ও সুযোগ — NEXUS §৭। ⓘ কাগজের ধারার শুরুতে: খোঁজ → সুযোগ → আদেশ।
+             */
+            ['label' => 'sales::crm.leads', 'icon' => 'customer', 'route' => 'sales.lead.index',
+                'permission' => 'sales.lead.view'],
+            ['label' => 'sales::crm.pipeline', 'icon' => 'star', 'route' => 'sales.opportunity.pipeline',
+                'permission' => 'sales.opportunity.view'],
+
             /*
              * ⭐ উদ্ধৃতি আর বিক্রয় আদেশ — ড্যাশবোর্ডের ঠিক পরে, দুইটা ভাঁজে (মালিকের
              * নির্দেশ, ২৮ সেপ্টেম্বর ২০২৬: *"age bosaw, code pore korbo"*)।
@@ -551,6 +560,18 @@ return [
          */
         'sales.reprint.override',
 
+        /*
+         * লিড ও সুযোগ — দেখা (নিজেরটা) আর সবার-দেখা আলাদা।
+         *
+         * ⭐ মালিকের নিয়ম, ২৬ সেপ্টেম্বর ২০২৬: বিক্রয়কর্মী কেবল নিজেরটা।
+         * ⛔ `manage` সবার লিড খোলে আর গ্রাহক বানায় — সিডারের ঢালাও
+         * `sales.%` বাদ-তালিকাতেও আছে।
+         */
+        'sales.lead.view',
+        'sales.lead.manage',
+        'sales.opportunity.view',
+        'sales.opportunity.manage',
+
         'sales.manage',
     ],
 
@@ -668,6 +689,7 @@ return [
         'Field Sales' => [
             'sales.quotation.view', 'sales.quotation.create', 'sales.quotation.update',
             'sales.order.view', 'sales.order.create', 'sales.do.view', 'sales.do.create',
+            'sales.lead.view', 'sales.opportunity.view',
             'sales.collection.view', 'sales.collection.create',
         ],
         'Manager' => [
@@ -685,6 +707,8 @@ return [
             'sales.shipment.cancel',
             'sales.quotation.view',
             'sales.delivery.view',
+            'sales.lead.view', 'sales.lead.manage',
+            'sales.opportunity.view', 'sales.opportunity.manage',
             'sales.route.view',
             'sales.order.view', 'sales.challan.view', 'sales.invoice.view',
             'sales.collection.view', 'sales.return.view', 'sales.shipment.view',
@@ -717,6 +741,8 @@ return [
         'COL' => 'sales::doc.collection',
         'SR' => 'sales::doc.return',
         'CMC' => 'sales::doc.commission',
+        'LD' => 'sales::crm.doc_lead',
+        'OPP' => 'sales::crm.doc_opportunity',
     ],
 
     /*
@@ -732,6 +758,13 @@ return [
         'sales_invoice' => SalesInvoice::class,
         'sales_return' => SalesReturn::class,
         'collection' => Collection::class,
+    ],
+
+    /*
+     * সুযোগের ধাপ — একই নামে দুইটা নয় ([[MasterListService::create()]] পাহারা ডাকে)।
+     */
+    'duplicates' => [
+        ['model' => OpportunityStage::class, 'name' => ['name_en', 'name_bn']],
     ],
 
     'drill_sources' => [

@@ -104,6 +104,7 @@ return [
             ['label' => 'master_data::menu.price_lists', 'icon' => 'list', 'route' => 'master_data.price_list.index', 'permission' => 'master_data.view'],
             ['label' => 'master_data::menu.party_types', 'icon' => 'people', 'route' => 'master_data.party_type.index', 'permission' => 'master_data.view'],
             ['label' => 'master_data::sales_channel.title', 'icon' => 'share', 'route' => 'master_data.sales_channel.index', 'permission' => 'master_data.view'],
+            ['label' => 'sales::crm.opportunity_stages', 'icon' => 'list', 'route' => 'master_data.opportunity_stage.index', 'permission' => 'master_data.view'],
             ['label' => 'master_data::menu.reason_codes', 'icon' => 'help', 'route' => 'master_data.reason.index', 'permission' => 'master_data.view'],
 
             /*

@@ -314,6 +314,13 @@ class DemoSeeder extends Seeder
                          * পারেন। ওই সিদ্ধান্তটা মালিকের।
                          */
                         'customer.portal',
+
+                        /*
+                         * ⛔ সবার লিড ও সুযোগ দেখার চাবি — একই ফাঁদ আবার।
+                         * মালিকের নিয়ম (২৬ সেপ্টেম্বর): বিক্রয়কর্মী কেবল নিজেরটা।
+                         */
+                        'sales.lead.manage',
+                        'sales.opportunity.manage',
                     ])
                     ->get()
             );

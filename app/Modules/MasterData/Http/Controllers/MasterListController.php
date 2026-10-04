@@ -17,6 +17,7 @@ use App\Modules\MasterData\Models\Currency;
 use App\Modules\MasterData\Models\Department;
 use App\Modules\MasterData\Models\Designation;
 use App\Modules\MasterData\Models\EmploymentType;
+use App\Modules\MasterData\Models\OpportunityStage;
 use App\Modules\MasterData\Models\PartyType;
 use App\Modules\MasterData\Models\PaymentMethod;
 use App\Modules\MasterData\Models\PaymentTerm;
@@ -247,6 +248,25 @@ class MasterListController extends Controller implements HasMiddleware
             'title' => 'master_data::sales_channel.title',
             'fields' => [],
             'columns' => [],
+        ],
+
+        /*
+         * সুযোগের ধাপ — NEXUS §৭। ⓘ কোডে বাঁধা কেবল জেতা/হারা; বাকি ধাপ কোম্পানির।
+         */
+        'opportunity-stages' => [
+            'model' => OpportunityStage::class,
+            'route' => 'opportunity_stage',
+            'title' => 'sales::crm.opportunity_stages',
+            'fields' => [
+                'probability' => ['type' => 'number', 'label' => 'sales::crm.stage_probability', 'step' => '1',
+                    'rules' => ['nullable', 'integer', 'min:0', 'max:100']],
+                'sort_order' => ['type' => 'number', 'label' => 'sales::crm.stage_sort_order', 'step' => '1',
+                    'rules' => ['nullable', 'integer', 'min:0', 'max:65535']],
+                'is_won' => ['type' => 'switch', 'label' => 'sales::crm.stage_is_won',
+                    'hint' => 'sales::crm.stage_is_won_hint'],
+                'is_lost' => ['type' => 'switch', 'label' => 'sales::crm.stage_is_lost'],
+            ],
+            'columns' => ['probability', 'is_won', 'is_lost'],
         ],
 
         'reason-codes' => [

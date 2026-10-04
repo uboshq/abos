@@ -73,6 +73,8 @@ return [
         'sales.cost' => 'See purchase cost',
         'sales.discount' => 'Discounts',
         'sales.invoice' => 'Sales invoices',
+        'sales.lead' => 'Leads',
+        'sales.opportunity' => 'Opportunities',
         'sales.order' => 'Sales orders',
         'sales.quotation' => 'Sales quotations',
         'sales.reprint' => 'Reprint',
