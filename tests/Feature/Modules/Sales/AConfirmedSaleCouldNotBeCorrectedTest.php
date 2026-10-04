@@ -178,6 +178,39 @@ final class AConfirmedSaleCouldNotBeCorrectedTest extends TestCase
         $this->get($edit)->assertOk()->assertSee('data-edit-refused', false);
     }
 
+    /**
+     * ⭐ দলের খাতা তাজা — সম্পাদিত বিলের কেবল শেষ রূপ; আগের সারি আর উল্টো সারি খাতায় থাকে কিন্তু দেখায় না,
+     * বকেয়া একই (মালিক, ৪ অক্টোবর ২০২৬, INV-0002)। ⛔ বাতিল বিলের উল্টো সারি এতে বাদ যায় না।
+     */
+    public function test_the_party_ledger_shows_only_the_last_form_of_an_edited_bill(): void
+    {
+        $sale = $this->sell('2');
+        $edited = app(SaleEditor::class)->edit($sale, $this->data, $this->lines('5'));
+        $customer = (int) $this->data['customer_id'];
+
+        $all = \App\Models\LedgerEntry::query()->forParty('customer', $customer)->where('source_id', $sale->id)
+            ->where('source_type', 'like', \App\Modules\Sales\Models\SalesInvoice::drillSourceType().'%')->count();
+        $shown = \App\Core\Support\PartyLedger::withoutUndoneEdits(\App\Models\LedgerEntry::query()->forParty('customer', $customer))
+            ->where('source_id', $sale->id)->where('source_type', 'like', \App\Modules\Sales\Models\SalesInvoice::drillSourceType().'%')->get();
+
+        $this->assertSame(3, $all, 'প্রস্তুতিটাই ভুল — খাতায় আগের, উল্টো আর নতুন, তিন সারি থাকার কথা।');
+        $this->assertCount(1, $shown, '⛔ দলের খাতায় সম্পাদিত বিলের আগের বা উল্টো সারি দেখাচ্ছে।');
+        $this->assertSame(0, bccomp('50', (string) $shown->first()->debit, 4), '⛔ দেখানো সারিটা শেষ রূপ (৫০) নয়।');
+
+        $everything = \App\Models\LedgerEntry::query()->forParty('customer', $customer)->selectRaw('COALESCE(SUM(debit) - SUM(credit), 0) as n')->value('n');
+        $fresh = \App\Core\Support\PartyLedger::withoutUndoneEdits(\App\Models\LedgerEntry::query()->forParty('customer', $customer))->selectRaw('COALESCE(SUM(debit) - SUM(credit), 0) as n')->value('n');
+        $this->assertSame(0, bccomp((string) $everything, (string) $fresh, 4), '⛔ লুকানোয় বকেয়া বদলে গেছে।');
+
+        // ⓘ পাশে একটা কখনো-না-বদলানো বিল — ছকের এক সারিতে নম্বর যতবার আসে (কাগজের ঘর আর বিবরণ), সম্পাদিতটাও ঠিক ততবার
+        $plain = $this->sell('1');
+        $page = (string) $this->get(route('customer.show', $customer))->assertOk()->getContent();
+        $table = substr($page, (int) strpos($page, 'id="transactions"'));
+        $times = fn (string $no) => preg_match_all('/'.preg_quote($no, '/').'(?!\d)/u', $table);
+
+        $this->assertGreaterThan(0, $times($plain->document_no), 'প্রস্তুতিটাই ভুল — না-বদলানো বিলটা ছকে নেই।');
+        $this->assertSame($times($plain->document_no), $times($edited->document_no), '⛔ সম্পাদিত বিল ছকে একাধিক সারিতে দেখাচ্ছে।');
+    }
+
     // ── যন্ত্রপাতি ──────────────────────────────────────────────────────
 
     private function sell(string $qty): SalesInvoice

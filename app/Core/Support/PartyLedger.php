@@ -53,6 +53,9 @@ final class PartyLedger
      */
     public static function page(Builder $base, Request $request): LengthAwarePaginator
     {
+        /* ⭐ সম্পাদিত কাগজের আগের সারি আর তার উল্টো সারি বাদ — জের, প্রারম্ভিক আর দেখানো সারি, তিনটা থেকেই ([[withoutUndoneEdits()]]) */
+        $base = self::withoutUndoneEdits(clone $base);
+
         $order = fn (Builder $q) => $q->orderBy('ledger_entries.trx_date')->orderBy('ledger_entries.id');
 
         $rows = $order(self::filter(clone $base, $request))->paginate(self::PER_PAGE)->withQueryString();
@@ -166,5 +169,42 @@ final class PartyLedger
         $raw = trim((string) $raw);
 
         return preg_match('/^\d{4}-\d{2}-\d{2}$/', $raw) === 1 && strtotime($raw) !== false ? $raw : null;
+    }
+
+    /**
+     * ⭐ দলের খাতা "তাজা" — সম্পাদিত কাগজের কেবল শেষ রূপ (মালিক, ৪ অক্টোবর ২০২৬, INV-0002: "party ledger fresh hote hobe,
+     * edite tai bosbe; history audit e thakbe")।
+     *
+     * ⓘ সম্পাদনায় খাতা আগের সারিগুলো উল্টায় (`<source>:reversal`, একই কাগজ) তারপর একই কাগজ আবার বসায়
+     * ([[PostingEngine::reverse()]], [[SaleEditor]])। বাদ যায় দুই রকম সারি:
+     *   ১ · উল্টো সারি, যার পরে একই কাগজ আবার বসেছে;
+     *   ২ · আগের সারি, যাকে উল্টানো হয়েছে আর তারপর আবার বসেছে।
+     * ⓘ জোড়াটা মিলে ঠিক শূন্য — তাই বকেয়া একটুও বদলায় না, কেবল দেখা পরিষ্কার। খাতায় সব সারি থাকে, অডিটেও।
+     * ⛔ বাতিল কাগজ (উল্টানো, আর বসেনি — CXL) বাদ যায় না: তার উল্টো কাগজটাই মালিকের নিয়মে দেখানোর কথা।
+     *
+     * @param  Builder<LedgerEntry>  $query
+     * @return Builder<LedgerEntry>
+     */
+    public static function withoutUndoneEdits(Builder $query): Builder
+    {
+        $t = $query->getModel()->getTable();
+
+        return $query
+            ->whereNot(fn ($q) => $q->where($t.'.source_type', 'like', '%:reversal')
+                ->whereExists(fn ($again) => $again->selectRaw('1')->from($t.' as again')
+                    ->whereColumn('again.company_id', $t.'.company_id')
+                    ->whereColumn('again.source_id', $t.'.source_id')
+                    ->whereRaw("CONCAT(again.source_type, ':reversal') = {$t}.source_type")
+                    ->whereColumn('again.id', '>', $t.'.id')))
+            ->whereNot(fn ($q) => $q->whereExists(fn ($undo) => $undo->selectRaw('1')->from($t.' as undo')
+                ->whereColumn('undo.company_id', $t.'.company_id')
+                ->whereColumn('undo.source_id', $t.'.source_id')
+                ->whereRaw("undo.source_type = CONCAT({$t}.source_type, ':reversal')")
+                ->whereColumn('undo.id', '>', $t.'.id')
+                ->whereExists(fn ($again) => $again->selectRaw('1')->from($t.' as again')
+                    ->whereColumn('again.company_id', $t.'.company_id')
+                    ->whereColumn('again.source_id', $t.'.source_id')
+                    ->whereColumn('again.source_type', $t.'.source_type')
+                    ->whereColumn('again.id', '>', 'undo.id'))));
     }
 }

@@ -1274,7 +1274,8 @@ class SalesPrintController extends Controller implements HasMiddleware
     {
         $from = \Illuminate\Support\Carbon::parse($billDate)->startOfMonth();
         $next = $from->copy()->addMonth();
-        $party = fn () => \App\Models\LedgerEntry::query()->forParty('customer', $customerId);
+        // ⭐ সম্পাদিত বিলের আগের সারি আর উল্টো সারি বাদ — দলের খাতার একই নিয়ম (মালিক, ৪ অক্টোবর ২০২৬; [[PartyLedger::withoutUndoneEdits()]])
+        $party = fn () => \App\Core\Support\PartyLedger::withoutUndoneEdits(\App\Models\LedgerEntry::query()->forParty('customer', $customerId));
 
         $balance = bcadd((string) ($party()->where('trx_date', '<', $from->toDateString())
             ->selectRaw('COALESCE(SUM(debit) - SUM(credit), 0) as net')->value('net') ?? 0), '0', 4);
