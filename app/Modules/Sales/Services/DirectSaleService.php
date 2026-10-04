@@ -354,10 +354,22 @@ final class DirectSaleService
                 (int) $challan->id,
             );
 
+            /*
+             * ⭐ গেট পাসে মাল বেরোনো (সুইচ `sales.invoice_at_goods_issue`, মালিক, ৪ অক্টোবর ২০২৬) — "এখনই নিয়ে যাবেন" ছাড়া
+             * সব বিক্রিতে চালান মাল কেবল আটকায়, বিল খসড়ায় বাঁধা থাকে; বেরোনো আর বিল গেট পাসে ([[GoodsIssue]])।
+             */
+            $atGate = $this->issuesAtGate($data);
+
+            if ($atGate) {
+                $challan->update(['issue_at_gate' => true]);
+            }
+
             $challan = $this->challans->confirm($challan->fresh(['lines']), $deposit, DeliveryOrderStock::reservationsOf($source)); // ⓘ গ১১: DO-র নিজের আটকানো এই বিক্রিরই
 
-            // ফ্রি ও উপহার — চালান নিশ্চিত হওয়ার পর, ফ্রি ভাণ্ডার থেকে
-            $this->moveFreeStock($challan->fresh(['lines.product', 'giftLines.product']), $warehouse);
+            // ফ্রি ও উপহার — চালান নিশ্চিত হওয়ার পর, ফ্রি ভাণ্ডার থেকে (গেট পাসের চালানে গেট পাসে — [[issueFreeAtGate()]])
+            if (! $atGate) {
+                $this->moveFreeStock($challan->fresh(['lines.product', 'giftLines.product']), $warehouse);
+            }
 
             /*
              * ⓘ রাখা খসড়া পাকা হলে বিলটা **সেই একই কাগজ** — নতুন সারি বসে,
@@ -380,7 +392,10 @@ final class DirectSaleService
              * অঙ্ক দেখত — যেন পুরোটাই বাকি — অথচ ক্রেতা তখন কাউন্টারে টাকা
              * গুনে দাঁড়িয়ে।
              */
-            $invoice = $this->invoices->confirm($invoice, $deposit);
+            // ⓘ গেট পাসের চালানে বিল এখন খসড়াই — পাকা হয় মাল বেরোলে, একই নম্বরে ([[GoodsIssue::issue()]])
+            if (! $atGate) {
+                $invoice = $this->invoices->confirm($invoice, $deposit);
+            }
 
             /* ⭐ ধাপ চ — ইনভয়েস আর চালান একসাথে, আর একই লেনদেনে উৎস "বিল হয়েছে" ([[settleSource()]]) */
             if ($source !== null && $counted !== null) {
@@ -1456,11 +1471,19 @@ final class DirectSaleService
             );
 
             // ⓘ গোনা টাকাসহ — নইলে নগদে দেওয়া বিক্রয়ও চালানের সীমায় আটকাত
-            $challan = $this->challans->confirm($challan, $deposit, DeliveryOrderStock::reservationsOf($source)); // ⓘ গ১১: DO-র নিজের আটকানো এই বিক্রিরই
+            // ⭐ গেট পাসে মাল বেরোনো — সইয়ের পরেও একই নিয়ম, বাছাটা পর্দার ছবিতে ([[issuesAtGate()]])
+            $atGate = $this->issuesAtGate((array) ($invoice->counter_screen['fields'] ?? []));
 
-            $this->moveFreeStock($challan->fresh(['lines.product', 'giftLines.product']), $challan->warehouse);
+            if ($atGate) {
+                $challan->update(['issue_at_gate' => true]);
+            }
 
-            $invoice = $this->invoices->confirm($invoice->fresh(['lines']), $deposit);
+            $challan = $this->challans->confirm($challan->fresh(['lines']), $deposit, DeliveryOrderStock::reservationsOf($source)); // ⓘ গ১১: DO-র নিজের আটকানো এই বিক্রিরই
+
+            if (! $atGate) {
+                $this->moveFreeStock($challan->fresh(['lines.product', 'giftLines.product']), $challan->warehouse);
+                $invoice = $this->invoices->confirm($invoice->fresh(['lines']), $deposit);
+            }
 
             // ⭐ ধাপ চ — সইয়ের পরে পাকা হলেও উৎস একই লেনদেনে "বিল হয়েছে" ([[settleSource()]])
             if ($source !== null && $counted !== null) {
@@ -1495,6 +1518,24 @@ final class DirectSaleService
      *
      * @param  array<string, mixed>  $fields
      */
+    /**
+     * এই বিক্রি কি গেট পাসে মাল বের করবে — সুইচ চালু, আর মাল "এখনই" যাচ্ছে না (মালিক, ৪ অক্টোবর ২০২৬)।
+     * ⓘ "এখনই নিয়ে যাবেন" (Cash Sale) এক চাপে সব — আজকের মতো। মোড না পাঠালে (ফোন, DO) গাড়িতে যাওয়া বিক্রিই ধরা।
+     *
+     * @param  array<string, mixed>  $fields
+     */
+    private function issuesAtGate(array $fields): bool
+    {
+        return (bool) $this->settings->get('sales.invoice_at_goods_issue', false)
+            && ($fields['delivery_mode'] ?? null) !== 'take_now';
+    }
+
+    /** গেট পাসে ফ্রি আর উপহার বের করা — নিশ্চিতে যা আটকে রাখা হয়েছিল ([[GoodsIssue::issue()]]) */
+    public function issueFreeAtGate(DeliveryChallan $challan): void
+    {
+        $this->moveFreeStock($challan->fresh(['lines.product', 'giftLines.product']), $challan->warehouse);
+    }
+
     private function handOverIfTakenNow(DeliveryChallan $challan, array $fields, ?Customer $customer): void
     {
         if (($fields['delivery_mode'] ?? null) !== 'take_now') {

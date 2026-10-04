@@ -380,6 +380,34 @@ final class DeliveryChallanService
                     : '0';
 
                 /*
+                 * ⭐ গেট পাসে মাল বেরোনো (সুইচ `sales.invoice_at_goods_issue`, মালিক, ৪ অক্টোবর ২০২৬; SAP-এর Post Goods Issue)।
+                 * ⓘ এই চালানে মাল এখন কেবল **আটকায়** — তাক থেকে কমে না; বেরোয় গেট পাসে ([[GoodsIssue::issue()]])।
+                 * আটকানো = পরিমাণ − আদেশের যতটা এখানে ছাড়া হলো (আদেশের ধরা এই চালানের হয়ে যায়), "পাওয়া যায়" থেকে, তালাসহ।
+                 * ⚠️ লট আর ছাপা দামের যাচাই গেট পাসে — মাল তখনই সত্যিই বেরোয়।
+                 */
+                if ($challan->issue_at_gate) {
+                    $hold = bcsub($qty, $release, 4);
+
+                    if (bccomp($hold, '0', 4) !== 0) {
+                        $this->stock->move(
+                            product: $line->product,
+                            warehouse: $challan->warehouse,
+                            sourceType: DeliveryChallan::STOCK_SOURCE,
+                            sourceId: $challan->id,
+                            reserved: $hold,
+                            date: $challan->trx_date,
+                            documentNo: $challan->document_no,
+                            narration: __('sales::message.held_for_gate', ['no' => $challan->document_no]),
+                            batch: $line->batch,
+                            fromAvailable: true,
+                            ownReservations: $ownReservations,
+                        );
+                    }
+
+                    continue;
+                }
+
+                /*
                  * issue() — move() নয়, কারণ লট ধরা পণ্যে একটা লাইন
                  * কয়টা চলাচল হবে তা আগে থেকে জানা যায় না।
                  *
@@ -425,6 +453,36 @@ final class DeliveryChallanService
 
             return $challan->fresh(['lines']);
         });
+    }
+
+    /**
+     * ⭐ গেট পাসে মাল বেরোনো — আটকানো চালানের (মালিক, ৪ অক্টোবর ২০২৬; SAP-এর Post Goods Issue; [[GoodsIssue::issue()]])।
+     *
+     * ⓘ প্রতিটা সারির পুরো পরিমাণ আটকানো থেকে ছাড়ে আর তাক থেকে বেরোয় — একই উৎস-নামে, তাই বিলের খরচ ([[SalesInvoiceService]]
+     * `lotsThatLeft`) আর বাতিলের উল্টানো আগের পথেই চলে। লটের তালা, "লটে যা আছে তার বেশি নয়" আর ছাপা দামের সীমা — সব এখানে,
+     * কারণ মাল এখনই সত্যিই বেরোচ্ছে। ⓘ বেরোনোর তারিখ আজ — খরচ ওঠে মাল বেরোনোর দিনে (IFRS ১৫)।
+     */
+    public function issueHeldGoods(DeliveryChallan $challan): void
+    {
+        $challan->loadMissing(['lines.product', 'lines.batch', 'warehouse']);
+
+        foreach ($challan->lines->sortBy('line_no') as $line) {
+            $qty = (string) $line->delivered_qty;
+
+            $movements = $this->stock->issue(
+                product: $line->product,
+                warehouse: $challan->warehouse,
+                sourceType: DeliveryChallan::STOCK_SOURCE,
+                sourceId: $challan->id,
+                qty: $qty,
+                reserved: bcmul($qty, '-1', 4),
+                date: now()->toDateString(),
+                documentNo: $challan->document_no,
+                batch: $line->batch,
+            );
+
+            $this->assertWithinPrintedPrice($line, $movements);
+        }
     }
 
     /**
@@ -1065,6 +1123,15 @@ final class DeliveryChallanService
          * ⛔ আগে ফিরত পুরো `delivered_qty`। যে চালান কিছুই ছাড়েনি (আদেশ কিছু ধরেনি), তার বাতিলে মাল নতুন করে ধরা
          * পড়ত, আর আদেশের পাঠক ([[SalesOrderService::heldByThisOrder()]]) এমন ধরা দেখাত যা কেউ কোনোদিন বসায়নি।
          */
+        /*
+         * ⭐ গেট পাসের আগে বাতিল (সুইচ `sales.invoice_at_goods_issue`) — মাল কখনো বেরোয়নি, কেবল আটকেছিল; সেই আটকানোই ছাড়া।
+         * ⓘ উপরের উল্টানো কেবল তাকের মাল ফেরায়, আটকানো নয় ([[StockService::reverse()]])। এই চালানের নিজের আটকানো (আদেশের
+         * ছাড়ার পরের নিট) ফেরত গেলে মোট আটকানো আদেশের আগের অবস্থায় ফেরে; নিচের লুপ তখন কিছুই ধরে না (নিট ধনাত্মক)।
+         */
+        if ($challan->issue_at_gate && $challan->goods_issued_at === null) {
+            $this->releaseTheHold($challan, $date, $reason, $paperNo);
+        }
+
         $released = StockMovement::query()
             ->where('source_type', DeliveryChallan::STOCK_SOURCE)
             ->where('source_id', $challan->id)
@@ -1091,6 +1158,37 @@ final class DeliveryChallanService
                 sourceId: $challan->id,
                 floor: '0',
                 reserved: $reserve,
+                date: $date,
+                documentNo: $paperNo ?? $challan->document_no,
+                narration: $reason,
+            );
+        }
+    }
+
+    /**
+     * আটকানো চালানের আটকানো ছাড়া — পণ্য ধরে এখনো যতটা আটকে আছে (উৎস + তার ফেরত সারি), ততটাই ([[unpost()]]-এর অংশ)।
+     */
+    private function releaseTheHold(DeliveryChallan $challan, Carbon $date, string $reason, ?string $paperNo): void
+    {
+        $held = StockMovement::query()
+            ->whereIn('source_type', [DeliveryChallan::STOCK_SOURCE, DeliveryChallan::STOCK_SOURCE.':cancel'])
+            ->where('source_id', $challan->id)
+            ->where('warehouse_id', $challan->warehouse_id)
+            ->groupBy('product_id')
+            ->selectRaw('product_id, COALESCE(SUM(reserved_change), 0) as held')
+            ->pluck('held', 'product_id');
+
+        foreach ($held as $productId => $qty) {
+            if (bccomp((string) $qty, '0', 4) <= 0) {
+                continue;
+            }
+
+            $this->stock->move(
+                product: Product::query()->findOrFail($productId),
+                warehouse: $challan->warehouse,
+                sourceType: DeliveryChallan::STOCK_SOURCE.':cancel',
+                sourceId: $challan->id,
+                reserved: bcmul((string) $qty, '-1', 4),
                 date: $date,
                 documentNo: $paperNo ?? $challan->document_no,
                 narration: $reason,

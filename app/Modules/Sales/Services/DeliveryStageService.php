@@ -579,6 +579,8 @@ final class DeliveryStageService
                  * ([[DispatchBill]])। ⓘ গেট পাসের আগে, একই লেনদেনে: বিল আটকালে (বাকির দেয়াল)
                  * গেট পাসও নয়, রওনাও নয়। আগে থেকে বিল থাকলে কিছুই করে না।
                  */
+                // ⭐ গেট পাস = মাল বেরোনো, আর তখনই ইনভয়েস — আটকানো চালানের (সুইচ চালু থাকলে নিশ্চিত হওয়া; [[GoodsIssue]])
+                app(GoodsIssue::class)->issue($challan);
                 app(DispatchBill::class)->forDispatch($challan);
                 app(GatePassService::class)->issueFor($challan, $event);
             }

@@ -60,6 +60,8 @@ class DeliveryChallan extends Model implements Drillable, ShowsItselfForSigning
         'ship_to', 'ship_date', 'deposit_method', 'deposit_ref',
         // ⭐ মাল কীভাবে যাবে · গাড়ি কার · ভাড়া কে দেবে — কাউন্টার, ৪ অক্টোবর ২০২৬ (খালি = আজকের আচরণ)
         'delivery_mode', 'vehicle_owner', 'fare_paid_by',
+        // ⭐ গেট পাসে মাল বেরোনো (sales.invoice_at_goods_issue, ৪ অক্টোবর ২০২৬) — false মানে আগের নিয়ম
+        'issue_at_gate', 'goods_issued_at',
         'status', 'narration', 'created_by',
         'cancelled_by', 'cancelled_at', 'cancel_reason',
     ];
@@ -71,6 +73,8 @@ class DeliveryChallan extends Model implements Drillable, ShowsItselfForSigning
             'transport_cost' => 'decimal:4',
             'own_transport' => 'boolean',
             'ship_date' => 'date',
+            'issue_at_gate' => 'boolean',
+            'goods_issued_at' => 'datetime',
 
             'trx_date' => 'date',
             'cancelled_at' => 'datetime',

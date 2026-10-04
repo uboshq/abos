@@ -78,6 +78,7 @@ return [
     'freight_charged' => ':no — freight charged to the customer',
     'free_from_own_stock' => ':no — free goods out of our own stock (promotion cost)',
     'taken_now' => 'Taken now — from the counter',
+    'held_for_gate' => ':no — goods held, they leave at the gate pass',
     'cost_of_goods' => ':no — cost of goods sold',
     'stock_out' => ':no — inventory reduced',
     'money_in' => ':no — money received',
