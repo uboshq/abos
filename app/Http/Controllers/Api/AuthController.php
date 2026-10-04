@@ -201,7 +201,13 @@ class AuthController extends Controller
      */
     public function refresh(Request $request): JsonResponse
     {
-        $user = $request->user();
+        $current = $this->refreshTokenFrom($request);
+
+        if ($current === null) {
+            return response()->json(['message' => 'Unauthenticated.'], 401); // ⓘ Laravel-এর নিজের ৪০১-এর একই কথা — অ্যাপ এটাই চেনে
+        }
+
+        $user = $current->tokenable;
         /*
          * বার্তাসহ, কারণ `abilities` মিডলওয়্যারও ৪০৩ দেয় — আর দুইটা
          * খালি ৪০৩ দেখতে হুবহু এক। ব্যর্থ টেস্ট তখন বলে "কোথাও একটা
@@ -225,16 +231,53 @@ class AuthController extends Controller
         }
 
         $data = $request->validate([
-            'deviceId' => ['required', 'string', 'max:64'],
+            'deviceId' => ['nullable', 'string', 'max:64'],
         ]);
 
-        $current = $request->user()->currentAccessToken();
+        /*
+         * ⓘ deviceId না পাঠালে টোকেনের নিজের নাম থেকে (`refresh:<deviceId>`) — অ্যাপ ০.৪.৮ পর্যন্ত নবায়নে deviceId
+         * পাঠাত না, আর তাতে প্রতিটা নবায়ন ৪২২ হত ([[refreshTokenFrom()]], ৪ অক্টোবর ২০২৬)।
+         */
+        $deviceId = filled($data['deviceId'] ?? null)
+            ? (string) $data['deviceId']
+            : ($current instanceof PersonalAccessToken && str_starts_with((string) $current->name, self::REFRESH.':')
+                ? substr((string) $current->name, strlen(self::REFRESH) + 1) : '');
 
-        if ($current instanceof PersonalAccessToken) {
-            $current->delete();
+        if ($deviceId === '') {
+            return response()->json(['message' => __('validation.required', ['attribute' => 'deviceId'])], 422);
         }
 
-        return response()->json($this->issue($user, $data['deviceId']));
+        $current->delete();
+
+        return response()->json($this->issue($user, $deviceId));
+    }
+
+    /**
+     * ⛔ নবায়নের টোকেন — হেডারে, না পেলে body-তে (`refreshToken`); অ্যাপ ০.৪.৮ পর্যন্ত body-তেই পাঠাত, হেডার ছাড়া, আর
+     * দরজা কেবল হেডার পড়ত — প্রতিটা নবায়ন ৪০১, ৩০ মিনিট পরে সব ফোন চুপ (মালিক, ৪ অক্টোবর ২০২৬)।
+     * ⓘ পাহারা আগের মতোই, কেবল এখানে স্পষ্ট: টোকেন আছে, মেয়াদ ফুরোয়নি, ক্ষমতা `refresh` (access টোকেনে নবায়ন নয়),
+     * আর ব্যবহার করা টোকেন মুছে যায় বলে দ্বিতীয়বার চলে না।
+     */
+    private function refreshTokenFrom(Request $request): ?PersonalAccessToken
+    {
+        $plain = $request->bearerToken();
+
+        if (! is_string($plain) || $plain === '') {
+            $plain = $request->input('refreshToken');
+        }
+
+        if (! is_string($plain) || $plain === '') {
+            return null;
+        }
+
+        $token = PersonalAccessToken::findToken($plain);
+
+        if ($token === null || ! $token->can(self::REFRESH)
+            || ($token->expires_at !== null && $token->expires_at->isPast())) {
+            return null;
+        }
+
+        return $token;
     }
 
     /**

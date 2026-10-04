@@ -79,7 +79,12 @@ Route::prefix('v1/auth')
          * দিয়েই নিজেকে চিরকাল নবায়ন করা যেত।
          */
         Route::post('/refresh', [AuthController::class, 'refresh'])
-            ->middleware(['auth:sanctum', 'abilities:'.AuthController::REFRESH, 'throttle:30,1,api-token'])
+            /*
+             * ⓘ টোকেন নিয়ামক নিজে খোঁজে — হেডার, না পেলে body-র `refreshToken` (অ্যাপ ০.৪.৮ পর্যন্ত ওভাবেই পাঠায়); যাচাই
+             * একই চার পাহারা: আছে, মেয়াদ আছে, ক্ষমতা `refresh`, কর্মী ([[AuthController::refreshTokenFrom()]], ৪ অক্টোবর ২০২৬)।
+             * ⚠️ `auth:sanctum` এখানে নয়: Laravel সেটা অগ্রাধিকারে সবার আগে চালায়, তাই body-র টোকেন দেখার সুযোগই থাকত না।
+             */
+            ->middleware(['throttle:30,1,api-token'])
             ->name('refresh');
 
         Route::post('/logout', [AuthController::class, 'logout'])
