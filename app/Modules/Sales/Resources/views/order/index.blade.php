@@ -42,10 +42,19 @@
             ]),
         ],
         [
+            // ⭐ অবস্থা, চালান, বিল — পাশে ব্যাক অর্ডার আর লাল "পুরনো খসড়া" (মালিক, ৪ অক্টোবর ২০২৬; [[OrderProgress]])
             'key' => 'status',
             'label' => __('sales::field.state'),
-            'width' => '8rem',
-            'render' => fn ($d) => view('sales::components.status-badge', ['document' => $d]),
+            'width' => '14rem',
+            'render' => fn ($d) => view('sales::order.partials.state-chip', [
+                'status' => (string) $d->status,
+                'delivery' => $states[$d->id]['delivery'] ?? null,
+                'billing' => $states[$d->id]['billing'] ?? null,
+                'back' => $states[$d->id]['back'] ?? false,
+                'stale' => $states[$d->id]['stale'] ?? false,
+                'days' => $states[$d->id]['age_days'] ?? 0,
+                'paperDate' => \App\Core\Support\DateFormat::format($d->trx_date),
+            ]),
         ],
     ];
 @endphp

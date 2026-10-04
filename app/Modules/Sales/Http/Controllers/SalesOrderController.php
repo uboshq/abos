@@ -18,6 +18,7 @@ use App\Modules\Inventory\Models\Warehouse;
 use App\Modules\Inventory\Services\PackConversion;
 use App\Modules\Sales\Http\Requests\SalesOrderRequest;
 use App\Modules\Sales\Models\SalesOrder;
+use App\Modules\Sales\Services\OrderProgress;
 use App\Modules\Sales\Services\OrderTracking;
 use App\Modules\Sales\Services\SalesOrderService;
 use App\Modules\Sales\Services\SellableStock;
@@ -50,6 +51,8 @@ class SalesOrderController extends Controller implements HasMiddleware
             new Middleware('can:sales.order.view', only: ['track']),
             new Middleware('can:sales.order.update', only: ['confirm']),
             new Middleware('can:sales.order.cancel', only: ['cancel']),
+            // ⭐ বন্ধ — নিজের চাবি (মালিক, ৪ অক্টোবর ২০২৬; [[SalesOrderService::close()]])
+            new Middleware('can:sales.order.close', only: ['close']),
         ];
     }
 
@@ -121,7 +124,9 @@ class SalesOrderController extends Controller implements HasMiddleware
         return view('sales::order.index', [
             'menu' => $this->menu->forUser($request->user()),
             'grand' => $this->grandTotals($query, ['total' => 't.total']),
-            'orders' => $query->paginate(50)->withQueryString(),
+            'orders' => $orders = $query->paginate(50)->withQueryString(),
+            // ⭐ প্রতিটা আদেশের অবস্থা ও অগ্রগতি — পাতার পঞ্চাশটার জন্য একবারে ([[OrderProgress::compute()]])
+            'states' => app(OrderProgress::class)->compute($orders->getCollection()),
             'q' => $request->query('q'),
             'dates' => $dates,
             'sort' => $sort,
@@ -185,9 +190,13 @@ class SalesOrderController extends Controller implements HasMiddleware
     {
         $order->load(['lines.product.unit', 'customer', 'warehouse', 'challans', 'creator', 'quotation']);
 
+        $order->loadMissing('closer');
+
         return view('sales::order.show', [
             'menu' => $this->menu->forUser($request->user()),
             'order' => $order,
+            // ⭐ মাথার আর প্রতি লাইনের অবস্থা ও অগ্রগতি ([[OrderProgress]], মালিক, ৪ অক্টোবর ২০২৬)
+            'status' => app(OrderProgress::class)->of($order),
         ]);
     }
 
@@ -231,6 +240,28 @@ class SalesOrderController extends Controller implements HasMiddleware
         return redirect()
             ->route('sales.order.show', $order)
             ->with('saved', __('sales::message.order_cancelled'));
+    }
+
+    /**
+     * ⭐ আদেশ বন্ধ — পুরো বিলের পরে কারণ ছাড়া, কম রেখে কারণসহ ([[SalesOrderService::close()]])।
+     */
+    public function close(Request $request, SalesOrder $order): RedirectResponse
+    {
+        // ⛔ বন্ধের নিজের চাবি — middleware()-এর পাশাপাশি পদ্ধতির ভিতরেও, যাতে দরজা কোনো পথেই খোলা না থাকে
+        $this->authorize('sales.order.close');
+
+        // ⓘ ঘরের নাম পর্দার ভাষায় — বার্তায় ডাটাবেসের কলাম ("close reason") নয়
+        $reason = $request->validate(
+            ['close_reason' => ['nullable', 'string', 'max:500']],
+            [],
+            ['close_reason' => __('sales::order_status.field_close_reason')],
+        )['close_reason'] ?? null;
+
+        $this->service->close($order, $reason);
+
+        return redirect()
+            ->route('sales.order.show', $order)
+            ->with('saved', __('sales::order_status.closed_flash'));
     }
 
     /**

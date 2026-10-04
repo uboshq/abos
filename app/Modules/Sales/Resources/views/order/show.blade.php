@@ -59,8 +59,37 @@
 
                 <div>
                     <dt class="text-(--color-ink-muted)">{{ __('sales::field.state') }}</dt>
-                    <dd class="mt-0.5"><x-sales::status-badge :document="$order" /></dd>
+                    <dd class="mt-0.5" data-order-header-state>
+                        @include('sales::order.partials.state-chip', [
+                            'status' => (string) $order->status,
+                            'delivery' => $status['delivery'],
+                            'billing' => $status['billing'],
+                            'back' => $status['back'],
+                            'stale' => $status['stale'],
+                            'days' => $status['age_days'],
+                            'paperDate' => \App\Core\Support\DateFormat::format($order->trx_date),
+                        ])
+                    </dd>
                 </div>
+
+                {{-- ⓘ বাতিলের কারণ থাকে — পাতায় দেখা যায়, মোছা হয় না (নিয়ম ৫) --}}
+                @if ($order->status === \App\Core\Support\DocumentStatus::CANCELLED && filled($order->cancel_reason))
+                    <div data-cancel-reason>
+                        <dt class="text-(--color-ink-muted)">{{ __('sales::order_status.field_cancel_reason') }}</dt>
+                        <dd class="mt-0.5">{{ $order->cancel_reason }}</dd>
+                    </div>
+                @endif
+
+                @if ($order->status === \App\Core\Support\DocumentStatus::CLOSED)
+                    <div data-close-reason>
+                        <dt class="text-(--color-ink-muted)">{{ __('sales::order_status.field_close_reason') }}</dt>
+                        <dd class="mt-0.5">{{ $order->close_reason ?: '—' }}</dd>
+                    </div>
+                    <div>
+                        <dt class="text-(--color-ink-muted)">{{ __('sales::order_status.field_closed_by') }}</dt>
+                        <dd class="mt-0.5">{{ $order->closer?->name ?? '—' }} · {{ \App\Core\Support\DateFormat::format($order->closed_at) }}</dd>
+                    </div>
+                @endif
 
                 @if ($order->quotation)
                     <div>
@@ -101,6 +130,16 @@
                     ['key' => 'pending', 'label' => __('sales::field.pending'),
                      'numeric' => true, 'width' => '8rem',
                      'render' => fn ($l) => \App\Core\Support\Money::format($l->pendingQty())],
+                    ['key' => 'billed', 'label' => __('sales::order_status.field_billed'),
+                     'numeric' => true, 'width' => '8rem',
+                     'render' => fn ($l) => \App\Core\Support\Money::format($status['lines'][$l->id]['billed'] ?? '0')],
+                    ['key' => 'line_state', 'label' => __('sales::order_status.field_progress'), 'width' => '12rem',
+                     'render' => fn ($l) => view('sales::order.partials.state-chip', [
+                         'lineStatus' => $status['lines'][$l->id]['line_status'] ?? 'open',
+                         'delivery' => $status['lines'][$l->id]['delivery'] ?? null,
+                         'billing' => $status['lines'][$l->id]['billing'] ?? null,
+                         'back' => $status['lines'][$l->id]['back'] ?? false,
+                     ])],
                     ['key' => 'rate', 'label' => __('sales::field.rate'),
                      'numeric' => true, 'width' => '8rem',
                      'render' => fn ($l) => \App\Core\Support\Money::format($l->rate)],
@@ -120,8 +159,26 @@
         </section>
 
         @can('delete', $order)
-            @if ($order->status !== \App\Core\Support\DocumentStatus::CANCELLED)
+            {{-- ⓘ বন্ধ আদেশ বাতিল হয় না — বন্ধের দিনেই তার বাকি মাল ছাড়া হয়েছে --}}
+            @if (! in_array($order->status, [\App\Core\Support\DocumentStatus::CANCELLED, \App\Core\Support\DocumentStatus::CLOSED], true))
                 <x-sales::cancel-form :action="route('sales.order.cancel', $order)" />
+            @endif
+        @endcan
+
+        {{-- ⭐ বন্ধ — পুরো বিলের পরে কারণ ছাড়া, কম রেখে কারণসহ (মালিক, ৪ অক্টোবর ২০২৬; [[SalesOrderService::close()]]) --}}
+        @can('sales.order.close')
+            @if ($order->status === \App\Core\Support\DocumentStatus::CONFIRMED)
+                <details data-close-order
+                         class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
+                    <summary class="cursor-pointer text-sm font-medium">{{ __('sales::order_status.close') }}</summary>
+
+                    <form method="POST" action="{{ route('sales.order.close', $order) }}" class="mt-3 grid gap-3">
+                        @csrf
+                        <p class="text-sm text-(--color-ink-muted)">{{ __('sales::order_status.close_hint') }}</p>
+                        <x-ui.field name="close_reason" :label="__('sales::order_status.close_reason')" />
+                        <x-ui.button type="submit" tone="secondary">{{ __('sales::order_status.close') }}</x-ui.button>
+                    </form>
+                </details>
             @endif
         @endcan
     </div>

@@ -27,6 +27,9 @@ class SalesOrderLine extends Model
         'sales_order_id', 'product_id', 'ordered_qty',
         'entered_qty', 'entered_unit_id', 'rate',
         'discount', 'tax', 'tax_variance', 'amount', 'line_no', 'narration',
+        // ⭐ DO বিক্রয় আদেশে মেশানো, ধাপ ১ — নকশার §১.৪ (মালিক, ৪ অক্টোবর ২০২৬)
+        'requested_qty', 'free_qty', 'rejected_qty', 'reject_reason',
+        'delivery_status', 'billing_status', 'line_status',
     ];
 
     protected function casts(): array
@@ -38,6 +41,9 @@ class SalesOrderLine extends Model
             'discount' => 'decimal:4',
             'tax' => 'decimal:4',
             'amount' => 'decimal:4',
+            'requested_qty' => 'decimal:4',
+            'free_qty' => 'decimal:4',
+            'rejected_qty' => 'decimal:4',
             /*
              * ব্যতিক্রমের সংখ্যাগুলোও টাকা — তাই decimal, string নয়।
              *
@@ -54,6 +60,16 @@ class SalesOrderLine extends Model
      *
      * ⓘ পুরো কারণটা [[BelongsToCompanyThroughParent]]-এ।
      */
+    /**
+     * ⓘ অগ্রগতি কাগজের লেখা নয় — সইয়ের ছাপে গোনা হয় না ([[SalesOrder::fingerprintIgnores()]]-এর একই কারণ)।
+     *
+     * @return list<string>
+     */
+    public function fingerprintIgnores(): array
+    {
+        return ['delivery_status', 'billing_status', 'line_status'];
+    }
+
     protected function companyParent(): string
     {
         return 'order';

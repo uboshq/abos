@@ -400,6 +400,8 @@ return [
         'sales.order.create',
         'sales.order.update',
         'sales.order.cancel',
+        // ⭐ আদেশ বন্ধ — পুরো বিলের পরে, বা কারণসহ কম রেখে (মালিক, ৪ অক্টোবর ২০২৬: আন্তর্জাতিক মান)
+        'sales.order.close',
         // ⭐ ডেলিভারি অর্ডার — লেখা আর দেখা (মালিকের বিক্রয়-ধারা, ২ অক্টোবর ২০২৬; সই আসে কোম্পানির ছক থেকে)
         'sales.do.view',
         'sales.do.create',
@@ -648,6 +650,8 @@ return [
             // ⭐ অর্ডার নিশ্চিত, আর ট্রিপ চালানো ও বাতিল — তদারকি (হাঁটার স্ক্রিপ্টে ধরা, ২৯ সেপ্টেম্বর ২০২৬)।
             // ⚠️ `order.update` খসড়া সম্পাদনাও খোলে — নিশ্চিত আর সম্পাদনা একই চাবিতে বাঁধা (মালিককে জানানো)
             'sales.order.update',
+            // ⭐ আদেশ বন্ধ — নিশ্চিতের মতোই তদারকির কাজ (৪ অক্টোবর ২০২৬)। ⚠️ কেবল নতুন কোম্পানিতে পৌঁছায় — ভূমিকার ছক চলতি ভূমিকা বাড়ায় না
+            'sales.order.close',
             'sales.shipment.create',
             'sales.shipment.cancel',
             'sales.quotation.view',
@@ -755,6 +759,9 @@ return [
         // ⭐ ডেলিভারি অর্ডার — সুপারভাইজার পেরোল / থামল (২ অক্টোবর ২০২৬); শোনেন abos-86 (হিসাব, মজুদ)
         \App\Modules\Sales\Events\DeliveryOrderSupervisorApproved::class,
         \App\Modules\Sales\Events\DeliveryOrderCancelled::class,
+        // ⭐ বিক্রয় আদেশ বাতিল / বন্ধ (৪ অক্টোবর ২০২৬); শোনেন abos-86 (নতুন ধারার হোল্ড ছাড়া)
+        \App\Modules\Sales\Events\SalesOrderCancelled::class,
+        \App\Modules\Sales\Events\SalesOrderClosed::class,
     ],
 
     /*

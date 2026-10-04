@@ -14,6 +14,8 @@ use App\Core\Support\DocumentStatus;
 use App\Core\Support\Money;
 use App\Modules\Sales\Metrics\SalesMetrics;
 use App\Modules\Sales\Models\SalesInvoice;
+use App\Modules\Sales\Models\SalesOrder;
+use App\Modules\Sales\Services\OrderTracking;
 use Illuminate\Contracts\Database\Query\Builder;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -120,6 +122,25 @@ final class SalesWidgets implements DashboardWidgets
                 tone: 'neutral',
                 sort: 30,
                 icon: 'clock',
+            ),
+
+            /*
+             * ⭐ পুরনো খসড়া আদেশ — খসড়া অবস্থায় তিন দিন বা তার বেশি (মালিক, ৪ অক্টোবর ২০২৬; পরিকল্পনার §৪.৩)।
+             *
+             * ⓘ গোনা অর্ডার তালিকার "পুরনো খসড়া" ট্যাবেরই ([[OrderTracking::applyListTab()]]) — ঘর চাপলে ঠিক সেই
+             * সারিগুলোই খোলে, আর আদেশ দেখার চাবি যাঁর আছে কেবল তিনিই ঘরটা পান।
+             */
+            new Widget(
+                group: 'todo',
+                label: __('sales::order_status.tile_stale'),
+                value: (string) app(OrderTracking::class)
+                    ->applyListTab(SalesOrder::query(), OrderTracking::LIST_STALE)
+                    ->count(),
+                href: route('sales.order.index', ['tab' => OrderTracking::LIST_STALE]),
+                permission: 'sales.order.view',
+                tone: 'warn',
+                sort: 15,
+                icon: 'edit',
             ),
         ];
     }

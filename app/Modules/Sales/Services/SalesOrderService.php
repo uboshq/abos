@@ -7,16 +7,21 @@ namespace App\Modules\Sales\Services;
 use App\Core\Engines\Approval\DocumentApproval;
 use App\Core\Engines\NumberSeries\NumberSeriesEngine;
 use App\Core\Services\SettingsService;
+use App\Core\Support\Actor;
 use App\Core\Support\CompanyContext;
 use App\Core\Support\DocumentStatus;
 use App\Models\FinancialYear;
 use App\Models\IssuedNumber;
 use App\Modules\Inventory\Models\Product;
+use App\Modules\Inventory\Models\StockMovement;
 use App\Modules\Inventory\Models\Warehouse;
 use App\Modules\Inventory\Services\ReadsPackedQuantities;
 use App\Modules\Inventory\Services\StockService;
+use App\Modules\Sales\Events\SalesOrderCancelled;
+use App\Modules\Sales\Events\SalesOrderClosed;
 use App\Modules\Sales\Models\SalesOrder;
 use App\Modules\Sales\Models\SalesOrderLine;
+use App\Modules\Sales\Support\SalesOrderStatus;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -214,6 +219,8 @@ final class SalesOrderService
      */
     public function cancel(SalesOrder $order, string $reason): SalesOrder
     {
+        $this->assertNotClosed($order);
+
         if ($order->status === DocumentStatus::CANCELLED) {
             throw ValidationException::withMessages([
                 'status' => __('sales::validation.already_cancelled', ['no' => $order->document_no]),
@@ -232,9 +239,15 @@ final class SalesOrderService
                 ]);
             }
 
+            // ⛔ বন্ধ আদেশের ধরা মাল বন্ধেই ছাড়া হয়েছে — বাতিলে আবার ছাড়লে Reserved ঋণাত্মক হত
+            $this->assertNotClosed($order);
+
             if ($order->status === DocumentStatus::CONFIRMED && $order->warehouse) {
+                // ⛔ কেবল এই আদেশ নিজে যা ধরেছিল — অন্য কাগজের ধরা মাল নয় ([[heldByThisOrder()]], ৪ অক্টোবর ২০২৬)
+                $own = $this->heldByThisOrder($order);
+
                 foreach ($order->lines as $line) {
-                    $stillReserved = $line->pendingQty();
+                    $stillReserved = $this->ownShare($own, $line);
 
                     if (bccomp($stillReserved, '0', 4) <= 0) {
                         continue;
@@ -260,8 +273,175 @@ final class SalesOrderService
                 'cancel_reason' => $reason,
             ]);
 
-            return $order->fresh(['lines']);
+            $fresh = $order->fresh(['lines']);
+
+            // ⭐ abos-86-এর হোল্ড ছাড়ার জন্য — লেনদেন পাকা হলে তবেই ([[SalesOrderCancelled]])
+            DB::afterCommit(fn () => event(SalesOrderCancelled::from($fresh, $reason)));
+
+            return $fresh;
         });
+    }
+
+    /**
+     * ⭐ বন্ধ — পুরো বিলের পরে, বা ইচ্ছা করে কম রেখে (মালিক, ৪ অক্টোবর ২০২৬: আন্তর্জাতিক মান; পরিকল্পনার §৫.১-এর শেষ ধাপ)।
+     *
+     * ⓘ পুরো বিল হলে কারণ লাগে না — কাজ শেষ। ⛔ বাকি রেখে বন্ধ ("short close") করলে কারণ বাধ্যতামূলক; প্রতিটা লাইনের
+     * বাকিটা "আর দেওয়া হবে না" হয় (`rejected_qty`, `reject_reason` — SAP-এর reason for rejection, নকশার §১.৪), আর যে মাল
+     * এখনো এই আদেশের নামে ধরা তা ছাড়া হয় — নাহলে বন্ধ আদেশ চিরকাল তাকের মাল আটকে রাখত।
+     * ⛔ কিছুই না গিয়ে থাকলে বন্ধ নয়, বাতিল — বন্ধ মানে "যা হওয়ার হয়েছে", আর কিছু না হওয়া আদেশের নাম বাতিল।
+     *
+     * ⓘ ছাড়ার নিয়ম [[cancel()]]-এর হুবহু (লাইনের `pendingQty()`), যাতে খসড়া চালান পরে নিশ্চিত হলে সে নিজের অংশটুকুই ছাড়ে
+     * ([[DeliveryChallanService::releasableQty()]]) — দুইবার নয়। ⚠️ কেবল `ledger` আদেশে আর সুইচ চালু থাকলে (মাল ধরা
+     * হয়েছিল কেবল তখনই, [[confirm()]])। `holds` আদেশের হোল্ড ছাড়ে abos-86-এর সেবা (নকশার ধাপ ৪, `ReleaseTheOrderStock`)।
+     */
+    public function close(SalesOrder $order, ?string $reason = null): SalesOrder
+    {
+        $reason = trim((string) $reason);
+
+        $order->loadMissing(['lines.product', 'warehouse']);
+
+        return DB::transaction(function () use ($order, $reason) {
+            // ⛔ দ্বিতীয় ক্লিক — তালার ভিতরে অবস্থা আবার ([[lockAndReread()]])
+            $this->lockAndReread($order);
+
+            if ($order->status !== SalesOrderStatus::CONFIRMED) {
+                throw ValidationException::withMessages([
+                    'status' => __('sales::order_status.only_confirmed_closes', ['no' => $order->document_no]),
+                ]);
+            }
+
+            $progress = app(OrderProgress::class)->of($order);
+
+            if ($progress['billing'] !== SalesOrderStatus::FULL && $reason === '') {
+                throw ValidationException::withMessages([
+                    'close_reason' => __('sales::order_status.short_close_needs_reason', ['no' => $order->document_no]),
+                ]);
+            }
+
+            if ($progress['delivery'] === SalesOrderStatus::NONE) {
+                throw ValidationException::withMessages([
+                    'status' => __('sales::order_status.nothing_went_cancel_instead', ['no' => $order->document_no]),
+                ]);
+            }
+
+            $ledger = (string) ($order->hold_mode ?? SalesOrderStatus::HOLD_LEDGER) === SalesOrderStatus::HOLD_LEDGER;
+
+            // ⛔ কেবল এই আদেশ নিজে যা ধরেছিল — সুইচ বন্ধে নিশ্চিত হওয়া আদেশ কিছুই ধরেনি, তাই কিছুই ছাড়ে না
+            $own = $ledger && $order->warehouse ? $this->heldByThisOrder($order) : [];
+
+            foreach ($order->lines as $line) {
+                if ($ledger && $order->warehouse) {
+                    $stillReserved = $this->ownShare($own, $line);
+
+                    if (bccomp($stillReserved, '0', 4) > 0) {
+                        $this->stock->move(
+                            product: $line->product,
+                            warehouse: $order->warehouse,
+                            sourceType: SalesOrder::STOCK_SOURCE.':close',
+                            sourceId: $order->id,
+                            reserved: bcmul($stillReserved, '-1', 4),
+                            date: now(),
+                            documentNo: $order->document_no,
+                            narration: $reason !== '' ? $reason : null,
+                        );
+                    }
+                }
+
+                // ⓘ যা যায়নি, তা "আর দেওয়া হবে না" — চূড়ান্ত পরিমাণ = যা গেছে
+                $open = (string) $progress['lines'][(int) $line->id]['open'];
+
+                $line->forceFill(array_filter([
+                    'line_status' => SalesOrderStatus::LINE_CLOSED,
+                    'rejected_qty' => bccomp($open, '0', 4) > 0 ? bcadd((string) $line->rejected_qty, $open, 4) : null,
+                    'reject_reason' => bccomp($open, '0', 4) > 0 ? mb_substr($reason, 0, 255) : null,
+                ], fn ($v) => $v !== null))->save();
+            }
+
+            $order->update([
+                'status' => SalesOrderStatus::CLOSED,
+                'closed_at' => now(),
+                'closed_by' => Actor::userId(),
+                'close_reason' => $reason !== '' ? $reason : null,
+            ]);
+
+            // ⭐ অগ্রগতির ঘর — একমাত্র লেখকের হাতে ([[OrderProgress::refresh()]])
+            app(OrderProgress::class)->refresh($order->fresh(['lines']));
+
+            $fresh = $order->fresh(['lines']);
+
+            // ⭐ abos-86-এর হোল্ড ছাড়ার জন্য — লেনদেন পাকা হলে তবেই ([[SalesOrderClosed]])
+            DB::afterCommit(fn () => event(SalesOrderClosed::from($fresh, $reason)));
+
+            return $fresh;
+        });
+    }
+
+    /** ⛔ বন্ধ আদেশ বাতিল হয় না — বন্ধের দিনেই তার বাকি মাল ছাড়া হয়েছে। */
+    private function assertNotClosed(SalesOrder $order): void
+    {
+        if ($order->status === SalesOrderStatus::CLOSED) {
+            throw ValidationException::withMessages([
+                'status' => __('sales::order_status.closed_cannot_cancel', ['no' => $order->document_no]),
+            ]);
+        }
+    }
+
+    /**
+     * ⛔ এই আদেশ নিজে কতটা ধরেছিল — পণ্যপ্রতি, আদেশের গুদামে, মজুদের খাতা থেকে (উৎস `sales_order`, এই আদেশের আইডি)।
+     *
+     * ── কেন খাতা থেকে, সুইচ থেকে নয় (সমন্বয়কের নির্দেশ, ৪ অক্টোবর ২০২৬) ────────────────────────────
+     * ⓘ বাতিল আর বন্ধ আগে প্রতিটা লাইনের বাকি (`pendingQty()`) ছাড়ত, আদেশ সত্যিই কিছু ধরেছিল কি না না দেখে। ⛔ সংরক্ষণের
+     * সুইচ (`sales.reserve_on_order`) বন্ধ থাকতে নিশ্চিত হওয়া আদেশ কিছুই ধরেনি — অথচ বাতিলে সে **অন্য কাগজের** ধরা মাল ছেড়ে
+     * দিত, আর সেই মাল আবার বেচা যেত। ⚠️ আজকের সুইচ দেখলেও ভুল হত: নিশ্চিতের দিন চালু, বাতিলের দিন বন্ধ হলে আদেশের ধরা মাল
+     * চিরকাল আটকে থাকত। ⭐ সত্যিটা খাতায়: এই আদেশ নিজের নামে কতটা বসিয়েছিল।
+     *
+     * ⭐ চালান যতটা ছেড়েছে তা-ও যোগ হয় (abos-86, ৪ অক্টোবর ২০২৬): ছাড়াটা বসে চালানের নিজের উৎসে (`delivery_challan`,
+     * ঋণাত্মক), আর চালান বাতিলের ফেরত `delivery_challan:cancel`-এ — তাই যোগফলই আসল অবশিষ্ট ধরা। ⛔ শুধু `sales_order`
+     * গুনলে ১০ ধরে ৬ ছাড়ার পরেও ১০ দেখাত, আর বাতিল অন্য কাগজের ৬ খেয়ে ফেলত।
+     *
+     * @return array<int, string> পণ্য → এই আদেশের নিজের বসানো Reserved
+     */
+    public function heldByThisOrder(SalesOrder $order): array
+    {
+        $challan = \App\Modules\Sales\Models\DeliveryChallan::class;
+        $challans = $challan::query()
+            ->where('sales_order_id', $order->id)
+            ->where('warehouse_id', $order->warehouse_id)
+            ->select('id');
+
+        return StockMovement::query()
+            ->where('warehouse_id', $order->warehouse_id)
+            ->where(fn ($q) => $q
+                ->where(fn ($own) => $own->where('source_type', SalesOrder::STOCK_SOURCE)->where('source_id', $order->id))
+                ->orWhere(fn ($out) => $out->whereIn('source_type', [$challan::STOCK_SOURCE, $challan::STOCK_SOURCE.':cancel'])
+                    ->whereIn('source_id', $challans)))
+            ->groupBy('product_id')
+            ->selectRaw('product_id, COALESCE(SUM(reserved_change), 0) as held')
+            ->pluck('held', 'product_id')
+            ->mapWithKeys(fn ($held, $product) => [(int) $product => bcadd((string) $held, '0', 4)])
+            ->all();
+    }
+
+    /**
+     * একটা লাইনের ছাড়ার অংশ — লাইনের বাকি, কিন্তু এই আদেশ নিজে যতটা ধরেছিল তার বেশি নয়।
+     *
+     * ⓘ একই পণ্য দুই লাইনে থাকলে ভাগটা একবারই খরচ হয় — দেওয়া অংশ হিসাব থেকে কমে।
+     *
+     * @param  array<int, string>  $own
+     */
+    private function ownShare(array &$own, SalesOrderLine $line): string
+    {
+        $pending = $line->pendingQty();
+        $left = $own[(int) $line->product_id] ?? '0';
+        $take = bccomp($pending, $left, 4) > 0 ? $left : $pending;
+
+        if (bccomp($take, '0', 4) <= 0) {
+            return '0';
+        }
+
+        $own[(int) $line->product_id] = bcsub($left, $take, 4);
+
+        return $take;
     }
 
     /**

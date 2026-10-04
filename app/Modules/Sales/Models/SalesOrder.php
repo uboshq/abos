@@ -48,6 +48,13 @@ class SalesOrder extends Model implements Drillable
         'subtotal', 'discount', 'tax', 'total',
         'status', 'narration', 'created_by', 'created_by_customer_id',
         'cancelled_by', 'cancelled_at', 'cancel_reason',
+        // ⭐ DO বিক্রয় আদেশে মেশানো, ধাপ ১ — নকশার §১.৩ (মালিক, ৪ অক্টোবর ২০২৬; [[SalesOrderStatus]])
+        'submitted_at', 'approved_at',
+        'credit_short', 'credit_held_at', 'credit_checked_at', 'credit_warnings',
+        'depot_check_at', 'depot_check_by',
+        'delivery_status', 'billing_status',
+        'closed_at', 'closed_by', 'close_reason',
+        'hold_mode',
     ];
 
     protected function casts(): array
@@ -56,6 +63,14 @@ class SalesOrder extends Model implements Drillable
             'trx_date' => 'date',
             'deliver_on' => 'date',
             'cancelled_at' => 'datetime',
+            'submitted_at' => 'datetime',
+            'approved_at' => 'datetime',
+            'credit_short' => 'decimal:4',
+            'credit_held_at' => 'datetime',
+            'credit_checked_at' => 'datetime',
+            'credit_warnings' => 'array',
+            'depot_check_at' => 'datetime',
+            'closed_at' => 'datetime',
             'subtotal' => 'decimal:4',
             'discount' => 'decimal:4',
             'tax' => 'decimal:4',
@@ -97,6 +112,31 @@ class SalesOrder extends Model implements Drillable
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
+    }
+
+    /** ⓘ কে আদেশটা বন্ধ করলেন — পাতায় নাম ([[SalesOrderService::close()]]) */
+    public function closer(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'closed_by');
+    }
+
+    /**
+     * ⓘ ধারার ছাপ আর অগ্রগতি কাগজের লেখা নয় — সইয়ের ছাপে ([[DocumentFingerprint]]) গোনা হয় না।
+     *
+     * ⚠️ গুনলে জমা, সীমার যাচাই বা একটা চালানই কাগজ "বদলেছে" বলত, আর সই পাওয়া আদেশ আবার সই চাইত।
+     *
+     * @return list<string>
+     */
+    public function fingerprintIgnores(): array
+    {
+        return [
+            'submitted_at', 'approved_at',
+            'credit_short', 'credit_held_at', 'credit_checked_at', 'credit_warnings',
+            'depot_check_at', 'depot_check_by',
+            'delivery_status', 'billing_status',
+            'closed_at', 'closed_by', 'close_reason',
+            'hold_mode',
+        ];
     }
 
     public function scopeOpen(Builder $query): Builder

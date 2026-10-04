@@ -6,9 +6,11 @@ namespace App\Modules\Sales\Services;
 
 use App\Core\Support\DocumentStatus;
 use App\Modules\Sales\Models\SalesOrder;
+use App\Modules\Sales\Support\SalesOrderStatus;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder as EloquentBuilder;
 use Illuminate\Database\Query\Builder;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -67,6 +69,12 @@ final class OrderTracking
     public const LIST_HISTORY = 'history';
 
     /**
+     * ⭐ পুরনো খসড়া — খসড়া অবস্থায় তিন দিন বা তার বেশি (পরিকল্পনার §৪.৩: *"৩ দিন পড়ে থাকলে তালিকায় লাল"*;
+     * মালিক, ৪ অক্টোবর ২০২৬)। ⓘ নিয়ম আর কাটা-সময় [[OrderProgress::isStale()]]-এর — দুই জায়গায় এক।
+     */
+    public const LIST_STALE = 'stale';
+
+    /**
      * ট্যাবের ক্রম — চাবি → নাম আর খোলার চাবি।
      *
      * @var array<string, array{label: string, hint: string, permission: string}>
@@ -76,6 +84,7 @@ final class OrderTracking
         self::LIST_PENDING => ['label' => 'sales::order_tabs.pending', 'hint' => 'sales::order_tabs.hint_pending', 'permission' => 'sales.order.view'],
         self::LIST_PARTIAL => ['label' => 'sales::order_tabs.partial', 'hint' => 'sales::order_tabs.hint_partial', 'permission' => 'sales.order.view'],
         self::LIST_BACK => ['label' => 'sales::order_tabs.back', 'hint' => 'sales::order_tabs.hint_back', 'permission' => 'sales.order.view'],
+        self::LIST_STALE => ['label' => 'sales::order_status.tab_stale', 'hint' => 'sales::order_status.hint_tab_stale', 'permission' => 'sales.order.view'],
         self::LIST_HISTORY => ['label' => 'sales::order_tabs.history', 'hint' => 'sales::order_tabs.hint_history', 'permission' => 'sales.order.view'],
     ];
 
@@ -224,22 +233,27 @@ final class OrderTracking
     public function applyListTab(EloquentBuilder $orders, string $tab, bool $withCancelled = false): EloquentBuilder
     {
         $live = fn (EloquentBuilder $q): EloquentBuilder => $q->where('sal_orders.status', '<>', DocumentStatus::CANCELLED);
+        // ⓘ বন্ধ বা ফেরত আদেশ আর অপেক্ষমাণ বা আংশিক নয় — তার জায়গা ইতিহাসে (৪ অক্টোবর ২০২৬, [[SalesOrderStatus::FINISHED]])
+        $open = fn (EloquentBuilder $q): EloquentBuilder => $q->whereNotIn('sal_orders.status', SalesOrderStatus::FINISHED);
         [$lessThanOrdered, $lessBindings] = $this->deliveredAgainstOrdered('<');
         [$allGone, $goneBindings] = $this->deliveredAgainstOrdered('>=');
 
         return match ($tab) {
-            self::LIST_PENDING => $live($orders)->where($this->deliveredQty(), '<=', 0),
-            self::LIST_PARTIAL => $live($orders)->where($this->deliveredQty(), '>', 0)
+            self::LIST_PENDING => $open($orders)->where($this->deliveredQty(), '<=', 0),
+            self::LIST_PARTIAL => $open($orders)->where($this->deliveredQty(), '>', 0)
                 ->whereRaw($lessThanOrdered, $lessBindings),
             // ⓘ কেবল নিশ্চিত আদেশ — খসড়া আদেশের মাল এখনো কেউ চায়নি, তাই সে "পিছিয়ে" নেই
             self::LIST_BACK => $live($orders)->where('sal_orders.status', DocumentStatus::CONFIRMED)
                 ->whereExists($this->shortLines()->selectRaw('1')),
             // ⓘ শেষ হয়ে যাওয়া আদেশ: সব মাল গেছে, নয়তো বাতিল — প্রতিটার পাতায় পুরো পথ ([[SalesOrderController::show()]])
             self::LIST_HISTORY => $orders->where(fn (EloquentBuilder $q) => $q
-                ->where('sal_orders.status', DocumentStatus::CANCELLED)
+                ->whereIn('sal_orders.status', SalesOrderStatus::FINISHED)
                 ->orWhere(fn (EloquentBuilder $done) => $done
                     ->where($this->deliveredQty(), '>', 0)
                     ->whereRaw($allGone, $goneBindings))),
+            // ⭐ পুরনো খসড়া — খসড়া অবস্থায় তিন দিন বা তার বেশি ([[OrderProgress::isStale()]]-এর হুবহু নিয়ম)
+            self::LIST_STALE => $orders->where('sal_orders.status', SalesOrderStatus::DRAFT)
+                ->where('sal_orders.created_at', '<=', OrderProgress::staleCutoff()),
             // ⓘ "সব" — আগের তালিকা হুবহু: বাতিল লুকানো, চাইলে দেখা যায় (নিয়ম ৫)
             default => $withCancelled ? $orders : $live($orders),
         };
@@ -255,7 +269,7 @@ final class OrderTracking
     {
         $rows = DB::query()
             ->fromSub(
-                $orders->select('sal_orders.id', 'sal_orders.status')
+                $orders->select('sal_orders.id', 'sal_orders.status', 'sal_orders.created_at')
                     ->selectSub($this->orderedQty(), 'ordered_total')
                     ->selectSub($this->deliveredQty(), 'delivered_total')
                     ->selectSub($this->shortLines()->selectRaw('COUNT(*)'), 'short_lines'),
@@ -285,6 +299,11 @@ final class OrderTracking
             return [self::LIST_HISTORY];
         }
 
+        // ⓘ বন্ধ বা ফেরত — "সব"-এ থাকে (বাতিল নয়), আর ইতিহাসে
+        if (in_array($row->status ?? null, SalesOrderStatus::FINISHED, true)) {
+            return [self::LIST_ALL, self::LIST_HISTORY];
+        }
+
         $ordered = (string) ($row->ordered_total ?? '0');
         $delivered = (string) ($row->delivered_total ?? '0');
 
@@ -296,6 +315,12 @@ final class OrderTracking
 
         if (($row->status ?? null) === DocumentStatus::CONFIRMED && (int) ($row->short_lines ?? 0) > 0) {
             $tabs[] = self::LIST_BACK;
+        }
+
+        if (($row->status ?? null) === SalesOrderStatus::DRAFT
+            && ($row->created_at ?? null) !== null
+            && Carbon::parse((string) $row->created_at)->lte(OrderProgress::staleCutoff())) {
+            $tabs[] = self::LIST_STALE;
         }
 
         return $tabs;

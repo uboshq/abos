@@ -211,6 +211,8 @@ Route::middleware('auth')->prefix('sales')->group(function () {
         Route::put('/{order}', [SalesOrderController::class, 'update'])->whereNumber('order')->name('update');
         Route::post('/{order}/confirm', [SalesOrderController::class, 'confirm'])->whereNumber('order')->name('confirm');
         Route::post('/{order}/cancel', [SalesOrderController::class, 'cancel'])->whereNumber('order')->name('cancel');
+        // ⭐ বন্ধ — চাবি sales.order.close, কন্ট্রোলারের middleware()-এ
+        Route::post('/{order}/close', [SalesOrderController::class, 'close'])->whereNumber('order')->name('close');
     });
 
     Route::prefix('challans')->name('challan.')->group(function () {
