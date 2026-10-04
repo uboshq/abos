@@ -418,6 +418,9 @@ final class DirectSaleService
             }
 
 
+            // ⭐ "এখনই নিয়ে যাবেন" — এক চাপে গেট পাস আর "পৌঁছেছে" (মালিক, ৪ অক্টোবর ২০২৬; [[handOverIfTakenNow()]])
+            $this->handOverIfTakenNow($challan, $data, $customer);
+
             $total = (string) $invoice->total;
 
             return [
@@ -1474,9 +1477,35 @@ final class DirectSaleService
                 $this->postCounterVoucher($voucher->fresh());
             }
 
+            // ⭐ সইয়ের পরে পাকা হলেও "এখনই নিয়ে যাবেন" — বাছাটা পর্দার ছবিতে ছিল ([[handOverIfTakenNow()]])
+            $this->handOverIfTakenNow($challan, (array) ($invoice->counter_screen['fields'] ?? []), Customer::query()->find($invoice->customer_id));
 
             return $invoice->fresh(['lines']);
         });
+    }
+
+    /**
+     * ⭐ "এখনই নিয়ে যাবেন" (Cash Sale) — এক চাপে গেট পাস আর "পৌঁছেছে" (মালিক, ৪ অক্টোবর ২০২৬; D365/SAP কাউন্টারের ধাঁচ)।
+     *
+     * ⓘ মাল ক্রেতার হাতে, কাউন্টারেই — তাই ডেলিভারির তালিকায় অপেক্ষার কিছু নেই। "পৌঁছেছে"-তে সরাসরি যাওয়াটাই গেট পার হওয়া
+     * ([[DeliveryStageService::move()]] — গেট পাস নিজে থেকে, একই লেনদেনে), গ্রহণকারী ক্রেতা নিজে।
+     * ⚠️ কেবল `delivery_mode = take_now` স্পষ্ট পাঠানো হলে। মোড না পাঠালে (ফোন, পুরনো পথ) আজকের আচরণ — বিক্রি ডেলিভারির
+     * তালিকায় অপেক্ষা করে; ⛔ নইলে ফোনের প্রতিটা বিক্রি হঠাৎ নিজে "পৌঁছেছে" হয়ে যেত। "পরে পাঠানো হবে" আর "পরে নিয়ে যাবেন"
+     * অপেক্ষা করে — গেট পাস হয় মাল বেরোনোর দিন।
+     *
+     * @param  array<string, mixed>  $fields
+     */
+    private function handOverIfTakenNow(DeliveryChallan $challan, array $fields, ?Customer $customer): void
+    {
+        if (($fields['delivery_mode'] ?? null) !== 'take_now') {
+            return;
+        }
+
+        app(DeliveryStageService::class)->move($challan->fresh(), DeliveryStage::DELIVERED, [
+            'receiver_name' => (string) ($customer?->name_bn ?: $customer?->name_en),
+            'receiver_phone' => (string) ($customer?->phone ?? '') ?: null,
+            'note' => __('sales::message.taken_now'),
+        ]);
     }
 
     /**
