@@ -85,7 +85,13 @@ final class NoteAccounts
     public function others(string $kind, string $direction): Collection
     {
         return match ($kind) {
-            Note::KIND_CUSTOMER => $this->byCodes([$direction === Note::CREDIT ? StandardChart::SALES_RETURN : StandardChart::SALES]),
+            /*
+             * ⭐ গ্রাহকের ক্রেডিট নোট — মাল ফেরত হলে বিক্রয় ফেরত (৪১১০), কেবল দামের ছাড় হলে দেওয়া ছাড় (৫৩০০); মালিকের পরিকল্পনা
+             * সংস্করণ ২, ৪ অক্টোবর ২০২৬। ⓘ কোড ধরে সাজানো, তাই ডিফল্ট ([[defaultOther()]]) আগের মতোই ৪১১০ — আজকের আচরণ বদলায় না।
+             */
+            Note::KIND_CUSTOMER => $this->byCodes($direction === Note::CREDIT
+                ? [StandardChart::SALES_RETURN, StandardChart::DISCOUNT_GIVEN]
+                : [StandardChart::SALES]),
             Note::KIND_SUPPLIER => $this->byCodes([StandardChart::PURCHASE_PRICE_VARIANCE]),
             Note::KIND_SERVICE_PROVIDER => Account::query()->postable()->ofType([Account::EXPENSE])->orderBy('code')->get(),
             Note::KIND_PERSON => Account::query()->postable()->ofType([Account::INCOME, Account::EXPENSE])->orderBy('code')->get(),
