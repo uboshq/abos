@@ -502,7 +502,18 @@ return new class extends Migration
      */
     public function down(): void
     {
-        if (Schema::hasTable('acc_withdrawal_limits')) {
+        if (Schema::hasTable('acc_withdrawal_limits') && $this->hasIndex('acc_withdrawal_limits', 'acc_withdrawal_limits_one_cap_per_person')) {
+            /*
+             * ⛔ আগে `company_id`-র নিজের সূচক — ৪ অক্টোবর ২০২৬ (abos-86-এর ধরা)। এই অনন্য সূচকটাই `company_id`-র
+             * বিদেশি চাবিকে সেবা দেয়; একা মুছতে গেলে MySQL বলে "1553 … needed in a foreign key constraint", আর
+             * rollback অর্ধেক থেমে ছক ভাঙা থাকে (DatabaseMigrations-এর পরীক্ষার পরে বাকি সব পরীক্ষা লাল)।
+             */
+            if (! $this->hasIndex('acc_withdrawal_limits', 'acc_withdrawal_limits_company_id_index')) {
+                Schema::table('acc_withdrawal_limits', function (Blueprint $table): void {
+                    $table->index('company_id', 'acc_withdrawal_limits_company_id_index');
+                });
+            }
+
             Schema::table('acc_withdrawal_limits', function (Blueprint $table): void {
                 $table->dropUnique('acc_withdrawal_limits_one_cap_per_person');
             });
