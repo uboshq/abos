@@ -6,6 +6,8 @@ import 'package:abos_mobile/features/direct_sale/counter_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'return_screen_test.dart' show FakeReturnApi;
+
 /// সরাসরি বিক্রয়ের কাউন্টার, ফোনে (0.4.9) — মালিকের কাউন্টারের নিয়ম; দেয়াল সার্ভারের, ফোন সত্যি করে দেখায়।
 class _FakeApi implements DirectSaleApi {
   List<CounterLine>? sent;
@@ -156,6 +158,7 @@ Future<void> _pump(WidgetTester tester, _FakeApi api) async {
   await tester.pumpWidget(MaterialApp(
       home: CounterScreen(
           api: api,
+          returnApi: FakeReturnApi(),
           customers: const [_dealer],
           products: const [_lotted, _plain])));
   await tester.pumpAndSettle();
@@ -316,7 +319,7 @@ void main() {
   });
 
   testWidgets(
-      'reprint before any bill says so; return says where to do it for now',
+      'reprint before any bill says so; return opens the return screen on the bills of this customer',
       (tester) async {
     final api = _FakeApi();
     await _pump(tester, api);
@@ -329,7 +332,9 @@ void main() {
 
     await tester.tap(find.byKey(const ValueKey('counter-return')));
     await tester.pumpAndSettle();
-    expect(find.textContaining('বিক্রি ফেরত'), findsOneWidget);
+    expect(find.text('বিক্রি ফেরত'), findsOneWidget);
+    expect(find.text('INV-0007'), findsOneWidget,
+        reason: 'the bills to return from');
   });
 
   testWidgets(

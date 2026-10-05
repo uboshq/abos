@@ -3,12 +3,14 @@ import 'package:intl/intl.dart';
 
 import '../../core/api_client/network_errors.dart';
 import '../../core/orders/direct_sale_api.dart';
+import '../../core/orders/sales_return_api.dart';
 import '../../core/records/customer_record.dart';
 import '../../core/records/product_record.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/confirm_overview_sheet.dart';
 import '../printing/document_actions_sheet.dart';
+import 'return_screen.dart';
 
 /// সরাসরি বিক্রয়ের কাউন্টার — ফোনে (0.4.9, মালিক ৪ অক্টোবর ২০২৬: *"direct sales er counter banaw app e"*)।
 ///
@@ -22,10 +24,14 @@ class CounterScreen extends StatefulWidget {
   const CounterScreen(
       {super.key,
       this.api = const ServerDirectSaleApi(),
+      this.returnApi = const ServerSalesReturnApi(),
       this.customers,
       this.products});
 
   final DirectSaleApi api;
+
+  /// ⭐ "ফেরত" বোতামের পর্দা — ওয়েবের ফেরতের একই সেবা ([[ReturnScreen]])
+  final SalesReturnApi returnApi;
 
   /// পরীক্ষার জন্য — না দিলে ফোনে জমা তালিকা
   final List<CustomerRecord>? customers;
@@ -1065,8 +1071,10 @@ class _CounterScreenState extends State<CounterScreen> {
                 Icons.undo,
                 _busy
                     ? null
-                    : () => _popup('ফেরত',
-                        'বিক্রি ফেরত এখনো ফোনে আসেনি — ওয়েবের "বিক্রি ফেরত" পাতা থেকে করুন।')),
+                    : () => Navigator.of(context).push(MaterialPageRoute<void>(
+                          builder: (_) => ReturnScreen(
+                              customerId: _customer?.id, api: widget.returnApi),
+                        ))),
           ]),
           Row(children: [
             _button('counter-draft', 'খসড়া রাখুন', Icons.save_outlined,
