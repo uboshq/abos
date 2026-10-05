@@ -55,6 +55,12 @@ Route::prefix('v1/sales')
         Route::get('/direct/drafts', [\App\Modules\Sales\Http\Controllers\DirectSaleApiController::class, 'drafts'])->name('direct.drafts');
         Route::get('/direct/drafts/{id}', [\App\Modules\Sales\Http\Controllers\DirectSaleApiController::class, 'draft'])->whereUuid('id')->name('direct.draft');
         Route::post('/direct/void', [\App\Modules\Sales\Http\Controllers\DirectSaleApiController::class, 'void'])->name('direct.void');
+        // ⭐ ফোনে বিক্রি ফেরত — ওয়েবের একই যাচাই, সেবা আর সারাংশ ([[SalesReturnApiController]], ৪ অক্টোবর ২০২৬)
+        Route::get('/returns/setup', [\App\Modules\Sales\Http\Controllers\SalesReturnApiController::class, 'setup'])->name('return.setup');
+        Route::get('/returns/invoice/{id}', [\App\Modules\Sales\Http\Controllers\SalesReturnApiController::class, 'invoice'])->whereUuid('id')->name('return.invoice');
+        Route::post('/returns', [\App\Modules\Sales\Http\Controllers\SalesReturnApiController::class, 'store'])->name('return.store');
+        Route::get('/returns/{id}/overview', [\App\Modules\Sales\Http\Controllers\SalesReturnApiController::class, 'overview'])->whereUuid('id')->name('return.overview');
+        Route::post('/returns/{id}/confirm', [\App\Modules\Sales\Http\Controllers\SalesReturnApiController::class, 'confirm'])->whereUuid('id')->name('return.confirm');
 
         Route::get('/delivery-orders', [\App\Modules\Sales\Http\Controllers\DeliveryOrderApiController::class, 'index'])->name('delivery_order.index');
         Route::post('/delivery-orders', [\App\Modules\Sales\Http\Controllers\DeliveryOrderApiController::class, 'store'])->name('delivery_order.store');
