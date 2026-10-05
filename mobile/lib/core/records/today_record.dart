@@ -18,8 +18,8 @@ class TodayRecord {
   String? get date => _text('date');
 
   /// ⚠️ Shown on screen, always. Somebody can belong to more than one company
-  /// and this app has no way to switch — figures from the wrong company,
-  /// unlabelled, are figures somebody acts on.
+  /// and switches between them from the home header (0.4.2) — figures from
+  /// the wrong company, unlabelled, are figures somebody acts on.
   String? get company => _text('company');
 
   String? get branch => _text('branch');

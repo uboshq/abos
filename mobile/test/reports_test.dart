@@ -1,3 +1,5 @@
+import 'package:abos_mobile/features/printing/document_actions_sheet.dart';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -15,12 +17,25 @@ void main() {
     'title': 'দৈনিক বিক্রয়',
     'columns': [
       {'key': 'trx_date', 'label': 'তারিখ', 'type': 'date', 'total': false},
-      {'key': 'document_no', 'label': 'নম্বর', 'type': 'document', 'total': false},
+      {
+        'key': 'document_no',
+        'label': 'নম্বর',
+        'type': 'document',
+        'total': false
+      },
       {'key': 'amount', 'label': 'টাকা', 'type': 'money', 'total': true},
     ],
     'rows': [
-      {'trx_date': '2026-09-16', 'document_no': 'SI-2609-0031', 'amount': '1275.0000'},
-      {'trx_date': '2026-09-16', 'document_no': 'SI-2609-0032', 'amount': '860.5000'},
+      {
+        'trx_date': '2026-09-16',
+        'document_no': 'SI-2609-0031',
+        'amount': '1275.0000'
+      },
+      {
+        'trx_date': '2026-09-16',
+        'document_no': 'SI-2609-0032',
+        'amount': '860.5000'
+      },
     ],
     'totals': {'amount': '45200.0000'},
     'page': 1,
@@ -134,7 +149,7 @@ void main() {
           loadList: () async => const [
             ReportSummary({'key': 'sales.daily', 'title': 'দৈনিক বিক্রয়'}),
           ],
-          open: (key, p) async => page,
+          open: (key, p, f) async => page,
         ),
       ));
       await tester.pumpAndSettle();
@@ -150,6 +165,115 @@ void main() {
       expect(find.text('৳45,200'), findsOneWidget);
       expect(find.text('412 টির মধ্যে 1–2'), findsOneWidget);
       expect(find.text('পাতা 1 / 5'), findsOneWidget);
+    });
+
+    // ⭐ তারিখ ধরে — মালিক, ৪ অক্টোবর ২০২৬। A report that declares `date_range` opens on this month and says so;
+    // one that does not sends no dates and shows no range button.
+    testWidgets('a dated report asks for this month and shows the range',
+        (tester) async {
+      final asked = <Map<String, dynamic>>[];
+      await tester.pumpWidget(MaterialApp(
+        home: ReportViewScreen(
+          report: const ReportSummary({
+            'key': 'accounts.party_ledger',
+            'title': 'খতিয়ান',
+            'filters': ['date_range']
+          }),
+          today: () => DateTime(2026, 10, 4, 15, 30),
+          open: (key, p, f) async {
+            asked.add(f);
+            return page;
+          },
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      expect(asked.single, {'from': '2026-10-01', 'to': '2026-10-04'});
+      expect(find.byKey(const Key('report-range')), findsOneWidget);
+      expect(find.text('01/10/2026 — 04/10/2026'), findsOneWidget);
+    });
+
+    // ⭐ মজুদের রিপোর্ট — এক মডিউলের রিপোর্টই (মালিক, ৪ অক্টোবর ২০২৬)
+    testWidgets('a module list shows only that module', (tester) async {
+      await tester.pumpWidget(MaterialApp(
+        home: ReportsScreen(
+          module: 'inventory',
+          title: 'মজুদের রিপোর্ট',
+          loadList: () async => const [
+            ReportSummary({
+              'key': 'inventory.stock_value',
+              'title': 'মজুদের মূল্য',
+              'module': 'inventory'
+            }),
+            ReportSummary({
+              'key': 'sales.daily',
+              'title': 'দৈনিক বিক্রয়',
+              'module': 'sales'
+            }),
+          ],
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      expect(find.text('মজুদের রিপোর্ট'), findsOneWidget);
+      expect(find.text('মজুদের মূল্য'), findsOneWidget);
+      expect(find.text('দৈনিক বিক্রয়'), findsNothing,
+          reason: '⛔ অন্য মডিউলের রিপোর্ট মজুদের তালিকায়');
+    });
+
+    // ⭐ PDF — এই পর্দার একই তারিখে, দেখা · ছাপা · পাঠানোর শিটে
+    testWidgets('the PDF button asks for this report with these dates',
+        (tester) async {
+      String? askedKey;
+      Map<String, dynamic>? askedFilters;
+      await tester.pumpWidget(MaterialApp(
+        home: ReportViewScreen(
+          report: const ReportSummary({
+            'key': 'accounts.party_ledger',
+            'title': 'খতিয়ান',
+            'filters': ['date_range']
+          }),
+          today: () => DateTime(2026, 10, 4),
+          open: (key, p, f) async => page,
+          exportPdf: (key, filters) async {
+            askedKey = key;
+            askedFilters = filters;
+            return Uint8List.fromList('%PDF-1.4'.codeUnits);
+          },
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('report-pdf')));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(DocumentActionsSheet), findsOneWidget);
+      // ⓘ শিট PDF আনে কোনো কাজ চাপলে (ছাপা, পাঠানো — ফোনের যন্ত্র); তাই শিটের নিজের আনার পথটাই ডাকা
+      final bytes = await tester
+          .widget<DocumentActionsSheet>(find.byType(DocumentActionsSheet))
+          .loadPdf!('a4');
+      expect(String.fromCharCodes(bytes).startsWith('%PDF'), isTrue);
+      expect(askedKey, 'accounts.party_ledger');
+      expect(askedFilters, {'from': '2026-10-01', 'to': '2026-10-04'});
+    });
+
+    testWidgets('an undated report sends no dates and offers no range',
+        (tester) async {
+      final asked = <Map<String, dynamic>>[];
+      await tester.pumpWidget(MaterialApp(
+        home: ReportViewScreen(
+          report:
+              const ReportSummary({'key': 'inventory.stock', 'title': 'মজুদ'}),
+          open: (key, p, f) async {
+            asked.add(f);
+            return page;
+          },
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      expect(asked.single, isEmpty);
+      expect(find.byKey(const Key('report-range')), findsNothing);
     });
   });
 }

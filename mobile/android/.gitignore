@@ -12,3 +12,6 @@ GeneratedPluginRegistrant.java
 key.properties
 **/*.keystore
 **/*.jks
+
+# ⭐ Firebase (২ অক্টোবর ২০২৬) — গোপন নয়, তবু git-এ নয় (সমন্বয়কের নির্দেশ); বিল্ড-যন্ত্রে হাতে বসানো
+app/google-services.json

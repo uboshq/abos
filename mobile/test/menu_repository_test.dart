@@ -179,6 +179,21 @@ void main() {
       expect(labels.indexOf('হাজিরা'), lessThan(firstPlanned));
     });
 
+    // ⭐ DO+SO মেশানো, ধাপ ১০ — একই টাইল, কোম্পানির সুইচে নাম আর চাবি বদলায়
+    test('the DO tile becomes the sales order tile when the company switched', () {
+      const sr = AuthUser(id: '1', name: 'SR', email: 'sr@abos.test', roles: [], permissions: ['sales.order.view', 'sales.do.view']);
+      const orderOnly = AuthUser(id: '2', name: 'O', email: 'o@abos.test', roles: [], permissions: ['sales.order.view']);
+      String? label(AuthUser u, bool on) {
+        final tile = repository.ordered(const [], u, ordersReplaceDo: on).where((i) => i.routeName == 'delivery-orders');
+        return tile.isEmpty ? null : tile.first.label;
+      }
+
+      expect(label(sr, false), 'ডেলিভারি অর্ডার');
+      expect(label(sr, true), 'বিক্রয় আদেশ');
+      expect(label(orderOnly, false), isNull, reason: 'DO-র চাবি ছাড়া DO-র টাইল নয়');
+      expect(label(orderOnly, true), 'বিক্রয় আদেশ', reason: 'আদেশের চাবিতেই আদেশের টাইল');
+    });
+
     test("the server's own order survives inside the live group", () {
       // ⚠️ That order is a decision made on the web side — the menu stands in
       // the order the goods actually move — and this file must not

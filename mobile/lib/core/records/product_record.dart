@@ -46,6 +46,32 @@ class ProductRecord {
 
   bool get isActive => payload['isActive'] != false;
 
+  /// The product's own packs (`ProductSync::packs()`): "1 কার্টন = 48 পিস".
+  /// Only whole packs above one piece; empty when it has none.
+  List<ProductPack> get packs => ((payload['packs'] as List?) ?? const [])
+      .whereType<Map>()
+      .map((row) => ProductPack(
+            name: (row['unitNameBn'] ?? row['unitCode'] ?? '').toString(),
+            factor: (double.tryParse('${row['factor']}') ?? 0).round(),
+            barcode: row['barcode']?.toString(),
+          ))
+      .where((pack) => pack.factor > 1)
+      .toList(growable: false);
+
+  /// The biggest pack — the "কার্টন" the order keypad counts in — or null.
+  ProductPack? get carton {
+    final all = packs;
+    if (all.isEmpty) return null;
+    return all.reduce((a, b) => a.factor >= b.factor ? a : b);
+  }
+
+  /// Whether [scanned] is this product's own barcode or one of its packs'.
+  bool hasBarcode(String scanned) {
+    final needle = scanned.trim();
+    if (needle.isEmpty) return false;
+    return barcode == needle || packs.any((pack) => pack.barcode == needle);
+  }
+
   /// Name in either language, plus the two things a rep reads off a carton:
   /// the code and the barcode.
   bool matches(String query) {
@@ -76,4 +102,17 @@ class ProductRecord {
     final payload = ReferenceCache.instance.get(entityType, id);
     return payload == null ? null : ProductRecord(payload);
   }
+}
+
+/// One pack of a product — a carton, a dozen — as `ProductSync` sends it.
+class ProductPack {
+  const ProductPack({required this.name, required this.factor, this.barcode});
+
+  /// "কার্টন" — the unit as a person says it.
+  final String name;
+
+  /// How many base pieces are in one; only whole packs above one are kept.
+  final int factor;
+
+  final String? barcode;
 }

@@ -1,4 +1,5 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
     <!--
       Bluetooth, for the shop's thermal receipt printer.
 
@@ -38,6 +39,28 @@
     <uses-feature android:name="android.hardware.bluetooth"
         android:required="false" />
 
+    <!-- চালান/গেট পাসের QR পড়ার ক্যামেরা (0.4.3) — কেবল "কাগজ স্ক্যান" পর্দা খুললে চায়।
+         ক্যামেরা ছাড়া ফোনেও বাকি সব চলে, তাই required নয়। -->
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-feature android:name="android.hardware.camera"
+        android:required="false" />
+
+    <!--
+      Installing the app's own update (docs/Contract section 6, rule kha).
+
+      The app downloads the APK, checks its size and its SHA-256 against what
+      the server said, and only then hands it to the system package installer.
+      Without this permission the installer refuses with "For your security,
+      your phone is set to block..." even though the person is looking
+      straight at the install prompt they meant to open.
+
+      From Android 8 this buys only the right to ASK. The person still has to
+      switch "install unknown apps" on for this app once, and Android still
+      shows its own confirmation before every install. Neither is this app's
+      to remove, and nothing here installs silently.
+    -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+
     <application
         android:label="ABOS"
         android:name="${applicationName}"
@@ -64,11 +87,49 @@
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
         </activity>
+        <!--
+          The two home-screen widgets.
+
+          Registered here rather than discovered: a widget is a broadcast
+          receiver the launcher talks to, and one the manifest does not name
+          simply does not exist as far as the system is concerned. It fails by
+          not appearing in the widget picker, which reads as "the phone does
+          not support it".
+        -->
+        <receiver
+            android:name=".TodayWidgetProvider"
+            android:label="@string/today_widget_name"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/today_widget_info" />
+        </receiver>
+        <receiver
+            android:name=".ApprovalsWidgetProvider"
+            android:label="@string/approvals_widget_name"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/approvals_widget_info" />
+        </receiver>
+
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
+        <!--
+          Glance comes in with home_widget but the app has no Glance widgets.
+          Its package-replaced receiver runs in the app's own process right after
+          every update; if it throws, the first launch after updating dies (0.4.1).
+        -->
+        <receiver android:name="androidx.glance.appwidget.MyPackageReplacedReceiver" tools:node="remove" />
     </application>
     <!-- Required to query activities that can process text, see:
          https://developer.android.com/training/package-visibility and

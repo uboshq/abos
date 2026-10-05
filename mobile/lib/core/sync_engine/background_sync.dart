@@ -3,6 +3,7 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'package:workmanager/workmanager.dart';
 
 import '../auth/token_storage.dart';
+import '../launcher_widgets/launcher_widget_refresh.dart';
 import 'sync_engine.dart';
 
 /// Turns on what [SyncEngine] already does on reconnect — drain the offline
@@ -71,6 +72,12 @@ void callbackDispatcher() {
 
       await SyncEngine.instance.init();
       await SyncEngine.instance.flushAll();
+
+      // The home-screen widgets ride the same tick. Somebody who has not
+      // opened the app all morning still reads the launcher, and this is
+      // the only thing that runs for them. After the flush, so the figures
+      // include the orders that just went up.
+      await LauncherWidgetRefresh.refresh();
     } catch (error) {
       // flush()/flushAll() already catch their own network and server failures
       // and leave the queue for the next attempt — this is the backstop for

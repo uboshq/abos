@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/sync_engine/sync_engine.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/update/app_version_check.dart';
+import 'update_download_button.dart';
 
 /// Stands between the person and the app when this build is too old to be
 /// trusted, and says so quietly when it is merely behind — docs/Contract §৬.
@@ -79,29 +79,50 @@ class _UpdateNotice extends StatelessWidget {
     return Material(
       color: AppColors.pendingSurface,
       child: Padding(
-        padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.md, vertical: AppSpacing.sm),
-        child: Row(
+        padding: const EdgeInsets.fromLTRB(
+            AppSpacing.md, AppSpacing.sm, AppSpacing.xs, AppSpacing.sm),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.system_update_outlined,
-                size: 18, color: AppColors.pending),
-            const SizedBox(width: AppSpacing.sm),
-            Expanded(
-              child: Text(
-                release.note ??
-                    'নতুন একটা সংস্করণ এসেছে${release.versionName == null ? '' : ' (${release.versionName})'}।',
-                style: const TextStyle(fontSize: 12.5, color: AppColors.pending),
-              ),
+            Row(
+              children: [
+                const Icon(Icons.system_update_outlined,
+                    size: 18, color: AppColors.pending),
+                const SizedBox(width: AppSpacing.sm),
+                Expanded(
+                  child: Text(
+                    'নতুন সংস্করণ এসেছে${release.versionName == null ? '' : ' (${release.versionName})'}।',
+                    style: const TextStyle(
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.pending),
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.close, size: 18),
+                  tooltip: 'সরিয়ে রাখুন',
+                  onPressed: onDismiss,
+                ),
+              ],
             ),
-            if (release.url != null)
-              TextButton(
-                onPressed: () => _open(release.url!),
-                child: const Text('নামান'),
+            // ⭐ কী নতুন — মালিক, ২ অক্টোবর ২০২৬: "ki ki update holo ta dekhabe"।
+            // এক লাইনে এক জিনিস ([[AppRelease.whatsNew]])।
+            for (final line in release.whatsNew)
+              Padding(
+                padding: const EdgeInsets.only(left: 26, right: AppSpacing.sm, top: 2),
+                child: Text('• $line',
+                    style: const TextStyle(fontSize: 12.5, color: AppColors.pending)),
               ),
-            IconButton(
-              icon: const Icon(Icons.close, size: 18),
-              tooltip: 'সরিয়ে রাখুন',
-              onPressed: onDismiss,
+            // docs/Contract section 6, rule kha: the app downloads, checks
+            // and hands over its own update. No link, no browser.
+            Padding(
+              padding: const EdgeInsets.only(right: AppSpacing.sm),
+              child: UpdateDownloadButton(
+                release: release,
+                label: 'এখনই আপডেট করুন',
+                dense: true,
+              ),
             ),
           ],
         ),
@@ -177,12 +198,7 @@ class _UpdateWall extends StatelessWidget {
                   ),
                 ],
                 const SizedBox(height: AppSpacing.lg),
-                if (release.url != null)
-                  FilledButton.icon(
-                    onPressed: () => _open(release.url!),
-                    icon: const Icon(Icons.download_outlined),
-                    label: const Text('নতুন সংস্করণ নামান'),
-                  ),
+                UpdateDownloadButton(release: release),
               ],
             ),
           ),
@@ -190,15 +206,4 @@ class _UpdateWall extends StatelessWidget {
       ),
     );
   }
-}
-
-/// Hands the address to the browser and stops there.
-///
-/// <p>docs/Contract §৬ rule খ: the app never downloads the APK itself.
-/// Doing so would mean an installer path inside the app, which offers nothing
-/// except a new way to put the wrong file on a phone.
-Future<void> _open(String url) async {
-  final uri = Uri.tryParse(url);
-  if (uri == null) return;
-  await launchUrl(uri, mode: LaunchMode.externalApplication);
 }

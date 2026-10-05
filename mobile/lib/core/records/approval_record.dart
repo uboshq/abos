@@ -26,6 +26,10 @@ class ApprovalRecord {
 
   String? get documentNo => _text('documentNo');
 
+  /// The document's own `public_id` — what `GET /documents/{type}/{id}/pdf` takes (docs/Contract §১০). Absent for a
+  /// request whose paper is gone; then there is nothing to open.
+  String? get documentId => _text('documentId');
+
   /// What is being asked for — `confirm`, `cancel`, and so on.
   String? get action => _text('action');
 

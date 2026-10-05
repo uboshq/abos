@@ -7,18 +7,29 @@ import '../../features/attendance/attendance_screen.dart';
 import '../../features/auth/login_screen.dart';
 import '../../features/customers/customer_detail_screen.dart';
 import '../../features/customers/customer_list_screen.dart';
+import '../../features/customers/deposit_request_screen.dart';
 import '../../features/customers/due_list_screen.dart';
 import '../../features/home/home_shell.dart';
+import '../orders/delivery_order_api.dart';
+import '../../features/delivery_orders/delivery_order_screens.dart';
+import '../../features/leads/lead_screens.dart';
+import '../../features/quotations/quotation_screens.dart';
+import '../../features/route/my_route_screen.dart';
+import '../../features/direct_sale/counter_screen.dart';
+import '../../features/orders/delivery_tracking_screen.dart';
 import '../../features/orders/new_order_screen.dart';
 import '../../features/orders/order_prefill.dart';
 import '../../features/orders/order_list_screen.dart';
 import '../../features/products/product_list_screen.dart';
+import '../../features/scan/paper_scan_screen.dart';
 import '../../features/splash/splash_screen.dart';
+import '../../features/dashboards/dashboards_screen.dart';
 import '../../features/reports/reports_screen.dart';
 import '../../features/stock/stock_list_screen.dart';
 import '../../features/today/today_screen.dart';
 import '../../features/sync/sync_status_screen.dart';
 import '../auth/auth_state.dart';
+import '../menu/module_gate.dart';
 
 /// Turns `ref.listen(authStateProvider, ...)` into the [Listenable] go_router
 /// wants for [GoRouter.refreshListenable] — go_router has no native awareness
@@ -61,53 +72,83 @@ final goRouterProvider = Provider<GoRouter>((ref) {
     },
     routes: [
       GoRoute(path: '/', builder: (context, state) => const SplashScreen()),
-      GoRoute(
-          path: '/login', builder: (context, state) => const LoginScreen()),
+      GoRoute(path: '/login', builder: (context, state) => const LoginScreen()),
+      // ⭐ Every screen under /home sits behind [ModuleGateView]: a module
+      // the company switched off for the phone shows "এই অংশটা এখন বন্ধ"
+      // however it was reached — tile, saved link or a widget's tap.
       GoRoute(
         path: '/home',
         builder: (context, state) => const HomeShell(),
         routes: [
           GoRoute(
             path: 'approvals',
-            builder: (context, state) => const ApprovalInboxScreen(),
+            builder: (context, state) => const ModuleGateView(
+                path: 'approvals', child: ApprovalInboxScreen()),
           ),
           GoRoute(
             path: 'attendance',
-            builder: (context, state) => const AttendanceScreen(),
+            builder: (context, state) => const ModuleGateView(
+                path: 'attendance', child: AttendanceScreen()),
+          ),
+          // ⭐ মডিউলের ড্যাশবোর্ড — মালিক, ৪ অক্টোবর ২০২৬; দরজা সার্ভারের (চাবি, ফোনে চালু)
+          GoRoute(
+            path: 'dashboards',
+            builder: (context, state) => const DashboardsScreen(),
           ),
           GoRoute(
             path: 'reports',
-            builder: (context, state) => const ReportsScreen(),
+            builder: (context, state) =>
+                const ModuleGateView(path: 'reports', child: ReportsScreen()),
           ),
           GoRoute(
             path: 'today',
-            builder: (context, state) => const TodayScreen(),
+            builder: (context, state) =>
+                const ModuleGateView(path: 'today', child: TodayScreen()),
           ),
           GoRoute(
             path: 'dues',
-            builder: (context, state) => const DueListScreen(),
+            builder: (context, state) =>
+                const ModuleGateView(path: 'dues', child: DueListScreen()),
           ),
           GoRoute(
             path: 'customers',
-            builder: (context, state) => const CustomerListScreen(),
+            builder: (context, state) => const ModuleGateView(
+                path: 'customers', child: CustomerListScreen()),
             routes: [
               GoRoute(
                 // The public_id in the path, never a sequential one — the
                 // same rule the wire follows (docs/Contract §৩ ক).
                 path: ':id',
-                builder: (context, state) => CustomerDetailScreen(
-                  customerId: state.pathParameters['id'] ?? '',
+                builder: (context, state) => ModuleGateView(
+                  path: 'customers',
+                  child: CustomerDetailScreen(
+                    customerId: state.pathParameters['id'] ?? '',
+                  ),
                 ),
+                routes: [
+                  // স্লিপসহ জমার অনুরোধ (0.4.3) — দোকানের পাতা থেকে
+                  GoRoute(
+                    path: 'deposit',
+                    builder: (context, state) => ModuleGateView(
+                      path: 'customers',
+                      child: DepositRequestScreen(
+                        customerId: state.pathParameters['id'] ?? '',
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
           GoRoute(
             path: 'products',
-            builder: (context, state) => const ProductListScreen(),
+            builder: (context, state) => const ModuleGateView(
+                path: 'products', child: ProductListScreen()),
           ),
           GoRoute(
             path: 'stock',
-            builder: (context, state) => const StockListScreen(),
+            builder: (context, state) =>
+                const ModuleGateView(path: 'stock', child: StockListScreen()),
           ),
           GoRoute(
             path: 'new-order',
@@ -115,13 +156,79 @@ final goRouterProvider = Provider<GoRouter>((ref) {
             // করে লিখুন" on a rejected order (order_list_screen.dart /
             // sync_status_screen.dart) — absent on the plain "নতুন অর্ডার"
             // tile, which is the ordinary case.
-            builder: (context, state) => NewOrderScreen(
-              prefill: state.extra as OrderPrefill?,
+            builder: (context, state) => ModuleGateView(
+              path: 'new-order',
+              child: NewOrderScreen(prefill: state.extra as OrderPrefill?),
             ),
           ),
           GoRoute(
             path: 'orders',
-            builder: (context, state) => const OrderListScreen(),
+            builder: (context, state) =>
+                const ModuleGateView(path: 'orders', child: OrderListScreen()),
+          ),
+          // ⭐ সরাসরি বিক্রয়ের কাউন্টার (0.4.9) — ওয়েবের কাউন্টারের চাবি; টাকা আছে, তাই কেবল অনলাইনে
+          GoRoute(
+            path: 'counter',
+            builder: (context, state) =>
+                const ModuleGateView(path: 'counter', child: CounterScreen()),
+          ),
+          // ⭐ ডেলিভারি অর্ডার (0.4.8) — লেখা, জমা, সুপারভাইজারের পরিমাণ আর সই; "নতুন DO" কেবল লেখার চাবিতে
+          GoRoute(
+            path: 'delivery-orders',
+            builder: (context, state) => ModuleGateView(
+              path: 'delivery-orders',
+              child: Consumer(
+                builder: (context, ref, _) {
+                  // ⭐ কোম্পানি বিক্রয় আদেশে চলে গেলে একই পর্দা আদেশের দরজায়, আদেশের চাবিতে (DO+SO মেশানো, ধাপ ১০)
+                  final orders = ref.watch(ordersReplaceDoProvider);
+                  return DeliveryOrderListScreen(
+                    api: ServerDeliveryOrderApi(orders: orders),
+                    canWrite: ref.watch(authStateProvider).user?.can(orders
+                            ? 'sales.order.create'
+                            : 'sales.do.create') ??
+                        false,
+                  );
+                },
+              ),
+            ),
+          ),
+          // ⭐ আজকের রুট — সাপ্তাহিক ছকের রুট আর তার দোকান (সমন্বয়কের ক্রম "ঘ", ৫ অক্টোবর ২০২৬)
+          GoRoute(
+            path: 'my-route',
+            builder: (context, state) =>
+                const ModuleGateView(path: 'my-route', child: MyRouteScreen()),
+          ),
+          // ⭐ লিড — মাঠ থেকে নতুন দোকানের খোঁজ (সমন্বয়কের ক্রম "ঘ")
+          GoRoute(
+            path: 'leads',
+            builder: (context, state) =>
+                const ModuleGateView(path: 'leads', child: LeadListScreen()),
+          ),
+          // ⭐ উদ্ধৃতি — মাঠ থেকে দাম, জমা, পাঠানো, দোকানির উত্তর, আদেশে রূপান্তর (সমন্বয়কের ক্রম "ঘ")
+          GoRoute(
+            path: 'quotations',
+            builder: (context, state) => ModuleGateView(
+              path: 'quotations',
+              child: Consumer(
+                builder: (context, ref, _) => QuotationListScreen(
+                  canWrite: ref
+                          .watch(authStateProvider)
+                          .user
+                          ?.can('sales.quotation.create') ??
+                      false,
+                ),
+              ),
+            ),
+          ),
+          GoRoute(
+            path: 'tracking',
+            builder: (context, state) => const ModuleGateView(
+                path: 'tracking', child: DeliveryTrackingScreen()),
+          ),
+          GoRoute(
+            path: 'scan',
+            builder: (context, state) =>
+                const ModuleGateView(path: 'scan', child: PaperScanScreen()),
           ),
           GoRoute(
             path: 'sync-status',

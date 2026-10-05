@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:abos_mobile/core/orders/order_api.dart';
 import 'package:abos_mobile/core/sync_engine/reference_cache.dart';
 import 'package:abos_mobile/core/sync_engine/sync_engine.dart';
 import 'package:abos_mobile/features/customers/customer_list_screen.dart';
@@ -221,9 +222,9 @@ void main() {
     expect(find.text('৳1,275'), findsOneWidget);
   });
 
-  testWidgets('the order screen picks a named shop and shows what it owes',
+  testWidgets('the order screen picks a named shop and names it in the header',
       (tester) async {
-    await tester.pumpWidget(const MaterialApp(home: NewOrderScreen()));
+    await tester.pumpWidget(const MaterialApp(home: NewOrderScreen(api: _NoServer())));
     await tester.pump();
 
     await tester.tap(find.text('গ্রাহক বাছুন'));
@@ -231,33 +232,48 @@ void main() {
 
     // The picker row. Before the fix `labelOf` read `name`, so every row in
     // this sheet was blank — a rep could not tell which shop they were
-    // choosing, on the screen where an order is written.
+    // choosing, on the screen where an order is written. The due is on the
+    // row: which shop to sell to on credit is decided here.
     expect(find.text('রহিম স্টোর'), findsOneWidget);
+    expect(find.text('বকেয়া ৳8,125.5'), findsOneWidget);
 
     await tester.tap(find.text('রহিম স্টোর'));
     await tester.pumpAndSettle();
 
-    // Chosen, and the due appears before anything is promised — the figure
-    // docs/Contract §০ names as unknowable offline, which is exactly why the
-    // server works to keep it fresh on the device.
-    expect(find.text('বকেয়া ৳8,125.5'), findsOneWidget);
-    expect(find.textContaining('সীমা ৳50,000'), findsOneWidget);
+    expect(find.text('রহিম স্টোর · মিরপুর ১০'), findsOneWidget);
   });
 
-  testWidgets('a product added to the cart carries its price', (tester) async {
-    await tester.pumpWidget(const MaterialApp(home: NewOrderScreen()));
+  testWidgets('a product on the order list carries its price, and never its stock',
+      (tester) async {
+    await tester.pumpWidget(const MaterialApp(home: NewOrderScreen(api: _NoServer())));
     await tester.pump();
 
-    await tester.tap(find.text('যোগ করুন'));
-    await tester.pumpAndSettle();
-
     expect(find.text('লাইফবয় সাবান ১০০গ্রাম'), findsOneWidget);
-    await tester.tap(find.text('লাইফবয় সাবান ১০০গ্রাম'));
+    await tester.tap(find.byKey(const ValueKey('order-plus-$productId')));
     await tester.pumpAndSettle();
 
-    // One line at 42.5, and the estimated total that follows from it. A cart
-    // whose prices are null adds up to zero and says so out loud.
-    expect(find.textContaining('৳42.5 × 1'), findsOneWidget);
-    expect(find.textContaining('মোট (আনুমানিক): ৳42.5'), findsOneWidget);
+    // One piece at 42.5, and the total that follows from it. A cart whose
+    // prices are null adds up to zero and says so out loud.
+    expect(find.text('✓ ঝুড়িতে আছে · ৳৪২.৫'), findsOneWidget);
+    expect(find.text('৳৪২.৫'), findsWidgets);
+
+    // ⛔ The owner's rule: the SR's phone shows no stock on this screen,
+    // although a StockOnHand row (40 sellable) is in the cache.
+    expect(find.textContaining('বিক্রয়যোগ্য'), findsNothing);
+    expect(find.textContaining('40'), findsNothing);
+    expect(find.textContaining('৪০'), findsNothing);
   });
+}
+
+/// The order screen's server, absent — every question fails as no signal.
+class _NoServer implements OrderApi {
+  const _NoServer();
+
+  @override
+  Future<List<OfferLine>> offers(String customerId, List<OfferAsk> lines) async =>
+      throw StateError('offline');
+
+  @override
+  Future<CustomerStanding> standing(String customerId, double orderTotal) async =>
+      throw StateError('offline');
 }

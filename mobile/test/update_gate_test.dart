@@ -14,6 +14,11 @@ void main() {
     versionCode: 5,
     versionName: '0.5.0',
     url: 'https://erp.adi.com.bd/app/abos-arm64.apk',
+    // docs/Contract §৬ rule খ, 27 September 2026: a release is only ever
+    // published with both, and the app offers no download without them.
+    apkSha256:
+        '3f5a0c1d2e4b6a79880f1e2d3c4b5a69788796a5b4c3d2e1f00112233445c09e',
+    sizeBytes: 74213888,
     minimumCode: 3,
     noteBn: 'নতুন সংস্করণ এসেছে।',
     noteEn: 'A new version is available.',
@@ -98,7 +103,9 @@ void main() {
           verdict: UpdateVerdict.available, release: release)));
       await tester.pumpAndSettle();
 
-      expect(find.text('নতুন সংস্করণ এসেছে।'), findsOneWidget);
+      // ⓘ ০.৪.৬ থেকে: শিরোনামে সংস্করণ, নোট নিচে এক লাইনে এক জিনিস ("কী নতুন")
+      expect(find.text('নতুন সংস্করণ এসেছে (0.5.0)।'), findsOneWidget);
+      expect(find.text('• নতুন সংস্করণ এসেছে।'), findsOneWidget);
       expect(find.text('অ্যাপের ভেতর'), findsOneWidget,
           reason: 'a notice is not a wall — the app underneath is still '
               'correct, which is the whole difference between the two');
@@ -112,7 +119,8 @@ void main() {
       await tester.tap(find.byIcon(Icons.close));
       await tester.pumpAndSettle();
 
-      expect(find.text('নতুন সংস্করণ এসেছে।'), findsNothing);
+      expect(find.text('নতুন সংস্করণ এসেছে (0.5.0)।'), findsNothing);
+      expect(find.text('• নতুন সংস্করণ এসেছে।'), findsNothing);
       expect(find.text('অ্যাপের ভেতর'), findsOneWidget);
     });
 

@@ -152,10 +152,14 @@ class ApiClient {
       throw StateError('No refresh token stored');
     }
 
+    // ⛔ ০.৪.৮ পর্যন্ত টোকেন কেবল body-তে যেত, হেডার ছাড়া, deviceId ছাড়া — সার্ভারের দরজা হেডার পড়ে, তাই প্রতিটা
+    // নবায়ন ৪০১ আর ৩০ মিনিট পরে ফোন চুপ (মালিক, ৪ অক্টোবর ২০২৬)। এখন হেডারে, আর deviceId সাথে; body-তেও থাকে,
+    // যাতে পুরনো আর নতুন সার্ভার দুটোই মানে।
+    final deviceId = await TokenStorage.instance.deviceId();
     final response = await dio.post<Map<String, dynamic>>(
       '/auth/refresh',
-      data: {'refreshToken': refreshToken},
-      options: Options(extra: skipAuthRefresh),
+      data: {'refreshToken': refreshToken, 'deviceId': deviceId},
+      options: Options(extra: skipAuthRefresh, headers: {'Authorization': 'Bearer $refreshToken'}),
     );
 
     final body = response.data;

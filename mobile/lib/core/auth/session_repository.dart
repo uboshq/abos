@@ -21,6 +21,7 @@ class SessionRepository {
   static final SessionRepository instance = SessionRepository._();
 
   static const _userKey = 'abos_session_user';
+  static const _orgKey = 'abos_session_org';
 
   final FlutterSecureStorage _storage = const FlutterSecureStorage(
     aOptions: AndroidOptions(encryptedSharedPreferences: true),
@@ -43,7 +44,67 @@ class SessionRepository {
     }
   }
 
+  /// Which company and branch this session is inside, as `GET /me` last said
+  /// — kept so the home header can still name them on a phone with no
+  /// signal. docs/Contract §৮ rule খ: figures nobody can tell the company of
+  /// are figures somebody acts on, and the header is where that is read.
+  Future<void> saveOrg(OrgSnapshot org) async {
+    try {
+      await _storage.write(key: _orgKey, value: jsonEncode(org.toJson()));
+    } catch (_) {
+      // A header that falls back to the person's name is the worst case
+      // here; it is not worth failing a sign-in over.
+    }
+  }
+
+  Future<OrgSnapshot?> readOrg() async {
+    try {
+      final raw = await _storage.read(key: _orgKey);
+      if (raw == null || raw.isEmpty) return null;
+      return OrgSnapshot.fromJson(jsonDecode(raw) as Map<String, dynamic>);
+    } catch (_) {
+      return null;
+    }
+  }
+
   Future<void> clear() async {
     await _storage.delete(key: _userKey);
+    try {
+      await _storage.delete(key: _orgKey);
+    } catch (_) {
+      // Nothing to do — the next sign-in overwrites it anyway.
+    }
   }
+}
+
+/// The two names the home header shows. Names only: never an id, and never
+/// used as a cache key — that stays `public_id`-based, see [AuthUser].
+class OrgSnapshot {
+  const OrgSnapshot({required this.company, required this.branch, this.phoneModules});
+
+  final String company;
+  final String branch;
+
+  /// The modules `/me` last said are on for the phone — kept so a widget
+  /// tap on a phone with no signal still meets the same switch
+  /// ([ModuleGate]). Null when never heard.
+  final Set<String>? phoneModules;
+
+  bool get isEmpty => company.isEmpty && branch.isEmpty;
+
+  factory OrgSnapshot.fromJson(Map<String, dynamic> json) {
+    final modules = json['phoneModules'];
+    return OrgSnapshot(
+      company: json['company']?.toString() ?? '',
+      branch: json['branch']?.toString() ?? '',
+      phoneModules:
+          modules is List ? modules.map((e) => e.toString()).toSet() : null,
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+        'company': company,
+        'branch': branch,
+        if (phoneModules != null) 'phoneModules': phoneModules!.toList()..sort(),
+      };
 }

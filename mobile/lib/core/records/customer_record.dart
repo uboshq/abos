@@ -44,6 +44,13 @@ class CustomerRecord {
 
   String? get address => _text('addressBn') ?? _text('addressEn');
 
+  /// The shop's point — the owner, 5 Oct 2026, pointing at the due list: the
+  /// name and the mobile are there, "now show the point with it". The server
+  /// sends the Bengali name first (`CustomerSync::pointName()`), and null when
+  /// the shop sits on no point; an older server sends nothing, which reads the
+  /// same, so nothing is added to the row.
+  String? get pointName => _text('pointName');
+
   String? get customerType => _text('customerType');
 
   bool get isActive => payload['isActive'] != false;
@@ -62,6 +69,8 @@ class CustomerRecord {
       code,
       ownerName,
       phone,
+      // A rep often knows a shop by its point ("the one in Kawran Bazar").
+      pointName,
     ].any((field) => field != null && field.toLowerCase().contains(needle));
   }
 

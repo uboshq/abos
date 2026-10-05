@@ -44,6 +44,10 @@ void main() {
     'approval_inbox_screen.dart',
     'attendance_screen.dart',
     'reports_screen.dart',
+    'dashboards_screen.dart',
+    'my_route_screen.dart',
+    'lead_screens.dart',
+    'quotation_screens.dart',
     'sync_status_screen.dart',
   };
 
@@ -123,7 +127,8 @@ void main() {
   testWidgets('অনুমোদন', (t) async {
     await expectPullable(
       t,
-      ApprovalInboxScreen(loadPending: () async => const ApprovalPage(rows: [])),
+      ApprovalInboxScreen(
+          loadPending: () async => const ApprovalPage(rows: [])),
     );
   });
 
@@ -144,9 +149,10 @@ void main() {
     // report again was the only way on.
     await tester.pumpWidget(MaterialApp(
       home: ReportsScreen(
-        loadList: () async =>
-            const [ReportSummary({'key': 'sales.daily', 'title': 'দৈনিক বিক্রয়'})],
-        open: (_, __) async => const ReportPage({
+        loadList: () async => const [
+          ReportSummary({'key': 'sales.daily', 'title': 'দৈনিক বিক্রয়'})
+        ],
+        open: (_, __, ___) async => const ReportPage({
           'columns': [
             {'key': 'amount', 'label': 'টাকা', 'type': 'money'},
           ],

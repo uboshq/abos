@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../auth/auth_user.dart';
+import '../auth/session_profile.dart';
 import 'me_api.dart';
 import 'menu_item.dart';
 import 'menu_module.dart';
@@ -29,6 +30,19 @@ import 'route_registry.dart';
 /// successful login (see `SessionRepository`). The fallback is
 /// permission-filtered the identical way, so it degrades to "the same menu,
 /// no icons any fresher than the last sign-in" rather than to nothing.
+class HomeMenu {
+  const HomeMenu({required this.items, this.profile, this.me});
+
+  final List<MenuItem> items;
+
+  /// `/me`-র মানুষটা — পদবি আর ছবিসহ; অফলাইনে null।
+  final AuthUser? me;
+
+  /// Null when `/me` could not be reached and the menu is the local
+  /// fallback — see [MenuRepository.homeFor].
+  final SessionProfile? profile;
+}
+
 class MenuRepository {
   const MenuRepository();
 
@@ -76,7 +90,16 @@ class MenuRepository {
     'orders': Icons.receipt_long_outlined,
   };
 
-  Future<List<MenuItem>> menuFor(AuthUser user) async {
+  Future<List<MenuItem>> menuFor(AuthUser user) async =>
+      (await homeFor(user)).items;
+
+  /// The menu plus which company and branch `/me` says this session is in —
+  /// one call, because they arrive in one response and the home screen
+  /// wants both. [HomeMenu.profile] is null on the offline fallback: the
+  /// header then reads the names the last successful `/me` left in
+  /// `SessionRepository`, and only after that falls back to the person's own
+  /// name.
+  Future<HomeMenu> homeFor(AuthUser user) async {
     try {
       final response = await MeApi.fetch();
       final items = <MenuItem>[];
@@ -86,9 +109,14 @@ class MenuRepository {
           if (tile != null) items.add(tile);
         }
       }
-      return ordered(items, response.user);
+      return HomeMenu(
+        items: ordered(items, response.user,
+            ordersReplaceDo: response.profile.ordersReplaceDo),
+        profile: response.profile,
+        me: response.user,
+      );
     } catch (_) {
-      return ordered(_localFallback(user), user);
+      return HomeMenu(items: ordered(_localFallback(user), user));
     }
   }
 
@@ -188,25 +216,78 @@ class MenuRepository {
   /// business second-guessing it. All that changes here is that dead tiles
   /// sink.
   @visibleForTesting
-  List<MenuItem> ordered(List<MenuItem> items, AuthUser user) {
+  List<MenuItem> ordered(List<MenuItem> items, AuthUser user,
+      {bool ordersReplaceDo = false}) {
     final live = <MenuItem>[];
     final planned = <MenuItem>[];
     for (final item in items) {
       (item.planned ? planned : live).add(item);
     }
-    return [...live, ..._syntheticTiles(user), ...planned];
+    return [...live, ..._syntheticTiles(user, ordersReplaceDo), ...planned];
   }
 
   /// Tiles that are not `/me` menu rows at all — see this class's own doc
   /// comment for "নতুন অর্ডার" and হাজিরা, and the trailing comment below for
   /// the sync-status tile every role gets regardless.
-  List<MenuItem> _syntheticTiles(AuthUser user) => [
+  List<MenuItem> _syntheticTiles(AuthUser user, [bool ordersReplaceDo = false]) => [
         if (user.can(_newOrderPermission))
           const MenuItem(
             key: 'sales.order.create',
             label: 'নতুন অর্ডার',
             icon: Icons.add_shopping_cart_outlined,
             routeName: 'new-order',
+          ),
+        // ⭐ ডেলিভারি ট্র্যাকিং (0.4.6, মালিক ২ অক্টোবর ২০২৬) — SR-এর অর্ডার দেখার চাবি, বা গুদাম/ডেলিভারির চাবি।
+        // মেনু-সারি নয়: ওয়েবের সারিটা `sales.screen_orders`-এর পেছনে, আর গুদামের মানুষ ওটা পান না।
+        if (user.can('sales.order.view') || user.can('sales.delivery.view'))
+          const MenuItem(
+            key: 'sales.tracking',
+            label: 'ডেলিভারি ট্র্যাকিং',
+            icon: Icons.local_shipping_outlined,
+            routeName: 'tracking',
+          ),
+        // ⭐ আজকের রুট — ছকে আজ যে রুট আর তার দোকান; মাঠের মানুষের আদেশ দেখার চাবিতে (সমন্বয়কের ক্রম "ঘ")
+        if (user.can('sales.order.view'))
+          const MenuItem(
+            key: 'sales.my_route',
+            label: 'আজকের রুট',
+            icon: Icons.route_outlined,
+            routeName: 'my-route',
+          ),
+        // ⭐ লিড — মাঠ থেকে নতুন দোকানের খোঁজ, ওয়েবের লিডের একই চাবি
+        if (user.can('sales.lead.view'))
+          const MenuItem(
+            key: 'sales.lead',
+            label: 'লিড',
+            icon: Icons.person_search_outlined,
+            routeName: 'leads',
+          ),
+        // ⭐ উদ্ধৃতি — ওয়েবের উদ্ধৃতির একই চাবি
+        if (user.can('sales.quotation.view'))
+          const MenuItem(
+            key: 'sales.quotation',
+            label: 'উদ্ধৃতি',
+            icon: Icons.request_quote_outlined,
+            routeName: 'quotations',
+          ),
+        // ⭐ সরাসরি বিক্রয়ের কাউন্টার (0.4.9) — ওয়েবের কাউন্টারের একই চাবি
+        if (user.can('sales.challan.create'))
+          const MenuItem(
+            key: 'sales.direct',
+            label: 'সরাসরি বিক্রয়',
+            icon: Icons.point_of_sale_outlined,
+            routeName: 'counter',
+          ),
+        // ⭐ ডেলিভারি অর্ডার (0.4.8) — DO দেখার চাবি যাঁর; লেখা আর সই পর্দার ভিতরে নিজের চাবিতে।
+        // ⭐ কোম্পানি বিক্রয় আদেশে চলে গেলে একই টাইল "বিক্রয় আদেশ" — আদেশ দেখার চাবিতে (DO+SO মেশানো, ধাপ ১০)
+        if (ordersReplaceDo
+            ? user.can('sales.order.view')
+            : user.can('sales.do.view'))
+          MenuItem(
+            key: 'sales.delivery_order',
+            label: ordersReplaceDo ? 'বিক্রয় আদেশ' : 'ডেলিভারি অর্ডার',
+            icon: Icons.assignment_outlined,
+            routeName: 'delivery-orders',
           ),
         // First tile on the grid for whoever can see the day's sales — it is
         // the question asked most often and from the furthest away.

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'package:intl/intl.dart';
 
+import '../../core/records/list_queries.dart';
 import '../../core/records/money.dart';
 import '../../core/records/sales_order_record.dart';
 import '../../core/sync_engine/reference_sync.dart';
@@ -9,6 +10,7 @@ import '../../core/sync_engine/sync_engine.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/app_status_pill.dart';
 import '../../core/widgets/empty_state.dart';
+import '../../core/widgets/list_controls.dart';
 import 'rejected_order_card.dart';
 
 /// Three states an order taken on this phone can be in, all in one list
@@ -25,6 +27,11 @@ class OrderListScreen extends StatefulWidget {
 
 class _OrderListScreenState extends State<OrderListScreen> {
   bool _refreshing = false;
+  // সিঙ্ক হওয়া অংশের ফিল্টার আর সাজানো — শুধু স্ক্রিন খোলা থাকা পর্যন্ত।
+  // অপেক্ষমাণ আর ফেরত আসা অর্ডার এতে পড়ে না: ওগুলো হাতে গোনা, আর ফেরতগুলো
+  // সবসময় চোখের সামনে থাকা দরকার।
+  String _sort = OrderListQuery.defaultSort;
+  ListFilters _filters = const {};
 
   Future<void> _refresh() async {
     setState(() => _refreshing = true);
@@ -45,9 +52,9 @@ class _OrderListScreenState extends State<OrderListScreen> {
         .where((item) => item.entityType == 'SalesOrder')
         .toList();
     final pendingCount = SyncEngine.instance.pendingCount;
-    final synced = SalesOrderRecord.all()
-      ..sort((a, b) => (b.trxDate ?? DateTime(0))
-          .compareTo(a.trxDate ?? DateTime(0)));
+    final synced = SalesOrderRecord.all();
+    final shown =
+        OrderListQuery.apply(synced, sort: _sort, filters: _filters);
 
     // Why the last pull brought nothing down, when that is what happened —
     // null after a clean pull, and an empty list then means an empty list.
@@ -123,13 +130,28 @@ class _OrderListScreenState extends State<OrderListScreen> {
                   ],
                   if (synced.isNotEmpty) ...[
                     _SectionHeader('সিঙ্ক হয়েছে (${synced.length})'),
+                    ListControls(
+                      padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+                      sortOptions: OrderListQuery.sortOptions,
+                      sort: _sort,
+                      onSort: (value) => setState(() => _sort = value),
+                      filterGroups: OrderListQuery.filterGroups(synced),
+                      filters: _filters,
+                      onFilters: (value) => setState(() => _filters = value),
+                    ),
+                    if (shown.isEmpty)
+                      const Padding(
+                        padding: EdgeInsets.all(AppSpacing.md),
+                        child: Text('এই ফিল্টারে কোনো অর্ডার নেই।',
+                            textAlign: TextAlign.center),
+                      ),
                     // The number is what this section exists for — the rep
                     // could not give it to the shopkeeper offline (docs/
                     // Contract §০, decision ২), so this is the screen where
                     // they finally get it. It used to read `orderNumber`,
                     // which the server has never sent, so every confirmed
                     // order here said "নম্বর নেই"; see SalesOrderRecord.
-                    ...synced.map((order) => Card(
+                    ...shown.map((order) => Card(
                           child: ListTile(
                             leading: const AppStatusPill(
                                 label: 'সম্পন্ন', kind: AppStatusKind.success),

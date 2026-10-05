@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+import '../printing/document_actions_sheet.dart';
 import '../../core/api_client/network_errors.dart';
 import '../../core/approvals/approvals_api.dart';
 import '../../core/records/approval_record.dart';
@@ -217,8 +218,10 @@ class _ApprovalInboxScreenState extends State<ApprovalInboxScreen> {
                   else
                     ...rows.map((approval) => _ApprovalCard(
                           approval: approval,
-                          onApprove: _busy ? null : () => _confirmApprove(approval),
-                          onReject: _busy ? null : () => _confirmReject(approval),
+                          onApprove:
+                              _busy ? null : () => _confirmApprove(approval),
+                          onReject:
+                              _busy ? null : () => _confirmReject(approval),
                         )),
                 ],
               ),
@@ -293,9 +296,30 @@ class _ApprovalCard extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
+                // ⭐ সইয়ের আগে আসল কাগজটা — মালিক, ৪ অক্টোবর ২০২৬: *"sob vautucher cr dr note … print share korazay pdf
+                // e"*। The same sheet as everywhere ([[DocumentActionsSheet]]): the server's own PDF, then print or share.
+                if (approval.documentId != null &&
+                    approval.documentType.isNotEmpty)
+                  TextButton.icon(
+                    key: Key('approval-paper-${approval.id}'),
+                    onPressed: () => DocumentActionsSheet.show(
+                      context,
+                      type: approval.documentType,
+                      id: approval.documentId!,
+                      title: [
+                        approval.documentTypeLabel,
+                        if (approval.documentNo != null) approval.documentNo!
+                      ].join(' · '),
+                      fileStem: approval.documentNo,
+                    ),
+                    icon: const Icon(Icons.picture_as_pdf_outlined, size: 18),
+                    label: const Text('কাগজ দেখুন'),
+                  ),
+                const Spacer(),
                 TextButton(
                   onPressed: onReject,
-                  style: TextButton.styleFrom(foregroundColor: AppColors.danger),
+                  style:
+                      TextButton.styleFrom(foregroundColor: AppColors.danger),
                   child: const Text('প্রত্যাখ্যান'),
                 ),
                 const SizedBox(width: AppSpacing.sm),
@@ -348,8 +372,7 @@ class _RemarksDialogState extends State<_RemarksDialog> {
     // lives in ApprovalsApi.reject and in ApprovalEngine::reject's signature
     // — three places, because a refusal with no reason reaches the person who
     // asked as something they cannot act on.
-    final ready =
-        !widget.remarksRequired || _controller.text.trim().isNotEmpty;
+    final ready = !widget.remarksRequired || _controller.text.trim().isNotEmpty;
 
     return AlertDialog(
       title: Text(widget.title),
@@ -357,8 +380,7 @@ class _RemarksDialogState extends State<_RemarksDialog> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(widget.subtitle,
-              style: Theme.of(context).textTheme.bodySmall),
+          Text(widget.subtitle, style: Theme.of(context).textTheme.bodySmall),
           const SizedBox(height: AppSpacing.md),
           TextField(
             controller: _controller,

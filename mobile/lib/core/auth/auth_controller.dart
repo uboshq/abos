@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io' show Platform;
 
 import 'package:dio/dio.dart';
@@ -8,6 +9,7 @@ import '../config/app_config.dart';
 import '../api_client/network_errors.dart';
 import '../sync_engine/reference_cache.dart';
 import '../sync_engine/reference_sync.dart';
+import '../launcher_widgets/launcher_widget_refresh.dart';
 import 'auth_exceptions.dart';
 import 'auth_state.dart';
 import 'auth_user.dart';
@@ -84,6 +86,9 @@ class AuthController extends StateNotifier<AuthState> {
       final user = AuthUser.fromJson(userJson);
       await SessionRepository.instance.saveUser(user);
       state = AuthState.signedIn(user);
+      // The home-screen widgets, now that there is a session to fill them
+      // from. Not awaited: a launcher tile must not hold up a sign-in.
+      unawaited(LauncherWidgetRefresh.refresh());
     } on DioException catch (error) {
       final status = error.response?.statusCode;
       if (status == 409) {
@@ -96,6 +101,10 @@ class AuthController extends StateNotifier<AuthState> {
           fallback: 'ঢোকা গেল না। কিছুক্ষণ পর আবার চেষ্টা করুন।'));
     }
   }
+
+  /// Whether somebody is signed in right now. For callers outside the
+  /// provider tree (main() before runApp), which may not read [state].
+  bool get isSignedIn => state.status == AuthStatus.signedIn;
 
   /// Signs this device out. Best-effort against the server — a phone with no
   /// signal at the moment someone taps "sign out" still has to leave the
@@ -132,6 +141,10 @@ class AuthController extends StateNotifier<AuthState> {
     // that failed it. Left behind, it puts the previous account's 403 on the
     // next person'''s first empty screen.
     ReferenceSync.forgetLastFailure();
+    // And the same boundary on the launcher: a home screen must not go on
+    // showing one person's cash in hand and approval queue after they have
+    // signed out, possibly to somebody at a different company.
+    unawaited(LauncherWidgetRefresh.clear());
     state = const AuthState.signedOut();
   }
 }
