@@ -235,7 +235,12 @@ final class StockReports
                 ],
                 ['key' => 'unit_name', 'label' => 'inventory::field.unit', 'width' => '5rem'],
 
-                ['key' => 'purchase_price', 'label' => 'inventory::field.purchase_price', 'type' => ReportColumn::MONEY],
+                /*
+                 * ⭐ কেনা দর আর প্রতিটা মূল্যের কলাম খরচ দেখার চাবির পেছনে — Inventory অডিট ম১৪, ৫ অক্টোবর ২০২৬।
+                 * ⛔ আগে চাবি ছাড়া যে কেউ পর্দায়, ছাপায়, ফাইলে আর ফোনে ([[ReportResult::columnsFor()]]) কেনা দর দেখতেন,
+                 * অথচ পণ্যের পাতায় সেটা ঢাকা; আর মূল্য ÷ পরিমাণ = কেনা দর, তাই মূল্যের কলামও।
+                 */
+                ['key' => 'purchase_price', 'label' => 'inventory::field.purchase_price', 'type' => ReportColumn::MONEY, 'permission' => 'inventory.cost.view'],
                 ['key' => 'sale_price', 'label' => 'inventory::field.sale_price', 'type' => ReportColumn::MONEY],
 
                 /*
@@ -246,19 +251,19 @@ final class StockReports
                  */
                 ['key' => 'opening_qty', 'label' => 'inventory::field.qty_opening', 'type' => ReportColumn::QUANTITY],
                 ['key' => 'opening_free', 'label' => 'inventory::field.free_opening', 'type' => ReportColumn::QUANTITY],
-                ['key' => 'opening_value', 'label' => 'inventory::field.amount_opening', 'type' => ReportColumn::MONEY],
+                ['key' => 'opening_value', 'label' => 'inventory::field.amount_opening', 'type' => ReportColumn::MONEY, 'permission' => 'inventory.cost.view'],
 
                 ['key' => 'in_qty', 'label' => 'inventory::field.qty_in', 'type' => ReportColumn::QUANTITY],
                 ['key' => 'in_free', 'label' => 'inventory::field.free_in', 'type' => ReportColumn::QUANTITY],
-                ['key' => 'in_value', 'label' => 'inventory::field.amount_in', 'type' => ReportColumn::MONEY],
+                ['key' => 'in_value', 'label' => 'inventory::field.amount_in', 'type' => ReportColumn::MONEY, 'permission' => 'inventory.cost.view'],
 
                 ['key' => 'out_qty', 'label' => 'inventory::field.qty_out', 'type' => ReportColumn::QUANTITY],
                 ['key' => 'out_free', 'label' => 'inventory::field.free_out', 'type' => ReportColumn::QUANTITY],
-                ['key' => 'out_value', 'label' => 'inventory::field.amount_out', 'type' => ReportColumn::MONEY],
+                ['key' => 'out_value', 'label' => 'inventory::field.amount_out', 'type' => ReportColumn::MONEY, 'permission' => 'inventory.cost.view'],
 
                 ['key' => 'closing_qty', 'label' => 'inventory::field.qty_closing', 'type' => ReportColumn::QUANTITY],
                 ['key' => 'closing_free', 'label' => 'inventory::field.free_closing', 'type' => ReportColumn::QUANTITY],
-                ['key' => 'closing_value', 'label' => 'inventory::field.amount_closing', 'type' => ReportColumn::MONEY],
+                ['key' => 'closing_value', 'label' => 'inventory::field.amount_closing', 'type' => ReportColumn::MONEY, 'permission' => 'inventory.cost.view'],
 
                 ['key' => 'closing_total', 'label' => 'inventory::field.qty_total_with_free', 'type' => ReportColumn::QUANTITY],
             ],

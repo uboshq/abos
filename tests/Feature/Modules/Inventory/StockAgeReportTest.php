@@ -50,6 +50,8 @@ class StockAgeReportTest extends TestCase
      */
     public function test_each_bucket_value_matches_its_own_layer_list(): void
     {
+        // ⓘ টাকাটা খরচের চাবির পেছনে (Inventory অডিট ম১৪) — চাবিওয়ালা মালিক হয়ে পড়া
+        $this->actingAs($this->user);
         $facts = $this->facts();
 
         foreach ($this->buckets as [$min, $max]) {

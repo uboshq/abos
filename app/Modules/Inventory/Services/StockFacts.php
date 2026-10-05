@@ -498,8 +498,16 @@ final class StockFacts
      *
      * $minDays ≤ বয়স < $maxDays (maxDays null = খোলা, সবচেয়ে পুরনো বাকেট)।
      */
-    public function agingValue(int $minDays, ?int $maxDays = null): string
+    public function agingValue(int $minDays, ?int $maxDays = null): ?string
     {
+        /*
+         * ⭐ খরচের সংখ্যা, তাই [[value()]]-এর একই চাবি; চাবি না থাকলে `null` — Inventory অডিট ম১৪, ৫ অক্টোবর ২০২৬।
+         * ⛔ আগে বয়সের পাতা আর ঝুঁকির বোর্ড চাবি ছাড়াই আটকে থাকা টাকা দেখাত।
+         */
+        if (! FieldSecurity::visible(StockMovement::class, 'unit_cost')) {
+            return null;
+        }
+
         $row = $this->agingScope($minDays, $maxDays)
             ->selectRaw('COALESCE(SUM(l.qty_remaining * l.unit_cost), 0) as v')
             ->first();

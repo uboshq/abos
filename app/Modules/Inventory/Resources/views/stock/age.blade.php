@@ -5,6 +5,12 @@
     থাকের সংখ্যাটা টাকা — পণ্য-গণনা নয়। ভিত্তি inv_cost_layers (FIFO স্তর),
     রিপোর্ট কেবল পড়ে। সবচেয়ে পুরনো স্তর আগে।
 --}}
+{{--
+    ⭐ টাকা কেবল খরচ দেখার চাবিওয়ালার — Inventory অডিট ম১৪, ৫ অক্টোবর ২০২৬। চাবি না থাকলে
+    [[StockFacts::agingValue()]] `null` দেয়; তখন ভাগের টাকা আর "আটকে থাকা টাকা" কলাম দুটোই সরে, বয়স আর পরিমাণ থাকে।
+    ⛔ আগে চাবি ছাড়াও স্তরের টাকা দেখা যেত — টাকা ÷ পরিমাণ = কেনা দর।
+--}}
+@php $showsCost = \App\Core\Security\FieldSecurity::visible(\App\Modules\Inventory\Models\StockMovement::class, 'unit_cost'); @endphp
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ __('inventory::analysis.age_title') }}</x-slot:title>
 
@@ -23,9 +29,11 @@
                     <span class="block text-xs text-(--color-ink-muted)">
                         {{ $b }} {{ __('inventory::analysis.days', ['count' => '']) }}
                     </span>
-                    <span class="num block text-lg font-bold text-(--color-ink)">
-                        ৳{{ \App\Core\Support\Money::format($totals[$b], 0) }}
-                    </span>
+                    @if ($showsCost && $totals[$b] !== null)
+                        <span class="num block text-lg font-bold text-(--color-ink)">
+                            ৳{{ \App\Core\Support\Money::format($totals[$b], 0) }}
+                        </span>
+                    @endif
                 </a>
             @endforeach
         </div>
@@ -44,7 +52,9 @@
                             <th >{{ __('inventory::analysis.received') }}</th>
                             <th class="text-right">{{ __('inventory::analysis.age_days_col') }}</th>
                             <th class="text-right">{{ __('inventory::analysis.quantity') }}</th>
-                            <th class="text-right">{{ __('inventory::analysis.value_stuck') }}</th>
+                            @if ($showsCost)
+                                <th class="text-right">{{ __('inventory::analysis.value_stuck') }}</th>
+                            @endif
                         </tr>
                     </thead>
                     <tbody>
@@ -62,9 +72,11 @@
                                 <td class="num text-right text-(--color-ink)">
                                     {{ rtrim(rtrim((string) $l->qty_remaining, '0'), '.') }}
                                 </td>
-                                <td class="num text-right font-medium text-(--color-ink)">
-                                    ৳{{ \App\Core\Support\Money::format($l->value_stuck) }}
-                                </td>
+                                @if ($showsCost)
+                                    <td class="num text-right font-medium text-(--color-ink)">
+                                        ৳{{ \App\Core\Support\Money::format($l->value_stuck) }}
+                                    </td>
+                                @endif
                             </tr>
                         @endforeach
                     </tbody>

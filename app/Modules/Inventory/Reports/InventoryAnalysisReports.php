@@ -183,7 +183,7 @@ final class InventoryAnalysisReports
                 ['key' => 'unplaced', 'label' => 'inventory::field.unplaced', 'type' => ReportColumn::QUANTITY],
                 ['key' => 'reserved', 'label' => 'inventory::field.reserved', 'type' => ReportColumn::QUANTITY],
                 ['key' => 'sellable', 'label' => 'inventory::stockview.sellable', 'type' => ReportColumn::QUANTITY],
-                ['key' => 'value', 'label' => 'inventory::stockview.value', 'type' => ReportColumn::MONEY],
+                ['key' => 'value', 'label' => 'inventory::stockview.value', 'type' => ReportColumn::MONEY, 'permission' => 'inventory.cost.view'],
             ],
         );
     }

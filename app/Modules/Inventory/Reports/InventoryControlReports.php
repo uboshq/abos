@@ -168,7 +168,7 @@ final class InventoryControlReports
                 ['key' => 'on_hand', 'label' => 'inventory::control.on_hand', 'type' => ReportColumn::QUANTITY],
                 ['key' => 'out_year', 'label' => 'inventory::control.out_year', 'type' => ReportColumn::QUANTITY],
                 ['key' => 'turns', 'label' => 'inventory::control.turns', 'width' => '6rem'],
-                ['key' => 'value', 'label' => 'inventory::control.value', 'type' => ReportColumn::MONEY],
+                ['key' => 'value', 'label' => 'inventory::control.value', 'type' => ReportColumn::MONEY, 'permission' => 'inventory.cost.view'],
             ],
         );
     }
@@ -295,7 +295,7 @@ final class InventoryControlReports
                 ['key' => 'book_qty', 'label' => 'inventory::control.book_qty', 'type' => ReportColumn::QUANTITY],
                 ['key' => 'counted_qty', 'label' => 'inventory::control.counted_qty', 'type' => ReportColumn::QUANTITY],
                 ['key' => 'difference', 'label' => 'inventory::control.difference', 'type' => ReportColumn::QUANTITY],
-                ['key' => 'difference_value', 'label' => 'inventory::control.difference_value', 'type' => ReportColumn::MONEY],
+                ['key' => 'difference_value', 'label' => 'inventory::control.difference_value', 'type' => ReportColumn::MONEY, 'permission' => 'inventory.cost.view'],
             ],
         );
     }

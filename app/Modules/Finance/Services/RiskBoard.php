@@ -302,7 +302,8 @@ final class RiskBoard
     {
         $value = $this->stock->agingValue(self::STUCK_DAYS);
 
-        if (bccomp($value, '0', 4) <= 0) {
+        // ⓘ খরচ দেখার চাবি না থাকলে `null` — কার্ডটাই আসে না (Inventory অডিট ম১৪)
+        if ($value === null || bccomp($value, '0', 4) <= 0) {
             return null;
         }
 
