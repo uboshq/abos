@@ -196,13 +196,31 @@ class VoucherPrintController extends Controller implements HasMiddleware
     private function lines(Voucher $voucher): array
     {
         return $voucher->lines->map(fn (VoucherLine $line) => [
+            /*
+             * ⭐ খাতের পাশে পক্ষের নাম — মালিক, ৫ অক্টোবর ২০২৬ (ডেমো JRN-0003: দুই সারিতেই "1110 প্রাপ্য হিসাব",
+             * কার থেকে কার নামে সরল তা কাগজে নেই — "etaw ager motoi")। ⓘ নামটা [[DrillResolver]] দিয়ে, মডেল চিনে
+             * নয় — Accounts কারও উপর দাঁড়ায় না, নিচের পুরনো টীকার কারণটা অক্ষত।
+             */
             'account' => trim(
                 ($line->account?->code ?? '').' '.($line->account?->name() ?? '')
+                .(($name = $this->partyName($line->party_type, $line->party_id)) !== '' ? ' — '.$name : '')
             ),
             'narration' => (string) ($line->narration ?? ''),
             'debit' => $this->money($line->debit),
             'credit' => $this->money($line->credit),
         ])->all();
+    }
+
+    /** পক্ষের নাম — গ্রাহক, সরবরাহকারী, ব্যক্তি, কর্মী — যে-ই হোক, ধরন আর নম্বর থেকে; না পেলে খালি। */
+    private function partyName(?string $type, int|string|null $id): string
+    {
+        if (blank($type) || (int) $id <= 0) {
+            return '';
+        }
+
+        $party = app(\App\Core\Engines\Drill\DrillResolver::class)->resolve((string) $type, (int) $id);
+
+        return $party !== null && method_exists($party, 'name') ? (string) $party->name() : '';
     }
 
     /**
