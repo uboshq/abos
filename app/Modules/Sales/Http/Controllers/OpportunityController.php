@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Sales\Http\Controllers;
 
+use App\Core\Concerns\GrandTotals;
 use App\Core\Services\MenuBuilder;
 use App\Core\Support\CompanyContext;
 use App\Http\Controllers\Controller;
@@ -29,6 +30,8 @@ use Illuminate\View\View;
  */
 class OpportunityController extends Controller implements HasMiddleware
 {
+    use GrandTotals;
+
     /** ফর্মে কয়টা পণ্যের সারি — JS ছাড়া, তাই সংখ্যাটা স্থির। */
     public const LINE_ROWS = 5;
 
@@ -63,7 +66,9 @@ class OpportunityController extends Controller implements HasMiddleware
 
         return view('sales::crm.opportunity.index', [
             'menu' => $this->menu->forUser($user),
-            'opportunities' => $query->paginate(50)->withQueryString(),
+            'opportunities' => (clone $query)->paginate(50)->withQueryString(),
+            // ⭐ যোগফলের পট্টি — গোটা ছাঁকনির আনুমানিক মূল্য, পাতার নয় (মালিক, ৫ অক্টোবর ২০২৬)
+            'grand' => $this->grandTotals($query, ['value' => 't.estimated_value']),
             'stages' => $this->opportunities->stages()->mapWithKeys(fn ($s) => [$s->id => $s->name()]),
             'q' => $request->query('q'),
             'stage' => $request->query('stage'),

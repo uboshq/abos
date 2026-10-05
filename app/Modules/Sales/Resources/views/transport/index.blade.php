@@ -173,5 +173,6 @@
             :columns="$columns" />
 
         <x-ui.pager :rows="$challans" />
+        <x-ui.list-totals :rows="$challans" :grand="$grand ?? []" :columns="$columns" />
     </div>
 </x-layouts.app>

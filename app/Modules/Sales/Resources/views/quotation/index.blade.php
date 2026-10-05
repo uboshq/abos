@@ -94,5 +94,6 @@
             :columns="$columns" />
 
         <x-ui.pager :rows="$quotations" />
+        <x-ui.list-totals :rows="$quotations" :grand="$grand ?? []" :columns="$columns" />
     </div>
 </x-layouts.app>

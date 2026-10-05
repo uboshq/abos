@@ -5,7 +5,51 @@
      * `tone` ঐচ্ছিক: `ink` (সাধারণ) · `ok` (আদায়) · `bad` (বকেয়া)।
      */
     'totals' => [],
+
+    /**
+     * ⭐ সারির সংখ্যা — paginator (`total()` গোটা ছাঁকনির গোনা) বা সরাসরি একটা সংখ্যা।
+     * মালিক, ৫ অক্টোবর ২০২৬: পট্টিটা **প্রতিটা** তালিকায়; টাকা না থাকলেও অন্তত "১২৪টি সারি"।
+     */
+    'rows' => null,
+
+    /**
+     * ⭐ টেবিলের সর্বমোট ([[GrandTotals]]) আর কলামগুলো — দিলে যে কলাম যোগ দেখায় (`'total' => 'money'|'quantity'`)
+     * তার সর্বমোট এখানেও বসে, কলামের নিজের নামে। ⓘ একই সংখ্যা, একই উৎস: টেবিলের নিচের সর্বমোট আর এই পট্টি
+     * কখনো আলাদা কথা বলে না।
+     */
+    'grand' => [],
+    'columns' => [],
 ])
+
+@php
+    $head = [];
+
+    // ⓘ paginator-এর `total()` গোটা ছাঁকনির গোনা (পাতা ভাগের নিজের COUNT), এই পাতার নয়
+    if ($rows instanceof \Illuminate\Contracts\Pagination\LengthAwarePaginator) {
+        $rows = $rows->total();
+    } elseif ($rows instanceof \Countable) {
+        $rows = count($rows);
+    }
+
+    if (is_int($rows)) {
+        $head[] = ['value' => __('core.list.rows', ['count' => number_format($rows)])];
+    }
+
+    foreach ($grand === [] ? [] : $columns as $column) {
+        $kind = $column['total'] ?? null;
+
+        if (! in_array($kind, ['money', 'quantity'], true) || ! array_key_exists($column['key'] ?? '', $grand)) {
+            continue;
+        }
+
+        $head[] = [
+            'label' => (string) $column['label'],
+            'value' => \App\View\Components\Ui\Table::format((string) $grand[$column['key']], $kind),
+        ];
+    }
+
+    $totals = [...$head, ...$totals];
+@endphp
 
 {{--
     তালিকার যোগফল — পর্দা **ঘোষণা করে**, দেখায় না।

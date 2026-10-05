@@ -111,6 +111,16 @@ final class OrderTracking
      */
     public function rows(?string $term, string $stage, ?int $customerId = null): LengthAwarePaginator
     {
+        return $this->query($term, $stage, $customerId)->paginate(50)->withQueryString();
+    }
+
+    /**
+     * ছাঁকা আদেশগুলোর কোয়েরি — পাতা ভাগের আগে; তালিকা আর তার যোগফলের পট্টি ([[x-ui.list-totals]]) একই সারি গোনে।
+     *
+     * @return EloquentBuilder<SalesOrder>
+     */
+    public function query(?string $term, string $stage, ?int $customerId = null): EloquentBuilder
+    {
         $base = SalesOrder::query()
             ->where('status', '<>', DocumentStatus::CANCELLED)
             ->when($term, fn ($q, $t) => $q->search($t))
@@ -138,15 +148,13 @@ final class OrderTracking
             ->latest('trx_date')
             ->latest('id');
 
-        $filtered = match ($stage) {
+        return match ($stage) {
             self::PLACED => $orders->where('delivered_total', '<=', 0),
             self::PARTIAL => $orders->whereRaw('delivered_total > 0 AND delivered_total < ordered_total'),
             self::DELIVERED => $orders->whereRaw('delivered_total >= ordered_total AND invoice_count = 0'),
             self::BILLED => $orders->where('invoice_count', '>', 0),
             default => $orders,
         };
-
-        return $filtered->paginate(50)->withQueryString();
     }
 
     /**

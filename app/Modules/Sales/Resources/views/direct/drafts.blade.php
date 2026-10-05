@@ -43,6 +43,7 @@
         ],
         [
             'key' => 'total',
+            'total' => 'money',
             'label' => __('sales::field.total'),
             'numeric' => true,
             'width' => '9rem',
@@ -105,8 +106,10 @@
         <x-ui.table
             :empty="$q !== '' ? __('core.empty.no_results') : __('sales::field.pending_drafts_none')"
             :rows="$drafts"
+            :grand="$grand ?? []"
             :columns="$columns" />
 
         <x-ui.pager :rows="$drafts" />
+        <x-ui.list-totals :rows="$drafts" :grand="$grand ?? []" :columns="$columns" />
     </div>
 </x-layouts.app>

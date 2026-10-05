@@ -33,7 +33,7 @@
                  '<a class="text-(--color-link)" href="'.e(route('customer.show', $o->customer->id)).'">'
                  .e($o->customer->name()).'</a>')],
 
-        ['key' => 'total', 'label' => __('sales::field.total'), 'numeric' => true, 'width' => '10rem',
+        ['key' => 'total', 'total' => 'money', 'label' => __('sales::field.total'), 'numeric' => true, 'width' => '10rem',
          'render' => fn ($o) => $money($o->total)],
 
         /* ⓘ "কতটা গেছে" — পরিমাণে, টাকায় নয়: আদেশ মালের হিসাব, আর
@@ -107,10 +107,12 @@
         </nav>
 
         <x-ui.table :rows="$orders"
+                    :grand="$grand ?? []"
                     :columns="$columns"
                     :compact="request()->boolean('compact')"
                     :empty="filled(request('q')) ? __('core.empty.no_results') : __('sales::message.no_orders_to_track')" />
     </div>
 
     <div class="mt-3">{{ $orders->links() }}</div>
+    <x-ui.list-totals :rows="$orders" :grand="$grand ?? []" :columns="$columns" />
 </x-layouts.app>

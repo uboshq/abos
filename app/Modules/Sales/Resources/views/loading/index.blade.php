@@ -47,5 +47,6 @@
         <x-ui.table :empty="__('sales::loading.empty')" :rows="$trips" :columns="$columns" />
 
         <x-ui.pager :rows="$trips" />
+        <x-ui.list-totals :rows="$trips" />
     </div>
 </x-layouts.app>

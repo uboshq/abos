@@ -137,6 +137,7 @@
         </div>
 
         <x-ui.pager :rows="$customers" />
+        <x-ui.list-totals :rows="$customers" />
     </section>
 
     {{-- ── সাপ্তাহিক ছক ─────────────────────────────────────────────── --}}

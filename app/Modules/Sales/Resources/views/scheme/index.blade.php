@@ -105,4 +105,5 @@
     </div>
 
     {{ $schemes->links() }}
+    <x-ui.list-totals :rows="$schemes" />
 </x-layouts.app>

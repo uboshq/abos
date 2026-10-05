@@ -93,6 +93,8 @@ class SalesOrderController extends Controller implements HasMiddleware
         return view('sales::order.track', [
             'menu' => $this->menu->forUser($request->user()),
             'orders' => $tracking->rows($term, $stage, $customerId),
+            // ⭐ যোগফলের পট্টি — গোটা ছাঁকনির আদেশের মোট, পাতার নয় (মালিক, ৫ অক্টোবর ২০২৬)
+            'grand' => $this->grandTotals($tracking->query($term, $stage, $customerId), ['total' => 't.total']),
             'counts' => $tracking->counts($term, $customerId),
             'tracking' => $tracking,
             'stage' => $stage,

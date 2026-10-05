@@ -67,5 +67,6 @@
         <x-ui.table :empty="__('sales::gate_pass.empty')" :rows="$passes" :columns="$columns" />
 
         <x-ui.pager :rows="$passes" />
+        <x-ui.list-totals :rows="$passes" />
     </div>
 </x-layouts.app>

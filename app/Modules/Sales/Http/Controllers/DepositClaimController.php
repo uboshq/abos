@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Sales\Http\Controllers;
 
+use App\Core\Concerns\GrandTotals;
 use App\Core\Services\MenuBuilder;
 use App\Http\Controllers\Controller;
 use App\Modules\Accounts\Models\Account;
@@ -24,6 +25,8 @@ use Illuminate\View\View;
  */
 class DepositClaimController extends Controller implements HasMiddleware
 {
+    use GrandTotals;
+
     public function __construct(
         private readonly DepositClaimService $claims,
         private readonly MenuBuilder $menu,
@@ -41,24 +44,27 @@ class DepositClaimController extends Controller implements HasMiddleware
     {
         $status = $request->query('status', DepositClaim::PENDING);
 
+        $query = DepositClaim::query()->inViewedBranch()
+            ->with(['customer', 'bankAccount', 'decider'])
+            ->when($status !== 'all', fn ($q) => $q->where('status', $status))
+            /*
+             * ⭐ খোঁজা — টুলবারের ঘরটা সত্যিই কাজ করে (১৯ সেপ্টেম্বর ২০২৬)।
+             * ⓘ রেফারেন্স, নোট, আর গ্রাহকের নাম/কোড।
+             */
+            ->when(trim((string) $request->query('q')) ?: null, fn ($q, $term) => $q->where(
+                fn ($w) => $w->where('reference', 'like', "%{$term}%")
+                    ->orWhere('note', 'like', "%{$term}%")
+                    ->orWhereHas('customer', fn ($c) => $c->where('name_en', 'like', "%{$term}%")
+                        ->orWhere('name_bn', 'like', "%{$term}%")
+                        ->orWhere('code', 'like', "%{$term}%")),
+            ))
+            ->orderByDesc('claimed_on')->orderByDesc('id');
+
         return view('sales::claim.index', [
             'menu' => $this->menu->forUser($request->user()),
-            'claims' => DepositClaim::query()->inViewedBranch()
-                ->with(['customer', 'bankAccount', 'decider'])
-                ->when($status !== 'all', fn ($q) => $q->where('status', $status))
-                /*
-                 * ⭐ খোঁজা — টুলবারের ঘরটা সত্যিই কাজ করে (১৯ সেপ্টেম্বর ২০২৬)।
-                 * ⓘ রেফারেন্স, নোট, আর গ্রাহকের নাম/কোড।
-                 */
-                ->when(trim((string) $request->query('q')) ?: null, fn ($q, $term) => $q->where(
-                    fn ($w) => $w->where('reference', 'like', "%{$term}%")
-                        ->orWhere('note', 'like', "%{$term}%")
-                        ->orWhereHas('customer', fn ($c) => $c->where('name_en', 'like', "%{$term}%")
-                            ->orWhere('name_bn', 'like', "%{$term}%")
-                            ->orWhere('code', 'like', "%{$term}%")),
-                ))
-                ->orderByDesc('claimed_on')->orderByDesc('id')
-                ->paginate(50)->withQueryString(),
+            'claims' => (clone $query)->paginate(50)->withQueryString(),
+            // ⭐ যোগফলের পট্টি — গোটা ছাঁকনির দাবির অঙ্ক, পাতার নয় (মালিক, ৫ অক্টোবর ২০২৬)
+            'grand' => $this->grandTotals($query, ['amount' => 't.amount']),
             'status' => $status,
             'pendingCount' => DepositClaim::query()->inViewedBranch()->pending()->count(),
             // `money()` নিজেই দল ছাঁকে, তাই আলাদা `postable()` লাগে না

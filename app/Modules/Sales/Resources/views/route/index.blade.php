@@ -76,4 +76,5 @@
     <p class="mt-1 text-xs text-(--color-ink-muted)">{{ __('sales::route.target_note') }}</p>
 
     <x-ui.pager :rows="$routes" />
+    <x-ui.list-totals :rows="$routes" />
 </x-layouts.app>

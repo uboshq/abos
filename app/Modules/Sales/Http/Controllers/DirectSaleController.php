@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Sales\Http\Controllers;
 
+use App\Core\Concerns\GrandTotals;
 use App\Core\Contracts\RecipeBook;
 use App\Core\Engines\Approval\HeldForApproval;
 use App\Core\Engines\NumberSeries\NumberSeriesEngine;
@@ -59,6 +60,8 @@ use Illuminate\View\View;
  */
 class DirectSaleController extends Controller implements HasMiddleware
 {
+    use GrandTotals;
+
     /** এর বেশি পণ্য হলে পাতার সাথে পাঠানো বন্ধ, সার্ভারে খোঁজা শুরু। */
     private const INLINE_CATALOGUE_LIMIT = 2000;
 
@@ -870,17 +873,19 @@ class DirectSaleController extends Controller implements HasMiddleware
         /* ⭐ দুই ট্যাব — খসড়া আর অনুমোদনের অপেক্ষায় (মালিক, ২৮ সেপ্টেম্বর ২০২৬) */
         $tab = $request->query('tab') === 'approval' ? 'approval' : 'drafts';
 
-        $drafts = ($tab === 'approval' ? DirectSaleService::awaitingApproval() : DirectSaleService::trueDrafts())
+        $query = ($tab === 'approval' ? DirectSaleService::awaitingApproval() : DirectSaleService::trueDrafts())
             ->with(['customer.location', 'lines.challanLine.challan', 'lines.product'])
             ->when($q !== '', fn ($query) => $query->search($q))
-            ->orderByDesc('id')
-            ->paginate(50)
-            ->withQueryString();
+            ->orderByDesc('id');
+
+        $drafts = (clone $query)->paginate(50)->withQueryString();
 
         return view('sales::direct.drafts', [
             'menu' => $this->menu->forUser($request->user()),
             'drafts' => $drafts,
             'why' => $this->whyStuck($drafts->getCollection()),
+            // ⭐ যোগফলের পট্টি — এই ট্যাবের গোটা ছাঁকনির মোট, পাতার নয় (মালিক, ৫ অক্টোবর ২০২৬)
+            'grand' => $this->grandTotals($query, ['total' => 't.total']),
             'tab' => $tab,
             'tabCounts' => [
                 'drafts' => DirectSaleService::trueDrafts()->count(),

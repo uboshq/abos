@@ -13,7 +13,7 @@
          'render' => fn ($o) => $o->partyName() ?: '-'],
         ['key' => 'stage', 'label' => __('sales::crm.stage'), 'width' => '9rem',
          'render' => fn ($o) => $o->stage?->name() ?: '-'],
-        ['key' => 'value', 'label' => __('sales::crm.estimated_value'), 'numeric' => true, 'width' => '10rem',
+        ['key' => 'value', 'total' => 'money', 'label' => __('sales::crm.estimated_value'), 'numeric' => true, 'width' => '10rem',
          'render' => fn ($o) => \App\Core\Support\Money::format($o->estimated_value)],
         ['key' => 'probability', 'label' => __('sales::crm.probability'), 'numeric' => true, 'width' => '6rem',
          'render' => fn ($o) => $o->probability . '%'],
@@ -73,9 +73,10 @@
             </x-ui.toolbar>
         </form>
 
-        <x-ui.table :rows="$opportunities" :columns="$columns"
+        <x-ui.table :rows="$opportunities" :columns="$columns" :grand="$grand ?? []"
                     :empty="$q ? __('core.empty.no_results') : __('sales::crm.no_opportunities')" />
 
         <x-ui.pager :rows="$opportunities" />
+        <x-ui.list-totals :rows="$opportunities" :grand="$grand ?? []" :columns="$columns" />
     </div>
 </x-layouts.app>

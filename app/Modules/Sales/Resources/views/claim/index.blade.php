@@ -29,6 +29,7 @@
         ],
         [
             'key' => 'amount',
+            'total' => 'money',
             'label' => __('sales::portal.claimed'),
             'numeric' => true,
             'width' => '10rem',
@@ -117,11 +118,13 @@
         </div>
 
         <x-ui.table :rows="$claims"
+                    :grand="$grand ?? []"
                     :columns="$columns"
                     :compact="request()->boolean('compact')"
                     :empty="request('q') ? __('core.empty.no_results') : __('sales::portal.empty')" />
     </div>
 
     {{ $claims->links() }}
+    <x-ui.list-totals :rows="$claims" :grand="$grand ?? []" :columns="$columns" />
 
 </x-layouts.app>

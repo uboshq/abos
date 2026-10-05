@@ -72,5 +72,6 @@
                     :empty="$q ? __('core.empty.no_results') : __('sales::crm.no_leads')" />
 
         <x-ui.pager :rows="$leads" />
+        <x-ui.list-totals :rows="$leads" />
     </div>
 </x-layouts.app>

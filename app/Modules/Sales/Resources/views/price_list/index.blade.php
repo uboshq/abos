@@ -72,4 +72,5 @@
     <p class="mt-2 text-xs text-(--color-ink-muted)">{{ __('sales::price_list.history_note') }}</p>
 
     <x-ui.pager :rows="$products" />
+    <x-ui.list-totals :rows="$products" />
 </x-layouts.app>

@@ -87,6 +87,7 @@
                         :empty="__('core.empty.no_results')" />
 
             <x-ui.pager :rows="$jobs" />
+            <x-ui.list-totals :rows="$jobs" />
         @endif
     </div>
 </x-layouts.app>

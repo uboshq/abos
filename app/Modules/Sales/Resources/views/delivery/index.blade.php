@@ -118,5 +118,6 @@
             :columns="$columns" />
 
         <x-ui.pager :rows="$rows" />
+        <x-ui.list-totals :rows="$rows" :grand="$grand ?? []" :columns="$columns" />
     </div>
 </x-layouts.app>

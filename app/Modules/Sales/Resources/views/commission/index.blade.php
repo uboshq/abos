@@ -99,4 +99,5 @@
     </div>
 
     <div class="mt-3">{{ $claims->links() }}</div>
+    <x-ui.list-totals :rows="$claims" :grand="$grand ?? []" :columns="$columns" />
 </x-layouts.app>

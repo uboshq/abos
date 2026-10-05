@@ -111,6 +111,7 @@
             :columns="$columns" />
 
         <x-ui.pager :rows="$orders" />
+        <x-ui.list-totals :rows="$orders" :grand="$grand ?? []" :columns="$columns" />
     </div>
 
     {{-- ⭐ বিক্রয় আদেশ — নতুন ধারায় DO-র কাজ আদেশই করে; অংশে অংশে, বাকিটা আবার এখানে (নকশার ধাপ ৬) --}}
