@@ -222,5 +222,6 @@
             :columns="$ledgerColumns" />
 
         <x-ui.pager :rows="$entries" />
+        <x-ui.list-totals :rows="$entries" />
     </section>
 </x-layouts.app>

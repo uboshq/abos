@@ -282,5 +282,6 @@
             :columns="$columns" />
 
         <x-ui.pager :rows="$customers" />
+        <x-ui.list-totals :rows="$customers" :grand="$grand ?? []" :columns="$columns" />
     </div>
 </x-layouts.app>
