@@ -247,6 +247,7 @@ final class CreditExposure implements CreditHolds
         $delivered = DB::table('sal_challan_lines as cl')
             ->join('sal_challans as c', 'c.id', '=', 'cl.delivery_challan_id')
             ->whereColumn('cl.sales_order_line_id', 'ol.id')
+            ->where('c.company_id', CompanyContext::id())
             ->whereNull('c.deleted_at')
             ->whereIn('c.status', DocumentStatus::POSTED)
             ->selectRaw('COALESCE(SUM(cl.delivered_qty), 0)');

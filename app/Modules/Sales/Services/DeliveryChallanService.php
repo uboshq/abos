@@ -1054,9 +1054,9 @@ final class DeliveryChallanService
      */
     private function ordersOf(DeliveryChallan $challan): array
     {
-        $fromLines = DB::table('sal_order_lines')
-            ->whereIn('id', DB::table('sal_challan_lines')->where('delivery_challan_id', $challan->id)
-                ->whereNotNull('sales_order_line_id')->select('sales_order_line_id'))
+        // ⓘ মডেল দিয়ে — কোম্পানির ছাঁকনি নিজেই বসে ([[EveryRawQueryNamesItsCompanyTest]])
+        $fromLines = SalesOrderLine::query()
+            ->whereIn('id', $challan->lines()->whereNotNull('sales_order_line_id')->pluck('sales_order_line_id'))
             ->pluck('sales_order_id')
             ->map(fn ($id) => (int) $id)
             ->all();
