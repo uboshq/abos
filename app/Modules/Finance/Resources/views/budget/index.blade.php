@@ -58,5 +58,6 @@
         </div>
 
         <x-ui.pager :rows="$plan" />
+        <x-ui.list-totals :rows="$plan" :grand="$planGrand ?? []" :columns="$columns" />
     </section>
 </x-layouts.app>

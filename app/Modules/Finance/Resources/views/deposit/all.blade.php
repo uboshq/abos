@@ -88,6 +88,7 @@
                 ]" />
 
             <x-ui.pager :rows="$deposits" />
+            <x-ui.list-totals :rows="$deposits" />
         </section>
     </div>
 </x-layouts.app>

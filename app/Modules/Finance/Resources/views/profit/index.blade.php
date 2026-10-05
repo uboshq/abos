@@ -248,6 +248,7 @@
                             :empty="__('finance::message.no_distribution_yet')" />
 
                 <x-ui.pager :rows="$history" />
+                <x-ui.list-totals :rows="$history" :grand="$grand ?? []" :columns="$historyColumns" />
             </section>
         </div>
     </div>

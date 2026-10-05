@@ -197,5 +197,6 @@
             :columns="$bfColumns" />
 
         <x-ui.pager :rows="$facilities" />
+        <x-ui.list-totals :rows="$facilities" :grand="$grand ?? []" :columns="$bfColumns" />
     </div>
 </x-layouts.app>

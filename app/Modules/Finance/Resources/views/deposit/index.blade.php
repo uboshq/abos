@@ -238,6 +238,7 @@
             :columns="$depColumns" />
 
         <x-ui.pager :rows="$deposits" />
+        <x-ui.list-totals :rows="$deposits" :grand="$grand ?? []" :columns="$depColumns" />
         @endif
     </div>
 </x-layouts.app>

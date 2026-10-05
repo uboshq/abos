@@ -109,4 +109,5 @@
     </div>
 
     <div class="mt-3">{{ $kinds->links() }}</div>
+    <x-ui.list-totals :rows="$kinds" />
 </x-layouts.app>

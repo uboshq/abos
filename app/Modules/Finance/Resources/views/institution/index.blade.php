@@ -87,5 +87,6 @@
                     :empty="__('finance::institution.none_yet')" />
 
         <x-ui.pager :rows="$institutions" />
+        <x-ui.list-totals :rows="$institutions" />
     </div>
 </x-layouts.app>

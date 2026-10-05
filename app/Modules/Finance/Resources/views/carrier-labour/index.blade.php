@@ -117,6 +117,7 @@
             ]" />
 
             <x-ui.pager :rows="$statement['rows']" />
+            <x-ui.list-totals :rows="$statement['rows']" />
         </div>
     @endif
 </x-layouts.app>

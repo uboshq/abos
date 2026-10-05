@@ -140,5 +140,6 @@
         ]" />
 
         <x-ui.pager :rows="$rows" />
+        <x-ui.list-totals :rows="$rows" :totals="[['label' => __('finance::bank_charge.amount'), 'value' => Money::format($bank_id ? (string) ($byBank->first(fn ($b) => $b['bank']?->id === (int) $bank_id)['amount'] ?? '0') : (string) $total)]]" />
     </div>
 </x-layouts.app>

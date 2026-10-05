@@ -187,6 +187,7 @@
                         :empty="request('q') ? __('core.empty.no_results') : __('finance::message.no_rentals')" />
 
             <x-ui.pager :rows="$contracts" />
+            <x-ui.list-totals :rows="$contracts" :grand="$grand ?? []" :columns="$rentColumns" />
         @endif
     </section>
 </x-layouts.app>

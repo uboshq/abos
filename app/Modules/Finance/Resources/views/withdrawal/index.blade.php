@@ -235,6 +235,7 @@
                 :columns="$wdColumns" />
 
             <x-ui.pager :rows="$rows" />
+            <x-ui.list-totals :rows="$rows" :grand="$grand ?? []" :columns="$wdColumns" />
         @endif
     </div>
 </x-layouts.app>

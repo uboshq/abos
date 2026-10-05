@@ -107,5 +107,6 @@
                     :empty="__('finance::insurance.none_yet')" />
 
         <x-ui.pager :rows="$policies" />
+        <x-ui.list-totals :rows="$policies" :grand="$grand ?? []" :columns="$columns" />
     </div>
 </x-layouts.app>
