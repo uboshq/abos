@@ -63,13 +63,12 @@
     {{-- ── মাথা (মালিক, ৬ অক্টোবর ২০২৬): টাকার বাক্স সোজা উপরে, শিরোনামের সমান উচ্চতায় ডানে; বাঁয়ে শিরোনাম, তার ঠিক নিচে
          কোম্পানি · তারিখ, তার কাছেই ফিল্টার · লেআউট · সময় — মাঝে ফাঁকা নয়, যাতে চার্ট উপরে ওঠে ── --}}
     <section data-command-head class="flex flex-col gap-3 lg:flex-row" style="justify-content: space-between; align-items: flex-start">
-        <div class="flex min-w-0 flex-1 flex-col gap-2">
-            <div>
-                <h1 data-home-title class="truncate text-xl font-semibold">{{ __('core.menu.dashboard') }}</h1>
-                <div data-gold-hairline aria-hidden="true" class="gold-hairline mt-3 rounded-full"></div>
-            </div>
+        {{-- ⓘ শিরোনাম আর কোম্পানির সারি একদম কাছাকাছি (মালিক, ৬ অক্টোবর ২০২৬: *"একদম কাছাকাছি"*) — সোনালি রেখার
+             ফাঁকা জায়গা বাদ, বাছাইয়ের বোতামের ছোঁয়ার-উচ্চতা উপরে টেনে আনা --}}
+        <div class="flex min-w-0 flex-1 flex-col" style="gap: 0.375rem">
+            <h1 data-home-title class="truncate text-xl font-semibold" style="line-height: 1.75rem">{{ __('core.menu.dashboard') }}</h1>
             {{-- ⭐ কোম্পানি আর শাখা — টপবারের একই বাছাই, এখানেও; বদলালে হোমের প্রতিটা সংখ্যা সেই শাখার --}}
-            <div data-home-company class="flex flex-wrap items-center gap-3">
+            <div data-home-company class="flex flex-wrap items-center gap-3" style="margin-top: -0.5rem; margin-inline-start: -0.5rem">
                 <x-shell.company-switcher :company="auth()->user()->currentCompany" :branch="auth()->user()->currentBranch" />
                 <span class="text-sm text-(--color-ink-muted)">{{ now()->locale(app()->getLocale())->translatedFormat('l, j F Y') }}</span>
             </div>

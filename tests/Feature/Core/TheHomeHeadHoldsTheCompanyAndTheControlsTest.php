@@ -54,6 +54,8 @@ final class TheHomeHeadHoldsTheCompanyAndTheControlsTest extends TestCase
             $this->assertSame(1, $page->query('.//*[@data-money-position]', $head->item(0))->length, '⛔ টাকার বাক্স শিরোনামের সারিতে নেই।');
             $this->assertStringContainsString('align-items: flex-start', $head->item(0)->getAttribute('style'), '⛔ বাক্সটা উপরে সাঁটা নয়।');
             $this->assertSame(1, $page->query('//h1')->length, '⛔ পাতায় দুইটা শিরোনাম — পুরনো শিরোনামের সারি রয়ে গেছে।');
+            // ⓘ শিরোনাম আর কোম্পানির সারি একদম কাছাকাছি (মালিক, ৬ অক্টোবর ২০২৬) — মাঝে সোনালি রেখার ফাঁকা নয়; ১০৮০-তে মাপা ১১px
+            $this->assertSame(0, $page->query('.//*[@data-gold-hairline]', $head->item(0))->length, '⛔ শিরোনামের নিচে আবার ফাঁকার রেখা।');
 
             // ── কোম্পানি-শাখা বাছাই মাথার সারিতে, শাখা বদলের দরজাসহ ──
             $company = $page->query('//section[@data-command-head]//*[@data-home-company]');
