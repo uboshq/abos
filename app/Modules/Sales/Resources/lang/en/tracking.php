@@ -14,10 +14,14 @@ return [
     'notice' => [
         'title' => ':no — :step',
         'body' => ':customer',
+        // ⓘ Only the number and the step on a lock screen — no shop name or money (coordinator's condition 2)
+        'order_held' => ':no — held at the credit limit',
+        'order_awaits' => ':no — waiting for your signature',
     ],
     'empty' => 'No sales.',
     'step' => [
         'ordered' => 'Order received',
+        'credit_hold' => 'Held at the credit limit',
         'draft' => 'Draft',
         'approval' => 'Awaiting approval',
         'warehouse' => 'In the warehouse',
@@ -58,6 +62,10 @@ return [
         'delivered' => 'Delivered',
     ],
     'ordered' => 'Order :no placed',
+    // ⭐ New-flow orders — SO+DO merge, step 11 (5 Oct 2026)
+    'submitted' => 'Order submitted',
+    'credit_held' => 'Held at the credit limit — moves on by itself when money arrives',
+    'back_order' => 'The rest goes later',
     'do_written' => 'DO :no written',
     'sent_for_signature' => 'Sent for signature',
     'decision' => [

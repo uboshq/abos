@@ -4,11 +4,14 @@ declare(strict_types=1);
 
 namespace App\Modules\Sales\Services;
 
+use App\Core\Engines\Approval\ApprovalEngine;
 use App\Core\Services\NotificationService;
 use App\Core\Services\Ownership;
 use App\Core\Support\CompanyContext;
+use App\Models\User;
 use App\Modules\Sales\Models\DeliveryChallan;
 use App\Modules\Sales\Models\DeliveryEvent;
+use App\Modules\Sales\Models\SalesOrder;
 
 /**
  * ধাপ বদলালে বার্তা — ডেলিভারি ট্র্যাকিং, ধাপ ২ (মালিকের আদেশ, ২ অক্টোবর ২০২৬)।
@@ -29,6 +32,12 @@ use App\Modules\Sales\Models\DeliveryEvent;
 final class TrackingNotices
 {
     public const TYPE = 'sales.delivery_stage';
+
+    /** ⭐ নতুন ধারার আদেশ বাকির সীমায় আটকে গেল — লেখক আর মালিক (DO+SO মেশানো, ধাপ ১১, ৫ অক্টোবর ২০২৬) */
+    public const ORDER_HELD = 'sales.order_credit_held';
+
+    /** ⭐ নতুন ধারার আদেশ সইয়ের অপেক্ষায় — এখনকার স্তরের অনুমোদনকারীরা ([[ApprovalEngine::canDecide()]]) */
+    public const ORDER_AWAITS = 'sales.order_awaits_you';
 
     public function __construct(
         private readonly NotificationService $notices,
@@ -80,6 +89,74 @@ final class TrackingNotices
                 ]);
             }
         });
+    }
+
+    /**
+     * ⭐ আদেশ বাকির সীমায় আটকে গেল (প্রথমবার) — লেখক আর মালিক জানেন, টাকা এলে আদেশ নিজেই এগোবে।
+     *
+     * ⓘ ডাকে [[SalesOrderService]] লেনদেন পাকা হলে। যিনি জমা দিলেন তিনি নিজে পর্দায় দেখছেন, তাই তাঁর কাছে যায় না
+     * ([[NotificationService]]-এর নিয়ম); পোর্টালের গ্রাহক পোর্টালে আদেশের পাতায় দেখেন।
+     * ⛔ লক-স্ক্রিনে কেবল নম্বর আর ধাপ — দোকানের নাম বা টাকা নয় (সমন্বয়কের শর্ত ২)।
+     */
+    public function orderHeld(SalesOrder $order): void
+    {
+        CompanyContext::forCompany((int) $order->company_id, function () use ($order): void {
+            $users = collect([(int) $order->created_by])
+                ->merge($this->owners->activeOwnersIn((int) $order->company_id)->modelKeys())
+                ->filter()->unique()->values();
+
+            $this->tell($users->all(), self::ORDER_HELD, __('sales::tracking.notice.order_held', ['no' => $order->document_no], 'bn'),
+                $order, route('sales.order.show', $order));
+        });
+    }
+
+    /**
+     * ⭐ আদেশ সইয়ের অপেক্ষায় — এখনকার স্তরের প্রত্যেক অনুমোদনকারী জানেন।
+     *
+     * ⓘ অনুমোদন-ইঞ্জিন নিজে অনুমোদনকারীকে খবর দেয় না (কেবল ফলাফল লেখককে) — তাই এখানে, একবারই।
+     * কে সই দিতে পারেন সেটা ইঞ্জিনের নিজের প্রশ্ন ([[ApprovalEngine::canDecide()]]) — এখানে আলাদা নিয়ম নয়।
+     */
+    public function orderAwaitsYou(SalesOrder $order): void
+    {
+        $engine = app(ApprovalEngine::class);
+        $approval = $engine->latestFor($order, SalesOrderService::APPROVAL_ACTION);
+
+        if ($approval === null || ! $approval->isPending()) {
+            return;
+        }
+
+        CompanyContext::forCompany((int) $order->company_id, function () use ($order, $approval, $engine): void {
+            $users = User::query()
+                ->where('is_active', true)
+                ->whereHas('companies', fn ($q) => $q->where('companies.id', (int) $order->company_id))
+                ->get()
+                ->filter(fn (User $user) => $engine->canDecide($approval, $user))
+                ->modelKeys();
+
+            $this->tell($users, self::ORDER_AWAITS, __('sales::tracking.notice.order_awaits', ['no' => $order->document_no], 'bn'),
+                $order, route('sales.order.show', $order));
+        });
+    }
+
+    /**
+     * ইন-অ্যাপ খবর, তারপর যাঁরা পেলেন কেবল তাঁদের ফোনে পুশ — চাপলে অ্যাপ আদেশের ট্র্যাকিং খোলে।
+     *
+     * @param  list<int>  $users
+     */
+    private function tell(array $users, string $type, string $title, SalesOrder $order, string $url): void
+    {
+        if ($users === []) {
+            return;
+        }
+
+        $sent = $this->notices->sendMany($users, $type, $title,
+            __('sales::tracking.notice.body', ['customer' => (string) $order->customer?->name()], 'bn'), $url);
+
+        foreach ($sent->pluck('user_id')->unique() as $userId) {
+            \App\Jobs\SendPushToUser::dispatch((int) $userId, $title, [
+                'open' => 'tracking', 'kind' => 'order', 'id' => (string) $order->public_id,
+            ]);
+        }
     }
 
     /**

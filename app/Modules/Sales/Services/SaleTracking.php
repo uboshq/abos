@@ -13,6 +13,7 @@ use App\Modules\Sales\Models\DeliveryState;
 use App\Modules\Sales\Models\GatePass;
 use App\Modules\Sales\Models\SalesInvoice;
 use App\Modules\Sales\Models\SalesOrder;
+use App\Modules\Sales\Support\SalesOrderStatus;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -31,7 +32,8 @@ use Illuminate\Support\Facades\DB;
  * চালান (DO) — প্রতিটাই একটা বিক্রি; আর যে আদেশের এখনো চালান হয়নি — "অর্ডার" ধাপে।
  *
  * ── ধাপ (এক কথায়, ফোনের এক লাইনে) ─────────────────────────────────────────
- *   ordered   — আদেশ এসেছে, DO হয়নি
+ *   ordered   — আদেশ এসেছে, DO হয়নি (নতুন ধারায়: অনুমোদিত, মাল আটকানো, চালান হয়নি)
+ *   credit_hold — নতুন ধারার আদেশ বাকির সীমায় আটকে, টাকার অপেক্ষায় (DO+SO মেশানো, ধাপ ১১)
  *   draft     — কাউন্টারে খসড়া
  *   approval  — সইয়ের অপেক্ষায় (চালান, বিল বা বিলের বিপরীতে জমা — [[DirectSaleService::whereHeld()]])
  *   warehouse — পাকা, গুদামে (বরাদ্দ/তোলা/প্যাক)
@@ -40,13 +42,15 @@ use Illuminate\Support\Facades\DB;
  *   delivered — পৌঁছেছে
  *   cancelled — বাতিল
  * ⓘ বিল হয়েছে কি না আলাদা পতাকা (`billed`) — ধাপের সাথে মেশানো নয়, কারণ বিল আগে-পরে দুইই হয়।
+ * ⓘ আংশিক চালানের আদেশ চালানের ধাপ দেখায়, বাকিটা আলাদা পতাকায় (`back_order`) — আদেশের নিজের অগ্রগতি থেকে
+ * ([[OrderProgress]]-এর `delivery_status`), নিজে গোনা নয়।
  *
  * ⓘ দেয়াল: কোম্পানি আর শাখার সাধারণ স্কোপ (মডেলের নিজের)। কর্মীর "নিজের অধীনের" দেয়াল আসবে
  * SR-এর নিজের-দোকানি দেয়ালের সাথে — আজ চাবিওয়ালা সবাই সব দেখেন, ওয়েবের ট্র্যাকিংয়ের মতোই।
  */
 final class SaleTracking
 {
-    public const STEPS = ['ordered', 'draft', 'approval', 'warehouse', 'gate_out', 'partial', 'delivered', 'cancelled'];
+    public const STEPS = ['ordered', 'credit_hold', 'draft', 'approval', 'warehouse', 'gate_out', 'partial', 'delivered', 'cancelled'];
 
     /**
      * ⭐ ৯ রং — মালিকের আদেশ, ২ অক্টোবর ২০২৬; অ্যাপের `trackingColours` হুবহু একই।
@@ -60,7 +64,7 @@ final class SaleTracking
 
     /** তালিকার ধাপ → ৯ রঙের কোনটা ([[milestones()]]-এর একই রং) */
     public const CATEGORY_OF_STEP = [
-        'ordered' => 'approved', 'draft' => 'draft', 'approval' => 'pending', 'warehouse' => 'processing',
+        'ordered' => 'approved', 'credit_hold' => 'hold', 'draft' => 'draft', 'approval' => 'pending', 'warehouse' => 'processing',
         'gate_out' => 'dispatched', 'partial' => 'dispatched', 'delivered' => 'delivered', 'cancelled' => 'rejected',
     ];
 
@@ -85,7 +89,7 @@ final class SaleTracking
         };
 
         $challans = $narrow(DeliveryChallan::query())
-            ->with('customer')
+            ->with(['customer', 'order'])
             ->when($customerId, fn ($q, $id) => $q->where('customer_id', $id))
             ->when($term, fn ($q, $t) => $q->where(fn ($w) => $w
                 ->where('document_no', 'like', "%{$t}%")
@@ -128,6 +132,7 @@ final class SaleTracking
                 'total' => bcadd((string) $challan->total, '0', 2),
                 'step' => $steps[$challan->id],
                 'billed' => isset($billed[$challan->id]),
+                'back_order' => $this->hasBackOrder($challan->order),
                 'sort' => [$challan->trx_date?->toDateString(), (int) $challan->id],
             ]);
         }
@@ -141,8 +146,9 @@ final class SaleTracking
                 'date' => $order->trx_date?->toDateString(),
                 'customer' => $order->customer?->name(),
                 'total' => bcadd((string) $order->total, '0', 2),
-                'step' => 'ordered',
+                'step' => $this->orderStep($order),
                 'billed' => false,
+                'back_order' => false,
                 'sort' => [$order->trx_date?->toDateString(), (int) $order->id],
             ]);
         }
@@ -181,12 +187,18 @@ final class SaleTracking
     public function story(DeliveryChallan|SalesOrder $sale): array
     {
         $events = collect();
-        $order = $sale instanceof SalesOrder ? $sale : $sale->salesOrder;
+        // ⓘ চালানের আদেশ-সম্পর্কের নাম `order` — আগে `salesOrder` পড়া হত, যা নেই, তাই চালানের দাগে আদেশের ঘটনা আসত না
+        $order = $sale instanceof SalesOrder ? $sale : $sale->order;
 
         if ($order !== null) {
             $order->loadMissing('creator');
             $events->push($this->event($order->created_at, 'ordered', $order->creator?->name,
                 __('sales::tracking.ordered', ['no' => $order->document_no])));
+
+            // ⭐ নতুন ধারা — জমা, বাকির সীমায় আটকানো, আর আদেশের সই (DO+SO মেশানো, ধাপ ১১)
+            foreach ($this->orderEvents($order) as $event) {
+                $events->push($event);
+            }
         }
 
         if ($sale instanceof SalesOrder) {
@@ -200,7 +212,8 @@ final class SaleTracking
             }
             $milestones[1]['state'] = 'current';
 
-            return $this->head($sale, 'ordered', false) + ['events' => $events->values()->all(), 'milestones' => $milestones];
+            return $this->head($sale, $this->orderStep($sale), false)
+                + ['events' => $events->sortBy(fn (array $e) => $e['at'] ?? '')->values()->all(), 'milestones' => $milestones];
         }
 
         $challan = $sale->loadMissing(['customer', 'creator']);
@@ -606,6 +619,67 @@ final class SaleTracking
             ->orderBy('id')->get();
     }
 
+    /**
+     * ⭐ একটা আদেশের ধাপ, যার এখনো চালান হয়নি — অবস্থা থেকে (DO+SO মেশানো, নকশার ধাপ ১১, ৫ অক্টোবর ২০২৬)।
+     *
+     * ⓘ নতুন ধারার অবস্থাগুলো (জমা, সইয়ের অপেক্ষা, সীমায় আটকে, ফেরত) কেবল নতুন ধারায় হয়, তাই ওগুলো যেখানেই থাকুক
+     * নিজের ধাপ পায়। ⚠️ খসড়া কেবল কোম্পানি নতুন ধারায় চললে "খসড়া" — পুরনো ধারায় আজকের মতো "অর্ডার এসেছে",
+     * সুইচ বন্ধে কিছুই বদলায় না।
+     */
+    public function orderStep(SalesOrder $order): string
+    {
+        return match ((string) $order->status) {
+            SalesOrderStatus::SUBMITTED, SalesOrderStatus::AWAITING_APPROVAL => 'approval',
+            SalesOrderStatus::CREDIT_HELD => 'credit_hold',
+            SalesOrderStatus::REJECTED => 'cancelled',
+            SalesOrderStatus::DRAFT => app(SalesOrderService::class)->replacesDo() ? 'draft' : 'ordered',
+            default => 'ordered',
+        };
+    }
+
+    /** আদেশের বাকি এখনো যাবে — আংশিক গেছে, আদেশ খোলা ([[OrderProgress]]-এর `delivery_status`) */
+    private function hasBackOrder(?SalesOrder $order): bool
+    {
+        return $order !== null
+            && $order->delivery_status === SalesOrderStatus::PARTIAL
+            && ! in_array((string) $order->status, SalesOrderStatus::FINISHED, true);
+    }
+
+    /**
+     * নতুন ধারার আদেশের ঘটনা — জমা, সীমায় আটকানো, আর আদেশের নিজের সই।
+     *
+     * @return list<array{at: ?string, step: string, by: ?string, text: string}>
+     */
+    private function orderEvents(SalesOrder $order): array
+    {
+        $events = [];
+
+        if ($order->submitted_at !== null) {
+            $events[] = $this->event($order->submitted_at, 'approval', $order->creator?->name, __('sales::tracking.submitted'));
+        }
+
+        if ($order->credit_held_at !== null) {
+            $events[] = $this->event($order->credit_held_at, 'credit_hold', null, __('sales::tracking.credit_held'));
+        }
+
+        $approvals = Approval::query()
+            ->where('approvable_type', $order->getMorphClass())->where('approvable_id', $order->id)
+            ->with(['requester', 'decisions.user'])->orderBy('id')->get();
+
+        foreach ($approvals as $approval) {
+            $events[] = $this->event($approval->requested_at ?? $approval->created_at, 'approval',
+                $approval->requesterName(), __('sales::tracking.sent_for_signature'));
+
+            foreach ($approval->decisions as $decision) {
+                $kind = in_array($decision->decision, ['approved', 'rejected', 'forwarded'], true) ? $decision->decision : 'other';
+                $events[] = $this->event($decision->decided_at, 'approval', $decision->user?->name,
+                    __('sales::tracking.decision.'.$kind).($decision->remarks ? ' — '.$decision->remarks : ''));
+            }
+        }
+
+        return $events;
+    }
+
     /** @return array{at: ?string, step: string, by: ?string, text: string} */
     private function event(mixed $at, string $step, ?string $by, string $text): array
     {
@@ -633,6 +707,7 @@ final class SaleTracking
             'step' => $step,
             'category' => self::CATEGORY_OF_STEP[$step],
             'billed' => $billed,
+            'back_order' => $sale instanceof DeliveryChallan && $this->hasBackOrder($sale->order),
         ];
     }
 }

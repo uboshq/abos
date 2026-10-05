@@ -568,6 +568,7 @@ final class SalesOrderService
             : ['fits' => true, 'short' => '0.0000'];
 
         if (! $result['fits']) {
+            $firstHold = $order->credit_held_at === null;
             $order->forceFill([
                 'status' => SalesOrderStatus::CREDIT_HELD,
                 'credit_short' => $result['short'],
@@ -576,7 +577,14 @@ final class SalesOrderService
                 'credit_checked_at' => now(),
             ])->save();
 
-            return $order->fresh(['lines']);
+            $held = $order->fresh(['lines']);
+
+            // ⭐ প্রথমবার আটকালেই খবর — বারবার যাচাইয়ে নয় (DO+SO মেশানো, ধাপ ১১; [[TrackingNotices::orderHeld()]])
+            if ($firstHold) {
+                DB::afterCommit(fn () => app(TrackingNotices::class)->orderHeld($held));
+            }
+
+            return $held;
         }
 
         $order->forceFill(['credit_short' => null, 'credit_checked_at' => now()])->save();
@@ -593,8 +601,12 @@ final class SalesOrderService
 
         if ($approval !== null) {
             $order->forceFill(['status' => SalesOrderStatus::AWAITING_APPROVAL])->save();
+            $waiting = $order->fresh(['lines']);
 
-            return $order->fresh(['lines']);
+            // ⭐ সইয়ের অপেক্ষা — এখনকার স্তরের অনুমোদনকারীরা খবর পান (DO+SO মেশানো, ধাপ ১১; [[TrackingNotices::orderAwaitsYou()]])
+            DB::afterCommit(fn () => app(TrackingNotices::class)->orderAwaitsYou($waiting));
+
+            return $waiting;
         }
 
         return $this->markApproved($order);

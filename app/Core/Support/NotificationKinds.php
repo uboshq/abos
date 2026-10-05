@@ -63,6 +63,13 @@ final class NotificationKinds
              * ⓘ পান দোকানের এলাকার SR/ASM/DSM/RSM আর মালিক; কেউ চাইলে বন্ধ রাখতে পারেন।
              */
             'sales.delivery_stage' => 'core.notify.kind.delivery_stage',
+
+            /*
+             * ⭐ নতুন ধারার বিক্রয় আদেশ — DO+SO মেশানো, ধাপ ১১ (৫ অক্টোবর ২০২৬; [[TrackingNotices]])।
+             * ⓘ সীমায় আটকে: লেখক আর মালিক; সইয়ের অপেক্ষা: এখনকার স্তরের অনুমোদনকারীরা।
+             */
+            'sales.order_credit_held' => 'core.notify.kind.order_credit_held',
+            'sales.order_awaits_you' => 'core.notify.kind.order_awaits_you',
         ];
     }
 
