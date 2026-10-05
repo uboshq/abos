@@ -10,8 +10,10 @@ use App\Core\Engines\Sync\SyncBatch;
 use App\Core\Engines\Sync\SyncPosition;
 use App\Core\Engines\Sync\SyncRecord;
 use App\Core\Engines\Sync\SyncRejection;
+use App\Core\Support\CompanyContext;
 use App\Models\User;
 use App\Modules\Customer\Models\Customer;
+use App\Modules\MasterData\Models\Location;
 use Illuminate\Support\Carbon;
 
 /**
@@ -38,6 +40,20 @@ final class CustomerSync implements SyncsToDevices
     public static function entityType(): string
     {
         return 'Customer';
+    }
+
+    /** দোকানের পয়েন্টের নাম — নিজের ধাপ পয়েন্ট হলে সেটা, নইলে তার মা; বাংলা আগে */
+    private static function pointName(Customer $customer): ?string
+    {
+        foreach ([$customer->location, $customer->location?->parent] as $place) {
+            if ($place !== null && $place->level === Location::POINT) {
+                $name = trim((string) ($place->name_bn ?: $place->name_en));
+
+                return $name === '' ? null : $name;
+            }
+        }
+
+        return null;
     }
 
     /**
@@ -83,13 +99,22 @@ final class CustomerSync implements SyncsToDevices
             ->limit($limit);
 
         if ($since !== null) {
-            $query->where('updated_at', '>', $since);
+            /*
+             * ⭐ পয়েন্টের নাম বদলালে ঐ পয়েন্টের দোকানগুলোও যায় — নামটা গ্রাহকের সারিতে চড়ে ফোনে যায় (`pointName`), অথচ
+             * গ্রাহকের নিজের `updated_at` নড়ে না। ⓘ দোকানের নিজের ধাপ বা তার মা (পয়েন্ট যেকোনো একটা)।
+             */
+            $query->where(fn ($q) => $q->where('updated_at', '>', $since)
+                ->orWhereIn('location_id', fn ($l) => $l->select('l0.id')->from('mdm_locations as l0')
+                    ->leftJoin('mdm_locations as l1', 'l1.id', '=', 'l0.parent_id')
+                    ->where('l0.company_id', CompanyContext::id())
+                    ->where(fn ($w) => $w->where('l0.updated_at', '>', $since)->orWhere('l1.updated_at', '>', $since))));
         }
 
         // ⭐ পরের পাতা — (সময়, id) জোড়ার পর থেকে ([[SyncPosition]], গ১৮)
         $after?->after($query, $query->qualifyColumn('updated_at'), $query->qualifyColumn('id'));
 
-        $rows = $query->get();
+        // ⓘ পয়েন্ট খুঁজতে দুই ধাপ উপরে — এক কোয়েরিতে, সারি ধরে নয়
+        $rows = $query->with('location.parent')->get();
 
         return SyncBatch::of($rows->map(fn (Customer $customer) => new SyncRecord(
             entityType: self::entityType(),
@@ -112,6 +137,13 @@ final class CustomerSync implements SyncsToDevices
                 'nameBn' => $customer->name_bn,
                 'ownerName' => $customer->owner_name,
                 'phone' => $customer->phone,
+
+                /*
+                 * ⭐ দোকানের পয়েন্ট — মালিক, ৫ অক্টোবর ২০২৬ (ফোনের বকেয়া তালিকার ছবি দিয়ে): *"কাস্টমারের নাম মোবাইল নাম্বার
+                 * দেয়া আছে এখন সাথে পয়েন্ট আউট করে দাও"*। বাংলা নাম আগে; দোকান পয়েন্টে না বসলে null — ফোন তখন কিছু যোগ করে না।
+                 * ⓘ পুরনো ফোন বাড়তি ঘর উপেক্ষা করে।
+                 */
+                'pointName' => self::pointName($customer),
                 'addressEn' => $customer->address_en,
                 'addressBn' => $customer->address_bn,
                 'customerType' => $customer->customer_type,
