@@ -6,6 +6,7 @@ namespace App\Modules\Inventory\Imports;
 
 use App\Core\Contracts\Importer;
 use App\Core\Services\SettingsService;
+use App\Core\Support\ViewedBranch;
 use App\Modules\Inventory\Models\Product;
 use App\Modules\Inventory\Services\ProductService;
 use App\Modules\MasterData\Models\Brand;
@@ -116,6 +117,19 @@ final class ProductImporter implements Importer
         /* ⭐ ইমপোর্টও কোম্পানির লটের সুইচ মানে — চালু থাকলে প্রতিটা পণ্য লট ধরে (৪ অক্টোবর ২০২৬) */
         if ((bool) app(SettingsService::class)->get('inventory.lots_always', true)) {
             $data['track_batch'] = true;
+        }
+
+        /*
+         * ⭐ হেডারে শাখা বাছা থাকলে পণ্যটা সেই শাখার — মালিক, ৫ অক্টোবর ২০২৬ (ADI: SL-Lion Group শাখায় আমদানি, অথচ
+         * SL-Super Group-এর ৮৩টা পণ্যও লায়নে দেখাত)। ⛔ আগে আমদানি শাখা ছুঁত না, আর শাখার সারি ছাড়া পণ্য **সব
+         * শাখার** ([[Product::scopeSoldInViewedBranch()]]) — তাই এক গ্রুপের তালিকা সব গ্রুপে ছড়াত।
+         * ⓘ "সব শাখা" দেখার সময় আমদানি করলে আগের মতোই সব শাখার।
+         */
+        $branch = ViewedBranch::one();
+
+        if ($branch !== null) {
+            $data['branch_table'] = '1';
+            $data['branch_ids'] = [$branch];
         }
 
         $this->products->create($data);
