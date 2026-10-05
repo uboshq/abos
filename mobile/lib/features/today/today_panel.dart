@@ -152,26 +152,35 @@ class _TodayPanelState extends State<TodayPanel> {
                   // TodayRecord's own doc comment: zero is a number somebody
                   // acts on, and "no cash today" is not "you may not see the
                   // cash".
-                  if (today.sales != null)
-                    _HeroCard(
-                      heading: 'আজকের বিক্রি',
-                      figure: today.sales!,
-                      colour: AppColors.primary,
-                      detail: _count(today.sales!.count, 'টি বিক্রয়'),
-                      onTap: widget.onOpenSales,
-                    ),
-                  if (today.collections != null || today.dues != null)
-                    _CollectionsDuesCard(
-                      collections: today.collections,
-                      dues: today.dues,
-                      onTap: widget.onOpenDues,
-                    ),
-                  if (today.cashInHand != null)
-                    _HeroCard(
-                      heading: 'হাতে নগদ',
-                      figure: today.cashInHand!,
-                      colour: AppColors.onSurface,
-                    ),
+                  // ⭐ The owner's home, 6 Oct 2026 — three rows: today's sale
+                  // beside today's money in; what we will get beside what we
+                  // must pay; then the web home's top-right box, and the
+                  // principal commission under it. An older server sends none
+                  // of the new blocks and the old cards are drawn instead.
+                  if (_ownersHome(today))
+                    ..._ownersRows(today)
+                  else ...[
+                    if (today.sales != null)
+                      _HeroCard(
+                        heading: 'আজকের বিক্রি',
+                        figure: today.sales!,
+                        colour: AppColors.primary,
+                        detail: _count(today.sales!.count, 'টি বিক্রয়'),
+                        onTap: widget.onOpenSales,
+                      ),
+                    if (today.collections != null || today.dues != null)
+                      _CollectionsDuesCard(
+                        collections: today.collections,
+                        dues: today.dues,
+                        onTap: widget.onOpenDues,
+                      ),
+                    if (today.cashInHand != null)
+                      _HeroCard(
+                        heading: 'হাতে নগদ',
+                        figure: today.cashInHand!,
+                        colour: AppColors.onSurface,
+                      ),
+                  ],
                   if (today.pendingApprovals != null &&
                       today.pendingApprovals! > 0)
                     _ApprovalsCard(
@@ -190,6 +199,85 @@ class _TodayPanelState extends State<TodayPanel> {
 
   static String? _count(int? count, String unit) =>
       count == null ? null : '$count $unit';
+
+  /// Whether the server sent the owner's new blocks (6 Oct 2026).
+  static bool _ownersHome(TodayRecord today) =>
+      today.inflow != null || today.payable != null || today.money != null;
+
+  List<Widget> _ownersRows(TodayRecord today) {
+    final sales = today.sales;
+    final inflow = today.inflow;
+    final collections = today.collections;
+    final dues = today.dues;
+    final payable = today.payable;
+    final handLoans = today.payableHandLoans ?? 0;
+
+    final Widget? moneyIn = inflow != null
+        ? _Stat(
+            label: 'আজকের ইনফ্লো/আদায়',
+            value: Money.taka(inflow.amount),
+            colour: AppColors.success,
+            detail: collections == null
+                ? null
+                : 'আদায় ${Money.taka(collections.amount)}',
+          )
+        : collections == null
+            ? null
+            : _Stat(
+                label: 'আজকের আদায়',
+                value: Money.taka(collections.amount),
+                colour: AppColors.success,
+                detail: _count(collections.count, 'টি আদায়'),
+              );
+
+    return [
+      if (sales != null || moneyIn != null)
+        _PairCard(
+          onTap: widget.onOpenSales,
+          left: sales == null
+              ? null
+              : _Stat(
+                  label: 'আজকের বিক্রি',
+                  value: Money.taka(sales.amount),
+                  colour: AppColors.primary,
+                  detail: _count(sales.count, 'টি বিক্রয়'),
+                ),
+          right: moneyIn,
+        ),
+      if (dues != null || payable != null)
+        _PairCard(
+          onTap: widget.onOpenDues,
+          left: dues == null
+              ? null
+              : _Stat(
+                  label: 'পাওনা (Recoverable)',
+                  value: Money.taka(dues.amount),
+                  colour: AppColors.success,
+                  detail: dues.shops == null ? null : '${dues.shops} টি দোকান',
+                ),
+          right: payable == null
+              ? null
+              : _Stat(
+                  label: 'দেনা (Payable)',
+                  value: Money.taka(payable.amount),
+                  colour: AppColors.danger,
+                  detail: handLoans > 0
+                      ? 'হাতধার ${Money.taka(handLoans)} সহ'
+                      : null,
+                ),
+        ),
+      if (today.money != null)
+        _MoneyBoxCard(box: today.money!)
+      else if (today.cashInHand != null)
+        _HeroCard(
+          heading: 'হাতে নগদ',
+          figure: today.cashInHand!,
+          colour: AppColors.onSurface,
+        ),
+      if (today.principals != null && today.principals!.isNotEmpty)
+        _PrincipalsCard(lines: today.principals!),
+    ];
+  }
 }
 
 /// Before anything has arrived: a hourglass while the first request runs, a
@@ -388,6 +476,123 @@ class _CollectionsDuesCard extends StatelessWidget {
                 ),
             ],
           ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Two figures side by side in one card — the owner's rows. A half that did
+/// not come back is left empty rather than filled with a zero (rule ক).
+class _PairCard extends StatelessWidget {
+  const _PairCard({this.left, this.right, this.onTap});
+
+  final Widget? left;
+  final Widget? right;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return _TapCard(
+      onTap: onTap,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(child: left ?? const SizedBox.shrink()),
+          const SizedBox(width: AppSpacing.md),
+          Expanded(child: right ?? const SizedBox.shrink()),
+          if (onTap != null)
+            const Icon(Icons.chevron_right,
+                size: 20, color: AppColors.onSurfaceMuted),
+        ],
+      ),
+    );
+  }
+}
+
+/// "হাতে ও ব্যাংকে মোট" — the web home's top-right box with the same figures
+/// (server `AccountsWidgets`): the total, then cash · MFS · bank · on the road.
+class _MoneyBoxCard extends StatelessWidget {
+  const _MoneyBoxCard({required this.box});
+
+  final MoneyBox box;
+
+  @override
+  Widget build(BuildContext context) {
+    Widget part(String label, double? value) => Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(label,
+                  style: const TextStyle(
+                      fontSize: 12, color: AppColors.onSurfaceMuted)),
+              Text(Money.taka(value),
+                  style: const TextStyle(
+                      fontSize: 13.5, fontWeight: FontWeight.w700)),
+            ],
+          ),
+        );
+
+    return _TapCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const _CardHeading('হাতে ও ব্যাংকে মোট'),
+          const SizedBox(height: AppSpacing.xs),
+          Text(Money.taka(box.amount),
+              style: const TextStyle(
+                  fontSize: 26,
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.onSurface)),
+          const SizedBox(height: AppSpacing.sm),
+          Row(children: [
+            part('নগদ', box.cash),
+            part('MFS', box.mfs),
+            part('ব্যাংক', box.bank),
+            part('পথে', box.transit),
+          ]),
+        ],
+      ),
+    );
+  }
+}
+
+/// ⭐ The principal commission — each principal's current cycle: what came
+/// in, the commission at its rate, what was paid, and the balance in the
+/// report's own words. Nothing is counted here; these are the report's rows.
+class _PrincipalsCard extends StatelessWidget {
+  const _PrincipalsCard({required this.lines});
+
+  final List<PrincipalLine> lines;
+
+  @override
+  Widget build(BuildContext context) {
+    return _TapCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const _CardHeading('প্রিন্সিপালের কমিশন'),
+          for (final line in lines) ...[
+            const SizedBox(height: AppSpacing.sm),
+            Text(line.name,
+                style: const TextStyle(fontWeight: FontWeight.w700)),
+            Text('${line.period} · ${line.basisRate}',
+                style: const TextStyle(
+                    fontSize: 12, color: AppColors.onSurfaceMuted)),
+            const SizedBox(height: 2),
+            Text(
+              'আদায় ${Money.taka(line.inflow)} · '
+              'কমিশন ${Money.taka(line.commission)} · '
+              'দেওয়া ${Money.taka(line.paid)}',
+              style: const TextStyle(fontSize: 12.5),
+            ),
+            Text(line.balanceLabel,
+                style: TextStyle(
+                    fontWeight: FontWeight.w700,
+                    color: (line.balance ?? 0) > 0
+                        ? AppColors.danger
+                        : AppColors.success)),
+          ],
         ],
       ),
     );

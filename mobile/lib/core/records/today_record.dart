@@ -36,6 +36,54 @@ class TodayRecord {
   TodayFigure? get cashInHand => _tile('cashInHand');
   TodayFigure? get dues => _tile('dues');
 
+  /// ⭐ The owner's home of 6 Oct 2026 (drawn on a phone screenshot): today's
+  /// money in, everything we must pay, and the web home's top-right box —
+  /// "হাতে ও ব্যাংকে মোট" with cash · MFS · bank · on the road. Each comes
+  /// under its own key and is absent without it (rule ক); an older server
+  /// sends none of them and the screen draws the old cards instead.
+  TodayFigure? get inflow => _tile('inflow');
+
+  TodayFigure? get payable => _tile('payable');
+
+  /// What of [payable] is hand loans we took — shown under it when not zero.
+  double? get payableHandLoans {
+    final block = payload['payable'];
+    return block is Map ? Money.value(block['handLoans']) : null;
+  }
+
+  MoneyBox? get money {
+    final block = payload['money'];
+    if (block is! Map) return null;
+    return MoneyBox(
+      amount: Money.value(block['amount']),
+      cash: Money.value(block['cash']),
+      mfs: Money.value(block['mfs']),
+      bank: Money.value(block['bank']),
+      transit: Money.value(block['transit']),
+    );
+  }
+
+  /// ⭐ The principal commission report, each principal's current cycle —
+  /// what came in, the commission, what was paid and the balance (server
+  /// `PrincipalCommissionReport`). Null without `supplier.report`.
+  List<PrincipalLine>? get principals {
+    final list = payload['principals'];
+    if (list is! List) return null;
+    return [
+      for (final row in list)
+        if (row is Map)
+          PrincipalLine(
+            name: (row['name'] ?? '').toString(),
+            period: (row['period'] ?? '').toString(),
+            basisRate: (row['basisRate'] ?? '').toString(),
+            inflow: Money.value(row['inflow']),
+            commission: Money.value(row['commission']),
+            paid: Money.value(row['paid']),
+            balance: Money.value(row['balance']),
+          ),
+    ];
+  }
+
   int? get pendingApprovals {
     final block = payload['approvals'];
     if (block is! Map) return null;
@@ -74,6 +122,50 @@ class TodayFigure {
   final double? amount;
   final int? count;
   final int? shops;
+}
+
+/// "হাতে ও ব্যাংকে মোট" — the web home's top-right box, the same figures: the
+/// total is cash + MFS + bank, and what is on the road is its own part.
+class MoneyBox {
+  const MoneyBox({this.amount, this.cash, this.mfs, this.bank, this.transit});
+
+  final double? amount;
+  final double? cash;
+  final double? mfs;
+  final double? bank;
+  final double? transit;
+}
+
+/// One principal's cycle in the commission report.
+class PrincipalLine {
+  const PrincipalLine({
+    required this.name,
+    required this.period,
+    required this.basisRate,
+    this.inflow,
+    this.commission,
+    this.paid,
+    this.balance,
+  });
+
+  final String name;
+  final String period;
+  final String basisRate;
+  final double? inflow;
+  final double? commission;
+  final double? paid;
+
+  /// The principal's share less what was paid: positive means we still have
+  /// to pay them, negative means the company owes us — the report's own words.
+  final double? balance;
+
+  String get balanceLabel {
+    final value = balance ?? 0;
+    if (value == 0) return 'জের নেই';
+    return value > 0
+        ? 'দিতে হবে ${Money.taka(value)}'
+        : 'কোম্পানির কাছে পাব ${Money.taka(-value)}';
+  }
 }
 
 /// `GET /dashboard/today`, with the last answer kept on the phone.

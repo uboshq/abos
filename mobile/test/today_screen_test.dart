@@ -82,6 +82,98 @@ void main() {
     expect(find.text('৳0'), findsNothing);
   });
 
+  // ⭐ The owner's home, 6 Oct 2026, drawn on a screenshot: sale | money in;
+  // Recoverable | Payable; "হাতে ও ব্যাংকে মোট" with its four parts; and the
+  // principal commission under it.
+  const owners = TodayRecord({
+    'date': '2026-10-06',
+    'company': 'UNIVER BANGLADESH',
+    'asOf': '2026-10-06T01:14:00+06:00',
+    'sales': {'count': 2, 'amount': '5200.0000'},
+    'collections': {'count': 1, 'amount': '1500.0000'},
+    'inflow': {'amount': '9400.0000'},
+    'dues': {'amount': '609011.2300', 'shops': 32},
+    'payable': {'amount': '125000.0000', 'books': '120000.0000', 'handLoans': '5000.0000'},
+    'cashInHand': {'amount': '3000.0000'},
+    'money': {
+      'amount': '48000.0000',
+      'cash': '3000.0000',
+      'mfs': '5000.0000',
+      'bank': '40000.0000',
+      'transit': '700.0000',
+    },
+    'principals': [
+      {
+        'name': 'S-001 — Star Line',
+        'period': '02/09/2026 – 01/10/2026',
+        'basisRate': 'Margin 3.85%',
+        'inflow': '100000.0000',
+        'commission': '3850.0000',
+        'share': '96150.0000',
+        'paid': '90000.0000',
+        'balance': '6150.0000',
+      },
+    ],
+  });
+
+  testWidgets("the owner's rows: sale beside money in, recoverable beside payable",
+      (tester) async {
+    await tester.pumpWidget(screen(fetch: () async => owners));
+    await tester.pumpAndSettle();
+
+    expect(find.text('আজকের বিক্রি'), findsOneWidget);
+    expect(find.text('আজকের ইনফ্লো/আদায়'), findsOneWidget);
+    expect(find.text('৳9,400'), findsOneWidget);
+    expect(find.textContaining('আদায় ৳1,500'), findsOneWidget);
+
+    expect(find.text('পাওনা (Recoverable)'), findsOneWidget);
+    expect(find.text('৳609,011.23'), findsOneWidget);
+    expect(find.textContaining('32 টি দোকান'), findsOneWidget);
+    expect(find.text('দেনা (Payable)'), findsOneWidget);
+    expect(find.text('৳125,000'), findsOneWidget);
+    expect(find.textContaining('হাতধার ৳5,000 সহ'), findsOneWidget);
+
+    // ⓘ the old cards are not drawn as well — one figure, one place
+    expect(find.text('আদায় ও বকেয়া'), findsNothing);
+    expect(find.text('হাতে নগদ'), findsNothing);
+  });
+
+  testWidgets("the web's money box: the total and cash · MFS · bank · on the road",
+      (tester) async {
+    await tester.pumpWidget(screen(fetch: () async => owners));
+    await tester.pumpAndSettle();
+
+    expect(find.text('হাতে ও ব্যাংকে মোট'), findsOneWidget);
+    expect(find.text('৳48,000'), findsOneWidget);
+    for (final label in ['নগদ', 'MFS', 'ব্যাংক', 'পথে']) {
+      expect(find.text(label), findsOneWidget, reason: label);
+    }
+    expect(find.text('৳40,000'), findsOneWidget);
+    expect(find.text('৳700'), findsOneWidget);
+  });
+
+  testWidgets('the principal commission: commission, paid and the balance in words',
+      (tester) async {
+    await tester.pumpWidget(screen(fetch: () async => owners));
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(find.text('প্রিন্সিপালের কমিশন'), 200);
+
+    expect(find.text('S-001 — Star Line'), findsOneWidget);
+    expect(find.textContaining('কমিশন ৳3,850'), findsOneWidget);
+    expect(find.textContaining('দেওয়া ৳90,000'), findsOneWidget);
+    expect(find.text('দিতে হবে ৳6,150'), findsOneWidget);
+  });
+
+  testWidgets('an older server without the new blocks still gets the old cards',
+      (tester) async {
+    await tester.pumpWidget(screen());
+    await tester.pumpAndSettle();
+
+    expect(find.text('হাতে নগদ'), findsOneWidget);
+    expect(find.text('হাতে ও ব্যাংকে মোট'), findsNothing);
+    expect(find.text('দেনা (Payable)'), findsNothing);
+  });
+
   testWidgets('with no signal it shows what it last knew, and says so',
       (tester) async {
     await tester.pumpWidget(screen(

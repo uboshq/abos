@@ -87,9 +87,9 @@ void main() {
     expect(names, ['রহিম স্টোর', 'মাঝারি দোকান', 'ছোট দোকান']);
   });
 
-  // ⭐ The owner, 5 Oct 2026: the name and the mobile are there, "now show the
-  // point with it". After the mobile, and nothing added for a shop on no point.
-  testWidgets('the point follows the mobile, and a shop on no point adds nothing',
+  // ⭐ The owner, 6 Oct 2026: two lines — the name, then "পয়েন্ট: …" with
+  // "বকেয়া: …" beside it. The mobile is on the shop's own page, a tap away.
+  testWidgets('two lines: the name, then the point beside the due; no mobile on the row',
       (tester) async {
     await tester.runAsync(() async {
       await seed(
@@ -108,11 +108,16 @@ void main() {
     await tester.pumpWidget(const MaterialApp(home: DueListScreen()));
     await tester.pump();
 
-    final subtitles = tester
-        .widgetList<ListTile>(find.byType(ListTile))
-        .map((t) => (t.subtitle! as Text).data)
-        .toList();
-    expect(subtitles, ['01711000001 · কারওয়ান বাজার', '01711000002']);
+    expect(find.text('পয়েন্ট: কারওয়ান বাজার'), findsOneWidget);
+    expect(find.text('বকেয়া: ৳5,000'), findsOneWidget);
+    // ⓘ A shop on no point keeps its due line, with nothing made up beside it
+    expect(find.text('বকেয়া: ৳3,000'), findsOneWidget);
+    expect(find.textContaining('পয়েন্ট: '), findsOneWidget);
+    expect(find.textContaining('01711000001'), findsNothing,
+        reason: 'the mobile is on the shop page, not the row');
+    final tiles = tester.widgetList<ListTile>(find.byType(ListTile));
+    expect(tiles.every((t) => t.onTap != null), isTrue,
+        reason: 'a tap opens the shop, where the mobile is');
   });
 
   testWidgets('a shop in advance is not listed as a negative debt',
@@ -131,7 +136,8 @@ void main() {
     expect(find.textContaining('অগ্রিমওয়ালা'), findsNothing);
   });
 
-  testWidgets('the credit limit is shown and never judged', (tester) async {
+  testWidgets('the limit and the days are on the shop page, not the row, and never judged',
+      (tester) async {
     await tester.runAsync(() => seed(
         id: 'c1',
         nameBn: 'রহিম স্টোর',
@@ -142,8 +148,10 @@ void main() {
     await tester.pumpWidget(const MaterialApp(home: DueListScreen()));
     await tester.pump();
 
-    expect(find.textContaining('সীমা ৳50,000'), findsOneWidget);
-    expect(find.textContaining('15 দিনের শর্ত'), findsOneWidget);
+    // ⓘ Two lines only (owner, 6 Oct 2026) — the shop's page carries them.
+    expect(find.textContaining('সীমা ৳50,000'), findsNothing);
+    expect(find.textContaining('15 দিনের শর্ত'), findsNothing);
+    expect(find.text('বকেয়া: ৳60,000'), findsOneWidget);
     // ⛔ Over the limit, and the screen still draws no verdict. Whether a
     // limit blocks anything is a company switch the phone is deliberately not
     // sent — CustomerDueSync says so — and a phone deciding on its own cached
