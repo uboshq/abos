@@ -239,7 +239,7 @@ class MeController extends Controller
         return Branch::query()
             ->active()
             ->when($allowed !== null, fn ($q) => $q->whereIn('id', $allowed))
-            ->orderBy('name_en')
+            ->ordered()
             ->get()
             ->map(fn (Branch $branch): array => [
                 'public_id' => $branch->public_id,

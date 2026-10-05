@@ -36,6 +36,8 @@ final class BranchDesk
         'name_bn' => ['nullable', 'string', 'max:160'],
         'address_en' => ['nullable', 'string', 'max:500'],
         'phone' => ['nullable', 'string', 'max:32'],
+        // ⭐ তালিকায় কোথায় বসবে — মালিক, ৫ অক্টোবর ২০২৬; ০ বা খালি মানে নামের বর্ণক্রমে
+        'sort_order' => ['nullable', 'integer', 'min:0', 'max:999'],
     ];
 
     /**
@@ -55,6 +57,9 @@ final class BranchDesk
              * ভুলের পাতা। ⭐ এখন ঘরের পাশে বার্তা, আর লেখা ঘরগুলো ফিরে আসে।
              */
             $this->assertCodeFree($code);
+
+            // ⓘ খালি ক্রম = ০ (নামের বর্ণক্রমে) — ঘরটা খালি থাকতে পারে না
+            $data['sort_order'] = (int) ($data['sort_order'] ?? 0);
 
             return Branch::create([
                 ...$data,
@@ -79,6 +84,10 @@ final class BranchDesk
 
             if ($code !== $branch->code) {
                 $this->assertCodeFree($code);
+            }
+
+            if (array_key_exists('sort_order', $data)) {
+                $data['sort_order'] = (int) ($data['sort_order'] ?? 0);
             }
 
             $branch->fill([...$data, 'code' => $code])->save();

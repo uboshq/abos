@@ -40,6 +40,10 @@
                     :value="old('name_bn', $branch->name_bn)" />
         <x-ui.field name="phone" :label="__('core.print.phone')"
                     :value="old('phone', $branch->phone)" />
+        {{-- ⭐ শাখার ক্রম — মালিক, ৫ অক্টোবর ২০২৬ --}}
+        <x-ui.field name="sort_order" type="number" min="0" max="999" :label="__('core.company.branch_order')"
+                    :hint="__('core.company.branch_order_hint')"
+                    :value="old('sort_order', $branch->sort_order ?: '')" />
         <x-ui.field name="address_en" :label="__('system_admin::field.address_en')"
                     :value="old('address_en', $branch->address_en)" />
 

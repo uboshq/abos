@@ -1188,6 +1188,8 @@ return [
         'switch' => 'কোম্পানি বদলান',
         'company' => 'কোম্পানি',
         'branch' => 'শাখা',
+        'branch_order' => 'তালিকায় ক্রম',
+        'branch_order_hint' => '১ সবার আগে; খালি রাখলে নামের বর্ণক্রমে',
         'all_branches' => 'সব শাখা',
         'branch_of' => 'শাখা — :company',
         'stamped_with_branch' => 'আপনি যা লিখছেন তা এই শাখার নামেই বসছে।',

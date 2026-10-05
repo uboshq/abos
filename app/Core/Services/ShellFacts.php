@@ -78,7 +78,7 @@ final class ShellFacts
         return $this->branches ??= Branch::query()
             ->active()
             ->when($allowed !== null, fn ($q) => $q->whereIn('id', $allowed))
-            ->orderBy('name_en')
+            ->ordered()
             ->get();
     }
 
