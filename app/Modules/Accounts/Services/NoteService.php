@@ -188,6 +188,16 @@ final class NoteService
         }
 
         return DB::transaction(function () use ($note) {
+            /*
+             * ⛔ সারি তালা দিয়ে অবস্থা আবার পড়া — Accounts-Finance অডিট ম২, ৪ অক্টোবর ২০২৬। ⚠️ একসাথে "বাতিল" আর
+             * "পাকা" হলে দুটোই খসড়া দেখত: খাতায় বসত, অথচ কাগজ "বাতিল"। ⓘ দ্বিতীয়জন অপেক্ষা করে আসল অবস্থা দেখেন।
+             */
+            if ($this->lockedStatus($note) !== DocumentStatus::DRAFT) {
+                throw ValidationException::withMessages([
+                    'status' => __('accounts::note.only_a_draft_can_be_confirmed'),
+                ]);
+            }
+
             $this->posting->post(
                 sourceType: $note->sourceType(),
                 sourceId: $note->id,
@@ -223,6 +233,15 @@ final class NoteService
         }
 
         return DB::transaction(function () use ($note, $reason, $paperNo) {
+            // ⛔ আসল অবস্থা, তালা দিয়ে (ম২) — মাঝে পাকা হলে দাখিলা ফেরাতেই হবে, আর দুইবার বাতিলে দুইবার উল্টানো নয়
+            $status = $this->lockedStatus($note);
+
+            if ($status === DocumentStatus::CANCELLED) {
+                return $note->refresh();
+            }
+
+            $note->status = $status;
+
             /*
              * ⓘ ফেরানোর তারিখ **আজ**, কাগজের তারিখ নয় — বন্ধ হয়ে যাওয়া
              * মাসে ফিরিয়ে নিলে ঐ মাসের বন্ধ করা হিসাব বদলে যেত।
@@ -246,6 +265,12 @@ final class NoteService
 
             return $note->refresh();
         });
+    }
+
+    /** নোটের অবস্থা, সারি তালা দিয়ে (ম২) */
+    private function lockedStatus(Note $note): string
+    {
+        return (string) Note::query()->withoutGlobalScopes()->whereKey($note->getKey())->lockForUpdate()->value('status');
     }
 
     /**

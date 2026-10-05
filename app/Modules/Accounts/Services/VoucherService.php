@@ -298,6 +298,22 @@ final class VoucherService
         $ownable = $this->accountsThatHoldAParty();
 
         return DB::transaction(function () use ($voucher, $ownable) {
+            /*
+             * ⛔ সারি তালা দিয়ে অবস্থা আবার পড়া — Accounts-Finance অডিট ম২, ৪ অক্টোবর ২০২৬।
+             * ⚠️ উপরের পরখ হাতে ধরা মডেল দেখে। একই মুহূর্তে কেউ "বাতিল" চাপলে দুইজনেই "খসড়া" দেখতেন: বাতিল কিছু ফেরাত না
+             * (খাতায় তখনো কিছু নেই), আর পোস্ট খাতায় বসাত — শেষে কাগজ "বাতিল", অথচ টাকা খাতায়। ⓘ এখন দ্বিতীয়জন অপেক্ষা
+             * করেন, তারপর আসল অবস্থা দেখে থামেন ([[cancel()]]-এও একই তালা)।
+             */
+            $status = $this->lockedStatus($voucher);
+
+            if ($status !== DocumentStatus::DRAFT) {
+                throw ValidationException::withMessages([
+                    'status' => $status === DocumentStatus::CANCELLED
+                        ? __('accounts::validation.cancelled_cannot_post')
+                        : __('accounts::validation.already_posted', ['no' => $voucher->document_no]),
+                ]);
+            }
+
             // ⚠️ লেনদেনের ভিতরে, খাতায় তোলার আগে — তালা আর মাপা একই লেনদেনে
             $this->assertMoneyIsThere($voucher);
             $this->assertAgainstFits($voucher);
@@ -416,6 +432,18 @@ final class VoucherService
             : ($terms['party_required'] ?? false)) {
             throw ValidationException::withMessages(['against_id' => __('accounts::validation.against_wrong_party')]);
         }
+    }
+
+    /**
+     * ভাউচারের অবস্থা, সারি তালা দিয়ে — ম২। ⓘ হাতে থাকা মডেল ধরেই খোঁজা, তাই কোম্পানির স্কোপ লাগে না (আন্তঃকোম্পানির
+     * দুই পাশ অন্য কোম্পানির প্রসঙ্গেও এখান দিয়ে যায়)।
+     */
+    private function lockedStatus(Voucher $voucher): string
+    {
+        return (string) Voucher::query()->withoutGlobalScopes()
+            ->whereKey($voucher->getKey())
+            ->lockForUpdate()
+            ->value('status');
     }
 
     /** দুই পাশ একসাথে উল্টানোর ভিতরে আছি কি না — [[cancellingBothSides()]] */
@@ -673,6 +701,20 @@ final class VoucherService
         }
 
         return DB::transaction(function () use ($voucher, $reason, $onDate, $paperNo) {
+            /*
+             * ⛔ সারি তালা দিয়ে আসল অবস্থা — ম২। ⚠️ হাতে ধরা মডেল "খসড়া" বললেও মাঝে কেউ পোস্ট করে থাকতে পারেন; তখন
+             * খাতার দাখিলা না ফিরিয়েই কাগজ "বাতিল" হত। আর দুইজন একসাথে বাতিল চাপলে দাখিলা দুইবার উল্টাত।
+             */
+            $status = $this->lockedStatus($voucher);
+
+            if ($status === DocumentStatus::CANCELLED) {
+                throw ValidationException::withMessages([
+                    'status' => __('accounts::validation.already_cancelled'),
+                ]);
+            }
+
+            $voucher->status = $status;
+
             // খসড়া কখনো লেজারে বসেনি, তাই ফেরানোরও কিছু নেই
             if ($voucher->isPosted()) {
                 $this->posting->reverse(
