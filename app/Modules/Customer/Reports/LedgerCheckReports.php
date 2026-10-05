@@ -47,6 +47,9 @@ final class LedgerCheckReports
                     'source_type' => 'source_type_literal',
                     'source_id' => 'party_id',
                 ],
+                // ⭐ মালিক, ৫ অক্টোবর ২০২৬: গ্রাহকের পাশে মোবাইল আর পয়েন্ট — কাকে ফোন করবেন, কোন এলাকার
+                ['key' => 'phone', 'label' => 'customer::field.phone', 'type' => ReportColumn::TEXT],
+                ['key' => 'point', 'label' => 'customer::field.point', 'type' => ReportColumn::TEXT],
                 ['key' => 'party_total', 'label' => 'customer::ledger_check.party_total', 'type' => ReportColumn::MONEY],
                 ['key' => 'control_total', 'label' => 'customer::ledger_check.control_total', 'type' => ReportColumn::MONEY],
                 ['key' => 'difference', 'label' => 'customer::ledger_check.difference', 'type' => ReportColumn::MONEY],
@@ -75,11 +78,16 @@ final class LedgerCheckReports
 
         $name = app()->getLocale() === 'bn' ? "COALESCE(NULLIF(c.name_bn, ''), c.name_en)" : 'c.name_en';
 
+        $point = app()->getLocale() === 'bn' ? "COALESCE(NULLIF(l.name_bn, ''), l.name_en)" : 'l.name_en';
+
         $parties = DB::query()->fromSub($byParty, 'p')
             ->join('customers as c', 'c.id', '=', 'p.party_id')
+            ->leftJoin('mdm_locations as l', 'l.id', '=', 'c.location_id')
             ->where(fn (Builder $w) => $w->where('p.party_total', '<>', 0)->orWhere('p.control_total', '<>', 0))
             ->selectRaw('0 as sort_last')
             ->selectRaw("{$name} as party_name")
+            ->selectRaw('c.phone as phone')
+            ->selectRaw("{$point} as point")
             ->selectRaw(DB::getPdo()->quote($type).' as source_type_literal')
             ->selectRaw('p.party_id')
             ->selectRaw('p.party_total')
@@ -94,6 +102,8 @@ final class LedgerCheckReports
             ->where('n.amount', '<>', 0)
             ->selectRaw('1 as sort_last')
             ->selectRaw(DB::getPdo()->quote((string) __('customer::ledger_check.nobody')).' as party_name')
+            ->selectRaw('NULL as phone')
+            ->selectRaw('NULL as point')
             ->selectRaw('NULL as source_type_literal')
             ->selectRaw('NULL as party_id')
             ->selectRaw('0 as party_total')

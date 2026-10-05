@@ -48,6 +48,10 @@ final class TheLedgersAgreeWithTheirControlAndBranchesSettleTest extends TestCas
     public function test_a_customer_ledger_is_set_against_the_receivable_control_and_the_unnamed_part_shows(): void
     {
         $customer = Customer::query()->orderBy('id')->firstOrFail();
+        // ⓘ মোবাইল আর পয়েন্ট ভরা — খালি থাকলে null = null দাবিটা কিছুই মাপত না
+        $point = \App\Modules\MasterData\Models\Location::query()->firstOrFail();
+        $customer->forceFill(['phone' => '01711-000555', 'location_id' => $point->id])->save();
+        $customer->refresh();
         $receivable = $this->postable(StandardChart::RECEIVABLE);
         $cash = $this->postable(StandardChart::CASH_IN_HAND);
 
@@ -62,6 +66,10 @@ final class TheLedgersAgreeWithTheirControlAndBranchesSettleTest extends TestCas
         $this->assertSame(0, bccomp((string) $mine['party_total'], '530', 4), '⛔ গ্রাহকের খাতায় ৫৩০ নয়।');
         $this->assertSame(0, bccomp((string) $mine['control_total'], '500', 4), '⛔ পাওনার খাতে ৫০০ নয়।');
         $this->assertSame(0, bccomp((string) $mine['difference'], '30', 4), '⛔ পার্থক্য ৩০ নয় — অন্য খাতে বসা অংশ ধরা পড়েনি।');
+
+        // ⭐ মালিক, ৫ অক্টোবর ২০২৬: গ্রাহকের পাশে মোবাইল আর পয়েন্ট
+        $this->assertSame($customer->phone, $mine['phone'], '⛔ সারিতে গ্রাহকের মোবাইল নেই।');
+        $this->assertSame($customer->location?->name(), $mine['point'], '⛔ সারিতে গ্রাহকের পয়েন্ট নেই।');
 
         $nobody = $rows->first(fn (array $r) => $r['party_id'] === null);
         $this->assertNotNull($nobody, '⛔ পাওনার খাতে কারও নামে নয় এমন টাকা খাতায় আলাদা সারি পায়নি।');
