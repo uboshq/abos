@@ -29,7 +29,6 @@
 
 import { taka } from '../components/money.js'
 import { freeFromStock, lineMargin, marginLabel } from './margin.js'
-import { applyPrices, fetchPrices } from './customer-prices.js'
 
 /*
  * ⓘ জমার খালি খসড়া — তিন জায়গায় লাগে (শুরু, "যোগ করুন"-এর পরে, "সব
@@ -78,7 +77,6 @@ export default function directSale({
     draftKey, hasErrors, texts, freeAllowedUrl, warehouseId, creditRules, lots,
     pendingDrafts, resume, pendingUrl, transferModes, approvalNotice,
     margin = { costs: {}, floor: 0, words: {} },
-    pricesUrl = '',
 }) {
     /*
      * ⓘ লটের তালিকা — পণ্যের আইডি ধরে, মেয়াদের ক্রমে সাজানো।
@@ -1142,9 +1140,6 @@ export default function directSale({
         chooseCustomer(id) {
             this.customerId = String(id);
 
-            /* ⭐ গ্রাহকের দর তালিকা — তালিকা আর কার্টের আপনা-আপনি দর এই গ্রাহকের দরে (দর তালিকা, ৫ অক্টোবর ২০২৬; [[customer-prices.js]]) */
-            this.repriceFor(this.customerId);
-
             /*
              * ক্রেতার নিজের মেয়াদ থাকলে সেটাই বসে।
              *
@@ -1194,17 +1189,6 @@ export default function directSale({
                 this.openDraftPopup = true;
                 this.soundTheAlarm();
             }
-        },
-
-        /**
-         * ⭐ এই গ্রাহকের দর সার্ভার থেকে, তারপর বসানো — হাতে লেখা দর ছোঁয়া হয় না। ⓘ মাঝে গ্রাহক বদলালে পুরনো উত্তরটা ফেলে দেওয়া হয়।
-         */
-        async repriceFor(customerId) {
-            const prices = await fetchPrices(pricesUrl, customerId);
-
-            if (! prices || String(this.customerId) !== String(customerId)) return;
-
-            applyPrices(this.catalogue, this.lines, this.entry, this.picked, prices);
         },
 
         /** খোলা খসড়াটা এই পর্দাতেই খোলা — সম্পাদনা করে পাকা করার জন্য। */
