@@ -89,5 +89,6 @@
             :columns="$columns" />
 
         <x-ui.pager :rows="$receipts" />
+        <x-ui.list-totals :rows="$receipts" :grand="$grand ?? []" :columns="$columns" />
     </div>
 </x-layouts.app>

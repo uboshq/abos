@@ -147,9 +147,7 @@
 
              ⓘ দেখানো হবে কি না সেটা রূপ ঠিক করে ([[Ui::listFoot]]), তাই
              এখানে কোনো রূপের নাম লেখা নেই। --}}
-        <x-ui.list-totals :totals="[
-            ['value' => __('core.list.rows', ['count' => number_format($totals['rows'])])],
-            ['label' => __('core.list.page_total'), 'value' => \App\Core\Support\Money::format($totals['money'])],
-        ]" />
+        {{-- ⭐ মোট · পরিশোধিত · বাকি — টেবিলের সর্বমোটের একই সংখ্যা, গোটা ছাঁকনির (মালিক, ৫ অক্টোবর ২০২৬) --}}
+        <x-ui.list-totals :rows="$totals['rows']" :grand="$grand ?? []" :columns="$columns" />
     </div>
 </x-layouts.app>

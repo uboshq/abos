@@ -61,5 +61,9 @@
         ]" />
 
         <x-ui.pager :rows="$rows" />
+        <x-ui.list-totals :rows="$rows" :totals="[
+            ['label' => __('purchase::schedule.total'), 'value' => Money::format((string) ($grand['total'] ?? '0'))],
+            ['label' => __('purchase::schedule.due'), 'value' => Money::format((string) ($grand['amount'] ?? '0')), 'tone' => 'bad'],
+        ]" />
     </div>
 </x-layouts.app>

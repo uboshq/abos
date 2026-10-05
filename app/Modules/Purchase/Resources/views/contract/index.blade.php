@@ -79,5 +79,6 @@
             :columns="$columns" />
 
         <x-ui.pager :rows="$contracts" />
+        <x-ui.list-totals :rows="$contracts" />
     </div>
 </x-layouts.app>

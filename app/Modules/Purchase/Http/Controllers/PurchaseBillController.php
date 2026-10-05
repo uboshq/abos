@@ -109,7 +109,6 @@ class PurchaseBillController extends Controller implements HasMiddleware
             'showBranch' => ViewedBranch::one() === null,
             'totals' => [
                 'rows' => (clone $totalled)->count(),
-                'money' => (clone $totalled)->sum('total'),
             ],
             'q' => $request->query('q'),
             'dates' => $dates,

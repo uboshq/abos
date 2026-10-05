@@ -73,5 +73,6 @@
             :columns="$columns" />
 
         <x-ui.pager :rows="$rfqs" />
+        <x-ui.list-totals :rows="$rfqs" />
     </div>
 </x-layouts.app>
