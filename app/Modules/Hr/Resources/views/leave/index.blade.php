@@ -70,4 +70,5 @@
     </div>
 
     <div class="mt-4">{{ $applications->links() }}</div>
+    <x-ui.list-totals :rows="$applications" />
 </x-layouts.app>

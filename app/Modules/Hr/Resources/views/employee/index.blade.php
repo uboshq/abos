@@ -58,4 +58,5 @@
     </div>
 
     <div class="mt-4">{{ $employees->links() }}</div>
+    <x-ui.list-totals :rows="$employees" />
 </x-layouts.app>

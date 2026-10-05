@@ -56,4 +56,5 @@
     </div>
 
     <div class="mt-4">{{ $runs->links() }}</div>
+    <x-ui.list-totals :rows="$runs" :grand="$grand ?? []" :columns="$columns" />
 </x-layouts.app>

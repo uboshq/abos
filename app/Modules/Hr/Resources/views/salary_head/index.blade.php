@@ -88,5 +88,6 @@
             :columns="$columns" />
 
         <x-ui.pager :rows="$heads" />
+        <x-ui.list-totals :rows="$heads" />
     </div>
 </x-layouts.app>
