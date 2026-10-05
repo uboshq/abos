@@ -816,6 +816,8 @@ return [
         RouteReports::class,
         // ⭐ খোলা আদেশ ও ব্যাক অর্ডার, সীমায় আটকানো আদেশ, বিক্রয় খাতা — পরিকল্পনা সংস্করণ ২ §৯ (৪ অক্টোবর ২০২৬)
         \App\Modules\Sales\Reports\SalesOrderBookReports::class,
+        // ⭐ বাকি ও আদায় — সীমার ব্যবহার, বাকি বন্ধ, ঝুঁকির গ্রাহক, সীমা বদলের ইতিহাস (৫ অক্টোবর ২০২৬)
+        \App\Modules\Sales\Reports\CreditControlReports::class,
     ],
 
     /*

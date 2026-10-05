@@ -31,6 +31,11 @@ class SalesReportController extends Controller implements HasMiddleware
         // ⭐ পরিকল্পনা সংস্করণ ২ §৯ (৪ অক্টোবর ২০২৬; [[SalesOrderBookReports]])
         'open-orders' => 'sales.open_orders',
         'credit-blocked' => 'sales.credit_blocked',
+        // ⭐ বাকি ও আদায় ([[CreditControlReports]], ৫ অক্টোবর ২০২৬)
+        'credit-use' => 'sales.credit_use',
+        'blocked-customers' => 'sales.credit_blocked_customers',
+        'risky-customers' => 'sales.credit_risk',
+        'limit-history' => 'sales.credit_limit_history',
         'invoice-book' => 'sales.invoice_book',
         'uninvoiced' => 'sales.uninvoiced',
         'by-customer' => 'sales.by_customer',

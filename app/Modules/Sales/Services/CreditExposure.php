@@ -336,23 +336,50 @@ final class CreditExposure implements CreditHolds
      */
     public function unclearedCheques(Customer $customer): string
     {
-        $sum = DB::table('acc_cheques as ch')
-            ->where('ch.company_id', $customer->company_id)
-            ->whereNull('ch.deleted_at')
-            ->where('ch.direction', 'received')
-            ->where('ch.party_type', 'customer')
+        $sum = $this->unclearedQuery((int) $customer->company_id)
             ->where('ch.party_id', $customer->id)
-            ->whereIn('ch.status', ['pending', 'deposited'])
-            ->where(fn ($q) => $q->whereNotNull('ch.collection_id')
-                ->orWhereNotNull('ch.voucher_id')
-                ->orWhereExists(fn ($e) => $e->from('ledger_entries as le')
-                    ->where('le.source_type', 'cheque')
-                    ->whereColumn('le.source_id', 'ch.id')))
             // ⓘ তালাসহ দেয়ালে সর্বশেষ অবস্থা — একই মুহূর্তে চেক ক্লিয়ার/ফেরত হলেও ([[assertRoomLocked()]])
             ->when($this->readLatest, fn ($q) => $q->sharedLock())
             ->sum('ch.amount');
 
         return bcadd((string) $sum, '0', 4);
+    }
+
+    /**
+     * অনেক গ্রাহকের ক্লিয়ার না হওয়া চেক একবারে — রিপোর্টের জন্য ([[CreditControlReports]]); নিয়ম [[unclearedCheques()]]-এরই।
+     *
+     * @param  list<int>  $customerIds
+     * @return array<int, string>
+     */
+    public function unclearedChequesFor(array $customerIds): array
+    {
+        if ($customerIds === []) {
+            return [];
+        }
+
+        return $this->unclearedQuery(CompanyContext::id())
+            ->whereIn('ch.party_id', $customerIds)
+            ->groupBy('ch.party_id')
+            ->selectRaw('ch.party_id, SUM(ch.amount) as amount')
+            ->pluck('amount', 'party_id')
+            ->map(fn ($v) => bcadd((string) $v, '0', 4))
+            ->all();
+    }
+
+    /** হাতে আসার দিনেই জমায় বসা, এখনো ক্লিয়ার না হওয়া চেক — এক জায়গায় লেখা শর্ত */
+    private function unclearedQuery(?int $companyId): \Illuminate\Database\Query\Builder
+    {
+        return DB::table('acc_cheques as ch')
+            ->where('ch.company_id', $companyId)
+            ->whereNull('ch.deleted_at')
+            ->where('ch.direction', 'received')
+            ->where('ch.party_type', 'customer')
+            ->whereIn('ch.status', ['pending', 'deposited'])
+            ->where(fn ($q) => $q->whereNotNull('ch.collection_id')
+                ->orWhereNotNull('ch.voucher_id')
+                ->orWhereExists(fn ($e) => $e->from('ledger_entries as le')
+                    ->where('le.source_type', 'cheque')
+                    ->whereColumn('le.source_id', 'ch.id')));
     }
 
     /**
