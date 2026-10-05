@@ -14,7 +14,6 @@ use App\Modules\Inventory\Models\Batch;
 use App\Modules\Inventory\Models\Product;
 use App\Modules\Inventory\Models\Warehouse;
 use App\Modules\Inventory\Services\PackConversion;
-use App\Modules\Inventory\Services\StockAdjustmentService;
 use App\Modules\Inventory\Services\StockCountService;
 use App\Modules\Inventory\Services\StockService;
 use App\Modules\MasterData\Models\ReasonCode;
@@ -71,7 +70,6 @@ class StockController extends Controller implements HasMiddleware
 
     public function __construct(
         private readonly StockService $stock,
-        private readonly StockAdjustmentService $adjustments,
         private readonly MenuBuilder $menu,
 
         /*
@@ -564,7 +562,11 @@ class StockController extends Controller implements HasMiddleware
     {
         $data = $this->validatedMovement($request, ReasonCode::STOCK_ISSUE, 'qty');
 
-        $movement = $this->adjustments->issue(
+        /*
+         * ⭐ বের করা এখন একটা কাগজ, সইয়ের ধারায় — Inventory অডিট গ৫, ৪ অক্টোবর ২০২৬ ([[StockCountService::issue()]])।
+         * ⓘ ছক চালু থাকলে কাগজটা সইয়ের অপেক্ষায়, শেষ সইয়ে নিজেই খাতায়; ছক বন্ধে আগের মতো এখনই।
+         */
+        [$paper, $held] = $this->counts->issue(
             product: $data['product'],
             warehouse: $data['warehouse'],
             qty: (string) $request->input('qty'),
@@ -572,6 +574,10 @@ class StockController extends Controller implements HasMiddleware
             date: $request->input('trx_date'),
             narration: $request->input('narration'),
         );
+
+        if ($held) {
+            return back()->with('saved', __('inventory::message.issue_waiting_for_signature', ['document' => $paper->document_no]));
+        }
 
         return back()->with('saved', __('inventory::message.issued', [
             'qty' => rtrim(rtrim((string) $request->input('qty'), '0'), '.'),

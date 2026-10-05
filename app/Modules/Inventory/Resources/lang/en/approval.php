@@ -11,5 +11,6 @@ declare(strict_types=1);
 
 return [
     'count' => 'Stock count or adjustment (accepting the difference)',
+    'issue' => 'Goods given out without a sale (hospitality, gifts, use by the owner)',
     'transfer' => 'Dispatching a stock transfer',
 ];

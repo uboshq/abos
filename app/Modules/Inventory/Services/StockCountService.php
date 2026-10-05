@@ -200,6 +200,13 @@ final class StockCountService
          */
         $this->assertReasonFits($reason, ReasonCode::STOCK_ADJUSTMENT);
 
+        // ⛔ বের করার কাগজ গণনার পথে মানা যায় না — তার কারণ ও সই আলাদা, শেষ হয় [[finishIssue()]]-এ (গ৫)
+        if ($count->isIssue()) {
+            throw ValidationException::withMessages([
+                'status' => __('inventory::validation.issue_paper_is_not_a_count', ['document' => $count->document_no]),
+            ]);
+        }
+
         $count->loadMissing(['lines.product', 'warehouse']);
 
         if ($count->lines->isEmpty()) {
@@ -304,6 +311,140 @@ final class StockCountService
     }
 
     /**
+     * ⭐ বিনা বিক্রয়ে মাল বের করা — একটা অপেক্ষমাণ কাগজ, সইয়ের ধারায় (Inventory অডিট গ৫, ৪ অক্টোবর ২০২৬)।
+     *
+     * ⛔ আগে আপ্যায়ন, উপহার বা মালিকের ব্যবহারে মাল বের করলে সাথে সাথে খরচের খাতে টাকা উঠত, কোনো সই ছাড়াই —
+     * একজন গুদামের লোক তাকের সব মাল "উপহার" দেখিয়ে খাতা থেকে বের করে দিতে পারতেন।
+     *
+     * ⓘ এখন একটা এক-সারির কাগজ (`kind = issue`), কারণটা কাগজে লেখা। `inventory.issue` ছক চালু থাকলে কাগজটা খসড়া
+     * থাকে আর শেষ সইয়ে নিজেই শেষ হয় ([[FinishTheIssueOnTheLastSignature]]); ছক বন্ধে আগের মতো এখনই।
+     *
+     * @return array{0: StockCount, 1: bool} কাগজ, আর সইয়ের অপেক্ষায় কি না
+     */
+    public function issue(
+        Product $product,
+        Warehouse $warehouse,
+        string $qty,
+        ReasonCode $reason,
+        Carbon|string|null $date = null,
+        ?string $narration = null,
+    ): array {
+        $this->assertReasonFits($reason, ReasonCode::STOCK_ISSUE);
+
+        if (! is_numeric($qty) || bccomp($qty, '0', 4) <= 0) {
+            throw ValidationException::withMessages([
+                'qty' => __('inventory::validation.issue_needs_qty'),
+            ]);
+        }
+
+        $paper = DB::transaction(function () use ($product, $warehouse, $qty, $reason, $date, $narration) {
+            Warehouse::query()->whereKey($warehouse->id)->lockForUpdate()->first();
+
+            /*
+             * ⛔ একই মালের আগের বের-করা সইয়ের অপেক্ষায় থাকলে আরেকটা নয় — সই আটকালে আবার চাপায় দুটো কাগজ হত,
+             * আর সইকারী দুটোয় সই দিলে মাল দুইবার বেরোত (গ৭-এর একই ফাঁদ)।
+             */
+            $waiting = StockCount::query()->withoutGlobalScopes()
+                ->where('company_id', CompanyContext::id())->whereNull('deleted_at')
+                ->where('kind', StockCount::KIND_ISSUE)->where('status', DocumentStatus::DRAFT)
+                ->where('warehouse_id', $warehouse->id)
+                ->whereHas('lines', fn ($lines) => $lines->where('product_id', $product->id))
+                ->value('document_no');
+
+            if ($waiting !== null) {
+                throw ValidationException::withMessages([
+                    'qty' => __('inventory::validation.issue_already_waiting', ['product' => $product->name(), 'document' => $waiting]),
+                ]);
+            }
+
+            // ⓘ তাকে যা নেই তা দেওয়া যায় না — বিস্কুটটা হয় তাকে ছিল, নয় ছিল না
+            $onHand = $this->stock->floorQty($product, $warehouse);
+
+            if (bccomp($qty, $onHand, 4) > 0) {
+                throw ValidationException::withMessages([
+                    'qty' => __('inventory::validation.issue_more_than_stock', ['have' => rtrim(rtrim($onHand, '0'), '.')]),
+                ]);
+            }
+
+            $paper = StockCount::create([
+                'company_id' => CompanyContext::id(),
+                'branch_id' => $warehouse->branch_id ?? CompanyContext::branchId(),
+                'document_no' => $this->numbers->next('SC'),
+                'kind' => StockCount::KIND_ISSUE,
+                'count_date' => Carbon::parse($date ?? now())->toDateString(),
+                'warehouse_id' => $warehouse->id,
+                'narration' => $narration,
+                'reason_code_id' => $reason->id,
+                'status' => DocumentStatus::DRAFT,
+                'counted_by' => auth()->id(),
+                'created_by' => auth()->id(),
+            ]);
+
+            $paper->lines()->create([
+                'company_id' => CompanyContext::id(),
+                'product_id' => $product->id,
+                'book_qty' => $onHand,
+                'counted_qty' => bcsub($onHand, $qty, 4),
+                'difference' => bcmul($qty, '-1', 4),
+                'unit_cost' => $this->averageCost($product),
+                'reason_code_id' => $reason->id,
+            ]);
+
+            return $paper->load('lines');
+        });
+
+        $line = $paper->lines->first();
+        $atStake = $line->unit_cost === null ? '0' : bcmul($qty, (string) $line->unit_cost, 4);
+
+        $held = $this->approvals->stopping(
+            document: $paper,
+            module: 'inventory',
+            action: 'issue',
+            amount: $atStake,
+            reason: $narration ?: $reason->name(),
+        ) !== null;
+
+        return [$held ? $paper : $this->finishIssue($paper), $held];
+    }
+
+    /**
+     * ⭐ বের করার কাগজ শেষ — মাল তাক থেকে, টাকা কাগজের কারণের খাতে (গ৫)। ছক বন্ধে [[issue()]] এখনই ডাকে, ছক চালু
+     * থাকলে শেষ সইয়ে [[FinishTheIssueOnTheLastSignature]]।
+     *
+     * ⓘ সারি আটকে অবস্থা আবার পড়া — একই সইয়ের ঘটনা দুইবার এলে বা হাতে আগেই শেষ হলে দ্বিতীয়বার কিছু হয় না।
+     */
+    public function finishIssue(StockCount $paper): StockCount
+    {
+        return DB::transaction(function () use ($paper) {
+            if (! $paper->isIssue() || $this->lockedStatus($paper) !== DocumentStatus::DRAFT) {
+                throw ValidationException::withMessages([
+                    'status' => __('inventory::validation.count_not_draft'),
+                ]);
+            }
+
+            $paper->loadMissing(['lines.product', 'warehouse', 'reason']);
+            $line = $paper->lines->firstOrFail();
+
+            $this->adjustments->settle(
+                product: $line->product,
+                warehouse: $paper->warehouse,
+                difference: (string) $line->difference,
+                reason: $paper->reason,
+                date: $paper->count_date,
+                narration: $paper->narration ?: $paper->document_no,
+            );
+
+            $paper->update([
+                'status' => DocumentStatus::CONFIRMED,
+                'approved_by' => auth()->id(),
+                'approved_at' => now(),
+            ]);
+
+            return $paper->fresh(['lines']);
+        });
+    }
+
+    /**
      * ⭐ পড়ে থাকা খসড়া বাতিল — কারণসহ (Inventory অডিট গ৭, ৪ অক্টোবর ২০২৬)।
      *
      * ⓘ খসড়ায় খাতা নড়েনি, তাই বাতিলে ফেরানোর কিছু নেই — কেবল কাগজটা বন্ধ হয়, যাতে একই পণ্যের নতুন গণনা লেখা যায়।
@@ -348,6 +489,8 @@ final class StockCountService
             ->withoutGlobalScopes()
             ->where('company_id', CompanyContext::id())
             ->whereNull('deleted_at')
+            // ⓘ কেবল গণনা — বের করার কাগজ খাতার সংখ্যার ছবি নয়, সত্যিকারের চলাচল (গ৫)
+            ->where('kind', StockCount::KIND_COUNT)
             ->where('warehouse_id', $warehouseId)
             ->whereHas('lines', function ($lines) use ($productId, $batchId) {
                 $lines->where('product_id', $productId);

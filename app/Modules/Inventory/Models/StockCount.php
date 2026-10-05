@@ -12,6 +12,7 @@ use App\Core\Concerns\ScopedToUserBranch;
 use App\Core\Support\DocumentStatus;
 use App\Models\Branch;
 use App\Models\User;
+use App\Modules\MasterData\Models\ReasonCode;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -43,11 +44,17 @@ class StockCount extends Model
     use ScopedToUserBranch;
     use SoftDeletes;
 
+    /** ⓘ গণনা — গুনে পাওয়া পার্থক্য */
+    public const KIND_COUNT = 'count';
+
+    /** ⭐ বিনা বিক্রয়ে মাল বের করা — কারণ কাগজেই, শেষ সইয়ে নিজেই খাতায় (Inventory অডিট গ৫, ৪ অক্টোবর ২০২৬) */
+    public const KIND_ISSUE = 'issue';
+
     protected $table = 'inv_stock_counts';
 
     protected $fillable = [
-        'company_id', 'branch_id', 'document_no', 'count_date',
-        'warehouse_id', 'narration', 'status',
+        'company_id', 'branch_id', 'document_no', 'kind', 'count_date',
+        'warehouse_id', 'narration', 'reason_code_id', 'status',
         'counted_by', 'approved_by', 'approved_at', 'created_by',
         // ⓘ পড়ে থাকা খসড়ার বাতিল — কে, কখন, কেন (অডিট গ৭)
         'cancel_reason', 'cancelled_by', 'cancelled_at',
@@ -85,6 +92,17 @@ class StockCount extends Model
     public function approver(): BelongsTo
     {
         return $this->belongsTo(User::class, 'approved_by');
+    }
+
+    /** ⓘ বের করার কাগজের কারণ — টাকা কোন খাতে যাবে, সেটা এটাই বলে */
+    public function reason(): BelongsTo
+    {
+        return $this->belongsTo(ReasonCode::class, 'reason_code_id');
+    }
+
+    public function isIssue(): bool
+    {
+        return $this->kind === self::KIND_ISSUE;
     }
 
     public function canceller(): BelongsTo

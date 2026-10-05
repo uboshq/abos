@@ -688,14 +688,18 @@ return [
      * থাকা খসড়াটা গণনার পর্দা থেকে `count` চাবিতে মেনে নেওয়া যেত — আর
      * সেখানে ছক না থাকলে **সই ছাড়াই**। ⭐ এক কাগজ, এক চাবি, পাশের দরজা নেই।
      *
-     * ⚠️ এখনো সই ছাড়া যায়: [[StockAdjustmentService::issue()]] (বিনা বিক্রয়ে
-     * মাল দেওয়া) আর মান-পরীক্ষায় বাতিল মাল — দুইটাই সরাসরি `adjust()`
-     * ডাকে, কোনো খসড়া কাগজ ছাড়া। ⓘ সই বসাতে হলে ওদেরও একটা অপেক্ষমাণ
-     * কাগজ লাগবে — নকশার সিদ্ধান্ত, অডিট §১.৩ ধাপ ২-এর সাথে।
+     * ⭐ `issue` — বিনা বিক্রয়ে মাল বের করা (আপ্যায়ন, উপহার, মালিকের ব্যবহার), Inventory অডিট গ৫, ৪ অক্টোবর ২০২৬।
+     * ⛔ আগে সই ছাড়াই খাতায় টাকা বসাত। ⓘ এখন একটা অপেক্ষমাণ কাগজ ([[StockCountService::issue()]]), কারণ কাগজেই
+     * লেখা, শেষ সইয়ে নিজেই শেষ হয় ([[FinishTheIssueOnTheLastSignature]])। ⚠️ আলাদা চাবি, কারণ কাগজের ধরন আলাদা:
+     * [[StockCountService::approve()]] বের করার কাগজ মানে না, তাই `count` ছক দিয়ে এর পাশের দরজা খোলে না।
+     *
+     * ⚠️ এখনো সই ছাড়া যায়: মান-পরীক্ষায় বাতিল মালের বিনাশ — সরাসরি [[StockAdjustmentService::issue()]] ডাকে,
+     * রায়ের চাবিতে ([[QualityInspectionService::dispose()]])।
      */
     'approvals' => [
         'transfer' => 'inventory::approval.transfer',
         'count' => 'inventory::approval.count',
+        'issue' => 'inventory::approval.issue',
     ],
 
     /*
@@ -718,7 +722,8 @@ return [
      * এক, কিন্তু মানুষের কাছে এক নয়। ⓘ পাহারাটা
      * [[EveryModuleSaysWhereMoneyMovesTest]]-এ — নামটা সেখানেও হাতে লেখা।
      */
-    'moves_money' => ['count'],
+    // ⭐ `issue` — বের করা মালের টাকা খরচ/উত্তোলনের খাতে বসে (গ৫, ৪ অক্টোবর ২০২৬)
+    'moves_money' => ['count', 'issue'],
 
     /*
      * ⭐ রিপোর্টের সাধারণ ছাঁকনি — গুদাম আর পণ্য মজুদের ([[ReportFilters]], রিপোর্ট সেন্টার ধাপ ১)।
@@ -950,6 +955,11 @@ return [
         StockMovement::class => [
             'unit_cost' => 'inventory.cost.view',
         ],
+    ],
+
+    'listeners' => [
+        // ⭐ শেষ সইয়ে "মাল বের করা" নিজেই শেষ (গ৫)
+        \App\Core\Events\ApprovalDecided::class => [\App\Modules\Inventory\Listeners\FinishTheIssueOnTheLastSignature::class],
     ],
 
 ];

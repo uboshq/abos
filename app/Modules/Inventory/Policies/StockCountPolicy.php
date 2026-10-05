@@ -58,7 +58,9 @@ class StockCountPolicy
     public function approve(User $user, StockCount $document): bool
     {
         return $user->can('inventory.count.approve')
-            && $document->status === DocumentStatus::DRAFT;
+            && $document->status === DocumentStatus::DRAFT
+            // ⓘ বের করার কাগজ গণনার পথে নয় — শেষ হয় নিজের সইয়ে (গ৫, [[StockCountService::finishIssue()]])
+            && ! $document->isIssue();
     }
 
     /**

@@ -147,6 +147,7 @@ return [
     'counted_by' => 'Counted by',
     'approved_by' => 'Accepted by',
     'count_cancelled_because' => 'Cancelled by :who - reason: :reason',
+    'issue_paper' => 'Goods given out - :reason',
     'qc_inspected' => 'Inspected',
     'qc_accepted' => 'Accepted',
     'qc_rejected' => 'Rejected',

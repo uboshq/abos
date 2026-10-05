@@ -71,6 +71,8 @@ return [
     'surplus_needs_rate' => 'Surplus found in a count needs a rate — only you know which consignment it came from, and without a rate it can never leave the shelf again.',
     'issue_needs_qty' => 'The quantity issued must be more than zero.',
     'issue_more_than_stock' => 'Only :have is on the shelf — no more than that can go out.',
+    'issue_already_waiting' => 'A give-out paper :document for :product is already waiting for its signature - let it finish or cancel it, then try again.',
+    'issue_paper_is_not_a_count' => ':document is a give-out paper, not a count - it finishes on its own signature and cannot be accepted like a count.',
 
     // ── Opening stock, from a file ──────────────────────────────────
     'opening_must_be_positive' => ':column must be more than zero — an opening of nothing, or at no cost, says nothing.',

@@ -60,6 +60,13 @@
                 <p class="mt-3 text-sm text-(--color-ink-muted)">{{ $count->narration }}</p>
             @endif
 
+            {{-- ⭐ মাল বের করার কাগজ — কারণটা কাগজেই, টাকা সেই খাতে (অডিট গ৫) --}}
+            @if ($count->isIssue())
+                <p class="mt-3 text-sm font-medium">
+                    {{ __('inventory::field.issue_paper', ['reason' => $count->reason?->label() ?? '—']) }}
+                </p>
+            @endif
+
             {{-- ⓘ বাতিল খসড়া — কে আর কেন (অডিট গ৭) --}}
             @if ($count->cancel_reason)
                 <p class="mt-3 text-sm text-(--color-badge-danger-ink)">
@@ -145,7 +152,9 @@
         @else
             @if ($count->status === \App\Core\Support\DocumentStatus::DRAFT)
                 <p class="text-sm text-(--color-ink-muted)">
-                    {{ __('inventory::message.count_waiting_for_approver') }}
+                    {{ $count->isIssue()
+                        ? __('inventory::message.issue_waiting_for_signature', ['document' => $count->document_no])
+                        : __('inventory::message.count_waiting_for_approver') }}
                 </p>
             @endif
         @endcan

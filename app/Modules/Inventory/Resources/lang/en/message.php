@@ -71,6 +71,7 @@ return [
     'issue_note' => 'Goods that leave without being sold — entertainment, gifts, owner use, samples.',
     'issued' => ':qty went out — :reason, and the value went to :account.',
     'issue_no_account' => 'Inventory Shortage & Surplus',
+    'issue_waiting_for_signature' => 'Paper :document is waiting for its signature - the goods are still on the shelf and the books have not moved. It goes out by itself on the last signature.',
     'issue_where_it_goes' => 'Where each reason posts',
     'issue_narration_hint' => 'Who took it, or why it was given — for a gift this matters.',
     'issue_cost_note' => 'Stock falls at cost, not at the selling price — nobody paid, so it is not a sale.',
