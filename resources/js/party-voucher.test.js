@@ -276,3 +276,68 @@ describe('partyVoucher — খোঁজা যায় এমন নামে�
         expect(make().pickedLabel).toBe('—')
     })
 })
+
+/*
+ * ⭐ রসিদ একটা বিলের বিপরীতে — Accounts-Finance অডিট ম১, ৪ অক্টোবর ২০২৬।
+ * ⛔ আগে বহু বিলে ভাগের ঘর ছিল যা সার্ভার রাখত না; এখন বাছা বিলটাই `against_type` / `against_id`।
+ */
+describe('partyVoucher — কোন বিলের বিপরীতে', () => {
+    const bill = { against_type: 'sales_invoice', id: 7, no: 'INV-7', date: '2026-09-01', age: 34, outstanding: '250.0000' }
+
+    function withAmount(value) {
+        const input = { value, dispatchEvent: vi.fn() }
+        const box = make()
+        box.$root = { closest: () => ({ querySelector: (q) => (q === '[name="amount"]' ? input : null) }) }
+        box.bills = [bill]
+
+        return { box, input }
+    }
+
+    it('বাছা বিলটাই "বিপরীতে" ঘরে, আর খালি টাকার ঘরে বিলের বাকি বসে', () => {
+        const { box, input } = withAmount('')
+
+        box.pick(bill)
+
+        expect(box.pickedType).toBe('sales_invoice')
+        expect(box.pickedId).toBe('7')
+        expect(box.pickedBill).toBe(bill)
+        expect(input.value).toBe('250.00')
+    })
+
+    it('টাকার ঘরে আগে থেকে অঙ্ক থাকলে বদলায় না — আংশিক টাকা', () => {
+        const { box, input } = withAmount('100')
+
+        box.pick(bill)
+
+        expect(input.value).toBe('100')
+        expect(box.overDue).toBe(false)
+    })
+
+    it('বিলের বাকির চেয়ে বেশি টাকা হলে আগেই বলে', () => {
+        const { box } = withAmount('300')
+
+        box.pick(bill)
+
+        expect(box.overDue).toBe(true)
+    })
+
+    it('বাছাই তোলা যায়, আর পক্ষ বদলালে নিজেই ওঠে', () => {
+        const { box } = withAmount('')
+
+        box.pick(bill)
+        box.unpick()
+        expect(box.pickedId).toBe('')
+
+        box.pick(bill)
+        box.resetParty()
+        expect(box.pickedId).toBe('')
+        expect(box.pickedType).toBe('')
+    })
+
+    it('অন্য মডিউলের আগাম-ভরা "বিপরীতে" বসে থাকে', () => {
+        const box = make({ pickedType: 'capital_entry', pickedId: 42 })
+
+        expect(box.pickedType).toBe('capital_entry')
+        expect(box.pickedId).toBe('42')
+    })
+})

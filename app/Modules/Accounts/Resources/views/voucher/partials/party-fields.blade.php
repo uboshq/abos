@@ -60,13 +60,14 @@
                      'hint' => $o['hint'] ?? '', 'find' => $o['find'] ?? '']))
                  ->values()),
              dueUrl: @js(route('accounts.voucher.due')),
-             picked: @js(old('bill_allocs', [])),
+             // ⓘ কোন বিলের বিপরীতে — একটাই (অডিট ম১); অন্য মডিউলের আগাম-ভরা "বিপরীতে"-ও এখান দিয়েই যায়
+             pickedType: @js((string) ($was('against_type') ?? '')),
+             pickedId: @js((string) ($was('against_id') ?? '')),
              adding: @js($errors->has('party_new') || filled(old('party_new'))),
              newName: @js((string) old('party_new', '')),
              texts: @js([
                  'owed' => __('accounts::field.owed'),
-                 'allocated' => __('accounts::field.allocated'),
-                 'overAllocated' => __('accounts::message.over_allocated'),
+                 'overDue' => __('accounts::message.more_than_the_bill_owes'),
                  'noBills' => __('accounts::message.no_open_bill'),
              ]),
          })">
@@ -408,13 +409,22 @@
 
         ⓘ ভাঁজটা নিজে থেকেই খোলে যখন পক্ষ বাছা হয় আর বিল আছে।
     --}}
+    {{-- ⓘ বাছা বিল রসিদের "বিপরীতে" ঘরে — বাছা না থাকলে ঘর দুটো যায়ই না --}}
+    <input type="hidden" name="against_type" x-bind:value="pickedType" x-bind:disabled="pickedId === ''">
+    <input type="hidden" name="against_id" x-bind:value="pickedId" x-bind:disabled="pickedId === ''">
+
+    {{--
+        ⭐ একটা বিলই বাছা যায় — Accounts-Finance অডিট ম১, ৪ অক্টোবর ২০২৬।
+        ⛔ আগে প্রতিটা বিলে টিক আর অঙ্কের ঘর ছিল, অথচ সার্ভার ভাগগুলো কোথাও রাখত না — আর তালিকাটাই সবসময় খালি আসত।
+        ⓘ এক টাকায় বহু বিল আর "পুরনো বিল আগে" বিক্রয়ের "আদায়" পর্দায়; এখানে বাছা বিলের অঙ্ক, পক্ষ আর খোলা থাকা
+        পোস্টের মুহূর্তে মাপা হয় ([[VoucherService::assertAgainstFits()]])।
+    --}}
     <details class="mt-4 rounded-(--radius-card) border border-(--color-border) p-3"
              x-bind:open="bills.length > 0">
         <summary class="cursor-pointer text-sm font-semibold">
             {{ __('accounts::field.against_which_invoice') }}
             <span class="ms-2 text-xs font-normal text-(--color-ink-muted)"
-                  x-show="bills.length > 0" x-cloak
-                  x-text="texts.allocated + ' ' + allocatedTotal.toFixed(2)"></span>
+                  x-show="pickedBill" x-cloak x-text="pickedBill ? pickedBill.no : ''"></span>
         </summary>
 
         <template x-if="bills.length === 0">
@@ -433,62 +443,38 @@
                                 <th class="p-2 text-start">{{ __('accounts::field.date') }}</th>
                                 <th class="p-2 text-end">{{ __('accounts::field.age') }}</th>
                                 <th class="p-2 text-end">{{ __('accounts::field.outstanding') }}</th>
-                                <th class="p-2 text-end">{{ __('accounts::field.on_this_receipt') }}</th>
                             </tr>
                         </thead>
                         <tbody>
-                            <template x-for="(b, i) in bills" :key="b.id">
+                            <template x-for="b in bills" :key="b.against_type + '-' + b.id">
                                 <tr class="border-b border-(--color-border)">
                                     <td class="p-2">
-                                        <input type="checkbox" :value="b.id"
-                                               :name="'bill_allocs[' + i + '][invoice_id]'"
-                                               :checked="alloc[b.id] !== undefined"
-                                               x-on:change="toggle(b, $event.target.checked)">
+                                        <input type="radio" name="bill_pick"
+                                               :aria-label="b.no"
+                                               :checked="String(b.id) === pickedId && b.against_type === pickedType"
+                                               x-on:change="pick(b)">
                                     </td>
                                     <td class="p-2 font-medium" x-text="b.no"></td>
                                     <td class="p-2" x-text="b.date"></td>
                                     <td class="num p-2 text-end" x-text="b.age"></td>
                                     <td class="num p-2 text-end" x-text="$fixed(b.outstanding)"></td>
-                                    <td class="p-2 text-end">
-                                        <input type="number" step="0.01" inputmode="decimal"
-                                               class="num w-28 rounded-(--radius-field) border border-(--color-border) p-1 text-end"
-                                               :name="'bill_allocs[' + i + '][amount]'"
-                                               x-model.number="alloc[b.id]">
-                                    </td>
                                 </tr>
                             </template>
                         </tbody>
                     </table>
                 </div>
 
-                {{--
-                    ⭐ পুরনো বিল আগে — মালিকের নিজের চাওয়া নিয়ম।
-
-                    ⓘ টাকাটা বয়সের ক্রমে বসে, আর যতটুকু বাকি ততটুকুই।
-                    ⚠️ নিজে থেকে হয় না, বোতাম চাপলে হয় — কারণ কখনো
-                    গ্রাহক নির্দিষ্ট একটা বিলের জন্যই টাকা দেন।
-                --}}
-                <div class="mt-2 flex flex-wrap gap-2">
-                    <button type="button"
+                <div class="mt-2 flex flex-wrap items-center gap-2">
+                    <button type="button" x-show="pickedId !== ''" x-cloak
                             class="rounded-full border border-(--color-border) px-3 py-1 text-xs"
-                            x-on:click="fifo()">
-                        {{ __('accounts::field.oldest_first') }}
+                            x-on:click="unpick()">
+                        {{ __('accounts::field.no_bill') }}
                     </button>
-                    <button type="button"
-                            class="rounded-full border border-(--color-border) px-3 py-1 text-xs"
-                            x-on:click="clearAlloc()">
-                        {{ __('accounts::field.clear_all') }}
-                    </button>
+                    <span class="text-2xs text-(--color-ink-muted)">{{ __('accounts::message.many_bills_on_collection') }}</span>
                 </div>
 
-                <p class="mt-3 flex items-center justify-between text-sm">
-                    <span class="text-(--color-ink-muted)" x-text="texts.allocated"></span>
-                    <span class="num font-semibold" x-text="allocatedTotal.toFixed(2)"></span>
-                </p>
-
-                {{-- ⚠️ ভাগ করা টাকা গৃহীত টাকার চেয়ে বেশি — অঙ্ক দুইটা সমান হতেই হবে --}}
-                <p class="mt-1 text-xs text-(--color-danger)" x-show="overAllocated" x-cloak
-                   x-text="texts.overAllocated"></p>
+                {{-- ⚠️ গৃহীত টাকা বাছা বিলের বাকির চেয়ে বেশি — পোস্টে সার্ভার থামাবে, আগেই বলা --}}
+                <p class="mt-1 text-xs text-(--color-danger)" x-show="overDue" x-cloak x-text="texts.overDue"></p>
             </div>
         </template>
     </details>

@@ -6,11 +6,11 @@ namespace App\Modules\Accounts\Http\Controllers;
 
 use App\Core\Concerns\GrandTotals;
 use App\Core\Concerns\SortsLists;
+use App\Core\Contracts\PartyOpenBills;
 use App\Core\Engines\Attachment\AttachmentEngine;
 use App\Core\Engines\Drill\DrillResolver;
 use App\Core\Services\MenuBuilder;
 use App\Core\Services\PartyRegistry;
-use App\Core\Support\CompanyContext;
 use App\Http\Controllers\Controller;
 use App\Models\Approval;
 use App\Modules\Accounts\Http\Requests\VoucherRequest;
@@ -24,7 +24,6 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
-use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
@@ -253,76 +252,21 @@ class VoucherController extends Controller implements HasMiddleware
     }
 
     /**
-     * এই পক্ষের যে বিলগুলো এখনো পুরো শোধ হয়নি।
+     * এই পক্ষের যে বিলগুলো এখনো পুরো শোধ হয়নি — বিলের মালিক মডিউল মাপে ([[PartyOpenBills]])।
      *
-     * ── ⭐ কেন মোট বকেয়া যথেষ্ট নয় ──────────────────────────────────
-     * [[AccountsFacts::dueFrom]] খতিয়ান ধরে **একটা সংখ্যা** দেয় — "তিনি
-     * মোট কত দেবেন"। ⓘ কিন্তু টাকা এলে প্রশ্নটা আলাদা: **কোন বিলের
-     * বিপরীতে?**
+     * ── ⛔ কী ভাঙা ছিল — Accounts-Finance অডিট ম১, ৪ অক্টোবর ২০২৬ ─────────
+     * এখানে বিক্রয়ের টেবিলে কাঁচা কোয়েরি চলত, বিলের অবস্থা খুঁজত 'posted' — অথচ পাকা বিক্রয় বিল 'confirmed'। ⚠️ তালিকা তাই
+     * সবসময় খালি, আর বাকি মাপা হত নিজের মতো (পাকা ফেরত বাদ যেত না)। ফর্ম আবার বহু বিলের ভাগ পাঠাত, যা কোথাও সংরক্ষণ হত না।
      *
-     * ⚠️ সেটা না জানলে পুরনো বিলটা চিরকাল খোলা থাকত আর নতুনটা শোধ
-     * দেখাত, অথচ টাকাটা একই। ⓘ বয়স ধরে বকেয়ার তালিকা (aging) তখন
-     * মিথ্যা বলত, আর "কার টাকা কতদিন আটকে" প্রশ্নের উত্তরটাই ভুল হত।
-     *
-     * ── ⓘ কেন কেবল গ্রাহক ───────────────────────────────────────────
-     * বিলভিত্তিক নিষ্পত্তি এই মুহূর্তে বিক্রয়ের দিকেই আছে
-     * (`sal_invoices`)। ⚠️ সরবরাহকারীর দিকে একই জিনিস লাগবে, কিন্তু
-     * সেটা `pur_bills` ধরে, আর সেই পথটা এখনো লেখা হয়নি — তাই খালি
-     * তালিকা ফেরে, ভুল তালিকা নয়।
+     * ⭐ এখন: তালিকা বিলের নিজের বাকিতে, আর রসিদ **একটা** বিলের বিপরীতে বাঁধা যায় (`against_type`/`against_id`), যার অঙ্ক,
+     * পক্ষ আর খোলা থাকা পোস্টের মুহূর্তে মাপে [[VoucherService::assertAgainstFits()]]। এক টাকায় বহু বিল আর "পুরনো বিল আগে"
+     * বিক্রয়ের "আদায়" পর্দায় — হিসাবের উৎস একটাই।
      *
      * @return list<array<string, mixed>>
      */
     private function openBillsOf(string $type, int $id): array
     {
-        if ($type !== 'customer') {
-            return [];
-        }
-
-        /*
-         * ⓘ `paid` ধরা হয় ঐ ইনভয়েসের বিপরীতে বসা রসিদগুলোর যোগফল
-         * থেকে (`against_type` / `against_id`) — আলাদা কোনো "শোধ হয়েছে"
-         * কলাম নেই, আর সেটাই ঠিক: দুই জায়গায় লিখলে একদিন দুইটা আলাদা
-         * হয়ে যেত।
-         */
-        return DB::table('sal_invoices as i')
-            ->where('i.company_id', CompanyContext::id())
-            ->where('i.customer_id', $id)
-            ->where('i.status', 'posted')
-            ->whereNull('i.deleted_at')
-            ->leftJoin('vouchers as v', function ($join): void {
-                $join->on('v.against_id', '=', 'i.id')
-                    ->where('v.against_type', '=', 'sales_invoice')
-                    ->whereNull('v.deleted_at')
-                    ->where('v.status', '=', 'posted');
-            })
-            ->groupBy('i.id', 'i.document_no', 'i.trx_date', 'i.due_on', 'i.total')
-            ->havingRaw('i.total - COALESCE(SUM(v.amount), 0) > 0.0001')
-            ->orderBy('i.trx_date')
-            ->limit(50)
-            ->get([
-                'i.id',
-                'i.document_no',
-                'i.trx_date',
-                'i.due_on',
-                'i.total',
-                DB::raw('COALESCE(SUM(v.amount), 0) as paid'),
-            ])
-            ->map(fn ($row) => [
-                'id' => (int) $row->id,
-                'no' => $row->document_no,
-                'date' => $row->trx_date,
-
-                /*
-                 * বয়স — দিনে, আর সেটা এখানেই গোনা হয়।
-                 *
-                 * ⓘ ব্রাউজারে গুনলে ফোনের ঘড়ি ভুল থাকলে বয়সটাও ভুল
-                 * হত, আর ব্যবহারকারী বুঝতেন না কেন।
-                 */
-                'age' => (int) now()->startOfDay()->diffInDays(Carbon::parse($row->trx_date)->startOfDay()),
-                'outstanding' => bcsub((string) $row->total, (string) $row->paid, 4),
-            ])
-            ->values()
-            ->all();
+        return app(PartyOpenBills::class)->openBills($type, $id);
     }
 
     /**

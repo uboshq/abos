@@ -106,6 +106,8 @@ return [
         \App\Core\Contracts\CustomerSalesFilters::class => \App\Modules\Sales\Services\SalesCustomerFilters::class,
         // ⓘ হোমের ছাঁকনির গুদাম, এলাকা আর SR — বিক্রয় জানে (মালিক, ৪ অক্টোবর ২০২৬; [[HomeSalesFilters]])
         \App\Core\Contracts\HomeSalesFilters::class => \App\Modules\Sales\Services\SalesHomeFilters::class,
+        // ⓘ রসিদের "কোন বিলের বিপরীতে" — গ্রাহকের খোলা বিল, বিলের নিজের বাকিতে (Accounts-Finance অডিট ম১)
+        \App\Core\Contracts\PartyOpenBills::class => \App\Modules\Sales\Services\SalesPartyOpenBills::class,
 
         // ⛔ কুপন কেবল পাকা কাগজের সত্যিকারের সারিতে — প্রমোশন বিক্রয়কে চেনে না, চুক্তি চেনে (গভীর অডিট, ২৯ সেপ্টেম্বর ২০২৬)
         \App\Core\Contracts\CouponPapers::class => \App\Modules\Sales\Services\SalesCouponPapers::class,

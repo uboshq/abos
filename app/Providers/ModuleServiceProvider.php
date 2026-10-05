@@ -60,6 +60,9 @@ class ModuleServiceProvider extends ServiceProvider
         // ⓘ বিক্রয় বন্ধ থাকলে গ্রাহকের তালিকায় টপ/বটম বিক্রি আর "ভালো কাস্টমার" কাউকে পায় না ([[CustomerSalesFilters]])
         $this->app->bind(\App\Core\Contracts\CustomerSalesFilters::class, \App\Core\Services\NoCustomerSalesFilters::class);
 
+        // ⓘ বিক্রয় বন্ধ থাকলে রসিদে বাছার মতো খোলা বিল নেই ([[PartyOpenBills]], অডিট ম১)
+        $this->app->bind(\App\Core\Contracts\PartyOpenBills::class, \App\Core\Services\NoPartyOpenBills::class);
+
         // ⓘ বিক্রয় বন্ধ থাকলে হোমের ছাঁকনিতে বাছার কিছু নেই ([[HomeSalesFilters]])
         $this->app->bind(\App\Core\Contracts\HomeSalesFilters::class, \App\Core\Services\NoHomeSalesFilters::class);
 

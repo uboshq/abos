@@ -468,6 +468,27 @@ export function invoiceCollection (config = {}) {
             if (this.rows.length === 0) this.add();
         },
 
+        /*
+         * ⭐ পুরনো বিল আগে — উপরের "টাকা" ঘরের অঙ্ক বয়সের ক্রমে, প্রতিটা বিলে যতটুকু বাকি ততটুকুই (Accounts-Finance অডিট
+         * ম১, ৫ অক্টোবর ২০২৬: এক টাকায় বহু বিল এখন কেবল এই পর্দায়, রসিদে একটাই বিল)। ⚠️ টাকা ফুরালে বাকি বিল বসে না —
+         * শূন্যের সারি "ভাগ হয়েছে" দেখাত অথচ কিছুই বসেনি। ⓘ আসল পাহারা সার্ভারে: বিলে বাকির বেশি নয়, মোটে টাকার বেশি নয়।
+         */
+        oldestFirst() {
+            let left = parseFloat(this.$root.closest('form')?.querySelector('[name="amount"]')?.value) || 0;
+            const bills = this.mine
+                .filter(o => (parseFloat(o.due) || 0) > 0)
+                .sort((a, b) => (a.date === b.date ? Number(a.id) - Number(b.id) : (a.date < b.date ? -1 : 1)));
+
+            this.rows = [];
+            for (const o of bills) {
+                if (left <= 0.0001) break;
+                const take = Math.min(left, parseFloat(o.due) || 0);
+                this.rows.push({ sales_invoice_id: o.id, amount: take.toFixed(2) });
+                left -= take;
+            }
+            if (this.rows.length === 0) this.add();
+        },
+
         /* ক্রেতা বদলালে বাছা বিলগুলোও মোছে — অন্যের বিলে টাকা বসবে না */
         pickCustomer(id) {
             this.customerId = id;

@@ -160,7 +160,9 @@
             ⓘ হাতে খোলা রসিদে ঘর দুইটা খালি থাকে, আর সেটাই স্বাভাবিক —
             বেশিরভাগ আদায় কোনো নথির বিপরীতে নয়।
         --}}
-        @if (filled(old('against_type', $voucher->against_type)))
+        {{-- ⓘ রসিদ আর পরিশোধে ঘর দুটো party-fields পাঠায় — বিল বাছলে বদলায়, তাই এখানে দ্বিতীয় কপি নয় (অডিট ম১) --}}
+        @if (filled(old('against_type', $voucher->against_type))
+            && ! in_array($voucher->type, [\App\Modules\Accounts\Models\Voucher::RECEIPT, \App\Modules\Accounts\Models\Voucher::PAYMENT], true))
             <input type="hidden" name="against_type"
                    value="{{ old('against_type', $voucher->against_type) }}">
             <input type="hidden" name="against_id"

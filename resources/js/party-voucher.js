@@ -1,5 +1,5 @@
 /**
- * রসিদ ও পরিশোধের পর্দার যুক্তি — পক্ষ, বকেয়া, আর বিলের ভাগ।
+ * রসিদ ও পরিশোধের পর্দার যুক্তি — পক্ষ, বকেয়া, আর কোন বিলের বিপরীতে।
  *
  * ── ⭐ কেন ফাইলে, ব্লেডের ভিতরে নয় ───────────────────────────────────
  * আগে পুরো যুক্তিটা `x-data="{ … }"` অ্যাট্রিবিউটের ভিতরে লেখা ছিল, আর
@@ -19,7 +19,7 @@ import { matchParties, SHOWN_AT_ONCE } from './party-search.js'
 
 export { matchParties, SHOWN_AT_ONCE }
 
-export default function partyVoucher({ partyType, partyId, parties, dueUrl, picked, texts, adding = false, newName = '' }) {
+export default function partyVoucher({ partyType, partyId, parties, dueUrl, texts, pickedType = '', pickedId = '', adding = false, newName = '' }) {
     return {
         partyType,
         partyId,
@@ -44,13 +44,14 @@ export default function partyVoucher({ partyType, partyId, parties, dueUrl, pick
         bills: [],
 
         /**
-         * কোন বিলে কত বসল — চাবি বিলের id, মান টাকার অঙ্ক।
+         * ⭐ রসিদ **একটা** বিলের বিপরীতে — `against_type` / `against_id` (Accounts-Finance অডিট ম১, ৪ অক্টোবর ২০২৬)।
          *
-         * ⚠️ অ্যারে নয়, বস্তু: সারিগুলো বাছাই-অনুযায়ী আসে-যায়, আর
-         * অ্যারের সূচক ধরে রাখলে একটা টিক তুললে বাকিগুলোর অঙ্ক এক ঘর
-         * সরে যেত।
+         * ⛔ আগে এখানে বহু বিলে ভাগের ঘর ছিল (`bill_allocs`), কিন্তু সার্ভার সেটা কোথাও রাখত না — ভাগ করলেও কিছুই হত না।
+         * ⓘ এখন বাছা বিলটাই রসিদের "বিপরীতে" ঘরে যায়, আর পোস্টের মুহূর্তে অঙ্ক, পক্ষ আর খোলা থাকা মাপা হয়। এক টাকায় বহু বিল
+         * আর "পুরনো বিল আগে" বিক্রয়ের "আদায়" পর্দায় — হিসাবের উৎস একটাই।
          */
-        alloc: {},
+        pickedType: pickedType ? String(pickedType) : '',
+        pickedId: pickedId ? String(pickedId) : '',
 
         get partyOptions() {
             return this.parties.filter((p) => p.type === this.partyType);
@@ -247,6 +248,7 @@ export default function partyVoucher({ partyType, partyId, parties, dueUrl, pick
             this.partyId = '';
             this.due = null;
             this.bills = [];
+            this.unpick();
             this.adding = true;
             this.closeList();
             this.$nextTick(() => this.$refs.newMobile?.focus());
@@ -262,32 +264,29 @@ export default function partyVoucher({ partyType, partyId, parties, dueUrl, pick
                 this.partyId = '';
                 this.due = null;
                 this.bills = [];
+                this.unpick();
             }
         },
 
-        get allocatedTotal() {
-            return Object.values(this.alloc).reduce((sum, v) => sum + (Number(v) || 0), 0);
+        /** বাছা বিলটা — তালিকায় থাকলে। */
+        get pickedBill() {
+            return this.bills.find((b) => String(b.id) === this.pickedId && b.against_type === this.pickedType) || null;
         },
 
         /**
-         * ভাগ করা টাকা গৃহীত টাকার চেয়ে বেশি কি না।
+         * গৃহীত টাকা বাছা বিলের বাকির চেয়ে বেশি কি না।
          *
-         * ⓘ অঙ্কটা পর্দার নিচের "গৃহীত টাকা" ঘর থেকে পড়া হয় — দুইটা
-         * সংখ্যা এক জায়গায় রাখলে একটা বদলালে অন্যটা বাসি হয়ে যেত।
+         * ⓘ অঙ্কটা পর্দার নিচের "গৃহীত টাকা" ঘর থেকে পড়া হয় — দুইটা সংখ্যা এক জায়গায় রাখলে একটা বদলালে অন্যটা বাসি
+         * হত। ⚠️ এটা কেবল আগাম সতর্কতা; আসল পাহারা পোস্টের মুহূর্তে সার্ভারে।
          */
-        get overAllocated() {
+        get overDue() {
+            const bill = this.pickedBill;
             const amount = Number(this.$root.closest('form')?.querySelector('[name="amount"]')?.value || 0);
 
-            return amount > 0 && this.allocatedTotal - amount > 0.0001;
+            return bill !== null && amount - Number(bill.outstanding) > 0.0001;
         },
 
         init() {
-            for (const row of picked || []) {
-                if (row && row.invoice_id) {
-                    this.alloc[row.invoice_id] = Number(row.amount) || 0;
-                }
-            }
-
             if (this.partyId) {
                 this.loadDue();
             }
@@ -298,7 +297,7 @@ export default function partyVoucher({ partyType, partyId, parties, dueUrl, pick
             this.partyId = '';
             this.due = null;
             this.bills = [];
-            this.alloc = {};
+            this.unpick();
         },
 
         async loadDue() {
@@ -331,42 +330,26 @@ export default function partyVoucher({ partyType, partyId, parties, dueUrl, pick
             }
         },
 
-        toggle(bill, on) {
-            if (on) {
-                this.alloc[bill.id] = Number(bill.outstanding);
-            } else {
-                delete this.alloc[bill.id];
-            }
-        },
-
         /**
-         * পুরনো বিল আগে — মালিকের নিজের চাওয়া নিয়ম।
+         * এই বিলের বিপরীতে — আর টাকার ঘর খালি থাকলে বিলের বাকিটাই বসে।
          *
-         * ⓘ গৃহীত টাকাটা বয়সের ক্রমে বসে, আর প্রতিটা বিলে **যতটুকু
-         * বাকি ততটুকুই** — বেশি নয়। ⚠️ টাকা ফুরালে বাকি বিলগুলো খালি
-         * থাকে, শূন্য বসে না: শূন্য বসালে সেগুলো "ভাগ করা হয়েছে"
-         * দেখাত অথচ কিছুই বসেনি।
+         * ⚠️ ঘরে আগে থেকে অঙ্ক থাকলে সেটা বদলানো হয় না: গ্রাহক প্রায়ই বাকির একটা অংশ দেন।
          */
-        fifo() {
-            const form = this.$root.closest('form');
-            let left = Number(form?.querySelector('[name="amount"]')?.value || 0);
+        pick(bill) {
+            this.pickedType = String(bill.against_type);
+            this.pickedId = String(bill.id);
 
-            this.alloc = {};
+            const amount = this.$root.closest('form')?.querySelector('[name="amount"]');
 
-            for (const b of [...this.bills].sort((a, b) => b.age - a.age)) {
-                if (left <= 0.0001) {
-                    break;
-                }
-
-                const take = Math.min(left, Number(b.outstanding));
-
-                this.alloc[b.id] = Number(take.toFixed(2));
-                left -= take;
+            if (amount && String(amount.value || '').trim() === '') {
+                amount.value = Number(bill.outstanding).toFixed(2);
+                amount.dispatchEvent(new Event('input', { bubbles: true }));
             }
         },
 
-        clearAlloc() {
-            this.alloc = {};
+        unpick() {
+            this.pickedType = '';
+            this.pickedId = '';
         },
     };
 }

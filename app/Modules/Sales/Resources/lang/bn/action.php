@@ -11,6 +11,7 @@ return [
     'cancel_document' => 'বাতিল করুন',
     'edit' => 'সম্পাদনা',
     'add_line' => 'আরেকটা লাইন',
+    'oldest_bills_first' => 'পুরনো বিল আগে',
     'remove_line' => 'সরাও',
 
     /*

@@ -40,6 +40,8 @@
         'customer_id' => (string) $open->customer_id,
         'label' => $open->document_no.' — '.\App\Core\Support\Money::format($open->dueAmount()),
         'due' => (string) $open->dueAmount(),
+        // ⓘ "পুরনো বিল আগে" বয়সের ক্রমে বসায় (অডিট ম১)
+        'date' => \Illuminate\Support\Carbon::parse($open->trx_date)->toDateString(),
     ])->values();
 @endphp
 
@@ -177,11 +179,20 @@
                     </table>
                 </div>
 
-                <button type="button" @click="add()"
-                        class="mt-2 rounded-(--radius-field) border border-(--color-border) px-3 py-1.5 text-sm
-                               transition-colors hover:bg-(--color-surface-hover)">
-                    + {{ __('sales::action.add_line') }}
-                </button>
+                <div class="mt-2 flex flex-wrap gap-2">
+                    <button type="button" @click="add()"
+                            class="rounded-(--radius-field) border border-(--color-border) px-3 py-1.5 text-sm
+                                   transition-colors hover:bg-(--color-surface-hover)">
+                        + {{ __('sales::action.add_line') }}
+                    </button>
+
+                    {{-- ⭐ পুরনো বিল আগে — টাকার অঙ্ক বয়সের ক্রমে, যতটুকু বাকি ততটুকুই (অডিট ম১; মালিকের নিয়ম) --}}
+                    <button type="button" @click="oldestFirst()" x-show="mine.length > 0" x-cloak
+                            class="rounded-(--radius-field) border border-(--color-border) px-3 py-1.5 text-sm
+                                   transition-colors hover:bg-(--color-surface-hover)">
+                        {{ __('sales::action.oldest_bills_first') }}
+                    </button>
+                </div>
             </div>
         </section>
 

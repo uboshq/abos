@@ -11,6 +11,7 @@ return [
     'cancel_document' => 'Cancel',
     'edit' => 'Edit',
     'add_line' => 'Add a line',
+    'oldest_bills_first' => 'Oldest bills first',
     'remove_line' => 'Remove',
 
     /* ⓘ কারণসহ bn/action.php-তে — লেখাটা "Edit" নয়, কারণ সারিটা উপরে ফেরে। */
