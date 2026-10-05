@@ -148,6 +148,16 @@ class InterCompanyController extends Controller implements HasMiddleware
                 : __('accounts::message.inter_company_done', ['company' => $transfer->counterCompany->name()]));
     }
 
+    /** ⭐ দুই পাশ একসাথে উল্টানো — কারণসহ (গ১২; [[InterCompanyService::reverse()]]) */
+    public function reverse(\Illuminate\Http\Request $request, InterCompanyTransfer $transfer): RedirectResponse
+    {
+        $data = $request->validate(['cancel_reason' => ['required', 'string', 'min:3', 'max:500']]);
+
+        $this->transfers->reverse($request->user(), $transfer, $data['cancel_reason']);
+
+        return back()->with('status', __('accounts::message.inter_company_reversed'));
+    }
+
     /**
      * দেওয়ার দিকের খাত — কেবল টাকা।
      *

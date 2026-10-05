@@ -277,6 +277,8 @@ Route::middleware('auth')->prefix('accounts')->group(function () {
         Route::get('/', [InterCompanyController::class, 'index'])->name('index');
         Route::get('/create', [InterCompanyController::class, 'create'])->name('create');
         Route::post('/', [InterCompanyController::class, 'store'])->name('store');
+        // ⭐ দুই পাশ একসাথে উল্টানো — গ১২ ([[InterCompanyService::reverse()]])
+        Route::post('/{transfer}/reverse', [InterCompanyController::class, 'reverse'])->whereNumber('transfer')->name('reverse');
     });
 
     /*

@@ -67,6 +67,13 @@
                 ? __('accounts::field.inter_company_balanced')
                 : __('accounts::field.inter_company_half'),
         ],
+        // ⭐ দুই পাশ একসাথে উল্টানো — গ১২ (৪ অক্টোবর ২০২৬); এক পাশ একা আর কোথাও থেকে নয়
+        [
+            'key' => 'reverse',
+            'label' => __('accounts::field.inter_company_reverse'),
+            'width' => '16rem',
+            'render' => fn ($t) => view('accounts::inter-company.partials.reverse', ['transfer' => $t]),
+        ],
     ];
 @endphp
 

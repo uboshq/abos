@@ -21,6 +21,7 @@ use App\Models\User;
 use App\Modules\Accounts\Events\VoucherPosted;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Models\CashTill;
+use App\Modules\Accounts\Models\InterCompanyTransfer;
 use App\Modules\Accounts\Models\Voucher;
 use App\Modules\Accounts\Models\VoucherLine;
 use Illuminate\Database\Eloquent\Collection;
@@ -417,6 +418,57 @@ final class VoucherService
         }
     }
 
+    /** দুই পাশ একসাথে উল্টানোর ভিতরে আছি কি না — [[cancellingBothSides()]] */
+    private static int $bothSides = 0;
+
+    /**
+     * ⭐ আন্তঃকোম্পানির দুই পাশ একসাথে — কেবল [[InterCompanyService::reverse()]] এর ভিতর দিয়ে (গ১২, ৪ অক্টোবর ২০২৬)।
+     *
+     * @template T
+     *
+     * @param  \Closure(): T  $work
+     * @return T
+     */
+    public static function cancellingBothSides(\Closure $work): mixed
+    {
+        self::$bothSides++;
+
+        try {
+            return $work();
+        } finally {
+            self::$bothSides--;
+        }
+    }
+
+    /**
+     * ⛔ আন্তঃকোম্পানি লেনদেনের এক পাশ একা বাতিল বা উল্টো নয় — গ১২, Accounts-Finance অডিট, ৪ অক্টোবর ২০২৬।
+     *
+     * ⓘ আগে ভাউচারের পর্দা থেকে এক পাশ (দেওয়ার বা পাওয়ার) একা বাতিল করা যেত: অন্য কোম্পানিতে টাকা পাওয়া থেকেই যেত,
+     * আর দুই কোম্পানির চলতি হিসাব শূন্যে মিলত না। ⓘ দুই পাশ একসাথে উল্টায় [[InterCompanyService::reverse()]];
+     * উল্টো কাগজের পথও ([[AccountsReversalService::reverseVoucher()]]) এখান দিয়েই যায়, তাই সেটাও থামে।
+     *
+     * ⓘ সারিটা অন্য কোম্পানির হতে পারে (পাওয়ার পাশ), তাই কোম্পানির ছাঁকনি তুলে খোঁজা — আর মেলানো হয় ভাউচারটা ঐ
+     * পাশের কোম্পানিরই কি না।
+     */
+    private function assertNotOneSideOfInterCompany(Voucher $voucher): void
+    {
+        if (self::$bothSides > 0) {
+            return;
+        }
+
+        $transfer = InterCompanyTransfer::query()->withoutGlobalScopes()
+            ->where(fn ($q) => $q->where('out_voucher_id', $voucher->id)->orWhere('in_voucher_id', $voucher->id))
+            ->get()
+            ->first(fn (InterCompanyTransfer $t) => ((int) $t->out_voucher_id === (int) $voucher->id && (int) $t->company_id === (int) $voucher->company_id)
+                || ((int) $t->in_voucher_id === (int) $voucher->id && (int) $t->counter_company_id === (int) $voucher->company_id));
+
+        if ($transfer !== null) {
+            throw ValidationException::withMessages([
+                'status' => __('accounts::validation.inter_company_one_side', ['no' => $voucher->document_no]),
+            ]);
+        }
+    }
+
     /**
      * যে নথির বিপরীতে এই ভাউচার, সেটাকে নিষ্পন্ন বা আবার খসড়া করা।
      *
@@ -611,6 +663,8 @@ final class VoucherService
                 'status' => __('accounts::validation.already_cancelled'),
             ]);
         }
+
+        $this->assertNotOneSideOfInterCompany($voucher);
 
         if (blank($reason)) {
             throw ValidationException::withMessages([

@@ -220,4 +220,5 @@ return [
     // ⭐ গ১ — সইয়ের জন্য থামা আন্তঃকোম্পানি লেনদেন (৪ অক্টোবর ২০২৬)
     'inter_company_awaiting' => 'The inter-company transfer is awaiting its signature — both books get it on the last one.',
     'till_opening_awaiting' => 'The till is open; its opening balance awaits the signature and reaches the books on the last one.',
+    'inter_company_reversed' => 'Both sides of the inter-company transfer have been reversed.',
 ];

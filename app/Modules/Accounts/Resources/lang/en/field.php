@@ -325,4 +325,8 @@ return [
     // ⭐ স্থিতিপত্রে অগ্রিম আলাদা লাইনে — উপস্থাপনে, খাতায় নয় (৪ অক্টোবর ২০২৬)
     'customer_advance' => 'Customer advances',
     'supplier_advance' => 'Supplier advances',
+    // ⭐ গ১২ — দুই পাশ একসাথে উল্টানো (৪ অক্টোবর ২০২৬)
+    'inter_company_reverse' => 'Reverse both sides',
+    'inter_company_reverse_reason' => 'Reason',
+    'inter_company_reversed' => 'Reversed',
 ];

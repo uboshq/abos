@@ -210,6 +210,58 @@ final class InterCompanyService
     }
 
     /**
+     * ⭐ দুই পাশ একসাথে উল্টানো — গ১২, Accounts-Finance অডিট, ৪ অক্টোবর ২০২৬।
+     *
+     * ⓘ দুই কোম্পানির প্রসঙ্গে, এক লেনদেনে, কারণসহ, আর চাবি দুই কোম্পানিতেই ([[assertBothAreMine()]])। পাকা পাশ উল্টায়
+     * উল্টো কাগজে (REV — [[AccountsReversalService::reverseVoucher()]]); সইয়ের অপেক্ষার খসড়া কেবল বাতিল হয়।
+     * ⛔ এক পাশ একা আর কোনো পথে উল্টানো যায় না ([[VoucherService::assertNotOneSideOfInterCompany()]])।
+     */
+    public function reverse(User $user, InterCompanyTransfer $transfer, string $reason): InterCompanyTransfer
+    {
+        $reason = trim($reason);
+
+        if ($reason === '') {
+            throw ValidationException::withMessages(['cancel_reason' => __('accounts::validation.cancel_reason_required')]);
+        }
+
+        $own = (int) CompanyContext::id();
+        $counter = $this->assertBothAreMine($user, $own, (int) $transfer->counter_company_id);
+
+        return DB::transaction(function () use ($user, $transfer, $reason, $counter) {
+            $locked = InterCompanyTransfer::query()->whereKey($transfer->id)->lockForUpdate()->firstOrFail();
+
+            if (! in_array($locked->status, [DocumentStatus::CONFIRMED, DocumentStatus::DRAFT], true)) {
+                throw ValidationException::withMessages(['status' => __('accounts::validation.inter_company_not_reversible')]);
+            }
+
+            $draft = $locked->status === DocumentStatus::DRAFT;
+            $undo = function (?int $voucherId) use ($user, $reason, $draft): void {
+                $voucher = $voucherId === null ? null : Voucher::query()->find($voucherId);
+
+                if ($voucher === null || $voucher->isCancelled()) {
+                    return;
+                }
+
+                $draft || ! $voucher->isPosted()
+                    ? $this->vouchers->cancel($voucher, $reason)
+                    : app(AccountsReversalService::class)->reverseVoucher($voucher, $user, $reason);
+            };
+
+            VoucherService::cancellingBothSides(function () use ($undo, $locked, $counter): void {
+                $undo($locked->out_voucher_id === null ? null : (int) $locked->out_voucher_id);
+
+                $this->inTheirBooks($counter, fn () => CompanyContext::forCompany((int) $counter->id,
+                    fn () => $undo($locked->in_voucher_id === null ? null : (int) $locked->in_voucher_id)));
+            });
+
+            $locked->status = DocumentStatus::CANCELLED;
+            $locked->save();
+
+            return $locked;
+        });
+    }
+
+    /**
      * দুই দিকের ভাউচার খাতায় — দেওয়ার দিক নিজের প্রসঙ্গে, পাওয়ার দিক অন্য কোম্পানির প্রসঙ্গে (ত্রুটি ঐ কোম্পানির নামে)।
      */
     private function postBothSides(InterCompanyTransfer $transfer, Company $counter): InterCompanyTransfer

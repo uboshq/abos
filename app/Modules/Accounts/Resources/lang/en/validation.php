@@ -135,4 +135,7 @@ return [
     'group_takes_no_money' => '":name" is a head, not an account — money posted there shows up in no balance. Pick one of the accounts under it.',
     'not_a_money_account' => ':name is not a cash or bank account — money does not land there.',
     'cheque_already_registered' => 'Cheque :no is already registered (:doc) — the same cheque cannot be entered twice.',
+    // ⭐ গ১২ — আন্তঃকোম্পানির দুই পাশ একসাথে (৪ অক্টোবর ২০২৬)
+    'inter_company_one_side' => 'One side (:no) of an inter-company transfer cannot be cancelled or reversed alone — reverse both sides together from the inter-company page.',
+    'inter_company_not_reversible' => 'This inter-company transfer can no longer be reversed — it already was.',
 ];
