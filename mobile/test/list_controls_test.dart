@@ -432,6 +432,9 @@ void main() {
         await tester.pump();
 
         expect(find.text('সাবান'), findsOneWidget);
+        // ⭐ মজুদ মডিউল — মূল্যসহ তালিকা আর মজুদের রিপোর্ট, পর্দার মাথায় (মালিক, ৪ অক্টোবর ২০২৬)
+        expect(find.byKey(const Key('stock-value')), findsOneWidget);
+        expect(find.byKey(const Key('stock-reports')), findsOneWidget);
         expect(find.text('ডাল'), findsNothing);
         expect(find.text('1'), findsOneWidget); // ব্যাজ: একটা ফিল্টার চালু
 

@@ -1,11 +1,15 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../../core/api_client/network_errors.dart';
+import '../../core/printing/documents_api.dart';
 import '../../core/records/report_record.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/empty_state.dart';
+import '../printing/document_actions_sheet.dart';
 
 /// Every report this person may run — docs/Contract §৯.
 ///
@@ -15,9 +19,14 @@ import '../../core/widgets/empty_state.dart';
 /// A report registered on the server tomorrow appears here without a mobile
 /// release — the same reasoning as `GET /sync/capabilities`.
 class ReportsScreen extends StatefulWidget {
-  const ReportsScreen({super.key, this.loadList, this.open});
+  const ReportsScreen(
+      {super.key, this.loadList, this.open, this.module, this.title});
 
   final Future<List<ReportSummary>> Function()? loadList;
+
+  /// ⭐ এক মডিউলের রিপোর্টই — "মজুদের রিপোর্ট" (মালিক, ৪ অক্টোবর ২০২৬); null মানে সব
+  final String? module;
+  final String? title;
   final Future<ReportPage> Function(
       String key, int page, Map<String, dynamic> filters)? open;
 
@@ -44,7 +53,10 @@ class _ReportsScreenState extends State<ReportsScreen> {
     });
     try {
       final list = await (widget.loadList ?? ReportsApi.list)();
-      if (mounted) setState(() => _reports = list);
+      final shown = widget.module == null
+          ? list
+          : list.where((r) => r.module == widget.module).toList();
+      if (mounted) setState(() => _reports = shown);
     } catch (error) {
       if (mounted) {
         setState(() => _error = errorMessageFor(error,
@@ -70,7 +82,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
             .toList();
 
     return Scaffold(
-      appBar: AppBar(title: const Text('রিপোর্ট')),
+      appBar: AppBar(title: Text(widget.title ?? 'রিপোর্ট')),
       body: Column(
         children: [
           Padding(
@@ -139,7 +151,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
 /// One report, drawn entirely from what the server said its columns are.
 class ReportViewScreen extends StatefulWidget {
   const ReportViewScreen(
-      {super.key, required this.report, this.open, this.today});
+      {super.key, required this.report, this.open, this.today, this.exportPdf});
 
   final ReportSummary report;
 
@@ -149,6 +161,10 @@ class ReportViewScreen extends StatefulWidget {
 
   /// The day "today" is, injected in tests so a date range does not depend on when the test runs.
   final DateTime Function()? today;
+
+  /// The PDF of this report with these filters — injected in tests (the real one is `GET /reports/{key}/export?format=pdf`).
+  final Future<Uint8List> Function(String key, Map<String, dynamic> filters)?
+      exportPdf;
 
   @override
   State<ReportViewScreen> createState() => _ReportViewScreenState();
@@ -237,7 +253,38 @@ class _ReportViewScreenState extends State<ReportViewScreen> {
     final page = _page;
 
     return Scaffold(
-      appBar: AppBar(title: Text(page?.title ?? widget.report.title)),
+      appBar: AppBar(
+        title: Text(page?.title ?? widget.report.title),
+        actions: [
+          // ⭐ PDF — দেখা, ছাপা, পাঠানো; এই পর্দার একই তারিখ আর ছাঁকনিতে, সব সারি (মালিক, ৪ অক্টোবর ২০২৬)
+          IconButton(
+            key: const Key('report-pdf'),
+            tooltip: 'PDF — দেখা, ছাপা, পাঠানো',
+            icon: const Icon(Icons.picture_as_pdf_outlined),
+            onPressed: page == null
+                ? null
+                : () => showModalBottomSheet<void>(
+                      context: context,
+                      isScrollControlled: true,
+                      builder: (_) => DocumentActionsSheet(
+                        type: 'report',
+                        id: widget.report.key,
+                        title: page.title,
+                        fileStem:
+                            'abos-${widget.report.key.replaceAll('.', '-')}',
+                        loadPapers: () async => const ['a4'],
+                        loadPdf: (_) => (widget.exportPdf ??
+                            (String k, Map<String, dynamic> f) =>
+                                DocumentsApi.export(
+                                    slug: k, format: 'pdf', filters: f))(
+                          widget.report.key,
+                          _filters,
+                        ),
+                      ),
+                    ),
+          ),
+        ],
+      ),
       body: Column(
         children: [
           if (_busy) const LinearProgressIndicator(),

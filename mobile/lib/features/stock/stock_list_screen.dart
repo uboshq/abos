@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../core/records/list_queries.dart';
+import '../../core/records/report_record.dart';
 import '../../core/records/money.dart';
 import '../../core/records/stock_record.dart';
 import '../../core/sync_engine/reference_sync.dart';
@@ -8,6 +9,7 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/empty_state.dart';
 import '../../core/widgets/list_controls.dart';
+import '../reports/reports_screen.dart';
 
 /// Hand-on-shelf quantities — reachable only from a menu tile gated on
 /// `inventory.stock.view` (see menu_repository.dart), so a role without that
@@ -60,6 +62,44 @@ class _StockListScreenState extends State<StockListScreen> {
       appBar: AppBar(title: const Text('হাতে থাকা মজুদ')),
       body: Column(
         children: [
+          // ⭐ মজুদ মডিউল — মূল্য আর রিপোর্ট (মালিক, ৪ অক্টোবর ২০২৬: "stock qty, value, ivinno report")। মূল্য ওয়েবের রিপোর্ট
+          // থেকেই (`inventory.stock_value`) — খরচ দেখার চাবি না থাকলে সার্ভার মূল্যের কলামই পাঠায় না।
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
+                AppSpacing.md, AppSpacing.sm, AppSpacing.md, 0),
+            child: Row(children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  key: const Key('stock-value'),
+                  icon: const Icon(Icons.payments_outlined, size: 18),
+                  label: const Text('মূল্যসহ তালিকা'),
+                  onPressed: () =>
+                      Navigator.of(context).push(MaterialPageRoute<void>(
+                    builder: (_) => const ReportViewScreen(
+                      report: ReportSummary({
+                        'key': 'inventory.stock_value',
+                        'title': 'মজুদের মূল্য',
+                        'module': 'inventory'
+                      }),
+                    ),
+                  )),
+                ),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: OutlinedButton.icon(
+                  key: const Key('stock-reports'),
+                  icon: const Icon(Icons.assessment_outlined, size: 18),
+                  label: const Text('মজুদের রিপোর্ট'),
+                  onPressed: () =>
+                      Navigator.of(context).push(MaterialPageRoute<void>(
+                    builder: (_) => const ReportsScreen(
+                        module: 'inventory', title: 'মজুদের রিপোর্ট'),
+                  )),
+                ),
+              ),
+            ]),
+          ),
           Padding(
             padding: const EdgeInsets.all(AppSpacing.md),
             child: TextField(

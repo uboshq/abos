@@ -1,3 +1,5 @@
+import 'package:abos_mobile/features/printing/document_actions_sheet.dart';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -189,6 +191,70 @@ void main() {
       expect(asked.single, {'from': '2026-10-01', 'to': '2026-10-04'});
       expect(find.byKey(const Key('report-range')), findsOneWidget);
       expect(find.text('01/10/2026 — 04/10/2026'), findsOneWidget);
+    });
+
+    // ⭐ মজুদের রিপোর্ট — এক মডিউলের রিপোর্টই (মালিক, ৪ অক্টোবর ২০২৬)
+    testWidgets('a module list shows only that module', (tester) async {
+      await tester.pumpWidget(MaterialApp(
+        home: ReportsScreen(
+          module: 'inventory',
+          title: 'মজুদের রিপোর্ট',
+          loadList: () async => const [
+            ReportSummary({
+              'key': 'inventory.stock_value',
+              'title': 'মজুদের মূল্য',
+              'module': 'inventory'
+            }),
+            ReportSummary({
+              'key': 'sales.daily',
+              'title': 'দৈনিক বিক্রয়',
+              'module': 'sales'
+            }),
+          ],
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      expect(find.text('মজুদের রিপোর্ট'), findsOneWidget);
+      expect(find.text('মজুদের মূল্য'), findsOneWidget);
+      expect(find.text('দৈনিক বিক্রয়'), findsNothing,
+          reason: '⛔ অন্য মডিউলের রিপোর্ট মজুদের তালিকায়');
+    });
+
+    // ⭐ PDF — এই পর্দার একই তারিখে, দেখা · ছাপা · পাঠানোর শিটে
+    testWidgets('the PDF button asks for this report with these dates',
+        (tester) async {
+      String? askedKey;
+      Map<String, dynamic>? askedFilters;
+      await tester.pumpWidget(MaterialApp(
+        home: ReportViewScreen(
+          report: const ReportSummary({
+            'key': 'accounts.party_ledger',
+            'title': 'খতিয়ান',
+            'filters': ['date_range']
+          }),
+          today: () => DateTime(2026, 10, 4),
+          open: (key, p, f) async => page,
+          exportPdf: (key, filters) async {
+            askedKey = key;
+            askedFilters = filters;
+            return Uint8List.fromList('%PDF-1.4'.codeUnits);
+          },
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('report-pdf')));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(DocumentActionsSheet), findsOneWidget);
+      // ⓘ শিট PDF আনে কোনো কাজ চাপলে (ছাপা, পাঠানো — ফোনের যন্ত্র); তাই শিটের নিজের আনার পথটাই ডাকা
+      final bytes = await tester
+          .widget<DocumentActionsSheet>(find.byType(DocumentActionsSheet))
+          .loadPdf!('a4');
+      expect(String.fromCharCodes(bytes).startsWith('%PDF'), isTrue);
+      expect(askedKey, 'accounts.party_ledger');
+      expect(askedFilters, {'from': '2026-10-01', 'to': '2026-10-04'});
     });
 
     testWidgets('an undated report sends no dates and offers no range',
