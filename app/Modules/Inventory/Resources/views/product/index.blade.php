@@ -17,7 +17,22 @@
      * দুই জায়গায় হাতে লিখলে একদিন একটায় কলাম যোগ হত আর অন্যটায় নয়,
      * তাই একটাই তালিকা।
      */
+    /*
+     * ⭐ ক্রম নম্বর, সবার বাঁয়ে — মালিক, ৫ অক্টোবর ২০২৬: "product list er bame SL no daw"।
+     * ⓘ পাতা ধরে চলে: দ্বিতীয় পাতা ৫১ থেকে, প্রথম পাতার পরে। পণ্যের আইডি নয় — আইডি ফাঁক রেখে চলে, আর
+     * গোনার কাজে আসে না।
+     */
+    $serial = $products->getCollection()->values()
+        ->mapWithKeys(fn ($p, $i) => [$p->id => ($products->firstItem() ?? 1) + $i]);
+
     $columns = [
+        [
+            'key' => 'serial',
+            'label' => __('core.table.serial'),
+            'numeric' => true,
+            'width' => '3rem',
+            'render' => fn ($p) => $serial[$p->id] ?? '',
+        ],
         [
             'key' => 'code',
             'label' => __('inventory::field.code'),
