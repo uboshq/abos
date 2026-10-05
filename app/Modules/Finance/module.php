@@ -185,14 +185,15 @@ return [
              * যা ফেরত দিতে হবে। ⭐ মালিকের ক্রমে দায় আগে, সম্পদ পরে —
              * খাতা যে ক্রমে পড়া হয়।
              *
-             * ⓘ ব্যাংক ঋণ আর হাতধার পাশাপাশি, কারণ মানুষ দুইটা একসাথেই
-             * খোঁজেন। ⚠️ কিন্তু এক পর্দায় মেলানো যেত না — মঞ্জুরি,
-             * জামানত, ড্রয়িং পাওয়ার আর নবায়ন, একটাও হাতধারে নেই।
+             * ⭐ ভাঁজ নেই — "ব্যাংক ঋণ" আর "হাতধার" উপরের ট্যাবে আর বাঁয়ের মেনুতে নিজের নিজের সারি
+             * (মালিকের সরাসরি আদেশ, ৫ অক্টোবর ২০২৬, সমন্বয়কের মারফত: "দায়" দলটা সরাও)। ⓘ পাশাপাশি থাকে, কারণ
+             * মানুষ দুইটা একসাথেই খোঁজেন; ⚠️ এক পর্দায় মেলানো যেত না — মঞ্জুরি, জামানত, ড্রয়িং পাওয়ার আর নবায়ন,
+             * একটাও হাতধারে নেই।
              */
 
-            ['label' => 'finance::menu.bank_facility', 'cluster' => 'liability', 'icon' => 'building',
+            ['label' => 'finance::menu.bank_facility', 'icon' => 'building',
                 'route' => 'finance.bank_facility.index', 'permission' => 'finance.bank_facility.view'],
-            ['label' => 'finance::menu.hand_loan', 'cluster' => 'liability', 'icon' => 'handover',
+            ['label' => 'finance::menu.hand_loan', 'icon' => 'handover',
                 'route' => 'finance.hand_loan.index', 'permission' => 'finance.hand_loan.view'],
 
             /*

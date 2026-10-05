@@ -98,10 +98,26 @@ final class TheMenuHadThreeDoorsToOneRoomTest extends TestCase
         }
 
         $this->assertSame(
-            ['overview', 'ownership', 'liability', 'savings', 'contracts'],
+            ['overview', 'ownership', 'savings', 'contracts'],
             $folds,
             'লেনদেনের ভাঁজগুলো আর মালিকের ক্রমে নেই।',
         );
+
+        /*
+         * ⭐ "দায়" আর ভাঁজ নয় — মালিকের সরাসরি আদেশ, ৫ অক্টোবর ২০২৬ (সমন্বয়কের মারফত): ব্যাংক ঋণ আর হাতধার নিজের
+         * নিজের সারি, উপরের ট্যাবে আর বাঁয়ের মেনুতে। ⓘ জায়গা আগের মতো — মালিকানার পরে, দায়ের ক্রমে।
+         */
+        $rows = $this->rowsOf('transactions');
+        $routes = array_map(fn (array $row) => $row['route'] ?? null, $rows);
+        foreach (['finance.bank_facility.index', 'finance.hand_loan.index'] as $route) {
+            $row = $rows[array_search($route, $routes, true)] ?? null;
+            $this->assertNotNull($row, $route.' লেনদেনের সারিতে নেই।');
+            $this->assertNull($row['cluster'] ?? null, '⛔ '.$route.' আবার কোনো ভাঁজের ভিতরে — মালিক নিজের সারি চেয়েছেন।');
+        }
+        $this->assertSame(1, array_search('finance.hand_loan.index', $routes, true) - array_search('finance.bank_facility.index', $routes, true),
+            'ব্যাংক ঋণ আর হাতধার পাশাপাশি।');
+        $this->assertGreaterThan(array_search('finance.profit.index', $routes, true), array_search('finance.bank_facility.index', $routes, true),
+            'দায় মালিকানার পরে — মালিকের ক্রম।');
 
         // ⓘ ছয় নম্বর ভাগ "সেটআপ" — কোরের সেটিংস দলেই বসে
         $setup = array_map(fn (array $row) => $row['route'] ?? null, $this->rowsOf('settings'));
