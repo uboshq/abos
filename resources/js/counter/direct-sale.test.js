@@ -2284,3 +2284,113 @@ describe('ফ্রি-ভাণ্ডারের বাইরে: সুইচ
         expect(c.freeBeyondNote).toBe('')
     })
 })
+
+/*
+ * ── খসড়া রাখার পরে লট বদলেছে — খোলামাত্র জানানো ──────────────────────
+ * মালিক, ৪ অক্টোবর ২০২৬ (DRF-0014): রাখা খসড়া খোলার আগে অন্য বিল লট OM-10513
+ * থেকে সব বেচে দিয়েছিল, OM-238-এ ছিল ২; সেবা ঠিকই থামাল, কিন্তু পর্দা কিছু
+ * বলেনি, তাই কোন সারিটা ঠিক করতে হবে তা বোঝা যায়নি।
+ *
+ * ⛔ মালিকের "ক": পর্দা নিজে লট ভাগ করে না — কার্ট হুবহু থাকে, কেবল পপ-আপ,
+ * শব্দ আর সারিতে লাল চিহ্ন। ⚠️ লট মেলে আইডি ধরে: OM-10513 দুই পণ্যে আছে।
+ */
+describe('খোলা খসড়ার লট বদলেছে — পপ-আপ, শব্দ, কার্ট অটুট', () => {
+    const TEXTS = {
+        notForSales: 'বিক্রয়ের জন্য নয়',
+        lotChangedLine: ':product — লট :lot-এ :have, সারিতে :want।',
+        lotShortBadge: 'লট :lot-এ এখন :have, সারিতে :want',
+    }
+
+    const LOTS = {
+        1: [
+            { id: '101', productId: '1', no: 'OM-9903', expiry: '2026-12-01', qty: '19' },
+            { id: '102', productId: '1', no: 'OM-10513', expiry: '2027-01-01', qty: '30' },
+        ],
+        // ⚠️ একই নম্বর, আরেক পণ্য, আরেক আইডি — নম্বরে মেলালে ভুল লট ধরা পড়ত
+        2: [
+            { id: '201', productId: '2', no: 'OM-10513', expiry: '2026-11-01', qty: '40' },
+            { id: '202', productId: '2', no: 'OM-238', expiry: '2027-02-01', qty: '2' },
+        ],
+    }
+
+    const line = (over) => ({
+        key: 1, id: 1, name: 'মি. কচমচ', unit: 'pcs', qty: '24', freeQty: '1', rate: '50',
+        discountPercent: '', unitId: '', gifts: [], batchId: '102', batchNo: 'OM-10513', ...over,
+    })
+
+    const open = (lines, { lots = LOTS, viewOnly = false } = {}) => {
+        const c = counter({
+            texts: TEXTS,
+            lots,
+            warehouseId: 3,
+            catalogue: [product({ id: 1, name: 'মি. কচমচ' }), product({ id: 2, name: 'চানাচুর' })],
+            resume: { invoiceId: 14, customerId: 5, screen: { lines, nextKey: 9 }, fields: {}, viewOnly },
+        })
+        c.soundTheAlarm = vi.fn()
+        vi.stubGlobal('localStorage', { getItem: () => null, setItem: () => {}, removeItem: () => {} })
+        c.start()
+        vi.unstubAllGlobals()
+
+        return c
+    }
+
+    it('লট ০ (তালিকায় নেই) আর লট ছোট — দুই সারিই পপ-আপে, শব্দ বাজে, কার্ট হুবহু', () => {
+        const lines = [
+            line({ key: 1, id: 1, batchId: '103', batchNo: 'OM-10513' }),
+            line({ key: 2, id: 2, name: 'চানাচুর', qty: '4', freeQty: '', batchId: '202', batchNo: 'OM-238' }),
+        ]
+        const c = open(JSON.parse(JSON.stringify(lines)))
+
+        expect(c.lotChangedOpen).toBe(true)
+        expect(c.lotChangedLines).toEqual([
+            'মি. কচমচ — লট OM-10513-এ 0, সারিতে 25।',
+            'চানাচুর — লট OM-238-এ 2, সারিতে 4।',
+        ])
+        expect(c.soundTheAlarm).toHaveBeenCalledTimes(1)
+        expect(c.lines).toEqual(lines)
+        expect(c.lotShortText(c.lines[1])).toBe('লট OM-238-এ এখন 2, সারিতে 4')
+    })
+
+    it('ফ্রি-ও গোনা হয়: ৩০-এর লটে ২৯ + ২ ফ্রি না কুলায়, ২৯ + ১ কুলায়', () => {
+        expect(open([line({ qty: '29', freeQty: '2' })]).lotChangedLines)
+            .toEqual(['মি. কচমচ — লট OM-10513-এ 30, সারিতে 31।'])
+        expect(open([line({ qty: '29', freeQty: '1' })]).lotChangedOpen).toBe(false)
+    })
+
+    it('লট মেলে আইডি ধরে — অন্য পণ্যের একই নম্বরের বড় লট দেখে চুপ থাকে না', () => {
+        const c = open([line({ qty: '35', freeQty: '' })])
+
+        expect(c.lotChangedLines).toEqual(['মি. কচমচ — লট OM-10513-এ 30, সারিতে 35।'])
+    })
+
+    it('সব লট ঠিক থাকলে কিছুই নয় — পপ-আপ নেই, শব্দ নেই, কার্ট হুবহু', () => {
+        const lines = [
+            line({ key: 1 }),
+            line({ key: 2, id: 2, name: 'চানাচুর', qty: '2', freeQty: '', batchId: '202', batchNo: 'OM-238' }),
+            line({ key: 3, id: 1, qty: '5', freeQty: '', batchId: '', batchNo: '' }),
+        ]
+        const c = open(JSON.parse(JSON.stringify(lines)))
+
+        expect(c.lotChangedOpen).toBe(false)
+        expect(c.lotChangedLines).toEqual([])
+        expect(c.soundTheAlarm).not.toHaveBeenCalled()
+        expect(c.lines).toEqual(lines)
+        expect(c.lines.map(l => c.lotShortText(l))).toEqual(['', '', ''])
+    })
+
+    it('সইয়ের অপেক্ষার (কেবল দেখা) বিক্রিতে কিছুই নয়', () => {
+        const c = open([line({ batchId: '103' })], { viewOnly: true })
+
+        expect(c.lotChangedOpen).toBe(false)
+        expect(c.soundTheAlarm).not.toHaveBeenCalled()
+    })
+
+    it('"বুঝেছি" পপ-আপ বন্ধ করে, লাল চিহ্ন থাকে', () => {
+        const c = open([line({ batchId: '103' })])
+
+        c.closeLotChanged()
+
+        expect(c.lotChangedOpen).toBe(false)
+        expect(c.lotShortText(c.lines[0])).toBe('লট OM-10513-এ এখন 0, সারিতে 25')
+    })
+})

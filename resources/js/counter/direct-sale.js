@@ -513,6 +513,9 @@ export default function directSale({
             this.driverName = String(resume.fields?.driver_name ?? '');
             this.driverPhone = String(resume.fields?.driver_phone ?? '');
             this.draftFound = false;
+
+            /* ⭐ খসড়া রাখার পরে লটের মাল বদলাতে পারে — খোলামাত্র জানানো (মালিক, ৪ অক্টোবর ২০২৬, DRF-0014) */
+            if (! this.viewOnly) this.checkLotsAfterResume();
         },
 
         /** এই ক্রেতার রাখা খসড়াগুলো — পেন্ডিং ড্রপডাউনের তালিকা। */
@@ -2809,6 +2812,71 @@ export default function directSale({
                 l => l.key !== this.editingKey
                     && String(l.id) === String(this.picked?.id) && String(l.batchId) === String(batchId),
             );
+        },
+
+        /**
+         * ⭐ কার্টের সারি তার লটের এখনকার মালে কুলায় কি না — মালিক, ৪ অক্টোবর ২০২৬ (DRF-0014)।
+         *
+         * ⓘ খসড়া রাখার পরে অন্য বিল ঐ লট থেকে বেচে দিতে পারে; সেবা তখন পাকা করতে দেয় না
+         * ("লট … আছে কেবল …"), কিন্তু কোন সারিটা দোষী তা পর্দা বলত না।
+         *
+         * ⚠️ লট মেলে **আইডি** ধরে, নম্বর ধরে নয় — একই নম্বর (OM-10513) কয়েকটা পণ্যে আছে।
+         * ⓘ চাওয়া = পরিমাণ × প্যাকের গুণক + ফ্রি (ফ্রি মূল এককে, সেবার মতোই); লট তালিকায় না থাকলে
+         * (খালি বা মেয়াদ গেছে) তাতে ০। ⛔ গুদাম না জানলে লটের তালিকাই আসে না — তখন কিছু বলা হয় না।
+         * ⛔ মালিকের "ক": পর্দা নিজে কিছু বদলায় না, কেবল দেখায়।
+         *
+         * @return {{no: string, have: number, want: number}|null}
+         */
+        lotShortFor(line) {
+            if (! line || String(line.batchId ?? '') === '' || ! this.warehouseId) return null;
+
+            const lot = (lotBook[String(line.id)] ?? []).find(l => String(l.id) === String(line.batchId));
+            const unit = ((this.packs ?? {})[line.id] ?? []).find(u => String(u.id) === String(line.unitId ?? ''));
+            const factor = unit ? (Number(unit.factor ?? 1) || 1) : 1;
+            const want = Math.round(((Number(line.qty) || 0) * factor + (Number(line.freeQty) || 0)) * 10000) / 10000;
+            const have = lot ? Math.round((Number(lot.qty) || 0) * 10000) / 10000 : 0;
+
+            return want > have ? { no: String(lot?.no ?? line.batchNo ?? ''), have, want } : null;
+        },
+
+        /** ⓘ সারির লাল চিহ্নের লেখা — কুলালে খালি। */
+        lotShortText(line) {
+            const short = this.lotShortFor(line);
+
+            if (! short) return '';
+
+            return String(texts.lotShortBadge ?? '')
+                .replace(':lot', short.no)
+                .replace(':have', this.qty(String(short.have)))
+                .replace(':want', this.qty(String(short.want)));
+        },
+
+        /* ⭐ খোলা খসড়ার পপ-আপ — যে সারিগুলো লটে কুলায় না, সবগুলো একসাথে */
+        lotChangedOpen: false,
+        lotChangedLines: [],
+
+        /**
+         * ⭐ খসড়া খোলার মুহূর্তে প্রতিটা সারি লটের এখনকার মালের সাথে মেলানো।
+         * ⓘ না কুলালে একটা পপ-আপ (সব সারির নাম, লট, আছে, চায়) আর শব্দ; সব ঠিক থাকলে কিছুই নয়।
+         * ⛔ কার্ট ছোঁয়া হয় না — মালিকের "ক" (৪ অক্টোবর ২০২৬): বিক্রেতা নিজে সারি বদলান।
+         */
+        checkLotsAfterResume() {
+            this.lotChangedLines = this.lines
+                .map(line => ({ line, short: this.lotShortFor(line) }))
+                .filter(x => x.short !== null)
+                .map(x => String(texts.lotChangedLine ?? '')
+                    .replace(':product', String(x.line.name ?? ''))
+                    .replace(':lot', x.short.no)
+                    .replace(':have', this.qty(String(x.short.have)))
+                    .replace(':want', this.qty(String(x.short.want))));
+
+            this.lotChangedOpen = this.lotChangedLines.length > 0;
+
+            if (this.lotChangedOpen) this.soundTheAlarm();
+        },
+
+        closeLotChanged() {
+            this.lotChangedOpen = false;
         },
 
         /* ⓘ তালিকায় দেখানোর লেখা — নম্বর, মেয়াদ, আর কতটা আছে। */

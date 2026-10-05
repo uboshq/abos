@@ -308,6 +308,11 @@ return [
     'credit_held' => 'বিল না হওয়া ডিও ও খসড়া',
     'credit_over' => 'সীমা পার',
     'open_draft_title' => 'এই ক্রেতার খসড়া খোলা আছে',
+    /* ⭐ খোলা খসড়ার লট বদলেছে — মালিক, ৪ অক্টোবর ২০২৬ (DRF-0014) */
+    'lot_changed_title' => 'খসড়া রাখার পরে মজুদ বদলেছে',
+    'lot_changed_line' => ':product — লট :lot-এ :have, সারিতে :want।',
+    'lot_changed_hint' => 'লাল চিহ্নের সারিগুলো সম্পাদনা করে পরিমাণ কমান, বাকিটা আরেকটা লট বেছে নতুন সারিতে দিন।',
+    'lot_short_badge' => 'লট :lot-এ এখন :have, সারিতে :want',
     'stuck_challan_signature' => 'সইয়ের অপেক্ষায় — ডেলিভারি চালান',
     'stuck_invoice_signature' => 'সইয়ের অপেক্ষায় — বিল',
     'stuck_deposit_signature' => 'সইয়ের অপেক্ষায় — জমা :no',

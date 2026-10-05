@@ -303,6 +303,8 @@
                   'lotIsRequired' => __('sales::validation.lot_must_be_chosen'),
                   'lotAlreadyInCart' => __('sales::validation.lot_already_in_cart'),
                   'lotHoldsLess' => __('sales::validation.lot_holds_less'),
+                  'lotChangedLine' => __('sales::message.lot_changed_line'),
+                  'lotShortBadge' => __('sales::message.lot_short_badge'),
                   'itemAlreadyInCart' => __('sales::validation.item_already_in_cart'),
                   'freeNextAt' => __('sales::message.free_next_at'),
                   'freeRatio' => __('sales::message.free_ratio'),
@@ -591,6 +593,33 @@
                    x-text="creditWarning"></p>
 
                 <button type="button" @click="closeCreditWarning()"
+                        class="mt-6 w-full rounded-(--radius-field) bg-(--color-warning) px-4 py-3
+                               text-lg font-bold text-(--color-warning-ink) hover:bg-(--color-warning-hover)">
+                    {{ __('sales::message.credit_wall_ok') }}
+                </button>
+            </div>
+        </div>
+
+        {{-- ⭐ খোলা খসড়ার লট বদলেছে — মালিক, ৪ অক্টোবর ২০২৬ (DRF-0014)। ⓘ খোলামাত্র, শব্দসহ;
+             কার্ট ছোঁয়া হয় না ([[checkLotsAfterResume()]])। --}}
+        <div data-popup="lot-changed" x-show="lotChangedOpen" x-cloak role="alertdialog" aria-modal="true"
+             aria-labelledby="lot-changed-title"
+             class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+            <div class="w-full max-w-lg rounded-(--radius-card) border-2 border-(--color-warning)
+                        bg-(--color-surface-card) p-6 text-center shadow-lg">
+                <p id="lot-changed-title" class="text-2xl font-bold text-(--color-warning-hover)">
+                    {{ __('sales::message.lot_changed_title') }}
+                </p>
+
+                <ul class="mt-4 space-y-1 text-start text-lg font-semibold leading-relaxed text-(--color-ink)">
+                    <template x-for="(text, n) in lotChangedLines" :key="n">
+                        <li x-text="text"></li>
+                    </template>
+                </ul>
+
+                <p class="mt-3 text-sm text-(--color-ink-muted)">{{ __('sales::message.lot_changed_hint') }}</p>
+
+                <button type="button" @click="closeLotChanged()"
                         class="mt-6 w-full rounded-(--radius-field) bg-(--color-warning) px-4 py-3
                                text-lg font-bold text-(--color-warning-ink) hover:bg-(--color-warning-hover)">
                     {{ __('sales::message.credit_wall_ok') }}

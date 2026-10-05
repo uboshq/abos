@@ -46,6 +46,11 @@
                                                   x-text="@js(__('sales::field.lot')) + ' ' + line.batchNo"></span>
                                         </template>
 
+                                        {{-- ⭐ লটে আর কুলায় না (খসড়া রাখার পরে অন্য বিল বেচেছে) — লাল চিহ্ন, মালিক, ৪ অক্টোবর ২০২৬ --}}
+                                        <span x-show="lotShortText(line) !== ''" x-cloak data-lot-short
+                                              class="ms-2 inline-block rounded-full border border-(--color-danger) bg-(--color-badge-danger-bg) px-2 text-2xs font-bold text-(--color-badge-danger-ink)"
+                                              x-text="lotShortText(line)"></span>
+
                                         {{-- ⭐ মার্জিন — খরচের চাবিধারীর জন্য, লটের নিচে (NEXUS §৩২) --}}
                                         @include('sales::direct.partials.margin-line')
 
