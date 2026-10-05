@@ -57,9 +57,14 @@ final class PackBackfill
 
                 try {
                     $report[] = ['company' => $company->code, ...$this->forCompany()];
-                } finally {
-                    $apply ? DB::commit() : DB::rollBack();
+                } catch (\Throwable $e) {
+                    // ⛔ ভাঙলে এই কোম্পানির কিছুই পাকা নয় — অডিট গ১৭ ([[PackRebase::run()]]-এর একই সারাই)
+                    DB::rollBack();
+
+                    throw $e;
                 }
+
+                $apply ? DB::commit() : DB::rollBack();
             });
         }
 

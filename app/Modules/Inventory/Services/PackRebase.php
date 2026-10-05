@@ -121,9 +121,17 @@ final class PackRebase
             $this->packs($product, $from, $to, $per);
 
             $after = $this->totals($product);
-        } finally {
-            $apply ? DB::commit() : DB::rollBack();
+        } catch (\Throwable $e) {
+            /*
+             * ⛔ ভাঙলে কিছুই পাকা নয় — Inventory অডিট গ১৭, ৪ অক্টোবর ২০২৬। আগে `finally`-তে `apply` হলেই commit: মজুদ ২৪ গুণ,
+             * অথচ কাগজ আর পণ্যের একক আগের মতো, আর আবার চালালে আরেকবার গুণ। ⓘ ত্রুটিটা চাপা পড়ে না।
+             */
+            DB::rollBack();
+
+            throw $e;
         }
+
+        $apply ? DB::commit() : DB::rollBack();
 
         return [
             'product' => (string) $product->code,
