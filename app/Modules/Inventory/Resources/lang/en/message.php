@@ -140,6 +140,7 @@ return [
     'count_recorded' => 'The count is saved. The books have not moved yet.',
     'count_approved' => 'The difference is settled and the books are updated.',
     'count_cancelled' => 'The count is cancelled - the books did not move. A new count of these goods can be written now.',
+    'adjust_waiting_for_approver' => 'Count :document is written - the books have not moved. Someone allowed to accept counts will settle the difference.',
     'count_settle_note' => 'Accepting writes the difference into the books. It cannot be undone.',
     'count_waiting_for_approver' => 'This count is waiting for someone who can accept the difference.',
     'no_inspections' => 'No inspections yet.',

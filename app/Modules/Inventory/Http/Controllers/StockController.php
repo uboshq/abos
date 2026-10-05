@@ -515,6 +515,16 @@ class StockController extends Controller implements HasMiddleware
             'expiry_date' => $request->input('expiry_date'),
         ]]);
 
+        /*
+         * ⛔ মেনে নেওয়া কেবল মেনে নেওয়ার চাবিতে — Inventory অডিট গ৬, ৪ অক্টোবর ২০২৬।
+         * ⚠️ আগে এই পর্দা কেবল সমন্বয়ের চাবি দেখে নিজেই মেনে নিত, তাই গণনার আলাদা চাবিটা ("গুদামের লোক গোনেন,
+         * মেনে নেন না") এখান দিয়ে এড়ানো যেত — গোনা ০ লিখলেই পুরো মজুদ ঘাটতি হয়ে খাতায়। ⓘ চাবি না থাকলে কাগজটা
+         * খসড়া থাকে, আর যিনি পারেন তিনি গণনার পাতা থেকে মেনে নেন ([[StockCountPolicy::approve()]])।
+         */
+        if (! $request->user()->can('approve', $count)) {
+            return back()->with('saved', __('inventory::message.adjust_waiting_for_approver', ['document' => $count->document_no]));
+        }
+
         $this->counts->approve($count, $data['reason']);
 
         $difference = (string) ($count->lines->first()?->difference ?? '0');
