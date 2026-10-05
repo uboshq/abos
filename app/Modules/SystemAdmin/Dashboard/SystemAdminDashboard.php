@@ -7,13 +7,18 @@ namespace App\Modules\SystemAdmin\Dashboard;
 use App\Core\Contracts\ProvidesDashboard;
 use App\Core\Engines\Dashboard\Breakdown;
 use App\Core\Engines\Dashboard\DashboardDefinition;
+use App\Core\Engines\Dashboard\DateRange;
 use App\Core\Engines\Dashboard\Listing;
 use App\Core\Engines\Dashboard\Stat;
 use App\Core\Engines\Dashboard\Tile;
+use App\Core\Services\PermissionSyncer;
 use App\Core\Support\CompanyContext;
+use App\Models\AuditTrail;
 use App\Models\Company;
+use App\Models\ErrorEvent;
 use App\Models\User;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 use Spatie\Permission\Models\Role;
 
 /**
@@ -87,9 +92,12 @@ final class SystemAdminDashboard implements ProvidesDashboard
                     hint: __('system_admin::dashboard.companies_hint'),
                     href: route('system_admin.company.index'),
                 ),
+
+                ...self::backgroundJobs(),
             ],
 
-            panels: self::whoCanGetIn(),
+            // ⓘ প্রথম চার্ট আগের জায়গাতেই — হোমে মডিউলের প্রথম চার্টটা বসে; নতুনগুলো তার পরে (৬ অক্টোবর ২০২৬)
+            panels: [...self::whoCanGetIn(), ...self::twoStep(), ...self::accessChanges(), ...self::errorsThisWeek()],
 
             listings: [
                 new Listing(
@@ -156,6 +164,179 @@ final class SystemAdminDashboard implements ProvidesDashboard
             ],
             hint: __('system_admin::dashboard.who_gets_in_hint', ['count' => (int) ($row->two_step ?? 0)]),
         )];
+    }
+
+    /**
+     * ⭐ পেছনের কাজ — সারিতে অপেক্ষায় কতগুলো, ব্যর্থ কতগুলো (মালিকের ড্যাশবোর্ড নকশা, ৬ অক্টোবর ২০২৬)।
+     *
+     * ⚠️ `jobs` আর `failed_jobs` ফ্রেমওয়ার্কের টেবিল — **company_id কলামই নেই** ([[EveryRawQueryNamesItsCompanyTest]]-এর
+     * NO_COMPANY_COLUMN)। ⓘ তাই সংখ্যাটা গোটা সার্ভারের, এক কোম্পানির নয়। ⛔ সেজন্য কেবল এই কোম্পানির সুপার অ্যাডমিন
+     * দেখেন — বাকিদের কাছে অন্য কোম্পানির কাজও গোনায় চলে আসত। ⓘ কেবল গোনা; কাজের ভেতরের লেখা (payload) কখনো পড়া হয় না।
+     * ⓘ নতুন ড্যাশবোর্ডের অংশ (config abos.dashboards_v2)।
+     *
+     * @return list<Stat>
+     */
+    private static function backgroundJobs(): array
+    {
+        if (! config('abos.dashboards_v2') || ! self::superAdminHere()) {
+            return [];
+        }
+
+        // ⚠️ কোম্পানিহীন টেবিল — company_id নেই, তাই ছাঁকনিও নেই; দরজাটা উপরের সুপার অ্যাডমিনের প্রশ্ন
+        $queued = DB::table('jobs')->count();
+        $failed = DB::table('failed_jobs')->count();
+
+        return [
+            new Stat(
+                label: __('system_admin::dashboard.jobs_queued'),
+                value: (string) $queued,
+                hint: __('system_admin::dashboard.jobs_queued_hint'),
+            ),
+            new Stat(
+                label: __('system_admin::dashboard.jobs_failed'),
+                value: (string) $failed,
+                hint: __('system_admin::dashboard.jobs_failed_hint'),
+                tone: $failed > 0 ? Stat::BAD : Stat::GOOD,
+            ),
+        ];
+    }
+
+    /**
+     * ⭐ দ্বিতীয় ধাপ — কতজনের চালু, কতজনের নয় (মালিকের ড্যাশবোর্ড নকশা, ৬ অক্টোবর ২০২৬)।
+     *
+     * ⓘ "চালু" মানে উপরের "ব্যবহারকারীর অবস্থা"-র ইঙ্গিতের একই শর্ত: গোপন চাবি বসানো **আর** নিশ্চিত করা
+     * (`mfa_confirmed_at`) — বসানো কিন্তু নিশ্চিত না-করা মানে লগইনে কোড চাওয়াই হয় না। ⓘ এই কোম্পানির মানুষ (পিভট),
+     * যোগফল উপরের "ব্যবহারকারী" সংখ্যার সমান। ⛔ কেবল `system_admin.user.manage`।
+     * ⓘ নতুন ড্যাশবোর্ডের অংশ (config abos.dashboards_v2)।
+     *
+     * @return list<Breakdown>
+     */
+    private static function twoStep(): array
+    {
+        if (! config('abos.dashboards_v2') || ! auth()->user()?->can('system_admin.user.manage')) {
+            return [];
+        }
+
+        $row = User::query()
+            ->whereHas('companies', fn ($q) => $q->whereKey(CompanyContext::id()))
+            ->selectRaw('SUM(CASE WHEN mfa_secret IS NOT NULL AND mfa_confirmed_at IS NOT NULL THEN 1 ELSE 0 END) as two_step')
+            ->selectRaw('COUNT(*) as everyone')
+            ->toBase()->first();
+
+        $with = (int) ($row->two_step ?? 0);
+
+        return [new Breakdown(
+            label: __('system_admin::dashboard.two_step'),
+            parts: [
+                ['label' => __('system_admin::dashboard.two_step_on'), 'value' => (string) $with],
+                ['label' => __('system_admin::dashboard.two_step_off'), 'value' => (string) ((int) ($row->everyone ?? 0) - $with)],
+            ],
+            hint: __('system_admin::dashboard.two_step_hint'),
+            chart: 'donut',
+        )];
+    }
+
+    /**
+     * ⭐ ব্যবহারকারী আর অনুমতির বদল — এই সপ্তাহে কী কতবার (মালিকের ড্যাশবোর্ড নকশা, ৬ অক্টোবর ২০২৬)।
+     *
+     * ⓘ উৎস নিরীক্ষার খাতা ([[AuditTrail]], কোম্পানির দেয়ালে বসা), কেবল ব্যবহারকারীর সারি: তৈরি, বদল, রোল বদল
+     * (`roles_changed`), কোম্পানি বা নাগালের বদল, পাসওয়ার্ড, দ্বিতীয় ধাপ বন্ধ/নতুন করে — নাম খাতার নিজের ভাষায়
+     * ([[AuditTrail::actionInWords()]])। ⚠️ রোলের ভেতরের চাবি বদল আজ খাতায় ওঠে না (রোলের পর্দা নিরীক্ষা লেখে না),
+     * তাই এখানে কেবল "কার রোল বদলাল" — "রোলটা নিজে কী পেল" নয়।
+     * ⓘ সপ্তাহ = আজসহ শেষ সাত দিন। ⛔ কেবল `system_admin.user.manage`। ⓘ নতুন ড্যাশবোর্ডের অংশ (config abos.dashboards_v2)।
+     *
+     * @return list<Breakdown>
+     */
+    private static function accessChanges(): array
+    {
+        if (! config('abos.dashboards_v2') || ! auth()->user()?->can('system_admin.user.manage')) {
+            return [];
+        }
+
+        $from = Carbon::today()->subDays(6);
+
+        $rows = AuditTrail::query()
+            ->where('auditable_type', (new User)->getMorphClass())
+            ->where('created_at', '>=', $from)
+            ->selectRaw('action, COUNT(*) as n')
+            ->groupBy('action')
+            ->orderByDesc('n')
+            ->toBase()->get();
+
+        if ($rows->isEmpty()) {
+            return [];
+        }
+
+        return [new Breakdown(
+            label: __('system_admin::dashboard.access_changes'),
+            parts: $rows->map(fn ($r) => ['label' => AuditTrail::actionInWords($r->action), 'value' => (string) (int) $r->n])->all(),
+            hint: __('system_admin::dashboard.access_changes_hint', ['count' => (int) $rows->sum('n')]),
+            chart: 'hbars',
+            range: DateRange::label($from, Carbon::today()),
+        )];
+    }
+
+    /**
+     * ⭐ ব্যবস্থার ভুল — এই সপ্তাহে কতগুলো, তার কয়টা কেউ দেখেননি (মালিকের ড্যাশবোর্ড নকশা, ৬ অক্টোবর ২০২৬)।
+     *
+     * ⓘ উৎস কোরের ভুলের খাতা ([[ErrorEvent]], `error_events`); একই ভুল বারবার হলে একটাই সারি (`times` বাড়ে), তাই
+     * গোনাটা আলাদা ভুলের। "এই সপ্তাহে" = শেষবার দেখা দিয়েছে আজসহ শেষ সাত দিনে।
+     * ⛔ কেবল এই কোম্পানির সারি (`company_id`) — কোম্পানিহীন ভুল কে দেখবেন, সেই প্রশ্নের উত্তর কেবল নিরীক্ষা মডিউলের
+     * [[CompanylessRows]]-এ, আর এই মডিউল সেটা চেনে না (`depends_on`)। ⓘ পুরো খাতা নিরীক্ষার ভুলের পর্দায়।
+     * ⛔ কেবল `system_admin.settings.manage`। ⓘ নতুন ড্যাশবোর্ডের অংশ (config abos.dashboards_v2)।
+     *
+     * @return list<Breakdown>
+     */
+    private static function errorsThisWeek(): array
+    {
+        if (! config('abos.dashboards_v2') || ! auth()->user()?->can('system_admin.settings.manage')) {
+            return [];
+        }
+
+        $from = Carbon::today()->subDays(6);
+
+        $row = ErrorEvent::query()
+            ->where('company_id', CompanyContext::id())
+            ->where('last_seen_at', '>=', $from)
+            ->selectRaw('SUM(CASE WHEN acknowledged_at IS NULL THEN 1 ELSE 0 END) as unseen')
+            ->selectRaw('SUM(CASE WHEN acknowledged_at IS NULL THEN 0 ELSE 1 END) as seen')
+            ->toBase()->first();
+
+        return [new Breakdown(
+            label: __('system_admin::dashboard.errors_week'),
+            parts: [
+                ['label' => __('system_admin::dashboard.errors_unseen'), 'value' => (string) (int) ($row->unseen ?? 0)],
+                ['label' => __('system_admin::dashboard.errors_seen'), 'value' => (string) (int) ($row->seen ?? 0)],
+            ],
+            hint: __('system_admin::dashboard.errors_week_hint'),
+            chart: 'columns',
+            range: DateRange::label($from, Carbon::today()),
+        )];
+    }
+
+    /**
+     * দর্শক কি **এই** কোম্পানির সুপার অ্যাডমিন — প্রতিবার ডাটাবেসে, চলতি কোম্পানি ধরে (৬ অক্টোবর ২০২৬)।
+     *
+     * ⚠️ `$user->roles` নয়: spatie teams-এ সম্পর্কটা যে কোম্পানিতে লোড হয়েছিল তার রোল ধরে রাখে, আর এখানে ভুল উত্তর
+     * মানে গোটা সার্ভারের সংখ্যা ভুল মানুষের হাতে। ⓘ নিরীক্ষা মডিউলের একই প্রশ্নের ছাঁচ — এই মডিউল সেটা চেনে না, তাই এখানে।
+     * ⛔ দর্শক বা কোম্পানি না থাকলে উত্তর "না"।
+     */
+    private static function superAdminHere(): bool
+    {
+        $viewer = auth()->user();
+        $company = CompanyContext::id();
+
+        if ($viewer === null || $company === null) {
+            return false;
+        }
+
+        return DB::table('model_has_roles as mhr')
+            ->join('roles as r', 'r.id', '=', 'mhr.role_id')
+            ->where('mhr.model_type', $viewer->getMorphClass())
+            ->where('mhr.model_id', $viewer->getKey())
+            ->where('mhr.company_id', $company)
+            ->where('r.name', PermissionSyncer::SUPER_ADMIN_ROLE)
+            ->exists();
     }
 
     private static function lastBackup(): ?int

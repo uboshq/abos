@@ -7,11 +7,14 @@ namespace App\Modules\Governance\Dashboard;
 use App\Core\Contracts\ProvidesDashboard;
 use App\Core\Engines\Dashboard\Breakdown;
 use App\Core\Engines\Dashboard\DashboardDefinition;
+use App\Core\Engines\Dashboard\DateRange;
 use App\Core\Engines\Dashboard\Listing;
 use App\Core\Engines\Dashboard\Stat;
 use App\Core\Engines\Dashboard\Tile;
 use App\Models\AuditTrail;
+use App\Models\DocumentDelivery;
 use App\Models\ExportLog;
+use App\Models\LoginAttempt;
 use Illuminate\Support\Carbon;
 
 /**
@@ -73,7 +76,8 @@ final class GovernanceDashboard implements ProvidesDashboard
                 ),
             ],
 
-            panels: [...self::whatWasDone(), ...self::loginsToday()],
+            // ⓘ প্রথম চার্ট আগের জায়গাতেই — হোমে মডিউলের প্রথম চার্টটা বসে; নতুনটা তার পরে (৬ অক্টোবর ২০২৬)
+            panels: [...self::whatWasDone(), ...self::loginsToday(), ...self::papersThisMonth()],
 
             listings: [
                 new Listing(
@@ -90,6 +94,8 @@ final class GovernanceDashboard implements ProvidesDashboard
                     empty: __('governance::message.nothing_yet'),
                     href: route('governance.audit.index'),
                 ),
+
+                ...self::latestLogins(),
             ],
         );
     }
@@ -131,6 +137,8 @@ final class GovernanceDashboard implements ProvidesDashboard
             label: __('governance::dashboard.this_month_actions'),
             parts: $parts,
             hint: __('governance::dashboard.this_month_actions_hint', ['count' => (int) $rows->sum('n')]),
+            // ⓘ সময়ের চার্ট — কোন দিন থেকে কোন দিন (মালিক, ৫ অক্টোবর ২০২৬; বসানো ৬ অক্টোবর ২০২৬)
+            range: DateRange::label(Carbon::today()->startOfMonth(), Carbon::today()),
         )];
     }
 
@@ -182,6 +190,87 @@ final class GovernanceDashboard implements ProvidesDashboard
             label: __('governance::dashboard.logins_today'),
             parts: $parts,
             hint: __('governance::dashboard.logins_today_hint'),
+            range: DateRange::label(Carbon::today(), Carbon::today()),
+        )];
+    }
+
+    /**
+     * ⭐ এ মাসে কাগজ কীভাবে বেরোল — ছাপা, নামানো, লিংকে পাঠানো, লিংক খোলা (মালিকের ড্যাশবোর্ড নকশা, ৬ অক্টোবর ২০২৬)।
+     *
+     * ⓘ খাতাটা কোরের ([[DocumentDelivery]], `doc_deliveries`) — প্রতিটা মডিউলের ছাপার পর্দা এখানেই লেখে, আর মডেলটা
+     * নিজেই কোম্পানির দেয়ালে বসা (`BelongsToCompany`)। ⛔ `sal_print_jobs` নেওয়া হয়নি: ওটা বিক্রয়ের টেবিল, আর এই মডিউল
+     * বিক্রয় চেনে না (`depends_on`) — তাছাড়া ওটা কেবল বিক্রয়ের বিল গোনে, এটা সব কাগজ।
+     * ⓘ চারটা ভাগ সবসময় ([[DocumentDelivery::WAYS]]) — শূন্যও দেখায়, কারণ "এ মাসে একটাও লিংক খোলা হয়নি" নিজেই একটা খবর।
+     * ⛔ কেবল `governance.audit.view` — নিরীক্ষার খাতা যে চাবিতে খোলে। ⓘ নতুন ড্যাশবোর্ডের অংশ (config abos.dashboards_v2)।
+     *
+     * @return list<Breakdown>
+     */
+    private static function papersThisMonth(): array
+    {
+        if (! config('abos.dashboards_v2') || ! auth()->user()?->can('governance.audit.view')) {
+            return [];
+        }
+
+        $from = Carbon::today()->startOfMonth();
+
+        $rows = DocumentDelivery::query()
+            ->where('created_at', '>=', $from)
+            ->selectRaw('how, COUNT(*) as n')
+            ->groupBy('how')
+            ->toBase()->pluck('n', 'how');
+
+        $parts = array_map(fn (string $how) => [
+            'label' => __('governance::dashboard.paper_'.$how),
+            'value' => (string) (int) ($rows[$how] ?? 0),
+        ], DocumentDelivery::WAYS);
+
+        return [new Breakdown(
+            label: __('governance::dashboard.papers_this_month'),
+            parts: $parts,
+            hint: __('governance::dashboard.papers_this_month_hint', ['count' => array_sum(array_map(fn ($p) => (int) $p['value'], $parts))]),
+            chart: 'columns',
+            range: DateRange::label($from, Carbon::today()),
+        )];
+    }
+
+    /**
+     * ⭐ শেষ ঢোকার চেষ্টাগুলো — কে, কখন, পারলেন কি না, আর কোন আইপি থেকে (মালিকের ড্যাশবোর্ড নকশা, ৬ অক্টোবর ২০২৬)।
+     *
+     * ⓘ আইপি ঢোকার খাতার নিজের ঘর (`login_history.ip_address`) — ঢোকার খাতার পর্দাও ঠিক এটাই দেখায়।
+     * ⛔ সারিগুলো কেবল [[CompanylessRows::logins()]] দিয়ে — উপরের লগইন চার্টের একই দেয়াল; অচেনা নামের চেষ্টা (আর তার
+     * আইপি) কেবল সুপার অ্যাডমিন দেখেন। ⛔ কেবল `governance.login.view`।
+     * ⓘ পুরনো "সর্বশেষ বদল" তালিকা হুবহু থাকে — সুইচ বন্ধে পুরনো পাতা বদলায় না; এটা নতুন ড্যাশবোর্ডে আলাদা তালিকা।
+     *
+     * @return list<Listing>
+     */
+    private static function latestLogins(): array
+    {
+        $viewer = auth()->user();
+
+        if (! config('abos.dashboards_v2') || ! $viewer?->can('governance.login.view')) {
+            return [];
+        }
+
+        $known = [LoginAttempt::WRONG_PASSWORD, LoginAttempt::UNKNOWN, LoginAttempt::NEEDS_CODE, LoginAttempt::WRONG_CODE, LoginAttempt::LOCKED, LoginAttempt::INACTIVE];
+
+        return [new Listing(
+            label: __('governance::dashboard.latest_logins'),
+            columns: [
+                ['key' => 'when', 'label' => __('governance::field.when'), 'width' => '11rem',
+                    'render' => fn (LoginAttempt $a) => $a->created_at?->format('d M Y, H:i') ?? '—'],
+                ['key' => 'who', 'label' => __('governance::field.who'),
+                    'render' => fn (LoginAttempt $a) => $a->who()],
+                ['key' => 'result', 'label' => __('governance::field.result'), 'width' => '11rem',
+                    'render' => fn (LoginAttempt $a) => $a->succeeded
+                        ? __('governance::message.got_in')
+                        : (in_array($a->reason, $known, true) ? __('governance::message.why_'.$a->reason) : __('governance::message.refused'))],
+                ['key' => 'ip', 'label' => __('governance::field.where_from'), 'width' => '9rem',
+                    'render' => fn (LoginAttempt $a) => $a->ip_address ?: '—'],
+            ],
+            rows: app(\App\Modules\Governance\Services\CompanylessRows::class)->logins($viewer)
+                ->with('user')->latestFirst()->limit(10)->get(),
+            empty: __('governance::message.nothing_yet'),
+            href: route('governance.login.index'),
         )];
     }
 }

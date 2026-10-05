@@ -7,13 +7,16 @@ namespace App\Modules\MasterData\Dashboard;
 use App\Core\Contracts\ProvidesDashboard;
 use App\Core\Engines\Dashboard\Breakdown;
 use App\Core\Engines\Dashboard\DashboardDefinition;
+use App\Core\Engines\Dashboard\Listing;
 use App\Core\Engines\Dashboard\Stat;
 use App\Core\Engines\Dashboard\Tile;
+use App\Models\AuditTrail;
 use App\Modules\MasterData\Models\Brand;
 use App\Modules\MasterData\Models\Location;
 use App\Modules\MasterData\Models\ProductCategory;
 use App\Modules\MasterData\Models\Tax;
 use App\Modules\MasterData\Models\Unit;
+use Illuminate\Support\Str;
 
 /**
  * মাস্টার ডাটা মডিউলের ড্যাশবোর্ড।
@@ -28,9 +31,27 @@ use App\Modules\MasterData\Models\Unit;
  * **তালিকাগুলো ভরা আছে তো?** একটা খালি একক-তালিকা বা কর-তালিকা মানে
  * পণ্য বানানোই আটকে যাবে, আর ভুলটা ধরা পড়বে অনেক দূরে — পণ্যের ফর্মে,
  * একটা খালি ড্রপডাউন হিসেবে, যেখান থেকে কারণটা বোঝা যায় না।
+ *
+ * ── ⏸ "আজ আর এ মাসে কত নতুন" কেন এখনো নেই (৬ অক্টোবর ২০২৬) ─────────────
+ * ⓘ নকশা চায় পাঁচটা তালিকার (গ্রাহক, সরবরাহকারী, পণ্য, কর্মী, গুদাম) নতুন সারির গোনা। ⛔ এই মডিউল ঐ মডিউলগুলো
+ * চেনে না, আর তালিকার কোয়েরি (Builder) থাকে কেবল প্রতিটা মডিউলের নিজের `health()`-এ ([[MasterHealth::widget()]])।
+ * ⚠️ সংখ্যাটা আনতে হলে প্রতিটা মডিউলের `health()`-কে ঐ একই Builder একটা নতুন কোরের সহায়কে দিতে হবে (যেমন
+ * `created_at` ধরে `new_today`/`new_month` গোনা, আর `parts`-এ বসানো) — অর্থাৎ পাঁচটা অন্য মডিউলের ফাইল বদলানো।
+ * ⏸ তাই এই ধাপে বাদ; ঐ পাঁচটা ফাইল যিনি দেখেন, তাঁর সাথে একসাথে বসবে।
  */
 final class MasterDataDashboard implements ProvidesDashboard
 {
+    /**
+     * ⓘ অন্য মডিউলের মাস্টার তালিকা — ক্লাসের **শেষ নাম** দিয়ে চেনা, পুরো namespace দিয়ে নয় (৬ অক্টোবর ২০২৬)।
+     *
+     * ⛔ এই মডিউল গ্রাহক, সরবরাহকারী, পণ্য, কর্মী বা গুদামের মডিউল চেনে না (`depends_on`) — `use` বা পুরো ক্লাসের নাম
+     * লিখলে সীমারেখার পাহারা ([[BoundariesTest]]) ঠিকই লাল হত। ⓘ নিরীক্ষার খাতায় (`audit_trails.auditable_type`) যা লেখা
+     * আছে, তার শেষ অংশ মিলিয়ে দেখা হয় — মডিউলটা বন্ধ বা মুছে গেলেও পর্দা ভাঙে না, কেবল সারিটা আসে না।
+     *
+     * @var list<string>
+     */
+    private const OTHER_LISTS = ['Customer', 'Supplier', 'Product', 'Employee', 'Warehouse'];
+
     public static function dashboard(): DashboardDefinition
     {
         $health = self::health();
@@ -107,7 +128,55 @@ final class MasterDataDashboard implements ProvidesDashboard
 
                 ...$health['panels'],
             ],
+
+            listings: self::recentlyChanged(),
         );
+    }
+
+    /**
+     * ⭐ সদ্য বদলানো মাস্টার রেকর্ড — শেষ দশটা (মালিকের ড্যাশবোর্ড নকশা §১২, ৬ অক্টোবর ২০২৬)।
+     *
+     * ⓘ উৎস কোরের নিরীক্ষার খাতা ([[AuditTrail]]) — মডেলটা নিজেই কোম্পানির দেয়ালে বসা, তাই অন্য কোম্পানির দাগ আসে না।
+     * ⓘ "মাস্টার" মানে এই মডিউলের নিজের সব তালিকা (একক, কর, ব্র্যান্ড, এলাকা…) আর [[self::OTHER_LISTS]]-এর পাঁচটা।
+     * ⚠️ খাতায় কোন কোন ধরন আছে, আগে সেটা পড়া হয় (একটা DISTINCT), তারপর কেবল মিলে যাওয়াগুলো — অন্য মডিউলের নাম
+     * এখানে লেখা থাকে না।
+     * ⛔ কেবল `governance.audit.view` — নিরীক্ষার খাতা যে চাবিতে খোলে; নাহলে মাস্টার ডেটা দেখার চাবি দিয়েই অন্যের
+     * গ্রাহকের নাম আর কে কবে বদলাল, তা পড়া যেত। ⓘ নতুন ড্যাশবোর্ডের অংশ (config abos.dashboards_v2)।
+     *
+     * @return list<Listing>
+     */
+    private static function recentlyChanged(): array
+    {
+        if (! config('abos.dashboards_v2') || ! auth()->user()?->can('governance.audit.view')) {
+            return [];
+        }
+
+        $own = Str::beforeLast(Unit::class, '\\').'\\';
+
+        $types = AuditTrail::query()->distinct()->pluck('auditable_type')
+            ->filter(fn ($type) => str_starts_with((string) $type, $own)
+                || (str_contains((string) $type, '\\Models\\') && in_array(class_basename((string) $type), self::OTHER_LISTS, true)))
+            ->values()->all();
+
+        return [new Listing(
+            label: __('master_data::dashboard.recently_changed'),
+            columns: [
+                ['key' => 'when', 'label' => __('master_data::dashboard.col_when'), 'width' => '11rem',
+                    'render' => fn (AuditTrail $t) => $t->created_at?->format('d M Y, H:i') ?? '—'],
+                ['key' => 'who', 'label' => __('master_data::dashboard.col_who'), 'width' => '10rem',
+                    'render' => fn (AuditTrail $t) => $t->user?->name ?? __('master_data::dashboard.system')],
+                ['key' => 'list', 'label' => __('master_data::dashboard.col_list'), 'width' => '9rem',
+                    'render' => fn (AuditTrail $t) => $t->moduleLabel() ?? '—'],
+                ['key' => 'what', 'label' => __('master_data::dashboard.col_what'), 'width' => '9rem',
+                    'render' => fn (AuditTrail $t) => AuditTrail::actionInWords($t->action)],
+                ['key' => 'record', 'label' => __('master_data::dashboard.col_record'),
+                    'render' => fn (AuditTrail $t) => $t->title()],
+            ],
+            rows: $types === []
+                ? collect()
+                : AuditTrail::query()->with('user')->whereIn('auditable_type', $types)->latest('id')->limit(10)->get(),
+            empty: __('master_data::dashboard.recently_changed_empty'),
+        )];
     }
 
     /**

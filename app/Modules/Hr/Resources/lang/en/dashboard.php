@@ -38,4 +38,18 @@ return [
     'by_department_hint' => ':count current employees',
     'no_department' => 'No department set',
     'other_departments' => 'Other departments',
+
+    // ⭐ মালিকের পুরো নকশা, ৬ অক্টোবর ২০২৬
+    'workforce_hint' => ':count current employees',
+    'by_branch' => 'Employees by branch',
+    'no_branch' => 'No branch set',
+    'other_branches' => 'Other branches',
+    'by_designation' => 'Employees by designation',
+    'no_designation' => 'No designation set',
+    'other_designations' => 'Other designations',
+    'allowance_deduction' => 'Allowances and deductions',
+    'allowance_deduction_hint' => 'Earnings :earning · deductions :deduction · confirmed payslips of the month shown',
+    'deduction_head' => '− :name',
+    'cost_by_department' => 'Salary cost by department',
+    'cost_by_department_hint' => 'Gross pay :total · confirmed payslips of the month shown',
 ];

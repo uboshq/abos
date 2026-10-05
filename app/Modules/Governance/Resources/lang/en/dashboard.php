@@ -23,4 +23,13 @@ return [
     'login_code' => 'Second-step code',
     'login_locked' => 'Locked or inactive',
     'login_other' => 'Stopped for another reason',
+
+    // Papers out this month, and the latest sign-in attempts with their IP (6 Oct 2026)
+    'papers_this_month' => 'Papers — how they went out this month',
+    'papers_this_month_hint' => ':count times this month — bills, challans and vouchers of every module',
+    'paper_printed' => 'Printed',
+    'paper_downloaded' => 'Downloaded',
+    'paper_shared' => 'Sent as a link',
+    'paper_opened' => 'Link opened',
+    'latest_logins' => 'Latest sign-in attempts — from which IP',
 ];

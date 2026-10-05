@@ -24,4 +24,23 @@ return [
     'within_15' => '8–15 days',
     'within_30' => '16–30 days',
     'later' => 'After 30 days',
+
+    // The rest of the spec: discount, gifts, coupons, budget, live offers (6 Oct 2026)
+    'discount_this_month' => 'Discount given this month',
+    'discount_this_month_hint' => ':range — amount and percent discounts, reversed ones left out',
+    'gifts_this_month' => 'Gifts given this month',
+    'gifts_this_month_hint' => ':range — gift slips out of the godown, fully returned ones left out',
+    'coupons' => 'Coupons — issued vs redeemed',
+    'coupons_issued' => 'Issued',
+    'coupons_redeemed' => 'Redeemed',
+    'budget_used' => 'Budget vs spent — open offers',
+    'budget_ceiling' => 'Budget',
+    'budget_spent' => 'Spent',
+    'live_list' => 'Running now — which offer ends when',
+    'live_list_empty' => 'No offer is running right now.',
+    'col_code' => 'Code',
+    'col_name' => 'Offer',
+    'col_type' => 'Type',
+    'col_ends' => 'Ends',
+    'col_days_left' => 'Days left',
 ];

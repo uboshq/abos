@@ -38,4 +38,18 @@ return [
     'by_department_hint' => 'চলতি :count জন কর্মী',
     'no_department' => 'বিভাগ বসানো হয়নি',
     'other_departments' => 'অন্যান্য বিভাগ',
+
+    // ⭐ মালিকের পুরো নকশা, ৬ অক্টোবর ২০২৬
+    'workforce_hint' => 'চলতি :count জন কর্মী',
+    'by_branch' => 'শাখা অনুযায়ী কর্মী',
+    'no_branch' => 'শাখা বসানো হয়নি',
+    'other_branches' => 'অন্যান্য শাখা',
+    'by_designation' => 'পদবি অনুযায়ী কর্মী',
+    'no_designation' => 'পদবি বসানো হয়নি',
+    'other_designations' => 'অন্যান্য পদবি',
+    'allowance_deduction' => 'ভাতা ও কর্তন',
+    'allowance_deduction_hint' => 'মোট আয় :earning · কর্তন :deduction · দেখানো মাসের নিশ্চিত বেতনশিট',
+    'deduction_head' => '− :name',
+    'cost_by_department' => 'বিভাগ অনুযায়ী বেতন খরচ',
+    'cost_by_department_hint' => 'মোট বেতন :total · দেখানো মাসের নিশ্চিত বেতনশিট',
 ];

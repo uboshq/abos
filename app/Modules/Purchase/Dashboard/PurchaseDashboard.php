@@ -119,9 +119,13 @@ final class PurchaseDashboard implements ProvidesDashboard
                     href: route('purchase.order.index'),
                     tone: Stat::WARN,
                 ),
+
+                // ⭐ এ মাসের ফেরত আর সইয়ের অপেক্ষার বিল — মালিকের নকশা, ৬ অক্টোবর ২০২৬ ([[PurchaseCharts]])
+                ...PurchaseCharts::stats(),
             ],
 
-            panels: [self::boughtAgainstPaid(), ...self::topSuppliers()],
+            // ⚠️ প্রথম চার্টটা হোমে যায় — নতুনগুলো তার পরে (৬ অক্টোবর ২০২৬)
+            panels: [self::boughtAgainstPaid(), ...self::topSuppliers(), ...PurchaseCharts::panels()],
 
             listings: [
                 new Listing(
@@ -140,6 +144,7 @@ final class PurchaseDashboard implements ProvidesDashboard
                     href: route('purchase.bill.index'),
                 ),
                 ...self::goodsNotYetIn(),
+                ...PurchaseCharts::listings(),
             ],
         );
     }

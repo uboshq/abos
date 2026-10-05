@@ -31,4 +31,20 @@ return [
     'others' => 'Others',
     'by_module' => 'Waiting, by module',
     'by_module_hint' => 'Where signatures are held up',
+
+    // ⭐ মালিকের পুরো নকশা, ৬ অক্টোবর ২০২৬
+    'approved_today' => 'Approved today',
+    'approved_today_hint' => 'Given the final yes today',
+    'rejected_today' => 'Rejected today',
+    'rejected_today_hint' => 'Turned down today',
+    'average_time' => 'Average time to decide',
+    'average_time_hint' => 'This month, from sending to the final yes or no · :count decided',
+    'hours' => ':n hours',
+    'days' => ':n days',
+    'overdue' => 'Past the time limit',
+    'overdue_hint' => 'Waiting past the flow time limit · no-limit requests left out',
+    'delegations_today' => 'Signing handed over today',
+    'delegations_today_hint' => 'Hand-overs in force today and not withdrawn',
+    'my_queue' => 'Waiting for my signature, by module',
+    'my_queue_hint' => ':count in my inbox',
 ];

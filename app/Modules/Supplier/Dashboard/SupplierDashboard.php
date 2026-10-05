@@ -67,12 +67,17 @@ final class SupplierDashboard implements ProvidesDashboard
                     hint: __('supplier::dashboard.new_hint'),
                     href: route('supplier.index'),
                 ),
+
+                // ⭐ এ মাসে কেনা — মালিকের নকশা, ৬ অক্টোবর ২০২৬ ([[SupplierCharts]])
+                ...SupplierCharts::stats(),
             ],
 
-            panels: [...self::mostOwed(), ...self::ageing()],
+            // ⚠️ প্রথম চার্টের জায়গা অপরিবর্তিত — নতুনটা শেষে (৬ অক্টোবর ২০২৬)
+            panels: [...self::mostOwed(), ...self::ageing(), ...SupplierCharts::panels()],
 
             listings: [
                 ...self::principals(),
+                ...SupplierCharts::listings(),
                 new Listing(
                     label: __('supplier::dashboard.newest'),
                     columns: [

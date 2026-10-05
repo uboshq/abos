@@ -19,4 +19,14 @@ return [
     'same_hint' => 'Active rows with exactly the same phone or name — likely one party entered twice',
     'inactive' => 'Inactive rows — by list',
     'inactive_hint' => 'Inactive rows are not counted but stay in the list',
+
+    // Recently changed master records (6 Oct 2026)
+    'recently_changed' => 'Recently changed master records — last ten',
+    'recently_changed_empty' => 'No change to a master list is in the trail yet.',
+    'col_when' => 'When',
+    'col_who' => 'Who',
+    'col_list' => 'Which list',
+    'col_what' => 'What happened',
+    'col_record' => 'Record',
+    'system' => 'The system',
 ];

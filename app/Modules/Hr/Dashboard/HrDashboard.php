@@ -18,6 +18,9 @@ use App\Modules\Hr\Models\Attendance;
 use App\Modules\Hr\Models\Employee;
 use App\Modules\Hr\Models\LeaveApplication;
 use App\Modules\Hr\Models\PayrollRun;
+use App\Modules\Hr\Models\Payslip;
+use App\Modules\Hr\Models\PayslipLine;
+use App\Modules\Hr\Models\SalaryHead;
 use Illuminate\Contracts\Database\Query\Builder;
 use Illuminate\Support\Carbon;
 
@@ -91,7 +94,8 @@ final class HrDashboard implements ProvidesDashboard
                 ),
             ],
 
-            panels: [self::todaysRoll($today), ...self::byDepartment(), ...self::leaveThisMonth(), ...self::comingAndGoing(), ...self::salaryCost()],
+            panels: [self::todaysRoll($today), ...self::byDepartment(), ...self::byBranch(), ...self::byDesignation(), ...self::leaveThisMonth(),
+                ...self::comingAndGoing(), ...self::salaryCost(), ...self::allowancesAndDeductions(), ...self::costByDepartment()],
 
             listings: [
                 new Listing(
@@ -312,6 +316,242 @@ final class HrDashboard implements ProvidesDashboard
             points: $points,
             firstLabel: __('hr::field.gross'),
             secondLabel: __('hr::field.net'),
+        )];
+    }
+
+    /**
+     * ⭐ শাখা অনুযায়ী চালু কর্মী — মালিকের ড্যাশবোর্ড নকশা (৬ অক্টোবর ২০২৬)।
+     *
+     * ⓘ "বিভাগ অনুযায়ী"-র একই ভিত (দেখার শাখা, `leaving_date` নেই), তাই দুই চার্টের যোগফল এক। শাখাহীনরা আলাদা ভাগে।
+     * ⓘ হেডারে একটা শাখা বাছা থাকলে একটাই দণ্ড — সেটাই ঠিক, অন্য শাখার মানুষ এখানে দেখানোর কথা নয়।
+     * ⓘ নতুন ড্যাশবোর্ডের অংশ (config abos.dashboards_v2)।
+     *
+     * @return list<Breakdown>
+     */
+    private static function byBranch(): array
+    {
+        return self::workforceBy(
+            'branch_id',
+            fn (array $ids) => \App\Models\Branch::query()->whereIn('id', $ids)->get()->mapWithKeys(fn ($b) => [$b->id => $b->name()]),
+            label: __('hr::dashboard.by_branch'),
+            none: __('hr::dashboard.no_branch'),
+            others: __('hr::dashboard.other_branches'),
+            top: 6,
+            chart: 'hbars',
+        );
+    }
+
+    /**
+     * ⭐ পদবি অনুযায়ী চালু কর্মী — মালিকের ড্যাশবোর্ড নকশা (৬ অক্টোবর ২০২৬)।
+     *
+     * ⓘ একই ভিত; বড় থেকে ছোট প্রথম পাঁচটা, বাকি "অন্যান্য" — ছয় টুকরোর বেশি ডোনাটে চোখে আলাদা হয় না।
+     * ⓘ নতুন ড্যাশবোর্ডের অংশ (config abos.dashboards_v2)।
+     *
+     * @return list<Breakdown>
+     */
+    private static function byDesignation(): array
+    {
+        return self::workforceBy(
+            'designation_id',
+            fn (array $ids) => \App\Modules\MasterData\Models\Designation::query()->whereIn('id', $ids)->get()->mapWithKeys(fn ($d) => [$d->id => $d->name()]),
+            label: __('hr::dashboard.by_designation'),
+            none: __('hr::dashboard.no_designation'),
+            others: __('hr::dashboard.other_designations'),
+            top: 5,
+            chart: 'donut',
+        );
+    }
+
+    /**
+     * চালু কর্মী এক ঘর ধরে ভাগ — শাখা আর পদবির চার্টের একটাই নিয়ম (৬ অক্টোবর ২০২৬)।
+     *
+     * @param  callable(list<int>): \Illuminate\Support\Collection<int, string>  $names
+     * @return list<Breakdown>
+     */
+    private static function workforceBy(string $column, callable $names, string $label, string $none, string $others, int $top, string $chart): array
+    {
+        if (! config('abos.dashboards_v2')) {
+            return [];
+        }
+
+        $rows = self::inView(Employee::query()->whereNull('leaving_date'), 'hr_employees.branch_id')
+            ->selectRaw("hr_employees.{$column} as k, COUNT(*) as n")
+            ->groupBy("hr_employees.{$column}")
+            ->toBase()->get();
+
+        if ($rows->isEmpty()) {
+            return [];
+        }
+
+        $known = $names($rows->pluck('k')->filter()->map(fn ($id) => (int) $id)->values()->all());
+
+        $parts = $rows->map(fn ($r) => [
+            'label' => $r->k === null ? $none : ($known[$r->k] ?? '—'),
+            'n' => (int) $r->n,
+        ])->sortByDesc('n')->values();
+
+        $shown = $parts->take($top);
+        $rest = $parts->slice($top)->sum('n');
+
+        if ($rest > 0) {
+            $shown->push(['label' => $others, 'n' => $rest]);
+        }
+
+        return [new Breakdown(
+            label: $label,
+            parts: $shown->map(fn ($p) => ['label' => $p['label'], 'value' => (string) $p['n']])->all(),
+            hint: __('hr::dashboard.workforce_hint', ['count' => $parts->sum('n')]),
+            chart: $chart,
+        )];
+    }
+
+    /**
+     * কোন মাসের বেতন দেখানো হবে — এ মাসের নিশ্চিত বেতনশিট থাকলে এ মাস, নইলে তার আগের সর্বশেষ নিশ্চিত মাস (৬ অক্টোবর ২০২৬)।
+     *
+     * ⓘ বেতন সাধারণত মাসের শেষে হয়; কেবল "এ মাস" ধরলে মাসের প্রায় পুরোটা জুড়ে চার্ট ফাঁকা থাকত। কোন মাস, তা চার্টের নিচে লেখা থাকে।
+     * ⓘ "বেতন খরচ — গত ছয় মাস"-এর একই ছাঁকনি: নিশ্চিত রান, রানের শাখা দেখার শাখায়।
+     */
+    private static function payrollMonth(): ?Carbon
+    {
+        $month = self::payrollRuns()
+            ->where('month', '<=', Carbon::today()->startOfMonth()->toDateString())
+            ->max('month');
+
+        return $month !== null ? Carbon::parse((string) $month)->startOfMonth() : null;
+    }
+
+    /** নিশ্চিত বেতন-রান, দেখার শাখায় — বেতনের সব চার্টের একই ভিত। */
+    private static function payrollRuns(): \Illuminate\Database\Eloquent\Builder
+    {
+        return self::inView(PayrollRun::query(), 'hr_payroll_runs.branch_id')
+            ->whereIn('hr_payroll_runs.status', DocumentStatus::POSTED);
+    }
+
+    /**
+     * ⭐ ভাতা বনাম কর্তন — বেতনশিটের সারি, খাত ধরে (মালিকের ড্যাশবোর্ড নকশা, ৬ অক্টোবর ২০২৬)।
+     *
+     * ⓘ বেতনশিটের সারির (`hr_payslip_lines`) কপি করা খাত-নাম আর ধরন — খাতের নাম পরে বদলালেও সেদিনের নামই থাকে।
+     * আগে আয়ের খাতগুলো (মূল বেতনসহ), তারপর কর্তনের খাত সামনে "−" চিহ্ন নিয়ে; দুই দলের মোট ব্যাখ্যায়।
+     * ⓘ আয়ের মোট = বেতনশিটের `gross`, কর্তনের মোট = `deductions` — বেতনশিটের পর্দার সাথে এক।
+     * ⛔ টাকার অঙ্ক — কেবল `hr.payroll.view`। ⓘ নতুন ড্যাশবোর্ডের অংশ (config abos.dashboards_v2)।
+     *
+     * @return list<Breakdown>
+     */
+    private static function allowancesAndDeductions(): array
+    {
+        if (! config('abos.dashboards_v2') || ! auth()->user()?->can('hr.payroll.view')) {
+            return [];
+        }
+
+        $month = self::payrollMonth();
+
+        if ($month === null) {
+            return [];
+        }
+
+        $rows = PayslipLine::query()
+            ->join('hr_payslips', 'hr_payslips.id', '=', 'hr_payslip_lines.payslip_id')
+            ->whereNull('hr_payslips.deleted_at')
+            ->whereIn('hr_payslips.payroll_run_id', self::payrollRuns()->where('hr_payroll_runs.month', $month->toDateString())->select('hr_payroll_runs.id'))
+            ->selectRaw('hr_payslip_lines.kind, hr_payslip_lines.head_code, MAX(hr_payslip_lines.head_name_en) as name_en, '
+                .'MAX(hr_payslip_lines.head_name_bn) as name_bn, MIN(hr_payslip_lines.sort_order) as sort, SUM(hr_payslip_lines.amount) as total')
+            ->groupBy('hr_payslip_lines.kind', 'hr_payslip_lines.head_code')
+            ->toBase()->get()
+            ->filter(fn ($r) => bccomp((string) $r->total, '0', 4) !== 0)
+            ->sortBy(fn ($r) => [$r->kind === SalaryHead::DEDUCTION ? 1 : 0, (int) $r->sort, (string) $r->head_code])
+            ->values();
+
+        if ($rows->isEmpty()) {
+            return [];
+        }
+
+        $bn = app()->getLocale() === 'bn';
+        $earning = '0';
+        $deduction = '0';
+        $parts = [];
+
+        foreach ($rows as $r) {
+            $name = $bn && filled($r->name_bn) ? (string) $r->name_bn : (string) $r->name_en;
+            $isDeduction = $r->kind === SalaryHead::DEDUCTION;
+
+            if ($isDeduction) {
+                $deduction = bcadd($deduction, (string) $r->total, 4);
+            } else {
+                $earning = bcadd($earning, (string) $r->total, 4);
+            }
+
+            $parts[] = [
+                'label' => $isDeduction ? __('hr::dashboard.deduction_head', ['name' => $name]) : $name,
+                'value' => Money::format((string) $r->total),
+            ];
+        }
+
+        return [new Breakdown(
+            label: __('hr::dashboard.allowance_deduction'),
+            parts: $parts,
+            hint: __('hr::dashboard.allowance_deduction_hint', ['earning' => Money::format($earning), 'deduction' => Money::format($deduction)]),
+            chart: 'columns',
+            range: \App\Core\Engines\Dashboard\DateRange::label($month, $month->copy()->endOfMonth()),
+        )];
+    }
+
+    /**
+     * ⭐ বিভাগ অনুযায়ী বেতন খরচ — মালিকের ড্যাশবোর্ড নকশা (৬ অক্টোবর ২০২৬)।
+     *
+     * ⓘ খরচ = বেতনশিটের মোট আয় (`gross`) — কর্তন কর্মীর পকেট থেকে যায়, প্রতিষ্ঠানের খরচ কমায় না। বিভাগ কর্মীর
+     * আজকের বিভাগ (`hr_employees.department_id`); বিভাগহীনরা আলাদা ভাগে, যাতে যোগফল মাসের মোট বেতনের সমান থাকে।
+     * ⓘ ভাতা-কর্তনের চার্টের একই মাস আর একই রান; বড় থেকে ছোট প্রথম ছয়টা, বাকি "অন্যান্য"।
+     * ⛔ টাকার অঙ্ক — কেবল `hr.payroll.view`। ⓘ নতুন ড্যাশবোর্ডের অংশ (config abos.dashboards_v2)।
+     *
+     * @return list<Breakdown>
+     */
+    private static function costByDepartment(): array
+    {
+        if (! config('abos.dashboards_v2') || ! auth()->user()?->can('hr.payroll.view')) {
+            return [];
+        }
+
+        $month = self::payrollMonth();
+
+        if ($month === null) {
+            return [];
+        }
+
+        $rows = Payslip::query()
+            ->join('hr_employees', 'hr_employees.id', '=', 'hr_payslips.employee_id')
+            ->whereIn('hr_payslips.payroll_run_id', self::payrollRuns()->where('hr_payroll_runs.month', $month->toDateString())->select('hr_payroll_runs.id'))
+            ->selectRaw('hr_employees.department_id as k, COALESCE(SUM(hr_payslips.gross), 0) as cost')
+            ->groupBy('hr_employees.department_id')
+            ->toBase()->get();
+
+        if ($rows->isEmpty()) {
+            return [];
+        }
+
+        $names = \App\Modules\MasterData\Models\Department::query()
+            ->whereIn('id', $rows->pluck('k')->filter()->all())
+            ->get()->mapWithKeys(fn ($d) => [$d->id => $d->name()]);
+
+        $parts = $rows->map(fn ($r) => [
+            'label' => $r->k === null ? __('hr::dashboard.no_department') : ($names[$r->k] ?? '—'),
+            'cost' => (string) $r->cost,
+        ])->sort(fn ($a, $b) => bccomp($b['cost'], $a['cost'], 4))->values();
+
+        $sum = fn ($list) => $list->reduce(fn (string $carry, $p) => bcadd($carry, $p['cost'], 4), '0');
+
+        $shown = $parts->take(6);
+        $rest = $sum($parts->slice(6));
+
+        if (bccomp($rest, '0', 4) !== 0) {
+            $shown->push(['label' => __('hr::dashboard.other_departments'), 'cost' => $rest]);
+        }
+
+        return [new Breakdown(
+            label: __('hr::dashboard.cost_by_department'),
+            parts: $shown->map(fn ($p) => ['label' => $p['label'], 'value' => Money::format($p['cost'])])->all(),
+            hint: __('hr::dashboard.cost_by_department_hint', ['total' => Money::format($sum($parts))]),
+            chart: 'hbars',
+            range: \App\Core\Engines\Dashboard\DateRange::label($month, $month->copy()->endOfMonth()),
         )];
     }
 

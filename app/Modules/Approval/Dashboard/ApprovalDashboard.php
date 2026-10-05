@@ -5,12 +5,15 @@ declare(strict_types=1);
 namespace App\Modules\Approval\Dashboard;
 
 use App\Core\Contracts\ProvidesDashboard;
+use App\Core\Engines\Approval\ApprovalEngine;
 use App\Core\Engines\Dashboard\Breakdown;
 use App\Core\Engines\Dashboard\DashboardDefinition;
 use App\Core\Engines\Dashboard\Listing;
 use App\Core\Engines\Dashboard\Stat;
 use App\Core\Engines\Dashboard\Tile;
+use App\Core\Support\Money;
 use App\Models\Approval;
+use App\Models\ApprovalDelegation;
 use Illuminate\Support\Carbon;
 
 /**
@@ -58,9 +61,10 @@ final class ApprovalDashboard implements ProvidesDashboard
                     href: route('approval.inbox.index'),
                     tone: Stat::BAD,
                 ),
+                ...self::decisionsAndDelays(),
             ],
 
-            panels: [self::howLongWaiting(), ...self::byModule(), ...self::byPerson()],
+            panels: [self::howLongWaiting(), ...self::byModule(), ...self::byPerson(), ...self::myQueue()],
 
             listings: [
                 new Listing(
@@ -198,6 +202,146 @@ final class ApprovalDashboard implements ProvidesDashboard
                 ];
             })->all(),
             hint: __('approval::dashboard.by_module_hint'),
+        )];
+    }
+
+    /**
+     * ⭐ আজকের সিদ্ধান্ত, গতি, দেরি আর ভার — মালিকের ড্যাশবোর্ড নকশা (৬ অক্টোবর ২০২৬)।
+     *
+     * ⓘ আজ অনুমোদিত / আজ নাকচ = চূড়ান্ত অবস্থা আর `decided_at` আজকের দিনে (দিনের শুরু-শেষ PHP থেকে, SQL-এর ঘড়ি নয়)।
+     * ⓘ গড় সময় = এ মাসে যেগুলোর শেষ সিদ্ধান্ত (হ্যাঁ বা না) হয়েছে, জমা (`requested_at`) থেকে সিদ্ধান্ত (`decided_at`) পর্যন্ত;
+     * ৪৮ ঘণ্টার কম হলে ঘণ্টায়, নইলে দিনে। কোনো সিদ্ধান্ত না থাকলে "—", শূন্য নয় — শূন্য মানে "সাথে সাথে"।
+     * ⓘ সময় পার = অপেক্ষমাণ আর ছকের দেওয়া সময় (`due_at`) পেরিয়ে গেছে; সময়সীমা ছাড়া ছকের অনুরোধ এতে নেই, ঘরের ব্যাখ্যাতেও তাই লেখা।
+     * ⓘ চালু ভার = আজকের তারিখে চালু, হাতে বন্ধ হয়নি ([[ApprovalDelegation::scopeActive()]]-এর একই তিন শর্ত)।
+     * ⓘ নতুন ড্যাশবোর্ডের অংশ (config abos.dashboards_v2)।
+     *
+     * @return list<Stat>
+     */
+    private static function decisionsAndDelays(): array
+    {
+        if (! config('abos.dashboards_v2')) {
+            return [];
+        }
+
+        $now = Carbon::now();
+        $today = Carbon::today();
+        $monthStart = $today->copy()->startOfMonth();
+
+        $decidedToday = fn (string $status): string => (string) Approval::query()
+            ->where('status', $status)
+            ->whereBetween('decided_at', [$today, $today->copy()->endOfDay()])
+            ->count();
+
+        $speed = Approval::query()
+            ->whereIn('status', [Approval::APPROVED, Approval::REJECTED])
+            ->whereBetween('decided_at', [$monthStart, $monthStart->copy()->endOfMonth()])
+            ->selectRaw('COUNT(*) as n, AVG(TIMESTAMPDIFF(SECOND, requested_at, decided_at)) as secs')
+            ->toBase()->first();
+
+        $decided = (int) ($speed->n ?? 0);
+
+        $overdue = Approval::query()
+            ->where('status', Approval::PENDING)
+            ->whereNotNull('due_at')
+            ->where('due_at', '<', $now)
+            ->count();
+
+        return [
+            new Stat(
+                label: __('approval::dashboard.approved_today'),
+                value: $decidedToday(Approval::APPROVED),
+                hint: __('approval::dashboard.approved_today_hint'),
+                href: route('approval.inbox.index'),
+                tone: Stat::GOOD,
+            ),
+            new Stat(
+                label: __('approval::dashboard.rejected_today'),
+                value: $decidedToday(Approval::REJECTED),
+                hint: __('approval::dashboard.rejected_today_hint'),
+                href: route('approval.inbox.index'),
+                tone: Stat::BAD,
+            ),
+            new Stat(
+                label: __('approval::dashboard.average_time'),
+                value: $decided > 0 ? self::duration((string) $speed->secs) : '—',
+                hint: __('approval::dashboard.average_time_hint', ['count' => $decided]),
+            ),
+            new Stat(
+                label: __('approval::dashboard.overdue'),
+                value: (string) $overdue,
+                hint: __('approval::dashboard.overdue_hint'),
+                href: route('approval.inbox.index'),
+                tone: $overdue > 0 ? Stat::BAD : Stat::NEUTRAL,
+            ),
+            new Stat(
+                label: __('approval::dashboard.delegations_today'),
+                value: (string) ApprovalDelegation::query()->active($today->toDateString())->count(),
+                hint: __('approval::dashboard.delegations_today_hint'),
+                href: route('approval.delegation.index'),
+            ),
+        ];
+    }
+
+    /**
+     * সেকেন্ড থেকে পড়ার মতো সময় — ৪৮ ঘণ্টার কম হলে ঘণ্টায়, নইলে দিনে; এক দশমিক (৬ অক্টোবর ২০২৬)।
+     *
+     * ⓘ SQL-এর AVG দশমিক লেখা ফেরত দেয়; ভাগ আর গোল করা bcmath-এ ([[Money::round()]]), টাকার মতোই।
+     */
+    private static function duration(string $seconds): string
+    {
+        $seconds = bccomp($seconds, '0', 4) < 0 ? '0' : $seconds;
+        $hours = bcdiv($seconds, '3600', 6);
+
+        return bccomp($hours, '48', 6) < 0
+            ? __('approval::dashboard.hours', ['n' => Money::round($hours, 1)])
+            : __('approval::dashboard.days', ['n' => Money::round(bcdiv($hours, '24', 6), 1)]);
+    }
+
+    /**
+     * ⭐ আমার সইয়ের অপেক্ষায়, মডিউল ধরে — মালিকের ড্যাশবোর্ড নকশা (৬ অক্টোবর ২০২৬)।
+     *
+     * ⓘ ইনবক্সের হুবহু একই তালিকা ([[ApprovalEngine::pendingQueryFor()]]) — হাতে দেওয়া, ছকে আমার ধাপ, সময় পেরিয়ে উপরে আসা;
+     * এখানে আলাদা নিয়ম লিখলে ইনবক্স আর চার্ট দুই কথা বলত। যোগফল হোমের "আমার সিদ্ধান্তের অপেক্ষায়" সংখ্যার সমান।
+     * ⓘ ইনবক্সের ক্রম (`requested_at`) গোনায় লাগে না, আর ONLY_FULL_GROUP_BY-তে ভাঙত — তাই `reorder()`।
+     * ⛔ সই দেওয়ার চাবি (`approval.decide`) ছাড়া চার্টই নেই — হোমের ঘরের একই চাবি।
+     * ⓘ নতুন ড্যাশবোর্ডের অংশ (config abos.dashboards_v2)।
+     *
+     * @return list<Breakdown>
+     */
+    private static function myQueue(): array
+    {
+        $user = auth()->user();
+
+        if (! config('abos.dashboards_v2') || $user === null || ! $user->can('approval.decide')) {
+            return [];
+        }
+
+        $rows = app(ApprovalEngine::class)->pendingQueryFor($user)
+            ->reorder()
+            ->selectRaw('module, COUNT(*) as n')
+            ->groupBy('module')
+            ->orderByDesc('n')
+            ->toBase()->get();
+
+        if ($rows->isEmpty()) {
+            return [];
+        }
+
+        $registry = app(\App\Core\Module\ModuleRegistry::class);
+        $locale = app()->getLocale();
+
+        return [new Breakdown(
+            label: __('approval::dashboard.my_queue'),
+            parts: $rows->map(function ($r) use ($registry, $locale) {
+                $module = $r->module !== null ? $registry->get((string) $r->module) : null;
+
+                return [
+                    'label' => $module ? ($module->name[$locale] ?? $module->name['en']) : (string) ($r->module ?? '—'),
+                    'value' => (string) (int) $r->n,
+                ];
+            })->all(),
+            hint: __('approval::dashboard.my_queue_hint', ['count' => (int) $rows->sum('n')]),
+            chart: 'hbars',
         )];
     }
 }
