@@ -25,4 +25,7 @@ return [
     'cheque_clear' => 'চেক পাশ',
     'cheque_bounce' => 'চেক ফেরত',
     'inter_company' => 'আন্তঃকোম্পানি লেনদেন',
+    'till_opening' => 'নতুন ক্যাশবাক্সের খোলা জের',
+    'fixed_asset_register' => 'স্থায়ী সম্পদ নিবন্ধন (টাকার উৎসসহ)',
+    'fixed_asset_dispose' => 'স্থায়ী সম্পদ বিক্রি বা বাতিল',
 ];

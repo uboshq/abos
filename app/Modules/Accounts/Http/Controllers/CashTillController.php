@@ -119,9 +119,13 @@ class CashTillController extends Controller implements HasMiddleware
     {
         $till = $this->tills->create($request->validated());
 
+        // ⓘ খোলা জের সইয়ের অপেক্ষায় থাকলে সেটা বলা ([[AccountsSignature]])
+        $waiting = bccomp((string) $till->account?->opening_balance, '0', 4) !== 0
+            && app(\App\Core\Engines\Approval\ApprovalEngine::class)->latestFor($till, \App\Modules\Accounts\Services\AccountsSignature::TILL_OPENING)?->status === \App\Models\Approval::PENDING;
+
         return redirect()
             ->route('accounts.till.show', $till)
-            ->with('saved', __('accounts::message.till_created'));
+            ->with('saved', $waiting ? __('accounts::message.till_opening_awaiting') : __('accounts::message.till_created'));
     }
 
     public function show(Request $request, CashTill $till): View

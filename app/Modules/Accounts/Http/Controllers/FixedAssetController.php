@@ -219,9 +219,10 @@ class FixedAssetController extends Controller implements HasMiddleware
                 ->where('code', StandardChart::DEPRECIATION_EXPENSE)->value('id'),
         ]);
 
+        // ⓘ সইয়ের অপেক্ষায় থাকলে "নিবন্ধিত" বলা মিথ্যা হত ([[AccountsSignature]])
         return redirect()
             ->route('accounts.asset.show', $asset)
-            ->with('status', __('accounts::asset.registered'));
+            ->with('status', $asset->isAwaiting() ? __('accounts::asset.awaiting_signature') : __('accounts::asset.registered'));
     }
 
     /** মাস শেষের দৌড় — সব সচল সম্পদে একবারে। */
@@ -272,14 +273,15 @@ class FixedAssetController extends Controller implements HasMiddleware
             'disposed_on' => ['required', 'date'],
         ]);
 
-        $this->assets->dispose(
+        $after = $this->assets->dispose(
             $asset,
             (string) $data['disposal_amount'],
             (int) $data['into_account_id'],
             $data['disposed_on'],
         );
 
-        return back()->with('status', __('accounts::asset.disposed'));
+        // ⓘ সইয়ের অপেক্ষায় সম্পদটা এখনো চালু — "বিক্রি হয়েছে" বলা মিথ্যা হত ([[AccountsSignature]])
+        return back()->with('status', $after->isActive() ? __('accounts::asset.awaiting_signature') : __('accounts::asset.disposed'));
     }
 
     /** @return Collection<int, Account> */

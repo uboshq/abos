@@ -86,4 +86,7 @@ return [
     'already_there' => 'It is already at that branch',
     'move_history' => 'Where it has been',
     'disposal_head_missing' => 'The account for gain or loss on asset sales (:code) is not in the chart — update the chart (abos:sync-chart).',
+    // ⭐ গ১ — নিবন্ধন সইয়ের অপেক্ষায় (৪ অক্টোবর ২০২৬)
+    'awaiting' => 'Awaiting signature',
+    'awaiting_signature' => 'This is awaiting its signature — it reaches the books on the last one.',
 ];

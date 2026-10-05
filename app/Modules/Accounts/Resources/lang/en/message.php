@@ -219,4 +219,5 @@ return [
     'monthly_cash_net' => 'Net cash for the period — transfers between the accounts shown are netted out',
     // ⭐ গ১ — সইয়ের জন্য থামা আন্তঃকোম্পানি লেনদেন (৪ অক্টোবর ২০২৬)
     'inter_company_awaiting' => 'The inter-company transfer is awaiting its signature — both books get it on the last one.',
+    'till_opening_awaiting' => 'The till is open; its opening balance awaits the signature and reaches the books on the last one.',
 ];

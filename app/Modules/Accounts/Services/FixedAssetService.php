@@ -134,11 +134,26 @@ final class FixedAssetService
                     'branch_id' => $data['branch_id'] ?? CompanyContext::branchId(),
                     'document_no' => $this->numbers->next('FA'),
                     'method' => $method,
-                    'status' => FixedAsset::ACTIVE,
+                    // ⓘ টাকার উৎস থাকলে আগে সইয়ের অপেক্ষায় — নিচে সই লাগে না দেখলে তখনই চালু
+                    'status' => $funding !== null ? FixedAsset::AWAITING : FixedAsset::ACTIVE,
                     'created_by' => auth()->id(),
                 ]);
 
+                /*
+                 * ⭐ সই — গ১, Accounts-Finance অডিট, ৪ অক্টোবর ২০২৬ ([[AccountsSignature]])।
+                 *
+                 * ⛔ আগে সম্পদ নিবন্ধনেই টাকার উৎস (নগদ, ব্যাংক, দেনা, ব্যক্তি) সই ছাড়া খাতায় বসত। ⓘ ছক চালু থাকলে সম্পদ
+                 * "সইয়ের অপেক্ষায়" থাকে — অবচয় ধরে না, খাতায় নেই; শেষ সইয়ে [[finishRegistered()]] ঠিক এই উৎস দিয়েই
+                 * দাখিলা বসায়। ছক বন্ধে (UB) আগের মতো এখনই।
+                 */
+                if ($funding !== null && app(AccountsSignature::class)->holds($asset, AccountsSignature::FIXED_ASSET_REGISTER,
+                    (string) $asset->cost, (string) $asset->name, ['funding' => $funding, 'opening_depreciation' => $openingDepreciation])) {
+                    return $asset;
+                }
+
                 if ($funding !== null) {
+                    $asset->forceFill(['status' => FixedAsset::ACTIVE])->save();
+
                     $this->posting->post(
                         sourceType: FixedAsset::drillSourceType(),
                         sourceId: $asset->id,
@@ -176,6 +191,43 @@ final class FixedAssetService
      * ⓘ অন্য সব ভুল অবিকল থাকে — কেবল `trx_date` নামটা বদলায়,
      * কারণ এই পর্দায় তারিখের ঘরটার নাম আলাদা।
      */
+    /**
+     * শেষ সইয়ের পরে — সই চাওয়ার মুহূর্তের উৎস দিয়ে দাখিলা, তারপর চালু ([[FinishTheAccountsPaperOnTheLastSignature]])।
+     *
+     * ⓘ সারিতে তালা দিয়ে, অপেক্ষায় থাকলেই — একই সই দুইবার ঘটনা পাঠালে দ্বিতীয়বার কিছু হয় না।
+     *
+     * @param  array{funding?: array{account_id: int, party_type: ?string, party_id: ?int}, opening_depreciation?: string}  $signed
+     */
+    public function finishRegistered(FixedAsset $asset, array $signed): FixedAsset
+    {
+        return DB::transaction(function () use ($asset, $signed) {
+            $locked = FixedAsset::query()->whereKey($asset->id)->lockForUpdate()->firstOrFail();
+            $funding = $signed['funding'] ?? null;
+
+            if (! $locked->isAwaiting() || ! is_array($funding)) {
+                return $locked;
+            }
+
+            $locked->forceFill(['status' => FixedAsset::ACTIVE])->save();
+
+            $this->posting->post(
+                sourceType: FixedAsset::drillSourceType(),
+                sourceId: $locked->id,
+                trxDate: $this->postableDate($locked->acquired_on),
+                lines: [
+                    ['account_id' => (int) $locked->asset_account_id, 'debit' => (string) $locked->cost, 'narration' => $locked->name],
+                    ['account_id' => (int) $funding['account_id'], 'credit' => (string) $locked->cost,
+                        'party_type' => $funding['party_type'] ?? null, 'party_id' => $funding['party_id'] ?? null, 'narration' => $locked->name],
+                ],
+                documentNo: $locked->document_no,
+            );
+
+            $this->openingDepreciation($locked, (string) ($signed['opening_depreciation'] ?? '0'));
+
+            return $locked->refresh();
+        });
+    }
+
     private function onTheDateField(ValidationException $e): ValidationException
     {
         $errors = $e->errors();
@@ -395,7 +447,8 @@ final class FixedAssetService
 
         if (! $asset->isActive()) {
             throw ValidationException::withMessages([
-                'status' => __('accounts::asset.not_active'),
+                // ⓘ সইয়ের অপেক্ষা "আর ব্যবহারে নেই" নয় — আলাদা কথা (গ১)
+                'status' => $asset->isAwaiting() ? __('accounts::asset.awaiting_signature') : __('accounts::asset.not_active'),
             ]);
         }
 
@@ -606,6 +659,16 @@ final class FixedAssetService
 
         $on = Carbon::parse($date ?? now())->startOfDay();
         $proceeds = Money::of($amount);
+
+        /*
+         * ⭐ সই — গ১ ([[AccountsSignature]])। ⓘ বিক্রির অঙ্ক, টাকার খাত আর তারিখ সইয়ের সারিতে থাকে; শেষ সইয়ে
+         * [[FinishTheAccountsPaperOnTheLastSignature]] ঠিক এগুলো দিয়েই এই মেথড আবার ডাকে। ছক বন্ধে আগের মতো এখনই।
+         */
+        if (app(AccountsSignature::class)->holds($asset, AccountsSignature::FIXED_ASSET_DISPOSE, $proceeds, null,
+            ['amount' => $proceeds, 'into_account_id' => $intoAccountId, 'on' => $on->toDateString()])) {
+            return $asset->refresh();
+        }
+
         $book = $asset->bookValue();
         $accumulated = $asset->accumulated();
 

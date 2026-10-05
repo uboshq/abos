@@ -6,13 +6,17 @@ namespace App\Modules\Accounts\Listeners;
 
 use App\Core\Events\ApprovalDecided;
 use App\Models\Approval;
+use App\Modules\Accounts\Models\CashTill;
 use App\Modules\Accounts\Models\Cheque;
+use App\Modules\Accounts\Models\FixedAsset;
 use App\Modules\Accounts\Models\InterCompanyTransfer;
 use App\Modules\Accounts\Models\Note;
 use App\Modules\Accounts\Services\AccountsSignature;
 use App\Modules\Accounts\Services\ChequeService;
+use App\Modules\Accounts\Services\FixedAssetService;
 use App\Modules\Accounts\Services\InterCompanyService;
 use App\Modules\Accounts\Services\NoteService;
+use App\Modules\Accounts\Services\OpeningBalanceService;
 
 /**
  * ⭐ শেষ সই পড়লে হিসাবের কাগজটা নিজেই শেষ হয় — গ১, Accounts-Finance অডিট, ৪ অক্টোবর ২০২৬ ([[AccountsSignature]])।
@@ -40,6 +44,28 @@ final class FinishTheAccountsPaperOnTheLastSignature
         // ⓘ খসড়া থাকলেই — একই সই দুইবার ঘটনা পাঠালে বা কেউ হাতে আগেই পাকা করলে দ্বিতীয়বার কিছু হয় না
         if ($paper instanceof Note && $paper->isDraft()) {
             app(NoteService::class)->confirm($paper);
+
+            return;
+        }
+
+        // ⓘ খোলা জের একবারই ওঠে — আগে উঠে থাকলে [[OpeningBalanceService::forAccount()]] নিজেই কিছু করে না
+        if ($paper instanceof CashTill && $paper->account !== null) {
+            app(OpeningBalanceService::class)->forAccount($paper->account);
+
+            return;
+        }
+
+        // ⓘ সই চাওয়ার মুহূর্তের তথ্য সইয়ের সারিতেই ([[DocumentApproval::stopping()]]-এর `payload`)
+        if ($paper instanceof FixedAsset) {
+            $signed = (array) ($approval->payload ?? []);
+
+            match ($approval->action) {
+                AccountsSignature::FIXED_ASSET_REGISTER => app(FixedAssetService::class)->finishRegistered($paper, $signed),
+                AccountsSignature::FIXED_ASSET_DISPOSE => $paper->isActive()
+                    ? app(FixedAssetService::class)->dispose($paper, (string) ($signed['amount'] ?? '0'), (int) ($signed['into_account_id'] ?? 0), $signed['on'] ?? null)
+                    : null,
+                default => null,
+            };
 
             return;
         }

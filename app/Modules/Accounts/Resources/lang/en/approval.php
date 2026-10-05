@@ -25,4 +25,7 @@ return [
     'cheque_clear' => 'Cheque cleared',
     'cheque_bounce' => 'Cheque bounced',
     'inter_company' => 'Inter-company transfer',
+    'till_opening' => 'Opening balance of a new cash till',
+    'fixed_asset_register' => 'Fixed asset registered (with funding)',
+    'fixed_asset_dispose' => 'Fixed asset sold or written off',
 ];

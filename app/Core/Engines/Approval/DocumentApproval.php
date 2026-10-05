@@ -54,6 +54,8 @@ final class DocumentApproval
         ?string $amount = null,
         ?string $reason = null,
         array $fields = [],
+        // ⭐ সই চাওয়ার মুহূর্তের তথ্য — শেষ সইয়ে কাজটা ঠিক এগুলো দিয়েই শেষ হয় (৪ অক্টোবর ২০২৬; [[AccountsSignature]])
+        array $payload = [],
     ): ?Approval {
         /*
          * ⭐ ঘরগুলো কাগজ থেকেই — ২৪ সেপ্টেম্বর ২০২৬।
@@ -170,6 +172,7 @@ final class DocumentApproval
              */
             payload: array_filter([
                 ...$fields,
+                ...$payload,
 
                 /*
                  * ⭐ ঘরের **নাম**, মান নয়।

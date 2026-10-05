@@ -35,16 +35,31 @@ final class AccountsSignature
     /** আন্তঃকোম্পানি লেনদেন — দুই কোম্পানির খাতায় একসাথে */
     public const INTER_COMPANY = 'inter_company';
 
+    /** খোলা জেরসহ নতুন ক্যাশবাক্স — জেরটা খাতায় ওঠা */
+    public const TILL_OPENING = 'till_opening';
+
+    /** স্থায়ী সম্পদ নিবন্ধন — টাকার উৎস থাকলে (নগদ, ব্যাংক, দেনা, ব্যক্তি) */
+    public const FIXED_ASSET_REGISTER = 'fixed_asset_register';
+
+    /** স্থায়ী সম্পদ বিক্রি বা বাতিল */
+    public const FIXED_ASSET_DISPOSE = 'fixed_asset_dispose';
+
     /** শেষ সই পড়লে যে কাজগুলো এই মডিউল নিজে শেষ করে */
-    public const ACTIONS = [self::NOTE, self::CHEQUE_CLEAR, self::CHEQUE_BOUNCE, self::INTER_COMPANY];
+    public const ACTIONS = [
+        self::NOTE, self::CHEQUE_CLEAR, self::CHEQUE_BOUNCE, self::INTER_COMPANY, self::TILL_OPENING,
+        self::FIXED_ASSET_REGISTER, self::FIXED_ASSET_DISPOSE,
+    ];
 
     public function __construct(private readonly DocumentApproval $approval) {}
 
     /**
      * কাজটা কি সইয়ের জন্য থামবে? `true` — থামল (অনুরোধ বসেছে বা আগেরটা এখনো ঝুলে); `false` — এগোও।
      */
-    public function holds(Model $paper, string $action, string $amount, ?string $reason = null): bool
+    /**
+     * @param  array<string, mixed>  $payload  সই চাওয়ার মুহূর্তের তথ্য — শেষ সইয়ে কাজটা এগুলো দিয়েই শেষ হয়
+     */
+    public function holds(Model $paper, string $action, string $amount, ?string $reason = null, array $payload = []): bool
     {
-        return $this->approval->stopping($paper, self::MODULE, $action, $amount, $reason) !== null;
+        return $this->approval->stopping($paper, self::MODULE, $action, $amount, $reason, payload: $payload) !== null;
     }
 }

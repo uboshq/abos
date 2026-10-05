@@ -43,6 +43,9 @@ class FixedAsset extends Model implements Drillable
 
     public const DISPOSED = 'disposed';
 
+    /** ⭐ নিবন্ধন সইয়ের অপেক্ষায় — অবচয় ধরে না, খাতায় নেই (গ১, ৪ অক্টোবর ২০২৬) */
+    public const AWAITING = 'awaiting';
+
     protected $table = 'acc_fixed_assets';
 
     protected $fillable = [
@@ -93,6 +96,11 @@ class FixedAsset extends Model implements Drillable
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
+    }
+
+    public function isAwaiting(): bool
+    {
+        return $this->status === self::AWAITING;
     }
 
     public function isActive(): bool

@@ -74,7 +74,10 @@ final class CashTillService implements ProvisionsCompany
      */
     public function create(array $data): CashTill
     {
-        return DB::transaction(function () use ($data) {
+        // ⓘ খোলা জের শুরুতেই ধরা — নিচে বাক্স বসানোর আগে ঘরটা মুছে ফেলা হয় (গ১, [[AccountsSignature]])
+        $opening = bcadd((string) ($data['opening_balance'] ?? '0'), '0', 4);
+
+        return DB::transaction(function () use ($data, $opening) {
             $parent = $this->cashParent();
 
             /*
@@ -118,7 +121,8 @@ final class CashTillService implements ProvisionsCompany
                  * সবসময় `cashParent()` = ১১০১ হাতে নগদ, আর ওটার
                  * `money_kind` `cash`, তাই সন্তানও `cash` পায়।
                  */
-                'opening_balance' => $data['opening_balance'] ?? 0,
+                // ⭐ খোলা জের এখানে শূন্য — খাতায় তোলা নিচে, সইয়ের পরে (গ১, [[AccountsSignature]])
+                'opening_balance' => 0,
                 'opening_date' => $data['opening_date'] ?? null,
             ],
                 /*
@@ -156,6 +160,21 @@ final class CashTillService implements ProvisionsCompany
             // প্রধান টিল আলাদা করে বসানো হয়, কারণ একটাই থাকতে পারে
             if ($data['is_primary'] ?? false) {
                 $this->makePrimary($till);
+            }
+
+            /*
+             * ⭐ খোলা জেরে সই — গ১, Accounts-Finance অডিট, ৪ অক্টোবর ২০২৬ ([[AccountsSignature]])।
+             *
+             * ⛔ আগে "খোলা জের" দিয়ে নতুন বাক্স বানালেই টাকাটা সই ছাড়া খাতায় বসত — হিসাবরক্ষক নগদ ঘাটতি ঢাকতে ঘাটতির
+             * সমান জের দিয়ে বাক্স বানিয়ে ব্যাংকে পাঠাতে পারতেন। ⓘ এখন জেরটা খাতে ঘোষণা হিসেবে বসে; ছক চালু থাকলে খাতায়
+             * ওঠে শেষ সইয়ে ([[FinishTheAccountsPaperOnTheLastSignature]]), ছক বন্ধে (UB) আগের মতো এখনই।
+             */
+            if (bccomp($opening, '0', 4) !== 0) {
+                $account->forceFill(['opening_balance' => $opening])->save();
+
+                if (! app(AccountsSignature::class)->holds($till, AccountsSignature::TILL_OPENING, $opening)) {
+                    app(OpeningBalanceService::class)->forAccount($account->fresh());
+                }
             }
 
             return $till->fresh();
