@@ -724,6 +724,74 @@ class _CounterScreenState extends State<CounterScreen> {
     }
   }
 
+  /// ⭐ দাম দেখুন — পণ্য বাছলে দর, বিক্রয়যোগ্য মজুদ আর লট; "বিলে তুলুন" চাপলে উপরের ঘরে বসে (ওয়েবের F3)
+  Future<void> _priceCheck() async {
+    final picked = await _pick<ProductRecord>(
+        'দাম দেখুন — পণ্য বাছুন', _products, (p) => p.name);
+    if (picked == null || !mounted) return;
+    CounterPrice price;
+    try {
+      price = await widget.api.price(picked.id, warehouseId: _warehouseId);
+    } catch (e) {
+      if (mounted) {
+        await _popup('দাম আনা গেল না',
+            errorMessageFor(e, fallback: 'আবার চেষ্টা করুন।'));
+      }
+      return;
+    }
+    if (!mounted) return;
+    final toBill = await showModalBottomSheet<bool>(
+      context: context,
+      builder: (sheet) => Padding(
+        padding: const EdgeInsets.all(AppSpacing.md),
+        child: Column(
+          key: const ValueKey('counter-price-sheet'),
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+                price.code.isEmpty
+                    ? price.name
+                    : '${price.name} · ${price.code}',
+                style: Theme.of(sheet).textTheme.titleMedium),
+            Text('বিক্রয় দর: ৳ ${price.rate} / ${price.unit}'),
+            Text(price.available == null
+                ? 'বিক্রয়যোগ্য মজুদ: দেখার অনুমতি নেই'
+                : 'বিক্রয়যোগ্য মজুদ: ${price.available} ${price.unit}'),
+            for (final lot in price.lots)
+              Text([
+                'লট ${lot.no}',
+                if (lot.expiry.isNotEmpty) 'মেয়াদ ${lot.expiry}',
+                if (lot.qty.isNotEmpty) 'আছে ${lot.qty}'
+              ].join(' · ')),
+            const SizedBox(height: AppSpacing.sm),
+            Row(children: [
+              TextButton(
+                  onPressed: () => Navigator.pop(sheet, false),
+                  child: const Text('ফিরে যান')),
+              const Spacer(),
+              FilledButton(
+                key: const ValueKey('counter-price-to-bill'),
+                onPressed: () => Navigator.pop(sheet, true),
+                child: const Text('বিলে তুলুন'),
+              ),
+            ]),
+          ],
+        ),
+      ),
+    );
+    if (toBill == true && mounted) {
+      setState(() {
+        _clearEntry();
+        _product = picked;
+        _lot = _lotsOfProduct.firstOrNull;
+        final rate = double.tryParse(price.rate) ?? 0;
+        _rate.text = rate > 0 ? rate.toStringAsFixed(2) : '';
+      });
+      _askFree();
+    }
+  }
+
   /// আবার ছাপা — এই কাউন্টারের শেষ বিল: দেখা, ছাপা, পাঠানো
   Future<void> _reprint() async {
     final id = _lastInvoiceId;
@@ -751,13 +819,28 @@ class _CounterScreenState extends State<CounterScreen> {
       builder: (dialog) => AlertDialog(
         key: const ValueKey('counter-void-dialog'),
         title: const Text('বিল বাতিল'),
-        content: TextField(
-          key: const ValueKey('counter-void-reason'),
-          controller: reason,
-          autofocus: true,
-          decoration:
-              const InputDecoration(labelText: 'কেন বাতিল (বাধ্যতামূলক)'),
-        ),
+        // ⓘ কারণ ওয়েবের পপ-আপের একই তালিকা থেকে; তালিকা না এলে (পুরনো সার্ভার) নিজে লেখা
+        content: (_setup?.voidReasons.isNotEmpty ?? false)
+            ? StatefulBuilder(
+                builder: (_, setDialog) => DropdownButtonFormField<String>(
+                  key: const ValueKey('counter-void-reason-pick'),
+                  initialValue: reason.text.isEmpty ? null : reason.text,
+                  decoration: const InputDecoration(
+                      labelText: 'কেন বাতিল (বাধ্যতামূলক)'),
+                  items: [
+                    for (final r in _setup!.voidReasons)
+                      DropdownMenuItem(value: r, child: Text(r))
+                  ],
+                  onChanged: (v) => setDialog(() => reason.text = v ?? ''),
+                ),
+              )
+            : TextField(
+                key: const ValueKey('counter-void-reason'),
+                controller: reason,
+                autofocus: true,
+                decoration:
+                    const InputDecoration(labelText: 'কেন বাতিল (বাধ্যতামূলক)'),
+              ),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(dialog, false),
@@ -874,6 +957,16 @@ class _CounterScreenState extends State<CounterScreen> {
                     'ক্রেতা বাছুন', _customers, (c) => c.name);
                 if (picked != null) setState(() => _customer = picked);
               },
+            ),
+          ),
+          // ⭐ দাম দেখুন — ক্রেতার ঘরের নিচে, ডান দিকে (মালিকের ছবি, ৪ অক্টোবর ২০২৬; ওয়েবের F3)
+          Align(
+            alignment: Alignment.centerRight,
+            child: TextButton.icon(
+              key: const ValueKey('counter-price'),
+              onPressed: _busy ? null : _priceCheck,
+              icon: const Icon(Icons.price_check, size: 18),
+              label: const Text('দাম দেখুন'),
             ),
           ),
           if (setup != null && setup.warehouses.length > 1)

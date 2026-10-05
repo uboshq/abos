@@ -44,7 +44,11 @@ class CounterSetup {
     required this.lots,
     this.depositMethods = const [],
     this.carriers = const [],
+    this.voidReasons = const [],
   });
+
+  /// বিল বাতিলের কারণ — ওয়েবের পপ-আপের একই তালিকা
+  final List<String> voidReasons;
 
   /// ⭐ টাকা নেওয়ার পদ্ধতি আর বাহক — ওয়েবের কাউন্টারের একই তালিকা (৪ অক্টোবর ২০২৬)
   final List<CounterMethod> depositMethods;
@@ -83,6 +87,10 @@ class CounterSetup {
         depositMethods: [
           for (final m in (json['depositMethods'] as List?) ?? const [])
             if (m is Map) CounterMethod.fromJson(Map<String, dynamic>.from(m)),
+        ],
+        voidReasons: [
+          for (final r in (json['voidReasons'] as List?) ?? const [])
+            r.toString(),
         ],
         carriers: [
           for (final c in (json['carriers'] as List?) ?? const [])
@@ -209,6 +217,43 @@ class CounterExtras {
   /// কাউন্টারে খোলা রাখা খসড়া — পাঠালে নতুন বিল নয়, এটাই পাকা হয়
   final String? resumeId;
   final String? note;
+}
+
+/// ⭐ "দাম দেখুন" — বিলে না তুলে দর, বিক্রয়যোগ্য মজুদ আর লট (ওয়েবের পপ-আপের একই উৎস)।
+/// `available` null মানে মজুদ দেখার চাবি নেই — SR-এর ফোনে মজুদ নয় (মালিক, ১ অক্টোবর ২০২৬)।
+class CounterPrice {
+  const CounterPrice(
+      {required this.name,
+      required this.rate,
+      this.unit = '',
+      this.code = '',
+      this.available,
+      this.lots = const []});
+
+  final String name;
+  final String rate;
+  final String unit;
+  final String code;
+  final String? available;
+  final List<CounterLot> lots;
+
+  factory CounterPrice.fromJson(Map<String, dynamic> json) => CounterPrice(
+        name: json['name']?.toString() ?? '',
+        rate: json['rate']?.toString() ?? '0',
+        unit: json['unit']?.toString() ?? '',
+        code: json['code']?.toString() ?? '',
+        available: json['available']?.toString(),
+        lots: [
+          for (final l in (json['lots'] as List?) ?? const [])
+            if (l is Map)
+              CounterLot(
+                id: l['id']?.toString() ?? '',
+                no: l['no']?.toString() ?? '',
+                expiry: l['expiry']?.toString() ?? '',
+                qty: l['qty']?.toString() ?? '',
+              ),
+        ],
+      );
 }
 
 /// রাখা খসড়ার তালিকার একটা সারি
@@ -381,6 +426,9 @@ abstract class DirectSaleApi {
   /// রাখা খসড়া — খোলার জন্য
   Future<List<CounterDraftSummary>> drafts();
 
+  /// দাম দেখুন — একটা পণ্যের দর, মজুদ আর লট
+  Future<CounterPrice> price(String productId, {String? warehouseId});
+
   Future<CounterDraft> openDraft(String id);
 
   /// বিল বাতিল, কারণসহ — খোলা খসড়া হলে খসড়াটাই, নইলে না-জমা বিলটা অডিটে
@@ -502,6 +550,16 @@ class ServerDirectSaleApi implements DirectSaleApi {
         if (d is Map)
           CounterDraftSummary.fromJson(Map<String, dynamic>.from(d)),
     ];
+  }
+
+  @override
+  Future<CounterPrice> price(String productId, {String? warehouseId}) async {
+    final response = await ApiClient.dio.get<Map<String, dynamic>>(
+        '/sales/direct/price/$productId',
+        queryParameters: {
+          if (warehouseId != null) 'warehouse': warehouseId,
+        });
+    return CounterPrice.fromJson(response.data ?? const {});
   }
 
   @override

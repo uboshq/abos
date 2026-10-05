@@ -22,6 +22,8 @@ class _FakeApi implements DirectSaleApi {
   CounterExtras? sentExtras;
   String? voidedReason;
   String? voidedResume;
+  bool reasonList = false;
+  String? stockShown = '42';
 
   @override
   Future<ConfirmOverviewData> overview({
@@ -56,7 +58,7 @@ class _FakeApi implements DirectSaleApi {
   }
 
   @override
-  Future<CounterSetup> setup({String? warehouseId}) async => const CounterSetup(
+  Future<CounterSetup> setup({String? warehouseId}) async => CounterSetup(
         warehouseId: 'wh-1',
         warehouses: [CounterChoice('wh-1', 'প্রধান গুদাম')],
         paymentTerms: [
@@ -72,6 +74,8 @@ class _FakeApi implements DirectSaleApi {
               id: 'm-cash', label: 'নগদ', kind: 'cash', accountId: 'ac-1')
         ],
         carriers: [CounterChoice('car-1', 'করিম পরিবহন')],
+        voidReasons:
+            reasonList ? const ['গ্রাহক কিনবেন না', 'অন্য কারণ'] : const [],
         lots: {
           'prd-lot': [
             CounterLot(
@@ -105,6 +109,18 @@ class _FakeApi implements DirectSaleApi {
     sentExtras = extras;
     return answer;
   }
+
+  @override
+  Future<CounterPrice> price(String productId, {String? warehouseId}) async =>
+      CounterPrice(
+        name: 'কসমস বিস্কুট',
+        rate: '40.00',
+        unit: 'পিস',
+        available: stockShown,
+        lots: const [
+          CounterLot(id: 'lot-a', no: 'LOT-A', expiry: '2027-01-01', qty: '50')
+        ],
+      );
 
   @override
   Future<List<CounterDraftSummary>> drafts() async => const [
@@ -316,6 +332,52 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('লট: LOT-A'), findsNothing,
         reason: '⛔ বাতিলের পরেও কার্টে সারি রয়ে গেল');
+  });
+
+  // ⭐ দাম দেখুন — দর, মজুদ (চাবি থাকলে), লট; "বিলে তুলুন" উপরের ঘরে বসায়
+  testWidgets(
+      'price check shows the rate and stock, hides stock without the key, and puts the product on the bill',
+      (tester) async {
+    final api = _FakeApi();
+    await _pump(tester, api);
+
+    await tester.tap(find.byKey(const ValueKey('counter-price')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('কসমস বিস্কুট').last);
+    await tester.pumpAndSettle();
+    expect(find.text('বিক্রয় দর: ৳ 40.00 / পিস'), findsOneWidget);
+    expect(find.text('বিক্রয়যোগ্য মজুদ: 42 পিস'), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('counter-price-to-bill')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('counter-lot')), findsOneWidget,
+        reason: 'the product sits in the entry box');
+
+    api.stockShown = null;
+    await tester.tap(find.byKey(const ValueKey('counter-price')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('কসমস বিস্কুট').last);
+    await tester.pumpAndSettle();
+    expect(find.text('বিক্রয়যোগ্য মজুদ: দেখার অনুমতি নেই'), findsOneWidget,
+        reason: '⛔ চাবি ছাড়া মজুদ দেখা গেল');
+  });
+
+  testWidgets('void reasons come from the web list when the server sends one',
+      (tester) async {
+    final api = _FakeApi()..reasonList = true;
+    await _pump(tester, api);
+    await _pickProduct(tester, 'কসমস বিস্কুট');
+    await _add(tester, qty: '10');
+
+    await tester.tap(find.byKey(const ValueKey('counter-void')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('counter-void-reason-pick')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('গ্রাহক কিনবেন না').last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('counter-void-confirm')));
+    await tester.pumpAndSettle();
+
+    expect(api.voidedReason, 'গ্রাহক কিনবেন না');
   });
 
   testWidgets(
