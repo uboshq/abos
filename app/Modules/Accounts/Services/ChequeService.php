@@ -6,6 +6,7 @@ namespace App\Modules\Accounts\Services;
 
 use App\Core\Engines\NumberSeries\NumberSeriesEngine;
 use App\Core\Engines\Posting\PostingEngine;
+use App\Core\Services\PartyRegistry;
 use App\Core\Support\CompanyContext;
 use App\Core\Support\DateFormat;
 use App\Core\Support\Money;
@@ -85,6 +86,21 @@ final class ChequeService
             throw ValidationException::withMessages([
                 'party' => __('accounts::validation.cheque_needs_party'),
             ]);
+        }
+
+        /*
+         * ⛔ পক্ষটা সত্যিই আছে, এই কোম্পানিতে, আর চেনা ধরনের — Accounts-Finance অডিট ম১২, ৪ অক্টোবর ২০২৬।
+         * ⚠️ আগে যা আসত তাই বসত: অন্য কোম্পানির গ্রাহকের id বা না-থাকা কারো নামে চেক লেখা যেত, আর পাশের দিন টাকা
+         * সেই নামে বসত — নিজের গ্রাহকের বকেয়া কমত না।
+         */
+        if (filled($data['party_type'] ?? null) || filled($data['party_id'] ?? null)) {
+            $parties = app(PartyRegistry::class);
+
+            if (! $parties->knows((string) ($data['party_type'] ?? '')) || ! $parties->exists((string) $data['party_type'], (int) ($data['party_id'] ?? 0))) {
+                throw ValidationException::withMessages([
+                    'party' => __('accounts::validation.party_unknown'),
+                ]);
+            }
         }
 
         return DB::transaction(function () use ($data, $direction, $amount) {
