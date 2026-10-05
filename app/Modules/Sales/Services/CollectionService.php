@@ -366,7 +366,13 @@ final class CollectionService
             return;
         }
 
-        $isCheque = in_array($said, ['cheque', 'check', 'chq', 'চেক'], true)
+        /*
+         * ⛔ লেখার ভিতরে শব্দ খোঁজা, হুবহু মিল নয় — Accounts-Finance অডিট ম১১, ৪ অক্টোবর ২০২৬।
+         * ⚠️ আগে কেবল ঘরটা হুবহু "cheque" হলে থামত; "Cheque 4471", "PDC", "চেক নং ১২" লিখলে পাশের আগেই খাতায় নগদ ধরা হত,
+         * আর গ্রাহকের বাকির সীমা খুলে যেত। ⓘ শব্দের সীমা মেনে — "checkout"-এর মতো শব্দ ধরা পড়ে না।
+         */
+        $isCheque = preg_match('/(?<![\p{L}\p{N}])(cheques?|checks?|chq|pdc|post[\s\-]?dated)(?![\p{L}])/u', $said) === 1
+            || str_contains($said, 'চেক')
             || PaymentMethod::query()
                 ->where('kind', 'cheque')
                 ->where(fn ($q) => $q
