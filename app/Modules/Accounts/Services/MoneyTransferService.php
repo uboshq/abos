@@ -285,6 +285,13 @@ final class MoneyTransferService
              * না। খসড়া অবস্থাতেও পাঠানোর পা-টা বসেছে, তাই সেটাও ফেরে।
              */
             if ($transfer->isConfirmed()) {
+                /*
+                 * ⛔ গ্রহণ উল্টালে টাকা গন্তব্য খাত থেকে বেরোয় — সেখানে টাকা থাকতে হবে (Accounts-Finance অডিট ম৩, ৪ অক্টোবর
+                 * ২০২৬)। ⚠️ আগে গ্রহণকারী কাউন্টার টাকাটা খরচ করে ফেলার পরে স্থানান্তর বাতিল করলে কাউন্টার ঋণাত্মক হত।
+                 * ⓘ কেবল পাঠানোর পা থাকলে (খসড়া) উল্টানো টাকা উৎসে ফেরায়, তাই সেখানে কিছু মাপার নেই।
+                 */
+                $this->assertDestinationStillHolds($transfer);
+
                 $this->posting->reverse(
                     MoneyTransfer::drillSourceType(),
                     $transfer->id,
@@ -440,6 +447,30 @@ final class MoneyTransferService
      * ⛔ আগে পাঠানো ব্যক্তি "তৈরি" চাবি দিয়েই বাতিল করতেন: খাতায় টাকা তাঁর বাক্সে ফিরত, অথচ নগদ অন্যের হাতে।
      * গ্রহণের আগে পাঠানো ব্যক্তি আগের মতোই ফেরাতে পারেন — টাকা তখনো পথে, কারও হাতে ওঠেনি।
      */
+    /** ⛔ গ্রহণ উল্টানোর আগে গন্তব্যে টাকাটা আছে কি না — ম৩ ([[CashOnHand]], পোস্টের নিয়মের হুবহু) */
+    private function assertDestinationStillHolds(MoneyTransfer $transfer): void
+    {
+        $account = Account::query()->find($transfer->destinationAccountId());
+        $cash = app(CashOnHand::class);
+
+        if ($account === null || ! $cash->guards($account)) {
+            return;
+        }
+
+        $cash->lock($account);
+        $short = $cash->shortfall($account, (string) $transfer->amount, now()->toDateString());
+
+        if ($short !== null) {
+            throw ValidationException::withMessages([
+                'cancel_reason' => __('accounts::validation.not_enough_money_in', [
+                    'account' => $account->label(),
+                    'held' => Money::format(bcsub((string) $transfer->amount, $short, 4)),
+                    'amount' => Money::format((string) $transfer->amount),
+                ]),
+            ]);
+        }
+    }
+
     private function assertMayCancel(MoneyTransfer $transfer): void
     {
         if (! $transfer->isConfirmed()) {

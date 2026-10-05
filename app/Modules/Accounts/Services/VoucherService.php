@@ -21,6 +21,7 @@ use App\Models\User;
 use App\Modules\Accounts\Events\VoucherPosted;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Models\CashTill;
+use App\Modules\Accounts\Models\BankStatementLine;
 use App\Modules\Accounts\Models\InterCompanyTransfer;
 use App\Modules\Accounts\Models\Voucher;
 use App\Modules\Accounts\Models\VoucherLine;
@@ -435,6 +436,22 @@ final class VoucherService
     }
 
     /**
+     * ⛔ ব্যাংকে মেলানো ভাউচার বাতিল নয় — ম৩। ⓘ [[AccountsReversalService]]-এর একই নিয়ম, একই বার্তা; এখানে বসায় প্রতিটা বাতিলের
+     * পথ ঢাকা পড়ে (ভাউচারের পর্দা, উল্টো কাগজ, আন্তঃকোম্পানি, অন্য মডিউল)।
+     */
+    private function assertNotReconciled(Voucher $voucher): void
+    {
+        $lineIds = $voucher->lines->pluck('id');
+
+        if ($voucher->lines->whereNotNull('reconciliation_id')->isNotEmpty()
+            || BankStatementLine::query()->withoutGlobalScopes()->whereIn('matched_line_id', $lineIds)->exists()) {
+            throw ValidationException::withMessages([
+                'cancel_reason' => __('accounts::reversal.reconciled', ['no' => $voucher->document_no]),
+            ]);
+        }
+    }
+
+    /**
      * ভাউচারের অবস্থা, সারি তালা দিয়ে — ম২। ⓘ হাতে থাকা মডেল ধরেই খোঁজা, তাই কোম্পানির স্কোপ লাগে না (আন্তঃকোম্পানির
      * দুই পাশ অন্য কোম্পানির প্রসঙ্গেও এখান দিয়ে যায়)।
      */
@@ -717,6 +734,17 @@ final class VoucherService
 
             // খসড়া কখনো লেজারে বসেনি, তাই ফেরানোরও কিছু নেই
             if ($voucher->isPosted()) {
+                /*
+                 * ⛔ Accounts-Finance অডিট ম৩, ৪ অক্টোবর ২০২৬ — দুইটা পাহারা, উল্টানোর আগে:
+                 *  · ব্যাংকে মেলানো ভাউচার এখান দিয়ে বাতিল হয় না। ⚠️ আগে কেবল উল্টো কাগজের পথ ([[AccountsReversalService]])
+                 *    এটা দেখত; ভাউচারের পর্দা, স্থানান্তর বা অন্য মডিউল সরাসরি এখানে এলে আগের মাসের মেলানো চুপচাপ ভুল হত।
+                 *  · উল্টানোয় যে নগদ খাত থেকে টাকা বেরোয়, সেখানে টাকা থাকতে হবে। ⚠️ রসিদের টাকা খরচ হয়ে যাওয়ার পরে রসিদ
+                 *    বাতিল করলে কাউন্টার ঋণাত্মক হত — পোস্টের সময় যে নিয়ম ([[assertMoneyIsThere()]]), বাতিলেও সেটাই।
+                 */
+                $voucher->load('lines.account');
+                $this->assertNotReconciled($voucher);
+                $this->assertMoneyIsThere($voucher, reversing: true, on: $onDate ?? now()->toDateString());
+
                 $this->posting->reverse(
                     Voucher::SOURCE_TYPES[$voucher->type],
                     $voucher->id,
@@ -1086,7 +1114,7 @@ final class VoucherService
      * ⚠️ তালা id-এর ক্রমে — দুইটা কন্ট্রা উল্টো দিকে একই দুই টিল ছুঁলে
      * অন্য ক্রমে তালা নিলে একে অন্যের জন্য অপেক্ষায় আটকে যেত।
      */
-    private function assertMoneyIsThere(Voucher $voucher): void
+    private function assertMoneyIsThere(Voucher $voucher, bool $reversing = false, ?string $on = null): void
     {
         $cash = app(CashOnHand::class);
         $out = [];
@@ -1097,7 +1125,11 @@ final class VoucherService
             }
 
             $id = (int) $line->account_id;
-            $out[$id] = bcadd($out[$id] ?? '0', bcsub((string) $line->credit, (string) $line->debit, 4), 4);
+            // ⓘ উল্টানোয় দিক উল্টো — যে খাতে টাকা ঢুকেছিল, সেখান থেকেই বেরোয় (ম৩)
+            $leaving = $reversing
+                ? bcsub((string) $line->debit, (string) $line->credit, 4)
+                : bcsub((string) $line->credit, (string) $line->debit, 4);
+            $out[$id] = bcadd($out[$id] ?? '0', $leaving, 4);
         }
 
         ksort($out);
@@ -1110,7 +1142,7 @@ final class VoucherService
             $account = $voucher->lines->firstWhere('account_id', $id)->account;
             $cash->lock($account);
 
-            $short = $cash->shortfall($account, $amount, $voucher->trx_date?->toDateString());
+            $short = $cash->shortfall($account, $amount, $on ?? $voucher->trx_date?->toDateString());
 
             if ($short !== null) {
                 throw ValidationException::withMessages([
