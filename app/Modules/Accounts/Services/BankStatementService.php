@@ -196,7 +196,15 @@ final class BankStatementService
             $ours = VoucherLine::query()
                 ->where('account_id', $account->id)
                 ->whereNull('reconciliation_id')
+                /*
+                 * ⛔ Accounts-Finance অডিট ম৭, ৪ অক্টোবর ২০২৬ — দুইটা শর্ত যা ছিল না:
+                 *  · বইয়ের যে সারি আগেই আরেকটা ব্যাংক সারির সাথে মেলানো, সেটা আর নয়। ⚠️ আগে একই দিনে একই অঙ্কের দুই
+                 *    ব্যাংক সারি পরপর দুই চালানোয় (বা একই চালানোয়) বইয়ের একটা সারিতেই বসত — ব্যাংক বলত দুইবার, বই একবার।
+                 *  · কেবল পাকা ভাউচার। ⚠️ বাতিল বা খসড়া ভাউচারের সারিও মিলত — যে টাকা খাতায় নেই তার সাথে ব্যাংকের টাকা "মিলে গেল"।
+                 */
+                ->whereNotIn('id', BankStatementLine::query()->whereNotNull('matched_line_id')->select('matched_line_id'))
                 ->whereHas('voucher', fn ($q) => $q
+                    ->posted()
                     ->whereBetween('trx_date', [
                         Carbon::parse($line->trx_date)->subDays(7)->toDateString(),
                         Carbon::parse($line->trx_date)->addDays(7)->toDateString(),
