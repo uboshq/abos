@@ -461,6 +461,8 @@ return [
         // ⭐ উল্টো কাগজ — পাকা ভাউচার আর নোটের, নিজের ক্রম REV-0001 (মালিকের সংস্করণ ২, ৪ অক্টোবর ২০২৬)
         'REV' => 'accounts::reversal.doc',
         'CC' => 'accounts::doc.cash_count',
+        // ⭐ দায়িত্ব হস্তান্তর — TH-… (অডিট ম৮)
+        'TH' => 'accounts::doc.till_handover',
 
         /*
          * ক্যাশ টিলের কোড — মালিকের নির্দেশ (২০২৬-০৭ তারিখ ৭): কোড অটো।
@@ -639,6 +641,8 @@ return [
         'till_opening' => 'accounts::approval.till_opening',
         'fixed_asset_register' => 'accounts::approval.fixed_asset_register',
         'fixed_asset_dispose' => 'accounts::approval.fixed_asset_dispose',
+        // ⭐ ক্যাশবাক্সের দায়িত্ব হস্তান্তর (অডিট ম৮)
+        'till_handover' => 'accounts::approval.till_handover',
     ],
 
     /*
@@ -653,7 +657,7 @@ return [
      * মিলিয়ে দেখে। ⛔ একটা টাইপো নীরবে কাগজটাকে bulk-এ
      * ঢুকিয়ে দিত।
      */
-    'moves_money' => ['expense', 'counter_deposit', 'counter_payment', 'transfer', 'receipt', 'payment', 'journal', 'contra', 'year_end', 'note', 'cheque_clear', 'cheque_bounce', 'inter_company', 'till_opening', 'fixed_asset_register', 'fixed_asset_dispose'],
+    'moves_money' => ['expense', 'counter_deposit', 'counter_payment', 'transfer', 'receipt', 'payment', 'journal', 'contra', 'year_end', 'note', 'cheque_clear', 'cheque_bounce', 'inter_company', 'till_opening', 'fixed_asset_register', 'fixed_asset_dispose', 'till_handover'],
 
     // রিপোর্ট সরবরাহকারী — কোর নিজে থেকে ডেকে নেবে (সেকশন ১৯.৩)।
     // কোর ফাইলে মডিউলের নাম লিখতে হয় না।

@@ -203,6 +203,17 @@ final class CashTillService implements ProvisionsCompany
              * ⛔ বন্ধ করা কেবল [[deactivate()]]-এর পাহারা দিয়ে — Accounts-Finance অডিট ম৮, ৪ অক্টোবর ২০২৬।
              * ⚠️ সম্পাদনার ফর্মে "চালু" টিক তুলে দিলে টাকাসহ বাক্স চুপচাপ বন্ধ হত — টাকা খাতায় থাকত, পর্দায় আর দেখা যেত না।
              */
+            /*
+             * ⛔ টাকাসহ বাক্সের দায়িত্ব সাধারণ সম্পাদনায় বদলায় না — "দায়িত্ব হস্তান্তর" দিয়ে, জের গুনে, সই নিয়ে
+             * ([[TillHandoverService]], অডিট ম৮)। ⓘ খালি বাক্সে আজকের মতোই — হাতবদলের মতো কিছু নেই।
+             */
+            if (array_key_exists('holder_id', $data) && (int) $data['holder_id'] !== (int) $till->holder_id
+                && bccomp($till->balance(), '0', 4) !== 0) {
+                throw ValidationException::withMessages([
+                    'holder_id' => __('accounts::validation.till_holder_needs_handover', ['amount' => Money::format($till->balance())]),
+                ]);
+            }
+
             $closing = array_key_exists('is_active', $data) && ! (bool) $data['is_active'] && $till->is_active;
             unset($data['is_active']);
 

@@ -11,6 +11,7 @@ use App\Modules\Accounts\Models\Cheque;
 use App\Modules\Accounts\Models\FixedAsset;
 use App\Modules\Accounts\Models\InterCompanyTransfer;
 use App\Modules\Accounts\Models\MoneyTransfer;
+use App\Modules\Accounts\Models\TillHandover;
 use App\Modules\Accounts\Models\Note;
 use App\Modules\Accounts\Services\AccountsSignature;
 use App\Modules\Accounts\Services\ChequeService;
@@ -19,6 +20,7 @@ use App\Modules\Accounts\Services\InterCompanyService;
 use App\Modules\Accounts\Services\MoneyTransferService;
 use App\Modules\Accounts\Services\NoteService;
 use App\Modules\Accounts\Services\OpeningBalanceService;
+use App\Modules\Accounts\Services\TillHandoverService;
 
 /**
  * ⭐ শেষ সই পড়লে হিসাবের কাগজটা নিজেই শেষ হয় — গ১, Accounts-Finance অডিট, ৪ অক্টোবর ২০২৬ ([[AccountsSignature]])।
@@ -71,6 +73,15 @@ final class FinishTheAccountsPaperOnTheLastSignature
                     : null,
                 default => null,
             };
+
+            return;
+        }
+
+        // ⓘ দায়িত্ব হস্তান্তর — সইয়ের অপেক্ষায় থাকলেই বাক্স নতুন জনের (অডিট ম৮)
+        if ($paper instanceof TillHandover) {
+            if ($paper->isAwaiting()) {
+                app(TillHandoverService::class)->finish($paper);
+            }
 
             return;
         }

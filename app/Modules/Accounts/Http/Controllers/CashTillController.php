@@ -16,10 +16,13 @@ use App\Models\LedgerEntry;
 use App\Models\User;
 use App\Modules\Accounts\Http\Requests\CashTillRequest;
 use App\Modules\Accounts\Models\CashTill;
+use App\Modules\Accounts\Models\TillHandover;
 use App\Modules\Accounts\Services\CashTillService;
+use App\Modules\Accounts\Services\TillHandoverService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
+use Illuminate\Routing\Controllers\Middleware;
 use Illuminate\Support\Collection;
 use Illuminate\View\View;
 
@@ -42,7 +45,12 @@ class CashTillController extends Controller implements HasMiddleware
 
     public static function middleware(): array
     {
-        return static::resourcePermissions(CashTill::class, 'till');
+        return [
+            ...static::resourcePermissions(CashTill::class, 'till'),
+
+            // ⭐ দায়িত্ব হস্তান্তর — বাক্স সাজানোর চাবিতে (অডিট ম৮; [[TillHandoverService]])
+            new Middleware('can:update,till', only: ['handOver', 'cancelHandover']),
+        ];
     }
 
     public function index(Request $request): View
@@ -171,7 +179,45 @@ class CashTillController extends Controller implements HasMiddleware
             'till' => $till,
             'entries' => $entries,
             'balance' => $till->balance(),
+
+            // ⭐ দায়িত্বের ইতিহাস আর হস্তান্তরের ঘর (অডিট ম৮)
+            'handovers' => TillHandover::query()->where('cash_till_id', $till->id)
+                ->with(['fromHolder', 'toHolder', 'cashCount'])->orderByDesc('id')->limit(20)->get(),
+            'holders' => $this->holderOptions(),
         ]);
+    }
+
+    /**
+     * ⭐ দায়িত্ব হস্তান্তর — নতুন জন, আর গুনে কত পেলেন (না দিলে খাতার জেরই) — Accounts-Finance অডিট ম৮, ৪ অক্টোবর ২০২৬।
+     */
+    public function handOver(Request $request, CashTill $till): RedirectResponse
+    {
+        $data = $request->validate([
+            'to_holder_id' => ['required', 'integer'],
+            'counted_amount' => ['nullable', 'numeric', 'min:0'],
+            'narration' => ['nullable', 'string', 'max:500'],
+        ]);
+
+        $handover = app(TillHandoverService::class)->handOver(
+            $till,
+            (int) $data['to_holder_id'],
+            isset($data['counted_amount']) ? (string) $data['counted_amount'] : null,
+            $data['narration'] ?? null,
+        );
+
+        return redirect()->route('accounts.till.show', $till)->with('saved', $handover->isAwaiting()
+            ? __('accounts::custody.handover_awaiting', ['no' => $handover->document_no])
+            : __('accounts::custody.handover_done', ['no' => $handover->document_no, 'name' => $handover->toHolder?->name]));
+    }
+
+    public function cancelHandover(CashTill $till, TillHandover $handover): RedirectResponse
+    {
+        abort_unless((int) $handover->cash_till_id === (int) $till->id, 404);
+
+        app(TillHandoverService::class)->cancel($handover);
+
+        return redirect()->route('accounts.till.show', $till)
+            ->with('saved', __('accounts::custody.handover_cancelled', ['no' => $handover->document_no]));
     }
 
     public function edit(Request $request, CashTill $till): View

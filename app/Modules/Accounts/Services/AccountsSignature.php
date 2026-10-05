@@ -44,10 +44,13 @@ final class AccountsSignature
     /** স্থায়ী সম্পদ বিক্রি বা বাতিল */
     public const FIXED_ASSET_DISPOSE = 'fixed_asset_dispose';
 
+    // ⭐ ক্যাশবাক্সের দায়িত্ব হস্তান্তর — টাকার দায় বদলায় (Accounts-Finance অডিট ম৮; [[TillHandoverService]])
+    public const TILL_HANDOVER = 'till_handover';
+
     /** শেষ সই পড়লে যে কাজগুলো এই মডিউল নিজে শেষ করে */
     public const ACTIONS = [
         self::NOTE, self::CHEQUE_CLEAR, self::CHEQUE_BOUNCE, self::INTER_COMPANY, self::TILL_OPENING,
-        self::FIXED_ASSET_REGISTER, self::FIXED_ASSET_DISPOSE,
+        self::FIXED_ASSET_REGISTER, self::FIXED_ASSET_DISPOSE, self::TILL_HANDOVER,
     ];
 
     public function __construct(private readonly DocumentApproval $approval) {}

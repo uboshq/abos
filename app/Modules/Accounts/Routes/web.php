@@ -111,6 +111,9 @@ Route::middleware('auth')->prefix('accounts')->group(function () {
 
         // resource ছকের বাইরে, তাই অনুমতি কন্ট্রোলারে হাতে যাচাই করা হয়
         Route::post('/{till}/primary', [CashTillController::class, 'makePrimary'])->name('primary');
+        // ⭐ দায়িত্ব হস্তান্তর — জের গুনে, সই নিয়ে (অডিট ম৮)
+        Route::post('/{till}/handover', [CashTillController::class, 'handOver'])->name('handover');
+        Route::post('/{till}/handover/{handover}/cancel', [CashTillController::class, 'cancelHandover'])->name('handover.cancel');
     });
 
     /*

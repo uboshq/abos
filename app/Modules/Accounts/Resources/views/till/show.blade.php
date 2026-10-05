@@ -141,6 +141,9 @@
         </section>
     </div>
 
+    {{-- ⭐ দায়িত্ব হস্তান্তর আর তার ইতিহাস (অডিট ম৮) --}}
+    @include('accounts::till.partials.handover', ['till' => $till, 'handovers' => $handovers ?? collect(), 'holders' => $holders ?? collect(), 'balance' => $balance])
+
     <section data-boxed class="mt-4 overflow-hidden rounded-(--radius-card) border border-(--color-border)
                     bg-(--color-surface-card)">
         <h2 class="border-b border-(--color-border) bg-(--color-section-head) px-4 py-3 font-semibold">

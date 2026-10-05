@@ -11,6 +11,7 @@ return [
     'contra_voucher' => 'কন্ট্রা ভাউচার',
     'money_transfer' => 'টাকা হস্তান্তর',
     'cash_count' => 'নগদ গণনা',
+    'till_handover' => 'দায়িত্ব হস্তান্তর',
     'till_code' => 'ক্যাশ টিলের কোড',
     'loan' => 'ঋণ',
     'fixed_asset' => 'স্থায়ী সম্পদ',

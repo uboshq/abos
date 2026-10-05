@@ -10,6 +10,7 @@ return [
     'contra_voucher' => 'Contra Voucher',
     'money_transfer' => 'Money Transfer',
     'cash_count' => 'Cash Count',
+    'till_handover' => 'Box handover',
     'till_code' => 'Cash Till Code',
     'loan' => 'Loan',
     'fixed_asset' => 'Fixed asset',
