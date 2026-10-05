@@ -228,6 +228,8 @@ final class PackRebase
                 'public_id' => (string) Str::uuid7(),
                 'company_id' => $layer->company_id,
                 'product_id' => $layer->product_id,
+                // ⭐ ভাগের সারিও মূল স্তরের লট — অডিট ম৭; ⛔ আগে খালি থাকত, আর এই পিসগুলোর দাম লটহীন হয়ে যেত
+                'batch_id' => $layer->batch_id,
                 'source_type' => $layer->source_type,
                 'source_id' => $layer->source_id,
                 'document_no' => $layer->document_no,

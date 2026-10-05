@@ -431,6 +431,8 @@ final class SalesReturnService
                 documentNo: $return->document_no,
                 date: $return->trx_date,
                 returnedBy: $siblings,
+                // ⭐ মাল যে লটে ফিরছে, খরচও সেই লটের স্তরে (অডিট ম৭)
+                batch: $line->batch,
             ), 4);
         }
 

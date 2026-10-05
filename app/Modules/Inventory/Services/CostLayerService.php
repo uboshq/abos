@@ -322,13 +322,20 @@ final class CostLayerService
          * @var list<int>|null
          */
         ?array $returnedBy = null,
+
+        /*
+         * ⭐ কোন লটের মাল ফিরছে — Inventory অডিট ম৭, ৫ অক্টোবর ২০২৬।
+         * ⛔ আগে খরচ ফিরত টানের উল্টো ক্রমে, লট না দেখে: লট A-র মাল ফিরলেও খরচ বসত লট B-র স্তরে। ⓘ দিলে সেই লটের স্তর
+         * আগে, বাকিটা আগের ক্রমে; `null` মানে আগের আচরণ হুবহু।
+         */
+        ?Batch $batch = null,
     ): string {
         if (bccomp($qty, '0', 4) <= 0) {
             throw new RuntimeException('Returning stock needs a positive quantity.');
         }
 
         return DB::transaction(function () use (
-            $product, $qty, $issuedSourceType, $issuedSourceId, $sourceType, $sourceId, $documentNo, $date, $returnedBy
+            $product, $qty, $issuedSourceType, $issuedSourceId, $sourceType, $sourceId, $documentNo, $date, $returnedBy, $batch
         ) {
             // মূল নথিটা যে স্তরগুলো থেকে টেনেছিল — টানার উল্টো ক্রমে
             $uses = CostLayerUse::query()
@@ -357,6 +364,12 @@ final class CostLayerService
             }
 
             $uses = $uses->unique('cost_layer_id')->values();
+
+            // ⭐ ফেরা লটের স্তর আগে (ম৭) — বাকিগুলোর ক্রম অক্ষত (PHP-র সাজানো স্থির)
+            if ($batch !== null) {
+                $lotOf = CostLayer::query()->whereIn('id', $uses->pluck('cost_layer_id'))->pluck('batch_id', 'id');
+                $uses = $uses->sortBy(fn ($use) => (int) ($lotOf[$use->cost_layer_id] ?? 0) === (int) $batch->id ? 0 : 1)->values();
+            }
 
             foreach ($uses as $use) {
                 if (bccomp($remaining, '0', 4) <= 0) {

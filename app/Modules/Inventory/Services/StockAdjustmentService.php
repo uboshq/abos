@@ -226,8 +226,8 @@ final class StockAdjustmentService
              * ত্রুটি নেই, কোথাও লাল নেই; ভুলটা ধরা পড়ত গুদামে মাল
              * খুঁজতে গিয়ে।
              */
-            $movement = $surplus
-                ? $this->stock->move(
+            $movements = $surplus
+                ? [$this->stock->move(
                     product: $product,
                     warehouse: $warehouse,
                     sourceType: StockService::ADJUSTMENT,
@@ -237,7 +237,7 @@ final class StockAdjustmentService
                     date: $date,
                     narration: $narration,
                     batch: $batch,
-                )
+                )]
                 /*
                  * ⛔ গোনা লটের ঘাটতি সেই লট থেকেই — ২৯ সেপ্টেম্বর ২০২৬ (অডিটে প্রমাণিত)।
                  * ⓘ লট A গোনা হলো, কম পাওয়া গেল লট A-তে; আগে ঘাটতি বেরোত পুরনোটা আগে
@@ -245,7 +245,7 @@ final class StockAdjustmentService
                  * থাকলে (গণনার পরে বিক্রি) থামে — লট ঋণাত্মক হয় না।
                  */
                 : ($batch !== null
-                    ? $this->lotShortage($product, $warehouse, $difference, $reason, $date, $narration, $batch)
+                    ? [$this->lotShortage($product, $warehouse, $difference, $reason, $date, $narration, $batch)]
                     /*
                  * ⓘ কয়টা সারি হবে তা আগে জানা যায় না — তিন লট জুড়ে
                  * ঘাটতি হলে তিনটা। ⚠️ খরচ ও খতিয়ানের নোঙর প্রথমটা,
@@ -261,7 +261,9 @@ final class StockAdjustmentService
                     date: $date,
                     narration: $narration,
                     reason: $reason,
-                )[0]);
+                ));
+
+            $movement = $movements[0];
 
             /*
              * মালের দাম আগে, খতিয়ান পরে — কারণ খতিয়ানের অঙ্কটা দাম থেকেই আসে।
@@ -285,16 +287,26 @@ final class StockAdjustmentService
 
                 $amount = bcmul($difference, $unitCost, 4);
             } else {
-                $taken = $this->costs->issue(
-                    product: $product,
-                    qty: bcmul($difference, '-1', 4),
-                    sourceType: StockService::ADJUSTMENT,
-                    sourceId: $movement->id,
-                    documentNo: $movement->document_no,
-                    date: $date,
-                );
+                /*
+                 * ⭐ প্রতিটা বেরোনো সারির খরচ তার নিজের লটের স্তর থেকে — Inventory অডিট ম৭, ৫ অক্টোবর ২০২৬।
+                 * ⛔ আগে পুরো ঘাটতির খরচ একবারে, লট না দেখে, পুরনো স্তর আগে: লট B কম পাওয়া গেলেও লট A-র স্তর খালি হত — মোট
+                 * টাকা ঠিক, কিন্তু পরে লট A বিক্রির লাভ ভুল। ⓘ নোঙর আর খতিয়ান আগের মতো একটা ([[StockTransferService]]-এর রীতি)।
+                 */
+                $amount = '0';
 
-                $amount = $taken['cost'];
+                foreach ($movements as $out) {
+                    $taken = $this->costs->issue(
+                        product: $product,
+                        qty: bcmul((string) $out->floor_change, '-1', 4),
+                        sourceType: StockService::ADJUSTMENT,
+                        sourceId: $movement->id,
+                        documentNo: $movement->document_no,
+                        date: $date,
+                        batch: $out->batch_id === null ? null : Batch::query()->find($out->batch_id),
+                    );
+
+                    $amount = bcadd($amount, $taken['cost'], 4);
+                }
             }
 
             if (bccomp($amount, '0', 4) !== 0) {

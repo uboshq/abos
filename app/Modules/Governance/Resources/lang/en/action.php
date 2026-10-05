@@ -53,4 +53,6 @@ return [
     'counter_bill_voided' => 'Counter bill voided',
     // ⭐ গুদাম বদলে একই মানুষ পাঠিয়ে গ্রহণ — দুজনের কাজের সুইচে কেবল সুপার অ্যাডমিন পারেন (অডিট ম৪, ৫ অক্টোবর ২০২৬)
     'received_by_its_sender' => 'Received by the person who sent it (super admin)',
+    // ⓘ লট বলা ছিল, কিন্তু সেই লটের স্তরে খরচ নেই — বাকিটা আগের-আসা নিয়মে, নীরবে নয় ([[CostLayerService::issue()]])
+    'lot_cost_fell_back' => 'Lot had no cost layer left; cost drawn first-in-first-out',
 ];
