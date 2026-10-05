@@ -317,6 +317,17 @@ final class QualityInspectionService
             $held = $this->holdFor($result, $acceptedQty, $rejectedQty);
 
             /*
+             * ⛔ আটকানোর মতো কিছু থাকলে গুদাম লাগবেই — Inventory অডিট ম৫, ৫ অক্টোবর ২০২৬। ⚠️ আগে গুদাম ছাড়া কাগজে কোনো
+             * রায়েই কিছু আটকাত না, অথচ কাগজ বলত "বাতিল" — খারাপ মাল তাকে বিক্রয়যোগ্য থেকে যেত। ⓘ পুরো পাশে কিছু আটকানোর
+             * নেই, তাই গুদাম ছাড়াও রায় বসে।
+             */
+            if (bccomp($held, '0', 4) > 0 && $inspection->warehouse === null) {
+                throw ValidationException::withMessages([
+                    'warehouse_id' => __('inventory::validation.qc_hold_needs_warehouse', ['document' => $inspection->document_no]),
+                ]);
+            }
+
+            /*
              * ⛔ [[StockService::hold()]], সরাসরি `move()` নয়।
              *
              * ── ⚠️ প্রথম চেষ্টায় এখানেই ভুল ছিল ──────────────────────
@@ -363,8 +374,11 @@ final class QualityInspectionService
     {
         return match ($result) {
             QualityInspection::QUARANTINE => bcadd($accepted, $rejected, 4),
-            QualityInspection::REJECTED => $rejected,
-            default => '0',
+            /*
+             * ⭐ "অনুমোদিত" রায়েও বাতিল অংশটা আটকায় — Inventory অডিট ম৫, ৫ অক্টোবর ২০২৬।
+             * ⛔ আগে অনুমোদিতে কিছুই আটকাত না, সাথে বাতিল পরিমাণ লেখা থাকলেও: ৩০-এর ৫টা খারাপ, অথচ ৫টাই বিক্রয়যোগ্য।
+             */
+            default => $rejected,
         };
     }
 

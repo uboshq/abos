@@ -125,6 +125,7 @@ return [
     'qc_product_required' => 'Pick the product that was inspected.',
     'qc_needs_quantity' => 'How much was inspected?',
     'qc_already_decided' => 'This inspection already has a decision.',
+    'qc_hold_needs_warehouse' => ':document has no warehouse, so there is nowhere to hold the rejected or quarantined goods. Set the warehouse on the paper, then decide.',
     'qc_unknown_result' => 'That is not a decision this system knows.',
     'qc_parts_must_add_up' => 'Accepted plus rejected must come to :total.',
     'qc_reason_missing' => 'The hold reason :code is missing from the master list, so the goods cannot be held.',
