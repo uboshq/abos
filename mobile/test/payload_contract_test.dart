@@ -43,6 +43,7 @@ void main() {
       'nameBn': 'রহিম স্টোর',
       'ownerName': 'Abdur Rahim',
       'phone': '01711000000',
+      'pointName': 'কারওয়ান বাজার',
       'addressEn': 'Mirpur 10',
       'addressBn': 'মিরপুর ১০',
       'customerType': 'retail',
@@ -60,6 +61,19 @@ void main() {
       expect(customer.phone, '01711000000');
       expect(customer.address, 'মিরপুর ১০');
       expect(customer.ownerName, 'Abdur Rahim');
+      expect(customer.pointName, 'কারওয়ান বাজার');
+    });
+
+    test('a shop on no point, or from an older server, has no point', () {
+      expect(const CustomerRecord({'nameEn': 'X', 'pointName': null}).pointName, isNull);
+      expect(const CustomerRecord({'nameEn': 'X'}).pointName, isNull);
+      expect(const CustomerRecord({'nameEn': 'X', 'pointName': ' '}).pointName, isNull);
+    });
+
+    test('the search finds a shop by its point', () {
+      const customer = CustomerRecord(payload);
+      expect(customer.matches('কারওয়ান'), isTrue);
+      expect(const CustomerRecord({'nameEn': 'X'}).matches('কারওয়ান'), isFalse);
     });
 
     test('falls back to the English name, then the code, never to a blank',

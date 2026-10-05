@@ -149,6 +149,7 @@ class _CustomerTile extends StatelessWidget {
     final name = customer.name;
     final subtitle = [
       if (customer.phone != null) customer.phone!,
+      if (customer.pointName != null) customer.pointName!,
       if (customer.address != null) customer.address!,
     ].join(' · ');
     final due = CustomerDueRecord.forCustomer(customer.id);

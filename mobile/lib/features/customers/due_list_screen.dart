@@ -213,6 +213,7 @@ class _DueTile extends StatelessWidget {
         subtitle: Text(
           [
             if (row.customer.phone != null) row.customer.phone!,
+            if (row.customer.pointName != null) row.customer.pointName!,
             if (due.creditDays > 0) '${due.creditDays} দিনের শর্ত',
             // The limit is shown, never judged against. CustomerDueSync says
             // it plainly: a zero limit means cash or advance, and whether any

@@ -20,6 +20,7 @@ void main() {
     required String id,
     required String nameBn,
     String? phone,
+    String? pointName,
     required String outstanding,
     String creditLimit = '0.0000',
     int creditDays = 0,
@@ -32,6 +33,7 @@ void main() {
         'id': id,
         'nameBn': nameBn,
         if (phone != null) 'phone': phone,
+        if (pointName != null) 'pointName': pointName,
       },
     );
     await ReferenceCache.instance.put(
@@ -83,6 +85,34 @@ void main() {
     final tiles = tester.widgetList<ListTile>(find.byType(ListTile)).toList();
     final names = tiles.map((t) => (t.title! as Text).data).toList();
     expect(names, ['রহিম স্টোর', 'মাঝারি দোকান', 'ছোট দোকান']);
+  });
+
+  // ⭐ The owner, 5 Oct 2026: the name and the mobile are there, "now show the
+  // point with it". After the mobile, and nothing added for a shop on no point.
+  testWidgets('the point follows the mobile, and a shop on no point adds nothing',
+      (tester) async {
+    await tester.runAsync(() async {
+      await seed(
+          id: 'c1',
+          nameBn: 'রহিম স্টোর',
+          phone: '01711000001',
+          pointName: 'কারওয়ান বাজার',
+          outstanding: '5000.0000');
+      await seed(
+          id: 'c2',
+          nameBn: 'করিম স্টোর',
+          phone: '01711000002',
+          outstanding: '3000.0000');
+    });
+
+    await tester.pumpWidget(const MaterialApp(home: DueListScreen()));
+    await tester.pump();
+
+    final subtitles = tester
+        .widgetList<ListTile>(find.byType(ListTile))
+        .map((t) => (t.subtitle! as Text).data)
+        .toList();
+    expect(subtitles, ['01711000001 · কারওয়ান বাজার', '01711000002']);
   });
 
   testWidgets('a shop in advance is not listed as a negative debt',

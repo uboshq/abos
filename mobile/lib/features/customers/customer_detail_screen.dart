@@ -111,6 +111,7 @@ class _Header extends StatelessWidget {
       if (customer.code != null) customer.code!,
       if (customer.ownerName != null) customer.ownerName!,
       if (customer.phone != null) customer.phone!,
+      if (customer.pointName != null) customer.pointName!,
       if (customer.address != null) customer.address!,
     ];
 
