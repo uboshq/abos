@@ -667,15 +667,24 @@ final class SalesInvoiceService
 
                 $this->assertEnoughToSell($line->product, $warehouse, (string) $line->qty);
 
-                $this->stock->move(
+                /*
+                 * ⭐ চালানের মতোই লট ধরে — Inventory অডিট গ১০, ৪ অক্টোবর ২০২৬।
+                 *
+                 * ⛔ আগে `move()` লট ছাড়া: পণ্যের মোট কমত, কোনো লট কমত না, আর লটের ছাপা দামের সীমা কেউ মাপত না।
+                 * ⓘ `issue()` লট ধরা পণ্যে আগে-মেয়াদ ক্রমে লট বাছে (চালানের [[DeliveryChallanService::confirm()]]-এর একই ডাক);
+                 * লটহীন পণ্যে একটাই সারি, `batch_id` খালি — আগের আচরণ হুবহু।
+                 */
+                $movements = $this->stock->issue(
                     product: $line->product,
                     warehouse: $warehouse,
                     sourceType: SalesInvoice::STOCK_SOURCE,
                     sourceId: $invoice->id,
-                    floor: bcmul((string) $line->qty, '-1', 4),
+                    qty: (string) $line->qty,
                     date: $invoice->trx_date,
                     documentNo: $invoice->document_no,
                 );
+
+                $this->assertWithinPrintedPrice($line, $movements);
             }
 
             $this->takeCostFromLayers($invoice);
@@ -1689,6 +1698,28 @@ final class SalesInvoiceService
                     'return' => $return->document_no,
                 ]),
             ]);
+        }
+    }
+
+    /**
+     * ⭐ চালান-ছাড়া সারির ছাপা দামের সীমা — যে লটগুলো থেকে মাল বেরোল তাদের প্রতিটার (অডিট গ১০, ৪ অক্টোবর ২০২৬)।
+     *
+     * ⓘ ক্রেতা প্রতি এককে যা দেন, সারির ছাড়ের পরে — চালানের [[DeliveryChallanService::assertWithinPrintedPrice()]]-এর একই মাপ;
+     * ⚠️ ছাড় না বাদ দিলে ঋণাত্মক ছাড় বসিয়ে সীমা পেরোনো যেত।
+     *
+     * @param  iterable<\App\Modules\Inventory\Models\StockMovement>  $movements
+     */
+    private function assertWithinPrintedPrice(SalesInvoiceLine $line, iterable $movements): void
+    {
+        $qty = (string) $line->qty;
+        $net = bccomp($qty, '0', 4) > 0
+            ? bcsub((string) $line->rate, bcdiv((string) ($line->discount ?? '0'), $qty, 6), 6)
+            : (string) $line->rate;
+
+        foreach ($movements as $movement) {
+            if ($movement->batch !== null) {
+                app(\App\Modules\Inventory\Services\PrintedPriceCeiling::class)->assertWithin($movement->batch, $net);
+            }
         }
     }
 
