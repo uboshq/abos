@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Api;
 
 use App\Core\Engines\Approval\ApprovalEngine;
+use App\Core\Engines\Report\ReportEngine;
 use App\Core\Services\DataScope;
 use App\Core\Support\CompanyContext;
 use App\Http\Controllers\Controller;
@@ -14,10 +15,13 @@ use App\Models\User;
 use App\Models\UserDataScope;
 use App\Modules\Accounts\Dashboard\AccountsWidgets;
 use App\Modules\Accounts\Models\Voucher;
+use App\Modules\Accounts\Services\AccountsFacts;
 use App\Modules\Customer\Services\CustomerMetrics;
+use App\Modules\Finance\Services\HandLoanService;
 use App\Modules\Sales\Metrics\SalesMetrics;
 use App\Modules\Sales\Models\Collection;
 use App\Modules\Sales\Models\SalesInvoice;
+use App\Modules\Supplier\Reports\PrincipalCommissionReport;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -44,6 +48,10 @@ use Illuminate\Support\Carbon;
  *                                    সিদ্ধান্ত ২৬ সেপ্টেম্বর — বকেয়ার তালিকার
  *                                    সমান চাবি, বিক্রয়কর্মীর দোকান-বাঁধন হলে আবার দেখা
  *   approvals    approval.decide
+ *   money        accounts.till.view  ⭐ ওয়েবের "হাতে ও ব্যাংকে মোট" — নগদ · MFS · ব্যাংক · পথে (৬ অক্টোবর ২০২৬)
+ *   inflow       accounts.view       ⭐ আজ যত টাকা ঢুকল, স্থানান্তর বাদ
+ *   payable      accounts.view       ⭐ সব দায় + হাতধারে আমাদের দেনা (হাতধারের ভাগ কেবল finance.hand_loan.view-এ)
+ *   principals   supplier.report     ⭐ প্রিন্সিপালের কমিশন — শতাংশ, দেওয়া, বাকি
  *
  * ── শাখা ─────────────────────────────────────────────────────────────
  * ⓘ বাছাই-করা শাখা নয় — ব্যবহারকারীর শাখা-সীমা ([[ScopedToUserBranch]]),
@@ -92,6 +100,55 @@ class DashboardTodayController extends Controller
 
         if ($user->can('accounts.till.view')) {
             $body['cashInHand'] = ['amount' => self::money(AccountsWidgets::cashInHand())];
+
+            /*
+             * ⭐ হাতে ও ব্যাংকে মোট — ওয়েবের হোমের ডান-উপরের ঘরটাই, হুবহু একই সংখ্যা (মালিক, ৬ অক্টোবর ২০২৬, ফোনের
+             * ছবিতে: "হাতে ও ব্যাংকে মোট · নগদ · MFS · BANK · পথে")। মোট = নগদ + MFS + ব্যাংক, যেমন ওয়েবে; পথে আলাদা ভাগ।
+             */
+            $cash = self::money(AccountsWidgets::cashInHand());
+            $mfs = self::money(AccountsWidgets::mfsBalance());
+            $bank = self::money(AccountsWidgets::bankBalance());
+            $body['money'] = [
+                'amount' => bcadd(bcadd($cash, $mfs, 4), $bank, 4),
+                'cash' => $cash,
+                'mfs' => $mfs,
+                'bank' => $bank,
+                'transit' => self::money(AccountsWidgets::inTransit()),
+            ];
+        }
+
+        if ($user->can('accounts.view')) {
+            $facts = app(AccountsFacts::class);
+
+            // ⭐ আজকের ইনফ্লো — আজ যত টাকা ঢুকল, নগদ-ব্যাংক-MFS মিলিয়ে, নিজের মধ্যে স্থানান্তর বাদ (মালিক, ৬ অক্টোবর ২০২৬)
+            $body['inflow'] = ['amount' => self::money($facts->moneyFlowBetween($today, $today)['in'])];
+
+            /*
+             * ⭐ Payable — "যাকেই আমার পেমেন্ট করতে হবে" (মালিক, ৬ অক্টোবর ২০২৬): দায়ের গোটা দল (সরবরাহকারী, ভাড়া, ভ্যাট,
+             * বেতন, ঋণ — [[AccountsFacts::liabilities()]]) আর হাতধারে আমাদের দেনা (হাতধারের পাতার "আমরা দেব")।
+             */
+            $owed = self::money($facts->liabilities());
+            $handLoans = $user->can('finance.hand_loan.view') && class_exists(HandLoanService::class)
+                ? self::money(app(HandLoanService::class)->standing()['we_owe'])
+                : '0.0000';
+            $body['payable'] = ['amount' => bcadd($owed, $handLoans, 4), 'books' => $owed, 'handLoans' => $handLoans];
+        }
+
+        /*
+         * ⭐ প্রিন্সিপালের কমিশন — রিপোর্টের পুরো ফল (মালিক, ৬ অক্টোবর ২০২৬: "ডিলাররা যে টাকা দেয়, এখান থেকে আমি কত
+         * পার্সেন্টেজ পাব, কত দেওয়া হয়েছে, কত ব্যালেন্স")। নিজে গোনা নয় — [[PrincipalCommissionReport]], শাখার দেয়ালসহ।
+         */
+        if ($user->can('supplier.report') && class_exists(PrincipalCommissionReport::class)) {
+            $body['principals'] = array_map(fn (array $r) => [
+                'name' => (string) $r['supplier_name'],
+                'period' => (string) $r['period'],
+                'basisRate' => (string) $r['basis_rate'],
+                'inflow' => self::money((string) $r['inflow']),
+                'commission' => self::money((string) $r['commission']),
+                'share' => self::money((string) $r['share']),
+                'paid' => self::money((string) $r['paid']),
+                'balance' => self::money((string) $r['balance']),
+            ], app(ReportEngine::class)->run(PrincipalCommissionReport::KEY, [], 1, 50)->rows);
         }
 
         if ($user->can('customer.report')) {

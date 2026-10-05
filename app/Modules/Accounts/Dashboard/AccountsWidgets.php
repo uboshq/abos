@@ -163,12 +163,12 @@ final class AccountsWidgets implements DashboardWidgets
         return self::sumOf(self::inView(CashTill::query()->active(), 'cash_tills.branch_id')->pluck('account_id')->all());
     }
 
-    private static function mfsBalance(): string
+    public static function mfsBalance(): string
     {
         return self::sumOf(Account::query()->ofMoneyKind(Account::MFS)->pluck('id')->all(), true);
     }
 
-    private static function bankBalance(): string
+    public static function bankBalance(): string
     {
         // ⛔ কেবল ব্যাংক — MFS আলাদা সংখ্যা, একসাথে গুনলে দুইটাই মিথ্যা
         return self::sumOf(Account::query()->ofMoneyKind(Account::BANK)->pluck('id')->all(), true);
@@ -186,7 +186,7 @@ final class AccountsWidgets implements DashboardWidgets
      * হবে আর যোগফলে দুইবার গোনা বন্ধ হবে। ততদিন এটা "কার হাতে পথে
      * কত" প্রশ্নের সৎ উত্তর, শুধু খাতায় আলাদা করা নেই।
      */
-    private static function inTransit(): string
+    public static function inTransit(): string
     {
         return Money::sumOf(
             self::inView(MoneyTransfer::query()->pending(), 'money_transfers.branch_id')->get(),

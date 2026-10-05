@@ -504,13 +504,7 @@ final class AccountsFacts
      */
     public function moneyFlowByMonth(int $months = 6): array
     {
-        $ids = [];
-
-        foreach ([StandardChart::CASH_IN_HAND, StandardChart::BANK, StandardChart::MOBILE_MONEY] as $code) {
-            foreach (StandardChart::find($code)?->selfAndDescendants()->pluck('id') ?? [] as $id) {
-                $ids[] = (int) $id;
-            }
-        }
+        $ids = $this->moneyAccountIds();
 
         $start = Carbon::today()->startOfMonth()->subMonths($months - 1);
         $rows = collect();
@@ -596,6 +590,58 @@ final class AccountsFacts
     public function netProfit(string $income, string $expense): string
     {
         return bcsub($income, $expense, 4);
+    }
+
+    /**
+     * ⭐ দুই তারিখের মধ্যে টাকা এল আর গেল — নগদ, ব্যাংক, MFS মিলিয়ে, নিজের মধ্যে স্থানান্তর বাদ ([[moneyFlowByMonth()]]-এর
+     * হুবহু নিয়ম, এক পরিসরে)। ⓘ ফোনের হোমের "আজকের ইনফ্লো" (মালিক, ৬ অক্টোবর ২০২৬) এটাই পড়ে। দেখার শাখা মানে।
+     *
+     * @return array{in: string, out: string}
+     */
+    public function moneyFlowBetween(string $from, string $to): array
+    {
+        $ids = $this->moneyAccountIds();
+
+        if ($ids === []) {
+            return ['in' => '0.0000', 'out' => '0.0000'];
+        }
+
+        $row = $this->inView(LedgerEntry::query()->whereIn('ledger_entries.account_id', $ids), 'ledger_entries.branch_id')
+            ->whereBetween('ledger_entries.trx_date', [$from, $to])
+            ->whereExists(fn ($q) => $q->selectRaw('1')->from('ledger_entries as other')
+                ->whereColumn('other.company_id', 'ledger_entries.company_id')
+                ->whereColumn('other.source_type', 'ledger_entries.source_type')
+                ->whereColumn('other.source_id', 'ledger_entries.source_id')
+                ->whereNotIn('other.account_id', $ids))
+            ->selectRaw('COALESCE(SUM(ledger_entries.debit), 0) as d, COALESCE(SUM(ledger_entries.credit), 0) as c')
+            ->toBase()->first();
+
+        return ['in' => bcadd((string) ($row->d ?? '0'), '0', 4), 'out' => bcadd((string) ($row->c ?? '0'), '0', 4)];
+    }
+
+    /** টাকার খাত — নগদ, ব্যাংক, MFS আর তাদের নিচের সব @return list<int> */
+    private function moneyAccountIds(): array
+    {
+        $ids = [];
+
+        foreach ([StandardChart::CASH_IN_HAND, StandardChart::BANK, StandardChart::MOBILE_MONEY] as $code) {
+            foreach (StandardChart::find($code)?->selfAndDescendants()->pluck('id') ?? [] as $id) {
+                $ids[] = (int) $id;
+            }
+        }
+
+        return $ids;
+    }
+
+    /**
+     * ⭐ সব দায় — যাকেই টাকা দিতে হবে: চলতি দায় (সরবরাহকারী, ভাড়া, শ্রমিক, ভ্যাট, বেতন…, ২১০০) আর দীর্ঘমেয়াদি দায়
+     * (ঋণ, ২২০০) — দায়ের গোটা দল (২০০০)। ⓘ ফোনের হোমের "Payable" (মালিক, ৬ অক্টোবর ২০২৬: "যাকেই আমার পেমেন্ট করতে
+     * হবে")। হাতধারে আমাদের দেনা এখানে নেই — সেটা হাতধার খাতের (সম্পদ ১১৭০) ভেতরে নিট, তাই ডাকার জায়গা আলাদা যোগ করে।
+     * দেখার শাখা মানে।
+     */
+    public function liabilities(): string
+    {
+        return $this->balanceOfCode('2000');
     }
 
     /**
