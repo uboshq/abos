@@ -24,7 +24,7 @@ class NumberSeries extends Model
     protected $fillable = [
         'company_id', 'branch_id', 'financial_year_id', 'module', 'doc_type',
         'prefix', 'suffix', 'format', 'padding', 'next_number', 'start_number',
-        'reset_yearly', 'is_active',
+        'reset_yearly', 'reset_daily', 'is_active',
     ];
 
     protected function casts(): array
@@ -34,6 +34,7 @@ class NumberSeries extends Model
             'next_number' => 'integer',
             'start_number' => 'integer',
             'reset_yearly' => 'boolean',
+            'reset_daily' => 'boolean',
             'is_active' => 'boolean',
         ];
     }
@@ -65,6 +66,11 @@ class NumberSeries extends Model
         static::saving(function (self $series): void {
             if ($series->reset_yearly && ! NumberSeriesProvisioner::resetsWith((string) $series->format)) {
                 $series->reset_yearly = false;
+            }
+
+            // ⛔ একই কারণে দিন ছাড়া ছকে রোজ ০১ নয় — কালকের ০১ আর আজকের ০১ এক নম্বর হত
+            if ($series->reset_daily && ! NumberSeriesProvisioner::resetsDailyWith((string) $series->format)) {
+                $series->reset_daily = false;
             }
         });
     }

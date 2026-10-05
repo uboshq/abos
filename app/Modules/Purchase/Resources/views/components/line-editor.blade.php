@@ -56,6 +56,12 @@
      * কোড পড়ে নয়।
      */
     'lots' => false,
+
+    /*
+     * ⭐ খালি লট-ঘরের প্রস্তাব — পরের লট নম্বর (`051026/01-LOT`), মালিকের আদেশ, ৫ অক্টোবর ২০২৬।
+     * ⓘ কেবল দেখায়, খরচ হয় না; ঘর খালি রেখে সংরক্ষণ করলে কাগজের তারিখে নম্বরটা বসে ([[PurchaseLots]])।
+     */
+    'lotHint' => null,
 ])
 @php
     $showTax ??= (bool) app(\App\Core\Services\SettingsService::class)->get('purchase.vat_enabled', false);
@@ -270,9 +276,11 @@
                                 দেখাটা।
                             --}}
                             <td class="cell-input" data-label="{{ __('inventory::field.batch_no') }}">
+                                {{-- ⓘ `required` নেই — ৫ অক্টোবর ২০২৬ থেকে খালি লট সংরক্ষণে নিজে বসে ([[PurchaseLots]]) --}}
                                 <input type="text" maxlength="60"
                                        x-show="tracksLot(row)"
-                                       :required="tracksLot(row)"
+                                       placeholder="{{ $lotHint }}"
+                                       title="{{ __('purchase::lot.auto', ['number' => $lotHint]) }}"
                                        :name="'lines[' + (i) + '][batch_no]'" x-model="row.batch_no"
                                        class="h-(--spacing-field-compact) w-full sm:w-28 rounded-(--radius-field) border
                                               border-(--color-border) bg-(--color-surface-card) px-2">

@@ -19,11 +19,13 @@ use App\Modules\Purchase\Models\PurchaseBill;
 use App\Modules\Purchase\Models\PurchaseOrder;
 use App\Modules\Purchase\Models\PurchaseReceipt;
 use App\Modules\Purchase\Services\PurchaseBillService;
+use App\Modules\Purchase\Services\PurchaseLots;
 use App\Modules\Supplier\Models\Supplier;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
+use Illuminate\Support\Carbon;
 use Illuminate\View\View;
 
 /**
@@ -354,6 +356,9 @@ class PurchaseBillController extends Controller implements HasMiddleware
         return [
             'suppliers' => Supplier::query()->inViewedBranch()->active()->forPurchasing($keepSupplierId)->orderBy('name_en')->get(),
             'products' => $products,
+
+            // ⭐ খালি লট-ঘরের প্রস্তাব — খরচ হয় না, সংরক্ষণে কাগজের তারিখে বসে ([[PurchaseLots]], মালিক, ৫ অক্টোবর ২০২৬)
+            'lotHint' => app(PurchaseLots::class)->upcoming(Carbon::today()),
 
             /*
              * ⭐ গতবারের দর ও নীতি — মালিকের নির্দেশ, ২১ সেপ্টেম্বর ২০২৬।

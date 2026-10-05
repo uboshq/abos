@@ -28,7 +28,7 @@ import { reprice } from '../pricing.js'
 export default function directPurchase({
     catalogue, vatEnabled, lastRatesUrl,
     depositMethods, moneyAccounts, carriers, packs, packDefaults, suppliers,
-    paymentTermDefault, draftKey, hasErrors, accountCodes, texts, lotErrors,
+    paymentTermDefault, draftKey, hasErrors, accountCodes, texts, lotErrors, lotHint,
 }) {
     return {
         catalogue,
@@ -43,12 +43,13 @@ export default function directPurchase({
         nextKey: 1,
 
         /* ── লট — কেবল লট ধরা পণ্যের সারিতে ─────────────────
-           ⓘ সার্ভার ফিরিয়ে দিলে কোন সারির লট নেই সেটা এখানে আসে,
-           সারির ক্রম ধরে (`lines.{i}.batch_no`)। ⚠️ `lotTried` —
-           পাঠানোর চেষ্টা হয়েছে কি না; তার আগে খালি ঘরের নিচে লাল
-           বার্তা দেখানো মানে প্রতিটা নতুন সারিতে অকারণ ধমক। */
+           ⓘ সার্ভার কোনো সারির লট ফিরিয়ে দিলে বার্তাটা এখানে আসে,
+           সারির ক্রম ধরে (`lines.{i}.batch_no`)।
+           ⭐ ৫ অক্টোবর ২০২৬ থেকে খালি লট আটকায় না — সংরক্ষণে নিজে
+           বসে, কাগজের তারিখে (`PurchaseLots`, মালিকের আদেশ)। `lotHint`
+           পরের নম্বরটা কেবল দেখায় (`051026/01-LOT`), খরচ করে না। */
         lotErrors: lotErrors || {},
-        lotTried: false,
+        lotHint: lotHint || '',
 
         /*
          * ⭐ পাঠানো কেন থামল — এক বাক্যে, পর্দার উপরে।
@@ -1590,23 +1591,7 @@ export default function directPurchase({
                 return;
             }
 
-            /* ⭐ লট ধরা সারিতে লট নেই — পাঠানোর আগেই, সারির নিচে।
-               ⛔ কেবল `required`-এর ভরসায় রাখলে ব্রাউজার একটা ভাসমান
-               ইশারা দেখাত (কখনো স্ক্রলের বাইরে), আর ঘরটা লুকানো
-               থাকলে কিছুই না। ⓘ সার্ভারও একই কথা বলে, সারি ধরে। */
-            const missing = this.firstLotMissing();
-
-            if (missing >= 0) {
-                event.preventDefault();
-                this.lotTried = true;
-
-                /* ⓘ দুইটা বার্তা, আর দুইটা আলাদা প্রশ্নের উত্তর: উপরেরটা
-                   বলে **কেন থামল**, সারির নিচেরটা বলে **কোন সারিতে** */
-                this.stopped = texts.needALot || '';
-                this.$nextTick(() => this.focusLot(missing));
-
-                return;
-            }
+            /* ⓘ খালি লট আর থামায় না — ৫ অক্টোবর ২০২৬ থেকে সংরক্ষণে নিজে বসে (`PurchaseLots`) */
 
             const paid = this.paidTotal + (Number(this.paidNow) || 0);
 
@@ -1692,9 +1677,12 @@ export default function directPurchase({
          *
          * ১ · কার্টে এই পণ্যের আগের সারি — একই গাড়ির একই পণ্য সাধারণত
          *     একই লট (আলাদা হলে মানুষটা বদলে দেন)
-         * ২ · নইলে এই পণ্যের **শেষ যে লটে মাল ঢুকেছিল** (সার্ভারের
-         *     [[LastLotFor]]) — মেয়াদসহ
-         * ৩ · নইলে খালি
+         * ২ · নইলে খালি — সংরক্ষণে কাগজের লট নম্বর নিজে বসে
+         *     (`051026/01-LOT`, [[PurchaseLots]])
+         *
+         * ⛔ ৫ অক্টোবর ২০২৬ পর্যন্ত দ্বিতীয় ধাপ ছিল "গতবারের লট"
+         * ([[LastLotFor]]); মালিকের আদেশে তার জায়গায় নতুন নম্বর —
+         * পুরনো লট বসালে নতুন মাল পুরনো লটে, পুরনো মেয়াদে মিশত।
          */
         lotSeed(product) {
             const blank = { batch_no: '', expiry_date: '', mrp: '', from: '' };
@@ -1714,43 +1702,20 @@ export default function directPurchase({
                 }
             }
 
-            const last = product.last_lot;
-
-            if (last && last.batch_no) {
-                return {
-                    batch_no: last.batch_no,
-                    expiry_date: last.expiry_date || '',
-                    mrp: last.mrp || '',
-                    from: 'last',
-                };
-            }
-
             return blank;
         },
 
         /**
          * সারির নিচের বার্তা — খালি মানে কিছু বলার নেই।
          *
-         * ⓘ সার্ভারের বার্তা আগে (সে পণ্যের নামসহ বলে), তারপর পর্দার
-         * নিজেরটা — কিন্তু কেবল পাঠানোর চেষ্টার পরে। ⭐ লট লিখলেই দুইটাই
-         * সরে যায়।
+         * ⓘ কেবল সার্ভারের বার্তা — খালি লট পর্দা আর আটকায় না (৫ অক্টোবর
+         * ২০২৬ থেকে সংরক্ষণে নিজে বসে)। ⭐ লট লিখলেই সরে যায়।
          */
         lotProblem(line, index) {
             if (! this.tracksLot(line)) return '';
             if (String(line.batch_no || '').trim() !== '') return '';
 
-            const server = this.lotErrors[index] ?? this.lotErrors[String(index)];
-
-            if (server) return server;
-
-            return this.lotTried ? (texts.lotNeeded || '') : '';
-        },
-
-        /** লট ধরা অথচ লট-হীন প্রথম সারি — না থাকলে −১। */
-        firstLotMissing() {
-            return this.lines.findIndex(
-                line => this.tracksLot(line) && String(line.batch_no || '').trim() === ''
-            );
+            return this.lotErrors[index] ?? this.lotErrors[String(index)] ?? '';
         },
 
         /**

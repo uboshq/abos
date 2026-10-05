@@ -15,7 +15,6 @@ use App\Modules\Purchase\Services\DirectPurchaseService;
 use App\Modules\Supplier\Models\Supplier;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Validation\ValidationException;
 use Tests\TestCase;
 
 /**
@@ -153,16 +152,14 @@ class ThePharmacyCouldNotBuyASingleStripTest extends TestCase
     }
 
     /**
-     * ⛔ লট ধরা পণ্য লট নম্বর ছাড়া ঢোকে না।
+     * ⭐ লট ধরা পণ্য লট নম্বর ছাড়া ঢোকে না — নম্বর না লিখলে নম্বর-ক্রম থেকে বসে।
      *
-     * ⓘ শর্তটা সেবা স্তরে, পর্দায় নয় — পর্দার `required` কেবল ব্রাউজারের
-     * ভদ্রতা, আর API বা ইমপোর্ট ওই পথে আসেই না।
+     * ⓘ ৫ অক্টোবর ২০২৬ পর্যন্ত খালি লট এখানে ফিরিয়ে দেওয়া হত; মালিকের আদেশে এখন কাগজের তারিখে
+     * `DDMMYY/XX-LOT` বসে ([[PurchaseLots]])। শর্তটা আগের মতোই সেবা স্তরে — API বা ইমপোর্টও একই পথ পায়।
      */
-    public function test_a_lot_tracked_product_cannot_arrive_without_a_number(): void
+    public function test_a_lot_tracked_product_without_a_number_gets_one_from_the_series(): void
     {
-        $this->expectException(ValidationException::class);
-
-        app(DirectPurchaseService::class)->complete(
+        $result = app(DirectPurchaseService::class)->complete(
             [
                 'supplier_id' => $this->supplier->id,
                 'warehouse_id' => $this->warehouse->id,
@@ -176,6 +173,12 @@ class ThePharmacyCouldNotBuyASingleStripTest extends TestCase
                 'batch_no' => '',
             ]],
         );
+
+        $lot = (string) $result['bill']->lines->first()->batch_no;
+
+        $this->assertSame(now()->format('dmy').'/01-LOT', $lot, 'খালি লটে নম্বর-ক্রমের লট বসেনি।');
+        $this->assertTrue(Batch::query()->where('product_id', $this->medicine->id)->where('batch_no', $lot)->exists(),
+            'নম্বরটা সারিতে বসেছে, কিন্তু লটটা জন্মায়নি।');
     }
 
     /**

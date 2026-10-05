@@ -24,8 +24,8 @@ use App\Modules\MasterData\Models\PaymentTerm;
 use App\Modules\MasterData\Services\MethodFitsAccount;
 use App\Modules\Purchase\Http\Requests\DirectPurchaseRules;
 use App\Modules\Purchase\Services\DirectPurchaseService;
-use App\Modules\Purchase\Services\LastLotFor;
 use App\Modules\Purchase\Services\LastPaidRate;
+use App\Modules\Purchase\Services\PurchaseLots;
 use App\Modules\Supplier\Models\Supplier;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
@@ -34,6 +34,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
+use Illuminate\Support\Carbon;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
@@ -68,7 +69,7 @@ class DirectPurchaseController extends Controller implements HasMiddleware
         private readonly SettingsService $settings,
         private readonly MenuBuilder $menu,
         private readonly LastPaidRate $lastPaid,
-        private readonly LastLotFor $lastLots,
+        private readonly PurchaseLots $lots,
     ) {}
 
     public static function middleware(): array
@@ -84,6 +85,9 @@ class DirectPurchaseController extends Controller implements HasMiddleware
             'menu' => $this->menu->forUser($request->user()),
             'products' => $this->catalogue($warehouse),
             'suppliers' => Supplier::query()->inViewedBranch()->active()->forPurchasing()->orderBy('name_en')->get(),
+
+            // ⭐ খালি লট-ঘরের প্রস্তাব — খরচ হয় না, সংরক্ষণে কাগজের তারিখে বসে ([[PurchaseLots]], মালিক, ৫ অক্টোবর ২০২৬)
+            'lotHint' => $this->lots->upcoming(Carbon::today()),
 
             /*
              * ── গুদাম বনাম তাক — দুইটা আলাদা প্রশ্ন ──────────────────
@@ -289,8 +293,6 @@ class DirectPurchaseController extends Controller implements HasMiddleware
             DirectPurchaseRules::messages(),
         );
 
-        DirectPurchaseRules::demandLots($data['lines']);
-
         /*
          * ⛔ টাকা আসে কেবল টাকার খাত থেকে — ২৭ সেপ্টেম্বর ২০২৬ (abos-10 যা পেয়েছেন)।
          *
@@ -456,21 +458,18 @@ class DirectPurchaseController extends Controller implements HasMiddleware
     private function catalogue(?Warehouse $warehouse): array
     {
         /*
-         * ⭐ লট ধরা কি না, আর গতবারের লট — পর্দার লট-ঘরের জন্য।
+         * ⭐ লট ধরা কি না — পর্দার লট-ঘরের জন্য।
          *
-         * ⓘ `stockPanel()` সেবার জিনিস আর সেটা এই দুইটা জানে না; তাই
-         * এখানে জোড়া লাগে। ⚠️ `track_batch` না গেলে পর্দা জানত না কোন
-         * সারিতে লট চাইতে হবে, আর লট ধরা পণ্য কেনা যেত না — সার্ভার
-         * বলত "লট নম্বর লাগবে", অথচ পর্দায় লেখার কোনো ঘরই ছিল না।
+         * ⓘ `stockPanel()` সেবার জিনিস আর সেটা এটা জানে না; তাই এখানে
+         * জোড়া লাগে। ⚠️ `track_batch` না গেলে পর্দা জানত না কোন সারিতে
+         * লটের ঘর আঁকতে হবে।
+         *
+         * ⛔ "গতবারের লট" (`last_lot`) আর যায় না — ৫ অক্টোবর ২০২৬ থেকে
+         * খালি লটে নতুন নম্বর বসে ([[PurchaseLots]], মালিকের আদেশ)।
          */
-        $lots = $this->lastLots->products(
-            $this->products()->filter(fn (Product $p) => (bool) $p->track_batch)->modelKeys(),
-        );
-
         return $this->products()
             ->map(fn (Product $p) => $this->purchases->stockPanel($p, $warehouse) + [
                 'track_batch' => (bool) $p->track_batch,
-                'last_lot' => $p->track_batch ? ($lots[(int) $p->id] ?? null) : null,
             ])
             ->all();
     }

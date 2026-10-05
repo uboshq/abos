@@ -46,6 +46,7 @@ class NumberSeriesController extends Controller implements HasMiddleware
         '{YYYY}' => 'master_data::field.year_four',
         '{YY}' => 'master_data::field.year_two',
         '{MM}' => 'master_data::field.month',
+        '{DD}' => 'master_data::field.day',
         '{BRANCH}' => 'core.company.branch',
         '{SEQ}' => 'master_data::field.sequence',
     ];
@@ -168,6 +169,9 @@ class NumberSeriesController extends Controller implements HasMiddleware
             // বছর শেষে ক্রম আবার ১ থেকে শুরু হবে কি না — বাংলাদেশে
             // বেশিরভাগ প্রতিষ্ঠান অর্থবছর ধরে গোনে
             'reset_yearly' => ['nullable', 'boolean'],
+
+            // ⭐ রোজ ০১ থেকে — লটের জন্য (মালিক, ৫ অক্টোবর ২০২৬), যেকোনো সিরিজে বসানো যায়
+            'reset_daily' => ['nullable', 'boolean'],
         ], [
             /*
              * ডিফল্ট বার্তাটা ছিল "The format field format is invalid" —
@@ -197,6 +201,14 @@ class NumberSeriesController extends Controller implements HasMiddleware
 
         if ($request->boolean('reset_yearly') && ! $validated['reset_yearly']) {
             session()->flash('warning', __('master_data::message.reset_needs_a_year'));
+        }
+
+        // ⛔ একই নিয়ম দিনে: পুরো তারিখ ছাড়া রোজ ০১ মানে দুই দিনের দুই কাগজে এক নম্বর
+        $validated['reset_daily'] = $request->boolean('reset_daily')
+            && NumberSeriesProvisioner::resetsDailyWith($validated['format']);
+
+        if ($request->boolean('reset_daily') && ! $validated['reset_daily']) {
+            session()->flash('warning', __('master_data::message.reset_needs_a_day'));
         }
 
         /*

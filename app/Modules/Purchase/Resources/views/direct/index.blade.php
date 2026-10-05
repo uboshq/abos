@@ -70,11 +70,9 @@
               ]),
               texts: @js([
                   'paidMoreConfirm' => __('purchase::message.paid_more_confirm'),
-                  'lotNeeded' => __('purchase::lot.needs_lot_short'),
 
                   {{-- ⭐ পাঠানো থামার তিনটা কারণ — পর্দায় লেখার জন্য --}}
                   'needALine' => __('purchase::message.need_a_line'),
-                  'needALot' => __('purchase::message.need_a_lot'),
                   'needACarrier' => __('purchase::message.need_a_carrier'),
 
                   {{-- ⛔ দর ০ বা বিক্রয়দর ছাড়া — কার্টে নয়, পাঠানোও নয় (মালিক, ৩ অক্টোবর ২০২৬) --}}
@@ -88,6 +86,8 @@
                   ->filter(fn ($messages, $key) => preg_match('/^lines\.\d+\.batch_no$/', (string) $key) === 1)
                   ->mapWithKeys(fn ($messages, $key) => [(string) explode('.', (string) $key)[1] => $messages[0]])
                   ->all()),
+              {{-- ⭐ খালি লট-ঘরের প্রস্তাব — পরের লট নম্বর, খরচ হয় না ([[PurchaseLots]], মালিক, ৫ অক্টোবর ২০২৬) --}}
+              lotHint: @js($lotHint),
           })"
           @submit="guard($event)"
           x-effect="saveDraft()"

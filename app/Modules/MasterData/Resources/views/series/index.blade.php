@@ -163,6 +163,15 @@
                                             {{ $row->reset_yearly ? __('core.yes') : __('core.no') }}
                                         </span>
                                     </label>
+                                    {{-- ⭐ রোজ ০১ থেকে — লটের ঘর (মালিক, ৫ অক্টোবর ২০২৬); একই কলামে, যাতে টেবিল চওড়া না হয় --}}
+                                    <label class="flex min-h-(--spacing-touch) items-center gap-2">
+                                        <input type="checkbox" name="reset_daily" value="1"
+                                               @checked($row->reset_daily) class="size-4"
+                                               aria-label="{{ __('master_data::field.reset_daily') }}">
+                                        <span class="text-2xs text-(--color-ink-muted)">
+                                            {{ __('master_data::field.reset_daily') }}
+                                        </span>
+                                    </label>
                                 </td>
 
                                 {{-- নমুনাটা ইঞ্জিনের নিজের কোড থেকে আসে।

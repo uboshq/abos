@@ -252,7 +252,7 @@
                 ঠিক হয় আজ কত দামে বেচা হবে। আদেশ বা চালানে নয় — আদেশে
                 দর এখনো চূড়ান্ত নয়, আর চালানে টাকার কথাই ওঠে না।
             --}}
-            <x-purchase::line-editor lots show-free :products="$products" :lines="$existing" qty-field="qty"
+            <x-purchase::line-editor lots show-free :lot-hint="$lotHint ?? null" :products="$products" :lines="$existing" qty-field="qty"
                                      :link-field="$linkField"
                                      :link-options="$receiptLines->isNotEmpty() ? $receiptLines : $orderLines"
                                      show-sales-price />

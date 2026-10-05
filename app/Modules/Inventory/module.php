@@ -610,6 +610,12 @@ return [
          * সময়টুকু। দুইটাই কাজের কোনো অংশ নয়।
          */
         'WHS' => 'inventory::doc.warehouse_code',
+
+        /*
+         * ⭐ লটের প্রস্তাব — 051026/01-LOT, মালিকের আদেশ, ৫ অক্টোবর ২০২৬: *"লটে নিজে থেকে প্রস্তাব দেবে, DDMMYY/XX-LOT"*।
+         * ⓘ রোজ ০১ থেকে, কাগজের তারিখে; ছক নম্বর-ক্রমের পাতা থেকে বদলানো যায় ([[NumberSeriesProvisioner]], [[PurchaseLots]])।
+         */
+        'LOT' => 'inventory::doc.lot',
     ],
 
     'drill_sources' => [

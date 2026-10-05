@@ -10,4 +10,5 @@ return [
     'production' => 'রান্না',
     'quality_inspection' => 'গুণমান পরিদর্শন',
     'stock_count' => 'মাল গোনা',
+    'lot' => 'লট নম্বর',
 ];

@@ -10,4 +10,5 @@ return [
     'production' => 'Cooking',
     'quality_inspection' => 'Quality Inspection',
     'stock_count' => 'Stock Count',
+    'lot' => 'Lot Number',
 ];

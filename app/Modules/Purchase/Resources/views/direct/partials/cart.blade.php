@@ -62,7 +62,9 @@
                                              না-ধরা সারিতে তিনটা ফাঁকা কলাম পড়ে থাকত।
 
                                              ⭐ মান আগে থেকে বসানো (`lotSeed`): কার্টে এই পণ্যের
-                                             আগের সারি, নইলে শেষ যে লটে মাল ঢুকেছিল। Enter —
+                                             আগের সারি, নইলে খালি — খালি লট সংরক্ষণে নিজে বসে,
+                                             কাগজের তারিখে (`051026/01-LOT`, মালিক, ৫ অক্টোবর ২০২৬);
+                                             ঘরে পরের নম্বরটা কেবল দেখায় (`lotHint`)। Enter —
                                              পরের ঘর; শেষ ঘরের পর পরের পণ্য খোঁজা (`lotNext`)।
 
                                              ⚠️ `required` নেই, ইচ্ছে করে: ব্রাউজারের ভাসমান ইশারা
@@ -76,6 +78,7 @@
                                                     </span>
                                                     <input type="text" maxlength="60" autocomplete="off" data-lot-field
                                                            :name="'lines[' + (index) + '][batch_no]'" x-model="line.batch_no"
+                                                           :placeholder="lotHint"
                                                            @keydown.enter.prevent="lotNext($event)"
                                                            :aria-invalid="lotProblem(line, index) ? 'true' : 'false'"
                                                            :class="lotProblem(line, index) ? 'border-(--color-danger)' : 'border-(--color-border)'"
@@ -118,9 +121,9 @@
                                                   text-2xs text-(--color-badge-danger-ink)"
                                            x-text="lotProblem(line, index)"></p>
 
-                                        <span x-show="tracksLot(line) && line.lot_from === 'last' && ! lotProblem(line, index)" x-cloak
+                                        <span x-show="tracksLot(line) && String(line.batch_no || '').trim() === '' && ! lotProblem(line, index)" x-cloak
                                               class="block text-2xs text-(--color-ink-muted)">
-                                            {{ __('purchase::lot.from_last_lot') }}
+                                            {{ __('purchase::lot.auto', ['number' => $lotHint]) }}
                                         </span>
 
                                         {{-- ⭐ গতবারের দর — সারিতেই, ভাসমান নয়।

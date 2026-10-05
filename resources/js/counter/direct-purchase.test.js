@@ -190,15 +190,15 @@ describe('লট — কেবল লট ধরা সারিতে', () => {
         id: 7,
         name: 'ওষুধ',
         track_batch: true,
-        last_lot: { batch_no: 'L-LAST', expiry_date: '2027-03-31', mrp: '95' },
         ...over,
     })
 
     const withLots = (over = {}) => {
         const c = counter({
-            catalogue: [product({ track_batch: false, last_lot: null }), tracked()],
-            texts: { paidMoreConfirm: 'বেশি দিচ্ছেন?', lotNeeded: 'লট নম্বর লিখুন' },
+            catalogue: [product({ track_batch: false }), tracked()],
+            texts: { paidMoreConfirm: 'বেশি দিচ্ছেন?' },
             lotErrors: {},
+            lotHint: '051026/01-LOT',
             ...over,
         })
         c.$nextTick = fn => fn()
@@ -245,22 +245,17 @@ describe('লট — কেবল লট ধরা সারিতে', () => {
         expect(second.lot_from).toBe('line')
     })
 
-    it('আগের সারি না থাকলে পণ্যের শেষ লট — মেয়াদসহ', () => {
-        const c = withLots()
-        const line = add(c, c.catalogue[1])
-
-        expect(line.batch_no).toBe('L-LAST')
-        expect(line.expiry_date).toBe('2027-03-31')
-        expect(line.mrp).toBe('95')
-        expect(line.lot_from).toBe('last')
-    })
-
-    it('কোনো লট জানা না থাকলে খালি — বানানো নম্বর নয়', () => {
-        const c = withLots({ catalogue: [tracked({ last_lot: null })] })
+    /* ⭐ ৫ অক্টোবর ২০২৬ — "গতবারের লট" নয়: ঘর খালি, প্রস্তাব কেবল দেখায়, নম্বর বসে সংরক্ষণে (`PurchaseLots`) */
+    it('আগের সারি না থাকলে খালি — গতবারের লট নয়, ঘরে পরের লট নম্বরের প্রস্তাব', () => {
+        /* ⓘ পুরনো সার্ভার `last_lot` পাঠালেও সেটা আর বসে না */
+        const c = withLots({ catalogue: [tracked({ last_lot: { batch_no: 'L-LAST', expiry_date: '2027-03-31', mrp: '95' } })] })
         const line = add(c, c.catalogue[0])
 
         expect(line.batch_no).toBe('')
         expect(line.expiry_date).toBe('')
+        expect(line.mrp).toBe('')
+        expect(line.lot_from).toBe('')
+        expect(c.lotHint).toBe('051026/01-LOT')
     })
 
     it('লট না-ধরা পণ্যে কিছুই বসে না', () => {
@@ -271,26 +266,21 @@ describe('লট — কেবল লট ধরা সারিতে', () => {
         expect(c.lotProblem(line, 0)).toBe('')
     })
 
-    /* ⭐ বার্তা পাতায়, ব্রাউজারের ভাসমান ইশারায় নয় — আর পাঠানো থামে */
-    it('লট ছাড়া পাঠাতে গেলে পাঠানো থামে আর সারির নিচে বার্তা', () => {
-        const c = withLots({ catalogue: [tracked({ last_lot: null })] })
+    /* ⭐ ৫ অক্টোবর ২০২৬ থেকে খালি লট পাঠানো থামায় না — সংরক্ষণে কাগজের লট নম্বর নিজে বসে */
+    it('লট ছাড়া পাঠালে পাঠানো থামে না, সারির নিচে লাল বার্তাও নয়', () => {
+        const c = withLots({ catalogue: [tracked()] })
         const line = add(c, c.catalogue[0])
-
-        expect(c.lotProblem(line, 0)).toBe('')
 
         let stopped = false
         c.guard({ preventDefault: () => { stopped = true } })
 
-        expect(stopped).toBe(true)
-        expect(c.busy).toBe(false)
-        expect(c.lotProblem(line, 0)).toBe('লট নম্বর লিখুন')
-
-        line.batch_no = 'L-9'
+        expect(stopped).toBe(false)
+        expect(c.stopped).toBe('')
         expect(c.lotProblem(line, 0)).toBe('')
     })
 
     it('সার্ভারের সারি-ধরা বার্তাটা ঐ সারির নিচেই, লট লিখলে সরে যায়', () => {
-        const c = withLots({ catalogue: [tracked({ last_lot: null })], lotErrors: { 0: 'সারি ১ — লট লাগবে' } })
+        const c = withLots({ catalogue: [tracked()], lotErrors: { 0: 'সারি ১ — লট লাগবে' } })
         const line = add(c, c.catalogue[0])
 
         expect(c.lotProblem(line, 0)).toBe('সারি ১ — লট লাগবে')
@@ -300,7 +290,7 @@ describe('লট — কেবল লট ধরা সারিতে', () => {
     })
 
     it('সারি মুছলে পুরনো সারি-ধরা বার্তাগুলো ভুল সারিতে বসে না', () => {
-        const c = withLots({ catalogue: [tracked({ last_lot: null })], lotErrors: { 1: 'সারি ২ — লট লাগবে' } })
+        const c = withLots({ catalogue: [tracked()], lotErrors: { 1: 'সারি ২ — লট লাগবে' } })
         add(c, c.catalogue[0])
         const second = add(c, c.catalogue[0])
 
@@ -462,9 +452,10 @@ describe('গোটা বিলের ছাড়', () => {
  * সারিটা স্ক্রলের বাইরে থাকলে সেটাও চোখে পড়ত না; বাকি দুইটায় কোথাও
  * কিছু লেখা হত না।
  *
- * ⭐ তিনটাই সার্ভারও আটকায় (`lines` required·min:1, `demandLots()`,
- * `carrier_id`-এর `Rule::requiredIf`) — অর্থাৎ পর্দার বার্তাটা
- * নিরাপত্তা নয়, **ভদ্রতা**: সার্ভার ফিরিয়ে দেওয়ার আগেই বলা।
+ * ⭐ সার্ভারও আটকায় (`lines` required·min:1, `carrier_id`-এর
+ * `Rule::requiredIf`) — অর্থাৎ পর্দার বার্তাটা নিরাপত্তা নয়, **ভদ্রতা**:
+ * সার্ভার ফিরিয়ে দেওয়ার আগেই বলা। ⓘ লটের থামা ৫ অক্টোবর ২০২৬-এ উঠে
+ * গেছে — খালি লট সংরক্ষণে নিজে বসে (`PurchaseLots`)।
  */
 describe('পাঠানো থামলে পর্দা তার কারণ বলে', () => {
     /** নকল `$refs` — ফোকাস সত্যিই নড়ল কি না, প্রতিনিধি চিহ্ন দিয়ে নয়। */
@@ -486,9 +477,7 @@ describe('পাঠানো থামলে পর্দা তার কার
 
     const texts = {
         paidMoreConfirm: 'বেশি দিচ্ছেন?',
-        lotNeeded: 'লট নম্বর লিখুন',
         needALine: 'আগে অন্তত একটা পণ্য কার্টে দিন।',
-        needALot: 'লট ধরা পণ্যে লট নম্বর ছাড়া পাঠানো যায় না।',
         needACarrier: 'ভাড়া লেখা আছে — কে আনল সেটাও লিখুন।',
     }
 
@@ -507,7 +496,8 @@ describe('পাঠানো থামলে পর্দা তার কার
         expect(c.focused).toContain('search')
     })
 
-    it('লট নম্বর নেই — বার্তা উপরেও, সারির নিচেও', () => {
+    /* ⓘ ৫ অক্টোবর ২০২৬ থেকে — খালি লট সংরক্ষণে নিজে বসে, তাই থামার কারণ নয় */
+    it('লট নম্বর নেই — পাঠানো থামে না', () => {
         const c = withRefs(counter({ texts, catalogue: [tracked()], lots: true }))
 
         c.pick(c.catalogue[0])
@@ -519,12 +509,9 @@ describe('পাঠানো থামলে পর্দা তার কার
         let stopped = false
         c.guard({ preventDefault: () => { stopped = true } })
 
-        expect(stopped).toBe(true)
-        expect(c.stopped).toBe(texts.needALot)
-
-        /* ⓘ সারির নিচের বার্তাটাও আগের মতোই থাকে — দুইটা একে অন্যের
-           বদলি নয়: উপরেরটা বলে "কেন থামল", নিচেরটা বলে "কোন সারিতে" */
-        expect(c.lotProblem(c.lines[0], 0)).toBe(texts.lotNeeded)
+        expect(stopped).toBe(false)
+        expect(c.stopped).toBe('')
+        expect(c.lotProblem(c.lines[0], 0)).toBe('')
     })
 
     it('ভাড়া আছে কিন্তু বাহক নেই — বার্তা, আর কার্সর বাহকের ঘরে', () => {

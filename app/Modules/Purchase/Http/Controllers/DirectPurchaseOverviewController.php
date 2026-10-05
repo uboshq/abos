@@ -47,7 +47,6 @@ class DirectPurchaseOverviewController extends Controller implements HasMiddlewa
         $data = $check->validated();
 
         try {
-            DirectPurchaseRules::demandLots($data['lines']);
             $sheet = $overview->build($data);
         } catch (ValidationException $e) {
             return $this->notReady($e->validator->errors()->all());

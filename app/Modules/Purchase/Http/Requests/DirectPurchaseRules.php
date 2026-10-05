@@ -4,9 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Purchase\Http\Requests;
 
-use App\Modules\Inventory\Models\Product;
 use Illuminate\Validation\Rule;
-use Illuminate\Validation\ValidationException;
 
 /**
  * সরাসরি ক্রয়ের যাচাইয়ের তালিকা — এক জায়গায়, জমা আর তার আগের সারাংশ দুইজনেরই (৪ অক্টোবর ২০২৬)।
@@ -264,51 +262,6 @@ final class DirectPurchaseRules
                 Rule::exists('inv_products', 'id')->where('company_id', $companyId)],
             'gifts.*.remarks' => ['nullable', 'string', 'max:191'],
         ];
-    }
-
-    /**
-     * লট ধরা পণ্যের প্রতিটা সারিতে লট নম্বর — কিছু লেখার **আগে**।
-     *
-     * ── কেন এখানে, সেবার পাহারা থাকা সত্ত্বেও ──────────────────────────
-     * [[BatchService::receive]] নিজেও আটকায়, কিন্তু সে ডাক পায় বিল
-     * নিশ্চিত হওয়ার সময় — আর ততক্ষণে বিলটা খসড়া হয়ে লেখা হয়ে গেছে
-     * (সেবার প্রথম লেনদেন)। ⛔ ফলে প্রতিটা ব্যর্থ চেষ্টায় একটা করে
-     * খসড়া বিল পড়ে থাকত, আর বার্তাটা বসত `lines` নামে — কোন সারি, তা
-     * পর্দা বলতে পারত না।
-     *
-     * ⭐ এখানে সারি ধরে: `lines.{i}.batch_no` — পর্দা ঠিক ঐ সারির লট-ঘরের
-     * নিচে বার্তাটা দেখায়, আর কিছুই লেখা হয় না।
-     *
-     * ⓘ মেয়াদ বাধ্যতামূলক নয়, অতীতের তারিখও আটকানো নয় — ঘরের নিয়ম
-     * ([[BatchService::receive]]: "খালি চলে — সব লটে মেয়াদ থাকে না")
-     * তা-ই বলে। নতুন নিয়ম এখানে বানানো হয়নি।
-     *
-     * @param  list<array<string, mixed>>  $lines
-     */
-    public static function demandLots(array $lines): void
-    {
-        $tracked = Product::query()
-            ->whereIn('id', array_map(fn (array $line) => (int) $line['product_id'], $lines))
-            ->where('track_batch', true)
-            ->get()
-            ->keyBy('id');
-
-        $missing = [];
-
-        foreach ($lines as $index => $line) {
-            $product = $tracked->get((int) $line['product_id']);
-
-            if ($product !== null && trim((string) ($line['batch_no'] ?? '')) === '') {
-                $missing['lines.'.$index.'.batch_no'] = __('purchase::lot.needs_lot', [
-                    'line' => (int) $index + 1,
-                    'product' => $product->name(),
-                ]);
-            }
-        }
-
-        if ($missing !== []) {
-            throw ValidationException::withMessages($missing);
-        }
     }
 
     /**

@@ -64,6 +64,8 @@ return [
     'year_two' => 'সাল (২ অঙ্ক)',
     'month' => 'মাস',
     'reset_yearly' => 'বছর শেষে ১ থেকে শুরু',
+    'reset_daily' => 'প্রতিদিন ১ থেকে শুরু',
+    'day' => 'দিন',
     'sample' => 'নমুনা',
     'next_number' => 'পরের নম্বর',
     'doc_type' => 'ডকুমেন্ট',

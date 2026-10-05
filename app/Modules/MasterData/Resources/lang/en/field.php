@@ -50,6 +50,8 @@ return [
     'year_two' => 'Year (2 digits)',
     'month' => 'Month',
     'reset_yearly' => 'Restart at 1 each year',
+    'reset_daily' => 'Restart at 1 each day',
+    'day' => 'Day',
     'sample' => 'Sample',
     'next_number' => 'Next number',
     'doc_type' => 'Document',

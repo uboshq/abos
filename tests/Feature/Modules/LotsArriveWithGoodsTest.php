@@ -11,6 +11,7 @@ use App\Modules\Inventory\Models\Batch;
 use App\Modules\Inventory\Models\Product;
 use App\Modules\Inventory\Models\StockMovement;
 use App\Modules\Inventory\Models\Warehouse;
+use App\Modules\Inventory\Services\BatchService;
 use App\Modules\Purchase\Models\PurchaseBill;
 use App\Modules\Purchase\Services\PurchaseBillService;
 use App\Modules\Purchase\Services\PurchaseReceiptService;
@@ -213,16 +214,23 @@ class LotsArriveWithGoodsTest extends TestCase
     // ── নম্বর ছাড়া ────────────────────────────────────────────────
 
     /**
-     * লট ধরা পণ্যে নম্বর ছাড়া মাল ঢোকানো যায় না।
+     * লট ধরা পণ্যে নম্বর ছাড়া মাল ঢোকে না — ক্রয়ের পথে নম্বর না লিখলে নম্বর-ক্রম থেকে বসে।
      *
      * ঢুকতে দিলে মালটা "কোন লট জানা নেই" অবস্থায় বসত, আর পরে বেচতে
-     * গেলে ব্যবস্থা বলত লটে যথেষ্ট নেই — আজ ঠিক সেটাই ঘটত, কারণ
-     * কোনো পথই লট বানাত না।
+     * গেলে ব্যবস্থা বলত লটে যথেষ্ট নেই।
+     *
+     * ⓘ ৫ অক্টোবর ২০২৬ থেকে ক্রয়ের খালি লটে `DDMMYY/XX-LOT` বসে ([[PurchaseLots]], মালিকের আদেশ);
+     * ⛔ লটের নিজের দরজা ([[BatchService::receive()]]) খালি নম্বর এখনো ফেরায় — অন্য পথ (খোলা মজুদ, সমন্বয়) সেখানেই আসে।
      */
-    public function test_a_tracked_product_cannot_arrive_without_a_lot_number(): void
+    public function test_a_tracked_product_never_arrives_without_a_lot_number(): void
     {
-        $this->expectException(ValidationException::class);
+        $bill = $this->buy($this->trackedLine(['batch_no' => '']));
 
-        $this->buy($this->trackedLine(['batch_no' => '']));
+        $lot = (string) $bill->fresh('lines')->lines->first()->batch_no;
+        $this->assertMatchesRegularExpression('#^\d{6}/\d{2}-LOT$#', $lot, 'খালি লটে নম্বর-ক্রমের লট বসেনি।');
+        $this->assertTrue(Batch::query()->where('product_id', $this->tracked->id)->where('batch_no', $lot)->exists());
+
+        $this->expectException(ValidationException::class);
+        app(BatchService::class)->receive($this->tracked, '');
     }
 }

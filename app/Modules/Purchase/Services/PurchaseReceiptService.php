@@ -609,6 +609,15 @@ final class PurchaseReceiptService
         $total = '0';
         $lineNo = 0;
 
+        // ⭐ খালি লটে নিজে থেকে নম্বর — একটা কাগজ, একটা লট ([[PurchaseLots]], মালিক, ৫ অক্টোবর ২০২৬)
+        $autoLot = null;
+        $tracked = Product::query()
+            ->whereIn('id', array_map(fn (array $line) => (int) ($line['product_id'] ?? 0), $lines))
+            ->where('track_batch', true)
+            ->pluck('id')
+            ->map(fn ($id) => (int) $id)
+            ->all();
+
         foreach ($lines as $line) {
             $productId = (int) ($line['product_id'] ?? 0);
             $qty = $this->positive($line['received_qty'] ?? null, 'received_qty');
@@ -636,6 +645,14 @@ final class PurchaseReceiptService
                 $line['unit_id'] ?? null,
             )['qty'];
 
+            $batchNo = filled($line['batch_no'] ?? null) ? trim((string) $line['batch_no']) : null;
+
+            if ($batchNo === null && in_array($productId, $tracked, true)) {
+                $batchNo = $autoLot ??= app(PurchaseLots::class)->forPaper(
+                    PurchaseReceipt::drillSourceType(), (int) $receipt->id, Carbon::parse($receipt->trx_date), $receipt->branch_id, $tracked,
+                );
+            }
+
             PurchaseReceiptLine::create([
                 'purchase_receipt_id' => $receipt->id,
                 'product_id' => $productId,
@@ -651,7 +668,7 @@ final class PurchaseReceiptService
                  * করার মুহূর্তে, মালের সাথে। খসড়া কাগজ কখনো নিশ্চিত না
                  * হলে একটা খালি লট তালিকায় বসে থাকত।
                  */
-                'batch_no' => filled($line['batch_no'] ?? null) ? trim((string) $line['batch_no']) : null,
+                'batch_no' => $batchNo,
                 'expiry_date' => $line['expiry_date'] ?? null,
                 'mrp' => filled($line['mrp'] ?? null) ? (string) $line['mrp'] : null,
 

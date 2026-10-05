@@ -65,8 +65,8 @@ final class TheCounterStoppedAndSaidNothingTest extends TestCase
 
         /*
          * ⛔ লট ধরা নয় এমন পণ্য — ইচ্ছাকৃত। ⚠️ লট ধরা পণ্য নিলে
-         * `demandLots()` আগে থামাত, আর তখন এই দাবিটা **ভাড়ার নিয়মের
-         * বদলে লটের নিয়মটা** মাপত, অথচ সবুজই থাকত।
+         * লটের নিয়মও মাপে ঢুকত (৫ অক্টোবর ২০২৬ পর্যন্ত `demandLots()`
+         * আগে থামাত), আর এই দাবিটা কেবল ভাড়ার নিয়ম মাপে।
          */
         $plain = Product::query()->where('track_batch', false)->first();
 
@@ -163,7 +163,8 @@ final class TheCounterStoppedAndSaidNothingTest extends TestCase
             'ঘরটা আছে, কিন্তু সে বার্তাটার সাথে বাঁধা নয়।');
 
         /* ⓘ আর শব্দ তিনটা সত্যিই পর্দায় পৌঁছায় */
-        foreach (['need_a_line', 'need_a_lot', 'need_a_carrier'] as $key) {
+        /* ⓘ need_a_lot আর নেই — ৫ অক্টোবর ২০২৬ থেকে খালি লট থামায় না, সংরক্ষণে নিজে বসে ([[PurchaseLots]]) */
+        foreach (['need_a_line', 'need_a_carrier'] as $key) {
             $this->assertStringContainsString(
                 __('purchase::message.'.$key),
                 $html,

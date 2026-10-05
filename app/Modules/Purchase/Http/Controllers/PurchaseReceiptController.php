@@ -17,12 +17,14 @@ use App\Modules\Purchase\Http\Requests\PurchaseReceiptRequest;
 use App\Modules\Purchase\Models\PurchaseBill;
 use App\Modules\Purchase\Models\PurchaseOrder;
 use App\Modules\Purchase\Models\PurchaseReceipt;
+use App\Modules\Purchase\Services\PurchaseLots;
 use App\Modules\Purchase\Services\PurchaseReceiptService;
 use App\Modules\Supplier\Models\Supplier;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
+use Illuminate\Support\Carbon;
 use Illuminate\View\View;
 
 /**
@@ -245,6 +247,9 @@ class PurchaseReceiptController extends Controller implements HasMiddleware
             'suppliers' => Supplier::query()->inViewedBranch()->active()->forPurchasing($keepSupplierId)->orderBy('name_en')->get(),
             'warehouses' => Warehouse::query()->active()->orderBy('code')->get(),
             'products' => Product::query()->soldInViewedBranch()->active()->with('unit')->orderBy('name_en')->get(),
+
+            // ⭐ খালি লট-ঘরের প্রস্তাব — খরচ হয় না, সংরক্ষণে কাগজের তারিখে বসে ([[PurchaseLots]], মালিক, ৫ অক্টোবর ২০২৬)
+            'lotHint' => app(PurchaseLots::class)->upcoming(Carbon::today()),
         ];
     }
 

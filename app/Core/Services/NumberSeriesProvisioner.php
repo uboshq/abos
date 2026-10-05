@@ -25,6 +25,18 @@ final class NumberSeriesProvisioner
     public function __construct(private readonly ModuleRegistry $registry) {}
 
     /**
+     * ⭐ যে কাগজের ছক `{PREFIX}-{SEQ}` নয় — লট, মালিকের আদেশ, ৫ অক্টোবর ২০২৬: *"DDMMYY/XX-LOT; মানে আজ কেনা হলে
+     * 051026/01-LOT"*। দুই ঘর, রোজ ০১ থেকে; তারিখটা কাগজের ([[NumberSeriesEngine::next()]])।
+     *
+     * ⓘ নতুন সিরিজ বসার সময়ই কেবল — নম্বর-ক্রমের পাতা থেকে বদলালে সেটাই থাকে।
+     *
+     * @var array<string, array{format: string, padding: int, reset_daily: bool}>
+     */
+    private const SHAPE = [
+        'LOT' => ['format' => '{DD}{MM}{YY}/{SEQ}-{PREFIX}', 'padding' => 2, 'reset_daily' => true],
+    ];
+
+    /**
      * উপসর্গের সুন্দর রূপ।
      *
      * কোডে "RV" লেখা থাকলেও কাগজে "RCV-2026-2027-0001" ছাপা হলে
@@ -119,6 +131,17 @@ final class NumberSeriesProvisioner
     }
 
     /**
+     * এই ছকে পুরো দিনটা আছে কি না — অর্থাৎ রোজ ০১ থেকে গোনা চলে কি না ([[NumberSeriesEngine::next()]])।
+     *
+     * ⓘ [[resetsWith()]]-এর একই যুক্তি, এক ধাপ নিচে: দিন, মাস আর বছর তিনটাই চাই, নইলে আজকের ০১ আর অন্য কোনো দিনের
+     * ০১ একই নম্বর — `{DD}/{SEQ}` পরের মাসের একই তারিখে আবার আসত।
+     */
+    public static function resetsDailyWith(string $format): bool
+    {
+        return str_contains($format, '{DD}') && str_contains($format, '{MM}') && self::resetsWith($format);
+    }
+
+    /**
      * কোনো মডিউল কি সত্যিই এই ডকুমেন্ট টাইপটা ঘোষণা করেছে?
      *
      * সিরিজ না পেলে ইঞ্জিন এটা জিজ্ঞেস করে। ঘোষিত হলে সিরিজটা নিজে
@@ -182,14 +205,16 @@ final class NumberSeriesProvisioner
                         continue;
                     }
 
-                    $format = self::formatFor($module->docTypes[$docType]);
+                    $shape = self::SHAPE[$docType] ?? null;
+                    $format = $shape['format'] ?? self::formatFor($module->docTypes[$docType]);
 
                     NumberSeries::create([
                         'module' => $module->code,
                         'doc_type' => $docType,
                         'prefix' => self::FRIENDLY_PREFIX[$docType] ?? $docType,
                         'format' => $format,
-                        'padding' => 4,
+                        'padding' => $shape['padding'] ?? 4,
+                        'reset_daily' => $shape['reset_daily'] ?? false,
 
                         /*
                          * ⛔ এই ঘরটা এখানে লেখাই হত না, আর কলামের নিজের

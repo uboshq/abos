@@ -14,7 +14,6 @@ use App\Modules\Inventory\Models\Batch;
 use App\Modules\Inventory\Models\Product;
 use App\Modules\Inventory\Models\Warehouse;
 use App\Modules\Purchase\Models\PurchaseBill;
-use App\Modules\Purchase\Services\LastLotFor;
 use App\Modules\Supplier\Models\Supplier;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -38,10 +37,11 @@ use Tests\TestCase;
  * নেই), আর ততক্ষণে বিলটা খসড়া হয়ে লেখা হয়ে গেছে — প্রতি চেষ্টায় একটা।
  *
  * ── ⭐ এখানে যা দাবি করা হয় ───────────────────────────────────────────
- *   ক · লট ছাড়া পাঠালে ঠিক ঐ সারির নামে বাংলা বার্তা, আর **কিছুই লেখা হয় না**
+ *   ক · লট ছাড়া পাঠালে কাগজের লট নম্বর নিজে বসে — `DDMMYY/01-LOT` (মালিক, ৫ অক্টোবর ২০২৬; আগে ফেরানো হত)
  *   খ · লট ও মেয়াদসহ পাঠালে মাল ঐ লটে ঢোকে, আর পাঁচ মিল মেলে
- *   গ · পর্দায় লটের ঘর আছে, কেবল লট ধরা সারির জন্য; তালিকা বলে কে লট ধরে
- *   ঘ · "শেষ লট" মানে শেষ যে লটে মাল **ঢুকেছে**, শেষ যে লট জন্মেছে তা নয়
+ *   গ · পর্দায় লটের ঘর আছে, কেবল লট ধরা সারির জন্য; তালিকা বলে কে লট ধরে, আর ঘরে পরের লট নম্বরের প্রস্তাব
+ *
+ * ⓘ "গতবারের লট" প্রস্তাব (আগের ঘ) ৫ অক্টোবর ২০২৬-এ উঠে গেছে — তার জায়গায় নম্বর-ক্রমের লট ([[PurchaseLots]])।
  *
  * ⓘ ব্যবহারকারী ভূমিকাহীন, হাতে কেবল একটা চাবি — `purchase.bill.create`।
  */
@@ -104,38 +104,19 @@ final class ALotTrackedProductCouldNotBeBoughtDirectlyTest extends TestCase
         $this->product->forceFill(['track_batch' => true])->save();
     }
 
-    // ── ক · লট ছাড়া — সারির নামে বাংলা বার্তা, আর কিছুই লেখা হয় না ──────
+    // ── ক · লট ছাড়া — কাগজের লট নম্বর নিজে বসে (মালিক, ৫ অক্টোবর ২০২৬) ──────
 
-    public function test_without_a_lot_the_line_is_refused_in_bengali_and_nothing_is_written(): void
+    public function test_without_a_lot_the_line_gets_the_papers_lot_number(): void
     {
-        $before = $this->counts();
+        $this->buy(['batch_no' => '', 'expiry_date' => ''])->assertSessionHasNoErrors()->assertRedirect();
 
-        $response = $this->buy(['batch_no' => '', 'expiry_date' => '']);
+        $bill = PurchaseBill::query()->latest('id')->with('lines')->firstOrFail();
+        $this->assertSame('confirmed', $bill->status, 'খালি লটের বিলটা নিশ্চিত হয়নি।');
 
-        $response->assertSessionHasErrors('lines.0.batch_no');
-
-        $message = session('errors')->first('lines.0.batch_no');
-        $expected = __('purchase::lot.needs_lot', ['line' => 1, 'product' => $this->product->name()], 'bn');
-
-        $this->assertNotSame('purchase::lot.needs_lot', $expected, 'বাংলা বার্তার চাবিটাই নেই।');
-        $this->assertSame($expected, $message, 'বার্তাটা ঐ সারির লট-ঘরের নামে বসেনি।');
-        $this->assertMatchesRegularExpression('/\p{Bengali}/u', $message, 'বার্তাটা বাংলায় নয়।');
-        $this->assertStringContainsString($this->product->name(), $message, 'বার্তায় পণ্যের নাম নেই — কোন সারি, বোঝা যায় না।');
-
-        $this->assertSame($before, $this->counts(),
-            'লট ছাড়া ফেরানো চেষ্টাও কিছু লিখে ফেলেছে (বিল · মজুদ · খতিয়ান · লট)।');
-
-        // ⓘ ফেরা পাতায় বার্তাটা দেখা যায় — ব্রাউজারের মতো ফেরত-ঠিকানা ধরে
-        $page = $this->buy(['batch_no' => '', 'expiry_date' => ''], [], follow: true)->assertOk();
-        $html = html_entity_decode($page->getContent(), ENT_QUOTES | ENT_HTML5, 'UTF-8');
-
-        $this->assertStringContainsString($message, $html, 'ফেরা পাতায় বার্তাটা নেই।');
-
-        // ⭐ আর সারির লট-ঘরের জন্য, সারির ক্রম ধরে — উপরের তালিকায় কেবল নয়
-        $this->assertStringContainsString('lotErrors: '.json_encode(['0' => $message], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), $html,
-            'সারি-ধরা বার্তাটা পর্দার লট-ঘরে পৌঁছায়নি।');
-
-        $this->assertSame($before, $this->counts(), 'দ্বিতীয় ফেরানো চেষ্টাও কিছু লিখে ফেলেছে।');
+        $lot = (string) $bill->lines->first()->batch_no;
+        $this->assertSame(now()->format('dmy').'/01-LOT', $lot, 'খালি লটে কাগজের লট নম্বর বসেনি।');
+        $this->assertTrue(Batch::query()->where('product_id', $this->product->id)->where('batch_no', $lot)->exists(),
+            'নম্বরটা সারিতে আছে, কিন্তু মাল ঐ লটে ঢোকেনি।');
     }
 
     // ── খ · লট ও মেয়াদসহ — মাল ঐ লটে, আর পাঁচ মিল ────────────────────────
@@ -223,46 +204,24 @@ final class ALotTrackedProductCouldNotBeBoughtDirectlyTest extends TestCase
         // ⓘ Enter পরের ঘরে যায় — ফর্ম জমা হয় না
         $this->assertStringContainsString('lotNext($event)', $html, 'লটের ঘরে Enter-এর পথ নেই।');
 
-        // ⓘ তালিকা বলে এই পণ্য লট ধরে, আর তার গতবারের লটটা কী
+        // ⓘ তালিকা বলে এই পণ্য লট ধরে — আর "গতবারের লট" আর যায় না (৫ অক্টোবর ২০২৬)
         $this->assertMatchesRegularExpression(
-            '/"id":'.$this->product->id.',[^{}]*"track_batch":true,"last_lot":\{"batch_no":"LOT-SEEN"/',
+            '/"id":'.$this->product->id.',[^{}]*"track_batch":true/',
             $html,
-            'পর্দার তালিকায় লট ধরা পণ্যের চিহ্ন বা গতবারের লট নেই।',
+            'পর্দার তালিকায় লট ধরা পণ্যের চিহ্ন নেই।',
         );
+        $this->assertStringNotContainsString('"last_lot"', $html, 'গতবারের লট এখনো প্রস্তাব হয়ে পর্দায় যায়।');
 
         // ⓘ লট না-ধরা পণ্যের সারি লট চায় না
         $this->assertMatchesRegularExpression(
-            '/"id":'.$plain->id.',[^{}]*"track_batch":false,"last_lot":null/',
+            '/"id":'.$plain->id.',[^{}]*"track_batch":false/',
             $html,
             'লট না-ধরা পণ্যকেও তালিকা লট ধরা বলছে।',
         );
-    }
 
-    // ── ঘ · "শেষ লট" মানে শেষ যে লটে মাল ঢুকেছে ──────────────────────────
-
-    public function test_the_last_lot_is_the_last_one_received_not_the_last_one_created(): void
-    {
-        $lots = app(LastLotFor::class);
-
-        $this->assertNull($lots->product((int) $this->product->id), 'লটহীন পণ্যের "শেষ লট" বানানো হয়েছে।');
-
-        $first = now()->addMonths(3)->toDateString();
-        $second = now()->addMonths(9)->toDateString();
-
-        $this->buy(['batch_no' => 'LOT-OLD', 'expiry_date' => $first])->assertSessionHasNoErrors();
-        $this->buy(['batch_no' => 'LOT-NEW', 'expiry_date' => $second])->assertSessionHasNoErrors();
-
-        $this->assertSame(
-            ['batch_no' => 'LOT-NEW', 'expiry_date' => $second],
-            array_intersect_key($lots->product((int) $this->product->id) ?? [], ['batch_no' => 1, 'expiry_date' => 1]),
-        );
-
-        // ⭐ পুরনো লটে আবার মাল এল — এখন সেটাই শেষ, যদিও লট সারিটা পুরনো
-        $this->buy(['batch_no' => 'LOT-OLD', 'expiry_date' => $first])->assertSessionHasNoErrors();
-
-        $this->assertSame('LOT-OLD', $lots->product((int) $this->product->id)['batch_no'] ?? null,
-            'আবার ঢোকা পুরনো লটটা "শেষ লট" হয়নি — জন্মের ক্রম ধরা হচ্ছে।');
-        $this->assertSame($first, $lots->product((int) $this->product->id)['expiry_date'] ?? null);
+        // ⭐ ঘরে পরের লট নম্বরের প্রস্তাব — আজকের দ্বিতীয়টা, কারণ উপরে প্রথমটা "LOT-SEEN" হাতে লেখা (সিরিজ ছোঁয়নি)
+        $this->assertStringContainsString('lotHint: "'.now()->format('dmy').'/01-LOT"', $html, 'পর্দায় লট নম্বরের প্রস্তাব নেই।');
+        $this->assertStringContainsString(':placeholder="lotHint"', $html, 'প্রস্তাবটা লট-ঘরে বাঁধা নয়।');
     }
 
     // ── সহায়ক ─────────────────────────────────────────────────────────────

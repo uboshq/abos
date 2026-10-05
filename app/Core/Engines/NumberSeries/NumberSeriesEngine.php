@@ -93,11 +93,17 @@ final class NumberSeriesEngine
              */
             $series = $this->lockSeries($companyId, $docType, $branchId, $financialYear?->id);
 
-            $sequence = $series->next_number;
-            $documentNo = $this->format($series, $sequence, $branchId, $financialYear, $date);
+            if ($this->countsByDay($series)) {
+                // ⓘ দিনের গুনতি — `next_number` ছোঁয় না; সারিটা লক করা, তাই দুইজনে একই দিনের একই ক্রম পায় না
+                $sequence = $this->nextOfTheDay($series, $branchId, $financialYear, $date);
+                $documentNo = $this->format($series, $sequence, $branchId, $financialYear, $date);
+            } else {
+                $sequence = $series->next_number;
+                $documentNo = $this->format($series, $sequence, $branchId, $financialYear, $date);
 
-            $series->next_number = $sequence + 1;
-            $series->save();
+                $series->next_number = $sequence + 1;
+                $series->save();
+            }
 
             IssuedNumber::create([
                 'company_id' => $companyId,
@@ -112,6 +118,53 @@ final class NumberSeriesEngine
 
             return $documentNo;
         });
+    }
+
+    /**
+     * ⭐ রোজ ০১ থেকে গোনা — লট, মালিকের আদেশ, ৫ অক্টোবর ২০২৬ (`051026/01-LOT`, পরের কেনা `051026/02-LOT`, কাল আবার ০১)।
+     *
+     * ⓘ ঘরটা সিরিজের নিজের (`reset_daily`), আর কেবল তখনই খাটে যখন ছকে পুরো দিনটা আছে
+     * ([[NumberSeriesProvisioner::resetsDailyWith()]]) — নইলে দুই দিনের ০১ একই নম্বর হত। ⛔ বাকি কাগজে `{DD}` আগের মতোই
+     * কেবল দেখায়, গুনতি ভাঙে না (নিচে [[format()]]-এ মালিকের ৫ সেপ্টেম্বরের সিদ্ধান্ত)।
+     */
+    private function countsByDay(NumberSeries $series): bool
+    {
+        return (bool) $series->reset_daily && NumberSeriesProvisioner::resetsDailyWith((string) $series->format);
+    }
+
+    /**
+     * এই দিনে এই সিরিজের পরের ক্রম — কাগজের তারিখে যত নম্বর আগে কাটা হয়েছে, তার সবচেয়ে বড়টার পরেরটা।
+     *
+     * ⓘ দিনটা আলাদা কলামে রাখা নেই, নম্বরটাতেই আছে — তাই ঐ দিনের সম্ভাব্য নম্বরগুলো (একশোটা করে) বানিয়ে
+     * `issued_numbers`-এ মেলানো হয়। ⚠️ বাতিল নম্বরও গোনা হয়: বাতিল নম্বর আর কখনো ফেরে না ([[void()]])। ছক বদলালে নতুন ছকের
+     * নম্বর ০১ থেকে — পুরনো ছকের নম্বরের সাথে তার মিল হয় না।
+     */
+    private function nextOfTheDay(NumberSeries $series, ?int $branchId, ?FinancialYear $financialYear, Carbon $date): int
+    {
+        $from = max(1, (int) $series->start_number);
+
+        for ($window = $from; ; $window += 100) {
+            $candidates = [];
+
+            for ($sequence = $window; $sequence < $window + 100; $sequence++) {
+                $candidates[$this->format($series, $sequence, $branchId, $financialYear, $date)] = $sequence;
+            }
+
+            $taken = IssuedNumber::query()
+                ->where('company_id', $series->company_id)
+                ->whereIn('document_no', array_keys($candidates))
+                ->pluck('document_no')
+                ->map(fn (string $no) => $candidates[$no])
+                ->max();
+
+            if ($taken === null) {
+                return $window;
+            }
+
+            if ($taken < $window + 99) {
+                return $taken + 1;
+            }
+        }
     }
 
     /**
@@ -315,15 +368,63 @@ final class NumberSeriesEngine
         return $series !== null && $this->preview($series) === trim($documentNo);
     }
 
+    /**
+     * এই ধরনের পরের নম্বর, **কাগজের তারিখে** — কিছু খরচ না করে (লটের প্রস্তাব, [[PurchaseLots::upcoming()]])।
+     *
+     * ⓘ সিরিজ খোঁজা [[isNextNumber()]]-এর একই ক্রমে; ঘোষিত ধরনের সিরিজ এখনো না বসলে বসিয়ে নেয়, [[next()]] যেমন নেয়।
+     * সিরিজ না থাকলে null।
+     */
+    public function upcoming(string $docType, ?int $branchId = null, ?Carbon $date = null): ?string
+    {
+        $companyId = CompanyContext::id();
+
+        if ($companyId === null) {
+            return null;
+        }
+
+        $date = $date ?? Carbon::today();
+        $branchId = $branchId ?? CompanyContext::branchId();
+        $financialYear = FinancialYear::forDate($date);
+
+        $find = fn () => $this->findSeries($companyId, $docType, $branchId, $financialYear?->id)
+            ?? $this->findSeries($companyId, $docType, null, $financialYear?->id)
+            ?? $this->findSeries($companyId, $docType, $branchId, null)
+            ?? $this->findSeries($companyId, $docType, null, null);
+
+        $series = $find();
+
+        if ($series === null && $financialYear !== null && $this->provisioner->knows($docType)) {
+            $this->provisioner->provision($financialYear);
+            $series = $find();
+        }
+
+        if ($series === null) {
+            return null;
+        }
+
+        $sequence = $this->countsByDay($series)
+            ? $this->nextOfTheDay($series, $branchId, $financialYear, $date)
+            : $series->next_number;
+
+        return $this->format($series, $sequence, $branchId, $financialYear, $date);
+    }
+
     public function preview(NumberSeries $series, ?int $sequence = null): string
     {
+        $year = $series->financial_year_id !== null
+            ? $this->financialYear($series->financial_year_id)
+            : null;
+
+        // ⓘ রোজ-০১ সিরিজের পরেরটা `next_number` নয়, আজকের গুনতি থেকে ([[nextOfTheDay()]])
+        if ($sequence === null && $this->countsByDay($series)) {
+            $sequence = $this->nextOfTheDay($series, $series->branch_id, $year, Carbon::today());
+        }
+
         return $this->format(
             $series,
             $sequence ?? $series->next_number,
             $series->branch_id,
-            $series->financial_year_id !== null
-                ? $this->financialYear($series->financial_year_id)
-                : null,
+            $year,
             Carbon::today(),
         );
     }
