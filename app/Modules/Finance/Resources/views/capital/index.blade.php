@@ -289,6 +289,7 @@
                 :columns="$entryColumns" />
 
             <x-ui.pager :rows="$entries" />
+            <x-ui.list-totals :rows="$entries" :grand="$grand ?? []" :columns="$entryColumns" />
         </section>
     @endif
     </div>
