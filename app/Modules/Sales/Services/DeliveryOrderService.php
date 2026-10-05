@@ -228,7 +228,8 @@ final class DeliveryOrderService
             $order->lines()->create([
                 'product_id' => $product->id,
                 'qty' => $qty,
-                'rate' => (string) ($product->sale_price ?? '0'),
+                // ⭐ ডিলারের দর তালিকার দাম, নাহলে পণ্যের দাম ([[SalesPrice]], ৫ অক্টোবর ২০২৬)
+                'rate' => app(SalesPrice::class)->for($order->customer, $product, $order->trx_date)->price,
                 'free_qty' => (string) ($line['free_qty'] ?? '0'),
                 'note' => $line['note'] ?? null,
             ]);

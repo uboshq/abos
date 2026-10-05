@@ -77,7 +77,8 @@ class PortalOrderController extends Controller
             $lines[] = [
                 'product_id' => (int) $product->id,
                 'ordered_qty' => (string) $line['qty'],
-                'rate' => (string) ($product->sale_price ?? '0'),
+                // ⭐ এই ডিলারের দর তালিকার দাম, নাহলে পণ্যের ([[SalesPrice]], ৫ অক্টোবর ২০২৬)
+                'rate' => app(\App\Modules\Sales\Services\SalesPrice::class)->for($customer, $product)->price,
                 'discount' => '0',
             ];
         }

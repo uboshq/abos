@@ -577,7 +577,10 @@
                                               px-2 text-end text-sm font-bold">
                             </x-sales::entry-field>
                             <x-sales::entry-field label="sales::field.sales_rate" width="w-full">
+                                {{-- ⭐ দর কোথা থেকে — "গ্রাহকের দাম" ইত্যাদি, ঘরের উপর রাখলে (দর তালিকা, ৫ অক্টোবর ২০২৬); তালিকার দামে লেখা মোটা --}}
                                 <input type="number" step="0.0001" min="0" x-model="entry.rate"
+                                       :title="(picked && picked.priceLabel) || ''" data-price-source
+                                       :class="picked && picked.priceSource && picked.priceSource !== 'standard' ? 'font-bold' : ''"
                                        class="num h-(--spacing-field-dense) w-full rounded-(--radius-field) border border-(--color-border)
                                               bg-(--color-surface-app) px-2 text-end text-sm">
                             </x-sales::entry-field>

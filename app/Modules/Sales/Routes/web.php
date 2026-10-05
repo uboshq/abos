@@ -105,6 +105,8 @@ Route::middleware('auth')->prefix('sales')->group(function () {
      */
     Route::prefix('price-list')->name('price_list.')->group(function () {
         Route::get('/', [\App\Modules\Sales\Http\Controllers\PriceListController::class, 'index'])->name('index');
+        // ⭐ এই গ্রাহকের দর — কাউন্টার, আদেশ, উদ্ধৃতি ([[PriceQuoteController]], দর তালিকা, ৫ অক্টোবর ২০২৬)
+        Route::get('/quote', [\App\Modules\Sales\Http\Controllers\PriceQuoteController::class, 'quote'])->name('quote');
         Route::put('/{product}', [\App\Modules\Sales\Http\Controllers\PriceListController::class, 'update'])
             ->whereNumber('product')->name('update');
         Route::get('/{product}/history', [\App\Modules\Sales\Http\Controllers\PriceListController::class, 'history'])

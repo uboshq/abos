@@ -114,7 +114,12 @@ class DirectSaleApiController extends Controller implements HasMiddleware
         abort_if($id === null, 404);
 
         $warehouse = $this->warehouse((string) $request->query('warehouse', ''));
-        $row = $this->options->catalogue($warehouse, 1, (int) $id)->first();
+
+        // ⭐ `?customer=` (public id) দিলে এই গ্রাহকের দর তালিকার দাম ([[SalesPrice]], ৫ অক্টোবর ২০২৬); না দিলে সবার দর
+        $customer = filled($request->query('customer'))
+            ? Customer::query()->inViewedBranch()->where('public_id', (string) $request->query('customer'))->first()
+            : null;
+        $row = $this->options->catalogue($warehouse, 1, (int) $id, $customer)->first();
 
         abort_if($row === null, 404);
 
@@ -128,6 +133,8 @@ class DirectSaleApiController extends Controller implements HasMiddleware
             'code' => (string) $row->code,
             'unit' => (string) $row->unit,
             'rate' => (string) $row->rate,
+            'priceSource' => (string) $row->priceSource,
+            'priceLabel' => (string) $row->priceLabel,
             'available' => $seesStock ? (string) $row->available : null,
             'lots' => array_map(fn (array $lot) => [
                 'id' => (string) ($lotIds[(int) $lot['id']] ?? ''),

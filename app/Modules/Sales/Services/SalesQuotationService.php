@@ -508,7 +508,10 @@ final class SalesQuotationService
 
             $pack = $this->packed($product, $qty, $line['unit_id'] ?? null, $rate);
 
-            if ($pricing->verdictOn($pack['rate'], (string) ($product->sale_price ?? '0')) === PricingRule::BLOCK) {
+            // ⭐ মান দাম = এই ডিলারের দর তালিকার দাম, নাহলে পণ্যের দাম ([[SalesPrice]], ৫ অক্টোবর ২০২৬) — বিলের একই মাপ
+            $standard = app(SalesPrice::class)->for($quotation->customer, $product, $quotation->trx_date)->price;
+
+            if ($pricing->verdictOn($pack['rate'], $standard) === PricingRule::BLOCK) {
                 throw ValidationException::withMessages([
                     'lines' => __('sales::validation.price_out_of_range', [
                         'product' => $product->name(),

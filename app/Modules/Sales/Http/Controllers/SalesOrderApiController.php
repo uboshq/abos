@@ -80,12 +80,13 @@ class SalesOrderApiController extends Controller implements HasMiddleware
             throw ValidationException::withMessages(['status' => __('sales::order_status.submit_needs_switch', ['no' => '—'])]);
         }
 
+        $customer = $this->customer($data['customer']);
         $order = $this->orders->create([
-            'customer_id' => $this->customer($data['customer'])->id,
+            'customer_id' => $customer->id,
             'deliver_on' => $data['deliver_on'] ?? null,
             'narration' => $data['narration'] ?? null,
             'source' => SalesOrderStatus::SOURCE_SR,
-        ], $this->lines($data['lines']));
+        ], $this->lines($data['lines'], $customer));
 
         if ($request->boolean('submit')) {
             $order = $this->orders->submit($order);
@@ -102,7 +103,7 @@ class SalesOrderApiController extends Controller implements HasMiddleware
         $order = $this->orders->update($order, [
             'deliver_on' => $data['deliver_on'] ?? null,
             'narration' => $data['narration'] ?? null,
-        ], $this->lines($data['lines']));
+        ], $this->lines($data['lines'], $order->customer));
 
         return response()->json($this->facts($order, true));
     }
@@ -141,9 +142,9 @@ class SalesOrderApiController extends Controller implements HasMiddleware
     }
 
     /** @return list<array{product_id: int, ordered_qty: string, rate: string, discount: string, narration: ?string}> */
-    private function lines(array $lines): array
+    private function lines(array $lines, ?Customer $customer): array
     {
-        return array_map(function (array $l): array {
+        return array_map(function (array $l) use ($customer): array {
             $product = Product::query()
                 ->when(Str::isUuid($l['product']), fn ($q) => $q->where('public_id', $l['product']), fn ($q) => $q->whereKey((int) $l['product']))
                 ->first();
@@ -152,7 +153,8 @@ class SalesOrderApiController extends Controller implements HasMiddleware
                 'product_id' => (int) $product?->id,
                 'ordered_qty' => (string) $l['qty'],
                 // ⓘ দাম পণ্যের — ফোন দাম পাঠায় না (DO-র একই নিয়ম, [[DeliveryOrderService::writeLines()]])
-                'rate' => (string) ($product?->sale_price ?? '0'),
+                // ⭐ এই ডিলারের দর তালিকার দাম, নাহলে পণ্যের ([[SalesPrice]], ৫ অক্টোবর ২০২৬)
+                'rate' => $product !== null ? app(\App\Modules\Sales\Services\SalesPrice::class)->for($customer, $product)->price : '0',
                 'discount' => '0',
                 'narration' => $l['note'] ?? null,
             ];

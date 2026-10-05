@@ -79,18 +79,21 @@ class SalesQuotationApiController extends Controller implements HasMiddleware
         // ⚠️ আগেই পড়া — `createFrom()` JSON-এর থলেটা ভাগ করে, তাই `replace()`-এর পরে `$request`-এ `submit` আর থাকে না
         $submit = $request->boolean('submit');
         $today = now();
+        $customer = $this->customer($data['customer']);
         $form = SalesQuotationRequest::createFrom($request)->replace([
-            'customer_id' => $this->customer($data['customer'])->id,
+            'customer_id' => $customer->id,
             'trx_date' => $today->toDateString(),
             'valid_until' => $today->copy()->addDays($this->service->defaultValidDays())->toDateString(),
             'narration' => $data['narration'] ?? null,
-            'lines' => array_map(function (array $l): array {
+            'lines' => array_map(function (array $l) use ($customer): array {
                 $product = $this->product($l['product']);
 
                 return [
                     'product_id' => $product?->id,
                     'qty' => (string) $l['qty'],
-                    'rate' => isset($l['rate']) ? (string) $l['rate'] : (string) ($product?->sale_price ?? '0'),
+                    // ⭐ দর না পাঠালে এই ডিলারের দর তালিকার দাম ([[SalesPrice]], ৫ অক্টোবর ২০২৬)
+                    'rate' => isset($l['rate']) ? (string) $l['rate']
+                        : ($product !== null ? app(\App\Modules\Sales\Services\SalesPrice::class)->for($customer, $product)->price : '0'),
                 ];
             }, array_values($data['lines'])),
         ]);

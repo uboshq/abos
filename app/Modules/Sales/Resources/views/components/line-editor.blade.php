@@ -27,6 +27,8 @@
      */
     'stock' => [],
     'showBreakdown' => false,
+    // ⭐ দর তালিকার ঠিকানা — দিলে পণ্য বাছার সময় খালি দর এই গ্রাহকের দামে ভরে (আদেশ, উদ্ধৃতি; ৫ অক্টোবর ২০২৬)
+    'pricesUrl' => null,
 ])
 @php
     $showTax ??= (bool) app(\App\Core\Services\SettingsService::class)->get('sales.vat_enabled', false);
@@ -66,6 +68,7 @@
                  packs: @js($packs),
                  packDefaults: @js($packDefaults),
                  stock: @js((object) $stock),
+                 pricesUrl: @js((string) $pricesUrl),
                })"
      @bulk-applied.window="absorb($event.detail.rows)">
 
@@ -98,7 +101,7 @@
                     <tr class="border-b border-(--color-border)">
                         <td class="cell-input" data-label="{{ __('sales::field.product') }}">
                             <select :name="'lines[' + (i) + '][product_id]'" x-model="row.product_id" required
-                                    @change="row.unit_id = defaultUnit(row.product_id)"
+                                    @change="productChosen(row)"
                                     class="h-(--spacing-field-compact) w-full rounded-(--radius-field) border border-(--color-border)
                                            bg-(--color-surface-card) px-2">
                                 <option value="">-</option>

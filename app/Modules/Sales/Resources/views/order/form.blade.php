@@ -143,6 +143,7 @@
             </label>
 
             <x-sales::line-editor :products="$products" :lines="$existing"
+                                  :prices-url="route('sales.price_list.quote')"
                                   qty-field="ordered_qty"
                                   :link-field="null"
                                   :link-options="[]"

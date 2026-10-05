@@ -557,7 +557,11 @@ class PosController extends Controller implements HasMiddleware
             'code' => $product->code,
             'name' => $product->name(),
             'unit' => $product->unit?->name(),
-            'rate' => (string) $product->sale_price,
+            // ⭐ বাছা গ্রাহকের (`?customer=`, নাহলে হাঁটা খদ্দেরের) দর তালিকার দাম ([[SalesPrice]], ৫ অক্টোবর ২০২৬)
+            'rate' => app(\App\Modules\Sales\Services\SalesPrice::class)->for(
+                Customer::query()->inViewedBranch()->find((int) ($request->query('customer') ?: $this->settings->get('sales.walkin_customer_id', 0))),
+                $product,
+            )->price,
             'barcode' => $product->barcode,
 
             /*
@@ -602,12 +606,19 @@ class PosController extends Controller implements HasMiddleware
             ->orderBy('name_en')
             ->limit(self::INLINE_CATALOGUE_LIMIT)
             ->get()
+            // ⭐ হাঁটা খদ্দেরের দর তালিকার দাম, নাহলে পণ্যের ([[SalesPrice]], ৫ অক্টোবর ২০২৬) — বিলের পাহারা একই গ্রাহক ধরে মাপে
+            ->tap(function ($rows) use (&$prices) {
+                $prices = app(\App\Modules\Sales\Services\SalesPrice::class)->forMany(
+                    Customer::query()->inViewedBranch()->find((int) $this->settings->get('sales.walkin_customer_id', 0)),
+                    $rows,
+                );
+            })
             ->map(fn (Product $p) => (object) [
                 'id' => $p->id,
                 'code' => $p->code,
                 'name' => $p->name(),
                 'unit' => $p->unit?->name() ?? '',
-                'rate' => (string) $p->sale_price,
+                'rate' => $prices[(int) $p->id]->price,
                 'barcode' => (string) $p->barcode,
                 'available' => $this->sellable($p, $warehouse),
             ])

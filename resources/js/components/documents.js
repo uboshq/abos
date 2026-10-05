@@ -1,3 +1,5 @@
+import { fetchPrices } from '../counter/customer-prices.js'
+
 /*
  * কাগজের সারিগুলো — চালান, ফেরত, আদায়, পরিশোধ, আর বাল্ক শীট।
  *
@@ -30,6 +32,31 @@ export function salesLineEditor (config = {}) {
             const chosen = (this.packDefaults || {})[productId];
 
             return chosen === undefined ? '' : String(chosen);
+        },
+
+        /*
+         * ⭐ পণ্য বাছলে প্যাক, আর দর খালি থাকলে এই গ্রাহকের দর তালিকার দাম (দর তালিকা, ৫ অক্টোবর ২০২৬; [[SalesPrice]])।
+         * ⓘ দর আসে কেবল যে পর্দা `pricesUrl` পাঠায় (আদেশ, উদ্ধৃতি); গ্রাহক ফর্মের `customer_id` থেকে। ⛔ লেখা দর ছোঁয়া হয় না।
+         */
+        pricesUrl: config.pricesUrl || '',
+        priceBook: {},
+        productChosen(row) {
+            row.unit_id = this.defaultUnit(row.product_id);
+
+            return this.fillRate(row);
+        },
+        async fillRate(row) {
+            if (! this.pricesUrl || String(row.rate ?? '') !== '' || String(row.product_id ?? '') === '') return;
+
+            const customerId = String(this.$root?.closest?.('form')?.elements?.customer_id?.value ?? '');
+
+            if (customerId === '') return;
+
+            if (! this.priceBook[customerId]) this.priceBook[customerId] = await fetchPrices(this.pricesUrl, customerId) ?? {};
+
+            const price = this.priceBook[customerId][String(row.product_id)];
+
+            if (price && String(row.rate ?? '') === '') row.rate = String(price.rate);
         },
         add() {
             this.rows.push({

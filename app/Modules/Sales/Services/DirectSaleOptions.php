@@ -15,6 +15,7 @@ use App\Modules\Inventory\Models\Warehouse;
 use App\Modules\Inventory\Services\FreeRatio;
 use App\Modules\MasterData\Models\PaymentMethod;
 use App\Modules\MasterData\Models\PaymentTerm;
+use App\Modules\Customer\Models\Customer;
 use App\Modules\Sales\Models\SalesInvoice;
 use App\Modules\Supplier\Models\Supplier;
 use Illuminate\Support\Collection;
@@ -270,7 +271,7 @@ final class DirectSaleOptions
      * ⓘ [[DirectSaleController]] থেকে হুবহু তোলা (৪ অক্টোবর ২০২৬), তিনটা বদল নাম ধরে: সীমা ডাকনেওয়ালার, একটা পণ্যে
      * ছাঁকা যায় (ফোনের "দাম দেখুন" — [[DirectSaleApiController::price()]]), আর রেসিপির খাতা `app()` দিয়ে।
      */
-    public function catalogue(?Warehouse $warehouse, int $limit, ?int $productId = null): Collection
+    public function catalogue(?Warehouse $warehouse, int $limit, ?int $productId = null, ?Customer $customer = null): Collection
     {
         $sum = fn (string $column) => DB::table('inv_stock_movements')
             ->selectRaw("COALESCE(SUM({$column}), 0)")
@@ -294,7 +295,11 @@ final class DirectSaleOptions
             ->when($productId !== null, fn ($q) => $q->whereKey($productId))
             ->limit($limit)
             ->get()
-            ->map(function (Product $p) use ($warehouse, $seesCost) {
+            // ⭐ দর এই গ্রাহকের দর তালিকা থেকে, নাহলে পণ্যের দাম ([[SalesPrice]], ৫ অক্টোবর ২০২৬) — সব পণ্য দুইটা কোয়েরিতে
+            ->tap(function (Collection $rows) use (&$prices, $customer) {
+                $prices = app(SalesPrice::class)->forMany($customer, $rows);
+            })
+            ->map(function (Product $p) use ($warehouse, $seesCost, &$prices) {
                 /*
                  * খাবারের উত্তরটা আলাদা — কারণটা
                  * [[RecipeService::sellableQty()]]-এ। POS-ও ঠিক এই
@@ -317,7 +322,10 @@ final class DirectSaleOptions
                     'name_bn' => (string) $p->name_bn,
 
                     'unit' => $p->unit?->name() ?? '',
-                    'rate' => (string) $p->sale_price,
+                    'rate' => $prices[(int) $p->id]->price,
+                    // ⓘ দরটা কোথা থেকে — পর্দা "গ্রাহকের দাম" লেখে
+                    'priceSource' => $prices[(int) $p->id]->source,
+                    'priceLabel' => $prices[(int) $p->id]->label(),
                     'barcode' => (string) $p->barcode,
 
                     /*
