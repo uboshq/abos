@@ -5,9 +5,13 @@ declare(strict_types=1);
 namespace App\Modules\Accounts\Services;
 
 use App\Core\Services\DataScope;
+use App\Core\Services\LedgerBalances;
+use App\Core\Support\DocumentStatus;
+use App\Models\Approval;
 use App\Models\LedgerEntry;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Models\CashTill;
+use App\Modules\Accounts\Models\Voucher;
 use Illuminate\Contracts\Database\Query\Builder;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
@@ -124,7 +128,12 @@ final class AccountsFacts
     /** এক ধরনের সব খাতের নিট — স্বাভাবিক দিকে ধনাত্মক। */
     public function netOfType(string $type, Carbon $from, Carbon $to): string
     {
-        $row = LedgerEntry::query()
+        /*
+         * ⭐ হেডারে বাছা শাখায় — মালিকের ধরা ভুল, ৫ অক্টোবর ২০২৬: শাখা A বাছা থাকতে শাখা B-র বিক্রিতে হিসাবের প্রথম চার্ট
+         * ("এই মাস এ পর্যন্ত") বদলাত, অথচ হোমের বাকি সব সংখ্যা শাখা মানত। ⓘ টাকার ঘর ([[moneyPositions()]]) যেভাবে মানে,
+         * ঠিক সেভাবে ([[inView()]]); "সব শাখা"-য় আগের মতোই গোটা কোম্পানি।
+         */
+        $row = $this->inView(LedgerEntry::query(), 'ledger_entries.branch_id')
             ->join('accounts', 'accounts.id', '=', 'ledger_entries.account_id')
             ->where('accounts.type', $type)
             ->whereBetween('ledger_entries.trx_date', [$from->toDateString(), $to->toDateString()])
@@ -195,7 +204,8 @@ final class AccountsFacts
     {
         $today = Carbon::today()->toDateString();
 
-        $row = LedgerEntry::query()
+        // ⭐ হেডারে বাছা শাখায় (৫ অক্টোবর ২০২৬) — [[netOfType()]]-এর একই কারণ; আজকের আদায়-পরিশোধও শাখা মানে
+        $row = $this->inView(LedgerEntry::query(), 'ledger_entries.branch_id')
             ->join('accounts', 'accounts.id', '=', 'ledger_entries.account_id')
             ->where('ledger_entries.trx_date', $today)
             ->selectRaw(
@@ -575,5 +585,141 @@ final class AccountsFacts
         }
 
         return $out;
+    }
+
+    /**
+     * ⭐ এ মাসের নিট লাভ — আয় বাদ ব্যয় (মালিকের ড্যাশবোর্ড নকশা, ৫ অক্টোবর ২০২৬)।
+     *
+     * ⓘ সংজ্ঞা একটাই: [[incomeThisMonth()]] আর [[expenseThisMonth()]] — "এই মাস এ পর্যন্ত" ভাগের ঠিক ঐ দুই সংখ্যা।
+     * ⛔ এখানে আলাদা SUM লিখলে একদিন ভাগ বলত এক, লাভের ঘর বলত আরেক।
+     */
+    public function netProfit(string $income, string $expense): string
+    {
+        return bcsub($income, $expense, 4);
+    }
+
+    /**
+     * ⭐ চলতি সম্পদ, চলতি দায় আর নিট সম্পদ (মালিকের ড্যাশবোর্ড নকশা, ৫ অক্টোবর ২০২৬)।
+     *
+     * ⓘ "চলতি" ছকেই চিহ্নিত, নতুন কোনো ভাগ বানানো হয়নি: ১১০০ *চলতি সম্পদ* আর ২১০০ *চলতি দায়* দুইটা দল
+     * ([[StandardChart]]); স্থায়ী সম্পদ (১২০০) আর দীর্ঘমেয়াদি দায় (২২০০) তাদের বাইরে। অর্থের CFO পাতার চলতি অনুপাতও
+     * ঠিক এই দুই দল পড়ে ([[CfoFigures]])।
+     * ⓘ নিট সম্পদ = মোট সম্পদ (১০০০) − মোট দায় (২০০০) — দেনা মিটিয়ে ব্যবসার যা থাকে।
+     * ⓘ দেখার শাখা মানে — [[balanceOfCode()]] দিয়েই, প্রাপ্য-প্রদেয়র মতো।
+     *
+     * @return array{current_assets: string, current_liabilities: string, net_assets: string}
+     */
+    public function currentPosition(): array
+    {
+        return [
+            'current_assets' => $this->balanceOfCode('1100'),
+            'current_liabilities' => $this->balanceOfCode('2100'),
+            'net_assets' => bcsub($this->balanceOfCode('1000'), $this->balanceOfCode('2000'), 4),
+        ];
+    }
+
+    /**
+     * ⭐ খতিয়ানের আজকের চলাচল — আজ কয়টা ভাউচার পোস্ট হলো, এ মাসে কয়টা দাখিলা উল্টানো হলো, আর এ মাসে কয়টা ভাউচার
+     * পিছনের তারিখে বসল (মালিকের ড্যাশবোর্ড নকশা, ৫ অক্টোবর ২০২৬)।
+     *
+     * ⓘ পোস্ট = নিশ্চিত বা বন্ধ ([[DocumentStatus::POSTED]]) — পাশের "এ মাসের ভাউচার" ভাগ যেভাবে গোনে; "আজ" মানে
+     * পোস্টের মুহূর্ত (`approved_at`, [[VoucherService::post()]] বসায়), কাগজের তারিখ নয়।
+     * ⓘ উল্টানো = খতিয়ানের `<উৎস>:reversal` সারি ([[PostingEngine::reverse()]]); এক কাগজের অনেক সারি একবারই গোনা।
+     * ⓘ পিছনের তারিখ = এ মাসে লেখা পোস্ট-করা ভাউচার, যার তারিখ লেখার দিনের আগে। ⚠️ সংখ্যাটা শূন্য না হলে কেউ বন্ধ
+     * হয়ে যাওয়া দিনের হিসাব বদলাচ্ছেন — নিরীক্ষক প্রথমে এটাই জিজ্ঞেস করেন।
+     * ⓘ ভাউচার মডেলের নিজের দেয়াল দেখার শাখা মানে; খতিয়ানের সারি [[inView()]] দিয়ে।
+     *
+     * @return array{posted_today: int, reversed_this_month: int, backdated_this_month: int}
+     */
+    public function ledgerActivity(): array
+    {
+        $today = Carbon::today();
+        $monthStart = $today->copy()->startOfMonth();
+
+        $postedToday = Voucher::query()
+            ->whereIn('status', DocumentStatus::POSTED)
+            ->where('approved_at', '>=', $today->toDateTimeString())
+            ->where('approved_at', '<', $today->copy()->addDay()->toDateTimeString())
+            ->count();
+
+        $reversed = $this->inView(LedgerEntry::query(), 'ledger_entries.branch_id')
+            ->where('ledger_entries.source_type', 'like', '%:reversal')
+            ->whereBetween('ledger_entries.trx_date', [$monthStart->toDateString(), $today->toDateString()])
+            ->selectRaw('COUNT(DISTINCT ledger_entries.source_type, ledger_entries.source_id) as n')
+            ->toBase()->value('n');
+
+        // ⓘ তারিখের তুলনা SQL-এ, কিন্তু মাসের শুরু আসে PHP থেকে — ডাটাবেসের ঘড়ি নয়
+        $backdated = Voucher::query()
+            ->whereIn('status', DocumentStatus::POSTED)
+            ->where('vouchers.created_at', '>=', $monthStart->toDateTimeString())
+            ->whereRaw('vouchers.trx_date < DATE(vouchers.created_at)')
+            ->count();
+
+        return [
+            'posted_today' => $postedToday,
+            'reversed_this_month' => (int) $reversed,
+            'backdated_this_month' => $backdated,
+        ];
+    }
+
+    /**
+     * ⭐ যে ড্রয়ারে টাকা শূন্যের নিচে — কয়টা (মালিকের ড্যাশবোর্ড নকশা, ৫ অক্টোবর ২০২৬)।
+     *
+     * ⓘ ড্রয়ারের জের [[tillBalances()]] থেকেই, টিলের পর্দা যেটা দেখায়। ⛔ হাতের নগদ শূন্যের নিচে যেতে পারে না —
+     * এমন একটা ড্রয়ার মানে খরচ বা জমা ভুল ড্রয়ার থেকে লেখা, নয়তো আদায় লেখা বাকি।
+     */
+    public function tillsBelowZero(): int
+    {
+        return count(array_filter(
+            $this->tillBalances($this->tills()),
+            fn (string $balance) => bccomp($balance, '0', 4) < 0,
+        ));
+    }
+
+    /**
+     * ⭐ সইয়ের অপেক্ষায় যে ভাউচার — কয়টা (মালিকের ড্যাশবোর্ড নকশা, ৫ অক্টোবর ২০২৬)।
+     *
+     * ⓘ অনুমোদনের সারি কোরের ([[Approval]], `App\Models`) — হিসাব কোনো মডিউলের উপর দাঁড়ায় না, তাই এটাই পড়া যায়।
+     * ভাউচারের তালিকা আর মাস-শেষের চেকলিস্ট একই শর্তে গোনে ([[VoucherController]], [[MonthEndChecklist]])।
+     * ⓘ ভাউচার ধরে গোনা, অনুমোদন ধরে নয় — তাই দেখার শাখার দেয়াল ভাউচার মডেলের নিজেরটাই।
+     */
+    public function vouchersAwaitingSignature(): int
+    {
+        return Voucher::query()
+            ->whereIn('id', Approval::query()
+                ->where('approvable_type', Voucher::class)
+                ->where('module', VoucherApproval::MODULE)
+                ->pending()
+                ->select('approvable_id'))
+            ->count();
+    }
+
+    /**
+     * ⭐ ব্যাংক অনুযায়ী জের — প্রতিটা ব্যাংক খাতে কত (মালিকের ড্যাশবোর্ড নকশা, ৫ অক্টোবর ২০২৬)।
+     *
+     * ⓘ "ব্যাংক" = ব্যাংক-চিহ্নিত পাতা-খাত ([[Account::scopeOfMoneyKind()]]) — [[bankBalance()]]-এর একই খাতগুলো, ⛔ MFS নয়।
+     * ⓘ জের খাতের নিজের [[Account::balanceOn()]], হেডারে বাছা শাখায় — খাতের পাতা যা দেখায় তাই; সব খাতের যোগফল একটাই
+     * কোয়েরিতে আগে তোলা ([[LedgerBalances::preload()]]), তাই খাত যত, কোয়েরি তত নয়।
+     *
+     * @return list<array{id: int, name: string, balance: string}>
+     */
+    public function bankBalances(): array
+    {
+        $banks = Account::query()->ofMoneyKind(Account::BANK)->where('is_active', true)->orderBy('code')->get();
+
+        if ($banks->isEmpty()) {
+            return [];
+        }
+
+        $scope = app(DataScope::class);
+        $branch = $scope->viewsOneBranch(auth()->user()) ? ($scope->viewBranchIds(auth()->user())[0] ?? null) : null;
+
+        app(LedgerBalances::class)->preload($banks->map(fn (Account $a) => (int) $a->getKey())->all(), null, $branch);
+
+        return $banks->map(fn (Account $bank) => [
+            'id' => (int) $bank->getKey(),
+            'name' => $bank->name(),
+            'balance' => $bank->balanceOn(null, $branch),
+        ])->values()->all();
     }
 }

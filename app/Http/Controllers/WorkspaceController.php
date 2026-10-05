@@ -110,7 +110,8 @@ class WorkspaceController extends Controller
              * ([[RefuseSwitchedOffScreens::refuses()]]), যাতে সারি আর দরজা কখনো দুই কথা না বলে।
              */
             'overall' => array_values(array_filter(
-                $this->engine->overall($request->user()),
+                // ⓘ চার্টও হোমের বাছা সময়ে আঁকা হয় — যে চার্ট সময় মানে (এ মাসের আয়-ব্যয়), সে HomePeriod::chosen() পড়ে (৫ অক্টোবর ২০২৬)
+                \App\Core\Dashboard\HomePeriod::during($period, fn () => $this->engine->overall($request->user())),
                 fn (array $row) => ! $this->doors->refuses('module.dashboard', ['module' => $row['module']]),
             )),
 

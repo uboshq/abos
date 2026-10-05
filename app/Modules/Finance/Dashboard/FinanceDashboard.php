@@ -5,12 +5,20 @@ declare(strict_types=1);
 namespace App\Modules\Finance\Dashboard;
 
 use App\Core\Contracts\ProvidesDashboard;
+use App\Core\Dashboard\HomePeriod;
 use App\Core\Engines\Dashboard\Breakdown;
 use App\Core\Engines\Dashboard\DashboardDefinition;
+use App\Core\Engines\Dashboard\DateRange;
 use App\Core\Engines\Dashboard\Listing;
 use App\Core\Engines\Dashboard\Stat;
 use App\Core\Engines\Dashboard\Tile;
+use App\Core\Services\DataScope;
+use App\Core\Support\CompanyContext;
+use App\Core\Support\DocumentStatus;
 use App\Core\Support\Money;
+use App\Modules\Accounts\Models\BankReconciliation;
+use App\Modules\Accounts\Models\BankStatementLine;
+use App\Modules\Accounts\Models\Voucher;
 use App\Modules\Accounts\Services\AccountsFacts;
 use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Finance\Models\CapitalEntry;
@@ -18,6 +26,8 @@ use App\Modules\Finance\Models\Deposit;
 use App\Modules\Finance\Models\Withdrawal;
 use App\Modules\Finance\Services\BudgetService;
 use App\Modules\Finance\Services\HeadTotals;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Schema;
 
@@ -33,6 +43,13 @@ final class FinanceDashboard implements ProvidesDashboard
 {
     public static function dashboard(): DashboardDefinition
     {
+        /*
+         * ⭐ হোমে বসলে হোমের বাছা সময় — মালিক, ৫ অক্টোবর ২০২৬: তিনি "আজ" বেছেছিলেন অথচ এই চার্ট মাস দেখাচ্ছিল।
+         * ⓘ [[HomePeriod::chosen()]] কেবল হোম আঁকার সময় কিছু বলে; অর্থের নিজের পাতায় `null`, তখন এ মাস — আগের মতো।
+         */
+        $period = HomePeriod::chosen() ?? 'month';
+        [$spentFrom, $spentTo] = HomePeriod::window($period);
+
         $expenseHeads = array_map(
             fn (array $row) => [
                 'label' => $row['label'],
@@ -40,8 +57,8 @@ final class FinanceDashboard implements ProvidesDashboard
             ],
             app(HeadTotals::class)->topUnder(
                 StandardChart::OPERATING_EXPENSES,
-                now()->startOfMonth()->toDateString(),
-                now()->toDateString(),
+                $spentFrom,
+                $spentTo,
             ),
         );
 
@@ -166,6 +183,7 @@ final class FinanceDashboard implements ProvidesDashboard
                     href: $custody,
                     permission: 'accounts.view',
                 ),
+                ...self::fundAndDues($facts, $money, $cashBook, $supplierAgeing),
 
                 /*
                  * ⓘ বয়সের ভাগটা এখানে গোনা হয় না — দরজাটা **যেখানে
@@ -280,7 +298,6 @@ final class FinanceDashboard implements ProvidesDashboard
             ],
 
             panels: array_values(array_filter([
-                ...self::cashFlow($facts),
                 /*
                  * ── এই মাসে টাকা কোন খাতে গেল ───────────────────────
                  *
@@ -309,13 +326,25 @@ final class FinanceDashboard implements ProvidesDashboard
                  * ফেলনা ডাটাবেসে, যেখানে খরচ ছিল না।
                  */
                 $expenseHeads === [] ? null : new Breakdown(
-                    label: __('finance::dashboard.where_money_went'),
+                    label: __('finance::dashboard.'.match ($period) {
+                        'today' => 'where_money_went_today',
+                        'year' => 'where_money_went_year',
+                        default => 'where_money_went',
+                    }),
                     // ⓘ `forParent()` নিজেই বড় থেকে ছোট সাজিয়ে দেয়, তাই এখানে
                     // আবার সাজানো হয় না — দুইবার সাজালে একদিন দুইটা নিয়ম
                     // আলাদা হয়ে যেত
                     parts: $expenseHeads,
                     hint: __('finance::dashboard.where_money_went_hint'),
+                    range: DateRange::label($spentFrom, $spentTo),
                 ),
+
+                /*
+                 * ⓘ খরচের ভাগ প্রথমে, নগদ প্রবাহ আর ব্যাংক তার পরে (৫ অক্টোবর ২০২৬) — হোম মডিউলের প্রথম চার্টটাই দেখায়
+                 * ([[DashboardEngine]]), আর মালিকের হোমের চার্ট "এই মাসে টাকা কোথায় গেল", যেটা হোমের বাছা সময় মানে।
+                 */
+                ...self::cashFlow($facts),
+                ...self::bankWise($facts),
             ])),
 
             listings: [
@@ -364,7 +393,7 @@ final class FinanceDashboard implements ProvidesDashboard
 
         $over = $status['used_pct'] !== null && bccomp($status['used_pct'], '100', 1) > 0;
 
-        return [new Stat(
+        return [...[new Stat(
             label: __('finance::budget.status'),
             value: ($status['used_pct'] ?? '0').'%',
             hint: __('finance::budget.status_hint', [
@@ -373,6 +402,35 @@ final class FinanceDashboard implements ProvidesDashboard
             ]),
             href: route('finance.budget.actual'),
             tone: $over ? Stat::BAD : Stat::NEUTRAL,
+            permission: 'finance.budget.view',
+        )], ...self::budgetVariance($status)];
+    }
+
+    /**
+     * ⭐ বাজেটের পার্থক্য — বাজেট বাদ প্রকৃত, টাকায় (মালিকের ড্যাশবোর্ড নকশা, ৫ অক্টোবর ২০২৬)।
+     *
+     * ⓘ সংখ্যা দুইটা পাশের অবস্থার কার্ডের একই [[BudgetService::monthStatus()]] থেকে — একবারই পড়া, দুই কার্ডে।
+     * ⚠️ চিহ্ন মালিকের নকশা ধরে (বাজেট − প্রকৃত): ধনাত্মক মানে এখনো বাকি, ঋণাত্মক মানে ছাড়িয়ে গেছে।
+     * বাজেট-বনাম-প্রকৃত পাতার "ফারাক" কলাম উল্টো দিকে গোনে (প্রকৃত − বাজেট), তাই নাম আলাদা।
+     * ⓘ নতুন ড্যাশবোর্ডের অংশ (config abos.dashboards_v2)।
+     *
+     * @param  array{budget: string, actual: string, used_pct: ?string}  $status
+     * @return list<Stat>
+     */
+    private static function budgetVariance(array $status): array
+    {
+        if (! config('abos.dashboards_v2')) {
+            return [];
+        }
+
+        $variance = bcsub($status['budget'], $status['actual'], 4);
+
+        return [new Stat(
+            label: __('finance::budget.month_variance'),
+            value: Money::format($variance),
+            hint: __('finance::budget.month_variance_hint'),
+            href: route('finance.budget.actual'),
+            tone: bccomp($variance, '0', 4) < 0 ? Stat::BAD : Stat::GOOD,
             permission: 'finance.budget.view',
         )];
     }
@@ -403,6 +461,207 @@ final class FinanceDashboard implements ProvidesDashboard
             ], $facts->moneyFlowByMonth(6)),
             firstLabel: __('finance::dashboard.cash_in'),
             secondLabel: __('finance::dashboard.cash_out'),
+            // ⓘ ছয় মাসের প্রথম দিন থেকে আজ — [[AccountsFacts::moneyFlowByMonth()]]-এর একই শুরু (৫ অক্টোবর ২০২৬)
+            range: DateRange::label(Carbon::today()->startOfMonth()->subMonths(5), Carbon::today()),
+        )];
+    }
+
+    /**
+     * ⭐ মোট তহবিল, আজকের আদায় ও পরিশোধ, এ মাসের নিট নগদ প্রবাহ, মিলকরণ বাকি, আর সামনের সপ্তাহের ও মেয়াদোত্তীর্ণ দেনা
+     * (মালিকের ড্যাশবোর্ড নকশা, ৫ অক্টোবর ২০২৬)।
+     *
+     * ⓘ একটা সংখ্যারও নতুন সংজ্ঞা নেই: তহবিল = উপরের নগদ + ব্যাংক + MFS ([[AccountsFacts::moneyPositions()]]); আজকের
+     * আদায়-পরিশোধ = হিসাবের ড্যাশবোর্ডের একই [[AccountsFacts::today()]]; নিট প্রবাহ = নগদ প্রবাহের চার্টের এ মাসের দণ্ড
+     * ([[AccountsFacts::moneyFlowByMonth()]], কেবল এক মাস চেয়ে)।
+     * ⛔ নগদ/ব্যাংক/MFS ঘরের একই চাবি (`accounts.view`) — চাবি ছাড়া কিছুই নেই। ⓘ নতুন ড্যাশবোর্ডের অংশ (config
+     * abos.dashboards_v2)।
+     *
+     * @param  array{cash: string, bank: string, mfs: string}  $money
+     * @return list<Stat>
+     */
+    private static function fundAndDues(AccountsFacts $facts, array $money, ?string $cashBook, ?string $supplierAgeing): array
+    {
+        if (! config('abos.dashboards_v2') || ! auth()->user()?->can('accounts.view')) {
+            return [];
+        }
+
+        $fund = bcadd(bcadd($money['cash'], $money['bank'], 4), $money['mfs'], 4);
+        $today = $facts->today();
+
+        $flow = $facts->moneyFlowByMonth(1);
+        $month = $flow[array_key_last($flow)] ?? ['in' => '0', 'out' => '0'];
+        $netFlow = bcsub($month['in'], $month['out'], 2);
+
+        /*
+         * ⓘ মিলকরণ বাকি = ব্যাংকের বিবরণীর যে সারি এখনো খাতার কোনো সারির সাথে মেলানো হয়নি ([[BankStatementLine::unmatched()]],
+         * মিলকরণের পর্দা ঠিক এগুলোই দেখায়)। ⚠️ শাখা ধরে ছাঁকা হয় না: বিবরণীটা কোম্পানির ব্যাংক খাতের, আর বেশিরভাগ সারিতে
+         * শাখাই লেখা থাকে না — এক শাখা বাছলে সংখ্যাটা চুপচাপ শূন্য দেখাত, অথচ ব্যাংক যা জানে আমরা জানি না।
+         */
+        $unmatched = BankStatementLine::query()->unmatched()->count();
+        $drafts = BankReconciliation::query()->where('status', BankReconciliation::DRAFT)->count();
+
+        $dues = self::payablesDue();
+
+        return [
+            new Stat(
+                label: __('finance::dashboard.total_fund'),
+                value: Money::format($fund),
+                hint: __('finance::dashboard.total_fund_hint'),
+                href: $cashBook,
+                permission: 'accounts.view',
+                tone: Stat::GOOD,
+            ),
+            new Stat(
+                label: __('finance::dashboard.today_collection'),
+                value: Money::format($today['collection']),
+                hint: __('finance::dashboard.today_collection_hint'),
+                href: Route::has('sales.collection.index') ? route('sales.collection.index') : null,
+                permission: 'accounts.view',
+                tone: Stat::GOOD,
+            ),
+            new Stat(
+                label: __('finance::dashboard.today_payment'),
+                value: Money::format($today['payment']),
+                hint: __('finance::dashboard.today_payment_hint'),
+                href: Route::has('purchase.payment.index') ? route('purchase.payment.index') : null,
+                permission: 'accounts.view',
+            ),
+            new Stat(
+                label: __('finance::dashboard.net_cash_flow_month'),
+                value: Money::format($netFlow),
+                hint: __('finance::dashboard.net_cash_flow_month_hint'),
+                href: $cashBook,
+                permission: 'accounts.view',
+                tone: bccomp($netFlow, '0', 2) < 0 ? Stat::BAD : Stat::GOOD,
+            ),
+            new Stat(
+                label: __('finance::dashboard.reconciliation_pending'),
+                value: (string) $unmatched,
+                hint: __('finance::dashboard.reconciliation_pending_hint', ['drafts' => $drafts]),
+                href: Route::has('accounts.reconciliation.index') ? route('accounts.reconciliation.index') : null,
+                permission: 'accounts.view',
+                tone: $unmatched > 0 ? Stat::WARN : Stat::NEUTRAL,
+            ),
+            new Stat(
+                label: __('finance::dashboard.payables_next_week'),
+                value: Money::format($dues['soon']),
+                hint: __('finance::dashboard.payables_next_week_hint', ['count' => $dues['soon_count']]),
+                href: $supplierAgeing,
+                permission: 'accounts.view',
+                tone: $dues['soon_count'] > 0 ? Stat::WARN : Stat::NEUTRAL,
+            ),
+            new Stat(
+                label: __('finance::dashboard.payables_overdue'),
+                value: Money::format($dues['overdue']),
+                hint: __('finance::dashboard.payables_overdue_hint', ['count' => $dues['overdue_count']]),
+                href: $supplierAgeing,
+                permission: 'accounts.view',
+                tone: $dues['overdue_count'] > 0 ? Stat::BAD : Stat::NEUTRAL,
+            ),
+        ];
+    }
+
+    /**
+     * ⭐ সরবরাহকারীর বিল — সামনের ৭ দিনে যার মেয়াদ, আর যার মেয়াদ পেরিয়ে গেছে; কেবল যেখানে টাকা বাকি (৫ অক্টোবর ২০২৬)।
+     *
+     * ── ⚠️ কেন `DB::table`, মডেল নয় ──────────────────────────────────────
+     * অর্থ ক্রয়ের উপর দাঁড়ায় (`module.php`-এর `depends_on`-এ purchase আছে), কিন্তু মালিকের ড্যাশবোর্ড-নকশার নিয়ম:
+     * ড্যাশবোর্ড ক্রয়ের ক্লাস import করে না, আর বিলের বাকির জন্য কোরে কোনো চুক্তি নেই। তাই টেবিল থেকে সরাসরি,
+     * প্রতিটা কোয়েরিতে কোম্পানির নাম হাতে (`company_id`) — `DB::table` গ্লোবাল স্কোপ মানে না।
+     *
+     * ── ⛔ বাকির সংজ্ঞা দ্বিতীয়বার লেখা নয়, হুবহু নকল ──────────────────────
+     * বাকি = বিলের মোট − পোস্ট হওয়া পরিশোধের সারি − বিলের বিপরীতে পোস্ট হওয়া পরিশোধ ভাউচার, অর্থাৎ
+     * [[PurchaseBill::scopeWithPaid()]] আর [[PurchaseBill::dueAmount()]]-এর একই তিন ভাগ, [[CashForecast]] যেভাবে পড়ে।
+     * ⚠️ ওখানে শর্ত বদলালে এখানেও বদলাতে হবে — দাবিটা ([[TheFinanceDashboardShowsTheWholeSpecTest]]) পরিশোধ বসিয়ে মাপে।
+     * ⓘ মেয়াদ-না-লেখা বিল কোনো ঘরেই নয় — কবে দিতে হবে তা জানা নেই। দেখার শাখা মানে, বিলের তালিকার মতো।
+     *
+     * @return array{soon: string, soon_count: int, overdue: string, overdue_count: int}
+     */
+    private static function payablesDue(): array
+    {
+        $company = CompanyContext::id();
+        $today = Carbon::today()->toDateString();
+        $weekEnd = Carbon::today()->addDays(7)->toDateString();
+
+        $paidByLines = DB::table('pur_payment_lines')
+            ->join('pur_payments', 'pur_payments.id', '=', 'pur_payment_lines.payment_id')
+            ->whereColumn('pur_payment_lines.purchase_bill_id', 'pur_bills.id')
+            ->whereColumn('pur_payments.company_id', 'pur_bills.company_id')
+            ->whereIn('pur_payments.status', DocumentStatus::POSTED)
+            ->whereNull('pur_payments.deleted_at')
+            ->selectRaw('COALESCE(SUM(pur_payment_lines.amount), 0)');
+
+        $paidByVouchers = DB::table('vouchers')
+            ->whereColumn('vouchers.company_id', 'pur_bills.company_id')
+            ->where('vouchers.type', Voucher::PAYMENT)
+            // ⓘ বিলের উৎস-নাম ([[PurchaseBill::drillSourceType()]]) — ক্লাসটা import না করে, শব্দটাই
+            ->where('vouchers.against_type', 'purchase_bill')
+            ->whereColumn('vouchers.against_id', 'pur_bills.id')
+            ->where('vouchers.status', DocumentStatus::CONFIRMED)
+            ->whereNull('vouchers.deleted_at')
+            ->selectRaw('COALESCE(SUM(vouchers.amount), 0)');
+
+        $bills = app(DataScope::class)->inView(DB::table('pur_bills')
+            ->where('pur_bills.company_id', $company)
+            ->whereIn('pur_bills.status', DocumentStatus::POSTED)
+            ->whereNull('pur_bills.deleted_at')
+            ->whereNotNull('pur_bills.due_on')
+            ->where('pur_bills.due_on', '<=', $weekEnd), 'pur_bills.branch_id')
+            ->select(['pur_bills.due_on', 'pur_bills.total'])
+            ->selectSub($paidByLines, 'paid_lines')
+            ->selectSub($paidByVouchers, 'paid_vouchers');
+
+        $left = 'b.total - b.paid_lines - b.paid_vouchers';
+
+        $row = DB::query()->fromSub($bills, 'b')
+            ->whereRaw("{$left} > 0")
+            ->selectRaw(
+                "COALESCE(SUM(CASE WHEN b.due_on < ? THEN {$left} ELSE 0 END), 0) as overdue,"
+                ."COALESCE(SUM(CASE WHEN b.due_on < ? THEN 1 ELSE 0 END), 0) as overdue_count,"
+                ."COALESCE(SUM(CASE WHEN b.due_on >= ? THEN {$left} ELSE 0 END), 0) as soon,"
+                ."COALESCE(SUM(CASE WHEN b.due_on >= ? THEN 1 ELSE 0 END), 0) as soon_count",
+                [$today, $today, $today, $today],
+            )
+            ->first();
+
+        return [
+            'soon' => bcadd((string) ($row->soon ?? '0'), '0', 4),
+            'soon_count' => (int) ($row->soon_count ?? 0),
+            'overdue' => bcadd((string) ($row->overdue ?? '0'), '0', 4),
+            'overdue_count' => (int) ($row->overdue_count ?? 0),
+        ];
+    }
+
+    /**
+     * ⭐ ব্যাংক অনুযায়ী জের — প্রতিটা ব্যাংক খাতে আজ কত, আড়াআড়ি দণ্ডে (মালিকের ড্যাশবোর্ড নকশা, ৫ অক্টোবর ২০২৬)।
+     *
+     * ⓘ হিসাব [[AccountsFacts::bankBalances()]]-এ — ব্যাংক-চিহ্নিত পাতা-খাত (⛔ MFS নয়), প্রতিটার নিজের জের, হেডারে বাছা
+     * শাখায়। অর্থের পাতা নিজে খাতা পড়ে না।
+     * ⓘ ব্যাংক খাতই না থাকলে ভাগটা বসে না — `Breakdown` খালি অংশ পেলে ব্যতিক্রম ছোঁড়ে।
+     * ⓘ নতুন ড্যাশবোর্ডের অংশ (config abos.dashboards_v2), কেবল accounts.view-এ।
+     *
+     * @return list<Breakdown>
+     */
+    private static function bankWise(AccountsFacts $facts): array
+    {
+        if (! config('abos.dashboards_v2') || ! auth()->user()?->can('accounts.view')) {
+            return [];
+        }
+
+        $banks = $facts->bankBalances();
+
+        if ($banks === []) {
+            return [];
+        }
+
+        return [new Breakdown(
+            label: __('finance::dashboard.bank_wise'),
+            parts: array_map(fn (array $bank) => [
+                'label' => $bank['name'],
+                'value' => Money::format($bank['balance']),
+            ], $banks),
+            hint: __('finance::dashboard.bank_wise_hint'),
+            chart: 'hbars',
         )];
     }
 }

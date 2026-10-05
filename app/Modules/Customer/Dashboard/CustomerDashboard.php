@@ -21,6 +21,9 @@ use Illuminate\Support\Carbon;
  * টেনে আনলে Customer মডিউলকে Sales-এর উপর দাঁড়াতে হত — ঠিক যে চক্রটা
  * [[Customer]] মডেলে একবার ভেঙে সরানো হয়েছিল (`lastPurchaseOn()`)।
  *
+ * ⓘ ৫ অক্টোবর ২০২৬: নতুন ড্যাশবোর্ডে বিক্রির অঙ্ক এসেছে, কিন্তু চক্রটা ফেরেনি — কোরের চুক্তি
+ * ([[CustomerSalesFilters]]) দিয়ে, যেটা বিক্রয় বাস্তবায়ন করে ([[CustomerTradeCharts]])।
+ *
  * এই পর্দার প্রশ্ন তাই আলাদা: **তালিকাটা সুস্থ আছে তো** — কতজন সচল,
  * কতজন নিষ্ক্রিয়, আর নতুন কারা এলেন।
  */
@@ -68,11 +71,15 @@ final class CustomerDashboard implements ProvidesDashboard
                     hint: __('customer::dashboard.new_hint'),
                     href: route('customer.index'),
                 ),
+                // ⭐ নতুন ড্যাশবোর্ডে বিক্রি, গড় বিল আর মেয়াদ পেরোনো বাকি — বিক্রয়ের চুক্তি দিয়ে ([[CustomerTradeCharts]], ৫ অক্টোবর ২০২৬)
+                ...CustomerTradeCharts::stats(),
             ],
 
-            panels: [...self::growth(), ...self::ageing()],
+            panels: [...self::growth(), ...self::ageing(), ...CustomerTradeCharts::panels()],
 
             listings: [
+                // ⭐ এ মাসের সবচেয়ে বড় পাঁচ ক্রেতা, বকেয়াসহ — নতুন ড্যাশবোর্ডে (৫ অক্টোবর ২০২৬)
+                ...CustomerTradeCharts::listings(),
                 new Listing(
                     label: __('customer::dashboard.newest'),
                     columns: [

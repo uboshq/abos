@@ -28,4 +28,20 @@ final class NoCustomerSalesFilters implements CustomerSalesFilters
     {
         return $customers;
     }
+
+    // ⓘ বিক্রয় বন্ধ — ড্যাশবোর্ডের বিক্রি-নির্ভর চার্টগুলো নেই, শূন্যের চার্ট নয় (৫ অক্টোবর ২০২৬)
+    public function billsBetween(string $from, string $to): ?array
+    {
+        return null;
+    }
+
+    public function topBuyers(string $from, string $to, int $limit): ?array
+    {
+        return null;
+    }
+
+    public function overdueByCustomer(string $today): ?array
+    {
+        return null;
+    }
 }

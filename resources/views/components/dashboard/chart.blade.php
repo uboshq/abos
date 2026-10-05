@@ -9,7 +9,7 @@
        এক হয়ে যেত (৪ অক্টোবর ২০২৬ ছবিতে ধরা)। বান্ডেল টোকেনটা না জানলেও চলে — পাশে একই রঙের বিকল্প।
      ⓘ শূন্যের মাথায় "0" লেখা হয় না — শূন্য বিন্দু মাটিতেই বসে; ডোনাটের পাশের তালিকায় শূন্যও থাকে।
      ⓘ হোম আর মডিউলের নতুন পাতা এই একটাই ছক ডাকে — দুই জায়গায় দুই রকম আঁকা হয় না। --}}
-@props(['panel', 'compact' => false])
+@props(['panel', 'compact' => false, 'showRange' => true])
 
 @php
     $palette = ['var(--color-chart-1, #2563eb)', 'var(--color-chart-2, #d97706)', 'var(--color-chart-3, #7c3aed)',
@@ -27,11 +27,18 @@
         @foreach ($panel->points as $point)
             <div class="flex h-full flex-1 items-end justify-center gap-0.5">
                 @foreach ([['first', $palette[0], $panel->firstLabel], ['second', $palette[1], $panel->secondLabel]] as [$side, $fill, $name])
-                    <div class="flex h-full w-1/2 flex-col items-center justify-end">
-                        <span data-bar-value class="mb-0.5 whitespace-nowrap leading-none tabular-nums text-(--color-ink-muted)"
-                              style="font-size: 0.6rem">{{ $zero($point[$side]) ? '' : ($point[$side.'Note'] ?? $short($point[$side])) }}</span>
+                    {{-- ⭐ মান দণ্ডের ভেতরে, খাড়া করে (মালিক, ৫ অক্টোবর ২০২৬: *"amount gulo color pipe er vitore dile full buzazabe"*);
+                         দণ্ড বেঁটে হলে (৩৫%-এর কম) ভেতরে ধরে না, তখন মাথার উপরে --}}
+                    @php
+                        $barH = max(2, (int) round((float) $point[$side] / $peak * 85));
+                        $inside = $barH >= 35;
+                    @endphp
+                    <div class="flex h-full w-1/2 flex-col items-center justify-end" style="position: relative">
+                        <span data-bar-value @class(['whitespace-nowrap leading-none tabular-nums', 'mb-0.5 text-(--color-ink-muted)' => ! $inside])
+                              @if ($inside) style="position: absolute; bottom: 4px; left: 50%; transform: translateX(-50%) rotate(180deg); writing-mode: vertical-rl; color: var(--color-ink-inverse); font-weight: 700; font-size: 0.62rem; z-index: 1; text-shadow: 0 0 2px rgb(0 0 0 / 0.35)"
+                              @else style="font-size: 0.6rem" @endif>{{ $zero($point[$side]) ? '' : ($point[$side.'Note'] ?? $short($point[$side])) }}</span>
                         <div class="w-full rounded-t"
-                             style="height:{{ max(2, (int) round((float) $point[$side] / $peak * 85)) }}%; background: {{ $fill }}"
+                             style="height:{{ $barH }}%; background: {{ $fill }}"
                              title="{{ $point['label'] }} · {{ $name }}: {{ $point[$side.'Title'] ?? $point[$side] }}"></div>
                     </div>
                 @endforeach
@@ -176,5 +183,12 @@
             @endforeach
         </div>
     @endif
+@endif
+
+{{-- ⭐ কোন তারিখ থেকে কোন তারিখ (মালিক, ৫ অক্টোবর ২০২৬: *"kobe theke kobe porjonto eta likhbe"*) --}}
+@if ($panel->range && $showRange)
+    <p data-chart-range class="flex items-center gap-1 px-4 pb-2 text-2xs text-(--color-ink-muted)">
+        <x-ui.icon name="calendar" :size="12" />{{ $panel->range }}
+    </p>
 @endif
 </div>

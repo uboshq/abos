@@ -34,6 +34,11 @@ final class Breakdown
          * ⓘ না দিলে: ছয় বা কম ভাগ, সব অঋণাত্মক → ডোনাট; নইলে আড়াআড়ি দণ্ড ([[kind()]])।
          */
         public readonly ?string $chart = null,
+        /**
+         * ⭐ কোন তারিখ থেকে কোন তারিখ — মালিক, ৫ অক্টোবর ২০২৬: *"kobe theke kobe porjonto eta likhbe"*।
+         * ⓘ [[DateRange::label()]] দিয়ে বানানো লেখা ("১ অক্টো – ৫ অক্টো ২০২৬"); চার্টের নিচে বসে। `null` মানে সময়ের নয় (যেমন তালিকা কতটা ভরা)।
+         */
+        public readonly ?string $range = null,
     ) {
         if ($chart !== null && ! in_array($chart, self::CHARTS, true)) {
             throw new InvalidArgumentException("Breakdown '{$label}' asks for an unknown chart '{$chart}'.");

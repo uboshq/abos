@@ -151,6 +151,8 @@ final class HrDashboard implements ProvidesDashboard
                 ['label' => __('hr::dashboard.not_written'), 'value' => (string) $unwritten],
             ],
             hint: __('hr::dashboard.todays_roll_hint', ['count' => $headcount]),
+            // ⭐ কোন দিনের (মালিক, ৫ অক্টোবর ২০২৬)
+            range: \App\Core\Engines\Dashboard\DateRange::label(\Illuminate\Support\Carbon::today(), \Illuminate\Support\Carbon::today()),
         );
     }
 

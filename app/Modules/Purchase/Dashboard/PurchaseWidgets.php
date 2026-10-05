@@ -58,6 +58,11 @@ final class PurchaseWidgets implements DashboardWidgets
             tone: 'money',
             sort: 30,
             icon: 'scale',
+            // ⓘ বিক্রি না থাকলেও একই ভাগ, শূন্যে — নামের দুই ঘর একই আকারের
+            parts: [
+                __('supplier::field.sold') => Money::format('0'),
+                __('supplier::field.cost_of_sold') => Money::format('0'),
+            ],
         );
 
         return [
@@ -71,6 +76,8 @@ final class PurchaseWidgets implements DashboardWidgets
                 hint: $margin->hint,
                 sort: 30,
                 icon: 'scale',
+                // ⓘ একই ভাগ (বিক্রি · বিক্রীত মালের খরচ) — একই নামের দুই ঘর দুই রকম কথা না বলে
+                parts: $margin->parts,
             ),
             new Widget(
                 group: 'kpi',

@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace App\Modules\Accounts\Dashboard;
 
 use App\Core\Contracts\ProvidesDashboard;
+use App\Core\Dashboard\HomePeriod;
 use App\Core\Engines\Dashboard\Breakdown;
 use App\Core\Engines\Dashboard\DashboardDefinition;
+use App\Core\Engines\Dashboard\DateRange;
 use App\Core\Engines\Dashboard\Listing;
 use App\Core\Engines\Dashboard\Stat;
 use App\Core\Engines\Dashboard\Tile;
@@ -15,6 +17,7 @@ use App\Core\Support\Money;
 use App\Modules\Accounts\Models\MoneyTransfer;
 use App\Modules\Accounts\Models\Voucher;
 use App\Modules\Accounts\Services\AccountsFacts;
+use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Services\StandardChart;
 use Illuminate\Support\Facades\Route;
 
@@ -51,6 +54,10 @@ final class AccountsDashboard implements ProvidesDashboard
          * এভাবেই।
          */
         $today = $facts->today();
+
+        // ⓘ মাসের আয়-ব্যয় একবারই পড়া — "এই মাস এ পর্যন্ত" ভাগ আর নিট লাভ একই দুই সংখ্যা (৫ অক্টোবর ২০২৬)
+        $income = $facts->incomeThisMonth();
+        $expense = $facts->expenseThisMonth();
 
         /*
          * সবচেয়ে বেশি বকেয়া যে দশজনের — নাম সহ।
@@ -258,6 +265,7 @@ final class AccountsDashboard implements ProvidesDashboard
                     href: route('accounts.asset.index'),
                     permission: 'accounts.asset.view',
                 ),
+                ...self::bookHealth($facts, $income, $expense),
             ],
 
             panels: [
@@ -267,19 +275,20 @@ final class AccountsDashboard implements ProvidesDashboard
                  * **পার্থক্যটা নিজে বিয়োগ করতে হত**। পাশাপাশি রাখলে
                  * মাসটা লাভে না লোকসানে, সেটা তাকানোর সাথে সাথেই বোঝা যায়।
                  */
-                new Breakdown(
+                config('abos.dashboards_v2') ? self::incomeExpenseProfit($facts, $income, $expense) : new Breakdown(
                     label: __('accounts::dashboard.month_so_far'),
                     parts: [
                         ['label' => __('accounts::dashboard.income'),
-                            'value' => Money::format($facts->incomeThisMonth())],
+                            'value' => Money::format($income)],
                         ['label' => __('accounts::dashboard.expense'),
-                            'value' => Money::format($facts->expenseThisMonth())],
+                            'value' => Money::format($expense)],
                     ],
                     hint: __('accounts::dashboard.month_so_far_hint'),
                 ),
                 ...self::trialBalance($facts),
                 ...self::papersThisMonth(),
                 ...self::incomeAndExpense($facts),
+                ...self::currentPosition($facts),
             ],
 
             listings: [
@@ -425,6 +434,7 @@ final class AccountsDashboard implements ProvidesDashboard
                 ['label' => __('accounts::dashboard.papers_cancelled'), 'value' => (string) (int) ($counts[\App\Core\Support\DocumentStatus::CANCELLED] ?? 0)],
             ],
             hint: __('accounts::dashboard.papers_this_month_hint'),
+            range: DateRange::label(\Illuminate\Support\Carbon::today()->startOfMonth(), \Illuminate\Support\Carbon::today()),
         )];
     }
 
@@ -439,6 +449,8 @@ final class AccountsDashboard implements ProvidesDashboard
             return [];
         }
 
+        $months = $facts->incomeExpenseByMonth(6);
+
         return [new \App\Core\Engines\Dashboard\Series(
             label: __('accounts::dashboard.income_expense_months'),
             points: array_map(fn (array $m) => [
@@ -447,9 +459,145 @@ final class AccountsDashboard implements ProvidesDashboard
                 'second' => $m['expense'],
                 'firstTitle' => Money::format($m['income']),
                 'secondTitle' => Money::format($m['expense']),
-            ], $facts->incomeExpenseByMonth(6)),
+            ], $months),
             firstLabel: __('accounts::dashboard.income'),
             secondLabel: __('accounts::dashboard.expense'),
+            // ⓘ ছয় মাসের প্রথম দিন থেকে আজ — [[AccountsFacts::incomeExpenseByMonth()]]-এর একই শুরু (৫ অক্টোবর ২০২৬)
+            range: DateRange::label(\Illuminate\Support\Carbon::today()->startOfMonth()->subMonths(5), \Illuminate\Support\Carbon::today()),
+        )];
+    }
+
+    /**
+     * ⭐ প্রথম চার্ট — মোট আয়, মোট ব্যয় আর নিট লাভ, পাশাপাশি স্তম্ভে (মালিক, ৫ অক্টোবর ২০২৬)।
+     *
+     * ⓘ হোমে বসলে হোমের বাছা সময় মানে ([[HomePeriod::chosen()]]): "আজ" বাছলে আজকের, "বছর" বাছলে অর্থবছরের শুরু থেকে।
+     * ⛔ মালিকের অভিযোগ: তিনি "আজ" বেছেছিলেন অথচ চার্ট মাস দেখাচ্ছিল। মডিউলের নিজের পাতায় (বাছা নেই) এ মাস, আগের মতো।
+     * ⓘ সংখ্যা [[AccountsFacts::netOfType()]] থেকে — মাসের বেলায় ঠিক উপরে পড়া দুই সংখ্যাই, আবার পড়া হয় না;
+     * নিট লাভ [[AccountsFacts::netProfit()]]। ⓘ স্তম্ভ, ডোনাট নয়: লোকসানের মাসে নিট লাভ ঋণাত্মক, ডোনাট সেটা আঁকতে পারে না।
+     * ⓘ চার্টের নিচে কোন তারিখ থেকে কোন তারিখ ([[DateRange::label()]])।
+     */
+    private static function incomeExpenseProfit(AccountsFacts $facts, string $monthIncome, string $monthExpense): Breakdown
+    {
+        $period = HomePeriod::chosen() ?? 'month';
+        [$from, $to] = HomePeriod::window($period);
+
+        [$income, $expense] = $period === 'month'
+            ? [$monthIncome, $monthExpense]
+            : [
+                $facts->netOfType(Account::INCOME, \Illuminate\Support\Carbon::parse($from), \Illuminate\Support\Carbon::parse($to)),
+                $facts->netOfType(Account::EXPENSE, \Illuminate\Support\Carbon::parse($from), \Illuminate\Support\Carbon::parse($to)),
+            ];
+
+        return new Breakdown(
+            label: __('accounts::dashboard.'.match ($period) {
+                'today' => 'today_so_far',
+                'year' => 'year_so_far',
+                default => 'month_so_far',
+            }),
+            parts: [
+                ['label' => __('accounts::dashboard.total_income'), 'value' => Money::format($income)],
+                ['label' => __('accounts::dashboard.total_expense'), 'value' => Money::format($expense)],
+                ['label' => __('accounts::dashboard.net_profit'), 'value' => Money::format($facts->netProfit($income, $expense))],
+            ],
+            hint: __('accounts::dashboard.income_expense_profit_hint'),
+            chart: 'columns',
+            range: DateRange::label($from, $to),
+        );
+    }
+
+    /**
+     * ⭐ খাতার স্বাস্থ্য এক নজরে — এ মাসের নিট লাভ, আজ কয়টা ভাউচার পোস্ট হলো, এ মাসে কয়টা উল্টানো, কয়টা পিছনের
+     * তারিখে, কয়টা ড্রয়ার শূন্যের নিচে, আর কয়টা ভাউচার সইয়ের অপেক্ষায় (মালিকের ড্যাশবোর্ড নকশা, ৫ অক্টোবর ২০২৬)।
+     *
+     * ⓘ প্রতিটা সংখ্যার সংজ্ঞা [[AccountsFacts]]-এ, এখানে কেবল সাজানো। ⓘ নতুন ড্যাশবোর্ডের অংশ (config
+     * abos.dashboards_v2), কেবল accounts.view-এ — পাশের রেওয়ামিলের একই চাবি।
+     * ⚠️ শূন্যের বেশি হলে সাবধানের রং: পিছনের তারিখ, শূন্যের নিচের ড্রয়ার আর ঝুলে থাকা সই — তিনটাই দিনশেষে শূন্য
+     * থাকার কথা।
+     *
+     * @return list<Stat>
+     */
+    private static function bookHealth(AccountsFacts $facts, string $income, string $expense): array
+    {
+        if (! config('abos.dashboards_v2') || ! auth()->user()?->can('accounts.view')) {
+            return [];
+        }
+
+        $profit = $facts->netProfit($income, $expense);
+        $activity = $facts->ledgerActivity();
+        $belowZero = $facts->tillsBelowZero();
+        $awaiting = $facts->vouchersAwaitingSignature();
+
+        return [
+            new Stat(
+                label: __('accounts::dashboard.net_profit_month'),
+                value: Money::format($profit),
+                hint: __('accounts::dashboard.net_profit_month_hint'),
+                href: Route::has('accounts.report.final.profit_loss') ? route('accounts.report.final.profit_loss') : null,
+                tone: bccomp($profit, '0', 4) < 0 ? Stat::BAD : Stat::GOOD,
+            ),
+            new Stat(
+                label: __('accounts::dashboard.posted_today'),
+                value: (string) $activity['posted_today'],
+                hint: __('accounts::dashboard.posted_today_hint'),
+                href: Route::has('accounts.voucher.list') ? route('accounts.voucher.list') : null,
+            ),
+            new Stat(
+                label: __('accounts::dashboard.reversed_this_month'),
+                value: (string) $activity['reversed_this_month'],
+                hint: __('accounts::dashboard.reversed_this_month_hint'),
+            ),
+            new Stat(
+                label: __('accounts::dashboard.backdated_this_month'),
+                value: (string) $activity['backdated_this_month'],
+                hint: __('accounts::dashboard.backdated_this_month_hint'),
+                tone: $activity['backdated_this_month'] > 0 ? Stat::WARN : Stat::NEUTRAL,
+            ),
+            new Stat(
+                label: __('accounts::dashboard.tills_below_zero'),
+                value: (string) $belowZero,
+                hint: __('accounts::dashboard.tills_below_zero_hint'),
+                href: route('accounts.till.index'),
+                tone: $belowZero > 0 ? Stat::BAD : Stat::NEUTRAL,
+                permission: 'accounts.till.view',
+            ),
+            new Stat(
+                label: __('accounts::dashboard.awaiting_signature'),
+                value: (string) $awaiting,
+                hint: __('accounts::dashboard.awaiting_signature_hint'),
+                href: Route::has('approval.inbox.index') ? route('approval.inbox.index') : null,
+                tone: $awaiting > 0 ? Stat::WARN : Stat::NEUTRAL,
+            ),
+        ];
+    }
+
+    /**
+     * ⭐ চলতি সম্পদ, চলতি দায় আর নিট সম্পদ — পাশাপাশি দণ্ডে (মালিকের ড্যাশবোর্ড নকশা, ৫ অক্টোবর ২০২৬)।
+     *
+     * ⓘ "চলতি" ছকের নিজের দল ধরে (১১০০, ২১০০) — [[AccountsFacts::currentPosition()]]-এ কারণ লেখা। ইঙ্গিতে চলতি মূলধন
+     * (চলতি সম্পদ − চলতি দায়): ঋণাত্মক মানে সামনের দেনা মেটানোর মতো চলতি সম্পদ নেই।
+     * ⓘ নতুন ড্যাশবোর্ডের অংশ (config abos.dashboards_v2), কেবল accounts.view-এ।
+     *
+     * @return list<Breakdown>
+     */
+    private static function currentPosition(AccountsFacts $facts): array
+    {
+        if (! config('abos.dashboards_v2') || ! auth()->user()?->can('accounts.view')) {
+            return [];
+        }
+
+        $position = $facts->currentPosition();
+
+        return [new Breakdown(
+            label: __('accounts::dashboard.current_position'),
+            parts: [
+                ['label' => __('accounts::dashboard.current_assets'), 'value' => Money::format($position['current_assets'])],
+                ['label' => __('accounts::dashboard.current_liabilities'), 'value' => Money::format($position['current_liabilities'])],
+                ['label' => __('accounts::dashboard.net_assets'), 'value' => Money::format($position['net_assets'])],
+            ],
+            hint: __('accounts::dashboard.current_position_hint', [
+                'working' => Money::format(bcsub($position['current_assets'], $position['current_liabilities'], 4)),
+            ]),
+            chart: 'hbars',
         )];
     }
 }

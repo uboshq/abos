@@ -57,11 +57,11 @@ final class TheSalesFunnelCountsEachStepTest extends TestCase
 
         $this->assertSame($before[0], $after[0], '⛔ বিক্রিতে উদ্ধৃতির সংখ্যা বদলেছে।');
         $this->assertSame($before[1], $after[1], '⛔ কাউন্টারের বিক্রিতে অর্ডারের সংখ্যা বদলেছে।');
-        $this->assertSame($before[2] + 1, $after[2], '⛔ পাকা বিক্রিতে চালান এক বাড়েনি।');
-        $this->assertSame($before[3] + 1, $after[3], '⛔ পাকা বিক্রিতে বিল এক বাড়েনি।');
+        $this->assertSame($before[3] + 1, $after[3], '⛔ পাকা বিক্রিতে চালান এক বাড়েনি।');
+        $this->assertSame($before[4] + 1, $after[4], '⛔ পাকা বিক্রিতে বিল এক বাড়েনি।');
     }
 
-    /** @return list<int>|null উদ্ধৃতি, অর্ডার, চালান, বিল */
+    /** @return list<int>|null উদ্ধৃতি, অর্ডার, DO, চালান, বিল, আদায় (৫ অক্টোবর ২০২৬: DO আর আদায়ের ধাপ যোগ হলো) */
     private function funnel(): ?array
     {
         $panel = collect(SalesDashboard::dashboard()->panels)->firstWhere('label', __('sales::dashboard.funnel'));

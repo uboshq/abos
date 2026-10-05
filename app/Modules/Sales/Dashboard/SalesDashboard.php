@@ -162,6 +162,10 @@ final class SalesDashboard implements ProvidesDashboard
                     secondLabel: __('sales::dashboard.collected'),
                     // ⓘ বিল বনাম আদায় — পাশাপাশি স্তম্ভই আন্তর্জাতিক রীতি (মালিক, ৪ অক্টোবর ২০২৬: "vino rokomer graph")
                     chart: 'bars',
+                    // ⭐ কোন তারিখ থেকে কোন তারিখ (মালিক, ৫ অক্টোবর ২০২৬) — নতুন রূপে বছরের শুরু, পুরনোয় ছয় মাস আগের ১ তারিখ
+                    range: \App\Core\Engines\Dashboard\DateRange::label(
+                        config('abos.dashboards_v2') ? Carbon::today()->startOfYear() : Carbon::today()->startOfMonth()->subMonths(5),
+                        Carbon::today()),
                 ),
 
                 new Breakdown(

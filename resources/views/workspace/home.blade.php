@@ -57,12 +57,41 @@
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ __('core.menu.dashboard') }}</x-slot:title>
 
+    {{-- ⭐ শিরোনাম একা; উপশিরোনামের জায়গায় কোম্পানি-শাখা বাছাই, আর ফিল্টার · লেআউট · সময় তার নিচে
+         (মালিক, ৫ অক্টোবর ২০২৬: *"company branch selector dewar kotha"* · *"ei gulo ড্যাশবোর্ড er niche niye aso"*) --}}
     <x-slot:header>
-        <x-ui.page-header
-            :title="__('core.menu.dashboard')"
-            :subtitle="auth()->user()?->currentCompany?->name()
-                . (auth()->user()?->currentBranch ? ' · ' . auth()->user()->currentBranch->name() : '')">
-            <x-slot:actions>
+        <x-ui.page-header :title="__('core.menu.dashboard')" />
+    </x-slot:header>
+
+    <style @nonce>
+        .hm-pictures { display: grid; gap: .75rem; grid-template-columns: minmax(0, 1fr); }
+        .hm-kpis { display: grid; gap: .6rem; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        .hm-work { display: grid; gap: .75rem; grid-template-columns: minmax(0, 1fr); }
+        @media (min-width: 768px) {
+            .hm-pictures { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+            .hm-kpis { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+        }
+        @media (min-width: 1280px) {
+            /* ⭐ ৪টা করে দুই সারি (মালিক, ৫ অক্টোবর ২০২৬) — চার্ট বড়, মান পরিষ্কার */
+            .hm-pictures { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+            .hm-kpis { grid-template-columns: repeat(8, minmax(0, 1fr)); }
+            .hm-work { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        }
+        /* ⓘ মান কখনো কাটা নয় (truncate নয়) — লম্বা হলে ভাঙে ([[TheHomeShowsOnlyYourOwnWorkTest]]) */
+        .hm-kpi-value { line-height: 1.3; }
+    </style>
+
+    {{-- ── মাথা: বাঁয়ে চালু ফিল্টারের লাইন, ডানে টাকার বাক্স (থাকছে হুবহু) ── --}}
+    <section data-command-head class="mb-3 flex flex-col gap-3 lg:flex-row" style="justify-content: space-between; align-items: flex-end">
+        <div class="flex min-w-0 flex-1 flex-col gap-3" style="align-self: stretch; justify-content: space-between">
+            {{-- ⭐ কোম্পানি আর শাখা — টপবারের একই বাছাই, এখানেও; বদলালে হোমের প্রতিটা সংখ্যা সেই শাখার --}}
+            <div data-home-company class="flex flex-wrap items-center gap-3">
+                <x-shell.company-switcher :company="auth()->user()->currentCompany" :branch="auth()->user()->currentBranch" />
+                <span class="text-sm text-(--color-ink-muted)">{{ now()->locale(app()->getLocale())->translatedFormat('l, j F Y') }}</span>
+            </div>
+
+            {{-- ⭐ ফিল্টার · লেআউট সাজান · সময় — মাথার ডান কোণ থেকে নেমে এখানে --}}
+            <div data-home-controls class="flex flex-wrap items-center gap-2">
                 {{-- ⭐ হোমের ফিল্টার — গুদাম, এলাকা, SR; বদলায় কেবল বিক্রি আর বকেয়া ([[HomeFilter]]) --}}
                 <details data-home-filter class="relative">
                     <summary @class([
@@ -155,33 +184,7 @@
                         @endforeach
                     </div>
                 </details>
-            </x-slot:actions>
-        </x-ui.page-header>
-    </x-slot:header>
-
-    <style @nonce>
-        .hm-pictures { display: grid; gap: .75rem; grid-template-columns: minmax(0, 1fr); }
-        .hm-kpis { display: grid; gap: .6rem; grid-template-columns: repeat(2, minmax(0, 1fr)); }
-        .hm-work { display: grid; gap: .75rem; grid-template-columns: minmax(0, 1fr); }
-        @media (min-width: 768px) {
-            .hm-pictures { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-            .hm-kpis { grid-template-columns: repeat(4, minmax(0, 1fr)); }
-        }
-        @media (min-width: 1280px) {
-            /* ⭐ ৪টা করে দুই সারি (মালিক, ৫ অক্টোবর ২০২৬) — চার্ট বড়, মান পরিষ্কার */
-            .hm-pictures { grid-template-columns: repeat(4, minmax(0, 1fr)); }
-            .hm-kpis { grid-template-columns: repeat(8, minmax(0, 1fr)); }
-            .hm-work { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-        }
-        /* ⓘ মান কখনো কাটা নয় (truncate নয়) — লম্বা হলে ভাঙে ([[TheHomeShowsOnlyYourOwnWorkTest]]) */
-        .hm-kpi-value { line-height: 1.3; }
-    </style>
-
-    {{-- ── মাথা: বাঁয়ে চালু ফিল্টারের লাইন, ডানে টাকার বাক্স (থাকছে হুবহু) ── --}}
-    <section data-command-head class="mb-3 flex flex-col gap-3 lg:flex-row" style="justify-content: space-between; align-items: flex-end">
-        <div class="min-w-0 flex-1">
-            {{-- ⓘ আজকের তারিখ আর দেখার শাখা — টাকার বাক্সের পাশের জায়গাটা খালি না থাকে --}}
-            <p class="text-sm text-(--color-ink-muted)">{{ now()->locale(app()->getLocale())->translatedFormat('l, j F Y') }}</p>
+            </div>
             @if ($filter->active())
                 <div data-home-filter-on class="mt-2 flex flex-wrap items-center gap-2 rounded-(--radius-field) border border-(--color-brand-600)
                             bg-(--color-brand-50) px-3 py-2 text-sm text-(--color-brand-700)">
@@ -238,11 +241,12 @@
                                 <div class="flex items-baseline justify-between gap-3 border-b border-(--color-border) px-4 py-2">
                                     <span class="min-w-0">
                                         <span class="block truncate text-sm font-semibold text-(--color-ink)">{{ $row['name'] }}</span>
-                                        <span class="block truncate text-2xs text-(--color-ink-muted)">{{ $row['panel']->label }}</span>
+                                        {{-- ⓘ হোমে তারিখ শিরোনামের আগে — নিচে আলাদা লাইন হলে এক পর্দায় ধরত না, পরে বসালে লম্বা শিরোনামে কেটে যেত --}}
+                                        <span class="block truncate text-2xs text-(--color-ink-muted)">@if ($row['panel']->range)<span data-chart-range class="font-semibold text-(--color-ink-body)">{{ $row['panel']->range }}</span> · @endif{{ $row['panel']->label }}</span>
                                     </span>
                                     <span class="shrink-0 text-xs text-(--color-link)">{{ __('home.details') }} →</span>
                                 </div>
-                                <x-dashboard.chart :panel="$row['panel']" compact />
+                                <x-dashboard.chart :panel="$row['panel']" compact :show-range="false" />
                             </a>
                         @endforeach
                     </div>

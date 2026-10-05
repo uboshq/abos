@@ -36,6 +36,11 @@ final class Series
         public readonly string $secondLabel,
         /** ⭐ চার্টের ধরন — `line` (ডিফল্ট), `area` বা `bars` (মালিক, ৪ অক্টোবর ২০২৬: "vino rokomer graph") */
         public readonly string $chart = 'line',
+        /**
+         * ⭐ কোন তারিখ থেকে কোন তারিখ — মালিক, ৫ অক্টোবর ২০২৬: *"kobe theke kobe porjonto eta likhbe"*।
+         * ⓘ [[DateRange::label()]] দিয়ে বানানো লেখা ("১ অক্টো – ৫ অক্টো ২০২৬"); চার্টের নিচে বসে। `null` মানে সময়ের নয় (যেমন তালিকা কতটা ভরা)।
+         */
+        public readonly ?string $range = null,
     ) {
         if (! in_array($chart, self::CHARTS, true)) {
             throw new InvalidArgumentException("Series '{$label}' asks for an unknown chart '{$chart}'.");

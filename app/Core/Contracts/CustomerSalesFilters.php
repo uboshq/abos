@@ -25,4 +25,30 @@ interface CustomerSalesFilters
 
     /** যাঁদের কোনো পাকা বিল নিজের বাকির দিন (খালি হলে ৩০) পেরিয়ে অপরিশোধিত পড়ে নেই */
     public function noOverdueBill(Builder $customers): Builder;
+
+    /*
+     * ⭐ গ্রাহকের ড্যাশবোর্ডের বিক্রি-নির্ভর তিন প্রশ্ন — মালিকের ড্যাশবোর্ড নকশা, ৫ অক্টোবর ২০২৬।
+     * ⓘ একই নিয়ম: পাকা বিল, হেডারে বাছা শাখায়; `null` মানে বিক্রয় মডিউলই নেই (মিথ্যা শূন্য নয়, চার্টই নেই)।
+     */
+
+    /**
+     * দুই তারিখের মধ্যে পাকা বিলের সংখ্যা আর মোট টাকা
+     *
+     * @return array{count: int, total: string}|null
+     */
+    public function billsBetween(string $from, string $to): ?array;
+
+    /**
+     * দুই তারিখের মধ্যে সবচেয়ে বেশি কেনা গ্রাহক, বড়টা আগে
+     *
+     * @return list<array{customer_id: int, total: string}>|null
+     */
+    public function topBuyers(string $from, string $to, int $limit): ?array;
+
+    /**
+     * মেয়াদ (বিলের `due_on`, না থাকলে বিলের দিন) `$today`-র আগে পেরিয়েছে অথচ শোধ হয়নি — গ্রাহক ধরে, বড়টা আগে
+     *
+     * @return list<array{customer_id: int, bills: int, amount: string}>|null
+     */
+    public function overdueByCustomer(string $today): ?array;
 }
