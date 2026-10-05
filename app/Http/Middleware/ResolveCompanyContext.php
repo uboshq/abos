@@ -142,6 +142,11 @@ class ResolveCompanyContext
 
         CompanyContext::set($companyId, $user->current_branch_id, $financialYearId);
 
+        /* ⭐ নতুন ড্যাশবোর্ড নিয়ন্ত্রণ প্যানেল থেকেও খোলে (system.dashboards_v2, মালিক, ৬ অক্টোবর ২০২৬) — কেবল খোলে, .env-এ চালু থাকলে বন্ধ করে না */
+        if (! config('abos.dashboards_v2') && app(\App\Core\Services\SettingsService::class)->get('system.dashboards_v2')) {
+            config(['abos.dashboards_v2' => true]);
+        }
+
         return $next($request);
     }
 }

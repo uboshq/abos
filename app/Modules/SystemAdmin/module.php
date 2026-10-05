@@ -757,6 +757,19 @@ return [
         ],
 
         /*
+         * ⭐ নতুন ড্যাশবোর্ড — মালিক, ৬ অক্টোবর ২০২৬: *"sudhu server e na, control panel e switch ene daw"*।
+         * ⓘ চালু = এই কোম্পানিতে `abos.dashboards_v2` চালু ([[ResolveCompanyContext]])। বন্ধ = সার্ভারের .env যা বলে
+         * (ABOS_DASHBOARDS_V2) — তাই সুইচটা কেবল খোলে, সার্ভারে চালু থাকা কিছু বন্ধ করে না।
+         */
+        [
+            'key' => 'system.dashboards_v2',
+            'label' => 'system_admin::settings.dashboards_v2',
+            'type' => 'boolean',
+            'default' => false,
+            'group' => 'general',
+        ],
+
+        /*
          * ⓘ `system.notice` এই তালিকায় আর নেই — ২৩ সেপ্টেম্বর ২০২৬।
          *
          * ⭐ মালিক বললেন *"etar jonno alada menu koro"*, আর ঘরটা
