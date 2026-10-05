@@ -297,7 +297,13 @@ final class EveryExcuseWeGrantedIsCountedTest extends TestCase
      *   +৫  EveryRouteIsGuardedTest::ANY_SIGNED_IN_USER — পোর্টালে গ্রাহকের নিজের বিক্রয় আদেশ (তালিকা, ফর্ম, লেখা,
      *       দেখা, জমা): গ্রাহকের কোনো চাবি থাকে না — DO-র পাঁচ দরজার হুবহু যমজ, দেয়াল [[CustomerPapers]]-এর সরু পথ
      */
-    private const CEILING = 315;
+    /*
+     * ── ⚠️ ৩১৫ → ৩১৬, ৫ অক্টোবর ২০২৬ (abos-af, Inventory অডিট ম১) ─────────────────────────────────────────────
+     *   +১  NoSensitiveFieldIsPrintedInTheOpenTest::OPEN_ON_PURPOSE — গণনার পাতার বাড়তির দর (count/form), stock/adjust-এর
+     *       যমজ: খালি ইনপুট, কোনো সঞ্চিত দর ছাপা হয় না। ⛔ খরচের চাবির পেছনে লুকালে চাবিহীন গণনাকারী দরই দিতে পারতেন না,
+     *       আর স্তর-ছাড়া বাড়তি আবার আটকাত (ম১-এর ভুলটাই)। ⚠️ ঘরের নাম বদলে পাহারা এড়ানো যেত — সেটা ফাঁকি, তাই ছাড়।
+     */
+    private const CEILING = 316;
 
     /*
      * ── ⚠️ ২২২ → ২২৪, ২৩ সেপ্টেম্বর ২০২৬ ───────────────────────────
