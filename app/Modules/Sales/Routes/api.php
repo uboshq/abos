@@ -79,4 +79,7 @@ Route::prefix('v1/sales')
         Route::post('/orders/{id}/submit', [\App\Modules\Sales\Http\Controllers\SalesOrderApiController::class, 'submit'])->whereUuid('id')->name('order.submit');
         // ⓘ চাবি ছকের — এখনকার স্তরের অনুমোদনকারী ([[SalesOrderService::setApprovedQuantities()]])
         Route::post('/orders/{id}/approved-quantities', [\App\Modules\Sales\Http\Controllers\SalesOrderApiController::class, 'approvedQuantities'])->whereUuid('id')->name('order.approved_quantities');
+
+        // ⭐ আমার আজকের রুট — সাপ্তাহিক ছকের রুট আর তার দোকান, রুট-পাতার একই অঙ্কে ([[MyRouteApiController]], ৫ অক্টোবর ২০২৬)
+        Route::get('/my-route', [\App\Modules\Sales\Http\Controllers\MyRouteApiController::class, 'index'])->name('my_route.index');
     });
