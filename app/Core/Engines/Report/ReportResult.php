@@ -216,7 +216,7 @@ final class ReportResult
 
         // ⓘ জের — "(Dr) 250.79", খালি বিয়োগ নয় ([[ReportColumn::DR_CR]])
         if ($column->type === ReportColumn::DR_CR) {
-            return Money::drCr($value, $column->decimals());
+            return $column->signed($value);
         }
 
         if ($column->isNumeric()) {
@@ -244,6 +244,11 @@ final class ReportResult
      */
     public static function number(mixed $value, ReportColumn $column): string
     {
+        // ⓘ জেরের মোটও খালি বিয়োগ ছাড়া — "দিতে হবে ৳…" বা "(Cr) …" ([[ReportColumn::signed()]])
+        if ($column->type === ReportColumn::DR_CR) {
+            return $column->signed($value);
+        }
+
         return $column->type === ReportColumn::QUANTITY
             ? Money::quantity($value)
             : Money::format($value, $column->decimals());

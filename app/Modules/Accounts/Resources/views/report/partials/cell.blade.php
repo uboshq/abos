@@ -20,7 +20,8 @@
 
     @case (\App\Core\Engines\Report\ReportColumn::DR_CR)
         {{-- ⓘ জের — "(Dr) 250.79" / "(Cr) 22,958.21", খালি বিয়োগ নয় (মালিক, ৩ অক্টোবর ২০২৬) --}}
-        {{ $value === null || $value === '' ? '' : \App\Core\Support\Money::drCr($value) }}
+        {{-- ⓘ ঘোষিত শব্দ থাকলে "দিতে হবে ৳…" / "কোম্পানির কাছে পাব ৳…" ([[ReportColumn::signed()]]) --}}
+        {{ $value === null || $value === '' ? '' : $column->signed($value) }}
         @break
 
     @case (\App\Core\Engines\Report\ReportColumn::QUANTITY)

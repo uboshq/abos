@@ -47,6 +47,8 @@ class Supplier extends Model implements Drillable
         'party_type_id', 'payment_term_id', 'bin', 'tin',
         'credit_limit', 'credit_days', 'opening_balance', 'opening_date',
         'status', 'is_active', 'created_by',
+        // ⭐ প্রিন্সিপালের কমিশন — কেবল রিপোর্ট (মালিক, ৫ অক্টোবর ২০২৬; [[PrincipalCommission]])
+        'principal_branch_id', 'commission_basis', 'commission_rate', 'cycle_start_day', 'cycle_close_day',
     ];
 
     protected function casts(): array
@@ -57,12 +59,21 @@ class Supplier extends Model implements Drillable
             'opening_balance' => 'decimal:4',
             'opening_date' => 'date',
             'is_active' => 'boolean',
+            'commission_rate' => 'decimal:3',
+            'cycle_start_day' => 'integer',
+            'cycle_close_day' => 'integer',
         ];
     }
 
     public function branch(): BelongsTo
     {
         return $this->belongsTo(Branch::class);
+    }
+
+    /** ⭐ যে শাখার আদায়ের উপর এই প্রিন্সিপালের কমিশন গোনা হয় ([[PrincipalCommission]]) */
+    public function principalBranch(): BelongsTo
+    {
+        return $this->belongsTo(Branch::class, 'principal_branch_id');
     }
 
     public function partyType(): BelongsTo

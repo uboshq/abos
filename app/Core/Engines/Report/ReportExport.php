@@ -159,7 +159,7 @@ final class ReportExport
         return match ($column->type) {
             ReportColumn::MONEY => Money::format((string) $value, $column->decimals()),
             // ⓘ পর্দার একই লেখা — "(Dr) 250.79" ([[Money::drCr()]])
-            ReportColumn::DR_CR => Money::drCr($value, $column->decimals()),
+            ReportColumn::DR_CR => $column->signed($value),
             // ⓘ পর্দার একই রূপ ([[ReportResult::number()]]) — ফাইলে ৩,৭৯৬, "3,796.000" নয়
             ReportColumn::QUANTITY => ReportResult::number((string) $value, $column),
             ReportColumn::DATE => DateFormat::format($value),

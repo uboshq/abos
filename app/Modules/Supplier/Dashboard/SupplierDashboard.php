@@ -14,6 +14,7 @@ use App\Core\Support\Money;
 use App\Modules\Accounts\Services\AccountsFacts;
 use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Supplier\Models\Supplier;
+use App\Modules\Supplier\Reports\PrincipalCommissionReport;
 use Illuminate\Support\Carbon;
 
 /**
@@ -71,6 +72,7 @@ final class SupplierDashboard implements ProvidesDashboard
             panels: [...self::mostOwed(), ...self::ageing()],
 
             listings: [
+                ...self::principals(),
                 new Listing(
                     label: __('supplier::dashboard.newest'),
                     columns: [
@@ -126,6 +128,53 @@ final class SupplierDashboard implements ProvidesDashboard
                 'value' => Money::format($row['amount']),
             ], $rows),
             hint: __('supplier::dashboard.most_owed_hint'),
+        )];
+    }
+
+    /**
+     * ⭐ প্রিন্সিপালের কমিশন — চলতি চক্রে এ পর্যন্ত কমিশন আর জের, প্রিন্সিপাল ধরে (মালিক, ৫ অক্টোবর ২০২৬)।
+     *
+     * ⓘ নিজের হিসাব নয়: রিপোর্টটাই চালানো হয় ([[PrincipalCommissionReport]]), তাই পর্দা আর রিপোর্ট কখনো দুই কথা বলে
+     * না; শাখার দেয়াল আর হেডারে বাছা শাখাও রিপোর্টের। ⛔ রিপোর্টের চাবি (`supplier.report`) ছাড়া তালিকাটাই নেই, আর
+     * কোনো প্রিন্সিপাল বসানো না থাকলেও নেই — ফাঁকা বাক্স রোজ চোখে পড়ার কিছু নয়।
+     * ⓘ জের রিপোর্টের কলামের নিজের লেখায় — "দিতে হবে ৳…" / "কোম্পানির কাছে পাব ৳…" ([[ReportColumn::signed()]])।
+     *
+     * @return list<Listing>
+     */
+    private static function principals(): array
+    {
+        if (! auth()->user()?->can('supplier.report')) {
+            return [];
+        }
+
+        $result = app(\App\Core\Engines\Report\ReportEngine::class)->run(
+            PrincipalCommissionReport::KEY,
+            ['branch_id' => \App\Core\Support\ViewedBranch::one()],
+            1,
+            50,
+        );
+
+        if ($result->rows === []) {
+            return [];
+        }
+
+        $balance = collect($result->report->columns)->firstWhere('key', 'balance');
+
+        return [new Listing(
+            label: __('supplier::principal.dashboard_title'),
+            columns: [
+                ['key' => 'principal', 'label' => __('supplier::principal.principal'),
+                    'render' => fn (array $row) => $row['supplier_name']],
+                ['key' => 'period', 'label' => __('supplier::principal.period'), 'width' => '13rem',
+                    'render' => fn (array $row) => $row['period']],
+                ['key' => 'commission', 'label' => __('supplier::principal.commission'), 'width' => '9rem',
+                    'render' => fn (array $row) => Money::format($row['commission'])],
+                ['key' => 'balance', 'label' => __('supplier::principal.balance'), 'width' => '13rem',
+                    'render' => fn (array $row) => $balance->signed($row['balance'])],
+            ],
+            rows: collect($result->rows),
+            empty: __('supplier::principal.dashboard_empty'),
+            href: route('supplier.report.show', ['slug' => 'principal-commission']),
         )];
     }
 

@@ -81,6 +81,10 @@ return [
              */
             ['label' => 'supplier::menu.payment_schedule', 'icon' => 'calendar', 'route' => 'supplier.report.show',
                 'route_params' => ['slug' => 'payment-schedule'], 'permission' => 'supplier.report'],
+
+            // ⭐ প্রিন্সিপালের কমিশন — আদায়ের উপর ডিপোর আয়, প্রিন্সিপালের নিজের মাসে (মালিক, ৫ অক্টোবর ২০২৬)
+            ['label' => 'supplier::principal.title', 'icon' => 'wallet', 'route' => 'supplier.report.show',
+                'route_params' => ['slug' => 'principal-commission'], 'permission' => 'supplier.report'],
         ],
     ],
 
@@ -163,6 +167,8 @@ return [
     'reports' => [
         PartyReports::class,
         \App\Modules\Supplier\Reports\LedgerCheckReports::class,
+        // ⭐ প্রিন্সিপালের কমিশন — কেবল রিপোর্ট, খাতায় কিছু বসে না (মালিক, ৫ অক্টোবর ২০২৬)
+        \App\Modules\Supplier\Reports\PrincipalCommissionReport::class,
     ],
 
     /*

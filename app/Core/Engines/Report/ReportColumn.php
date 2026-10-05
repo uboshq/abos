@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Core\Engines\Report;
 
+use App\Core\Support\Money;
 use InvalidArgumentException;
 
 /**
@@ -58,6 +59,15 @@ final class ReportColumn
          * তাই আড়ালটা কলাম ধরে: সারিগুলো তিনি দেখেন, ওই একটা ঘর নয়।
          */
         public readonly ?string $permission = null,
+
+        /*
+         * ⭐ জেরের কথা — চিহ্নের বদলে দুইটা শব্দ (প্রিন্সিপালের কমিশন, মালিক, ৫ অক্টোবর ২০২৬)।
+         * ⓘ কেবল [[self::DR_CR]]-এ: `[ধনাত্মক হলে, ঋণাত্মক হলে]` — দুইটা অনুবাদের চাবি, প্রতিটায় `:amount`, যেমন
+         * "দিতে হবে ৳:amount" / "কোম্পানির কাছে পাব ৳:amount"। না দিলে আগের মতো "(Dr) 250.79" / "(Cr) 22,958.21"।
+         *
+         * @var array{0: string, 1: string}|null
+         */
+        public readonly ?array $words = null,
     ) {}
 
     /** @param array<string, mixed> $definition */
@@ -91,7 +101,29 @@ final class ReportColumn
             sourceTypeKey: $definition['source_type'] ?? null,
             sourceIdKey: $definition['source_id'] ?? null,
             permission: $definition['permission'] ?? null,
+            words: isset($definition['words']) ? [(string) $definition['words'][0], (string) $definition['words'][1]] : null,
         );
+    }
+
+    /**
+     * জেরের লেখা, খালি বিয়োগ ছাড়া — পর্দা, মোট, ছাপা, PDF আর ফাইল সবাই এটাই ডাকে ([[self::DR_CR]])।
+     *
+     * ⓘ শব্দ ঘোষণা থাকলে "দিতে হবে ৳১২,৩৪৫.০০", না থাকলে [[Money::drCr()]]-এর "(Dr) 250.79"; শূন্যে কেবল অঙ্ক।
+     */
+    public function signed(mixed $value): string
+    {
+        if ($this->words === null) {
+            return Money::drCr($value, $this->decimals());
+        }
+
+        $rounded = Money::round($value, $this->decimals());
+        $amount = Money::format(ltrim($rounded, '-'), $this->decimals());
+
+        return match (bccomp($rounded, '0', $this->decimals())) {
+            1 => (string) __($this->words[0], ['amount' => $amount]),
+            -1 => (string) __($this->words[1], ['amount' => $amount]),
+            default => $amount,
+        };
     }
 
     /**

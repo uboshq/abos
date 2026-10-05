@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Supplier\Http\Requests;
 
 use App\Core\Support\CompanyContext;
+use App\Modules\Supplier\Reports\PrincipalCommission;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -87,6 +88,32 @@ class SupplierRequest extends FormRequest
              * একই Request দিয়েই আসবে, আর সেখানে ঘরটা পাঠানো যায়।
              */
             'is_active' => ['nullable', 'boolean'],
+
+            ...$this->principalRules(),
+        ];
+    }
+
+    /**
+     * ⭐ প্রিন্সিপালের কমিশন — মালিক, ৫ অক্টোবর ২০২৬ ([[PrincipalCommission]])।
+     *
+     * ⓘ ভিত্তি বাছা থাকলে বাকি চারটা লাগে — নইলে রিপোর্ট সারিটা গুনতেই পারত না। ⛔ কেবল সম্পাদনার চাবি
+     * (`supplier.update`) যাঁর হাতে, তিনিই বসাতে পারেন: ডিপোর আয়ের হার — বানানোর চাবি দিয়ে খোলে না।
+     *
+     * @return array<string, list<mixed>>
+     */
+    private function principalRules(): array
+    {
+        $may = (bool) $this->user()?->can('supplier.update');
+        $gate = $may ? [] : ['prohibited'];
+        $with = 'required_with:commission_basis';
+
+        return [
+            'commission_basis' => [...$gate, 'nullable', 'string', Rule::in(PrincipalCommission::BASES)],
+            'principal_branch_id' => [...$gate, 'nullable', $with, 'integer',
+                Rule::exists('branches', 'id')->where('company_id', $this->companyId())],
+            'commission_rate' => [...$gate, 'nullable', $with, 'numeric', 'gt:0', 'lt:100', 'decimal:0,3'],
+            'cycle_start_day' => [...$gate, 'nullable', $with, 'integer', 'between:1,31'],
+            'cycle_close_day' => [...$gate, 'nullable', $with, 'integer', 'between:1,'.PrincipalCommission::MONTH_END],
         ];
     }
 
@@ -108,6 +135,11 @@ class SupplierRequest extends FormRequest
             'credit_days' => __('supplier::field.credit_days'),
             'opening_balance' => __('supplier::field.opening_balance'),
             'opening_date' => __('supplier::field.opening_date'),
+            'principal_branch_id' => __('supplier::principal.branch'),
+            'commission_basis' => __('supplier::principal.basis'),
+            'commission_rate' => __('supplier::principal.rate'),
+            'cycle_start_day' => __('supplier::principal.start_day'),
+            'cycle_close_day' => __('supplier::principal.close_day'),
         ];
     }
 

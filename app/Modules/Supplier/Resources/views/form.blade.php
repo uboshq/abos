@@ -222,6 +222,55 @@
             </div>
         </section>
 
+        {{-- ⭐ প্রিন্সিপাল ও কমিশন — মালিক, ৫ অক্টোবর ২০২৬ ([[PrincipalCommission]])।
+             ⓘ কেবল রিপোর্টের জন্য, খাতায় কিছু বসে না। ⛔ ঘরগুলো কেবল সম্পাদনার চাবি যাঁর হাতে তাঁর পর্দায় —
+             সার্ভারও বাকিদের পাঠানো মান ফেরায় ([[SupplierRequest::principalRules()]])। --}}
+        @can('supplier.update')
+            @php
+                $basisOptions = collect(\App\Modules\Supplier\Reports\PrincipalCommission::BASES)
+                    ->mapWithKeys(fn ($b) => [$b => __('supplier::principal.basis_'.$b)]);
+                $startDays = collect(range(1, 31))->mapWithKeys(fn ($d) => [$d => (string) $d]);
+                $closeDays = collect(range(1, 30))->mapWithKeys(fn ($d) => [$d => (string) $d])
+                    ->put(\App\Modules\Supplier\Reports\PrincipalCommission::MONTH_END, __('supplier::principal.month_end'));
+            @endphp
+            <section data-boxed data-principal-commission
+                     class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
+                <h2 class="mb-1 font-semibold">{{ __('supplier::principal.section') }}</h2>
+                <p class="mb-3 max-w-(--spacing-prose-max) text-sm text-(--color-ink-muted)">
+                    {{ __('supplier::principal.section_hint') }}
+                </p>
+
+                <div class="grid gap-3 sm:grid-cols-3">
+                    <x-ui.select name="principal_branch_id" :label="__('supplier::principal.branch')"
+                                 :options="$branches->mapWithKeys(fn ($b) => [$b->id => $b->name()])"
+                                 :selected="$supplier->principal_branch_id"
+                                 :hint="__('supplier::principal.branch_hint')"
+                                 placeholder="—" />
+
+                    <x-ui.select name="commission_basis" :label="__('supplier::principal.basis')"
+                                 :options="$basisOptions"
+                                 :selected="$supplier->commission_basis"
+                                 placeholder="—" />
+
+                    <x-ui.field name="commission_rate" type="number" step="0.001" inputmode="decimal"
+                                :label="__('supplier::principal.rate')"
+                                :value="old('commission_rate', $supplier->commission_rate)" numeric />
+                </div>
+
+                <div class="mt-3 grid gap-3 sm:grid-cols-2">
+                    <x-ui.select name="cycle_start_day" :label="__('supplier::principal.start_day')"
+                                 :options="$startDays"
+                                 :selected="$supplier->cycle_start_day"
+                                 placeholder="—" />
+
+                    <x-ui.select name="cycle_close_day" :label="__('supplier::principal.close_day')"
+                                 :options="$closeDays"
+                                 :selected="$supplier->cycle_close_day"
+                                 placeholder="—" />
+                </div>
+            </section>
+        @endcan
+
         @if ($isNew)
             <section data-boxed class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
                 <h2 class="mb-1 font-semibold">{{ __('supplier::section.opening') }}</h2>

@@ -9,6 +9,7 @@ use App\Core\Services\MenuBuilder;
 use App\Http\Controllers\Controller;
 use App\Models\Branch;
 use App\Modules\MasterData\Models\PartyType;
+use App\Modules\Supplier\Reports\PrincipalCommissionReport;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
@@ -46,6 +47,9 @@ class SupplierReportController extends Controller implements HasMiddleware
          * ঠিক সেটাই আজ দুইবার ঘটেছে (মরা slug)।
          */
         'payment-schedule' => 'supplier.payment_schedule',
+
+        // ⭐ প্রিন্সিপালের কমিশন — মালিক, ৫ অক্টোবর ২০২৬ ([[PrincipalCommissionReport]])
+        'principal-commission' => PrincipalCommissionReport::KEY,
     ];
 
     public function __construct(
@@ -83,9 +87,13 @@ class SupplierReportController extends Controller implements HasMiddleware
             byBranch: true,
         );
 
+        /* ⭐ প্রিন্সিপালের কমিশন — মাস বাছার নিজের ঘর আর "কেবল রিপোর্ট" কথাটা; বাকি রিপোর্টে কিছুই বদলায় না */
+        $principal = $key === PrincipalCommissionReport::KEY;
+
         return view('accounts::report.show', [
             'menu' => $this->menu->forUser($request->user()),
             'slug' => $slug,
+            ...($principal ? ['extraFilters' => 'supplier::reports.month-filter', 'notice' => __('supplier::principal.notice')] : []),
             'report' => $definition,
             'result' => $result,
             'branches' => $definition->hasFilter('branch')
