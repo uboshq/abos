@@ -71,7 +71,9 @@ final class ReportExportApiController extends Controller
 
         /* ⛔ ফরম্যাট চাবির **পরে** — চাবিহীন মানুষ ৪২২ দেখে জানবেন না রিপোর্টটা আছে */
         $format = (string) $request->validate([
-            'format' => ['required', 'string', Rule::in(ListExport::FORMATS)],
+            // ⭐ pdf — খতিয়ান আর রিপোর্ট ফোন থেকে দেখা, ছাপা, পাঠানো (মালিক, ৪ অক্টোবর ২০২৬); কেবল এই দরজায়, তালিকার
+            // সাধারণ রপ্তানিতে নয় — নইলে ওয়েবের প্রতিটা তালিকা pdf মেনে নিত অথচ বানাতে পারত না
+            'format' => ['required', 'string', Rule::in([...ListExport::FORMATS, 'pdf'])],
         ])['format'];
 
         if ((int) ($page['totalRows'] ?? 0) > self::MAX_ROWS) {
@@ -98,6 +100,10 @@ final class ReportExportApiController extends Controller
         $export = new ListExport;
         ReportExport::into($export, $result, $columns);
 
+        if ($format === 'pdf') {
+            return $this->pdf($export, $columns, __($definition->title), $result->filters, $slug);
+        }
+
         $body = match ($format) {
             'xlsx' => $export->xlsx(),
             'json' => $export->json(),
@@ -119,6 +125,43 @@ final class ReportExportApiController extends Controller
             'Content-Disposition' => 'attachment; filename="'.$filename.'"',
             // ⛔ রপ্তানি ক্যাশ হয় না — কাল একই ঠিকানা অন্য সংখ্যা দেবে (নিয়ম ঙ)
             'Cache-Control' => 'no-store, no-cache, must-revalidate',
+        ]);
+    }
+
+    /**
+     * ⭐ রিপোর্টের PDF — রপ্তানির একই ধরা টেবিল ([[ReportExport::into()]]) কাগজে, ছাপার একই যন্ত্রে ([[PrintEngine]],
+     * [[print.report]]): কোম্পানির নাম, শিরোনাম, তারিখের সীমা, সারি আর সর্বমোট। ⓘ সংখ্যা এখানে কষা হয় না।
+     *
+     * @param  list<\App\Core\Engines\Report\ReportColumn>  $columns
+     * @param  array<string, mixed>  $filters
+     */
+    private function pdf(ListExport $export, array $columns, string $title, array $filters, string $slug): Response
+    {
+        $table = $export->captured() ?? ['columns' => [], 'values' => []];
+        $numeric = [];
+        foreach ($columns as $column) {
+            $numeric[$column->key] = in_array($column->type, ['money', 'quantity', 'percent', 'dr_cr'], true);
+        }
+
+        $from = (string) ($filters['from'] ?? '');
+        $to = (string) ($filters['to'] ?? '');
+
+        $pdf = app(\App\Core\Engines\Print\PrintEngine::class)->render('print.report', [
+            'title' => $title,
+            'range' => $from !== '' || $to !== ''
+                ? trim(\App\Core\Support\DateFormat::format($from ?: null).' — '.\App\Core\Support\DateFormat::format($to ?: null), ' —')
+                : null,
+            'columns' => array_map(fn (array $c) => ['label' => $c['label'], 'numeric' => $numeric[$c['key']] ?? false], $table['columns']),
+            'rows' => $table['values'],
+            'footer' => $export->footerRow(),
+        ]);
+
+        app(ExportJournal::class)->wrote($export->rowCount());
+
+        return response($pdf, 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'attachment; filename="abos-'.str_replace('.', '-', $slug).'-'.now()->format('Y-m-d').'.pdf"',
+            'Cache-Control' => 'no-store',
         ]);
     }
 }

@@ -706,6 +706,30 @@ final class ThePhoneCouldNotPrintWhatItSawTest extends TestCase
             ->assertOk()->assertHeader('Content-Type', 'text/csv; charset=UTF-8');
     }
 
+    /**
+     * ⭐ রিপোর্টের PDF — মালিক, ৪ অক্টোবর ২০২৬: *"all ledger & report date veue print share korazay pdf e"*।
+     * একই মানুষ: চাবি ছাড়া ৪০৩; চাবি দিলে সত্যিকারের PDF, না-ক্যাশযোগ্য। ⛔ আর কাগজে **সব** ছাঁকা সারি, একটা পাতার
+     * ১০০টা নয় (a3ecb8e3-এর ভুল — bb-এর সতর্কতা): ১৫০ সারির রিপোর্টের কাগজে ১৫০টাই।
+     */
+    public function test_the_report_pdf_needs_the_key_and_carries_every_row_not_one_page(): void
+    {
+        $this->phone($this->exportUrl(self::COUNTING, ['format' => 'pdf']))->assertForbidden();
+
+        $this->grant(self::REPORT_KEY);
+
+        $rows = null;
+        \Illuminate\Support\Facades\View::creator('print.report', function ($view) use (&$rows): void {
+            $rows = $view->getData()['rows'];
+        });
+
+        $response = $this->phone($this->exportUrl(self::COUNTING, ['format' => 'pdf']))
+            ->assertOk()->assertHeader('Content-Type', 'application/pdf');
+
+        $this->assertStringStartsWith('%PDF', (string) $response->getContent(), '⛔ PDF নয়।');
+        $this->assertStringContainsString('no-store', (string) $response->headers->get('Cache-Control'));
+        $this->assertCount(150, $rows ?? [], '⛔ কাগজে কেবল এক পাতার সারি গেল।');
+    }
+
     /** ⭐ একই মানুষ: রিপোর্টের নিজের চাবি ছাড়া ৪০৩; চাবি দিলে ফাইল। */
     public function test_the_export_needs_the_reports_own_key(): void
     {
@@ -780,6 +804,9 @@ final class ThePhoneCouldNotPrintWhatItSawTest extends TestCase
     /**
      * ⛔ `docx` নেই (মালিকের সিদ্ধান্ত), অচেনা বা না-বলা ফরম্যাট ৪২২; অচেনা
      * রিপোর্ট ৪০৪; আর চাবিহীন মানুষ ভুল ফরম্যাটে ৪২২ নয়, ৪০৩ পান।
+     * ⓘ `pdf` আর এই তালিকায় নেই — মালিক, ৪ অক্টোবর ২০২৬: *"all ledger & report date veue print share korazay pdf e"*;
+     * ১৩ সেপ্টেম্বরের ভয় ("তৃতীয় ফরম্যাট, তৃতীয় জায়গায় অঙ্ক") খাটে না, কারণ PDF রপ্তানির একই ধরা টেবিল থেকে
+     * ([[test_the_report_pdf_needs_the_key_and_carries_every_row_not_one_page()]])।
      */
     public function test_docx_and_unknown_formats_are_422_and_unknown_reports_404(): void
     {
@@ -787,7 +814,7 @@ final class ThePhoneCouldNotPrintWhatItSawTest extends TestCase
 
         $this->grant(self::REPORT_KEY);
 
-        foreach (['docx', 'pdf', ''] as $format) {
+        foreach (['docx', 'html', ''] as $format) {
             $this->phone($this->exportUrl(self::COUNTING, ['format' => $format]))
                 ->assertUnprocessable()->assertJsonValidationErrors('format');
         }

@@ -220,6 +220,16 @@ class ListExport
         $this->footer = array_map(fn ($v) => $this->text($v), $values);
     }
 
+    /**
+     * সর্বমোটের সারি, না থাকলে null — রিপোর্টের PDF-এর জন্য ([[ReportExportApiController]], ৪ অক্টোবর ২০২৬)।
+     *
+     * @return list<string>|null
+     */
+    public function footerRow(): ?array
+    {
+        return $this->footer;
+    }
+
     /** পাতা ভাগের খবর — [[ReportExport]] নিজের ফলাফল থেকে এটা দেয়। */
     public function paged(int $lastPage, string $pageName = 'page'): void
     {
