@@ -287,7 +287,6 @@ final class EachProductConvertsByItsOwnPackTest extends TestCase
             ->groupBy(fn (Unit $unit) => $unit->rootUnitId())
             ->map(fn ($group) => $group
                 ->sortByDesc(fn (Unit $unit) => (float) $unit->toBase('1'))
-                ->map(fn (Unit $unit) => ['id' => $unit->id, 'label' => $unit->name()])
                 ->values()
                 ->all());
 
@@ -301,7 +300,16 @@ final class EachProductConvertsByItsOwnPackTest extends TestCase
                 continue;
             }
 
-            $options[$product->id] = $byRoot[$root];
+            /*
+             * ⓘ `factor` — এক এককে কত মজুদ-একক (4cd2dccd: কাউন্টার কার্টনের পরিমাণ লটের পিসের সাথে মেলায়); পুরনো নিয়মের
+             * [[legacyFactor()]]-এর একই ভাগ, তাই দাবিটা আগের মতোই "ব্যাকফিলের পরে উত্তর বদলায় না"।
+             */
+            $stocking = $units->firstWhere('id', $product->unit_id);
+            $options[$product->id] = array_map(fn (Unit $unit) => [
+                'id' => $unit->id,
+                'label' => $unit->name(),
+                'factor' => bcdiv($unit->toBase('1'), $stocking->toBase('1'), 6),
+            ], $byRoot[$root]);
         }
 
         return $options;
