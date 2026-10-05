@@ -13,6 +13,7 @@ use App\Core\Support\DateFormat;
 use App\Core\Support\DocumentStatus;
 use App\Core\Support\Money;
 use App\Models\FinancialYear;
+use App\Models\LedgerEntry;
 use App\Models\User;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Models\CashTill;
@@ -68,10 +69,10 @@ final class MoneyTransferService
 
             // ⛔ টিলের খাতে তালা, তারপর জের — চূড়ান্ত অডিট ⛔৭ ([[TwoTransfersEmptiedOneTillTest]])।
             // ⓘ তালা ছাড়া দুইজন একসাথে পাঠালে দুইজনেই পুরো জের দেখতেন, আর টিল শূন্যের নিচে নামত।
-            $this->cash->lock($from->account);
-            $this->assertEnoughInHand($from, $amount);
-
             $trxDate = Carbon::parse($data['trx_date'] ?? now());
+
+            $this->cash->lock($from->account);
+            $this->assertEnoughInHand($from, $amount, on: $trxDate->toDateString());
 
             $transfer = MoneyTransfer::create([
                 'company_id' => CompanyContext::id(),
@@ -150,7 +151,8 @@ final class MoneyTransferService
 
             $from = $transfer->fromTill;
             $this->cash->lock($from->account);
-            $this->assertEnoughInHand($from, (string) $transfer->amount, except: (int) $transfer->id);
+            $this->assertEnoughInHand($from, (string) $transfer->amount, except: (int) $transfer->id,
+                on: Carbon::parse($transfer->trx_date)->toDateString());
 
             $this->postSendLeg($transfer);
             $transfer->forceFill(['status' => DocumentStatus::DRAFT])->save();
@@ -592,7 +594,7 @@ final class MoneyTransferService
      * ⛔ সইয়ের অপেক্ষায় থাকা স্থানান্তরের টাকা "পাওয়া যায়" থেকে বাদ — ম৬। ⚠️ ওগুলোর পা এখনো খাতায় বসেনি, তাই জেরে টাকাটা
      * এখনো আছে; বাদ না দিলে একই টাকা অপেক্ষার মধ্যে আরেক জায়গায় পাঠানো যেত, আর দুই সই পড়লে টিল ঋণাত্মক।
      */
-    private function assertEnoughInHand(CashTill $from, string $amount, ?int $except = null): void
+    private function assertEnoughInHand(CashTill $from, string $amount, ?int $except = null, ?string $on = null): void
     {
         $awaiting = (string) MoneyTransfer::query()
             ->where('from_till_id', $from->id)
@@ -600,7 +602,12 @@ final class MoneyTransferService
             ->when($except !== null, fn ($q) => $q->whereKeyNot($except))
             ->sum('amount');
 
-        $inHand = bcsub($from->balance(), $awaiting ?: '0', 4);
+        /*
+         * ⛔ পেছনের তারিখের স্থানান্তর — Accounts-Finance অডিট ম৯, ৪ অক্টোবর ২০২৬। ⚠️ আগে কেবল আজকের জের দেখা হত; ১০
+         * তারিখে ১,০০০ ছিল, ১২ তারিখে ৮০০ খরচ — আজ ২০০। ১১ তারিখের ৫০০-র স্থানান্তর তখন আজকের ২০০ দেখে থামত না যদি
+         * জের বেশি থাকত, অথচ ১২ তারিখে বাক্স ঋণাত্মক হত। ⓘ এখন সেই তারিখ থেকে আজ পর্যন্ত **সবচেয়ে কম** জের মাপা হয়।
+         */
+        $inHand = bcsub($this->lowestFrom($from, $on), $awaiting ?: '0', 4);
 
         if (bccomp($amount, $inHand, 4) > 0) {
             throw ValidationException::withMessages([
@@ -609,6 +616,33 @@ final class MoneyTransferService
                 ]),
             ]);
         }
+    }
+
+    /** বাক্সের সবচেয়ে কম জের — দেওয়া তারিখের শেষ থেকে আজ পর্যন্ত প্রতিটা দিনের শেষে (তারিখ না দিলে বা ভবিষ্যৎ হলে আজকেরটাই) */
+    private function lowestFrom(CashTill $till, ?string $on): string
+    {
+        $today = $till->balance();
+
+        if ($on === null || $on >= now()->toDateString()) {
+            return $today;
+        }
+
+        $lowest = $running = $till->balance($on);
+
+        $days = LedgerEntry::query()
+            ->where('account_id', $till->account_id)
+            ->where('trx_date', '>', $on)
+            ->groupBy('trx_date')
+            ->orderBy('trx_date')
+            ->selectRaw('trx_date, COALESCE(SUM(debit), 0) - COALESCE(SUM(credit), 0) as n')
+            ->pluck('n');
+
+        foreach ($days as $change) {
+            $running = bcadd($running, (string) $change, 4);
+            $lowest = bccomp($running, $lowest, 4) < 0 ? $running : $lowest;
+        }
+
+        return bccomp($today, $lowest, 4) < 0 ? $today : $lowest;
     }
 
     private function amount(mixed $value): string

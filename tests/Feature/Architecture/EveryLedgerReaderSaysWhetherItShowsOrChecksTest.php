@@ -61,6 +61,7 @@ final class EveryLedgerReaderSaysWhetherItShowsOrChecksTest extends TestCase
 
     /** @var array<string, string> যাচাই করে — গোটা কোম্পানি, দেখার শাখা কখনো নয় */
     private const CHECKS = [
+        'app/Modules/Accounts/Services/MoneyTransferService.php' => 'স্থানান্তরের আগে বাক্সের সবচেয়ে কম জের — নিজের খাত, গোটা কোম্পানি ধরে; দেখার শাখা খাটলে অন্য শাখার দাখিলা বাদ পড়ে জের ভুল হত (অডিট ম৯, ৫ অক্টোবর ২০২৬)',
         'app/Modules/Finance/Services/OwnerCapital.php' => 'মালিকের শুরুর মূলধন — রেজিস্টার আর ৩১০০-এর জের মেলানো, গোটা কোম্পানি ধরে, শাখা আলাদা করে; দেখার শাখা খাটলে অন্য শাখার ফাঁক অদৃশ্য হত (৫ অক্টোবর ২০২৬)',
         'app/Core/Engines/Posting/PostingEngine.php' => 'খাতায় লেখা — পোস্টিং',
         'app/Core/Security/LedgerChain.php' => 'খাতার সিল — প্রতিটা সারি দেখতেই হয়',
