@@ -52,7 +52,7 @@ class Production extends Model
 
     protected $fillable = [
         'company_id', 'branch_id', 'financial_year_id', 'document_no',
-        'recipe_id', 'product_id', 'warehouse_id', 'trx_date',
+        'recipe_id', 'product_id', 'warehouse_id', 'trx_date', 'expiry_date',
         'qty', 'cost_total', 'status', 'narration', 'created_by',
         'cancelled_by', 'cancelled_at', 'cancel_reason',
     ];
@@ -61,6 +61,7 @@ class Production extends Model
     {
         return [
             'trx_date' => 'date',
+            'expiry_date' => 'date',
             'cancelled_at' => 'datetime',
 
             // কয়টা হলো, আর মোট কত টাকার মাল গেল — দুইটাই টাকার অঙ্কে যায়

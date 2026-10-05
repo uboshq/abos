@@ -10,6 +10,7 @@ use App\Core\Support\CompanyContext;
 use App\Core\Support\DocumentStatus;
 use App\Models\FinancialYear;
 use App\Modules\Inventory\Models\Warehouse;
+use App\Modules\Inventory\Services\BatchService;
 use App\Modules\Inventory\Services\CostLayerService;
 use App\Modules\Inventory\Services\StockService;
 use App\Modules\Restaurant\Models\Production;
@@ -73,6 +74,7 @@ final class ProductionService
                 'product_id' => $recipe->product_id,
                 'warehouse_id' => $data['warehouse_id'] ?? $this->defaultWarehouse()?->id,
                 'trx_date' => $date->toDateString(),
+                'expiry_date' => $data['expiry_date'] ?? null,
                 'qty' => $data['qty'],
                 'status' => DocumentStatus::DRAFT,
                 'narration' => $data['narration'] ?? null,
@@ -192,6 +194,18 @@ final class ProductionService
              * দশটা পণ্যের মতোই: বিক্রিতে তার নিজের FIFO স্তরই টানা
              * হবে, আর রেসিপির কোনো ভূমিকা থাকবে না।
              */
+            /*
+             * ⛔ লট ছাড়া খাবার গুদামে ওঠে না — মালিকের নিয়ম, ২৩ সেপ্টেম্বর ২০২৬।
+             *
+             * ⓘ লট নম্বরটা **কাগজটাই**, হাতে লেখা কিছু নয়। ⚠️ রাঁধুনিকে
+             * লিখতে দিলে প্রতিদিন কিছু একটা বানানো হত, আর দুইদিনের
+             * রান্না একই নম্বরে পড়ত — আর বিষক্রিয়ার দিন ওই দুইদিন
+             * আলাদা করাই হত প্রথম কাজ।
+             *
+             * ⓘ নম্বরটা কাগজ ধরে হওয়ায় সুতোটা দুই দিকেই টানা যায়:
+             * লট থেকে কোন রান্না, রান্না থেকে কোন রেসিপি, আর রেসিপি
+             * থেকে কোন উপকরণের লট।
+             */
             $this->stock->move(
                 product: $production->product,
                 warehouse: $warehouse,
@@ -200,6 +214,13 @@ final class ProductionService
                 floor: (string) $production->qty,
                 date: $production->trx_date,
                 documentNo: $production->document_no,
+                batch: $production->product->track_batch
+                    ? app(BatchService::class)->receive(
+                        product: $production->product,
+                        batchNo: (string) $production->document_no,
+                        expiry: $production->expiry_date?->toDateString(),
+                    )
+                    : null,
             );
 
             $this->costs->receive(

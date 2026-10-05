@@ -106,6 +106,28 @@ final class TheCookedFoodWentInWithoutADateOnItTest extends TestCase
         );
     }
 
+    /**
+     * ⛔ রান্নার আগের মেয়াদ টাইপের ভুল — ধরা না পড়লে খাবারটা জন্মেই মেয়াদোত্তীর্ণ; রান্নার দিন নিজে চলে (৫ অক্টোবর ২০২৬ যোগ, abos-ec)।
+     *
+     * ⓘ ফর্মের নিয়ম সরাসরি মাপা — রেস্তোরাঁর পাতা পরীক্ষায় সুইচের পেছনে।
+     */
+    public function test_an_expiry_before_the_cooking_day_is_refused(): void
+    {
+        $request = new \App\Modules\Restaurant\Http\Requests\ProductionRequest;
+        $request->setUserResolver(fn () => \App\Models\User::query()->where('email', 'owner@abos.test')->firstOrFail());
+        $rules = $request->rules();
+        $only = array_intersect_key($rules, array_flip(['trx_date', 'expiry_date']));
+        $today = now()->toDateString();
+
+        $this->assertTrue(\Illuminate\Support\Facades\Validator::make(
+            ['trx_date' => $today, 'expiry_date' => now()->subDay()->toDateString()], $only,
+        )->errors()->has('expiry_date'), '⛔ রান্নার আগের দিনের মেয়াদ মেনে নেওয়া হলো।');
+
+        $this->assertFalse(\Illuminate\Support\Facades\Validator::make(
+            ['trx_date' => $today, 'expiry_date' => $today], $only,
+        )->errors()->has('expiry_date'), '⛔ রান্নার দিনের মেয়াদও আটকাল — একই দিনে শেষ হওয়া খাবার লেখা যায় না।');
+    }
+
     /** একটা রান্না — নিশ্চিত করা পর্যন্ত। */
     private function cooked(bool $lots, ?string $expiry = null): Production
     {

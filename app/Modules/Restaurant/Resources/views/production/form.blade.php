@@ -65,6 +65,18 @@
                                 :value="old('trx_date', $production->trx_date)"
                                 required />
 
+                    {{--
+                        মেয়াদ — ঐচ্ছিক, আর লট নম্বরের কোনো ঘর নেই।
+
+                        ⓘ রান্নার লট **কাগজটাই** — এই উৎপাদনের নম্বর।
+                        ⚠️ হাতে লিখতে দিলে প্রতিদিন কিছু একটা বানানো হত, আর
+                        দুইদিনের রান্না একই নম্বরে পড়ত।
+                    --}}
+                    <x-ui.field name="expiry_date"
+                                :label="__('inventory::field.expiry_date')"
+                                type="date"
+                                :value="old('expiry_date', $production->expiry_date?->toDateString())" />
+
                     <x-ui.field name="qty"
                                 :label="__('inventory::field.made')"
                                 type="number"
