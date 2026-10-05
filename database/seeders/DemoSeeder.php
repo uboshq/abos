@@ -428,6 +428,12 @@ class DemoSeeder extends Seeder
         // মজুদের পর্দা খুললে ফাঁকা টেবিল, আর ফাঁকা টেবিল দেখে বোঝা যায় না
         // অঙ্কটা ঠিক আছে কি না।
         CompanyContext::forCompany($alpha->id, function () {
+            /*
+             * ⓘ ডেমো কোম্পানির খোলা জের সংরক্ষিত মুনাফায় — ৫ অক্টোবর ২০২৬ থেকে আসল কোম্পানিতে ডিফল্ট মালিকের মূলধন
+             * ([[OpeningBalanceService::openingEquity()]]), কিন্তু ডেমোর পরীক্ষাগুলো এই জেরকেই "আগের বছরের লাভ" ধরে
+             * মুনাফা ভাগ করে। ⚠️ নতুন নিয়মের নিজের পরীক্ষা সুইচ চালু করে মাপে ([[TheOpeningBalanceIsTheOwnersCapitalTest]])।
+             */
+            app(SettingsService::class)->set('accounts.opening_to_capital', false);
             $this->setUpSuppliers();
             $this->setUpCustomers();
             $this->setUpStock();

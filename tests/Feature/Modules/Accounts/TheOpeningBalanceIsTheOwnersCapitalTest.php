@@ -36,6 +36,8 @@ final class TheOpeningBalanceIsTheOwnersCapitalTest extends TestCase
         CompanyContext::set($company->id, $company->defaultBranch()?->id);
         $this->actingAs(User::query()->where('email', 'owner@abos.test')->firstOrFail());
         app(StandardChart::class)->install();
+        // ⓘ ডেমো কোম্পানিতে সুইচ বন্ধ (DemoSeeder) — আসল ডিফল্ট চালু, তাই এখানে চালু করে মাপা
+        app(SettingsService::class)->set('accounts.opening_to_capital', true);
     }
 
     public function test_the_switch_sends_the_other_side_to_capital_or_to_retained_earnings(): void

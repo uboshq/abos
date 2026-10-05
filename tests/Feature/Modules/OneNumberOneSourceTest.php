@@ -142,7 +142,7 @@ class OneNumberOneSourceTest extends TestCase
          * সিডার বদলালেই লাল হত — অথচ কোডে কিছুই ভাঙেনি।
          */
         $equity = Account::query()
-            ->where('code', StandardChart::OWNER_CAPITAL)->firstOrFail(); // ⓘ খোলা জের মূলধনে, ৫ অক্টোবর ২০২৬
+            ->where('code', StandardChart::RETAINED_EARNINGS)->firstOrFail();
 
         $before = $this->fromTheLedger($equity);
 

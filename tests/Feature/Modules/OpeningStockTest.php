@@ -82,15 +82,13 @@ class OpeningStockTest extends TestCase
     {
         $inventory = $this->balanceOf(StandardChart::INVENTORY);
 
-        // মজুদ যত ডেবিট, মালিকের মূলধন ঠিক তত ক্রেডিট (তাই ঋণাত্মক) — মালিক, ৫ অক্টোবর ২০২৬: খোলা জের মূলধনে
-        // ([[OpeningBalanceService::openingEquity()]]); আগে সংরক্ষিত মুনাফায় বসত, সেটা এখন শূন্য
+        // মজুদ যত ডেবিট, অবশিষ্ট মুনাফা ঠিক তত ক্রেডিট (তাই ঋণাত্মক)
+        // ⓘ ডেমো কোম্পানিতে সুইচ বন্ধ (DemoSeeder); চালু অবস্থার দাবি [[TheOpeningBalanceIsTheOwnersCapitalTest]]-এ
         $this->assertSame(0, bccomp(
             bcmul($inventory, '-1', 4),
-            $this->balanceOf(StandardChart::OWNER_CAPITAL),
+            $this->balanceOf(StandardChart::RETAINED_EARNINGS),
             4,
         ));
-        $this->assertSame(0, bccomp('0', $this->balanceOf(StandardChart::RETAINED_EARNINGS), 4),
-            '⛔ খোলা মজুদ এখনো সংরক্ষিত মুনাফায় বসছে।');
 
         // আয় বা ঘাটতির খাত ছোঁয়া হয়নি
         $this->assertSame(0, bccomp('0', $this->balanceOf(StandardChart::SALES), 4));
