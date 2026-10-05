@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../core/records/customer_record.dart';
 import '../../core/records/list_queries.dart';
@@ -197,6 +198,16 @@ class _TotalStrip extends StatelessWidget {
   }
 }
 
+/// One shop, two lines — the owner's own layout, 6 Oct 2026:
+///
+///     M/S. Alif mim International Enterprise
+///     পয়েন্ট: ফুলপুর                      বকেয়া: ৳3,543
+///
+/// The mobile number, the credit days and the limit are not on the row: they
+/// are on the shop's own page, which a tap opens ("mobile no to click ba
+/// touch kore open korle vitore ache"). A shop on no point keeps the second
+/// line with the due alone. The limit is still never judged here or there —
+/// see the detail page and `CustomerDueSync`.
 class _DueTile extends StatelessWidget {
   const _DueTile({required this.row});
 
@@ -204,33 +215,31 @@ class _DueTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final due = row.due;
+    final point = row.customer.pointName;
 
     return Card(
       child: ListTile(
+        onTap: () => context.push('/home/customers/${row.customer.id}'),
         title: Text(row.customer.name,
             style: const TextStyle(fontWeight: FontWeight.w600)),
-        subtitle: Text(
-          [
-            if (row.customer.phone != null) row.customer.phone!,
-            if (row.customer.pointName != null) row.customer.pointName!,
-            if (due.creditDays > 0) '${due.creditDays} দিনের শর্ত',
-            // The limit is shown, never judged against. CustomerDueSync says
-            // it plainly: a zero limit means cash or advance, and whether any
-            // limit blocks a sale is a company switch the phone is not sent.
-            // Drawing a verdict here would be this app deciding something it
-            // was deliberately not told how to decide.
-            if (due.hasCreditLimit) 'সীমা ${Money.taka(due.creditLimit)}',
-          ].join(' · '),
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-        ),
-        trailing: Text(
-          Money.taka(due.outstanding),
-          style: const TextStyle(
-              fontWeight: FontWeight.w700,
-              fontSize: 15,
-              color: AppColors.danger),
+        subtitle: Row(
+          children: [
+            Expanded(
+              child: Text(
+                point == null ? '' : 'পয়েন্ট: $point',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            const SizedBox(width: AppSpacing.sm),
+            Text(
+              'বকেয়া: ${Money.taka(row.due.outstanding)}',
+              style: const TextStyle(
+                  fontWeight: FontWeight.w700,
+                  fontSize: 15,
+                  color: AppColors.danger),
+            ),
+          ],
         ),
       ),
     );
