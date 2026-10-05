@@ -246,6 +246,14 @@ class MenuRepository {
             icon: Icons.local_shipping_outlined,
             routeName: 'tracking',
           ),
+        // ⭐ আজকের রুট — ছকে আজ যে রুট আর তার দোকান; মাঠের মানুষের আদেশ দেখার চাবিতে (সমন্বয়কের ক্রম "ঘ")
+        if (user.can('sales.order.view'))
+          const MenuItem(
+            key: 'sales.my_route',
+            label: 'আজকের রুট',
+            icon: Icons.route_outlined,
+            routeName: 'my-route',
+          ),
         // ⭐ সরাসরি বিক্রয়ের কাউন্টার (0.4.9) — ওয়েবের কাউন্টারের একই চাবি
         if (user.can('sales.challan.create'))
           const MenuItem(

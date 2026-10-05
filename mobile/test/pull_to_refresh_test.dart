@@ -45,6 +45,7 @@ void main() {
     'attendance_screen.dart',
     'reports_screen.dart',
     'dashboards_screen.dart',
+    'my_route_screen.dart',
     'sync_status_screen.dart',
   };
 

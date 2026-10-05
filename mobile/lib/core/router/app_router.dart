@@ -12,6 +12,7 @@ import '../../features/customers/due_list_screen.dart';
 import '../../features/home/home_shell.dart';
 import '../orders/delivery_order_api.dart';
 import '../../features/delivery_orders/delivery_order_screens.dart';
+import '../../features/route/my_route_screen.dart';
 import '../../features/direct_sale/counter_screen.dart';
 import '../../features/orders/delivery_tracking_screen.dart';
 import '../../features/orders/new_order_screen.dart';
@@ -187,6 +188,12 @@ final goRouterProvider = Provider<GoRouter>((ref) {
                 },
               ),
             ),
+          ),
+          // ⭐ আজকের রুট — সাপ্তাহিক ছকের রুট আর তার দোকান (সমন্বয়কের ক্রম "ঘ", ৫ অক্টোবর ২০২৬)
+          GoRoute(
+            path: 'my-route',
+            builder: (context, state) =>
+                const ModuleGateView(path: 'my-route', child: MyRouteScreen()),
           ),
           GoRoute(
             path: 'tracking',
