@@ -82,4 +82,11 @@ Route::prefix('v1/sales')
 
         // ⭐ আমার আজকের রুট — সাপ্তাহিক ছকের রুট আর তার দোকান, রুট-পাতার একই অঙ্কে ([[MyRouteApiController]], ৫ অক্টোবর ২০২৬)
         Route::get('/my-route', [\App\Modules\Sales\Http\Controllers\MyRouteApiController::class, 'index'])->name('my_route.index');
+
+        // ⭐ লিড — মাঠ থেকে নতুন দোকানের খোঁজ, ওয়েবের একই সেবা ও চাবি ([[LeadApiController]], ৫ অক্টোবর ২০২৬)
+        Route::get('/leads/setup', [\App\Modules\Sales\Http\Controllers\LeadApiController::class, 'setup'])->name('lead.setup');
+        Route::get('/leads', [\App\Modules\Sales\Http\Controllers\LeadApiController::class, 'index'])->name('lead.index');
+        Route::post('/leads', [\App\Modules\Sales\Http\Controllers\LeadApiController::class, 'store'])->name('lead.store');
+        Route::get('/leads/{id}', [\App\Modules\Sales\Http\Controllers\LeadApiController::class, 'show'])->whereUuid('id')->name('lead.show');
+        Route::put('/leads/{id}', [\App\Modules\Sales\Http\Controllers\LeadApiController::class, 'update'])->whereUuid('id')->name('lead.update');
     });
