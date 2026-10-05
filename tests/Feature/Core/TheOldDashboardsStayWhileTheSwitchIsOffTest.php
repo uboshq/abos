@@ -43,8 +43,10 @@ final class TheOldDashboardsStayWhileTheSwitchIsOffTest extends TestCase
 
             foreach ($codes as $code) {
                 $response = $this->get(route('module.dashboard', ['module' => $code]));
+                // ⛔ ৫০০ কখনো চুপচাপ বাদ নয় — কেবল বন্ধ মডিউল (৪০৪) বা চাবি নেই (৪০৩) বাদ, দুই অবস্থায় একই
+                $this->assertContains($response->status(), [200, 403, 404], "⛔ {$code}: ড্যাশবোর্ড ".($on ? 'চালুতে' : 'বন্ধে').' ভাঙল ('.$response->status().')।');
                 if ($response->status() !== 200) {
-                    continue; // বন্ধ মডিউল বা চাবি নেই — দুই অবস্থায় একই
+                    continue;
                 }
                 $response->assertViewIs($on ? 'dashboard.module-v2' : 'dashboard.module');
                 $panels[$code][$on ? 'on' : 'off'] = count($engine->for($code, $owner)->panels);

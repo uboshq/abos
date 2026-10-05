@@ -541,8 +541,13 @@ class ShellTest extends TestCase
         // অবস্থাটা document থেকে পড়া, নিজে মনে রাখা নয়: Esc বা F11 দিয়েও
         // ফুল-স্ক্রিন ছাড়া যায়, আর তখন নিজের রাখা boolean বাস্তবের সাথে
         // অমিল হয়ে বোতামটা ভুল আইকন দেখাত।
-        $this->assertStringContainsString('fullscreenchange', $toggle);
-        $this->assertStringContainsString('document.fullscreenElement', $toggle);
+        // ⓘ CSP-র পর (d9aeeb94) যুক্তিটা JS-এ — ব্লেডে কেবল ঘটনার বাঁধন, পড়াটা [[fullscreenToggle]]-এ (৫ অক্টোবর ২০২৬)
+        $this->assertStringContainsString('x-data="fullscreenToggle"', $toggle);
+        $this->assertStringContainsString('@fullscreenchange.document="sync()"', $toggle);
+        $js = file_get_contents(resource_path('js/components/shell.js'));
+        $body = substr($js, (int) strpos($js, 'export function fullscreenToggle'), 600);
+        $this->assertStringContainsString('this.full = Boolean(document.fullscreenElement)', $body,
+            'ফুল-স্ক্রিনের অবস্থা document থেকে পড়া হচ্ছে না।');
     }
 
     /** রেলে যে মডিউলগুলো সত্যিই বসে — মেনু থেকেই নেওয়া, হাতে লেখা নয়। */

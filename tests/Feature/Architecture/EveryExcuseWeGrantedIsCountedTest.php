@@ -37,6 +37,12 @@ final class EveryExcuseWeGrantedIsCountedTest extends TestCase
      * @var list<string>
      */
     private const EXCUSES = [
+        // ⓘ দেখায়, কিন্তু ইচ্ছা করে গোটা কোম্পানি — শাখার নিয়ম পাশ কাটানো, তাই ছাড় (1847bb6c, গোনা শুরু ৫ অক্টোবর ২০২৬)
+        'EveryLedgerReaderSaysWhetherItShowsOrChecksTest::WHOLE_BY_DECISION',
+        // ⓘ নিয়মের বাইরে রাখা সারি — তালিকা নয় (1fd5e3ed), যোগ অর্থহীন (9d79fff7), শাখা না-মানা পক্ষের খোঁজ (42ec6cef); গোনা শুরু ৫ অক্টোবর ২০২৬
+        'EveryListPageHasTheToolbarTest::NOT_A_LIST',
+        'EveryMoneyListShowsAGrandTotalTest::NOT_A_SUM',
+        'EveryPartyListFollowsTheViewedBranchTest::EXCUSED',
         'ACodeMadeFromANameCanComeOutEmptyTest::HANDLED',
         'ASkippedTestReadsAsAPassingOneTest::STEPPING_ASIDE_FOR_NOW',
         'AnAuditedModelMustSayWhoseBooksItBelongsToTest::EXEMPT',
@@ -98,6 +104,8 @@ final class EveryExcuseWeGrantedIsCountedTest extends TestCase
      * @var list<string>
      */
     private const NOT_EXCUSES = [
+        // ⓘ চাহিদা: অন্য কোম্পানিতে ঢোকার প্রতিটা দরজা তালিকায় থাকতে হবে, আর বেশিরভাগ নিজেই canInCompany() ডাকে (৫ অক্টোবর ২০২৬)
+        'EveryDoorIntoAnotherCompanyAsksTheKeyThereTest::DOORS',
         // ⓘ চাহিদা: খাতা পড়া প্রতিটা ফাইল দেখায় নাকি যাচাই করে (শাখা-দেখা, ২৯ সেপ্টেম্বর ২০২৬)
         'EveryLedgerReaderSaysWhetherItShowsOrChecksTest::SHOWS',
         'EveryLedgerReaderSaysWhetherItShowsOrChecksTest::CHECKS',
@@ -249,7 +257,42 @@ final class EveryExcuseWeGrantedIsCountedTest extends TestCase
      *        ফাইলে কোম্পানি না-ছাঁকা `exists` আগে থেকেই পেয়েছে। নতুন ফাঁক নয় — পুরনো ফাঁক প্রথমবার
      *        গোনা; Accounts-এর সবগুলো সারানো, বাকিগুলো সারালে সংখ্যা আর এই ছাদ দুইটাই নামবে।
      */
-    private const CEILING = 265;
+    /*
+     * ── ⚠️ ২৬৫ → ২৮৮, ৫ অক্টোবর ২০২৬ (abos-95, কোঅর্ডিনেটর abos-63-এর সিদ্ধান্ত "ক") ─────────────
+     * ছাদ না বদলেই ২৩টা সারি কমিট হয়েছিল, তাই পাহারা লাল ছিল। ⓘ মাপা, প্রতিফলনে, git ধরে (aef435a2-এ ২৬৫ → HEAD-এ ২৮৮);
+     * কারণ প্রতিটা সারির নিজের ফাইল থেকে, নতুন বানানো নয়:
+     *   +৮  EveryRouteIsGuardedTest::CUSTOMER_PORTAL — পোর্টালে নিজের DO (index, create, store, show, submit), নিজের
+     *       বিক্রির দাগ (tracking, tracking.show), নিজের দাবির স্লিপ; সবগুলো নিজের গ্রাহক-id ধরে, অন্যেরটায় ৪০৩
+     *   +৬  EveryRouteIsGuardedTest::GUARDED_INSIDE_THE_METHOD — বিক্রির দাগ (ওয়েব ও ফোন, তালিকা ও একটা):
+     *       sales.delivery.view অথবা sales.order.view, mayTrack()-এ; DO-র অনুমোদিত পরিমাণ (ওয়েব ও ফোন):
+     *       ApprovalEngine::canDecide()
+     *   +৩  EveryRouteIsGuardedTest::TOKEN_SYNC (৪ যোগ, ১ বাদ) — নিজের ফোনের FCM টোকেন, নিজের কোম্পানি/শাখা বদল,
+     *       ফোনের ড্যাশবোর্ড তালিকা ও মডিউল (প্রতিটা ঘর নিজের চাবিতে, মডিউলে $this->authorize())
+     *   +২  EveryRouteIsGuardedTest::OPEN_TO_THE_WORLD — সই-করা কাগজের QR (নিজে কিছু দেখায় না, sales.scan-এ পাঠায়);
+     *       টোকেন নবায়ন (refresh টোকেন নিয়ামক নিজে যাচাই করে)
+     *   +২  EveryRouteIsGuardedTest::ANY_SIGNED_IN_USER — রিপোর্ট সেন্টার (প্রতিটা সারি নিজের মেনু-চাবিতে ছাঁকা);
+     *       হোমের সাজ home.layout (কেবল নিজের users.home_layout, c738174c)
+     *   +১  EveryChangeableRowRemembersWhoChangedItTest::EXEMPT — RecentPaper: কে কোন কাগজ শেষ কবে খুলেছেন, কেউ
+     *       সম্পাদনা করে না
+     *   +১  EveryReportStandsBehindTheBranchWallTest::SAME_FOR_EVERYONE — governance.periods: মাস বন্ধের তালা গোটা
+     *       কোম্পানির (period_locks-এ branch_id নেই)
+     */
+    /*
+     * ── ⚠️ ২৮৮ → ২৯০, একই দিন ─────────────────────────────────────────────────────────────────
+     *   +২  EveryLedgerReaderSaysWhetherItShowsOrChecksTest::WHOLE_BY_DECISION — নতুন গোনা তালিকা (1847bb6c), আগে
+     *       কোনো দিকেই বসানো ছিল না: কয়েক কোম্পানির একসাথে লাভ-ক্ষতি (GroupLedgerService — শাখার আইডি কেবল চলতি
+     *       কোম্পানির); বাজেট (BudgetService — `fin_budgets`-এ শাখা নেই)
+     */
+    /*
+     * ── ⚠️ ২৯০ → ৩১০, একই দিন — তিনটা তালিকা আগে কোনো দিকেই বসানো ছিল না, এখন গোনা শুরু ──────────────
+     *   +৫   EveryListPageHasTheToolbarTest::NOT_A_LIST — তালিকা নয় এমন পাতা: বিক্রয়ের ড্যাশবোর্ড, বছর সমাপনী, খাতা
+     *        মেলানোর যাচাই, পুরনো খাতা থেকে আনা, রান্নাঘরের বোর্ড
+     *   +১১  EveryMoneyListShowsAGrandTotalTest::NOT_A_SUM — যোগ মিথ্যা বা অর্থহীন: নানা ধরনের সই, খাতের গাছ, বছর-শেষের
+     *        পূর্বরূপ, সইয়ের সীমা, মাসের স্থিতি, চলমান স্থিতি, দুই দিকের স্থিতি, দুই দামের তালিকা, একক খরচ, ড্যাশবোর্ড
+     *   +৪   EveryPartyListFollowsTheViewedBranchTest::EXCUSED — গ্রাহক-পোর্টালের লগইন, নাম ধরে খোঁজা (find, exists),
+     *        কেবল মন্তব্যে নাম
+     */
+    private const CEILING = 310;
 
     /*
      * ── ⚠️ ২২২ → ২২৪, ২৩ সেপ্টেম্বর ২০২৬ ───────────────────────────
