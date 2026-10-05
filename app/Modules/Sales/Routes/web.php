@@ -113,6 +113,23 @@ Route::middleware('auth')->prefix('sales')->group(function () {
             ->whereNumber('product')->name('history');
     });
 
+    /*
+     * ⭐ দর তালিকা — গ্রাহক, ধরন, এলাকা, সবার; পণ্যপ্রতি দর ও মেয়াদ (৫ অক্টোবর ২০২৬; [[PriceBookController]])।
+     * ⓘ দেখা sales.price_list.view, বসানো sales.price_list.manage — কন্ট্রোলারের middleware()-এ।
+     */
+    Route::prefix('price-lists')->name('price_book.')->group(function () {
+        $c = \App\Modules\Sales\Http\Controllers\PriceBookController::class;
+        Route::get('/', [$c, 'index'])->name('index');
+        Route::get('/create', [$c, 'create'])->name('create');
+        Route::post('/', [$c, 'store'])->name('store');
+        Route::get('/{list}', [$c, 'show'])->whereNumber('list')->name('show');
+        Route::get('/{list}/edit', [$c, 'edit'])->whereNumber('list')->name('edit');
+        Route::put('/{list}', [$c, 'update'])->whereNumber('list')->name('update');
+        Route::post('/{list}/items', [$c, 'storeItems'])->whereNumber('list')->name('items.store');
+        Route::delete('/{list}/items/{item}', [$c, 'destroyItem'])->whereNumber(['list', 'item'])->name('items.destroy');
+        Route::get('/{list}/history/{product}', [$c, 'history'])->whereNumber(['list', 'product'])->name('history');
+    });
+
     Route::get('/planned/{screen}', [\App\Modules\Sales\Http\Controllers\PlannedScreenController::class, 'show'])
         ->name('planned');
 

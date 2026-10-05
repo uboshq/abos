@@ -35,9 +35,7 @@ final class EveryListCarriesItsTotalsBarTest extends TestCase
      * ⚠️ কেবল ছোট হয়: পট্টি বসলে লাল হয়ে নাম কাটতে বলে। ⓘ ফাইলটা না থাকলে (পরিষ্কার চেকআউট) চুপ — ঠিক
      * [[EveryMoneyListShowsAGrandTotalTest]]-এর PENDING-এর মতো।
      */
-    private const PENDING = [
-        'Sales/Resources/views/price_book/show.blade.php' => 'দামের বইয়ের পাতা — pricing-এর চলতি কাজ (৫ অক্টোবর ২০২৬), কমিটের আগে `<x-ui.list-totals :rows="$items" />`',
-    ];
+    private const PENDING = [];
 
     public function test_every_paginated_list_renders_the_totals_bar_or_is_exempt_with_a_reason(): void
     {

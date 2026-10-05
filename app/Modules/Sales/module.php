@@ -287,14 +287,15 @@ return [
             // ⭐ আসল পাতা — মূল্য তালিকা, ২৭ সেপ্টেম্বর ২০২৬ (আগে 'তৈরি হচ্ছে')
             ['label' => 'sales::planned.pricing_lists', 'cluster' => 'pricing', 'icon' => 'wallet', 'route' => 'sales.price_list.index',
                 'permission' => 'sales.order.view'],
-            ['label' => 'sales::planned.pricing_customer', 'cluster' => 'pricing', 'icon' => 'wallet', 'route' => 'sales.planned',
-                'route_params' => ['screen' => 'pricing_customer'], 'permission' => 'sales.order.view'],
-            ['label' => 'sales::planned.pricing_channel', 'cluster' => 'pricing', 'icon' => 'wallet', 'route' => 'sales.planned',
-                'route_params' => ['screen' => 'pricing_channel'], 'permission' => 'sales.order.view'],
-            ['label' => 'sales::planned.pricing_territory', 'cluster' => 'pricing', 'icon' => 'wallet', 'route' => 'sales.planned',
-                'route_params' => ['screen' => 'pricing_territory'], 'permission' => 'sales.order.view'],
-            ['label' => 'sales::planned.pricing_special', 'cluster' => 'pricing', 'icon' => 'wallet', 'route' => 'sales.planned',
-                'route_params' => ['screen' => 'pricing_special'], 'permission' => 'sales.order.view'],
+            // ⭐ আসল পাতা — দর তালিকা: গ্রাহক, ধরন (চ্যানেল/ডিলার স্তর), এলাকা, আর সবার বিশেষ দাম (৫ অক্টোবর ২০২৬; আগে 'তৈরি হচ্ছে')
+            ['label' => 'sales::planned.pricing_customer', 'cluster' => 'pricing', 'icon' => 'wallet', 'route' => 'sales.price_book.index',
+                'route_params' => ['target' => 'customer'], 'permission' => 'sales.price_list.view'],
+            ['label' => 'sales::planned.pricing_channel', 'cluster' => 'pricing', 'icon' => 'wallet', 'route' => 'sales.price_book.index',
+                'route_params' => ['target' => 'tier'], 'permission' => 'sales.price_list.view'],
+            ['label' => 'sales::planned.pricing_territory', 'cluster' => 'pricing', 'icon' => 'wallet', 'route' => 'sales.price_book.index',
+                'route_params' => ['target' => 'territory'], 'permission' => 'sales.price_list.view'],
+            ['label' => 'sales::planned.pricing_special', 'cluster' => 'pricing', 'icon' => 'wallet', 'route' => 'sales.price_book.index',
+                'route_params' => ['target' => 'all'], 'permission' => 'sales.price_list.view'],
             ['label' => 'sales::planned.pricing_dynamic', 'cluster' => 'pricing', 'icon' => 'wallet', 'route' => 'sales.planned',
                 'route_params' => ['screen' => 'pricing_dynamic'], 'permission' => 'sales.order.view'],
 
@@ -576,6 +577,13 @@ return [
         'sales.opportunity.view',
         'sales.opportunity.manage',
 
+        /*
+         * ⭐ দর তালিকা — দেখা আর বসানো আলাদা (৫ অক্টোবর ২০২৬; [[PriceBookController]])।
+         * ⛔ বসানো মানে কে কত দেবেন তা ঠিক করা — সিডারের ঢালাও `sales.%` বাদ-তালিকাতেও আছে।
+         */
+        'sales.price_list.view',
+        'sales.price_list.manage',
+
         'sales.manage',
     ],
 
@@ -718,6 +726,8 @@ return [
             'sales.collection.view', 'sales.return.view', 'sales.shipment.view',
             'sales.report',
             'sales.return.report',
+            // ⓘ দর তালিকা দেখা — তদারকি; বসানো নয় (মালিকের কাজ)
+            'sales.price_list.view',
         ],
     ],
 

@@ -313,7 +313,11 @@ final class EveryExcuseWeGrantedIsCountedTest extends TestCase
      *   +১  EveryListCarriesItsTotalsBarTest::PENDING — pricing-এর অকমিটেড দামের বইয়ের পাতা; পট্টি বসলেই নামটা কাটতে
      *       হয় (লাল), তাই সংখ্যাটা ফিরে ৩১৮-এ নামবে
      */
-    private const CEILING = 319;
+    /*
+     * ── ⚠️ ৩১৯ → ৩১৮, ৫ অক্টোবর ২০২৬ (দর তালিকা, ধাপ ৩) ─────────────────────────────────────────────────────────
+     *   −১  EveryListCarriesItsTotalsBarTest::PENDING — দামের বইয়ের পাতায় পট্টি বসল, নামটা কাটা হলো
+     */
+    private const CEILING = 318;
 
     /*
      * ── ⚠️ ২২২ → ২২৪, ২৩ সেপ্টেম্বর ২০২৬ ───────────────────────────
