@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../reports/reports_screen.dart';
 import '../../core/api_client/network_errors.dart';
 import '../../core/dashboard/dashboard_api.dart';
 import '../../core/theme/app_colors.dart';
@@ -168,6 +169,23 @@ class _ModuleDashboardScreenState extends State<ModuleDashboardScreen> {
               for (final stat in d.stats) _StatCard(stat: stat),
               for (final panel in d.panels) _PanelCard(panel: panel),
               for (final listing in d.listings) _ListingCard(listing: listing),
+              // ⭐ এই মডিউলের রিপোর্ট — তারিখ আর PDF সহ (মালিক, ৪ অক্টোবর ২০২৬: "Sales Account er gulo dorkar")
+              Padding(
+                padding: const EdgeInsets.only(top: AppSpacing.sm),
+                child: OutlinedButton.icon(
+                  key: const Key('dashboard-reports'),
+                  icon: const Icon(Icons.assessment_outlined, size: 18),
+                  label: const Text('এই মডিউলের রিপোর্ট'),
+                  onPressed: () =>
+                      Navigator.of(context).push(MaterialPageRoute<void>(
+                    builder: (_) => ReportsScreen(
+                      module: widget.module,
+                      title:
+                          '${d.title.isNotEmpty ? d.title : widget.name} — রিপোর্ট',
+                    ),
+                  )),
+                ),
+              ),
             ],
           ],
         ),

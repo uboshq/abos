@@ -106,6 +106,10 @@ void main() {
     expect(find.text('সাবান'), findsOneWidget);
     expect(find.text('বিক্রয়যোগ্য: 2'), findsOneWidget,
         reason: 'one field per line, label and value together');
+    // ⭐ এই মডিউলের রিপোর্ট — তারিখ আর PDF সহ (মালিক, ৪ অক্টোবর ২০২৬)
+    await tester.scrollUntilVisible(
+        find.byKey(const Key('dashboard-reports')), 200);
+    expect(find.text('এই মডিউলের রিপোর্ট'), findsOneWidget);
   });
 
   testWidgets('a failed load says so instead of showing an empty dashboard',
