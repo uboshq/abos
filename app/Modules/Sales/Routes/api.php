@@ -89,4 +89,14 @@ Route::prefix('v1/sales')
         Route::post('/leads', [\App\Modules\Sales\Http\Controllers\LeadApiController::class, 'store'])->name('lead.store');
         Route::get('/leads/{id}', [\App\Modules\Sales\Http\Controllers\LeadApiController::class, 'show'])->whereUuid('id')->name('lead.show');
         Route::put('/leads/{id}', [\App\Modules\Sales\Http\Controllers\LeadApiController::class, 'update'])->whereUuid('id')->name('lead.update');
+
+        // ⭐ উদ্ধৃতি — মাঠ থেকে দাম, জমা, পাঠানো, দোকানির উত্তর, আদেশে রূপান্তর; ওয়েবের একই সেবা ও যাচাই ([[SalesQuotationApiController]])
+        Route::get('/quotations', [\App\Modules\Sales\Http\Controllers\SalesQuotationApiController::class, 'index'])->name('quotation.index');
+        Route::post('/quotations', [\App\Modules\Sales\Http\Controllers\SalesQuotationApiController::class, 'store'])->name('quotation.store');
+        Route::get('/quotations/{id}', [\App\Modules\Sales\Http\Controllers\SalesQuotationApiController::class, 'show'])->whereUuid('id')->name('quotation.show');
+        Route::post('/quotations/{id}/submit', [\App\Modules\Sales\Http\Controllers\SalesQuotationApiController::class, 'submit'])->whereUuid('id')->name('quotation.submit');
+        Route::post('/quotations/{id}/send', [\App\Modules\Sales\Http\Controllers\SalesQuotationApiController::class, 'send'])->whereUuid('id')->name('quotation.send');
+        Route::post('/quotations/{id}/accept', [\App\Modules\Sales\Http\Controllers\SalesQuotationApiController::class, 'accept'])->whereUuid('id')->name('quotation.accept');
+        Route::post('/quotations/{id}/reject', [\App\Modules\Sales\Http\Controllers\SalesQuotationApiController::class, 'reject'])->whereUuid('id')->name('quotation.reject');
+        Route::post('/quotations/{id}/convert', [\App\Modules\Sales\Http\Controllers\SalesQuotationApiController::class, 'convert'])->whereUuid('id')->name('quotation.convert');
     });
