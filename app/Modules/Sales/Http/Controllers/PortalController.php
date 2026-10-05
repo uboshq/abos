@@ -252,6 +252,8 @@ class PortalController extends Controller
             'due' => $customer->outstanding(),
             'invoices' => $this->papers->invoices(20),
             'claims' => $this->claims->forCustomer($customer),
+            // ⭐ কোম্পানি বিক্রয় আদেশে চলে গেলে DO-র বোতামের জায়গায় আদেশের বোতাম (DO+SO মেশানো, ধাপ ৯)
+            'ordersOn' => app(\App\Modules\Sales\Services\SalesOrderService::class)->replacesDo(),
         ]);
     }
 

@@ -99,7 +99,9 @@ final class SalesOrderService
                 'deliver_on' => $data['deliver_on'] ?? null,
                 'narration' => $data['narration'] ?? null,
                 'status' => DocumentStatus::DRAFT,
-                'created_by' => auth()->id(),
+                // ⓘ গ্রাহক নিজে লিখলে (পোর্টাল) লেখক তিনি, কর্মী নন — পোর্টালের পাহারায় `auth()->id()` গ্রাহকের id, কর্মীর নয়
+                'created_by' => isset($data['created_by_customer_id']) ? null : auth()->id(),
+                'created_by_customer_id' => $data['created_by_customer_id'] ?? null,
             ]);
 
             $this->replaceLines($order, $lines);

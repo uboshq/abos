@@ -292,7 +292,12 @@ final class EveryExcuseWeGrantedIsCountedTest extends TestCase
      *   +৪   EveryPartyListFollowsTheViewedBranchTest::EXCUSED — গ্রাহক-পোর্টালের লগইন, নাম ধরে খোঁজা (find, exists),
      *        কেবল মন্তব্যে নাম
      */
-    private const CEILING = 310;
+    /*
+     * ── ⚠️ ৩১০ → ৩১৫, ৫ অক্টোবর ২০২৬ (abos-2c, DO+SO মেশানো, ধাপ ৯) ─────────────────────────────────────────
+     *   +৫  EveryRouteIsGuardedTest::ANY_SIGNED_IN_USER — পোর্টালে গ্রাহকের নিজের বিক্রয় আদেশ (তালিকা, ফর্ম, লেখা,
+     *       দেখা, জমা): গ্রাহকের কোনো চাবি থাকে না — DO-র পাঁচ দরজার হুবহু যমজ, দেয়াল [[CustomerPapers]]-এর সরু পথ
+     */
+    private const CEILING = 315;
 
     /*
      * ── ⚠️ ২২২ → ২২৪, ২৩ সেপ্টেম্বর ২০২৬ ───────────────────────────

@@ -199,6 +199,25 @@ final class CustomerPapers
     }
 
     /**
+     * ⭐ নিজের বিক্রয় আদেশ — নতুনটা আগে, পাতায় ৫০ ([[PortalOrderController]]; DO+SO মেশানো, ধাপ ৯, ৫ অক্টোবর ২০২৬)।
+     * ⓘ অফিস বা SR-এর লেখা নিজের আদেশও — "কার" প্রশ্নের উত্তর গ্রাহক, লেখক নয়।
+     *
+     * @return LengthAwarePaginator<int, SalesOrder>
+     */
+    public function salesOrders(int $perPage = 50): LengthAwarePaginator
+    {
+        return $this->mine(SalesOrder::query())
+            ->orderByDesc('trx_date')->orderByDesc('id')
+            ->paginate($perPage)->withQueryString();
+    }
+
+    /** নিজের একটা বিক্রয় আদেশ, লাইনসহ — অন্যেরটা ৪০৪ */
+    public function salesOrder(string $publicId): SalesOrder
+    {
+        return $this->mine(SalesOrder::query())->where('public_id', $publicId)->with('lines.product')->firstOrFail();
+    }
+
+    /**
      * DO-তে চাওয়া যায় এমন পণ্য — সক্রিয়, নামের ক্রমে, দামসহ (দাম পণ্যের, ডিলারের নয়)।
      * ⓘ কোম্পানির ক্যাটালগ — "কার" প্রশ্ন নেই, তবু এখানে, যাতে পোর্টালের পর্দা নিজে কোয়েরি না লেখে।
      *

@@ -624,6 +624,12 @@ Route::prefix('portal')->name('portal.')->group(function () {
         Route::post('/do', [\App\Modules\Sales\Http\Controllers\PortalDeliveryOrderController::class, 'store'])->name('do.store');
         Route::get('/do/{id}', [\App\Modules\Sales\Http\Controllers\PortalDeliveryOrderController::class, 'show'])->whereUuid('id')->name('do.show');
         Route::post('/do/{id}/submit', [\App\Modules\Sales\Http\Controllers\PortalDeliveryOrderController::class, 'submit'])->whereUuid('id')->name('do.submit');
+        // ⭐ নিজের বিক্রয় আদেশ — DO-র জায়গায়, কোম্পানির সুইচে ([[PortalOrderController]]; DO+SO মেশানো, ধাপ ৯)
+        Route::get('/orders', [\App\Modules\Sales\Http\Controllers\PortalOrderController::class, 'index'])->name('order.index');
+        Route::get('/orders/new', [\App\Modules\Sales\Http\Controllers\PortalOrderController::class, 'create'])->name('order.create');
+        Route::post('/orders', [\App\Modules\Sales\Http\Controllers\PortalOrderController::class, 'store'])->name('order.store');
+        Route::get('/orders/{id}', [\App\Modules\Sales\Http\Controllers\PortalOrderController::class, 'show'])->whereUuid('id')->name('order.show');
+        Route::post('/orders/{id}/submit', [\App\Modules\Sales\Http\Controllers\PortalOrderController::class, 'submit'])->whereUuid('id')->name('order.submit');
         Route::get('/tracking', [PortalController::class, 'tracking'])->name('tracking');
         Route::get('/tracking/{kind}/{id}', [PortalController::class, 'trackingStory'])
             ->where('kind', 'challan|order')->whereUuid('id')->name('tracking.show');

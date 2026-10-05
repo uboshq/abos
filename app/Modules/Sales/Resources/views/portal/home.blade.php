@@ -19,11 +19,23 @@
         {{ __('sales::portal.claim_title') }}
     </a>
 
-    {{-- ⭐ নিজের DO — লেখা আর জমা (মালিকের বিক্রয়-ধারা, ২ অক্টোবর ২০২৬) --}}
-    <a href="{{ route('sales.portal.do.index') }}" data-portal-do
-       class="mb-3 block rounded-(--radius-field) bg-(--color-brand-500) px-4 py-3 text-center font-medium text-white">
-        {{ __('sales::delivery_order.title') }}
-    </a>
+    {{-- ⭐ নিজের বিক্রয় আদেশ — কোম্পানি DO ছেড়ে আদেশে চলে গেলে (DO+SO মেশানো, ধাপ ৯, ৫ অক্টোবর ২০২৬); খোলা DO নিচের ছোট লিংকে শেষ হয় --}}
+    @if ($ordersOn ?? false)
+        <a href="{{ route('sales.portal.order.index') }}" data-portal-orders
+           class="mb-2 block rounded-(--radius-field) bg-(--color-brand-500) px-4 py-3 text-center font-medium text-white">
+            {{ __('sales::portal_order.title') }}
+        </a>
+        <a href="{{ route('sales.portal.do.index') }}" data-portal-do-old
+           class="mb-3 block text-center text-sm text-(--color-brand-500) hover:underline">
+            {{ __('sales::portal_order.old_do') }}
+        </a>
+    @else
+        {{-- ⭐ নিজের DO — লেখা আর জমা (মালিকের বিক্রয়-ধারা, ২ অক্টোবর ২০২৬) --}}
+        <a href="{{ route('sales.portal.do.index') }}" data-portal-do
+           class="mb-3 block rounded-(--radius-field) bg-(--color-brand-500) px-4 py-3 text-center font-medium text-white">
+            {{ __('sales::delivery_order.title') }}
+        </a>
+    @endif
 
     {{-- ⭐ নিজের অর্ডার কোথায় — ডেলিভারি ট্র্যাকিং (মালিক, ২ অক্টোবর ২০২৬) --}}
     <a href="{{ route('sales.portal.tracking') }}" data-portal-tracking

@@ -36,7 +36,9 @@ class SalesOrderApiController extends Controller implements HasMiddleware
     public static function middleware(): array
     {
         return [
-            new Middleware('can:sales.order.view', only: ['index', 'show']),
+            // ⓘ সুপারভাইজারের পরিমাণও আদেশ দেখার চাবিতে — যিনি আদেশটা দেখতে পান না তিনি পরিমাণও বদলান না; তার উপরে
+            // ছকের নিজের দেয়াল ([[SalesOrderService::setApprovedQuantities()]]: এখনকার স্তরের অনুমোদনকারী, নাহলে ৪০৩)
+            new Middleware('can:sales.order.view', only: ['index', 'show', 'approvedQuantities']),
             new Middleware('can:sales.order.create', only: ['store', 'update', 'submit']),
         ];
     }
