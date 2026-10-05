@@ -91,6 +91,17 @@
     // ক্রেডিটেরটা "from", ঠিক যেভাবে সেভ হয়েছিল
     $debitLine = $voucher->lines->firstWhere(fn ($l) => bccomp((string) $l->debit, '0', 4) > 0);
     $creditLine = $voucher->lines->firstWhere(fn ($l) => bccomp((string) $l->credit, '0', 4) > 0);
+
+    /*
+     * ⛔ মানুষ যে অঙ্ক লিখেছিলেন — চার্জসহ কাগজে ডেবিটের প্রথম সারি নয় (Accounts-Finance অডিট ম৪, ৪ অক্টোবর ২০২৬)।
+     * ⚠️ টাকা ঢোকায় (রসিদ, কন্ট্রা) চার্জ ভেতর থেকে কাটে: Dr টাকার খাত (অঙ্ক − চার্জ) · Dr চার্জ / Cr অন্য পাশ (অঙ্ক)
+     * ([[VoucherService::twoLineEntry()]])। ঘরে প্রথম ডেবিট বসালে সম্পাদনার প্রতিটা সংরক্ষণে অঙ্কটা চার্জের সমান কমত।
+     * ⓘ পরিশোধ আর খরচে চার্জ বাইরে যোগ হয়, তাই সেখানে প্রথম ডেবিটই লেখা অঙ্ক; চার্জ না থাকলে দুই পাশ একই।
+     */
+    $charged = bccomp((string) ($voucher->charge_amount ?? '0'), '0', 4) > 0;
+    $typedAmount = $charged && ! in_array($voucher->type, [\App\Modules\Accounts\Models\Voucher::PAYMENT, \App\Modules\Accounts\Models\Voucher::EXPENSE], true)
+        ? $creditLine?->credit
+        : $debitLine?->debit;
 @endphp
 
 <x-layouts.app :menu="$menu">
@@ -260,7 +271,7 @@
                                      না নিচে, আর ধরন অনুযায়ী তিনটা শাখা। ⛔ একটা বদলে বাকি
                                      দুইটা ভুলে গেলে একই বোতাম এক ভাউচারে কাজ করত, অন্যটায়
                                      নীরবে করত না। --}}
-                                :value="old('amount', $debitLine?->debit ?? $voucher->amount)" required numeric />
+                                :value="old('amount', $typedAmount ?? $voucher->amount)" required numeric />
                 </div>
             </section>
         @endif
@@ -646,7 +657,7 @@
                                      না নিচে, আর ধরন অনুযায়ী তিনটা শাখা। ⛔ একটা বদলে বাকি
                                      দুইটা ভুলে গেলে একই বোতাম এক ভাউচারে কাজ করত, অন্যটায়
                                      নীরবে করত না। --}}
-                                :value="old('amount', $debitLine?->debit ?? $voucher->amount)" required numeric 
+                                :value="old('amount', $typedAmount ?? $voucher->amount)" required numeric 
                                 x-on:input="$dispatch('abos-expense-amount', $event.target.value)" />
 
                     {{-- ⓘ সংযুক্তি মালিকের ছবির মার্ক করা খালি জায়গায় — উৎসে কর্তনের ঠিক নিচে। --}}
@@ -833,7 +844,7 @@
                                      না নিচে, আর ধরন অনুযায়ী তিনটা শাখা। ⛔ একটা বদলে বাকি
                                      দুইটা ভুলে গেলে একই বোতাম এক ভাউচারে কাজ করত, অন্যটায়
                                      নীরবে করত না। --}}
-                                :value="old('amount', $debitLine?->debit ?? $voucher->amount)" required numeric />
+                                :value="old('amount', $typedAmount ?? $voucher->amount)" required numeric />
 
                     {{--
                         ⭐ কার মাধ্যমে — বিবরণের ঠিক আগে, ১৮ সেপ্টেম্বর ২০২৬।
@@ -885,7 +896,7 @@
                 <div class="grid items-end gap-3 sm:grid-cols-[1fr_2fr_auto]">
                     <x-ui.field name="amount" type="number" step="0.01" inputmode="decimal"
                                 :label="__('accounts::field.amount_moved')"
-                                :value="old('amount', $debitLine?->debit ?? $voucher->amount)" required numeric />
+                                :value="old('amount', $typedAmount ?? $voucher->amount)" required numeric />
 
                     <x-ui.field name="narration"
                                 :label="__('core.table.narration')"
