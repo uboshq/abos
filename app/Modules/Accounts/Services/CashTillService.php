@@ -11,6 +11,7 @@ use App\Core\Support\DocumentStatus;
 use App\Core\Support\Money;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Models\CashTill;
+use App\Modules\Accounts\Models\MoneyTransfer;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -198,7 +199,18 @@ final class CashTillService implements ProvisionsCompany
             $wantsPrimary = (bool) ($data['is_primary'] ?? $till->is_primary);
             unset($data['is_primary']);
 
+            /*
+             * ⛔ বন্ধ করা কেবল [[deactivate()]]-এর পাহারা দিয়ে — Accounts-Finance অডিট ম৮, ৪ অক্টোবর ২০২৬।
+             * ⚠️ সম্পাদনার ফর্মে "চালু" টিক তুলে দিলে টাকাসহ বাক্স চুপচাপ বন্ধ হত — টাকা খাতায় থাকত, পর্দায় আর দেখা যেত না।
+             */
+            $closing = array_key_exists('is_active', $data) && ! (bool) $data['is_active'] && $till->is_active;
+            unset($data['is_active']);
+
             $till->update($data);
+
+            if ($closing) {
+                $this->deactivate($till);
+            }
 
             // নাম বদলালে খাতের নামও — নাহলে ছকে পুরনো নাম আর টিলের
             // পর্দায় নতুন নাম, একই জিনিসের দুই পরিচয়
@@ -259,6 +271,21 @@ final class CashTillService implements ProvisionsCompany
         if ($till->is_primary) {
             throw ValidationException::withMessages([
                 'is_active' => __('accounts::validation.primary_till_cannot_close'),
+            ]);
+        }
+
+        /*
+         * ⛔ পথে থাকা টাকাও — সইয়ের বা গ্রহণের অপেক্ষায় থাকা স্থানান্তর এই বাক্সের হলে বন্ধ নয় (ম৮)। ⚠️ নইলে গ্রহণ এসে
+         * বন্ধ বাক্সে টাকা বসাত, বা সইয়ে টাকা বন্ধ বাক্স থেকে বেরোত।
+         */
+        $moving = MoneyTransfer::query()
+            ->whereIn('status', [MoneyTransfer::AWAITING, DocumentStatus::DRAFT])
+            ->where(fn ($q) => $q->where('from_till_id', $till->id)->orWhere('to_till_id', $till->id))
+            ->value('document_no');
+
+        if ($moving !== null) {
+            throw ValidationException::withMessages([
+                'is_active' => __('accounts::validation.till_has_money_on_the_way', ['no' => $moving]),
             ]);
         }
 

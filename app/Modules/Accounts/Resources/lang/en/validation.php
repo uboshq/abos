@@ -30,6 +30,7 @@ return [
     'group_is_not_money' => 'A group holds no money, so it cannot be marked as cash or bank.',
     'till_code_taken' => 'Another cash counter already uses code :code.',
     'till_has_money' => 'This counter still holds :amount. Deposit or transfer it first, then close.',
+    'till_has_money_on_the_way' => 'Transfer :no of this box is still on its way or waiting for its signature - finish or cancel it before closing the box.',
     'primary_till_cannot_close' => 'The main cash counter cannot be closed — end-of-day deposits need somewhere '
         .'defined to go. Make another one primary first.',
     'no_transit_account' => 'The chart has no ":code Cash in Transit" account. Install the standard chart first — without it there is nowhere for handed-over money to sit.',
