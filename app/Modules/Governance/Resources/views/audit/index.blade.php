@@ -100,5 +100,6 @@
             :columns="$columns" />
 
         <x-ui.pager :rows="$trails" />
+        <x-ui.list-totals :rows="$trails" />
     </div>
 </x-layouts.app>

@@ -75,5 +75,6 @@
         @endif
 
         <x-ui.pager :rows="$entries" />
+        <x-ui.list-totals :rows="$entries" />
     </div>
 </x-layouts.app>

@@ -61,4 +61,5 @@
     </div>
 
     <div class="mt-4">{{ $history->links() }}</div>
+    <x-ui.list-totals :rows="$history" />
 </x-layouts.app>

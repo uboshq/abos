@@ -98,5 +98,6 @@
             :columns="$columns" />
 
         <x-ui.pager :rows="$recipes" />
+        <x-ui.list-totals :rows="$recipes" />
     </div>
 </x-layouts.app>

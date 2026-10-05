@@ -76,4 +76,7 @@
             <x-ui.pager :rows="$runs" />
         </section>
     @endif
+
+    {{-- ⓘ খালি হলেও "০টি সারি" — যে রাতগুলো নেই, সেটাও একটা উত্তর --}}
+    <x-ui.list-totals :rows="$runs" />
 </x-layouts.app>

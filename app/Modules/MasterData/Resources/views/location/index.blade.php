@@ -186,6 +186,9 @@
                         {{ $rows->links() }}
                     </div>
                 @endif
+
+                {{-- ⓘ এক পাতার তালিকাতেও সারির সংখ্যা — পাতা ভাগের শর্তের বাইরে --}}
+                <x-ui.list-totals :rows="$rows" />
             @elseif ($tooManyToShow)
                 <div class="border-b border-(--color-border) bg-(--color-surface-app) px-4 py-3 text-sm">
                     {{ __('master_data::message.too_many', ['count' => $total]) }}

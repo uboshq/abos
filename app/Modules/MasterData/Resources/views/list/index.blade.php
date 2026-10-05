@@ -104,5 +104,6 @@
             )" />
 
         <x-ui.pager :rows="$records" />
+        <x-ui.list-totals :rows="$records" />
     </div>
 </x-layouts.app>

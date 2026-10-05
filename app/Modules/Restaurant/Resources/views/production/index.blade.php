@@ -62,5 +62,6 @@
             :columns="$columns" />
 
         <x-ui.pager :rows="$productions" />
+        <x-ui.list-totals :rows="$productions" />
     </div>
 </x-layouts.app>

@@ -130,4 +130,5 @@
             <x-ui.pager :rows="$notices" />
         @endif
     @endif
+    <x-ui.list-totals :rows="$notices" />
 </x-layouts.app>

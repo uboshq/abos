@@ -180,5 +180,6 @@
     </div>
 
     {{ $users->links() }}
+    <x-ui.list-totals :rows="$users" />
 
 </x-layouts.app>

@@ -170,4 +170,5 @@
     @endif
 
     {{ $flows->links() }}
+    <x-ui.list-totals :rows="$flows" />
 </x-layouts.app>

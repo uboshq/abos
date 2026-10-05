@@ -179,6 +179,7 @@
                 @endforelse
 
                 <x-ui.pager :rows="$given" />
+                <x-ui.list-totals :rows="$given" />
             </section>
         </div>
     </div>

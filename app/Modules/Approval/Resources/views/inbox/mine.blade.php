@@ -86,5 +86,6 @@
             ]" />
 
         <x-ui.pager :rows="$approvals" />
+        <x-ui.list-totals :rows="$approvals" />
     </div>
 </x-layouts.app>

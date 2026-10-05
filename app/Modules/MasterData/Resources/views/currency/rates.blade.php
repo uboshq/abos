@@ -136,5 +136,6 @@
             ]" />
 
         <x-ui.pager :rows="$rates" />
+        <x-ui.list-totals :rows="$rates" />
     </div>
 </x-layouts.app>

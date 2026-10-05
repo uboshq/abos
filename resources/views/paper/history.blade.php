@@ -103,4 +103,5 @@
                 :empty="__('core.print.history_empty')" />
 
     <x-ui.pager :rows="$rows" />
+    <x-ui.list-totals :rows="$rows" />
 </x-layouts.app>

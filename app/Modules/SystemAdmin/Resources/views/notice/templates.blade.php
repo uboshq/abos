@@ -87,6 +87,7 @@
                 ]" />
 
             <x-ui.pager :rows="$templates" />
+            <x-ui.list-totals :rows="$templates" />
         </section>
     </div>
 </x-layouts.app>

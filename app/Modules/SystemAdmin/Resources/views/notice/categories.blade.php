@@ -77,6 +77,7 @@
                 ]" />
 
             <x-ui.pager :rows="$categories" />
+            <x-ui.list-totals :rows="$categories" />
         </section>
     </div>
 </x-layouts.app>
