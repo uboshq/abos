@@ -10,6 +10,7 @@ import '../../core/menu/me_api.dart';
 import '../../core/menu/menu_item.dart';
 import '../../core/menu/menu_repository.dart';
 import '../../core/menu/module_gate.dart';
+import '../../core/orders/delivery_order_api.dart';
 import '../../core/records/today_record.dart';
 import '../../core/sync_engine/sync_engine.dart';
 import '../../core/theme/app_colors.dart';
@@ -123,6 +124,9 @@ class _HomeShellState extends ConsumerState<HomeShell> {
           );
     if (profile?.phoneModules != null) {
       ref.read(phoneModulesProvider.notifier).state = profile!.phoneModules;
+    }
+    if (profile != null) {
+      ref.read(ordersReplaceDoProvider.notifier).state = profile.ordersReplaceDo;
     }
     final modules = ref.read(phoneModulesProvider);
     setState(() {

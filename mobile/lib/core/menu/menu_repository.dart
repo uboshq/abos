@@ -110,7 +110,8 @@ class MenuRepository {
         }
       }
       return HomeMenu(
-        items: ordered(items, response.user),
+        items: ordered(items, response.user,
+            ordersReplaceDo: response.profile.ordersReplaceDo),
         profile: response.profile,
         me: response.user,
       );
@@ -215,19 +216,20 @@ class MenuRepository {
   /// business second-guessing it. All that changes here is that dead tiles
   /// sink.
   @visibleForTesting
-  List<MenuItem> ordered(List<MenuItem> items, AuthUser user) {
+  List<MenuItem> ordered(List<MenuItem> items, AuthUser user,
+      {bool ordersReplaceDo = false}) {
     final live = <MenuItem>[];
     final planned = <MenuItem>[];
     for (final item in items) {
       (item.planned ? planned : live).add(item);
     }
-    return [...live, ..._syntheticTiles(user), ...planned];
+    return [...live, ..._syntheticTiles(user, ordersReplaceDo), ...planned];
   }
 
   /// Tiles that are not `/me` menu rows at all — see this class's own doc
   /// comment for "নতুন অর্ডার" and হাজিরা, and the trailing comment below for
   /// the sync-status tile every role gets regardless.
-  List<MenuItem> _syntheticTiles(AuthUser user) => [
+  List<MenuItem> _syntheticTiles(AuthUser user, [bool ordersReplaceDo = false]) => [
         if (user.can(_newOrderPermission))
           const MenuItem(
             key: 'sales.order.create',
@@ -253,10 +255,13 @@ class MenuRepository {
             routeName: 'counter',
           ),
         // ⭐ ডেলিভারি অর্ডার (0.4.8) — DO দেখার চাবি যাঁর; লেখা আর সই পর্দার ভিতরে নিজের চাবিতে।
-        if (user.can('sales.do.view'))
-          const MenuItem(
+        // ⭐ কোম্পানি বিক্রয় আদেশে চলে গেলে একই টাইল "বিক্রয় আদেশ" — আদেশ দেখার চাবিতে (DO+SO মেশানো, ধাপ ১০)
+        if (ordersReplaceDo
+            ? user.can('sales.order.view')
+            : user.can('sales.do.view'))
+          MenuItem(
             key: 'sales.delivery_order',
-            label: 'ডেলিভারি অর্ডার',
+            label: ordersReplaceDo ? 'বিক্রয় আদেশ' : 'ডেলিভারি অর্ডার',
             icon: Icons.assignment_outlined,
             routeName: 'delivery-orders',
           ),

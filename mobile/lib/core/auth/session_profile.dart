@@ -33,6 +33,7 @@ class SessionProfile {
     this.branches = const [],
     this.viewAllBranches = false,
     this.phoneModules,
+    this.ordersReplaceDo = false,
   });
 
   final OrgRef company;
@@ -57,6 +58,10 @@ class SessionProfile {
   /// walls still hold.
   final Set<String>? phoneModules;
 
+  /// ⭐ The company writes sales orders where it wrote DOs (`sales.orders_replace_do`; SO+DO merge, step 10,
+  /// 5 Oct 2026) — the DO screens then write through `/sales/orders`. False from an older server.
+  final bool ordersReplaceDo;
+
   /// Whether there is anything to switch between at all — a picker with one
   /// company and one branch is a button that does nothing.
   bool get canSwitch => companies.length > 1 || branches.length > 1;
@@ -72,6 +77,7 @@ class SessionProfile {
       viewAllBranches: json['viewAllBranches'] == true,
       phoneModules:
           modules is List ? modules.map((e) => e.toString()).toSet() : null,
+      ordersReplaceDo: json['ordersReplaceDo'] == true,
     );
   }
 }

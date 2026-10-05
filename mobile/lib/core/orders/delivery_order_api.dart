@@ -1,3 +1,5 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import '../api_client/api_client.dart';
 import '../approvals/approvals_api.dart';
 import '../records/money.dart';
@@ -45,6 +47,7 @@ class DeliveryOrder {
     required this.editable,
     required this.awaitingMe,
     this.approvalId,
+    this.creditShort,
     this.lines = const [],
   });
 
@@ -65,6 +68,9 @@ class DeliveryOrder {
   /// সইয়ের দরজা — `/approvals/{id}/approve|reject`; আমার হাতে না থাকলে null।
   final String? approvalId;
 
+  /// বিক্রয় আদেশ বাকির সীমায় আটকে থাকলে কত কম — DO-তে আসে না।
+  final double? creditShort;
+
   final List<DeliveryOrderLine> lines;
 
   factory DeliveryOrder.fromJson(Map<String, dynamic> json) => DeliveryOrder(
@@ -78,12 +84,17 @@ class DeliveryOrder {
         editable: json['editable'] == true,
         awaitingMe: json['awaiting_me'] == true,
         approvalId: json['approval_id']?.toString(),
+        creditShort: json['credit_short'] == null ? null : Money.valueOrZero(json['credit_short']),
         lines: [
           for (final row in (json['lines'] as List?) ?? const [])
             if (row is Map) DeliveryOrderLine.fromJson(Map<String, dynamic>.from(row)),
         ],
       );
 }
+
+/// ⭐ কোম্পানি DO ছেড়ে বিক্রয় আদেশে চলে কি না — `/me`-র `ordersReplaceDo`, হোম পর্দা বসায় (DO+SO মেশানো, ধাপ ১০,
+/// ৫ অক্টোবর ২০২৬)। সত্যি হলে DO-র পর্দাগুলো আদেশের দরজায় লেখে ([[ServerDeliveryOrderApi.orders]])।
+final ordersReplaceDoProvider = StateProvider<bool>((ref) => false);
 
 /// একটা চাওয়া — পণ্যের public id আর পরিমাণ; দাম নয়।
 class WantedLine {
@@ -94,6 +105,9 @@ class WantedLine {
 }
 
 abstract class DeliveryOrderApi {
+  /// ⭐ বিক্রয় আদেশের দরজা কি না — পর্দা তখন "আদেশ" বলে (DO+SO মেশানো, ধাপ ১০)।
+  bool get forOrders;
+
   /// `awaitingMe` সত্যি হলে কেবল যেগুলো এখন আমার সইয়ের অপেক্ষায়।
   Future<List<DeliveryOrder>> list({bool awaitingMe = false});
 
@@ -112,9 +126,15 @@ abstract class DeliveryOrderApi {
 }
 
 class ServerDeliveryOrderApi implements DeliveryOrderApi {
-  const ServerDeliveryOrderApi();
+  const ServerDeliveryOrderApi({this.orders = false});
 
-  static const _base = '/sales/delivery-orders';
+  /// ⭐ বিক্রয় আদেশের দরজা (`/sales/orders`) — একই আকারের JSON, কেবল `kind: so` যোগ; সার্ভারের ধাপ ১০।
+  final bool orders;
+
+  String get _base => orders ? '/sales/orders' : '/sales/delivery-orders';
+
+  @override
+  bool get forOrders => orders;
 
   @override
   Future<List<DeliveryOrder>> list({bool awaitingMe = false}) async {

@@ -10,6 +10,7 @@ import '../../features/customers/customer_list_screen.dart';
 import '../../features/customers/deposit_request_screen.dart';
 import '../../features/customers/due_list_screen.dart';
 import '../../features/home/home_shell.dart';
+import '../orders/delivery_order_api.dart';
 import '../../features/delivery_orders/delivery_order_screens.dart';
 import '../../features/direct_sale/counter_screen.dart';
 import '../../features/orders/delivery_tracking_screen.dart';
@@ -174,13 +175,16 @@ final goRouterProvider = Provider<GoRouter>((ref) {
             builder: (context, state) => ModuleGateView(
               path: 'delivery-orders',
               child: Consumer(
-                builder: (context, ref, _) => DeliveryOrderListScreen(
-                  canWrite: ref
-                          .watch(authStateProvider)
-                          .user
-                          ?.can('sales.do.create') ??
-                      false,
-                ),
+                builder: (context, ref, _) {
+                  // ⭐ কোম্পানি বিক্রয় আদেশে চলে গেলে একই পর্দা আদেশের দরজায়, আদেশের চাবিতে (DO+SO মেশানো, ধাপ ১০)
+                  final orders = ref.watch(ordersReplaceDoProvider);
+                  return DeliveryOrderListScreen(
+                    api: ServerDeliveryOrderApi(orders: orders),
+                    canWrite: ref.watch(authStateProvider).user?.can(
+                            orders ? 'sales.order.create' : 'sales.do.create') ??
+                        false,
+                  );
+                },
               ),
             ),
           ),

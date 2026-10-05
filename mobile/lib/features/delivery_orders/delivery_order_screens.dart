@@ -16,12 +16,17 @@ final _taka = NumberFormat.decimalPattern('en_IN');
 
 String _qty(double v) => v == v.roundToDouble() ? v.toInt().toString() : v.toString();
 
+/// ⭐ কাগজের নাম — কোম্পানি বিক্রয় আদেশে চলে গেলে একই পর্দা "আদেশ" বলে (DO+SO মেশানো, ধাপ ১০)।
+String _paper(DeliveryOrderApi api) => api.forOrders ? 'আদেশ' : 'DO';
+
+String _title(DeliveryOrderApi api) => api.forOrders ? 'বিক্রয় আদেশ' : 'ডেলিভারি অর্ডার';
+
 class DeliveryOrderListScreen extends StatefulWidget {
   const DeliveryOrderListScreen({super.key, this.api = const ServerDeliveryOrderApi(), this.canWrite = true});
 
   final DeliveryOrderApi api;
 
-  /// `sales.do.create` — না থাকলে "নতুন DO" বোতাম নেই।
+  /// `sales.do.create` (আদেশে `sales.order.create`) — না থাকলে "নতুন" বোতাম নেই।
   final bool canWrite;
 
   @override
@@ -52,7 +57,7 @@ class _DeliveryOrderListScreenState extends State<DeliveryOrderListScreen> {
       if (mounted) {
         setState(() => _error = errorMessageFor(e,
             fallback: 'তালিকা আনা গেল না। নিচে টেনে আবার চেষ্টা করুন।',
-            whenAbsent: 'সার্ভারে ডেলিভারি অর্ডার এখনো আসেনি — অফিসে জানান।'));
+            whenAbsent: 'সার্ভারে ${_title(widget.api)} এখনো আসেনি — অফিসে জানান।'));
       }
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -79,13 +84,13 @@ class _DeliveryOrderListScreenState extends State<DeliveryOrderListScreen> {
   Widget build(BuildContext context) {
     final rows = _rows ?? const <DeliveryOrder>[];
     return Scaffold(
-      appBar: AppBar(title: const Text('ডেলিভারি অর্ডার')),
+      appBar: AppBar(title: Text(_title(widget.api))),
       floatingActionButton: widget.canWrite
           ? FloatingActionButton.extended(
               key: const ValueKey('do-new'),
               onPressed: _new,
               icon: const Icon(Icons.add),
-              label: const Text('নতুন DO'),
+              label: Text('নতুন ${_paper(widget.api)}'),
             )
           : null,
       body: RefreshIndicator(
@@ -116,9 +121,9 @@ class _DeliveryOrderListScreenState extends State<DeliveryOrderListScreen> {
             if (_busy) const LinearProgressIndicator(),
             if (_error != null) _ErrorCard(_error!),
             if (_rows != null && rows.isEmpty && !_busy)
-              const Padding(
-                padding: EdgeInsets.all(AppSpacing.lg),
-                child: Text('কোনো DO নেই।', textAlign: TextAlign.center),
+              Padding(
+                padding: const EdgeInsets.all(AppSpacing.lg),
+                child: Text('কোনো ${_paper(widget.api)} নেই।', textAlign: TextAlign.center),
               ),
             for (final order in rows)
               Card(
@@ -213,7 +218,9 @@ class _NewDeliveryOrderScreenState extends State<NewDeliveryOrderScreen> {
       );
       if (mounted) Navigator.of(context).pop(made);
     } catch (e) {
-      if (mounted) setState(() => _error = errorMessageFor(e, fallback: 'DO রাখা গেল না। আবার চেষ্টা করুন।'));
+      if (mounted) {
+        setState(() => _error = errorMessageFor(e, fallback: '${_paper(widget.api)} রাখা গেল না। আবার চেষ্টা করুন।'));
+      }
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -222,7 +229,7 @@ class _NewDeliveryOrderScreenState extends State<NewDeliveryOrderScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('নতুন DO')),
+      appBar: AppBar(title: Text('নতুন ${_paper(widget.api)}')),
       body: ListView(
         padding: const EdgeInsets.all(AppSpacing.md),
         children: [
@@ -353,7 +360,7 @@ class _DeliveryOrderScreenState extends State<DeliveryOrderScreen> {
       final order = await widget.api.show(widget.id);
       if (mounted) setState(() => _take(order));
     } catch (e) {
-      if (mounted) setState(() => _error = errorMessageFor(e, fallback: 'DO আনা গেল না।'));
+      if (mounted) setState(() => _error = errorMessageFor(e, fallback: '${_paper(widget.api)} আনা গেল না।'));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -367,7 +374,7 @@ class _DeliveryOrderScreenState extends State<DeliveryOrderScreen> {
   Widget build(BuildContext context) {
     final order = _order;
     return Scaffold(
-      appBar: AppBar(title: Text(order?.no ?? 'ডেলিভারি অর্ডার')),
+      appBar: AppBar(title: Text(order?.no ?? _title(widget.api))),
       body: ListView(
         padding: const EdgeInsets.all(AppSpacing.md),
         children: [
@@ -384,6 +391,10 @@ class _DeliveryOrderScreenState extends State<DeliveryOrderScreen> {
             if (order.customer != null) Text('ডিলার: ${order.customer}'),
             if (order.date != null) Text('তারিখ: ${order.date}'),
             Text('মোট: ৳ ${_taka.format(order.total)}'),
+            // ⓘ বিক্রয় আদেশ বাকির সীমায় আটকে — লেখক দেখেন কেন থেমে আছে; টাকা এলে সার্ভার নিজেই আবার দেখে
+            if (order.creditShort != null)
+              Text('বাকির সীমায় আটকে — কম ৳ ${_taka.format(order.creditShort)}',
+                  key: const ValueKey('do-credit-short'), style: const TextStyle(color: AppColors.danger)),
             const SizedBox(height: AppSpacing.md),
             for (final line in order.lines)
               Card(
@@ -411,7 +422,7 @@ class _DeliveryOrderScreenState extends State<DeliveryOrderScreen> {
             if (order.editable)
               FilledButton(
                 key: const ValueKey('do-send'),
-                onPressed: _busy ? null : () => _run(() => widget.api.submit(order.id), 'DO জমা হলো — সুপারভাইজার দেখবেন।'),
+                onPressed: _busy ? null : () => _run(() => widget.api.submit(order.id), '${_paper(widget.api)} জমা হলো — সুপারভাইজার দেখবেন।'),
                 child: const Text('জমা দিন'),
               ),
             if (order.awaitingMe && order.approvalId != null) ...[
@@ -452,7 +463,7 @@ class _DeliveryOrderScreenState extends State<DeliveryOrderScreen> {
                         _run(() async {
                           await widget.api.reject(order.approvalId!, _reason.text);
                           return null;
-                        }, 'DO ফেরত পাঠানো হলো।');
+                        }, '${_paper(widget.api)} ফেরত পাঠানো হলো।');
                       },
                 child: const Text('ফেরত পাঠান'),
               ),

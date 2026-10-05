@@ -113,6 +113,8 @@ void main() {
       expect(profile.viewAllBranches, isTrue);
       expect(profile.phoneModules, {'sales', 'inventory'});
       expect(profile.canSwitch, isTrue);
+      expect(profile.ordersReplaceDo, isFalse, reason: 'an older server says nothing — the DO door stays');
+      expect(SessionProfile.fromJson({'ordersReplaceDo': true}).ordersReplaceDo, isTrue);
     });
 
     test('a server older than the switcher: nothing to pick, nothing hidden', () {

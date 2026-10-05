@@ -7,6 +7,11 @@ import 'package:flutter_test/flutter_test.dart';
 
 /// ডেলিভারি অর্ডার (0.4.8) — মালিকের বিক্রয়-ধারা §২ক-খ। নিয়ম সার্ভারের; ফোন যা পাঠায় আর যা দেখায় তা-ই দাবি।
 class _FakeApi implements DeliveryOrderApi {
+  _FakeApi({this.forOrders = false});
+
+  @override
+  final bool forOrders;
+
   bool? askedAwaiting;
   String? sentCustomer;
   List<WantedLine>? sentLines;
@@ -144,6 +149,34 @@ void main() {
     expect(api.sentQty, {7: 6}, reason: 'যা ঘরে দেখছেন তাতেই সই — আগে পরিমাণ যায়');
     expect(api.calls, ['submit', 'qty', 'approve:ap-1']);
     expect(find.text('অবস্থা: অনুমোদিত'), findsOneWidget);
+  });
+
+  // ⭐ DO+SO মেশানো, ধাপ ১০ — কোম্পানি বিক্রয় আদেশে চলে গেলে একই পর্দা "আদেশ" বলে, আর সীমায় আটকালে কত কম
+  testWidgets('on the order door the same screens say "order" and a held order says how much it is short', (tester) async {
+    final api = _FakeApi(forOrders: true);
+    await tester.pumpWidget(MaterialApp(home: DeliveryOrderListScreen(api: api)));
+    await tester.pumpAndSettle();
+    expect(find.text('বিক্রয় আদেশ'), findsOneWidget);
+    expect(find.text('নতুন আদেশ'), findsOneWidget);
+    expect(find.text('ডেলিভারি অর্ডার'), findsNothing);
+    expect(find.text('নতুন DO'), findsNothing);
+
+    api.current = const DeliveryOrder(
+      id: 'so-1', no: 'SO-0001', date: '2026-10-05', customer: 'রহিম স্টোর', status: 'credit_held', statusLabel: 'সীমায় আটকে',
+      total: 400, editable: false, awaitingMe: false, creditShort: 150,
+    );
+    await tester.pumpWidget(MaterialApp(home: DeliveryOrderScreen(id: 'so-1', api: api)));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('do-credit-short')), findsOneWidget);
+    expect(find.text('বাকির সীমায় আটকে — কম ৳ 150'), findsOneWidget);
+  });
+
+  test('the order door reads the same JSON, and the paper says which door it is', () {
+    expect(const ServerDeliveryOrderApi().forOrders, isFalse);
+    expect(const ServerDeliveryOrderApi(orders: true).forOrders, isTrue);
+    final so = DeliveryOrder.fromJson({'kind': 'so', 'id': 'x', 'no': 'SO-1', 'status': 'credit_held', 'credit_short': '150.00'});
+    expect(so.creditShort, 150);
+    expect(DeliveryOrder.fromJson({'id': 'y', 'no': 'DO-1'}).creditShort, isNull);
   });
 
   testWidgets('sending back needs a reason before anything reaches the server', (tester) async {
