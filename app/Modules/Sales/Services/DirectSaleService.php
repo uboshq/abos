@@ -1145,6 +1145,12 @@ final class DirectSaleService
             ->where('counter_source', $id['key'])
             ->where('counter_source_id', $id['id'])
             ->where('status', DocumentStatus::DRAFT)
+            /*
+             * ⓘ গেট পাসের অপেক্ষার বিল খসড়া নয় — তার চালান নিশ্চিত, মাল আটকানো, বিল পাকা হবে গেটে ([[GoodsIssue]])। ⛔ গুনলে
+             * প্রথম গাড়ি না ছাড়া পর্যন্ত একই আদেশের পরের কিস্তি খোলাই যেত না (bb-র প্রশ্ন, abos-63-এর রায়, ৪ অক্টোবর ২০২৬)।
+             */
+            ->whereDoesntHave('lines.challanLine.challan', fn ($c) => $c->where('issue_at_gate', true)
+                ->where('status', DocumentStatus::CONFIRMED))
             ->when($parked !== null, fn ($q) => $q->whereKeyNot($parked->id))
             ->first(['id', 'document_no']);
 
