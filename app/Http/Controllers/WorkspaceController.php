@@ -58,7 +58,13 @@ class WorkspaceController extends Controller
             ? \App\Core\Dashboard\HomeFilter::fromRequest($request, $filterChoices, app(\App\Core\Contracts\HomeSalesFilters::class))
             : \App\Core\Dashboard\HomeFilter::none();
 
-        return view('workspace.dashboard', [
+        // ⭐ বাছা সময় — মূল সূচকের প্রবাহগুলো এটা মানে ([[HomePeriod]], ৫ অক্টোবর ২০২৬)
+        $period = in_array($request->query('period'), \App\Core\Dashboard\Widget::PERIODS, true)
+            ? (string) $request->query('period')
+            : 'today';
+
+        // ⭐ নতুন হোম (মালিকের পরিকল্পনা ২, ৫ অক্টোবর ২০২৬) — আলাদা পাতা; সুইচ বন্ধ থাকলে পুরনো পাতা হুবহু
+        return view(config('abos.dashboards_v2') ? 'workspace.home' : 'workspace.dashboard', [
             'menu' => $menu,
 
             /*
@@ -80,7 +86,9 @@ class WorkspaceController extends Controller
             'roleLivesIn' => $menu === [] ? $this->whereTheirRolesAre($request->user()) : [],
 
             // ⭐ হোমের ছাঁকনি — কেবল এই কার্ডগুলো গোনার সময় চালু; বদলায় শুধু বিক্রি আর বকেয়া ([[HomeFilter]])
-            'groups' => $filter->during(fn () => $this->widgets->forUser($request->user())),
+            'groups' => $filter->during(fn () => \App\Core\Dashboard\HomePeriod::during($period,
+                fn () => $this->widgets->forUser($request->user()))),
+            'period' => $period,
             'filter' => $filter,
             'filterChoices' => $filterChoices,
 

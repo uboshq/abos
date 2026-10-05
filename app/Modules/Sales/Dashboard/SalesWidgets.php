@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Sales\Dashboard;
 
 use App\Core\Contracts\DashboardWidgets;
+use App\Core\Dashboard\HomePeriod;
 use App\Core\Dashboard\Widget;
 use App\Core\Engines\Report\ReportEngine;
 use App\Core\Metrics\Metric;
@@ -36,6 +37,43 @@ final class SalesWidgets implements DashboardWidgets
 {
     /** @return list<Widget> */
     public static function widgets(): array
+    {
+        return [...self::base(), ...self::kpis()];
+    }
+
+    /**
+     * ⭐ হোমের মূল সূচক (দল `kpi`) — মালিক, ৫ অক্টোবর ২০২৬: হোমের পরিকল্পনা ২, প্রতিটা সংখ্যা একবারই।
+     * বিক্রি আর আদায় — বাছা সময়ে (আজ/এ মাস/এ বছর); আজ হলে গত সপ্তাহের একই বারের তুলনা আর সাত দিনের রেখা।
+     *
+     * @return list<Widget>
+     */
+    private static function kpis(): array
+    {
+        $today = Carbon::today()->toDateString();
+        $from = match (HomePeriod::current()) {
+            'month' => Carbon::today()->startOfMonth()->toDateString(),
+            'year' => SalesMetrics::financialYear()[0],
+            default => $today,
+        };
+        [$sales, $collected] = match (HomePeriod::current()) {
+            'month' => [SalesMetrics::salesThisMonth(), SalesMetrics::collectedThisMonth()],
+            'year' => [SalesMetrics::salesThisYear(), SalesMetrics::collectedThisYear()],
+            default => [SalesMetrics::salesToday(), SalesMetrics::collectedToday()],
+        };
+        $isToday = HomePeriod::current() === 'today';
+
+        return [
+            self::money($sales, 'kpi', 10, route('sales.invoice.index', ['from' => $from, 'to' => $today]),
+                $isToday ? self::lastSevenDays('sal_invoices', 'total') : [], 'receipt',
+                $isToday ? self::againstLastWeek('sal_invoices', 'total') : null),
+            self::money($collected, 'kpi', 20, route('sales.collection.index', ['from' => $from, 'to' => $today]),
+                $isToday ? self::lastSevenDays('sal_collections', 'amount') : [], 'inbox',
+                $isToday ? self::againstLastWeek('sal_collections', 'amount') : null),
+        ];
+    }
+
+    /** @return list<Widget> */
+    private static function base(): array
     {
         $today = Carbon::today()->toDateString();
         $monthStart = Carbon::today()->startOfMonth()->toDateString();

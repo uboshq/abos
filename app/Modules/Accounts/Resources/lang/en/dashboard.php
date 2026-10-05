@@ -66,4 +66,6 @@ return [
     'papers_cancelled' => 'Cancelled',
     'papers_this_month_hint' => 'Drafts should be down to zero by day end',
     'income_expense_months' => 'Income and expense — last six months',
+    // ⓘ হোমের নতুন রূপ (পরিকল্পনা ২, ৫ অক্টোবর ২০২৬)
+    'kpi_receivable' => 'Owed by customers',
 ];

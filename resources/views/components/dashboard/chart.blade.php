@@ -23,7 +23,7 @@
 <div data-chart="{{ $kind }}" class="min-w-0">
 @if ($isSeries && $kind === 'bars')
     @php $peak = $panel->peak(); @endphp
-    <div class="flex items-end gap-2 px-4 pt-4" style="height: {{ $compact ? '10rem' : 'var(--spacing-chart)' }}">
+    <div class="flex items-end gap-2 px-4 pt-4" style="height: {{ $compact ? '7.5rem' : 'var(--spacing-chart)' }}">
         @foreach ($panel->points as $point)
             <div class="flex h-full flex-1 items-end justify-center gap-0.5">
                 @foreach ([['first', $palette[0], $panel->firstLabel], ['second', $palette[1], $panel->secondLabel]] as [$side, $fill, $name])
@@ -46,7 +46,8 @@
 @elseif ($isSeries)
     {{-- রেখা বা ভরা রেখা — দুই ধারা, প্রতিটা বিন্দুতে মান (প্রথমটা উপরে, দ্বিতীয়টা নিচে, যাতে না ঢাকে) --}}
     @php
-        $w = $compact ? 240 : 320; $h = $compact ? 150 : 190; $left = 14; $right = 14; $top = 18; $bottom = 24;
+        // ⓘ ভিতরের চওড়া কার্ডের চওড়ার কাছাকাছি — নইলে SVG চওড়ায় টেনে লম্বাও হয় (চওড়া কার্ডে ৬০০px পর্যন্ত, ৫ অক্টোবর ২০২৬ ছবিতে ধরা)
+        $w = $compact ? 380 : 760; $h = $compact ? 130 : 200; $left = 16; $right = 16; $top = 18; $bottom = 24;
         $peak = $panel->peak();
         $n = count($panel->points);
         $x = fn (int $i) => $n === 1 ? $w / 2 : $left + $i * ($w - $left - $right) / ($n - 1);
@@ -77,7 +78,7 @@
 @endif
 
 @if ($isSeries)
-    <div class="flex flex-wrap items-center gap-4 px-4 py-2 text-2xs text-(--color-ink-muted)">
+    <div @class(['flex flex-wrap items-center gap-4 px-4 text-2xs text-(--color-ink-muted)', 'py-1' => $compact, 'py-2' => ! $compact])>
         <span class="flex items-center gap-1.5"><span class="inline-block size-2.5 rounded-sm" style="background: {{ $palette[0] }}"></span>{{ $panel->firstLabel }}</span>
         <span class="flex items-center gap-1.5"><span class="inline-block size-2.5 rounded-sm" style="background: {{ $palette[1] }}"></span>{{ $panel->secondLabel }}</span>
     </div>
@@ -144,7 +145,7 @@
         </div>
     @elseif ($kind === 'columns')
         {{-- খাড়া স্তম্ভ — এক ধারা, এক রং; মাথায় মান, নিচে নাম --}}
-        <div class="flex items-end gap-2 px-4 pt-4" style="height: {{ $compact ? '10rem' : 'var(--spacing-chart)' }}">
+        <div class="flex items-end gap-2 px-4 pt-4" style="height: {{ $compact ? '7.5rem' : 'var(--spacing-chart)' }}">
             @foreach ($parts as $part)
                 <div class="flex h-full min-w-0 flex-1 flex-col items-center justify-end">
                     <span data-bar-value class="mb-0.5 whitespace-nowrap leading-none tabular-nums text-(--color-ink-muted)" style="font-size: 0.65rem">{{ $zero($part['value']) ? '' : $part['value'] }}</span>

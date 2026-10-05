@@ -30,6 +30,34 @@ final class AccountsWidgets implements DashboardWidgets
     /** @return list<Widget> */
     public static function widgets(): array
     {
+        return [...self::base(), ...self::kpis()];
+    }
+
+    /**
+     * ⭐ হোমের মূল সূচক (দল `kpi`) — মালিক, ৫ অক্টোবর ২০২৬: হোমের পরিকল্পনা ২, প্রতিটা সংখ্যা একবারই।
+     * বাজারে বকেয়া — হোমের ফিল্টারে এলাকা বাছা থাকলে সেই এলাকার ([[receivable()]])।
+     *
+     * @return list<Widget>
+     */
+    private static function kpis(): array
+    {
+        return [
+            new Widget(
+                group: 'kpi',
+                label: __('accounts::dashboard.kpi_receivable'),
+                value: Money::format(self::receivable()),
+                href: route('accounts.coa.index'),
+                permission: 'accounts.view',
+                tone: 'money',
+                sort: 40,
+                icon: 'wallet',
+            ),
+        ];
+    }
+
+    /** @return list<Widget> */
+    private static function base(): array
+    {
         return [
             /*
              * হাতে ও ব্যাংকে মোট — একটা সংখ্যা, নিচে ভাগ।

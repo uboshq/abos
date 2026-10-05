@@ -32,7 +32,8 @@ final class Widget
      * ভুলে যায়।
      */
     // ⓘ 'health' — মাস্টার তালিকার স্বাস্থ্য; হোমে বসে না, মাস্টার ডেটার পর্দায় ([[MasterHealth]], ৪ অক্টোবর ২০২৬)
-    public const GROUPS = ['today', 'month', 'year', 'todo', 'health'];
+    // ⓘ 'kpi' — হোমের মূল সূচক, প্রতিটা একবারই ([[HomePeriod]], ৫ অক্টোবর ২০২৬)
+    public const GROUPS = ['today', 'month', 'year', 'todo', 'health', 'kpi'];
 
     /**
      * যে তিনটা দলের মধ্যে পর্দার উপরের সারিটা বদলায়।

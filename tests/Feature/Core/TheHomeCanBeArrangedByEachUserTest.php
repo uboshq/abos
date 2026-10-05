@@ -33,38 +33,40 @@ final class TheHomeCanBeArrangedByEachUserTest extends TestCase
 
         $page = $this->actingAs($owner)->get(route('dashboard'))->assertOk()->getContent();
         $this->assertStringContainsString('data-layout-menu', $page, 'লেআউট সাজানোর ঘর নেই।');
-        $this->assertStringContainsString('data-home-unit="period" style="order: 1"', $page);
-        $this->assertStringContainsString('data-home-unit="work" style="order: 4"', $page);
+        // ⓘ নতুন হোম (পরিকল্পনা ২, ৫ অক্টোবর ২০২৬): চার্ট আগে, তারপর মূল সূচক, তারপর কাজ
+        $this->assertStringContainsString('data-home-unit="pictures" style="order: 1"', $page);
+        $this->assertStringContainsString('data-home-unit="work" style="order: 3"', $page);
         $this->assertStringContainsString('data-business-pictures', $page, 'ছবি আগে থেকেই নেই — লুকানোর দাবি কিছু দেখবে না।');
 
         // ⭐ ছবি লুকানো, "কাজ" সবার উপরে
         $this->actingAs($owner)->post(route('home.layout'), [
-            'position' => ['period' => 2, 'overall' => 3, 'pictures' => 4, 'work' => 1],
-            'show' => ['period' => 1, 'overall' => 1, 'exceptions' => 1, 'happenings' => 1],
+            'position' => ['kpis' => 2, 'pictures' => 3, 'work' => 1],
+            'show' => ['kpis' => 1, 'exceptions' => 1, 'happenings' => 1],
         ])->assertRedirect();
 
         $saved = HomeLayout::for($owner->fresh());
-        $this->assertSame(['work', 'period', 'overall', 'pictures'], $saved->order);
+        $this->assertSame(['work', 'kpis', 'pictures'], $saved->order);
         $this->assertSame(['pictures'], $saved->hidden);
 
         $page = $this->actingAs($owner->fresh())->get(route('dashboard'))->assertOk()->getContent();
         $this->assertStringContainsString('data-home-unit="work" style="order: 1"', $page, '⛔ ক্রম পাতায় বসেনি।');
-        $this->assertStringContainsString('data-home-unit="pictures" style="order: 4"', $page);
+        $this->assertStringContainsString('data-home-unit="pictures" style="order: 3"', $page);
         $this->assertStringNotContainsString('data-business-pictures', $page, '⛔ লুকানো ছবি তবু আঁকা হয়েছে।');
-        $this->assertStringContainsString('data-period-cards', $page, '⛔ যা লুকানো হয়নি সেটাও চলে গেছে।');
+        $this->assertStringContainsString('data-kpis', $page, '⛔ যা লুকানো হয়নি সেটাও চলে গেছে।');
 
         // ⓘ অন্য ব্যবহারকারীর পাতা আগের মতো
         $this->assertNull($other->fresh()->home_layout, '⛔ একজনের সাজ আরেকজনের ঘরে গেছে।');
 
         // ⓘ ভাঙা ইনপুট — অচেনা নাম ফেলে দেওয়া, সব ভাগ থাকে
-        $this->assertSame(HomeLayout::UNITS, HomeLayout::from(['nope', 'period', 'period'], ['x'])->order);
+        // ⓘ পুরনো নাম (period, overall) আর অচেনা নাম ফেলে দেওয়া — পুরনো সাজ নতুন পাতা ভাঙে না
+        $this->assertSame(HomeLayout::UNITS, HomeLayout::from(['nope', 'period', 'overall', 'pictures', 'pictures'], ['x', 'overall'])->order);
         $this->assertSame([], HomeLayout::from([], ['x', 'y'])->hidden);
-        $this->actingAs($owner->fresh())->post(route('home.layout'), ['position' => ['period' => 'abc']])->assertSessionHasErrors('position.period');
+        $this->actingAs($owner->fresh())->post(route('home.layout'), ['position' => ['kpis' => 'abc']])->assertSessionHasErrors('position.kpis');
 
         // ⭐ "আগের মতো"
         $this->actingAs($owner->fresh())->post(route('home.layout'), ['reset' => '1'])->assertRedirect(route('dashboard'));
         $this->assertNull($owner->fresh()->home_layout);
         $page = $this->actingAs($owner->fresh())->get(route('dashboard'))->assertOk()->getContent();
-        $this->assertStringContainsString('data-home-unit="pictures" style="order: 3"', $page);
+        $this->assertStringContainsString('data-home-unit="pictures" style="order: 1"', $page);
     }
 }

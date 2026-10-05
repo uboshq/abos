@@ -15,4 +15,6 @@ return [
     'expiry_within_30' => '8–30 days',
     'expiry_within_90' => '31–90 days',
     'expiry_later' => 'After 90 days',
+    // ⓘ হোমের নতুন রূপ (পরিকল্পনা ২, ৫ অক্টোবর ২০২৬)
+    'kpi_stock_value_hint' => 'At cost · free goods at zero',
 ];

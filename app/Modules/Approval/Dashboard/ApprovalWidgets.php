@@ -24,6 +24,37 @@ final class ApprovalWidgets implements DashboardWidgets
     /** @return list<Widget> */
     public static function widgets(): array
     {
+        return [...self::base(), ...self::kpis()];
+    }
+
+    /**
+     * ⭐ হোমের মূল সূচক (দল `kpi`) — মালিক, ৫ অক্টোবর ২০২৬: হোমের পরিকল্পনা ২, প্রতিটা সংখ্যা একবারই।
+     * আমার সইয়ের অপেক্ষায় কয়টা — ব্যতিক্রম কেন্দ্রের "আমার অপেক্ষায়" হোমে তখন আর আসে না।
+     *
+     * @return list<Widget>
+     */
+    private static function kpis(): array
+    {
+        $user = auth()->user();
+        $waiting = $user !== null ? app(ApprovalEngine::class)->pendingQueryFor($user)->count() : 0;
+
+        return [
+            new Widget(
+                group: 'kpi',
+                label: __('approval::dashboard.kpi_waiting'),
+                value: (string) $waiting,
+                href: route('approval.inbox.index'),
+                permission: 'approval.decide',
+                tone: $waiting > 0 ? 'warn' : 'neutral',
+                sort: 80,
+                icon: 'inbox',
+            ),
+        ];
+    }
+
+    /** @return list<Widget> */
+    private static function base(): array
+    {
         $user = auth()->user();
 
         // গোনাটা ডাটাবেজে — উইজেটে কেবল সংখ্যাটাই বসে, একটাও সারি নয়।

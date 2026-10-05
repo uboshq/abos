@@ -17,10 +17,11 @@ use App\Models\User;
 final class HomeLayout
 {
     /** সরানো যায় এমন ভাগ, আগের ক্রমে */
-    public const UNITS = ['period', 'overall', 'pictures', 'work'];
+    // ⭐ নতুন হোম (পরিকল্পনা ২, ৫ অক্টোবর ২০২৬): চার্ট আগে, তারপর মূল সূচক, তারপর কাজ — পুরনো নাম ফেলে দেওয়া হয় ([[from()]])
+    public const UNITS = ['pictures', 'kpis', 'work'];
 
     /** লুকানো যায় এমন অংশ */
-    public const PARTS = ['period', 'overall', 'pictures', 'exceptions', 'happenings'];
+    public const PARTS = ['pictures', 'kpis', 'exceptions', 'happenings'];
 
     /**
      * @param  list<string>  $order

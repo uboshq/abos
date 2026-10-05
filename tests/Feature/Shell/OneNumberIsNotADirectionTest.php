@@ -153,9 +153,15 @@ class OneNumberIsNotADirectionTest extends TestCase
      */
     public function test_a_flat_week_draws_nothing(): void
     {
-        $this->get(route('dashboard'))
-            ->assertOk()
-            ->assertDontSee('<polyline', false);
+        // ⓘ কার্ডের সাত দিনের রেখা — নিজের viewBox-এ চেনা (পুরনো কার্ড ১০০×৩২, নতুন মূল সূচক ১০০×১৬); ব্যবসার চিত্রের
+        // রেখা-চার্ট (৫ অক্টোবর ২০২৬ থেকে) আলাদা জিনিস, তার রেখা থাকবেই
+        foreach ([false, true] as $v2) {
+            config(['abos.dashboards_v2' => $v2]);
+            $this->get(route('dashboard'))
+                ->assertOk()
+                ->assertDontSee('viewBox="0 0 100 32"', false)
+                ->assertDontSee('viewBox="0 0 100 16"', false);
+        }
     }
 
     /** সংখ্যাগুলো সত্যিই সাত দিনের — কম বা বেশি নয়। */

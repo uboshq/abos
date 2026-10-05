@@ -34,16 +34,20 @@ final class EveryChartBarShowsItsValueTest extends TestCase
         $this->actingAs(User::query()->where('email', 'owner@abos.test')->firstOrFail());
 
         $home = $this->xpath($this->get(route('dashboard'))->assertOk()->getContent());
-        $this->assertSame(4, $home->query('//div[@data-home-units]/div[@data-home-unit]')->length, '⛔ হোমের সাজানো ভাগ চারটা পাশাপাশি নয় — কোনো বন্ধনী ভুল জায়গায়।');
+        $this->assertSame(3, $home->query('//div[@data-home-units]/div[@data-home-unit]')->length, '⛔ হোমের সাজানো ভাগ তিনটা পাশাপাশি নয় — কোনো বন্ধনী ভুল জায়গায়।');
         $this->assertSame(1, $home->query('//div[@data-home-unit="pictures"]//section[@data-business-pictures]')->length, '⛔ ছবির অংশ নিজের ভাগের বাইরে।');
-        $this->assertStringContainsString('auto-fit', (string) $home->query('//div[@data-pictures-row]')->item(0)?->getAttribute('style'), '⛔ ছবি এক সারির ছকে নয়।');
+        // ⭐ ৪টা করে দুই সারি (মালিক, ৫ অক্টোবর ২০২৬) — ছকটা পাতার নিজের শৈলীতে
+        $this->assertStringContainsString('hm-pictures', (string) $home->query('//div[@data-pictures-row]')->item(0)?->getAttribute('class'));
+        $this->assertStringContainsString('repeat(4, minmax(0, 1fr))', $html = $this->get(route('dashboard'))->getContent(), '⛔ চার্ট ৪টা করে সারিতে নয়।');
 
         $this->assertBarsHaveValues($home, 'হোম');
 
         // ⭐ এক রকম নয় — হোমে অন্তত চার ধরনের চার্ট (মালিক: "vino rokomer int standred graph")
         $kinds = array_unique(array_map(fn ($n) => $n->getAttribute('data-chart'), iterator_to_array($home->query('//*[@data-chart]'))));
         $this->assertGreaterThanOrEqual(4, count($kinds), '⛔ হোমের চার্ট প্রায় সব এক রকম: '.implode(', ', $kinds));
-        $this->assertContains('funnel', $kinds, '⛔ বিক্রয়ের ফানেল ফানেল হয়ে আঁকা হয়নি।');
+        // ⓘ ফানেল বিক্রয়ের নিজের পাতায় (হোমে প্রতিটা মডিউলের প্রথম চার্ট)
+        $salesKinds = array_map(fn ($n) => $n->getAttribute('data-chart'), iterator_to_array($this->xpath($this->get(route('module.dashboard', ['module' => 'sales']))->getContent())->query('//*[@data-chart]')));
+        $this->assertContains('funnel', $salesKinds, '⛔ বিক্রয়ের ফানেল ফানেল হয়ে আঁকা হয়নি।');
         $this->assertContains('donut', $kinds);
 
         foreach (['sales', 'inventory', 'accounts'] as $module) {

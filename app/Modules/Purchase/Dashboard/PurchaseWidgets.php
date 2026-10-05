@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Purchase\Dashboard;
 
 use App\Core\Contracts\DashboardWidgets;
+use App\Core\Dashboard\HomePeriod;
 use App\Core\Dashboard\Widget;
 use App\Core\Engines\Report\ReportEngine;
 use App\Core\Services\DataScope;
@@ -27,6 +28,65 @@ final class PurchaseWidgets implements DashboardWidgets
 {
     /** @return list<Widget> */
     public static function widgets(): array
+    {
+        return [...self::base(), ...self::kpis()];
+    }
+
+    /**
+     * ⭐ হোমের মূল সূচক (দল `kpi`) — মালিক, ৫ অক্টোবর ২০২৬: হোমের পরিকল্পনা ২, প্রতিটা সংখ্যা একবারই।
+     * এ মাসের মোট লাভ (বিলের বিক্রয় − বিক্রীত পণ্যের ব্যয়, ক্রয়মূল্যের উপর %) আর বাছা সময়ের ক্রয়।
+     *
+     * @return list<Widget>
+     */
+    private static function kpis(): array
+    {
+        $today = Carbon::today()->toDateString();
+        [$from, $label] = match (HomePeriod::current()) {
+            'month' => [Carbon::today()->startOfMonth()->toDateString(), 'purchase::dashboard.purchases_this_month'],
+            'year' => [auth()->user()?->currentCompany?->currentFinancialYear()?->starts_on?->toDateString()
+                ?? Carbon::today()->startOfMonth()->toDateString(), 'purchase::dashboard.purchases_this_year'],
+            default => [$today, 'purchase::dashboard.purchases_today'],
+        };
+
+        // ⓘ লাভ এ মাসের, সময় যা-ই বাছা হোক; বিক্রি না থাকলে শূন্য দেখায় (ঘর হারায় না)
+        $margin = self::marginThisMonth('kpi') ?? new Widget(
+            group: 'kpi',
+            label: __('purchase::widget.margin_this_month'),
+            value: Money::format('0'),
+            href: route('purchase.report.show', ['slug' => 'settlement']),
+            permission: 'purchase.settlement.view',
+            tone: 'money',
+            sort: 30,
+            icon: 'scale',
+        );
+
+        return [
+            new Widget(
+                group: 'kpi',
+                label: $margin->label,
+                value: $margin->value,
+                href: $margin->href,
+                permission: $margin->permission,
+                tone: 'money',
+                hint: $margin->hint,
+                sort: 30,
+                icon: 'scale',
+            ),
+            new Widget(
+                group: 'kpi',
+                label: __($label),
+                value: Money::format(self::billTotal($from, $today), 2),
+                href: route('purchase.bill.index', ['from' => $from, 'to' => $today]),
+                permission: 'purchase.bill.view',
+                tone: 'money',
+                sort: 70,
+                icon: 'purchase',
+            ),
+        ];
+    }
+
+    /** @return list<Widget> */
+    private static function base(): array
     {
         $today = Carbon::today()->toDateString();
         $monthStart = Carbon::today()->startOfMonth()->toDateString();
@@ -104,7 +164,7 @@ final class PurchaseWidgets implements DashboardWidgets
      * আয় ও ব্যয়ের খাত ধরে গুনতে হত, আর তাতে বিক্রয় ছাড়া অন্য আয়ও
      * ঢুকে পড়ত — যেমন বাতিল হওয়া বিলের উল্টো এন্ট্রি।
      */
-    private static function marginThisMonth(): ?Widget
+    private static function marginThisMonth(string $group = 'month'): ?Widget
     {
         // ⭐ দেখার শাখা (২৯ সেপ্টেম্বর ২০২৬)
         $row = self::inView(DB::table('sal_invoices'), 'sal_invoices.branch_id')
@@ -139,7 +199,7 @@ final class PurchaseWidgets implements DashboardWidgets
             : null;
 
         return new Widget(
-            group: 'month',
+            group: $group,
             label: __('purchase::widget.margin_this_month'),
             value: Money::format($margin),
             href: route('purchase.report.show', ['slug' => 'settlement']),

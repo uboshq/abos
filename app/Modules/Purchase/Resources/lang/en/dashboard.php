@@ -30,4 +30,6 @@ return [
     'bought_against_paid_year' => 'Bought and paid in :year — January to December',
     'bought' => 'Bought',
     'paid' => 'Paid',
+    // ⓘ হোমের নতুন রূপ (পরিকল্পনা ২, ৫ অক্টোবর ২০২৬)
+    'purchases_this_year' => 'Purchases this year',
 ];

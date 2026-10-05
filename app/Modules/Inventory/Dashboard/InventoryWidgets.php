@@ -7,6 +7,7 @@ namespace App\Modules\Inventory\Dashboard;
 use App\Core\Contracts\DashboardWidgets;
 use App\Core\Dashboard\Widget;
 use App\Core\Engines\Report\ReportEngine;
+use App\Core\Support\Money;
 use App\Modules\Inventory\Models\Product;
 
 /**
@@ -21,6 +22,41 @@ final class InventoryWidgets implements DashboardWidgets
 {
     /** @return list<Widget> */
     public static function widgets(): array
+    {
+        return [...self::base(), ...self::kpis()];
+    }
+
+    /**
+     * ⭐ হোমের মূল সূচক (দল `kpi`) — মালিক, ৫ অক্টোবর ২০২৬: হোমের পরিকল্পনা ২, প্রতিটা সংখ্যা একবারই।
+     * মজুদের মূল্য — কেনা দরে, ফ্রি শূন্য ([[StockFacts::value()]]); দাম দেখার চাবি ছাড়া ঘরটাই নেই।
+     *
+     * @return list<Widget>
+     */
+    private static function kpis(): array
+    {
+        $value = app(\App\Modules\Inventory\Services\StockFacts::class)->value();
+
+        if ($value === null) {
+            return [];
+        }
+
+        return [
+            new Widget(
+                group: 'kpi',
+                label: __('inventory::overview.stock_value'),
+                value: Money::format($value),
+                href: route('inventory.stock.index'),
+                permission: 'inventory.cost.view',
+                tone: 'money',
+                hint: __('inventory::dashboard.kpi_stock_value_hint'),
+                sort: 60,
+                icon: 'inventory',
+            ),
+        ];
+    }
+
+    /** @return list<Widget> */
+    private static function base(): array
     {
         return [
             /*

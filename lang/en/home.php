@@ -39,4 +39,9 @@ return [
     'filter_clear' => 'Clear',
     'filter_on' => 'Filter on',
     'filter_scope' => 'Only sales and dues change; a due belongs to the customer, so only the area applies to it.',
+    // ⓘ হোমের নতুন রূপ (পরিকল্পনা ২, ৫ অক্টোবর ২০২৬)
+    'kpis_title' => 'Key figures',
+    'pictures_title' => 'The business at a glance',
+    'layout_part_kpis' => 'Key figures',
+    'nothing_today' => 'Nothing yet',
 ];

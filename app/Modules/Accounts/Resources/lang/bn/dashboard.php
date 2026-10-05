@@ -66,4 +66,6 @@ return [
     'papers_cancelled' => 'বাতিল',
     'papers_this_month_hint' => 'খসড়া দিনশেষে শূন্যে নামার কথা',
     'income_expense_months' => 'আয় ও ব্যয় — গত ছয় মাস',
+    // ⓘ হোমের নতুন রূপ (পরিকল্পনা ২, ৫ অক্টোবর ২০২৬)
+    'kpi_receivable' => 'বাজারে বকেয়া',
 ];

@@ -311,7 +311,12 @@ class WhatTheCompanyOwesMeAndIOweThemTest extends TestCase
     /** কিছু না ঘটলে উইজেট দুইটাই চুপ থাকে — শূন্যের কার্ড পর্দার জায়গা নেয়। */
     public function test_the_widgets_stay_quiet_when_there_is_nothing(): void
     {
-        $this->assertSame([], SupplierWidgets::widgets());
+        // ⓘ হোমের মূল সূচকের ঘরটা (দল `kpi`) শূন্যেও থাকে — নতুন হোমে ঘর হারায় না (মালিকের পরিকল্পনা ২, ৫ অক্টোবর ২০২৬);
+        // ⛔ সতর্কতা কিন্তু চুপ — দেনা না থাকলে "করণীয়"-তে কিছু আসে না
+        $alerts = array_values(array_filter(SupplierWidgets::widgets(), fn ($w) => $w->group !== 'kpi'));
+        $this->assertSame([], $alerts);
+        $this->assertSame([\App\Core\Support\Money::format('0')], array_map(fn ($w) => $w->value, array_values(array_filter(SupplierWidgets::widgets(), fn ($w) => $w->group === 'kpi'))),
+            '⛔ মূল সূচকের ঘর শূন্য দেখায় না।');
     }
 
     // ── পুঁজির উপর ফেরত ─────────────────────────────────────────────

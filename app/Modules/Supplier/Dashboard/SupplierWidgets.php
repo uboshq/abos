@@ -35,6 +35,27 @@ final class SupplierWidgets implements DashboardWidgets
     /** @return list<Widget> */
     public static function widgets(): array
     {
+        return [...self::base(), ...self::kpis()];
+    }
+
+    /**
+     * ⭐ হোমের মূল সূচক (দল `kpi`) — মালিক, ৫ অক্টোবর ২০২৬: হোমের পরিকল্পনা ২, প্রতিটা সংখ্যা একবারই।
+     * কোম্পানিকে দিতে হবে — শূন্য হলেও ঘরটা থাকে; হোমে তখন ব্যতিক্রম কেন্দ্রে আর আসে না (একই সংখ্যা দুইবার নয়)।
+     *
+     * @return list<Widget>
+     */
+    private static function kpis(): array
+    {
+        $owed = self::owedToPrincipals('kpi', true);
+
+        // ⓘ মূল সূচকের পঞ্চম ঘর — ক্রম: বিক্রি, আদায়, লাভ, বকেয়া, দেনা, মজুদ, ক্রয়, সই
+        return [new Widget(group: 'kpi', label: $owed->label, value: $owed->value, href: $owed->href,
+            permission: $owed->permission, tone: 'money', hint: $owed->hint, sort: 50, icon: $owed->icon)];
+    }
+
+    /** @return list<Widget> */
+    private static function base(): array
+    {
         return array_values(array_filter([
             self::owedToPrincipals(),
         ]));
@@ -46,7 +67,7 @@ final class SupplierWidgets implements DashboardWidgets
      * খতিয়ান থেকে গোনা, সরবরাহকারীর টেবিলের কোনো কলাম থেকে নয় — তাই
      * সংখ্যাটা প্রদেয়ের তালিকার সাথে সংজ্ঞা অনুযায়ীই মেলে।
      */
-    private static function owedToPrincipals(): ?Widget
+    private static function owedToPrincipals(string $group = 'todo', bool $evenIfNothing = false): ?Widget
     {
         // ⭐ দেখার শাখার সারি (২৯ সেপ্টেম্বর ২০২৬)
         $owed = (string) (self::inView(DB::table('ledger_entries'), 'ledger_entries.branch_id')
@@ -57,12 +78,12 @@ final class SupplierWidgets implements DashboardWidgets
             ->selectRaw('COALESCE(SUM(credit) - SUM(debit), 0) as owed')
             ->value('owed') ?? '0');
 
-        if (bccomp($owed, '0', 4) <= 0) {
+        if (bccomp($owed, '0', 4) <= 0 && ! $evenIfNothing) {
             return null;
         }
 
         return new Widget(
-            group: 'todo',
+            group: $group,
             label: __('supplier::widget.owed_to_principals'),
             value: Money::format($owed),
             href: route('supplier.report.show', ['slug' => 'payable-list']),
