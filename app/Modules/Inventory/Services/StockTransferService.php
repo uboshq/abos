@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Inventory\Services;
 
 use App\Core\Engines\Approval\DocumentApproval;
+use App\Core\Engines\Approval\DocumentFingerprint;
 use App\Core\Engines\NumberSeries\NumberSeriesEngine;
 use App\Core\Support\CompanyContext;
 use App\Core\Support\DocumentStatus;
@@ -105,6 +106,16 @@ final class StockTransferService
         $this->assertEditable($transfer);
 
         return DB::transaction(function () use ($transfer, $data, $lines) {
+            /*
+             * ⛔ তালা দিয়ে অবস্থা আবার — Inventory অডিট ম৩, ৫ অক্টোবর ২০২৬। উপরের পাহারা হাতের কপি দেখে; পুরনো কপি দিয়ে
+             * রওনা-হওয়া স্থানান্তরের সারি বদলানো যেত — ট্রাকে ১০, কাগজে ১০০।
+             */
+            if ($this->lockedStatus($transfer) !== DocumentStatus::DRAFT) {
+                throw ValidationException::withMessages([
+                    'status' => __('inventory::validation.only_draft_edits', ['no' => $transfer->document_no]),
+                ]);
+            }
+
             $trxDate = Carbon::parse($data['trx_date'] ?? $transfer->trx_date);
 
             $from = $this->warehouse($data['from_warehouse_id'] ?? $transfer->from_warehouse_id);
@@ -152,6 +163,9 @@ final class StockTransferService
          * (`ApprovalFlow::appliesTo`) — এখানে ওটাই ঠিক, কারণ প্রশ্নটা
          * "কত টাকার" নয়, "মালটা সরানো উচিত কি না"।
          */
+        // ⓘ সই মাপার মুহূর্তের কাগজ — তালার পরে আবার মেলানো হয় (অডিট ম৩, নিচে)
+        $signedShape = app(DocumentFingerprint::class)->of($transfer);
+
         $this->approvals->assertClear(
             document: $transfer,
             module: 'inventory',
@@ -160,7 +174,7 @@ final class StockTransferService
             reason: $transfer->narration,
         );
 
-        return DB::transaction(function () use ($transfer) {
+        return DB::transaction(function () use ($transfer, $signedShape) {
             /*
              * ⛔ সারি আটকে অবস্থা আবার পড়া — ২৯ সেপ্টেম্বর ২০২৬।
              * দুইবার চাপ দিলে দুইটা অনুরোধই বাইরের প্রশ্নে "খসড়া" দেখত,
@@ -169,6 +183,18 @@ final class StockTransferService
             if ($this->lockedStatus($transfer) !== DocumentStatus::DRAFT) {
                 throw ValidationException::withMessages([
                     'status' => __('inventory::validation.only_draft_dispatches', ['no' => $transfer->document_no]),
+                ]);
+            }
+
+            /*
+             * ⭐ তালার পরে কাগজটা সই মাপার মুহূর্তের মতোই আছে তো (Inventory অডিট ম৩, ৫ অক্টোবর ২০২৬)।
+             * ⛔ আগে সারি তোলা হত তালার আগে: সই মাপার পরে কেউ সারি বদলালে ট্রাকে যেত পুরনো পরিমাণ (কাগজে নতুনটা), আর সইটা
+             * যে কাগজে ছিল তার বাইরের কাগজ পার হত। ⓘ ছাপ ডাটাবেজ থেকে নতুন করে পড়ে ([[DocumentFingerprint::of()]]); মিললে হাতের
+             * সারি আর ডাটাবেজের সারি এক। সম্পাদনাও এখন এই সারিতে তালা নেয় ([[update()]]), তাই তালার পরে আর বদলায় না।
+             */
+            if (app(DocumentFingerprint::class)->of($transfer) !== $signedShape) {
+                throw ValidationException::withMessages([
+                    'status' => __('inventory::validation.transfer_changed_while_sending', ['no' => $transfer->document_no]),
                 ]);
             }
 
@@ -194,6 +220,13 @@ final class StockTransferService
                     date: $transfer->trx_date,
                     documentNo: $transfer->document_no,
                     narration: __('inventory::message.transfer_on_the_way', ['no' => $transfer->document_no]),
+                    /*
+                     * ⭐ "পাওয়া যায়" থেকে, তালাসহ — Inventory অডিট ম২, ৫ অক্টোবর ২০২৬।
+                     * ⛔ উপরের পাহারা প্রতিটা সারি আলাদা মাপে, তালা ছাড়া: তাকে ৮, একই পণ্য দুই সারিতে ৬ + ৬ — দুটোই পাস, ট্রাকে
+                     * ১২; দুটো স্থানান্তর একসাথে বেরোলে দুজনেই পুরো ৮ দেখত। ⓘ এখানে মাপা হয় এই লেনদেনের আগের সারির আটকানোসহ,
+                     * আর অন্য লেনদেন তালায় অপেক্ষা করে ([[StockService::assertEnoughAvailable()]])।
+                     */
+                    fromAvailable: true,
                 );
             }
 

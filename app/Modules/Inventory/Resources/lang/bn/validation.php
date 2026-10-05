@@ -72,6 +72,7 @@ return [
     'same_warehouse' => 'একই গুদামে স্থানান্তর হয় না — উৎস আর গন্তব্য আলাদা হতে হবে।',
     'not_enough_to_transfer' => ':warehouse-এ :product আছে :available — তার বেশি পাঠানো যাবে না।',
     'only_draft_dispatches' => ':no খসড়া নয়, তাই আবার রওনা দেওয়া যাবে না।',
+    'transfer_changed_while_sending' => ':no রওনার মুহূর্তে বদলে গেছে — কেউ সারি বদলেছেন। কাগজটা আবার দেখে নিয়ে রওনা দিন।',
     'only_dispatched_receives' => ':no এখনো রওনাই দেয়নি — বুঝে নেওয়ার কিছু নেই।',
     'received_cannot_cancel' => ':no পৌঁছে গেছে — বাতিল নয়, ফেরাতে হলে উল্টো দিকে আরেকটা স্থানান্তর করুন।',
     'only_draft_edits' => ':no খসড়া নয় — রওনা দেওয়ার পর আর বদলানো যায় না।',
