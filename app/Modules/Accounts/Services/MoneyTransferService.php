@@ -123,11 +123,26 @@ final class MoneyTransferService
                         'debit' => '0', 'credit' => $transfer->amount],
                 ],
                 documentNo: $transfer->document_no,
-                branchId: $transfer->branch_id,
+                // ⛔ দাতার শাখায় — টাকা ঐ শাখার ড্রয়ার থেকে বেরোল (অডিট ম৬, [[legBranch()]])
+                branchId: $this->legBranch($transfer->fromTill?->branch_id, $transfer),
             );
 
             return $transfer;
         });
+    }
+
+    /**
+     * ⭐ প্রতিটা পা নিজের শাখায় — Accounts-Finance অডিট ম৬, ৪ অক্টোবর ২০২৬।
+     *
+     * ⛔ আগে দুই পা-ই কাগজের শাখায় (যিনি লিখলেন তাঁর) বসত: ধানমন্ডির বাক্স থেকে মিরপুরের বাক্সে টাকা গেলে দুই শাখার খাতাই
+     * ভুল — ধানমন্ডির নগদ কমত না, মিরপুরের বাড়ত না, আর যে শাখার নামে বসল তার জের দুই দিকেই নড়ত। ⓘ এখন পাঠানো পা দাতার
+     * শাখায়, গ্রহণ গ্রহীতার; "পথের টাকা" প্রতিটা শাখায় এক পাশ পায় আর কোম্পানি-স্তরে শূন্যে মেলে। শাখা না জানা গেলে কাগজেরটাই।
+     */
+    private function legBranch(mixed $branchId, MoneyTransfer $transfer): ?int
+    {
+        $branchId = $branchId !== null ? (int) $branchId : null;
+
+        return $branchId ?: ($transfer->branch_id !== null ? (int) $transfer->branch_id : null);
     }
 
     /**
@@ -242,7 +257,8 @@ final class MoneyTransferService
                         'debit' => '0', 'credit' => $transfer->amount],
                 ],
                 documentNo: $transfer->document_no,
-                branchId: $transfer->branch_id,
+                // ⛔ গ্রহীতার বাক্সের শাখায় (অডিট ম৬); ব্যাংকের খাত কোম্পানির, তাই ব্যাংকে জমা দাতার শাখাতেই — পথের টাকা সেখানেই মেলে
+                branchId: $this->legBranch($transfer->toTill?->branch_id ?? $transfer->fromTill?->branch_id, $transfer),
             );
 
             $transfer->forceFill([
