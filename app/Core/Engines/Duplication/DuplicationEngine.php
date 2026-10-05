@@ -41,10 +41,13 @@ final class DuplicationEngine
      * `$data` রেফারেন্সে: `allow_duplicate` একটা সিদ্ধান্তের ঘর, রেকর্ডের
      * কলাম নয় — শেষে মুছে ফেলা হয়, নাহলে mass-assignment-এ ছুঁড়ে ফেলত।
      *
+     * ⓘ `$narrow` — নাম কোন পরিসরে মেলানো হবে, ডাকা কোড ঠিক করে (৫ অক্টোবর ২০২৬: আলাদা ব্যবসার শাখায় একই
+     * নামের পণ্য চলে, [[ProductService::sameBranches()]])। না দিলে গোটা কোম্পানি, আগের মতো।
+     *
      * @param  class-string  $model
      * @param  array<string, mixed>  $data
      */
-    public function check(string $model, array &$data, ?int $exceptId = null): void
+    public function check(string $model, array &$data, ?int $exceptId = null, ?\Closure $narrow = null): void
     {
         $rule = $this->registry->for($model);
 
@@ -71,7 +74,7 @@ final class DuplicationEngine
             return;
         }
 
-        $matches = $this->nameMatches($model, $rule['name'], $data, $exceptId);
+        $matches = $this->nameMatches($model, $rule['name'], $data, $exceptId, $narrow);
 
         if ($matches->isNotEmpty()) {
             throw ValidationException::withMessages([
@@ -95,7 +98,7 @@ final class DuplicationEngine
      * @param  array<string, mixed>  $data
      * @return Collection<int, Model>
      */
-    private function nameMatches(string $model, array $columns, array $data, ?int $exceptId): Collection
+    private function nameMatches(string $model, array $columns, array $data, ?int $exceptId, ?\Closure $narrow = null): Collection
     {
         $found = collect();
 
@@ -107,7 +110,7 @@ final class DuplicationEngine
             }
 
             $found = $found->merge(
-                $this->guard->nameMatches($model, $columns, (string) $value, $exceptId),
+                $this->guard->nameMatches($model, $columns, (string) $value, $exceptId, $narrow),
             );
         }
 

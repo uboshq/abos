@@ -86,6 +86,42 @@ final class TheImportSpreadOneGroupsGoodsToEveryBranchTest extends TestCase
         $this->assertContains('IMP-ALL-1', Product::query()->soldInViewedBranch()->pluck('code')->all());
     }
 
+    /**
+     * ⭐ একই নাম, আলাদা শাখা — মালিক, ৫ অক্টোবর ২০২৬: "এই ব্যবসায় আলাদা আলাদা শাখা, আলাদা পণ্য" (খ)।
+     * ADI-তে Gold-এর ৬১টা আর Lion-এর ৪২টা পণ্য আটকেছিল, কারণ নামগুলো Super-এর পণ্যের সাথে হুবহু এক।
+     *
+     * দাবি — একই মানুষ, একই নাম:
+     *  · শাখা ক-তে "Lexus Box", তারপর শাখা খ-তে "Lexus Box" → দুটোই বসে, নিজের নিজের শাখায়।
+     *  · শাখা ক-তে আবার "Lexus Box" → থামে (একই শাখায় নকল আগের মতোই ধরা পড়ে)।
+     *  · সব শাখার পুরনো পণ্যের নামে কোনো শাখায় নতুন পণ্য → থামে (সেটা ঐ শাখাতেও বিক্রি হয়)।
+     */
+    public function test_the_same_name_is_a_different_product_in_another_branch_but_not_in_the_same_one(): void
+    {
+        [$a, $b] = $this->twoBranches();
+
+        $this->viewBranch($a);
+        $this->import('IMP-NAME-A', 'Lexus Box- 180 gm');
+
+        $this->viewBranch($b);
+        $this->import('IMP-NAME-B', 'Lexus Box- 180 gm');
+
+        $this->assertSame(2, Product::query()->where('name_en', 'Lexus Box- 180 gm')->count(),
+            '⛔ শাখা খ-এর পণ্য শাখা ক-এর একই নামের পণ্যে আটকে গেছে।');
+
+        $this->viewBranch($a);
+        $this->assertThrows(fn () => $this->import('IMP-NAME-A2', 'Lexus Box- 180 gm'),
+            \Illuminate\Validation\ValidationException::class);
+
+        // ⓘ সব শাখার পুরনো পণ্য (শাখার সারি নেই) প্রতিটা শাখার সাথেই মেলে
+        $this->owner->forceFill(['view_all_branches' => true])->save();
+        CompanyContext::set($this->company->id, $a->id);
+        $this->import('IMP-NAME-ALL', 'Everywhere Biscuit');
+
+        $this->viewBranch($b);
+        $this->assertThrows(fn () => $this->import('IMP-NAME-ALL-B', 'Everywhere Biscuit'),
+            \Illuminate\Validation\ValidationException::class);
+    }
+
     /** @return array{0: Branch, 1: Branch} */
     private function twoBranches(): array
     {
@@ -106,10 +142,10 @@ final class TheImportSpreadOneGroupsGoodsToEveryBranchTest extends TestCase
         CompanyContext::set($this->company->id, $branch->id);
     }
 
-    private function import(string $code): Product
+    private function import(string $code, ?string $name = null): Product
     {
         app(ProductImporter::class)->import([
-            'code' => $code, 'name_en' => 'Import '.$code, 'name_bn' => '', 'barcode' => '',
+            'code' => $code, 'name_en' => $name ?? 'Import '.$code, 'name_bn' => '', 'barcode' => '',
             'brand' => '', 'category' => '', 'unit' => '', 'tax' => '',
             'purchase_price' => '', 'sale_price' => '', 'reorder_level' => '',
         ]);

@@ -35,7 +35,8 @@ final class ProductService
     {
         // একই নামে দুইবার পণ্য নয় — নাম মিললে সতর্ক করে থামে, allow_duplicate
         // দিলে এগোয়। এই দরজাটাই এতদিন ছিল না, তাই লাইভে জোড়া পণ্য বসেছিল।
-        $this->duplicates->check(Product::class, $data);
+        // ⭐ ৫ অক্টোবর ২০২৬: মেলানো হয় কেবল একই শাখার পণ্যের সাথে ([[sameBranches()]])
+        $this->duplicates->check(Product::class, $data, null, $this->sameBranches($data));
 
         $this->assertImportable($data);
 
@@ -105,7 +106,7 @@ final class ProductService
     public function update(Product $product, array $data): Product
     {
         // নাম বদলে আরেকটা পণ্যের নকল হয়ে গেলেও একই পাহারা; নিজের সারি বাদ
-        $this->duplicates->check(Product::class, $data, $product->id);
+        $this->duplicates->check(Product::class, $data, $product->id, $this->sameBranches($data, $product));
 
         if (isset($data['code']) && trim((string) $data['code']) !== $product->code) {
             $this->assertCodeIsFree(trim((string) $data['code']), $product->id);
@@ -177,6 +178,34 @@ final class ProductService
         unset($data['branch_table'], $data['branch_ids']);
 
         return [$data, $ids];
+    }
+
+    /**
+     * ⭐ একই নামের পাহারা কেবল একই শাখার পণ্যের মধ্যে — মালিক, ৫ অক্টোবর ২০২৬ (ADI: "এই ব্যবসায় আলাদা আলাদা শাখা,
+     * আলাদা পণ্য")। SL-Gold Group-এর "Lexus Box- 180 gm" আর SL-Super Group-এর "Lexus Box- 180 gm" দুই ব্যবসার দুই
+     * পণ্য, নিজের নিজের কোডে; অথচ পাহারা গোটা কোম্পানিতে মেলাত, তাই Gold-এর ৬১টা আর Lion-এর ৪২টা আমদানি আটকে ছিল।
+     *
+     * ⓘ কোন শাখা: নতুন পণ্যের বেলায় পাঠানো `branch_ids` (আমদানি হেডারের শাখা পাঠায়, [[ProductImporter]]); সম্পাদনায়
+     * পাঠানো তালিকা, না এলে পণ্যের নিজের শাখা। ⛔ শাখা নেই মানে "সব শাখার" পণ্য — তখন গোটা কোম্পানিতে মেলানো,
+     * আগের মতোই কড়া। আর সব-শাখার পুরনো পণ্য প্রতিটা শাখার সাথেই মেলে, কারণ সেটা সব শাখাতেই বিক্রি হয়।
+     *
+     * @param  array<string, mixed>  $data
+     */
+    private function sameBranches(array $data, ?Product $product = null): ?\Closure
+    {
+        $ids = array_key_exists('branch_table', $data)
+            ? array_values(array_unique(array_map('intval', (array) ($data['branch_ids'] ?? []))))
+            : ($product?->branches()->pluck('branches.id')->map(fn ($id) => (int) $id)->all() ?? []);
+
+        if ($ids === []) {
+            return null;
+        }
+
+        return fn ($query) => $query->where(fn ($q) => $q
+            ->whereNotExists(fn ($s) => $s->from('inv_product_branches')->whereColumn('inv_product_branches.product_id', 'inv_products.id'))
+            ->orWhereExists(fn ($s) => $s->from('inv_product_branches')
+                ->whereColumn('inv_product_branches.product_id', 'inv_products.id')
+                ->whereIn('inv_product_branches.branch_id', $ids)));
     }
 
     /** @param  list<int>|null  $ids */

@@ -152,6 +152,7 @@ final class DuplicateGuard
         array $columns,
         ?string $name,
         ?int $ignoreId = null,
+        ?\Closure $narrow = null,
     ): Collection {
         $needle = self::normaliseName($name);
 
@@ -167,7 +168,14 @@ final class DuplicateGuard
          * ইনডেক্সও ব্যবহার করত না। মাস্টার ডাটার সারি হাজারের ঘরে,
          * লাখের নয় — তাই মেমোরিতে তুলনা করাই সৎ ও সহজ।
          */
-        return $this->search($model, $ignoreId)
+        $search = $this->search($model, $ignoreId);
+
+        // ⓘ ডাকা কোড পরিসর ছোট করতে পারে — যেমন পণ্য কেবল নিজের শাখার মধ্যে ([[ProductService::sameBranches()]])
+        if ($narrow !== null) {
+            $narrow($search);
+        }
+
+        return $search
             ->get()
             ->filter(function (Model $row) use ($columns, $needle): bool {
                 foreach ($columns as $column) {
