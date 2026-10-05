@@ -65,6 +65,7 @@ return [
         .'To correct it, cancel and issue a new voucher — that is the rule on paper too.',
     'cancel_reason_required' => 'A reason for cancelling is required.',
     'share_on_a_dead_bill' => 'Bill :no is cancelled or was not found - a cost cannot be shared onto a cancelled bill.',
+    'transfer_awaiting_signature' => 'This transfer is still waiting for its signature - the money has not changed hands, so it cannot be received.',
     'shares_over_the_expense' => 'The bills were given :shared but the expense is :amount - the shares cannot exceed the expense.',
     'no_financial_year' => 'No financial year covers :date.',
     'year_closed' => 'Financial year :year is closed, so nothing new can be posted into it.',

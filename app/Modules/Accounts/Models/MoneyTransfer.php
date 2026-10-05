@@ -102,6 +102,19 @@ class MoneyTransfer extends Model implements Drillable
         return $this->toTill?->name() ?? $this->toAccount?->name() ?? '—';
     }
 
+    /**
+     * ⭐ সইয়ের অপেক্ষায় — টাকা এখনো দাতার ড্রয়ারে, খাতায় কিছু বসেনি (Accounts-Finance অডিট ম৬, ৪ অক্টোবর ২০২৬)।
+     *
+     * ⓘ সই এখন হস্তান্তরের আগে; শেষ সইয়ে পাঠানোর পা বসে আর কাগজ "গ্রহণের অপেক্ষায়" (`draft`) হয়
+     * ([[MoneyTransferService::finishSigned()]])। ⚠️ এই অবস্থায় গ্রহণ চলে না — টাকা তো এখনো হাতবদলই হয়নি।
+     */
+    public const AWAITING = 'awaiting';
+
+    public function isAwaiting(): bool
+    {
+        return $this->status === self::AWAITING;
+    }
+
     public function isPending(): bool
     {
         return $this->status === DocumentStatus::DRAFT;

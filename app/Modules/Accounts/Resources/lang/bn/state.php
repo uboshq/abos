@@ -8,6 +8,7 @@ return [
     'year_closed' => 'বন্ধ',
     'closed' => 'বন্ধ',
     'awaiting_receipt' => 'গ্রহণের অপেক্ষায়',
+    'awaiting_signature' => 'সইয়ের অপেক্ষায়',
     'received' => 'গৃহীত',
     'approved' => 'অনুমোদিত',
     'due' => 'বাকি',

@@ -111,6 +111,7 @@ return [
     'no_transfers' => 'No transfers yet.',
     'awaiting_you' => 'Waiting for you to receive',
     'transfer_started' => ':no — handed over. The money moves when the receiver confirms.',
+    'transfer_awaiting_signature' => ':no is waiting for its signature - the money is still in the giving box and nothing is booked. It goes on its way on the last signature.',
     'transfer_received' => ':no — received.',
     'transfer_cancelled' => ':no — transfer cancelled.',
     'transfer_is_cancelled' => 'This transfer has been cancelled.',

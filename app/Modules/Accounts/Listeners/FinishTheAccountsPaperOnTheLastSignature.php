@@ -10,11 +10,13 @@ use App\Modules\Accounts\Models\CashTill;
 use App\Modules\Accounts\Models\Cheque;
 use App\Modules\Accounts\Models\FixedAsset;
 use App\Modules\Accounts\Models\InterCompanyTransfer;
+use App\Modules\Accounts\Models\MoneyTransfer;
 use App\Modules\Accounts\Models\Note;
 use App\Modules\Accounts\Services\AccountsSignature;
 use App\Modules\Accounts\Services\ChequeService;
 use App\Modules\Accounts\Services\FixedAssetService;
 use App\Modules\Accounts\Services\InterCompanyService;
+use App\Modules\Accounts\Services\MoneyTransferService;
 use App\Modules\Accounts\Services\NoteService;
 use App\Modules\Accounts\Services\OpeningBalanceService;
 
@@ -28,8 +30,11 @@ final class FinishTheAccountsPaperOnTheLastSignature
 {
     public function handle(ApprovalDecided $event): void
     {
+        $action = (string) ($event->payload['action'] ?? '');
+
+        // ⓘ `transfer` — স্থানান্তরের সই এখন হস্তান্তরের আগে (Accounts-Finance অডিট ম৬); চাবিটা পুরনো, তাই ACTIONS-এর বাইরে
         if (($event->payload['module'] ?? null) !== AccountsSignature::MODULE
-            || ! in_array((string) ($event->payload['action'] ?? ''), AccountsSignature::ACTIONS, true)) {
+            || (! in_array($action, AccountsSignature::ACTIONS, true) && $action !== 'transfer')) {
             return;
         }
 
@@ -66,6 +71,15 @@ final class FinishTheAccountsPaperOnTheLastSignature
                     : null,
                 default => null,
             };
+
+            return;
+        }
+
+        // ⓘ সইয়ের অপেক্ষায় থাকলেই — পুরনো ধারার (গ্রহণে সই) কাগজ বা আগেই পাঠানো কাগজে কিছু হয় না
+        if ($paper instanceof MoneyTransfer) {
+            if ($paper->isAwaiting()) {
+                app(MoneyTransferService::class)->finishSigned($paper);
+            }
 
             return;
         }

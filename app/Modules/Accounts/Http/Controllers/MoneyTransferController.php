@@ -134,7 +134,10 @@ class MoneyTransferController extends Controller implements HasMiddleware
 
         return redirect()
             ->route('accounts.transfer.show', $transfer)
-            ->with('saved', __('accounts::message.transfer_started', ['no' => $transfer->document_no]));
+            // ⓘ সইয়ের অপেক্ষায় থাকলে তাই বলা — নইলে দাতা ভাবতেন টাকা চলে গেছে (অডিট ম৬)
+            ->with('saved', $transfer->isAwaiting()
+                ? __('accounts::message.transfer_awaiting_signature', ['no' => $transfer->document_no])
+                : __('accounts::message.transfer_started', ['no' => $transfer->document_no]));
     }
 
     public function show(Request $request, MoneyTransfer $transfer): View

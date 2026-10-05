@@ -93,39 +93,27 @@ final class MoneyTransferService
             ]);
 
             /*
-             * প্রথম পা — টাকাটা টিল থেকে বেরিয়ে পথে ওঠে।
+             * ⭐ সই হস্তান্তরের আগে — Accounts-Finance অডিট ম৬, ৪ অক্টোবর ২০২৬ (৬৩-এর সিদ্ধান্ত: "কাজের আগে অনুমোদন")।
              *
-             * ── কেন এখনই, গ্রহণের অপেক্ষায় নয় ────────────────────────
-             * আগে প্রথম ধাপে খতিয়ানে কিছুই বসত না, যুক্তি ছিল "গ্রহণ
-             * নিশ্চিত না হওয়া পর্যন্ত টাকাটা দাতার"। দায়িত্বের দিক থেকে
-             * ঠিক, কিন্তু **ব্যালেন্সের দিক থেকে মিথ্যা**: টাকাটা ড্রয়ার
-             * থেকে বেরিয়ে গেছে, অথচ টিলের ব্যালেন্স তা বলছিল না।
-             *
-             * ফল ছিল দুইটা:
-             *   ১. ওই দিন নগদ গণনা করলে টিলে ঘাটতি দেখাত, আর
-             *      হেফাজতকারী দায়ী হতেন এমন টাকার জন্য যেটা তিনি হাতে
-             *      হাতে দিয়ে দিয়েছেন
-             *   ২. একই টাকা দুইবার পাঠানো যেত — একই ৫,০০০ একই মিনিটে
-             *      সিন্দুকে ও ব্যাংকে, দুইটাই সম্ভব দেখাত
-             *
-             * দায়িত্বটা হারায় না: টাকাটা গ্রহীতার খাতেও যায়নি, গেছে
-             * "পথের টাকা" খাতে — যেটা কারও হাতে নেই, আর দলিলে দাতার
-             * নাম লেখা আছে।
+             * ⛔ আগে পাঠানোর পা সাথে সাথে খাতায় বসত, আর সই চাওয়া হত গ্রহণের সময় — অর্থাৎ টাকা হাতবদল হয়ে যেত, সই পরে।
+             * ⓘ এখন `accounts.transfer` ছক চালু থাকলে কাগজটা সইয়ের অপেক্ষায় থাকে: খাতায় কিছু বসে না, টাকা ড্রয়ারেই;
+             * শেষ সইয়ে পাঠানোর পা বসে ([[finishSigned()]])। ছক বন্ধে আগের মতোই এখনই।
              */
-            $this->posting->post(
-                MoneyTransfer::drillSourceType().':sent',
-                $transfer->id,
-                $transfer->trx_date,
-                [
-                    ['account_id' => $this->transitAccount()->id,
-                        'debit' => $transfer->amount, 'credit' => '0'],
-                    ['account_id' => $transfer->fromTill->account_id,
-                        'debit' => '0', 'credit' => $transfer->amount],
-                ],
-                documentNo: $transfer->document_no,
-                // ⛔ দাতার শাখায় — টাকা ঐ শাখার ড্রয়ার থেকে বেরোল (অডিট ম৬, [[legBranch()]])
-                branchId: $this->legBranch($transfer->fromTill?->branch_id, $transfer),
-            );
+            $held = $this->approvals->stopping(
+                document: $transfer,
+                module: 'accounts',
+                action: 'transfer',
+                amount: (string) $transfer->amount,
+                reason: $transfer->narration,
+            ) !== null;
+
+            if ($held) {
+                $transfer->forceFill(['status' => MoneyTransfer::AWAITING])->save();
+
+                return $transfer;
+            }
+
+            $this->postSendLeg($transfer);
 
             return $transfer;
         });
@@ -143,6 +131,70 @@ final class MoneyTransferService
         $branchId = $branchId !== null ? (int) $branchId : null;
 
         return $branchId ?: ($transfer->branch_id !== null ? (int) $transfer->branch_id : null);
+    }
+
+    /**
+     * শেষ সইয়ের পরে — পাঠানোর পা বসে, কাগজ "গ্রহণের অপেক্ষায়" (ম৬; [[FinishTheAccountsPaperOnTheLastSignature]] ডাকে)।
+     *
+     * ⛔ সইয়ের অপেক্ষার মধ্যে টাকা খরচ হয়ে গিয়ে থাকলে থামে — নইলে টিল শূন্যের নিচে নামত। ⓘ সারি তালা দিয়ে অবস্থা আবার
+     * পড়া: একই সইয়ের ঘটনা দুইবার এলে দ্বিতীয়বার কিছু হয় না।
+     */
+    public function finishSigned(MoneyTransfer $transfer): MoneyTransfer
+    {
+        return DB::transaction(function () use ($transfer) {
+            $this->lockFresh($transfer);
+
+            if (! $transfer->isAwaiting()) {
+                return $transfer;
+            }
+
+            $from = $transfer->fromTill;
+            $this->cash->lock($from->account);
+            $this->assertEnoughInHand($from, (string) $transfer->amount, except: (int) $transfer->id);
+
+            $this->postSendLeg($transfer);
+            $transfer->forceFill(['status' => DocumentStatus::DRAFT])->save();
+
+            return $transfer->fresh();
+        });
+    }
+
+    /**
+     * প্রথম পা — টাকাটা টিল থেকে বেরিয়ে পথে ওঠে (ছক বন্ধে হস্তান্তরের মুহূর্তে, ছক চালু থাকলে শেষ সইয়ে)।
+     *
+     * ── কেন এখনই, গ্রহণের অপেক্ষায় নয় ────────────────────────
+     * আগে প্রথম ধাপে খতিয়ানে কিছুই বসত না, যুক্তি ছিল "গ্রহণ
+     * নিশ্চিত না হওয়া পর্যন্ত টাকাটা দাতার"। দায়িত্বের দিক থেকে
+     * ঠিক, কিন্তু **ব্যালেন্সের দিক থেকে মিথ্যা**: টাকাটা ড্রয়ার
+     * থেকে বেরিয়ে গেছে, অথচ টিলের ব্যালেন্স তা বলছিল না।
+     *
+     * ফল ছিল দুইটা:
+     *   ১. ওই দিন নগদ গণনা করলে টিলে ঘাটতি দেখাত, আর
+     *      হেফাজতকারী দায়ী হতেন এমন টাকার জন্য যেটা তিনি হাতে
+     *      হাতে দিয়ে দিয়েছেন
+     *   ২. একই টাকা দুইবার পাঠানো যেত — একই ৫,০০০ একই মিনিটে
+     *      সিন্দুকে ও ব্যাংকে, দুইটাই সম্ভব দেখাত
+     *
+     * দায়িত্বটা হারায় না: টাকাটা গ্রহীতার খাতেও যায়নি, গেছে
+     * "পথের টাকা" খাতে — যেটা কারও হাতে নেই, আর দলিলে দাতার
+     * নাম লেখা আছে।
+     */
+    private function postSendLeg(MoneyTransfer $transfer): void
+    {
+        $this->posting->post(
+            MoneyTransfer::drillSourceType().':sent',
+            $transfer->id,
+            $transfer->trx_date,
+            [
+                ['account_id' => $this->transitAccount()->id,
+                    'debit' => $transfer->amount, 'credit' => '0'],
+                ['account_id' => $transfer->fromTill->account_id,
+                    'debit' => '0', 'credit' => $transfer->amount],
+            ],
+            documentNo: $transfer->document_no,
+            // ⛔ দাতার শাখায় — টাকা ঐ শাখার ড্রয়ার থেকে বেরোল (অডিট ম৬, [[legBranch()]])
+            branchId: $this->legBranch($transfer->fromTill?->branch_id, $transfer),
+        );
     }
 
     /**
@@ -316,12 +368,15 @@ final class MoneyTransferService
                 );
             }
 
-            $this->posting->reverse(
-                MoneyTransfer::drillSourceType().':sent',
-                $transfer->id,
-                now()->toDateString(),
-                $reason,
-            );
+            // ⓘ সইয়ের অপেক্ষায় থাকা কাগজের কোনো পা খাতায় বসেনি — ফেরানোরও কিছু নেই (ম৬)
+            if (! $transfer->isAwaiting()) {
+                $this->posting->reverse(
+                    MoneyTransfer::drillSourceType().':sent',
+                    $transfer->id,
+                    now()->toDateString(),
+                    $reason,
+                );
+            }
 
             $transfer->forceFill([
                 'status' => DocumentStatus::CANCELLED,
@@ -404,6 +459,13 @@ final class MoneyTransferService
 
     private function assertReceivable(MoneyTransfer $transfer): void
     {
+        // ⛔ সইয়ের আগে গ্রহণ নয় — টাকা তো এখনো দাতার ড্রয়ারে (ম৬)
+        if ($transfer->isAwaiting()) {
+            throw ValidationException::withMessages([
+                'status' => __('accounts::validation.transfer_awaiting_signature'),
+            ]);
+        }
+
         if ($transfer->isConfirmed()) {
             throw ValidationException::withMessages([
                 'status' => __('accounts::validation.transfer_already_confirmed'),
@@ -526,9 +588,19 @@ final class MoneyTransferService
         }
     }
 
-    private function assertEnoughInHand(CashTill $from, string $amount): void
+    /**
+     * ⛔ সইয়ের অপেক্ষায় থাকা স্থানান্তরের টাকা "পাওয়া যায়" থেকে বাদ — ম৬। ⚠️ ওগুলোর পা এখনো খাতায় বসেনি, তাই জেরে টাকাটা
+     * এখনো আছে; বাদ না দিলে একই টাকা অপেক্ষার মধ্যে আরেক জায়গায় পাঠানো যেত, আর দুই সই পড়লে টিল ঋণাত্মক।
+     */
+    private function assertEnoughInHand(CashTill $from, string $amount, ?int $except = null): void
     {
-        $inHand = $from->balance();
+        $awaiting = (string) MoneyTransfer::query()
+            ->where('from_till_id', $from->id)
+            ->where('status', MoneyTransfer::AWAITING)
+            ->when($except !== null, fn ($q) => $q->whereKeyNot($except))
+            ->sum('amount');
+
+        $inHand = bcsub($from->balance(), $awaiting ?: '0', 4);
 
         if (bccomp($amount, $inHand, 4) > 0) {
             throw ValidationException::withMessages([
