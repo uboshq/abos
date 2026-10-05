@@ -208,6 +208,35 @@ final class ThePhoneCounterHoldsEveryWallOfTheWebCounterTest extends TestCase
             '⛔ না-জমা বিলের বাতিল অডিটে লেখা হয়নি।');
     }
 
+    /**
+     * "দাম দেখুন" — একই বিক্রেতা: মজুদ দেখার চাবি ছাড়া কেবল দর (SR-এর ফোনে মজুদ নয়), চাবি দিলে ওয়েবের কাউন্টারের হুবহু
+     * বিক্রয়যোগ্য মজুদ আর লট; বাতিলের কারণ ওয়েবের পপ-আপের একই তালিকা।
+     */
+    public function test_the_price_check_shows_the_web_figures_and_stock_only_with_the_stock_key(): void
+    {
+        $this->asSeller();
+        $url = '/api/v1/sales/direct/price/'.$this->product->public_id;
+
+        $plain = $this->getJson($url)->assertOk()->json();
+        $this->assertSame((string) $this->product->fresh()->sale_price, $plain['rate']);
+        $this->assertNull($plain['available'], '⛔ মজুদের চাবি ছাড়াই মজুদ দেখা গেল।');
+        $this->assertNull($plain['lots'][0]['qty']);
+
+        $this->grant('inventory.stock.view');
+        Sanctum::actingAs($this->seller->fresh(), [AuthController::APP]);
+        $full = $this->getJson($url)->assertOk()->json();
+
+        $web = app(\App\Modules\Sales\Services\DirectSaleOptions::class)
+            ->catalogue($this->warehouse, 1, (int) $this->product->id)->first();
+        $this->assertSame((string) $web->available, $full['available'], '⛔ ফোন আর ওয়েব আলাদা মজুদ বলছে।');
+        $this->assertSame('LOT-PHONE', $full['lots'][0]['no']);
+
+        $this->assertSame(
+            array_values(array_filter(explode('|', (string) __('sales::field.cancel_reasons')))),
+            $this->getJson('/api/v1/sales/direct/setup')->json('voidReasons'),
+        );
+    }
+
     /** ডেলিভারি — "পরে পাঠানো" হলে ঠিকানা আর তারিখ ছাড়া নয়; দিলে চালানে মোড, গাড়ি আর ভাড়া বসে */
     public function test_send_later_needs_an_address_and_a_date_and_the_challan_keeps_how_the_goods_go(): void
     {

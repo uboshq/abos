@@ -96,6 +96,47 @@ class DirectSaleApiController extends Controller implements HasMiddleware
              */
             'depositMethods' => $this->publicMethods(),
             'carriers' => $this->publicCarriers(),
+
+            // ⓘ বিল বাতিলের কারণ — ওয়েবের পপ-আপের একই তালিকা (`sales::field.cancel_reasons`)
+            'voidReasons' => array_values(array_filter(explode('|', (string) __('sales::field.cancel_reasons')))),
+        ]);
+    }
+
+    /**
+     * `GET /direct/price/{product}?warehouse=` — "দাম দেখুন": বিলে না তুলে দর, বিক্রয়যোগ্য মজুদ আর লট।
+     * ⓘ ওয়েবের পপ-আপের একই উৎস — কাউন্টারের পণ্য-তালিকা ([[DirectSaleOptions::catalogue()]]) আর লট ([[DirectSaleOptions::lots()]])।
+     * ⛔ মজুদ আর লটের পরিমাণ কেবল মজুদ দেখার চাবিতে (`inventory.stock.view`) — SR-এর ফোনে মজুদ নয় (মালিক, ১ অক্টোবর ২০২৬)।
+     */
+    public function price(Request $request, string $product): JsonResponse
+    {
+        $id = Product::query()->where('public_id', $product)->value('id');
+
+        abort_if($id === null, 404);
+
+        $warehouse = $this->warehouse((string) $request->query('warehouse', ''));
+        $row = $this->options->catalogue($warehouse, 1, (int) $id)->first();
+
+        abort_if($row === null, 404);
+
+        $seesStock = (bool) $request->user()?->can('inventory.stock.view');
+        $lots = $this->options->lots($warehouse)[(int) $id] ?? [];
+        $lotIds = Batch::query()->whereKey(array_column($lots, 'id'))->pluck('public_id', 'id');
+
+        return response()->json([
+            'product' => $product,
+            'name' => $row->name,
+            'code' => (string) $row->code,
+            'unit' => (string) $row->unit,
+            'rate' => (string) $row->rate,
+            'available' => $seesStock ? (string) $row->available : null,
+            'lots' => array_map(fn (array $lot) => [
+                'id' => (string) ($lotIds[(int) $lot['id']] ?? ''),
+                'no' => $lot['no'],
+                'expiry' => $lot['expiry'],
+                'qty' => $seesStock ? $lot['qty'] : null,
+                'paid' => $lot['paid'],
+                'free' => $lot['free'],
+            ], $lots),
         ]);
     }
 
