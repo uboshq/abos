@@ -17,6 +17,8 @@
         'id' => (int) $a->id, 'label' => $a->label(), 'hint' => '',
         'find' => mb_strtolower($a->label().' '.($a->name_bn ?? '').' '.($a->name_en ?? '').' '.($a->code ?? '')),
     ])->values()->all();
+    // ⓘ পোস্ট হওয়া ভাউচারের সংশোধন — একই ফর্ম, অন্য দরজা আর কারণের ঘর ([[VoucherController::revise()]])
+    $revising ??= false;
 
     // অন্তত পাঁচটা সারি — কম দিলে প্রতিটা জাবেদায় প্রথমেই "সারি যোগ
     // করুন" চাপতে হত, আর সেটা রোজকার কাজে বিরক্তিকর
@@ -66,13 +68,15 @@
         থাকত না।
     --}}
     <form method="POST" enctype="multipart/form-data"
-          action="{{ $isNew ? route('accounts.voucher.store', 'journal') : route('accounts.voucher.update', $voucher) }}"
+          action="{{ $revising ? route('accounts.voucher.revise.save', $voucher) : ($isNew ? route('accounts.voucher.store', 'journal') : route('accounts.voucher.update', $voucher)) }}"
           x-data="journalForm"
           @submit="busy ? $event.preventDefault() : (busy = true)"
           class="space-y-4">
         @csrf
         @unless ($isNew) @method('PUT') @endunless
         <input type="hidden" name="type" value="journal">
+
+        @include('accounts::voucher.partials.revision-reason')
 
         {{--
             ⛔ "কেন এভাবে" ব্লকটা তুলে দেওয়া হলো — মালিকের সিদ্ধান্ত, ১৮ সেপ্টেম্বর ২০২৬।
@@ -349,16 +353,19 @@
         <div class="flex flex-wrap items-center gap-2">
             <x-ui.button type="submit" tone="primary"
                          ::class="(busy || ! balanced) && 'pointer-events-none opacity-50'">
-                {{ __('accounts::action.save_and_post') }}
+                {{ __($revising ? 'accounts::revision.save' : 'accounts::action.save_and_post') }}
             </x-ui.button>
 
-            <button type="submit" name="save_as_draft" value="1"
-                    class="inline-flex min-h-(--spacing-touch) items-center rounded-(--radius-field) border
-                           border-(--color-border) px-4 text-sm font-medium transition-colors
-                           hover:bg-(--color-surface-hover)"
-                    :class="busy && 'pointer-events-none opacity-70'">
-                {{ __('accounts::action.save_draft') }}
-            </button>
+            {{-- ⓘ সংশোধনে খসড়া নেই — পোস্ট হওয়া কাগজ খসড়া হয় না --}}
+            @unless ($revising)
+                <button type="submit" name="save_as_draft" value="1"
+                        class="inline-flex min-h-(--spacing-touch) items-center rounded-(--radius-field) border
+                               border-(--color-border) px-4 text-sm font-medium transition-colors
+                               hover:bg-(--color-surface-hover)"
+                        :class="busy && 'pointer-events-none opacity-70'">
+                    {{ __('accounts::action.save_draft') }}
+                </button>
+            @endunless
 
             <x-ui.button tone="secondary"
                          :href="$isNew

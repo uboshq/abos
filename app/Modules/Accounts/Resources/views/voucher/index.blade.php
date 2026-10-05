@@ -68,6 +68,7 @@
          'render' => fn ($v) => view('accounts::voucher.partials.status', [
              'voucher' => $v,
              'awaiting' => in_array((int) $v->id, $awaitingIds ?? [], true),
+             'revised' => in_array((int) $v->id, $revisedIds ?? [], true),
          ])],
     ];
 @endphp

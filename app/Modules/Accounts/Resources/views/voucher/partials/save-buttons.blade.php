@@ -14,6 +14,13 @@
      * নকশা মিলত না — আর মালিক ওটাই ধরেন।
      */
     $primaryLabel ??= 'accounts::action.save_and_post';
+
+    // ⓘ সংশোধনে একটাই বোতাম — পোস্ট হওয়া কাগজ খসড়া হয় না ([[VoucherController::saveRevision()]])
+    $revising ??= false;
+
+    if ($revising) {
+        $primaryLabel = 'accounts::revision.save';
+    }
 @endphp
 
 <div class="flex flex-wrap gap-2">
@@ -22,13 +29,15 @@
         {{ __($primaryLabel) }}
     </x-ui.button>
 
-    <button type="submit" name="save_as_draft" value="1"
-            class="inline-flex min-h-(--spacing-touch) items-center rounded-(--radius-field) border
-                   border-(--color-border) px-4 text-sm font-medium transition-colors
-                   hover:bg-(--color-surface-hover)"
-            :class="busy && 'pointer-events-none opacity-70'">
-        {{ __('accounts::action.save_draft') }}
-    </button>
+    @unless ($revising)
+        <button type="submit" name="save_as_draft" value="1"
+                class="inline-flex min-h-(--spacing-touch) items-center rounded-(--radius-field) border
+                       border-(--color-border) px-4 text-sm font-medium transition-colors
+                       hover:bg-(--color-surface-hover)"
+                :class="busy && 'pointer-events-none opacity-70'">
+            {{ __('accounts::action.save_draft') }}
+        </button>
+    @endunless
 
     <x-ui.button tone="secondary"
                  :href="$voucher->exists

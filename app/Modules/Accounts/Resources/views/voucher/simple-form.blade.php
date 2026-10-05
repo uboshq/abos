@@ -11,6 +11,8 @@
 --}}
 @php
     $isNew = ! $voucher->exists;
+    // ⓘ পোস্ট হওয়া ভাউচারের সংশোধন — একই ফর্ম, অন্য দরজা আর কারণের ঘর ([[VoucherController::revise()]])
+    $revising ??= false;
 
     /*
      * রসিদ ও পরিশোধে পক্ষের ঘর দুইটা উপরে বসে (নমুনার সারি ২)।
@@ -143,7 +145,7 @@
         থাকত না।
     --}}
     <form method="POST" enctype="multipart/form-data"
-          action="{{ $isNew ? route('accounts.voucher.store', $type) : route('accounts.voucher.update', $voucher) }}"
+          action="{{ $revising ? route('accounts.voucher.revise.save', $voucher) : ($isNew ? route('accounts.voucher.store', $type) : route('accounts.voucher.update', $voucher)) }}"
           x-data="{ busy: false }"
           @submit="busy ? $event.preventDefault() : (busy = true)"
           {{-- ⛔ রসিদ ও পরিশোধও চওড়া — ১৯ সেপ্টেম্বর ২০২৬, মালিক: *"bame faka jayga
@@ -153,6 +155,8 @@
         @csrf
         @unless ($isNew) @method('PUT') @endunless
         <input type="hidden" name="type" value="{{ $type }}">
+
+        @include('accounts::voucher.partials.revision-reason')
 
         {{--
             ⭐ এই রসিদটা কোন নথি নিষ্পন্ন করছে — "কীসের বিপরীতে"।

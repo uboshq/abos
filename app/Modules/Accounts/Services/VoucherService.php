@@ -657,14 +657,82 @@ final class VoucherService
      * @param  array<string, mixed>  $data  খসড়ার সম্পাদনার একই যাচাই করা ঘর
      * @param  list<array<string, mixed>>  $lines
      */
-    public function editPosted(Voucher $voucher, User $user, string $reason, array $data, array $lines): DocumentRevision
-    {
+    public function editPosted(
+        Voucher $voucher,
+        User $user,
+        string $reason,
+        array $data,
+        array $lines,
+        // ⓘ খরচের চালান-ভাগ — সংশোধনের একই লেনদেনে, নইলে ভাগ পুরনো অঙ্কে থাকত ([[replaceBillShares()]])
+        ?array $billShares = null,
+        string $basis = 'qty',
+    ): DocumentRevision {
+        // ⛔ যে ভাউচার অন্য কাগজের সাথে বাঁধা, তা এখান দিয়ে নয় — কারণসহ থামে (পাকা ভাউচার সম্পাদনা, মালিক ৫ অক্টোবর ২০২৬)
+        $why = $this->whyNotRevisable($voucher);
+
+        if ($why !== null) {
+            throw ValidationException::withMessages(['edit' => $why]);
+        }
+
         $this->assertNoChequeReceived($voucher->type,
             array_key_exists('instrument', $data) ? $data['instrument'] : $voucher->instrument);
 
-        return app(RevisionKeeper::class)->edit($voucher, $user, $reason, function (Voucher $locked) use ($data, $lines): void {
+        return app(RevisionKeeper::class)->edit($voucher, $user, $reason, function (Voucher $locked) use ($data, $lines, $billShares, $basis): void {
             $this->writeHeaderAndLines($locked, [...$data, 'status' => $locked->status], $lines);
+
+            if ($billShares !== null) {
+                $this->replaceBillShares($locked, $billShares, $basis);
+            }
         });
+    }
+
+    /**
+     * ⭐ পাকা ভাউচার কেন এখান দিয়ে সম্পাদনা করা নিরাপদ নয় — `null` মানে নিরাপদ (মালিকের আদেশ, ৫ অক্টোবর ২০২৬)।
+     *
+     * ⓘ সুইচ, সুপার অ্যাডমিন আর খোলা মাস দেখে [[PostedEdit]]; এটা দেখে ভাউচারটা অন্য কিছুর সাথে বাঁধা কি না। বাঁধা থাকলে
+     * এখানে অঙ্ক বদলালে অন্য পাশটা পুরনো অঙ্কে থেকে যেত — তাই পর্দা বোতামের জায়গায় এই কারণটাই দেখায়, চুপচাপ লুকায় না।
+     *  · কাউন্টারের বিল থেকে আসা রসিদ/পরিশোধ — বিলটা সম্পাদনা করতে হয়
+     *  · অন্য কাগজ নিষ্পন্ন করে (`against`) — সেই কাগজের অঙ্ক আর অবস্থা এই টাকার উপর দাঁড়িয়ে
+     *  · আন্তঃকোম্পানির এক পাশ — দুই পাশ একসাথে না বদলালে দুই কোম্পানি আর মেলে না
+     *  · ব্যাংকে মেলানো — মেলানোটা পুরনো অঙ্কে দাঁড়িয়ে
+     */
+    public function whyNotRevisable(Voucher $voucher): ?string
+    {
+        if ($voucher->origin === Voucher::ORIGIN_COUNTER) {
+            return __('accounts::revision.from_counter', ['no' => $voucher->document_no]);
+        }
+
+        if (filled($voucher->against_type) && (int) $voucher->against_id > 0) {
+            return __('accounts::revision.settles_a_paper', ['no' => $voucher->document_no, 'paper' => $this->againstLabel($voucher)]);
+        }
+
+        $interCompany = InterCompanyTransfer::query()->withoutGlobalScopes()
+            ->where(fn ($q) => $q->where('out_voucher_id', $voucher->id)->orWhere('in_voucher_id', $voucher->id))
+            ->exists();
+
+        if ($interCompany) {
+            return __('accounts::revision.inter_company_side', ['no' => $voucher->document_no]);
+        }
+
+        $voucher->loadMissing('lines');
+
+        if ($voucher->lines->whereNotNull('reconciliation_id')->isNotEmpty()
+            || BankStatementLine::query()->withoutGlobalScopes()->whereIn('matched_line_id', $voucher->lines->pluck('id'))->exists()) {
+            return __('accounts::revision.reconciled', ['no' => $voucher->document_no]);
+        }
+
+        return null;
+    }
+
+    /** বাঁধা কাগজের নম্বর — না পাওয়া গেলে ধরনের নাম */
+    private function againstLabel(Voucher $voucher): string
+    {
+        $class = app(DrillResolver::class)->map()[(string) $voucher->against_type] ?? null;
+        $document = $class !== null ? (new $class)->newQuery()->find((int) $voucher->against_id) : null;
+
+        return $document !== null && method_exists($document, 'drillDocumentNo')
+            ? (string) $document->drillDocumentNo()
+            : (string) $voucher->against_type;
     }
 
     /**

@@ -11,8 +11,11 @@ use App\Core\Engines\Attachment\AttachmentEngine;
 use App\Core\Engines\Drill\DrillResolver;
 use App\Core\Services\MenuBuilder;
 use App\Core\Services\PartyRegistry;
+use App\Core\Services\PostedEdit;
 use App\Http\Controllers\Controller;
 use App\Models\Approval;
+use App\Models\DocumentRevision;
+use App\Models\User;
 use App\Modules\Accounts\Http\Requests\VoucherRequest;
 use App\Modules\Accounts\Models\Voucher;
 use App\Modules\Accounts\Services\AccountsFacts;
@@ -25,6 +28,7 @@ use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
 /**
@@ -63,6 +67,9 @@ class VoucherController extends Controller implements HasMiddleware
             new Middleware('can:create,'.Voucher::class, only: ['create', 'store']),
             new Middleware('can:update,voucher', only: ['edit', 'update', 'post']),
             new Middleware('can:delete,voucher', only: ['cancel']),
+
+            // ⓘ পাকা ভাউচার সম্পাদনা — দেখার চাবি দরজায়, আর সুপার অ্যাডমিন + সুইচ + খোলা মাস [[assertMayRevise()]]-এ
+            new Middleware('can:view,voucher', only: ['revise', 'saveRevision']),
         ];
     }
 
@@ -147,6 +154,12 @@ class VoucherController extends Controller implements HasMiddleware
             'awaitingCount' => $awaitingIds->count(),
             'awaitingIds' => $awaitingIds->map(fn ($id) => (int) $id)->all(),
             'awaiting' => $request->boolean('awaiting'),
+
+            // ⭐ "সংশোধিত" দাগ — এই পাতার ভাউচারগুলোর, একটা প্রশ্নে (পাকা ভাউচার সম্পাদনা, ৫ অক্টোবর ২০২৬)
+            'revisedIds' => DocumentRevision::query()
+                ->where('document_type', (new Voucher)->getMorphClass())
+                ->whereIn('document_id', $vouchers->getCollection()->modelKeys())
+                ->distinct()->pluck('document_id')->map(fn ($id) => (int) $id)->all(),
         ]);
     }
 
@@ -655,6 +668,74 @@ class VoucherController extends Controller implements HasMiddleware
 
         return app(DrillResolver::class)
             ->resolve($voucher->party_type, $voucher->party_id);
+    }
+
+    /**
+     * ⭐ পোস্ট হওয়া ভাউচার সম্পাদনার পাতা — সুপার অ্যাডমিন (মালিকের আদেশ, ৫ অক্টোবর ২০২৬)।
+     *
+     * ⓘ খসড়ার একই ফর্ম, সাথে বাধ্যতামূলক কারণ; সংরক্ষণে আগের দাখিলা উল্টো সারিতে থাকে আর নতুনটা বসে
+     * ([[VoucherService::editPosted()]], [[RevisionKeeper]])।
+     */
+    public function revise(Request $request, Voucher $voucher): View
+    {
+        $this->assertMayRevise($request->user(), $voucher);
+
+        $voucher->load('lines');
+
+        return view($voucher->type === Voucher::JOURNAL
+            ? 'accounts::voucher.journal-form'
+            : 'accounts::voucher.simple-form', [
+                'menu' => $this->menu->forUser($request->user()),
+                'type' => $voucher->type,
+                'voucher' => $voucher,
+                'revising' => true,
+                ...$this->formOptions($voucher->type),
+            ]);
+    }
+
+    public function saveRevision(VoucherRequest $request, Voucher $voucher): RedirectResponse
+    {
+        $this->assertMayRevise($request->user(), $voucher);
+
+        $reason = $request->validate([
+            'revision_reason' => ['required', 'string', 'min:3', 'max:500'],
+        ])['revision_reason'];
+
+        $validated = $request->validated();
+
+        $this->vouchers->editPosted(
+            $voucher,
+            $request->user(),
+            (string) $reason,
+            // ⓘ কেবল মাথার ঘর — সারি, চালান-ভাগ আর বোতামের নাম আলাদা পথে যায়
+            array_intersect_key($validated, array_flip($voucher->getFillable())),
+            $this->linesFrom($request, $voucher->type),
+            // ⓘ খরচে চালান-ভাগ সংশোধনের একই লেনদেনে; অন্য ধরনে ঘরটাই নেই, তাই ছোঁয়া হয় না
+            $voucher->type === Voucher::EXPENSE ? ($validated['bill_shares'] ?? []) : null,
+            $validated['alloc_basis'] ?? 'qty',
+        );
+
+        return redirect()
+            ->route('accounts.voucher.show', $voucher)
+            ->with('saved', __('accounts::revision.saved', ['no' => $voucher->document_no]));
+    }
+
+    /**
+     * ⛔ সুইচ চালু, সুপার অ্যাডমিন, পোস্ট হওয়া, খোলা মাস ([[PostedEdit::assertMay()]]), আর ভাউচারটা অন্য কিছুর সাথে বাঁধা নয়
+     * ([[VoucherService::whyNotRevisable()]]) — না হলে ৪০৩, কারণসহ।
+     */
+    private function assertMayRevise(?User $user, Voucher $voucher): void
+    {
+        abort_if($user === null, 403);
+
+        try {
+            app(PostedEdit::class)->assertMay($voucher, $user);
+        } catch (ValidationException $e) {
+            abort(403, (string) collect($e->errors())->flatten()->first());
+        }
+
+        $why = $this->vouchers->whyNotRevisable($voucher);
+        abort_if($why !== null, 403, (string) $why);
     }
 
     private function assertEditable(Voucher $voucher): void

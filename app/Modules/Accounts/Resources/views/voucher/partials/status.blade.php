@@ -34,3 +34,7 @@
 @else
     <x-ui.badge :tone="$tone">{{ __('core.status.' . $voucher->status) }}</x-ui.badge>
 @endif
+{{-- ⭐ সংশোধিত — পোস্টের পরে সুপার অ্যাডমিন বদলেছেন; ইতিহাস ভাউচারের পাতায় (মালিকের আদেশ, ৫ অক্টোবর ২০২৬) --}}
+@if ($revised ?? false)
+    <x-ui.badge tone="warning" data-revised>{{ __('accounts::revision.revised') }}</x-ui.badge>
+@endif

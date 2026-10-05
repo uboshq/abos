@@ -10,6 +10,24 @@
     $canEdit = $voucher->isEditable();
 
     /*
+     * ⭐ পোস্ট হওয়া ভাউচার সম্পাদনা — সুপার অ্যাডমিন (মালিকের আদেশ, ৫ অক্টোবর ২০২৬)।
+     * ⓘ বোতাম আসে কেবল যখন [[PostedEdit::assertMay()]] পাস করে (সুইচ চালু, সুপার অ্যাডমিন, খোলা মাস)। তখন ভাউচারটা অন্য
+     * কিছুর সাথে বাঁধা থাকলে বোতামের জায়গায় কারণটা দেখায় ([[VoucherService::whyNotRevisable()]]) — চুপচাপ লুকায় না।
+     */
+    $mayRevise = false;
+    $whyNotRevise = null;
+
+    if ($voucher->isPosted() && auth()->user() !== null) {
+        try {
+            app(\App\Core\Services\PostedEdit::class)->assertMay($voucher, auth()->user());
+            $mayRevise = true;
+            $whyNotRevise = app(\App\Modules\Accounts\Services\VoucherService::class)->whyNotRevisable($voucher);
+        } catch (\Illuminate\Validation\ValidationException) {
+            $mayRevise = false;
+        }
+    }
+
+    /*
      * ব্যাংকে গেলে লেনদেনের নম্বরটা এখানেই চাওয়া হয়, লেখার সময় নয়।
      *
      * লেখার মুহূর্তে বিকাশের TrxID জন্মায়ইনি — তখন চাইলে মানুষ `0`
@@ -61,6 +79,19 @@
     <x-slot:header>
         <x-ui.page-header :title="$voucher->document_no" :subtitle="$voucher->originLabel() ?? $voucher->typeLabel()">
             <x-slot:actions>
+                @if ($mayRevise)
+                    @if ($whyNotRevise === null)
+                        <x-ui.button tone="secondary" :href="route('accounts.voucher.revise', $voucher)" data-revise>
+                            {{ __('accounts::revision.edit') }}
+                        </x-ui.button>
+                    @else
+                        <p role="status" data-revise-blocked
+                           class="max-w-md rounded-(--radius-field) bg-(--color-badge-warning-bg) px-3 py-1.5 text-sm text-(--color-badge-warning-ink)">
+                            {{ $whyNotRevise }}
+                        </p>
+                    @endif
+                @endif
+
                 @if ($voucher->isDraft())
                     @can('accounts.voucher.update')
                         <x-ui.button tone="secondary" :href="route('accounts.voucher.edit', $voucher)">

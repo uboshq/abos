@@ -149,6 +149,11 @@ Route::middleware('auth')->prefix('accounts')->group(function () {
             ->whereNumber('voucher')->name('edit');
         Route::put('/{voucher}', [VoucherController::class, 'update'])
             ->whereNumber('voucher')->name('update');
+        // ⭐ পোস্ট হওয়া ভাউচার সম্পাদনা — সুপার অ্যাডমিন, কারণসহ (মালিকের আদেশ, ৫ অক্টোবর ২০২৬; [[VoucherController::revise()]])
+        Route::get('/{voucher}/revise', [VoucherController::class, 'revise'])
+            ->whereNumber('voucher')->name('revise');
+        Route::put('/{voucher}/revise', [VoucherController::class, 'saveRevision'])
+            ->whereNumber('voucher')->name('revise.save');
         Route::post('/{voucher}/post', [VoucherController::class, 'post'])
             ->whereNumber('voucher')->name('post');
         // ⭐ পোস্টের আগে সারাংশ — পপ-আপের ভিতর ([[VoucherOverviewController]], ৪ অক্টোবর ২০২৬)
