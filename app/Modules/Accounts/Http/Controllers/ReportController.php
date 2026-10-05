@@ -86,6 +86,8 @@ class ReportController extends Controller implements HasMiddleware
         // ⭐ কাস্টমার ও সাপ্লায়ার লেজার — মালিক, ৩ অক্টোবর ২০২৬
         'customer-ledger' => \App\Modules\Accounts\Reports\PartyLedgerReports::CUSTOMER,
         'supplier-ledger' => \App\Modules\Accounts\Reports\PartyLedgerReports::SUPPLIER,
+        // ⭐ ব্যক্তির লেজার — মালিক, ৫ অক্টোবর ২০২৬ ([[PartyLedgerReports::PERSON]])
+        'person-ledger' => \App\Modules\Accounts\Reports\PartyLedgerReports::PERSON,
         'trial-balance' => 'accounts.trial_balance',
         // ⭐ খাতা মেলানো — রিপোর্ট সেন্টার ধাপ ৬ (মালিক, ১ অক্টোবর ২০২৬)
         'branch-dues' => 'accounts.branch_dues',
@@ -217,6 +219,26 @@ class ReportController extends Controller implements HasMiddleware
              * ধার করা import দিয়ে নয়। পাহারা: [[BoundariesTest]]।
              */
             'partyTypes' => collect(),
+
+            /*
+             * ⭐ পক্ষ বাছার তালিকা — কাস্টমার, সাপ্লায়ার আর ব্যক্তির লেজারে (মালিক, ৫ অক্টোবর ২০২৬)।
+             * ⛔ আগে লেজারের পাতায় পক্ষ বাছার ঘরই ছিল না — মেনু থেকে খুললে খালি পাতা, পক্ষের পাতা থেকে এলে তবেই খাতা।
+             * ⓘ মডেল নয়, টেবিল: গ্রাহক, সরবরাহকারী আর ব্যক্তি অন্য মডিউলের, আর Accounts কারও উপর দাঁড়ায় না
+             * ([[BoundariesTest]]; উপরের partyTypes-এর একই কারণ)। কোম্পানি আর মোছা-নয় নিজেই ছাঁকা।
+             */
+            'partyFilter' => $partyFilter = collect(\App\Modules\Accounts\Reports\PartyLedgerReports::PARTY_FILTERS)
+                ->keys()->first(fn (string $f) => $definition->hasFilter($f)),
+            'parties' => $partyFilter === null ? collect() : \Illuminate\Support\Facades\DB::table(
+                ['customer_id' => 'customers', 'supplier_id' => 'suppliers', 'person_id' => 'mdm_people'][$partyFilter],
+            )
+                ->where('company_id', \App\Core\Support\CompanyContext::id())
+                ->whereNull('deleted_at')
+                ->orderBy('name_en')
+                ->get(['id', 'name_en', 'name_bn'])
+                ->map(fn ($p) => (object) [
+                    'id' => (int) $p->id,
+                    'name' => app()->getLocale() === 'bn' && filled($p->name_bn) ? $p->name_bn : $p->name_en,
+                ]),
 
             // ⓘ রিপোর্টের নিজের ছাঁকনি — ভাগের পাতার `$extraFilters` দরজা দিয়ে (চেকের দিক আর অবস্থা)
             'extraFilters' => $key === ChequeReports::KEY ? 'accounts::report.partials.cheque-filters' : null,

@@ -206,6 +206,37 @@ final class TheCustomerLedgerEndsWhereTheBooksSayTest extends TestCase
         $this->assertSame(0, bccomp($this->summary($all)['value'], $this->dealer->fresh()->outstanding(), 2), '⛔ সব শাখায় শেষ জের খাতার বকেয়ার সমান নয়।');
     }
 
+    /**
+     * ⭐ মালিক, ৫ অক্টোবর ২০২৬ (ডেমো JRN-0003): Rahim Store-এর ১০০ টাকা জাবেদায় Sujon Sumon (ব্যক্তি)-এর নামে সরানো —
+     * "Sujon Sumon-এর খাতায় বসেনি, রহিম স্টোরে বসেছে কিন্তু বিবরণ নাই"।
+     * দাবি:
+     *  · ব্যক্তির লেজারে সারিটা আছে, (Dr) ১০০।
+     *  · বিবরণ খালি জাবেদা দুই লেজারেই "জাবেদা ভাউচার" লেখে।
+     *  · লেজারের পাতায় পক্ষ বাছার ঘর আছে, আর বাছা পক্ষটা বাছাই থাকে।
+     */
+    public function test_a_journal_that_moves_a_due_to_a_person_shows_in_the_persons_ledger_with_its_kind(): void
+    {
+        $person = \App\Modules\MasterData\Models\Person::query()->create(['code' => 'PL-1', 'name_en' => 'Sujon Sumon', 'is_active' => true]);
+
+        $this->ledgerPost('journal_voucher', [
+            ['account_id' => $this->receivable(), 'credit' => '100', ...$this->party()],
+            ['account_id' => $this->receivable(), 'debit' => '100', 'party_type' => 'person', 'party_id' => (int) $person->id],
+        ]);
+
+        $mine = $this->ledger(PartyLedgerReports::PERSON, ['person_id' => $person->id]);
+        $this->assertCount(2, $mine->rows, '⛔ ব্যক্তির লেজারে জাবেদার সারিটা নেই।');
+        $this->assertSame('(Dr) 100.00', $this->summary($mine)['text']);
+        $this->assertSame(__('accounts::party_ledger.kind_journal'), $mine->rows[1]['narration'], '⛔ বিবরণ খালি — কাগজের ধরন বসেনি।');
+
+        $dealer = $this->ledger(PartyLedgerReports::CUSTOMER, ['customer_id' => $this->dealer->id]);
+        $this->assertSame(__('accounts::party_ledger.kind_journal'), $dealer->rows[array_key_last($dealer->rows)]['narration'], '⛔ গ্রাহকের লেজারেও বিবরণ খালি।');
+
+        $page = (string) $this->get(route('accounts.report.show', ['slug' => 'person-ledger', 'person_id' => $person->id]))->assertOk()->getContent();
+        $this->assertMatchesRegularExpression('/<select name="person_id" data-party-picker/', $page, '⛔ পক্ষ বাছার ঘর নেই।');
+        $this->assertMatchesRegularExpression('/<option value="'.$person->id.'"\s+selected/', $page, '⛔ বাছা পক্ষ বাছাই থাকেনি।');
+        $this->assertStringContainsString('(Dr) 100.00', $page);
+    }
+
     public function test_the_supplier_ledger_reads_cr_for_what_we_owe(): void
     {
         $supplier = Supplier::query()->create(['code' => 'SL-1', 'name_en' => 'Ledger Supplier', 'name_bn' => 'Ledger Supplier', 'is_active' => true]);

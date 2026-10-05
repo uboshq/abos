@@ -38,10 +38,21 @@ final class PartyLedgerReports
 
     public const SUPPLIER = 'accounts.supplier_ledger';
 
+    /*
+     * ⭐ ব্যক্তির খাতা — মালিক, ৫ অক্টোবর ২০২৬ (ডেমো JRN-0003: Rahim Store-এর ১০০ টাকা Sujon Sumon-এর নামে সরানো হলো,
+     * অথচ "Sujon Sumon-এর খাতায় বসেনি")। ⛔ টাকাটা ঠিকই খতিয়ানে তাঁর নামে বসেছিল (`party_type = person`), কিন্তু
+     * ব্যক্তির খাতা বলে কোনো পর্দাই ছিল না — গ্রাহক আর সরবরাহকারীর ছিল, ব্যক্তির নয়।
+     */
+    public const PERSON = 'accounts.person_ledger';
+
+    /** ⓘ ছাঁকনির নাম → খতিয়ানের পক্ষের ধরন; বাছার তালিকা ([[ReportController]]) এটা পড়ে */
+    public const PARTY_FILTERS = ['customer_id' => 'customer', 'supplier_id' => 'supplier', 'person_id' => 'person'];
+
     public static function registerAll(ReportEngine $engine): void
     {
         $engine->register(self::ledger(self::CUSTOMER, 'customer', 'customer_id', 'accounts::party_ledger.customer_title'));
         $engine->register(self::ledger(self::SUPPLIER, 'supplier', 'supplier_id', 'accounts::party_ledger.supplier_title'));
+        $engine->register(self::ledger(self::PERSON, 'person', 'person_id', 'accounts::party_ledger.person_title'));
     }
 
     private static function ledger(string $key, string $partyType, string $filter, string $title): ReportDefinition
@@ -79,6 +90,32 @@ final class PartyLedgerReports
         );
     }
 
+    /**
+     * ⭐ বিবরণ খালি হলে কাগজের নিজের নাম — মালিক, ৫ অক্টোবর ২০২৬: "রহিম স্টোরে বসেছে, কিন্তু বিবরণ নাই"।
+     * ⓘ আগের ৪ অক্টোবরের নিয়মের মতো ("গ্রাহকের কাছে পাওনা" নয়, "SL-3064 — Sales Invoice"): নম্বর পাশের ঘরেই, তাই
+     * এখানে শুধু ধরনটা — "জাবেদা ভাউচার", "আদায়", "বিক্রয় বিল"। অচেনা ধরনে NULL, তখন ঘর খালিই থাকে।
+     */
+    private static function kindOf(\PDO $pdo): string
+    {
+        $kinds = [
+            'sales_invoice' => 'sales_invoice', 'sales_return' => 'sales_return', 'receipt_voucher' => 'receipt',
+            'payment_voucher' => 'payment', 'expense_voucher' => 'expense', 'journal_voucher' => 'journal', 'contra_voucher' => 'contra',
+            'note' => 'note', 'purchase_bill' => 'purchase_bill', 'purchase_return' => 'purchase_return',
+            'opening_balance' => 'opening', 'opening' => 'opening',
+        ];
+
+        $case = 'CASE';
+
+        foreach ($kinds as $source => $kind) {
+            $case .= ' WHEN source_type = '.$pdo->quote($source).' THEN '.$pdo->quote((string) __('accounts::party_ledger.kind_'.$kind));
+        }
+
+        // ⓘ বাতিল/উল্টো সারি (`…:reversal`, `…:cancel`)
+        $case .= " WHEN source_type LIKE '%:reversal' OR source_type LIKE '%:cancel' THEN ".$pdo->quote((string) __('accounts::party_ledger.kind_reversal'));
+
+        return $case.' ELSE NULL END';
+    }
+
     /** @param  array<string, mixed>  $f */
     private static function query(array $f, string $partyType, int $partyId): Builder
     {
@@ -103,7 +140,9 @@ final class PartyLedgerReports
 
         $lines = $party()
             ->whereBetween('trx_date', [$f['from'], $f['to']])
-            ->select(['trx_date', 'document_no', 'narration', 'debit', 'credit', 'source_type', 'source_id'])
+            ->select(['trx_date', 'document_no'])
+            ->selectRaw("COALESCE(NULLIF(narration, ''), ".self::kindOf($pdo).') as narration')
+            ->addSelect(['debit', 'credit', 'source_type', 'source_id'])
             ->selectRaw('1 as sort, id');
 
         $running = DB::query()

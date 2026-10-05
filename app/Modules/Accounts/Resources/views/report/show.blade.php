@@ -305,6 +305,21 @@
                     লিখতে হত। ছাঁকনি হলে কোম্পানি নিজে একটা ধরন যোগ
                     করলেই তার খতিয়ান পেয়ে যায় — কোড ছোঁয়া ছাড়াই।
                 --}}
+                {{-- ⭐ কোন পক্ষের লেজার — মালিক, ৫ অক্টোবর ২০২৬ ([[ReportController]] `parties`) --}}
+                @if (! empty($partyFilter))
+                    <label>
+                        <span class="sr-only">{{ __('accounts::party_ledger.pick_party') }}</span>
+                        <select name="{{ $partyFilter }}" data-party-picker
+                                class="h-(--spacing-field-compact) max-w-64 rounded-(--radius-field) border border-(--color-border)
+                                       bg-(--color-surface-app) px-2 text-sm">
+                            <option value="">{{ __('accounts::party_ledger.pick_party') }}</option>
+                            @foreach ($parties as $party)
+                                <option value="{{ $party->id }}" @selected((int) ($filters[$partyFilter] ?? 0) === $party->id)>{{ $party->name }}</option>
+                            @endforeach
+                        </select>
+                    </label>
+                @endif
+
                 @if ($partyTypes->isNotEmpty())
                     <label>
                         <span class="sr-only">{{ __('master_data::menu.party_types') }}</span>
