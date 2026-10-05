@@ -37,6 +37,8 @@ class PriceList extends Model implements Drillable
     protected $fillable = [
         'company_id', 'code', 'name_en', 'name_bn',
         'party_type_id', 'is_default', 'is_active', 'created_by',
+        // ⭐ তালিকা কার জন্য — একজন গ্রাহক বা এক এলাকা (বিক্রয়ের দর তালিকা, ৫ অক্টোবর ২০২৬); ঘর দুইটা বিক্রয়ের মাইগ্রেশনে
+        'customer_id', 'location_id',
     ];
 
     protected function casts(): array
