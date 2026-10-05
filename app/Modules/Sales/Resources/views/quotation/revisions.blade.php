@@ -53,7 +53,7 @@
             </ul>
 
             <x-ui.pager :rows="$roots" />
-            <x-ui.list-totals :rows="$roots" />
         @endif
+        <x-ui.list-totals :rows="$roots" />
     </section>
 </x-layouts.app>
