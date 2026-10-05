@@ -33,6 +33,7 @@
         ],
         [
             'key' => 'cost',
+            'total' => 'money',
             'label' => __('accounts::asset.cost'),
             'numeric' => true,
             'width' => '10rem',
@@ -131,10 +132,12 @@
         </form>
 
         <x-ui.table :rows="$assets"
+                    :grand="$grand ?? []"
                     :columns="$columns"
                     :compact="request()->boolean('compact')"
                     :empty="$q ? __('core.empty.no_results') : __('accounts::asset.empty')" />
     </div>
 
     <div class="mt-3">{{ $assets->links() }}</div>
+    <x-ui.list-totals :rows="$assets" :grand="$grand ?? []" :columns="$columns" />
 </x-layouts.app>

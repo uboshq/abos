@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Accounts\Http\Controllers;
 
+use App\Core\Concerns\GrandTotals;
 use App\Core\Concerns\SortsLists;
 use App\Core\Services\MenuBuilder;
 use App\Core\Support\ViewedBranch;
@@ -44,6 +45,7 @@ use Illuminate\View\View;
  */
 class VoucherListController extends Controller implements HasMiddleware
 {
+    use GrandTotals;
     use SortsLists;
 
     public const SALES_DEPOSIT = 'sales_deposit';
@@ -152,7 +154,9 @@ class VoucherListController extends Controller implements HasMiddleware
             'tab' => $tab,
             'tabs' => self::TABS,
             'counts' => $this->counts($request),
-            'vouchers' => $query->paginate(50)->withQueryString(),
+            'vouchers' => (clone $query)->paginate(50)->withQueryString(),
+            // ⭐ যোগফলের পট্টি — গোটা ছাঁকনির অঙ্ক, পাতার নয় (মালিক, ৫ অক্টোবর ২০২৬)
+            'grand' => $this->grandTotals($query, ['amount' => 't.amount']),
             'q' => $request->query('q'),
             'sort' => $sort,
             'sortOptions' => [
@@ -186,7 +190,9 @@ class VoucherListController extends Controller implements HasMiddleware
             'tab' => $tab,
             'tabs' => self::TABS,
             'counts' => $this->counts($request),
-            'vouchers' => $query->paginate(50)->withQueryString(),
+            'vouchers' => (clone $query)->paginate(50)->withQueryString(),
+            // ⭐ যোগফলের পট্টি — গোটা ছাঁকনির অঙ্ক, পাতার নয় (মালিক, ৫ অক্টোবর ২০২৬)
+            'grand' => $this->grandTotals($query, ['amount' => 't.amount']),
             'q' => $request->query('q'),
             'sort' => $sort,
             'sortOptions' => [

@@ -109,5 +109,6 @@
                     :view-url="fn ($n) => route('accounts.note.show', $n)" />
 
         <x-ui.pager :rows="$rows" />
+        <x-ui.list-totals :rows="$rows" :grand="$grand ?? []" :columns="$columns" />
     </div>
 </x-layouts.app>

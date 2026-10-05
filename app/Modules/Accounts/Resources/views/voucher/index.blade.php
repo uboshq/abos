@@ -154,5 +154,6 @@
             :columns="$columns" />
 
         <x-ui.pager :rows="$vouchers" />
+        <x-ui.list-totals :rows="$vouchers" :grand="$grand ?? []" :columns="$columns" />
     </div>
 </x-layouts.app>

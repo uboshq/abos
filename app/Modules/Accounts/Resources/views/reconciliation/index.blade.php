@@ -98,4 +98,5 @@
     </div>
 
     <div class="mt-3">{{ $reconciliations->links() }}</div>
+    <x-ui.list-totals :rows="$reconciliations" />
 </x-layouts.app>

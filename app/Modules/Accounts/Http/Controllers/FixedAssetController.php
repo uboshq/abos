@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Accounts\Http\Controllers;
 
+use App\Core\Concerns\GrandTotals;
 use App\Core\Services\MenuBuilder;
 use App\Core\Services\PartyRegistry;
 use App\Core\Support\CompanyContext;
@@ -31,6 +32,8 @@ use Illuminate\View\View;
  */
 class FixedAssetController extends Controller implements HasMiddleware
 {
+    use GrandTotals;
+
     public function __construct(
         private readonly FixedAssetService $assets,
         private readonly MenuBuilder $menu,
@@ -46,7 +49,7 @@ class FixedAssetController extends Controller implements HasMiddleware
 
     public function index(Request $request): View
     {
-        $assets = FixedAsset::query()
+        $query = FixedAsset::query()
             ->with(['assetAccount'])
             // খোঁজা — নাম, কাগজের নম্বর আর গায়ের ট্যাগ; গুদামে দাঁড়িয়ে
             // মানুষের হাতে ট্যাগ নম্বরটাই থাকে।
@@ -55,13 +58,13 @@ class FixedAssetController extends Controller implements HasMiddleware
                     ->orWhere('document_no', 'like', "%{$term}%")
                     ->orWhere('tag_no', 'like', "%{$term}%")
             ))
-            ->orderByDesc('acquired_on')
-            ->paginate(50)
-            ->withQueryString();
+            ->orderByDesc('acquired_on');
 
         return view('accounts::asset.index', [
             'menu' => $this->menu->forUser($request->user()),
-            'assets' => $assets,
+            'assets' => (clone $query)->paginate(50)->withQueryString(),
+            // ⭐ যোগফলের পট্টি — ছাঁকা সব সম্পদের কেনা দাম, পাতার নয় (মালিক, ৫ অক্টোবর ২০২৬)
+            'grand' => $this->grandTotals($query, ['cost' => 't.cost']),
             'q' => $request->query('q'),
             /*
              * ⓘ সম্পদের খাতের তালিকাটা আর এখানে নয় — ফর্মটা `create`-এ

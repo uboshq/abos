@@ -77,5 +77,6 @@
             :columns="$columns" />
 
         <x-ui.pager :rows="$loans" />
+        <x-ui.list-totals :rows="$loans" :grand="$grand ?? []" :columns="$columns" />
     </div>
 </x-layouts.app>

@@ -181,6 +181,7 @@
                 ]" />
 
             <x-ui.pager :rows="$entries" />
+            <x-ui.list-totals :rows="$entries" />
         </section>
     @endif
 </x-layouts.app>

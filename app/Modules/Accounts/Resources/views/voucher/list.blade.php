@@ -25,7 +25,7 @@
              'source' => $d->source_type, 'id' => $d->source_id,
          ])],
         ['key' => 'narration', 'label' => __('core.table.narration')],
-        ['key' => 'amount', 'label' => __('accounts::field.amount'), 'numeric' => true, 'width' => '10rem',
+        ['key' => 'amount', 'total' => 'money', 'label' => __('accounts::field.amount'), 'numeric' => true, 'width' => '10rem',
          'render' => fn ($d) => \App\Core\Support\Money::format($d->amount)],
     ] : [
         ['key' => 'trx_date', 'label' => __('core.table.date'), 'width' => '8rem',
@@ -43,7 +43,7 @@
 
     if (! $isDocumentTab) {
         $columns[] = ['key' => 'narration', 'label' => __('core.table.narration')];
-        $columns[] = ['key' => 'amount', 'label' => __('accounts::field.amount'), 'numeric' => true, 'width' => '10rem',
+        $columns[] = ['key' => 'amount', 'total' => 'money', 'label' => __('accounts::field.amount'), 'numeric' => true, 'width' => '10rem',
             'render' => fn ($v) => \App\Core\Support\Money::format($v->amount)];
         $columns[] = ['key' => 'status', 'label' => __('accounts::field.state'), 'width' => '8rem',
             'render' => fn ($v) => view('accounts::voucher.partials.status', ['voucher' => $v])];
@@ -97,8 +97,10 @@
             :compact="request()->boolean('compact')"
             :empty="$q ? __('core.empty.no_results') : __('accounts::message.no_vouchers')"
             :rows="$vouchers"
+            :grand="$grand ?? []"
             :columns="$columns" />
 
         <x-ui.pager :rows="$vouchers" />
+        <x-ui.list-totals :rows="$vouchers" :grand="$grand ?? []" :columns="$columns" />
     </div>
 </x-layouts.app>

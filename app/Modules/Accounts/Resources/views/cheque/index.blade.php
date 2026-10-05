@@ -140,4 +140,5 @@
     </div>
 
     <div class="mt-3">{{ $cheques->links() }}</div>
+    <x-ui.list-totals :rows="$cheques" :grand="$grand ?? []" :columns="$columns" />
 </x-layouts.app>

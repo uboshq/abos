@@ -96,4 +96,5 @@
                 :empty="__('accounts::message.inter_company_none')" />
 
     <x-ui.pager :rows="$rows" />
+    <x-ui.list-totals :rows="$rows" />
 </x-layouts.app>
