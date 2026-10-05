@@ -162,14 +162,25 @@ final class ProductionService
             $sort = 0;
 
             foreach ($taken as $need) {
-                $drawn = $this->costs->issue(
-                    product: $need['product'],
-                    qty: $need['qty'],
-                    sourceType: Production::STOCK_SOURCE,
-                    sourceId: $production->id,
-                    documentNo: $production->document_no,
-                    date: $production->trx_date,
-                );
+                /*
+                 * ⭐ খরচ লট ধরে — যে লট থেকে উপকরণ বেরোল, সেই লটের স্তর থেকে (Inventory অডিট ম৭, ৫ অক্টোবর ২০২৬)।
+                 * ⛔ আগে পুরোটা একবারে, লট না দেখে, পুরনো স্তর আগে: লট A-র চাল গেল, খালি হল লট B-র স্তর।
+                 */
+                $drawn = ['cost' => '0'];
+
+                foreach ($need['lots'] ?? [[null, $need['qty']]] as [$batchId, $qty]) {
+                    $part = $this->costs->issue(
+                        product: $need['product'],
+                        qty: $qty,
+                        sourceType: Production::STOCK_SOURCE,
+                        sourceId: $production->id,
+                        documentNo: $production->document_no,
+                        date: $production->trx_date,
+                        batch: $batchId === null ? null : \App\Modules\Inventory\Models\Batch::query()->find($batchId),
+                    );
+
+                    $drawn['cost'] = bcadd($drawn['cost'], $part['cost'], 4);
+                }
 
                 ProductionLine::query()->create([
                     'production_id' => $production->id,
@@ -206,6 +217,14 @@ final class ProductionService
              * লট থেকে কোন রান্না, রান্না থেকে কোন রেসিপি, আর রেসিপি
              * থেকে কোন উপকরণের লট।
              */
+            $lot = $production->product->track_batch
+                ? app(BatchService::class)->receive(
+                    product: $production->product,
+                    batchNo: (string) $production->document_no,
+                    expiry: $production->expiry_date?->toDateString(),
+                )
+                : null;
+
             $this->stock->move(
                 product: $production->product,
                 warehouse: $warehouse,
@@ -214,13 +233,7 @@ final class ProductionService
                 floor: (string) $production->qty,
                 date: $production->trx_date,
                 documentNo: $production->document_no,
-                batch: $production->product->track_batch
-                    ? app(BatchService::class)->receive(
-                        product: $production->product,
-                        batchNo: (string) $production->document_no,
-                        expiry: $production->expiry_date?->toDateString(),
-                    )
-                    : null,
+                batch: $lot,
             );
 
             $this->costs->receive(
@@ -231,6 +244,8 @@ final class ProductionService
                 sourceId: $production->id,
                 documentNo: $production->document_no,
                 date: $production->trx_date,
+                // ⭐ তৈরি খাবারের স্তরও তার লটে — অডিট ম৭; ⛔ আগে লটহীন, আর লট ধরে বিক্রিতে "লটের স্তর নেই"
+                batch: $lot,
             );
 
             return $production->fresh(['lines.product', 'product', 'recipe']);

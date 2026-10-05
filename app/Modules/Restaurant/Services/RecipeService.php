@@ -206,7 +206,9 @@ final class RecipeService
      * একটা অবস্থায় বসত যা কোনো বাস্তব ঘটনার সাথে মেলে না, আর কেউ জানত
      * না কোনটা কমেছে কোনটা কমেনি।
      *
-     * @return list<array{product: Product, qty: string}> যা যা কমল
+     * ⓘ `lots` — কোন লট থেকে কতটা বেরোল ([batch_id|null, qty]); খরচ তাই লট ধরে টানা যায় (Inventory অডিট ম৭)।
+     *
+     * @return list<array{product: Product, qty: string, lots: list<array{0: int|null, 1: string}>}> যা যা কমল
      */
     public function consume(
         Recipe $recipe,
@@ -226,8 +228,8 @@ final class RecipeService
         return DB::transaction(function () use (
             $needs, $warehouse, $sourceType, $sourceId, $date, $documentNo
         ) {
-            foreach ($needs as $need) {
-                $this->stock->issue(
+            foreach ($needs as $i => $need) {
+                $out = $this->stock->issue(
                     product: $need['product'],
                     warehouse: $warehouse,
                     sourceType: $sourceType,
@@ -235,6 +237,11 @@ final class RecipeService
                     qty: $need['qty'],
                     date: $date,
                     documentNo: $documentNo,
+                );
+
+                $needs[$i]['lots'] = array_map(
+                    fn ($movement) => [$movement->batch_id === null ? null : (int) $movement->batch_id, bcmul((string) $movement->floor_change, '-1', 4)],
+                    $out,
                 );
             }
 
