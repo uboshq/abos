@@ -357,14 +357,11 @@ final class StockCountService
                 ]);
             }
 
-            // ⓘ তাকে যা নেই তা দেওয়া যায় না — বিস্কুটটা হয় তাকে ছিল, নয় ছিল না
+            // ⓘ খাতার সংখ্যা তাকের — কাগজের "আগে/পরে" সেটাই বলে
             $onHand = $this->stock->floorQty($product, $warehouse);
 
-            if (bccomp($qty, $onHand, 4) > 0) {
-                throw ValidationException::withMessages([
-                    'qty' => __('inventory::validation.issue_more_than_stock', ['have' => rtrim(rtrim($onHand, '0'), '.')]),
-                ]);
-            }
+            // ⭐ মাপা হয় "পাওয়া যায়" দিয়ে — অডিট ম৬ ([[assertIssuable()]])
+            $this->assertIssuable($product, $warehouse, $qty);
 
             $paper = StockCount::create([
                 'company_id' => CompanyContext::id(),
@@ -425,6 +422,10 @@ final class StockCountService
             $paper->loadMissing(['lines.product', 'warehouse', 'reason']);
             $line = $paper->lines->firstOrFail();
 
+            // ⭐ শেষ সইয়ে আবার — সইয়ের অপেক্ষার মাঝে মাল অন্যের আদেশে সংরক্ষিত হয়ে থাকতে পারে (অডিট ম৬)
+            Warehouse::query()->whereKey($paper->warehouse_id)->lockForUpdate()->first();
+            $this->assertIssuable($line->product, $paper->warehouse, bcmul((string) $line->difference, '-1', 4));
+
             $this->adjustments->settle(
                 product: $line->product,
                 warehouse: $paper->warehouse,
@@ -442,6 +443,24 @@ final class StockCountService
 
             return $paper->fresh(['lines']);
         });
+    }
+
+    /**
+     * ⭐ বের করা যায় কেবল যা "পাওয়া যায়" (তাক − সংরক্ষিত − আটকানো) — Inventory অডিট ম৬, ৫ অক্টোবর ২০২৬।
+     *
+     * ⛔ আগে মাপা হত কেবল তাক: তাকে ১০-এর ৬টা অন্যের আদেশে সংরক্ষিত, তবু ৫টা "উপহার" বেরোত, আর আদেশ খালি হাতে দাঁড়াত।
+     * ⓘ ডাকা হয় গুদামের তালার ভিতরে — কাগজ খোলায় আর শেষ সইয়ে ([[issue()]], [[finishIssue()]])। ⚠️ পরিদর্শনের বিনাশ এই
+     * পথে আসে না: সে আটকানো মালই নেয় ([[StockAdjustmentService::issue()]]), আর "পাওয়া যায়" বসালে সেটা ভাঙত।
+     */
+    private function assertIssuable(Product $product, Warehouse $warehouse, string $qty): void
+    {
+        $available = $this->stock->availableQty($product, $warehouse);
+
+        if (bccomp($qty, $available, 4) > 0) {
+            throw ValidationException::withMessages([
+                'qty' => __('inventory::validation.issue_more_than_stock', ['have' => rtrim(rtrim(bcadd($available, '0', 4), '0'), '.') ?: '0']),
+            ]);
+        }
     }
 
     /**
