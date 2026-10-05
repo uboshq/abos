@@ -337,6 +337,8 @@ final class CreditExposure implements CreditHolds
                 ->orWhereExists(fn ($e) => $e->from('ledger_entries as le')
                     ->where('le.source_type', 'cheque')
                     ->whereColumn('le.source_id', 'ch.id')))
+            // ⓘ তালাসহ দেয়ালে সর্বশেষ অবস্থা — একই মুহূর্তে চেক ক্লিয়ার/ফেরত হলেও ([[assertRoomLocked()]])
+            ->when($this->readLatest, fn ($q) => $q->sharedLock())
             ->sum('ch.amount');
 
         return bcadd((string) $sum, '0', 4);
@@ -610,7 +612,12 @@ final class CreditExposure implements CreditHolds
          */
         $unpaid = bcsub($adding, $payingNow, 4);
 
-        $pending = $this->pending($customer, $exceptInvoiceId, $exceptChallanId);
+        /*
+         * ⭐ ক্লিয়ার না হওয়া চেকও — [[check()]]-এর হুবহু ভাগ ([[unclearedCheques()]]), ৫ অক্টোবর ২০২৬।
+         * ⛔ আগে কাউন্টার/চালান/বিলের দেয়াল এটা গুনত না, অথচ DO আর আদেশের যাচাই গুনত: হাতে আসার দিনেই জমায় বসা
+         * ২,০০০-এর চেক কাউন্টারে ২,০০০ বেশি জায়গা দিত, আর একই গ্রাহকের DO আটকাত। এখন দুই পথ এক অঙ্ক বলে।
+         */
+        $pending = bcadd($this->pending($customer, $exceptInvoiceId, $exceptChallanId), $this->unclearedCheques($customer), 4);
 
         /*
          * ⛔ বাকি বন্ধ ([[stopsFor()]]) — সীমার আগে, ৫ অক্টোবর ২০২৬। এই কাগজে নতুন বাকি জন্মালে "না"; পুরো টাকা দিলে

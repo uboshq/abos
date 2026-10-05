@@ -113,6 +113,10 @@ final class DirectSaleOverview
         if (bccomp($s['held'], '0', 4) > 0) {
             $o->money(__('sales::overview_confirm.held'), Money::format($s['held']));
         }
+        // ⭐ ক্লিয়ার না হওয়া চেক — দেয়াল এটা গোনে, তাই সারাংশও দেখায় ([[CreditExposure::assertRoom()]])
+        if (bccomp($s['cheques'], '0', 4) > 0) {
+            $o->money(__('sales::credit.uncleared_cheques'), Money::format($s['cheques']));
+        }
 
         if ($this->credit->isOn()) {
             $o->money(__('sales::overview_confirm.limit'), Money::format($s['limit']));
@@ -166,7 +170,7 @@ final class DirectSaleOverview
         }
 
         $ledger = bcsub(bcadd($customer->outstanding(), '0', 4), (string) $old, 4);
-        $exposure = bcadd(bcadd($ledger, (string) $s['held'], 4), $left, 4);
+        $exposure = bcadd(bcadd(bcadd($ledger, (string) $s['held'], 4), (string) $s['cheques'], 4), $left, 4);
         $over = bcsub($exposure, (string) $s['limit'], 4);
 
         return array_merge($s, [
@@ -201,7 +205,7 @@ final class DirectSaleOverview
 
         $held = bcadd($this->credit->pending($customer, $id), '0', 4);
         $ledger = bcsub((string) $s['due'], (string) $s['advance'], 4);
-        $exposure = bcadd(bcadd($ledger, $held, 4), $left, 4);
+        $exposure = bcadd(bcadd(bcadd($ledger, $held, 4), (string) $s['cheques'], 4), $left, 4);
         $over = bcsub($exposure, (string) $s['limit'], 4);
 
         return array_merge($s, [

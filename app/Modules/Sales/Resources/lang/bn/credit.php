@@ -7,4 +7,5 @@ declare(strict_types=1);
  */
 return [
     'overdue_stop' => ':days দিনের পুরনো বাকি আছে (:bills, :amount) — নতুন বাকি বন্ধ',
+    'uncleared_cheques' => 'ক্লিয়ার না হওয়া চেক',
 ];

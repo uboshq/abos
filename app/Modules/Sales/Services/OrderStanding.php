@@ -34,7 +34,7 @@ final class OrderStanding
     ) {}
 
     /**
-     * @return array{due: string, advance: string, held: string, limit: string, pending_claims: string,
+     * @return array{due: string, advance: string, held: string, cheques: string, limit: string, pending_claims: string,
      *               pending_claim_count: int, order_total: string, exposure: string, to_pay: string, over_limit: bool,
      *               stop_reason: ?string, stop: bool}
      */
@@ -47,6 +47,8 @@ final class OrderStanding
         $advance = bccomp($ledger, '0', 4) < 0 ? bcmul($ledger, '-1', 4) : '0.0000';
 
         $held = bcadd($this->exposure->pending($customer), '0', 4);
+        // ⭐ ক্লিয়ার না হওয়া চেক — দেয়ালের একই ভাগ ([[CreditExposure::unclearedCheques()]]), ৫ অক্টোবর ২০২৬
+        $cheques = $this->exposure->unclearedCheques($customer);
         $limit = bcadd((string) ($customer->credit_limit ?? '0'), '0', 4);
 
         $claims = DepositClaim::query()
@@ -56,7 +58,7 @@ final class OrderStanding
             ->first();
 
         // ⓘ জমা (অগ্রিম) খাতার বাকিতেই কাটা — `outstanding()` ঋণাত্মক হয়ে আসে
-        $exposure = bcadd(bcadd($ledger, $held, 4), $orderTotal, 4);
+        $exposure = bcadd(bcadd(bcadd($ledger, $held, 4), $cheques, 4), $orderTotal, 4);
         $over = bcsub($exposure, $limit, 4);
 
         /*
@@ -70,6 +72,7 @@ final class OrderStanding
             'due' => $due,
             'advance' => $advance,
             'held' => $held,
+            'cheques' => $cheques,
             'limit' => $limit,
             'pending_claims' => bcadd((string) ($claims?->total ?? '0'), '0', 4),
             'pending_claim_count' => (int) ($claims?->n ?? 0),
