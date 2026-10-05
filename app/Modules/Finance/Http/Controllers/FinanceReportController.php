@@ -44,7 +44,9 @@ class FinanceReportController extends Controller
         $definition = $this->reports->get($key);
         Gate::authorize($definition->permission);
 
-        $result = $this->reports->run($key, $request->only($definition->requestKeys()), page: max(1, (int) $request->query('page', 1)));
+        // ⓘ শাখা ধরে ভাগ চাওয়া হয়, বাকি রিপোর্ট-পর্দার মতো — ভাগ হবে কি না ইঞ্জিন ঠিক করে; এই খাতাগুলো একটাই চলমান জের,
+        // তাই সংজ্ঞায় `splitByBranch: false` ([[ReportEngine::branchPlan()]])
+        $result = $this->reports->run($key, $request->only($definition->requestKeys()), page: max(1, (int) $request->query('page', 1)), byBranch: true);
 
         if ($key === LoanLedgerReports::BANK_LOAN) {
             return view('accounts::report.show', [

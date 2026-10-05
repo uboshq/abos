@@ -109,11 +109,13 @@ final class LoanLedgerReports
     {
         $facility = $facilityId > 0 ? BankFacility::query()->find($facilityId) : null;
         $service = app(BankFacilityService::class);
-        $rows = $facility === null ? null : $service->ledgerRowsOf($facility);
+        // ⛔ শাখার দেয়াল — এক শাখায় সীমিত মানুষ অন্য শাখার দাখিলা দেখেন না ([[ReportEngine::branchWall()]])
+        $rows = $facility === null ? null : $service->ledgerRowsOf($facility)?->tap(ReportEngine::branchWall($f, 'branch_id'));
 
         // ⓘ ঋণ না বাছলে, বা খাত নেই (গ্যারান্টি) — খালি খাতা
         if ($rows === null) {
             return DB::query()->fromSub(DB::table('ledger_entries')->where('company_id', $f['company_id'])
+                ->tap(ReportEngine::branchWall($f, 'branch_id'))
                 ->selectRaw("NULL as trx_date, NULL as document_no, NULL as narration, 0 as debit, 0 as credit, NULL as source_type, NULL as source_id, 0 as sort, 0 as id, 0 as balance")
                 ->whereRaw('1 = 0'), 'r');
         }
