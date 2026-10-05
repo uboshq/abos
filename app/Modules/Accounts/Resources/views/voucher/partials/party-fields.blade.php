@@ -60,7 +60,7 @@
                      'hint' => $o['hint'] ?? '', 'find' => $o['find'] ?? '']))
                  ->values()),
              dueUrl: @js(route('accounts.voucher.due')),
-             // ⓘ কোন বিলের বিপরীতে — একটাই (অডিট ম১); অন্য মডিউলের আগাম-ভরা "বিপরীতে"-ও এখান দিয়েই যায়
+             // ⓘ কোন বিলের বিপরীতে — একটাই (অডিট ম১); অন্য মডিউলের আগাম-ভরা “বিপরীতে”-ও এখান দিয়েই যায়
              pickedType: @js((string) ($was('against_type') ?? '')),
              pickedId: @js((string) ($was('against_id') ?? '')),
              adding: @js($errors->has('party_new') || filled(old('party_new'))),
