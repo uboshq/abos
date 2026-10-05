@@ -37,6 +37,8 @@ return [
 
     // ডিলারের কমিশন — কোম্পানির কাছে দাবি
     'commission_max_amount' => 'Highest commission in taka (0 = no limit)',
+    'discount_cap_line_percent' => 'Highest manual discount per line, % (0 = no limit)',
+    'discount_cap_bill_percent' => 'Highest manual discount per bill, % (0 = no limit)',
     'pos_rounding' => 'Show the rounding field at the counter',
     'rounding_max' => 'Largest rounding in taka (0 = no limit)',
     'commission_max_percent' => 'Highest commission rate % (0 = no limit)',

@@ -161,6 +161,9 @@ final class SalesInvoiceService
      */
     public function assertDiscountApproved(SalesInvoice $invoice): void
     {
+        // ⛔ সীমার উপরের ছাড় সই চাওয়ার আগেই ফেরে — সই দিয়ে সীমা পেরোনো যায় না ([[DiscountCap]], ৫ অক্টোবর ২০২৬)
+        app(DiscountCap::class)->assertWithin($invoice);
+
         $discount = $this->discountAwaitingSignature($invoice);
 
         if (bccomp($discount, '0', 4) <= 0) {
@@ -1244,6 +1247,9 @@ final class SalesInvoiceService
         }
 
         $totals['total'] = bcsub(bcadd($totals['total'], $rounding, 4), $billDiscount, 4);
+
+        // ⛔ হাতের ছাড়ের সীমা — বিল লেখার মুহূর্তেই, খসড়াও বসে না ([[DiscountCap]], ৫ অক্টোবর ২০২৬)
+        app(DiscountCap::class)->assertWithin($invoice);
 
         /*
          * ⭐ বিলে যোগ করা গাড়িভাড়া — মোটের ভিতরে, ছাড়ের পরে (মালিক, ৪ অক্টোবর ২০২৬; "Prepaid & Add")।

@@ -306,4 +306,5 @@ return [
     'stuck_paused' => 'Inactive: holds no credit',
     'draft_paused' => 'Draft :no deactivated.',
     'draft_resumed' => 'Draft :no is active again.',
+    'discount_cap_hint' => 'Discount limit — :line% per line, :bill% per bill (0 = no limit)',
 ];

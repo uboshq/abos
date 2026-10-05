@@ -104,6 +104,11 @@
                     <input type="hidden" name="discount_amount" :value="discountValue">
                 </x-sales::panel-row>
 
+                {{-- ⭐ হাতের ছাড়ের সীমা — কোম্পানির সেটিং থাকলে চোখের সামনে (৫ অক্টোবর ২০২৬; সার্ভার নিজে আটকায়, [[DiscountCap]]) --}}
+                @if (($discountCapHint = app(\App\Modules\Sales\Services\DiscountCap::class)->hint()) !== null)
+                    <p class="text-xs text-(--color-ink-muted)" data-discount-cap>{{ $discountCapHint }}</p>
+                @endif
+
                 @if ($vatEnabled)
                     {{--
                         ── ভ্যাট — পুরো কাগজের জন্য একবারে বদলানো যায় ─────────

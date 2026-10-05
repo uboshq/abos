@@ -1389,6 +1389,24 @@ return [
         ],
         [
             /*
+             * ⭐ হাতের ছাড়ের সীমা — সারিতে আর পুরো বিলে, শতাংশে (মালিক, ৫ অক্টোবর ২০২৬: আন্তর্জাতিক মান; [[DiscountCap]])।
+             * ⓘ ০ = সীমা নেই (ডিফল্ট, আজকের আচরণ)। ⛔ উপরে গেলে বিল ফেরে; ভিতরে থাকলেও মালিকের সই আগের মতো লাগে।
+             */
+            'key' => 'sales.discount_cap_line_percent',
+            'label' => 'sales::settings.discount_cap_line_percent',
+            'type' => 'number',
+            'default' => 0,
+            'group' => 'limits',
+        ],
+        [
+            'key' => 'sales.discount_cap_bill_percent',
+            'label' => 'sales::settings.discount_cap_bill_percent',
+            'type' => 'number',
+            'default' => 0,
+            'group' => 'limits',
+        ],
+        [
+            /*
              * বিক্রিতে ভ্যাট — মালিক, ২৮ সেপ্টেম্বর ২০২৬ (রাত): দুই সুইচ, ডিফল্টে সব জায়গায় বন্ধ।
              * ⓘ বন্ধ মানে বন্ধ: ঘর নেই, সার্ভার ভ্যাট নেয় না ([[CalculatesSalesLines::lineFigures()]])।
              * ক্রয়ের সুইচ আলাদা (`purchase.vat_enabled`) — কোনো দিক অন্যটা পড়ে না।
