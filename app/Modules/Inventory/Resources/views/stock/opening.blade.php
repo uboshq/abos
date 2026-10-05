@@ -146,6 +146,8 @@
             {{-- ⓘ উপরের "মোট" এই পাতার নয়, সবটার — পেজারের সীমা আর
                  ওই সংখ্যাটা তাই ইচ্ছাকৃতভাবে দুইটা আলাদা কথা বলে। --}}
             <x-ui.pager :rows="$entered" />
+            {{-- ⓘ মোট মূল্য উপরের মতোই সবটার, আর দর লুকানো থাকলে ঢাকা --}}
+            <x-ui.list-totals :rows="$entered" :totals="[['label' => __('inventory::message.opening_total'), 'value' => $showCost ? \App\Core\Support\Money::format($total) : \App\Core\Security\FieldSecurity::mask()]]" />
         </section>
     </div>
 </x-layouts.app>

@@ -428,5 +428,19 @@
             :totals="isset($grand) ? [] : $totals" />
 
         <x-ui.pager :rows="$products" />
+
+        {{-- ⭐ যোগফলের পট্টি — সারি · তাকে · বিক্রয়যোগ্য, আর মূল্য কেবল যিনি দর দেখতে পারেন (কলামটা তখনই থাকে)।
+             ⓘ টেবিলের সর্বমোটের একই সংখ্যা, গোটা ছাঁকনির; ⛔ আটটা পরিমাণের সবকটা নয় — পট্টি এক লাইনে থাকে। --}}
+        @php
+            $barTotals = [
+                ['label' => __('inventory::field.floor'), 'value' => \App\View\Components\Ui\Table::format((string) ($grand['floor'] ?? '0'), 'quantity')],
+                ['label' => __('inventory::field.available'), 'value' => \App\View\Components\Ui\Table::format((string) ($grand['available'] ?? '0'), 'quantity')],
+            ];
+
+            if (isset($grand['stock_value']) && collect($columns)->contains('key', 'stock_value')) {
+                $barTotals[] = ['label' => __('inventory::field.stock_value'), 'value' => \App\Core\Support\Money::format((string) $grand['stock_value'])];
+            }
+        @endphp
+        <x-ui.list-totals :rows="$products" :totals="$barTotals" />
     </div>
 </x-layouts.app>

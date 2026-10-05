@@ -163,5 +163,6 @@
             ]" />
 
         <x-ui.pager :rows="$movements" />
+        <x-ui.list-totals :rows="$movements" />
     </section>
 </x-layouts.app>

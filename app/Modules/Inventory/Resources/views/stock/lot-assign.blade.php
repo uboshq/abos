@@ -104,6 +104,7 @@
                 ]" />
 
             <x-ui.pager :rows="$waiting" />
+            <x-ui.list-totals :rows="$waiting" />
         </section>
     </div>
 </x-layouts.app>

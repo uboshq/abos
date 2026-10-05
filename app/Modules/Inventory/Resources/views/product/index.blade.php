@@ -222,5 +222,6 @@
             :columns="$columns" />
 
         <x-ui.pager :rows="$products" />
+        <x-ui.list-totals :rows="$products" />
     </div>
 </x-layouts.app>
