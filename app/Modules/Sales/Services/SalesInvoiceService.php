@@ -1108,8 +1108,7 @@ final class SalesInvoiceService
              *
              * তাই সরে যাওয়াটা মাপা হয় **সারির দরে**, মান দামের সাথে।
              */
-            // ⭐ মান দাম = এই গ্রাহকের সেদিনের দর তালিকার দাম, নাহলে পণ্যের দাম ([[SalesPrice]], ৫ অক্টোবর ২০২৬) — পণ্যের এককে, কারণ `$rate` উপরে নেমে গেছে
-            $standardPrice = app(SalesPrice::class)->for($invoice->customer, $product, $invoice->trx_date)->price;
+            $standardPrice = (string) ($product->sale_price ?? '0');
 
             /*
              * প্রতিটা সারিতে নতুন করে শূন্য — লুপের বাইরে নয়।
