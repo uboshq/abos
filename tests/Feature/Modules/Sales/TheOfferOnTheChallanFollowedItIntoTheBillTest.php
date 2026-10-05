@@ -159,26 +159,28 @@ final class TheOfferOnTheChallanFollowedItIntoTheBillTest extends TestCase
     }
 
     /**
-     * ⏸ মালিকের সিদ্ধান্তের অপেক্ষায় (সমন্বয়কারী জিজ্ঞেস করছেন, ৪ অক্টোবর ২০২৬)।
-     *
-     * আজকের আচরণ ([[SalesInvoiceService::assertDiscountApproved()]]): বিলের ছাড় থেকে অফারের ভাগ বাদ দিয়ে
-     * কেবল মানুষের নিজের ছাড় মালিকের সই চায় — অফার চালুর সময়েই সই নিয়েছিল। মালিকের ১ অক্টোবরের নিয়ম
-     * নাম ধরে কেবল স্কিম/অফারের ফ্রি মাল ছাড় দেয়; টাকার অফার ছাড় পায় কি না, সেটা মালিক বলবেন।
-     * ⓘ নিচের দাবি আজকের আচরণ লিখে রাখে, কিন্তু চলে না — সিদ্ধান্ত এলে markTestIncomplete সরিয়ে ঠিক দিকটা দাবি করুন।
+     * ⛔ অফারের ছাড়ও প্রতিটা বিলে মালিকের সই চায় — মালিক, ৫ অক্টোবর ২০২৬: "অফার-ছাড়ে সই মালিক দেবেন"।
+     * ⓘ বিলে কেবল অফারের ১০ টাকা ছাড় — তবু নিশ্চিতের আগে থামে, আর সই চাওয়া অঙ্ক ঠিক ১০।
      */
-    public function test_the_offer_share_and_the_owner_discount_signature_PENDING_OWNER(): void
+    public function test_an_offer_discount_waits_for_the_owner_on_every_bill(): void
     {
-        $this->markTestIncomplete('মালিকের সিদ্ধান্ত বাকি: টাকার অফারের ছাড় কি প্রতিটা বিলে মালিকের ছাড়ের সই চাইবে, নাকি অফার চালুর সময়ের সই-ই যথেষ্ট? সিদ্ধান্তের আগে কোনো দিকেই দাবি নয়।');
-
         $offer = $this->tenPercentOffer();
         $challan = $this->draftChallan();
         $this->applyOffer($challan, $offer)->assertSessionHasNoErrors();
         $challan = app(DeliveryChallanService::class)->confirm($challan->fresh());
         $invoice = $this->bill($challan, '10');
 
-        // আজকের আচরণ: বিলে কেবল অফারের ছাড় থাকলে সইয়ের কিছু নেই — assertDiscountApproved() থামায় না
-        app(\App\Modules\Sales\Services\SalesInvoiceService::class)->assertDiscountApproved($invoice->fresh());
-        $this->assertSame('10.0000', (string) $invoice->lines()->sum('promotion_discount'));
+        $this->assertSame('10.0000', (string) $invoice->lines()->sum('promotion_discount'), 'প্রস্তুতিটাই ভুল — বিলে অফারের ছাড় নেই।');
+        $service = app(\App\Modules\Sales\Services\SalesInvoiceService::class);
+        $this->assertSame(0, bccomp('10', $service->discountAwaitingSignature($invoice->fresh()), 4),
+            '⛔ অফারের ছাড় সইয়ের অঙ্কে নেই।');
+
+        try {
+            $service->assertDiscountApproved($invoice->fresh());
+            $this->fail('⛔ কেবল অফারের ছাড়, তবু মালিকের সই ছাড়াই বিল এগোল।');
+        } catch (\Illuminate\Validation\ValidationException) {
+            $this->assertTrue(true);
+        }
     }
 
     // ── যন্ত্রপাতি ──────────────────────────────────────────────────────
