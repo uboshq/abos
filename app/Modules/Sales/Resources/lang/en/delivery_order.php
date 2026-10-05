@@ -22,6 +22,8 @@ return [
     'submit' => 'Submit',
     'keep_draft' => 'Keep as draft',
     'saved' => 'DO saved.',
+    'write_an_order_now' => 'New DOs are closed — write a sales order now. Open DOs finish as before.',
+    'new_order' => 'New sales order',
     'submitted' => 'DO submitted — the supervisor will look at it.',
     'not_ready' => 'This DO is not ready for the counter yet — it is: :status.',
     'already_invoiced' => 'This DO was already invoiced on another bill.',

@@ -92,6 +92,7 @@ class DeliveryOrderDeskController extends Controller implements HasMiddleware
 
         return view('sales::delivery_order.index', [
             'menu' => $this->menu->forUser($request->user()),
+            'newStopped' => $this->orders->newOnesStopped(),
             'grand' => $this->grandTotals($query, ['total' => 't.total']),
             'orders' => $query->paginate(50)->withQueryString(),
             'tab' => $tab,
@@ -107,8 +108,13 @@ class DeliveryOrderDeskController extends Controller implements HasMiddleware
         ]);
     }
 
-    public function create(Request $request): View
+    public function create(Request $request): View|RedirectResponse
     {
+        // ⭐ কোম্পানি বিক্রয় আদেশে চলে গেলে নতুন DO-র ফর্ম খোলে না — তালিকা বলে কেন (নকশার ধাপ ১২)
+        if ($this->orders->newOnesStopped()) {
+            return redirect()->route('sales.delivery_order.index');
+        }
+
         return view('sales::delivery_order.form', [
             'menu' => $this->menu->forUser($request->user()),
             // ⓘ হেডারে বাছা শাখার গ্রাহকই — মালিক, ১ অক্টোবর ২০২৬: এক শাখার কিছু আরেক শাখায় নয়

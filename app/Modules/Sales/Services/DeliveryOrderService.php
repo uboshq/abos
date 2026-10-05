@@ -6,6 +6,7 @@ namespace App\Modules\Sales\Services;
 
 use App\Core\Engines\Approval\ApprovalEngine;
 use App\Core\Engines\NumberSeries\NumberSeriesEngine;
+use App\Core\Services\SettingsService;
 use App\Models\User;
 use App\Modules\Customer\Models\Customer;
 use App\Modules\Inventory\Models\Product;
@@ -40,7 +41,19 @@ final class DeliveryOrderService
     public function __construct(
         private readonly NumberSeriesEngine $numbers,
         private readonly ApprovalEngine $approvals,
+        private readonly SettingsService $settings,
     ) {}
+
+    /**
+     * ⭐ নতুন DO বন্ধ — কোম্পানি বিক্রয় আদেশে চলে গেলে ([[SalesOrderService::REPLACES_DO]]; নকশার ধাপ ১২, ৫ অক্টোবর ২০২৬)।
+     *
+     * ⓘ কেবল নতুন বানানো বন্ধ: খোলা DO-র জমা, সই, পরিমাণ-বদল, হিসাবের যাচাই, ঘড়ি, ডিপো যাচাই আর কাউন্টার
+     * আগের মতো, নিজের নম্বরে শেষ হয়। ⛔ পাহারা এখানেই, [[create()]]-এ — ডেস্ক, পোর্টাল আর API তিন দরজাই এই পথে লেখে।
+     */
+    public function newOnesStopped(): bool
+    {
+        return (bool) $this->settings->get(SalesOrderService::REPLACES_DO, false);
+    }
 
     /**
      * @param  array{customer_id?: int, sales_order_id?: ?int, warehouse_id?: ?int, trx_date?: string, deliver_on?: ?string, narration?: ?string}  $data
@@ -48,6 +61,10 @@ final class DeliveryOrderService
      */
     public function create(array $data, array $lines, User|Customer $by): DeliveryOrder
     {
+        if ($this->newOnesStopped()) {
+            throw ValidationException::withMessages(['order' => __('sales::delivery_order.write_an_order_now')]);
+        }
+
         $customerId = $by instanceof Customer ? (int) $by->id : (int) ($data['customer_id'] ?? 0);
         $this->assertCustomer($customerId);
         $orderId = $this->salesOrderFor($data['sales_order_id'] ?? null, $customerId);

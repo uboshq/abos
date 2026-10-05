@@ -4,10 +4,17 @@
 <x-sales::portal.layout :customer="$customer">
     <h1 class="mb-3 text-lg font-semibold">{{ __('sales::delivery_order.title') }}</h1>
 
-    <a href="{{ route('sales.portal.do.create') }}" data-portal-do-new
-       class="mb-4 block rounded-(--radius-field) bg-(--color-brand-500) px-4 py-3 text-center font-medium text-white">
-        {{ __('sales::delivery_order.new') }}
-    </a>
+    {{-- ⭐ কোম্পানি বিক্রয় আদেশে চলে গেলে নতুন DO নয় — খোলা DO-গুলো নিচে আগের মতো (নকশার ধাপ ১২) --}}
+    @if ($newStopped ?? false)
+        <p class="mb-4 rounded-(--radius-field) bg-(--color-badge-warning-bg) px-4 py-3 text-sm text-(--color-badge-warning-ink)" role="status" data-portal-do-stopped>
+            {{ __('sales::delivery_order.write_an_order_now') }}
+        </p>
+    @else
+        <a href="{{ route('sales.portal.do.create') }}" data-portal-do-new
+           class="mb-4 block rounded-(--radius-field) bg-(--color-brand-500) px-4 py-3 text-center font-medium text-white">
+            {{ __('sales::delivery_order.new') }}
+        </a>
+    @endif
 
     <div class="grid gap-2">
         @forelse ($orders as $order)

@@ -31,11 +31,18 @@ class PortalDeliveryOrderController extends Controller
         return view('sales::portal.do-index', [
             'customer' => $customer,
             'orders' => $this->papers->deliveryOrders(),
+            'newStopped' => $this->orders->newOnesStopped(),
         ]);
     }
 
-    public function create(): View
+    public function create(): View|RedirectResponse
     {
+        // ⭐ কোম্পানি বিক্রয় আদেশে চলে গেলে নতুন DO-র ফর্ম খোলে না (নকশার ধাপ ১২)
+        if ($this->orders->newOnesStopped()) {
+            return redirect()->route('sales.portal.do.index')
+                ->withErrors(['order' => __('sales::delivery_order.write_an_order_now')]);
+        }
+
         return view('sales::portal.do-form', [
             'customer' => $this->papers->customer(),
             'products' => $this->papers->orderableProducts(),

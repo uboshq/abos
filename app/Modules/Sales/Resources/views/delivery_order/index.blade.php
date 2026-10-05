@@ -66,17 +66,32 @@
         @endforeach
     </nav>
 
+    @if ($newStopped ?? false)
+        <p class="mb-4 rounded-(--radius-field) bg-(--color-badge-warning-bg) px-3 py-2 text-sm text-(--color-badge-warning-ink)" role="status" data-new-do-stopped>
+            {{ __('sales::delivery_order.write_an_order_now') }}
+        </p>
+    @endif
+
     <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
         <form method="GET" class="contents">
             <input type="hidden" name="tab" value="{{ $tab }}">
             <x-ui.toolbar :title="__('sales::delivery_order.title')" :columns="$columns"
                           :search-placeholder="__('sales::delivery_order.search')" :sort="$sortOptions" :quiet="['tab']">
                 <x-slot:actions>
-                    @can('sales.do.create')
-                        <x-ui.button tone="primary" icon="plus" :href="route('sales.delivery_order.create')" data-new-do>
-                            {{ __('sales::delivery_order.new') }}
-                        </x-ui.button>
-                    @endcan
+                    {{-- ⭐ কোম্পানি বিক্রয় আদেশে চলে গেলে "নতুন DO"-র জায়গায় নতুন আদেশ (নকশার ধাপ ১২) --}}
+                    @if ($newStopped ?? false)
+                        @can('sales.order.create')
+                            <x-ui.button tone="primary" icon="plus" :href="route('sales.order.create')" data-new-order-instead>
+                                {{ __('sales::delivery_order.new_order') }}
+                            </x-ui.button>
+                        @endcan
+                    @else
+                        @can('sales.do.create')
+                            <x-ui.button tone="primary" icon="plus" :href="route('sales.delivery_order.create')" data-new-do>
+                                {{ __('sales::delivery_order.new') }}
+                            </x-ui.button>
+                        @endcan
+                    @endif
                 </x-slot:actions>
                 <x-ui.date-range :dates="$dates" />
             </x-ui.toolbar>
