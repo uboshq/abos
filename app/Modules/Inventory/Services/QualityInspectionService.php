@@ -427,6 +427,9 @@ final class QualityInspectionService
             ]);
         }
 
+        // ⛔ বিনাশের ক্ষতি কেবল সমন্বয়ের কারণে — অন্য কারণ টাকা উত্তোলন বা ফেরতের খাতে নিত (অডিট গ৮, ৪ অক্টোবর ২০২৬)
+        app(StockCountService::class)->assertReasonFits($writeOff, ReasonCode::STOCK_ADJUSTMENT);
+
         $inspection->loadMissing(['product', 'warehouse', 'batch']);
 
         $product = $inspection->product;

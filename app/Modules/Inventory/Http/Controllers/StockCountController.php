@@ -134,7 +134,8 @@ class StockCountController extends Controller implements HasMiddleware
              * দেখানো হবে — আর সেটা নীতি ঠিক করে, পর্দা নয়।
              */
             'reasons' => $request->user()?->can('approve', $count)
-                ? ReasonCode::query()->active()->with('account')->orderBy('code')->get()
+                // ⛔ কেবল সমন্বয়ের কারণ — বাকিগুলো টাকা অন্য খাতে নিত (অডিট গ৮; পাহারা [[StockCountService::assertReasonFits()]])
+                ? ReasonCode::query()->inContext(ReasonCode::STOCK_ADJUSTMENT)->active()->with('account')->orderBy('code')->get()
                 : collect(),
         ]);
     }

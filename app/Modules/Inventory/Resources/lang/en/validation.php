@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 return [
     'count_not_draft' => 'This count has already been accepted or cancelled - only a draft can be accepted.',
+    'reason_not_for_this' => '“:reason” is not a reason for this - pick one from the list.',
     'code_taken' => 'Another product already uses this code.',
     'barcode_taken' => 'Another product already uses barcode :barcode — a scanner could not tell them apart.',
     'not_negative' => ':field cannot be negative.',

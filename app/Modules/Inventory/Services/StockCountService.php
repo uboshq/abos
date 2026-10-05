@@ -167,6 +167,13 @@ final class StockCountService
             ]);
         }
 
+        /*
+         * ⛔ গণনার কারণ কেবল সমন্বয়ের কারণ — Inventory অডিট গ৮, ৪ অক্টোবর ২০২৬।
+         * ⚠️ আগে যেকোনো কারণ চলত: ঘাটতিতে "মালিকের ব্যবহার" বাছলে টাকা মালিকের উত্তোলনে যেত, "বিক্রয় ফেরত"
+         * বাছলে ফেরতের খাতে — ঘাটতির খাতে (৫১৬০) নয় ([[StockAdjustmentService::postToLedger()]] খাত নেয় কারণ থেকে)।
+         */
+        $this->assertReasonFits($reason, ReasonCode::STOCK_ADJUSTMENT);
+
         $count->loadMissing(['lines.product', 'warehouse']);
 
         if ($count->lines->isEmpty()) {
@@ -350,6 +357,21 @@ final class StockCountService
         }
 
         return $out;
+    }
+
+    /**
+     * ⛔ কারণটা এই কাজের প্রসঙ্গের, এই কোম্পানির, আর চালু — অডিট গ৮। ⓘ মান-পরীক্ষার বিনাশও এটাই ডাকে
+     * ([[QualityInspectionService::dispose()]])।
+     */
+    public function assertReasonFits(ReasonCode $reason, string $context): void
+    {
+        if ($reason->context !== $context
+            || (int) $reason->company_id !== (int) CompanyContext::id()
+            || ! $reason->is_active) {
+            throw ValidationException::withMessages([
+                'reason_code_id' => __('inventory::validation.reason_not_for_this', ['reason' => $reason->name()]),
+            ]);
+        }
     }
 
     /** কাগজের অবস্থা, সারি আটকে — [[approve()]]-এর দ্বিতীয় ক্লিক (⛔১৩) */
