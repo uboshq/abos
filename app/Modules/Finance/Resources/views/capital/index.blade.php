@@ -201,6 +201,11 @@
         </x-ui.toolbar>
     </form>
 
+    {{-- ⭐ মূলধনের রিপোর্ট — অর্থ-মডিউলের পরিকল্পনা, অংশ ২ ([[CapitalReportController::TABS]]) --}}
+    <div class="px-2 pb-2">
+        @include('finance::capital.partials.report-tabs')
+    </div>
+
     {{-- ট্যাবের সারি --}}
     <nav class="flex flex-wrap gap-1 border-b border-(--color-border) px-2 text-sm"
          aria-label="{{ __('finance::menu.capital') }}">
@@ -284,7 +289,6 @@
                 :columns="$entryColumns" />
 
             <x-ui.pager :rows="$entries" />
-            <x-ui.list-totals :rows="$entries" :grand="$grand ?? []" :columns="$entryColumns" />
         </section>
     @endif
     </div>

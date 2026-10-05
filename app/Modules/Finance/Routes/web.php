@@ -88,6 +88,9 @@ Route::middleware('auth')->prefix('finance')->group(function () {
         Route::post('/', [CapitalController::class, 'store'])->name('store');
         // ⭐ কোম্পানির মালিক — শুরুর মূলধন তাঁর নামে (মালিকের আদেশ, ৫ অক্টোবর ২০২৬)
         Route::post('/owner', [CapitalController::class, 'setOwner'])->name('owner');
+        // ⭐ মূলধন ও বিনিয়োগের রিপোর্ট — অর্থ-মডিউলের পরিকল্পনা, অংশ ২ ([[CapitalReportController]], ৫ অক্টোবর ২০২৬)
+        Route::get('/reports/{slug}', [\App\Modules\Finance\Http\Controllers\CapitalReportController::class, 'show'])
+            ->where('slug', '[a-z\-]+')->name('report.show');
         /*
          * সম্পাদনা ও মোছা — ⛔ কেবল খসড়া, আর পাহারাটা কন্ট্রোলারে।
          *
