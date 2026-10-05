@@ -186,6 +186,8 @@ return [
         'module' => 'Module on/off',
         'group' => 'Menu folds',
         'item' => 'Menu rows',
+        // ⓘ the phone's module switch — core puts it on every module ([[PhoneModules]])
+        'mobile' => 'Mobile app',
         'invoice_info' => 'Set Your Invoice Information',
         'print_paper' => 'Paper size',
     ],

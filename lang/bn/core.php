@@ -229,6 +229,8 @@ return [
         'module' => 'মডিউল চালু/বন্ধ',
         'group' => 'মেনুর ভাঁজ',
         'item' => 'মেনুর সারি',
+        // ⓘ ফোনে মডিউল চালু/বন্ধ — কোর প্রতিটা মডিউলে বসায় ([[PhoneModules]])
+        'mobile' => 'মোবাইল অ্যাপ',
         'invoice_info' => 'Set Your Invoice Information',
         'print_paper' => 'ছাপার কাগজ',
     ],
