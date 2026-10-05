@@ -808,6 +808,8 @@ return [
         AccountFormOpened::class,
         // ⭐ চেক পাশ — টাকার জন্য আটকে থাকা DO আবার যাচাই হয় (বিক্রয়ের কাজের ধারা, ২ অক্টোবর ২০২৬)
         \App\Modules\Accounts\Events\ChequeCleared::class,
+        // ⭐ খোলা জের মালিকের মূলধনে — অর্থ রেজিস্টারে মালিকের নামে তোলে (মালিকের আদেশ, ৫ অক্টোবর ২০২৬)
+        \App\Modules\Accounts\Events\OpeningCapitalBooked::class,
     ],
 
     // ⭐ শেষ সই পড়লে হিসাবের কাগজ নিজেই শেষ হয় — গ১ ([[AccountsSignature]])

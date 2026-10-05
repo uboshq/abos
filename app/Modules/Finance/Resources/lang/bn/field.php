@@ -98,6 +98,7 @@ return [
     'in_kind_asset' => 'যন্ত্রপাতি / সম্পদ',
     'in_kind_goods' => 'পণ্য',
     'in_kind_profit' => 'ঘোষিত লাভ',
+    'in_kind_opening' => 'শুরুর মূলধন',
     'received_into' => 'যে খাতে জমা',
     'loan_principal' => 'টাকার পরিমাণ',
     'opening_repaid' => 'এ পর্যন্ত ফেরত',

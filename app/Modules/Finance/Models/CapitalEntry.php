@@ -99,6 +99,15 @@ class CapitalEntry extends Model implements Drillable, SettledByAVoucher, \App\C
      */
     public const PROFIT = 'profit';
 
+    /**
+     * ⭐ শুরুর মূলধন — খোলা জের যা মালিকের মূলধনে (৩১০০) বসেছে, মালিকের নামে (মালিকের আদেশ, ৫ অক্টোবর ২০২৬)।
+     *
+     * ⓘ `PROFIT`-এর মতোই সিস্টেমের নিজের — ফর্মে বাছা যায় না। ⛔ এই সারি কোনো দাখিলা বসায় না: খাতায় আগে থেকে বসা টাকা
+     * (খোলা জের, শুরুর জাবেদা) রেজিস্টারে মালিকের নামে আনে, শাখা ধরে। রেজিস্টারের মোট = ৩১০০-এর জের, তাই দুবার গোনা
+     * হয় না ([[OwnerCapital::reconcile()]])।
+     */
+    public const OPENING = 'opening';
+
     public const KINDS = [self::CONTRIBUTION, self::INVESTMENT];
 
     public const DRAFT = 'draft';

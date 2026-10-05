@@ -169,4 +169,16 @@ return [
 
     // Waiting for its signature — audit 4 Oct 2026 ([[FinanceSignature]])
     'awaiting_signature' => 'Sent for signature — it posts on the last signature, and is cancelled if refused.',
+
+    // Owner's opening capital — owner's order, 5 Oct 2026
+    'opening_capital_narration' => 'Opening capital - the opening balances already in the books',
+    'owner_needed' => 'The capital register has no owner - pick who owns the company or give a new name. The opening balances then show as their opening capital.',
+    'owner_pick' => 'Pick a person',
+    'owner_new' => 'or a new name',
+    'owner_save' => 'Set the owner',
+    'owner_saved' => ':name now owns the company - the opening capital is in that name.',
+    'owner_need_one' => 'Pick a person or write a new name.',
+    'branch_capital' => 'Capital by branch',
+    'branch_none' => 'No branch',
+    'company_total' => 'Company total',
 ];

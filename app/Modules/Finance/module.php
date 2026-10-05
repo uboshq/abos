@@ -673,5 +673,23 @@ return [
         // ⭐ মুনাফা ঘোষণার শেষ সই — খসড়া ঘোষণা খাতায়, "না" হলে বাতিল ([[PostTheProfitOnTheLastSignature]])
         // ⭐ অর্থের বাকি টাকার কাজের শেষ সই — খসড়া খাতায়, "না" হলে বাতিল; উত্তোলনের "না" বাতিল করে ([[FinishTheFinancePaperOnTheLastSignature]])
         ApprovalDecided::class => [PostTheProfitOnTheLastSignature::class, FinishTheFinancePaperOnTheLastSignature::class],
+
+        // ⭐ খোলা জের মালিকের মূলধনে — রেজিস্টারে মালিকের নামে, শাখা ধরে ([[ReconcileOpeningCapital]])
+        \App\Modules\Accounts\Events\OpeningCapitalBooked::class => [\App\Modules\Finance\Listeners\ReconcileOpeningCapital::class],
+    ],
+
+    /*
+     * ⭐ কোম্পানির মালিক — মূলধনের রেজিস্টারে শুরুর মূলধন কার নামে বসবে (মালিকের আদেশ, ৫ অক্টোবর ২০২৬; [[OwnerCapital]])।
+     * ⓘ বাছাই কেবল এই কোম্পানির চালু ব্যক্তিদের মধ্যে; খালি থাকলে মূলধনের পাতা প্রথমবার বাছতে বা বানাতে বলে।
+     */
+    'settings' => [
+        [
+            'key' => 'finance.owner_person_id',
+            'label' => 'finance::settings.owner_person',
+            'type' => 'integer',
+            'options' => [\App\Modules\Finance\Services\OwnerCapital::class, 'choices'],
+            'default' => 0,
+            'group' => 'capital',
+        ],
     ],
 ];

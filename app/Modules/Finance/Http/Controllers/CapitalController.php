@@ -27,6 +27,8 @@ use Illuminate\Support\Collection;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
+use App\Core\Services\Ownership;
+use App\Modules\Finance\Services\OwnerCapital;
 
 /**
  * মূলধন ও বিনিয়োগ — কে ব্যবসায় টাকা দিলেন, আর কে কোথায় দাঁড়িয়ে।
@@ -69,7 +71,40 @@ class CapitalController extends Controller implements HasMiddleware
              * থেকে উধাও হওয়া — আর সেটা ব্যাখ্যা করতে হয়।
              */
             new Middleware('can:finance.capital.delete', only: ['destroy']),
+
+            // ⭐ কোম্পানির মালিক ঠিক করা — দেখার চাবি দরজায়, আর সুপার অ্যাডমিন [[setOwner()]]-এ (মালিকের আদেশ, ৫ অক্টোবর ২০২৬)
+            new Middleware('can:finance.capital.view', only: ['setOwner']),
         ];
+    }
+
+    /**
+     * ⭐ কোম্পানির মালিক ঠিক করা — বাছা ব্যক্তি, বা নতুন নাম (মালিকের আদেশ, ৫ অক্টোবর ২০২৬)।
+     *
+     * ⓘ ঠিক হওয়ার মুহূর্তেই খাতায় বসা খোলা জের মালিকের নামে শুরুর মূলধন হয়ে রেজিস্টারে আসে, শাখা ধরে
+     * ([[OwnerCapital::reconcile()]])। ⛔ কেবল এই কোম্পানির সুপার অ্যাডমিন — মালিক কে, সেটা মালিকেরই কথা।
+     */
+    public function setOwner(Request $request): RedirectResponse
+    {
+        abort_unless(app(Ownership::class)->isOwnerIn($request->user(), (int) CompanyContext::id()), 403);
+
+        $data = $request->validate([
+            'person_id' => ['nullable', 'integer', Rule::exists('mdm_people', 'id')->where('company_id', CompanyContext::id())],
+            'person_new' => ['nullable', 'string', 'max:120'],
+        ]);
+
+        $id = app(PersonResolver::class)->resolve($data);
+
+        if ($id === null) {
+            throw ValidationException::withMessages(['person_id' => __('finance::message.owner_need_one')]);
+        }
+
+        $person = Person::query()->findOrFail($id);
+        $owners = app(OwnerCapital::class);
+        $owners->choose($person);
+        $owners->reconcile();
+
+        return redirect()->route('finance.capital.index', ['tab' => 'owners'])
+            ->with('saved', __('finance::message.owner_saved', ['name' => $person->name()]));
     }
 
     public function index(Request $request): View
@@ -87,11 +122,19 @@ class CapitalController extends Controller implements HasMiddleware
          * ⚠️ অচেনা ট্যাব চুপচাপ মানা হয় না — লেনদেনেই ফেরে।
          */
         $tab = $request->query('tab') === 'owners' ? 'owners' : 'entries';
+
+        // ⭐ মালিক আর শাখা ধরে মূলধন — মালিকের আদেশ, ৫ অক্টোবর ২০২৬ ([[OwnerCapital]])
+        $owners = app(OwnerCapital::class);
+        $owner = $owners->owner();
         $personId = $request->integer('person') ?: null;
 
         return view('finance::capital.index', [
             'menu' => $this->menu->forUser($request->user()),
             'tab' => $tab,
+            'owner' => $owner,
+            'ownerChoices' => $owner === null ? Person::query()->where('is_active', true)->orderBy('name_en')->get() : collect(),
+            'mayChooseOwner' => app(Ownership::class)->isOwnerIn($request->user(), (int) CompanyContext::id()),
+            'branchCapital' => $this->capital->byBranch(),
             'person' => $personId === null ? null : Person::query()->find($personId),
             /*
              * ⓘ `person`-ও সাথেই — প্রতিটা সারিতে নামটা দেখানো হয়, আর

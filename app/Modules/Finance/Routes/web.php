@@ -86,6 +86,8 @@ Route::middleware('auth')->prefix('finance')->group(function () {
         Route::get('/', [CapitalController::class, 'index'])->name('index');
         Route::get('/create', [CapitalController::class, 'create'])->name('create');
         Route::post('/', [CapitalController::class, 'store'])->name('store');
+        // ⭐ কোম্পানির মালিক — শুরুর মূলধন তাঁর নামে (মালিকের আদেশ, ৫ অক্টোবর ২০২৬)
+        Route::post('/owner', [CapitalController::class, 'setOwner'])->name('owner');
         /*
          * সম্পাদনা ও মোছা — ⛔ কেবল খসড়া, আর পাহারাটা কন্ট্রোলারে।
          *

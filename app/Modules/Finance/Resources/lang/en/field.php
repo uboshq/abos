@@ -89,6 +89,7 @@ return [
     'in_kind_asset' => 'Equipment / asset',
     'in_kind_goods' => 'Goods',
     'in_kind_profit' => 'Declared profit',
+    'in_kind_opening' => 'Opening capital',
     'received_into' => 'Received into',
     'loan_principal' => 'Amount',
     'opening_repaid' => 'Repaid so far',

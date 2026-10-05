@@ -10,8 +10,10 @@ use App\Core\Support\CompanyContext;
 use App\Models\Company;
 use App\Models\FinancialYear;
 use App\Models\LedgerEntry;
+use App\Modules\Accounts\Events\OpeningCapitalBooked;
 use App\Modules\Accounts\Models\Account;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 
 /**
  * পুরনো হিসাব থেকে নিয়ে আসা ব্যালেন্স খাতায় বসানো।
@@ -143,7 +145,7 @@ final class OpeningBalanceService
 
         $narration = $this->narration();
 
-        return $this->posting->post(
+        return $this->announce($equity, $this->posting->post(
             sourceType: 'opening_stock',
             sourceId: $sourceId,
             trxDate: $this->dateFor($date),
@@ -153,7 +155,7 @@ final class OpeningBalanceService
             ],
             documentNo: $documentNo,
             branchId: $branchId,
-        );
+        ));
     }
 
     /**
@@ -209,7 +211,7 @@ final class OpeningBalanceService
 
         $narration = $this->narration();
 
-        return $this->posting->post(
+        return $this->announce($equity, $this->posting->post(
             sourceType: self::ACCOUNT_SOURCE.self::SOURCE_SUFFIX,
             sourceId: $account->id,
             trxDate: $this->dateFor($account->opening_date),
@@ -226,7 +228,7 @@ final class OpeningBalanceService
                 ],
             ],
             documentNo: $account->code,
-        );
+        ));
     }
 
     /**
@@ -284,6 +286,25 @@ final class OpeningBalanceService
      * ⓘ কোম্পানির সুইচ `accounts.opening_to_capital` (ডিফল্ট চালু): বন্ধ করলে আগের মতো সংরক্ষিত মুনাফায় — ABOS অনেক
      * ব্যবসায় বিক্রি হয়, আর অংশীদারি বা কোম্পানির হিসাবে সেটাই চায় কেউ কেউ। মূলধনের খাত না থাকলে সংরক্ষিত মুনাফায়।
      */
+    /**
+     * ⭐ খোলা জের মালিকের মূলধনে বসলে খবর — অর্থ মডিউল রেজিস্টারে মালিকের নামে তোলে (মালিকের আদেশ, ৫ অক্টোবর ২০২৬;
+     * [[OpeningCapitalBooked]])। ⓘ হিসাব অর্থকে চেনে না — কেবল ঘটনা ছোড়ে, লেনদেন পাকা হওয়ার পরে।
+     *
+     * @template T
+     *
+     * @param  T  $rows
+     * @return T
+     */
+    private function announce(?Account $equity, mixed $rows): mixed
+    {
+        if ($equity !== null && $equity->code === StandardChart::OWNER_CAPITAL) {
+            $companyId = (int) CompanyContext::id();
+            DB::afterCommit(fn () => event(new OpeningCapitalBooked(publicId: (string) $equity->public_id, payload: [], companyId: $companyId)));
+        }
+
+        return $rows;
+    }
+
     private function openingEquity(): ?\App\Modules\Accounts\Models\Account
     {
         if ((bool) app(\App\Core\Services\SettingsService::class)->get('accounts.opening_to_capital', true)) {
@@ -343,13 +364,13 @@ final class OpeningBalanceService
             $partyIsDebit ? 'credit' : 'debit' => $amount,
         ];
 
-        return $this->posting->post(
+        return $this->announce($equity, $this->posting->post(
             sourceType: $partyType.self::SOURCE_SUFFIX,
             sourceId: $partyId,
             trxDate: $this->dateFor($date),
             lines: [$partyLine, $equityLine],
             documentNo: $documentNo,
-        );
+        ));
     }
 
     /**

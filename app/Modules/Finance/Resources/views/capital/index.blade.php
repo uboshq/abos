@@ -221,6 +221,9 @@
         @endforeach
     </nav>
 
+    {{-- ⭐ মালিক আর শাখা ধরে মূলধন — মালিকের আদেশ, ৫ অক্টোবর ২০২৬ ([[OwnerCapital]]) --}}
+    @include('finance::capital.partials.owner-and-branches')
+
     @if ($tab === 'owners')
         {{-- ── মালিক ও বিনিয়োগকারী — কে কোথায় দাঁড়িয়ে ──────────────────────── --}}
         <section>

@@ -377,6 +377,40 @@ final class CapitalService
      *                               একটা ড্যাশ দেখায়, শূন্য নয়।
      * @return list<array<string, mixed>>
      */
+    /**
+     * ⭐ শাখা ধরে মূলধন — প্রতিটা শাখার নিজের সারি আর নিচে কোম্পানির মোট (মালিকের প্রশ্ন, ৫ অক্টোবর ২০২৬:
+     * *"প্রতিটা শাখার মূলধন আলাদা দেখাবে, নাকি একসাথে?"* — দুটোই)।
+     *
+     * ⓘ নিয়ম [[positions()]]-এর হুবহু — পাকা, বাতিল রসিদের নয়, হেডারে বাছা শাখায়। শাখা বাছলে একটাই সারি।
+     *
+     * @return array{rows: list<array{branch: string, total: string}>, total: string}
+     */
+    public function byBranch(): array
+    {
+        $sums = CapitalEntry::query()
+            ->posted()
+            ->inViewedBranch()
+            ->where(fn ($q) => $q->whereNull('voucher_id')
+                ->orWhereHas('voucher', fn ($v) => $v->where('status', '!=', DocumentStatus::CANCELLED)))
+            ->groupBy('branch_id')
+            ->selectRaw('branch_id, COALESCE(SUM(amount), 0) as total')
+            ->pluck('total', 'branch_id');
+
+        $names = \App\Models\Branch::query()->whereKey($sums->keys()->filter()->all())->get()->keyBy('id');
+        $rows = [];
+        $total = '0';
+
+        foreach ($sums as $branch => $sum) {
+            $rows[] = [
+                'branch' => $branch ? ($names->get((int) $branch)?->name() ?? '#'.$branch) : __('finance::message.branch_none'),
+                'total' => bcadd((string) $sum, '0', 4),
+            ];
+            $total = bcadd($total, (string) $sum, 4);
+        }
+
+        return ['rows' => $rows, 'total' => $total];
+    }
+
     public function positions(?string $profit = null): array
     {
         /*
@@ -389,6 +423,8 @@ final class CapitalService
          */
         $given = CapitalEntry::query()
             ->posted()
+            // ⭐ হেডারে বাছা শাখা — শাখা বাছলে কেবল সেই শাখার মূলধন (মালিকের প্রশ্ন, ৫ অক্টোবর ২০২৬)
+            ->inViewedBranch()
 
             /*
              * ⛔ যে রসিদ দিয়ে মূলধনটা এসেছিল সেটা বাতিল হলে সারিটা গোনা হয়
