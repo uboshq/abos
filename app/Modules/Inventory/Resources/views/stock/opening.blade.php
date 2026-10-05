@@ -100,10 +100,13 @@
             </form>
         </section>
 
+        {{-- ⭐ দর লুকানো থাকলে মূল্যও — অডিট ম১২, ৫ অক্টোবর ২০২৬। ⛔ আগে দর ঢাকা অথচ মূল্য খোলা: মূল্য ÷ পরিমাণ = দর, পাহারাটা অলংকার। --}}
+        @php $showCost = \App\Core\Security\FieldSecurity::visible(\App\Modules\Inventory\Models\StockMovement::class, 'unit_cost'); @endphp
+
         <section data-boxed class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
             <div class="flex items-baseline justify-between border-b border-(--color-border) px-4 py-3">
                 <h2 class="font-semibold">{{ __('inventory::message.opening_total') }}</h2>
-                <span class="num font-semibold">{{ \App\Core\Support\Money::format($total) }}</span>
+                <span class="num font-semibold">{{ $showCost ? \App\Core\Support\Money::format($total) : \App\Core\Security\FieldSecurity::mask() }}</span>
             </div>
 
             <x-ui.table
@@ -130,13 +133,14 @@
                      */
                     ['key' => 'unit_cost', 'label' => __('inventory::field.opening_rate'),
                      'numeric' => true, 'width' => '8rem',
-                     'render' => fn ($r) => \App\Core\Security\FieldSecurity::visible(
-                         \App\Modules\Inventory\Models\StockMovement::class, 'unit_cost')
+                     'render' => fn ($r) => $showCost
                          ? \App\Core\Support\Money::format($r->unit_cost)
                          : \App\Core\Security\FieldSecurity::mask()],
                     ['key' => 'value', 'label' => __('inventory::field.opening_value'),
                      'numeric' => true, 'width' => '9rem',
-                     'render' => fn ($r) => \App\Core\Support\Money::format($r->value)],
+                     'render' => fn ($r) => $showCost
+                         ? \App\Core\Support\Money::format($r->value)
+                         : \App\Core\Security\FieldSecurity::mask()],
                 ]" />
 
             {{-- ⓘ উপরের "মোট" এই পাতার নয়, সবটার — পেজারের সীমা আর
