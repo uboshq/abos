@@ -60,4 +60,14 @@ class StockCountPolicy
         return $user->can('inventory.count.approve')
             && $document->status === DocumentStatus::DRAFT;
     }
+
+    /**
+     * ⭐ পড়ে থাকা খসড়া বাতিল — যিনি মেনে নিতে পারেন, বা যিনি লিখেছেন (অডিট গ৭, ৪ অক্টোবর ২০২৬)।
+     * ⓘ খসড়ায় খাতা নড়েনি, তাই লেখক নিজের ভুল গণনা তুলে নিতে পারেন; অন্যের খসড়া কেবল মেনে নেওয়ার চাবিওয়ালা।
+     */
+    public function cancel(User $user, StockCount $document): bool
+    {
+        return $document->status === DocumentStatus::DRAFT
+            && ($user->can('inventory.count.approve') || (int) $document->created_by === (int) $user->id);
+    }
 }

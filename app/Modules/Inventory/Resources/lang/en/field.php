@@ -146,6 +146,7 @@ return [
     'counted_qty' => 'Counted',
     'counted_by' => 'Counted by',
     'approved_by' => 'Accepted by',
+    'count_cancelled_because' => 'Cancelled by :who - reason: :reason',
     'qc_inspected' => 'Inspected',
     'qc_accepted' => 'Accepted',
     'qc_rejected' => 'Rejected',

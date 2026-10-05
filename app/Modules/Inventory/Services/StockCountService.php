@@ -87,6 +87,9 @@ final class StockCountService
                 ]);
             }
 
+            // ⓘ এক গুদামের গণনা একটা একটা করে — দুইজন একসাথে একই পণ্য লিখলে দুজনেই "অপেক্ষায় কিছু নেই" দেখতেন (গ৭)
+            Warehouse::query()->whereKey($warehouse->id)->lockForUpdate()->first();
+
             $countDate = Carbon::parse($data['count_date'] ?? now());
 
             $count = StockCount::create([
@@ -117,6 +120,25 @@ final class StockCountService
                  * কেউ-না-গোনা লট খালি হত ([[TheCountWasSettledAtTheWrongMomentTest]])।
                  */
                 $lot = $this->lotFor($product, $line);
+
+                /*
+                 * ⛔ একই পণ্যের দ্বিতীয় খসড়া নয় — Inventory অডিট গ৭, ৪ অক্টোবর ২০২৬।
+                 * ⚠️ সমন্বয় সইয়ে আটকালে খসড়াটা পড়ে থাকত, আবার চাপলে আরেকটা; দুটোই একই খাতার সংখ্যা ধরে, তাই
+                 * অনুমোদনকারী পরে দুটো মানলে একই ঘাটতি দুইবার বসত। ⓘ আগেরটা মেনে নিন বা বাতিল করুন ([[cancel()]])।
+                 */
+                $waiting = $this->sameGoods((int) $product->id, (int) $warehouse->id, $lot?->id)
+                    ->where('status', DocumentStatus::DRAFT)
+                    ->value('document_no');
+
+                if ($waiting !== null) {
+                    throw ValidationException::withMessages([
+                        'lines' => __('inventory::validation.count_already_waiting', [
+                            'product' => $product->name(),
+                            'document' => $waiting,
+                        ]),
+                    ]);
+                }
+
                 $bookQty = $lot !== null
                     ? $this->adjustments->lotFloor($lot, $warehouse)
                     : $this->stock->floorQty($product, $warehouse);
@@ -230,6 +252,26 @@ final class StockCountService
                 }
 
                 /*
+                 * ⛔ এই গণনার পরে একই মালের আরেকটা গণনা মেনে নেওয়া হয়ে গেলে, এটা বাসি — গ৭।
+                 * ⓘ দুটোই একই খাতার সংখ্যা দেখে লেখা, তাই পার্থক্যটা ওটাই বসিয়ে দিয়েছে; এটা মানলে দ্বিতীয়বার।
+                 * ⚠️ নতুন খসড়ায় এমন জোড়া হয়ই না ([[record()]]) — এটা আগের দিনের পড়ে থাকা জোড়ার জন্য।
+                 */
+                $settledSince = $this->sameGoods((int) $line->product_id, (int) $count->warehouse_id, $line->batch_id)
+                    ->where('status', DocumentStatus::CONFIRMED)
+                    ->whereKeyNot($count->id)
+                    ->where('approved_at', '>', $count->created_at)
+                    ->value('document_no');
+
+                if ($settledSince !== null) {
+                    throw ValidationException::withMessages([
+                        'status' => __('inventory::validation.count_settled_by_another', [
+                            'product' => $line->product?->name(),
+                            'document' => $settledSince,
+                        ]),
+                    ]);
+                }
+
+                /*
                  * ⛔ গণনার নিজের পার্থক্য — অনুমোদনের মুহূর্তে আবার মাপা নয় (২৯ সেপ্টেম্বর
                  * ২০২৬, অডিটে প্রমাণিত): মাঝের বিক্রি উদ্বৃত্ত হয়ে ফিরত ([[StockAdjustmentService::settle()]])।
                  */
@@ -255,6 +297,61 @@ final class StockCountService
 
             return $count->fresh(['lines']);
         });
+    }
+
+    /**
+     * ⭐ পড়ে থাকা খসড়া বাতিল — কারণসহ (Inventory অডিট গ৭, ৪ অক্টোবর ২০২৬)।
+     *
+     * ⓘ খসড়ায় খাতা নড়েনি, তাই বাতিলে ফেরানোর কিছু নেই — কেবল কাগজটা বন্ধ হয়, যাতে একই পণ্যের নতুন গণনা লেখা যায়।
+     */
+    public function cancel(StockCount $count, string $reason): StockCount
+    {
+        $reason = trim($reason);
+
+        if (mb_strlen($reason) < 3) {
+            throw ValidationException::withMessages([
+                'cancel_reason' => __('inventory::validation.count_cancel_needs_reason'),
+            ]);
+        }
+
+        return DB::transaction(function () use ($count, $reason) {
+            if ($this->lockedStatus($count) !== DocumentStatus::DRAFT) {
+                throw ValidationException::withMessages([
+                    'status' => __('inventory::validation.count_not_draft'),
+                ]);
+            }
+
+            $count->update([
+                'status' => DocumentStatus::CANCELLED,
+                'cancel_reason' => $reason,
+                'cancelled_by' => auth()->id(),
+                'cancelled_at' => now(),
+            ]);
+
+            return $count->fresh();
+        });
+    }
+
+    /**
+     * এক গুদামে একই মাল ছোঁয়া গণনাগুলো — একই পণ্য, আর লট মেলে বা কোনো একটায় লট বলা নেই।
+     *
+     * ⓘ লট ছাড়া ঘাটতি বেরোয় আগে-মেয়াদ নিয়মে, যেকোনো লট থেকে — তাই লটহীন সারি সব লটের সাথেই মেলে।
+     * ⛔ শাখার দেয়াল ছাড়া (কোম্পানির ভিতরে): অন্য শাখার কেউ লিখে রাখা খসড়া না দেখলে জোড়াটা আবার হত।
+     */
+    private function sameGoods(int $productId, int $warehouseId, ?int $batchId): \Illuminate\Database\Eloquent\Builder
+    {
+        return StockCount::query()
+            ->withoutGlobalScopes()
+            ->where('company_id', CompanyContext::id())
+            ->whereNull('deleted_at')
+            ->where('warehouse_id', $warehouseId)
+            ->whereHas('lines', function ($lines) use ($productId, $batchId) {
+                $lines->where('product_id', $productId);
+
+                if ($batchId !== null) {
+                    $lines->where(fn ($q) => $q->whereNull('batch_id')->orWhere('batch_id', $batchId));
+                }
+            });
     }
 
     /**

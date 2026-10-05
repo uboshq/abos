@@ -44,6 +44,7 @@ return [
     'load_sheet' => 'Load the sheet',
     'blind_count' => 'Blind count (hide book quantity)',
     'settle_count' => 'Accept the difference',
+    'cancel_count' => 'Cancel the count',
     'new_inspection' => 'New inspection',
     'decide' => 'Record the decision',
     'add_serials' => 'Add serial numbers',

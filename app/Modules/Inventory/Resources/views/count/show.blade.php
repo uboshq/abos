@@ -5,10 +5,6 @@
     ⚠️ তাই পার্থক্যের কলামটাই সবচেয়ে চওড়া চোখে পড়ে, আর মেনে নেওয়ার
     বোতামটা কারণ-কোডের ঠিক পাশে — ⛔ কারণ ছাড়া মেনে নেওয়ার কোনো পথ নেই।
 --}}
-@php
-    $settled = $count->status === \App\Core\Support\DocumentStatus::CONFIRMED;
-@endphp
-
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ $count->document_no }}</x-slot:title>
 
@@ -62,6 +58,13 @@
 
             @if ($count->narration)
                 <p class="mt-3 text-sm text-(--color-ink-muted)">{{ $count->narration }}</p>
+            @endif
+
+            {{-- ⓘ বাতিল খসড়া — কে আর কেন (অডিট গ৭) --}}
+            @if ($count->cancel_reason)
+                <p class="mt-3 text-sm text-(--color-badge-danger-ink)">
+                    {{ __('inventory::field.count_cancelled_because', ['who' => $count->canceller?->name ?? '—', 'reason' => $count->cancel_reason]) }}
+                </p>
             @endif
         </section>
 
@@ -140,11 +143,32 @@
                 </p>
             </form>
         @else
-            @unless ($settled)
+            @if ($count->status === \App\Core\Support\DocumentStatus::DRAFT)
                 <p class="text-sm text-(--color-ink-muted)">
                     {{ __('inventory::message.count_waiting_for_approver') }}
                 </p>
-            @endunless
+            @endif
+        @endcan
+
+        {{-- ⭐ পড়ে থাকা খসড়া বাতিল — তারপর একই পণ্যের নতুন গণনা লেখা যায় (অডিট গ৭, [[StockCountPolicy::cancel()]]) --}}
+        @can('cancel', $count)
+            <form method="POST" action="{{ route('inventory.count.cancel', $count) }}"
+                  data-boxed
+                  class="flex flex-wrap items-end gap-3 rounded-(--radius-card) border
+                         border-(--color-border) bg-(--color-surface-card) p-4">
+                @csrf
+
+                <label class="flex min-w-64 flex-1 flex-col gap-1 text-sm">
+                    <span class="text-xs text-(--color-ink-muted)">{{ __('inventory::message.cancel_reason') }}</span>
+                    <input type="text" name="cancel_reason" required minlength="3" maxlength="500"
+                           class="h-(--spacing-field) rounded-(--radius-field) border border-(--color-border)
+                                  bg-(--color-surface-app) px-3">
+                </label>
+
+                <x-ui.button type="submit" tone="danger">
+                    {{ __('inventory::action.cancel_count') }}
+                </x-ui.button>
+            </form>
         @endcan
     </div>
 </x-layouts.app>

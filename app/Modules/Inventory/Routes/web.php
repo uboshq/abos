@@ -210,6 +210,9 @@ Route::middleware('auth')->prefix('inventory')->group(function () {
             ->whereNumber('count')->name('show');
         Route::post('/{count}/approve', [StockCountController::class, 'approve'])
             ->whereNumber('count')->name('approve');
+        // ⓘ পড়ে থাকা খসড়া বাতিল (অডিট গ৭)
+        Route::post('/{count}/cancel', [StockCountController::class, 'cancel'])
+            ->whereNumber('count')->name('cancel');
     });
 
     /*

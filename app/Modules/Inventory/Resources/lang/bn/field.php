@@ -174,6 +174,7 @@ return [
     'counted_qty' => 'গোনা হলো',
     'counted_by' => 'গুনেছেন',
     'approved_by' => 'মেনে নিয়েছেন',
+    'count_cancelled_because' => ':who বাতিল করেছেন — কারণ: :reason',
     'qc_inspected' => 'পরিদর্শিত',
     'qc_accepted' => 'গৃহীত',
     'qc_rejected' => 'বাতিল',

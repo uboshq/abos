@@ -67,6 +67,9 @@ class StockCountController extends Controller implements HasMiddleware
              * থাকত, আর যে কেউ পার্থক্য মেনে নিয়ে খাতা বদলে দিতে পারত।
              */
             new Middleware('can:approve,count', only: ['approve']),
+
+            // ⓘ পড়ে থাকা খসড়া বাতিল — [[StockCountPolicy::cancel()]] (অডিট গ৭)
+            new Middleware('can:cancel,count', only: ['cancel']),
         ];
     }
 
@@ -159,6 +162,20 @@ class StockCountController extends Controller implements HasMiddleware
         return redirect()
             ->route('inventory.count.show', $count)
             ->with('saved', __('inventory::message.count_approved'));
+    }
+
+    /** ⭐ পড়ে থাকা খসড়া বাতিল, কারণসহ — তারপর একই পণ্যের নতুন গণনা লেখা যায় (অডিট গ৭)। */
+    public function cancel(Request $request, StockCount $count): RedirectResponse
+    {
+        $reason = $request->validate([
+            'cancel_reason' => ['required', 'string', 'min:3', 'max:500'],
+        ])['cancel_reason'];
+
+        $this->counts->cancel($count, $reason);
+
+        return redirect()
+            ->route('inventory.count.show', $count)
+            ->with('saved', __('inventory::message.count_cancelled'));
     }
 
     /**

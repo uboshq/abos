@@ -5,6 +5,9 @@ declare(strict_types=1);
 return [
     'count_not_draft' => 'This count has already been accepted or cancelled - only a draft can be accepted.',
     'reason_not_for_this' => '“:reason” is not a reason for this - pick one from the list.',
+    'count_already_waiting' => 'Count :document for :product is already waiting to be accepted - accept or cancel it, then write a new count.',
+    'count_settled_by_another' => 'The difference for :product was already settled by count :document - accepting this one would book it twice. Cancel this one.',
+    'count_cancel_needs_reason' => 'Write why it is cancelled - at least 3 characters.',
     'code_taken' => 'Another product already uses this code.',
     'barcode_taken' => 'Another product already uses barcode :barcode — a scanner could not tell them apart.',
     'not_negative' => ':field cannot be negative.',

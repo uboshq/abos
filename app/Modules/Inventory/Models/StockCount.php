@@ -49,6 +49,8 @@ class StockCount extends Model
         'company_id', 'branch_id', 'document_no', 'count_date',
         'warehouse_id', 'narration', 'status',
         'counted_by', 'approved_by', 'approved_at', 'created_by',
+        // ⓘ পড়ে থাকা খসড়ার বাতিল — কে, কখন, কেন (অডিট গ৭)
+        'cancel_reason', 'cancelled_by', 'cancelled_at',
     ];
 
     protected function casts(): array
@@ -56,6 +58,7 @@ class StockCount extends Model
         return [
             'count_date' => 'date',
             'approved_at' => 'datetime',
+            'cancelled_at' => 'datetime',
         ];
     }
 
@@ -82,6 +85,11 @@ class StockCount extends Model
     public function approver(): BelongsTo
     {
         return $this->belongsTo(User::class, 'approved_by');
+    }
+
+    public function canceller(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'cancelled_by');
     }
 
     public function creator(): BelongsTo
