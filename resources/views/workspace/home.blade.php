@@ -60,30 +60,14 @@
     {{-- ⭐ শিরোনাম একা; উপশিরোনামের জায়গায় কোম্পানি-শাখা বাছাই, আর ফিল্টার · লেআউট · সময় তার নিচে
          (মালিক, ৫ অক্টোবর ২০২৬: *"company branch selector dewar kotha"* · *"ei gulo ড্যাশবোর্ড er niche niye aso"*) --}}
     <x-slot:header>
-        <x-ui.page-header :title="__('core.menu.dashboard')" />
-    </x-slot:header>
-
-    <style @nonce>
-        .hm-pictures { display: grid; gap: .75rem; grid-template-columns: minmax(0, 1fr); }
-        .hm-kpis { display: grid; gap: .6rem; grid-template-columns: repeat(2, minmax(0, 1fr)); }
-        .hm-work { display: grid; gap: .75rem; grid-template-columns: minmax(0, 1fr); }
-        @media (min-width: 768px) {
-            .hm-pictures { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-            .hm-kpis { grid-template-columns: repeat(4, minmax(0, 1fr)); }
-        }
-        @media (min-width: 1280px) {
-            /* ⭐ ৪টা করে দুই সারি (মালিক, ৫ অক্টোবর ২০২৬) — চার্ট বড়, মান পরিষ্কার */
-            .hm-pictures { grid-template-columns: repeat(4, minmax(0, 1fr)); }
-            .hm-kpis { grid-template-columns: repeat(8, minmax(0, 1fr)); }
-            .hm-work { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-        }
-        /* ⓘ মান কখনো কাটা নয় (truncate নয়) — লম্বা হলে ভাঙে ([[TheHomeShowsOnlyYourOwnWorkTest]]) */
-        .hm-kpi-value { line-height: 1.3; }
-    </style>
-
-    {{-- ── মাথা: বাঁয়ে চালু ফিল্টারের লাইন, ডানে টাকার বাক্স (থাকছে হুবহু) ── --}}
-    <section data-command-head class="mb-3 flex flex-col gap-3 lg:flex-row" style="justify-content: space-between; align-items: flex-end">
-        <div class="flex min-w-0 flex-1 flex-col gap-3" style="align-self: stretch; justify-content: space-between">
+    {{-- ── মাথা (মালিক, ৬ অক্টোবর ২০২৬): টাকার বাক্স সোজা উপরে, শিরোনামের সমান উচ্চতায় ডানে; বাঁয়ে শিরোনাম, তার ঠিক নিচে
+         কোম্পানি · তারিখ, তার কাছেই ফিল্টার · লেআউট · সময় — মাঝে ফাঁকা নয়, যাতে চার্ট উপরে ওঠে ── --}}
+    <section data-command-head class="flex flex-col gap-3 lg:flex-row" style="justify-content: space-between; align-items: flex-start">
+        <div class="flex min-w-0 flex-1 flex-col gap-2">
+            <div>
+                <h1 data-home-title class="truncate text-xl font-semibold">{{ __('core.menu.dashboard') }}</h1>
+                <div data-gold-hairline aria-hidden="true" class="gold-hairline mt-3 rounded-full"></div>
+            </div>
             {{-- ⭐ কোম্পানি আর শাখা — টপবারের একই বাছাই, এখানেও; বদলালে হোমের প্রতিটা সংখ্যা সেই শাখার --}}
             <div data-home-company class="flex flex-wrap items-center gap-3">
                 <x-shell.company-switcher :company="auth()->user()->currentCompany" :branch="auth()->user()->currentBranch" />
@@ -224,6 +208,26 @@
             </a>
         @endif
     </section>
+    </x-slot:header>
+
+    <style @nonce>
+        .hm-pictures { display: grid; gap: .75rem; grid-template-columns: minmax(0, 1fr); }
+        .hm-kpis { display: grid; gap: .6rem; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        .hm-work { display: grid; gap: .75rem; grid-template-columns: minmax(0, 1fr); }
+        @media (min-width: 768px) {
+            .hm-pictures { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+            .hm-kpis { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+        }
+        @media (min-width: 1280px) {
+            /* ⭐ ৪টা করে দুই সারি (মালিক, ৫ অক্টোবর ২০২৬) — চার্ট বড়, মান পরিষ্কার */
+            .hm-pictures { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+            .hm-kpis { grid-template-columns: repeat(8, minmax(0, 1fr)); }
+            .hm-work { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        }
+        /* ⓘ মান কখনো কাটা নয় (truncate নয়) — লম্বা হলে ভাঙে ([[TheHomeShowsOnlyYourOwnWorkTest]]) */
+        .hm-kpi-value { line-height: 1.3; }
+    </style>
+
 
     {{-- ⭐ সাজানো যায় এমন তিন ভাগ — ক্রম CSS `order`-এ, লুকানো অংশ আঁকাই হয় না ([[HomeLayout]]) --}}
     <div data-home-units style="display: flex; flex-direction: column">

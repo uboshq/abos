@@ -47,6 +47,14 @@ final class TheHomeHeadHoldsTheCompanyAndTheControlsTest extends TestCase
             config(['abos.dashboards_v2' => $v2]);
             $page = $this->xpath($this->get(route('dashboard'))->assertOk()->getContent());
 
+            // ── টাকার বাক্স শিরোনামের সাথে একই মাথার সারিতে (মালিক, ৬ অক্টোবর ২০২৬: *"সোজা উপরে বসবে"*) ──
+            $head = $page->query('//section[@data-command-head]');
+            $this->assertSame(1, $head->length, '⛔ হোমের মাথার সারি নেই।');
+            $this->assertSame(1, $page->query('.//*[@data-home-title]', $head->item(0))->length, '⛔ শিরোনাম মাথার সারিতে নেই।');
+            $this->assertSame(1, $page->query('.//*[@data-money-position]', $head->item(0))->length, '⛔ টাকার বাক্স শিরোনামের সারিতে নেই।');
+            $this->assertStringContainsString('align-items: flex-start', $head->item(0)->getAttribute('style'), '⛔ বাক্সটা উপরে সাঁটা নয়।');
+            $this->assertSame(1, $page->query('//h1')->length, '⛔ পাতায় দুইটা শিরোনাম — পুরনো শিরোনামের সারি রয়ে গেছে।');
+
             // ── কোম্পানি-শাখা বাছাই মাথার সারিতে, শাখা বদলের দরজাসহ ──
             $company = $page->query('//section[@data-command-head]//*[@data-home-company]');
             $this->assertSame(1, $company->length, '⛔ মাথায় কোম্পানি-শাখা বাছাই নেই।');

@@ -244,17 +244,19 @@ final class StockFacts
      */
     public static function shortTaka(string $amount): string
     {
-        $value = abs((float) $amount);
+        // ⓘ স্ট্রিং আর bcmath-এ, float নয় (৬ অক্টোবর ২০২৬, MoneyIsNeverAFloatTest) — বড় অঙ্কে float শেষ ঘর হারায়
+        $value = ltrim(Money::of($amount), '-');
+        $trim = fn (string $n) => str_contains($n, '.') ? rtrim(rtrim($n, '0'), '.') : $n;
 
         foreach ([['10000000', 'crore'], ['100000', 'lakh'], ['1000', 'thousand']] as [$unit, $word]) {
-            if ($value >= (float) $unit) {
-                $figure = rtrim(rtrim(number_format($value / (float) $unit, 1, '.', ''), '0'), '.');
+            if (bccomp($value, $unit, 4) >= 0) {
+                $figure = $trim(Money::round(bcdiv($value, $unit, 4), 1));
 
                 return $figure.' '.__('inventory::overview.short_'.$word);
             }
         }
 
-        return (string) round($value);
+        return $trim(Money::round($value, 0));
     }
 
     /** আজ কতগুলো নড়াচড়া লেখা হয়েছে। */
