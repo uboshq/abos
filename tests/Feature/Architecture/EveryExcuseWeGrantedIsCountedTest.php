@@ -41,6 +41,9 @@ final class EveryExcuseWeGrantedIsCountedTest extends TestCase
         'EveryLedgerReaderSaysWhetherItShowsOrChecksTest::WHOLE_BY_DECISION',
         // ⓘ নিয়মের বাইরে রাখা সারি — তালিকা নয় (1fd5e3ed), যোগ অর্থহীন (9d79fff7), শাখা না-মানা পক্ষের খোঁজ (42ec6cef); গোনা শুরু ৫ অক্টোবর ২০২৬
         'EveryListPageHasTheToolbarTest::NOT_A_LIST',
+        // ⓘ যোগফলের পট্টি ছাড়া তালিকা — গ্রাহকের পোর্টাল (নিজের লেআউট), আর পাশের সেশনের অকমিটেড নতুন পাতা (৫ অক্টোবর ২০২৬)
+        'EveryListCarriesItsTotalsBarTest::EXEMPT',
+        'EveryListCarriesItsTotalsBarTest::PENDING',
         'EveryMoneyListShowsAGrandTotalTest::NOT_A_SUM',
         'EveryPartyListFollowsTheViewedBranchTest::EXCUSED',
         'ACodeMadeFromANameCanComeOutEmptyTest::HANDLED',
@@ -303,7 +306,14 @@ final class EveryExcuseWeGrantedIsCountedTest extends TestCase
      *       যমজ: খালি ইনপুট, কোনো সঞ্চিত দর ছাপা হয় না। ⛔ খরচের চাবির পেছনে লুকালে চাবিহীন গণনাকারী দরই দিতে পারতেন না,
      *       আর স্তর-ছাড়া বাড়তি আবার আটকাত (ম১-এর ভুলটাই)। ⚠️ ঘরের নাম বদলে পাহারা এড়ানো যেত — সেটা ফাঁকি, তাই ছাড়।
      */
-    private const CEILING = 316;
+    /*
+     * ── ⚠️ ৩১৬ → ৩১৯, ৫ অক্টোবর ২০২৬ (abos-63, প্রতিটা তালিকায় যোগফলের পট্টি) ──────────────────────────────────
+     *   +২  EveryListCarriesItsTotalsBarTest::EXEMPT — গ্রাহকের পোর্টালের DO আর আদেশের তালিকা: নিজের লেআউট, পট্টি
+     *       আঁকার খোলসই নেই; ঘোষণা করলে কিছুই আঁকা হত না আর পাহারা মিথ্যা সবুজ হত
+     *   +১  EveryListCarriesItsTotalsBarTest::PENDING — pricing-এর অকমিটেড দামের বইয়ের পাতা; পট্টি বসলেই নামটা কাটতে
+     *       হয় (লাল), তাই সংখ্যাটা ফিরে ৩১৮-এ নামবে
+     */
+    private const CEILING = 319;
 
     /*
      * ── ⚠️ ২২২ → ২২৪, ২৩ সেপ্টেম্বর ২০২৬ ───────────────────────────
