@@ -190,3 +190,61 @@ describe('partySearch — কম্পোনেন্ট', () => {
         expect(make({ uid: 'ps-a' }).optionId(0)).not.toBe(make({ uid: 'ps-b' }).optionId(0))
     })
 })
+
+/*
+ * ⭐ জাবেদার সারি — কয়েক ধরনের পক্ষ এক ঘরে, দল ধরে, আর ঐচ্ছিক ঘর খালি করা যায় (মালিক, ৫ অক্টোবর ২০২৬,
+ * সমন্বয়কের মারফত: "খোঁজা যায় এমন বাছাই … পক্ষের ধরন দল ধরে")।
+ */
+describe('partySearch — জাবেদার সারি', () => {
+    const grouped = [
+        { id: 'customer:11', label: 'Rahim Store', hint: 'C-0101', find: 'rahim store c-0101 গ্রাহক', group: 'গ্রাহক' },
+        { id: 'customer:12', label: 'Karim Traders', hint: 'C-0102', find: 'karim traders c-0102 গ্রাহক', group: 'গ্রাহক' },
+        { id: 'supplier:7', label: 'Rahim Agro', hint: 'S-0007', find: 'rahim agro s-0007 সরবরাহকারী', group: 'সরবরাহকারী' },
+        { id: 'person:3', label: 'Sujon Sumon', hint: '01711', find: 'sujon sumon 01711 ব্যক্তি', group: 'ব্যক্তি' },
+    ]
+
+    it('দলের নাম কেবল দলের প্রথম সারিতে — খোঁজার পরেও যা মেলে তার দল', () => {
+        const box = make({ options: grouped })
+
+        expect(box.shown.map((_, i) => box.groupLabel(i))).toEqual(['গ্রাহক', '', 'সরবরাহকারী', 'ব্যক্তি'])
+
+        box.search = 'rahim'
+        expect(box.shown.map((p) => p.id)).toEqual(['customer:11', 'supplier:7'])
+        expect(box.shown.map((_, i) => box.groupLabel(i))).toEqual(['গ্রাহক', 'সরবরাহকারী'])
+    })
+
+    it('মান "type:id" — আগের select-এর হুবহু; ↓ Enter-এ বাছা, লুকানো ঘরে change যায়', () => {
+        const box = make({ options: grouped, value: 'person:3' })
+
+        expect(box.pickedLabel).toBe('Sujon Sumon')
+
+        box.openList()
+        box.search = 'karim'
+        box.searched()
+        box.pickCursor()
+
+        expect(box.value).toBe('customer:12')
+        expect(box.$refs.input.dispatchEvent).toHaveBeenCalled()
+    })
+
+    it('ঐচ্ছিক ঘর — মাথায় "—", বাছলে খালি; খোঁজার শব্দ দিলে "—" সরে যায়', () => {
+        const box = make({ options: grouped, value: 'customer:11', clearable: true })
+
+        box.openList('')
+        expect(box.shown[0]).toMatchObject({ id: '', label: '—' })
+        expect(box.groupLabel(0)).toBe('')
+        expect(box.groupLabel(1)).toBe('গ্রাহক')
+
+        box.cursor = 0
+        box.pickCursor()
+        expect(box.value).toBe('')
+        expect(box.pickedLabel).toBe('—')
+
+        box.search = 'sujon'
+        expect(box.shown.map((p) => p.id)).toEqual(['person:3'])
+    })
+
+    it('ঐচ্ছিক নয় এমন ঘরে "—" সারি নেই — নোটের পক্ষ আগের মতোই', () => {
+        expect(make().shown.some((p) => p.id === '')).toBe(false)
+    })
+})

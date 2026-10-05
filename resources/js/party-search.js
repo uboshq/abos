@@ -52,11 +52,16 @@ export function matchParties(options, term) {
  * ⓘ `uid` প্রতিটা ঘরের নিজের — একই পাতায় কয়েকটা পিকার (জার্নালের সারি)
  * থাকলেও সারির `id` একে অন্যের সাথে মেশে না।
  */
-export default function partySearch({ value = '', options = [], uid = 'party' } = {}) {
+export default function partySearch({ value = '', options = [], uid = 'party', clearable = false } = {}) {
     return {
         /** বাছা পক্ষের id — লুকানো ঘরে এটাই যায়। */
         value: value === null || value === undefined ? '' : String(value),
-        options,
+
+        /*
+         * ⭐ ঐচ্ছিক ঘর — জাবেদার সারির পক্ষ বা খাত (৫ অক্টোবর ২০২৬): তালিকার মাথায় "—", বাছলে ঘর খালি, আগের
+         * `<select>`-এর `<option value="">—</option>`-এর মতো। ⓘ খোঁজার শব্দ দিলে ওটা আর মেলে না, তাই সরে যায়।
+         */
+        options: clearable ? [{ id: '', label: '—', hint: '', find: '' }, ...options] : options,
         uid,
 
         listOpen: false,
@@ -112,6 +117,20 @@ export default function partySearch({ value = '', options = [], uid = 'party' } 
 
         isPicked(p) {
             return String(p.id) === this.value
+        },
+
+        /**
+         * ⭐ দলের নাম — দলের প্রথম সারির মাথায়, নাহলে খালি (গ্রাহক · সরবরাহকারী · ব্যক্তি · কর্মী, জাবেদার পক্ষ,
+         * ৫ অক্টোবর ২০২৬)। ⓘ খোঁজার পরেও দল ধরে — যে সারিগুলো মেলে কেবল সেগুলোর দলের নাম।
+         */
+        groupLabel(i) {
+            const row = this.shown[i]
+
+            if (!row || !row.group) {
+                return ''
+            }
+
+            return i === 0 || (this.shown[i - 1] && this.shown[i - 1].group !== row.group) ? row.group : ''
         },
 
         /**

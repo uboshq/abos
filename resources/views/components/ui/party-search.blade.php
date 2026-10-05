@@ -10,6 +10,17 @@
 
     'label' => null,
     'required' => false,
+
+    /*
+     * ⭐ জাবেদার সারি (৫ অক্টোবর ২০২৬) — কয়েক ধরনের পক্ষ এক ঘরে, দল ধরে:
+     * `groups` = [[PartyRegistry::forPicker()]]-এর পুরো ফল ([type, label, options]); মান তখন "type:id", আগের
+     * `<select>`-এর হুবহু। ⓘ `clearable` — ঐচ্ছিক ঘর, মাথায় "—"; `ariaLabel` — লেবেলহীন সারির ঘরের নাম;
+     * `wide` — সরু কলামেও খোঁজার প্যানেল অন্তত ১৮rem, যাতে নাম আর কোড কাটা না পড়ে।
+     */
+    'groups' => null,
+    'clearable' => false,
+    'ariaLabel' => null,
+    'wide' => false,
 ])
 
 {{--
@@ -37,21 +48,32 @@
 @php
     $uid = 'ps-'.trim((string) preg_replace('/[^a-z0-9]+/i', '-', $name), '-').'-'.\Illuminate\Support\Str::lower(\Illuminate\Support\Str::random(5));
 
-    $rows = collect($options)
-        ->map(fn (array $o) => [
-            'id' => (int) $o['id'],
-            'label' => (string) $o['label'],
-            'hint' => (string) ($o['hint'] ?? ''),
-            'find' => (string) ($o['find'] ?? ''),
-        ])
-        ->values();
+    $rows = $groups === null
+        ? collect($options)
+            ->map(fn (array $o) => [
+                'id' => (int) $o['id'],
+                'label' => (string) $o['label'],
+                'hint' => (string) ($o['hint'] ?? ''),
+                'find' => (string) ($o['find'] ?? ''),
+            ])
+            ->values()
+        : collect($groups)
+            ->flatMap(fn (array $g) => collect($g['options'])->map(fn (array $o) => [
+                'id' => $g['type'].':'.$o['id'],
+                'label' => (string) $o['label'],
+                'hint' => (string) ($o['hint'] ?? ''),
+                // ⓘ দলের নামেও খোঁজা যায় — "সরবরাহকারী রহিম"
+                'find' => mb_strtolower((string) ($o['find'] ?? $o['label']).' '.$g['label']),
+                'group' => (string) $g['label'],
+            ]))
+            ->values();
 
     $value = $selected === null ? '' : (string) $selected;
     $hasError = $errors->has($name);
 @endphp
 
 <div {{ $attributes->class('min-w-0') }}
-     x-data="partySearch({ value: @js($value), options: @js($rows), uid: @js($uid) })">
+     x-data="partySearch({ value: @js($value), options: @js($rows), uid: @js($uid), clearable: @js((bool) $clearable) })">
     @if ($label)
         <span id="{{ $uid }}-label" class="mb-1 block text-sm font-medium">
             {{ $label }}
@@ -74,7 +96,7 @@
                 x-on:keydown="triggerKey($event)"
                 aria-haspopup="listbox"
                 x-bind:aria-expanded="listOpen ? 'true' : 'false'"
-                @if ($label) aria-labelledby="{{ $uid }}-label" @endif
+                @if ($label) aria-labelledby="{{ $uid }}-label" @elseif ($ariaLabel) aria-label="{{ $ariaLabel }}" @endif
                 @if ($hasError) aria-invalid="true" @endif
                 x-bind:title="pickedHint"
                 data-party-picker
@@ -96,9 +118,8 @@
              — ঘরটার সমান চওড়া, তাই ১৯২০×১০৮০-তে ডান কলামে বসেও কিছু কাটা পড়ে না
              (মালিক, ৩ অক্টোবর: *"sob porda 1080p korbe mendetory"*)। --}}
         <div x-show="listOpen" x-cloak
-             class="absolute inset-x-0 top-full z-30 mt-1 rounded-(--radius-card)
-                    border-2 border-(--color-brand-500) bg-(--color-surface-card)
-                    p-1.5 text-(--color-ink) shadow-lg">
+             @class(['absolute inset-x-0 top-full z-30 mt-1 rounded-(--radius-card) border-2 border-(--color-brand-500)
+                      bg-(--color-surface-card) p-1.5 text-(--color-ink) shadow-lg', 'min-w-72' => $wide])>
             <input type="search" x-ref="search" x-model="search"
                    x-on:input="searched()"
                    x-on:keydown.arrow-down.prevent="moveDown()"
@@ -123,6 +144,10 @@
                         x-on:mousemove="hover(i)"
                         :class="isCursor(i) ? 'bg-(--color-surface-hover)' : ''"
                         class="cursor-pointer rounded-(--radius-field) px-2 py-1.5">
+                        {{-- ⓘ দলের প্রথম সারির মাথায় দলের নাম (গ্রাহক · সরবরাহকারী · ব্যক্তি · কর্মী) --}}
+                        <span class="-mx-2 -mt-1.5 mb-1 block border-b border-(--color-border) px-2 pb-0.5 pt-1.5 text-2xs font-semibold
+                                     uppercase text-(--color-ink-muted)"
+                              x-show="groupLabel(i) !== ''" x-text="groupLabel(i)" data-party-group></span>
                         <span class="block truncate text-sm"
                               :class="isPicked(p) ? 'font-semibold' : ''"
                               x-text="p.label"></span>

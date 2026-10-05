@@ -12,6 +12,11 @@
 --}}
 @php
     $isNew = ! $voucher->exists;
+    // ⓘ খাতের খোঁজার তালিকা একবারই গড়া — প্রতিটা সারিতে নয় ([[x-ui.party-search]])
+    $accountOptions = collect($allAccounts)->map(fn ($a) => [
+        'id' => (int) $a->id, 'label' => $a->label(), 'hint' => '',
+        'find' => mb_strtolower($a->label().' '.($a->name_bn ?? '').' '.($a->name_en ?? '').' '.($a->code ?? '')),
+    ])->values()->all();
 
     // অন্তত পাঁচটা সারি — কম দিলে প্রতিটা জাবেদায় প্রথমেই "সারি যোগ
     // করুন" চাপতে হত, আর সেটা রোজকার কাজে বিরক্তিকর
@@ -174,18 +179,12 @@
                             @php $line = $existing[$i] ?? [] @endphp
                             <tr>
                                 <td class="tight">
-                                    <select name="lines[{{ $i }}][account_id]"
-                                            aria-label="{{ __('accounts::field.account') }} — {{ $i + 1 }}"
-                                            class="h-(--spacing-field) w-full min-w-48 rounded-(--radius-field)
-                                                   border border-(--color-border) bg-(--color-surface-card) px-2">
-                                        <option value="">—</option>
-                                        @foreach ($allAccounts as $account)
-                                            <option value="{{ $account->id }}"
-                                                    @selected(($line['account_id'] ?? null) == $account->id)>
-                                                {{ $account->label() }}
-                                            </option>
-                                        @endforeach
-                                    </select>
+                                    {{-- ⭐ খোঁজা যায় — কোড বা নাম (মালিক, ৫ অক্টোবর ২০২৬, সমন্বয়কের মারফত: লম্বা তালিকা স্ক্রল
+                                         করতে হত); একই [[x-ui.party-search]], মান আগের নামেই যায় --}}
+                                    <x-ui.party-search :name="'lines['.$i.'][account_id]'" :options="$accountOptions"
+                                                       :selected="$line['account_id'] ?? null" clearable wide
+                                                       :aria-label="__('accounts::field.account').' — '.($i + 1)"
+                                                       class="min-w-48" data-journal-account />
                                 </td>
 
                                 <td class="tight">
@@ -218,24 +217,14 @@
                                     খুঁজে পেত না।
                                 --}}
                                 <td class="tight">
-                                    <select name="lines[{{ $i }}][party]"
-                                            aria-label="{{ __('accounts::field.party') }} — {{ $i + 1 }}"
-                                            class="h-(--spacing-field) w-full rounded-(--radius-field)
-                                                   border border-(--color-border)
-                                                   bg-(--color-surface-card) px-2">
-                                        <option value="">—</option>
-                                        @foreach ($parties as $group)
-                                            <optgroup label="{{ $group['label'] }}">
-                                                @foreach ($group['options'] as $party)
-                                                    <option value="{{ $group['type'] }}:{{ $party['id'] }}"
-                                                            @selected(($line['party_type'] ?? null) === $group['type']
-                                                                && ($line['party_id'] ?? null) == $party['id'])>
-                                                        {{ $party['label'] }}
-                                                    </option>
-                                                @endforeach
-                                            </optgroup>
-                                        @endforeach
-                                    </select>
+                                    {{-- ⭐ খোঁজা যায় — নাম, কোড বা মোবাইল, দল ধরে (গ্রাহক · সরবরাহকারী · ব্যক্তি · কর্মী); মান আগের
+                                         মতোই "type:id" (মালিক, ৫ অক্টোবর ২০২৬, সমন্বয়কের মারফত) --}}
+                                    <x-ui.party-search :name="'lines['.$i.'][party]'" :groups="$parties"
+                                                       :selected="($line['party_type'] ?? null) && ($line['party_id'] ?? null)
+                                                           ? $line['party_type'].':'.$line['party_id'] : null"
+                                                       clearable wide
+                                                       :aria-label="__('accounts::field.party').' — '.($i + 1)"
+                                                       data-journal-party />
                                 </td>
 
                                 {{--
