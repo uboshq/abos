@@ -861,11 +861,14 @@ final class DeliveryChallanService
 
         $wouldBe = bcadd((string) ($alreadyDelivered ?: '0'), $qty, 4);
 
-        if (bccomp($wouldBe, (string) $orderLine->ordered_qty, 4) > 0) {
+        // ⭐ "আর দেওয়া হবে না" অংশ বাদ — সেটুকু আর পাঠানো যায় না (নকশা "DO বিক্রয় আদেশে মেশানো", ধাপ ৭)
+        $deliverable = bcsub((string) $orderLine->ordered_qty, (string) ($orderLine->rejected_qty ?? '0'), 4);
+
+        if (bccomp($wouldBe, $deliverable, 4) > 0) {
             throw ValidationException::withMessages([
                 'lines' => __('sales::validation.over_delivered_order', [
                     'no' => $orderLine->order->document_no,
-                    'ordered' => rtrim(rtrim((string) $orderLine->ordered_qty, '0'), '.'),
+                    'ordered' => rtrim(rtrim($deliverable, '0'), '.'),
                     'delivered' => rtrim(rtrim((string) ($alreadyDelivered ?: '0'), '0'), '.'),
                 ]),
             ]);

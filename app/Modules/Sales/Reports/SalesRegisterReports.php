@@ -74,7 +74,8 @@ final class SalesRegisterReports
     {
         $cancelled = DocumentStatus::CANCELLED;
 
-        $ordered = '(select COALESCE(SUM(ol.ordered_qty), 0) from sal_order_lines ol where ol.sales_order_id = o.id)';
+        // ⭐ "আর দেওয়া হবে না" অংশ বাদ — বাকিটা বন্ধ করা আদেশ যা গেছে তাতেই ১০০% (নকশার ধাপ ৭)
+        $ordered = '(select COALESCE(SUM(ol.ordered_qty - ol.rejected_qty), 0) from sal_order_lines ol where ol.sales_order_id = o.id)';
 
         $delivered = "(select COALESCE(SUM(cl.delivered_qty), 0)
                 from sal_challan_lines cl

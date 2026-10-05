@@ -23,6 +23,7 @@ use App\Modules\Inventory\Services\StockService;
 use App\Modules\Sales\Events\SalesOrderApproved;
 use App\Modules\Sales\Events\SalesOrderCancelled;
 use App\Modules\Sales\Events\SalesOrderClosed;
+use App\Modules\Sales\Events\SalesOrderLineRejected;
 use App\Modules\Sales\Models\SalesOrder;
 use App\Modules\Sales\Models\SalesOrderLine;
 use App\Modules\Sales\Support\SalesOrderStatus;
@@ -621,8 +622,8 @@ final class SalesOrderService
      * ⛔ কিছুই না গিয়ে থাকলে বন্ধ নয়, বাতিল — বন্ধ মানে "যা হওয়ার হয়েছে", আর কিছু না হওয়া আদেশের নাম বাতিল।
      *
      * ⓘ ছাড়ার নিয়ম [[cancel()]]-এর হুবহু (লাইনের `pendingQty()`), যাতে খসড়া চালান পরে নিশ্চিত হলে সে নিজের অংশটুকুই ছাড়ে
-     * ([[DeliveryChallanService::releasableQty()]]) — দুইবার নয়। ⚠️ কেবল `ledger` আদেশে আর সুইচ চালু থাকলে (মাল ধরা
-     * হয়েছিল কেবল তখনই, [[confirm()]])। `holds` আদেশের হোল্ড ছাড়ে abos-86-এর সেবা (নকশার ধাপ ৪, `ReleaseTheOrderStock`)।
+     * ([[DeliveryChallanService::releasableQty()]]) — দুইবার নয়। ⓘ কতটা ধরা, তা মজুদের খাতা থেকে ([[heldByThisOrder()]]) —
+     * দুই ধারাতেই, কারণ নতুন ধারার আদেশও নিজের মাল একই উৎসে ধরে (abos-86, 60ac3abf)।
      */
     public function close(SalesOrder $order, ?string $reason = null): SalesOrder
     {
@@ -654,13 +655,15 @@ final class SalesOrderService
                 ]);
             }
 
-            $ledger = (string) ($order->hold_mode ?? SalesOrderStatus::HOLD_LEDGER) === SalesOrderStatus::HOLD_LEDGER;
-
-            // ⛔ কেবল এই আদেশ নিজে যা ধরেছিল — সুইচ বন্ধে নিশ্চিত হওয়া আদেশ কিছুই ধরেনি, তাই কিছুই ছাড়ে না
-            $own = $ledger && $order->warehouse ? $this->heldByThisOrder($order) : [];
+            /*
+             * ⛔ কেবল এই আদেশ নিজে যা ধরেছিল — সুইচ বন্ধে নিশ্চিত হওয়া আদেশ কিছুই ধরেনি, তাই কিছুই ছাড়ে না।
+             * ⭐ দুই ধারাতেই: নতুন ধারার আদেশও নিজের মাল একই উৎসে ধরে (abos-86, 60ac3abf) — আগে এখানে কেবল আজকের নিয়মের আদেশ
+             * ছাড়ত, আর নতুন ধারার বন্ধ আদেশের মাল চিরকাল আটকে থাকত (নকশার ধাপ ৭-এ ধরা, ৫ অক্টোবর ২০২৬)।
+             */
+            $own = $order->warehouse ? $this->heldByThisOrder($order) : [];
 
             foreach ($order->lines as $line) {
-                if ($ledger && $order->warehouse) {
+                if ($order->warehouse) {
                     $stillReserved = $this->ownShare($own, $line);
 
                     if (bccomp($stillReserved, '0', 4) > 0) {
@@ -706,6 +709,107 @@ final class SalesOrderService
         });
     }
 
+    /**
+     * ⭐ এক লাইনের বাকির কিছুটা (বা সবটা) "আর দেওয়া হবে না" — SAP-এর reason for rejection (নকশা "DO বিক্রয় আদেশে মেশানো"
+     * §১.৪, ধাপ ৭; সমন্বয়কের উত্তর ৩: ডিপো কম দিলে বাকিটা খোলা থাকে — যতক্ষণ না কেউ এভাবে বন্ধ করেন)।
+     *
+     * ⛔ কেবল সংরক্ষিত আদেশ; কারণ বাধ্যতামূলক; খোলা পরিমাণের বেশি নয় (খসড়া চালানের মাল "যাওয়ার পথে" — বাদ যায় না)।
+     * ⓘ আদেশ ঐ অংশের জন্য যে মাল নিজে ধরেছিল তা ছাড়ে ([[heldByThisOrder()]], লাইনের ক্রমে ভাগ — বাতিল আর বন্ধের একই নিয়ম),
+     * দুই ধারাতেই; ঘটনাটা ([[SalesOrderLineRejected]]) বাকিদের জানানোর জন্য।
+     * ⓘ লাইনে আর কিছু খোলা না থাকলে লাইন বন্ধ — কিছু গিয়ে থাকলে `closed`, কিছুই না গেলে `rejected`। কারণ জমে: আগের কারণের পরে নতুনটা।
+     */
+    public function rejectRemainder(SalesOrderLine $line, string $qty, string $reason): SalesOrderLine
+    {
+        $reason = trim($reason);
+
+        if ($reason === '') {
+            throw ValidationException::withMessages([
+                'reject_reason' => __('sales::order_status.reject_needs_reason'),
+            ]);
+        }
+
+        $order = $line->order()->with('warehouse')->firstOrFail();
+
+        return DB::transaction(function () use ($order, $line, $qty, $reason) {
+            $this->lockAndReread($order);
+
+            if ($order->status !== SalesOrderStatus::CONFIRMED) {
+                throw ValidationException::withMessages([
+                    'status' => __('sales::order_status.only_confirmed_rejects', ['no' => $order->document_no]),
+                ]);
+            }
+
+            $line = SalesOrderLine::query()->with('product')->whereKey($line->getKey())
+                ->where('sales_order_id', $order->id)->lockForUpdate()->firstOrFail();
+            $open = $line->pendingQty();
+            $qty = trim($qty);
+
+            if (! is_numeric($qty) || bccomp($qty, '0', 4) <= 0 || bccomp($qty, $open, 4) > 0) {
+                throw ValidationException::withMessages([
+                    'reject_qty' => __('sales::order_status.reject_qty_range', [
+                        'no' => $order->document_no,
+                        'open' => rtrim(rtrim($open, '0'), '.'),
+                    ]),
+                ]);
+            }
+
+            $qty = bcadd($qty, '0', 4);
+
+            /*
+             * ⓘ এই লাইনের ভাগে যে মাল আদেশ নিজে ধরে আছে — বাতিলের একই ভাগাভাগি, লাইনের ক্রমে। ⭐ দুই ধারাতেই: নতুন ধারার আদেশও
+             * নিজের মাল মজুদের খাতায় একই উৎসে ধরে (`sales_order`, abos-86-এর [[HoldTheStockForTheApprovedOrder]], 60ac3abf)।
+             */
+            if ($order->warehouse_id !== null) {
+                $own = $this->heldByThisOrder($order);
+                $share = '0';
+
+                foreach ($order->lines()->get() as $each) {
+                    $taken = $this->ownShare($own, $each);
+
+                    if ((int) $each->id === (int) $line->id) {
+                        $share = $taken;
+
+                        break;
+                    }
+                }
+
+                $release = bccomp($qty, $share, 4) < 0 ? $qty : $share;
+
+                if (bccomp($release, '0', 4) > 0) {
+                    $this->stock->move(
+                        product: $line->product,
+                        warehouse: $order->warehouse,
+                        sourceType: SalesOrder::STOCK_SOURCE.':reject',
+                        sourceId: $order->id,
+                        reserved: bcmul($release, '-1', 4),
+                        date: now(),
+                        documentNo: $order->document_no,
+                        narration: $reason,
+                    );
+                }
+            }
+
+            $left = bcsub($open, $qty, 4);
+            $sent = $line->deliveredQty();
+
+            $line->forceFill([
+                'rejected_qty' => bcadd((string) ($line->rejected_qty ?? '0'), $qty, 4),
+                'reject_reason' => mb_substr(trim(((string) $line->reject_reason).' · '.$reason, ' ·'), 0, 255),
+                'line_status' => bccomp($left, '0', 4) > 0
+                    ? SalesOrderStatus::LINE_OPEN
+                    : (bccomp($sent, '0', 4) > 0 ? SalesOrderStatus::LINE_CLOSED : SalesOrderStatus::LINE_REJECTED),
+            ])->save();
+
+            // ⭐ অগ্রগতির ঘর — একমাত্র লেখকের হাতে ([[OrderProgress::refresh()]])
+            app(OrderProgress::class)->refresh($order->fresh(['lines']));
+
+            $fresh = $line->fresh();
+            DB::afterCommit(fn () => event(SalesOrderLineRejected::from($order, $fresh, $qty, $reason)));
+
+            return $fresh;
+        });
+    }
+
     /** ⛔ বন্ধ আদেশ বাতিল হয় না — বন্ধের দিনেই তার বাকি মাল ছাড়া হয়েছে। */
     private function assertNotClosed(SalesOrder $order): void
     {
@@ -742,7 +846,8 @@ final class SalesOrderService
         return StockMovement::query()
             ->where('warehouse_id', $order->warehouse_id)
             ->where(fn ($q) => $q
-                ->where(fn ($own) => $own->where('source_type', SalesOrder::STOCK_SOURCE)->where('source_id', $order->id))
+                // ⭐ আর এক লাইনের বাকি বন্ধে যা ছাড়া হলো (`:reject`) — নাহলে পরের চালান এমন মাল ছাড়ত যা আদেশ আর ধরে না (ধাপ ৭)
+                ->where(fn ($own) => $own->whereIn('source_type', [SalesOrder::STOCK_SOURCE, SalesOrder::STOCK_SOURCE.':reject'])->where('source_id', $order->id))
                 ->orWhere(fn ($out) => $out->whereIn('source_type', [$challan::STOCK_SOURCE, $challan::STOCK_SOURCE.':cancel'])
                     ->whereIn('source_id', $challans)))
             ->groupBy('product_id')

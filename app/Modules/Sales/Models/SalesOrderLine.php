@@ -100,10 +100,14 @@ class SalesOrderLine extends Model
         return (string) ($delivered ?: '0');
     }
 
-    /** আর কত দেওয়া বাকি — ঋণাত্মক হয় না। */
+    /**
+     * আর কত দেওয়া বাকি — ঋণাত্মক হয় না।
+     *
+     * ⭐ "আর দেওয়া হবে না" অংশ (`rejected_qty`) বাদ — তা আর পাওনা নয় (নকশা "DO বিক্রয় আদেশে মেশানো" §১.৪, ধাপ ৭)।
+     */
     public function pendingQty(): string
     {
-        $pending = bcsub((string) $this->ordered_qty, $this->deliveredQty(), 4);
+        $pending = bcsub(bcsub((string) $this->ordered_qty, (string) ($this->rejected_qty ?? '0'), 4), $this->deliveredQty(), 4);
 
         return bccomp($pending, '0', 4) > 0 ? $pending : '0.0000';
     }

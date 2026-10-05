@@ -260,7 +260,7 @@ final class CreditExposure implements CreditHolds
             ->where('o.hold_mode', SalesOrderStatus::HOLD_HOLDS)
             ->whereIn('o.status', [SalesOrderStatus::APPROVED, SalesOrderStatus::CONFIRMED])
             ->where('ol.ordered_qty', '>', 0)
-            ->select(['o.customer_id', 'ol.ordered_qty', 'ol.amount'])
+            ->select(['o.customer_id', 'ol.ordered_qty', 'ol.rejected_qty', 'ol.amount'])
             ->selectSub($delivered, 'delivered');
 
         if ($this->readLatest) {
@@ -270,7 +270,8 @@ final class CreditExposure implements CreditHolds
         $out = [];
 
         foreach ($query->get() as $row) {
-            $left = bcsub((string) $row->ordered_qty, (string) $row->delivered, 4);
+            // ⭐ "আর দেওয়া হবে না" অংশ আর পাওনা নয় — সীমায় গোনা হয় না (নকশা "DO বিক্রয় আদেশে মেশানো", ধাপ ৭)
+            $left = bcsub(bcsub((string) $row->ordered_qty, (string) ($row->rejected_qty ?? '0'), 4), (string) $row->delivered, 4);
 
             if (bccomp($left, '0', 4) <= 0) {
                 continue;

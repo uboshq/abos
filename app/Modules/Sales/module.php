@@ -831,6 +831,8 @@ return [
         \App\Modules\Sales\Events\SalesOrderClosed::class,
         // ⭐ বিক্রয় আদেশের শেষ সই (নতুন ধারা); শোনেন abos-86 (হোল্ড, তারপর `confirmed`)
         \App\Modules\Sales\Events\SalesOrderApproved::class,
+        // ⭐ এক লাইনের বাকিটা "আর দেওয়া হবে না" (নকশার ধাপ ৭); শোনেন abos-86 (নতুন ধারার হোল্ড ছোট করা)
+        \App\Modules\Sales\Events\SalesOrderLineRejected::class,
     ],
 
     /*

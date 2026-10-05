@@ -190,7 +190,8 @@ final class OrderTracking
     private function orderedQty(): Builder
     {
         return DB::table('sal_order_lines')
-            ->selectRaw('COALESCE(SUM(ordered_qty), 0)')
+            // ⭐ "আর দেওয়া হবে না" অংশ বাদ — বাকিটা বন্ধ করা আদেশ "পুরো গেছে"-র ইতিহাসে যায় (নকশার ধাপ ৭)
+            ->selectRaw('COALESCE(SUM(ordered_qty - rejected_qty), 0)')
             ->whereColumn('sal_order_lines.sales_order_id', 'sal_orders.id');
     }
 
@@ -364,7 +365,7 @@ final class OrderTracking
             ->where(fn (Builder $q) => $q->whereNull('sal_orders.warehouse_id')
                 ->orWhereColumn('inv_stock_movements.warehouse_id', 'sal_orders.warehouse_id'));
 
-        $left = 'sal_order_lines.ordered_qty - ('.$sent->toSql().')';
+        $left = 'sal_order_lines.ordered_qty - sal_order_lines.rejected_qty - ('.$sent->toSql().')';
 
         return DB::table('sal_order_lines')
             ->whereColumn('sal_order_lines.sales_order_id', 'sal_orders.id')

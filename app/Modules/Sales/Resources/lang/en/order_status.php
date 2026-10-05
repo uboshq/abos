@@ -78,5 +78,10 @@ return [
     'not_awaiting_you' => ':no is not awaiting a signature — its quantities cannot change now.',
     'approved_qty_range' => 'The quantity must be between 0 and the requested :asked — it cannot go up.',
 
+    // ⭐ এক লাইনের বাকিটা বন্ধ (ধাপ ৭, ৪ অক্টোবর ২০২৬)
+    'reject_needs_reason' => 'Write a reason to close the rest.',
+    'only_confirmed_rejects' => ':no is not reserved — only a reserved order\'s line can have its rest closed.',
+    'reject_qty_range' => ':no — :open is open on this line; the quantity to close must be above 0 and no more than what is open.',
+
     'closed_cannot_cancel' => ':no is closed — a closed order cannot be cancelled.',
 ];

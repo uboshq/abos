@@ -62,7 +62,8 @@ final class SalesReports
                 ->whereBetween('o.trx_date', [$f['from'], $f['to']])
                 ->whereNull('o.deleted_at')
                 ->where('o.status', DocumentStatus::CONFIRMED)
-                ->whereRaw("ol.ordered_qty > {$delivered}")
+                // ⭐ "আর দেওয়া হবে না" অংশ বাদ (নকশা "DO বিক্রয় আদেশে মেশানো", ধাপ ৭)
+                ->whereRaw("ol.ordered_qty - ol.rejected_qty > {$delivered}")
                 ->orderBy('o.trx_date')
                 ->orderBy('o.document_no')
                 ->select([
@@ -74,7 +75,7 @@ final class SalesReports
                     self::productName(),
                     'ol.ordered_qty',
                     DB::raw("{$delivered} as delivered_qty"),
-                    DB::raw("ol.ordered_qty - {$delivered} as pending_qty"),
+                    DB::raw("ol.ordered_qty - ol.rejected_qty - {$delivered} as pending_qty"),
                 ]),
             columns: [
                 ['key' => 'trx_date', 'label' => 'core.print.date', 'type' => ReportColumn::DATE, 'width' => '7rem'],
