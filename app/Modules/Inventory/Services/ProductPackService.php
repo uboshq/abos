@@ -113,7 +113,7 @@ final class ProductPackService
      */
     public function assertBaseCanChange(Product $product, bool $packsGiven): void
     {
-        foreach (PackSnapshot::TABLES as $table) {
+        foreach ($this->tablesHoldingAQuantity() as $table) {
             if (! Schema::hasTable($table) || ! Schema::hasColumn($table, 'product_id')) {
                 continue;
             }
@@ -139,6 +139,29 @@ final class ProductPackService
                 'unit_id' => __('inventory::validation.unit_change_needs_packs'),
             ]);
         }
+    }
+
+    /**
+     * ⭐ যে টেবিলগুলো পণ্যের পরিমাণ লেখে — ডাটাবেজ থেকেই, হাতের তালিকা নয় (Inventory অডিট গ১৬, ৪ অক্টোবর ২০২৬)।
+     *
+     * ⛔ আগে কেবল [[PackSnapshot::TABLES]]-এর ১৪টা দেখা হত — DO, দরপত্র, গণনা, উৎপাদন, পরিদর্শন, রিকুইজিশন, DO-র মাল-ধরা
+     * সেখানে নেই, তাই খোলা DO-র ২৪ পিস নীরবে ২৪ কার্টন হত। ⚠️ হাতের তালিকা কাল নতুন কাগজ এলে আবার পিছিয়ে পড়ত।
+     * ⓘ নিয়ম: `product_id` আছে আর পরিমাণের একটা ঘর (`…qty…`, `…quantity…`, মজুদের `…_change`)। ⓘ পণ্যের নিজের প্যাকের
+     * টেবিল বাদ — সেটা এই ফর্মই নতুন করে লেখে ([[save()]])। পুরনো তালিকাও সাথে থাকে, যাতে কোনোটা বাদ না পড়ে।
+     *
+     * @return list<string>
+     */
+    private function tablesHoldingAQuantity(): array
+    {
+        $found = array_map(fn ($row) => (string) $row->t, DB::select(
+            "SELECT DISTINCT c.TABLE_NAME AS t FROM information_schema.COLUMNS c
+              WHERE c.TABLE_SCHEMA = DATABASE() AND c.COLUMN_NAME = 'product_id'
+                AND EXISTS (SELECT 1 FROM information_schema.COLUMNS q
+                             WHERE q.TABLE_SCHEMA = c.TABLE_SCHEMA AND q.TABLE_NAME = c.TABLE_NAME
+                               AND (q.COLUMN_NAME LIKE '%qty%' OR q.COLUMN_NAME LIKE '%quantity%' OR q.COLUMN_NAME LIKE '%_change'))"
+        ));
+
+        return array_values(array_diff(array_unique([...PackSnapshot::TABLES, ...$found]), ['inv_product_units']));
     }
 
     /**
