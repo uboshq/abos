@@ -119,6 +119,9 @@ class BankFacilityController extends Controller implements HasMiddleware
              * কারণ ছাড়াই।
              */
             'facilities' => $facilities,
+            // ⭐ বাকি সুদ — মাঝপথে শোধের চার্জের একই হিসাব ([[BankFacilityService::interestLeft()]]; মালিক, ৫ অক্টোবর ২০২৬)
+            'interest' => $facilities->getCollection()
+                ->mapWithKeys(fn (BankFacility $f) => [(int) $f->id => $this->facilities->interestLeft($f)])->all(),
             'grand' => $this->grandTotals($this->facilityQuery($tab, $term), ['limit_amount' => 't.limit_amount']),
             'renewals' => $this->facilities->dueForRenewal(),
         ]);

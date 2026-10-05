@@ -8,6 +8,7 @@ use App\Core\Engines\Report\ReportEngine;
 use App\Core\Services\MenuBuilder;
 use App\Http\Controllers\Controller;
 use App\Models\Branch;
+use App\Modules\Finance\Models\BankFacility;
 use App\Modules\Finance\Models\HandLoanAccount;
 use App\Modules\Finance\Reports\LoanLedgerReports;
 use App\Modules\MasterData\Models\Person;
@@ -27,6 +28,7 @@ class FinanceReportController extends Controller
 {
     public const SLUGS = [
         'hand-loan-book' => LoanLedgerReports::HAND_LOAN,
+        'bank-loan-book' => LoanLedgerReports::BANK_LOAN,
     ];
 
     public function __construct(
@@ -43,6 +45,23 @@ class FinanceReportController extends Controller
         Gate::authorize($definition->permission);
 
         $result = $this->reports->run($key, $request->only($definition->requestKeys()), page: max(1, (int) $request->query('page', 1)));
+
+        if ($key === LoanLedgerReports::BANK_LOAN) {
+            return view('accounts::report.show', [
+                'menu' => $this->menu->forUser($request->user()),
+                'slug' => $slug,
+                'report' => $definition,
+                'result' => $result,
+                'branches' => collect(),
+                'accounts' => collect(),
+                'partyTypes' => collect(),
+                // ⓘ ঋণ বাছার ঘর — ব্যাংক আর কাগজের নম্বর
+                'partyFilter' => 'facility_id',
+                'parties' => BankFacility::query()->inViewedBranch()->orderBy('bank')->get()
+                    ->map(fn (BankFacility $f) => (object) ['id' => (int) $f->id, 'name' => trim($f->bank.' · '.$f->document_no, ' ·')]),
+            ]);
+        }
+
         $personId = (int) ($result->filters['person_id'] ?? 0);
 
         return view('accounts::report.show', [

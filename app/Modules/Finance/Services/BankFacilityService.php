@@ -406,12 +406,7 @@ class BankFacilityService
                 ];
             }
 
-            $left = LoanSchedule::interestLeft(
-                (string) $facility->limit_amount,
-                (string) ($facility->interest_rate ?? '0'),
-                $months,
-                $this->instalmentStanding($facility)['paid'],
-            );
+            $left = (string) $this->interestLeft($facility);
 
             $charge = bcdiv(bcmul($left, $amount, 4), '100', 4);
 
@@ -705,6 +700,55 @@ class BankFacilityService
 
         // ⓘ সূচি নেই (লিজ, হার/সংখ্যা লেখা নেই) — কয়টা শোধের ভাউচার এসেছে
         return $this->repayments($facility)['count'];
+    }
+
+    /**
+     * ⭐ বাকি সুদ — বাকি কিস্তিগুলোর সুদাংশের যোগফল ([[LoanSchedule::interestLeft]]), কয়টা দেওয়া হয়েছে সেটা খাতা থেকে।
+     *
+     * ⓘ একটাই হিসাব: মাঝপথে শোধের চার্জ ([[settlementToday()]]) আর ব্যাংক ঋণের তালিকার "বাকি সুদ" (মালিক, ৫ অক্টোবর ২০২৬)
+     * দুইটাই এখান থেকে। ⚠️ কিস্তির সংখ্যা লেখা না থাকলে (CC, লিজ) সূচিই নেই — null, পর্দায় "—", শূন্য নয়।
+     */
+    public function interestLeft(BankFacility $facility): ?string
+    {
+        $months = (int) ($facility->instalments ?? 0);
+
+        if ($months < 1) {
+            return null;
+        }
+
+        return LoanSchedule::interestLeft(
+            (string) $facility->limit_amount,
+            (string) ($facility->interest_rate ?? '0'),
+            $months,
+            $this->instalmentStanding($facility)['paid'],
+        );
+    }
+
+    /**
+     * ⭐ এই ঋণের খাতা-সারি — [[standing()]] যে সারি থেকে বকেয়া গোনে, হুবহু সেগুলো ([[ownEntries()]]); ঋণের খাতার
+     * রিপোর্ট ([[LoanLedgerReports::BANK_LOAN]]) এটাই পড়ে, তাই খাতার শেষ জের আর তালিকার "বাকি আসল" কখনো আলাদা হয় না।
+     * ⓘ খাত নেই (গ্যারান্টি) — null।
+     */
+    public function ledgerRowsOf(BankFacility $facility): ?\Illuminate\Database\Query\Builder
+    {
+        $account = $this->accountOf($facility);
+
+        return $account === null ? null : $this->ownEntries($facility, $account);
+    }
+
+    /**
+     * পুরনো ব্যবস্থা থেকে তোলা টাকা যেটা খাতায় বসেনি — [[standing()]]-এর একই নিয়ম: খোলা দাখিলা থাকলে শূন্য (ওটা খাতায়
+     * আছে), নাহলে লেখা `opening_drawn`। ⓘ খাতার রিপোর্ট এটা খোলা জেরে যোগ করে।
+     */
+    public function legacyOpening(BankFacility $facility): string
+    {
+        $opened = DB::table('ledger_entries')
+            ->where('company_id', CompanyContext::id())
+            ->where('source_type', self::OPENING_SOURCE)
+            ->where('source_id', (int) $facility->id)
+            ->exists();
+
+        return $opened ? '0.0000' : bcadd((string) ($facility->opening_drawn ?? '0'), '0', 4);
     }
 
     /**

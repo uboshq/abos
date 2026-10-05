@@ -9,7 +9,9 @@ use App\Core\Engines\Report\ReportDefinition;
 use App\Core\Engines\Report\ReportEngine;
 use App\Core\Support\Money;
 use App\Modules\Accounts\Models\Voucher;
+use App\Modules\Finance\Models\BankFacility;
 use App\Modules\Finance\Models\HandLoanMovement;
+use App\Modules\Finance\Services\BankFacilityService;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Facades\DB;
 
@@ -31,6 +33,13 @@ use Illuminate\Support\Facades\DB;
 final class LoanLedgerReports
 {
     public const HAND_LOAN = 'finance.hand_loan_ledger';
+
+    /*
+     * ⭐ ব্যাংক ঋণের খাতা — একই ধাঁচ, একই নীতি: পর্দার "বাকি আসল" যেখান থেকে ([[BankFacilityService::standing()]] —
+     * খতিয়ানে ঋণের নিজের সারি, আর খাতায় না-বসা পুরনো তোলা), খাতাও সেখান থেকে ([[BankFacilityService::ledgerRowsOf()]],
+     * [[BankFacilityService::legacyOpening()]])। ⓘ দিক: তোলা (দেনা বাড়ে) = ক্রেডিট, তাই জের (Cr) মানে আমরা ব্যাংকের কাছে ধারি।
+     */
+    public const BANK_LOAN = 'finance.bank_loan_ledger';
 
     public static function registerAll(ReportEngine $engine): void
     {
@@ -63,6 +72,77 @@ final class LoanLedgerReports
                 ['key' => 'balance', 'label' => 'core.table.balance', 'type' => ReportColumn::DR_CR, 'width' => '10rem'],
             ],
         ));
+
+        $engine->register(new ReportDefinition(
+            key: self::BANK_LOAN,
+            // ⛔ ব্যাংক ঋণের পাতা যে চাবি দেখে, সেটাই
+            permission: 'finance.bank_facility.view',
+            title: 'finance::loan_ledger.bank_loan_title',
+            filters: ['date_range', 'facility_id'],
+            splitByBranch: false,
+            query: fn (array $f) => self::bankLoan($f, (int) ($f['facility_id'] ?? 0)),
+            summary: function (array $totals): array {
+                $net = bcsub((string) ($totals['debit'] ?? '0'), (string) ($totals['credit'] ?? '0'), 4);
+
+                return ['label' => __('finance::loan_ledger.closing'), 'value' => $net, 'text' => Money::drCr($net), 'good' => true];
+            },
+            columns: [
+                ['key' => 'trx_date', 'label' => 'core.print.date', 'type' => ReportColumn::DATE, 'width' => '7rem'],
+                [
+                    'key' => 'document_no',
+                    'label' => 'core.table.document',
+                    'type' => ReportColumn::DOCUMENT,
+                    'source_type' => 'source_type',
+                    'source_id' => 'source_id',
+                ],
+                ['key' => 'narration', 'label' => 'core.table.narration'],
+                ['key' => 'debit', 'label' => 'finance::loan_ledger.repaid', 'type' => ReportColumn::MONEY],
+                ['key' => 'credit', 'label' => 'finance::loan_ledger.drawn', 'type' => ReportColumn::MONEY],
+                ['key' => 'balance', 'label' => 'core.table.balance', 'type' => ReportColumn::DR_CR, 'width' => '10rem'],
+            ],
+        ));
+    }
+
+    /** @param  array<string, mixed>  $f */
+    private static function bankLoan(array $f, int $facilityId): Builder
+    {
+        $facility = $facilityId > 0 ? BankFacility::query()->find($facilityId) : null;
+        $service = app(BankFacilityService::class);
+        $rows = $facility === null ? null : $service->ledgerRowsOf($facility);
+
+        // ⓘ ঋণ না বাছলে, বা খাত নেই (গ্যারান্টি) — খালি খাতা
+        if ($rows === null) {
+            return DB::query()->fromSub(DB::table('ledger_entries')->where('company_id', $f['company_id'])
+                ->selectRaw("NULL as trx_date, NULL as document_no, NULL as narration, 0 as debit, 0 as credit, NULL as source_type, NULL as source_id, 0 as sort, 0 as id, 0 as balance")
+                ->whereRaw('1 = 0'), 'r');
+        }
+
+        $pdo = DB::getPdo();
+        $legacy = $service->legacyOpening($facility);
+        $net = 'COALESCE(SUM(debit), 0) - COALESCE(SUM(credit), 0) - '.$pdo->quote($legacy);
+
+        $opening = (clone $rows)
+            ->where('trx_date', '<', $f['from'])
+            ->selectRaw(
+                $pdo->quote((string) $f['from']).' as trx_date, NULL as document_no, '
+                .$pdo->quote((string) __('finance::loan_ledger.opening')).' as narration, '
+                ."GREATEST({$net}, 0) as debit, GREATEST(-({$net}), 0) as credit, "
+                .'NULL as source_type, NULL as source_id, 0 as sort, 0 as id'
+            );
+
+        $lines = (clone $rows)
+            ->whereBetween('trx_date', [$f['from'], $f['to']])
+            ->select(['trx_date', 'document_no'])
+            ->selectRaw("COALESCE(NULLIF(narration, ''), ".$pdo->quote((string) __('finance::loan_ledger.kind_bank')).') as narration')
+            ->addSelect(['debit', 'credit', 'source_type', 'source_id'])
+            ->selectRaw('1 as sort, id');
+
+        $running = DB::query()
+            ->fromSub($opening->unionAll($lines), 'l')
+            ->select('l.*')
+            ->selectRaw('SUM(l.debit - l.credit) OVER (ORDER BY l.sort, l.trx_date, l.id ROWS UNBOUNDED PRECEDING) as balance');
+
+        return DB::query()->fromSub($running, 'r')->orderBy('r.sort')->orderBy('r.trx_date')->orderBy('r.id');
     }
 
     /** @param  array<string, mixed>  $f */

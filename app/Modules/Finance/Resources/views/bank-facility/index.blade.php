@@ -23,9 +23,12 @@
     ];
 
     $bfColumns = [
+        /* ⭐ নাম চাপলে ঋণের খাতা — হাতধারের একই ধাঁচ (মালিক, ৫ অক্টোবর ২০২৬; [[FinanceReportController]]);
+             ঋণের নিজের পাতা (জামানত, শর্ত, কিস্তি, বন্ধ) শেষের "খুলুন" ঘরে */
         ['key' => 'bank', 'label' => __('finance::field.bank'),
          'render' => fn ($f) => new \Illuminate\Support\HtmlString(
-             '<a href=\'' . route('finance.bank_facility.show', $f->id) . '\' '
+             '<a data-bank-loan-book href=\'' . e(route('finance.report.show', ['slug' => 'bank-loan-book', 'facility_id' => $f->id,
+                 'from' => \App\Core\Engines\Report\ReportEngine::ALL_TIME])) . '\' '
              . 'class=\'text-brand-500 underline-offset-2 hover:underline\'>'
              . e($f->bank) . '</a>')],
         /*
@@ -71,6 +74,9 @@
          'render' => fn ($f) => isset($standing[$f->id])
              ? \App\Core\Support\Money::format($standing[$f->id]['left'])
              : '—'],
+        /* ⭐ বাকি সুদ — কিস্তির সূচি থেকে; সূচি নেই (CC, লিজ) তো "—", শূন্য নয় */
+        ['key' => 'interest_left', 'label' => __('finance::loan_ledger.interest_left'), 'numeric' => true, 'width' => '9rem',
+         'render' => fn ($f) => ($interest[$f->id] ?? null) === null ? '—' : \App\Core\Support\Money::format($interest[$f->id])],
 
         ['key' => 'renews_on', 'label' => __('finance::field.renews_on'), 'width' => '9rem',
          'render' => fn ($f) => $f->renews_on?->translatedFormat('j M Y') ?? '—'],
