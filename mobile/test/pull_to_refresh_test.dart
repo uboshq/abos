@@ -46,6 +46,7 @@ void main() {
     'reports_screen.dart',
     'dashboards_screen.dart',
     'my_route_screen.dart',
+    'lead_screens.dart',
     'sync_status_screen.dart',
   };
 

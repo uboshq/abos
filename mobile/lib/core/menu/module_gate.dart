@@ -39,6 +39,7 @@ class ModuleGate {
     'scan': 'sales',
     'tracking': 'sales',
     'my-route': 'sales',
+    'leads': 'sales',
     'delivery-orders': 'sales',
     'counter': 'sales',
     'today': 'sales',

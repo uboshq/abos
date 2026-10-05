@@ -254,6 +254,14 @@ class MenuRepository {
             icon: Icons.route_outlined,
             routeName: 'my-route',
           ),
+        // ⭐ লিড — মাঠ থেকে নতুন দোকানের খোঁজ, ওয়েবের লিডের একই চাবি
+        if (user.can('sales.lead.view'))
+          const MenuItem(
+            key: 'sales.lead',
+            label: 'লিড',
+            icon: Icons.person_search_outlined,
+            routeName: 'leads',
+          ),
         // ⭐ সরাসরি বিক্রয়ের কাউন্টার (0.4.9) — ওয়েবের কাউন্টারের একই চাবি
         if (user.can('sales.challan.create'))
           const MenuItem(
