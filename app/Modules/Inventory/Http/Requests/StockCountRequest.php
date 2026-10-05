@@ -39,6 +39,8 @@ class StockCountRequest extends FormRequest
             'lines.*.counted_qty' => ['nullable', 'numeric', 'min:0'],
             'lines.*.batch_no' => ['nullable', 'string', 'max:60'],
             'lines.*.expiry_date' => ['nullable', 'date'],
+            // ⭐ বাড়তি পেলে তার দর — অডিট ম১; খালি হলে গড় দর ([[StockCountService::record()]])
+            'lines.*.unit_cost' => ['nullable', 'numeric', 'min:0'],
         ];
     }
 

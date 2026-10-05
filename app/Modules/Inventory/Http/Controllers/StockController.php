@@ -513,6 +513,8 @@ class StockController extends Controller implements HasMiddleware
              */
             'batch_no' => $request->input('batch_no'),
             'expiry_date' => $request->input('expiry_date'),
+            // ⭐ পর্দার দর কাগজে যায় — অডিট ম১; ⛔ আগে যাচাই হয়েও পথে ফেলে দেওয়া হত
+            'unit_cost' => $request->input('unit_cost'),
         ]]);
 
         /*

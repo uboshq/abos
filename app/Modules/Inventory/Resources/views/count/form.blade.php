@@ -95,6 +95,9 @@
                                 @endunless
 
                                 <th class="text-end">{{ __('inventory::field.counted_qty') }}</th>
+                                {{-- ⭐ অডিট ম১: বাড়তি পেলে লট (লট-ধরা পণ্যে) আর দর — ⛔ আগে ঘরই ছিল না, তাই লট-ধরা বাড়তি পুরো গণনা আটকাত --}}
+                                <th class="text-start">{{ __('inventory::field.batch_no') }} · {{ __('inventory::field.expiry_date') }}</th>
+                                <th class="text-end">{{ __('inventory::field.surplus_rate') }}</th>
                             </tr>
                         </thead>
 
@@ -120,6 +123,34 @@
                                         <input type="number" step="0.01" min="0" inputmode="decimal"
                                                name="lines[{{ $i }}][counted_qty]"
                                                value="{{ old('lines.'.$i.'.counted_qty') }}"
+                                               class="num h-(--spacing-field-compact) w-full rounded-(--radius-field)
+                                                      border border-(--color-border) bg-(--color-surface-card)
+                                                      px-2 text-end sm:w-28">
+                                    </td>
+
+                                    <td class="cell-input" data-label="{{ __('inventory::field.batch_no') }}">
+                                        {{-- ⓘ কেবল লট-ধরা পণ্যে; ঘাটতিতে খালি রাখলে আগে-মেয়াদ নিয়ম লট বাছে --}}
+                                        @if ($product->track_batch)
+                                            <div class="flex gap-1">
+                                                <input type="text" maxlength="60" name="lines[{{ $i }}][batch_no]"
+                                                       value="{{ old('lines.'.$i.'.batch_no') }}"
+                                                       aria-label="{{ __('inventory::field.batch_no') }}"
+                                                       class="h-(--spacing-field-compact) w-full rounded-(--radius-field) border
+                                                              border-(--color-border) bg-(--color-surface-card) px-2 sm:w-28">
+                                                <input type="date" name="lines[{{ $i }}][expiry_date]"
+                                                       value="{{ old('lines.'.$i.'.expiry_date') }}"
+                                                       aria-label="{{ __('inventory::field.expiry_date') }}"
+                                                       class="h-(--spacing-field-compact) w-full rounded-(--radius-field) border
+                                                              border-(--color-border) bg-(--color-surface-card) px-2 sm:w-36">
+                                            </div>
+                                        @endif
+                                    </td>
+
+                                    <td class="cell-input" data-label="{{ __('inventory::field.surplus_rate') }}">
+                                        {{-- ⓘ খালি রাখলে গড় দর; স্তর নেই এমন পণ্যে বাড়তি পেলে দরটা লাগবেই --}}
+                                        <input type="number" step="0.01" min="0" inputmode="decimal"
+                                               name="lines[{{ $i }}][unit_cost]"
+                                               value="{{ old('lines.'.$i.'.unit_cost') }}"
                                                class="num h-(--spacing-field-compact) w-full rounded-(--radius-field)
                                                       border border-(--color-border) bg-(--color-surface-card)
                                                       px-2 text-end sm:w-28">

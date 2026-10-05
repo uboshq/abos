@@ -150,8 +150,12 @@ final class StockCountService
                     'book_qty' => $bookQty,
                     'counted_qty' => $line['counted_qty'],
                     'difference' => bcsub($line['counted_qty'], $bookQty, 4),
-                    // পার্থক্যের টাকা দেখাতে গড় একক-খরচ; মাল না থাকলে বলা যায় না
-                    'unit_cost' => $this->averageCost($product),
+                    /*
+                     * ⭐ লেখা দর আগে, না থাকলে গড় — Inventory অডিট ম১, ৫ অক্টোবর ২০২৬।
+                     * ⛔ আগে সবসময় গড় বসত: মানুষ বাড়তির দর লিখলেও ফেলে দেওয়া হত, আর স্তর না থাকলে গড়ও নেই, তাই বাড়তি
+                     * খাতায় তোলাই যেত না ("দর লাগবে")। ⓘ মেনে নেওয়ার দিন বাড়তির স্তর এই দরেই বসে ([[StockAdjustmentService::settle()]])।
+                     */
+                    'unit_cost' => $line['unit_cost'] ?? $this->averageCost($product),
                     // reason_code_id অনুমোদনের সময় বসবে
                 ]);
             }
@@ -408,6 +412,24 @@ final class StockCountService
         );
     }
 
+    /** লেখা দর — খালি হলে null (তখন গড়), নাহলে শূন্য বা বেশি একটা সংখ্যা */
+    private function typedRate(mixed $value): ?string
+    {
+        $value = trim((string) ($value ?? ''));
+
+        if ($value === '') {
+            return null;
+        }
+
+        if (! is_numeric($value) || bccomp($value, '0', 4) < 0) {
+            throw ValidationException::withMessages([
+                'lines' => __('inventory::validation.surplus_needs_rate'),
+            ]);
+        }
+
+        return bcadd($value, '0', 4);
+    }
+
     private function cleanLines(array $lines): array
     {
         $out = [];
@@ -450,6 +472,8 @@ final class StockCountService
                  */
                 'batch_no' => $line['batch_no'] ?? null,
                 'expiry_date' => $line['expiry_date'] ?? null,
+                // ⓘ বাড়তির দর — যাচাই এখানে, কারণ ঋণাত্মক বা লেখা-নয় দর কাগজে বসলে মেনে নেওয়ার দিন স্তরটাই মিথ্যা হত
+                'unit_cost' => $this->typedRate($line['unit_cost'] ?? null),
             ];
         }
 
