@@ -61,6 +61,7 @@ return [
     'not_enough_to_transfer' => 'Only :available of :product is in :warehouse — no more can be sent.',
     'only_draft_dispatches' => ':no is not a draft, so it cannot be dispatched again.',
     'transfer_changed_while_sending' => ':no changed while it was being sent; someone edited its lines. Check the paper again and send it.',
+    'transfer_same_person' => 'You sent :no yourself; in this company sending and receiving are done by two different people. Someone else must receive it.',
     'only_dispatched_receives' => ':no has not been dispatched yet — there is nothing to receive.',
     'received_cannot_cancel' => ':no has arrived — transfer it back instead of cancelling.',
     'only_draft_edits' => ':no is not a draft — it cannot be changed once dispatched.',

@@ -905,6 +905,17 @@ return [
             'group' => 'entry',
         ],
         [
+            /*
+             * ⭐ গুদাম বদলে দুজনের কাজ — যিনি পাঠান তিনি গ্রহণ করেন না (Inventory অডিট ম৪; মালিক, ৫ অক্টোবর ২০২৬: ডিফল্ট বন্ধ)।
+             * ⓘ বন্ধে আজকের মতো — এক-লোকের ডিপো আটকায় না। চালুতে সুপার অ্যাডমিন পারেন, অডিটে দাগসহ ([[StockTransferService::receive()]])।
+             */
+            'key' => 'inventory.transfer_two_people',
+            'label' => 'inventory::settings.transfer_two_people',
+            'type' => 'boolean',
+            'default' => false,
+            'group' => 'entry',
+        ],
+        [
             // ব্র্যান্ডের ঘরটা সব ব্যবসায় লাগে না (নিয়ম ৭)
             'key' => 'inventory.brand_enabled',
             'label' => 'inventory::settings.brand_enabled',

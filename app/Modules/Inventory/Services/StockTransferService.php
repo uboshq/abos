@@ -233,6 +233,8 @@ final class StockTransferService
             $transfer->update([
                 'status' => DocumentStatus::CONFIRMED,
                 'dispatched_at' => now(),
+                // ⓘ কে পাঠালেন — "দুজনের কাজ" সুইচ গ্রহণে এটাই মেলায় (অডিট ম৪)
+                'dispatched_by' => auth()->id(),
             ]);
 
             return $transfer->fresh(['lines']);
@@ -264,6 +266,8 @@ final class StockTransferService
                     'status' => __('inventory::validation.only_dispatched_receives', ['no' => $transfer->document_no]),
                 ]);
             }
+
+            $this->assertTwoPeople($transfer);
 
             foreach ($transfer->lines as $line) {
                 /*
@@ -476,6 +480,39 @@ final class StockTransferService
                 'to_warehouse_id' => __('inventory::validation.same_warehouse'),
             ]);
         }
+    }
+
+    /**
+     * ⭐ গুদাম বদলে দুজনের কাজ — Inventory অডিট ম৪; মালিক, ৫ অক্টোবর ২০২৬ ("এভাবেই করো")।
+     *
+     * ⛔ আগে একজনই পাঠাতেন আর গ্রহণ করতেন — পথে হারানো মাল "পৌঁছেছে" লেখা যেত, আর কেউ মিলিয়ে দেখত না।
+     * ⓘ কোম্পানির সুইচ `inventory.transfer_two_people` (ডিফল্ট বন্ধ — বন্ধে আজকের মতো, এক-লোকের ডিপো আটকায় না)। চালুতে যিনি
+     * পাঠালেন তিনি গ্রহণ করতে পারেন না; সুপার অ্যাডমিন পারেন, কিন্তু অডিটে লেখা থাকে যে একই মানুষ দুটোই করেছেন।
+     * ⓘ পুরনো কাগজে পাঠানো মানুষ জানা নেই (`dispatched_by` খালি) — তখন থামানোর কিছু নেই।
+     */
+    private function assertTwoPeople(StockTransfer $transfer): void
+    {
+        $sender = (int) StockTransfer::query()->whereKey($transfer->id)->value('dispatched_by');
+        $user = auth()->user();
+
+        if (! (bool) app(\App\Core\Services\SettingsService::class)->get('inventory.transfer_two_people', false)
+            || $sender === 0 || $user === null || (int) $user->getKey() !== $sender) {
+            return;
+        }
+
+        if ($user->roles->contains('name', \App\Core\Services\PermissionSyncer::SUPER_ADMIN_ROLE)) {
+            app(\App\Core\Engines\Audit\AuditEngine::class)->recordAction($transfer, 'received_by_its_sender', sprintf(
+                '%s: sent and received by the same person (%s), allowed as super admin',
+                $transfer->document_no,
+                (string) ($user->name ?? $user->email),
+            ));
+
+            return;
+        }
+
+        throw ValidationException::withMessages([
+            'status' => __('inventory::validation.transfer_same_person', ['no' => $transfer->document_no]),
+        ]);
     }
 
     private function assertEnoughAtSource(Product $product, Warehouse $warehouse, string $qty): void

@@ -48,6 +48,8 @@ class StockTransfer extends Model implements Drillable
         'company_id', 'branch_id', 'financial_year_id', 'document_no',
         'from_warehouse_id', 'to_warehouse_id', 'trx_date',
         'dispatched_at', 'received_at',
+        // ⓘ কে পাঠালেন — "দুজনের কাজ" সুইচের জন্য (অডিট ম৪)
+        'dispatched_by',
         'status', 'narration', 'created_by',
         'cancelled_by', 'cancelled_at', 'cancel_reason',
     ];

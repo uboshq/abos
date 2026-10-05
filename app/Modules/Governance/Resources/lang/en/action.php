@@ -51,4 +51,6 @@ return [
     'reversed' => 'Reversed by a reversal paper',
     'cancelled_by_cxl' => 'Reversed by a cancellation invoice',
     'counter_bill_voided' => 'Counter bill voided',
+    // ⭐ গুদাম বদলে একই মানুষ পাঠিয়ে গ্রহণ — দুজনের কাজের সুইচে কেবল সুপার অ্যাডমিন পারেন (অডিট ম৪, ৫ অক্টোবর ২০২৬)
+    'received_by_its_sender' => 'Received by the person who sent it (super admin)',
 ];
