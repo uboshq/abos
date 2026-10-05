@@ -24,4 +24,5 @@ return [
     'note' => 'Credit or debit note',
     'cheque_clear' => 'Cheque cleared',
     'cheque_bounce' => 'Cheque bounced',
+    'inter_company' => 'Inter-company transfer',
 ];

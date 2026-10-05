@@ -7,9 +7,11 @@ namespace App\Modules\Accounts\Listeners;
 use App\Core\Events\ApprovalDecided;
 use App\Models\Approval;
 use App\Modules\Accounts\Models\Cheque;
+use App\Modules\Accounts\Models\InterCompanyTransfer;
 use App\Modules\Accounts\Models\Note;
 use App\Modules\Accounts\Services\AccountsSignature;
 use App\Modules\Accounts\Services\ChequeService;
+use App\Modules\Accounts\Services\InterCompanyService;
 use App\Modules\Accounts\Services\NoteService;
 
 /**
@@ -38,6 +40,12 @@ final class FinishTheAccountsPaperOnTheLastSignature
         // ⓘ খসড়া থাকলেই — একই সই দুইবার ঘটনা পাঠালে বা কেউ হাতে আগেই পাকা করলে দ্বিতীয়বার কিছু হয় না
         if ($paper instanceof Note && $paper->isDraft()) {
             app(NoteService::class)->confirm($paper);
+
+            return;
+        }
+
+        if ($paper instanceof InterCompanyTransfer) {
+            app(InterCompanyService::class)->finishSigned($paper);
 
             return;
         }

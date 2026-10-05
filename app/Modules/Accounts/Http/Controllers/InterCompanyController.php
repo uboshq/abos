@@ -140,11 +140,12 @@ class InterCompanyController extends Controller implements HasMiddleware
     {
         $transfer = $this->transfers->record($request->user(), $request->validated());
 
+        // ⓘ সইয়ের জন্য থামলে "হয়ে গেছে" বলা মিথ্যা হত ([[AccountsSignature]])
         return redirect()
             ->route('accounts.inter_company.index')
-            ->with('status', __('accounts::message.inter_company_done', [
-                'company' => $transfer->counterCompany->name(),
-            ]));
+            ->with('status', $transfer->status === \App\Core\Support\DocumentStatus::DRAFT
+                ? __('accounts::message.inter_company_awaiting')
+                : __('accounts::message.inter_company_done', ['company' => $transfer->counterCompany->name()]));
     }
 
     /**

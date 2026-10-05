@@ -633,6 +633,7 @@ return [
         'note' => 'accounts::approval.note',
         'cheque_clear' => 'accounts::approval.cheque_clear',
         'cheque_bounce' => 'accounts::approval.cheque_bounce',
+        'inter_company' => 'accounts::approval.inter_company',
     ],
 
     /*
@@ -647,7 +648,7 @@ return [
      * মিলিয়ে দেখে। ⛔ একটা টাইপো নীরবে কাগজটাকে bulk-এ
      * ঢুকিয়ে দিত।
      */
-    'moves_money' => ['expense', 'counter_deposit', 'counter_payment', 'transfer', 'receipt', 'payment', 'journal', 'contra', 'year_end', 'note', 'cheque_clear', 'cheque_bounce'],
+    'moves_money' => ['expense', 'counter_deposit', 'counter_payment', 'transfer', 'receipt', 'payment', 'journal', 'contra', 'year_end', 'note', 'cheque_clear', 'cheque_bounce', 'inter_company'],
 
     // রিপোর্ট সরবরাহকারী — কোর নিজে থেকে ডেকে নেবে (সেকশন ১৯.৩)।
     // কোর ফাইলে মডিউলের নাম লিখতে হয় না।

@@ -115,7 +115,6 @@ final class InterCompanyService
                 ],
             );
 
-            $this->vouchers->post($out);
             $transfer->out_voucher_id = $out->id;
 
             /*
@@ -169,15 +168,61 @@ final class InterCompanyService
                     ],
                 );
 
-                return $this->vouchers->post($voucher);
+                return $voucher;
             }));
 
             $transfer->in_voucher_id = $in->id;
-            $transfer->status = DocumentStatus::CONFIRMED;
             $transfer->save();
 
-            return $transfer;
+            /*
+             * ⭐ সই — গ১, Accounts-Finance অডিট, ৪ অক্টোবর ২০২৬ ([[AccountsSignature]])।
+             *
+             * ⛔ আগে আন্তঃকোম্পানির টাকা সই ছাড়াই দুই কোম্পানির খাতায় বসত। ⓘ এখন দুই দিকের ভাউচার খসড়া হয়ে বসে;
+             * ছক চালু থাকলে লেনদেনটা খসড়াই থাকে, শেষ সই পড়লে [[finishSigned()]] দুইটাই একসাথে খাতায় তোলে।
+             * ছক বন্ধ (UB) — আগের মতোই এখনই।
+             */
+            if (app(AccountsSignature::class)->holds($transfer, AccountsSignature::INTER_COMPANY, $amount, (string) $data['purpose'])) {
+                return $transfer;
+            }
+
+            return $this->postBothSides($transfer, $counter);
         });
+    }
+
+    /**
+     * শেষ সইয়ের পরে — দুই দিকের খসড়া ভাউচার একসাথে খাতায় ([[FinishTheAccountsPaperOnTheLastSignature]])।
+     *
+     * ⓘ সারিতে তালা দিয়ে, খসড়া থাকলেই — একই সই দুইবার ঘটনা পাঠালে দ্বিতীয়বার কিছু হয় না।
+     */
+    public function finishSigned(InterCompanyTransfer $transfer): InterCompanyTransfer
+    {
+        return DB::transaction(function () use ($transfer) {
+            $locked = InterCompanyTransfer::query()->whereKey($transfer->id)->lockForUpdate()->firstOrFail();
+
+            if ($locked->status !== DocumentStatus::DRAFT || $locked->out_voucher_id === null || $locked->in_voucher_id === null) {
+                return $locked;
+            }
+
+            $counter = Company::query()->withoutGlobalScopes()->findOrFail($locked->counter_company_id);
+
+            return $this->postBothSides($locked, $counter);
+        });
+    }
+
+    /**
+     * দুই দিকের ভাউচার খাতায় — দেওয়ার দিক নিজের প্রসঙ্গে, পাওয়ার দিক অন্য কোম্পানির প্রসঙ্গে (ত্রুটি ঐ কোম্পানির নামে)।
+     */
+    private function postBothSides(InterCompanyTransfer $transfer, Company $counter): InterCompanyTransfer
+    {
+        $this->vouchers->post(Voucher::query()->findOrFail($transfer->out_voucher_id));
+
+        $this->inTheirBooks($counter, fn () => CompanyContext::forCompany((int) $counter->id,
+            fn () => $this->vouchers->post(Voucher::query()->findOrFail($transfer->in_voucher_id))));
+
+        $transfer->status = DocumentStatus::CONFIRMED;
+        $transfer->save();
+
+        return $transfer;
     }
 
     /**

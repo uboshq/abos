@@ -24,4 +24,5 @@ return [
     'note' => 'ক্রেডিট বা ডেবিট নোট',
     'cheque_clear' => 'চেক পাশ',
     'cheque_bounce' => 'চেক ফেরত',
+    'inter_company' => 'আন্তঃকোম্পানি লেনদেন',
 ];

@@ -217,4 +217,6 @@ return [
     'year_reopened' => ':name is open again — the closing entry has been reversed.',
     'reopen_note' => 'The closing entry is reversed, not deleted — the history stays.',
     'monthly_cash_net' => 'Net cash for the period — transfers between the accounts shown are netted out',
+    // ⭐ গ১ — সইয়ের জন্য থামা আন্তঃকোম্পানি লেনদেন (৪ অক্টোবর ২০২৬)
+    'inter_company_awaiting' => 'The inter-company transfer is awaiting its signature — both books get it on the last one.',
 ];

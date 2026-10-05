@@ -32,8 +32,11 @@ final class AccountsSignature
     /** চেক ফেরত — পক্ষের খাতায় টাকা ফেরে */
     public const CHEQUE_BOUNCE = 'cheque_bounce';
 
+    /** আন্তঃকোম্পানি লেনদেন — দুই কোম্পানির খাতায় একসাথে */
+    public const INTER_COMPANY = 'inter_company';
+
     /** শেষ সই পড়লে যে কাজগুলো এই মডিউল নিজে শেষ করে */
-    public const ACTIONS = [self::NOTE, self::CHEQUE_CLEAR, self::CHEQUE_BOUNCE];
+    public const ACTIONS = [self::NOTE, self::CHEQUE_CLEAR, self::CHEQUE_BOUNCE, self::INTER_COMPANY];
 
     public function __construct(private readonly DocumentApproval $approval) {}
 
