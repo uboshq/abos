@@ -13,6 +13,7 @@ import '../../features/home/home_shell.dart';
 import '../orders/delivery_order_api.dart';
 import '../../features/delivery_orders/delivery_order_screens.dart';
 import '../../features/leads/lead_screens.dart';
+import '../../features/quotations/quotation_screens.dart';
 import '../../features/route/my_route_screen.dart';
 import '../../features/direct_sale/counter_screen.dart';
 import '../../features/orders/delivery_tracking_screen.dart';
@@ -182,8 +183,9 @@ final goRouterProvider = Provider<GoRouter>((ref) {
                   final orders = ref.watch(ordersReplaceDoProvider);
                   return DeliveryOrderListScreen(
                     api: ServerDeliveryOrderApi(orders: orders),
-                    canWrite: ref.watch(authStateProvider).user?.can(
-                            orders ? 'sales.order.create' : 'sales.do.create') ??
+                    canWrite: ref.watch(authStateProvider).user?.can(orders
+                            ? 'sales.order.create'
+                            : 'sales.do.create') ??
                         false,
                   );
                 },
@@ -201,6 +203,22 @@ final goRouterProvider = Provider<GoRouter>((ref) {
             path: 'leads',
             builder: (context, state) =>
                 const ModuleGateView(path: 'leads', child: LeadListScreen()),
+          ),
+          // ⭐ উদ্ধৃতি — মাঠ থেকে দাম, জমা, পাঠানো, দোকানির উত্তর, আদেশে রূপান্তর (সমন্বয়কের ক্রম "ঘ")
+          GoRoute(
+            path: 'quotations',
+            builder: (context, state) => ModuleGateView(
+              path: 'quotations',
+              child: Consumer(
+                builder: (context, ref, _) => QuotationListScreen(
+                  canWrite: ref
+                          .watch(authStateProvider)
+                          .user
+                          ?.can('sales.quotation.create') ??
+                      false,
+                ),
+              ),
+            ),
           ),
           GoRoute(
             path: 'tracking',
