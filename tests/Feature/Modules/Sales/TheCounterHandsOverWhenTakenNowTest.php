@@ -65,7 +65,8 @@ final class TheCounterHandsOverWhenTakenNowTest extends TestCase
             ['delivery_mode' => 'pickup_later'],
             [],
         ] as $extra) {
-            $challan = $this->sell($extra);
+            // ⓘ একই কার্ট তিনবার, জেনেশুনে — "আবার করুন" টিক ([[DirectSaleService::refuseARepeatBill()]])
+            $challan = $this->sell([...$extra, 'confirm_duplicate' => '1']);
             $mode = $extra['delivery_mode'] ?? 'না পাঠানো';
 
             $this->assertSame(0, $this->passes($challan), "⛔ {$mode}: মাল বেরোনোর আগেই গেট পাস।");

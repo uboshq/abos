@@ -688,6 +688,17 @@
                         </ul>
                     </div>
                 @endif
+
+                {{-- ⭐ "আবার করুন" — কেবল যখন সার্ভার বলেছে "এই বিল এইমাত্র হয়েছে" (মালিক, ৫ অক্টোবর ২০২৬; INV-0006 → DRF-0012)।
+                     ⓘ টিক না দিলে আবার থামে; দিলে যায়, আর সিদ্ধান্তটা নতুন বিলের অডিটে ([[DirectSaleService::refuseARepeatBill()]])। --}}
+                @error('confirm_duplicate')
+                    <label data-repeat-bill
+                           class="mt-2 flex items-start gap-2 rounded-(--radius-field) border border-(--color-badge-danger-ink)
+                                  px-3 py-2 text-xs font-semibold text-(--color-badge-danger-ink)">
+                        <input type="checkbox" name="confirm_duplicate" value="1" class="mt-0.5">
+                        <span>{{ __('sales::repeat_bill.tick') }}</span>
+                    </label>
+                @enderror
             </div>
 
         </aside>

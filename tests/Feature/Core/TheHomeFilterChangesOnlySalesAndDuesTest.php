@@ -55,10 +55,13 @@ final class TheHomeFilterChangesOnlySalesAndDuesTest extends TestCase
         $otherWarehouse = (int) Warehouse::query()->whereKeyNot($warehouse)->value('id');
         $other = User::query()->whereKeyNot($owner->id)->firstOrFail();
 
-        $sell = function () use ($customer, $warehouse): void {
+        // ⓘ প্রতিবার আলাদা পরিমাণ — একই বিল পরপর দুইবার কাউন্টার নিজেই আটকায় ("আবার করুন" ছাড়া)
+        $count = 0;
+        $sell = function () use ($customer, $warehouse, &$count): void {
+            $count++;
             app(DirectSaleService::class)->complete(
                 ['customer_id' => $customer->id, 'warehouse_id' => $warehouse, 'own_transport' => '1'],
-                [['product_id' => Product::query()->where('name_en', 'Cosmos Biscuit 40gm')->value('id'), 'qty' => '1', 'rate' => '10', 'free_qty' => '0']],
+                [['product_id' => Product::query()->where('name_en', 'Cosmos Biscuit 40gm')->value('id'), 'qty' => (string) $count, 'rate' => '10', 'free_qty' => '0']],
             );
         };
 

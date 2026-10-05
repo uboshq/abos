@@ -820,6 +820,7 @@ final class TheReturnCameBackAndTheBooksStillAgreedTest extends TestCase
             'customer_id' => $customer->id,
             'warehouse_id' => $this->warehouse->id,
             'lines' => $lines,
+            'confirm_duplicate' => '1', // ⓘ একই কার্ট বারবার, জেনেশুনে — "আবার করুন" টিক ([[DirectSaleService::refuseARepeatBill()]])
             ...$extra,
         ])->assertSessionHasNoErrors();
 

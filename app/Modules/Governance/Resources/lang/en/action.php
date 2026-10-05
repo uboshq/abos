@@ -51,6 +51,8 @@ return [
     'reversed' => 'Reversed by a reversal paper',
     'cancelled_by_cxl' => 'Reversed by a cancellation invoice',
     'counter_bill_voided' => 'Counter bill voided',
+    // ⭐ একই বিল জেনেশুনে আবার — কাউন্টারের "আবার করুন" টিক (মালিক, ৫ অক্টোবর ২০২৬)
+    'counter_repeat_bill' => 'Same bill made again on purpose',
     // ⭐ গুদাম বদলে একই মানুষ পাঠিয়ে গ্রহণ — দুজনের কাজের সুইচে কেবল সুপার অ্যাডমিন পারেন (অডিট ম৪, ৫ অক্টোবর ২০২৬)
     'received_by_its_sender' => 'Received by the person who sent it (super admin)',
     // ⓘ লট বলা ছিল, কিন্তু সেই লটের স্তরে খরচ নেই — বাকিটা আগের-আসা নিয়মে, নীরবে নয় ([[CostLayerService::issue()]])

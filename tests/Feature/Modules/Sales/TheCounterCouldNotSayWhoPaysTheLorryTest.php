@@ -85,7 +85,8 @@ final class TheCounterCouldNotSayWhoPaysTheLorryTest extends TestCase
     public function test_collect_and_none_touch_no_books(): void
     {
         foreach (['customer', 'none'] as $who) {
-            [$challan, $invoice] = $this->sell($who);
+            // ⓘ একই কার্ট দুইবার, জেনেশুনে — "আবার করুন" টিক ([[DirectSaleService::refuseARepeatBill()]])
+            [$challan, $invoice] = $this->sell($who, ['confirm_duplicate' => '1']);
 
             $this->assertFalse(DB::table('ledger_entries')->where('source_type', DeliveryChallan::STOCK_SOURCE)->where('source_id', $challan->id)->exists(),
                 "⛔ {$who}: ভাড়া আমাদের খরচে বসেছে।");

@@ -131,6 +131,7 @@ class NoLimitMeansNoCreditNotNoSaleTest extends TestCase
                 'customer_id' => $this->customer->id,
                 'warehouse_id' => $this->warehouse->id,
                 'deposit' => $paying,
+                'confirm_duplicate' => '1', // ⓘ একই কার্ট বারবার, জেনেশুনে — "আবার করুন" টিক ([[DirectSaleService::refuseARepeatBill()]])
             ],
             [['product_id' => $this->product->id, 'qty' => '10', 'rate' => '100']],
         );

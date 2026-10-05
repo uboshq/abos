@@ -156,6 +156,7 @@ final class TheStockLeftBeforeTheGoodsDidTest extends TestCase
             'ship_to' => 'কাপ্তান বাজার',
             'ship_date' => now()->addDay()->toDateString(),
             'lines' => [['product_id' => $this->biscuit->id, 'qty' => '2', 'rate' => '10', 'free_qty' => '0']],
+            'confirm_duplicate' => '1', // ⓘ একই কার্ট বারবার, জেনেশুনে — "আবার করুন" টিক ([[DirectSaleService::refuseARepeatBill()]])
         ])->assertSessionHasNoErrors();
 
         return [DeliveryChallan::query()->latest('id')->firstOrFail(), SalesInvoice::query()->latest('id')->firstOrFail()];

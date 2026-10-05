@@ -84,6 +84,12 @@ final class DirectSaleService
         'wallet', 'wallet_medium', 'counterparty_phone',
     ];
 
+    /** ⓘ বিক্রেতার "আবার করুন" টিক — একই বিল জেনেশুনে আবার ([[refuseARepeatBill()]]) */
+    public const REPEAT_FIELD = 'confirm_duplicate';
+
+    /** ⓘ অডিটের কাজের নাম — জেনেশুনে করা একই বিল, আগেরটার নম্বরসহ */
+    public const REPEAT_AUDIT = 'counter_repeat_bill';
+
     public function __construct(
         private readonly DeliveryChallanService $challans,
         private readonly SalesInvoiceService $invoices,
@@ -363,6 +369,9 @@ final class DirectSaleService
                 (int) $challan->id,
             );
 
+            // ⛔ একই বিল দুইবার নয় — গ্রাহকের তালার ভিতরে, তাই দুই কাউন্টার একসাথে পেরোয় না ([[refuseARepeatBill()]])
+            $this->refuseARepeatBill($data, $challan, $draft, $customer);
+
             /*
              * ⭐ গেট পাসে মাল বেরোনো (সুইচ `sales.invoice_at_goods_issue`, মালিক, ৪ অক্টোবর ২০২৬) — "এখনই নিয়ে যাবেন" ছাড়া
              * সব বিক্রিতে চালান মাল কেবল আটকায়, বিল খসড়ায় বাঁধা থাকে; বেরোনো আর বিল গেট পাসে ([[GoodsIssue]])।
@@ -610,6 +619,9 @@ final class DirectSaleService
                     $this->invoiceLines($challan->fresh(['lines'])),
                     (int) $challan->id,
                 );
+
+            // ⛔ "খসড়া রাখুন"-ও একই দেয়াল — পাকা বিলের হুবহু কার্ট খসড়া হয়ে বসলে পরে দ্বিতীয় বিল হত (INV-0006 → DRF-0012)
+            $this->refuseARepeatBill($data, $challan, $invoice, $customer);
 
             /*
              * ⓘ খসড়ায় সীমার দেয়াল নেই — মালিকের নির্দেশ, ২৬ সেপ্টেম্বর
@@ -966,6 +978,111 @@ final class DirectSaleService
     }
 
     /**
+     * ⛔ একই বিল দুইবার নয় — মালিকের নির্দেশ, ৫ অক্টোবর ২০২৬: *"এভাবে ডাবল যাতে না হয় সেই ব্যবস্থা করো"*।
+     *
+     * ── কী ঘটেছিল (লাইভ, UB, ৪ অক্টোবর ২০২৬) ──────────────────────────────
+     * ১৮:১০:১৪-এ ক্রেতা ৯৭-এর বিল INV-0006 নিশ্চিত হলো (১১ পণ্য, ৪০,৫৯৯.১২, খাতায়)। ১৮:১১:৫৫-এ **হুবহু একই কার্ট**
+     * "খসড়া রাখুন"-এ DRF-0012 হলো, আর মালিক সেটা নিশ্চিত করতে যাচ্ছিলেন — হলে ক্রেতা দুইবার বিল পেতেন।
+     *
+     * ── ⭐ নিয়ম (আন্তর্জাতিক মানের duplicate-document check) ──────────────────
+     * একই ক্রেতা, শেষ N মিনিটে (সেটিং `sales.duplicate_bill_minutes`, ডিফল্ট ৩০, ০ = বন্ধ) কাউন্টারের একটা পাঠানো
+     * বিল — পাকা, বা সই/গেট পাসের অপেক্ষায় — যার সারিগুলো (পণ্য, লট, পরিমাণ, ফ্রি, দর) আর মোট হুবহু এক: তাহলে থামে,
+     * আগের বিলের নম্বর বলে। ⓘ সত্যিকারের পুনরাবৃত্ত বিক্রি বৈধ — বিক্রেতা "আবার করুন" টিক দিলে যায়, আর সিদ্ধান্তটা
+     * নতুন বিলের অডিটে বসে, আগেরটার নম্বরসহ।
+     *
+     * ⚠️ মেলানো চালানের সারি থেকে, bcmath-এর স্থির লেখায়, সাজিয়ে — ভাসমান সংখ্যা নয়, ক্রমও নয়। ⛔ নিজেকে নয়: যে বিল
+     * এখন লেখা হচ্ছে (নতুন বা রাখা খসড়া) সে বাদ, আর হাতের খসড়াও (`counter_draft`) — ওটা এখনো কোনো বিক্রি নয়।
+     *
+     * @param  array<string, mixed>  $data
+     */
+    private function refuseARepeatBill(array $data, DeliveryChallan $challan, SalesInvoice $invoice, Customer $customer): void
+    {
+        $minutes = (int) $this->settings->get('sales.duplicate_bill_minutes', 30);
+
+        if ($minutes <= 0) {
+            return;
+        }
+
+        $mine = self::fingerprintOf($challan->fresh(['lines'])->lines);
+        $total = bcadd((string) SalesInvoice::query()->whereKey($invoice->id)->value('total'), '0', 2);
+        $since = now()->subMinutes($minutes);
+
+        $candidates = SalesInvoice::acrossBranches()
+            ->where('customer_id', $customer->id)
+            ->whereKeyNot($invoice->id)
+            ->whereNotNull('counter_screen')
+            ->whereNull('counter_draft')
+            ->whereIn('status', [...DocumentStatus::POSTED, DocumentStatus::DRAFT])
+            ->where(fn ($q) => $q->where('created_at', '>=', $since)->orWhere('updated_at', '>=', $since))
+            ->orderByDesc('id')
+            ->limit(20)
+            ->with('lines.challanLine')
+            ->get();
+
+        foreach ($candidates as $earlier) {
+            if (bcadd((string) $earlier->total, '0', 2) !== $total) {
+                continue;
+            }
+
+            $challanId = $earlier->lines->first()?->challanLine?->delivery_challan_id;
+
+            if ($challanId === null) {
+                continue;
+            }
+
+            $theirs = self::fingerprintOf(DeliveryChallan::query()->with('lines')->find($challanId)?->lines ?? collect());
+
+            if ($theirs !== $mine) {
+                continue;
+            }
+
+            if ((string) ($data[self::REPEAT_FIELD] ?? '') === '1') {
+                // ⭐ জেনেশুনে — সিদ্ধান্তটা নতুন বিলের অডিটে, আগের বিলের নম্বরসহ; একই লেনদেন, বিল না হলে অডিটও নেই
+                app(\App\Core\Engines\Audit\AuditEngine::class)->record($invoice, self::REPEAT_AUDIT, [
+                    'repeat_of' => [null, (string) $earlier->document_no],
+                ], __('sales::repeat_bill.audit_reason', ['no' => $earlier->document_no]));
+
+                return;
+            }
+
+            throw ValidationException::withMessages([
+                self::REPEAT_FIELD => __(
+                    in_array($earlier->status, DocumentStatus::POSTED, true) ? 'sales::repeat_bill.refused' : 'sales::repeat_bill.refused_sent',
+                    [
+                        'no' => $earlier->document_no,
+                        'lines' => count(explode("\n", $mine)),
+                        'total' => \App\Core\Support\Money::format($total),
+                    ],
+                ),
+            ]);
+        }
+    }
+
+    /**
+     * চালানের সারিগুলোর স্থির ছাপ — পণ্য|লট|পরিমাণ|ফ্রি|দর, bcmath-এ চার ঘর, সাজানো, এক লাইনে একটা।
+     *
+     * @param  iterable<object>  $lines
+     */
+    private static function fingerprintOf(iterable $lines): string
+    {
+        $rows = [];
+
+        foreach ($lines as $line) {
+            $rows[] = implode('|', [
+                (int) $line->product_id,
+                (int) ($line->batch_id ?? 0),
+                bcadd((string) ($line->delivered_qty ?? '0'), '0', 4),
+                bcadd((string) ($line->free_qty ?? '0'), '0', 4),
+                bcadd((string) ($line->rate ?? '0'), '0', 4),
+            ]);
+        }
+
+        sort($rows, SORT_STRING);
+
+        return implode("\n", $rows);
+    }
+
+    /**
      * ⭐ রাখা খসড়া বাতিল — মালিকের তিনটা পথের একটা ("conf … batil … edit")।
      *
      * ⓘ ক্রম: আগে বিল, তারপর চালান। ⚠️ উল্টো করলে চালানের পাহারা
@@ -1078,7 +1195,8 @@ final class DirectSaleService
         $screen = json_decode((string) ($data['screen_state'] ?? ''), true);
 
         $fields = array_filter(
-            Arr::except($data, ['screen_state', 'resume_invoice_id', 'save_as_draft', 'lines', 'gifts', 'deposits']),
+            // ⓘ `confirm_duplicate` এক চাপের সিদ্ধান্ত — রাখা খসড়ার ছবিতে থেকে গেলে পরের পাকা করায় নিজে থেকে খাটত
+            Arr::except($data, ['screen_state', 'resume_invoice_id', 'save_as_draft', 'confirm_duplicate', 'lines', 'gifts', 'deposits']),
             fn ($value) => $value === null || is_scalar($value),
         );
 

@@ -100,6 +100,9 @@ final class DirectSaleRules
              */
             'save_as_draft' => ['nullable', 'in:0,1'],
 
+            // ⭐ "আবার করুন" — একই বিল জেনেশুনে আবার; টিকটা আসে কেবল দেয়াল থামালে ([[DirectSaleService::refuseARepeatBill()]])
+            'confirm_duplicate' => ['nullable', 'in:0,1'],
+
             /*
              * ⭐ রাখা খসড়া — মালিকের নকশা, ২৬ সেপ্টেম্বর ২০২৬: খসড়া পাকা হয়
              * একই পর্দায় ফিরে এসে।

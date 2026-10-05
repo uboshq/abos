@@ -29,6 +29,7 @@
 
 import { taka } from '../components/money.js'
 import { freeFromStock, lineMargin, marginLabel } from './margin.js'
+import { applyPrices, fetchPrices } from './customer-prices.js'
 
 /*
  * ⓘ জমার খালি খসড়া — তিন জায়গায় লাগে (শুরু, "যোগ করুন"-এর পরে, "সব
@@ -77,6 +78,7 @@ export default function directSale({
     draftKey, hasErrors, texts, freeAllowedUrl, warehouseId, creditRules, lots,
     pendingDrafts, resume, pendingUrl, transferModes, approvalNotice,
     margin = { costs: {}, floor: 0, words: {} },
+    pricesUrl = '',
 }) {
     /*
      * ⓘ লটের তালিকা — পণ্যের আইডি ধরে, মেয়াদের ক্রমে সাজানো।
@@ -378,6 +380,21 @@ export default function directSale({
          */
         viewOnly: Boolean(resume?.viewOnly),
 
+        /*
+         * ⛔ এই পর্দা তার কার্ট সার্ভারে পাঠিয়ে দিয়েছে — মালিকের নির্দেশ, ৫ অক্টোবর ২০২৬: *"একবার কনফার্ম হওয়ার পরে যাতে
+         * লিস্ট খালি হয়ে যায়"* (লাইভ: INV-0006 নিশ্চিত, দেড় মিনিট পরে হুবহু একই কার্ট DRF-0012)।
+         *
+         * ── কেন কার্টটা টিকে থাকত ─────────────────────────────────────────
+         * নিশ্চিত হলে পাতা ছাপায় চলে যায়, কিন্তু **পাঠানো পাতাটা ব্রাউজারে মরে না**: "পেছনে" চাপলে ব্রাউজার ঐ পাতাটাই
+         * স্মৃতি থেকে হুবহু ফেরায় (back-forward cache) — ভরা কার্ট, আর `x-effect`-এর খসড়া-লেখা তখনো চালু। কিছু ছুঁলেই
+         * পাঠানো কার্টটা আবার ব্রাউজারের খসড়ায় লেখা হত, আর পরের বার পাতা খুললে "আগের খসড়া ফেরাবেন?" — একই বিল আবার।
+         *
+         * ⭐ এখন: পাঠানোর মুহূর্তে ([[guardSubmit()]]) পতাকা ওঠে — এই পাতা আর খসড়া লেখে না ([[saveDraft()]]), আর স্মৃতি
+         * থেকে ফিরলে ([[onPageShow()]]) কার্ট মুছে পাতাটা নতুন করে খোলে। ⓘ আসল দেয়াল সার্ভারে
+         * ([[DirectSaleService::refuseARepeatBill()]]); এটা বিক্রেতার সামনে থেকে পুরনো কার্টটা সরায়।
+         */
+        sent: false,
+
         /** ফিরিয়ে আনার প্রস্তাব — খসড়া পাওয়া গেলে উপরে বার দেখায়। */
         draftFound: false,
         draftAt: '',
@@ -399,7 +416,8 @@ export default function directSale({
              * ব্যবহারকারীকে ফেরানোর প্রস্তাব দেখানো হচ্ছে**।
              * বোতামটা থাকত, চাপলে কিছুই ফিরত না।
              */
-            if (this.draftFound || this.viewOnly) return;
+            /* ⛔ পাঠানো কার্ট আর লেখা নয় — [[sent]]; নইলে পাঠানো (হয়তো পাকা) বিলটাই আবার "খসড়া" হয়ে ফিরত */
+            if (this.draftFound || this.viewOnly || this.sent) return;
 
             try {
                 if (this.lines.length === 0) {
@@ -1124,6 +1142,9 @@ export default function directSale({
         chooseCustomer(id) {
             this.customerId = String(id);
 
+            /* ⭐ গ্রাহকের দর তালিকা — তালিকা আর কার্টের আপনা-আপনি দর এই গ্রাহকের দরে (দর তালিকা, ৫ অক্টোবর ২০২৬; [[customer-prices.js]]) */
+            this.repriceFor(this.customerId);
+
             /*
              * ক্রেতার নিজের মেয়াদ থাকলে সেটাই বসে।
              *
@@ -1173,6 +1194,17 @@ export default function directSale({
                 this.openDraftPopup = true;
                 this.soundTheAlarm();
             }
+        },
+
+        /**
+         * ⭐ এই গ্রাহকের দর সার্ভার থেকে, তারপর বসানো — হাতে লেখা দর ছোঁয়া হয় না। ⓘ মাঝে গ্রাহক বদলালে পুরনো উত্তরটা ফেলে দেওয়া হয়।
+         */
+        async repriceFor(customerId) {
+            const prices = await fetchPrices(pricesUrl, customerId);
+
+            if (! prices || String(this.customerId) !== String(customerId)) return;
+
+            applyPrices(this.catalogue, this.lines, this.entry, this.picked, prices);
         },
 
         /** খোলা খসড়াটা এই পর্দাতেই খোলা — সম্পাদনা করে পাকা করার জন্য। */
@@ -3032,7 +3064,37 @@ export default function directSale({
                 return;
             }
 
+            // ⛔ পাঠানো হলো — এই পাতা আর কার্ট লেখে না ([[sent]])
+            this.sent = true;
             this.parkDraft();
+        },
+
+        /*
+         * ⭐ পাতাটা ব্রাউজারের স্মৃতি থেকে ফিরল ("পেছনে", back-forward cache) — `@pageshow.window`।
+         *
+         * ⓘ পাঠানো পাতা ফিরলে ([[sent]]) কার্টটা পাঠানো কার্ট: বিল হয়ে থাকতে পারে। ⛔ তাই পর্দায় থাকে না — সারি, জমা,
+         * অঙ্ক মুছে, পাঠানোর সময় সরিয়ে রাখা নকলটাও (`.pending`) মুছে, পাতা নতুন করে খোলে: নতুন পাতা সার্ভার থেকে, নতুন
+         * এক-জমার চিহ্নসহ। ⚠️ ব্রাউজারের খসড়া (`draftKey`) ছোঁয়া হয় না — পাঠানোর পরে এই পাতা ওটা লেখেনি; থাকলে
+         * সেটা পরের পাতার (সার্ভার ফেরালে কার্ট সেখানে ফেরে, আর বিক্রেতার সারানো কার্ট সেখানেই লেখা)।
+         * ⓘ না-পাঠানো পাতা স্মৃতি থেকে ফিরলে কিছুই বদলায় না — অসমাপ্ত কার্ট যেমন ছিল।
+         */
+        onPageShow(event) {
+            if (! event?.persisted || ! this.sent) return;
+
+            try {
+                localStorage.removeItem(this.draftKey + '.pending');
+            } catch (e) {
+                // localStorage বন্ধ — পর্দা মোছা আর নতুন করে খোলা তবু চলে
+            }
+
+            this.lines = [];
+            this.deposits = [];
+            this.discountInput = '';
+            this.expenseInput = '';
+            this.roundingInput = '';
+            this.customerId = '';
+
+            window.location.reload();
         },
 
         /*

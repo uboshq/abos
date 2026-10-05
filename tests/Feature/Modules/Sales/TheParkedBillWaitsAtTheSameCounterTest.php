@@ -436,7 +436,7 @@ final class TheParkedBillWaitsAtTheSameCounterTest extends TestCase
             ->assertSessionHasErrors(['resume_invoice_id' => $gone]);
 
         // ⓶ বাতিল
-        $discarded = $this->park();
+        $discarded = $this->park(qty: 9); // ⓘ অন্য পরিমাণ — হুবহু একই কার্ট এইমাত্র পাকা, একই বিলের দেয়ালে থামত ([[refuseARepeatBill()]])
         $this->post(route('sales.direct.discard', $discarded), ['reason' => 'ক্রেতা আসেননি'])
             ->assertSessionHasNoErrors();
 
@@ -692,7 +692,7 @@ final class TheParkedBillWaitsAtTheSameCounterTest extends TestCase
 
         // ⓘ আগে পাকা বিক্রি, পরে খসড়া — খোলা খসড়া থাকলে একই ক্রেতার নতুন বিল আটকায়
         $this->sell(['save_as_draft' => '0'])->assertSessionHasNoErrors();
-        $this->park();
+        $this->park(qty: 9); // ⓘ অন্য পরিমাণ — হুবহু একই কার্ট একই বিলের দেয়ালে থামত ([[refuseARepeatBill()]])
 
         foreach (['sales.invoice.index', 'sales.challan.index', 'sales.direct.drafts'] as $list) {
             $html = $this->get(route($list))->assertOk()->getContent();
@@ -1045,7 +1045,7 @@ final class TheParkedBillWaitsAtTheSameCounterTest extends TestCase
         $this->assertSame(route('sales.challan.show', $challan), $resume['challanUrl']);
 
         /* ⓘ নতুন বিল আটকায় না — একই ক্রেতাকে আবার বেচা যায় */
-        $this->sell(['own_transport' => '1'])->assertSessionHasNoErrors();
+        $this->sell(['own_transport' => '1'], null, 9)->assertSessionHasNoErrors(); // ⓘ অন্য পরিমাণ — হুবহু একই কার্ট একই বিলের দেয়ালে থামত
 
         app(\App\Modules\Sales\Services\DeliveryStageService::class)
             ->move($challan->fresh(), \App\Modules\Sales\Services\DeliveryStage::DELIVERED, ['receiver_name' => 'রহিম']);

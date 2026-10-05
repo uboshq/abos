@@ -281,10 +281,14 @@
     </style>
 
     {{-- ⓘ `data-confirm-overview` — নিশ্চিতের আগে সারাংশের পপ-আপ (abos-2c) এই ফর্ম চেনে --}}
+    {{-- ⛔ `hasErrors` কেবল এই ফর্মের নিজের ফেরত (সাথে পাঠানো সারি, `old('lines')`) — অন্য পাতার ভুল এখানে ফিরলে (যেমন ছাপার
+         দরজা) পাঠানো, হয়তো পাকা, কার্টটা আবার পর্দায় বসত (মালিক, ৫ অক্টোবর ২০২৬: "কনফার্মের পরে লিস্ট খালি")।
+         `@pageshow.window` — পাঠানো পাতা ব্রাউজারের স্মৃতি থেকে ফিরলে কার্ট মুছে নতুন করে খোলে ([[direct-sale.js]] `onPageShow`)। --}}
     <form method="POST" action="{{ route('sales.direct.store') }}" data-confirm-overview="{{ route('sales.direct.overview') }}"
           x-data="directSale({
               catalogue: @js($products),
               margin: @js($margin),
+              pricesUrl: @js(route('sales.price_list.quote')),
               lots: @js($lots),
               customers: @js($customerTerms),
               walkinId: {{ $walkinId }},
@@ -296,7 +300,7 @@
               depositMethods: @js($depositMethods),
               moneyAccounts: @js($moneyAccounts),
               draftKey: 'abos.direct-sale.{{ App\Core\Support\CompanyContext::id() }}.{{ auth()->id() }}',
-              hasErrors: @js($errors->any() || session('approval_failed', false)),
+              hasErrors: @js(($errors->any() && old('lines') !== null) || session('approval_failed', false)),
               texts: @js([
                   'notForSales' => __('sales::message.not_for_sales'),
                   'freeBeyondRatio' => __('sales::validation.free_over_allowance'),
@@ -352,6 +356,7 @@
           x-init="start()"
           x-effect="saveDraft()"
           @submit="guardSubmit($event)"
+          @pageshow.window="onPageShow($event)"
 
           {{--
               ── কি-বোর্ডের শর্টকাট — POS-এর কী-গুলোই ─────────────────────

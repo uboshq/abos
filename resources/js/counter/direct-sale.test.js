@@ -2394,3 +2394,148 @@ describe('খোলা খসড়ার লট বদলেছে — পপ-�
         expect(c.lotShortText(c.lines[0])).toBe('লট OM-10513-এ এখন 0, সারিতে 25')
     })
 })
+
+/*
+ * ⛔ নিশ্চিতের পরে কার্ট খালি — মালিক, ৫ অক্টোবর ২০২৬: *"একবার কনফার্ম হওয়ার পরে যাতে লিস্ট খালি হয়ে যায়"*।
+ *
+ * ⓘ লাইভে INV-0006 নিশ্চিত হলো, আর দেড় মিনিট পরে হুবহু একই কার্ট "খসড়া রাখুন"-এ DRF-0012। পাঠানো পাতাটা ব্রাউজারে
+ * বেঁচে থাকত ("পেছনে" — back-forward cache), ভরা কার্ট আর চালু খসড়া-লেখা নিয়ে।
+ * দাবি — একই পর্দা, একই কার্ট: পাঠানোর পরে কিছু ছুঁলেও ব্রাউজারের খসড়ায় কিছু লেখা হয় না; স্মৃতি থেকে ফিরলে কার্ট খালি,
+ * সরিয়ে রাখা নকলও নেই, পাতা নতুন করে খোলে; আর নতুন খোলা পাতায় সারি বা "আগের খসড়া ফেরাবেন?" কিছুই নেই।
+ */
+describe('নিশ্চিতের পরে কার্ট খালি — পেছনে বা নতুন করে খুললেও', () => {
+    const memoryStore = () => {
+        const box = new Map()
+
+        return {
+            box,
+            getItem: (k) => (box.has(k) ? box.get(k) : null),
+            setItem: (k, v) => box.set(k, String(v)),
+            removeItem: (k) => box.delete(k),
+        }
+    }
+
+    let store
+    let reload
+
+    beforeEach(() => {
+        store = memoryStore()
+        reload = vi.fn()
+        vi.stubGlobal('localStorage', store)
+        vi.stubGlobal('window', { location: { reload } })
+    })
+
+    afterEach(() => {
+        vi.unstubAllGlobals()
+    })
+
+    /** এগারো সারির একটা ভরা কার্ট, জমাসহ — লাইভের বিলের মতো। */
+    const filled = (over = {}) => {
+        const c = counter(over)
+
+        c.customerId = '97'
+        c.lines = Array.from({ length: 11 }, (_, i) => ({
+            key: i + 1, id: i + 1, name: 'পণ্য ' + (i + 1), qty: '3', freeQty: '', rate: '100',
+            discountPercent: 0, unitId: '', batchId: String(100 + i), batchNo: 'L-' + i, gifts: [],
+        }))
+        c.deposits = [{ methodId: 'cash', accountId: '3', amount: '500' }]
+        c.nextKey = 12
+        c.saveDraft()
+
+        return c
+    }
+
+    const confirm = (c) => c.guardSubmit({ submitter: { value: '0' }, preventDefault: () => {} })
+
+    it('প্রস্তুতি — না পাঠানো কার্ট ব্রাউজারের খসড়ায় লেখা থাকে', () => {
+        filled()
+
+        expect(store.getItem('test.counter')).not.toBeNull()
+    })
+
+    it('পাঠানোর পরে কার্ট ছুঁলেও ব্রাউজারের খসড়ায় আর লেখা হয় না', () => {
+        const c = filled()
+
+        confirm(c)
+        expect(store.getItem('test.counter')).toBeNull()
+
+        // ⓘ x-effect যা করত — কিছু বদলালেই আবার saveDraft()
+        c.lines[0].qty = '4'
+        c.saveDraft()
+
+        expect(store.getItem('test.counter')).toBeNull()
+    })
+
+    it('পাঠানো পাতা স্মৃতি থেকে ফিরলে কার্ট, জমা খালি, সরানো নকলও নেই, পাতা নতুন করে খোলে', () => {
+        const c = filled()
+
+        confirm(c)
+        expect(store.getItem('test.counter.pending')).not.toBeNull()
+
+        c.onPageShow({ persisted: true })
+
+        expect(c.lines).toEqual([])
+        expect(c.deposits).toEqual([])
+        expect(c.customerId).toBe('')
+        expect(store.getItem('test.counter.pending')).toBeNull()
+        expect(store.getItem('test.counter')).toBeNull()
+        expect(reload).toHaveBeenCalledTimes(1)
+    })
+
+    it('নতুন করে খোলা পাতায় (সফল নিশ্চিতের পরে, ভুল ছাড়া) কোনো সারি নেই, ফেরানোর প্রস্তাবও নেই', () => {
+        confirm(filled())
+
+        const fresh = counter({ hasErrors: false })
+        fresh.start()
+
+        expect(fresh.lines).toEqual([])
+        expect(fresh.draftFound).toBe(false)
+        expect(store.box.size).toBe(0)
+    })
+
+    it('স্মৃতি থেকে ফেরা আর তারপর নতুন করে খোলা — দুই ধাপেই কার্ট খালি', () => {
+        const c = filled()
+
+        confirm(c)
+        c.lines[1].qty = '9'
+        c.saveDraft()
+        c.onPageShow({ persisted: true })
+
+        const fresh = counter({ hasErrors: false })
+        fresh.start()
+
+        expect(fresh.lines).toEqual([])
+        expect(fresh.draftFound).toBe(false)
+    })
+
+    it('না-পাঠানো পাতা স্মৃতি থেকে ফিরলে কিছুই মোছে না', () => {
+        const c = filled()
+
+        c.onPageShow({ persisted: true })
+
+        expect(c.lines).toHaveLength(11)
+        expect(store.getItem('test.counter')).not.toBeNull()
+        expect(reload).not.toHaveBeenCalled()
+    })
+
+    it('পাঠানো পাতা সাধারণভাবে দেখানো (স্মৃতি থেকে নয়) হলে কিছুই নয়', () => {
+        const c = filled()
+
+        confirm(c)
+        c.onPageShow({ persisted: false })
+
+        expect(c.lines).toHaveLength(11)
+        expect(reload).not.toHaveBeenCalled()
+    })
+
+    it('সার্ভার ফেরালে (ভুলসহ নতুন পাতা) কার্টটা ফেরে — নিশ্চিত না হওয়া বিল হারায় না', () => {
+        const c = filled()
+
+        confirm(c)
+
+        const back = counter({ hasErrors: true })
+        back.start()
+
+        expect(back.lines).toHaveLength(11)
+    })
+})
