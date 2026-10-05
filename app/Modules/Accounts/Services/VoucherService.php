@@ -1343,7 +1343,12 @@ final class VoucherService
     {
         $ids = [];
 
-        foreach ([StandardChart::RECEIVABLE, StandardChart::PAYABLE_GROUP] as $code) {
+        /*
+         * ⛔ হাতধার (১১৭০) আর কর্মীর অগ্রিম (১১৩১)-ও কারো নামে বসে — মালিকের অভিযোগ, ৫ অক্টোবর ২০২৬ (আভা ট্রেড RCV-0001)।
+         * ⚠️ আগে কেবল পাওনা আর দেনা ছিল: ব্যক্তির নামে হাতধার ফেরতের রসিদে মাথায় পক্ষ থাকলেও খাতার ১১৭০-সারিতে পক্ষ বসত
+         * না — তাই "Aminul কত দেবেন" প্রশ্নের উত্তরে টাকাটা আসতই না।
+         */
+        foreach ([StandardChart::RECEIVABLE, StandardChart::PAYABLE_GROUP, StandardChart::HAND_LOAN, StandardChart::EMPLOYEE_ADVANCE] as $code) {
             $root = StandardChart::find($code);
 
             if ($root === null) {
