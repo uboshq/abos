@@ -103,7 +103,7 @@ class OpeningStockScreenTest extends TestCase
 
         $floorBefore = $stock->floorQty($this->product, $this->warehouse);
         $ledgerBefore = $this->balanceOf(StandardChart::INVENTORY);
-        $equityBefore = $this->balanceOf(StandardChart::RETAINED_EARNINGS);
+        $equityBefore = $this->balanceOf(StandardChart::OWNER_CAPITAL);
 
         $this->service()->bringIn($this->product, $this->warehouse, '25', '80');
 
@@ -126,7 +126,7 @@ class OpeningStockScreenTest extends TestCase
 
         // আর প্রতিপক্ষ অবশিষ্ট মুনাফা, আয় নয়
         $this->assertSame(0, bccomp(
-            bcsub($this->balanceOf(StandardChart::RETAINED_EARNINGS), $equityBefore, 4),
+            bcsub($this->balanceOf(StandardChart::OWNER_CAPITAL), $equityBefore, 4),
             '-2000',
             4,
         ));

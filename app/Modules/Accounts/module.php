@@ -749,6 +749,14 @@ return [
             'default' => '',
             'group' => 'print',
         ],
+        // ⭐ খোলা জের মালিকের মূলধনে — মালিক, ৫ অক্টোবর ২০২৬ ([[OpeningBalanceService::openingEquity()]])
+        [
+            'key' => 'accounts.opening_to_capital',
+            'label' => 'accounts::settings.opening_to_capital',
+            'type' => 'boolean',
+            'default' => true,
+            'group' => 'entry',
+        ],
         [
             'key' => 'accounts.backdate_days',
             'label' => 'accounts::settings.backdate_days',

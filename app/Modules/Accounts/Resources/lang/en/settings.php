@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 return [
+    'opening_to_capital' => 'Opening balances (customer dues, opening stock, account balances) go to the owner capital — off sends them to retained earnings',
     'backdate_days' => 'How many days back an entry may be dated',
     'cash_ceiling_enabled' => 'Cash ceiling per person',
     'cash_ceiling_blocks' => 'Block money in over the ceiling (otherwise only warn)',

@@ -127,7 +127,7 @@ final class OpeningBalanceService
         }
 
         $inventory = StandardChart::find(StandardChart::INVENTORY);
-        $equity = StandardChart::find(StandardChart::RETAINED_EARNINGS);
+        $equity = $this->openingEquity();
 
         if ($inventory === null || $equity === null) {
             throw new PostingException(
@@ -183,7 +183,7 @@ final class OpeningBalanceService
             return [];
         }
 
-        $equity = StandardChart::find(StandardChart::RETAINED_EARNINGS);
+        $equity = $this->openingEquity();
 
         if ($equity === null) {
             throw new PostingException(
@@ -270,6 +270,22 @@ final class OpeningBalanceService
     /**
      * @return list<LedgerEntry>
      */
+    /**
+     * ⭐ খোলা জের কোন মালিকানার খাতে — মালিক, ৫ অক্টোবর ২০২৬: *"Customer balance & Opening stock eguli ki Maliker capital
+     * e zabena?"*। ⓘ একক মালিকের ব্যবসায় শুরুর দিনের পাওনা, মজুদ আর খাতের জের মালিকেরই পুঁজি — আন্তর্জাতিক চর্চাও
+     * শেষে মূলধনে নেয়। ⛔ আগে সব [[StandardChart::RETAINED_EARNINGS]]-এ (৩৩০০) বসত, যেটা আগের বছরগুলোর জমা লাভের খাত।
+     * ⓘ কোম্পানির সুইচ `accounts.opening_to_capital` (ডিফল্ট চালু): বন্ধ করলে আগের মতো সংরক্ষিত মুনাফায় — ABOS অনেক
+     * ব্যবসায় বিক্রি হয়, আর অংশীদারি বা কোম্পানির হিসাবে সেটাই চায় কেউ কেউ। মূলধনের খাত না থাকলে সংরক্ষিত মুনাফায়।
+     */
+    private function openingEquity(): ?\App\Modules\Accounts\Models\Account
+    {
+        if ((bool) app(\App\Core\Services\SettingsService::class)->get('accounts.opening_to_capital', true)) {
+            return StandardChart::find(StandardChart::OWNER_CAPITAL) ?? StandardChart::find(StandardChart::RETAINED_EARNINGS);
+        }
+
+        return StandardChart::find(StandardChart::RETAINED_EARNINGS);
+    }
+
     private function post(
         string $partyType,
         int $partyId,
@@ -296,7 +312,7 @@ final class OpeningBalanceService
         }
 
         $party = StandardChart::find($partyAccount);
-        $equity = StandardChart::find(StandardChart::RETAINED_EARNINGS);
+        $equity = $this->openingEquity();
 
         if ($party === null || $equity === null) {
             throw new PostingException(
