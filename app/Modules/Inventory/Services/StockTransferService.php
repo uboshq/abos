@@ -314,6 +314,8 @@ final class StockTransferService
                 }
             }
 
+            $this->moveTheValueBetweenBranches($transfer);
+
             $transfer->update([
                 'status' => DocumentStatus::CLOSED,
                 'received_at' => now(),
@@ -480,6 +482,63 @@ final class StockTransferService
                 'to_warehouse_id' => __('inventory::validation.same_warehouse'),
             ]);
         }
+    }
+
+    /**
+     * ⭐ শাখা-পেরোনো গুদাম বদলে মজুদের টাকাও শাখা বদলায় — Inventory অডিট ম১১, ৫ অক্টোবর ২০২৬।
+     *
+     * ⛔ আগে গুদাম বদলে খাতায় কিছুই নড়ত না: নেত্রকোনায় কেনা মাল ময়মনসিংহে গিয়ে বিক্রি হলে ময়মনসিংহের স্থিতিপত্রে মজুদ ঋণাত্মক,
+     * নেত্রকোনায় বাড়তি — শাখার খাতা মিথ্যা, কোম্পানির মোট ঠিক।
+     * ⓘ গ্রহণে মজুদ খাতের একটা দাখিলা: পাঠানো শাখায় ক্রেডিট, পাওয়া শাখায় ডেবিট; দাম গড় খরচে (স্তর কোম্পানির, শাখার নয় —
+     * [[CostLayerService]])। একই শাখার গুদাম বা শাখাহীন গুদামে কিছু নয়। ⓘ গ্রহণের পরে স্থানান্তর বাতিল হয় না, তাই উল্টানোর পথ লাগে না।
+     */
+    private function moveTheValueBetweenBranches(StockTransfer $transfer): void
+    {
+        $from = $transfer->fromWarehouse?->branch_id;
+        $to = $transfer->toWarehouse?->branch_id;
+
+        if ($from === null || $to === null || (int) $from === (int) $to) {
+            return;
+        }
+
+        $layers = app(\App\Modules\Inventory\Services\CostLayerService::class);
+        $amount = '0';
+
+        foreach ($transfer->lines as $line) {
+            $qtyOnHand = $layers->qtyOnHand($line->product);
+
+            if (bccomp($qtyOnHand, '0', 4) <= 0) {
+                continue;
+            }
+
+            $average = bcdiv($layers->valueOnHand($line->product), $qtyOnHand, 6);
+            $amount = bcadd($amount, bcmul((string) $line->qty, $average, 6), 6);
+        }
+
+        $amount = bcadd($amount, '0', 2);
+
+        if (bccomp($amount, '0', 2) <= 0) {
+            return;
+        }
+
+        $inventory = \App\Modules\Accounts\Services\StandardChart::find(\App\Modules\Accounts\Services\StandardChart::INVENTORY);
+
+        if ($inventory === null) {
+            return;
+        }
+
+        $note = __('inventory::message.transfer_arrived', ['no' => $transfer->document_no]);
+
+        app(\App\Core\Engines\Posting\PostingEngine::class)->post(
+            sourceType: StockTransfer::drillSourceType(),
+            sourceId: (int) $transfer->id,
+            trxDate: now(),
+            lines: [
+                ['account_id' => $inventory->id, 'debit' => $amount, 'narration' => $note, 'branch_id' => (int) $to],
+                ['account_id' => $inventory->id, 'credit' => $amount, 'narration' => $note, 'branch_id' => (int) $from],
+            ],
+            documentNo: $transfer->document_no,
+        );
     }
 
     /**

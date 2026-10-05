@@ -121,6 +121,12 @@ final class OpeningBalanceService
         string $documentNo,
         string $amount,
         Carbon|string|null $date = null,
+
+        /*
+         * ⭐ কোন শাখার খাতায় — গুদামের শাখা, লেখকের নয় (Inventory অডিট ম১১, ৫ অক্টোবর ২০২৬)। ⛔ আগে দাখিলা বসত লেখকের
+         * শাখায় বা কোনো শাখায় নয়, আর গুদামের শাখার স্থিতিপত্রে তার মজুদের টাকা থাকত না। `null` মানে আগের আচরণ।
+         */
+        ?int $branchId = null,
     ): array {
         if (bccomp($amount, '0', 4) <= 0) {
             return [];
@@ -146,6 +152,7 @@ final class OpeningBalanceService
                 ['account_id' => $equity->id, 'credit' => $amount, 'narration' => $narration],
             ],
             documentNo: $documentNo,
+            branchId: $branchId,
         );
     }
 

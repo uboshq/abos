@@ -214,6 +214,12 @@ class StockTransferTest extends TestCase
      */
     public function test_nothing_reaches_the_ledger(): void
     {
+        /*
+         * ⓘ একই শাখার দুই গুদাম — শাখা-পেরোনো স্থানান্তরে এখন মজুদের টাকাও শাখা বদলায় (Inventory অডিট ম১১, ৫ অক্টোবর ২০২৬;
+         * পাহারা [[TheStockSatInTheWrongBranchsBooksTest]]), তাই "কিছুই নয়" কেবল একই শাখার ভিতরে সত্য। ডেমোর দুই গুদাম দুই শাখার।
+         */
+        $this->to->forceFill(['branch_id' => $this->from->branch_id])->saveQuietly();
+
         $transfer = $this->transfers()->receive(
             $this->transfers()->dispatch(
                 $this->transfers()->create($this->document(), [['product_id' => $this->product->id, 'qty' => '5']])

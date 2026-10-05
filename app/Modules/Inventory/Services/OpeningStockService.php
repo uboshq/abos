@@ -111,6 +111,8 @@ final class OpeningStockService
                 documentNo: self::DOCUMENT_NO,
                 amount: bcmul($qty, $unitCost, 4),
                 date: $date,
+                // ⭐ গুদামের শাখার খাতায় — অডিট ম১১
+                branchId: $warehouse->branch_id === null ? null : (int) $warehouse->branch_id,
             );
 
             return $movement;
