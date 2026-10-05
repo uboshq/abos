@@ -683,6 +683,9 @@ final class SalesInvoiceService
 
             $invoice->update(['status' => DocumentStatus::CONFIRMED]);
 
+            // ⭐ আদেশের বিলের অগ্রগতি — খাতা বসার পরে, একই লেনদেনে (SO+DO ধাপ ৫; [[OrderProgress::refreshOrders()]])
+            app(OrderProgress::class)->refreshOrders($this->ordersOf($invoice));
+
             $confirmed = $invoice->fresh(['lines']);
 
             /*
@@ -833,6 +836,36 @@ final class SalesInvoiceService
             'cancelled_at' => now(),
             'cancel_reason' => $reason,
         ]);
+
+        // ⭐ বাতিল-ইনভয়েসের পথেও (SO+DO ধাপ ৫)
+        app(OrderProgress::class)->refreshOrders($this->ordersOf($invoice));
+    }
+
+    /**
+     * বিলটা যে আদেশ(গুলো)র — বিলের সারি → চালানের সারি → চালানের মাথা বা আদেশ-সারি।
+     *
+     * @return list<int>
+     */
+    private function ordersOf(SalesInvoice $invoice): array
+    {
+        $rows = DB::table('sal_invoice_lines as il')
+            ->join('sal_challan_lines as cl', 'cl.id', '=', 'il.delivery_challan_line_id')
+            ->join('sal_challans as c', 'c.id', '=', 'cl.delivery_challan_id')
+            ->leftJoin('sal_order_lines as ol', 'ol.id', '=', 'cl.sales_order_line_id')
+            ->where('il.sales_invoice_id', $invoice->id)
+            ->get(['c.sales_order_id as head', 'ol.sales_order_id as line']);
+
+        $ids = [];
+
+        foreach ($rows as $row) {
+            foreach ([$row->head, $row->line] as $id) {
+                if ($id !== null) {
+                    $ids[] = (int) $id;
+                }
+            }
+        }
+
+        return $ids;
     }
 
     /**

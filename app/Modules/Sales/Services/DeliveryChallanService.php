@@ -458,6 +458,9 @@ final class DeliveryChallanService
 
             $challan->update(['status' => DocumentStatus::CONFIRMED]);
 
+            // ⭐ আদেশের চালানের অগ্রগতি — মাল আর খাতা বসার পরে, একই লেনদেনে (SO+DO ধাপ ৫; [[OrderProgress::refreshOrders()]])
+            app(OrderProgress::class)->refreshOrders($this->ordersOf($challan));
+
             return $challan->fresh(['lines']);
         });
     }
@@ -537,6 +540,9 @@ final class DeliveryChallanService
                 'cancelled_at' => now(),
                 'cancel_reason' => $reason,
             ]);
+
+            // ⭐ বাতিলে অগ্রগতি আবার নামে — partial থেকে none (SO+DO ধাপ ৫)
+            app(OrderProgress::class)->refreshOrders($this->ordersOf($challan));
 
             return $challan->fresh(['lines']);
         });
@@ -1036,6 +1042,26 @@ final class DeliveryChallanService
             'cancelled_at' => now(),
             'cancel_reason' => $reason,
         ]);
+
+        // ⭐ বাতিল-ইনভয়েসের পথেও (SO+DO ধাপ ৫)
+        app(OrderProgress::class)->refreshOrders($this->ordersOf($challan));
+    }
+
+    /**
+     * চালানটা যে আদেশ(গুলো)র — মাথার `sales_order_id` আর সারির আদেশ-সারি দুই দিক থেকেই।
+     *
+     * @return list<int>
+     */
+    private function ordersOf(DeliveryChallan $challan): array
+    {
+        $fromLines = DB::table('sal_order_lines')
+            ->whereIn('id', DB::table('sal_challan_lines')->where('delivery_challan_id', $challan->id)
+                ->whereNotNull('sales_order_line_id')->select('sales_order_line_id'))
+            ->pluck('sales_order_id')
+            ->map(fn ($id) => (int) $id)
+            ->all();
+
+        return $challan->sales_order_id === null ? $fromLines : [...$fromLines, (int) $challan->sales_order_id];
     }
 
     /**

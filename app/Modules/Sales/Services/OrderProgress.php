@@ -156,6 +156,37 @@ final class OrderProgress
     }
 
     /**
+     * ⭐ চালান বা বিলের অবস্থা বদলের পরে তার আদেশগুলো — SO+DO মেশানো, ধাপ ৫ (৪ অক্টোবর ২০২৬)।
+     *
+     * ⓘ ডাকা হয় মজুদ আর খাতা বসার **পরে**, একই লেনদেনে — গোনা হয় পাকা চালান আর বিল থেকে, আগে ডাকলে পুরনো অঙ্ক লিখত।
+     * ⓘ আদেশে তালা id-র ক্রমে, তারপর গোনা: একই আদেশের দুই চালান একসাথে নিশ্চিত হলে দ্বিতীয়টা প্রথমটার কমিট দেখে গোনে,
+     * আর একটার লেখা আরেকটা মুছে দেয় না।
+     *
+     * @param  iterable<int|string|null>  $orderIds
+     */
+    public function refreshOrders(iterable $orderIds): void
+    {
+        $ids = [];
+
+        foreach ($orderIds as $id) {
+            if ($id !== null && (int) $id > 0) {
+                $ids[(int) $id] = true;
+            }
+        }
+
+        $ids = array_keys($ids);
+        sort($ids);
+
+        foreach ($ids as $id) {
+            $order = SalesOrder::query()->whereKey($id)->lockForUpdate()->first();
+
+            if ($order !== null) {
+                $this->refresh($order);
+            }
+        }
+    }
+
+    /**
      * একটা পরিমাণ চূড়ান্তের কতটা — none | partial | full।
      *
      * ⓘ চূড়ান্ত ০ (পুরোটা "আর দেওয়া হবে না") আর কিছু গেছে → পুরো; কিছুই যায়নি → none।
