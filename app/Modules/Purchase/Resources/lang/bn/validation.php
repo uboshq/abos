@@ -61,6 +61,7 @@ return [
     'unknown_bill_line' => 'বিলের লাইনটা এই কোম্পানির তালিকায় নেই।',
     'over_returned' => ':no বিলে আর :room ফেরত দেওয়া যাবে — তার বেশি নয়।',
     'not_enough_to_return' => ':product গুদামে আছে :available — তার বেশি ফেরত পাঠানো যাবে না।',
+    'return_lot_short' => ':product-এর লট :lot-এ এই গুদামে আছে :available — বিলের মাল ঐ লটেই এসেছিল, তাই ফেরতও ঐ লট থেকে; তার বেশি যাবে না।',
 
     'missing_account' => 'হিসাবের ছকে :code খাতটা নেই — ছকটা বসানো হয়নি।',
     /*

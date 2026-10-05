@@ -13,7 +13,9 @@ use App\Models\FinancialYear;
 use App\Models\IssuedNumber;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Services\StandardChart;
+use App\Modules\Inventory\Models\Batch;
 use App\Modules\Inventory\Models\Product;
+use App\Modules\Inventory\Models\StockMovement;
 use App\Modules\Inventory\Models\Warehouse;
 use App\Modules\Inventory\Services\CostLayerService;
 use App\Modules\Inventory\Services\ReadsPackedQuantities;
@@ -187,6 +189,28 @@ final class PurchaseReturnService
                  * সত্যিই আছে সেখান থেকেই যায়। ⓘ একটাই সারিতে, তাই
                  * মোট এক মুহূর্তের জন্যও ভুল থাকে না।
                  */
+                // ⭐ লট ধরা পণ্য লট ধরেই বেরোয় — অডিট গ৯ ([[lotPlan()]]); প্রতিটা লটে আগে অপেক্ষার ঘর, তারপর তাক
+                $plan = $this->lotPlan($line, $return->warehouse);
+
+                if ($plan !== null) {
+                    foreach ($plan as $part) {
+                        $this->stock->move(
+                            product: $line->product,
+                            warehouse: $return->warehouse,
+                            sourceType: PurchaseReturn::STOCK_SOURCE,
+                            sourceId: $return->id,
+                            floor: bcmul($part['shelf'], '-1', 4),
+                            reason: $return->reasonCode,
+                            date: $return->trx_date,
+                            documentNo: $return->document_no,
+                            batch: $part['batch'],
+                            unplaced: bcmul($part['waiting'], '-1', 4),
+                        );
+                    }
+
+                    continue;
+                }
+
                 // ⓘ পাহারা যে ভাগ দেখে পাস করেছে, নেওয়াও ঠিক সেই ভাগ থেকে — [[returnable()]]
                 $waiting = $this->returnable($line->product, $return->warehouse)['waiting'];
                 $qty = (string) $line->qty;
@@ -257,6 +281,8 @@ final class PurchaseReturnService
         foreach ($return->lines as $line) {
             $this->assertWithinBilled($line);
             $this->assertEnoughInStock($line->product, $return->warehouse, (string) $line->qty);
+            // ⓘ লট ধরা পণ্যে লটেও আছে তো — না থাকলে সারাংশও আগেই বলে ([[lotPlan()]])
+            $this->lotPlan($line, $return->warehouse);
         }
     }
 
@@ -298,7 +324,23 @@ final class PurchaseReturnService
                  * ⓘ ভাগটা আন্দাজ করা হয় না — এই কাগজের নিজের সারিগুলো
                  * যোগ করে উল্টে দেওয়া হয়, তাই সংখ্যাটা সবসময় হুবহু।
                  */
-                foreach ($this->stock->netBySource(PurchaseReturn::STOCK_SOURCE, $return->id) as $productId => $net) {
+                /*
+                 * ⭐ লট ধরেও — যে লট থেকে গিয়েছিল সেই লটেই ফেরে (অডিট গ৯)। ⓘ পণ্য আর লট ধরে নিট; লটহীন সারির লট null,
+                 * তাই আগের আচরণ সেখানে অবিকল।
+                 */
+                $nets = StockMovement::query()
+                    ->where('source_type', PurchaseReturn::STOCK_SOURCE)
+                    ->where('source_id', $return->id)
+                    ->groupBy('product_id', 'batch_id')
+                    ->selectRaw('product_id, batch_id')
+                    ->selectRaw('COALESCE(SUM(floor_change), 0) as floor')
+                    ->selectRaw('COALESCE(SUM(unplaced_change), 0) as unplaced')
+                    ->get();
+
+                foreach ($nets as $row) {
+                    $productId = (int) $row->product_id;
+                    $net = ['floor' => (string) $row->floor, 'unplaced' => (string) $row->unplaced];
+
                     /*
                      * ⓘ শূন্য নিট বাদ — [[StockService::move()]] শূন্য
                      * চলাচলে ইচ্ছাকৃতভাবে থামে ("কিছুই নড়ছে না")। এখানে
@@ -318,6 +360,7 @@ final class PurchaseReturnService
                         date: $date,
                         documentNo: $return->document_no,
                         narration: $reason,
+                        batch: $row->batch_id === null ? null : Batch::query()->findOrFail((int) $row->batch_id),
                         unplaced: bcmul($net['unplaced'], '-1', 4),
                     );
                 }
@@ -814,6 +857,92 @@ final class PurchaseReturnService
         $shelf = bccomp($states['available'], '0', 4) > 0 ? bcadd($states['available'], '0', 4) : '0.0000';
 
         return ['waiting' => $waiting, 'shelf' => $shelf, 'total' => bcadd($waiting, $shelf, 4)];
+    }
+
+    /**
+     * ⭐ লট ধরা পণ্যের ফেরত কোন লট থেকে কতটা — Inventory অডিট গ৯, ৪ অক্টোবর ২০২৬।
+     *
+     * ⛔ আগে ফেরত মাল বের করত লট ছাড়া: পণ্যের মোট কমত, লট A তবু পুরো দেখাত — পরে লট A থেকে না-থাকা মাল বিক্রি হত, আর
+     * রিকলের খাতা ভুল লট দেখাত।
+     * ⓘ কোন লট:
+     *   · বিলের সারি লট বললে (বিলের, নাহলে তার মাল-গ্রহণ সারির `batch_no`) — কেবল সেই লট; কম থাকলে থামে, অন্য লটে গড়ায় না;
+     *   · নাহলে আগে-মেয়াদ ক্রমে সব লট (⚠️ মেয়াদোত্তীর্ণও — মেয়াদ পেরোনো মাল সরবরাহকারীকে ফেরত দেওয়াই স্বাভাবিক), তারপর
+     *     লট-ধরা শুরুর আগের লটহীন মাল।
+     * ⓘ প্রতিটা লটে আগে অপেক্ষার ঘর, তারপর তাক (আটকানো বাদ) — পণ্য-স্তরের [[returnable()]]-এর একই ক্রম। গোনা তালাসহ।
+     *
+     * @return list<array{batch: ?Batch, waiting: string, shelf: string}>|null  লট ধরা পণ্য না হলে null
+     */
+    private function lotPlan(PurchaseReturnLine $line, ?Warehouse $warehouse): ?array
+    {
+        if ($warehouse === null || ! ($line->product?->track_batch ?? false)) {
+            return null;
+        }
+
+        $named = $this->lotOnTheBill($line);
+        $candidates = $named !== null
+            ? [$named]
+            : [...Batch::query()->where('product_id', $line->product_id)->fefo()->lockForUpdate()->get()->all(), null];
+
+        $plan = [];
+        $left = bcadd((string) $line->qty, '0', 4);
+        $found = '0';
+
+        foreach ($candidates as $batch) {
+            if (bccomp($left, '0', 4) <= 0) {
+                break;
+            }
+
+            $has = StockMovement::query()
+                ->where('product_id', $line->product_id)
+                ->where('warehouse_id', $warehouse->id)
+                ->when($batch === null, fn ($q) => $q->whereNull('batch_id'), fn ($q) => $q->where('batch_id', $batch->id))
+                ->lockForUpdate()
+                ->selectRaw('COALESCE(SUM(unplaced_change), 0) as waiting, COALESCE(SUM(floor_change - hold_change), 0) as shelf')
+                ->first();
+
+            $waiting = bccomp((string) $has->waiting, '0', 4) > 0 ? bcadd((string) $has->waiting, '0', 4) : '0';
+            $shelf = bccomp((string) $has->shelf, '0', 4) > 0 ? bcadd((string) $has->shelf, '0', 4) : '0';
+            $found = bcadd($found, bcadd($waiting, $shelf, 4), 4);
+
+            $fromWaiting = bccomp($waiting, $left, 4) >= 0 ? $left : $waiting;
+            $left = bcsub($left, $fromWaiting, 4);
+            $fromShelf = bccomp($shelf, $left, 4) >= 0 ? $left : $shelf;
+            $left = bcsub($left, $fromShelf, 4);
+
+            if (bccomp(bcadd($fromWaiting, $fromShelf, 4), '0', 4) > 0) {
+                $plan[] = ['batch' => $batch, 'waiting' => $fromWaiting, 'shelf' => $fromShelf];
+            }
+        }
+
+        if (bccomp($left, '0', 4) > 0) {
+            throw ValidationException::withMessages([
+                'lines' => $named !== null
+                    ? __('purchase::validation.return_lot_short', [
+                        'product' => $line->product->name(),
+                        'lot' => $named->batch_no,
+                        'available' => rtrim(rtrim(bcadd($found, '0', 4), '0'), '.') ?: '0',
+                    ])
+                    : __('purchase::validation.not_enough_to_return', [
+                        'product' => $line->product->name(),
+                        'available' => rtrim(rtrim(bcadd($found, '0', 4), '0'), '.') ?: '0',
+                    ]),
+            ]);
+        }
+
+        return $plan;
+    }
+
+    /** বিলের সারি যে লটে মাল এনেছিল — বিলের সারির, নাহলে তার মাল-গ্রহণ সারির লট নম্বর ধরে */
+    private function lotOnTheBill(PurchaseReturnLine $line): ?Batch
+    {
+        $billLine = $line->billLine;
+        $no = trim((string) ($billLine?->batch_no ?: $billLine?->receiptLine?->batch_no));
+
+        if ($no === '') {
+            return null;
+        }
+
+        return Batch::query()->where('product_id', $line->product_id)->where('batch_no', $no)->first();
     }
 
     private function resolveWarehouse(mixed $warehouseId): Warehouse

@@ -53,6 +53,7 @@ return [
     'unknown_bill_line' => 'That bill line is not in this company list.',
     'over_returned' => 'Only :room more can go back against :no.',
     'not_enough_to_return' => ':available of :product is in the warehouse — no more than that can go back.',
+    'return_lot_short' => 'Lot :lot of :product holds :available in this warehouse; the bill brought the goods in that lot, so the return goes from that lot and no more.',
 
     'missing_account' => 'Account :code is missing from the chart — the chart has not been installed.',
     /*
