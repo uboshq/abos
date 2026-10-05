@@ -204,6 +204,8 @@ final class VoucherService
     {
         $voucher->billShares()->delete();
 
+        $keep = [];
+
         foreach ($shares as $row) {
             $billId = (int) ($row['purchase_bill_id'] ?? 0);
             $amount = (string) ($row['share_amount'] ?? '0');
@@ -212,10 +214,69 @@ final class VoucherService
                 continue;
             }
 
+            // ⓘ একই চালান দুই সারিতে — যোগ করে একটা (টেবিলে এক ভাউচারে এক চালান একবারই)
+            $keep[$billId] = bcadd($keep[$billId] ?? '0', $amount, 4);
+        }
+
+        $this->assertSharesFit($voucher, $keep);
+
+        foreach ($keep as $billId => $amount) {
             $voucher->billShares()->create([
                 'purchase_bill_id' => $billId,
                 'share_amount' => $amount,
                 'basis' => $basis,
+            ]);
+        }
+    }
+
+    /**
+     * ⛔ চালানের ভাগ ভাউচারের খরচের বেশি নয়, আর বাতিল বা অন্য কোম্পানির চালানে নয় — Accounts-Finance অডিট ম৫, ৪ অক্টোবর ২০২৬।
+     *
+     * ⚠️ আগে যা আসত তাই বসত: ১,০০০ টাকার গাড়িভাড়া দুই চালানে ৮০০ + ৮০০ ভাগ হত, আর মালের দামে ১,৬০০ উঠত; বাতিল চালানেও
+     * ভাগ বসত, যে মাল কখনো আসেনি তার দামে খরচ। ⓘ সীমা = খরচের অঙ্ক — পরিশোধ আর খরচে চার্জ বাইরে যোগ হয়
+     * ([[paidWithCharge()]]), তাই ডেবিটের মোট থেকে চার্জ বাদ।
+     *
+     * @param  array<int, string>  $shares  চালান → অঙ্ক
+     */
+    private function assertSharesFit(Voucher $voucher, array $shares): void
+    {
+        if ($shares === []) {
+            return;
+        }
+
+        $bills = DB::table('pur_bills')
+            ->where('company_id', CompanyContext::id())
+            ->whereNull('deleted_at')
+            ->whereIn('id', array_keys($shares))
+            ->get(['id', 'document_no', 'status'])
+            ->keyBy('id');
+
+        foreach (array_keys($shares) as $billId) {
+            $bill = $bills->get($billId);
+
+            if ($bill === null || $bill->status === DocumentStatus::CANCELLED) {
+                throw ValidationException::withMessages([
+                    'bill_shares' => __('accounts::validation.share_on_a_dead_bill', ['no' => $bill->document_no ?? '#'.$billId]),
+                ]);
+            }
+        }
+
+        // ⓘ নতুন করে — সম্পাদনার পথে হাতের মডেলে আগের সারি থাকে
+        $voucher->load('lines');
+        $ceiling = $voucher->totals()['debit'];
+
+        if (in_array($voucher->type, [Voucher::PAYMENT, Voucher::EXPENSE], true)) {
+            $ceiling = bcsub($ceiling, (string) ($voucher->charge_amount ?? '0'), 4);
+        }
+
+        $total = array_reduce($shares, fn (string $sum, string $amount) => bcadd($sum, $amount, 4), '0');
+
+        if (bccomp($total, $ceiling, 4) > 0) {
+            throw ValidationException::withMessages([
+                'bill_shares' => __('accounts::validation.shares_over_the_expense', [
+                    'shared' => Money::format($total),
+                    'amount' => Money::format($ceiling),
+                ]),
             ]);
         }
     }

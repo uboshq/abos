@@ -64,6 +64,8 @@ return [
     'posted_cannot_edit' => ':no is posted and cannot be changed. '
         .'To correct it, cancel and issue a new voucher — that is the rule on paper too.',
     'cancel_reason_required' => 'A reason for cancelling is required.',
+    'share_on_a_dead_bill' => 'Bill :no is cancelled or was not found - a cost cannot be shared onto a cancelled bill.',
+    'shares_over_the_expense' => 'The bills were given :shared but the expense is :amount - the shares cannot exceed the expense.',
     'no_financial_year' => 'No financial year covers :date.',
     'year_closed' => 'Financial year :year is closed, so nothing new can be posted into it.',
     'line_needs_account' => 'This line has an amount but no account.',

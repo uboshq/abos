@@ -52,6 +52,8 @@ final class TaggableBillsOnTheVoucherForm implements OffersChoicesOnAForm
                  */
                 ->with(['lines.product'])
                 ->where('company_id', CompanyContext::id())
+                // ⛔ বাতিল চালান নয় — যে মাল আসেনি তার দামে খরচ বসত (Accounts-Finance অডিট ম৫; পাহারা [[VoucherService::replaceBillShares()]])
+                ->where('status', '!=', \App\Core\Support\DocumentStatus::CANCELLED)
                 ->where('trx_date', '>=', now()->subDays(60)->toDateString())
                 ->withSum('billShares as already_charged', 'share_amount')
                 ->withSum('lines as total_qty', 'qty')
