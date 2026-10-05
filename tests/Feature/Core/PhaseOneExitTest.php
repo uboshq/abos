@@ -72,10 +72,20 @@ class PhaseOneExitTest extends TestCase
         $this->assertTrue($registry->has('accounts'));
         $this->assertTrue($registry->has('customer'));
         $this->assertTrue($registry->has('system_admin'));
+        /*
+         * ⓘ Accounts-এর একমাত্র নির্ভরতা Backup (অর্থের নিয়ন্ত্রণ পর্দা ব্যাকআপের অবস্থা দেখায়, 2d392274,
+         * ২৫ সেপ্টেম্বর ২০২৬), আর Backup কারও উপর দাঁড়ায় না। ⓘ তাই দাবিটা "Accounts প্রথম" নয় — আগে কেবল তার নিজের
+         * নির্ভরতা, যারা নিজেরা কিছুর উপর দাঁড়ায় না; তারপর Accounts, বাকি সব মডিউলের আগে। ⛔ Accounts-এ নতুন
+         * নির্ভরতা যোগ হলে বা Backup কিছুর উপর দাঁড়ালে এটা লাল হয়।
+         */
+        $order = array_keys($registry->all());
+        $accountsNeeds = $registry->all()['accounts']->dependsOn;
+        $this->assertSame(['backup'], $accountsNeeds, 'Accounts দাঁড়ায় কেবল Backup-এর উপর — নতুন নির্ভরতা মানে স্তর উল্টে যাওয়া।');
+        $this->assertSame([], $registry->all()['backup']->dependsOn, 'Backup কারও উপর দাঁড়ায় না।');
         $this->assertSame(
-            'accounts',
-            array_key_first($registry->all()),
-            'Accounts has no dependencies, so it must be built first.',
+            [...$accountsNeeds, 'accounts'],
+            array_slice($order, 0, count($accountsNeeds) + 1),
+            'Accounts must be built right after its own dependencies, before every other module.',
         );
 
         // ২. Number Series — row lock, কখনো দুইবার এক নম্বর নয়
@@ -138,13 +148,17 @@ class PhaseOneExitTest extends TestCase
         $described = app(DrillResolver::class)->describe($entry->source_type, $entry->source_id);
         $this->assertSame('journal_voucher', $described['type']);
 
-        // ৫. Approval — সীমার উপরে অনুমোদন লাগে, নিজেরটা নিজে দেওয়া যায় না
+        // ৫. Approval — ছাড়ে সই লাগে, অঙ্ক যত ছোটই হোক
+        /*
+         * ⓘ আগে এখানে দাবি ছিল "ছোট ছাড়ে কারও সই লাগে না" (৫০০)। মালিক, ১ অক্টোবর ২০২৬: *"bill e kono char maliker
+         * onumoti chara dite parbe na"* — কোনো সীমা নেই। ⓘ দাবিটা উপরের লাল ক্রমের পেছনে লুকিয়ে ছিল, তাই কেউ দেখেনি।
+         */
         $approvals = app(ApprovalEngine::class);
         $document = Branch::query()->first();
 
-        $this->assertNull(
+        $this->assertNotNull(
             $approvals->request($document, 'sales', 'discount', '500', userId: $salesman->id),
-            'A small discount needs nobody.',
+            'A small discount still waits for the owner — there is no threshold.',
         );
 
         $large = $approvals->request($document, 'sales', 'discount', '2500', userId: $salesman->id);
