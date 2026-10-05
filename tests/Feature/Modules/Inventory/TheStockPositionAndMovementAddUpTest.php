@@ -57,14 +57,16 @@ final class TheStockPositionAndMovementAddUpTest extends TestCase
         $this->move('purchase_receipt', null, floor: '20');
         $this->move('purchase_bill', null, unplaced: '10');
         $this->move('delivery_challan', null, floor: '-12');
-        $this->move('quality_hold', null, floor: '-5', hold: '5');
+        // ⓘ অ্যাপের আটকানো তাক কমায় না, কেবল আটকায় ([[StockService::hold()]]) — আটকানো মাল তাকেরই অংশ (অডিট ম১০, ৫ অক্টোবর ২০২৬;
+        // ⛔ আগে এখানে তাক −৫ লেখা ছিল, আর রিপোর্টের "হাতে"-তে আটকানো আলাদা যোগ — দুই ভুল কাটাকাটি হয়ে সবুজ দেখাত)
+        $this->move('quality_hold', null, hold: '5');
         $this->move('sales_order', null, reserved: '2');
         $this->move('stock_transfer', null, floor: '-4');
         $this->move('stock_adjustment', null, floor: '-1');
         $this->move('sales_return', null, floor: '3');
 
         $position = collect($this->report('inventory.stock_position', []))->firstWhere('group_key', $this->product->id);
-        $this->assertSame(['36', '21', '5', '10', '2', '14', '1800'], $this->nums($position,
+        $this->assertSame(['36', '26', '5', '10', '2', '19', '1800'], $this->nums($position,
             ['on_hand', 'floor', 'held', 'unplaced', 'reserved', 'sellable', 'value']), 'মজুদের অবস্থা ভুল।');
 
         $movement = collect($this->report('inventory.movement_summary', [

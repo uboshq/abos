@@ -48,7 +48,8 @@ final class ALotCanBeFollowedWhereverItWentTest extends TestCase
         $other = $this->lot('LOT-X');
 
         $this->move($recalled, 'purchase_receipt', '2026-09-01', floor: '50', free: '5');
-        $this->move($recalled, 'quality_hold', '2026-09-02', floor: '-3', hold: '3');
+        // ⓘ অ্যাপের আটকানো তাক কমায় না, কেবল আটকায় ([[StockService::hold()]]) — গতিপথে তাই আসে না (অডিট ম১০, ৫ অক্টোবর ২০২৬)
+        $this->move($recalled, 'quality_hold', '2026-09-02', hold: '3');
         $this->move($recalled, 'delivery_challan', '2026-09-03', floor: '-20', free: '-1');
         $this->move($other, 'purchase_receipt', '2026-09-02', floor: '10');
 

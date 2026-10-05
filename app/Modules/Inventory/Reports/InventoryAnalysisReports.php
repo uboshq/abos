@@ -19,7 +19,8 @@ use Illuminate\Support\Facades\DB;
  * *"মালের চলাচল: ঢোকা/বেরোনো/স্থানান্তর/সমন্বয়"*।
  *
  * ⓘ দুইটাই চলাচলের সারি থেকে গোনা, হেডারে বাছা শাখার গুদামে ([[ReportEngine::branchWall()]] গুদামের শাখায়)।
- * ⓘ "হাতে" = তাকে + বসানো বাকি + আটকে — গুদামে যা আছে সব; "বেচা যাবে" = তাকে − ধরা − আটকে।
+ * ⓘ "হাতে" = তাকে + বসানো বাকি — গুদামে যা আছে সব ([[StockService::statesFor()]]-এর হুবহু); আটকানো মাল তাকেরই অংশ, তাই
+ * আলাদা যোগ নয় (⛔ আগে যোগ হত — অডিট ম১০: ১০-এর ৪ আটকালে ১৪, মূল্যও বেশি)। "বেচা যাবে" = তাকে − ধরা − আটকে।
  * ⓘ মূল্য = হাতে × পণ্যের খোলা স্তরের গড় দর — স্তর কোম্পানির, শাখার নয় ([[CostLayerService]])।
  */
 final class InventoryAnalysisReports
@@ -41,7 +42,7 @@ final class InventoryAnalysisReports
      *   এল      মাসে যত ঢুকেছে — কেনা, বিক্রয়-ফেরত, স্থানান্তরে আসা, সমন্বয়ে বাড়া (সব ধনাত্মক চলাচল)
      *   গেল     মাসে যত বেরিয়েছে — বিক্রি, ক্রয়-ফেরত, স্থানান্তরে যাওয়া, সমন্বয়ে কমা (সব ঋণাত্মক চলাচল)
      *   শেষে   শুরু + এল − গেল (পরের মাসের শুরু)
-     * ⓘ পরিমাণ "হাতে"-র মাপে (তাকে + বসানো বাকি + আটকে), তাই বসানো বা আটকানো এল-গেল নয়।
+     * ⓘ পরিমাণ "হাতে"-র মাপে (তাকে + বসানো বাকি), তাই বসানো এল-গেল নয়, আর আটকানো তো তাক থেকে নড়েই না (অডিট ম১০)।
      *
      * ── টাকা — যে দাম সত্যিই বসেছিল, আজকের দর নয় (সমন্বয়ক, ১ অক্টোবর ২০২৬) ─────────────────────────
      * ⛔ আজকের গড় দরে মাপলে দাম বদলালেই জানুয়ারির কলাম বদলে যেত। তাই:
@@ -54,7 +55,7 @@ final class InventoryAnalysisReports
      */
     public static function monthly(): ReportDefinition
     {
-        $qty = '(m.floor_change + m.unplaced_change + m.hold_change)';
+        $qty = '(m.floor_change + m.unplaced_change)';
 
         return new ReportDefinition(
             key: 'inventory.monthly_movement',
@@ -162,7 +163,7 @@ final class InventoryAnalysisReports
                     ->leftJoin('mdm_brands as br', 'br.id', '=', 'p.brand_id')
                     ->leftJoin('mdm_product_categories as pc', 'pc.id', '=', 'p.category_id')
                     ->groupByRaw("COALESCE({$key}, 0)")
-                    ->havingRaw('SUM(m.floor_change + m.unplaced_change + m.hold_change) <> 0 OR SUM(m.reserved_change) <> 0')
+                    ->havingRaw('SUM(m.floor_change + m.unplaced_change) <> 0 OR SUM(m.reserved_change) <> 0')
                     ->orderByRaw("MAX(COALESCE({$label}, '—'))")
                     ->selectRaw("COALESCE({$key}, 0) as group_key")
                     ->selectRaw("MAX(COALESCE({$label}, '—')) as group_label")
@@ -170,9 +171,9 @@ final class InventoryAnalysisReports
                     ->selectRaw('SUM(m.unplaced_change) as unplaced')
                     ->selectRaw('SUM(m.hold_change) as held')
                     ->selectRaw('SUM(m.reserved_change) as reserved')
-                    ->selectRaw('SUM(m.floor_change + m.unplaced_change + m.hold_change) as on_hand')
+                    ->selectRaw('SUM(m.floor_change + m.unplaced_change) as on_hand')
                     ->selectRaw('SUM(m.floor_change - m.reserved_change - m.hold_change) as sellable')
-                    ->selectRaw('SUM((m.floor_change + m.unplaced_change + m.hold_change) * COALESCE(('.self::avgCost().'), 0)) as value');
+                    ->selectRaw('SUM((m.floor_change + m.unplaced_change) * COALESCE(('.self::avgCost().'), 0)) as value');
             },
             columns: [
                 ['key' => 'group_label', 'label' => 'inventory::stockview.group'],
@@ -190,12 +191,12 @@ final class InventoryAnalysisReports
     /**
      * মালের চলাচল — পণ্য প্রতি: শুরুতে, কেনা, বেচা, ফেরত এল, ফেরত গেল, স্থানান্তরে এল/গেল, সমন্বয়, অন্য, শেষে।
      *
-     * ⓘ সব "হাতে"-র মাপে (তাকে + বসানো বাকি + আটকে) — তাই বসানো বা আটকানো নিজে কোনো চলাচল নয়, শূন্যে মেলে।
+     * ⓘ সব "হাতে"-র মাপে (তাকে + বসানো বাকি) — তাই বসানো নিজে কোনো চলাচল নয়, শূন্যে মেলে; আটকানো তাক থেকে নড়ে না (অডিট ম১০)।
      * ⓘ "অন্য" = উপরের কোনোটায় না পড়া উৎস (যেমন রান্না); শুরু + সব = শেষ, প্রতিটা সারিতে।
      */
     public static function movement(): ReportDefinition
     {
-        $qty = '(m.floor_change + m.unplaced_change + m.hold_change)';
+        $qty = '(m.floor_change + m.unplaced_change)';
         $in = fn (array $sources) => "SUM(CASE WHEN m.trx_date >= ? AND m.source_type IN ('".implode("','", $sources)."') THEN {$qty} ELSE 0 END)";
 
         return new ReportDefinition(

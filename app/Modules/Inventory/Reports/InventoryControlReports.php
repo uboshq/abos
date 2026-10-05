@@ -34,7 +34,7 @@ final class InventoryControlReports
      */
     public static function lotTrace(): ReportDefinition
     {
-        $qty = '(m.floor_change + m.unplaced_change + m.hold_change)';
+        $qty = '(m.floor_change + m.unplaced_change)';
         $free = '(m.free_change + m.unplaced_free_change)';
 
         return new ReportDefinition(
@@ -134,7 +134,7 @@ final class InventoryControlReports
                         ->when(! empty($f['warehouse_id']), fn ($q) => $q->where('m.warehouse_id', (int) $f['warehouse_id']))
                         ->groupBy('m.product_id')
                         ->selectRaw('m.product_id')
-                        ->selectRaw('SUM(m.floor_change + m.unplaced_change + m.hold_change) as on_hand')
+                        ->selectRaw('SUM(m.floor_change + m.unplaced_change) as on_hand')
                         ->selectRaw('MAX(CASE WHEN m.floor_change < 0 THEN m.trx_date END) as last_out')
                         ->selectRaw('SUM(CASE WHEN m.floor_change < 0 AND m.trx_date >= DATE_SUB(CURDATE(), INTERVAL 365 DAY) THEN -m.floor_change ELSE 0 END) as out_year'),
                     's',
@@ -212,7 +212,7 @@ final class InventoryControlReports
                         ->when(! empty($f['warehouse_id']), fn ($q) => $q->where('m.warehouse_id', (int) $f['warehouse_id']))
                         ->groupBy('m.product_id')
                         ->selectRaw('m.product_id')
-                        ->selectRaw('SUM(m.floor_change + m.unplaced_change + m.hold_change) as on_hand')
+                        ->selectRaw('SUM(m.floor_change + m.unplaced_change) as on_hand')
                         ->selectRaw('SUM(m.floor_change - m.reserved_change - m.hold_change) as available'),
                     's',
                 )
