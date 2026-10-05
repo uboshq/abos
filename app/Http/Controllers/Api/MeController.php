@@ -7,6 +7,7 @@ namespace App\Http\Controllers\Api;
 use App\Core\Services\DataScope;
 use App\Core\Services\MenuBuilder;
 use App\Core\Services\PhoneModules;
+use App\Core\Services\SettingsService;
 use App\Core\Support\CompanyContext;
 use App\Http\Controllers\Controller;
 use App\Models\Branch;
@@ -92,6 +93,12 @@ class MeController extends Controller
              * টাইল আর গভীর লিংকও একই সুইচে আটকাতে পারে।
              */
             'phoneModules' => $this->phone->onCodes(),
+
+            /*
+             * ⭐ কোম্পানি DO ছেড়ে বিক্রয় আদেশে চলে কি না (`sales.orders_replace_do`; DO বিক্রয় আদেশে মেশানো, ধাপ ১০,
+             * ৫ অক্টোবর ২০২৬) — অ্যাপ তখন DO-র পর্দায় আদেশের দরজায় লেখে (`/sales/orders`)। ⓘ পুরনো অ্যাপ এটা পড়ে না।
+             */
+            'ordersReplaceDo' => (bool) app(SettingsService::class)->get('sales.orders_replace_do', false),
 
             /*
              * কার্যকর অনুমতির তালিকা — রোলের নাম নয়, চাবিগুলো।

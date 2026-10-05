@@ -384,6 +384,7 @@ class EveryRouteIsGuardedTest extends TestCase
         'sales.tracking.index' => 'sales.delivery.view অথবা sales.order.view — mayTrack() পদ্ধতির শুরুতে',
         'sales.tracking.show' => 'sales.delivery.view অথবা sales.order.view — mayTrack() পদ্ধতির শুরুতে',
         'api.sales.delivery_order.approved_quantities' => 'এখনকার স্তরের অনুমোদনকারী — ApprovalEngine::canDecide() setApprovedQuantities()-এর শুরুতে, নাহলে ৪০৩',
+        'api.sales.order.approved_quantities' => 'বিক্রয় আদেশের একই নিয়ম — এখনকার স্তরের অনুমোদনকারী, ApprovalEngine::canDecide() SalesOrderService::setApprovedQuantities()-এর শুরুতে, নাহলে ৪০৩ ([[ThePhoneWritesTheSalesOrderTheWayItWroteTheDoTest]])',
         'sales.delivery_order.quantities' => 'অফিসের DO ডেস্কের একই দরজা — ApprovalEngine::canDecide() setApprovedQuantities()-এর শুরুতে, নাহলে ৪০৩ ([[TheOfficeWritesAndSignsTheDeliveryOrderOnItsDeskTest]])',
         'api.sales.tracking.index' => 'sales.delivery.view অথবা sales.order.view — mayTrack() পদ্ধতির শুরুতে',
         'api.sales.tracking.show' => 'sales.delivery.view অথবা sales.order.view — mayTrack() পদ্ধতির শুরুতে',

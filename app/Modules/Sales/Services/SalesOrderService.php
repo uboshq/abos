@@ -92,6 +92,8 @@ final class SalesOrderService
                 'financial_year_id' => $year->id,
                 'document_no' => $documentNo,
                 'customer_id' => $data['customer_id'],
+                // ⓘ কোথা থেকে এলো — ফোন `sr` পাঠায় ([[SalesOrderApiController]], [[SalesOrderSync]]); না পাঠালে কলামের নিজের মান
+                ...(isset($data['source']) && in_array($data['source'], SalesOrderStatus::SOURCES, true) ? ['source' => $data['source']] : []),
                 'warehouse_id' => $data['warehouse_id'] ?? $this->defaultWarehouse()?->id,
                 'trx_date' => $trxDate->toDateString(),
                 'deliver_on' => $data['deliver_on'] ?? null,

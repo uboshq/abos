@@ -70,4 +70,13 @@ Route::prefix('v1/sales')
         Route::post('/delivery-orders/{id}/submit', [\App\Modules\Sales\Http\Controllers\DeliveryOrderApiController::class, 'submit'])->whereUuid('id')->name('delivery_order.submit');
         // ⓘ চাবি ছকের — এখনকার স্তরের অনুমোদনকারী ([[DeliveryOrderService::setApprovedQuantities()]])
         Route::post('/delivery-orders/{id}/approved-quantities', [\App\Modules\Sales\Http\Controllers\DeliveryOrderApiController::class, 'approvedQuantities'])->whereUuid('id')->name('delivery_order.approved_quantities');
+
+        // ⭐ বিক্রয় আদেশ — DO-র যমজ দরজা, একই আকারের JSON ([[SalesOrderApiController]]; DO বিক্রয় আদেশে মেশানো, ধাপ ১০, ৫ অক্টোবর ২০২৬)
+        Route::get('/orders', [\App\Modules\Sales\Http\Controllers\SalesOrderApiController::class, 'index'])->name('order.index');
+        Route::post('/orders', [\App\Modules\Sales\Http\Controllers\SalesOrderApiController::class, 'store'])->name('order.store');
+        Route::get('/orders/{id}', [\App\Modules\Sales\Http\Controllers\SalesOrderApiController::class, 'show'])->whereUuid('id')->name('order.show');
+        Route::put('/orders/{id}', [\App\Modules\Sales\Http\Controllers\SalesOrderApiController::class, 'update'])->whereUuid('id')->name('order.update');
+        Route::post('/orders/{id}/submit', [\App\Modules\Sales\Http\Controllers\SalesOrderApiController::class, 'submit'])->whereUuid('id')->name('order.submit');
+        // ⓘ চাবি ছকের — এখনকার স্তরের অনুমোদনকারী ([[SalesOrderService::setApprovedQuantities()]])
+        Route::post('/orders/{id}/approved-quantities', [\App\Modules\Sales\Http\Controllers\SalesOrderApiController::class, 'approvedQuantities'])->whereUuid('id')->name('order.approved_quantities');
     });

@@ -15,6 +15,7 @@ use App\Modules\Customer\Models\Customer;
 use App\Modules\Inventory\Models\Product;
 use App\Modules\Sales\Models\SalesOrder;
 use App\Modules\Sales\Services\SalesOrderService;
+use App\Modules\Sales\Support\SalesOrderStatus;
 use Illuminate\Support\Carbon;
 
 /**
@@ -206,7 +207,19 @@ final class SalesOrderSync implements SyncsToDevices
             'trx_date' => $payload['trxDate'] ?? now()->toDateString(),
             'deliver_on' => $payload['deliverOn'] ?? null,
             'narration' => $payload['narration'] ?? null,
+            'source' => SalesOrderStatus::SOURCE_SR,
         ], $lines);
+
+        /*
+         * ⭐ নতুন ধারায় জমা — কোম্পানির সুইচ চালু থাকলে ([[SalesOrderService::REPLACES_DO]]; নকশার ধাপ ১০, ৫ অক্টোবর ২০২৬)।
+         *
+         * ⓘ উপরের "খসড়াই" যুক্তি পুরনো ধারার: সেখানে নিশ্চিত মানে তাক থেকে মাল সরা। নতুন ধারায় জমা মানে কেবল বাকির
+         * যাচাই আর সুপারভাইজারের কাছে যাওয়া — মাল আটকায় শেষ সইয়ের পরে, ঠিক যেভাবে মাঠের DO জমা হত। ফোনের লেখক
+         * খসড়া ধরে বসে থাকলে আদেশ কারো চোখেই পড়ত না। ⓘ সুইচ বন্ধে আজকের মতো খসড়া।
+         */
+        if ($this->orders->replacesDo()) {
+            $order = $this->orders->submit($order);
+        }
 
         return (string) $order->public_id;
     }
