@@ -78,7 +78,7 @@ final class ChallanTransportController extends Controller implements HasMiddlewa
 
         $data = $request->validate([
             'mode' => ['required', Rule::in(['vehicle', 'own', 'direct'])],
-            'vehicle_id' => ['nullable', 'integer', Rule::exists('mdm_vehicles', 'id')],
+            'vehicle_id' => ['nullable', 'integer', Rule::exists('mdm_vehicles', 'id')->where('company_id', \App\Core\Support\CompanyContext::id())],
             // ⓘ কেবল "গাড়িতে" পথে, আর বহরের গাড়ি না বাছলে — বাকি দুই পথে নম্বরের প্রশ্নই নেই
             'vehicle_no' => ['nullable', 'string', 'max:32',
                 Rule::requiredIf(fn () => $request->input('mode') === 'vehicle' && blank($request->input('vehicle_id')))],

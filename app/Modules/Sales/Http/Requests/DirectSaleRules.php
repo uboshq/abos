@@ -323,7 +323,7 @@ final class DirectSaleRules
              * পর্দায় থাকে, ভাউচারে পৌঁছায় না, আর কেউ টের পায় না।
              */
             'deposits.*.transfer_mode_id' => ['nullable', 'integer',
-                Rule::exists('mdm_transfer_modes', 'id')],
+                Rule::exists('mdm_transfer_modes', 'id')->where('company_id', \App\Core\Support\CompanyContext::id())],
             'deposits.*.from_bank' => ['nullable', 'string', 'max:120'],
             'deposits.*.from_branch' => ['nullable', 'string', 'max:120'],
             'deposits.*.from_account_name' => ['nullable', 'string', 'max:120'],
