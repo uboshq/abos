@@ -288,7 +288,6 @@
           x-data="directSale({
               catalogue: @js($products),
               margin: @js($margin),
-              pricesUrl: @js(route('sales.price_list.quote')),
               lots: @js($lots),
               customers: @js($customerTerms),
               walkinId: {{ $walkinId }},
