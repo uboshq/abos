@@ -31,6 +31,4 @@ return [
     'others' => 'Others',
     'by_module' => 'Waiting, by module',
     'by_module_hint' => 'Where signatures are held up',
-    // ⓘ হোমের নতুন রূপ (পরিকল্পনা ২, ৫ অক্টোবর ২০২৬)
-    'kpi_waiting' => 'Waiting for my signature',
 ];

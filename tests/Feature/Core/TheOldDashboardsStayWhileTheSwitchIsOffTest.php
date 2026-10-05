@@ -17,8 +17,8 @@ use Tests\TestCase;
  * সুইচ বন্ধ মানে পুরনো ড্যাশবোর্ড হুবহু — মালিক, ২ অক্টোবর ২০২৬: *"sob deshboard sesh kore tar por eksathe switch dibe"*।
  *
  * ⓘ দাবি, একই মানুষ দুইবার (সুইচ বন্ধ, তারপর চালু): বন্ধে প্রতিটা মডিউলের ড্যাশবোর্ড পুরনো পাতায় খোলে, আর তার
- * চার্টের সংখ্যা চালুর চেয়ে বেশি নয় (নতুন চার্ট কেবল যোগ হয়, পুরনোটা সরে না); হোমে নতুন তিন ঘর (সময়, ফিল্টার,
- * লেআউট) নেই, আর ফিল্টারের নম্বর দিলেও সংখ্যা বদলায় না। চালুতে নতুন পাতা আর তিন ঘর।
+ * চার্টের সংখ্যা চালুর চেয়ে বেশি নয় (নতুন চার্ট কেবল যোগ হয়, পুরনোটা সরে না)।
+ * ⓘ হোম ব্যতিক্রম — মালিকের অনুমোদিত নতুন হোম (৫ অক্টোবর ২০২৬) দুই অবস্থাতেই, পুরনো কালপর্বের কার্ড কোনোটাতেই নয়।
  */
 final class TheOldDashboardsStayWhileTheSwitchIsOffTest extends TestCase
 {
@@ -53,14 +53,11 @@ final class TheOldDashboardsStayWhileTheSwitchIsOffTest extends TestCase
             }
 
             $home = $this->get(route('dashboard', ['seller' => $owner->id]))->assertOk()->getContent();
-            foreach (['data-period-menu', 'data-home-filter', 'data-layout-menu'] as $mark) {
-                $on
-                    ? $this->assertStringContainsString($mark, $home, "চালুতে হোমে {$mark} নেই।")
-                    : $this->assertStringNotContainsString($mark, $home, "⛔ বন্ধেও হোমে {$mark}।");
+            // ⭐ হোম ৫ অক্টোবর ২০২৬ থেকে সুইচ ছাড়াই নতুন (মালিক: *"tumar plane r moto hoyni"* — আসল সাইটে, সুইচ বন্ধে)
+            foreach (['data-period-menu', 'data-home-filter', 'data-layout-menu', 'data-kpis', 'data-money-position'] as $mark) {
+                $this->assertStringContainsString($mark, $home, ($on ? 'চালুতে' : 'বন্ধে')." হোমে {$mark} নেই।");
             }
-            if (! $on) {
-                $this->assertStringNotContainsString('data-home-filter-on', $home, '⛔ বন্ধেও ফিল্টার চালু হয়েছে।');
-            }
+            $this->assertStringNotContainsString('data-period-cards', $home, '⛔ পুরনো হোমের কালপর্বের কার্ড ফিরে এসেছে।');
         }
 
         $this->assertNotEmpty($panels);

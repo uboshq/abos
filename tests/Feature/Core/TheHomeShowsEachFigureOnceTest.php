@@ -70,7 +70,7 @@ final class TheHomeShowsEachFigureOnceTest extends TestCase
             __('supplier::widget.owed_to_principals'),
             __('inventory::overview.stock_value'),
             __('purchase::dashboard.purchases_today'),
-            __('approval::dashboard.kpi_waiting'),
+            __('approval::dashboard.waiting_for_me'),
         ], array_keys($kpis), '⛔ মূল সূচকের ঘর বা ক্রম মালিকের পরিকল্পনা মতো নয়।');
 
         // ── কোনো নাম দুইবার নয় — টাকার বাক্স, সূচক, ব্যতিক্রম মিলিয়ে ──

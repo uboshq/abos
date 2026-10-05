@@ -51,20 +51,22 @@ class WorkspaceController extends Controller
         $menu = $this->menu->forUser($request->user());
 
         // ⭐ হোমের ছাঁকনি — কেবল নতুন ড্যাশবোর্ডে; তালিকার বাইরের নম্বর নেয় না (মালিক, ৪ অক্টোবর ২০২৬)
-        $filterChoices = config('abos.dashboards_v2')
-            ? app(\App\Core\Contracts\HomeSalesFilters::class)->choices()
-            : ['warehouses' => [], 'areas' => [], 'sellers' => []];
-        $filter = config('abos.dashboards_v2')
-            ? \App\Core\Dashboard\HomeFilter::fromRequest($request, $filterChoices, app(\App\Core\Contracts\HomeSalesFilters::class))
-            : \App\Core\Dashboard\HomeFilter::none();
+        // ⓘ ৫ অক্টোবর ২০২৬ থেকে নতুন হোম সব সাইটে, সুইচ ছাড়াই — তাই ফিল্টারও সবসময়
+        $filterChoices = app(\App\Core\Contracts\HomeSalesFilters::class)->choices();
+        $filter = \App\Core\Dashboard\HomeFilter::fromRequest($request, $filterChoices, app(\App\Core\Contracts\HomeSalesFilters::class));
 
         // ⭐ বাছা সময় — মূল সূচকের প্রবাহগুলো এটা মানে ([[HomePeriod]], ৫ অক্টোবর ২০২৬)
         $period = in_array($request->query('period'), \App\Core\Dashboard\Widget::PERIODS, true)
             ? (string) $request->query('period')
             : 'today';
 
-        // ⭐ নতুন হোম (মালিকের পরিকল্পনা ২, ৫ অক্টোবর ২০২৬) — আলাদা পাতা; সুইচ বন্ধ থাকলে পুরনো পাতা হুবহু
-        return view(config('abos.dashboards_v2') ? 'workspace.home' : 'workspace.dashboard', [
+        /*
+         * ⭐ নতুন হোম (মালিকের পরিকল্পনা ২, ৫ অক্টোবর ২০২৬) — সব সাইটে, সুইচ abos.dashboards_v2 ছাড়াই।
+         * ⓘ মালিক আসল সাইটে (সুইচ বন্ধ) পুরনো পাতা দেখে বললেন *"tumar plane r moto hoyni"* — অনুমোদিত হোম তাঁর
+         * পর্দাতেই আসার কথা। সুইচ এখন কেবল মডিউলের ড্যাশবোর্ডের নতুন রূপ বাঁধে; চার্ট সারিতে তাই সুইচ বন্ধে
+         * মডিউলের পুরনো প্রথম চার্ট, চালুতে নতুনটা।
+         */
+        return view('workspace.home', [
             'menu' => $menu,
 
             /*

@@ -41,7 +41,8 @@ final class ApprovalWidgets implements DashboardWidgets
         return [
             new Widget(
                 group: 'kpi',
-                label: __('approval::dashboard.kpi_waiting'),
+                // ⓘ ব্যতিক্রমের নামেই — হোম নাম মিলিয়ে দ্বিতীয়বার বাদ দেয়; আলাদা নামে একই সংখ্যা দুইবার আসত
+                label: __('approval::dashboard.waiting_for_me'),
                 value: (string) $waiting,
                 href: route('approval.inbox.index'),
                 permission: 'approval.decide',

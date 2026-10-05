@@ -1,5 +1,5 @@
 {{--
-    ⭐ হোম — নতুন রূপ (মালিকের পরিকল্পনা ২, ৫ অক্টোবর ২০২৬; সুইচ abos.dashboards_v2)।
+    ⭐ হোম — নতুন রূপ (মালিকের পরিকল্পনা ২, ৫ অক্টোবর ২০২৬) — সব সাইটে, সুইচ ছাড়াই।
 
     মালিকের লাল দাগ: টাকার বাক্স আর "ব্যবসার চিত্র"-এর চার্ট — দুইটা থাকবে, বাকি সব নতুন।
     ক্রম (মালিকের কথায়): টাকার বাক্স → ৮টা চার্ট, ৪টা করে দুই সারি, জরুরিগুলো প্রথমে → ৮টা মূল সূচক →
@@ -7,7 +7,7 @@
 
     ⛔ একই সংখ্যা দুইবার নয়: টাকার বাক্সে যা, মূল সূচকে তা নয়; মূল সূচকে যা, ব্যতিক্রম কেন্দ্রে তা নয়
     (নাম মিলিয়ে বাদ, নিচে `$shown`)। পুরনো "গোটা ব্যবসা" সারি আর সব-চার্ট অংশ এখানে নেই।
-    ⓘ সুইচ বন্ধ থাকলে পুরনো পাতা `workspace.dashboard` হুবহু ([[TheOldDashboardsStayWhileTheSwitchIsOffTest]])।
+    ⓘ সুইচ abos.dashboards_v2 কেবল মডিউলের ড্যাশবোর্ড বাঁধে; হোম দুই অবস্থাতেই এটাই।
 --}}
 @php
     $titles = [
@@ -173,7 +173,8 @@
             .hm-kpis { grid-template-columns: repeat(8, minmax(0, 1fr)); }
             .hm-work { grid-template-columns: repeat(2, minmax(0, 1fr)); }
         }
-        .hm-kpi-value { font-size: 1.15rem; line-height: 1.3; }
+        /* ⓘ মান কখনো কাটা নয় (truncate নয়) — লম্বা হলে ভাঙে ([[TheHomeShowsOnlyYourOwnWorkTest]]) */
+        .hm-kpi-value { line-height: 1.3; }
     </style>
 
     {{-- ── মাথা: বাঁয়ে চালু ফিল্টারের লাইন, ডানে টাকার বাক্স (থাকছে হুবহু) ── --}}
@@ -272,7 +273,7 @@
                                     <span class="truncate">{{ $widget->label }}</span>
                                 </span>
                                 <span @class([
-                                    'hm-kpi-value tabular mt-1 block truncate font-semibold',
+                                    'hm-kpi-value tabular mt-1 break-words text-lg block font-semibold',
                                     'text-(--color-badge-warning-ink)' => $widget->tone === 'warn' && $pending($widget),
                                     'text-(--color-ink)' => ! ($widget->tone === 'warn' && $pending($widget)),
                                 ])>{{ $widget->value }}</span>

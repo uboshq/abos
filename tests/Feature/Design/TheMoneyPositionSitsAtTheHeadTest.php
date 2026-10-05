@@ -12,9 +12,10 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 /**
- * হোম = "ব্যবসার কমান্ড সেন্টার" — মালিকের নকশা, ১ অক্টোবর ২০২৬।
+ * হোমের মাথা — মালিকের নকশা, ১ অক্টোবর ২০২৬; নতুন রূপ (পরিকল্পনা ২), ৫ অক্টোবর ২০২৬।
  *
- * ⭐ মাথার সারিতে বাঁয়ে শিরোনাম, ডানে "হাতে ও ব্যাংকে মোট" কার্ড (হাতে নগদ · MFS · ব্যাংক · পথে)।
+ * ⭐ মাথার সারিতে ডানে "হাতে ও ব্যাংকে মোট" কার্ড (হাতে নগদ · MFS · ব্যাংক · পথে) — মালিক লাল দাগে রেখেছেন।
+ * ⓘ বাঁয়ের বড় "ব্যবসার কমান্ড সেন্টার" লেখা পরিকল্পনা ২-এ উঠে গেছে (জায়গা খেত, কাজ ছিল না)।
  * ⓘ টাকার অবস্থান কোনো কালপর্বের নয় — আজ/মাস/বছর যেটাই বাছা হোক, কার্ডটা মাথায় থাকে।
  * ⛔ আর নিচের সারিতে কার্ডটা দ্বিতীয়বার আসে না: একই সংখ্যা দুই জায়গায় থাকলে মালিক ভাবেন দুইটা আলাদা টাকা।
  * ⚠️ যাঁর টাকার অনুমতি নেই, তাঁর মাথায় শুধু শিরোনাম — কার্ড নয়।
@@ -32,7 +33,7 @@ final class TheMoneyPositionSitsAtTheHeadTest extends TestCase
             $html = (string) $response->getContent();
 
             $this->assertStringContainsString('data-command-head', $html, "{$period}: কমান্ড সেন্টারের মাথা নেই।");
-            $this->assertStringContainsString(e(__('home.command_center')), $html, "{$period}: শিরোনাম নেই।");
+            $this->assertStringNotContainsString(e(__('home.command_center')), $html, "{$period}: ⛔ পুরনো বড় শিরোনাম ফিরে এসেছে।");
             $this->assertSame(1, substr_count($html, 'data-money-position'), "{$period}: টাকার অবস্থানের কার্ড মাথায় একবার নেই।");
 
             $label = $this->positionLabel($response->viewData('groups'));
@@ -40,11 +41,9 @@ final class TheMoneyPositionSitsAtTheHeadTest extends TestCase
 
             $head = $this->between($html, 'data-command-head', '</section>');
             $this->assertStringContainsString(e($label), $head, "{$period}: \"{$label}\" মাথার সারিতে নেই।");
-            if (str_contains($html, 'data-period-cards')) {
-                $cards = $this->between($html, 'data-period-cards', '</section>');
-                $this->assertStringNotContainsString(e($label), $cards,
-                    "{$period}: \"{$label}\" নিচের কার্ডের সারিতেও বসে গেছে — একই টাকা দুই জায়গায়।");
-            }
+            $kpis = $this->between($html, 'data-kpis', '</section>');
+            $this->assertStringNotContainsString(e($label), $kpis,
+                "{$period}: \"{$label}\" মূল সূচকেও বসে গেছে — একই টাকা দুই জায়গায়।");
         }
     }
 
@@ -68,7 +67,9 @@ final class TheMoneyPositionSitsAtTheHeadTest extends TestCase
 
         $response = $this->actingAs($owner)->get(route('dashboard'))->assertOk();
         $html = (string) $response->getContent();
-        $rows = array_values(array_filter($response->viewData('overall'), fn (array $row) => $row['panel'] !== null));
+        // ⓘ হোমে কেবল config-এর ৮টা মডিউলের চার্ট (পরিকল্পনা ২, ৫ অক্টোবর ২০২৬); বাকিগুলো নিজের পাতায়
+        $rows = array_values(array_filter($response->viewData('overall'),
+            fn (array $row) => $row['panel'] !== null && in_array($row['module'], config('abos.home_pictures'), true)));
 
         $this->assertNotEmpty($rows, 'মালিকের হোমে একটাও মডিউলের চার্ট নেই।');
         $this->assertStringContainsString('data-business-pictures', $html);
@@ -89,35 +90,35 @@ final class TheMoneyPositionSitsAtTheHeadTest extends TestCase
     }
 
     /**
-     * ⭐ নতুন হোম (`abos.dashboards_v2`) — মডিউলের প্রতিটা চার্ট নিজের কার্ডে, প্রথমটা শুধু নয়।
-     * ⛔ সুইচ বন্ধে প্রথমটার পরেরগুলো হোমে আসে না — চালুর আগে পুরনো হোম যেমন ছিল তেমনই।
+     * ⭐ হোমে প্রতিটা মডিউলের কেবল প্রথম চার্ট, config-এর ক্রমে — সুইচ চালু বা বন্ধ দুই অবস্থাতেই (পরিকল্পনা ২,
+     * ৫ অক্টোবর ২০২৬)। ⛔ একটা মডিউলের পরের চার্ট হোমে নয় — আগে নতুন হোম সবগুলো আনত, আর হিসাব চারবার বসত।
      */
-    public function test_the_new_home_shows_every_chart_and_the_old_one_only_the_first(): void
+    public function test_the_home_shows_each_listed_module_once_with_its_first_chart(): void
     {
         [$owner] = $this->people();
 
         foreach ([true, false] as $on) {
             config(['abos.dashboards_v2' => $on]);
             $response = $this->actingAs($owner)->get(route('dashboard'))->assertOk();
-            $pictures = $this->between((string) $response->getContent(), 'data-business-pictures', '</section>');
+            $html = (string) $response->getContent();
+            $pictures = $this->between($html, 'data-business-pictures', '</section>');
             $later = 0;
 
+            preg_match_all('/data-picture="([a-z_]+)"/', $pictures, $m);
+            $this->assertSame(array_values(array_intersect(config('abos.home_pictures'), $m[1])), $m[1], '⛔ চার্ট config-এর ক্রমে নয়।');
+            $this->assertSame(array_unique($m[1]), $m[1], '⛔ একটা মডিউলের চার্ট দুইবার।');
+
             foreach ($response->viewData('overall') as $row) {
+                if (! in_array($row['module'], $m[1], true)) {
+                    continue;
+                }
                 foreach ($row['panels'] as $i => $panel) {
-                    if ($i === 0) {
-                        $this->assertStringContainsString(e($panel->label), $pictures, "\"{$row['module']}\"-এর প্রথম চার্ট হোমে নেই।");
-
+                    if ($i === 0 || $panel->label === $row['panels'][0]->label) {
                         continue;
                     }
-
-                    if ($panel->label === $row['panels'][0]->label) {
-                        continue;
-                    }
-
                     $later++;
-                    $on
-                        ? $this->assertStringContainsString(e($panel->label), $pictures, "সুইচ চালু, অথচ \"{$row['module']}\"-এর \"{$panel->label}\" হোমে নেই।")
-                        : $this->assertStringNotContainsString(e($panel->label), $pictures, "⛔ সুইচ বন্ধ, তবু \"{$panel->label}\" হোমে — পুরনো হোম বদলে গেছে।");
+                    $this->assertStringNotContainsString('<span class="block truncate text-2xs text-(--color-ink-muted)">'.e($panel->label).'</span>', $pictures,
+                        "⛔ \"{$row['module']}\"-এর পরের চার্ট \"{$panel->label}\" হোমে।");
                 }
             }
 
@@ -136,12 +137,19 @@ final class TheMoneyPositionSitsAtTheHeadTest extends TestCase
         $response = $this->actingAs($owner)->get(route('dashboard'))->assertOk();
         $html = (string) $response->getContent();
         $todo = $response->viewData('groups')['todo'];
+        // ⓘ মূল সূচকে যা আছে, ব্যতিক্রমে তা আর নয় (পরিকল্পনা ২) — নাম মিলিয়ে বাদ
+        $kpiLabels = array_map(fn ($w) => $w->label, $response->viewData('groups')['kpi'] ?? []);
 
         $this->assertNotEmpty($todo);
         $this->assertStringContainsString('data-exception-center', $html);
         $center = $this->between($html, 'data-exception-center', '</section>');
 
         foreach ($todo as $widget) {
+            if (in_array($widget->label, $kpiLabels, true)) {
+                $this->assertStringNotContainsString('href="'.e($widget->href).'"', $center, "⛔ \"{$widget->label}\" মূল সূচকে আছে, ব্যতিক্রমেও বসেছে।");
+
+                continue;
+            }
             $digits = (int) preg_replace('/\D/', '', strtr($widget->value, ['০' => '0', '১' => '1', '২' => '2', '৩' => '3', '৪' => '4',
                 '৫' => '5', '৬' => '6', '৭' => '7', '৮' => '8', '৯' => '9']));
 
