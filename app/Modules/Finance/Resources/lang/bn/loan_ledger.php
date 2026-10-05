@@ -13,6 +13,7 @@ return [
     'taken' => 'নেওয়া',
     'kind_given' => 'হাতধার দেওয়া',
     'kind_taken' => 'হাতধার নেওয়া',
+    'kind_books' => 'হাতধার খাতে',
     'total' => 'মোট',
     'address' => 'ঠিকানা',
     'hand_loan_balance' => 'হাতধারে বাকি',

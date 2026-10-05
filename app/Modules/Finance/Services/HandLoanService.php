@@ -203,13 +203,20 @@ final class HandLoanService
                     'instrument_no' => ($data['instrument_no'] ?? '') ?: null,
                 ],
                 [
+                    /*
+                     * ⭐ হাতধার খাতের সারিতে মানুষটার নাম — খতিয়ানে ব্যক্তির খাতায় এই টাকা তাঁর নামে আসে (মালিকের অভিযোগ,
+                     * ৫ অক্টোবর ২০২৬)। ⓘ হাতধারের বাকিতে দুবার আসে না: চলাচলের নিজের ভাউচার
+                     * [[LoanLedgerReports::looseRows()]] বাদ দেয়, টাকাটা চলাচল থেকেই গোনা।
+                     */
                     [
                         'account_id' => $out ? $head->id : $money->id,
                         'debit' => $amount, 'credit' => '0',
+                        ...($out ? ['party_type' => 'person', 'party_id' => (int) $account->person_id] : []),
                     ],
                     [
                         'account_id' => $out ? $money->id : $head->id,
                         'debit' => '0', 'credit' => $amount,
+                        ...($out ? [] : ['party_type' => 'person', 'party_id' => (int) $account->person_id]),
                     ],
                 ],
             );
@@ -284,7 +291,43 @@ final class HandLoanService
             ', [HandLoanMovement::OUT, HandLoanMovement::IN])
             ->first();
 
-        return bcsub((string) $row->gone, (string) $row->came, 4);
+        $own = bcsub((string) $row->gone, (string) $row->came, 4);
+
+        /*
+         * ⭐ হাতধার খাতে তাঁর নামে সাধারণ ভাউচারের টাকা ([[LoanLedgerReports::looseRows()]]) — তাঁর সবচেয়ে নতুন খোলা
+         * হিসাবের নামে, যাতে সব হিসাবের যোগফল = তালিকার বাকি = খাতার শেষ জের (মালিকের অভিযোগ, ৫ অক্টোবর ২০২৬)।
+         */
+        if ($this->primaryAccountId((int) $account->person_id) !== (int) $account->id) {
+            return $own;
+        }
+
+        [$debit, $credit] = $this->looseOf([(int) $account->person_id])[(int) $account->person_id] ?? ['0', '0'];
+
+        return bcadd($own, bcsub($debit, $credit, 4), 4);
+    }
+
+    /** মানুষটার সবচেয়ে নতুন খোলা হিসাব — হাতধার খাতে তাঁর নামের সাধারণ সারিগুলো এর নামে গোনা হয় */
+    private function primaryAccountId(int $personId): ?int
+    {
+        $id = HandLoanAccount::query()->open()->where('person_id', $personId)->latest('id')->value('id');
+
+        return $id === null ? null : (int) $id;
+    }
+
+    /**
+     * হাতধার খাতে ব্যক্তির নামে সাধারণ সারি — দেওয়া (ডেবিট) আর নেওয়া (ক্রেডিট), জন প্রতি ([[LoanLedgerReports::looseRows()]])।
+     *
+     * @param  list<int>  $personIds
+     * @return array<int, array{0: string, 1: string}>
+     */
+    private function looseOf(array $personIds): array
+    {
+        return \App\Modules\Finance\Reports\LoanLedgerReports::looseRows((int) CompanyContext::id(), $personIds)
+            ->groupBy('le.party_id')
+            ->selectRaw('le.party_id as person_id, COALESCE(SUM(le.debit), 0) as d, COALESCE(SUM(le.credit), 0) as c')
+            ->get()
+            ->mapWithKeys(fn ($r) => [(int) $r->person_id => [bcadd((string) $r->d, '0', 4), bcadd((string) $r->c, '0', 4)]])
+            ->all();
     }
 
     /**
@@ -469,6 +512,15 @@ final class HandLoanService
          */
         foreach (\App\Modules\MasterData\Models\Person::query()->active()->whereNotIn('id', array_keys($people) ?: [0])->get() as $person) {
             $people[(int) $person->id] = ['person' => $person, 'given' => '0', 'taken' => '0', 'open' => null, 'due_on' => null];
+        }
+
+        // ⭐ হাতধার খাতে তাঁর নামে সাধারণ ভাউচারের টাকাও হাতধারে (মালিকের অভিযোগ, ৫ অক্টোবর ২০২৬; [[looseOf()]])
+        foreach ($this->looseOf(array_keys($people)) as $id => [$debit, $credit]) {
+            if (! isset($people[$id])) {
+                continue;
+            }
+            $people[$id]['given'] = bcadd($people[$id]['given'], $debit, 4);
+            $people[$id]['taken'] = bcadd($people[$id]['taken'], $credit, 4);
         }
 
         $books = app(\App\Modules\Accounts\Services\AccountsFacts::class)->dueFromMany('person', array_keys($people));

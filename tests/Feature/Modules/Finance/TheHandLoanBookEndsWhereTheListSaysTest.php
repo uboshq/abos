@@ -86,6 +86,37 @@ final class TheHandLoanBookEndsWhereTheListSaysTest extends TestCase
         $this->assertSame(0, bccomp($row['balance'], $later['closing'], 4), '⛔ তারিখ বদলালে শেষ জের বদলে গেল।');
     }
 
+    /**
+     * ⭐ মালিকের অভিযোগ, ৫ অক্টোবর ২০২৬ — আভা ট্রেডের RCV-0001: সাধারণ রসিদে Aminul-এর ৳৯,০০০ হাতধার খাতে (১১৭০) জমা,
+     * অথচ হাতধারের তালিকায় তাঁর ঘরে ০।
+     */
+    public function test_a_give_on_the_hand_loan_page_and_a_take_on_an_ordinary_receipt_meet_in_one_balance_counted_once(): void
+    {
+        $aminul = $this->person('Aminul');
+        $account = app(HandLoanService::class)->open(['person_id' => $aminul->id]);
+        $this->move($account, HandLoanMovement::OUT, '5000', now()->subDays(4));
+
+        $head = Account::query()->where('code', StandardChart::HAND_LOAN)->firstOrFail();
+        $vouchers = app(VoucherService::class);
+        $vouchers->post($vouchers->create(['type' => Voucher::RECEIPT, 'trx_date' => now()->subDay()->toDateString(), 'narration' => 'RCV — Aminul ফেরত দিলেন'], [
+            ['account_id' => $this->till, 'debit' => '2000', 'credit' => '0'],
+            ['account_id' => $head->id, 'debit' => '0', 'credit' => '2000', 'party_type' => 'person', 'party_id' => $aminul->id],
+        ]));
+
+        $row = $this->rowOf($aminul);
+        $this->assertSame(0, bccomp('3000', $row['balance'], 4),
+            '⛔ সাধারণ রসিদের ২০০০ হাতধারে আসেনি (৫০০০ থাকত), বা দেওয়াটা দুবার গোনা হলো (৮০০০)।');
+        $this->assertSame(0, bccomp($row['balance'], app(HandLoanService::class)->balanceOf($account), 4), 'তালিকা আর হিসাবের বকেয়া আলাদা।');
+
+        $book = $this->book($aminul, ReportEngine::ALL_TIME, now()->toDateString());
+        $this->assertSame(0, bccomp($row['balance'], $book['closing'], 4), '⛔ খাতার শেষ জের আর তালিকার বাকি আলাদা।');
+        $this->assertCount(2, $book['lines'], 'খাতায় দুই সারি — হাতধারের দেওয়া আর রসিদের নেওয়া, একবার করে।');
+
+        // ⓘ হাতধারের দেওয়াও এখন খতিয়ানে তাঁর নামে — তাই "মোট পাওনা" মেলে, "অন্য খাতে" নেই
+        $this->assertSame(0, bccomp('3000', app(AccountsFacts::class)->dueFrom('person', (int) $aminul->id), 4));
+        $this->assertFalse($row['differs']);
+    }
+
     public function test_sujon_sumons_hundred_on_the_receivable_shows_in_the_total_not_in_the_hand_loan(): void
     {
         $sujon = $this->person('Sujon Sumon');

@@ -13,6 +13,7 @@ return [
     'taken' => 'Taken',
     'kind_given' => 'Hand loan given',
     'kind_taken' => 'Hand loan taken',
+    'kind_books' => 'On the hand-loan account',
     'total' => 'Total',
     'address' => 'Address',
     'hand_loan_balance' => 'Hand loan balance',

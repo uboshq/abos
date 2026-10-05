@@ -9,6 +9,7 @@ use App\Core\Engines\Report\ReportDefinition;
 use App\Core\Engines\Report\ReportEngine;
 use App\Core\Support\Money;
 use App\Modules\Accounts\Models\Voucher;
+use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Finance\Models\BankFacility;
 use App\Modules\Finance\Models\HandLoanMovement;
 use App\Modules\Finance\Services\BankFacilityService;
@@ -145,6 +146,39 @@ final class LoanLedgerReports
         return DB::query()->fromSub($running, 'r')->orderBy('r.sort')->orderBy('r.trx_date')->orderBy('r.id');
     }
 
+    /**
+     * ⭐ হাতধার খাতের (১১৭০ আর নিচের সব) খতিয়ান-সারি, ব্যক্তির নামে, যেগুলো কোনো হাতধারের চলাচলের নিজের ভাউচার নয় —
+     * সাধারণ রসিদ/পরিশোধ/জাবেদায় হাতধার খাতে বসা টাকা (মালিকের অভিযোগ, ৫ অক্টোবর ২০২৬: আভা ট্রেডের RCV-0001-এ Aminul-এর
+     * ৳৯,০০০ হাতধার খাতে জমা, অথচ হাতধারের তালিকায় ০)।
+     *
+     * ── ⛔ দুবার নয় ──────────────────────────────────────────────────────────
+     * চলাচলের ভাউচার (আর তার `…:reversal`) এখানে বাদ — ওই টাকা চলাচল থেকেই গোনা হয় ([[HandLoanMovement::scopeCounted()]]),
+     * একই অঙ্ক। তাই চলাচলের ভাউচারে খতিয়ানে পক্ষ বসুক বা না বসুক (পুরনো সারি), যোগফল এক — পুরনো সারি ঠিক করার আগেও।
+     * ⓘ হাতধারের বাকি = চলাচল + এই সারিগুলো — তালিকা ([[HandLoanService::people()]]), হিসাবের বকেয়া
+     * ([[HandLoanService::balanceOf()]]) আর খাতা ([[handLoan()]]) তিনটাই এই একটা কোয়েরি পড়ে।
+     *
+     * @param  list<int>  $personIds
+     */
+    public static function looseRows(int $companyId, array $personIds): Builder
+    {
+        $head = StandardChart::find(StandardChart::HAND_LOAN);
+        $heads = $head === null ? [] : $head->selfAndDescendants()->modelKeys();
+        $own = [
+            ...array_values(Voucher::SOURCE_TYPES),
+            ...array_map(fn (string $t) => $t.':reversal', array_values(Voucher::SOURCE_TYPES)),
+        ];
+
+        return DB::table('ledger_entries as le')
+            ->where('le.company_id', $companyId)
+            ->whereIn('le.account_id', $heads ?: [0])
+            ->where('le.party_type', 'person')
+            ->whereIn('le.party_id', $personIds ?: [0])
+            ->whereNot(fn ($q) => $q->whereIn('le.source_type', $own)
+                ->whereExists(fn ($m) => $m->selectRaw('1')->from('fin_hand_loan_movements as hm')
+                    ->where('hm.company_id', $companyId)
+                    ->whereColumn('hm.voucher_id', 'le.source_id')));
+    }
+
     /** @param  array<string, mixed>  $f */
     private static function handLoan(array $f, int $personId): Builder
     {
@@ -152,19 +186,34 @@ final class LoanLedgerReports
         $debit = "CASE WHEN m.direction = '".HandLoanMovement::OUT."' THEN m.amount ELSE 0 END";
         $credit = "CASE WHEN m.direction = '".HandLoanMovement::IN."' THEN m.amount ELSE 0 END";
 
-        $moves = fn () => DB::table('fin_hand_loan_movements as m')
+        $kind = 'CASE m.direction WHEN '.$pdo->quote(HandLoanMovement::OUT).' THEN '.$pdo->quote((string) __('finance::loan_ledger.kind_given'))
+            .' ELSE '.$pdo->quote((string) __('finance::loan_ledger.kind_taken')).' END';
+        $source = 'CASE v.type WHEN '.$pdo->quote(Voucher::RECEIPT).' THEN '.$pdo->quote(Voucher::SOURCE_TYPES[Voucher::RECEIPT])
+            .' WHEN '.$pdo->quote(Voucher::PAYMENT).' THEN '.$pdo->quote(Voucher::SOURCE_TYPES[Voucher::PAYMENT]).' ELSE NULL END';
+
+        // ⓘ দুই উৎস এক সারিতে: হাতধারের চলাচল, আর হাতধার খাতে তাঁর নামে বাকি খতিয়ান-সারি ([[looseRows()]])
+        $moves = DB::table('fin_hand_loan_movements as m')
             ->join('fin_hand_loan_accounts as a', 'a.id', '=', 'm.account_id')
             ->leftJoin('vouchers as v', 'v.id', '=', 'm.voucher_id')
             ->where('m.company_id', $f['company_id'])
             ->where('a.person_id', $personId)
             ->whereRaw(HandLoanMovement::countedSql('m', 'v'))
-            ->tap(ReportEngine::branchWall($f, 'a.branch_id'));
+            ->tap(ReportEngine::branchWall($f, 'a.branch_id'))
+            ->selectRaw("m.moved_on as trx_date, v.document_no as document_no, COALESCE(NULLIF(m.note, ''), {$kind}) as narration, "
+                ."{$debit} as debit, {$credit} as credit, {$source} as source_type, v.id as source_id, m.id as id");
 
-        $net = "COALESCE(SUM({$debit}), 0) - COALESCE(SUM({$credit}), 0)";
+        $loose = self::looseRows((int) $f['company_id'], [$personId])
+            ->tap(ReportEngine::branchWall($f, 'le.branch_id'))
+            ->selectRaw("le.trx_date as trx_date, le.document_no as document_no, COALESCE(NULLIF(le.narration, ''), "
+                .$pdo->quote((string) __('finance::loan_ledger.kind_books')).') as narration, '
+                .'le.debit as debit, le.credit as credit, le.source_type as source_type, le.source_id as source_id, le.id + 1000000000 as id');
+
+        $all = fn () => DB::query()->fromSub((clone $moves)->unionAll(clone $loose), 'u');
 
         // ⓘ খোলা জের — শুরুর দিনের আগের সব; ধনাত্মক হলে দেওয়ার ঘরে, ঋণাত্মক হলে নেওয়ার ঘরে, যাতে যোগফল আর জের মেলে
-        $opening = $moves()
-            ->where('m.moved_on', '<', $f['from'])
+        $net = 'COALESCE(SUM(u.debit), 0) - COALESCE(SUM(u.credit), 0)';
+        $opening = $all()
+            ->where('u.trx_date', '<', $f['from'])
             ->selectRaw(
                 $pdo->quote((string) $f['from']).' as trx_date, NULL as document_no, '
                 .$pdo->quote((string) __('finance::loan_ledger.opening')).' as narration, '
@@ -172,15 +221,9 @@ final class LoanLedgerReports
                 .'NULL as source_type, NULL as source_id, 0 as sort, 0 as id'
             );
 
-        $kind = 'CASE m.direction WHEN '.$pdo->quote(HandLoanMovement::OUT).' THEN '.$pdo->quote((string) __('finance::loan_ledger.kind_given'))
-            .' ELSE '.$pdo->quote((string) __('finance::loan_ledger.kind_taken')).' END';
-        $source = 'CASE v.type WHEN '.$pdo->quote(Voucher::RECEIPT).' THEN '.$pdo->quote(Voucher::SOURCE_TYPES[Voucher::RECEIPT])
-            .' WHEN '.$pdo->quote(Voucher::PAYMENT).' THEN '.$pdo->quote(Voucher::SOURCE_TYPES[Voucher::PAYMENT]).' ELSE NULL END';
-
-        $lines = $moves()
-            ->whereBetween('m.moved_on', [$f['from'], $f['to']])
-            ->selectRaw("m.moved_on as trx_date, v.document_no as document_no, COALESCE(NULLIF(m.note, ''), {$kind}) as narration, "
-                ."{$debit} as debit, {$credit} as credit, {$source} as source_type, v.id as source_id, 1 as sort, m.id as id");
+        $lines = $all()
+            ->whereBetween('u.trx_date', [$f['from'], $f['to']])
+            ->selectRaw('u.trx_date, u.document_no, u.narration, u.debit, u.credit, u.source_type, u.source_id, 1 as sort, u.id');
 
         $running = DB::query()
             ->fromSub($opening->unionAll($lines), 'l')
