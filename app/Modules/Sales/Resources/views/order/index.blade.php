@@ -91,6 +91,14 @@
         </x-slot:actions>
                 <x-ui.date-range :dates="$dates" />
 
+                {{-- ⭐ "কেবল আমার সইয়ের অপেক্ষায়" — সইয়ের ট্যাবে (নকশার §৪, ধাপ ৮) --}}
+                @if ($tab === 'awaiting')
+                    <label class="flex min-h-(--spacing-touch) items-center gap-2 text-sm">
+                        <input type="checkbox" name="mine" value="1" @checked($mine ?? false) class="size-4" data-only-mine>
+                        {{ __('sales::order_status.only_mine') }}
+                    </label>
+                @endif
+
                 {{-- ⓘ বাতিল দেখানোর বাক্স কেবল "সব"-এ — ইতিহাসে বাতিল এমনিতেই থাকে, বাকি ট্যাবে বাতিলের জায়গা নেই --}}
                 @if ($tab === 'all')
                     <label class="flex min-h-(--spacing-touch) items-center gap-2 text-sm">

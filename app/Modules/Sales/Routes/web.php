@@ -246,6 +246,9 @@ Route::middleware('auth')->prefix('sales')->group(function () {
         Route::post('/{order}/cancel', [SalesOrderController::class, 'cancel'])->whereNumber('order')->name('cancel');
         // ⭐ বন্ধ — চাবি sales.order.close, কন্ট্রোলারের middleware()-এ
         Route::post('/{order}/close', [SalesOrderController::class, 'close'])->whereNumber('order')->name('close');
+        // ⭐ নতুন ধারার দুই দরজা — চাবি কন্ট্রোলারের middleware()-এ (নকশার ধাপ ৮)
+        Route::post('/{order}/quantities', [SalesOrderController::class, 'quantities'])->whereNumber('order')->name('quantities');
+        Route::post('/{order}/reject-rest', [SalesOrderController::class, 'rejectRest'])->whereNumber('order')->name('reject_rest');
     });
 
     Route::prefix('challans')->name('challan.')->group(function () {

@@ -12,7 +12,8 @@
 
                     <form method="POST" action="{{ route('sales.order.confirm', $order) }}" data-confirm-overview="{{ route('sales.order.overview', $order) }}">
                         @csrf
-                        <x-ui.button type="submit" tone="primary" data-overview-trigger>{{ __('sales::action.confirm') }}</x-ui.button>
+                        {{-- ⭐ নতুন ধারায় "নিশ্চিত" মানে "জমা" — বাকির যাচাই, তারপর সুপারভাইজার (নকশার ধাপ ৮) --}}
+                        <x-ui.button type="submit" tone="primary" data-overview-trigger>{{ $replacesDo ? __('sales::order_status.submit') : __('sales::action.confirm') }}</x-ui.button>
                     </form>
                 @endcan
 
@@ -106,6 +107,9 @@
             </dl>
         </section>
 
+        {{-- ⭐ সইয়ের অপেক্ষা, সীমায় আটকে, সতর্কবার্তা, ধরা মাল (নকশার ধাপ ৮) --}}
+        @include('sales::order.partials.flow-boxes')
+
         <section data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border)
                         bg-(--color-surface-card)">
             <h2 class="border-b border-(--color-border) bg-(--color-section-head) px-4 py-3 font-semibold">
@@ -123,7 +127,10 @@
                      'render' => fn ($l) => $l->product?->unit?->name()],
                     ['key' => 'ordered_qty', 'label' => __('sales::field.ordered'),
                      'numeric' => true, 'width' => '8rem',
-                     'render' => fn ($l) => \App\Core\Support\Money::format($l->ordered_qty)],
+                     'render' => fn ($l) => \App\Core\Support\Money::format($l->ordered_qty)
+                        . ($l->requested_qty !== null && bccomp((string) $l->requested_qty, (string) $l->ordered_qty, 4) !== 0
+                            ? ' · ' . __('sales::order_status.requested', ['qty' => \App\Core\Support\Money::quantity((string) $l->requested_qty)])
+                            : '')],
                     ['key' => 'delivered', 'label' => __('sales::field.delivered'),
                      'numeric' => true, 'width' => '8rem',
                      'render' => fn ($l) => \App\Core\Support\Money::format($l->deliveredQty())],
@@ -157,6 +164,9 @@
                 ]" />
             </div>
         </section>
+
+        {{-- ⭐ সুপারভাইজারের পরিমাণ, আর এক লাইনের বাকিটা বন্ধ (নকশার ধাপ ৮) --}}
+        @include('sales::order.partials.flow-forms')
 
         @can('delete', $order)
             {{-- ⓘ বন্ধ আদেশ বাতিল হয় না — বন্ধের দিনেই তার বাকি মাল ছাড়া হয়েছে --}}

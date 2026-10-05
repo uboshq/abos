@@ -74,6 +74,18 @@ final class OrderTracking
      */
     public const LIST_STALE = 'stale';
 
+    /*
+     * ⭐ নতুন ধারার ধাপগুলোর ট্যাব — নকশা "DO বিক্রয় আদেশে মেশানো" §৪, ধাপ ৮ (৫ অক্টোবর ২০২৬)। ⓘ অবস্থা ধরে, একটাই নিয়ম
+     * [[applyListTab()]] আর [[listTabsOf()]]-এ; "ডিপো যাচাইয়ে" চিহ্ন ধরে (`depot_check_at`), অবস্থা নয়।
+     */
+    public const LIST_DRAFT = 'draft';
+
+    public const LIST_AWAITING = 'awaiting';
+
+    public const LIST_CREDIT_HELD = 'credit_held';
+
+    public const LIST_DEPOT = 'depot';
+
     /**
      * ট্যাবের ক্রম — চাবি → নাম আর খোলার চাবি।
      *
@@ -81,7 +93,11 @@ final class OrderTracking
      */
     public const LIST_TABS = [
         self::LIST_ALL => ['label' => 'sales::order_tabs.all', 'hint' => 'sales::order_tabs.hint_all', 'permission' => 'sales.order.view'],
+        self::LIST_DRAFT => ['label' => 'sales::order_status.tab_draft', 'hint' => 'sales::order_status.hint_tab_draft', 'permission' => 'sales.order.view'],
+        self::LIST_AWAITING => ['label' => 'sales::order_status.tab_awaiting', 'hint' => 'sales::order_status.hint_tab_awaiting', 'permission' => 'sales.order.view'],
+        self::LIST_CREDIT_HELD => ['label' => 'sales::order_status.tab_credit_held', 'hint' => 'sales::order_status.hint_tab_credit_held', 'permission' => 'sales.order.view'],
         self::LIST_PENDING => ['label' => 'sales::order_tabs.pending', 'hint' => 'sales::order_tabs.hint_pending', 'permission' => 'sales.order.view'],
+        self::LIST_DEPOT => ['label' => 'sales::order_status.tab_depot', 'hint' => 'sales::order_status.hint_tab_depot', 'permission' => 'sales.order.view'],
         self::LIST_PARTIAL => ['label' => 'sales::order_tabs.partial', 'hint' => 'sales::order_tabs.hint_partial', 'permission' => 'sales.order.view'],
         self::LIST_BACK => ['label' => 'sales::order_tabs.back', 'hint' => 'sales::order_tabs.hint_back', 'permission' => 'sales.order.view'],
         self::LIST_STALE => ['label' => 'sales::order_status.tab_stale', 'hint' => 'sales::order_status.hint_tab_stale', 'permission' => 'sales.order.view'],
@@ -255,6 +271,12 @@ final class OrderTracking
             // ⭐ পুরনো খসড়া — খসড়া অবস্থায় তিন দিন বা তার বেশি ([[OrderProgress::isStale()]]-এর হুবহু নিয়ম)
             self::LIST_STALE => $orders->where('sal_orders.status', SalesOrderStatus::DRAFT)
                 ->where('sal_orders.created_at', '<=', OrderProgress::staleCutoff()),
+            // ⭐ নতুন ধারার ধাপ — অবস্থা ধরে; ডিপো যাচাই চিহ্ন ধরে ([[listTabsOf()]]-এর হুবহু নিয়ম; নকশার ধাপ ৮)
+            self::LIST_DRAFT => $orders->where('sal_orders.status', SalesOrderStatus::DRAFT),
+            self::LIST_AWAITING => $orders->where('sal_orders.status', SalesOrderStatus::AWAITING_APPROVAL),
+            self::LIST_CREDIT_HELD => $orders->where('sal_orders.status', SalesOrderStatus::CREDIT_HELD),
+            self::LIST_DEPOT => $orders->where('sal_orders.status', SalesOrderStatus::CONFIRMED)
+                ->whereNotNull('sal_orders.depot_check_at'),
             // ⓘ "সব" — আগের তালিকা হুবহু: বাতিল লুকানো, চাইলে দেখা যায় (নিয়ম ৫)
             default => $withCancelled ? $orders : $live($orders),
         };
@@ -270,7 +292,7 @@ final class OrderTracking
     {
         $rows = DB::query()
             ->fromSub(
-                $orders->select('sal_orders.id', 'sal_orders.status', 'sal_orders.created_at')
+                $orders->select('sal_orders.id', 'sal_orders.status', 'sal_orders.created_at', 'sal_orders.depot_check_at')
                     ->selectSub($this->orderedQty(), 'ordered_total')
                     ->selectSub($this->deliveredQty(), 'delivered_total')
                     ->selectSub($this->shortLines()->selectRaw('COUNT(*)'), 'short_lines'),
@@ -324,7 +346,15 @@ final class OrderTracking
             $tabs[] = self::LIST_STALE;
         }
 
-        return $tabs;
+        // ⭐ নতুন ধারার ধাপ — [[applyListTab()]]-এর হুবহু নিয়ম (নকশার ধাপ ৮)
+        $status = $row->status ?? null;
+
+        return [...$tabs, ...array_keys(array_filter([
+            self::LIST_DRAFT => $status === SalesOrderStatus::DRAFT,
+            self::LIST_AWAITING => $status === SalesOrderStatus::AWAITING_APPROVAL,
+            self::LIST_CREDIT_HELD => $status === SalesOrderStatus::CREDIT_HELD,
+            self::LIST_DEPOT => $status === SalesOrderStatus::CONFIRMED && ($row->depot_check_at ?? null) !== null,
+        ]))];
     }
 
     /**

@@ -8,6 +8,7 @@ use App\Core\Concerns\AuthorizesResource;
 use App\Core\Concerns\FiltersByDate;
 use App\Core\Concerns\GrandTotals;
 use App\Core\Concerns\SortsLists;
+use App\Core\Engines\Approval\ApprovalEngine;
 use App\Core\Services\MenuBuilder;
 use App\Core\Support\DocumentStatus;
 use App\Core\Support\Money;
@@ -17,11 +18,14 @@ use App\Modules\Inventory\Models\Product;
 use App\Modules\Inventory\Models\Warehouse;
 use App\Modules\Inventory\Services\PackConversion;
 use App\Modules\Sales\Http\Requests\SalesOrderRequest;
+use App\Modules\Sales\Models\DeliveryOrder;
 use App\Modules\Sales\Models\SalesOrder;
 use App\Modules\Sales\Services\OrderProgress;
 use App\Modules\Sales\Services\OrderTracking;
 use App\Modules\Sales\Services\SalesOrderService;
 use App\Modules\Sales\Services\SellableStock;
+use App\Modules\Sales\Support\DeliveryOrderStatus;
+use App\Modules\Sales\Support\SalesOrderStatus;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
@@ -53,6 +57,12 @@ class SalesOrderController extends Controller implements HasMiddleware
             new Middleware('can:sales.order.cancel', only: ['cancel']),
             // ⭐ বন্ধ — নিজের চাবি (মালিক, ৪ অক্টোবর ২০২৬; [[SalesOrderService::close()]])
             new Middleware('can:sales.order.close', only: ['close']),
+            /*
+             * ⭐ নতুন ধারার দুই দরজা (নকশার ধাপ ৮)। পরিমাণ কমানো: আদেশ দেখার চাবি, আর ভিতরে সেবা নিজে দেখে মানুষটা এখনকার
+             * অনুমোদনকারী কি না ([[SalesOrderService::setApprovedQuantities()]] → ৪০৩)। বাকিটা বন্ধ: বন্ধের চাবি।
+             */
+            new Middleware('can:sales.order.view', only: ['quantities']),
+            new Middleware('can:sales.order.close', only: ['rejectRest']),
         ];
     }
 
@@ -114,6 +124,17 @@ class SalesOrderController extends Controller implements HasMiddleware
             $request->boolean('cancelled'),
         );
 
+        /*
+         * ⭐ "কেবল আমার সইয়ের অপেক্ষায়" — সইয়ের ট্যাবের ভিতরে (নকশার §৪)। ⓘ সইয়ের ইনবক্সের একই প্রশ্ন
+         * ([[ApprovalEngine::pendingQueryFor()]]), তাই দুই পাতা কখনো দুই কথা বলে না।
+         */
+        if ($tab === OrderTracking::LIST_AWAITING && $request->boolean('mine') && $request->user() !== null) {
+            $query->whereIn('sal_orders.id', app(ApprovalEngine::class)->pendingQueryFor($request->user())
+                ->where('approvable_type', SalesOrder::class)
+                ->where('action', SalesOrderService::APPROVAL_ACTION)
+                ->select('approvable_id'));
+        }
+
         $sort = $this->applySort($query, $request, [
             'recent' => fn ($q) => $q->orderByDesc('trx_date')->orderByDesc('id'),
             'oldest' => fn ($q) => $q->orderBy('trx_date')->orderBy('id'),
@@ -134,6 +155,7 @@ class SalesOrderController extends Controller implements HasMiddleware
             'showCancelled' => $request->boolean('cancelled'),
             'tab' => $tab,
             'tabs' => $this->listTabs($request, $tab, $counts),
+            'mine' => $request->boolean('mine'),
         ]);
     }
 
@@ -163,6 +185,25 @@ class SalesOrderController extends Controller implements HasMiddleware
                 'count' => $counts[$key] ?? 0,
                 'active' => $key === $active,
             ];
+        }
+
+        /*
+         * ⭐ "পুরনো DO (n)" — কেবল যতক্ষণ কোম্পানিতে খোলা DO আছে, আর DO দেখার চাবি থাকলে; চাপলে DO-র ডেস্ক (নকশার §৪)।
+         * ⓘ খোলা DO নিজের নম্বরে শেষ হয় — শেষ হলে ট্যাবটা নিজেই সরে।
+         */
+        if ($request->user()?->can('sales.do.view') ?? false) {
+            $openDos = DeliveryOrder::query()->whereNotIn('status', DeliveryOrderStatus::CLOSED)->count();
+
+            if ($openDos > 0) {
+                $tabs[] = [
+                    'key' => 'old_do',
+                    'label' => __('sales::order_status.tab_old_do'),
+                    'hint' => __('sales::order_status.hint_tab_old_do'),
+                    'url' => route('sales.delivery_order.index'),
+                    'count' => $openDos,
+                    'active' => false,
+                ];
+            }
         }
 
         return $tabs;
@@ -197,7 +238,81 @@ class SalesOrderController extends Controller implements HasMiddleware
             'order' => $order,
             // ⭐ মাথার আর প্রতি লাইনের অবস্থা ও অগ্রগতি ([[OrderProgress]], মালিক, ৪ অক্টোবর ২০২৬)
             'status' => app(OrderProgress::class)->of($order),
+            ...$this->flowFacts($request, $order),
         ]);
+    }
+
+    /**
+     * ⭐ আদেশের পাতার নতুন ধারার অংশ — সইয়ের অপেক্ষা, পরিমাণ কমানোর অধিকার, ধরা মাল, আর "জমা" বোতাম (নকশার ধাপ ৮)।
+     *
+     * @return array{approval: ?\App\Models\Approval, mayLower: bool, held: array<int, string>, replacesDo: bool}
+     */
+    private function flowFacts(Request $request, SalesOrder $order): array
+    {
+        $engine = app(ApprovalEngine::class);
+        $approval = $order->status === SalesOrderStatus::AWAITING_APPROVAL
+            ? $engine->latestFor($order, SalesOrderService::APPROVAL_ACTION)
+            : null;
+        $approval = $approval?->isPending() ? $approval : null;
+
+        return [
+            'approval' => $approval,
+            'mayLower' => $approval !== null && $request->user() !== null && $engine->canDecide($approval, $request->user()),
+            'held' => $order->status === SalesOrderStatus::CONFIRMED && $order->warehouse_id !== null
+                ? $this->service->heldByThisOrder($order)
+                : [],
+            'replacesDo' => $this->service->replacesDo(),
+        ];
+    }
+
+    /**
+     * ⭐ সুপারভাইজার পরিমাণ কমান — পাতা থেকে ([[SalesOrderService::setApprovedQuantities()]]: কেবল এখনকার অনুমোদনকারী, ০ থেকে চাওয়া)।
+     */
+    public function quantities(Request $request, SalesOrder $order): RedirectResponse
+    {
+        $data = $request->validate(
+            ['qty' => ['required', 'array'], 'qty.*' => ['required', 'numeric', 'min:0']],
+            [],
+            ['qty.*' => __('sales::order_status.field_lower_qty')],
+        );
+
+        $this->service->setApprovedQuantities(
+            $order,
+            array_map(fn ($v) => (string) $v, $data['qty']),
+            $request->user(),
+        );
+
+        return redirect()
+            ->route('sales.order.show', $order)
+            ->with('saved', __('sales::order_status.lower_saved'));
+    }
+
+    /**
+     * ⭐ এক লাইনের বাকিটা "আর দেওয়া হবে না" — পাতা থেকে, কারণসহ ([[SalesOrderService::rejectRemainder()]])।
+     */
+    public function rejectRest(Request $request, SalesOrder $order): RedirectResponse
+    {
+        $data = $request->validate(
+            [
+                'line_id' => ['required', 'integer'],
+                'reject_qty' => ['required', 'numeric', 'gt:0'],
+                'reject_reason' => ['required', 'string', 'max:255'],
+            ],
+            [],
+            [
+                'line_id' => __('sales::order_status.field_reject_line'),
+                'reject_qty' => __('sales::order_status.field_reject_qty'),
+                'reject_reason' => __('sales::order_status.field_reject_reason'),
+            ],
+        );
+
+        $line = $order->lines()->whereKey((int) $data['line_id'])->firstOrFail();
+
+        $this->service->rejectRemainder($line, (string) $data['reject_qty'], (string) $data['reject_reason']);
+
+        return redirect()
+            ->route('sales.order.show', $order)
+            ->with('saved', __('sales::order_status.reject_saved'));
     }
 
     public function edit(Request $request, SalesOrder $order): View
