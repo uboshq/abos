@@ -231,6 +231,8 @@ final class ChequeService
         $this->assertStatus($cheque, [Cheque::PENDING, Cheque::DEPOSITED, Cheque::CLEARED]);
 
         return DB::transaction(function () use ($cheque, $reason) {
+            $this->lockedFresh($cheque, [Cheque::PENDING, Cheque::DEPOSITED, Cheque::CLEARED]);
+
             /*
              * ⚠️ পাশ হয়ে থাকলে ব্যাংকের টাকা আগে ১১০৪-এ ফেরে; আদায় বাতিল
              * তারপর ১১০৪ থেকে গ্রাহকে ফেরায়। নাহলে ব্যাংকে এমন টাকা থেকে
@@ -326,6 +328,9 @@ final class ChequeService
         }
 
         return DB::transaction(function () use ($cheque, $bank, $date, $amount) {
+            // ⛔ তালা দিয়ে অবস্থা আবার — একই মুহূর্তে "ফেরত" এলে দুটোই "জমা" দেখত (অডিট ম১০)
+            $this->lockedFresh($cheque, [Cheque::PENDING, Cheque::DEPOSITED]);
+
             /*
              * ⭐ নতুন চেকে পাশের দিনই ডিলারের বকেয়া কমে — এর আগে খাতায়
              * কিছুই ছিল না। ⚠️ পুরনো চেক আগেই Cr ডিলার পেয়েছে, তাই সে
@@ -408,6 +413,9 @@ final class ChequeService
 
         if ($cheque->direction === Cheque::RECEIVED && ! $this->receivedIntoTheBooks($cheque)) {
             return DB::transaction(function () use ($cheque, $reason, $date, $amount) {
+                // ⛔ তালা দিয়ে অবস্থা আবার — একই মুহূর্তে "পাশ" হলে এখানে তা দেখা যায়, আর পাশের টাকাও ফেরে (অডিট ম১০)
+                $this->lockedFresh($cheque, [Cheque::PENDING, Cheque::DEPOSITED, Cheque::CLEARED]);
+
                 /*
                  * ⭐ নতুন নিয়মের চেক: পাশের আগে খাতায় কিছুই ছিল না, তাই
                  * উল্টানোরও কিছু নেই — কেবল অবস্থা।
@@ -432,6 +440,10 @@ final class ChequeService
          * Dr ডিলার / Cr ব্যাংক।
          */
         return DB::transaction(function () use ($cheque, $reason, $date, $amount) {
+            $this->lockedFresh($cheque, $cheque->direction === Cheque::RECEIVED
+                ? [Cheque::PENDING, Cheque::DEPOSITED, Cheque::CLEARED]
+                : [Cheque::PENDING, Cheque::DEPOSITED]);
+
             if ($cheque->direction === Cheque::RECEIVED && $cheque->status === Cheque::CLEARED) {
                 $this->returnToHand($cheque, $date, $reason);
             }
@@ -660,6 +672,23 @@ final class ChequeService
             documentNo: $cheque->document_no,
             lines: $lines,
         );
+    }
+
+    /**
+     * ⛔ চেকের সারি তালা দিয়ে আবার পড়া, তারপর অবস্থা মাপা — Accounts-Finance অডিট ম১০, ৪ অক্টোবর ২০২৬।
+     *
+     * ⚠️ আগে পাশ আর ফেরত হাতে ধরা কপির অবস্থা দেখত; দুজন একসাথে চাপলে দুজনেই "জমা" দেখতেন — খাতায় পাশের টাকা ব্যাংকে
+     * বসত, অথচ কাগজ শেষে "ফেরত"। ⓘ এখন দ্বিতীয়জন অপেক্ষা করেন, তারপর আসল অবস্থা দেখেন: ফেরতের পথ তখন পাশের টাকাও
+     * ফেরায়, আর পাশের পথ থামে।
+     *
+     * @param  list<string>  $allowed
+     */
+    private function lockedFresh(Cheque $cheque, array $allowed): void
+    {
+        $fresh = Cheque::query()->withoutGlobalScopes()->whereKey($cheque->getKey())->lockForUpdate()->firstOrFail();
+        $cheque->setRawAttributes($fresh->getAttributes(), true);
+
+        $this->assertStatus($cheque, $allowed);
     }
 
     /**

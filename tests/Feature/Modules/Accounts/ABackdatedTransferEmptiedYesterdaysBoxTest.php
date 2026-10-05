@@ -59,6 +59,20 @@ final class ABackdatedTransferEmptiedYesterdaysBoxTest extends TestCase
         $this->assertSame('draft', $this->send('200', now()->subDays(5)->toDateString())->status);
     }
 
+    /**
+     * ⓘ সবচেয়ে কম জের মাঝের এক দিনে — আজ আর সেই দিন দুটোই ভরা। ছয় দিন আগে ১০০০, তিন দিন আগে ৮০০ খরচ, গতকাল আবার
+     * ৮০০ এল (আজ ১০০০)। পাঁচ দিন আগের ৫০০ পাঠালে তিন দিন আগে বাক্স −৩০০ হত।
+     */
+    public function test_the_lowest_day_in_between_counts_even_when_today_is_full(): void
+    {
+        $this->putMoneyIn($this->from->account, '1000', now()->subDays(6)->toDateString());
+        $this->spend('800', now()->subDays(3)->toDateString());
+        $this->putMoneyIn($this->from->account, '800', now()->subDay()->toDateString());
+
+        $this->assertRefused(fn () => $this->send('500', now()->subDays(5)->toDateString()),
+            '⛔ মাঝের দিনে বাক্স ঋণাত্মক হলো — আজ আর শুরুর দিন দেখে পাশ।');
+    }
+
     /** আজ এল ১০০০ — তিন দিন আগের তারিখে পাঠানো যায় না, তখন বাক্সে কিছুই ছিল না */
     public function test_money_that_came_later_does_not_fund_an_earlier_transfer(): void
     {
