@@ -657,6 +657,8 @@ return [
         \App\Modules\Finance\Reports\LoanLedgerReports::class,
         // ⭐ মূলধন ও বিনিয়োগের রিপোর্ট — অর্থ-মডিউলের পরিকল্পনা, অংশ ২
         \App\Modules\Finance\Reports\CapitalReports::class,
+        // ⭐ ভাড়ার চুক্তি ও জামানতের রিপোর্ট — অর্থ-মডিউলের পরিকল্পনা, অংশ ৫
+        \App\Modules\Finance\Reports\RentalReports::class,
     ],
 
     'events' => [],

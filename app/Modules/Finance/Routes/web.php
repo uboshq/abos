@@ -232,6 +232,10 @@ Route::middleware('auth')->prefix('finance')->group(function () {
          */
         Route::post('/people', [RentalContractController::class, 'storePerson'])->name('person.store');
 
+        // ⭐ ভাড়ার চুক্তি ও জামানতের রিপোর্ট — অর্থ-মডিউলের পরিকল্পনা, অংশ ৫ ([[RentalReportController]], ৬ অক্টোবর ২০২৬)
+        Route::get('/reports/{slug}', [\App\Modules\Finance\Http\Controllers\RentalReportController::class, 'show'])
+            ->where('slug', '[a-z\-]+')->name('report.show');
+
         Route::get('/{contract}', [RentalContractController::class, 'show'])
             ->whereNumber('contract')->name('show');
 

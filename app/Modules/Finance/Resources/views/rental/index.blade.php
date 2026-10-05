@@ -112,6 +112,11 @@
             </x-ui.toolbar>
         </form>
 
+        {{-- ⭐ ভাড়ার রিপোর্ট — অর্থ-মডিউলের পরিকল্পনা, অংশ ৫ ([[RentalReportController::TABS]]) --}}
+        <div class="px-2 pb-2">
+            @include('finance::rental.partials.report-tabs')
+        </div>
+
         {{-- ⭐ এই জায়গার চুক্তি — ছাঁকনিটা চুপচাপ বসে না (২০ সেপ্টেম্বর ২০২৬)।
              ⚠️ না লিখলে মানুষ ভাবতেন এটাই সব চুক্তি, আর সংখ্যাটা কম মনে হত। --}}
         @if (($subject ?? null) !== null)
