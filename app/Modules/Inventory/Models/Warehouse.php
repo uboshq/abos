@@ -58,7 +58,16 @@ class Warehouse extends Model implements Drillable
      */
     public static function idsInViewedBranch(): ?array
     {
-        if (ViewedBranch::one() === null) {
+        /*
+         * ⭐ "সব শাখা"-তেও গুদাম-সীমিত মানুষের কেবল নিজের গুদাম — Inventory অডিট ম১৩, ৫ অক্টোবর ২০২৬।
+         * ⛔ আগে "সব শাখা" মানেই `null` ("সব গুদাম"), মানুষটা গুদাম-সীমিত হলেও — কাঁচা মজুদ-কোয়েরিতে তিনি সব গুদামের
+         * পরিমাণ আর মূল্য দেখতেন। ⓘ নিচের কোয়েরি নিজেই নাগালের দেয়াল মানে ([[ScopedToUserWarehouse]]), তাই তালিকাটা সেখান থেকেই।
+         */
+        $user = auth()->user();
+        $limited = $user instanceof \App\Models\User
+            && app(\App\Core\Services\DataScope::class)->idsFor($user, \App\Models\UserDataScope::WAREHOUSE) !== null;
+
+        if (ViewedBranch::one() === null && ! $limited) {
             return null;
         }
 

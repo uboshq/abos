@@ -202,6 +202,12 @@ class StockPlacementController extends Controller implements HasMiddleware
             ->leftJoin('inv_batches as b', 'b.id', '=', 'm.batch_id')
             ->where('m.company_id', CompanyContext::id())
             /*
+             * ⭐ কেবল দেখার নাগালের গুদাম — হেডারে বাছা শাখার, আর গুদাম-সীমিত মানুষের নিজের (Inventory অডিট ম১৩ ও ম৩০,
+             * ৫ অক্টোবর ২০২৬)। ⛔ আগে কাঁচা কোয়েরিতে কোনো ছাঁকনিই ছিল না: অন্য শাখার, অন্য গুদামের বিল এই বোর্ডে ভাসত।
+             */
+            ->when(Warehouse::idsInViewedBranch(), fn ($q, array $ids) => $q->whereIn('m.warehouse_id', $ids))
+            ->when(Warehouse::idsInViewedBranch() === [], fn ($q) => $q->whereRaw('1 = 0'))
+            /*
              * ⚠️ কাগজের নম্বর ও তারিখ **দলের অংশ নয়** — MAX/MIN দিয়ে আনা হয়।
              *
              * ── কী ভাঙা ছিল, ৪ সেপ্টেম্বর ২০২৬ ─────────────────────────
