@@ -17,7 +17,7 @@ return [
     'address' => 'Address',
     'hand_loan_balance' => 'Hand loan balance',
     'books_total' => 'Total due (all accounts)',
-    'differs_short' => 'differs',
+    'elsewhere' => 'On other accounts :amount',
     'differs' => 'The hand-loan balance and the books total differ — money sits in the name of this person on another account, or a hand-loan voucher did not land in their name.',
     'give_or_take' => 'New give/take',
 ];

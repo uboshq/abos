@@ -23,6 +23,7 @@
             @csrf
             <x-ui.field name="name_bn" :label="__('finance::field.hl_new_person')" required />
             <x-ui.field name="mobile" :label="__('finance::field.person_mobile')" />
+            <x-ui.field name="address" :label="__('finance::loan_ledger.address')" />
             <x-ui.button type="submit" tone="primary">{{ __('finance::action.add_person') }}</x-ui.button>
         </form>
     @endcan

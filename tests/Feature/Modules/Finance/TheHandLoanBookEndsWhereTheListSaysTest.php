@@ -106,8 +106,30 @@ final class TheHandLoanBookEndsWhereTheListSaysTest extends TestCase
         $this->assertSame(0, bccomp('0', $row['balance'], 4), 'হাতধারে তাঁর কোনো চলাচল নেই।');
         $this->assertTrue($row['differs']);
 
+        $this->assertSame(0, bccomp('100', $row['elsewhere'], 4), '"অন্য খাতে" = মোট − হাতধার');
+
         $page = $this->get(route('finance.hand_loan.index'))->assertOk();
-        $page->assertSee('data-books-differ', false)->assertSee('(Dr) 100.00');
+        // ⭐ "⚠ মেলে না" নয় — তথ্যের লেখা, মালিকের কথায় (৫ অক্টোবর ২০২৬)
+        $page->assertSee('data-books-elsewhere', false)
+            ->assertSee(__('finance::loan_ledger.elsewhere', ['amount' => '(Dr) 100.00']))
+            ->assertDontSee('মেলে না');
+    }
+
+    public function test_an_address_saved_on_the_person_form_or_the_quick_add_shows_in_the_list(): void
+    {
+        // ⓘ মাস্টার ডেটার ব্যক্তির ফর্ম — ঘরটা আঁকা আছে, আর সংরক্ষণে বসে
+        $this->get(route('master_data.person.create'))->assertOk()->assertSee('name="address"', false);
+        $this->post(route('master_data.person.store'), ['name_en' => 'Form Person', 'mobile' => '01700000009', 'address' => 'কেন্দুয়া বাজার'])
+            ->assertSessionHasNoErrors();
+        $this->assertSame('কেন্দুয়া বাজার', Person::query()->where('name_en', 'Form Person')->value('address'));
+
+        // ⓘ হাতধারের পাতার দ্রুত-যোগ — নাম, মোবাইল আর ঠিকানা
+        $this->get(route('finance.hand_loan.index'))->assertOk()->assertSee('name="address"', false);
+        $this->post(route('finance.hand_loan.person.store'), ['name_bn' => 'Quick Person', 'mobile' => '01700000010', 'address' => 'মোহনগঞ্জ'])
+            ->assertSessionHasNoErrors();
+        $this->assertSame('মোহনগঞ্জ', Person::query()->where('name_en', 'Quick Person')->value('address'));
+
+        $this->get(route('finance.hand_loan.index'))->assertOk()->assertSee('কেন্দুয়া বাজার')->assertSee('মোহনগঞ্জ');
     }
 
     public function test_every_person_is_listed_on_opening_the_page_and_a_name_opens_the_book_behind_the_key(): void

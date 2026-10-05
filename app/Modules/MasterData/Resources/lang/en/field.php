@@ -69,5 +69,6 @@ return [
     'exchange_rate' => 'Rate',
 
     'mobile' => 'Mobile',
+    'address' => 'Address',
     'note' => 'Note',
 ];

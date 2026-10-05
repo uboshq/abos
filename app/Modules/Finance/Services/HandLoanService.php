@@ -478,6 +478,8 @@ final class HandLoanService
             $row['balance'] = bcsub($row['given'], $row['taken'], 4);
             $row['books'] = $books[$id] ?? '0.0000';
             $row['differs'] = bccomp($row['balance'], $row['books'], 4) !== 0;
+            // ⭐ অন্য খাতে — মোট পাওনা বাদ হাতধারের বাকি (মালিক, ৫ অক্টোবর ২০২৬: "মেলে না" ভুলের মতো শোনাত, অথচ ভুল নেই)
+            $row['elsewhere'] = bcsub($row['books'], $row['balance'], 4);
             foreach (['given', 'taken', 'balance', 'books'] as $key) {
                 $totals[$key] = bcadd($totals[$key], $row[$key], 4);
             }

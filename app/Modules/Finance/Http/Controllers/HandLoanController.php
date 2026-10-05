@@ -229,11 +229,14 @@ class HandLoanController extends Controller implements HasMiddleware
         $data = $request->validate([
             'name_bn' => ['required', 'string', 'max:120'],
             'mobile' => ['nullable', 'string', 'max:32'],
+            // ⭐ ঠিকানাও — মালিক, ৫ অক্টোবর ২০২৬; তালিকার "ঠিকানা" কলাম এটাই পড়ে
+            'address' => ['nullable', 'string', 'max:191'],
         ]);
 
         $payload = [
             'person_new' => $data['name_bn'],
             'person_mobile' => $data['mobile'] ?? null,
+            'person_address' => $data['address'] ?? null,
         ];
 
         $this->people->resolve($payload);

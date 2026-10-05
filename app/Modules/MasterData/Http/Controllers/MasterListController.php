@@ -347,9 +347,15 @@ class MasterListController extends Controller implements HasMiddleware
                  * নামে পাহারা নরম (দুইজন "মোঃ রহিম" থাকতে পারেন), নম্বরে কঠিন।
                  */
                 'mobile' => ['type' => 'text', 'label' => 'master_data::field.mobile'],
+                /*
+                 * ⭐ ঠিকানা — মালিক, ৫ অক্টোবর ২০২৬: "ঠিকানা নেই, পরিকল্পনামতো হয়নি"। ⓘ ঘরটা টেবিলে আগে থেকেই ছিল
+                 * (`mdm_people.address`, অর্থের ফর্মের দ্রুত-যোগ ওখানে লিখত), কেবল এই ফর্মে আঁকা হয়নি; হাতধারের
+                 * ব্যক্তির তালিকার "ঠিকানা" কলাম এটাই পড়ে।
+                 */
+                'address' => ['type' => 'text', 'label' => 'master_data::field.address'],
                 'note' => ['type' => 'text', 'label' => 'master_data::field.note'],
             ],
-            'columns' => ['mobile'],
+            'columns' => ['mobile', 'address'],
         ],
 
         /*
