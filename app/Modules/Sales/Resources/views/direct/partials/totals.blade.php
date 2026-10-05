@@ -576,7 +576,7 @@
                     </button>
 
                     {{-- সারি ২ — "খসড়া রাখুন" ফর্মের নিজের submit (নাম আর মান কেবল চাপলে যায় — নিচের ব্যাখ্যা দেখুন) --}}
-                    <button type="submit" name="save_as_draft" value="1" class="ds-b8 ds-b8-neutral" data-counter-button="save_draft"
+                    <button type="submit" name="save_as_draft" value="1" class="ds-b8 ds-b8-grey bg-(--color-border-strong)" data-counter-button="save_draft"
                             :disabled="! canConfirm">
                         <span>{{ __('sales::action.save_draft') }}</span>
                     </button>

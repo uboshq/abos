@@ -198,6 +198,8 @@
         .ds-b8.is-on { box-shadow: 0 0 0 2px var(--b8-ink); }
         /* ⭐ লাইনের ভিতরের বোতাম — "দাম দেখুন" মন্তব্যের লাইনে (মালিক, ৪ অক্টোবর ২০২৬) */
         .ds-b8-inline { padding: .15rem .6rem; min-height: 1.9rem; }
+        /* ⭐ "খসড়া রাখুন" ছাই রং — মালিকের ছবি, ২৭ সেপ্টেম্বর ২০২৬; সারি ২-এ সরার পরেও (৫ অক্টোবর ২০২৬) */
+        .ds-b8-grey { --b8-bg: var(--color-border-strong); --b8-ink: var(--color-ink); }
         .ds-b8-success { --b8-bg: var(--color-badge-success-bg); --b8-ink: var(--color-badge-success-ink); }
         .ds-b8-pending { --b8-bg: var(--color-badge-pending-bg); --b8-ink: var(--color-badge-pending-ink); }
         .ds-b8-info { --b8-bg: var(--color-badge-info-bg); --b8-ink: var(--color-badge-info-ink); }
