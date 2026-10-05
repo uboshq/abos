@@ -449,6 +449,11 @@ final class AnOrderSaysWhereItStandsOnEveryLineTest extends TestCase
         $this->deliver($order, ['first' => '6']);
         $this->assertSame(0, bccomp(bcadd($base, '4', 4), $reserved(), 4), 'প্রস্তুতিটাই ভুল — চালান ৬টা ছাড়েনি।');
 
+        // ⛔ একই আইডিতে অন্য নম্বরের "আদেশের" ধরা — ডেমো-বীজ যেমন বসায় (SO-000001, আইডি ১) — এই আদেশের নয় (৫ অক্টোবর ২০২৬)
+        app(StockService::class)->move(product: $this->product, warehouse: $this->warehouse,
+            sourceType: SalesOrder::STOCK_SOURCE, sourceId: (int) $order->id, reserved: '7', documentNo: 'SO-SEED-'.$order->id);
+        $base = bcadd($base, '7', 4);
+
         $held = $orders->heldByThisOrder($order->fresh());
         $this->assertSame(0, bccomp('4', $held[(int) $this->product->id] ?? '0', 4),
             '⛔ ৬টা চালানে যাওয়ার পরেও আদেশ বলছে সে '.($held[(int) $this->product->id] ?? '0').' ধরে আছে — অবশিষ্ট ৪।');

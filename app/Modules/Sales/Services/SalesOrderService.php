@@ -851,7 +851,13 @@ final class SalesOrderService
             ->where('warehouse_id', $order->warehouse_id)
             ->where(fn ($q) => $q
                 // ⭐ আর এক লাইনের বাকি বন্ধে যা ছাড়া হলো (`:reject`) — নাহলে পরের চালান এমন মাল ছাড়ত যা আদেশ আর ধরে না (ধাপ ৭)
-                ->where(fn ($own) => $own->whereIn('source_type', [SalesOrder::STOCK_SOURCE, SalesOrder::STOCK_SOURCE.':reject'])->where('source_id', $order->id))
+                /*
+                 * ⛔ আইডির সাথে আদেশের নম্বরও — আদেশের নিজের প্রতিটা সারি নিজের নম্বর লেখে। ⓘ ডেমো-বীজ "sales_order"
+                 * উৎসে ১ আর ২ আইডিতে ধরা বসায় এমন আদেশের নামে যা নেই; শুধু আইডি মেলালে সত্যিকারের ১ নম্বর আদেশ
+                 * ঐ ৬০টাকে নিজের ভাবত আর চালান-বাতিল-বন্ধে অন্যের মাল ছাড়ত (৫ অক্টোবর ২০২৬, ধাপ ৮-এর ১০৮০p যাচাইয়ে ধরা)।
+                 */
+                ->where(fn ($own) => $own->whereIn('source_type', [SalesOrder::STOCK_SOURCE, SalesOrder::STOCK_SOURCE.':reject'])
+                    ->where('source_id', $order->id)->where('document_no', $order->document_no))
                 ->orWhere(fn ($out) => $out->whereIn('source_type', [$challan::STOCK_SOURCE, $challan::STOCK_SOURCE.':cancel'])
                     ->whereIn('source_id', $challans)))
             ->groupBy('product_id')
