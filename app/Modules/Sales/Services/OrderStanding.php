@@ -35,7 +35,8 @@ final class OrderStanding
 
     /**
      * @return array{due: string, advance: string, held: string, limit: string, pending_claims: string,
-     *               pending_claim_count: int, order_total: string, exposure: string, to_pay: string, over_limit: bool}
+     *               pending_claim_count: int, order_total: string, exposure: string, to_pay: string, over_limit: bool,
+     *               stop_reason: ?string, stop: bool}
      */
     public function for(Customer $customer, string $orderTotal = '0'): array
     {
@@ -58,6 +59,13 @@ final class OrderStanding
         $exposure = bcadd(bcadd($ledger, $held, 4), $orderTotal, 4);
         $over = bcsub($exposure, $limit, 4);
 
+        /*
+         * ⭐ বাকি বন্ধের কথা — দেয়ালের একই প্রশ্ন ([[CreditExposure::stopsFor()]]), ৫ অক্টোবর ২০২৬। `stop` = এই অর্ডারে
+         * নতুন বাকি জন্মায় (অগ্রিম যতটা ঢাকে ততটা বাকি নয়), তাই নিশ্চিত হবে না; `stop_reason` = কারণটা, অঙ্ক ছাড়াই।
+         */
+        $reason = $this->exposure->stopFor($customer);
+        $new = bccomp($orderTotal, $exposure, 4) < 0 ? $orderTotal : $exposure;
+
         return [
             'due' => $due,
             'advance' => $advance,
@@ -69,6 +77,8 @@ final class OrderStanding
             'exposure' => $exposure,
             'to_pay' => bccomp($over, '0', 4) > 0 ? $over : '0.0000',
             'over_limit' => bccomp($over, '0', 4) > 0,
+            'stop_reason' => $reason,
+            'stop' => $reason !== null && bccomp($new, '0', 4) > 0,
         ];
     }
 
@@ -88,7 +98,8 @@ final class OrderStanding
         foreach ($lines as $line) {
             $product = $line['product'];
             $qty = bcadd((string) $line['qty'], '0', 4);
-            $rate = (string) ($line['rate'] ?? $product->sale_price ?? '0');
+            // ⓘ দর না এলে এই ডিলারের দর তালিকার দাম ([[SalesPrice]], ৫ অক্টোবর ২০২৬)
+            $rate = (string) ($line['rate'] ?? app(SalesPrice::class)->for($customer, $product)->price);
 
             $offers = bccomp($qty, '0', 4) > 0 ? $this->free->forLine([
                 'customer_id' => (int) $customer->id,

@@ -386,6 +386,22 @@ return [
             'default' => 0,
             'group' => 'entry',
         ],
+
+        /*
+         * ⭐ মেয়াদ পেরোনো বাকির দেয়াল — বাকি ও আদায় (SAP Credit Management-এর "oldest open item"), ৫ অক্টোবর ২০২৬।
+         *
+         * ⓘ ০ (ডিফল্ট) = বন্ধ। ৬০ বসালে: কোনো বিলের টাকা মেয়াদের ৬০ দিনের বেশি পরেও বাকি থাকলে সেই গ্রাহক নতুন
+         * বাকি পান না — পুরো টাকা দিলে কেনা চলে ([[CreditExposure::stopsFor()]])। ⚠️ কেবল বাকির সীমার সুইচ চালু থাকলে।
+         * ⛔ সুপার অ্যাডমিনের: ০ বসালেই সব গ্রাহকের দেয়াল ওঠে — সীমার সুইচের মতোই।
+         */
+        [
+            'key' => 'customer.overdue_block_days',
+            'label' => 'customer::settings.overdue_block_days',
+            'type' => 'integer',
+            'default' => 0,
+            'group' => 'entry',
+            'super_admin_only' => true,
+        ],
         [
             'key' => 'customer.show_photo_on_print',
             'label' => 'customer::settings.show_photo_on_print',

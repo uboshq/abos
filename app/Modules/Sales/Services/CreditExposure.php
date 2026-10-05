@@ -11,7 +11,9 @@ use App\Core\Support\Money;
 use App\Models\LedgerEntry;
 use App\Modules\Customer\Models\Customer;
 use App\Modules\Sales\Models\DeliveryChallan;
+use App\Modules\Sales\Models\SalesInvoice;
 use App\Modules\Sales\Support\SalesOrderStatus;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -90,6 +92,181 @@ final class CreditExposure implements CreditHolds
     }
 
     /**
+     * ⭐ নতুন বাকি বন্ধ কি না, আর কেন — বাকি ও আদায়, ৫ অক্টোবর ২০২৬ (SAP Credit Management-এর "oldest open item")।
+     *
+     * ⓘ সীমা দেখে "কত", এটা দেখে "আদৌ কি": কোম্পানি `customer.overdue_block_days` = X বসালে, কোনো বিলের টাকা মেয়াদের
+     * X দিনের বেশি পরেও বাকি থাকলে সেই গ্রাহক নতুন বাকি পান না। ⛔ সীমার সুইচ বন্ধ থাকলে কিছুই নয় ([[isOn()]])।
+     * ⓘ পুরো টাকা দিলে কেনা চলে — দেয়ালটা কেবল **নতুন বাকি** আটকায় ([[newCredit()]])।
+     *
+     * @param  iterable<Customer>  $customers
+     * @return array<int, string>  গ্রাহক → "নিশ্চিত হবে না"-র কথা (যাঁর কিছু নেই, তিনি তালিকায় নেই)
+     */
+    public function stopsFor(iterable $customers): array
+    {
+        return array_map(fn (array $d) => $d['message'], $this->stopDetails($customers));
+    }
+
+    /**
+     * [[stopsFor()]]-এর ভিতর — কথার সাথে কত দিলে দেয়াল ওঠে (`clears`; null = পুরো দায় শোধ ছাড়া নয়)।
+     *
+     * @param  iterable<Customer>  $customers
+     * @return array<int, array{message: string, clears: ?string}>
+     */
+    private function stopDetails(iterable $customers): array
+    {
+        if (! $this->isOn()) {
+            return [];
+        }
+
+        $out = [];
+        $days = $this->overdueDays();
+
+        $list = [];
+        foreach ($customers as $customer) {
+            $list[(int) $customer->id] = $customer;
+        }
+
+        if ($days > 0) {
+            foreach ($this->overdueBills($list, $days) as $id => $bills) {
+                $total = array_reduce($bills, fn (string $sum, array $b) => bcadd($sum, $b['unpaid'], 4), '0');
+                $names = array_column(array_slice($bills, 0, 3), 'no');
+                $out[$id] = [
+                    'message' => __('sales::credit.overdue_stop', [
+                        'days' => $days,
+                        'bills' => implode(', ', $names).(count($bills) > 3 ? ' …' : ''),
+                        'amount' => Money::format($total),
+                    ]),
+                    'clears' => $total,
+                ];
+            }
+        }
+
+        return $out;
+    }
+
+    /** একজনের — [[stopsFor()]]-এর একই হিসাব */
+    public function stopFor(Customer $customer): ?string
+    {
+        return $this->stopDetails([$customer])[(int) $customer->id]['message'] ?? null;
+    }
+
+    /** কোম্পানির দেয়ালের দিন — ০ মানে বন্ধ */
+    public function overdueDays(): int
+    {
+        return max(0, (int) app(\App\Core\Services\SettingsService::class)->get('customer.overdue_block_days', 0));
+    }
+
+    /**
+     * ⭐ মেয়াদের `$days` দিনের বেশি পরেও যে বিলগুলোর টাকা বাকি — পুরনোটা আগে।
+     *
+     * ── ⓘ বিলের বাকি কোথা থেকে ───────────────────────────────────────────
+     * আদায়ের সূচির ([[CollectionDueReport]]) "মেয়াদ পেরোনো" ঘরের হুবহু নিয়ম: বিলের বাকি = মোট − আদায় − রসিদ − পাকা
+     * ফেরত ([[SalesInvoice::scopeWithCollected()]]); মেয়াদ বিলের `due_on` (কাউন্টার বসায় গ্রাহকের `credit_days` থেকে),
+     * না লেখা থাকলে বিলের দিন। ⚠️ বয়সের রিপোর্ট ([[PartyReports::ageing()]]) বিল ধরে নয়, খাতার সারি ধরে গোনে — তাই বিল
+     * ধরে যে হিসাবটা আগে থেকেই আছে, সেটাই।
+     *
+     * ── ⓘ কোনো বিলে না বসা জমা ─────────────────────────────────────────
+     * অগ্রিম বা খাতার জমা কোনো বিলে বাঁধা না থাকলে বিলের হিসাব তাকে দেখে না, অথচ খাতায় বকেয়া কমেছে। ⭐ সেই
+     * টাকাটা (খোলা বিলের মোট − খাতার বকেয়া) **সবচেয়ে পুরনো বিল থেকে** কাটা হয় — বয়সের রিপোর্টের নিয়ম ("আদায় সবচেয়ে
+     * পুরনো ধাপ থেকে কাটা হয়")। ⛔ নইলে যিনি পুরো টাকা অগ্রিমে দিয়েছেন তিনিও আটকাতেন।
+     *
+     * @param  array<int, Customer>  $customers  id → গ্রাহক
+     * @return array<int, list<array{no: string, unpaid: string, due_on: string}>>
+     */
+    public function overdueBills(array $customers, int $days): array
+    {
+        if ($customers === [] || $days <= 0) {
+            return [];
+        }
+
+        $cutoff = Carbon::today()->subDays($days)->toDateString();
+        $due = '(i.total - i.collected_total - i.voucher_total - i.returned_total)';
+        $on = 'COALESCE(i.due_on, i.trx_date)';
+
+        $bills = SalesInvoice::query()->posted()->withCollected()->toBase()
+            ->where('sal_invoices.company_id', CompanyContext::id())
+            ->whereIn('sal_invoices.customer_id', array_keys($customers));
+
+        $rows = DB::query()->fromSub($bills, 'i')
+            ->whereRaw("{$due} > 0.0001")
+            ->orderBy('i.customer_id')
+            ->orderByRaw($on)
+            ->orderBy('i.id')
+            ->selectRaw("i.customer_id, i.document_no, {$on} as due_date, {$due} as unpaid")
+            ->get()
+            ->groupBy('customer_id');
+
+        $out = [];
+
+        foreach ($rows as $customerId => $open) {
+            $customer = $customers[(int) $customerId] ?? null;
+
+            // ⓘ কেবল যাঁর অন্তত একটা পুরনো খোলা বিল আছে — বাকিদের খাতা পড়ার দরকারই নেই
+            if ($customer === null || ! $open->contains(fn ($r) => (string) $r->due_date < $cutoff)) {
+                continue;
+            }
+
+            $sum = $open->reduce(fn (string $s, $r) => bcadd($s, (string) $r->unpaid, 4), '0');
+            $loose = bcsub($sum, $customer->outstanding(), 4);
+            $loose = bccomp($loose, '0', 4) > 0 ? $loose : '0';
+
+            foreach ($open as $row) {
+                $left = (string) $row->unpaid;
+                $take = bccomp($loose, $left, 4) < 0 ? $loose : $left;
+                $left = bcsub($left, $take, 4);
+                $loose = bcsub($loose, $take, 4);
+
+                if ((string) $row->due_date < $cutoff && bccomp($left, '0.0001', 4) > 0) {
+                    $out[(int) $customerId][] = ['no' => (string) $row->document_no, 'unpaid' => $left, 'due_on' => (string) $row->due_date];
+                }
+            }
+        }
+
+        return $out;
+    }
+
+    /**
+     * এই কাগজে কত **নতুন** বাকি — অগ্রিম যতটা ঢাকে, ততটা বাকি নয়।
+     *
+     * ⓘ = min(এই কাগজের বাকি, কাগজের পরে মোট দায়)। অগ্রিম ৫০,০০০-এর গ্রাহক ১০,০০০-এর মাল নিলে নতুন বাকি ০।
+     */
+    private function newCredit(string $unpaid, string $exposureAfter): string
+    {
+        $new = bccomp($unpaid, $exposureAfter, 4) < 0 ? $unpaid : $exposureAfter;
+
+        return bccomp($new, '0', 4) > 0 ? $new : '0';
+    }
+
+    /**
+     * ⓘ বিলটা কেবল আগেই বেরোনো মালের — তার প্রতিটা সারি পাকা চালানে বাঁধা।
+     *
+     * ⛔ মাল গেট পেরিয়ে গেলে বিল আটকানো মানে মাল বাইরে অথচ খাতায় নেই — তাতে নতুন বাকি জন্মায় না, চালানের দিনেই
+     * জন্মেছিল (তখন দেয়াল চালানেই ছিল)। তাই বাকি বন্ধের দেয়াল এমন বিল আটকায় না; সীমার দেয়াল আগের মতোই।
+     */
+    private function billsGoodsAlreadyGone(?int $invoiceId): bool
+    {
+        if ($invoiceId === null) {
+            return false;
+        }
+
+        $lines = DB::table('sal_invoice_lines')->where('sales_invoice_id', $invoiceId)->count();
+
+        if ($lines === 0) {
+            return false;
+        }
+
+        $gone = DB::table('sal_invoice_lines as il')
+            ->join('sal_challan_lines as cl', 'cl.id', '=', 'il.delivery_challan_line_id')
+            ->join('sal_challans as c', 'c.id', '=', 'cl.delivery_challan_id')
+            ->where('il.sales_invoice_id', $invoiceId)
+            ->whereNull('c.deleted_at')
+            ->whereIn('c.status', DocumentStatus::POSTED)
+            ->count();
+
+        return $gone === $lines;
+    }
+
+    /**
      * ⭐ ডেলিভারি অর্ডারের হিসাবের যাচাই — সফটওয়্যার নিজে অনুমোদন দেয়, ২ অক্টোবর ২০২৬ (বিক্রয়ের কাজের ধারা, ধাপ গ)।
      *
      * ⓘ দেয়ালের হুবহু হিসাব ([[assertRoom()]]): খাতার বকেয়া + আটকে থাকা ([[pending()]]) + এই কাগজ ≤ সীমা — ছুড়ে না
@@ -98,13 +275,13 @@ final class CreditExposure implements CreditHolds
      * ⛔ চেক কেবল ক্লিয়ার হলে (২৬ সেপ্টেম্বর): পুরনো পথে হাতে আসার দিনই জমায় বসা চেক ক্লিয়ার না হলে টাকাটা ফেরত
      * যোগ হয় ([[unclearedCheques()]])।
      *
-     * @return array{fits: bool, short: string, used_percent: ?string}  ⓘ `used_percent` সীমা ০ হলে null
+     * @return array{fits: bool, short: string, used_percent: ?string, reason: ?string}  ⓘ `used_percent` সীমা ০ হলে null; `reason` বাকি বন্ধের কথা ([[stopsFor()]])
      */
     public function check(Customer $customer, string $adding, ?int $exceptDeliveryOrderId = null): array
     {
         // ⓘ সুইচ বন্ধ — সীমা যাচাই হয় না, DO-র হিসাবের "সীমা" সতর্কতাও চুপ ([[isOn()]])
         if (! $this->isOn()) {
-            return ['fits' => true, 'short' => '0', 'used_percent' => null];
+            return ['fits' => true, 'short' => '0', 'used_percent' => null, 'reason' => null];
         }
 
         $limit = bcadd((string) ($customer->credit_limit ?? '0'), '0', 4);
@@ -116,11 +293,26 @@ final class CreditExposure implements CreditHolds
         );
 
         $short = bcsub($exposure, $limit, 4);
+        $short = bccomp($short, '0', 4) > 0 ? $short : '0.0000';
+        $reason = null;
+
+        /*
+         * ⭐ বাকি বন্ধ ([[stopsFor()]]) — এই কাগজে নতুন বাকি জন্মালে আটকায়, সীমায় জায়গা থাকলেও (৫ অক্টোবর ২০২৬)।
+         * ⓘ "কম" = কত দিলে দেয়াল ওঠে: পুরনো বাকির ক্ষেত্রে সেই বিলগুলোর টাকা (অগ্রিম সবচেয়ে পুরনো বিলে কাটে), নইলে পুরো দায়।
+         */
+        $stop = $this->stopDetails([$customer])[(int) $customer->id] ?? null;
+
+        if ($stop !== null && bccomp($this->newCredit(bcadd($adding, '0', 4), $exposure), '0', 4) > 0) {
+            $reason = $stop['message'];
+            $clears = $stop['clears'] === null || bccomp($stop['clears'], $exposure, 4) > 0 ? $exposure : $stop['clears'];
+            $short = bccomp($clears, $short, 4) > 0 ? bcadd($clears, '0', 4) : $short;
+        }
 
         return [
-            'fits' => bccomp($short, '0', 4) <= 0,
-            'short' => bccomp($short, '0', 4) > 0 ? $short : '0.0000',
+            'fits' => $reason === null && bccomp($short, '0', 4) <= 0,
+            'short' => $short,
             'used_percent' => bccomp($limit, '0', 4) > 0 ? bcdiv(bcmul($exposure, '100', 4), $limit, 2) : null,
+            'reason' => $reason,
         ];
     }
 
@@ -419,6 +611,19 @@ final class CreditExposure implements CreditHolds
         $unpaid = bcsub($adding, $payingNow, 4);
 
         $pending = $this->pending($customer, $exceptInvoiceId, $exceptChallanId);
+
+        /*
+         * ⛔ বাকি বন্ধ ([[stopsFor()]]) — সীমার আগে, ৫ অক্টোবর ২০২৬। এই কাগজে নতুন বাকি জন্মালে "না"; পুরো টাকা দিলে
+         * (বা অগ্রিমে ঢাকলে) চলে। ⓘ আগেই গেট পেরোনো মালের বিল আটকায় না ([[billsGoodsAlreadyGone()]])।
+         */
+        if (bccomp($unpaid, '0', 4) > 0 && ! $this->billsGoodsAlreadyGone($exceptInvoiceId)) {
+            $stop = $this->stopFor($customer);
+            $after = bcadd(bcadd($customer->outstanding(), $pending, 4), $unpaid, 4);
+
+            if ($stop !== null && bccomp($this->newCredit($unpaid, $after), '0', 4) > 0) {
+                throw ValidationException::withMessages(['customer_id' => $stop]);
+            }
+        }
 
         if (! $customer->wouldExceedCreditLimit(bcadd($pending, $unpaid, 4))) {
             return;

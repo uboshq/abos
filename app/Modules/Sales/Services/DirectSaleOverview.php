@@ -120,6 +120,13 @@ final class DirectSaleOverview
                 $o->money(__('sales::overview_confirm.over_limit'), Money::format($s['to_pay']), 'bad');
                 $o->note(__('sales::overview_confirm.over_limit_note', ['amount' => Money::format($s['to_pay'])]), 'stop');
             }
+
+            // ⭐ বাকি বন্ধ — সেবার দেয়ালের একই মাপ: এই বিলে নতুন বাকি জন্মালে "নিশ্চিত হবে না" ([[CreditExposure::assertRoom()]])
+            $owed = bccomp($left, '0', 4) > 0 ? $left : '0';
+            $new = bccomp($owed, (string) $s['exposure'], 4) < 0 ? $owed : (string) $s['exposure'];
+            if ($s['stop_reason'] !== null && bccomp($new, '0', 4) > 0) {
+                $o->note($s['stop_reason'], 'stop');
+            }
         }
 
         // ── কার সই লাগবে ─────────────────────────────────────────────

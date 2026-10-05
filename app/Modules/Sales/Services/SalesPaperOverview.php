@@ -259,6 +259,12 @@ final class SalesPaperOverview
 
         if ($what['credit_short'] !== null) {
             $o->note(__('sales::overview_confirm.order_credit_held', ['amount' => Money::format($what['credit_short'])]), 'warn');
+
+            // ⭐ বাকি বন্ধের কারণ — আদেশ থামে না, টাকার অপেক্ষায় দাঁড়ায়; তাই `warn` ([[CreditExposure::check()]])
+            $reason = $order->customer !== null ? $this->credit->stopFor($order->customer) : null;
+            if ($reason !== null) {
+                $o->note($reason, 'warn');
+            }
         } elseif ($what['signature']) {
             $o->note(__('sales::overview_confirm.order_signature'), 'warn');
         }
