@@ -18,6 +18,7 @@ class TrackedSale {
     required this.step,
     required this.billed,
     this.category,
+    this.backOrder = false,
   });
 
   final String kind;
@@ -28,6 +29,9 @@ class TrackedSale {
   final double total;
   final String step;
   final bool billed;
+
+  /// ⭐ আদেশের বাকি মাল পরে যাবে — আংশিক চালান (DO+SO মেশানো, ধাপ ১১); পুরনো সার্ভারে false।
+  final bool backOrder;
 
   /// ৯ রঙের কোনটা — সার্ভার বলে; পুরনো সার্ভারে না থাকলে null।
   final String? category;
@@ -42,6 +46,7 @@ class TrackedSale {
         step: json['step']?.toString() ?? '',
         billed: json['billed'] == true,
         category: json['category']?.toString(),
+        backOrder: json['back_order'] == true,
       );
 }
 
@@ -116,6 +121,7 @@ class TrackingList {
 /// ধাপের বাংলা নাম — সার্ভারের `sales::tracking.step` তালিকার হুবহু।
 const Map<String, String> trackingStepLabels = {
   'ordered': 'অর্ডার এসেছে',
+  'credit_hold': 'বাকির সীমায় আটকে',
   'draft': 'খসড়া',
   'approval': 'অনুমোদনের অপেক্ষায়',
   'warehouse': 'গুদামে',

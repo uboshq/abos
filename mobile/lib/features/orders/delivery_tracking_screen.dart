@@ -159,7 +159,8 @@ class _DeliveryTrackingScreenState extends State<DeliveryTrackingScreen> {
                         Text(
                           [
                             trackingStepLabels[sale.step] ?? sale.step,
-                            if (sale.billed) 'বিল হয়েছে'
+                            if (sale.billed) 'বিল হয়েছে',
+                            if (sale.backOrder) 'বাকি মাল পরে যাবে'
                           ].join(' · '),
                           style: TextStyle(
                               color: _saleColour(sale),
@@ -183,7 +184,7 @@ Color _saleColour(TrackedSale sale) =>
 
 Color _colour(String step) => switch (step) {
       'delivered' => AppColors.success,
-      'cancelled' => AppColors.danger,
+      'cancelled' || 'credit_hold' => AppColors.danger,
       'approval' || 'draft' => AppColors.warning,
       _ => AppColors.pending,
     };
@@ -250,7 +251,8 @@ class _StoryScreenState extends State<_StoryScreen> {
             Text(
               [
                 trackingStepLabels[sale.step] ?? sale.step,
-                if (sale.billed) 'বিল হয়েছে'
+                if (sale.billed) 'বিল হয়েছে',
+                if (sale.backOrder) 'বাকি মাল পরে যাবে'
               ].join(' · '),
               style: TextStyle(
                   color: _saleColour(sale), fontWeight: FontWeight.w600),
