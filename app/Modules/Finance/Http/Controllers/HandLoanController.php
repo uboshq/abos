@@ -130,12 +130,17 @@ class HandLoanController extends Controller implements HasMiddleware
             'due' => count(array_filter($rows, $needsChasing)),
 
             /* ⓘ মানুষের সংখ্যা — খোঁজায় ছাঁকা নয়, ঠিক যতটা সারি ওই ট্যাবে */
-            'people' => count($this->peopleRows($standing['rows'], '')),
+            'people' => count(($everyone = $this->loans->people())['rows']),
         ];
 
-        $tab = in_array($request->query('tab'), ['they', 'we', 'due', 'people'], true)
+        /*
+         * ⭐ ব্যক্তির তালিকা আগে — মালিকের সরাসরি আদেশ, ৫ অক্টোবর ২০২৬ (সমন্বয়কের মারফত): "যাঁদের সাথে হাতধার, তাঁদের
+         * তালিকা, গ্রাহকের তালিকার মতো"। ⓘ হিসাব ধরে আগের তালিকাগুলো (সব হিসাব · তিনি দেবেন · আমরা দেব · তারিখ এল)
+         * পাশের ট্যাবে থাকে।
+         */
+        $tab = in_array($request->query('tab'), ['all', 'they', 'we', 'due'], true)
             ? (string) $request->query('tab')
-            : 'all';
+            : 'people';
 
         /*
          * ⭐ "কার সাথে" — মালিকের নির্দেশ, ২০ সেপ্টেম্বর ২০২৬।
@@ -150,9 +155,18 @@ class HandLoanController extends Controller implements HasMiddleware
          * ⓘ যাঁদের খোলা হিসাব আছে তাঁরা আগে, তারপর বাকিরা — তালিকায়
          * নাম যোগ করার পর সেটা যেন হারিয়ে না যায়।
          */
-        $people = $tab !== 'people' ? [] : $this->peopleRows($standing['rows'], $term);
+        $people = $tab !== 'people' ? null : $everyone;
 
-        if ($tab !== 'all') {
+        if ($people !== null && $term !== '') {
+            $people['rows'] = array_values(array_filter($people['rows'], fn (array $r) => str_contains(
+                mb_strtolower(implode(' ', array_filter([
+                    $r['person']->name_en, $r['person']->name_bn, $r['person']->code, $r['person']->mobile,
+                ]))),
+                $term,
+            )));
+        }
+
+        if (! in_array($tab, ['all', 'people'], true)) {
             $rows = array_values(array_filter($rows, match ($tab) {
                 'they' => fn ($r) => $sideOf($r) > 0,
                 'we' => fn ($r) => $sideOf($r) < 0,
@@ -179,60 +193,6 @@ class HandLoanController extends Controller implements HasMiddleware
      * @param  list<array<string, mixed>>  $rows
      * @return list<array<string, mixed>>
      */
-    private function peopleRows(array $rows, string $term): array
-    {
-        $byPerson = [];
-
-        foreach ($rows as $row) {
-            $person = $row['account']->person;
-
-            if ($person === null) {
-                continue;
-            }
-
-            $id = (int) $person->id;
-            $balance = (string) $row['balance'];
-
-            $byPerson[$id] ??= ['person' => $person, 'to_us' => '0', 'by_us' => '0', 'open' => 0];
-            $byPerson[$id]['open']++;
-
-            if (bccomp($balance, '0', 4) > 0) {
-                $byPerson[$id]['to_us'] = bcadd($byPerson[$id]['to_us'], $balance, 4);
-            } else {
-                $byPerson[$id]['by_us'] = bcadd($byPerson[$id]['by_us'], bcmul($balance, '-1', 4), 4);
-            }
-        }
-
-        /*
-         * ⓘ তালিকার বাকি মানুষগুলোও থাকে, শূন্য নিয়ে। ⚠️ নাহলে এই
-         * ট্যাবে নতুন একটা নাম যোগ করার সাথে সাথেই সেটা পর্দা থেকে
-         * হারিয়ে যেত, আর মানুষ ভাবতেন সংরক্ষণ হয়নি।
-         */
-        foreach (Person::query()->active()->orderBy('name_en')->get() as $person) {
-            $byPerson[(int) $person->id] ??= [
-                'person' => $person, 'to_us' => '0', 'by_us' => '0', 'open' => 0,
-            ];
-        }
-
-        $out = array_values($byPerson);
-
-        if ($term !== '') {
-            $out = array_values(array_filter($out, fn (array $r) => str_contains(
-                mb_strtolower(implode(' ', array_filter([
-                    $r['person']->name_en, $r['person']->name_bn,
-                    $r['person']->code, $r['person']->mobile,
-                ]))),
-                $term,
-            )));
-        }
-
-        // ⓘ যাঁদের হিসাব খোলা তাঁরা আগে, তারপর নামের ক্রমে
-        usort($out, fn (array $a, array $b) => [$b['open'] > 0, $a['person']->name()]
-            <=> [$a['open'] > 0, $b['person']->name()]);
-
-        return $out;
-    }
-
     /**
      * নতুন হাতধারের ফর্ম — নিজের পাতায় (১৯ সেপ্টেম্বর ২০২৬)।
      *

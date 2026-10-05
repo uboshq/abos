@@ -45,6 +45,8 @@
             <div class="sm:col-span-2">
                 @include('finance::components.person-picker', [
                     'people' => $people,
+                    // ⓘ খাতা থেকে "নতুন হাতধার" — মানুষটা আগে থেকেই বাছা (মালিক, ৫ অক্টোবর ২০২৬)
+                    'selected' => old('person_id', request('person_id')),
                     'label' => __('finance::field.person_name'),
                     'required' => true,
                 ])

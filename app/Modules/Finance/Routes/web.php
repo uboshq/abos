@@ -173,6 +173,9 @@ Route::middleware('auth')->prefix('finance')->group(function () {
             ->whereNumber('bankFacility')->name('close');
     });
 
+    // ⭐ অর্থের খাতা — হাতধার (পরে ব্যাংক ঋণ), গ্রাহকের খাতার একই পাতায় ([[FinanceReportController]], ৫ অক্টোবর ২০২৬)
+    Route::get('/reports/{slug}', [\App\Modules\Finance\Http\Controllers\FinanceReportController::class, 'show'])->name('report.show');
+
     Route::prefix('hand-loans')->name('hand_loan.')->group(function () {
         Route::get('/', [HandLoanController::class, 'index'])->name('index');
         // ⓘ নতুন হাতধারের ফর্ম নিজের পাতায় — ১৯ সেপ্টেম্বর ২০২৬

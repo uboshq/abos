@@ -96,7 +96,8 @@ final class TheHandLoanListWasBuriedUnderItsFormTest extends TestCase
            নেই, তাই শূন্য। */
         /* ⭐ পঞ্চম গোনা "কার সাথে" — মানুষের তালিকার সারি,
            মালিকের নির্দেশ ২০ সেপ্টেম্বর ২০২৬। ⓘ এখানে দুইজন মানুষ। */
-        $this->assertSame(['all' => 2, 'they' => 1, 'we' => 1, 'due' => 0, 'people' => 2],
+        /* ⭐ "ব্যক্তি" এখন সব ব্যক্তি, কেবল যাঁদের হাতধার আছে তাঁরা নন — মালিক, ৫ অক্টোবর ২০২৬ (সমন্বয়কের মারফত) */
+        $this->assertSame(['all' => 2, 'they' => 1, 'we' => 1, 'due' => 0, 'people' => Person::query()->active()->count()],
             $they->viewData('counts'));
 
         $we = $this->get(route('finance.hand_loan.index', ['tab' => 'we']))->assertOk();

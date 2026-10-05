@@ -66,14 +66,13 @@ final class TheListOfPeopleLivedInAnotherModuleTest extends TestCase
 
         $page = $this->get(route('finance.hand_loan.index', ['tab' => 'people']))->assertOk();
 
-        $rows = collect($page->viewData('people'))
+        $rows = collect($page->viewData('people')['rows'])
             ->mapWithKeys(fn (array $r) => [$r['person']->name() => $r]);
 
-        $this->assertSame('1000.0000', $rows['করিম']['to_us']);
-        $this->assertSame('0', $rows['করিম']['by_us']);
-
-        $this->assertSame('500.0000', $rows['রহিম']['by_us']);
-        $this->assertSame(1, $rows['রহিম']['open']);
+        /* ⓘ দুই ঘরের বদলে এক জের, চিহ্নে দিক — মালিকের পাঁচ কলামের আদেশ, ৫ অক্টোবর ২০২৬: পর্দায় "(Dr)"/"(Cr)" */
+        $this->assertSame('1000.0000', $rows['করিম']['balance']);
+        $this->assertSame('-500.0000', $rows['রহিম']['balance']);
+        $this->assertNotNull($rows['রহিম']['open'], 'রহিমের খোলা হিসাব আছে।');
     }
 
     /**
@@ -117,7 +116,7 @@ final class TheListOfPeopleLivedInAnotherModuleTest extends TestCase
         $page = $this->get(route('finance.hand_loan.index', ['tab' => 'people']))->assertOk();
 
         $this->assertSame(
-            count($page->viewData('people')),
+            count($page->viewData('people')['rows']),
             $page->viewData('counts')['people'],
             'ট্যাবের সংখ্যা আর তালিকার সারি আলাদা কথা বলছে।',
         );

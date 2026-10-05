@@ -86,7 +86,8 @@ final class TheLoanKnewThePersonButNotTheDealerTest extends TestCase
         $this->assertSame($customer->name(), collect($rows)
             ->firstWhere('account.id', $account->id)['partner_name'] ?? null);
 
-        $this->get(route('finance.hand_loan.index'))->assertOk()->assertSee($customer->name());
+        // ⓘ হিসাব ধরে তালিকা এখন "সব হিসাব" ট্যাবে — পাতা খোলে ব্যক্তির তালিকায় (মালিক, ৫ অক্টোবর ২০২৬)
+        $this->get(route('finance.hand_loan.index', ['tab' => 'all']))->assertOk()->assertSee($customer->name());
     }
 
     /**

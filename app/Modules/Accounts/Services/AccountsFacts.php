@@ -344,6 +344,30 @@ final class AccountsFacts
     }
 
     /**
+     * ⭐ [[dueFrom()]]-এর হুবহু নিয়ম, অনেক পক্ষের জন্য এক কোয়েরিতে — হাতধারের ব্যক্তির তালিকার "মোট পাওনা" (মালিক,
+     * ৫ অক্টোবর ২০২৬; [[HandLoanService::people()]])। ⛔ নিয়মটা এখানেই, dueFrom-এর পাশে — অন্য মডিউলে আলাদা SUM নয়;
+     * দুইটা মেলে কি না দাবিতে বাঁধা ([[TheHandLoanBookEndsWhereTheListSaysTest]])।
+     *
+     * @param  list<int>  $partyIds
+     * @return array<int, string> পক্ষের id → ডেবিট − ক্রেডিট (যাঁর কোনো সারি নেই তিনি নেই)
+     */
+    public function dueFromMany(string $partyType, array $partyIds): array
+    {
+        if ($partyIds === []) {
+            return [];
+        }
+
+        return LedgerEntry::query()
+            ->where('party_type', $partyType)
+            ->whereIn('party_id', $partyIds)
+            ->groupBy('party_id')
+            ->selectRaw('party_id, COALESCE(SUM(debit), 0) as d, COALESCE(SUM(credit), 0) as c')
+            ->get()
+            ->mapWithKeys(fn ($row) => [(int) $row->party_id => bcsub((string) $row->d, (string) $row->c, 4)])
+            ->all();
+    }
+
+    /**
      * সবচেয়ে বেশি বকেয়া যাদের — গ্রাহক বা সরবরাহকারী।
      *
      * ⭐ **একটাই কোয়েরি**, পক্ষ ধরে গুচ্ছ করা। প্রতি পক্ষের জন্য আলাদা

@@ -62,7 +62,7 @@
                 bg-(--color-surface-card)">
         <form method="GET" class="contents">
             {{-- ⓘ খোঁজা বা ঘনত্ব বদলালেও ট্যাবটা থাকে --}}
-            @if ($tab !== 'all')
+            @if ($tab !== 'people')
                 <input type="hidden" name="tab" value="{{ $tab }}">
             @endif
 
@@ -100,15 +100,15 @@
         {{-- ⭐ ট্যাবের সারি — মূলধনের পাতার হুবহু গড়ন (মালিকের নমুনা, ১৯ সেপ্টেম্বর ২০২৬) --}}
         <nav class="flex flex-wrap gap-1 border-b border-(--color-border) px-2 text-sm"
              aria-label="{{ __('finance::menu.hand_loan') }}">
-            @foreach (['all' => __('finance::field.hl_tab_all'),
+            {{-- ⭐ ব্যক্তির তালিকা প্রথমে, আর সেটাই পাতা খুললে — মালিক, ৫ অক্টোবর ২০২৬ (হিসাব ধরে তালিকাগুলো পাশে) --}}
+            @foreach (['people' => __('finance::field.hl_tab_people'),
+                       'all' => __('finance::field.hl_tab_all'),
                        'they' => __('finance::message.hand_loan_they_owe'),
                        'we' => __('finance::message.hand_loan_we_owe'),
                        /* ⭐ মনে করিয়ে দেওয়া — তারিখ পেরোনো বা ত্রিশ দিনের ভিতরে (§১৪খ) */
-                       'due' => __('finance::field.hl_tab_due'),
-                       /* ⭐ কার সাথে — মানুষের তালিকা, মালিকের নির্দেশ ২০ সেপ্টেম্বর ২০২৬ */
-                       'people' => __('finance::field.hl_tab_people')] as $key => $label)
+                       'due' => __('finance::field.hl_tab_due')] as $key => $label)
                 <a href="{{ route('finance.hand_loan.index', array_filter([
-                        'tab' => $key === 'all' ? null : $key,
+                        'tab' => $key === 'people' ? null : $key,
                         'q' => request('q'),
                     ])) }}"
                    @if ($tab === $key) aria-current="page" @endif

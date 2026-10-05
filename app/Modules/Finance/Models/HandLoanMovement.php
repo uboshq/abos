@@ -73,6 +73,29 @@ class HandLoanMovement extends Model implements Drillable, SettledByAVoucher, \A
         return $this->belongsTo(Voucher::class);
     }
 
+    /**
+     * ⭐ কোন চলাচল গোনা হয় — একটাই নিয়ম, তিন জায়গায়: হিসাবের বকেয়া ([[HandLoanService::balanceOf()]]), মানুষের তালিকা
+     * ([[HandLoanService::people()]]) আর মানুষের খাতা ([[LoanLedgerReports]], [[countedSql()]])।
+     *
+     * ⛔ কেবল খাতায় বসা টাকা — অডিট গ১ ও ম২২, ৪ অক্টোবর ২০২৬: সই-এর অপেক্ষার (খসড়া) ভাউচারের টাকা এখনো নড়েনি, আর
+     * বাতিল ভাউচারের টাকা ফিরে এসেছে। ⚠️ ভাউচার ছাড়া পুরনো সারি (খোলার আমদানি) গোনা হয়।
+     */
+    public function scopeCounted(\Illuminate\Database\Eloquent\Builder $query): \Illuminate\Database\Eloquent\Builder
+    {
+        return $query->where(fn ($q) => $q->whereNull('voucher_id')
+            ->orWhereHas('voucher', fn ($v) => $v->where('status', \App\Core\Support\DocumentStatus::CONFIRMED)));
+    }
+
+    /**
+     * [[scopeCounted()]]-এর হুবহু শর্ত, কাঁচা কোয়েরির জন্য — চলাচল `$movement` আর তার ভাউচার `$voucher` (LEFT JOIN) নামে।
+     * ⛔ এখানে আলাদা করে লেখা নিয়মটা ঐ স্কোপের পাশেই, যাতে একটা বদলালে অন্যটা চোখে পড়ে; দুইটা মেলে কি না দাবিতে বাঁধা
+     * ([[TheHandLoanBookEndsWhereTheListSaysTest]])।
+     */
+    public static function countedSql(string $movement, string $voucher): string
+    {
+        return "({$movement}.voucher_id IS NULL OR {$voucher}.status = '".\App\Core\Support\DocumentStatus::CONFIRMED."')";
+    }
+
     /** ডিপোর দিক থেকে চিহ্নসহ — ব্যালেন্স এদের যোগফল। */
     public function signed(): string
     {

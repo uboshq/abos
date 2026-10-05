@@ -273,14 +273,11 @@ final class HandLoanService
             ->where('account_id', $account->id)
 
             /*
-             * ⛔ কেবল খাতায় বসা টাকা — অডিট গ১ ও ম২২, ৪ অক্টোবর ২০২৬।
-             *
-             * ⓘ সই-এর অপেক্ষার (খসড়া) ভাউচারের টাকা এখনো নড়েনি, আর হিসাবের পর্দা থেকে বাতিল করা ভাউচারের
-             * টাকা ফিরে এসেছে — দুইটাই আগে গোনা হত, তাই খাতা আর এই পাতা দুই কথা বলত। ⚠️ ভাউচার ছাড়া
-             * পুরনো সারি (খোলার আমদানি) আগের মতোই গোনা হয়।
+             * ⛔ কেবল খাতায় বসা টাকা — অডিট গ১ ও ম২২, ৪ অক্টোবর ২০২৬ ([[HandLoanMovement::scopeCounted()]], নিয়ম একটাই):
+             * সই-এর অপেক্ষার (খসড়া) ভাউচারের টাকা এখনো নড়েনি, আর বাতিল ভাউচারের টাকা ফিরে এসেছে — দুইটাই আগে গোনা
+             * হত, তাই খাতা আর এই পাতা দুই কথা বলত। ⚠️ ভাউচার ছাড়া পুরনো সারি (খোলার আমদানি) আগের মতোই গোনা হয়।
              */
-            ->where(fn ($q) => $q->whereNull('voucher_id')
-                ->orWhereHas('voucher', fn ($v) => $v->where('status', DocumentStatus::CONFIRMED)))
+            ->counted()
             ->selectRaw('
                 COALESCE(SUM(CASE WHEN direction = ? THEN amount ELSE 0 END), 0) as gone,
                 COALESCE(SUM(CASE WHEN direction = ? THEN amount ELSE 0 END), 0) as came
@@ -419,6 +416,80 @@ final class HandLoanService
      * @param  Collection<int, HandLoanAccount>  $accounts
      * @return array<string, array<int, string>>
      */
+    /**
+     * ⭐ ব্যক্তির তালিকা, হাতধারের চোখে — জন প্রতি এক সারি, গ্রাহকের তালিকার মতো (মালিকের সরাসরি আদেশ, ৫ অক্টোবর ২০২৬, সমন্বয়কের মারফত)।
+     *
+     * ⓘ মোট দেওয়া, মোট নেওয়া আর বাকি — চলাচল থেকে, [[balanceOf()]]-এর একই গোনার নিয়মে ([[HandLoanMovement::scopeCounted()]]),
+     * তাঁর সব হাতধারের হিসাব মিলিয়ে (চুকে যাওয়াগুলোও — মোট দেওয়া-নেওয়া ইতিহাসের প্রশ্ন)। ⛔ এক জনের খাতা
+     * ([[LoanLedgerReports]]) আর এই সারির বাকি তাই কখনো আলাদা হয় না।
+     *
+     * ⭐ "সব খাত মিলিয়ে" — সমন্বয়ক, ৫ অক্টোবর: ডেমোর JRN-0003 ১০০ টাকা প্রাপ্য খাতে একজন ব্যক্তির নামে সরিয়েছিল, অথচ
+     * হাতধারের পাতা বলত "তিনি দেবেন ০"। তাই দ্বিতীয় সংখ্যা: খতিয়ানে তাঁর নামের সব সারি, ডেবিট − ক্রেডিট —
+     * [[AccountsFacts::dueFromMany()]] — dueFrom-এর হুবহু নিয়ম, এক কোয়েরিতে সবার (দুইটা মেলে কি না দাবিতে বাঁধা)।
+     * ⓘ হাতধারের ভাউচার আজ খতিয়ানে কারও নামে বসে না, তাই দুই সংখ্যা আলাদা হতেই পারে — পর্দা তখন সতর্ক করে।
+     *
+     * @return array{rows: list<array<string, mixed>>, given: string, taken: string, balance: string, books: string}
+     */
+    public function people(): array
+    {
+        $accounts = HandLoanAccount::query()->inViewedBranch()->with('person')->get()
+            ->filter(fn (HandLoanAccount $a) => $a->person !== null);
+
+        $sums = HandLoanMovement::query()
+            ->counted()
+            ->whereIn('account_id', $accounts->modelKeys() ?: [0])
+            ->groupBy('account_id')
+            ->selectRaw('account_id,
+                COALESCE(SUM(CASE WHEN direction = ? THEN amount ELSE 0 END), 0) as gone,
+                COALESCE(SUM(CASE WHEN direction = ? THEN amount ELSE 0 END), 0) as came', [HandLoanMovement::OUT, HandLoanMovement::IN])
+            ->get()
+            ->keyBy('account_id');
+
+        $people = [];
+
+        foreach ($accounts as $account) {
+            $id = (int) $account->person_id;
+            $sum = $sums->get($account->id);
+            $people[$id] ??= ['person' => $account->person, 'given' => '0', 'taken' => '0', 'open' => null, 'due_on' => null];
+            $people[$id]['given'] = bcadd($people[$id]['given'], (string) ($sum->gone ?? '0'), 4);
+            $people[$id]['taken'] = bcadd($people[$id]['taken'], (string) ($sum->came ?? '0'), 4);
+
+            if ($account->status === HandLoanAccount::ACTIVE) {
+                $people[$id]['open'] ??= $account;
+                $due = $account->next_due_on ?? $account->due_on;
+                if ($due !== null && ($people[$id]['due_on'] === null || $due->lt($people[$id]['due_on']))) {
+                    $people[$id]['due_on'] = $due;
+                }
+            }
+        }
+
+        /*
+         * ⭐ সব ব্যক্তি, কেবল যাঁদের হাতধার আছে তাঁরা নন — মালিকের কলামের আদেশ, ৫ অক্টোবর ২০২৬ (সমন্বয়কের মারফত)।
+         * ⓘ যাঁর হাতধার নেই তাঁর "মোট পাওনা" তবু খতিয়ানে থাকতে পারে (জাবেদায় তাঁর নামে বসানো টাকা) — ঠিক সেই প্রশ্নটার জন্যই।
+         */
+        foreach (\App\Modules\MasterData\Models\Person::query()->active()->whereNotIn('id', array_keys($people) ?: [0])->get() as $person) {
+            $people[(int) $person->id] = ['person' => $person, 'given' => '0', 'taken' => '0', 'open' => null, 'due_on' => null];
+        }
+
+        $books = app(\App\Modules\Accounts\Services\AccountsFacts::class)->dueFromMany('person', array_keys($people));
+        $totals = ['given' => '0', 'taken' => '0', 'balance' => '0', 'books' => '0'];
+
+        foreach ($people as $id => &$row) {
+            $row['balance'] = bcsub($row['given'], $row['taken'], 4);
+            $row['books'] = $books[$id] ?? '0.0000';
+            $row['differs'] = bccomp($row['balance'], $row['books'], 4) !== 0;
+            foreach (['given', 'taken', 'balance', 'books'] as $key) {
+                $totals[$key] = bcadd($totals[$key], $row[$key], 4);
+            }
+        }
+        unset($row);
+
+        $rows = array_values($people);
+        usort($rows, fn (array $a, array $b) => strcmp((string) $a['person']->name(), (string) $b['person']->name()));
+
+        return ['rows' => $rows] + $totals;
+    }
+
     private function partnerNames(Collection $accounts): array
     {
         $pairs = $accounts

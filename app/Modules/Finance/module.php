@@ -652,7 +652,10 @@ return [
         'rental_contract' => RentalContract::class,
     ],
 
-    'reports' => [],
+    // ⭐ হাতধার আর ব্যাংক ঋণের খাতা — মালিক, ৫ অক্টোবর ২০২৬ ([[LoanLedgerReports]])
+    'reports' => [
+        \App\Modules\Finance\Reports\LoanLedgerReports::class,
+    ],
 
     'events' => [],
 
