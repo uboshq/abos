@@ -888,7 +888,8 @@ final class SalesOrderService
      */
     private function ownShare(array &$own, SalesOrderLine $line): string
     {
-        $pending = $line->pendingQty();
+        // ⛔ খসড়া চালানের অংশও এখনো আদেশের ধরা — কেবল নিশ্চিত চালান বাদ (অডিট ম১৫, ৬ অক্টোবর ২০২৬; [[SalesOrderLine::unshippedQty()]])
+        $pending = $line->unshippedQty();
         $left = $own[(int) $line->product_id] ?? '0';
         $take = bccomp($pending, $left, 4) > 0 ? $left : $pending;
 

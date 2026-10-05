@@ -7,6 +7,7 @@ namespace App\Modules\Sales\Models;
 use App\Core\Concerns\BelongsToCompanyThroughParent;
 use App\Core\Concerns\HasPublicId;
 use App\Core\Concerns\IsAudited;
+use App\Core\Support\DocumentStatus;
 use App\Modules\Inventory\Concerns\HasEnteredPack;
 use App\Modules\Inventory\Models\Product;
 use Illuminate\Database\Eloquent\Model;
@@ -105,6 +106,23 @@ class SalesOrderLine extends Model
      *
      * ⭐ "আর দেওয়া হবে না" অংশ (`rejected_qty`) বাদ — তা আর পাওনা নয় (নকশা "DO বিক্রয় আদেশে মেশানো" §১.৪, ধাপ ৭)।
      */
+    /**
+     * যতটা এখনো আসলে বেরোয়নি — খসড়া চালানের অংশও এখানে (অডিট ম১৫, ৬ অক্টোবর ২০২৬)।
+     *
+     * ⓘ [[pendingQty()]] খসড়া চালানকে "দেওয়া" ধরে — অতিরিক্ত-চালানের পাহারার জন্য সেটাই ঠিক (খসড়া কোটা নেয়)। ⛔ কিন্তু
+     * আদেশের ধরা মজুদ ছাড়তে সেটা ভুল: খসড়া কিছু বের করেনি, ধরাটা তখনো আদেশের। আদেশ বাতিল বা বন্ধে খসড়ার অংশ ধরা
+     * থেকে যেত, আর খসড়াটা মুছলে চিরকাল আটকে থাকত। ⭐ এখানে কেবল নিশ্চিত (খসড়া নয়, বাতিল নয়) চালান বাদ যায়।
+     */
+    public function unshippedQty(): string
+    {
+        $shipped = (string) ($this->challanLines()
+            ->whereHas('challan', fn ($q) => $q->whereNotIn('status', [DocumentStatus::DRAFT, DocumentStatus::CANCELLED]))
+            ->sum('delivered_qty') ?: '0');
+        $left = bcsub(bcsub((string) $this->ordered_qty, (string) ($this->rejected_qty ?? '0'), 4), $shipped, 4);
+
+        return bccomp($left, '0', 4) > 0 ? $left : '0.0000';
+    }
+
     public function pendingQty(): string
     {
         $pending = bcsub(bcsub((string) $this->ordered_qty, (string) ($this->rejected_qty ?? '0'), 4), $this->deliveredQty(), 4);

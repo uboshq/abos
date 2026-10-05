@@ -463,6 +463,50 @@ final class AnOrderSaysWhereItStandsOnEveryLineTest extends TestCase
     }
 
     /**
+     * ⛔ খসড়া চালান থাকা অবস্থায় আদেশ বাতিল — ধরা পুরোটাই ছাড়ে, আর খসড়া পরে বাতিল হলেও কিছু আটকে থাকে না
+     * (অডিট ম১৫, ৬ অক্টোবর ২০২৬)। ⓘ খসড়া কিছু বের করেনি, তাই তার অংশের ধরাও আদেশের।
+     */
+    public function test_cancelling_an_order_with_a_draft_challan_releases_all_it_held(): void
+    {
+        app(SettingsService::class)->set('sales.reserve_on_order', true);
+        $reserved = fn (): string => (string) app(StockService::class)->statesFor($this->product, $this->warehouse)['reserved'];
+        $base = $reserved();
+
+        $order = $this->approved([[$this->product, '10']]);
+        $line = $order->fresh(['lines'])->lines->first();
+        $draft = app(DeliveryChallanService::class)->create([
+            'customer_id' => $order->customer_id, 'warehouse_id' => $this->warehouse->id,
+            'sales_order_id' => $order->id, 'trx_date' => now()->toDateString(),
+        ], [['product_id' => $line->product_id, 'sales_order_line_id' => $line->id, 'delivered_qty' => '4', 'rate' => (string) $line->rate]]);
+        $this->assertSame(0, bccomp(bcadd($base, '10', 4), $reserved(), 4), 'প্রস্তুতিটাই ভুল — খসড়া চালান ধরায় হাত দিল।');
+
+        app(SalesOrderService::class)->cancel($order->fresh(), 'ডিলার না করেছেন');
+        $this->assertSame(0, bccomp($base, $reserved(), 4), '⛔ খসড়া চালানের ৪টার ধরা আদেশ বাতিলের পরেও আটকে আছে।');
+
+        app(DeliveryChallanService::class)->cancel($draft->fresh(), 'আদেশ বাতিল');
+        $this->assertSame(0, bccomp($base, $reserved(), 4), '⛔ খসড়া বাতিলের পরে ধরা বদলাল।');
+    }
+
+    /**
+     * ⛔ গেটে মাল ছাড়ার সুইচ চালু — নিশ্চিত চালানের ধরা (গেটের অপেক্ষায়) আদেশ বাতিলে ছাড়ে না; ছাড়ে কেবল যা বেরোয়নি
+     * (অডিট ম১৫-এর সতর্কতা, ৬ অক্টোবর ২০২৬)। ⓘ "আদেশের সব ধরা ছাড়ো" হলে গেটে দাঁড়ানো মালও বিক্রিযোগ্য হয়ে যেত।
+     */
+    public function test_with_goods_issued_at_the_gate_a_confirmed_challan_keeps_its_hold_on_cancel(): void
+    {
+        app(SettingsService::class)->set('sales.reserve_on_order', true);
+        app(SettingsService::class)->set('sales.invoice_at_goods_issue', true);
+        $reserved = fn (): string => (string) app(StockService::class)->statesFor($this->product, $this->warehouse)['reserved'];
+
+        $order = $this->approved([[$this->product, '10']]);
+        $this->deliver($order, ['first' => '4']);
+        $before = $reserved();
+
+        app(SalesOrderService::class)->cancel($order->fresh(), 'বাকি নেবেন না');
+        $this->assertSame(0, bccomp(bcsub($before, '6', 4), $reserved(), 4),
+            '⛔ বাতিলে কেবল না-বেরোনো ৬টা ছাড়ার কথা — গেটের অপেক্ষার ৪টা ধরা থাকবে। আগে '.$before.', পরে '.$reserved());
+    }
+
+    /**
      * ⭐ বন্ধ আর বাতিল নিজের ঘটনা ছোটায় — ঠিক একবার, আর থেমে যাওয়া কাজে একবারও নয় (abos-86-এর হোল্ড ছাড়ার জন্য)।
      */
     public function test_close_and_cancel_announce_themselves_once_and_never_when_refused(): void
