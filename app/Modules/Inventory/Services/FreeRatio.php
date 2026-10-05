@@ -28,11 +28,12 @@ use Illuminate\Support\Facades\DB;
  * `unplaced_free_change`-এ — ক্রয়ের **তিনটা পথেই** (বিল · রসিদ ·
  * সরাসরি ক্রয়, শেষেরটা ভিতরে বিলের সেবাই ডাকে)।
  *
- * ⛔ `floor_change` দেখা যেত না: বসানোর সারি `unplaced` থেকে `floor`-এ
- * সরায়, তাই একই মাল **দুইবার** গোনা হত।
- *
- * ⓘ আর কেবল **ধনাত্মক** সারি — ঋণাত্মকগুলো ফেরত বা বাতিল, আর ওরা
- * "কত এসেছিল" প্রশ্নের উত্তর বদলায় না।
+ * ⭐ গোনা হয় আসার উৎসগুলোর **নিট**, অপেক্ষার ঘর আর তাক মিলিয়ে (`unplaced + floor`, ফ্রিতে `unplaced_free + free`) —
+ * Inventory অডিট ম৯, ৫ অক্টোবর ২০২৬।
+ * ⛔ আগে কেবল ধনাত্মক অপেক্ষার সারি গোনা হত: বিল সম্পাদনায় আগের মাল উল্টে নতুন করে বসে, তাই আগেরটা আর নতুনটা দুটোই গোনা
+ * হত — ১০০ + ১০ ফ্রি, সম্পাদনায় ফ্রি ৫: গোনা ২০০ আর ১৫ (৭.৫%), আসলে ৫%।
+ * ⓘ বসানোর সারি (অপেক্ষা → তাক, একই উৎস-নামে) নিটে নিজেই শূন্য — তাই তাক মেলালেও একই মাল দুইবার গোনা হয় না। ক্রয় ফেরত
+ * নিজের উৎস-নামে, এখানে পড়ে না — "কত এসেছিল" প্রশ্নের উত্তর সে বদলায় না।
  */
 final class FreeRatio
 {
@@ -66,8 +67,8 @@ final class FreeRatio
             })
             ->groupBy('batch_id')
             ->selectRaw('batch_id')
-            ->selectRaw('COALESCE(SUM(GREATEST(unplaced_change, 0)), 0) as paid')
-            ->selectRaw('COALESCE(SUM(GREATEST(unplaced_free_change, 0)), 0) as free')
+            ->selectRaw('GREATEST(COALESCE(SUM(unplaced_change + floor_change), 0), 0) as paid')
+            ->selectRaw('GREATEST(COALESCE(SUM(unplaced_free_change + free_change), 0), 0) as free')
             ->get()
             ->mapWithKeys(fn ($row) => [(string) $row->batch_id => [
                 'paid' => (string) $row->paid,
@@ -100,8 +101,8 @@ final class FreeRatio
                         ->orWhere('source_type', 'like', $source.':%');
                 }
             })
-            ->selectRaw('COALESCE(SUM(GREATEST(unplaced_change, 0)), 0) as paid')
-            ->selectRaw('COALESCE(SUM(GREATEST(unplaced_free_change, 0)), 0) as free')
+            ->selectRaw('GREATEST(COALESCE(SUM(unplaced_change + floor_change), 0), 0) as paid')
+            ->selectRaw('GREATEST(COALESCE(SUM(unplaced_free_change + free_change), 0), 0) as free')
             ->first();
 
         return [
