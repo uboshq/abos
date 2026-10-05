@@ -125,6 +125,9 @@ class DirectSaleController extends Controller implements HasMiddleware
          */
         $held = $this->credit->pendingFor($customers->pluck('id')->map(fn ($id) => (int) $id)->all());
 
+        // ⭐ বাকি বন্ধ (হাতে বসানো বা মেয়াদ পেরোনো বাকি) — দেয়ালের একই কথা, ক্রেতার ঘরে (বাকি ও আদায়, ৫ অক্টোবর ২০২৬)
+        $stops = $this->credit->stopsFor($customers);
+
         /*
          * ⭐ খোলা খসড়া নিজেকে আটকায় না — মালিক, ৪ অক্টোবর ২০২৬ (DRF-0014, M/S Bokthiyar: অগ্রিম ৪৪,৫৮৯.৫৫, বিল
          * ৪৪,৫০৩.৭৩, তবু "অবশিষ্ট সীমা ৳85.82, বিল ৳44,417.91 বেশি")। খসড়াটা `held`-এ থাকে, আর পর্দায় খুললে একই বিল
@@ -310,6 +313,7 @@ class DirectSaleController extends Controller implements HasMiddleware
                     - ($editing !== null && (int) $editing->customer_id === (int) $c->id ? (float) $editing->total : 0),
                 'held' => (float) ($held[(int) $c->id] ?? 0),
                 'days' => (int) $c->credit_days,
+                'stop' => $stops[(int) $c->id] ?? null,
                 'name' => $c->name(),
 
                 /*

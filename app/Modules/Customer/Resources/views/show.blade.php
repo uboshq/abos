@@ -53,6 +53,33 @@
 
     <x-ui.errors />
 
+    {{-- ⭐ "বাকি বন্ধ" — পাতার মাথায়, পপ-আপের বাইরে: কাউন্টারের আগে এখানেই চোখে পড়ুক (বাকি ও আদায়, ৫ অক্টোবর ২০২৬) --}}
+    @if ($customer->isCreditBlocked())
+        <div role="alert" data-credit-blocked
+             class="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-(--radius-field)
+                    bg-(--color-badge-danger-bg) px-3 py-2 text-sm text-(--color-badge-danger-ink)">
+            <div>
+                <span class="font-semibold">{{ __('customer::credit_block.badge') }}</span>
+                · {{ __('customer::credit_block.reason') }}: {{ $customer->credit_block_reason }}
+                · {{ __('customer::credit_block.by_on', [
+                        'user' => $customer->creditBlocker?->name ?? '—',
+                        'date' => \App\Core\Support\DateFormat::format($customer->credit_blocked_at),
+                    ]) }}
+            </div>
+            @can('update', $customer)
+                <form method="POST" action="{{ route('customer.credit_block.destroy', $customer) }}" class="flex items-center gap-2">
+                    @csrf
+                    @method('DELETE')
+                    <input type="text" name="reason" required maxlength="500"
+                           placeholder="{{ __('customer::credit_block.clear_reason') }}"
+                           class="h-(--spacing-field-dense) rounded-(--radius-field) border border-(--color-border)
+                                  bg-(--color-surface-card) px-2 text-sm text-(--color-ink)">
+                    <x-ui.button type="submit" tone="secondary">{{ __('customer::credit_block.clear') }}</x-ui.button>
+                </form>
+            @endcan
+        </div>
+    @endif
+
     {{-- ⭐ পার্টির পাতায় কেবল লেনদেনের ছক খোলা — বাকিটা 👁 চাপলে এই পপ-আপে (মালিক, ৩ অক্টোবর ২০২৬:
          "লেনদেন টেবিল খোলা, বাকি 👁-এর পেছনে")। ⓘ ঘরগুলো পাতাতেই থাকে, কেবল লুকানো। --}}
     <div x-data="{ open: false }" @party-eye.window="open = true" @keydown.escape.window="open = false">
@@ -120,6 +147,22 @@
                         {{ __('customer::message.over_limit') }}
                     </p>
                 @endif
+            @endif
+
+            {{-- ⭐ "বাকি বন্ধ" বসানো — সীমা বদলানোর একই চাবিতে, কারণসহ ([[CreditBlockController]]) --}}
+            @if (! $customer->isCreditBlocked())
+                @can('update', $customer)
+                    <form method="POST" action="{{ route('customer.credit_block.store', $customer) }}"
+                          class="mt-3 flex flex-wrap items-center gap-2" data-credit-block-form>
+                        @csrf
+                        <input type="text" name="reason" required maxlength="500"
+                               placeholder="{{ __('customer::credit_block.reason') }}"
+                               class="h-(--spacing-field-dense) min-w-0 flex-1 rounded-(--radius-field) border
+                                      border-(--color-border) bg-(--color-surface-card) px-2 text-sm">
+                        <x-ui.button type="submit" tone="secondary">{{ __('customer::credit_block.block') }}</x-ui.button>
+                    </form>
+                    <p class="mt-1 text-2xs text-(--color-ink-muted)">{{ __('customer::credit_block.help') }}</p>
+                @endcan
             @endif
         </section>
 

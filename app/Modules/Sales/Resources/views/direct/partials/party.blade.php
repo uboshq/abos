@@ -515,6 +515,13 @@
                                      class="mt-1 rounded-(--radius-field) bg-(--color-badge-danger-bg)
                                             px-2 py-1.5 text-2xs text-(--color-badge-danger-ink)"
                                      x-text="openDraftText"></div>
+
+                                {{-- ⭐ বাকি বন্ধ — হাতে বসানো, বা মেয়াদ পেরোনো পুরনো বাকি; পুরো টাকা দিলে বিক্রি চলে
+                                     ([[CreditExposure::stopsFor()]], বাকি ও আদায়, ৫ অক্টোবর ২০২৬) --}}
+                                <div x-show="customerId && customer && customer.stop" x-cloak role="alert" data-credit-stop
+                                     class="mt-1 rounded-(--radius-field) bg-(--color-badge-danger-bg)
+                                            px-2 py-1.5 text-2xs font-semibold text-(--color-badge-danger-ink)"
+                                     x-text="customer ? customer.stop : ''"></div>
                             </div>
                         </div>
 

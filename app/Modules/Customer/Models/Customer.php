@@ -138,7 +138,25 @@ class Customer extends Model implements AuthenticatableContract, Drillable
             'portal_last_login_at' => 'datetime',
             'portal_password' => 'hashed',
             'is_active' => 'boolean',
+            'credit_blocked_at' => 'datetime',
         ];
+    }
+
+    /**
+     * ⭐ "বাকি বন্ধ" — হাতে বসানো পতাকা, বাকি ও আদায় (৫ অক্টোবর ২০২৬; [[CustomerService::blockCredit()]])।
+     *
+     * ⓘ বসানো থাকলে নতুন বাকি কোনো পথে যায় না, পুরো টাকা দিলে কেনা চলে ([[CreditExposure::stopsFor()]])।
+     * ⛔ `fillable`-এ নয় — সম্পাদনার ফর্ম থেকে নীরবে বসানো-তোলা যেত, কারণ আর কে-কবে ছাড়াই।
+     */
+    public function isCreditBlocked(): bool
+    {
+        return $this->credit_blocked_at !== null;
+    }
+
+    /** কে বাকি বন্ধ করেছেন */
+    public function creditBlocker(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'credit_blocked_by');
     }
 
     public function branch(): BelongsTo

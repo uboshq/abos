@@ -237,6 +237,60 @@ final class CustomerService
      * যে গ্রাহকের বিল বা আদায় আছে তাকে মুছে ফেললে ওই লেনদেনগুলো কার,
      * সেই প্রশ্নের উত্তর হারিয়ে যায়।
      */
+    /**
+     * ⭐ "বাকি বন্ধ" বসানো — বাকি ও আদায় (SAP Credit Management-এর "credit block"), ৫ অক্টোবর ২০২৬।
+     *
+     * ⓘ কারণ বাধ্যতামূলক; কে আর কখন সারিতেই বসে, আর বদলটা নিরীক্ষার খাতায় ওঠে — ঘরগুলোর আগে-পরে
+     * ([[IsAudited]]) আর আলাদা কাজের নাম `credit_blocked`, কারণসহ। ⛔ ডাকার পক্ষ চাবি দেখে (`customer.update`,
+     * সীমা বদলানোর একই চাবি — [[CreditBlockController]])।
+     */
+    public function blockCredit(Customer $customer, string $reason): Customer
+    {
+        $reason = trim($reason);
+
+        return DB::transaction(function () use ($customer, $reason) {
+            $fresh = Customer::query()->whereKey($customer->getKey())->lockForUpdate()->firstOrFail();
+
+            if ($fresh->isCreditBlocked()) {
+                throw ValidationException::withMessages(['reason' => __('customer::credit_block.already')]);
+            }
+
+            $fresh->forceFill([
+                'credit_blocked_at' => now(),
+                'credit_blocked_by' => auth()->id(),
+                'credit_block_reason' => $reason,
+            ])->save();
+
+            $fresh->auditAction('credit_blocked', $reason);
+
+            return $fresh->fresh();
+        });
+    }
+
+    /** ⭐ "বাকি বন্ধ" তোলা — একই চাবি, কারণ বাধ্যতামূলক, খাতায় `credit_unblocked` */
+    public function clearCreditBlock(Customer $customer, string $reason): Customer
+    {
+        $reason = trim($reason);
+
+        return DB::transaction(function () use ($customer, $reason) {
+            $fresh = Customer::query()->whereKey($customer->getKey())->lockForUpdate()->firstOrFail();
+
+            if (! $fresh->isCreditBlocked()) {
+                throw ValidationException::withMessages(['reason' => __('customer::credit_block.not_blocked')]);
+            }
+
+            $fresh->forceFill([
+                'credit_blocked_at' => null,
+                'credit_blocked_by' => null,
+                'credit_block_reason' => null,
+            ])->save();
+
+            $fresh->auditAction('credit_unblocked', $reason);
+
+            return $fresh->fresh();
+        });
+    }
+
     public function deactivate(Customer $customer): Customer
     {
         $customer->update(['is_active' => false]);

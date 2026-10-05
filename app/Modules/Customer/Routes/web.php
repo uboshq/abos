@@ -70,6 +70,12 @@ Route::middleware('auth')->prefix('customers')->group(function () {
     Route::post('/{customer}/conduct', [ConductController::class, 'store'])
         ->whereNumber('customer')->name('conduct.store');
 
+    // ⭐ "বাকি বন্ধ" বসানো ও তোলা — সীমা বদলানোর একই চাবিতে (বাকি ও আদায়, ৫ অক্টোবর ২০২৬; [[CreditBlockController]])
+    Route::post('/{customer}/credit-block', [\App\Modules\Customer\Http\Controllers\CreditBlockController::class, 'store'])
+        ->whereNumber('customer')->name('credit_block.store');
+    Route::delete('/{customer}/credit-block', [\App\Modules\Customer\Http\Controllers\CreditBlockController::class, 'destroy'])
+        ->whereNumber('customer')->name('credit_block.destroy');
+
     /*
      * পোর্টালের চাবি — গ্রাহকের নিজের রুট নয়, আলাদা কন্ট্রোলারে।
      *

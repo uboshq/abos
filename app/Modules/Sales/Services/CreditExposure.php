@@ -126,6 +126,17 @@ final class CreditExposure implements CreditHolds
             $list[(int) $customer->id] = $customer;
         }
 
+        // ⭐ হাতে বসানো "বাকি বন্ধ" আগে ([[Customer::isCreditBlocked()]]) — পুরো দায় শোধ ছাড়া দেয়াল ওঠে না
+        foreach ($list as $id => $customer) {
+            if ($customer->isCreditBlocked()) {
+                $out[$id] = [
+                    'message' => __('sales::credit.blocked_stop', ['reason' => (string) $customer->credit_block_reason]),
+                    'clears' => null,
+                ];
+                unset($list[$id]);
+            }
+        }
+
         if ($days > 0) {
             foreach ($this->overdueBills($list, $days) as $id => $bills) {
                 $total = array_reduce($bills, fn (string $sum, array $b) => bcadd($sum, $b['unpaid'], 4), '0');

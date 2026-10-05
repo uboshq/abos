@@ -45,6 +45,9 @@ return [
     'expiry_corrected' => 'Expiry corrected',
     'shift_closed' => 'Shift closed',
     'sent_back' => 'Sent back',
+    // Credit block set and cleared, with a reason (credit and collections, 5 Oct 2026)
+    'credit_blocked' => 'Credit blocked',
+    'credit_unblocked' => 'Credit allowed again',
     'db_restored' => 'Books restored from backup',
     'db_restore_failed' => 'Books restore failed',
     // ⭐ উল্টো কাগজ আর বাতিল-ইনভয়েস (মালিকের সংস্করণ ২, ৪ অক্টোবর ২০২৬)

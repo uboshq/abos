@@ -8,4 +8,5 @@ declare(strict_types=1);
 return [
     'overdue_stop' => 'Unpaid for more than :days days past due (:bills, :amount) — no new credit',
     'uncleared_cheques' => 'Cheques not yet cleared',
+    'blocked_stop' => 'Credit is blocked for this customer (:reason) — a sale paid in full still goes through',
 ];
