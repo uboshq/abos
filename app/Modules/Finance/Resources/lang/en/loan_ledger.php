@@ -14,6 +14,7 @@ return [
     'kind_given' => 'Hand loan given',
     'kind_taken' => 'Hand loan taken',
     'kind_books' => 'On the hand-loan account',
+    'party_backfill' => 'Hand-loan line given its person — reversed and reposted the same day',
     'total' => 'Total',
     'address' => 'Address',
     'hand_loan_balance' => 'Hand loan balance',
