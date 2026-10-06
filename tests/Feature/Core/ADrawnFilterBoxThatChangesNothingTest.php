@@ -54,6 +54,44 @@ final class ADrawnFilterBoxThatChangesNothingTest extends TestCase
         'party_type' => ['party_type_id' => 987653],
         'cost_centre' => ['cost_center_id' => 987652],
         'account' => ['account_id' => 987651],
+
+        /*
+         * ⭐ পরে আসা ছাঁকনিগুলো — ৬ অক্টোবর ২০২৬ (ec)। ⛔ তালিকা ২১ সেপ্টেম্বরের পাঁচটায় থেমে ছিল, আর প্রথম অচেনা ছাঁকনিতেই
+         * পাহারা থামত (চেক রেজিস্টারের `direction`) — তার পরের কোনো রিপোর্টের কোনো ছাঁকনি আর মাপা হত না।
+         * ⓘ যে ছাঁকনির মান রিপোর্ট ভেদে আলাদা (`status`, `state`, `group_by`), তার কয়েকটা বিকল্প — যেকোনো একটা কোয়েরি
+         * বদলালেই ছাঁকনিটা জীবিত ([[probes()]])।
+         */
+        'warehouse_id' => ['warehouse_id' => 987650],
+        'product_id' => ['product_id' => 987649],
+        'category_id' => ['category_id' => 987648],
+        'brand_id' => ['brand_id' => 987647],
+        'customer_id' => ['customer_id' => 987646],
+        'supplier_id' => ['supplier_id' => 987645],
+        'person_id' => ['person_id' => 987644],
+        'salesman_id' => ['salesman_id' => 987643],
+        'rental_contract_id' => ['rental_contract_id' => 987642],
+        'location_id' => ['location_id' => 987641],
+        'facility_id' => ['facility_id' => 987640],
+        'batch_id' => ['batch_id' => 987639],
+        'direction' => ['direction' => 'received'],
+        'month' => ['month' => '1997-04'],
+        'period' => ['period' => 'week'],
+        'status' => [['status' => 'bounced'], ['status' => 'slow'], ['status' => 'negative']],
+        'state' => [['state' => 'overdue'], ['state' => 'today']],
+        'group_by' => [['group_by' => 'brand'], ['group_by' => 'product']],
+    ];
+
+    /**
+     * ⓘ যে ছাঁকনি কোয়েরিতে নয়, PHP-তে সারি বাছে — খালি পরীক্ষার ডেটাবেসে কোয়েরির আকার তাই বদলায় না, অথচ ছাঁকনি জীবিত।
+     * ⛔ এখানে নাম কেবল কারণসহ; কোয়েরিতে বসানো ছাঁকনি এখানে আসে না।
+     */
+    private const DATA_DRIVEN = [
+        'finance.bank_loan_instalments / state' => 'কিস্তিগুলো সেবা থেকে PHP-তে আসে ([[BankFacilityService::instalmentsDue()]]) আর অবস্থা সেখানেই বাছা হয়',
+        'supplier.principal_commission / month' => 'প্রতিটা প্রিন্সিপালের চক্র PHP-তে গোনা ([[PrincipalCommission::rows()]]); প্রিন্সিপাল না থাকলে সারি নেই',
+        'supplier.principal_commission / branch' => 'শাখার দেয়াল প্রিন্সিপালের তালিকায় বসে, সারি PHP-তে জন্মায় — প্রিন্সিপাল না থাকলে কোয়েরি খালি',
+        'finance.bank_loan_instalments / date_range' => 'শেষ তারিখ কিস্তির সেবায় "আজ পর্যন্ত" হিসেবে যায়; সারি PHP-তে, ঋণ না থাকলে খালি',
+        'finance.bank_loan_ledger / date_range' => 'খতিয়ান কেবল একটা সত্যিকারের ঋণ বাছলে গড়ে ওঠে ([[LoanLedgerReports::bankLoan()]]) — বানানো আইডিতে খালি খাতা',
+        'finance.bank_loan_ledger / facility_id' => 'ঋণটা ডেটাবেসে খোঁজা হয় — বানানো আইডি না মিললে খালি খাতা, ছাঁকনি থাকুক বা না থাকুক',
     ];
 
     private Company $company;
@@ -92,7 +130,18 @@ final class ADrawnFilterBoxThatChangesNothingTest extends TestCase
 
                 $measured++;
 
-                if ($this->shapeOf($report, []) === $this->shapeOf($report, self::PROBE[$filter])) {
+                if (array_key_exists($key.' / '.$filter, self::DATA_DRIVEN)) {
+                    continue;
+                }
+
+                $plain = $this->shapeOf($report, []);
+                $alive = false;
+
+                foreach ($this->probes($filter) as $probe) {
+                    $alive = $alive || $plain !== $this->shapeOf($report, $probe);
+                }
+
+                if (! $alive) {
                     $dead[] = $key.' / '.$filter;
                 }
             }
@@ -168,7 +217,7 @@ final class ADrawnFilterBoxThatChangesNothingTest extends TestCase
             $keys = $report->requestKeys();
 
             foreach ($report->filters as $filter) {
-                foreach (array_keys(self::PROBE[$filter] ?? []) as $asked) {
+                foreach (array_keys($this->probes($filter)[0] ?? []) as $asked) {
                     if (! in_array($asked, $keys, true)) {
                         $missing[] = $key.' / '.$filter.' → '.$asked;
                     }
@@ -192,6 +241,18 @@ final class ADrawnFilterBoxThatChangesNothingTest extends TestCase
     }
 
     // ── মাপার যন্ত্রপাতি ─────────────────────────────────────────────
+
+    /**
+     * একটা ছাঁকনির মাপার মান — একটা, বা কয়েকটা বিকল্প (মান যখন রিপোর্ট ভেদে আলাদা)।
+     *
+     * @return list<array<string, mixed>>
+     */
+    private function probes(string $filter): array
+    {
+        $probe = self::PROBE[$filter] ?? [];
+
+        return array_is_list($probe) ? $probe : [$probe];
+    }
 
     /** @return array<string, ReportDefinition> */
     private function reports(): array
