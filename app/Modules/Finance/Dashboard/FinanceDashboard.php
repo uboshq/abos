@@ -192,6 +192,7 @@ final class FinanceDashboard implements ProvidesDashboard
                 ...self::handLoansOverdue(),
                 ...self::rentalsDue(),
                 ...self::bankLoansDue(),
+                ...self::insuranceDue(),
 
                 /*
                  * ⓘ বয়সের ভাগটা এখানে গোনা হয় না — দরজাটা **যেখানে
@@ -764,4 +765,31 @@ final class FinanceDashboard implements ProvidesDashboard
             tone: $overdue !== [] ? Stat::BAD : ($ending->isNotEmpty() ? Stat::WARN : Stat::NEUTRAL),
         )];
     }
+
+    /**
+     * ⭐ বীমা — বাকি প্রিমিয়াম আর নবায়ন (অর্থ-মডিউলের পরিকল্পনা ৬.৫, ৬ অক্টোবর ২০২৬)। ⓘ নিজের হিসাব নয়: [[InsuranceDues]] —
+     * ঘণ্টাও ওখান থেকে পড়ে। হেডারে বাছা শাখায়। ⛔ বীমার চাবি ছাড়া নেই।
+     *
+     * @return list<Stat>
+     */
+    private static function insuranceDue(): array
+    {
+        if (! config('abos.dashboards_v2') || ! auth()->user()?->can('finance.insurance.view')) {
+            return [];
+        }
+
+        $dues = app(\App\Modules\Finance\Services\InsuranceDues::class);
+        $renewals = $dues->renewals(inView: true);
+        $premiums = $dues->premiumsDue(inView: true);
+
+        return [new Stat(
+            label: __('finance::insurance_alert.dash_label'),
+            value: Money::format($premiums->reduce(fn (string $sum, $p) => bcadd($sum, (string) $p->amount, 4), '0')),
+            hint: __('finance::insurance_alert.dash_hint', ['renewals' => $renewals->count(), 'premiums' => $premiums->count()]),
+            href: route('finance.insurance.index', ['tab' => 'due']),
+            permission: 'finance.insurance.view',
+            tone: $premiums->isNotEmpty() ? Stat::BAD : ($renewals->isNotEmpty() ? Stat::WARN : Stat::NEUTRAL),
+        )];
+    }
+
 }

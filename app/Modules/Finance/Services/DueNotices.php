@@ -56,6 +56,11 @@ final class DueNotices
 
     public const BANK_RENEWAL_DUE = 'finance.bank_renewal_due';
 
+    // ⭐ বীমা — পরিকল্পনা ৬.৫, ৬ অক্টোবর ২০২৬
+    public const INSURANCE_RENEWAL_DUE = 'finance.insurance_renewal_due';
+
+    public const INSURANCE_PREMIUM_DUE = 'finance.insurance_premium_due';
+
     /** কিস্তির তাগাদা কত দিন আগে থেকে — এক সপ্তাহ, দিন পার হলে প্রতি সপ্তাহে */
     public const INSTALMENT_DAYS = 7;
 
@@ -77,6 +82,8 @@ final class DueNotices
             // ⭐ ভাড়া — চুক্তি শেষের ৬০/৩০ দিন আগে আর বকেয়া ([[RentalNotices]], পরিকল্পনা ৫ঘ, ৬ অক্টোবর ২০২৬)
             'rentals' => array_sum(app(RentalNotices::class)->sendAll()),
             'bank_loans' => $this->bankInstalmentsDue() + $this->bankRenewalsDue(),
+            // ⭐ বীমা — নবায়নের ৩০ দিন আগে, আর বাকি প্রিমিয়াম ([[InsuranceDues]], পরিকল্পনা ৬.৫, ৬ অক্টোবর ২০২৬)
+            'insurance' => $this->insuranceRenewalsDue() + $this->insurancePremiumsDue(),
         ];
     }
 
@@ -299,6 +306,49 @@ final class DueNotices
                 route('finance.bank_facility.show', $facility->id),
                 __('finance::bank_loan_report.notice_renewal', ['facility' => trim($facility->bank.' · '.$facility->document_no, ' ·')]),
                 __('finance::bank_loan_report.notice_renewal_body', ['date' => $facility->renews_on->translatedFormat('j M Y')]),
+            );
+        }
+
+        return $sent;
+    }
+
+    /**
+     * ⭐ বীমার নবায়ন — মেয়াদ শেষের ৩০ দিনের ভিতরে, বা পেরিয়ে গেছে ([[InsuranceDues::renewals()]]); পলিসি ধরে সপ্তাহে একবার।
+     */
+    public function insuranceRenewalsDue(): int
+    {
+        $sent = 0;
+
+        foreach (app(InsuranceDues::class)->renewals() as $policy) {
+            $sent += $this->tell(
+                self::INSURANCE_RENEWAL_DUE,
+                'finance.insurance.view',
+                route('finance.insurance.show', $policy->id),
+                __('finance::insurance_alert.notice_renewal', ['policy' => $policy->policy_no, 'insurer' => $policy->institution?->name() ?? '']),
+                __('finance::insurance_alert.notice_renewal_body', ['date' => $policy->ends_on->translatedFormat('j M Y'), 'days' => $policy->daysLeft()]),
+            );
+        }
+
+        return $sent;
+    }
+
+    /**
+     * ⭐ বাকি বীমা প্রিমিয়াম — দিন পার, বা সামনের সাত দিনে ([[InsuranceDues::premiumsDue()]]); প্রিমিয়াম ধরে সপ্তাহে একবার।
+     */
+    public function insurancePremiumsDue(): int
+    {
+        $sent = 0;
+
+        foreach (app(InsuranceDues::class)->premiumsDue() as $premium) {
+            $sent += $this->tell(
+                self::INSURANCE_PREMIUM_DUE,
+                'finance.insurance.view',
+                route('finance.insurance.show', $premium->policy_id),
+                __('finance::insurance_alert.notice_premium', ['policy' => $premium->policy?->policy_no ?? '']),
+                __('finance::insurance_alert.notice_premium_body', [
+                    'amount' => Money::format($premium->amount),
+                    'date' => $premium->period_from->translatedFormat('j M Y'),
+                ]),
             );
         }
 
