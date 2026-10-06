@@ -11,6 +11,7 @@ use App\Modules\Customer\Models\Customer;
 use App\Modules\Inventory\Models\Product;
 use App\Modules\Sales\Models\SalesOrder;
 use App\Modules\Sales\Models\SalesOrderLine;
+use App\Modules\Sales\Services\OrderProgress;
 use App\Modules\Sales\Services\SalesOrderService;
 use App\Modules\Sales\Support\SalesOrderStatus;
 use Illuminate\Http\JsonResponse;
@@ -59,8 +60,11 @@ class SalesOrderApiController extends Controller implements HasMiddleware
                 fn ($q) => $q->where('status', (string) $request->query('status')))
             ->latest('trx_date')->latest('id')->paginate(50);
 
+        // ⓘ ওয়েবের আদেশ-তালিকার চিপের একই গোনা, পঞ্চাশটায় একবার ([[OrderProgress::compute()]])
+        $progress = app(OrderProgress::class)->compute($rows->getCollection());
+
         return response()->json([
-            'orders' => collect($rows->items())->map(fn (SalesOrder $o) => $this->facts($o, false))->values(),
+            'orders' => collect($rows->items())->map(fn (SalesOrder $o) => $this->facts($o, false, $progress[(int) $o->id] ?? null))->values(),
             'next_page' => $rows->hasMorePages() ? $rows->currentPage() + 1 : null,
         ]);
     }
@@ -190,10 +194,61 @@ class SalesOrderApiController extends Controller implements HasMiddleware
         return SalesOrder::query()->where('public_id', $id)->firstOrFail();
     }
 
+    /**
+     * ওয়েবের চিপের ক্রমে: অবস্থা, চালান, বিল, ব্যাক অর্ডার, পুরনো খসড়া — রং ব্যাজের নামে (`success`, `danger` …)।
+     *
+     * @return list<array{key: string, label: string, tone: string}>
+     */
+    private function chips(SalesOrder $o, array $progress): array
+    {
+        $chips = [['key' => 'status', 'label' => SalesOrderStatus::label((string) $o->status), 'tone' => SalesOrderStatus::tone((string) $o->status)]];
+        foreach (['delivery' => 'deliveryLabel', 'billing' => 'billingLabel'] as $key => $label) {
+            $p = (string) ($progress[$key] ?? SalesOrderStatus::NONE);
+            if ($p !== SalesOrderStatus::NONE) {
+                $chips[] = ['key' => $key, 'label' => SalesOrderStatus::$label($p), 'tone' => SalesOrderStatus::progressTone($p)];
+            }
+        }
+        if (! empty($progress['back'])) {
+            $chips[] = ['key' => 'back_order', 'label' => __('sales::order_status.back_order'), 'tone' => 'danger'];
+        }
+        if (! empty($progress['stale'])) {
+            $chips[] = ['key' => 'stale', 'label' => __('sales::order_status.stale', ['days' => (int) ($progress['age_days'] ?? 0)]), 'tone' => 'danger'];
+        }
+
+        return $chips;
+    }
+
+    /**
+     * ⛔ মজুদের সংখ্যা (`have`, `short`) কেবল মজুদ দেখার চাবিতে (`inventory.stock.view`) — SR-এর ফোনে মজুদ নয় (মালিক,
+     * ১ অক্টোবর ২০২৬; কাউন্টারের একই নিয়ম, [[DirectSaleApiController]])। চাবি না থাকলে কেবল "কুলোয় কি না" (`enough`)।
+     *
+     * @return list<array{product: ?string, want: string, enough: bool, have?: string, short?: string}>
+     */
+    private function atp(SalesOrder $o): array
+    {
+        $atp = $this->orders->availableToPromise($o);
+        $seesStock = (bool) request()->user()?->can('inventory.stock.view');
+
+        return $o->lines->unique('product_id')->filter(fn ($l) => isset($atp[(int) $l->product_id]))
+            ->map(function ($l) use ($atp, $seesStock): array {
+                $a = $atp[(int) $l->product_id];
+                $short = bcsub($a['want'], $a['have'], 4);
+                $isShort = bccomp($short, '0', 4) > 0;
+
+                return [
+                    'product' => $l->product?->name(),
+                    'want' => $a['want'],
+                    'enough' => ! $isShort,
+                    ...($seesStock ? ['have' => $a['have'], 'short' => $isShort ? $short : '0.0000'] : []),
+                ];
+            })->values()->all();
+    }
+
     /** @return array<string, mixed> */
-    private function facts(SalesOrder $o, bool $withLines): array
+    private function facts(SalesOrder $o, bool $withLines, ?array $progress = null): array
     {
         $o->loadMissing(['customer', 'lines.product']);
+        $progress ??= app(OrderProgress::class)->of($o);
         $pending = $o->status === SalesOrderStatus::AWAITING_APPROVAL
             ? app(ApprovalEngine::class)->latestFor($o, SalesOrderService::APPROVAL_ACTION) : null;
         $user = request()->user();
@@ -209,6 +264,12 @@ class SalesOrderApiController extends Controller implements HasMiddleware
             'total' => bcadd((string) $o->total, '0', 2),
             // ⓘ সীমায় আটকে থাকলে কত কম — ফোনে লেখক দেখেন কেন থেমে আছে
             'credit_short' => $o->credit_short === null ? null : bcadd((string) $o->credit_short, '0', 2),
+            // ⭐ ওয়েবের তালিকার চিপ, একই উৎসে আর একই কথায় ([[OrderProgress]], state-chip) — ফোন কেবল আঁকে
+            'back_order' => (bool) ($progress['back'] ?? false),
+            'credit_held' => $o->status === SalesOrderStatus::CREDIT_HELD,
+            'chips' => $this->chips($o, $progress),
+            // ⭐ মজুদ এখন — ধরা হয়নি: কত আছে, কত চাই, কত কম (মালিক, ৬ অক্টোবর ২০২৬: মাল ধরা চালানে; [[SalesOrderService::availableToPromise()]])
+            'atp' => $withLines ? $this->atp($o) : null,
             'editable' => $o->status === SalesOrderStatus::DRAFT && $o->created_by_customer_id === null
                 && (int) $o->created_by === (int) $user?->id,
             'awaiting_me' => $awaitingMe = $pending !== null && $user !== null && app(ApprovalEngine::class)->canDecide($pending, $user),

@@ -1099,4 +1099,36 @@ final class SalesOrderService
             'signature' => $this->engine->requires('sales', self::APPROVAL_ACTION, (string) $order->total, class_basename(SalesOrder::class)),
         ];
     }
+
+    /**
+     * ⭐ কত আছে আর কত চাই — ধরা ছাড়াই (ATP), যখন আদেশ মাল ধরে না (মালিক, ৬ অক্টোবর ২০২৬: ধরা শুরু চালানে)।
+     * ⭐ ওয়েবের আদেশের পাতা আর ফোনের আদেশ — একই উৎস (সমন্বয়ক, ৬ অক্টোবর ২০২৬)।
+     * ⓘ খোলা আদেশেই (খসড়া থেকে নিশ্চিত পর্যন্ত, বন্ধ বা বাতিল নয়), গুদাম জানা থাকলে; পণ্য ধরে একবার।
+     *
+     * @return array<int, array{have: string, want: string}>
+     */
+    public function availableToPromise(SalesOrder $order): array
+    {
+        if ($order->warehouse === null || (bool) app(\App\Core\Services\SettingsService::class)->get('sales.reserve_on_order', false)
+            || in_array($order->status, [SalesOrderStatus::CLOSED, SalesOrderStatus::CANCELLED, SalesOrderStatus::REJECTED], true)) {
+            return [];
+        }
+
+        $stock = app(\App\Modules\Inventory\Services\StockService::class);
+        $out = [];
+
+        foreach ($order->lines->groupBy('product_id') as $productId => $lines) {
+            $product = $lines->first()->product;
+            if ($product === null) {
+                continue;
+            }
+            $want = $lines->reduce(fn (string $s, $l) => bcadd($s, $l->pendingQty(), 4), '0');
+            if (bccomp($want, '0', 4) <= 0) {
+                continue;
+            }
+            $out[(int) $productId] = ['have' => bcadd($stock->availableQty($product, $order->warehouse), '0', 4), 'want' => $want];
+        }
+
+        return $out;
+    }
 }
