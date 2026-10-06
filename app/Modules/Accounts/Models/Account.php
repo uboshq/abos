@@ -111,7 +111,7 @@ class Account extends Model implements Drillable
 
             $builder->whereNotIn($builder->getModel()->getTable().'.id', CashTill::query()->withoutGlobalScope('viewed-branch')
                 ->whereNotNull('account_id')
-                ->where(fn ($w) => $w->whereNull('branch_id')->orWhere('branch_id', '!=', $branch))
+                ->whereNotNull('branch_id')->where('branch_id', '!=', $branch) // ⭐ শাখাহীন টিল সব শাখার — মালিক, ৬ অক্টোবর ২০২৬
                 ->select('account_id'));
         });
     }
@@ -235,7 +235,7 @@ class Account extends Model implements Drillable
         // ⚠️ টিলের নিজের শাখার দেয়ালের বাইরে পড়তে হয় — নাহলে বাদ দেওয়ার তালিকাটাই খালি হত
         return $query->whereNotIn($query->getModel()->getTable().'.id', CashTill::query()->withoutGlobalScope('viewed-branch')
             ->whereNotNull('account_id')
-            ->where(fn ($w) => $w->whereNull('branch_id')->orWhere('branch_id', '!=', $branch))
+            ->whereNotNull('branch_id')->where('branch_id', '!=', $branch) // ⭐ শাখাহীন টিল সব শাখার — মালিক, ৬ অক্টোবর ২০২৬
             ->select('account_id'));
     }
 

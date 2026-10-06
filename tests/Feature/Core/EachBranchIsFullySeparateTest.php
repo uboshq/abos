@@ -146,8 +146,10 @@ final class EachBranchIsFullySeparateTest extends TestCase
                 foreach (self::PLACES as $where) {
                     $marker = $kind.strtoupper($where);
                     $this->assertContains($marker, $all[$name], "⛔ {$name} — \"সব শাখা\"-য় {$marker} নেই।");
-                    $this->assertSame($where === 'mms', in_array($marker, $mms[$name], true), sprintf(
-                        '⛔ %s — ময়মনসিংহ বেছে %s %s।', $name, $marker, $where === 'mms' ? 'দেখা যায়নি' : 'দেখা গেল',
+                    // ⓘ শাখাহীন টিল (কোম্পানির) প্রতিটা শাখায়ও — মালিক, ৬ অক্টোবর ২০২৬: "এই একাউন্ট সব branch ব্যবহার করবে"
+                    $seen = $where === 'mms' || ($kind === 'ZQTILL' && $where === 'none');
+                    $this->assertSame($seen, in_array($marker, $mms[$name], true), sprintf(
+                        '⛔ %s — ময়মনসিংহ বেছে %s %s।', $name, $marker, $seen ? 'দেখা যায়নি' : 'দেখা গেল',
                     ));
                 }
             }
@@ -197,7 +199,8 @@ final class EachBranchIsFullySeparateTest extends TestCase
         $every = $this->idsOn(route('accounts.transfer.create'), 'tills');
 
         foreach (self::PLACES as $where) {
-            $this->assertSame($where === 'mms', in_array($this->till[$where], $one, true), "⛔ ময়মনসিংহ বেছে \"কোন টিলে\"-তে {$where}-এর টিল ভুল জায়গায়।");
+            // ⓘ শাখাহীন টিল প্রতিটা শাখার — মালিক, ৬ অক্টোবর ২০২৬
+            $this->assertSame(in_array($where, ['mms', 'none'], true), in_array($this->till[$where], $one, true), "⛔ ময়মনসিংহ বেছে \"কোন টিলে\"-তে {$where}-এর টিল ভুল জায়গায়।");
             $this->assertContains($this->till[$where], $every, "⛔ \"সব শাখা\"-য় \"কোন টিলে\" থেকে {$where}-এর টিল হারাল — শাখা পেরোনো হস্তান্তর আর বসানো যেত না।");
         }
     }

@@ -67,7 +67,7 @@ class MoneyCustodyController extends Controller implements HasMiddleware
          */
         $branch = ViewedBranch::one();
 
-        $tills = ViewedBranch::narrow(CashTill::query(), 'cash_tills.branch_id')
+        $tills = CashTill::query() /* ⭐ শাখার দেয়াল মডেলেই — বাছা শাখার আর শাখাহীন টিল (মালিক, ৬ অক্টোবর ২০২৬) */
             ->with(['account', 'holder'])
             ->orderByDesc('is_primary')
             ->orderBy('code')

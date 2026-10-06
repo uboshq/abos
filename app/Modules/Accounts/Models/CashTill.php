@@ -51,8 +51,13 @@ class CashTill extends Model implements Drillable
         static::addGlobalScope('viewed-branch', function (Builder $builder): void {
             $branch = ViewedBranch::one();
 
+            /*
+             * ⭐ শাখায় না-বাঁধা টিল (কোম্পানির) প্রতিটা শাখায় দেখা যায় — মালিক, ৬ অক্টোবর ২০২৬: *"এই একাউন্ট সব
+             * branch ব্যবহার করবে"* (মালিকের হাতে নগদ, অভি, আবু কাওসার)। ⓘ শাখায় বাঁধা টিল আগের মতো কেবল নিজের শাখায়।
+             */
             if ($branch !== null) {
-                $builder->where($builder->getModel()->getTable().'.branch_id', $branch);
+                $table = $builder->getModel()->getTable();
+                $builder->where(fn (Builder $q) => $q->where($table.'.branch_id', $branch)->orWhereNull($table.'.branch_id'));
             }
         });
     }

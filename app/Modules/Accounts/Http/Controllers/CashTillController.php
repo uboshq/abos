@@ -60,7 +60,11 @@ class CashTillController extends Controller implements HasMiddleware
          * জের পুরো ড্রয়ারের, শাখা ধরে কাটা নয় — একটা ড্রয়ার একটাই জায়গায় থাকে;
          * আর [[CashTill::balance()]] টাকা বেরোনোর যাচাইয়ে লাগে, ওটা গোটা থাকে।
          */
-        $query = ViewedBranch::narrow(CashTill::query(), 'cash_tills.branch_id')
+        // ⭐ বাছা শাখার টিল আর শাখাহীন (কোম্পানির) টিল — মালিক, ৬ অক্টোবর ২০২৬: "এই একাউন্ট সব branch ব্যবহার করবে"
+        $query = CashTill::query()->withoutGlobalScope('viewed-branch')
+            ->when(ViewedBranch::one(), fn ($q, $branch) => $q->where(
+                fn ($w) => $w->where('cash_tills.branch_id', $branch)->orWhereNull('cash_tills.branch_id'),
+            ))
             ->search($request->query('q'))
             ->when(! $request->boolean('inactive'), fn ($q) => $q->active())
             ->with(['account', 'holder', 'branch']);

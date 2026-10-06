@@ -64,7 +64,7 @@ class ShiftController extends Controller implements HasMiddleware
              * তালিকাটাই আগে থেকে জানত।
              */
             // ⭐ হেডারে বাছা শাখার টিল (৩০ সেপ্টেম্বর ২০২৬) — [[ViewedBranch]]
-            'tills' => ViewedBranch::narrow(CashTill::query(), 'cash_tills.branch_id')
+            'tills' => CashTill::query() /* ⭐ শাখার দেয়াল মডেলেই — বাছা শাখার আর শাখাহীন টিল (মালিক, ৬ অক্টোবর ২০২৬) */
                 ->active()
                 ->whereNotIn('id', CounterShift::query()->open()->pluck('cash_till_id'))
                 ->orderBy('code')

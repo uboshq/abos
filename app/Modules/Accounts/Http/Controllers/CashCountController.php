@@ -102,7 +102,7 @@ class CashCountController extends Controller implements HasMiddleware
         return view('accounts::count.form', [
             'menu' => $this->menu->forUser($request->user()),
             // ⭐ হেডারে বাছা শাখার টিল (৩০ সেপ্টেম্বর ২০২৬) — [[ViewedBranch]]
-            'tills' => ViewedBranch::narrow(CashTill::query(), 'cash_tills.branch_id')->active()->orderByDesc('is_primary')->orderBy('code')->get(),
+            'tills' => CashTill::query() /* ⭐ শাখার দেয়াল মডেলেই — বাছা শাখার আর শাখাহীন টিল (মালিক, ৬ অক্টোবর ২০২৬) */->active()->orderByDesc('is_primary')->orderBy('code')->get(),
             'notes' => CashCount::DENOMINATIONS,
         ]);
     }

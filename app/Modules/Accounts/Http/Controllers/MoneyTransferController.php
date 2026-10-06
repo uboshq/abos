@@ -8,7 +8,6 @@ use App\Core\Concerns\GrandTotals;
 use App\Core\Concerns\SortsLists;
 use App\Core\Services\MenuBuilder;
 use App\Core\Support\CompanyContext;
-use App\Core\Support\ViewedBranch;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Modules\Accounts\Models\Account;
@@ -197,7 +196,7 @@ class MoneyTransferController extends Controller implements HasMiddleware
              * শাখার দেয়ালে ([[CashTill::booted()]]): এক শাখা বাছা থাকলে কেবল সেই শাখার, "সব শাখা"-য়
              * সবগুলো। ⓘ শাখা পেরোনো হস্তান্তর তাই কেবল "সব শাখা"-য় বসে (মালিক, ১ অক্টোবর ২০২৬)।
              */
-            'fromTills' => ViewedBranch::narrow(CashTill::query(), 'cash_tills.branch_id')->active()->with('account')->orderByDesc('is_primary')->orderBy('code')->get(),
+            'fromTills' => CashTill::query() /* ⭐ শাখার দেয়াল মডেলেই — বাছা শাখার আর শাখাহীন টিল (মালিক, ৬ অক্টোবর ২০২৬) */->active()->with('account')->orderByDesc('is_primary')->orderBy('code')->get(),
             'tills' => CashTill::query()->active()->with('account')->orderByDesc('is_primary')->orderBy('code')->get(),
             // ব্যাংকে জমা দেওয়াটাও হস্তান্তর, আর সেটাই দিনশেষে সবচেয়ে
             // বেশি হয় — তাই ব্যাংকের খাতগুলোও গন্তব্যের তালিকায়

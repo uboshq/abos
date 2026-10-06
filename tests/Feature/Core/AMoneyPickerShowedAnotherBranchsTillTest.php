@@ -83,7 +83,8 @@ final class AMoneyPickerShowedAnotherBranchsTillTest extends TestCase
             'আদায়ের রসিদ (ভাউচার)' => [route('accounts.voucher.create', 'receipt'), 'moneyAccounts'],
         ];
 
-        $expect = ['mms' => ['mms', 'bank'], 'ntk' => ['ntk', 'bank'], 'all' => ['mms', 'ntk', 'none', 'bank']];
+        // ⓘ শাখায় না-বাঁধা টিল ("none") প্রতিটা শাখায়ও — মালিক, ৬ অক্টোবর ২০২৬: "এই একাউন্ট সব branch ব্যবহার করবে"
+        $expect = ['mms' => ['mms', 'none', 'bank'], 'ntk' => ['ntk', 'none', 'bank'], 'all' => ['mms', 'ntk', 'none', 'bank']];
 
         foreach (['mms' => $this->mymensingh->id, 'ntk' => $this->netrakona->id, 'all' => 'all'] as $pick => $branch) {
             $this->choose($branch);
