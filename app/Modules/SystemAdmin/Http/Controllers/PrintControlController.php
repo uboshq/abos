@@ -93,7 +93,7 @@ class PrintControlController extends Controller implements HasMiddleware
             'paper' => $paper,
             'size' => $size,
             'target' => $target,
-            'cards' => $this->cards($target, $designs, $size),
+            'cards' => $this->cards($target, $designs, $size, $branch),
 
             /* ⓘ নতুন নকশা থাকলে "সাধারণ"-এর পুরনো সুইচগুলোও (অংশ, কলাম) পর্দায় নয় — ওগুলো কেবল সাধারণ কাগজের */
             'hasDesigns' => array_diff($designs['options'] ?? [], ['standard']) !== [],
@@ -266,7 +266,7 @@ class PrintControlController extends Controller implements HasMiddleware
      *
      * @return list<array{code: string, name: string, sample: ?string}>
      */
-    private function cards(?string $target, ?array $designs, string $size = 'a4'): array
+    private function cards(?string $target, ?array $designs, string $size = 'a4', ?int $branch = null): array
     {
         $cards = [];
 
@@ -293,10 +293,11 @@ class PrintControlController extends Controller implements HasMiddleware
             $cards[] = [
                 'code' => $code,
                 'name' => (string) __($designs['option_label'].$code),
-                'sample' => $designs['sample_route'] === null ? null : route($designs['sample_route'], ['design' => $code, 'size' => $size]),
+                // ⭐ শাখার ট্যাবে সেই শাখার মাথা আর লোগোয় নমুনা (মালিক, ৬ অক্টোবর ২০২৬)
+                'sample' => $designs['sample_route'] === null ? null : route($designs['sample_route'], array_filter(['design' => $code, 'size' => $size, 'branch' => $branch])),
 
                 /* ⓘ আসল ছাপা, পপআপে — নমুনার পাতার `?pdf=1` */
-                'pdf' => $designs['sample_route'] === null ? null : route($designs['sample_route'], ['design' => $code, 'size' => $size, 'pdf' => 1]),
+                'pdf' => $designs['sample_route'] === null ? null : route($designs['sample_route'], array_filter(['design' => $code, 'size' => $size, 'pdf' => 1, 'branch' => $branch])),
             ];
         }
 

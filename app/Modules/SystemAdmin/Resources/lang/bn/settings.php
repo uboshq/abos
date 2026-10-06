@@ -66,6 +66,7 @@ return [
     'invoice_info_no_logo' => 'কোনো লোগো তোলা হয়নি',
     'invoice_info_change_logo' => 'লোগো, BIN আর TIN বদলান কোম্পানির পাতায়',
     'invoice_info_logo_switch' => 'লোগো চালু-বন্ধ: "বিক্রয় বিল" কাগজের ট্যাবে, "কাগজে যা আসবে"।',
+    'invoice_info_next_shared' => 'এই নম্বর সব শাখার — বিক্রি নম্বর একটাই, শাখা ধরে আলাদা নয়।',
     'invoice_info_next' => 'পরের বিক্রি নম্বর',
     'invoice_info_series' => 'নম্বরের ধরন বদলান নম্বর সিরিজে',
     'invoice_info_no_series' => 'বিক্রি নম্বরের কোনো চালু সিরিজ নেই',

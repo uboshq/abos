@@ -66,6 +66,7 @@ return [
     'invoice_info_no_logo' => 'No logo uploaded',
     'invoice_info_change_logo' => 'Change logo, BIN and TIN on the company page',
     'invoice_info_logo_switch' => 'Turning the logo on or off: the "Sales invoice" paper tab, "What appears on the paper".',
+    'invoice_info_next_shared' => 'This number is shared by every branch — there is one sale number, not one per branch.',
     'invoice_info_next' => 'Next sale number',
     'invoice_info_series' => 'Change the number pattern in Number series',
     'invoice_info_no_series' => 'No active sale number series',

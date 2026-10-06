@@ -93,10 +93,10 @@ class InvoiceInfoController extends Controller implements HasMiddleware
             'papers' => PrintControlController::paperTabs(),
             'parts' => $this->parts($branch),
             'company' => $company,
-            'next' => $this->nextSaleNumber(),
+            ...$this->nextSaleNumber($branch),
 
             /* ⓘ নমুনার পাতা বিক্রয়ের — বিক্রয় বন্ধ থাকলে রুটটাই নেই, তখন লিংকও নেই */
-            'sample' => Route::has('sales.invoice_sample') ? route('sales.invoice_sample') : null,
+            'sample' => Route::has('sales.invoice_sample') ? route('sales.invoice_sample', array_filter(['branch' => $branch])) : null,
         ]);
     }
 
@@ -310,20 +310,25 @@ class InvoiceInfoController extends Controller implements HasMiddleware
     }
 
     /**
-     * পরের বিক্রি নম্বর — কেবল দেখানোর জন্য।
+     * পরের বিক্রি নম্বর — কেবল দেখানোর জন্য; সিরিজ এখানে বদলায় না।
      *
-     * ⓘ ২৯ সেপ্টেম্বর থেকে বিলের নম্বরই বিক্রি নম্বর (S-0001), তাই সিরিজ `S`। শাখার নিজের
-     * সিরিজ না থাকলে কোম্পানির সাধারণটা — ইঞ্জিন যে ক্রমে খোঁজে।
+     * ⓘ ২৯ সেপ্টেম্বর থেকে বিলের নম্বরই বিক্রি নম্বর (S-0001), তাই সিরিজ `S`। ⭐ শাখা ধরে (মালিক, ৬ অক্টোবর ২০২৬):
+     * শাখার ট্যাবে সেই শাখার নিজের সিরিজ, না থাকলে সবার সাধারণটা আর সাথে "এই নম্বর সব শাখার"; কোম্পানির ট্যাবে
+     * সাধারণটা। ⛔ আগে যেকোনো ট্যাবে প্রথম শাখার সিরিজটা দেখাত — লায়নের ট্যাবে সুপারের নম্বর।
+     *
+     * @return array{next: ?string, nextShared: bool}
      */
-    private function nextSaleNumber(): ?string
+    private function nextSaleNumber(?int $branch): array
     {
-        $series = NumberSeries::query()
-            ->where('doc_type', 'S')
-            ->where('is_active', true)
-            ->orderByRaw('branch_id is null')
-            ->orderByDesc('financial_year_id')
-            ->first();
+        $active = fn () => NumberSeries::query()->where('doc_type', 'S')->where('is_active', true)->orderByDesc('financial_year_id');
 
-        return $series === null ? null : $this->numbers->preview($series);
+        $own = $branch === null ? null : $active()->where('branch_id', $branch)->first();
+        $shared = $active()->whereNull('branch_id')->first();
+        $series = $own ?? $shared;
+
+        return [
+            'next' => $series === null ? null : $this->numbers->preview($series),
+            'nextShared' => $own === null && $shared !== null,
+        ];
     }
 }

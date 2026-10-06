@@ -104,6 +104,10 @@
 
                 @if ($next !== null)
                     <p class="mb-2 font-mono text-lg" data-next-number>{{ $next }}</p>
+                    {{-- ⭐ সিরিজ শাখার নিজের না হলে বলে দেওয়া — নম্বর এখানে বদলায় না, সিরিজের পাতায় --}}
+                    @if ($nextShared)
+                        <p class="mb-2 text-xs text-(--color-ink-muted)" data-next-shared>{{ __('system_admin::settings.invoice_info_next_shared') }}</p>
+                    @endif
                 @else
                     <p class="mb-2 text-sm text-(--color-ink-muted)">{{ __('system_admin::settings.invoice_info_no_series') }}</p>
                 @endif
@@ -201,7 +205,7 @@
 
             {{-- ⓘ নতুন ট্যাবে — একই পাতায় খুললে না-সংরক্ষিত বদল হারাত --}}
             @if ($sample !== null)
-                <a href="{{ $sample }}" target="_blank" rel="noopener"
+                <a href="{{ $sample }}" target="_blank" rel="noopener" data-sample-link
                    class="text-sm underline">{{ __('system_admin::settings.invoice_info_sample') }}</a>
             @endif
         </div>

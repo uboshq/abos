@@ -55,7 +55,7 @@
     {{-- ⭐ লোগো নামের পাশে, উপরে নয় — মালিক, ৩০ সেপ্টেম্বর ২০২৬ --}}
     <table style="margin: 0 auto"><tr>
         @if ($v->logo)<td style="padding-right: 3mm; vertical-align: middle"><img src="{{ $v->logo }}" style="height: 13mm;" alt=""></td>@endif
-        <td style="vertical-align: middle"><div class="co-name">{{ $company->name('bn') }}</div></td>
+        <td style="vertical-align: middle"><div class="co-name" data-head-name>{{ trim((string) app(\App\Core\Services\BranchSettings::class)->get('sales.print.header.name')) ?: $company->name('bn') }}</div></td>
     </tr></table>
     @include('sales::print.partials.invoice-company', ['v' => $v])
     <div class="title-wrap"><span class="title">{{ $bn('heading') }}</span></div>

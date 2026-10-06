@@ -56,10 +56,23 @@ abstract class PaperSampleController extends Controller implements HasMiddleware
      */
     abstract protected function sample(): array;
 
+    /**
+     * ⭐ `?branch=` — শাখার ট্যাব থেকে খুললে সেই শাখার মাথা, লোগো আর নকশা ([[InvoiceSampleController::show()]]-এর একই
+     * নিয়ম; মালিক, ৬ অক্টোবর ২০২৬)। ⛔ অন্য কোম্পানির বা অচেনা শাখা হলে কোম্পানির নমুনা।
+     */
     public function show(Request $request): Response
     {
+        $branch = is_numeric($request->query('branch'))
+            && \App\Models\Branch::query()->whereKey((int) $request->query('branch'))->where('company_id', \App\Core\Support\CompanyContext::id())->exists()
+                ? (int) $request->query('branch') : null;
+
+        return app(\App\Core\Services\BranchSettings::class)->during($branch, fn (): Response => $this->drawn($request));
+    }
+
+    private function drawn(Request $request): Response
+    {
         $size = in_array($request->query('size'), PaperDesigns::SIZES, true) ? (string) $request->query('size') : 'a4';
-        $asked = (string) $request->query('design', (string) $this->settings->get(PaperDesigns::key($this->paper(), $size)));
+        $asked = (string) $request->query('design', (string) app(\App\Core\Services\BranchSettings::class)->get(PaperDesigns::key($this->paper(), $size)));
 
         // ⓘ অচেনা নকশা হলে তালিকার প্রথমটা — পুরনো লিংক বা ভুল লেখায় পাতা ভাঙে না
         $template = PaperDesigns::template($this->paper(), $size, $asked)

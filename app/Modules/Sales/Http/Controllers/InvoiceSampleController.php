@@ -8,6 +8,7 @@ use App\Core\Engines\Print\PaperSize;
 use App\Core\Engines\Print\PrintableDocument;
 use App\Core\Engines\Print\PrintEngine;
 use App\Core\Engines\Print\PrintProfile;
+use App\Core\Services\BranchSettings;
 use App\Core\Services\SettingsService;
 use App\Core\Support\DateFormat;
 use App\Http\Controllers\Controller;
@@ -44,14 +45,27 @@ class InvoiceSampleController extends Controller implements HasMiddleware
     }
 
     /**
-     * ⓘ `?design=` — ছাপার নিয়ন্ত্রণে প্রতিটা নকশার নিজের নমুনা; না দিলে কোম্পানির বাছা নকশা।
-     * ⛔ `standard` বা অচেনা নাম → ক্লাসিক: এই পাতা কেবল তালিকার ছাঁচ দেখায়।
+     * ⭐ `?branch=` — বিলের তথ্যের পাতার শাখার ট্যাব থেকে খুললে সেই শাখার মাথা, লোগো আর নকশা (মালিক, ৬ অক্টোবর ২০২৬:
+     * "প্রতিটা শাখা আলাদা আলাদা হওয়ার কথা")। ⛔ অন্য কোম্পানির বা অচেনা শাখা হলে কোম্পানির নমুনা।
      */
     public function show(Request $request): Response
     {
+        $branch = is_numeric($request->query('branch'))
+            && \App\Models\Branch::query()->whereKey((int) $request->query('branch'))->where('company_id', \App\Core\Support\CompanyContext::id())->exists()
+                ? (int) $request->query('branch') : null;
+
+        return app(BranchSettings::class)->during($branch, fn (): Response => $this->sample($request));
+    }
+
+    /**
+     * ⓘ `?design=` — ছাপার নিয়ন্ত্রণে প্রতিটা নকশার নিজের নমুনা; না দিলে বাছা শাখার (নাহলে কোম্পানির) নকশা।
+     * ⛔ `standard` বা অচেনা নাম → ক্লাসিক: এই পাতা কেবল তালিকার ছাঁচ দেখায়।
+     */
+    private function sample(Request $request): Response
+    {
         /* ⓘ `?size=` — A4 · A5 · থার্মাল, প্রতিটার নিজের তালিকা ([[PaperDesigns]]) */
         $size = in_array($request->query('size'), PaperDesigns::SIZES, true) ? (string) $request->query('size') : 'a4';
-        $asked = (string) $request->query('design', (string) $this->settings->get(PaperDesigns::key('invoice', $size)));
+        $asked = (string) $request->query('design', (string) app(BranchSettings::class)->get(PaperDesigns::key('invoice', $size)));
         $template = PaperDesigns::template('invoice', $size, $asked)
             ?? PaperDesigns::template('invoice', $size, PaperDesigns::codes('invoice', $size)[0] ?? null)
             ?? InvoiceDesigns::ALL[InvoiceDesigns::FALLBACK];
