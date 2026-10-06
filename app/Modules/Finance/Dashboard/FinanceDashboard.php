@@ -188,6 +188,7 @@ final class FinanceDashboard implements ProvidesDashboard
                 ),
                 ...self::fundAndDues($facts, $money, $cashBook, $supplierAgeing),
                 ...self::handLoansOverdue(),
+                ...self::rentalsDue(),
 
                 /*
                  * ⓘ বয়সের ভাগটা এখানে গোনা হয় না — দরজাটা **যেখানে
@@ -702,6 +703,33 @@ final class FinanceDashboard implements ProvidesDashboard
             ], $banks),
             hint: __('finance::dashboard.bank_wise_hint'),
             chart: 'hbars',
+        )];
+    }
+
+    /**
+     * ⭐ ভাড়ার সতর্কতা — চুক্তি শেষের ৬০ দিনের মধ্যে, আর বকেয়া ভাড়া (অর্থ-মডিউলের পরিকল্পনা ৫ঘ, ৬ অক্টোবর ২০২৬)।
+     *
+     * ⓘ নিজের হিসাব নয়: [[RentalDues]] — ঘণ্টির খবর আর ভাড়ার পাতাও ওখান থেকেই পড়ে। হেডারে বাছা শাখায়।
+     *
+     * @return list<Stat>
+     */
+    private static function rentalsDue(): array
+    {
+        if (! config('abos.dashboards_v2') || ! auth()->user()?->can('finance.rental.view')) {
+            return [];
+        }
+
+        $dues = app(\App\Modules\Finance\Services\RentalDues::class);
+        $ending = $dues->ending(inView: true);
+        $overdue = $dues->overdue(inView: true);
+
+        return [new Stat(
+            label: __('finance::rental_report.dash_label'),
+            value: Money::format(array_reduce($overdue, fn (string $sum, array $r) => bcadd($sum, $r['amount'], 4), '0')),
+            hint: __('finance::rental_report.dash_hint', ['ending' => $ending->count(), 'overdue' => count($overdue)]),
+            href: route('finance.rental.report.show', ['slug' => 'schedule']),
+            permission: 'finance.rental.view',
+            tone: $overdue !== [] ? Stat::BAD : ($ending->isNotEmpty() ? Stat::WARN : Stat::NEUTRAL),
         )];
     }
 }

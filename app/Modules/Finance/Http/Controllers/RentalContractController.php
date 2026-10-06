@@ -200,7 +200,9 @@ class RentalContractController extends Controller implements HasMiddleware
              * জামানতের নয় লাখ ষাট হাজার ফেরত নিতে ভুলে যাওয়া এভাবেই
              * ঘটে — কাগজটা কোথাও থাকে, তারিখটা কারো মনে থাকে না।
              */
-            'endingSoon' => RentalContract::query()->inViewedBranch()->endingSoon()->orderBy('ends_on')->get(),
+            'endingSoon' => RentalContract::query()->inViewedBranch()
+                // ⓘ ঘণ্টির খবর আর ড্যাশবোর্ডের একই দিন ([[RentalDues::WINDOWS]]) — পাতা আর খবর কখনো আলাদা কথা বলে না
+                ->endingSoon(\App\Modules\Finance\Services\RentalDues::WINDOWS[0])->orderBy('ends_on')->get(),
             'tab' => $tab,
 
             // ⓘ ট্যাবের পাশের গোনা — খোঁজায় ছাঁকা নয়, মোট কয়টা চুক্তি

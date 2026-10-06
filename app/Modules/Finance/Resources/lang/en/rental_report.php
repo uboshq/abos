@@ -39,4 +39,12 @@ return [
     'opening_row' => 'Opening balance',
     'legacy' => 'Opening deposit (no voucher)',
     'taken_back' => 'Taken / refunded',
+
+    'notice_ending' => ':who — rental contract ending soon (:place)',
+    'notice_ending_body' => 'Ends on :date, :days days left. Give notice to renew or leave in time.',
+    'notice_ended_body' => 'The term ended on :date, :days days ago, and the contract is still running. Renew or close it.',
+    'notice_overdue' => ':who — rent overdue (:place)',
+    'notice_overdue_body' => ':count months of rent overdue (:months) — Tk :amount',
+    'dash_label' => 'Rent overdue',
+    'dash_hint' => ':overdue contracts with rent overdue · :ending contracts ending within 60 days',
 ];

@@ -55,6 +55,8 @@ final class DueNotices
         return [
             'maturing' => $this->maturingDeposits(),
             'hand_loans' => $this->handLoansDue(),
+            // ⭐ ভাড়া — চুক্তি শেষের ৬০/৩০ দিন আগে আর বকেয়া ([[RentalNotices]], পরিকল্পনা ৫ঘ, ৬ অক্টোবর ২০২৬)
+            'rentals' => array_sum(app(RentalNotices::class)->sendAll()),
         ];
     }
 
