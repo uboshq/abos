@@ -28,6 +28,7 @@ import '../../features/dashboards/dashboards_screen.dart';
 import '../../features/reports/reports_screen.dart';
 import '../../features/books/money_in_screens.dart';
 import '../../features/deliveries/deliveries_screen.dart';
+import '../../features/loading/loading_screens.dart';
 import '../../features/books/principal_screens.dart';
 import '../../features/books/purchase_screens.dart';
 import '../../features/stock/stock_list_screen.dart';
@@ -204,6 +205,12 @@ final goRouterProvider = Provider<GoRouter>((ref) {
             path: 'deliveries',
             builder: (context, state) => const ModuleGateView(
                 path: 'deliveries', child: DeliveriesScreen()),
+          ),
+          // ⭐ লোডিং শিট — খোলা ট্রিপ, "প্যাক হয়েছে" (ধাপ ৪, ৬ অক্টোবর ২০২৬)
+          GoRoute(
+            path: 'loading',
+            builder: (context, state) => const ModuleGateView(
+                path: 'loading', child: LoadingListScreen()),
           ),
           GoRoute(
             path: 'collections',

@@ -51,9 +51,9 @@ class _FakeRun implements DeliveryRunApi {
   bool done = false;
 
   @override
-  Future<List<DeliveryRunRow>> today() async {
+  Future<DeliveryRunPage> today({int page = 1}) async {
     calls++;
-    return done
+    return DeliveryRunPage(done
         ? const []
         : const [
             DeliveryRunRow(
@@ -65,7 +65,7 @@ class _FakeRun implements DeliveryRunApi {
                 vehicle: 'DM-T 11-1234',
                 driver: 'করিম · 01800-000000',
                 lines: _lines),
-          ];
+          ]);
   }
 }
 

@@ -281,6 +281,14 @@ class MenuRepository {
             icon: Icons.local_shipping_outlined,
             routeName: 'deliveries',
           ),
+        // ⭐ লোডিং শিট — পণ্য ধরে কত, চালান ধরে কার জন্য, "প্যাক হয়েছে" (ধাপ ৪, ৬ অক্টোবর ২০২৬); দেখা ট্রিপের চাবিতে
+        if (user.can('sales.shipment.view'))
+          const MenuItem(
+            key: 'sales.loading',
+            label: 'লোডিং শিট',
+            icon: Icons.inventory_2_outlined,
+            routeName: 'loading',
+          ),
         // ⭐ টাকা আদায়, প্রিন্সিপাল আর ক্রয় — কেবল পড়া, ওয়েবের দেখার চাবিতে (মালিক, ৬ অক্টোবর ২০২৬)
         if (user.can('sales.collection.view'))
           const MenuItem(

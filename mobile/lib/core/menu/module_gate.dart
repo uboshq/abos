@@ -45,6 +45,7 @@ class ModuleGate {
     'counter': 'sales',
     'collections': 'sales',
     'deliveries': 'sales',
+    'loading': 'sales',
     'principals': 'purchase',
     'purchases': 'purchase',
     'today': 'sales',
