@@ -256,6 +256,17 @@ final class CouponDesk
                 'redeemed_at' => $at,
             ]);
 
+            // ⭐ খাতায় — কাগজের মালিক বসায়, একই লেনদেনে (পুরো ERP অডিট ⛔১০, ৬ অক্টোবর ২০২৬; [[\App\Core\Contracts\CouponPapers::redeemed()]])
+            if (app()->bound(\App\Core\Contracts\CouponPapers::class)) {
+                app(\App\Core\Contracts\CouponPapers::class)->redeemed(
+                    $sourceType,
+                    $sourceId,
+                    (string) ($applied->benefit_kind?->value ?? $applied->benefit_kind),
+                    (string) ($applied->worth ?? '0'),
+                    $code,
+                );
+            }
+
             return $applied;
         });
     }

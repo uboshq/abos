@@ -24,4 +24,15 @@ interface CouponPapers
      * @return array{customer_id: ?int, branch_id: ?int, warehouse_id: ?int, product_id: int, qty: string, value: string}|null
      */
     public function line(string $sourceType, int $sourceId, int $sourceLineId): ?array;
+
+    /**
+     * ⭐ কুপন কাটা হলো — কাগজের মালিক খাতায় বসায় (পুরো ERP অডিট ⛔১০, ৬ অক্টোবর ২০২৬)।
+     *
+     * ⛔ আগে প্রয়োগ আর অঙ্ক লেখা হত, খাতায় কিছুই নয়: বাজেট খরচ হত, অথচ আয় আর গ্রাহকের পাওনা বদলাত না। ⓘ ডাকা হয়
+     * কুপন কাটার **একই লেনদেনে** ([[\App\Modules\Promotion\Services\CouponDesk::redeem()]]) — এখানে থামলে কুপনও কাটে না।
+     *
+     * @param  string  $kind  সুবিধার ধরন (`percent`, `amount`, `credit`, `goods`, `points`)
+     * @param  string  $worth  সুবিধার টাকার মূল্য
+     */
+    public function redeemed(string $sourceType, int $sourceId, string $kind, string $worth, string $code): void;
 }

@@ -26,6 +26,46 @@ final class SalesCouponPapers implements CouponPapers
         };
     }
 
+    /**
+     * ⭐ পাকা বিলে কুপনের টাকার ছাড় — গ্রাহকের ক্রেডিট নোট, ঐ বিলের বিপরীতে (পুরো ERP অডিট ⛔১০, ৬ অক্টোবর ২০২৬)।
+     *
+     * ⓘ বিল আগেই খাতায়, তাই ছাড়টা পরের কাগজে: Dr দেওয়া ছাড় (৫৩০০) / Cr প্রাপ্য (গ্রাহক) — [[NoteService]]-এর পথেই, তাই
+     * নোটের সই, বিলের বাকি জায়গার সীমা ([[\App\Core\Contracts\NoteTarget]]) আর বাতিল-ইনভয়েসের পাহারা সবই খাটে। ভ্যাট ০ —
+     * কুপনের অঙ্কটাই ছাড়। ⓘ মাল বা পয়েন্টের কুপনে টাকার ছাড় নেই, কিছু বসে না। ⓘ আদেশে কুপন: আয় এখনো খাতায় নেই, তাই
+     * এখানে কিছু নয়।
+     */
+    public function redeemed(string $sourceType, int $sourceId, string $kind, string $worth, string $code): void
+    {
+        if ($sourceType !== 'sales_invoice' || ! in_array($kind, ['percent', 'amount', 'credit'], true)
+            || ! is_numeric($worth) || bccomp($worth, '0', 4) <= 0) {
+            return;
+        }
+
+        // ⓘ দরজা আগেই কাগজ যাচাই করে ([[line()]]); পাকা বিল না থাকলে খাতায় বসানোর কিছু নেই
+        $invoice = SalesInvoice::query()->whereIn('status', DocumentStatus::POSTED)->find($sourceId);
+
+        if ($invoice === null) {
+            return;
+        }
+        $discount = \App\Modules\Accounts\Services\StandardChart::find(\App\Modules\Accounts\Services\StandardChart::DISCOUNT_GIVEN);
+        $notes = app(\App\Modules\Accounts\Services\NoteService::class);
+
+        $note = $notes->create([
+            'direction' => \App\Modules\Accounts\Models\Note::CREDIT,
+            'party_kind' => \App\Modules\Accounts\Models\Note::KIND_CUSTOMER,
+            'party_id' => (int) $invoice->customer_id,
+            'other_account_id' => $discount?->id,
+            'trx_date' => now()->toDateString(),
+            'amount' => bcadd($worth, '0', 4),
+            'tax_amount' => '0',
+            'reason' => 'agreed_discount',
+            'against_no' => (string) $invoice->document_no,
+            'narration' => __('sales::message.coupon_note', ['code' => $code]),
+        ]);
+
+        $notes->confirm($note);
+    }
+
     /** @return array{customer_id: ?int, branch_id: ?int, warehouse_id: ?int, product_id: int, qty: string, value: string}|null */
     private function invoiceLine(int $invoiceId, int $lineId): ?array
     {
