@@ -55,4 +55,22 @@ final class AVoucherSaidNothingAboutWhyTest extends TestCase
         ])->assertSessionHasNoErrors();
         $this->assertSame(1, Voucher::query()->count(), '⛔ বিবরণসহ ভাউচারও থামল।');
     }
+
+    /** ⓘ সেটিং পর্দার "ভাউচারে বিবরণ বাধ্যতামূলক" — বন্ধে ঐচ্ছিক, আবার চালুতে আটকায় (fe, ৭ অক্টোবর ২০২৬) */
+    public function test_the_settings_switch_decides_off_then_on_again(): void
+    {
+        [$a, $b] = Account::query()->postable()->active()->whereNull('money_kind')->orderBy('code')->take(2)->get()->all();
+        $blank = fn () => $this->post(route('accounts.voucher.store', 'journal'), [
+            'type' => Voucher::JOURNAL, 'trx_date' => now()->toDateString(), 'narration' => '', 'save_as_draft' => '1',
+            'lines' => [['account_id' => $a->id, 'debit' => '100', 'credit' => '0'], ['account_id' => $b->id, 'debit' => '0', 'credit' => '100']],
+        ]);
+
+        app(\App\Core\Services\SettingsService::class)->set('accounts.require_narration', false);
+        $blank()->assertSessionHasNoErrors()->assertRedirect();
+        $this->assertSame(1, Voucher::query()->count(), '⛔ সুইচ বন্ধ, তবু বিবরণ ছাড়া ভাউচার থামল।');
+
+        app(\App\Core\Services\SettingsService::class)->set('accounts.require_narration', true);
+        $blank()->assertSessionHasErrors('narration');
+        $this->assertSame(1, Voucher::query()->count(), '⛔ সুইচ আবার চালু, তবু বিবরণ ছাড়া ভাউচার জমা হলো।');
+    }
 }

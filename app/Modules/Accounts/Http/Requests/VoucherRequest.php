@@ -357,8 +357,15 @@ class VoucherRequest extends FormRequest
         $rules = [
             'type' => ['required', Rule::in(Voucher::TYPES)],
             'trx_date' => ['required', 'date', 'before_or_equal:today'],
-            // ⭐ বিবরণ বাধ্যতামূলক, সব ধরনে — কেন টাকা নড়ল, কাগজেই লেখা (ভাউচারের পরিকল্পনা, অংশ ৩খ, ৭ অক্টোবর ২০২৬)
-            'narration' => ['required', 'string', 'max:500'],
+            /*
+             * ⭐ বিবরণ বাধ্যতামূলক, সব ধরনে — কেন টাকা নড়ল, কাগজেই লেখা (ভাউচারের পরিকল্পনা, অংশ ৩খ, ৭ অক্টোবর ২০২৬)।
+             * ⓘ সেটিং পর্দার `accounts.require_narration` মেনে (চালু = বাধ্যতামূলক, বন্ধ = ঐচ্ছিক) — পর্দা যা বলে কাজেও তাই
+             * (fe, মালিক, ৭ অক্টোবর)। ⚠️ আগে সুইচটা কেউ পড়ত না।
+             */
+            'narration' => [
+                (bool) app(\App\Core\Services\SettingsService::class)->get('accounts.require_narration', true) ? 'required' : 'nullable',
+                'string', 'max:500',
+            ],
 
             /*
              * ⛔ শাখাটা এই কোম্পানিরই — ৭ সেপ্টেম্বর ২০২৬।
