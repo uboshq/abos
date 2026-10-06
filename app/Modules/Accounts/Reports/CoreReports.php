@@ -487,6 +487,12 @@ final class CoreReports
                     'good' => $profit,
                 ];
             },
+            /*
+             * ⛔ ওয়েবের দরজা যে চাবি দেখে, সেটাই — কেবল চূড়ান্ত হিসাব ([[FinalAccountsReportController]], cec88dd3)। ⓘ আগে
+             * এখানে `accounts.report`-ও ছিল, তাই যাঁর কেবল চূড়ান্ত হিসাবের চাবি (মালিকের পাঠক, নিরীক্ষক) তিনি পাতা খুলতেন
+             * কিন্তু সূচি, ফোন আর ডাউনলোডে পেতেন না (সমন্বয়কের সিদ্ধান্ত, ৬ অক্টোবর ২০২৬; স্থিতিপত্রের মতো)।
+             */
+            permission: 'accounts.report.final',
         );
     }
 
@@ -607,8 +613,9 @@ final class CoreReports
     {
         return new ReportDefinition(
             key: 'accounts.cash_flow',
-            // ⛔ ওয়েবের দরজা যে চাবি দেখে, সেটাই — সূচি ও ফোন এখান থেকে পড়ে (২৭ সেপ্টেম্বর ২০২৬)
-            permission: ['accounts.report', 'accounts.report.final'],
+            // ⛔ ওয়েবের দরজা যে চাবি দেখে, সেটাই — সূচি ও ফোন এখান থেকে পড়ে (২৭ সেপ্টেম্বর ২০২৬)। ⓘ দরজা কেবল চূড়ান্ত
+            // হিসাব চায় ([[FinalAccountsReportController]], cec88dd3) — লাভ-ক্ষতির মতোই (৬ অক্টোবর ২০২৬)
+            permission: 'accounts.report.final',
             title: 'accounts::menu.cash_flow',
             filters: ['date_range', 'branch'],
             groupBy: 'trx_date',
