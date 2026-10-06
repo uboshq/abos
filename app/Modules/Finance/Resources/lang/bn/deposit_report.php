@@ -65,4 +65,12 @@ return [
     'accrual_month_not_over' => 'মাসটা এখনো শেষ হয়নি — শেষ হওয়া মাসই কেবল বসানো যায়।',
     'accrual_narration' => ':month-এর অর্জিত মুনাফা — :deposit (:institution)',
     'accrual_reversal_narration' => ':month-এর অর্জিত মুনাফা উল্টানো — :deposit',
+
+    // ⭐ ব্যাংক যা কেটে রাখে (প্র২)
+    'source_tax_cut' => 'উৎসে কর (ব্যাংক কেটেছে)',
+    'excise_duty' => 'আবগারি শুল্ক',
+    'penalty' => 'আগে ভাঙানোর জরিমানা',
+    'deduction_negative' => 'কাটা টাকা ঋণাত্মক হয় না।',
+    'deduction_owner' => 'মালিকের নামের জমার কর বা কাটা ব্যবসার খাতায় বসে না।',
+    'penalty_only_on_close' => 'জরিমানা কেবল জমা ভাঙানোর সময়।',
 ];

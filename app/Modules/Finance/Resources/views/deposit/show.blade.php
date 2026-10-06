@@ -162,6 +162,14 @@
                                             :selected="old('money_account_id',
                                                 $d->payout_account_id ?? $d->funded_from_account_id)" />
 
+                        {{-- ⭐ ব্যাংক যা কেটে রেখেছে — কেবল ব্যবসার জমার মুনাফায় (প্র২, ৬ অক্টোবর ২০২৬) --}}
+                        @if (! $d->kind->takesInstalments() && $d->isBusinessAsset())
+                            <x-ui.field name="source_tax" type="number" step="0.01" numeric data-deduction
+                                        :label="__('finance::deposit_report.source_tax_cut')" :value="old('source_tax')" />
+                            <x-ui.field name="excise_duty" type="number" step="0.01" numeric data-deduction
+                                        :label="__('finance::deposit_report.excise_duty')" :value="old('excise_duty')" />
+                        @endif
+
                         {{-- ⛔ চাপা কলাম সারানো — ১৯ সেপ্টেম্বর ২০২৬ (মালিক: *"সব পাতাতেই সমস্যা"*)।
                              ⓘ বোতামটা `flex items-end`-এর ভেতরে গ্রিডের একটা ঘর নিত, আর
                              আধা পর্দার প্যানেলে লেখা ভাঙত। ⭐ এখন নিজের সারি, নিচে বাঁয়ে। --}}
@@ -200,6 +208,16 @@
                                         :label="__('finance::field.money_account')"
                                         :accounts="$accounts"
                                         :selected="old('money_account_id', $d->funded_from_account_id)" />
+
+                    {{-- ⭐ ব্যাংক যা কেটে রেখেছে — নিজের নিজের খাতে; হাতে পাওয়া টাকা উপরে (প্র২, ৬ অক্টোবর ২০২৬) --}}
+                    @if ($d->isBusinessAsset())
+                        <x-ui.field name="source_tax" type="number" step="0.01" numeric data-deduction
+                                    :label="__('finance::deposit_report.source_tax_cut')" :value="old('source_tax')" />
+                        <x-ui.field name="excise_duty" type="number" step="0.01" numeric data-deduction
+                                    :label="__('finance::deposit_report.excise_duty')" :value="old('excise_duty')" />
+                        <x-ui.field name="penalty" type="number" step="0.01" numeric data-deduction
+                                    :label="__('finance::deposit_report.penalty')" :value="old('penalty')" />
+                    @endif
 
                     {{-- ⓘ একই সারানো — বোতাম নিজের সারিতে, নিচে বাঁয়ে --}}
                     <div class="flex flex-wrap items-center gap-2 sm:col-span-2">

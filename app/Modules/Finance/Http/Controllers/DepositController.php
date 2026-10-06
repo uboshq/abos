@@ -527,6 +527,9 @@ class DepositController extends Controller implements HasMiddleware
         $data = $request->validate([
             'kind' => ['required', 'string', 'in:'.DepositMovement::INSTALMENT.','.DepositMovement::PAYOUT],
             'amount' => ['required', 'numeric', 'gt:0'],
+            // ⭐ ব্যাংক যা কেটে রেখেছে — উৎসে কর আর আবগারি শুল্ক (প্র২, ৬ অক্টোবর ২০২৬; [[DepositService::deductionLines()]])
+            'source_tax' => ['nullable', 'numeric', 'min:0'],
+            'excise_duty' => ['nullable', 'numeric', 'min:0'],
             'moved_on' => ['required', 'date'],
             'money_account_id' => ['required', 'integer', 'exists:accounts,id'],
             // ব্যাংক/MFS হলে যে নম্বরটা লাগে — ⛔ `required` নয়, নিয়মটা
@@ -549,6 +552,10 @@ class DepositController extends Controller implements HasMiddleware
     {
         $data = $request->validate([
             'amount' => ['required', 'numeric', 'gt:0'],
+            // ⭐ ব্যাংক যা কেটে রেখেছে — উৎসে কর, আবগারি শুল্ক, আগে ভাঙানোর জরিমানা (প্র২)
+            'source_tax' => ['nullable', 'numeric', 'min:0'],
+            'excise_duty' => ['nullable', 'numeric', 'min:0'],
+            'penalty' => ['nullable', 'numeric', 'min:0'],
             'moved_on' => ['required', 'date'],
             'money_account_id' => ['required', 'integer', 'exists:accounts,id'],
             // ব্যাংক/MFS হলে যে নম্বরটা লাগে — ⛔ `required` নয়, নিয়মটা

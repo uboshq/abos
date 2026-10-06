@@ -315,6 +315,18 @@ final class StandardChart implements ProvisionsCompany
      */
     public const ACCRUED_INTEREST = '1165';
 
+    /*
+     * ⭐ অগ্রিম আয়কর — চলতি সম্পদ (অর্থ-মডিউলের পরিকল্পনা ৪, ৬ অক্টোবর ২০২৬; সমন্বয়কের সিদ্ধান্ত প্র২)। ব্যাংক মুনাফা থেকে
+     * যে উৎসে কর কেটে রাখে, সেটা খরচ নয় — বছর শেষে আয়করের সাথে সমন্বয় হয় ([[DepositService::returnLines()]])।
+     */
+    public const ADVANCE_INCOME_TAX = '1135';
+
+    /*
+     * ⭐ আগে ভাঙানোর জরিমানা — খরচ, সুদ খরচের পাশে (সমন্বয়কের সিদ্ধান্ত প্র২)। ⓘ আগে জরিমানা, কর আর শুল্ক সব একসাথে ৫৩১০-এ
+     * পড়ত, তাই বছর শেষে কেউ বলতে পারত না কতটা কর ফেরত পাওয়ার যোগ্য।
+     */
+    public const EARLY_BREAK_PENALTY = '5325';
+
     /** স্থায়ী সম্পদের গ্রুপ — নিচে আসবাব, যানবাহন, যন্ত্রপাতি। */
     public const FIXED_ASSETS = '1200';
 
@@ -854,6 +866,7 @@ final class StandardChart implements ProvisionsCompany
              * ⓘ দাখিলা: `1165` ডেবিট, `4310` সুদ আয় ক্রেডিট।
              */
             ['1165', 'Accrued Interest', 'অর্জিত মুনাফা', $A, '1100', false, []],
+            ['1135', 'Advance Income Tax', 'অগ্রিম আয়কর', $A, '1100', false, []],
 
             /*
              * আমদানির পণ্য জাহাজে — আমাদের, কিন্তু গুদামে নয়।
@@ -1192,6 +1205,7 @@ final class StandardChart implements ProvisionsCompany
             ['5310', 'Interest Expense', 'সুদ ব্যয়', $X, '5000', false, []],
             // ⭐ সম্পদ বিক্রির লোকসান — ধ্রুবকের মন্তব্যে কারণ
             ['5320', 'Loss on Sale of Assets', 'সম্পদ বিক্রির লোকসান', $X, '5000', false, []],
+            ['5325', 'Early Encashment Penalty', 'আগে ভাঙানোর জরিমানা', $X, '5000', false, []],
             ['5400', 'Bad Debt', 'অনাদায়ী পাওনা', $X, '5000', false, []],
         ];
     }

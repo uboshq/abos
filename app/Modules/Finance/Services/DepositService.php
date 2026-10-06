@@ -224,7 +224,10 @@ final class DepositService
                 ],
                 [
                     ['account_id' => $into->id, 'debit' => $amount, 'credit' => '0'],
-                    ['account_id' => $this->returnHead($deposit)->id, 'debit' => '0', 'credit' => $amount],
+                    // ⭐ ব্যাংক যা কেটে রেখেছে — উৎসে কর আর আবগারি শুল্ক নিজের খাতে; আয় মোট অর্জিত (প্র২, ৬ অক্টোবর ২০২৬)
+                    ...$this->deductionLines($deposit, $data),
+                    ['account_id' => $this->returnHead($deposit)->id, 'debit' => '0',
+                        'credit' => bcadd($amount, $this->deducted($deposit, $data), 4)],
                 ],
             );
 
@@ -262,6 +265,8 @@ final class DepositService
             $into = $this->money($data['money_account_id']);
             $received = (string) $data['amount'];
             $principal = (string) $deposit->principal;
+            // ⓘ ভাঙানোয় জরিমানাও কাটা যায় ([[deductionLines()]])
+            $data['__closing'] = true;
 
             $lines = [['account_id' => $into->id, 'debit' => $received, 'credit' => '0']];
 
@@ -270,7 +275,10 @@ final class DepositService
                 $lines[] = ['account_id' => $this->assetHead(Deposit::BUSINESS)->id,
                     'debit' => '0', 'credit' => $principal];
 
-                $extra = bcsub($received, $principal, 4);
+                // ⭐ ব্যাংক যা কেটে রেখেছে — কর, শুল্ক, জরিমানা নিজের নিজের খাতে; বাকিটা মুনাফা বা ঘাটতি (প্র২, ৬ অক্টোবর ২০২৬)
+                array_push($lines, ...$this->deductionLines($deposit, $data));
+
+                $extra = bcsub(bcadd($received, $this->deducted($deposit, $data), 4), $principal, 4);
 
                 if (bccomp($extra, '0', 4) > 0) {
                     $lines[] = ['account_id' => $this->returnHead($deposit)->id,
@@ -292,6 +300,9 @@ final class DepositService
                  */
                 $lines[] = ['account_id' => $this->head(StandardChart::DRAWINGS)->id,
                     'debit' => '0', 'credit' => $received];
+
+                // ⛔ মালিকের জমায় কাটা লিখলে ফেরায় — উপেক্ষা করলে মানুষ ভাবতেন কর খাতায় বসেছে
+                $this->deductionLines($deposit, $data);
             }
 
             $voucher = $this->vouchers->create(
@@ -495,6 +506,66 @@ final class DepositService
         }
 
         return (int) $facility->id;
+    }
+
+    /**
+     * ⭐ ব্যাংক যা কেটে রেখেছে — উৎসে কর (অগ্রিম আয়কর, সম্পদ), আবগারি শুল্ক (ব্যাংক চার্জ), আগে ভাঙানোর জরিমানা (নিজের খরচ)।
+     * সমন্বয়কের সিদ্ধান্ত প্র২, ৬ অক্টোবর ২০২৬: আগে সব একসাথে ৫৩১০-এ পড়ত, তাই কতটা কর ফেরতযোগ্য কেউ বলতে পারত না।
+     *
+     * ⛔ কেবল ব্যবসার জমায় — মালিকের নামের জমার কর মালিকের নিজের, ব্যবসার খাতায় নয়; সেখানে কোনো কাটা লিখলে ফেরায়।
+     * ⓘ জরিমানা কেবল ভাঙানোয় ([[close()]]); মুনাফা তোলায় এলে ফেরায়।
+     *
+     * @param  array<string, mixed>  $data
+     * @return list<array{account_id: int, debit: string, credit: string}>
+     */
+    private function deductionLines(Deposit $deposit, array $data): array
+    {
+        $heads = [
+            'source_tax' => StandardChart::ADVANCE_INCOME_TAX,
+            'excise_duty' => StandardChart::BANK_CHARGES,
+            'penalty' => StandardChart::EARLY_BREAK_PENALTY,
+        ];
+        $lines = [];
+
+        foreach ($heads as $field => $code) {
+            $amount = bcadd((string) (($data[$field] ?? '') ?: '0'), '0', 4);
+
+            if (bccomp($amount, '0', 4) < 0) {
+                throw ValidationException::withMessages([$field => __('finance::deposit_report.deduction_negative')]);
+            }
+
+            if (bccomp($amount, '0', 4) === 0) {
+                continue;
+            }
+
+            if (! $deposit->isBusinessAsset()) {
+                throw ValidationException::withMessages([$field => __('finance::deposit_report.deduction_owner')]);
+            }
+
+            if ($field === 'penalty' && ! ($data['__closing'] ?? false)) {
+                throw ValidationException::withMessages([$field => __('finance::deposit_report.penalty_only_on_close')]);
+            }
+
+            $lines[] = ['account_id' => $this->chartHead($code)->id, 'debit' => $amount, 'credit' => '0'];
+        }
+
+        return $lines;
+    }
+
+    /** @param  array<string, mixed>  $data */
+    private function deducted(Deposit $deposit, array $data): string
+    {
+        return array_reduce($this->deductionLines($deposit, $data), fn (string $sum, array $l) => bcadd($sum, $l['debit'], 4), '0');
+    }
+
+    /** ছকের খাত — না থাকলে (পুরনো কোম্পানি) ছক একবার বসিয়ে নেয়; [[StandardChart::install()]] কেবল যা নেই তা-ই বসায় */
+    private function chartHead(string $code): Account
+    {
+        if (StandardChart::find($code) === null) {
+            app(StandardChart::class)->install();
+        }
+
+        return $this->head($code);
     }
 
     private function assetHead(string $heldBy): Account

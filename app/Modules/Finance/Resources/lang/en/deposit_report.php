@@ -60,4 +60,11 @@ return [
     'accrual_month_not_over' => 'The month is not over yet — only a finished month can be booked.',
     'accrual_narration' => 'Accrued profit for :month — :deposit (:institution)',
     'accrual_reversal_narration' => 'Accrued profit for :month reversed — :deposit',
+
+    'source_tax_cut' => 'Source tax (deducted by the bank)',
+    'excise_duty' => 'Excise duty',
+    'penalty' => 'Early encashment penalty',
+    'deduction_negative' => 'A deduction cannot be negative.',
+    'deduction_owner' => 'Tax or deductions on an owner-held deposit do not go into the business books.',
+    'penalty_only_on_close' => 'A penalty applies only when the deposit is encashed.',
 ];
