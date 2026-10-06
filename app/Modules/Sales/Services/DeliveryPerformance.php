@@ -17,7 +17,8 @@ use Illuminate\Support\Facades\DB;
  * ── সংজ্ঞা — একবার, এখানে ─────────────────────────────────────────────
  * • প্রতিশ্রুত দিন: আদেশের `deliver_on` → নাহলে চালানের `ship_date` → নাহলে চালানের তারিখ।
  * • পৌঁছানোর দিন: প্রথম "পৌঁছেছে" বা "আংশিক" ঘটনা ([[DeliveryEvent]]) — ধাপের খাতা থেকে, হাতের লেখা নয়।
- * • সময়মতো: পৌঁছানোর দিন ≤ প্রতিশ্রুত দিন। পুরো: চালানের এখনকার ধাপ "পৌঁছেছে" (আংশিক নয়)।
+ * • OTIF, সময়মতো আর পুরো — আদেশের লাইন ধরে ([[DeliveryReports::lines()]], ৬ অক্টোবর ২০২৬): প্রতিশ্রুত দিনের মধ্যে
+ *   চূড়ান্ত পরিমাণ পৌঁছেছে কি না। ⓘ দেরির তালিকা আর আদেশ থেকে রওনার সময় এখনো চালান ধরে।
  * • OTIF %: যাদের প্রতিশ্রুত দিন আজ বা আগে (সময় পেরিয়েছে) — তাদের কতগুলো সময়মতো **আর** পুরো। ⓘ সামনের
  *   চালান হিসাবে নেই: ওদের দেরি হয়নি, আবার ঠিক সময়েও পৌঁছায়নি।
  * • আদেশ থেকে রওনা: আদেশ লেখা (`created_at`) থেকে প্রথম "রওনা" ঘটনা — কেবল আদেশ থেকে আসা চালান।
@@ -39,10 +40,20 @@ final class DeliveryPerformance
         $today = Carbon::today()->toDateString();
         $rows = $this->base($from, $to)->get();
 
-        $due = $rows->filter(fn ($r) => $r->promised_on <= $today);
-        $onTime = $due->filter(fn ($r) => $r->arrived_on !== null && $r->arrived_on <= $r->promised_on);
-        $inFull = $due->filter(fn ($r) => $r->stage === DeliveryStage::DELIVERED);
-        $otif = $onTime->filter(fn ($r) => $r->stage === DeliveryStage::DELIVERED);
+        /*
+         * ⭐ OTIF আদেশের লাইন ধরে — OTIF রিপোর্টের একই হিসাব ([[DeliveryReports::lines()]]; সমন্বয়কের সিদ্ধান্ত, ৬ অক্টোবর
+         * ২০২৬)। ⛔ আগে চালান ধরে, আর "পুরো" মানে ছিল চালানের ধাপ "পৌঁছেছে" — তাই আদেশের অর্ধেক মালের চালানও "পুরো" গুনত।
+         * ⓘ দেখার শাখা আর ডিলারের দেয়াল রিপোর্টের মতোই খাটে — বিক্রয়কর্মী ড্যাশবোর্ডেও কেবল নিজের ডিলার দেখেন।
+         */
+        $lines = DB::query()->fromSub(\App\Modules\Sales\Reports\DeliveryReports::lines([
+            'company_id' => CompanyContext::id(), 'from' => $from, 'to' => $to,
+            'branch_ids' => app(\App\Core\Services\DataScope::class)->viewBranchIds(auth()->user()),
+        ], $today), 'ln')->where('ln.due', 1)->get();
+
+        $due = $lines;
+        $onTime = $due->filter(fn ($r) => bccomp((string) $r->on_time_qty, '0', 4) > 0);
+        $inFull = $due->filter(fn ($r) => bccomp((string) $r->arrived_qty, (string) $r->wanted, 4) >= 0);
+        $otif = $due->filter(fn ($r) => (int) $r->otif === 1);
 
         $leadHours = $rows->pluck('lead_hours')->filter(fn ($h) => $h !== null)->map(fn ($h) => (int) $h);
 

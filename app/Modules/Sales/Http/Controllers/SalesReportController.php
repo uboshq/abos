@@ -43,6 +43,8 @@ class SalesReportController extends Controller implements HasMiddleware
         'by-brand' => 'sales.by_brand',
         'by-channel' => 'sales.by_channel',
         'by-route' => 'sales.by_route',
+        // ⭐ সময়মতো ও পুরো — আদেশের লাইন ধরে (পরিকল্পনা সংস্করণ ২ §৯, ৬ অক্টোবর ২০২৬; [[DeliveryReports]])
+        'otif' => \App\Modules\Sales\Reports\DeliveryReports::OTIF,
     ];
 
     public function __construct(
@@ -113,6 +115,9 @@ class SalesReportController extends Controller implements HasMiddleware
             'partyTypes' => $definition->hasFilter('party_type')
                 ? PartyType::query()->active()->orderBy('code')->get()
                 : collect(),
+            // ⭐ ফলটা এক লাইনে — যে রিপোর্ট সারাংশ ঘোষণা করে (OTIF %, ৬ অক্টোবর ২০২৬); ⓘ আগে এই দরজা পাঠাতই না, তাই কোনো
+            // বিক্রয় রিপোর্টের ফল পাতায় দেখাত না, অথচ হিসাবের রিপোর্টে দেখাত ([[ReportController]])
+            'summary' => $definition->summary === null ? null : ($definition->summary)($result->totals),
         ]);
     }
 }

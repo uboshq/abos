@@ -67,17 +67,18 @@ final class TheDeliveryPerformanceCountsOnTimeInFullTest extends TestCase
 
         $response = $this->actingAs($clerk->fresh())->get(route('sales.delivery_performance.index'))->assertOk();
 
-        $this->assertSame(
-            ['due' => 4, 'otif' => 1, 'on_time' => 2, 'in_full' => 2, 'percent' => '25.0', 'avg_hours' => 26, 'late' => 2],
-            $response->viewData('summary'),
-            '⛔ মাপকাঠি ভুল — সামনের চালান গোনা, আংশিককে পুরো ধরা, বা দেরিকে সময়মতো।',
-        );
+        /*
+         * ⓘ OTIF, সময়মতো আর পুরো এখন আদেশের লাইন ধরে ([[TheOtifCountsOrderLinesNotChallansTest]], ৬ অক্টোবর ২০২৬) — এই
+         * পাঁচ চালানে লাইন নেই, তাই এখানে কেবল চালান-ধরা মাপকাঠি: আদেশ থেকে রওনার গড় আর দেরির তালিকা।
+         */
+        $summary = $response->viewData('summary');
+        $this->assertSame(['avg_hours' => 26, 'late' => 2], ['avg_hours' => $summary['avg_hours'], 'late' => $summary['late']],
+            '⛔ মাপকাঠি ভুল — গড় সময় বা দেরির গোনা।');
 
         $this->assertSame([$d->id, $c->id], collect($response->viewData('late')->items())->pluck('id')->all(),
             '⛔ দেরির তালিকা ভুল — বা সবচেয়ে পুরনো প্রতিশ্রুতি উপরে নেই।');
 
         $html = (string) $response->getContent();
-        $this->assertStringContainsString('25.0%', $html, 'পাতায় OTIF % নেই।');
         $this->assertStringContainsString(e(__('sales::delivery_performance.not_yet')), $html, 'পৌঁছায়নি চালানে "এখনো পৌঁছায়নি" লেখা নেই।');
         $this->assertStringNotContainsString(e(route('sales.challan.show', $a)).'"', $this->lateTable($html), '⛔ সময়মতো চালান দেরির তালিকায়।');
     }

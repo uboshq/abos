@@ -818,6 +818,8 @@ return [
         \App\Modules\Sales\Reports\SalesOrderBookReports::class,
         // ⭐ বাকি ও আদায় — সীমার ব্যবহার, বাকি বন্ধ, ঝুঁকির গ্রাহক, সীমা বদলের ইতিহাস (৫ অক্টোবর ২০২৬)
         \App\Modules\Sales\Reports\CreditControlReports::class,
+        // ⭐ ডেলিভারির রিপোর্ট — OTIF আদেশের লাইন ধরে (পরিকল্পনা সংস্করণ ২ §৯, ৬ অক্টোবর ২০২৬)
+        \App\Modules\Sales\Reports\DeliveryReports::class,
     ],
 
     /*
