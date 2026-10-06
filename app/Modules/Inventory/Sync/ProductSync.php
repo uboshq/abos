@@ -73,6 +73,8 @@ final class ProductSync implements SyncsToDevices
          * কোয়ারি হত — ফোনের প্রথম সিঙ্কটাই সবচেয়ে বড়।
          */
         $query = Product::query()
+            // ⭐ দেখার শাখার — ওয়েবের তালিকার একই নিয়ম (মালিক, ৬ অক্টোবর ২০২৬: "অ্যাপে অন্য ব্রাঞ্চের … হিসাবে ঢুকেছে"); এই শাখায় বিক্রি হয় এমন পণ্যই ([[Product::scopeSoldInViewedBranch()]])
+            ->soldInViewedBranch()
             ->with(['unit:id,code,name_en,name_bn', 'packs.unit:id,code,name_en,name_bn'])
             ->orderBy('updated_at')
             ->orderBy('id')

@@ -85,6 +85,86 @@ final class TheWebHeaderMovedThePhonesBranchTooTest extends TestCase
         $this->assertSame('70.00', $this->payload($after, 'CustomerDue')['outstandingInView']);
     }
 
+    /**
+     * ⭐ বাকি সিঙ্কও দেখার শাখা মানে — বিক্রয় আদেশ, আদায়, মজুদ (ওয়েবের তালিকা আর মজুদের পাতার একই নিয়ম)।
+     * ⛔ আগে এরা কেবল নাগাল মানত: শাখা A দেখা ফোনে B-র আদেশ আর আদায় নামত, আর মজুদ ছিল সব শাখার গুদামের যোগ।
+     */
+    public function test_orders_collections_and_stock_on_the_phone_are_the_viewed_branchs_too(): void
+    {
+        $tdepot = Company::query()->where('code', 'TDEPOT')->firstOrFail();
+        $a = Branch::acrossAllCompanies()->where('code', 'NTK')->firstOrFail();
+        $b = Branch::acrossAllCompanies()->where('company_id', $tdepot->id)->where('id', '<>', $a->id)->firstOrFail();
+
+        // ⓘ দুটো আদেশ আর দুটো আদায় — সেবার নিজের দরজায়, তারপর একটা A-র, একটা B-র
+        \App\Core\Support\CompanyContext::set($tdepot->id, $a->id);
+        $this->actingAs(User::query()->where('email', 'owner@abos.test')->firstOrFail());
+        app(\App\Modules\Accounts\Services\StandardChart::class)->install();
+        $customer = Customer::query()->withoutGlobalScopes()->where('company_id', $tdepot->id)->orderBy('id')->firstOrFail();
+        $warehouse = DB::table('inv_warehouses')->where('company_id', $tdepot->id)->where('is_default', true)->value('id');
+        $productId = DB::table('inv_products')->where('company_id', $tdepot->id)->orderBy('id')->value('id');
+        foreach ([1, 2] as $_) {
+            app(\App\Modules\Sales\Services\SalesOrderService::class)->create(
+                ['customer_id' => $customer->id, 'warehouse_id' => $warehouse, 'trx_date' => now()->toDateString()],
+                [['product_id' => $productId, 'ordered_qty' => '1', 'rate' => '10']],
+            );
+            app(\App\Modules\Sales\Services\CollectionService::class)->create(
+                ['customer_id' => $customer->id, 'trx_date' => now()->toDateString(), 'amount' => '50', 'instrument' => 'cash'], [],
+            );
+        }
+
+        $orders = DB::table('sal_orders')->where('company_id', $tdepot->id)->orderBy('id')->limit(2)->pluck('id')->all();
+        $this->assertCount(2, $orders, 'প্রস্তুতিটাই ভুল — দুটো আদেশ লাগে।');
+        DB::table('sal_orders')->where('id', $orders[0])->update(['branch_id' => $a->id]);
+        DB::table('sal_orders')->where('id', $orders[1])->update(['branch_id' => $b->id]);
+
+        $collections = DB::table('sal_collections')->where('company_id', $tdepot->id)->orderBy('id')->limit(2)->pluck('id')->all();
+        $this->assertCount(2, $collections, 'প্রস্তুতিটাই ভুল — দুটো আদায় লাগে।');
+        DB::table('sal_collections')->where('id', $collections[0])->update(['branch_id' => $a->id]);
+        DB::table('sal_collections')->where('id', $collections[1])->update(['branch_id' => $b->id]);
+
+        // ⓘ ডিফল্ট গুদাম A-র, বাকি সব B-র — ফোনের মজুদ কেবল ডিফল্ট গুদামের হওয়ার কথা
+        $home = DB::table('inv_warehouses')->where('company_id', $tdepot->id)->where('is_default', true)->value('id');
+        DB::table('inv_warehouses')->where('company_id', $tdepot->id)->update(['branch_id' => $b->id]);
+        DB::table('inv_warehouses')->where('id', $home)->update(['branch_id' => $a->id]);
+        // ⓘ মজুদের সারি নিজের গুদামের শাখায় — আসল ব্যবসায় গুদাম শাখা বদলায় না
+        DB::table('inv_stock_movements')->where('company_id', $tdepot->id)->update(['branch_id' => $b->id]);
+        DB::table('inv_stock_movements')->where('warehouse_id', $home)->update(['branch_id' => $a->id]);
+        $floor = fn (?int $warehouse) => DB::table('inv_stock_movements')->where('company_id', $tdepot->id)
+            ->when($warehouse !== null, fn ($q) => $q->where('warehouse_id', $warehouse))
+            ->groupBy('product_id')->selectRaw('product_id, SUM(floor_change) as qty')->pluck('qty', 'product_id');
+        $atHome = $floor($home);
+        $everywhere = $floor(null);
+        $product = collect($everywhere->keys())->first(fn ($id) => bccomp((string) $everywhere[$id], (string) ($atHome[$id] ?? '0'), 4) !== 0);
+        $this->assertNotNull($product, 'প্রস্তুতিটাই ভুল — অন্য গুদামে মজুদ আছে এমন পণ্য নেই।');
+
+        // ⓘ দুই পণ্য: একটা কেবল B-তে বিক্রি হয়, একটা কেবল A-তে (ওয়েবের পণ্য-তালিকা B-রটা A-তে দেখায় না)
+        [$onlyA, $onlyB] = DB::table('inv_products')->where('company_id', $tdepot->id)->orderBy('id')->limit(2)->pluck('id')->all();
+        foreach ([[$onlyA, $a->id], [$onlyB, $b->id]] as [$p, $branch]) {
+            DB::table('inv_product_branches')->insert(['company_id' => $tdepot->id, 'product_id' => $p, 'branch_id' => $branch, 'created_at' => now(), 'updated_at' => now()]);
+        }
+
+        $token = $this->signIn();
+        $this->withToken($token)->postJson('/api/v1/workspace', ['company' => $tdepot->public_id, 'branch' => $a->public_id])->assertOk();
+
+        $sales = $this->pull($token, 'sales');
+        $id = fn (string $table, int $row) => (string) DB::table($table)->where('id', $row)->value('public_id');
+        $this->assertContains($id('sal_orders', $orders[0]), $this->ids($sales, 'SalesOrder'));
+        $this->assertNotContains($id('sal_orders', $orders[1]), $this->ids($sales, 'SalesOrder'), '⛔ শাখা A-র ফোনে B-র বিক্রয় আদেশ।');
+        $this->assertContains($id('sal_collections', $collections[0]), $this->ids($sales, 'Collection'));
+        $this->assertNotContains($id('sal_collections', $collections[1]), $this->ids($sales, 'Collection'), '⛔ শাখা A-র ফোনে B-র আদায়।');
+
+        $inventory = $this->pull($token, 'inventory');
+        $this->assertSame([], $inventory['unreadable'], 'মজুদের টানা পড়া গেল না।');
+        $this->assertFalse($inventory['hasMore'], 'প্রস্তুতিটাই ভুল — একটা পাতায় সব মজুদ আসেনি।');
+        $stock = collect($inventory['records'])->where('entityType', 'StockOnHand')
+            ->map(fn ($r) => json_decode((string) $r['payloadJson'], true))->keyBy('productId');
+        $publicId = (string) DB::table('inv_products')->where('id', $product)->value('public_id');
+        $this->assertContains($id('inv_products', $onlyA), $this->ids($inventory, 'Product'));
+        $this->assertNotContains($id('inv_products', $onlyB), $this->ids($inventory, 'Product'), '⛔ শাখা A-র ফোনে কেবল B-তে বিক্রি হয় এমন পণ্য।');
+        $this->assertSame(0, bccomp((string) ($atHome[$product] ?? '0'), (string) ($stock[$publicId]['floor'] ?? '0'), 4),
+            '⛔ শাখা A-র ফোনের মজুদে B-র গুদামের মালও যোগ হয়েছে: ঘরে '.($atHome[$product] ?? '0').', সবখানে '.$everywhere[$product].', ফোনে '.json_encode($stock[$publicId] ?? null).' ধরন '.json_encode(collect($inventory['records'])->countBy('entityType')).' মোট মজুদ-সারি '.$stock->count().' পণ্য '.$product);
+    }
+
     // ── যন্ত্রপাতি ──────────────────────────────────────────────────────
 
     /** @param  list<int>  $customers */
@@ -130,11 +210,11 @@ final class TheWebHeaderMovedThePhonesBranchTooTest extends TestCase
     }
 
     /** @return array<string, mixed> */
-    private function pull(string $token): array
+    private function pull(string $token, string $module = 'customer'): array
     {
         $this->app['auth']->forgetGuards();
 
-        return $this->withToken($token)->getJson('/api/v1/sync/customer/pull?limit=1000&deviceId='.self::DEVICE)->assertOk()->json();
+        return $this->withToken($token)->getJson('/api/v1/sync/'.$module.'/pull?limit=1000&deviceId='.self::DEVICE)->assertOk()->json();
     }
 
     private function complete(string $token): void
