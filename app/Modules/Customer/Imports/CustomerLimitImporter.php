@@ -15,8 +15,14 @@ use App\Modules\Customer\Services\CustomerService;
  * নিয়ম সম্পাদনারই ([[CustomerService::proposeLimit()]]): কমানো সাথে সাথে; বাড়ানো ঠিক সেই অঙ্কে সইয়ের অনুরোধ, আর
  * অনুমোদন কেন্দ্রে সই পড়লে নিজে বসে ([[ApplyTheLimitOnTheLastSignature]])। ⛔ কোনো পথে সই এড়ানো যায় না।
  */
-final class CustomerLimitImporter implements Importer
+final class CustomerLimitImporter implements \App\Core\Contracts\ImportNeedsKeys, Importer
 {
+    /** ⛔ এই ইমপোর্টের চাবি — পর্দার একই কাজের (পুরো ERP অডিট, ৬ অক্টোবর ২০২৬, SystemAdmin ⛔৫; [[ImportNeedsKeys]]) */
+    public static function requiredPermissions(): array
+    {
+        return ['customer.update'];
+    }
+
     public function __construct(private readonly CustomerService $customers) {}
 
     public static function label(): string

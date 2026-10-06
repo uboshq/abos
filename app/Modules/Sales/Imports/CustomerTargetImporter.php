@@ -15,8 +15,14 @@ use Illuminate\Validation\ValidationException;
  *
  * ⓘ পাতার একই পথ আর একই যাচাই ([[CustomerTargetService::setOne()]]) — ইমপোর্টের আলাদা নিয়ম নেই।
  */
-final class CustomerTargetImporter implements Importer
+final class CustomerTargetImporter implements \App\Core\Contracts\ImportNeedsKeys, Importer
 {
+    /** ⛔ এই ইমপোর্টের চাবি — পর্দার একই কাজের (পুরো ERP অডিট, ৬ অক্টোবর ২০২৬, SystemAdmin ⛔৫; [[ImportNeedsKeys]]) */
+    public static function requiredPermissions(): array
+    {
+        return ['sales.customer_target.manage'];
+    }
+
     public function __construct(private readonly CustomerTargetService $targets) {}
 
     public static function label(): string

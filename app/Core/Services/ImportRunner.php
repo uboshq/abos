@@ -40,13 +40,41 @@ final class ImportRunner
     {
         $all = [];
 
+        /*
+         * ⛔ লগইন করা মানুষের বেলায় কেবল যা তিনি পর্দাতেও পারেন — পুরো ERP অডিট, ৬ অক্টোবর ২০২৬ (SystemAdmin ⛔৫)।
+         * ⓘ মডিউল বন্ধ থাকলে তার ইমপোর্টও নয়; ইমপোর্টারের প্রতিটা চাবি ([[ImportNeedsKeys]]) লাগে, আর চাবি না ঘোষণা করা
+         * ইমপোর্টার আসেই না। ⓘ কনসোলে মানুষ নেই — সেখানে আগের মতো সব।
+         */
+        $user = auth()->user();
+        $settings = app(\App\Core\Services\SettingsService::class);
+
         foreach ($this->registry->all() as $module) {
+            if ($user !== null && ! (bool) $settings->get($module->code.'.enabled', true)) {
+                continue;
+            }
+
             foreach ($module->imports as $key => $class) {
+                if ($user !== null && ! self::mayRun($class, $user)) {
+                    continue;
+                }
+
                 $all[$key] = $class;
             }
         }
 
         return $all;
+    }
+
+    /** @param  class-string  $class */
+    private static function mayRun(string $class, \Illuminate\Contracts\Auth\Authenticatable $user): bool
+    {
+        if (! is_subclass_of($class, \App\Core\Contracts\ImportNeedsKeys::class)) {
+            return false;
+        }
+
+        $keys = $class::requiredPermissions();
+
+        return $keys !== [] && collect($keys)->every(fn (string $key): bool => $user->can($key));
     }
 
     /**

@@ -26,8 +26,14 @@ use Illuminate\Validation\ValidationException;
  * মজুদ বসে গণনার পর্দা থেকে (StockService::adjust), আর তখন প্রতিটা
  * সংখ্যার পেছনে একটা কারণ ও একটা তারিখ থাকে — যা একটা CSV কলামে থাকত না।
  */
-final class ProductImporter implements Importer
+final class ProductImporter implements \App\Core\Contracts\ImportNeedsKeys, Importer
 {
+    /** ⛔ এই ইমপোর্টের চাবি — পর্দার একই কাজের (পুরো ERP অডিট, ৬ অক্টোবর ২০২৬, SystemAdmin ⛔৫; [[ImportNeedsKeys]]) */
+    public static function requiredPermissions(): array
+    {
+        return ['inventory.product.create'];
+    }
+
     public function __construct(private readonly ProductService $products) {}
 
     /**

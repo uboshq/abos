@@ -22,8 +22,14 @@ use Illuminate\Validation\ValidationException;
  * নিজে কিছু সেভ করে না — CustomerService ডাকে, তাই বাংলা নামের নিয়ম,
  * কোডের অনন্যতা ও খোলা ব্যালেন্সের দাখিলা হাতে বসানোর মতোই খাটে।
  */
-final class CustomerImporter implements Importer
+final class CustomerImporter implements \App\Core\Contracts\ImportNeedsKeys, Importer
 {
+    /** ⛔ এই ইমপোর্টের চাবি — পর্দার একই কাজের (পুরো ERP অডিট, ৬ অক্টোবর ২০২৬, SystemAdmin ⛔৫; [[ImportNeedsKeys]]) */
+    public static function requiredPermissions(): array
+    {
+        return ['customer.create'];
+    }
+
     public function __construct(private readonly CustomerService $customers) {}
 
     public static function label(): string

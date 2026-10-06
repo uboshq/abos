@@ -37,8 +37,14 @@ use Illuminate\Support\Carbon;
  * "আগে জের বসেছে" ভুল হিসেবে ধরা হয় না — ধরলে পুনরায় তোলার সময়
  * হয়ে-যাওয়া সারিগুলো গোটা ফাইলটাকে আটকে দিত।
  */
-final class OpeningBalanceImporter implements Importer, RefusesAPartialImport
+final class OpeningBalanceImporter implements \App\Core\Contracts\ImportNeedsKeys, Importer, RefusesAPartialImport
 {
+    /** ⛔ এই ইমপোর্টের চাবি — পর্দার একই কাজের (পুরো ERP অডিট, ৬ অক্টোবর ২০২৬, SystemAdmin ⛔৫; [[ImportNeedsKeys]]) */
+    public static function requiredPermissions(): array
+    {
+        return ['accounts.coa.manage', 'accounts.voucher.create'];
+    }
+
     public function __construct(private readonly OpeningBalanceService $openings) {}
 
     public static function label(): string

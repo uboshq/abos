@@ -33,8 +33,14 @@ use Illuminate\Validation\ValidationException;
  * মূল্য শূন্য হত, আর প্রথম বিক্রিতেই মুনাফা পুরো বিক্রয়মূল্যের সমান
  * দেখাত।
  */
-final class OpeningStockImporter implements Importer
+final class OpeningStockImporter implements \App\Core\Contracts\ImportNeedsKeys, Importer
 {
+    /** ⛔ এই ইমপোর্টের চাবি — পর্দার একই কাজের (পুরো ERP অডিট, ৬ অক্টোবর ২০২৬, SystemAdmin ⛔৫; [[ImportNeedsKeys]]) */
+    public static function requiredPermissions(): array
+    {
+        return ['inventory.stock.opening'];
+    }
+
     public function __construct(private readonly OpeningStockService $opening) {}
 
     public static function label(): string

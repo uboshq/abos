@@ -30,8 +30,14 @@ use App\Modules\Accounts\Services\BankStatementService;
  * নামান। ⛔ ওটাকে ভুল বললে গোটা ফাইলটা ফেরত যেত, অথচ নতুন সারিগুলোই
  * তাঁর দরকার।
  */
-final class BankStatementImporter implements Importer
+final class BankStatementImporter implements \App\Core\Contracts\ImportNeedsKeys, Importer
 {
+    /** ⛔ এই ইমপোর্টের চাবি — পর্দার একই কাজের (পুরো ERP অডিট, ৬ অক্টোবর ২০২৬, SystemAdmin ⛔৫; [[ImportNeedsKeys]]) */
+    public static function requiredPermissions(): array
+    {
+        return ['accounts.reconciliation.manage'];
+    }
+
     public function __construct(private readonly BankStatementService $lines) {}
 
     public static function label(): string

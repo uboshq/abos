@@ -20,8 +20,14 @@ use Illuminate\Validation\ValidationException;
  * সবই হাতে বসানোর মতোই খাটে। নিজে Supplier::create() ডাকলে ইমপোর্ট করা
  * সারিগুলো আলাদা নিয়মে চলত, আর সেটা ধরা পড়ত মাস পরে।
  */
-final class SupplierImporter implements Importer
+final class SupplierImporter implements \App\Core\Contracts\ImportNeedsKeys, Importer
 {
+    /** ⛔ এই ইমপোর্টের চাবি — পর্দার একই কাজের (পুরো ERP অডিট, ৬ অক্টোবর ২০২৬, SystemAdmin ⛔৫; [[ImportNeedsKeys]]) */
+    public static function requiredPermissions(): array
+    {
+        return ['supplier.create'];
+    }
+
     public function __construct(private readonly SupplierService $suppliers) {}
 
     public static function label(): string

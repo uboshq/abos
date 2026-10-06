@@ -23,8 +23,14 @@ use Illuminate\Validation\ValidationException;
  * এখানে রাখলে ছক ও জের এক ইমপোর্টে মিশে যেত — খোলার জের আলাদা ইমপোর্টার
  * (`OpeningBalanceImporter`), কারণ ওটা একটা দলিল, তালিকা নয়।
  */
-final class ChartOfAccountsImporter implements Importer
+final class ChartOfAccountsImporter implements \App\Core\Contracts\ImportNeedsKeys, Importer
 {
+    /** ⛔ এই ইমপোর্টের চাবি — পর্দার একই কাজের (পুরো ERP অডিট, ৬ অক্টোবর ২০২৬, SystemAdmin ⛔৫; [[ImportNeedsKeys]]) */
+    public static function requiredPermissions(): array
+    {
+        return ['accounts.coa.manage'];
+    }
+
     public function __construct(private readonly AccountService $accounts) {}
 
     public static function label(): string
