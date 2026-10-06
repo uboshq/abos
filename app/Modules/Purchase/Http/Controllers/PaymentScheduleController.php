@@ -98,7 +98,7 @@ class PaymentScheduleController extends Controller implements HasMiddleware
             ->orderBy('pur_bills.id');
 
         // ⭐ সর্বমোট — ট্যাবের সব পাতা মিলে, বিলের তালিকার হুবহু হিসাবে ([[GrandTotals]])
-        $grand = $this->grandTotals($list, ['total' => 't.total', 'amount' => 'GREATEST(t.total - COALESCE(t.paid_total, 0) - COALESCE(t.voucher_paid_total, 0), 0)']);
+        $grand = $this->grandTotals($list, ['total' => 't.total', 'amount' => 'GREATEST(t.total - COALESCE(t.paid_total, 0) - COALESCE(t.voucher_paid_total, 0) - COALESCE(t.returned_total, 0), 0)']);
         $rows = $list->paginate(50)->withQueryString();
 
         return view('purchase::payment-schedule.index', [

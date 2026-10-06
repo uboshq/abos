@@ -63,7 +63,8 @@ final class PaymentDueReport
             ->tap(ReportEngine::branchWall($f, 'pur_bills.branch_id'))
             ->when($f['supplier_id'] ?? null, fn ($w, $id) => $w->where('pur_bills.supplier_id', (int) $id));
 
-        $due = '(b.total - b.paid_total - b.voucher_paid_total)';
+        // ⭐ পাকা ফেরতও বাদ — [[PurchaseBill::dueAmount()]] (ক্রয় ⚠️৬, ৬ অক্টোবর ২০২৬)
+        $due = '(b.total - b.paid_total - b.voucher_paid_total - COALESCE(b.returned_total, 0))';
         $on = 'COALESCE(b.due_on, b.trx_date)';
         $name = app()->getLocale() === 'bn' ? "COALESCE(NULLIF(s.name_bn, ''), s.name_en)" : 's.name_en';
 

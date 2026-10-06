@@ -365,11 +365,18 @@ class PurchaseBill extends Model implements Drillable, \App\Core\Contracts\Settl
             ->whereColumn('against_id', 'pur_bills.id')
             ->posted();
 
+        // ⭐ পাকা ফেরতও — [[returnedAmount()]]-এর হুবহু শর্ত (পুরো ERP অডিট, ক্রয় ⚠️৬, ৬ অক্টোবর ২০২৬)
+        $returned = PurchaseReturn::query()
+            ->selectRaw('COALESCE(SUM(total), 0)')
+            ->whereColumn('pur_returns.purchase_bill_id', 'pur_bills.id')
+            ->whereIn('status', \App\Core\Support\DocumentStatus::POSTED);
+
         // pur_bills.* না দিলে addSelect শুধু সাব-কোয়েরিটাই আনত
         return $query->addSelect([
             'pur_bills.*',
             'paid_total' => $paid,
             'voucher_paid_total' => $byVoucher,
+            'returned_total' => $returned,
         ]);
     }
 
@@ -379,9 +386,22 @@ class PurchaseBill extends Model implements Drillable, \App\Core\Contracts\Settl
      * ঋণাত্মক হয় না: অতিরিক্ত শোধ (অগ্রিম) বিলের বাকি নয়, সরবরাহকারীর
      * খাতার ব্যাপার — ওটা এখানে দেখালে "বাকি −৫০০" পড়ে কেউ বুঝত না।
      */
+    /**
+     * ⭐ এই বিলের পাকা ক্রয়-ফেরত — পুরো ERP অডিট, ক্রয় ⚠️৬, ৬ অক্টোবর ২০২৬।
+     * ⛔ নিশ্চিত ফেরত খাতায় দেনা কমাত, অথচ বিলের বাকি, পরিশোধের ভাগ আর বাকির রিপোর্টে নয় — ফেরত দেওয়া মালের টাকাও পুরো
+     * পরিশোধ করা যেত, আর বাকির রিপোর্ট সরবরাহকারীর খাতার সাথে মিলত না।
+     */
+    public function returnedAmount(): string
+    {
+        $preloaded = $this->getAttribute('returned_total');
+
+        return bcadd((string) ($preloaded ?? PurchaseReturn::query()->where('purchase_bill_id', $this->id)
+            ->whereIn('status', \App\Core\Support\DocumentStatus::POSTED)->sum('total')), '0', 4);
+    }
+
     public function dueAmount(): string
     {
-        $due = bcsub((string) $this->total, $this->paidAmount(), 4);
+        $due = bcsub(bcsub((string) $this->total, $this->paidAmount(), 4), $this->returnedAmount(), 4);
 
         return bccomp($due, '0', 4) > 0 ? $due : '0.0000';
     }

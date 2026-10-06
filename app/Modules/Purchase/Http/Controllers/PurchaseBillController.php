@@ -103,7 +103,7 @@ class PurchaseBillController extends Controller implements HasMiddleware
 
         return view('purchase::bill.index', [
             'menu' => $this->menu->forUser($request->user()),
-            'grand' => $this->grandTotals($query, ['total' => 't.total', 'paid_total' => 'COALESCE(t.paid_total, 0) + COALESCE(t.voucher_paid_total, 0)', 'due' => 'GREATEST(t.total - COALESCE(t.paid_total, 0) - COALESCE(t.voucher_paid_total, 0), 0)']),
+            'grand' => $this->grandTotals($query, ['total' => 't.total', 'paid_total' => 'COALESCE(t.paid_total, 0) + COALESCE(t.voucher_paid_total, 0)', 'due' => 'GREATEST(t.total - COALESCE(t.paid_total, 0) - COALESCE(t.voucher_paid_total, 0) - COALESCE(t.returned_total, 0), 0)']),
             'bills' => $query->paginate(50)->withQueryString(),
             // ⓘ "শাখা" কলাম কেবল হেডারে "সব শাখা" থাকলে — এক শাখা বাছলে সব সারি একই শাখার
             'showBranch' => ViewedBranch::one() === null,
