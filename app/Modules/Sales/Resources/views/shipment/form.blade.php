@@ -80,8 +80,15 @@
                 <x-ui.field name="driver_name" :label="__('sales::shipment.driver_name')"
                             :value="old('driver_name', $shipment->driver_name)" />
 
+                {{-- ⭐ চালকের ফোন আর বাহক — ধাপ ৪ --}}
+                <x-ui.field name="driver_phone" type="tel" :label="__('sales::field.driver_phone')"
+                            :value="old('driver_phone', $shipment->driver_phone)" />
+
                 <x-ui.field name="helper_name" :label="__('sales::shipment.helper')"
                             :value="old('helper_name', $shipment->helper_name)" />
+
+                <x-ui.field name="carrier_name" :label="__('sales::field.carrier_name')"
+                            :value="old('carrier_name', $shipment->carrier_name)" />
 
                 @if ($routes->isNotEmpty())
                     <x-ui.select name="route_location_id" :label="__('sales::shipment.route')"

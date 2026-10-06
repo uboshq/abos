@@ -25,7 +25,7 @@
         <div class="flex flex-wrap items-center justify-between gap-2">
             <h2 class="text-lg font-semibold">{{ __('sales::loading.title') }} {{ $trip->document_no }}</h2>
             <span class="text-sm text-(--color-ink-muted)">
-                {{ DateFormat::format($trip->trx_date) }} · {{ $trip->vehicle_no ?: '—' }} · {{ $trip->driver_name ?: '—' }}
+                {{ DateFormat::format($trip->trx_date) }} · {{ $trip->vehicle_no ?: '—' }} · {{ $trip->driver_name ?: '—' }}@if ($trip->driver_phone) · <span data-trip-driver-phone>{{ $trip->driver_phone }}</span>@endif
             </span>
         </div>
 

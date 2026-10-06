@@ -60,7 +60,8 @@ class Shipment extends Model implements Drillable
     protected $fillable = [
         'company_id', 'branch_id', 'financial_year_id', 'document_no',
         'trx_date', 'warehouse_id', 'vehicle_id', 'vehicle_no',
-        'driver_name', 'helper_name',
+        // ⭐ চালকের ফোন আর বাহক — ধাপ ৪ (৬ অক্টোবর ২০২৬)
+        'driver_name', 'driver_phone', 'helper_name', 'carrier_name',
         'route_location_id', 'opening_km', 'closing_km',
         'dispatched_at', 'returned_at',
         'status', 'narration', 'created_by',

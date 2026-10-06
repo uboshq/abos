@@ -26,7 +26,10 @@ class ShipmentRequest extends FormRequest
             'vehicle_no' => ['nullable', 'string', 'max:64'],
 
             'driver_name' => ['nullable', 'string', 'max:191'],
+            // ⭐ পথে গাড়ির সাথে কথা বলার নম্বর, আর ভাড়ার গাড়ি হলে কোন পরিবহনের (ধাপ ৪, ৬ অক্টোবর ২০২৬)
+            'driver_phone' => ['nullable', 'string', 'max:32', 'regex:/^\+?[0-9][0-9\- ]{5,19}$/'],
             'helper_name' => ['nullable', 'string', 'max:191'],
+            'carrier_name' => ['nullable', 'string', 'max:191'],
 
             'route_location_id' => ['nullable', 'integer',
                 Rule::exists('mdm_locations', 'id')->where('company_id', $companyId)],
@@ -54,7 +57,7 @@ class ShipmentRequest extends FormRequest
     {
         return $this->safe()->only([
             'trx_date', 'warehouse_id', 'vehicle_id', 'vehicle_no',
-            'driver_name', 'helper_name',
+            'driver_name', 'driver_phone', 'helper_name', 'carrier_name',
             'route_location_id', 'opening_km', 'narration',
         ]);
     }

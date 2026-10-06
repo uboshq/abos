@@ -774,6 +774,9 @@ class SalesPrintController extends Controller implements HasMiddleware
                 'core.print.date' => DateFormat::format($shipment->trx_date),
                 'sales::field.vehicle_no' => (string) $shipment->vehicle_no,
                 'sales::field.driver_name' => (string) $shipment->driver_name,
+                // ⭐ চালকের ফোন আর বাহক — ধাপ ৪ (৬ অক্টোবর ২০২৬)
+                'sales::field.driver_phone' => (string) ($shipment->driver_phone ?? ''),
+                'sales::field.carrier_name' => (string) ($shipment->carrier_name ?? ''),
                 'sales::loading.challan_list' => $shipment->lines
                     ->map(fn ($l) => trim(($l->challan?->document_no ?? '').' '.($l->challan?->customer?->name() ?? '')))
                     ->implode(' · '),
