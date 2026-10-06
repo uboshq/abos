@@ -302,6 +302,9 @@ Route::middleware('auth')->prefix('finance')->group(function () {
          */
         Route::get('/', [DepositController::class, 'all'])->name('all');
 
+        // ⭐ মাস শেষের অর্জিত মুনাফা — অর্থ-মডিউলের পরিকল্পনা ৪.২ ([[DepositAccrualService]], ৬ অক্টোবর ২০২৬)
+        Route::post('/accruals', [DepositController::class, 'accrue'])->name('accrue');
+
         // ⭐ আমানতের রিপোর্ট — অর্থ-মডিউলের পরিকল্পনা, অংশ ৪ ([[DepositReportController]], ৬ অক্টোবর ২০২৬); ⓘ `reports` কোনো
         // ইস্যুকারীর নাম নয়, তাই `/{issuer}`-এর সাথে সংঘর্ষ নেই
         Route::get('/reports/{slug}', [\App\Modules\Finance\Http\Controllers\DepositReportController::class, 'show'])

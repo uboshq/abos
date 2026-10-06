@@ -308,6 +308,13 @@ final class StandardChart implements ProvisionsCompany
      */
     public const INTEREST_PAYABLE = '2145';
 
+    /*
+     * ⭐ অর্জিত মুনাফা — চলতি সম্পদ (অর্থ-মডিউলের পরিকল্পনা ৪.২, ৬ অক্টোবর ২০২৬; সমন্বয়কের সিদ্ধান্ত প্র১)। মাস শেষে আমানতের
+     * অর্জিত অথচ না-পাওয়া মুনাফা এখানে বসে (Dr ১১৬৫ / Cr ৪৩১০), পরের মাসের প্রথম দিনে উল্টায় ([[DepositAccrualService]]) —
+     * প্রদেয় সুদের ([[INTEREST_PAYABLE]]) জোড়া। খাতটা ছকে আগে থেকেই আছে।
+     */
+    public const ACCRUED_INTEREST = '1165';
+
     /** স্থায়ী সম্পদের গ্রুপ — নিচে আসবাব, যানবাহন, যন্ত্রপাতি। */
     public const FIXED_ASSETS = '1200';
 

@@ -10,6 +10,7 @@ use App\Modules\Accounts\Models\Voucher;
 use App\Modules\Finance\Models\BankFacility;
 use App\Modules\Finance\Models\Withdrawal;
 use App\Modules\Finance\Services\BankFacilityService;
+use App\Modules\Finance\Services\DepositAccrualService;
 use App\Modules\Finance\Services\DepositService;
 use App\Modules\Finance\Services\FinanceSignature;
 use App\Modules\Finance\Services\HandLoanService;
@@ -65,9 +66,10 @@ final class FinishTheFinancePaperOnTheLastSignature
             FinanceSignature::HAND_LOAN => $yes
                 ? app(HandLoanService::class)->finishSigned($voucher)
                 : app(HandLoanService::class)->dropRefused($voucher, $why),
-            FinanceSignature::DEPOSIT => $yes
-                ? app(DepositService::class)->finishSigned($voucher)
-                : app(DepositService::class)->dropRefused($voucher, $why),
+            // ⭐ মাসিক অর্জিত মুনাফা জমার নিজের ছকে, আলাদা করে চেনা (পরিকল্পনা ৪.২, ৬ অক্টোবর ২০২৬); বাকি জমার কাগজ আগের মতো
+            FinanceSignature::DEPOSIT => DepositAccrualService::isAccrual($voucher)
+                ? ($yes ? app(DepositAccrualService::class)->finishSigned($voucher) : app(DepositAccrualService::class)->dropRefused($voucher, $why))
+                : ($yes ? app(DepositService::class)->finishSigned($voucher) : app(DepositService::class)->dropRefused($voucher, $why)),
             FinanceSignature::RENTAL => $yes
                 ? app(RentalContractService::class)->finishSigned($voucher)
                 : app(RentalContractService::class)->dropRefused($voucher, $why),

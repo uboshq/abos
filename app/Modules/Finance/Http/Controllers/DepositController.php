@@ -57,7 +57,7 @@ class DepositController extends Controller implements HasMiddleware
         return [
             new Middleware('can:finance.deposit.view', only: ['index', 'show', 'all']),
             new Middleware('can:finance.deposit.create', only: ['create', 'store']),
-            new Middleware('can:finance.deposit.move', only: ['movement', 'close']),
+            new Middleware('can:finance.deposit.move', only: ['movement', 'close', 'accrue']),
             new Middleware('can:finance.deposit.cancel', only: ['cancel']),
         ];
     }
@@ -625,5 +625,21 @@ class DepositController extends Controller implements HasMiddleware
                 'reason' => $refused->getMessage(),
             ]));
         }
+    }
+
+    /**
+     * ⭐ মাস শেষের অর্জিত মুনাফা — অর্থ-মডিউলের পরিকল্পনা ৪.২, ৬ অক্টোবর ২০২৬ ([[DepositAccrualService]])। কেবল শেষ হওয়া মাস;
+     * এক জমায় এক মাস একবারই; আগের মাসের জমা পরের মাসের প্রথম দিনে নিজে উল্টায়।
+     */
+    public function accrue(Request $request): RedirectResponse
+    {
+        $data = $request->validate([
+            'month' => ['required', 'date_format:Y-m'],
+        ]);
+
+        $done = app(\App\Modules\Finance\Services\DepositAccrualService::class)
+            ->run(\Illuminate\Support\Carbon::createFromFormat('Y-m-d', $data['month'].'-01'));
+
+        return back()->with('saved', __('finance::deposit_report.accrual_done', $done));
     }
 }
