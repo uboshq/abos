@@ -18,6 +18,7 @@ return [
     'nothing_to_confirm' => 'This run has no payslips.',
     'already_cancelled' => 'This run was already cancelled.',
     'head_needs_an_account' => 'The head :head has no ledger account, and the standard one could not be found.',
+    'employee_advance_missing' => 'The chart has no Employee Advance account (1131), so there is nowhere to hold what an employee owes when deductions exceed the salary.',
     'salary_payable_missing' => 'The chart has no Salary Payable account, so there is nowhere for the salary to sit.',
     'to_before_from' => 'The end date cannot be before the start date.',
     'days_must_be_positive' => 'The number of days must be greater than zero.',

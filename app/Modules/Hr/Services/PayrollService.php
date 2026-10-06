@@ -471,8 +471,20 @@ final class PayrollService
          */
         $owed = [];
 
+        /*
+         * ⛔ ঋণাত্মক নিট কর্মীর নামে পাওনা, মোটে কাটাকাটি নয় — পুরো-ERP অডিট, ৬ অক্টোবর ২০২৬ (HR ⚠️৭;
+         * [[ANegativeSalaryIsOwedByTheEmployeeTest]])। ⓘ কর্তন মোটের বেশি হলে (কামাইয়ে বেতন কমল, কর্তন কমল না) শিটের নিট ঋণাত্মক;
+         * আগে সেটা সবার নিটের যোগে মিশে প্রদেয় বেতন কমাত — অন্যদের দেনা থেকে কাটা, আর কর্মীর কাছে পাওনা কোথাও নেই (IAS 1: অফসেট
+         * নয়)। এখন সে অঙ্ক ১১৩১ কর্মীর অগ্রিমে ডেবিট, তাঁর নামে — পরের মাসের অগ্রিম কর্তন সেটাও ধরে ([[AdvanceBalance]])।
+         */
+        $short = [];
+
         foreach ($run->payslips as $slip) {
-            $net = bcadd($net, (string) $slip->net, 4);
+            if (bccomp((string) $slip->net, '0', 4) < 0) {
+                $short[(int) $slip->employee_id] = bcadd($short[(int) $slip->employee_id] ?? '0', bcsub('0', (string) $slip->net, 4), 4);
+            } else {
+                $net = bcadd($net, (string) $slip->net, 4);
+            }
 
             foreach ($slip->lines as $line) {
                 $accountId = $line->account_id ?? $this->fallbackAccount($line->kind)?->id;
@@ -516,6 +528,21 @@ final class PayrollService
             }
 
             $lines[] = ['account_id' => (int) $accountId, 'debit' => $amount, 'narration' => $narration];
+        }
+
+        $advance = $short === [] ? null : $this->accountByCode(StandardChart::EMPLOYEE_ADVANCE);
+
+        if ($short !== [] && $advance === null) {
+            throw ValidationException::withMessages([
+                'account' => __('hr::validation.employee_advance_missing'),
+            ]);
+        }
+
+        foreach ($short as $employeeId => $amount) {
+            $lines[] = [
+                'account_id' => (int) $advance->id, 'debit' => $amount, 'narration' => $narration,
+                'party_type' => Employee::drillSourceType(), 'party_id' => $employeeId,
+            ];
         }
 
         /*
