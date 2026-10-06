@@ -9,6 +9,7 @@ use App\Core\Engines\Report\ReportDefinition;
 use App\Core\Engines\Report\ReportEngine;
 use App\Core\Support\DocumentStatus;
 use App\Modules\Sales\Services\DeliveryStage;
+use App\Modules\Sales\Support\DeliveryOrderStatus;
 use App\Modules\Sales\Support\SalesOrderStatus;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Carbon;
@@ -37,12 +38,16 @@ final class DeliveryReports
 
     public const CHALLAN_STATUS = 'sales.challan_status';
 
+    // ⭐ আদেশ থেকে রওনার সময় — পরিকল্পনা সংস্করণ ২ §৯ (ঘ)
+    public const ORDER_TO_DISPATCH = 'sales.order_to_dispatch';
+
     private const KEY = 'sales.report';
 
     public static function registerAll(ReportEngine $engine): void
     {
         $engine->register(self::otif());
         $engine->register(self::challanStatus());
+        $engine->register(self::orderToDispatch());
     }
 
     /**
@@ -224,6 +229,110 @@ final class DeliveryReports
                 ['key' => 'received_by', 'label' => 'sales::challan_status.received_by'],
                 ['key' => 'damaged_qty', 'label' => 'sales::challan_status.damaged_qty', 'type' => ReportColumn::QUANTITY],
                 ['key' => 'hours_to_dispatch', 'label' => 'sales::challan_status.hours_to_dispatch', 'type' => ReportColumn::QUANTITY, 'total' => false],
+            ],
+        );
+    }
+
+    /**
+     * ⭐ আদেশ থেকে রওনার সময় — বিক্রয় পরিকল্পনা সংস্করণ ২ §৯ (ঘ), ৬ অক্টোবর ২০২৬ (মালিকের আদেশ "Sales মডিউলের কাজ শেষ দাও")।
+     *
+     * ⓘ ডিপোর মূল ধারা DO (মালিক, ২ অক্টোবর ২০২৬), তাই প্রতিটা DO এক সারি — দিন ধরে, খসড়া · ফেরানো · বাতিল বাদ। ধাপগুলোর প্রথম
+     * সময়: পাঠানো (না থাকলে তৈরি) → তত্ত্বাবধায়কের অনুমোদন → বিল ও চালান (একসাথে তৈরি হয়) → প্রথম গেট পাস → প্রথম রওনা। প্রতিটা
+     * ফাঁকের ঘণ্টা আলাদা, আর পাঠানো থেকে রওনার মোট। সারাংশ: রওনা হওয়া DO-র গড় মোট ঘণ্টা।
+     *
+     * ⓘ DO থেকে চালান: DO-র বিল → বিলের লাইন → চালানের লাইন → চালান (বিভক্ত চালানে প্রথমটা)। গেট পাস কেবল দেওয়া (`issued`)।
+     */
+    private static function orderToDispatch(): ReportDefinition
+    {
+        return new ReportDefinition(
+            key: self::ORDER_TO_DISPATCH,
+            permission: self::KEY,
+            title: 'sales::order_dispatch.title',
+            filters: ['date_range'],
+            query: function (array $f): Builder {
+                $company = (int) $f['company_id'];
+                $pdo = DB::getPdo();
+
+                $links = DB::table('sal_invoice_lines as il')
+                    ->join('sal_challan_lines as cl', 'cl.id', '=', 'il.delivery_challan_line_id')
+                    ->join('sal_challans as c', 'c.id', '=', 'cl.delivery_challan_id')
+                    ->where('c.company_id', $company)
+                    ->whereIn('c.status', DocumentStatus::POSTED)
+                    ->distinct()
+                    ->select(['il.sales_invoice_id', 'cl.delivery_challan_id']);
+
+                $gate = DB::query()->fromSub($links, 'lk')
+                    ->join('sal_gate_passes as gp', 'gp.delivery_challan_id', '=', 'lk.delivery_challan_id')
+                    ->where('gp.status', \App\Modules\Sales\Models\GatePass::ISSUED)
+                    ->groupBy('lk.sales_invoice_id')
+                    ->selectRaw('lk.sales_invoice_id, MIN(gp.issued_at) as gate_at');
+
+                $out = DB::query()->fromSub($links, 'lk')
+                    ->join('sal_delivery_events as ev', 'ev.delivery_challan_id', '=', 'lk.delivery_challan_id')
+                    ->where('ev.to_stage', DeliveryStage::DISPATCHED)
+                    ->groupBy('lk.sales_invoice_id')
+                    ->selectRaw('lk.sales_invoice_id, MIN(ev.occurred_at) as dispatched_at');
+
+                $start = 'COALESCE(d.submitted_at, d.created_at)';
+                $gap = fn (string $a, string $b) => "CASE WHEN {$a} IS NULL OR {$b} IS NULL THEN NULL ELSE TIMESTAMPDIFF(HOUR, {$a}, {$b}) END";
+
+                return DB::table('sal_delivery_orders as d')
+                    ->join('customers as cu', 'cu.id', '=', 'd.customer_id')
+                    ->leftJoin('sal_invoices as i', function ($j) {
+                        $j->on('i.id', '=', 'd.sales_invoice_id')->whereNull('i.deleted_at');
+                    })
+                    ->leftJoinSub($gate, 'g', 'g.sales_invoice_id', '=', 'd.sales_invoice_id')
+                    ->leftJoinSub($out, 'o', 'o.sales_invoice_id', '=', 'd.sales_invoice_id')
+                    ->where('d.company_id', $company)
+                    ->whereNull('d.deleted_at')
+                    ->whereNotIn('d.status', [DeliveryOrderStatus::DRAFT, DeliveryOrderStatus::REJECTED, DeliveryOrderStatus::CANCELLED])
+                    ->whereBetween('d.trx_date', [$f['from'], $f['to']])
+                    ->tap(ReportEngine::branchWall($f, 'd.branch_id'))
+                    ->tap(ReportEngine::dealerWall($f, 'd.customer_id'))
+                    ->selectRaw('d.document_no as do_no, d.trx_date as trx_date, '.self::name('cu').' as customer, '
+                        .'i.document_no as invoice_no, '.$pdo->quote('sales_invoice').' as invoice_type, i.id as invoice_id, '
+                        ."{$start} as submitted_at, d.approved_at as approved_at, i.created_at as invoiced_at, g.gate_at as gate_at, "
+                        .'o.dispatched_at as dispatched_at, '
+                        .$gap($start, 'd.approved_at').' as hours_to_approve, '
+                        .$gap('d.approved_at', 'i.created_at').' as hours_to_invoice, '
+                        .$gap('i.created_at', 'g.gate_at').' as hours_to_gate, '
+                        .$gap('g.gate_at', 'o.dispatched_at').' as hours_to_leave, '
+                        .$gap($start, 'o.dispatched_at').' as hours_total, '
+                        .'CASE WHEN o.dispatched_at IS NULL THEN 0 ELSE 1 END as dispatched')
+                    ->orderBy('d.trx_date')
+                    ->orderBy('d.id');
+            },
+            summary: function (array $totals): array {
+                $left = (int) ($totals['dispatched'] ?? 0);
+                $average = $left === 0 ? null : bcdiv((string) ($totals['hours_total'] ?? '0'), (string) $left, 1);
+
+                return [
+                    'label' => __('sales::order_dispatch.summary'),
+                    'value' => $average ?? '0',
+                    'text' => $average === null
+                        ? __('sales::order_dispatch.none_left')
+                        : __('sales::order_dispatch.summary_text', ['hours' => $average, 'count' => $left]),
+                    // ⓘ দুই দিনের মধ্যে রওনা হলে ভালো খবর
+                    'good' => $average === null || bccomp($average, '48', 1) <= 0,
+                ];
+            },
+            columns: [
+                ['key' => 'do_no', 'label' => 'sales::order_dispatch.do'],
+                ['key' => 'customer', 'label' => 'sales::otif.customer'],
+                ['key' => 'invoice_no', 'label' => 'sales::order_dispatch.invoice', 'type' => ReportColumn::DOCUMENT,
+                    'source_type' => 'invoice_type', 'source_id' => 'invoice_id'],
+                ['key' => 'submitted_at', 'label' => 'sales::order_dispatch.submitted_at'],
+                ['key' => 'approved_at', 'label' => 'sales::order_dispatch.approved_at'],
+                ['key' => 'invoiced_at', 'label' => 'sales::order_dispatch.invoiced_at'],
+                ['key' => 'gate_at', 'label' => 'sales::challan_status.gate_at'],
+                ['key' => 'dispatched_at', 'label' => 'sales::challan_status.dispatched_at'],
+                ['key' => 'hours_to_approve', 'label' => 'sales::order_dispatch.hours_to_approve', 'type' => ReportColumn::QUANTITY, 'total' => false],
+                ['key' => 'hours_to_invoice', 'label' => 'sales::order_dispatch.hours_to_invoice', 'type' => ReportColumn::QUANTITY, 'total' => false],
+                ['key' => 'hours_to_gate', 'label' => 'sales::order_dispatch.hours_to_gate', 'type' => ReportColumn::QUANTITY, 'total' => false],
+                ['key' => 'hours_to_leave', 'label' => 'sales::order_dispatch.hours_to_leave', 'type' => ReportColumn::QUANTITY, 'total' => false],
+                // ⓘ মোট ঘণ্টা আর "রওনা হয়েছে" (১/০) যোগ হয় — সারাংশের গড় এই দুইটা থেকে
+                ['key' => 'hours_total', 'label' => 'sales::order_dispatch.hours_total', 'type' => ReportColumn::QUANTITY],
+                ['key' => 'dispatched', 'label' => 'sales::order_dispatch.dispatched', 'type' => ReportColumn::QUANTITY],
             ],
         );
     }

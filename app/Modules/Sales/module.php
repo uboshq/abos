@@ -373,6 +373,9 @@ return [
             /* ⭐ বিক্রয়কর্মী ধরে বিক্রি — পরিকল্পনা সংস্করণ ২ §৯ গ, ৬ অক্টোবর ২০২৬ ([[SalespersonReports]]) */
             ['label' => 'sales::salesperson_report.title', 'icon' => 'people', 'route' => 'sales.report.show',
                 'route_params' => ['slug' => 'by-salesperson'], 'permission' => 'sales.report'],
+            /* ⭐ আদেশ থেকে রওনার সময় — DO ধরে, পরিকল্পনা সংস্করণ ২ §৯ ঘ ([[DeliveryReports::ORDER_TO_DISPATCH]]) */
+            ['label' => 'sales::order_dispatch.title', 'icon' => 'clock', 'route' => 'sales.report.show',
+                'route_params' => ['slug' => 'order-to-dispatch'], 'permission' => 'sales.report'],
 
             /*
              * রিকল — এই লটটা কাদের কাছে গেছে।
