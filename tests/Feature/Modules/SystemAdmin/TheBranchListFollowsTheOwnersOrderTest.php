@@ -64,4 +64,25 @@ final class TheBranchListFollowsTheOwnersOrderTest extends TestCase
         $fresh = new ShellFacts;
         $this->assertSame(['ZSUPER', 'ALION', 'AAPLAIN'], array_slice($fresh->branches()->pluck('code')->all(), 0, 3));
     }
+
+    /**
+     * ⭐ মুছে ফেলা শাখার কোড আবার নেওয়া যায় — মালিক, ৬ অক্টোবর ২০২৬ (হোলসেলকে "AVA" করতে গিয়ে ৫০০)।
+     * ⛔ অনন্য সূচি মুছে ফেলা সারিও ধরত, পাহারা দেখত না; চালু শাখার কোড আগের মতোই আটকায়, বার্তাসহ।
+     */
+    public function test_a_deleted_branchs_code_can_be_used_again_but_a_live_ones_cannot(): void
+    {
+        $desk = app(BranchDesk::class);
+
+        $old = $desk->open($this->company, ['code' => 'AVA', 'name_en' => 'Old Ava']);
+        $old->delete();
+        $shop = $desk->open($this->company, ['code' => 'WHOLE', 'name_en' => 'Wholesale']);
+
+        $desk->update($shop, ['code' => 'ava', 'name_en' => 'AVA TRADE']);
+        $this->assertSame('AVA', $shop->fresh()->code, '⛔ মুছে ফেলা শাখার কোড নেওয়া গেল না।');
+        $this->assertNotSame('AVA', Branch::onlyTrashed()->findOrFail($old->id)->code, '⛔ মুছে ফেলা শাখা কোড ছাড়েনি।');
+
+        $live = $desk->open($this->company, ['code' => 'LIVEX', 'name_en' => 'Live X']);
+        $this->expectException(\Illuminate\Validation\ValidationException::class);
+        $desk->update($live, ['code' => 'AVA', 'name_en' => 'Live X']);
+    }
 }

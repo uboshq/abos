@@ -218,5 +218,13 @@ final class BranchDesk
                 'code' => __('system_admin::message.branch_code_taken'),
             ]);
         }
+
+        /*
+         * ⭐ মুছে ফেলা শাখার কোড ছেড়ে দেওয়া — মালিক, ৬ অক্টোবর ২০২৬ (হোলসেলকে "AVA" করতে গিয়ে ৫০০)।
+         * ⛔ ডাটাবেজের অনন্য সূচি (company_id, code) মুছে ফেলা সারিও ধরে, কিন্তু উপরের প্রশ্ন সেগুলো দেখে না
+         * (SoftDeletes) — তাই পাহারা পেরিয়ে সেভ ভাঙত। ⓘ মুছে ফেলা শাখার কোডে "~id" লেজ বসে; সারিটা থাকে।
+         */
+        Branch::onlyTrashed()->where('code', $code)->get()
+            ->each(fn (Branch $gone) => $gone->forceFill(['code' => mb_substr($code, 0, 10).'~'.$gone->id])->saveQuietly());
     }
 }
