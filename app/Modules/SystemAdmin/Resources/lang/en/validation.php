@@ -34,4 +34,6 @@ return [
         .'which checks in the same breath that this company is not left without an owner.',
     'role_beyond_your_own' => ':roles carries permissions you do not have yourself — nobody can hand out more power than they hold. Ask the owner.',
     'place_of_another_company' => 'This branch, warehouse or scope does not belong to that company, or that company is outside what you manage here.',
+    // ⛔ পুরো ERP অডিট, ৬ অক্টোবর ২০২৬ (SystemAdmin ⛔৩)
+    'scope_beyond_your_own' => 'You cannot give anyone a view wider than your own — leaving it empty means "no limit", which is wider too. Pick within your own branches or warehouses, or ask the owner.',
 ];

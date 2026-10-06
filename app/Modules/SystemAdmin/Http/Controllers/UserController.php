@@ -1078,6 +1078,7 @@ class UserController extends Controller implements HasMiddleware
         ]);
 
         $this->assertPlacesBelongToTheirCompany($data, $reach);
+        $this->assertScopesWithinMine($data);
 
         return $data;
     }
@@ -1097,6 +1098,53 @@ class UserController extends Controller implements HasMiddleware
      * @param  array<string, mixed>  $data
      * @param  list<int>  $reach
      */
+    /**
+     * ⛔ নিজের সীমার বাইরে কাউকে দেখার সীমা দেওয়া নয় — নিজেকেও নয় (পুরো ERP অডিট, ৬ অক্টোবর ২০২৬, SystemAdmin ⛔৩)।
+     *
+     * ⓘ আগে কেবল দেখা হত শাখা-গুদাম ঐ কোম্পানির কি না: এক শাখায় সীমিত অ্যাডমিন নিজের সীমা মুছে দিতে পারতেন, অন্যকে
+     * সীমাহীন বা নিজের না-দেখা শাখায় বসাতে পারতেন। ⭐ যে কোম্পানিতে আমি শাখা বা গুদামে সীমিত, সেখানে বাছাই কেবল আমার
+     * সীমার ভেতরে — আর খালি রাখা ("সীমা নেই") মানেই আমার চেয়ে বেশি, তাই সেটাও নয়। সীমাহীন অ্যাডমিন যেমন ছিলেন।
+     *
+     * @param  array<string, mixed>  $data
+     */
+    private function assertScopesWithinMine(array $data): void
+    {
+        $actor = auth()->user();
+        $scope = app(DataScope::class);
+        $kinds = [UserDataScope::BRANCH => 'branch_scope'];
+
+        foreach (array_keys($this->scopeKinds()) as $type) {
+            $kinds[$type] = $type.'_scope';
+        }
+
+        $errors = [];
+
+        foreach ((array) ($data['companies'] ?? []) as $companyId) {
+            $companyId = (int) $companyId;
+
+            foreach ($kinds as $type => $field) {
+                $mine = CompanyContext::forCompany($companyId, fn () => $scope->idsFor($actor, $type));
+
+                if ($mine === null) {
+                    continue;
+                }
+
+                $chosen = array_values(array_unique(array_map('intval', array_filter(
+                    (array) ($data[$field][$companyId] ?? []),
+                    fn ($id) => $id !== null && $id !== '',
+                ))));
+
+                if ($chosen === [] || array_diff($chosen, $mine) !== []) {
+                    $errors[$field.'.'.$companyId] = __('system_admin::validation.scope_beyond_your_own');
+                }
+            }
+        }
+
+        if ($errors !== []) {
+            throw ValidationException::withMessages($errors);
+        }
+    }
+
     private function assertPlacesBelongToTheirCompany(array $data, array $reach): void
     {
         $slots = ['default_branch' => Branch::class, 'branch_scope' => Branch::class];

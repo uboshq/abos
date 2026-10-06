@@ -135,7 +135,7 @@ class UserPolicy
                     }
                 }
 
-                return true;
+                return $this->seesNoLessThan($actor, $target);
             } finally {
                 $actor->unsetRelation('roles')->unsetRelation('permissions');
                 $target->unsetRelation('roles')->unsetRelation('permissions');
@@ -163,6 +163,31 @@ class UserPolicy
 
         foreach ($role->permissions->pluck('name') as $permission) {
             if (! $actor->can($permission)) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * ⛔ আমি শাখা বা গুদামে সীমিত হলে তিনিও সীমিত, আর তাঁর সীমা আমার ভেতরে — নইলে সীমাহীন সহকর্মীর পাসওয়ার্ড বদলে
+     * তাঁর হয়ে বেশি দেখা যেত (পুরো ERP অডিট, ৬ অক্টোবর ২০২৬, SystemAdmin ⛔৩)। ⓘ কোম্পানির প্রসঙ্গের ভেতরে ডাকা হয়।
+     */
+    private function seesNoLessThan(User $actor, User $target): bool
+    {
+        $scope = app(\App\Core\Services\DataScope::class);
+
+        foreach ([\App\Models\UserDataScope::BRANCH, \App\Models\UserDataScope::WAREHOUSE] as $type) {
+            $mine = $scope->idsFor($actor, $type);
+
+            if ($mine === null) {
+                continue;
+            }
+
+            $theirs = $scope->idsFor($target, $type);
+
+            if ($theirs === null || array_diff($theirs, $mine) !== []) {
                 return false;
             }
         }
