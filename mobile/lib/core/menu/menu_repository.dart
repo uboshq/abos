@@ -193,7 +193,8 @@ class MenuRepository {
       final (label, permission, icon) = tuple;
       final appPath = RouteRegistry.appPathFor(serverRoute);
       if (appPath == null || !user.can(permission)) return;
-      items.add(MenuItem(key: serverRoute, label: label, icon: icon, routeName: appPath));
+      items.add(MenuItem(
+          key: serverRoute, label: label, icon: icon, routeName: appPath));
     });
     return items;
   }
@@ -229,7 +230,9 @@ class MenuRepository {
   /// Tiles that are not `/me` menu rows at all — see this class's own doc
   /// comment for "নতুন অর্ডার" and হাজিরা, and the trailing comment below for
   /// the sync-status tile every role gets regardless.
-  List<MenuItem> _syntheticTiles(AuthUser user, [bool ordersReplaceDo = false]) => [
+  List<MenuItem> _syntheticTiles(AuthUser user,
+          [bool ordersReplaceDo = false]) =>
+      [
         if (user.can(_newOrderPermission))
           const MenuItem(
             key: 'sales.order.create',
@@ -269,6 +272,28 @@ class MenuRepository {
             label: 'উদ্ধৃতি',
             icon: Icons.request_quote_outlined,
             routeName: 'quotations',
+          ),
+        // ⭐ টাকা আদায়, প্রিন্সিপাল আর ক্রয় — কেবল পড়া, ওয়েবের দেখার চাবিতে (মালিক, ৬ অক্টোবর ২০২৬)
+        if (user.can('sales.collection.view'))
+          const MenuItem(
+            key: 'sales.collections',
+            label: 'টাকা আদায়',
+            icon: Icons.payments_outlined,
+            routeName: 'collections',
+          ),
+        if (user.can('supplier.view'))
+          const MenuItem(
+            key: 'purchase.principals',
+            label: 'প্রিন্সিপাল',
+            icon: Icons.business_outlined,
+            routeName: 'principals',
+          ),
+        if (user.can('purchase.bill.view'))
+          const MenuItem(
+            key: 'purchase.purchases',
+            label: 'ক্রয়',
+            icon: Icons.shopping_cart_outlined,
+            routeName: 'purchases',
           ),
         // ⭐ সরাসরি বিক্রয়ের কাউন্টার (0.4.9) — ওয়েবের কাউন্টারের একই চাবি
         if (user.can('sales.challan.create'))

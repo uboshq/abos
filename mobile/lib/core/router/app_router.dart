@@ -26,6 +26,9 @@ import '../../features/scan/paper_scan_screen.dart';
 import '../../features/splash/splash_screen.dart';
 import '../../features/dashboards/dashboards_screen.dart';
 import '../../features/reports/reports_screen.dart';
+import '../../features/books/money_in_screens.dart';
+import '../../features/books/principal_screens.dart';
+import '../../features/books/purchase_screens.dart';
 import '../../features/stock/stock_list_screen.dart';
 import '../../features/today/today_screen.dart';
 import '../../features/sync/sync_status_screen.dart';
@@ -190,6 +193,33 @@ final goRouterProvider = Provider<GoRouter>((ref) {
                         false,
                   );
                 },
+              ),
+            ),
+          ),
+          // ⭐ টাকা আদায়, প্রিন্সিপাল আর ক্রয় — কেবল পড়া (মালিক, ৬ অক্টোবর ২০২৬: "অ্যাপে payment received, principal list
+          // আর purchase list দরকার"); চাবি সার্ভারে, টাইল চাবি অনুযায়ী ([[MenuRepository]])
+          GoRoute(
+            path: 'collections',
+            builder: (context, state) => const ModuleGateView(
+                path: 'collections', child: MoneyInListScreen()),
+          ),
+          GoRoute(
+            path: 'principals',
+            builder: (context, state) => const ModuleGateView(
+                path: 'principals', child: PrincipalListScreen()),
+          ),
+          GoRoute(
+            path: 'purchases',
+            builder: (context, state) => ModuleGateView(
+              path: 'purchases',
+              child: Consumer(
+                builder: (context, ref, _) => PurchaseListScreen(
+                  canSeeReceipts: ref
+                          .watch(authStateProvider)
+                          .user
+                          ?.can('purchase.receipt.view') ??
+                      false,
+                ),
               ),
             ),
           ),
