@@ -77,7 +77,8 @@ final class ADrawnFilterBoxThatChangesNothingTest extends TestCase
         'month' => ['month' => '1997-04'],
         'period' => ['period' => 'week'],
         'status' => [['status' => 'bounced'], ['status' => 'slow'], ['status' => 'negative']],
-        'state' => [['state' => 'overdue'], ['state' => 'today']],
+        // ⓘ বীমার দাবির খাতা নিজের অবস্থাই মানে (জমা · অনুমোদিত · আংশিক · নিষ্পন্ন · নাকচ — [[InsuranceClaim::STATES]])
+        'state' => [['state' => 'overdue'], ['state' => 'today'], ['state' => 'lodged']],
         'group_by' => [['group_by' => 'brand'], ['group_by' => 'product']],
     ];
 
