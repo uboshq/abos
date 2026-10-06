@@ -140,8 +140,13 @@ class DashboardTodayController extends Controller
          */
         if ($user->can('supplier.report') && class_exists(PrincipalCommissionReport::class)) {
             $body['principals'] = array_map(fn (array $r) => [
+                // ⭐ সংক্ষিপ্ত নাম, না থাকলে নাম — কোড নয় (মালিক, ৬ অক্টোবর ২০২৬; রিপোর্টের সারিতেই)
                 'name' => (string) $r['supplier_name'],
                 'period' => (string) $r['period'],
+                // ⭐ ওয়েবের বাক্সের "সময়কাল: 26/09/2026 – আজ পর্যন্ত" — অঙ্কগুলো চক্রের শুরু থেকে আজ পর্যন্ত
+                'periodFrom' => (string) $r['period_from'],
+                'periodTo' => (string) $r['period_to'],
+                'periodSoFar' => \App\Modules\Supplier\Reports\PrincipalCommission::soFar((string) $r['period_from'], (string) $r['period_to']),
                 'basisRate' => (string) $r['basis_rate'],
                 'inflow' => self::money((string) $r['inflow']),
                 'commission' => self::money((string) $r['commission']),

@@ -182,6 +182,13 @@ final class ThePhoneHomeCarriesTheOwnersNewBoxesTest extends TestCase
             $this->assertSame(bcadd((string) $r['balance'], '0', 4), $rows[$i]['balance']);
             $this->assertSame(bcadd((string) $r['commission'], '0', 4), $rows[$i]['commission']);
             $this->assertSame((string) $r['supplier_name'], $rows[$i]['name']);
+            // ⓘ ওয়েবের বাক্সের "সময়কাল: … – আজ পর্যন্ত" ফোনেও একই কথা (মালিক, ৬ অক্টোবর ২০২৬)
+            $this->assertSame([(string) $r['period_from'], (string) $r['period_to']], [$rows[$i]['periodFrom'], $rows[$i]['periodTo']]);
+            $this->assertSame(
+                \App\Modules\Supplier\Reports\PrincipalCommission::soFar((string) $r['period_from'], (string) $r['period_to']),
+                $rows[$i]['periodSoFar'],
+                '⛔ ফোনের সময়কাল ওয়েবের বাক্সের সাথে মেলে না।',
+            );
         }
     }
 
