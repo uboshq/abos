@@ -58,10 +58,16 @@ final class MonthEndChecklist
         ];
     }
 
-    /** মাসের তারিখে কোনো খসড়া ভাউচার পড়ে নেই। */
+    /**
+     * মাসের তারিখে কোনো খসড়া ভাউচার পড়ে নেই।
+     *
+     * ⛔ সব শাখা জুড়ে — পুরো-ERP অডিট, ৬ অক্টোবর ২০২৬ (হিসাব ⚠️৮; [[AMonthOrYearCloseSeesEveryBranchTest]])। ⓘ মাস আর বছর বন্ধ গোটা
+     * কোম্পানির, অথচ খোঁজ ছিল দেখার শাখার দেয়ালে: এক শাখা বাছা থাকলে অন্য শাখার খসড়া, মিলকরণ, গোনা বা সম্পদ অদৃশ্য — তালিকা সবুজ,
+     * বছর বন্ধ, আর ওই খসড়া আর কখনো পোস্ট হতে পারত না।
+     */
     private function drafts(CarbonImmutable $from, CarbonImmutable $to): array
     {
-        $count = Voucher::query()
+        $count = Voucher::acrossBranches()
             ->where('status', DocumentStatus::DRAFT)
             ->whereBetween('trx_date', [$from->toDateString(), $to->toDateString()])
             ->count();
@@ -77,7 +83,7 @@ final class MonthEndChecklist
             ->pending()
             ->pluck('approvable_id');
 
-        $count = $ids->isEmpty() ? 0 : Voucher::query()
+        $count = $ids->isEmpty() ? 0 : Voucher::acrossBranches()
             ->whereIn('id', $ids)
             ->whereBetween('trx_date', [$from->toDateString(), $to->toDateString()])
             ->count();
@@ -105,7 +111,7 @@ final class MonthEndChecklist
             return $this->row('bank_reconciled', 0, 'accounts.reconciliation.index', applicable: false);
         }
 
-        $done = BankReconciliation::query()
+        $done = BankReconciliation::acrossBranches()
             ->whereIn('bank_account_id', $used)
             ->where('status', BankReconciliation::CONFIRMED)
             ->whereBetween('statement_date', [$from->toDateString(), $to->toDateString()])
@@ -124,7 +130,7 @@ final class MonthEndChecklist
             return $this->row('cash_counted', 0, 'accounts.count.index', applicable: false);
         }
 
-        $counted = CashCount::query()
+        $counted = CashCount::acrossBranches()
             ->whereIn('cash_till_id', $tills)
             ->where('status', DocumentStatus::CONFIRMED)
             ->whereBetween('trx_date', [$from->toDateString(), $to->toDateString()])
@@ -137,7 +143,7 @@ final class MonthEndChecklist
     /** মাস শেষের আগে কেনা প্রতিটা চালু সম্পদের এই মাসের অবচয় বসেছে। */
     private function depreciated(CarbonImmutable $from, CarbonImmutable $to): array
     {
-        $assets = FixedAsset::query()
+        $assets = FixedAsset::acrossBranches()
             ->where('status', FixedAsset::ACTIVE)
             ->where('acquired_on', '<=', $to->toDateString())
             ->pluck('id');

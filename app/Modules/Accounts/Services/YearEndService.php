@@ -380,9 +380,16 @@ final class YearEndService
         }
     }
 
+    /**
+     * বছরের তারিখে পড়ে থাকা খসড়া ভাউচার।
+     *
+     * ⛔ সব শাখা জুড়ে — পুরো-ERP অডিট, ৬ অক্টোবর ২০২৬ (হিসাব ⚠️৮; [[AMonthOrYearCloseSeesEveryBranchTest]])। ⓘ মাস আর বছর বন্ধ গোটা
+     * কোম্পানির, অথচ খোঁজ ছিল দেখার শাখার দেয়ালে: এক শাখা বাছা থাকলে অন্য শাখার খসড়া, মিলকরণ, গোনা বা সম্পদ অদৃশ্য — তালিকা সবুজ,
+     * বছর বন্ধ, আর ওই খসড়া আর কখনো পোস্ট হতে পারত না।
+     */
     private function draftCount(FinancialYear $year): int
     {
-        return Voucher::query()
+        return Voucher::acrossBranches()
             ->whereBetween('trx_date', [$year->starts_on, $year->ends_on])
             ->where('status', DocumentStatus::DRAFT)
             ->count();
