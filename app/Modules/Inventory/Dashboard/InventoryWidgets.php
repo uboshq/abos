@@ -99,16 +99,12 @@ final class InventoryWidgets implements DashboardWidgets
      */
     private static function belowReorder(): int
     {
-        $available = '(select COALESCE(SUM(m.floor_change - m.reserved_change - m.hold_change), 0)
-                       from inv_stock_movements m
-                       where m.product_id = inv_products.id
-                         and m.company_id = inv_products.company_id)';
-
-        return Product::query()->soldInViewedBranch()
-            ->active()
-            ->where('reorder_level', '>', 0)
-            ->whereRaw("{$available} <= inv_products.reorder_level")
-            ->count();
+        /*
+         * ⭐ ড্যাশবোর্ডের একই প্রশ্ন, একই জায়গা থেকে — Inventory অডিট ম২৮, ৫ অক্টোবর ২০২৬।
+         * ⛔ আগে এখানে নিজের হাতে লেখা কোয়েরি: শাখার পণ্য-তালিকা মানত কিন্তু শাখার গুদাম নয় (অন্য শাখার মাল "আছে" বলত),
+         * আর ড্যাশবোর্ড উল্টোটা — দুই পর্দায় দুই সংখ্যা। ⓘ এখন দুটোই [[StockFacts::belowReorder()]]।
+         */
+        return app(\App\Modules\Inventory\Services\StockFacts::class)->belowReorder();
     }
 
     /** সংখ্যাটা রিপোর্ট থেকেই — ক্লিক করে যা খোলে, ঠিক তাই। */

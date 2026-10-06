@@ -222,7 +222,13 @@ final class InventoryAnalysisReports
     public static function movement(): ReportDefinition
     {
         $qty = '(m.floor_change + m.unplaced_change)';
-        $in = fn (array $sources) => "SUM(CASE WHEN m.trx_date >= ? AND m.source_type IN ('".implode("','", $sources)."') THEN {$qty} ELSE 0 END)";
+        /*
+         * ⭐ উৎসের মূল নাম — `:cancel`, `:reject`… বাদে — Inventory অডিট ম২৮, ৫ অক্টোবর ২০২৬।
+         * ⛔ আগে বাতিলের উল্টো সারি (`delivery_challan:cancel`) কোনো নামের সাথে মিলত না, তাই "অন্য"-তে পড়ত: বিক্রি ১০০,
+         * অন্য +২০ — অথচ আসলে বিক্রি ৮০। ⓘ এখন উল্টো সারি নিজের ঘরেই কাটে, তাই বাতিল চালান বিক্রি কমায়।
+         */
+        $source = "SUBSTRING_INDEX(m.source_type, ':', 1)";
+        $in = fn (array $sources) => "SUM(CASE WHEN m.trx_date >= ? AND {$source} IN ('".implode("','", $sources)."') THEN {$qty} ELSE 0 END)";
 
         return new ReportDefinition(
             key: 'inventory.movement_summary',
@@ -230,7 +236,7 @@ final class InventoryAnalysisReports
             title: 'inventory::stockview.movement',
             filters: ['date_range', 'branch', 'warehouse_id', 'product_id', 'brand_id', 'category_id'],
             groupBy: 'product_id',
-            query: function (array $f) use ($qty, $in) {
+            query: function (array $f) use ($qty, $in, $source) {
                 $from = $f['from'];
                 $named = ['purchase_receipt', 'purchase_bill', 'opening_stock', 'delivery_challan', 'sales_invoice',
                     'sales_return', 'purchase_return', 'stock_transfer', 'stock_adjustment'];
@@ -246,10 +252,10 @@ final class InventoryAnalysisReports
                     ->selectRaw('-'.$in(['delivery_challan', 'sales_invoice']).' as sold', [$from])
                     ->selectRaw($in(['sales_return']).' as returned_in', [$from])
                     ->selectRaw('-'.$in(['purchase_return']).' as returned_out', [$from])
-                    ->selectRaw("SUM(CASE WHEN m.trx_date >= ? AND m.source_type = 'stock_transfer' AND {$qty} > 0 THEN {$qty} ELSE 0 END) as transfer_in", [$from])
-                    ->selectRaw("SUM(CASE WHEN m.trx_date >= ? AND m.source_type = 'stock_transfer' AND {$qty} < 0 THEN -{$qty} ELSE 0 END) as transfer_out", [$from])
+                    ->selectRaw("SUM(CASE WHEN m.trx_date >= ? AND {$source} = 'stock_transfer' AND {$qty} > 0 THEN {$qty} ELSE 0 END) as transfer_in", [$from])
+                    ->selectRaw("SUM(CASE WHEN m.trx_date >= ? AND {$source} = 'stock_transfer' AND {$qty} < 0 THEN -{$qty} ELSE 0 END) as transfer_out", [$from])
                     ->selectRaw($in(['stock_adjustment']).' as adjusted', [$from])
-                    ->selectRaw("SUM(CASE WHEN m.trx_date >= ? AND m.source_type NOT IN ('".implode("','", $named)."') THEN {$qty} ELSE 0 END) as other", [$from])
+                    ->selectRaw("SUM(CASE WHEN m.trx_date >= ? AND {$source} NOT IN ('".implode("','", $named)."') THEN {$qty} ELSE 0 END) as other", [$from])
                     ->selectRaw("SUM({$qty}) as closing");
             },
             columns: [

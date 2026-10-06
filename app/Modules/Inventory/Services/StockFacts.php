@@ -630,7 +630,8 @@ final class StockFacts
      */
     private function belowReorderQuery()
     {
-        return Product::query()
+        // ⭐ শাখায় বিক্রি হওয়া পণ্যই — হোমের উইজেটের সাথে এক প্রশ্ন (Inventory অডিট ম২৮; [[InventoryWidgets::belowReorder()]])
+        return Product::query()->soldInViewedBranch()
             ->active()
             ->where('reorder_level', '>', 0)
             ->whereRaw($this->availableSql().' <= inv_products.reorder_level');
