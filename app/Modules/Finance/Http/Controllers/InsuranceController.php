@@ -77,6 +77,10 @@ class InsuranceController extends Controller implements HasMiddleware
             /* ⭐ মাস শেষের অগ্রিম — কোন মাসে কত, কোন খাত থেকে, উল্টেছে কি না (পরিকল্পনা ৬.৩) */
             'prepayments' => InsurancePrepayment::query()->where('policy_id', $policy->id)
                 ->with(['voucher', 'reversalVoucher', 'expenseAccount'])->orderByDesc('for_month')->orderBy('id')->get(),
+
+            /* ⭐ এই পলিসির দাবি — জমা থাকাগুলোও (পরিকল্পনা ৬.৪) */
+            'claims' => \App\Modules\Finance\Models\InsuranceClaim::query()->where('policy_id', $policy->id)
+                ->orderByDesc('claimed_on')->orderByDesc('id')->get(),
         ]);
     }
 

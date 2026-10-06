@@ -635,6 +635,8 @@ return [
         'insurance_premium' => InsurancePremium::class,
         // ⭐ মাস শেষের অগ্রিম বীমা — ভাউচার থেকে পলিসিতে ফেরা (পরিকল্পনা ৬.৩)
         'insurance_prepayment' => \App\Modules\Finance\Models\InsurancePrepayment::class,
+        // ⭐ বীমার দাবি — টাকা আসার রসিদ এর বিপরীতে, পোস্ট হলে দাবি নিজে গোনে (পরিকল্পনা ৬.৪)
+        'insurance_claim' => \App\Modules\Finance\Models\InsuranceClaim::class,
         'withdrawal' => Withdrawal::class,
         'deposit_movement' => DepositMovement::class,
         'hand_loan_movement' => HandLoanMovement::class,

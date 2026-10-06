@@ -120,4 +120,41 @@
             ]" />
         </section>
     @endif
+
+    {{-- ⭐ দাবি — জমা থাকা দাবি খাতায় নেই, কিন্তু এখানে আছে (পরিকল্পনা ৬.৪; IAS 37) --}}
+    <section data-boxed data-insurance-claims
+             class="mt-4 max-w-screen-2xl overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
+        <h2 class="border-b border-(--color-border) px-3 py-2 text-sm font-semibold">{{ __('finance::insurance_claim.claims') }}</h2>
+        <x-ui.table :rows="$claims ?? collect()" :empty="__('finance::insurance_claim.none_yet')"
+                    :view-url="fn ($c) => route('finance.insurance.claim.show', $c)" :columns="[
+            ['key' => 'claimed_on', 'label' => __('finance::insurance_claim.claimed_on'), 'width' => '8rem',
+             'render' => fn ($c) => $c->claimed_on->format('d/m/Y')],
+            ['key' => 'incident', 'label' => __('finance::insurance_claim.incident'),
+             'render' => fn ($c) => $c->incident],
+            ['key' => 'claimed_amount', 'label' => __('finance::insurance_claim.claimed_amount'), 'numeric' => true, 'width' => '9rem',
+             'render' => fn ($c) => Money::format($c->claimed_amount)],
+            ['key' => 'received_amount', 'label' => __('finance::insurance_claim.received_amount'), 'numeric' => true, 'width' => '9rem',
+             'render' => fn ($c) => Money::format($c->received_amount)],
+            ['key' => 'status', 'label' => __('finance::insurance_claim.state'), 'width' => '8rem',
+             'render' => fn ($c) => __('finance::insurance_claim.state_'.$c->status)],
+        ]" />
+
+        @can('finance.insurance.manage')
+            <form method="POST" action="{{ route('finance.insurance.claim.store', $policy) }}" data-claim-lodge
+                  class="grid gap-3 border-t border-(--color-border) p-3 sm:grid-cols-2 xl:grid-cols-5">
+                @csrf
+                <x-ui.field name="incident_on" type="date" required :label="__('finance::insurance_claim.incident_on')"
+                            :value="old('incident_on', now()->toDateString())" />
+                <x-ui.field name="claimed_on" type="date" required :label="__('finance::insurance_claim.claimed_on')"
+                            :value="old('claimed_on', now()->toDateString())" />
+                <x-ui.field name="incident" required :label="__('finance::insurance_claim.incident')" :value="old('incident')" />
+                <x-ui.field name="claimed_amount" type="number" step="0.01" numeric required
+                            :label="__('finance::insurance_claim.claimed_amount')" :value="old('claimed_amount')" />
+                <x-ui.field name="claim_no" :label="__('finance::insurance_claim.claim_no')" :value="old('claim_no')" />
+                <div class="flex items-end sm:col-span-2 xl:col-span-5">
+                    <x-ui.button type="submit" tone="secondary">{{ __('finance::insurance_claim.lodge') }}</x-ui.button>
+                </div>
+            </form>
+        @endcan
+    </section>
 </x-layouts.app>

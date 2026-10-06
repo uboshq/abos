@@ -48,6 +48,8 @@ class FinanceReportController extends Controller
 
         // ⭐ বীমার প্রিমিয়ামের সূচি (অর্থ-মডিউলের পরিকল্পনা ৬.২; [[InsuranceReports]])
         'insurance-premiums' => InsuranceReports::PREMIUMS,
+        // ⭐ বীমার দাবির খাতা (পরিকল্পনা ৬.৪)
+        'insurance-claims' => InsuranceReports::CLAIMS,
     ];
 
     /** ব্যাংক ঋণের রিপোর্টের সারি — রিপোর্টের মাথায় আর ঋণের তালিকায় একই ক্রমে */
@@ -100,8 +102,8 @@ class FinanceReportController extends Controller
             ]);
         }
 
-        // ⓘ বীমার প্রিমিয়ামের সূচি — অবস্থা বাছার ঘর
-        if ($slug === 'insurance-premiums') {
+        // ⓘ বীমার প্রিমিয়ামের সূচি আর দাবির খাতা — অবস্থা বাছার ঘর, যার যার নিজের
+        if (in_array($slug, ['insurance-premiums', 'insurance-claims'], true)) {
             return view('accounts::report.show', [
                 'menu' => $this->menu->forUser($request->user()),
                 'slug' => $slug,
@@ -110,7 +112,9 @@ class FinanceReportController extends Controller
                 'branches' => Branch::query()->active()->orderBy('name_en')->get(),
                 'accounts' => collect(),
                 'partyTypes' => collect(),
-                'extraFilters' => 'finance::insurance.partials.premium-state',
+                'extraFilters' => $slug === 'insurance-claims'
+                    ? 'finance::insurance.partials.claim-state'
+                    : 'finance::insurance.partials.premium-state',
             ]);
         }
 

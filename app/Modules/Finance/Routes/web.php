@@ -13,6 +13,7 @@ use App\Modules\Finance\Http\Controllers\ExpenseController;
 use App\Modules\Finance\Http\Controllers\HandLoanController;
 use App\Modules\Finance\Http\Controllers\IncomeController;
 use App\Modules\Finance\Http\Controllers\InstitutionController;
+use App\Modules\Finance\Http\Controllers\InsuranceClaimController;
 use App\Modules\Finance\Http\Controllers\InsuranceController;
 use App\Modules\Finance\Http\Controllers\PlanController;
 use App\Modules\Finance\Http\Controllers\ProfitDistributionController;
@@ -403,6 +404,14 @@ Route::middleware('auth')->prefix('finance')->group(function () {
         Route::get('/{policy}/renew', [InsuranceController::class, 'renewForm'])->whereNumber('policy')->name('renew_form');
         Route::post('/{policy}/renew', [InsuranceController::class, 'renew'])->whereNumber('policy')->name('renew');
         Route::patch('/{policy}/toggle', [InsuranceController::class, 'toggle'])->whereNumber('policy')->name('toggle');
+
+        // ⭐ বীমার দাবির খাতা — অর্থ-মডিউলের পরিকল্পনা ৬.৪ ([[InsuranceClaimService]])
+        Route::post('/{policy}/claims', [InsuranceClaimController::class, 'store'])->whereNumber('policy')->name('claim.store');
+        Route::get('/claims/{claim}', [InsuranceClaimController::class, 'show'])->whereNumber('claim')->name('claim.show');
+        Route::post('/claims/{claim}/approve', [InsuranceClaimController::class, 'approve'])->whereNumber('claim')->name('claim.approve');
+        Route::post('/claims/{claim}/receive', [InsuranceClaimController::class, 'receive'])->whereNumber('claim')->name('claim.receive');
+        Route::post('/claims/{claim}/close', [InsuranceClaimController::class, 'close'])->whereNumber('claim')->name('claim.close');
+        Route::post('/claims/{claim}/reject', [InsuranceClaimController::class, 'reject'])->whereNumber('claim')->name('claim.reject');
     });
 });
 

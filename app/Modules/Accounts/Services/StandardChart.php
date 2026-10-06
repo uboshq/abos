@@ -498,6 +498,15 @@ final class StandardChart implements ProvisionsCompany
      */
     public const DAMAGE_CLAIM = '1151';
 
+    /*
+     * ⭐ বীমা দাবি — প্রাপ্য আর আদায় (অর্থ-মডিউলের পরিকল্পনা ৬.৪, ৬ অক্টোবর ২০২৬; সমন্বয়কের উত্তর প্র৩, IAS 37)। জমা দেওয়া
+     * দাবি খাতায় নয়; লিখিত অনুমোদনে Dr 1152 / Cr 4370, টাকা এলে Cr 1152 (অনুমোদন থাকলে) বা সরাসরি Cr 4370
+     * ([[InsuranceClaimService]])। ⓘ ড্যামেজ দাবির (১১৫১) পাশে, কিন্তু আলাদা পাওনাদার — বীমা কোম্পানি।
+     */
+    public const INSURANCE_CLAIM_RECEIVABLE = '1152';
+
+    public const INSURANCE_CLAIM_INCOME = '4370';
+
     /**
      * যে দাবিটা কোম্পানি মানল না।
      *
@@ -812,6 +821,7 @@ final class StandardChart implements ProvisionsCompany
 
             // ⭐ ড্যামেজ দাবি — কোম্পানির কাছে পাওনা, নগদ নয় (৪ অক্টোবর ২০২৬; [[DAMAGE_CLAIM]])
             ['1151', 'Damage Claim Receivable', 'ড্যামেজ দাবি — কোম্পানির কাছে পাওনা', $A, '1100', false, []],
+            ['1152', 'Insurance Claim Receivable', 'বীমা দাবি — প্রাপ্য', $A, '1100', false, []],
 
             /*
              * সরিয়ে রাখা টাকা — FD, DPS, বন্ড।
@@ -1130,6 +1140,7 @@ final class StandardChart implements ProvisionsCompany
             ['4350', 'Gain on Sale of Assets', 'সম্পদ বিক্রির লাভ', $I, '4000', false, []],
             // ⭐ ক্রেতার কাছ থেকে আদায় করা গাড়িভাড়া — বিক্রয়ের পাশে, আলাদা ([[FREIGHT_INCOME]])
             ['4360', 'Freight Income', 'পরিবহন ভাড়া আদায়', $I, '4000', false, []],
+            ['4370', 'Insurance Claim Recovery', 'বীমা দাবি আদায়', $I, '4000', false, []],
 
             // ── খরচ ───────────────────────────────────────────────────
             ['5000', 'Expenses', 'খরচ', $X, null, true, []],
