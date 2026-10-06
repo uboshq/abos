@@ -9,7 +9,6 @@ use App\Core\Concerns\SortsLists;
 use App\Core\Services\MenuBuilder;
 use App\Core\Support\CompanyContext;
 use App\Core\Support\RunningBalance;
-use App\Core\Support\ViewedBranch;
 use App\Http\Controllers\Controller;
 use App\Models\Branch;
 use App\Models\LedgerEntry;
@@ -62,8 +61,9 @@ class CashTillController extends Controller implements HasMiddleware
          */
         // ⭐ বাছা শাখার টিল আর শাখাহীন (কোম্পানির) টিল — মালিক, ৬ অক্টোবর ২০২৬: "এই একাউন্ট সব branch ব্যবহার করবে"
         $query = CashTill::query()->withoutGlobalScope('viewed-branch')
-            ->when(ViewedBranch::one(), fn ($q, $branch) => $q->where(
-                fn ($w) => $w->where('cash_tills.branch_id', $branch)->orWhereNull('cash_tills.branch_id'),
+            // ⛔ "সব শাখা"-তেও নাগালের ভেতরে (অডিট ⛔১১); সীমাহীন হলে সব ([[CashTill::visibleBranchIds()]])
+            ->when(CashTill::visibleBranchIds(), fn ($q, array $ids) => $q->where(
+                fn ($w) => $w->whereIn('cash_tills.branch_id', $ids)->orWhereNull('cash_tills.branch_id'),
             ))
             ->search($request->query('q'))
             ->when(! $request->boolean('inactive'), fn ($q) => $q->active())

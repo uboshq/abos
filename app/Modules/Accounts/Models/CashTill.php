@@ -10,7 +10,6 @@ use App\Core\Concerns\HasDocumentStatus;
 use App\Core\Concerns\HasPublicId;
 use App\Core\Concerns\IsAudited;
 use App\Core\Contracts\Drillable;
-use App\Core\Support\ViewedBranch;
 use App\Models\Branch;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
@@ -49,17 +48,30 @@ class CashTill extends Model implements Drillable
     protected static function booted(): void
     {
         static::addGlobalScope('viewed-branch', function (Builder $builder): void {
-            $branch = ViewedBranch::one();
-
             /*
              * ⭐ শাখায় না-বাঁধা টিল (কোম্পানির) প্রতিটা শাখায় দেখা যায় — মালিক, ৬ অক্টোবর ২০২৬: *"এই একাউন্ট সব
              * branch ব্যবহার করবে"* (মালিকের হাতে নগদ, অভি, আবু কাওসার)। ⓘ শাখায় বাঁধা টিল আগের মতো কেবল নিজের শাখায়।
+             * ⛔ "সব শাখা"-তেও নাগালের ভেতরে — অডিট ⛔১১ (৬ অক্টোবর ২০২৬): আগে এক শাখায় সীমিত মানুষ "সব শাখা" বাছলে সব
+             * শাখার টিল দেখতেন। ⓘ সীমাহীন মানুষ (মালিক) "সব শাখা"-তে আগের মতো সব ([[visibleBranchIds()]])।
              */
-            if ($branch !== null) {
+            $ids = self::visibleBranchIds();
+
+            if ($ids !== null) {
                 $table = $builder->getModel()->getTable();
-                $builder->where(fn (Builder $q) => $q->where($table.'.branch_id', $branch)->orWhereNull($table.'.branch_id'));
+                $builder->where(fn (Builder $q) => $q->whereIn($table.'.branch_id', $ids)->orWhereNull($table.'.branch_id'));
             }
         });
+    }
+
+    /**
+     * ⭐ যে শাখাগুলোর টিল দেখা যায় — এক শাখা বাছা থাকলে [সেটা], "সব শাখা"-তে নাগাল, সীমাহীন হলে `null` (সব)।
+     * ⓘ শাখাহীন টিল সবসময় যোগ হয় — ডাকনেওয়ালা নিজে `orWhereNull` বসায়। [[DataScope::viewBranchIds()]]-এর একই নিয়ম।
+     *
+     * @return list<int>|null
+     */
+    public static function visibleBranchIds(): ?array
+    {
+        return app(\App\Core\Services\DataScope::class)->viewBranchIds(auth()->user());
     }
 
     protected $fillable = [

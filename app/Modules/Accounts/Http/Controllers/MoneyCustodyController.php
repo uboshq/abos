@@ -119,7 +119,7 @@ class MoneyCustodyController extends Controller implements HasMiddleware
             ->get();
 
         // ⓘ পথে থাকা টাকা — কাঁচা অঙ্কটা সর্বমোটে যায়, লেখা অঙ্কটা ফুটারের সারিতে
-        $transitAmount = (string) (StandardChart::find(StandardChart::CASH_IN_TRANSIT)?->balanceOn(null, $branch) ?? '0');
+        $transitAmount = (string) (StandardChart::find(StandardChart::CASH_IN_TRANSIT)?->balanceInView() ?? '0');
 
         return view('accounts::custody.index', [
             'menu' => $this->menu->forUser($request->user()),
@@ -190,8 +190,8 @@ class MoneyCustodyController extends Controller implements HasMiddleware
                 'name' => $cash->name(),
                 'kind' => __('accounts::custody.kind_office_cash'),
                 'holder' => $cash->keeper?->name,
-                'amount' => (string) $cash->balanceOn(null, $branch),
-                'balance' => Money::format($cash->balanceOn(null, $branch)),
+                'amount' => (string) $cash->balanceInView(),
+                'balance' => Money::format($cash->balanceInView()),
                 'sent' => Money::format('0'),
                 'url' => route('accounts.coa.show', $cash),
                 'active' => $cash->is_active,
@@ -213,8 +213,8 @@ class MoneyCustodyController extends Controller implements HasMiddleware
                  * কেবল নগদ কাউন্টারের জন্য।
                  */
                 'holder' => null,
-                'amount' => (string) $bank->balanceOn(null, $branch),
-                'balance' => Money::format($bank->balanceOn(null, $branch)),
+                'amount' => (string) $bank->balanceInView(),
+                'balance' => Money::format($bank->balanceInView()),
                 'sent' => Money::format('0'),
                 'url' => route('accounts.coa.index'),
                 'active' => $bank->is_active,

@@ -12,7 +12,6 @@ use App\Core\Concerns\IsAudited;
 use App\Core\Contracts\Drillable;
 use App\Core\Services\LedgerBalances;
 use App\Core\Support\RunningBalance;
-use App\Core\Support\ViewedBranch;
 use App\Models\LedgerEntry;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
@@ -103,15 +102,16 @@ class Account extends Model implements Drillable
     protected static function booted(): void
     {
         static::addGlobalScope('viewed-branch-till', function (Builder $builder): void {
-            $branch = ViewedBranch::one();
+            // ⛔ "সব শাখা"-তেও নাগালের ভেতরে — অডিট ⛔১১ (৬ অক্টোবর ২০২৬); সীমাহীন হলে `null`, কিছুই বাদ নয় ([[CashTill::visibleBranchIds()]])
+            $ids = CashTill::visibleBranchIds();
 
-            if ($branch === null) {
+            if ($ids === null) {
                 return;
             }
 
             $builder->whereNotIn($builder->getModel()->getTable().'.id', CashTill::query()->withoutGlobalScope('viewed-branch')
                 ->whereNotNull('account_id')
-                ->whereNotNull('branch_id')->where('branch_id', '!=', $branch) // ⭐ শাখাহীন টিল সব শাখার — মালিক, ৬ অক্টোবর ২০২৬
+                ->whereNotNull('branch_id')->whereNotIn('branch_id', $ids ?: [0]) // ⭐ শাখাহীন টিল সব শাখার — মালিক, ৬ অক্টোবর ২০২৬
                 ->select('account_id'));
         });
     }
@@ -226,16 +226,17 @@ class Account extends Model implements Drillable
      */
     public function scopeNotAnotherBranchsTill(Builder $query): Builder
     {
-        $branch = ViewedBranch::one();
+        // ⛔ "সব শাখা"-তেও নাগালের ভেতরে — অডিট ⛔১১ (৬ অক্টোবর ২০২৬); সীমাহীন হলে কিছুই বাদ নয় ([[CashTill::visibleBranchIds()]])
+        $ids = CashTill::visibleBranchIds();
 
-        if ($branch === null) {
+        if ($ids === null) {
             return $query;
         }
 
         // ⚠️ টিলের নিজের শাখার দেয়ালের বাইরে পড়তে হয় — নাহলে বাদ দেওয়ার তালিকাটাই খালি হত
         return $query->whereNotIn($query->getModel()->getTable().'.id', CashTill::query()->withoutGlobalScope('viewed-branch')
             ->whereNotNull('account_id')
-            ->whereNotNull('branch_id')->where('branch_id', '!=', $branch) // ⭐ শাখাহীন টিল সব শাখার — মালিক, ৬ অক্টোবর ২০২৬
+            ->whereNotNull('branch_id')->whereNotIn('branch_id', $ids ?: [0]) // ⭐ শাখাহীন টিল সব শাখার — মালিক, ৬ অক্টোবর ২০২৬
             ->select('account_id'));
     }
 
@@ -299,6 +300,33 @@ class Account extends Model implements Drillable
      * ক্রেডিট বেশি হলে সংখ্যাটা ধনাত্মক। নাহলে প্রতিটা রিপোর্টে আলাদা
      * করে চিহ্ন উল্টাতে হত, আর কোথাও না কোথাও বাদ পড়ত।
      */
+    /**
+     * ⭐ দেখার জের — হেডারে এক শাখা বাছা থাকলে সেই শাখার, "সব শাখা"-তে মানুষের নাগালের শাখা আর শাখাহীন সারির (অডিট ⛔১১,
+     * ৬ অক্টোবর ২০২৬)। ⓘ সীমাহীন মানুষ (মালিক) বা এক শাখা বাছা — হুবহু [[balanceOn()]], আগের মতো।
+     * ⛔ কেবল দেখানোর জন্য; টাকার যাচাই (টিল শূন্যের নিচে নয়, সীমা) গোটা কোম্পানির [[balanceOn()]] পড়ে।
+     */
+    public function balanceInView(): string
+    {
+        $scope = app(\App\Core\Services\DataScope::class);
+        $user = auth()->user();
+        $ids = $scope->viewBranchIds($user);
+
+        if ($ids === null || $scope->viewsOneBranch($user)) {
+            return $this->balanceOn(null, $ids[0] ?? null);
+        }
+
+        if ($this->is_group) {
+            return $this->children()->get()->reduce(fn (string $sum, self $child) => bcadd($sum, $child->balanceInView(), 4), '0');
+        }
+
+        $row = $scope->inView(LedgerEntry::query()->forAccount($this->id), 'ledger_entries.branch_id')
+            ->selectRaw('COALESCE(SUM(debit), 0) as d, COALESCE(SUM(credit), 0) as c')
+            ->first();
+        $net = bcsub((string) ($row->d ?? 0), (string) ($row->c ?? 0), 4);
+
+        return $this->nature === self::CREDIT ? bcmul($net, '-1', 4) : $net;
+    }
+
     public function balanceOn(?string $upto = null, ?int $branchId = null): string
     {
         if ($this->is_group) {
