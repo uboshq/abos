@@ -21,7 +21,7 @@
     $worth = count($steps) > 1 || (count($steps) === 1 && $steps[0]['unit']->id !== ($ladder[array_key_last($ladder)]['unit']->id ?? null));
 @endphp
 
-<x-ui.amount :value="$qty" :href="$href ?? null" :dash-on-zero="$dashOnZero ?? false" />
+<x-ui.amount :value="$qty" :href="$href ?? null" :dash-on-zero="$dashOnZero ?? false" :quantity="true" />
 
 @if ($worth)
     <div class="num text-2xs text-(--color-ink-muted)">

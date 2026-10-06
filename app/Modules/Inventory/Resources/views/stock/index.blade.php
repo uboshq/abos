@@ -144,6 +144,7 @@
             'render' => fn ($p) => view('inventory::partials.qty-in-packs', [
                 'qty' => $p->floor_total,
                 'dashOnZero' => true,
+                'quantity' => true,
                 'ladder' => $ladders[$p->id] ?? [],
                 'href' => route('inventory.product.show', $p).'#movements',
             ]),
@@ -158,6 +159,7 @@
             'render' => fn ($p) => view('ui.amount-link', [
                 'value' => $p->reserved_total,
                 'dashOnZero' => true,
+                'quantity' => true,
                 'href' => route('inventory.product.show', $p).'#movements',
             ]),
         ],
@@ -171,6 +173,7 @@
             'render' => fn ($p) => view('ui.amount-link', [
                 'value' => $p->hold_total,
                 'dashOnZero' => true,
+                'quantity' => true,
                 /*
                  * ⛔ এখানে ছিল `'inventory.hold'` — ওটা রিপোর্টের **চাবি**,
                  * ঠিকানার স্লাগ নয়, তাই লিংকটা ৪০৪ দিত (২১ সেপ্টেম্বর
@@ -194,6 +197,7 @@
             'render' => fn ($p) => view('ui.amount-link', [
                 'value' => $available($p),
                 'dashOnZero' => true,
+                'quantity' => true,
                 'href' => route('inventory.product.show', $p).'#movements',
             ]),
         ],
@@ -207,6 +211,7 @@
             'render' => fn ($p) => view('ui.amount-link', [
                 'value' => $p->free_total,
                 'dashOnZero' => true,
+                'quantity' => true,
                 'href' => route('inventory.product.show', $p).'#movements',
             ]),
         ],
@@ -220,6 +225,7 @@
             'render' => fn ($p) => view('ui.amount-link', [
                 'value' => $freeAvailable($p),
                 'dashOnZero' => true,
+                'quantity' => true,
                 'href' => route('inventory.product.show', $p).'#movements',
             ]),
         ],
@@ -233,6 +239,7 @@
             'render' => fn ($p) => view('ui.amount-link', [
                 'value' => $p->unplaced_total,
                 'dashOnZero' => true,
+                'quantity' => true,
                 'href' => route('inventory.stock.placement'),
             ]),
         ],
@@ -246,6 +253,7 @@
             'render' => fn ($p) => view('ui.amount-link', [
                 'value' => $p->unplaced_free_total,
                 'dashOnZero' => true,
+                'quantity' => true,
                 'href' => route('inventory.stock.placement'),
             ]),
         ],

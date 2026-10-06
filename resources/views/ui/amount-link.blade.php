@@ -8,4 +8,5 @@
              :href="$href ?? null"
              :tone="$tone ?? null"
              :blank-on-zero="$blankOnZero ?? false"
-             :dash-on-zero="$dashOnZero ?? false" />
+             :dash-on-zero="$dashOnZero ?? false"
+             :quantity="$quantity ?? false" />

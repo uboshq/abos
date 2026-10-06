@@ -33,6 +33,11 @@ final class AZeroOnTheShelfReadsAsADashTest extends TestCase
         $plain = Blade::render('<x-ui.amount :value="0" href="/x" />');
         $this->assertStringContainsString('0.00', $plain, '⛔ "–" চাওয়া ছাড়াও শূন্য বদলে গেছে।');
 
+        // ⓘ পরিমাণে অকারণ ০০ নয় — মালিক, ৬ অক্টোবর ২০২৬
+        $this->assertStringContainsString('>493<', Blade::render('<x-ui.amount :value="493" :quantity="true" />'), '⛔ পরিমাণে এখনো .00।');
+        $this->assertStringContainsString('>2.5<', Blade::render('<x-ui.amount :value="2.5" :quantity="true" />'));
+        $this->assertStringContainsString('493.00', Blade::render('<x-ui.amount :value="493" />'), '⛔ টাকার অঙ্কেও দশমিক ছাঁটা হয়েছে।');
+
         $some = Blade::render('<x-ui.amount :value="12.5" href="/x" :dash-on-zero="true" />');
         $this->assertStringContainsString('12.50', $some);
         $this->assertStringContainsString('href="/x"', $some);

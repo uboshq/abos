@@ -5,6 +5,8 @@
     'blankOnZero' => false,
     // ⭐ শূন্যে "–" — মালিক, ৬ অক্টোবর ২০২৬: "যে স্টক 0.00 সেখানে - চিহ্ন দাও" (মজুদের পরিমাণের ঘরে)
     'dashOnZero' => false,
+    // ⭐ পরিমাণ — দশমিকের পরে অকারণ ০০ নয় (৪৯৩, ২.৫) — মালিক, ৬ অক্টোবর ২০২৬: "স্টক qty-তে দশমিকের পরে 00 দিতে না করেছিলাম"
+    'quantity' => false,
     'tone' => null,
 ])
 
@@ -55,6 +57,7 @@
     $text = match (true) {
         $blankOnZero && $zero => '',
         $dash => '–',
+        $quantity => \App\Core\Support\Money::quantity($raw),
         default => number_format((float) $value, $decimals),
     };
 
