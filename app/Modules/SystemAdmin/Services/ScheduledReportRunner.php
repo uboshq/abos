@@ -17,6 +17,7 @@ use App\Models\ReportSchedule;
 use App\Models\User;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Storage;
 use Throwable;
@@ -144,10 +145,16 @@ final class ScheduledReportRunner
          * কোম্পানির বকেয়া পেতেন — কোনো পর্দা না খুলেই। তাই তাঁকে ভাগের ফাইল থেকে সরিয়ে তাঁর
          * **নিজের** পরিচয়ে আলাদা একটা ফাইল, যেটা কেবল তিনিই নামাতে পারেন।
          */
+        /*
+         * ⛔ শাখায় সীমিত প্রাপকও দেয়ালের ভিতরে — অডিট ⛔৬ (৬ অক্টোবর ২০২৬)। ভাগের ফাইল বানানো মানুষের নাগালে, তাই
+         * এক শাখার মানুষ রোজ সব শাখার সংখ্যা পেতেন। ⓘ এখন তিনিও নিজের পরিচয়ে নিজের ফাইল পান, নিজের শাখায়
+         * ([[hasBranchLimit()]] — রিপোর্ট-ইঞ্জিনের একই নিয়ম: সব শাখা যাঁর হাতে তিনি সীমিত নন)।
+         */
         $walled = CompanyContext::forCompany(
             (int) $schedule->company_id,
             fn (): Collection => $recipients
-                ->filter(fn (User $user): bool => app(\App\Core\Services\DealerScope::class)->walled($user->fresh()))
+                ->filter(fn (User $user): bool => app(\App\Core\Services\DealerScope::class)->walled($user->fresh())
+                    || self::hasBranchLimit($user->fresh(), (int) $schedule->company_id))
                 ->values(),
         );
         $recipients = $recipients->reject(fn (User $user): bool => $walled->contains('id', $user->id))->values();
@@ -181,6 +188,23 @@ final class ScheduledReportRunner
      *
      * @return Collection<int, User>
      */
+    /**
+     * ⓘ প্রাপক কোনো শাখায় সীমিত কি না — কোম্পানির সব শাখা যাঁর হাতে তিনি সীমিত নন ([[ReportEngine::normaliseFilters()]]-এর
+     * একই নিয়ম, তাই "সীমিত" মানে দুই জায়গায় এক)।
+     */
+    private static function hasBranchLimit(User $user, int $companyId): bool
+    {
+        $allowed = app(\App\Core\Services\DataScope::class)->idsFor($user, \App\Models\UserDataScope::BRANCH);
+
+        if ($allowed === null) {
+            return false;
+        }
+
+        $every = DB::table('branches')->where('company_id', $companyId)->pluck('id')->map(fn ($id) => (int) $id)->all();
+
+        return $every === [] || array_diff($every, $allowed) !== [];
+    }
+
     private function recipientsWhoMaySee(ReportSchedule $schedule, ReportDefinition $definition): Collection
     {
         return CompanyContext::forCompany(

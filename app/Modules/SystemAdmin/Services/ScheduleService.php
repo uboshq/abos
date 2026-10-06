@@ -70,6 +70,8 @@ final class ScheduleService
      */
     public function update(ReportSchedule $schedule, array $data): ReportSchedule
     {
+        $this->assertMayChange($schedule);
+
         return DB::transaction(function () use ($schedule, $data) {
             $this->assertValid($data);
 
@@ -94,9 +96,32 @@ final class ScheduleService
         });
     }
 
+    /**
+     * ⛔ সূচি বদলাতে পারেন কেবল যিনি বানিয়েছেন, বা super_admin — অডিট ⛔৬ (৬ অক্টোবর ২০২৬)।
+     *
+     * ⓘ রিপোর্ট চলে বানানো মানুষের পরিচয়ে আর তাঁর নাগালে ([[ScheduledReportRunner]])। আগে সূচির চাবি থাকলেই যে কেউ
+     * মালিকের সূচিতে রিপোর্ট বদলে নিজেকে প্রাপক করতে পারতেন — মালিকের পরিচয় ধার নিয়ে গোটা কোম্পানির তথ্য।
+     * ⓘ মানুষ ছাড়া পথ (কমান্ড, সিডার) আগের মতো।
+     */
+    private function assertMayChange(ReportSchedule $schedule): void
+    {
+        $user = auth()->user();
+
+        if ($user === null || (int) $schedule->created_by === (int) $user->id
+            || $user->hasRole(\App\Core\Services\PermissionSyncer::SUPER_ADMIN_ROLE)) {
+            return;
+        }
+
+        throw ValidationException::withMessages([
+            'schedule' => __('system_admin::schedule.not_yours'),
+        ]);
+    }
+
     /** নিষ্ক্রিয় করা — মোছা নয়; ক্রন আর তুলবে না। */
     public function deactivate(ReportSchedule $schedule): ReportSchedule
     {
+        $this->assertMayChange($schedule);
+
         $schedule->forceFill(['is_active' => false])->save();
 
         return $schedule->fresh();
@@ -104,6 +129,8 @@ final class ScheduleService
 
     public function activate(ReportSchedule $schedule): ReportSchedule
     {
+        $this->assertMayChange($schedule);
+
         $schedule->forceFill([
             'is_active' => true,
             'next_run_at' => $this->nextRunFor($schedule),
