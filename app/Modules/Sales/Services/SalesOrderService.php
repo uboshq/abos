@@ -277,6 +277,9 @@ final class SalesOrderService
             // ⛔ বন্ধ আদেশের ধরা মাল বন্ধেই ছাড়া হয়েছে — বাতিলে আবার ছাড়লে Reserved ঋণাত্মক হত
             $this->assertNotClosed($order);
 
+            // ⭐ অফার, উপহার, কুপন আর পয়েন্টও ফেরে — চালানের সাধারণ বাতিলের মতো (পুরো ERP অডিট, প্রমোশন ⛔১, ৬ অক্টোবর ২০২৬)
+            app(\App\Core\Contracts\SalesOffers::class)->reverseAll(SalesOrder::drillSourceType(), (int) $order->id);
+
             if ($order->status === DocumentStatus::CONFIRMED && $order->warehouse) {
                 // ⛔ কেবল এই আদেশ নিজে যা ধরেছিল — অন্য কাগজের ধরা মাল নয় ([[heldByThisOrder()]], ৪ অক্টোবর ২০২৬)
                 $own = $this->heldByThisOrder($order);

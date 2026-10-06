@@ -1052,6 +1052,9 @@ final class DeliveryChallanService
 
         $challan->loadMissing(['lines.product', 'lines.orderLine.order', 'warehouse']);
 
+        // ⭐ অফার, উপহার, কুপন আর পয়েন্টও ফেরে — চালানের সাধারণ বাতিলের মতো (পুরো ERP অডিট, প্রমোশন ⛔১, ৬ অক্টোবর ২০২৬)
+        app(\App\Modules\Sales\Services\ChallanOffers::class)->reverseAll($challan);
+
         $this->unpost($challan, $date, $reason, $paperNo);
 
         $challan->update([

@@ -840,6 +840,9 @@ final class SalesInvoiceService
 
         $invoice->loadMissing(['lines.product', 'lines.challanLine', 'warehouse']);
 
+        // ⭐ অফার, উপহার, কুপন আর পয়েন্টও ফেরে — চালানের সাধারণ বাতিলের মতো (পুরো ERP অডিট, প্রমোশন ⛔১, ৬ অক্টোবর ২০২৬)
+        app(\App\Core\Contracts\SalesOffers::class)->reverseAll(SalesInvoice::drillSourceType(), (int) $invoice->id);
+
         $this->unpost($invoice, $date, $reason, $paperNo);
 
         $invoice->update([
