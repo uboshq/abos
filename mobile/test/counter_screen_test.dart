@@ -3,6 +3,7 @@ import 'package:abos_mobile/core/records/customer_record.dart';
 import 'package:abos_mobile/core/records/product_record.dart';
 import 'package:abos_mobile/core/widgets/confirm_overview_sheet.dart';
 import 'package:abos_mobile/features/direct_sale/counter_screen.dart';
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -24,6 +25,15 @@ class _FakeApi implements DirectSaleApi {
   String? voidedResume;
   bool reasonList = false;
   String? stockShown = '42';
+
+  // ⭐ 0.4.15 — দুবার-বিল, ক্রেতার দাম, গুদাম নেই
+  bool duplicateOnce = false;
+  int sells = 0;
+  String? priceCustomer;
+  // ⓘ পুরনো পরীক্ষাগুলোর দর বদলায় না — নিজের পরীক্ষা নিজের দর বসায়
+  String customerRate = '40.00';
+  bool priceOffline = false;
+  bool noWarehouse = false;
 
   @override
   Future<ConfirmOverviewData> overview({
@@ -59,29 +69,33 @@ class _FakeApi implements DirectSaleApi {
 
   @override
   Future<CounterSetup> setup({String? warehouseId}) async => CounterSetup(
-        warehouseId: 'wh-1',
-        warehouses: [CounterChoice('wh-1', 'প্রধান গুদাম')],
+        warehouseId: noWarehouse ? null : 'wh-1',
+        warehouses: noWarehouse
+            ? const []
+            : [const CounterChoice('wh-1', 'প্রধান গুদাম')],
         paymentTerms: [
-          CounterChoice('cash', 'নগদ'),
-          CounterChoice('credit:30', '৩০ দিন বাকি')
+          const CounterChoice('cash', 'নগদ'),
+          const CounterChoice('credit:30', '৩০ দিন বাকি')
         ],
         moneyAccounts: [
-          CounterChoice('ac-1', '1101 · নগদ', kind: 'cash'),
-          CounterChoice('ac-2', '1102 · ব্যাংক', kind: 'bank')
+          const CounterChoice('ac-1', '1101 · নগদ', kind: 'cash'),
+          const CounterChoice('ac-2', '1102 · ব্যাংক', kind: 'bank')
         ],
         depositMethods: [
-          CounterMethod(
+          const CounterMethod(
               id: 'm-cash', label: 'নগদ', kind: 'cash', accountId: 'ac-1')
         ],
-        carriers: [CounterChoice('car-1', 'করিম পরিবহন')],
+        carriers: [const CounterChoice('car-1', 'করিম পরিবহন')],
         voidReasons:
             reasonList ? const ['গ্রাহক কিনবেন না', 'অন্য কারণ'] : const [],
-        lots: {
-          'prd-lot': [
-            CounterLot(
-                id: 'lot-a', no: 'LOT-A', expiry: '2027-01-01', qty: '50')
-          ],
-        },
+        lots: noWarehouse
+            ? const {}
+            : {
+                'prd-lot': [
+                  const CounterLot(
+                      id: 'lot-a', no: 'LOT-A', expiry: '2027-01-01', qty: '50')
+                ],
+              },
       );
 
   @override
@@ -102,6 +116,25 @@ class _FakeApi implements DirectSaleApi {
     CounterExtras extras = const CounterExtras(),
   }) async {
     if (failWith != null) throw failWith!;
+    sells++;
+    // ⓘ সার্ভারের দেয়াল — একই বিল আগে হয়েছে, জেনেশুনে না পাঠালে ৪২২
+    if (duplicateOnce && !extras.confirmDuplicate) {
+      throw DioException(
+        requestOptions: RequestOptions(path: '/sales/direct'),
+        response: Response(
+          requestOptions: RequestOptions(path: '/sales/direct'),
+          statusCode: 422,
+          data: {
+            'message': 'আজ এই ক্রেতার ঠিক এই বিল আগেই হয়েছে।',
+            'errors': {
+              'confirm_duplicate': [
+                'আজ এই ক্রেতার ঠিক এই বিল আগেই হয়েছে (S-0006)।'
+              ]
+            },
+          },
+        ),
+      );
+    }
     sentCustomer = customerId;
     sentTerm = paymentTerm;
     sent = lines;
@@ -111,16 +144,25 @@ class _FakeApi implements DirectSaleApi {
   }
 
   @override
-  Future<CounterPrice> price(String productId, {String? warehouseId}) async =>
-      CounterPrice(
-        name: 'কসমস বিস্কুট',
-        rate: '40.00',
-        unit: 'পিস',
-        available: stockShown,
-        lots: const [
-          CounterLot(id: 'lot-a', no: 'LOT-A', expiry: '2027-01-01', qty: '50')
-        ],
-      );
+  Future<CounterPrice> price(String productId,
+      {String? warehouseId, String? customerId}) async {
+    priceCustomer = customerId;
+    if (priceOffline) {
+      throw DioException(
+          requestOptions: RequestOptions(path: '/sales/direct/price'),
+          type: DioExceptionType.connectionError);
+    }
+    return CounterPrice(
+      name: 'কসমস বিস্কুট',
+      rate: customerId == null ? '40.00' : customerRate,
+      priceLabel: customerId == null ? '' : 'দামের তালিকা: ডিলার দর',
+      unit: 'পিস',
+      available: stockShown,
+      lots: const [
+        CounterLot(id: 'lot-a', no: 'LOT-A', expiry: '2027-01-01', qty: '50')
+      ],
+    );
+  }
 
   @override
   Future<List<CounterDraftSummary>> drafts() async => const [
@@ -201,6 +243,11 @@ Future<void> _pickDealer(WidgetTester tester) async {
   await tester.pumpAndSettle();
 }
 
+String _rateText(WidgetTester tester) => tester
+    .widget<TextField>(find.byKey(const ValueKey('counter-rate')))
+    .controller!
+    .text;
+
 Future<void> _confirm(WidgetTester tester) async {
   await tester.tap(find.byKey(const ValueKey('counter-confirm')));
   await tester.pumpAndSettle();
@@ -209,6 +256,137 @@ Future<void> _confirm(WidgetTester tester) async {
 }
 
 void main() {
+  // ── ⭐ 0.4.15 — সমন্বয়কের তিন কাজ, ৬ অক্টোবর ২০২৬ ───────────────────────────────
+
+  testWidgets(
+      'the same bill twice: the server warning shows, "again" needs the tick, and only then confirm_duplicate goes',
+      (tester) async {
+    final api = _FakeApi()..duplicateOnce = true;
+    await _pump(tester, api);
+    await _pickDealer(tester);
+    await _pickProduct(tester, 'কসমস বিস্কুট');
+    await _add(tester, qty: '10');
+    await _confirm(tester);
+
+    expect(find.byKey(const ValueKey('counter-repeat')), findsOneWidget,
+        reason: '⛔ দুবার-বিলের সতর্কতা সাধারণ ভুলের পপ-আপে হারাল');
+    expect(find.textContaining('S-0006'), findsOneWidget,
+        reason: 'সার্ভারের বার্তা (আগের বিলের নম্বরসহ) দেখা গেল না');
+    expect(api.sent, isNull);
+
+    // ⓘ টিক ছাড়া "আবার করুন" চাপা যায় না
+    await tester.tap(find.byKey(const ValueKey('counter-repeat-go')));
+    await tester.pumpAndSettle();
+    expect(api.sells, 1, reason: '⛔ টিক ছাড়াই আবার পাঠানো হলো');
+
+    await tester.tap(find.byKey(const ValueKey('counter-repeat-tick')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('counter-repeat-go')));
+    await tester.pumpAndSettle();
+
+    expect(api.sells, 2);
+    expect(api.sentExtras!.confirmDuplicate, isTrue);
+    expect(find.text('বিক্রি হলো'), findsOneWidget);
+  });
+
+  testWidgets(
+      'the same bill twice: going back sends nothing more and keeps the cart',
+      (tester) async {
+    final api = _FakeApi()..duplicateOnce = true;
+    await _pump(tester, api);
+    await _pickDealer(tester);
+    await _pickProduct(tester, 'কসমস বিস্কুট');
+    await _add(tester, qty: '10');
+    await _confirm(tester);
+
+    await tester.tap(find.text('ফিরে যান'));
+    await tester.pumpAndSettle();
+    expect(api.sells, 1);
+    expect(api.sent, isNull);
+    expect(find.text('লট: LOT-A'), findsOneWidget,
+        reason: '⛔ ফিরে গেলে কার্ট মুছে গেল');
+  });
+
+  testWidgets(
+      'the customer\'s price list rate comes in over the stored sale price',
+      (tester) async {
+    final api = _FakeApi()..customerRate = '37.50';
+    await _pump(tester, api);
+
+    // ⓘ ক্রেতা ছাড়া — ফোনের জমা দাম
+    await _pickProduct(tester, 'কসমস বিস্কুট');
+    expect(_rateText(tester), '40.00');
+    expect(api.priceCustomer, isNull);
+
+    // ⓘ ক্রেতা বাছলে — সেই ক্রেতার দাম, কোথা থেকে তা-ও
+    await _pickDealer(tester);
+    expect(api.priceCustomer, 'cus-1');
+    expect(_rateText(tester), '37.50', reason: '⛔ দামের তালিকার দর বসল না');
+    expect(find.text('দামের তালিকা: ডিলার দর'), findsOneWidget);
+
+    await _add(tester, qty: '10');
+    await _confirm(tester);
+    expect(api.sent!.single.rate, 37.5);
+  });
+
+  testWidgets('customer first, then the product: the customer\'s rate too',
+      (tester) async {
+    final api = _FakeApi()..customerRate = '37.50';
+    await _pump(tester, api);
+    await _pickDealer(tester);
+    await _pickProduct(tester, 'কসমস বিস্কুট');
+
+    expect(_rateText(tester), '37.50',
+        reason: '⛔ ক্রেতা আগে বাছলে পণ্যের দর ফোনের জমা দামেই রইল');
+  });
+
+  testWidgets('a hand-typed rate is never overwritten by the late answer',
+      (tester) async {
+    final api = _FakeApi()..customerRate = '37.50';
+    await _pump(tester, api);
+    await _pickProduct(tester, 'কসমস বিস্কুট');
+    await tester.enterText(find.byKey(const ValueKey('counter-rate')), '39');
+    await tester.pumpAndSettle();
+
+    await _pickDealer(tester);
+    expect(_rateText(tester), '39',
+        reason: '⛔ মানুষের লেখা দর সার্ভারের দর মুছে দিল');
+  });
+
+  testWidgets('offline, the stored sale price stays and nothing breaks',
+      (tester) async {
+    final api = _FakeApi()
+      ..customerRate = '37.50'
+      ..priceOffline = true;
+    await _pump(tester, api);
+    await _pickDealer(tester);
+    await _pickProduct(tester, 'কসমস বিস্কুট');
+
+    expect(_rateText(tester), '40.00');
+    expect(find.byKey(const ValueKey('counter-error')), findsNothing,
+        reason: 'অফলাইনে দাম না আসা ভুল নয় — আগের দামই চলে');
+  });
+
+  testWidgets(
+      'no warehouse: a plain message instead of empty lots, and nothing goes into the cart',
+      (tester) async {
+    final api = _FakeApi()..noWarehouse = true;
+    await _pump(tester, api);
+
+    expect(find.byKey(const ValueKey('counter-no-warehouse')), findsOneWidget);
+    expect(
+        find.textContaining('কোনো চালু গুদাম পাওয়া যায়নি'), findsOneWidget);
+
+    await _pickDealer(tester);
+    await _pickProduct(tester, 'কসমস বিস্কুট');
+    await _add(tester, qty: '10');
+    expect(find.text('লট: LOT-A'), findsNothing);
+    expect(
+        tester.widget<Text>(find.byKey(const ValueKey('counter-error'))).data,
+        contains('গুদাম ছাড়া লট আসে না'),
+        reason: '⛔ গুদাম ছাড়াই লট-ধরা পণ্য কার্টে ঢুকল');
+  });
+
   // ── ⭐ ওয়েবের কাউন্টারের ৮ বোতাম, ফোনেও — মালিক, ৪ অক্টোবর ২০২৬ ─────────────────
 
   testWidgets(
