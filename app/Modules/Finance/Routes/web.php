@@ -299,6 +299,11 @@ Route::middleware('auth')->prefix('finance')->group(function () {
          */
         Route::get('/', [DepositController::class, 'all'])->name('all');
 
+        // ⭐ আমানতের রিপোর্ট — অর্থ-মডিউলের পরিকল্পনা, অংশ ৪ ([[DepositReportController]], ৬ অক্টোবর ২০২৬); ⓘ `reports` কোনো
+        // ইস্যুকারীর নাম নয়, তাই `/{issuer}`-এর সাথে সংঘর্ষ নেই
+        Route::get('/reports/{slug}', [\App\Modules\Finance\Http\Controllers\DepositReportController::class, 'show'])
+            ->where('slug', '[a-z\-]+')->name('report.show');
+
         Route::get('/{issuer}', [DepositController::class, 'index'])
             ->whereIn('issuer', DepositKind::ISSUERS)->name('index');
 

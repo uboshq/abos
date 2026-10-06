@@ -663,6 +663,8 @@ return [
         \App\Modules\Finance\Reports\CapitalReports::class,
         // ⭐ ভাড়ার চুক্তি ও জামানতের রিপোর্ট — অর্থ-মডিউলের পরিকল্পনা, অংশ ৫
         \App\Modules\Finance\Reports\RentalReports::class,
+        // ⭐ আমানতের রিপোর্ট — অর্থ-মডিউলের পরিকল্পনা, অংশ ৪
+        \App\Modules\Finance\Reports\DepositReports::class,
     ],
 
     'events' => [],
