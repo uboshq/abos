@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Inventory\Services;
 
 use App\Core\Support\CompanyContext;
+use App\Modules\Inventory\Models\Warehouse;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -56,6 +57,12 @@ final class GoodsWaitingToBePlaced
          */
         return DB::table('inv_stock_movements')
             ->where('company_id', $companyId)
+            /*
+             * ⭐ বোর্ডের একই দেয়াল — দেখা শাখার আর মানুষের নিজের গুদাম (Inventory অডিট ম৩০, ৫ অক্টোবর ২০২৬)।
+             * ⛔ আগে ব্যাজ গোটা কোম্পানির বিল গুনত, অথচ বোর্ড খুললে কেবল নিজের গুদামের: ব্যাজে ২, বোর্ডে ১।
+             */
+            ->when(Warehouse::idsInViewedBranch(), fn ($q, array $ids) => $q->whereIn('warehouse_id', $ids))
+            ->when(Warehouse::idsInViewedBranch() === [], fn ($q) => $q->whereRaw('1 = 0'))
             /*
              * ⭐ কেবল যে সারি বসার-অপেক্ষার ঘর নাড়ায় — বাকিগুলো যোগফলে শূন্য যোগ করে, তাই ফল
              * হুবহু একই, কেবল দলবদ্ধ করার সারি কম (১ অক্টোবর ২০২৬; মেনু প্রতিটা পাতায় গোনে)।
