@@ -143,8 +143,14 @@ final class AnEditShavedTheBankChargeOffAgainTest extends TestCase
             'charge_amount' => $form['charge_amount'],
             'from_account_id' => $credit->account_id,
             'to_account_id' => $debit->account_id,
+            /*
+             * ⓘ খসড়া হিসেবে আবার রাখা — প্রশ্নটা সারি নিয়ে, পোস্ট নিয়ে নয় (ব্যাংকের পোস্টে লেনদেন নম্বর লাগে)। ⚠️ ৭ অক্টোবর
+             * ২০২৬ পর্যন্ত এই PUT পরীক্ষায় ৫০০ দিত (`from_account_id` মাথায় ঢালা হতো) আর কিছুই বদলাত না — তাই "সারি অপরিবর্তিত"
+             * ফাঁকা সবুজ ছিল। নিচের assertRedirect সেটা আর লুকাতে দেয় না ([[AJournalDraftCouldNotBeEditedTest]])।
+             */
+            'save_as_draft' => '1',
             ...$extra,
-        ], fn ($v) => $v !== null))->assertSessionHasNoErrors();
+        ], fn ($v) => $v !== null))->assertSessionHasNoErrors()->assertRedirect(route('accounts.voucher.show', $voucher));
     }
 
     /** @return list<string> খাত · ডেবিট · ক্রেডিট */

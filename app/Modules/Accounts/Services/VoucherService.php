@@ -783,7 +783,9 @@ final class VoucherService
         $trxDate = Carbon::parse($data['trx_date'] ?? $voucher->trx_date);
 
         $voucher->update([
-            ...$data,
+            // ⛔ কেবল মাথার ঘর — জাবেদার পর্দা `lines` পাঠায়, আর তা মাথায় ঢালতে গেলে খসড়া সম্পাদনা ৫০০ দিত (৭ অক্টোবর ২০২৬;
+            // সংশোধনের পথ একই ছাঁকনি নেয়, [[VoucherController::saveRevision()]])
+            ...array_intersect_key($data, array_flip($voucher->getFillable())),
             // ধরন ও নম্বর কখনো বদলায় না: নম্বরটা সিরিজ থেকে এসেছে আর
             // ধরন বদলালে ওই সিরিজটাই ভুল হয়ে যেত
             'type' => $voucher->type,
