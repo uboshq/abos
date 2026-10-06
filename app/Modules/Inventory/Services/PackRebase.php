@@ -117,7 +117,8 @@ final class PackRebase
                 $rows[$table] = $this->lines($table, $product->id, $per, $qty, $rate);
             }
 
-            $product->forceFill(['unit_id' => $to->id])->save();
+            $product->forceFill(['unit_id' => $to->id] + $this->restated($product, $per))->save();
+            $rows['inv_batches'] = $this->lotPrices($product->id, $per);
             $this->packs($product, $from, $to, $per);
 
             $after = $this->totals($product);
@@ -313,6 +314,59 @@ final class PackRebase
      * প্যাকের টেবিল নতুন base-এ: পুরনো base একটা প্যাক হয়ে যায় (১ কার্টন =
      * ২৪ পিস), আর বাকি প্যাকগুলোর factor-ও ঐ অনুপাতে বাড়ে।
      */
+    /**
+     * ⭐ পণ্যের নিজের দাম আর পরিমাণের সীমাও নতুন এককে — Inventory অডিট ম২০, ৫ অক্টোবর ২০২৬।
+     *
+     * ⛔ আগে কেবল একক বদলাত: বিক্রির দর থাকত কার্টনের (এক পিস কার্টনের দামে বিক্রি), কেনা দর কার্টনের, আর
+     * পুনঃক্রয়ের সীমা, সর্বোচ্চ মাত্রা ও পুনঃক্রয়ের পরিমাণ কার্টনের সংখ্যায় — পিসে গোনা মজুদের পাশে ২৪ গুণ ছোট।
+     * ⓘ দাম ÷ N (চার ঘরে, অর্ধেক উপরে), পরিমাণ × N; শতাংশ (`pricing_pct`) এককহীন, অক্ষত।
+     *
+     * @return array<string, string|null>
+     */
+    private function restated(Product $product, string $per): array
+    {
+        $out = [];
+
+        foreach (['purchase_price', 'sale_price'] as $price) {
+            if ($product->{$price} !== null) {
+                $out[$price] = $this->round4(bcdiv((string) $product->{$price}, $per, 8));
+            }
+        }
+
+        // ⓘ খালি ঘর ছোঁয়া হয় না — ⛔ `null` লিখলে `reorder_level`-এর মতো NOT NULL ঘর ভাঙত (হাতে ধরা মডেলে ডিফল্টটা আসে না)
+        foreach (['reorder_level', 'max_level', 'reorder_qty'] as $qty) {
+            if ($product->{$qty} !== null) {
+                $out[$qty] = bcmul((string) $product->{$qty}, $per, 4);
+            }
+        }
+
+        return $out;
+    }
+
+    /**
+     * ⭐ লটের ছাপা দামও এক পিসের — ম২০। ⓘ এটা সীমা (বিক্রির দর এর বেশি নয়), তাই উপরে গোল: নিচে গোল করলে কার্টনের
+     * ছাপা দামের হুবহু ভাগে বেচা পিসও "ছাপা দামের বেশি" বলে থামত।
+     */
+    private function lotPrices(int $productId, string $per): int
+    {
+        $count = 0;
+
+        foreach (DB::table('inv_batches')->where('product_id', $productId)->whereNotNull('mrp')->get(['id', 'company_id', 'mrp']) as $lot) {
+            $exact = bcdiv((string) $lot->mrp, $per, 8);
+            $up = bcadd(bcadd($exact, '0', 4), bccomp($exact, bcadd($exact, '0', 4), 8) > 0 ? '0.0001' : '0', 4);
+
+            DB::table('inv_batches')->where('company_id', $lot->company_id)->where('id', $lot->id)->update(['mrp' => $up]);
+            $count++;
+        }
+
+        return $count;
+    }
+
+    private function round4(string $number): string
+    {
+        return bcadd($number, bccomp($number, '0', 8) >= 0 ? '0.00005' : '-0.00005', 4);
+    }
+
     private function packs(Product $product, Unit $from, Unit $to, string $per): void
     {
         if (! Schema::hasTable('inv_product_units')) {
