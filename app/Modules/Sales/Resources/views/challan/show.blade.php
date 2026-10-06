@@ -30,7 +30,8 @@
                     </span>
                 @endif
 
-                @if ($challan->status === \App\Core\Support\DocumentStatus::CONFIRMED && ($leftToBill ?? true))
+                {{-- ⓘ গেট পাসে বিল হয় এমন চালানে "বিল করুন" নেই — বিল গেট পাসে নিজে বসে (৬ অক্টোবর ২০২৬) --}}
+                @if ($challan->status === \App\Core\Support\DocumentStatus::CONFIRMED && ($leftToBill ?? true) && ! $challan->issue_at_gate)
                     @can('create', \App\Modules\Sales\Models\SalesInvoice::class)
                         <x-ui.button tone="primary"
                                      :href="route('sales.invoice.create', ['delivery_challan_id' => $challan->id])">

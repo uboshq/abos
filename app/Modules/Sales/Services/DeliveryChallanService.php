@@ -150,6 +150,14 @@ final class DeliveryChallanService
                 'trx_date' => $trxDate->toDateString(),
                 'vehicle_id' => $data['vehicle_id'] ?? null,
                 'vehicle_no' => $data['vehicle_no'] ?? null,
+                /*
+                 * ⭐ গেট পাসে মাল বেরোনো আর বিল — সব চালানে, কেবল কাউন্টারের নয় (সমন্বয়ক, ৬ অক্টোবর ২০২৬; মালিকের পরিকল্পনা §৩
+                 * ধাপ ৫–৬)। ⓘ আদেশ, DO বা অফিস থেকে লেখা চালান কোম্পানির সুইচ নিজেই পড়ে; কাউন্টার "এখনই নিয়ে যাবেন" হলে নিজে
+                 * বন্ধ করে দেয় ([[DirectSaleService::issuesAtGate()]])। সুইচ বন্ধ থাকলে আগের মতো — চালান নিশ্চিত হলেই মাল নামে।
+                 */
+                'issue_at_gate' => array_key_exists('issue_at_gate', $data)
+                    ? (bool) $data['issue_at_gate']
+                    : (bool) app(\App\Core\Services\SettingsService::class)->get('sales.invoice_at_goods_issue', false),
                 'driver_name' => $data['driver_name'] ?? null,
                 // ⓘ কাউন্টার পাঠায়, আগে এখানে চুপচাপ হারাত — নিশ্চিতকরণের পাতায় চালকের ফোন আসত না
                 'driver_phone' => $data['driver_phone'] ?? null,
@@ -249,7 +257,8 @@ final class DeliveryChallanService
             ]);
         }
 
-        $challan->loadMissing(['lines.product', 'lines.orderLine', 'warehouse']);
+        // ⓘ `lines.batch`-ও — অফিসের চালানও এখন গেটের পথে যায় (৬ অক্টোবর ২০২৬), আর সেই পথ লট পড়ে; নইলে আলাদা-আলাদা টানা (লোকালে ৫০০)
+        $challan->loadMissing(['lines.product', 'lines.orderLine', 'lines.batch', 'warehouse']);
 
         if ($challan->lines->isEmpty()) {
             throw ValidationException::withMessages(['lines' => __('sales::validation.no_lines')]);

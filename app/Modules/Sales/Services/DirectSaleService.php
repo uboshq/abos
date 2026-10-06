@@ -378,9 +378,8 @@ final class DirectSaleService
              */
             $atGate = $this->issuesAtGate($data);
 
-            if ($atGate) {
-                $challan->update(['issue_at_gate' => true]);
-            }
+            // ⓘ দুই দিকেই লেখা — চালান এখন সুইচ থেকে নিজে চালু হয়ে আসে, তাই "এখনই নিয়ে যাবেন" হলে বন্ধ করতে হয়
+            $challan->update(['issue_at_gate' => $atGate]);
 
             $challan = $this->challans->confirm($challan->fresh(['lines']), $deposit, DeliveryOrderStock::reservationsOf($source)); // ⓘ গ১১: DO-র নিজের আটকানো এই বিক্রিরই
 
@@ -1609,9 +1608,8 @@ final class DirectSaleService
             // ⭐ গেট পাসে মাল বেরোনো — সইয়ের পরেও একই নিয়ম, বাছাটা পর্দার ছবিতে ([[issuesAtGate()]])
             $atGate = $this->issuesAtGate((array) ($invoice->counter_screen['fields'] ?? []));
 
-            if ($atGate) {
-                $challan->update(['issue_at_gate' => true]);
-            }
+            // ⓘ দুই দিকেই — উপরের একই কারণে
+            $challan->update(['issue_at_gate' => $atGate]);
 
             $challan = $this->challans->confirm($challan->fresh(['lines']), $deposit, DeliveryOrderStock::reservationsOf($source)); // ⓘ গ১১: DO-র নিজের আটকানো এই বিক্রিরই
 
