@@ -119,10 +119,10 @@
                  ⚠️ তিন কলামে ঢোকালে নামের ঘর সরু হয়ে যেত, অথচ এখানেই
                  সবচেয়ে লম্বা লেখা বসে। --}}
             <div class="mt-3 grid gap-3 sm:grid-cols-2">
-                <x-ui.field name="name_en" :label="__('supplier::field.supplier_name_en')"
+                <x-ui.field name="name_en" :label="$isService ? __('supplier::field.supplier_name_en') : __('supplier::field.principal_name_en')"
                             :value="old('name_en', $supplier->name_en)" required />
 
-                <x-ui.field name="name_bn" :label="__('supplier::field.supplier_name_bn')"
+                <x-ui.field name="name_bn" :label="$isService ? __('supplier::field.supplier_name_bn') : __('supplier::field.principal_name_bn')"
                             :value="old('name_bn', $supplier->name_bn)"
                             :required="$requireBangla"
                             :hint="__('supplier::message.bn_name_hint')" />

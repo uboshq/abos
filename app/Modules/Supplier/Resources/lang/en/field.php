@@ -8,6 +8,8 @@ return [
 
     'supplier_name_en' => 'Supplier name (English)',
     'supplier_name_bn' => 'Supplier name (Bangla)',
+    'principal_name_en' => 'Principal name (English)',
+    'principal_name_bn' => 'Principal name (Bangla)',
     'name_en' => 'Name (English)',
     'name_bn' => 'Name (Bangla)',
     'short_name' => 'Short name',

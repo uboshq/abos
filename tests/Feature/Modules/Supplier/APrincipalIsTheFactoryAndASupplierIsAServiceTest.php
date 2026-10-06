@@ -54,11 +54,17 @@ final class APrincipalIsTheFactoryAndASupplierIsAServiceTest extends TestCase
         $this->assertTrue(Supplier::query()->onlyServiceProviders()->whereKey($shop->id)->exists(), '⛔ সাধারণ সরবরাহকারী সেবাদাতার তালিকায় নেই।');
         $this->assertFalse(Supplier::query()->onlySuppliers()->whereKey($shop->id)->exists(), '⛔ সাধারণ সরবরাহকারী প্রিন্সিপালের তালিকায়।');
 
-        $main = $this->get(route('supplier.create'))->assertOk()->viewData('partyTypes')->pluck('code')->all();
+        $mainPage = $this->get(route('supplier.create'))->assertOk();
+        $main = $mainPage->viewData('partyTypes')->pluck('code')->all();
         $this->assertSame([Supplier::VENDOR_CODE], $main, '⛔ নতুন সরবরাহকারীর ফর্মে প্রিন্সিপাল ছাড়া অন্য ধরন।');
+        // ⓘ মালিক, ৬ অক্টোবর ২০২৬ (ছবিতে দাগ): মূল তালিকার মেনু, শিরোনাম আর নামের ঘর — "প্রিন্সিপাল"
+        $mainPage->assertSee('নতুন প্রিন্সিপাল')->assertSee('প্রিন্সিপালের নাম (ইংরেজি)')->assertSee('প্রিন্সিপাল তালিকা')
+            ->assertDontSee('সরবরাহকারীর নাম (ইংরেজি)');
 
-        $services = $this->get(route('supplier.create', ['kind' => 'service']))->assertOk()->viewData('partyTypes')->pluck('code')->all();
+        $servicePage = $this->get(route('supplier.create', ['kind' => 'service']))->assertOk();
+        $services = $servicePage->viewData('partyTypes')->pluck('code')->all();
         $this->assertContains('GENERAL', $services, '⛔ সেবাদাতার ফর্মে সাধারণ সরবরাহকারী নেই।');
         $this->assertNotContains(Supplier::VENDOR_CODE, $services);
+        $servicePage->assertSee('সরবরাহকারীর নাম (ইংরেজি)')->assertDontSee('প্রিন্সিপালের নাম (ইংরেজি)');
     }
 }
