@@ -58,6 +58,12 @@ final class StockOnHandSync implements SyncsToDevices
         return 'inventory.stock.view';
     }
 
+    /** ফোন থেকে আসে না (`acceptsPush()` false) — লেখার চাবি নেই ([[SyncsToDevices::requiredPushPermission()]]) */
+    public static function requiredPushPermission(): ?string
+    {
+        return null;
+    }
+
     /**
      * @return list<SyncRecord>
      */

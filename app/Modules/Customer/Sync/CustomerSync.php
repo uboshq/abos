@@ -73,6 +73,12 @@ final class CustomerSync implements SyncsToDevices
         return 'customer.view';
     }
 
+    /** ফোন থেকে আসে না (`acceptsPush()` false) — লেখার চাবি নেই ([[SyncsToDevices::requiredPushPermission()]]) */
+    public static function requiredPushPermission(): ?string
+    {
+        return null;
+    }
+
     /**
      * চাবিটা [[SyncService::pull()]] আগেই দেখে নিয়েছে, তাই এখানে আর
      * নয় — দুই জায়গায় থাকলে একদিন দুইটা অমিল হত।

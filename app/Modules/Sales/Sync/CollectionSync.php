@@ -66,10 +66,16 @@ final class CollectionSync implements SyncsToDevices
     public static function requiredPermission(): ?string
     {
         /*
-         * ⭐ কেবল অফিসের লোক — মালিক, ৭ অক্টোবর ২০২৬: "এটা কেবল অফিসের লোকদের জন্য থাকবে, আর ফিল্ডের জন্য থাকবে
-         * payment request" (মাঠের টাকা যায় স্লিপসহ জমার অনুরোধে)। ⓘ আদায়ের চাবি SR-দেরও আছে, তাই সিঙ্কের চাবি খাতায় টাকা
-         * তোলার চাবি; আদায়ের চাবি [[apply()]]-এ আলাদা দেখা হয় ([[officeMayCollect()]])।
+         * ⭐ কেবল অফিসের লোক লেখেন — মালিক, ৭ অক্টোবর ২০২৬: "এটা কেবল অফিসের লোকদের জন্য থাকবে, আর ফিল্ডের জন্য থাকবে
+         * payment request" (মাঠের টাকা যায় জমার বিজ্ঞপ্তিতে)। ⓘ আদায়ের চাবি SR-দেরও আছে, তাই লেখার দিকে আরেকটা চাবি —
+         * খাতায় টাকা তোলার ([[requiredPushPermission()]]); দুটো মিলেই [[officeMayCollect()]]।
          */
+        return 'sales.collection.create';
+    }
+
+    /** ⛔ ফোন থেকে লেখার চাবি — খাতায় টাকা তোলার, কেবল অফিসের লোকের (মালিক, ৭ অক্টোবর ২০২৬); আদায়ের চাবি পড়ার দিকে ([[SyncsToDevices::requiredPushPermission()]]) */
+    public static function requiredPushPermission(): ?string
+    {
         return 'accounts.voucher.create';
     }
 
@@ -154,15 +160,14 @@ final class CollectionSync implements SyncsToDevices
             throw SyncRejection::conflict(__('sales::sync.collection_edit_needs_network'));
         }
 
-        // ⛔ আদায়ের চাবিও লাগে — সিঙ্কের চাবি কেবল খাতায় টাকা তোলার ([[requiredPermission()]])
-        if (! $user->can('sales.collection.create')) {
-            throw new SyncRejection(__('sync.not_allowed_offline', ['type' => self::entityType()]));
-        }
+        // ⓘ দুই চাবিই সেবা দেখে নেয় ([[SyncService::applyOne()]]): পড়ার — আদায়ের ([[requiredPermission()]]),
+        // লেখার — খাতায় টাকা তোলার ([[requiredPushPermission()]])
 
         $payload = $change->payload();
 
         // বাইরের কী থেকে ভেতরের আইডি — ফোন কেবল public_id চেনে, ক্রমিক id নয়
-        $customer = Customer::query()
+        // ⛔ ফোনে বাছা শাখার গ্রাহকই — অনলাইন পথের মতো (অডিট ফোন ⛔৩, ৬ অক্টোবর ২০২৬)
+        $customer = Customer::query()->inViewedBranch()
             ->where('public_id', (string) ($payload['customerId'] ?? ''))
             ->first();
 

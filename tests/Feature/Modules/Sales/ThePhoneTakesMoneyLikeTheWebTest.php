@@ -165,6 +165,31 @@ final class ThePhoneTakesMoneyLikeTheWebTest extends TestCase
         $this->assertSame(DocumentStatus::DRAFT, Collection::query()->where('public_id', $out[4]['entityId'])->value('status'));
     }
 
+    /** ⛔ ফোনে বাছা শাখার বাইরের দোকানের নামে আদায় নয় (অডিট ফোন ⛔৩); একই মানুষ, দোকান শাখায় ফিরলে বসে */
+    public function test_a_shop_of_another_branch_than_the_one_in_view_gives_no_collection(): void
+    {
+        $company = \App\Models\Company::query()->findOrFail($this->owner->current_company_id);
+        $home = $company->defaultBranch();
+        $other = \App\Models\Branch::query()->where('company_id', $company->id)->whereKeyNot($home->id)->first()
+            ?? \App\Models\Branch::query()->create(['company_id' => $company->id, 'code' => 'OOT3', 'name_en' => 'Other branch', 'is_active' => true]);
+
+        $this->accountant()->forceFill(['view_all_branches' => false, 'current_branch_id' => $home->id])->save();
+        $this->accountant = $this->accountant->fresh();
+        $this->actingAs($this->accountant);
+        app(\App\Core\Services\DataScope::class)->forget();
+        $this->assertSame((int) $home->id, \App\Core\Support\ViewedBranch::one(), 'প্রস্তুতিটাই ভুল — এক শাখা দেখা হচ্ছে না।');
+
+        $payload = ['customerId' => (string) $this->shop->public_id, 'trxDate' => now()->toDateString(), 'amount' => '100'];
+
+        $this->shop->forceFill(['branch_id' => $other->id])->save();
+        $out = $this->push([$this->change('br-1', $payload)]);
+        $this->assertSame(SyncChange::REJECTED, $out[0]['status'], '⛔ অন্য শাখার দোকানের নামে ফোন থেকে আদায় বসল।');
+
+        $this->shop->forceFill(['branch_id' => $home->id])->save();
+        $out = $this->push([$this->change('br-2', $payload)]);
+        $this->assertSame(SyncChange::APPLIED, $out[0]['status'], json_encode($out));
+    }
+
     // ── যন্ত্রপাতি ──────────────────────────────────────────────────────
 
     private function anAccount(): Account

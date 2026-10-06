@@ -64,6 +64,12 @@ final class AttendanceSync implements SyncsToDevices
         return 'hr.attendance.self';
     }
 
+    /** ⛔ ফোন থেকে লেখার চাবি — নিজের হাজিরা, ওয়েবের একই চাবি ([[SyncsToDevices::requiredPushPermission()]]) */
+    public static function requiredPushPermission(): ?string
+    {
+        return 'hr.attendance.self';
+    }
+
     /**
      * ফোনে নিজের হাজিরাগুলো ফিরে আসে — কোন দিনগুলো পৌঁছেছে তা দেখা যায়।
      *

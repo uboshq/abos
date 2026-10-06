@@ -162,6 +162,13 @@ final class TheSaleBelongsToTheSalesmanBoundThatDayTest extends TestCase
     public function test_a_walled_salesman_cannot_send_money_from_the_phone_but_old_drafts_still_settle(): void
     {
         $rahim = Customer::acrossDealers()->where('name_en', 'Rahim Traders')->firstOrFail();
+
+        /*
+         * ⓘ ফোনে আদায় এখন কেবল অফিসের লোকের — খাতায় টাকা তোলার চাবিও লাগে (মালিক, ৭ অক্টোবর ২০২৬;
+         * [[ThePhoneTakesMoneyLikeTheWebTest]])। এই দাবি দেয়াল মাপে, তাই নিয়ন্ত্রণের ধাপে বিক্রয়কর্মীর হাতে সেই চাবিও —
+         * নইলে প্রথম ধাপই চাবির অভাবে ফিরত, আর দেয়ালের ফেরানো আলাদা করে দেখা যেত না।
+         */
+        CompanyContext::forCompany($this->company->id, fn () => $this->sales->givePermissionTo(Permission::findOrCreate('accounts.voucher.create', 'web')));
         $this->mark(false);
         $this->actingAs($this->sales->fresh());
 

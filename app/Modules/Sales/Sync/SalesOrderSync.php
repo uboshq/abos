@@ -15,8 +15,10 @@ use App\Modules\Customer\Models\Customer;
 use App\Modules\Inventory\Models\Product;
 use App\Modules\Sales\Models\SalesOrder;
 use App\Modules\Sales\Services\SalesOrderService;
+use App\Modules\Sales\Services\SalesPrice;
 use App\Modules\Sales\Support\SalesOrderStatus;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Validator;
 
 /**
  * অর্ডার — **নেট ছাড়া লেখা যায় এমন একমাত্র জিনিস।**
@@ -71,6 +73,12 @@ final class SalesOrderSync implements SyncsToDevices
     public static function requiredPermission(): ?string
     {
         return 'sales.order.view';
+    }
+
+    /** ⛔ ফোন থেকে লেখার চাবি — ওয়েব আর ফোনের অনলাইন আদেশের একই চাবি; দেখার চাবিতে লেখা নয় (অডিট ফোন ⛔১, ৬ অক্টোবর ২০২৬) ([[SyncsToDevices::requiredPushPermission()]]) */
+    public static function requiredPushPermission(): ?string
+    {
+        return 'sales.order.create';
     }
 
     /**
@@ -144,13 +152,34 @@ final class SalesOrderSync implements SyncsToDevices
         $payload = $change->payload();
 
         /*
+         * ⛔ ওয়েবের একই নিয়ম — তারিখ আজকের পরে নয়, ডেলিভারি তারিখের আগে নয়, পরিমাণ এক দশমিক নিয়মে (পুরো ERP অডিট,
+         * ৬ অক্টোবর ২০২৬, ফোন ⛔২ ও ⚠️৬)। ⓘ "1e5" বা অ্যারে আগে bcmath-এ ৫০০ দিত, আর ফোনের পুরো সারি আটকে থাকত —
+         * এখন এই একটা সারিই ফেরে, বাংলা বার্তায় ([[SyncService::applyOne()]] ValidationException ধরে)।
+         */
+        $rules = Validator::make($payload, [
+            'customerId' => ['required', 'string', 'max:64'],
+            'trxDate' => ['nullable', 'date_format:Y-m-d', 'before_or_equal:today'],
+            'deliverOn' => ['nullable', 'date_format:Y-m-d', 'after_or_equal:'.((is_string($payload['trxDate'] ?? null) && $payload['trxDate'] !== '') ? 'trxDate' : 'today')],
+            'narration' => ['nullable', 'string', 'max:500'],
+            'lines' => ['required', 'array', 'min:1', 'max:200'],
+            'lines.*' => ['array'],
+            'lines.*.productId' => ['required', 'string', 'max:64'],
+            'lines.*.qty' => ['required', 'regex:/^\d{1,14}(\.\d{1,4})?$/', 'not_regex:/^0+(\.0+)?$/'],
+        ], [
+            'lines.required' => __('sales::sync.order_has_no_lines'),
+            'lines.min' => __('sales::sync.order_has_no_lines'),
+        ]);
+        $rules->validate();
+
+        /*
          * বাইরের কী থেকে ভেতরের আইডি।
          *
          * ফোন কখনো ভেতরের ক্রমিক `id` দেখে না — সে `public_id` (UUID)
          * ধরে কথা বলে, ঠিক যেমন `CustomerSync` পাঠায়। ক্রমিক আইডি
          * পাঠালে গোনা যেত: "আমার আগে কতজন গ্রাহক ছিল"।
          */
-        $customer = Customer::query()
+        // ⛔ ফোনে বাছা শাখার গ্রাহকই — অনলাইন পথের মতো (অডিট ফোন ⛔৩); ডিলার-দেয়াল মডেলের নিজের ([[ScopedToUserDealers]])
+        $customer = Customer::query()->inViewedBranch()
             ->where('public_id', (string) ($payload['customerId'] ?? ''))
             ->first();
 
@@ -159,12 +188,9 @@ final class SalesOrderSync implements SyncsToDevices
         }
 
         $lines = [];
+        $trxDate = (string) ($payload['trxDate'] ?? '') !== '' ? (string) $payload['trxDate'] : now()->toDateString();
 
-        foreach ((array) ($payload['lines'] ?? []) as $line) {
-            if (! is_array($line)) {
-                continue;
-            }
-
+        foreach ((array) $payload['lines'] as $line) {
             $product = Product::query()
                 ->where('public_id', (string) ($line['productId'] ?? ''))
                 ->first();
@@ -173,18 +199,25 @@ final class SalesOrderSync implements SyncsToDevices
                 throw new SyncRejection(__('sales::sync.unknown_product'));
             }
 
+            /*
+             * ⛔ দর সার্ভারের, ছাড় শূন্য — ফোনের কথায় নয় (পুরো ERP অডিট, ৬ অক্টোবর ২০২৬, ফোন ⛔২)।
+             *
+             * আগে ফোন যে দর আর ছাড় পাঠাত তা-ই বসত, আর জমার সময় বাকির যাচাই চলত সেই কমানো মোটে; দামের নিয়ম ধরত কেবল
+             * বিলের সময়। এখন অনলাইন পথের মতো ([[SalesOrderApiController::lines()]]): এই ডিলারের দর তালিকার দাম, নাহলে
+             * পণ্যের ([[SalesPrice]]) — আদেশের তারিখের দাম। ছাড় দেন কেবল মালিক, ওয়েবে, সইসহ ("যেকোনো ছাড়ে মালিক")।
+             * ⓘ দাম শূন্য হলে ফেরানো — মালিকের "sales price chara entry nibe na" (ওয়েবের `gt:0`)।
+             */
+            $rate = app(SalesPrice::class)->for($customer, $product, $trxDate)->price;
+
+            if (bccomp((string) $rate, '0', 4) <= 0) {
+                throw new SyncRejection(__('sales::sync.order_line_has_no_price', ['product' => (string) ($product->name_bn ?: $product->name_en)]));
+            }
+
             $lines[] = [
                 'product_id' => $product->id,
-                'ordered_qty' => (string) ($line['qty'] ?? '0'),
-
-                /*
-                 * দর ফোন পাঠায়, কিন্তু সেটাই শেষ কথা নয় — সার্ভারের
-                 * দর-সহনশীলতার নিয়ম ([[PricingRule]]) নিশ্চিত করার সময়
-                 * এটা মাপে। অফলাইনে ফোনে বসে থাকা দামটা পুরনো হতে
-                 * পারে, আর সেই ক্ষেত্রেই নিয়মটা কাজে লাগে।
-                 */
-                'rate' => (string) ($line['rate'] ?? '0'),
-                'discount' => (string) ($line['discount'] ?? '0'),
+                'ordered_qty' => (string) $line['qty'],
+                'rate' => (string) $rate,
+                'discount' => '0',
             ];
         }
 
@@ -204,7 +237,7 @@ final class SalesOrderSync implements SyncsToDevices
          */
         $order = $this->orders->create([
             'customer_id' => $customer->id,
-            'trx_date' => $payload['trxDate'] ?? now()->toDateString(),
+            'trx_date' => $trxDate,
             'deliver_on' => $payload['deliverOn'] ?? null,
             'narration' => $payload['narration'] ?? null,
             'source' => SalesOrderStatus::SOURCE_SR,

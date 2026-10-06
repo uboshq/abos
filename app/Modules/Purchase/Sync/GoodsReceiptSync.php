@@ -58,6 +58,12 @@ final class GoodsReceiptSync implements SyncsToDevices
         return 'purchase.receipt.create';
     }
 
+    /** ⛔ ফোন থেকে লেখার চাবি — ওয়েবের মাল-গ্রহণ লেখার চাবি ([[SyncsToDevices::requiredPushPermission()]]) */
+    public static function requiredPushPermission(): ?string
+    {
+        return 'purchase.receipt.create';
+    }
+
     /**
      * ⓘ যন্ত্রে ফেরত যাওয়ার কিছু নেই।
      *

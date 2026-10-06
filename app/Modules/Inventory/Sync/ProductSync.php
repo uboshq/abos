@@ -61,6 +61,12 @@ final class ProductSync implements SyncsToDevices
         return 'inventory.product.view';
     }
 
+    /** ফোন থেকে আসে না (`acceptsPush()` false) — লেখার চাবি নেই ([[SyncsToDevices::requiredPushPermission()]]) */
+    public static function requiredPushPermission(): ?string
+    {
+        return null;
+    }
+
     /**
      * @return list<SyncRecord>
      */

@@ -84,6 +84,22 @@ interface SyncsToDevices
     public static function requiredPermission(): ?string;
 
     /**
+     * ⛔ ফোন থেকে **লিখতে** যে চাবি লাগে — পড়ার চাবির ([[requiredPermission()]]) উপরে, আলাদা।
+     *
+     * ── কী ভাঙা ছিল (পুরো ERP অডিট, ৬ অক্টোবর ২০২৬, ফোন ⛔১) ─────────────
+     * পুশ পাহারা পেত কেবল পড়ার চাবিতে। অফলাইন আদেশের চাবি `sales.order.view` — ফলে ডিফল্ট ম্যানেজার, যাঁর
+     * দেখার চাবি আছে কিন্তু লেখার নেই, `/sync/sales/push` দিয়ে আদেশ বানাতে পারতেন; ওয়েব আর ফোনের অনলাইন পথ
+     * চায় `sales.order.create`।
+     *
+     * ইন্টারফেসে, যাতে ভোলা না যায় — নতুন হ্যান্ডলার লিখতে গেলে ক্লাসটাই তৈরি হয় না। প্রয়োগ এক জায়গায়,
+     * [[SyncService::applyOne()]]-এ: পড়ার চাবি **আর** লেখার চাবি, দুটোই।
+     *
+     * `null` কেবল তখন, যখন ধরনটা ফোন থেকে আসেই না (`acceptsPush()` false) —
+     * [[EverySyncWriteHasItsOwnKeyTest]] বাকিটা দেখে।
+     */
+    public static function requiredPushPermission(): ?string;
+
+    /**
      * `$since`-এর পর যা বদলেছে, **এই ব্যবহারকারীর জন্য**।
      *
      * `$since` null মানে এই ডিভাইস কখনো কিছু পায়নি — পুরোটা যাবে।

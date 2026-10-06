@@ -60,6 +60,12 @@ final class PurchaseOrderSync implements SyncsToDevices
         return 'purchase.order.view';
     }
 
+    /** ফোন থেকে আসে না (`acceptsPush()` false) — লেখার চাবি নেই ([[SyncsToDevices::requiredPushPermission()]]) */
+    public static function requiredPushPermission(): ?string
+    {
+        return null;
+    }
+
     /**
      * @return list<SyncRecord>
      */
