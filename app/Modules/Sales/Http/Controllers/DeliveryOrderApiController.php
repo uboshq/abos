@@ -178,7 +178,8 @@ class DeliveryOrderApiController extends Controller implements HasMiddleware
             'status' => (string) $o->status,
             'status_label' => DeliveryOrderStatus::label((string) $o->status),
             'total' => bcadd((string) $o->total, '0', 2),
-            'editable' => $o->isEditableByWriter() && (int) $o->created_by === (int) $user?->id,
+            // ⓘ সুইচ চালু (কোম্পানি বিক্রয় আদেশে) হলে খসড়া DO আর বদলায় না ([[DeliveryOrderService::newOnesStopped()]]) — ফোনে বোতামও নয়
+            'editable' => $o->isEditableByWriter() && (int) $o->created_by === (int) $user?->id && ! $this->orders->newOnesStopped(),
             'awaiting_me' => $awaitingMe = $pending !== null && $user !== null && app(ApprovalEngine::class)->canDecide($pending, $user),
             // ⓘ ফোন এটা দিয়েই সই দেয় — `/approvals/{id}/approve|reject`, অনুমোদন-বাক্সের একই দরজা
             'approval_id' => $awaitingMe ? (string) $pending->public_id : null,

@@ -100,6 +100,27 @@ final class TheDeliveryOrderDoorsOpenOnlyForTheirOwnersTest extends TestCase
             '⛔ জমার পরে লেখক পরিমাণ বদলে ফেললেন।');
     }
 
+    /** ⓘ সুইচের আগের খসড়া — সুইচ চালু হলে সার্ভার আর বদলাতে দেয় না, তাই ফোনে "বদলান"-ও নয় (অডিট ফোন ⓘ, ৭ অক্টোবর ২০২৬) */
+    public function test_a_draft_from_before_the_switch_is_no_longer_offered_for_editing(): void
+    {
+        $sr = User::factory()->create(['is_active' => true, 'current_company_id' => $this->company->id]);
+        $sr->companies()->attach($this->company->id, ['is_active' => true]);
+        $this->grant($sr, 'sales.do.create');
+        $this->grant($sr, 'sales.do.view');
+        Sanctum::actingAs($sr->fresh(), [AuthController::APP]);
+
+        $made = $this->postJson('/api/v1/sales/delivery-orders', [
+            'customer' => (string) $this->dealer->public_id, 'lines' => [['product' => (string) $this->product->public_id, 'qty' => '5']],
+        ])->assertCreated()->json();
+        $this->assertTrue($made['editable']);
+
+        app(\App\Core\Services\SettingsService::class)->set(\App\Modules\Sales\Services\SalesOrderService::REPLACES_DO, true);
+        $this->assertFalse($this->getJson('/api/v1/sales/delivery-orders/'.$made['id'])->assertOk()->json('editable'),
+            '⛔ সুইচের পরে ফোনে "বদলান" দেখাল, অথচ সার্ভার ফেরাবে।');
+        $this->putJson('/api/v1/sales/delivery-orders/'.$made['id'], ['lines' => [['product' => (string) $this->product->public_id, 'qty' => '6']]])
+            ->assertStatus(422);
+    }
+
     /** ⭐ ফোনের সুপারভাইজার — "আমার সইয়ের অপেক্ষায়" তালিকায় DO, আর সই অনুমোদন-বাক্সের একই দরজায়; অচেনা কর্মী দেখেন না */
     public function test_on_the_phone_the_supervisor_sees_it_awaiting_and_signs_a_stranger_does_not_see_it(): void
     {
