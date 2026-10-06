@@ -9,6 +9,7 @@ use App\Core\Concerns\HasPublicId;
 use App\Core\Concerns\IsAudited;
 use App\Core\Concerns\ListedInViewedBranch;
 use App\Core\Contracts\Drillable;
+use App\Core\Support\DocumentStatus;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Models\Loan;
 use App\Modules\MasterData\Models\Person;
@@ -115,7 +116,7 @@ class Deposit extends Model implements Drillable
         'branch_name', 'reference_no', 'held_by', 'person_id', 'principal',
         'profit_rate', 'tax_rate', 'return_word', 'opened_on', 'matures_on', 'on_maturity',
         'instalment_amount', 'instalment_day', 'payout_account_id', 'account_id',
-        'funded_from_account_id', 'pledged_to_loan_id', 'status', 'closed_on',
+        'funded_from_account_id', 'pledged_to_loan_id', 'pledged_to_facility_id', 'status', 'closed_on',
         'note', 'cancel_reason', 'cancelled_at', 'cancelled_by', 'created_by',
     ];
 
@@ -242,6 +243,23 @@ class Deposit extends Model implements Drillable
     }
 
     /**
+     * ⭐ যে ব্যাংক ঋণের বিপরীতে এই জমাটা বন্ধক — ব্যাংক ঋণের নিজের খাতায় ([[BankFacility]]; অর্থ-মডিউলের পরিকল্পনা ৪.৫,
+     * ৬ অক্টোবর ২০২৬)। ⓘ নতুন বন্ধক এখানেই; পুরনো [[pledgedToLoan()]] পড়া থাকে, যতদিন পুরনো তথ্য আছে।
+     *
+     * @return BelongsTo<\App\Modules\Finance\Models\BankFacility, $this>
+     */
+    public function pledgedToFacility(): BelongsTo
+    {
+        return $this->belongsTo(BankFacility::class, 'pledged_to_facility_id');
+    }
+
+    /** কোনো ঋণে বাঁধা কি না — নতুন ব্যাংক ঋণে বা পুরনো ঋণের সারিতে */
+    public function isPledged(): bool
+    {
+        return $this->pledged_to_facility_id !== null || $this->pledged_to_loan_id !== null;
+    }
+
+    /**
      * টাকাটা আছে, কিন্তু হাতে নেই।
      *
      * ---- কেন এটা আলাদা করে বলা লাগে ----
@@ -254,6 +272,15 @@ class Deposit extends Model implements Drillable
      */
     public function isLocked(): bool
     {
+        /*
+         * ⭐ ব্যাংক ঋণে বাঁধা — ঋণটা চালু থাকা পর্যন্ত আটকানো (৬ অক্টোবর ২০২৬)। ⓘ ব্যাংক জামানত ছাড়ে ঋণ বন্ধের চিঠিতে, বাকি
+         * শূন্যে নামলে নয় — সিসিতে বাকি রোজ শূন্যে নামে, আর মেয়াদি ঋণ শোধের পরেও বন্ধ লেখা না হওয়া পর্যন্ত কাগজ ব্যাংকেই থাকে
+         * ([[BankFacilityService::close()]])।
+         */
+        if ($this->pledged_to_facility_id !== null) {
+            return $this->pledgedToFacility !== null && $this->pledgedToFacility->status === DocumentStatus::CONFIRMED;
+        }
+
         if ($this->pledged_to_loan_id === null) {
             return false;
         }

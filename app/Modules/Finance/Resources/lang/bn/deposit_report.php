@@ -54,4 +54,6 @@ return [
     'lien_state' => 'অবস্থা',
     'lien_locked' => 'আটকানো',
     'lien_free' => 'ছাড়ার যোগ্য',
+
+    'pledge_needs_live_facility' => 'বন্ধকের ঋণটা এই কোম্পানির চালু ব্যাংক ঋণ হতে হবে।',
 ];

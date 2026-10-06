@@ -129,6 +129,11 @@ final class DepositService
                     ? (($data['pledged_to_loan_id'] ?? '') ?: null)
                     : null,
 
+                // ⭐ ব্যাংক ঋণের বিপরীতে বন্ধক — একই নিয়ম: কেবল ব্যবসার জমা, আর কেবল এই কোম্পানির চালু ব্যাংক ঋণ ([[liveFacility()]])
+                'pledged_to_facility_id' => ($data['held_by'] === Deposit::BUSINESS)
+                    ? $this->liveFacility($data['pledged_to_facility_id'] ?? null)
+                    : null,
+
                 'status' => Deposit::ACTIVE,
                 'created_by' => auth()->id(),
             ]);
@@ -471,6 +476,27 @@ final class DepositService
      * কারণ ফার্ম সঞ্চয়পত্র কিনতেই পারে না — টাকাটা ব্যবসা থেকে বেরিয়ে
      * গেছে, আর কাগজটা কেবল জানার জন্য এখানে থাকে।
      */
+    /**
+     * ⛔ বন্ধকের ব্যাংক ঋণ — এই কোম্পানির আর চালু। ⓘ অন্য কোম্পানির বা বন্ধ ঋণের বিপরীতে বন্ধক লেখা যেত না-থাকা দায়ের জামানত,
+     * আর জমাটা চিরদিন "আটকানো" দেখাত না, অথবা ভুল কোম্পানির পাতায় নামত।
+     */
+    private function liveFacility(mixed $id): ?int
+    {
+        if ($id === null || $id === '') {
+            return null;
+        }
+
+        $facility = \App\Modules\Finance\Models\BankFacility::query()->live()->find($id);
+
+        if ($facility === null) {
+            throw ValidationException::withMessages([
+                'pledged_to_facility_id' => __('finance::deposit_report.pledge_needs_live_facility'),
+            ]);
+        }
+
+        return (int) $facility->id;
+    }
+
     private function assetHead(string $heldBy): Account
     {
         return $this->head($heldBy === Deposit::OWNER

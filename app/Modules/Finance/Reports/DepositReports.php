@@ -260,8 +260,9 @@ final class DepositReports
      * বেশি হলে। বাকি = [[Loan::outstanding()]]-এর একই উৎস: ঋণের আসলের খাতে তার নিজের চলাচল আর কিস্তির সারি, নেওয়া ঋণে
      * ক্রেডিট − ডেবিট। দাবি দুটোকে প্রতিটা জমায় মেলায়, তাই পাতা আর রিপোর্ট কখনো আলাদা কথা বলে না।
      *
-     * ⚠️ জমা এখন পুরনো ঋণের সারিতে (`acc_loans`) বাঁধা; ব্যাংক ঋণের নতুন খাতায় (`fin_bank_facilities`) বাঁধার ঘর আসছে
-     * (সমন্বয়কের সিদ্ধান্ত প্র৪, ৬ অক্টোবর ২০২৬) — তখন এই রিপোর্ট দুটোই পড়বে।
+     * ⭐ দুই সংযোগই: ব্যাংক ঋণ (`pledged_to_facility_id`, ৬ অক্টোবর ২০২৬ থেকে) আর পুরনো ঋণের সারি (`pledged_to_loan_id`)।
+     * ব্যাংক ঋণে আটকানো = ঋণটা চালু ([[Deposit::isLocked()]]); বাকি = [[BankFacilityService::owedOn()]] — সেটা খাতা আর পুরনো
+     * খোলা জের মিলিয়ে PHP-তে গোনা, তাই এখানে কেবল অবস্থা আর সীমা; বাকির ঘর পুরনো ঋণের জন্য।
      */
     private static function liens(): ReportDefinition
     {
@@ -292,15 +293,28 @@ final class DepositReports
                     .$pdo->quote((string) __('finance::deposit_report.lien_locked')).' ELSE '
                     .$pdo->quote((string) __('finance::deposit_report.lien_free')).' END';
 
-                return self::openOn($f, (string) $f['to'])
+                $old = self::openOn($f, (string) $f['to'])
                     ->join('acc_loans as l', 'l.id', '=', 'd.pledged_to_loan_id')
                     ->leftJoinSub($owed, 'o', 'o.loan_id', '=', 'l.id')
+                    ->whereNull('d.pledged_to_facility_id')
                     ->where('d.held_by', Deposit::BUSINESS)
                     ->selectRaw('d.document_no as document_no, '.$pdo->quote(Deposit::drillSourceType()).' as source_type, d.id as source_id, '
                         .'d.institution as institution, d.principal as principal, d.matures_on as matures_on, '
-                        ."CONCAT(l.lender, ' · ', l.document_no) as loan, l.sanctioned as sanctioned, COALESCE(o.owed, 0) as owed, {$state} as state")
-                    ->orderBy('l.lender')
-                    ->orderBy('d.id');
+                        ."CONCAT(l.lender, ' · ', l.document_no) as loan, l.sanctioned as sanctioned, COALESCE(o.owed, 0) as owed, {$state} as state");
+
+                // ⭐ ব্যাংক ঋণে — চালু থাকা পর্যন্ত আটকানো; বাকি এখানে নয় (ব্যাংক ঋণের পাতায়)
+                $bank = self::openOn($f, (string) $f['to'])
+                    ->join('fin_bank_facilities as bf', 'bf.id', '=', 'd.pledged_to_facility_id')
+                    ->where('bf.company_id', $f['company_id'])
+                    ->where('d.held_by', Deposit::BUSINESS)
+                    ->selectRaw('d.document_no as document_no, '.$pdo->quote(Deposit::drillSourceType()).' as source_type, d.id as source_id, '
+                        .'d.institution as institution, d.principal as principal, d.matures_on as matures_on, '
+                        ."TRIM(BOTH ' · ' FROM CONCAT(COALESCE(bf.bank, ''), ' · ', COALESCE(bf.document_no, ''))) as loan, "
+                        .'bf.limit_amount as sanctioned, NULL as owed, '
+                        .'CASE WHEN bf.status = '.$pdo->quote(DocumentStatus::CONFIRMED).' THEN '.$pdo->quote((string) __('finance::deposit_report.lien_locked'))
+                        .' ELSE '.$pdo->quote((string) __('finance::deposit_report.lien_free')).' END as state');
+
+                return DB::query()->fromSub($bank->unionAll($old), 'x')->orderBy('x.loan')->orderBy('x.source_id');
             },
             columns: [
                 [

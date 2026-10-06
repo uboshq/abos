@@ -100,9 +100,9 @@ class BankFacility extends Model implements Drillable
     /**
      * জামানতের ধরন।
      *
-     * ⓘ `LIEN` মানে আমাদের নিজের এফডিআর ব্যাংকে বন্ধক — আর ঐ জোড়াটা
-     * [[Deposit]]-এ `pledged_to_loan_id` নামে **আগে থেকেই আছে**। ⭐ তাই
-     * নতুন কিছু বানানো হয়নি।
+     * ⓘ `LIEN` মানে আমাদের নিজের এফডিআর ব্যাংকে বন্ধক — জোড়াটা জমার দিকে, [[Deposit]]-এর `pledged_to_facility_id`
+     * (৬ অক্টোবর ২০২৬)। ⛔ আগে এখানে লেখা ছিল জোড়াটা `pledged_to_loan_id` নামে আছে — কিন্তু সেটা পুরনো ঋণের সারিতে
+     * (`acc_loans`) যায়, এই খাতায় নয়; তাই "কোন FDR কোন ব্যাংক ঋণে" প্রশ্নের উত্তর ছিল না।
      */
     public const UNSECURED = 'unsecured';
 

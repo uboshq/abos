@@ -120,7 +120,7 @@ class TheFdBehindTheLoanTest extends TestCase
         return $loan->refresh();
     }
 
-    private function fd(string $amount, ?int $pledgedTo = null, string $heldBy = Deposit::BUSINESS): Deposit
+    private function fd(string $amount, ?int $pledgedTo = null, string $heldBy = Deposit::BUSINESS, ?int $facility = null): Deposit
     {
         return app(DepositService::class)->open([
             'kind_id' => DepositKind::query()->where('code', 'FDR')->firstOrFail()->id,
@@ -132,6 +132,7 @@ class TheFdBehindTheLoanTest extends TestCase
             'matures_on' => '2027-08-01',
             'funded_from_account_id' => $this->cash()->id,
             'pledged_to_loan_id' => $pledgedTo,
+            'pledged_to_facility_id' => $facility,
         ]);
     }
 
@@ -263,6 +264,70 @@ class TheFdBehindTheLoanTest extends TestCase
         $this->assertFalse($rows->has($owners->id), '⛔ মালিকের নামের জমা ব্যবসার জামানতে');
 
         $this->get(route('finance.deposit.report.show', ['slug' => 'liens']))->assertOk()->assertSee('Sonali Bank');
+    }
+
+    /**
+     * ⭐ ব্যাংক ঋণের বিপরীতে বন্ধক — অর্থ-মডিউলের পরিকল্পনা ৪.৫ (৬ অক্টোবর ২০২৬, সমন্বয়কের সিদ্ধান্ত প্র৪)।
+     *
+     * ⛔ ঋণটা চালু থাকা পর্যন্ত জমা আটকানো আর ভাঙানো যায় না; ঋণ বন্ধ হলে ছাড়া পায়। বিপজ্জনক ইনপুট: অন্য কোম্পানির ঋণ, বন্ধ
+     * ঋণ, মালিকের নামের জমা। জামানতের রিপোর্ট দুই সংযোগই দেখায়, আর অবস্থা প্রতিটা জমায় [[Deposit::isLocked()]]-এর হুবহু।
+     */
+    public function test_a_deposit_pledged_to_a_bank_loan_is_held_until_the_loan_closes(): void
+    {
+        $this->putMoneyIn($this->cash(), '1000000', '2026-07-31');
+        $facility = $this->facility('Pubali Bank', 'PBL-CC-1');
+        $closed = $this->facility('Janata Bank', 'JB-TL-9', \App\Core\Support\DocumentStatus::CLOSED);
+        $theirs = CompanyContext::forCompany((int) Company::query()->where('code', 'FMART')->value('id'),
+            fn () => $this->facility('Their Bank', 'THEIR-1'));
+
+        $fd = $this->fd('250000', facility: $facility->id);
+        $this->assertSame((int) $facility->id, (int) $fd->pledged_to_facility_id);
+        $this->assertTrue($fd->isLocked(), 'চালু ব্যাংক ঋণে বাঁধা জমা আটকানো নয়');
+
+        // ⛔ বাঁধা থাকতে ভাঙানো যায় না
+        try {
+            app(DepositService::class)->close($fd, ['amount' => '250000', 'money_account_id' => $this->cash()->id, 'closed_on' => now()->toDateString()]);
+            $this->fail('⛔ চালু ব্যাংক ঋণের জামানত ভাঙানো গেল।');
+        } catch (\Illuminate\Validation\ValidationException) {
+        }
+
+        // ⛔ বন্ধ ঋণে, অন্য কোম্পানির ঋণে নতুন বন্ধক নয়; মালিকের জমায় বন্ধক বসে না
+        foreach ([[$closed->id, 'বন্ধ ঋণে'], [$theirs->id, 'অন্য কোম্পানির ঋণে']] as [$id, $why]) {
+            try {
+                $this->fd('10000', facility: $id);
+                $this->fail("⛔ {$why} বন্ধক লেখা গেল।");
+            } catch (\Illuminate\Validation\ValidationException $e) {
+                $this->assertArrayHasKey('pledged_to_facility_id', $e->errors(), $why);
+            }
+        }
+        $this->assertNull($this->fd('20000', heldBy: Deposit::OWNER, facility: $facility->id)->pledged_to_facility_id, '⛔ মালিকের জমা ব্যবসার ঋণে বাঁধা গেল');
+
+        // ⓘ রিপোর্ট আর জমার নিয়ম — একই কথা
+        $state = fn () => collect(app(\App\Core\Engines\Report\ReportEngine::class)->run(\App\Modules\Finance\Reports\DepositReports::LIENS,
+            ['from' => now()->toDateString(), 'to' => now()->toDateString()])->rows)->map(fn ($r) => (array) $r)->keyBy('source_id')->get($fd->id);
+        $this->assertSame(__('finance::deposit_report.lien_locked'), $state()['state']);
+        $this->assertStringContainsString('Pubali Bank', $state()['loan']);
+
+        // ⓘ জমার ফর্মে চালু ব্যাংক ঋণের তালিকা — বন্ধ ঋণ নয়
+        $this->get(route('finance.deposit.create', ['issuer' => DepositKind::BANK]))->assertOk()
+            ->assertSee('name="pledged_to_facility_id"', false)->assertSee('PBL-CC-1')->assertDontSee('JB-TL-9');
+
+        // ⓘ ঋণ বন্ধ — জমা ছাড়া পায়, রিপোর্টও তাই বলে
+        $facility->update(['status' => \App\Core\Support\DocumentStatus::CLOSED, 'closed_on' => now()->toDateString()]);
+        $fd->refresh();
+        $this->assertFalse($fd->isLocked(), 'বন্ধ ঋণের জামানত এখনো আটকানো');
+        $this->assertSame(__('finance::deposit_report.lien_free'), $state()['state']);
+
+        $this->get(route('finance.deposit.index', ['issuer' => DepositKind::BANK, 'tab' => 'pledged']))->assertOk()->assertSee($fd->document_no);
+    }
+
+    private function facility(string $bank, string $no, string $status = \App\Core\Support\DocumentStatus::CONFIRMED): \App\Modules\Finance\Models\BankFacility
+    {
+        return \App\Modules\Finance\Models\BankFacility::query()->create([
+            'company_id' => CompanyContext::id(), 'document_no' => $no, 'kind' => \App\Modules\Finance\Models\BankFacility::CC,
+            'bank' => $bank, 'sanctioned_on' => now()->subMonths(2)->toDateString(), 'limit_amount' => '1000000', 'interest_rate' => '11',
+            'status' => $status, 'closed_on' => $status === \App\Core\Support\DocumentStatus::CLOSED ? now()->toDateString() : null,
+        ]);
     }
 
     public function test_paying_off_the_loan_frees_the_fd(): void

@@ -199,7 +199,17 @@
                  মালিক নিজের নামে যেটা রেখেছেন সেটা ব্যবসার সম্পদ নয়,
                  তাই ব্যবসার ধারের জামানত হিসেবে ওটা দেখানো মানে এমন
                  কিছু গুনে ফেলা যা ব্যবসার নয়। --}}
-            @if ($pledgeableLoans->isNotEmpty())
+            {{-- ⭐ ব্যাংক ঋণের বিপরীতে — নতুন বন্ধক এখানেই (অর্থ-মডিউলের পরিকল্পনা ৪.৫, ৬ অক্টোবর ২০২৬); পুরনো ঋণের তালিকা
+                 কেবল তখন, যখন ব্যাংক ঋণের খাতায় এখনো কিছু নেই --}}
+            @if (($pledgeableFacilities ?? collect())->isNotEmpty())
+                <div x-cloak x-show="heldBy === 'business'" class="sm:col-span-2">
+                    <x-ui.select name="pledged_to_facility_id"
+                                 :label="__('finance::field.pledged_to_loan')"
+                                 :options="$pledgeableFacilities->mapWithKeys(fn ($f) => [$f->id => trim($f->bank.' — '.$f->document_no, ' —')])"
+                                 :placeholder="__('finance::field.not_pledged')"
+                                 :selected="old('pledged_to_facility_id')" />
+                </div>
+            @elseif ($pledgeableLoans->isNotEmpty())
                 <div x-cloak x-show="heldBy === 'business'" class="sm:col-span-2">
                     <x-ui.select name="pledged_to_loan_id"
                                  :label="__('finance::field.pledged_to_loan')"

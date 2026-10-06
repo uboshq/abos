@@ -8,7 +8,17 @@
 
     ⓘ বন্ধক না থাকলে "খালি" — ওটা লিংক নয়, কারণ যাওয়ার জায়গা নেই।
 --}}
-@if ($deposit->pledged_to_loan_id === null)
+@if ($deposit->pledged_to_facility_id !== null)
+    {{-- ⭐ ব্যাংক ঋণের খাতায় (৬ অক্টোবর ২০২৬) — নতুন বন্ধক এখানে --}}
+    @if ($deposit->pledgedToFacility === null)
+        —
+    @else
+        <a href="{{ route('finance.bank_facility.show', $deposit->pledged_to_facility_id) }}"
+           class="text-(--color-brand-500) underline-offset-2 hover:underline">
+            {{ trim($deposit->pledgedToFacility->bank.' · '.$deposit->pledgedToFacility->document_no, ' ·') }}
+        </a>
+    @endif
+@elseif ($deposit->pledged_to_loan_id === null)
     {{ __('finance::field.dep_free') }}
 @elseif ($deposit->pledgedToLoan === null)
     {{-- ⚠️ ঋণটা আর নেই — নম্বরও নেই, তাই চুপ করে ড্যাশ --}}

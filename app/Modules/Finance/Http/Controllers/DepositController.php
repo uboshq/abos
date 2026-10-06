@@ -177,7 +177,7 @@ class DepositController extends Controller implements HasMiddleware
                     ->count(),
 
                 'pledged' => Deposit::query()->inViewedBranch()->issuedBy($issuer)->open()
-                    ->whereNotNull('pledged_to_loan_id')
+                    ->where(fn ($p) => $p->whereNotNull('pledged_to_loan_id')->orWhereNotNull('pledged_to_facility_id'))
                     ->count(),
 
                 // ⓘ কয়টা প্রতিষ্ঠান — ঠিক যতটা সারি ওই ট্যাবে
@@ -223,7 +223,7 @@ class DepositController extends Controller implements HasMiddleware
                     ->when($tab === 'maturing', fn ($q) => $q
                         ->whereNotNull('matures_on')
                         ->where('matures_on', '<=', $maturingBy))
-                    ->when($tab === 'pledged', fn ($q) => $q->whereNotNull('pledged_to_loan_id'))
+                    ->when($tab === 'pledged', fn ($q) => $q->where(fn ($p) => $p->whereNotNull('pledged_to_loan_id')->orWhereNotNull('pledged_to_facility_id')))
                     ->count()])
                 ->all(),
 
@@ -236,7 +236,7 @@ class DepositController extends Controller implements HasMiddleware
                 ->when($tab === 'maturing', fn ($q) => $q
                     ->whereNotNull('matures_on')
                     ->where('matures_on', '<=', $maturingBy))
-                ->when($tab === 'pledged', fn ($q) => $q->whereNotNull('pledged_to_loan_id'))
+                ->when($tab === 'pledged', fn ($q) => $q->where(fn ($p) => $p->whereNotNull('pledged_to_loan_id')->orWhereNotNull('pledged_to_facility_id')))
                 ->when($term !== '', fn ($q) => $q->where(
                     fn ($w) => $w->where('document_no', 'like', "%{$term}%")
                         ->orWhere('institution', 'like', "%{$term}%")
@@ -305,6 +305,9 @@ class DepositController extends Controller implements HasMiddleware
                 ->whereIn('kind', [Loan::TERM, Loan::CC])
                 ->orderByDesc('id')
                 ->get(),
+            // ⭐ চালু ব্যাংক ঋণ — নতুন বন্ধক এখানে (অর্থ-মডিউলের পরিকল্পনা ৪.৫, ৬ অক্টোবর ২০২৬)
+            'pledgeableFacilities' => \App\Modules\Finance\Models\BankFacility::query()->live()
+                ->orderBy('bank')->orderByDesc('id')->get(),
         ]);
     }
 
@@ -460,6 +463,8 @@ class DepositController extends Controller implements HasMiddleware
              * ভরসা করে নেওয়া সিদ্ধান্তই সবচেয়ে দামি ভুল।
              */
             'pledged_to_loan_id' => ['nullable', 'integer', 'exists:acc_loans,id'],
+            // ⭐ ব্যাংক ঋণের বিপরীতে — চালু আর এই কোম্পানির কি না সার্ভিস দেখে ([[DepositService::liveFacility()]])
+            'pledged_to_facility_id' => ['nullable', 'integer'],
 
             'note' => ['nullable', 'string', 'max:500'],
         ]);

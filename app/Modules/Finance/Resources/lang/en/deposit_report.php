@@ -50,4 +50,6 @@ return [
     'lien_state' => 'State',
     'lien_locked' => 'Held',
     'lien_free' => 'Can be released',
+
+    'pledge_needs_live_facility' => 'The pledge must be against a running bank loan of this company.',
 ];
