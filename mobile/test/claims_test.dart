@@ -49,6 +49,12 @@ void main() {
     expect((await repository.menuFor(worker)).map((i) => i.key), contains('hr.claim.self'));
     expect((await repository.menuFor(other)).map((i) => i.key), isNot(contains('hr.claim.self')));
     expect(ModuleGate.moduleOfPath['claims'], 'hr');
+
+    // ⛔ ফোনে HR বন্ধ (লাইভে mobile.modules.hr বসানো নেই) — টাইলই নেই, ৪০৩-এর বার্তা নয় (সমন্বয়ক, ৭ অক্টোবর ২০২৬)
+    final tiles = await repository.menuFor(worker);
+    expect(ModuleGate.visible(tiles, {'sales'}).map((i) => i.key), isNot(contains('hr.claim.self')));
+    expect(ModuleGate.visible(tiles, {'sales', 'hr'}).map((i) => i.key), contains('hr.claim.self'));
+    expect(ModuleGate.allows({'sales'}, 'claims'), isFalse);
   });
 
   test('the server row reads; the label is the server\'s, never a raw key', () {
