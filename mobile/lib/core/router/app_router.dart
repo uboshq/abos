@@ -9,6 +9,7 @@ import '../../features/customers/customer_detail_screen.dart';
 import '../../features/customers/customer_list_screen.dart';
 import '../../features/customers/deposit_request_screen.dart';
 import '../../features/customers/due_list_screen.dart';
+import '../../features/notifications/notifications_screen.dart';
 import '../../features/home/home_shell.dart';
 import '../orders/delivery_order_api.dart';
 import '../../features/delivery_orders/delivery_order_screens.dart';
@@ -233,6 +234,11 @@ final goRouterProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: 'sync-status',
             builder: (context, state) => const SyncStatusScreen(),
+          ),
+          // ⭐ মাথার ঘণ্টা — নিজের নোটিফিকেশন (মালিক, ৬ অক্টোবর ২০২৬)
+          GoRoute(
+            path: 'notifications',
+            builder: (context, state) => const NotificationsScreen(),
           ),
         ],
       ),

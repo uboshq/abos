@@ -11,6 +11,7 @@ import '../../core/menu/menu_item.dart';
 import '../../core/menu/menu_repository.dart';
 import '../../core/menu/module_gate.dart';
 import '../../core/orders/delivery_order_api.dart';
+import '../../core/records/notification_record.dart';
 import '../../core/records/today_record.dart';
 import '../../core/sync_engine/sync_engine.dart';
 import '../../core/theme/app_colors.dart';
@@ -52,6 +53,7 @@ class HomeShell extends ConsumerStatefulWidget {
     this.now,
     this.reloadProfile,
     this.switcher,
+    this.fetchNotifications,
   });
 
   /// Seams — the real ones need a server or a secure store.
@@ -66,6 +68,9 @@ class HomeShell extends ConsumerStatefulWidget {
   /// `GET /me` again, for the picker after a company change.
   final Future<SessionProfile?> Function()? reloadProfile;
   final WorkspaceSwitcher? switcher;
+
+  /// Seam for the bell's count — the real one needs a server.
+  final Future<NotificationPage> Function()? fetchNotifications;
 
   @override
   ConsumerState<HomeShell> createState() => _HomeShellState();
@@ -84,6 +89,18 @@ class _HomeShellState extends ConsumerState<HomeShell> {
   String? _designation;
   String? _avatarUrl;
 
+  /// How many bell messages are unread — null until the server has said.
+  int? _unread;
+
+  Future<void> _loadUnread() async {
+    try {
+      final page = await (widget.fetchNotifications ?? NotificationApi.fetch)();
+      if (mounted) setState(() => _unread = page.unread);
+    } catch (_) {
+      // ⓘ পুরনো সার্ভার বা সিগন্যাল নেই — ঘণ্টা থাকে, কেবল গোনা ছাড়া
+    }
+  }
+
   /// Bumped after a move, so the day's figures are asked for again — they
   /// belong to the company and branch they were fetched for.
   int _generation = 0;
@@ -92,6 +109,7 @@ class _HomeShellState extends ConsumerState<HomeShell> {
   void initState() {
     super.initState();
     _load();
+    _loadUnread();
   }
 
   Future<void> _load() async {
@@ -204,8 +222,21 @@ class _HomeShellState extends ConsumerState<HomeShell> {
               : _designation,
           onTap: (_profile?.canSwitch ?? false) ? _openPicker : null,
         ),
+        // ⭐ মালিক, ৬ অক্টোবর ২০২৬: সবুজ মাথার একদম ডানে ব্যবহারকারীর ছবি (চাপলে প্রোফাইল), তার পাশে ঘণ্টা
         actions: [
           _SyncAction(onTap: () => context.go('/home/sync-status')),
+          _BellAction(
+            unread: _unread,
+            onTap: () async {
+              await context.push('/home/notifications');
+              if (mounted) _loadUnread();
+            },
+          ),
+          _AvatarAction(
+            name: user.name,
+            avatarUrl: _avatarUrl,
+            onTap: () => setState(() => _tab = 2),
+          ),
           const SizedBox(width: AppSpacing.xs),
         ],
       ),
@@ -308,6 +339,57 @@ class _Header extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
               style: const TextStyle(fontSize: 12, color: Colors.white70)),
       ],
+    );
+  }
+}
+
+/// ⭐ The bell — this person's messages (server `NotificationApiController`),
+/// with how many are unread.
+class _BellAction extends StatelessWidget {
+  const _BellAction({required this.unread, required this.onTap});
+
+  final int? unread;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final count = unread ?? 0;
+    return IconButton(
+      key: const ValueKey('header-bell'),
+      tooltip: 'নোটিফিকেশন',
+      onPressed: onTap,
+      icon: Badge(
+        isLabelVisible: count > 0,
+        label: Text(count > 99 ? '99+' : '$count'),
+        child: const Icon(Icons.notifications_outlined),
+      ),
+    );
+  }
+}
+
+/// ⭐ The person's photo at the far right of the green header — a tap opens
+/// the profile (the "আরও" tab, which is the profile page).
+class _AvatarAction extends StatelessWidget {
+  const _AvatarAction({required this.name, required this.avatarUrl, required this.onTap});
+
+  final String name;
+  final String? avatarUrl;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return IconButton(
+      key: const ValueKey('header-avatar'),
+      tooltip: 'প্রোফাইল',
+      onPressed: onTap,
+      icon: CircleAvatar(
+        radius: 15,
+        backgroundColor: Colors.white,
+        foregroundColor: AppColors.primary,
+        foregroundImage: avatarUrl == null ? null : NetworkImage(avatarUrl!),
+        child: Text(name.trim().isEmpty ? '?' : name.trim().characters.first,
+            style: const TextStyle(fontWeight: FontWeight.w700)),
+      ),
     );
   }
 }

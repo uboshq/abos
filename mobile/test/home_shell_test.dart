@@ -103,12 +103,22 @@ void main() {
     expect(find.textContaining('টেষ্ট কোম্পানী লিমিটেড · Head Office'), findsNothing);
   });
 
-  testWidgets('the greeting looks at the clock', (tester) async {
+  // ⭐ The owner, 6 Oct 2026: no greeting, no name on the home — the photo sits
+  // at the far right of the green header and opens the profile; the bell
+  // sits beside it.
+  testWidgets('no greeting on the home; the photo and the bell are in the header',
+      (tester) async {
     await tester.pumpWidget(shell(now: () => DateTime(2026, 9, 27, 20, 15)));
     await tester.pumpAndSettle();
 
-    expect(find.text('শুভ রাত্রি, করিম'), findsOneWidget);
-    expect(find.textContaining('শুভ সকাল'), findsNothing);
+    expect(find.textContaining('শুভ রাত্রি'), findsNothing);
+    expect(find.byKey(const ValueKey('header-bell')), findsOneWidget);
+    expect(find.byKey(const ValueKey('header-avatar')), findsOneWidget);
+
+    await tester.tap(find.byKey(const ValueKey('header-avatar')));
+    await tester.pumpAndSettle();
+    expect(find.text('বেরিয়ে যান'), findsOneWidget,
+        reason: 'the photo opens the profile');
   });
 
   testWidgets('the figures and the hour they were true are on the home tab',
@@ -125,14 +135,13 @@ void main() {
     expect(find.text('হাতে নগদ'), findsNothing);
   });
 
-  testWidgets('the day\'s work is one tap away, only what this person may open',
-      (tester) async {
+  // ⛔ The shortcut row is gone (owner, 6 Oct 2026: "ei sort cutgulo dewar
+  // dorkar nai") — the অ্যাপ tab holds every door.
+  testWidgets('no shortcut row on the home', (tester) async {
     await tester.pumpWidget(shell());
     await tester.pumpAndSettle();
 
-    // A quick action for the tile that exists, and none for one that does not.
-    expect(find.widgetWithText(ActionChip, 'নতুন অর্ডার'), findsOneWidget);
-    expect(find.widgetWithText(ActionChip, 'হাজিরা'), findsNothing);
+    expect(find.byType(ActionChip), findsNothing);
   });
 
   testWidgets('the tabs are in Bangla and each one opens', (tester) async {

@@ -526,9 +526,10 @@ class _MoneyBoxCard extends StatelessWidget {
               Text(label,
                   style: const TextStyle(
                       fontSize: 12, color: AppColors.onSurfaceMuted)),
-              Text(Money.taka(value),
+              _OneLine(Text(Money.taka(value),
+                  maxLines: 1,
                   style: const TextStyle(
-                      fontSize: 13.5, fontWeight: FontWeight.w700)),
+                      fontSize: 13.5, fontWeight: FontWeight.w700))),
             ],
           ),
         );
@@ -539,11 +540,12 @@ class _MoneyBoxCard extends StatelessWidget {
         children: [
           const _CardHeading('হাতে ও ব্যাংকে মোট'),
           const SizedBox(height: AppSpacing.xs),
-          Text(Money.taka(box.amount),
+          _OneLine(Text(Money.taka(box.amount),
+              maxLines: 1,
               style: const TextStyle(
                   fontSize: 26,
                   fontWeight: FontWeight.w800,
-                  color: AppColors.onSurface)),
+                  color: AppColors.onSurface))),
           const SizedBox(height: AppSpacing.sm),
           Row(children: [
             part('নগদ', box.cash),
@@ -557,9 +559,11 @@ class _MoneyBoxCard extends StatelessWidget {
   }
 }
 
-/// ⭐ The principal commission — each principal's current cycle: what came
-/// in, the commission at its rate, what was paid, and the balance in the
-/// report's own words. Nothing is counted here; these are the report's rows.
+/// ⭐ The principal commission — the owner's column order, 6 Oct 2026: the
+/// principal, total inflow (this cycle so far), commission, sent to the
+/// principal, inflow still held (the balance without its sign), and a remark
+/// with the period ("দিতে হবে ৳…" or "কোম্পানির কাছে পাব ৳…"). Nothing is
+/// counted here; these are the report's own rows.
 class _PrincipalsCard extends StatelessWidget {
   const _PrincipalsCard({required this.lines});
 
@@ -567,6 +571,27 @@ class _PrincipalsCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    Widget figure(String label, double? value, {Color? colour}) => Padding(
+          padding: const EdgeInsets.symmetric(vertical: 2),
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(label,
+                    style: const TextStyle(
+                        fontSize: 12.5, color: AppColors.onSurfaceMuted)),
+              ),
+              Flexible(
+                child: _OneLine(Text(Money.taka(value),
+                    maxLines: 1,
+                    style: TextStyle(
+                        fontSize: 13.5,
+                        fontWeight: FontWeight.w700,
+                        color: colour))),
+              ),
+            ],
+          ),
+        );
+
     return _TapCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -575,26 +600,40 @@ class _PrincipalsCard extends StatelessWidget {
           for (final line in lines) ...[
             const SizedBox(height: AppSpacing.sm),
             Text(line.name,
+                key: const ValueKey('principal-name'),
                 style: const TextStyle(fontWeight: FontWeight.w700)),
-            Text('${line.period} · ${line.basisRate}',
+            const SizedBox(height: 2),
+            figure('মোট ইনফ্লো', line.inflow),
+            figure('কমিশন (${line.basisRate})', line.commission),
+            figure('প্রিন্সিপালকে পাঠানো', line.paid),
+            figure('বাকি ইনফ্লো', (line.balance ?? 0).abs(),
+                colour: (line.balance ?? 0) > 0
+                    ? AppColors.danger
+                    : AppColors.success),
+            Text('মন্তব্য: ${line.balanceLabel} · ${line.period}',
+                key: const ValueKey('principal-remarks'),
                 style: const TextStyle(
                     fontSize: 12, color: AppColors.onSurfaceMuted)),
-            const SizedBox(height: 2),
-            Text(
-              'আদায় ${Money.taka(line.inflow)} · '
-              'কমিশন ${Money.taka(line.commission)} · '
-              'দেওয়া ${Money.taka(line.paid)}',
-              style: const TextStyle(fontSize: 12.5),
-            ),
-            Text(line.balanceLabel,
-                style: TextStyle(
-                    fontWeight: FontWeight.w700,
-                    color: (line.balance ?? 0) > 0
-                        ? AppColors.danger
-                        : AppColors.success)),
           ],
         ],
       ),
+    );
+  }
+}
+
+/// A figure that stays on one line: it shrinks to fit rather than breaking
+/// in the middle of the number.
+class _OneLine extends StatelessWidget {
+  const _OneLine(this.child);
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return FittedBox(
+      fit: BoxFit.scaleDown,
+      alignment: AlignmentDirectional.centerStart,
+      child: child,
     );
   }
 }
@@ -705,9 +744,11 @@ class _Stat extends StatelessWidget {
             style: const TextStyle(
                 fontSize: 12.5, color: AppColors.onSurfaceMuted)),
         const SizedBox(height: 2),
-        Text(value,
+        // ⭐ অঙ্ক এক লাইনে, যত বড়ই হোক — ছোট হয়ে বসে, ভাঙে না (মালিক, ৬ অক্টোবর ২০২৬: "৳140,255,926.33" দুই লাইনে)
+        _OneLine(Text(value,
+            maxLines: 1,
             style: TextStyle(
-                fontSize: 20, fontWeight: FontWeight.w700, color: colour)),
+                fontSize: 20, fontWeight: FontWeight.w700, color: colour))),
         if (detail != null)
           Text(detail!,
               style: const TextStyle(
