@@ -256,8 +256,25 @@ class RentalContractService
              * ⛔ পুরোটা আবার খরচে বসালে মাসের ভাড়া দুইবার খরচ হত, আর ২১৪১ কোনোদিন শূন্যে নামত না।
              */
             $accrued = RentalAccrualService::settles($contract, $month);
-            $toExpense = $accrued === null ? $rent : bcsub($rent, $accrued, 4);
+
+            /*
+             * ⛔ সামনের মাসের ভাড়া — অগ্রিম, খরচ নয় (পুরো-ERP অডিট, ৬ অক্টোবর ২০২৬ ⛔৬)। ⓘ আগে মার্চের ভাড়া জানুয়ারিতে দিলে মার্চের
+             * খরচ জানুয়ারিতে পড়ত (নগদ ভিত্তি)। এখন ১১৩৭-এ বসে, আর মাসটা এলে মাসের জমা সেটা খরচে সরায় ([[RentalAccrualService::run()]])।
+             */
+            $ahead = $accrued === null && $month->gt(Carbon::today()->startOfMonth());
+            $toExpense = match (true) {
+                $ahead => '0',
+                $accrued === null => $rent,
+                default => bcsub($rent, $accrued, 4),
+            };
             $lines = [];
+
+            if ($ahead) {
+                $lines[] = [
+                    'account_id' => RentalAccrualService::prepaid()->id,
+                    'debit' => $rent, 'credit' => '0',
+                ];
+            }
 
             if ($accrued !== null) {
                 $lines[] = [

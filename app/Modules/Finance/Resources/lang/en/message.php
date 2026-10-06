@@ -97,6 +97,7 @@ return [
     'rental_deposit_narration' => ':who — deposit paid',
     'rental_month_narration' => ':who — rent for :month',
     'rent_accrual_narration' => ':who — rent payable for :month',
+    'rent_prepaid_release_narration' => ':who — prepaid rent for :month expensed',
     'rent_accrual_month' => 'Month',
     'rent_accrual_run' => 'Book the month rent as payable',
     'rent_accrual_note' => 'Expensed at the start of the month, cleared from the payable on the day it is paid; once per month. The current month books itself.',

@@ -153,6 +153,48 @@ final class RentIsOwedFromTheFirstOfTheMonthTest extends TestCase
         $this->assertSame(1, app(RentalAccrualService::class)->run($this->month(0))['accrued']);
     }
 
+    /**
+     * ⛔ সামনের মাসের ভাড়া আগে দিলে অগ্রিম (১১৩৭), খরচ নয়; মাসটা এলে মাসের জমা সেটা খরচে সরায়, একবারই; সই বাকি থাকলে নয়
+     * (পুরো-ERP অডিট, ৬ অক্টোবর ২০২৬ ⛔৬)।
+     */
+    public function test_a_month_paid_ahead_waits_as_prepaid_and_is_expensed_when_it_comes(): void
+    {
+        // ⓘ চলতি মাস, প্রদেয় না বসা — আগের মতোই সরাসরি খরচে, অগ্রিমে নয়
+        $now = $this->open('This Month Landlord', $this->month(-1), '8000');
+        $this->pay($now, $this->month(0), '8000');
+        $this->assertMoney('8000', $this->netOf((int) $now->expense_account_id), '⛔ চলতি মাসের ভাড়া খরচে যায়নি');
+        $this->assertMoney('0', $this->net(StandardChart::PREPAID_RENT), '⛔ চলতি মাসের ভাড়া অগ্রিমে বসল');
+        // ⓘ এর কাজ শেষ — পরের মাসের প্রদেয় যেন নিচের অঙ্কে না মেশে
+        $now->forceFill(['status' => RentalContract::CLOSED])->save();
+
+        $contract = $this->open('Ahead Landlord', $this->month(-1), '10000');
+        $expense = (int) $contract->expense_account_id;
+        $this->assertSame((int) $now->expense_account_id, $expense, 'দৃশ্যটাই বানানো যায়নি — দুই চুক্তির খরচ দুই খাতে');
+        $base = $this->netOf($expense);
+
+        $this->pay($contract, $this->month(1), '10000');
+        $this->assertMoney($base, $this->netOf($expense), '⛔ সামনের মাসের ভাড়া আজই খরচে');
+        $this->assertMoney('10000', $this->net(StandardChart::PREPAID_RENT), '⛔ আগাম ভাড়া অগ্রিমে বসেনি');
+
+        // ⓘ মাসটা এলো
+        Carbon::setTestNow($this->month(1)->addDays(2));
+        $this->assertSame(1, app(RentalAccrualService::class)->run(now()->startOfMonth())['accrued']);
+        $this->assertSame(0, app(RentalAccrualService::class)->run(now()->startOfMonth())['accrued'], '⛔ আগাম মাস দুইবার খরচে');
+        $this->assertMoney(bcadd($base, '10000', 4), $this->netOf($expense), '⛔ আগাম মাস নিজের মাসে খরচে যায়নি');
+        $this->assertMoney('0', $this->net(StandardChart::PREPAID_RENT), '⛔ অগ্রিম মোছেনি');
+        $this->assertMoney('0', $this->net(StandardChart::RENT_PAYABLE), '⛔ আগাম দেওয়া মাসে আবার প্রদেয় বসল');
+        $this->assertSame(now()->startOfMonth()->toDateString(), RentalAccrual::query()->sole()->voucher->trx_date->toDateString(), 'মাসের প্রথম দিনে');
+
+        // ⓘ সই বাকি আগাম পরিশোধ — মাস এলেও সরে না, সই পড়লে পরের চালে
+        $this->flow();
+        $this->pay($contract->fresh(), $this->month(1), '10000');
+        Carbon::setTestNow($this->month(1)->addDays(2));
+        $this->assertSame(0, app(RentalAccrualService::class)->run(now()->startOfMonth())['accrued'], '⛔ সই বাকি আগাম পরিশোধ খরচে সরল');
+        $this->sign();
+        $this->assertSame(1, app(RentalAccrualService::class)->run(now()->startOfMonth())['accrued'], '⛔ সই পড়ার পরেও আগাম মাস খরচে সরেনি');
+        $this->assertMoney('0', $this->net(StandardChart::PREPAID_RENT), 'অগ্রিম মুছেছে');
+    }
+
     public function test_the_command_and_the_button_run_it(): void
     {
         $this->open('Command Landlord', $this->month(-3), '10000');

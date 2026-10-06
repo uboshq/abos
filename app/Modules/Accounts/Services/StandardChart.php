@@ -346,6 +346,13 @@ final class StandardChart implements ProvisionsCompany
     public const PREPAID_INSURANCE = '1136';
 
     /*
+     * ⭐ অগ্রিম ভাড়া — সামনের মাসের ভাড়া আগে দিলে সম্পদ, নিজের মাসে খরচ (পুরো-ERP অডিট, ৬ অক্টোবর ২০২৬ ⛔৬; IAS 1 জমা ভিত্তি)।
+     * ⓘ ভাড়ার চুক্তির "অগ্রিম" জামানত (১১৩০) আলাদা জিনিস — ওটা মাসে মাসে কাটা পড়ে; এটা একটা নির্দিষ্ট মাসের আগাম পরিশোধ
+     * ([[RentalContractService::adjustMonth()]], মাস এলে [[RentalAccrualService::run()]] খরচে সরায়)।
+     */
+    public const PREPAID_RENT = '1137';
+
+    /*
      * ⭐ আগে ভাঙানোর জরিমানা — খরচ, সুদ খরচের পাশে (সমন্বয়কের সিদ্ধান্ত প্র২)। ⓘ আগে জরিমানা, কর আর শুল্ক সব একসাথে ৫৩১০-এ
      * পড়ত, তাই বছর শেষে কেউ বলতে পারত না কতটা কর ফেরত পাওয়ার যোগ্য।
      */
@@ -903,6 +910,7 @@ final class StandardChart implements ProvisionsCompany
             ['1165', 'Accrued Interest', 'অর্জিত মুনাফা', $A, '1100', false, []],
             ['1135', 'Advance Income Tax', 'অগ্রিম আয়কর', $A, '1100', false, []],
             ['1136', 'Prepaid Insurance', 'অগ্রিম বীমা', $A, '1100', false, []],
+            ['1137', 'Prepaid Rent', 'অগ্রিম ভাড়া', $A, '1100', false, []],
 
             /*
              * আমদানির পণ্য জাহাজে — আমাদের, কিন্তু গুদামে নয়।

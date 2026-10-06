@@ -7,6 +7,7 @@ namespace App\Modules\Finance\Services;
 use App\Core\Concerns\ReadsTheRowUnderLock;
 use App\Core\Services\OpenPeriod;
 use App\Core\Support\CompanyContext;
+use App\Core\Support\DocumentStatus;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Models\Voucher;
 use App\Modules\Accounts\Services\StandardChart;
@@ -76,6 +77,13 @@ final class RentalAccrualService
             ->orderBy('id')->get();
 
         foreach ($contracts as $contract) {
+            // ⭐ মাসটা আগাম দেওয়া — অগ্রিম থেকে খরচে সরানো (অডিট ⛔৬); অন্যভাবে দেওয়া বা বসানো মাস আগের মতোই বাদ
+            if (! $this->accrued($contract, $start) && $contract->adjustments()->whereDate('for_month', $start->toDateString())->exists()) {
+                $accrued += $this->release($contract, $start);
+
+                continue;
+            }
+
             if ($this->monthTaken($contract, $start)) {
                 continue;
             }
@@ -132,11 +140,95 @@ final class RentalAccrualService
         return ['accrued' => $accrued, 'held' => $held];
     }
 
-    /** মাসটা কি আগেই বসেছে, বা দেওয়া হয়ে গেছে (অগ্রিম দেওয়া মাসের খরচ দেওয়ার ভাউচারেই পড়েছে) */
+    /** মাসটা কি আগেই বসেছে, বা দেওয়া হয়ে গেছে */
     private function monthTaken(RentalContract $contract, Carbon $start): bool
     {
-        return RentalAccrual::query()->where('rental_contract_id', $contract->id)->whereDate('for_month', $start->toDateString())->exists()
+        return $this->accrued($contract, $start)
             || $contract->adjustments()->whereDate('for_month', $start->toDateString())->exists();
+    }
+
+    private function accrued(RentalContract $contract, Carbon $start): bool
+    {
+        return RentalAccrual::query()->where('rental_contract_id', $contract->id)->whereDate('for_month', $start->toDateString())->exists();
+    }
+
+    /**
+     * ⭐ আগাম দেওয়া মাস এলো — অগ্রিম ভাড়া (১১৩৭) থেকে খরচে, মাসের প্রথম দিনে (পুরো-ERP অডিট, ৬ অক্টোবর ২০২৬ ⛔৬)।
+     *
+     * ⓘ কেবল যখন মাসের পরিশোধ খাতায় বসেছে আর তাতে ১১৩৭-এ ডেবিট আছে — অঙ্ক সেই ডেবিটই। সই বাকি থাকলে এখনো নয় (পরের চালে)।
+     * সই চায় না: টাকা আর নড়ে না, সই পরিশোধেই পড়েছে (বীমার অগ্রিমের একই নিয়ম, সমন্বয়কের সিদ্ধান্ত ক)। মাসের সারি বসে, তাই
+     * একবারই।
+     *
+     * @return int ১ সরানো হলে, নাহলে ০
+     */
+    private function release(RentalContract $contract, Carbon $start): int
+    {
+        return DB::transaction(function () use ($contract, $start): int {
+            $this->lockFresh($contract);
+
+            if ($this->accrued($contract, $start)) {
+                return 0;
+            }
+
+            $paid = $contract->adjustments()->whereDate('for_month', $start->toDateString())->with('voucher.lines')->first()?->voucher;
+
+            if ($paid === null || $paid->status !== DocumentStatus::CONFIRMED) {
+                return 0;
+            }
+
+            $amount = bcadd((string) $paid->lines->where('account_id', self::prepaid()->id)->sum('debit'), '0', 2);
+
+            if (bccomp($amount, '0', 2) <= 0) {
+                return 0;
+            }
+
+            $voucher = $this->vouchers->create([
+                'type' => Voucher::JOURNAL,
+                'branch_id' => $contract->branch_id,
+                'trx_date' => $start->toDateString(),
+                'narration' => __('finance::message.rent_prepaid_release_narration', [
+                    'who' => $contract->counterparty, 'month' => $start->translatedFormat('F Y'),
+                ]),
+                'against_type' => RentalContract::drillSourceType(),
+                'against_id' => $contract->id,
+            ], [
+                ['account_id' => $contract->expense_account_id, 'debit' => $amount, 'credit' => '0'],
+                ['account_id' => self::prepaid()->id, 'debit' => '0', 'credit' => $amount],
+            ]);
+
+            $this->vouchers->post($voucher);
+
+            RentalAccrual::query()->create([
+                'company_id' => CompanyContext::id(),
+                'branch_id' => $contract->branch_id,
+                'rental_contract_id' => $contract->id,
+                'for_month' => $start->toDateString(),
+                'amount' => $amount,
+                'voucher_id' => $voucher->id,
+                'created_by' => auth()->id(),
+            ]);
+
+            return 1;
+        });
+    }
+
+    /** ১১৩৭ অগ্রিম ভাড়া — না থাকলে (পুরনো কোম্পানি) ছক একবার বসিয়ে নেয় */
+    public static function prepaid(): Account
+    {
+        $account = StandardChart::find(StandardChart::PREPAID_RENT);
+
+        if ($account === null) {
+            app(StandardChart::class)->install();
+            $account = StandardChart::find(StandardChart::PREPAID_RENT);
+        }
+
+        if ($account === null) {
+            throw ValidationException::withMessages([
+                'for_month' => __('finance::validation.chart_head_missing', ['code' => StandardChart::PREPAID_RENT]),
+            ]);
+        }
+
+        return $account;
     }
 
     /**
