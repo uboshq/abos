@@ -163,7 +163,8 @@ class _PurchaseListScreenState extends State<PurchaseListScreen> {
             if (page != null)
               TotalStrip(
                   label: _kind == 'bill' ? 'মোট ক্রয়' : 'মোট গ্রহণ',
-                  value: Money.taka(page.total),
+                  // ⓘ দামের চাবি ছাড়া অঙ্ক আসে না — কেবল কয়টা
+                  value: page.total == null ? '—' : Money.taka(page.total),
                   count: page.count),
             if (page != null && _rows.isEmpty && !_busy)
               const Padding(
@@ -182,8 +183,10 @@ class _PurchaseListScreenState extends State<PurchaseListScreen> {
                       'পরিশোধিত ${Money.taka(row.paid)} · বাকি ${Money.taka(row.due)}',
                   ].join('\n')),
                   isThreeLine: row.paid != null,
-                  trailing: Text(Money.taka(row.total),
-                      style: const TextStyle(fontWeight: FontWeight.w700)),
+                  trailing: row.total == null
+                      ? null
+                      : Text(Money.taka(row.total),
+                          style: const TextStyle(fontWeight: FontWeight.w700)),
                   onTap: () => Navigator.of(context).push(
                       MaterialPageRoute<void>(
                           builder: (_) => PurchaseScreen(
@@ -254,7 +257,7 @@ class _PurchaseScreenState extends State<PurchaseScreen> {
                   FactRow('অবস্থা', d.row.statusLabel),
                   if (d.supplierNo.isNotEmpty)
                     FactRow('তাদের কাগজের নম্বর', d.supplierNo),
-                  FactRow('মোট', Money.taka(d.row.total)),
+                  if (d.row.total != null) FactRow('মোট', Money.taka(d.row.total)),
                   if (d.row.paid != null)
                     FactRow('পরিশোধিত', Money.taka(d.row.paid)),
                   if (d.row.due != null)

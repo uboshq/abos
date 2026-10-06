@@ -96,6 +96,9 @@ class _FakeBooks implements BooksApi {
 
   bool withCost = false;
 
+  /// ⛔ দামের চাবি ছাড়া সার্ভার কোনো অঙ্ক পাঠায় না (অডিট ক্রয় ⚠️১৫)
+  bool withMoney = true;
+
   @override
   Future<PurchasePage> purchases(
       {required String kind,
@@ -113,11 +116,11 @@ class _FakeBooks implements BooksApi {
             date: '2026-10-01',
             principal: 'Star Line',
             statusLabel: 'নিশ্চিত',
-            total: 50000,
-            paid: kind == 'bill' ? 20000 : null,
-            due: kind == 'bill' ? 30000 : null),
+            total: withMoney ? 50000 : null,
+            paid: kind == 'bill' && withMoney ? 20000 : null,
+            due: kind == 'bill' && withMoney ? 30000 : null),
       ],
-      total: 50000,
+      total: withMoney ? 50000 : null,
       count: 1,
     );
   }
@@ -125,15 +128,15 @@ class _FakeBooks implements BooksApi {
   @override
   Future<PurchaseDetail> purchase(String kind, String id) async =>
       PurchaseDetail(
-        row: const PurchaseRow(
+        row: PurchaseRow(
             kind: 'bill',
             id: 'b1',
             no: 'PB-0009',
             principal: 'Star Line',
             statusLabel: 'নিশ্চিত',
-            total: 50000,
-            paid: 20000,
-            due: 30000),
+            total: withMoney ? 50000 : null,
+            paid: withMoney ? 20000 : null,
+            due: withMoney ? 30000 : null),
         lines: [
           PurchaseLine(
               product: 'কসমস বিস্কুট',
@@ -253,6 +256,32 @@ void main() {
     api.withCost = true;
     await _pump(tester, PurchaseScreen(kind: 'bill', id: 'b1', api: api));
     expect(find.textContaining('দর ৳500'), findsOneWidget);
+  });
+
+  test('a purchase row the server sent without its money reads as no money, not ৳0', () {
+    final row = PurchaseRow.fromJson(const {'kind': 'bill', 'id': 'b1', 'no': 'PB-0009', 'principal': 'Star Line'});
+    expect(row.total, isNull);
+    expect(row.paid, isNull);
+    expect(row.due, isNull);
+    expect(PurchaseRow.fromJson(const {'total': '50000.0000'}).total, 50000);
+  });
+
+  testWidgets('without the cost key: no total anywhere, and never a zero taka',
+      (tester) async {
+    final api = _FakeBooks()..withMoney = false;
+    await _pump(tester, PurchaseListScreen(api: api, today: _today));
+    expect(find.textContaining('৳'), findsNothing,
+        reason: '⛔ চাবি ছাড়া অঙ্ক দেখাল — নাকি ৳০?');
+    expect(find.text('—'), findsOneWidget);
+
+    await _pump(tester, PurchaseScreen(kind: 'bill', id: 'b1', api: api));
+    expect(find.text('মোট'), findsNothing);
+    expect(find.textContaining('৳'), findsNothing);
+
+    // ⓘ চাবিসহ একই পর্দায় অঙ্ক আসে — দাবিটা অন্ধ নয়
+    api.withMoney = true;
+    await _pump(tester, PurchaseScreen(kind: 'bill', id: 'b1', api: api));
+    expect(find.text('মোট'), findsOneWidget);
   });
 
   group('the three tiles follow the keys', () {
