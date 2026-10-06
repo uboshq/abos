@@ -8,6 +8,7 @@ return [
     'over_receipt_percent' => 'Percent over the ordered quantity that may be received',
     'block_price_mismatch' => 'Block a bill whose value does not match the receipt',
     'block_order_price_mismatch' => 'Block a bill whose rate does not match the order',
+    'payment_three_hands' => 'Proposer, signer and payer are three different people',
 
     'screen_direct' => 'Show the Direct Purchase screen',
     'screen_orders' => 'Show the Purchase Orders screen',

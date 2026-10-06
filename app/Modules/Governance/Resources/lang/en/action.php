@@ -63,4 +63,5 @@ return [
     'opening_principal_set' => 'Opening stock principal set',
     'opening_corrected' => 'Opening stock row corrected',
     'opening_removed' => 'Opening stock row removed',
+    'three_hands_override' => 'Same person on a payment: proposed/signed/paid',
 ];

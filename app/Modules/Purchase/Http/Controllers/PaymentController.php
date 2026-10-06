@@ -52,6 +52,8 @@ class PaymentController extends Controller implements HasMiddleware
     {
         $query = Payment::query()
             ->search($request->query('q'))
+            // ⭐ এক প্রস্তাবের পরিশোধগুলো (?proposal=PP-…) — ধাপ খ ১১, ৭ অক্টোবর ২০২৬
+            ->when(filled($request->query('proposal')), fn ($q) => $q->where('proposal_no', (string) $request->query('proposal')))
             ->with(['supplier', 'account'])
             // বাতিলগুলো লুকানো, মোছা নয় (নিয়ম ৫)
             ->when(! $request->boolean('cancelled'),
@@ -181,6 +183,22 @@ class PaymentController extends Controller implements HasMiddleware
     }
 
     /**
+     * টাকার খাত — নগদ, ব্যাংক, মোবাইল; অন্য শাখার টিল বাদ ([[Account::scopeNotAnotherBranchsTill()]], ৩০ সেপ্টেম্বর ২০২৬)।
+     * ⓘ পরিশোধের প্রস্তাবও এটাই নেয় ([[PaymentScheduleController::propose()]]) — এক তালিকা, এক জায়গায়।
+     * ⚠️ ভেতরের OR বাইরে না ছড়াতে পুরনো প্রশ্নটা উপ-প্রশ্ন।
+     */
+    public static function moneyAccounts(): \Illuminate\Support\Collection
+    {
+        $moneyCodes = StandardChart::MONEY_PARENTS;
+
+        return Account::query()->notAnotherBranchsTill()->whereIn('id', Account::query()->postable()
+            ->whereIn('code', $moneyCodes)
+            ->orWhereIn('parent_id', Account::query()->whereIn('code', $moneyCodes)->select('id'))
+            ->select('id'))
+            ->orderBy('code')->get();
+    }
+
+    /**
      * @return array<string, mixed>
      */
     private function formData(): array
@@ -192,11 +210,7 @@ class PaymentController extends Controller implements HasMiddleware
             'suppliers' => Supplier::query()->inViewedBranch()->active()->forPurchasing()->orderBy('name_en')->get(),
             // ⭐ অন্য শাখার টিলের খাত বাদ (৩০ সেপ্টেম্বর ২০২৬) — [[Account::scopeNotAnotherBranchsTill()]]
             // ⚠️ ভেতরের OR বাইরে না ছড়াতে পুরনো প্রশ্নটা উপ-প্রশ্ন হয়ে গেছে
-            'accounts' => Account::query()->notAnotherBranchsTill()->whereIn('id', Account::query()->postable()
-                ->whereIn('code', $moneyCodes)
-                ->orWhereIn('parent_id', Account::query()->whereIn('code', $moneyCodes)->select('id'))
-                ->select('id'))
-                ->orderBy('code')->get(),
+            'accounts' => self::moneyAccounts(),
 
             /*
              * যে বিলগুলোয় এখনো টাকা বাকি।

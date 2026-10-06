@@ -95,6 +95,9 @@ final class ThePayableOnTheDashboardForgotThePaymentsTest extends TestCase
 
         app(StandardChart::class)->install();
 
+        // ⓘ এই পরীক্ষার একজন কেরানিই পরিশোধ লেখেন আর নিশ্চিত করেন — তিন হাতের নিয়ম (ধাপ খ ১২, ৭ অক্টোবর ২০২৬) এখানে
+        // প্রশ্ন নয়, তাই বন্ধ; নিয়মের নিজের দাবি [[OnePersonProposedSignedAndPaidTest]]-এ
+        app(\App\Core\Services\SettingsService::class)->set('purchase.payment_three_hands', false);
         $this->supplier = Supplier::query()->firstOrFail();
         $this->warehouse = Warehouse::query()->where('is_default', true)->firstOrFail();
 

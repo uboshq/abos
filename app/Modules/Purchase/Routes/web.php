@@ -186,6 +186,9 @@ Route::middleware('auth')->prefix('purchase')->group(function () {
      * ⓘ বিলের শেষ তারিখ কেবল ক্রয় জানে, তাই পাতাটা এখানে।
      */
     Route::get('/payment-schedule', [PaymentScheduleController::class, 'index'])->name('payment_schedule.index');
+    // ⭐ পরিশোধের প্রস্তাব — বাছা বিল থেকে খসড়া পরিশোধ (টাকা আসা-যাওয়ার পরিকল্পনা, ধাপ খ ১১, ৭ অক্টোবর ২০২৬)
+    Route::post('/payment-schedule/propose', [PaymentScheduleController::class, 'propose'])->name('payment_schedule.propose');
+    Route::get('/payment-proposals/{no}', [PaymentScheduleController::class, 'proposal'])->where('no', '[A-Za-z0-9\-/]+')->name('payment_schedule.proposal');
 
     Route::prefix('payments')->name('payment.')->group(function () {
         Route::get('/', [PaymentController::class, 'index'])->name('index');

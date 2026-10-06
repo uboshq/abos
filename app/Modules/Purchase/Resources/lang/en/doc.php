@@ -7,6 +7,7 @@ return [
     'receipt' => 'Goods Receipt',
     'bill' => 'Purchase Bill',
     'payment' => 'Payment',
+    'proposal' => 'Payment proposal',
     'return' => 'Purchase Return',
     'requisition' => 'Purchase Requisition',
     'rfq' => 'Request for Quotation',

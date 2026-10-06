@@ -55,6 +55,8 @@ class Payment extends Model implements Drillable
         'cheque_id',
 
         'status', 'narration', 'created_by',
+        // ⭐ কোন পরিশোধের প্রস্তাবের (PP-…) — টাকা আসা-যাওয়ার পরিকল্পনা, ধাপ খ ১১ (৭ অক্টোবর ২০২৬)
+        'proposal_no',
         'cancelled_by', 'cancelled_at', 'cancel_reason',
     ];
 

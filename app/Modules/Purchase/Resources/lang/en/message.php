@@ -71,6 +71,7 @@ return [
     'cancel_reason' => 'Reason for cancelling',
     'pending_of_order' => ':count line(s) of this order are still to arrive.',
     'paid_against' => 'Paid against :no',
+    'proposal_narration' => 'Payment proposal :no',
     /*
      * Said once, at the moment it matters.
      *

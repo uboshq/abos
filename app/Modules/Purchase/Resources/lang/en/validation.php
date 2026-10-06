@@ -10,6 +10,12 @@ return [
     'only_draft_edits' => ':no is not a draft — cancel it and make a new one to change a posted document.',
     'already_cancelled' => ':no was already cancelled.',
     'cancel_paid_bill' => ':no carries :paid in payments. Cancel the payments first, then the bill.',
+    'proposal_empty' => 'Pick at least one bill and give its amount.',
+    'proposal_bill_not_open' => ':no is not an open posted bill and cannot be proposed.',
+    'proposal_over_due' => ':no has :due left; no more than that can be proposed.',
+    'three_hands_proposer_pays' => 'Whoever proposed :no cannot pay it; someone else must confirm.',
+    'three_hands_signer_pays' => 'Whoever signed :no cannot pay it; someone else must confirm.',
+    'three_hands_proposer_signed' => 'The proposer of :no signed it; another signature is needed.',
     'unknown_product' => 'That product is not in this company\'s list.',
 
     'gift_needs_a_lot' => '":product" is lot-tracked, and a gift row has no lot number field. Taking it in without one would make both expiry and recall wrong, so a lot-tracked product cannot be taken as a gift.',

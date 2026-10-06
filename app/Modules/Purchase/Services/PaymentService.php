@@ -122,6 +122,7 @@ final class PaymentService
                 'instrument_no' => $data['instrument_no'] ?? null,
                 'instrument_date' => $data['instrument_date'] ?? null,
                 'narration' => $data['narration'] ?? null,
+                'proposal_no' => $data['proposal_no'] ?? null,
                 'status' => DocumentStatus::DRAFT,
                 'created_by' => auth()->id(),
             ]);
@@ -218,6 +219,7 @@ final class PaymentService
 
             $payment->unsetRelation('lines');
             $this->assertStillFits($payment);
+            $this->assertThreeHands($locked);
 
             /*
              * ── চেকে দিলে টাকাটা এখনো যায়নি ──────────────────────────
@@ -281,6 +283,50 @@ final class PaymentService
 
             return $payment->fresh(['lines']);
         });
+    }
+
+    /**
+     * ⭐ প্রস্তাবক ≠ সইদাতা ≠ টাকাদাতা — টাকা আসা-যাওয়ার আন্তর্জাতিক পরিকল্পনা, ধাপ খ ১২ (৭ অক্টোবর ২০২৬)।
+     *
+     * ⓘ প্রস্তাবক = খসড়ার লেখক (প্রস্তাবের PP তৈরিকারী); সইদাতা = এই পরিশোধে 'payment' নিয়মে "হ্যাঁ" দেওয়া মানুষ; টাকাদাতা
+     * = এখন যিনি নিশ্চিত করছেন। ⛔ সুইচ চালু থাকলে টাকাদাতা প্রস্তাবক বা সইদাতা নন, আর সইদাতা প্রস্তাবক নন। ⓘ মালিক (সুপার
+     * অ্যাডমিন) একা করলে আটকায় না — নিরীক্ষায় "একই মানুষ" দাগ পড়ে। সুইচ বন্ধে আজকের আচরণ অবিকল।
+     */
+    private function assertThreeHands(Payment $payment): void
+    {
+        if (! (bool) app(\App\Core\Services\SettingsService::class)->get('purchase.payment_three_hands', true)) {
+            return;
+        }
+
+        $actor = (int) (\App\Core\Support\Actor::userId() ?? 0);
+        $proposer = (int) ($payment->created_by ?? 0);
+        $signers = \App\Models\ApprovalDecision::query()
+            ->whereIn('approval_id', \App\Models\Approval::query()->where('approvable_type', Payment::class)
+                ->where('approvable_id', $payment->id)->where('action', 'payment')->select('id'))
+            ->where('decision', \App\Models\ApprovalDecision::APPROVED)
+            ->pluck('user_id')->map(fn ($id) => (int) $id)->all();
+
+        $clash = match (true) {
+            $actor !== 0 && $actor === $proposer => 'proposer_pays',
+            $actor !== 0 && in_array($actor, $signers, true) => 'signer_pays',
+            $proposer !== 0 && in_array($proposer, $signers, true) => 'proposer_signed',
+            default => null,
+        };
+
+        if ($clash === null) {
+            return;
+        }
+
+        $user = auth()->user();
+        $owner = $user instanceof \App\Models\User && $user->roles->contains('name', \App\Core\Services\PermissionSyncer::SUPER_ADMIN_ROLE);
+
+        if ($owner) {
+            app(\App\Core\Engines\Audit\AuditEngine::class)->recordAction($payment, 'three_hands_override', __('purchase::validation.three_hands_'.$clash));
+
+            return;
+        }
+
+        throw ValidationException::withMessages(['status' => __('purchase::validation.three_hands_'.$clash, ['no' => $payment->document_no])]);
     }
 
     public function cancel(Payment $payment, string $reason, Carbon|string|null $onDate = null): Payment

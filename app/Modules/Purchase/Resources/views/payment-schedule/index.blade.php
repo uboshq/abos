@@ -41,6 +41,13 @@
                           :count="trans_choice('core.count.records', $rows->total(), ['count' => $rows->total()])" />
         </form>
 
+        {{-- ⭐ পরিশোধের প্রস্তাব (ধাপ খ ১১, ৭ অক্টোবর ২০২৬) — প্রতি সারিতে অঙ্ক, খালি মানে বাছা নয়; JS ছাড়া --}}
+        @php $proposing = $accounts->isNotEmpty(); @endphp
+        @if ($proposing)
+        <form method="POST" action="{{ route('purchase.payment_schedule.propose') }}" data-payment-proposal>
+            @csrf
+        @endif
+
         <x-ui.table :rows="$rows" :empty="__('purchase::schedule.none')"
             :grand="$grand ?? []"
             :view-url="fn ($bill) => route('purchase.bill.show', $bill)"
@@ -56,9 +63,24 @@
              'render' => fn ($bill) => Money::format($bill->total)],
             ['key' => 'amount', 'total' => 'money', 'raw' => fn ($bill) => $bill->dueAmount(), 'label' => __('purchase::schedule.due'), 'numeric' => true, 'width' => '9rem',
              'render' => fn ($bill) => Money::format($bill->dueAmount())],
+            ['key' => 'propose', 'label' => __('purchase::schedule.propose'), 'width' => '9rem',
+             'render' => fn ($bill) => view('purchase::payment-schedule.partials.propose', ['bill' => $bill, 'proposing' => $proposing])],
             ['key' => 'pay', 'label' => '', 'width' => '7rem',
              'render' => fn ($bill) => view('purchase::payment-schedule.partials.pay', ['bill' => $bill])],
         ]" />
+
+        @if ($proposing && $rows->total() > 0)
+            <div class="flex flex-wrap items-end gap-3 border-t border-(--color-border) p-3" data-proposal-footer>
+                <x-ui.select name="account_id" :label="__('purchase::field.account')"
+                             :options="$accounts->mapWithKeys(fn ($a) => [$a->id => $a->name()])" placeholder="-" required />
+                <x-ui.field name="trx_date" type="date" :label="__('purchase::field.date')" :value="now()->toDateString()" />
+                <x-ui.button type="submit" tone="primary">{{ __('purchase::schedule.make_proposal') }}</x-ui.button>
+                <p class="text-xs text-(--color-ink-muted)">{{ __('purchase::schedule.proposal_hint') }}</p>
+            </div>
+        @endif
+        @if ($proposing)
+        </form>
+        @endif
 
         <x-ui.pager :rows="$rows" />
         <x-ui.list-totals :rows="$rows" :totals="[

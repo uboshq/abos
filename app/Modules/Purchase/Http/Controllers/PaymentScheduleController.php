@@ -69,10 +69,23 @@ class PaymentScheduleController extends Controller implements HasMiddleware
             DocumentStatus::POSTED,
         ));
 
+        /*
+         * ⭐ ভাউচারে দেওয়া টাকা আর পাকা ফেরতও বাদ — [[PurchaseBill::dueAmount()]]-এর হুবহু (৭ অক্টোবর ২০২৬)। ⛔ আগে কেবল
+         * পরিশোধের কাগজ বাদ যেত: কাউন্টারে ভাউচারে পুরো শোধ বা পুরো ফেরত হওয়া বিলও "বাকি" তালিকায় থাকত — আর পরিশোধের
+         * প্রস্তাবে ওঠার ঝুঁকি।
+         */
+        $voucherPosted = "'".DocumentStatus::CONFIRMED."'";
+
         return "(pur_bills.total - (
             select COALESCE(SUM(pl.amount), 0) from pur_payment_lines pl
             join pur_payments p on p.id = pl.payment_id
             where pl.purchase_bill_id = pur_bills.id and p.status in ({$posted})
+        ) - (
+            select COALESCE(SUM(v.amount), 0) from vouchers v
+            where v.type = 'payment' and v.against_type = 'purchase_bill' and v.against_id = pur_bills.id and v.status = {$voucherPosted}
+        ) - (
+            select COALESCE(SUM(r.total), 0) from pur_returns r
+            where r.purchase_bill_id = pur_bills.id and r.status in ({$posted})
         ))";
     }
 
@@ -108,6 +121,54 @@ class PaymentScheduleController extends Controller implements HasMiddleware
             'buckets' => $this->buckets($today),
             'rows' => $rows,
             'grand' => $grand,
+            // ⭐ পরিশোধের প্রস্তাব — কেবল যাঁর পরিশোধ লেখার চাবি আছে (টাকা আসা-যাওয়ার পরিকল্পনা, ধাপ খ ১১, ৭ অক্টোবর ২০২৬)
+            'accounts' => $request->user()?->can('purchase.payment.create') ? PaymentController::moneyAccounts() : collect(),
+        ]);
+    }
+
+    /**
+     * ⭐ পরিশোধের প্রস্তাব — বাছা বিল আর অঙ্ক থেকে সরবরাহকারী প্রতি একটা খসড়া পরিশোধ ([[PaymentProposalService]])।
+     * ⓘ খাতায় কিছু নয়; অনুমোদন আর টাকা দেওয়া আজকের পথে, পরিশোধের তালিকা থেকে।
+     */
+    public function propose(Request $request): \Illuminate\Http\RedirectResponse
+    {
+        abort_unless($request->user()?->can('purchase.payment.create'), 403);
+
+        $data = $request->validate([
+            'picks' => ['required', 'array'],
+            'picks.*' => ['nullable', 'numeric', 'min:0'],
+            'account_id' => ['required', 'integer', \Illuminate\Validation\Rule::in(PaymentController::moneyAccounts()->pluck('id')->all())],
+            'trx_date' => ['nullable', 'date', 'before_or_equal:today'],
+        ]);
+
+        $made = app(\App\Modules\Purchase\Services\PaymentProposalService::class)
+            ->propose((array) $data['picks'], (int) $data['account_id'], $data['trx_date'] ?? null);
+
+        return redirect()->route('purchase.payment_schedule.proposal', ['no' => (string) $made[0]->proposal_no])
+            ->with('saved', __('purchase::schedule.proposed', [
+                'count' => count($made),
+                'numbers' => collect($made)->pluck('document_no')->implode(', '),
+            ]));
+    }
+
+    /**
+     * ⭐ প্রস্তাবের পাতা — কোন কোন খসড়া, কার অনুমোদন বাকি, কোনগুলো পরিশোধ হয়েছে (ধাপ খ ১১, ৭ অক্টোবর ২০২৬)।
+     * ⓘ প্রস্তাব আলাদা টেবিলে নয় — তার পরিশোধগুলোই প্রস্তাব (`proposal_no`); না থাকলে ৪০৪।
+     */
+    public function proposal(Request $request, string $no): View
+    {
+        $payments = \App\Modules\Purchase\Models\Payment::query()->where('proposal_no', $no)
+            ->with(['supplier', 'creator', 'lines.bill'])->orderBy('id')->get();
+
+        abort_if($payments->isEmpty(), 404);
+
+        $approvals = app(\App\Core\Engines\Approval\ApprovalEngine::class);
+
+        return view('purchase::payment-schedule.proposal', [
+            'menu' => $this->menu->forUser($request->user()),
+            'no' => $no,
+            'payments' => $payments,
+            'approvalOf' => $payments->mapWithKeys(fn ($p) => [$p->id => $approvals->latestFor($p, 'payment')]),
         ]);
     }
 

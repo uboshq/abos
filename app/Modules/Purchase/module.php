@@ -485,6 +485,8 @@ return [
          */
         'SP' => 'purchase::doc.payment',
         'PR' => 'purchase::doc.return',
+        // ⭐ পরিশোধের প্রস্তাব — নম্বরধারী কাগজ (SAP-এর payment run), টাকা আসা-যাওয়ার পরিকল্পনা, ধাপ খ ১১ (৭ অক্টোবর ২০২৬)
+        'PP' => 'purchase::doc.proposal',
     ],
 
     /*
@@ -753,6 +755,19 @@ return [
             'key' => 'purchase.block_order_price_mismatch',
             'super_admin_only' => true,
             'label' => 'purchase::settings.block_order_price_mismatch',
+            'type' => 'boolean',
+            'default' => true,
+            'group' => 'entry',
+        ],
+        [
+            /*
+             * ⭐ প্রস্তাবক ≠ সইদাতা ≠ টাকাদাতা — টাকা আসা-যাওয়ার পরিকল্পনা, ধাপ খ ১২ (৭ অক্টোবর ২০২৬)।
+             * ⓘ নতুন কোম্পানিতে চালু; ঘোষণার দিন যত কোম্পানি ছিল সবগুলোতে মাইগ্রেশনে বন্ধ (fe, মালিক)। মালিক একা করলে আটকায় না,
+             * নিরীক্ষায় দাগ পড়ে ([[PaymentService::assertThreeHands()]])।
+             */
+            'key' => 'purchase.payment_three_hands',
+            'super_admin_only' => true,
+            'label' => 'purchase::settings.payment_three_hands',
             'type' => 'boolean',
             'default' => true,
             'group' => 'entry',

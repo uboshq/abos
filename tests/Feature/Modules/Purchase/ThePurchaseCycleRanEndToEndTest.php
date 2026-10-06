@@ -110,6 +110,9 @@ final class ThePurchaseCycleRanEndToEndTest extends TestCase
          * মান বদলালে বাড়তি-গ্রহণের দাবিটা ভুল কারণে সবুজ হয়ে যেত।
          */
         app(SettingsService::class)->set('purchase.over_receipt_percent', 0);
+        // ⓘ এই পরীক্ষার একজন কেরানিই পরিশোধ লেখেন আর নিশ্চিত করেন — তিন হাতের নিয়ম (ধাপ খ ১২, ৭ অক্টোবর ২০২৬) এখানে
+        // প্রশ্ন নয়, তাই বন্ধ; নিয়মের নিজের দাবি [[OnePersonProposedSignedAndPaidTest]]-এ
+        app(SettingsService::class)->set('purchase.payment_three_hands', false);
 
         $this->supplier = Supplier::query()->firstOrFail();
         $this->warehouse = Warehouse::query()->where('is_default', true)->firstOrFail();
