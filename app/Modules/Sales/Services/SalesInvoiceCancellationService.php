@@ -234,7 +234,19 @@ final class SalesInvoiceCancellationService
             $own = DeliveryChallanLine::query()->where('delivery_challan_id', $challan->id)->whereIn('id', $lineIds)->count();
             $all = DeliveryChallanLine::query()->where('delivery_challan_id', $challan->id)->count();
 
-            if ($own !== $all || $challan->status !== DocumentStatus::CONFIRMED) {
+            /*
+             * ⭐ একই চালান-সারি দুই বিলে ভাগ — পুরো ERP অডিট ⛔৩, ৬ অক্টোবর ২০২৬।
+             * ⛔ আগে কেবল সারি গোনা হত: চালানের এক সারির ১০-এর ৬ বিল A-তে, ৪ বিল B-তে হলে দুই বিলই ঐ একটা সারি দেখায়, তাই
+             * "নিজের = সব" মিলত — A বাতিলে গোটা চালান (১০) ফিরত, অথচ B-র আয় আর খরচ খাতায় থেকে যেত। ⓘ এখন চালানের কোনো
+             * সারিতে অন্য কোনো চালু (বাতিল নয়) বিলের সারি থাকলে চালানটা ভাগের — ফেরত দিন।
+             */
+            $sharedWithAnotherBill = \App\Modules\Sales\Models\SalesInvoiceLine::query()
+                ->whereIn('delivery_challan_line_id', DeliveryChallanLine::query()->where('delivery_challan_id', $challan->id)->select('id'))
+                ->where('sales_invoice_id', '<>', $invoice->id)
+                ->whereHas('invoice', fn ($q) => $q->where('status', '<>', DocumentStatus::CANCELLED))
+                ->exists();
+
+            if ($own !== $all || $sharedWithAnotherBill || $challan->status !== DocumentStatus::CONFIRMED) {
                 throw ValidationException::withMessages(['reason' => __('sales::cancellation.shared_challan', [...$no, 'challan' => $challan->document_no])]);
             }
         }
