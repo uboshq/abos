@@ -117,9 +117,19 @@ class ACostFileLeavesATraceTest extends TestCase
      */
     public function test_it_counts_the_rows_that_left(): void
     {
-        $this->exportByCustomer()->assertOk();
+        $response = $this->exportByCustomer()->assertOk();
 
-        $this->assertSame(1, ExportLog::query()->latestFirst()->firstOrFail()->row_count);
+        /*
+         * ⓘ যতটা লাইন ফাইলে গেছে, মাথার লাইন বাদে — "সব শাখা"-য় রিপোর্ট শাখা ধরে ভাগ হয়ে নামে (শাখার নাম, সারি, শাখার মোট,
+         * সর্বমোট; [[ReportEngine::branchPlan()]]), আর ওগুলোও ফাইলেই যায়। ⛔ আগে এখানে ১ লেখা ছিল, শাখার ভাগ আসার পর ৪ গোনা
+         * হত আর দাবি লাল থাকত — অথচ খাতা ফাইলটাই গুনছিল।
+         */
+        ob_start();
+        $response->baseResponse->sendContent();
+        $lines = array_values(array_filter(preg_split('/\r\n|\n/', (string) ob_get_clean()), fn (string $l) => trim($l) !== ''));
+
+        $this->assertGreaterThan(1, count($lines), 'দৃশ্যটাই বানানো যায়নি — ফাইলে কোনো সারি নেই');
+        $this->assertSame(count($lines) - 1, ExportLog::query()->latestFirst()->firstOrFail()->row_count);
     }
 
     /** কোন পর্দা থেকে। */
@@ -165,7 +175,8 @@ class ACostFileLeavesATraceTest extends TestCase
     /** @param  list<string>  $extra */
     private function clerk(array $extra = []): User
     {
-        foreach (['governance.audit.view', 'sales.report'] as $name) {
+        // ⓘ খাতার নিজের চাবি — ১৮ সেপ্টেম্বর ২০২৬ থেকে (d722232c "চার খাতা এক চাবিতে খুলত"), অডিটের চাবি নয়
+        foreach (['governance.export.view', 'sales.report'] as $name) {
             Permission::findOrCreate($name, 'web');
         }
 
@@ -186,7 +197,7 @@ class ACostFileLeavesATraceTest extends TestCase
     {
         $this->exportByCustomer()->assertOk();
 
-        $this->actingAs($this->clerk(['governance.audit.view']))
+        $this->actingAs($this->clerk(['governance.export.view']))
             ->get(route('governance.export.index'))
             ->assertOk()
             ->assertSee('by-customer')
@@ -215,7 +226,7 @@ class ACostFileLeavesATraceTest extends TestCase
 
         $before = ExportLog::query()->count();
 
-        $response = $this->actingAs($this->clerk(['governance.audit.view']))
+        $response = $this->actingAs($this->clerk(['governance.export.view']))
             ->get(route('governance.export.index', ['export' => 'csv']))
             ->assertOk();
 
@@ -259,6 +270,9 @@ class ACostFileLeavesATraceTest extends TestCase
         $this->exportByCustomer()->assertOk();
 
         $name = $clerk->name;
+
+        // ⓘ মোছেন অন্য কেউ (মালিক) — নিজে নিজেকে মুছলে মোছার অডিট-সারি সদ্য-মোছা মানুষের নামে বসতে চাইত
+        $this->actingAs(User::query()->where('email', 'owner@abos.test')->firstOrFail());
         $clerk->forceDelete();
 
         $row = ExportLog::query()->latestFirst()->firstOrFail();
