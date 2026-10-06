@@ -9,6 +9,7 @@ return [
     'only_draft_confirms' => ':no is not a draft, so it cannot be confirmed again.',
     'only_draft_edits' => ':no is not a draft — cancel it and make a new one to change a posted document.',
     'already_cancelled' => ':no was already cancelled.',
+    'cancel_paid_bill' => ':no carries :paid in payments. Cancel the payments first, then the bill.',
     'unknown_product' => 'That product is not in this company\'s list.',
 
     'gift_needs_a_lot' => '":product" is lot-tracked, and a gift row has no lot number field. Taking it in without one would make both expiry and recall wrong, so a lot-tracked product cannot be taken as a gift.',

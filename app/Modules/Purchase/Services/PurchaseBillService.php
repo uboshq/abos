@@ -1174,6 +1174,28 @@ final class PurchaseBillService
         $date = $onDate === null ? now() : Carbon::parse($onDate);
 
         return DB::transaction(function () use ($bill, $reason, $date) {
+            /*
+             * ⭐ তালায় আবার পড়া, আর পরিশোধ বসা বিল বাতিল নয় — পুরো ERP অডিট, ক্রয় ⚠️৭, ৬ অক্টোবর ২০২৬।
+             * ⛔ আগে পরিশোধ বসা বিলও বাতিল হত — পরিশোধগুলো বাতিল বিলে ঝুলে ব্যাখ্যাহীন অগ্রিম হত; আর দুই ট্যাবে একসাথে
+             * চাপলে দুবার উল্টাত। ⓘ আগে পরিশোধ বাতিল করুন, তারপর বিল।
+             */
+            $locked = PurchaseBill::query()->whereKey($bill->id)->lockForUpdate()->firstOrFail();
+
+            if ($locked->status === DocumentStatus::CANCELLED) {
+                throw ValidationException::withMessages([
+                    'status' => __('purchase::validation.already_cancelled', ['no' => $bill->document_no]),
+                ]);
+            }
+
+            if (bccomp($locked->paidAmount(), '0', 4) > 0) {
+                throw ValidationException::withMessages([
+                    'status' => __('purchase::validation.cancel_paid_bill', [
+                        'no' => $bill->document_no,
+                        'paid' => \App\Core\Support\Money::format($locked->paidAmount()),
+                    ]),
+                ]);
+            }
+
             if ($bill->status === DocumentStatus::CONFIRMED) {
                 $this->takeBackDirectLines($bill, $date, $reason);
                 $this->takeBackGifts($bill, $date, $reason);
