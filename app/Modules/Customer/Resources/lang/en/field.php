@@ -23,6 +23,9 @@ return [
     'credit_days' => 'Credit duration (days)',
     'opening_balance' => 'Opening balance',
     'opening_date' => 'Opening date',
+    'opening_side' => 'Side',
+    'opening_side_dr' => 'Customer owes us (Dr)',
+    'opening_side_cr' => 'We owe the customer (Cr)',
     'outstanding' => 'Outstanding',
     'outstanding_all_branches' => 'Outstanding, all branches',
 

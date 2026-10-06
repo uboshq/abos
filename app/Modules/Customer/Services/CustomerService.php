@@ -112,7 +112,7 @@ final class CustomerService
     public function update(Customer $customer, array $data): Customer
     {
         $this->assertBanglaNameIfRequired($data, $customer);
-        $this->assertNotADuplicate($data, $customer->id);
+        $this->assertNotADuplicate($data, $customer->id, $customer->branch_id);
         $this->assertOnlyOneDistributorPerPoint($data, $customer);
 
         if (isset($data['code']) && $data['code'] !== $customer->code) {
@@ -543,14 +543,16 @@ final class CustomerService
      *
      * @param  array<string, mixed>  $data
      */
-    private function assertNotADuplicate(array &$data, ?int $exceptId = null): void
+    private function assertNotADuplicate(array &$data, ?int $exceptId = null, ?int $existingBranch = null): void
     {
         $guard = app(DuplicateGuard::class);
 
         $allowed = (bool) ($data['allow_duplicate'] ?? false);
         unset($data['allow_duplicate']);
 
-        $guard->assertPhoneIsFree(Customer::class, ['phone'], $data['phone'] ?? null, $exceptId);
+        $narrow = $this->sameBranch($data, $existingBranch);
+
+        $guard->assertPhoneIsFree(Customer::class, ['phone'], $data['phone'] ?? null, $exceptId, 'phone', $narrow);
 
         if ($allowed) {
             return;
@@ -561,6 +563,7 @@ final class CustomerService
             ['name_en', 'name_bn'],
             $data['name_en'] ?? null,
             $exceptId,
+            $narrow,
         );
 
         if ($matches->isNotEmpty()) {
@@ -568,6 +571,27 @@ final class CustomerService
                 'name_en' => __('core.duplicate.name_matches').' '.__('core.duplicate.confirm_hint'),
             ]);
         }
+    }
+
+    /**
+     * ⭐ নকল খোঁজা কেবল একই শাখার গ্রাহকের মধ্যে — মালিক, ৬ অক্টোবর ২০২৬: *"আদি কর্পোরেশন (সুপার গ্রুপ)-এ
+     * কোনো গ্রাহক নাই, তারপরেও দেখাচ্ছে কেন?"*
+     *
+     * ⛔ আগে খোঁজা হত পুরো কোম্পানিতে, তাই হোলসেল বা জাবেদের দোকানের নাম বা ফোন সুপারে নতুন গ্রাহক খুলতে
+     * আটকাত। ⓘ শাখাগুলো আলাদা ব্যবসা ([[EachBranchIsFullySeparateTest]]) — একই দোকান দুই শাখার গ্রাহক হতে
+     * পারে, প্রতিটার নিজের বাকি। ⚠️ শাখা জানা না থাকলে (null) পুরো কোম্পানি, আগের মতো।
+     *
+     * @param  array<string, mixed>  $data
+     */
+    private function sameBranch(array $data, ?int $existingBranch): ?\Closure
+    {
+        $branch = $data['branch_id'] ?? $existingBranch ?? CompanyContext::branchId();
+
+        if (blank($branch)) {
+            return null;
+        }
+
+        return fn ($q) => $q->where('branch_id', (int) $branch);
     }
 
     /**

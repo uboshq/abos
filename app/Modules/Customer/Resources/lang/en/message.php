@@ -7,7 +7,7 @@ return [
 
     'bn_name_hint' => 'Without it the English name is shown everywhere.',
     'type_hint' => 'For example: retail, wholesale, institution.',
-    'zero_means_unlimited' => '0 means no limit.',
+    'zero_means_unlimited' => '0 or blank means no credit — cash only.',
     'credit_days_hint' => 'How many days the credit may run — after that the amount counts as overdue.',
 
     'opening_note' => 'What was owed before this system. Can only be set now — '
@@ -28,6 +28,7 @@ return [
     'count' => '{0} No customers|{1} 1 customer|[2,*] :count customers',
     'confirm_deactivate' => 'Deactivate this customer? Their history and dues stay; only new billing stops.',
     'point_hint' => 'Which point the shop sits at. The area follows from it.',
+    'point_search' => 'Type a point name or code',
     'portal_enabled' => 'The portal is open. Tell the customer their code :code and the password.',
     'portal_password_set' => 'The new password is set. Tell the customer — the old one no longer works.',
     'portal_disabled' => 'The portal is closed. They are signed out now, not when the session expires.',

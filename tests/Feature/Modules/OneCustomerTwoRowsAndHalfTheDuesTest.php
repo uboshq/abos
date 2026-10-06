@@ -183,4 +183,33 @@ class OneCustomerTwoRowsAndHalfTheDuesTest extends TestCase
 
         $this->assertSame($other->id, $twin->company_id);
     }
+
+    /**
+     * ⭐ অন্য শাখার গ্রাহক নকল নয় — মালিক, ৬ অক্টোবর ২০২৬: *"সুপারে কোনো গ্রাহক নাই, তারপরেও দেখাচ্ছে কেন?"*
+     * ⓘ হোলসেলের নাম আর ফোন সুপারে নতুন গ্রাহক খুলতে আটকাত। ⛔ একই শাখায় আগের মতোই আটকায়।
+     */
+    public function test_another_branch_is_not_a_duplicate_but_the_same_branch_still_is(): void
+    {
+        $here = CompanyContext::branchId();
+        $there = \App\Models\Branch::create(['company_id' => CompanyContext::id(), 'code' => 'ZWHL', 'name_en' => 'Wholesale']);
+
+        $this->customer('Rahim Store', '01712345678', ['branch_id' => $there->id]);
+
+        $twin = $this->customer('Rahim Store', '01712345678', ['branch_id' => $here]);
+        $this->assertSame($here, $twin->branch_id);
+
+        try {
+            $this->customer('Rahim  Store', null, ['branch_id' => $here]);
+            $this->fail('⛔ একই শাখায় একই নাম আর সতর্ক করে না।');
+        } catch (ValidationException $e) {
+            $this->assertArrayHasKey('name_en', $e->errors());
+        }
+
+        try {
+            $this->customer('Other Shop', '+8801712345678', ['branch_id' => $there->id]);
+            $this->fail('⛔ একই শাখায় একই ফোন আর আটকায় না।');
+        } catch (ValidationException $e) {
+            $this->assertArrayHasKey('phone', $e->errors());
+        }
+    }
 }

@@ -21,6 +21,9 @@
     'clearable' => false,
     'ariaLabel' => null,
     'wide' => false,
+
+    /* ⓘ খোঁজার ঘরের লেখা — না দিলে পক্ষের ("নাম, কোড, মোবাইল…"); গ্রাহকের পয়েন্টে নিজের (মালিক, ৬ অক্টোবর ২০২৬) */
+    'placeholder' => null,
 ])
 
 {{--
@@ -129,8 +132,8 @@
                    x-bind:aria-expanded="listOpen ? 'true' : 'false'"
                    x-bind:aria-activedescendant="activeOption"
                    autocomplete="off" data-party-search
-                   placeholder="{{ __('accounts::field.party_search') }}"
-                   aria-label="{{ __('accounts::field.party_search') }}"
+                   placeholder="{{ $placeholder ?? __('accounts::field.party_search') }}"
+                   aria-label="{{ $placeholder ?? __('accounts::field.party_search') }}"
                    class="h-(--spacing-field-dense) w-full rounded-(--radius-field)
                           border border-(--color-border) bg-(--color-surface-card) px-2 text-sm">
 

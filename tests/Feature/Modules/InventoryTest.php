@@ -544,8 +544,8 @@ class InventoryTest extends TestCase
             ->assertSee(__('inventory::field.reserved'), false)
             ->assertSee(__('inventory::field.hold'), false)
             ->assertSee(__('inventory::field.available'), false)
-            // ১০০ − ০ − ১৫ = ৮৫
-            ->assertSee('85.00');
+            // ১০০ − ০ − ১৫ = ৮৫ — পরিমাণে অকারণ .00 নয় (মালিক, ৬ অক্টোবর ২০২৬)
+            ->assertSee('>85<', false);
     }
 
     public function test_the_hold_report_separates_the_reasons(): void

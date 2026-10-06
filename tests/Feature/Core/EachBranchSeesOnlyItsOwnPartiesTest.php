@@ -106,7 +106,8 @@ final class EachBranchSeesOnlyItsOwnPartiesTest extends TestCase
 
                 foreach (['mms', 'ntk', 'none'] as $where) {
                     $seen = in_array($this->{$bag}[$where], $ids, true);
-                    $should = in_array($where, $expect[$pick], true);
+                    // ⭐ ৬ অক্টোবর ২০২৬, মালিক: শাখাহীন বাক্স *"সব শাখা ব্যবহার করবে"* — প্রতিটা শাখার টিল-পিকারে থাকে (610bea77)
+                    $should = in_array($where, $expect[$pick], true) || ($bag === 'till' && $where === 'none');
 
                     $this->assertSame($should, $seen, sprintf(
                         '⛔ %s — "%s" বেছে %s-এর সারি %s।',
@@ -130,7 +131,8 @@ final class EachBranchSeesOnlyItsOwnPartiesTest extends TestCase
         $every = $this->idsOn(route('accounts.transfer.create'), 'tills');
 
         foreach (['mms', 'ntk', 'none'] as $where) {
-            $this->assertSame($where === 'mms', in_array($this->till[$where], $one, true), "⛔ ময়মনসিংহ বেছে \"কোন টিলে\"-তে {$where}-এর টিল ভুল জায়গায়।");
+            // ⭐ ৬ অক্টোবর ২০২৬, মালিক: শাখাহীন বাক্স (মালিকের হাতে নগদ) *"সব শাখা ব্যবহার করবে"* — তাই সেটা প্রতিটা শাখায় দেখা যায় (610bea77)
+            $this->assertSame($where !== 'ntk', in_array($this->till[$where], $one, true), "⛔ ময়মনসিংহ বেছে \"কোন টিলে\"-তে {$where}-এর টিল ভুল জায়গায়।");
             $this->assertContains($this->till[$where], $every, "⛔ \"সব শাখা\"-য় \"কোন টিলে\" থেকে {$where}-এর টিল হারাল।");
         }
     }

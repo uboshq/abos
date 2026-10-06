@@ -93,7 +93,7 @@ class CustomerRequest extends FormRequest
             // ইমপোর্ট বা API দিয়ে ফেরানো যায়
             'customer_type' => ['nullable', 'string', 'max:32'],
 
-            // ঋণাত্মক সীমার কোনো অর্থ নেই; শূন্য মানে সীমাহীন।
+            // ঋণাত্মক সীমার কোনো অর্থ নেই; শূন্য মানে বাকি নেই — কেবল নগদ (মালিক, ১ অক্টোবর ২০২৬)।
             'credit_limit' => ['nullable', 'numeric', 'min:0'],
             'credit_days' => ['nullable', 'integer', 'min:0', 'max:365'],
 
@@ -110,6 +110,31 @@ class CustomerRequest extends FormRequest
             ],
             'is_active' => ['nullable', 'boolean'],
         ];
+    }
+
+    /**
+     * ⭐ খোলা ব্যালেন্সের দিক — মালিক, ৬ অক্টোবর ২০২৬: *"আন্তর্জাতিক মানে সাজাও"*।
+     *
+     * ⓘ ফর্মে অঙ্কটা সব সময় ধনাত্মক, পাশে দিক: "গ্রাহক দেবে (Dr)" বা "গ্রাহক পাবে (Cr)" — ঋণাত্মক অঙ্ক
+     * লিখে আগাম বোঝানো ভুলপ্রবণ ছিল। ⚠️ সেবা আগের মতোই চিহ্ন দেখে (Cr = ঋণাত্মক), তাই এখানেই অঙ্কটা
+     * চিহ্নে বদলায়; দিক না পাঠালে (ইমপোর্ট, API) অঙ্ক যেমন এসেছে তেমনই থাকে।
+     */
+    protected function prepareForValidation(): void
+    {
+        $side = $this->input('opening_side');
+        $amount = trim((string) $this->input('opening_balance', ''));
+
+        // ⛔ দিকটা গ্রাহকের কলাম নয় — রেখে দিলে `Customer::create()` mass-assignment-এ ভাঙত (৫০০)
+        $this->request->remove('opening_side');
+        $this->query->remove('opening_side');
+
+        if (! in_array($side, ['dr', 'cr'], true) || $amount === '' || ! is_numeric($amount)) {
+            return;
+        }
+
+        $plain = ltrim($amount, '-+');
+
+        $this->merge(['opening_balance' => $side === 'cr' && ! \App\Core\Support\Money::isZero($plain) ? '-'.$plain : $plain]);
     }
 
     /** @return array<string, string> */

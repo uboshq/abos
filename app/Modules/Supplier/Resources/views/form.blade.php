@@ -127,6 +127,7 @@
                             :required="$requireBangla"
                             :hint="__('supplier::message.bn_name_hint')" />
             </div>
+            <x-ui.duplicate-confirm />
 
             {{-- ⭐ সংক্ষিপ্ত নাম — ড্যাশবোর্ড ও রিপোর্টে পুরো নামের বদলে (Star Line), মালিক, ৬ অক্টোবর ২০২৬ --}}
             <div class="mt-3 grid gap-3 sm:grid-cols-2">

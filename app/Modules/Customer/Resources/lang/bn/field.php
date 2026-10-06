@@ -37,6 +37,9 @@ return [
     'credit_days' => 'বাকীর মেয়াদ (দিন)',
     'opening_balance' => 'খোলা ব্যালেন্স',
     'opening_date' => 'খোলার তারিখ',
+    'opening_side' => 'দিক',
+    'opening_side_dr' => 'গ্রাহক দেবে (Dr)',
+    'opening_side_cr' => 'গ্রাহক পাবে (Cr)',
     'outstanding' => 'বকেয়া',
     'outstanding_all_branches' => 'সব শাখা মিলিয়ে বকেয়া',
 

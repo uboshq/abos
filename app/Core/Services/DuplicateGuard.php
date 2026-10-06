@@ -110,6 +110,7 @@ final class DuplicateGuard
         ?string $phone,
         ?int $ignoreId = null,
         string $field = 'phone',
+        ?\Closure $narrow = null,
     ): void {
         $needle = self::normalisePhone($phone);
 
@@ -117,7 +118,14 @@ final class DuplicateGuard
             return;
         }
 
-        $match = $this->search($model, $ignoreId)
+        $search = $this->search($model, $ignoreId);
+
+        // ⓘ ডাকা কোড পরিসর ছোট করতে পারে — যেমন গ্রাহক কেবল নিজের শাখার মধ্যে ([[CustomerService::sameBranch()]])
+        if ($narrow !== null) {
+            $narrow($search);
+        }
+
+        $match = $search
             ->where(function (Builder $q) use ($columns, $needle) {
                 foreach ($columns as $column) {
                     $q->orWhere($column, 'like', '%'.$needle);
