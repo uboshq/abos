@@ -370,13 +370,19 @@ final class SaleTracking
      * ⓘ ধাপগুলো [[milestones()]]-এরই — একই হিসাব, কেবল মালিকের সাত ধাপে বাছা, আর প্রতিটায় গাড়ি ও চালক
      * ([[DeliveryChallan::transportFacts()]])। চালানের পাতা, ট্র্যাকিংয়ের পাতা আর ফোন — তিনটাই এটা পড়ে।
      *
-     * @return list<array{step: string, label: string, state: string, at: ?string, by: ?string, vehicle: ?string, driver: ?string}>
+     * ⭐ পৌঁছানোর প্রমাণ — ধাপ ৭ (মালিক, ৬ অক্টোবর ২০২৬: "ডিলার বুঝে নিলেন — নাম, ফোন"): "পৌঁছেছে" ধাপে কে বুঝে নিলেন
+     * (`receiver`, নাম · ফোন) — প্রথম "পৌঁছেছে" বা "আংশিক পৌঁছেছে" ঘটনা থেকে; আংশিক হলেও পৌঁছানোর সময়টা।
+     *
+     * @return list<array{step: string, label: string, state: string, at: ?string, by: ?string, vehicle: ?string, driver: ?string, receiver: ?string}>
      */
     public function timeline(DeliveryChallan $challan): array
     {
         $miles = collect($this->milestones($challan, $challan->salesOrder, $this->passOf($challan)))->keyBy('key');
         $t = $challan->transportFacts();
         $driver = trim(implode(' · ', array_filter([$t['driver_name'] ?? null, $t['driver_phone'] ?? null])));
+        $arrival = $this->stageEvents($challan)
+            ->first(fn ($e) => in_array($e->to_stage, [DeliveryStage::DELIVERED, DeliveryStage::PARTIALLY_DELIVERED], true));
+        $receiver = $arrival === null ? '' : trim(implode(' · ', array_filter([$arrival->receiver_name, $arrival->receiver_phone])));
         $rows = [];
 
         foreach (self::TIMELINE as $key => $step) {
@@ -391,7 +397,13 @@ final class SaleTracking
                 'by' => $m['by'] ?? null,
                 'vehicle' => $carries ? (($t['mode'] ?? null) === 'customer_self' ? __('sales::field.transport_mode_customer_self') : ($t['vehicle_no'] ?: null)) : null,
                 'driver' => $carries && $driver !== '' ? $driver : null,
+                'receiver' => $step === 'delivered' && $receiver !== '' ? $receiver : null,
             ];
+
+            // ⓘ আংশিক পৌঁছালে ধাপটা "এখন", তবু কখন পৌঁছাল তা বলা — প্রমাণের সময়
+            if ($step === 'delivered' && $rows[array_key_last($rows)]['at'] === null && $arrival !== null) {
+                $rows[array_key_last($rows)]['at'] = $this->iso($arrival->occurred_at);
+            }
         }
 
         return $rows;

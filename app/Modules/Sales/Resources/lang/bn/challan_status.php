@@ -14,6 +14,8 @@ return [
     'packed_at' => 'প্যাক',
     'gate_at' => 'গেট পাস',
     'dispatched_at' => 'রওনা',
+    'received_by' => 'বুঝে নিলেন',
+    'damaged_qty' => 'ভাঙা',
     'arrived_at' => 'পৌঁছেছে',
     'hours_to_dispatch' => 'তৈরি থেকে রওনা (ঘণ্টা)',
 ];

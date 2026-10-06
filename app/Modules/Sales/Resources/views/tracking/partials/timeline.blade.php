@@ -34,6 +34,10 @@
                 @if ($row['driver'])
                     <div class="text-xs">{{ __('sales::tracking.timeline.driver') }}: {{ $row['driver'] }}</div>
                 @endif
+                {{-- ⭐ পৌঁছানোর প্রমাণ — কে বুঝে নিলেন, নাম আর ফোন (ধাপ ৭) --}}
+                @if ($row['receiver'] ?? null)
+                    <div class="text-xs font-medium" data-timeline-receiver>{{ __('sales::tracking.timeline.received_by') }}: {{ $row['receiver'] }}</div>
+                @endif
             </li>
         @endforeach
     </ol>

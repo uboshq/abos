@@ -156,6 +156,22 @@ final class DeliveryReports
                     ->groupBy('gp.delivery_challan_id')
                     ->selectRaw('gp.delivery_challan_id, MIN(gp.issued_at) as gate_at');
 
+                /*
+                 * ⭐ পৌঁছানোর প্রমাণ — ধাপ ৭ (মালিক, ৬ অক্টোবর ২০২৬: "ডিলার বুঝে নিলেন — নাম, ফোন … কম বা ভাঙা মাল"):
+                 * প্রথম পৌঁছানোর (পুরো বা আংশিক) ঘটনার নাম · ফোন, আর সব পৌঁছানোর লাইনে ভাঙার যোগ।
+                 */
+                $arrived = [$pdo->quote(DeliveryStage::DELIVERED), $pdo->quote(DeliveryStage::PARTIALLY_DELIVERED)];
+                $firstArrival = DB::table('sal_delivery_events as ae')
+                    ->where('ae.company_id', $company)
+                    ->whereRaw('ae.to_stage IN ('.implode(', ', $arrived).')')
+                    ->groupBy('ae.delivery_challan_id')
+                    ->selectRaw('ae.delivery_challan_id, MIN(ae.id) as first_id');
+                $damaged = DB::table('sal_delivery_event_lines as dl')
+                    ->join('sal_delivery_events as de', 'de.id', '=', 'dl.delivery_event_id')
+                    ->where('dl.company_id', $company)
+                    ->groupBy('de.delivery_challan_id')
+                    ->selectRaw('de.delivery_challan_id, SUM(dl.damaged_qty) as damaged_qty');
+
                 $stage = 'CASE COALESCE(st.stage, '.$pdo->quote(DeliveryStage::PENDING).')';
 
                 foreach (DeliveryStage::ALL as $one) {
@@ -170,6 +186,9 @@ final class DeliveryReports
                     ->leftJoin('sal_delivery_states as st', 'st.delivery_challan_id', '=', 'c.id')
                     ->leftJoinSub($events, 'e', 'e.delivery_challan_id', '=', 'c.id')
                     ->leftJoinSub($gate, 'g', 'g.delivery_challan_id', '=', 'c.id')
+                    ->leftJoinSub($firstArrival, 'fa', 'fa.delivery_challan_id', '=', 'c.id')
+                    ->leftJoin('sal_delivery_events as rcv', 'rcv.id', '=', 'fa.first_id')
+                    ->leftJoinSub($damaged, 'dmg', 'dmg.delivery_challan_id', '=', 'c.id')
                     ->where('c.company_id', $company)
                     ->whereIn('c.status', DocumentStatus::POSTED)
                     ->whereBetween('c.trx_date', [$f['from'], $f['to']])
@@ -179,7 +198,9 @@ final class DeliveryReports
                         .'c.trx_date as trx_date, '.self::name('cu').' as customer, o.document_no as order_no, '
                         ."COALESCE(NULLIF(c.vehicle_no, ''), '') as vehicle, {$stage} as stage, "
                         .'c.created_at as created_at, e.allocated_at, e.picking_at, e.packed_at, g.gate_at, e.dispatched_at, e.arrived_at, '
-                        .'CASE WHEN e.dispatched_at IS NULL THEN NULL ELSE TIMESTAMPDIFF(HOUR, c.created_at, e.dispatched_at) END as hours_to_dispatch')
+                        .'CASE WHEN e.dispatched_at IS NULL THEN NULL ELSE TIMESTAMPDIFF(HOUR, c.created_at, e.dispatched_at) END as hours_to_dispatch, '
+                        ."CONCAT_WS(' · ', NULLIF(rcv.receiver_name, ''), NULLIF(rcv.receiver_phone, '')) as received_by, "
+                        .'COALESCE(dmg.damaged_qty, 0) as damaged_qty')
                     ->orderBy('c.trx_date')
                     ->orderBy('c.id');
             },
@@ -200,6 +221,8 @@ final class DeliveryReports
                 ['key' => 'gate_at', 'label' => 'sales::challan_status.gate_at'],
                 ['key' => 'dispatched_at', 'label' => 'sales::challan_status.dispatched_at'],
                 ['key' => 'arrived_at', 'label' => 'sales::challan_status.arrived_at'],
+                ['key' => 'received_by', 'label' => 'sales::challan_status.received_by'],
+                ['key' => 'damaged_qty', 'label' => 'sales::challan_status.damaged_qty', 'type' => ReportColumn::QUANTITY],
                 ['key' => 'hours_to_dispatch', 'label' => 'sales::challan_status.hours_to_dispatch', 'type' => ReportColumn::QUANTITY, 'total' => false],
             ],
         );

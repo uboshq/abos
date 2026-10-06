@@ -46,6 +46,7 @@ return [
         'by' => 'By',
         'car' => 'Vehicle',
         'driver' => 'Driver',
+        'received_by' => 'Received by',
     ],
     'milestone' => [
         'order_created' => 'Order created',

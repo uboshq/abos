@@ -47,6 +47,7 @@ return [
         'by' => 'করেছেন',
         'car' => 'গাড়ি',
         'driver' => 'চালক',
+        'received_by' => 'বুঝে নিলেন',
     ],
     'milestone' => [
         'order_created' => 'অর্ডার তৈরি',

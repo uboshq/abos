@@ -14,6 +14,8 @@ return [
     'packed_at' => 'Packed',
     'gate_at' => 'Gate pass',
     'dispatched_at' => 'Dispatched',
+    'received_by' => 'Received by',
+    'damaged_qty' => 'Damaged',
     'arrived_at' => 'Arrived',
     'hours_to_dispatch' => 'Created to dispatch (hours)',
 ];
