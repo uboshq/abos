@@ -154,10 +154,11 @@ class FreeGoodsCarryLotsTest extends TestCase
      */
     public function test_the_two_counts_inside_a_lot_stay_apart(): void
     {
-        $batch = $this->buy('AB-2', now()->addYear()->toDateString(), qty: '0.0001', free: '50');
+        // ⓘ এক বস্তা কেনা, পঞ্চাশ ফ্রি — বস্তা ভাঙা যায় না, তাই "প্রায় শূন্য" (০.০০০১) নয় (ভগ্নাংশের নিয়ম, ৬ অক্টোবর ২০২৬)
+        $batch = $this->buy('AB-2', now()->addYear()->toDateString(), qty: '1', free: '50');
 
         $this->assertSame(0, bccomp($batch->freeBalance($this->warehouse), '50', 4));
-        $this->assertSame(-1, bccomp($batch->balance($this->warehouse), '1', 4), 'বিক্রয়যোগ্য অংশটা ফ্রি দিয়ে ভরে গেছে');
+        $this->assertSame(0, bccomp($batch->balance($this->warehouse), '1', 4), 'বিক্রয়যোগ্য অংশটা ফ্রি দিয়ে ভরে গেছে');
     }
 
     // ── বেরোনো ───────────────────────────────────────────────────

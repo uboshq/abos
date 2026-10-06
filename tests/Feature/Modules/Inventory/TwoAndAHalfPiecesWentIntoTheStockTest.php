@@ -15,41 +15,80 @@ use App\Modules\MasterData\Models\Unit;
 use App\Modules\Sales\Services\SalesInvoiceService;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Validation\ValidationException;
 use Tests\TestCase;
 
 /**
- * নিজের এককে লেখা ভাঙা পরিমাণ চলে — ম১৯ ফেরানো, ৬ অক্টোবর ২০২৬।
+ * পিসের পণ্যে আড়াই পিস মজুদে বসত — Inventory অডিট ম১৯, ৫ অক্টোবর ২০২৬।
  *
- * ⛔ ম১৯ (023caadf) নিজের এককেও "ভাঙা যায় না" যাচাই বসিয়েছিল। কিন্তু `allows_fraction` প্রতিটা এককে ডিফল্টে মিথ্যা, আর
- * কোথাও কেউ সেটা সত্যি বসায় না — কেজি আর লিটারও তাই "ভাঙা যায় না"। পুরো দৌড়ে ধরা পড়ল: আড়াই কেজি চিনি কেনা আর পাঁচ
- * লিটার তেলের ভাঙা বিক্রি থামল; লাইভেও থামত।
- * ⭐ এই দাবি সেটাই আটকায়: ভগ্নাংশ-বন্ধ এককের পণ্যেও নিজের এককে ২.৫ বিলে বসে। এককগুলো ঠিকভাবে বসানোর পরে নিয়মটা
- * ফিরলে এই দাবিও বদলাতে হবে — জেনে-বুঝে।
+ * ⛔ ভগ্নাংশ না চলা এককের যাচাই কেবল অন্য এককে লেখা পরিমাণে চলত ([[PackConversion::toStockQty()]]): "½ বাক্স"
+ * থামত, অথচ পণ্যের নিজের এককে "২.৫ পিস" সোজা কাগজে আর মজুদে যেত — গণনা কখনো মিলত না।
+ * ⭐ এখন নিজের এককেও একই নিয়ম, প্রতিটা কাগজের সাধারণ দরজায় ([[ReadsPackedQuantities]])।
  */
 final class TwoAndAHalfPiecesWentIntoTheStockTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_a_fraction_in_the_products_own_unit_still_goes_on_a_bill(): void
+    protected function setUp(): void
     {
+        parent::setUp();
         $this->seed(DemoSeeder::class);
         $company = Company::query()->where('code', 'TDEPOT')->firstOrFail();
         CompanyContext::set($company->id, $company->defaultBranch()?->id);
         $this->actingAs(User::query()->where('email', 'owner@abos.test')->firstOrFail());
+    }
 
-        $unit = Unit::query()->create(['code' => 'M19U', 'name_en' => 'kg (unset)', 'name_bn' => 'কেজি', 'factor' => '1',
-            'allows_fraction' => false, 'is_active' => true]);
-        $sugar = Product::query()->create(['code' => 'M19-SUGAR', 'name_en' => 'Loose sugar', 'name_bn' => 'খোলা চিনি',
-            'unit_id' => $unit->id, 'sale_price' => '100', 'is_active' => true]);
+    public function test_a_piece_product_refuses_half_a_piece_in_its_own_unit(): void
+    {
+        $piece = $this->product('M19-PC', false);
 
-        $this->assertSame('2.5', app(PackConversion::class)->toStockQty($sugar, '2.5'), '⛔ নিজের এককে আড়াই কেজি থামল।');
+        try {
+            app(PackConversion::class)->toStockQty($piece, '2.5');
+            $this->fail('⛔ পিসের পণ্যে আড়াই পিস চলল।');
+        } catch (ValidationException $e) {
+            $this->assertStringContainsString('M19-PC', implode(' ', $e->validator->errors()->all()));
+        }
 
-        $bill = app(SalesInvoiceService::class)->create(
+        $this->assertSame('3', app(PackConversion::class)->toStockQty($piece, '3'), 'পুরো সংখ্যাও আটকে গেল।');
+        $this->assertSame('2.5', app(PackConversion::class)->toStockQty($this->product('M19-KG', true), '2.5'), 'ভাঙা চলা এককেও আটকাল।');
+    }
+
+    public function test_a_bill_line_of_half_a_piece_is_refused_at_the_door(): void
+    {
+        $piece = $this->product('M19-BILL', false);
+
+        $this->expectException(ValidationException::class);
+
+        app(SalesInvoiceService::class)->create(
             ['customer_id' => Customer::query()->orderBy('id')->firstOrFail()->id,
                 'warehouse_id' => Warehouse::query()->orderBy('id')->firstOrFail()->id, 'trx_date' => now()->toDateString()],
-            [['product_id' => $sugar->id, 'qty' => '2.5', 'rate' => '100']],
+            [['product_id' => $piece->id, 'qty' => '2.5', 'rate' => '100']],
         );
+    }
 
-        $this->assertSame(0, bccomp((string) $bill->lines->first()->qty, '2.5', 4), '⛔ আড়াই কেজির বিল বসল না।');
+    /**
+     * ⭐ একবার নিয়মটা ফেরানো হয়েছিল (c3c6a9b9) এই ভুল কারণে যে "কেজি-লিটারে কেউ টিক দেয় না"। কোম্পানির নিজের
+     * KG আর LTR ভগ্নাংশ-চলা হয়েই বসে, PCS নয় — তাই ২.৫ কেজি চলে, ২.৫ পিস নয় (মালিক, ৬ অক্টোবর ২০২৬)।
+     */
+    public function test_the_companys_own_kg_and_litre_allow_fractions_and_pieces_do_not(): void
+    {
+        $unit = fn (string $code) => Unit::query()->where('code', $code)->firstOrFail();
+
+        $this->assertTrue((bool) $unit('KG')->allows_fraction, '⛔ কোম্পানির কেজি ভগ্নাংশ-চলা নয়।');
+        $this->assertTrue((bool) $unit('LTR')->allows_fraction, '⛔ কোম্পানির লিটার ভগ্নাংশ-চলা নয়।');
+        $this->assertFalse((bool) $unit('PCS')->allows_fraction, '⛔ কোম্পানির পিস ভগ্নাংশ-চলা।');
+
+        $sugar = Product::query()->create(['code' => 'M19-SUGAR', 'name_en' => 'Loose sugar', 'name_bn' => 'খোলা চিনি',
+            'unit_id' => $unit('KG')->id, 'sale_price' => '140', 'is_active' => true]);
+        $this->assertSame('2.5', app(PackConversion::class)->toStockQty($sugar, '2.5'), '⛔ ২.৫ কেজি চিনি আটকাল।');
+    }
+
+    private function product(string $code, bool $fraction): Product
+    {
+        $unit = Unit::query()->create(['code' => $code.'U', 'name_en' => $code.' unit', 'name_bn' => $code.' একক', 'factor' => '1',
+            'allows_fraction' => $fraction, 'is_active' => true]);
+
+        return Product::query()->create(['code' => $code, 'name_en' => $code, 'name_bn' => $code, 'unit_id' => $unit->id,
+            'sale_price' => '100', 'is_active' => true]);
     }
 }

@@ -212,7 +212,7 @@ final class DirectPurchaseLotsFractionsAndReturnsTest extends TestCase
      */
     public function test_a_fraction_of_a_kilo_makes_a_layer_no_bigger_than_what_came(): void
     {
-        $sugar = $this->freshProduct('FRC', 'Loose sugar (kg)');
+        $sugar = $this->freshProduct('FRC', 'Loose sugar (kg)', unit: 'KG');
 
         $before = $this->snapshot($sugar);
 
@@ -612,13 +612,14 @@ final class DirectPurchaseLotsFractionsAndReturnsTest extends TestCase
     /**
      * একেবারে নতুন পণ্য — তাকে কিছু নেই, স্তর নেই, ভ্যাট নেই।
      */
-    private function freshProduct(string $prefix, string $name, bool $trackBatch = false): Product
+    private function freshProduct(string $prefix, string $name, bool $trackBatch = false, string $unit = 'PCS'): Product
     {
         $product = Product::query()->create([
             'code' => $prefix.'-'.mb_substr(md5($name.microtime()), 0, 8),
             'name_en' => $name,
             'name_bn' => $name,
-            'unit_id' => Unit::query()->orderBy('id')->firstOrFail()->id,
+            // ⓘ খোলা চিনি কেজিতে — পিসে ভগ্নাংশ চলে না (ম১৯, ৬ অক্টোবর ২০২৬ ফেরানো)
+            'unit_id' => Unit::query()->where('code', $unit)->firstOrFail()->id,
             'is_active' => true,
         ]);
 

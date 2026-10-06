@@ -55,12 +55,8 @@ trait ReadsPackedQuantities
          * (১০ পিস)" ছাপা হত।
          */
         if ($unitId === null || $unitId === $product->unit_id) {
-            /*
-             * ⛔ নিজের এককে ভাঙার যাচাই এখানে নেই — ইচ্ছাকৃত (ম১৯ ফেরানো, ৬ অক্টোবর ২০২৬)। `allows_fraction` প্রতিটা এককে
-             * ডিফল্টে মিথ্যা, আর কোথাও কেউ সেটা সত্যি বসায় না: কেজি আর লিটারও "ভাঙা যায় না" — যাচাইটা বসালে লাইভে ২.৫ কেজি
-             * চিনি আর আধা লিটার তেল বেচা-কেনা থামত। এককগুলো ঠিকভাবে বসানোর পরেই নিয়মটা ফিরবে।
-             */
-            return ['qty' => $qty, 'rate' => $rate, 'entered_qty' => null, 'entered_unit_id' => null];
+            // ⭐ নিজের এককেও ভাঙা ধরা পড়ে — পিসের পণ্যে "২.৫" নয় (Inventory অডিট ম১৯; [[PackConversion::toStockQty()]])
+            return ['qty' => app(PackConversion::class)->toStockQty($product, $qty), 'rate' => $rate, 'entered_qty' => null, 'entered_unit_id' => null];
         }
 
         $packs = app(PackConversion::class);
