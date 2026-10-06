@@ -27,6 +27,8 @@ return [
     'product_has_no_unit' => ':product-এর কোনো একক বসানো নেই, তাই কীসে বদলাবে তা বলা যায় না।',
     'units_do_not_meet' => ':entered আর :stocking-এর গোড়া এক নয়, তাই একটাকে অন্যটায় বদলানোর সৎ কোনো উপায় নেই।',
     'qty_not_whole' => ':unit ভাঙা যায় না — :product-এর পরিমাণ পুরো সংখ্যায় লিখুন (লেখা হয়েছে :qty)।',
+    'product_inactive_on_paper' => ':product বন্ধ করা পণ্য — নতুন কাগজে বসে না। আবার চালু করুন, বা অন্য পণ্য বাছুন।',
+    'product_not_sold_in_branch' => ':product এই শাখায় বিক্রি হয় না — পণ্যের "কোন শাখায় বিক্রি" তালিকা দেখুন।',
     'unit_does_not_split' => 'এক :entered পুরো :stocking-এ ভাগ হয় না — এককে ভগ্নাংশ চালু করুন, নাহলে পরিমাণটা :stocking-এ লিখুন।',
 
     // ব্যাচ বাছাই

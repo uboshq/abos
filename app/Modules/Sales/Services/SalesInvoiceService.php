@@ -24,6 +24,7 @@ use App\Modules\Inventory\Models\StockMovement;
 use App\Modules\Inventory\Models\Warehouse;
 use App\Modules\Inventory\Services\CostLayerService;
 use App\Modules\Inventory\Services\ReadsPackedQuantities;
+use App\Modules\Inventory\Services\SellableHere;
 use App\Modules\Inventory\Services\StockService;
 use App\Modules\Sales\Events\InvoiceConfirmed;
 use App\Modules\Sales\Models\DeliveryChallan;
@@ -1111,6 +1112,11 @@ final class SalesInvoiceService
             $rate = $pack['rate'];
 
             $challanLine = $this->resolveChallanLine($invoice, $line['delivery_challan_line_id'] ?? null, $productId, $qty);
+
+            // ⭐ চালান ছাড়া নতুন লাইনের পণ্য সক্রিয় আর এই শাখার (Inventory অডিট ম২৩); চালানের লাইন চালানেই যাচাই হয়েছে
+            if ($challanLine === null) {
+                app(SellableHere::class)->assert($product, $invoice->branch_id === null ? null : (int) $invoice->branch_id);
+            }
 
             // ভ্যাট না পাঠালে পণ্যের নিজের হার থেকে গোনা — কাউন্টারের পর্দা
             // ভ্যাট দেখাত কিন্তু কখনো পাঠাত না, আর বিলে বসত শূন্য

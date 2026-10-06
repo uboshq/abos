@@ -19,6 +19,7 @@ use App\Modules\Inventory\Models\StockMovement;
 use App\Modules\Inventory\Models\Warehouse;
 use App\Modules\Inventory\Services\PrintedPriceCeiling;
 use App\Modules\Inventory\Services\ReadsPackedQuantities;
+use App\Modules\Inventory\Services\SellableHere;
 use App\Modules\Inventory\Services\StockService;
 use App\Modules\Sales\Models\DeliveryChallan;
 use App\Modules\Sales\Models\DeliveryChallanLine;
@@ -619,6 +620,11 @@ final class DeliveryChallanService
             $rate = $pack['rate'];
 
             $orderLine = $this->resolveOrderLine($challan, $line['sales_order_line_id'] ?? null, $productId, $qty);
+
+            // ⭐ আদেশ ছাড়া নতুন বাছা পণ্য সক্রিয় আর এই শাখার (Inventory অডিট ম২৩) — কাউন্টার, ফোন আর চালানের পর্দা সবাই এখানে আসে
+            if ($orderLine === null) {
+                app(SellableHere::class)->assert($product, $challan->branch_id === null ? null : (int) $challan->branch_id);
+            }
 
             $amount = bcmul($qty, $rate, 4);
 

@@ -225,6 +225,11 @@ final class DeliveryOrderService
             $product = Product::query()->find((int) ($line['product_id'] ?? 0))
                 ?? throw ValidationException::withMessages(["lines.{$i}.product_id" => __('sales::delivery_order.no_product')]);
 
+            // ⭐ DO-র পণ্য সক্রিয় আর DO-র শাখার (Inventory অডিট ম২৩) — ফোন আর পোর্টালের DO-ও এখানে আসে;
+            // ⓘ DO নিজে শাখা লেখে না, তাই শাখা না থাকলে কাজের শাখা ([[CompanyContext::branchId()]])
+            $branch = $order->branch_id ?? \App\Core\Support\CompanyContext::branchId();
+            app(\App\Modules\Inventory\Services\SellableHere::class)->assert($product, $branch === null ? null : (int) $branch, "lines.{$i}.product_id");
+
             $order->lines()->create([
                 'product_id' => $product->id,
                 'qty' => $qty,

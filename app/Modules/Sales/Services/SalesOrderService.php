@@ -926,6 +926,9 @@ final class SalesOrderService
                 throw ValidationException::withMessages(['lines' => __('sales::validation.unknown_product')]);
             }
 
+            // ⭐ আদেশের নতুন পণ্য সক্রিয় আর আদেশের শাখার (Inventory অডিট ম২৩) — অফিস, ফোন আর পোর্টালের আদেশ সবাই এখানে আসে
+            app(\App\Modules\Inventory\Services\SellableHere::class)->assert($product, $order->branch_id === null ? null : (int) $order->branch_id);
+
             // "২ বাক্স @ ৮০০" — পরিমাণ আর দর একসাথে পণ্যের এককে নামে
             $pack = $this->packed($product, $qty, $line['unit_id'] ?? null, $rate);
             $qty = $pack['qty'];
