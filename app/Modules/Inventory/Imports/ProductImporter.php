@@ -30,6 +30,19 @@ final class ProductImporter implements Importer
 {
     public function __construct(private readonly ProductService $products) {}
 
+    /**
+     * ⭐ একই ফাইলে আগে দেখা বারকোড আর নাম — Inventory অডিট ম২৫, ৫ অক্টোবর ২০২৬।
+     * ⛔ আগে প্রতিটা সারি কেবল ডেটাবেস দেখত: ফাইলের ভিতরে একই বারকোড দুইবার থাকলে পূর্বদর্শন দুটোকেই ঠিক বলত, আর
+     * বসানোর সময় দ্বিতীয়টা ভাঙত; একই নাম দুইবার থাকলে দুইটা আলাদা পণ্য জন্মাত। ⓘ একটা আমদানি = একটা ইমপোর্টার
+     * ([[ImportRunner]]), তাই মনে রাখা এই ফাইলেরই।
+     *
+     * @var array<string, int>
+     */
+    private array $seenBarcodes = [];
+
+    /** @var array<string, int> */
+    private array $seenNames = [];
+
     public static function label(): string
     {
         return 'inventory::menu.products';
@@ -47,7 +60,8 @@ final class ProductImporter implements Importer
             'barcode' => ['label' => 'inventory::field.barcode', 'required' => false],
             'brand' => ['label' => 'inventory::field.brand', 'required' => false],
             'category' => ['label' => 'inventory::field.category', 'required' => false],
-            'unit' => ['label' => 'inventory::field.unit', 'required' => false],
+            // ⭐ একক বাধ্যতামূলক — Inventory অডিট ম২৫; ⛔ আগে এককহীন পণ্য ঢুকত, আর প্রথম কাগজেই "পণ্যের একক নেই" বলে থামত
+            'unit' => ['label' => 'inventory::field.unit', 'required' => true],
             'tax' => ['label' => 'inventory::field.tax', 'required' => false],
             'purchase_price' => ['label' => 'inventory::field.purchase_price', 'required' => false],
             'sale_price' => ['label' => 'inventory::field.sale_price', 'required' => false],
@@ -78,6 +92,24 @@ final class ProductImporter implements Importer
             $errors[] = __('inventory::validation.barcode_taken', ['barcode' => $row['barcode']]);
         }
 
+        $barcode = trim((string) ($row['barcode'] ?? ''));
+
+        if ($barcode !== '' && isset($this->seenBarcodes[$barcode])) {
+            $errors[] = __('inventory::validation.barcode_twice_in_file', ['barcode' => $barcode]);
+        }
+
+        /*
+         * ⓘ নাম মেলানো হয় ছোট-বড় হাতের অক্ষর আর ফাঁকা বাদ দিয়ে, আর ডেটাবেসে কেবল দেখা শাখায় বিক্রি হওয়া পণ্যের সাথে
+         * ([[Product::scopeSoldInViewedBranch()]]): একই নামের পণ্য আলাদা শাখায় বৈধ (তিন গ্রুপের তালিকা)।
+         */
+        $name = mb_strtolower(preg_replace('/\s+/u', ' ', trim((string) ($row['name_en'] ?? ''))) ?? '');
+
+        if ($name !== '' && isset($this->seenNames[$name])) {
+            $errors[] = __('inventory::validation.name_twice_in_file', ['name' => $row['name_en']]);
+        } elseif ($name !== '' && Product::query()->soldInViewedBranch()->whereRaw('LOWER(TRIM(name_en)) = ?', [$name])->exists()) {
+            $errors[] = __('inventory::validation.name_taken', ['name' => $row['name_en']]);
+        }
+
         foreach (['purchase_price', 'sale_price', 'reorder_level'] as $numeric) {
             if (filled($row[$numeric]) && ! is_numeric($row[$numeric])) {
                 $errors[] = __('core.import.not_a_number', ['column' => $numeric]);
@@ -101,6 +133,17 @@ final class ProductImporter implements Importer
                         $errors[] = $message;
                     }
                 }
+            }
+        }
+
+        // ⓘ কেবল ঠিক সারিই মনে থাকে — ভুল সারি বসবে না, তাই সে পরেরটাকে "দ্বিতীয়বার" বানায় না
+        if ($errors === []) {
+            if ($barcode !== '') {
+                $this->seenBarcodes[$barcode] = 1;
+            }
+
+            if ($name !== '') {
+                $this->seenNames[$name] = 1;
             }
         }
 
