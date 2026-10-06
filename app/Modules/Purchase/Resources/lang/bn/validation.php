@@ -46,6 +46,7 @@ return [
     'receipt_other_supplier' => 'চালানটা অন্য সরবরাহকারীর।',
     'over_billed' => ':no চালানে এসেছে :received — তার বেশি বিল করা যাবে না।',
     'price_mismatch' => ':no বিলের টাকা চালানের সাথে :difference টাকা মিলছে না। মিলিয়ে নিন, নাহলে Control Panel থেকে এই আটকানোটা বন্ধ করুন।',
+    'order_price_mismatch' => ':product-এর দর আদেশে :ordered, বিলে :billed — মিলিয়ে নিন, নাহলে Control Panel থেকে এই আটকানোটা বন্ধ করুন।',
     'duplicate_bill_no' => 'এই সরবরাহকারীর :no নম্বর বিল আগেই আছে — একই বিল দুইবার শোধ হয়ে যেত।',
     // পরিশোধ
     'payment_must_be_positive' => 'পরিশোধের অঙ্ক শূন্যের বেশি হতে হবে।',

@@ -1350,6 +1350,14 @@ final class PurchaseBillService
          */
         $this->recordMatch($bill, $difference);
 
+        /*
+         * ⭐ তিন দিকের তৃতীয় দাম — আদেশের দর (টাকা আসা-যাওয়ার আন্তর্জাতিক পরিকল্পনা, ধাপ খ ১০, ৭ অক্টোবর ২০২৬)।
+         * ⓘ পরিমাণ তিন দিকেই আগে থেকে মেলে (বিল ≤ চালান, বিল ≤ আদেশ, চালান ≤ আদেশ + ছাড়), আর দাম বিল বনাম চালান; কিন্তু
+         * বিলের দর আদেশের দরের সাথে কেউ মেলাত না। ⛔ সুইচ চালু: থামে; বন্ধ: থামে না, মিলের ফলে "exception" দাগ।
+         * ⓘ আদেশ ছাড়া সারি (সরাসরি ক্রয়) — কিছুই বদলায় না।
+         */
+        $this->assertOrderPrices($bill);
+
         if (bccomp($difference, '0', 4) !== 0) {
             $this->assertDifferenceAllowed($bill, $difference);
 
@@ -1811,6 +1819,36 @@ final class PurchaseBillService
         }
 
         return PurchaseBill::MATCH_MATCHED;
+    }
+
+    /** ⭐ বিলের দর বনাম আদেশের দর — সরাসরি সারির আদেশ, বা চালানের পিছনের আদেশ ([[assertOrderPrices()]]-এর ডাক উপরে) */
+    private function assertOrderPrices(PurchaseBill $bill): void
+    {
+        $bill->load(['lines.orderLine', 'lines.receiptLine.orderLine', 'lines.product']);
+
+        foreach ($bill->lines as $line) {
+            $orderLine = $line->orderLine ?? $line->receiptLine?->orderLine;
+
+            if ($orderLine === null || bccomp((string) $line->rate, (string) $orderLine->rate, 4) === 0) {
+                continue;
+            }
+
+            if ($this->settings->get('purchase.block_order_price_mismatch', true)) {
+                throw ValidationException::withMessages([
+                    'lines' => __('purchase::validation.order_price_mismatch', [
+                        'product' => $line->product?->name() ?? '',
+                        'ordered' => Money::format((string) $orderLine->rate),
+                        'billed' => Money::format((string) $line->rate),
+                    ]),
+                ]);
+            }
+
+            if (in_array($bill->match_state, [PurchaseBill::MATCH_MATCHED, PurchaseBill::MATCH_PARTIAL, null], true)) {
+                $bill->forceFill(['match_state' => PurchaseBill::MATCH_EXCEPTION])->save();
+            }
+
+            return;
+        }
     }
 
     /**

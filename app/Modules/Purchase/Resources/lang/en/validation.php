@@ -37,6 +37,7 @@ return [
     'receipt_other_supplier' => 'That receipt belongs to another supplier.',
     'over_billed' => ':no received :received — no more than that can be billed.',
     'price_mismatch' => ':no differs from the receipt by :difference. Reconcile it, or switch this check off in the Control Panel.',
+    'order_price_mismatch' => 'The order rate of :product is :ordered but the bill says :billed. Match them, or switch this block off in the Control Panel.',
     'duplicate_bill_no' => 'Bill :no already exists for this supplier — the same bill would be paid twice.',
     // Payment
     'payment_must_be_positive' => 'A payment must be more than zero.',

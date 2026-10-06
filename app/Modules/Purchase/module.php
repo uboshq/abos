@@ -745,6 +745,18 @@ return [
             'default' => true,
             'group' => 'entry',
         ],
+        [
+            /*
+             * ⭐ বিলের দর আদেশের দরের সাথে না মিললে আটকাও — তিন দিক মেলানো (টাকা আসা-যাওয়ার পরিকল্পনা, ধাপ খ ১০, ৭ অক্টোবর ২০২৬)।
+             * ⓘ নতুন কোম্পানিতে চালু; ঘোষণার দিন যত কোম্পানি ছিল সবগুলোতে মাইগ্রেশনে বন্ধ — আজকের পথ না ভাঙতে (fe, মালিক)।
+             */
+            'key' => 'purchase.block_order_price_mismatch',
+            'super_admin_only' => true,
+            'label' => 'purchase::settings.block_order_price_mismatch',
+            'type' => 'boolean',
+            'default' => true,
+            'group' => 'entry',
+        ],
     ],
 
     /*

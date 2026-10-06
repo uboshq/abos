@@ -7,6 +7,7 @@ return [
     'field_free_qty' => 'ফ্রি পরিমাণের ঘর দেখাও',
     'over_receipt_percent' => 'আদেশের চেয়ে কত শতাংশ বেশি মাল নেওয়া যাবে',
     'block_price_mismatch' => 'বিলের দাম চালানের সাথে না মিললে আটকাও',
+    'block_order_price_mismatch' => 'বিলের দর আদেশের দরের সাথে না মিললে আটকাও',
 
     'screen_direct' => 'সরাসরি ক্রয়ের পর্দা দেখাও',
     'screen_orders' => 'ক্রয় আদেশের পর্দা দেখাও',
