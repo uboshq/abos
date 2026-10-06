@@ -2597,13 +2597,15 @@ final class DirectSaleService
 
     private function resolveWarehouse(mixed $warehouseId): Warehouse
     {
+        // ⭐ প্রধান না থাকলে শাখার একমাত্র চালু গুদাম ([[Warehouse::defaultInView()]], ৬ অক্টোবর ২০২৬)
         $warehouse = blank($warehouseId)
-            ? Warehouse::query()->where('is_default', true)->active()->first()
+            ? Warehouse::defaultInView()
             : Warehouse::query()->whereKey((int) $warehouseId)->first();
 
         if ($warehouse === null) {
             throw ValidationException::withMessages([
-                'warehouse_id' => __('sales::validation.unknown_warehouse'),
+                // ⓘ গুদাম না বললে কারণটা স্পষ্ট — "প্রধান গুদাম বাছুন", খালি "অচেনা গুদাম" নয়
+                'warehouse_id' => blank($warehouseId) ? Warehouse::mainMissingMessage() : __('sales::validation.unknown_warehouse'),
             ]);
         }
 

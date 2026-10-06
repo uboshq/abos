@@ -103,6 +103,34 @@ class Warehouse extends Model implements Drillable
         return $this->fresh();
     }
 
+    /**
+     * ⭐ দেখা শাখার প্রধান গুদাম — না থাকলে সেখানকার একমাত্র চালু গুদাম (লাইভের ত্রুটি, fe, ৬ অক্টোবর ২০২৬)।
+     *
+     * ⛔ ইউনিভারের সাত শাখার কেবল একটায় প্রধান গুদাম ছিল; বাকি শাখার কাউন্টার গুদাম না পেয়ে খালি লট দেখাত — মালিক:
+     * *"লটে কোনো লট দেখায় না, তাই বাছা যায় না, না বাছলে qty বসে না"*। ⓘ একাধিক চালু গুদাম আর কোনোটা প্রধান নয় হলে
+     * `null` — কোনটা নেবে তা আন্দাজ করা হয় না; ডাকার জায়গা তখন "প্রধান গুদাম বাছুন" বলে ([[mainMissingMessage()]])।
+     */
+    public static function defaultInView(): ?self
+    {
+        $main = static::query()->where('is_default', true)->active()->first();
+
+        if ($main !== null) {
+            return $main;
+        }
+
+        $active = static::query()->active()->limit(2)->get();
+
+        return $active->count() === 1 ? $active->first() : null;
+    }
+
+    /** ⓘ প্রধান গুদাম না পাওয়ার কারণটা মানুষের ভাষায় — একাধিক গুদাম হলে "প্রধান বাছুন", একটাও না থাকলে "গুদাম নেই" */
+    public static function mainMissingMessage(): string
+    {
+        return static::query()->active()->count() > 1
+            ? (string) __('inventory::validation.choose_main_warehouse')
+            : (string) __('inventory::validation.no_active_warehouse');
+    }
+
     protected $table = 'inv_warehouses';
 
     protected $fillable = [

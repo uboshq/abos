@@ -60,6 +60,8 @@ return [
     'not_enough_on_floor' => 'There is not that much :product in :warehouse — there is :have.',
     'warehouse_branch_has_history' => ':warehouse already has stock movements — its branch no longer changes. Open a new warehouse in the other branch and transfer the goods.',
     'warehouse_still_holds_stock' => ':warehouse still has goods, or goods reserved or held for someone — move or release them first, then deactivate.',
+    'choose_main_warehouse' => 'This branch has several warehouses and none is the main one — mark one as main in the warehouse list, or pick a warehouse at the counter.',
+    'no_active_warehouse' => 'This branch has no active warehouse — open one first.',
     'warehouse_code_taken' => 'Another warehouse already uses this code.',
     'not_enough_free' => 'Only :have free stock of :product is in :warehouse — no more can be given.',
 

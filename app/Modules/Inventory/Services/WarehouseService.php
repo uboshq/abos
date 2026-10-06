@@ -49,7 +49,18 @@ final class WarehouseService
 
             // প্রথম গুদামটাই প্রধান — নাহলে কোনো প্রধান ছাড়া শুরু হত,
             // আর মাল কোথায় ঢুকবে তা বলার কেউ থাকত না
-            if (($data['is_default'] ?? false) || Warehouse::query()->count() === 1) {
+            /*
+             * ⭐ শাখার প্রথম গুদাম নিজেই প্রধান — শাখা ধরে, হেডারের দেখা নয় (লাইভের ত্রুটি, ৬ অক্টোবর ২০২৬)। ⛔ আগে গোনা হত
+             * দেখা গুদাম: "সব শাখা"-য় দ্বিতীয় শাখার প্রথম গুদাম প্রধান হত না, আর সেই শাখার কাউন্টার গুদাম না পেয়ে লট খালি দেখাত।
+             */
+            $branchHasMain = Warehouse::query()
+                ->withoutGlobalScopes(['user-warehouse', Warehouse::VIEWED_BRANCH])
+                ->whereKeyNot($warehouse->id)
+                ->where('is_default', true)
+                ->when($warehouse->branch_id === null, fn ($q) => $q->whereNull('branch_id'), fn ($q) => $q->where('branch_id', $warehouse->branch_id))
+                ->exists();
+
+            if (($data['is_default'] ?? false) || ! $branchHasMain) {
                 $warehouse->makeDefault();
             }
 

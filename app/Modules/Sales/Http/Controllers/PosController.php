@@ -680,6 +680,7 @@ class PosController extends Controller implements HasMiddleware
 
         return $id > 0
             ? Warehouse::query()->find($id)
-            : Warehouse::query()->where('is_default', true)->active()->first();
+            // ⭐ প্রধান না থাকলে শাখার একমাত্র চালু গুদাম ([[Warehouse::defaultInView()]], ৬ অক্টোবর ২০২৬)
+            : Warehouse::defaultInView();
     }
 }

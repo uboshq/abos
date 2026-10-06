@@ -419,6 +419,7 @@ class DirectSaleApiController extends Controller implements HasMiddleware
     {
         return $publicId !== ''
             ? Warehouse::query()->where('public_id', $publicId)->first()
-            : Warehouse::query()->where('is_default', true)->first();
+            // ⭐ প্রধান না থাকলে শাখার একমাত্র চালু গুদাম — ফোনের কাউন্টারেও ([[Warehouse::defaultInView()]], ৬ অক্টোবর ২০২৬)
+            : Warehouse::defaultInView();
     }
 }
