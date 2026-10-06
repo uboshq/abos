@@ -22,10 +22,14 @@ use Tests\TestCase;
 final class TheMenuOfferedFinalAccountsTheDoorRefusedTest extends TestCase
 {
     use RefreshDatabase;
+    use \Tests\Concerns\TakesTheDealerWallOffTheDemoSalesman;
 
     public function test_the_final_accounts_key_alone_opens_what_the_menu_offers(): void
     {
         $this->seed(DemoSeeder::class);
+        // ⓘ প্রথম চাবিহীন মানুষটা ডেমোর বিক্রয়কর্মী, যিনি ডিলারের দেয়ালের ভিতরে (⛔১৬) — দেয়ালের ভিতরে পুরো কোম্পানির লাভ-ক্ষতি
+        // ঠিকভাবেই ৪০৩; এখানে প্রশ্নটা চাবির, দেয়ালের নয়
+        $this->takeTheDealerWallOffTheDemoSalesman();
 
         $company = Company::query()->where('code', 'TDEPOT')->firstOrFail();
         CompanyContext::set($company->id, $company->defaultBranch()?->id);
