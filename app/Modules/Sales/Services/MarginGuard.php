@@ -282,7 +282,7 @@ final class MarginGuard
      */
     public function requestFor(DeliveryChallan $challan): ?Approval
     {
-        $verdict = $this->judge($challan->fresh(['lines.product']) ?? $challan);
+        $verdict = $this->judge($challan->fresh(['lines.product.tax']) ?? $challan);
 
         if ($verdict->action !== self::APPROVAL || ! $verdict->isBelow() || ! $this->flowExists($challan)) {
             return null;
@@ -899,7 +899,8 @@ final class MarginGuard
      */
     private function challanRows(DeliveryChallan $challan): array
     {
-        $challan->loadMissing('lines.product');
+        // ⓘ করসহ — [[withoutInclusiveVat()]] পণ্যের কর পড়ে; না আনলে প্রতিটা সারিতে আলাদা কোয়েরি, আর local-এ ৫০০ (৬ অক্টোবর ২০২৬-এর বিক্রয় ধারার পরীক্ষা)
+        $challan->loadMissing('lines.product.tax');
 
         $rows = [];
 
