@@ -255,6 +255,15 @@ class EveryRouteIsGuardedTest extends TestCase
         'api.notices.acknowledge' => 'নিজের সই — লক্ষ্যের বাইরে হলে ৪০৪',
 
         /*
+         * ⭐ ফোনের ঘণ্টা — ৬ অক্টোবর ২০২৬ (মালিক: "Notification icon dibe ekta")। ⓘ ওয়েবের `notifications.open` আর
+         * `read-all`-এর একই নিয়ম: নিজের খবর, মালিকানা [[NotificationService::markRead()]]-এ যাচাই, অন্যেরটায় ৪০৪;
+         * চাবি চাইলে গ্রাহক আর সরবরাহকারী নিজেদের খবরও দেখতে পেতেন না।
+         */
+        'api.notifications.index' => 'নিজের ঘণ্টার খবর — কেবল এই মানুষটার, এই কোম্পানির',
+        'api.notifications.read-all' => 'নিজের ঘণ্টা খালি করা',
+        'api.notifications.read' => 'নিজের খবরে পড়ার দাগ — অন্যেরটায় ৪০৪',
+
+        /*
          * পর্দার দুইটা — পাঠকের কাজ, লেখকের নয়।
          *
          * ⓘ সরালে কেবল **নিজের** পর্দা থেকে সরে, আর সই দেন যাঁর

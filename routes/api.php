@@ -9,6 +9,7 @@ use App\Http\Controllers\Api\DashboardTodayController;
 use App\Http\Controllers\Api\DocumentApiController;
 use App\Http\Controllers\Api\MeController;
 use App\Http\Controllers\Api\NoticeApiController;
+use App\Http\Controllers\Api\NotificationApiController;
 use App\Http\Controllers\Api\ReportApiController;
 use App\Http\Controllers\Api\ReportExportApiController;
 use App\Http\Controllers\Api\SyncController;
@@ -144,6 +145,14 @@ Route::prefix('v1')
         Route::post('/notices/{notice}/read', [NoticeApiController::class, 'read'])->name('notices.read');
         Route::post('/notices/{notice}/acknowledge', [NoticeApiController::class, 'acknowledge'])
             ->name('notices.acknowledge');
+
+        /*
+         * ⭐ ঘণ্টার খবর — ফোনের মাথার ঘণ্টা (মালিক, ৬ অক্টোবর ২০২৬)। ⓘ নিজের খবর, তাই চাবি নেই, নোটিশের মতোই;
+         * অন্যের খবর ৪০৪ ([[NotificationApiController]])।
+         */
+        Route::get('/notifications', [NotificationApiController::class, 'index'])->name('notifications.index');
+        Route::post('/notifications/read-all', [NotificationApiController::class, 'readAll'])->name('notifications.read-all');
+        Route::post('/notifications/{notification}/read', [NotificationApiController::class, 'read'])->name('notifications.read');
 
         /*
          * "আমি কে, আর আমি কী দেখব" — অ্যাপের প্রথম প্রশ্ন।

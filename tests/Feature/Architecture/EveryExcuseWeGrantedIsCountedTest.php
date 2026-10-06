@@ -317,7 +317,12 @@ final class EveryExcuseWeGrantedIsCountedTest extends TestCase
      * ── ⚠️ ৩১৯ → ৩১৮, ৫ অক্টোবর ২০২৬ (দর তালিকা, ধাপ ৩) ─────────────────────────────────────────────────────────
      *   −১  EveryListCarriesItsTotalsBarTest::PENDING — দামের বইয়ের পাতায় পট্টি বসল, নামটা কাটা হলো
      */
-    private const CEILING = 318;
+    /*
+     * ── ⚠️ +৩, ৬ অক্টোবর ২০২৬ (abos-2c, ফোনের ঘণ্টা) ─────────────────────────────────────────────────────────────
+     *   +৩  EveryRouteIsGuardedTest::TOKEN_SYNC — api.notifications.index / read / read-all: নিজের খবর, ওয়েবের
+     *       notifications.open আর read-all-এর মতোই চাবিহীন; মালিকানা NotificationService::markRead()-এ, অন্যেরটায় ৪০৪
+     */
+    private const CEILING = 321;
 
     /*
      * ── ⚠️ ২২২ → ২২৪, ২৩ সেপ্টেম্বর ২০২৬ ───────────────────────────
