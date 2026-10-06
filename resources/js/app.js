@@ -12,6 +12,7 @@ import partyVoucher from './party-voucher.js'
 import partySearch from './party-search.js'
 import directSale from './counter/direct-sale.js'
 import directPurchase from './counter/direct-purchase.js'
+import openingCart from './counter/opening-cart.js'
 import { registerComponents } from './components/index.js'
 import { listenForColumnChoice } from './columns.js'
 
@@ -90,6 +91,8 @@ document.addEventListener('alpine:init', () => {
      */
     Alpine.data('directSale', directSale)
     Alpine.data('directPurchase', directPurchase)
+    // ⭐ খোলা মজুদের কার্ট — সার্চ, ফ্রি, দাম, Enter = পরের ঘর (মালিক, ৬ অক্টোবর ২০২৬)
+    Alpine.data('openingCart', openingCart)
 
     /*
      * ⭐ শেল, টাকার ঘর ও বাকি পর্দার ছোট কম্পোনেন্ট — ১৯ সেপ্টেম্বর ২০২৬।

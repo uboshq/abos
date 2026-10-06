@@ -195,7 +195,9 @@ return [
     'opening_cart_rows' => 'মোট সারি',
     'opening_cart_value' => 'মোট মূল্য',
     'opening_cart_search' => 'কোড, নাম বা বারকোড',
-    'opening_cart_lot_auto' => 'খালি = সিরিজ থেকে',
+    'opening_cart_lot_auto' => 'খালি = Opening',
+    'opening_cart_no_match' => 'কোনো পণ্য মেলেনি',
+    'opening_cart_qty_total' => 'মোট পরিমাণ',
     'opening_cart_import' => 'Excel/CSV থেকে বসান',
     'opening_cart_row_error' => 'লাল সারিগুলো ঠিক করুন — একটা সারি ভুল থাকলে কোনোটাই বসে না।',
 ];

@@ -192,7 +192,9 @@ return [
     'opening_cart_rows' => 'Rows',
     'opening_cart_value' => 'Total value',
     'opening_cart_search' => 'Code, name or barcode',
-    'opening_cart_lot_auto' => 'Blank = from the series',
+    'opening_cart_lot_auto' => 'Blank = Opening',
+    'opening_cart_no_match' => 'No product matches',
+    'opening_cart_qty_total' => 'Total quantity',
     'opening_cart_import' => 'From Excel/CSV',
     'opening_cart_row_error' => 'Fix the red rows — if one row is wrong, none goes in.',
 ];

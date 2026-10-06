@@ -21,7 +21,7 @@ use Tests\TestCase;
  * খোলা মজুদ বসত এক পণ্যে এক ফর্মে — মালিক, ৬ অক্টোবর ২০২৬: *"এভাবে না দিয়ে পাশাপাশি করে দিলে হতো না"*।
  *
  * ⭐ এখন এক পর্দায় কার্ট: উপরে একবার গুদাম আর তারিখ, নিচে সারিপ্রতি এক পণ্য; এক চাপে সব সারি এক লেনদেনে
- * ([[OpeningStockService::bringInMany()]]), খাতায় একটা দাখিলা; খালি লট সিরিজ থেকে; একটা সারি ভুল হলে কিছুই বসে না।
+ * ([[OpeningStockService::bringInMany()]]), খাতায় একটা দাখিলা; খালি লট "Opening"; একটা সারি ভুল হলে কিছুই বসে না।
  */
 final class TheOpeningStockWentInOneProductAtATimeTest extends TestCase
 {
@@ -46,7 +46,7 @@ final class TheOpeningStockWentInOneProductAtATimeTest extends TestCase
         $b = $this->product('CART-B');
         $c = $this->product('CART-C');
 
-        $this->get(route('inventory.stock.opening'))->assertOk()->assertSee('data-opening-cart', false)->assertSee('CART-A — ');
+        $this->get(route('inventory.stock.opening'))->assertOk()->assertSee('data-opening-cart', false)->assertSee('openingCart(', false)->assertSee('CART-A');
 
         $this->post(route('inventory.stock.opening.cart'), [
             'warehouse_id' => $this->store->id,
@@ -68,8 +68,9 @@ final class TheOpeningStockWentInOneProductAtATimeTest extends TestCase
         $debit = LedgerEntry::query()->where('source_type', 'opening_stock')->where('source_id', $sources->first())->sum('debit');
         $this->assertSame(0, bccomp((string) $debit, '800', 2), '⛔ দাখিলার মোট সব সারির মূল্য (৫০০ + ১০০ + ২০০) নয়।');
 
+        // ⭐ খালি লট = "Opening" — মালিক, ৬ অক্টোবর ২০২৬ (আগে সিরিজ থেকে নম্বর)
         $autoLot = (string) Batch::query()->where('product_id', $b->id)->value('batch_no');
-        $this->assertNotSame('', $autoLot, '⛔ খালি লট সিরিজ থেকে নম্বর পেল না।');
+        $this->assertSame('Opening', $autoLot, '⛔ খালি লট "Opening" নামে বসেনি।');
     }
 
     public function test_one_wrong_row_puts_nothing_in_and_says_which_row(): void

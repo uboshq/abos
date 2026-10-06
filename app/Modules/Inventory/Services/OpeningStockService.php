@@ -38,6 +38,9 @@ final class OpeningStockService
     /** খোলা মজুদের চলাচল ও স্তর এই ধরনেই বসে। */
     public const SOURCE_TYPE = 'opening';
 
+    /** ⭐ খোলা মজুদের লট খালি হলে এই নাম (মালিক, ৬ অক্টোবর ২০২৬) */
+    public const OPENING_LOT = 'Opening';
+
     public const DOCUMENT_NO = 'OPENING';
 
     public function __construct(
@@ -201,16 +204,26 @@ final class OpeningStockService
         if ($product->track_batch) {
             $no = trim((string) ($row['batch_no'] ?? ''));
 
+            /*
+             * ⭐ লট খালি → "Opening" — মালিক, ৬ অক্টোবর ২০২৬ (সিরিজ নয়, খোলা মজুদের জন্য)। ⓘ একই পণ্যে আগে থেকে
+             * "Opening" লট থাকলে সেই লটেই যোগ হয় — হাতে লেখা লটের একই নিয়ম ([[BatchService::receive()]] খুঁজে পেলে সেটাই দেয়),
+             * আর তাই এই লটে "আগেই বসানো" আটকায় না (`$topUp`)।
+             */
+            $topUp = false;
+
             if ($no === '') {
-                $no = app(\App\Core\Engines\NumberSeries\NumberSeriesEngine::class)->next(
-                    'LOT', $warehouse->branch_id === null ? null : (int) $warehouse->branch_id, $date === null ? null : Carbon::parse($date), self::SOURCE_TYPE,
-                );
+                $no = self::OPENING_LOT;
+                $topUp = true;
             }
 
             $batch = app(BatchService::class)->receive(product: $product, batchNo: $no, expiry: ($row['expiry_date'] ?? null) ?: null);
         }
 
-        $this->assertSane($product, $warehouse, $qty, $cost, $batch);
+        $this->assertSane($product, $warehouse, $qty, $cost, $batch, $topUp ?? false);
+
+        // ⭐ ফ্রি — খরচ ছাড়া, একই লটে (ক্রয়ের মতো); খরচের স্তরে বসে না
+        $free = trim((string) ($row['free_qty'] ?? ''));
+        $free = is_numeric($free) && bccomp($free, '0', 4) > 0 ? bcadd($free, '0', 4) : '0';
 
         $movement = $this->stock->move(
             product: $product,
@@ -218,11 +231,14 @@ final class OpeningStockService
             sourceType: self::SOURCE_TYPE,
             sourceId: $product->id,
             floor: $qty,
+            free: $free,
             date: $date,
             documentNo: self::DOCUMENT_NO,
             narration: $narration ?? __('inventory::message.opening_narration'),
             batch: $batch,
         );
+
+        $this->priceTheProduct($product, $cost, $row);
 
         $supplier = $row['supplier_id'] ?? null;
 
@@ -291,12 +307,38 @@ final class OpeningStockService
     }
 
     /** @throws ValidationException */
+    /**
+     * ⭐ পণ্যের দাম — ক্রয়ের একই নিয়ম ([[PurchaseBillService]]): কেনা দর সবসময়; বিক্রয়মূল্য লেখা থাকলে; নীতি (মার্কআপ বা
+     * মার্জিন, শতাংশসহ) বাছা থাকলে। ⓘ খালি বিক্রয়মূল্য মানে "দাম বদলাব না" — পুরনো দাম আর নীতি অক্ষত।
+     *
+     * @param  array<string, mixed>  $row
+     */
+    private function priceTheProduct(Product $product, string $cost, array $row): void
+    {
+        $update = ['purchase_price' => $cost];
+        $price = trim((string) ($row['sales_price'] ?? ''));
+
+        if (is_numeric($price) && bccomp($price, '0', 4) > 0) {
+            $update['sale_price'] = bcadd($price, '0', 4);
+            $anchor = (string) ($row['pricing_anchor'] ?? '');
+
+            if (in_array($anchor, ['markup', 'margin', 'sales_price'], true)) {
+                $pct = trim((string) ($row['pricing_pct'] ?? ''));
+                $update['pricing_anchor'] = $anchor;
+                $update['pricing_pct'] = $anchor !== 'sales_price' && is_numeric($pct) ? $pct : null;
+            }
+        }
+
+        $product->update($update);
+    }
+
     private function assertSane(
         Product $product,
         Warehouse $warehouse,
         string $qty,
         string $unitCost,
         ?Batch $batch = null,
+        bool $topUp = false,
     ): void {
         /*
          * ⛔ লট ধরা পণ্যে লট ছাড়া শুরুর মজুদ নয়।
@@ -347,7 +389,7 @@ final class OpeningStockService
             ]);
         }
 
-        if ($this->exists($product, $warehouse, $batch)) {
+        if (! $topUp && $this->exists($product, $warehouse, $batch)) {
             throw ValidationException::withMessages([
                 'product_id' => __('inventory::message.opening_already_done', [
                     'product' => $product->name(),

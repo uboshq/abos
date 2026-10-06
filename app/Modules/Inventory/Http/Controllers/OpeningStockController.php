@@ -132,7 +132,10 @@ class OpeningStockController extends Controller implements HasMiddleware
                 continue;
             }
 
-            $product = $this->productFromTyped($typed);
+            // ⭐ সার্চ বাক্স থেকে বাছা হলে id আসে; হাতে লেখা হলে কোড বা বারকোড ধরে চেনা
+            $product = filled($row['product_id'] ?? null) && ctype_digit((string) $row['product_id'])
+                ? Product::query()->soldInViewedBranch()->whereKey((int) $row['product_id'])->first()
+                : $this->productFromTyped($typed);
 
             if ($product === null) {
                 $unknown["rows.{$i}.product"] = [__('inventory::message.opening_unknown_product')];
@@ -147,6 +150,11 @@ class OpeningStockController extends Controller implements HasMiddleware
                 'batch_no' => $row['batch_no'] ?? null,
                 'expiry_date' => $row['expiry_date'] ?? null,
                 'supplier_id' => $row['supplier_id'] ?? null,
+                // ⭐ ফ্রি আর দাম — মালিক, ৬ অক্টোবর ২০২৬ ("Quantity * Free", "Rate, Markup, Margin, Sales price")
+                'free_qty' => $row['free_qty'] ?? null,
+                'sales_price' => $row['sales_price'] ?? null,
+                'pricing_anchor' => $row['pricing_anchor'] ?? null,
+                'pricing_pct' => $row['pricing_pct'] ?? null,
             ];
         }
 
