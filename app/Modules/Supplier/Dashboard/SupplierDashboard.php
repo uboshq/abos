@@ -206,8 +206,11 @@ final class SupplierDashboard implements ProvidesDashboard
      * বাকি ইনফ্লো কথায় — "দিতে হবে: 11,56,172.16" (জের ধনাত্মক: আমরা প্রিন্সিপালকে দেব) বা "কোম্পানির কাছে পাব: …"
      * (ঋণাত্মক: বেশি পাঠানো হয়ে গেছে)। ⛔ খালি বিয়োগ চিহ্ন কখনো নয়; শূন্য হলে কেবল অঙ্ক।
      */
-    /** ⓘ কমিশন ঋণাত্মক ("আসল" ভিত্তিতে কেনা দামের নিচে বিক্রি) হলে কথায়, খালি বিয়োগ নয় (৬ অক্টোবর ২০২৬) */
-    private static function earned(string $commission): string
+    /**
+     * ⓘ কমিশন ঋণাত্মক ("আসল" ভিত্তিতে কেনা দামের নিচে বিক্রি) হলে কথায়, খালি বিয়োগ নয় (৬ অক্টোবর ২০২৬)।
+     * ⭐ public — ফোনের হোমের প্রিন্সিপালের ঘর ([[DashboardTodayController]]) এই লেখাটাই পাঠায়, নিজে গড়ে না।
+     */
+    public static function earned(string $commission): string
     {
         $rounded = Money::round($commission, 2);
 

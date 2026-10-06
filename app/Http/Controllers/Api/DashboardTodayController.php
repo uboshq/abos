@@ -150,6 +150,8 @@ class DashboardTodayController extends Controller
                 'basisRate' => (string) $r['basis_rate'],
                 'inflow' => self::money((string) $r['inflow']),
                 'commission' => self::money((string) $r['commission']),
+                // ⭐ ওয়েবের বাক্সের লেখাই — ঋণাত্মক হলে "লোকসান ৳… — কেনা দামের নিচে বিক্রি", খালি বিয়োগ নয় (৬ অক্টোবর ২০২৬)
+                'commissionLabel' => \App\Modules\Supplier\Dashboard\SupplierDashboard::earned((string) $r['commission']),
                 'share' => self::money((string) $r['share']),
                 'paid' => self::money((string) $r['paid']),
                 'balance' => self::money((string) $r['balance']),

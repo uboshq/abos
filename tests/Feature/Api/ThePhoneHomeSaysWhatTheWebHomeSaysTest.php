@@ -125,6 +125,34 @@ final class ThePhoneHomeSaysWhatTheWebHomeSaysTest extends TestCase
         }
     }
 
+    /**
+     * ⭐ "আসল" ভিত্তিতে কেনা দামের নিচে বিক্রি — কমিশন ঋণাত্মক, আর ফোন ওয়েবের বাক্সের লেখাটাই বলে ("লোকসান ৳… — কেনা
+     * দামের নিচে বিক্রি"), খালি বিয়োগ নয় (সমন্বয়ক, ৬ অক্টোবর ২০২৬)।
+     */
+    public function test_a_loss_on_the_actual_basis_is_said_in_the_webs_words(): void
+    {
+        $principal = \App\Modules\Supplier\Models\Supplier::query()->orderBy('id')->firstOrFail();
+        $principal->forceFill([
+            'principal_branch_id' => $this->company->defaultBranch()?->id, 'commission_basis' => 'actual',
+            'commission_rate' => null, 'cycle_start_day' => 2, 'cycle_close_day' => 1,
+        ])->save();
+
+        // ⓘ আজকের বিলের মাল এই প্রিন্সিপালের স্তর থেকে — আদায় নেই, তাই কমিশন = − কেনা দাম
+        $this->billToday();
+        $layers = \Illuminate\Support\Facades\DB::table('inv_cost_layer_uses')->where('source_type', 'sales_invoice')->pluck('cost_layer_id');
+        $this->assertNotEmpty($layers, 'দাবির ভিত্তি নেই — বিলে কেনা-দামের স্তরই নেই।');
+        \Illuminate\Support\Facades\DB::table('inv_cost_layers')->whereIn('id', $layers)->update(['supplier_id' => $principal->id]);
+
+        $phone = collect($this->phone()->json('principals'))->firstWhere('name', \App\Modules\Supplier\Reports\PrincipalCommission::shortName($principal->short_name, $principal->name_bn, (string) $principal->name_en));
+        $this->assertNotNull($phone, 'প্রিন্সিপালের সারি ফোনে নেই।');
+        $this->assertSame(-1, bccomp((string) $phone['commission'], '0', 4), 'দাবির ভিত্তি নেই — কমিশন ঋণাত্মক হয়নি।');
+
+        $this->web();
+        $this->assertSame(\App\Modules\Supplier\Dashboard\SupplierDashboard::earned((string) $phone['commission']), $phone['commissionLabel'],
+            '⛔ ফোনের লোকসানের লেখা ওয়েবের বাক্সের নয়।');
+        $this->assertStringNotContainsString('-', $phone['commissionLabel'], '⛔ লোকসান খালি বিয়োগ চিহ্নে বলা হলো।');
+    }
+
     public function test_payable_is_the_chart_liabilities_and_the_hand_loan_pages_we_owe(): void
     {
         // ⓘ ডেমোতে দায় নেই — একটা সরবরাহকারীর পাওনা বসানো, যাতে দাবিটা শূন্য = শূন্য না মাপে
