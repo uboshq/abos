@@ -41,7 +41,8 @@ final class SalesCustomerFilters implements CustomerSalesFilters
             ->selectRaw('1')
             ->whereColumn('b.customer_id', 'customers.id')
             ->whereRaw('b.total > b.collected_total + b.voucher_total + b.returned_total')
-            ->whereRaw('b.trx_date < DATE_SUB(CURDATE(), INTERVAL COALESCE(NULLIF(customers.credit_days, 0), 30) DAY)'));
+            // ⓘ "আজ" অ্যাপের ঘড়ি থেকে, ডেটাবেসের নয় (৬ অক্টোবর ২০২৬)
+            ->whereRaw('b.trx_date < DATE_SUB(?, INTERVAL COALESCE(NULLIF(customers.credit_days, 0), 30) DAY)', [\Illuminate\Support\Carbon::today()->toDateString()]));
     }
 
     /**

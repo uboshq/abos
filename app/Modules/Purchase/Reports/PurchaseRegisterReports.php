@@ -162,6 +162,7 @@ final class PurchaseRegisterReports
             ->selectRaw("{$name} as supplier_name")
             ->selectRaw("CASE {$a}.status {$statuses} ELSE {$a}.status END as status_label")
             ->selectRaw("{$a}.total")
-            ->selectRaw("CASE WHEN {$a}.status IN ('{$open}') THEN DATEDIFF(CURDATE(), {$a}.trx_date) END as age_days");
+            // ⓘ "আজ" অ্যাপের ঘড়ি থেকে, ডেটাবেসের নয় — UTC ডেটাবেসে রাত ১২টা থেকে ভোর ৬টা বয়স এক দিন কম দেখাত (৬ অক্টোবর ২০২৬)
+            ->selectRaw("CASE WHEN {$a}.status IN ('{$open}') THEN DATEDIFF(?, {$a}.trx_date) END as age_days", [\Illuminate\Support\Carbon::today()->toDateString()]);
     }
 }
