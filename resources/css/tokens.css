@@ -25,6 +25,11 @@
        hex হলে সেটা ভেঙে যেত। */
     --color-brand-50: rgb(var(--accent-50, 232 240 254) / 1);
     --color-brand-100: rgb(var(--accent-100, 205 224 253) / 1);
+    /* ⓘ পর্দায় ব্যবহার হয়, কিন্তু সংজ্ঞা ছিল না (৭ অক্টোবর ২০২৬) — নাম ছাড়া রঙ কিছুই আঁকে না */
+    --color-brand-400: rgb(var(--accent-400, 96 165 250) / 1);
+    --color-ink-faint: #94a3b8;
+    --color-accent-600: var(--color-brand-600);
+    --color-accent-ink: var(--color-brand-ink);
 
     /* Electric Blue #1565C0 — UI-এর মূল নীল, বোতাম ও লিংক */
     /* অ্যাকসেন্টের উপরে লেখার কালি — রংটাই ঠিক করে।
@@ -1122,6 +1127,28 @@
        এখন দুইটাই একই শিট থেকে আসে।
     */
     --color-brand-gold: #ffd54f;
+
+    /*
+     * ⭐ গাঢ় থিমে যে রংগুলো বদলাত না — মালিক, ৭ অক্টোবর ২০২৬: *"ডার্ক মোডে প্রতিটা পর্দায় কিছু না কিছু
+     * সমস্যা — কিছু জায়গায় সাদা বাক্স, লেখাও সাদা, কিছু বোঝা যায় না"*।
+     * ⛔ এগুলোর গাঢ় মান ছিল না: হালকা নীল জমিন (brand-50/100) গাঢ় পাতায় সাদা বাক্স হয়ে থাকত আর তার উপর
+     * গাঢ় থিমের সাদা কালি মিলিয়ে যেত; গাঢ় নীল/সবুজ/লাল লেখা (brand-700/900, success, danger, info) কালো
+     * জমিনে ডুবে যেত। ⓘ জমিন অ্যাকসেন্ট থেকে মিশিয়ে (color-mix), তাই প্রতিটা থিমের নিজের রঙে।
+     */
+    --color-brand-50: color-mix(in srgb, var(--color-brand-500) 16%, var(--color-surface-card));
+    --color-brand-100: color-mix(in srgb, var(--color-brand-500) 28%, var(--color-surface-card));
+    --color-brand-400: color-mix(in srgb, var(--color-brand-500) 70%, #ffffff);
+    /* ⓘ brand-700 লেখা আর বোতামের হোভার দুই কাজে — গাঢ় থিমে অ্যাকসেন্টই (কালো জমিনে ৫:১, সাদা কালিতে ৩.৭:১); brand-900 কেবল জমিন, তাই অক্ষত */
+    --color-brand-700: var(--color-brand-500);
+    --color-success: #34d399;
+    --color-success-hover: #6ee7b7;
+    /* ⓘ লাল লেখাও, সাদা কালির লাল বোতামও — #ef4444 দুই কাজেই চলে (কালো জমিনে ৪.৯:১, সাদা কালিতে ৩.৮:১) */
+    --color-danger: #ef4444;
+    --color-danger-hover: #dc2626;
+    --color-info: #93c5fd;
+    --color-warning-hover: #fbbf24;
+    --color-accent-pink: #f472b6;
+    --color-ink-faint: #94a3b8;
 }
 
 /* ব্যবহারকারী নড়াচড়া কমাতে বললে — সেকশন ১৫.২০ ও ১৬.৭ */
