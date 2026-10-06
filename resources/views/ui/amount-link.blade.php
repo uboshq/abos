@@ -7,4 +7,5 @@
 <x-ui.amount :value="$value"
              :href="$href ?? null"
              :tone="$tone ?? null"
-             :blank-on-zero="$blankOnZero ?? false" />
+             :blank-on-zero="$blankOnZero ?? false"
+             :dash-on-zero="$dashOnZero ?? false" />

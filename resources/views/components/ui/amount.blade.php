@@ -3,6 +3,8 @@
     'href' => null,
     'decimals' => 2,
     'blankOnZero' => false,
+    // ⭐ শূন্যে "–" — মালিক, ৬ অক্টোবর ২০২৬: "যে স্টক 0.00 সেখানে - চিহ্ন দাও" (মজুদের পরিমাণের ঘরে)
+    'dashOnZero' => false,
     'tone' => null,
 ])
 
@@ -48,18 +50,23 @@
      */
     $negative = bccomp($raw, '0', 4) < 0;
 
-    $text = $blankOnZero && $zero
-        ? ''
-        : number_format((float) $value, $decimals);
+    $dash = $dashOnZero && $zero;
+
+    $text = match (true) {
+        $blankOnZero && $zero => '',
+        $dash => '–',
+        default => number_format((float) $value, $decimals),
+    };
 
     $classes = trim('num '.match (true) {
+        $dash => 'text-(--color-ink-muted)',
         $tone !== null => "text-(--color-{$tone})",
         $negative => 'text-(--color-danger)',
         default => '',
     });
 @endphp
 
-@if ($href !== null && $text !== '')
+@if ($href !== null && $text !== '' && ! $dash)
     <a href="{{ $href }}"
        {{ $attributes->class([
            $classes,
