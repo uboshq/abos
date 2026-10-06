@@ -197,10 +197,35 @@ class EveryRawQueryNamesItsCompanyTest extends TestCase
             .'আর ছাপে কেবল সারির সংখ্যা ও md5 বেরোয়, কোনো সারির লেখা নয়',
         'app/Modules/Inventory/Services/ProductPackService.php' => 'পণ্যের একক বদলানোর আগে কোনো মজুদ বা লাইন আছে কি না — '
             .'পণ্যের id দিয়ে, আর পণ্যটা নিজেই কোম্পানি-স্কোপে বাছা; লাইন-টেবিলে company_id নেই',
+        /*
+         * ⓘ মাসিক বিক্রয় রিপোর্ট — প্রতিটা কাঁচা কোয়েরি `walled()` দিয়ে যায়, আর সেটাই প্রথম লাইনে
+         * `->where('d.company_id', $f['company_id'])` বসায় (বিল আর ফেরতের মাথা `d`; লাইনের কোয়েরি মাথার সাথে জোড়া)।
+         * খাতার কোয়েরি নিজেই `le.company_id` লেখে। ⓘ ধরা পড়েছে ৫ অক্টোবর ২০২৬ (fe-র পড়া, ec লিখেছে)।
+         */
+        'app/Modules/Sales/Reports/MonthlySalesReport.php' => 'প্রতিটা বিল/ফেরতের কাঁচা কোয়েরি `walled()`-এর ভিতর দিয়ে, '
+            .'যা `d.company_id`-এ ছাঁকে; খাতার কোয়েরি নিজে `le.company_id` লেখে',
+
         'app/Console/Commands/CatchUpNumbers.php' => 'ছাঁকনিটা শর্তসাপেক্ষে বসে (`$where[\'scoped\']`), কারণ নম্বর '
             .'সিরিজের কিছু টেবিল ইচ্ছাকৃতভাবেই কোম্পানি-নিরপেক্ষ; '
             .'বসানোর সময় সিরিজের নিজের company_id ব্যবহার হয়',
     ];
+
+    /**
+     * ⭐ টেবিল-হীন `DB::query()`-র ছাড় কেবল সত্যিই টেবিল-হীনের — ৫ অক্টোবর ২০২৬।
+     * ⛔ কাঁচা SQL-এর ভিতরে `from`/`join` লুকানো থাকলে, বা `->from()` দিলে, পাহারা তাকে ধরেই।
+     */
+    public function test_only_a_select_that_reads_no_table_goes_unflagged(): void
+    {
+        $this->assertSame([], $this->rawQueriesIn("<?php \$q = DB::query()->selectRaw('? as ym', [\$ym]);"));
+
+        foreach ([
+            "<?php \$q = DB::query()->selectRaw('(select count(*) from pur_bills) as n');",
+            "<?php \$q = DB::query()->from('pur_bills')->get();",
+            "<?php \$q = DB::query()->selectRaw('1')->join('pur_bills as b', 'b.id', '=', 'x.id');",
+        ] as $source) {
+            $this->assertCount(1, $this->rawQueriesIn($source), "⛔ টেবিল পড়া কোয়েরি ছাড় পেল: {$source}");
+        }
+    }
 
     public function test_no_raw_query_forgets_the_company(): void
     {
@@ -313,6 +338,18 @@ class EveryRawQueryNamesItsCompanyTest extends TestCase
                  * ভাঙতেন (ReportEngine-এর দুইটা, LastPaidRate-এর একটা)।
                  */
                 if ($table === null && str_contains($code, 'fromSub(')) {
+                    continue;
+                }
+
+                /*
+                 * ⭐ কোনো টেবিল না পড়া `DB::query()` ছাড় পায় — ৫ অক্টোবর ২০২৬।
+                 *
+                 * ⓘ `DB::query()->selectRaw('? as ym', [$ym])` মাসের একটা ক্যালেন্ডার-সারি বানায়, কোনো সারি পড়ে না —
+                 * কোম্পানির কিছুই সেখানে নেই ([[InventoryAnalysisReports]]-এর মাসিক চলাচল)। ⛔ কিন্তু বাক্যের কোথাও —
+                 * কাঁচা SQL-এর লেখাসহ — `from` বা `join` থাকলেই ছাড় নেই: `selectRaw('(select … from pur_bills)')`
+                 * টেবিল পড়ে, আর সেটাই ফাঁস।
+                 */
+                if ($table === null && $entry === 'DB::query(' && preg_match('/\b(from|join)\b/i', $code) !== 1) {
                     continue;
                 }
 

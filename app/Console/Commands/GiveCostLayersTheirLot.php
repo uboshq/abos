@@ -115,7 +115,8 @@ class GiveCostLayersTheirLot extends Command
                 continue;
             }
 
-            DB::table('inv_cost_layers')->where('id', $layer->id)->update(['batch_id' => $lot]);
+            // ⓘ কোম্পানিও — সারিটা কোম্পানি-ছাঁকা তালিকা থেকেই আসে, তবু লেখার কোয়েরি নিজে বলে কার (কাঁচা-কোয়েরির পাহারা)
+            DB::table('inv_cost_layers')->where('company_id', $companyId)->where('id', $layer->id)->update(['batch_id' => $lot]);
             $counts['filled']++;
         }
 

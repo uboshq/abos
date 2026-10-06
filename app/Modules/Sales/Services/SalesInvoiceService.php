@@ -1509,6 +1509,8 @@ final class SalesInvoiceService
 
         $drawn = DB::table('inv_cost_layer_uses as u')
             ->join('inv_cost_layers as l', 'l.id', '=', 'u.cost_layer_id')
+            // ⓘ বিলগুলো কোম্পানি-স্কোপে বাছা, তবু কাঁচা কোয়েরি নিজে বলে কার (কাঁচা-কোয়েরির পাহারা, ৫ অক্টোবর ২০২৬)
+            ->where('u.company_id', CompanyContext::id())
             ->where('u.source_type', SalesInvoice::STOCK_SOURCE)
             ->whereIn('u.source_id', $others)
             ->where('u.fallback', false)
