@@ -572,7 +572,8 @@ class _PrincipalsCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    Widget figure(String label, String value, {Color? colour, double size = 15}) =>
+    Widget figure(String label, String value,
+            {Color? colour, double size = 15}) =>
         Padding(
           padding: const EdgeInsets.symmetric(vertical: 3),
           child: Row(
@@ -603,15 +604,17 @@ class _PrincipalsCard extends StatelessWidget {
             const SizedBox(height: AppSpacing.sm),
             Text(line.name,
                 key: const ValueKey('principal-name'),
-                style: const TextStyle(
-                    fontSize: 17, fontWeight: FontWeight.w800)),
+                style:
+                    const TextStyle(fontSize: 17, fontWeight: FontWeight.w800)),
             Text('সময়কাল: ${line.periodLabel}',
                 key: const ValueKey('principal-period'),
                 style: const TextStyle(
                     fontSize: 12.5, color: AppColors.onSurfaceMuted)),
             const SizedBox(height: AppSpacing.xs),
             figure('মোট ইনফ্লো', Money.taka(line.inflow)),
-            figure('কমিশন (${line.basisRate})', Money.taka(line.commission)),
+            // ⭐ লোকসান কথায়, লাল — ওয়েবের বাক্সের মতো, খালি বিয়োগ নয় (৬ অক্টোবর ২০২৬)
+            figure('কমিশন (${line.basisRate})', line.commissionText,
+                colour: line.isLoss ? AppColors.danger : null),
             figure('প্রিন্সিপালকে পাঠানো', Money.taka(line.paid)),
             figure('বাকি ইনফ্লো', line.balanceLabel,
                 size: 16,
