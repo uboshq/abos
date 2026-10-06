@@ -194,6 +194,9 @@ final class DeliveryOrderStock
         return DB::transaction(function () use ($order, $firmUntil, $expiresAt): array {
             $order = $this->lockOrder($order);
 
+            // ⛔ গোনার আগে পণ্যের সারিতে তালা — দুটো DO একসাথে ধরলে দুটোই একই খালি মাল দেখত (অডিট ম১৮, [[StockLock]])
+            \App\Modules\Sales\Support\StockLock::products($order->lines()->pluck('product_id'));
+
             // ⓘ আগের খোলা আটকানো আগে ফেরে — তারপর মাপা, যাতে নিজের আটকানো নিজেকে কম না দেখায়
             $this->releaseOpen($order, 'rehold');
 

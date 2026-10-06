@@ -220,6 +220,9 @@ final class SalesOrderService
                     ]);
                 }
 
+                // ⛔ গোনার আগে পণ্যের সারিতে তালা — দুটো একসাথে ধরলে দুটোই একই খালি মাল দেখত (অডিট ম১৮, [[StockLock]])
+                \App\Modules\Sales\Support\StockLock::products($order->lines->pluck('product_id'));
+
                 foreach ($order->lines as $line) {
                     $this->assertEnoughToSell($line->product, $warehouse, (string) $line->ordered_qty);
 

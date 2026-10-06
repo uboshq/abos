@@ -50,6 +50,9 @@ final class HoldTheStockForTheApprovedOrder
             }
 
             if ($locked->hold_mode === SalesOrderStatus::HOLD_HOLDS && $locked->warehouse !== null) {
+                // ⛔ গোনার আগে পণ্যের সারিতে তালা — দুটো একসাথে ধরলে দুটোই একই খালি মাল দেখত (অডিট ম১৮, [[StockLock]])
+                \App\Modules\Sales\Support\StockLock::products($locked->lines->pluck('product_id'));
+
                 foreach ($locked->lines as $line) {
                     $wanted = bcadd((string) $line->ordered_qty, '0', 4);
 
