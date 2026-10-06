@@ -194,6 +194,20 @@ final class ThePhoneReadsMoneyInPrincipalsAndPurchasesTest extends TestCase
         $lines = $this->phone($clerk, '/purchase/purchases/bill/'.$bill->public_id)->json('lines');
         $this->assertArrayNotHasKey('rate', $lines[0], '⛔ খরচের চাবি ছাড়া কেনা দর ফোনে গেল।');
         $this->assertArrayNotHasKey('amount', $lines[0]);
+
+        // ⛔ মোটও নয় — এক সারির বিলে মোট ÷ পরিমাণ = দর (পুরো ERP অডিট, ক্রয় ⚠️১৫, ৬ অক্টোবর ২০২৬)
+        $page = $this->phone($clerk, '/purchase/purchases/bill/'.$bill->public_id)->json();
+        foreach (['total', 'paid', 'due'] as $money) {
+            $this->assertArrayNotHasKey($money, $page, "⛔ খরচের চাবি ছাড়া বিলের {$money} ফোনে গেল।");
+        }
+        $clerkList = $this->phone($clerk, '/purchase/purchases', $range)->json();
+        $this->assertArrayNotHasKey('total', $clerkList, '⛔ খরচের চাবি ছাড়া তালিকার মোট ফোনে গেল।');
+        $this->assertNotEmpty($clerkList['rows'], 'দাবির ভিত্তি নেই — চাবিহীন তালিকা খালি।');
+        foreach ($clerkList['rows'] as $r) {
+            $this->assertSame([], array_intersect(['total', 'paid', 'due'], array_keys($r)), '⛔ খরচের চাবি ছাড়া সারির অঙ্ক ফোনে গেল।');
+        }
+        $this->assertArrayHasKey('total', $this->phone($this->owner, '/purchase/purchases', $range)->json(), 'মালিকের তালিকায় মোট নেই।');
+
         $this->phoneRaw($clerk, '/purchase/purchases', ['kind' => 'receipt'])->assertForbidden();
     }
 

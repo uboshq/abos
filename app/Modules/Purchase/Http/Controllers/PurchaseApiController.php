@@ -121,16 +121,22 @@ class PurchaseApiController extends Controller implements HasMiddleware
             ->whereBetween("{$table}.trx_date", [$from, $to])
             ->when($data['principal'] ?? null, fn (Builder $q, string $p) => $q->whereHas('supplier', fn (Builder $s) => $s->where('public_id', $p)));
 
-        $total = (string) (clone $query)->where("{$table}.status", '!=', 'cancelled')->sum("{$table}.total");
-        $page = (clone $query)->with('supplier')->orderByDesc("{$table}.trx_date")->orderByDesc("{$table}.id")->paginate(self::PER_PAGE);
+        /*
+         * ⛔ দামের চাবি ছাড়া কোনো টাকার অঙ্ক নয় — মোট, পরিশোধ, বাকি কিছুই (পুরো ERP অডিট, ৬ অক্টোবর ২০২৬, ক্রয় ⚠️১৫): আগে কেবল
+         * সারির দর লুকানো ছিল, অথচ বিলের মোট সবসময় যেত — এক সারির বিলে মোট ÷ পরিমাণ = দর। ⓘ বিলের পরিশোধ এক কোয়েরিতে
+         * ([[PurchaseBill::scopeWithPaid()]]) — আগে সারিপ্রতি ২–৪টা।
+         */
+        $cost = (bool) $request->user()?->can('inventory.cost.view');
+        $page = (clone $query)->with('supplier')->when($kind === 'bill' && $cost, fn (Builder $q) => $q->withPaid())
+            ->orderByDesc("{$table}.trx_date")->orderByDesc("{$table}.id")->paginate(self::PER_PAGE);
 
         return response()->json([
             'kind' => $kind,
             'from' => $from,
             'to' => $to,
             'count' => $page->total(),
-            'total' => Money::round($total, 4),
-            'rows' => collect($page->items())->map(fn (PurchaseBill|PurchaseReceipt $p) => $this->purchaseRow($p))->values(),
+            ...($cost ? ['total' => Money::round((string) (clone $query)->where("{$table}.status", '!=', 'cancelled')->sum("{$table}.total"), 4)] : []),
+            'rows' => collect($page->items())->map(fn (PurchaseBill|PurchaseReceipt $p) => $this->purchaseRow($p, $cost))->values(),
             'next_page' => $page->hasMorePages() ? $page->currentPage() + 1 : null,
         ]);
     }
@@ -147,7 +153,7 @@ class PurchaseApiController extends Controller implements HasMiddleware
         $cost = (bool) $request->user()?->can('inventory.cost.view');
 
         return response()->json([
-            ...$this->purchaseRow($paper),
+            ...$this->purchaseRow($paper, $cost),
             'supplier_no' => (string) ($kind === 'bill' ? ($paper->supplier_bill_no ?? '') : ($paper->supplier_challan_no ?? '')),
             'narration' => (string) ($paper->narration ?? ''),
             'lines' => $paper->lines->map(fn (PurchaseBillLine|PurchaseReceiptLine $l) => [
@@ -179,7 +185,7 @@ class PurchaseApiController extends Controller implements HasMiddleware
     }
 
     /** @return array<string, mixed> */
-    private function purchaseRow(PurchaseBill|PurchaseReceipt $p): array
+    private function purchaseRow(PurchaseBill|PurchaseReceipt $p, bool $cost): array
     {
         $bill = $p instanceof PurchaseBill;
 
@@ -191,8 +197,9 @@ class PurchaseApiController extends Controller implements HasMiddleware
             'principal' => (string) ($p->supplier === null ? '' : (filled($p->supplier->short_name) ? $p->supplier->short_name : $p->supplier->name())),
             'status' => (string) $p->status,
             'status_label' => (string) __('core.status.'.$p->status),
-            'total' => Money::round((string) $p->total, 4),
-            ...($bill ? [
+            // ⛔ অঙ্ক কেবল দামের চাবিতে — উপরের [[purchases()]] দেখুন
+            ...($cost ? ['total' => Money::round((string) $p->total, 4)] : []),
+            ...($bill && $cost ? [
                 'paid' => Money::round($p->paidAmount(), 4),
                 'due' => Money::round($p->dueAmount(), 4),
             ] : []),
