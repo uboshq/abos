@@ -6,6 +6,8 @@ declare(strict_types=1);
 return [
     'over_limit' => 'Over their credit limit',
     'receivable_over' => 'Total receivable (limit :limit)',
+    'kpi_owed' => 'Owed by customers',
+    'kpi_owed_advance' => 'Advance :amount',
 
     'title' => 'Dashboard',
     'subtitle' => 'The customer list — where it stands',

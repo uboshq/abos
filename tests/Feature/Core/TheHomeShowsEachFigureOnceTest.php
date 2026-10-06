@@ -8,8 +8,8 @@ use App\Core\Support\CompanyContext;
 use App\Core\Support\Money;
 use App\Models\Company;
 use App\Models\User;
-use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Customer\Models\Customer;
+use App\Modules\Customer\Services\CustomerMetrics;
 use App\Modules\Inventory\Models\Product;
 use App\Modules\Inventory\Models\Warehouse;
 use App\Modules\Inventory\Services\StockFacts;
@@ -66,7 +66,7 @@ final class TheHomeShowsEachFigureOnceTest extends TestCase
             __('sales::dashboard.sales_today'),
             __('sales::dashboard.collected_today'),
             __('purchase::widget.margin_this_month'),
-            __('accounts::dashboard.kpi_receivable'),
+            __('customer::dashboard.kpi_owed'),
             __('supplier::widget.owed_to_principals'),
             __('inventory::overview.stock_value'),
             __('purchase::dashboard.purchases_today'),
@@ -87,8 +87,9 @@ final class TheHomeShowsEachFigureOnceTest extends TestCase
             '⛔ আজকের বিক্রি বিলের খাতার সাথে মেলে না।');
         $this->assertSame(1, bccomp(SalesMetrics::invoiceTotal($today, $today), '0', 4), 'বিক্রি ওঠেনি — দাবির ভিত নেই।');
 
-        $this->assertSame(Money::format(StandardChart::find(StandardChart::RECEIVABLE)?->balanceOn(null, null) ?? '0'),
-            $kpis[__('accounts::dashboard.kpi_receivable')], '⛔ বাজারে বকেয়া খতিয়ানের পাওনা খাতের জের নয়।');
+        // ⓘ ৬ অক্টোবর ২০২৬ থেকে পাওনা মোট — প্রতি দোকানের ধনাত্মক জেরের যোগ, ফোনের একই উৎস ([[TheHomeOwedByCustomersIsGrossTest]])
+        $this->assertSame(Money::format(app(CustomerMetrics::class)->dues(auth()->user(), $today)['amount']),
+            $kpis[__('customer::dashboard.kpi_owed')], '⛔ বাজারে বকেয়া গ্রাহকের খতিয়ানের বকেয়ার যোগ নয়।');
 
         $owed = (string) (DB::table('ledger_entries')->where('company_id', $company->id)->where('party_type', Supplier::drillSourceType())
             ->whereIn('party_id', Supplier::onlySuppliersIds())

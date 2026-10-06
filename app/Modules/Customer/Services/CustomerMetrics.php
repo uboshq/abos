@@ -22,9 +22,14 @@ use Illuminate\Support\Facades\DB;
 final class CustomerMetrics
 {
     /**
-     * @return array{amount: string, shops: int} টাকা স্ট্রিং, চার ঘর
+     * ⓘ `advance` — যাঁদের জের ঋণাত্মক (আমাদের কাছে তাঁদের টাকা), তার যোগ, চিহ্ন ছাড়া; বকেয়ার সাথে
+     * কাটাকাটি হয় না — IAS 1 (৩২): সম্পদ আর দায় নিট করা নিষেধ (হোমের "বাজারে বকেয়া", ৬ অক্টোবর ২০২৬)।
+     * ⓘ `$customers` — হোমের ছাঁকনিতে এলাকা বাছা থাকলে সেই এলাকার গ্রাহক; `null` মানে সবাই।
+     *
+     * @param  list<int>|null  $customers
+     * @return array{amount: string, shops: int, advance: string} টাকা স্ট্রিং, চার ঘর
      */
-    public function dues(User $user, string $asOf): array
+    public function dues(User $user, string $asOf, ?array $customers = null): array
     {
         $perShop = ViewedBranch::narrow(DB::table('ledger_entries'), 'ledger_entries.branch_id', $user)
             ->join('customers', 'customers.id', '=', 'ledger_entries.party_id')
@@ -42,17 +47,21 @@ final class CustomerMetrics
              * ⭐ ৩০ সেপ্টেম্বর ২০২৬: নাগালের পাশাপাশি হেডারে বাছা শাখাও — এক শাখা বাছা
              * থাকলে কেবল সেটা, শাখাহীন সারি ছাড়া ([[ViewedBranch::narrow()]])।
              */
+            ->when($customers !== null, fn ($q) => $q->whereIn('ledger_entries.party_id', $customers ?: [0]))
             ->groupBy('ledger_entries.party_id')
-            ->havingRaw('SUM(ledger_entries.debit) - SUM(ledger_entries.credit) > 0')
             ->selectRaw('SUM(ledger_entries.debit) - SUM(ledger_entries.credit) as outstanding');
 
+        // ⓘ প্রতি দোকানের নিজের জের আগে, তারপর ধনাত্মকগুলো বকেয়া আর ঋণাত্মকগুলো অগ্রিম — আলাদা যোগ
         $row = DB::query()->fromSub($perShop, 'due')
-            ->selectRaw('COALESCE(SUM(outstanding), 0) as amount, COUNT(*) as shops')
+            ->selectRaw('COALESCE(SUM(CASE WHEN outstanding > 0 THEN outstanding ELSE 0 END), 0) as amount')
+            ->selectRaw('COALESCE(SUM(CASE WHEN outstanding > 0 THEN 1 ELSE 0 END), 0) as shops')
+            ->selectRaw('COALESCE(SUM(CASE WHEN outstanding < 0 THEN 0 - outstanding ELSE 0 END), 0) as advance')
             ->first();
 
         return [
             'amount' => bcadd((string) ($row->amount ?? '0'), '0', 4),
             'shops' => (int) ($row->shops ?? 0),
+            'advance' => bcadd((string) ($row->advance ?? '0'), '0', 4),
         ];
     }
 }

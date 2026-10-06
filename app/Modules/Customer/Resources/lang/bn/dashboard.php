@@ -6,6 +6,8 @@ declare(strict_types=1);
 return [
     'over_limit' => 'ধারের সীমা ছাড়িয়েছেন',
     'receivable_over' => 'মোট বকেয়া (সীমা :limit)',
+    'kpi_owed' => 'বাজারে বকেয়া',
+    'kpi_owed_advance' => 'অগ্রিম :amount',
 
     'title' => 'ড্যাশবোর্ড',
     'subtitle' => 'গ্রাহকের তালিকা — আজ কোথায় দাঁড়িয়ে',

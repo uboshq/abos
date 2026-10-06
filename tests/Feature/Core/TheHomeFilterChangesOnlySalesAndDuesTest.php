@@ -6,10 +6,14 @@ namespace Tests\Feature\Core;
 
 use App\Core\Contracts\HomeSalesFilters;
 use App\Core\Dashboard\HomeFilter;
+use App\Core\Engines\Posting\PostingEngine;
 use App\Core\Support\CompanyContext;
+use App\Core\Support\DocumentStatus;
+use App\Core\Support\Money;
 use App\Models\Company;
 use App\Models\User;
-use App\Modules\Accounts\Dashboard\AccountsWidgets;
+use App\Modules\Accounts\Services\StandardChart;
+use App\Modules\Customer\Dashboard\CustomerWidgets;
 use App\Modules\Customer\Models\Customer;
 use App\Modules\Inventory\Models\Product;
 use App\Modules\Inventory\Models\Warehouse;
@@ -106,14 +110,28 @@ final class TheHomeFilterChangesOnlySalesAndDuesTest extends TestCase
         $this->assertFalse($this->filter(['seller' => 999999, 'warehouse' => 999999, 'area' => 999999])->active());
 
         // ⭐ বকেয়া — এলাকা মানে; অন্য এলাকায় এই গ্রাহকের বকেয়া নেই, SR বকেয়া বদলায় না
-        $receivable = new \ReflectionMethod(AccountsWidgets::class, 'receivable');
-        $whole = $receivable->invoke(null);
-        $inArea = $this->filter(['area' => $area])->during(fn () => $receivable->invoke(null));
+        // ⓘ ৬ অক্টোবর ২০২৬ থেকে হোমের "বাজারে বকেয়া" গ্রাহক মডিউলের, আর মোট — প্রতি দোকানের ধনাত্মক জেরের যোগ
+        $receivable = new \ReflectionMethod(CustomerWidgets::class, 'owedByCustomers');
+        // ⓘ এলাকার বাইরের একটা দোকানে বকেয়া — নাহলে গোটা আর এলাকার সংখ্যা এক হত, আর ছাঁকনি না দেখলেও দাবি সবুজ থাকত
+        $outside = Customer::query()->create([
+            'company_id' => $company->id, 'branch_id' => $company->defaultBranch()?->id, 'code' => 'OUT-AREA',
+            'name_en' => 'Outside the area', 'status' => DocumentStatus::CONFIRMED, 'is_active' => true,
+        ]);
+        $this->assertNotContains($outside->id, app(HomeSalesFilters::class)->customersInArea($area));
+        app(PostingEngine::class)->post(sourceType: 'test:outside-area', sourceId: 1, trxDate: now(), branchId: $company->defaultBranch()?->id, lines: [
+            ['account_id' => StandardChart::find(StandardChart::RECEIVABLE)->id, 'debit' => '700', 'party_type' => Customer::drillSourceType(), 'party_id' => $outside->id],
+            ['account_id' => StandardChart::find(StandardChart::SALES)->id, 'credit' => '700'],
+        ]);
+        $whole = $receivable->invoke(null)->value;
+        $inArea = $this->filter(['area' => $area])->during(fn () => $receivable->invoke(null)->value);
         $ids = app(HomeSalesFilters::class)->customersInArea($area);
         $this->assertContains($customer->id, $ids);
-        $expected = Customer::query()->whereIn('id', $ids)->get()->reduce(fn (string $s, Customer $c) => bcadd($s, $c->outstanding(), 4), '0');
-        $this->assertSame(0, bccomp($inArea, $expected, 4), '⛔ এলাকার বকেয়া গ্রাহকদের খাতার যোগফল নয়।');
-        $this->assertSame(0, bccomp($this->filter(['seller' => $owner->id])->during(fn () => $receivable->invoke(null)), $whole, 4),
+        $expected = Customer::query()->whereIn('id', $ids)->get()
+            ->reduce(fn (string $s, Customer $c) => bccomp($c->outstanding(), '0', 4) > 0 ? bcadd($s, $c->outstanding(), 4) : $s, '0');
+        $this->assertSame(1, bccomp($expected, '0', 4), 'এলাকায় বকেয়া নেই — দাবিটা কিছু মাপছে না।');
+        $this->assertSame(Money::format($expected), $inArea, '⛔ এলাকার বকেয়া গ্রাহকদের খাতার বকেয়ার যোগ নয়।');
+        $this->assertNotSame($whole, $inArea, '⛔ এলাকা বাছায় বকেয়া বদলায়নি — ছাঁকনিটা দেখছে না।');
+        $this->assertSame($whole, $this->filter(['seller' => $owner->id])->during(fn () => $receivable->invoke(null)->value),
             '⛔ SR বাছায় বকেয়া বদলেছে — বকেয়া গ্রাহকের, বিলের নয়।');
 
         // ⭐ পাতা — চালু ফিল্টারের লাইন, বাছা নাম, আর সময়ের লিংকে ফিল্টার থেকে যায়

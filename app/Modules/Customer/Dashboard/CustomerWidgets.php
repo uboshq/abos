@@ -9,6 +9,7 @@ use App\Core\Dashboard\Widget;
 use App\Core\Services\SettingsService;
 use App\Core\Support\Money;
 use App\Modules\Customer\Models\Customer;
+use App\Modules\Customer\Services\CustomerMetrics;
 
 /**
  * সীমা ছাড়ানোর সতর্কতা — "যা করা বাকি" দলে।
@@ -31,7 +32,7 @@ final class CustomerWidgets implements DashboardWidgets
     {
         $settings = app(SettingsService::class);
 
-        $widgets = [];
+        $widgets = [self::owedByCustomers()];
 
         if ($settings->get('customer.alert_over_limit', true)) {
             $widgets[] = self::overTheirLimit();
@@ -97,6 +98,37 @@ final class CustomerWidgets implements DashboardWidgets
             permission: 'customer.report',
             tone: $over ? 'warn' : 'neutral',
             sort: 61,
+            icon: 'wallet',
+        );
+    }
+
+    /**
+     * ⭐ হোমের মূল সূচক "বাজারে বকেয়া" (দল `kpi`) — ৬ অক্টোবর ২০২৬।
+     *
+     * ⓘ পাওনা মোট, নিট নয় (IAS 1 ¶৩২): প্রতি দোকানের নিজের জের আগে, তারপর কেবল ধনাত্মকগুলোর যোগ; অগ্রিম নিচের
+     * ছোট লেখায় আলাদা। ⛔ আগে পাওনা খাতের (১১১০) নিট জের পড়ত — এক দোকানের অগ্রিম আরেক দোকানের বকেয়া কাটত, আর
+     * গ্রাহকহীন সারিও ঢুকত। ⭐ ফোনের হোম একই উৎস পড়ে ([[CustomerMetrics::dues()]]), তাই দুই পর্দা এক সংখ্যা বলে।
+     * ⓘ শাখার দেয়াল, বিক্রয়কর্মীর দেয়াল আর হোমের এলাকার ছাঁকনি — তিনটাই dues()-এর ভেতরে।
+     */
+    private static function owedByCustomers(): Widget
+    {
+        $dues = app(CustomerMetrics::class)->dues(
+            auth()->user(),
+            now()->toDateString(),
+            \App\Core\Dashboard\HomeFilter::current()?->dueCustomers(),
+        );
+
+        return new Widget(
+            group: 'kpi',
+            label: __('customer::dashboard.kpi_owed'),
+            value: Money::format($dues['amount']),
+            href: route('customer.report.show', ['slug' => 'due-list']),
+            permission: 'customer.report',
+            tone: 'money',
+            hint: bccomp($dues['advance'], '0', 4) > 0
+                ? __('customer::dashboard.kpi_owed_advance', ['amount' => Money::format($dues['advance'])])
+                : null,
+            sort: 40,
             icon: 'wallet',
         );
     }
