@@ -1,3 +1,6 @@
+import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart' show visibleForTesting;
+
 import '../api_client/api_client.dart';
 import '../widgets/confirm_overview_sheet.dart';
 
@@ -209,7 +212,8 @@ class CounterExtras {
       {this.deposits = const [],
       this.delivery = const CounterDelivery(),
       this.resumeId,
-      this.note});
+      this.note,
+      this.confirmDuplicate = false});
 
   final List<CounterDeposit> deposits;
   final CounterDelivery delivery;
@@ -217,6 +221,28 @@ class CounterExtras {
   /// কাউন্টারে খোলা রাখা খসড়া — পাঠালে নতুন বিল নয়, এটাই পাকা হয়
   final String? resumeId;
   final String? note;
+
+  /// ⭐ "জেনেশুনে আবার" — একই ক্রেতার একই বিল সার্ভার একবার আটকায়; মানুষ টিক দিলে তবেই এটা পাঠানো (ওয়েবের একই ঘর)
+  final bool confirmDuplicate;
+
+  CounterExtras repeating() => CounterExtras(
+      deposits: deposits,
+      delivery: delivery,
+      resumeId: resumeId,
+      note: note,
+      confirmDuplicate: true);
+}
+
+/// ⭐ একই বিল দুবারের সতর্কতা — সার্ভারের ৪২২-এর `errors.confirm_duplicate` (ওয়েবের কাউন্টারের একই দেয়াল)।
+/// অন্য যেকোনো ভুলে null: তখন ফোন সাধারণ বার্তাই দেখায়, "আবার করুন" টিক নয়।
+String? duplicateWarning(Object error) {
+  if (error is! DioException || error.response?.statusCode != 422) return null;
+  final body = error.response?.data;
+  final errors = body is Map ? body['errors'] : null;
+  final field = errors is Map ? errors['confirm_duplicate'] : null;
+  final first = field is List && field.isNotEmpty ? field.first : field;
+  final text = first?.toString().trim() ?? '';
+  return text.isEmpty ? null : text;
 }
 
 /// ⭐ "দাম দেখুন" — বিলে না তুলে দর, বিক্রয়যোগ্য মজুদ আর লট (ওয়েবের পপ-আপের একই উৎস)।
@@ -228,7 +254,8 @@ class CounterPrice {
       this.unit = '',
       this.code = '',
       this.available,
-      this.lots = const []});
+      this.lots = const [],
+      this.priceLabel = ''});
 
   final String name;
   final String rate;
@@ -237,9 +264,13 @@ class CounterPrice {
   final String? available;
   final List<CounterLot> lots;
 
+  /// দামটা কোথা থেকে — সার্ভারের নিজের কথায় ("দামের তালিকা: …"); পুরনো সার্ভারে ফাঁকা
+  final String priceLabel;
+
   factory CounterPrice.fromJson(Map<String, dynamic> json) => CounterPrice(
         name: json['name']?.toString() ?? '',
         rate: json['rate']?.toString() ?? '0',
+        priceLabel: json['priceLabel']?.toString() ?? '',
         unit: json['unit']?.toString() ?? '',
         code: json['code']?.toString() ?? '',
         available: json['available']?.toString(),
@@ -426,8 +457,9 @@ abstract class DirectSaleApi {
   /// রাখা খসড়া — খোলার জন্য
   Future<List<CounterDraftSummary>> drafts();
 
-  /// দাম দেখুন — একটা পণ্যের দর, মজুদ আর লট
-  Future<CounterPrice> price(String productId, {String? warehouseId});
+  /// দাম দেখুন — একটা পণ্যের দর, মজুদ আর লট; [customerId] দিলে সেই ক্রেতার দামের তালিকার দর
+  Future<CounterPrice> price(String productId,
+      {String? warehouseId, String? customerId});
 
   Future<CounterDraft> openDraft(String id);
 
@@ -473,7 +505,8 @@ class ServerDirectSaleApi implements DirectSaleApi {
   }
 
   /// ⓘ বিক্রি আর সারাংশ — একই ঘর; "credit:30" → শর্ত credit, মেয়াদ ৩০ দিন (ওয়েবের কাউন্টারের মতোই)
-  static Map<String, dynamic> _payload({
+  @visibleForTesting
+  static Map<String, dynamic> payload({
     required String customerId,
     String? warehouseId,
     required String paymentTerm,
@@ -495,6 +528,7 @@ class ServerDirectSaleApi implements DirectSaleApi {
       ...extras.delivery.toJson(),
       if (extras.resumeId != null) 'resume': extras.resumeId,
       if (note != null && note.trim().isNotEmpty) 'narration': note.trim(),
+      if (extras.confirmDuplicate) 'confirm_duplicate': '1',
     };
   }
 
@@ -509,7 +543,7 @@ class ServerDirectSaleApi implements DirectSaleApi {
   }) async {
     final response =
         await ApiClient.dio.post<Map<String, dynamic>>('/sales/direct',
-            data: _payload(
+            data: payload(
               customerId: customerId,
               warehouseId: warehouseId,
               paymentTerm: paymentTerm,
@@ -530,7 +564,7 @@ class ServerDirectSaleApi implements DirectSaleApi {
   }) async {
     final response =
         await ApiClient.dio.post<Map<String, dynamic>>('/sales/direct/overview',
-            data: _payload(
+            data: payload(
               customerId: customerId,
               warehouseId: warehouseId,
               paymentTerm: paymentTerm,
@@ -553,11 +587,14 @@ class ServerDirectSaleApi implements DirectSaleApi {
   }
 
   @override
-  Future<CounterPrice> price(String productId, {String? warehouseId}) async {
+  Future<CounterPrice> price(String productId,
+      {String? warehouseId, String? customerId}) async {
     final response = await ApiClient.dio.get<Map<String, dynamic>>(
         '/sales/direct/price/$productId',
         queryParameters: {
           if (warehouseId != null) 'warehouse': warehouseId,
+          // ⭐ এই ক্রেতার দামের তালিকা (সার্ভার, ৫ অক্টোবর ২০২৬: [[SalesPrice]])
+          if (customerId != null) 'customer': customerId,
         });
     return CounterPrice.fromJson(response.data ?? const {});
   }

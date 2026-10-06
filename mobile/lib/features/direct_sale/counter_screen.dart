@@ -58,6 +58,12 @@ class _CounterScreenState extends State<CounterScreen> {
   int? _freeAllowed;
   String? _editingKey;
 
+  /// দরটা কোথা থেকে — সার্ভারের কথায় ("দামের তালিকা: …"); ফোনের জমা দাম হলে null
+  String? _rateNote;
+
+  /// মানুষ নিজে দর লিখেছেন — তখন ক্রেতার দাম আর বসে না (পণ্য বদলালে আবার না-লেখা)
+  bool _rateTyped = false;
+
   // ⭐ ওয়েবের ৮ বোতামের অবস্থা — মালিক, ৪ অক্টোবর ২০২৬
   List<CounterDeposit> _deposits = const [];
   CounterDelivery _delivery = const CounterDelivery();
@@ -142,6 +148,9 @@ class _CounterScreenState extends State<CounterScreen> {
   bool get _tracked =>
       _product != null && (_setup?.lots.containsKey(_product!.id) ?? false);
 
+  /// সার্ভার গুদাম ঠিক করতে পারেনি — তখন লটের তালিকা ফাঁকা, আর লট-ধরা পণ্য লট ছাড়াই কার্টে ঢুকে পরে সার্ভারে আটকাত
+  bool get _noWarehouse => _setup != null && _warehouseId == null;
+
   Future<T?> _pick<T>(String title, List<T> items, String Function(T) label) =>
       showModalBottomSheet<T>(
         context: context,
@@ -170,11 +179,39 @@ class _CounterScreenState extends State<CounterScreen> {
     }
   }
 
+  /// ⭐ ক্রেতার দাম — ক্রেতা বাছা থাকলে সার্ভারের দামের তালিকার দর (ওয়েবের কাউন্টারের একই উৎস, `?customer=`);
+  /// ⓘ নেট না থাকলে বা পুরনো সার্ভারে ফোনের জমা দাম যেমন ছিল তেমনই থাকে। ⛔ ততক্ষণে পণ্য বদলালে বা হাতে দর
+  /// লিখলে উত্তরটা ফেলে দেওয়া হয় — মানুষের লেখা দর সার্ভারের দর মুছবে না।
+  Future<void> _customerRate(ProductRecord product) async {
+    final customer = _customer;
+    if (customer == null || _rateTyped) return;
+    try {
+      final price = await widget.api.price(product.id,
+          warehouseId: _warehouseId, customerId: customer.id);
+      final rate = double.tryParse(price.rate) ?? 0;
+      if (!mounted ||
+          _product?.id != product.id ||
+          _customer?.id != customer.id ||
+          _rateTyped ||
+          rate <= 0) {
+        return;
+      }
+      setState(() {
+        _rate.text = rate.toStringAsFixed(2);
+        _rateNote = price.priceLabel.isEmpty ? null : price.priceLabel;
+      });
+    } catch (_) {
+      // ⓘ অফলাইন — আগের দাম থাকে
+    }
+  }
+
   void _clearEntry() {
     _product = null;
     _lot = null;
     _editingKey = null;
     _freeAllowed = null;
+    _rateNote = null;
+    _rateTyped = false;
     for (final c in [_qty, _rate, _discount, _free]) {
       c.clear();
     }
@@ -188,7 +225,9 @@ class _CounterScreenState extends State<CounterScreen> {
     final free = int.tryParse(_free.text.trim()) ?? 0;
 
     String? why;
-    if (product == null) {
+    if (_noWarehouse) {
+      why = 'গুদাম পাওয়া যায়নি — গুদাম ছাড়া লট আসে না।';
+    } else if (product == null) {
       why = 'পণ্য বাছুন।';
     } else if (_tracked && _lot == null) {
       why = 'লট বাছুন — এই পণ্য লট ধরে বিক্রি হয়।';
@@ -241,8 +280,13 @@ class _CounterScreenState extends State<CounterScreen> {
     });
   }
 
-  Future<void> _sell({required bool draft}) async {
+  Future<void> _sell({required bool draft, bool repeat = false}) async {
     final customer = _customer;
+    if (_noWarehouse) {
+      setState(
+          () => _error = 'গুদাম পাওয়া যায়নি — গুদাম ছাড়া বিক্রি হয় না।');
+      return;
+    }
     if (customer == null || _cart.isEmpty) {
       setState(() => _error =
           customer == null ? 'ক্রেতা বাছুন।' : 'কার্টে অন্তত একটা পণ্য দিন।');
@@ -259,7 +303,7 @@ class _CounterScreenState extends State<CounterScreen> {
         paymentTerm: _term,
         lines: List.of(_cart),
         draft: draft,
-        extras: _extras,
+        extras: repeat ? _extras.repeating() : _extras,
       );
       if (!mounted) return;
       setState(() => _busy =
@@ -284,6 +328,16 @@ class _CounterScreenState extends State<CounterScreen> {
     } catch (e) {
       // ⓘ সার্ভারের দেয়াল (ঋণসীমা, লট, দর …) — পপ-আপে, মালিকের নিয়ম
       if (mounted) setState(() => _busy = false);
+
+      // ⭐ একই বিল দুবার — সার্ভার একবার থামায়; মানুষ টিক দিয়ে "আবার করুন" চাপলে তবেই জেনেশুনে পাঠানো
+      final duplicate = duplicateWarning(e);
+      if (duplicate != null && !repeat && mounted) {
+        if (await _askRepeat(duplicate) == true && mounted) {
+          await _sell(draft: draft, repeat: true);
+        }
+        return;
+      }
+
       if (mounted) {
         await _popup(
             'বিক্রি হলো না',
@@ -298,6 +352,11 @@ class _CounterScreenState extends State<CounterScreen> {
   /// "নিশ্চিত করুন" — আগে সার্ভারের সারাংশ ([[ConfirmOverview]]), তারপর মানুষের সিদ্ধান্ত
   Future<void> _review() async {
     final customer = _customer;
+    if (_noWarehouse) {
+      setState(
+          () => _error = 'গুদাম পাওয়া যায়নি — গুদাম ছাড়া বিক্রি হয় না।');
+      return;
+    }
     if (customer == null || _cart.isEmpty) {
       setState(() => _error =
           customer == null ? 'ক্রেতা বাছুন।' : 'কার্টে অন্তত একটা পণ্য দিন।');
@@ -731,7 +790,8 @@ class _CounterScreenState extends State<CounterScreen> {
     if (picked == null || !mounted) return;
     CounterPrice price;
     try {
-      price = await widget.api.price(picked.id, warehouseId: _warehouseId);
+      price = await widget.api.price(picked.id,
+          warehouseId: _warehouseId, customerId: _customer?.id);
     } catch (e) {
       if (mounted) {
         await _popup('দাম আনা গেল না',
@@ -901,6 +961,45 @@ class _CounterScreenState extends State<CounterScreen> {
         ),
       );
 
+  /// ⭐ "একই বিল আগেই হয়েছে" — সার্ভারের বার্তা, আর একটা টিক; টিক না দিলে "আবার করুন" চাপা যায় না (ওয়েবের একই ঘর)
+  Future<bool?> _askRepeat(String warning) {
+    var ticked = false;
+    return showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (dialogContext, setDialog) => AlertDialog(
+          key: const ValueKey('counter-repeat'),
+          title: const Text('একই বিল আগেই হয়েছে'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(warning),
+              CheckboxListTile(
+                key: const ValueKey('counter-repeat-tick'),
+                contentPadding: EdgeInsets.zero,
+                controlAffinity: ListTileControlAffinity.leading,
+                value: ticked,
+                title: const Text('জেনেশুনে আবার একই বিল করছি'),
+                onChanged: (v) => setDialog(() => ticked = v ?? false),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.pop(dialogContext, false),
+                child: const Text('ফিরে যান')),
+            FilledButton(
+                key: const ValueKey('counter-repeat-go'),
+                onPressed:
+                    ticked ? () => Navigator.pop(dialogContext, true) : null,
+                child: const Text('আবার করুন')),
+          ],
+        ),
+      ),
+    );
+  }
+
   Future<void> _popup(String title, String text) => showDialog<void>(
         context: context,
         builder: (dialogContext) => AlertDialog(
@@ -955,7 +1054,13 @@ class _CounterScreenState extends State<CounterScreen> {
               onTap: () async {
                 final picked = await _pick<CustomerRecord>(
                     'ক্রেতা বাছুন', _customers, (c) => c.name);
-                if (picked != null) setState(() => _customer = picked);
+                if (picked == null) return;
+                setState(() => _customer = picked);
+                // ⓘ পণ্য আগে বাছা থাকলে (নতুন সারি) — দরটা এই ক্রেতার তালিকা থেকে
+                final product = _product;
+                if (product != null && _editingKey == null) {
+                  _customerRate(product);
+                }
               },
             ),
           ),
@@ -969,7 +1074,21 @@ class _CounterScreenState extends State<CounterScreen> {
               label: const Text('দাম দেখুন'),
             ),
           ),
-          if (setup != null && setup.warehouses.length > 1)
+          // ⭐ গুদাম নেই — খালি লটের বদলে স্পষ্ট কথা (৬ অক্টোবর ২০২৬: UB-র AVA TRADE-এ গুদাম না পেয়ে লট আসছিল না)
+          if (_noWarehouse)
+            Card(
+              key: const ValueKey('counter-no-warehouse'),
+              color: AppColors.warningSurface,
+              child: Padding(
+                padding: const EdgeInsets.all(AppSpacing.md),
+                child: Text(setup!.warehouses.isEmpty
+                    ? 'এই শাখায় কোনো চালু গুদাম পাওয়া যায়নি — গুদাম ছাড়া লট আসে না, বিক্রিও হয় না। অফিসে জানান।'
+                    : 'গুদাম ঠিক হয়নি — নিচে গুদাম বাছুন; গুদাম ছাড়া লট আসে না।'),
+              ),
+            ),
+          if (setup != null &&
+              (setup.warehouses.length > 1 ||
+                  (_warehouseId == null && setup.warehouses.isNotEmpty)))
             DropdownButtonFormField<String>(
               initialValue: _warehouseId,
               decoration: const InputDecoration(labelText: 'গুদাম'),
@@ -1022,8 +1141,11 @@ class _CounterScreenState extends State<CounterScreen> {
                         _rate.text = (picked.salePrice ?? 0) > 0
                             ? picked.salePrice!.toStringAsFixed(2)
                             : '';
+                        _rateNote = null;
+                        _rateTyped = false;
                       });
                       _askFree();
+                      _customerRate(picked);
                     },
                   ),
                   if (_tracked)
@@ -1056,7 +1178,13 @@ class _CounterScreenState extends State<CounterScreen> {
                     controller: _rate,
                     keyboardType:
                         const TextInputType.numberWithOptions(decimal: true),
-                    decoration: const InputDecoration(labelText: 'দর'),
+                    decoration:
+                        InputDecoration(labelText: 'দর', helperText: _rateNote),
+                    // ⓘ হাতে লেখা দর — সার্ভারের দামের নোট আর খাটে না
+                    onChanged: (_) => setState(() {
+                      _rateTyped = true;
+                      _rateNote = null;
+                    }),
                   ),
                   TextField(
                     key: const ValueKey('counter-discount'),
