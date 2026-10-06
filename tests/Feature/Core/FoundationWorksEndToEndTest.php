@@ -134,12 +134,12 @@ class FoundationWorksEndToEndTest extends TestCase
         $this->assertSame(1, (int) $entry->source_id);
         $this->assertSame($documentNo, $entry->document_no);
 
-        // ৫. অনুমোদন — ছাড় ১,০০০-এর উপরে হলে মালিকের সম্মতি লাগে
+        // ৫. অনুমোদন — যেকোনো ছাড়ে মালিকের সই (মালিক, ১ অক্টোবর ২০২৬; অফারসহ, ৫ অক্টোবর); ছোট ছাড়ও বাদ নয়
         $approvals = app(ApprovalEngine::class);
         $document = Branch::query()->first();
 
         $small = $approvals->request($document, 'sales', 'discount', '500', userId: $salesman->id);
-        $this->assertNull($small, 'A small discount should not need anybody.');
+        $this->assertNotNull($small, '⛔ ৫০০ টাকার ছাড় কারো সই চাইল না — মালিকের নিয়মে যেকোনো ছাড় সই চায়।');
 
         $large = $approvals->request($document, 'sales', 'discount', '2500', userId: $salesman->id);
         $this->assertNotNull($large);

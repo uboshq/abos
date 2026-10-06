@@ -72,14 +72,26 @@ class ApprovalTest extends TestCase
      * এটা আগে পরীক্ষা করা হয়, কারণ ভুল দিকের ভুলটাই বেশি ক্ষতিকর:
      * প্রতিটা ছোট ছাড়ে অনুমোদন চাইলে মানুষ নিয়মটা এড়ানোর পথ খোঁজে।
      */
-    public function test_a_small_discount_needs_nobody(): void
+    /**
+     * ⛔ যেকোনো ছাড়, যত ছোটই হোক (অফারসহ), মালিকের সই চায়; ছাড় শূন্য হলে কিছুই চায় না — মালিক, ১ অক্টোবর ২০২৬
+     * ("any manual discount, any amount"), আর ৫ অক্টোবর অফারের ছাড়ও (69200c27)। ⓘ আগে এখানে "ছোট ছাড়ে কেউ লাগে না" দাবি ছিল।
+     */
+    public function test_even_a_small_discount_waits_and_a_bill_with_none_needs_nobody(): void
     {
-        $this->flow(threshold: '500');
+        $this->flow(threshold: '0');
+        $this->actingAs($this->seller);
 
-        $invoice = $this->actingAs($this->seller)->invoice(discount: '100');
+        try {
+            $this->invoice(discount: '100');
+            $this->fail('⛔ ১০০ টাকার ছাড় সই ছাড়াই খাতায় বসল।');
+        } catch (ValidationException $e) {
+            $this->assertArrayHasKey('discount', $e->errors());
+        }
+        $this->assertSame(1, Approval::query()->count(), '⛔ ছোট ছাড়ে সইয়ের অনুরোধ তৈরি হয়নি।');
 
-        $this->assertSame(DocumentStatus::CONFIRMED, $invoice->status);
-        $this->assertSame(0, Approval::query()->count());
+        $plain = $this->invoice(discount: '0');
+        $this->assertSame(DocumentStatus::CONFIRMED, $plain->status, 'ছাড় ছাড়া বিলও আটকে গেল।');
+        $this->assertSame(1, Approval::query()->count(), '⛔ ছাড় ছাড়া বিলেও সই চাওয়া হলো।');
     }
 
     /**
@@ -288,13 +300,23 @@ class ApprovalTest extends TestCase
      * ইচ্ছাকৃত: নতুন কোম্পানিতে কিছুই আটকাবে না যতক্ষণ না মালিক নিজে
      * ছক বসান। ডিফল্টে সব আটকে দিলে প্রথম দিনেই কেউ কিছু করতে পারত না।
      */
-    public function test_without_a_rule_nothing_needs_approval(): void
+    /**
+     * ⛔ ছক নেই — তবু ছাড় যায় না (fail-closed; সমন্বয়ক, ২ অক্টোবর ২০২৬: সই ছাড়া কোনো ছাড় নয়); ছাড় ছাড়া বিল আগের মতোই পাকা।
+     * ⓘ আগে এখানে "ছক না থাকলে কিছুই অনুমোদন চায় না" দাবি ছিল — ছাড়ের বেলায় সেটা মালিকের নিয়মের উল্টো।
+     */
+    public function test_without_a_rule_a_discount_is_refused_and_a_plain_bill_still_confirms(): void
     {
         ApprovalFlow::query()->delete();
+        $this->actingAs($this->seller);
 
-        $invoice = $this->actingAs($this->seller)->invoice(discount: '900');
+        try {
+            $this->invoice(discount: '900');
+            $this->fail('⛔ ছাড়ের ছক নেই, তবু ছাড় খাতায় বসল।');
+        } catch (ValidationException $e) {
+            $this->assertArrayHasKey('discount', $e->errors());
+        }
 
-        $this->assertSame(DocumentStatus::CONFIRMED, $invoice->status);
+        $this->assertSame(DocumentStatus::CONFIRMED, $this->invoice(discount: '0')->status, 'ছাড় ছাড়া বিল ছক ছাড়া পাকা হলো না।');
         $this->assertSame(0, Approval::query()->count());
     }
 
