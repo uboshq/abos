@@ -633,6 +633,8 @@ return [
     'drill_sources' => [
         'capital_entry' => CapitalEntry::class,
         'insurance_premium' => InsurancePremium::class,
+        // ⭐ মাস শেষের অগ্রিম বীমা — ভাউচার থেকে পলিসিতে ফেরা (পরিকল্পনা ৬.৩)
+        'insurance_prepayment' => \App\Modules\Finance\Models\InsurancePrepayment::class,
         'withdrawal' => Withdrawal::class,
         'deposit_movement' => DepositMovement::class,
         'hand_loan_movement' => HandLoanMovement::class,

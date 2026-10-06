@@ -11,6 +11,8 @@ use App\Http\Controllers\Controller;
 use App\Modules\Finance\Models\Institution;
 use App\Modules\Finance\Models\InsurancePolicy;
 use App\Modules\Finance\Models\InsurancePremium;
+use App\Modules\Finance\Models\InsurancePrepayment;
+use App\Modules\Finance\Services\InsurancePrepaymentService;
 use App\Modules\Finance\Services\InsuranceService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
@@ -44,7 +46,7 @@ class InsuranceController extends Controller implements HasMiddleware
         return [
             new Middleware('can:finance.insurance.view', only: ['index', 'show']),
             new Middleware('can:finance.insurance.manage',
-                only: ['create', 'store', 'edit', 'update', 'renewForm', 'renew', 'toggle']),
+                only: ['create', 'store', 'edit', 'update', 'renewForm', 'renew', 'toggle', 'prepay']),
         ];
     }
 
@@ -71,7 +73,26 @@ class InsuranceController extends Controller implements HasMiddleware
         return view('finance::insurance.show', [
             'menu' => $this->menu->forUser($request->user()),
             'policy' => $policy->load(['institution', 'premiums.voucher']),
+
+            /* ⭐ মাস শেষের অগ্রিম — কোন মাসে কত, কোন খাত থেকে, উল্টেছে কি না (পরিকল্পনা ৬.৩) */
+            'prepayments' => InsurancePrepayment::query()->where('policy_id', $policy->id)
+                ->with(['voucher', 'reversalVoucher', 'expenseAccount'])->orderByDesc('for_month')->orderBy('id')->get(),
         ]);
+    }
+
+    /**
+     * ⭐ মাস শেষের অগ্রিম বীমা — অর্থ-মডিউলের পরিকল্পনা ৬.৩, ৬ অক্টোবর ২০২৬ ([[InsurancePrepaymentService]])। কেবল শেষ
+     * হওয়া মাস; এক কিস্তিতে এক মাস একবারই; আগের মাসের অগ্রিম পরের মাসের প্রথম দিনে নিজে উল্টায়।
+     */
+    public function prepay(Request $request): RedirectResponse
+    {
+        $data = $request->validate([
+            'month' => ['required', 'date_format:Y-m'],
+        ]);
+
+        $done = app(InsurancePrepaymentService::class)->run(\Illuminate\Support\Carbon::createFromFormat('Y-m-d', $data['month'].'-01'));
+
+        return back()->with('saved', __('finance::insurance.prepaid_done', $done));
     }
 
     public function create(Request $request): View

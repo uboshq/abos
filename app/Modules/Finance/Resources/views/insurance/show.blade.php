@@ -98,4 +98,26 @@
              'render' => fn ($p) => view('finance::insurance.partials.pay', ['premium' => $p, 'policy' => $policy])],
         ]" />
     </section>
+
+    {{-- ⭐ মাস শেষের অগ্রিম — কোন মাসে কত খরচ থেকে সরল, কোন খাত থেকে, কোন ভাউচারে, উল্টেছে কি না (পরিকল্পনা ৬.৩) --}}
+    @if (($prepayments ?? collect())->isNotEmpty())
+        <section data-boxed data-insurance-prepayments
+                 class="mt-4 max-w-screen-2xl overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
+            <h2 class="border-b border-(--color-border) px-3 py-2 text-sm font-semibold">{{ __('finance::insurance.prepaid_title') }}</h2>
+            <x-ui.table :rows="$prepayments" :empty="'—'" :columns="[
+                ['key' => 'month', 'label' => __('finance::insurance.prepaid_month'), 'width' => '9rem',
+                 'render' => fn ($a) => $a->for_month->translatedFormat('F Y')],
+                ['key' => 'days', 'label' => __('finance::insurance.prepaid_days'), 'width' => '8rem',
+                 'render' => fn ($a) => $a->days_left.' / '.$a->days_total],
+                ['key' => 'amount', 'label' => __('finance::insurance.prepaid_amount'), 'numeric' => true, 'width' => '10rem',
+                 'render' => fn ($a) => Money::format($a->amount)],
+                ['key' => 'account', 'label' => __('finance::insurance.prepaid_from_account'),
+                 'render' => fn ($a) => trim(($a->expenseAccount?->code ?? '').' '.($a->expenseAccount?->name() ?? ''))],
+                ['key' => 'voucher', 'label' => __('finance::insurance.prepaid_voucher'), 'width' => '9rem',
+                 'render' => fn ($a) => $a->voucher?->document_no ?? '—'],
+                ['key' => 'reversal', 'label' => __('finance::insurance.prepaid_reversal'), 'width' => '9rem',
+                 'render' => fn ($a) => $a->reversalVoucher?->document_no ?? '—'],
+            ]" />
+        </section>
+    @endif
 </x-layouts.app>
