@@ -79,6 +79,21 @@ class Person extends Model implements Drillable
 
     protected $table = 'mdm_people';
 
+    /*
+     * ⭐ ব্যক্তির ধরন — অর্থ-মডিউলের পরিকল্পনা, ৫ অক্টোবর ২০২৬: কর্মী, আত্মীয়, ব্যবসায়ী, অন্যান্য। ⓘ IAS 24: মালিক বা
+     * আত্মীয়ের সাথে লেনদেন আলাদা চেনা যায় (হাতধারের রিপোর্টে কলাম)। ঐচ্ছিক — খালি মানে "বলা হয়নি"।
+     */
+    public const STAFF = 'staff';
+
+    public const RELATIVE = 'relative';
+
+    public const BUSINESS = 'business';
+
+    public const OTHER = 'other';
+
+    /** @var list<string> */
+    public const KINDS = [self::STAFF, self::RELATIVE, self::BUSINESS, self::OTHER];
+
     /**
      * ⓘ `is_default` নেই, ইচ্ছাকৃতভাবে — "ডিফল্ট মানুষ" বলে কিছু হয় না।
      * সাধারণ ফর্মটা সব তালিকার জন্য একটাই, তাই ঘরটা এলেও
@@ -87,7 +102,7 @@ class Person extends Model implements Drillable
      */
     protected $fillable = [
         'company_id', 'code', 'name_en', 'name_bn',
-        'mobile', 'relationship', 'address', 'nid_tin', 'note', 'is_active', 'created_by',
+        'mobile', 'kind', 'relationship', 'address', 'nid_tin', 'note', 'is_active', 'created_by',
     ];
 
     protected function casts(): array

@@ -10,6 +10,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Branch;
 use App\Modules\Finance\Models\BankFacility;
 use App\Modules\Finance\Models\HandLoanAccount;
+use App\Modules\Finance\Reports\HandLoanReports;
 use App\Modules\Finance\Reports\LoanLedgerReports;
 use App\Modules\MasterData\Models\Person;
 use Illuminate\Http\Request;
@@ -29,6 +30,26 @@ class FinanceReportController extends Controller
     public const SLUGS = [
         'hand-loan-book' => LoanLedgerReports::HAND_LOAN,
         'bank-loan-book' => LoanLedgerReports::BANK_LOAN,
+
+        // ⭐ হাতধারের রিপোর্ট ৩–৭ — অর্থ-মডিউলের পরিকল্পনা, ৫ অক্টোবর ২০২৬ ([[HandLoanReports]])
+        'hand-loan-reconcile' => HandLoanReports::RECONCILE,
+        'hand-loan-receivable' => HandLoanReports::RECEIVABLE,
+        'hand-loan-payable' => HandLoanReports::PAYABLE,
+        'hand-loan-receivable-age' => HandLoanReports::AGE_RECEIVABLE,
+        'hand-loan-payable-age' => HandLoanReports::AGE_PAYABLE,
+        'hand-loan-activity' => HandLoanReports::ACTIVITY,
+        'hand-loan-schedule' => HandLoanReports::SCHEDULE,
+    ];
+
+    /** হাতধারের রিপোর্টের সারি — প্রতিটা রিপোর্টের মাথায় আর হাতধারের পাতায় একই ক্রমে */
+    public const HAND_LOAN_REPORTS = [
+        'hand-loan-receivable' => 'finance::hand_loan_report.receivable_short',
+        'hand-loan-payable' => 'finance::hand_loan_report.payable_short',
+        'hand-loan-receivable-age' => 'finance::hand_loan_report.age_receivable_short',
+        'hand-loan-payable-age' => 'finance::hand_loan_report.age_payable_short',
+        'hand-loan-activity' => 'finance::hand_loan_report.activity_short',
+        'hand-loan-schedule' => 'finance::hand_loan_report.schedule_short',
+        'hand-loan-reconcile' => 'finance::hand_loan_report.reconcile_short',
     ];
 
     public function __construct(
@@ -61,6 +82,20 @@ class FinanceReportController extends Controller
                 'partyFilter' => 'facility_id',
                 'parties' => BankFacility::query()->inViewedBranch()->orderBy('bank')->get()
                     ->map(fn (BankFacility $f) => (object) ['id' => (int) $f->id, 'name' => trim($f->bank.' · '.$f->document_no, ' ·')]),
+            ]);
+        }
+
+        // ⓘ হাতধারের তালিকা-রিপোর্টগুলো — কাউকে বাছার ঘর নেই, মাথায় রিপোর্টের সারি
+        if (isset(self::HAND_LOAN_REPORTS[$slug])) {
+            return view('accounts::report.show', [
+                'menu' => $this->menu->forUser($request->user()),
+                'slug' => $slug,
+                'report' => $definition,
+                'result' => $result,
+                'branches' => Branch::query()->active()->orderBy('name_en')->get(),
+                'accounts' => collect(),
+                'partyTypes' => collect(),
+                'extraFilters' => 'finance::hand-loan.partials.report-tabs',
             ]);
         }
 

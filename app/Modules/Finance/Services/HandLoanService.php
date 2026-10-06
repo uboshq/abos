@@ -233,6 +233,8 @@ final class HandLoanService
                 'direction' => $direction,
                 'amount' => $amount,
                 'moved_on' => $on,
+                // ⭐ কবে ফেরতের কথা — না দিলে হিসাবের তারিখ খাটে (পরিকল্পনা ১.৮, [[HandLoanReports::SCHEDULE]])
+                'return_on' => ($data['return_on'] ?? '') ?: null,
                 'money_account_id' => $money->id,
                 'voucher_id' => $voucher->id,
                 'note' => ($data['note'] ?? '') ?: null,

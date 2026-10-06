@@ -203,6 +203,11 @@
                             :label="__('finance::field.date')"
                             :value="old('moved_on', now()->toDateString())" />
 
+                {{-- ⭐ কবে ফেরতের কথা — পরিশোধের সময়সূচি এটাই পড়ে (পরিকল্পনা ১.৮, ৫ অক্টোবর ২০২৬); খালি রাখলে হিসাবের তারিখ --}}
+                <x-ui.field name="return_on" type="date"
+                            :label="__('finance::field.return_on')"
+                            :value="old('return_on')" />
+
                 {{-- ⛔ আগে এখানে কেবল খাতের ঘর ছিল, আর ব্যাংক বাছলে
                      সার্ভার লেনদেন নম্বর চেয়ে আটকে দিত — ঘরটা ছাড়াই। --}}
                 <x-ui.money-account name="money_account_id" required codes
@@ -256,6 +261,8 @@
                 ['key' => 'amount', 'label' => __('finance::field.amount'), 'numeric' => true,
                  'width' => '11rem',
                  'render' => fn ($m) => \App\Core\Support\Money::format($m->amount)],
+                ['key' => 'return_on', 'label' => __('finance::field.return_on'), 'width' => '9rem',
+                 'render' => fn ($m) => $m->return_on === null ? '—' : \App\Core\Support\DateFormat::format($m->return_on)],
                 ['key' => 'money', 'label' => __('finance::field.money_account'),
                  'render' => fn ($m) => $m->moneyAccount?->name() ?? '—'],
                 ['key' => 'note', 'label' => __('finance::field.note'),

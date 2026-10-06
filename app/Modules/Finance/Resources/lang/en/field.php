@@ -155,6 +155,7 @@ return [
     'interest_rate' => 'Interest rate (%/year)',
     'term_months' => 'Term (months)',
     'due_on' => 'Promised back by',
+    'return_on' => 'Due back on',
     'next_due_on' => 'Next instalment',
     'repayment' => 'Repayment',
     'repayment_lump' => 'In one go, at the end',

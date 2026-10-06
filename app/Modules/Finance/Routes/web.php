@@ -194,6 +194,10 @@ Route::middleware('auth')->prefix('finance')->group(function () {
          */
         Route::post('/people', [HandLoanController::class, 'storePerson'])->name('person.store');
 
+        // ⭐ জের নিশ্চিতকরণের চিঠি — একজন মানুষের নামে, একটা তারিখে (অর্থ-মডিউলের পরিকল্পনা ১.৯, ৫ অক্টোবর ২০২৬)
+        Route::get('/people/{person}/letter', \App\Modules\Finance\Http\Controllers\HandLoanLetterController::class)
+            ->whereNumber('person')->name('letter');
+
         Route::get('/{handLoan}', [HandLoanController::class, 'show'])
             ->whereNumber('handLoan')->name('show');
 

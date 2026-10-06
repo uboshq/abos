@@ -159,9 +159,11 @@ final class LoanLedgerReports
      * ⓘ হাতধারের বাকি = চলাচল + এই সারিগুলো — তালিকা ([[HandLoanService::people()]]), হিসাবের বকেয়া
      * ([[HandLoanService::balanceOf()]]) আর খাতা ([[handLoan()]]) তিনটাই এই একটা কোয়েরি পড়ে।
      *
-     * @param  list<int>  $personIds
+     * ⓘ `null` মানে সব ব্যক্তি — হাতধারের তালিকা-রিপোর্টগুলো ([[HandLoanReports]]) একসাথে সবার পড়ে।
+     *
+     * @param  list<int>|null  $personIds
      */
-    public static function looseRows(int $companyId, array $personIds): Builder
+    public static function looseRows(int $companyId, ?array $personIds): Builder
     {
         $head = StandardChart::find(StandardChart::HAND_LOAN);
         $heads = $head === null ? [] : $head->selfAndDescendants()->modelKeys();
@@ -174,7 +176,7 @@ final class LoanLedgerReports
             ->where('le.company_id', $companyId)
             ->whereIn('le.account_id', $heads ?: [0])
             ->where('le.party_type', 'person')
-            ->whereIn('le.party_id', $personIds ?: [0])
+            ->when($personIds !== null, fn ($q) => $q->whereIn('le.party_id', $personIds ?: [0]))
             ->whereNot(fn ($q) => $q->whereIn('le.source_type', $own)
                 ->whereExists(fn ($m) => $m->selectRaw('1')->from('fin_hand_loan_movements as hm')
                     ->where('hm.company_id', $companyId)

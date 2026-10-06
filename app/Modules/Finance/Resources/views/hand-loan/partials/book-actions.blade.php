@@ -14,6 +14,9 @@
                          :href="route('finance.hand_loan.create', ['person_id' => $bookPerson->id])">{{ __('finance::action.new_hand_loan') }}</x-ui.button>
         @endcan
     @endif
+    {{-- ⭐ জের নিশ্চিতকরণের চিঠি — খাতার শেষ তারিখে (পরিকল্পনা ১.৯, ৫ অক্টোবর ২০২৬) --}}
+    <x-ui.button icon="print" data-hand-loan-letter target="_blank"
+                 :href="route('finance.hand_loan.letter', ['person' => $bookPerson->id, 'as_of' => $result->filters['to'] ?? null])">{{ __('finance::hand_loan_letter.button') }}</x-ui.button>
     @can('accounts.report')
         <x-ui.button icon="book"
                      :href="route('accounts.report.show', ['slug' => 'person-ledger', 'person_id' => $bookPerson->id, 'from' => \App\Core\Engines\Report\ReportEngine::ALL_TIME])">{{ __('finance::loan_ledger.books_total') }}</x-ui.button>

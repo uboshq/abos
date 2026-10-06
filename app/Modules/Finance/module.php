@@ -655,6 +655,8 @@ return [
     // ⭐ হাতধার আর ব্যাংক ঋণের খাতা — মালিক, ৫ অক্টোবর ২০২৬ ([[LoanLedgerReports]])
     'reports' => [
         \App\Modules\Finance\Reports\LoanLedgerReports::class,
+        // ⭐ হাতধারের রিপোর্ট ৩–৭ — অর্থ-মডিউলের পরিকল্পনা, ৫ অক্টোবর ২০২৬
+        \App\Modules\Finance\Reports\HandLoanReports::class,
         // ⭐ মূলধন ও বিনিয়োগের রিপোর্ট — অর্থ-মডিউলের পরিকল্পনা, অংশ ২
         \App\Modules\Finance\Reports\CapitalReports::class,
         // ⭐ ভাড়ার চুক্তি ও জামানতের রিপোর্ট — অর্থ-মডিউলের পরিকল্পনা, অংশ ৫

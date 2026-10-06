@@ -97,6 +97,11 @@
             @endforeach
         </section>
 
+        {{-- ⭐ হাতধারের রিপোর্ট ৩–৭ — পাওনা, দেনা, বয়স, দেওয়া-নেওয়া, খাতের সাথে মেলানো (পরিকল্পনা, ৫ অক্টোবর ২০২৬) --}}
+        <div class="border-b border-(--color-border) px-3 py-2">
+            @include('finance::hand-loan.partials.report-tabs')
+        </div>
+
         {{-- ⭐ ট্যাবের সারি — মূলধনের পাতার হুবহু গড়ন (মালিকের নমুনা, ১৯ সেপ্টেম্বর ২০২৬) --}}
         <nav class="flex flex-wrap gap-1 border-b border-(--color-border) px-2 text-sm"
              aria-label="{{ __('finance::menu.hand_loan') }}">

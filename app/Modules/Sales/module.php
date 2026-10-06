@@ -331,24 +331,8 @@ return [
             // ⭐ পরিকল্পনা সংস্করণ ২ §৯ — খোলা আদেশ ও ব্যাক অর্ডার, সীমায় আটকানো আদেশ, বিক্রয় খাতা (৪ অক্টোবর ২০২৬)
             ['label' => 'sales::order_book.open_title', 'icon' => 'list', 'route' => 'sales.report.show',
                 'route_params' => ['slug' => 'open-orders'], 'permission' => 'sales.report'],
-            /*
-             * ⭐ "বাকি ও আদায়" — বাকি নিয়ন্ত্রণের নিজের ভাঁজ (SAP Credit Management / D365 Credit and collections-এর
-             * মতো; মালিকের অনুমোদিত পরিকল্পনা, ৫ অক্টোবর ২০২৬): সীমার ব্যবহার, বাকি বন্ধ, ঝুঁকির গ্রাহক, বয়সভিত্তিক বকেয়া,
-             * সীমায় আটকানো আদেশ আর সীমা বদলের ইতিহাস এক জায়গায় ([[CreditControlReports]])।
-             */
-            ['label' => 'sales::credit.use_title', 'cluster' => 'credit_collections', 'icon' => 'scale', 'route' => 'sales.report.show',
-                'route_params' => ['slug' => 'credit-use'], 'permission' => 'sales.report'],
-            ['label' => 'sales::credit.blocked_title', 'cluster' => 'credit_collections', 'icon' => 'alert-triangle', 'route' => 'sales.report.show',
-                'route_params' => ['slug' => 'blocked-customers'], 'permission' => 'sales.report'],
-            ['label' => 'sales::credit.risk_title', 'cluster' => 'credit_collections', 'icon' => 'alert-triangle', 'route' => 'sales.report.show',
-                'route_params' => ['slug' => 'risky-customers'], 'permission' => 'sales.report'],
-            // ⓘ বয়সভিত্তিক বকেয়া গ্রাহক মডিউলের রিপোর্ট — একই পাতা, এই ভাঁজ থেকেও (গ্রাহকের মেনুতেও আছে)
-            ['label' => 'customer::menu.ageing', 'cluster' => 'credit_collections', 'icon' => 'clock', 'from' => 'customer', 'route' => 'customer.report.show',
-                'route_params' => ['slug' => 'ageing'], 'permission' => 'customer.report', 'setting' => 'customer.screen_ageing'],
-            ['label' => 'sales::order_book.blocked_title', 'cluster' => 'credit_collections', 'icon' => 'alert-triangle', 'route' => 'sales.report.show',
+            ['label' => 'sales::order_book.blocked_title', 'icon' => 'alert-triangle', 'route' => 'sales.report.show',
                 'route_params' => ['slug' => 'credit-blocked'], 'permission' => 'sales.report'],
-            ['label' => 'sales::credit.history_title', 'cluster' => 'credit_collections', 'icon' => 'clock', 'route' => 'sales.report.show',
-                'route_params' => ['slug' => 'limit-history'], 'permission' => 'sales.report'],
             ['label' => 'sales::order_book.invoice_title', 'icon' => 'book', 'route' => 'sales.report.show',
                 'route_params' => ['slug' => 'invoice-book'], 'permission' => 'sales.report'],
             ['label' => 'sales::menu.undelivered', 'icon' => 'alert-triangle', 'route' => 'sales.report.show',

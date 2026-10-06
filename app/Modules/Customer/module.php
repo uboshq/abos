@@ -104,9 +104,7 @@ return [
             ['label' => 'customer::menu.due_list', 'icon' => 'wallet', 'route' => 'customer.report.show',
                 'route_params' => ['slug' => 'due-list'], 'permission' => 'customer.report'],
             ['label' => 'customer::menu.ageing', 'icon' => 'clock', 'route' => 'customer.report.show',
-                'route_params' => ['slug' => 'ageing'], 'permission' => 'customer.report',
-                // ⓘ একই পর্দা বিক্রয়ের "বাকি ও আদায়" ভাঁজেও — দুই সারি এক সুইচে, তাই সুইচটা নাম ধরে ঘোষিত
-                'setting' => 'customer.screen_ageing'],
+                'route_params' => ['slug' => 'ageing'], 'permission' => 'customer.report'],
 
             // "কত পাওনা" নয়, "এ মাসে কে কত দিল" — আদায়কারীর জমার সাথে
             // মেলানোর তালিকা
@@ -403,17 +401,6 @@ return [
             'default' => 0,
             'group' => 'entry',
             'super_admin_only' => true,
-        ],
-        [
-            /*
-             * ⓘ বয়সভিত্তিক বকেয়ার পর্দা — গ্রাহকের রিপোর্টে আর বিক্রয়ের "বাকি ও আদায়" ভাঁজে একই সারি (৫ অক্টোবর ২০২৬);
-             * এক সুইচে দুইটাই চালু-বন্ধ হয়।
-             */
-            'key' => 'customer.screen_ageing',
-            'label' => 'customer::settings.screen_ageing',
-            'type' => 'boolean',
-            'default' => true,
-            'group' => 'screens',
         ],
         [
             'key' => 'customer.show_photo_on_print',

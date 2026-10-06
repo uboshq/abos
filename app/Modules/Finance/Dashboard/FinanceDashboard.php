@@ -12,10 +12,12 @@ use App\Core\Engines\Dashboard\DateRange;
 use App\Core\Engines\Dashboard\Listing;
 use App\Core\Engines\Dashboard\Stat;
 use App\Core\Engines\Dashboard\Tile;
+use App\Core\Engines\Report\ReportEngine;
 use App\Core\Services\DataScope;
 use App\Core\Support\CompanyContext;
 use App\Core\Support\DocumentStatus;
 use App\Core\Support\Money;
+use App\Core\Support\ViewedBranch;
 use App\Modules\Accounts\Models\BankReconciliation;
 use App\Modules\Accounts\Models\BankStatementLine;
 use App\Modules\Accounts\Models\Voucher;
@@ -24,6 +26,7 @@ use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Finance\Models\CapitalEntry;
 use App\Modules\Finance\Models\Deposit;
 use App\Modules\Finance\Models\Withdrawal;
+use App\Modules\Finance\Reports\HandLoanReports;
 use App\Modules\Finance\Services\BudgetService;
 use App\Modules\Finance\Services\HeadTotals;
 use Illuminate\Support\Carbon;
@@ -184,6 +187,7 @@ final class FinanceDashboard implements ProvidesDashboard
                     permission: 'accounts.view',
                 ),
                 ...self::fundAndDues($facts, $money, $cashBook, $supplierAgeing),
+                ...self::handLoansOverdue(),
 
                 /*
                  * ⓘ বয়সের ভাগটা এখানে গোনা হয় না — দরজাটা **যেখানে
@@ -559,6 +563,42 @@ final class FinanceDashboard implements ProvidesDashboard
                 tone: $dues['overdue_count'] > 0 ? Stat::BAD : Stat::NEUTRAL,
             ),
         ];
+    }
+
+    /**
+     * ⭐ হাতধারের ফেরতের দিন পার — অর্থ-মডিউলের পরিকল্পনা ১, ৫ অক্টোবর ২০২৬: *"৩ জনের ফেরতের দিন পার"*।
+     *
+     * ⓘ নিজের হিসাব নয়: পরিশোধের সময়সূচির "দিন পার" সারিগুলো ([[HandLoanReports::SCHEDULE]], `state` = overdue) — রিপোর্ট আর
+     * ড্যাশবোর্ড কখনো দুই কথা বলে না, আর রিপোর্টের শাখার দেয়াল এখানেও খাটে। মানুষ গোনা হয় একবার করে, টুকরো নয়।
+     * ⛔ হাতধারের চাবি ছাড়া নেই।
+     *
+     * @return list<Stat>
+     */
+    private static function handLoansOverdue(): array
+    {
+        if (! config('abos.dashboards_v2') || ! auth()->user()?->can('finance.hand_loan.view')) {
+            return [];
+        }
+
+        $rows = app(ReportEngine::class)->run(HandLoanReports::SCHEDULE, [
+            'to' => Carbon::today()->toDateString(), 'state' => HandLoanReports::OVERDUE, 'branch_id' => ViewedBranch::one(),
+        ], 1, 1000)->rows;
+
+        $theirs = array_filter($rows, fn (array $r) => bccomp((string) $r['they_owe'], '0', 4) > 0);
+        $ours = array_filter($rows, fn (array $r) => bccomp((string) $r['we_owe'], '0', 4) > 0);
+        $people = count(array_unique(array_map(fn (array $r) => (int) $r['person_id'], $theirs)));
+
+        return [new Stat(
+            label: __('finance::dashboard.hand_loans_overdue'),
+            value: Money::format(array_reduce($theirs, fn (string $sum, array $r) => bcadd($sum, (string) $r['they_owe'], 4), '0')),
+            hint: __('finance::dashboard.hand_loans_overdue_hint', [
+                'count' => $people,
+                'ours' => count(array_unique(array_map(fn (array $r) => (int) $r['person_id'], $ours))),
+            ]),
+            href: route('finance.report.show', ['slug' => 'hand-loan-schedule', 'state' => HandLoanReports::OVERDUE]),
+            permission: 'finance.hand_loan.view',
+            tone: $theirs !== [] || $ours !== [] ? Stat::BAD : Stat::NEUTRAL,
+        )];
     }
 
     /**

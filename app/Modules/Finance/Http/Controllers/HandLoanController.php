@@ -411,6 +411,8 @@ class HandLoanController extends Controller implements HasMiddleware
             'direction' => ['required', 'string', 'in:'.implode(',', HandLoanMovement::DIRECTIONS)],
             'amount' => ['required', 'numeric', 'gt:0'],
             'moved_on' => ['required', 'date'],
+            // ⭐ কবে ফেরতের কথা — ঐচ্ছিক, দেওয়া-নেওয়ার দিনের আগে নয় (পরিকল্পনা ১.৮, ৫ অক্টোবর ২০২৬)
+            'return_on' => ['nullable', 'date', 'after_or_equal:moved_on'],
             'money_account_id' => ['required', 'integer', 'exists:accounts,id'],
             // ব্যাংক/MFS হলে যে নম্বরটা লাগে — ⛔ `required` নয়, নিয়মটা
             // এক জায়গায়: [[VoucherService::assertBankReferenceIsFree]]

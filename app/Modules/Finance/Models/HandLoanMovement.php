@@ -46,6 +46,8 @@ class HandLoanMovement extends Model implements Drillable, SettledByAVoucher, \A
 
     protected $fillable = [
         'company_id', 'account_id', 'direction', 'amount', 'moved_on',
+        // ⭐ কবে ফেরতের কথা — পরিকল্পনা ১.৮, ৫ অক্টোবর ২০২৬ ([[HandLoanReports::SCHEDULE]])
+        'return_on',
         'money_account_id', 'voucher_id', 'note', 'created_by',
     ];
 
@@ -55,6 +57,7 @@ class HandLoanMovement extends Model implements Drillable, SettledByAVoucher, \A
         return [
             'amount' => 'decimal:4',
             'moved_on' => 'date',
+            'return_on' => 'date',
         ];
     }
 

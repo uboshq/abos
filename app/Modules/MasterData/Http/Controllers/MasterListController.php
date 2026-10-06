@@ -347,6 +347,8 @@ class MasterListController extends Controller implements HasMiddleware
                  * নামে পাহারা নরম (দুইজন "মোঃ রহিম" থাকতে পারেন), নম্বরে কঠিন।
                  */
                 'mobile' => ['type' => 'text', 'label' => 'master_data::field.mobile'],
+                // ⭐ ধরন — কর্মী, আত্মীয়, ব্যবসায়ী, অন্যান্য (অর্থ-মডিউলের পরিকল্পনা, ৫ অক্টোবর ২০২৬; IAS 24-এর আত্মীয় আলাদা চেনা)
+                'kind' => ['type' => 'select', 'label' => 'master_data::field.kind', 'options' => 'person_kinds', 'labels' => 'person_kind'],
                 /*
                  * ⭐ ঠিকানা — মালিক, ৫ অক্টোবর ২০২৬: "ঠিকানা নেই, পরিকল্পনামতো হয়নি"। ⓘ ঘরটা টেবিলে আগে থেকেই ছিল
                  * (`mdm_people.address`, অর্থের ফর্মের দ্রুত-যোগ ওখানে লিখত), কেবল এই ফর্মে আঁকা হয়নি; হাতধারের
@@ -355,7 +357,7 @@ class MasterListController extends Controller implements HasMiddleware
                 'address' => ['type' => 'text', 'label' => 'master_data::field.address'],
                 'note' => ['type' => 'text', 'label' => 'master_data::field.note'],
             ],
-            'columns' => ['mobile', 'address'],
+            'columns' => ['mobile', 'kind', 'address'],
         ],
 
         /*
@@ -846,6 +848,7 @@ class MasterListController extends Controller implements HasMiddleware
              */
             'money_accounts' => Account::query()->money()->postable()->active()->orderBy('code')->get(),
             'tax_kinds' => Tax::KINDS,
+            'person_kinds' => Person::KINDS,
             'payment_kinds' => PaymentMethod::KINDS,
             'applies' => PartyType::APPLIES,
             'contexts' => ReasonCode::CONTEXTS,

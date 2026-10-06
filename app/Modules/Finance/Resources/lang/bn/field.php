@@ -172,6 +172,7 @@ return [
     'interest_rate' => 'সুদের হার (%/বছর)',
     'term_months' => 'মেয়াদ (মাস)',
     'due_on' => 'ফেরতের তারিখ',
+    'return_on' => 'কবে ফেরতের কথা',
     'next_due_on' => 'পরের কিস্তি',
     'repayment' => 'ফেরতের ধরন',
     'repayment_lump' => 'এককালীন — মেয়াদ শেষে',

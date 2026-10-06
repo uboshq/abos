@@ -58,6 +58,8 @@ return [
     'payables_next_week_hint' => ':count বিলের মেয়াদ আজ থেকে ৭ দিনের মধ্যে',
     'payables_overdue' => 'মেয়াদোত্তীর্ণ দেনা',
     'payables_overdue_hint' => ':count বিলের মেয়াদ পেরিয়ে গেছে, টাকা বাকি',
+    'hand_loans_overdue' => 'হাতধারের ফেরতের দিন পার',
+    'hand_loans_overdue_hint' => ':count জনের ফেরতের দিন পার · আমাদের দেওয়ার দিন পার :ours জনের',
     // ৫ অক্টোবর ২০২৬ — হোমের বাছা সময় ধরে
     'where_money_went_today' => 'আজ টাকা কোথায় গেল',
     'where_money_went_year' => 'এ বছর টাকা কোথায় গেল',
