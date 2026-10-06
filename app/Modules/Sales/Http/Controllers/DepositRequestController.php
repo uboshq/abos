@@ -128,7 +128,15 @@ class DepositRequestController extends Controller implements HasMiddleware
 
     private function customer(string $key): Customer
     {
-        return Customer::query()
+        /*
+         * ⛔ দেখার শাখার গ্রাহকই; ফোনে কেবল public_id (পুরো ERP অডিট, ৬ অক্টোবর ২০২৬, ফোন ⛔৩): আগে শাখা ছাড়া খোঁজা, আর
+         * সংখ্যার আইডিও চলত — /standing/1, /standing/2 … অন্য শাখার গ্রাহকের নামে জমার বিজ্ঞপ্তি তোলা যেত। ⓘ ওয়েবের ফর্ম
+         * এখনো সংখ্যার আইডি পাঠায়, তাই সংখ্যা কেবল ওয়েবের দরজায়।
+         */
+        $phone = str_starts_with(request()->path(), 'api/');
+        abort_if($phone && ! Str::isUuid($key), 404);
+
+        return Customer::query()->inViewedBranch()
             ->when(Str::isUuid($key), fn ($q) => $q->where('public_id', $key), fn ($q) => $q->whereKey((int) $key))
             ->firstOrFail();
     }
