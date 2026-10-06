@@ -134,7 +134,8 @@ class _DeliveryOrderListScreenState extends State<DeliveryOrderListScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       if (order.customer != null) Text(order.customer!),
-                      Text(order.statusLabel),
+                      // ⭐ ওয়েবের চিপ — ব্যাক অর্ডার, সীমায় আটকে, চালান আর বিল (সমন্বয়ক, ৬ অক্টোবর ২০২৬)
+                      if (order.chips.isEmpty) Text(order.statusLabel) else OrderChips(order.chips),
                       Text('৳ ${_taka.format(order.total)}'),
                     ],
                   ),
@@ -395,6 +396,9 @@ class _DeliveryOrderScreenState extends State<DeliveryOrderScreen> {
             if (order.creditShort != null)
               Text('বাকির সীমায় আটকে — কম ৳ ${_taka.format(order.creditShort)}',
                   key: const ValueKey('do-credit-short'), style: const TextStyle(color: AppColors.danger)),
+            if (order.chips.isNotEmpty) OrderChips(order.chips),
+            // ⭐ মজুদ এখন — ধরা হয়নি: আছে, চাই, কম (ওয়েবের আদেশের পাতার একই উৎস)
+            if (order.stockNow.isNotEmpty) _StockNowCard(order.stockNow),
             const SizedBox(height: AppSpacing.md),
             for (final line in order.lines)
               Card(
@@ -559,6 +563,71 @@ class _PickSheetState<T> extends State<_PickSheet<T>> {
       ),
     );
   }
+}
+
+/// ওয়েবের চিপের মতো — ছোট গোল ব্যাজ, রং সার্ভারের নামে
+class OrderChips extends StatelessWidget {
+  const OrderChips(this.chips, {super.key});
+
+  final List<OrderChip> chips;
+
+  static (Color, Color) colours(String tone) => switch (tone) {
+        'success' => (AppColors.successSurface, AppColors.success),
+        'warning' => (AppColors.warningSurface, AppColors.warning),
+        'danger' => (AppColors.dangerSurface, AppColors.danger),
+        'info' || 'pending' => (AppColors.pendingSurface, AppColors.pending),
+        _ => (AppColors.surfaceMuted, AppColors.onSurfaceMuted),
+      };
+
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
+        child: Wrap(
+          spacing: AppSpacing.xs,
+          runSpacing: AppSpacing.xs,
+          children: [
+            for (final c in chips)
+              Container(
+                key: ValueKey('order-chip-${c.key}'),
+                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: 2),
+                decoration: BoxDecoration(
+                    color: colours(c.tone).$1, borderRadius: BorderRadius.circular(12)),
+                child: Text(c.label,
+                    style: TextStyle(fontSize: 12, color: colours(c.tone).$2, fontWeight: FontWeight.w600)),
+              ),
+          ],
+        ),
+      );
+}
+
+class _StockNowCard extends StatelessWidget {
+  const _StockNowCard(this.rows);
+
+  final List<OrderStockNow> rows;
+
+  @override
+  Widget build(BuildContext context) => Card(
+        key: const ValueKey('order-stock-now'),
+        child: Padding(
+          padding: const EdgeInsets.all(AppSpacing.md),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('মজুদ এখন — ধরা হয়নি', style: TextStyle(fontWeight: FontWeight.w700)),
+              const Text('মাল আটকায় ডিপোর চালান নিশ্চিত হলে; এখানে কেবল কত আছে আর কত চাই।',
+                  style: TextStyle(color: AppColors.onSurfaceMuted)),
+              for (final r in rows) ...[
+                const SizedBox(height: AppSpacing.xs),
+                Text(r.product, style: const TextStyle(fontWeight: FontWeight.w600)),
+                Text(r.have != null ? 'আছে ${_qty(r.have!)} · চাই ${_qty(r.want)}' : 'চাই ${_qty(r.want)}'),
+                if (!r.enough)
+                  Text(r.short != null ? 'কম ${_qty(r.short!)}' : 'মজুদে কুলোয় না',
+                      style: const TextStyle(color: AppColors.danger, fontWeight: FontWeight.w600)),
+              ],
+            ],
+          ),
+        ),
+      );
 }
 
 class _ErrorCard extends StatelessWidget {

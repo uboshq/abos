@@ -18,6 +18,7 @@ class DeliveryRunRow {
     required this.token,
     required this.documentNo,
     required this.customer,
+    this.saleNo,
     this.phone = '',
     this.address = '',
     this.vehicle,
@@ -28,6 +29,9 @@ class DeliveryRunRow {
   final String token;
   final String documentNo;
   final String customer;
+
+  /// ⭐ বিক্রির নম্বর (S-0154) — চালানের নিজের নম্বর CHA-0154 থেকে আলাদা; পুরনো কাগজে null
+  final String? saleNo;
   final String phone;
   final String address;
   final String? vehicle;
@@ -38,6 +42,7 @@ class DeliveryRunRow {
         token: j['token']?.toString() ?? '',
         documentNo: j['document_no']?.toString() ?? '',
         customer: j['customer']?.toString() ?? '',
+        saleNo: j['sale_no']?.toString(),
         phone: j['phone']?.toString() ?? '',
         address: j['address']?.toString() ?? '',
         vehicle: j['vehicle']?.toString(),
@@ -234,8 +239,16 @@ class _DeliveriesScreenState extends State<DeliveriesScreen> {
                       Text(row.customer,
                           style: const TextStyle(
                               fontSize: 16, fontWeight: FontWeight.w700)),
-                      Text([row.documentNo, if (row.phone.isNotEmpty) row.phone]
-                          .join(' · ')),
+                      Text(
+                          [
+                            row.documentNo,
+                            if (row.saleNo != null &&
+                                row.saleNo!.isNotEmpty &&
+                                row.saleNo != row.documentNo)
+                              row.saleNo!,
+                            if (row.phone.isNotEmpty) row.phone
+                          ].join(' · '),
+                          key: ValueKey('delivery-no-${row.documentNo}')),
                       if (row.address.isNotEmpty)
                         Text(row.address,
                             style: const TextStyle(

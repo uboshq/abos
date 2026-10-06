@@ -147,7 +147,16 @@ class _DeliveryTrackingScreenState extends State<DeliveryTrackingScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(sale.no,
+                        // ⭐ বিক্রির নম্বর আর কাগজের নিজের নম্বর, দুটোই — খোঁজায় যেকোনোটা চলে
+                        Text(
+                            [
+                              sale.no,
+                              if (sale.documentNo != null &&
+                                  sale.documentNo!.isNotEmpty &&
+                                  sale.documentNo != sale.no)
+                                sale.documentNo!,
+                            ].join(' · '),
+                            key: ValueKey('tracked-no-${sale.id}'),
                             style:
                                 const TextStyle(fontWeight: FontWeight.w700)),
                         if (sale.customer != null) Text(sale.customer!),

@@ -66,6 +66,15 @@ class ReferenceCache {
     });
   }
 
+  /// ⭐ Which view (company and branches) the cached rows belong to — the server's `view` on every pull (owner, 6 Oct
+  /// 2026: "the app shows another branch's customers and balances"). Not a `type:id` key, so [allOf] never sees it.
+  static const String _viewKey = '__view';
+
+  String? get view => _box?.get(_viewKey)?['view'] as String?;
+
+  Future<void> rememberView(String view) =>
+      _requireBox.put(_viewKey, <String, dynamic>{'view': view});
+
   /// One record by id, decoded back into a Map — null if never synced.
   Map<String, dynamic>? get(String entityType, String entityId) {
     final row = _box?.get(_key(entityType, entityId));

@@ -35,6 +35,30 @@ class DeliveryOrderLine {
       );
 }
 
+/// ⭐ আদেশের একটা চিপ — ওয়েবের তালিকার একই কথা আর রং (অবস্থা, চালান, বিল, ব্যাক অর্ডার, পুরনো খসড়া); সার্ভার বলে, ফোন আঁকে।
+class OrderChip {
+  const OrderChip({required this.key, required this.label, required this.tone});
+
+  final String key;
+  final String label;
+
+  /// ব্যাজের রং — `success`, `warning`, `danger`, `info`, `pending`, `draft`
+  final String tone;
+}
+
+/// ⭐ মজুদ এখন — ধরা হয়নি (মালিক, ৬ অক্টোবর ২০২৬: মাল ধরা চালানে, আদেশে নয়)। ⛔ মজুদের সংখ্যা ([have], [short]) কেবল
+/// মজুদ দেখার চাবিতে আসে — SR-এর ফোনে নয় (মালিক, ১ অক্টোবর ২০২৬); তখন কেবল [enough]।
+class OrderStockNow {
+  const OrderStockNow(
+      {required this.product, required this.want, required this.enough, this.have, this.short});
+
+  final String product;
+  final double want;
+  final bool enough;
+  final double? have;
+  final double? short;
+}
+
 class DeliveryOrder {
   const DeliveryOrder({
     required this.id,
@@ -49,6 +73,9 @@ class DeliveryOrder {
     this.approvalId,
     this.creditShort,
     this.lines = const [],
+    this.chips = const [],
+    this.backOrder = false,
+    this.stockNow = const [],
   });
 
   final String id;
@@ -73,6 +100,14 @@ class DeliveryOrder {
 
   final List<DeliveryOrderLine> lines;
 
+  /// ওয়েবের চিপ — পুরনো সার্ভার বা DO-তে খালি, তখন কেবল [statusLabel]
+  final List<OrderChip> chips;
+
+  final bool backOrder;
+
+  /// কেবল একটা আদেশের পাতায় (তালিকায় নয়); আদেশ নিজে মাল ধরলে খালি
+  final List<OrderStockNow> stockNow;
+
   factory DeliveryOrder.fromJson(Map<String, dynamic> json) => DeliveryOrder(
         id: json['id']?.toString() ?? '',
         no: json['no']?.toString() ?? '—',
@@ -88,6 +123,26 @@ class DeliveryOrder {
         lines: [
           for (final row in (json['lines'] as List?) ?? const [])
             if (row is Map) DeliveryOrderLine.fromJson(Map<String, dynamic>.from(row)),
+        ],
+        chips: [
+          for (final c in (json['chips'] as List?) ?? const [])
+            if (c is Map)
+              OrderChip(
+                  key: c['key']?.toString() ?? '',
+                  label: c['label']?.toString() ?? '',
+                  tone: c['tone']?.toString() ?? 'draft'),
+        ],
+        backOrder: json['back_order'] == true,
+        stockNow: [
+          for (final a in (json['atp'] as List?) ?? const [])
+            if (a is Map)
+              OrderStockNow(
+                product: a['product']?.toString() ?? '—',
+                want: Money.valueOrZero(a['want']),
+                enough: a['enough'] != false,
+                have: a.containsKey('have') ? Money.valueOrZero(a['have']) : null,
+                short: a.containsKey('short') ? Money.valueOrZero(a['short']) : null,
+              ),
         ],
       );
 }

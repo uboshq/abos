@@ -193,11 +193,13 @@ class DueListQuery {
     return sortStable(
         kept,
         switch (sort) {
-          'dueAsc' => (a, b) => a.due.outstanding.compareTo(b.due.outstanding),
+          'dueAsc' => (a, b) =>
+              a.due.outstandingInView.compareTo(b.due.outstandingInView),
           'name' => (a, b) => compareText(a.customer.name, b.customer.name),
           'limitUsed' => (a, b) =>
               compareNullableLast(a.limitUsed, b.limitUsed, descending: true),
-          _ => (a, b) => b.due.outstanding.compareTo(a.due.outstanding),
+          _ => (a, b) =>
+              b.due.outstandingInView.compareTo(a.due.outstandingInView),
         });
   }
 }

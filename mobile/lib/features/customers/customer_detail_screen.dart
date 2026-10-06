@@ -144,7 +144,7 @@ class _DueCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final owes = due.outstanding > 0;
+    final owes = due.outstandingInView > 0;
 
     return Card(
       child: Padding(
@@ -213,7 +213,8 @@ class _Actions extends StatelessWidget {
           ),
         // ⭐ স্লিপসহ জমার অনুরোধ (0.4.3)
         OutlinedButton.icon(
-          onPressed: () => context.push('/home/customers/${customer.id}/deposit'),
+          onPressed: () =>
+              context.push('/home/customers/${customer.id}/deposit'),
           icon: const Icon(Icons.receipt_long_outlined),
           label: const Text('জমার অনুরোধ'),
         ),
