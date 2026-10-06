@@ -157,16 +157,20 @@ final class DirectPurchaseUndoAndNoDoublePostTest extends TestCase
             stock: [$this->rice->id => ['qty' => '5', 'free' => '0', 'value' => '1000']],
             supplier: '0', cash: '-1000', profit: '0');
 
-        app(PurchaseBillService::class)->cancel($bill->fresh(), 'মাল ফেরত গেছে');
-
-        $this->assertFiveMatches('বিল বাতিলের পরে, ভাউচার তখনো খোলা', $before, $this->snapshot(),
-            ledger: [$till->code => '-1000', StandardChart::PAYABLE => '1000'],
-            stock: [$this->rice->id => ['qty' => '0', 'free' => '0', 'value' => '0']],
-            supplier: '-1000', cash: '-1000', profit: '0');
-
+        /*
+         * ⭐ আগে পরিশোধ, তারপর বিল — পুরো ERP অডিট, ক্রয় ⚠️৭, ৬ অক্টোবর ২০২৬ (70e94ce4)। ⛔ আগে উল্টো ক্রমে চলত: বিল আগে
+         * বাতিল হলে মাঝখানে পরিশোধটা বাতিল বিলে ঝুলে সরবরাহকারীর ব্যাখ্যাহীন অগ্রিম হত। ⓘ শেষ অবস্থা একই — সব শূন্য।
+         */
         app(VoucherService::class)->cancel($result['payments'][0]->fresh(), 'সরবরাহকারী টাকা ফেরত দিয়েছেন');
 
-        $this->assertFiveMatches('ভাউচার বাতিলের পরে', $before, $this->snapshot(),
+        $this->assertFiveMatches('ভাউচার বাতিলের পরে, বিল তখনো খোলা', $before, $this->snapshot(),
+            ledger: [StandardChart::INVENTORY => '1000', StandardChart::PAYABLE => '-1000'],
+            stock: [$this->rice->id => ['qty' => '5', 'free' => '0', 'value' => '1000']],
+            supplier: '1000', cash: '0', profit: '0');
+
+        app(PurchaseBillService::class)->cancel($bill->fresh(), 'মাল ফেরত গেছে');
+
+        $this->assertFiveMatches('বিল বাতিলের পরে', $before, $this->snapshot(),
             ledger: [], stock: [$this->rice->id => ['qty' => '0', 'free' => '0', 'value' => '0']],
             supplier: '0', cash: '0', profit: '0');
     }

@@ -294,11 +294,9 @@ class BatchOnPaperTest extends TestCase
      */
     public function test_a_transfer_across_two_lots_arrives_and_frees_the_hold(): void
     {
-        $to = Warehouse::query()->whereKeyNot($this->warehouse->id)->first();
-
-        if ($to === null) {
-            $this->markTestSkipped('ডেমোতে দ্বিতীয় গুদাম নেই।');
-        }
+        // ⓘ নিজের গন্তব্য গুদাম — ডেমোর উপর নির্ভর করে পাশ কাটানো নয় ([[ASkippedTestReadsAsAPassingOneTest]])
+        $to = Warehouse::query()->create(['code' => 'LOT-TO', 'name_en' => 'Lot destination', 'is_active' => true,
+            'branch_id' => $this->warehouse->branch_id]);
 
         $early = $this->lot('E1', now()->addMonths(3)->toDateString(), '6');
         $late = $this->lot('L1', now()->addMonths(9)->toDateString(), '20');
