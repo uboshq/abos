@@ -75,6 +75,7 @@ class TodayRecord {
           PrincipalLine(
             name: (row['name'] ?? '').toString(),
             period: (row['period'] ?? '').toString(),
+            periodSoFar: row['periodSoFar']?.toString(),
             basisRate: (row['basisRate'] ?? '').toString(),
             inflow: Money.value(row['inflow']),
             commission: Money.value(row['commission']),
@@ -141,6 +142,7 @@ class PrincipalLine {
   const PrincipalLine({
     required this.name,
     required this.period,
+    this.periodSoFar,
     required this.basisRate,
     this.inflow,
     this.commission,
@@ -150,6 +152,15 @@ class PrincipalLine {
 
   final String name;
   final String period;
+
+  /// "26/09/2026 – আজ পর্যন্ত" while today is inside the cycle (server
+  /// `PrincipalCommission::soFar()`); an older server sends none and [period]
+  /// is shown instead.
+  final String? periodSoFar;
+
+  String get periodLabel =>
+      (periodSoFar != null && periodSoFar!.trim().isNotEmpty) ? periodSoFar! : period;
+
   final String basisRate;
   final double? inflow;
   final double? commission;
@@ -163,8 +174,8 @@ class PrincipalLine {
     final value = balance ?? 0;
     if (value == 0) return 'জের নেই';
     return value > 0
-        ? 'দিতে হবে ${Money.taka(value)}'
-        : 'কোম্পানির কাছে পাব ${Money.taka(-value)}';
+        ? 'দিতে হবে: ${Money.taka(value)}'
+        : 'কোম্পানির কাছে পাব: ${Money.taka(-value)}';
   }
 }
 

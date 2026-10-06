@@ -559,11 +559,12 @@ class _MoneyBoxCard extends StatelessWidget {
   }
 }
 
-/// ⭐ The principal commission — the owner's column order, 6 Oct 2026: the
-/// principal, total inflow (this cycle so far), commission, sent to the
-/// principal, inflow still held (the balance without its sign), and a remark
-/// with the period ("দিতে হবে ৳…" or "কোম্পানির কাছে পাব ৳…"). Nothing is
-/// counted here; these are the report's own rows.
+/// ⭐ The principal commission — the web box of 6 Oct 2026 (server 4630f6a2),
+/// drawn like the home's money box: per principal, five figures in order —
+/// the principal, total inflow, commission, sent to the principal, and the
+/// inflow still held said in words ("দিতে হবে: …" or "কোম্পানির কাছে পাব:
+/// …"); the period under the name, "26/09/2026 – আজ পর্যন্ত". The name is
+/// the server's short name, never a code. Nothing is counted here.
 class _PrincipalsCard extends StatelessWidget {
   const _PrincipalsCard({required this.lines});
 
@@ -571,22 +572,23 @@ class _PrincipalsCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    Widget figure(String label, double? value, {Color? colour}) => Padding(
-          padding: const EdgeInsets.symmetric(vertical: 2),
+    Widget figure(String label, String value, {Color? colour, double size = 15}) =>
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 3),
           child: Row(
             children: [
               Expanded(
                 child: Text(label,
                     style: const TextStyle(
-                        fontSize: 12.5, color: AppColors.onSurfaceMuted)),
+                        fontSize: 13, color: AppColors.onSurfaceMuted)),
               ),
               Flexible(
-                child: _OneLine(Text(Money.taka(value),
+                child: _OneLine(Text(value,
                     maxLines: 1,
                     style: TextStyle(
-                        fontSize: 13.5,
-                        fontWeight: FontWeight.w700,
-                        color: colour))),
+                        fontSize: size,
+                        fontWeight: FontWeight.w800,
+                        color: colour ?? AppColors.onSurface))),
               ),
             ],
           ),
@@ -601,19 +603,21 @@ class _PrincipalsCard extends StatelessWidget {
             const SizedBox(height: AppSpacing.sm),
             Text(line.name,
                 key: const ValueKey('principal-name'),
-                style: const TextStyle(fontWeight: FontWeight.w700)),
-            const SizedBox(height: 2),
-            figure('মোট ইনফ্লো', line.inflow),
-            figure('কমিশন (${line.basisRate})', line.commission),
-            figure('প্রিন্সিপালকে পাঠানো', line.paid),
-            figure('বাকি ইনফ্লো', (line.balance ?? 0).abs(),
+                style: const TextStyle(
+                    fontSize: 17, fontWeight: FontWeight.w800)),
+            Text('সময়কাল: ${line.periodLabel}',
+                key: const ValueKey('principal-period'),
+                style: const TextStyle(
+                    fontSize: 12.5, color: AppColors.onSurfaceMuted)),
+            const SizedBox(height: AppSpacing.xs),
+            figure('মোট ইনফ্লো', Money.taka(line.inflow)),
+            figure('কমিশন (${line.basisRate})', Money.taka(line.commission)),
+            figure('প্রিন্সিপালকে পাঠানো', Money.taka(line.paid)),
+            figure('বাকি ইনফ্লো', line.balanceLabel,
+                size: 16,
                 colour: (line.balance ?? 0) > 0
                     ? AppColors.danger
                     : AppColors.success),
-            Text('মন্তব্য: ${line.balanceLabel} · ${line.period}',
-                key: const ValueKey('principal-remarks'),
-                style: const TextStyle(
-                    fontSize: 12, color: AppColors.onSurfaceMuted)),
           ],
         ],
       ),

@@ -106,6 +106,7 @@ void main() {
       {
         'name': 'S-001 — Star Line',
         'period': '02/09/2026 – 01/10/2026',
+        'periodSoFar': '02/09/2026 – আজ পর্যন্ত',
         'basisRate': 'Margin 3.85%',
         'inflow': '100000.0000',
         'commission': '3850.0000',
@@ -168,9 +169,11 @@ void main() {
     expect(find.text('প্রিন্সিপালকে পাঠানো'), findsOneWidget);
     expect(find.text('৳90,000'), findsOneWidget);
     expect(find.text('বাকি ইনফ্লো'), findsOneWidget);
-    expect(find.text('৳6,150'), findsOneWidget);
-    expect(find.text('মন্তব্য: দিতে হবে ৳6,150 · 02/09/2026 – 01/10/2026'),
-        findsOneWidget);
+    expect(find.text('দিতে হবে: ৳6,150'), findsOneWidget,
+        reason: 'the inflow still held, said in words');
+    expect(find.text('সময়কাল: 02/09/2026 – আজ পর্যন্ত'), findsOneWidget);
+    expect(find.textContaining('মন্তব্য'), findsNothing,
+        reason: 'no remarks column any more');
 
     final labels = tester
         .widgetList<Text>(find.descendant(
@@ -188,6 +191,13 @@ void main() {
                 labels.indexOf('বাকি ইনফ্লো'),
         isTrue,
         reason: "the owner's column order");
+  });
+
+  test('an older server without periodSoFar shows the plain period', () {
+    const line = PrincipalLine(name: 'X', period: '02/09/2026 – 01/10/2026', basisRate: 'Margin 4%');
+    expect(line.periodLabel, '02/09/2026 – 01/10/2026');
+    expect(const PrincipalLine(name: 'X', period: 'p', basisRate: 'b', balance: -10).balanceLabel,
+        'কোম্পানির কাছে পাব: ৳10');
   });
 
   testWidgets('an older server without the new blocks still gets the old cards',
