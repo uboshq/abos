@@ -63,6 +63,8 @@ final class TheRentScheduleKnowsWhichMonthsWerePaidTest extends TestCase
         $this->godown = $this->contract('Godown Landlord', $this->mymensingh, '10000', $this->month(-3)->addDays(14));
         // ⓘ দোকান, নেত্রকোনা — একই সময়ে শুরু, গত মাসের ৫ তারিখে আগেভাগে শেষ
         $this->shop = $this->contract('Shop Landlord', $this->netrakona, '5000', $this->month(-3), closedOn: $this->month(-1)->addDays(4));
+        // ⓘ দোকানের প্রথম মাস সই-ব্যবস্থার আগের — ভাউচার নেই, তবু দেওয়া (চুক্তির পাতার একই নিয়ম)
+        $this->adjust($this->shop, $this->month(-3), '5000', '0', null);
 
         // m-3: শেষ সই পড়েছে — নগদ ৭০০০ + জামানত থেকে ৩০০০
         $this->adjust($this->godown, $this->month(-3), '7000', '3000', DocumentStatus::CONFIRMED);
@@ -121,7 +123,7 @@ final class TheRentScheduleKnowsWhichMonthsWerePaidTest extends TestCase
 
         $result = app(ReportEngine::class)->run(RentalReports::SCHEDULE, $this->range());
         $summary = ($result->report->summary)($result->totals);
-        $this->assertMoney('51000', $summary['value'], 'মোট বাকি = গুদাম ৩০০০০ + দোকান ১৫০০০ + মেয়াদ ফুরানো ৬০০০');
+        $this->assertMoney('46000', $summary['value'], 'মোট বাকি = গুদাম ৩০০০০ + দোকান ১০০০০ (প্রথম মাস ভাউচার ছাড়া দেওয়া) + মেয়াদ ফুরানো ৬০০০');
         $this->assertFalse($summary['good']);
     }
 
@@ -204,11 +206,11 @@ final class TheRentScheduleKnowsWhichMonthsWerePaidTest extends TestCase
         ]);
     }
 
-    private function adjust(RentalContract $contract, Carbon $month, string $cash, string $fromDeposit, string $voucherStatus, bool $deleted = false): void
+    private function adjust(RentalContract $contract, Carbon $month, string $cash, string $fromDeposit, ?string $voucherStatus, bool $deleted = false): void
     {
         $rent = bcadd($cash, $fromDeposit, 4);
 
-        $voucher = Voucher::query()->create([
+        $voucher = $voucherStatus === null ? null : Voucher::query()->create([
             'company_id' => $this->company->id, 'branch_id' => $contract->branch_id,
             'financial_year_id' => FinancialYear::query()->value('id'), 'type' => Voucher::PAYMENT,
             'document_no' => 'PV-RNT-'.random_int(1, 999999), 'trx_date' => $month->toDateString(), 'amount' => $rent, 'status' => $voucherStatus,
@@ -217,7 +219,7 @@ final class TheRentScheduleKnowsWhichMonthsWerePaidTest extends TestCase
         $row = RentalAdjustment::query()->create([
             'company_id' => $this->company->id, 'branch_id' => $contract->branch_id, 'rental_contract_id' => $contract->id,
             'for_month' => $month->toDateString(), 'rent' => $rent, 'paid_cash' => $cash, 'from_deposit' => $fromDeposit,
-            'voucher_id' => $voucher->id,
+            'voucher_id' => $voucher?->id,
         ]);
 
         if ($deleted) {

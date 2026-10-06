@@ -104,8 +104,9 @@ final class RentalReports
             ->join('fin_rental_adjustments as a', function ($j) {
                 $j->on('a.rental_contract_id', '=', 'c.id')->whereNull('a.deleted_at');
             })
-            ->join('vouchers as av', 'av.id', '=', 'a.voucher_id')
-            ->whereRaw("av.status = {$posted}")
+            ->leftJoin('vouchers as av', 'av.id', '=', 'a.voucher_id')
+            // ⓘ ভাউচার ছাড়া পুরনো সারি (সই-ব্যবস্থার আগের) করা ধরা — চুক্তির পাতার একই নিয়ম ([[RentalContract::adjustedSoFar()]])
+            ->whereRaw("(a.voucher_id IS NULL OR av.status = {$posted})")
             ->selectRaw('c.id as contract_id, a.for_month as trx_date, 0 as given, 0 as refunded, a.from_deposit as deducted, 0 as legacy, '
                 .'av.document_no as document_no, '.DB::getPdo()->quote(Voucher::SOURCE_TYPES[Voucher::PAYMENT]).' as source_type, av.id as source_id, '
                 .'a.id + 1000000000 as row_id');
@@ -165,7 +166,8 @@ final class RentalReports
             query: function (array $f): Builder {
                 $posted = DB::getPdo()->quote(DocumentStatus::CONFIRMED);
                 $waiting = DB::getPdo()->quote(DocumentStatus::DRAFT);
-                $paid = fn (string $column) => "CASE WHEN v.status = {$posted} THEN a.{$column} ELSE 0 END";
+                // ⓘ ভাউচার ছাড়া পুরনো সারিও দেওয়া — চুক্তির পাতার একই নিয়ম ([[RentalContract::adjustedSoFar()]])
+                $paid = fn (string $column) => "CASE WHEN a.id IS NOT NULL AND (a.voucher_id IS NULL OR v.status = {$posted}) THEN a.{$column} ELSE 0 END";
                 $due = 'COALESCE(a.rent, c.monthly_rent)';
 
                 return DB::query()

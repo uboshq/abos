@@ -9,6 +9,7 @@ use App\Core\Concerns\HasPublicId;
 use App\Core\Concerns\IsAudited;
 use App\Core\Concerns\ListedInViewedBranch;
 use App\Core\Contracts\Drillable;
+use App\Core\Support\DocumentStatus;
 use App\Models\Branch;
 use App\Modules\Accounts\Models\Account;
 use Illuminate\Database\Eloquent\Builder;
@@ -125,10 +126,20 @@ class RentalContract extends Model implements Drillable
         return bcsub((string) $this->monthly_rent, (string) $this->monthly_adjustment, 4);
     }
 
-    /** এ পর্যন্ত জামানত থেকে কত কাটা হয়েছে। */
+    /**
+     * এ পর্যন্ত জামানত থেকে কত কাটা হয়েছে — কেবল যে মাসের ভাউচারে শেষ সই পড়ে খাতায় বসেছে।
+     *
+     * ⛔ ৬ অক্টোবর ২০২৬ (সমন্বয়কের মারফত): আগে প্রতিটা মাসের সারি গোনা হত। তাই সইয়ের অপেক্ষার মাস টাকা না নড়তেই কাটা
+     * দেখাত, আর মাসের ভাউচার পরে বাতিল হলে খাতায় টাকা জামানতে ফিরলেও পাতা চিরদিন কম দেখাত। এখন অগ্রিম সমন্বয়ের
+     * রিপোর্টের একই নিয়ম ([[RentalReports::depositMoves()]]), তাই পাতা আর রিপোর্ট একই সংখ্যা বলে।
+     * ⓘ ভাউচার ছাড়া পুরনো সারি (সই-ব্যবস্থার আগের) করা ধরা হয়।
+     */
     public function adjustedSoFar(): string
     {
-        return (string) $this->adjustments()->sum('from_deposit');
+        return (string) $this->adjustments()
+            ->where(fn ($q) => $q->whereNull('voucher_id')
+                ->orWhereHas('voucher', fn ($v) => $v->where('status', DocumentStatus::CONFIRMED)))
+            ->sum('from_deposit');
     }
 
     /**
@@ -140,6 +151,21 @@ class RentalContract extends Model implements Drillable
     public function depositLeft(): string
     {
         return bcsub((string) $this->deposit_amount, $this->adjustedSoFar(), 4);
+    }
+
+    /**
+     * জামানতে কত বাছা যায় — পড়ে থাকা থেকে সইয়ের অপেক্ষার মাসগুলোর কাটাও বাদ।
+     *
+     * ⛔ পাহারার জন্য, দেখানোর জন্য নয়: অপেক্ষার মাস টাকা আটকে রাখে। [[depositLeft()]] দিয়ে মাপলে দুইটা অপেক্ষার মাস একই
+     * জামানত দুবার কাটত, আর দুইটাতেই সই পড়লে জামানত শূন্যের নিচে নামত।
+     */
+    public function depositFree(): string
+    {
+        $waiting = (string) $this->adjustments()
+            ->whereHas('voucher', fn ($v) => $v->where('status', DocumentStatus::DRAFT))
+            ->sum('from_deposit');
+
+        return bcsub($this->depositLeft(), $waiting, 4);
     }
 
     /**

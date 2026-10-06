@@ -332,11 +332,12 @@ class RentalContractService
         $monthsLeft = max(0, (int) now()->startOfMonth()->diffInMonths($contract->ends_on, false) + 1);
         $needed = bcmul($adjustment, (string) $monthsLeft, 4);
 
-        if (bccomp($needed, $contract->depositLeft(), 4) > 0) {
+        // ⛔ সইয়ের অপেক্ষার মাসের টাকা বাদ দিয়ে — সে টাকা আগেই আটকানো ([[RentalContract::depositFree()]])
+        if (bccomp($needed, $contract->depositFree(), 4) > 0) {
             throw ValidationException::withMessages([
                 'monthly_adjustment' => __('finance::validation.rental_adjustment_exceeds_deposit', [
                     'whole' => $needed,
-                    'deposit' => $contract->depositLeft(),
+                    'deposit' => $contract->depositFree(),
                 ]),
             ]);
         }
@@ -740,10 +741,11 @@ class RentalContractService
 
     private function assertDepositCovers(RentalContract $contract, string $fromDeposit): void
     {
-        if (bccomp($fromDeposit, $contract->depositLeft(), 4) > 0) {
+        // ⛔ সইয়ের অপেক্ষার মাসের টাকা বাদ দিয়ে — নইলে দুই অপেক্ষার মাস একই জামানত কাটত ([[RentalContract::depositFree()]])
+        if (bccomp($fromDeposit, $contract->depositFree(), 4) > 0) {
             throw ValidationException::withMessages([
                 'from_deposit' => __('finance::validation.rental_no_deposit_left', [
-                    'left' => $contract->depositLeft(),
+                    'left' => $contract->depositFree(),
                 ]),
             ]);
         }

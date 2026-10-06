@@ -81,6 +81,8 @@ final class TheDepositLeftIsReadFromTheBooksTest extends TestCase
         // ⓘ পুরনো দোকান, নেত্রকোনা — ২০০০০ জামানত খোলা জেরে, কোনো ভাউচার নেই; মাসে ২০০০ কাটে
         $this->legacy = $this->contract('Legacy Landlord', $this->netrakona, '20000', '2000', $this->month(-6));
         $this->adjust($this->legacy, $this->month(-2), '2000', DocumentStatus::CONFIRMED);
+        // ⓘ সই-ব্যবস্থার আগের মাস — ভাউচার নেই, তবু করা মাস (চুক্তির পাতা আর রিপোর্ট একই নিয়মে)
+        $this->adjust($this->legacy, $this->month(-3), '1000', null);
 
         // ⓘ ফেরত দিয়ে শেষ — ১০০০০ দেওয়া, গত মাসে পুরোটা ফেরত, জামানতের অঙ্ক শূন্য
         $this->returned = $this->contract('Returned Landlord', $this->mymensingh, '10000', '0', $this->month(-3));
@@ -106,8 +108,8 @@ final class TheDepositLeftIsReadFromTheBooksTest extends TestCase
         $this->assertSame(21, (int) $godown['months_left'], '৬৩৫০০ ÷ ৩০০০ — পুরো মাস, নিচে গোল');
 
         $legacy = $this->row($rows, 'Legacy Landlord');
-        $this->assertMoney('18000', $legacy['opening_balance'], 'ভাউচার ছাড়া পুরনো জামানত − সই-পড়া ২০০০');
-        $this->assertMoney('18000', $legacy['closing_balance'], 'পুরনো দোকান');
+        $this->assertMoney('17000', $legacy['opening_balance'], 'ভাউচার ছাড়া পুরনো জামানত − সই-পড়া ২০০০ − ভাউচার ছাড়া পুরনো মাস ১০০০');
+        $this->assertMoney('17000', $legacy['closing_balance'], 'পুরনো দোকান');
 
         $returned = $this->row($rows, 'Returned Landlord');
         $this->assertMoney('10000', $returned['opening_balance'], 'ফেরতের আগে');
@@ -125,7 +127,7 @@ final class TheDepositLeftIsReadFromTheBooksTest extends TestCase
 
         $this->assertMoney('0', $legacy['opening_balance'], 'শুরুর আগে কিছু নেই');
         $this->assertMoney('20000', $legacy['given'], 'শুরুর দিনে পুরনো জামানত');
-        $this->assertMoney('2000', $legacy['deducted'], 'সই-পড়া মাস');
+        $this->assertMoney('3000', $legacy['deducted'], 'সই-পড়া মাস আর ভাউচার ছাড়া পুরনো মাস');
     }
 
     /** ⭐ ভাউচারে বসা আর সব মাস সই-পড়া হলে শেষ জের চুক্তির পাতার "জামানতে বাকি"-র হুবহু */
@@ -137,6 +139,46 @@ final class TheDepositLeftIsReadFromTheBooksTest extends TestCase
             $this->assertMoney($contract->fresh()->depositLeft(), $this->row($rows, $contract->counterparty)['closing_balance'],
                 "{$contract->counterparty}: রিপোর্ট আর চুক্তির পাতা আলাদা");
         }
+    }
+
+    /**
+     * ⭐ চুক্তির পাতা আর রিপোর্ট একই সংখ্যা বলে — সমন্বয়কের দাবি, ৬ অক্টোবর ২০২৬: পরে বাতিল হওয়া মাসের ভাউচার জামানত
+     * ফেরায়, আর সইয়ের অপেক্ষার মাস কাটা গোনে না ([[RentalContract::depositLeft()]])।
+     */
+    public function test_the_contract_page_says_what_the_report_says(): void
+    {
+        $rows = $this->advance($this->month(-7));
+
+        foreach ([$this->godown, $this->legacy, $this->returned] as $contract) {
+            $this->assertMoney((string) $this->row($rows, $contract->counterparty)['closing_balance'], $contract->fresh()->depositLeft(),
+                "⛔ {$contract->counterparty}: চুক্তির পাতা আর রিপোর্ট আলাদা");
+        }
+
+        $this->assertMoney('63500', $this->godown->fresh()->depositLeft(), '⛔ অপেক্ষার বা বাতিল মাস কাটা গোনা হল');
+        $this->assertMoney('3000', $this->godown->fresh()->adjustedSoFar(), 'কেবল সই-পড়া মাস');
+
+        $this->get(route('finance.rental.show', $this->godown))->assertOk()->assertSee(\App\Core\Support\Money::format('63500'));
+    }
+
+    /** ⛔ অপেক্ষার মাস টাকা আটকে রাখে — নতুন শর্ত সেই টাকা দ্বিতীয়বার ধরতে পারে না ([[RentalContract::depositFree()]]) */
+    public function test_a_waiting_month_holds_its_deposit_against_new_terms(): void
+    {
+        $godown = $this->godown->fresh();
+        $this->assertMoney('60500', $godown->depositFree(), 'পড়ে থাকা ৬৩৫০০ − অপেক্ষার ৩০০০');
+
+        // ⓘ বাকি মাসগুলোয় মোট কাটা ৬০৫০০-এর বেশি কিন্তু ৬৩৫০০-এর কম — পুরনো নিয়মে পার হত
+        $months = max(0, (int) now()->startOfMonth()->diffInMonths($godown->ends_on, false) + 1);
+        $monthly = bcdiv('63400', (string) $months, 0);
+        $this->assertSame(1, bccomp(bcmul($monthly, (string) $months, 4), '60500', 4), 'পরীক্ষার অঙ্ক ঠিক ফাঁকে পড়েনি');
+
+        try {
+            app(\App\Modules\Finance\Services\RentalContractService::class)->reviseTerms($godown, ['monthly_adjustment' => $monthly]);
+            $this->fail('⛔ অপেক্ষার মাসের জামানত নতুন শর্তে আবার ধরা গেল।');
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            $this->assertArrayHasKey('monthly_adjustment', $e->errors());
+        }
+
+        $this->assertMoney('3000', $godown->fresh()->monthly_adjustment, 'শর্ত বদলায়নি');
     }
 
     public function test_one_branch_shows_only_its_own_contracts(): void
@@ -164,7 +206,8 @@ final class TheDepositLeftIsReadFromTheBooksTest extends TestCase
         // ⓘ সব জামানত ভাউচারে বসলে "শুরুর জামানত" সারি নেই; ভাউচার ছাড়া হলে একটাই সারি
         $this->assertNotContains(__('finance::rental_report.legacy'), array_column($this->book($this->godown, $this->month(-7)), 'narration'));
         $legacy = $this->book($this->legacy, $this->month(-7));
-        $this->assertSame([__('finance::rental_report.opening_row'), __('finance::rental_report.legacy'), __('finance::rental_report.deducted')], array_column($legacy, 'narration'));
+        $this->assertSame([__('finance::rental_report.opening_row'), __('finance::rental_report.legacy'), __('finance::rental_report.deducted'),
+            __('finance::rental_report.deducted')], array_column($legacy, 'narration'));
         $this->assertMoney('20000', $legacy[1]['debit'], 'পুরনো জামানত');
 
         $this->assertSame([], app(ReportEngine::class)->run(RentalReports::DEPOSIT_BOOK, ['from' => $this->month(-7)->toDateString(), 'to' => now()->toDateString()])->rows,
@@ -273,9 +316,9 @@ final class TheDepositLeftIsReadFromTheBooksTest extends TestCase
         }
     }
 
-    private function adjust(RentalContract $contract, Carbon $month, string $fromDeposit, string $voucherStatus, bool $deleted = false): void
+    private function adjust(RentalContract $contract, Carbon $month, string $fromDeposit, ?string $voucherStatus, bool $deleted = false): void
     {
-        $voucher = Voucher::query()->create([
+        $voucher = $voucherStatus === null ? null : Voucher::query()->create([
             'company_id' => $this->company->id, 'branch_id' => $contract->branch_id,
             'financial_year_id' => FinancialYear::query()->value('id'), 'type' => Voucher::PAYMENT,
             'document_no' => 'PV-RNT-'.random_int(1, 999999), 'trx_date' => $month->toDateString(), 'amount' => '10000', 'status' => $voucherStatus,
@@ -284,7 +327,7 @@ final class TheDepositLeftIsReadFromTheBooksTest extends TestCase
         $row = RentalAdjustment::query()->create([
             'company_id' => $this->company->id, 'branch_id' => $contract->branch_id, 'rental_contract_id' => $contract->id,
             'for_month' => $month->toDateString(), 'rent' => '10000', 'paid_cash' => bcsub('10000', $fromDeposit, 4), 'from_deposit' => $fromDeposit,
-            'voucher_id' => $voucher->id,
+            'voucher_id' => $voucher?->id,
         ]);
 
         if ($deleted) {
