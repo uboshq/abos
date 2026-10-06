@@ -38,4 +38,8 @@ return [
 
     'dashboard_title' => 'Principal commission — current cycle',
     'dashboard_empty' => 'No principal has a commission set.',
+    'dash_inflow' => 'Cumulative inflow',
+    'dash_sent' => 'Sent to principal',
+    'dash_balance' => 'Balance inflow',
+    'dash_remarks' => 'Remarks / period',
 ];

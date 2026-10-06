@@ -230,12 +230,27 @@ final class APrincipalEarnsOnWhatTheDepotCollectsTest extends TestCase
         $shown = $listing->rows->firstWhere('supplier_id', $this->principal->id);
         $cells = collect($listing->columns)->mapWithKeys(fn (array $c) => [$c['key'] => ($c['render'])($shown)]);
 
+        // ⓘ মালিকের কলাম, ৬ অক্টোবর ২০২৬: নাম · মোট ইনফ্লো · কমিশন · প্রিন্সিপালকে পাঠানো · বাকি ইনফ্লো · মন্তব্য/সময়কাল
+        $this->assertSame(['principal', 'inflow', 'commission', 'paid', 'balance', 'remarks'], array_keys($cells->all()));
         $this->assertSame(Money::format($row['commission']), $cells['commission']);
+        $this->assertSame('1,00,000.00', $cells['inflow']);
         $this->assertSame('3,850.00', $cells['commission']);
-        $this->assertSame('দিতে হবে ৳76,150.00', $cells['balance']);
+        $this->assertSame('20,000.00', $cells['paid']);
+        $this->assertSame('76,150.00', $cells['balance']);
+        $this->assertSame('দিতে হবে ৳76,150.00 · '.$row['period'], $cells['remarks']);
 
         $this->get(route('module.dashboard', ['module' => 'supplier']))->assertOk()
-            ->assertSee('দিতে হবে ৳76,150.00');
+            ->assertSee('দিতে হবে ৳76,150.00')
+            ->assertSee('প্রিন্সিপালকে পাঠানো');
+
+        // ⓘ উল্টো দিক — বাকি ইনফ্লোতে চিহ্ন নেই, কে কাকে দেবে তা মন্তব্যে কথায়
+        $this->pay($this->principal, '100000', '2026-10-04');
+        $listing = collect(SupplierDashboard::dashboard()->listings)
+            ->first(fn (Listing $l) => $l->label === __('supplier::principal.dashboard_title'));
+        $shown = $listing->rows->firstWhere('supplier_id', $this->principal->id);
+        $cells = collect($listing->columns)->mapWithKeys(fn (array $c) => [$c['key'] => ($c['render'])($shown)]);
+        $this->assertSame('23,850.00', $cells['balance'], '⛔ বাকি ইনফ্লো খালি বিয়োগ চিহ্নে।');
+        $this->assertStringStartsWith('কোম্পানির কাছে পাব ৳23,850.00', $cells['remarks']);
     }
 
     public function test_only_the_supplier_edit_key_sets_the_principal_fields(): void

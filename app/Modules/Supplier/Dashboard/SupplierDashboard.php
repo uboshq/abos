@@ -167,15 +167,24 @@ final class SupplierDashboard implements ProvidesDashboard
 
         return [new Listing(
             label: __('supplier::principal.dashboard_title'),
+            /*
+             * ⓘ মালিকের কলাম, ৬ অক্টোবর ২০২৬: *"প্রিন্সিপালের নাম, cumulative inflow, commission, send inflow to principal,
+             * balance inflow, Remarks"* — বাকি ইনফ্লো = অংশ − পাঠানো (রিপোর্টের জের), অঙ্কে চিহ্ন ছাড়া; কে কাকে দেবে তা
+             * মন্তব্যে কথায় ("দিতে হবে ৳…" / "কোম্পানির কাছে পাব ৳…"), সাথে চক্রের সময়কাল।
+             */
             columns: [
                 ['key' => 'principal', 'label' => __('supplier::principal.principal'),
                     'render' => fn (array $row) => $row['supplier_name']],
-                ['key' => 'period', 'label' => __('supplier::principal.period'), 'width' => '13rem',
-                    'render' => fn (array $row) => $row['period']],
-                ['key' => 'commission', 'label' => __('supplier::principal.commission'), 'width' => '9rem',
+                ['key' => 'inflow', 'label' => __('supplier::principal.dash_inflow'), 'width' => '9rem',
+                    'render' => fn (array $row) => Money::format($row['inflow'])],
+                ['key' => 'commission', 'label' => __('supplier::principal.commission'), 'width' => '8rem',
                     'render' => fn (array $row) => Money::format($row['commission'])],
-                ['key' => 'balance', 'label' => __('supplier::principal.balance'), 'width' => '13rem',
-                    'render' => fn (array $row) => $balance->signed($row['balance'])],
+                ['key' => 'paid', 'label' => __('supplier::principal.dash_sent'), 'width' => '9rem',
+                    'render' => fn (array $row) => Money::format($row['paid'])],
+                ['key' => 'balance', 'label' => __('supplier::principal.dash_balance'), 'width' => '9rem',
+                    'render' => fn (array $row) => Money::format(ltrim((string) $row['balance'], '-'))],
+                ['key' => 'remarks', 'label' => __('supplier::principal.dash_remarks'), 'width' => '16rem',
+                    'render' => fn (array $row) => $balance->signed($row['balance']).' · '.$row['period']],
             ],
             rows: collect($result->rows),
             empty: __('supplier::principal.dashboard_empty'),
