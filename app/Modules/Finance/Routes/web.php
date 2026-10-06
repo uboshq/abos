@@ -177,6 +177,9 @@ Route::middleware('auth')->prefix('finance')->group(function () {
         Route::post('/{bankFacility}/close', [BankFacilityController::class, 'close'])
             ->whereNumber('bankFacility')->name('close');
 
+        // ⭐ মাস শেষের সুদ জমা — অর্থ-মডিউলের পরিকল্পনা ৩.৩, ৬ অক্টোবর ২০২৬
+        Route::post('/accruals', [BankFacilityController::class, 'accrue'])->name('accrue');
+
         // ⭐ ব্যাংকের বিবরণীর জের — অর্থ-মডিউলের পরিকল্পনা ৩.৬, ৬ অক্টোবর ২০২৬
         Route::post('/{bankFacility}/statements', [BankFacilityController::class, 'statement'])
             ->whereNumber('bankFacility')->name('statement');

@@ -300,6 +300,14 @@ final class StandardChart implements ProvisionsCompany
      */
     public const INTEREST_EXPENSE = '5310';
 
+    /*
+     * ⭐ প্রদেয় সুদ — চলতি দায় (অর্থ-মডিউলের পরিকল্পনা ৩.৩, ৬ অক্টোবর ২০২৬; সমন্বয়কের অনুমোদিত নকশা ক)। মাস শেষে ঋণের
+     * জমা সুদ এখানে বসে (Dr ৫৩১০ / Cr ২১৪৫), পরের মাসের প্রথম দিনে উল্টায় ([[InterestAccrualService]])।
+     * ⚠️ ২১৫০ নয় — ওটা আগে থেকেই গ্রাহকের অগ্রিম; ২১৪০ প্রদেয় খরচের পাশে ২১৪৫।
+     * ⓘ পুরনো কোম্পানিতে [[install()]] যা নেই কেবল তা-ই বসায়, তাই খাতটা প্রথম ব্যবহারে নিজে আসে।
+     */
+    public const INTEREST_PAYABLE = '2145';
+
     /** স্থায়ী সম্পদের গ্রুপ — নিচে আসবাব, যানবাহন, যন্ত্রপাতি। */
     public const FIXED_ASSETS = '1200';
 
@@ -901,6 +909,7 @@ final class StandardChart implements ProvisionsCompany
              */
             ['2131', 'Provident Fund Payable', 'প্রদেয় ভবিষ্য তহবিল', $L, '2100', false, []],
             ['2140', 'Expenses Payable', 'প্রদেয় খরচ', $L, '2100', false, []],
+            ['2145', 'Interest Payable', 'প্রদেয় সুদ', $L, '2100', false, []],
             ['2150', 'Advance from Customers', 'গ্রাহকের অগ্রিম', $L, '2100', false, []],
             // মাল এসেছে, বিল আসেনি — ধ্রুবকটার মন্তব্যে কারণ লেখা আছে
             ['2160', 'Goods Received Not Invoiced', 'প্রাপ্ত মাল, বিল আসেনি', $L, '2100', false, []],

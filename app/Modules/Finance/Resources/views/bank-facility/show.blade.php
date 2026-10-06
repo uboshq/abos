@@ -379,6 +379,29 @@
          মূল কাগজটা একটাই। --}}
     <x-ui.attachments :document="$facility" />
 
+    {{-- ⭐ মাসিক সুদ জমা — অর্থ-মডিউলের পরিকল্পনা ৩.৩, ৬ অক্টোবর ২০২৬ ([[InterestAccrualService]]) --}}
+    @if (($accruals ?? collect())->isNotEmpty())
+        <section data-boxed data-interest-accruals
+                 class="mb-4 overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
+            <h2 class="border-b border-(--color-border) p-4 font-semibold">{{ __('finance::bank_loan_report.accruals') }}</h2>
+            <x-ui.table
+                :rows="$accruals"
+                :columns="[
+                    ['key' => 'month', 'label' => __('finance::bank_loan_report.accrual_month'), 'width' => '9rem',
+                     'render' => fn ($a) => $a->for_month->translatedFormat('F Y')],
+                    ['key' => 'days', 'label' => __('finance::bank_loan_report.accrual_days'), 'width' => '6rem',
+                     'render' => fn ($a) => $a->days],
+                    ['key' => 'base', 'label' => __('finance::bank_loan_report.accrual_base'), 'numeric' => true,
+                     'render' => fn ($a) => \App\Core\Support\Money::format($a->base)],
+                    ['key' => 'amount', 'label' => __('finance::bank_loan_report.accrual_amount'), 'numeric' => true,
+                     'render' => fn ($a) => \App\Core\Support\Money::format($a->amount)],
+                    ['key' => 'state', 'label' => __('finance::bank_loan_report.state'), 'width' => '9rem',
+                     'render' => fn ($a) => __($a->reversal_voucher_id !== null ? 'finance::bank_loan_report.accrual_reversed'
+                         : ($a->voucher?->isDraft() ? 'finance::bank_loan_report.accrual_waiting' : 'finance::bank_loan_report.accrual_booked'))],
+                ]" />
+        </section>
+    @endif
+
     {{-- ⭐ ব্যাংকের বিবরণী বনাম খাতা — অর্থ-মডিউলের পরিকল্পনা ৩.৬, ৬ অক্টোবর ২০২৬ ([[BankFacilityService::statementGaps()]]) --}}
     <section data-boxed data-facility-statements
              class="mb-4 overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">

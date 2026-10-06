@@ -15,6 +15,7 @@ use App\Modules\Accounts\Models\Account;
 use App\Modules\Finance\Models\BankFacility;
 use App\Modules\Finance\Models\Institution;
 use App\Modules\Finance\Services\BankFacilityService;
+use App\Modules\Finance\Services\InterestAccrualService;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
@@ -67,7 +68,7 @@ class BankFacilityController extends Controller implements HasMiddleware
             new Middleware('can:finance.bank_facility.create', only: ['create', 'store']),
             new Middleware('can:finance.bank_facility.close', only: ['close']),
             // ⓘ বিবরণীর জের লেখা টাকা নাড়ে না — ঋণ খোলার চাবিতেই (পরিকল্পনা ৩.৬)
-            new Middleware('can:finance.bank_facility.create', only: ['statement']),
+            new Middleware('can:finance.bank_facility.create', only: ['statement', 'accrue']),
         ];
     }
 
@@ -372,12 +373,32 @@ class BankFacilityController extends Controller implements HasMiddleware
 
             /* ⭐ ব্যাংকের বিবরণী বনাম খাতা (পরিকল্পনা ৩.৬) */
             'statements' => $this->facilities->statementGaps($bankFacility),
+
+            /* ⭐ মাসিক সুদ জমা — কোন মাসে কত, উল্টেছে কি না (পরিকল্পনা ৩.৩) */
+            'accruals' => \App\Modules\Finance\Models\InterestAccrual::query()
+                ->where('bank_facility_id', $bankFacility->id)->with(['voucher', 'reversalVoucher'])
+                ->orderByDesc('for_month')->get(),
         ]);
     }
 
     /**
      * ⭐ ব্যাংকের বিবরণীর জের লেখা — অর্থ-মডিউলের পরিকল্পনা ৩.৬, ৬ অক্টোবর ২০২৬। একই দিনে আবার লিখলে বদলায়; টাকা নড়ে না।
      */
+    /**
+     * ⭐ মাস শেষের সুদ জমা — অর্থ-মডিউলের পরিকল্পনা ৩.৩, ৬ অক্টোবর ২০২৬ ([[InterestAccrualService]])। কেবল শেষ হওয়া মাস;
+     * এক ঋণে এক মাস একবারই; আগের মাসের জমা পরের মাসের প্রথম দিনে নিজে উল্টায়।
+     */
+    public function accrue(Request $request): RedirectResponse
+    {
+        $data = $request->validate([
+            'month' => ['required', 'date_format:Y-m'],
+        ]);
+
+        $done = app(InterestAccrualService::class)->run(\Illuminate\Support\Carbon::createFromFormat('Y-m-d', $data['month'].'-01'));
+
+        return back()->with('saved', __('finance::bank_loan_report.accrual_done', $done));
+    }
+
     public function statement(Request $request, BankFacility $bankFacility): RedirectResponse
     {
         $data = $request->validate([

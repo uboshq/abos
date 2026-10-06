@@ -13,6 +13,7 @@ use App\Modules\Finance\Services\BankFacilityService;
 use App\Modules\Finance\Services\DepositService;
 use App\Modules\Finance\Services\FinanceSignature;
 use App\Modules\Finance\Services\HandLoanService;
+use App\Modules\Finance\Services\InterestAccrualService;
 use App\Modules\Finance\Services\ProfitDistribution;
 use App\Modules\Finance\Services\RentalContractService;
 use App\Modules\Finance\Services\WithdrawalService;
@@ -73,6 +74,10 @@ final class FinishTheFinancePaperOnTheLastSignature
             FinanceSignature::CAPITALISE => $yes
                 ? app(ProfitDistribution::class)->finishCapitalise($voucher)
                 : app(ProfitDistribution::class)->dropCapitalise($voucher, $why),
+            // ⭐ ব্যাংক ঋণের মাসিক সুদ জমা — ঋণের নিজের সইয়ের ছকে (পরিকল্পনা ৩.৩, ৬ অক্টোবর ২০২৬)
+            FinanceSignature::BANK_FACILITY => ! InterestAccrualService::isAccrual($voucher) ? null : ($yes
+                ? app(InterestAccrualService::class)->finishSigned($voucher)
+                : app(InterestAccrualService::class)->dropRefused($voucher, $why)),
             default => null,
         };
     }
