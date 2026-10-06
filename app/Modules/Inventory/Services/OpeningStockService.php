@@ -119,13 +119,20 @@ final class OpeningStockService
         });
     }
 
-    /** এই পণ্যের এই গুদামে খোলা মজুদ আগেই বসেছে কি না। */
-    public function exists(Product $product, Warehouse $warehouse): bool
+    /**
+     * এই পণ্যের এই গুদামে খোলা মজুদ আগেই বসেছে কি না।
+     *
+     * ⭐ লট-ধরা পণ্যে প্রশ্নটা লট ধরে — Inventory অডিট ম২৪, ৫ অক্টোবর ২০২৬। ⛔ আগে প্রথম লট বসলেই পণ্যটা "হয়ে গেছে":
+     * চালুর দিনে তাকে একই ওষুধের তিন লট থাকলে দ্বিতীয়টা আর ঢোকানো যেত না, আর মানুষ সব মাল এক লটে ঠেলতেন — মেয়াদ
+     * আর রিকল দুটোই ভুল। ⓘ একই লট দুইবার নয়, আর লটহীন পণ্যে আগের মতো একবারই।
+     */
+    public function exists(Product $product, Warehouse $warehouse, ?Batch $batch = null): bool
     {
         return StockMovement::query()
             ->where('product_id', $product->id)
             ->where('warehouse_id', $warehouse->id)
             ->where('source_type', self::SOURCE_TYPE)
+            ->when($product->track_batch && $batch !== null, fn ($q) => $q->where('batch_id', $batch->id))
             ->exists();
     }
 
@@ -151,6 +158,8 @@ final class OpeningStockService
         return ! StockMovement::query()
             ->where('product_id', $product->id)
             ->where('warehouse_id', $warehouse->id)
+            // ⓘ অন্য লটের খোলা মজুদ লেনদেন নয় — চালুর দিন সব লট একই সারিতে বসে (ম২৪)
+            ->where('source_type', '<>', self::SOURCE_TYPE)
             ->exists();
     }
 
@@ -211,7 +220,7 @@ final class OpeningStockService
             ]);
         }
 
-        if ($this->exists($product, $warehouse)) {
+        if ($this->exists($product, $warehouse, $batch)) {
             throw ValidationException::withMessages([
                 'product_id' => __('inventory::message.opening_already_done', [
                     'product' => $product->name(),
