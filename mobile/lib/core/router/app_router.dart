@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../features/approvals/approval_inbox_screen.dart';
 import '../../features/attendance/attendance_screen.dart';
+import '../../features/claims/claims_screens.dart';
 import '../../features/auth/login_screen.dart';
 import '../../features/customers/customer_detail_screen.dart';
 import '../../features/customers/customer_list_screen.dart';
@@ -96,6 +97,12 @@ final goRouterProvider = Provider<GoRouter>((ref) {
             path: 'attendance',
             builder: (context, state) => const ModuleGateView(
                 path: 'attendance', child: AttendanceScreen()),
+          ),
+          GoRoute(
+            path: 'claims',
+            // ⭐ খরচের দাবি ও অগ্রিম (৭ অক্টোবর ২০২৬) — ফোনের HR সুইচের পিছনে
+            builder: (context, state) => const ModuleGateView(
+                path: 'claims', child: ClaimListScreen()),
           ),
           // ⭐ মডিউলের ড্যাশবোর্ড — মালিক, ৪ অক্টোবর ২০২৬; দরজা সার্ভারের (চাবি, ফোনে চালু)
           GoRoute(

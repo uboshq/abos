@@ -363,6 +363,14 @@ class MenuRepository {
             icon: Icons.how_to_reg_outlined,
             routeName: 'attendance',
           ),
+        // ⭐ খরচের দাবি আর অগ্রিম — কর্মীর নিজের (টাকা-আসা-যাওয়ার পরিকল্পনা ১৩, ৭ অক্টোবর ২০২৬; ওয়েবের একই চাবি)
+        if (user.can('hr.claim.self'))
+          const MenuItem(
+            key: 'hr.claim.self',
+            label: 'খরচের দাবি',
+            icon: Icons.request_quote_outlined,
+            routeName: 'claims',
+          ),
         // What this device has and has not sent is a fact about the phone,
         // not a business permission — every signed-in role can open it, live
         // menu or fallback alike.

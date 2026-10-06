@@ -32,6 +32,7 @@ class ModuleGate {
   static const Map<String, String> moduleOfPath = {
     'approvals': 'approval',
     'attendance': 'hr',
+    'claims': 'hr',
     'customers': 'customer',
     'dues': 'customer',
     'orders': 'sales',
