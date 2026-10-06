@@ -63,9 +63,34 @@ final class InventoryAnalysisReports
             title: 'inventory::stockview.monthly',
             filters: ['date_range', 'branch', 'warehouse_id', 'product_id', 'brand_id', 'category_id'],
             query: function (array $f) use ($qty) {
+                /*
+                 * ⭐ ক্যালেন্ডার শুরু হয় প্রথম চলাচলের মাস থেকে, তার আগে নয় — Inventory অডিট ম২৬, ৫ অক্টোবর ২০২৬।
+                 * ⛔ "শুরু থেকে" মানে ১৯০০ সাল: আগে তখন ১,৫২০টা মাসের সারি জন্মাত, প্রায় সবই শূন্য, আর কোয়েরিটা প্রতিটার জন্য
+                 * খাতা আর মজুদ আলাদা করে গুনত। ⓘ কোম্পানির প্রথম চলাচলের আগে কোনো মাসে কিছুই ছিল না, তাই সেগুলো বাদ।
+                 */
+                $from = Carbon::parse($f['from']);
+                $to = Carbon::parse($f['to']);
+                $first = DB::table('inv_stock_movements')->where('company_id', $f['company_id'])->min('trx_date');
+
+                if ($first !== null && Carbon::parse($first)->gt($from)) {
+                    $from = Carbon::parse($first);
+                }
+
+                if ($from->gt($to)) {
+                    $from = $to->copy();
+                }
+
                 $months = collect(CarbonPeriod::create(
-                    Carbon::parse($f['from'])->startOfMonth(), '1 month', Carbon::parse($f['to'])->startOfMonth(),
+                    $from->copy()->startOfMonth(), '1 month', $to->copy()->startOfMonth(),
                 ))->map(fn ($d) => $d->format('Y-m'))->values();
+
+                /*
+                 * ⭐ প্রথম আর শেষ মাস ভাঙা হলে তার সীমা পরিসরের তারিখে — ম২৬। ⛔ আগে প্রথম মাসের শুরুর মজুদ ধরা হত মাসের ১
+                 * তারিখে, অথচ আসা-যাওয়া গোনা হত পরিসরের শুরু থেকে: ১৫ তারিখে শুরু করলে ১–১৪-এর চলাচল কোথাও থাকত না, আর
+                 * শেষের মজুদ ভুল; শেষ মাসের শেষ টাকাও পরিসরের পরের দিনগুলো ধরত। ⓘ তারিখ দুটো যাচাই করা `Y-m-d`, তাই সোজা বসে।
+                 */
+                $start = "GREATEST(CONCAT(cal.ym, '-01'), '".Carbon::parse($f['from'])->toDateString()."')";
+                $stop = "LEAST(DATE_ADD(CONCAT(cal.ym, '-01'), INTERVAL 1 MONTH), '".Carbon::parse($f['to'])->addDay()->toDateString()."')";
 
                 $calendar = $months->skip(1)->reduce(
                     fn ($q, string $ym) => $q->unionAll(DB::query()->selectRaw('? as ym', [$ym])),
@@ -92,7 +117,7 @@ final class InventoryAnalysisReports
                     ->selectRaw('SUM(c.amount) as out_value');
 
                 $openingQty = self::movements($f)
-                    ->whereRaw("m.trx_date < CONCAT(cal.ym, '-01')")
+                    ->whereRaw("m.trx_date < {$start}")
                     ->selectRaw("COALESCE(SUM({$qty}), 0)");
                 // ⓘ শুরু/শেষ টাকা — মজুদ খাতের জের; পণ্য-স্তরের ছাঁকনি থাকলে খাতা উত্তর দিতে পারে না, তাই খালি
                 $byGoods = ! empty($f['warehouse_id']) || ! empty($f['product_id']) || ! empty($f['brand_id']) || ! empty($f['category_id']);
@@ -113,8 +138,8 @@ final class InventoryAnalysisReports
                     ->selectRaw('COALESCE(x.in_qty, 0) as in_qty')
                     ->selectRaw('COALESCE(x.out_qty, 0) as out_qty')
                     ->when(! $byGoods, fn ($q) => $q
-                        ->selectSub($ledger("CONCAT(cal.ym, '-01')"), 'opening_value')
-                        ->selectSub($ledger("DATE_ADD(CONCAT(cal.ym, '-01'), INTERVAL 1 MONTH)"), 'closing_value'))
+                        ->selectSub($ledger($start), 'opening_value')
+                        ->selectSub($ledger($stop), 'closing_value'))
                     ->when($byGoods, fn ($q) => $q->selectRaw('NULL as opening_value, NULL as closing_value'))
                     ->selectRaw('COALESCE(li.in_value, 0) as in_value')
                     ->selectRaw('COALESCE(lo.out_value, 0) as out_value');
