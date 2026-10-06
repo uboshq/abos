@@ -41,6 +41,9 @@ use Illuminate\Validation\ValidationException;
  */
 final class VoucherService
 {
+    // ⭐ লেখক ≠ পাকাকারী — অংশ ৩গ ([[writerMayNotPost()]])
+    public const MAKER_CHECKER = 'accounts.voucher_maker_checker';
+
     public function __construct(
         private readonly NumberSeriesEngine $numbers,
         private readonly PostingEngine $posting,
@@ -302,7 +305,12 @@ final class VoucherService
      * খসড়া, কোনো হিসাবে নেই। PostingEngine নিজেই দেখে ডেবিট-ক্রেডিট
      * মিলছে কি না, বছর খোলা আছে কি না, আর আগে বসানো হয়েছে কি না।
      */
-    public function post(Voucher $voucher): Voucher
+    /**
+     * @param  bool  $byHand  ⓘ মানুষ ভাউচারের পর্দা থেকে পাকা করছেন ([[VoucherController]]) — লেখক ≠ পাকাকারী কেবল তখন
+     *                        ([[assertAnotherHandPosts()]]); সিস্টেমের এক ধাপে লেখা-পাকা ভাউচার আর শেষ সইয়ের পরে
+     *                        নিজে-পাকা আগের মতো।
+     */
+    public function post(Voucher $voucher, bool $byHand = false): Voucher
     {
         if ($voucher->isPosted()) {
             throw ValidationException::withMessages([
@@ -317,6 +325,10 @@ final class VoucherService
             throw ValidationException::withMessages([
                 'status' => __('accounts::validation.cancelled_cannot_post'),
             ]);
+        }
+
+        if ($byHand) {
+            $this->assertAnotherHandPosts($voucher);
         }
 
         $voucher->load('lines.account');
@@ -1540,6 +1552,46 @@ final class VoucherService
                 'instrument' => __('accounts::validation.cheque_only_through_register'),
             ]);
         }
+    }
+
+    /**
+     * ⭐ লেখক ≠ পাকাকারী (maker-checker) — ভাউচারের আন্তর্জাতিক পরিকল্পনা, অংশ ৩গ (৭ অক্টোবর ২০২৬)।
+     *
+     * ⓘ সুইচ `accounts.voucher_maker_checker` চালু থাকলে যিনি ভাউচারটা লিখেছেন (`created_by`) তিনি নিজে পাকা করেন না —
+     * পাকা করেন অন্য কেউ। ⓘ মালিক (সুপার অ্যাডমিন) একা করলে আটকায় না, নিরীক্ষায় "নিজের লেখা নিজে পাকা" দাগ পড়ে।
+     * সুইচ বন্ধে আজকের আচরণ অবিকল।
+     */
+    public function writerMayNotPost(Voucher $voucher): bool
+    {
+        if (! (bool) app(\App\Core\Services\SettingsService::class)->get(self::MAKER_CHECKER, true)) {
+            return false;
+        }
+
+        $actor = (int) (\App\Core\Support\Actor::userId() ?? 0);
+
+        return $actor !== 0 && $actor === (int) ($voucher->created_by ?? 0) && ! $this->actorIsOwner();
+    }
+
+    private function assertAnotherHandPosts(Voucher $voucher): void
+    {
+        if ($this->writerMayNotPost($voucher)) {
+            throw ValidationException::withMessages([
+                'status' => __('accounts::validation.maker_checker', ['no' => $voucher->document_no]),
+            ]);
+        }
+
+        if ((bool) app(\App\Core\Services\SettingsService::class)->get(self::MAKER_CHECKER, true)
+            && (int) (\App\Core\Support\Actor::userId() ?? 0) === (int) ($voucher->created_by ?? 0)) {
+            app(\App\Core\Engines\Audit\AuditEngine::class)->recordAction($voucher, 'maker_checker_override',
+                __('accounts::validation.maker_checker', ['no' => $voucher->document_no]));
+        }
+    }
+
+    private function actorIsOwner(): bool
+    {
+        $user = auth()->user();
+
+        return $user instanceof User && $user->roles->contains('name', \App\Core\Services\PermissionSyncer::SUPER_ADMIN_ROLE);
     }
 
     private function assertType(mixed $type): string

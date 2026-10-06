@@ -787,6 +787,19 @@ return [
             'group' => 'entry',
         ],
         [
+            /*
+             * ⭐ লেখক ≠ পাকাকারী — ভাউচারের আন্তর্জাতিক পরিকল্পনা, অংশ ৩গ (৭ অক্টোবর ২০২৬)।
+             * ⓘ নতুন কোম্পানিতে চালু; ঘোষণার দিন যত কোম্পানি ছিল সবগুলোতে মাইগ্রেশনে বন্ধ (fe, মালিক)। মালিক একা করলে
+             * আটকায় না, নিরীক্ষায় দাগ পড়ে ([[VoucherService::writerMayNotPost()]])।
+             */
+            'key' => 'accounts.voucher_maker_checker',
+            'super_admin_only' => true,
+            'label' => 'accounts::settings.voucher_maker_checker',
+            'type' => 'boolean',
+            'default' => true,
+            'group' => 'entry',
+        ],
+        [
             'key' => 'accounts.require_narration',
             'label' => 'accounts::settings.require_narration',
             'type' => 'boolean',

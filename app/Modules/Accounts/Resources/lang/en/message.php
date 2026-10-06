@@ -223,4 +223,5 @@ return [
     'inter_company_awaiting' => 'The inter-company transfer is awaiting its signature — both books get it on the last one.',
     'till_opening_awaiting' => 'The till is open; its opening balance awaits the signature and reaches the books on the last one.',
     'inter_company_reversed' => 'Both sides of the inter-company transfer have been reversed.',
+    'voucher_awaits_another_hand' => ':no is kept as a draft. You cannot post your own voucher; someone else must open it and press Post.',
 ];

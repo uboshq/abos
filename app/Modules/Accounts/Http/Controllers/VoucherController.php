@@ -398,7 +398,12 @@ class VoucherController extends Controller implements HasMiddleware
                 return [$voucher, true];
             }
 
-            $this->vouchers->post($voucher);
+            // ⭐ লেখক ≠ পাকাকারী (অংশ ৩গ) — লেখকের "সংরক্ষণ ও পোস্ট" খসড়া হয়ে থাকে, পাকা করেন অন্য কেউ
+            if ($this->vouchers->writerMayNotPost($voucher)) {
+                return [$voucher, 'checker'];
+            }
+
+            $this->vouchers->post($voucher, byHand: true);
 
             return [$voucher, false];
         });
@@ -471,8 +476,10 @@ class VoucherController extends Controller implements HasMiddleware
             // সম্পাদনা করে পোস্ট করলেই পাহারাটা এড়ানো যেত।
             if ($this->approvals->stopping($fresh) !== null) {
                 $waiting = true;
+            } elseif ($this->vouchers->writerMayNotPost($fresh)) {
+                $waiting = 'checker';
             } else {
-                $this->vouchers->post($fresh);
+                $this->vouchers->post($fresh, byHand: true);
             }
         }
 
@@ -531,7 +538,7 @@ class VoucherController extends Controller implements HasMiddleware
                 : __('accounts::message.voucher_approval_pending', ['no' => $voucher->document_no]));
         }
 
-        $this->vouchers->post($voucher);
+        $this->vouchers->post($voucher, byHand: true);
 
         return back()->with('saved', __('accounts::message.voucher_posted', ['no' => $voucher->document_no]));
     }
@@ -570,11 +577,14 @@ class VoucherController extends Controller implements HasMiddleware
      *
      * @return array{0: string, 1: string}
      */
-    private function savedOrWaiting(Voucher $voucher, bool $waiting): array
+    /** @param  bool|'checker'  $waiting  ⓘ 'checker' = লেখক নিজে পাকা করেন না (অংশ ৩গ), খসড়া অন্যের অপেক্ষায় */
+    private function savedOrWaiting(Voucher $voucher, bool|string $waiting): array
     {
-        return $waiting
-            ? ['warning', __('accounts::message.voucher_approval_pending', ['no' => $voucher->document_no])]
-            : ['saved', __('accounts::message.voucher_saved', ['no' => $voucher->document_no])];
+        return match ($waiting) {
+            'checker' => ['warning', __('accounts::message.voucher_awaits_another_hand', ['no' => $voucher->document_no])],
+            true => ['warning', __('accounts::message.voucher_approval_pending', ['no' => $voucher->document_no])],
+            default => ['saved', __('accounts::message.voucher_saved', ['no' => $voucher->document_no])],
+        };
     }
 
     /**

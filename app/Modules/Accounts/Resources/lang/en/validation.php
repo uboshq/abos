@@ -152,4 +152,5 @@ return [
     // ⭐ গ১২ — আন্তঃকোম্পানির দুই পাশ একসাথে (৪ অক্টোবর ২০২৬)
     'inter_company_one_side' => 'One side (:no) of an inter-company transfer cannot be cancelled or reversed alone — reverse both sides together from the inter-company page.',
     'inter_company_not_reversible' => 'This inter-company transfer can no longer be reversed — it already was.',
+    'maker_checker' => ':no was written by you. You cannot post your own voucher; someone else must post it.',
 ];
