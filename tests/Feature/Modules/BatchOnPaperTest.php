@@ -285,4 +285,37 @@ class BatchOnPaperTest extends TestCase
             ->where('warehouse_id', $to->id)
             ->count());
     }
+
+    /**
+     * ⭐ দুই লট মিলিয়ে বদলি পৌঁছায়, আর উৎসে আটকানো শূন্যে ফেরে — পুরো ERP অডিট ⛔১, ৬ অক্টোবর ২০২৬।
+     *
+     * ⛔ পাঠানোয় আটকানো বসে লট ছাড়া, আর গ্রহণে লট ধরে ছাড়ানো হত; ম১৭-এর লট-পাহারা ঐ লটে ০ পেত, তাই লটের মাল কখনো
+     * গন্তব্যে নামত না ("আটকে আছে কেবল 0.0000")।
+     */
+    public function test_a_transfer_across_two_lots_arrives_and_frees_the_hold(): void
+    {
+        $to = Warehouse::query()->whereKeyNot($this->warehouse->id)->first();
+
+        if ($to === null) {
+            $this->markTestSkipped('ডেমোতে দ্বিতীয় গুদাম নেই।');
+        }
+
+        $early = $this->lot('E1', now()->addMonths(3)->toDateString(), '6');
+        $late = $this->lot('L1', now()->addMonths(9)->toDateString(), '20');
+        $transfers = app(StockTransferService::class);
+        $transfer = $transfers->create(
+            ['from_warehouse_id' => $this->warehouse->id, 'to_warehouse_id' => $to->id, 'trx_date' => now()->toDateString()],
+            [['product_id' => $this->product->id, 'qty' => '10']],
+        );
+
+        $transfers->dispatch($transfer);
+        $transfers->receive($transfer->fresh());
+
+        $this->assertSame(0, bccomp('10', bcadd($early->fresh()->balance($to), $late->fresh()->balance($to), 4), 4), '⛔ দুই লট মিলিয়ে ১০ পৌঁছায়নি।');
+        $this->assertSame(0, bccomp('16', bcadd($early->fresh()->balance($this->warehouse), $late->fresh()->balance($this->warehouse), 4), 4), '⛔ উৎসের লট থেকে ১০ কমেনি।');
+
+        $held = (string) StockMovement::query()->where('product_id', $this->product->id)->where('warehouse_id', $this->warehouse->id)
+            ->where('source_type', StockTransfer::STOCK_SOURCE)->where('source_id', $transfer->id)->sum('hold_change');
+        $this->assertSame(0, bccomp($held, '0', 4), '⛔ উৎসে আটকানো রয়ে গেল।');
+    }
 }

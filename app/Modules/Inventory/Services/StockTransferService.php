@@ -279,13 +279,30 @@ final class StockTransferService
                  * আলাদা হয়ে যেত, আর গন্তব্যের মালটা "লট ধরা শুরুর আগের"
                  * বলে চিরকাল অবিক্রেয় থাকত।
                  */
+                /*
+                 * ⭐ আটকানো ছাড়া — যেভাবে বসেছিল সেভাবেই, লট ছাড়া (পুরো ERP অডিট ⛔১, ৬ অক্টোবর ২০২৬)।
+                 * ⛔ আগে আটকানোটা `issue()`-এর সাথে লট ধরে ছাড়া হত। পাঠানোয় আটকানো বসে লট ছাড়া, আর ম১৭ (003dfacf) থেকে
+                 * লট ধরে ছাড়ার আগে **ঐ লটের** আটকানো মাপা হয় — ০ পায়, তাই লটের মাল গন্তব্যে কখনো পৌঁছাত না ("আটকে আছে
+                 * কেবল 0.0000")। ⓘ পথে আটকে থাকা পুরনো বদলিগুলোর আটকানোও লট ছাড়া, তাই সেগুলোও এখন গ্রহণ হয়।
+                 */
+                $this->stock->move(
+                    product: $line->product,
+                    warehouse: $transfer->fromWarehouse,
+                    sourceType: StockTransfer::STOCK_SOURCE,
+                    sourceId: $transfer->id,
+                    hold: bcmul((string) $line->qty, '-1', 4),
+                    reason: $this->onTheWay(),
+                    date: now(),
+                    documentNo: $transfer->document_no,
+                    narration: __('inventory::message.transfer_left', ['no' => $transfer->document_no]),
+                );
+
                 $left = $this->stock->issue(
                     product: $line->product,
                     warehouse: $transfer->fromWarehouse,
                     sourceType: StockTransfer::STOCK_SOURCE,
                     sourceId: $transfer->id,
                     qty: (string) $line->qty,
-                    hold: bcmul((string) $line->qty, '-1', 4),
                     reason: $this->onTheWay(),
                     date: now(),
                     documentNo: $transfer->document_no,
