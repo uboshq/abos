@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Accounts\Services;
 
+use App\Core\Support\CompanyContext;
 use App\Models\User;
 use App\Modules\Accounts\Models\Account;
 use Illuminate\Support\Carbon;
@@ -127,9 +128,16 @@ final class GroupLedgerService
          * `Company::all()` অন্য ক্রেতার নাম এনে ফেলত। ⓘ তাই পিভটই
          * একমাত্র উৎস।
          */
+        /*
+         * ⛔ প্রতিটা কোম্পানিতে নিজের চাবি — অডিট ⛔১০ (৬ অক্টোবর ২০২৬)। দরজা কেবল চলতি কোম্পানির `accounts.report.group`
+         * দেখত, আর তালিকায় আসত সদস্য সব কোম্পানির আয়-ব্যয়-লাভ। যে কোম্পানিতে এই চাবি নেই, তার সংখ্যা এখানে আসে না
+         * ([[User::canInCompany()]] — ভাই-কোম্পানির টাকার পাতার একই নিয়ম)।
+         */
         return $user->companies()
             ->orderBy('companies.name_en')
             ->pluck('companies.name_en', 'companies.id')
+            // ⓘ চলতি কোম্পানির চাবি দরজাই দেখে নিয়েছে ([[GroupReportController::middleware()]]); বাকিগুলো এখানে
+            ->filter(fn ($name, $id) => (int) $id === CompanyContext::id() || $user->canInCompany((int) $id, 'accounts.report.group'))
             ->map(fn ($name) => (string) $name)
             ->all();
     }
