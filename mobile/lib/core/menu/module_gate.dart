@@ -43,6 +43,9 @@ class ModuleGate {
     'quotations': 'sales',
     'delivery-orders': 'sales',
     'counter': 'sales',
+    'collections': 'sales',
+    'principals': 'purchase',
+    'purchases': 'purchase',
     'today': 'sales',
     'products': 'inventory',
     'stock': 'inventory',
@@ -64,10 +67,9 @@ class ModuleGate {
 
   /// The tiles that may show — a "coming soon" tile has no path and is left
   /// to the server's own menu filter.
-  static List<MenuItem> visible(List<MenuItem> items, Set<String>? on) =>
-      items
-          .where((item) => item.planned || allows(on, item.routeName))
-          .toList(growable: false);
+  static List<MenuItem> visible(List<MenuItem> items, Set<String>? on) => items
+      .where((item) => item.planned || allows(on, item.routeName))
+      .toList(growable: false);
 }
 
 /// Wraps one routed screen: the screen itself when its module is on, the
