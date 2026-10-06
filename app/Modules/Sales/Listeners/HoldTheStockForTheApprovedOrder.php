@@ -49,7 +49,13 @@ final class HoldTheStockForTheApprovedOrder
                 return;
             }
 
-            if ($locked->hold_mode === SalesOrderStatus::HOLD_HOLDS && $locked->warehouse !== null) {
+            /*
+             * ⓘ মাল ধরা কেবল কোম্পানি চাইলে (`sales.reserve_on_order`, ডিফল্ট বন্ধ) — মালিক, ৬ অক্টোবর ২০২৬: ধরা শুরু ডিপোর চালান
+             * নিশ্চিত হলে। বন্ধ থাকলে অনুমোদিত আদেশ কিছু না ধরেই নিশ্চিত হয়; পাতায় কেবল কত আছে আর কত কম।
+             */
+            $reserves = (bool) app(\App\Core\Services\SettingsService::class)->get('sales.reserve_on_order', false);
+
+            if ($reserves && $locked->hold_mode === SalesOrderStatus::HOLD_HOLDS && $locked->warehouse !== null) {
                 // ⛔ গোনার আগে পণ্যের সারিতে তালা — দুটো একসাথে ধরলে দুটোই একই খালি মাল দেখত (অডিট ম১৮, [[StockLock]])
                 \App\Modules\Sales\Support\StockLock::products($locked->lines->pluck('product_id'));
 

@@ -43,6 +43,7 @@ final class AnApprovedOrderHoldsItsStockAndIsConfirmedTest extends TestCase
 
         $company = Company::query()->where('code', 'TDEPOT')->firstOrFail();
         CompanyContext::set($company->id, $company->defaultBranch()?->id);
+        app(\App\Core\Services\SettingsService::class)->set('sales.reserve_on_order', true); // ⓘ এই দাবির প্রশ্নে আদেশে ধরা আছে — ডিফল্ট এখন চালানে (মালিক, ৬ অক্টোবর ২০২৬)
         $this->actingAs(User::query()->where('email', 'owner@abos.test')->firstOrFail());
 
         $settings = app(SettingsService::class);

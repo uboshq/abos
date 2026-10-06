@@ -75,6 +75,8 @@ final class TheSalesScreenCountsWhatTheBooksSayTest extends TestCase
 
         // বাকির সীমা এখানে প্রশ্ন নয় — সরাসরি বিক্রয় যেন সীমায় না আটকায়
         app(SettingsService::class)->set('customer.credit_limit_enabled', false);
+        // ⓘ ডিলারের দেয়াল এই দাবির প্রশ্ন নয় — ডেমোতে চালু (⛔১৬, 758f2a11), তখন অর্জন যায় ডিলারে বাঁধা SR-এর কাছে; বন্ধে বিল লেখকের
+        app(\App\Core\Services\SettingsService::class)->set('customer.dealer_scope_enabled', false);
     }
 
     // ── ⓵ দরজা ─────────────────────────────────────────────────────────

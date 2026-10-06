@@ -53,6 +53,7 @@ final class AnOrderLineIsClosedShortTest extends TestCase
 
         $this->company = Company::query()->where('code', 'TDEPOT')->firstOrFail();
         CompanyContext::set($this->company->id, $this->company->defaultBranch()?->id);
+        app(\App\Core\Services\SettingsService::class)->set('sales.reserve_on_order', true); // ⓘ এই দাবির প্রশ্নে আদেশে ধরা আছে — ডিফল্ট এখন চালানে (মালিক, ৬ অক্টোবর ২০২৬)
         $this->actingAs(User::query()->where('email', 'owner@abos.test')->firstOrFail());
 
         app(SettingsService::class)->set('sales.screen_orders', true);

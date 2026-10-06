@@ -63,6 +63,8 @@ final class TheSalesDashboardShowsTheWholeSpecTest extends TestCase
         $company = Company::query()->where('code', 'TDEPOT')->firstOrFail();
         CompanyContext::set($company->id, $company->defaultBranch()?->id);
         $this->owner = User::query()->where('email', 'owner@abos.test')->firstOrFail();
+        // ⓘ ডিলারের দেয়াল এই দাবির প্রশ্ন নয় — ডেমোতে চালু (⛔১৬, 758f2a11), তখন অর্জন যায় ডিলারে বাঁধা SR-এর কাছে; বন্ধে বিল লেখকের
+        app(\App\Core\Services\SettingsService::class)->set('customer.dealer_scope_enabled', false);
         $this->actingAs($this->owner);
 
         $this->customer = Customer::query()->where('name_en', 'Rahim Traders')->firstOrFail();

@@ -9,7 +9,7 @@ return [
     // ⭐ ডেলিভারি অর্ডারের মাল কতক্ষণ (৩ অক্টোবর ২০২৬)
     'do_hard_hold_hours' => 'Hold a delivery order\'s goods hard for (hours)',
     'do_hold_days' => 'Keep a delivery order\'s goods while waiting for money (days)',
-    'reserve_on_order' => 'Hold stock when an order is confirmed',
+    'reserve_on_order' => 'Hold stock as soon as an order is confirmed (off: stock is held from the depot challan)',
     'allow_negative_stock' => 'Allow selling more than is available',
     'invoice_needs_challan' => 'An invoice must follow a challan',
     'walkin_customer' => 'Customer that cash sales are booked against',

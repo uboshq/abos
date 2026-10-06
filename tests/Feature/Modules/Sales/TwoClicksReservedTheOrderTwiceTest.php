@@ -57,6 +57,7 @@ final class TwoClicksReservedTheOrderTwiceTest extends TestCase
         $owner = User::query()->where('email', 'owner@abos.test')->firstOrFail();
         $this->assertTrue($owner->hasRole(PermissionSyncer::SUPER_ADMIN_ROLE), 'দৃশ্যটাই বানানো যায়নি — মালিক super_admin নন।');
         $this->actingAs($owner);
+        app(\App\Core\Services\SettingsService::class)->set('sales.reserve_on_order', true); // ⓘ এই দাবির প্রশ্ন আদেশে ধরা — ডিফল্ট এখন চালানে (মালিক, ৬ অক্টোবর ২০২৬)
 
         config(['database.connections.'.self::SECOND => config('database.connections.'.DB::getDefaultConnection())]);
         DB::purge(self::SECOND);

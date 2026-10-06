@@ -44,6 +44,7 @@ final class TwoOrdersHeldTheSameShelfTest extends TestCase
         CompanyContext::set($company->id, $company->defaultBranch()?->id);
         app(StandardChart::class)->install();
         $this->actingAs(User::query()->where('email', 'owner@abos.test')->firstOrFail());
+        app(\App\Core\Services\SettingsService::class)->set('sales.reserve_on_order', true); // ⓘ এই দাবির প্রশ্ন আদেশে ধরা — ডিফল্ট এখন চালানে (মালিক, ৬ অক্টোবর ২০২৬)
 
         config(['database.connections.'.self::OTHER => config('database.connections.'.DB::getDefaultConnection())]);
         DB::purge(self::OTHER);

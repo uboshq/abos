@@ -222,6 +222,7 @@ final class TheOrderPagesCarryTheNewFlowTest extends TestCase
      */
     public function test_the_page_says_submit_shows_the_credit_hold_and_the_held_stock(): void
     {
+        app(\App\Core\Services\SettingsService::class)->set('sales.reserve_on_order', true); // ⓘ এই দাবির প্রশ্ন আদেশে ধরা — ডিফল্ট এখন চালানে (মালিক, ৬ অক্টোবর ২০২৬)
         $ledger = app(SalesOrderService::class)->confirm($this->draft('3')->fresh(['lines']));
         $html = $this->get(route('sales.order.show', $ledger))->assertOk()->getContent();
         $this->assertStringContainsString('data-held-stock', $html, '⛔ সংরক্ষিত আদেশের পাতায় ধরা মালের বাক্স নেই।');

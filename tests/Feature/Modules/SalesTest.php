@@ -66,6 +66,7 @@ class SalesTest extends TestCase
         $this->user = User::query()->where('email', 'owner@abos.test')->firstOrFail();
 
         CompanyContext::set($this->company->id, $this->company->defaultBranch()?->id);
+        app(\App\Core\Services\SettingsService::class)->set('sales.reserve_on_order', true); // ⓘ এই দাবির প্রশ্নে আদেশে ধরা আছে — ডিফল্ট এখন চালানে (মালিক, ৬ অক্টোবর ২০২৬)
         $this->actingAs($this->user);
 
         $this->warehouse = Warehouse::query()->where('is_default', true)->firstOrFail();

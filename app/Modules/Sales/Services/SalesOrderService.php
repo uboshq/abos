@@ -211,7 +211,8 @@ final class SalesOrderService
                 ]);
             }
 
-            if ($this->settings->get('sales.reserve_on_order', true)) {
+            // ⓘ ডিফল্ট বন্ধ — মালিক, ৬ অক্টোবর ২০২৬: মাল ধরা শুরু ডিপোর চালান নিশ্চিত হলে, আদেশে নয়
+            if ($this->settings->get('sales.reserve_on_order', false)) {
                 $warehouse = $order->warehouse ?? $this->defaultWarehouse();
 
                 if ($warehouse === null) {
@@ -1075,7 +1076,7 @@ final class SalesOrderService
             $short = $result['fits'] ? null : (string) $result['short'];
         }
 
-        if (! $submits && $stops === [] && $this->settings->get('sales.reserve_on_order', true)) {
+        if (! $submits && $stops === [] && $this->settings->get('sales.reserve_on_order', false)) {
             $warehouse = $order->warehouse ?? $this->defaultWarehouse();
 
             try {

@@ -17,7 +17,8 @@
     $any = $order->status === SalesOrderStatus::AWAITING_APPROVAL
         || $order->status === SalesOrderStatus::CREDIT_HELD
         || $warnings->isNotEmpty()
-        || $heldLines->isNotEmpty();
+        || $heldLines->isNotEmpty()
+        || ! empty($atp ?? []);
 @endphp
 
 @if ($any)
@@ -51,6 +52,25 @@
                 <h2 class="font-semibold">{{ __('sales::order_status.box_warnings') }}</h2>
                 @foreach ($warnings as $warning)
                     <p class="mt-1">⚠️ {{ DepotCheckController::warningText($warning) }}</p>
+                @endforeach
+            </section>
+        @endif
+
+        {{-- ⭐ কত আছে আর কত চাই — ধরা ছাড়াই (মালিক, ৬ অক্টোবর ২০২৬: মাল আটকায় চালানে) --}}
+        @if (! empty($atp ?? []))
+            <section data-atp class="{{ $box }}">
+                <h2 class="font-semibold">{{ __('sales::order_status.box_atp') }}</h2>
+                <p class="mt-1 text-(--color-ink-muted)">{{ __('sales::order_status.box_atp_note') }}</p>
+                @foreach ($order->lines->unique('product_id') as $l)
+                    @php($a = $atp[(int) $l->product_id] ?? null)
+                    @if ($a !== null)
+                        @php($short = bcsub($a['want'], $a['have'], 4))
+                        <p class="mt-1">{{ $l->product?->name() }}</p>
+                        <p>{{ __('sales::order_status.box_atp_line', ['have' => \App\Core\Support\Money::quantity($a['have']), 'want' => \App\Core\Support\Money::quantity($a['want'])]) }}</p>
+                        @if (bccomp($short, '0', 4) > 0)
+                            <p class="font-semibold text-(--color-danger)">{{ __('sales::order_status.box_atp_short', ['short' => \App\Core\Support\Money::quantity($short)]) }}</p>
+                        @endif
+                    @endif
                 @endforeach
             </section>
         @endif

@@ -70,6 +70,7 @@ final class AnOrderSaysWhereItStandsOnEveryLineTest extends TestCase
 
         $this->company = Company::query()->where('code', 'TDEPOT')->firstOrFail();
         CompanyContext::set($this->company->id, $this->company->defaultBranch()?->id);
+        app(\App\Core\Services\SettingsService::class)->set('sales.reserve_on_order', true); // ⓘ এই দাবির প্রশ্নে আদেশে ধরা আছে — ডিফল্ট এখন চালানে (মালিক, ৬ অক্টোবর ২০২৬)
         $this->owner = User::query()->where('email', 'owner@abos.test')->firstOrFail();
         $this->actingAs($this->owner);
 
