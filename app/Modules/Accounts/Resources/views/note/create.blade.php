@@ -158,6 +158,7 @@
                      ওটাই পরে "কোন বিলের সংশোধন" প্রশ্নের একমাত্র উত্তর --}}
                 <x-ui.field name="against_no"
                             :label="__('accounts::note.against_no')"
+                            :hint="__('accounts::note.against_hint')"
                             :value="old('against_no')" />
             </div>
 

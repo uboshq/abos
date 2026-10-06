@@ -65,7 +65,7 @@ final class ANoteCouldNotBePrintedTest extends TestCase
         $this->assertSame((string) $note->document_no, $facts['document_no']);
         $this->assertSame($this->customer->name(), $facts['party_name'], '⛔ কাগজে পক্ষের নাম নেই।');
         $this->assertSame((string) $this->customer->code, $facts['party_code'], '⛔ কাগজে পক্ষের কোড নেই।');
-        $this->assertSame('INV-TEST-1', $facts['against_no']);
+        $this->assertSame($this->billNo, $facts['against_no']);
         $this->assertNotSame('', $facts['in_words'], '⛔ টাকার অঙ্ক কথায় নেই।');
         $this->assertCount(3, $this->drawn[0]['signatures']);
     }
@@ -128,8 +128,25 @@ final class ANoteCouldNotBePrintedTest extends TestCase
             'amount' => '1200',
             'tax_amount' => '0',
             'reason' => 'price_correction',
-            'against_no' => 'INV-TEST-1',
+            'against_no' => $this->billNo = $this->bill(), // ⓘ আসল পাকা বিল — নম্বরটা এখন যাচাই হয় (৬ অক্টোবর ২০২৬)
             'narration' => 'দাম ভুল বসেছিল',
         ]));
+    }
+
+    private string $billNo = '';
+
+    /** ⓘ এই গ্রাহকের একটা পাকা বিল, মোট ২০০০ — ১২০০-র ক্রেডিটের জায়গা থাকে */
+    private function bill(): string
+    {
+        $this->customer->forceFill(['credit_limit' => '1000000000'])->save();
+        $invoices = app(\App\Modules\Sales\Services\SalesInvoiceService::class);
+        $bill = $invoices->confirm($invoices->create(
+            ['customer_id' => $this->customer->id, 'warehouse_id' => \App\Modules\Inventory\Models\Warehouse::query()->where('is_default', true)->firstOrFail()->id,
+                'trx_date' => now()->toDateString()],
+            [['product_id' => \App\Modules\Inventory\Models\Product::query()->firstOrFail()->id, 'qty' => '2', 'rate' => '100']],
+        ));
+        $bill->forceFill(['total' => '2000', 'tax' => '0'])->save();
+
+        return (string) $bill->document_no;
     }
 }

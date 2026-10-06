@@ -150,7 +150,7 @@ final class APaperCancelledAndPostedAtOnceTest extends TestCase
             'amount' => '500',
             'tax_amount' => '0',
             'reason' => 'price_correction',
-            'against_no' => 'INV-M2-1',
+            'against_no' => null, // ⓘ বিল নেই — গ্রাহকের নোটে নম্বর দিলে সেটা আসল পাকা বিল হতে হয় (বিক্রয় পরিকল্পনা §৬, ৬ অক্টোবর ২০২৬)
             'narration' => 'M2-NOTE',
         ]);
     }

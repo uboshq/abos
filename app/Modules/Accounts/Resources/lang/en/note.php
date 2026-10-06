@@ -60,4 +60,8 @@ return [
     'no_goods_move' => 'No goods move. If goods come back it is a return, not a note.',
     // ⭐ গ১ — সইয়ের জন্য থামা নোট (৪ অক্টোবর ২০২৬)
     'awaiting_signature' => 'The note is awaiting its signature — it reaches the books on the last one.',
+    'against_hint' => 'On a customer note the bill number is checked; a blank VAT is set at the bill rate.',
+    'against_not_found' => 'This customer has no posted bill numbered :no. Check the number, or leave it blank.',
+    'credit_over_room' => 'Bill :no can take no more than :room in credit (its total less returns and earlier credits).',
+    'tax_over_rate' => 'The VAT is above the bill rate (:rate%, :no).',
 ];

@@ -30,7 +30,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * নাহলে লাভ-ক্ষতির হিসাবে আয় থাকত কিন্তু তার পেছনের খরচ থাকত না, আর
  * মুনাফা বাস্তবের চেয়ে বেশি দেখাত।
  */
-class SalesInvoice extends Model implements Drillable, ShowsItselfForSigning, \App\Core\Contracts\SettlementTerms
+class SalesInvoice extends Model implements Drillable, ShowsItselfForSigning, \App\Core\Contracts\SettlementTerms, \App\Core\Contracts\NoteTarget
 {
     use BelongsToCompany;
     use \App\Modules\Sales\Models\Concerns\CarriesTheSalesChannel;
@@ -449,5 +449,60 @@ class SalesInvoice extends Model implements Drillable, ShowsItselfForSigning, \A
             'party_required' => true,
             'open' => $this->status === \App\Core\Support\DocumentStatus::CONFIRMED && bccomp($this->dueAmount(), '0', 4) > 0,
         ];
+    }
+
+    /**
+     * ⭐ নোটের বিপরীতের বিল — বিক্রয় পরিকল্পনা §৬, ৬ অক্টোবর ২০২৬ ([[\App\Core\Contracts\NoteTarget]])।
+     * ⓘ কেবল গ্রাহকের, এই গ্রাহকের, পাকা (নিশ্চিত বা বন্ধ) বিল; বাতিল বা খসড়া নয়।
+     */
+    public static function noteTargetFor(string $number, string $partyType, int $partyId): ?self
+    {
+        if ($partyType !== 'customer' || trim($number) === '') {
+            return null;
+        }
+
+        return self::query()
+            ->where('document_no', trim($number))
+            ->where('customer_id', $partyId)
+            ->whereIn('status', \App\Core\Support\DocumentStatus::POSTED)
+            ->first();
+    }
+
+    public function noteTargetType(): string
+    {
+        return 'sales_invoice';
+    }
+
+    public function noteTargetNumber(): string
+    {
+        return (string) $this->document_no;
+    }
+
+    /** ⓘ বিলের মোট − ফেরত (বাতিল নয়) − আগের পাকা ক্রেডিট নোট */
+    public function noteCreditRoom(?int $exceptNoteId = null): string
+    {
+        $returned = (string) SalesReturn::query()->where('sales_invoice_id', $this->id)
+            ->where('status', '<>', \App\Core\Support\DocumentStatus::CANCELLED)->sum('total');
+
+        $credited = (string) \App\Modules\Accounts\Models\Note::query()
+            ->where('direction', \App\Modules\Accounts\Models\Note::CREDIT)
+            ->where('party_type', 'customer')->where('party_id', $this->customer_id)
+            ->where('against_no', $this->document_no)
+            // ⓘ কেবল পাকা ক্রেডিট — খসড়া জায়গা আটকায় না; পাকা করার সময় আবার মাপা হয় ([[NoteService::confirm()]])
+            ->whereIn('status', \App\Core\Support\DocumentStatus::POSTED)
+            ->when($exceptNoteId !== null, fn ($q) => $q->whereKeyNot($exceptNoteId))
+            ->sum('total');
+
+        $room = bcsub(bcsub((string) $this->total, $returned, 4), $credited, 4);
+
+        return bccomp($room, '0', 4) > 0 ? $room : '0.0000';
+    }
+
+    /** ⓘ ভ্যাট ÷ ভ্যাট-যোগ্য অংশ (মোট − ভ্যাট − গাড়িভাড়া − গোল করা) */
+    public function noteTaxRate(): string
+    {
+        $base = bcsub(bcsub(bcsub((string) $this->total, (string) $this->tax, 4), (string) ($this->freight_charge ?? '0'), 4), (string) ($this->rounding_amount ?? '0'), 4);
+
+        return bccomp($base, '0', 4) > 0 && bccomp((string) $this->tax, '0', 4) > 0 ? bcdiv((string) $this->tax, $base, 6) : '0';
     }
 }

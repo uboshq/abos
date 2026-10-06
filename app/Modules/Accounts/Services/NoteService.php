@@ -48,6 +48,28 @@ final class NoteService
         $amount = $this->money($data['amount'] ?? '0');
         $tax = $this->money($data['tax_amount'] ?? '0');
 
+        // ⭐ বিপরীতের বিল যাচাই, আর ভ্যাট খালি হলে বিলের হারে (বিক্রয় পরিকল্পনা §৬, ৬ অক্টোবর ২০২৬)
+        $target = $this->target($kind, $data);
+
+        if ($target !== null) {
+            $rate = $target->noteTaxRate();
+            $typed = trim((string) ($data['tax_amount'] ?? ''));
+
+            if ($typed === '' && bccomp($rate, '0', 6) > 0) {
+                $tax = $this->round2(bcmul($amount, $rate, 6));
+            } elseif (bccomp($tax, bcadd($this->round2(bcmul($amount, $rate, 6)), '0.01', 4), 4) > 0) {
+                throw ValidationException::withMessages(['tax_amount' => __('accounts::note.tax_over_rate', [
+                    'rate' => rtrim(rtrim(bcmul($rate, '100', 2), '0'), '.'),
+                    'no' => $target->noteTargetNumber(),
+                ])]);
+            }
+
+            $this->assertRoom($data['direction'] ?? '', $target, bcadd($amount, $tax, 4));
+            $data['against_type'] = $target->noteTargetType();
+            $data['against_id'] = (int) $target->getKey();
+            $data['against_no'] = $target->noteTargetNumber();
+        }
+
         // ⓘ ভ্যাট কেবল কেনা-বেচার পক্ষে (গ্রাহক, সরবরাহকারী) — সেবাদাতা আর ব্যক্তির সমন্বয়ে ভ্যাটের খাত নেই
         if (bccomp($tax, '0', 4) > 0 && ! in_array($kind, [Note::KIND_CUSTOMER, Note::KIND_SUPPLIER], true)) {
             throw ValidationException::withMessages(['tax_amount' => __('accounts::note.tax_only_trade')]);
@@ -198,6 +220,15 @@ final class NoteService
                 ]);
             }
 
+            // ⭐ খসড়ার পরে বিলে ফেরত বা আরেকটা ক্রেডিট বসে থাকতে পারে — পাকা করার সময় আবার মাপা
+            if (filled($note->against_no)) {
+                $target = $this->findTarget((string) $note->against_no, (string) $note->party_type, (int) $note->party_id);
+
+                if ($target !== null) {
+                    $this->assertRoom((string) $note->direction, $target, (string) $note->total, (int) $note->id);
+                }
+            }
+
             $this->posting->post(
                 sourceType: $note->sourceType(),
                 sourceId: $note->id,
@@ -331,6 +362,70 @@ final class NoteService
                 'direction' => __('accounts::note.unknown_direction'),
             ]);
         }
+    }
+
+    /**
+     * ⭐ নোটের বিপরীতের পাকা কাগজ — বিক্রয় পরিকল্পনা §৬, ৬ অক্টোবর ২০২৬ ([[\App\Core\Contracts\NoteTarget]])।
+     *
+     * ⓘ নম্বর না দিলে কোনো বিল নয় (সাধারণ সমন্বয়, বছরশেষের ছাড় — আগের মতো চলে)। ⛔ গ্রাহকের নোটে নম্বর দিলে সেটা
+     * এই গ্রাহকেরই পাকা বিল হতে হবে — ভুল নম্বর, অন্যের বিল বা বাতিল বিল থামে। অন্য পক্ষে কাগজ না মিললে আগের মতো
+     * খালি লেখা থাকে (তাদের কাগজ এখনো চুক্তিতে নেই)।
+     *
+     * @param  array<string, mixed>  $data
+     */
+    private function target(string $kind, array $data): ?\App\Core\Contracts\NoteTarget
+    {
+        $number = trim((string) ($data['against_no'] ?? ''));
+
+        if ($number === '') {
+            return null;
+        }
+
+        $target = $this->findTarget($number, Note::KINDS[$kind], (int) ($data['party_id'] ?? 0));
+
+        if ($target === null && $kind === Note::KIND_CUSTOMER) {
+            throw ValidationException::withMessages(['against_no' => __('accounts::note.against_not_found', ['no' => $number])]);
+        }
+
+        return $target;
+    }
+
+    /** ⓘ `drill_sources`-এর যে কাগজ চুক্তিটা মানে, তাদের কাছে জিজ্ঞেস — Accounts কোনো মডিউলের নাম জানে না */
+    private function findTarget(string $number, string $partyType, int $partyId): ?\App\Core\Contracts\NoteTarget
+    {
+        foreach (app(\App\Core\Engines\Drill\DrillResolver::class)->map() as $class) {
+            if (is_string($class) && is_subclass_of($class, \App\Core\Contracts\NoteTarget::class)) {
+                $found = $class::noteTargetFor($number, $partyType, $partyId);
+
+                if ($found !== null) {
+                    return $found;
+                }
+            }
+        }
+
+        return null;
+    }
+
+    /** ⛔ ক্রেডিট নোট বিলের বাকি জায়গার বেশি নয় — মোট থেকে ফেরত আর আগের ক্রেডিট বাদে */
+    private function assertRoom(string $direction, \App\Core\Contracts\NoteTarget $target, string $total, ?int $exceptNoteId = null): void
+    {
+        if ($direction !== Note::CREDIT) {
+            return;
+        }
+
+        $room = $target->noteCreditRoom($exceptNoteId);
+
+        if (bccomp($total, $room, 4) > 0) {
+            throw ValidationException::withMessages(['amount' => __('accounts::note.credit_over_room', [
+                'no' => $target->noteTargetNumber(),
+                'room' => \App\Core\Support\Money::format($room),
+            ])]);
+        }
+    }
+
+    private function round2(string $value): string
+    {
+        return bcadd($value, bccomp($value, '0', 6) >= 0 ? '0.005' : '-0.005', 2);
     }
 
     private function money(mixed $value): string
