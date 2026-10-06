@@ -6,7 +6,7 @@
 <x-sales::portal.layout :customer="$customer">
     <div data-live x-data="liveRefresh({ url: '{{ route('sales.portal.tracking.show', [$sale['kind'], $sale['id']]) }}', seconds: 30 })">
         <h1 class="text-lg font-semibold">{{ $sale['no'] }}</h1>
-        <div class="num text-sm">{{ \App\Core\Support\Money::format($sale['total']) }}</div>
+{{-- ⓘ ডিলারের ট্র্যাকিংয়ে টাকা নেই — মালিক, ৬ অক্টোবর ২০২৬ (খ): ধাপ দেখবেন, দাম নয়; দাম আদেশের ফর্মে --}}
         <div class="mb-3 text-sm font-semibold" style="color: {{ $trackingColours[$sale['category']] ?? '#111827' }}">
             {{ __('sales::tracking.step.'.$sale['step']) }}
         </div>

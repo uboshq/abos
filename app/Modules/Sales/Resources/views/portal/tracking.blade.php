@@ -13,7 +13,7 @@
                style="border-left: 4px solid {{ $trackingColours[$row['category']] ?? '#9CA3AF' }}">
                 <div class="font-semibold">{{ $row['no'] }}</div>
                 <div class="text-sm text-(--color-ink-muted)">{{ $row['date'] }}</div>
-                <div class="num text-sm">{{ \App\Core\Support\Money::format($row['total']) }}</div>
+{{-- ⓘ ডিলারের ট্র্যাকিংয়ে টাকা নেই — মালিক, ৬ অক্টোবর ২০২৬ (খ): ধাপ দেখবেন, দাম নয়; দাম আদেশের ফর্মে --}}
                 <div class="text-sm font-medium" style="color: {{ $trackingColours[$row['category']] ?? '#111827' }}">
                     {{ __('sales::tracking.step.'.$row['step']) }}
                 </div>
