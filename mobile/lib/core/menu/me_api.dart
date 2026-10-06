@@ -38,7 +38,8 @@ class MeApi {
 }
 
 class MeResponse {
-  const MeResponse({required this.user, required this.profile, required this.menu});
+  const MeResponse(
+      {required this.user, required this.profile, required this.menu});
 
   final AuthUser user;
   final SessionProfile profile;
