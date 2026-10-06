@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Accounts\Models;
 
 use App\Core\Concerns\BelongsToCompany;
+use App\Core\Concerns\ScopedToUserBranch;
 use App\Core\Concerns\HasPublicId;
 use App\Core\Concerns\IsAudited;
 use App\Core\Contracts\Drillable;
@@ -28,6 +29,8 @@ use Illuminate\Support\Carbon;
 class Cheque extends Model implements Drillable
 {
     use BelongsToCompany;
+    // ⛔ শাখার দেয়াল — হেডারের শাখা আর মানুষের নাগাল (অডিট ⛔৪, ৬ অক্টোবর ২০২৬; [[ScopedToUserBranch]])
+    use ScopedToUserBranch;
     use HasPublicId;
     use IsAudited;
     use SoftDeletes;

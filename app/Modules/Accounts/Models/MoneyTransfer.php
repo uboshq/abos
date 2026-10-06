@@ -32,6 +32,44 @@ class MoneyTransfer extends Model implements Drillable
     use IsAudited;
     use SoftDeletes;
 
+    /**
+     * ⛔ শাখার দেয়াল — অডিট ⛔৪ (৬ অক্টোবর ২০২৬)। ⓘ বদলির দুই দিক: পাঠানোর শাখা (`branch_id`, যে টিল থেকে) আর
+     * পাওয়ার টিল। ⭐ যেকোনো দিক মানুষের নাগালে থাকলে দেখা যায় — নাহলে পাওয়ার শাখার মানুষ নিজের টিলে আসা টাকা গ্রহণই
+     * করতে পারতেন না। ব্যাংকে জমা (পাওয়ার টিল নেই) পাঠানোর শাখার। নিয়ম [[ScopedToUserBranch]]-এর মতোই: এক শাখা বাছা →
+     * সেটা; "সব শাখা" → নাগাল আর শাখাহীন; সীমাহীন (মালিক) → সব; লগইন নেই (কাজ, কমান্ড) → সব।
+     */
+    protected static function booted(): void
+    {
+        static::addGlobalScope('user-branch', function (\Illuminate\Database\Eloquent\Builder $builder): void {
+            $user = auth()->user();
+
+            if (! $user instanceof \App\Models\User) {
+                return;
+            }
+
+            $scope = app(\App\Core\Services\DataScope::class);
+            $ids = $scope->viewBranchIds($user);
+
+            if ($ids === null) {
+                return;
+            }
+
+            $withUnbranched = ! $scope->viewsOneBranch($user);
+            $table = $builder->getModel()->getTable();
+            $tills = CashTill::query()->withoutGlobalScopes()->whereIn('branch_id', $ids ?: [0])->select('id');
+
+            $builder->where(function ($q) use ($table, $ids, $withUnbranched, $tills): void {
+                $q->whereIn($table.'.branch_id', $ids ?: [0])
+                    ->orWhereIn($table.'.to_till_id', $tills)
+                    ->orWhereIn($table.'.from_till_id', (clone $tills));
+
+                if ($withUnbranched) {
+                    $q->orWhereNull($table.'.branch_id');
+                }
+            });
+        });
+    }
+
     protected $fillable = [
         'company_id', 'branch_id', 'financial_year_id', 'document_no', 'trx_date',
         'from_till_id', 'to_till_id', 'to_account_id',
