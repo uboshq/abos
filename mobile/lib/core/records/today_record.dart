@@ -79,6 +79,7 @@ class TodayRecord {
             basisRate: (row['basisRate'] ?? '').toString(),
             inflow: Money.value(row['inflow']),
             commission: Money.value(row['commission']),
+            commissionLabel: row['commissionLabel']?.toString(),
             paid: Money.value(row['paid']),
             balance: Money.value(row['balance']),
           ),
@@ -146,6 +147,7 @@ class PrincipalLine {
     required this.basisRate,
     this.inflow,
     this.commission,
+    this.commissionLabel,
     this.paid,
     this.balance,
   });
@@ -159,11 +161,32 @@ class PrincipalLine {
   final String? periodSoFar;
 
   String get periodLabel =>
-      (periodSoFar != null && periodSoFar!.trim().isNotEmpty) ? periodSoFar! : period;
+      (periodSoFar != null && periodSoFar!.trim().isNotEmpty)
+          ? periodSoFar!
+          : period;
 
   final String basisRate;
   final double? inflow;
   final double? commission;
+
+  /// The web box's own words for the commission (server
+  /// `SupplierDashboard::earned()`): on the "actual" basis a sale below the
+  /// purchase cost makes it negative, and the web says "লোকসান ৳… — কেনা
+  /// দামের নিচে বিক্রি" rather than a bare minus. An older server sends none.
+  final String? commissionLabel;
+
+  bool get isLoss => (commission ?? 0) < 0;
+
+  /// What the phone shows: the server's words, else the same words made here.
+  String get commissionText {
+    final said = commissionLabel?.trim() ?? '';
+    if (said.isNotEmpty) return said;
+    final value = commission ?? 0;
+    return value < 0
+        ? 'লোকসান ${Money.taka(-value)} — কেনা দামের নিচে বিক্রি'
+        : Money.taka(value);
+  }
+
   final double? paid;
 
   /// The principal's share less what was paid: positive means we still have

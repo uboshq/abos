@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:abos_mobile/core/records/today_record.dart';
+import 'package:abos_mobile/core/theme/app_colors.dart';
 import 'package:abos_mobile/features/today/today_screen.dart';
 
 /// The day on one page — docs/Contract §৮.
@@ -93,7 +94,11 @@ void main() {
     'collections': {'count': 1, 'amount': '1500.0000'},
     'inflow': {'amount': '9400.0000'},
     'dues': {'amount': '609011.2300', 'shops': 32},
-    'payable': {'amount': '125000.0000', 'books': '120000.0000', 'handLoans': '5000.0000'},
+    'payable': {
+      'amount': '125000.0000',
+      'books': '120000.0000',
+      'handLoans': '5000.0000'
+    },
     'cashInHand': {'amount': '3000.0000'},
     'money': {
       'amount': '48000.0000',
@@ -117,7 +122,8 @@ void main() {
     ],
   });
 
-  testWidgets("the owner's rows: sale beside money in, recoverable beside payable",
+  testWidgets(
+      "the owner's rows: sale beside money in, recoverable beside payable",
       (tester) async {
     await tester.pumpWidget(screen(fetch: () async => owners));
     await tester.pumpAndSettle();
@@ -139,7 +145,8 @@ void main() {
     expect(find.text('হাতে নগদ'), findsNothing);
   });
 
-  testWidgets("the web's money box: the total and cash · MFS · bank · on the road",
+  testWidgets(
+      "the web's money box: the total and cash · MFS · bank · on the road",
       (tester) async {
     await tester.pumpWidget(screen(fetch: () async => owners));
     await tester.pumpAndSettle();
@@ -153,7 +160,8 @@ void main() {
     expect(find.text('৳700'), findsOneWidget);
   });
 
-  testWidgets('the principal commission: commission, paid and the balance in words',
+  testWidgets(
+      'the principal commission: commission, paid and the balance in words',
       (tester) async {
     await tester.pumpWidget(screen(fetch: () async => owners));
     await tester.pumpAndSettle();
@@ -178,7 +186,8 @@ void main() {
     final labels = tester
         .widgetList<Text>(find.descendant(
             of: find.ancestor(
-                of: find.text('প্রিন্সিপালের কমিশন'), matching: find.byType(Card)),
+                of: find.text('প্রিন্সিপালের কমিশন'),
+                matching: find.byType(Card)),
             matching: find.byType(Text)))
         .map((t) => t.data)
         .where((d) => d != null && !d.startsWith('৳'))
@@ -193,10 +202,56 @@ void main() {
         reason: "the owner's column order");
   });
 
+  // ⭐ "আসল" ভিত্তিতে কেনা দামের নিচে বিক্রি — ওয়েবের বাক্সের কথায়, লাল, খালি বিয়োগ নয় (সমন্বয়ক, ৬ অক্টোবর ২০২৬)
+  testWidgets('a loss on the actual basis is said in the web’s words, in red',
+      (tester) async {
+    final payload = Map<String, dynamic>.from(owners.payload);
+    payload['principals'] = [
+      {
+        'name': 'Star Line',
+        'period': '02/09/2026 – 01/10/2026',
+        'basisRate': 'আসল',
+        'inflow': '0.0000',
+        'commission': '-2500.0000',
+        'commissionLabel': 'লোকসান ৳2,500.00 — কেনা দামের নিচে বিক্রি',
+        'paid': '0.0000',
+        'balance': '2500.0000',
+      },
+    ];
+    await tester.pumpWidget(screen(fetch: () async => TodayRecord(payload)));
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(find.text('প্রিন্সিপালের কমিশন'), 200);
+
+    final loss = find.text('লোকসান ৳2,500.00 — কেনা দামের নিচে বিক্রি');
+    expect(loss, findsOneWidget,
+        reason: '⛔ সার্ভারের (ওয়েবের) লেখা দেখা গেল না');
+    expect(find.text('৳-2,500'), findsNothing, reason: '⛔ খালি বিয়োগ চিহ্ন');
+    expect(tester.widget<Text>(loss).style?.color, AppColors.danger);
+  });
+
+  test(
+      'an older server without the words: the phone says the same words itself',
+      () {
+    expect(
+        const PrincipalLine(
+                name: 'X', period: 'p', basisRate: 'আসল', commission: -2500)
+            .commissionText,
+        'লোকসান ৳2,500 — কেনা দামের নিচে বিক্রি');
+    expect(
+        const PrincipalLine(
+                name: 'X', period: 'p', basisRate: 'b', commission: 3850)
+            .commissionText,
+        '৳3,850');
+  });
+
   test('an older server without periodSoFar shows the plain period', () {
-    const line = PrincipalLine(name: 'X', period: '02/09/2026 – 01/10/2026', basisRate: 'Margin 4%');
+    const line = PrincipalLine(
+        name: 'X', period: '02/09/2026 – 01/10/2026', basisRate: 'Margin 4%');
     expect(line.periodLabel, '02/09/2026 – 01/10/2026');
-    expect(const PrincipalLine(name: 'X', period: 'p', basisRate: 'b', balance: -10).balanceLabel,
+    expect(
+        const PrincipalLine(
+                name: 'X', period: 'p', basisRate: 'b', balance: -10)
+            .balanceLabel,
         'কোম্পানির কাছে পাব: ৳10');
   });
 
