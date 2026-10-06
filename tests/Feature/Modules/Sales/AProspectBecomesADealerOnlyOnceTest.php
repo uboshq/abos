@@ -148,7 +148,8 @@ final class AProspectBecomesADealerOnlyOnceTest extends TestCase
         $manager = $this->member(['sales.lead.view', 'sales.lead.manage', 'customer.create']);
 
         $existing = Customer::query()->orderBy('id')->firstOrFail();
-        $existing->forceFill(['phone' => '01799888777'])->save();
+        // ⓘ একই শাখায় — নকল খোঁজা এখন কেবল নিজের শাখার গ্রাহকের মধ্যে (মালিক, ৬ অক্টোবর ২০২৬, 3f5c360d)
+        $existing->forceFill(['phone' => '01799888777', 'branch_id' => \App\Core\Support\CompanyContext::branchId()])->save();
 
         $lead = $this->leadOf($manager, '01799888777');
         $before = Customer::query()->count();
