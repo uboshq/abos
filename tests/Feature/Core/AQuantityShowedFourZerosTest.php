@@ -35,6 +35,10 @@ final class AQuantityShowedFourZerosTest extends TestCase
     /** নামে পরিমাণের মতো, আসলে নয় — কারণসহ। */
     private const NOT_A_QUANTITY = [
         'sales.margin.below_floor' => 'মার্জিনের সীমার নিচে কি না — হ্যাঁ/না লেখা, পরিমাণ নয়',
+        // ⓘ নামের শেষে held/available, অথচ টাকা — দুই দশমিকেই দেখানোর কথা
+        'sales.credit_use.held' => 'বাকির সীমায় আটকে থাকা টাকা — টাকা, পরিমাণ নয়',
+        'sales.credit_use.available' => 'সীমায় এখনো বাকি টাকা — টাকা, পরিমাণ নয়',
+        'finance.tenancy_arrears.deposit_held' => 'ভাড়াটের হাতে রাখা জামানত — টাকা, পরিমাণ নয়',
     ];
 
     protected function setUp(): void
@@ -51,6 +55,9 @@ final class AQuantityShowedFourZerosTest extends TestCase
     public function test_the_profit_by_product_screen_shows_plain_quantities(): void
     {
         [$whole, $half] = Product::query()->orderBy('id')->take(2)->get()->all();
+
+        // ⓘ ভগ্নাংশ কেবল ভগ্নাংশ-চলা এককে বেচা যায় (ম১৯, c3c6a9b9) — প্রশ্নটা দেখানোর, তাই এককটা ভগ্নাংশের
+        $half->unit->forceFill(['allows_fraction' => true])->save();
 
         $this->sell($whole, '45', '10');
         $this->sell($half, '12.5', '10');

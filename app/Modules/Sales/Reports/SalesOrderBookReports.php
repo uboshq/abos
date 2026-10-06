@@ -149,7 +149,8 @@ final class SalesOrderBookReports
                 ['key' => 'credit_limit', 'label' => 'sales::order_book.limit', 'type' => ReportColumn::MONEY, 'total' => false],
                 ['key' => 'accounts_short', 'label' => 'sales::order_book.short', 'type' => ReportColumn::MONEY],
                 ['key' => 'held_on', 'label' => 'sales::order_book.held_on', 'type' => ReportColumn::DATE, 'width' => '7rem'],
-                ['key' => 'days_held', 'label' => 'sales::order_book.days_held', 'width' => '5rem', 'total' => false],
+                // ⓘ দিন একটা পরিমাণ — গোটা সংখ্যা, দশমিকের শূন্য ছাড়া ([[AQuantityShowedFourZerosTest]])
+                ['key' => 'days_held', 'label' => 'sales::order_book.days_held', 'type' => ReportColumn::QUANTITY, 'width' => '5rem', 'total' => false],
             ],
         );
     }
