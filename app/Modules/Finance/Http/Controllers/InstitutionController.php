@@ -62,9 +62,10 @@ class InstitutionController extends Controller implements HasMiddleware
             'positions' => collect($institutions->items())
                 ->mapWithKeys(fn (Institution $i) => [$i->id => app(InstitutionPosition::class)->of($i)])->all(),
 
-            // ⓘ মোটের পট্টি — গোটা ছাঁকনির নিট, কেবল এই পাতার নয় (প্রতিষ্ঠান হাতে গোনা কয়েকটা, তাই সবগুলো গোনা চলে)
-            'netTotal' => Institution::query()->ofKind($kind)->get()
-                ->reduce(fn (string $sum, Institution $i) => bcadd($sum, app(InstitutionPosition::class)->of($i)['net'], 4), '0'),
+            // ⓘ সর্বমোট — গোটা ছাঁকনির নিট, কেবল এই পাতার নয়; টেবিলের নিচে আর মোটের পট্টিতে একই সংখ্যা
+            // (প্রতিষ্ঠান হাতে গোনা কয়েকটা, তাই সবগুলো গোনা চলে)
+            'grand' => ['net' => Institution::query()->ofKind($kind)->get()
+                ->reduce(fn (string $sum, Institution $i) => bcadd($sum, app(InstitutionPosition::class)->of($i)['net'], 4), '0')],
         ]);
     }
 

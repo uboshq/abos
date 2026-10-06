@@ -110,9 +110,10 @@ final class AnInstitutionHasOnePageTest extends TestCase
 
         $first = $this->get(route('finance.institution.index'))->assertOk();
         $this->assertArrayNotHasKey($bank->id, $first->viewData('positions'), 'দাবির ভিত্তি নেই — DBBL প্রথম পাতাতেই।');
-        $first->assertViewHas('netTotal', fn (string $total) => bccomp($total, $expected, 4) === 0);
+        $first->assertViewHas('grand', fn (array $grand) => bccomp($grand['net'], $expected, 4) === 0);
+        $first->assertSee(Money::format($expected), false);
         $this->get(route('finance.institution.index', ['kind' => Institution::INSURANCE]))->assertOk()
-            ->assertViewHas('netTotal', fn (string $total) => bccomp($total, '0', 4) === 0);
+            ->assertViewHas('grand', fn (array $grand) => bccomp($grand['net'], '0', 4) === 0);
     }
 
     // ── সহায়ক ─────────────────────────────────────────────────────────────────

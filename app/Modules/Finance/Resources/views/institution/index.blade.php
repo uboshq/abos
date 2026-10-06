@@ -32,7 +32,8 @@
         ['key' => 'phone', 'label' => __('finance::institution.phone'), 'width' => '9rem',
             'render' => fn ($i) => $i->phone ?: '—'],
         // ⭐ নিট — আমানত − ঋণ, প্রতিষ্ঠানের পাতার একই হিসাব (অর্থ-মডিউলের পরিকল্পনা ৭)
-        ['key' => 'net', 'label' => __('finance::institution.position_net'), 'numeric' => true, 'width' => '10rem',
+        ['key' => 'net', 'total' => 'money', 'label' => __('finance::institution.position_net'), 'numeric' => true, 'width' => '10rem',
+            'raw' => fn ($i) => $positions[$i->id]['net'] ?? '0',
             'render' => fn ($i) => isset($positions[$i->id]) ? \App\Core\Support\Money::format($positions[$i->id]['net']) : '—'],
         ['key' => 'is_active', 'label' => __('finance::institution.state'), 'width' => '6rem',
             'render' => fn ($i) => $i->is_active ? __('finance::institution.active') : __('finance::institution.inactive')],
@@ -87,10 +88,11 @@
 
     <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
         <x-ui.table :rows="$institutions" :columns="$columns"
+                    :grand="$grand ?? []"
+                    :view-url="fn ($i) => route('finance.institution.show', $i)"
                     :empty="__('finance::institution.none_yet')" />
 
         <x-ui.pager :rows="$institutions" />
-        <x-ui.list-totals :rows="$institutions"
-                          :totals="[['label' => __('finance::institution.position_net'), 'value' => \App\Core\Support\Money::format($netTotal ?? '0')]]" />
+        <x-ui.list-totals :rows="$institutions" :grand="$grand ?? []" :columns="$columns" />
     </div>
 </x-layouts.app>
