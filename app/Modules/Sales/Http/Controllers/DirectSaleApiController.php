@@ -165,6 +165,9 @@ class DirectSaleApiController extends Controller implements HasMiddleware
             'date' => $d->trx_date?->toDateString(),
             'total' => (string) $d->total,
             'lines' => $d->lines->count(),
+            // ⭐ ৩ দিন পেরোনো খসড়া লাল — ওয়েবের একই সীমা (পরিকল্পনা §৪.৩, ৬ অক্টোবর ২০২৬; লেখার সময় থেকে)
+            'age_days' => $d->created_at === null ? 0 : (int) $d->created_at->copy()->startOfDay()->diffInDays(now()->startOfDay()),
+            'stale' => $d->created_at !== null && $d->created_at->lte(\App\Modules\Sales\Services\OrderProgress::staleCutoff()),
         ])->values()]);
     }
 

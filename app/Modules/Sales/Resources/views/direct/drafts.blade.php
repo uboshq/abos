@@ -53,7 +53,8 @@
             // ⭐ কেন আটকে — মালিকের নির্দেশ, ২৮ সেপ্টেম্বর ২০২৬ ([[DirectSaleController::whyStuck()]])
             'key' => 'status',
             'label' => __('sales::field.state'),
-            'render' => fn ($d) => $why[$d->id] ?? '',
+            // ⭐ ৩ দিন পেরোনো খসড়া লাল (পরিকল্পনা §৪.৩, ৬ অক্টোবর ২০২৬)
+            'render' => fn ($d) => view('sales::direct.partials.draft-state', ['draft' => $d, 'why' => $why[$d->id] ?? '']),
         ],
         [
             'key' => 'actions',
