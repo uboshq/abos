@@ -276,6 +276,13 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         /*
+         * ⭐ প্রতিটা সারির কাজে কোম্পানির দাগ — `abos_company` (অডিট ⛔৯, ৬ অক্টোবর ২০২৬)।
+         * ⓘ `failed_jobs`-এ কোম্পানির ঘর নেই; দাগ ছাড়া হিসাবের "পটভূমির কাজ" পাতা সব প্রতিষ্ঠানের ব্যর্থ কাজ, তাদের ভুলের
+         * বার্তা আর SQL-এর মানসহ দেখাত ([[FinanceControlController::jobs()]])। দাগ থাকলে পাতা কেবল নিজের কোম্পানিরটা দেখায়।
+         */
+        \Illuminate\Queue\Queue::createPayloadUsing(fn () => ['abos_company' => \App\Core\Support\CompanyContext::id()]);
+
+        /*
          * ⭐ কোন মাপে ছাপা হলো — `X-Print-Scale: 85; auto` ([[PrintScale]], ১ অক্টোবর ২০২৬)।
          * ⓘ এক জায়গায়, তাই কোনো ছাপার কন্ট্রোলার ছুঁতে হয়নি; কাগজে কিছু লেখা হয় না (মালিক: কাগজ পরিষ্কার)।
          */

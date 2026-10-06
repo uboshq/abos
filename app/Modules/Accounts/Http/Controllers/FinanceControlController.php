@@ -166,8 +166,14 @@ class FinanceControlController extends Controller implements HasMiddleware
             ->values()
             ->all();
 
+        /*
+         * ⛔ কেবল এই কোম্পানির ব্যর্থ কাজ — কাজের দাগ `abos_company` ধরে ([[AppServiceProvider::boot()]], অডিট ⛔৯)।
+         * ⓘ দাগহীন পুরনো সারি কারও নয় বলে দেখানো হয় না: ভুলের বার্তায় অন্য প্রতিষ্ঠানের নাম আর SQL-এর মান থাকতে পারে।
+         */
         $failedJobs = Schema::hasTable('failed_jobs')
-            ? DB::table('failed_jobs')->orderByDesc('failed_at')->limit(50)->get(['id', 'queue', 'exception', 'failed_at'])
+            ? DB::table('failed_jobs')
+                ->whereRaw("JSON_UNQUOTE(JSON_EXTRACT(payload, '$.abos_company')) = ?", [(string) CompanyContext::id()])
+                ->orderByDesc('failed_at')->limit(50)->get(['id', 'queue', 'exception', 'failed_at'])
             : collect();
 
         // ⓘ রাতের ব্যাকআপ গোটা ডাটাবেসের, কোম্পানিহীন সারি — দুইটাই গোনা
