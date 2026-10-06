@@ -64,6 +64,7 @@ final class EveryLedgerReaderSaysWhetherItShowsOrChecksTest extends TestCase
 
     /** @var array<string, string> যাচাই করে — গোটা কোম্পানি, দেখার শাখা কখনো নয় */
     private const CHECKS = [
+        'app/Modules/Hr/Services/PayrollService.php' => '⛔ বাতিলের আগে বেতন-দেনা কতটা পরিশোধ হয়েছে — রান যত বসিয়েছিল আর খাতায় যত বাকি; গোটা কোম্পানি ধরে, কারণ দেনা এক খাতে আর রান গোটা কোম্পানির (অডিট HR ⚠️৬, ৬ অক্টোবর ২০২৬)',
         'app/Modules/Hr/Support/AdvanceBalance.php' => '⛔ কর্মীর খোলা অগ্রিম — বেতন থেকে কাটার সীমা আর খরচের দাবি মেটানো; কর্মীর নামে, গোটা কোম্পানি ধরে; অগ্রিম মানুষের, শাখার নয় (অডিট HR ⛔৪, ৬ অক্টোবর; মালিকের আদেশ ৭ অক্টোবর ২০২৬)',
         'app/Modules/Accounts/Services/MoneyTransferService.php' => 'স্থানান্তরের আগে বাক্সের সবচেয়ে কম জের — নিজের খাত, গোটা কোম্পানি ধরে; দেখার শাখা খাটলে অন্য শাখার দাখিলা বাদ পড়ে জের ভুল হত (অডিট ম৯, ৫ অক্টোবর ২০২৬)',
         'app/Modules/Finance/Services/OwnerCapital.php' => 'মালিকের শুরুর মূলধন — রেজিস্টার আর ৩১০০-এর জের মেলানো, গোটা কোম্পানি ধরে, শাখা আলাদা করে; দেখার শাখা খাটলে অন্য শাখার ফাঁক অদৃশ্য হত (৫ অক্টোবর ২০২৬)',

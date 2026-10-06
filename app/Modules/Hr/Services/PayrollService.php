@@ -243,6 +243,8 @@ final class PayrollService
             $this->assertNotCancelled($run);
 
             if ($run->status === DocumentStatus::CONFIRMED) {
+                $this->assertSalaryNotPaidOut($run);
+
                 $this->posting->reverse(
                     sourceType: PayrollRun::SOURCE_TYPE,
                     sourceId: $run->id,
@@ -660,6 +662,47 @@ final class PayrollService
             throw ValidationException::withMessages([
                 'month' => __('hr::validation.month_already_run', [
                     'month' => $monthStart->format('M Y'),
+                ]),
+            ]);
+        }
+    }
+
+    /**
+     * ⛔ পরিশোধ হয়ে যাওয়া বেতন উল্টানো যায় না — পুরো-ERP অডিট, ৬ অক্টোবর ২০২৬ (HR ⚠️৬; [[APaidPayrollCannotBeCancelledTest]])।
+     *
+     * ⓘ বেতন দেওয়া হয় আলাদা ভাউচারে, "প্রদেয় বেতন" ডেবিট করে — রানের সাথে বাঁধা নেই। তাই বাতিলের উল্টো দাখিলা দেনাটা আবার
+     * ডেবিট করত, অথচ টাকা ততক্ষণে কর্মীর হাতে: খাতায় বেতন-দেনা ঋণাত্মক, বা অন্য মাসের পাওনা নীরবে খেয়ে ফেলা। এখন রানটা যত
+     * দেনা বসিয়েছিল, খাতার গোটা কোম্পানির বেতন-দেনা তার চেয়ে কম হলে — অর্থাৎ কিছু পরিশোধ হয়েছে — বাতিল থামে; আগে পরিশোধের
+     * ভাউচার বাতিল, তারপর রান। গোটা কোম্পানি, কারণ দেনাটা এক খাতে আর রানটা গোটা কোম্পানির।
+     *
+     * ⓘ আগে আসা আগে শোধ: পরের মাসগুলোর জীবিত রানের দেনাও বাকি থাকার কথা ধরা হয় — নাহলে আগস্ট পরিশোধ, সেপ্টেম্বর বাকি অবস্থায়
+     * আগস্ট বাতিল করলে সেপ্টেম্বরের দেনাটাই "বাকি" দেখাত আর নীরবে খেয়ে ফেলা হত।
+     */
+    private function assertSalaryNotPaidOut(PayrollRun $run): void
+    {
+        $payable = $this->accountByCode(StandardChart::SALARY_PAYABLE);
+
+        if ($payable === null) {
+            return;
+        }
+
+        $owed = fn () => DB::table('ledger_entries')
+            ->where('company_id', CompanyContext::id())
+            ->where('account_id', $payable->id)
+            ->selectRaw('COALESCE(SUM(credit), 0) - COALESCE(SUM(debit), 0) as n');
+
+        $put = bcadd((string) $owed()->where('source_type', PayrollRun::SOURCE_TYPE)->where('source_id', $run->id)->value('n'), '0', 4);
+        $later = bcadd((string) $owed()->where('source_type', PayrollRun::SOURCE_TYPE)->whereIn('source_id', PayrollRun::acrossBranches()
+            ->where('status', DocumentStatus::CONFIRMED)
+            ->whereDate('month', '>', $run->month->toDateString())
+            ->select('id'))->value('n'), '0', 4);
+        $left = bcsub(bcadd((string) $owed()->value('n'), '0', 4), $later, 4);
+
+        if (bccomp($left, $put, 2) < 0) {
+            throw ValidationException::withMessages([
+                'status' => __('hr::validation.salary_already_paid', [
+                    'paid' => Money::format(bcsub($put, $left, 4)),
+                    'put' => Money::format($put),
                 ]),
             ]);
         }
