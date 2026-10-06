@@ -46,6 +46,8 @@ class SalesReportController extends Controller implements HasMiddleware
         // ⭐ সময়মতো ও পুরো — আদেশের লাইন ধরে (পরিকল্পনা সংস্করণ ২ §৯, ৬ অক্টোবর ২০২৬; [[DeliveryReports]])
         'otif' => \App\Modules\Sales\Reports\DeliveryReports::OTIF,
         'challan-status' => \App\Modules\Sales\Reports\DeliveryReports::CHALLAN_STATUS,
+        // ⭐ বিক্রয়কর্মী ধরে বিক্রি — লক্ষ্যের একই নিয়মে (পরিকল্পনা সংস্করণ ২ §৯ গ; [[SalespersonReports]])
+        'by-salesperson' => \App\Modules\Sales\Reports\SalespersonReports::KEY,
     ];
 
     public function __construct(

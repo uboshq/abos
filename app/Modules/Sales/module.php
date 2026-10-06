@@ -370,6 +370,9 @@ return [
                 'route_params' => ['slug' => 'by-channel'], 'permission' => 'sales.report'],
             ['label' => 'sales::route.report_title', 'icon' => 'reports', 'route' => 'sales.report.show',
                 'route_params' => ['slug' => 'by-route'], 'permission' => 'sales.report'],
+            /* ⭐ বিক্রয়কর্মী ধরে বিক্রি — পরিকল্পনা সংস্করণ ২ §৯ গ, ৬ অক্টোবর ২০২৬ ([[SalespersonReports]]) */
+            ['label' => 'sales::salesperson_report.title', 'icon' => 'people', 'route' => 'sales.report.show',
+                'route_params' => ['slug' => 'by-salesperson'], 'permission' => 'sales.report'],
 
             /*
              * রিকল — এই লটটা কাদের কাছে গেছে।
@@ -820,6 +823,8 @@ return [
         \App\Modules\Sales\Reports\CreditControlReports::class,
         // ⭐ ডেলিভারির রিপোর্ট — OTIF আদেশের লাইন ধরে (পরিকল্পনা সংস্করণ ২ §৯, ৬ অক্টোবর ২০২৬)
         \App\Modules\Sales\Reports\DeliveryReports::class,
+        // ⭐ বিক্রয়কর্মী ধরে বিক্রি (পরিকল্পনা সংস্করণ ২ §৯ গ)
+        \App\Modules\Sales\Reports\SalespersonReports::class,
     ],
 
     /*
