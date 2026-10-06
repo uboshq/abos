@@ -144,6 +144,7 @@ return [
         'sales_orders' => 'Orders',
         'delivery_orders' => 'Delivery Order (DO)', // ⭐ the owner, 2 Oct 2026
         'billing_documents' => 'Billing Documents',
+        'credit_collections' => 'Credit and collections', // ⭐ বাকি ও আদায় — বাকি নিয়ন্ত্রণের ভাঁজ (৫ অক্টোবর ২০২৬)
         'delivery_processing' => 'Delivery Processing',
         'pricing' => 'Pricing',
         'direct_sale' => 'Direct sale', // ⭐ fold — counter, depot check, drafts (owner, 4 Oct 2026)
