@@ -57,6 +57,8 @@ Route::prefix('v1/sales')
         Route::post('/direct/void', [\App\Modules\Sales\Http\Controllers\DirectSaleApiController::class, 'void'])->name('direct.void');
         Route::get('/direct/price/{product}', [\App\Modules\Sales\Http\Controllers\DirectSaleApiController::class, 'price'])->whereUuid('product')->name('direct.price');
         // ⭐ ফোনে বিক্রি ফেরত — ওয়েবের একই যাচাই, সেবা আর সারাংশ ([[SalesReturnApiController]], ৪ অক্টোবর ২০২৬)
+        // ⭐ আজকের ডেলিভারি — পথে থাকা চালান, পৌঁছানো QR-এর একই দরজায় ([[DeliveryRunApiController]], ধাপ ৭, ৬ অক্টোবর ২০২৬)
+        Route::get('/deliveries', [\App\Modules\Sales\Http\Controllers\DeliveryRunApiController::class, 'index'])->name('delivery_run.index');
         // ⭐ টাকা আদায় — কেবল পড়া, ওয়েবের আদায়ের চাবিতে ([[CollectionApiController]], মালিক, ৬ অক্টোবর ২০২৬)
         Route::get('/collections', [\App\Modules\Sales\Http\Controllers\CollectionApiController::class, 'index'])->name('collection.index');
         Route::get('/collections/{id}', [\App\Modules\Sales\Http\Controllers\CollectionApiController::class, 'show'])->whereUuid('id')->name('collection.show');
