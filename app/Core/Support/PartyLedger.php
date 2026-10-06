@@ -51,14 +51,24 @@ final class PartyLedger
      *
      * @param  Builder<LedgerEntry>  $base  এই পার্টির সব সারি (শাখা আর কোম্পানির দেয়াল আগেই বসানো)
      */
-    public static function page(Builder $base, Request $request): LengthAwarePaginator
+    public static function page(Builder $base, Request $request, bool $openAtEnd = false): LengthAwarePaginator
     {
         /* ⭐ সম্পাদিত কাগজের আগের সারি আর তার উল্টো সারি বাদ — জের, প্রারম্ভিক আর দেখানো সারি, তিনটা থেকেই ([[withoutUndoneEdits()]]) */
         $base = self::withoutUndoneEdits(clone $base);
 
         $order = fn (Builder $q) => $q->orderBy('ledger_entries.trx_date')->orderBy('ledger_entries.id');
 
-        $rows = $order(self::filter(clone $base, $request))->paginate(self::PER_PAGE)->withQueryString();
+        /*
+         * ⭐ খাতা তারিখের ক্রমে, খুললে শেষ পাতা — মালিক, ৬ অক্টোবর ২০২৬ (আন্তর্জাতিক খাতার নিয়ম; নতুন লেনদেন চোখের সামনে)।
+         * ⓘ `?page=` না থাকলে তবেই; পাতা বদলের তীর নিজের পাতা পাঠায়। ⛔ আগে প্রথম পাতায় সবচেয়ে পুরনো ৫০টা আসত, আর
+         * আজকের বিল দ্বিতীয় পাতায় লুকিয়ে থাকত (বিক্রয় ধারার পরীক্ষা)।
+         */
+        $page = null;
+        if ($openAtEnd && ! $request->has('page')) {
+            $page = max(1, (int) ceil(self::filter(clone $base, $request)->reorder()->count() / self::PER_PAGE));
+        }
+
+        $rows = $order(self::filter(clone $base, $request))->paginate(self::PER_PAGE, ['*'], 'page', $page)->withQueryString();
         $items = $rows->getCollection();
 
         if ($items->isEmpty()) {

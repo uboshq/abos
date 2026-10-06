@@ -38,7 +38,23 @@
         {{ __('core.table.range', ['from' => $from, 'to' => $to, 'total' => $total]) }}
     </span>
 
+    {{-- ⓘ নিজের তীর, বাংলায় — Laravel-এর ডিফল্ট `links()` "« Previous / Next » / Showing 1 to 50 of 60 results" লিখত,
+         আর সংখ্যাটা উপরে আগেই আছে (৬ অক্টোবর ২০২৬-এর বিক্রয় ধারার পরীক্ষা, গ্রাহকের খাতা) --}}
     @if ($rows->hasPages())
-        <span class="ms-auto">{{ $rows->links() }}</span>
+        <nav data-pager-links class="ms-auto flex items-center gap-2 text-xs" aria-label="{{ __('pager.label') }}">
+            @if ($rows->onFirstPage())
+                <span class="rounded-(--radius-field) border border-(--color-border) px-2.5 py-1 text-(--color-ink-muted) opacity-50">‹ {{ __('pager.previous') }}</span>
+            @else
+                <a href="{{ $rows->previousPageUrl() }}" rel="prev"
+                   class="rounded-(--radius-field) border border-(--color-border) px-2.5 py-1 text-(--color-link) hover:bg-(--color-surface-hover)">‹ {{ __('pager.previous') }}</a>
+            @endif
+            <span class="tabular text-(--color-ink-muted)">{{ __('pager.page_of', ['page' => $rows->currentPage(), 'last' => $rows->lastPage()]) }}</span>
+            @if ($rows->hasMorePages())
+                <a href="{{ $rows->nextPageUrl() }}" rel="next"
+                   class="rounded-(--radius-field) border border-(--color-border) px-2.5 py-1 text-(--color-link) hover:bg-(--color-surface-hover)">{{ __('pager.next') }} ›</a>
+            @else
+                <span class="rounded-(--radius-field) border border-(--color-border) px-2.5 py-1 text-(--color-ink-muted) opacity-50">{{ __('pager.next') }} ›</span>
+            @endif
+        </nav>
     @endif
 </div>

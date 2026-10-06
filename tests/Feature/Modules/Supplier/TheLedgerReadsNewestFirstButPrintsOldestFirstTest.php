@@ -15,7 +15,11 @@ use Illuminate\Support\Collection;
 use Tests\TestCase;
 
 /**
- * পর্দায় নতুন আগে, কাগজে ব্যাংকের খাতার মতো।
+ * ⭐ ৬ অক্টোবর ২০২৬ থেকে পর্দাও কাগজের মতো তারিখের ক্রমে, আর খুললে শেষ পাতা — মালিকের বাছাই, আন্তর্জাতিক খাতার নিয়ম
+ * ([[PartyLedger::page()]] `openAtEnd`)। ⓘ নিচের ২১ সেপ্টেম্বরের নিয়ম ("পর্দায় নতুন আগে") তাতে বদলেছে; লক্ষ্য একই —
+ * নতুন লেনদেন খুললেই চোখের সামনে — এখন শেষ পাতার নিচে। জেরের দাবি আগের মতোই সবচেয়ে দামি।
+ *
+ * (আগের লেখা) পর্দায় নতুন আগে, কাগজে ব্যাংকের খাতার মতো।
  *
  * ── ⭐ মালিকের নিয়ম, ২১ সেপ্টেম্বর ২০২৬ ──────────────────────────────
  * *"Transactions dekhar somoy ajker date sobar upore ... but print er
@@ -78,7 +82,7 @@ final class TheLedgerReadsNewestFirstButPrintsOldestFirstTest extends TestCase
         }
     }
 
-    public function test_the_screen_shows_the_newest_row_first(): void
+    public function test_the_screen_reads_by_date_with_the_newest_row_last(): void
     {
         $rows = $this->rows();
 
@@ -86,11 +90,8 @@ final class TheLedgerReadsNewestFirstButPrintsOldestFirstTest extends TestCase
             $this->markTestSkipped('এই সরবরাহকারীর দুইটা লেনদেন নেই — ক্রম মাপা যায় না।');
         }
 
-        $first = $rows->first()->trx_date;
-        $last = $rows->last()->trx_date;
-
-        $this->assertGreaterThanOrEqual($last, $first,
-            '⛔ পর্দায় পুরনো সারিটা উপরে — মালিক চান আজকেরটা উপরে।');
+        $this->assertLessThanOrEqual($rows->last()->trx_date, $rows->first()->trx_date,
+            '⛔ পর্দায় নতুন সারি উপরে — মালিক (৬ অক্টোবর ২০২৬) চান তারিখের ক্রম, নতুনটা নিচে।');
     }
 
     public function test_the_print_order_is_the_bank_order(): void

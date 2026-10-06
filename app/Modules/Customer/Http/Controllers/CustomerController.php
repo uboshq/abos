@@ -226,24 +226,12 @@ class CustomerController extends Controller implements HasMiddleware
          * ⓘ `net_balance` খাতার নিয়মে (ডেবিট − ক্রেডিট), পর্দা লেখে "(Dr)/(Cr)" ([[Money::drCr()]]);
          * `running_balance` পাতার পুরনো অর্থেই থাকে — অন্য কোনো পড়ুয়া যেন না ভাঙে।
          */
-        $entries = PartyLedger::page($ledger, $request);
+        // ⭐ তারিখের ক্রমে, খুললে শেষ পাতা — মালিক, ৬ অক্টোবর ২০২৬ ([[PartyLedger::page()]])
+        $entries = PartyLedger::page($ledger, $request, openAtEnd: true);
 
         $entries->getCollection()->each(function (LedgerEntry $entry) {
             $entry->running_balance = $entry->net_balance;
         });
-
-        /*
-         * ⭐ পর্দায় নতুন আগে, কাগজে ব্যাংকের খাতার মতো — ২১ সেপ্টেম্বর ২০২৬।
-         *
-         * ⓘ মালিকের নিয়ম, আর সরবরাহকারীর পাতার হুবহু একই কারণ:
-         * পর্দায় মানুষ দেখেন **শেষ কী হলো**, কাগজে মেলান **শুরু থেকে**।
-         *
-         * ⚠️ উল্টানোটা চলমান জের গোনার **পরে** — কোয়েরিতে উল্টে দিলে
-         * প্রতিটা সারির জের মিথ্যা হত। ⓘ `?ledger=asc` কাগজের ক্রম।
-         */
-        if ($request->query('ledger') !== 'asc') {
-            $entries->setCollection($entries->getCollection()->reverse()->values());
-        }
 
         /*
          * খোলা ব্যালেন্সের কৃত্রিম সারিটা এখানে আর নেই।

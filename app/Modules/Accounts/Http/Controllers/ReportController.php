@@ -14,6 +14,7 @@ use App\Modules\Accounts\Reports\ChequeReports;
 use App\Modules\Accounts\Reports\BranchesSideBySideReport;
 use App\Modules\Accounts\Reports\ExpenseAnalysisReport;
 use App\Modules\Accounts\Reports\MonthlyCashReport;
+use App\Modules\Accounts\Reports\PartyLedgerReports;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
@@ -156,6 +157,15 @@ class ReportController extends Controller implements HasMiddleware
             // ⭐ "সব শাখা"-তে শাখা ধরে ভাগ + সর্বমোট — ভাগ হবে কি না ইঞ্জিন ঠিক করে ([[ReportEngine::branchPlan()]])
             byBranch: true,
         );
+
+        /*
+         * ⭐ পক্ষের খাতা (গ্রাহক, সরবরাহকারী, ব্যক্তি) — তারিখের ক্রমে, খুললে শেষ পাতা (মালিক, ৬ অক্টোবর ২০২৬; গ্রাহক আর
+         * সরবরাহকারীর পাতার একই নিয়ম, [[PartyLedger::page()]])। ⓘ `?page=` না থাকলে তবেই; নতুন লেনদেন চোখের সামনে।
+         */
+        if (in_array($key, [PartyLedgerReports::CUSTOMER, PartyLedgerReports::SUPPLIER, PartyLedgerReports::PERSON], true)
+            && ! $request->has('page') && $result->lastPage() > 1) {
+            $result = $this->reports->run($key, $request->only($definition->requestKeys()), page: $result->lastPage(), byBranch: true);
+        }
 
         return view('accounts::report.show', [
             'menu' => $this->menu->forUser($request->user()),

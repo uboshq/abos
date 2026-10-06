@@ -230,34 +230,12 @@ class SupplierController extends Controller implements HasMiddleware
          * ⓘ `net_balance` খাতার নিয়মে (ডেবিট − ক্রেডিট), পর্দা লেখে "(Dr)/(Cr)" ([[Money::drCr()]]);
          * `running_balance` পাতার পুরনো অর্থেই থাকে — অন্য কোনো পড়ুয়া যেন না ভাঙে।
          */
-        $entries = PartyLedger::page($ledger, $request);
+        // ⭐ তারিখের ক্রমে, খুললে শেষ পাতা — মালিক, ৬ অক্টোবর ২০২৬ ([[PartyLedger::page()]])
+        $entries = PartyLedger::page($ledger, $request, openAtEnd: true);
 
         $entries->getCollection()->each(function (LedgerEntry $entry) {
             $entry->running_balance = bcmul($entry->net_balance, '-1', 4);
         });
-
-        /*
-         * ⭐ পর্দায় নতুন আগে, কাগজে ব্যাংকের খাতার মতো — ২১ সেপ্টেম্বর ২০২৬।
-         *
-         * ── ⓘ মালিকের নিয়ম ─────────────────────────────────────────
-         * *"Transactions dekhar somoy ajker date sobar upore ... but
-         * print er somoy ba printe dile bank er moto ledger dekhabe"*।
-         *
-         * ⭐ আর দুইটা আলাদা হওয়াই ঠিক: পর্দায় মানুষ দেখেন **শেষ কী
-         * হলো**, কাগজে মেলান **শুরু থেকে**। ব্যাংকের স্টেটমেন্টও তাই।
-         *
-         * ── ⚠️ উল্টানোটা গোনার **পরে**, আর সেটাই আসল কথা ─────────────
-         * ⛔ কোয়েরিতে `orderByDesc` বসালে চলমান জেরটা উল্টো দিক থেকে
-         * গুনত আর প্রতিটা সারির জের মিথ্যা হত। ⓘ তাই গোনা আগের মতোই
-         * পুরনো → নতুন, কেবল **দেখানোর ক্রমটা** উল্টে দেওয়া হয় —
-         * সংখ্যাগুলো সারির সাথেই থাকে।
-         *
-         * ⓘ `?ledger=asc` দিলে কাগজের ক্রম ফিরে আসে; ছাপার পথ ওটাই
-         * ব্যবহার করে।
-         */
-        if ($request->query('ledger') !== 'asc') {
-            $entries->setCollection($entries->getCollection()->reverse()->values());
-        }
 
         return view('supplier::show', [
             'menu' => $this->menu->forUser($request->user()),
