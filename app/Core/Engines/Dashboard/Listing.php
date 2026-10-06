@@ -31,6 +31,15 @@ final class Listing
         public readonly Collection $rows,
         public readonly string $empty,
         public readonly ?string $href = null,
+        /*
+         * শিরোনামের নিচে ছোট এক লাইন — যেমন "সময়কাল: 26/09/2026 – আজ পর্যন্ত"। ঐচ্ছিক।
+         */
+        public readonly ?string $note = null,
+        /*
+         * ⭐ হোমের "হাতে ও ব্যাংকে মোট" বাক্সের রূপে — গাঢ় সবুজাভ, পুরো সারি জুড়ে ([[x-dashboard.hero-listing]])।
+         * মালিক, ৬ অক্টোবর ২০২৬: প্রিন্সিপালের কমিশনের জন্য *"main dashboard-এর মতো একটা same box"*।
+         */
+        public readonly bool $hero = false,
     ) {
         if ($columns === []) {
             throw new InvalidArgumentException("Listing '{$label}' has no columns.");

@@ -230,27 +230,42 @@ final class APrincipalEarnsOnWhatTheDepotCollectsTest extends TestCase
         $shown = $listing->rows->firstWhere('supplier_id', $this->principal->id);
         $cells = collect($listing->columns)->mapWithKeys(fn (array $c) => [$c['key'] => ($c['render'])($shown)]);
 
-        // ⓘ মালিকের কলাম, ৬ অক্টোবর ২০২৬: নাম · মোট ইনফ্লো · কমিশন · প্রিন্সিপালকে পাঠানো · বাকি ইনফ্লো · মন্তব্য/সময়কাল
-        $this->assertSame(['principal', 'inflow', 'commission', 'paid', 'balance', 'remarks'], array_keys($cells->all()));
+        // ⓘ মালিকের বাক্স, ৬ অক্টোবর ২০২৬: প্রিন্সিপাল · মোট ইনফ্লো · কমিশন · প্রিন্সিপালকে পাঠানো · বাকি ইনফ্লো (কথায়);
+        //   সময়কাল শিরোনামের নিচে, এক চক্রে; হোমের টাকার বাক্সের রূপে
+        $this->assertTrue($listing->hero, '⛔ বাক্সটা হোমের টাকার বাক্সের রূপে নয়।');
+        $this->assertSame(['principal', 'inflow', 'commission', 'paid', 'balance'], array_keys($cells->all()));
         $this->assertSame(Money::format($row['commission']), $cells['commission']);
         $this->assertSame('1,00,000.00', $cells['inflow']);
         $this->assertSame('3,850.00', $cells['commission']);
         $this->assertSame('20,000.00', $cells['paid']);
-        $this->assertSame('76,150.00', $cells['balance']);
-        $this->assertSame('দিতে হবে ৳76,150.00 · '.$row['period'], $cells['remarks']);
+        $this->assertSame('দিতে হবে: 76,150.00', $cells['balance']);
+        $this->assertSame('সময়কাল: 02/10/2026 – আজ পর্যন্ত', $listing->note, '⛔ শিরোনামের নিচে চলতি চক্রের সময়কাল নেই।');
+
+        // ⓘ নাম: কোড নয়; সংক্ষিপ্ত নাম থাকলে সেটা, না থাকলে নাম
+        $this->assertStringNotContainsString((string) $this->principal->code, $cells['principal'], '⛔ প্রিন্সিপালের নামে কোড।');
+        $this->assertSame($this->principal->name_bn ?: $this->principal->name_en, $cells['principal']);
+        $this->principal->forceFill(['short_name' => 'Star Line'])->save();
+        $this->assertSame('Star Line', $this->cellsNow()['principal'], '⛔ সংক্ষিপ্ত নাম বসিয়েও পুরো নাম দেখাল।');
 
         $this->get(route('module.dashboard', ['module' => 'supplier']))->assertOk()
-            ->assertSee('দিতে হবে ৳76,150.00')
+            ->assertSee('data-hero-listing', false)
+            ->assertSee('দিতে হবে: 76,150.00')
+            ->assertSee('Star Line')
             ->assertSee('প্রিন্সিপালকে পাঠানো');
 
-        // ⓘ উল্টো দিক — বাকি ইনফ্লোতে চিহ্ন নেই, কে কাকে দেবে তা মন্তব্যে কথায়
+        // ⓘ উল্টো দিক — বাকি ইনফ্লো কথায়, খালি বিয়োগ নয়
         $this->pay($this->principal, '100000', '2026-10-04');
+        $this->assertSame('কোম্পানির কাছে পাব: 23,850.00', $this->cellsNow()['balance'], '⛔ বাকি ইনফ্লো খালি বিয়োগ চিহ্নে।');
+    }
+
+    /** @return array<string, string> */
+    private function cellsNow(): array
+    {
         $listing = collect(SupplierDashboard::dashboard()->listings)
             ->first(fn (Listing $l) => $l->label === __('supplier::principal.dashboard_title'));
         $shown = $listing->rows->firstWhere('supplier_id', $this->principal->id);
-        $cells = collect($listing->columns)->mapWithKeys(fn (array $c) => [$c['key'] => ($c['render'])($shown)]);
-        $this->assertSame('23,850.00', $cells['balance'], '⛔ বাকি ইনফ্লো খালি বিয়োগ চিহ্নে।');
-        $this->assertStringStartsWith('কোম্পানির কাছে পাব ৳23,850.00', $cells['remarks']);
+
+        return collect($listing->columns)->mapWithKeys(fn (array $c) => [$c['key'] => ($c['render'])($shown)])->all();
     }
 
     public function test_only_the_supplier_edit_key_sets_the_principal_fields(): void

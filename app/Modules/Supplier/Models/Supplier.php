@@ -42,6 +42,8 @@ class Supplier extends Model implements Drillable
 
     protected $fillable = [
         'company_id', 'branch_id', 'code', 'name_en', 'name_bn',
+        // ⭐ সংক্ষিপ্ত নাম — ড্যাশবোর্ড ও রিপোর্টে পুরো নামের বদলে (মালিক, ৬ অক্টোবর ২০২৬)
+        'short_name',
         'phone', 'email', 'address_en', 'address_bn',
         'contact_person', 'contact_phone',
         'party_type_id', 'payment_term_id', 'bin', 'tin',

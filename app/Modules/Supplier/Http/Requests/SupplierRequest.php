@@ -35,6 +35,8 @@ class SupplierRequest extends FormRequest
 
             'name_en' => ['required', 'string', 'max:191'],
             'name_bn' => ['nullable', 'string', 'max:191'],
+            // ⭐ সংক্ষিপ্ত নাম — ড্যাশবোর্ড ও রিপোর্টে পুরো নামের বদলে (মালিক, ৬ অক্টোবর ২০২৬)
+            'short_name' => ['nullable', 'string', 'max:60'],
 
             'phone' => ['nullable', 'string', 'max:32'],
             /*
@@ -124,6 +126,7 @@ class SupplierRequest extends FormRequest
             'code' => __('supplier::field.code'),
             'name_en' => __('supplier::field.name_en'),
             'name_bn' => __('supplier::field.name_bn'),
+            'short_name' => __('supplier::field.short_name'),
             'phone' => __('supplier::field.phone'),
             'email' => __('supplier::field.email'),
             'bin' => __('supplier::field.bin'),

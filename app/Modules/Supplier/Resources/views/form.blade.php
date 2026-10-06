@@ -127,6 +127,13 @@
                             :required="$requireBangla"
                             :hint="__('supplier::message.bn_name_hint')" />
             </div>
+
+            {{-- ⭐ সংক্ষিপ্ত নাম — ড্যাশবোর্ড ও রিপোর্টে পুরো নামের বদলে (Star Line), মালিক, ৬ অক্টোবর ২০২৬ --}}
+            <div class="mt-3 grid gap-3 sm:grid-cols-2">
+                <x-ui.field name="short_name" :label="__('supplier::field.short_name')"
+                            :value="old('short_name', $supplier->short_name)" maxlength="60"
+                            :hint="__('supplier::message.short_name_hint')" />
+            </div>
         </section>
 
         {{-- ── সারি ৩ — ঠিকানা ────────────────────────────────────────

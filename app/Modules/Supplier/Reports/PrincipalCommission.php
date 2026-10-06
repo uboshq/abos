@@ -217,7 +217,7 @@ final class PrincipalCommission
             ->whereNotNull('suppliers.cycle_close_day')
             ->tap(ReportEngine::branchWall($f, 'suppliers.principal_branch_id'))
             ->orderBy('suppliers.code')
-            ->select(['suppliers.id', 'suppliers.code', 'suppliers.name_en', 'suppliers.name_bn', 'suppliers.principal_branch_id',
+            ->select(['suppliers.id', 'suppliers.code', 'suppliers.name_en', 'suppliers.name_bn', 'suppliers.short_name', 'suppliers.principal_branch_id',
                 'suppliers.commission_basis', 'suppliers.commission_rate', 'suppliers.cycle_start_day', 'suppliers.cycle_close_day'])
             ->get();
 
@@ -251,7 +251,8 @@ final class PrincipalCommission
 
             $rows[] = [
                 'supplier_id' => (int) $p->id,
-                'supplier_name' => $p->code.' — '.($bn && filled($p->name_bn) ? $p->name_bn : $p->name_en),
+                // ⭐ সংক্ষিপ্ত নাম, না থাকলে নাম — কোড নয় (মালিক, ৬ অক্টোবর ২০২৬: *"SUP-0002 = code দেওয়ার দরকার নাই"*)
+                'supplier_name' => self::shortName($p->short_name, $p->name_bn, (string) $p->name_en, $bn),
                 'party_type_literal' => Supplier::drillSourceType(),
                 'branch_name' => $branches->get($p->principal_branch_id)?->name() ?? '—',
                 'period' => DateFormat::format($from).' – '.DateFormat::format($to),
@@ -267,6 +268,34 @@ final class PrincipalCommission
         }
 
         return $rows;
+    }
+
+    /**
+     * প্রিন্সিপাল কোন নামে — সংক্ষিপ্ত নাম ("Star Line"), না থাকলে বাংলা নাম, তাও না থাকলে ইংরেজি। ⛔ কোড কখনো নয়।
+     */
+    public static function shortName(?string $short, ?string $bn, string $en, bool $bangla = true): string
+    {
+        if (filled($short)) {
+            return trim((string) $short);
+        }
+
+        return $bangla && filled($bn) ? (string) $bn : $en;
+    }
+
+    /**
+     * চক্রের সময়কাল, এ পর্যন্ত — "26/09/2026 – আজ পর্যন্ত"; অঙ্কগুলো চক্রের শুরু থেকে আজ পর্যন্তই।
+     *
+     * ⓘ আজ চক্রের বাইরে (দুই চক্রের মাঝের ফাঁকে, বা মাস বেছে পুরনো চক্র) হলে পুরো সময়কালই — "আজ পর্যন্ত" তখন মিথ্যা।
+     */
+    public static function soFar(string $from, string $to, ?Carbon $today = null): string
+    {
+        $today = ($today ?? Carbon::today())->copy()->startOfDay();
+
+        if ($today->betweenIncluded(Carbon::parse($from)->startOfDay(), Carbon::parse($to)->startOfDay())) {
+            return (string) __('supplier::principal.so_far', ['from' => DateFormat::format($from)]);
+        }
+
+        return DateFormat::format($from).' – '.DateFormat::format($to);
     }
 
     /** হার পড়ার রূপে — ৩.৮৫০ → ৩.৮৫, ৪.০০০ → ৪ */

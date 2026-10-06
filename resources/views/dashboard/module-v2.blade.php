@@ -76,6 +76,13 @@
             </div>
         @endif
 
+        {{-- ⭐ গাঢ় বাক্সের তালিকা — হোমের "হাতে ও ব্যাংকে মোট"-এর রূপে, পুরো সারি জুড়ে, সূচকের ঠিক নিচে (মালিক, ৬ অক্টোবর ২০২৬) --}}
+        @foreach ($dashboard->listings as $listing)
+            @if ($listing->hero)
+                <x-dashboard.hero-listing :listing="$listing" />
+            @endif
+        @endforeach
+
         {{-- ── চার্ট — তিনটা করে; সময়ের ধারা দুই ঘর জুড়ে ─────────── --}}
         @if ($dashboard->panels !== [])
             <div class="grid gap-4 xl:grid-cols-3">
@@ -98,9 +105,9 @@
         @endif
 
         {{-- ── তালিকা ──────────────────────────────────────────────── --}}
-        @if ($dashboard->listings !== [])
+        @if (collect($dashboard->listings)->reject(fn ($l) => $l->hero)->isNotEmpty())
             <div class="grid gap-4 xl:grid-cols-2">
-                @foreach ($dashboard->listings as $listing)
+                @foreach (collect($dashboard->listings)->reject(fn ($l) => $l->hero) as $listing)
                     <section data-boxed class="min-w-0 overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
                         <h2 class="flex items-baseline gap-2 border-b border-(--color-border) px-4 py-3 text-sm font-semibold text-(--color-ink)">
                             {{ $listing->label }}

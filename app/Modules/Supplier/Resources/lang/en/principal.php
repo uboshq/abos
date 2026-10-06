@@ -42,4 +42,8 @@ return [
     'dash_sent' => 'Sent to principal',
     'dash_balance' => 'Balance inflow',
     'dash_remarks' => 'Remarks / period',
+    'dash_to_pay' => 'To pay: :amount',
+    'dash_to_get' => 'Due from the company: :amount',
+    'dash_period' => 'Period: :period',
+    'so_far' => ':from – to date',
 ];

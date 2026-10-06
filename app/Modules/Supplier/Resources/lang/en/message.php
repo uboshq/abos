@@ -6,6 +6,7 @@ return [
     'code_auto' => 'Leave blank and the code will be filled in.',
 
     'bn_name_hint' => 'Without it the English name is shown everywhere.',
+    'short_name_hint' => 'Shown on dashboards and reports instead of the full name',
     'contact_hint' => 'At a large supplier, the office number gets you nowhere.',
     'bin_hint' => 'Needed to withhold VAT at source on purchases.',
 

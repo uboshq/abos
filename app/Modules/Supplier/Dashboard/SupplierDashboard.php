@@ -14,6 +14,7 @@ use App\Core\Support\Money;
 use App\Modules\Accounts\Services\AccountsFacts;
 use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Supplier\Models\Supplier;
+use App\Modules\Supplier\Reports\PrincipalCommission;
 use App\Modules\Supplier\Reports\PrincipalCommissionReport;
 use Illuminate\Support\Carbon;
 
@@ -142,7 +143,7 @@ final class SupplierDashboard implements ProvidesDashboard
      * ⓘ নিজের হিসাব নয়: রিপোর্টটাই চালানো হয় ([[PrincipalCommissionReport]]), তাই পর্দা আর রিপোর্ট কখনো দুই কথা বলে
      * না; শাখার দেয়াল আর হেডারে বাছা শাখাও রিপোর্টের। ⛔ রিপোর্টের চাবি (`supplier.report`) ছাড়া তালিকাটাই নেই, আর
      * কোনো প্রিন্সিপাল বসানো না থাকলেও নেই — ফাঁকা বাক্স রোজ চোখে পড়ার কিছু নয়।
-     * ⓘ জের রিপোর্টের কলামের নিজের লেখায় — "দিতে হবে ৳…" / "কোম্পানির কাছে পাব ৳…" ([[ReportColumn::signed()]])।
+     * ⓘ হোমের "হাতে ও ব্যাংকে মোট" বাক্সের রূপে ([[x-dashboard.hero-listing]])।
      *
      * @return list<Listing>
      */
@@ -163,33 +164,58 @@ final class SupplierDashboard implements ProvidesDashboard
             return [];
         }
 
-        $balance = collect($result->report->columns)->firstWhere('key', 'balance');
+        /*
+         * ⭐ মালিকের বাক্স, ৬ অক্টোবর ২০২৬: *"'হাতে ও ব্যাংকে মোট' main dashboard-এর মতো একটা same box … প্রিন্সিপাল, মোট
+         * ইনফ্লো, কমিশন, প্রিন্সিপালকে পাঠানো, বাকি ইনফ্লো"* — উদাহরণ *"Star Line | 12,04,346.00 | 48,173.84 | 0.00 |
+         * দিতে হবে: 11,56,172.16"*।
+         *   · নাম = সংক্ষিপ্ত নাম, না থাকলে নাম; কোড নয় (রিপোর্টের সারিতেই, [[PrincipalCommission::shortName()]])
+         *   · বাকি ইনফ্লো = অংশ − পাঠানো (রিপোর্টের জের), কথায়: "দিতে হবে: …" / "কোম্পানির কাছে পাব: …" — খালি বিয়োগ নয়;
+         *     আলাদা মন্তব্যের কলাম আর নেই (de2353dc-এরটা এখানে মিশে গেল)
+         *   · সময়কাল শিরোনামের নিচে, সবার চক্র এক হলে; আলাদা হলে প্রতিটা সারিতে একটা কলাম
+         */
+        $periods = collect($result->rows)
+            ->map(fn (array $row) => PrincipalCommission::soFar((string) $row['period_from'], (string) $row['period_to']))
+            ->unique();
+        $oneCycle = $periods->count() === 1;
 
         return [new Listing(
             label: __('supplier::principal.dashboard_title'),
-            /*
-             * ⓘ মালিকের কলাম, ৬ অক্টোবর ২০২৬: *"প্রিন্সিপালের নাম, cumulative inflow, commission, send inflow to principal,
-             * balance inflow, Remarks"* — বাকি ইনফ্লো = অংশ − পাঠানো (রিপোর্টের জের), অঙ্কে চিহ্ন ছাড়া; কে কাকে দেবে তা
-             * মন্তব্যে কথায় ("দিতে হবে ৳…" / "কোম্পানির কাছে পাব ৳…"), সাথে চক্রের সময়কাল।
-             */
             columns: [
                 ['key' => 'principal', 'label' => __('supplier::principal.principal'),
                     'render' => fn (array $row) => $row['supplier_name']],
+                ...($oneCycle ? [] : [['key' => 'period', 'label' => __('supplier::principal.period'), 'width' => '13rem',
+                    'render' => fn (array $row) => PrincipalCommission::soFar((string) $row['period_from'], (string) $row['period_to'])]]),
                 ['key' => 'inflow', 'label' => __('supplier::principal.dash_inflow'), 'width' => '9rem',
                     'render' => fn (array $row) => Money::format($row['inflow'])],
                 ['key' => 'commission', 'label' => __('supplier::principal.commission'), 'width' => '8rem',
                     'render' => fn (array $row) => Money::format($row['commission'])],
                 ['key' => 'paid', 'label' => __('supplier::principal.dash_sent'), 'width' => '9rem',
                     'render' => fn (array $row) => Money::format($row['paid'])],
-                ['key' => 'balance', 'label' => __('supplier::principal.dash_balance'), 'width' => '9rem',
-                    'render' => fn (array $row) => Money::format(ltrim((string) $row['balance'], '-'))],
-                ['key' => 'remarks', 'label' => __('supplier::principal.dash_remarks'), 'width' => '16rem',
-                    'render' => fn (array $row) => $balance->signed($row['balance']).' · '.$row['period']],
+                ['key' => 'balance', 'label' => __('supplier::principal.dash_balance'), 'width' => '14rem',
+                    'render' => fn (array $row) => self::owed((string) $row['balance'])],
             ],
             rows: collect($result->rows),
             empty: __('supplier::principal.dashboard_empty'),
             href: route('supplier.report.show', ['slug' => 'principal-commission']),
+            note: $oneCycle ? __('supplier::principal.dash_period', ['period' => $periods->first()]) : null,
+            hero: true,
         )];
+    }
+
+    /**
+     * বাকি ইনফ্লো কথায় — "দিতে হবে: 11,56,172.16" (জের ধনাত্মক: আমরা প্রিন্সিপালকে দেব) বা "কোম্পানির কাছে পাব: …"
+     * (ঋণাত্মক: বেশি পাঠানো হয়ে গেছে)। ⛔ খালি বিয়োগ চিহ্ন কখনো নয়; শূন্য হলে কেবল অঙ্ক।
+     */
+    private static function owed(string $balance): string
+    {
+        $rounded = Money::round($balance, 2);
+        $amount = Money::format(ltrim($rounded, '-'));
+
+        return match (bccomp($rounded, '0', 2)) {
+            1 => (string) __('supplier::principal.dash_to_pay', ['amount' => $amount]),
+            -1 => (string) __('supplier::principal.dash_to_get', ['amount' => $amount]),
+            default => $amount,
+        };
     }
 
     /**

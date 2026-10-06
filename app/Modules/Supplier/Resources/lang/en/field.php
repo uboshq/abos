@@ -10,6 +10,7 @@ return [
     'supplier_name_bn' => 'Supplier name (Bangla)',
     'name_en' => 'Name (English)',
     'name_bn' => 'Name (Bangla)',
+    'short_name' => 'Short name',
     'supplier' => 'Supplier',
 
     'phone' => 'Mobile',
