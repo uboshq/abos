@@ -638,6 +638,22 @@ final class ReportEngine
         $filters['branch_id'] = $filters['branch_id'] ?? null;
 
         /*
+         * ⛔ শাখা একটাই সংখ্যা — অডিট ⛔৭ (৬ অক্টোবর ২০২৬)। `branch_id[]=5` এলে নিচের নাগালের যাচাই `(int) array` = 1 দেখত,
+         * অথচ কোয়েরি `where(col, [5])` শাখা ৫ পড়ত: শাখা ১-এ সীমিত মানুষ যেকোনো শাখার রিপোর্ট খুলতে পারতেন।
+         * ⓘ তাই অ্যারে, শূন্য, ঋণাত্মক বা লেখা — সব ফেরত; সংখ্যা হলে পূর্ণসংখ্যায় বসে, যাচাই আর কোয়েরি একই শাখা দেখে।
+         */
+        // ⓘ ০ বা খালি মানে আগের মতোই "শাখা বাছা নেই"
+        if ($filters['branch_id'] !== null && $filters['branch_id'] !== '' && $filters['branch_id'] !== 0 && $filters['branch_id'] !== '0') {
+            if (! is_scalar($filters['branch_id']) || ! ctype_digit((string) $filters['branch_id'])) {
+                throw ValidationException::withMessages(['branch_id' => __('validation.branch_out_of_reach')]);
+            }
+
+            $filters['branch_id'] = (int) $filters['branch_id'];
+        } else {
+            $filters['branch_id'] = null;
+        }
+
+        /*
          * ⛔ শাখার সীমা — পর্দা, ফোন, নির্ধারিত ফাইল, সবার একটাই দরজা এটা।
          *
          * ⓘ নির্ধারিত ফাইল মালিকের নামে চলে (runner লগইন করায়), তাই
