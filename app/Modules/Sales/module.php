@@ -914,6 +914,8 @@ return [
             \App\Modules\Sales\Listeners\MoveTheOrderOnItsSignature::class,
             // ⭐ বাতিল-ইনভয়েস — শেষ সইয়ে পাকা, প্রত্যাখ্যানে বাতিল (৪ অক্টোবর ২০২৬)
             \App\Modules\Sales\Listeners\FinishTheCancellationOnTheLastSignature::class,
+            // ⭐ ফেরত — শেষ সইয়ে পাকা, প্রত্যাখ্যানে বাতিল (বিক্রয় পরিকল্পনা §৬, ৬ অক্টোবর ২০২৬)
+            \App\Modules\Sales\Listeners\FinishTheReturnOnTheLastSignature::class,
         ],
     ],
 

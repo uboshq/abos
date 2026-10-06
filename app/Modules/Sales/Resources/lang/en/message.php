@@ -60,6 +60,8 @@ return [
     'return_updated' => 'The return was updated.',
     'return_confirmed' => 'The goods came back and the customer owes less, together.',
     'return_cancelled' => 'The return was cancelled — both the stock and the ledger went back.',
+    'return_rejected' => 'Signature refused — the return is cancelled.',
+    'return_awaiting' => 'Awaiting signature — on the last one the goods go back to their lot and the customer owes less.',
     'no_returns' => 'No sales returns yet.',
     'return_search' => 'Search by number or customer…',
     'return_note' => 'Against an invoice the rate comes from the invoice. Tick damaged goods — they come into the warehouse but cannot be sold again.',

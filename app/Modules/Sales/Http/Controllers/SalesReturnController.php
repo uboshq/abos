@@ -106,6 +106,9 @@ class SalesReturnController extends Controller implements HasMiddleware
         return view('sales::return.show', [
             'menu' => $this->menu->forUser($request->user()),
             'return' => $return,
+            // ⭐ সইয়ের অপেক্ষা — খসড়া → সই → নিশ্চিত (বিক্রয় পরিকল্পনা §৬, ৬ অক্টোবর ২০২৬)
+            'awaitingSignature' => $return->status === \App\Core\Support\DocumentStatus::DRAFT
+                && app(\App\Core\Engines\Approval\ApprovalEngine::class)->latestFor($return, \App\Modules\Sales\Listeners\FinishTheReturnOnTheLastSignature::ACTION)?->status === \App\Models\Approval::PENDING,
         ]);
     }
 

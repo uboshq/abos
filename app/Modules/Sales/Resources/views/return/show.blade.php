@@ -48,6 +48,9 @@
                 <div>
                     <dt class="text-(--color-ink-muted)">{{ __('sales::field.state') }}</dt>
                     <dd class="mt-0.5"><x-sales::status-badge :document="$return" /></dd>
+                    @if ($awaitingSignature ?? false)
+                        <dd class="mt-1 text-xs font-medium text-(--color-badge-warning-ink)" data-return-awaiting>{{ __('sales::message.return_awaiting') }}</dd>
+                    @endif
                 </div>
             </dl>
         </section>
