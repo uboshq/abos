@@ -251,6 +251,16 @@ final class DeliveryOrderService
         if (! $order->isEditableByWriter()) {
             throw ValidationException::withMessages(['status' => __('sales::delivery_order.locked_after_submit')]);
         }
+
+        /*
+         * ⛔ পুরনো খসড়া DO-ও আর বদলায় না, জমাও হয় না — কোম্পানি বিক্রয় আদেশে চলে গেলে (নকশার ধাপ ১৫, ৬ অক্টোবর ২০২৬)।
+         * ⓘ নতুন DO আগেই বন্ধ ([[create()]], ধাপ ১২); কিন্তু সুইচের আগে লেখা খসড়া জমা দিলে সে DO-র পথে ঢুকত — সুইচের পরে
+         * একই ডিলারের DO আর আদেশ পাশাপাশি। ⭐ জমা হওয়া DO-গুলো (সই, হিসাব, ডিপো, কাউন্টার) আগের মতো নিজের নম্বরে শেষ হয়;
+         * খসড়াটা থামানো ([[stop()]]) যায়, আর মাল চাইলে আদেশ লিখুন।
+         */
+        if ($this->newOnesStopped()) {
+            throw ValidationException::withMessages(['order' => __('sales::delivery_order.draft_now_an_order', ['no' => $order->document_no])]);
+        }
     }
 
     private function assertCustomer(int $customerId): void

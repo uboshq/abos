@@ -22,6 +22,7 @@ return [
     'submit' => 'Submit',
     'keep_draft' => 'Keep as draft',
     'saved' => 'DO saved.',
+    'draft_now_an_order' => ':no is a draft DO — it can no longer be changed or submitted: the company now works with sales orders. Write an order for the goods, and stop this draft.',
     'write_an_order_now' => 'New DOs are closed — write a sales order now. Open DOs finish as before.',
     'new_order' => 'New sales order',
     'submitted' => 'DO submitted — the supervisor will look at it.',

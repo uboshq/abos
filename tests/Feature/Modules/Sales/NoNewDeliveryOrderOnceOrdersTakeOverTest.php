@@ -32,7 +32,7 @@ use Tests\TestCase;
  * ⭐ দাবি (প্রতিটা দরজায় একই মানুষ — সুইচ বন্ধ, চালু, আবার বন্ধ):
  *   বন্ধে লেখা যায়; চালুতে ফর্ম খোলে না, পাঠানো লেখা ফেরে বাংলা কারণসহ, একটা DO-ও বাড়ে না, "নতুন DO" বোতাম নেই;
  *   আবার বন্ধে আগের মতো — সুইচটাই কারণ, অন্য কিছু নয়;
- *   সুইচের আগে লেখা খসড়া চালুর পরেও বদলানো, জমা আর সুপারভাইজারের সই পায়।
+ *   সুইচের আগে লেখা খসড়া চালুর পরে আর বদলায় না, জমাও হয় না (ধাপ ১৫, ৬ অক্টোবর ২০২৬); আগেই জমা হওয়া DO সই পেয়ে নিজের পথে শেষ হয়।
  */
 final class NoNewDeliveryOrderOnceOrdersTakeOverTest extends TestCase
 {
@@ -125,7 +125,7 @@ final class NoNewDeliveryOrderOnceOrdersTakeOverTest extends TestCase
         $this->postJson('/api/v1/sales/delivery-orders', $body)->assertCreated();
     }
 
-    public function test_a_draft_written_before_the_switch_is_still_edited_submitted_and_signed(): void
+    public function test_after_the_switch_an_old_draft_stops_and_a_submitted_do_still_finishes(): void
     {
         $supervisor = $this->staff(['sales.do.view', 'approval.decide']);
         $flow = ApprovalFlow::query()->create([
@@ -140,17 +140,25 @@ final class NoNewDeliveryOrderOnceOrdersTakeOverTest extends TestCase
 
         $sr = $this->staff(['sales.do.view', 'sales.do.create']);
         Sanctum::actingAs($sr, [AuthController::APP]);
-        $made = $this->postJson('/api/v1/sales/delivery-orders', [
-            'customer' => (string) $this->dealer->public_id,
-            'lines' => [['product' => (string) $this->product->public_id, 'qty' => '5']],
-        ])->assertCreated()->json();
-
-        $this->replaceDo(true);
-        $this->putJson('/api/v1/sales/delivery-orders/'.$made['id'], ['lines' => [['product' => (string) $this->product->public_id, 'qty' => '6']]])
-            ->assertOk();
+        $line = ['lines' => [['product' => (string) $this->product->public_id, 'qty' => '5']]];
+        $draft = $this->postJson('/api/v1/sales/delivery-orders', ['customer' => (string) $this->dealer->public_id, ...$line])->assertCreated()->json();
+        $made = $this->postJson('/api/v1/sales/delivery-orders', ['customer' => (string) $this->dealer->public_id, ...$line])->assertCreated()->json();
         $this->postJson('/api/v1/sales/delivery-orders/'.$made['id'].'/submit')->assertOk();
         $order = DeliveryOrder::query()->where('public_id', $made['id'])->firstOrFail();
-        $this->assertSame(DeliveryOrderStatus::SUPERVISOR_PENDING, $order->status, '⛔ সুইচের পরে খোলা খসড়া জমা হলো না।');
+        $this->assertSame(DeliveryOrderStatus::SUPERVISOR_PENDING, $order->status, 'প্রস্তুতিটাই ভুল — সুইচের আগে জমা হলো না।');
+
+        /*
+         * ⛔ সুইচের পরে পুরনো খসড়া আর বদলায় না, জমাও হয় না — নকশার ধাপ ১৫, সমন্বয়কের সিদ্ধান্ত ৬ অক্টোবর ২০২৬ (মালিকের ৪ অক্টোবরের
+         * "পুরনো নিয়ম কিছু থাকবে না")। ⓘ আগে (ধাপ ১২) এই খসড়াও জমা হত — তখন একই ডিলারের DO আর আদেশ পাশাপাশি চলত।
+         */
+        $this->replaceDo(true);
+        $this->putJson('/api/v1/sales/delivery-orders/'.$draft['id'], ['lines' => [['product' => (string) $this->product->public_id, 'qty' => '6']]])
+            ->assertStatus(422)->assertJsonValidationErrors('order');
+        $this->postJson('/api/v1/sales/delivery-orders/'.$draft['id'].'/submit')->assertStatus(422)->assertJsonValidationErrors('order');
+        $this->assertSame(DeliveryOrderStatus::DRAFT, DeliveryOrder::query()->where('public_id', $draft['id'])->value('status'),
+            '⛔ সুইচের পরে পুরনো খসড়া DO জমা হয়ে গেল।');
+
+        // ⭐ যা আগেই জমা — সে নিজের পথে শেষ হয়
 
         Sanctum::actingAs($supervisor, [AuthController::APP]);
         $approval = $this->getJson('/api/v1/sales/delivery-orders/'.$made['id'])->assertOk()->json('approval_id');
