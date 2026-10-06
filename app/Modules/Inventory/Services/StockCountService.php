@@ -139,6 +139,27 @@ final class StockCountService
                     ]);
                 }
 
+                /*
+                 * ⛔ পথে থাকা বদলির মাল গোনা যায় না — পুরো ERP অডিট ⛔৭, ৬ অক্টোবর ২০২৬।
+                 * ⓘ পাঠানোয় তাক কমে না (মাল আটকে থাকে, [[StockTransferService::dispatch()]]), অথচ মালটা ট্রাকে। তখন গুনলে
+                 * খাতা বলত তাকে আছে, হাতে মিলত না — মিথ্যা ঘাটতি, আর মেনে নিলে সেটা খরচে। ⚠️ কোন লট গেছে তা জানা যায় কেবল
+                 * পৌঁছানোর দিন, তাই বাদ দিয়ে গোনা যায় না — পৌঁছানো পর্যন্ত থামা।
+                 */
+                $onTheWay = \App\Modules\Inventory\Models\StockTransfer::query()
+                    ->where('from_warehouse_id', $warehouse->id)
+                    ->where('status', DocumentStatus::CONFIRMED)
+                    ->whereHas('lines', fn ($q) => $q->where('product_id', $product->id))
+                    ->value('document_no');
+
+                if ($onTheWay !== null) {
+                    throw ValidationException::withMessages([
+                        'lines' => __('inventory::validation.count_while_on_the_way', [
+                            'product' => $product->name(),
+                            'transfer' => $onTheWay,
+                        ]),
+                    ]);
+                }
+
                 $bookQty = $lot !== null
                     ? $this->adjustments->lotFloor($lot, $warehouse)
                     : $this->stock->floorQty($product, $warehouse);
