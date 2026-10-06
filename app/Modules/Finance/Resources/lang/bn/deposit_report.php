@@ -38,4 +38,10 @@ return [
     'overdue' => 'বকেয়া',
     'instalments_summary' => 'বকেয়া কিস্তি',
     'instalments_text' => 'বকেয়া ৳:overdue (সইয়ের অপেক্ষায় ৳:waiting)',
+
+    // গ — ঘণ্টির খবর
+    'notice_soon' => ':institution-এর :document — মেয়াদ এই সপ্তাহে',
+    'notice_matured_body' => 'মেয়াদপূর্তি :date, :days দিন আগে — জমাটা এখনো খোলা। ভাঙানো বা নবায়ন লিখুন।',
+    'notice_dps' => ':institution-এর :document — DPS কিস্তি বকেয়া',
+    'notice_dps_body' => ':count মাসের কিস্তি বকেয়া — ৳:amount',
 ];

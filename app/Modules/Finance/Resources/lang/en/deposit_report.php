@@ -36,4 +36,9 @@ return [
     'overdue' => 'Overdue',
     'instalments_summary' => 'Overdue instalments',
     'instalments_text' => 'Overdue Tk :overdue (awaiting signature Tk :waiting)',
+
+    'notice_soon' => ':institution :document — matures this week',
+    'notice_matured_body' => 'Matured on :date, :days days ago, and the deposit is still open. Record the encashment or the renewal.',
+    'notice_dps' => ':institution :document — DPS instalment overdue',
+    'notice_dps_body' => ':count months of instalments overdue — Tk :amount',
 ];

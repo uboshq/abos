@@ -40,6 +40,13 @@ final class DueNotices
     /** কত দিন আগে থেকে খবর যায় — পর্দার ডিফল্ট জানালার সমান */
     public const WINDOW_DAYS = 30;
 
+    /** ⭐ মেয়াদপূর্তির শেষ ধাপ — এত দিনের মধ্যে (বা পেরোলে) সপ্তাহে সপ্তাহে ([[depositsAboutToMature()]]) */
+    public const SOON_DAYS = 7;
+
+    public const MATURING_SOON = 'finance.deposit_maturing_soon';
+
+    public const DPS_DUE = 'finance.dps_instalment_due';
+
     public const MATURING = 'finance.deposit_maturing';
 
     public const HAND_LOAN_DUE = 'finance.hand_loan_due';
@@ -62,7 +69,10 @@ final class DueNotices
     public function sendAll(): array
     {
         return [
-            'maturing' => $this->maturingDeposits(),
+            // ⭐ মেয়াদপূর্তি দুই ধাপে — ৩০ দিনে একবার, ৭ দিনে (বা পেরোলে) সপ্তাহে সপ্তাহে (পরিকল্পনা ৪.৪, ৬ অক্টোবর ২০২৬)
+            'maturing' => $this->maturingDeposits() + $this->depositsAboutToMature(),
+            // ⭐ DPS-এর বকেয়া কিস্তি — কিস্তির দিন পেরিয়েছে, টাকা খাতায় বসেনি (পরিকল্পনা ৪.৩)
+            'dps' => $this->dpsInstalmentsDue(),
             'hand_loans' => $this->handLoansDue(),
             // ⭐ ভাড়া — চুক্তি শেষের ৬০/৩০ দিন আগে আর বকেয়া ([[RentalNotices]], পরিকল্পনা ৫ঘ, ৬ অক্টোবর ২০২৬)
             'rentals' => array_sum(app(RentalNotices::class)->sendAll()),
@@ -81,6 +91,8 @@ final class DueNotices
             ->open()
             ->whereNotNull('matures_on')
             ->where('matures_on', '<=', now()->addDays(self::WINDOW_DAYS)->toDateString())
+            // ⓘ শেষ সাত দিন পরের ধাপের ([[depositsAboutToMature()]]) — এই ধাপ কেবল ৩০ থেকে ৮ দিন
+            ->where('matures_on', '>', now()->addDays(self::SOON_DAYS)->toDateString())
             ->orderBy('matures_on')
             ->get();
 
@@ -92,6 +104,7 @@ final class DueNotices
                 'deposit' => $deposit->id,
             ]);
 
+            // ⓘ এই ধাপে একবারই — শেষ সাত দিনের ধাপ আবার মনে করায় (পরিকল্পনা: "৩০ আর ৭ দিন আগে")
             $sent += $this->tell(
                 self::MATURING,
                 'finance.deposit.view',
@@ -103,6 +116,79 @@ final class DueNotices
                 __('finance::message.notice_maturing_body', [
                     'date' => $deposit->matures_on?->translatedFormat('j M Y') ?? '—',
                     'days' => $this->daysLeft($deposit->matures_on),
+                ]),
+                quietDays: null,
+            );
+        }
+
+        return $sent;
+    }
+
+    /**
+     * ⭐ মেয়াদপূর্তির শেষ ধাপ — সাত দিনের মধ্যে, বা মেয়াদ পেরিয়েছে অথচ জমা এখনো খোলা (ভাঙানো বা নবায়ন লেখা হয়নি); সপ্তাহে
+     * সপ্তাহে, যতদিন না কেউ জমাটা বন্ধ বা নবায়ন করেন (পরিকল্পনা ৪.৪, ৬ অক্টোবর ২০২৬)।
+     */
+    public function depositsAboutToMature(): int
+    {
+        $rows = Deposit::query()->with('kind')->open()
+            ->whereNotNull('matures_on')
+            ->where('matures_on', '<=', now()->addDays(self::SOON_DAYS)->toDateString())
+            ->orderBy('matures_on')
+            ->get();
+
+        $sent = 0;
+
+        foreach ($rows as $deposit) {
+            $days = $this->daysLeft($deposit->matures_on);
+
+            $sent += $this->tell(
+                self::MATURING_SOON,
+                'finance.deposit.view',
+                route('finance.deposit.show', ['issuer' => $deposit->kind->issuer, 'deposit' => $deposit->id]),
+                __('finance::deposit_report.notice_soon', ['document' => $deposit->document_no, 'institution' => $deposit->institution]),
+                $days < 0
+                    ? __('finance::deposit_report.notice_matured_body', ['date' => $deposit->matures_on->translatedFormat('j M Y'), 'days' => -$days])
+                    : __('finance::message.notice_maturing_body', ['date' => $deposit->matures_on->translatedFormat('j M Y'), 'days' => $days]),
+            );
+        }
+
+        return $sent;
+    }
+
+    /**
+     * ⭐ DPS-এর বকেয়া কিস্তি — কিস্তির সময়সূচির "বকেয়া" ঘর ([[DepositReports::INSTALMENTS]]), আজ পর্যন্ত; জমা ধরে একটা
+     * খবর, সপ্তাহে একবার। ⓘ নিজের হিসাব নয় — রিপোর্টই বলে কোন মাস বকেয়া, তাই খবর আর পাতা কখনো আলাদা কথা বলে না।
+     */
+    public function dpsInstalmentsDue(): int
+    {
+        $rows = app(\App\Core\Engines\Report\ReportEngine::class)->run(\App\Modules\Finance\Reports\DepositReports::INSTALMENTS, [
+            'from' => now()->subYears(10)->toDateString(), 'to' => now()->toDateString(),
+        ], 1, 100000)->rows;
+
+        $owed = [];
+
+        foreach ($rows as $row) {
+            $row = (array) $row;
+
+            if (bccomp((string) $row['overdue'], '0', 4) > 0) {
+                $id = (int) $row['source_id'];
+                $owed[$id] ??= ['months' => 0, 'amount' => '0'];
+                $owed[$id]['months']++;
+                $owed[$id]['amount'] = bcadd($owed[$id]['amount'], (string) $row['overdue'], 4);
+            }
+        }
+
+        $sent = 0;
+
+        foreach (Deposit::query()->with('kind')->whereKey(array_keys($owed))->get() as $deposit) {
+            $sent += $this->tell(
+                self::DPS_DUE,
+                'finance.deposit.view',
+                route('finance.deposit.show', ['issuer' => $deposit->kind->issuer, 'deposit' => $deposit->id]),
+                __('finance::deposit_report.notice_dps', ['document' => $deposit->document_no, 'institution' => $deposit->institution]),
+                __('finance::deposit_report.notice_dps_body', [
+                    'count' => $owed[$deposit->id]['months'],
+                    'amount' => Money::format($owed[$deposit->id]['amount']),
                 ]),
             );
         }
@@ -225,12 +311,12 @@ final class DueNotices
      *
      * @return int কয়জনের কাছে সত্যিই গেল
      */
-    private function tell(string $type, string $permission, string $url, string $title, string $body): int
+    private function tell(string $type, string $permission, string $url, string $title, string $body, ?int $quietDays = self::QUIET_DAYS): int
     {
         $sent = 0;
 
         foreach ($this->whoCan($permission) as $user) {
-            if ($this->toldRecently($user->id, $type, $url)) {
+            if ($this->toldRecently($user->id, $type, $url, $quietDays)) {
                 continue;
             }
 
@@ -268,13 +354,14 @@ final class DueNotices
     /**
      * ⓘ "সম্প্রতি বলা হয়েছে" — পাঠানো খবরগুলোই মনে রাখে।
      */
-    private function toldRecently(int $userId, string $type, string $url): bool
+    /** ⓘ `$quietDays` `null` — কখনো আবার নয় (একবারের ধাপ) */
+    private function toldRecently(int $userId, string $type, string $url, ?int $quietDays = self::QUIET_DAYS): bool
     {
         return Notification::query()
             ->where('user_id', $userId)
             ->where('type', $type)
             ->where('url', $url)
-            ->where('created_at', '>=', now()->subDays(self::QUIET_DAYS))
+            ->when($quietDays !== null, fn ($q) => $q->where('created_at', '>=', now()->subDays($quietDays)))
             ->exists();
     }
 
