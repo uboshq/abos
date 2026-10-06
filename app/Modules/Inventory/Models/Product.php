@@ -124,7 +124,8 @@ class Product extends Model implements Drillable
      */
     public function branches(): BelongsToMany
     {
-        return $this->belongsToMany(Branch::class, 'inv_product_branches')->withTimestamps();
+        // ⓘ প্রতিটা নতুন সারি নিজের বাইরের নাম পায় ([[ProductBranch]], ৬ অক্টোবর ২০২৬)
+        return $this->belongsToMany(Branch::class, 'inv_product_branches')->using(ProductBranch::class)->withTimestamps();
     }
 
     /**
