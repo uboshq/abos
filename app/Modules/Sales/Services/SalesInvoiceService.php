@@ -882,23 +882,7 @@ final class SalesInvoiceService
      */
     private function unpost(SalesInvoice $invoice, Carbon $date, string $reason, ?string $paperNo = null): void
     {
-        foreach ($invoice->lines as $line) {
-            if ($line->challanLine !== null) {
-                continue;
-            }
-
-            $this->stock->move(
-                product: $line->product,
-                warehouse: $invoice->warehouse ?? $this->defaultWarehouse(),
-                sourceType: SalesInvoice::STOCK_SOURCE.':cancel',
-                sourceId: $invoice->id,
-                floor: (string) $line->qty,
-                date: $date,
-                documentNo: $paperNo ?? $invoice->document_no,
-                narration: $reason,
-            );
-        }
-
+        $this->putTheGoodsBack($invoice, $date, $reason, $paperNo);
         $this->putCostBackInLayers($invoice, $date);
 
         $this->posting->reverse(
@@ -928,32 +912,29 @@ final class SalesInvoiceService
      * সারি গোনে — নইলে একই স্তর থেকে টানা অন্য বিলের বাতিল এই বিলের
      * জায়গা খেয়ে ফেলত।
      *
-     * ⚠️ রান্না করা খাবার (রেসিপি) এখানে বাদ: উপকরণের মাল বাতিলে তাকে
-     * ফেরে না, তাই স্তরে ফেরালে স্তর আর তাক আলাদা হত — আলাদা কাজ।
+     * ⭐ এই বিলের নামে যে খরচ টানা হয়েছিল আর এখনো ফেরেনি, পণ্য ধরে পুরোটা — Inventory অডিট ম১৬, ৫ অক্টোবর ২০২৬।
+     * ⛔ আগে বিলের সারি ধরে গোনা হত আর রান্না করা খাবার বাদ যেত: উপকরণ তাকে ফিরলেও তাদের খরচ স্তরে ফিরত না।
+     * ⚠️ তাকে ফেরা মাল ([[putTheGoodsBack()]]) ধরে গোনা যায় না: চালানের সারির মাল চালানের নামে তাকে থাকে, কিন্তু
+     * তার খরচ টানা হয়েছিল বিলের নামে ([[takeCostFromLayers()]]) — সেটাও ফেরে। ⓘ সব টানই ফেরে বলে লট আপনিই মেলে:
+     * প্রতিটা টান তার নিজের স্তরে ([[CostLayerService::returnToLayers()]])।
      */
     private function putCostBackInLayers(SalesInvoice $invoice, Carbon $date): void
     {
-        $qtyOf = [];
-        $productOf = [];
+        $outstanding = \App\Modules\Inventory\Models\CostLayerUse::query()
+            ->whereIn('source_type', [SalesInvoice::STOCK_SOURCE, SalesInvoice::STOCK_SOURCE.':cancel'])
+            ->where('source_id', $invoice->id)
+            ->groupBy('product_id')
+            ->selectRaw('product_id, COALESCE(SUM(qty), 0) as qty')
+            ->pluck('qty', 'product_id');
 
-        foreach ($invoice->lines as $line) {
-            if ($this->recipes->consumesOnSale((int) $line->product_id)) {
-                continue;
-            }
-
-            $id = (int) $line->product_id;
-            $qtyOf[$id] = bcadd($qtyOf[$id] ?? '0', (string) $line->qty, 4);
-            $productOf[$id] = $line->product;
-        }
-
-        foreach ($qtyOf as $id => $qty) {
-            if (bccomp($qty, '0', 4) <= 0) {
+        foreach ($outstanding as $productId => $qty) {
+            if (bccomp((string) $qty, '0', 4) <= 0) {
                 continue;
             }
 
             $this->costs->returnToLayers(
-                product: $productOf[$id],
-                qty: $qty,
+                product: Product::query()->findOrFail((int) $productId),
+                qty: bcadd((string) $qty, '0', 4),
                 issuedSourceType: SalesInvoice::STOCK_SOURCE,
                 issuedSourceId: (int) $invoice->id,
                 sourceType: SalesInvoice::STOCK_SOURCE.':cancel',
@@ -961,6 +942,50 @@ final class SalesInvoiceService
                 documentNo: $invoice->document_no,
                 date: $date,
                 returnedBy: [(int) $invoice->id],
+            );
+        }
+    }
+
+    /**
+     * ⭐ বিক্রিতে যা তাক থেকে বেরিয়েছিল ঠিক তা-ই ফেরে — একই পণ্য, একই গুদাম, একই লট (Inventory অডিট ম১৬, ৫ অক্টোবর ২০২৬)।
+     *
+     * ⛔ আগে বিলের সারি ধরে সারির পণ্যটাই পরিমাণ ধরে ফিরত, লট ছাড়া:
+     *   ১. অর্ডারে-রান্না খাবার কোনোদিন গুদামে ঢোকেনি, বিক্রিতে কমেছিল তার উপকরণ — উল্টানোয় খাবারের মজুদ শূন্য থেকে
+     *      জন্মাত, আর উপকরণ ফিরত না;
+     *   ২. বিক্রি লট ধরে বেরোয় (গ১০), কিন্তু ফেরা লটহীন সারিতে — লট খালিই থাকত, পণ্যের মোট কেবল মিলত।
+     * ⓘ এখন এই বিলের নিজের সারি (উৎস + তার ফেরত) পণ্য-গুদাম-লট ধরে যোগ করে যতটা এখনো বাইরে, ততটা ফেরে — সম্পাদনার পরে
+     * আবার নিশ্চিত হয়ে আবার উল্টালেও কিছুই দুইবার ফেরে না। চালানের মাল এখানে আসে না: সে চালানের সারি, বিলের নয়।
+     */
+    private function putTheGoodsBack(SalesInvoice $invoice, Carbon $date, string $reason, ?string $paperNo): void
+    {
+        $out = StockMovement::query()
+            ->whereIn('source_type', [SalesInvoice::STOCK_SOURCE, SalesInvoice::STOCK_SOURCE.':cancel'])
+            ->where('source_id', $invoice->id)
+            ->groupBy('product_id', 'warehouse_id', 'batch_id')
+            ->selectRaw('product_id, warehouse_id, batch_id, COALESCE(SUM(floor_change), 0) as net')
+            ->orderBy('product_id')
+            ->get();
+
+        foreach ($out as $row) {
+            $qty = bcmul((string) $row->net, '-1', 4);
+
+            if (bccomp($qty, '0', 4) <= 0) {
+                continue;
+            }
+
+            $product = Product::query()->findOrFail((int) $row->product_id);
+            $batch = $row->batch_id === null ? null : Batch::query()->findOrFail((int) $row->batch_id);
+
+            $this->stock->move(
+                product: $product,
+                warehouse: Warehouse::query()->findOrFail((int) $row->warehouse_id),
+                sourceType: SalesInvoice::STOCK_SOURCE.':cancel',
+                sourceId: $invoice->id,
+                floor: $qty,
+                date: $date,
+                documentNo: $paperNo ?? $invoice->document_no,
+                narration: $reason,
+                batch: $batch,
             );
         }
     }
