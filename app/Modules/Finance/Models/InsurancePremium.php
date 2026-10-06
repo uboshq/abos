@@ -50,6 +50,21 @@ class InsurancePremium extends Model implements Drillable, SettledByAVoucher, \A
         ];
     }
 
+    /**
+     * ⭐ কিস্তির অবস্থা — দেওয়া / দিন পার / আজ / সামনে; দিন = সময়কালের শুরু (পরিকল্পনা ৬.২, [[InsuranceReports::PREMIUMS]])।
+     */
+    public function dueState(?\Carbon\CarbonInterface $today = null): string
+    {
+        if ($this->isPaid()) {
+            return 'paid';
+        }
+
+        $today = ($today ?? now())->toDateString();
+        $due = $this->period_from->toDateString();
+
+        return $due < $today ? 'overdue' : ($due === $today ? 'today' : 'upcoming');
+    }
+
     public function policy(): BelongsTo
     {
         return $this->belongsTo(InsurancePolicy::class, 'policy_id');

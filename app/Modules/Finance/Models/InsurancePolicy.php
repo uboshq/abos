@@ -50,11 +50,25 @@ class InsurancePolicy extends Model
      */
     public const WARN_DAYS = 30;
 
+    /*
+     * ⭐ প্রিমিয়ামের কিস্তি — পরিকল্পনা ৬.২, ৬ অক্টোবর ২০২৬; মান = কিস্তি প্রতি কয় মাস ([[InsuranceService::addPremium()]])।
+     */
+    public const YEARLY = 'yearly';
+
+    public const HALF_YEARLY = 'half_yearly';
+
+    public const QUARTERLY = 'quarterly';
+
+    public const MONTHLY = 'monthly';
+
+    /** @var array<string, int> */
+    public const FREQUENCIES = [self::YEARLY => 12, self::HALF_YEARLY => 6, self::QUARTERLY => 3, self::MONTHLY => 1];
+
     protected $table = 'fin_insurance_policies';
 
     protected $fillable = [
         'company_id', 'branch_id', 'institution_id', 'policy_no', 'covers', 'subject',
-        'sum_insured', 'premium', 'starts_on', 'ends_on', 'notes', 'is_active', 'created_by',
+        'sum_insured', 'premium', 'frequency', 'starts_on', 'ends_on', 'notes', 'is_active', 'created_by',
     ];
 
     /** @return array<string, string> */

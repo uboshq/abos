@@ -90,6 +90,8 @@
         <x-ui.table :rows="$policy->premiums" :empty="'—'" :columns="[
             ['key' => 'period', 'label' => __('finance::insurance.period'),
              'render' => fn ($p) => $p->period_from->format('d M Y').' → '.$p->period_to->format('d M Y')],
+            ['key' => 'due', 'label' => __('finance::insurance.premium_state'), 'width' => '8rem',
+             'render' => fn ($p) => __('finance::insurance.premium_state_'.$p->dueState())],
             ['key' => 'amount', 'label' => __('finance::insurance.premium'), 'numeric' => true, 'width' => '10rem',
              'render' => fn ($p) => Money::format($p->amount)],
             ['key' => 'status', 'label' => __('finance::insurance.state'), 'width' => '16rem',

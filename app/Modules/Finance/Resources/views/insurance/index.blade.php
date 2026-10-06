@@ -52,6 +52,11 @@
         <x-ui.page-header :title="__('finance::insurance.title')"
                           :subtitle="__('finance::insurance.subtitle')">
             <x-slot:actions>
+                {{-- ⭐ প্রিমিয়ামের সূচি — সব পলিসির কিস্তি, দিন আর অবস্থা (অর্থ-মডিউলের পরিকল্পনা ৬.২) --}}
+                <x-ui.button tone="secondary" icon="calendar" data-premium-schedule
+                             :href="route('finance.report.show', ['slug' => 'insurance-premiums'])">
+                    {{ __('finance::insurance.premium_schedule') }}
+                </x-ui.button>
                 @can('finance.insurance.manage')
                     <x-ui.button tone="primary" icon="plus" :href="route('finance.insurance.create')">
                         {{ __('finance::insurance.new') }}

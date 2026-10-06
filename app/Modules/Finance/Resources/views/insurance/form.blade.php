@@ -73,6 +73,12 @@
                         :label="__('finance::insurance.premium')"
                         :value="old('premium', $policy->premium)" />
 
+            {{-- ⭐ প্রিমিয়ামের কিস্তি — বছরে / ছয় মাসে / তিন মাসে / মাসে (পরিকল্পনা ৬.২, ৬ অক্টোবর ২০২৬) --}}
+            <x-ui.select name="frequency" :label="__('finance::insurance.frequency')"
+                         :options="collect(\App\Modules\Finance\Models\InsurancePolicy::FREQUENCIES)
+                             ->mapWithKeys(fn ($m, $k) => [$k => __('finance::insurance.frequency_'.$k)])->all()"
+                         :selected="old('frequency', $policy->frequency ?? 'yearly')" />
+
             <x-ui.field name="starts_on" type="date" required :label="__('finance::insurance.starts_on')"
                         :value="old('starts_on', $policy->starts_on?->toDateString())" />
 

@@ -178,6 +178,8 @@ class InsuranceController extends Controller implements HasMiddleware
             'subject' => ['required', 'string', 'max:200'],
             'sum_insured' => ['nullable', 'numeric', 'min:0', 'max:9999999999999'],
             'premium' => ['required', 'numeric', 'min:0', 'max:9999999999'],
+            // ⭐ প্রিমিয়ামের কিস্তি — ডিফল্ট বছরে (পরিকল্পনা ৬.২)
+            'frequency' => ['nullable', Rule::in(array_keys(InsurancePolicy::FREQUENCIES))],
             'starts_on' => ['required', 'date'],
             'ends_on' => ['required', 'date', 'after:starts_on'],
             'notes' => ['nullable', 'string', 'max:2000'],

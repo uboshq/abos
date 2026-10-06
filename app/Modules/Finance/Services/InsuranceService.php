@@ -58,18 +58,23 @@ final class InsuranceService
             $this->assertPolicyNoIsFree($data, $policy->id);
 
             $wasFrom = $policy->starts_on->toDateString();
+            $wasTo = $policy->ends_on->toDateString();
 
             $policy->update($this->clean($data));
 
-            InsurancePremium::query()
-                ->where('policy_id', $policy->id)
-                ->where('status', InsurancePremium::DRAFT)
-                ->where('period_from', $wasFrom)
-                ->update([
-                    'period_from' => $policy->starts_on->toDateString(),
-                    'period_to' => $policy->ends_on->toDateString(),
-                    'amount' => $policy->premium,
-                ]);
+            /*
+             * ⭐ চলতি মেয়াদের কিস্তিগুলো — একটাও দেওয়া না হলে নতুন অঙ্ক, দিন আর কিস্তির ধরনে আবার ভাগ (পরিকল্পনা ৬.২)।
+             * ⛔ একটাও দেওয়া হয়ে গেলে কিছুই ছোঁয়া হয় না — ওটা এখন খাতার কথা।
+             */
+            $term = InsurancePremium::query()->where('policy_id', $policy->id)
+                ->whereBetween('period_from', [$wasFrom, $wasTo]);
+
+            if (! (clone $term)->where('status', '!=', InsurancePremium::DRAFT)->exists()
+                && ! (clone $term)->whereNotNull('voucher_id')->exists()
+                && (clone $term)->exists()) {
+                (clone $term)->delete();
+                $this->addPremium($policy, $policy->starts_on, $policy->ends_on, (string) $policy->premium);
+            }
 
             // ⓘ শূন্য প্রিমিয়ামে বসানো পলিসিতে পরে অঙ্ক বসলে — তখনই প্রথম সারি
             if (! InsurancePremium::query()->where('policy_id', $policy->id)->exists()) {
@@ -132,15 +137,43 @@ final class InsuranceService
             return;
         }
 
-        InsurancePremium::query()->create([
-            'company_id' => $policy->company_id,
-            'policy_id' => $policy->id,
-            'period_from' => CarbonImmutable::parse($from)->toDateString(),
-            'period_to' => CarbonImmutable::parse($to)->toDateString(),
-            'amount' => $amount,
-            'status' => InsurancePremium::DRAFT,
-            'created_by' => auth()->id(),
-        ]);
+        /*
+         * ⭐ কিস্তিতে ভাগ — পরিকল্পনা ৬.২, ৬ অক্টোবর ২০২৬: মেয়াদের শুরু থেকে কিস্তির মাপে (বছরে ১২, ছয় মাসে ৬, তিন মাসে ৩, মাসে
+         * ১ মাস) এক এক ভাগ, শেষেরটা মেয়াদের শেষ দিন পর্যন্ত। অঙ্ক সমান ভাগ, পয়সায় গোল; ⓘ শেষ কিস্তি বাকিটা নেয়, তাই যোগফল
+         * হুবহু প্রিমিয়াম। "বছরে" মানে পুরো মেয়াদ একটা সারি — মেয়াদ বারো মাসের না হলেও, যেমন ছিল।
+         */
+        $start = CarbonImmutable::parse($from)->startOfDay();
+        $end = CarbonImmutable::parse($to)->startOfDay();
+        $step = InsurancePolicy::FREQUENCIES[$policy->frequency ?? InsurancePolicy::YEARLY] ?? 12;
+        $parts = [];
+
+        for ($at = $start; $at->lte($end); $at = $at->addMonthsNoOverflow($step)) {
+            $next = $at->addMonthsNoOverflow($step)->subDay();
+            $parts[] = [$at, ($step === 12 || $next->gt($end)) ? $end : $next];
+
+            if ($step === 12) {
+                break;
+            }
+        }
+
+        // ⓘ এক সারি হলে অঙ্ক হুবহু (চার ঘর); ভাগ হলে পয়সায় গোল, আর শেষটা বাকি সবটুকু — যোগফল হুবহু প্রিমিয়াম
+        $share = count($parts) === 1 ? bcadd($amount, '0', 4) : bcdiv($amount, (string) count($parts), 2);
+        $left = bcadd($amount, '0', 4);
+
+        foreach ($parts as $i => [$partFrom, $partTo]) {
+            $piece = $i === count($parts) - 1 ? $left : $share;
+            $left = bcsub($left, $piece, 4);
+
+            InsurancePremium::query()->create([
+                'company_id' => $policy->company_id,
+                'policy_id' => $policy->id,
+                'period_from' => $partFrom->toDateString(),
+                'period_to' => $partTo->toDateString(),
+                'amount' => $piece,
+                'status' => InsurancePremium::DRAFT,
+                'created_by' => auth()->id(),
+            ]);
+        }
     }
 
     /**
@@ -183,7 +216,7 @@ final class InsuranceService
      */
     private function clean(array $data): array
     {
-        $keep = ['institution_id', 'policy_no', 'covers', 'subject', 'sum_insured', 'premium',
+        $keep = ['institution_id', 'policy_no', 'covers', 'subject', 'sum_insured', 'premium', 'frequency',
             'starts_on', 'ends_on', 'notes'];
 
         $out = collect($data)

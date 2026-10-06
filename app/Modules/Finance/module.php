@@ -659,6 +659,8 @@ return [
         \App\Modules\Finance\Reports\HandLoanReports::class,
         // ⭐ ব্যাংক ঋণের কিস্তি আর সীমার ব্যবহার — অর্থ-মডিউলের পরিকল্পনা ৩, ৬ অক্টোবর ২০২৬
         \App\Modules\Finance\Reports\BankLoanReports::class,
+        // ⭐ বীমার প্রিমিয়ামের সূচি — অর্থ-মডিউলের পরিকল্পনা ৬.২, ৬ অক্টোবর ২০২৬
+        \App\Modules\Finance\Reports\InsuranceReports::class,
         // ⭐ মূলধন ও বিনিয়োগের রিপোর্ট — অর্থ-মডিউলের পরিকল্পনা, অংশ ২
         \App\Modules\Finance\Reports\CapitalReports::class,
         // ⭐ ভাড়ার চুক্তি ও জামানতের রিপোর্ট — অর্থ-মডিউলের পরিকল্পনা, অংশ ৫

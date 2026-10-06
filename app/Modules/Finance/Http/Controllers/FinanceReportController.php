@@ -12,6 +12,7 @@ use App\Modules\Finance\Models\BankFacility;
 use App\Modules\Finance\Models\HandLoanAccount;
 use App\Modules\Finance\Reports\BankLoanReports;
 use App\Modules\Finance\Reports\HandLoanReports;
+use App\Modules\Finance\Reports\InsuranceReports;
 use App\Modules\Finance\Reports\LoanLedgerReports;
 use App\Modules\MasterData\Models\Person;
 use Illuminate\Http\Request;
@@ -44,6 +45,9 @@ class FinanceReportController extends Controller
         // ⭐ ব্যাংক ঋণ — কিস্তি আর সীমার ব্যবহার (অর্থ-মডিউলের পরিকল্পনা ৩, ৬ অক্টোবর ২০২৬; [[BankLoanReports]])
         'bank-loan-instalments' => BankLoanReports::INSTALMENTS,
         'bank-limit-usage' => BankLoanReports::LIMITS,
+
+        // ⭐ বীমার প্রিমিয়ামের সূচি (অর্থ-মডিউলের পরিকল্পনা ৬.২; [[InsuranceReports]])
+        'insurance-premiums' => InsuranceReports::PREMIUMS,
     ];
 
     /** ব্যাংক ঋণের রিপোর্টের সারি — রিপোর্টের মাথায় আর ঋণের তালিকায় একই ক্রমে */
@@ -93,6 +97,20 @@ class FinanceReportController extends Controller
                 'partyFilter' => 'facility_id',
                 'parties' => BankFacility::query()->inViewedBranch()->orderBy('bank')->get()
                     ->map(fn (BankFacility $f) => (object) ['id' => (int) $f->id, 'name' => trim($f->bank.' · '.$f->document_no, ' ·')]),
+            ]);
+        }
+
+        // ⓘ বীমার প্রিমিয়ামের সূচি — অবস্থা বাছার ঘর
+        if ($slug === 'insurance-premiums') {
+            return view('accounts::report.show', [
+                'menu' => $this->menu->forUser($request->user()),
+                'slug' => $slug,
+                'report' => $definition,
+                'result' => $result,
+                'branches' => Branch::query()->active()->orderBy('name_en')->get(),
+                'accounts' => collect(),
+                'partyTypes' => collect(),
+                'extraFilters' => 'finance::insurance.partials.premium-state',
             ]);
         }
 
