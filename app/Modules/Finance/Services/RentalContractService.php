@@ -112,8 +112,13 @@ class RentalContractService
                 'ends_on' => $starts->copy()->addMonths($term)->subDay()->toDateString(),
                 'status' => RentalContract::ACTIVE,
                 'note' => $data['note'] ?? null,
+                // ⭐ বৃদ্ধির কথা থাকলে বছরে কত % — ঐচ্ছিক, কেবল মনে করায় (মালিক, প্র১, ৬ অক্টোবর ২০২৬)
+                'increase_percent' => ($data['increase_percent'] ?? '') !== '' ? $data['increase_percent'] : null,
                 'created_by' => auth()->id(),
             ]);
+
+            // ⭐ শর্তের প্রথম দফা — শুরুর মাস থেকে ([[RentalTerm]])
+            $this->writeTerm($contract, $starts->copy()->startOfMonth(), $rent, $adjustment, null);
 
             /*
              * জামানতের টাকাটা তখনই পোস্ট হয়, যখন সত্যিই দেওয়া হয়েছে।
@@ -342,15 +347,50 @@ class RentalContractService
             ]);
         }
 
-        $contract->update([
-            'monthly_rent' => $rent,
-            'monthly_adjustment' => $adjustment,
-            'counterparty_phone' => $data['counterparty_phone'] ?? $contract->counterparty_phone,
-            'subject' => $data['subject'] ?? $contract->subject,
-            'note' => $data['note'] ?? $contract->note,
-        ]);
+        /*
+         * ⭐ শর্তের নতুন দফা — কোন মাস থেকে (না দিলে চলতি মাস); সেই মাসে আগে থেকে দফা থাকলে সেটাই হালনাগাদ। পুরনো মাস নিজের
+         * দরে থাকে (মালিক, প্র১, ৬ অক্টোবর ২০২৬)। ⛔ চুক্তির শুরুর আগের মাসে নয়, মেয়াদের পরের মাসেও নয়।
+         */
+        $from = Carbon::parse((string) (($data['effective_from'] ?? '') ?: now()->toDateString()))->startOfMonth();
 
-        return $contract->fresh();
+        if ($from->lt($contract->starts_on->copy()->startOfMonth()) || $from->gt($contract->ends_on)) {
+            throw ValidationException::withMessages([
+                'effective_from' => __('finance::rental_report.term_outside_contract'),
+            ]);
+        }
+
+        return DB::transaction(function () use ($contract, $data, $rent, $adjustment, $from) {
+            $this->writeTerm($contract, $from, $rent, $adjustment, $data['note'] ?? null);
+
+            // ⓘ চুক্তির "এখনকার দর" = আজ খাটা দফা — সামনের মাসের দফা আজকের দর বদলায় না
+            $now = $contract->terms()->where('effective_from', '<=', now()->startOfMonth()->toDateString())
+                ->reorder('effective_from', 'desc')->first();
+
+            $contract->update([
+                'monthly_rent' => $now?->monthly_rent ?? $rent,
+                'monthly_adjustment' => $now?->monthly_adjustment ?? $adjustment,
+                'increase_percent' => array_key_exists('increase_percent', $data)
+                    ? (($data['increase_percent'] ?? '') !== '' ? $data['increase_percent'] : null)
+                    : $contract->increase_percent,
+                'counterparty_phone' => $data['counterparty_phone'] ?? $contract->counterparty_phone,
+                'subject' => $data['subject'] ?? $contract->subject,
+                'note' => $data['note'] ?? $contract->note,
+            ]);
+
+            return $contract->fresh();
+        });
+    }
+
+    /** শর্তের এক দফা — এক মাসে একটাই; থাকলে হালনাগাদ */
+    private function writeTerm(RentalContract $contract, Carbon $from, string $rent, string $adjustment, ?string $note): void
+    {
+        \App\Modules\Finance\Models\RentalTerm::query()->updateOrCreate(
+            ['rental_contract_id' => $contract->id, 'effective_from' => $from->toDateString()],
+            [
+                'company_id' => $contract->company_id, 'branch_id' => $contract->branch_id,
+                'monthly_rent' => $rent, 'monthly_adjustment' => $adjustment, 'note' => $note, 'created_by' => auth()->id(),
+            ],
+        );
     }
 
     /**

@@ -64,4 +64,12 @@ return [
     'state_running' => 'চলছে',
     'state_lapsed' => 'মেয়াদ পেরিয়েছে',
     'state_closed' => 'শেষ',
+
+    // ⭐ শর্তের ইতিহাস আর বৃদ্ধি (মালিক, প্র১)
+    'increase_percent' => 'বছরে বৃদ্ধি % (চুক্তিতে থাকলে)',
+    'effective_from' => 'কোন মাস থেকে',
+    'term_line' => ':from থেকে মাসে ৳:rent',
+    'term_outside_contract' => 'এই মাস চুক্তির মেয়াদের বাইরে।',
+    'notice_anniversary' => ':who — চুক্তির বর্ষপূর্তি আসছে (:place)',
+    'notice_anniversary_body' => ':date-এ বর্ষপূর্তি। চুক্তিতে :percent% বৃদ্ধির কথা আছে — এখনকার ৳:rent থেকে হয় ৳:next। বাড়লে শর্ত বদলে লিখুন।',
 ];

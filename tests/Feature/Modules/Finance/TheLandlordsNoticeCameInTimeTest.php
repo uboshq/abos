@@ -130,7 +130,7 @@ final class TheLandlordsNoticeCameInTimeTest extends TestCase
         $this->assertGreaterThan(0, $sent['ending']);
 
         // ⓘ একই দিনে আবার — কিছুই নয়
-        $this->assertSame(['ending' => 0, 'overdue' => 0], $this->morning());
+        $this->assertSame(['ending' => 0, 'overdue' => 0, 'anniversary' => 0], $this->morning());
 
         // ⓘ আট দিন পরে — ৩০-এর ধাপ আর বকেয়া আবার; ৬০-এর ধাপ (৩৭ দিন বাকি) আর নয়
         Carbon::setTestNow($this->today->copy()->addDays(8));

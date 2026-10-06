@@ -326,6 +326,8 @@ class RentalContractController extends Controller implements HasMiddleware
             'monthly_adjustment' => ['nullable', 'numeric', 'min:0'],
             'starts_on' => ['required', 'date'],
             'term_months' => ['required', 'integer', 'min:1', 'max:600'],
+            // ⭐ চুক্তিতে বৃদ্ধির কথা থাকলে বছরে কত % — ঐচ্ছিক (মালিক, প্র১, ৬ অক্টোবর ২০২৬)
+            'increase_percent' => ['nullable', 'numeric', 'min:0', 'max:100'],
 
             /*
              * ⭐ তিনটাই কলামে ছিল, ফর্মে ছিল না — ১৫ সেপ্টেম্বর ২০২৬।
@@ -389,6 +391,9 @@ class RentalContractController extends Controller implements HasMiddleware
         $this->contracts->reviseTerms($contract, $request->validate([
             'monthly_rent' => ['nullable', 'numeric', 'min:0'],
             'monthly_adjustment' => ['nullable', 'numeric', 'min:0'],
+            // ⭐ কোন মাস থেকে নতুন শর্ত (না দিলে চলতি মাস) আর বৃদ্ধির % — শর্তের ইতিহাস (মালিক, প্র১, ৬ অক্টোবর ২০২৬)
+            'effective_from' => ['nullable', 'date_format:Y-m'],
+            'increase_percent' => ['nullable', 'numeric', 'min:0', 'max:100'],
             'counterparty_phone' => ['nullable', 'string', 'max:40'],
             'subject' => ['nullable', 'string', 'max:191'],
             'note' => ['nullable', 'string', 'max:500'],

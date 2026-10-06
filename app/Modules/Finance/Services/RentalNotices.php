@@ -29,6 +29,12 @@ final class RentalNotices
 
     public const OVERDUE = 'finance.rent_overdue';
 
+    /** ⭐ বর্ষপূর্তি — বছর ধরে আলাদা ধরন, যাতে প্রতি বছর একবার (মালিক, প্র১, ৬ অক্টোবর ২০২৬) */
+    public const ANNIVERSARY = 'finance.rental_anniversary_';
+
+    /** বর্ষপূর্তির কত দিন আগে */
+    public const ANNIVERSARY_DAYS = 30;
+
     /** সপ্তাহে একবার — [[DueNotices::QUIET_DAYS]]-এর একই */
     public const QUIET_DAYS = DueNotices::QUIET_DAYS;
 
@@ -37,10 +43,43 @@ final class RentalNotices
         private readonly RentalDues $dues,
     ) {}
 
-    /** @return array{ending: int, overdue: int} কয়টা খবর গেল */
+    /** @return array{ending: int, overdue: int, anniversary: int} কয়টা খবর গেল */
     public function sendAll(): array
     {
-        return ['ending' => $this->ending(), 'overdue' => $this->overdue()];
+        return ['ending' => $this->ending(), 'overdue' => $this->overdue(), 'anniversary' => $this->anniversaries()];
+    }
+
+    /**
+     * ⭐ বর্ষপূর্তির ঘণ্টা — চুক্তিতে বৃদ্ধির % লেখা থাকলে, বর্ষপূর্তির ৩০ দিন আগে, প্রতি বছর একবার (মালিক, প্র১, ৬ অক্টোবর ২০২৬:
+     * "নিজে বাড়বে না, শুধু মনে করিয়ে দেবে")। ⓘ ভাড়া বদলায় না — মানুষ শর্ত বদলে লেখেন ([[RentalContractService::reviseTerms()]])।
+     */
+    public function anniversaries(): int
+    {
+        $sent = 0;
+
+        foreach (RentalContract::query()->active()->where('increase_percent', '>', 0)->orderBy('id')->get() as $contract) {
+            $next = $contract->nextAnniversary();
+
+            if ($next === null || $next->gt(now()->startOfDay()->addDays(self::ANNIVERSARY_DAYS))) {
+                continue;
+            }
+
+            $rent = (string) $contract->monthly_rent;
+            $raised = bcdiv(bcmul($rent, bcadd('100', (string) $contract->increase_percent, 4), 4), '100', 2);
+
+            $sent += $this->tell(
+                self::ANNIVERSARY.$next->year,
+                $this->urlOf($contract),
+                __('finance::rental_report.notice_anniversary', ['who' => $contract->counterparty, 'place' => (string) $contract->subject]),
+                __('finance::rental_report.notice_anniversary_body', [
+                    'date' => $next->translatedFormat('j M Y'), 'percent' => (string) $contract->increase_percent,
+                    'rent' => Money::format($rent), 'next' => Money::format($raised),
+                ]),
+                null,
+            );
+        }
+
+        return $sent;
     }
 
     public function ending(): int

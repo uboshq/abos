@@ -76,6 +76,8 @@ class RentalContract extends Model implements Drillable
         'subject', 'subject_type', 'subject_id',
         'account_id', 'expense_account_id',
         'deposit_amount', 'monthly_rent', 'monthly_adjustment', 'advance_months', 'tax_rate', 'rent_day',
+        // ⭐ চুক্তিতে বৃদ্ধির কথা থাকলে বছরে কত % — ঐচ্ছিক; নিজে বাড়ায় না, কেবল মনে করায় (মালিক, প্র১, ৬ অক্টোবর ২০২৬)
+        'increase_percent',
         'starts_on', 'term_months', 'ends_on',
         'status', 'closed_on', 'note', 'created_by',
     ];
@@ -87,6 +89,7 @@ class RentalContract extends Model implements Drillable
             'monthly_rent' => 'decimal:4',
             'monthly_adjustment' => 'decimal:4',
             'tax_rate' => 'decimal:2',
+            'increase_percent' => 'decimal:2',
             'starts_on' => 'date',
             'ends_on' => 'date',
             'closed_on' => 'date',
@@ -112,6 +115,41 @@ class RentalContract extends Model implements Drillable
     public function adjustments(): HasMany
     {
         return $this->hasMany(RentalAdjustment::class);
+    }
+
+    /** ⭐ শর্তের ইতিহাস — কোন মাস থেকে কত ভাড়া ([[RentalTerm]]) */
+    public function terms(): HasMany
+    {
+        return $this->hasMany(RentalTerm::class)->orderBy('effective_from');
+    }
+
+    /**
+     * ⭐ একটা মাসের ভাড়া — সেই মাসে খাটা শর্ত (সর্বশেষ যেটা মাসটা বা আগে থেকে), না থাকলে চুক্তির এখনকার দর।
+     *
+     * ⓘ ভাড়ার সময়সূচি ([[RentalReports::SCHEDULE]]) আর বকেয়া ([[RentalDues::overdue()]]) একই নিয়মে পড়ে।
+     */
+    public function rentFor(Carbon $month): string
+    {
+        $term = $this->terms()->where('effective_from', '<=', $month->copy()->startOfMonth()->toDateString())
+            ->reorder('effective_from', 'desc')->first();
+
+        return (string) ($term?->monthly_rent ?? $this->monthly_rent);
+    }
+
+    /**
+     * ⭐ পরের বর্ষপূর্তি — শুরুর দিনের মাস-দিন, দিনটা বা পরে; চুক্তির মেয়াদের পরে হলে নেই।
+     */
+    public function nextAnniversary(?Carbon $today = null): ?Carbon
+    {
+        $today = ($today ?? now())->copy()->startOfDay();
+        $years = max(1, (int) $this->starts_on->diffInYears($today) );
+        $next = $this->starts_on->copy()->addYearsNoOverflow($years);
+
+        while ($next->lt($today)) {
+            $next->addYearNoOverflow();
+        }
+
+        return $next->gt($this->ends_on) ? null : $next;
     }
 
     /**

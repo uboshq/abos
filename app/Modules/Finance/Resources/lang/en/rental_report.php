@@ -59,4 +59,11 @@ return [
     'state_running' => 'Running',
     'state_lapsed' => 'Term lapsed',
     'state_closed' => 'Closed',
+
+    'increase_percent' => 'Yearly increase % (if in the contract)',
+    'effective_from' => 'From which month',
+    'term_line' => 'From :from, Tk :rent a month',
+    'term_outside_contract' => 'This month is outside the contract term.',
+    'notice_anniversary' => ':who — contract anniversary coming (:place)',
+    'notice_anniversary_body' => 'Anniversary on :date. The contract provides a :percent% increase — from Tk :rent to Tk :next. If it rises, record the new terms.',
 ];

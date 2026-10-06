@@ -169,6 +169,18 @@
                                 bg-(--color-surface-card) p-4">
                     <h2 class="mb-3 font-semibold">{{ __('finance::action.rental_revise') }}</h2>
 
+                    {{-- ⭐ শর্তের ইতিহাস — কোন মাস থেকে কত (মালিক, প্র১, ৬ অক্টোবর ২০২৬; [[RentalTerm]]) --}}
+                    @if ($contract->terms->isNotEmpty())
+                        <ul data-rental-terms class="mb-3 grid gap-0.5 text-sm text-(--color-ink-muted)">
+                            @foreach ($contract->terms as $term)
+                                <li>{{ __('finance::rental_report.term_line', [
+                                    'from' => $term->effective_from->translatedFormat('M Y'),
+                                    'rent' => \App\Core\Support\Money::format($term->monthly_rent),
+                                ]) }}</li>
+                            @endforeach
+                        </ul>
+                    @endif
+
                     {{-- ⚠️ বদলটা কেবল সামনের মাসগুলোয় খাটে; যে মাসগুলো
                          করা হয়ে গেছে তারা নিজেদের সংখ্যা নিজেরাই ধরে
                          রাখে, তাই গত বছরের হিসাব নড়ে না। --}}
@@ -188,6 +200,14 @@
                         <x-ui.field name="monthly_adjustment" type="number" step="0.0001" min="0"
                                     :label="__('finance::field.rental_from_deposit')"
                                     :value="old('monthly_adjustment', $contract->monthly_adjustment)" />
+
+                        {{-- ⭐ কোন মাস থেকে আর বৃদ্ধির % — শর্তের ইতিহাস (মালিক, প্র১, ৬ অক্টোবর ২০২৬) --}}
+                        <x-ui.field name="effective_from" type="month"
+                                    :label="__('finance::rental_report.effective_from')"
+                                    :value="old('effective_from', now()->format('Y-m'))" />
+                        <x-ui.field name="increase_percent" type="number" step="0.01" min="0" max="100"
+                                    :label="__('finance::rental_report.increase_percent')"
+                                    :value="old('increase_percent', $contract->increase_percent)" />
 
                         <div class="sm:col-span-2">
                             <x-ui.button type="submit" tone="secondary">

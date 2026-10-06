@@ -30,10 +30,8 @@ use Illuminate\Support\Facades\DB;
  * সই ঝুলে থাকলে (`draft`) টাকা যায়নি — বাকিতেই থাকে, আলাদা ঘরে দেখায়। "না" হলে সারিটা সরে যায়
  * ([[RentalContractService::dropRefused()]]), আর ভাউচার পরে বাতিল হলে মাসটা আবার বাকি।
  *
- * ── ⚠️ জানা সীমা ─────────────────────────────────────────────────────────────
- * শর্ত বদলালে ([[RentalContractService::reviseTerms()]]) মাসিক ভাড়ার পুরনো অঙ্ক কোথাও থাকে না। তাই না-দেওয়া পুরনো
- * মাসের দেয় এখনকার ভাড়ায় দেখায়; দেওয়া মাস দেখায় তার নিজের সারির ভাড়া। ইতিহাস রাখা মাইগ্রেশন — বার্ষিক বৃদ্ধির
- * প্রশ্নের (মালিকের প্র১) উত্তরের সাথে।
+ * ── শর্তের ইতিহাস ─────────────────────────────────────────────────────────────
+ * প্রতিটা মাসের দেয় সেই মাসে খাটা শর্তের দরে ([[RentalTerm]], ৬ অক্টোবর ২০২৬ থেকে); দেওয়া মাস তার নিজের সারির ভাড়ায়।
  */
 final class RentalReports
 {
@@ -173,7 +171,13 @@ final class RentalReports
                 $waiting = DB::getPdo()->quote(DocumentStatus::DRAFT);
                 // ⓘ ভাউচার ছাড়া পুরনো সারিও দেওয়া — চুক্তির পাতার একই নিয়ম ([[RentalContract::adjustedSoFar()]])
                 $paid = fn (string $column) => "CASE WHEN a.id IS NOT NULL AND (a.voucher_id IS NULL OR v.status = {$posted}) THEN a.{$column} ELSE 0 END";
-                $due = 'COALESCE(a.rent, c.monthly_rent)';
+                /*
+                 * ⓘ দেয় — করা মাসে তার নিজের সারির ভাড়া; নাহলে সেই মাসে খাটা শর্তের দর ([[RentalTerm]], মালিকের সিদ্ধান্ত প্র১, ৬
+                 * অক্টোবর ২০২৬); শর্তের সারি না থাকলে চুক্তির এখনকার দর। ⛔ আগে পুরনো না-দেওয়া মাস এখনকার দরে দেখাত।
+                 */
+                $term = '(SELECT t.monthly_rent FROM fin_rental_terms t WHERE t.rental_contract_id = c.id AND t.effective_from <= mo.m '
+                    .'ORDER BY t.effective_from DESC LIMIT 1)';
+                $due = "COALESCE(a.rent, {$term}, c.monthly_rent)";
 
                 return DB::query()
                     ->fromSub(self::months($f), 'mo')

@@ -98,6 +98,11 @@
                         :label="__('finance::field.rent_day')"
                         :value="old('rent_day', 5)" />
 
+            {{-- ⭐ বৃদ্ধির কথা থাকলে — নিজে বাড়ায় না, বর্ষপূর্তির আগে মনে করায় (মালিক, প্র১, ৬ অক্টোবর ২০২৬) --}}
+            <x-ui.field name="increase_percent" type="number" step="0.01" min="0" max="100"
+                        :label="__('finance::rental_report.increase_percent')"
+                        :value="old('increase_percent')" />
+
             {{-- ⛔ অগ্রিম আর জামানত দুইটা আলাদা জিনিস — স্যাম্পলের
                  ঐ লাইনটাই এখানে সবচেয়ে জরুরি।
 

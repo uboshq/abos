@@ -92,7 +92,7 @@ final class RentalDues
     }
 
     /**
-     * যে চালু চুক্তিগুলোর বকেয়া মাস আছে — চুক্তি, মাসগুলো, আর মোট (এখনকার মাসিক ভাড়ায়; [[RentalReports]]-এর জানা সীমা)।
+     * যে চালু চুক্তিগুলোর বকেয়া মাস আছে — চুক্তি, মাসগুলো, আর মোট (প্রতিটা মাস সেই মাসের শর্তের দরে)।
      *
      * @return list<array{contract: RentalContract, months: list<Carbon>, amount: string}>
      */
@@ -107,7 +107,8 @@ final class RentalDues
                 $out[] = [
                     'contract' => $contract,
                     'months' => $months,
-                    'amount' => bcmul((string) $contract->monthly_rent, (string) count($months), 4),
+                    // ⓘ প্রতিটা মাস নিজের দরে — শর্তের ইতিহাস ([[RentalContract::rentFor()]], মালিকের সিদ্ধান্ত প্র১)
+                    'amount' => array_reduce($months, fn (string $sum, Carbon $m) => bcadd($sum, $contract->rentFor($m), 4), '0'),
                 ];
             }
         }
