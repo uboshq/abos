@@ -46,9 +46,8 @@ use Tests\TestCase;
  *   · ইনফ্লো — ওয়েবের হোমে নেই; অর্থের ড্যাশবোর্ডের টাকা-প্রবাহের একই নিয়ম — টাকা এলে বাড়ে, নিজের মধ্যে
  *     স্থানান্তরে নয়
  *
- * ⚠️ পাওনা (Recoverable) এখানে নেই — ফোন দেখায় দোকানের বকেয়ার যোগ (অগ্রিম কাটা নয়,
- * [[TheOwnerAskedHowTodayWentFromThePhoneTest::test_dues_count_only_what_is_owed]]), ওয়েবের হোম ১১১০-এর নিট জের
- * (অগ্রিম কাটা) — কোনটা ঠিক, সমন্বয়কের সিদ্ধান্তের অপেক্ষায়; আগে দাবি লিখলে ভুল দিকটাই পাকা হত।
+ *   · পাওনা — ওয়েবের হোমের "বাজারে বকেয়া" ([[CustomerWidgets]]): দোকানের বকেয়ার মোট, অগ্রিম কাটা নয় (সমন্বয়কের সিদ্ধান্ত,
+ *     IAS 1; a5-এর 0e5ff110)
  */
 final class ThePhoneHomeSaysWhatTheWebHomeSaysTest extends TestCase
 {
@@ -83,6 +82,33 @@ final class ThePhoneHomeSaysWhatTheWebHomeSaysTest extends TestCase
         $this->assertSame($this->card(SalesWidgets::widgets(), 'today', 20)->value, Money::format($phone->json('collections.amount')),
             '⛔ আজকের আদায় ফোনে এক, ওয়েবে আরেক।');
         $this->assertNotSame(Money::format('0'), Money::format($phone->json('sales.amount')), 'দাবির ভিত্তি নেই — আজ বিক্রিই নেই।');
+    }
+
+    /**
+     * ⭐ পাওনা — ওয়েবের হোমের "বাজারে বকেয়া" (a5, 0e5ff110: মোট, নিট নয় — IAS 1), একই উৎস ([[CustomerMetrics::dues()]])।
+     * ⓘ বিপজ্জনক উপাত্ত: এক দোকানের বকেয়া আর আরেক দোকানের অগ্রিম — নিট হলে দুই সংখ্যা আলাদা হত।
+     */
+    public function test_recoverable_is_the_web_homes_owed_by_customers_and_advances_do_not_cut_it(): void
+    {
+        $this->billToday();
+        $shop = Customer::query()->orderBy('id')->skip(1)->firstOrFail();
+        $cash = Account::query()->where('money_kind', Account::CASH)->postable()->active()->firstOrFail();
+        $this->journal([
+            ['account_id' => $cash->id, 'debit' => '5000', 'credit' => '0'],
+            ['account_id' => StandardChart::find(StandardChart::RECEIVABLE)->id, 'debit' => '0', 'credit' => '5000',
+                'party_type' => Customer::drillSourceType(), 'party_id' => $shop->id],
+        ]);
+        $phone = $this->phone()->json('dues');
+
+        $this->web();
+        $card = collect(\App\Modules\Customer\Dashboard\CustomerWidgets::widgets())
+            ->first(fn (Widget $w) => $w->label === __('customer::dashboard.kpi_owed'));
+        $this->assertNotNull($card, 'ওয়েবের "বাজারে বকেয়া" ঘর নেই।');
+        $this->assertSame($card->value, Money::format($phone['amount']), '⛔ পাওনা ফোনে এক, ওয়েবে আরেক।');
+        $this->assertNotNull($card->hint, 'দাবির ভিত্তি নেই — অগ্রিম নেই, তাই মোট আর নিট একই।');
+
+        $net = StandardChart::find(StandardChart::RECEIVABLE)->balanceOn(null, ViewedBranch::one());
+        $this->assertNotSame(Money::format($net), $card->value, '⛔ ঘরটা আবার ১১১০-এর নিট জের দেখায় — অগ্রিম বকেয়া কাটছে।');
     }
 
     public function test_money_is_the_web_homes_top_right_box_and_its_four_parts(): void
