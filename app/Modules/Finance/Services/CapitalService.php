@@ -411,7 +411,13 @@ final class CapitalService
         return ['rows' => $rows, 'total' => $total];
     }
 
-    public function positions(?string $profit = null): array
+    /**
+     * @param  bool  $wholeCompany  ⛔ লাভ বণ্টন আর বিনিয়োগের আয় — সবসময় পুরো কোম্পানি (পুরো-ERP অডিট, ৬ অক্টোবর ২০২৬ ⛔৪)।
+     *                               ⓘ লাভ-দেনার জাবেদা (৩৩০০ / ২১৯০) পুরো কোম্পানির জন্য বসে; হেডারে এক শাখা বাছা থাকলে আগে
+     *                               কেবল সেই শাখায় মূলধন দেওয়া মানুষেরা ভাগ পেতেন, আর পুরো % ভাগ হত সেই শাখার মূলধনে।
+     *                               মূলধনের পাতা আগের মতোই হেডারের শাখা মানে।
+     */
+    public function positions(?string $profit = null, bool $wholeCompany = false): array
     {
         /*
          * ⛔ দল বাঁধা হয় `person_id` ধরে, নাম ধরে নয় (১৩ সেপ্টেম্বর ২০২৬)।
@@ -423,8 +429,8 @@ final class CapitalService
          */
         $given = CapitalEntry::query()
             ->posted()
-            // ⭐ হেডারে বাছা শাখা — শাখা বাছলে কেবল সেই শাখার মূলধন (মালিকের প্রশ্ন, ৫ অক্টোবর ২০২৬)
-            ->inViewedBranch()
+            // ⭐ হেডারে বাছা শাখা — শাখা বাছলে কেবল সেই শাখার মূলধন (মালিকের প্রশ্ন, ৫ অক্টোবর ২০২৬); ⛔ লাভ বণ্টনে নয়
+            ->when(! $wholeCompany, fn ($q) => $q->inViewedBranch())
 
             /*
              * ⛔ যে রসিদ দিয়ে মূলধনটা এসেছিল সেটা বাতিল হলে সারিটা গোনা হয়

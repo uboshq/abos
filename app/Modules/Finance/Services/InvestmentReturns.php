@@ -43,7 +43,8 @@ final class InvestmentReturns
         $expense = $this->facts->netOfType(Account::EXPENSE, $from, $to);
         $profit = bcsub($income, $expense, 4);
 
-        $positions = $this->capital->positions();
+        // ⛔ পুরো কোম্পানি — হেডারের শাখা নয় (অডিট ⛔৪)
+        $positions = $this->capital->positions(wholeCompany: true);
 
         $shares = [];
 

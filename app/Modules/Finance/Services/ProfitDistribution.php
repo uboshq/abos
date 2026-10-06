@@ -82,7 +82,7 @@ final class ProfitDistribution
 
         $out = [];
 
-        foreach ($this->capital->positions($profit) as $position) {
+        foreach ($this->capital->positions($profit, wholeCompany: true) as $position) {
             $amount = (string) ($position['profit_share'] ?? '0');
 
             /*
@@ -288,7 +288,7 @@ final class ProfitDistribution
     {
         $agreed = '0';
 
-        foreach ($this->capital->positions() as $position) {
+        foreach ($this->capital->positions(wholeCompany: true) as $position) {
             if (($position['share_source'] ?? null) === 'agreed') {
                 $agreed = bcadd($agreed, (string) $position['share'], 4);
             }

@@ -172,7 +172,8 @@ final class ProfitDistributionController implements HasMiddleware
          */
         return [
             'menu' => $this->menu->forUser($request->user()),
-            'positions' => $this->capital->positions(null),
+            // ⛔ বণ্টনের পাতা ঘোষণার একই তালিকা দেখায় — পুরো কোম্পানি (অডিট ⛔৪)
+            'positions' => $this->capital->positions(null, wholeCompany: true),
 
             /*
              * ⓘ কার কত এখনো পড়ে আছে — বছর-শেষের বাক্সটা এটা
