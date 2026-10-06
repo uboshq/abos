@@ -131,6 +131,8 @@ class RentalContractService
                 $voucher = $this->vouchers->create(
                     [
                         'type' => Voucher::PAYMENT,
+                        // ⛔ চুক্তির শাখায় — চলতি শাখায় নয় (অডিট ৬ অক্টোবর ⛔৫): অন্য শাখা থেকে দিলে ২১৪১ বা জামানত শাখা ধরে কখনো মিলত না
+                        'branch_id' => $contract->branch_id,
                         'trx_date' => $starts->toDateString(),
                         'narration' => __('finance::message.rental_deposit_narration', [
                             'who' => $contract->counterparty,
@@ -289,6 +291,8 @@ class RentalContractService
             $voucher = $this->vouchers->create(
                 [
                     'type' => Voucher::PAYMENT,
+                    // ⛔ চুক্তির শাখায় — চলতি শাখায় নয় (অডিট ৬ অক্টোবর ⛔৫): অন্য শাখা থেকে দিলে ২১৪১ বা জামানত শাখা ধরে কখনো মিলত না
+                    'branch_id' => $contract->branch_id,
                     'trx_date' => (string) ($data['paid_on'] ?? $month->toDateString()),
                     'narration' => __('finance::message.rental_month_narration', [
                         'who' => $contract->counterparty,
@@ -449,6 +453,7 @@ class RentalContractService
             $voucher = $this->vouchers->create(
                 [
                     'type' => Voucher::PAYMENT,
+                    'branch_id' => $contract->branch_id,
                     'trx_date' => (string) ($data['paid_on'] ?? now()->toDateString()),
                     'narration' => __('finance::message.rental_topup_narration', [
                         'who' => $contract->counterparty,
@@ -506,6 +511,7 @@ class RentalContractService
                 $voucher = $this->vouchers->create(
                     [
                         'type' => Voucher::RECEIPT,
+                        'branch_id' => $contract->branch_id,
                         'trx_date' => $on,
                         'narration' => __('finance::message.rental_refund_narration', [
                             'who' => $contract->counterparty,
