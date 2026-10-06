@@ -74,6 +74,35 @@ class Warehouse extends Model implements Drillable
         return static::query()->pluck('id')->map(fn ($id) => (int) $id)->all();
     }
 
+    /**
+     * ⭐ প্রধান গুদাম শাখা-প্রতি একটা — হেডারে যা-ই বাছা থাকুক — Inventory অডিট ম২২, ৫ অক্টোবর ২০২৬।
+     *
+     * ⛔ সাধারণ [[IsMasterRecord::makeDefault()]] অন্যদের পতাকা নামাত **দেখা যায় এমনগুলোর** মধ্যে, আর গুদাম দেখা হয়
+     * হেডারের শাখা আর মানুষের গুদাম-সীমা দিয়ে: এক শাখা বাছা থাকলে প্রধান হত শাখা-প্রতি, "সব শাখা"-য় কোম্পানি-প্রতি,
+     * আর গুদাম-সীমিত মানুষ বাছলে অন্য গুদামের পতাকা থেকেই যেত — দুইটা প্রধান। তখন কাগজ কোন গুদামে নামবে, তা নির্ভর করত
+     * কে কবে কোন হেডারে টিক দিয়েছিলেন তার উপর।
+     * ⓘ এখন নিয়ম একটাই: এই গুদামের নিজের শাখার অন্য প্রধানগুলো নামে (শাখাহীন হলে শাখাহীনগুলো), দেখার দেয়াল ছাড়া;
+     * কোম্পানির দেয়াল থাকে। মালিকের *"প্রতিটা শাখা পুরোপুরি আলাদা"* (১ অক্টোবর ২০২৬)।
+     */
+    public function makeDefault(): static
+    {
+        \Illuminate\Support\Facades\DB::transaction(function () {
+            static::query()
+                ->withoutGlobalScopes(['user-warehouse', self::VIEWED_BRANCH])
+                ->where('is_default', true)
+                ->whereKeyNot($this->getKey())
+                ->when($this->branch_id === null,
+                    fn ($q) => $q->whereNull('branch_id'),
+                    fn ($q) => $q->where('branch_id', $this->branch_id))
+                ->get()
+                ->each(fn ($other) => $other->forceFill(['is_default' => false])->save());
+
+            $this->refresh()->forceFill(['is_default' => true, 'is_active' => true])->save();
+        });
+
+        return $this->fresh();
+    }
+
     protected $table = 'inv_warehouses';
 
     protected $fillable = [
