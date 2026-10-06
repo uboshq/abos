@@ -35,8 +35,7 @@ class CustomerRecord {
   /// this name is Bengali. English is the fallback rather than the other way
   /// round, and the code the fallback of last resort — a row with no name at
   /// all is still recognisable by the code the shop is billed under.
-  String get name =>
-      _text('nameBn') ?? _text('nameEn') ?? code ?? 'নাম নেই';
+  String get name => _text('nameBn') ?? _text('nameEn') ?? code ?? 'নাম নেই';
 
   String? get ownerName => _text('ownerName');
 
@@ -125,6 +124,13 @@ class CustomerDueRecord {
   /// server side either — the web screen reads it by this same rule.
   double get outstanding => Money.valueOrZero(payload['outstanding']);
 
+  /// ⭐ The due in the branch being viewed — what the web's customer list shows (owner, 6 Oct 2026: "another
+  /// branch's balance was counted"). Lists and totals show this; the credit check keeps [outstanding], the whole
+  /// company's, because the limit is absolute. An older server sends no such field: then the whole figure.
+  double get outstandingInView => payload.containsKey('outstandingInView')
+      ? Money.valueOrZero(payload['outstandingInView'])
+      : outstanding;
+
   double get creditLimit => Money.valueOrZero(payload['creditLimit']);
 
   int get creditDays => (payload['creditDays'] as num?)?.toInt() ?? 0;
@@ -138,10 +144,16 @@ class CustomerDueRecord {
   /// draws a limit that is not there, and no screen decides what one means.
   bool get hasCreditLimit => creditLimit > 0;
 
-  String get outstandingLabel {
-    if (outstanding == 0) return 'বকেয়া নেই';
-    if (outstanding < 0) return 'অগ্রিম ${Money.taka(-outstanding)}';
-    return 'বকেয়া ${Money.taka(outstanding)}';
+  /// The viewed branch's due, in words — for lists and the shop's page.
+  String get outstandingLabel => _label(outstandingInView);
+
+  /// The whole company's due, in words — beside the credit headroom on the order screen, which is measured by it.
+  String get wholeOutstandingLabel => _label(outstanding);
+
+  static String _label(double due) {
+    if (due == 0) return 'বকেয়া নেই';
+    if (due < 0) return 'অগ্রিম ${Money.taka(-due)}';
+    return 'বকেয়া ${Money.taka(due)}';
   }
 
   static CustomerDueRecord? forCustomer(String customerId) {

@@ -58,11 +58,13 @@ class _DueListScreenState extends State<DueListScreen> {
     // null after a clean pull, and an empty list then means an empty list.
     final trouble = ReferenceSync.troubleSentence;
     final rows = _owing();
-    final filtered = DueListQuery.apply(rows,
-        query: _query, sort: _sort, filters: _filters);
+    final filtered =
+        DueListQuery.apply(rows, query: _query, sort: _sort, filters: _filters);
     // ⓘ মোট সবসময় পুরো তালিকার — ফিল্টারে কটা দোকান লুকালেও মোট বকেয়া বদলায়
     // না, কারণ এই সংখ্যাটার জন্যই মালিক পাতাটা খোলেন।
-    final total = rows.fold<double>(0, (sum, row) => sum + row.due.outstanding);
+    // ⭐ দেখার শাখার বকেয়া — ওয়েবের তালিকার একই সংখ্যা (মালিক, ৬ অক্টোবর ২০২৬)
+    final total =
+        rows.fold<double>(0, (sum, row) => sum + row.due.outstandingInView);
 
     return Scaffold(
       appBar: AppBar(title: const Text('বকেয়া তালিকা')),
@@ -158,7 +160,7 @@ class _DueListScreenState extends State<DueListScreen> {
     final rows = <DueRow>[];
     for (final customer in CustomerRecord.all()) {
       final due = CustomerDueRecord.forCustomer(customer.id);
-      if (due == null || due.outstanding <= 0) continue;
+      if (due == null || due.outstandingInView <= 0) continue;
       rows.add(DueRow(customer: customer, due: due));
     }
     return rows;
@@ -233,7 +235,7 @@ class _DueTile extends StatelessWidget {
             ),
             const SizedBox(width: AppSpacing.sm),
             Text(
-              'বকেয়া: ${Money.taka(row.due.outstanding)}',
+              'বকেয়া: ${Money.taka(row.due.outstandingInView)}',
               style: const TextStyle(
                   fontWeight: FontWeight.w700,
                   fontSize: 15,

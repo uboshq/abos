@@ -19,11 +19,17 @@ class TrackedSale {
     required this.billed,
     this.category,
     this.backOrder = false,
+    this.documentNo,
   });
 
   final String kind;
   final String id;
+
+  /// বিক্রির নম্বর (S-0154) — নতুন কাগজে `sale_no`, পুরনোয় কাগজেরটাই
   final String no;
+
+  /// ⭐ কাগজের নিজের নম্বর (CHA-0154) — নতুন বিক্রিতে বিক্রির নম্বর থেকে আলাদা (৩ অক্টোবর ২০২৬); পুরনো সার্ভারে null
+  final String? documentNo;
   final String? date;
   final String? customer;
   final double total;
@@ -47,6 +53,7 @@ class TrackedSale {
         billed: json['billed'] == true,
         category: json['category']?.toString(),
         backOrder: json['back_order'] == true,
+        documentNo: json['document_no']?.toString(),
       );
 }
 

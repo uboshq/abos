@@ -148,6 +148,8 @@ class ReferenceSync {
         },
       );
       final body = response.data ?? const {};
+      // ⭐ Before a single row is stored: rows of another view must not mix with this one ([[adoptView]]).
+      if (page == 0) await adoptView(body['view'] as String?);
       final records = (body['records'] as List?) ?? const [];
       hasMore = body['hasMore'] as bool? ?? false;
       unreadable = ((body['unreadable'] as List?) ?? const [])
@@ -184,6 +186,22 @@ class ReferenceSync {
       caughtUp: fullyCaughtUp,
       unreadableEntityTypes: unreadable,
     );
+  }
+
+  /// ⛔ Owner, 6 Oct 2026: "the app shows another branch's customers and their balances too". The branch lives on
+  /// the person, so choosing one in the web header moves the phone's view as well — and the phone kept the old
+  /// branch's rows while the new view's rows arrived on top. The server now names the view on every pull and starts
+  /// the device over when it changed; here the phone wipes what it holds before storing anything of the new view.
+  /// ⓘ A cache with no view yet (this app's first pull after the update) is wiped once — that cleans today's mix.
+  /// ⓘ An older server names no view: nothing happens, as before.
+  @visibleForTesting
+  static Future<bool> adoptView(String? view) async {
+    if (view == null || view.isEmpty) return false;
+    await ReferenceCache.instance.init();
+    if (ReferenceCache.instance.view == view) return false;
+    await ReferenceCache.instance.clearAll();
+    await ReferenceCache.instance.rememberView(view);
+    return true;
   }
 
   /// One page into the cache; returns how many records it held.

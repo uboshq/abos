@@ -829,7 +829,8 @@ class DueNotice extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    due.outstandingLabel,
+                    // ⓘ গোটা কোম্পানির — পাশের সীমার হিসাব এটা দিয়েই (সীমা পরম)
+                    due.wholeOutstandingLabel,
                     style: TextStyle(
                       fontWeight: FontWeight.w700,
                       fontSize: 13,

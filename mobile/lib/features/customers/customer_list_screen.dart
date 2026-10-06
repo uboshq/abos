@@ -123,8 +123,8 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
                           ],
                         )
                       : ListView.separated(
-                          padding:
-                              const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: AppSpacing.md),
                           itemCount: filtered.length,
                           separatorBuilder: (_, __) =>
                               const SizedBox(height: AppSpacing.xs),
@@ -189,7 +189,7 @@ class _DuePill extends StatelessWidget {
     // Owed is the only state worth a colour. A shop that is square, or in
     // advance, is not news — and colouring it green would make the ordinary
     // case shout as loudly as the one a rep has to act on.
-    final owes = due.outstanding > 0;
+    final owes = due.outstandingInView > 0;
 
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
