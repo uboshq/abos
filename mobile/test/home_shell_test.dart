@@ -9,6 +9,7 @@ import 'package:abos_mobile/core/auth/session_profile.dart';
 import 'package:abos_mobile/core/auth/session_repository.dart';
 import 'package:abos_mobile/core/menu/menu_item.dart';
 import 'package:abos_mobile/core/menu/menu_repository.dart';
+import 'package:abos_mobile/core/records/notice_bar.dart';
 import 'package:abos_mobile/core/records/today_record.dart';
 import 'package:abos_mobile/core/update/app_version_check.dart';
 import 'package:abos_mobile/features/home/home_shell.dart';
@@ -64,7 +65,8 @@ void main() {
       ),
     ],
     profile: SessionProfile(
-      company: OrgRef(publicId: 'c1', code: 'TCL', name: 'টেষ্ট কোম্পানী লিমিটেড'),
+      company:
+          OrgRef(publicId: 'c1', code: 'TCL', name: 'টেষ্ট কোম্পানী লিমিটেড'),
       branch: OrgRef(publicId: 'b1', code: 'HO', name: 'Head Office'),
       locale: 'bn',
     ),
@@ -75,6 +77,7 @@ void main() {
     Future<OrgSnapshot?> Function()? readCachedOrg,
     DateTime Function()? now,
     TodayRecord? Function()? lastKnown,
+    Future<List<NoticeBarItem>> Function()? noticeBar,
   }) =>
       ProviderScope(
         overrides: [authStateProvider.overrideWith((ref) => _SignedIn(user))],
@@ -87,6 +90,7 @@ void main() {
             cacheOrg: (_) async {},
             checkUpdate: () async => UpdateStatus.fine,
             now: now ?? () => DateTime(2026, 9, 27, 10, 30),
+            fetchNoticeBar: noticeBar ?? () async => const [],
           ),
         ),
       );
@@ -100,13 +104,15 @@ void main() {
     expect(find.text('টেষ্ট কোম্পানী লিমিটেড'), findsOneWidget);
     expect(find.text('Head Office'), findsOneWidget);
     // Said once, in the header — not again above the cards.
-    expect(find.textContaining('টেষ্ট কোম্পানী লিমিটেড · Head Office'), findsNothing);
+    expect(find.textContaining('টেষ্ট কোম্পানী লিমিটেড · Head Office'),
+        findsNothing);
   });
 
   // ⭐ The owner, 6 Oct 2026: no greeting, no name on the home — the photo sits
   // at the far right of the green header and opens the profile; the bell
   // sits beside it.
-  testWidgets('no greeting on the home; the photo and the bell are in the header',
+  testWidgets(
+      'no greeting on the home; the photo and the bell are in the header',
       (tester) async {
     await tester.pumpWidget(shell(now: () => DateTime(2026, 9, 27, 20, 15)));
     await tester.pumpAndSettle();
@@ -119,6 +125,30 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('বেরিয়ে যান'), findsOneWidget,
         reason: 'the photo opens the profile');
+  });
+
+  // ⭐ মালিক, ৬ অক্টোবর ২০২৬: ওয়েবের চলমান নোটিশ ফোনেও — মাথার নিচে, প্রতিটা ট্যাবে; কিছু না থাকলে চুপ
+  testWidgets(
+      'the notice line of the web sits under the header on every tab, and is quiet when empty',
+      (tester) async {
+    await tester.pumpWidget(shell(
+        noticeBar: () async =>
+            const [NoticeBarItem(id: 'n1', title: 'কাল অফিস বন্ধ')]));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const ValueKey('notice-ticker')), findsOneWidget);
+    expect(find.textContaining('কাল অফিস বন্ধ'), findsWidgets);
+
+    await tester.tap(find.text('অ্যাপ'));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('notice-ticker')), findsOneWidget,
+        reason: 'নোটিশ কেবল হোম ট্যাবে — মাথার নিচে নয়');
+
+    // ⓘ নতুন গাছ — একই গাছে আবার পাম্প করলে আগের অবস্থা থেকে যেত
+    await tester.pumpWidget(const SizedBox());
+    await tester.pumpWidget(shell());
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('notice-ticker')), findsNothing);
   });
 
   testWidgets('the figures and the hour they were true are on the home tab',
@@ -162,8 +192,8 @@ void main() {
       (tester) async {
     await tester.pumpWidget(shell(
       loadHome: (_) async => const HomeMenu(items: []),
-      readCachedOrg: () async =>
-          const OrgSnapshot(company: 'টেষ্ট কোম্পানী লিমিটেড', branch: 'Head Office'),
+      readCachedOrg: () async => const OrgSnapshot(
+          company: 'টেষ্ট কোম্পানী লিমিটেড', branch: 'Head Office'),
     ));
     await tester.pumpAndSettle();
 
