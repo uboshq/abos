@@ -77,7 +77,9 @@ class TheFdBehindTheLoanTest extends TestCase
 
     private function cash(): Account
     {
-        return Account::query()->postable()->where('name_en', 'like', '%Cash%')->firstOrFail();
+        // ⛔ আসল নগদের খাত — নামে "Cash" থাকা প্রথম খাত নয় (৬ অক্টোবর ২০২৬)। ⓘ টাকা কেবল নগদ, ব্যাংক বা MFS খাত থেকে
+        // যায় (অডিট ম২৩, [[FinanceSignature::moneyAccount()]]); নাম ধরে বাছলে অন্য খাত উঠত, আর প্রতিটা জমা থামত
+        return Account::query()->money()->postable()->active()->where('money_kind', Account::CASH)->orderBy('id')->firstOrFail();
     }
 
     private function payable(): Account
