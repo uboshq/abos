@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Accounts\Services;
 
+use App\Core\Services\DataScope;
 use App\Core\Support\CompanyContext;
 use App\Core\Support\ViewedBranch;
 use App\Modules\Accounts\Models\Account;
@@ -65,6 +66,17 @@ final class BalanceSheetService
          * ⛔ এটা দেখানোর হিসাব; কোনো যাচাই এটা ডাকে না।
          */
         $branchId ??= ViewedBranch::one();
+
+        /*
+         * ⛔ "সব শাখা"-তেও নাগালের ভেতরে — অডিট ⛔১১ (৬ অক্টোবর ২০২৬)। আগে `null` মানে গোটা কোম্পানি, তাই দুই শাখায় সীমিত
+         * মানুষও সব শাখার স্থিতিপত্র আর চলতি বছরের লাভ দেখতেন। ⓘ শাখা না বললে দেখার নিয়ম ([[DataScope::inView()]]):
+         * এক শাখা বাছা → সেটা; "সব শাখা" → নাগালের শাখা আর শাখাহীন সারি; সীমাহীন মানুষ (মালিক) → সব, আগের মতো।
+         * ⓘ ডাকনেওয়ালা নিজে শাখা দিলে ঠিক সেটা।
+         */
+        $explicit = $branchId;
+        $this->scope = $explicit !== null
+            ? fn ($q, string $column) => $q->where($column, $explicit)
+            : fn ($q, string $column) => app(DataScope::class)->inView($q, $column);
 
         $balances = $this->balances($asOf, $branchId);
         $accounts = Account::query()->orderBy('code')->get();
@@ -143,6 +155,9 @@ final class BalanceSheetService
      * @param  array<int, string>  $balances
      * @return list<array<string, mixed>>
      */
+    /** @var \Closure(mixed, string): mixed শাখার ছাঁকনি — [[build()]] বসায় */
+    private \Closure $scope;
+
     private function side(Collection $accounts, array $balances, string $type): array
     {
         /*
@@ -233,7 +248,7 @@ final class BalanceSheetService
             ->join('accounts', 'accounts.id', '=', 'ledger_entries.account_id')
             ->where('ledger_entries.company_id', CompanyContext::id())
             ->where('ledger_entries.trx_date', '<=', $asOf)
-            ->when($branchId, fn ($q) => $q->where('ledger_entries.branch_id', $branchId))
+            ->tap(fn ($q) => ($this->scope)($q, 'ledger_entries.branch_id'))
             ->groupBy('ledger_entries.account_id', 'accounts.nature')
             ->select([
                 'ledger_entries.account_id',
@@ -294,7 +309,7 @@ final class BalanceSheetService
              * বন্ধের দাখিলাতেই শূন্য হয়ে আছে, তাই শুরু থেকে গুনলেও তা দুবার আসে না।
              */
             ->where('ledger_entries.trx_date', '<=', $asOf)
-            ->when($branchId, fn ($q) => $q->where('ledger_entries.branch_id', $branchId))
+            ->tap(fn ($q) => ($this->scope)($q, 'ledger_entries.branch_id'))
             ->selectRaw('
                 COALESCE(SUM(CASE WHEN accounts.type = ? THEN credit - debit ELSE 0 END), 0) as income,
                 COALESCE(SUM(CASE WHEN accounts.type = ? THEN debit - credit ELSE 0 END), 0) as expense
@@ -325,7 +340,7 @@ final class BalanceSheetService
             ->where('account_id', $accountId)
             ->whereNotNull('party_id')
             ->where('trx_date', '<=', $asOf)
-            ->when($branchId, fn ($q) => $q->where('branch_id', $branchId))
+            ->tap(fn ($q) => ($this->scope)($q, 'branch_id'))
             ->groupBy('party_type', 'party_id')
             ->selectRaw('SUM(debit) - SUM(credit) as net')
             ->pluck('net');
