@@ -66,7 +66,7 @@ class LoadingSheetController extends Controller implements HasMiddleware
 
     public function show(Request $request, Shipment $shipment): View
     {
-        $shipment->load(['lines.challan.customer', 'lines.challan.lines.product.unit']);
+        $shipment->load(['lines.challan.customer', 'lines.challan.lines.product.unit', 'lines.challan.lines.batch']);
 
         $stages = DeliveryState::query()
             ->whereIn('delivery_challan_id', $shipment->lines->pluck('delivery_challan_id'))
@@ -122,7 +122,12 @@ class LoadingSheetController extends Controller implements HasMiddleware
     /**
      * পণ্য ধরে যোগফল — গাড়িতে কোন পণ্য মোট কত (পরিমাণ + ফ্রি), সব চালান মিলিয়ে।
      *
-     * @return list<array{product: string, unit: string, qty: string, free: string}>
+     * ⭐ লট ধরে ভাগ — ধাপ ৪ (মালিক, ৬ অক্টোবর ২০২৬: "পণ্য ধরে কত তুলতে হবে"): তোলার লোককে কোন লট থেকে কত, সেটাও
+     * জানতে হয়; `lots` = লট → পরিমাণ (+ফ্রি), লট-ছাড়া মাল লটের ঘরে নেই। পর্দা, ছাপা আর ফোন — তিনটাই এটা পড়ে।
+     *
+     * ⓘ `for` = কার জন্য — "দোকান (চালান)" → পরিমাণ (+ফ্রি); ছাপায় নামের নিচে।
+     *
+     * @return list<array{product: string, unit: string, qty: string, free: string, lots: array<string, string>, for: array<string, string>}>
      */
     public static function productTotals(Shipment $shipment): array
     {
@@ -136,9 +141,21 @@ class LoadingSheetController extends Controller implements HasMiddleware
                     'unit' => (string) ($line->product?->unit?->name() ?? ''),
                     'qty' => '0',
                     'free' => '0',
+                    'lots' => [],
+                    'for' => [],
                 ];
                 $totals[$key]['qty'] = bcadd($totals[$key]['qty'], (string) $line->delivered_qty, 4);
                 $totals[$key]['free'] = bcadd($totals[$key]['free'], (string) ($line->free_qty ?? '0'), 4);
+
+                $who = trim(($tripLine->challan?->customer?->name() ?? '').' ('.($tripLine->challan?->document_no ?? '').')');
+                $totals[$key]['for'][$who] = bcadd($totals[$key]['for'][$who] ?? '0',
+                    bcadd((string) $line->delivered_qty, (string) ($line->free_qty ?? '0'), 4), 4);
+
+                $lot = (string) ($line->batch?->batch_no ?? '');
+                if ($lot !== '') {
+                    $totals[$key]['lots'][$lot] = bcadd($totals[$key]['lots'][$lot] ?? '0',
+                        bcadd((string) $line->delivered_qty, (string) ($line->free_qty ?? '0'), 4), 4);
+                }
             }
         }
 

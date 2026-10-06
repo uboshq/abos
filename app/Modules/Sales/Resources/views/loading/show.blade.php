@@ -42,7 +42,14 @@
                 <tbody>
                     @forelse ($totals as $row)
                         <tr class="border-b border-(--color-border) last:border-b-0">
-                            <td class="py-1">{{ $row['product'] }}</td>
+                            <td class="py-1">{{ $row['product'] }}
+                                {{-- ⭐ কোন লট থেকে কত — তোলার লোকের জন্য (ধাপ ৪) --}}
+                                @if (($row['lots'] ?? []) !== [])
+                                    <div class="text-xs text-(--color-ink-muted)" data-loading-lots>
+                                        @foreach ($row['lots'] as $lot => $qty){{ $lot }}: {{ Money::format($qty) }}@if (! $loop->last) · @endif @endforeach
+                                    </div>
+                                @endif
+                            </td>
                             <td class="num py-1 text-end">{{ Money::format($row['qty']) }} {{ $row['unit'] }}</td>
                             <td class="num py-1 text-end">{{ Money::format($row['free']) }}</td>
                         </tr>

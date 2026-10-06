@@ -756,16 +756,38 @@ class SalesPrintController extends Controller implements HasMiddleware
     }
 
     /**
-     * ⭐ লোডিং শিট — ট্রিপ ধরে গাড়িতে যা উঠবে, প্রতিটা চালানের প্রতিটা সারি ([[LoadingSheetController]])।
+     * ⭐ লোডিং শিট — ট্রিপ ধরে গাড়িতে যা উঠবে ([[LoadingSheetController]])।
      * ⓘ দাম নেই — মাল তোলার লোক গোনেন, দাম তাঁর কাজ নয়।
+     *
+     * ⭐ পর্দার মতো দুই ভাগ — ধাপ ৪ (মালিক, ৬ অক্টোবর ২০২৬: "পণ্য ধরে কত তুলতে হবে, চালান ধরে কার জন্য"):
+     * টেবিলে পণ্য ধরে মোট, সব চালান মিলিয়ে, নিচে লট ধরে ভাগ ([[LoadingSheetController::productTotals()]] — পর্দার
+     * একই হিসাব); বিবরণে চালান ধরে কার জন্য কী। ⛔ আগে চালানের সারিগুলো সমান করে বিছানো থাকত — একই পণ্য পাঁচবার, যোগ নেই।
      */
     public function loadingSheet(Request $request, Shipment $shipment): Response
     {
-        $shipment->load(['lines.challan.customer', 'lines.challan.lines.product.unit']);
+        $shipment->load(['lines.challan.customer', 'lines.challan.lines.product.unit', 'lines.challan.lines.batch']);
 
-        $lines = $shipment->lines
-            ->flatMap(fn ($tripLine) => $tripLine->challan?->lines ?? collect())
-            ->values();
+        $products = array_map(fn (array $row) => [
+            'code' => '',
+            'name' => $row['product'],
+            'qty' => $this->qty($row['qty']),
+            'unit' => $row['unit'],
+            'rate' => '',
+            'amount' => '',
+            // ⓘ নামের নিচে: কোন লট থেকে কত, আর কার জন্য কত — তোলার লোক এক সারিতেই দেখেন
+            'note' => implode(' | ', array_filter([
+                implode(' · ', array_map(fn ($lot, $qty) => $lot.': '.$this->qty($qty), array_keys($row['lots']), $row['lots'])),
+                implode(' · ', array_map(fn ($who, $qty) => $who.': '.$this->qty($qty), array_keys($row['for']), $row['for'])),
+            ])),
+            'free' => bccomp($row['free'], '0', 4) > 0 ? $this->qty($row['free']) : '',
+            'total_qty' => $this->qty(bcadd($row['qty'], $row['free'], 4)),
+            'group' => '',
+        ], \App\Modules\Sales\Http\Controllers\LoadingSheetController::productTotals($shipment));
+
+        $byChallan = $shipment->lines->map(fn ($tripLine) => trim(($tripLine->challan?->document_no ?? '').' · '
+            .($tripLine->challan?->customer?->name() ?? '')).' — '
+            .($tripLine->challan?->lines ?? collect())->map(fn ($l) => $l->product?->name().' '.$this->qty(bcadd((string) $l->delivered_qty, (string) ($l->free_qty ?? '0'), 4)))->implode(', '))
+            ->implode(' | ');
 
         $doc = new PrintableDocument(
             title: __('sales::loading.title'),
@@ -781,8 +803,9 @@ class SalesPrintController extends Controller implements HasMiddleware
                     ->map(fn ($l) => trim(($l->challan?->document_no ?? '').' '.($l->challan?->customer?->name() ?? '')))
                     ->implode(' · '),
             ],
-            lines: $this->productLines($lines, 'delivered_qty', []),
+            lines: $products,
             signatures: ['core.print.storekeeper', 'core.print.driver'],
+            narration: __('sales::loading.by_challan').': '.$byChallan,
             showMoney: false,
             notice: __('core.print.no_price_notice'),
         );
