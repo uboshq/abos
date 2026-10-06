@@ -80,7 +80,8 @@ final class InventoryWidgets implements DashboardWidgets
             new Widget(
                 group: 'todo',
                 label: __('inventory::dashboard.on_hold'),
-                value: (string) self::reportRows('inventory.hold'),
+                // ⓘ সারির সংখ্যা, পরিমাণ নয় — মজুদের ডোনাটে আটকানো পরিমাণ (৪২) আর এখানে সারি (২); "২টা সারি" লেখা না থাকলে দুই সংখ্যা ভুল বোঝাত (৬ অক্টোবর ২০২৬)
+                value: (string) __('inventory::dashboard.on_hold_rows', ['n' => self::reportRows('inventory.hold')]),
                 href: route('inventory.report.show', ['slug' => 'hold']),
                 permission: 'inventory.report',
                 tone: 'neutral',

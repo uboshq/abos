@@ -8,6 +8,7 @@ return [
 
     'below_reorder' => 'Running low',
     'on_hold' => 'Stock on hold',
+    'on_hold_rows' => ':n rows',
     'expiry_title' => 'Expiry control — lots',
     'expiry_hint' => ':count lots with stock, by when they expire',
     'expiry_expired' => 'Expired',
