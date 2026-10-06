@@ -62,7 +62,10 @@ class PayslipPrintController extends Controller implements HasMiddleware
 
     public function all(Request $request, PayrollRun $run): Response
     {
-        $run->load(['payslips.employee.department', 'payslips.employee.designation', 'payslips.lines']);
+        // ⛔ কেবল নাগালের কর্মীদের স্লিপ (পুরো-ERP অডিট, ৬ অক্টোবর ২০২৬ HR ⛔২; [[BranchReach]])
+        $run->setRelation('payslips', app(\App\Modules\Hr\Support\BranchReach::class)
+            ->throughEmployee($run->payslips()->getQuery(), $request->user())
+            ->with(['employee.department', 'employee.designation', 'lines'])->get());
 
         $documents = $run->payslips
             ->sortBy(fn (Payslip $slip) => $slip->employee?->code)

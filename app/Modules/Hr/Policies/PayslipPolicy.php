@@ -6,9 +6,8 @@ namespace App\Modules\Hr\Policies;
 
 use App\Core\Services\DataScope;
 use App\Models\User;
-use App\Models\UserDataScope;
-use App\Modules\Hr\Models\PayrollRun;
 use App\Modules\Hr\Models\Payslip;
+use App\Modules\Hr\Support\BranchReach;
 
 /**
  * একটা বেতনের পাতা — তার রান যেখানে দেখা যায়, সেখানেই।
@@ -32,10 +31,11 @@ class PayslipPolicy
             return false;
         }
 
-        $branchId = PayrollRun::acrossBranches()
-            ->whereKey($payslip->payroll_run_id)
-            ->value('branch_id');
-
-        return $this->scope->allows($user, UserDataScope::BRANCH, $branchId === null ? null : (int) $branchId);
+        /*
+         * ⛔ কর্মীর শাখা, রানের নয় — পুরো-ERP অডিট, ৬ অক্টোবর ২০২৬ (HR ⛔২)। ⓘ রান পুরো কোম্পানির কর্মীদের; "কোথায় বসে
+         * চালানো হলো" দিয়ে কার স্লিপ দেখা যাবে ঠিক হত, তাই সীমিত ম্যানেজার রানের শাখায় থাকলে সব শাখার কর্মীর বেতন দেখতেন —
+         * যাঁদের কর্মীর তালিকা তাঁর কাছ থেকে লুকায় ([[EmployeePolicy]])। কর্মীর তালিকার একই নাগাল ([[BranchReach]])।
+         */
+        return app(BranchReach::class)->reaches($user, $payslip->employee()->withoutGlobalScopes()->first());
     }
 }

@@ -54,11 +54,12 @@
 
     <div class="mb-4 grid gap-4 lg:grid-cols-[1fr_22rem]">
         <div class="grid gap-3 sm:grid-cols-4">
+            {{-- ⓘ নাগালের কর্মীদের মোট — সীমা না থাকলে রানের নিজের (অডিট HR ⛔২) --}}
             @foreach ([
-                'hr::field.employee_count' => $run->employee_count,
-                'hr::field.gross' => \App\Core\Support\Money::format($run->gross_total),
-                'hr::field.deductions' => \App\Core\Support\Money::format($run->deduction_total),
-                'hr::field.net' => \App\Core\Support\Money::format($run->net_total),
+                'hr::field.employee_count' => $summary['count'],
+                'hr::field.gross' => \App\Core\Support\Money::format($summary['gross']),
+                'hr::field.deductions' => \App\Core\Support\Money::format($summary['deductions']),
+                'hr::field.net' => \App\Core\Support\Money::format($summary['net']),
             ] as $label => $value)
                 <div data-boxed class="rounded-(--radius-card) border border-(--color-border)
                             bg-(--color-surface-card) p-3">

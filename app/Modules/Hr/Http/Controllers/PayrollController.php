@@ -9,6 +9,7 @@ use App\Core\Services\MenuBuilder;
 use App\Http\Controllers\Controller;
 use App\Modules\Hr\Models\PayrollRun;
 use App\Modules\Hr\Services\PayrollService;
+use App\Modules\Hr\Support\BranchReach;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -88,11 +89,31 @@ class PayrollController extends Controller implements HasMiddleware
 
     public function show(Request $request, PayrollRun $run): View
     {
-        $run->load(['payslips.employee', 'payslips.lines', 'branch', 'creator']);
+        $run->load(['branch', 'creator']);
+
+        /*
+         * ⛔ কেবল নাগালের কর্মীদের স্লিপ, আর তাদেরই মোট — পুরো-ERP অডিট, ৬ অক্টোবর ২০২৬ (HR ⛔২)। ⓘ রান পুরো কোম্পানির; আগে
+         * সীমিত ম্যানেজার রানটা দেখতে পেলে সব কর্মীর মোট, কর্তন আর নিট দেখতেন। সীমা না থাকলে (মালিক) রানের নিজের মোটই।
+         */
+        $reach = app(BranchReach::class);
+        $slips = $reach->throughEmployee($run->payslips()->getQuery(), $request->user())->with(['employee', 'lines'])->get();
+        $run->setRelation('payslips', $slips);
+        $limited = $reach->branches($request->user()) !== null;
 
         return view('hr::payroll.show', [
             'menu' => $this->menu->forUser($request->user()),
             'run' => $run,
+            'summary' => $limited ? [
+                'count' => $slips->count(),
+                'gross' => (string) $slips->sum('gross'),
+                'deductions' => (string) $slips->sum('deductions'),
+                'net' => (string) $slips->sum('net'),
+            ] : [
+                'count' => $run->employee_count,
+                'gross' => (string) $run->gross_total,
+                'deductions' => (string) $run->deduction_total,
+                'net' => (string) $run->net_total,
+            ],
             // ব্যাংকে কতজনের বেতন যাবে — ফাইলটা নামানোর আগে জানা দরকার
             'bankRows' => $run->payslips->where('payment_method', 'bank')
                 ->filter(fn ($s) => bccomp((string) $s->net, '0', 4) > 0)->count(),
@@ -135,7 +156,8 @@ class PayrollController extends Controller implements HasMiddleware
     {
         abort_unless($run->isConfirmed(), 404);
 
-        $file = $this->payroll->bankFile($run);
+        // ⛔ কেবল নাগালের কর্মীদের সারি (অডিট HR ⛔২)
+        $file = $this->payroll->bankFile($run, request()->user());
 
         return response($file['content'], 200, [
             'Content-Type' => 'text/csv; charset=UTF-8',

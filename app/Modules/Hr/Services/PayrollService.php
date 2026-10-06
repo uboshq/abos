@@ -266,9 +266,10 @@ final class PayrollService
      *
      * @return array{name: string, content: string, rows: int}
      */
-    public function bankFile(PayrollRun $run): array
+    public function bankFile(PayrollRun $run, ?\App\Models\User $user = null): array
     {
-        $slips = $run->payslips()
+        // ⓘ নাম ধরে কেউ চাইলে কেবল তাঁর নাগালের কর্মী ([[BranchReach]], অডিট HR ⛔২)
+        $slips = ($user === null ? $run->payslips()->getQuery() : app(\App\Modules\Hr\Support\BranchReach::class)->throughEmployee($run->payslips()->getQuery(), $user))
             ->with('employee')
             ->where('payment_method', 'bank')
             ->get();
