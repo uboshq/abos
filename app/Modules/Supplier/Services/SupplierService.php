@@ -109,6 +109,8 @@ final class SupplierService
                 $supplier->code,
                 (string) $supplier->opening_balance,
                 $supplier->opening_date,
+                // ⭐ সরবরাহকারীর নিজের শাখায়, ঢোকানো মানুষের শাখায় নয় (অডিট ⓘ১৭)
+                branchId: $supplier->branch_id === null ? null : (int) $supplier->branch_id,
             );
 
             return $supplier;

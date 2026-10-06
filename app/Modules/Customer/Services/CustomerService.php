@@ -100,6 +100,8 @@ final class CustomerService
                 $customer->code,
                 (string) $customer->opening_balance,
                 $customer->opening_date,
+                // ⭐ গ্রাহকের নিজের শাখায়, ঢোকানো মানুষের শাখায় নয় (অডিট ⓘ১৭)
+                branchId: $customer->branch_id === null ? null : (int) $customer->branch_id,
             );
 
             return $customer;

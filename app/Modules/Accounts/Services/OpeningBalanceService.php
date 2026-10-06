@@ -60,11 +60,13 @@ final class OpeningBalanceService
         string $documentNo,
         string $amount,
         Carbon|string|null $date = null,
+        ?int $branchId = null,
     ): array {
         return $this->post(
             $partyType, $partyId, $documentNo, $amount, $date,
             partyAccount: StandardChart::RECEIVABLE,
             partyIsDebit: true,
+            branchId: $branchId,
         );
     }
 
@@ -79,11 +81,13 @@ final class OpeningBalanceService
         string $documentNo,
         string $amount,
         Carbon|string|null $date = null,
+        ?int $branchId = null,
     ): array {
         return $this->post(
             $partyType, $partyId, $documentNo, $amount, $date,
             partyAccount: StandardChart::PAYABLE,
             partyIsDebit: false,
+            branchId: $branchId,
         );
     }
 
@@ -366,6 +370,7 @@ final class OpeningBalanceService
         Carbon|string|null $date,
         string $partyAccount,
         bool $partyIsDebit,
+        ?int $branchId = null,
     ): array {
         // শূন্য খোলা ব্যালেন্স মানে কিছুই আনার নেই — দাখিলা বসালে
         // লেজারে দুইটা শূন্য সারি থাকত, যা পড়ার সময় শুধু বিভ্রান্ত করে
@@ -414,6 +419,11 @@ final class OpeningBalanceService
             trxDate: $this->dateFor($date),
             lines: [$partyLine, $equityLine],
             documentNo: $documentNo,
+            /*
+             * ⭐ পক্ষের নিজের শাখায় — অডিট ⓘ১৭ (৬ অক্টোবর ২০২৬)। ⛔ আগে শাখা পাঠানো হত না, তাই খোলা জের বসত যিনি ঢোকালেন
+             * তাঁর শাখায় (পোস্টিংয়ের ডিফল্ট) — নেত্রকোনার গ্রাহকের পুরনো বাকি ময়মনসিংহের খাতায়। শাখা না দিলে আগের মতো।
+             */
+            branchId: $branchId,
         ));
     }
 
