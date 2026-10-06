@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Modules\Hr\Http\Controllers\AttendanceController;
 use App\Modules\Hr\Http\Controllers\EmployeeController;
+use App\Modules\Hr\Http\Controllers\ExpenseClaimController;
 use App\Modules\Hr\Http\Controllers\LeaveController;
 use App\Modules\Hr\Http\Controllers\PayrollController;
 use App\Modules\Hr\Http\Controllers\PayslipPrintController;
@@ -43,6 +44,18 @@ Route::middleware('auth')->prefix('hr')->group(function () {
      * ব্যাংক ফাইলের ঠিকানা {run}-এর নিচে, কারণ ফাইলটা একটা রানেরই —
      * আলাদা কোনো পর্দা নেই, রানের পাতা থেকেই নামানো হয়।
      */
+    /*
+     * ⭐ খরচের দাবি আর অগ্রিম অনুরোধ — মালিকের আদেশ, ৭ অক্টোবর ২০২৬ ([[ExpenseClaimController]])। সই সইয়ের বাক্সে, টাকা
+     * ক্যাশিয়ার দেন ভাউচারের পর্দা থেকে।
+     */
+    Route::prefix('claims')->name('claim.')->group(function () {
+        Route::get('/', [ExpenseClaimController::class, 'index'])->name('index');
+        Route::get('/create', [ExpenseClaimController::class, 'create'])->name('create');
+        Route::post('/', [ExpenseClaimController::class, 'store'])->name('store');
+        // ⓘ নিজের দাবি, বা সবার-চাবি আর নাগাল ([[ExpenseClaimPolicy]])
+        Route::get('/{claim}', [ExpenseClaimController::class, 'show'])->whereNumber('claim')->middleware('can:view,claim')->name('show');
+    });
+
     Route::prefix('payroll')->name('payroll.')->group(function () {
         Route::get('/', [PayrollController::class, 'index'])->name('index');
         Route::get('/create', [PayrollController::class, 'create'])->name('create');

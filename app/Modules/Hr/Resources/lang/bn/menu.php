@@ -6,6 +6,7 @@ return [
     'employees' => 'কর্মী',
     'salary_heads' => 'বেতনের খাত',
     'payroll' => 'বেতনের রান',
+    'claims' => 'খরচের দাবি ও অগ্রিম',
     'attendance' => 'হাজিরা',
     'leave' => 'ছুটি',
     'leave_types' => 'ছুটির ধরন',

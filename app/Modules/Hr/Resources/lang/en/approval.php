@@ -11,4 +11,6 @@ declare(strict_types=1);
 
 return [
     'payroll' => 'Confirming a payroll run',
+    'expense_claim' => 'Employee expense claim',
+    'cash_advance' => 'Employee cash advance request',
 ];

@@ -240,6 +240,14 @@ final class VoucherApproval
             return null;
         }
 
+        /*
+         * ⭐ যে কাগজের বিপরীতে ভাউচার, সেটা আগেই শেষ সই পেয়েছে — আবার সই নয় (কর্মীর খরচের দাবি, মালিকের আদেশ ৭ অক্টোবর
+         * ২০২৬; [[SignedBeforeItIsPaid]])। ⓘ সই একবার, কাগজে; খসড়া ভাউচার কেবল টাকা দেওয়ার নির্দেশ।
+         */
+        if ($this->paperAlreadySigned($voucher)) {
+            return null;
+        }
+
         return match (true) {
             // ⓘ ২০ সেপ্টেম্বর: ক্রয়ের কাউন্টারের পরিশোধও কাউন্টারের নিজের ছকে
             $voucher->origin === Voucher::ORIGIN_COUNTER && $voucher->type === Voucher::PAYMENT => self::COUNTER_PAYMENT,
@@ -248,6 +256,25 @@ final class VoucherApproval
 
             default => (string) $voucher->type,
         };
+    }
+
+    private function paperAlreadySigned(Voucher $voucher): bool
+    {
+        $type = (string) ($voucher->against_type ?? '');
+
+        if ($type === '' || (int) ($voucher->against_id ?? 0) <= 0) {
+            return false;
+        }
+
+        $class = app(\App\Core\Engines\Drill\DrillResolver::class)->map()[$type] ?? null;
+
+        if ($class === null || ! is_subclass_of($class, \App\Core\Contracts\SignedBeforeItIsPaid::class)) {
+            return false;
+        }
+
+        $paper = $class::query()->find((int) $voucher->against_id);
+
+        return $paper instanceof \App\Core\Contracts\SignedBeforeItIsPaid && $paper->signedBeforeItIsPaid();
     }
 
     /**

@@ -60,6 +60,8 @@ return [
             ['label' => 'hr::menu.payroll', 'icon' => 'cash', 'route' => 'hr.payroll.index', 'permission' => 'hr.payroll.view'],
             ['label' => 'hr::menu.attendance', 'icon' => 'calendar', 'route' => 'hr.attendance.index', 'permission' => 'hr.attendance.view'],
             ['label' => 'hr::menu.leave', 'icon' => 'clock', 'route' => 'hr.leave.index', 'permission' => 'hr.leave.view'],
+            // ⭐ খরচের দাবি আর অগ্রিম — কর্মী নিজে (মালিকের আদেশ, ৭ অক্টোবর ২০২৬; [[ExpenseClaimController]])
+            ['label' => 'hr::menu.claims', 'icon' => 'wallet', 'route' => 'hr.claim.index', 'permission' => 'hr.claim.self'],
         ],
     ],
 
@@ -126,6 +128,14 @@ return [
         'hr.leave.view',
         'hr.leave.manage',
         'hr.leave.approve',
+
+        /*
+         * ⭐ খরচের দাবি আর অগ্রিম অনুরোধ — মালিকের আদেশ, ৭ অক্টোবর ২০২৬ ([[ExpenseClaimService]])।
+         * ⓘ `self` — নিজের দাবি পাঠানো আর দেখা (মাঠের কর্মী, ক্যাশিয়ার, হিসাবরক্ষক); `view` — সবার দাবি, নাগালের কর্মী
+         * ধরে। ⛔ সই এই চাবিতে নয় — সই কোম্পানির নিজের ছকে, আর যিনি চাইলেন তিনি সই দেন না।
+         */
+        'hr.claim.self',
+        'hr.claim.view',
     ],
 
     /*
@@ -141,28 +151,28 @@ return [
          * ⓘ কাউন্টারের কর্মী সব ডিলার দেখেন (মালিক, ২৬ সেপ্টেম্বর) — নাহলে বিল করবেন কীভাবে।
          */
         'Counter' => [
-            'hr.attendance.self',
+            'hr.attendance.self', 'hr.claim.self',
         ],
         /*
          * ASM — বিক্রয়কর্মীর উপরের স্তর, প্রতিটা কোম্পানিতে ডিফল্টে (মালিক, ২৭ সেপ্টেম্বর ২০২৬)।
          * ⚠️ SR→ASM→RSM→DSM-এর বাঁধন এখনো কোডে নেই; আপাতত কেবল চাবির তালিকা।
          */
         'ASM' => [
-            'hr.attendance.self',
+            'hr.attendance.self', 'hr.claim.self',
         ],
         /*
          * RSM — ASM-এর উপরের স্তর, প্রতিটা কোম্পানিতে ডিফল্টে (মালিক, ২৭ সেপ্টেম্বর ২০২৬)।
          * ⚠️ স্তরের বাঁধন এখনো কোডে নেই; আপাতত কেবল চাবির তালিকা।
          */
         'RSM' => [
-            'hr.attendance.self',
+            'hr.attendance.self', 'hr.claim.self',
         ],
         /*
          * DSM — বিক্রয়ের সবচেয়ে উপরের স্তর, প্রতিটা কোম্পানিতে ডিফল্টে (মালিক, ২৭ সেপ্টেম্বর ২০২৬)।
          * ⚠️ স্তরের বাঁধন এখনো কোডে নেই; আপাতত কেবল চাবির তালিকা।
          */
         'DSM' => [
-            'hr.attendance.self',
+            'hr.attendance.self', 'hr.claim.self',
         ],
         /*
          * ⭐ হিসাবরক্ষক — প্রতিটা কোম্পানিতে ডিফল্টে থাকে। মালিকের নির্দেশ, ২৭
@@ -170,15 +180,16 @@ return [
          * ⓘ জমার দাবির মঞ্জুরি কেবল তাঁর (মালিক, ২৬ সেপ্টেম্বর)।
          */
         'Accountant' => [
-            'hr.attendance.self',
+            'hr.attendance.self', 'hr.claim.self',
         ],
         'HR' => [
             'hr.employee.view', 'hr.employee.manage',
             'hr.attendance.view', 'hr.attendance.manage',
             'hr.leave.view', 'hr.leave.manage', 'hr.leave.approve',
+            'hr.claim.self', 'hr.claim.view',
         ],
-        'Field Sales' => ['hr.attendance.self'],
-        'Warehouse' => ['hr.attendance.self'],
+        'Field Sales' => ['hr.attendance.self', 'hr.claim.self'],
+        'Warehouse' => ['hr.attendance.self', 'hr.claim.self'],
     ],
 
     /*
@@ -196,6 +207,9 @@ return [
      */
     'approvals' => [
         'payroll' => 'hr::approval.payroll',
+        // ⭐ কর্মীর খরচের দাবি আর অগ্রিম — আলাদা কাজ, যাতে দুইটার আলাদা সীমা বসানো যায় (মালিকের আদেশ, ৭ অক্টোবর ২০২৬)
+        'expense_claim' => 'hr::approval.expense_claim',
+        'cash_advance' => 'hr::approval.cash_advance',
     ],
 
     /*
@@ -209,7 +223,7 @@ return [
      * ⚠️ নামগুলো `approvals`-এ থাকতেই হবে — [[ModuleDefinition]]
      * মিলিয়ে দেখে। ⛔ একটা টাইপো নীরবে কাগজটাকে bulk-এ ঢুকিয়ে দিত।
      */
-    'moves_money' => ['payroll'],
+    'moves_money' => ['payroll', 'expense_claim', 'cash_advance'],
 
     'doc_types' => [
         /*
@@ -222,6 +236,9 @@ return [
          * কোনটার কথা হচ্ছে।
          */
         'PRL' => 'hr::doc.payroll',
+
+        // ⭐ খরচের দাবি আর অগ্রিম অনুরোধ — একই সিরিজ (মালিকের আদেশ, ৭ অক্টোবর ২০২৬)
+        'EXC' => 'hr::doc.expense_claim',
 
         /*
          * পরিচয়ের কোডগুলোও সিরিজ থেকে — মালিকের নির্দেশ (২০২৬-০৮-০৭)।
@@ -241,6 +258,8 @@ return [
     'drill_sources' => [
         'employee' => Employee::class,
         'payroll_run' => PayrollRun::class,
+        // ⭐ খরচের দাবি — ভাউচার থেকে দাবিতে ফেরা, রসিদের ছবি, আর ক্যাশিয়ারের ভাউচার পাকা হলে "টাকা দেওয়া হয়েছে"
+        'expense_claim' => \App\Modules\Hr\Models\ExpenseClaim::class,
     ],
 
     /*
@@ -397,6 +416,13 @@ return [
      * ⚠️ কিন্তু API লেখার দিন ওগুলোকে আলাদা করে ভাবতে হবে: JSON-এ
      * `@can` বলে কিছু নেই।
      */
+    /*
+     * ⭐ খরচের দাবি বা অগ্রিমের শেষ সই — অনুমোদিত আর খসড়া ভাউচার; "না" হলে ফেরানো ([[FinishTheClaimOnTheLastSignature]])।
+     */
+    'listeners' => [
+        \App\Core\Events\ApprovalDecided::class => [\App\Modules\Hr\Listeners\FinishTheClaimOnTheLastSignature::class],
+    ],
+
     'sensitive_fields' => [
         Employee::class => [
             'national_id' => 'hr.identity.view',

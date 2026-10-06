@@ -11,4 +11,6 @@ declare(strict_types=1);
 
 return [
     'payroll' => 'বেতনের রান নিশ্চিত করা',
+    'expense_claim' => 'কর্মীর খরচের দাবি',
+    'cash_advance' => 'কর্মীর অগ্রিম অনুরোধ',
 ];

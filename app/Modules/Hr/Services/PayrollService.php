@@ -21,6 +21,7 @@ use App\Modules\Hr\Models\PayrollRun;
 use App\Modules\Hr\Models\Payslip;
 use App\Modules\Hr\Models\PayslipLine;
 use App\Modules\Hr\Models\SalaryHead;
+use App\Modules\Hr\Support\AdvanceBalance;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -542,37 +543,16 @@ final class PayrollService
         return $lines;
     }
 
-    /** খাতটা কি কর্মীর অগ্রিম (১১৩১ বা তার নিচে) — কারও নামে বসে এমন খাত */
+    /** খাতটা কি কর্মীর অগ্রিম (১১৩১ বা তার নিচে) — কারও নামে বসে এমন খাত ([[AdvanceBalance]]) */
     private function isAdvance(?int $accountId): bool
     {
-        if ($accountId === null) {
-            return false;
-        }
-
-        $this->advanceIds ??= StandardChart::find(StandardChart::EMPLOYEE_ADVANCE)?->selfAndDescendants()
-            ->map(fn ($a) => (int) $a->id)->all() ?? [];
-
-        return in_array($accountId, $this->advanceIds, true);
+        return app(AdvanceBalance::class)->isAdvance($accountId);
     }
 
-    /** @var list<int>|null */
-    private ?array $advanceIds = null;
-
-    /**
-     * মাস-শেষে কর্মীর নামের খোলা অগ্রিম — খাতায় বসা দেওয়া − আদায়, গোটা কোম্পানি (শাখা নয়: অগ্রিম মানুষের, শাখার নয়)।
-     */
+    /** মাস-শেষে কর্মীর নামের খোলা অগ্রিম — খরচের দাবির একই নিয়ম ([[AdvanceBalance::open()]]) */
     private function advanceOpen(Employee $employee, Carbon $monthEnd): string
     {
-        $this->isAdvance(0);
-
-        return bcadd((string) DB::table('ledger_entries')
-            ->where('company_id', CompanyContext::id())
-            ->whereIn('account_id', $this->advanceIds)
-            ->where('party_type', Employee::drillSourceType())
-            ->where('party_id', $employee->id)
-            ->where('trx_date', '<=', $monthEnd->toDateString())
-            ->selectRaw('COALESCE(SUM(debit), 0) - COALESCE(SUM(credit), 0) as n')
-            ->value('n'), '0', 2);
+        return app(AdvanceBalance::class)->open($employee, $monthEnd);
     }
 
     /**
