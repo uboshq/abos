@@ -563,7 +563,12 @@ final class PayrollService
      */
     private function assertNoLiveRun(Carbon $monthStart): void
     {
-        $exists = PayrollRun::query()
+        /*
+         * ⛔ সব শাখা জুড়ে — পুরো-ERP অডিট, ৬ অক্টোবর ২০২৬ (HR ⛔১)। ⓘ রানটা পুরো কোম্পানির কর্মীদের ([[build()]]), অথচ
+         * `PayrollRun` হেডারের শাখার দেয়ালে; এক শাখা বাছা থাকলে অন্য শাখায় বানানো রান অদৃশ্য থাকত, যাচাই পার হত, আর একই মাসের
+         * বেতন-খরচ ও বেতন-দেনা দ্বিগুণ বসত। তালার পরের দ্বিতীয় যাচাইও এটাই ডাকে।
+         */
+        $exists = PayrollRun::acrossBranches()
             ->forMonth($monthStart->toDateString())
             ->where('status', '<>', DocumentStatus::CANCELLED)
             ->exists();
