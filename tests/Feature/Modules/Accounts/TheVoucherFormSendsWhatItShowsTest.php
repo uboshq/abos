@@ -354,6 +354,8 @@ final class TheVoucherFormSendsWhatItShowsTest extends TestCase
 
         // ⓘ তারিখের ঘর পাতায় ফাঁকা আসতে পারে — ব্যবহারকারী লেখেন, তাই পরীক্ষাও লেখে
         $fields['trx_date'] = ($fields['trx_date'] ?? '') !== '' ? $fields['trx_date'] : now()->toDateString();
+        // ⓘ বিবরণ বাধ্যতামূলক (ভাউচারের পরিকল্পনা ৩খ, ৭ অক্টোবর ২০২৬) — ব্যবহারকারী লেখেন, তাই পরীক্ষাও লেখে
+        $fields['narration'] = ($fields['narration'] ?? '') !== '' ? $fields['narration'] : 'পরীক্ষার বিবরণ';
 
         return $this->from(route('accounts.voucher.create', ['type' => $type]))
             ->post(route('accounts.voucher.store', ['type' => $type]), $fields);
@@ -374,6 +376,7 @@ final class TheVoucherFormSendsWhatItShowsTest extends TestCase
             'party_id' => (string) $customer->id,
             'amount' => '1000',
             'trx_date' => now()->toDateString(),
+            'narration' => 'পরীক্ষার বিবরণ', // ⓘ বিবরণ বাধ্যতামূলক (৩খ)
         ];
 
         return $trusted ? ['type' => 'receipt', ...$base, ...$choices] : [...$base, ...$choices];

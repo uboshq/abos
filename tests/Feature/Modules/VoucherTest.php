@@ -385,6 +385,7 @@ class VoucherTest extends TestCase
         $this->post(route('accounts.voucher.store', 'receipt'), [
             'type' => 'receipt',
             'trx_date' => '2026-08-10',
+            'narration' => 'পরীক্ষার বিবরণ', // ⓘ বিবরণ বাধ্যতামূলক (ভাউচারের পরিকল্পনা ৩খ, ৭ অক্টোবর ২০২৬)
             'from_account_id' => $this->receivable,
             'to_account_id' => $this->cash,
             'amount' => '900.00',
@@ -399,6 +400,7 @@ class VoucherTest extends TestCase
         $this->post(route('accounts.voucher.store', 'journal'), [
             'type' => 'journal',
             'trx_date' => '2026-08-10',
+            'narration' => 'পরীক্ষার বিবরণ', // ⓘ বিবরণ বাধ্যতামূলক (ভাউচারের পরিকল্পনা ৩খ, ৭ অক্টোবর ২০২৬)
             'lines' => [
                 ['account_id' => $this->rent, 'debit' => '500', 'credit' => ''],
                 ['account_id' => $this->cash, 'debit' => '', 'credit' => '400'],

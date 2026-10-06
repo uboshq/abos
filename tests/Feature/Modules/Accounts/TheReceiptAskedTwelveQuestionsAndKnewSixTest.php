@@ -150,6 +150,7 @@ class TheReceiptAskedTwelveQuestionsAndKnewSixTest extends TestCase
                  * দুই জায়গাতেই পাঠায় ([[TheOwnersCapitalWasBookedAsACustomerPayingTest]])।
                  */
                 'type' => Voucher::RECEIPT,
+                'narration' => 'পরীক্ষার বিবরণ', // ⓘ বিবরণ বাধ্যতামূলক (ভাউচারের পরিকল্পনা ৩খ, ৭ অক্টোবর ২০২৬)
                 'trx_date' => now()->toDateString(),
                 'amount' => '1000',
                 'from_account_id' => $this->receivable()->id,

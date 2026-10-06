@@ -295,6 +295,7 @@ final class ThePaymentChargeIsTheCompanysNotTheSuppliersTest extends TestCase
             ->post(route('accounts.voucher.store', ['type' => $type]), [
                 'type' => $type,
                 'trx_date' => now()->toDateString(),
+                'narration' => 'পরীক্ষার বিবরণ', // ⓘ বিবরণ বাধ্যতামূলক (ভাউচারের পরিকল্পনা ৩খ, ৭ অক্টোবর ২০২৬)
                 ...$fields,
             ]);
     }

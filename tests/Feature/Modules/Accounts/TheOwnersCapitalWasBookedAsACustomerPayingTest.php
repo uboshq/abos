@@ -99,6 +99,7 @@ final class TheOwnersCapitalWasBookedAsACustomerPayingTest extends TestCase
             // ⚠️ ঠিকানার ধরনটা মেনুর জন্য; যাচাই পড়ে ফর্মের ঘরটা
             'type' => Voucher::RECEIPT,
             'trx_date' => now()->toDateString(),
+            'narration' => 'পরীক্ষার বিবরণ', // ⓘ বিবরণ বাধ্যতামূলক (ভাউচারের পরিকল্পনা ৩খ, ৭ অক্টোবর ২০২৬)
             'amount' => '2500000',
             'to_account_id' => $this->bank()->id,
             'instrument_no' => 'CAP-1',

@@ -357,7 +357,8 @@ class VoucherRequest extends FormRequest
         $rules = [
             'type' => ['required', Rule::in(Voucher::TYPES)],
             'trx_date' => ['required', 'date', 'before_or_equal:today'],
-            'narration' => ['nullable', 'string', 'max:500'],
+            // ⭐ বিবরণ বাধ্যতামূলক, সব ধরনে — কেন টাকা নড়ল, কাগজেই লেখা (ভাউচারের পরিকল্পনা, অংশ ৩খ, ৭ অক্টোবর ২০২৬)
+            'narration' => ['required', 'string', 'max:500'],
 
             /*
              * ⛔ শাখাটা এই কোম্পানিরই — ৭ সেপ্টেম্বর ২০২৬।

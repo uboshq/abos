@@ -132,6 +132,7 @@ final class TheReceiptListedNoBillsAndKeptNoSharesTest extends TestCase
         return $this->post(route('accounts.voucher.store', ['type' => Voucher::RECEIPT]), [
             'type' => Voucher::RECEIPT,
             'trx_date' => now()->toDateString(),
+            'narration' => 'পরীক্ষার বিবরণ', // ⓘ বিবরণ বাধ্যতামূলক (ভাউচারের পরিকল্পনা ৩খ, ৭ অক্টোবর ২০২৬)
             'amount' => $amount,
             'party_type' => 'customer',
             'party_id' => $invoice->customer_id,

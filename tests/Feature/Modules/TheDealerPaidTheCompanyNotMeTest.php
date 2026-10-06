@@ -177,6 +177,7 @@ class TheDealerPaidTheCompanyNotMeTest extends TestCase
         $this->post(route('accounts.voucher.store', ['type' => 'journal']), [
             'type' => Voucher::JOURNAL,
             'trx_date' => now()->toDateString(),
+            'narration' => 'পরীক্ষার বিবরণ', // ⓘ বিবরণ বাধ্যতামূলক (ভাউচারের পরিকল্পনা ৩খ, ৭ অক্টোবর ২০২৬)
             'lines' => [
                 ['account_id' => $this->payable->id, 'debit' => '5000',
                     'party' => 'supplier:'.$this->principal->id],
@@ -212,6 +213,7 @@ class TheDealerPaidTheCompanyNotMeTest extends TestCase
         $this->post(route('accounts.voucher.store', ['type' => 'journal']), [
             'type' => Voucher::JOURNAL,
             'trx_date' => now()->toDateString(),
+            'narration' => 'পরীক্ষার বিবরণ', // ⓘ বিবরণ বাধ্যতামূলক (ভাউচারের পরিকল্পনা ৩খ, ৭ অক্টোবর ২০২৬)
             'lines' => [
                 ['account_id' => $this->payable->id, 'debit' => '5000',
                     'party_type' => 'whatever', 'party_id' => 1],
@@ -228,6 +230,7 @@ class TheDealerPaidTheCompanyNotMeTest extends TestCase
         $this->post(route('accounts.voucher.store', ['type' => 'journal']), [
             'type' => Voucher::JOURNAL,
             'trx_date' => now()->toDateString(),
+            'narration' => 'পরীক্ষার বিবরণ', // ⓘ বিবরণ বাধ্যতামূলক (ভাউচারের পরিকল্পনা ৩খ, ৭ অক্টোবর ২০২৬)
             'lines' => [
                 ['account_id' => $this->payable->id, 'debit' => '5000',
                     'party' => 'supplier:99999'],
@@ -248,6 +251,7 @@ class TheDealerPaidTheCompanyNotMeTest extends TestCase
         $this->post(route('accounts.voucher.store', ['type' => 'journal']), [
             'type' => Voucher::JOURNAL,
             'trx_date' => now()->toDateString(),
+            'narration' => 'পরীক্ষার বিবরণ', // ⓘ বিবরণ বাধ্যতামূলক (ভাউচারের পরিকল্পনা ৩খ, ৭ অক্টোবর ২০২৬)
             'lines' => [
                 ['account_id' => $this->payable->id, 'debit' => '5000', 'party_type' => 'supplier'],
                 ['account_id' => $this->receivable->id, 'credit' => '5000'],
@@ -261,6 +265,7 @@ class TheDealerPaidTheCompanyNotMeTest extends TestCase
         $this->post(route('accounts.voucher.store', ['type' => 'journal']), [
             'type' => Voucher::JOURNAL,
             'trx_date' => now()->toDateString(),
+            'narration' => 'পরীক্ষার বিবরণ', // ⓘ বিবরণ বাধ্যতামূলক (ভাউচারের পরিকল্পনা ৩খ, ৭ অক্টোবর ২০২৬)
             'lines' => [
                 ['account_id' => $this->payable->id, 'debit' => '700'],
                 ['account_id' => $this->receivable->id, 'credit' => '700'],

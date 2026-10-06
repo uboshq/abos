@@ -138,6 +138,7 @@ final class AnEditShavedTheBankChargeOffAgainTest extends TestCase
         $this->put(route('accounts.voucher.update', $voucher), array_filter([
             'type' => $voucher->type,
             'trx_date' => $voucher->trx_date->toDateString(),
+            'narration' => 'পরীক্ষার বিবরণ', // ⓘ বিবরণ বাধ্যতামূলক (ভাউচারের পরিকল্পনা ৩খ, ৭ অক্টোবর ২০২৬)
             'amount' => $form['amount'],
             'charge_amount' => $form['charge_amount'],
             'from_account_id' => $credit->account_id,
