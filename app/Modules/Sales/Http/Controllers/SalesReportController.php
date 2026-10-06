@@ -48,6 +48,8 @@ class SalesReportController extends Controller implements HasMiddleware
         'challan-status' => \App\Modules\Sales\Reports\DeliveryReports::CHALLAN_STATUS,
         // ⭐ আদেশ থেকে রওনার সময় — DO ধরে (পরিকল্পনা সংস্করণ ২ §৯ ঘ)
         'order-to-dispatch' => \App\Modules\Sales\Reports\DeliveryReports::ORDER_TO_DISPATCH,
+        // ⭐ আদায়ের লক্ষ্য বনাম অর্জন — ডিলার ধরে, লক্ষ্যের পাতার একই অর্জন (পরিকল্পনা সংস্করণ ২ §৯ ঙ)
+        'collection-target' => \App\Modules\Sales\Reports\CollectionTargetReports::KEY,
         // ⭐ বিক্রয়কর্মী ধরে বিক্রি — লক্ষ্যের একই নিয়মে (পরিকল্পনা সংস্করণ ২ §৯ গ; [[SalespersonReports]])
         'by-salesperson' => \App\Modules\Sales\Reports\SalespersonReports::KEY,
     ];

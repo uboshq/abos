@@ -75,6 +75,7 @@ final class EveryReportStandsBehindTheBranchWallTest extends TestCase
         'inventory.stock_value' => 'valued from `inv_cost_layers`, which are company-wide (costing is per company, not per branch)',
         'purchase.settlement' => 'one row joins goods-in, sales, payments and balance of different branches (see the report\'s own note)',
         'purchase.return_on_capital' => 'same four-document join as settlement; no single branch owns a row',
+        'sales.collection_target' => 'a dealer has one monthly target for the whole company, and its achievement is counted company-wide like the bill reminder (CustomerTargetService is a CHECKS ledger reader)',
         'promotion.active' => '`given_worth` sums `promotion_applications`, which carry no branch',
         'promotion.expired' => '`given_worth` sums `promotion_applications`, which carry no branch',
         'promotion.cancelled_offers' => 'application count and given worth come from `promotion_applications`, which carry no branch',

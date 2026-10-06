@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Modules\Sales\Services;
 
 use App\Core\Support\CompanyContext;
-use App\Models\LedgerEntry;
 use App\Modules\Sales\Models\CustomerTarget;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
@@ -162,27 +161,46 @@ final class CustomerTargetService
             return [];
         }
 
-        $range = [$from->toDateString(), $to->toDateString()];
-        $base = fn () => LedgerEntry::query()->where('party_type', 'customer')->whereIn('party_id', $customerIds)->whereBetween('trx_date', $range)->groupBy('party_id');
+        // ⓘ নিয়মটা একটাই জায়গায় — রিপোর্টও এটাই পড়ে ([[achievedQuery()]], [[CollectionTargetReports]])
+        $rows = DB::query()->fromSub(self::achievedQuery((int) CompanyContext::id(), $from->toDateString(), $to->toDateString()), 'a')
+            ->whereIn('a.customer_id', $customerIds)
+            ->pluck('a.achieved', 'a.customer_id');
 
-        $in = $base()->whereIn('source_type', self::INFLOW)->selectRaw('party_id, SUM(credit) as v')->pluck('v', 'party_id');
-        $out = $base()->where('source_type', self::BOUNCED)->selectRaw('party_id, SUM(debit) as v')->pluck('v', 'party_id');
-        $held = DB::table('acc_cheques as ch')
-            ->where('ch.company_id', CompanyContext::id())->whereNull('ch.deleted_at')
-            ->where('ch.direction', 'received')->where('ch.party_type', 'customer')->whereIn('ch.party_id', $customerIds)
-            ->whereIn('ch.status', ['pending', 'deposited'])->whereBetween('ch.received_on', $range)
-            ->where(fn ($q) => $q->whereNotNull('ch.collection_id')->orWhereNotNull('ch.voucher_id')
-                ->orWhereExists(fn ($e) => $e->from('ledger_entries as le')->where('le.source_type', 'cheque')->whereColumn('le.source_id', 'ch.id')))
-            ->groupBy('ch.party_id')->selectRaw('ch.party_id, SUM(ch.amount) as v')->pluck('v', 'party_id');
-
-        $out2 = [];
+        $out = [];
 
         foreach ($customerIds as $id) {
-            $v = bcsub(bcsub((string) ($in[$id] ?? 0), (string) ($out[$id] ?? 0), 4), (string) ($held[$id] ?? 0), 4);
-            $out2[$id] = bccomp($v, '0', 4) > 0 ? $v : '0.0000';
+            $out[$id] = bcadd((string) ($rows[$id] ?? '0'), '0', 4);
         }
 
-        return $out2;
+        return $out;
+    }
+
+    /**
+     * ⭐ ডিলার ধরে অর্জন — SQL হিসেবে, যাতে পাতা, বিলের বাক্স আর রিপোর্ট একই নিয়মে গোনে (বিক্রয় পরিকল্পনা সংস্করণ ২ §৯ ঙ, ৬ অক্টোবর
+     * ২০২৬)। সারি: `customer_id`, `achieved` (শূন্যের নিচে নয়)।
+     *
+     * আসা টাকা ([[INFLOW]]-এর ক্রেডিট) − ফেরত চেক ([[BOUNCED]]-এর ডেবিট) − হাতে আসার দিন খাতায় উঠে যাওয়া অথচ এখনো পাশ না হওয়া চেক।
+     * ⓘ কোম্পানি ধরে, শাখা ধরে নয় — ডিলারের লক্ষ্য একটাই ([[EveryLedgerReaderSaysWhetherItShowsOrChecksTest]]-এ "যাচাই")।
+     */
+    public static function achievedQuery(int $company, string $from, string $to): \Illuminate\Database\Query\Builder
+    {
+        $range = [$from, $to];
+        $ledger = fn () => DB::table('ledger_entries as le')
+            ->where('le.company_id', $company)->where('le.party_type', 'customer')->whereBetween('le.trx_date', $range);
+
+        $in = $ledger()->whereIn('le.source_type', self::INFLOW)->selectRaw('le.party_id as customer_id, le.credit as v');
+        $bounced = $ledger()->where('le.source_type', self::BOUNCED)->selectRaw('le.party_id as customer_id, -le.debit as v');
+        $held = DB::table('acc_cheques as ch')
+            ->where('ch.company_id', $company)->whereNull('ch.deleted_at')
+            ->where('ch.direction', 'received')->where('ch.party_type', 'customer')
+            ->whereIn('ch.status', ['pending', 'deposited'])->whereBetween('ch.received_on', $range)
+            ->where(fn ($q) => $q->whereNotNull('ch.collection_id')->orWhereNotNull('ch.voucher_id')
+                ->orWhereExists(fn ($e) => $e->from('ledger_entries as le2')->where('le2.source_type', 'cheque')->whereColumn('le2.source_id', 'ch.id')))
+            ->selectRaw('ch.party_id as customer_id, -ch.amount as v');
+
+        return DB::query()->fromSub($in->unionAll($bounced)->unionAll($held), 'm')
+            ->groupBy('m.customer_id')
+            ->selectRaw('m.customer_id as customer_id, GREATEST(COALESCE(SUM(m.v), 0), 0) as achieved');
     }
 
     /** আজ থেকে শেষ তারিখ পর্যন্ত ব্যাংক খোলার দিন — রবি থেকে বৃহস্পতি। */
