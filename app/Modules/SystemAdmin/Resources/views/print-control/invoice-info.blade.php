@@ -34,7 +34,8 @@
         <span class="me-2 text-xs text-(--color-ink-muted)">{{ __('system_admin::settings.invoice_info_for') }}</span>
         @foreach ([null, ...$branches] as $one)
             @php $id = $one?->id; @endphp
-            <a href="{{ route('system_admin.print_control.invoice_info', array_filter(['branch' => $id])) }}"
+            {{-- ⓘ কোম্পানির ট্যাব `?branch=company` — নাহলে হেডারের শাখাই খুলত (মালিক, ৬ অক্টোবর ২০২৬) --}}
+            <a href="{{ route('system_admin.print_control.invoice_info', ['branch' => $id ?? 'company']) }}"
                @class([
                    'min-h-(--spacing-touch) px-3 py-2 text-sm transition-colors',
                    'border-b-2 border-(--color-brand-600) font-semibold' => $branch === $id,

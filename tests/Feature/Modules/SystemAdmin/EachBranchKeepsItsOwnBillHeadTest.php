@@ -73,6 +73,28 @@ final class EachBranchKeepsItsOwnBillHeadTest extends TestCase
     // ── যন্ত্রপাতি ──────────────────────────────────────────────────────
 
     /** @return array{name: string, address: string, phone: string, email: string, website: string} */
+    /**
+     * ⭐ হেডারে বাছা শাখাতেই পাতা খোলে — মালিক, ৬ অক্টোবর ২০২৬: *"বিলে কোম্পানির নাম শাখা ধরে আলাদা হচ্ছে না"*।
+     * ⛔ আগে সব সময় "কোম্পানি" খুলত, তাই হেডারে সুপার বেছে বদলানো নাম কোম্পানিতে বসত (লাইভে শাখার সারি শূন্য)।
+     */
+    public function test_the_page_opens_on_the_branch_picked_in_the_header(): void
+    {
+        $owner = User::query()->where('email', 'owner@abos.test')->firstOrFail();
+
+        $this->actingAs($owner)->post(route('branch.switch'), ['branch_id' => (string) $this->super->id]);
+        $this->actingAs($owner->fresh())->get(route('system_admin.print_control.invoice_info'))
+            ->assertOk()->assertViewHas('branch', $this->super->id);
+
+        // ⓘ কোম্পানির ট্যাব নিজে চাইলে কোম্পানিই
+        $this->actingAs($owner->fresh())->get(route('system_admin.print_control.invoice_info', ['branch' => 'company']))
+            ->assertOk()->assertViewHas('branch', null);
+
+        // ⓘ "সব শাখা" বাছা থাকলে কোম্পানি
+        $this->actingAs($owner->fresh())->post(route('branch.switch'), ['branch_id' => 'all']);
+        $this->actingAs($owner->fresh())->get(route('system_admin.print_control.invoice_info'))
+            ->assertOk()->assertViewHas('branch', null);
+    }
+
     private function headIn(?Branch $branch): array
     {
         return app(BranchSettings::class)->during($branch?->id,

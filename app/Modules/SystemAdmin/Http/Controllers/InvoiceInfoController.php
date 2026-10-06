@@ -78,6 +78,17 @@ class InvoiceInfoController extends Controller implements HasMiddleware
          * ⓘ null = কোম্পানি (সব শাখার মূল); একটা শাখা = তার নিজের বদল, খালি ঘর "কোম্পানির মতো"।
          */
         $branch = $this->branchFrom($request->query('branch'));
+
+        /*
+         * ⭐ হেডারে একটা শাখা বাছা থাকলে পাতাটা সেই শাখাতেই খোলে — মালিক, ৬ অক্টোবর ২০২৬: *"বিলে কোম্পানির নাম শাখা ধরে
+         * আলাদা হচ্ছে না"*। ⛔ আগে `?branch` না থাকলে সব সময় "কোম্পানি (সব শাখা)" খুলত; হেডারে সুপার বেছে নাম বদলালে
+         * সেটা কোম্পানিতে বসত আর সব শাখার বিল বদলাত — লাইভে একটাও শাখার সারি ছিল না। ⓘ "কোম্পানি" ট্যাব নিজে
+         * `?branch=company` পাঠায় ([[header-branch-filters-everything]])।
+         */
+        if (! $request->has('branch')) {
+            $branch = $this->branchFrom(\App\Core\Support\ViewedBranch::one());
+        }
+
         $logo = $this->branches->invoiceLogoPath($branch);
 
         return view('system_admin::print-control.invoice-info', [

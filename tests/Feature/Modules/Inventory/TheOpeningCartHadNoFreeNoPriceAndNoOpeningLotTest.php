@@ -150,4 +150,22 @@ final class TheOpeningCartHadNoFreeNoPriceAndNoOpeningLotTest extends TestCase
         return Product::query()->create(['code' => $code, 'name_en' => $code, 'name_bn' => $code, 'is_active' => true,
             'track_batch' => true, 'unit_id' => Unit::query()->orderBy('id')->firstOrFail()->id] + $extra);
     }
+
+    /**
+     * ⭐ খোলা মজুদের ফ্রি কাউন্টারে দেওয়া যায় — মালিক, ৬ অক্টোবর ২০২৬: *"সুপারে ফ্রি দেওয়া যায় না — সর্বাধিক 0"*।
+     * ⛔ ফ্রির অনুপাত কেবল ক্রয় থেকে গোনা হত; খোলা মজুদের লটে ফ্রি থাকলেও "যতটা এসেছিল" শূন্য।
+     */
+    public function test_free_that_came_with_the_opening_counts_toward_the_ratio(): void
+    {
+        $p = $this->product('FREE-R');
+
+        $this->cart([['product' => 'FREE-R', 'qty' => '24', 'free_qty' => '1', 'unit_cost' => '50', 'batch_no' => '']])
+            ->assertSessionHasNoErrors();
+
+        $batch = Batch::query()->where('product_id', $p->id)->firstOrFail();
+        $ratio = app(\App\Modules\Inventory\Services\FreeRatio::class);
+
+        $this->assertSame(0, bccomp($ratio->allowedOn($batch, '24'), '1', 4), '⛔ খোলা মজুদের ২৪:১ লটে ২৪ বেচলে ১ ফ্রি দেওয়া যায় না।');
+        $this->assertSame(0, bccomp($ratio->allowedOn($batch, '23'), '0', 4), '⛔ অনুপাতের কম বেচলেও ফ্রি দেওয়া যাচ্ছে।');
+    }
 }

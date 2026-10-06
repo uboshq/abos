@@ -255,8 +255,10 @@
 
                             ⓘ প্রতিটা রঙ থিমের টোকেন থেকে, হার্ডকোড নয়।
                         --}}
-                        <div class="mt-1 flex flex-wrap items-baseline gap-x-4 gap-y-1"
-                             x-show="picked" x-cloak>
+                        {{-- ⭐ হাইলাইট বাক্সে — মালিক, ৬ অক্টোবর ২০২৬: *"এগুলো একটা হাইলাইট বক্সে দিয়ে দাও"*।
+                             ⓘ টোকেনের রং (brand-50 / brand-400), তাই অন্ধকার থিমেও মেলে; ক্লাসগুলো বানানো CSS-এ আছে। --}}
+                        <div class="mt-2 flex flex-wrap items-baseline gap-x-4 gap-y-1 rounded-(--radius-field) border border-(--color-brand-400) bg-(--color-brand-50) px-3 py-2"
+                             x-show="picked" x-cloak data-stock-box>
                             @foreach ([
                                 ['available', 'sales::field.available_short', 'text-sm text-(--color-success)', true],
                                 ['free_available', 'sales::field.free_available', 'text-sm text-(--color-success)', true],
