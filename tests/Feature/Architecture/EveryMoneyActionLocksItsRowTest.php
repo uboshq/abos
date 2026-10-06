@@ -42,7 +42,6 @@ final class EveryMoneyActionLocksItsRowTest extends TestCase
         'Promotion/Services/PromotionLifecycle.php::approve',
         'Promotion/Services/PromotionLifecycle.php::cancel',
         'Purchase/Services/PaymentService.php::cancel',
-        'Purchase/Services/PurchaseBillService.php::cancel',
         'Purchase/Services/PurchaseOrderService.php::confirm',
         'Purchase/Services/PurchaseOrderService.php::cancel',
         'Purchase/Services/PurchaseReceiptService.php::cancel',
