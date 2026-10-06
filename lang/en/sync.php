@@ -26,6 +26,7 @@ return [
 
     'refused_without_reason' => 'The server did not accept this, and did not say why. Tell the office.',
 
+    'device_not_yours' => 'This handset does not match your sign-in. Sign out once and sign in again.',
     'device_unknown' => 'This handset is not registered yet. Sign out once and sign in again.',
     'module_unknown' => 'This part (:module) cannot be synchronised.',
 

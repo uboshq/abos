@@ -265,10 +265,24 @@ class SyncController extends Controller
      */
     private function deviceId(Request $request): string
     {
-        $deviceId = trim((string) $request->query('deviceId', ''));
+        $asked = trim((string) $request->query('deviceId', ''));
 
-        abort_if($deviceId === '', 400, __('sync.device_unknown'));
+        /*
+         * ⛔ যন্ত্রের নাম টোকেনের নিজের নাম থেকে — `sync:<deviceId>` ([[AuthController::issue()]]), কর্মক্ষেত্র-দরজার মতো
+         * ([[WorkspaceApiController::deviceOf()]])। পুরো ERP অডিট, ৬ অক্টোবর ২০২৬, ফোন ⚠️৭: আগে নাম আসত কেবল `?deviceId=`
+         * থেকে — অন্যের যন্ত্রের নাম জানলে তার জলছাপ মোছা, pull-complete করে সারি হারানো, বা যন্ত্রটা নিজের নামে সরানো
+         * যেত। ⓘ ফোন একই নাম পাঠায় (লগইনের যন্ত্রই), তাই অ্যাপে কিছু বদলায় না; অন্য নাম পাঠালে ফেরে। `?deviceId=` আগের
+         * মতোই লাগে ([[TheSyncPushNeverWorkedForARealPhoneTest]]); নামহীন টোকেনে (পরীক্ষার Sanctum::actingAs) কেবল সেটাই।
+         */
+        abort_if($asked === '' || mb_strlen($asked) > 64, 400, __('sync.device_unknown'));
 
-        return $deviceId;
+        $token = $request->user()?->currentAccessToken();
+        $prefix = AuthController::ACCESS.':';
+
+        if ($token instanceof \Laravel\Sanctum\PersonalAccessToken && str_starts_with((string) $token->name, $prefix)) {
+            abort_if($asked !== substr((string) $token->name, strlen($prefix)), 403, __('sync.device_not_yours'));
+        }
+
+        return $asked;
     }
 }
