@@ -18,8 +18,10 @@ use Tests\TestCase;
 /**
  * এক কোম্পানির মালিক গোটা ডাটাবেস — সব কোম্পানির খাতা — নামিয়ে নিতে পারতেন (চূড়ান্ত অডিট, ৩০ সেপ্টেম্বর ২০২৬, ⛔১)।
  *
- * ⓘ একই মানুষ দুইবার: কেবল এক কোম্পানির super_admin → ৪০৩; সব চালু কোম্পানির super_admin → পাহারা পেরোয় (নাম না
+ * ⓘ একই মানুষ দুইবার: কেবল এক কোম্পানির super_admin → ৪০৩; সব কোম্পানির super_admin → পাহারা পেরোয় (নাম না
  * মিললে তখন ৪০৪, অর্থাৎ ৪০৩ আর আসে না)। ⭐ মালিকের শর্ত ("SURIMPOWER"): সবখানে super_admin যিনি, তিনি পারেন।
+ * ⛔ পুরো ERP অডিট, ৬ অক্টোবর ২০২৬ (SystemAdmin ⛔১): বন্ধ কোম্পানিও গোনা — আগে "বন্ধ কোম্পানি গোনা হয় না" ছিল এই
+ * ফাইলেরই দাবি, আর ঠিক সেই ফাঁক দিয়ে নতুন কোম্পানি খুলে বাকিগুলো বন্ধ করে পুরো ব্যাকআপ নামানো যেত।
  */
 final class TheWholeDatabaseWentToAnyCompanysOwnerTest extends TestCase
 {
@@ -57,23 +59,35 @@ final class TheWholeDatabaseWentToAnyCompanysOwnerTest extends TestCase
 
         $this->grantSuperAdmin($this->b);
 
-        /* ⭐ একই মানুষ, এবার দুই কোম্পানিরই মালিক — পাহারা পেরোয়; ফাইল নেই বলে ৪০৪ */
+        /* ⭐ একই মানুষ, এবার প্রতিটা কোম্পানির মালিক — পাহারা পেরোয়; ফাইল নেই বলে ৪০৪ */
         $this->actingAs($this->person->fresh())
             ->get(route('backup.download', 'no-such-file.sql.gz'))
             ->assertNotFound();
     }
 
-    public function test_a_closed_company_does_not_count(): void
+    public function test_a_closed_company_still_counts(): void
     {
         $access = app(WholeDatabaseAccess::class);
 
         $this->assertFalse($access->allows($this->person->fresh()));
 
-        /* ⓘ B বন্ধ হলে সব চালু কোম্পানি মানে কেবল A — আর তিনি A-র মালিক */
+        /* ⛔ B বন্ধ — আগে "সব চালু কোম্পানি" মানে কেবল A হয়ে যেত, আর A-র মালিক পুরো ডাটাবেস পেতেন */
         $this->b->forceFill(['is_active' => false])->save();
+        $this->assertFalse($access->allows($this->person->fresh()), '⛔ কোম্পানি বন্ধ করেই পুরো ব্যাকআপের অধিকার মিলল।');
+
+        $this->grantSuperAdminEverywhere();
         $this->assertTrue($access->allows($this->person->fresh()));
 
         $this->assertFalse($access->allows(null));
+    }
+
+    private function grantSuperAdminEverywhere(): void
+    {
+        foreach (Company::query()->get() as $company) {
+            if (Role::query()->where('company_id', $company->id)->where('name', PermissionSyncer::SUPER_ADMIN_ROLE)->exists()) {
+                $this->grantSuperAdmin($company);
+            }
+        }
     }
 
     private function onlySuperAdminOf(Company $keep): void

@@ -212,6 +212,7 @@ class MeController extends Controller
     private function companies(User $user): array
     {
         return $user->companies()
+            ->where('companies.is_active', true)
             ->orderBy('name_en')
             ->get()
             ->map(fn (Company $company): array => [

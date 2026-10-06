@@ -126,6 +126,8 @@ class CompanyController extends Controller implements HasMiddleware
 
     public function store(Request $request, CompanyProvisioner $provisioner): RedirectResponse
     {
+        $this->mustOwnTheWholeSystem($request);
+
         $data = $request->validate([
             /*
              * খালি রাখা যায় — নাম থেকে বসে (২ সেপ্টেম্বর ২০২৬)।
@@ -293,6 +295,18 @@ class CompanyController extends Controller implements HasMiddleware
      * ⚠️ ৪০৪, ৪০৩ নয় — যে কোম্পানিতে আপনার কিছু নেই, তার অস্তিত্ব আছে
      * কি না সেটাও আপনার জানার কথা নয়।
      */
+    /**
+     * ⛔ নতুন কোম্পানি খোলা আর কোম্পানি চালু/বন্ধ — কেবল গোটা ব্যবস্থার মালিক ([[WholeDatabaseAccess]]: প্রতিটা কোম্পানিতে
+     * super_admin) — পুরো ERP অডিট, ৬ অক্টোবর ২০২৬ (SystemAdmin ⛔১)।
+     *
+     * ⓘ আগে company.manage-ই যথেষ্ট ছিল (শাখার মেনুও এই চাবিতে): খোলার মানুষ নতুন কোম্পানির super_admin হতেন, তারপর
+     * বাকিগুলো বন্ধ করে "সব কোম্পানির মালিক" হয়ে পুরো ব্যাকআপ নামাতে পারতেন। ⭐ শাখার কাজ আগের চাবিতেই থাকে।
+     */
+    private function mustOwnTheWholeSystem(Request $request, int $status = 403): void
+    {
+        abort_unless(app(\App\Core\Security\WholeDatabaseAccess::class)->allows($request->user()), $status, __('system_admin::message.only_owner_companies'));
+    }
+
     private function mustBeYourCompany(Request $request, Company $company): void
     {
         /*
@@ -530,7 +544,9 @@ class CompanyController extends Controller implements HasMiddleware
      */
     public function toggle(Request $request, Company $company): RedirectResponse
     {
-        $this->mustBeYourCompany($request, $company);
+        // ⓘ বন্ধ কোম্পানিতে আর ঢোকা যায় না ([[User::canAccessCompany()]]), তাই "নিজের কোম্পানি" যাচাই নয় — মালিকের যাচাই;
+        // অন্যের কোম্পানি আগের মতোই অদৃশ্য (৪০৪)
+        $this->mustOwnTheWholeSystem($request, 404);
 
         if ($company->id === CompanyContext::id() && $company->is_active) {
             return back()->withErrors([

@@ -32,7 +32,12 @@ final class WholeDatabaseAccess
             return false;
         }
 
-        $active = Company::query()->where('is_active', true)->pluck('id')->map(fn ($id) => (int) $id)->all();
+        /*
+         * ⛔ বন্ধ কোম্পানিও গোনা — পুরো ERP অডিট, ৬ অক্টোবর ২০২৬ (SystemAdmin ⛔১)। আগে কেবল চালুগুলো গোনা হত: কেউ
+         * নতুন কোম্পানি খুলে (সেখানে নিজে super_admin) বাকিগুলো বন্ধ করলে "সব চালু কোম্পানির super_admin" হয়ে যেতেন —
+         * আর ব্যাকআপে বন্ধ কোম্পানির তথ্যও থাকে। ⭐ ডাটাবেসে যত কোম্পানি, সবগুলোতেই super_admin হতে হবে।
+         */
+        $active = Company::query()->pluck('id')->map(fn ($id) => (int) $id)->all();
 
         if ($active === []) {
             return false;

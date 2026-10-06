@@ -155,7 +155,7 @@ class AuthController extends Controller
         $companyId = $user->current_company_id;
 
         if ($companyId === null || ! $user->canAccessCompany($companyId)) {
-            $companyId = $user->companies()->orderBy('companies.id')->value('companies.id');
+            $companyId = $user->companies()->where('companies.is_active', true)->orderBy('companies.id')->value('companies.id');
 
             if ($companyId === null) {
                 /*

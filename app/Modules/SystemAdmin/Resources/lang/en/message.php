@@ -67,4 +67,7 @@ return [
     'cannot_delete_default_branch' => 'This is the default branch — it cannot be deleted. Make another branch the default first.',
     'cannot_delete_last_branch' => 'This is the only branch of the company — it cannot be deleted. Without a branch no transaction knows where it belongs.',
     'branch_in_use' => 'This branch has documents, ledger rows, stock or users attached (:where) — it cannot be deleted. Deactivate it instead; old documents stay intact.',
+
+    // ⛔ পুরো ERP অডিট, ৬ অক্টোবর ২০২৬ (SystemAdmin ⛔১)
+    'only_owner_companies' => 'Only the owner — super admin in every company — opens a company or switches one on or off.',
 ];

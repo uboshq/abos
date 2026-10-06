@@ -88,7 +88,7 @@ class ResolveCompanyContext
 
         // প্রথমবার লগইন, বা যে কোম্পানিতে ছিল সেটা থেকে সরিয়ে দেওয়া হয়েছে।
         if ($companyId === null || ! $user->canAccessCompany($companyId)) {
-            $companyId = $user->companies()->orderBy('companies.id')->value('companies.id');
+            $companyId = $user->companies()->where('companies.is_active', true)->orderBy('companies.id')->value('companies.id');
 
             if ($companyId === null) {
                 CompanyContext::clear();

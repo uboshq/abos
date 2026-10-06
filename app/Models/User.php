@@ -401,7 +401,8 @@ class User extends Authenticatable
 
     public function canAccessCompany(int $companyId): bool
     {
-        return $this->companies()->whereKey($companyId)->exists();
+        // ⛔ বন্ধ কোম্পানিতে ঢোকা নয় — সদস্যপদ থাকলেও (পুরো ERP অডিট, ৬ অক্টোবর ২০২৬, SystemAdmin ⛔১)
+        return $this->companies()->whereKey($companyId)->where('companies.is_active', true)->exists();
     }
 
     /**
