@@ -52,6 +52,7 @@ final class EveryLedgerReaderSaysWhetherItShowsOrChecksTest extends TestCase
         'app/Modules/Finance/Services/CarrierAndLabourLedger.php' => 'বাহক আর শ্রমিকের খতিয়ান — পর্দা',
         'app/Modules/Finance/Services/CfoFigures.php' => 'অর্থ-প্রধানের সংখ্যা — পর্দা',
         'app/Modules/Finance/Services/HeadTotals.php' => 'মাথাভিত্তিক যোগফল — পর্দা',
+        'app/Modules/Finance/Services/InstitutionPosition.php' => 'প্রতিষ্ঠানের এক পাতা — জোড়া হিসাবের জের, হেডারে বাছা শাখায় (ViewedBranch::one())',
         'app/Modules/Inventory/Services/StockFacts.php' => 'মজুদের চার্টের টাকা — ঢোকা আর বেরোনো, কেনা দরে',
         'app/Modules/Sales/Services/RouteMetrics.php' => 'রুটের পর্দার অঙ্ক',
         'app/Modules/Sales/Services/SalesCustomerTrade.php' => 'গ্রাহকের কেনাবেচার পর্দা',

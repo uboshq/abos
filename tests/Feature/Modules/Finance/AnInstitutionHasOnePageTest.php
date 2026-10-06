@@ -98,6 +98,21 @@ final class AnInstitutionHasOnePageTest extends TestCase
 
         $list = (string) $this->get(route('finance.institution.index'))->assertOk()->getContent();
         $this->assertStringContainsString(Money::format('-250000'), $list, '⛔ তালিকা আর পাতা দুই নিট বলে।');
+
+        // ⓘ পট্টির নিট = গোটা ছাঁকনির প্রতিটা প্রতিষ্ঠানের নিটের যোগ, কেবল এই পাতার নয় — নামের ক্রমে আগে বসা ৫০টা
+        // ফাঁকা প্রতিষ্ঠান প্রথম পাতা ভরে দেয়, DBBL দ্বিতীয় পাতায় যায়, তবু পট্টি তার নিট গোনে
+        foreach (range(1, 50) as $n) {
+            $this->institution(sprintf('Aa Filler %02d', $n));
+        }
+        $expected = Institution::query()->get()
+            ->reduce(fn (string $s, Institution $i) => bcadd($s, app(InstitutionPosition::class)->of($i)['net'], 4), '0');
+        $this->assertSame(-1, bccomp($expected, '0', 4), 'দাবির ভিত্তি নেই — যোগে DBBL-এর ঋণাত্মক নিট নেই।');
+
+        $first = $this->get(route('finance.institution.index'))->assertOk();
+        $this->assertArrayNotHasKey($bank->id, $first->viewData('positions'), 'দাবির ভিত্তি নেই — DBBL প্রথম পাতাতেই।');
+        $first->assertViewHas('netTotal', fn (string $total) => bccomp($total, $expected, 4) === 0);
+        $this->get(route('finance.institution.index', ['kind' => Institution::INSURANCE]))->assertOk()
+            ->assertViewHas('netTotal', fn (string $total) => bccomp($total, '0', 4) === 0);
     }
 
     // ── সহায়ক ─────────────────────────────────────────────────────────────────

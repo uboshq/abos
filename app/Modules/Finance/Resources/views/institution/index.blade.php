@@ -90,6 +90,7 @@
                     :empty="__('finance::institution.none_yet')" />
 
         <x-ui.pager :rows="$institutions" />
-        <x-ui.list-totals :rows="$institutions" />
+        <x-ui.list-totals :rows="$institutions"
+                          :totals="[['label' => __('finance::institution.position_net'), 'value' => \App\Core\Support\Money::format($netTotal ?? '0')]]" />
     </div>
 </x-layouts.app>
