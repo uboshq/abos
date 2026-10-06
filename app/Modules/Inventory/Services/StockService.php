@@ -197,6 +197,16 @@ final class StockService
              */
             if (bccomp($floor, '0', 4) < 0) {
                 $this->assertEnoughOnFloor($product, $warehouse, $floor);
+
+                // ⭐ লটের নিজের তাকও (Inventory অডিট ম১৭) — পণ্যের মোট থাকলেও লট শূন্যের নিচে নামে না
+                if ($batch !== null) {
+                    $this->assertEnoughInTheLot($product, $warehouse, $batch, $floor);
+                }
+            }
+
+            // ⭐ আটকানো ঘর শূন্যের নিচে নামে না (ম১৭) — যতটা আটকে আছে তার বেশি ছাড়া যায় না
+            if (bccomp($hold, '0', 4) < 0) {
+                $this->assertEnoughHeld($product, $warehouse, $batch, $hold);
             }
 
             // ⭐ গ১১ — বিক্রি হলে "পাওয়া যায়"-ও, তালাসহ ([[assertEnoughAvailable()]])
@@ -1415,6 +1425,61 @@ final class StockService
                     'product' => $product->name(),
                     'warehouse' => $warehouse->name(),
                     'available' => rtrim(rtrim(bccomp($available, '0', 4) > 0 ? $available : '0', '0'), '.') ?: '0',
+                ]),
+            ]);
+        }
+    }
+
+    /**
+     * ⭐ লটের নিজের তাকে যা নেই তা সেই লট থেকে বেরোয় না — Inventory অডিট ম১৭, ৫ অক্টোবর ২০২৬।
+     *
+     * ⛔ আগে কেবল পণ্যের মোট দেখা হত ([[assertEnoughOnFloor()]]): লট A বিক্রি হয়ে শেষ, লট B-তে মাল আছে — তখন
+     * A-তে ফেরা মালের ফেরত বাতিল করলে A শূন্যের নিচে নামত, আর মোটটা মিলত বলে কেউ টের পেত না। ⓘ তালাসহ, পণ্যের
+     * মোটের একই নিয়মে।
+     */
+    private function assertEnoughInTheLot(Product $product, Warehouse $warehouse, Batch $batch, string $floor): void
+    {
+        $inLot = StockMovement::query()
+            ->forProduct($product->id)
+            ->inWarehouse($warehouse->id)
+            ->where('batch_id', $batch->id)
+            ->lockForUpdate()
+            ->selectRaw('COALESCE(SUM(floor_change), 0) as floor')
+            ->value('floor');
+
+        if (bccomp(bcmul($floor, '-1', 4), (string) $inLot, 4) > 0) {
+            throw ValidationException::withMessages([
+                'qty' => __('inventory::validation.lot_floor_short', [
+                    'product' => $product->name(),
+                    'lot' => $batch->batch_no,
+                    'have' => bcadd((string) $inLot, '0', 4),
+                ]),
+            ]);
+        }
+    }
+
+    /**
+     * ⭐ যতটা আটকে আছে তার বেশি ছাড়া যায় না — Inventory অডিট ম১৭, ৫ অক্টোবর ২০২৬।
+     *
+     * ⛔ আগে কোনো পাহারাই ছিল না: আটকে রাখা ফেরত মাল ছাড়ার পরে ফেরতটা বাতিল করলে আটকানো ঘর ঋণাত্মক হত, আর
+     * "পাওয়া যায়" (তাক − ধরা − আটকানো) তাকের চেয়ে **বেশি** দেখাত। ⓘ লট দিলে সেই লটের আটকানো, নইলে পণ্যের।
+     */
+    private function assertEnoughHeld(Product $product, Warehouse $warehouse, ?Batch $batch, string $hold): void
+    {
+        $held = StockMovement::query()
+            ->forProduct($product->id)
+            ->inWarehouse($warehouse->id)
+            ->when($batch !== null, fn ($q) => $q->where('batch_id', $batch->id))
+            ->lockForUpdate()
+            ->selectRaw('COALESCE(SUM(hold_change), 0) as held')
+            ->value('held');
+
+        if (bccomp(bcmul($hold, '-1', 4), (string) $held, 4) > 0) {
+            throw ValidationException::withMessages([
+                'qty' => __('inventory::validation.hold_short', [
+                    'product' => $product->name(),
+                    'warehouse' => $warehouse->name(),
+                    'have' => bcadd((string) $held, '0', 4),
                 ]),
             ]);
         }

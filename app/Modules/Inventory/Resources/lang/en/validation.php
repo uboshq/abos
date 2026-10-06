@@ -49,6 +49,8 @@ return [
     'wrong_reason_context' => 'That reason is not for holding stock.',
     'not_enough_available' => 'Not that much is available — there is :available.',
     'not_that_much_held' => 'Not that much is held — there is :held.',
+    'lot_floor_short' => 'Lot :lot of :product holds only :have — no more can leave this lot.',
+    'hold_short' => 'Only :have of :product is held in :warehouse — no more can be released. It may already have been released or written off.',
     'not_enough_on_floor' => 'There is not that much :product in :warehouse — there is :have.',
     'warehouse_code_taken' => 'Another warehouse already uses this code.',
     'not_enough_free' => 'Only :have free stock of :product is in :warehouse — no more can be given.',
