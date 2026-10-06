@@ -27,6 +27,7 @@ import '../../features/splash/splash_screen.dart';
 import '../../features/dashboards/dashboards_screen.dart';
 import '../../features/reports/reports_screen.dart';
 import '../../features/books/money_in_screens.dart';
+import '../../features/deliveries/deliveries_screen.dart';
 import '../../features/books/principal_screens.dart';
 import '../../features/books/purchase_screens.dart';
 import '../../features/stock/stock_list_screen.dart';
@@ -198,6 +199,12 @@ final goRouterProvider = Provider<GoRouter>((ref) {
           ),
           // ⭐ টাকা আদায়, প্রিন্সিপাল আর ক্রয় — কেবল পড়া (মালিক, ৬ অক্টোবর ২০২৬: "অ্যাপে payment received, principal list
           // আর purchase list দরকার"); চাবি সার্ভারে, টাইল চাবি অনুযায়ী ([[MenuRepository]])
+          // ⭐ আজকের ডেলিভারি — পথে থাকা চালান, "বুঝিয়ে দিন" (ধাপ ৭, ৬ অক্টোবর ২০২৬)
+          GoRoute(
+            path: 'deliveries',
+            builder: (context, state) => const ModuleGateView(
+                path: 'deliveries', child: DeliveriesScreen()),
+          ),
           GoRoute(
             path: 'collections',
             builder: (context, state) => const ModuleGateView(

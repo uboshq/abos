@@ -30,8 +30,15 @@ class PaperToken {
 }
 
 class ScannedLine {
-  const ScannedLine({required this.product, required this.qty, required this.freeQty, this.lot});
+  const ScannedLine(
+      {this.line = 0,
+      required this.product,
+      required this.qty,
+      required this.freeQty,
+      this.lot});
 
+  /// সারির ক্রমিক — "আংশিক পৌঁছেছে"-তে সারি চেনার জন্য (সার্ভার ধাপ ৭, ৬ অক্টোবর ২০২৬); পুরনো সার্ভারে ০
+  final int line;
   final String product;
   final double qty;
   final double freeQty;
@@ -91,6 +98,7 @@ class ScannedPaper {
         for (final row in (json['lines'] as List?) ?? const [])
           if (row is Map)
             ScannedLine(
+              line: (row['line'] as num?)?.toInt() ?? 0,
               product: row['product']?.toString() ?? '—',
               qty: Money.valueOrZero(row['qty']),
               freeQty: Money.valueOrZero(row['free_qty']),
@@ -100,9 +108,13 @@ class ScannedPaper {
       transportNamed: transport['named'] == true,
       vehicle: transport['vehicle']?.toString(),
       driver: transport['driver']?.toString(),
-      outAt: out == null ? null : DateTime.tryParse(out['at']?.toString() ?? '')?.toLocal(),
+      outAt: out == null
+          ? null
+          : DateTime.tryParse(out['at']?.toString() ?? '')?.toLocal(),
       outBy: out?['by']?.toString(),
-      billTotal: json['bill_total'] == null ? null : Money.valueOrZero(json['bill_total']),
+      billTotal: json['bill_total'] == null
+          ? null
+          : Money.valueOrZero(json['bill_total']),
       canGateOut: actions['gate_out'] == true,
       canDeliver: actions['deliver'] == true,
     );
@@ -114,7 +126,37 @@ abstract class PaperScanApi {
 
   Future<ScannedPaper> gateOut(String token);
 
-  Future<ScannedPaper> deliver(String token, {required String receiver, String? phone});
+  /// ⭐ পৌঁছানোর প্রমাণ — নাম আর ফোন; [taken] (ক্রমিক → ভালো অবস্থায় নিলেন) আর [damaged] (ক্রমিক → ভাঙা) দিলে
+  /// আর কোথাও কম বা ভাঙা থাকলে সার্ভার "আংশিক পৌঁছেছে" লেখে (ধাপ ৭)
+  Future<ScannedPaper> deliver(String token,
+      {required String receiver,
+      required String phone,
+      List<ScannedLine> lines = const [],
+      Map<int, double> taken = const {},
+      Map<int, double> damaged = const {}});
+}
+
+/// যা পাঠানো হবে — সব পুরো আর ভাঙা নেই হলে কেবল নাম-ফোন ("পৌঁছেছে"); নাহলে সারিগুলোও ("আংশিক")
+Map<String, dynamic> deliveryPayload(
+    {required String receiver,
+    required String phone,
+    required List<ScannedLine> lines,
+    Map<int, double> taken = const {},
+    Map<int, double> damaged = const {}}) {
+  final partial = lines.any(
+      (l) => (taken[l.line] ?? l.qty) != l.qty || (damaged[l.line] ?? 0) > 0);
+  String q(double v) => v.toStringAsFixed(4);
+  return {
+    'receiver_name': receiver,
+    'receiver_phone': phone,
+    if (partial)
+      'lines': {for (final l in lines) '${l.line}': q(taken[l.line] ?? l.qty)},
+    if (partial)
+      'damaged': {
+        for (final l in lines)
+          if ((damaged[l.line] ?? 0) > 0) '${l.line}': q(damaged[l.line]!)
+      },
+  };
 }
 
 class ServerPaperScanApi implements PaperScanApi {
@@ -122,24 +164,33 @@ class ServerPaperScanApi implements PaperScanApi {
 
   @override
   Future<ScannedPaper> open(String token) async {
-    final response = await ApiClient.dio.get<Map<String, dynamic>>('/sales/scan/$token');
+    final response =
+        await ApiClient.dio.get<Map<String, dynamic>>('/sales/scan/$token');
     return ScannedPaper.fromJson(response.data ?? const {});
   }
 
   @override
   Future<ScannedPaper> gateOut(String token) async {
-    final response = await ApiClient.dio.post<Map<String, dynamic>>('/sales/scan/$token/gate-out');
+    final response = await ApiClient.dio
+        .post<Map<String, dynamic>>('/sales/scan/$token/gate-out');
     return ScannedPaper.fromJson(response.data ?? const {});
   }
 
   @override
-  Future<ScannedPaper> deliver(String token, {required String receiver, String? phone}) async {
+  Future<ScannedPaper> deliver(String token,
+      {required String receiver,
+      required String phone,
+      List<ScannedLine> lines = const [],
+      Map<int, double> taken = const {},
+      Map<int, double> damaged = const {}}) async {
     final response = await ApiClient.dio.post<Map<String, dynamic>>(
       '/sales/scan/$token/deliver',
-      data: {
-        'receiver_name': receiver,
-        if (phone != null && phone.isNotEmpty) 'receiver_phone': phone,
-      },
+      data: deliveryPayload(
+          receiver: receiver,
+          phone: phone,
+          lines: lines,
+          taken: taken,
+          damaged: damaged),
     );
     return ScannedPaper.fromJson(response.data ?? const {});
   }

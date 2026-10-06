@@ -273,6 +273,14 @@ class MenuRepository {
             icon: Icons.request_quote_outlined,
             routeName: 'quotations',
           ),
+        // ⭐ আজকের ডেলিভারি — যিনি পৌঁছানো লিখতে পারেন (ধাপ ৭, ৬ অক্টোবর ২০২৬)
+        if (user.can('sales.delivery.update'))
+          const MenuItem(
+            key: 'sales.deliveries',
+            label: 'আজকের ডেলিভারি',
+            icon: Icons.local_shipping_outlined,
+            routeName: 'deliveries',
+          ),
         // ⭐ টাকা আদায়, প্রিন্সিপাল আর ক্রয় — কেবল পড়া, ওয়েবের দেখার চাবিতে (মালিক, ৬ অক্টোবর ২০২৬)
         if (user.can('sales.collection.view'))
           const MenuItem(

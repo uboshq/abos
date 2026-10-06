@@ -4,6 +4,7 @@ import 'package:mobile_scanner/mobile_scanner.dart';
 
 import '../../core/api_client/network_errors.dart';
 import '../../core/orders/paper_scan_api.dart';
+import 'receive_screen.dart';
 import '../../core/records/money.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
@@ -42,7 +43,8 @@ class _PaperScanScreenState extends State<PaperScanScreen> {
 
   Future<void> _onDetect(BarcodeCapture capture) async {
     if (_busy || _token != null) return;
-    final raw = capture.barcodes.map((b) => b.rawValue).whereType<String>().firstOrNull;
+    final raw =
+        capture.barcodes.map((b) => b.rawValue).whereType<String>().firstOrNull;
     if (raw == null) return;
 
     final token = PaperToken.from(raw);
@@ -83,7 +85,8 @@ class _PaperScanScreenState extends State<PaperScanScreen> {
     return switch (_statusOf(e)) {
       403 => 'এই কাগজ দেখার বা বদলানোর অনুমতি আপনার নেই।',
       409 => 'মাল আগেই বেরিয়ে গেছে।',
-      422 => 'হয়নি — গাড়ির তথ্য বসানো নেই, বা দোকানের বাকির সীমা পার। অফিসে বলুন।',
+      422 =>
+        'হয়নি — গাড়ির তথ্য বসানো নেই, বা দোকানের বাকির সীমা পার। অফিসে বলুন।',
       _ => 'হয়নি। আবার চেষ্টা করুন।',
     };
   }
@@ -103,44 +106,36 @@ class _PaperScanScreenState extends State<PaperScanScreen> {
         title: const Text('মাল বেরোল?'),
         content: const Text('গেট পাস হবে আর বিল কাটা হবে। এটা ফেরানো যায় না।'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('না')),
-          FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('হ্যাঁ, বেরোল')),
+          TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('না')),
+          FilledButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('হ্যাঁ, বেরোল')),
         ],
       ),
     );
     if (ok == true) await _run(() => widget.api.gateOut(_token!));
   }
 
+  /// ⭐ "বুঝিয়ে দিন" — নাম, ফোন আর প্রতিটা সারির নেওয়া ও ভাঙা (ধাপ ৭, ৬ অক্টোবর ২০২৬; [[ReceiveScreen]])
   Future<void> _deliver() async {
-    final name = TextEditingController();
-    final phone = TextEditingController();
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('ডেলিভারি নিশ্চিত'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(controller: name, decoration: const InputDecoration(labelText: 'যিনি মাল নিলেন')),
-            TextField(
-              controller: phone,
-              keyboardType: TextInputType.phone,
-              decoration: const InputDecoration(labelText: 'তাঁর ফোন (ইচ্ছা হলে)'),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('বাদ')),
-          FilledButton(
-            onPressed: () => Navigator.pop(context, name.text.trim().isNotEmpty),
-            child: const Text('নিশ্চিত'),
-          ),
-        ],
-      ),
-    );
-    if (ok == true) {
-      await _run(() => widget.api.deliver(_token!, receiver: name.text.trim(), phone: phone.text.trim()));
-    }
+    final paper = _paper;
+    if (paper == null) return;
+    final result =
+        await Navigator.of(context).push<ReceiveResult>(MaterialPageRoute(
+      builder: (_) => ReceiveScreen(
+          documentNo: paper.documentNo,
+          customer: paper.customer,
+          lines: paper.lines),
+    ));
+    if (result == null) return;
+    await _run(() => widget.api.deliver(_token!,
+        receiver: result.receiver,
+        phone: result.phone,
+        lines: paper.lines,
+        taken: result.taken,
+        damaged: result.damaged));
   }
 
   Future<void> _again() async {
@@ -193,7 +188,8 @@ class _PaperScanScreenState extends State<PaperScanScreen> {
             color: AppColors.dangerSurface,
             child: Padding(
               padding: const EdgeInsets.all(AppSpacing.md),
-              child: Text(_error!, style: const TextStyle(color: AppColors.danger)),
+              child: Text(_error!,
+                  style: const TextStyle(color: AppColors.danger)),
             ),
           ),
         if (paper != null) ...[
@@ -204,7 +200,8 @@ class _PaperScanScreenState extends State<PaperScanScreen> {
           const SizedBox(height: AppSpacing.md),
           Text('অবস্থা: ${_stageLabel(paper.stage)}', style: bold),
           if (paper.outAt != null)
-            Text('বেরিয়েছে ${DateFormat('dd/MM/yyyy HH:mm').format(paper.outAt!)}'
+            Text(
+                'বেরিয়েছে ${DateFormat('dd/MM/yyyy HH:mm').format(paper.outAt!)}'
                 '${paper.outBy == null ? '' : ' · ${paper.outBy}'}'),
           const Divider(),
           for (final line in paper.lines) ...[
@@ -216,7 +213,10 @@ class _PaperScanScreenState extends State<PaperScanScreen> {
           ],
           const Divider(),
           Text(paper.transportNamed ? 'গাড়ি বসানো আছে' : '⚠ গাড়ি বসানো নেই',
-              style: TextStyle(color: paper.transportNamed ? AppColors.success : AppColors.warning)),
+              style: TextStyle(
+                  color: paper.transportNamed
+                      ? AppColors.success
+                      : AppColors.warning)),
           if (paper.vehicle != null) Text('গাড়ি ${paper.vehicle}'),
           if (paper.driver != null) Text('চালক ${paper.driver}'),
           if (paper.billTotal != null) ...[
