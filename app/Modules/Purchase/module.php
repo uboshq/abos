@@ -738,6 +738,8 @@ return [
         [
             // বিল আদেশের দামের সাথে না মিললে আটকে দেওয়া হবে কি না
             'key' => 'purchase.block_price_mismatch',
+            // ⛔ কেবল মালিক — টাকার নিয়ম শিথিল করার সুইচ (পুরো ERP অডিট, ৬ অক্টোবর ২০২৬, SystemAdmin ⛔৪)
+            'super_admin_only' => true,
             'label' => 'purchase::settings.block_price_mismatch',
             'type' => 'boolean',
             'default' => true,

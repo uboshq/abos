@@ -1392,6 +1392,8 @@ return [
              * অর্ডার নেওয়া হয়, আর তখন আটকে দিলে অর্ডারটাই হাতছাড়া হয়।
              */
             'key' => 'sales.allow_negative_stock',
+            // ⛔ কেবল মালিক — টাকার নিয়ম শিথিল করার সুইচ (পুরো ERP অডিট, ৬ অক্টোবর ২০২৬, SystemAdmin ⛔৪)
+            'super_admin_only' => true,
             'label' => 'sales::settings.allow_negative_stock',
             'type' => 'boolean',
             'default' => false,
@@ -1406,6 +1408,8 @@ return [
              * ধরত না।
              */
             'key' => 'sales.commission_max_amount',
+            // ⛔ কেবল মালিক — টাকার নিয়ম শিথিল করার সুইচ (পুরো ERP অডিট, ৬ অক্টোবর ২০২৬, SystemAdmin ⛔৪)
+            'super_admin_only' => true,
             'label' => 'sales::settings.commission_max_amount',
             'type' => 'number',
             'default' => 5000,
@@ -1417,6 +1421,8 @@ return [
              * ⓘ ০ = সীমা নেই (ডিফল্ট, আজকের আচরণ)। ⛔ উপরে গেলে বিল ফেরে; ভিতরে থাকলেও মালিকের সই আগের মতো লাগে।
              */
             'key' => 'sales.discount_cap_line_percent',
+            // ⛔ কেবল মালিক — টাকার নিয়ম শিথিল করার সুইচ (পুরো ERP অডিট, ৬ অক্টোবর ২০২৬, SystemAdmin ⛔৪)
+            'super_admin_only' => true,
             'label' => 'sales::settings.discount_cap_line_percent',
             'type' => 'number',
             'default' => 0,
@@ -1424,6 +1430,8 @@ return [
         ],
         [
             'key' => 'sales.discount_cap_bill_percent',
+            // ⛔ কেবল মালিক — টাকার নিয়ম শিথিল করার সুইচ (পুরো ERP অডিট, ৬ অক্টোবর ২০২৬, SystemAdmin ⛔৪)
+            'super_admin_only' => true,
             'label' => 'sales::settings.discount_cap_bill_percent',
             'type' => 'number',
             'default' => 0,
@@ -1447,6 +1455,8 @@ return [
              * খরচে বা উপরে নয়। কোম্পানি-প্রতি, কারণ ABOS অনেক ব্যবসায় চলে।
              */
             'key' => 'sales.margin.floor_percent',
+            // ⛔ কেবল মালিক — টাকার নিয়ম শিথিল করার সুইচ (পুরো ERP অডিট, ৬ অক্টোবর ২০২৬, SystemAdmin ⛔৪)
+            'super_admin_only' => true,
             'label' => 'sales::margin.setting_floor',
             'type' => 'number',
             'default' => 0,
@@ -1455,6 +1465,8 @@ return [
         [
             // ⓘ সীমার নিচে হলে কী — সতর্ক (ডিফল্ট, আজকের মতো বিক্রি চলে), অনুমোদন, না আটকানো
             'key' => 'sales.margin.action',
+            // ⛔ কেবল মালিক — টাকার নিয়ম শিথিল করার সুইচ (পুরো ERP অডিট, ৬ অক্টোবর ২০২৬, SystemAdmin ⛔৪)
+            'super_admin_only' => true,
             'label' => 'sales::margin.setting_action',
             'type' => 'choice',
             'options' => ['warn', 'approval', 'block'],
@@ -1542,6 +1554,8 @@ return [
              * করতে হবে" বলার উপায়।
              */
             'key' => 'sales.commission_max_percent',
+            // ⛔ কেবল মালিক — টাকার নিয়ম শিথিল করার সুইচ (পুরো ERP অডিট, ৬ অক্টোবর ২০২৬, SystemAdmin ⛔৪)
+            'super_admin_only' => true,
             'label' => 'sales::settings.commission_max_percent',
             'type' => 'number',
             'default' => 10,

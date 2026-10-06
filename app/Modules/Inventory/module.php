@@ -916,6 +916,8 @@ return [
              * ⓘ বন্ধে আজকের মতো — এক-লোকের ডিপো আটকায় না। চালুতে সুপার অ্যাডমিন পারেন, অডিটে দাগসহ ([[StockTransferService::receive()]])।
              */
             'key' => 'inventory.transfer_two_people',
+            // ⛔ কেবল মালিক — টাকার নিয়ম শিথিল করার সুইচ (পুরো ERP অডিট, ৬ অক্টোবর ২০২৬, SystemAdmin ⛔৪)
+            'super_admin_only' => true,
             'label' => 'inventory::settings.transfer_two_people',
             'type' => 'boolean',
             'default' => false,

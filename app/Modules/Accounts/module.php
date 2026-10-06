@@ -763,6 +763,8 @@ return [
         ],
         [
             'key' => 'accounts.backdate_days',
+            // ⛔ কেবল মালিক — টাকার নিয়ম শিথিল করার সুইচ (পুরো ERP অডিট, ৬ অক্টোবর ২০২৬, SystemAdmin ⛔৪)
+            'super_admin_only' => true,
             'label' => 'accounts::settings.backdate_days',
             'type' => 'integer',
             'default' => 7,
@@ -777,6 +779,8 @@ return [
         ],
         [
             'key' => 'accounts.cash_ceiling_blocks',
+            // ⛔ কেবল মালিক — টাকার নিয়ম শিথিল করার সুইচ (পুরো ERP অডিট, ৬ অক্টোবর ২০২৬, SystemAdmin ⛔৪)
+            'super_admin_only' => true,
             'label' => 'accounts::settings.cash_ceiling_blocks',
             'type' => 'boolean',
             'default' => false,

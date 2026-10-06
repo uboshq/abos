@@ -750,6 +750,8 @@ return [
          */
         [
             'key' => 'system.edit_posted_papers',
+            // ⛔ কেবল মালিক — টাকার নিয়ম শিথিল করার সুইচ (পুরো ERP অডিট, ৬ অক্টোবর ২০২৬, SystemAdmin ⛔৪)
+            'super_admin_only' => true,
             'label' => 'system_admin::settings.edit_posted_papers',
             'type' => 'boolean',
             'default' => false,

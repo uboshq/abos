@@ -222,6 +222,8 @@ return [
              * সংখ্যাটা না বসানো পর্যন্ত কিছুই বদলায় না।
              */
             'key' => 'approval.self_limit',
+            // ⛔ কেবল মালিক — টাকার নিয়ম শিথিল করার সুইচ (পুরো ERP অডিট, ৬ অক্টোবর ২০২৬, SystemAdmin ⛔৪)
+            'super_admin_only' => true,
             'label' => 'approval::settings.self_limit',
             'type' => 'number',
             'default' => 0,
