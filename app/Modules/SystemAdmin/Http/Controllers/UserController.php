@@ -1389,6 +1389,9 @@ class UserController extends Controller implements HasMiddleware
 
         // ── ⛔ এখান থেকে নিচে সবটাই তালা খোলার পথ ──────────────────────
 
+        // ⛔ যাঁর খাতা বদলাতে পারি না, তাঁর তালাও খুলি না — প্রতিটা কোম্পানিতে (পুরো ERP অডিট, ৬ অক্টোবর ২০২৬, SystemAdmin ⛔২)
+        $this->authorize('update', $user);
+
         /*
          * ⛔ সুপার অ্যাডমিনের তালা খোলে কেবল আরেকজন সুপার অ্যাডমিন — চূড়ান্ত অডিট (⛔২)। ⚠️ আগে "User Admin" চাবিই
          * যথেষ্ট ছিল, আর তাতে মালিকের দ্বিতীয় তালা খুলে তাঁর ফোনের চাবি মুছে ফেলা যেত। ⓘ [[resetTwoStep()]]-এর
@@ -1433,6 +1436,8 @@ class UserController extends Controller implements HasMiddleware
         $this->mustBeInThisCompany($user);
 
         abort_unless($actor->hasRole(PermissionSyncer::SUPER_ADMIN_ROLE), 403);
+        // ⛔ এক কোম্পানির মালিক অন্য কোম্পানির মালিকের তালা নয় (পুরো ERP অডিট, ৬ অক্টোবর ২০২৬, SystemAdmin ⛔২)
+        $this->authorize('update', $user);
 
         if ((int) $actor->id === (int) $user->id) {
             return back()->withErrors(['reason' => __('auth.two_step_reset_not_self')]);

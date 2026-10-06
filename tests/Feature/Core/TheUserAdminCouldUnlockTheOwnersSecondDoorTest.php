@@ -66,8 +66,12 @@ final class TheUserAdminCouldUnlockTheOwnersSecondDoorTest extends TestCase
         $this->assertTrue((bool) $this->owner->fresh()->two_step_required, 'User Admin মালিকের দ্বিতীয় তালা খুলে ফেলেছেন।');
 
         /* ⭐ একই মানুষ, এবার সুপার অ্যাডমিন — দরজা খোলে; মালিকের মতো ক্ষমতাধর কেউ আটকান না */
-        CompanyContext::forCompany($this->company->id, fn () => $this->userAdmin->assignRole(
-            Role::query()->where('company_id', $this->company->id)->where('name', PermissionSyncer::SUPER_ADMIN_ROLE)->firstOrFail()));
+        // ⛔ মালিকের প্রতিটা কোম্পানিতে — এক কোম্পানির সুপার অ্যাডমিন অন্য কোম্পানির মালিকের তালা খোলেন না (পুরো ERP অডিট, ৬ অক্টোবর ২০২৬, SystemAdmin ⛔২)
+        foreach ($this->owner->companies()->pluck('companies.id') as $companyId) {
+            CompanyContext::forCompany((int) $companyId, fn () => $this->userAdmin->unsetRelation('roles')->assignRole(
+                Role::query()->where('company_id', $companyId)->where('name', PermissionSyncer::SUPER_ADMIN_ROLE)->firstOrFail()));
+            $this->userAdmin->companies()->syncWithoutDetaching([(int) $companyId]);
+        }
         app(PermissionRegistrar::class)->forgetCachedPermissions();
 
         $this->actingAs($this->userAdmin->fresh())
@@ -79,7 +83,9 @@ final class TheUserAdminCouldUnlockTheOwnersSecondDoorTest extends TestCase
 
     public function test_a_user_admin_can_still_switch_off_an_ordinary_persons_second_door(): void
     {
-        $clerk = User::query()->where('email', 'accounts@abos.test')->firstOrFail();
+        // ⓘ সত্যিই সাধারণ কর্মী — এই কোম্পানিতে, কোনো চাবি ছাড়া। আগে হিসাবরক্ষক ছিলেন, যাঁর চাবি User Admin-এর নেই; নিজের চেয়ে বেশি ক্ষমতার মানুষের তালা খোলা এখন আটকায় ([[UserPolicy::update()]], ৬ অক্টোবর ২০২৬)
+        $clerk = User::factory()->create(['is_active' => true, 'current_company_id' => $this->company->id]);
+        $clerk->companies()->attach($this->company->id, ['is_active' => true]);
         $this->assertFalse($clerk->hasRole(PermissionSyncer::SUPER_ADMIN_ROLE));
         $clerk->forceFill(['two_step_required' => true])->save();
 

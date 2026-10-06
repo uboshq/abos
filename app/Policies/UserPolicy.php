@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace App\Policies;
 
 use App\Core\Services\PermissionSyncer;
+use App\Core\Support\CompanyContext;
 use App\Models\User;
 use App\Models\UserPermissionOverride;
+use Illuminate\Support\Facades\DB;
 use Spatie\Permission\Models\Role;
 
 /**
@@ -64,37 +66,81 @@ class UserPolicy
             return false;
         }
 
-        if ($this->isOwner($actor)) {
-            return true;
-        }
-
         if (! $target->exists) {
             return true;
         }
 
-        if ($this->isOwner($target)) {
-            return false;
-        }
-
         /*
-         * ⓘ তাঁর প্রতিটা ক্ষমতা আমারও আছে — তবেই তাঁর খাতায় হাত। ভূমিকার
-         * অনুমতির সাথে তাঁর নিজের নামে দেওয়া ব্যতিক্রমও ([[UserPermissionOverride]]),
-         * নাহলে ব্যতিক্রম দিয়ে ক্ষমতা পাওয়া মানুষটা এই নিয়মের বাইরে থাকতেন।
+         * ⛔ প্রতিটা কোম্পানিতে — কেবল চলতিটায় নয়। পুরো ERP অডিট, ৬ অক্টোবর ২০২৬ (SystemAdmin ⛔২)।
+         *
+         * ইমেইল, পাসওয়ার্ড আর সচল-অবস্থা একটাই সারিতে, সব কোম্পানির জন্য। আগে যাচাই হত কেবল চলতি কোম্পানিতে: A-র
+         * ইউজার-অ্যাডমিন A-র সদস্য কারও পাসওয়ার্ড বদলে তাঁর হয়ে ঢুকতে পারতেন — তিনি B-তে super_admin হলেও; আর
+         * A-র মালিকও B-র মালিকের খাতা নিতে পারতেন। ⭐ এখন মানুষটা যত কোম্পানির সদস্য বা যেখানে তাঁর ভূমিকা আছে,
+         * প্রতিটাতে আমাকে তাঁকে ঢাকতে হবে — সেখানে আমি super_admin, নয়তো সেখানে তাঁর প্রতিটা ক্ষমতা আমারও।
          */
-        $powers = $target->getAllPermissions()->pluck('name')->merge(
-            UserPermissionOverride::query()
-                ->where('user_id', $target->id)
-                ->where('granted', true)
-                ->pluck('permission'),
-        )->unique();
-
-        foreach ($powers as $permission) {
-            if (! $actor->can($permission)) {
+        foreach ($this->companiesOf($target) as $companyId) {
+            if (! $this->covers($actor, $target, $companyId)) {
                 return false;
             }
         }
 
         return true;
+    }
+
+    /** ⓘ সদস্যপদ আর ভূমিকা — দুই জায়গা থেকেই, যাতে সদস্যপদ বন্ধ হলেও রয়ে যাওয়া ভূমিকা বাদ না পড়ে */
+    private function companiesOf(User $target): array
+    {
+        return DB::table('company_user')->where('user_id', $target->id)->pluck('company_id')
+            ->merge(DB::table('model_has_roles')->where('model_type', $target->getMorphClass())
+                ->where('model_id', $target->id)->pluck('company_id'))
+            ->filter()->map(fn ($id) => (int) $id)->unique()->values()->all();
+    }
+
+    /** এই কোম্পানিতে আমি কি তাঁকে ঢাকি — আমি মালিক, নয়তো তিনি মালিক নন আর তাঁর প্রতিটা ক্ষমতা আমার */
+    private function covers(User $actor, User $target, int $companyId): bool
+    {
+        return (bool) CompanyContext::forCompany($companyId, function () use ($actor, $target): bool {
+            $actor->unsetRelation('roles')->unsetRelation('permissions');
+            $target->unsetRelation('roles')->unsetRelation('permissions');
+
+            try {
+                if ($this->isOwner($actor)) {
+                    return true;
+                }
+
+                if ($this->isOwner($target)) {
+                    return false;
+                }
+
+                /*
+                 * ⓘ তাঁর প্রতিটা ক্ষমতা আমারও আছে — তবেই তাঁর খাতায় হাত। ভূমিকার
+                 * অনুমতির সাথে তাঁর নিজের নামে দেওয়া ব্যতিক্রমও ([[UserPermissionOverride]]),
+                 * নাহলে ব্যতিক্রম দিয়ে ক্ষমতা পাওয়া মানুষটা এই নিয়মের বাইরে থাকতেন।
+                 */
+                $powers = $target->getAllPermissions()->pluck('name')->merge(
+                    UserPermissionOverride::query()
+                        ->where('user_id', $target->id)
+                        ->where('granted', true)
+                        ->pluck('permission'),
+                )->unique();
+
+                // ⓘ সেই কোম্পানির সদস্য নই — তাঁর একটা ক্ষমতাও থাকলে ঢাকি না
+                if ($powers->isNotEmpty() && ! $actor->canAccessCompany((int) CompanyContext::id())) {
+                    return false;
+                }
+
+                foreach ($powers as $permission) {
+                    if (! $actor->can($permission)) {
+                        return false;
+                    }
+                }
+
+                return true;
+            } finally {
+                $actor->unsetRelation('roles')->unsetRelation('permissions');
+                $target->unsetRelation('roles')->unsetRelation('permissions');
+            }
+        });
     }
 
     /**

@@ -378,10 +378,16 @@ final class TheSuperAdminCouldSkipTheSecondDoorTest extends TestCase
     {
         $second = User::query()->where('email', '!=', $this->admin->email)->firstOrFail();
 
-        CompanyContext::forCompany(
-            (int) CompanyContext::id(),
-            fn () => $second->assignRole(PermissionSyncer::SUPER_ADMIN_ROLE),
-        );
+        /*
+         * ⛔ মালিকের প্রতিটা কোম্পানিতে — কেবল চলতিটায় নয় (পুরো ERP অডিট, ৬ অক্টোবর ২০২৬, SystemAdmin ⛔২): এক কোম্পানির
+         * super_admin অন্য কোম্পানির মালিকের তালা খুলতে পারেন না ([[UserPolicy::update()]])।
+         */
+        foreach ($this->admin->companies()->pluck('companies.id') as $companyId) {
+            CompanyContext::forCompany((int) $companyId, function () use ($second, $companyId): void {
+                $second->unsetRelation('roles')->assignRole(PermissionSyncer::SUPER_ADMIN_ROLE);
+                $second->companies()->syncWithoutDetaching([(int) $companyId]);
+            });
+        }
 
         $second = $second->fresh();
 
