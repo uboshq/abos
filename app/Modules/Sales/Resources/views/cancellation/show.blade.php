@@ -21,6 +21,21 @@
                     {{ $invoice->document_no }}
                 </x-ui.button>
 
+                {{-- ⭐ বাতিলের পরে ঠিক বিল — বিক্রয় পরিকল্পনা §৬ (৬ অক্টোবর ২০২৬) --}}
+                @if ($cancellation->status === \App\Core\Support\DocumentStatus::CONFIRMED)
+                    @if ($reissueOrderId !== null)
+                        <x-ui.button tone="primary" :href="route('sales.order.show', $reissueOrderId)" data-reissue-order :title="__('sales::cancellation.reissue_order_hint')">
+                            {{ __('sales::cancellation.reissue_order') }}
+                        </x-ui.button>
+                    @else
+                        @can('sales.invoice.create')
+                            <x-ui.button tone="primary" :href="route('sales.direct.create', ['reissue' => $invoice->id])" data-reissue :title="__('sales::cancellation.reissue_hint')">
+                                {{ __('sales::cancellation.reissue') }}
+                            </x-ui.button>
+                        @endcan
+                    @endif
+                @endif
+
                 @if ($cancellation->status === \App\Core\Support\DocumentStatus::CONFIRMED)
                     <x-ui.print-menu :documents="[[
                         'label' => __('sales::cancellation.title'),

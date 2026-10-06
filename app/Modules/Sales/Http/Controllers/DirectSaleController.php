@@ -385,7 +385,8 @@ class DirectSaleController extends Controller implements HasMiddleware
             'resume' => $this->editFrom($request) ?? $this->resumeFrom($request),
 
             /* ⭐ উৎস থেকে খোলা পর্দা — রাখা খসড়ার একই আকারে ([[sourceScreen()]]), আর মাথার "DO-0012 থেকে" */
-            'sourceResume' => $fromSource === null ? null : $this->sourceScreen($fromSource['screen'], $warehouse),
+            // ⭐ বাতিলের পরে ঠিক বিল (?reissue=) — উৎস-পর্দার একই পথে, নতুন বিক্রি হিসেবে ([[reissueFrom()]])
+            'sourceResume' => $fromSource === null ? $this->reissueFrom($request) : $this->sourceScreen($fromSource['screen'], $warehouse),
             'counterSource' => $fromSource === null ? $this->sourceOfDraft($request) : $fromSource['banner'],
 
             /*
@@ -1109,6 +1110,64 @@ class DirectSaleController extends Controller implements HasMiddleware
             'approvalUrl' => null,
             'stage' => 'edit',
             'editInvoiceId' => (int) $sale->id,
+            'challanUrl' => null,
+        ];
+    }
+
+    /**
+     * ⭐ বাতিলের পরে ঠিক বিল — `?reissue=<বাতিল বিল>` (মালিকের বিক্রয় পরিকল্পনা §৬, ৬ অক্টোবর ২০২৬: "পুরো ভুল ইনভয়েস:
+     * বাতিল-ইনভয়েস, তারপর ঠিক ইনভয়েস")।
+     *
+     * ⓘ বাতিল কাউন্টার-বিলের নিজের পর্দার ছবি (`counter_screen`, না থাকলে বিল থেকে গড়া) **নতুন** বিক্রি হিসেবে খোলে:
+     * বিলের id নেই, পুরনো নম্বর, তারিখ, মেয়াদ আর জমা বাদ। বিক্রেতা শুধরে সংরক্ষণ করলে নতুন নম্বরে নতুন বিল — পুরনোটা
+     * বাতিলই থাকে। ⓘ লট বৈধ থাকে: বাতিল-ইনভয়েস মাল সেই লটেই ফেরায়। ⛔ কেবল বাতিল বিল, আর বিল বানানোর চাবি থাকলে।
+     *
+     * @return array<string, mixed>|null
+     */
+    private function reissueFrom(Request $request): ?array
+    {
+        $id = $request->integer('reissue');
+
+        if ($id <= 0 || ! $request->user()?->can('sales.invoice.create')) {
+            return null;
+        }
+
+        $old = SalesInvoice::query()->where('status', \App\Core\Support\DocumentStatus::CANCELLED)->find($id);
+
+        if ($old === null) {
+            return null;
+        }
+
+        $saved = (array) $old->counter_screen;
+
+        // ⓘ পর্দার ছবি না থাকলে (সেবা বা ফোন থেকে বিক্রি — `screen` ফাঁকা) বিলের সারি থেকে গড়া
+        if ((array) ($saved['screen'] ?? []) === []) {
+            $saved = app(\App\Modules\Sales\Services\DirectSaleOptions::class)->screenFromDraft($old);
+        }
+
+        $screen = (array) ($saved['screen'] ?? []);
+
+        if ($screen === []) {
+            return null;
+        }
+
+        $screen['deposits'] = [];
+        $screen['dueOn'] = '';
+        $fields = array_diff_key((array) ($saved['fields'] ?? []), array_flip(['invoice_no', 'challan_no', 'trx_date', 'due_on']));
+
+        $cxl = \App\Modules\Sales\Models\SalesInvoiceCancellation::query()->where('sales_invoice_id', $old->id)->orderByDesc('id')->value('document_no');
+        session()->now('approval_notice', __('sales::cancellation.reissue_notice', ['cxl' => (string) $cxl, 'no' => (string) $old->document_no]));
+
+        return [
+            'invoiceId' => '',
+            'invoiceNo' => '',
+            'challanNo' => '',
+            'customerId' => (int) $old->customer_id,
+            'screen' => $screen,
+            'fields' => $fields,
+            'viewOnly' => false,
+            'approvalUrl' => null,
+            'stage' => 'source',
             'challanUrl' => null,
         ];
     }

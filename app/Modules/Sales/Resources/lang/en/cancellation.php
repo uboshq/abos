@@ -28,4 +28,9 @@ return [
     'shared_challan' => 'Challan :challan of :no also carries another invoice’s goods — make a return, not a cancellation invoice.',
     'month_closed' => 'The month :month of :no is closed — someone allowed must reopen it with a reason first.',
     'approval' => 'Cancellation invoice (signature)',
+    'reissue' => 'Make the correct bill',
+    'reissue_hint' => 'The cancelled bill\'s lines open at the counter — fix them and save for a new bill with a new number.',
+    'reissue_order' => 'Back to the order — new challan',
+    'reissue_order_hint' => 'The order lines are open again — a new challan from the order gives the correct bill.',
+    'reissue_notice' => 'The lines of :no are filled in after :cxl — fix them and save; it becomes a new bill with a new number.',
 ];

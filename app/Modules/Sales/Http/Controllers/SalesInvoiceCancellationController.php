@@ -61,10 +61,25 @@ final class SalesInvoiceCancellationController extends Controller implements Has
     {
         $cancellation->loadMissing(['invoice.lines.product.unit', 'customer', 'creator', 'confirmer']);
 
+        /*
+         * ⭐ ঠিক বিলের পথ — বিক্রয় পরিকল্পনা §৬ (৬ অক্টোবর ২০২৬): আদেশ থেকে আসা বিলে আদেশে ফেরা (বাতিলে চালান উল্টে আদেশের
+         * সারি আবার খোলে), নইলে কাউন্টারে পুরনো সারিসহ নতুন বিক্রি ([[DirectSaleController::reissueFrom()]])।
+         */
+        $orderId = null;
+
+        if ($cancellation->status === \App\Core\Support\DocumentStatus::CONFIRMED && $cancellation->invoice !== null) {
+            $orderId = \App\Modules\Sales\Models\DeliveryChallan::query()
+                ->whereIn('id', \App\Modules\Sales\Models\DeliveryChallanLine::query()
+                    ->whereIn('id', $cancellation->invoice->lines()->whereNotNull('delivery_challan_line_id')->pluck('delivery_challan_line_id'))
+                    ->pluck('delivery_challan_id'))
+                ->whereNotNull('sales_order_id')->value('sales_order_id');
+        }
+
         return view('sales::cancellation.show', [
             'menu' => $this->menu->forUser($request->user()),
             'cancellation' => $cancellation,
             'invoice' => $cancellation->invoice,
+            'reissueOrderId' => $orderId === null ? null : (int) $orderId,
         ]);
     }
 }
