@@ -7,6 +7,7 @@ namespace App\Modules\Inventory\Reports;
 use App\Core\Engines\Report\ReportColumn;
 use App\Core\Engines\Report\ReportDefinition;
 use App\Core\Engines\Report\ReportEngine;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -110,11 +111,17 @@ final class InventoryControlReports
     {
         $slow = self::SLOW_DAYS;
         $dead = self::DEAD_DAYS;
-        $state = "CASE
-                WHEN s.last_out IS NULL OR DATEDIFF(CURDATE(), s.last_out) >= {$dead} THEN 'dead'
-                WHEN DATEDIFF(CURDATE(), s.last_out) >= {$slow} THEN 'slow'
+        /*
+         * ⭐ "আজ" অ্যাপের ঘড়ি থেকে, ডেটাবেসের নয় — Inventory অডিট ম২৯, ৫ অক্টোবর ২০২৬।
+         * ⛔ আগে ডেটাবেসের নিজের "আজ": ডেটাবেস সার্ভার UTC-তে চলে, তাই বাংলাদেশের রাত ১২টা থেকে ভোর ৬টা পর্যন্ত "আজ" ছিল গতকাল —
+         * অলস দিনের সংখ্যা এক কম, আর ৯০/১৮০ দিনের সীমায় দাঁড়ানো পণ্য ঐ ছয় ঘণ্টা ভুল ঘরে। ⓘ তারিখটা ডাকার সময়ই গোনা হয়,
+         * সংজ্ঞা বানানোর সময় নয় — নইলে দীর্ঘ চলা প্রক্রিয়া কালকের "আজ" রাখত।
+         */
+        $state = fn (string $today) => "CASE
+                WHEN s.last_out IS NULL OR DATEDIFF({$today}, s.last_out) >= {$dead} THEN 'dead'
+                WHEN DATEDIFF({$today}, s.last_out) >= {$slow} THEN 'slow'
             END";
-        $labels = "CASE ({$state}) WHEN 'dead' THEN ".DB::getPdo()->quote((string) __('inventory::control.state_dead'))
+        $labels = fn (string $state) => "CASE ({$state}) WHEN 'dead' THEN ".DB::getPdo()->quote((string) __('inventory::control.state_dead'))
             .' WHEN \'slow\' THEN '.DB::getPdo()->quote((string) __('inventory::control.state_slow')).' END';
 
         $avgCost = '(select CASE WHEN SUM(cl.qty_remaining) > 0 THEN SUM(cl.qty_remaining * cl.unit_cost) / SUM(cl.qty_remaining) END
@@ -125,7 +132,12 @@ final class InventoryControlReports
             permission: 'inventory.report',
             title: 'inventory::control.slow_dead',
             filters: ['branch', 'warehouse_id', 'brand_id', 'category_id', 'status'],
-            query: fn (array $f) => DB::query()
+            query: function (array $f) use ($state, $labels, $avgCost) {
+                $today = DB::getPdo()->quote(Carbon::today()->toDateString());
+                $state = $state($today);
+                $labels = $labels($state);
+
+                return DB::query()
                 ->fromSub(
                     DB::table('inv_stock_movements as m')
                         ->join('inv_warehouses as w', 'w.id', '=', 'm.warehouse_id')
@@ -136,7 +148,7 @@ final class InventoryControlReports
                         ->selectRaw('m.product_id')
                         ->selectRaw('SUM(m.floor_change + m.unplaced_change) as on_hand')
                         ->selectRaw('MAX(CASE WHEN m.floor_change < 0 THEN m.trx_date END) as last_out')
-                        ->selectRaw('SUM(CASE WHEN m.floor_change < 0 AND m.trx_date >= DATE_SUB(CURDATE(), INTERVAL 365 DAY) THEN -m.floor_change ELSE 0 END) as out_year'),
+                        ->selectRaw("SUM(CASE WHEN m.floor_change < 0 AND m.trx_date >= DATE_SUB({$today}, INTERVAL 365 DAY) THEN -m.floor_change ELSE 0 END) as out_year"),
                     's',
                 )
                 ->join('inv_products as p', 'p.id', '=', 's.product_id')
@@ -154,12 +166,13 @@ final class InventoryControlReports
                     DB::raw("{$labels} as state"),
                     DB::raw("CONCAT(p.code, ' - ', ".self::name('p').') as product_name'),
                     's.last_out',
-                    DB::raw('DATEDIFF(CURDATE(), s.last_out) as idle_days'),
+                    DB::raw("DATEDIFF({$today}, s.last_out) as idle_days"),
                     's.on_hand',
                     's.out_year',
                     DB::raw('ROUND(s.out_year / s.on_hand, 2) as turns'),
                     DB::raw("ROUND(s.on_hand * COALESCE({$avgCost}, 0), 4) as value"),
-                ]),
+                ]);
+            },
             columns: [
                 ['key' => 'state', 'label' => 'inventory::control.state', 'width' => '6rem'],
                 ['key' => 'product_name', 'label' => 'inventory::field.product'],
