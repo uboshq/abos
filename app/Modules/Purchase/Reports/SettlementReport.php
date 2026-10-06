@@ -156,12 +156,43 @@ final class SettlementReport
      */
     private static function goodsIn(int $company, string $from, string $to): Builder
     {
-        return DB::table('pur_receipts')
+        $received = DB::table('pur_receipts')
             ->where('company_id', $company)
             ->whereBetween('trx_date', [$from, $to])
             ->whereIn('status', DocumentStatus::POSTED)
-            ->groupBy('supplier_id')
-            ->select(['supplier_id', DB::raw('SUM(total) as goods_in')]);
+            ->select(['supplier_id', DB::raw('total as goods_in')]);
+
+        /*
+         * ⛔ সরাসরি ক্রয়ও — পুরো-ERP অডিট, ৬ অক্টোবর ২০২৬ ⛔৮। ⓘ চালান-ছাড়া বিলে মাল বিলেই ঢোকে (লাইনে মাল-গ্রহণের লাইন নেই),
+         * আর গো-লাইভের পথ ঠিক এটাই; আগে এই মাল এখানে আসতই না। মাল-গ্রহণ থেকে আসা লাইন বাদ — সেই মাল উপরে একবার গোনা।
+         */
+        $direct = DB::table('pur_bill_lines as bl')
+            ->join('pur_bills as b', 'b.id', '=', 'bl.purchase_bill_id')
+            ->where('b.company_id', $company)
+            ->whereBetween('b.trx_date', [$from, $to])
+            ->whereIn('b.status', DocumentStatus::POSTED)
+            ->whereNull('b.deleted_at')
+            ->whereNull('bl.purchase_receipt_line_id')
+            ->select(['b.supplier_id as supplier_id', DB::raw('bl.amount as goods_in')]);
+
+        return DB::query()->fromSub($received->unionAll($direct), 'g')
+            ->groupBy('g.supplier_id')
+            ->select(['g.supplier_id as supplier_id', DB::raw('SUM(g.goods_in) as goods_in')]);
+    }
+
+    /**
+     * ⭐ বিল আর পণ্য ধরে এক সারি — বিক্রয়মূল্যের ওজন-গড় দর (পুরো-ERP অডিট, ৬ অক্টোবর ২০২৬ ⛔৮)।
+     *
+     * ⓘ খরচ-স্তরের ব্যবহার কোন বিলের লাইন টেনেছে তা জানে না, কেবল বিল আর পণ্য। তাই এক জোড়ায় এক সারি: স্তরের পরিমাণ × এই দর,
+     * আর প্রতিটা ব্যবহার একবারই মেলে। দুই লাইনের দর আলাদা হলে গড়ে বিক্রয় মোট একই থাকে। মূলধনের লাভের রিপোর্টও এটাই পড়ে।
+     */
+    public static function lineRates(int $company): Builder
+    {
+        return DB::table('sal_invoice_lines as sl')
+            ->join('sal_invoices as si', 'si.id', '=', 'sl.sales_invoice_id')
+            ->where('si.company_id', $company)
+            ->groupBy('sl.sales_invoice_id', 'sl.product_id')
+            ->selectRaw('sl.sales_invoice_id, sl.product_id, CASE WHEN SUM(sl.qty) = 0 THEN 0 ELSE SUM(sl.rate * sl.qty) / SUM(sl.qty) END as rate');
     }
 
     /**
@@ -195,7 +226,12 @@ final class SettlementReport
              * বিক্রয়মূল্যটা বিলের লাইন থেকে, স্তর থেকে নয় — স্তর কেবল
              * খরচ জানে। মিলানো হয় বিল ও পণ্য ধরে।
              */
-            ->join('sal_invoice_lines as il', function ($join) {
+            /*
+             * ⛔ বিল আর পণ্য ধরে আগে এক সারি, ওজন-গড় দরে ([[lineRates()]]) — পুরো-ERP অডিট, ৬ অক্টোবর ২০২৬ ⛔৮। ⓘ আগে বিলের
+             * প্রতিটা লাইনের সাথে সরাসরি মেলানো হত, আর একই বিলে একই পণ্য দুই লাইনে থাকলে (এক লাইনে এক লট — রোজকার ঘটনা)
+             * প্রতিটা ব্যবহার দুই লাইনের সাথেই মিলত: বিক্রির খরচ দ্বিগুণ, দর গুলিয়ে যেত।
+             */
+            ->joinSub(self::lineRates($company), 'il', function ($join) {
                 $join->on('il.sales_invoice_id', '=', 'i.id')
                     ->on('il.product_id', '=', 'u.product_id');
             })
@@ -230,12 +266,25 @@ final class SettlementReport
      */
     private static function money(int $company, string $from, string $to): Builder
     {
+        /*
+         * ⛔ কেবল টাকা দেওয়ার কাগজ — পুরো-ERP অডিট, ৬ অক্টোবর ২০২৬ ⛔৮। ⓘ আগে সরবরাহকারীর নামের সব ডেবিট যোগ হত, আর বিল
+         * নিশ্চিতের GRNI-র ডেবিট আর ক্রয়-ফেরতও সরবরাহকারীর নামে বসে — তাই "দেওয়া হয়েছে" প্রায় সব বিলের অঙ্কে ফুলে উঠত।
+         * এখন: ক্রয়ের পরিশোধ, পরিশোধ-ভাউচার (সরাসরি ক্রয়ের টাকাও এটাই), আর জাবেদা (তিন-কোণা সমন্বয় হাতে বসে); বাতিলের
+         * উল্টো সারি নিজের মূল থেকে বিয়োগ।
+         */
+        $paying = [
+            \App\Modules\Purchase\Models\Payment::drillSourceType(),
+            \App\Modules\Accounts\Models\Voucher::SOURCE_TYPES[\App\Modules\Accounts\Models\Voucher::PAYMENT],
+            \App\Modules\Accounts\Models\Voucher::SOURCE_TYPES[\App\Modules\Accounts\Models\Voucher::JOURNAL],
+        ];
+
         return DB::table('ledger_entries')
             ->where('company_id', $company)
             ->where('party_type', Supplier::drillSourceType())
             ->whereBetween('trx_date', [$from, $to])
+            ->whereIn('source_type', [...$paying, ...array_map(fn (string $s) => $s.':reversal', $paying)])
             ->groupBy('party_id')
-            ->select(['party_id', DB::raw('SUM(debit) as paid_to_them')]);
+            ->select(['party_id', DB::raw("SUM(CASE WHEN source_type LIKE '%:reversal' THEN -credit ELSE debit END) as paid_to_them")]);
     }
 
     /**

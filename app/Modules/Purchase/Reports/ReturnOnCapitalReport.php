@@ -293,7 +293,8 @@ final class ReturnOnCapitalReport
                 $join->on('i.id', '=', 'u.source_id')
                     ->where('u.source_type', '=', SalesInvoice::STOCK_SOURCE);
             })
-            ->join('sal_invoice_lines as il', function ($join) {
+            // ⛔ বিল আর পণ্য ধরে এক সারি — নিষ্পত্তির একই পথ ([[SettlementReport::lineRates()]], অডিট ⛔৮)
+            ->joinSub(SettlementReport::lineRates($company), 'il', function ($join) {
                 $join->on('il.sales_invoice_id', '=', 'i.id')
                     ->on('il.product_id', '=', 'u.product_id');
             })
