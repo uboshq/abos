@@ -159,6 +159,50 @@ final class OpeningBalanceService
     }
 
     /**
+     * ⭐ খোলা মজুদের এক সারির মূল্য ফেরানো — সংশোধন বা মুছে ফেলা (মালিক, ৬ অক্টোবর ২০২৬)।
+     *
+     * ⓘ কার্ট সব সারির জন্য **একটা** দাখিলা দেয়, তাই এক সারির জন্য পুরো দাখিলা উল্টানো যায় না ([[PostingEngine::reverse()]]
+     * সবটা উল্টায়)। ⭐ তাই সারির নিজের মূল্যে আলাদা উল্টো দাখিলা — Dr শুরুর মূলধন / Cr মজুদ — নিজের উৎসে
+     * (`opening_stock:withdrawn`, সংশোধনের চলাচলের id)। ⛔ পুরনো সারি মোছা বা বদলানো হয় না; খাতার শিকল অক্ষত।
+     *
+     * @return list<LedgerEntry>
+     */
+    public function withdrawInventory(
+        int $sourceId,
+        string $documentNo,
+        string $amount,
+        Carbon|string|null $date = null,
+        ?int $branchId = null,
+    ): array {
+        if (bccomp($amount, '0', 4) <= 0) {
+            return [];
+        }
+
+        $inventory = StandardChart::find(StandardChart::INVENTORY);
+        $equity = $this->openingEquity();
+
+        if ($inventory === null || $equity === null) {
+            throw new PostingException(
+                'Opening stock needs the standard chart — install it before bringing stock in.'
+            );
+        }
+
+        $narration = $this->narration();
+
+        return $this->posting->post(
+            sourceType: 'opening_stock:withdrawn',
+            sourceId: $sourceId,
+            trxDate: $this->dateFor($date),
+            lines: [
+                ['account_id' => $equity->id, 'debit' => $amount, 'narration' => $narration],
+                ['account_id' => $inventory->id, 'credit' => $amount, 'narration' => $narration],
+            ],
+            documentNo: $documentNo,
+            branchId: $branchId,
+        );
+    }
+
+    /**
      * ছকের একটা খাতের নিজের খোলা ব্যালেন্স — খাতায়, কেবল কলামে নয়।
      *
      * ── কী ভাঙা ছিল, ২৯ আগস্ট ২০২৬ ─────────────────────────────────

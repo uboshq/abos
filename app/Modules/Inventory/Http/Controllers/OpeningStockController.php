@@ -367,6 +367,8 @@ class OpeningStockController extends Controller implements HasMiddleware
                 $join->on('inv_cost_layers.source_id', '=', 'inv_stock_movements.id')
                     ->where('inv_cost_layers.source_type', '=', OpeningStockService::SOURCE_TYPE);
             })
-            ->where('inv_stock_movements.source_type', OpeningStockService::SOURCE_TYPE);
+            ->where('inv_stock_movements.source_type', OpeningStockService::SOURCE_TYPE)
+            // ⭐ সংশোধিত বা মুছে ফেলা সারি তালিকায় নয় — তার জায়গায় নতুন সারি (৬ অক্টোবর ২০২৬)
+            ->whereNotExists(fn ($q) => OpeningStockService::correctionOf($q, 'inv_stock_movements.id'));
     }
 }

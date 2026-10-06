@@ -131,6 +131,18 @@ describe('openingCart — দাম', () => {
     })
 })
 
+describe('openingCart — ফ্রির সতর্কতা', () => {
+    it('ফ্রি পরিমাণের সমান বা বেশি হলে সতর্কতা, কম বা খালি হলে নয়', () => {
+        const cart = make()
+
+        expect(cart.freeWarn({ qty: '8', free_qty: '8' })).toBe(true)
+        expect(cart.freeWarn({ qty: '8', free_qty: '9' })).toBe(true)
+        expect(cart.freeWarn({ qty: '8', free_qty: '7.99' })).toBe(false)
+        expect(cart.freeWarn({ qty: '8', free_qty: '' })).toBe(false)
+        expect(cart.freeWarn({ qty: '', free_qty: '3' })).toBe(false)
+    })
+})
+
 describe('openingCart — মোট', () => {
     it('সারির মূল্য পরিমাণ × দর; ফ্রি গোনে না', () => {
         expect(rowValue({ qty: '10', rate: '2.5', free_qty: '5' })).toBe(25)

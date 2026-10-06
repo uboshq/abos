@@ -152,7 +152,9 @@
                                                class="num w-full rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-2 py-1 text-right"></td>
                                     <td><input :name="name(i, 'free_qty')" x-model="row.free_qty" data-cell="free" type="number" step="any" min="0" inputmode="decimal"
                                                aria-label="{{ __('inventory::field.free') }}" x-on:keydown.enter="enter($event, row)"
-                                               class="num w-full rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-2 py-1 text-right"></td>
+                                               class="num w-full rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-2 py-1 text-right">
+                                        {{-- ⭐ ফ্রি পরিমাণের সমান বা বেশি — হলুদ সতর্কতা, আটকানো নয় (৬ অক্টোবর ২০২৬) --}}
+                                        <span x-show="freeWarn(row)" x-cloak data-cart-free-warn class="block text-2xs font-medium text-(--color-badge-warning-ink)">{{ __('inventory::message.opening_free_warn') }}</span></td>
                                     <td><input :name="name(i, 'unit_cost')" x-model="row.rate" data-cell="rate" type="number" step="any" min="0" inputmode="decimal"
                                                aria-label="{{ __('inventory::field.opening_rate') }}" x-on:input="priced(row, 'rate')" x-on:keydown.enter="enter($event, row)"
                                                class="num w-full rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-2 py-1 text-right"></td>
@@ -212,6 +214,12 @@
 
         {{-- ⭐ দর লুকানো থাকলে মূল্যও — অডিট ম১২, ৫ অক্টোবর ২০২৬। ⛔ আগে দর ঢাকা অথচ মূল্য খোলা: মূল্য ÷ পরিমাণ = দর, পাহারাটা অলংকার। --}}
         @php $showCost = \App\Core\Security\FieldSecurity::visible(\App\Modules\Inventory\Models\StockMovement::class, 'unit_cost'); @endphp
+        {{-- ⓘ লিঙ্কটা এখানে, কলামের তালিকায় নয় — `:columns="…"`-এর ভেতরে `"` বসলে অ্যাট্রিবিউটটাই কেটে যায় আর পুরো টেবিল কাঁচা লেখা হয়ে ছাপে --}}
+        @php
+            $editLink = fn ($r) => new \Illuminate\Support\HtmlString(
+                '<a data-opening-edit href="'.e(route('inventory.stock.opening.edit', $r->id)).'" class="text-(--color-brand-600) hover:underline">'.e(__('core.action.edit')).'</a>'
+            );
+        @endphp
 
         <section data-boxed class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
             <div class="flex items-baseline justify-between border-b border-(--color-border) px-4 py-3">
@@ -251,6 +259,8 @@
                      'render' => fn ($r) => $showCost
                          ? \App\Core\Support\Money::format($r->value)
                          : \App\Core\Security\FieldSecurity::mask()],
+                    /* ⭐ সংশোধন — মালিক, ৬ অক্টোবর ২০২৬ ([[OpeningCorrectionController]]); শর্ত না মিললে সেই পাতাই বলে কেন */
+                    ['key' => 'edit', 'label' => '', 'width' => '6rem', 'render' => $editLink],
                 ]" />
 
             {{-- ⓘ উপরের "মোট" এই পাতার নয়, সবটার — পেজারের সীমা আর

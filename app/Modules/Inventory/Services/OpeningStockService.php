@@ -43,6 +43,16 @@ final class OpeningStockService
 
     public const DOCUMENT_NO = 'OPENING';
 
+    /**
+     * ⭐ সংশোধিত বা মুছে ফেলা সারির উল্টো চলাচল — উৎস মূল সারির চলাচল (মালিক, ৬ অক্টোবর ২০২৬)।
+     * ⓘ "লেনদেন" নয়: [[stillOpen()]] এটা গোনে না, আর মূল সারিটা "আগেই বসানো"-তেও আর ধরা হয় না ([[exists()]])।
+     */
+    public const CORRECTED = 'opening:corrected';
+
+    public const AUDIT_CORRECTED = 'opening_corrected';
+
+    public const AUDIT_REMOVED = 'opening_removed';
+
     public function __construct(
         private readonly StockService $stock,
         private readonly CostLayerService $layers,
@@ -276,7 +286,221 @@ final class OpeningStockService
             ->where('warehouse_id', $warehouse->id)
             ->where('source_type', self::SOURCE_TYPE)
             ->when($product->track_batch && $batch !== null, fn ($q) => $q->where('batch_id', $batch->id))
+            // ⓘ সংশোধিত বা মুছে ফেলা সারি আর বসানো নয় — একই লট আবার দেওয়া যায় (৬ অক্টোবর ২০২৬)
+            ->whereNotExists(fn ($q) => self::correctionOf($q, 'inv_stock_movements.id'))
             ->exists();
+    }
+
+    /** ⓘ মূল সারির উল্টো চলাচল আছে কি না — তালিকা আর [[exists()]] একই শর্তে */
+    public static function correctionOf($query, string $movementIdColumn)
+    {
+        return $query->selectRaw('1')
+            ->from('inv_stock_movements as corr')
+            ->where('corr.source_type', self::CORRECTED)
+            ->whereColumn('corr.source_id', $movementIdColumn);
+    }
+
+    /**
+     * ⭐ খোলা মজুদের এক সারি সংশোধন — মালিক, ৬ অক্টোবর ২০২৬: *"ভুলে লট ছাড়া সেভ করে ফেলেছি, এডিটের ব্যবস্থা কী?"*
+     *
+     * ⓘ লট, মেয়াদ, পরিমাণ, ফ্রি আর দর বদলানো যায় — কেবল যদি এই পণ্যের এই গুদামে খোলা মজুদ ছাড়া আর কিছু ঘটেনি
+     * ([[stillOpen()]]: বিক্রি, স্থানান্তর, সমন্বয়, সংরক্ষণ — কিছুই নয়) আর সারির খরচের স্তরে কেউ হাত দেয়নি।
+     *
+     * ⛔ কিছুই মোছা বা বদলানো হয় না: মূল সারির উল্টো চলাচল ([[CORRECTED]]), তার স্তর তোলা ([[CostLayerService::withdraw()]]),
+     * তারপর নতুন সারি আর নতুন স্তর, মূল তারিখেই। ⭐ খাতা: মূল্য (পরিমাণ × দর) বদলালে পুরনো মূল্যের উল্টো দাখিলা আর নতুন
+     * মূল্যের দাখিলা; কেবল লট বা মেয়াদ বা ফ্রি বদলালে খাতায় কিছু বসে না — টাকা একই।
+     *
+     * @param  array{batch_no?: ?string, expiry_date?: ?string, qty: string, free_qty?: ?string, unit_cost: string}  $data
+     *
+     * @throws ValidationException
+     */
+    public function correct(StockMovement $movement, array $data): StockMovement
+    {
+        return DB::transaction(function () use ($movement, $data) {
+            [$product, $warehouse, $layer, $batch] = $this->editable($movement);
+
+            $qty = trim((string) ($data['qty'] ?? ''));
+            $cost = trim((string) ($data['unit_cost'] ?? ''));
+
+            if (! is_numeric($qty) || ! is_numeric($cost)) {
+                throw ValidationException::withMessages(['qty' => __('inventory::message.opening_needs_qty')]);
+            }
+
+            $free = trim((string) ($data['free_qty'] ?? ''));
+            $free = is_numeric($free) && bccomp($free, '0', 4) > 0 ? bcadd($free, '0', 4) : '0';
+
+            $newBatch = null;
+            $topUp = false;
+
+            if ($product->track_batch) {
+                $no = trim((string) ($data['batch_no'] ?? ''));
+                $expiry = ($data['expiry_date'] ?? null) ?: null;
+
+                if ($no === '') {
+                    $no = self::OPENING_LOT;
+                }
+
+                $topUp = $no === self::OPENING_LOT;
+
+                if ($batch !== null && $batch->batch_no === $no) {
+                    $newBatch = $batch;
+
+                    // ⓘ একই লট, মেয়াদ বদল — লটের মেয়াদ, পুরো লটের জন্য (লটের মেয়াদ একটাই)
+                    if ($expiry !== null && $batch->expiry_date?->toDateString() !== Carbon::parse($expiry)->toDateString()) {
+                        $newBatch = app(BatchService::class)->correctExpiry($batch, $expiry, __('inventory::message.opening_corrected_narration'));
+                    }
+                } else {
+                    $newBatch = app(BatchService::class)->receive(product: $product, batchNo: $no, expiry: $expiry);
+                }
+            }
+
+            $before = $this->snapshot($movement, $layer, $batch);
+            $oldValue = bcmul((string) $movement->floor_change, (string) $layer->unit_cost, 4);
+            $undo = $this->undo($movement, $product, $warehouse, $batch);
+
+            $this->assertSane($product, $warehouse, $qty, $cost, $newBatch, $topUp);
+
+            $date = $movement->trx_date;
+            $new = $this->stock->move(
+                product: $product,
+                warehouse: $warehouse,
+                sourceType: self::SOURCE_TYPE,
+                sourceId: $product->id,
+                floor: $qty,
+                free: $free,
+                date: $date,
+                documentNo: self::DOCUMENT_NO,
+                narration: __('inventory::message.opening_corrected_narration'),
+                batch: $newBatch,
+            );
+
+            $this->layers->receive(
+                product: $product,
+                qty: $qty,
+                unitCost: $cost,
+                sourceType: self::SOURCE_TYPE,
+                sourceId: $new->id,
+                documentNo: self::DOCUMENT_NO,
+                date: $date,
+                batch: $newBatch,
+                supplierId: $layer->supplier_id === null ? null : (int) $layer->supplier_id,
+            );
+
+            $newValue = bcmul($qty, $cost, 4);
+
+            if (bccomp($oldValue, $newValue, 4) !== 0) {
+                $branch = $warehouse->branch_id === null ? null : (int) $warehouse->branch_id;
+                $this->opening->withdrawInventory(sourceId: (int) $undo->id, documentNo: self::DOCUMENT_NO, amount: $oldValue, date: $date, branchId: $branch);
+                $this->opening->forInventory(sourceId: (int) $new->id, documentNo: self::DOCUMENT_NO, amount: $newValue, date: $date, branchId: $branch);
+            }
+
+            app(\App\Core\Engines\Audit\AuditEngine::class)->record($new, self::AUDIT_CORRECTED, [
+                'before' => [$before, null],
+                'after' => [null, ['movement_id' => $new->id, 'batch_no' => $newBatch?->batch_no, 'expiry_date' => $newBatch?->expiry_date?->toDateString(),
+                    'qty' => $qty, 'free_qty' => $free, 'unit_cost' => $cost]],
+            ]);
+
+            return $new;
+        });
+    }
+
+    /**
+     * ⭐ খোলা মজুদের এক সারি মুছে ফেলা — সংশোধনের একই শর্তে; মজুদ, স্তর আর খাতা তিনটাই উল্টো (মালিক, ৬ অক্টোবর ২০২৬)।
+     *
+     * @throws ValidationException
+     */
+    public function remove(StockMovement $movement): void
+    {
+        DB::transaction(function () use ($movement) {
+            [$product, $warehouse, $layer, $batch] = $this->editable($movement);
+
+            $before = $this->snapshot($movement, $layer, $batch);
+            $value = bcmul((string) $movement->floor_change, (string) $layer->unit_cost, 4);
+            $undo = $this->undo($movement, $product, $warehouse, $batch);
+
+            $this->opening->withdrawInventory(
+                sourceId: (int) $undo->id,
+                documentNo: self::DOCUMENT_NO,
+                amount: $value,
+                date: $movement->trx_date,
+                branchId: $warehouse->branch_id === null ? null : (int) $warehouse->branch_id,
+            );
+
+            app(\App\Core\Engines\Audit\AuditEngine::class)->record($undo, self::AUDIT_REMOVED, ['before' => [$before, null]]);
+        });
+    }
+
+    /**
+     * সংশোধন বা মুছে ফেলার শর্ত — খোলা মজুদের সারি, এখনো সংশোধিত নয়, আর তার মাল থেকে কিছুই বেরোয়নি।
+     *
+     * @return array{0: Product, 1: Warehouse, 2: \App\Modules\Inventory\Models\CostLayer, 3: ?Batch}
+     *
+     * @throws ValidationException
+     */
+    private function editable(StockMovement $movement): array
+    {
+        $movement = StockMovement::query()->whereKey($movement->id)->lockForUpdate()->firstOrFail();
+
+        if ($movement->source_type !== self::SOURCE_TYPE || bccomp((string) $movement->floor_change, '0', 4) <= 0
+            || StockMovement::query()->where('source_type', self::CORRECTED)->where('source_id', $movement->id)->exists()) {
+            throw ValidationException::withMessages(['movement' => __('inventory::message.opening_not_editable')]);
+        }
+
+        $product = Product::query()->findOrFail($movement->product_id);
+        $warehouse = Warehouse::query()->findOrFail($movement->warehouse_id);
+
+        // ⛔ এই পণ্যের এই গুদামে বিক্রি, স্থানান্তর, সমন্বয় বা সংরক্ষণ — কিছু ঘটে থাকলে আর নয়
+        if (! $this->stillOpen($product, $warehouse)) {
+            throw ValidationException::withMessages(['movement' => __('inventory::message.opening_edit_too_late', [
+                'product' => $product->name(),
+                'warehouse' => $warehouse->name(),
+            ])]);
+        }
+
+        $layer = \App\Modules\Inventory\Models\CostLayer::query()
+            ->where('source_type', self::SOURCE_TYPE)->where('source_id', $movement->id)->first();
+
+        if ($layer === null) {
+            throw ValidationException::withMessages(['movement' => __('inventory::message.opening_not_editable')]);
+        }
+
+        $batch = $movement->batch_id === null ? null : Batch::query()->find($movement->batch_id);
+
+        return [$product, $warehouse, $layer, $batch];
+    }
+
+    /** মূল সারির উল্টো চলাচল আর তার স্তর তোলা — কিছুই মোছা হয় না, কেবল স্তর (ছোঁয়া হলে [[CostLayerService::withdraw()]] থামায়)। */
+    private function undo(StockMovement $movement, Product $product, Warehouse $warehouse, ?Batch $batch): StockMovement
+    {
+        $undo = $this->stock->move(
+            product: $product,
+            warehouse: $warehouse,
+            sourceType: self::CORRECTED,
+            sourceId: (int) $movement->id,
+            floor: bcmul((string) $movement->floor_change, '-1', 4),
+            free: bcmul((string) ($movement->free_change ?? '0'), '-1', 4),
+            date: $movement->trx_date,
+            documentNo: self::DOCUMENT_NO,
+            narration: __('inventory::message.opening_corrected_narration'),
+            batch: $batch,
+        );
+
+        $this->layers->withdraw(self::SOURCE_TYPE, (int) $movement->id);
+
+        return $undo;
+    }
+
+    /** @return array<string, mixed> নিরীক্ষার "আগে" */
+    private function snapshot(StockMovement $movement, \App\Modules\Inventory\Models\CostLayer $layer, ?Batch $batch): array
+    {
+        return [
+            'movement_id' => $movement->id,
+            'batch_no' => $batch?->batch_no,
+            'expiry_date' => $batch?->expiry_date?->toDateString(),
+            'qty' => (string) $movement->floor_change,
+            'free_qty' => (string) ($movement->free_change ?? '0'),
+            'unit_cost' => (string) $layer->unit_cost,
+        ];
     }
 
     /**
@@ -301,8 +525,8 @@ final class OpeningStockService
         return ! StockMovement::query()
             ->where('product_id', $product->id)
             ->where('warehouse_id', $warehouse->id)
-            // ⓘ অন্য লটের খোলা মজুদ লেনদেন নয় — চালুর দিন সব লট একই সারিতে বসে (ম২৪)
-            ->where('source_type', '<>', self::SOURCE_TYPE)
+            // ⓘ অন্য লটের খোলা মজুদ লেনদেন নয় — চালুর দিন সব লট একই সারিতে বসে (ম২৪); তার সংশোধনও নয় (৬ অক্টোবর ২০২৬)
+            ->whereNotIn('source_type', [self::SOURCE_TYPE, self::CORRECTED])
             ->exists();
     }
 

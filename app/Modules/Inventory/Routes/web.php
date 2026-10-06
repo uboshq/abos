@@ -137,6 +137,11 @@ Route::middleware('auth')->prefix('inventory')->group(function () {
         Route::get('/opening/principal', [\App\Modules\Inventory\Http\Controllers\OpeningPrincipalController::class, 'index'])->name('opening.principal');
         Route::post('/opening/principal', [\App\Modules\Inventory\Http\Controllers\OpeningPrincipalController::class, 'update'])->name('opening.principal.update');
 
+        // ⭐ খোলা মজুদের সারি সংশোধন ও মুছে ফেলা — মালিক, ৬ অক্টোবর ২০২৬ ([[OpeningCorrectionController]])
+        Route::get('/opening/{movement}/edit', [\App\Modules\Inventory\Http\Controllers\OpeningCorrectionController::class, 'edit'])->whereNumber('movement')->name('opening.edit');
+        Route::put('/opening/{movement}', [\App\Modules\Inventory\Http\Controllers\OpeningCorrectionController::class, 'update'])->whereNumber('movement')->name('opening.update');
+        Route::delete('/opening/{movement}', [\App\Modules\Inventory\Http\Controllers\OpeningCorrectionController::class, 'destroy'])->whereNumber('movement')->name('opening.destroy');
+
         /*
          * লট বসানো — মাল আনা নয়, নাম বসানো।
          *
