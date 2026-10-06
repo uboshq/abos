@@ -509,6 +509,117 @@ final class DepositService
     }
 
     /**
+     * ⭐ ব্যাংক নিজে জামানতের জমা ভাঙিয়ে ঋণ শোধ করল — অর্থ-মডিউলের পরিকল্পনা ৪.৫ (৬ অক্টোবর ২০২৬, সমন্বয়কের সিদ্ধান্ত প্র৫:
+     * "জরিমানা খরচে, বাকি ঋণ শোধে")।
+     *
+     * ── দাখিলা ─────────────────────────────────────────────────────────────────
+     *   Dr ঋণের খাত (যতটা ঋণে গেল)   ·   Dr টাকার খাত (ব্যাংক বাড়তিটা আমাদের দিলে)   ·   Dr কর / শুল্ক / জরিমানা ([[deductionLines()]])
+     *   Cr ১১৬০ জমার আসল   ·   Cr ৪৩১০ বাকিটা মুনাফা — অথবা ঘাটতি হলে Dr ৫৩১০
+     * ⓘ ভাউচারটা ঋণের নামে বাঁধা (`against_type` = ব্যাংক ঋণ), তাই ঋণের খাতা, বাকি আর কিস্তি নিজে থেকেই শোধটা দেখে
+     * ([[BankFacilityService::ledgerRowsOf()]]); জমার চলাচলের সারিও এই ভাউচারে।
+     *
+     * ── ⛔ পাহারা ───────────────────────────────────────────────────────────────
+     *   · কেবল ব্যবসার খোলা জমা, যেটা এই কোম্পানির চালু ব্যাংক ঋণে বাঁধা — বাঁধা থাকাটাই এই পথের কারণ, তাই [[close()]]-এর
+     *     "বাঁধা জমা ভাঙানো যায় না" এখানে খাটে না
+     *   · ঋণে যাওয়া টাকা সেই দিনের বাকির বেশি নয় ([[BankFacilityService::owedOn()]]) — বেশি হলে ব্যাংক বাড়তিটা আমাদের দেয়,
+     *     সেটা আলাদা ঘরে
+     *   · ছকের সই মানে (জমার ছক); সই পড়লে জমা বন্ধ ([[finishSigned()]])
+     *
+     * @param  array<string, mixed>  $data  moved_on, applied, remainder?, money_account_id?, source_tax?, excise_duty?, penalty?, note?
+     */
+    public function encashForLoan(Deposit $deposit, array $data): DepositMovement
+    {
+        return DB::transaction(function () use ($deposit, $data) {
+            $this->lockFresh($deposit);
+            $this->assertOpen($deposit);
+
+            $facility = $deposit->pledged_to_facility_id === null ? null
+                : \App\Modules\Finance\Models\BankFacility::query()->live()->find($deposit->pledged_to_facility_id);
+
+            if ($facility === null || ! $deposit->isBusinessAsset()) {
+                throw ValidationException::withMessages([
+                    'applied' => __('finance::deposit_report.lien_needs_live_facility'),
+                ]);
+            }
+
+            // ⓘ ঋণের খাত — মেয়াদি ঋণে দায়ের খাত, চলতি সীমায় (CC) ব্যাংকের নিজের হিসাব ([[BankFacilityService::accountOf()]]-এর একই নিয়ম)
+            $loanAccount = $facility->isBalanceSheetDebt() ? $facility->liability_account_id : $facility->money_account_id;
+
+            if ($loanAccount === null) {
+                throw ValidationException::withMessages([
+                    'applied' => __('finance::deposit_report.lien_needs_live_facility'),
+                ]);
+            }
+
+            $on = (string) $data['moved_on'];
+            $applied = bcadd((string) $data['applied'], '0', 4);
+            $remainder = bcadd((string) (($data['remainder'] ?? '') ?: '0'), '0', 4);
+            $owed = app(BankFacilityService::class)->owedOn($facility, $on);
+
+            if (bccomp($applied, '0', 4) <= 0 || bccomp($applied, $owed, 4) > 0) {
+                throw ValidationException::withMessages([
+                    'applied' => __('finance::deposit_report.lien_applied_over_owed', ['owed' => \App\Core\Support\Money::format($owed)]),
+                ]);
+            }
+
+            $data['__closing'] = true;
+            $into = bccomp($remainder, '0', 4) > 0 ? $this->money($data['money_account_id'] ?? null) : null;
+            $principal = (string) $deposit->principal;
+
+            $lines = [['account_id' => (int) $loanAccount, 'debit' => $applied, 'credit' => '0']];
+
+            if ($into !== null) {
+                $lines[] = ['account_id' => $into->id, 'debit' => $remainder, 'credit' => '0'];
+            }
+
+            array_push($lines, ...$this->deductionLines($deposit, $data));
+            $lines[] = ['account_id' => $this->assetHead(Deposit::BUSINESS)->id, 'debit' => '0', 'credit' => $principal];
+
+            $extra = bcsub(bcadd(bcadd($applied, $remainder, 4), $this->deducted($deposit, $data), 4), $principal, 4);
+
+            if (bccomp($extra, '0', 4) > 0) {
+                $lines[] = ['account_id' => $this->returnHead($deposit)->id, 'debit' => '0', 'credit' => $extra];
+            }
+
+            if (bccomp($extra, '0', 4) < 0) {
+                $lines[] = ['account_id' => $this->head(StandardChart::INTEREST_EXPENSE)->id, 'debit' => bcmul($extra, '-1', 4), 'credit' => '0'];
+            }
+
+            $voucher = $this->vouchers->create([
+                'type' => Voucher::JOURNAL,
+                'trx_date' => $on,
+                'narration' => $data['note'] ?? __('finance::deposit_report.lien_narration', [
+                    'no' => $deposit->document_no, 'loan' => trim($facility->bank.' · '.$facility->document_no, ' ·'),
+                ]),
+                // ⓘ ঋণের নামে — ঋণের খাতা আর বাকি এই শোধ দেখে
+                'against_type' => \App\Modules\Finance\Models\BankFacility::drillSourceType(),
+                'against_id' => $facility->id,
+            ], $lines);
+
+            $held = $this->signature->postOrHold($voucher, FinanceSignature::DEPOSIT, bcadd($applied, $remainder, 4));
+
+            $movement = DepositMovement::query()->create([
+                'company_id' => CompanyContext::id(),
+                'deposit_id' => $deposit->id,
+                'kind' => DepositMovement::CLOSED,
+                'amount' => bcadd($applied, $remainder, 4),
+                'moved_on' => $on,
+                'money_account_id' => $into?->id,
+                'voucher_id' => $voucher->id,
+                'note' => $data['note'] ?? null,
+                'created_by' => auth()->id(),
+            ]);
+
+            // ⛔ সই-এর আগে জমাটা "বন্ধ" নয় — বন্ধ করে শেষ সই ([[finishSigned()]])
+            if (! $held) {
+                $deposit->forceFill(['status' => Deposit::CLOSED, 'closed_on' => $on])->save();
+            }
+
+            return $movement;
+        });
+    }
+
+    /**
      * ⭐ ব্যাংক যা কেটে রেখেছে — উৎসে কর (অগ্রিম আয়কর, সম্পদ), আবগারি শুল্ক (ব্যাংক চার্জ), আগে ভাঙানোর জরিমানা (নিজের খরচ)।
      * সমন্বয়কের সিদ্ধান্ত প্র২, ৬ অক্টোবর ২০২৬: আগে সব একসাথে ৫৩১০-এ পড়ত, তাই কতটা কর ফেরতযোগ্য কেউ বলতে পারত না।
      *

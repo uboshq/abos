@@ -57,7 +57,7 @@ class DepositController extends Controller implements HasMiddleware
         return [
             new Middleware('can:finance.deposit.view', only: ['index', 'show', 'all']),
             new Middleware('can:finance.deposit.create', only: ['create', 'store']),
-            new Middleware('can:finance.deposit.move', only: ['movement', 'close', 'accrue']),
+            new Middleware('can:finance.deposit.move', only: ['movement', 'close', 'accrue', 'lien']),
             new Middleware('can:finance.deposit.cancel', only: ['cancel']),
         ];
     }
@@ -648,5 +648,28 @@ class DepositController extends Controller implements HasMiddleware
             ->run(\Illuminate\Support\Carbon::createFromFormat('Y-m-d', $data['month'].'-01'));
 
         return back()->with('saved', __('finance::deposit_report.accrual_done', $done));
+    }
+
+    /**
+     * ⭐ ব্যাংক জামানত ভাঙিয়ে ঋণ শোধ করল — অর্থ-মডিউলের পরিকল্পনা ৪.৫ (প্র৫, ৬ অক্টোবর ২০২৬; [[DepositService::encashForLoan()]])।
+     */
+    public function lien(Request $request, string $issuer, Deposit $deposit): RedirectResponse
+    {
+        $data = $request->validate([
+            'applied' => ['required', 'numeric', 'gt:0'],
+            'remainder' => ['nullable', 'numeric', 'min:0'],
+            'money_account_id' => ['nullable', 'integer'],
+            'source_tax' => ['nullable', 'numeric', 'min:0'],
+            'excise_duty' => ['nullable', 'numeric', 'min:0'],
+            'penalty' => ['nullable', 'numeric', 'min:0'],
+            'moved_on' => ['required', 'date'],
+            'note' => ['nullable', 'string', 'max:500'],
+        ]);
+
+        $movement = $this->deposits->encashForLoan($deposit, $data);
+
+        return back()->with('saved', $movement->voucher?->isDraft()
+            ? __('finance::message.awaiting_signature')
+            : __('finance::deposit_report.lien_done', ['no' => $deposit->document_no]));
     }
 }

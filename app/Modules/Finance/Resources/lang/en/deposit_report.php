@@ -67,4 +67,14 @@ return [
     'deduction_negative' => 'A deduction cannot be negative.',
     'deduction_owner' => 'Tax or deductions on an owner-held deposit do not go into the business books.',
     'penalty_only_on_close' => 'A penalty applies only when the deposit is encashed.',
+
+    'lien_title' => 'The bank encashed the deposit to settle the loan',
+    'lien_hint' => 'Enter from the bank letter: how much went to the loan, any surplus paid to us and into which account, and what was deducted.',
+    'lien_applied' => 'Applied to the loan',
+    'lien_remainder' => 'Surplus paid to us',
+    'lien_run' => 'Record the lien encashment',
+    'lien_done' => ':no — lien encashment recorded.',
+    'lien_needs_live_facility' => 'This deposit is not pledged to a running bank loan — use the normal encashment.',
+    'lien_applied_over_owed' => 'The amount applied is more than the loan owed that day (Tk :owed) — enter the surplus as paid to us.',
+    'lien_narration' => ':no — encashed to settle :loan',
 ];

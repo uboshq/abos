@@ -230,6 +230,41 @@
         </div>
     @endif
 
+    {{-- ⭐ ব্যাংক জামানত ভাঙিয়ে ঋণ শোধ করল — অর্থ-মডিউলের পরিকল্পনা ৪.৫ (প্র৫, ৬ অক্টোবর ২০২৬; [[DepositService::encashForLoan()]])।
+         ⓘ কেবল চালু ব্যাংক ঋণে বাঁধা ব্যবসার খোলা জমায়; জরিমানা খরচে, বাকি ঋণ শোধে, বাড়তি থাকলে আমাদের ব্যাংকে। --}}
+    @if ($isOpen && $d->isBusinessAsset() && $d->pledged_to_facility_id !== null && $d->isLocked())
+        @can('finance.deposit.move')
+            <section data-boxed data-lien-encash class="mb-4 rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
+                <h2 class="mb-1 font-semibold">{{ __('finance::deposit_report.lien_title') }}</h2>
+                <p class="mb-3 text-sm text-(--color-ink-muted)">{{ __('finance::deposit_report.lien_hint') }}</p>
+
+                <form method="POST" action="{{ route('finance.deposit.lien', ['issuer' => $issuer, 'deposit' => $d->id]) }}"
+                      class="grid gap-3 sm:grid-cols-2">
+                    @csrf
+                    <x-ui.field name="applied" type="number" step="0.01" numeric required
+                                :label="__('finance::deposit_report.lien_applied')" :value="old('applied')" />
+                    <x-ui.field name="moved_on" type="date" required
+                                :label="__('finance::field.date')" :value="old('moved_on', now()->toDateString())" />
+                    <x-ui.field name="remainder" type="number" step="0.01" numeric
+                                :label="__('finance::deposit_report.lien_remainder')" :value="old('remainder')" />
+                    <x-ui.money-account name="money_account_id"
+                                        :label="__('finance::field.money_account')"
+                                        :accounts="$accounts"
+                                        :selected="old('money_account_id', $d->funded_from_account_id)" />
+                    <x-ui.field name="source_tax" type="number" step="0.01" numeric
+                                :label="__('finance::deposit_report.source_tax_cut')" :value="old('source_tax')" />
+                    <x-ui.field name="excise_duty" type="number" step="0.01" numeric
+                                :label="__('finance::deposit_report.excise_duty')" :value="old('excise_duty')" />
+                    <x-ui.field name="penalty" type="number" step="0.01" numeric
+                                :label="__('finance::deposit_report.penalty')" :value="old('penalty')" />
+                    <div class="flex flex-wrap items-center gap-2 sm:col-span-2">
+                        <x-ui.button type="submit" tone="danger">{{ __('finance::deposit_report.lien_run') }}</x-ui.button>
+                    </div>
+                </form>
+            </section>
+        @endcan
+    @endif
+
     {{-- ── ভুল হয়েছে ─────────────────────────────────────────────────
          ভাঙার প্যানেলের নিচে, আলাদা করে, আর লাল নয় — কারণ এটা রোজকার
          কাজ নয় আর চোখে পড়ার মতো করে রাখলে কেউ একদিন ভুল করে চাপবেন।

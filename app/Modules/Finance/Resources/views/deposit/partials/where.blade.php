@@ -43,11 +43,12 @@
 
              তাই ব্যাজে থাকে যেটুকু এক নজরে লাগে ("বাঁধা" + কোন ধার),
              আর পুরো কথাটা মাউস রাখলে। --}}
-        <span title="{{ __('finance::state.pledged', ['loan' => $deposit->pledgedToLoan->document_no]) }}"
+        {{-- ⓘ ব্যাংক ঋণে বা পুরনো ঋণে — নাম যেটায় বাঁধা সেখান থেকে ([[Deposit::pledgeLabel()]], ৬ অক্টোবর ২০২৬) --}}
+        <span title="{{ __('finance::state.pledged', ['loan' => $deposit->pledgeLabel()]) }}"
               class="mt-0.5 inline-flex w-fit whitespace-nowrap rounded-(--radius-field)
                      bg-(--color-badge-warning-bg) px-2 py-0.5 text-2xs
                      text-(--color-badge-warning-ink)">
-            {{ __('finance::state.pledged_short') }} · {{ $deposit->pledgedToLoan->document_no }}
+            {{ __('finance::state.pledged_short') }} · {{ $deposit->pledgeLabel() }}
         </span>
     @endif
 </span>

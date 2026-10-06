@@ -253,6 +253,18 @@ class Deposit extends Model implements Drillable
         return $this->belongsTo(BankFacility::class, 'pledged_to_facility_id');
     }
 
+    /** যে ঋণে বাঁধা তার নাম — ব্যাংক ঋণ (ব্যাংক · নম্বর) বা পুরনো ঋণের নম্বর; ঋণটা না থাকলে ড্যাশ */
+    public function pledgeLabel(): string
+    {
+        if ($this->pledged_to_facility_id !== null) {
+            $facility = $this->pledgedToFacility;
+
+            return $facility === null ? '—' : trim($facility->bank.' · '.$facility->document_no, ' ·');
+        }
+
+        return $this->pledgedToLoan?->document_no ?? '—';
+    }
+
     /** কোনো ঋণে বাঁধা কি না — নতুন ব্যাংক ঋণে বা পুরনো ঋণের সারিতে */
     public function isPledged(): bool
     {
@@ -272,6 +284,11 @@ class Deposit extends Model implements Drillable
      */
     public function isLocked(): bool
     {
+        // ⓘ বন্ধ বা বাতিল জমা আর কিছু আটকায় না — ব্যাংক জামানত ভাঙিয়ে ঋণ শোধ করলেও ঋণটা চালু থাকতে পারে
+        if (in_array($this->status, [self::CLOSED, self::CANCELLED], true)) {
+            return false;
+        }
+
         /*
          * ⭐ ব্যাংক ঋণে বাঁধা — ঋণটা চালু থাকা পর্যন্ত আটকানো (৬ অক্টোবর ২০২৬)। ⓘ ব্যাংক জামানত ছাড়ে ঋণ বন্ধের চিঠিতে, বাকি
          * শূন্যে নামলে নয় — সিসিতে বাকি রোজ শূন্যে নামে, আর মেয়াদি ঋণ শোধের পরেও বন্ধ লেখা না হওয়া পর্যন্ত কাগজ ব্যাংকেই থাকে
