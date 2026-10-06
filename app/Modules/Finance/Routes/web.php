@@ -395,8 +395,6 @@ Route::middleware('auth')->prefix('finance')->group(function () {
         Route::get('/', [InsuranceController::class, 'index'])->name('index');
         Route::get('/create', [InsuranceController::class, 'create'])->name('create');
         Route::post('/', [InsuranceController::class, 'store'])->name('store');
-        // ⭐ মাস শেষের অগ্রিম বীমা — অর্থ-মডিউলের পরিকল্পনা ৬.৩ ([[InsurancePrepaymentService]])
-        Route::post('/prepayments', [InsuranceController::class, 'prepay'])->name('prepay');
         Route::get('/{policy}', [InsuranceController::class, 'show'])->whereNumber('policy')->name('show');
         Route::get('/{policy}/edit', [InsuranceController::class, 'edit'])->whereNumber('policy')->name('edit');
         Route::put('/{policy}', [InsuranceController::class, 'update'])->whereNumber('policy')->name('update');
