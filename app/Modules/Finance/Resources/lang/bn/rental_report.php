@@ -51,4 +51,17 @@ return [
     'notice_overdue_body' => ':count মাসের ভাড়া বকেয়া (:months) — ৳:amount',
     'dash_label' => 'বকেয়া ভাড়া',
     'dash_hint' => ':overdue চুক্তিতে ভাড়া বকেয়া · :ending চুক্তি ৬০ দিনের মধ্যে শেষ',
+
+    // ঙ — চুক্তির তালিকা
+    'contracts_short' => 'চুক্তির তালিকা',
+    'contracts_title' => 'ভাড়ার চুক্তির তালিকা',
+    'monthly_rent' => 'মাসিক ভাড়া',
+    'deposit_left' => 'জামানতে বাকি',
+    'starts_on' => 'শুরু',
+    'ends_on' => 'শেষ',
+    'days_left' => 'আর কত দিন',
+    'state' => 'অবস্থা',
+    'state_running' => 'চলছে',
+    'state_lapsed' => 'মেয়াদ পেরিয়েছে',
+    'state_closed' => 'শেষ',
 ];

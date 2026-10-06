@@ -181,6 +181,42 @@ final class TheDepositLeftIsReadFromTheBooksTest extends TestCase
         $this->assertMoney('3000', $godown->fresh()->monthly_adjustment, 'শর্ত বদলায়নি');
     }
 
+    /**
+     * ⭐ ঙ — চুক্তির তালিকা: সময়ের মধ্যে চলা চুক্তি, জামানতে বাকি অগ্রিম সমন্বয়ের হুবহু, অবস্থা, আর কত দিন।
+     *
+     * ⛔ মেয়াদ পেরিয়েও চালু থাকা চুক্তি সময়ের আগে শেষ হলেও তালিকায় — ঠিক এগুলোই নজরে আনা দরকার; আগেই শেষ করা চুক্তি
+     * সময়ের আগে শেষ হলে নয়।
+     */
+    public function test_the_contract_list_shows_what_ran_with_its_deposit_and_state(): void
+    {
+        $lapsed = $this->contract('Lapsed Landlord', $this->mymensingh, '0', '0', $this->month(-40)); // ⓘ ৩৬ মাসের মেয়াদ, চার মাস আগে শেষ
+        $gone = $this->contract('Long Gone Landlord', $this->mymensingh, '0', '0', $this->month(-40));
+        $gone->update(['status' => RentalContract::CLOSED, 'closed_on' => $this->month(-20)->toDateString()]);
+
+        $result = app(ReportEngine::class)->run(RentalReports::CONTRACTS, ['from' => $this->month(-1)->toDateString(), 'to' => now()->toDateString()]);
+        $rows = array_map(fn ($r) => (array) $r, $result->rows);
+        $advance = $this->advance($this->month(-1));
+
+        foreach (['Godown Landlord', 'Legacy Landlord', 'Returned Landlord'] as $who) {
+            $this->assertMoney((string) $this->row($advance, $who)['closing_balance'], $this->row($rows, $who)['deposit_left'], "{$who}: তালিকার জামানত");
+        }
+
+        $this->assertSame(__('finance::rental_report.state_running'), $this->row($rows, 'Godown Landlord')['state']);
+        $this->assertSame(__('finance::rental_report.state_closed'), $this->row($rows, 'Returned Landlord')['state'], 'সময়ের মধ্যে শেষ করা — তালিকায়, "শেষ"');
+        $this->assertSame(__('finance::rental_report.state_lapsed'), $this->row($rows, 'Lapsed Landlord')['state'], '⛔ মেয়াদ পেরোনো চালু চুক্তি');
+        $this->assertNull($this->find($rows, 'Long Gone Landlord'), '⛔ সময়ের আগেই শেষ করা চুক্তি দেখাল।');
+        $this->assertNull($this->find($rows, 'Awaiting Landlord'), '⛔ সইয়ের অপেক্ষায় খোলা চুক্তি দেখাল।');
+        $this->assertNull($this->find($rows, 'Other Company Landlord'), '⛔ অন্য কোম্পানির চুক্তি দেখাল।');
+
+        $this->assertSame((int) now()->startOfDay()->diffInDays($this->godown->ends_on, false), (int) $this->row($rows, 'Godown Landlord')['days_left'], 'আর কত দিন');
+        $this->assertLessThan(0, (int) $this->row($rows, 'Lapsed Landlord')['days_left']);
+
+        $ntk = app(ReportEngine::class)->run(RentalReports::CONTRACTS, ['from' => $this->month(-1)->toDateString(), 'to' => now()->toDateString(), 'branch_id' => $this->netrakona->id]);
+        $this->assertSame(['Legacy Landlord'], array_column(array_map(fn ($r) => (array) $r, $ntk->rows), 'counterparty'));
+
+        $this->get(route('finance.rental.report.show', ['slug' => 'contracts']))->assertOk()->assertSee('Lapsed Landlord');
+    }
+
     public function test_one_branch_shows_only_its_own_contracts(): void
     {
         $rows = $this->advance($this->month(-1), ['branch_id' => $this->netrakona->id]);

@@ -27,6 +27,7 @@ class RentalReportController extends Controller
         'schedule' => RentalReports::SCHEDULE,
         'advance' => RentalReports::ADVANCE,
         'deposit-book' => RentalReports::DEPOSIT_BOOK,
+        'contracts' => RentalReports::CONTRACTS,
     ];
 
     /** রিপোর্টের সারি — প্রতিটা রিপোর্টের মাথায় আর ভাড়ার পাতায় একই ক্রমে */
@@ -34,6 +35,7 @@ class RentalReportController extends Controller
         'schedule' => 'finance::rental_report.schedule_short',
         'advance' => 'finance::rental_report.advance_short',
         'deposit-book' => 'finance::rental_report.book_short',
+        'contracts' => 'finance::rental_report.contracts_short',
     ];
 
     public function __construct(

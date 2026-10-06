@@ -47,4 +47,16 @@ return [
     'notice_overdue_body' => ':count months of rent overdue (:months) — Tk :amount',
     'dash_label' => 'Rent overdue',
     'dash_hint' => ':overdue contracts with rent overdue · :ending contracts ending within 60 days',
+
+    'contracts_short' => 'Contracts',
+    'contracts_title' => 'Rental contracts',
+    'monthly_rent' => 'Monthly rent',
+    'deposit_left' => 'Deposit left',
+    'starts_on' => 'Starts',
+    'ends_on' => 'Ends',
+    'days_left' => 'Days left',
+    'state' => 'State',
+    'state_running' => 'Running',
+    'state_lapsed' => 'Term lapsed',
+    'state_closed' => 'Closed',
 ];

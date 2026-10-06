@@ -22,6 +22,8 @@ use Illuminate\Support\Facades\DB;
  *   ক ভাড়ার সময়সূচি — চুক্তি ধরে প্রতি মাস: দেয়, নগদে দেওয়া, জামানত থেকে কাটা, সইয়ের অপেক্ষায়, বাকি ([[SCHEDULE]])
  *   খ অগ্রিম সমন্বয় — চুক্তি ধরে: শুরুর জের, দেওয়া, মাসে মাসে কাটা, ফেরত, শেষের জের, কত মাস চলবে ([[ADVANCE]])
  *   গ জামানতের খাতা — একটা চুক্তির জামানতের প্রতিটা নড়াচড়া, কাগজসহ, চলমান জের ([[DEPOSIT_BOOK]])
+ *   ঙ চুক্তির তালিকা — বাড়িওয়ালা, জায়গা, মাসিক ভাড়া, জামানতে বাকি, শুরু ও শেষ, আর কত দিন, অবস্থা ([[CONTRACTS]])।
+ *     ⓘ বার্ষিক বৃদ্ধি % এখনো নেই — মালিকের প্রশ্নের (প্র১) উত্তরের সাথে নতুন ঘর আসবে
  *
  * ── ⭐ একটাই উৎস ─────────────────────────────────────────────────────────────
  * মাসটা "দেওয়া" কেবল যখন তার সারি ([[RentalAdjustment]]) আছে আর ভাউচারে শেষ সই পড়ে খাতায় বসেছে (`confirmed`)।
@@ -41,6 +43,8 @@ final class RentalReports
 
     public const DEPOSIT_BOOK = 'finance.rental_deposit_book';
 
+    public const CONTRACTS = 'finance.rental_contracts';
+
     // ⛔ ভাড়ার পাতা যে চাবি দেখে, সেটাই — সব কয়টার
     private const KEY = 'finance.rental.view';
 
@@ -52,6 +56,7 @@ final class RentalReports
         $engine->register(self::schedule());
         $engine->register(self::advance());
         $engine->register(self::depositBook());
+        $engine->register(self::contracts());
     }
 
     /**
@@ -364,6 +369,68 @@ final class RentalReports
                 ['key' => 'debit', 'label' => 'finance::rental_report.given', 'type' => ReportColumn::MONEY],
                 ['key' => 'credit', 'label' => 'finance::rental_report.taken_back', 'type' => ReportColumn::MONEY],
                 ['key' => 'balance', 'label' => 'finance::rental_report.closing_balance', 'type' => ReportColumn::MONEY, 'width' => '10rem'],
+            ],
+        );
+    }
+
+    /**
+     * ⭐ ঙ — চুক্তির তালিকা: সময়ের মধ্যে যে চুক্তিগুলো অন্তত এক দিন চলেছে (বা মেয়াদ পেরিয়েও এখনো শেষ করা হয়নি), শেষের
+     * তারিখ ধরে।
+     *
+     * ⓘ জামানতে বাকি — শেষের দিন পর্যন্ত, [[depositMoves()]] থেকে, তাই অগ্রিম সমন্বয়ের শেষ জেরের হুবহু। "আর কত দিন" শেষের
+     * দিন থেকে গোনা — ডাটাবেজের ঘড়ি নয়।
+     */
+    private static function contracts(): ReportDefinition
+    {
+        return new ReportDefinition(
+            key: self::CONTRACTS,
+            permission: self::KEY,
+            title: 'finance::rental_report.contracts_title',
+            filters: ['date_range'],
+            query: function (array $f): Builder {
+                $pdo = DB::getPdo();
+                $to = $pdo->quote((string) $f['to']);
+                $left = self::depositMoves($f)->where('d.trx_date', '<=', $f['to'])
+                    ->groupBy('d.contract_id')
+                    ->selectRaw('d.contract_id, COALESCE(SUM(d.given + d.legacy - d.refunded - d.deducted), 0) as deposit_left');
+
+                $state = 'CASE WHEN c.status = '.$pdo->quote(RentalContract::CLOSED).' THEN '.$pdo->quote((string) __('finance::rental_report.state_closed'))
+                    ." WHEN c.ends_on < {$to} THEN ".$pdo->quote((string) __('finance::rental_report.state_lapsed'))
+                    .' ELSE '.$pdo->quote((string) __('finance::rental_report.state_running')).' END';
+
+                return DB::table('fin_rental_contracts as c')
+                    ->leftJoinSub($left, 'dl', 'dl.contract_id', '=', 'c.id')
+                    ->where('c.company_id', $f['company_id'])
+                    ->whereNull('c.deleted_at')
+                    ->whereIn('c.status', [RentalContract::ACTIVE, RentalContract::CLOSED])
+                    ->where('c.starts_on', '<=', $f['to'])
+                    // ⓘ চালু থাকলে মেয়াদ পেরোলেও তালিকায় — ঠিক এগুলোই নজরে আনা দরকার
+                    ->where(fn ($q) => $q->where('c.status', RentalContract::ACTIVE)
+                        ->orWhereRaw('COALESCE(c.closed_on, c.ends_on) >= ?', [$f['from']]))
+                    ->tap(ReportEngine::branchWall($f, 'c.branch_id'))
+                    ->selectRaw('c.document_no as document_no, '.$pdo->quote(RentalContract::drillSourceType()).' as source_type, c.id as source_id, '
+                        .'c.counterparty as counterparty, c.subject as subject, c.monthly_rent as monthly_rent, '
+                        .'COALESCE(dl.deposit_left, 0) as deposit_left, c.starts_on as starts_on, c.ends_on as ends_on, '
+                        ."DATEDIFF(c.ends_on, {$to}) as days_left, {$state} as state")
+                    ->orderBy('c.ends_on')
+                    ->orderBy('c.id');
+            },
+            columns: [
+                [
+                    'key' => 'document_no',
+                    'label' => 'finance::rental_report.contract',
+                    'type' => ReportColumn::DOCUMENT,
+                    'source_type' => 'source_type',
+                    'source_id' => 'source_id',
+                ],
+                ['key' => 'counterparty', 'label' => 'finance::rental_report.counterparty'],
+                ['key' => 'subject', 'label' => 'finance::rental_report.subject'],
+                ['key' => 'monthly_rent', 'label' => 'finance::rental_report.monthly_rent', 'type' => ReportColumn::MONEY],
+                ['key' => 'deposit_left', 'label' => 'finance::rental_report.deposit_left', 'type' => ReportColumn::MONEY],
+                ['key' => 'starts_on', 'label' => 'finance::rental_report.starts_on', 'type' => ReportColumn::DATE, 'width' => '7rem'],
+                ['key' => 'ends_on', 'label' => 'finance::rental_report.ends_on', 'type' => ReportColumn::DATE, 'width' => '7rem'],
+                ['key' => 'days_left', 'label' => 'finance::rental_report.days_left', 'type' => ReportColumn::QUANTITY, 'total' => false],
+                ['key' => 'state', 'label' => 'finance::rental_report.state'],
             ],
         );
     }
