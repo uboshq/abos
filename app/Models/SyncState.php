@@ -47,6 +47,8 @@ class SyncState extends Model
         'company_id', 'device_id', 'module', 'last_synced_at',
         // ⭐ পুরনো অ্যাপের পাতার কার্সর — [[SyncService::pull()]], গ১৮ (৪ অক্টোবর ২০২৬)
         'page_cursor',
+        // ⭐ কোন দেখায় (কোম্পানি:শাখা) এই জলচিহ্ন — [[SyncService::sawAnotherView()]], ৬ অক্টোবর ২০২৬
+        'view_key',
     ];
 
     protected function casts(): array

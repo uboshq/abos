@@ -170,7 +170,7 @@ class SyncController extends Controller
      */
     public function pullComplete(Request $request, string $module): JsonResponse
     {
-        $this->staff($request);
+        $user = $this->staff($request);
         $deviceId = $this->deviceId($request);
 
         if (! $this->registry->knowsModule($module)) {
@@ -179,7 +179,7 @@ class SyncController extends Controller
             ], 404);
         }
 
-        $this->sync->recordSuccessfulPull($deviceId, $module);
+        $this->sync->recordSuccessfulPull($deviceId, $module, $user);
 
         return response()->json(['ok' => true]);
     }

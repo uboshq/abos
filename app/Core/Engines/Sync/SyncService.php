@@ -356,6 +356,19 @@ final class SyncService
      */
     public function pull(User $user, string $deviceId, string $module, int $limit, ?string $cursor = null, bool $paged = false): array
     {
+        $view = $this->viewKey($user);
+
+        /*
+         * ⛔ দেখার শাখা বদলেছে অথচ যন্ত্র জানে না — মালিক, ৬ অক্টোবর ২০২৬: *"অ্যাপে অন্য ব্রাঞ্চের কাস্টমার আর কাস্টমার
+         * ব্যালেন্সও হিসাবে ঢুকেছে"*। শাখা থাকে মানুষের একটাই সারিতে, তাই ওয়েবের হেডারে বদলালে ফোনের দেখাও বদলায় — আর
+         * আগের জলচিহ্ন থেকে টানায় আসত কেবল নতুন দেখার বদলগুলো, ক্যাশে আগের শাখার সারি রয়ে যেত। ⭐ এখন যন্ত্রের
+         * কোনো জলচিহ্ন অন্য দেখায় লেখা হলে সবগুলো মোছে, গোড়া থেকে; উত্তরের `view` দেখে ফোন নিজের ক্যাশও মোছে।
+         */
+        if ($this->sawAnotherView($deviceId, $view)) {
+            $this->startOver($deviceId);
+            $cursor = $paged ? null : $cursor;
+        }
+
         $since = $this->cursorFor($deviceId, $module);
         $handlers = $this->registry->forModule($module);
 
@@ -443,7 +456,35 @@ final class SyncService
             'hasMore' => $hasMore,
             'unreadable' => $unreadable,
             'cursor' => $nextCursor,
+            // ⭐ কোন দেখার তথ্য — ফোন আগেরটার সাথে না মিললে নিজের ক্যাশ মুছে সব আবার টানে
+            'view' => $view,
         ];
+    }
+
+    /**
+     * ⭐ দেখার চাবি — কোম্পানি আর দেখার শাখাগুলো ([[DataScope::viewBranchIds()]]); শাখাহীন সারিও দেখলে `+`।
+     * ⓘ এক শাখা বাছা, "সব শাখা", বা নাগাল বদলানো — যেকোনোটায় চাবি বদলায়।
+     */
+    public function viewKey(User $user): string
+    {
+        $scope = app(\App\Core\Services\DataScope::class);
+        $ids = $scope->viewBranchIds($user);
+        if ($ids !== null) {
+            sort($ids);
+        }
+
+        return CompanyContext::id().':'.($ids === null ? '*' : implode(',', $ids)).($scope->viewsOneBranch($user) ? '' : '+');
+    }
+
+    /**
+     * ⓘ এই যন্ত্রের কোনো জলচিহ্ন অন্য দেখায় লেখা। চাবিহীন জলচিহ্ন (যে ডাকে মানুষ নেই) অমিল নয়; আজকের মিশে থাকা
+     * ক্যাশ সারায় মাইগ্রেশন — সব যন্ত্র একবার গোড়া থেকে।
+     */
+    private function sawAnotherView(string $deviceId, string $view): bool
+    {
+        return SyncState::query()->withoutGlobalScopes()->where('device_id', $deviceId)
+            ->whereNotNull('view_key')->where('view_key', '<>', $view)
+            ->exists();
     }
 
     private const DONE = 'done';
@@ -510,12 +551,13 @@ final class SyncService
      * (`reference_sync.dart`: `!hasMore && unreadable.isEmpty`), আর
      * সার্ভারও নিজের দিকে একই কথা ধরে — দুই পাশে একই নিয়ম, ইচ্ছে করে।
      */
-    public function recordSuccessfulPull(string $deviceId, string $module): void
+    public function recordSuccessfulPull(string $deviceId, string $module, ?User $user = null): void
     {
         SyncState::query()->updateOrCreate(
             ['device_id' => $deviceId, 'module' => $module],
-            // ⓘ পালা শেষ — কার্সরও শেষ ([[pull()]], গ১৮)
-            ['company_id' => CompanyContext::id(), 'last_synced_at' => now(), 'page_cursor' => null],
+            // ⓘ পালা শেষ — কার্সরও শেষ ([[pull()]], গ১৮); ⭐ কোন দেখায় পাওয়া, তা-ও ([[sawAnotherView()]])
+            ['company_id' => CompanyContext::id(), 'last_synced_at' => now(), 'page_cursor' => null,
+                'view_key' => $user === null ? null : $this->viewKey($user)],
         );
     }
 

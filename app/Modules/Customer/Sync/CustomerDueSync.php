@@ -80,6 +80,8 @@ final class CustomerDueSync implements SyncsToDevices
             // ⭐ বাছা শাখার গ্রাহকই — [[CustomerSync::pull()]]-এর একই নিয়ম (মালিক, ২ অক্টোবর ২০২৬)
             ->inViewedBranch()
             ->withOutstanding()
+            // ⭐ দেখার শাখার বকেয়া — ওয়েবের তালিকার একই সংখ্যা ([[Customer::scopeWithOutstandingInView()]], ৬ অক্টোবর ২০২৬)
+            ->withOutstandingInView()
             ->addSelect(['due_moved_at' => $lastMoved])
             ->orderBy('due_moved_at')
             ->orderBy('customers.id')
@@ -126,6 +128,12 @@ final class CustomerDueSync implements SyncsToDevices
                      * ওয়েবের পর্দাটাও পড়ে।
                      */
                     'outstanding' => $outstanding,
+
+                    /*
+                     * ⭐ দেখার শাখার বকেয়া — বকেয়া তালিকা এটা দেখায়, ওয়েবের তালিকার হুবহু (মালিক, ৬ অক্টোবর ২০২৬: "অন্য
+                     * ব্রাঞ্চের ব্যালেন্সও হিসাবে ঢুকেছে")। ⛔ সীমার যাচাই `outstanding`-এই — সীমা পরম, গোটা কোম্পানির।
+                     */
+                    'outstandingInView' => bcadd((string) ($customer->getAttribute('outstanding_in_view') ?? '0'), '0', 2),
                     'creditLimit' => (string) $customer->credit_limit,
                     'creditDays' => (int) $customer->credit_days,
 
