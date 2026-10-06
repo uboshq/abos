@@ -53,6 +53,8 @@ return [
     'lot_floor_short' => 'Lot :lot of :product holds only :have — no more can leave this lot.',
     'hold_short' => 'Only :have of :product is held in :warehouse — no more can be released. It may already have been released or written off.',
     'not_enough_on_floor' => 'There is not that much :product in :warehouse — there is :have.',
+    'warehouse_branch_has_history' => ':warehouse already has stock movements — its branch no longer changes. Open a new warehouse in the other branch and transfer the goods.',
+    'warehouse_still_holds_stock' => ':warehouse still has goods, or goods reserved or held for someone — move or release them first, then deactivate.',
     'warehouse_code_taken' => 'Another warehouse already uses this code.',
     'not_enough_free' => 'Only :have free stock of :product is in :warehouse — no more can be given.',
 

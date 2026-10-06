@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Inventory\Services;
 
 use App\Core\Engines\NumberSeries\NumberSeriesEngine;
+use App\Modules\Inventory\Models\StockMovement;
 use App\Modules\Inventory\Models\Warehouse;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -65,6 +66,19 @@ final class WarehouseService
             $this->assertCodeIsFree(trim((string) $data['code']), $warehouse->id);
         }
 
+        /*
+         * ⭐ মজুদের ইতিহাস আছে এমন গুদাম শাখা বদলায় না — Inventory অডিট ম২১, ৫ অক্টোবর ২০২৬।
+         * ⛔ আগে বদলানো যেত: আগের সব চলাচল আর খাতার মজুদ পুরনো শাখায়, তাক নতুন শাখায় — শাখার মজুদ আর তার খাতা আলাদা
+         * কথা বলত, আর পুরনো শাখার রিপোর্ট থেকে গুদামটাই হারাত। ⓘ নতুন শাখায় নতুন গুদাম খুলে মাল স্থানান্তর করতে হয়।
+         */
+        if (array_key_exists('branch_id', $data)
+            && (int) ($data['branch_id'] ?? 0) !== (int) ($warehouse->branch_id ?? 0)
+            && $this->hasHistory($warehouse)) {
+            throw ValidationException::withMessages([
+                'branch_id' => __('inventory::validation.warehouse_branch_has_history', ['warehouse' => $warehouse->name()]),
+            ]);
+        }
+
         $makeDefault = (bool) ($data['is_default'] ?? false);
         unset($data['is_default']);
 
@@ -91,6 +105,17 @@ final class WarehouseService
             ]);
         }
 
+        /*
+         * ⭐ মাল বা ধরা/আটকানো থাকা গুদাম নিষ্ক্রিয় হয় না — Inventory অডিট ম২১, ৫ অক্টোবর ২০২৬।
+         * ⛔ আগে হত: তালিকা আর বাছাই থেকে গুদামটা সরে যেত, অথচ তাকে মাল আর তার নামে ধরা আদেশ ও খোলা কাগজ — সেগুলো আর
+         * পূরণ বা ছাড়ার পথ থাকত না। ⓘ আগে মাল সরিয়ে আর ধরা ছেড়ে তারপর।
+         */
+        if ($this->holdsAnything($warehouse)) {
+            throw ValidationException::withMessages([
+                'is_active' => __('inventory::validation.warehouse_still_holds_stock', ['warehouse' => $warehouse->name()]),
+            ]);
+        }
+
         $warehouse->refresh()->forceFill(['is_active' => false])->save();
 
         return $warehouse->fresh();
@@ -110,6 +135,33 @@ final class WarehouseService
         $warehouse->refresh()->forceFill(['is_active' => true])->save();
 
         return $warehouse->fresh();
+    }
+
+    private function hasHistory(Warehouse $warehouse): bool
+    {
+        return StockMovement::query()->withoutGlobalScopes()
+            ->where('company_id', $warehouse->company_id)
+            ->where('warehouse_id', $warehouse->id)
+            ->exists();
+    }
+
+    /** ⓘ যেকোনো ঘরে বাকি — তাক, বসার অপেক্ষা, ফ্রি, ধরা, আটকানো */
+    private function holdsAnything(Warehouse $warehouse): bool
+    {
+        $row = StockMovement::query()->withoutGlobalScopes()
+            ->where('company_id', $warehouse->company_id)
+            ->where('warehouse_id', $warehouse->id)
+            ->selectRaw('SUM(floor_change) as f, SUM(unplaced_change) as u, SUM(free_change) as fr, SUM(unplaced_free_change) as uf,
+                         SUM(reserved_change) as r, SUM(free_reserved_change) as frr, SUM(hold_change) as h')
+            ->first();
+
+        foreach (['f', 'u', 'fr', 'uf', 'r', 'frr', 'h'] as $column) {
+            if (bccomp((string) ($row->{$column} ?? '0'), '0', 4) !== 0) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private function assertCodeIsFree(string $code, ?int $exceptId = null): void

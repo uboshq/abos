@@ -65,6 +65,8 @@ return [
     'lot_floor_short' => ':product-এর লট :lot-এ আছে কেবল :have — এর বেশি এই লট থেকে বেরোতে পারে না।',
     'hold_short' => ':warehouse-এ :product আটকে আছে কেবল :have — এর বেশি ছাড়া যায় না। মালটা হয়তো আগেই ছাড়া বা বাতিল হয়েছে।',
     'not_enough_on_floor' => ':warehouse-এ :product এত নেই — আছে :have।',
+    'warehouse_branch_has_history' => ':warehouse-এ মজুদের লেনদেন হয়ে গেছে — শাখা আর বদলায় না। নতুন শাখায় নতুন গুদাম খুলে মাল স্থানান্তর করুন।',
+    'warehouse_still_holds_stock' => ':warehouse-এ এখনো মাল, বা কারো জন্য ধরা বা আটকানো মাল আছে — আগে সরান বা ছাড়ুন, তারপর নিষ্ক্রিয় করুন।',
     'warehouse_code_taken' => 'এই কোডে আরেকটা গুদাম আছে।',
     'not_enough_free' => ':warehouse-এ :product-এর ফ্রি স্টক আছে :have — তার বেশি ফ্রি দেওয়া যাবে না।',
 
