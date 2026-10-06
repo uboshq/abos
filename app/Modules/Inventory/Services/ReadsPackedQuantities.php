@@ -55,7 +55,8 @@ trait ReadsPackedQuantities
          * (১০ পিস)" ছাপা হত।
          */
         if ($unitId === null || $unitId === $product->unit_id) {
-            return ['qty' => $qty, 'rate' => $rate, 'entered_qty' => null, 'entered_unit_id' => null];
+            // ⭐ নিজের এককেও ভাঙা ধরা পড়ে — পিসের পণ্যে "২.৫" নয় (Inventory অডিট ম১৯; [[PackConversion::toStockQty()]])
+            return ['qty' => app(PackConversion::class)->toStockQty($product, $qty), 'rate' => $rate, 'entered_qty' => null, 'entered_unit_id' => null];
         }
 
         $packs = app(PackConversion::class);

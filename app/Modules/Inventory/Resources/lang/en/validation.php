@@ -24,6 +24,7 @@ return [
     'unknown_unit' => 'That unit is not in this company list.',
     'product_has_no_unit' => ':product has no unit set, so there is nothing to convert into.',
     'units_do_not_meet' => ':entered and :stocking do not share a base unit, so there is no honest way to turn one into the other.',
+    'qty_not_whole' => ':unit does not split — enter a whole number for :product (entered :qty).',
     'unit_does_not_split' => 'One :entered does not divide into whole :stocking — set the unit to allow fractions, or enter the quantity in :stocking.',
 
     // Batch allocation

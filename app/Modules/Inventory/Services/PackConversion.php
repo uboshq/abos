@@ -52,7 +52,16 @@ final class PackConversion
      */
     public function toStockQty(Product $product, string $qty, ?int $unitId = null): string
     {
+        /*
+         * ⭐ নিজের এককে লেখা পরিমাণেও ভাঙা ধরা পড়ে — Inventory অডিট ম১৯, ৫ অক্টোবর ২০২৬।
+         * ⛔ আগে পণ্যের নিজের একক এলে সংখ্যাটা যাচাই ছাড়াই ফিরত: পিসের পণ্যে "২.৫ পিস" সোজা মজুদে বসত, অথচ
+         * বাক্স থেকে নামা আধখানা পিস নিচে থামত — একই ভুল, দরজা ভেদে আলাদা উত্তর।
+         */
         if ($unitId === null || $unitId === $product->unit_id) {
+            if ($product->unit_id !== null) {
+                $this->assertWhole($product, $qty, (int) $product->unit_id);
+            }
+
             return $qty;
         }
 
@@ -476,6 +485,22 @@ final class PackConversion
         return str_contains($number, '.')
             ? rtrim(rtrim($number, '0'), '.')
             : $number;
+    }
+
+    /** ⓘ ভগ্নাংশ না চলা এককে পুরো সংখ্যা চাই (ম১৯) */
+    private function assertWhole(Product $product, string $qty, int $unitId): void
+    {
+        $unit = $this->unit($unitId);
+
+        if (! $unit->allows_fraction && bccomp($qty, $this->floor($qty), 6) !== 0) {
+            throw ValidationException::withMessages([
+                'qty' => __('inventory::validation.qty_not_whole', [
+                    'product' => $product->name(),
+                    'unit' => $unit->name(),
+                    'qty' => rtrim(rtrim($qty, '0'), '.'),
+                ]),
+            ]);
+        }
     }
 
     private function floor(string $number): string
