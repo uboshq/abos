@@ -11,6 +11,7 @@ import '../../core/menu/menu_item.dart';
 import '../../core/menu/menu_repository.dart';
 import '../../core/menu/module_gate.dart';
 import '../../core/orders/delivery_order_api.dart';
+import '../../core/records/notice_bar.dart';
 import '../../core/records/notification_record.dart';
 import '../../core/records/today_record.dart';
 import '../../core/sync_engine/sync_engine.dart';
@@ -21,6 +22,7 @@ import '../../core/widgets/empty_state.dart';
 import '../../core/workspace/workspace_switcher.dart';
 import '../update/update_gate.dart';
 import 'home_dashboard.dart';
+import 'notice_ticker.dart';
 import 'workspace_picker.dart';
 
 /// The signed-in person's home: three tabs under one header that always
@@ -54,6 +56,7 @@ class HomeShell extends ConsumerStatefulWidget {
     this.reloadProfile,
     this.switcher,
     this.fetchNotifications,
+    this.fetchNoticeBar,
   });
 
   /// Seams — the real ones need a server or a secure store.
@@ -71,6 +74,9 @@ class HomeShell extends ConsumerStatefulWidget {
 
   /// Seam for the bell's count — the real one needs a server.
   final Future<NotificationPage> Function()? fetchNotifications;
+
+  /// Seam for the running notice line — the real one needs a server.
+  final Future<List<NoticeBarItem>> Function()? fetchNoticeBar;
 
   @override
   ConsumerState<HomeShell> createState() => _HomeShellState();
@@ -124,7 +130,8 @@ class _HomeShellState extends ConsumerState<HomeShell> {
     if (cached != null && !cached.isEmpty && _org == null) {
       setState(() => _org = cached);
     }
-    if (cached?.phoneModules != null && ref.read(phoneModulesProvider) == null) {
+    if (cached?.phoneModules != null &&
+        ref.read(phoneModulesProvider) == null) {
       ref.read(phoneModulesProvider.notifier).state = cached!.phoneModules;
     }
 
@@ -144,7 +151,8 @@ class _HomeShellState extends ConsumerState<HomeShell> {
       ref.read(phoneModulesProvider.notifier).state = profile!.phoneModules;
     }
     if (profile != null) {
-      ref.read(ordersReplaceDoProvider.notifier).state = profile.ordersReplaceDo;
+      ref.read(ordersReplaceDoProvider.notifier).state =
+          profile.ordersReplaceDo;
     }
     final modules = ref.read(phoneModulesProvider);
     setState(() {
@@ -246,32 +254,44 @@ class _HomeShellState extends ConsumerState<HomeShell> {
       // in front of it would leave them with a blank app and no explanation.
       body: UpdateGate(
         check: widget.checkUpdate,
-        child: IndexedStack(
-          index: _tab,
-          children: [
-            HomeDashboard(
-              key: ValueKey('home-dashboard-$_generation'),
-              user: user,
-              items: _items,
-              headerNamesOrg: headerNamesOrg,
-              fetchToday: widget.fetchToday,
-              lastKnownToday: widget.lastKnownToday,
-              onRecord: _onRecord,
-              now: widget.now,
-            ),
-            _menuLoading
-                ? const Center(child: CircularProgressIndicator())
-                : _items.isEmpty
-                    ? const EmptyState(
-                        icon: Icons.lock_outline,
-                        title: 'আপনার জন্য কোনো মেনু নেই',
-                        message:
-                            'অফিসে জানান — আপনার অ্যাকাউন্টে কোনো অনুমতি বসানো নেই।',
-                      )
-                    : _MenuGrid(items: _items),
-            _MoreTab(user: user, org: org, designation: _designation, avatarUrl: _avatarUrl),
-          ],
-        ),
+        child: Column(children: [
+          // ⭐ ওয়েবের চলমান নোটিশ — মাথার ঠিক নিচে, প্রতিটা ট্যাবে (মালিক, ৬ অক্টোবর ২০২৬); কিছু না থাকলে চুপ।
+          // ⓘ কোম্পানি বদলালে নতুন key — আগের কোম্পানির নোটিশ এক মুহূর্তও থাকে না
+          NoticeTicker(
+              key: ValueKey('notice-ticker-$_generation'),
+              fetch: widget.fetchNoticeBar),
+          Expanded(
+              child: IndexedStack(
+            index: _tab,
+            children: [
+              HomeDashboard(
+                key: ValueKey('home-dashboard-$_generation'),
+                user: user,
+                items: _items,
+                headerNamesOrg: headerNamesOrg,
+                fetchToday: widget.fetchToday,
+                lastKnownToday: widget.lastKnownToday,
+                onRecord: _onRecord,
+                now: widget.now,
+              ),
+              _menuLoading
+                  ? const Center(child: CircularProgressIndicator())
+                  : _items.isEmpty
+                      ? const EmptyState(
+                          icon: Icons.lock_outline,
+                          title: 'আপনার জন্য কোনো মেনু নেই',
+                          message:
+                              'অফিসে জানান — আপনার অ্যাকাউন্টে কোনো অনুমতি বসানো নেই।',
+                        )
+                      : _MenuGrid(items: _items),
+              _MoreTab(
+                  user: user,
+                  org: org,
+                  designation: _designation,
+                  avatarUrl: _avatarUrl),
+            ],
+          )),
+        ]),
       ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _tab,
@@ -370,7 +390,8 @@ class _BellAction extends StatelessWidget {
 /// ⭐ The person's photo at the far right of the green header — a tap opens
 /// the profile (the "আরও" tab, which is the profile page).
 class _AvatarAction extends StatelessWidget {
-  const _AvatarAction({required this.name, required this.avatarUrl, required this.onTap});
+  const _AvatarAction(
+      {required this.name, required this.avatarUrl, required this.onTap});
 
   final String name;
   final String? avatarUrl;
@@ -456,9 +477,8 @@ class _MenuTile extends ConsumerWidget {
     return Card(
       child: InkWell(
         borderRadius: BorderRadius.circular(12),
-        onTap: item.planned
-            ? null
-            : () => context.go('/home/${item.routeName}'),
+        onTap:
+            item.planned ? null : () => context.go('/home/${item.routeName}'),
         child: Padding(
           padding: const EdgeInsets.all(AppSpacing.md),
           child: Column(
@@ -476,7 +496,8 @@ class _MenuTile extends ConsumerWidget {
               if (item.planned) ...[
                 const SizedBox(height: AppSpacing.xs),
                 const Text('শীঘ্রই আসছে',
-                    style: TextStyle(fontSize: 11, color: AppColors.onSurfaceMuted)),
+                    style: TextStyle(
+                        fontSize: 11, color: AppColors.onSurfaceMuted)),
               ] else if (item.key == 'sales.order.index') ...[
                 const SizedBox(height: AppSpacing.xs),
                 const _PendingBadge(),
@@ -511,7 +532,11 @@ class _PendingBadge extends StatelessWidget {
 /// shared phone one stray tap must not cost somebody their session and the
 /// login that follows.
 class _MoreTab extends ConsumerWidget {
-  const _MoreTab({required this.user, required this.org, this.designation, this.avatarUrl});
+  const _MoreTab(
+      {required this.user,
+      required this.org,
+      this.designation,
+      this.avatarUrl});
 
   final String? designation;
   final String? avatarUrl;
@@ -531,7 +556,8 @@ class _MoreTab extends ConsumerWidget {
               key: const ValueKey('profile-avatar'),
               backgroundColor: AppColors.primary,
               foregroundColor: AppColors.onPrimary,
-              foregroundImage: avatarUrl == null ? null : NetworkImage(avatarUrl!),
+              foregroundImage:
+                  avatarUrl == null ? null : NetworkImage(avatarUrl!),
               child: Text(user.name.isEmpty ? '?' : user.name.characters.first),
             ),
             title: Text(user.name,
