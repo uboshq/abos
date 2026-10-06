@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Feature\Design;
 
 use App\Core\Module\ModuleRegistry;
+use App\Core\Services\SettingsService;
 use App\Core\Support\CompanyContext;
 use App\Core\Support\Ui;
 use App\Models\Company;
@@ -329,15 +330,25 @@ class AClonePromisedAShapeAndDrewAnotherTest extends TestCase
                 continue;
             }
 
+            /*
+             * ⓘ ২১ সেপ্টেম্বর ২০২৬ (`cb681185`) থেকে `onchange="this.form.requestSubmit()"` নেই — লাইভের CSP
+             * প্রতিটা on*= চালাতে দিত না। এখন ইনপুটে `data-action="submit-form"`, আর শ্রোতা বান্ডিলের
+             * actions.js-এ, যে নিজেই requestSubmit() ডাকে (নিচে আলাদা করে দেখা)।
+             */
             $applies = array_filter(
                 $tags[0],
-                static fn (string $tag): bool => str_contains($tag, 'requestSubmit'),
+                static fn (string $tag): bool => str_contains($tag, 'data-action="submit-form"'),
             );
 
             if ($applies === []) {
                 $missing[] = "{$field} — ক্লিকে বসে না, সংরক্ষণ টিপতে হয়";
             }
         }
+
+        // ⓘ চিহ্নটা কাজের হলে তবেই — শ্রোতাটা সত্যিই ফর্ম জমা দেয়
+        $actions = (string) file_get_contents(resource_path('js/components/actions.js'));
+        $this->assertStringContainsString('[data-action="submit-form"]', $actions, '⛔ actions.js আর submit-form শোনে না।');
+        $this->assertStringContainsString('requestSubmit', $actions, '⛔ actions.js ফর্ম জমা দেয় না।');
 
         $this->assertSame([], $missing, implode("\n", [
             'চেহারার পাতার বাছাই আবার দুই ধাপ হয়ে গেছে:',
@@ -443,6 +454,14 @@ class AClonePromisedAShapeAndDrewAnotherTest extends TestCase
     public function test_the_top_strip_carries_what_the_look_declared(): void
     {
         $wrong = [];
+
+        /*
+         * ⓘ সব মডিউলের সুইচ খোলা — রেস্টুরেন্ট ২২ সেপ্টেম্বর ২০২৬ থেকে জন্ম থেকেই বন্ধ, আর বন্ধ মডিউল পটিতে
+         * আসে না। দাবিটা রূপের ঘোষণা মাপে, আজকের সুইচ নয় ([[TheMenuStandsInTheOrderTheOwnerAskedForTest]]-এর একই যুক্তি)।
+         */
+        foreach (app(ModuleRegistry::class)->all() as $module) {
+            app(SettingsService::class)->set($module->code.'.enabled', true);
+        }
 
         foreach (Ui::keys() as $look) {
             $shape = Ui::topnav($look);

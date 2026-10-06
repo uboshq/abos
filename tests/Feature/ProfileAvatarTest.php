@@ -96,14 +96,15 @@ class ProfileAvatarTest extends TestCase
      * ৮০০×১৬০০ ছবির উপরের ৩০% (y ০–৪৮০) লাল, বাকিটা নীল। বর্গের বাহু ৮০০।
      *
      *   এখনকার নিয়ম — শুরু y = (১৬০০−৮০০) × ০.১০ = ৮০। কাটা অংশ ৮০–৮৮০,
-     *   তাই লাল থাকে ৮০–৪৮০ = ৪০০px, অর্থাৎ ফলাফলের উপরের অর্ধেক
-     *   (২৫৬-এ y ০–১২৮)।
+     *   তাই লাল থাকে ৮০–৪৮০ = ৪০০px, অর্থাৎ ফলাফলের উপরের অর্ধেক।
      *
      *   মাঝ-বরাবর কাটলে — শুরু y = ৪০০। লাল থাকত ৪০০–৪৮০ = ৮০px,
-     *   অর্থাৎ ফলাফলের উপরের ২৫px মাত্র।
+     *   অর্থাৎ ফলাফলের উপরের দশ ভাগের এক ভাগ মাত্র।
      *
-     * তাই y=১০০ দেখলেই দুইটা আলাদা করা যায়। ঠিক ১২৮-এ নমুনা নেওয়া হয় না —
-     * ওটা দুই রঙের সীমানা, আর JPEG সেখানে রং মিশিয়ে দেয়।
+     * তাই উচ্চতার ১০০/২৫৬ ভাগে দেখলেই দুইটা আলাদা করা যায়। ঠিক মাঝখানে নমুনা
+     * নেওয়া হয় না — ওটা দুই রঙের সীমানা, আর JPEG সেখানে রং মিশিয়ে দেয়।
+     * ⓘ নমুনার জায়গা ছবির মাপের ভাগে, পিক্সেলে নয় — ১৪ সেপ্টেম্বর ২০২৬ থেকে মাপ ২৫৬ নয়,
+     * ইঞ্জিনের FACE_EDGE (৫১২); পিক্সেলে লেখা নমুনা তখন লালের ভেতরেই পড়ত।
      */
     public function test_portrait_photos_are_cropped_from_the_top_not_the_middle(): void
     {
@@ -114,8 +115,9 @@ class ProfileAvatarTest extends TestCase
             Storage::disk('public')->get($this->user->fresh()->avatar_path)
         );
 
-        $upper = imagecolorsforindex($out, imagecolorat($out, 128, 100));
-        $lower = imagecolorsforindex($out, imagecolorat($out, 128, 200));
+        $edge = imagesx($out);
+        $upper = imagecolorsforindex($out, imagecolorat($out, intdiv($edge, 2), intdiv($edge * 100, 256)));
+        $lower = imagecolorsforindex($out, imagecolorat($out, intdiv($edge, 2), intdiv($edge * 200, 256)));
 
         // উপরের অর্ধেক লাল — মাঝ-বরাবর কাটলে এখানে নীল থাকত
         $this->assertGreaterThan(150, $upper['red']);
@@ -172,7 +174,8 @@ class ProfileAvatarTest extends TestCase
         file_put_contents($path, 'not an image at all');
 
         $this->expectException(RuntimeException::class);
-        $this->expectExceptionMessage('avatar.not_an_image');
+        // ⓘ ছবি খোলা এখন ইঞ্জিনের কাজ (১৪ সেপ্টেম্বর ২০২৬), তাই চাবিটাও ইঞ্জিনের
+        $this->expectExceptionMessage('image.not_an_image');
 
         app(AvatarService::class)->store(
             $this->user,

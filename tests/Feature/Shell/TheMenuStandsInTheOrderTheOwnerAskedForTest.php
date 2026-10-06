@@ -72,6 +72,12 @@ class TheMenuStandsInTheOrderTheOwnerAskedForTest extends TestCase
         ['business', 'sales'],
 
         /*
+         * ⓘ অফার বিক্রয়ের ঠিক পরে (order ৫২) — ২৭ সেপ্টেম্বর ২০২৬ নিজের মডিউল হলো (`869396c5`);
+         * মানুষ অফার খোঁজেন বিক্রয়ের সাথেই।
+         */
+        ['business', 'promotion'],
+
+        /*
          * ⭐ রেস্টুরেন্ট বিক্রয়ের ঠিক পরে — মালিকের সিদ্ধান্ত,
          * ৫ সেপ্টেম্বর ২০২৬।
          *
@@ -99,6 +105,9 @@ class TheMenuStandsInTheOrderTheOwnerAskedForTest extends TestCase
          * মডিউলগুলোকে এক ধাপ নামিয়ে দিত।
          */
         ['system', 'master_data'],
+
+        // ⭐ ডকুমেন্ট মাস্টার ডাটা আর প্রশাসনের মাঝে — মালিক, ৩০ সেপ্টেম্বর ২০২৬: *"DOC system r MDM er majkhane dibe"*
+        ['system', 'documents'],
         ['system', 'system_admin'],
 
         /*
