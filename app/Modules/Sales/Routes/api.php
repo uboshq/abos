@@ -58,7 +58,11 @@ Route::prefix('v1/sales')
         Route::get('/direct/price/{product}', [\App\Modules\Sales\Http\Controllers\DirectSaleApiController::class, 'price'])->whereUuid('product')->name('direct.price');
         // ⭐ ফোনে বিক্রি ফেরত — ওয়েবের একই যাচাই, সেবা আর সারাংশ ([[SalesReturnApiController]], ৪ অক্টোবর ২০২৬)
         // ⭐ আজকের ডেলিভারি — পথে থাকা চালান, পৌঁছানো QR-এর একই দরজায় ([[DeliveryRunApiController]], ধাপ ৭, ৬ অক্টোবর ২০২৬)
-        Route::get('/deliveries', [\App\Modules\Sales\Http\Controllers\DeliveryRunApiController::class, 'index'])->name('delivery_run.index');
+        Route::get('/deliveries', [\App\Modules\Sales\Http\Controllers\DeliveryRunApiController::class, 'index'])->middleware('can:sales.delivery.update')->name('delivery_run.index');
+        // ⭐ লোডিং শিট — পণ্য ধরে কত, চালান ধরে কার জন্য, আর "প্যাক হয়েছে" ([[LoadingApiController]], ধাপ ৪, ৬ অক্টোবর ২০২৬)
+        Route::get('/loading', [\App\Modules\Sales\Http\Controllers\LoadingApiController::class, 'index'])->middleware('can:sales.shipment.view')->name('loading.index');
+        Route::get('/loading/{id}', [\App\Modules\Sales\Http\Controllers\LoadingApiController::class, 'show'])->whereUuid('id')->middleware('can:sales.shipment.view')->name('loading.show');
+        Route::post('/loading/{id}/packed', [\App\Modules\Sales\Http\Controllers\LoadingApiController::class, 'packed'])->whereUuid('id')->middleware('can:sales.delivery.update')->name('loading.packed');
         // ⭐ টাকা আদায় — কেবল পড়া, ওয়েবের আদায়ের চাবিতে ([[CollectionApiController]], মালিক, ৬ অক্টোবর ২০২৬)
         Route::get('/collections', [\App\Modules\Sales\Http\Controllers\CollectionApiController::class, 'index'])->name('collection.index');
         Route::get('/collections/{id}', [\App\Modules\Sales\Http\Controllers\CollectionApiController::class, 'show'])->whereUuid('id')->name('collection.show');

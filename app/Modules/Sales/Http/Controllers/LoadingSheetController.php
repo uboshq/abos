@@ -11,12 +11,11 @@ use App\Modules\Sales\Models\DeliveryState;
 use App\Modules\Sales\Models\Shipment;
 use App\Modules\Sales\Services\DeliveryStage;
 use App\Modules\Sales\Services\DeliveryStageService;
+use App\Modules\Sales\Services\TripPacking;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
 /**
@@ -31,7 +30,7 @@ use Illuminate\View\View;
 class LoadingSheetController extends Controller implements HasMiddleware
 {
     /** যে ধাপ থেকে "লোডিং নিশ্চিত" প্যাকে নেয়। */
-    public const LOADABLE = [DeliveryStage::ALLOCATED, DeliveryStage::PICKING];
+    public const LOADABLE = TripPacking::LOADABLE;
 
     public function __construct(
         private readonly DeliveryStageService $stages,
@@ -85,34 +84,8 @@ class LoadingSheetController extends Controller implements HasMiddleware
      */
     public function confirm(Request $request, Shipment $shipment): RedirectResponse
     {
-        if ($shipment->status !== DocumentStatus::DRAFT) {
-            throw ValidationException::withMessages([
-                'status' => __('sales::loading.not_open', ['no' => $shipment->document_no]),
-            ]);
-        }
-
-        $shipment->loadMissing('lines.challan');
-
-        $moved = DB::transaction(function () use ($shipment) {
-            $count = 0;
-
-            foreach ($shipment->lines as $line) {
-                $challan = $line->challan;
-
-                if ($challan === null) {
-                    continue;
-                }
-
-                $stage = (string) $this->stages->ensure($challan)->stage;
-
-                if (in_array($stage, self::LOADABLE, true)) {
-                    $this->stages->move($challan, DeliveryStage::PACKED);
-                    $count++;
-                }
-            }
-
-            return $count;
-        });
+        // ⓘ ফোনের লোডিং শিটের একই সেবা ([[TripPacking]])
+        $moved = app(TripPacking::class)->pack($shipment);
 
         return redirect()
             ->route('sales.loading_sheet.show', $shipment)
