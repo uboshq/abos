@@ -34,6 +34,42 @@
 
     <x-ui.errors />
 
+    {{-- ⭐ এক পাতায় পুরো ছবি — অর্থ-মডিউলের পরিকল্পনা ৭, ৬ অক্টোবর ২০২৬ ([[InstitutionPosition]]): আমানত (হিসাবের জের +
+         চালু আমানত), ঋণের বাকি, নিট; গ্যারান্টি আর বীমা আলাদা লাইনে, নিটে নয়। --}}
+    <section data-boxed data-institution-position
+             class="mb-4 max-w-screen-2xl rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
+        <p class="text-sm font-semibold" data-institution-sentence>
+            {{ __('finance::institution.position_sentence', [
+                'name' => $institution->short_code ?: $institution->name(),
+                'held' => Money::format($position['held']),
+                'loans' => Money::format($position['loans']),
+                'net' => Money::format($position['net']),
+            ]) }}
+        </p>
+        <dl class="mt-3 grid gap-3 text-sm sm:grid-cols-3 lg:grid-cols-6">
+            @foreach ([
+                'position_accounts' => $position['accounts'],
+                'position_deposits' => $position['deposits'],
+                'position_loans' => $position['loans'],
+                'position_net' => $position['net'],
+                'position_guarantees' => $position['guarantees'],
+                'position_insured' => $position['sum_insured'],
+            ] as $label => $value)
+                <div>
+                    <dt class="text-2xs text-(--color-ink-muted)">{{ __('finance::institution.'.$label) }}</dt>
+                    <dd @class(['num font-semibold tabular-nums',
+                                'text-(--color-danger)' => $label === 'position_net' && bccomp($value, '0', 4) < 0])
+                        data-position="{{ $label }}">{{ Money::format($value) }}</dd>
+                </div>
+            @endforeach
+        </dl>
+        @if (bccomp($position['premiums_due'], '0', 4) > 0)
+            <p class="mt-2 text-2xs text-(--color-ink-muted)">
+                {{ __('finance::institution.position_premiums_due', ['amount' => Money::format($position['premiums_due'])]) }}
+            </p>
+        @endif
+    </section>
+
     @if ($institution->kind !== \App\Modules\Finance\Models\Institution::INSURANCE)
         <section data-boxed
                  class="mb-4 max-w-screen-2xl overflow-hidden rounded-(--radius-card) border border-(--color-border)
@@ -132,6 +168,8 @@
                 <span class="ms-auto text-sm tabular-nums">
                     {{ __('finance::field.limit_amount') }}:
                     <strong>{{ Money::format($facilities->reduce(fn ($c, $f) => bcadd($c, (string) $f->limit_amount, 4), '0')) }}</strong>
+                    · {{ __('finance::institution.position_loans') }}:
+                    <strong>{{ Money::format($position['loans']) }}</strong>
                 </span>
             </header>
 
@@ -144,6 +182,8 @@
                  'render' => fn ($f) => $f->branch_name ?: '—'],
                 ['key' => 'limit_amount', 'label' => __('finance::field.limit_amount'), 'numeric' => true, 'width' => '10rem',
                  'render' => fn ($f) => Money::format($f->limit_amount)],
+                ['key' => 'owed', 'label' => __('finance::institution.position_loans'), 'numeric' => true, 'width' => '10rem',
+                 'render' => fn ($f) => isset($owedByFacility[$f->id]) ? Money::format($owedByFacility[$f->id]) : '—'],
             ]" />
         </section>
     @endif

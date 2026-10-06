@@ -12,6 +12,7 @@ use App\Modules\Finance\Models\BankFacility;
 use App\Modules\Finance\Models\Deposit;
 use App\Modules\Finance\Models\Institution;
 use App\Modules\Finance\Models\InstitutionAccount;
+use App\Modules\Finance\Services\InstitutionPosition;
 use App\Modules\Finance\Services\InstitutionService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -44,16 +45,22 @@ class InstitutionController extends Controller implements HasMiddleware
     {
         $kind = in_array($request->query('kind'), Institution::KINDS, true) ? $request->query('kind') : null;
 
+        $institutions = Institution::query()
+            ->ofKind($kind)
+            ->orderByDesc('is_active')
+            ->orderBy('name_en')
+            ->paginate(50)
+            ->withQueryString();
+
         return view('finance::institution.index', [
             'menu' => $this->menu->forUser($request->user()),
             'kind' => $kind,
             'counts' => Institution::query()->selectRaw('kind, COUNT(*) as n')->groupBy('kind')->pluck('n', 'kind'),
-            'institutions' => Institution::query()
-                ->ofKind($kind)
-                ->orderByDesc('is_active')
-                ->orderBy('name_en')
-                ->paginate(50)
-                ->withQueryString(),
+            'institutions' => $institutions,
+
+            // ⭐ প্রতিটা প্রতিষ্ঠানের নিট — এই পাতার সারিগুলোর, প্রতিষ্ঠানের নিজের পাতার একই হিসাব (পরিকল্পনা ৭)
+            'positions' => collect($institutions->items())
+                ->mapWithKeys(fn (Institution $i) => [$i->id => app(InstitutionPosition::class)->of($i)])->all(),
         ]);
     }
 
@@ -92,6 +99,10 @@ class InstitutionController extends Controller implements HasMiddleware
                     ->all()
                 : [],
             'policies' => $institution->insurancePolicies()->orderBy('ends_on')->get(),
+
+            // ⭐ এক পাতায় পুরো ছবি — আমানত, ঋণ, নিট, গ্যারান্টি, বীমা (অর্থ-মডিউলের পরিকল্পনা ৭, ৬ অক্টোবর ২০২৬)
+            'position' => app(InstitutionPosition::class)->of($institution),
+            'owedByFacility' => app(InstitutionPosition::class)->owedByFacility($institution),
 
             /*
              * ⓘ এই ব্যাংকের ঋণ আর আমানত — দুইটাই `institution_id` ধরে।

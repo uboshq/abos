@@ -31,6 +31,9 @@
             'render' => fn ($i) => $i->contact_person ?: '—'],
         ['key' => 'phone', 'label' => __('finance::institution.phone'), 'width' => '9rem',
             'render' => fn ($i) => $i->phone ?: '—'],
+        // ⭐ নিট — আমানত − ঋণ, প্রতিষ্ঠানের পাতার একই হিসাব (অর্থ-মডিউলের পরিকল্পনা ৭)
+        ['key' => 'net', 'label' => __('finance::institution.position_net'), 'numeric' => true, 'width' => '10rem',
+            'render' => fn ($i) => isset($positions[$i->id]) ? \App\Core\Support\Money::format($positions[$i->id]['net']) : '—'],
         ['key' => 'is_active', 'label' => __('finance::institution.state'), 'width' => '6rem',
             'render' => fn ($i) => $i->is_active ? __('finance::institution.active') : __('finance::institution.inactive')],
         [

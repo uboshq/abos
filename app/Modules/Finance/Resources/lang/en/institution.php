@@ -57,4 +57,12 @@ return [
     'policies' => 'Insurance policies',
     'total' => 'Total',
     'coa_hint' => 'For a bank or MFS account — which institution. Its balance then shows on the institution page.',
+    'position_sentence' => 'At :name: deposits and balances :held, loans :loans, net :net',
+    'position_accounts' => 'Account balances',
+    'position_deposits' => 'Deposits',
+    'position_loans' => 'Loans outstanding',
+    'position_net' => 'Net',
+    'position_guarantees' => 'Guarantees (contingent)',
+    'position_insured' => 'Sum insured',
+    'position_premiums_due' => 'Premiums due :amount',
 ];

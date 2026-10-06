@@ -59,4 +59,12 @@ return [
     'policies' => 'বীমা পলিসি',
     'total' => 'মোট',
     'coa_hint' => 'ব্যাংক বা MFS খাত হলে — কোন প্রতিষ্ঠানের। প্রতিষ্ঠানের পাতায় জের দেখায়।',
+    'position_sentence' => ':name-এ মোট আমানত :held, মোট ঋণ :loans, নিট :net',
+    'position_accounts' => 'হিসাবের জের',
+    'position_deposits' => 'আমানত',
+    'position_loans' => 'ঋণের বাকি',
+    'position_net' => 'নিট',
+    'position_guarantees' => 'গ্যারান্টি (সম্ভাব্য দায়)',
+    'position_insured' => 'বীমার অঙ্ক',
+    'position_premiums_due' => 'বাকি প্রিমিয়াম :amount',
 ];
