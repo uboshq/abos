@@ -249,6 +249,9 @@ return [
              */
             ['label' => 'finance::menu.rental', 'cluster' => 'contracts', 'icon' => 'building',
                 'route' => 'finance.rental.index', 'permission' => 'finance.rental.view'],
+            // ⭐ ভাড়াটে — আমরা যখন জায়গা ভাড়া দিই (মালিকের সিদ্ধান্ত প্র৩, ৬ অক্টোবর ২০২৬)
+            ['label' => 'finance::tenancy.title', 'cluster' => 'contracts', 'icon' => 'building',
+                'route' => 'finance.tenancy.index', 'permission' => 'finance.rental.view'],
             ['label' => 'finance::insurance.title', 'cluster' => 'contracts', 'icon' => 'lock',
                 'route' => 'finance.insurance.index', 'permission' => 'finance.insurance.view'],
 
@@ -519,6 +522,8 @@ return [
          * "কোন চুক্তি" প্রশ্নের উত্তর কেবল আইডি, আর ওটা কাগজে থাকে না।
          */
         'RNT' => 'finance::doc.rental',
+        // ⭐ ভাড়াটের চুক্তি — মালিকের সিদ্ধান্ত প্র৩, ৬ অক্টোবর ২০২৬
+        'TNT' => 'finance::doc.tenancy',
         'BFC' => 'finance::doc.bank_facility',
     ],
 
@@ -654,6 +659,8 @@ return [
         'deposit' => Deposit::class,
         'hand_loan' => HandLoanAccount::class,
         'rental_contract' => RentalContract::class,
+        // ⭐ ভাড়াটের চুক্তি — তার ভাউচার থেকে চুক্তিতে ফেরা, আর চুক্তিপত্র তোলা (প্র৩)
+        'tenancy' => \App\Modules\Finance\Models\Tenancy::class,
     ],
 
     // ⭐ হাতধার আর ব্যাংক ঋণের খাতা — মালিক, ৫ অক্টোবর ২০২৬ ([[LoanLedgerReports]])
@@ -671,6 +678,8 @@ return [
         \App\Modules\Finance\Reports\RentalReports::class,
         // ⭐ আমানতের রিপোর্ট — অর্থ-মডিউলের পরিকল্পনা, অংশ ৪
         \App\Modules\Finance\Reports\DepositReports::class,
+        // ⭐ ভাড়াটের আদায় আর বকেয়া — মালিকের সিদ্ধান্ত প্র৩, ৬ অক্টোবর ২০২৬
+        \App\Modules\Finance\Reports\TenancyReports::class,
     ],
 
     'events' => [],

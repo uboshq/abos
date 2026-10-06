@@ -9,5 +9,6 @@ return [
     'deposit' => 'Deposit',
     'withdrawal' => 'Withdrawal',
     'rental' => 'Rental contract',
+    'tenancy' => 'Tenancy',
     'bank_facility' => 'Bank facility',
 ];

@@ -9,5 +9,6 @@ return [
     'deposit' => 'জমা',
     'withdrawal' => 'উত্তোলন',
     'rental' => 'ভাড়ার চুক্তি',
+    'tenancy' => 'ভাড়াটের চুক্তি',
     'bank_facility' => 'ব্যাংক সুবিধা',
 ];

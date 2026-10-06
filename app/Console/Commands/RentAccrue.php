@@ -7,6 +7,7 @@ namespace App\Console\Commands;
 use App\Core\Support\CompanyContext;
 use App\Models\Company;
 use App\Modules\Finance\Services\RentalAccrualService;
+use App\Modules\Finance\Services\TenancyService;
 use Illuminate\Console\Command;
 use Illuminate\Support\Carbon;
 
@@ -24,9 +25,9 @@ class RentAccrue extends Command
         {--company= : কেবল একটা কোম্পানির কোড, খালি হলে সবগুলো}
         {--month= : কোন মাস (YYYY-MM), খালি হলে চলতি মাস}';
 
-    protected $description = 'মাসের ভাড়া মাসের শুরুতে প্রদেয় হিসেবে বসায় — চালু সব চুক্তির, এক মাস একবার';
+    protected $description = 'মাসের ভাড়া মাসের শুরুতে বসায় — দেওয়ার দিকে প্রদেয়, ভাড়াটের দিকে পাওনা; এক মাস একবার';
 
-    public function handle(RentalAccrualService $accruals): int
+    public function handle(RentalAccrualService $accruals, TenancyService $tenancies): int
     {
         $month = $this->option('month')
             ? Carbon::createFromFormat('Y-m-d', $this->option('month').'-01')
@@ -45,6 +46,7 @@ class RentAccrue extends Command
 
         $broke = false;
         $accrued = 0;
+        $charged = 0;
         $held = 0;
 
         foreach ($companies as $company) {
@@ -54,6 +56,11 @@ class RentAccrue extends Command
                 $done = $accruals->run($month);
                 $accrued += $done['accrued'];
                 $held += $done['held'];
+
+                // ⭐ উল্টো দিক — ভাড়াটের মাসের দাবি (মালিকের সিদ্ধান্ত প্র৩), একই নিয়মে
+                $billed = $tenancies->charge($month);
+                $charged += $billed['charged'];
+                $held += $billed['held'];
             } catch (\Throwable $e) {
                 $broke = true;
 
@@ -66,7 +73,7 @@ class RentAccrue extends Command
             }
         }
 
-        $this->info("প্রদেয় ভাড়া {$accrued}টি চুক্তিতে, সইয়ের অপেক্ষায় {$held}টি।");
+        $this->info("প্রদেয় ভাড়া {$accrued}টি চুক্তিতে, ভাড়াটের দাবি {$charged}টি, সইয়ের অপেক্ষায় {$held}টি।");
 
         return $broke ? self::FAILURE : self::SUCCESS;
     }

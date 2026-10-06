@@ -18,6 +18,7 @@ use App\Modules\Finance\Services\InterestAccrualService;
 use App\Modules\Finance\Services\ProfitDistribution;
 use App\Modules\Finance\Services\RentalAccrualService;
 use App\Modules\Finance\Services\RentalContractService;
+use App\Modules\Finance\Services\TenancyService;
 use App\Modules\Finance\Services\WithdrawalService;
 
 /**
@@ -73,9 +74,15 @@ final class FinishTheFinancePaperOnTheLastSignature
                 : ($yes ? app(DepositService::class)->finishSigned($voucher) : app(DepositService::class)->dropRefused($voucher, $why)),
             // ⭐ মাসের প্রদেয় ভাড়া ভাড়ার নিজের ছকে, আলাদা করে চেনা (মালিকের সিদ্ধান্ত প্র২, ৬ অক্টোবর ২০২৬); ⛔ চুক্তির পথে গেলে
             // খোলার-জামানত-নয় এমন জার্নালকে "চুক্তি শেষ" ধরে চুক্তি বন্ধ করে দিত
-            FinanceSignature::RENTAL => RentalAccrualService::isAccrual($voucher)
-                ? ($yes ? app(RentalAccrualService::class)->finishSigned($voucher) : app(RentalAccrualService::class)->dropRefused($voucher, $why))
-                : ($yes ? app(RentalContractService::class)->finishSigned($voucher) : app(RentalContractService::class)->dropRefused($voucher, $why)),
+            // ⭐ ভাড়াটের কাগজও ভাড়ার ছকে (প্র৩) — ভাউচারের বিপরীত থেকে চেনা; ⛔ চুক্তির পথে গেলে ওটা ভাড়ার চুক্তি খুঁজে পেত না
+            FinanceSignature::RENTAL => match (true) {
+                TenancyService::isTenancy($voucher) => $yes
+                    ? app(TenancyService::class)->finishSigned($voucher) : app(TenancyService::class)->dropRefused($voucher, $why),
+                RentalAccrualService::isAccrual($voucher) => $yes
+                    ? app(RentalAccrualService::class)->finishSigned($voucher) : app(RentalAccrualService::class)->dropRefused($voucher, $why),
+                default => $yes
+                    ? app(RentalContractService::class)->finishSigned($voucher) : app(RentalContractService::class)->dropRefused($voucher, $why),
+            },
             FinanceSignature::CAPITALISE => $yes
                 ? app(ProfitDistribution::class)->finishCapitalise($voucher)
                 : app(ProfitDistribution::class)->dropCapitalise($voucher, $why),

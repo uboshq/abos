@@ -322,6 +322,17 @@ final class StandardChart implements ProvisionsCompany
     public const RENT_PAYABLE = '2141';
 
     /*
+     * ⭐ আমরা যখন বাড়িওয়ালা — মালিকের সিদ্ধান্ত প্র৩, ৬ অক্টোবর ২০২৬ ([[TenancyService]])। ভাড়াটের কাছে মাসের ভাড়া পাওনা
+     * (মাসের শুরুতে Dr ১১২৫ / Cr ৪৩২০) আর ভাড়াটের রাখা জামানত (দায়, চুক্তি শেষে ফেরতযোগ্য)। ⓘ দুই খাতের প্রতিটা সারিতে
+     * ভাড়াটে পক্ষ হিসেবে বসে, তাই পক্ষের খাতা ভাড়াটে ধরে জের দেখায়।
+     */
+    public const RENT_RECEIVABLE = '1125';
+
+    public const TENANT_DEPOSITS = '2155';
+
+    public const RENT_INCOME = '4320';
+
+    /*
      * ⭐ অগ্রিম আয়কর — চলতি সম্পদ (অর্থ-মডিউলের পরিকল্পনা ৪, ৬ অক্টোবর ২০২৬; সমন্বয়কের সিদ্ধান্ত প্র২)। ব্যাংক মুনাফা থেকে
      * যে উৎসে কর কেটে রাখে, সেটা খরচ নয় — বছর শেষে আয়করের সাথে সমন্বয় হয় ([[DepositService::returnLines()]])।
      */
@@ -814,6 +825,7 @@ final class StandardChart implements ProvisionsCompany
              */
             ['1131', 'Advance to Employees', 'কর্মীর অগ্রিম', $A, '1100', false, []],
             ['1140', 'Security Deposits', 'জামানত', $A, '1100', false, []],
+            ['1125', 'Rent Receivable', 'ভাড়া প্রাপ্য', $A, '1100', false, []],
 
             /*
              * ডিলারকে দেওয়া কমিশন — কোম্পানির কাছে দাবি।
@@ -955,6 +967,7 @@ final class StandardChart implements ProvisionsCompany
             ['2140', 'Expenses Payable', 'প্রদেয় খরচ', $L, '2100', false, []],
             ['2145', 'Interest Payable', 'প্রদেয় সুদ', $L, '2100', false, []],
             ['2141', 'Rent Payable', 'প্রদেয় ভাড়া', $L, '2100', false, []],
+            ['2155', 'Tenant Security Deposits', 'ভাড়াটের জামানত', $L, '2100', false, []],
             ['2150', 'Advance from Customers', 'গ্রাহকের অগ্রিম', $L, '2100', false, []],
             // মাল এসেছে, বিল আসেনি — ধ্রুবকটার মন্তব্যে কারণ লেখা আছে
             ['2160', 'Goods Received Not Invoiced', 'প্রাপ্ত মাল, বিল আসেনি', $L, '2100', false, []],

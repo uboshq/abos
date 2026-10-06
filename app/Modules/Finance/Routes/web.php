@@ -273,6 +273,34 @@ Route::middleware('auth')->prefix('finance')->group(function () {
     });
 
     /*
+     * ⭐ ভাড়াটে — আমরা যখন জায়গা ভাড়া দিই (মালিকের সিদ্ধান্ত প্র৩, ৬ অক্টোবর ২০২৬; [[TenancyController]])।
+     * ⓘ `reports/` আর `charges` `{tenancy}`-এর আগে, আর `{tenancy}` সংখ্যায় বাঁধা।
+     */
+    Route::prefix('tenancies')->name('tenancy.')->group(function () {
+        Route::get('/', [\App\Modules\Finance\Http\Controllers\TenancyController::class, 'index'])->name('index');
+        Route::get('/create', [\App\Modules\Finance\Http\Controllers\TenancyController::class, 'create'])->name('create');
+        Route::post('/', [\App\Modules\Finance\Http\Controllers\TenancyController::class, 'store'])->name('store');
+        Route::post('/charges', [\App\Modules\Finance\Http\Controllers\TenancyController::class, 'charge'])->name('charge');
+        Route::get('/reports/{slug}', [\App\Modules\Finance\Http\Controllers\TenancyController::class, 'report'])
+            ->where('slug', '[a-z\-]+')->name('report.show');
+
+        Route::get('/{tenancy}', [\App\Modules\Finance\Http\Controllers\TenancyController::class, 'show'])
+            ->whereNumber('tenancy')->name('show');
+        Route::post('/{tenancy}/collect', [\App\Modules\Finance\Http\Controllers\TenancyController::class, 'collect'])
+            ->whereNumber('tenancy')->name('collect');
+        Route::post('/{tenancy}/deposit', [\App\Modules\Finance\Http\Controllers\TenancyController::class, 'receiveDeposit'])
+            ->whereNumber('tenancy')->name('deposit');
+        Route::post('/{tenancy}/from-deposit', [\App\Modules\Finance\Http\Controllers\TenancyController::class, 'fromDeposit'])
+            ->whereNumber('tenancy')->name('from-deposit');
+        Route::post('/{tenancy}/refund', [\App\Modules\Finance\Http\Controllers\TenancyController::class, 'refund'])
+            ->whereNumber('tenancy')->name('refund');
+        Route::put('/{tenancy}', [\App\Modules\Finance\Http\Controllers\TenancyController::class, 'revise'])
+            ->whereNumber('tenancy')->name('revise');
+        Route::post('/{tenancy}/close', [\App\Modules\Finance\Http\Controllers\TenancyController::class, 'close'])
+            ->whereNumber('tenancy')->name('close');
+    });
+
+    /*
      * ⭐ জমার ধরন — অর্থের মানচিত্র §১৪ক, ২০ সেপ্টেম্বর ২০২৬।
      *
      * ⓘ `deposits/` গ্রুপের **বাইরে**, আর সেটা ইচ্ছাকৃত: ওখানে `/{issuer}`
