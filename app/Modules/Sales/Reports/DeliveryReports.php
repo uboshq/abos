@@ -96,7 +96,6 @@ final class DeliveryReports
             ->whereRaw("{$wanted} > 0")
             ->whereRaw("{$promised} BETWEEN ? AND ?", [$f['from'], $f['to']])
             ->tap(ReportEngine::branchWall($f, 'o.branch_id'))
-            ->tap(ReportEngine::dealerWall($f, 'o.customer_id'))
             ->groupBy('l.id')
             ->selectRaw('MIN(o.document_no) as document_no, MIN(o.id) as source_id, MIN(o.trx_date) as order_date, '
                 .'MIN('.self::name('cu').') as customer, MIN('.self::name('p').') as product, '

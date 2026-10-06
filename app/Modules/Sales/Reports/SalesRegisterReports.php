@@ -132,7 +132,6 @@ final class SalesRegisterReports
             ->join('customers as c', 'c.id', '=', "{$a}.customer_id")
             ->where("{$a}.company_id", $f['company_id'])
             ->tap(ReportEngine::branchWall($f, "{$a}.branch_id"))
-            ->tap(ReportEngine::dealerWall($f, "{$a}.customer_id"))
             ->whereBetween("{$a}.trx_date", [$f['from'], $f['to']])
             ->whereNull("{$a}.deleted_at")
             ->selectRaw("{$a}.trx_date")
