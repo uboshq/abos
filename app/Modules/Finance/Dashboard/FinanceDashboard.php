@@ -246,7 +246,7 @@ final class FinanceDashboard implements ProvidesDashboard
                      * ⓘ পাহারা: [[TheDashboardLookedForAWordNobodyWritesTest]]।
                      */
                     value: Money::format(
-                        CapitalEntry::query()->whereIn('entry_type', CapitalEntry::KINDS)->sum('amount')
+                        CapitalEntry::query()->posted()->whereIn('entry_type', CapitalEntry::KINDS)->sum('amount') // ⛔ কেবল খাতায় ওঠা — খসড়া নয় (অডিট ⛔৪)
                     ),
                     hint: __('finance::dashboard.capital_in_hint'),
                     href: route('finance.capital.index'),
@@ -254,7 +254,8 @@ final class FinanceDashboard implements ProvidesDashboard
                 ),
                 new Stat(
                     label: __('finance::dashboard.withdrawn'),
-                    value: Money::format(Withdrawal::query()->sum('amount')),
+                    // ⛔ কেবল খাতায় ওঠা উত্তোলন — খসড়া বা সইয়ের অপেক্ষার নয় (অডিট ⛔৪, ৬ অক্টোবর ২০২৬)
+                    value: Money::format(Withdrawal::query()->posted()->sum('amount')),
                     hint: __('finance::dashboard.withdrawn_hint'),
                     href: route('finance.withdrawal.index'),
                     tone: Stat::WARN,

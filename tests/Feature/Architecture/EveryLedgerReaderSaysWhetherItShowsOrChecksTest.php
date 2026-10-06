@@ -29,7 +29,8 @@ use Tests\TestCase;
  */
 final class EveryLedgerReaderSaysWhetherItShowsOrChecksTest extends TestCase
 {
-    private const PATTERN = '/LedgerEntry::query|table\(\'ledger_entries|LedgerBalances|->balanceOn\(/';
+    // ⓘ `balanceInView()` — দেখার জের, ভেতরে খাতা পড়ে ([[Account::balanceInView()]], অডিট ⛔১১, ৬ অক্টোবর ২০২৬)
+    private const PATTERN = '/LedgerEntry::query|table\(\'ledger_entries|LedgerBalances|->balanceOn\(|->balanceInView\(/';
 
     /** @var array<string, string> দেখায় — দেখার শাখা মানবে (ধাপ খ) */
     private const SHOWS = [
@@ -151,7 +152,8 @@ final class EveryLedgerReaderSaysWhetherItShowsOrChecksTest extends TestCase
 
             $code = $this->codeOf(base_path($path));
 
-            if (preg_match('/ViewedBranch::|viewBranchIds\(|viewsOneBranch\(|->inView\(/', $code) !== 1) {
+            // ⓘ `balanceInView()` আর `CashTill::visibleBranchIds()` নিজেরাই দেখার শাখা আর নাগাল মানে (DataScope-এর ভেতরে)
+            if (preg_match('/ViewedBranch::|viewBranchIds\(|viewsOneBranch\(|->inView\(|->balanceInView\(|visibleBranchIds\(/', $code) !== 1) {
                 $blind[] = $path;
             }
         }

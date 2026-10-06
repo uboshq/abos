@@ -18,6 +18,7 @@ use App\Core\Support\Money;
 use App\Modules\Sales\Metrics\SalesMetrics;
 use App\Modules\Sales\Models\SalesInvoice;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 
 /**
  * বিক্রয় মডিউলের ড্যাশবোর্ড।
@@ -186,7 +187,7 @@ final class SalesDashboard implements ProvidesDashboard
                         ['key' => 'party', 'label' => __('sales::field.customer'),
                             'render' => fn ($i) => $i->customer?->name() ?? '—'],
                         ['key' => 'due', 'label' => __('sales::dashboard.outstanding'), 'width' => '9rem',
-                            'render' => fn ($i) => Money::format($i->total)],
+                            'render' => fn ($i) => Money::format($i->dueAmount())],
                     ],
                     rows: self::biggestDues(),
                     empty: __('sales::dashboard.nothing_due'),
@@ -197,16 +198,16 @@ final class SalesDashboard implements ProvidesDashboard
     }
 
     /**
-     * মোট বকেয়া — নিশ্চিত হওয়া বিলের অঙ্ক, আদায় বাদ।
+     * মোট বকেয়া — গ্রাহকদের কাছে আজ সত্যিই যা পাওনা।
      *
-     * খসড়া বাদ, ইচ্ছাকৃতভাবে: খসড়া বিল কারও কাছে পাওনা নয়, ওটা এখনো
-     * একটা কাগজের খসড়া মাত্র।
+     * ⛔ আগে "নিশ্চিত বিলের মোট" — আদায় আর ফেরত বাদ যেত না, তাই ডেমোতে ২৩,৭৮,৭৯০ দেখাত অথচ খাতার পাওনা ১৬,১০,২০৫
+     * (অডিট ⛔১১, ৬ অক্টোবর ২০২৬)। ⭐ এখন হোমের "বাজারে বকেয়া" আর ফোনের একই উৎস ([[CustomerMetrics::dues()]]):
+     * প্রতিটা দোকানের নিজের জের, তারপর ধনাত্মকগুলোর যোগ; শাখা আর বিক্রয়কর্মীর দেয়াল সেখানেই।
      */
     private static function outstanding(): string
     {
-        return (string) SalesInvoice::query()
-            ->posted()
-            ->sum('total');
+        return app(\App\Modules\Customer\Services\CustomerMetrics::class)
+            ->dues(auth()->user(), Carbon::today()->toDateString())['amount'];
     }
 
     /**
@@ -284,14 +285,27 @@ final class SalesDashboard implements ProvidesDashboard
     }
 
     /** সবচেয়ে বড় বকেয়াগুলো, উপরে। */
+    /**
+     * ⭐ সবচেয়ে বড় বকেয়া — বিলে এখনো যা বাকি, বড় থেকে ছোট (অডিট ⛔১১, ৬ অক্টোবর ২০২৬)।
+     * ⛔ আগে বিলের মোট ধরে সাজানো আর মোটটাই দেখানো — শোধ হয়ে যাওয়া বড় বিলও তালিকার মাথায় বসত।
+     * ⓘ বাকির হিসাব বিলের পাতার হুবহু ([[SalesInvoice::scopeWithCollected()]], [[SalesInvoice::dueAmount()]]):
+     * মোট − আদায় − রসিদ ভাউচার − পাকা ফেরত; কোম্পানি আর শাখার দেয়াল ভেতরের কোয়েরিতেই।
+     */
     private static function biggestDues()
     {
-        return SalesInvoice::query()
-            ->posted()
-            ->with('customer')
-            ->orderByDesc('total')
+        $ranked = DB::query()
+            ->fromSub(SalesInvoice::query()->posted()->withCollected(), 'i')
+            ->selectRaw('i.id, (i.total - i.collected_total - i.voucher_total - i.returned_total) as due')
+            ->whereRaw('(i.total - i.collected_total - i.voucher_total - i.returned_total) > 0')
+            ->orderByDesc('due')
+            ->orderBy('i.id')
             ->limit(8)
-            ->get();
+            ->pluck('id')
+            ->all();
+
+        return SalesInvoice::query()->withCollected()->with('customer')->whereIn('sal_invoices.id', $ranked ?: [0])->get()
+            ->sortBy(fn (SalesInvoice $i) => array_search($i->id, $ranked, true))
+            ->values();
     }
 
     /**

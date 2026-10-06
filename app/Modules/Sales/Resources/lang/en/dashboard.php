@@ -19,7 +19,7 @@ return [
     'month_hint' => 'Confirmed invoices this month',
     'collected_hint' => 'Money that came in today',
     'outstanding' => 'Outstanding',
-    'outstanding_hint' => 'Confirmed invoices only — drafts are not counted',
+    'outstanding_hint' => 'What customers owe today in the books — collections and returns taken off, each shop by its own balance',
     'six_months' => 'Billed and collected, six months',
     'billed' => 'Billed',
     'collected' => 'Collected',

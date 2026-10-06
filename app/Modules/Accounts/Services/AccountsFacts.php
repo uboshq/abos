@@ -101,11 +101,8 @@ final class AccountsFacts
 
     public function balanceOfCode(string $code): string
     {
-        // ⭐ একটা শাখা বাছা থাকলে কেবল সেই শাখার সারি (২৯ সেপ্টেম্বর ২০২৬)
-        $scope = app(DataScope::class);
-        $branch = $scope->viewsOneBranch(auth()->user()) ? ($scope->viewBranchIds(auth()->user())[0] ?? null) : null;
-
-        return StandardChart::find($code)?->balanceOn(null, $branch) ?? '0';
+        // ⭐ দেখার জের — এক শাখা বাছা থাকলে সেটা, "সব শাখা"-তে মানুষের নাগাল (অডিট ⛔১১, ৬ অক্টোবর ২০২৬; [[Account::balanceInView()]])
+        return StandardChart::find($code)?->balanceInView() ?? '0';
     }
 
     /**
@@ -765,7 +762,7 @@ final class AccountsFacts
         return $banks->map(fn (Account $bank) => [
             'id' => (int) $bank->getKey(),
             'name' => $bank->name(),
-            'balance' => $bank->balanceOn(null, $branch),
+            'balance' => $bank->balanceInView(),
         ])->values()->all();
     }
 }

@@ -173,19 +173,23 @@ final class PurchaseWidgets implements DashboardWidgets
      */
     private static function marginThisMonth(string $group = 'month'): ?Widget
     {
-        // ⭐ দেখার শাখা (২৯ সেপ্টেম্বর ২০২৬)
-        $row = self::inView(DB::table('sal_invoices'), 'sal_invoices.branch_id')
+        $month = [Carbon::today()->startOfMonth()->toDateString(), Carbon::today()->endOfMonth()->toDateString()];
+
+        /*
+         * ⭐ দেখার শাখা (২৯ সেপ্টেম্বর ২০২৬)। ⛔ ভ্যাট বাদ, এ মাসের পাকা ফেরত বাদ — অডিট ⛔২ (৬ অক্টোবর ২০২৬); বিক্রয়ের
+         * "এ মাসের মোট লাভ"-এর একই নিয়ম ([[SalesCharts::profit()]]), তাই দুই পাতা এক মার্জিন বলে।
+         */
+        $sum = fn (string $table) => self::inView(DB::table($table), $table.'.branch_id')
             ->where('company_id', CompanyContext::id())
             ->whereIn('status', DocumentStatus::POSTED)
-            ->whereBetween('trx_date', [
-                Carbon::today()->startOfMonth()->toDateString(),
-                Carbon::today()->endOfMonth()->toDateString(),
-            ])
-            ->selectRaw('COALESCE(SUM(total), 0) as sold, COALESCE(SUM(cost_of_goods), 0) as cost')
+            ->whereBetween('trx_date', $month)
+            ->selectRaw('COALESCE(SUM(total - tax), 0) as sold, COALESCE(SUM(cost_of_goods), 0) as cost')
             ->first();
+        $row = $sum('sal_invoices');
+        $back = $sum('sal_returns');
 
-        $sold = (string) ($row->sold ?? '0');
-        $cost = (string) ($row->cost ?? '0');
+        $sold = bcsub((string) ($row->sold ?? '0'), (string) ($back->sold ?? '0'), 4);
+        $cost = bcsub((string) ($row->cost ?? '0'), (string) ($back->cost ?? '0'), 4);
 
         if (bccomp($sold, '0', 4) === 0) {
             return null;

@@ -151,18 +151,27 @@ final class SalesCharts
             return null;
         }
 
+        $month = [Carbon::today()->startOfMonth()->toDateString(), Carbon::today()->endOfMonth()->toDateString()];
+
+        /*
+         * ⛔ ভ্যাট বাদ, ফেরত বাদ — অডিট ⛔২ (৬ অক্টোবর ২০২৬)। ⓘ ভ্যাট সরকারের টাকা, আমাদের বিক্রি নয়; আর এ মাসে ফেরত আসা
+         * মাল বিক্রিও কমায়, তার খরচও। আগে বিলের মোট (ভ্যাটসহ) থেকে খরচ বাদ দিয়ে "লাভ" বলা হত, ফেরত ধরা হত না।
+         */
         $row = SalesInvoice::query()
             ->posted()
-            ->whereBetween('trx_date', [
-                Carbon::today()->startOfMonth()->toDateString(),
-                Carbon::today()->endOfMonth()->toDateString(),
-            ])
-            ->selectRaw('COALESCE(SUM(total), 0) as sold, COALESCE(SUM(cost_of_goods), 0) as cost')
+            ->whereBetween('trx_date', $month)
+            ->selectRaw('COALESCE(SUM(total - tax), 0) as sold, COALESCE(SUM(cost_of_goods), 0) as cost')
+            ->toBase()
+            ->first();
+        $back = \App\Modules\Sales\Models\SalesReturn::query()
+            ->posted()
+            ->whereBetween('trx_date', $month)
+            ->selectRaw('COALESCE(SUM(total - tax), 0) as sold, COALESCE(SUM(cost_of_goods), 0) as cost')
             ->toBase()
             ->first();
 
-        $sold = (string) ($row->sold ?? '0');
-        $cost = (string) ($row->cost ?? '0');
+        $sold = bcsub((string) ($row->sold ?? '0'), (string) ($back->sold ?? '0'), 4);
+        $cost = bcsub((string) ($row->cost ?? '0'), (string) ($back->cost ?? '0'), 4);
 
         if (bccomp($sold, '0', 4) === 0) {
             return null;

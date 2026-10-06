@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Modules\Finance\Services;
 
-use App\Core\Support\ViewedBranch;
 use App\Modules\Accounts\Services\AccountsFacts;
 use App\Modules\Accounts\Services\StandardChart;
 
@@ -37,9 +36,9 @@ final class CfoFigures
         $allMoney = bcadd(bcadd($money['cash'], $money['bank'], 4), $money['mfs'], 4);
 
         // ⭐ হেডারে বাছা শাখায় (৩০ সেপ্টেম্বর ২০২৬) — [[ViewedBranch]] — টাকা আর প্রাপ্য-দেনা ([[AccountsFacts]]) যেমন মানে
-        $branch = ViewedBranch::one();
-        $assets = StandardChart::find('1100')?->balanceOn(null, $branch) ?? '0';
-        $liabilities = StandardChart::find('2100')?->balanceOn(null, $branch) ?? '0';
+        // ⭐ দেখার জের — "সব শাখা"-তেও মানুষের নাগাল (অডিট ⛔১১; [[Account::balanceInView()]])
+        $assets = StandardChart::find('1100')?->balanceInView() ?? '0';
+        $liabilities = StandardChart::find('2100')?->balanceInView() ?? '0';
 
         $hasLiabilities = bccomp($liabilities, '0', 4) > 0;
         $current = $hasLiabilities ? bcdiv($assets, $liabilities, 2) : null;
