@@ -186,7 +186,8 @@ final class PurchaseBillService
              */
             $given = trim((string) ($data['document_no'] ?? ''));
 
-            if ($given !== '' && PurchaseBill::query()->where('document_no', $given)->exists()) {
+            // ⭐ শাখার দেয়াল ছাড়া, কোম্পানির দেয়াল রেখে — নম্বর পুরো কোম্পানিতে একটাই (পুরো ERP অডিট, ক্রয় ⚠️৮, ৬ অক্টোবর ২০২৬)
+            if ($given !== '' && PurchaseBill::acrossBranches()->where('document_no', $given)->exists()) {
                 throw ValidationException::withMessages([
                     'bill_no' => __('purchase::validation.bill_no_taken', ['no' => $given]),
                 ]);
@@ -1044,7 +1045,8 @@ final class PurchaseBillService
         for ($attempt = 0; $attempt < 50; $attempt++) {
             $candidate = $this->numbers->next('PBL');
 
-            if (! PurchaseBill::query()->where('document_no', $candidate)->exists()) {
+            // ⭐ শাখার দেয়াল ছাড়া, কোম্পানির দেয়াল রেখে — নম্বর পুরো কোম্পানিতে একটাই (পুরো ERP অডিট, ক্রয় ⚠️৮, ৬ অক্টোবর ২০২৬)
+            if (! PurchaseBill::acrossBranches()->where('document_no', $candidate)->exists()) {
                 return $candidate;
             }
         }
@@ -1842,7 +1844,8 @@ final class PurchaseBillService
             return;
         }
 
-        $exists = PurchaseBill::query()
+        // ⭐ একই সরবরাহকারীর একই বিল অন্য শাখায়ও নয় — দুবার পরিশোধের ঝুঁকি (পুরো ERP অডিট, ক্রয় ⚠️৮, ৬ অক্টোবর ২০২৬)
+        $exists = PurchaseBill::acrossBranches()
             ->where('supplier_id', $supplierId)
             ->where('supplier_bill_no', $billNo)
             ->where('status', '<>', DocumentStatus::CANCELLED)
