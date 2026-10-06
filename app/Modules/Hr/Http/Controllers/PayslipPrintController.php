@@ -7,6 +7,7 @@ namespace App\Modules\Hr\Http\Controllers;
 use App\Core\Engines\Print\PaperSize;
 use App\Core\Engines\Print\PrintableDocument;
 use App\Core\Engines\Print\PrintEngine;
+use App\Core\Security\FieldSecurity;
 use App\Core\Services\PaperTrail;
 use App\Core\Services\SettingsService;
 use App\Core\Support\Money;
@@ -106,7 +107,10 @@ class PayslipPrintController extends Controller implements HasMiddleware
                 __('hr::field.department') => (string) $employee?->department?->name(),
                 __('hr::field.month') => $run->month->format('F Y'),
                 __('hr::field.payment_method') => __('hr::kind.'.$slip->payment_method),
-                __('hr::field.bank_account_no') => (string) $slip->bank_account_no,
+                // ⛔ পরিচয়ের চাবি ছাড়া ঢাকা (অডিট HR ⛔৩) — কর্মীর পাতার একই নিয়ম ([[FieldSecurity::show()]])
+                // ⓘ নম্বর না থাকলে ঘরটাই নেই — ফাঁকা ঘরে "••••" দেখালে নগদের কর্মীরও একটা নম্বর আছে মনে হত
+                __('hr::field.bank_account_no') => blank($slip->bank_account_no)
+                    ? '' : (string) FieldSecurity::show($slip, 'bank_account_no', (string) $slip->bank_account_no),
             ], fn (string $value) => $value !== ''),
             totals: [
                 __('hr::field.gross') => Money::format($slip->gross),

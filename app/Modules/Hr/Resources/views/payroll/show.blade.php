@@ -21,9 +21,12 @@
                 {{-- ব্যাংক ফাইল কেবল নিশ্চিত করা রানে। টাকা পাঠানোর
                      নির্দেশ যেন খাতায় না বসা বেতন থেকে না বেরোয়। --}}
                 @if ($run->isConfirmed())
-                    <x-ui.button tone="primary" :href="route('hr.payroll.bank_file', $run->id)">
-                        {{ __('hr::action.bank_file') }}
-                    </x-ui.button>
+                    {{-- ⓘ ফাইলে ব্যাংক-নম্বর, তাই পরিচয়ের চাবিও — চাবি ছাড়া বোতামই নেই, চাপলে ৪০৩ নয় --}}
+                    @can('hr.identity.view')
+                        <x-ui.button tone="primary" :href="route('hr.payroll.bank_file', $run->id)">
+                            {{ __('hr::action.bank_file') }}
+                        </x-ui.button>
+                    @endcan
                 @endif
             </x-slot:actions>
         </x-ui.page-header>

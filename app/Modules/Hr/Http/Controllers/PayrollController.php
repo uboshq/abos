@@ -32,6 +32,11 @@ class PayrollController extends Controller implements HasMiddleware
     {
         return [
             new Middleware('can:hr.payroll.view', only: ['index', 'show', 'bankFile']),
+            /*
+             * ⛔ ব্যাংকের ফাইলে প্রতিটা কর্মীর হিসাব আর রাউটিং নম্বর — পরিচয়ের চাবিও লাগে (পুরো-ERP অডিট, ৬ অক্টোবর ২০২৬ HR ⛔৩)।
+             * ⓘ মডিউল এই ঘরগুলোকে `hr.identity.view`-এর বলে ([[FieldSecurity]]), অথচ ফাইলটা কেবল বেতন দেখার চাবিতে নামত।
+             */
+            new Middleware('can:hr.identity.view', only: ['bankFile']),
             new Middleware('can:hr.payroll.manage', only: ['create', 'store', 'rebuild', 'confirm', 'cancel']),
         ];
     }
