@@ -72,7 +72,9 @@ final class OneQrOpensThePaperForTheRightPeopleOnlyTest extends TestCase
         $this->assertNotNull($again['gate_out']['at'] ?? null, 'দ্বিতীয় স্ক্যান বলেনি কবে বেরিয়েছিল।');
         $this->assertSame(1, GatePass::query()->where('delivery_challan_id', $challan->id)->count(), '⛔ দ্বিতীয় স্ক্যানে আরেকটা গেট পাস।');
 
-        $this->postJson('/api/v1/sales/scan/'.$token.'/deliver', ['receiver_name' => 'দোকানি'])->assertOk()
+        // ⭐ ফোন-নম্বর ছাড়া নয় (ধাপ ৭, ৬ অক্টোবর ২০২৬)
+        $this->postJson('/api/v1/sales/scan/'.$token.'/deliver', ['receiver_name' => 'দোকানি'])->assertUnprocessable();
+        $this->postJson('/api/v1/sales/scan/'.$token.'/deliver', ['receiver_name' => 'দোকানি', 'receiver_phone' => '01711-000000'])->assertOk()
             ->assertJsonPath('stage', 'delivered');
     }
 

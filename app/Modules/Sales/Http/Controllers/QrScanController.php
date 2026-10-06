@@ -92,7 +92,17 @@ class QrScanController extends Controller
         return response()->json($this->facts($request, $challan->fresh()));
     }
 
-    /** `POST /api/v1/sales/scan/{token}/deliver` — "ডেলিভারি নিশ্চিত" */
+    /**
+     * `POST /api/v1/sales/scan/{token}/deliver` — "ডেলিভারি নিশ্চিত"।
+     *
+     * ⭐ পৌঁছানোর প্রমাণ — মালিকের বিক্রয় পরিকল্পনা (সংস্করণ ২) ধাপ ৭, ৬ অক্টোবর ২০২৬: *"ডিলার বুঝে নিলেন — নাম, ফোন;
+     * QR, ফোন বা বোতাম। কম বা ভাঙা মাল → ফেরত বা দাবি"*।
+     *   · নাম আর ফোন দুইটাই লাগে — ফোন ছাড়া পরে কাউকে জিজ্ঞেস করার পথ থাকে না
+     *   · `lines` (সারির ক্রমিক → ভালো অবস্থায় নেওয়া) আর `damaged` (ক্রমিক → ভাঙা) দিলে আর কোথাও কম বা ভাঙা থাকলে
+     *     "আংশিক পৌঁছেছে" — ওয়েবের একই সেবা ([[DeliveryStageService::partialLines()]], [[ShortDeliveryReturn]]): কম ফেরত
+     *     বিক্রয়যোগ্য, ভাঙা আটকে রাখা মজুদে; সব পুরো হলে "পৌঁছেছে"
+     * ⓘ সারি চেনা যায় ক্রমিকে — ভেতরের id ফোনে যায় না।
+     */
     public function deliver(Request $request, string $token): JsonResponse
     {
         $challan = $this->challan($token);
@@ -100,15 +110,66 @@ class QrScanController extends Controller
 
         $data = $request->validate([
             'receiver_name' => ['required', 'string', 'max:120'],
-            'receiver_phone' => ['nullable', 'string', 'max:30'],
+            'receiver_phone' => ['required', 'string', 'max:30'],
+            'lines' => ['nullable', 'array'],
+            'lines.*' => ['nullable'],
+            'damaged' => ['nullable', 'array'],
+            'damaged.*' => ['nullable'],
         ]);
 
-        DB::transaction(function () use ($challan, $data) {
-            $this->stages->move($challan, DeliveryStage::DELIVERED, $data + ['note' => __('sales::qr.delivered_note')]);
-            app(AuditEngine::class)->recordAction($challan, 'qr.delivered');
+        [$to, $data] = $this->outcome($challan, $data);
+
+        DB::transaction(function () use ($challan, $data, $to) {
+            $this->stages->move($challan, $to, $data + ['note' => __('sales::qr.delivered_note')]);
+            app(AuditEngine::class)->recordAction($challan, $to === DeliveryStage::DELIVERED ? 'qr.delivered' : 'qr.partially_delivered');
         });
 
         return response()->json($this->facts($request, $challan->fresh()));
+    }
+
+    /**
+     * পুরো না আংশিক — ক্রমিক → চালানের সারি; কোথাও কম বা ভাঙা থাকলে আংশিক, সেবার নিজের ঘরে।
+     *
+     * @param  array<string, mixed>  $data
+     * @return array{0: string, 1: array<string, mixed>}
+     */
+    private function outcome(DeliveryChallan $challan, array $data): array
+    {
+        $given = (array) ($data['lines'] ?? []);
+        $broken = (array) ($data['damaged'] ?? []);
+        unset($data['lines'], $data['damaged']);
+
+        if ($given === [] && $broken === []) {
+            return [DeliveryStage::DELIVERED, $data];
+        }
+
+        $byNo = $challan->lines()->get()->keyBy(fn ($l) => (string) $l->line_no);
+        $lines = [];
+        $damaged = [];
+        $partial = false;
+
+        foreach ($byNo as $no => $line) {
+            $took = array_key_exists($no, $given) ? $given[$no] : (string) $line->delivered_qty;
+            $bad = $broken[$no] ?? '0';
+            $lines[$line->id] = $took;
+            $damaged[$line->id] = $bad;
+
+            if (! is_numeric($took) || ! is_numeric($bad)
+                || bccomp((string) $took, (string) $line->delivered_qty, 4) !== 0 || bccomp((string) $bad, '0', 4) !== 0) {
+                $partial = true;
+            }
+        }
+
+        // ⛔ অচেনা ক্রমিক — সেবার "অন্য চালানের সারি" বার্তাই, পথ যা-ই হোক
+        foreach ([...array_keys($given), ...array_keys($broken)] as $no) {
+            if (! $byNo->has((string) $no)) {
+                throw \Illuminate\Validation\ValidationException::withMessages(['lines' => __('sales::delivery.errors.line_not_on_challan')]);
+            }
+        }
+
+        return $partial
+            ? [DeliveryStage::PARTIALLY_DELIVERED, $data + ['lines' => $lines, 'damaged' => $damaged]]
+            : [DeliveryStage::DELIVERED, $data];
     }
 
     // ── যন্ত্রপাতি ──────────────────────────────────────────────────────
@@ -150,6 +211,8 @@ class QrScanController extends Controller
             'stage' => $stage,
             'customer' => ['name' => $challan->customer?->name(), 'code' => $challan->customer?->code],
             'lines' => $challan->lines->map(fn ($l) => [
+                // ⓘ সারির ক্রমিক — "আংশিক পৌঁছেছে"-তে ফোন এটা দিয়েই সারি চেনায় ([[deliver()]])
+                'line' => (int) $l->line_no,
                 'product' => $l->product?->name(),
                 'qty' => bcadd((string) $l->delivered_qty, '0', 4),
                 'free_qty' => bcadd((string) ($l->free_qty ?? '0'), '0', 4),
