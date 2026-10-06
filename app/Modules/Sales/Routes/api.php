@@ -57,6 +57,9 @@ Route::prefix('v1/sales')
         Route::post('/direct/void', [\App\Modules\Sales\Http\Controllers\DirectSaleApiController::class, 'void'])->name('direct.void');
         Route::get('/direct/price/{product}', [\App\Modules\Sales\Http\Controllers\DirectSaleApiController::class, 'price'])->whereUuid('product')->name('direct.price');
         // ⭐ ফোনে বিক্রি ফেরত — ওয়েবের একই যাচাই, সেবা আর সারাংশ ([[SalesReturnApiController]], ৪ অক্টোবর ২০২৬)
+        // ⭐ টাকা আদায় — কেবল পড়া, ওয়েবের আদায়ের চাবিতে ([[CollectionApiController]], মালিক, ৬ অক্টোবর ২০২৬)
+        Route::get('/collections', [\App\Modules\Sales\Http\Controllers\CollectionApiController::class, 'index'])->name('collection.index');
+        Route::get('/collections/{id}', [\App\Modules\Sales\Http\Controllers\CollectionApiController::class, 'show'])->whereUuid('id')->name('collection.show');
         Route::get('/returns/setup', [\App\Modules\Sales\Http\Controllers\SalesReturnApiController::class, 'setup'])->name('return.setup');
         Route::get('/returns/invoice/{id}', [\App\Modules\Sales\Http\Controllers\SalesReturnApiController::class, 'invoice'])->whereUuid('id')->name('return.invoice');
         Route::post('/returns', [\App\Modules\Sales\Http\Controllers\SalesReturnApiController::class, 'store'])->name('return.store');
