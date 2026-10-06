@@ -25,6 +25,15 @@ final class EveryPartyListFollowsTheViewedBranchTest extends TestCase
         'app/Modules/Sales/Http/Controllers/PortalController.php' => 'গ্রাহক-পোর্টালের লগইন — গ্রাহক নিজে ঢুকছেন, কর্মীর হেডার নেই',
         'app/Modules/Sales/Http/Controllers/SalesOrderController.php' => 'একজনকে নাম ধরে খোঁজা (find) — তালিকা নয়',
         'app/Modules/Supplier/Http/Controllers/SupplierController.php' => 'একজন সরবরাহকারীর ধরন আছে কি না (exists) — তালিকা নয়',
+        // ⓘ ৬ অক্টোবর ২০২৬ (ec, পাহারার মিথ্যা লাল) — প্রতিটা লাইন পড়ে মেলানো: একজনকে চাবি ধরে খোঁজা, বা আগেই শাখায়
+        //   ছাঁকা আইডির নাম আনা; কোনোটাই বাছাইয়ের তালিকা নয়
+        'app/Modules/Sales/Http/Controllers/DepositRequestController.php' => 'একজন গ্রাহককে ঠিকানার চাবি (uuid/id) ধরে খোঁজা — তালিকা নয়',
+        'app/Modules/Sales/Http/Controllers/OrderStandingController.php' => 'একজন গ্রাহককে ঠিকানার চাবি (uuid/id) ধরে খোঁজা — তালিকা নয়',
+        'app/Modules/Sales/Http/Controllers/DirectSaleApiController.php' => 'ফোনের পাঠানো একজন গ্রাহক public_id ধরে, আর বাছা সরবরাহকারীদের id→public_id মানচিত্র — তালিকা নয়',
+        'app/Modules/Sales/Http/Controllers/DirectSaleController.php' => 'জমা দেওয়া একজন গ্রাহককে id ধরে খোঁজা (find) — তালিকা নয়',
+        'app/Modules/Sales/Http/Controllers/SalesReturnApiController.php' => 'ফোনের পাঠানো একজন গ্রাহক public_id ধরে — তালিকা নয়',
+        'app/Modules/Customer/Dashboard/CustomerTradeCharts.php' => 'চার্টের নাম — আইডিগুলো আগেই দেখা শাখার বিক্রি আর বকেয়া থেকে বাছা; গোনার তালিকা নিজে inViewedBranch()',
+        'app/Modules/Supplier/Dashboard/SupplierCharts.php' => 'চার্টের নাম — আইডিগুলো আগেই দেখা শাখায় ছাঁকা ক্রয় থেকে ([[DataScope::inView()]])',
         'app/Modules/Accounts/Dashboard/AccountsDashboard.php' => 'কেবল মন্তব্যে নাম আছে, কোডে নয়',
     ];
 

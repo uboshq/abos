@@ -1,5 +1,5 @@
 {{--
-    ডিলারের নিজের DO — তালিকা আর "নতুন DO" (মালিকের বিক্রয়-ধারা, ২ অক্টোবর ২০২৬)। কেবল নিজের ([[PortalDeliveryOrderController]])।
+    গ্রাহকের নিজের DO — তালিকা আর "নতুন DO" (মালিকের বিক্রয়-ধারা, ২ অক্টোবর ২০২৬)। কেবল নিজের ([[PortalDeliveryOrderController]])।
 --}}
 <x-sales::portal.layout :customer="$customer">
     <h1 class="mb-3 text-lg font-semibold">{{ __('sales::delivery_order.title') }}</h1>

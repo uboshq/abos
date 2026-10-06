@@ -66,35 +66,17 @@ class ThePortalDoesNotCallThemDealersAgainTest extends TestCase
      * থাকে, আর পাহারাটা চুপ থাকে। **সংখ্যা বাড়লে ধরা পড়ে, বদলালে
      * নয়** — তাই পাশের কারণটাই আসল পাহারা, সংখ্যাটা নয়।
      */
-    private const ALLOWED = [
-        /*
-         * গ্রাহকের **ধরন** — খুচরা, পাইকারি, ডিলার।
-         *
-         * এটা পোর্টালের গ্রাহক নয়, একটা তালিকার সারি। মালিক ধরনটা
-         * নিয়ে আলাদা সিদ্ধান্ত নিচ্ছেন, আর সেটা এই কাজের অংশ নয়।
-         */
-        'app/Modules/Customer/Models/Customer.php' => [1, 'গ্রাহকের ধরনের তালিকা — খুচরা · পাইকারি · ডিলার'],
-
-        /*
-         * জাবেদার উদাহরণ আর ক্রেডিট-লিমিটের গল্প।
-         *
-         * "ডিলার টাকাটা কোম্পানিকে দিয়েছে" — এটা পরিবেশকের ব্যবসার
-         * একটা ঘটনা, পোর্টালের কোনো পর্দা নয়। আর "১৪৮ জনের মধ্যে বড়
-         * ডিলারও আছেন" মানে গ্রাহকদের **মধ্যে** কেউ কেউ ডিলার।
-         */
-        'app/Modules/Customer/module.php' => [2, 'পরিবেশকের ব্যবসার উদাহরণ — গ্রাহকদের মধ্যে যাঁরা ডিলার'],
-
-        /*
-         * কমিশনের রুটগুলোর মাথায় লেখা মন্তব্য।
-         *
-         * ফাইলটা পোর্টালের রুটও ধরে, তাই এলাকার ভিতরে পড়ে — কিন্তু
-         * এই লাইনটা কমিশনের, আর কমিশন ডিলারই পান।
-         */
-        'app/Modules/Sales/Routes/web.php' => [1, 'কমিশনের রুটের মন্তব্য — কমিশন ডিলারই পান, প্রত্যেক গ্রাহক নন'],
-    ];
+    /*
+     * ⓘ ৬ অক্টোবর ২০২৬: তিনটা ছাড়ই মুছল — গ্রাহকের ধরনের তালিকা, Customer module-এর উদাহরণ আর কমিশনের রুটের মন্তব্য।
+     * তিনটাতেই শব্দটা মন্তব্যে বা শনাক্তকারীতে, পর্দায় নয়; দেখা লেখা গোনার পরে ([[visibleText()]]) এগুলো আর গোনায় আসে না।
+     * ⛔ ঘোষিত ছাড় না মিললে পাহারা লাল হত ("ছাড়টা বাসি"), তাই তালিকা খালি আর বাজেট শূন্য।
+     *
+     * @var array<string, array{0: int, 1: string}>
+     */
+    private const ALLOWED = [];
 
     /** বাজেট — মালিকের ratchet নিয়ম: **কেবল কমবে**। */
-    private const BUDGET = 3;
+    private const BUDGET = 0;
 
     public function test_the_portal_calls_them_customers(): void
     {
@@ -122,6 +104,14 @@ class ThePortalDoesNotCallThemDealersAgainTest extends TestCase
              * তাই শ্রেণির নাম বদলালে এটাও সঙ্গে বদলায়।
              */
             $source = str_replace(class_basename(self::class), '', $source);
+
+            /*
+             * ⭐ কেবল মানুষ যা পড়ে — মালিকের শব্দের সিদ্ধান্ত পর্দা, ছাপা আর শব্দ-ফাইলের জন্য (fe-র মাধ্যমে, ৬ অক্টোবর ২০২৬)।
+             * ⛔ আগে গোটা ফাইল গোনা হত: মন্তব্য, শনাক্তকারী (`$dealer`, `dealer_id`), রুটের নাম আর পরীক্ষার নামও — তাই
+             * পোর্টাল ছোঁয়া ২৪টা ফাইল লাল, অথচ পর্দায় শব্দটা কোথাও নেই। ⓘ এখন [[visibleText()]]; পাহারা যে এখনো
+             * দেখা লেখায় লাল হয়, তা [[test_a_visible_dealer_is_still_caught_and_code_is_not()]] দেখায়।
+             */
+            $source = $this->visibleText($path, $source);
 
             $found = 0;
 
@@ -254,6 +244,78 @@ class ThePortalDoesNotCallThemDealersAgainTest extends TestCase
                 yield $path => $source;
             }
         }
+    }
+
+    /**
+     * ⭐ পাহারা দেখা লেখায় লাল হয়, কোডে নয় — ৬ অক্টোবর ২০২৬।
+     */
+    public function test_a_visible_dealer_is_still_caught_and_code_is_not(): void
+    {
+        $count = fn (string $path, string $source): int => array_sum(array_map(
+            fn (string $word) => substr_count($this->visibleText($path, $source), $word), self::RETIRED));
+
+        // ⛔ দেখা লেখা — ধরা পড়তেই হবে
+        $this->assertSame(1, $count('x/portal.blade.php', '<h1>ডিলারের পাতা</h1>'), 'পর্দার লেখায় "ডিলার" ধরা পড়ল না।');
+        $this->assertSame(1, $count('x/portal.blade.php', '<input placeholder="Dealer name">'), 'পর্দার placeholder-এ ধরা পড়ল না।');
+        $this->assertSame(1, $count('x/lang/bn/portal.php', "<?php return ['title' => 'ডিলারের DO'];"), 'শব্দ-ফাইলের মানে ধরা পড়ল না।');
+        $this->assertSame(1, $count('x/PortalThing.php', "<?php abort(403, 'Only a dealer may open this');"), 'বার্তার বাক্যে ধরা পড়ল না।');
+
+        // ⓘ কোড — মন্তব্য, শনাক্তকারী, রুটের নাম, ব্লেডের হিসাব
+        $this->assertSame(0, $count('x/portal.blade.php', "{{-- ডিলারের পাতা --}}<p>{{ \$dealer->name }}</p><div x-show=\"dealerOpen\" @click=\"dealer = 1\"></div>"));
+        $this->assertSame(0, $count('x/lang/bn/portal.php', "<?php /* ডিলার */ return ['dealer_title' => 'গ্রাহকের DO'];"));
+        $this->assertSame(0, $count('x/PortalThing.php', "<?php // ডিলার\n\$dealer = route('sales.scan.dealer', ['dealer_id' => 1]);"));
+    }
+
+    /**
+     * ফাইলের সেই অংশ যা মানুষ পর্দায়, ছাপায় বা বার্তায় পড়ে।
+     *
+     * ⓘ ব্লেড: মন্তব্য, `@php`, `<script>`, `{{ … }}`/`{!! … !!}`, ডিরেক্টিভ আর কোডের গুণ (`x-…`, `:…`, `@…`, `wire:…`,
+     * `class`, `id`, `name`, `href`, `data-…`) বাদে বাকিটা। শব্দ-ফাইল (`/lang/`): মন্তব্য বাদে কেবল মান। বাকি PHP: কেবল
+     * স্ট্রিং যা বাক্য (ফাঁকা আছে) বা বাংলা — `'dealer_id'`, `'sales.scan.dealer'` শনাক্তকারী, পড়ার লেখা নয়।
+     */
+    private function visibleText(string $path, string $source): string
+    {
+        // ⓘ পরীক্ষার লেখা (দাবির বার্তা, নমুনা) মানুষ পড়ে না; পর্দায় শব্দটা গেলে অ্যাপের ফাইলেই ধরা পড়ে
+        if (str_contains($path, '/tests/')) {
+            return '';
+        }
+
+        if (str_ends_with($path, '.blade.php')) {
+            $text = preg_replace([
+                '/\{\{--.*?--\}\}/s',
+                '/@php\b.*?@endphp/s',
+                '/<script\b.*?<\/script>/is',
+                '/\{!!.*?!!\}/s',
+                '/\{\{.*?\}\}/s',
+                // ⓘ কোডের গুণ ডিরেক্টিভের আগে — নইলে `@click`-এর নাম মুছে মানটা ("dealer = 1") লেখা হয়ে থাকত
+                '/\s(?:x-[\w.:-]+|:[\w.:-]+|@[\w.:-]+|wire:[\w.:-]+|class|id|name|href|data-[\w-]+)\s*=\s*(?:"[^"]*"|\'[^\']*\')/s',
+                '/\sdata-[\w-]+/', // ⓘ মানহীন `data-…` গুণ — পরীক্ষার হাতল, পড়ার লেখা নয়
+                '/@\w+\s*\((?:[^()]|\((?:[^()]|\([^()]*\))*\))*\)/s',
+                '/@\w+/',
+                '/<\/?[\w:.-]+/',
+            ], ' ', $source);
+
+            return (string) $text;
+        }
+
+        $strings = [];
+
+        foreach (token_get_all($source) as $token) {
+            if (is_array($token) && $token[0] === T_CONSTANT_ENCAPSED_STRING) {
+                $strings[] = substr($token[1], 1, -1);
+            }
+        }
+
+        if (str_contains($path, '/lang/')) {
+            // ⓘ মান — `=>`-এর ডানদিকের স্ট্রিং; চাবি শনাক্তকারী
+            preg_match_all('/=>\s*([\'"])((?:\\\\.|(?!\1).)*)\1/s', implode("\n", array_map(
+                fn ($t) => is_array($t) && in_array($t[0], [T_COMMENT, T_DOC_COMMENT], true) ? '' : (is_array($t) ? $t[1] : $t),
+                token_get_all($source))), $values);
+
+            return implode("\n", $values[2]);
+        }
+
+        return implode("\n", array_filter($strings, fn (string $s) => preg_match('/\s|[\x{0980}-\x{09FF}]/u', $s) === 1));
     }
 
     private function relative(string $path): string

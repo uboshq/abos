@@ -43,7 +43,9 @@ final class EveryExcuseWeGrantedIsCountedTest extends TestCase
         'EveryListPageHasTheToolbarTest::NOT_A_LIST',
         // ⓘ যোগফলের পট্টি ছাড়া তালিকা — গ্রাহকের পোর্টাল (নিজের লেআউট), আর পাশের সেশনের অকমিটেড নতুন পাতা (৫ অক্টোবর ২০২৬)
         'EveryListCarriesItsTotalsBarTest::EXEMPT',
-        'EveryListCarriesItsTotalsBarTest::PENDING',
+        // ⓘ EveryListCarriesItsTotalsBarTest::PENDING এখন খালি (দামের বইয়ের পাতায় পট্টি বসেছে, ৫ অক্টোবর) — খালি ধ্রুবক চাবিওয়ালা
+        //   তালিকা হিসেবে চেনা যায় না, তাই এখানে নাম রাখলে "খুঁজে পাওয়া যাচ্ছে না" মিথ্যা লাল (ec, ৬ অক্টোবর ২০২৬)।
+        //   আবার সারি বসলে নামটা ফেরান, CEILING-ও সেই মাপে বাড়ান।
         'EveryMoneyListShowsAGrandTotalTest::NOT_A_SUM',
         'EveryPartyListFollowsTheViewedBranchTest::EXCUSED',
         'ACodeMadeFromANameCanComeOutEmptyTest::HANDLED',
@@ -87,7 +89,11 @@ final class EveryExcuseWeGrantedIsCountedTest extends TestCase
         'NoIndexNameStandsAtTheEdgeTest::AT_THE_EDGE',
         'NoSensitiveFieldIsPrintedInTheOpenTest::OPEN_ON_PURPOSE',
         'TheBranchWallStandsOnEveryDocumentTest::NO_WALL_ON_PURPOSE',
-        'ThePortalDoesNotCallThemDealersAgainTest::ALLOWED',
+        // ⓘ +১১ ডিলারের দেয়ালের ছাড় (⛔১৬): বাঁধনটা নিজে, লিড ও সুযোগ (নিজেরটা নিজে দেখা), প্রমোশনের চারটা
+        //   যাচাইয়ের সারি, আর চালান-ধরা পাঁচটা লাইন/ঘটনা যা দেয়ালঘেরা কাগজের ভিতর দিয়েই পৌঁছায়
+        'EveryDealerPaperStandsBehindTheDealerWallTest::EXCUSED',
+        // ⓘ ThePortalDoesNotCallThemDealersAgainTest::ALLOWED এখন খালি (পাহারা কেবল দেখা লেখা গোনে, ৬ অক্টোবর ২০২৬) —
+        //   খালি ধ্রুবক চেনা যায় না, তাই নাম সরানো আর CEILING থেকে তার ৩টা সারি বাদ
     ];
 
     /**
@@ -318,11 +324,25 @@ final class EveryExcuseWeGrantedIsCountedTest extends TestCase
      *   −১  EveryListCarriesItsTotalsBarTest::PENDING — দামের বইয়ের পাতায় পট্টি বসল, নামটা কাটা হলো
      */
     /*
+     * ── ⚠️ ৩২১ → ৩৩৪, ৬ অক্টোবর ২০২৬ (abos-ec, পাহারার মিথ্যা লাল — fe-র নির্দেশ) ─────────────────────────────────
+     *   +৪  MoneyIsNeverAFloatTest::FLOAT_IS_DELIBERATE — লগইনের জায়গার অক্ষাংশ/দ্রাঘিমাংশ, দুইটা কেবল-তুলনা, আর কাউন্টারের
+     *       পর্দার JS-এ পাঠানো দেখানোর সংখ্যা; কোনোটাই টাকা জমা বা গোনে না
+     *   +২  MoneyNeverLandsOnAGroupAccountTest::GROUPS_BELONG_HERE — ছক আমদানির যমজ-খোঁজ আর খাতা-মেলানোর রিপোর্ট;
+     *       কোনোটাই খাত বাছে না
+     *   +৭  EveryPartyListFollowsTheViewedBranchTest::EXCUSED — একজনকে চাবি ধরে খোঁজা (পাঁচটা), আর আগেই শাখায় ছাঁকা
+     *       আইডির নাম (দুই চার্ট); প্রতিটা লাইন পড়ে মেলানো
+     */
+    /*
      * ── ⚠️ +৩, ৬ অক্টোবর ২০২৬ (abos-2c, ফোনের ঘণ্টা) ─────────────────────────────────────────────────────────────
      *   +৩  EveryRouteIsGuardedTest::TOKEN_SYNC — api.notifications.index / read / read-all: নিজের খবর, ওয়েবের
      *       notifications.open আর read-all-এর মতোই চাবিহীন; মালিকানা NotificationService::markRead()-এ, অন্যেরটায় ৪০৪
      */
-    private const CEILING = 321;
+    /*
+     * ── ⚠️ ৩৩৪ → ৩৩১, ৬ অক্টোবর ২০২৬ (abos-ec) ───────────────────────────────────────────────────────────────────
+     *   −৩  ThePortalDoesNotCallThemDealersAgainTest::ALLOWED — পাহারা কেবল দেখা লেখা গোনে; তিনটা ছাড়ের শব্দই মন্তব্যে
+     *       বা শনাক্তকারীতে ছিল, তাই তালিকা খালি
+     */
+    private const CEILING = 342;
 
     /*
      * ── ⚠️ ২২২ → ২২৪, ২৩ সেপ্টেম্বর ২০২৬ ───────────────────────────

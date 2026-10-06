@@ -7,9 +7,9 @@ declare(strict_types=1);
  */
 return [
     'who_title' => 'Sign in to open this paper',
-    'who_note' => 'Depot staff choose the staff sign-in; buyers and dealers choose the dealer sign-in. After signing in you come straight back to this paper.',
+    'who_note' => 'Depot staff choose the staff sign-in; customers choose the customer sign-in. After signing in you come straight back to this paper.',
     'staff_login' => 'Staff sign-in',
-    'dealer_login' => 'Dealer sign-in',
+    'dealer_login' => 'Customer sign-in',
 
     'staff_title' => 'Scan — :no',
     'next_hint' => 'Below is the current stage and the button for the next one. Press it to set the next stage.',

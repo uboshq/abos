@@ -234,6 +234,11 @@ class MoneyIsNeverAFloatTest extends TestCase
      * @var array<string, string> ফাইল => কারণ
      */
     private const FLOAT_IS_DELIBERATE = [
+        // ⓘ ৬ অক্টোবর ২০২৬ (ec, পাহারার মিথ্যা লাল): চারটাই টাকা জমা বা গোনা নয় — পড়ে মিলিয়ে দেখা
+        'app/Core/Services/LoginPlace.php' => 'লগইনের জায়গা — অক্ষাংশ/দ্রাঘিমাংশ আর নির্ভুলতার মিটার, টাকা নয়',
+        'app/Modules/Customer/Support/CustomerListFilters.php' => 'তুলনা — শূন্যের কম কি না; মানটা নিজে bcadd-এ যায়',
+        'app/Modules/Sales/Http/Requests/DirectSaleRules.php' => 'তুলনা — খরচ শূন্যের বেশি কি না, গোল করার সীমা পেরোল কি না; টাকা জমা হয় সেবায়, bcmath-এ',
+        'app/Modules/Sales/Services/DirectSaleOptions.php' => 'কাউন্টারের পর্দার জাভাস্ক্রিপ্টে পাঠানো ভ্যাটের হার আর কেনা দর — দেখানোর সংখ্যা; বিলের সব হিসাব সেবায়, bcmath-এ',
         'app/Core/Engines/Print/PaperLook.php' => 'কাগজের মাপ (মিমি, pt) — A5-এ ×০.৭২/×০.৮৫, টাকা নয় (৩০ সেপ্টেম্বর ২০২৬)',
         'app/Models/Attachment.php' => 'ফাইলের আকার, টাকা নয়',
         'app/Modules/Inventory/Http/Requests/StockTransferRequest.php' => 'তুলনা — খালি সারি ছাঁকা',
