@@ -364,6 +364,15 @@ final class PayrollService
                 ? bcmul($component['amount'], $factor, 10)
                 : $component['amount'], 2);
 
+            /*
+             * ⛔ অগ্রিমের কিস্তি কর্মীর খোলা অগ্রিমের বেশি নয় — পুরো-ERP অডিট, ৬ অক্টোবর ২০২৬ (HR ⛔৪)। ⓘ কিস্তি মাসিক নির্দিষ্ট
+             * অঙ্ক, বাকির সাথে বাঁধা ছিল না: অগ্রিম শোধ হয়ে গেলেও প্রতি মাসে কাটা চলত। এখন মাস-শেষে তাঁর নামের ১১৩১-এর জের পর্যন্ত।
+             */
+            if (! $head->isEarning() && $this->isAdvance($this->accountFor($head)?->id)) {
+                $open = $this->advanceOpen($employee, $monthEnd);
+                $amount = bccomp($amount, $open, 2) > 0 ? Money::round(bccomp($open, '0', 2) > 0 ? $open : '0', 2) : $amount;
+            }
+
             PayslipLine::create([
                 'company_id' => $run->company_id,
                 'payslip_id' => $slip->id,
@@ -445,6 +454,13 @@ final class PayrollService
         $credits = [];
         $net = '0';
 
+        /*
+         * ⛔ অগ্রিমের আদায় কর্মী ধরে, তাঁর নামে — পুরো-ERP অডিট, ৬ অক্টোবর ২০২৬ (HR ⛔৪)। ⓘ অগ্রিম দেওয়া হয় ভাউচারে কর্মীর নামে
+         * (১১৩১, পক্ষ `employee`), অথচ বেতনের কর্তন খাত ধরে একসাথে, নাম ছাড়া বসত — ১১৩১-এর মোট কমত, কারও নিজের জের নয়, আর
+         * "কে কত বাকি" চিরকাল ভুল থাকত। বাকি কর্তন আগের মতো খাত ধরে একসাথে।
+         */
+        $owed = [];
+
         foreach ($run->payslips as $slip) {
             $net = bcadd($net, (string) $slip->net, 4);
 
@@ -455,6 +471,13 @@ final class PayrollService
                     throw ValidationException::withMessages([
                         'account' => __('hr::validation.head_needs_an_account', ['head' => $line->head_code]),
                     ]);
+                }
+
+                if (! $line->isEarning() && $this->isAdvance((int) $accountId)) {
+                    $key = $accountId.':'.$slip->employee_id;
+                    $owed[$key] = [(int) $accountId, (int) $slip->employee_id, bcadd($owed[$key][2] ?? '0', (string) $line->amount, 4)];
+
+                    continue;
                 }
 
                 $bucket = $line->isEarning() ? 'debits' : 'credits';
@@ -504,7 +527,51 @@ final class PayrollService
             $lines[] = ['account_id' => (int) $accountId, 'credit' => $amount, 'narration' => $narration];
         }
 
+        foreach ($owed as [$accountId, $employeeId, $amount]) {
+            if (bccomp($amount, '0', 4) === 0) {
+                continue;
+            }
+
+            $lines[] = [
+                'account_id' => $accountId, 'credit' => $amount, 'narration' => $narration,
+                'party_type' => Employee::drillSourceType(), 'party_id' => $employeeId,
+            ];
+        }
+
         return $lines;
+    }
+
+    /** খাতটা কি কর্মীর অগ্রিম (১১৩১ বা তার নিচে) — কারও নামে বসে এমন খাত */
+    private function isAdvance(?int $accountId): bool
+    {
+        if ($accountId === null) {
+            return false;
+        }
+
+        $this->advanceIds ??= StandardChart::find(StandardChart::EMPLOYEE_ADVANCE)?->selfAndDescendants()
+            ->map(fn ($a) => (int) $a->id)->all() ?? [];
+
+        return in_array($accountId, $this->advanceIds, true);
+    }
+
+    /** @var list<int>|null */
+    private ?array $advanceIds = null;
+
+    /**
+     * মাস-শেষে কর্মীর নামের খোলা অগ্রিম — খাতায় বসা দেওয়া − আদায়, গোটা কোম্পানি (শাখা নয়: অগ্রিম মানুষের, শাখার নয়)।
+     */
+    private function advanceOpen(Employee $employee, Carbon $monthEnd): string
+    {
+        $this->isAdvance(0);
+
+        return bcadd((string) DB::table('ledger_entries')
+            ->where('company_id', CompanyContext::id())
+            ->whereIn('account_id', $this->advanceIds)
+            ->where('party_type', Employee::drillSourceType())
+            ->where('party_id', $employee->id)
+            ->where('trx_date', '<=', $monthEnd->toDateString())
+            ->selectRaw('COALESCE(SUM(debit), 0) - COALESCE(SUM(credit), 0) as n')
+            ->value('n'), '0', 2);
     }
 
     /**

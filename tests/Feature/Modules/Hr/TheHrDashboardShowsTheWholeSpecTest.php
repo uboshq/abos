@@ -99,6 +99,7 @@ final class TheHrDashboardShowsTheWholeSpecTest extends TestCase
         $structure->set($person, SalaryHead::query()->findOrFail($heads['BASIC']), '2026-01-01', '20000');
         $structure->set($person, SalaryHead::query()->findOrFail($heads['MEDICAL']), '2026-01-01', '1500');
         $structure->set($person, SalaryHead::query()->findOrFail($heads['ADVANCE']), '2026-01-01', '700');
+        $this->giveAdvance($person, '5000', Carbon::today()->startOfMonth()->toDateString());
 
         $month = Carbon::today()->startOfMonth();
         $payroll = app(PayrollService::class);
@@ -159,5 +160,21 @@ final class TheHrDashboardShowsTheWholeSpecTest extends TestCase
     private function total(?Breakdown $panel): int
     {
         return array_sum(array_map('intval', array_column($panel?->parts ?? [], 'value')));
+    }
+
+    /**
+     * ⓘ কর্মীর নামে আসল অগ্রিম — খাতায় (১১৩১, পক্ষ `employee`)। অগ্রিমের কিস্তি এখন খোলা অগ্রিমের বেশি কাটে না
+     * (পুরো-ERP অডিট, ৬ অক্টোবর ২০২৬ HR ⛔৪), তাই কিস্তি কাটতে হলে আগে অগ্রিমটা দিতে হয়।
+     */
+    private function giveAdvance(\App\Modules\Hr\Models\Employee $employee, string $amount, string $on): void
+    {
+        app(\App\Modules\Accounts\Services\StandardChart::class)->install();
+        $cash = \App\Modules\Accounts\Models\Account::query()->money()->postable()->active()->orderBy('code')->firstOrFail();
+
+        app(\App\Core\Engines\Posting\PostingEngine::class)->post(sourceType: 'payment_voucher', sourceId: random_int(1, 9_999_999), trxDate: $on, lines: [
+            ['account_id' => \App\Modules\Accounts\Services\StandardChart::find(\App\Modules\Accounts\Services\StandardChart::EMPLOYEE_ADVANCE)->id,
+                'debit' => $amount, 'party_type' => 'employee', 'party_id' => $employee->id],
+            ['account_id' => $cash->id, 'credit' => $amount],
+        ]);
     }
 }

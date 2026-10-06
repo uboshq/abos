@@ -75,6 +75,22 @@ class AttendanceAndLeaveTest extends TestCase
     }
 
     /** একজন কর্মী, মূল ২০,০০০ — অগস্টে (৩১ দিন) হিসাব সহজ থাকে। */
+    /**
+     * ⓘ কর্মীর নামে আসল অগ্রিম — খাতায় (১১৩১, পক্ষ `employee`)। অগ্রিমের কিস্তি এখন খোলা অগ্রিমের বেশি কাটে না
+     * (পুরো-ERP অডিট, ৬ অক্টোবর ২০২৬ HR ⛔৪), তাই কিস্তি কাটতে হলে আগে অগ্রিমটা দিতে হয়।
+     */
+    private function giveAdvance(\App\Modules\Hr\Models\Employee $employee, string $amount, string $on): void
+    {
+        app(\App\Modules\Accounts\Services\StandardChart::class)->install();
+        $cash = \App\Modules\Accounts\Models\Account::query()->money()->postable()->active()->orderBy('code')->firstOrFail();
+
+        app(\App\Core\Engines\Posting\PostingEngine::class)->post(sourceType: 'payment_voucher', sourceId: random_int(1, 9_999_999), trxDate: $on, lines: [
+            ['account_id' => \App\Modules\Accounts\Services\StandardChart::find(\App\Modules\Accounts\Services\StandardChart::EMPLOYEE_ADVANCE)->id,
+                'debit' => $amount, 'party_type' => 'employee', 'party_id' => $employee->id],
+            ['account_id' => $cash->id, 'credit' => $amount],
+        ]);
+    }
+
     private function employee(): Employee
     {
         $employee = app(EmployeeService::class)->create([
@@ -371,6 +387,7 @@ class AttendanceAndLeaveTest extends TestCase
             '2026-01-15',
             '1000',
         );
+        $this->giveAdvance($employee, '5000', '2026-07-01');
 
         $this->switchProrationOn();
 
