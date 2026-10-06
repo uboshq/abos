@@ -9,6 +9,9 @@ use App\Core\Engines\Report\ReportDefinition;
 use App\Core\Engines\Report\ReportEngine;
 use App\Core\Support\DocumentStatus;
 use App\Core\Support\Money;
+use App\Modules\Accounts\Models\Loan;
+use App\Modules\Accounts\Models\LoanInstalment;
+use App\Modules\Accounts\Models\LoanMovement;
 use App\Modules\Finance\Models\Deposit;
 use App\Modules\Finance\Models\DepositKind;
 use App\Modules\Finance\Models\DepositMovement;
@@ -20,6 +23,7 @@ use Illuminate\Support\Facades\DB;
  *
  *   ক জমা সুদ — একটা দিন পর্যন্ত অর্জিত কিন্তু না-পাওয়া মুনাফা, উৎসে কর বাদে নিট ([[ACCRUED]])
  *   খ DPS কিস্তির সময়সূচি — প্রতি মাসে দেয়, দেওয়া, সইয়ের অপেক্ষায়, বাকি, আর দিন পেরোলে বকেয়া ([[INSTALMENTS]])
+ *   ঘ ঋণের বিপরীতে জামানত — কোন জমা কোন ঋণে বাঁধা, ঋণের বাকি, আটকানো না ছাড়ার যোগ্য ([[LIENS]])
  *
  * ── ⭐ একটাই উৎস ─────────────────────────────────────────────────────────────
  * প্রতিটা চলাচল ([[DepositMovement]]) গোনা হয় কেবল যখন তার ভাউচার খাতায় বসেছে (শেষ সই পড়েছে), বা ভাউচারই নেই (পুরনো
@@ -31,6 +35,8 @@ final class DepositReports
 
     public const INSTALMENTS = 'finance.deposit_instalments';
 
+    public const LIENS = 'finance.deposit_liens';
+
     // ⛔ জমার পাতা যে চাবি দেখে, সেটাই — সব কয়টার
     private const KEY = 'finance.deposit.view';
 
@@ -41,6 +47,7 @@ final class DepositReports
     {
         $engine->register(self::accrued());
         $engine->register(self::instalments());
+        $engine->register(self::liens());
     }
 
     /**
@@ -242,6 +249,74 @@ final class DepositReports
                 ['key' => 'waiting', 'label' => 'finance::deposit_report.waiting', 'type' => ReportColumn::MONEY],
                 ['key' => 'outstanding', 'label' => 'finance::deposit_report.outstanding', 'type' => ReportColumn::MONEY],
                 ['key' => 'overdue', 'label' => 'finance::deposit_report.overdue', 'type' => ReportColumn::MONEY],
+            ],
+        );
+    }
+
+    /**
+     * ⭐ ঘ — ঋণের বিপরীতে জামানত: যে খোলা জমা কোনো ঋণে বাঁধা, সেই ঋণ, তার বাকি, আর জমাটা এখন আটকানো কি না।
+     *
+     * ⓘ আটকানো = [[Deposit::isLocked()]]-এর হুবহু নিয়ম: ঋণটা চলতি সীমা (CC — খালি থাকলেও সীমা খোলা) হলে, বা বাকি শূন্যের
+     * বেশি হলে। বাকি = [[Loan::outstanding()]]-এর একই উৎস: ঋণের আসলের খাতে তার নিজের চলাচল আর কিস্তির সারি, নেওয়া ঋণে
+     * ক্রেডিট − ডেবিট। দাবি দুটোকে প্রতিটা জমায় মেলায়, তাই পাতা আর রিপোর্ট কখনো আলাদা কথা বলে না।
+     *
+     * ⚠️ জমা এখন পুরনো ঋণের সারিতে (`acc_loans`) বাঁধা; ব্যাংক ঋণের নতুন খাতায় (`fin_bank_facilities`) বাঁধার ঘর আসছে
+     * (সমন্বয়কের সিদ্ধান্ত প্র৪, ৬ অক্টোবর ২০২৬) — তখন এই রিপোর্ট দুটোই পড়বে।
+     */
+    private static function liens(): ReportDefinition
+    {
+        return new ReportDefinition(
+            key: self::LIENS,
+            permission: self::KEY,
+            title: 'finance::deposit_report.liens_title',
+            filters: ['date_range'],
+            asOfDate: true,
+            query: function (array $f): Builder {
+                $pdo = DB::getPdo();
+                $sign = 'CASE WHEN MIN(l.direction) = '.$pdo->quote(Loan::GIVEN).' THEN 1 ELSE -1 END';
+
+                // ⓘ ঋণের বাকি — [[Loan::outstanding()]]-এর একই সারি; দিন ধরে নয়, আজকের (জামানত ছাড়ার প্রশ্ন আজকের)
+                $owed = DB::table('acc_loans as l')
+                    ->leftJoin('ledger_entries as le', function ($j) {
+                        $j->on('le.account_id', '=', 'l.principal_account_id')
+                            ->where(fn ($w) => $w->where(fn ($m) => $m->where('le.source_type', LoanMovement::drillSourceType())
+                                ->whereRaw('le.source_id IN (SELECT lm.id FROM acc_loan_movements lm WHERE lm.loan_id = l.id)'))
+                                ->orWhere(fn ($i) => $i->where('le.source_type', LoanInstalment::drillSourceType())
+                                    ->whereRaw('le.source_id IN (SELECT li.id FROM acc_loan_instalments li WHERE li.loan_id = l.id)')));
+                    })
+                    ->where('l.company_id', $f['company_id'])
+                    ->groupBy('l.id')
+                    ->selectRaw("l.id as loan_id, COALESCE(SUM(le.debit - le.credit), 0) * {$sign} as owed");
+
+                $state = 'CASE WHEN l.kind = '.$pdo->quote(Loan::CC).' OR COALESCE(o.owed, 0) > 0 THEN '
+                    .$pdo->quote((string) __('finance::deposit_report.lien_locked')).' ELSE '
+                    .$pdo->quote((string) __('finance::deposit_report.lien_free')).' END';
+
+                return self::openOn($f, (string) $f['to'])
+                    ->join('acc_loans as l', 'l.id', '=', 'd.pledged_to_loan_id')
+                    ->leftJoinSub($owed, 'o', 'o.loan_id', '=', 'l.id')
+                    ->where('d.held_by', Deposit::BUSINESS)
+                    ->selectRaw('d.document_no as document_no, '.$pdo->quote(Deposit::drillSourceType()).' as source_type, d.id as source_id, '
+                        .'d.institution as institution, d.principal as principal, d.matures_on as matures_on, '
+                        ."CONCAT(l.lender, ' · ', l.document_no) as loan, l.sanctioned as sanctioned, COALESCE(o.owed, 0) as owed, {$state} as state")
+                    ->orderBy('l.lender')
+                    ->orderBy('d.id');
+            },
+            columns: [
+                [
+                    'key' => 'document_no',
+                    'label' => 'finance::deposit_report.deposit',
+                    'type' => ReportColumn::DOCUMENT,
+                    'source_type' => 'source_type',
+                    'source_id' => 'source_id',
+                ],
+                ['key' => 'institution', 'label' => 'finance::deposit_report.institution'],
+                ['key' => 'principal', 'label' => 'finance::deposit_report.principal', 'type' => ReportColumn::MONEY],
+                ['key' => 'matures_on', 'label' => 'finance::deposit_report.matures_on', 'type' => ReportColumn::DATE, 'width' => '7rem'],
+                ['key' => 'loan', 'label' => 'finance::deposit_report.loan'],
+                ['key' => 'sanctioned', 'label' => 'finance::deposit_report.sanctioned', 'type' => ReportColumn::MONEY, 'total' => false],
+                ['key' => 'owed', 'label' => 'finance::deposit_report.owed', 'type' => ReportColumn::MONEY, 'total' => false],
+                ['key' => 'state', 'label' => 'finance::deposit_report.lien_state'],
             ],
         );
     }

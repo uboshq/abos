@@ -41,4 +41,13 @@ return [
     'notice_matured_body' => 'Matured on :date, :days days ago, and the deposit is still open. Record the encashment or the renewal.',
     'notice_dps' => ':institution :document — DPS instalment overdue',
     'notice_dps_body' => ':count months of instalments overdue — Tk :amount',
+
+    'liens_short' => 'Loan security',
+    'liens_title' => 'Deposits held against loans (lien)',
+    'loan' => 'Loan',
+    'sanctioned' => 'Loan limit',
+    'owed' => 'Loan owed',
+    'lien_state' => 'State',
+    'lien_locked' => 'Held',
+    'lien_free' => 'Can be released',
 ];

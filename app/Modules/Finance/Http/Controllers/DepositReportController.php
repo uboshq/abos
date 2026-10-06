@@ -25,12 +25,14 @@ class DepositReportController extends Controller
     public const SLUGS = [
         'accrued' => DepositReports::ACCRUED,
         'instalments' => DepositReports::INSTALMENTS,
+        'liens' => DepositReports::LIENS,
     ];
 
     /** রিপোর্টের সারি — প্রতিটা রিপোর্টের মাথায় আর জমার পাতায় একই ক্রমে */
     public const TABS = [
         'accrued' => 'finance::deposit_report.accrued_short',
         'instalments' => 'finance::deposit_report.instalments_short',
+        'liens' => 'finance::deposit_report.liens_short',
     ];
 
     public function __construct(

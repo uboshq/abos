@@ -44,4 +44,14 @@ return [
     'notice_matured_body' => 'মেয়াদপূর্তি :date, :days দিন আগে — জমাটা এখনো খোলা। ভাঙানো বা নবায়ন লিখুন।',
     'notice_dps' => ':institution-এর :document — DPS কিস্তি বকেয়া',
     'notice_dps_body' => ':count মাসের কিস্তি বকেয়া — ৳:amount',
+
+    // ঘ — ঋণের বিপরীতে জামানত
+    'liens_short' => 'ঋণের জামানত',
+    'liens_title' => 'ঋণের বিপরীতে জামানত (লিয়েন)',
+    'loan' => 'কোন ঋণে',
+    'sanctioned' => 'ঋণের সীমা',
+    'owed' => 'ঋণের বাকি',
+    'lien_state' => 'অবস্থা',
+    'lien_locked' => 'আটকানো',
+    'lien_free' => 'ছাড়ার যোগ্য',
 ];

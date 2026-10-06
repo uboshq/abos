@@ -214,6 +214,57 @@ class TheFdBehindTheLoanTest extends TestCase
      * থাকলে শোধ করা ঋণের FD চিরকাল আটকে দেখাত, আর মালিক জানতেন না
      * তাঁর টাকাটা আসলে ছাড়া পেয়ে গেছে।
      */
+    /**
+     * ⭐ জামানতের রিপোর্ট ([[DepositReports::LIENS]], অর্থ-মডিউলের পরিকল্পনা ৪.৫, ৬ অক্টোবর ২০২৬) প্রতিটা জমায় জমার নিজের
+     * নিয়মের ([[Deposit::isLocked()]]) সাথে মেলে — চালু টার্ম ঋণ, শোধ হওয়া ঋণ, খালি সিসি সীমা; ঋণের বাকিও [[Loan::outstanding()]]-এর
+     * হুবহু। ⛔ মালিকের নামের জমা আর বাঁধা নয় এমন জমা রিপোর্টে নেই।
+     */
+    public function test_the_lien_report_says_what_each_deposit_says(): void
+    {
+        $running = $this->bankLoan('300000');
+        $paidOff = $this->bankLoan('100000');
+        $cc = $this->bankLoan('500000', Loan::CC);
+        app(LoanService::class)->repay($paidOff, '100000', $this->cash()->id, '2026-09-01');
+        // ⓘ চালু ঋণের প্রথম কিস্তি শোধ — বাকি কমে, কিস্তির সারি থেকে (চলাচল নয়)
+        $first = $running->instalments()->orderBy('no')->firstOrFail();
+        $this->putMoneyIn($this->cash(), '200000', '2026-08-31');
+        app(LoanService::class)->payInstalment($first, $this->cash()->id, '2026-09-01');
+        $this->assertSame(-1, bccomp($running->refresh()->outstanding(), '300000', 4), 'প্রস্তুতিটাই ভুল — কিস্তি বাকি কমায়নি');
+
+        $fds = [
+            $this->fd('200000', $running->id),
+            $this->fd('150000', $running->id),
+            $this->fd('50000', $paidOff->id),
+            $this->fd('80000', $cc->id),
+        ];
+        $loose = $this->fd('40000');
+        // ⛔ মালিকের নামের জমা ঋণে বাঁধা থাকলেও (পুরনো তথ্য) — ব্যবসার জামানত নয়
+        $owners = $this->fd('30000', heldBy: Deposit::OWNER);
+        Deposit::query()->whereKey($owners->id)->update(['pledged_to_loan_id' => $running->id]);
+
+        $result = app(\App\Core\Engines\Report\ReportEngine::class)->run(\App\Modules\Finance\Reports\DepositReports::LIENS,
+            ['from' => now()->toDateString(), 'to' => now()->toDateString()]);
+        $rows = collect($result->rows)->map(fn ($r) => (array) $r)->keyBy('source_id');
+
+        foreach ($fds as $fd) {
+            $fd->refresh();
+            $row = $rows->get($fd->id);
+            $this->assertNotNull($row, "জমা {$fd->document_no} রিপোর্টে নেই");
+            $this->assertSame(
+                __($fd->isLocked() ? 'finance::deposit_report.lien_locked' : 'finance::deposit_report.lien_free'),
+                $row['state'],
+                "⛔ {$fd->document_no}: রিপোর্ট আর জমার নিয়ম আলাদা কথা বলে",
+            );
+            $this->assertSame(0, bccomp($fd->pledgedToLoan->outstanding(), (string) $row['owed'], 4), "{$fd->document_no}: ঋণের বাকি");
+        }
+
+        $this->assertSame([true, true, false, true], array_map(fn ($fd) => $fd->isLocked(), $fds), 'প্রস্তুতিটাই ভুল — চার অবস্থা নেই');
+        $this->assertFalse($rows->has($loose->id), '⛔ বাঁধা নয় এমন জমা জামানতের রিপোর্টে');
+        $this->assertFalse($rows->has($owners->id), '⛔ মালিকের নামের জমা ব্যবসার জামানতে');
+
+        $this->get(route('finance.deposit.report.show', ['slug' => 'liens']))->assertOk()->assertSee('Sonali Bank');
+    }
+
     public function test_paying_off_the_loan_frees_the_fd(): void
     {
         $loan = $this->bankLoan('300000');
