@@ -668,7 +668,10 @@ final class MasterListService implements ProvisionsCompany
             ['INST', 'Institution', 'প্রতিষ্ঠান', ['applies_to' => PartyType::BOTH]],
 
             // সরবরাহকারী ও ভেন্ডর
-            ['VENDOR', 'Vendor', 'সরবরাহকারী', ['applies_to' => PartyType::SUPPLIER]],
+            // ⭐ মালিক, ৬ অক্টোবর ২০২৬: "প্রিন্সিপাল শুধু ম্যানুফ্যাকচারারের জন্য, ডিপোর জন্য; সাধারণ সরবরাহকারী সেবাদাতায়"।
+            // ⓘ কোড VENDOR থাকে (মূল সরবরাহকারী তালিকা এই কোড ধরে চেনে — [[Supplier::VENDOR_CODE]]), নাম প্রিন্সিপাল।
+            ['VENDOR', 'Principal', 'প্রিন্সিপাল', ['applies_to' => PartyType::SUPPLIER]],
+            ['GENERAL', 'Supplier', 'সরবরাহকারী', ['applies_to' => PartyType::SUPPLIER]],
             ['TRANSPORT', 'Transport Vendor', 'পরিবহনকারী', ['applies_to' => PartyType::SUPPLIER]],
             ['LABOUR', 'Labour Contractor', 'হাম্মালি ঠিকাদার', ['applies_to' => PartyType::SUPPLIER]],
             ['COURIER', 'Courier', 'কুরিয়ার', ['applies_to' => PartyType::SUPPLIER]],

@@ -228,7 +228,7 @@ class ImportTest extends TestCase
      */
     public function test_a_type_matches_by_code_or_by_name(): void
     {
-        foreach (['VENDOR', 'Vendor', 'সরবরাহকারী'] as $i => $value) {
+        foreach (['VENDOR', 'Principal', 'প্রিন্সিপাল'] as $i => $value) {
             $result = $this->runner()->check('supplier', $this->csv(
                 $this->header()."\n,Party {$i},,,,,,,,{$value},,0,0,\n"
             ));
