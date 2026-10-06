@@ -60,4 +60,5 @@ return [
     'received_by_its_sender' => 'Received by the person who sent it (super admin)',
     // ⓘ লট বলা ছিল, কিন্তু সেই লটের স্তরে খরচ নেই — বাকিটা আগের-আসা নিয়মে, নীরবে নয় ([[CostLayerService::issue()]])
     'lot_cost_fell_back' => 'Lot had no cost layer left; cost drawn first-in-first-out',
+    'opening_principal_set' => 'Opening stock principal set',
 ];

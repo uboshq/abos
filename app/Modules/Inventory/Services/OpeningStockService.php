@@ -68,10 +68,13 @@ final class OpeningStockService
         Carbon|string|null $date = null,
         ?string $narration = null,
         ?Batch $batch = null,
+
+        // ⭐ মালটা কোন সরবরাহকারী/প্রিন্সিপালের — ঐচ্ছিক; স্তরে বসে, "আসল" কমিশন সেখান থেকে পড়ে (মালিক, ৬ অক্টোবর ২০২৬)
+        ?int $supplierId = null,
     ): StockMovement {
         $this->assertSane($product, $warehouse, $qty, $unitCost, $batch);
 
-        return DB::transaction(function () use ($product, $warehouse, $qty, $unitCost, $date, $narration, $batch) {
+        return DB::transaction(function () use ($product, $warehouse, $qty, $unitCost, $date, $narration, $batch, $supplierId) {
             $movement = $this->stock->move(
                 product: $product,
                 warehouse: $warehouse,
@@ -104,6 +107,7 @@ final class OpeningStockService
 
                 // ⭐ স্তরও লট চেনে (চূড়ান্ত অডিট, [[CostLayerService::issue()]])
                 batch: $batch,
+                supplierId: $supplierId,
             );
 
             $this->opening->forInventory(
@@ -117,6 +121,129 @@ final class OpeningStockService
 
             return $movement;
         });
+    }
+
+    /**
+     * ⭐ এক চাপে অনেক সারি — খোলা মজুদের কার্ট (মালিক, ৬ অক্টোবর ২০২৬: *"পাশাপাশি করে দিলে হতো না"*)।
+     *
+     * ⓘ এক গুদাম, এক তারিখ, এক বিবরণ; প্রতি সারি এক পণ্য। সব সারি **এক লেনদেনে**: একটা সারি ভুল হলে কোনোটাই বসে না,
+     * আর প্রতিটা ভুল তার সারির নামে ফেরে (`rows.{i}.ঘর`) — পর্দা ঠিক সেই সারিটা লাল দেখায়।
+     * ⓘ খাতায় **একটা** দাখিলা, সব সারির মোট মূল্যে (Dr মজুদ / Cr শুরুর মূলধন), গুদামের শাখায়।
+     * ⓘ লট-ধরা পণ্যে লট খালি হলে লট-সিরিজ থেকে নম্বর (`LOT`), মেয়াদসহ।
+     *
+     * @param  list<array{product_id: int|string, qty: string, unit_cost: string, batch_no?: ?string, expiry_date?: ?string, supplier_id?: int|string|null}>  $rows
+     * @return list<StockMovement>
+     *
+     * @throws ValidationException
+     */
+    public function bringInMany(Warehouse $warehouse, array $rows, Carbon|string|null $date = null, ?string $narration = null): array
+    {
+        if ($rows === []) {
+            throw ValidationException::withMessages(['rows' => __('inventory::message.opening_cart_empty')]);
+        }
+
+        return DB::transaction(function () use ($warehouse, $rows, $date, $narration) {
+            $errors = [];
+            $movements = [];
+            $total = '0';
+
+            foreach (array_values($rows) as $i => $row) {
+                try {
+                    $product = Product::query()->find((int) ($row['product_id'] ?? 0));
+
+                    if ($product === null) {
+                        throw ValidationException::withMessages(['product_id' => __('inventory::message.opening_unknown_product')]);
+                    }
+
+                    $qty = (string) ($row['qty'] ?? '0');
+                    $cost = (string) ($row['unit_cost'] ?? '0');
+
+                    if (! is_numeric($qty) || ! is_numeric($cost)) {
+                        throw ValidationException::withMessages(['qty' => __('inventory::message.opening_needs_qty')]);
+                    }
+
+                    $movement = $this->bringInRow($product, $warehouse, $qty, $cost, $date, $narration, $row);
+                    $movements[] = $movement;
+                    $total = bcadd($total, bcmul($qty, $cost, 4), 4);
+                } catch (ValidationException $e) {
+                    foreach ($e->errors() as $field => $messages) {
+                        $errors["rows.{$i}.{$field}"] = $messages;
+                    }
+                }
+            }
+
+            // ⛔ একটা সারিও ভুল হলে কিছুই নয় — লেনদেনটা ফেরে, আর ভুলগুলো সারির নামে
+            if ($errors !== []) {
+                throw ValidationException::withMessages($errors);
+            }
+
+            $this->opening->forInventory(
+                sourceId: (int) $movements[0]->id,
+                documentNo: self::DOCUMENT_NO,
+                amount: $total,
+                date: $date,
+                branchId: $warehouse->branch_id === null ? null : (int) $warehouse->branch_id,
+            );
+
+            return $movements;
+        });
+    }
+
+    /**
+     * কার্টের এক সারি — যাচাই, লট (খালি হলে সিরিজ থেকে), মজুদ আর খরচের স্তর; খাতা নয় ([[bringInMany()]] একবারে বসায়)।
+     *
+     * @param  array<string, mixed>  $row
+     */
+    private function bringInRow(Product $product, Warehouse $warehouse, string $qty, string $cost, Carbon|string|null $date, ?string $narration, array $row): StockMovement
+    {
+        $batch = null;
+
+        if ($product->track_batch) {
+            $no = trim((string) ($row['batch_no'] ?? ''));
+
+            if ($no === '') {
+                $no = app(\App\Core\Engines\NumberSeries\NumberSeriesEngine::class)->next(
+                    'LOT', $warehouse->branch_id === null ? null : (int) $warehouse->branch_id, $date === null ? null : Carbon::parse($date), self::SOURCE_TYPE,
+                );
+            }
+
+            $batch = app(BatchService::class)->receive(product: $product, batchNo: $no, expiry: ($row['expiry_date'] ?? null) ?: null);
+        }
+
+        $this->assertSane($product, $warehouse, $qty, $cost, $batch);
+
+        $movement = $this->stock->move(
+            product: $product,
+            warehouse: $warehouse,
+            sourceType: self::SOURCE_TYPE,
+            sourceId: $product->id,
+            floor: $qty,
+            date: $date,
+            documentNo: self::DOCUMENT_NO,
+            narration: $narration ?? __('inventory::message.opening_narration'),
+            batch: $batch,
+        );
+
+        $supplier = $row['supplier_id'] ?? null;
+
+        // ⛔ প্রিন্সিপাল এই কোম্পানির সরবরাহকারীই — অন্যের id পাঠালে সারিটা থামে
+        if (filled($supplier) && ! DB::table('suppliers')->where('company_id', $product->company_id)->where('id', (int) $supplier)->whereNull('deleted_at')->exists()) {
+            throw ValidationException::withMessages(['supplier_id' => __('inventory::message.opening_unknown_principal')]);
+        }
+
+        $this->layers->receive(
+            product: $product,
+            qty: $qty,
+            unitCost: $cost,
+            sourceType: self::SOURCE_TYPE,
+            sourceId: $movement->id,
+            documentNo: self::DOCUMENT_NO,
+            date: $date,
+            batch: $batch,
+            supplierId: filled($supplier) ? (int) $supplier : null,
+        );
+
+        return $movement;
     }
 
     /**

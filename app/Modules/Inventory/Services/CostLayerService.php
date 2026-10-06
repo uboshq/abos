@@ -55,6 +55,9 @@ final class CostLayerService
          * লটহীন মাল — আচরণ আগের মতোই।
          */
         ?Batch $batch = null,
+
+        // ⭐ মালটা কার (সরবরাহকারী/প্রিন্সিপাল) — ক্রয়ে উৎস থেকে, খোলা মজুদে মানুষের বাছাই; "আসল" কমিশন এটাই পড়ে
+        ?int $supplierId = null,
     ): CostLayer {
         if (bccomp($qty, '0', 4) <= 0) {
             throw new RuntimeException('A cost layer needs a positive quantity.');
@@ -78,6 +81,7 @@ final class CostLayerService
 
             // ⓘ লট থাকলেই ঘরটা লেখা — লটহীন স্তরের সারি হুবহু আগের মতো
             ...($batch !== null ? ['batch_id' => $batch->id] : []),
+            ...($supplierId !== null ? ['supplier_id' => $supplierId] : []),
         ]);
     }
 
@@ -110,6 +114,7 @@ final class CostLayerService
         ?string $documentNo = null,
         Carbon|string|null $date = null,
         ?Batch $batch = null,
+        ?int $supplierId = null,
     ): array {
         if (bccomp($qty, '0', 4) <= 0) {
             throw new RuntimeException('A cost layer needs a positive quantity.');
@@ -159,14 +164,14 @@ final class CostLayerService
          */
         if (bccomp($higher, '0', 4) > 0) {
             $layers[] = $this->receive(
-                $product, $higher, bcadd($low, '0.0001', 4), $sourceType, $sourceId, $documentNo, $date, $batch
+                $product, $higher, bcadd($low, '0.0001', 4), $sourceType, $sourceId, $documentNo, $date, $batch, $supplierId
             );
         }
 
         $rest = bcsub($qty, $higher, 4);
 
         if (bccomp($rest, '0', 4) > 0) {
-            $layers[] = $this->receive($product, $rest, $low, $sourceType, $sourceId, $documentNo, $date, $batch);
+            $layers[] = $this->receive($product, $rest, $low, $sourceType, $sourceId, $documentNo, $date, $batch, $supplierId);
         }
 
         return $layers;

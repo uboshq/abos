@@ -32,6 +32,9 @@ class CostLayer extends Model
 
         // ⭐ স্তরটা কোন লটের — চূড়ান্ত অডিট, ৩০ সেপ্টেম্বর ২০২৬ ([[CostLayerService::issue()]])
         'batch_id',
+
+        // ⭐ মালটা কোন সরবরাহকারী/প্রিন্সিপালের — "আসল" কমিশনের অংশ এখান থেকে (৬ অক্টোবর ২০২৬)
+        'supplier_id',
     ];
 
     protected function casts(): array

@@ -176,4 +176,6 @@ return [
     'stock_filter' => 'Stock filter',
     'stock_value' => 'Stock value',
     'held_days' => 'Days held',
+    'opening_principal' => 'Supplier / principal',
+    'opening_principal_hint' => 'Whose goods these are — the principal commission counts their purchase cost as the principal share. Optional, can be set later.',
 ];

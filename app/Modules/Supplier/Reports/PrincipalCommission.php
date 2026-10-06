@@ -193,11 +193,8 @@ final class PrincipalCommission
      */
     public function costOfSales(int $company, int $branch, int $supplier, string $from, string $to): string
     {
-        $fromSupplier = fn (Builder $l) => $l->where(fn (Builder $q) => $q
-            ->where(fn (Builder $b) => $b->where('l.source_type', 'purchase_bill')
-                ->whereIn('l.source_id', DB::table('pur_bills')->where('company_id', $company)->where('supplier_id', $supplier)->select('id')))
-            ->orWhere(fn (Builder $r) => $r->where('l.source_type', 'purchase_receipt')
-                ->whereIn('l.source_id', DB::table('pur_receipts')->where('company_id', $company)->where('supplier_id', $supplier)->select('id'))));
+        // ⭐ স্তর নিজেই জানে মালটা কার (`inv_cost_layers.supplier_id`) — ক্রয়ে উৎস থেকে ভরা, খোলা মজুদে মানুষের বাছা (৬ অক্টোবর ২০২৬)
+        $fromSupplier = fn (Builder $l) => $l->where('l.supplier_id', $supplier);
 
         $sold = DB::table('inv_cost_layer_uses as u')
             ->join('inv_cost_layers as l', 'l.id', '=', 'u.cost_layer_id')

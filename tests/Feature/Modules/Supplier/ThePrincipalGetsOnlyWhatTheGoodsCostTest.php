@@ -203,7 +203,9 @@ final class ThePrincipalGetsOnlyWhatTheGoodsCostTest extends TestCase
             'document_no' => 'ACT-PB-'.$product->code, 'supplier_id' => $supplier->id, 'trx_date' => '2026-09-20']);
         app(StockService::class)->move(product: $product, warehouse: $this->storeA, sourceType: 'purchase_bill', sourceId: $bill->id, floor: $qty);
         app(CostLayerService::class)->receive(product: $product, qty: $qty, unitCost: $cost, sourceType: 'purchase_bill',
-            sourceId: $bill->id, documentNo: $bill->document_no, date: '2026-09-20');
+            sourceId: $bill->id, documentNo: $bill->document_no, date: '2026-09-20',
+            // ⓘ বিলের সেবা যা বসায় — স্তর জানে মালটা কার (৬ অক্টোবর ২০২৬; [[CostLayerService::receive()]])
+            supplierId: (int) $supplier->id);
     }
 
     private function sell(Product $product, string $qty, string $rate, ?Warehouse $store = null): SalesInvoice

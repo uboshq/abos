@@ -15,6 +15,13 @@
         <x-ui.page-header :title="__('inventory::menu.opening')" />
     </x-slot:header>
 
+    {{-- ⭐ আগে বসানো খোলা মজুদে প্রিন্সিপাল বসানোর পাতা (মালিক, ৬ অক্টোবর ২০২৬) --}}
+    <p class="mb-3 text-sm">
+        <a href="{{ route('inventory.stock.opening.principal') }}" class="text-(--color-brand-600) hover:underline" data-opening-principal-link>
+            {{ __('inventory::message.opening_principal_link') }}
+        </a>
+    </p>
+
     @if (session('saved'))
         <div role="status"
              class="mb-4 rounded-(--radius-field) bg-(--color-badge-success-bg) px-3 py-2 text-sm
@@ -35,68 +42,114 @@
         </div>
     @endif
 
-    <div class="grid gap-4 lg:grid-cols-[minmax(0,22rem)_minmax(0,1fr)]">
+    <div class="space-y-4">
 
-        <section data-boxed class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
-            <h2 class="mb-1 font-semibold">{{ __('inventory::menu.opening') }}</h2>
+        {{--
+            ⭐ খোলা মজুদের কার্ট — মালিক, ৬ অক্টোবর ২০২৬: *"এভাবে না দিয়ে পাশাপাশি করে দিলে হতো না"*।
+            ⓘ উপরে একবার গুদাম, তারিখ, বিবরণ; নিচে প্রতি সারি এক পণ্য। পণ্যের ঘর ব্রাউজারের নিজের তালিকা থেকে খোঁজে
+            (কোড, নাম বা বারকোড) — কোনো JS ছাড়াই। এক চাপে সব সারি, এক লেনদেনে ([[OpeningStockController::storeMany()]]);
+            একটা সারি ভুল হলে কোনোটাই বসে না, আর ভুল সারিটা লাল।
+        --}}
+        @php
+            $cartRows = max(15, min(200, (int) request('rows', 15)), count((array) old('rows', [])));
+            $bad = collect($errors->keys())
+                ->map(fn ($k) => preg_match('/^rows\.(\d+)\./', $k, $m) === 1 ? (int) $m[1] : null)
+                ->filter(fn ($v) => $v !== null)->unique()->values()->all();
+            $mainStore = $warehouses->firstWhere('is_default', true)?->id ?? ($warehouses->count() === 1 ? $warehouses->first()->id : null);
+        @endphp
+        <section data-boxed data-opening-cart class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
+            <h2 class="mb-1 font-semibold">{{ __('inventory::message.opening_cart_title') }}</h2>
             <p class="mb-3 max-w-(--spacing-prose-max) text-sm text-(--color-ink-muted)">
                 {{ __('inventory::message.opening_note') }}
+                <a href="{{ route('system_admin.import.index') }}" class="ms-2 text-(--color-brand-600) hover:underline" data-opening-import>
+                    {{ __('inventory::message.opening_cart_import') }}
+                </a>
             </p>
 
-            {{--
-                পরিমাণ × দর = মূল্য, চোখের সামনেই।
+            @if ($bad !== [])
+                <p role="alert" class="mb-3 text-sm font-medium text-(--color-badge-danger-ink)">{{ __('inventory::message.opening_cart_row_error') }}</p>
+            @endif
 
-                সংখ্যাটা সার্ভারই হিসাব করে বসায় — এখানকার অঙ্কটা শুধু
-                দেখার জন্য, যাতে দর লেখার সময়েই বোঝা যায় ব্যালেন্স শিটে
-                কত টাকা বসতে যাচ্ছে। ৫০ আর ৫০০ পাশাপাশি দেখতে প্রায় এক,
-                কিন্তু মূল্যের ঘরে পার্থক্যটা দশগুণ হয়ে চোখে পড়ে।
-            --}}
-            <form method="POST" action="{{ route('inventory.stock.opening.store') }}" class="space-y-3"
-                  x-data="openingValue">
+            <form method="POST" action="{{ route('inventory.stock.opening.cart') }}">
                 @csrf
 
-                <x-ui.select name="product_id" :label="__('inventory::field.product')"
-                             :options="$products->mapWithKeys(fn ($p) => [$p->id => $p->code . ' - ' . $p->name()])"
-                             placeholder="-" required />
-
-                <x-ui.select name="warehouse_id" :label="__('inventory::field.warehouse')"
-                             :options="$warehouses->mapWithKeys(fn ($w) => [$w->id => $w->name()])"
-                             placeholder="-" required />
-
-                <x-ui.field name="qty" type="number" step="0.01" min="0" inputmode="decimal"
-                            :label="__('inventory::field.quantity')" numeric required
-                            x-model="qty" />
-
-                <x-ui.field name="unit_cost" type="number" step="0.01" min="0" inputmode="decimal"
-                            :label="__('inventory::field.opening_rate')" numeric required
-                            x-model="rate" />
-
-                <div class="flex items-baseline justify-between rounded-(--radius-field)
-                            bg-(--color-surface-app) px-3 py-2">
-                    <span class="text-sm text-(--color-ink-muted)">
-                        {{ __('inventory::field.opening_value') }}
-                    </span>
-                    <span class="num font-semibold" x-text="value">—</span>
+                <div class="mb-3 grid gap-3 sm:grid-cols-3">
+                    <x-ui.select name="warehouse_id" :label="__('inventory::field.warehouse')"
+                                 :options="$warehouses->mapWithKeys(fn ($w) => [$w->id => $w->name()])"
+                                 :selected="old('warehouse_id', $mainStore)"
+                                 placeholder="-" required />
+                    <x-ui.field name="trx_date" type="date" :label="__('inventory::field.date')"
+                                :value="old('trx_date', now()->toDateString())" />
+                    <x-ui.field name="narration" :label="__('inventory::field.narration')" :value="old('narration')" />
                 </div>
 
-                {{--
-                    লট — কেবল যে পণ্যে লট ধরা হয়, তার জন্য।
+                <datalist id="opening-products">
+                    @foreach ($products as $p)
+                        <option value="{{ $p->code }} — {{ $p->name() }}{{ $p->barcode ? ' — '.$p->barcode : '' }}"></option>
+                    @endforeach
+                </datalist>
 
-                    ⓘ ঘর দুইটা সবসময়ই দেখা যায়, কারণ কোন পণ্যে লট ধরা
-                    আছে তা বাছার আগে জানা যায় না। ⚠️ লট ধরা না হলে
-                    সার্ভার নম্বরটা নীরবে ফেলে দেয় — নাহলে চালে-ডালে
-                    একটা অর্থহীন লট জন্মাত।
-                --}}
-                <x-ui.field name="batch_no" :label="__('inventory::field.batch_no')" />
+                <div class="overflow-x-auto">
+                    <table class="ui-list w-full text-sm">
+                        <thead>
+                            <tr class="border-b border-(--color-border) text-left text-(--color-ink-muted)">
+                                <th class="w-8">#</th>
+                                <th class="min-w-64">{{ __('inventory::field.product') }}</th>
+                                <th class="w-24 text-right">{{ __('inventory::field.quantity') }}</th>
+                                <th class="w-28 text-right">{{ __('inventory::field.opening_rate') }}</th>
+                                <th class="w-36">{{ __('inventory::field.batch_no') }}</th>
+                                <th class="w-36">{{ __('inventory::field.expiry_date') }}</th>
+                                <th class="w-44">{{ __('inventory::field.opening_principal') }}</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @for ($i = 0; $i < $cartRows; $i++)
+                                <tr data-cart-row="{{ $i }}" @class(['border-b border-(--color-border)/60', 'bg-(--color-badge-danger-bg)' => in_array($i, $bad, true)])>
+                                    <td class="num text-(--color-ink-muted)">{{ $i + 1 }}</td>
+                                    <td>
+                                        <input name="rows[{{ $i }}][product]" list="opening-products" autocomplete="off"
+                                               value="{{ old("rows.$i.product") }}" placeholder="{{ __('inventory::message.opening_cart_search') }}"
+                                               aria-label="{{ __('inventory::field.product') }} {{ $i + 1 }}"
+                                               class="w-full rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-2 py-1">
+                                        @foreach ($errors->get("rows.$i.*") as $messages)
+                                            @foreach ((array) $messages as $message)
+                                                <span class="block text-2xs text-(--color-badge-danger-ink)">{{ $message }}</span>
+                                            @endforeach
+                                        @endforeach
+                                    </td>
+                                    <td><input name="rows[{{ $i }}][qty]" type="number" step="any" min="0" inputmode="decimal" value="{{ old("rows.$i.qty") }}"
+                                               aria-label="{{ __('inventory::field.quantity') }} {{ $i + 1 }}"
+                                               class="num w-full rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-2 py-1 text-right"></td>
+                                    <td><input name="rows[{{ $i }}][unit_cost]" type="number" step="any" min="0" inputmode="decimal" value="{{ old("rows.$i.unit_cost") }}"
+                                               aria-label="{{ __('inventory::field.opening_rate') }} {{ $i + 1 }}"
+                                               class="num w-full rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-2 py-1 text-right"></td>
+                                    <td><input name="rows[{{ $i }}][batch_no]" value="{{ old("rows.$i.batch_no") }}" placeholder="{{ __('inventory::message.opening_cart_lot_auto') }}"
+                                               aria-label="{{ __('inventory::field.batch_no') }} {{ $i + 1 }}"
+                                               class="w-full rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-2 py-1"></td>
+                                    <td><input name="rows[{{ $i }}][expiry_date]" type="date" value="{{ old("rows.$i.expiry_date") }}"
+                                               aria-label="{{ __('inventory::field.expiry_date') }} {{ $i + 1 }}"
+                                               class="w-full rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-2 py-1"></td>
+                                    <td>
+                                        <select name="rows[{{ $i }}][supplier_id]" aria-label="{{ __('inventory::field.opening_principal') }} {{ $i + 1 }}"
+                                                class="w-full rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-2 py-1">
+                                            <option value="">—</option>
+                                            @foreach ($suppliers as $sid => $sname)
+                                                <option value="{{ $sid }}" @selected((string) old("rows.$i.supplier_id") === (string) $sid)>{{ $sname }}</option>
+                                            @endforeach
+                                        </select>
+                                    </td>
+                                </tr>
+                            @endfor
+                        </tbody>
+                    </table>
+                </div>
 
-                <x-ui.field name="expiry_date" type="date" :label="__('inventory::field.expiry_date')" />
-
-                <x-ui.field name="trx_date" type="date" :label="__('inventory::field.date')"
-                            :value="now()->toDateString()" />
-
-                <x-ui.field name="narration" :label="__('inventory::field.narration')" />
-
-                <x-ui.button type="submit" tone="primary">{{ __('core.action.save') }}</x-ui.button>
+                <div class="mt-3 flex flex-wrap items-center gap-3">
+                    <x-ui.button type="submit" tone="primary">{{ __('core.action.save') }}</x-ui.button>
+                    <a href="{{ route('inventory.stock.opening', ['rows' => $cartRows + 10]) }}" class="text-sm text-(--color-brand-600) hover:underline" data-cart-more>
+                        {{ __('inventory::message.opening_cart_add') }} (+10)
+                    </a>
+                </div>
             </form>
         </section>
 

@@ -231,6 +231,8 @@ final class PackRebase
                 'product_id' => $layer->product_id,
                 // ⭐ ভাগের সারিও মূল স্তরের লট — অডিট ম৭; ⛔ আগে খালি থাকত, আর এই পিসগুলোর দাম লটহীন হয়ে যেত
                 'batch_id' => $layer->batch_id,
+                // ⓘ মালটা কার — ভাগের সারিও মূল স্তরের প্রিন্সিপাল (৬ অক্টোবর ২০২৬)
+                'supplier_id' => $layer->supplier_id ?? null,
                 'source_type' => $layer->source_type,
                 'source_id' => $layer->source_id,
                 'document_no' => $layer->document_no,

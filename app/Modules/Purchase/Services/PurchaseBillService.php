@@ -557,6 +557,9 @@ final class PurchaseBillService
 
                 // ⭐ স্তরও লট চেনে (চূড়ান্ত অডিট, [[CostLayerService::issue()]])
                 batch: $batch,
+
+                // ⭐ আর মালটা কার — প্রিন্সিপালের "আসল" কমিশন এখান থেকে পড়ে (৬ অক্টোবর ২০২৬)
+                supplierId: (int) $bill->supplier_id,
             );
         }
     }

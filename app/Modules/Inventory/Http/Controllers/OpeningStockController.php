@@ -63,6 +63,9 @@ class OpeningStockController extends Controller implements HasMiddleware
              */
             'products' => $this->openProducts(),
 
+            // ⭐ মালটা কার — সরবরাহকারী/প্রিন্সিপাল, ঐচ্ছিক (৬ অক্টোবর ২০২৬)
+            'suppliers' => self::suppliers(),
+
             'entered' => $this->entered(),
 
             /*
@@ -76,6 +79,117 @@ class OpeningStockController extends Controller implements HasMiddleware
              */
             'total' => $this->enteredTotal(),
         ]);
+    }
+
+    /**
+     * এই কোম্পানির সরবরাহকারী — নাম, সংক্ষিপ্ত নাম আগে।
+     *
+     * ⓘ সরাসরি টেবিল থেকে, মডেল ছাড়া: মজুদ মডিউল সরবরাহকারী মডিউলের উপর নির্ভর করে না, তাই তার ক্লাস ডাকে না।
+     *
+     * @return array<int, string>
+     */
+    public static function suppliers(): array
+    {
+        $bn = app()->getLocale() === 'bn';
+
+        return DB::table('suppliers')
+            ->where('company_id', CompanyContext::id())
+            ->whereNull('deleted_at')
+            ->orderBy('name_en')
+            ->get(['id', 'short_name', 'name_en', 'name_bn'])
+            ->mapWithKeys(fn ($s) => [(int) $s->id => filled($s->short_name) ? (string) $s->short_name
+                : ($bn && filled($s->name_bn) ? (string) $s->name_bn : (string) $s->name_en)])
+            ->all();
+    }
+
+    /**
+     * ⭐ খোলা মজুদের কার্ট — এক চাপে অনেক সারি (মালিক, ৬ অক্টোবর ২০২৬: *"পাশাপাশি করে দিলে হতো না"*)।
+     *
+     * ⓘ উপরে একবার গুদাম, তারিখ, বিবরণ; নিচে প্রতি সারি এক পণ্য। পণ্যের ঘরে লেখা থাকে "কোড — নাম" (ব্রাউজারের তালিকা
+     * থেকে বাছা), সার্ভার কোড ধরে চেনে। খালি সারি বাদ। ⛔ সব সারি এক লেনদেনে ([[OpeningStockService::bringInMany()]]) —
+     * একটা ভুল হলে কিছুই বসে না, আর ভুলটা তার সারির নামে ফেরে।
+     */
+    public function storeMany(Request $request): RedirectResponse
+    {
+        $companyId = CompanyContext::id();
+
+        $head = $request->validate([
+            'warehouse_id' => ['required', 'integer', Rule::exists('inv_warehouses', 'id')->where('company_id', $companyId)],
+            'trx_date' => ['nullable', 'date', 'before_or_equal:today'],
+            'narration' => ['nullable', 'string', 'max:500'],
+            'rows' => ['required', 'array', 'max:500'],
+        ]);
+
+        $rows = [];
+        $unknown = [];
+
+        foreach ((array) $request->input('rows', []) as $i => $row) {
+            $typed = trim((string) ($row['product'] ?? ''));
+            $qty = trim((string) ($row['qty'] ?? ''));
+
+            // ⓘ পুরো খালি সারি — বাদ
+            if ($typed === '' && $qty === '') {
+                continue;
+            }
+
+            $product = $this->productFromTyped($typed);
+
+            if ($product === null) {
+                $unknown["rows.{$i}.product"] = [__('inventory::message.opening_unknown_product')];
+
+                continue;
+            }
+
+            $rows[(int) $i] = [
+                'product_id' => $product->id,
+                'qty' => $qty === '' ? '0' : $qty,
+                'unit_cost' => trim((string) ($row['unit_cost'] ?? '')) ?: '0',
+                'batch_no' => $row['batch_no'] ?? null,
+                'expiry_date' => $row['expiry_date'] ?? null,
+                'supplier_id' => $row['supplier_id'] ?? null,
+            ];
+        }
+
+        if ($unknown !== []) {
+            throw \Illuminate\Validation\ValidationException::withMessages($unknown);
+        }
+
+        $warehouse = Warehouse::query()->findOrFail($head['warehouse_id']);
+
+        try {
+            $movements = $this->opening->bringInMany($warehouse, array_values($rows), $head['trx_date'] ?? null, $head['narration'] ?? null);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            // ⓘ সেবা সারি গোনে ০ থেকে, খালি সারি বাদ দিয়ে — পর্দার সারির নম্বরে ফেরানো, যাতে ঠিক সেই সারিটা লাল হয়
+            $keys = array_keys($rows);
+            $mapped = [];
+
+            foreach ($e->errors() as $field => $messages) {
+                $mapped[preg_replace_callback('/^rows\.(\d+)\./', fn ($m) => 'rows.'.($keys[(int) $m[1]] ?? $m[1]).'.', $field)] = $messages;
+            }
+
+            throw \Illuminate\Validation\ValidationException::withMessages($mapped);
+        }
+
+        $value = collect($rows)->reduce(fn (string $sum, array $r) => bcadd($sum, bcmul((string) $r['qty'], (string) $r['unit_cost'], 4), 4), '0');
+
+        return redirect()->route('inventory.stock.opening')->with('saved', __('inventory::message.opening_cart_saved', [
+            'count' => count($movements),
+            'value' => Money::format($value),
+        ]));
+    }
+
+    /** "কোড — নাম — বারকোড" বা কেবল কোড/বারকোড — এই কোম্পানির, এই শাখায় বিক্রি হওয়া পণ্য */
+    private function productFromTyped(string $typed): ?Product
+    {
+        if ($typed === '') {
+            return null;
+        }
+
+        $code = trim(explode(' — ', $typed)[0]);
+
+        return Product::query()->soldInViewedBranch()
+            ->where(fn ($q) => $q->where('code', $code)->orWhere('barcode', $code))
+            ->first();
     }
 
     public function store(Request $request): RedirectResponse
@@ -110,6 +224,9 @@ class OpeningStockController extends Controller implements HasMiddleware
              */
             'batch_no' => ['nullable', 'string', 'max:60'],
             'expiry_date' => ['nullable', 'date'],
+
+            // ⭐ মালটা কার — ঐচ্ছিক; এই কোম্পানির সরবরাহকারী ([[OpeningPrincipalController]]-এ পরেও বসানো যায়)
+            'supplier_id' => ['nullable', 'integer', Rule::exists('suppliers', 'id')->where('company_id', $companyId)->whereNull('deleted_at')],
         ]);
 
         $product = Product::query()->findOrFail($validated['product_id']);
@@ -123,6 +240,7 @@ class OpeningStockController extends Controller implements HasMiddleware
             date: $validated['trx_date'] ?? null,
             narration: $validated['narration'] ?? null,
             batch: $this->lotFor($product, $validated),
+            supplierId: isset($validated['supplier_id']) ? (int) $validated['supplier_id'] : null,
         );
 
         return back()->with('saved', __('inventory::message.opening_saved', [

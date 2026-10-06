@@ -432,6 +432,9 @@ final class PurchaseReceiptService
 
                     // ⭐ স্তরও লট চেনে — বাছা লট বেচলে খরচ এই স্তর থেকে (চূড়ান্ত অডিট, [[CostLayerService::issue()]])
                     batch: $batch,
+
+                    // ⭐ আর মালটা কার — প্রিন্সিপালের "আসল" কমিশন এখান থেকে পড়ে (৬ অক্টোবর ২০২৬)
+                    supplierId: (int) $receipt->supplier_id,
                 );
             }
 

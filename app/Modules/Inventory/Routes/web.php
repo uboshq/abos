@@ -130,6 +130,12 @@ Route::middleware('auth')->prefix('inventory')->group(function () {
         // খোলা মজুদ — পুরনো খাতা থেকে আসার দিনের কাজ, সমন্বয় নয়
         Route::get('/opening', [OpeningStockController::class, 'index'])->name('opening');
         Route::post('/opening', [OpeningStockController::class, 'store'])->name('opening.store');
+        // ⭐ খোলা মজুদের কার্ট — এক চাপে অনেক সারি (মালিক, ৬ অক্টোবর ২০২৬)
+        Route::post('/opening/cart', [OpeningStockController::class, 'storeMany'])->name('opening.cart');
+
+        // ⭐ আগে বসানো খোলা মজুদে প্রিন্সিপাল বসানো — মালিক, ৬ অক্টোবর ২০২৬ ([[OpeningPrincipalController]])
+        Route::get('/opening/principal', [\App\Modules\Inventory\Http\Controllers\OpeningPrincipalController::class, 'index'])->name('opening.principal');
+        Route::post('/opening/principal', [\App\Modules\Inventory\Http\Controllers\OpeningPrincipalController::class, 'update'])->name('opening.principal.update');
 
         /*
          * লট বসানো — মাল আনা নয়, নাম বসানো।
