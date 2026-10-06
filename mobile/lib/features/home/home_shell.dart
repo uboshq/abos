@@ -11,6 +11,7 @@ import '../../core/menu/menu_item.dart';
 import '../../core/menu/menu_repository.dart';
 import '../../core/menu/module_gate.dart';
 import '../../core/orders/delivery_order_api.dart';
+import '../../core/books/collection_entry.dart';
 import '../../core/records/notice_bar.dart';
 import '../../core/records/notification_record.dart';
 import '../../core/records/today_record.dart';
@@ -153,6 +154,7 @@ class _HomeShellState extends ConsumerState<HomeShell> {
     if (profile != null) {
       ref.read(ordersReplaceDoProvider.notifier).state =
           profile.ordersReplaceDo;
+      ref.read(mayCollectProvider.notifier).state = profile.mayCollect;
     }
     final modules = ref.read(phoneModulesProvider);
     setState(() {

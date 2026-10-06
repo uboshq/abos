@@ -69,6 +69,7 @@ class MoneyInDetail {
     this.instrumentDate,
     this.narration = '',
     this.by = '',
+    this.status = '',
     this.lines = const [],
   });
 
@@ -78,6 +79,16 @@ class MoneyInDetail {
   final String? instrumentDate;
   final String narration;
   final String by;
+
+  /// ⭐ পাকা (`confirmed`) নাকি খসড়া — অনুমোদন বা নিশ্চিতের অপেক্ষায় (ফোনের আদায়ের রসিদ, ৭ অক্টোবর ২০২৬); পুরনো সার্ভারে ''
+  final String status;
+
+  String get statusLabel => switch (status) {
+        'confirmed' || 'closed' => 'পাকা — খাতায় উঠেছে',
+        'draft' => 'অপেক্ষায় — অনুমোদন বা নিশ্চিত বাকি',
+        'cancelled' => 'বাতিল',
+        _ => '',
+      };
 
   /// কোন বিলে কত — (বিলের নম্বর, টাকা)
   final List<(String, double)> lines;
@@ -305,6 +316,7 @@ class ServerBooksApi implements BooksApi {
       instrumentDate: body['instrument_date']?.toString(),
       narration: body['narration']?.toString() ?? '',
       by: body['by']?.toString() ?? '',
+      status: body['status']?.toString() ?? '',
       lines: [
         for (final l in _rows(body['lines']))
           (l['invoice']?.toString() ?? '', Money.valueOrZero(l['amount'])),
