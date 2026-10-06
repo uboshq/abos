@@ -180,7 +180,11 @@ final class SalesInvoiceService
          */
         $decided = $this->approvals->latestFor($invoice, 'discount');
 
-        if ($decided?->status === Approval::APPROVED) {
+        /*
+         * ⛔ সই যত টাকার, ছাড় তার বেশি হলে আবার সই — a4-এর অডিট, ৬ অক্টোবর ২০২৬: ১০০ টাকায় সই নিয়ে খসড়া বদলে ৫,০০০ ছাড়ে
+         * নিশ্চিত করা যেত। ⓘ অঙ্ক হুবহু মিললে সেই সই-ই চলে; না মিললে (বেশি বা কম — [[Approval::covers()]]-এর কারণ দেখো) নিচে নতুন অনুরোধ, বিল খসড়ায়।
+         */
+        if ($decided?->status === Approval::APPROVED && $decided->covers($discount)) {
             return;
         }
 
