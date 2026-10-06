@@ -18,6 +18,7 @@ use Illuminate\Support\Facades\DB;
  * ⭐ ডেলিভারির রিপোর্ট — মালিকের বিক্রয় পরিকল্পনা (সংস্করণ ২) §৯, ৬ অক্টোবর ২০২৬ (সমন্বয়কের মারফত):
  *
  *   ক OTIF — সময়মতো ও পুরো, আদেশের লাইন ধরে ([[OTIF]])
+ *   খ চালানের অবস্থা — প্রতিটা চালান, এখনকার ধাপ আর প্রতিটা ধাপের সময়, গেট পাস, তৈরি থেকে রওনা ([[CHALLAN_STATUS]])
  *
  * ── ⭐ OTIF-এর সংজ্ঞা (SAP / D365-এর মতো; সমন্বয়কের সিদ্ধান্ত) ─────────────────────────────
  * একক = আদেশের লাইন। লাইনটা "সময়মতো ও পুরো" যদি প্রতিশ্রুত দিনের মধ্যে পৌঁছানো পরিমাণ ≥ চূড়ান্ত পরিমাণ
@@ -34,11 +35,14 @@ final class DeliveryReports
 {
     public const OTIF = 'sales.otif';
 
+    public const CHALLAN_STATUS = 'sales.challan_status';
+
     private const KEY = 'sales.report';
 
     public static function registerAll(ReportEngine $engine): void
     {
         $engine->register(self::otif());
+        $engine->register(self::challanStatus());
     }
 
     /**
@@ -96,6 +100,7 @@ final class DeliveryReports
             ->whereRaw("{$wanted} > 0")
             ->whereRaw("{$promised} BETWEEN ? AND ?", [$f['from'], $f['to']])
             ->tap(ReportEngine::branchWall($f, 'o.branch_id'))
+            ->tap(ReportEngine::dealerWall($f, 'o.customer_id'))
             ->groupBy('l.id')
             ->selectRaw('MIN(o.document_no) as document_no, MIN(o.id) as source_id, MIN(o.trx_date) as order_date, '
                 .'MIN('.self::name('cu').') as customer, MIN('.self::name('p').') as product, '
@@ -115,6 +120,89 @@ final class DeliveryReports
             ->selectRaw("CASE WHEN x.promised_on <= {$today} THEN 1 ELSE 0 END as due")
             ->selectRaw("CASE WHEN x.promised_on <= {$today} AND x.on_time_qty >= x.wanted THEN 1 ELSE 0 END as otif")
             ->selectRaw("{$state} as state");
+    }
+
+    /**
+     * ⭐ খ — চালানের অবস্থা: তারিখের মধ্যের প্রতিটা নিশ্চিত চালান — এখনকার ধাপ, প্রতিটা ধাপে প্রথম কখন এল (ধাপের খাতা,
+     * [[DeliveryEvent]] — হাতের লেখা নয়), গেট পাস (বাতিল নয়), আর তৈরি থেকে রওনা কত ঘণ্টা।
+     *
+     * ⓘ একটা ধাপ দুবার এলে (পৌঁছায়নি → আবার রওনা) প্রথমবারেরটা — দেরি লুকায় না। ধাপ বাদ দিয়ে এগোলে সেই ঘর খালি।
+     * ⓘ শাখা চালানের; বিক্রয়কর্মী কেবল নিজের ডিলার।
+     */
+    private static function challanStatus(): ReportDefinition
+    {
+        return new ReportDefinition(
+            key: self::CHALLAN_STATUS,
+            permission: self::KEY,
+            title: 'sales::challan_status.title',
+            filters: ['date_range'],
+            query: function (array $f): Builder {
+                $company = (int) $f['company_id'];
+                $pdo = DB::getPdo();
+                $first = fn (string $stage) => 'MIN(CASE WHEN ev.to_stage = '.$pdo->quote($stage).' THEN ev.occurred_at END)';
+
+                $events = DB::table('sal_delivery_events as ev')
+                    ->where('ev.company_id', $company)
+                    ->groupBy('ev.delivery_challan_id')
+                    ->selectRaw('ev.delivery_challan_id, '
+                        .$first(DeliveryStage::ALLOCATED).' as allocated_at, '.$first(DeliveryStage::PICKING).' as picking_at, '
+                        .$first(DeliveryStage::PACKED).' as packed_at, '.$first(DeliveryStage::DISPATCHED).' as dispatched_at, '
+                        .'MIN(CASE WHEN ev.to_stage IN ('.$pdo->quote(DeliveryStage::DELIVERED).', '.$pdo->quote(DeliveryStage::PARTIALLY_DELIVERED).') '
+                        .'THEN ev.occurred_at END) as arrived_at');
+
+                $gate = DB::table('sal_gate_passes as gp')
+                    ->where('gp.company_id', $company)
+                    ->where('gp.status', \App\Modules\Sales\Models\GatePass::ISSUED)
+                    ->groupBy('gp.delivery_challan_id')
+                    ->selectRaw('gp.delivery_challan_id, MIN(gp.issued_at) as gate_at');
+
+                $stage = 'CASE COALESCE(st.stage, '.$pdo->quote(DeliveryStage::PENDING).')';
+
+                foreach (DeliveryStage::ALL as $one) {
+                    $stage .= ' WHEN '.$pdo->quote($one).' THEN '.$pdo->quote((string) __('sales::delivery.stage.'.$one));
+                }
+
+                $stage .= ' ELSE st.stage END';
+
+                return DB::table('sal_challans as c')
+                    ->join('customers as cu', 'cu.id', '=', 'c.customer_id')
+                    ->leftJoin('sal_orders as o', 'o.id', '=', 'c.sales_order_id')
+                    ->leftJoin('sal_delivery_states as st', 'st.delivery_challan_id', '=', 'c.id')
+                    ->leftJoinSub($events, 'e', 'e.delivery_challan_id', '=', 'c.id')
+                    ->leftJoinSub($gate, 'g', 'g.delivery_challan_id', '=', 'c.id')
+                    ->where('c.company_id', $company)
+                    ->whereIn('c.status', DocumentStatus::POSTED)
+                    ->whereBetween('c.trx_date', [$f['from'], $f['to']])
+                    ->tap(ReportEngine::branchWall($f, 'c.branch_id'))
+                    ->tap(ReportEngine::dealerWall($f, 'c.customer_id'))
+                    ->selectRaw('c.document_no as document_no, '.$pdo->quote('delivery_challan').' as source_type, c.id as source_id, '
+                        .'c.trx_date as trx_date, '.self::name('cu').' as customer, o.document_no as order_no, '
+                        ."COALESCE(NULLIF(c.vehicle_no, ''), '') as vehicle, {$stage} as stage, "
+                        .'c.created_at as created_at, e.allocated_at, e.picking_at, e.packed_at, g.gate_at, e.dispatched_at, e.arrived_at, '
+                        .'CASE WHEN e.dispatched_at IS NULL THEN NULL ELSE TIMESTAMPDIFF(HOUR, c.created_at, e.dispatched_at) END as hours_to_dispatch')
+                    ->orderBy('c.trx_date')
+                    ->orderBy('c.id');
+            },
+            columns: [
+                [
+                    'key' => 'document_no',
+                    'label' => 'sales::challan_status.challan',
+                    'type' => ReportColumn::DOCUMENT,
+                    'source_type' => 'source_type',
+                    'source_id' => 'source_id',
+                ],
+                ['key' => 'customer', 'label' => 'sales::otif.customer'],
+                ['key' => 'order_no', 'label' => 'sales::otif.order'],
+                ['key' => 'vehicle', 'label' => 'sales::challan_status.vehicle'],
+                ['key' => 'stage', 'label' => 'sales::challan_status.stage'],
+                ['key' => 'created_at', 'label' => 'sales::challan_status.created_at'],
+                ['key' => 'packed_at', 'label' => 'sales::challan_status.packed_at'],
+                ['key' => 'gate_at', 'label' => 'sales::challan_status.gate_at'],
+                ['key' => 'dispatched_at', 'label' => 'sales::challan_status.dispatched_at'],
+                ['key' => 'arrived_at', 'label' => 'sales::challan_status.arrived_at'],
+                ['key' => 'hours_to_dispatch', 'label' => 'sales::challan_status.hours_to_dispatch', 'type' => ReportColumn::QUANTITY, 'total' => false],
+            ],
+        );
     }
 
     /** নাম — বাংলায় বাংলা নাম (না থাকলে ইংরেজি), নাহলে ইংরেজি */

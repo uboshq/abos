@@ -45,6 +45,7 @@ class SalesReportController extends Controller implements HasMiddleware
         'by-route' => 'sales.by_route',
         // ⭐ সময়মতো ও পুরো — আদেশের লাইন ধরে (পরিকল্পনা সংস্করণ ২ §৯, ৬ অক্টোবর ২০২৬; [[DeliveryReports]])
         'otif' => \App\Modules\Sales\Reports\DeliveryReports::OTIF,
+        'challan-status' => \App\Modules\Sales\Reports\DeliveryReports::CHALLAN_STATUS,
     ];
 
     public function __construct(
