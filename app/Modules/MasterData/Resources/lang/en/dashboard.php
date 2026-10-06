@@ -19,6 +19,10 @@ return [
     'same_hint' => 'Active rows with exactly the same phone or name — likely one party entered twice',
     'inactive' => 'Inactive rows — by list',
     'inactive_hint' => 'Inactive rows are not counted but stay in the list',
+    'new_today' => 'New records today',
+    'new_today_hint' => 'Customers, suppliers, products, staff and warehouses opened today — all lists together',
+    'new_month' => 'New this month — by list',
+    'new_month_hint' => 'Rows opened from the 1st of the month to today',
 
     // Recently changed master records (6 Oct 2026)
     'recently_changed' => 'Recently changed master records — last ten',

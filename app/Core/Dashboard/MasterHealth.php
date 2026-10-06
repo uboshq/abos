@@ -73,6 +73,10 @@ final class MasterHealth
                 'missing' => (string) $missing,
                 'same' => (string) $same,
                 'inactive' => (string) ($total - $live),
+                // ⓘ আজ আর এ মাসে কত নতুন সারি খোলা হলো — খোলার দিন (`created_at`) ধরে, চালু-বন্ধ দুটোই
+                'new_today' => (string) (clone $rows)->whereDate($table.'.created_at', now()->toDateString())->count(),
+                'new_month' => (string) (clone $rows)->whereBetween($table.'.created_at',
+                    [now()->startOfMonth()->toDateTimeString(), now()->endOfDay()->toDateTimeString()])->count(),
             ],
         );
     }

@@ -107,6 +107,17 @@ class EveryModuleDashboardHasItsOwnDoorTest extends TestCase
         $engine = app(DashboardEngine::class);
         $wrong = [];
 
+        /*
+         * ⓘ চাবির প্রশ্ন সুইচের প্রশ্ন থেকে আলাদা — তাই সব মডিউল চালু করে নেওয়া। ⚠️ রেস্তোরাঁ ২২ সেপ্টেম্বর
+         * ২০২৬ থেকে জন্ম থেকেই বন্ধ; না খুললে তার দরজা চাবি থাকুক বা না থাকুক ৪০৪ দিত, আর চাবির দাবি সেখানে
+         * কখনো তাকাত না। সুইচের দরজা নিচের পরীক্ষায়।
+         */
+        foreach (app(ModuleRegistry::class)->all() as $module) {
+            if ($module->dashboard !== null) {
+                app(SettingsService::class)->set($module->code.'.enabled', true);
+            }
+        }
+
         foreach (app(ModuleRegistry::class)->all() as $module) {
             if ($module->dashboard === null) {
                 continue;
@@ -202,13 +213,23 @@ class EveryModuleDashboardHasItsOwnDoorTest extends TestCase
         $settings = app(SettingsService::class);
         $wrong = [];
 
+        /*
+         * ⓘ শুরুতে সব চালু — ২২ সেপ্টেম্বর ২০২৬ থেকে রেস্তোরাঁ জন্ম থেকেই বন্ধ (`restaurant.enabled`
+         * ডিফল্ট false)। না খুললে তার দরজা প্রতিটা সারিতে ৪০৪ দিত, আর "কেবল নিজেরটা বন্ধ" দাবিটা
+         * বন্ধ-জন্মানো মডিউলের উপর কখনো তাকাত না।
+         */
+        foreach ($withDashboards as $module) {
+            $settings->set($module->code.'.enabled', true);
+        }
+
         foreach ($withDashboards as $module) {
             $settings->set($module->code.'.enabled', false);
 
             foreach ($withDashboards as $other) {
                 $url = route('module.dashboard', ['module' => $other->code]);
                 $status = $this->actingAs($user)->get($url)->getStatusCode();
-                $want = $other->code === $module->code ? 404 : 200;
+                // ⓘ অপরিহার্য মডিউলের সুইচ পড়াই হয় না (২৪ সেপ্টেম্বর ২০২৬, [[RefuseSwitchedOffScreens]]) — তার দরজা খোলাই থাকে
+                $want = $other->code === $module->code && ! $module->essential ? 404 : 200;
 
                 if ($status !== $want) {
                     $wrong[] = "{$module->code} বন্ধ থাকতে {$other->code}-এর ড্যাশবোর্ড {$status}, {$want} হওয়ার কথা";

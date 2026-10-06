@@ -53,17 +53,17 @@ return [
     'depends_on' => [],
 
     /*
-     * ⓘ ড্যাশবোর্ডের ইঞ্জিন নয় — নিজের পাতা। ⚠️ ইঞ্জিনের ড্যাশবোর্ডে সংখ্যা
-     * লাগে, আর আজ সব সংখ্যাই শূন্য হত ("মোট ডকুমেন্ট ০") — যা সত্য হলেও
-     * ভুল বোঝায়। ⭐ মালিক চান ড্যাশবোর্ডে গোটা পরিকল্পনা আর প্রতিটা অংশের
-     * অবস্থা, তাই সারিটা [[PlanController::dashboard()]]-এ যায়।
+     * ⭐ আসল ড্যাশবোর্ড — ERP-তে জোড়া নথি, ভাগ করা লিংক আর পাঠানো কাগজ থেকে
+     * (মালিকের ড্যাশবোর্ড নকশা §১৩, ৬ অক্টোবর ২০২৬)। আগে এখানে কোনো সংখ্যা ছিল না,
+     * তাই মেনু পরিকল্পনার পাতায় যেত; সেই পাতা ([[PlanController::dashboard()]])
+     * এখনো আছে, প্রতিটা ডকুমেন্ট পর্দার নিচের "গোটা পরিকল্পনা দেখুন" লিংকে।
      */
-    'dashboard' => null,
+    'dashboard' =>\App\Modules\Documents\Dashboard\DocumentsDashboard::class,
 
     'menu' => [
         'dashboard' => [
-            ['label' => 'documents::menu.dashboard', 'icon' => 'dashboard', 'route' => 'documents.dashboard',
-                'permission' => 'documents.view'],
+            ['label' => 'documents::menu.dashboard', 'icon' => 'dashboard', 'route' => 'module.dashboard',
+                'route_params' => ['module' => 'documents'], 'permission' => 'documents.view'],
         ],
 
         /*

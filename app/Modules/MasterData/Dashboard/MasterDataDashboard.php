@@ -7,6 +7,7 @@ namespace App\Modules\MasterData\Dashboard;
 use App\Core\Contracts\ProvidesDashboard;
 use App\Core\Engines\Dashboard\Breakdown;
 use App\Core\Engines\Dashboard\DashboardDefinition;
+use App\Core\Engines\Dashboard\DateRange;
 use App\Core\Engines\Dashboard\Listing;
 use App\Core\Engines\Dashboard\Stat;
 use App\Core\Engines\Dashboard\Tile;
@@ -211,6 +212,14 @@ final class MasterDataDashboard implements ProvidesDashboard
             tone: $score >= 95 ? Stat::GOOD : ($score >= 80 ? Stat::WARN : Stat::BAD),
         )];
 
+        // ⭐ আজ কত নতুন রেকর্ড খোলা হলো — সব তালিকা মিলে (মালিকের নকশা §১২, ৬ অক্টোবর ২০২৬)
+        $newToday = array_sum(array_map(fn ($w) => (int) $w->parts['new_today'], $lists));
+        $stats[] = new Stat(
+            label: __('master_data::dashboard.new_today'),
+            value: (string) $newToday,
+            hint: __('master_data::dashboard.new_today_hint'),
+        );
+
         foreach ($lists as $list) {
             $stats[] = new Stat(
                 label: $list->label,
@@ -230,6 +239,9 @@ final class MasterDataDashboard implements ProvidesDashboard
                 hint: __('master_data::dashboard.same_hint')),
             new Breakdown(label: __('master_data::dashboard.inactive'), parts: $part('inactive'),
                 hint: __('master_data::dashboard.inactive_hint')),
+            new Breakdown(label: __('master_data::dashboard.new_month'), parts: $part('new_month'),
+                hint: __('master_data::dashboard.new_month_hint'), chart: 'columns',
+                range: DateRange::label(now()->startOfMonth(), now())),
         ]];
     }
 }
