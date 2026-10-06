@@ -22,4 +22,21 @@ return [
     'outstanding' => 'Outstanding',
     'schedule_summary' => 'Rent outstanding',
     'schedule_text' => 'Due Tk :due, outstanding Tk :outstanding (awaiting signature Tk :waiting)',
+
+    'advance_short' => 'Advance adjustment',
+    'advance_title' => 'Advance and deposit adjustment',
+    'opening_balance' => 'Opening',
+    'given' => 'Given',
+    'deducted' => 'Taken against rent',
+    'refunded' => 'Refunded',
+    'closing_balance' => 'Closing',
+    'monthly_adjustment' => 'Taken per month',
+    'months_left' => 'Months left',
+    'advance_summary' => 'Total left in deposits',
+
+    'book_short' => 'Deposit book',
+    'book_title' => 'Deposit book',
+    'opening_row' => 'Opening balance',
+    'legacy' => 'Opening deposit (no voucher)',
+    'taken_back' => 'Taken / refunded',
 ];

@@ -8,6 +8,7 @@ use App\Core\Engines\Report\ReportEngine;
 use App\Core\Services\MenuBuilder;
 use App\Http\Controllers\Controller;
 use App\Models\Branch;
+use App\Modules\Finance\Models\RentalContract;
 use App\Modules\Finance\Reports\RentalReports;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -24,11 +25,15 @@ class RentalReportController extends Controller
 {
     public const SLUGS = [
         'schedule' => RentalReports::SCHEDULE,
+        'advance' => RentalReports::ADVANCE,
+        'deposit-book' => RentalReports::DEPOSIT_BOOK,
     ];
 
     /** রিপোর্টের সারি — প্রতিটা রিপোর্টের মাথায় আর ভাড়ার পাতায় একই ক্রমে */
     public const TABS = [
         'schedule' => 'finance::rental_report.schedule_short',
+        'advance' => 'finance::rental_report.advance_short',
+        'deposit-book' => 'finance::rental_report.book_short',
     ];
 
     public function __construct(
@@ -47,7 +52,7 @@ class RentalReportController extends Controller
         // ⓘ শাখা ধরে ভাগ চাওয়া হয়, বাকি রিপোর্ট-পর্দার মতো — ভাগ হবে কি না ইঞ্জিন ঠিক করে ([[ReportEngine::branchPlan()]])
         $result = $this->reports->run($key, $request->only($definition->requestKeys()), page: max(1, (int) $request->query('page', 1)), byBranch: true);
 
-        return view('accounts::report.show', [
+        $view = [
             'menu' => $this->menu->forUser($request->user()),
             'slug' => $slug,
             'report' => $definition,
@@ -58,6 +63,17 @@ class RentalReportController extends Controller
             'extraFilters' => 'finance::rental.partials.report-tabs',
             // ⓘ ফলটা এক লাইনে — রিপোর্ট নিজের যোগফল থেকে কষে
             'summary' => $definition->summary === null ? null : ($definition->summary)($result->totals),
-        ]);
+        ];
+
+        // ⓘ জামানতের খাতা — চুক্তি বাছার ঘর: দেখার শাখার চালু আর শেষ চুক্তি
+        if ($key === RentalReports::DEPOSIT_BOOK) {
+            $view['partyFilter'] = 'rental_contract_id';
+            $view['parties'] = RentalContract::query()->inViewedBranch()
+                ->whereIn('status', [RentalContract::ACTIVE, RentalContract::CLOSED])
+                ->orderBy('counterparty')->get()
+                ->map(fn (RentalContract $c) => (object) ['id' => (int) $c->id, 'name' => trim($c->counterparty.' · '.$c->document_no, ' ·')]);
+        }
+
+        return view('accounts::report.show', $view);
     }
 }

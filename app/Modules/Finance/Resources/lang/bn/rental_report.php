@@ -23,4 +23,23 @@ return [
     'outstanding' => 'বাকি',
     'schedule_summary' => 'বাকি ভাড়া',
     'schedule_text' => 'দেয় ৳:due, বাকি ৳:outstanding (সইয়ের অপেক্ষায় ৳:waiting)',
+
+    // খ — অগ্রিম সমন্বয়
+    'advance_short' => 'অগ্রিম সমন্বয়',
+    'advance_title' => 'অগ্রিম ও জামানতের সমন্বয়',
+    'opening_balance' => 'শুরুর জের',
+    'given' => 'দেওয়া',
+    'deducted' => 'ভাড়ায় কাটা',
+    'refunded' => 'ফেরত',
+    'closing_balance' => 'শেষের জের',
+    'monthly_adjustment' => 'মাসে কাটে',
+    'months_left' => 'আর কত মাস',
+    'advance_summary' => 'জামানতে মোট বাকি',
+
+    // গ — জামানতের খাতা
+    'book_short' => 'জামানতের খাতা',
+    'book_title' => 'জামানতের খাতা',
+    'opening_row' => 'খোলা জের',
+    'legacy' => 'শুরুর জামানত (ভাউচার ছাড়া)',
+    'taken_back' => 'কাটা / ফেরত',
 ];
