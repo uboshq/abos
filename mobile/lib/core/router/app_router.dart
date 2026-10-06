@@ -133,7 +133,7 @@ final goRouterProvider = Provider<GoRouter>((ref) {
                   ),
                 ),
                 routes: [
-                  // স্লিপসহ জমার অনুরোধ (0.4.3) — দোকানের পাতা থেকে
+                  // জমার বিজ্ঞপ্তি, স্লিপসহ (0.4.3) — দোকানের পাতা থেকে
                   GoRoute(
                     path: 'deposit',
                     builder: (context, state) => ModuleGateView(

@@ -3,10 +3,11 @@ import 'package:dio/dio.dart';
 import '../api_client/api_client.dart';
 import '../records/money.dart';
 
-/// স্লিপসহ জমার অনুরোধ — `/sales/deposit-requests` (0.4.3, মালিক ১ অক্টোবর ২০২৬)।
+/// জমার বিজ্ঞপ্তি (Payment Advice) — `/sales/deposit-requests` (0.4.3, মালিক ১ অক্টোবর ২০২৬; নাম ও চার অবস্থা
+/// টাকা-আসা-যাওয়ার পরিকল্পনা, ৭ অক্টোবর ২০২৬)।
 ///
-/// <p>⭐ এটা অনুরোধ, টাকা নয়: হিসাবরক্ষক স্লিপ মিলিয়ে গ্রহণ করলে তবেই বকেয়া কমে। তাই ফোনে "জমা হয়েছে"
-/// কখনো লেখা হয় না — লেখা হয় "অপেক্ষায়"। ব্যাংকে জমায় স্লিপ ছাড়া সার্ভার ফেরায়।
+/// <p>⭐ এটা বিজ্ঞপ্তি, টাকা নয়: হিসাবরক্ষক স্লিপ মিলিয়ে গ্রহণ করলে তবেই বকেয়া কমে। তাই ফোনে "জমা হয়েছে"
+/// কখনো লেখা হয় না — লেখা হয় "পাঠানো"। ব্যাংকে জমায় স্লিপ ছাড়া সার্ভার ফেরায়।
 class BankChoice {
   const BankChoice(this.id, this.name);
 
@@ -23,6 +24,7 @@ class DepositRequestRow {
     this.reference,
     this.reason,
     required this.hasSlip,
+    this.serverLabel = '',
   });
 
   final String? date;
@@ -33,6 +35,9 @@ class DepositRequestRow {
   final String? reason;
   final bool hasSlip;
 
+  /// সার্ভারের নিজের লেখা (`status_label`) — নতুন কোনো অবস্থা এলে এটাই দেখায়; পুরনো সার্ভারে ''
+  final String serverLabel;
+
   factory DepositRequestRow.fromJson(Map<String, dynamic> json) => DepositRequestRow(
         date: json['claimed_on']?.toString(),
         amount: Money.valueOrZero(json['amount']),
@@ -41,13 +46,15 @@ class DepositRequestRow {
         reference: json['reference']?.toString(),
         reason: json['decision_reason']?.toString(),
         hasSlip: json['has_slip'] == true,
+        serverLabel: json['status_label']?.toString() ?? '',
       );
 
+  /// ⭐ চার অবস্থা: পাঠানো · যাচাই চলছে · গৃহীত · প্রত্যাখ্যাত (কারণসহ, [reason])
   String get statusLabel => switch (status) {
-        'pending' => 'অপেক্ষায়',
+        'pending' => 'পাঠানো',
         'accepted' => 'গৃহীত',
-        'rejected' => 'বাতিল',
-        _ => status,
+        'rejected' => 'প্রত্যাখ্যাত',
+        _ => serverLabel.isNotEmpty ? serverLabel : 'যাচাই চলছে',
       };
 }
 

@@ -8,11 +8,11 @@ import '../../core/records/money.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 
-/// দোকানির জমার অনুরোধ, ব্যাংক স্লিপের ছবিসহ (0.4.3)।
+/// দোকানির জমার বিজ্ঞপ্তি, ব্যাংক স্লিপের ছবিসহ (0.4.3; নাম ৭ অক্টোবর ২০২৬)।
 ///
 /// <p>⭐ মালিক, ১ অক্টোবর ২০২৬: *"customer payment dile bank slip soho ekta request paTanor bebosta app e
 /// thakbe"*। SR স্লিপের ছবি তোলেন, পাঠান; হিসাবরক্ষক মিলিয়ে গ্রহণ করলে তবেই বকেয়া কমে — তাই পর্দা "অপেক্ষায়"
-/// বলে, "জমা হয়েছে" কখনো নয়। নিচে এই দোকানের আগের অনুরোধগুলো, অবস্থাসহ।
+/// বলে, "জমা হয়েছে" কখনো নয়। নিচে এই দোকানের আগের বিজ্ঞপ্তিগুলো, অবস্থাসহ।
 ///
 /// <p>⭐ মালিকের নিয়ম: এক লাইনে এক জিনিস, কোনো টেবিল নয়।
 class DepositRequestScreen extends StatefulWidget {
@@ -144,7 +144,7 @@ class _DepositRequestScreenState extends State<DepositRequestScreen> {
   Widget build(BuildContext context) {
     final customer = CustomerRecord.byId(widget.customerId);
     return Scaffold(
-      appBar: AppBar(title: const Text('জমার অনুরোধ')),
+      appBar: AppBar(title: const Text('জমার বিজ্ঞপ্তি')),
       body: ListView(
         padding: const EdgeInsets.all(AppSpacing.md),
         children: [
@@ -210,7 +210,7 @@ class _DepositRequestScreenState extends State<DepositRequestScreen> {
             label: const Text('পাঠান'),
           ),
           const Divider(height: AppSpacing.xl),
-          Text('আগের অনুরোধ (${_history.length})', style: const TextStyle(fontWeight: FontWeight.w700)),
+          Text('আগের বিজ্ঞপ্তি (${_history.length})', style: const TextStyle(fontWeight: FontWeight.w700)),
           for (final row in _history)
             Card(
               child: Padding(
@@ -228,7 +228,9 @@ class _DepositRequestScreenState extends State<DepositRequestScreen> {
                         })),
                     if (row.date != null) Text('তারিখ ${row.date}'),
                     if (row.reference != null) Text('নম্বর ${row.reference}'),
-                    if (row.reason != null) Text('কারণ: ${row.reason}'),
+                    if (row.status == 'rejected' || (row.reason ?? '').isNotEmpty)
+                      Text('কারণ: ${(row.reason ?? '').isEmpty ? 'জানানো হয়নি' : row.reason}',
+                          style: row.status == 'rejected' ? const TextStyle(color: AppColors.danger) : null),
                   ],
                 ),
               ),
