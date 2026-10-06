@@ -97,7 +97,7 @@ class RentalContractController extends Controller implements HasMiddleware
              * ঘণ্টা লাইভে ছিল।
              */
             new Middleware('can:finance.rental.create', only: [
-                'create', 'store', 'storePerson', 'adjust', 'revise', 'topUp',
+                'create', 'store', 'storePerson', 'adjust', 'revise', 'topUp', 'accrue',
             ]),
 
             /*
@@ -379,6 +379,19 @@ class RentalContractController extends Controller implements HasMiddleware
         return back()->with('saved', $this->contracts->isWaiting($contract)
             ? __('finance::message.awaiting_signature')
             : __('finance::message.rental_month_done'));
+    }
+
+    /** ⭐ মাসের ভাড়া প্রদেয় হিসেবে — চালু সব চুক্তির, এক মাস একবার (মালিকের সিদ্ধান্ত প্র২, [[RentalAccrualService]]) */
+    public function accrue(Request $request): RedirectResponse
+    {
+        $data = $request->validate([
+            'month' => ['required', 'date_format:Y-m'],
+        ]);
+
+        $done = app(\App\Modules\Finance\Services\RentalAccrualService::class)
+            ->run(\Illuminate\Support\Carbon::createFromFormat('Y-m-d', $data['month'].'-01'));
+
+        return back()->with('saved', __('finance::message.rent_accrual_done', $done));
     }
 
     /**

@@ -230,6 +230,9 @@ class RentalContractService
          */
         $this->assertMonthNotDone($contract, $month);
 
+        // ⛔ মাসের প্রদেয় বসেছে অথচ সই বাকি — আগে সেটা ([[RentalAccrualService::settles()]])
+        RentalAccrualService::settles($contract, $month);
+
         if (bccomp($cash, '0', 4) > 0 && blank($data['money_account_id'] ?? null)) {
             throw ValidationException::withMessages([
                 'money_account_id' => __('finance::validation.rental_needs_money_account'),
@@ -245,10 +248,29 @@ class RentalContractService
             $this->assertMonthNotDone($contract, $month);
             $this->assertDepositCovers($contract, $fromDeposit);
 
-            $lines = [[
-                'account_id' => $contract->expense_account_id,
-                'debit' => $rent, 'credit' => '0',
-            ]];
+            /*
+             * ⭐ মাসের শুরুতে ভাড়া প্রদেয় হিসেবে বসে থাকলে (মালিকের সিদ্ধান্ত প্র২, ৬ অক্টোবর ২০২৬; [[RentalAccrualService]])
+             * দেওয়ার দিন খরচ নয়, ২১৪১ শোধ — বসানো অঙ্কটুকু। দেওয়া ভাড়া আলাদা হলে কেবল তফাতটা খরচে (বেশি হলে Dr, কম হলে Cr)।
+             * ⛔ পুরোটা আবার খরচে বসালে মাসের ভাড়া দুইবার খরচ হত, আর ২১৪১ কোনোদিন শূন্যে নামত না।
+             */
+            $accrued = RentalAccrualService::settles($contract, $month);
+            $toExpense = $accrued === null ? $rent : bcsub($rent, $accrued, 4);
+            $lines = [];
+
+            if ($accrued !== null) {
+                $lines[] = [
+                    'account_id' => RentalAccrualService::payable()->id,
+                    'debit' => $accrued, 'credit' => '0',
+                ];
+            }
+
+            if (bccomp($toExpense, '0', 4) !== 0) {
+                $lines[] = [
+                    'account_id' => $contract->expense_account_id,
+                    'debit' => bccomp($toExpense, '0', 4) > 0 ? $toExpense : '0',
+                    'credit' => bccomp($toExpense, '0', 4) < 0 ? bcmul($toExpense, '-1', 4) : '0',
+                ];
+            }
 
             if (bccomp($cash, '0', 4) > 0) {
                 $lines[] = [

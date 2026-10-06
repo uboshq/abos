@@ -248,6 +248,9 @@ Route::middleware('auth')->prefix('finance')->group(function () {
         Route::get('/reports/{slug}', [\App\Modules\Finance\Http\Controllers\RentalReportController::class, 'show'])
             ->where('slug', '[a-z\-]+')->name('report.show');
 
+        // ⭐ মাসের ভাড়া প্রদেয় হিসেবে — মালিকের সিদ্ধান্ত প্র২ ([[RentalAccrualService]], ৬ অক্টোবর ২০২৬)
+        Route::post('/accruals', [RentalContractController::class, 'accrue'])->name('accrue');
+
         Route::get('/{contract}', [RentalContractController::class, 'show'])
             ->whereNumber('contract')->name('show');
 

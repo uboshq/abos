@@ -115,6 +115,24 @@
         {{-- ⭐ ভাড়ার রিপোর্ট — অর্থ-মডিউলের পরিকল্পনা, অংশ ৫ ([[RentalReportController::TABS]]) --}}
         <div class="px-2 pb-2">
             @include('finance::rental.partials.report-tabs')
+
+            {{-- ⭐ মাসের ভাড়া প্রদেয় হিসেবে — মালিকের সিদ্ধান্ত প্র২ ([[RentalAccrualService]]); চলতি মাস নিজেই বসে, বোতামটা
+                 আগের খোলা মাসের জন্য --}}
+            @if ($tab === 'running')
+                @can('finance.rental.create')
+                    <form method="POST" action="{{ route('finance.rental.accrue') }}" data-rent-accrual
+                          class="mt-2 flex w-full flex-wrap items-end gap-2 text-sm">
+                        @csrf
+                        <label class="grid gap-0.5">
+                            <span class="block text-2xs text-(--color-ink-muted)">{{ __('finance::message.rent_accrual_month') }}</span>
+                            <input type="month" name="month" required value="{{ now()->format('Y-m') }}" max="{{ now()->format('Y-m') }}"
+                                   class="h-(--spacing-field-compact) rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-app) px-2 text-sm">
+                        </label>
+                        <x-ui.button type="submit" tone="secondary">{{ __('finance::message.rent_accrual_run') }}</x-ui.button>
+                        <span class="text-2xs text-(--color-ink-muted)">{{ __('finance::message.rent_accrual_note') }}</span>
+                    </form>
+                @endcan
+            @endif
         </div>
 
         {{-- ⭐ এই জায়গার চুক্তি — ছাঁকনিটা চুপচাপ বসে না (২০ সেপ্টেম্বর ২০২৬)।

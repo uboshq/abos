@@ -316,6 +316,12 @@ final class StandardChart implements ProvisionsCompany
     public const ACCRUED_INTEREST = '1165';
 
     /*
+     * ⭐ প্রদেয় ভাড়া — চলতি দায় (মালিকের সিদ্ধান্ত প্র২, ৬ অক্টোবর ২০২৬)। মাসের শুরুতে ভাড়া খরচে বসে (Dr ৫২০২ / Cr ২১৪১),
+     * দেওয়ার দিন এখান থেকে শোধ হয় ([[RentalAccrualService]]); দেওয়া পর্যন্ত দায় থাকে — উল্টো দাখিলা নয়।
+     */
+    public const RENT_PAYABLE = '2141';
+
+    /*
      * ⭐ অগ্রিম আয়কর — চলতি সম্পদ (অর্থ-মডিউলের পরিকল্পনা ৪, ৬ অক্টোবর ২০২৬; সমন্বয়কের সিদ্ধান্ত প্র২)। ব্যাংক মুনাফা থেকে
      * যে উৎসে কর কেটে রাখে, সেটা খরচ নয় — বছর শেষে আয়করের সাথে সমন্বয় হয় ([[DepositService::returnLines()]])।
      */
@@ -948,6 +954,7 @@ final class StandardChart implements ProvisionsCompany
             ['2131', 'Provident Fund Payable', 'প্রদেয় ভবিষ্য তহবিল', $L, '2100', false, []],
             ['2140', 'Expenses Payable', 'প্রদেয় খরচ', $L, '2100', false, []],
             ['2145', 'Interest Payable', 'প্রদেয় সুদ', $L, '2100', false, []],
+            ['2141', 'Rent Payable', 'প্রদেয় ভাড়া', $L, '2100', false, []],
             ['2150', 'Advance from Customers', 'গ্রাহকের অগ্রিম', $L, '2100', false, []],
             // মাল এসেছে, বিল আসেনি — ধ্রুবকটার মন্তব্যে কারণ লেখা আছে
             ['2160', 'Goods Received Not Invoiced', 'প্রাপ্ত মাল, বিল আসেনি', $L, '2100', false, []],

@@ -247,6 +247,19 @@ Schedule::command('queue:work --stop-when-empty --max-time=50 --tries=3')
  * একই কাগজের খবর সাত দিনে একবার। ⛔ শিডিউলে সপ্তাহে একবার রাখলে ঠিক
  * ঐ দিনটা মিস হলে পুরো সপ্তাহ চলে যেত।
  */
+/*
+ * ⭐ মাসের ভাড়া মাসের শুরুতে প্রদেয় — মালিকের সিদ্ধান্ত প্র২, ৬ অক্টোবর ২০২৬ ([[RentAccrue]], [[RentalAccrualService]])।
+ *
+ * ⓘ ঘণ্টায় একবার, চলতি মাসের জন্য: যা বসেছে তা আবার বসে না, তাই বারবার প্রশ্ন করায় ক্ষতি নেই — আর একটা মিনিট ফসকালে মাসের
+ * প্রথম দিনটা হারায় না (ব্যাকআপের শিক্ষা, উপরে)। মাসের মাঝে খোলা চুক্তিও পরের ঘণ্টায় ধরা পড়ে।
+ */
+Schedule::command('abos:rent-accrue')
+    ->hourlyAt(10)
+    ->withoutOverlapping()
+    ->onFailure(function () {
+        logger()->critical('মাসের প্রদেয় ভাড়া বসানো ব্যর্থ হয়েছে — হাতে দেখতে হবে।');
+    });
+
 Schedule::command('abos:money-due')
     ->dailyAt('08:00')
     ->withoutOverlapping()
