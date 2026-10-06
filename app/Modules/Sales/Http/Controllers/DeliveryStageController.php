@@ -131,6 +131,9 @@ class DeliveryStageController extends Controller implements HasMiddleware
             'lines' => ['nullable', 'array'],
             // ⓘ আকার সেবা দেখে ([[DeliveryStageService::partialLines()]]) — ঋণাত্মক, বেশি, অন্য চালানের সারি
             'lines.*' => ['nullable'],
+            // ⭐ ভাঙা পৌঁছানো পরিমাণ, সারি ধরে (ধাপ ৭) — আকার সেবা দেখে
+            'damaged' => ['nullable', 'array'],
+            'damaged.*' => ['nullable'],
             // ⓘ রওনার গাড়ি ও চালক — সারির ছোট ঘর থেকে; গেট পাস ঐ ছবিটাই নেয় ([[GatePassService]])
             'vehicle_id' => ['nullable', 'integer',
                 Rule::exists('mdm_vehicles', 'id')->where('company_id', CompanyContext::id())],

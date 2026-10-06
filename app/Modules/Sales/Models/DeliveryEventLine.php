@@ -26,11 +26,13 @@ class DeliveryEventLine extends Model
 
     protected $fillable = [
         'company_id', 'delivery_event_id', 'delivery_challan_line_id', 'delivered_qty',
+        // ⭐ ভাঙা পৌঁছানো পরিমাণ — ধাপ ৭, ৬ অক্টোবর ২০২৬; আটকে রাখা মজুদে ফেরত ([[ShortDeliveryReturn]])
+        'damaged_qty',
     ];
 
     protected function casts(): array
     {
-        return ['delivered_qty' => 'decimal:4'];
+        return ['delivered_qty' => 'decimal:4', 'damaged_qty' => 'decimal:4'];
     }
 
     public function event(): BelongsTo

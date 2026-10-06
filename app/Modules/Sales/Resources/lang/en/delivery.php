@@ -88,13 +88,14 @@ return [
         'receiver_phone' => 'Their phone',
         'delivered_qty' => 'Delivered quantity',
         'sent_qty' => 'On the challan',
+        'damaged_qty' => 'Damaged',
         'product' => 'Product',
         'vehicle' => 'Vehicle (fleet)',
         'vehicle_not_in_fleet' => '- not in the fleet -',
         'vehicle_no' => 'Vehicle number',
         'driver_name' => 'Driver',
         'driver_phone' => 'Driver phone',
-        'partial_hint' => 'Enter what the customer took on each line; the rest comes back on a sales return.',
+        'partial_hint' => 'Enter what the customer took in good order and what arrived damaged on each line; the rest (short) comes back on a sales return, the damaged part into held stock.',
     ],
 
     // ⭐ কম নিলে বাকিটা নিজে ফেরত — [[ShortDeliveryReturn]]

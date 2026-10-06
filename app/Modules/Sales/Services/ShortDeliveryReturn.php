@@ -28,15 +28,21 @@ use Illuminate\Support\Facades\DB;
  * লাগলে ফেরতটা সইয়ের অপেক্ষায় থাকে (মালিকের নিয়ম: গেট পাসের পরে ফেরত মালিকের সইসহ); নাহলে তখনই পাকা।
  *
  * ⚠️ কেবল দামের পরিমাণ — ফ্রি মাল আংশিক-পৌঁছানোর ঘরে লেখা হয় না, তাই এখানে আসে না।
+ *
+ * ── ⭐ ভাঙা মাল — ধাপ ৭, ৬ অক্টোবর ২০২৬ ────────────────────────────────────
+ * *"কম বা ভাঙা মাল → ফেরত বা দাবি"*। ভাঙা অংশও একই ফেরতে, কিন্তু আটকে রাখা মজুদে (`to_hold`) — গুদামে গোনা যায়,
+ * বিক্রয়যোগ্য নয়; কারণ "ক্ষতিগ্রস্ত পণ্য" (`DAMAGE`)। ⓘ সমন্বয়কের কথায় আপাতত কেবল ফেরত — প্রিন্সিপাল বা বাহকের
+ * কাছে দাবি মালিকের উত্তরের অপেক্ষায়।
  */
 final class ShortDeliveryReturn
 {
     public function __construct(private readonly SalesReturnService $returns) {}
 
     /**
-     * @param  array<int, string>  $delivered  চালানের সারি → ক্রেতা যতটা নিলেন
+     * @param  array<int, string>  $delivered  চালানের সারি → ক্রেতা যতটা ভালো অবস্থায় নিলেন
+     * @param  array<int, string>  $damaged  চালানের সারি → যতটা ভাঙা পৌঁছাল
      */
-    public function for(DeliveryChallan $challan, DeliveryEvent $event, array $delivered): ?SalesReturn
+    public function for(DeliveryChallan $challan, DeliveryEvent $event, array $delivered, array $damaged = []): ?SalesReturn
     {
         $challan->loadMissing('lines');
 
@@ -59,23 +65,40 @@ final class ShortDeliveryReturn
         }
 
         $lines = [];
+        $broken = $this->damageReason() ?? $reason;
 
         foreach ($challan->lines as $line) {
             $billLine = $billLines->get($line->id);
-            $short = bcsub((string) $line->delivered_qty, (string) ($delivered[$line->id] ?? $line->delivered_qty), 4);
+            $bad = bcadd((string) ($damaged[$line->id] ?? '0'), '0', 4);
+            $back = bcsub((string) $line->delivered_qty, (string) ($delivered[$line->id] ?? $line->delivered_qty), 4);
 
-            if ($billLine === null || bccomp($short, '0', 4) <= 0) {
+            if ($billLine === null || bccomp($back, '0', 4) <= 0) {
                 continue;
             }
 
-            foreach ($this->byLot($challan, (int) $line->product_id, $short) as [$batchId, $qty]) {
-                $lines[] = [
-                    'product_id' => $line->product_id,
-                    'sales_invoice_line_id' => $billLine->id,
-                    'qty' => $qty,
-                    'batch_id' => $batchId,
-                    'reason_code_id' => $reason->id,
-                ];
+            /*
+             * ⓘ ফেরার মোট (কম + ভাঙা) একবারে লটে ভাগ — দুইবার ভাগ করলে একই লটের মাল দুইবার ফিরত। ভাঙা অংশ আগে
+             * কাটা, বাকিটা কম।
+             */
+            foreach ($this->byLot($challan, (int) $line->product_id, $back) as [$batchId, $qty]) {
+                $holdPart = bccomp($bad, $qty, 4) < 0 ? $bad : $qty;
+                $bad = bcsub($bad, $holdPart, 4);
+
+                foreach ([[$holdPart, true], [bcsub($qty, $holdPart, 4), false]] as [$part, $hold]) {
+                    if (bccomp($part, '0', 4) <= 0) {
+                        continue;
+                    }
+
+                    $lines[] = [
+                        'product_id' => $line->product_id,
+                        'sales_invoice_line_id' => $billLine->id,
+                        'qty' => $part,
+                        'batch_id' => $batchId,
+                        'reason_code_id' => ($hold ? $broken : $reason)->id,
+                        // ⭐ ভাঙা — আটকে রাখা মজুদে, বিক্রয়যোগ্য নয়
+                        'to_hold' => $hold,
+                    ];
+                }
             }
         }
 
@@ -104,7 +127,10 @@ final class ShortDeliveryReturn
     }
 
     /**
-     * ফেরতের কারণ — আংশিক পৌঁছানোর কারণটাই, যদি সেটা ফেরতের কারণও হয়; নাহলে ফেরতের প্রথম কারণ।
+     * ফেরতের কারণ — আংশিক পৌঁছানোর কারণটাই, যদি সেটা ফেরতের কারণও হয়; নাহলে মজুদে-ফেরার প্রথম কারণ।
+     *
+     * ⛔ আগে "ফেরতের প্রথম কারণ" — তালিকায় প্রথমটা "ক্ষতিগ্রস্ত পণ্য", তাই না-পৌঁছানো ভালো মালও ভাঙা বলে লেখা হত
+     * (ধাপ ৭-এর ভাঙার ঘর বসাতে গিয়ে ধরা, ৬ অক্টোবর ২০২৬)। ⭐ এখন যে কারণে মাল বিক্রয়যোগ্য মজুদে ফেরে সেটা আগে।
      */
     private function reason(DeliveryEvent $event): ?ReasonCode
     {
@@ -118,7 +144,13 @@ final class ShortDeliveryReturn
             }
         }
 
-        return $codes->orderBy('id')->first();
+        return $codes->orderByDesc('returns_to_stock')->orderBy('id')->first();
+    }
+
+    /** ভাঙা মালের কারণ — ফেরতের তালিকার "ক্ষতিগ্রস্ত পণ্য" (`DAMAGE`); না থাকলে null, তখন আংশিকের কারণটাই */
+    private function damageReason(): ?ReasonCode
+    {
+        return ReasonCode::query()->inContext(ReasonCode::SALES_RETURN)->where('code', 'DAMAGE')->first();
     }
 
     /**

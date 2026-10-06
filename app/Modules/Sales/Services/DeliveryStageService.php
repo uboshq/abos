@@ -102,6 +102,7 @@ final class DeliveryStageService
             $receiver = null;
             $phone = null;
             $lines = [];
+            $damaged = [];
 
             if ($to === DeliveryStage::FAILED) {
                 $reason = $this->reason($data['reason_code_id'] ?? null);
@@ -133,7 +134,7 @@ final class DeliveryStageService
             }
 
             if ($to === DeliveryStage::PARTIALLY_DELIVERED) {
-                $lines = $this->partialLines($challan, $data['lines'] ?? []);
+                [$lines, $damaged] = $this->partialLines($challan, $data['lines'] ?? [], $data['damaged'] ?? []);
             }
 
             return $this->write($state, $challan, $to, DeliveryStage::BY_HAND, [
@@ -141,7 +142,7 @@ final class DeliveryStageService
                 'reason_code_id' => $reason?->id,
                 'receiver_name' => $receiver,
                 'receiver_phone' => $phone,
-            ], $lines);
+            ], $lines, $damaged);
         });
     }
 
@@ -520,11 +521,12 @@ final class DeliveryStageService
      * ইতিহাসের সারি ও এখনকার ধাপ — একসাথে।
      *
      * @param  array<string, mixed>  $extras
-     * @param  array<int, string>  $lines  চালানের সারি → কতটা গেল
+     * @param  array<int, string>  $lines  চালানের সারি → কতটা ভালো অবস্থায় গেল
+     * @param  array<int, string>  $damaged  চালানের সারি → কতটা ভাঙা পৌঁছাল (ধাপ ৭)
      */
-    private function write(?DeliveryState $state, DeliveryChallan $challan, string $to, string $source, array $extras = [], array $lines = []): DeliveryState
+    private function write(?DeliveryState $state, DeliveryChallan $challan, string $to, string $source, array $extras = [], array $lines = [], array $damaged = []): DeliveryState
     {
-        return DB::transaction(function () use ($state, $challan, $to, $source, $extras, $lines) {
+        return DB::transaction(function () use ($state, $challan, $to, $source, $extras, $lines, $damaged) {
             $now = now();
 
             $event = DeliveryEvent::create([
@@ -548,6 +550,7 @@ final class DeliveryStageService
                     'delivery_event_id' => $event->id,
                     'delivery_challan_line_id' => $lineId,
                     'delivered_qty' => $qty,
+                    'damaged_qty' => $damaged[$lineId] ?? '0',
                 ]);
             }
 
@@ -556,7 +559,7 @@ final class DeliveryStageService
              * ফেরত না বসলে আংশিক পৌঁছানোও বসে না, তাই "পৌঁছেছে কম, দেনা পুরো" কখনো থাকে না।
              */
             if ($to === DeliveryStage::PARTIALLY_DELIVERED && $lines !== []) {
-                app(ShortDeliveryReturn::class)->for($challan, $event, $lines);
+                app(ShortDeliveryReturn::class)->for($challan, $event, $lines, $damaged);
             }
 
             /*
@@ -613,12 +616,20 @@ final class DeliveryStageService
      *   • ঋণাত্মক বা চালানের চেয়ে বেশি — ক্রেতা যা পাননি তা "পেয়েছেন" নয়।
      *   • সব শূন্য বা সব পুরো — ওটা আংশিক নয়; "পৌঁছায়নি" বা "পৌঁছেছে" বাছুন।
      *
-     * @return array<int, string>
+     * ⭐ ভাঙা — ধাপ ৭ (মালিক, ৬ অক্টোবর ২০২৬: "কম বা ভাঙা মাল → ফেরত বা দাবি"): প্রতিটা সারিতে যতটা ভাঙা পৌঁছাল।
+     * ⛔ ভালো + ভাঙা চালানের চেয়ে বেশি নয়; ভাঙা থাকলে সারিটা পুরো নয় (আংশিকই); কেবল ভাঙা এলেও আংশিক —
+     * "কিছুই পৌঁছায়নি" নয়, ক্রেতা মালটা দেখেছেন আর ফেরত দিলেন।
+     *
+     * @return array{0: array<int, string>, 1: array<int, string>} ভালো অবস্থায় নেওয়া, ভাঙা
      */
-    private function partialLines(DeliveryChallan $challan, mixed $given): array
+    private function partialLines(DeliveryChallan $challan, mixed $given, mixed $broken = []): array
     {
         if (! is_array($given)) {
             $given = [];
+        }
+
+        if (! is_array($broken)) {
+            $broken = [];
         }
 
         $challanLines = DeliveryChallanLine::query()
@@ -626,7 +637,7 @@ final class DeliveryStageService
             ->get()
             ->keyBy('id');
 
-        foreach (array_keys($given) as $lineId) {
+        foreach ([...array_keys($given), ...array_keys($broken)] as $lineId) {
             if (! $challanLines->has((int) $lineId)) {
                 throw ValidationException::withMessages([
                     'lines' => __('sales::delivery.errors.line_not_on_challan'),
@@ -635,11 +646,10 @@ final class DeliveryStageService
         }
 
         $result = [];
+        $damaged = [];
         $any = false;
         $allFull = true;
-
-        foreach ($challanLines as $id => $line) {
-            $value = $given[$id] ?? '0';
+        $number = function (mixed $value): string {
             $raw = is_scalar($value) ? trim((string) $value) : 'x';
             $raw = $raw === '' ? '0' : $raw;
 
@@ -649,15 +659,21 @@ final class DeliveryStageService
                 ]);
             }
 
+            return $raw;
+        };
+
+        foreach ($challanLines as $id => $line) {
+            $raw = $number($given[$id] ?? '0');
+            $bad = $number($broken[$id] ?? '0');
             $shipped = (string) $line->delivered_qty;
 
-            if (bccomp($raw, $shipped, 4) > 0) {
+            if (bccomp(bcadd($raw, $bad, 4), $shipped, 4) > 0) {
                 throw ValidationException::withMessages([
                     'lines' => __('sales::delivery.errors.qty_over', ['line' => $line->line_no]),
                 ]);
             }
 
-            if (bccomp($raw, '0', 4) > 0) {
+            if (bccomp($raw, '0', 4) > 0 || bccomp($bad, '0', 4) > 0) {
                 $any = true;
             }
 
@@ -666,6 +682,10 @@ final class DeliveryStageService
             }
 
             $result[(int) $id] = bcadd($raw, '0', 4);
+
+            if (bccomp($bad, '0', 4) > 0) {
+                $damaged[(int) $id] = bcadd($bad, '0', 4);
+            }
         }
 
         if (! $any) {
@@ -680,7 +700,7 @@ final class DeliveryStageService
             ]);
         }
 
-        return $result;
+        return [$result, $damaged];
     }
 
     private function reason(mixed $id): ?ReasonCode

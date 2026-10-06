@@ -112,6 +112,15 @@
                                                value="{{ old('lines.'.$line->id, '0') }}"
                                                aria-label="{{ __('sales::delivery.field.delivered_qty') }} — {{ $line->product?->name() }}"
                                                class="{{ $inputClass }}">
+                                        {{-- ⭐ ভাঙা পৌঁছানো — আটকে রাখা মজুদে ফেরত (ধাপ ৭) --}}
+                                        <label class="flex items-center gap-1 text-xs text-(--color-ink-muted)">
+                                            {{ __('sales::delivery.field.damaged_qty') }}
+                                            <input type="number" name="damaged[{{ $line->id }}]" min="0" step="0.0001"
+                                                   max="{{ $line->delivered_qty }}" data-damaged-qty
+                                                   value="{{ old('damaged.'.$line->id, '0') }}"
+                                                   aria-label="{{ __('sales::delivery.field.damaged_qty') }} — {{ $line->product?->name() }}"
+                                                   class="{{ $inputClass }}">
+                                        </label>
                                     </li>
                                 @endforeach
                             </ul>
