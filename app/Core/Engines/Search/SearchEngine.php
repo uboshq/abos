@@ -76,7 +76,8 @@ final class SearchEngine
      *
      * @var list<string>
      */
-    private const COLUMNS = ['document_no', 'code', 'name_en', 'name_bn', 'name', 'mobile', 'phone'];
+    // ⓘ `sale_no` — বিক্রির নম্বর (S-0154); নতুন কাগজের নিজের নম্বর INV-/CHA-/GP-0154 (৬ অক্টোবর ২০২৬)
+    private const COLUMNS = ['document_no', 'sale_no', 'code', 'name_en', 'name_bn', 'name', 'mobile', 'phone'];
 
     /** @var array<class-string, array{route: string, permission: ?string, columns: list<string>}>|null */
     private ?array $sources = null;

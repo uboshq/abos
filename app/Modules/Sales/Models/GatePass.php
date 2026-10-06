@@ -109,6 +109,8 @@ class GatePass extends Model
 
         return $query->where(function (Builder $q) use ($term) {
             $q->where('document_no', 'like', "%{$term}%")
+                // ⭐ বিক্রির নম্বরেও (S-0154) — নতুন কাগজের নিজের নম্বর INV-/CHA-/GP-0154, বিক্রিরটা `sale_no`-তে (৬ অক্টোবর ২০২৬)
+                ->orWhere('sale_no', 'like', "%{$term}%")
                 ->orWhere('vehicle_no', 'like', "%{$term}%")
                 ->orWhereHas('challan', fn (Builder $c) => $c->search($term));
         });
