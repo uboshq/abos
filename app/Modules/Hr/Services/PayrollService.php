@@ -128,6 +128,14 @@ final class PayrollService
         $this->assertDraft($run);
 
         return DB::transaction(function () use ($run) {
+            /*
+             * ⛔ সারিতে তালা দিয়ে তাজা অবস্থা — পুরো-ERP অডিট, ৬ অক্টোবর ২০২৬ (HR ⚠️৫; [[ARebuildCannotEraseAConfirmedRunTest]])।
+             * ⓘ পুরনো কপিতে "খসড়া" দেখে আবার-বানানো চললে, ততক্ষণে আরেকজনের নিশ্চিত করা রানের বেতনশিট মুছে নতুন বসত — খাতায় বসা
+             * অঙ্ক আর শিট আলাদা হয়ে যেত। মুছবে কি না, সেটা তাজা অবস্থা বলে।
+             */
+            $this->lockFresh($run);
+            $this->assertDraft($run);
+
             $monthEnd = $run->month->copy()->endOfMonth();
 
             $run->payslips()->each(function (Payslip $slip) {
