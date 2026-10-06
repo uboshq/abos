@@ -298,7 +298,9 @@ class SyncEngine {
   ///
   /// Throws [UnsupportedError] for any [entityType] outside
   /// [_writableOffline] — see that field's own doc comment.
-  Future<void> enqueue({
+  /// ⓘ Returns the change's own id — a screen that wants the server's record
+  /// once it lands (a receipt) asks [appliedEntityId] with it.
+  Future<String> enqueue({
     required String module,
     required String entityType,
     required String operation,
@@ -322,8 +324,9 @@ class SyncEngine {
       );
     }
 
+    final changeId = _newChangeId();
     await _box.add(<String, dynamic>{
-      'changeId': _newChangeId(),
+      'changeId': changeId,
       'module': module,
       'entityType': entityType,
       'entityId': entityId,
@@ -342,7 +345,16 @@ class SyncEngine {
     });
 
     await flush(module);
+    return changeId;
   }
+
+  /// ⭐ The server's id for a change that has landed — in memory only, for the
+  /// screen that just sent it (a collection's receipt, 7 Oct 2026). Null while
+  /// it waits, or after the app restarts; the record is then in the synced
+  /// list as usual.
+  String? appliedEntityId(String changeId) => _appliedEntityIds[changeId];
+
+  final Map<String, String> _appliedEntityIds = {};
 
   /// The decoded payloads of everything still queued for one entity type.
   ///
@@ -489,6 +501,10 @@ class SyncEngine {
             });
           } else if (outcome != null) {
             // APPLIED or DUPLICATE — genuinely done.
+            final landed = outcome['entityId'];
+            if (landed is String && landed.isNotEmpty) {
+              _appliedEntityIds[row['changeId'] as String] = landed;
+            }
             toDelete.add(key);
           }
           // No outcome for this changeId at all (should not happen, but a

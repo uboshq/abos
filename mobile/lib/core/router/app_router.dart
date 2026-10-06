@@ -27,6 +27,7 @@ import '../../features/splash/splash_screen.dart';
 import '../../features/dashboards/dashboards_screen.dart';
 import '../../features/reports/reports_screen.dart';
 import '../../features/books/money_in_screens.dart';
+import '../books/collection_entry.dart';
 import '../../features/deliveries/deliveries_screen.dart';
 import '../../features/loading/loading_screens.dart';
 import '../../features/books/principal_screens.dart';
@@ -214,8 +215,11 @@ final goRouterProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: 'collections',
-            builder: (context, state) => const ModuleGateView(
-                path: 'collections', child: MoneyInListScreen()),
+            // ⭐ অফিসের লোকের "নতুন আদায়" (`mayCollect`, ৭ অক্টোবর ২০২৬)
+            builder: (context, state) => Consumer(
+                builder: (context, ref, _) => ModuleGateView(
+                    path: 'collections',
+                    child: MoneyInListScreen(canCollect: ref.watch(mayCollectProvider)))),
           ),
           GoRoute(
             path: 'principals',

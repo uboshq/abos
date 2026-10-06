@@ -5,6 +5,7 @@ import '../../core/books/books_api.dart';
 import '../../core/records/money.dart';
 import '../../core/theme/app_spacing.dart';
 import 'books_widgets.dart';
+import 'collect_screen.dart';
 
 /// ⭐ টাকা আদায় (Payment received) — মালিক, ৬ অক্টোবর ২০২৬।
 ///
@@ -12,10 +13,16 @@ import 'books_widgets.dart';
 /// একটা চাপলে বিস্তারিত — কোন বিলে কত বসল। কেবল পড়া। SR-এর ফোনে কেবল তাঁর নিজের ডিলারের — সার্ভারের দেয়াল।
 class MoneyInListScreen extends StatefulWidget {
   const MoneyInListScreen(
-      {super.key, this.api = const ServerBooksApi(), this.today});
+      {super.key,
+      this.api = const ServerBooksApi(),
+      this.today,
+      this.canCollect = false});
 
   final BooksApi api;
   final DateTime? today;
+
+  /// ⭐ অফিসের লোক — "নতুন আদায়" বোতাম (`/me`-র `mayCollect`, ৭ অক্টোবর ২০২৬)
+  final bool canCollect;
 
   @override
   State<MoneyInListScreen> createState() => _MoneyInListScreenState();
@@ -82,6 +89,18 @@ class _MoneyInListScreenState extends State<MoneyInListScreen> {
     final page = _page;
     return Scaffold(
       appBar: AppBar(title: const Text('টাকা আদায়')),
+      floatingActionButton: widget.canCollect
+          ? FloatingActionButton.extended(
+              key: const ValueKey('money-in-new'),
+              onPressed: () async {
+                await Navigator.of(context).push(MaterialPageRoute<void>(
+                    builder: (_) => CollectScreen(books: widget.api)));
+                if (mounted) await _load();
+              },
+              icon: const Icon(Icons.add),
+              label: const Text('নতুন আদায়'),
+            )
+          : null,
       body: RefreshIndicator(
         onRefresh: _load,
         child: ListView(
@@ -213,6 +232,7 @@ class _MoneyInScreenState extends State<MoneyInScreen> {
                   FactRow('গ্রাহক', d.row.customer),
                   FactRow('তারিখ', dayOf(d.row.date)),
                   FactRow('টাকা', Money.taka(d.row.amount)),
+                  if (d.statusLabel.isNotEmpty) FactRow('অবস্থা', d.statusLabel),
                   FactRow('পদ্ধতি', MoneyInRow.methodLabel(d.row.method)),
                   FactRow('খাত', d.row.account),
                   if (d.instrumentNo.isNotEmpty)

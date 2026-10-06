@@ -34,6 +34,7 @@ class SessionProfile {
     this.viewAllBranches = false,
     this.phoneModules,
     this.ordersReplaceDo = false,
+    this.mayCollect = false,
   });
 
   final OrgRef company;
@@ -62,6 +63,11 @@ class SessionProfile {
   /// 5 Oct 2026) — the DO screens then write through `/sales/orders`. False from an older server.
   final bool ordersReplaceDo;
 
+  /// ⭐ This person may take money on the phone — office people only (owner,
+  /// 7 Oct 2026; field money goes through the deposit notice). False from an
+  /// older server.
+  final bool mayCollect;
+
   /// Whether there is anything to switch between at all — a picker with one
   /// company and one branch is a button that does nothing.
   bool get canSwitch => companies.length > 1 || branches.length > 1;
@@ -78,6 +84,7 @@ class SessionProfile {
       phoneModules:
           modules is List ? modules.map((e) => e.toString()).toSet() : null,
       ordersReplaceDo: json['ordersReplaceDo'] == true,
+      mayCollect: json['mayCollect'] == true,
     );
   }
 }
