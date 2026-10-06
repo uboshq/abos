@@ -158,10 +158,36 @@ void main() {
     await tester.pumpAndSettle();
     await tester.scrollUntilVisible(find.text('প্রিন্সিপালের কমিশন'), 200);
 
+    // ⭐ the owner's column order: name · total inflow · commission · sent ·
+    // inflow still held · remark with the period
     expect(find.text('S-001 — Star Line'), findsOneWidget);
-    expect(find.textContaining('কমিশন ৳3,850'), findsOneWidget);
-    expect(find.textContaining('দেওয়া ৳90,000'), findsOneWidget);
-    expect(find.text('দিতে হবে ৳6,150'), findsOneWidget);
+    expect(find.text('মোট ইনফ্লো'), findsOneWidget);
+    expect(find.text('৳100,000'), findsOneWidget);
+    expect(find.text('কমিশন (Margin 3.85%)'), findsOneWidget);
+    expect(find.text('৳3,850'), findsOneWidget);
+    expect(find.text('প্রিন্সিপালকে পাঠানো'), findsOneWidget);
+    expect(find.text('৳90,000'), findsOneWidget);
+    expect(find.text('বাকি ইনফ্লো'), findsOneWidget);
+    expect(find.text('৳6,150'), findsOneWidget);
+    expect(find.text('মন্তব্য: দিতে হবে ৳6,150 · 02/09/2026 – 01/10/2026'),
+        findsOneWidget);
+
+    final labels = tester
+        .widgetList<Text>(find.descendant(
+            of: find.ancestor(
+                of: find.text('প্রিন্সিপালের কমিশন'), matching: find.byType(Card)),
+            matching: find.byType(Text)))
+        .map((t) => t.data)
+        .where((d) => d != null && !d.startsWith('৳'))
+        .toList();
+    expect(
+        labels.indexOf('মোট ইনফ্লো') < labels.indexOf('কমিশন (Margin 3.85%)') &&
+            labels.indexOf('কমিশন (Margin 3.85%)') <
+                labels.indexOf('প্রিন্সিপালকে পাঠানো') &&
+            labels.indexOf('প্রিন্সিপালকে পাঠানো') <
+                labels.indexOf('বাকি ইনফ্লো'),
+        isTrue,
+        reason: "the owner's column order");
   });
 
   testWidgets('an older server without the new blocks still gets the old cards',

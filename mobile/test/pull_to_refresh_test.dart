@@ -10,6 +10,8 @@ import 'package:abos_mobile/features/approvals/approval_inbox_screen.dart';
 import 'package:abos_mobile/features/attendance/attendance_screen.dart';
 import 'package:abos_mobile/features/customers/customer_list_screen.dart';
 import 'package:abos_mobile/features/customers/due_list_screen.dart';
+import 'package:abos_mobile/core/records/notification_record.dart';
+import 'package:abos_mobile/features/notifications/notifications_screen.dart';
 import 'package:abos_mobile/features/orders/order_list_screen.dart';
 import 'package:abos_mobile/features/products/product_list_screen.dart';
 import 'package:abos_mobile/features/reports/reports_screen.dart';
@@ -41,6 +43,8 @@ void main() {
     'stock_list_screen.dart',
     'order_list_screen.dart',
     'due_list_screen.dart',
+    // ⭐ মাথার ঘণ্টার পাতা — মালিক, ৬ অক্টোবর ২০২৬
+    'notifications_screen.dart',
     'approval_inbox_screen.dart',
     'attendance_screen.dart',
     'reports_screen.dart',
@@ -120,6 +124,8 @@ void main() {
   testWidgets('পণ্য', (t) => expectPullable(t, const ProductListScreen()));
   testWidgets('মজুদ', (t) => expectPullable(t, const StockListScreen()));
   testWidgets('বকেয়া', (t) => expectPullable(t, const DueListScreen()));
+  testWidgets('নোটিফিকেশন', (t) => expectPullable(t, NotificationsScreen(
+      fetch: () async => const NotificationPage(items: [], unread: 0))));
 
   testWidgets('অর্ডার — the screen the hand-written list missed',
       (t) => expectPullable(t, const OrderListScreen()));

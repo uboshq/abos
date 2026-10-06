@@ -6,7 +6,6 @@ import '../../core/menu/menu_item.dart';
 import '../../core/records/today_record.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
-import '../../core/widgets/day_part.dart';
 import '../today/today_panel.dart';
 
 /// The হোম tab: a greeting, the day's figures, and the two or three things
@@ -44,24 +43,9 @@ class HomeDashboard extends StatelessWidget {
   /// Seam for the greeting — a test can ask for eight in the evening.
   final DateTime Function()? now;
 
-  /// Which tiles earn a place above the fold, in this order. Everything
-  /// else is one tap away on the অ্যাপ tab.
-  static const List<String> _quickKeys = [
-    'sales.order.create',
-    'approval.inbox.index',
-    'hr.attendance.self',
-    'customer.dues',
-    'reports',
-  ];
 
   @override
   Widget build(BuildContext context) {
-    final quick = <MenuItem>[
-      for (final key in _quickKeys)
-        for (final item in items)
-          if (item.key == key && !item.planned) item,
-    ];
-
     return TodayPanel(
       fetch: fetchToday,
       lastKnown: lastKnownToday,
@@ -87,82 +71,9 @@ class HomeDashboard extends StatelessWidget {
           ),
         ),
       ],
-      leading: (context, today) => [
-        _GreetingCard(user: user, today: today, now: now),
-        if (quick.isNotEmpty) ...[
-          const SizedBox(height: AppSpacing.sm),
-          _QuickActions(items: quick),
-        ],
-        const SizedBox(height: AppSpacing.md),
-      ],
-    );
-  }
-}
-
-class _GreetingCard extends StatelessWidget {
-  const _GreetingCard({required this.user, required this.today, this.now});
-
-  final AuthUser user;
-  final TodayRecord? today;
-  final DateTime Function()? now;
-
-  @override
-  Widget build(BuildContext context) {
-    final greeting = banglaGreeting((now ?? DateTime.now)());
-    final name = user.name.trim();
-    // The server's business day, when it has said which one it is
-    // (docs/Contract §৮ rule গ) — never the phone's.
-    final date = today?.date;
-
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.md),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              name.isEmpty ? greeting : '$greeting, $name',
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
-            ),
-            const SizedBox(height: AppSpacing.xs),
-            Text(
-              [
-                if (user.roles.isNotEmpty) user.roles.join(', '),
-                if (date != null) date,
-              ].join(' · '),
-              style: const TextStyle(
-                  fontSize: 12.5, color: AppColors.onSurfaceMuted),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-/// A row of chips, each one a tile from the অ্যাপ grid promoted to the front.
-class _QuickActions extends StatelessWidget {
-  const _QuickActions({required this.items});
-
-  final List<MenuItem> items;
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      height: 40,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        itemCount: items.length,
-        separatorBuilder: (_, __) => const SizedBox(width: AppSpacing.sm),
-        itemBuilder: (context, index) {
-          final item = items[index];
-          return ActionChip(
-            avatar: Icon(item.icon, size: 18, color: AppColors.primary),
-            label: Text(item.label),
-            onPressed: () => context.go('/home/${item.routeName}'),
-          );
-        },
-      ),
+      // ⛔ শুভেচ্ছা আর শর্টকাটের সারি নেই — মালিক, ৬ অক্টোবর ২০২৬: "ei sort cutgulo dewar dorkar nai, user nam, suvo
+      // sokal etaw bad daw"; খালি জায়গায় সংখ্যাগুলো উঠে আসে, প্রিন্সিপালের বাক্সসহ। নাম আর ছবি এখন মাথার ডানে।
+      leading: (context, today) => const [],
     );
   }
 }
