@@ -9,6 +9,7 @@ use App\Core\Support\Money;
 use App\Core\Support\ViewedBranch;
 use App\Http\Controllers\Controller;
 use App\Modules\Accounts\Models\Account;
+use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Sales\Models\Collection;
 use App\Modules\Sales\Models\CollectionLine;
 use Illuminate\Database\Eloquent\Builder;
@@ -38,7 +39,47 @@ class CollectionApiController extends Controller implements HasMiddleware
 
     public static function middleware(): array
     {
-        return [new Middleware('can:sales.collection.view')];
+        return [
+            new Middleware('can:sales.collection.view', only: ['index', 'show']),
+            // ⓘ আদায় লেখার প্রস্তুতি — কেবল অফিসের লোক: আদায়ের চাবি আর খাতায় টাকা তোলার চাবি ([[CollectionSync::officeMayCollect()]])
+            new Middleware('can:sales.collection.create', only: ['setup']),
+            new Middleware('can:accounts.voucher.create', only: ['setup']),
+        ];
+    }
+
+    /**
+     * `GET /collections/setup` — ফোনের আদায়-ফর্মের টাকার খাত (মালিক, ৭ অক্টোবর ২০২৬: "অ্যাপে পেমেন্ট অপশন চালু করো")।
+     *
+     * ⓘ ওয়েবের আদায়-ফর্মের হুবহু তালিকা ([[CollectionController::formData()]]): নগদ, ব্যাংক আর MFS-এর পোস্টযোগ্য খাত,
+     * অন্য শাখার টিল বাদ। প্রতিটার ধরন (`cash` | `bank` | `mfs`) — মা-খাত দেখে — যাতে ফোন "মাধ্যম" বলতে পারে।
+     * ⓘ লেখা নিজে সিঙ্কে ([[CollectionSync::apply()]]) — নেট ছাড়াও জমা থাকে, আর একই আদায় দুবার বসে না।
+     */
+    public function setup(): JsonResponse
+    {
+        // ⓘ ধরন খাতের নিজের ঘর (`money_kind`) থেকে; না থাকলে মা-খাতের কোড দেখে
+        $kindOf = fn (Account $a): string => match (true) {
+            in_array($a->money_kind, [Account::CASH, Account::BANK, Account::MFS], true) => (string) $a->money_kind,
+            ($a->parent?->code ?? $a->code) === StandardChart::BANK => Account::BANK,
+            ($a->parent?->code ?? $a->code) === StandardChart::MOBILE_MONEY => Account::MFS,
+            default => Account::CASH,
+        };
+
+        // ⓘ টাকার মা-খাতের (নগদ ১১০১ · ব্যাংক ১১০২ · MFS ১১০৫) সন্তান-খাত, কেবল পোস্টযোগ্য — মা-খাতগুলো নিজেরাই দল, তাই মা
+        // খোঁজায় postable() নয় ([[TheMoneyParentsAreGroupsSoPostableFindsNoneTest]]); অন্য শাখার টিল বাদ, ওয়েবের ফর্মের মতো
+        $accounts = Account::query()->notAnotherBranchsTill()
+            ->whereIn('parent_id', Account::query()->whereIn('code', StandardChart::MONEY_PARENTS)->select('id'))
+            ->postable()
+            ->with('parent:id,code')->orderBy('code')->get();
+
+        return response()->json([
+            'today' => now()->toDateString(),
+            'accounts' => $accounts->map(fn (Account $a): array => [
+                'id' => (string) $a->public_id,
+                'code' => (string) $a->code,
+                'name' => $a->name(),
+                'kind' => $kindOf($a),
+            ])->values(),
+        ]);
     }
 
     /** `GET /collections?from=&to=&q=&method=&page=` */
@@ -83,6 +124,8 @@ class CollectionApiController extends Controller implements HasMiddleware
 
         return response()->json([
             ...$this->row($collection),
+            // ⭐ ফোনের রসিদ — পাকা, নাকি খসড়া (অনুমোদন বা নিশ্চিতের অপেক্ষায়) — ৭ অক্টোবর ২০২৬
+            'status' => (string) $collection->status,
             'instrument' => (string) ($collection->instrument ?? ''),
             'instrument_no' => (string) ($collection->instrument_no ?? ''),
             'instrument_date' => $collection->instrument_date?->toDateString(),

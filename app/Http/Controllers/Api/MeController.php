@@ -101,6 +101,14 @@ class MeController extends Controller
             'ordersReplaceDo' => (bool) app(SettingsService::class)->get('sales.orders_replace_do', false),
 
             /*
+             * ⭐ ফোনে টাকা আদায় লেখা যায় কি না — কেবল অফিসের লোক (মালিক, ৭ অক্টোবর ২০২৬: "এটা কেবল অফিসের লোকদের
+             * জন্য … ফিল্ডের জন্য deposit request")। ⓘ আদায়ের চাবি SR-দেরও আছে (জমার অনুরোধের জন্য), তাই দরজা অফিসের চাবিতে:
+             * খাতায় টাকা তোলার চাবি (`accounts.voucher.create` — হিসাবরক্ষক আর মালিকের, মাঠের নয়), আর ডিলারে বাঁধা নন।
+             * ⓘ পুরনো অ্যাপ এটা পড়ে না।
+             */
+            'mayCollect' => \App\Modules\Sales\Sync\CollectionSync::officeMayCollect($user),
+
+            /*
              * কার্যকর অনুমতির তালিকা — রোলের নাম নয়, চাবিগুলো।
              *
              * ⓘ অ্যাপ "এই বোতামটা দেখাব কি না" প্রশ্নের উত্তর চায়, আর

@@ -45,6 +45,14 @@ class CollectionSyncTest extends TestCase
         CompanyContext::set($this->company->id, $this->company->defaultBranch()?->id);
 
         $this->salesman = User::query()->where('email', 'sales@abos.test')->firstOrFail();
+        /*
+         * ⓘ ফোনের আদায় এখন কেবল অফিসের লোকের — খাতায় টাকা তোলার চাবিও লাগে (মালিক, ৭ অক্টোবর ২০২৬; মাঠের টাকা যায়
+         * স্লিপসহ জমার অনুরোধে)। এই ফাইলের প্রশ্ন সিঙ্কের আচরণ, তাই পাঠানো মানুষটার দুই চাবিই আছে।
+         */
+        CompanyContext::forCompany($this->company->id, fn () => $this->salesman->givePermissionTo(
+            array_map(fn (string $k) => \Spatie\Permission\Models\Permission::findOrCreate($k, 'web'), ['sales.collection.create', 'accounts.voucher.create'])));
+        app(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
+        $this->salesman = $this->salesman->fresh();
         $this->actingAs($this->salesman);
 
         $this->shop = Customer::query()->firstOrFail();

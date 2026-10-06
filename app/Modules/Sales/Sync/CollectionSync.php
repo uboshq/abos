@@ -11,11 +11,14 @@ use App\Core\Engines\Sync\SyncPosition;
 use App\Core\Engines\Sync\SyncRecord;
 use App\Core\Engines\Sync\SyncRejection;
 use App\Models\User;
+use App\Modules\Accounts\Models\Account;
 use App\Modules\Customer\Models\Customer;
 use App\Modules\Sales\Models\Collection;
 use App\Modules\Sales\Models\SalesInvoice;
 use App\Modules\Sales\Services\CollectionService;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\ValidationException;
 
 /**
  * মাঠ থেকে আদায় — নেট ছাড়া নেওয়া, নেট এলে বসানো।
@@ -62,7 +65,20 @@ final class CollectionSync implements SyncsToDevices
      */
     public static function requiredPermission(): ?string
     {
-        return 'sales.collection.create';
+        /*
+         * ⭐ কেবল অফিসের লোক — মালিক, ৭ অক্টোবর ২০২৬: "এটা কেবল অফিসের লোকদের জন্য থাকবে, আর ফিল্ডের জন্য থাকবে
+         * payment request" (মাঠের টাকা যায় স্লিপসহ জমার অনুরোধে)। ⓘ আদায়ের চাবি SR-দেরও আছে, তাই সিঙ্কের চাবি খাতায় টাকা
+         * তোলার চাবি; আদায়ের চাবি [[apply()]]-এ আলাদা দেখা হয় ([[officeMayCollect()]])।
+         */
+        return 'accounts.voucher.create';
+    }
+
+    /** ⭐ ফোনে আদায় — আদায়ের চাবি, খাতায় টাকা তোলার চাবি, আর ডিলারে বাঁধা নন; /me আর সিঙ্ক দুই জায়গায় একই প্রশ্ন */
+    public static function officeMayCollect(User $user): bool
+    {
+        return $user->can('sales.collection.create')
+            && $user->can('accounts.voucher.create')
+            && ! app(\App\Core\Services\DealerScope::class)->walled($user);
     }
 
     /**
@@ -85,7 +101,7 @@ final class CollectionSync implements SyncsToDevices
     public function pull(User $user, ?Carbon $since, int $limit, ?SyncPosition $after = null): SyncBatch
     {
         $query = Collection::query()
-            ->with('customer:id,public_id')
+            ->with(['customer:id,public_id', 'account'])
             ->orderBy('updated_at')
             ->orderBy('id')
             ->limit($limit);
@@ -109,6 +125,10 @@ final class CollectionSync implements SyncsToDevices
                 'trxDate' => $collection->trx_date?->toDateString(),
                 'amount' => (string) $collection->amount,
                 'status' => $collection->status,
+                // ⭐ ফোনের রসিদ — কোন খাতে, কী মাধ্যমে, কোন লেনদেন-নম্বরে (৭ অক্টোবর ২০২৬); পুরনো অ্যাপ বাড়তি ঘর উপেক্ষা করে
+                'accountName' => $collection->account?->name(),
+                'instrument' => $collection->instrument,
+                'instrumentNo' => $collection->instrument_no,
                 'narration' => $collection->narration,
             ],
             updatedAt: $collection->updated_at ?? $collection->created_at ?? now(),
@@ -134,6 +154,11 @@ final class CollectionSync implements SyncsToDevices
             throw SyncRejection::conflict(__('sales::sync.collection_edit_needs_network'));
         }
 
+        // ⛔ আদায়ের চাবিও লাগে — সিঙ্কের চাবি কেবল খাতায় টাকা তোলার ([[requiredPermission()]])
+        if (! $user->can('sales.collection.create')) {
+            throw new SyncRejection(__('sync.not_allowed_offline', ['type' => self::entityType()]));
+        }
+
         $payload = $change->payload();
 
         // বাইরের কী থেকে ভেতরের আইডি — ফোন কেবল public_id চেনে, ক্রমিক id নয়
@@ -145,15 +170,47 @@ final class CollectionSync implements SyncsToDevices
             throw new SyncRejection(__('sales::sync.unknown_customer'));
         }
 
-        $amount = (string) ($payload['amount'] ?? '0');
+        /*
+         * ⭐ ফোনের আদায় — ওয়েবের আদায়-ফর্মের একই নিয়ম ([[CollectionRequest]]), একই সেবা ([[CollectionService]]);
+         * মালিক, ৭ অক্টোবর ২০২৬: "অ্যাপে পেমেন্ট অপশন চালু করো"। ⓘ টাকার খাত (নগদ/ব্যাংক/MFS), মাধ্যম, লেনদেন-নম্বর,
+         * তারিখ আর মন্তব্য — পুরনো অ্যাপ এগুলো পাঠায় না, তখন আগের মতো প্রধান টিলের নগদ।
+         * ⓘ অঙ্ক আর লেখার ঘর কঠোরভাবে — "1e5" বা অ্যারে এলে ৫০০ নয়, কারণসহ ফেরত (একটা ভুল সারি গোটা সারি আটকায় না)।
+         */
+        $account = null;
 
-        if (! is_numeric($amount) || bccomp($amount, '0', 4) <= 0) {
-            throw new SyncRejection(__('sales::sync.collection_needs_amount'));
+        if (filled($payload['accountId'] ?? null)) {
+            // ⛔ কেবল পোস্টযোগ্য খাত — দল-খাতে টাকা নয় ([[MoneyNeverLandsOnAGroupAccountTest]]); বাকি নিয়ম সেবার ([[MoneyAccountRule]])
+            $account = Account::query()->postable()->where('public_id', (string) $payload['accountId'])->first();
+
+            if ($account === null) {
+                throw new SyncRejection(__('sales::sync.unknown_money_account'));
+            }
+        }
+
+        $data = [
+            'trx_date' => is_string($payload['trxDate'] ?? null) ? $payload['trxDate'] : now()->toDateString(),
+            'amount' => is_scalar($payload['amount'] ?? null) ? (string) $payload['amount'] : '',
+            'instrument' => $payload['instrument'] ?? null,
+            'instrument_no' => $payload['instrumentNo'] ?? null,
+            'narration' => $payload['narration'] ?? null,
+        ];
+
+        $check = Validator::make($data, [
+            'trx_date' => ['required', 'date_format:Y-m-d', 'before_or_equal:today'],
+            'amount' => ['required', 'regex:/^\d{1,14}(\.\d{1,4})?$/', 'not_regex:/^0+(\.0+)?$/'],
+            'instrument' => ['nullable', 'string', 'max:32'],
+            'instrument_no' => ['nullable', 'string', 'max:64'],
+            'narration' => ['nullable', 'string', 'max:500'],
+        ]);
+
+        if ($check->fails()) {
+            throw new SyncRejection((string) $check->errors()->first());
         }
 
         /*
-         * বিলভিত্তিক বরাদ্দ — ফোন public_id ধরে বিল দেখায়। বরাদ্দ না
-         * এলে টাকাটা গ্রাহকের অগ্রিম হয়ে বসে (অফিস নিশ্চিত করার সময়)।
+         * অন্য অংশের মতো এখানেও: প্রতিটা বণ্টনের বিল আসে বাইরের কী দিয়ে।
+         * অচেনা বিল মানে এই পরিবর্তন প্রত্যাখ্যাত — অর্ধেক বণ্টন বসিয়ে
+         * বাকিটা নীরবে বাদ দেওয়া হিসাব গুলিয়ে দেয়।
          */
         $lines = [];
 
@@ -176,19 +233,33 @@ final class CollectionSync implements SyncsToDevices
             ];
         }
 
+        try {
+            $collection = $this->collections->create([
+                'customer_id' => $customer->id,
+                'trx_date' => $data['trx_date'],
+                'amount' => $data['amount'],
+                'account_id' => $account?->id,
+                // ⓘ পুরনো অ্যাপ মাধ্যম পাঠায় না — তখন আগের মতো নগদ
+                'instrument' => $data['instrument'] ?? ($account === null ? 'cash' : null),
+                'instrument_no' => $data['instrument_no'],
+                'narration' => $data['narration'],
+            ], $lines);
+        } catch (ValidationException $refused) {
+            throw new SyncRejection((string) collect($refused->errors())->flatten()->first());
+        }
+
         /*
-         * খাত ইচ্ছাকৃতভাবে দেওয়া হয় না — `account_id` null মানে
-         * CollectionService প্রধান নগদ টিলে বসায় (মাঠের আদায় নগদ)। এতে
-         * টাকার-খাতের নিয়মটা এড়ানো হয় না, বরং সেটার মধ্য দিয়েই যায়।
-         * চেকের আদায় কাউন্টারের আলাদা পথ (১১০৪), এখানে নয়।
+         * ⭐ "এখনই নিশ্চিত" — ওয়েবের দুই চাপ (লেখা, তারপর নিশ্চিত) এক চাপে; চাবিও একই (`sales.collection.create`)।
+         * ⓘ অনুমোদনের অপেক্ষায় ([[HeldForApproval]]) বা টাকার কোনো নিয়মে আটকালে খসড়াই থাকে — ওয়েবে যেমন থাকে;
+         * অনুরোধটাও থাকে, ফোন পরে আদায়ের অবস্থা দেখে বলে কেন।
          */
-        $collection = $this->collections->create([
-            'customer_id' => $customer->id,
-            'trx_date' => $payload['trxDate'] ?? now()->toDateString(),
-            'amount' => $amount,
-            'instrument' => 'cash',
-            'narration' => $payload['narration'] ?? null,
-        ], $lines);
+        if (($payload['confirm'] ?? false) === true) {
+            try {
+                $collection = $this->collections->confirm($collection->fresh(['lines']));
+            } catch (ValidationException) {
+                // ⓘ খসড়া থাকল — ওয়েবের একই আচরণ
+            }
+        }
 
         return (string) $collection->public_id;
     }

@@ -64,6 +64,8 @@ Route::prefix('v1/sales')
         Route::get('/loading/{id}', [\App\Modules\Sales\Http\Controllers\LoadingApiController::class, 'show'])->whereUuid('id')->middleware('can:sales.shipment.view')->name('loading.show');
         Route::post('/loading/{id}/packed', [\App\Modules\Sales\Http\Controllers\LoadingApiController::class, 'packed'])->whereUuid('id')->middleware('can:sales.delivery.update')->name('loading.packed');
         // ⭐ টাকা আদায় — কেবল পড়া, ওয়েবের আদায়ের চাবিতে ([[CollectionApiController]], মালিক, ৬ অক্টোবর ২০২৬)
+        // ⭐ ফোনে আদায় লেখার প্রস্তুতি — টাকার খাত, ওয়েবের ফর্মের একই তালিকা; লেখা নিজে সিঙ্কে ([[CollectionSync]], ৭ অক্টোবর ২০২৬)
+        Route::get('/collections/setup', [\App\Modules\Sales\Http\Controllers\CollectionApiController::class, 'setup'])->middleware(['can:sales.collection.create', 'can:accounts.voucher.create'])->name('collection.setup');
         Route::get('/collections', [\App\Modules\Sales\Http\Controllers\CollectionApiController::class, 'index'])->name('collection.index');
         Route::get('/collections/{id}', [\App\Modules\Sales\Http\Controllers\CollectionApiController::class, 'show'])->whereUuid('id')->name('collection.show');
         Route::get('/returns/setup', [\App\Modules\Sales\Http\Controllers\SalesReturnApiController::class, 'setup'])->name('return.setup');
