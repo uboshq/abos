@@ -62,6 +62,7 @@ final class MoneyTransferService
     {
         return DB::transaction(function () use ($data) {
             $from = $this->till($data['from_till_id'] ?? null, 'from_till_id');
+            $this->assertSentFromYourOwnTill($from, $data['given_by'] ?? null);
 
             $amount = $this->amount($data['amount'] ?? null);
 
@@ -389,6 +390,38 @@ final class MoneyTransferService
 
             return $transfer->fresh();
         });
+    }
+
+    /**
+     * ⛔ নগদ কেবল নিজের বাক্স থেকে পাঠানো — পুরো-ERP অডিট, ৬ অক্টোবর ২০২৬ (হিসাব ⚠️৫; [[ATransferLeavesOnlyYourOwnTillTest]])।
+     *
+     * ⓘ ভাউচারে নগদ কেবল নিজের বাক্সে ([[VoucherService::assertCashLandsInOwnTill()]], মালিকের নিয়ম ২১ সেপ্টেম্বর), অথচ স্থানান্তর
+     * যেকোনো বাক্স থেকে পাঠানো যেত, আর "দিলেন" ঘরে যেকোনো নাম — সহকর্মীর বাক্স খালি হত তাঁর নামে, তাঁর অজান্তে। এখন:
+     *  · পাঠানোর বাক্সটা লেখকের হেফাজতে ([[CashTill::mayUse()]] — একই নিয়ম; কারও নামে কোনো বাক্স না থাকলে নিয়ম ঘুমায়);
+     *  · "দিলেন" লেখক নিজে বা ওই বাক্সের ধারক — অন্য কেউ নয়।
+     * কনসোল আর সিডারে ব্যবহারকারী নেই — তখন চলে না, ভাউচারের মতোই।
+     */
+    private function assertSentFromYourOwnTill(CashTill $from, mixed $givenBy): void
+    {
+        $userId = (int) (auth()->id() ?? 0);
+
+        if ($userId === 0) {
+            return;
+        }
+
+        if (! CashTill::mayUse($userId, (int) $from->account_id)) {
+            throw ValidationException::withMessages([
+                'from_till_id' => __('accounts::validation.transfer_not_your_till', ['till' => $from->name()]),
+            ]);
+        }
+
+        $giver = (int) ($givenBy ?? $userId);
+
+        if ($giver !== $userId && $giver !== (int) $from->holder_id) {
+            throw ValidationException::withMessages([
+                'given_by' => __('accounts::validation.giver_not_the_holder', ['till' => $from->name()]),
+            ]);
+        }
     }
 
     private function till(mixed $id, string $field): CashTill

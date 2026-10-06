@@ -189,12 +189,20 @@ class MoneyAndCustodyTest extends TestCase
             'holder_id' => $this->owner->id,
         ]);
 
+        // ⓘ পাঠানোর বাক্স পাঠানো মানুষের হেফাজতে — নগদ কেবল নিজের বাক্স থেকে (অডিট হিসাব ⚠️৫, ৬ অক্টোবর ২০২৬; [[ATransferLeavesOnlyYourOwnTillTest]])
+        $cashier = User::factory()->create();
+        $cashier->companies()->attach($this->company, ['is_active' => true]);
+        $this->till->forceFill(['holder_id' => $cashier->id])->save();
+        $this->actingAs($cashier);
+
         app(MoneyTransferService::class)->initiate([
             'from_till_id' => $this->till->id,
             'to_till_id' => $mine->id,
             'amount' => '5000',
             'trx_date' => now()->toDateString(),
         ]);
+
+        $this->actingAs($this->owner);
 
         $this->screen()->assertOk()->assertSee(
             trans_choice('accounts::custody.waiting_for_you', 1, ['count' => 1])

@@ -141,6 +141,8 @@ return [
     'year_reopen_latest_only' => 'Only the year closed most recently can be reopened — right now that is ":name".',
     /* Cash only into your own till - 21 September 2026. */
     'cash_not_your_till' => ':account is not your till - cash can only go into your own.',
+    'transfer_not_your_till' => ':till is not your cash box — cash can only be sent from your own box.',
+    'giver_not_the_holder' => '"Given by" must be you or the holder of :till — a transfer cannot be written in anyone else\'s name.',
     'no_till_of_your_own' => 'No till is held in your name, so cash cannot be taken - choose bank or MFS.',
     /* The money-account rule - MoneyAccountRule, 27 September 2026. */
     'unknown_account' => 'That account is not in this company chart.',

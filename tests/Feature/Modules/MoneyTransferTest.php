@@ -61,6 +61,8 @@ class MoneyTransferTest extends TestCase
         $tills = app(CashTillService::class);
 
         $this->from = $tills->ensurePrimaryTill();
+        // ⓘ পাঠানোর বাক্স পাঠানো মানুষের হেফাজতে — নগদ কেবল নিজের বাক্স থেকে (অডিট হিসাব ⚠️৫, ৬ অক্টোবর ২০২৬; [[ATransferLeavesOnlyYourOwnTillTest]])
+        $this->from->forceFill(['holder_id' => $this->giver->id])->save();
         $this->to = $tills->create([
             'code' => 'RIDER-A',
             'name_en' => 'Rider A',
