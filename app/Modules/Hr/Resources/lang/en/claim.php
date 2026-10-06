@@ -51,7 +51,7 @@ return [
     'narration_advance' => ':who — cash advance :no',
     'narration_from_advance' => ':who — expense claim :no, from advance',
 
-    'no_employee' => 'There is no employee record in your name — ask HR to link your user to an employee.',
+    'no_employee' => 'There is no employee record in your name. HR or the owner: HR → Employees → your name → Edit → pick you in "System User" and save (if you are not an employee yet, add one first).',
     'kind_bad' => 'Pick expense claim or cash advance request.',
     'amount_bad' => 'The amount must be above zero.',
     'reason_required' => 'Write the reason.',
