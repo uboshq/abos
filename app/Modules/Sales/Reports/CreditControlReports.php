@@ -130,6 +130,7 @@ final class CreditControlReports
                     ->where('customers.company_id', $f['company_id'])
                     ->where('customers.is_active', true)
                     ->tap(ReportEngine::branchWall($f, 'customers.branch_id'))
+                    ->tap(ReportEngine::dealerWall($f, 'customers.id')) // ⛔১৬ — বিক্রয়কর্মী কেবল নিজের ডিলার
                     ->withOutstanding()
                     ->get()
                     ->keyBy(fn (Customer $c) => (int) $c->id)
@@ -227,6 +228,7 @@ final class CreditControlReports
                     ->where('a.module', 'customer')
                     ->where('a.action', 'credit_limit')
                     ->tap(ReportEngine::branchWall($f, 'customers.branch_id'))
+                    ->tap(ReportEngine::dealerWall($f, 'customers.id')) // ⛔১৬ — বিক্রয়কর্মী কেবল নিজের ডিলার
                     ->whereBetween(DB::raw('DATE(a.requested_at)'), [$f['from'], $f['to']])
                     ->orderByDesc('a.requested_at')
                     ->orderByDesc('a.id')
@@ -267,6 +269,7 @@ final class CreditControlReports
             ->whereNull('customers.deleted_at')
             ->where('customers.is_active', true)
             ->tap(ReportEngine::branchWall($f, 'customers.branch_id'))
+            ->tap(ReportEngine::dealerWall($f, 'customers.id')) // ⛔১৬ — বিক্রয়কর্মী কেবল নিজের ডিলার
             ->select(['customers.id', 'customers.code as customer_code'])
             ->selectRaw(self::name().' as customer_name')
             ->selectRaw("'".Customer::drillSourceType()."' as party_type_literal");
@@ -280,6 +283,7 @@ final class CreditControlReports
             ->whereNull('customers.deleted_at')
             ->where('customers.is_active', true)
             ->tap(ReportEngine::branchWall($f, 'customers.branch_id'))
+            ->tap(ReportEngine::dealerWall($f, 'customers.id')) // ⛔১৬ — বিক্রয়কর্মী কেবল নিজের ডিলার
             ->pluck('customers.id')->map(fn ($id) => (int) $id)->all();
     }
 

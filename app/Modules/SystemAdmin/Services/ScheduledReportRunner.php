@@ -136,10 +136,35 @@ final class ScheduledReportRunner
          */
         $recipients = $this->recipientsWhoMaySee($schedule, $definition);
 
+        /*
+         * ⭐ দেয়ালের ভিতরের প্রাপক — মালিকের উত্তর ৬ (২৬ সেপ্টেম্বর ২০২৬): *"প্রত্যেকে কেবল
+         * নিজেরটা"* (⛔১৬, ২ অক্টোবর ২০২৬)।
+         *
+         * ⛔ ভাগের ফাইলটা সূচির মালিকের চোখে বানানো; একজন বিক্রয়কর্মী প্রাপক থাকলে তিনি গোটা
+         * কোম্পানির বকেয়া পেতেন — কোনো পর্দা না খুলেই। তাই তাঁকে ভাগের ফাইল থেকে সরিয়ে তাঁর
+         * **নিজের** পরিচয়ে আলাদা একটা ফাইল, যেটা কেবল তিনিই নামাতে পারেন।
+         */
+        $walled = CompanyContext::forCompany(
+            (int) $schedule->company_id,
+            fn (): Collection => $recipients
+                ->filter(fn (User $user): bool => app(\App\Core\Services\DealerScope::class)->walled($user->fresh()))
+                ->values(),
+        );
+        $recipients = $recipients->reject(fn (User $user): bool => $walled->contains('id', $user->id))->values();
+
         $run = $this->generate($schedule, $owner, $recipients);
 
         $this->schedules->markRan($schedule, $run->status);
         $this->notifyReady($schedule, $run, $owner, $recipients);
+
+        foreach ($walled as $person) {
+            try {
+                $own = $this->generate($schedule, $person, collect());
+                $this->notifyReady($schedule, $own, $person, collect());
+            } catch (\Illuminate\Auth\Access\AuthorizationException) {
+                // ⓘ রিপোর্টটা ডিলারের দেয়াল বসায় না — তাঁর জন্য কোনো ফাইলই নয়, ফাঁস নয়
+            }
+        }
 
         return $run;
     }

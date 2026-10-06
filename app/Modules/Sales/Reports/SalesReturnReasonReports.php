@@ -83,6 +83,7 @@ final class SalesReturnReasonReports
                 })
                 ->where('sr.company_id', $f['company_id'])
                 ->tap(ReportEngine::branchWall($f, 'sr.branch_id'))
+                ->tap(ReportEngine::dealerWall($f, 'sr.customer_id'))
                 ->when($f['customer_id'] ?? null, fn ($q, $c) => $q->where('sr.customer_id', (int) $c))
                 ->when($f['product_id'] ?? null, fn ($q, $p) => $q->where('rl.product_id', (int) $p))
                 ->whereBetween('sr.trx_date', [$f['from'], $f['to']])

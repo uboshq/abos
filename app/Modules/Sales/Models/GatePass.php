@@ -24,6 +24,8 @@ class GatePass extends Model
     use BelongsToCompany;
     use HasPublicId;
     use IsAudited;
+    // ⭐ বিক্রয়কর্মী কেবল নিজের বাঁধা ডিলারের কাগজ দেখেন — ⛔১৬, ২ অক্টোবর ২০২৬ ([[DealerScope]])
+    use \App\Core\Concerns\ScopedToUserDealers;
 
     /*
      * ⛔ শাখার দেয়াল — চূড়ান্ত অডিট ⛔১৪, ৩০ সেপ্টেম্বর ২০২৬। ⓘ সারিতে `branch_id` বসত, কিন্তু ছাঁকনি ছিল
@@ -36,6 +38,19 @@ class GatePass extends Model
     public const CANCELLED = 'cancelled';
 
     protected $table = 'sal_gate_passes';
+
+    /**
+     * ⭐ গেট পাস চালানের, নয়তো ট্রিপের — দেখা ডিলারের চালান বা সেই চালানের ট্রিপ (⛔১৬)।
+     */
+    public function applyDealerWall(Builder $builder, \Illuminate\Database\Query\Builder $dealerIds): void
+    {
+        $table = $this->getTable();
+
+        $builder->where(fn ($w) => $w->whereIn($table.'.delivery_challan_id', self::challansOfDealers($dealerIds))
+            ->orWhereIn($table.'.shipment_id', fn ($s) => $s->select('dw_l.shipment_id')
+                ->from('sal_shipment_lines as dw_l')
+                ->whereIn('dw_l.delivery_challan_id', self::challansOfDealers($dealerIds))));
+    }
 
     protected $fillable = [
         'company_id', 'branch_id', 'document_no', 'sale_no',

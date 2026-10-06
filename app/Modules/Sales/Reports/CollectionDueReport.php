@@ -65,6 +65,7 @@ final class CollectionDueReport
         $bills = SalesInvoice::query()->posted()->withCollected()->toBase()
             ->where('sal_invoices.company_id', $f['company_id'])
             ->tap(ReportEngine::branchWall($f, 'sal_invoices.branch_id'))
+                ->tap(ReportEngine::dealerWall($f, 'sal_invoices.customer_id'))
             ->when($f['customer_id'] ?? null, fn ($w, $id) => $w->where('sal_invoices.customer_id', (int) $id));
 
         $due = '(i.total - i.collected_total - i.voucher_total - i.returned_total)';

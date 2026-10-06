@@ -32,6 +32,17 @@ Route::middleware('auth')->prefix('customers')->group(function () {
     Route::get('/reports/{slug}', [CustomerReportController::class, 'show'])->name('report.show');
 
     /*
+     * ⭐ কোন কর্মী কোন ডিলারের — ⛔১৬, ২ অক্টোবর ২০২৬। ⓘ স্থির পথ, {customer}-এর আগে।
+     */
+    Route::get('/bindings', [\App\Modules\Customer\Http\Controllers\DealerBindingController::class, 'index'])->name('binding.index');
+    Route::get('/bindings/tree', [\App\Modules\Customer\Http\Controllers\DealerBindingController::class, 'tree'])->name('binding.tree');
+    Route::post('/bindings', [\App\Modules\Customer\Http\Controllers\DealerBindingController::class, 'store'])->name('binding.store');
+    Route::post('/bindings/handover', [\App\Modules\Customer\Http\Controllers\DealerBindingController::class, 'handover'])->name('binding.handover');
+    Route::post('/bindings/supervisor', [\App\Modules\Customer\Http\Controllers\DealerBindingController::class, 'supervisor'])->name('binding.supervisor');
+    Route::post('/bindings/{binding}/end', [\App\Modules\Customer\Http\Controllers\DealerBindingController::class, 'end'])
+        ->whereNumber('binding')->name('binding.end');
+
+    /*
      * আচরণ নামানো — কোড দিয়ে, তাই {customer}-এর আগে ও স্থির পথে।
      * "conduct" সংখ্যা নয় বলে {customer} (whereNumber) এটাকে গিলত না,
      * তবু স্পষ্টতার জন্য উপরে।

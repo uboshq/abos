@@ -96,6 +96,8 @@ return [
 
         'master' => [
             ['label' => 'customer::menu.customers', 'icon' => 'customer', 'route' => 'customer.index', 'permission' => 'customer.view'],
+            // ⭐ কোন কর্মী কোন ডিলারের — চালুর আগে এই পর্দা (⛔১৬, ২ অক্টোবর ২০২৬)
+            ['label' => 'customer::binding.menu', 'icon' => 'customer', 'route' => 'customer.binding.index', 'permission' => 'customer.binding.manage'],
         ],
         'reports' => [
             // ⭐ খাতা মেলানো — রিপোর্ট সেন্টার ধাপ ৬ (মালিক, ১ অক্টোবর ২০২৬)
@@ -144,6 +146,19 @@ return [
 
         // ⛔ শুরুর বাকি খাতায় বসানো — টাকার কাজ, নিজের চাবি (গভীর অডিট, ২৯ সেপ্টেম্বর ২০২৬; [[CustomerService]])
         'customer.opening_balance',
+
+        /*
+         * ⭐ ডিলারের বাঁধন — ⛔১৬, ২ অক্টোবর ২০২৬ ([[DealerScope]])।
+         *
+         * ⓘ `own` — মাঠের বিক্রয়কর্মীর চিহ্ন: কেবল নিজের (আর নিচের গাছের) বাঁধা ডিলার দেখেন,
+         * আর অর্ডার ছাড়া কিছু তৈরি করেন না। রোলের নাম নয়, চাবি — নাম কোম্পানিভেদে আলাদা।
+         * ⓘ `all` — সব ডিলার; চিহ্নের উপরে জেতে। সুপার অ্যাডমিন এমনিতেই পান, আর একজনকে
+         * আলাদা করে দিতে হলে ব্যতিক্রম দিয়েই হয়।
+         * ⓘ `binding.manage` — কে কোন ডিলারের, হাতবদল, উপরওয়ালা, আর চালুর আগাম দেখা।
+         */
+        'customer.dealers.own',
+        'customer.dealers.all',
+        'customer.binding.manage',
     ],
 
     /*
@@ -164,6 +179,8 @@ return [
          */
         'ASM' => [
             'customer.view',
+            // ⭐ নিজের আর নিচের গাছের বাঁধা ডিলার — মালিকের উত্তর ৩ (⛔১৬)
+            'customer.dealers.own',
         ],
         /*
          * RSM — ASM-এর উপরের স্তর, প্রতিটা কোম্পানিতে ডিফল্টে (মালিক, ২৭ সেপ্টেম্বর ২০২৬)।
@@ -172,6 +189,8 @@ return [
         'RSM' => [
             'customer.view',
             'customer.report',
+            // ⭐ নিজের নিচের গাছের বাঁধা ডিলার — মালিকের উত্তর ৩ (⛔১৬)
+            'customer.dealers.own',
         ],
         /*
          * DSM — বিক্রয়ের সবচেয়ে উপরের স্তর, প্রতিটা কোম্পানিতে ডিফল্টে (মালিক, ২৭ সেপ্টেম্বর ২০২৬)।
@@ -180,6 +199,8 @@ return [
         'DSM' => [
             'customer.view',
             'customer.report',
+            // ⭐ নিজের নিচের গাছের বাঁধা ডিলার — মালিকের উত্তর ৩ (⛔১৬)
+            'customer.dealers.own',
         ],
         /*
          * ⭐ হিসাবরক্ষক — প্রতিটা কোম্পানিতে ডিফল্টে থাকে। মালিকের নির্দেশ, ২৭
@@ -192,13 +213,19 @@ return [
             // ⓘ শুরুর বাকি হিসাবের কাজ — মাঠের বিক্রয়কর্মীর নয়
             'customer.opening_balance',
         ],
-        'Field Sales' => ['customer.view', 'customer.create'],
+        /*
+         * ⛔ মাঠের বিক্রয়কর্মী ডিলার বসান না — মালিক, ২৬ সেপ্টেম্বর ২০২৬: *"বিক্রয়কর্মী কিছুই
+         * তৈরি করতে পারবেন না — কেবল অর্ডার দেবেন"*। ⓘ আগে এখানে `customer.create` ছিল (quick-create)।
+         */
+        'Field Sales' => ['customer.view', 'customer.dealers.own'],
         'Manager' => [
             'customer.view',
             'customer.report',
             // ⭐ মালিকের ভূমিকা-ভাগ, ২৭ সেপ্টেম্বর ২০২৬ (*"baki sob tumar poramorso motei koro"*)
             'customer.create',
             'customer.update',
+            // ⭐ কে কোন ডিলারের — তদারকির কাজ (⛔১৬)
+            'customer.binding.manage',
         ],
     ],
 
@@ -303,6 +330,23 @@ return [
 
     // Control Panel-এ যে সুইচগুলো দেখাবে — নিয়ম ৭।
     'settings' => [
+        [
+            /*
+             * ⭐ বিক্রয়কর্মী কেবল নিজের ডিলার দেখবেন — ⛔১৬, ২ অক্টোবর ২০২৬।
+             *
+             * ⚠️ ডিফল্ট **বন্ধ** — সমন্বয়কারীর সিদ্ধান্ত, ৪ অক্টোবর ২০২৬ (মালিকের উত্তর ৭-এর "চালু" বদলে):
+             * চিহ্নটা মাঠের রোলে বসে (স্থানান্তর), কিন্তু মালিক ডিলার বেঁধে নিজে চালু না করা পর্যন্ত লাইভে কিছুই
+             * বদলায় না। ⛔ বাঁধনের আগে চালু করলে প্রতিটা বিক্রয়কর্মী শূন্য দেখতেন (fail-closed) — তাই আগে
+             * বাঁধার পর্দা আর আগাম দেখা ([[DealerBindingController]]), তারপর এই সুইচ। ডেমোতে চালু (DemoSeeder)।
+             * ⛔ এক চাপে সবার দেয়াল ওঠে-নামে, তাই কেবল সুপার অ্যাডমিন বদলান।
+             */
+            'key' => 'customer.dealer_scope_enabled',
+            'label' => 'customer::binding.setting',
+            'type' => 'boolean',
+            'default' => false,
+            'group' => 'entry',
+            'super_admin_only' => true,
+        ],
         [
             'key' => 'customer.require_bn_name',
             'label' => 'customer::settings.require_bn_name',

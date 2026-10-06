@@ -113,6 +113,8 @@ final class EveryExcuseWeGrantedIsCountedTest extends TestCase
      * @var list<string>
      */
     private const NOT_EXCUSES = [
+        // ⓘ উল্টো দিকের তালিকা: এখানে নাম মানে ডিলারের দেয়ালে আটকানো বিক্রয়কর্মীর কাছে রিপোর্টটা **বন্ধ** (⛔১৬, ৬ অক্টোবর ২০২৬)
+        'EveryDealerPaperStandsBehindTheDealerWallTest::REFUSED_TO_THE_WALLED',
         // ⓘ চাহিদা: অন্য কোম্পানিতে ঢোকার প্রতিটা দরজা তালিকায় থাকতে হবে, আর বেশিরভাগ নিজেই canInCompany() ডাকে (৫ অক্টোবর ২০২৬)
         'EveryDoorIntoAnotherCompanyAsksTheKeyThereTest::DOORS',
         // ⓘ চাহিদা: খাতা পড়া প্রতিটা ফাইল দেখায় নাকি যাচাই করে (শাখা-দেখা, ২৯ সেপ্টেম্বর ২০২৬)

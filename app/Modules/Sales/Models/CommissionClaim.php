@@ -35,6 +35,8 @@ class CommissionClaim extends Model implements Drillable
     use BelongsToCompany;
     use HasPublicId;
     use IsAudited;
+    // ⭐ বিক্রয়কর্মী কেবল নিজের বাঁধা ডিলারের কাগজ দেখেন — ⛔১৬, ২ অক্টোবর ২০২৬ ([[DealerScope]])
+    use \App\Core\Concerns\ScopedToUserDealers;
     use SoftDeletes;
 
     /** দেওয়া হয়েছে, কোম্পানি এখনো কিছু বলেনি। */

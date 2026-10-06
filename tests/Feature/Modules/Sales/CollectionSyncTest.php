@@ -26,6 +26,8 @@ use Tests\TestCase;
 class CollectionSyncTest extends TestCase
 {
     use RefreshDatabase;
+    // ⓘ এই পরীক্ষার প্রশ্ন ডিলারের দেয়াল নয় — ডেমোর বিক্রয়কর্মীর চিহ্ন তোলা (⛔১৬, ৪ অক্টোবর ২০২৬)
+    use \Tests\Concerns\TakesTheDealerWallOffTheDemoSalesman;
 
     private Company $company;
 
@@ -37,6 +39,7 @@ class CollectionSyncTest extends TestCase
     {
         parent::setUp();
         $this->seed(DemoSeeder::class);
+        $this->takeTheDealerWallOffTheDemoSalesman();
 
         $this->company = Company::query()->where('code', 'TDEPOT')->firstOrFail();
         CompanyContext::set($this->company->id, $this->company->defaultBranch()?->id);

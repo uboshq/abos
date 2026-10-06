@@ -324,6 +324,15 @@ class DemoSeeder extends Seeder
                          */
                         'sales.lead.manage',
                         'sales.opportunity.manage',
+
+                        /*
+                         * ⛔ ডিলারের বাঁধনের দুইটা চাবি — সপ্তমবার একই ফাঁদ (⛔১৬, ২ অক্টোবর ২০২৬)।
+                         * ⓘ `all` আর `binding.manage` দেয়াল ভাঙে বা বসায় — বিক্রয়কর্মীর নয়।
+                         * ⭐ `own` (দেয়ালের চিহ্ন) ঢালাও `customer.%` থেকে **পান** — মালিকের উত্তর "ক",
+                         * ৩ অক্টোবর ২০২৬: ডেমোতে দেয়ালটা দেখা যাক। বাঁধন নিচে, গ্রাহক বসার পরে।
+                         */
+                        'customer.dealers.all',
+                        'customer.binding.manage',
                     ])
                     ->get()
             );
@@ -440,6 +449,32 @@ class DemoSeeder extends Seeder
             $this->setUpSuppliers();
             $this->setUpCustomers();
             $this->setUpStock();
+        });
+
+        /*
+         * ⭐ ডেমোর বিক্রয়কর্মী নিজের ডিলারে বাঁধা — মালিকের উত্তর "ক", ৩ অক্টোবর ২০২৬ (⛔১৬)।
+         *
+         * ⓘ চিহ্ন আছে (উপরে), তাই বাঁধন ছাড়া তিনি কিছুই দেখতেন না। সব ডিলার বাঁধা, কেবল
+         * "Niloy Store" নয় — ডেমোতে দেয়ালটা চোখে পড়ুক: মালিকের চোখে আছে, বিক্রয়কর্মীর চোখে নেই।
+         * ⓘ শুরু বছরের গোড়া থেকে, যাতে পুরনো তারিখের নমুনা-বিলও তাঁর নামে গোনা হয়।
+         */
+        CompanyContext::forCompany($alpha->id, function () use ($salesman, $alpha) {
+            // ⭐ ডেমোতে দেয়াল চালু — লাইভে ডিফল্ট বন্ধ, মালিক নিজে চালু করেন (৪ অক্টোবর ২০২৬)
+            app(\App\Core\Services\SettingsService::class)->set('customer.dealer_scope_enabled', true);
+
+            $dealers = \App\Modules\Customer\Models\Customer::acrossDealers()
+                ->where('name_en', '<>', 'Niloy Store')
+                ->orderBy('id')
+                ->pluck('id');
+
+            foreach ($dealers as $dealerId) {
+                \App\Modules\Customer\Models\DealerBinding::create([
+                    'company_id' => $alpha->id,
+                    'user_id' => $salesman->id,
+                    'customer_id' => $dealerId,
+                    'starts_on' => '2026-01-01',
+                ]);
+            }
         });
 
         /*

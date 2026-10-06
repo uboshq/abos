@@ -44,6 +44,8 @@ use Tests\TestCase;
 final class TheCountingEngineHadNoDoorTest extends TestCase
 {
     use RefreshDatabase;
+    // ⓘ এই পরীক্ষার প্রশ্ন ডিলারের দেয়াল নয় — ডেমোর বিক্রয়কর্মীর চিহ্ন তোলা (⛔১৬, ৪ অক্টোবর ২০২৬)
+    use \Tests\Concerns\TakesTheDealerWallOffTheDemoSalesman;
 
     private Warehouse $warehouse;
 
@@ -54,6 +56,7 @@ final class TheCountingEngineHadNoDoorTest extends TestCase
         parent::setUp();
 
         $this->seed(DemoSeeder::class);
+        $this->takeTheDealerWallOffTheDemoSalesman();
 
         $company = Company::query()->where('code', 'TDEPOT')->firstOrFail();
         CompanyContext::set($company->id, $company->defaultBranch()?->id);

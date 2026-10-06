@@ -21,6 +21,8 @@ final class CustomerTarget extends Model
     use BelongsToCompany;
     use HasPublicId;
     use IsAudited;
+    // ⭐ বিক্রয়কর্মী কেবল নিজের বাঁধা ডিলারের কাগজ দেখেন — ⛔১৬, ২ অক্টোবর ২০২৬ ([[DealerScope]])
+    use \App\Core\Concerns\ScopedToUserDealers;
 
     protected $table = 'sal_customer_targets';
 

@@ -364,6 +364,9 @@ final class SalesWidgets implements DashboardWidgets
      */
     private static function inView(Builder $query, string $column): Builder
     {
+        // ⭐ ডিলারের দেয়ালও — বিল আর আদায় দুই টেবিলেই `customer_id` (⛔১৬, ২ অক্টোবর ২০২৬)
+        app(\App\Core\Services\DealerScope::class)->restrict($query, strstr($column, '.', true).'.customer_id');
+
         return app(DataScope::class)->inView($query, $column);
     }
 

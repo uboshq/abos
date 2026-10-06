@@ -109,6 +109,7 @@ final class MonthlySalesReport
             ->join('customers as cu', 'cu.id', '=', 'le.party_id')
             ->where('le.company_id', $f['company_id'])
             ->tap(ReportEngine::branchWall($f, 'le.branch_id'))
+                ->tap(ReportEngine::dealerWall($f, 'le.party_id'))
             ->where('le.party_type', 'customer')
             ->whereIn('le.source_type', $sources)
             ->where('le.credit', '>', 0)
@@ -151,6 +152,7 @@ final class MonthlySalesReport
     {
         return $q->where('d.company_id', $f['company_id'])
             ->tap(ReportEngine::branchWall($f, 'd.branch_id'))
+                ->tap(ReportEngine::dealerWall($f, 'd.customer_id'))
             ->whereNull('d.deleted_at')
             ->whereBetween('d.trx_date', [$f['from'], $f['to']])
             ->tap(fn ($q) => self::whoFilters($q, $f, 'd.customer_id'));

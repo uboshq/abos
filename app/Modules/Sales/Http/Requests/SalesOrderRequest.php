@@ -23,7 +23,16 @@ class SalesOrderRequest extends FormRequest
 
         return [
             'customer_id' => ['required', 'integer',
-                Rule::exists('customers', 'id')->where('company_id', $companyId)],
+                Rule::exists('customers', 'id')->where('company_id', $companyId),
+                /*
+                 * ⛔ বিক্রয়কর্মী কেবল নিজের বাঁধা ডিলারের অর্ডার দেন — ⛔১৬, ২ অক্টোবর ২০২৬।
+                 * ⓘ `exists` কাঁচা কোয়েরি, ডিলারের দেয়াল সেখানে চলে না; তাই আলাদা প্রশ্ন।
+                 */
+                static function (string $attribute, mixed $value, \Closure $fail): void {
+                    if (! app(\App\Core\Services\DealerScope::class)->allowsCustomer((int) $value)) {
+                        $fail(__('customer::binding.dealer_out_of_reach'));
+                    }
+                }],
             'warehouse_id' => ['nullable', 'integer',
                 Rule::exists('inv_warehouses', 'id')->where('company_id', $companyId)],
             'trx_date' => ['required', 'date', 'before_or_equal:today'],

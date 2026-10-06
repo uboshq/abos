@@ -29,8 +29,16 @@ class DeliveryState extends Model
     use BelongsToCompany;
     use HasPublicId;
     use IsAudited;
+    // ⭐ বিক্রয়কর্মী কেবল নিজের বাঁধা ডিলারের কাগজ দেখেন — ⛔১৬, ২ অক্টোবর ২০২৬ ([[DealerScope]])
+    use \App\Core\Concerns\ScopedToUserDealers;
 
     protected $table = 'sal_delivery_states';
+
+    /** ⭐ ডেলিভারির ধাপ চালানের — দেখা ডিলারের চালানগুলোরই (⛔১৬)। */
+    public function applyDealerWall(Builder $builder, \Illuminate\Database\Query\Builder $dealerIds): void
+    {
+        $builder->whereIn($this->getTable().'.delivery_challan_id', self::challansOfDealers($dealerIds));
+    }
 
     protected $fillable = [
         'company_id', 'delivery_challan_id', 'stage', 'stage_at', 'updated_by',

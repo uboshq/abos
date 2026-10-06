@@ -9,10 +9,13 @@ use App\Core\Concerns\HasActiveState;
 use App\Core\Concerns\HasPublicId;
 use App\Core\Concerns\IsAudited;
 use App\Core\Concerns\IsMasterRecord;
+use App\Core\Concerns\ScopedToUserDealers;
 use App\Core\Contracts\Drillable;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Query\Builder as QueryBuilder;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
@@ -30,6 +33,12 @@ class PriceList extends Model implements Drillable
     use HasPublicId;
     use IsAudited;
     use IsMasterRecord;
+
+    /*
+     * ⛔ ডিলারের দেয়াল — কোনো ডিলারের নিজের দর কেবল তাঁর বিক্রয়কর্মী দেখেন (⛔১৬, ৬ অক্টোবর ২০২৬)।
+     * ⓘ সাধারণ তালিকা (`customer_id` নেই) সবার — নিচের [[applyDealerWall()]] ওটাকে ছাড়ে।
+     */
+    use ScopedToUserDealers;
     use SoftDeletes;
 
     protected $table = 'mdm_price_lists';
@@ -79,5 +88,13 @@ class PriceList extends Model implements Drillable
     public function drillRoute(): array
     {
         return ['master_data.price_list.show', ['price_list' => $this->id]];
+    }
+
+    /** ⓘ সাধারণ তালিকা (কোনো ডিলারের নয়) দেয়ালের ভিতরেও দেখা যায় — কেবল অন্য ডিলারের বিশেষ দর লুকায়। */
+    public function applyDealerWall(Builder $builder, QueryBuilder $dealerIds): void
+    {
+        $column = $this->getTable().'.'.$this->dealerScopeColumn();
+
+        $builder->where(fn (Builder $q) => $q->whereNull($column)->orWhereIn($column, $dealerIds));
     }
 }

@@ -30,6 +30,8 @@ final class CustomerMetrics
             ->join('customers', 'customers.id', '=', 'ledger_entries.party_id')
             ->where('ledger_entries.company_id', CompanyContext::id())
             ->where('ledger_entries.party_type', Customer::drillSourceType())
+            // ⭐ বিক্রয়কর্মী কেবল নিজের ডিলারের বকেয়া (⛔১৬, ২ অক্টোবর ২০২৬)
+            ->tap(fn ($q) => app(\App\Core\Services\DealerScope::class)->restrict($q, 'customers.id', $user))
             ->where('ledger_entries.trx_date', '<=', $asOf)
             /*
              * ⚠️ শাখায় সীমিত ব্যবহারকারী কেবল নিজের শাখার জের দেখেন —

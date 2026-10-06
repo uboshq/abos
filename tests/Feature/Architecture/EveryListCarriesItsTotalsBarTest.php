@@ -23,6 +23,7 @@ final class EveryListCarriesItsTotalsBarTest extends TestCase
 {
     /** পাতা ভাগ আছে, কিন্তু পট্টি ইচ্ছাকৃতভাবে নেই — কারণসহ */
     private const EXEMPT = [
+        'Customer/Resources/views/binding/index.blade.php' => 'ডিলার-বাঁধনের তালিকা — কোন বিক্রয়কর্মী কোন ডিলারের, কবে থেকে; টাকার কোনো ঘর নেই, যোগ করার কিছু নেই (⛔১৬)',
         // ⓘ গ্রাহকের পোর্টাল নিজের লেআউটে (`x-sales::portal.layout`), ABOS-এর খোলসে নয় — পট্টি আঁকে কেবল খোলসের
         // `listfoot` ([[chrome/navy]]); এখানে ঘোষণা করলে কোথাও আঁকা হত না, অর্থাৎ পাহারাটা মিথ্যা সবুজ হত
         'Sales/Resources/views/portal/do-index.blade.php' => 'গ্রাহকের পোর্টাল — নিজের লেআউট, পট্টি আঁকার খোলস নেই; প্রতিটা DO কার্ডে নিজের অঙ্ক',

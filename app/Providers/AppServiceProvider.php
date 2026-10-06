@@ -80,6 +80,16 @@ class AppServiceProvider extends ServiceProvider
          * পাতা খোলার আগেই ১৯২টা কোয়েরি — আর প্রায় সবগুলোই কিছু না পেয়ে
          * ফিরত। হিসাবটা এখন [[PermissionOverrides]]-এ, উত্তর অবিকল একই।
          */
+        /*
+         * ⛔ দেয়ালের ভিতরের বিক্রয়কর্মী কেবল অর্ডার দেন — মালিক, ২৬ সেপ্টেম্বর ২০২৬: *"বিক্রয়কর্মী
+         * কিছুই তৈরি করতে পারবেন না — কেবল অর্ডার দেবেন"* (⛔১৬, [[DealerScope::mayDo()]])।
+         * ⓘ ব্যতিক্রমের হুকের **আগে**: একজনকে ভুলে `invoice.create` দেওয়া থাকলেও নিয়মটা জেতে।
+         * চাবির নিয়ম, তালিকা নয় — কাল নতুন মডিউলের `x.y.create`-ও আপনা থেকে আটকায়।
+         */
+        Gate::before(fn (User $user, string $ability): ?bool => CompanyContext::id() === null
+            ? null
+            : app(\App\Core\Services\DealerScope::class)->mayDo($user, $ability));
+
         Gate::before(function (User $user, string $ability) {
             if (CompanyContext::id() === null) {
                 return null;
@@ -220,6 +230,9 @@ class AppServiceProvider extends ServiceProvider
          * ধরে রাখা চলবে না — ওটা ঠিক উল্টো দিকের নিরাপত্তা-ফুটো হত।
          */
         $this->app->scoped(DataScope::class);
+
+        // ⭐ ডিলারের দেয়াল — নিচের গাছটা অনুরোধে একবার গোনা, পরের অনুরোধে নতুন (⛔১৬)
+        $this->app->scoped(\App\Core\Services\DealerScope::class);
 
         /*
          * অনুমতির ব্যতিক্রম — অনুরোধ প্রতি একটা।

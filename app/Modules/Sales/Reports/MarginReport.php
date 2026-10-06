@@ -73,6 +73,7 @@ final class MarginReport
                     ->join('customers as cu', 'cu.id', '=', 'i.customer_id')
                     ->where('i.company_id', $f['company_id'])
                     ->tap(ReportEngine::branchWall($f, 'i.branch_id'))
+                ->tap(ReportEngine::dealerWall($f, 'i.customer_id'))
                     ->whereBetween('i.trx_date', [$f['from'], $f['to']])
                     ->whereNull('i.deleted_at')
                     // খাতায় বসা বিল — খসড়ার খরচ এখনো টানাই হয়নি (শূন্য)

@@ -212,6 +212,14 @@ final class SyncService
         $permission = $handler::requiredPermission();
 
         if ($permission !== null && ! $user->can($permission)) {
+            /*
+             * ⭐ দেয়ালের বিক্রয়কর্মীকে কারণটা নিজের ভাষায় — হ্যান্ডলার নিজে বলে ([[CollectionSync::walledRefusal()]]):
+             * *"টাকা নেবে কেবল অফিস"* (মালিকের উত্তর "খ", ৩ অক্টোবর ২০২৬; ⛔১৬)।
+             */
+            if (method_exists($handler, 'walledRefusal') && app(\App\Core\Services\DealerScope::class)->walled($user)) {
+                return $this->refuse($user, $deviceId, $module, $change, (string) $handler::walledRefusal());
+            }
+
             return $this->refuse($user, $deviceId, $module, $change, __('sync.push_needs_permission'));
         }
 

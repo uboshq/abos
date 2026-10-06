@@ -299,6 +299,8 @@ final class RouteMetrics
             ->where('ledger_entries.company_id', $company)
             ->where('customers.company_id', $company)
             ->where('ledger_entries.party_type', Customer::drillSourceType())
+            // ⭐ বিক্রয়কর্মী কেবল নিজের ডিলারের অঙ্ক — রুটের পাতা আর রিপোর্ট দুইটাই এই ভিতে (⛔১৬)
+            ->tap(fn ($q) => app(\App\Core\Services\DealerScope::class)->restrict($q, 'customers.id'))
             // শেষ জের "এই তারিখ পর্যন্ত" — তাই শুরুর আগেরগুলোও লাগে (আগের জের)
             ->where('ledger_entries.trx_date', '<=', $to)
             ->when($branchId, fn ($q, $b) => $q->where('ledger_entries.branch_id', $b));

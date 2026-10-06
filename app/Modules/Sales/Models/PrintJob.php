@@ -29,6 +29,8 @@ class PrintJob extends Model
     use BelongsToCompany;
     use HasPublicId;
     use IsAudited;
+    // ⭐ বিক্রয়কর্মী কেবল নিজের বাঁধা ডিলারের কাগজ দেখেন — ⛔১৬, ২ অক্টোবর ২০২৬ ([[DealerScope]])
+    use \App\Core\Concerns\ScopedToUserDealers;
 
     /** সারিতে আছে, এখনো ছাপা হয়নি। */
     public const WAITING = 'waiting';
@@ -58,6 +60,22 @@ class PrintJob extends Model
     ];
 
     protected $table = 'sal_print_jobs';
+
+    /**
+     * ⭐ ছাপার সারি বিল বা চালানের — দেখা ডিলারের কাগজগুলোরই (⛔১৬)।
+     * ⓘ অচেনা ধরনের সারি দেয়ালের ভিতরের মানুষ দেখেন না — fail-closed।
+     */
+    public function applyDealerWall(Builder $builder, \Illuminate\Database\Query\Builder $dealerIds): void
+    {
+        $table = $this->getTable();
+        $invoices = \Illuminate\Support\Facades\DB::table('sal_invoices')->select('sal_invoices.id')
+            ->where('sal_invoices.company_id', \App\Core\Support\CompanyContext::id())
+            ->whereIn('sal_invoices.customer_id', $dealerIds);
+
+        $builder->where(fn ($w) => $w
+            ->where(fn ($i) => $i->where($table.'.document_type', self::INVOICE)->whereIn($table.'.document_id', $invoices))
+            ->orWhere(fn ($c) => $c->where($table.'.document_type', self::CHALLAN)->whereIn($table.'.document_id', self::challansOfDealers($dealerIds))));
+    }
 
     protected $fillable = [
         'company_id', 'branch_id',

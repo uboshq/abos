@@ -630,7 +630,8 @@ final class CustomerService
             return;
         }
 
-        $sitting = Customer::query()
+        // ⛔ দেয়াল ছাড়া — অন্যের ডিলার না দেখলে পয়েন্টটা "খালি" দেখাত (⛔১৬, §গ৫)
+        $sitting = Customer::acrossDealers()
             ->where('location_id', $pointId)
             ->where('is_active', true)
             ->when($existing, fn ($q) => $q->whereKeyNot($existing->id))
@@ -649,7 +650,8 @@ final class CustomerService
 
     private function assertCodeIsFree(string $code, ?int $exceptId = null): void
     {
-        $taken = Customer::query()
+        // ⛔ দেয়াল ছাড়া — অন্যের ডিলারের সংকেত না দেখলে "খালি" বলত, আর unique নিয়ম ৫০০ দিত (⛔১৬, §গ৫)
+        $taken = Customer::acrossDealers()
             ->where('code', $code)
             ->when($exceptId, fn ($q) => $q->whereKeyNot($exceptId))
             // মুছে ফেলা গ্রাহকের কোডও দখলে থাকে: সফট ডিলিট মানে রেকর্ডটা

@@ -46,6 +46,8 @@ final class RouteReports
 
                 $customers = DB::table('customers')
                     ->where('company_id', $company)
+                    // ⭐ বিক্রয়কর্মী কেবল নিজের ডিলার গোনেন; খাতার অঙ্ক RouteMetrics নিজে ছাঁকে (⛔১৬)
+                    ->tap(ReportEngine::dealerWall($f, 'customers.id'))
                     ->whereNull('deleted_at')
                     ->groupBy('location_id')
                     ->select(['location_id', DB::raw('COUNT(*) as customer_count')]);

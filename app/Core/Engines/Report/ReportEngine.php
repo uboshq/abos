@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Core\Engines\Report;
 
 use App\Core\Services\DataScope;
+use App\Core\Services\DealerScope;
 use App\Core\Support\CompanyContext;
 use App\Core\Support\RunningBalance;
 use App\Models\Branch;
@@ -60,6 +61,11 @@ final class ReportEngine
      * জানে), তাই ইঞ্জিন দেয়াল বসাতে পারে না — কিন্তু বসেছে কি না গুনতে পারে।
      */
     private static int $wallsBound = 0;
+
+    /**
+     * ⭐ কতবার [[dealerWall()]] ডাকা হয়েছে — শাখার দেয়ালের অবিকল একই হিসাব (⛔১৬, ২ অক্টোবর ২০২৬)।
+     */
+    private static int $dealerWallsBound = 0;
 
     /** ⓘ খোঁজের মোড়কে ভিতরের ক্রম বয়ে আনার ঘর ([[applySearch()]]) — সারিতে দেখানো হয় না */
     private const SEARCH_ORDER = '__search_order';
@@ -531,6 +537,27 @@ final class ReportEngine
     }
 
     /**
+     * ⭐ ডিলারের দেয়াল — রিপোর্টের কোয়েরিতে `->tap(ReportEngine::dealerWall($f, 'i.customer_id'))`
+     * (⛔১৬, ২ অক্টোবর ২০২৬)।
+     *
+     * ⓘ মালিক (২৬ সেপ্টেম্বর ২০২৬): বিক্রয়কর্মী কেবল নিজের ডিলারের বিল আর বকেয়া দেখবেন।
+     * ⚠️ পণ্য বা ব্র্যান্ড ধরে বিক্রির রিপোর্ট ডিলারের নাম দেখায় না, তবু ছাঁকতে হয় — নইলে
+     * বিক্রয়কর্মী গোটা কোম্পানির বিক্রির অঙ্ক দেখতেন।
+     * ⛔ যে রিপোর্ট এটা ডাকে না, দেয়ালের ভিতরের মানুষ সেটা পান না ([[queryFor()]]) — ফেরত, ফাঁস নয়।
+     *
+     * @param  array<string, mixed>  $f
+     * @return Closure(Builder|EloquentBuilder): void
+     */
+    public static function dealerWall(array $f, string $column): Closure
+    {
+        self::$dealerWallsBound++;
+
+        return function ($query) use ($column): void {
+            app(DealerScope::class)->restrict($query, $column);
+        };
+    }
+
+    /**
      * রিপোর্টের কোয়েরি — আর দেয়াল বসেছে কি না তার হিসাব।
      *
      * ⛔ দেয়াল ভুলে যাওয়া রিপোর্ট শাখায় আটকানো মানুষের জন্য **চলে না**:
@@ -542,6 +569,7 @@ final class ReportEngine
     private function queryFor(ReportDefinition $report, array $filters): Builder|EloquentBuilder
     {
         $before = self::$wallsBound;
+        $dealersBefore = self::$dealerWallsBound;
         $query = ($report->query)($filters);
 
         if (($filters['branch_ids'] ?? null) !== null && $report->branchless === null && self::$wallsBound === $before) {
@@ -551,7 +579,32 @@ final class ReportEngine
             );
         }
 
+        /*
+         * ⛔ ডিলারের দেয়াল না বসানো রিপোর্ট দেয়ালের ভিতরের মানুষকে দেওয়া হয় না — ৪০৩
+         * (⛔১৬, ২ অক্টোবর ২০২৬)। ⓘ গোটা কোম্পানির অঙ্ক চুপচাপ দেখানোর চেয়ে ভাঙা পাতা ভালো:
+         * প্রথমটা কেউ টের পায় না, দ্বিতীয়টা সেদিনই কেউ জানায়।
+         *
+         * ⓘ যে রিপোর্টের কোয়েরি ডিলারের কোনো টেবিল ছোঁয়ই না (মজুদ, ক্রয়), তার দেখানোর মতো ডিলারও নেই —
+         * সেটা চলে। ⚠️ মাপ কোয়েরির নিজের SQL থেকে, নাম থেকে নয় ([[touchesDealers()]]); সন্দেহ হলে ফেরত।
+         * ⓘ ধরা পড়েছে হোম পর্দায়: মজুদের উইজেট সবার জন্য রিপোর্ট চালায়, আর বিক্রয়কর্মীর পুরো হোম ৪০৩ দিত।
+         */
+        if (! empty($filters['dealer_walled']) && self::$dealerWallsBound === $dealersBefore && self::touchesDealers($query)) {
+            throw new AuthorizationException(
+                "Report '{$report->key}' never called ReportEngine::dealerWall(), and this user sees only the dealers bound to him — "
+                .'it would show every dealer. Lay the dealer wall on its query.'
+            );
+        }
+
         return $query;
+    }
+
+    /**
+     * ⭐ কোয়েরিটা কি ডিলারের কোনো টেবিল বা পক্ষের ঘর ছোঁয় — গ্রাহক, বিক্রয়ের কাগজ, খাতা, ভাউচার,
+     * চেক, প্রমোশন, বাঁধন, বা যেকোনো `party_` ঘর। ⛔ ছুঁলে দেয়াল ছাড়া চলে না (⛔১৬, ৪ অক্টোবর ২০২৬)।
+     */
+    private static function touchesDealers(Builder|EloquentBuilder $query): bool
+    {
+        return preg_match('/[`"\s.(](customers|customer_[a-z_]+|dealer_bindings|sal_[a-z_]+|ledger_entries|vouchers|acc_[a-z_]+|promotion_[a-z_]+|party_id|party_type)[`"\s.,)]/', ' '.$query->toSql().' ') === 1;
     }
 
     /**
@@ -629,6 +682,9 @@ final class ReportEngine
 
         $filters['branch_ids'] = $allowed;
         $filters['branch_nulls'] = true;
+
+        // ⭐ ডিলারের দেয়াল — দেখার মানুষ বিক্রয়কর্মী কি না; প্রশ্নটা প্রতি রানে নতুন (⛔১৬)
+        $filters['dealer_walled'] = app(DealerScope::class)->walled();
 
         /*
          * ⭐ দেখার শাখা — হেডারে একটা শাখা বাছা থাকলে রিপোর্টও কেবল সেটা, শাখাহীন

@@ -65,6 +65,15 @@ class WhatTheMonthWasSupposedToBeTest extends TestCase
         $service->confirm($invoice);
     }
 
+    /**
+     * ⭐ যাঁর ঘরে অর্জন ওঠে — বিলের দিনে ডিলারটা যাঁর নামে বাঁধা (মালিকের উত্তর "ক", ৩ অক্টোবর ২০২৬;
+     * ⛔১৬)। ⓘ ডেমোতে প্রথম গ্রাহক `sales@abos.test`-এ বাঁধা; বিল কাটেন মালিক, অর্জন বিক্রয়কর্মীর।
+     */
+    private function seller(): User
+    {
+        return User::query()->where('email', 'sales@abos.test')->firstOrFail();
+    }
+
     private function rowFor(User $user, ?Carbon $month = null): ?array
     {
         foreach (app(SalesTargetService::class)->scoreboard($month ?? Carbon::today()) as $row) {
@@ -146,11 +155,11 @@ class WhatTheMonthWasSupposedToBeTest extends TestCase
     /** বিক্রি করলে অর্জন বাড়ে, আর শতাংশটা সেই অনুপাতেই। */
     public function test_what_was_sold_counts_towards_the_target(): void
     {
-        app(SalesTargetService::class)->setForMonth(now(), [$this->owner->id => '1000']);
+        app(SalesTargetService::class)->setForMonth(now(), [$this->seller()->id => '1000']);
 
         $this->sell('250');
 
-        $row = $this->rowFor($this->owner);
+        $row = $this->rowFor($this->seller());
 
         $this->assertSame(0, bccomp($row['achieved'], '250', 4));
         $this->assertSame(0, bccomp($row['percent'], '25.0', 1));
@@ -196,7 +205,7 @@ class WhatTheMonthWasSupposedToBeTest extends TestCase
     {
         $this->sell('400');
 
-        $row = $this->rowFor($this->owner);
+        $row = $this->rowFor($this->seller());
 
         $this->assertNull($row['target']);
         $this->assertSame(0, bccomp($row['achieved'], '400', 4));
@@ -207,12 +216,12 @@ class WhatTheMonthWasSupposedToBeTest extends TestCase
     /** পর্দাটা খোলে আর সংখ্যাগুলো দেখায়। */
     public function test_the_screen_shows_the_month(): void
     {
-        app(SalesTargetService::class)->setForMonth(now(), [$this->owner->id => '1000']);
+        app(SalesTargetService::class)->setForMonth(now(), [$this->seller()->id => '1000']);
         $this->sell('250');
 
         $this->get(route('sales.target.index'))
             ->assertOk()
-            ->assertSee($this->owner->name)
+            ->assertSee($this->seller()->name)
             ->assertSee('25.0%');
     }
 

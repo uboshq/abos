@@ -76,6 +76,7 @@ final class PartyReports
                 ->where('ledger_entries.company_id', $f['company_id'])
                 ->where('ledger_entries.party_type', Customer::drillSourceType())
                 ->tap(ReportEngine::branchWall($f, 'ledger_entries.branch_id'))
+                ->tap(ReportEngine::dealerWall($f, 'customers.id'))
                 /*
                  * পক্ষের ধরন ধরে ছাঁকা — "ডিলারদের কত বকেয়া, পাইকারদের কত"।
                  *
@@ -162,6 +163,7 @@ final class PartyReports
                  * বিক্রি" প্রশ্নটাই ওঠে না।
                  */
                 ->tap(ReportEngine::branchWall($f, 'customers.branch_id'))
+                ->tap(ReportEngine::dealerWall($f, 'customers.id'))
 
                 ->where(fn ($q) => $q->whereNull('customers.credit_limit')
                     ->orWhere('customers.credit_limit', '<=', 0))
@@ -204,6 +206,7 @@ final class PartyReports
                 ->where('ledger_entries.company_id', $f['company_id'])
                 ->where('ledger_entries.party_type', Customer::drillSourceType())
                 ->tap(ReportEngine::branchWall($f, 'ledger_entries.branch_id'))
+                ->tap(ReportEngine::dealerWall($f, 'customers.id'))
                 /*
                  * পক্ষের ধরন ধরে ছাঁকা — "ডিলারদের কত বকেয়া, পাইকারদের কত"।
                  *
@@ -284,6 +287,7 @@ final class PartyReports
                     ->where('ledger_entries.company_id', $f['company_id'])
                     ->where('ledger_entries.party_type', Customer::drillSourceType())
                     ->tap(ReportEngine::branchWall($f, 'ledger_entries.branch_id'))
+                ->tap(ReportEngine::dealerWall($f, 'customers.id'))
                     /* একই ছাঁকনি — প্রশ্নটা এখানেও একই */
                     ->when($f['party_type_id'] ?? null,
                         fn ($q, $type) => $q->where('customers.party_type_id', $type))

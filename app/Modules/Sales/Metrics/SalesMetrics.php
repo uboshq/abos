@@ -244,6 +244,8 @@ final class SalesMetrics implements ProvidesMetrics
         $byVoucher = (string) (Voucher::query()
             ->where('type', Voucher::RECEIPT)
             ->where('party_type', 'customer')
+            // ⭐ বিক্রয়কর্মী কেবল নিজের ডিলারের রসিদ গোনেন (⛔১৬, ২ অক্টোবর ২০২৬)
+            ->tap(fn ($q) => app(\App\Core\Services\DealerScope::class)->restrict($q, 'party_id'))
             ->posted()
             ->whereBetween('trx_date', [$from, $to])
             ->sum('amount') ?: '0');

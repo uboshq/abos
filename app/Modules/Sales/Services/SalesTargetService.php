@@ -147,17 +147,33 @@ final class SalesTargetService
          * চেষ্টা করত আর পর্দাটা ৫০০ দিত। ভুলটা লিখতে সহজ, কারণ কোডটা
          * পড়তে ঠিকই লাগে।
          */
-        $rows = DB::table('sal_invoices as i')
+        $perLine = DB::table('sal_invoices as i')
             ->join('sal_invoice_lines as il', 'il.sales_invoice_id', '=', 'i.id')
             ->where('i.company_id', CompanyContext::id())
             ->whereNull('i.deleted_at')
             ->whereIn('i.status', DocumentStatus::POSTED)
             ->whereBetween('i.trx_date', [$from->toDateString(), $to->toDateString()])
-            ->whereNotNull('i.created_by')
-            ->groupBy('i.created_by')
+            /*
+             * ⭐ কার বিক্রি — **বিলের দিনে ডিলারটা যাঁর নামে বাঁধা**, বিল যিনি কেটেছেন তিনি নন (মালিকের
+             * উত্তর ৫, ২৬ সেপ্টেম্বর; "ক", ৩ অক্টোবর ২০২৬; ⛔১৬)। ⓘ হাতবদলের আগের বিক্রি পুরনো জনের।
+             * ⓘ নিয়মটা একটাই জায়গায় ([[DealerOwnership::boundOn()]]) — কমিশনও ওটাই ডাকে।
+             * ⛔ বাঁধনহীন ডিলারের বিক্রি কারো ঘরে ওঠে না। ⚠️ ডিলারের দেয়াল বন্ধ রাখা কোম্পানিতে বাঁধনই
+             * নেই, তাই সেখানে আগের নিয়ম (বিল যিনি কেটেছেন) — নইলে সবার অর্জন শূন্য হত।
+             * ⓘ ভিতরে সারি-প্রতি বিক্রেতা, বাইরে যোগ — ONLY_FULL_GROUP_BY-তে নিরাপদ।
+             */
+            ->when(
+                app(\App\Core\Services\DealerScope::class)->switchOn(),
+                fn ($q) => $q->selectSub(\App\Modules\Sales\Services\DealerOwnership::boundOn('i.customer_id', 'i.trx_date', 'i.company_id'), 'seller_id'),
+                fn ($q) => $q->selectRaw('i.created_by as seller_id'),
+            )
 
             // ভ্যাট বাদ — ওটা সরকারের টাকা, কারও বিক্রয় নয়
-            ->selectRaw('i.created_by as seller_id, SUM(il.amount - il.tax) as achieved')
+            ->selectRaw('il.amount - il.tax as line_amount');
+
+        $rows = DB::query()->fromSub($perLine, 'x')
+            ->whereNotNull('x.seller_id')
+            ->groupBy('x.seller_id')
+            ->selectRaw('x.seller_id, SUM(x.line_amount) as achieved')
             ->get();
 
         $byUser = [];
@@ -201,7 +217,18 @@ final class SalesTargetService
             ->where('is_active', true)
             ->orderBy('name')
             ->get()
-            ->filter(fn (User $user) => $user->can('sales.invoice.create'))
+            /*
+             * ⓘ দেয়ালের ভিতরের বিক্রয়কর্মী বিল কাটেন না (কেবল অর্ডার — ⛔১৬), তবু তিনিই বিক্রেতা:
+             * তাঁকে তালিকা থেকে ফেলা চলবে না। ⛔ আর তিনি নিজে পাতাটা খুললে কেবল নিজে আর নিচের গাছ —
+             * অন্য বিক্রয়কর্মীর অর্জন তাঁর এলাকার বাইরে (মালিকের উত্তর ২)।
+             */
+            ->filter(fn (User $user) => $user->can('sales.invoice.create') || app(\App\Core\Services\DealerScope::class)->walled($user))
+            ->filter(function (User $user): bool {
+                $viewer = auth()->user();
+                $scope = app(\App\Core\Services\DealerScope::class);
+
+                return ! $viewer instanceof User || ! $scope->walled($viewer) || in_array((int) $user->id, $scope->reachOf($viewer), true);
+            })
             ->values();
     }
 

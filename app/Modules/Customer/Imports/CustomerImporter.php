@@ -61,7 +61,7 @@ final class CustomerImporter implements Importer
     {
         $errors = [];
 
-        if (filled($row['code']) && Customer::query()->where('code', $row['code'])->withTrashed()->exists()) {
+        if (filled($row['code']) && Customer::acrossDealers()->where('code', $row['code'])->withTrashed()->exists()) {
             $errors[] = __('customer::validation.code_taken', ['code' => $row['code']]);
         }
 

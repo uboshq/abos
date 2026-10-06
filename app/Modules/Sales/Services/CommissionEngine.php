@@ -128,7 +128,14 @@ final class CommissionEngine
             '0',
         );
 
-        return ['base' => $base, 'lines' => $lines, 'total' => $total, 'reason' => null];
+        /*
+         * ⭐ কার বিক্রি — বিলের দিনে ডিলারটা যাঁর নামে বাঁধা (⛔১৬; মালিকের উত্তর ৫ আর "ক", ৩ অক্টোবর
+         * ২০২৬)। ⓘ লক্ষ্যমাত্রার অর্জনের অবিকল একই নিয়ম ([[DealerOwnership::srOn()]]); বাঁধনহীন হলে null।
+         */
+        $rep = $invoice->customer_id === null ? null
+            : app(DealerOwnership::class)->srOn((int) $invoice->customer_id, \Illuminate\Support\Carbon::parse($invoice->trx_date));
+
+        return ['base' => $base, 'lines' => $lines, 'total' => $total, 'reason' => null, 'sales_rep_id' => $rep];
     }
 
     /**

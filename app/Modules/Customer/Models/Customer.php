@@ -57,6 +57,8 @@ class Customer extends Model implements AuthenticatableContract, Drillable
     use HasFactory;
     use HasPublicId;
     use IsAudited;
+    // ⭐ বিক্রয়কর্মী কেবল নিজের বাঁধা ডিলারের কাগজ দেখেন — ⛔১৬, ২ অক্টোবর ২০২৬ ([[DealerScope]])
+    use \App\Core\Concerns\ScopedToUserDealers;
     use SoftDeletes;
 
     protected $fillable = [
@@ -117,6 +119,18 @@ class Customer extends Model implements AuthenticatableContract, Drillable
      * ধরা পড়েছে টেস্টে — লগইন সফল দেখাচ্ছিল, অথচ গার্ডে কোনো
      * ব্যবহারকারী বসছিল না।
      */
+    /**
+     * ⭐ ডিলারের দেয়াল গ্রাহকের নিজের সারিতে — ডিলারটা সারিটাই (⛔১৬, ২ অক্টোবর ২০২৬)।
+     *
+     * ⓘ শাখার দেয়াল এখানে ইচ্ছা করে গ্লোবাল নয় ([[scopeInViewedBranch()]]), কারণ কাগজ এক
+     * শাখার আর পক্ষ শাখা পেরোয়। ডিলারের দেয়ালে সেই সমস্যা নেই: একটা কাগজ দেখা যায় ঠিক তখনই,
+     * যখন তার ডিলার দেখা যায় — তাই `$invoice->customer` কখনো খালি আসে না।
+     */
+    public function dealerScopeColumn(): string
+    {
+        return 'id';
+    }
+
     public function getAuthPasswordName(): string
     {
         return 'portal_password';

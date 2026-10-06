@@ -33,6 +33,8 @@ use Tests\TestCase;
 final class EveryPaperSampleDrawsEveryDesignTest extends TestCase
 {
     use RefreshDatabase;
+    // ⓘ এই পরীক্ষার প্রশ্ন ডিলারের দেয়াল নয় — ডেমোর বিক্রয়কর্মীর চিহ্ন তোলা (⛔১৬, ৪ অক্টোবর ২০২৬)
+    use \Tests\Concerns\TakesTheDealerWallOffTheDemoSalesman;
 
     private const SALES = ['challan' => 'sales.challan_sample', 'order' => 'sales.order_sample', 'receipt' => 'sales.receipt_sample'];
 
@@ -42,6 +44,7 @@ final class EveryPaperSampleDrawsEveryDesignTest extends TestCase
     {
         parent::setUp();
         $this->seed(DemoSeeder::class);
+        $this->takeTheDealerWallOffTheDemoSalesman();
 
         $this->company = Company::query()->where('code', 'TDEPOT')->firstOrFail();
         CompanyContext::set($this->company->id, $this->company->defaultBranch()?->id);

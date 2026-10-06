@@ -37,11 +37,25 @@ class Shipment extends Model implements Drillable
     use HasDocumentStatus;
     use HasPublicId;
     use IsAudited;
+    // ⭐ বিক্রয়কর্মী কেবল নিজের বাঁধা ডিলারের কাগজ দেখেন — ⛔১৬, ২ অক্টোবর ২০২৬ ([[DealerScope]])
+    use \App\Core\Concerns\ScopedToUserDealers;
     use ScopedToUserBranch;
     use SoftDeletes;
     use \App\Modules\Sales\Models\Concerns\TellsTheDeliveryStage;
 
     protected $table = 'sal_shipments';
+
+    /**
+     * ⭐ ট্রিপের নিজের ডিলার নেই — যে ট্রিপে দেখা ডিলারের অন্তত একটা চালান, কেবল সেটা (⛔১৬)।
+     * ⓘ ট্রিপের ভিতরের চালান-তালিকা চালানের নিজের দেয়ালে ছাঁকা, তাই অন্যের চালান সেখানেও নেই।
+     */
+    public function applyDealerWall(Builder $builder, \Illuminate\Database\Query\Builder $dealerIds): void
+    {
+        $builder->whereExists(fn ($q) => $q->selectRaw('1')
+            ->from('sal_shipment_lines as dw_l')
+            ->whereColumn('dw_l.shipment_id', $this->getTable().'.id')
+            ->whereIn('dw_l.delivery_challan_id', self::challansOfDealers($dealerIds)));
+    }
 
     protected $fillable = [
         'company_id', 'branch_id', 'financial_year_id', 'document_no',

@@ -31,6 +31,8 @@ class SalesInvoiceCancellation extends Model implements Drillable
     use HasDocumentStatus;
     use HasPublicId;
     use IsAudited;
+    // ⭐ বিক্রয়কর্মী কেবল নিজের বাঁধা ডিলারের কাগজ দেখেন — ⛔১৬, ২ অক্টোবর ২০২৬ ([[DealerScope]])
+    use \App\Core\Concerns\ScopedToUserDealers;
     use ScopedToUserBranch;
     use SoftDeletes;
 
