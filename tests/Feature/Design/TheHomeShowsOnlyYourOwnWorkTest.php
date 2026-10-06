@@ -45,7 +45,9 @@ final class TheHomeShowsOnlyYourOwnWorkTest extends TestCase
         $this->assertContains('accounts', $all);
 
         $html = (string) $this->actingAs($owner)->get(route('dashboard'))->getContent();
-        $this->assertStringContainsString('mt-1 break-words text-lg', $html, 'টাইলের মান এখনো কেটে যায় (truncate)।');
+        // ⓘ ৬ অক্টোবর ২০২৬ থেকে মান ভাঙেও না (whitespace-nowrap), লম্বা হলে অক্ষর ছোট — কাটা তো নয়ই
+        $this->assertStringContainsString('hm-kpi-value tabular mt-1 block whitespace-nowrap', $html, 'টাইলের মান এক লাইনে নয়।');
+        $this->assertDoesNotMatchRegularExpression('/hm-kpi-value[^"]*truncate/', $html, 'টাইলের মান এখনো কেটে যায় (truncate)।');
     }
 
     /** @return list<string> টাইলের মডিউলগুলো */

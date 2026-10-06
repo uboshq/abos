@@ -170,6 +170,8 @@ final class CustomerDashboard implements ProvidesDashboard
             points: $points,
             firstLabel: __('customer::dashboard.growth_added'),
             secondLabel: __('customer::dashboard.growth_still_on'),
+            // ⓘ কবে থেকে কবে — মালিক, ৫ অক্টোবর ২০২৬: প্রতিটা চার্টে তারিখ
+            range: \App\Core\Engines\Dashboard\DateRange::label($start, \Illuminate\Support\Carbon::today()),
         )];
     }
 }

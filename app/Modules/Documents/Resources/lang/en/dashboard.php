@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 // ⓘ নথির ড্যাশবোর্ড (মালিকের নকশা §১৩, ৬ অক্টোবর ২০২৬; [[DocumentsDashboard]])
 return [
-    'title' => 'Documents',
+    'title' => 'Dashboard',
     'subtitle' => 'Every file attached in the ERP, shared links and papers sent out',
     'total' => 'Total documents',
     'total_hint' => 'Bills, challans, staff papers, wherever attached; whole company',

@@ -90,6 +90,7 @@ final class SalesCharts
 
         return new Breakdown(
             label: __('sales::dashboard.funnel'),
+            range: self::monthRange(),
             parts: [
                 ['label' => __('sales::dashboard.funnel_quotes'), 'value' => (string) $quotes],
                 ['label' => __('sales::dashboard.funnel_orders'), 'value' => (string) $orders],
@@ -121,6 +122,7 @@ final class SalesCharts
 
         return new Breakdown(
             label: __('sales::dashboard.target'),
+            range: self::monthRange(),
             parts: [
                 ['label' => __('sales::dashboard.target_achieved'), 'value' => Money::format($t['achieved'])],
                 ['label' => __('sales::dashboard.target_remaining'), 'value' => Money::format($remaining)],
@@ -173,6 +175,7 @@ final class SalesCharts
 
         return new Breakdown(
             label: __('sales::dashboard.profit'),
+            range: self::monthRange(),
             parts: [
                 ['label' => __('sales::dashboard.profit_sold'), 'value' => Money::format($sold)],
                 ['label' => __('sales::dashboard.profit_cost'), 'value' => Money::format($cost)],
@@ -234,6 +237,7 @@ final class SalesCharts
 
         return new Breakdown(
             label: __('sales::dashboard.return_reasons'),
+            range: self::monthRange(),
             parts: array_map(fn (array $row): array => [
                 'label' => (string) $row['reason_name'],
                 'value' => Money::format($row['total']),
@@ -256,6 +260,7 @@ final class SalesCharts
 
         return new Breakdown(
             label: $label,
+            range: self::monthRange(),
             parts: array_map(fn (array $r): array => [
                 'label' => $r['name'],
                 'value' => Money::format($r['amount']),
@@ -263,5 +268,11 @@ final class SalesCharts
             hint: $hint,
             chart: 'hbars',
         );
+    }
+
+    /** ⓘ কবে থেকে কবে — মাসের ১ তারিখ থেকে আজ (মালিক, ৫ অক্টোবর ২০২৬: প্রতিটা চার্টে তারিখ) */
+    private static function monthRange(): string
+    {
+        return \App\Core\Engines\Dashboard\DateRange::label(now()->startOfMonth(), now());
     }
 }

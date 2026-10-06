@@ -42,7 +42,22 @@
 
         {{-- ── সূচকের কার্ড — চারটা করে এক লাইনে ───────────────────── --}}
         @if ($dashboard->stats !== [])
-            <div data-stat-grid class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            @php
+                /*
+                 * ⭐ মালিকের নিয়ম (১ অক্টোবর ২০২৬, পুরনো পাতায়): ছয়টা পর্যন্ত এক লাইনে, নয়-দশটা দুই লাইনে (৫ + ৪) — কম লাইন।
+                 * ⓘ তাই সারি যত কম সম্ভব, প্রতি সারিতে পাঁচটার বেশি নয় (ছয়টা একাই এক সারি); শেষ সারিতে একা একটা ঘর নয়।
+                 */
+                $statCount = count($dashboard->stats);
+                $statCols = $statCount <= 6 ? max(1, $statCount) : (int) ceil($statCount / ceil($statCount / 5));
+            @endphp
+            <div data-stat-grid data-stat-cols="{{ $statCols }}" @class([
+                'grid gap-3 sm:grid-cols-2',
+                'xl:grid-cols-2' => $statCols === 2,
+                'xl:grid-cols-3' => $statCols === 3,
+                'xl:grid-cols-4' => $statCols === 4,
+                'xl:grid-cols-5' => $statCols === 5,
+                'xl:grid-cols-6' => $statCols === 6,
+            ])>
                 @foreach ($dashboard->stats as $stat)
                     @php
                         [$chipClass, $chipIcon, $chipText] = $chips[$stat->tone] ?? $chips[\App\Core\Engines\Dashboard\Stat::NEUTRAL];
@@ -85,17 +100,38 @@
 
         {{-- ── চার্ট — তিনটা করে; সময়ের ধারা দুই ঘর জুড়ে ─────────── --}}
         @if ($dashboard->panels !== [])
+            @php
+                /*
+                 * ⓘ তিন ঘরের সারিতে সাজানো: সময়ের ধারা দুই ঘর, বাকিগুলো এক ঘর। ⭐ সারির শেষে ফাঁকা থাকলে সেই সারির
+                 * শেষ বাক্সটা বাকি জায়গা নেয় — একা একটা বাক্স আর পাশে খালি জায়গা নয় (৬ অক্টোবর ২০২৬-এর ১০৮০p যাচাই)।
+                 */
+                $spans = [];
+                $used = 0;
+                foreach (array_values($dashboard->panels) as $i => $panel) {
+                    $want = $panel instanceof \App\Core\Engines\Dashboard\Series ? 2 : 1;
+                    if ($used > 0 && $used + $want > 3) {
+                        $spans[$i - 1] += 3 - $used;
+                        $used = 0;
+                    }
+                    $spans[$i] = $want;
+                    $used = ($used + $want) % 3;
+                }
+                if ($used > 0 && $spans !== []) {
+                    $spans[array_key_last($spans)] += 3 - $used;
+                }
+            @endphp
             <div class="grid gap-4 xl:grid-cols-3">
-                @foreach ($dashboard->panels as $panel)
+                @foreach (array_values($dashboard->panels) as $i => $panel)
                     @php $series = $panel instanceof \App\Core\Engines\Dashboard\Series; @endphp
-                    <section data-boxed data-panel @class([
+                    <section data-boxed data-panel data-span="{{ $spans[$i] }}" @class([
                         'min-w-0 rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)',
-                        'xl:col-span-2' => $series,
+                        'xl:col-span-2' => $spans[$i] === 2,
+                        'xl:col-span-3' => $spans[$i] === 3,
                     ])>
                         <h2 class="border-b border-(--color-border) px-4 py-3 text-sm font-semibold text-(--color-ink)">{{ $panel->label }}</h2>
 
                         {{-- ⭐ ধরন অনুযায়ী আঁকা, প্রতিটা দাগে মান ([[x-dashboard.chart]], মালিক ৪ অক্টোবর ২০২৬) --}}
-                        <x-dashboard.chart :panel="$panel" />
+                        <x-dashboard.chart :panel="$panel" :wide="$spans[$i] === 3" />
                         @if (! $series && $panel->hint)
                             <p class="border-t border-(--color-border) px-4 py-2 text-2xs text-(--color-ink-muted)">{{ $panel->hint }}</p>
                         @endif
@@ -107,8 +143,13 @@
         {{-- ── তালিকা ──────────────────────────────────────────────── --}}
         @if (collect($dashboard->listings)->reject(fn ($l) => $l->hero)->isNotEmpty())
             <div class="grid gap-4 xl:grid-cols-2">
-                @foreach (collect($dashboard->listings)->reject(fn ($l) => $l->hero) as $listing)
-                    <section data-boxed class="min-w-0 overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
+                @php $plain = collect($dashboard->listings)->reject(fn ($l) => $l->hero)->values(); @endphp
+                @foreach ($plain as $listing)
+                    {{-- ⓘ শেষেরটা একা পড়লে পুরো সারি — পাশে খালি জায়গা নয় --}}
+                    <section data-boxed data-listing @class([
+                        'min-w-0 overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)',
+                        'xl:col-span-2' => $loop->last && $plain->count() % 2 === 1,
+                    ])>
                         <h2 class="flex items-baseline gap-2 border-b border-(--color-border) px-4 py-3 text-sm font-semibold text-(--color-ink)">
                             {{ $listing->label }}
                             @if ($listing->href)
@@ -123,7 +164,11 @@
 
         {{-- ── ব্যতিক্রম ও সতর্কতা — যা আটকে আছে, প্রতিটা একটা কার্ড ── --}}
         @php
-            $waiting = collect($dashboard->reminders)->filter(function ($item) {
+            /*
+             * ⓘ কেবল করণীয় দল (`todo`) — আজ, মাস, বছর আর হোমের মূল সূচক উপরের ঘরগুলোতেই আছে। ⛔ ৬ অক্টোবর ২০২৬-এর
+             * যাচাইয়ে বিক্রয়ের পাতায় "আজকের বিক্রয়" তিনবার দেখা গেল (উপরের ঘর, দিনের দল, মূল সূচক) — একই সংখ্যা একবারই।
+             */
+            $waiting = collect($dashboard->reminders)->filter(fn ($item) => $item->group === 'todo')->filter(function ($item) {
                 $latin = strtr((string) $item->value, ['০' => '0', '১' => '1', '২' => '2', '৩' => '3', '৪' => '4', '৫' => '5', '৬' => '6', '৭' => '7', '৮' => '8', '৯' => '9']);
 
                 return (int) preg_replace('/\D/', '', $latin) > 0;

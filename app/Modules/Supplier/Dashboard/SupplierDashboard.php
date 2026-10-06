@@ -257,7 +257,8 @@ final class SupplierDashboard implements ProvidesDashboard
                 'label' => __('supplier::field.'.$bucket),
                 'value' => \App\Core\Support\Money::format($totals[$bucket] ?? '0'),
             ], ['bucket_current', 'bucket_30', 'bucket_60', 'bucket_90']),
-            hint: __('supplier::dashboard.ageing_hint', ['total' => \App\Core\Support\Money::format($totals['outstanding'] ?? '0')]),
+            // ⓘ রিপোর্টের মোটের কলাম `payable` — ⛔ আগে `outstanding` পড়ত, যে কলাম রিপোর্টে নেই, তাই লেখায় সবসময় 0.00 (৬ অক্টোবর ২০২৬-এর যাচাই)
+            hint: __('supplier::dashboard.ageing_hint', ['total' => \App\Core\Support\Money::format($totals['payable'] ?? '0')]),
         )];
     }
 }

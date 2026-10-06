@@ -279,8 +279,12 @@
                                     @endif
                                     <span class="truncate">{{ $widget->label }}</span>
                                 </span>
+                                {{-- ⓘ সংখ্যা ভাঙে না — লম্বা হলে অক্ষর ছোট (৬ অক্টোবর ২০২৬-এর যাচাই: "1,13,98,450.0" এক লাইনে, "0" পরের লাইনে) --}}
                                 <span @class([
-                                    'hm-kpi-value tabular mt-1 break-words text-lg block font-semibold',
+                                    'hm-kpi-value tabular mt-1 block whitespace-nowrap font-semibold',
+                                    'text-lg' => mb_strlen($widget->value) <= 12,
+                                    'text-base' => mb_strlen($widget->value) > 12 && mb_strlen($widget->value) <= 14,
+                                    'text-sm' => mb_strlen($widget->value) > 14,
                                     'text-(--color-badge-warning-ink)' => $widget->tone === 'warn' && $pending($widget),
                                     'text-(--color-ink)' => ! ($widget->tone === 'warn' && $pending($widget)),
                                 ])>{{ $widget->value }}</span>

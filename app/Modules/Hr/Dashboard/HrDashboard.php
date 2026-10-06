@@ -233,6 +233,7 @@ final class HrDashboard implements ProvidesDashboard
 
         return [new Breakdown(
             label: __('hr::dashboard.leave_this_month'),
+            range: \App\Core\Engines\Dashboard\DateRange::label($start, Carbon::today()),
             parts: array_map(fn (string $status) => [
                 'label' => __('hr::dashboard.leave_'.$status),
                 'value' => (string) (int) ($byStatus[$status] ?? 0),
@@ -316,6 +317,8 @@ final class HrDashboard implements ProvidesDashboard
             points: $points,
             firstLabel: __('hr::field.gross'),
             secondLabel: __('hr::field.net'),
+            // ⓘ কবে থেকে কবে — মালিক, ৫ অক্টোবর ২০২৬: প্রতিটা চার্টে তারিখ
+            range: \App\Core\Engines\Dashboard\DateRange::label($start, Carbon::today()),
         )];
     }
 

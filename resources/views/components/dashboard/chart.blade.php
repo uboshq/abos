@@ -9,7 +9,7 @@
        এক হয়ে যেত (৪ অক্টোবর ২০২৬ ছবিতে ধরা)। বান্ডেল টোকেনটা না জানলেও চলে — পাশে একই রঙের বিকল্প।
      ⓘ শূন্যের মাথায় "0" লেখা হয় না — শূন্য বিন্দু মাটিতেই বসে; ডোনাটের পাশের তালিকায় শূন্যও থাকে।
      ⓘ হোম আর মডিউলের নতুন পাতা এই একটাই ছক ডাকে — দুই জায়গায় দুই রকম আঁকা হয় না। --}}
-@props(['panel', 'compact' => false, 'showRange' => true])
+@props(['panel', 'compact' => false, 'showRange' => true, 'wide' => false])
 
 @php
     $palette = ['var(--color-chart-1, #2563eb)', 'var(--color-chart-2, #d97706)', 'var(--color-chart-3, #7c3aed)',
@@ -54,7 +54,8 @@
     {{-- রেখা বা ভরা রেখা — দুই ধারা, প্রতিটা বিন্দুতে মান (প্রথমটা উপরে, দ্বিতীয়টা নিচে, যাতে না ঢাকে) --}}
     @php
         // ⓘ ভিতরের চওড়া কার্ডের চওড়ার কাছাকাছি — নইলে SVG চওড়ায় টেনে লম্বাও হয় (চওড়া কার্ডে ৬০০px পর্যন্ত, ৫ অক্টোবর ২০২৬ ছবিতে ধরা)
-        $w = $compact ? 380 : 760; $h = $compact ? 130 : 200; $left = 16; $right = 16; $top = 18; $bottom = 24;
+        // ⓘ পুরো সারি জুড়লে (`wide`) আঁকার জায়গাও চওড়া — লেখা আর দাগ দুই ঘরের চার্টের মাপেই থাকে (৬ অক্টোবর ২০২৬-এর যাচাই)
+        $w = $compact ? 380 : ($wide ? 1140 : 760); $h = $compact ? 130 : 200; $left = 16; $right = 16; $top = 18; $bottom = 24;
         $peak = $panel->peak();
         $n = count($panel->points);
         $x = fn (int $i) => $n === 1 ? $w / 2 : $left + $i * ($w - $left - $right) / ($n - 1);
@@ -116,7 +117,8 @@
                 <text x="60" y="58" text-anchor="middle" font-size="15" font-weight="700" class="tabular-nums" style="fill: var(--color-ink)">{{ $short($sum) }}</text>
                 <text x="60" y="73" text-anchor="middle" font-size="9" style="fill: var(--color-ink-muted)">{{ __('core.dashboard.chart_total') }}</text>
             </svg>
-            <div class="min-w-0 flex-1 space-y-1.5">
+            {{-- ⓘ চওড়া বাক্সেও নাম আর মান কাছাকাছি — পুরো সারি জুড়লে মানটা ডান কিনারায় চলে যেত (৬ অক্টোবর ২০২৬-এর যাচাই) --}}
+            <div class="min-w-0 flex-1 space-y-1.5" style="max-width: 28rem">
                 @foreach ($parts as $i => $part)
                     <div class="flex items-center gap-1.5 text-xs" title="{{ $part['label'] }}: {{ $part['value'] }}">
                         <span class="inline-block size-2.5 shrink-0 rounded-full" style="background: {{ $palette[$i % 6] }}"></span>
