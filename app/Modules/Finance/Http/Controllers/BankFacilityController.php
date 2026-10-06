@@ -66,6 +66,8 @@ class BankFacilityController extends Controller implements HasMiddleware
             new Middleware('can:finance.bank_facility.view', only: ['index', 'show']),
             new Middleware('can:finance.bank_facility.create', only: ['create', 'store']),
             new Middleware('can:finance.bank_facility.close', only: ['close']),
+            // ⓘ বিবরণীর জের লেখা টাকা নাড়ে না — ঋণ খোলার চাবিতেই (পরিকল্পনা ৩.৬)
+            new Middleware('can:finance.bank_facility.create', only: ['statement']),
         ];
     }
 
@@ -283,6 +285,8 @@ class BankFacilityController extends Controller implements HasMiddleware
             'margin_percent' => ['nullable', 'numeric', 'min:0', 'max:100'],
             'instalments' => ['nullable', 'integer', 'min:1', 'max:600'],
             'instalment_amount' => ['nullable', 'numeric', 'min:0'],
+            // ⭐ প্রথম কিস্তির দিন — মঞ্জুরির আগে নয় (পরিকল্পনা ৩.২, ৬ অক্টোবর ২০২৬)
+            'first_instalment_on' => ['nullable', 'date', 'after_or_equal:sanctioned_on'],
             'down_payment' => ['nullable', 'numeric', 'min:0'],
             'charges' => ['nullable', 'numeric', 'min:0'],
 
@@ -363,9 +367,28 @@ class BankFacilityController extends Controller implements HasMiddleware
             /* ⭐ আজ শোধ করলে কত — বকেয়া, চার্জ, মোট */
             'settlement' => $this->facilities->settlementToday($bankFacility),
 
-            /* ⭐ কিস্তির তালিকা — মাস, আসল, সুদ, জের (মালিকের ছবি) */
-            'schedule' => $this->facilities->schedule($bankFacility),
+            /* ⭐ কিস্তির তালিকা — মাস, আসল, সুদ, জের (মালিকের ছবি); ৬ অক্টোবর ২০২৬ থেকে দিন আর অবস্থাসহ (পরিকল্পনা ৩.২) */
+            'schedule' => $this->facilities->datedSchedule($bankFacility),
+
+            /* ⭐ ব্যাংকের বিবরণী বনাম খাতা (পরিকল্পনা ৩.৬) */
+            'statements' => $this->facilities->statementGaps($bankFacility),
         ]);
+    }
+
+    /**
+     * ⭐ ব্যাংকের বিবরণীর জের লেখা — অর্থ-মডিউলের পরিকল্পনা ৩.৬, ৬ অক্টোবর ২০২৬। একই দিনে আবার লিখলে বদলায়; টাকা নড়ে না।
+     */
+    public function statement(Request $request, BankFacility $bankFacility): RedirectResponse
+    {
+        $data = $request->validate([
+            'statement_on' => ['required', 'date', 'before_or_equal:today'],
+            'bank_balance' => ['required', 'numeric'],
+            'note' => ['nullable', 'string', 'max:191'],
+        ]);
+
+        $this->facilities->recordStatement($bankFacility, $data);
+
+        return back()->with('saved', __('finance::bank_loan_report.statement_saved'));
     }
 
     public function close(Request $request, BankFacility $bankFacility): RedirectResponse

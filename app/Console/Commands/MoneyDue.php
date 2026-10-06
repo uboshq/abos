@@ -51,6 +51,7 @@ class MoneyDue extends Command
 
         $broke = false;
         $maturing = 0;
+        $bankLoans = 0;
         $handLoans = 0;
 
         foreach ($companies as $company) {
@@ -61,6 +62,7 @@ class MoneyDue extends Command
 
                 $maturing += $sent['maturing'];
                 $handLoans += $sent['hand_loans'];
+                $bankLoans += $sent['bank_loans'] ?? 0;
             } catch (\Throwable $e) {
                 $broke = true;
 
@@ -73,7 +75,7 @@ class MoneyDue extends Command
             }
         }
 
-        $this->info("মেয়াদের খবর {$maturing}টি, হাতধারের তাগাদা {$handLoans}টি।");
+        $this->info("মেয়াদের খবর {$maturing}টি, হাতধারের তাগাদা {$handLoans}টি, ব্যাংক ঋণের {$bankLoans}টি।");
 
         return $broke ? self::FAILURE : self::SUCCESS;
     }

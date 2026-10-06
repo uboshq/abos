@@ -58,6 +58,8 @@ return [
     'payables_next_week_hint' => ':count bills fall due within 7 days from today',
     'payables_overdue' => 'Overdue payables',
     'payables_overdue_hint' => ':count bills are past due with money still owed',
+    'bank_instalments_overdue' => 'Bank loan instalments overdue',
+    'bank_instalments_overdue_hint' => ':count instalments past their day · :renewals loans due for renewal',
     'hand_loans_overdue' => 'Hand loans past their return day',
     'hand_loans_overdue_hint' => ':count people past their return day · :ours we owe past the day',
     // 5 Oct 2026 — follows the home period

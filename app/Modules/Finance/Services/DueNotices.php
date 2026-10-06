@@ -6,6 +6,7 @@ namespace App\Modules\Finance\Services;
 
 use App\Core\Services\NotificationService;
 use App\Core\Support\CompanyContext;
+use App\Core\Support\Money;
 use App\Models\Notification;
 use App\Models\User;
 use App\Modules\Finance\Models\Deposit;
@@ -43,6 +44,14 @@ final class DueNotices
 
     public const HAND_LOAN_DUE = 'finance.hand_loan_due';
 
+    // ⭐ ব্যাংক ঋণের কিস্তি আর নবায়ন — অর্থ-মডিউলের পরিকল্পনা ৩.৫, ৬ অক্টোবর ২০২৬
+    public const BANK_INSTALMENT_DUE = 'finance.bank_instalment_due';
+
+    public const BANK_RENEWAL_DUE = 'finance.bank_renewal_due';
+
+    /** কিস্তির তাগাদা কত দিন আগে থেকে — এক সপ্তাহ, দিন পার হলে প্রতি সপ্তাহে */
+    public const INSTALMENT_DAYS = 7;
+
     public function __construct(private readonly NotificationService $notifications) {}
 
     /**
@@ -57,6 +66,7 @@ final class DueNotices
             'hand_loans' => $this->handLoansDue(),
             // ⭐ ভাড়া — চুক্তি শেষের ৬০/৩০ দিন আগে আর বকেয়া ([[RentalNotices]], পরিকল্পনা ৫ঘ, ৬ অক্টোবর ২০২৬)
             'rentals' => array_sum(app(RentalNotices::class)->sendAll()),
+            'bank_loans' => $this->bankInstalmentsDue() + $this->bankRenewalsDue(),
         ];
     }
 
@@ -149,6 +159,60 @@ final class DueNotices
                     'date' => $due->translatedFormat('j M Y'),
                     'days' => $this->daysLeft($due),
                 ]),
+            );
+        }
+
+        return $sent;
+    }
+
+    /**
+     * ⭐ ব্যাংক ঋণের কিস্তি — দিন পার, বা সামনের সাত দিনে (পরিকল্পনা ৩.৫)। ঋণ ধরে একটা খবর, সবচেয়ে পুরনো বাকি কিস্তির;
+     * কিস্তির তালিকা [[BankFacilityService::instalmentsDue()]]-এর, রিপোর্ট আর ড্যাশবোর্ড যেটা পড়ে।
+     */
+    public function bankInstalmentsDue(): int
+    {
+        $sent = 0;
+        $seen = [];
+
+        foreach (app(BankFacilityService::class)->instalmentsDue(self::INSTALMENT_DAYS) as $due) {
+            $facility = $due['facility'];
+
+            if (isset($seen[$facility->id])) {
+                continue;
+            }
+
+            $seen[$facility->id] = true;
+
+            $sent += $this->tell(
+                self::BANK_INSTALMENT_DUE,
+                'finance.bank_facility.view',
+                route('finance.bank_facility.show', $facility->id),
+                __('finance::bank_loan_report.notice_instalment', ['facility' => trim($facility->bank.' · '.$facility->document_no, ' ·')]),
+                __('finance::bank_loan_report.notice_instalment_body', [
+                    'date' => Carbon::parse($due['due_on'])->translatedFormat('j M Y'),
+                    'amount' => Money::format($due['amount']),
+                    'no' => $due['month'],
+                ]),
+            );
+        }
+
+        return $sent;
+    }
+
+    /**
+     * ⭐ ব্যাংক ঋণের নবায়ন বা মেয়াদ — ত্রিশ দিনের ভিতরে, বা পেরিয়ে গেছে ([[BankFacilityService::dueForRenewal()]]; পরিকল্পনা ৩.৫)।
+     */
+    public function bankRenewalsDue(): int
+    {
+        $sent = 0;
+
+        foreach (app(BankFacilityService::class)->dueForRenewal() as $facility) {
+            $sent += $this->tell(
+                self::BANK_RENEWAL_DUE,
+                'finance.bank_facility.view',
+                route('finance.bank_facility.show', $facility->id),
+                __('finance::bank_loan_report.notice_renewal', ['facility' => trim($facility->bank.' · '.$facility->document_no, ' ·')]),
+                __('finance::bank_loan_report.notice_renewal_body', ['date' => $facility->renews_on->translatedFormat('j M Y')]),
             );
         }
 

@@ -126,6 +126,8 @@ class BankFacility extends Model implements Drillable
         'bank', 'branch_name', 'sanction_no', 'sanctioned_on',
         'limit_amount', 'interest_rate', 'term_months', 'renews_on',
         'stock_value', 'margin_percent', 'instalments', 'instalment_amount',
+        // ⭐ প্রথম কিস্তির দিন — কিস্তির সূচির তারিখ এখান থেকে (পরিকল্পনা ৩.২, ৬ অক্টোবর ২০২৬)
+        'first_instalment_on',
         'down_payment', 'charges',
         'early_charge', 'early_charge_kind', 'early_charge_basis',
         'security_type', 'security_value', 'guarantors', 'covenant', 'last_statement_on',
@@ -140,6 +142,7 @@ class BankFacility extends Model implements Drillable
         return [
             'sanctioned_on' => 'date',
             'renews_on' => 'date',
+            'first_instalment_on' => 'date',
             'last_statement_on' => 'date',
             'closed_on' => 'date',
             'limit_amount' => 'decimal:4',
@@ -167,6 +170,12 @@ class BankFacility extends Model implements Drillable
      * ⓘ পুরনো `bank` ঘরটা থেকে যায়: মানুষ যা টাইপ করেছিলেন সেটাই
      * ঐতিহাসিক সত্য। নতুন সারিতে ঘরটা আর চাওয়া হয় না।
      */
+    /** ⭐ ব্যাংকের বিবরণীর জের — পুরনো থেকে নতুন ([[FacilityStatement]], পরিকল্পনা ৩.৬) */
+    public function statements(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(FacilityStatement::class, 'bank_facility_id')->orderBy('statement_on');
+    }
+
     public function institution(): BelongsTo
     {
         return $this->belongsTo(Institution::class);

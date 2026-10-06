@@ -117,6 +117,9 @@ class BankFacilityService
                     : null
             ),
 
+            // ⭐ প্রথম কিস্তির দিন — কিস্তির সূচির তারিখ ([[datedSchedule()]]); না দিলে মঞ্জুরির পরের মাস
+            'first_instalment_on' => ($data['first_instalment_on'] ?? '') ?: null,
+
             'opening_instalments_paid' => ($data['already_running'] ?? false)
                 ? ($data['instalments_paid'] ?? null)
                 : null,
@@ -763,6 +766,167 @@ class BankFacilityService
         return $facility->isBalanceSheetDebt()
             ? ($facility->liability_account_id === null ? null : (int) $facility->liability_account_id)
             : ($facility->money_account_id === null ? null : (int) $facility->money_account_id);
+    }
+
+    /**
+     * ⭐ কিস্তির সূচি, তারিখসহ — অর্থ-মডিউলের পরিকল্পনা ৩.২, ৬ অক্টোবর ২০২৬: "প্রতিটা কিস্তির আসল আর সুদ আলাদা, দেওয়া
+     * হয়েছে কিনা"।
+     *
+     * ⓘ সারিগুলো [[schedule()]]-এর (ক্ষয়িষ্ণু জের, [[LoanSchedule]]) — কোনো সারি সংরক্ষণ হয় না। দিন: প্রথম কিস্তির দিন
+     * (`first_instalment_on`), না থাকলে মঞ্জুরির পরের মাসের একই দিন; তারপর মাসে মাসে (মাসের শেষ দিনে আটকায়, ৩১ জানুয়ারির
+     * পরে ২৮/২৯ ফেব্রুয়ারি)। ⓘ "দেওয়া" খাতা থেকে — [[instalmentStanding()]]-এর গুনতি পর্যন্ত সব শোধ; বাকিগুলোর অবস্থা
+     * দিন পার / আজ / সামনে, আজকের তারিখ ধরে।
+     *
+     * @return array{rows: list<array<string, mixed>>, instalment: string, interest_total: string, paid_total: string, paid: int}|null
+     */
+    public function datedSchedule(BankFacility $facility, ?\Illuminate\Support\Carbon $today = null): ?array
+    {
+        $schedule = $this->schedule($facility);
+
+        if ($schedule === null) {
+            return null;
+        }
+
+        $today = ($today ?? \Illuminate\Support\Carbon::today())->toDateString();
+        $paid = $this->instalmentStanding($facility)['paid'];
+        $first = $this->firstInstalmentOn($facility);
+
+        foreach ($schedule['rows'] as &$row) {
+            $due = $first?->copy()->addMonthsNoOverflow((int) $row['month'] - 1);
+            $row['due_on'] = $due?->toDateString();
+            $row['amount'] = bcadd((string) $row['principal'], (string) $row['interest'], 2);
+            $row['state'] = match (true) {
+                (int) $row['month'] <= $paid => self::PAID,
+                $due === null => self::UNDATED,
+                $row['due_on'] < $today => self::OVERDUE,
+                $row['due_on'] === $today => self::DUE_TODAY,
+                default => self::UPCOMING,
+            };
+        }
+        unset($row);
+
+        return $schedule + ['paid' => $paid];
+    }
+
+    /** কিস্তির অবস্থা — [[datedSchedule()]] */
+    public const PAID = 'paid';
+
+    public const OVERDUE = 'overdue';
+
+    public const DUE_TODAY = 'today';
+
+    public const UPCOMING = 'upcoming';
+
+    public const UNDATED = 'undated';
+
+    /** প্রথম কিস্তির দিন — লেখা থাকলে সেটা, নইলে মঞ্জুরির পরের মাসের একই দিন */
+    public function firstInstalmentOn(BankFacility $facility): ?\Illuminate\Support\Carbon
+    {
+        if ($facility->first_instalment_on !== null) {
+            return \Illuminate\Support\Carbon::parse($facility->first_instalment_on);
+        }
+
+        return $facility->sanctioned_on === null
+            ? null
+            : \Illuminate\Support\Carbon::parse($facility->sanctioned_on)->addMonthNoOverflow();
+    }
+
+    /**
+     * ⭐ সব চালু ঋণের বাকি কিস্তি যা আজ বা তার আগে পড়েছে, আর সামনের `$days` দিনে যা পড়বে — কিস্তির রিপোর্ট, ঘণ্টা আর
+     * ড্যাশবোর্ড এটাই পড়ে (পরিকল্পনা ৩.৫, "মেয়াদ পার আর নবায়ন")।
+     *
+     * ⓘ দেখার শাখা মানে ([[ListedInViewedBranch]]); কিস্তি কেবল যেসব ঋণে সূচি আছে।
+     *
+     * @return list<array{facility: BankFacility, month: int, due_on: ?string, principal: string, interest: string, amount: string, state: string}>
+     */
+    public function instalmentsDue(int $days = 30, ?\Illuminate\Support\Carbon $today = null): array
+    {
+        $today ??= \Illuminate\Support\Carbon::today();
+        $until = $today->copy()->addDays($days)->toDateString();
+        $out = [];
+
+        $facilities = BankFacility::query()->live()
+            ->inViewedBranch()
+            ->whereNotNull('instalments')
+            ->orderBy('id')
+            ->get();
+
+        foreach ($facilities as $facility) {
+            foreach ($this->datedSchedule($facility, $today)['rows'] ?? [] as $row) {
+                if ($row['state'] === self::PAID || $row['due_on'] === null || $row['due_on'] > $until) {
+                    continue;
+                }
+
+                $out[] = [
+                    'facility' => $facility,
+                    'month' => (int) $row['month'],
+                    'due_on' => $row['due_on'],
+                    'principal' => (string) $row['principal'],
+                    'interest' => (string) $row['interest'],
+                    'amount' => (string) $row['amount'],
+                    'state' => $row['state'],
+                ];
+            }
+        }
+
+        usort($out, fn (array $a, array $b) => strcmp((string) $a['due_on'], (string) $b['due_on']));
+
+        return $out;
+    }
+
+    /**
+     * ⭐ একটা তারিখে খাতায় এই ঋণের দেনা — [[standing()]]-এর একই নিয়মে (নিজের খাতা-সারি + খাতায় না-বসা পুরনো তোলা),
+     * কেবল সেই দিন পর্যন্ত। ব্যাংকের বিবরণীর পাশে বসে ([[statementGaps()]])।
+     */
+    public function owedOn(BankFacility $facility, string $date): string
+    {
+        $rows = $this->ledgerRowsOf($facility);
+
+        if ($rows === null) {
+            return '0.0000';
+        }
+
+        $ledger = (string) ((clone $rows)->where('trx_date', '<=', $date)->sum(DB::raw('credit - debit')) ?? '0');
+
+        return bcadd($this->legacyOpening($facility), $ledger, 4);
+    }
+
+    /**
+     * ⭐ ব্যাংকের বিবরণী বনাম খাতা — অর্থ-মডিউলের পরিকল্পনা ৩.৬। প্রতিটা লেখা বিবরণীর পাশে সেই দিনের খাতার দেনা আর ফাঁক
+     * (ব্যাংক − খাতা); ধনাত্মক ফাঁক মানে ব্যাংক বেশি বলে — সাধারণত খাতায় না-বসা সুদ বা চার্জ।
+     *
+     * @return list<array{statement: \App\Modules\Finance\Models\FacilityStatement, books: string, gap: string}>
+     */
+    public function statementGaps(BankFacility $facility): array
+    {
+        return $facility->statements()->get()->map(function ($statement) use ($facility) {
+            $books = $this->owedOn($facility, $statement->statement_on->toDateString());
+
+            return [
+                'statement' => $statement,
+                'books' => $books,
+                'gap' => bcsub((string) $statement->bank_balance, $books, 4),
+            ];
+        })->values()->all();
+    }
+
+    /**
+     * ⭐ ব্যাংকের বিবরণীর জের লেখা — একই ঋণে একই দিনে একটাই; আবার লিখলে বদলায়। টাকা নড়ে না।
+     *
+     * @param  array{statement_on: string, bank_balance: string, note?: ?string}  $data
+     */
+    public function recordStatement(BankFacility $facility, array $data): \App\Modules\Finance\Models\FacilityStatement
+    {
+        return \App\Modules\Finance\Models\FacilityStatement::query()->updateOrCreate(
+            ['bank_facility_id' => $facility->id, 'statement_on' => $data['statement_on']],
+            [
+                'company_id' => CompanyContext::id(),
+                'branch_id' => $facility->branch_id,
+                'bank_balance' => $data['bank_balance'],
+                'note' => ($data['note'] ?? '') ?: null,
+                'created_by' => auth()->id(),
+            ],
+        );
     }
 
     /**

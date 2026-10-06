@@ -176,6 +176,10 @@ Route::middleware('auth')->prefix('finance')->group(function () {
 
         Route::post('/{bankFacility}/close', [BankFacilityController::class, 'close'])
             ->whereNumber('bankFacility')->name('close');
+
+        // ⭐ ব্যাংকের বিবরণীর জের — অর্থ-মডিউলের পরিকল্পনা ৩.৬, ৬ অক্টোবর ২০২৬
+        Route::post('/{bankFacility}/statements', [BankFacilityController::class, 'statement'])
+            ->whereNumber('bankFacility')->name('statement');
     });
 
     // ⭐ অর্থের খাতা — হাতধার (পরে ব্যাংক ঋণ), গ্রাহকের খাতার একই পাতায় ([[FinanceReportController]], ৫ অক্টোবর ২০২৬)

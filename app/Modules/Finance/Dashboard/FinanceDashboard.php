@@ -26,7 +26,9 @@ use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Finance\Models\CapitalEntry;
 use App\Modules\Finance\Models\Deposit;
 use App\Modules\Finance\Models\Withdrawal;
+use App\Modules\Finance\Reports\BankLoanReports;
 use App\Modules\Finance\Reports\HandLoanReports;
+use App\Modules\Finance\Services\BankFacilityService;
 use App\Modules\Finance\Services\BudgetService;
 use App\Modules\Finance\Services\HeadTotals;
 use Illuminate\Support\Carbon;
@@ -189,6 +191,7 @@ final class FinanceDashboard implements ProvidesDashboard
                 ...self::fundAndDues($facts, $money, $cashBook, $supplierAgeing),
                 ...self::handLoansOverdue(),
                 ...self::rentalsDue(),
+                ...self::bankLoansDue(),
 
                 /*
                  * ⓘ বয়সের ভাগটা এখানে গোনা হয় না — দরজাটা **যেখানে
@@ -599,6 +602,35 @@ final class FinanceDashboard implements ProvidesDashboard
             href: route('finance.report.show', ['slug' => 'hand-loan-schedule', 'state' => HandLoanReports::OVERDUE]),
             permission: 'finance.hand_loan.view',
             tone: $theirs !== [] || $ours !== [] ? Stat::BAD : Stat::NEUTRAL,
+        )];
+    }
+
+    /**
+     * ⭐ ব্যাংক ঋণের কিস্তি দিন পার, আর নবায়ন — অর্থ-মডিউলের পরিকল্পনা ৩.৫, ৬ অক্টোবর ২০২৬।
+     *
+     * ⓘ নিজের হিসাব নয়: কিস্তির রিপোর্টের "দিন পার" সারি ([[BankLoanReports::INSTALMENTS]]) আর নবায়নের তালিকা
+     * ([[BankFacilityService::dueForRenewal()]]) — ঘণ্টা আর ঋণের পাতা যেগুলো পড়ে। ⛔ ব্যাংক ঋণের চাবি ছাড়া নেই।
+     *
+     * @return list<Stat>
+     */
+    private static function bankLoansDue(): array
+    {
+        if (! config('abos.dashboards_v2') || ! auth()->user()?->can('finance.bank_facility.view')) {
+            return [];
+        }
+
+        $rows = app(ReportEngine::class)->run(BankLoanReports::INSTALMENTS, [
+            'to' => Carbon::today()->toDateString(), 'state' => BankFacilityService::OVERDUE, 'branch_id' => ViewedBranch::one(),
+        ], 1, 1000)->rows;
+        $renewals = app(BankFacilityService::class)->dueForRenewal()->count();
+
+        return [new Stat(
+            label: __('finance::dashboard.bank_instalments_overdue'),
+            value: Money::format(array_reduce($rows, fn (string $sum, array $r) => bcadd($sum, (string) $r['amount'], 4), '0')),
+            hint: __('finance::dashboard.bank_instalments_overdue_hint', ['count' => count($rows), 'renewals' => $renewals]),
+            href: route('finance.report.show', ['slug' => 'bank-loan-instalments', 'state' => BankFacilityService::OVERDUE]),
+            permission: 'finance.bank_facility.view',
+            tone: $rows !== [] ? Stat::BAD : ($renewals > 0 ? Stat::WARN : Stat::NEUTRAL),
         )];
     }
 

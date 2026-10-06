@@ -137,6 +137,11 @@
             </x-ui.toolbar>
         </form>
 
+        {{-- ⭐ ব্যাংক ঋণের রিপোর্ট — কিস্তি আর সীমার ব্যবহার (অর্থ-মডিউলের পরিকল্পনা ৩, ৬ অক্টোবর ২০২৬) --}}
+        <div class="border-b border-(--color-border) px-3 py-2">
+            @include('finance::bank-facility.partials.report-tabs')
+        </div>
+
         {{-- ট্যাবের সারি — চালু · বন্ধ, পাশে গোনা --}}
         <nav class="flex flex-wrap gap-1 border-b border-(--color-border) px-2 text-sm"
              aria-label="{{ __('finance::menu.bank_facility') }}">

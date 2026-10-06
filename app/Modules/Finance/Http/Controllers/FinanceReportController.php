@@ -10,6 +10,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Branch;
 use App\Modules\Finance\Models\BankFacility;
 use App\Modules\Finance\Models\HandLoanAccount;
+use App\Modules\Finance\Reports\BankLoanReports;
 use App\Modules\Finance\Reports\HandLoanReports;
 use App\Modules\Finance\Reports\LoanLedgerReports;
 use App\Modules\MasterData\Models\Person;
@@ -39,6 +40,16 @@ class FinanceReportController extends Controller
         'hand-loan-payable-age' => HandLoanReports::AGE_PAYABLE,
         'hand-loan-activity' => HandLoanReports::ACTIVITY,
         'hand-loan-schedule' => HandLoanReports::SCHEDULE,
+
+        // ⭐ ব্যাংক ঋণ — কিস্তি আর সীমার ব্যবহার (অর্থ-মডিউলের পরিকল্পনা ৩, ৬ অক্টোবর ২০২৬; [[BankLoanReports]])
+        'bank-loan-instalments' => BankLoanReports::INSTALMENTS,
+        'bank-limit-usage' => BankLoanReports::LIMITS,
+    ];
+
+    /** ব্যাংক ঋণের রিপোর্টের সারি — রিপোর্টের মাথায় আর ঋণের তালিকায় একই ক্রমে */
+    public const BANK_LOAN_REPORTS = [
+        'bank-loan-instalments' => 'finance::bank_loan_report.instalments_short',
+        'bank-limit-usage' => 'finance::bank_loan_report.limits_short',
     ];
 
     /** হাতধারের রিপোর্টের সারি — প্রতিটা রিপোর্টের মাথায় আর হাতধারের পাতায় একই ক্রমে */
@@ -82,6 +93,20 @@ class FinanceReportController extends Controller
                 'partyFilter' => 'facility_id',
                 'parties' => BankFacility::query()->inViewedBranch()->orderBy('bank')->get()
                     ->map(fn (BankFacility $f) => (object) ['id' => (int) $f->id, 'name' => trim($f->bank.' · '.$f->document_no, ' ·')]),
+            ]);
+        }
+
+        // ⓘ ব্যাংক ঋণের তালিকা-রিপোর্ট — ঋণ বাছার ঘর নেই, মাথায় রিপোর্টের সারি
+        if (isset(self::BANK_LOAN_REPORTS[$slug])) {
+            return view('accounts::report.show', [
+                'menu' => $this->menu->forUser($request->user()),
+                'slug' => $slug,
+                'report' => $definition,
+                'result' => $result,
+                'branches' => Branch::query()->active()->orderBy('name_en')->get(),
+                'accounts' => collect(),
+                'partyTypes' => collect(),
+                'extraFilters' => 'finance::bank-facility.partials.report-tabs',
             ]);
         }
 

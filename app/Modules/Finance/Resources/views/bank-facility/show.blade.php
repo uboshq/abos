@@ -145,6 +145,9 @@
                         <thead>
                             <tr class="text-2xs text-(--color-ink-muted)">
                                 <th class="text-start">{{ __('finance::field.month') }}</th>
+                                {{-- ⭐ কিস্তির দিন আর অবস্থা — পরিকল্পনা ৩.২, ৬ অক্টোবর ২০২৬ --}}
+                                <th class="text-start">{{ __('finance::bank_loan_report.due_on') }}</th>
+                                <th class="text-start">{{ __('finance::bank_loan_report.state') }}</th>
                                 <th class="text-end">{{ __('finance::field.principal_part') }}</th>
                                 <th class="text-end">{{ __('finance::field.interest_part') }}</th>
                                 <th class="text-end">{{ __('finance::field.balance_left') }}</th>
@@ -155,6 +158,12 @@
                             @foreach ($schedule['rows'] as $row)
                                 <tr class="border-t border-(--color-border)">
                                     <td class="num">{{ $row['month'] }}</td>
+                                    <td>{{ ($row['due_on'] ?? null) ? \App\Core\Support\DateFormat::format($row['due_on']) : '—' }}</td>
+                                    <td data-instalment-state="{{ $row['state'] ?? '' }}"
+                                        @class(['font-semibold text-(--color-danger)' => ($row['state'] ?? '') === 'overdue',
+                                                'text-(--color-success)' => ($row['state'] ?? '') === 'paid'])>
+                                        {{ __('finance::bank_loan_report.state_'.($row['state'] ?? 'undated')) }}
+                                    </td>
                                     <td class="text-end"><x-ui.amount :value="$row['principal']" /></td>
                                     <td class="text-end"><x-ui.amount :value="$row['interest']" /></td>
                                     <td class="text-end"><x-ui.amount :value="$row['balance']" /></td>
@@ -370,4 +379,44 @@
          মূল কাগজটা একটাই। --}}
     <x-ui.attachments :document="$facility" />
 
+    {{-- ⭐ ব্যাংকের বিবরণী বনাম খাতা — অর্থ-মডিউলের পরিকল্পনা ৩.৬, ৬ অক্টোবর ২০২৬ ([[BankFacilityService::statementGaps()]]) --}}
+    <section data-boxed data-facility-statements
+             class="mb-4 overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
+        <header class="border-b border-(--color-border) p-4">
+            <h2 class="font-semibold">{{ __('finance::bank_loan_report.statements') }}</h2>
+            <p class="mt-1 text-sm text-(--color-ink-muted)">{{ __('finance::bank_loan_report.statement_note') }}</p>
+        </header>
+
+        @can('finance.bank_facility.create')
+            <form method="POST" action="{{ route('finance.bank_facility.statement', $facility) }}"
+                  class="grid gap-3 border-b border-(--color-border) p-4 sm:grid-cols-4">
+                @csrf
+                <x-ui.field name="statement_on" type="date" required
+                            :label="__('finance::bank_loan_report.statement_on')"
+                            :value="old('statement_on', now()->toDateString())" />
+                <x-ui.field name="bank_balance" type="number" step="0.01" inputmode="decimal" numeric required
+                            :label="__('finance::bank_loan_report.bank_balance')" :value="old('bank_balance')" />
+                <x-ui.field name="note" :label="__('finance::field.note')" :value="old('note')" />
+                <div class="flex items-end">
+                    <x-ui.button type="submit" tone="primary">{{ __('finance::bank_loan_report.record_statement') }}</x-ui.button>
+                </div>
+            </form>
+        @endcan
+
+        <x-ui.table
+            :empty="__('finance::bank_loan_report.no_statement_yet')"
+            :rows="$statements ?? []"
+            :columns="[
+                ['key' => 'on', 'label' => __('finance::bank_loan_report.statement_on'), 'width' => '9rem',
+                 'render' => fn ($r) => \App\Core\Support\DateFormat::format($r['statement']->statement_on)],
+                ['key' => 'bank', 'label' => __('finance::bank_loan_report.bank_balance'), 'numeric' => true,
+                 'render' => fn ($r) => \App\Core\Support\Money::format($r['statement']->bank_balance)],
+                ['key' => 'books', 'label' => __('finance::bank_loan_report.books_balance'), 'numeric' => true,
+                 'render' => fn ($r) => \App\Core\Support\Money::format($r['books'])],
+                ['key' => 'gap', 'label' => __('finance::bank_loan_report.gap'), 'numeric' => true,
+                 'render' => fn ($r) => \App\Core\Support\Money::format($r['gap'])],
+                ['key' => 'note', 'label' => __('finance::field.note'),
+                 'render' => fn ($r) => $r['statement']->note ?: '—'],
+            ]" />
+    </section>
 </x-layouts.app>

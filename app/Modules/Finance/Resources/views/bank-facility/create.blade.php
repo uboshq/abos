@@ -270,6 +270,11 @@
                                 :label="__('finance::field.instalment_amount')"
                                 :value="old('instalment_amount')" numeric
                                 x-model="instalment" x-on:input="fromInstalment()" />
+
+                    {{-- ⭐ প্রথম কিস্তির দিন — কিস্তির সূচির তারিখ এখান থেকে; খালি রাখলে মঞ্জুরির পরের মাস (পরিকল্পনা ৩.২) --}}
+                    <x-ui.field name="first_instalment_on" type="date"
+                                :label="__('finance::bank_loan_report.first_instalment_on')"
+                                :value="old('first_instalment_on')" />
                 </div>
             </template>
 
