@@ -325,7 +325,6 @@ final class VoucherService
         $this->assertNoChequeInHandByHand($voucher);
         $this->assertCashLandsInOwnTill($voucher);
         $this->assertTheWayMatchesTheAccount($voucher);
-        $this->assertBankReferenceIsFree($voucher);
 
         /*
          * ── হেডারের পক্ষ কোন কোন সারিতে নামবে ────────────────────────
@@ -375,6 +374,13 @@ final class VoucherService
                         : __('accounts::validation.already_posted', ['no' => $voucher->document_no]),
                 ]);
             }
+
+            /*
+             * ⛔ লেনদেন নম্বর লেনদেনের ভেতরে — পুরো-ERP অডিট, ৬ অক্টোবর ২০২৬ (হিসাব ⚠️১৩; [[ATransactionNumberIsCheckedAcrossBranchesTest]])।
+             * ⓘ যাচাইটা খাতা-জোড়া (`money_account_id`) মাথায় লিখেও দেয়। আগে লেনদেনের বাইরে ছিল: পরে টাকা না থাকায় পোস্ট থামলেও
+             * খসড়ায় জোড়াটা রয়ে যেত, আর সঠিক ভাউচারে একই TrxID আর বসত না। এখন পোস্ট থামলে জোড়াও ফেরে।
+             */
+            $this->assertBankReferenceIsFree($voucher);
 
             // ⚠️ লেনদেনের ভিতরে, খাতায় তোলার আগে — তালা আর মাপা একই লেনদেনে
             $this->assertMoneyIsThere($voucher);
@@ -1368,7 +1374,11 @@ final class VoucherService
             ]);
         }
 
-        $twin = Voucher::query()
+        /*
+         * ⛔ সব শাখা জুড়ে — পুরো-ERP অডিট, ৬ অক্টোবর ২০২৬ (হিসাব ⚠️১৩)। ⓘ টাকার খাতা আর অনন্যতার ইনডেক্স গোটা কোম্পানির, অথচ খোঁজ
+         * ছিল দেখার শাখার দেয়ালে: অন্য শাখার ভাউচারে একই TrxID থাকলে পরিষ্কার বার্তার বদলে ডেটাবেসের ভাঙা ভুল আসত।
+         */
+        $twin = Voucher::acrossBranches()
             ->where('money_account_id', $account->id)
             ->where('instrument_no', $reference)
             ->whereKeyNot($voucher->id)
