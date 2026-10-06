@@ -27,7 +27,7 @@ use Illuminate\Support\Facades\DB;
  */
 class DeliveryRunApiController extends Controller implements HasMiddleware
 {
-    private const MAX = 100;
+    private const PER_PAGE = 50;
 
     public function __construct(private readonly PaperToken $tokens) {}
 
@@ -46,11 +46,12 @@ class DeliveryRunApiController extends Controller implements HasMiddleware
             ->whereIn('sal_challans.id', $onTheWay)
             ->with(['customer', 'lines.product'])
             ->orderBy('sal_challans.trx_date')->orderBy('sal_challans.id')
-            ->limit(self::MAX)
-            ->get();
+            // ⓘ পাতা ভাগ — ৫০টা করে, পরের পাতার নম্বরসহ ([[EveryListScreenPaginatesTest]])
+            ->paginate(self::PER_PAGE);
 
         return response()->json([
-            'rows' => $challans->map(function (DeliveryChallan $c): array {
+            'next_page' => $challans->hasMorePages() ? $challans->currentPage() + 1 : null,
+            'rows' => collect($challans->items())->map(function (DeliveryChallan $c): array {
                 $t = $c->transportFacts();
 
                 return [

@@ -55,7 +55,9 @@ final class TheDriverSeesTodaysDeliveriesTest extends TestCase
         app(DeliveryStageService::class)->move($done, DeliveryStage::DELIVERED, ['receiver_name' => 'করিম']);
         $this->phone();
 
-        $rows = collect($this->getJson('/api/v1/sales/deliveries')->assertOk()->json('rows'));
+        $answer = $this->getJson('/api/v1/sales/deliveries')->assertOk();
+        $this->assertNull($answer->json('next_page'), 'দুইটা চালানে পরের পাতা থাকার কথা নয়।');
+        $rows = collect($answer->json('rows'));
         $this->assertContains($onTheWay->document_no, $rows->pluck('document_no')->all(), '⛔ পথে থাকা চালান তালিকায় নেই।');
         $this->assertNotContains($done->document_no, $rows->pluck('document_no')->all(), '⛔ পৌঁছে যাওয়া চালান এখনো তালিকায়।');
 
