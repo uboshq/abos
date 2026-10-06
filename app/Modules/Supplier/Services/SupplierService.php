@@ -48,8 +48,12 @@ final class SupplierService
     /**
      * @param  array<string, mixed>  $data
      */
+    /** ⓘ শুরুর দেনা বসানোর চাবি — ছাঁচে কেবল হিসাবরক্ষকের ([[assertMayOpenABalance()]]); গ্রাহকের `customer.opening_balance`-এর জোড়া */
+    public const OPENING_KEY = 'supplier.opening_balance';
+
     public function create(array $data): Supplier
     {
+        $this->assertMayOpenABalance($data);
         $this->assertBanglaNameIfRequired($data);
         $this->assertBinIfRequired($data);
         $this->assertNotADuplicate($data);
@@ -200,6 +204,35 @@ final class SupplierService
      *
      * @param  array<string, mixed>  $data
      */
+    /**
+     * ⛔ শুরুর দেনা খাতায় বসানো টাকার কাজ — নিজের চাবি (অডিট ⛔১২, ৬ অক্টোবর ২০২৬)।
+     *
+     * ⓘ আগে সরবরাহকারী বানানোর চাবিতেই (ডিফল্টে ম্যানেজার) যেকোনো অঙ্কের দেনা বসত — মালিকের মূলধন ডেবিট, দেনা
+     * ক্রেডিট — আর তারপর সেটা পরিশোধও করা যেত। গ্রাহকের দিকে আগে থেকেই চাবি ছিল ([[CustomerService::assertMayOpenABalance()]]);
+     * এটা তার জোড়া। ⭐ পাহারা সার্ভিসে — ফর্ম, ইমপোর্ট ([[SupplierImporter]]) আর যেকোনো নতুন পথ এখান দিয়ে যায়।
+     * ⓘ শূন্য বা ফাঁকা অঙ্কে চাবি লাগে না; মানুষ ছাড়া পথ (সিডার, কমান্ড) আগের মতো। ⛔ চুপচাপ শূন্য করা হয় না — কারণসহ ফেরত।
+     *
+     * @param  array<string, mixed>  $data
+     */
+    private function assertMayOpenABalance(array $data): void
+    {
+        $amount = trim((string) ($data['opening_balance'] ?? ''));
+
+        if ($amount === '' || ! is_numeric($amount) || bccomp($amount, '0', 4) === 0) {
+            return;
+        }
+
+        $user = auth()->user();
+
+        if ($user === null || $user->can(self::OPENING_KEY)) {
+            return;
+        }
+
+        throw ValidationException::withMessages([
+            'opening_balance' => __('supplier::validation.opening_needs_key'),
+        ]);
+    }
+
     private function assertBinIfRequired(array $data, ?Supplier $existing = null): void
     {
         if (! $this->settings->enabled('supplier.require_bin')) {

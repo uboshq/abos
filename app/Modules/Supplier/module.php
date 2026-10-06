@@ -109,6 +109,9 @@ return [
         'supplier.delete',
         'supplier.report',
         'supplier.manage',
+
+        // ⛔ শুরুর দেনা খাতায় বসানো — টাকার কাজ, নিজের চাবি (অডিট ⛔১২, ৬ অক্টোবর ২০২৬; [[SupplierService]])
+        'supplier.opening_balance',
     ],
 
     /* নতুন ইনস্টলে (§৫): Manager সরবরাহকারী দেখা ও রিপোর্ট (বানানো নয়)। */
@@ -121,6 +124,8 @@ return [
         'Accountant' => [
             'supplier.view',
             'supplier.report',
+            // ⓘ শুরুর দেনা হিসাবের কাজ — গ্রাহকের `customer.opening_balance`-এর জোড়া
+            'supplier.opening_balance',
         ],
         'Manager' => [
             'supplier.view',
