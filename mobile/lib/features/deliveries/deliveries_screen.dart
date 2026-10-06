@@ -55,21 +55,30 @@ class DeliveryRunRow {
       );
 }
 
+/// এক পাতা — সার্ভার ৫০টা করে দেয়, পরের পাতার নম্বরসহ (নেই তো `null`)
+class DeliveryRunPage {
+  const DeliveryRunPage(this.rows, {this.nextPage});
+
+  final List<DeliveryRunRow> rows;
+  final int? nextPage;
+}
+
 abstract class DeliveryRunApi {
-  Future<List<DeliveryRunRow>> today();
+  Future<DeliveryRunPage> today({int page = 1});
 }
 
 class ServerDeliveryRunApi implements DeliveryRunApi {
   const ServerDeliveryRunApi();
 
   @override
-  Future<List<DeliveryRunRow>> today() async {
-    final response =
-        await ApiClient.dio.get<Map<String, dynamic>>('/sales/deliveries');
-    return [
+  Future<DeliveryRunPage> today({int page = 1}) async {
+    final response = await ApiClient.dio.get<Map<String, dynamic>>(
+        '/sales/deliveries',
+        queryParameters: {'page': page});
+    return DeliveryRunPage([
       for (final r in (response.data?['rows'] as List?) ?? const [])
         if (r is Map) DeliveryRunRow.fromJson(Map<String, dynamic>.from(r)),
-    ];
+    ], nextPage: (response.data?['next_page'] as num?)?.toInt());
   }
 }
 
@@ -90,6 +99,7 @@ class DeliveriesScreen extends StatefulWidget {
 
 class _DeliveriesScreenState extends State<DeliveriesScreen> {
   List<DeliveryRunRow>? _rows;
+  int? _next;
   bool _busy = false;
   String? _error;
   String? _notice;
@@ -106,14 +116,42 @@ class _DeliveriesScreenState extends State<DeliveriesScreen> {
       _error = null;
     });
     try {
-      final rows = await widget.api.today();
-      if (mounted) setState(() => _rows = rows);
+      final page = await widget.api.today();
+      if (mounted) {
+        setState(() {
+          _rows = page.rows;
+          _next = page.nextPage;
+        });
+      }
     } catch (e) {
       if (mounted) {
         setState(() => _error = errorMessageFor(e,
             fallback:
                 'ডেলিভারির তালিকা আনা গেল না। নিচে টেনে আবার চেষ্টা করুন।',
             whenAbsent: 'সার্ভারে আজকের ডেলিভারি এখনো আসেনি — অফিসে জানান।'));
+      }
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  /// "আরও দেখুন" — পরের পাতা নিচে জোড়া লাগে
+  Future<void> _more() async {
+    final next = _next;
+    if (next == null) return;
+    setState(() => _busy = true);
+    try {
+      final page = await widget.api.today(page: next);
+      if (mounted) {
+        setState(() {
+          _rows = [...?_rows, ...page.rows];
+          _next = page.nextPage;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _error = errorMessageFor(e,
+            fallback: 'পরের পাতা আনা গেল না। আবার চেষ্টা করুন।'));
       }
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -224,6 +262,14 @@ class _DeliveriesScreenState extends State<DeliveriesScreen> {
                       ),
                     ],
                   ),
+                ),
+              ),
+            if (_next != null)
+              Center(
+                child: OutlinedButton(
+                  key: const ValueKey('deliveries-more'),
+                  onPressed: _busy ? null : _more,
+                  child: const Text('আরও দেখুন'),
                 ),
               ),
           ],
