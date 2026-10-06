@@ -66,8 +66,15 @@ final class PrincipalCommission
 
     public const MARKUP = 'markup';
 
+    /**
+     * ⭐ আসল — ক্রয়মূল্য বাদে (মালিক, ৬ অক্টোবর ২০২৬): *"হোলসেলে একই পণ্য নানা দরে বিক্রি হয়, তাই কোম্পানি (প্রিন্সিপাল)
+     * পাবে শুধু তার ক্রয়মূল্য, বাকি বাড়তি টাকা সব কমিশন।"* ⓘ হার লাগে না — অংশ = চক্রে বিক্রি হওয়া এই সরবরাহকারীর মালের
+     * আসল ক্রয়মূল্য ([[costOfSales()]]), কমিশন = আদায় − অংশ।
+     */
+    public const ACTUAL = 'actual';
+
     /** @var list<string> */
-    public const BASES = [self::MARGIN, self::MARKUP];
+    public const BASES = [self::MARGIN, self::MARKUP, self::ACTUAL];
 
     /** শেষের দিন ৩১ = মাসের শেষ দিন */
     public const MONTH_END = 31;
@@ -174,6 +181,54 @@ final class PrincipalCommission
         return bcadd((string) ($net ?? '0'), '0', 4);
     }
 
+    /**
+     * ⭐ চক্রে, শাখায় বিক্রি হওয়া এই সরবরাহকারীর মালের আসল ক্রয়মূল্য — "আসল" ভিত্তির প্রিন্সিপালের অংশ (৬ অক্টোবর ২০২৬)।
+     *
+     * ⓘ খরচের স্তর জানে সে কোন কেনা থেকে জন্মেছে (`inv_cost_layers.source_type/source_id` — ক্রয় বিল বা মাল-গ্রহণ, আর
+     * তার সরবরাহকারী)। বিক্রি স্তর থেকে টানে (`inv_cost_layer_uses`), তাই টানের `amount` হুবহু সেই মালের কেনা দাম:
+     *   · বিক্রি = `sales_invoice` টান, আর তার বাতিল/সম্পাদনার উল্টো টান (`sales_invoice:cancel`, ঋণাত্মক) — বিলের তারিখ আর
+     *     শাখা ধরে; বাতিল বিক্রি তাই শূন্যে মেলে, সম্পাদনায় দুইবার গোনা হয় না।
+     *   · ফেরত = `sales_return` টান (ঋণাত্মক, একই স্তরে ফেরা) — ফেরতের তারিখ আর শাখা ধরে, বাতিল ফেরত বাদ (তার টান মুছে যায়)।
+     * ⛔ যে স্তর কোনো কেনা থেকে নয় (খোলা মজুদ, সমন্বয়, রান্না) তার সরবরাহকারী নেই — গোনা হয় না।
+     */
+    public function costOfSales(int $company, int $branch, int $supplier, string $from, string $to): string
+    {
+        $fromSupplier = fn (Builder $l) => $l->where(fn (Builder $q) => $q
+            ->where(fn (Builder $b) => $b->where('l.source_type', 'purchase_bill')
+                ->whereIn('l.source_id', DB::table('pur_bills')->where('company_id', $company)->where('supplier_id', $supplier)->select('id')))
+            ->orWhere(fn (Builder $r) => $r->where('l.source_type', 'purchase_receipt')
+                ->whereIn('l.source_id', DB::table('pur_receipts')->where('company_id', $company)->where('supplier_id', $supplier)->select('id'))));
+
+        $sold = DB::table('inv_cost_layer_uses as u')
+            ->join('inv_cost_layers as l', 'l.id', '=', 'u.cost_layer_id')
+            ->join('sal_invoices as d', 'd.id', '=', 'u.source_id')
+            ->where('u.company_id', $company)
+            ->whereIn('u.source_type', ['sales_invoice', 'sales_invoice:cancel'])
+            ->where('d.company_id', $company)
+            ->where('d.branch_id', $branch)
+            ->whereNull('d.deleted_at')
+            ->whereBetween('d.trx_date', [$from, $to])
+            ->tap($fromSupplier)
+            ->selectRaw('COALESCE(SUM(u.amount), 0) as v')
+            ->value('v');
+
+        $returned = DB::table('inv_cost_layer_uses as u')
+            ->join('inv_cost_layers as l', 'l.id', '=', 'u.cost_layer_id')
+            ->join('sal_returns as d', 'd.id', '=', 'u.source_id')
+            ->where('u.company_id', $company)
+            ->where('u.source_type', 'sales_return')
+            ->where('d.company_id', $company)
+            ->where('d.branch_id', $branch)
+            ->whereNull('d.deleted_at')
+            ->where('d.status', '<>', 'cancelled')
+            ->whereBetween('d.trx_date', [$from, $to])
+            ->tap($fromSupplier)
+            ->selectRaw('COALESCE(SUM(u.amount), 0) as v')
+            ->value('v');
+
+        return bcadd(bcadd((string) ($sold ?? '0'), (string) ($returned ?? '0'), 4), '0', 4);
+    }
+
     /** সময়ে এই সরবরাহকারীকে দেওয়া — পোস্ট হওয়া টাকার কাগজ, নিট। */
     public function paidTo(int $company, int $supplier, string $from, string $to): string
     {
@@ -212,7 +267,8 @@ final class PrincipalCommission
             ->whereNull('suppliers.deleted_at')
             ->whereNotNull('suppliers.principal_branch_id')
             ->whereIn('suppliers.commission_basis', self::BASES)
-            ->whereNotNull('suppliers.commission_rate')
+            // ⓘ "আসল" ভিত্তিতে হার লাগে না
+            ->where(fn (Builder $q) => $q->whereNotNull('suppliers.commission_rate')->orWhere('suppliers.commission_basis', self::ACTUAL))
             ->whereNotNull('suppliers.cycle_start_day')
             ->whereNotNull('suppliers.cycle_close_day')
             ->tap(ReportEngine::branchWall($f, 'suppliers.principal_branch_id'))
@@ -242,11 +298,19 @@ final class PrincipalCommission
 
             $fromDate = $from->toDateString();
             $toDate = $to->toDateString();
-            $rate = bcadd((string) $p->commission_rate, '0', 3);
+            $rate = bcadd((string) ($p->commission_rate ?? '0'), '0', 3);
+            $actual = $p->commission_basis === self::ACTUAL;
 
             $inflow = $this->collections((int) $f['company_id'], (int) $p->principal_branch_id, $fromDate, $toDate);
-            $commission = self::commission($inflow, (string) $p->commission_basis, $rate);
-            $share = bcsub(Money::round($inflow, 2), $commission, 2);
+
+            if ($actual) {
+                // ⭐ অংশ = আসল ক্রয়মূল্য; কমিশন = আদায় − অংশ (ঋণাত্মক হতে পারে — রিপোর্ট কথায় বলে)
+                $share = Money::round($this->costOfSales((int) $f['company_id'], (int) $p->principal_branch_id, (int) $p->id, $fromDate, $toDate), 2);
+                $commission = bcsub(Money::round($inflow, 2), $share, 2);
+            } else {
+                $commission = self::commission($inflow, (string) $p->commission_basis, $rate);
+                $share = bcsub(Money::round($inflow, 2), $commission, 2);
+            }
             $paid = Money::round($this->paidTo((int) $f['company_id'], (int) $p->id, $fromDate, $toDate), 2);
 
             $rows[] = [
@@ -259,7 +323,9 @@ final class PrincipalCommission
                 'period_from' => $fromDate,
                 'period_to' => $toDate,
                 'inflow' => Money::round($inflow, 2),
-                'basis_rate' => __('supplier::principal.basis_'.$p->commission_basis).' '.self::rate($rate).'%',
+                'basis_rate' => $actual
+                    ? (string) __('supplier::principal.basis_actual_short')
+                    : __('supplier::principal.basis_'.$p->commission_basis).' '.self::rate($rate).'%',
                 'commission' => $commission,
                 'share' => $share,
                 'paid' => $paid,

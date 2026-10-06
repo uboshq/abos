@@ -54,7 +54,14 @@ final class PrincipalCommissionReport
                 ['key' => 'period', 'label' => 'supplier::principal.period', 'width' => '13rem'],
                 ['key' => 'inflow', 'label' => 'supplier::principal.inflow', 'type' => ReportColumn::MONEY],
                 ['key' => 'basis_rate', 'label' => 'supplier::principal.basis_rate'],
-                ['key' => 'commission', 'label' => 'supplier::principal.commission', 'type' => ReportColumn::MONEY],
+                [
+                    'key' => 'commission',
+                    'label' => 'supplier::principal.commission',
+                    // ⓘ "আসল" ভিত্তিতে বিক্রি কেনা দামের নিচে গেলে কমিশন ঋণাত্মক — খালি বিয়োগ নয়, কথায় (৬ অক্টোবর ২০২৬)
+                    'type' => ReportColumn::DR_CR,
+                    'words' => ['supplier::principal.commission_earned', 'supplier::principal.commission_lost'],
+                    'total' => true,
+                ],
                 ['key' => 'share', 'label' => 'supplier::principal.share', 'type' => ReportColumn::MONEY],
                 ['key' => 'paid', 'label' => 'supplier::principal.paid', 'type' => ReportColumn::MONEY],
                 [

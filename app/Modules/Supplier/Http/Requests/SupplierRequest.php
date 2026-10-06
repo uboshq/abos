@@ -113,7 +113,8 @@ class SupplierRequest extends FormRequest
             'commission_basis' => [...$gate, 'nullable', 'string', Rule::in(PrincipalCommission::BASES)],
             'principal_branch_id' => [...$gate, 'nullable', $with, 'integer',
                 Rule::exists('branches', 'id')->where('company_id', $this->companyId())],
-            'commission_rate' => [...$gate, 'nullable', $with, 'numeric', 'gt:0', 'lt:100', 'decimal:0,3'],
+            // ⓘ "আসল" ভিত্তিতে হার লাগে না, পাঠালেও রাখা হয় না (exclude_if) — অংশ আসে ক্রয়মূল্য থেকে ([[PrincipalCommission::costOfSales()]])
+            'commission_rate' => [...$gate, 'exclude_if:commission_basis,'.PrincipalCommission::ACTUAL, 'nullable', $with, 'numeric', 'gt:0', 'lt:100', 'decimal:0,3'],
             'cycle_start_day' => [...$gate, 'nullable', $with, 'integer', 'between:1,31'],
             'cycle_close_day' => [...$gate, 'nullable', $with, 'integer', 'between:1,'.PrincipalCommission::MONTH_END],
         ];

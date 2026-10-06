@@ -241,6 +241,7 @@
                     ->put(\App\Modules\Supplier\Reports\PrincipalCommission::MONTH_END, __('supplier::principal.month_end'));
             @endphp
             <section data-boxed data-principal-commission
+                     x-data="{ basis: @js(old('commission_basis', $supplier->commission_basis)) }"
                      class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
                 <h2 class="mb-1 font-semibold">{{ __('supplier::principal.section') }}</h2>
                 <p class="mb-3 max-w-(--spacing-prose-max) text-sm text-(--color-ink-muted)">
@@ -257,11 +258,16 @@
                     <x-ui.select name="commission_basis" :label="__('supplier::principal.basis')"
                                  :options="$basisOptions"
                                  :selected="$supplier->commission_basis"
+                                 x-model="basis"
+                                 :hint="__('supplier::principal.basis_hint')"
                                  placeholder="—" />
 
-                    <x-ui.field name="commission_rate" type="number" step="0.001" inputmode="decimal"
-                                :label="__('supplier::principal.rate')"
-                                :value="old('commission_rate', $supplier->commission_rate)" numeric />
+                    {{-- ⓘ "আসল — ক্রয়মূল্য বাদে" বাছলে হার লাগে না (৬ অক্টোবর ২০২৬) --}}
+                    <div x-show="basis !== 'actual'" data-commission-rate>
+                        <x-ui.field name="commission_rate" type="number" step="0.001" inputmode="decimal"
+                                    :label="__('supplier::principal.rate')"
+                                    :value="old('commission_rate', $supplier->commission_rate)" numeric />
+                    </div>
                 </div>
 
                 <div class="mt-3 grid gap-3 sm:grid-cols-2">

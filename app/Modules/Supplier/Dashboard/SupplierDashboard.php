@@ -188,7 +188,7 @@ final class SupplierDashboard implements ProvidesDashboard
                 ['key' => 'inflow', 'label' => __('supplier::principal.dash_inflow'), 'width' => '9rem',
                     'render' => fn (array $row) => Money::format($row['inflow'])],
                 ['key' => 'commission', 'label' => __('supplier::principal.commission'), 'width' => '8rem',
-                    'render' => fn (array $row) => Money::format($row['commission'])],
+                    'render' => fn (array $row) => self::earned((string) $row['commission'])],
                 ['key' => 'paid', 'label' => __('supplier::principal.dash_sent'), 'width' => '9rem',
                     'render' => fn (array $row) => Money::format($row['paid'])],
                 ['key' => 'balance', 'label' => __('supplier::principal.dash_balance'), 'width' => '14rem',
@@ -206,6 +206,16 @@ final class SupplierDashboard implements ProvidesDashboard
      * বাকি ইনফ্লো কথায় — "দিতে হবে: 11,56,172.16" (জের ধনাত্মক: আমরা প্রিন্সিপালকে দেব) বা "কোম্পানির কাছে পাব: …"
      * (ঋণাত্মক: বেশি পাঠানো হয়ে গেছে)। ⛔ খালি বিয়োগ চিহ্ন কখনো নয়; শূন্য হলে কেবল অঙ্ক।
      */
+    /** ⓘ কমিশন ঋণাত্মক ("আসল" ভিত্তিতে কেনা দামের নিচে বিক্রি) হলে কথায়, খালি বিয়োগ নয় (৬ অক্টোবর ২০২৬) */
+    private static function earned(string $commission): string
+    {
+        $rounded = Money::round($commission, 2);
+
+        return bccomp($rounded, '0', 2) < 0
+            ? (string) __('supplier::principal.commission_lost', ['amount' => Money::format(ltrim($rounded, '-'))])
+            : Money::format($rounded);
+    }
+
     private static function owed(string $balance): string
     {
         $rounded = Money::round($balance, 2);
