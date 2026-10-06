@@ -178,7 +178,9 @@ class PurchaseRow {
   final String? date;
   final String principal;
   final String statusLabel;
-  final double total;
+
+  /// ⛔ কেবল দামের চাবিতে (`inventory.cost.view`) — না থাকলে null, "৳০" নয় (অডিট ক্রয় ⚠️১৫, ৭ অক্টোবর ২০২৬)
+  final double? total;
 
   /// কেবল বিলে
   final double? paid;
@@ -191,7 +193,7 @@ class PurchaseRow {
         date: j['date']?.toString(),
         principal: j['principal']?.toString() ?? '',
         statusLabel: j['status_label']?.toString() ?? '',
-        total: Money.valueOrZero(j['total']),
+        total: j.containsKey('total') ? Money.valueOrZero(j['total']) : null,
         paid: j.containsKey('paid') ? Money.valueOrZero(j['paid']) : null,
         due: j.containsKey('due') ? Money.valueOrZero(j['due']) : null,
       );
@@ -205,7 +207,9 @@ class PurchasePage {
       this.nextPage});
 
   final List<PurchaseRow> rows;
-  final double total;
+
+  /// ⛔ দামের চাবি ছাড়া null
+  final double? total;
   final int count;
   final int? nextPage;
 }
@@ -370,7 +374,7 @@ class ServerBooksApi implements BooksApi {
     });
     return PurchasePage(
       rows: _rows(body['rows']).map(PurchaseRow.fromJson).toList(),
-      total: Money.valueOrZero(body['total']),
+      total: body.containsKey('total') ? Money.valueOrZero(body['total']) : null,
       count: (body['count'] as num?)?.toInt() ?? 0,
       nextPage: _next(body['next_page']),
     );
