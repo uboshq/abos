@@ -121,7 +121,7 @@
                                                   text-2xs text-(--color-badge-danger-ink)"
                                            x-text="lotProblem(line, index)"></p>
 
-                                        <span x-show="tracksLot(line) && String(line.batch_no || '').trim() === '' && ! lotProblem(line, index)" x-cloak
+                                        <span x-show="lotAutoHint(line, index)" x-cloak
                                               class="block text-2xs text-(--color-ink-muted)">
                                             {{ __('purchase::lot.auto', ['number' => $lotHint]) }}
                                         </span>

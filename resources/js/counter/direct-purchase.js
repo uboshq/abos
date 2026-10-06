@@ -1711,6 +1711,14 @@ export default function directPurchase({
          * ⓘ কেবল সার্ভারের বার্তা — খালি লট পর্দা আর আটকায় না (৫ অক্টোবর
          * ২০২৬ থেকে সংরক্ষণে নিজে বসে)। ⭐ লট লিখলেই সরে যায়।
          */
+        /* ⭐ "খালি রাখলে নিজে বসবে" ইশারা — লট ধরা সারি, লট খালি, আর কোনো বার্তা নেই।
+           ⓘ x-data-র নিজের মেথড, কারণ CSP-র Alpine `String(...)`-এর মতো গ্লোবাল ডাক চালায় না (NoAlpineBindingCallsAGlobal). */
+        lotAutoHint(line, index) {
+            return this.tracksLot(line)
+                && String(line.batch_no || '').trim() === ''
+                && ! this.lotProblem(line, index);
+        },
+
         lotProblem(line, index) {
             if (! this.tracksLot(line)) return '';
             if (String(line.batch_no || '').trim() !== '') return '';

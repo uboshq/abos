@@ -279,6 +279,22 @@ describe('লট — কেবল লট ধরা সারিতে', () => {
         expect(c.lotProblem(line, 0)).toBe('')
     })
 
+    /* ⓘ "খালি রাখলে নিজে বসবে" ইশারা — x-data-র মেথড, CSP-তে চলে */
+    it('খালি লটের ইশারা কেবল লট ধরা, খালি আর বার্তাহীন সারিতে', () => {
+        const c = withLots({ lotErrors: { 1: 'সারি ২ — লট লাগবে' } })
+        const plain = add(c, c.catalogue[0])
+        const blank = add(c, c.catalogue[1])
+
+        expect(c.lotAutoHint(plain, 0)).toBe(false)
+        expect(c.lotAutoHint(blank, 1)).toBe(false)
+
+        c.lotErrors = {}
+        expect(c.lotAutoHint(blank, 1)).toBe(true)
+
+        blank.batch_no = 'L-5'
+        expect(c.lotAutoHint(blank, 1)).toBe(false)
+    })
+
     it('সার্ভারের সারি-ধরা বার্তাটা ঐ সারির নিচেই, লট লিখলে সরে যায়', () => {
         const c = withLots({ catalogue: [tracked()], lotErrors: { 0: 'সারি ১ — লট লাগবে' } })
         const line = add(c, c.catalogue[0])
