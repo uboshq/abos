@@ -305,20 +305,33 @@ class WhichProductActuallyPaysTest extends TestCase
 
         $this->assertNotSame([], $sales);
 
+        /*
+         * ⓘ দরজা খোঁজা হয় রুট আর নিয়ামকের `SLUGS` থেকে — রিপোর্ট-দরজার পাহারার একই উপায়
+         * ([[EveryReportNamesTheKeyItsWebDoorAsksForTest::webDoors()]])। কিছু রিপোর্টের নিজের দরজা, নিজের চাবিতে — মার্জিন
+         * খরচ দেখায় ([[MarginReportController]]), ফেরতের কারণ নিজের চাবি চায় ([[SalesReturnReasonReportController]])।
+         *
+         * ⛔ আগে স্লাগ চাবি থেকে বানানো হত (`credit_risk` → `credit-risk`), আর বাকি নিয়ন্ত্রণের তিনটা রিপোর্ট আর ফেরতের কারণ
+         * নিজের নামের স্লাগে (`risky-customers`, `by-reason`) খোলে — দরজা ছিল, তবু দাবি ৪০৪ পেত (৬ অক্টোবর ২০২৬)।
+         * ⚠️ দাবিটা একই থাকে: প্রতিটা বিক্রয় রিপোর্টের কোনো নিয়ামকে দরজা থাকতে হবে, আর সেটা খুলতে হবে।
+         */
+        $doors = [];
+
+        foreach (app('router')->getRoutes() as $route) {
+            $name = (string) $route->getName();
+            $controller = strtok($route->getActionName(), '@');
+
+            if (! str_ends_with($name, '.report.show') || ! class_exists($controller)) {
+                continue;
+            }
+
+            foreach ((new \ReflectionClass($controller))->getConstants()['SLUGS'] ?? [] as $slug => $target) {
+                $doors[is_array($target) ? $target['key'] : $target] ??= route($name, ['slug' => $slug]);
+            }
+        }
+
         foreach ($sales as $key) {
-            $slug = str_replace('_', '-', substr($key, strlen('sales.')));
-
-            /*
-             * ⓘ কিছু রিপোর্টের নিজের দরজা, নিজের চাবিতে — মার্জিনের রিপোর্ট খরচ দেখায়, তাই
-             * `sales.margin.report.show` ([[MarginReportController]], NEXUS §৩২, ২৮ সেপ্টেম্বর ২০২৬)।
-             * ⚠️ দাবিটা একই থাকে: দরজা থাকতে হবে — কেবল কোন ঠিকানায়, সেটা রিপোর্ট বলে।
-             */
-            $own = "sales.{$slug}.report.show";
-            $url = \Illuminate\Support\Facades\Route::has($own)
-                ? route($own, ['slug' => $slug])
-                : route('sales.report.show', ['slug' => $slug]);
-
-            $this->get($url)->assertOk();
+            $this->assertArrayHasKey($key, $doors, "⛔ {$key}: কোনো নিয়ামকে দরজা নেই");
+            $this->get($doors[$key])->assertOk();
         }
     }
 
