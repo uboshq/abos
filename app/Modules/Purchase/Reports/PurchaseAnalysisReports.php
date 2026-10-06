@@ -97,18 +97,24 @@ final class PurchaseAnalysisReports
                     ->limit(1)
                     ->select('bl.rate');
 
+                /*
+                 * ⛔ পণ্য ধরে যোগটা ভিতরে, শেষ দর আর আগের গড় বাইরে — লাইভে ৫০০, ৬ অক্টোবর ২০২৬:
+                 * *"'outer_l.product_id' isn't in GROUP BY"*। ⓘ আগে বাইরের প্রশ্নটাই GROUP BY করত, আর তার উপ-প্রশ্ন
+                 * (শেষ দর, আগের গড়) outer_l.product_id ধরে মেলাত — MariaDB-র ONLY_FULL_GROUP_BY সেটা নেয় না।
+                 * এখন বাইরে কোনো GROUP BY নেই: প্রতিটা সারি এক পণ্য, উপ-প্রশ্ন তাকেই ধরে।
+                 */
                 return DB::query()
                     ->fromSub(self::billLines($f, $f['from'], $f['to'])
-                        ->selectRaw('bl.product_id, bl.rate, bl.qty, bl.amount - bl.tax as value'), 'outer_l')
+                        ->groupBy('bl.product_id')
+                        ->selectRaw('bl.product_id, SUM(bl.qty) as qty, SUM(bl.amount - bl.tax) as value, MIN(bl.rate) as min_rate, MAX(bl.rate) as max_rate'), 'outer_l')
                     ->join('inv_products as p', 'p.id', '=', 'outer_l.product_id')
-                    ->groupBy('outer_l.product_id')
-                    ->orderByRaw('MAX(p.code)')
-                    ->selectRaw("MAX(CONCAT(p.code, ' - ', ".self::name('p').')) as product_name')
-                    ->selectRaw('SUM(outer_l.qty) as bought_qty')
+                    ->orderBy('p.code')
+                    ->selectRaw("CONCAT(p.code, ' - ', ".self::name('p').') as product_name')
+                    ->selectRaw('outer_l.qty as bought_qty')
                     ->selectSub($last, 'last_rate')
-                    ->selectRaw('SUM(outer_l.value) / NULLIF(SUM(outer_l.qty), 0) as avg_rate')
-                    ->selectRaw('MIN(outer_l.rate) as min_rate')
-                    ->selectRaw('MAX(outer_l.rate) as max_rate')
+                    ->selectRaw('outer_l.value / NULLIF(outer_l.qty, 0) as avg_rate')
+                    ->selectRaw('outer_l.min_rate as min_rate')
+                    ->selectRaw('outer_l.max_rate as max_rate')
                     ->selectSub($avg($prevFrom, $prevTo), 'previous_avg');
             },
             columns: [
