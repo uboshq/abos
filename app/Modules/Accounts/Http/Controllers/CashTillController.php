@@ -159,18 +159,26 @@ class CashTillController extends Controller implements HasMiddleware
          */
         $ordered = $entries->getCollection()->reverse()->values();
 
-        $opening = RunningBalance::sumOf(
-            LedgerEntry::query()
-                ->forAccount($till->account_id)
-                ->orderBy('trx_date')
-                ->orderBy('id')
-                ->limit(max(0, $entries->total() - $entries->lastItem()))
-                ->get(),
-            fn (LedgerEntry $e) => $e->debit,
-            fn (LedgerEntry $e) => $e->credit,
-            /* খোলার জের এখন খতিয়ানের প্রথম সারি — শুরুর মান শূন্য */
-            '0',
-        );
+        /*
+         * ⛔ পাতার আগের সব সারির জের — ডেটাবেসেই এক যোগফলে, পুরো-ERP অডিট, ৬ অক্টোবর ২০২৬ (হিসাব ⚠️১৫;
+         * [[TheTillPageSumsItsPastInTheDatabaseTest]])। ⓘ আগে সেই সব সারি PHP-তে তুলে যোগ হত — ব্যস্ত বাক্সের প্রথম পাতাতেই
+         * হাজার হাজার সারি মেমরিতে। এখন পুরনো দিক থেকে ঠিক ততগুলো সারির উপ-প্রশ্নে একটা SUM; খোলার জের খতিয়ানের প্রথম সারি,
+         * তাই শুরু শূন্য থেকে।
+         */
+        $before = max(0, $entries->total() - (int) $entries->lastItem());
+
+        $opening = $before === 0 ? '0' : bcadd((string) LedgerEntry::query()->withoutGlobalScopes()
+            ->fromSub(
+                LedgerEntry::query()
+                    ->forAccount($till->account_id)
+                    ->orderBy('trx_date')
+                    ->orderBy('id')
+                    ->limit($before)
+                    ->select(['debit', 'credit']),
+                'before_page',
+            )
+            ->selectRaw('COALESCE(SUM(debit), 0) - COALESCE(SUM(credit), 0) as n')
+            ->value('n'), '0', 4);
 
         $running = new RunningBalance($opening);
 
