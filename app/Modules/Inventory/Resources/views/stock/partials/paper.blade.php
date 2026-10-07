@@ -75,6 +75,16 @@
 
                 {{ trans_choice('inventory::message.lines_waiting', count($paper['lines']),
                     ['count' => count($paper['lines'])]) }}
+                {{-- ⭐ মোট — গোটানো অবস্থাতেও (মালিক, ৭ অক্টোবর ২০২৬: *"total qty, grand total দেখায় না; value দেখালেও ভালো"*) --}}
+                <span class="ms-auto flex flex-wrap gap-x-4 text-(--color-ink)" data-paper-total>
+                    <span>{{ __('inventory::field.total_qty') }}: <b class="num">{{ \App\Core\Support\Money::quantity($paper['total_qty'] ?? '0') }}</b></span>
+                    @if (bccomp((string) ($paper['total_free'] ?? '0'), '0', 4) > 0)
+                        <span>{{ __('inventory::field.unplaced_free') }}: <b class="num">{{ \App\Core\Support\Money::quantity($paper['total_free']) }}</b></span>
+                    @endif
+                    @if (($paper['total_value'] ?? null) !== null)
+                        <span>{{ __('inventory::field.total_value') }}: <b class="num">৳{{ \App\Core\Support\Money::format($paper['total_value']) }}</b></span>
+                    @endif
+                </span>
             </summary>
 
         <div class="overflow-x-auto">
@@ -359,6 +369,22 @@
                         </template>
                         </tbody>
                     @endforeach
+                {{-- ⭐ কাগজের মোট — বসেনি আর বসেনি (ফ্রি)-র ঠিক নিচে --}}
+                <tfoot>
+                    <tr class="border-t-2 border-(--color-border) font-semibold">
+                        <td class="text-end">
+                            {{ __('inventory::field.total') }}
+                            @if (($paper['total_value'] ?? null) !== null)
+                                <span class="ms-3 text-(--color-ink-muted)">{{ __('inventory::field.total_value') }}:</span>
+                                <span class="num">৳{{ \App\Core\Support\Money::format($paper['total_value']) }}</span>
+                            @endif
+                        </td>
+                        <td></td><td></td><td></td><td></td>
+                        <td class="num text-end">{{ \App\Core\Support\Money::quantity($paper['total_qty'] ?? '0') }}</td>
+                        <td class="num text-end">{{ bccomp((string) ($paper['total_free'] ?? '0'), '0', 4) > 0 ? \App\Core\Support\Money::quantity($paper['total_free']) : '—' }}</td>
+                        <td></td>
+                    </tr>
+                </tfoot>
             </table>
         </div>
 

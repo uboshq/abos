@@ -45,6 +45,10 @@ return [
     /* "Not placed", not "waiting" — the word names the job to be done. */
     'unplaced' => 'Not placed',
     'unplaced_free' => 'Not placed (free)',
+    'total' => 'Total',
+    'total_qty' => 'Total quantity',
+    'total_value' => 'Value',
+    'grand_total' => 'Grand total',
     'reason' => 'Reason',
     'changed_by' => 'Changed by',
     'counted' => 'Counted',

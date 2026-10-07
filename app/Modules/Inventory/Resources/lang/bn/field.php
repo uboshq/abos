@@ -65,6 +65,10 @@ return [
      */
     'unplaced' => 'বসেনি',
     'unplaced_free' => 'বসেনি (ফ্রি)',
+    'total' => 'মোট',
+    'total_qty' => 'মোট পরিমাণ',
+    'total_value' => 'মূল্য',
+    'grand_total' => 'সর্বমোট',
     'reason' => 'কারণ',
     'changed_by' => 'কে বদলাল',
     'counted' => 'গোনা হলো',

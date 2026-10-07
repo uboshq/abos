@@ -280,6 +280,36 @@ final class OneBillArrivedAsTwoPapersToPutAwayTest extends TestCase
     }
 
     /** একই কাগজে দশটা টাকার মাল আর দুইটা ফ্রি — দুই উৎসে, যেভাবে ক্রয় লেখে। */
+    /**
+     * ⭐ মোট, সর্বমোট আর মূল্য — মালিক, ৭ অক্টোবর ২০২৬: *"total qty, grand total দেখায় না; value দেখালেও ভালো"*।
+     * ⓘ মূল্য = বসেনি (টাকার) × সেই কাগজের খরচের দর; ফ্রির দাম নেই। ⛔ খরচ দেখার চাবি ছাড়া মূল্য নেই।
+     */
+    public function test_each_paper_and_the_page_show_totals_and_value(): void
+    {
+        $this->goodsArrived();
+        \Illuminate\Support\Facades\DB::table('inv_cost_layers')->insert([
+            'company_id' => CompanyContext::id(), 'product_id' => $this->product->id, 'source_type' => 'purchase_bill',
+            'source_id' => 4242, 'document_no' => 'PBL-4242', 'trx_date' => now()->toDateString(),
+            'qty_in' => '10', 'qty_remaining' => '10', 'unit_cost' => '50', 'created_at' => now(), 'updated_at' => now(),
+        ]);
+
+        $paper = $this->papersOnScreen()[0];
+        $this->assertSame(0, bccomp((string) $paper['total_qty'], '10', 4), '⛔ কাগজের মোট পরিমাণ ১০ নয়।');
+        $this->assertSame(0, bccomp((string) $paper['total_free'], '2', 4), '⛔ কাগজের মোট ফ্রি ২ নয়।');
+        $this->assertSame(0, bccomp((string) $paper['total_value'], '500', 4), '⛔ মূল্য ১০ × ৫০ = ৫০০ নয় (ফ্রির দাম ধরা হলো?)।');
+
+        $html = $this->get(route('inventory.stock.placement'))->getContent();
+        $this->assertStringContainsString('data-grand-total', $html, '⛔ পাতায় সর্বমোট নেই।');
+        $this->assertStringContainsString('<tfoot>', $html, '⛔ কাগজের নিচে মোটের সারি নেই।');
+
+        // ⓘ চাবি ছাড়া — একই কাগজ, মূল্যের ঘর নেই (৳০-ও নয়)
+        $controller = app(\App\Modules\Inventory\Http\Controllers\StockPlacementController::class);
+        $withTotals = new \ReflectionMethod($controller, 'withTotals');
+        $plain = $withTotals->invoke($controller, [$paper['source_type'].':4242' => $paper], false);
+        $this->assertNull(array_values($plain)[0]['total_value'], '⛔ খরচ দেখার চাবি ছাড়াই মূল্য এল।');
+        $this->assertSame(0, bccomp((string) array_values($plain)[0]['total_qty'], '10', 4));
+    }
+
     private function goodsArrived(): void
     {
         $stock = app(StockService::class);

@@ -53,6 +53,28 @@
             প্রতিটা কাগজের নিজের ফর্ম (দেখুন [[stock/partials/paper]]), অথচ
             উপরের "সবার জন্য" বারটা সব কাগজের সারিতেই বসাতে পারা চাই।
         --}}
+        {{-- ⭐ সর্বমোট — সব কাগজ মিলিয়ে (মালিক, ৭ অক্টোবর ২০২৬: *"total qty, grand total দেখায় না; value দেখালেও ভালো"*)।
+             ⓘ মূল্য কেবল খরচ দেখার চাবিতে ([[StockPlacementController::withTotals()]])। --}}
+        @php
+            $grand = ['qty' => '0', 'free' => '0', 'value' => '0'];
+            foreach ($papers as $p) {
+                $grand['qty'] = bcadd($grand['qty'], (string) ($p['total_qty'] ?? '0'), 4);
+                $grand['free'] = bcadd($grand['free'], (string) ($p['total_free'] ?? '0'), 4);
+                $grand['value'] = bcadd($grand['value'], (string) ($p['total_value'] ?? '0'), 4);
+            }
+        @endphp
+        <section data-boxed data-grand-total
+                 class="mb-4 flex flex-wrap items-baseline gap-x-8 gap-y-2 rounded-(--radius-card) border border-(--color-brand-400)
+                        bg-(--color-brand-50) px-4 py-3 text-sm">
+            <span class="font-semibold">{{ __('inventory::field.grand_total') }}</span>
+            <span>{{ trans_choice('inventory::message.papers_waiting', count($papers), ['count' => count($papers)]) }}</span>
+            <span>{{ __('inventory::field.total_qty') }}: <b class="num">{{ \App\Core\Support\Money::quantity($grand['qty']) }}</b></span>
+            <span>{{ __('inventory::field.unplaced_free') }}: <b class="num">{{ bccomp($grand['free'], '0', 4) > 0 ? \App\Core\Support\Money::quantity($grand['free']) : '—' }}</b></span>
+            @if ($showValue ?? false)
+                <span>{{ __('inventory::field.total_value') }}: <b class="num">৳{{ \App\Core\Support\Money::format($grand['value']) }}</b></span>
+            @endif
+        </section>
+
         <div x-data="stockPlacement(@js($places))">
             {{--
                 ⭐ "একবার বেছে, সবগুলোয় বসাও" — মালিকের ছবির উপরের সারি

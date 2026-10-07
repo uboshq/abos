@@ -86,10 +86,12 @@ class StockPlacementController extends Controller implements HasMiddleware
      */
     public function index(Request $request): View
     {
-        $papers = $this->waiting();
+        $showValue = (bool) $request->user()?->can('inventory.cost.view');
+        $papers = $this->withTotals($this->waiting(), $showValue);
 
         return view('inventory::stock.placement', [
             'menu' => $this->menu->forUser($request->user()),
+            'showValue' => $showValue,
             'papers' => $papers,
             'places' => $this->placesIn($papers),
 
@@ -109,6 +111,65 @@ class StockPlacementController extends Controller implements HasMiddleware
                 'return' => array_filter($papers, fn (array $paper) => $this->isReturn($paper)),
             ],
         ]);
+    }
+
+    /**
+     * ⭐ মোট আর মূল্য — মালিক, ৭ অক্টোবর ২০২৬: *"গুদামে মাল বসানোতে total qty, grand total এগুলো দেখায় না; value দেখালেও
+     * ভালো হয়"*।
+     *
+     * ⓘ প্রতিটা সারিতে মূল্য = বসানোর অপেক্ষার (টাকার) পরিমাণ × সেই কাগজের সেই পণ্য-লটের খরচের স্তরের দর; ফ্রির দাম নেই।
+     * প্রতিটা কাগজের নিচে মোট পরিমাণ, মোট ফ্রি আর মোট মূল্য। ⛔ মূল্য কেবল খরচ দেখার চাবিতে (`inventory.cost.view`) —
+     * না থাকলে ঘরটাই নেই, ৳০-ও নয়। ⚠️ অঙ্ক bcmath-এ, ভাসমান সংখ্যা নয়।
+     *
+     * @param  array<string, array<string, mixed>>  $papers
+     * @return array<string, array<string, mixed>>
+     */
+    private function withTotals(array $papers, bool $showValue): array
+    {
+        $rates = [];
+
+        if ($showValue && $papers !== []) {
+            $sourceIds = array_values(array_unique(array_map(fn (array $p) => (int) $p['source_id'], $papers)));
+
+            DB::table('inv_cost_layers')
+                ->where('company_id', CompanyContext::id())
+                ->whereIn('source_id', $sourceIds)
+                ->where('qty_in', '>', 0)
+                ->groupBy('source_type', 'source_id', 'product_id', 'batch_id')
+                ->select(['source_type', 'source_id', 'product_id', 'batch_id',
+                    DB::raw('SUM(qty_in * unit_cost) / SUM(qty_in) as rate')])
+                ->get()
+                ->each(function ($r) use (&$rates) {
+                    $rates[$r->source_type.':'.$r->source_id.':'.$r->product_id.':'.($r->batch_id ?? '')] = (string) $r->rate;
+                    // ⓘ লট ছাড়া খোঁজার জন্যও — পুরনো স্তরে লট বসানো না-ও থাকতে পারে
+                    $rates[$r->source_type.':'.$r->source_id.':'.$r->product_id.':*'] ??= (string) $r->rate;
+                });
+        }
+
+        foreach ($papers as $key => $paper) {
+            $qty = '0';
+            $free = '0';
+            $value = '0';
+
+            foreach ($paper['lines'] as $i => $line) {
+                $qty = bcadd($qty, (string) $line['waiting'], 4);
+                $free = bcadd($free, (string) $line['waiting_free'], 4);
+
+                if ($showValue) {
+                    $base = (string) $paper['source_type'].':'.$line['source_id'].':'.$line['product_id'];
+                    $rate = $rates[$base.':'.($line['batch_id'] ?? '')] ?? $rates[$base.':*'] ?? null;
+                    $lineValue = $rate === null ? null : bcmul((string) $line['waiting'], $rate, 4);
+                    $papers[$key]['lines'][$i]['value'] = $lineValue;
+                    $value = bcadd($value, $lineValue ?? '0', 4);
+                }
+            }
+
+            $papers[$key]['total_qty'] = $qty;
+            $papers[$key]['total_free'] = $free;
+            $papers[$key]['total_value'] = $showValue ? $value : null;
+        }
+
+        return $papers;
     }
 
     /**
