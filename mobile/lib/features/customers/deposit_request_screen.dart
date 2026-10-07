@@ -48,6 +48,10 @@ class _DepositRequestScreenState extends State<DepositRequestScreen> {
 
   List<BankChoice> _banks = const [];
   List<DepositRequestRow> _history = const [];
+
+  /// ⭐ কোন বিলের বিপরীতে — ঐচ্ছিক (টাকার পরিকল্পনা ২, ৭ অক্টোবর ২০২৬); বিল ধরে অঙ্কের ঘর
+  List<OpenBill> _bills = const [];
+  final Map<String, TextEditingController> _shares = {};
   bool _busy = false;
   String? _error;
   String? _done;
@@ -63,6 +67,9 @@ class _DepositRequestScreenState extends State<DepositRequestScreen> {
     _amount.dispose();
     _reference.dispose();
     _note.dispose();
+    for (final c in _shares.values) {
+      c.dispose();
+    }
     super.dispose();
   }
 
@@ -70,10 +77,16 @@ class _DepositRequestScreenState extends State<DepositRequestScreen> {
     try {
       final banks = await widget.api.banks();
       final history = await widget.api.forCustomer(widget.customerId);
+      // ⓘ পুরনো সার্ভারে দরজাটা নেই — তখন বিলের ঘর থাকে না, বাকি পর্দা আগের মতো
+      final bills = await widget.api.openBills(widget.customerId).catchError((_) => const <OpenBill>[]);
       if (!mounted) return;
       setState(() {
         _banks = banks;
         _history = history;
+        _bills = bills;
+        for (final b in bills) {
+          _shares.putIfAbsent(b.id, TextEditingController.new);
+        }
       });
     } catch (e) {
       if (mounted) {
@@ -101,6 +114,23 @@ class _DepositRequestScreenState extends State<DepositRequestScreen> {
       setState(() => _error = 'ব্যাংকে জমায় স্লিপের ছবি দিতেই হবে।');
       return;
     }
+    final shares = <BillShare>[];
+    var shared = 0.0;
+    for (final b in _bills) {
+      final text = _shares[b.id]?.text.trim() ?? '';
+      final value = double.tryParse(text) ?? 0;
+      if (value <= 0) continue;
+      if (value > b.due + 0.001) {
+        setState(() => _error = 'বিল ${b.no}-এর বকেয়া ${Money.taka(b.due)} — তার বেশি এই বিলে দেখানো যায় না।');
+        return;
+      }
+      shares.add(BillShare(b.id, text));
+      shared += value;
+    }
+    if (shared > (double.tryParse(amount) ?? 0) + 0.001) {
+      setState(() => _error = 'বিলগুলোতে মোট ${Money.taka(shared)}, অথচ জমা ${Money.taka(double.tryParse(amount) ?? 0)} — বিলের ভাগ জমার চেয়ে বেশি হতে পারে না।');
+      return;
+    }
     setState(() {
       _busy = true;
       _error = null;
@@ -116,6 +146,7 @@ class _DepositRequestScreenState extends State<DepositRequestScreen> {
         reference: _method == 'cash' ? null : _reference.text.trim(),
         note: _note.text.trim(),
         slipPath: _slip,
+        bills: shares,
       ));
       if (!mounted) return;
       setState(() {
@@ -123,6 +154,9 @@ class _DepositRequestScreenState extends State<DepositRequestScreen> {
         _amount.clear();
         _reference.clear();
         _note.clear();
+        for (final c in _shares.values) {
+          c.clear();
+        }
         _slip = null;
       });
       await _load();
@@ -198,6 +232,29 @@ class _DepositRequestScreenState extends State<DepositRequestScreen> {
               maxLength: 64,
               decoration: const InputDecoration(labelText: 'স্লিপ / লেনদেন নম্বর'),
             ),
+          if (_bills.isNotEmpty) ...[
+            const SizedBox(height: AppSpacing.sm),
+            const Text('কোন বিলের বিপরীতে (ঐচ্ছিক)', style: TextStyle(fontWeight: FontWeight.w700)),
+            const Text('বিল বাছলে গ্রহণের সময় টাকা সেই বিলগুলোতে মিলবে; না বাছলে মোট টাকা দোকানের খাতায় বসবে।',
+                style: TextStyle(color: AppColors.onSurfaceMuted)),
+            // ⓘ এক লাইনে এক বিল — মালিকের নিয়ম; টেবিল নয়
+            for (final b in _bills)
+              Row(
+                children: [
+                  Expanded(child: Text('${b.no} · বকেয়া ${Money.taka(b.due)}')),
+                  SizedBox(
+                    width: 120,
+                    child: TextField(
+                      key: ValueKey('bill-share-${b.id}'),
+                      controller: _shares[b.id],
+                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      textAlign: TextAlign.end,
+                      decoration: const InputDecoration(hintText: 'এই বিলে'),
+                    ),
+                  ),
+                ],
+              ),
+          ],
           TextField(controller: _note, decoration: const InputDecoration(labelText: 'আর কিছু বলার')),
           const SizedBox(height: AppSpacing.md),
           if (_method != 'cash')
@@ -231,6 +288,7 @@ class _DepositRequestScreenState extends State<DepositRequestScreen> {
                         })),
                     if (row.date != null) Text('তারিখ ${row.date}'),
                     if (row.reference != null) Text('নম্বর ${row.reference}'),
+                    for (final (no, amount) in row.bills) Text('বিল $no · ${Money.taka(amount)}'),
                     if (row.status == 'rejected' || (row.reason ?? '').isNotEmpty)
                       Text('কারণ: ${(row.reason ?? '').isEmpty ? 'জানানো হয়নি' : row.reason}',
                           style: row.status == 'rejected' ? const TextStyle(color: AppColors.danger) : null),
