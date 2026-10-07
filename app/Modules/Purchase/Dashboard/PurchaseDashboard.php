@@ -18,6 +18,7 @@ use App\Modules\Purchase\Models\Payment;
 use App\Modules\Purchase\Models\PurchaseBill;
 use App\Modules\Purchase\Models\PurchaseOrder;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 
 /**
  * ক্রয় মডিউলের ড্যাশবোর্ড।
@@ -100,7 +101,8 @@ final class PurchaseDashboard implements ProvidesDashboard
 
                 new Stat(
                     label: __('purchase::dashboard.paid_this_month'),
-                    value: Money::format(Payment::query()->where('trx_date', '>=', $month)->sum('amount')),
+                    // ⛔ কেবল খাতায় ওঠা পরিশোধ, সাথে বিলের বিপরীতে পরিশোধ-ভাউচার (কাউন্টার) — অডিট ⚠️১৪, ৬ অক্টোবর ২০২৬ ([[paidFrom()]])
+                    value: Money::format(self::paidFrom($month)),
                     hint: __('purchase::dashboard.paid_hint'),
                     href: route('purchase.payment.index'),
                     tone: Stat::GOOD,
@@ -136,10 +138,9 @@ final class PurchaseDashboard implements ProvidesDashboard
                         ['key' => 'party', 'label' => __('purchase::field.supplier'),
                             'render' => fn ($b) => $b->supplier?->name() ?? '—'],
                         ['key' => 'amount', 'label' => __('purchase::dashboard.payable'), 'width' => '9rem',
-                            'render' => fn ($b) => Money::format($b->total)],
+                            'render' => fn ($b) => Money::format($b->dueAmount())],
                     ],
-                    rows: PurchaseBill::query()->whereIn('status', DocumentStatus::POSTED)
-                        ->with('supplier')->orderByDesc('total')->limit(8)->get(),
+                    rows: self::biggestPayable(),
                     empty: __('purchase::dashboard.nothing_payable'),
                     href: route('purchase.bill.index'),
                 ),
@@ -252,9 +253,16 @@ final class PurchaseDashboard implements ProvidesDashboard
             ->selectRaw("{$expr} as ym, COALESCE(SUM(total), 0) as amount")->groupByRaw($expr)
             ->toBase()->pluck('amount', 'ym');
 
-        $paid = Payment::query()->where('trx_date', '>=', $start->toDateString())
+        // ⛔ কেবল খাতায় ওঠা পরিশোধ আর পরিশোধ-ভাউচার — খসড়া বা বাতিল নয় (অডিট ⚠️১৪)
+        $paid = Payment::query()->posted()->where('trx_date', '>=', $start->toDateString())
             ->selectRaw("{$expr} as ym, COALESCE(SUM(amount), 0) as amount")->groupByRaw($expr)
             ->toBase()->pluck('amount', 'ym');
+        $byVoucher = self::billVouchers()->where('trx_date', '>=', $start->toDateString())
+            ->selectRaw("{$expr} as ym, COALESCE(SUM(amount), 0) as amount")->groupByRaw($expr)
+            ->toBase()->pluck('amount', 'ym');
+        foreach ($byVoucher as $ym => $amount) {
+            $paid[$ym] = bcadd((string) ($paid[$ym] ?? '0'), (string) $amount, 4);
+        }
 
         $points = [];
 
@@ -282,5 +290,47 @@ final class PurchaseDashboard implements ProvidesDashboard
             // ⭐ কোন তারিখ থেকে কোন তারিখ (মালিক, ৫ অক্টোবর ২০২৬)
             range: \App\Core\Engines\Dashboard\DateRange::label($start, Carbon::today()),
         );
+    }
+
+    /**
+     * ⭐ একটা তারিখ থেকে আজ পর্যন্ত সরবরাহকারীকে যা দেওয়া হলো — খাতায় ওঠা পরিশোধ আর বিলের বিপরীতে পরিশোধ-ভাউচার।
+     * ⛔ আগে অবস্থা না দেখে সব পরিশোধ (খসড়া, বাতিলও), আর কাউন্টারের পরিশোধ-ভাউচার বাদ (অডিট ⚠️১৪, ৬ অক্টোবর ২০২৬)।
+     */
+    private static function paidFrom(string $from): string
+    {
+        $payments = (string) (Payment::query()->posted()->where('trx_date', '>=', $from)->sum('amount') ?: '0');
+
+        return bcadd($payments, (string) (self::billVouchers()->where('trx_date', '>=', $from)->sum('amount') ?: '0'), 4);
+    }
+
+    /** ⓘ ক্রয় বিলের বিপরীতে খাতায় ওঠা পরিশোধ-ভাউচার — [[PurchaseBill::paidByPaymentVouchers()]]-এর হুবহু শর্ত */
+    private static function billVouchers()
+    {
+        return \App\Modules\Accounts\Models\Voucher::query()
+            ->where('type', \App\Modules\Accounts\Models\Voucher::PAYMENT)
+            ->where('against_type', PurchaseBill::drillSourceType())
+            ->posted();
+    }
+
+    /**
+     * ⭐ সবচেয়ে বড় দেনা — বিলে এখনো যা বাকি, বড় থেকে ছোট (অডিট ⚠️১৪)। ⛔ আগে বিলের মোট ধরে সাজানো আর মোটটাই দেখানো —
+     * শোধ হয়ে যাওয়া বড় বিলও মাথায় বসত। ⓘ বাকির হিসাব বিলের পাতার হুবহু ([[PurchaseBill::scopeWithPaid()]]).
+     */
+    private static function biggestPayable()
+    {
+        $ranked = DB::query()
+            ->fromSub(PurchaseBill::query()->whereIn('status', DocumentStatus::POSTED)->withPaid(), 'b')
+            // ⭐ পাকা ফেরতও বাদ — [[PurchaseBill::dueAmount()]] (ক্রয় ⚠️৬, ৬ অক্টোবর ২০২৬)
+            ->selectRaw('b.id, (b.total - b.paid_total - b.voucher_paid_total - COALESCE(b.returned_total, 0)) as due')
+            ->whereRaw('(b.total - b.paid_total - b.voucher_paid_total - COALESCE(b.returned_total, 0)) > 0')
+            ->orderByDesc('due')
+            ->orderBy('b.id')
+            ->limit(8)
+            ->pluck('id')
+            ->all();
+
+        return PurchaseBill::query()->withPaid()->with('supplier')->whereIn('pur_bills.id', $ranked ?: [0])->get()
+            ->sortBy(fn (PurchaseBill $b) => array_search($b->id, $ranked, true))
+            ->values();
     }
 }
