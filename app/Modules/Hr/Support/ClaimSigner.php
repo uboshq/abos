@@ -52,6 +52,17 @@ final class ClaimSigner
                 return false;
             }
 
+            /*
+             * ⛔ মালিক কোম্পানির অনুমোদন বন্ধ রেখেছেন — ছক আছে, সবগুলোই বন্ধ, যেকোনো মডিউলে — তখন নতুন চালু ছক নয় (সমন্বয়কের
+             * আদেশ, ৭ অক্টোবর ২০২৬; [[AClaimNeverPassesWithoutASignatureTest]])। ⓘ লাইভে UB-তে মাইগ্রেশন ঠিক এটাই করেছিল: মালিক
+             * ৩ অক্টোবর সব ছক বন্ধ করেছিলেন, hr-এ কোনো ছক ছিল না, আর "ছক নেই" ধরে দুইটা চালু ছক বসেছিল।
+             */
+            $flows = ApprovalFlow::query()->where('company_id', CompanyContext::id());
+
+            if ((clone $flows)->exists() && ! (clone $flows)->where('is_active', true)->exists()) {
+                return false;
+            }
+
             $owners = Role::query()
                 ->where('company_id', CompanyContext::id())
                 ->where('guard_name', 'web')

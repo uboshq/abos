@@ -123,6 +123,21 @@ final class AClaimNeverPassesWithoutASignatureTest extends TestCase
         $this->assertSame(PermissionSyncer::SUPER_ADMIN_ROLE, Role::query()->findOrFail($flow->steps->sole()->approver_id)->name, 'ডিফল্ট সইদাতা মালিক নন');
     }
 
+    public function test_a_company_whose_owner_switched_every_flow_off_gets_no_new_one(): void
+    {
+        // ⓘ লাইভের UB: মালিক সব ছক বন্ধ রেখেছেন (৩ অক্টোবর ২০২৬), hr-এ কোনো ছক নেই
+        ApprovalFlow::query()->create(['module' => 'sales', 'action' => 'order', 'is_active' => false]);
+        ApprovalFlow::query()->update(['is_active' => false]);
+        $this->app->forgetInstance(ApprovalEngine::class);
+
+        $claim = $this->submit(ExpenseClaim::EXPENSE, '300');
+        (require base_path('app/Modules/Hr/Database/Migrations/2027_02_15_110000_a_claim_never_passes_without_a_signature.php'))->up();
+
+        $this->assertSame(0, ApprovalFlow::query()->where('is_active', true)->count(), '⛔ মালিকের বন্ধ রাখা কোম্পানিতে চালু ছক বসল');
+        $this->assertSame(0, ApprovalFlow::query()->where('module', 'hr')->count());
+        $this->assertSame(ExpenseClaim::APPROVED, $claim->status, 'মালিক অনুমোদন বন্ধ রেখেছেন — তাঁর সিদ্ধান্ত');
+    }
+
     public function test_the_companys_own_flow_is_left_as_it_is(): void
     {
         $signer = User::query()->where('email', 'accounts@abos.test')->firstOrFail();
