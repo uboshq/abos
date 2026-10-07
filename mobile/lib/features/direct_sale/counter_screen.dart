@@ -1158,7 +1158,7 @@ class _CounterScreenState extends State<CounterScreen> {
                           DropdownMenuItem(
                               value: l.id,
                               child: Text(
-                                  '${l.no} · মেয়াদ ${l.expiry} · আছে ${l.qty}')),
+                                  [l.no, 'মেয়াদ ${l.expiry}', if (l.qty.isNotEmpty) 'আছে ${l.qty}'].join(' · '))),
                       ],
                       onChanged: (v) {
                         setState(() => _lot =
