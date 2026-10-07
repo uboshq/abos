@@ -33,7 +33,7 @@
             'label' => __('sales::portal.claimed'),
             'numeric' => true,
             'width' => '10rem',
-            'render' => fn ($c) => view('sales::claim.partials.amount', ['value' => $c->amount]),
+            'render' => fn ($c) => view('sales::claim.partials.amount', ['value' => $c->amount, 'claim' => $c]),
         ],
         [
             'key' => 'reference',

@@ -58,7 +58,7 @@ class DepositClaim extends Model
     protected $fillable = [
         'company_id', 'branch_id', 'customer_id',
         'claimed_on', 'amount', 'method', 'reference', 'bank_account_id',
-        'status', 'note', 'collection_id',
+        'status', 'note', 'bills', 'collection_id',
         'decided_by', 'decided_at', 'decision_reason',
     ];
 
@@ -68,6 +68,8 @@ class DepositClaim extends Model
             'claimed_on' => 'date',
             'amount' => 'decimal:4',
             'decided_at' => 'datetime',
+            // ⭐ কোন বিলের বিপরীতে — `[{sales_invoice_id, amount}]`, ঐচ্ছিক ([[DepositClaimService::raise()]])
+            'bills' => 'array',
         ];
     }
 

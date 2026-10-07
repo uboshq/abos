@@ -28,6 +28,26 @@
                           border-(--color-border) bg-(--color-surface-app) px-3 text-end">
         </label>
 
+        {{-- ⭐ কোন বিলের বিপরীতে — ঐচ্ছিক (টাকার পরিকল্পনা ২, ৭ অক্টোবর ২০২৬; [[DepositClaimService::raise()]]) --}}
+        <fieldset class="block" data-claim-bills>
+            <legend class="mb-1 block text-sm font-medium">{{ __('sales::slip.bills') }}</legend>
+            <p class="mb-2 text-2xs text-(--color-ink-muted)">{{ __('sales::slip.bills_hint') }}</p>
+            @forelse ($openBills as $n => $bill)
+                <div class="mb-1 flex items-center gap-2 text-sm">
+                    <span class="flex-1">{{ $bill->document_no }} <span class="text-2xs text-(--color-ink-muted)">{{ $bill->trx_date?->format('d M Y') }}</span></span>
+                    <span class="num text-2xs text-(--color-ink-muted)">{{ __('sales::slip.bill_due') }} {{ \App\Core\Support\Money::format($bill->dueAmount()) }}</span>
+                    <input type="hidden" name="bills[{{ $n }}][invoice]" value="{{ $bill->public_id }}">
+                    <input type="number" step="0.01" min="0" max="{{ bcadd($bill->dueAmount(), '0', 2) }}"
+                           name="bills[{{ $n }}][amount]" value="{{ old('bills.'.$n.'.amount') }}"
+                           aria-label="{{ __('sales::slip.bill_pay') }} {{ $bill->document_no }}"
+                           class="num h-(--spacing-field) w-32 shrink-0 rounded-(--radius-field) border
+                                  border-(--color-border) bg-(--color-surface-app) px-2 text-end">
+                </div>
+            @empty
+                <p class="text-sm text-(--color-ink-muted)">{{ __('sales::slip.bills_none') }}</p>
+            @endforelse
+        </fieldset>
+
         <label class="block">
             <span class="mb-1 block text-sm font-medium">{{ __('sales::portal.method') }}</span>
             <select name="method" x-model="method"

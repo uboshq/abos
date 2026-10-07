@@ -20,13 +20,41 @@
 
         <x-ui.select name="customer" :label="__('sales::slip.customer')"
                      :options="$customers->mapWithKeys(fn ($c) => [$c->id => $c->name()])"
-                     :selected="old('customer')" placeholder="-" required />
+                     :selected="old('customer', $picked)" placeholder="-" required />
 
         <x-ui.field name="claimed_on" type="date" :label="__('sales::portal.claimed_on')"
-                    :value="old('claimed_on', now()->toDateString())" required />
+                    :value="old('claimed_on', request('claimed_on', now()->toDateString()))" required />
 
         <x-ui.field name="amount" type="number" step="0.01" inputmode="decimal" numeric required
-                    :label="__('sales::portal.amount')" :value="old('amount')" />
+                    :label="__('sales::portal.amount')" :value="old('amount', request('amount'))" />
+
+        {{--
+            ⭐ কোন বিলের বিপরীতে — ঐচ্ছিক (টাকার পরিকল্পনা ২, ৭ অক্টোবর ২০২৬; [[DepositClaimService::raise()]])।
+            ⓘ "বিল দেখুন" ফর্মটাই GET-এ এই পাতায় পাঠায় — বাছা গ্রাহকের খোলা বিল আসে, জাভাস্ক্রিপ্ট ছাড়া।
+        --}}
+        <fieldset class="block" data-claim-bills>
+            <legend class="mb-1 block text-sm font-medium">{{ __('sales::slip.bills') }}</legend>
+            <p class="mb-2 text-2xs text-(--color-ink-muted)">{{ __('sales::slip.bills_hint') }}</p>
+            @if ($openBills === null)
+                <x-ui.button type="submit" tone="secondary" formaction="{{ route('sales.claim.request.create') }}"
+                             formmethod="get" formnovalidate>{{ __('sales::slip.bills_show') }}</x-ui.button>
+            @else
+                @forelse ($openBills as $n => $bill)
+                    <div class="mb-1 flex items-center gap-2 text-sm">
+                        <span class="flex-1">{{ $bill->document_no }} <span class="text-2xs text-(--color-ink-muted)">{{ $bill->trx_date?->format('d M Y') }}</span></span>
+                        <span class="num text-2xs text-(--color-ink-muted)">{{ __('sales::slip.bill_due') }} {{ \App\Core\Support\Money::format($bill->dueAmount()) }}</span>
+                        <input type="hidden" name="bills[{{ $n }}][invoice]" value="{{ $bill->public_id }}">
+                        <input type="number" step="0.01" min="0" max="{{ bcadd($bill->dueAmount(), '0', 2) }}"
+                               name="bills[{{ $n }}][amount]" value="{{ old('bills.'.$n.'.amount') }}"
+                               aria-label="{{ __('sales::slip.bill_pay') }} {{ $bill->document_no }}"
+                               class="num h-(--spacing-field) w-32 shrink-0 rounded-(--radius-field) border
+                                      border-(--color-border) bg-(--color-surface-app) px-2 text-end">
+                    </div>
+                @empty
+                    <p class="text-sm text-(--color-ink-muted)">{{ __('sales::slip.bills_none') }}</p>
+                @endforelse
+            @endif
+        </fieldset>
 
         <label class="block">
             <span class="mb-1 block text-sm font-medium">{{ __('sales::portal.method') }}</span>

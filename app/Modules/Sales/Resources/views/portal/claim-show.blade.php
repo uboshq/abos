@@ -28,6 +28,13 @@
                 <dt class="text-(--color-ink-muted)">{{ __('sales::portal.method') }}</dt>
                 <dd>{{ __('sales::portal.'.$claim->method) }}</dd>
             </div>
+            {{-- ⭐ কোন বিলের বিপরীতে — দাবির প্রস্তাব (টাকার পরিকল্পনা ২, ৭ অক্টোবর ২০২৬) --}}
+            @foreach (\App\Modules\Sales\Http\Controllers\DepositRequestController::billFacts($claim) as $bill)
+                <div class="flex justify-between gap-3" data-claim-bills>
+                    <dt class="text-(--color-ink-muted)">{{ __('sales::slip.bills_named') }} {{ $bill['no'] }}</dt>
+                    <dd class="num">{{ \App\Core\Support\Money::format($bill['amount']) }}</dd>
+                </div>
+            @endforeach
             @if ($claim->reference)
                 <div class="flex justify-between gap-3">
                     <dt class="text-(--color-ink-muted)">{{ __('sales::portal.reference') }}</dt>

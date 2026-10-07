@@ -14,4 +14,17 @@ return [
     'new' => 'New request with slip',
     'view' => 'View slip',
     'none' => 'No slip',
+
+    'bills' => 'Against which bills (optional)',
+    'bills_hint' => 'Pick bills and the money is matched to them when accepted; pick none and the whole amount goes to your account.',
+    'bills_none' => 'No open bills.',
+    'bills_show' => 'Show this customer\'s open bills',
+    'bill_due' => 'Due',
+    'bill_pay' => 'On this bill',
+    'bill_not_theirs' => 'The bill picked is not this customer\'s.',
+    'bill_not_open' => 'Bill :no is not confirmed; a deposit cannot be shown against it.',
+    'bill_twice' => 'Bill :no is picked twice.',
+    'bill_over_due' => 'Bill :no has ৳:due due; no more than that can go on it.',
+    'bills_over_amount' => 'The bills add up to ৳:sum but the deposit is ৳:amount; the bills cannot take more than the deposit.',
+    'bills_named' => 'Bills',
 ];

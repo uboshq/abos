@@ -39,6 +39,8 @@ Route::prefix('v1/sales')
         // ⭐ স্লিপসহ জমার অনুরোধ — SR দোকানির ব্যাংক স্লিপের ছবি পাঠান ([[DepositRequestController]])
         Route::get('/deposit-requests/accounts', [DepositRequestController::class, 'accounts'])->name('deposit_request.accounts');
         Route::get('/deposit-requests', [DepositRequestController::class, 'apiIndex'])->name('deposit_request.index');
+        // ⭐ ডিলারের খোলা বিল — বিজ্ঞপ্তির "কোন বিলের বিপরীতে" (টাকার পরিকল্পনা ২, ৭ অক্টোবর ২০২৬)
+        Route::get('/deposit-requests/bills', [DepositRequestController::class, 'bills'])->name('deposit_request.bills');
         Route::post('/deposit-requests', [DepositRequestController::class, 'apiStore'])->middleware(\App\Http\Middleware\RemembersAPhoneWrite::class)->name('deposit_request.store');
 
         // ⭐ ডেলিভারি ট্র্যাকিং — বিক্রি কোথায়, কে কখন ([[SaleTrackingController]]); চাবি দুইয়ের যেকোনো একটা, পদ্ধতিতে

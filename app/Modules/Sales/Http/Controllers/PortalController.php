@@ -356,6 +356,8 @@ class PortalController extends Controller
             // ⛔ কেবল ব্যাংক — MFS নয়; `ofMoneyKind()` নিজেই দল ছাঁকে
             'banks' => Account::query()
                 ->ofMoneyKind(Account::BANK)->active()->orderBy('code')->get(),
+            // ⭐ নিজের খোলা বিল — "কোন বিলের বিপরীতে" (টাকার পরিকল্পনা ২, ৭ অক্টোবর ২০২৬)
+            'openBills' => $this->claims->openBills($customer),
         ]);
     }
 
@@ -372,8 +374,13 @@ class PortalController extends Controller
             'note' => ['nullable', 'string', 'max:500'],
             // ⭐ স্লিপের ছবি — ১ অক্টোবর ২০২৬; ধরন আর মাপ দেখে [[DepositSlip]] (কেবল ছবি/PDF, ৫ MB)
             'slip' => ['nullable', 'file', 'max:'.intdiv(\App\Core\Engines\Attachment\AttachmentEngine::SLIP_MAX_BYTES, 1024)],
+            // ⭐ কোন বিলের বিপরীতে — ঐচ্ছিক, কেবল নিজের বিল ([[DepositRequestController::billIds()]]-এর একই পাহারা)
+            'bills' => ['nullable', 'array', 'max:50'],
+            'bills.*.invoice' => ['required', 'string', 'max:64'],
+            'bills.*.amount' => ['nullable', 'numeric', 'min:0'],
         ]);
 
+        $data['bills'] = \App\Modules\Sales\Http\Controllers\DepositRequestController::billIds($customer, (array) ($data['bills'] ?? []));
         unset($data['slip']);
         app(\App\Modules\Sales\Services\DepositSlip::class)->raise($customer, $data, $request->file('slip'));
 

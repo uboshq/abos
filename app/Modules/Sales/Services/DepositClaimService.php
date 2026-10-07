@@ -4,11 +4,13 @@ declare(strict_types=1);
 
 namespace App\Modules\Sales\Services;
 
+use App\Core\Support\DocumentStatus;
 use App\Core\Support\Money;
 use App\Modules\Accounts\Services\MoneyAccountRule;
 use App\Modules\Customer\Models\Customer;
 use App\Modules\MasterData\Services\MethodFitsAccount;
 use App\Modules\Sales\Models\DepositClaim;
+use App\Modules\Sales\Models\SalesInvoice;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -59,6 +61,8 @@ final class DepositClaimService
             ]);
         }
 
+        $bills = $this->billsOf($customer, (array) ($data['bills'] ?? []), $amount);
+
         return DepositClaim::create([
             'company_id' => $customer->company_id,
             'branch_id' => $customer->branch_id,
@@ -69,8 +73,119 @@ final class DepositClaimService
             'reference' => filled($data['reference'] ?? null) ? trim((string) $data['reference']) : null,
             'bank_account_id' => $data['bank_account_id'] ?? null,
             'note' => $data['note'] ?? null,
+            'bills' => $bills === [] ? null : $bills,
             'status' => DepositClaim::PENDING,
         ]);
+    }
+
+    /**
+     * এই গ্রাহকের খোলা বিল — পুরনো আগে, বকেয়াসহ; বিজ্ঞপ্তির "কোন বিলের বিপরীতে" তালিকা (ফোন, ওয়েব, পোর্টাল একই উৎসে)।
+     * ⓘ বকেয়া [[SalesInvoice::dueAmount()]]-এর হুবহু — আদায়, রসিদ ভাউচার আর পাকা ফেরত বাদ দিয়ে; আদায়ের পর্দার একই অঙ্ক।
+     *
+     * @return \Illuminate\Support\Collection<int, SalesInvoice>
+     */
+    public function openBills(Customer $customer, int $limit = 100): \Illuminate\Support\Collection
+    {
+        return SalesInvoice::query()
+            ->where('customer_id', $customer->id)
+            ->where('status', DocumentStatus::CONFIRMED)
+            ->withCollected()
+            ->orderBy('trx_date')->orderBy('id')
+            ->get()
+            ->filter(fn (SalesInvoice $invoice) => bccomp($invoice->dueAmount(), '0', 4) > 0)
+            ->take($limit)
+            ->values();
+    }
+
+    /**
+     * ⭐ বাছা বিল যাচাই — নিজের, পাকা, বকেয়ার বেশি নয়, একই বিল দুইবার নয়, আর মোট জমার অঙ্কের বেশি নয় (টাকার পরিকল্পনা ২,
+     * ৭ অক্টোবর ২০২৬)। শূন্য বা ফাঁকা অঙ্কের সারি বাদ। ⓘ আদায়ের নিজের যাচাইয়ের ([[CollectionService]] `replaceLines`)
+     * একই কথা, আগেভাগে — ভুল বাছাই দাবি তোলার মুহূর্তেই ফেরে, ডিপোর টেবিলে গিয়ে নয়।
+     *
+     * @param  list<array<string, mixed>>  $rows  `[{sales_invoice_id, amount}]`
+     * @return list<array{sales_invoice_id: int, amount: string}>
+     */
+    private function billsOf(Customer $customer, array $rows, string $amount): array
+    {
+        $bills = [];
+        $sum = '0';
+
+        foreach ($rows as $row) {
+            $share = Money::of((string) ($row['amount'] ?? '0'));
+            if (bccomp($share, '0', 4) <= 0) {
+                continue;
+            }
+
+            $invoice = SalesInvoice::query()->whereKey((int) ($row['sales_invoice_id'] ?? 0))->first();
+            if ($invoice === null || (int) $invoice->customer_id !== (int) $customer->id) {
+                throw ValidationException::withMessages(['bills' => __('sales::slip.bill_not_theirs')]);
+            }
+            if ($invoice->status !== DocumentStatus::CONFIRMED) {
+                throw ValidationException::withMessages(['bills' => __('sales::slip.bill_not_open', ['no' => $invoice->document_no])]);
+            }
+            if (isset($bills[$invoice->id])) {
+                throw ValidationException::withMessages(['bills' => __('sales::slip.bill_twice', ['no' => $invoice->document_no])]);
+            }
+
+            $due = $invoice->dueAmount();
+            if (bccomp($share, $due, 4) > 0) {
+                throw ValidationException::withMessages(['bills' => __('sales::slip.bill_over_due', [
+                    'no' => $invoice->document_no, 'due' => Money::format($due),
+                ])]);
+            }
+
+            $bills[$invoice->id] = ['sales_invoice_id' => (int) $invoice->id, 'amount' => bcadd($share, '0', 4)];
+            $sum = bcadd($sum, $share, 4);
+        }
+
+        if (bccomp($sum, $amount, 4) > 0) {
+            throw ValidationException::withMessages(['bills' => __('sales::slip.bills_over_amount', [
+                'sum' => Money::format($sum), 'amount' => Money::format($amount),
+            ])]);
+        }
+
+        return array_values($bills);
+    }
+
+    /**
+     * ⭐ গ্রহণের মুহূর্তে বিলের ভাগ — দাবির ক্রমে, প্রতিটা বিলে তিনের ছোটটা: বাছা অঙ্ক, এখনকার বকেয়া, আর গৃহীত টাকার বাকি।
+     *
+     * ⓘ দাবি আর গ্রহণের মাঝে সময় যায়: বিলটা ততক্ষণে অন্য আদায়ে শোধ হতে পারে, ফেরত আসতে পারে, বাতিলও হতে পারে; আর ডিপো
+     * ব্যাংকের চার্জ কেটে অঙ্ক কমাতে পারে। ⛔ তখন আদায় আটকে দিলে ডিপো দাবিটা গ্রহণই করতে পারতেন না — তাই যা মেলে তা মেলে,
+     * বাকি টাকা আগের মতো গ্রাহকের খাতায় (বিলে না বসা আদায়)। আদায়ের নিজের পাহারা ([[CollectionService]]) তারপরও চলে।
+     *
+     * @return list<array{sales_invoice_id: int, amount: string}>
+     */
+    private function sharesAt(DepositClaim $claim, string $amount): array
+    {
+        $left = $amount;
+        $lines = [];
+
+        foreach ((array) $claim->bills as $bill) {
+            if (bccomp($left, '0', 4) <= 0) {
+                break;
+            }
+
+            $invoice = SalesInvoice::query()->whereKey((int) ($bill['sales_invoice_id'] ?? 0))->first();
+            if ($invoice === null || (int) $invoice->customer_id !== (int) $claim->customer_id || $invoice->status !== DocumentStatus::CONFIRMED) {
+                continue;
+            }
+
+            $share = self::least(Money::of((string) ($bill['amount'] ?? '0')), $invoice->dueAmount(), $left);
+            if (bccomp($share, '0', 4) <= 0) {
+                continue;
+            }
+
+            $lines[] = ['sales_invoice_id' => (int) $invoice->id, 'amount' => $share];
+            $left = bcsub($left, $share, 4);
+        }
+
+        return $lines;
+    }
+
+    private static function least(string ...$amounts): string
+    {
+        return array_reduce($amounts, fn (?string $min, string $a) => $min === null || bccomp($a, $min, 4) < 0 ? $a : $min);
     }
 
     /**
@@ -141,7 +256,8 @@ final class DepositClaimService
                 'instrument' => $claim->method,
                 'instrument_no' => $claim->reference,
                 'narration' => __('sales::portal.from_claim', ['no' => $claim->public_id]),
-            ], []);
+            // ⭐ বাছা বিলে মেলে — না বাছলে আগের মতো খালি, গ্রাহকের খাতায় মোট টাকা ([[sharesAt()]])
+            ], $this->sharesAt($claim, $amount));
 
             $this->collections->confirm($collection);
 
