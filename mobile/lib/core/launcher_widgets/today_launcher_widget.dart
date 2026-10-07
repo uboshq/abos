@@ -1,3 +1,4 @@
+import '../privacy/phone_privacy.dart';
 import '../records/money.dart';
 import '../records/today_record.dart';
 import '../widgets/day_part.dart';
@@ -54,18 +55,21 @@ class TodayLauncherWidget {
   static const dash = '—';
 
   /// Put a day's figures on the home screen.
-  static Future<void> publish(TodayRecord today, {DateTime? at}) =>
-      LauncherWidgetStore.write(provider, valuesFor(today, at: at));
+  /// ⛔ টাকার অঙ্ক কেবল মালিকের সুইচে ([[PhonePrivacy.widgetAmounts]]); নইলে "•••"
+  static Future<void> publish(TodayRecord today, {DateTime? at}) async =>
+      LauncherWidgetStore.write(provider,
+          valuesFor(today, at: at, showAmounts: await PhonePrivacy.widgetAmounts()));
 
   /// What [publish] writes, as a plain map: every cell, figure or dash.
   ///
   /// <p>Pure, so it can be checked without a launcher.
-  static Map<String, String> valuesFor(TodayRecord today, {DateTime? at}) {
+  static Map<String, String> valuesFor(TodayRecord today, {DateTime? at, bool showAmounts = true}) {
+    String? shown(String? figure) => figure == null || showAmounts ? figure : PhonePrivacy.hidden;
     final figures = <String, String?>{
-      salesToday: _taka(today.sales),
-      inflowToday: _taka(today.collections),
-      cash: _taka(today.cashInHand),
-      receivable: _taka(today.dues),
+      salesToday: shown(_taka(today.sales)),
+      inflowToday: shown(_taka(today.collections)),
+      cash: shown(_taka(today.cashInHand)),
+      receivable: shown(_taka(today.dues)),
     };
 
     return {

@@ -8,6 +8,9 @@ import 'package:home_widget/home_widget.dart';
 
 import 'core/auth/auth_controller.dart';
 import 'core/auth/auth_state.dart';
+import 'core/crash/crash_reporter.dart';
+import 'core/privacy/app_lock.dart';
+import 'core/privacy/phone_privacy.dart';
 import 'core/launcher_widgets/launcher_widget_refresh.dart';
 import 'core/launcher_widgets/widget_sync_observer.dart';
 import 'core/push/push_service.dart';
@@ -19,6 +22,11 @@ import 'core/theme/app_theme.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // ⭐ ধরা-না-পড়া ভুল অফিসের ভুলের খাতায় — সবার আগে, যাতে শুরুর ভাঙাও ধরা পড়ে (সমন্বয়কের অ্যাপ-অডিট, ৭ অক্টোবর ২০২৬)
+  CrashReporter.instance.install();
+  // ⛔ পর্দা আড়াল দিয়ে শুরু — `/me` এলে তবে মালিকের সুইচ ([[PhonePrivacy]])
+  unawaited(PhonePrivacy.secure(true));
 
   // Order matters, and each step here is a hard dependency of the next:
   //  1. Hive's own path setup, before any box anywhere is opened.
@@ -70,6 +78,9 @@ class AbosApp extends ConsumerStatefulWidget {
 
 class _AbosAppState extends ConsumerState<AbosApp> {
   late final WidgetSyncObserver _widgetSync;
+
+  /// ⭐ অ্যাপ-তালা — সংরক্ষিত সেশনে খুললে আর অনেকক্ষণ পরে ফিরলে ([[AppLock]]); এইমাত্র পাসওয়ার্ডে ঢুকলে নয়
+  late final AppLock _lock;
   StreamSubscription<Uri?>? _widgetTaps;
 
   @override
@@ -85,6 +96,10 @@ class _AbosAppState extends ConsumerState<AbosApp> {
 
     _listenForWidgetTaps();
 
+    final signedIn = ref.read(authStateProvider).status == AuthStatus.signedIn;
+    _lock = AppLock(startLocked: signedIn)..signedIn = signedIn;
+    WidgetsBinding.instance.addObserver(_lock);
+
     // ⭐ বার্তায় চাপলে ট্র্যাকিং; নতুন করে ঢুকলে এই ফোনের টোকেন আবার জমা (অন্য কেউ এই ফোনে ঢুকে থাকলে
     // সার্ভার আগের জনের সারি থেকে টোকেন সরায় — [[PushTokenController]])।
     PushService.instance.listenForTaps(_openFromPush);
@@ -92,6 +107,8 @@ class _AbosAppState extends ConsumerState<AbosApp> {
       if (previous?.status != AuthStatus.signedIn && next.status == AuthStatus.signedIn) {
         unawaited(PushService.instance.register());
       }
+      // ⓘ বেরোলে তালার কিছু নেই; নতুন করে ঢুকলে তালা খোলা (এইমাত্র পাসওয়ার্ড দিলেন)
+      _lock.signedIn = next.status == AuthStatus.signedIn;
     });
   }
 
@@ -136,17 +153,39 @@ class _AbosAppState extends ConsumerState<AbosApp> {
   void dispose() {
     _widgetSync.stop();
     _widgetTaps?.cancel();
+    WidgetsBinding.instance.removeObserver(_lock);
+    _lock.dispose();
+    _watched?.routerDelegate.removeListener(_noteScreen);
     super.dispose();
+  }
+
+  GoRouter? _watched;
+
+  /// ক্র্যাশের খবরে কোন পর্দা ছিল — রাউটার বদলালেই ([[CrashReporter.screen]])
+  void _noteScreen() {
+    final router = _watched;
+    if (router != null) {
+      CrashReporter.instance.screen = router.routerDelegate.currentConfiguration.uri.path;
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final GoRouter router = ref.watch(goRouterProvider);
+    if (!identical(router, _watched)) {
+      _watched?.routerDelegate.removeListener(_noteScreen);
+      _watched = router..routerDelegate.addListener(_noteScreen);
+    }
     return MaterialApp.router(
       title: 'ABOS',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light(),
       routerConfig: router,
+      builder: (context, child) => AppLockGate(
+        lock: _lock,
+        onSignOut: () => ref.read(authStateProvider.notifier).logout(),
+        child: child ?? const SizedBox.shrink(),
+      ),
     );
   }
 }

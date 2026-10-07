@@ -10,7 +10,7 @@ publish_to: "none"
 # package installer refuses an "upgrade" whose versionCode is not greater --
 # which is exactly the path a phone in a shop takes in the morning. A plain
 # counter that only ever goes up, never derived from the version name.
-version: 0.4.23+28
+version: 0.4.24+29
 
 environment:
   sdk: ">=3.4.0 <4.0.0"
@@ -118,6 +118,8 @@ dependencies:
   image_picker: ^1.1.2
   firebase_core: ^4.15.0
   firebase_messaging: ^16.7.0
+  local_auth: ^3.0.2
+  local_auth_android: ^2.2.0
 
 
 dev_dependencies:

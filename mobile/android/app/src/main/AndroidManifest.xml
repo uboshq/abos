@@ -61,6 +61,8 @@
     -->
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
 
+    <!-- ⭐ App lock: fingerprint or the phone's own PIN (local_auth), 7 Oct 2026 -->
+    <uses-permission android:name="android.permission.USE_BIOMETRIC"/>
     <application
         android:label="ABOS"
         android:name="${applicationName}"

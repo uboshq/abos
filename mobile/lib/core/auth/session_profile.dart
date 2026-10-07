@@ -35,6 +35,8 @@ class SessionProfile {
     this.phoneModules,
     this.ordersReplaceDo = false,
     this.mayCollect = false,
+    this.secureScreens = true,
+    this.widgetAmounts = false,
   });
 
   final OrgRef company;
@@ -68,6 +70,12 @@ class SessionProfile {
   /// older server.
   final bool mayCollect;
 
+  /// ⭐ পর্দা আড়াল (FLAG_SECURE) — মালিকের সুইচ; পুরনো সার্ভারে আড়াল চালু
+  final bool secureScreens;
+
+  /// ⭐ উইজেটে টাকার অঙ্ক — মালিকের সুইচ; পুরনো সার্ভারে লুকানো
+  final bool widgetAmounts;
+
   /// Whether there is anything to switch between at all — a picker with one
   /// company and one branch is a button that does nothing.
   bool get canSwitch => companies.length > 1 || branches.length > 1;
@@ -85,6 +93,8 @@ class SessionProfile {
           modules is List ? modules.map((e) => e.toString()).toSet() : null,
       ordersReplaceDo: json['ordersReplaceDo'] == true,
       mayCollect: json['mayCollect'] == true,
+      secureScreens: json['secureScreens'] != false,
+      widgetAmounts: json['widgetAmounts'] == true,
     );
   }
 }

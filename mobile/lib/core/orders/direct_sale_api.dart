@@ -24,7 +24,8 @@ class CounterLot {
         id: json['id']?.toString() ?? '',
         no: json['no']?.toString() ?? '',
         expiry: json['expiry']?.toString() ?? '',
-        qty: json['qty']?.toString() ?? '0',
+        // ⛔ মজুদ দেখার চাবি ছাড়া সার্ভার পরিমাণ পাঠায় না — তখন '' ("আছে ০" নয়)
+        qty: json['qty']?.toString() ?? '',
       );
 }
 

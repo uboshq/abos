@@ -94,6 +94,8 @@ void main() {
       FakeSecureStorage.install();
       harness = await HiveTestHarness.setUp();
       await SyncEngine.instance.init();
+      // ⓘ কেউ ঢুকে আছেন — বেরোনো ফোন কিছুই পাঠায় না (সারি মানুষের সাথে বাঁধা, ৭ অক্টোবর ২০২৬)
+      SyncEngine.instance.actAs('user-1');
     });
 
     tearDownAll(() async {

@@ -5,7 +5,8 @@ import android.net.Uri
 import android.os.Build
 import android.os.StatFs
 import android.provider.Settings
-import io.flutter.embedding.android.FlutterActivity
+import android.view.WindowManager
+import io.flutter.embedding.android.FlutterFragmentActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 
@@ -14,7 +15,8 @@ import io.flutter.plugin.common.MethodChannel
  * (docs/Contract section 6, rule kha). See lib/core/update/apk_installer.dart
  * and storage_check.dart for the other end of each.
  */
-class MainActivity : FlutterActivity() {
+// ⓘ FragmentActivity — the app lock's fingerprint/PIN prompt (local_auth) needs it (7 Oct 2026)
+class MainActivity : FlutterFragmentActivity() {
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
@@ -64,9 +66,33 @@ class MainActivity : FlutterActivity() {
                     else -> result.notImplemented()
                 }
             }
+
+        // ⭐ Screens out of screenshots and the recent-apps preview — the
+        // owner's switch, mobile.secure_screens (coordinator's app audit,
+        // 7 Oct 2026). lib/core/privacy/phone_privacy.dart turns it on at
+        // start and follows /me after.
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, SECURE_CHANNEL)
+            .setMethodCallHandler { call, result ->
+                when (call.method) {
+                    "set" -> {
+                        val on = call.argument<Boolean>("on") ?: true
+                        runOnUiThread {
+                            if (on) {
+                                window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
+                            } else {
+                                window.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
+                            }
+                            result.success(null)
+                        }
+                    }
+
+                    else -> result.notImplemented()
+                }
+            }
     }
 
     companion object {
+        private const val SECURE_CHANNEL = "com.abos.abos_mobile/secure"
         private const val INSTALL_CHANNEL = "com.abos.abos_mobile/install"
         private const val STORAGE_CHANNEL = "com.abos.abos_mobile/storage"
     }

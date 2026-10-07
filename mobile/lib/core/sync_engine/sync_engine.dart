@@ -159,6 +159,34 @@ class SyncEngine {
   /// with.
   int get pendingCount => _queue?.values
           .where((row) =>
+              _isMine(row) &&
+              row['status'] != _statusRejected &&
+              row['status'] != _statusResolved)
+          .length ??
+      0;
+
+  /// ⛔ কার সারি — অফলাইন সারি মানুষের সাথে বাঁধা (সমন্বয়কের অ্যাপ-অডিট, ৭ অক্টোবর ২০২৬: একটা ফোন দুইজন চালালে প্রথম
+  /// জনের না-যাওয়া অর্ডার দ্বিতীয় জনের সেশনে, তাঁর নামে বসত — সার্ভার পাঠানোর সময়ের মানুষকেই লেখক ধরে)।
+  ///
+  /// <p>লগইন আর সেশন ফেরানোয় [AuthController] বসায়, বেরোলে মোছে; পেছনের সিঙ্ক বসায় সংরক্ষিত প্রোফাইল থেকে। প্রতিটা নতুন
+  /// সারিতে এই আইডি থাকে, আর পাঠানো, গোনা ও দেখানো হয় কেবল এখনকার মানুষের সারি। ⓘ কেউ না থাকলে কিছুই যায় না।
+  /// ⓘ এই সংস্করণের আগে লেখা সারিতে আইডি নেই — সেগুলো আগের মতো এখনকার মানুষের সাথে যায়।
+  String? _owner;
+
+  /// এখন কে — `null` মানে কেউ নেই (বেরিয়ে গেছেন)
+  void actAs(String? userId) {
+    _owner = (userId == null || userId.isEmpty) ? null : userId;
+  }
+
+  bool _isMine(Map row) {
+    final writer = row['userId'];
+    return writer == null || writer == _owner;
+  }
+
+  /// অন্য কারও রেখে যাওয়া না-যাওয়া সারি — যিনি লিখেছেন তিনি ঢুকলেই যাবে
+  int get heldForOthersCount => _queue?.values
+          .where((row) =>
+              !_isMine(row) &&
               row['status'] != _statusRejected &&
               row['status'] != _statusResolved)
           .length ??
@@ -178,7 +206,7 @@ class SyncEngine {
       (_queue?.keys ?? const Iterable.empty())
           .map((key) {
             final row = _queue!.get(key);
-            if (row == null || row['status'] != _statusRejected) return null;
+            if (row == null || row['status'] != _statusRejected || !_isMine(row)) return null;
             return RejectedChange(
               key: key,
               entityType: row['entityType'] as String? ?? '',
@@ -327,6 +355,8 @@ class SyncEngine {
     final changeId = _newChangeId();
     await _box.add(<String, dynamic>{
       'changeId': changeId,
+      // ⛔ কার লেখা — অন্য কেউ ঢুকলে এটা তাঁর নামে যায় না ([[_owner]])
+      'userId': _owner,
       'module': module,
       'entityType': entityType,
       'entityId': entityId,
@@ -417,6 +447,7 @@ class SyncEngine {
       (_queue?.values ?? const Iterable<Map>.empty())
           .where((row) =>
               row['entityType'] == entityType &&
+              _isMine(row) &&
               row['status'] != _statusRejected &&
               row['status'] != _statusResolved)
           .map((row) {
@@ -462,8 +493,9 @@ class SyncEngine {
 
   /// Pushes every module that has queued changes.
   Future<void> flushAll() async {
-    if (_queue == null) return;
+    if (_queue == null || _owner == null) return;
     final modules = _box.values
+        .where(_isMine)
         .map((row) => row['module'] as String?)
         .whereType<String>()
         .toSet();
@@ -475,7 +507,8 @@ class SyncEngine {
   /// Pushes queued changes for one module. Safe to call when offline — it
   /// simply does nothing and leaves the queue intact.
   Future<void> flush(String module) async {
-    if (_flushing || _queue == null) return;
+    // ⛔ কেউ না থাকলে কিছু নয় — আর থাকলে কেবল তাঁর সারি ([[_owner]])
+    if (_flushing || _queue == null || _owner == null) return;
     _flushing = true;
     try {
       final deviceId = await TokenStorage.instance.deviceId();
@@ -492,8 +525,10 @@ class SyncEngine {
         final keys = _box.keys
             .where((key) {
               final row = _box.get(key);
-              return row?['module'] == module &&
-                  row?['status'] != _statusRejected;
+              return row != null &&
+                  row['module'] == module &&
+                  _isMine(row) &&
+                  row['status'] != _statusRejected;
             })
             .take(AppConfig.syncBatchSize)
             .toList(growable: false);
@@ -578,7 +613,7 @@ class SyncEngine {
 
     for (final key in _box.keys.toList(growable: false)) {
       final row = _box.get(key);
-      if (row == null || row['module'] != module) continue;
+      if (row == null || row['module'] != module || !_isMine(row)) continue;
 
       final attempts = ((row['attempts'] as int?) ?? 0) + 1;
       if (attempts >= AppConfig.syncMaxAttempts) {

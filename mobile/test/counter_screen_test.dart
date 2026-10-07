@@ -256,6 +256,12 @@ Future<void> _confirm(WidgetTester tester) async {
 }
 
 void main() {
+  test('a lot without its stock (no stock key) says nothing about how much, never "0"', () {
+    // ⛔ সার্ভার মজুদের চাবি ছাড়া পরিমাণ পাঠায় না (সমন্বয়কের অ্যাপ-অডিট, ৭ অক্টোবর ২০২৬)
+    expect(CounterLot.fromJson(const {'id': 'l1', 'no': 'LOT-1', 'expiry': '2027-01-01', 'qty': null}).qty, '');
+    expect(CounterLot.fromJson(const {'id': 'l1', 'no': 'LOT-1', 'expiry': '2027-01-01', 'qty': '12'}).qty, '12');
+  });
+
   // ── ⭐ 0.4.15 — সমন্বয়কের তিন কাজ, ৬ অক্টোবর ২০২৬ ───────────────────────────────
 
   testWidgets(
