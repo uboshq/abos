@@ -88,6 +88,9 @@ final class TheVoucherTypeSaidOneThingAndTheLinesAnotherTest extends TestCase
 
         $this->refused(Voucher::JOURNAL, [$this->dr($this->expense()), $this->cr($payable)], 'control_needs_party');
         $this->refused(Voucher::JOURNAL, [$this->dr($receivable), $this->cr($this->income())], 'control_needs_party');
+        // ⓘ হাতধার আর কর্মীর অগ্রিমও কারো নামে (fe, ৭ অক্টোবর ২০২৬)
+        $this->refused(Voucher::JOURNAL, [$this->dr($this->leaf(StandardChart::HAND_LOAN)), $this->cr($this->income())], 'control_needs_party');
+        $this->refused(Voucher::JOURNAL, [$this->dr($this->leaf(StandardChart::EMPLOYEE_ADVANCE)), $this->cr($this->income())], 'control_needs_party');
 
         $this->accepted(Voucher::JOURNAL, [$this->dr($this->expense()), [...$this->cr($payable), 'party_type' => 'supplier', 'party_id' => $supplier->id]]);
         $this->accepted(Voucher::JOURNAL, [[...$this->dr($receivable), 'party_type' => 'customer', 'party_id' => $customer->id], $this->cr($this->income())]);

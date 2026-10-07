@@ -1642,7 +1642,11 @@ final class VoucherService
             return;
         }
 
-        $control = $this->controlAccounts([StandardChart::RECEIVABLE, StandardChart::PAYABLE_GROUP]);
+        /*
+         * ⓘ যে খাতগুলো কারো নামে বসে — পাওনা, দেনা, হাতধার, কর্মীর অগ্রিম (fe, ৭ অক্টোবর ২০২৬)। ⭐ খাতার সারিতে পক্ষ বসানোর
+         * একই তালিকা ([[accountsThatHoldAParty()]]) — দুই তালিকা একদিন আলাদা হতো। ⓘ cb-র খাতের "পক্ষ রাখে" ধর্ম এলে ওটাই পড়বে।
+         */
+        $control = $this->accountsThatHoldAParty();
         $headerHasParty = filled($headerParty[0] ?? null) && filled($headerParty[1] ?? null);
 
         foreach ($lines as $line) {
