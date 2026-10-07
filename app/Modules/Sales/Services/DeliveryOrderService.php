@@ -74,6 +74,12 @@ final class DeliveryOrderService
                 'document_no' => $this->numbers->next('DO'),
                 'customer_id' => $customerId,
                 'sales_order_id' => $orderId,
+                /*
+                 * ⛔ শাখা ছাড়া DO নয় — অডিট ⛔১২ (সমন্বয়ক, ৬ অক্টোবর ২০২৬): আগে ঘরটাই লেখা হত না, তাই প্রতিটা DO শাখাহীন — শাখার
+                 * তালিকা, হেডারের শাখা-ছাঁকনি আর শাখার মাল যাচাই কোনোটাই একে চিনত না। ⓘ ডিলার নিজে লিখলে তাঁর নিজের শাখা;
+                 * কর্মী লিখলে যে শাখা দেখছেন ([[SalesOrderService]]-এর মতো), "সব শাখা" দেখলে গ্রাহকের শাখা।
+                 */
+                'branch_id' => $this->branchFor($data, $by, $customerId),
                 'warehouse_id' => $data['warehouse_id'] ?? null,
                 'trx_date' => $data['trx_date'] ?? now()->toDateString(),
                 'deliver_on' => $data['deliver_on'] ?? null,
@@ -87,6 +93,17 @@ final class DeliveryOrderService
 
             return $order->fresh('lines');
         });
+    }
+
+    /** @param  array<string, mixed>  $data */
+    private function branchFor(array $data, User|Customer $by, int $customerId): ?int
+    {
+        $customerBranch = Customer::query()->whereKey($customerId)->value('branch_id');
+        $chosen = $by instanceof Customer
+            ? $customerBranch
+            : ($data['branch_id'] ?? \App\Core\Support\CompanyContext::branchId() ?? $customerBranch);
+
+        return $chosen === null ? null : (int) $chosen;
     }
 
     /** ⛔ কেবল খসড়া, আর কেবল যিনি লিখেছিলেন */
