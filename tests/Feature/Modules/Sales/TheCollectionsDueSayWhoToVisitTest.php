@@ -52,6 +52,15 @@ final class TheCollectionsDueSayWhoToVisitTest extends TestCase
             ]);
         }
 
+        // ⓘ বিলগুলো খাতায় — সীমার ব্যবহার এখন খাতা থেকে (বিক্রয় ⚠️১১, [[TheDueReportMeasuresTheLimitLikeTheWallTest]])
+        DB::table('ledger_entries')->insert([
+            'company_id' => $company->id, 'branch_id' => $company->defaultBranch()?->id,
+            'financial_year_id' => \App\Models\FinancialYear::query()->where('is_current', true)->value('id'),
+            'account_id' => \App\Modules\Accounts\Services\StandardChart::find(\App\Modules\Accounts\Services\StandardChart::RECEIVABLE)->id,
+            'trx_date' => now()->subDays(10)->toDateString(), 'source_type' => 'sales_invoice', 'source_id' => 990001,
+            'party_type' => 'customer', 'party_id' => $customer->id, 'debit' => 1000, 'credit' => 0,
+        ]);
+
         $row = collect(app(ReportEngine::class)->run(CollectionDueReport::KEY, ['customer_id' => (string) $customer->id], perPage: 500)->rows)
             ->firstWhere('customer_code', 'DUE-1');
 

@@ -7,7 +7,9 @@ namespace App\Modules\Sales\Reports;
 use App\Core\Engines\Report\ReportColumn;
 use App\Core\Engines\Report\ReportDefinition;
 use App\Core\Engines\Report\ReportEngine;
+use App\Modules\Customer\Models\Customer;
 use App\Modules\Sales\Models\SalesInvoice;
+use App\Modules\Sales\Services\CreditExposure;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -70,13 +72,45 @@ final class CollectionDueReport
 
         $due = '(i.total - i.collected_total - i.voucher_total - i.returned_total)';
         $on = 'COALESCE(i.due_on, i.trx_date)';
+
+        /*
+         * ⛔ সীমার ব্যবহার খাতা থেকে, সীমার দেয়ালের মতো — পুরো-ERP অডিট, ৬ অক্টোবর ২০২৬ (বিক্রয় ⚠️১১;
+         * [[TheDueReportMeasuresTheLimitLikeTheWallTest]])। ⓘ আগে বিলের বাকি ÷ সীমা — খোলা জের, অগ্রিম আর বাতিলের পরে বাকি টাকা বাদ,
+         * অপেক্ষার কাগজও নয়; অথচ সীমার দেয়াল ([[CreditExposure]]) খাতা + অপেক্ষার কাগজ গোনে। এখন "বাকি-নিয়ন্ত্রণ" রিপোর্টের
+         * ([[CreditControlReports::creditUse()]]) একই উৎস: গ্রাহকের নামে খাতার জের (গোটা কোম্পানি — সীমা গ্রাহকের, শাখার নয়) আর
+         * বিল না হওয়া চালান, খসড়া বিল, DO, খোলা আদেশ ও ক্লিয়ার না হওয়া চেক। বিলের বকেয়ার কলামগুলো আগের মতো বিল থেকে।
+         */
+        $ids = (clone $bills)->distinct()->pluck('sal_invoices.customer_id')->map(fn ($id) => (int) $id)->all();
+        $exposure = app(CreditExposure::class);
+        $held = $exposure->pendingFor($ids);
+
+        foreach ($exposure->unclearedChequesFor($ids) as $id => $amount) {
+            $held[(int) $id] = bcadd($held[(int) $id] ?? '0', (string) $amount, 4);
+        }
+
+        $cases = '';
+
+        foreach ($held as $id => $amount) {
+            $cases .= ' WHEN '.(int) $id.' THEN '.bcadd((string) $amount, '0', 4);
+        }
+
+        $heldSql = $cases === '' ? '0' : "(CASE i.customer_id{$cases} ELSE 0 END)";
+        $used = "(COALESCE(l.due, 0) + {$heldSql})";
         $name = app()->getLocale() === 'bn' ? "COALESCE(NULLIF(cu.name_bn, ''), cu.name_en)" : 'cu.name_en';
 
         return DB::query()
             ->fromSub($bills, 'i')
             ->join('customers as cu', 'cu.id', '=', 'i.customer_id')
+            ->leftJoinSub(
+                DB::table('ledger_entries')
+                    ->where('company_id', $f['company_id'])
+                    ->where('party_type', Customer::drillSourceType())
+                    ->groupBy('party_id')
+                    ->select(['party_id', DB::raw('SUM(debit) - SUM(credit) as due')]),
+                'l', 'l.party_id', '=', 'i.customer_id',
+            )
             ->whereRaw("{$due} > 0.0001")
-            ->groupBy('i.customer_id', 'cu.code', 'cu.name_en', 'cu.name_bn', 'cu.credit_limit')
+            ->groupBy('i.customer_id', 'cu.code', 'cu.name_en', 'cu.name_bn', 'cu.credit_limit', 'l.due')
             ->orderByRaw("SUM(CASE WHEN {$on} < {$now} THEN {$due} ELSE 0 END) DESC")
             ->orderByRaw("SUM({$due}) DESC")
             ->select([
@@ -89,7 +123,7 @@ final class CollectionDueReport
                 DB::raw("SUM(CASE WHEN {$on} > {$week} AND {$on} <= {$monthEnd} THEN {$due} ELSE 0 END) as due_month"),
                 DB::raw("SUM({$due}) as total_due"),
                 'cu.credit_limit',
-                DB::raw("CASE WHEN COALESCE(cu.credit_limit, 0) > 0 THEN ROUND(SUM({$due}) * 100 / cu.credit_limit, 1) END as limit_used"),
+                DB::raw("CASE WHEN COALESCE(cu.credit_limit, 0) > 0 THEN ROUND({$used} * 100 / cu.credit_limit, 1) END as limit_used"),
             ]);
     }
 }
