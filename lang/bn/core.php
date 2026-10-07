@@ -871,6 +871,9 @@ return [
          * যেত না -- আর পড়া না গেলে জলছাপের কোনো মানে নেই।
          */
         'cancelled_watermark' => 'বাতিল',
+        // ⛔ খসড়া টাকার রসিদ — টাকা এখনো খাতায় ওঠেনি (অডিট, ৬ অক্টোবর ২০২৬; [[SalesPrintController::pdf()]])
+        'draft_receipt_notice' => 'খসড়া — এটি চূড়ান্ত রসিদ নয়, টাকা এখনো খাতায় ওঠেনি',
+        'draft_watermark' => 'খসড়া',
         'print' => 'ছাপুন',
         'choose_paper' => 'কাগজ বাছুন',
         'show_vendor_credit' => 'প্রিন্টের নিচে "Powered by UNIVER BANGLADESH" ও হটলাইন দেখাও',

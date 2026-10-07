@@ -736,6 +736,9 @@ return [
          * যেত না -- আর পড়া না গেলে জলছাপের কোনো মানে নেই।
          */
         'cancelled_watermark' => 'CANCELLED',
+        // ⛔ খসড়া টাকার রসিদ — টাকা এখনো খাতায় ওঠেনি (অডিট, ৬ অক্টোবর ২০২৬; [[SalesPrintController::pdf()]])
+        'draft_receipt_notice' => 'DRAFT — this is not a final receipt; the money is not in the books yet',
+        'draft_watermark' => 'DRAFT',
         'print' => 'Print',
         'choose_paper' => 'Choose paper',
         'show_vendor_credit' => 'Show "Powered by UNIVER BANGLADESH" and the hotline on printouts',

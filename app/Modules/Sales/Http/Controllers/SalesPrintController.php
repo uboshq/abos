@@ -1374,6 +1374,22 @@ class SalesPrintController extends Controller implements HasMiddleware
         };
     }
 
+    /** ⓘ কোনাকুনি জলছাপ — বাতিল আগে (বেশি জরুরি), তারপর খসড়া টাকার রসিদ ([[pdf()]]-এর কারণ); অন্য সব কাগজে নেই */
+    private function watermarkFor(?object $document): ?string
+    {
+        return match (true) {
+            ($document?->status ?? null) === DocumentStatus::CANCELLED => __('core.print.cancelled_watermark'),
+            $this->isDraftMoney($document) => __('core.print.draft_watermark'),
+            default => null,
+        };
+    }
+
+    /** ⓘ খাতায় না ওঠা আদায় — টাকা এখনো জমা হয়নি */
+    private function isDraftMoney(?object $document): bool
+    {
+        return $document instanceof Collection && $document->status === DocumentStatus::DRAFT;
+    }
+
     private function earlierDue(SalesInvoice $invoice, string $due): string
     {
         $customer = $invoice->customer;
@@ -1967,6 +1983,15 @@ class SalesPrintController extends Controller implements HasMiddleware
         }
 
         /*
+         * ⛔ খসড়া টাকার রসিদ পাকা দেখাত — অডিট, ৬ অক্টোবর ২০২৬ (সমন্বয়ক)। ⓘ খসড়া বিলের নিয়মই ([[draft()]]): মাথায় "খসড়া"
+         * বাক্স; সাথে কোনাকুনি "খসড়া" জলছাপ, কারণ রসিদের নিজের নকশাগুলো (`paperDesign`) মাথার বাক্স আঁকে না — বাক্স কেটেও
+         * ফেলা যায়, জলছাপ যায় না। ⚠️ খাতায় না ওঠা টাকার রসিদ হাতে পেলে দোকানি ভাবেন টাকা জমা হয়ে গেছে।
+         */
+        if ($this->isDraftMoney($document)) {
+            $doc = $doc->withNotice(__('core.print.draft_receipt_notice'));
+        }
+
+        /*
          * দ্বিতীয়বার ছাপা কাগজে DUPLICATE।
          *
          * ── কেন এটা দরকার ───────────────────────────────────────────
@@ -2012,7 +2037,7 @@ class SalesPrintController extends Controller implements HasMiddleware
              * তার বদলে নয়। কারণটা [[PrintEngine::toPdf()]]-এ লেখা:
              * বাক্স কেটে ফেলা যায়, জলছাপ যায় না।
              */
-            watermark: $cancelled ? __('core.print.cancelled_watermark') : null,
+            watermark: $this->watermarkFor($document),
         );
 
         if ($job !== null) {
