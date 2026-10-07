@@ -37,6 +37,8 @@ final class TheMoneySwitchesWereAnyonesTest extends TestCase
         'purchase.block_price_mismatch',
         'inventory.transfer_two_people',
         'system.edit_posted_papers',
+        // ⓘ ফোনের পর্দা আড়াল আর উইজেটের অঙ্ক — নিরাপত্তার দুই সুইচ (সমন্বয়কের অ্যাপ-অডিট, ৭ অক্টোবর ২০২৬)
+        'mobile.secure_screens', 'mobile.widget_amounts',
     ];
 
     private Company $company;

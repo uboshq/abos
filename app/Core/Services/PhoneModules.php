@@ -54,6 +54,15 @@ final class PhoneModules
      * (বিক্রয়ের নির্ভরতা ধরে), কিন্তু ফোনে গ্রাহক আর বকেয়ার টাইল লুকানো থাকত — মালিকের নিজের
      * ফোনে "গ্রাহক আসছে না"।
      */
+    /**
+     * ⭐ ফোনের পর্দা আড়াল — স্ক্রিনশট আর "সাম্প্রতিক অ্যাপ"-এর ছবি বন্ধ (Android FLAG_SECURE; সমন্বয়কের অ্যাপ-অডিট,
+     * ৭ অক্টোবর ২০২৬: বকেয়া, নগদ আর অনুমোদনের পর্দা সাম্প্রতিক-অ্যাপের তালিকায় ছবি হয়ে থাকত)। ডিফল্ট চালু; মালিক চাইলে বন্ধ।
+     */
+    public const SECURE_SCREENS = 'mobile.secure_screens';
+
+    /** ⭐ হোম-স্ক্রিনের উইজেটে টাকার অঙ্ক — ডিফল্ট বন্ধ ("•••"); অ্যাপ না খুলেই হাতের নগদ চোখে পড়ত (একই অডিট) */
+    public const WIDGET_AMOUNTS = 'mobile.widget_amounts';
+
     public const ON_BY_DEFAULT = ['accounts', 'customer', 'inventory', 'sales', 'purchase', 'approval', 'system_admin'];
 
     public function __construct(
@@ -88,6 +97,20 @@ final class PhoneModules
                 'tab' => 'mobile',
                 'label' => 'mobile.show_in_app',
                 'holds' => null,
+            ];
+        }
+
+        // ⓘ নিরাপত্তার দুই সুইচ — কেবল সুপার অ্যাডমিন বদলান (টাকার সুইচের মতো, [[SettingsService::assertMayChange()]])
+        foreach ([self::SECURE_SCREENS => true, self::WIDGET_AMOUNTS => false] as $key => $default) {
+            $out[$key] = [
+                'type' => 'boolean',
+                'default' => $default,
+                'module' => 'system_admin',
+                'group' => 'mobile',
+                'tab' => 'mobile',
+                'label' => 'mobile.'.substr($key, strlen('mobile.')),
+                'holds' => null,
+                'super_admin_only' => true,
             ];
         }
 

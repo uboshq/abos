@@ -109,6 +109,13 @@ class MeController extends Controller
             'mayCollect' => \App\Modules\Sales\Sync\CollectionSync::officeMayCollect($user),
 
             /*
+             * ⭐ ফোনের পর্দা আড়াল আর উইজেটের অঙ্ক — মালিকের দুই সুইচ (সমন্বয়কের অ্যাপ-অডিট, ৭ অক্টোবর ২০২৬; [[PhoneModules]])।
+             * ⓘ পুরনো অ্যাপ পড়ে না; নতুন অ্যাপ না পেলে আড়াল চালু আর অঙ্ক লুকানো ধরে।
+             */
+            'secureScreens' => (bool) app(SettingsService::class)->get(\App\Core\Services\PhoneModules::SECURE_SCREENS, true),
+            'widgetAmounts' => (bool) app(SettingsService::class)->get(\App\Core\Services\PhoneModules::WIDGET_AMOUNTS, false),
+
+            /*
              * কার্যকর অনুমতির তালিকা — রোলের নাম নয়, চাবিগুলো।
              *
              * ⓘ অ্যাপ "এই বোতামটা দেখাব কি না" প্রশ্নের উত্তর চায়, আর

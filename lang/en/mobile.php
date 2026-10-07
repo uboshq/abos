@@ -6,4 +6,6 @@ declare(strict_types=1);
 return [
     'show_in_app' => 'Show in the mobile app',
     'module_off' => 'This part is switched off for now. Ask an administrator to turn it on in the Control Panel, "Mobile app" tab.',
+    'secure_screens' => 'Keep phone screens private — no screenshots or recent-apps previews',
+    'widget_amounts' => 'Show money amounts on the home-screen widget (off shows •••)',
 ];
