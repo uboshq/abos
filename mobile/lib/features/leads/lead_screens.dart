@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../core/api_client/network_errors.dart';
+import '../../core/api_client/once_key.dart';
 import '../../core/orders/lead_api.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
@@ -172,6 +173,8 @@ class _LeadFormScreenState extends State<LeadFormScreen> {
   late final _phone = TextEditingController(text: widget.lead?.phone);
   late final _address = TextEditingController(text: widget.lead?.address);
   late final _reason = TextEditingController(text: widget.lead?.lostReason);
+  /// ⭐ এই কাজের চাবি — দুবার চাপলে বা উত্তর হারালে একবারই বসে ([[OnceKey]], অডিট ফোন ⚠️১২)
+  final _once = OnceKey();
   late final _notes = TextEditingController(text: widget.lead?.notes);
   late String? _source = widget.lead?.source ?? (widget.setup.sources.isEmpty ? null : widget.setup.sources.first.key);
   late String? _status = widget.lead?.status;
@@ -208,7 +211,7 @@ class _LeadFormScreenState extends State<LeadFormScreen> {
       notes: _notes.text,
     );
     try {
-      final saved = widget.lead == null ? await widget.api.create(form) : await widget.api.update(widget.lead!.id, form);
+      final saved = widget.lead == null ? await _once.send(() => widget.api.create(form)) : await widget.api.update(widget.lead!.id, form);
       if (mounted) Navigator.of(context).pop(saved);
     } catch (e) {
       if (mounted) setState(() => _error = errorMessageFor(e, fallback: 'লিড রাখা গেল না। আবার চেষ্টা করুন।'));

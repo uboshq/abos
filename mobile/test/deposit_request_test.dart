@@ -1,3 +1,4 @@
+import 'package:abos_mobile/core/api_client/once_key.dart';
 import 'package:abos_mobile/core/orders/deposit_request_api.dart';
 import 'package:abos_mobile/features/customers/deposit_request_screen.dart';
 import 'package:flutter/material.dart';
@@ -27,7 +28,7 @@ class _FakeApi implements DepositRequestApi {
     String? note,
     String? slipPath,
   }) async {
-    sent.add({'amount': amount, 'slip': slipPath, 'method': method});
+    sent.add({'amount': amount, 'slip': slipPath, 'method': method, 'key': OnceKey.current});
     return DepositRequestRow(date: null, amount: double.parse(amount), method: method, status: 'pending', hasSlip: slipPath != null);
   }
 }
@@ -99,6 +100,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(api.sent.single['slip'], '/tmp/slip.jpg');
+    expect(api.sent.single['key'], isNotNull, reason: '⛔ চাবি ছাড়া পাঠাল — দুবার চাপলে দুটো বিজ্ঞপ্তি (অডিট ফোন ⚠️১২)');
     await tester.scrollUntilVisible(find.text('পাঠানো'), 200, scrollable: find.byType(Scrollable).first);
     expect(find.text('পাঠানো'), findsOneWidget);
     // ⓘ বার্তাটা পাতার মাথায় — ListView নিচের দিকে গেলে উপরেরটা গাছেই থাকে না, তাই আগে উপরে ফেরা

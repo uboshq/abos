@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../../core/api_client/network_errors.dart';
+import '../../core/api_client/once_key.dart';
 import '../../core/orders/deposit_request_api.dart';
 import '../../core/records/customer_record.dart';
 import '../../core/records/money.dart';
@@ -37,6 +38,8 @@ class _DepositRequestScreenState extends State<DepositRequestScreen> {
   final _amount = TextEditingController();
   final _reference = TextEditingController();
   final _note = TextEditingController();
+  /// ⭐ এই কাজের চাবি — দুবার চাপলে বা উত্তর হারালে একবারই বসে ([[OnceKey]], অডিট ফোন ⚠️১২)
+  final _once = OnceKey();
 
   String _method = 'bank';
   DateTime _date = DateTime.now();
@@ -104,7 +107,7 @@ class _DepositRequestScreenState extends State<DepositRequestScreen> {
       _done = null;
     });
     try {
-      await widget.api.send(
+      await _once.send(() => widget.api.send(
         customerId: widget.customerId,
         date: _date,
         amount: amount,
@@ -113,7 +116,7 @@ class _DepositRequestScreenState extends State<DepositRequestScreen> {
         reference: _method == 'cash' ? null : _reference.text.trim(),
         note: _note.text.trim(),
         slipPath: _slip,
-      );
+      ));
       if (!mounted) return;
       setState(() {
         _done = 'পাঠানো হয়েছে — হিসাবরক্ষক মিলিয়ে দেখবেন। ততক্ষণ বকেয়া কমবে না।';
