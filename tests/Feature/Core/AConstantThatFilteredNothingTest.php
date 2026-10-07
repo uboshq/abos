@@ -6,6 +6,7 @@ namespace Tests\Feature\Core;
 
 use App\Core\Services\DataScope;
 use App\Core\Support\CompanyContext;
+use App\Models\Branch;
 use App\Models\Company;
 use App\Models\User;
 use App\Models\UserDataScope;
@@ -186,6 +187,48 @@ class AConstantThatFilteredNothingTest extends TestCase
             ->assertOk()
             ->assertSee('warehouse_scope['.$this->company->id.'][]', false)
             ->assertSee($this->second->code);
+    }
+
+    /**
+     * ⛔ হেডারে এক শাখা বাছা থাকলেও পর্দায় কোম্পানির **সব** গুদাম — মালিক, ৭ অক্টোবর ২০২৬।
+     *
+     * লাইভে মালিক হেডারে সুপার বেছে ব্যবহারকারী খুলেছিলেন: ADI-র পাঁচ গুদামের একটাই দেখাল,
+     * বাকি চারটা কাউকে দেওয়াই গেল না, আর কাউন্টারে লট এল না। ⓘ দেখার শাখার দেয়াল
+     * ('viewed-branch-warehouse') গুদামের তালিকা ছাঁকে — এই পর্দায় ওটাও তুলতে হয়।
+     */
+    public function test_the_user_screen_offers_warehouses_of_other_branches_while_one_branch_is_viewed(): void
+    {
+        $far = Branch::query()->create([
+            'company_id' => $this->company->id,
+            'code' => 'FARAWAY',
+            'name_en' => 'Far away branch',
+            'name_bn' => 'দূরের শাখা',
+            'is_active' => true,
+        ]);
+
+        $farHouse = Warehouse::query()->create([
+            'company_id' => $this->company->id,
+            'branch_id' => $far->id,
+            'code' => 'WH-FAR',
+            'name_en' => 'Far store',
+            'name_bn' => 'দূরের গুদাম',
+            'is_active' => true,
+        ]);
+
+        $this->owner->forceFill([
+            'view_all_branches' => false,
+            'current_branch_id' => $this->company->defaultBranch()?->id,
+        ])->save();
+
+        // ⓘ দেয়ালটা সত্যিই দাঁড়িয়ে আছে — নইলে নিচের দাবি কিছুই মাপত না
+        $this->actingAs($this->owner);
+        $this->assertNotContains('WH-FAR', Warehouse::query()->pluck('code')->all(),
+            'হেডারের শাখার দেয়াল দাঁড়ায়নি — পরীক্ষাটা ভুল জিনিস মাপছে।');
+
+        $this->get(route('system_admin.user.edit', $this->clerk))
+            ->assertOk()
+            ->assertSee('value="'.$farHouse->id.'"', false)
+            ->assertSee('WH-FAR');
     }
 
     /** পর্দা থেকে বসানো সীমাটা সত্যিই খাটে। */

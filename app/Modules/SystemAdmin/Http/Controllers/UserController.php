@@ -1366,8 +1366,14 @@ class UserController extends Controller implements HasMiddleware
                 $company->id => CompanyContext::forCompany(
                     $company->id,
                     fn () => collect($this->scopeKinds())->map(
+                        /*
+                         * ⛔ হেডারের শাখার দেয়ালও তুলতে হয় ('viewed-branch-warehouse')। মালিক হেডারে
+                         * সুপার বেছে থাকলে ADI-র পাঁচ গুদামের একটাই দেখাত, বাকি চারটা উধাও — কাউকে
+                         * ওগুলো দেওয়াই যেত না, আর কাউন্টারে লট আসত না (মালিক, ৭ অক্টোবর ২০২৬)।
+                         * ⓘ নামটা লেখা, কারণ ট্রেইটের ধ্রুবক সরাসরি পড়া যায় না; যে মডেলে নেই তাতে ক্ষতি নেই।
+                         */
                         fn (array $kind) => $kind['model']::query()
-                            ->withoutGlobalScope('user-warehouse')
+                            ->withoutGlobalScopes(['user-warehouse', 'viewed-branch-warehouse'])
                             ->orderBy('code')->get(),
                     ),
                 ),
