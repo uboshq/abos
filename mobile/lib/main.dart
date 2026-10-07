@@ -8,6 +8,7 @@ import 'package:home_widget/home_widget.dart';
 
 import 'core/auth/auth_controller.dart';
 import 'core/auth/auth_state.dart';
+import 'core/crash/crash_reporter.dart';
 import 'core/launcher_widgets/launcher_widget_refresh.dart';
 import 'core/launcher_widgets/widget_sync_observer.dart';
 import 'core/push/push_service.dart';
@@ -19,6 +20,9 @@ import 'core/theme/app_theme.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // ⭐ ধরা-না-পড়া ভুল অফিসের ভুলের খাতায় — সবার আগে, যাতে শুরুর ভাঙাও ধরা পড়ে (সমন্বয়কের অ্যাপ-অডিট, ৭ অক্টোবর ২০২৬)
+  CrashReporter.instance.install();
 
   // Order matters, and each step here is a hard dependency of the next:
   //  1. Hive's own path setup, before any box anywhere is opened.
@@ -136,12 +140,27 @@ class _AbosAppState extends ConsumerState<AbosApp> {
   void dispose() {
     _widgetSync.stop();
     _widgetTaps?.cancel();
+    _watched?.routerDelegate.removeListener(_noteScreen);
     super.dispose();
+  }
+
+  GoRouter? _watched;
+
+  /// ক্র্যাশের খবরে কোন পর্দা ছিল — রাউটার বদলালেই ([[CrashReporter.screen]])
+  void _noteScreen() {
+    final router = _watched;
+    if (router != null) {
+      CrashReporter.instance.screen = router.routerDelegate.currentConfiguration.uri.path;
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final GoRouter router = ref.watch(goRouterProvider);
+    if (!identical(router, _watched)) {
+      _watched?.routerDelegate.removeListener(_noteScreen);
+      _watched = router..routerDelegate.addListener(_noteScreen);
+    }
     return MaterialApp.router(
       title: 'ABOS',
       debugShowCheckedModeBanner: false,
