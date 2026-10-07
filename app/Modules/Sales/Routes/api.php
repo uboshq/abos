@@ -38,7 +38,7 @@ Route::prefix('v1/sales')
         // ⭐ স্লিপসহ জমার অনুরোধ — SR দোকানির ব্যাংক স্লিপের ছবি পাঠান ([[DepositRequestController]])
         Route::get('/deposit-requests/accounts', [DepositRequestController::class, 'accounts'])->name('deposit_request.accounts');
         Route::get('/deposit-requests', [DepositRequestController::class, 'apiIndex'])->name('deposit_request.index');
-        Route::post('/deposit-requests', [DepositRequestController::class, 'apiStore'])->name('deposit_request.store');
+        Route::post('/deposit-requests', [DepositRequestController::class, 'apiStore'])->middleware(\App\Http\Middleware\RemembersAPhoneWrite::class)->name('deposit_request.store');
 
         // ⭐ ডেলিভারি ট্র্যাকিং — বিক্রি কোথায়, কে কখন ([[SaleTrackingController]]); চাবি দুইয়ের যেকোনো একটা, পদ্ধতিতে
         Route::get('/tracking', [SaleTrackingController::class, 'index'])->name('tracking.index');
@@ -70,12 +70,12 @@ Route::prefix('v1/sales')
         Route::get('/collections/{id}', [\App\Modules\Sales\Http\Controllers\CollectionApiController::class, 'show'])->whereUuid('id')->name('collection.show');
         Route::get('/returns/setup', [\App\Modules\Sales\Http\Controllers\SalesReturnApiController::class, 'setup'])->name('return.setup');
         Route::get('/returns/invoice/{id}', [\App\Modules\Sales\Http\Controllers\SalesReturnApiController::class, 'invoice'])->whereUuid('id')->name('return.invoice');
-        Route::post('/returns', [\App\Modules\Sales\Http\Controllers\SalesReturnApiController::class, 'store'])->name('return.store');
+        Route::post('/returns', [\App\Modules\Sales\Http\Controllers\SalesReturnApiController::class, 'store'])->middleware(\App\Http\Middleware\RemembersAPhoneWrite::class)->name('return.store');
         Route::get('/returns/{id}/overview', [\App\Modules\Sales\Http\Controllers\SalesReturnApiController::class, 'overview'])->whereUuid('id')->name('return.overview');
         Route::post('/returns/{id}/confirm', [\App\Modules\Sales\Http\Controllers\SalesReturnApiController::class, 'confirm'])->whereUuid('id')->name('return.confirm');
 
         Route::get('/delivery-orders', [\App\Modules\Sales\Http\Controllers\DeliveryOrderApiController::class, 'index'])->name('delivery_order.index');
-        Route::post('/delivery-orders', [\App\Modules\Sales\Http\Controllers\DeliveryOrderApiController::class, 'store'])->name('delivery_order.store');
+        Route::post('/delivery-orders', [\App\Modules\Sales\Http\Controllers\DeliveryOrderApiController::class, 'store'])->middleware(\App\Http\Middleware\RemembersAPhoneWrite::class)->name('delivery_order.store');
         Route::get('/delivery-orders/{id}', [\App\Modules\Sales\Http\Controllers\DeliveryOrderApiController::class, 'show'])->whereUuid('id')->name('delivery_order.show');
         Route::put('/delivery-orders/{id}', [\App\Modules\Sales\Http\Controllers\DeliveryOrderApiController::class, 'update'])->whereUuid('id')->name('delivery_order.update');
         Route::post('/delivery-orders/{id}/submit', [\App\Modules\Sales\Http\Controllers\DeliveryOrderApiController::class, 'submit'])->whereUuid('id')->name('delivery_order.submit');
@@ -84,7 +84,7 @@ Route::prefix('v1/sales')
 
         // ⭐ বিক্রয় আদেশ — DO-র যমজ দরজা, একই আকারের JSON ([[SalesOrderApiController]]; DO বিক্রয় আদেশে মেশানো, ধাপ ১০, ৫ অক্টোবর ২০২৬)
         Route::get('/orders', [\App\Modules\Sales\Http\Controllers\SalesOrderApiController::class, 'index'])->name('order.index');
-        Route::post('/orders', [\App\Modules\Sales\Http\Controllers\SalesOrderApiController::class, 'store'])->name('order.store');
+        Route::post('/orders', [\App\Modules\Sales\Http\Controllers\SalesOrderApiController::class, 'store'])->middleware(\App\Http\Middleware\RemembersAPhoneWrite::class)->name('order.store');
         Route::get('/orders/{id}', [\App\Modules\Sales\Http\Controllers\SalesOrderApiController::class, 'show'])->whereUuid('id')->name('order.show');
         Route::put('/orders/{id}', [\App\Modules\Sales\Http\Controllers\SalesOrderApiController::class, 'update'])->whereUuid('id')->name('order.update');
         Route::post('/orders/{id}/submit', [\App\Modules\Sales\Http\Controllers\SalesOrderApiController::class, 'submit'])->whereUuid('id')->name('order.submit');
@@ -97,13 +97,13 @@ Route::prefix('v1/sales')
         // ⭐ লিড — মাঠ থেকে নতুন দোকানের খোঁজ, ওয়েবের একই সেবা ও চাবি ([[LeadApiController]], ৫ অক্টোবর ২০২৬)
         Route::get('/leads/setup', [\App\Modules\Sales\Http\Controllers\LeadApiController::class, 'setup'])->name('lead.setup');
         Route::get('/leads', [\App\Modules\Sales\Http\Controllers\LeadApiController::class, 'index'])->name('lead.index');
-        Route::post('/leads', [\App\Modules\Sales\Http\Controllers\LeadApiController::class, 'store'])->name('lead.store');
+        Route::post('/leads', [\App\Modules\Sales\Http\Controllers\LeadApiController::class, 'store'])->middleware(\App\Http\Middleware\RemembersAPhoneWrite::class)->name('lead.store');
         Route::get('/leads/{id}', [\App\Modules\Sales\Http\Controllers\LeadApiController::class, 'show'])->whereUuid('id')->name('lead.show');
         Route::put('/leads/{id}', [\App\Modules\Sales\Http\Controllers\LeadApiController::class, 'update'])->whereUuid('id')->name('lead.update');
 
         // ⭐ উদ্ধৃতি — মাঠ থেকে দাম, জমা, পাঠানো, দোকানির উত্তর, আদেশে রূপান্তর; ওয়েবের একই সেবা ও যাচাই ([[SalesQuotationApiController]])
         Route::get('/quotations', [\App\Modules\Sales\Http\Controllers\SalesQuotationApiController::class, 'index'])->name('quotation.index');
-        Route::post('/quotations', [\App\Modules\Sales\Http\Controllers\SalesQuotationApiController::class, 'store'])->name('quotation.store');
+        Route::post('/quotations', [\App\Modules\Sales\Http\Controllers\SalesQuotationApiController::class, 'store'])->middleware(\App\Http\Middleware\RemembersAPhoneWrite::class)->name('quotation.store');
         Route::get('/quotations/{id}', [\App\Modules\Sales\Http\Controllers\SalesQuotationApiController::class, 'show'])->whereUuid('id')->name('quotation.show');
         Route::post('/quotations/{id}/submit', [\App\Modules\Sales\Http\Controllers\SalesQuotationApiController::class, 'submit'])->whereUuid('id')->name('quotation.submit');
         Route::post('/quotations/{id}/send', [\App\Modules\Sales\Http\Controllers\SalesQuotationApiController::class, 'send'])->whereUuid('id')->name('quotation.send');

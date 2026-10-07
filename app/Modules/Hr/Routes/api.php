@@ -25,6 +25,6 @@ Route::prefix('v1/hr')
     ->group(function (): void {
         Route::get('/claims/heads', [ExpenseClaimController::class, 'apiHeads'])->name('claim.heads');
         Route::get('/claims', [ExpenseClaimController::class, 'apiIndex'])->name('claim.index');
-        Route::post('/claims', [ExpenseClaimController::class, 'apiStore'])->name('claim.store');
+        Route::post('/claims', [ExpenseClaimController::class, 'apiStore'])->middleware(\App\Http\Middleware\RemembersAPhoneWrite::class)->name('claim.store');
         Route::get('/claims/{claim:public_id}', [ExpenseClaimController::class, 'apiShow'])->middleware('can:view,claim')->name('claim.show');
     });
