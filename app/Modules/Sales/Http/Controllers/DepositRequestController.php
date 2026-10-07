@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Sales\Http\Controllers;
 
 use App\Core\Services\MenuBuilder;
+use App\Core\Support\PhoneInput;
 use App\Http\Controllers\Controller;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\Customer\Models\Customer;
@@ -84,7 +85,7 @@ class DepositRequestController extends Controller implements HasMiddleware
     /** `GET /api/v1/sales/deposit-requests?customer=` — এক দোকানের অনুরোধগুলো, সর্বশেষ আগে */
     public function apiIndex(Request $request): JsonResponse
     {
-        $customer = $this->customer((string) $request->query('customer', ''));
+        $customer = $this->customer(PhoneInput::text($request, 'customer', ''));
 
         return response()->json(['requests' => DepositClaim::query()
             ->where('customer_id', $customer->id)
@@ -106,7 +107,7 @@ class DepositRequestController extends Controller implements HasMiddleware
         $data = $request->validate([
             'customer' => ['required', 'string', 'max:64'],
             'claimed_on' => ['required', 'date', 'before_or_equal:today'],
-            'amount' => ['required', 'numeric', 'gt:0'],
+            'amount' => ['required', 'numeric', PhoneInput::DECIMAL, 'gt:0'],
             'method' => ['required', Rule::in([DepositClaim::BANK, DepositClaim::MFS, DepositClaim::CASH])],
             'reference' => ['nullable', 'string', 'max:64'],
             'bank_account_id' => ['nullable', 'integer', Rule::in($this->banks()->modelKeys())],

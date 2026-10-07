@@ -6,6 +6,7 @@ namespace App\Modules\Sales\Http\Controllers;
 
 use App\Core\Engines\Audit\AuditEngine;
 use App\Core\Support\DocumentStatus;
+use App\Core\Support\PhoneInput;
 use App\Http\Controllers\Controller;
 use App\Modules\Sales\Models\DeliveryChallan;
 use App\Modules\Sales\Models\GatePass;
@@ -112,9 +113,9 @@ class QrScanController extends Controller
             'receiver_name' => ['required', 'string', 'max:120'],
             'receiver_phone' => ['required', 'string', 'max:30'],
             'lines' => ['nullable', 'array'],
-            'lines.*' => ['nullable'],
+            'lines.*' => ['nullable', 'numeric', PhoneInput::DECIMAL],
             'damaged' => ['nullable', 'array'],
-            'damaged.*' => ['nullable'],
+            'damaged.*' => ['nullable', 'numeric', PhoneInput::DECIMAL],
         ]);
 
         [$to, $data] = $this->outcome($challan, $data);

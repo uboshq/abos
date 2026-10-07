@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Sales\Http\Controllers;
 
+use App\Core\Support\PhoneInput;
 use App\Http\Controllers\Controller;
 use App\Modules\Customer\Models\Customer;
 use App\Modules\Inventory\Models\Product;
@@ -33,11 +34,12 @@ class OrderStandingController extends Controller implements HasMiddleware
     /** `GET …/standing/{customer}?total=` */
     public function standing(Request $request, string $customer): JsonResponse
     {
-        $total = (string) $request->query('total', '0');
+        $total = PhoneInput::text($request, 'total', '0');
 
         return response()->json($this->standing->for(
             $this->customer($customer),
-            is_numeric($total) ? $total : '0',
+            // ⓘ "1e3" is_numeric পার হয়, bcmath নয় — এক দশমিক নিয়ম (অডিট ফোন ⚠️১১)
+            preg_match('/^\d{1,14}(\.\d{1,4})?$/', $total) === 1 ? $total : '0',
         ));
     }
 
@@ -49,8 +51,8 @@ class OrderStandingController extends Controller implements HasMiddleware
             'warehouse_id' => ['nullable', 'integer'],
             'lines' => ['required', 'array', 'max:200'],
             'lines.*.product' => ['required', 'string', 'max:64'],
-            'lines.*.qty' => ['required', 'numeric', 'min:0', 'max:99999999'],
-            'lines.*.rate' => ['nullable', 'numeric', 'min:0'],
+            'lines.*.qty' => ['required', 'numeric', PhoneInput::DECIMAL, 'min:0', 'max:99999999'],
+            'lines.*.rate' => ['nullable', 'numeric', PhoneInput::DECIMAL, 'min:0'],
         ]);
 
         $lines = array_map(fn (array $line) => [

@@ -6,6 +6,7 @@ namespace App\Modules\Sales\Http\Controllers;
 
 use App\Core\Engines\Approval\HeldForApproval;
 use App\Core\Support\DocumentStatus;
+use App\Core\Support\PhoneInput;
 use App\Http\Controllers\Controller;
 use App\Modules\Customer\Models\Customer;
 use App\Modules\MasterData\Models\ReasonCode;
@@ -42,7 +43,7 @@ final class SalesReturnApiController extends Controller implements HasMiddleware
     public function setup(Request $request): JsonResponse
     {
         $customer = filled($request->query('customer'))
-            ? Customer::query()->where('public_id', (string) $request->query('customer'))->first()
+            ? Customer::query()->where('public_id', PhoneInput::text($request, 'customer'))->first()
             : null;
 
         $invoices = SalesInvoice::query()
@@ -100,7 +101,7 @@ final class SalesReturnApiController extends Controller implements HasMiddleware
             'reason' => ['required', 'string', 'max:64'],
             'lines' => ['required', 'array', 'min:1', 'max:200'],
             'lines.*.line' => ['required', 'string', 'max:64'],
-            'lines.*.qty' => ['required', 'numeric', 'min:0'],
+            'lines.*.qty' => ['required', 'numeric', PhoneInput::DECIMAL, 'min:0'],
             'lines.*.to_hold' => ['nullable', 'boolean'],
         ]);
 

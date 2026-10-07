@@ -6,6 +6,7 @@ namespace App\Modules\Purchase\Http\Controllers;
 
 use App\Core\Support\Money;
 use App\Core\Support\PartyLedger;
+use App\Core\Support\PhoneInput;
 use App\Core\Support\ViewedBranch;
 use App\Http\Controllers\Controller;
 use App\Models\LedgerEntry;
@@ -51,7 +52,7 @@ class PurchaseApiController extends Controller implements HasMiddleware
     /** `GET /principals?q=` */
     public function principals(Request $request): JsonResponse
     {
-        $term = trim((string) $request->query('q', ''));
+        $term = trim(PhoneInput::text($request, 'q', ''));
 
         // ⭐ ওয়েবের সরবরাহকারীর তালিকার একই ছাঁকনি — মাথায় বাছা শাখা ([[Supplier::scopeInViewedBranch()]])
         $page = Supplier::query()->inViewedBranch()->onlySuppliers()->withPayableInView()

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Sales\Http\Controllers;
 
+use App\Core\Support\PhoneInput;
 use App\Http\Controllers\Controller;
 use App\Modules\Sales\Models\Lead;
 use App\Modules\Sales\Services\LeadService;
@@ -44,14 +45,14 @@ class LeadApiController extends Controller implements HasMiddleware
     {
         $rows = $this->leads->visibleTo($request->user())
             ->with('owner')
-            ->when(trim((string) $request->query('q', '')), function ($q, string $term) {
+            ->when(trim(PhoneInput::text($request, 'q', '')), function ($q, string $term) {
                 $like = '%'.str_replace(['%', '_'], ['\%', '\_'], $term).'%';
                 $q->where(fn ($w) => $w->where('name', 'like', $like)
                     ->orWhere('phone', 'like', $like)
                     ->orWhere('document_no', 'like', $like));
             })
             ->when(in_array($request->query('status'), Lead::STATUSES, true),
-                fn ($q) => $q->where('status', (string) $request->query('status')))
+                fn ($q) => $q->where('status', PhoneInput::text($request, 'status')))
             ->latest('id')
             ->paginate(50);
 

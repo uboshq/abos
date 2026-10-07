@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Sales\Http\Controllers;
 
 use App\Core\Engines\Approval\ApprovalEngine;
+use App\Core\Support\PhoneInput;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Modules\Customer\Models\Customer;
@@ -52,12 +53,12 @@ class SalesOrderApiController extends Controller implements HasMiddleware
     {
         $rows = SalesOrder::query()
             ->with('customer')
-            ->when(trim((string) $request->query('customer', '')), fn ($q, $c) => $q->where('customer_id', $this->customer($c)->id))
+            ->when(trim(PhoneInput::text($request, 'customer', '')), fn ($q, $c) => $q->where('customer_id', $this->customer($c)->id))
             ->when($request->query('scope') === 'awaiting_me', fn ($q) => $q->where('status', SalesOrderStatus::AWAITING_APPROVAL)
                 ->whereIn('id', app(ApprovalEngine::class)->pendingQueryFor($request->user())
                     ->where('approvable_type', (new SalesOrder)->getMorphClass())->select('approvable_id')))
             ->when(in_array($request->query('status'), SalesOrderStatus::ALL, true),
-                fn ($q) => $q->where('status', (string) $request->query('status')))
+                fn ($q) => $q->where('status', PhoneInput::text($request, 'status')))
             ->latest('trx_date')->latest('id')->paginate(50);
 
         // ⓘ ওয়েবের আদেশ-তালিকার চিপের একই গোনা, পঞ্চাশটায় একবার ([[OrderProgress::compute()]])
@@ -122,7 +123,7 @@ class SalesOrderApiController extends Controller implements HasMiddleware
     /** `POST /orders/{id}/approved-quantities` {lines: {lineId: qty}} — সুপারভাইজার; চাবি ছকের ([[SalesOrderService::setApprovedQuantities()]]) */
     public function approvedQuantities(Request $request, string $id): JsonResponse
     {
-        $data = $request->validate(['lines' => ['required', 'array'], 'lines.*' => ['required', 'numeric', 'min:0']]);
+        $data = $request->validate(['lines' => ['required', 'array'], 'lines.*' => ['required', 'numeric', PhoneInput::DECIMAL, 'min:0']]);
 
         $order = $this->orders->setApprovedQuantities($this->order($id), array_map('strval', $data['lines']), $request->user());
 
@@ -140,7 +141,7 @@ class SalesOrderApiController extends Controller implements HasMiddleware
             'narration' => ['nullable', 'string', 'max:500'],
             'lines' => ['required', 'array', 'min:1', 'max:200'],
             'lines.*.product' => ['required', 'string', 'max:64'],
-            'lines.*.qty' => ['required', 'numeric', 'gt:0'],
+            'lines.*.qty' => ['required', 'numeric', PhoneInput::DECIMAL, 'gt:0'],
             'lines.*.note' => ['nullable', 'string', 'max:255'],
         ]);
     }

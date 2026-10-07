@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Sales\Http\Controllers;
 
 use App\Core\Services\MenuBuilder;
+use App\Core\Support\PhoneInput;
 use App\Http\Controllers\Controller;
 use App\Modules\Customer\Models\Customer;
 use App\Modules\Sales\Models\DeliveryChallan;
@@ -30,15 +31,15 @@ class SaleTrackingController extends Controller
     {
         $this->mayTrack($request);
 
-        $customer = trim((string) $request->query('customer', ''));
+        $customer = trim(PhoneInput::text($request, 'customer', ''));
         // ⓘ ফোনে বাছা শাখার গ্রাহকই ([[ViewedBranch]])
         $customerId = $customer === '' ? null : (int) Customer::query()->inViewedBranch()
             ->when(Str::isUuid($customer), fn ($q) => $q->where('public_id', $customer), fn ($q) => $q->whereKey((int) $customer))
             ->firstOrFail()->id;
 
         return response()->json($this->tracking->list(
-            trim((string) $request->query('q', '')) ?: null,
-            $request->query('step') !== null ? (string) $request->query('step') : null,
+            trim(PhoneInput::text($request, 'q', '')) ?: null,
+            $request->query('step') !== null ? PhoneInput::text($request, 'step') : null,
             $customerId,
         ));
     }
@@ -65,15 +66,15 @@ class SaleTrackingController extends Controller
     {
         $this->mayTrack($request);
 
-        $step = in_array($request->query('step'), SaleTracking::STEPS, true) ? (string) $request->query('step') : null;
-        $term = trim((string) $request->query('q', '')) ?: null;
-        $date = fn (string $key): ?string => ($v = trim((string) $request->query($key, ''))) !== '' && strtotime($v) !== false
+        $step = in_array($request->query('step'), SaleTracking::STEPS, true) ? PhoneInput::text($request, 'step') : null;
+        $term = trim(PhoneInput::text($request, 'q', '')) ?: null;
+        $date = fn (string $key): ?string => ($v = trim(PhoneInput::text($request, $key, ''))) !== '' && strtotime($v) !== false
             ? date('Y-m-d', (int) strtotime($v)) : null;
         $dates = ['from' => $date('from'), 'to' => $date('to')];
         if ($dates['from'] !== null && $dates['to'] !== null && $dates['from'] > $dates['to']) {
             $dates = ['from' => $dates['to'], 'to' => $dates['from']];
         }
-        $sort = in_array($request->query('sort'), ['recent', 'oldest', 'largest', 'customer'], true) ? (string) $request->query('sort') : 'recent';
+        $sort = in_array($request->query('sort'), ['recent', 'oldest', 'largest', 'customer'], true) ? PhoneInput::text($request, 'sort') : 'recent';
 
         $list = $this->tracking->list($term, $step, ((int) $request->query('customer')) ?: null, 500, [
             ...$dates,

@@ -9,6 +9,7 @@ use App\Core\Engines\Audit\AuditEngine;
 use App\Core\Services\SettingsService;
 use App\Core\Support\CompanyContext;
 use App\Core\Support\Money;
+use App\Core\Support\PhoneInput;
 use App\Http\Controllers\Controller;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\Customer\Models\Customer;
@@ -55,7 +56,7 @@ class DirectSaleApiController extends Controller implements HasMiddleware
     /** `GET /direct/setup?warehouse=` — গুদাম, শর্ত, টাকার খাত, আর বাছা গুদামের লট (FEFO) */
     public function setup(Request $request): JsonResponse
     {
-        $warehouse = $this->warehouse((string) $request->query('warehouse', ''));
+        $warehouse = $this->warehouse(PhoneInput::text($request, 'warehouse', ''));
 
         /*
          * ⛔ লটের পরিমাণ কেবল মজুদ দেখার চাবিতে — "দাম দেখুন"-এর একই নিয়ম ([[price()]]; সমন্বয়কের অ্যাপ-অডিট, ৭ অক্টোবর
@@ -120,11 +121,11 @@ class DirectSaleApiController extends Controller implements HasMiddleware
 
         abort_if($id === null, 404);
 
-        $warehouse = $this->warehouse((string) $request->query('warehouse', ''));
+        $warehouse = $this->warehouse(PhoneInput::text($request, 'warehouse', ''));
 
         // ⭐ `?customer=` (public id) দিলে এই গ্রাহকের দর তালিকার দাম ([[SalesPrice]], ৫ অক্টোবর ২০২৬); না দিলে সবার দর
         $customer = filled($request->query('customer'))
-            ? Customer::query()->inViewedBranch()->where('public_id', (string) $request->query('customer'))->first()
+            ? Customer::query()->inViewedBranch()->where('public_id', PhoneInput::text($request, 'customer'))->first()
             : null;
         $row = $this->options->catalogue($warehouse, 1, (int) $id, $customer)->first();
 
@@ -225,7 +226,7 @@ class DirectSaleApiController extends Controller implements HasMiddleware
             'customer' => ['nullable', 'string', 'max:64'],
             'resume' => ['nullable', 'string', 'max:64'],
             'lines' => ['nullable', 'integer', 'min:0'],
-            'total' => ['nullable', 'numeric'],
+            'total' => ['nullable', 'numeric', PhoneInput::DECIMAL],
         ]);
 
         if (filled($data['resume'] ?? null)) {
@@ -256,7 +257,7 @@ class DirectSaleApiController extends Controller implements HasMiddleware
         $data = Validator::make($request->all(), [
             'product' => ['required', 'string', 'max:64'],
             'warehouse' => ['nullable', 'string', 'max:64'],
-            'qty' => ['required', 'numeric', 'gt:0'],
+            'qty' => ['required', 'numeric', PhoneInput::DECIMAL, 'gt:0'],
             'lot' => ['nullable', 'string', 'max:64'],
         ])->validate();
 

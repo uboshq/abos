@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Sales\Http\Controllers;
 
+use App\Core\Support\PhoneInput;
 use App\Http\Controllers\Controller;
 use App\Modules\Customer\Models\Customer;
 use App\Modules\Inventory\Models\Product;
@@ -47,9 +48,9 @@ class SalesQuotationApiController extends Controller implements HasMiddleware
     {
         $rows = SalesQuotation::query()
             ->with('customer')
-            ->when(trim((string) $request->query('customer', '')), fn ($q, $c) => $q->where('customer_id', $this->customer($c)->id))
+            ->when(trim(PhoneInput::text($request, 'customer', '')), fn ($q, $c) => $q->where('customer_id', $this->customer($c)->id))
             ->when(in_array($request->query('status'), SalesQuotation::STATES, true),
-                fn ($q) => $q->where('status', (string) $request->query('status')))
+                fn ($q) => $q->where('status', PhoneInput::text($request, 'status')))
             ->latest('trx_date')->latest('id')
             ->paginate(50);
 
@@ -72,8 +73,8 @@ class SalesQuotationApiController extends Controller implements HasMiddleware
             'narration' => ['nullable', 'string', 'max:500'],
             'lines' => ['required', 'array', 'min:1', 'max:200'],
             'lines.*.product' => ['required', 'string', 'max:64'],
-            'lines.*.qty' => ['required', 'numeric', 'gt:0'],
-            'lines.*.rate' => ['nullable', 'numeric'],
+            'lines.*.qty' => ['required', 'numeric', PhoneInput::DECIMAL, 'gt:0'],
+            'lines.*.rate' => ['nullable', 'numeric', PhoneInput::DECIMAL],
         ]);
 
         // ⚠️ আগেই পড়া — `createFrom()` JSON-এর থলেটা ভাগ করে, তাই `replace()`-এর পরে `$request`-এ `submit` আর থাকে না
