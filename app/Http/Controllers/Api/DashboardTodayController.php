@@ -14,12 +14,10 @@ use App\Models\Company;
 use App\Models\User;
 use App\Models\UserDataScope;
 use App\Modules\Accounts\Dashboard\AccountsWidgets;
-use App\Modules\Accounts\Models\Voucher;
 use App\Modules\Accounts\Services\AccountsFacts;
 use App\Modules\Customer\Services\CustomerMetrics;
 use App\Modules\Finance\Services\HandLoanService;
 use App\Modules\Sales\Metrics\SalesMetrics;
-use App\Modules\Sales\Models\Collection;
 use App\Modules\Sales\Models\SalesInvoice;
 use App\Modules\Supplier\Reports\PrincipalCommissionReport;
 use Illuminate\Http\JsonResponse;
@@ -91,9 +89,8 @@ class DashboardTodayController extends Controller
             /* ⓘ গোনা আর টাকা একই দুই উৎসে — আদায়ের কাগজ আর গ্রাহকের রসিদ ভাউচার
                ([[SalesMetrics::collectionTotal()]]) */
             $body['collections'] = [
-                'count' => Collection::query()->posted()->whereBetween('trx_date', [$today, $today])->count()
-                    + Voucher::query()->where('type', Voucher::RECEIPT)->where('party_type', 'customer')
-                        ->posted()->whereBetween('trx_date', [$today, $today])->count(),
+                // ⛔ ডিলার-দেয়ালসহ, অঙ্কের একই জায়গা থেকে ([[SalesMetrics::collectionCount()]]; অডিট ফোন ⚠️৯)
+                'count' => SalesMetrics::collectionCount($today, $today),
                 'amount' => self::money(SalesMetrics::collectionTotal($today, $today)),
             ];
         }

@@ -252,4 +252,21 @@ final class SalesMetrics implements ProvidesMetrics
 
         return Money::of(bcadd($byCollection, $byVoucher, 4));
     }
+
+    /**
+     * ⭐ কয়টা আদায় — [[collectionTotal()]]-এর হুবহু দুই উৎস আর একই দেয়াল (পুরো ERP অডিট, ৬ অক্টোবর ২০২৬, ফোন ⚠️৯: ফোনের
+     * আজকের পাতায় রসিদ-ভাউচারের গোনা ডিলার-দেয়াল ছাড়া ছিল — বাঁধা বিক্রয়কর্মী শাখার সব ডিলারের রসিদ-সংখ্যা দেখতেন,
+     * আর পাশের অঙ্কের সাথে মিলত না)। ⚠️ একটা বদলালে অন্যটাও।
+     */
+    public static function collectionCount(string $from, string $to): int
+    {
+        return Collection::query()->posted()->whereBetween('trx_date', [$from, $to])->count()
+            + Voucher::query()
+                ->where('type', Voucher::RECEIPT)
+                ->where('party_type', 'customer')
+                ->tap(fn ($q) => app(\App\Core\Services\DealerScope::class)->restrict($q, 'party_id'))
+                ->posted()
+                ->whereBetween('trx_date', [$from, $to])
+                ->count();
+    }
 }
