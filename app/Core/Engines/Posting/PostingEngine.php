@@ -117,7 +117,13 @@ final class PostingEngine
 
                 $created[] = LedgerEntry::create([
                     'company_id' => CompanyContext::id(),
-                    'branch_id' => $line['branch_id'] ?? $branchId,
+                    /*
+                     * ⛔ সারি নিজে শাখা বললে সেটাই — "শাখা নেই" (null) বললেও — পুরো-ERP অডিট, ৬ অক্টোবর ২০২৬ (হিসাব ⚠️৬;
+                     * [[AnUnbranchedIncomeClosesWhereItSitsTest]])। ⓘ আগে `??` স্পষ্ট null-কেও "বলেনি" ধরত: বছর বন্ধে শাখাহীন আয়-ব্যয়
+                     * বন্ধকারীর শাখায় শূন্য হত — শাখাহীন খাত খোলা থেকে যেত, আর বন্ধকারীর শাখায় উল্টো জের জমত। সারিতে ঘরটা না থাকলে
+                     * আগের মতোই কাগজের শাখা।
+                     */
+                    'branch_id' => array_key_exists('branch_id', $line) ? $line['branch_id'] : $branchId,
                     'financial_year_id' => $financialYear->id,
                     'account_id' => $line['account_id'],
                     'party_type' => $line['party_type'] ?? null,
