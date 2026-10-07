@@ -6,7 +6,7 @@ import android.os.Build
 import android.os.StatFs
 import android.provider.Settings
 import android.view.WindowManager
-import io.flutter.embedding.android.FlutterActivity
+import io.flutter.embedding.android.FlutterFragmentActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 
@@ -15,7 +15,8 @@ import io.flutter.plugin.common.MethodChannel
  * (docs/Contract section 6, rule kha). See lib/core/update/apk_installer.dart
  * and storage_check.dart for the other end of each.
  */
-class MainActivity : FlutterActivity() {
+// ⓘ FragmentActivity — the app lock's fingerprint/PIN prompt (local_auth) needs it (7 Oct 2026)
+class MainActivity : FlutterFragmentActivity() {
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
