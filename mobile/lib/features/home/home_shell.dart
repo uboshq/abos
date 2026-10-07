@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -12,6 +14,8 @@ import '../../core/menu/menu_repository.dart';
 import '../../core/menu/module_gate.dart';
 import '../../core/orders/delivery_order_api.dart';
 import '../../core/books/collection_entry.dart';
+import '../../core/launcher_widgets/launcher_widget_refresh.dart';
+import '../../core/privacy/phone_privacy.dart';
 import '../../core/records/notice_bar.dart';
 import '../../core/records/notification_record.dart';
 import '../../core/records/today_record.dart';
@@ -156,6 +160,11 @@ class _HomeShellState extends ConsumerState<HomeShell> {
       ref.read(ordersReplaceDoProvider.notifier).state =
           profile.ordersReplaceDo;
       ref.read(mayCollectProvider.notifier).state = profile.mayCollect;
+      // ⭐ মালিকের দুই সুইচ — পর্দা আড়াল, আর উইজেটের অঙ্ক; হোম আঁকা এর জন্য থামে না
+      unawaited(PhonePrivacy.follow(
+          secureScreens: profile.secureScreens,
+          widgetAmounts: profile.widgetAmounts,
+          redrawWidgets: LauncherWidgetRefresh.refresh));
     }
     final modules = ref.read(phoneModulesProvider);
     setState(() {

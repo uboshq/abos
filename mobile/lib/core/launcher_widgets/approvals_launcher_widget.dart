@@ -1,3 +1,4 @@
+import '../privacy/phone_privacy.dart';
 import '../records/approval_record.dart';
 import '../records/money.dart';
 import '../widgets/day_part.dart';
@@ -35,9 +36,11 @@ class ApprovalsLauncherWidget {
     List<ApprovalRecord> waiting, {
     bool hasMore = false,
     DateTime? at,
-  }) =>
+  }) async =>
       LauncherWidgetStore.write(
-          provider, valuesFor(waiting, hasMore: hasMore, at: at));
+          provider,
+          valuesFor(waiting,
+              hasMore: hasMore, at: at, showAmounts: await PhonePrivacy.widgetAmounts()));
 
   /// What [publish] writes. Pure, so it can be checked without a launcher.
   ///
@@ -48,8 +51,9 @@ class ApprovalsLauncherWidget {
     List<ApprovalRecord> waiting, {
     bool hasMore = false,
     DateTime? at,
+    bool showAmounts = true,
   }) {
-    final lines = approvalLines(waiting);
+    final lines = approvalLines(waiting, showAmounts: showAmounts);
     final hidden = waiting.length - lines.length;
 
     return {
@@ -91,7 +95,7 @@ class ApprovalsLauncherWidget {
 /// PB-2609-0007 · ৳125,000" is what a person quotes down a phone. Where the
 /// server sends no document number there is nothing to quote, so the type
 /// and the amount carry the line alone.
-List<String> approvalLines(List<ApprovalRecord> waiting) {
+List<String> approvalLines(List<ApprovalRecord> waiting, {bool showAmounts = true}) {
   final sorted = [...waiting]..sort((a, b) {
       final left = a.requestedAt;
       final right = b.requestedAt;
@@ -106,7 +110,8 @@ List<String> approvalLines(List<ApprovalRecord> waiting) {
       [
         approval.documentTypeLabel,
         if (approval.documentNo != null) approval.documentNo!,
-        if (approval.amount != null) Money.taka(approval.amount),
+        // ⛔ অঙ্ক কেবল মালিকের সুইচে ([[PhonePrivacy]])
+        if (approval.amount != null) showAmounts ? Money.taka(approval.amount) : PhonePrivacy.hidden,
       ].join(' · ')
   ];
 }

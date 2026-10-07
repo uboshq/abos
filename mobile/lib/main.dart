@@ -9,6 +9,7 @@ import 'package:home_widget/home_widget.dart';
 import 'core/auth/auth_controller.dart';
 import 'core/auth/auth_state.dart';
 import 'core/crash/crash_reporter.dart';
+import 'core/privacy/phone_privacy.dart';
 import 'core/launcher_widgets/launcher_widget_refresh.dart';
 import 'core/launcher_widgets/widget_sync_observer.dart';
 import 'core/push/push_service.dart';
@@ -23,6 +24,8 @@ Future<void> main() async {
 
   // ⭐ ধরা-না-পড়া ভুল অফিসের ভুলের খাতায় — সবার আগে, যাতে শুরুর ভাঙাও ধরা পড়ে (সমন্বয়কের অ্যাপ-অডিট, ৭ অক্টোবর ২০২৬)
   CrashReporter.instance.install();
+  // ⛔ পর্দা আড়াল দিয়ে শুরু — `/me` এলে তবে মালিকের সুইচ ([[PhonePrivacy]])
+  unawaited(PhonePrivacy.secure(true));
 
   // Order matters, and each step here is a hard dependency of the next:
   //  1. Hive's own path setup, before any box anywhere is opened.

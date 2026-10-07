@@ -11,6 +11,7 @@ import 'package:abos_mobile/core/launcher_widgets/today_launcher_widget.dart';
 import 'package:abos_mobile/core/launcher_widgets/widget_sync_observer.dart';
 import 'package:abos_mobile/core/records/approval_record.dart';
 import 'package:abos_mobile/core/records/today_record.dart';
+import 'package:abos_mobile/core/privacy/phone_privacy.dart';
 import 'package:abos_mobile/main.dart' show widgetDestination;
 
 /// The two home-screen widgets.
@@ -28,6 +29,8 @@ void main() {
     LauncherWidgetStore.writer = (provider, values) async {
       written[provider] = Map.of(values);
     };
+    // ⓘ মালিক উইজেটে অঙ্ক দেখানো চালু রেখেছেন — লুকানোর দাবি নিচে আলাদা
+    PhonePrivacy.amountsReader = () async => true;
   });
 
   const today = TodayRecord({
@@ -50,6 +53,49 @@ void main() {
         'amount': amount,
         'requestedAt': at,
       });
+
+  group('the owner\'s switch: money on the widget (coordinator\'s app audit, 7 Oct 2026)', () {
+    test('off: every money cell and approval amount reads •••, never a figure', () {
+      final values = TodayLauncherWidget.valuesFor(today, showAmounts: false);
+      for (final key in ['widget_sales_today', 'widget_inflow_today', 'widget_cash', 'widget_receivable']) {
+        expect(values[key], PhonePrivacy.hidden, reason: '⛔ $key-এ অঙ্ক দেখাল');
+      }
+      expect(approvalLines([approval('PB-1', '2026-09-27T09:00:00+06:00')], showAmounts: false).single,
+          isNot(contains('৳')));
+    });
+
+    test('publish reads the switch: off hides, unreadable hides, on shows', () async {
+      PhonePrivacy.amountsReader = () async => false;
+      await TodayLauncherWidget.publish(today);
+      expect(written[TodayLauncherWidget.provider]!['widget_cash'], PhonePrivacy.hidden);
+
+      PhonePrivacy.amountsReader = () async => throw Exception('no store');
+      await TodayLauncherWidget.publish(today);
+      expect(written[TodayLauncherWidget.provider]!['widget_cash'], PhonePrivacy.hidden, reason: '⛔ পড়া না গেলেও অঙ্ক দেখাল');
+
+      PhonePrivacy.amountsReader = () async => true;
+      await TodayLauncherWidget.publish(today);
+      expect(written[TodayLauncherWidget.provider]!['widget_cash'], '৳18,500');
+    });
+
+    test('following /me: the screen setting always, the widget redrawn only when its choice changes', () async {
+      final secureCalls = <bool>[];
+      var stored = false;
+      var redraws = 0;
+      PhonePrivacy.secureSetter = (on) async => secureCalls.add(on);
+      PhonePrivacy.amountsReader = () async => stored;
+      PhonePrivacy.amountsWriter = (on) async => stored = on;
+
+      await PhonePrivacy.follow(secureScreens: false, widgetAmounts: false, redrawWidgets: () async => redraws++);
+      expect(secureCalls, [false]);
+      expect(redraws, 0, reason: 'পছন্দ বদলায়নি — উইজেট আবার আঁকার কারণ নেই');
+
+      await PhonePrivacy.follow(secureScreens: true, widgetAmounts: true, redrawWidgets: () async => redraws++);
+      expect(secureCalls, [false, true]);
+      expect(stored, isTrue);
+      expect(redraws, 1);
+    });
+  });
 
   group('the figures widget', () {
     test('the four figures the contract sends are written as figures', () {
