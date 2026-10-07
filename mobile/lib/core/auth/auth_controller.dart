@@ -9,6 +9,7 @@ import '../config/app_config.dart';
 import '../api_client/network_errors.dart';
 import '../sync_engine/reference_cache.dart';
 import '../sync_engine/reference_sync.dart';
+import '../sync_engine/sync_engine.dart';
 import '../launcher_widgets/launcher_widget_refresh.dart';
 import 'auth_exceptions.dart';
 import 'auth_state.dart';
@@ -41,8 +42,10 @@ class AuthController extends StateNotifier<AuthState> {
     final refreshToken = await TokenStorage.instance.refreshToken();
     final savedUser = await SessionRepository.instance.readUser();
     if (refreshToken != null && refreshToken.isNotEmpty && savedUser != null) {
+      SyncEngine.instance.actAs(savedUser.id);
       state = AuthState.signedIn(savedUser);
     } else {
+      SyncEngine.instance.actAs(null);
       state = const AuthState.signedOut();
     }
   }
@@ -85,7 +88,10 @@ class AuthController extends StateNotifier<AuthState> {
           .saveTokens(accessToken: accessToken, refreshToken: refreshToken);
       final user = AuthUser.fromJson(userJson);
       await SessionRepository.instance.saveUser(user);
+      // ⛔ অফলাইন সারি এই মানুষের — আগের কারও রেখে যাওয়া সারি তাঁর নামে যায় না ([[SyncEngine.actAs]])
+      SyncEngine.instance.actAs(user.id);
       state = AuthState.signedIn(user);
+      unawaited(SyncEngine.instance.flushAll());
       // The home-screen widgets, now that there is a session to fill them
       // from. Not awaited: a launcher tile must not hold up a sign-in.
       unawaited(LauncherWidgetRefresh.refresh());
@@ -131,6 +137,7 @@ class AuthController extends StateNotifier<AuthState> {
   }
 
   Future<void> _clearLocalSession() async {
+    SyncEngine.instance.actAs(null);
     await TokenStorage.instance.clear();
     await SessionRepository.instance.clear();
     // A tenant-boundary rule, not tidiness — see ReferenceCache.clearAll's

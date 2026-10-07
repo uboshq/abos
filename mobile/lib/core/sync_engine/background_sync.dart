@@ -2,6 +2,7 @@ import 'package:flutter/widgets.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:workmanager/workmanager.dart';
 
+import '../auth/session_repository.dart';
 import '../auth/token_storage.dart';
 import '../launcher_widgets/launcher_widget_refresh.dart';
 import 'sync_engine.dart';
@@ -71,6 +72,12 @@ void callbackDispatcher() {
       if (refreshToken == null || refreshToken.isEmpty) return true;
 
       await SyncEngine.instance.init();
+      // ⛔ পেছনেও কেবল এখনকার মানুষের সারি — সংরক্ষিত প্রোফাইল থেকে; পড়া না গেলে কিছুই যায় না ([[SyncEngine.actAs]])
+      try {
+        SyncEngine.instance.actAs((await SessionRepository.instance.readUser())?.id);
+      } catch (_) {
+        SyncEngine.instance.actAs(null);
+      }
       await SyncEngine.instance.flushAll();
 
       // The home-screen widgets ride the same tick. Somebody who has not
