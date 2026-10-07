@@ -5,6 +5,7 @@ import '../../core/books/books_api.dart';
 import '../../core/books/collection_entry.dart';
 import '../../core/records/customer_record.dart';
 import '../../core/records/money.dart';
+import '../../core/sync_engine/sync_engine.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import 'money_in_screens.dart';
@@ -14,7 +15,8 @@ import 'money_in_screens.dart';
 ///
 /// <p>গ্রাহক (দেখার শাখার, পয়েন্ট আর বকেয়াসহ), অঙ্ক, টাকার খাত (নগদ · ব্যাংক · মোবাইল ব্যাংকিং), লেনদেন-নম্বর, তারিখ,
 /// মন্তব্য, আর "এখনই নিশ্চিত"। নিয়ম সব সার্ভারের — ওয়েবের আদায়-ফর্মের একই; এখানে কেবল যা না থাকলে পাঠানোই অর্থহীন।
-/// নেট না থাকলে ফোনে জমা থাকে, পরে যায়; বসে গেলে নম্বরসহ রসিদ খোলে ([[MoneyInScreen]])।
+/// ⛔ কেবল নেট থাকলে ("নেট না থাকলে শুধু অর্ডার") — সারিতে নয়; একই কাজ আবার পাঠালে একই চাবি, তাই একটাই বসে।
+/// বসে গেলে নম্বরসহ রসিদ খোলে ([[MoneyInScreen]])।
 class CollectScreen extends StatefulWidget {
   const CollectScreen({
     super.key,
@@ -22,9 +24,15 @@ class CollectScreen extends StatefulWidget {
     this.books = const ServerBooksApi(),
     this.customers,
     this.today,
+    this.newChangeId = _engineChangeId,
   });
 
+  static String _engineChangeId() => SyncEngine.instance.newChangeId();
+
   final CollectionEntryApi api;
+
+  /// পরীক্ষার পথ — একই কাজে একই চাবি কি না দেখতে
+  final String Function() newChangeId;
   final BooksApi books;
 
   /// পরীক্ষার জন্য — নইলে ফোনের ক্যাশের গ্রাহক
@@ -50,7 +58,9 @@ class _CollectScreenState extends State<CollectScreen> {
   bool _confirm = true;
   bool _busy = false;
   String? _error;
-  String? _notice;
+
+  /// একই কাজের চাবি — নেট গেলে বা উত্তর হারালে আবার চাপলে একই; ফর্ম বদলালে বা সার্ভার ফেরালে নতুন
+  String? _changeId;
 
   DateTime get _today {
     final now = widget.today ?? DateTime.now();
@@ -131,8 +141,9 @@ class _CollectScreenState extends State<CollectScreen> {
       _busy = true;
       _error = null;
     });
+    final changeId = _changeId ??= widget.newChangeId();
     try {
-      final changeId = await widget.api.send(CollectionDraft(
+      final outcome = await widget.api.send(CollectionDraft(
         customerId: _customer!.id,
         amount: _amount.text.trim(),
         date: _date,
@@ -141,9 +152,9 @@ class _CollectScreenState extends State<CollectScreen> {
         instrumentNo: _instrumentNo.text,
         narration: _narration.text,
         confirm: _confirm,
-      ));
+      ), changeId);
       if (!mounted) return;
-      final landed = widget.api.landedId(changeId);
+      final landed = outcome.landedId;
       if (landed != null) {
         // ⭐ বসে গেছে — নম্বরসহ রসিদ
         await Navigator.of(context).pushReplacement(MaterialPageRoute<void>(
@@ -151,14 +162,16 @@ class _CollectScreenState extends State<CollectScreen> {
         ));
         return;
       }
+      // ⓘ সার্ভার ফেরাল — কারণসহ; ঠিক করে আবার পাঠালে নতুন চাবি (ফেরানো চাবি আবার পাঠালে আবার ফেরে)
       setState(() {
-        _notice =
-            'আদায়টা ফোনে জমা হলো — নেট এলে নিজে থেকে পাঠানো হবে। সিঙ্কের অবস্থায় দেখা যাবে।';
-        _customer = null;
-        _amount.clear();
-        _instrumentNo.clear();
-        _narration.clear();
+        _error = outcome.refusal ?? 'আদায়টা বসেনি। আবার চেষ্টা করুন।';
+        _changeId = null;
       });
+    } on NoNetworkForThis {
+      // ⓘ চাবি থাকে — নেট এলে আবার চাপলে একই কাজ, দুবার নয়
+      if (mounted) {
+        setState(() => _error = 'আদায় দিতে নেট লাগবে। নেট চালু করে আবার চাপুন — ফোনে কিছু জমা থাকেনি।');
+      }
     } catch (e) {
       if (mounted) {
         setState(() => _error = errorMessageFor(e,
@@ -179,14 +192,6 @@ class _CollectScreenState extends State<CollectScreen> {
         padding: const EdgeInsets.all(AppSpacing.md),
         children: [
           if (_busy) const LinearProgressIndicator(),
-          if (_notice != null)
-            Card(
-              color: AppColors.successSurface,
-              child: Padding(
-                padding: const EdgeInsets.all(AppSpacing.md),
-                child: Text(_notice!, key: const ValueKey('collect-notice')),
-              ),
-            ),
           if (_error != null)
             Card(
               color: AppColors.dangerSurface,

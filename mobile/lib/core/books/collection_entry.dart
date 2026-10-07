@@ -7,8 +7,9 @@ import '../sync_engine/sync_engine.dart';
 /// ⭐ ফোনে টাকা আদায় — কেবল অফিসের লোক (মালিক, ৭ অক্টোবর ২০২৬: "এটা কেবল অফিসের লোকদের জন্য থাকবে, আর ফিল্ডের
 /// জন্য থাকবে payment request")। সার্ভার `/me`-তে বলে (`mayCollect`) — আদায়ের চাবি আর খাতায় টাকা তোলার চাবি।
 ///
-/// <p>লেখা যায় সিঙ্কের অপেক্ষার সারি দিয়ে ([[SyncEngine.enqueue]]) — নেট না থাকলে ফোনে জমা থাকে, পরে যায়, আর একই
-/// আদায় দুবার পৌঁছালেও সার্ভারে একটাই বসে (changeId)। নিয়ম সব সার্ভারের — ওয়েবের আদায়-ফর্মের একই।
+/// <p>⛔ কেবল নেট থাকলে — মালিকের নিয়ম "নেট না থাকলে শুধু অর্ডার" (৭ অক্টোবর ২০২৬, সমন্বয়কের অ্যাপ-অডিট: আগে সারিতে
+/// পাঠানো হত, আর সারি আদায় নেয়ই না — একটাও পৌঁছায়নি)। সিঙ্কের দরজায় সরাসরি ([[SyncEngine.pushNow]]), ফোনে বানানো
+/// চাবিসহ — দুবার চাপলেও একটাই বসে। নিয়ম সব সার্ভারের — ওয়েবের আদায়-ফর্মের একই।
 final mayCollectProvider = StateProvider<bool>((ref) => false);
 
 /// একটা টাকার খাত — নগদ, ব্যাংক বা MFS (ওয়েবের আদায়-ফর্মের একই তালিকা)
@@ -89,10 +90,8 @@ abstract class CollectionEntryApi {
   /// সার্ভারের তালিকা; নেট না থাকলে শেষবার পাওয়া তালিকা
   Future<List<CollectionAccount>> accounts();
 
-  /// অপেক্ষার সারিতে — ফেরত changeId; বসে গেলে সার্ভারের আইডি [landedId]-এ
-  Future<String> send(CollectionDraft draft);
-
-  String? landedId(String changeId);
+  /// এখনই সার্ভারে — [changeId] একই কাজে একই থাকে। নেট না থাকলে [NoNetworkForThis]।
+  Future<PushOutcome> send(CollectionDraft draft, String changeId);
 }
 
 class ServerCollectionEntryApi implements CollectionEntryApi {
@@ -133,14 +132,11 @@ class ServerCollectionEntryApi implements CollectionEntryApi {
   }
 
   @override
-  Future<String> send(CollectionDraft draft) => SyncEngine.instance.enqueue(
+  Future<PushOutcome> send(CollectionDraft draft, String changeId) =>
+      SyncEngine.instance.pushNow(
         module: 'sales',
         entityType: 'Collection',
-        operation: 'CREATE',
+        changeId: changeId,
         payload: draft.toPayload(),
       );
-
-  @override
-  String? landedId(String changeId) =>
-      SyncEngine.instance.appliedEntityId(changeId);
 }

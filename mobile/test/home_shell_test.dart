@@ -186,6 +186,8 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('বেরিয়ে যান'), findsOneWidget);
     expect(find.textContaining('karim@testco.local'), findsOneWidget);
+    // ⭐ হাতে হালনাগাদ যাচাই — মালিক, ৭ অক্টোবর ২০২৬
+    expect(find.text('অ্যাপ হালনাগাদ'), findsOneWidget);
   });
 
   testWidgets('with no signal the header still names the company it last knew',

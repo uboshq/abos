@@ -21,6 +21,7 @@ import '../../core/theme/app_spacing.dart';
 import '../../core/update/app_version_check.dart';
 import '../../core/widgets/empty_state.dart';
 import '../../core/workspace/workspace_switcher.dart';
+import '../update/app_update_tile.dart';
 import '../update/update_gate.dart';
 import 'home_dashboard.dart';
 import 'notice_ticker.dart';
@@ -591,6 +592,9 @@ class _MoreTab extends ConsumerWidget {
             onTap: () => context.go('/home/sync-status'),
           ),
         ),
+        const SizedBox(height: AppSpacing.sm),
+        // ⭐ অ্যাপ হালনাগাদ — হাতে যাচাই (মালিক, ৭ অক্টোবর ২০২৬)
+        const AppUpdateTile(),
         const SizedBox(height: AppSpacing.lg),
         OutlinedButton.icon(
           style: OutlinedButton.styleFrom(
