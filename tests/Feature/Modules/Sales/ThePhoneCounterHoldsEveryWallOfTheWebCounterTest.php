@@ -184,6 +184,25 @@ final class ThePhoneCounterHoldsEveryWallOfTheWebCounterTest extends TestCase
         $this->assertSame($invoices, SalesInvoice::query()->count());
     }
 
+    /**
+     * ⛔ ভেতরের id ফোন থেকে নয় — পুরো ERP অডিট, ৬ অক্টোবর ২০২৬, ফোন ⓘ১৯ ([[DirectSaleApiController::translate()]])।
+     * ক্রমিক `resume_invoice_id` পাঠালে আগে সেটাই খসড়া খুলত; এখন ঘরটা ফেলে দেওয়া হয় — তাই এটা নতুন বিল, আর ওয়েবের নিয়মে
+     * খোলা খসড়ার ক্রেতার নতুন বিল ফেরে; খসড়া যেমন ছিল থাকে।
+     */
+    public function test_an_internal_draft_id_from_the_phone_is_dropped_and_the_draft_is_not_opened(): void
+    {
+        $this->asSeller();
+        $parked = $this->postJson('/api/v1/sales/direct', [...$this->sale(), 'save_as_draft' => '1'])->assertCreated()->json();
+        $draft = SalesInvoice::query()->where('public_id', $parked['invoice']['id'])->firstOrFail();
+        $invoices = SalesInvoice::query()->count();
+
+        $this->postJson('/api/v1/sales/direct', [...$this->sale(), 'resume_invoice_id' => (string) $draft->id])
+            ->assertStatus(422)->assertJsonValidationErrors('customer_id');
+
+        $this->assertSame($invoices, SalesInvoice::query()->count());
+        $this->assertSame('draft', $draft->fresh()->status, '⛔ খসড়াটা ছোঁয়া হলো।');
+    }
+
     /** বাতিল — একই বিক্রেতা: বিল বানানোর চাবি ছাড়া ৪০৩; দিলে খসড়া বাতিল হয়, না-জমা বিল অডিটে লেখা হয় */
     public function test_voiding_needs_the_bill_key_cancels_a_kept_draft_and_records_an_unsaved_bill(): void
     {

@@ -82,4 +82,13 @@ final class ThePhoneDoorsBrokeOnOddInputTest extends TestCase
             'customer' => (string) $this->shop->public_id, 'claimed_on' => now()->toDateString(), 'amount' => '1500.50', 'method' => 'cash',
         ])->assertCreated();
     }
+
+    /** ⓘ ফোন ⓘ১৯ — ডেলিভারির দিন গতকাল নয়, ওয়েবের `after_or_equal:trx_date`-এর একই কথা; আজ চলে */
+    public function test_an_order_cannot_be_delivered_yesterday(): void
+    {
+        $body = ['customer' => (string) $this->shop->public_id, 'lines' => [['product' => (string) Product::query()->where('name_en', 'Cosmos Biscuit 40gm')->value('public_id'), 'qty' => '2']]];
+        $this->postJson('/api/v1/sales/orders', [...$body, 'deliver_on' => now()->subDay()->toDateString()])
+            ->assertStatus(422)->assertJsonValidationErrors('deliver_on');
+        $this->postJson('/api/v1/sales/orders', [...$body, 'deliver_on' => now()->toDateString()])->assertCreated();
+    }
 }

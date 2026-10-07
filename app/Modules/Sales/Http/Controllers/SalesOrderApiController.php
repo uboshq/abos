@@ -141,7 +141,8 @@ class SalesOrderApiController extends Controller implements HasMiddleware
     {
         return $request->validate([
             'customer' => [$creating ? 'required' : 'nullable', 'string', 'max:64'],
-            'deliver_on' => ['nullable', 'date'],
+            // ⓘ ওয়েবের `after_or_equal:trx_date`-এর একই কথা — ফোনের আদেশ আজকের তারিখে লেখা হয় (অডিট ফোন ⓘ১৯)
+            'deliver_on' => ['nullable', 'date', 'after_or_equal:today'],
             'narration' => ['nullable', 'string', 'max:500'],
             'lines' => ['required', 'array', 'min:1', 'max:200'],
             'lines.*.product' => ['required', 'string', 'max:64'],

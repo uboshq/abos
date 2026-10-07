@@ -356,24 +356,30 @@ class DirectSaleApiController extends Controller implements HasMiddleware
      */
     private function translate(array $in): array
     {
-        $out = $in;
+        /*
+         * ⛔ ভেতরের id ফোন থেকে নয় — `_id`-এ শেষ হওয়া ঘর ফোনের পাঠানো থেকে বাদ, তারপর public_id থেকে এখানেই বসে (পুরো ERP
+         * অডিট, ৬ অক্টোবর ২০২৬, ফোন ⓘ১৯: `resume_invoice_id`, `edit_invoice_id`, `carrier_id` অবিকল চলে যেত)। ফোন এগুলো
+         * কখনো পাঠায় না; ক্রমিক id আন্দাজে অন্যের খসড়া খোঁজার পথ বন্ধ।
+         */
+        $noIds = fn (array $a): array => array_filter($a, fn ($k): bool => ! str_ends_with((string) $k, '_id'), ARRAY_FILTER_USE_KEY);
+        $out = $noIds($in);
         $out['customer_id'] = $this->idOf(Customer::class, $in['customer'] ?? null, 'customer');
         $out['warehouse_id'] = filled($in['warehouse'] ?? null) ? $this->idOf(Warehouse::class, $in['warehouse'], 'warehouse') : null;
 
         $out['lines'] = array_map(fn ($l) => is_array($l) ? [
-            ...$l,
+            ...$noIds($l),
             'product_id' => $this->idOf(Product::class, $l['product'] ?? null, 'lines'),
             'batch_id' => filled($l['lot'] ?? null) ? $this->idOf(Batch::class, $l['lot'], 'lines') : null,
         ] : $l, array_values((array) ($in['lines'] ?? [])));
 
         $out['gifts'] = array_map(fn ($g) => is_array($g) ? [
-            ...$g,
+            ...$noIds($g),
             'product_id' => $this->idOf(Product::class, $g['product'] ?? null, 'gifts'),
             'against_product_id' => filled($g['against'] ?? null) ? $this->idOf(Product::class, $g['against'], 'gifts') : null,
         ] : $g, array_values((array) ($in['gifts'] ?? [])));
 
         $out['deposits'] = array_map(fn ($d) => is_array($d) ? [
-            ...$d,
+            ...$noIds($d),
             'account_id' => $this->idOf(Account::class, $d['account'] ?? null, 'deposits'),
             // ⭐ টাকা নেওয়ার পদ্ধতি — ঐচ্ছিক, ওয়েবের মতোই ([[DirectSaleOptions::depositMethods()]])
             'payment_method_id' => filled($d['method'] ?? null) ? $this->idOf(PaymentMethod::class, $d['method'], 'deposits') : null,
