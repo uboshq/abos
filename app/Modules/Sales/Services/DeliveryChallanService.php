@@ -730,6 +730,24 @@ final class DeliveryChallanService
             return;
         }
 
+        /*
+         * ⭐ নতুন নিয়মের কাগজ — মালিক, ৭ অক্টোবর ২০২৬ ([[FarePayment]])। ⓘ "এখনই দিলাম" হলে পূর্ণাঙ্গ খরচ ভাউচার
+         * (বাছা খাত থেকে, Main Counter থেকে নয়); "পরে দেব" হলে নিচের পুরনো দেনার পথ (Dr ৫২১৭ / Cr ২১১৬ বাহকের নামে)।
+         * ⛔ পরে-দেব কাগজে বাহক না থাকলে থামা — নইলে নিচের পথ টাকাটা প্রধান টিল থেকে কাটত, ঠিক যেটা মালিক বন্ধ করতে বললেন।
+         * ⓘ `fare_rule` null মানে পুরনো কাগজ — নিচের পথ হুবহু আগের মতো।
+         */
+        if ($challan->fare_rule === FarePayment::RULE) {
+            if ($challan->fare_status === FarePayment::NOW) {
+                app(FarePayment::class)->payOnConfirm($challan);
+
+                return;
+            }
+
+            if ($challan->carrier_id === null) {
+                throw ValidationException::withMessages(['carrier_id' => __('sales::fare.later_needs_carrier')]);
+            }
+        }
+
         $expense = StandardChart::find(StandardChart::VEHICLE_HIRE);
 
         /*
@@ -1124,6 +1142,9 @@ final class DeliveryChallanService
                 documentNo: $paperNo,
             );
         }
+
+        // ⭐ এখনই-দেওয়া ভাড়ার ভাউচারও বাতিল — নিজের উল্টো সারিতে (মালিক, ৭ অক্টোবর ২০২৬; [[FarePayment::undo()]])
+        app(FarePayment::class)->undo($challan, $reason, $date->toDateString(), $paperNo);
 
         /*
          * মাল ফেরে যে লট থেকে বেরিয়েছিল সেই লটেই।

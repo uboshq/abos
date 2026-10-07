@@ -172,6 +172,20 @@ class DeliveryChallan extends Model implements Drillable, ShowsItselfForSigning
     }
 
     /**
+     * ⭐ ভাড়ার ভাউচার (EV, বা পরে দিলে PV) আর টাকার খাত — মালিক, ৭ অক্টোবর ২০২৬ ([[FarePayment]])।
+     * ⓘ ঘরগুলো fillable নয়: কেবল সেবা বসায় (forceFill), অনুরোধের ভর-বসানো দিয়ে নয়।
+     */
+    public function fareVoucher(): BelongsTo
+    {
+        return $this->belongsTo(\App\Modules\Accounts\Models\Voucher::class, 'fare_voucher_id');
+    }
+
+    public function fareAccount(): BelongsTo
+    {
+        return $this->belongsTo(\App\Modules\Accounts\Models\Account::class, 'fare_account_id');
+    }
+
+    /**
      * ⭐ মাল কীভাবে গেল — পুরো তথ্য, এক জায়গায় (মালিক, ২ অক্টোবর ২০২৬: *"Gate Pass e transport driver details nai"*)।
      *
      * ⓘ গেট পাসের কাগজ আর অ্যাপের স্ক্যান-পর্দা দুটোই এখান থেকে পড়ে — তাই চালানে যা বসানো, গেট পাসে হুবহু তা।
