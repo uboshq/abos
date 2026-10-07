@@ -31,6 +31,24 @@ use Illuminate\Support\Facades\DB;
 final class DirectSaleOptions
 {
     /**
+     * ⭐ ভাড়া কে দিলেন — ব্যাংক বা MFS-এ বাছার তালিকা (মালিক, ৭ অক্টোবর ২০২৬; [[FarePayment::stamp()]])। ⓘ নগদে বাছা
+     * যায় না — যিনি লগইন করে আছেন তাঁর টিল থেকেই টাকা বেরোয়।
+     *
+     * @return list<array{id: string, label: string}>
+     */
+    public function farePayers(): array
+    {
+        return \App\Models\User::query()
+            ->whereHas('companies', fn ($q) => $q->whereKey(\App\Core\Support\CompanyContext::id()))
+            ->where('is_active', true)
+            ->orderBy('name')
+            ->get(['id', 'name'])
+            ->map(fn ($u): array => ['id' => (string) $u->id, 'label' => (string) $u->name])
+            ->values()
+            ->all();
+    }
+
+    /**
      * টাকার খাত — নগদ, ব্যাংক, মোবাইল মানি; অন্য শাখার টিল আর অন্যের নগদ বাক্স বাদ।
      *
      * @return list<array{id: string, label: string, parent: string}>

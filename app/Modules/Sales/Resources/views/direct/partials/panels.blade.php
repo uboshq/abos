@@ -179,6 +179,50 @@
                    x-init="seedDriver($el, 'farePaidBy')" :value="farePaidBy">
         </div>
 
+        {{-- ⭐ ভাড়া কোন খাত থেকে, কে দিলেন — মালিক, ৭ অক্টোবর ২০২৬ ([[FarePayment]])। ⓘ ভাড়া আমাদের হলে: এখনই দিলাম
+             (খাত বাধ্যতামূলক, ব্যাংক বা MFS-এ TrxID আর কে দিলেন) বা পরে দেব (বাহকের নামে দেনা)। Main Counter আর নিজে
+             থেকে নয়। ⓘ `moneyAccounts` কাউন্টারের নিজের তালিকা (অন্যের নগদ বাক্স আর অন্য শাখার টিল বাদ)। --}}
+        @php($farePayers = app(\App\Modules\Sales\Services\DirectSaleOptions::class)->farePayers())
+        <div class="sm:col-span-3" x-show="farePaidBy === 'us' || farePaidBy === 'us_add_to_bill'"
+             x-data="{ fareWhen: @js((string) old('fare_when', 'now')), fareAccount: @js((string) old('fare_account_id', '')),
+                       get fareByBank() { const a = moneyAccounts.find(x => x.id === this.fareAccount); return a !== undefined && a.parent !== '1101'; } }">
+            <span class="mb-1 block text-2xs text-(--color-ink-muted)">{{ __('sales::fare.when') }}</span>
+            <div class="ds-seg" role="radiogroup">
+                <button type="button" @click="fareWhen = 'now'" :class="fareWhen === 'now' ? 'is-on' : ''">{{ __('sales::fare.now') }}</button>
+                <button type="button" @click="fareWhen = 'later'" :class="fareWhen === 'later' ? 'is-on' : ''">{{ __('sales::fare.later') }}</button>
+            </div>
+            <input type="hidden" name="fare_when" :value="fareWhen">
+
+            <div class="mt-2 grid gap-2 sm:grid-cols-3" x-show="fareWhen === 'now'">
+                <label class="block">
+                    <span class="mb-1 block text-2xs text-(--color-ink-muted)">{{ __('sales::fare.account') }}</span>
+                    <select name="fare_account_id" x-model="fareAccount" :disabled="fareWhen !== 'now'"
+                            class="h-(--spacing-field-compact) w-full rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-2 text-2xs">
+                        <option value="">{{ __('sales::fare.pick_account') }}</option>
+                        <template x-for="a in moneyAccounts" :key="a.id">
+                            <option :value="a.id" x-text="a.label" :selected="a.id === fareAccount"></option>
+                        </template>
+                    </select>
+                </label>
+                <label class="block" x-show="fareByBank">
+                    <span class="mb-1 block text-2xs text-(--color-ink-muted)">{{ __('sales::fare.reference') }}</span>
+                    <input type="text" name="fare_reference" maxlength="64" value="{{ old('fare_reference') }}" :disabled="! fareByBank || fareWhen !== 'now'"
+                           class="num h-(--spacing-field-compact) w-full rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-2 text-2xs">
+                </label>
+                <label class="block">
+                    <span class="mb-1 block text-2xs text-(--color-ink-muted)">{{ __('sales::fare.payer') }}</span>
+                    <span class="block text-2xs" x-show="! fareByBank">{{ auth()->user()?->name }} · {{ __('sales::fare.payer_cash_is_you') }}</span>
+                    <select name="fare_payer_id" x-show="fareByBank" :disabled="! fareByBank || fareWhen !== 'now'"
+                            class="h-(--spacing-field-compact) w-full rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-2 text-2xs">
+                        @foreach ($farePayers as $payer)
+                            <option value="{{ $payer['id'] }}" @selected((string) old('fare_payer_id', (string) auth()->id()) === $payer['id'])>{{ $payer['label'] }}</option>
+                        @endforeach
+                    </select>
+                </label>
+            </div>
+            <p class="mt-1 text-2xs text-(--color-ink-muted)" x-show="fareWhen === 'later'">{{ __('sales::fare.later_hint') }}</p>
+        </div>
+
         {{-- ⓘ পুরনো "পরিবহন লাগবে না" চেকবক্স উঠে গেছে — গাড়ি "ক্রেতার নিজের" বা "নেই" থেকেই বোঝা যায় (af) --}}
         <input type="hidden" name="own_transport" :value="ownTransport">
 

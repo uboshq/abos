@@ -200,6 +200,15 @@ final class DirectSaleRules
             'fare_paid_by' => ['nullable', 'in:us,us_add_to_bill,customer,none'],
 
             /*
+             * ⭐ ভাড়া কোন খাত থেকে, কে দিলেন — মালিক, ৭ অক্টোবর ২০২৬ ([[FarePayment::stamp()]])। ⓘ এখানে কেবল আকার;
+             * আসল নিয়ম (খাত বাধ্যতামূলক, নিজের টিল, TrxID, পরে দিলে বাহক) সেবায় — ফোন আর ভবিষ্যতের দরজাও সেখান দিয়েই।
+             */
+            'fare_when' => ['nullable', 'in:now,later'],
+            'fare_account_id' => ['nullable', 'integer'],
+            'fare_reference' => ['nullable', 'string', 'max:64'],
+            'fare_payer_id' => ['nullable', 'integer'],
+
+            /*
              * কাউন্টারে নেওয়া টাকার বিবরণ — অঙ্কটা আগে থেকেই ছিল।
              *
              * নগদ ছাড়া অন্য কিছুতে (চেক, বিকাশ) নম্বর ছাড়া টাকাটা আর

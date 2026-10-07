@@ -2001,6 +2001,15 @@ final class DirectSaleService
             'deposit_ref' => ($data['deposit_ref'] ?? '') ?: null,
         ]);
 
+        /*
+         * ⭐ ভাড়া কোন খাত থেকে, কে দিলেন — মালিক, ৭ অক্টোবর ২০২৬ ([[FarePayment]])। ⓘ পর্দা ঘরগুলো পাঠালে নতুন নিয়ম:
+         * চালান পাকা হলে পূর্ণাঙ্গ খরচ ভাউচার (বা পরে দিলে বাহকের দেনা), Main Counter আর নিজে থেকে নয়। ⓘ না পাঠালে
+         * (পুরনো ফোনের অ্যাপ) আগের পথ, হুবহু — ফোনের দরজা নিজের ধাপে।
+         */
+        if (array_key_exists('fare_when', $data) || array_key_exists('fare_account_id', $data)) {
+            app(FarePayment::class)->stamp($challan->fresh(), $data);
+        }
+
         // ফ্রি পরিমাণ ও লাইনের ছাড় — ক্রম ধরে, কারণ লাইনগুলো ওই ক্রমেই বসেছে
         foreach ($challan->lines()->orderBy('line_no')->get() as $index => $line) {
             $line->update([
