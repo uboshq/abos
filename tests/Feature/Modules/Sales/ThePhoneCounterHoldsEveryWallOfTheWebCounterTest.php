@@ -230,6 +230,17 @@ final class ThePhoneCounterHoldsEveryWallOfTheWebCounterTest extends TestCase
             ->catalogue($this->warehouse, 1, (int) $this->product->id)->first();
         $this->assertSame((string) $web->available, $full['available'], '⛔ ফোন আর ওয়েব আলাদা মজুদ বলছে।');
         $this->assertSame('LOT-PHONE', $full['lots'][0]['no']);
+        $this->assertNotNull($full['lots'][0]['qty'], 'মজুদের চাবিতেও লটের পরিমাণ নেই।');
+
+        // ⛔ প্রস্তুতি-উত্তরেও একই নিয়ম — চাবি ছাড়া লটের পরিমাণ নয় (সমন্বয়কের অ্যাপ-অডিট, ৭ অক্টোবর ২০২৬); একই মানুষ চাবি পেলে পান
+        $pid = (string) $this->product->public_id;
+        $this->assertNotNull($this->getJson('/api/v1/sales/direct/setup')->json('lots')[$pid][0]['qty'], 'চাবিসহ প্রস্তুতিতে পরিমাণ নেই।');
+        $this->seller->revokePermissionTo('inventory.stock.view');
+        app(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
+        Sanctum::actingAs($this->seller->fresh(), [AuthController::APP]);
+        $lot = $this->getJson('/api/v1/sales/direct/setup')->assertOk()->json('lots')[$pid][0];
+        $this->assertNull($lot['qty'], '⛔ মজুদের চাবি ছাড়া প্রস্তুতি-উত্তরে লটের পরিমাণ গেল।');
+        $this->assertSame((string) $this->lot->public_id, $lot['id'], 'লট বাছার ঘর চাবি ছাড়াও থাকা চাই।');
 
         $this->assertSame(
             array_values(array_filter(explode('|', (string) __('sales::field.cancel_reasons')))),

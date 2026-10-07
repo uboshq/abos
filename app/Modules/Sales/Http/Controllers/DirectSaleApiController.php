@@ -57,6 +57,13 @@ class DirectSaleApiController extends Controller implements HasMiddleware
     {
         $warehouse = $this->warehouse((string) $request->query('warehouse', ''));
 
+        /*
+         * ⛔ লটের পরিমাণ কেবল মজুদ দেখার চাবিতে — "দাম দেখুন"-এর একই নিয়ম ([[price()]]; সমন্বয়কের অ্যাপ-অডিট, ৭ অক্টোবর
+         * ২০২৬: এখানে কেবল কাউন্টারের চাবি দেখা হত, তাই চাবিহীন কাউন্টার-ব্যবহারকারী প্রতিটা লটের মজুদ পেতেন)। লট, নম্বর
+         * আর মেয়াদ যায় — বিলে লট বাছতে লাগে; কত আছে তা নয়।
+         */
+        $seesStock = (bool) $request->user()?->can('inventory.stock.view');
+
         $lots = [];
         foreach ($this->options->lots($warehouse) as $productId => $rows) {
             $product = Product::query()->find((int) $productId);
@@ -68,7 +75,7 @@ class DirectSaleApiController extends Controller implements HasMiddleware
                 'id' => (string) ($ids[(int) $lot['id']] ?? ''),
                 'no' => $lot['no'],
                 'expiry' => $lot['expiry'],
-                'qty' => $lot['qty'],
+                'qty' => $seesStock ? $lot['qty'] : null,
             ], $rows);
         }
 
