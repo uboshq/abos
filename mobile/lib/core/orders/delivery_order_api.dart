@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../api_client/api_client.dart';
 import '../approvals/approvals_api.dart';
 import '../records/money.dart';
+import '../records/customer_record.dart';
 
 /// ডেলিভারি অর্ডার (DO) — `/sales/delivery-orders` (0.4.8, মালিকের বিক্রয়-ধারা §২ক-খ)।
 ///
@@ -112,7 +113,7 @@ class DeliveryOrder {
         id: json['id']?.toString() ?? '',
         no: json['no']?.toString() ?? '—',
         date: json['date']?.toString(),
-        customer: (json['customer'] is Map ? json['customer']['name'] : null)?.toString(),
+        customer: json['customer'] is Map ? withPointOrNull(json['customer']['name']?.toString(), json['customer']['point']) : null,
         status: json['status']?.toString() ?? '',
         statusLabel: json['status_label']?.toString() ?? json['status']?.toString() ?? '',
         total: Money.valueOrZero(json['total']),

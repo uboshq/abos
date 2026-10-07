@@ -78,7 +78,7 @@ class RejectedOrderSummary {
       final customerId = draft.customerId;
       final items = draft.lines;
       final customerName =
-          CustomerRecord.byId(customerId)?.name ?? 'অজানা গ্রাহক';
+          CustomerRecord.byId(customerId)?.label ?? 'অজানা গ্রাহক';
 
       return RejectedOrderSummary(
         customerName: customerName,

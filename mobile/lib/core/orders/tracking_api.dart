@@ -2,6 +2,7 @@ import 'dart:ui' show Color;
 
 import '../api_client/api_client.dart';
 import '../records/money.dart';
+import '../records/customer_record.dart';
 
 /// ডেলিভারি ট্র্যাকিং — `GET /sales/tracking`, `GET /sales/tracking/{kind}/{id}` (0.4.6)।
 ///
@@ -47,7 +48,7 @@ class TrackedSale {
         id: json['id']?.toString() ?? '',
         no: json['no']?.toString() ?? '—',
         date: json['date']?.toString(),
-        customer: json['customer']?.toString(),
+        customer: withPointOrNull(json['customer']?.toString(), json['customer_point']),
         total: Money.valueOrZero(json['total']),
         step: json['step']?.toString() ?? '',
         billed: json['billed'] == true,

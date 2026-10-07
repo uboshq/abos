@@ -1,5 +1,6 @@
 import '../api_client/api_client.dart';
 import '../records/money.dart';
+import '../records/customer_record.dart';
 
 /// ⭐ টাকা আদায়, প্রিন্সিপালের তালিকা আর ক্রয়ের তালিকা — কেবল পড়া (মালিক, ৬ অক্টোবর ২০২৬: "অ্যাপে payment received,
 /// principal list আর purchase list দরকার")।
@@ -31,7 +32,7 @@ class MoneyInRow {
         id: j['id']?.toString() ?? '',
         no: j['no']?.toString() ?? '',
         date: j['date']?.toString(),
-        customer: j['customer']?.toString() ?? '',
+        customer: withPoint(j['customer']?.toString() ?? '', j['customer_point']),
         account: j['account']?.toString() ?? '',
         method: j['method']?.toString() ?? 'other',
         amount: Money.valueOrZero(j['amount']),

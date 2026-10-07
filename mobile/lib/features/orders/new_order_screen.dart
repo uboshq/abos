@@ -383,7 +383,7 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
               Text(
                 customer == null
                     ? 'গ্রাহক বাছুন'
-                    : [customer.name, if (customer.address != null) customer.address!].join(' · '),
+                    : [customer.label, if (customer.address != null) customer.address!].join(' · '),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
@@ -912,7 +912,7 @@ class _CustomerPickerSheetState extends State<_CustomerPickerSheet> {
         final customer = filtered[index];
         final due = CustomerDueRecord.forCustomer(customer.id);
         return ListTile(
-          title: Text(customer.name),
+          title: Text(customer.label),
           subtitle: customer.phone == null ? null : Text(customer.phone!),
           trailing: due == null
               ? null

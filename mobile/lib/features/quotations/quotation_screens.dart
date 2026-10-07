@@ -233,10 +233,10 @@ class _NewQuotationScreenState extends State<NewQuotationScreen> {
             child: ListTile(
               key: const Key('quotation-customer'),
               leading: const Icon(Icons.storefront_outlined),
-              title: Text(_customer?.name ?? 'দোকান বাছুন'),
+              title: Text(_customer?.label ?? 'দোকান বাছুন'),
               trailing: const Icon(Icons.chevron_right),
               onTap: () async {
-                final picked = await _pick<CustomerRecord>('দোকান বাছুন', _customers, (c) => c.name);
+                final picked = await _pick<CustomerRecord>('দোকান বাছুন', _customers, (c) => c.label);
                 if (picked != null) setState(() => _customer = picked);
               },
             ),

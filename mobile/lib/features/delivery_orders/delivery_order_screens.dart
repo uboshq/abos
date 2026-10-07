@@ -241,10 +241,10 @@ class _NewDeliveryOrderScreenState extends State<NewDeliveryOrderScreen> {
             child: ListTile(
               key: const ValueKey('do-customer'),
               leading: const Icon(Icons.storefront_outlined),
-              title: Text(_customer?.name ?? 'ডিলার বাছুন'),
+              title: Text(_customer?.label ?? 'ডিলার বাছুন'),
               trailing: const Icon(Icons.chevron_right),
               onTap: () async {
-                final picked = await _pick<CustomerRecord>('ডিলার বাছুন', _customers, (c) => c.name);
+                final picked = await _pick<CustomerRecord>('ডিলার বাছুন', _customers, (c) => c.label);
                 if (picked != null) setState(() => _customer = picked);
               },
             ),

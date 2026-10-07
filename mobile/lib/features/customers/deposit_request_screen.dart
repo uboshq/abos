@@ -186,7 +186,7 @@ class _DepositRequestScreenState extends State<DepositRequestScreen> {
         padding: const EdgeInsets.all(AppSpacing.md),
         children: [
           if (customer != null)
-            Text(customer.name, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+            Text(customer.label, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
           const Text('হিসাবরক্ষক স্লিপ মিলিয়ে গ্রহণ করলে তবেই বকেয়া কমবে।',
               style: TextStyle(color: AppColors.onSurfaceMuted)),
           const SizedBox(height: AppSpacing.md),

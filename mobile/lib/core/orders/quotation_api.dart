@@ -1,5 +1,6 @@
 import '../api_client/api_client.dart';
 import '../records/money.dart';
+import '../records/customer_record.dart';
 
 /// ⭐ উদ্ধৃতি (কোটেশন) — `/sales/quotations` (সমন্বয়কের ক্রম "ঘ", ৫ অক্টোবর ২০২৬)।
 ///
@@ -59,7 +60,7 @@ class Quotation {
         no: json['no']?.toString() ?? '—',
         date: json['date']?.toString(),
         validUntil: json['valid_until']?.toString(),
-        customer: (json['customer'] is Map ? json['customer']['name'] : null)?.toString(),
+        customer: json['customer'] is Map ? withPointOrNull(json['customer']['name']?.toString(), json['customer']['point']) : null,
         status: json['status']?.toString() ?? '',
         statusLabel: json['status_label']?.toString() ?? json['status']?.toString() ?? '',
         total: Money.valueOrZero(json['total']),

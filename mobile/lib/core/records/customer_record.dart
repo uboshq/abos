@@ -1,6 +1,16 @@
 import '../sync_engine/reference_cache.dart';
 import 'money.dart';
 
+/// ⭐ গ্রাহকের নামের পাশে পয়েন্ট — মালিক, ৭ অক্টোবর ২০২৬: *"app e sob jaygay customer er pase obosoi point dibe nahoy
+/// cina zayna buja zayna"*। সার্ভার প্রতিটা দরজায় পয়েন্ট পাঠায় (`Customer::pointName()`); পয়েন্ট না থাকলে বা পুরনো
+/// সার্ভারে নামটাই থাকে। এক নিয়ম, সব পর্দায়: "নাম · পয়েন্ট"।
+String withPoint(String name, Object? point) {
+  final p = point?.toString().trim() ?? '';
+  return p.isEmpty || name.contains(' · $p') ? name : '$name · $p';
+}
+
+String? withPointOrNull(String? name, Object? point) => name == null ? null : withPoint(name, point);
+
 /// One shop, as `CustomerSync` actually sends it.
 ///
 /// <p><b>Why this file exists at all</b> — see `reference_cache.dart`'s own
@@ -49,6 +59,9 @@ class CustomerRecord {
   /// the shop sits on no point; an older server sends nothing, which reads the
   /// same, so nothing is added to the row.
   String? get pointName => _text('pointName');
+
+  /// নাম আর পয়েন্ট একসাথে — যেখানে নাম দেখায় ([withPoint]); খোঁজা আর সাজানো [name]-এ
+  String get label => withPoint(name, pointName);
 
   String? get customerType => _text('customerType');
 
