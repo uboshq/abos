@@ -122,6 +122,25 @@ final class ThePhoneWritesVouchersLikeTheWebTest extends TestCase
         $this->assertTrue($voucher->fresh()->isDraft(), '⛔ সই ছাড়া ফোনের পাকা করার দরজায় পাকা হলো।');
     }
 
+    /** ⭐ এক পথ — ওয়েবে সম্পাদনা করে "সংরক্ষণ ও পোস্ট" করলেও সই ঝুলে থাকা ভাউচার খসড়াই থাকে ([[VoucherWriter::update()]]) */
+    public function test_editing_a_held_voucher_on_the_web_still_waits_for_the_signature(): void
+    {
+        $flow = ApprovalFlow::create(['company_id' => $this->company->id, 'module' => 'accounts', 'action' => 'journal', 'is_active' => true]);
+        ApprovalFlowStep::create(['approval_flow_id' => $flow->id, 'level' => 1, 'approver_type' => 'user', 'approver_id' => User::factory()->create()->id]);
+        app(SettingsService::class)->set(VoucherService::MAKER_CHECKER, false);
+        $writer = $this->person(['accounts.voucher.create', 'accounts.voucher.update', 'accounts.report']);
+
+        $out = $this->push($writer, [$this->change('e-1', $this->journal())]);
+        $voucher = Voucher::query()->where('public_id', $out[0]['entityId'])->firstOrFail();
+        $this->assertTrue($voucher->isDraft(), 'প্রস্তুতিটাই ভুল — সই ছাড়াই পাকা।');
+
+        $this->app['auth']->forgetGuards();
+        $this->actingAs($writer->fresh());
+        $this->put(route('accounts.voucher.update', $voucher), [...$this->journal(), 'narration' => 'আবার লেখা'])->assertSessionHasNoErrors();
+        $this->assertTrue($voucher->fresh()->isDraft(), '⛔ সম্পাদনা করে সংরক্ষণেই সই এড়িয়ে পাকা হলো।');
+        $this->assertSame('আবার লেখা', $voucher->fresh()->narration);
+    }
+
     /** ওয়েবের অনুরোধের নিয়ম — প্রতিটা খারাপ সারি একা ফেরে, ভালোটা বসে */
     public function test_the_webs_rules_refuse_each_bad_row_alone(): void
     {

@@ -7,7 +7,6 @@ namespace App\Modules\Accounts\Http\Controllers;
 use App\Core\Concerns\GrandTotals;
 use App\Core\Concerns\SortsLists;
 use App\Core\Contracts\PartyOpenBills;
-use App\Core\Engines\Attachment\AttachmentEngine;
 use App\Core\Engines\Drill\DrillResolver;
 use App\Core\Services\MenuBuilder;
 use App\Core\Services\PartyRegistry;
@@ -22,12 +21,12 @@ use App\Modules\Accounts\Services\AccountsFacts;
 use App\Modules\Accounts\Services\DepositFormOptions;
 use App\Modules\Accounts\Services\VoucherApproval;
 use App\Modules\Accounts\Services\VoucherService;
+use App\Modules\Accounts\Services\VoucherWriter;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
@@ -49,7 +48,7 @@ class VoucherController extends Controller implements HasMiddleware
     public function __construct(
         private readonly VoucherService $vouchers,
         private readonly MenuBuilder $menu,
-        private readonly VoucherApproval $approvals,
+        private readonly VoucherWriter $writer,
     ) {}
 
     public static function middleware(): array
@@ -353,64 +352,16 @@ class VoucherController extends Controller implements HasMiddleware
          * বার্তাটা যা বলে বাস্তবেও তাই। "খসড়া রাখুন" চাপলে খসড়াই
          * থাকে -- ওটা তখন ইচ্ছাকৃত, আর ইচ্ছাকৃতটা লুকানো নয়।
          */
-        [$voucher, $waiting] = DB::transaction(function () use ($request, $data, $type) {
-            // ⭐ হাতে লেখা — ধরনের ছাঁচ খাটে (ভাউচারের পরিকল্পনা, অংশ ৩ক, ৭ অক্টোবর ২০২৬)
-            $voucher = $this->vouchers->create($data, $this->linesFrom($request, $type), byHand: true);
-
-            /*
-             * ⭐ কোন চালানের ঘাড়ে কতটা — খরচ ভাউচারের ট্যাগ।
-             *
-             * ⓘ একই লেনদেনে, ভাউচারের সাথেই। ⚠️ আলাদা করলে পোস্টিং
-             * আটকালে ভাউচারটা ফিরে যেত কিন্তু ট্যাগগুলো পড়ে থাকত —
-             * অনাথ সারি, যেগুলোর ভাউচারই নেই।
-             */
-            $this->vouchers->replaceBillShares($voucher, $data['bill_shares'] ?? [], $data['alloc_basis'] ?? 'qty');
-
-            /*
-             * সংযুক্তি — বিলের ছবি বা স্ক্যান।
-             *
-             * ⛔ ইঞ্জিনটা নিজের ব্যতিক্রম ছোড়ে (আকার, ধরন, ভাঙা ছবি),
-             * আর সেটা এখানে ধরা হয় **না**: লেনদেনটা তখন ফিরে যায়, আর
-             * ব্যবহারকারী কারণটা দেখেন। ⚠️ চুপচাপ গিলে ফেললে ভাউচারটা
-             * সেভ হত, ছবিটা হত না, আর কেউ জানত না।
-             */
-            if ($request->hasFile('attachment')) {
-                app(AttachmentEngine::class)->store(
-                    $request->file('attachment'),
-                    'accounts',
-                    Voucher::class,
-                    $voucher->id,
-                );
-            }
-
-            if ($request->boolean('save_as_draft')) {
-                return [$voucher, false];
-            }
-
-            /*
-             * অনুমোদন লাগলে খসড়াই থাকে, আর অনুরোধটা এখানেই যায়।
-             *
-             * ---- কেন এখানেও, শুধু post() রুটে নয় (৩ সেপ্টেম্বর ২০২৬) ----
-             * উপরের নিয়ম অনুযায়ী "সেভ করলেই পোস্ট" -- অর্থাৎ খরচ লেখার
-             * **স্বাভাবিক পথটা এই লাইনটাই**, `post()` রুট নয় (ওটায়
-             * যাওয়া হয় কেবল খসড়া পরে বসাতে)। এখানে শর্তটা না বসালে
-             * অনুমোদনের ছক বসানো থাকা সত্ত্বেও রোজকার খরচগুলো নীরবে
-             * সরাসরি খতিয়ানে বসে যেত, আর ছকটা কেবল একটা কম-ব্যবহৃত
-             * দরজাতেই কাজ করত -- সবচেয়ে খারাপ ধরনের আধা-পাহারা।
-             */
-            if ($this->approvals->stopping($voucher) !== null) {
-                return [$voucher, true];
-            }
-
-            // ⭐ লেখক ≠ পাকাকারী (অংশ ৩গ) — লেখকের "সংরক্ষণ ও পোস্ট" খসড়া হয়ে থাকে, পাকা করেন অন্য কেউ
-            if ($this->vouchers->writerMayNotPost($voucher)) {
-                return [$voucher, 'checker'];
-            }
-
-            $this->vouchers->post($voucher, byHand: true);
-
-            return [$voucher, false];
-        });
+        /*
+         * ⭐ এক পথ — ওয়েব আর ফোন একই লেখকের হাতে ([[VoucherWriter::store()]]; মালিক, ৭ অক্টোবর ২০২৬: ফোনে সব ভাউচার, ওয়েবের
+         * একই নিয়মে)। ধাপ আর তাদের কারণ সেখানে: ছাঁচ (৩ক), বিলের ভাগ, সংযুক্তি, খসড়া, সই, লেখক ≠ পাকাকারী (৩গ), পাকা — এক লেনদেনে।
+         */
+        [$voucher, $waiting] = $this->writer->store(
+            $data,
+            $this->linesFrom($request, $type),
+            $request->boolean('save_as_draft'),
+            $request->hasFile('attachment') ? $request->file('attachment') : null,
+        );
 
         return redirect()
             ->route('accounts.voucher.show', $voucher)
@@ -450,42 +401,14 @@ class VoucherController extends Controller implements HasMiddleware
 
         $validated = $request->validated();
 
-        $this->vouchers->update($voucher, $validated, $this->linesFrom($request, $voucher->type), byHand: true);
-
-        /*
-         * ⓘ সম্পাদনাতেও একই — নাহলে টিক তুলে নিলে সারিটা থেকে যেত,
-         * আর ঐ মালের দামে একটা খরচ বসে থাকত যেটা কেউ আর চায় না।
-         */
-        $this->vouchers->replaceBillShares(
+        // ⭐ একই লেখকের হাতে, এক লেনদেনে ([[VoucherWriter::update()]]) — সম্পাদনার পরেও সই আর লেখক ≠ পাকাকারীর একই শর্ত
+        $waiting = $this->writer->update(
             $voucher,
-            $validated['bill_shares'] ?? [],
-            $validated['alloc_basis'] ?? 'qty',
+            $validated,
+            $this->linesFrom($request, $voucher->type),
+            $request->boolean('save_as_draft'),
+            $request->hasFile('attachment') ? $request->file('attachment') : null,
         );
-
-        if ($request->hasFile('attachment')) {
-            app(AttachmentEngine::class)->store(
-                $request->file('attachment'),
-                'accounts',
-                Voucher::class,
-                $voucher->id,
-            );
-        }
-
-        $waiting = false;
-
-        if (! $request->boolean('save_as_draft')) {
-            $fresh = $voucher->fresh();
-
-            // সম্পাদনার পরেও একই শর্ত -- নাহলে একবার খসড়া রেখে তারপর
-            // সম্পাদনা করে পোস্ট করলেই পাহারাটা এড়ানো যেত।
-            if ($this->approvals->stopping($fresh) !== null) {
-                $waiting = true;
-            } elseif ($this->vouchers->writerMayNotPost($fresh)) {
-                $waiting = 'checker';
-            } else {
-                $this->vouchers->post($fresh, byHand: true);
-            }
-        }
 
         return redirect()
             ->route('accounts.voucher.show', $voucher)
@@ -514,24 +437,8 @@ class VoucherController extends Controller implements HasMiddleware
          * ⓘ নম্বর ছাপের বাইরে ([[Voucher::fingerprintIgnores()]]) কেবল
          * পোস্ট হওয়া পর্যন্ত; তারপর ওটা আর নড়ে না।
          */
-        if ($voucher->isDraft() && filled($validated['instrument_no'] ?? null)) {
-            $voucher->forceFill(['instrument_no' => trim($validated['instrument_no'])])->save();
-        }
-
-        /*
-         * অনুমোদন লাগে কি না — পোস্টের **আগে**, খতিয়ানে কিছু লেখার আগে।
-         *
-         * ── কেন এখানে, সার্ভিসের ভিতরে নয় ───────────────────────────
-         * `VoucherService::post()` ডাকা হয় সিডার, ইমপোর্ট আর অন্য
-         * সার্ভিস থেকেও — ওখানে বসালে ডেমো ডেটা বসানোই আটকে যেত, আর
-         * ইমপোর্ট করা দুই হাজার সারি অনুমোদনের অপেক্ষায় ঝুলে থাকত।
-         * অনুমোদন **মানুষের সিদ্ধান্তের** উপর বসে, যন্ত্রের উপর নয়,
-         * আর মানুষ আসে এই দরজা দিয়ে।
-         *
-         * ⚠️ নিচের `post()` আর তার ক্রম অস্পৃশ্য — এটা কেবল একটা শর্ত
-         * তার আগে, যা `null` হলে সবকিছু আজকের মতোই চলে।
-         */
-        $stopping = $this->approvals->stopping($voucher);
+        // ⭐ লেনদেন নম্বর কেবল খসড়ায়, তালায় আবার পড়ে, তারপর সই, তারপর সেবা — একই লেখকের হাতে ([[VoucherWriter::post()]])
+        $stopping = $this->writer->post($voucher, $validated['instrument_no'] ?? null);
 
         if ($stopping !== null) {
             return back()->with('warning', $stopping->status === Approval::REJECTED
@@ -541,8 +448,6 @@ class VoucherController extends Controller implements HasMiddleware
                 ])
                 : __('accounts::message.voucher_approval_pending', ['no' => $voucher->document_no]));
         }
-
-        $this->vouchers->post($voucher, byHand: true);
 
         return back()->with('saved', __('accounts::message.voucher_posted', ['no' => $voucher->document_no]));
     }
@@ -598,27 +503,8 @@ class VoucherController extends Controller implements HasMiddleware
      */
     private function linesFrom(VoucherRequest $request, string $type): array
     {
-        if ($type === Voucher::JOURNAL) {
-            return array_values((array) $request->input('lines', []));
-        }
-
-        return $this->vouchers->twoLineEntry(
-            $type,
-            (int) $request->input('from_account_id'),
-            (int) $request->input('to_account_id'),
-            (string) $request->input('amount'),
-            $request->input('narration'),
-
-            /*
-             * ⓘ খালি ঘর মানে চার্জ নেই, `0` নয় — আর পার্থক্যটা কাজের:
-             * `null` পেলে [[VoucherService::twoLineEntry()]] আগের মতো
-             * দুইটা সারিই বানায়, তাই চার্জহীন লক্ষ লক্ষ ভাউচারের পথ
-             * এক চুলও বদলায় না।
-             */
-            ($request->input('charge_amount') ?? '') !== ''
-                ? (string) $request->input('charge_amount')
-                : null,
-        );
+        // ⓘ ফোনের সিঙ্কের একই রূপান্তর ([[VoucherWriter::linesFor()]]) — খালি চার্জের ঘর মানে চার্জ নেই, `0` নয়
+        return $this->writer->linesFor($type, $request->all());
     }
 
     /**
