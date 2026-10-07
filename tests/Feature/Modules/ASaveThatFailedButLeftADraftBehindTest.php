@@ -85,14 +85,16 @@ class ASaveThatFailedButLeftADraftBehindTest extends TestCase
 
     private function other(): Account
     {
-        return Account::query()->postable()->active()
+        // ⓘ টাকার খাত নয় — হাতে লেখা ভাউচারের ছাঁচ (ভাউচারের পরিকল্পনা ৩ক, ৭ অক্টোবর ২০২৬)
+        return Account::query()->postable()->active()->ofType([Account::EXPENSE])->whereNull('money_kind')
             ->whereKeyNot($this->bank()->id)->orderBy('code')->firstOrFail();
     }
 
     /** @param  array<string, mixed>  $extra */
     private function submit(array $extra = []): TestResponse
     {
-        return $this->post(route('accounts.voucher.store', 'journal'), array_merge([
+        // ⭐ ব্যাংক ছোঁয়া কাগজ এখন খরচের ভাউচার — হাতে লেখা জাবেদায় ব্যাংক চলে না (ভাউচারের পরিকল্পনা ৩ক, ৭ অক্টোবর ২০২৬)
+        return $this->post(route('accounts.voucher.store', 'expense'), array_merge([
             /*
              * ধরনটা ফর্মেও যায়, কেবল ঠিকানায় নয়।
              *
@@ -100,13 +102,12 @@ class ASaveThatFailedButLeftADraftBehindTest extends TestCase
              * খাটবে -- জাবেদায় সারির তালিকা, বাকিগুলোয় দুই খাত আর
              * একটা অঙ্ক।
              */
-            'type' => Voucher::JOURNAL,
+            'type' => Voucher::EXPENSE,
             'trx_date' => now()->toDateString(),
-            'narration' => 'ব্যাংক ছুঁয়ে একটা জাবেদা',
-            'lines' => [
-                ['account_id' => $this->bank()->id, 'debit' => '5000', 'credit' => '0'],
-                ['account_id' => $this->other()->id, 'debit' => '0', 'credit' => '5000'],
-            ],
+            'narration' => 'ব্যাংক থেকে একটা খরচ',
+            'amount' => '5000',
+            'to_account_id' => $this->other()->id,
+            'from_account_id' => $this->bank()->id,
         ], $extra));
     }
 
@@ -158,7 +159,7 @@ class ASaveThatFailedButLeftADraftBehindTest extends TestCase
          * মূলধন থেকে, আজকের তারিখে। ⚠️ শুধু এই পরীক্ষায় — বাকিগুলো ভাউচার
          * গোনে, আর এখানে কেবল পোস্ট হলো কি না দেখা হয়।
          */
-        $this->putMoneyIn($this->other(), '10000', now()->toDateString());
+        $this->putMoneyIn($this->bank(), '10000', now()->toDateString());
 
         $this->submit(['instrument_no' => 'TRX-QA-0001'])
             ->assertSessionHasNoErrors();

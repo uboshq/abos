@@ -351,7 +351,8 @@ class VoucherController extends Controller implements HasMiddleware
          * থাকে -- ওটা তখন ইচ্ছাকৃত, আর ইচ্ছাকৃতটা লুকানো নয়।
          */
         [$voucher, $waiting] = DB::transaction(function () use ($request, $data, $type) {
-            $voucher = $this->vouchers->create($data, $this->linesFrom($request, $type));
+            // ⭐ হাতে লেখা — ধরনের ছাঁচ খাটে (ভাউচারের পরিকল্পনা, অংশ ৩ক, ৭ অক্টোবর ২০২৬)
+            $voucher = $this->vouchers->create($data, $this->linesFrom($request, $type), byHand: true);
 
             /*
              * ⭐ কোন চালানের ঘাড়ে কতটা — খরচ ভাউচারের ট্যাগ।
@@ -446,7 +447,7 @@ class VoucherController extends Controller implements HasMiddleware
 
         $validated = $request->validated();
 
-        $this->vouchers->update($voucher, $validated, $this->linesFrom($request, $voucher->type));
+        $this->vouchers->update($voucher, $validated, $this->linesFrom($request, $voucher->type), byHand: true);
 
         /*
          * ⓘ সম্পাদনাতেও একই — নাহলে টিক তুলে নিলে সারিটা থেকে যেত,

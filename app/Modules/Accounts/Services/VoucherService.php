@@ -55,12 +55,16 @@ final class VoucherService
      * @param  array<string, mixed>  $data
      * @param  list<array<string, mixed>>  $lines
      */
-    public function create(array $data, array $lines): Voucher
+    public function create(array $data, array $lines, bool $byHand = false): Voucher
     {
-        return DB::transaction(function () use ($data, $lines) {
+        return DB::transaction(function () use ($data, $lines, $byHand) {
             $type = $this->assertType($data['type'] ?? null);
 
             $this->assertNoChequeReceived($type, $data['instrument'] ?? null);
+            // ⓘ ধরনের ছাঁচ কেবল হাতে লেখা ভাউচারে — ব্যবস্থার নিজের পোস্টিং (নগদ গণনার ঘাটতি, আন্তঃকোম্পানি, ভাড়ার জমা…) তার সেবার ছাঁচ মানে
+            if ($byHand) {
+                $this->assertTemplate($type, $lines, [$data['party_type'] ?? null, $data['party_id'] ?? null]);
+            }
 
             $trxDate = Carbon::parse($data['trx_date']);
             $year = $this->resolveFinancialYear($trxDate);
@@ -288,12 +292,19 @@ final class VoucherService
      * @param  array<string, mixed>  $data
      * @param  list<array<string, mixed>>  $lines
      */
-    public function update(Voucher $voucher, array $data, array $lines): Voucher
+    public function update(Voucher $voucher, array $data, array $lines, bool $byHand = false): Voucher
     {
         $this->assertEditable($voucher);
 
         $this->assertNoChequeReceived($voucher->type,
             array_key_exists('instrument', $data) ? $data['instrument'] : $voucher->instrument);
+
+        if ($byHand) {
+            $this->assertTemplate((string) $voucher->type, $lines, [
+                array_key_exists('party_type', $data) ? $data['party_type'] : $voucher->party_type,
+                array_key_exists('party_id', $data) ? $data['party_id'] : $voucher->party_id,
+            ]);
+        }
 
         return DB::transaction(fn () => $this->writeHeaderAndLines($voucher, $data, $lines));
     }
@@ -1557,6 +1568,114 @@ final class VoucherService
                 'instrument' => __('accounts::validation.cheque_only_through_register'),
             ]);
         }
+    }
+
+    /**
+     * ⭐ ধরনের ছাঁচ — ভাউচারের আন্তর্জাতিক পরিকল্পনা, অংশ ৩ক (৭ অক্টোবর ২০২৬)।
+     *
+     *   জাবেদা  — নগদ/ব্যাংক/মোবাইল খাত নয় (টাকা নড়লে সেটা কনট্রা, আদায় বা পরিশোধ)
+     *   কনট্রা  — কেবল নগদ/ব্যাংক/মোবাইল খাত (নিজের টাকা এক জায়গা থেকে আরেক জায়গায়); ছাড় কেবল বদলির চার্জের খাত
+     *   আদায়   — টাকা ঢোকে: অন্তত একটা টাকার খাতে ডেবিট, কোনো টাকার খাতে ক্রেডিট নয়
+     *   পরিশোধ  — টাকা বেরোয়: অন্তত একটা টাকার খাতে ক্রেডিট, কোনো টাকার খাতে ডেবিট নয়
+     *   খরচ    — টাকা বেরোয় **অথবা** দেনা তৈরি হয় (পর্দার "বাকিতে" দল; পক্ষ বাধ্যতামূলক, [[VoucherRequest]]), টাকার খাতে
+     *            ডেবিট কোনোটাতেই নয় (fe, ৭ অক্টোবর ২০২৬: বিকল্প ক১ — বাকিতে সেবার খরচ আন্তর্জাতিক নিয়মে সরবরাহকারীর বিল)
+     *
+     * ⭐ আর জাবেদায় পাওনা ও দেনার নিয়ন্ত্রণ-খাতের প্রতিটা সারি কারো নামে — সারিতে বা মাথায় পক্ষ (sub-ledger নিয়ম, fe, ৭
+     * অক্টোবর ২০২৬)। ⛔ নাহলে মালিকহীন দেনা বা পাওনা বসে: প্রদেয়ের তালিকায় টাকা আছে, কাকে দিতে হবে লেখা নেই।
+     *
+     * ⛔ ভুল ধরনে নগদ-প্রবাহ আর রিপোর্ট ভুল হয়। ⓘ কেবল **হাতে লেখা** নতুন ও খসড়া ভাউচারে ([[create()]], [[update()]] `byHand`,
+     * ভাউচারের পর্দা থেকে) — আজকের পাকা ভাউচার আর তার সংশোধন যেমন আছে থাকে; ব্যবস্থার নিজের পোস্টিং (নগদ গণনার ঘাটতি,
+     * আন্তঃকোম্পানি, ভাড়ার জমা থেকে কাটা, চার্জসহ বদলি) তার সেবার নিজের ছাঁচে।
+     *
+     * @param  list<array<string, mixed>>  $lines
+     * @param  array{0: mixed, 1: mixed}  $headerParty  মাথার পক্ষ (`party_type`, `party_id`) — জাবেদার সারি পক্ষ না বললে এটা নামে
+     */
+    private function assertTemplate(string $type, array $lines, array $headerParty = [null, null]): void
+    {
+        $ids = collect($lines)->pluck('account_id')->filter()->map(fn ($id) => (int) $id)->unique()->values()->all();
+        $money = Account::query()->whereKey($ids)->whereNotNull('money_kind')->pluck('id')->map(fn ($id) => (int) $id)->all();
+
+        // ⓘ বদলির চার্জ — কনট্রার নিজের খরচ-সারি (ব্যাংক ৫২১০, মোবাইল ৫২১১), পর্দার "চার্জ" ঘর থেকে
+        $charges = Account::query()->whereKey($ids)->whereIn('code', [StandardChart::BANK_CHARGES, StandardChart::MFS_CHARGES])
+            ->pluck('id')->map(fn ($id) => (int) $id)->all();
+        $otherThanCharge = false;
+
+        $moneyIn = '0';
+        $moneyOut = '0';
+        $nonMoney = false;
+
+        foreach ($lines as $line) {
+            $id = (int) ($line['account_id'] ?? 0);
+
+            if ($id === 0) {
+                continue;
+            }
+
+            if (in_array($id, $money, true)) {
+                $moneyIn = bcadd($moneyIn, $this->money($line['debit'] ?? 0), 4);
+                $moneyOut = bcadd($moneyOut, $this->money($line['credit'] ?? 0), 4);
+            } else {
+                $nonMoney = true;
+                $otherThanCharge = $otherThanCharge || ! in_array($id, $charges, true);
+            }
+        }
+
+        // ⓘ দেনার পরিবারে ক্রেডিট — খরচের "বাকিতে" পথ (ক১)
+        $owed = $this->controlAccounts([StandardChart::PAYABLE_GROUP]);
+        $owesSomeone = collect($lines)->contains(fn (array $l) => in_array((int) ($l['account_id'] ?? 0), $owed, true)
+            && bccomp($this->money($l['credit'] ?? 0), '0', 4) > 0);
+
+        $broken = match ($type) {
+            Voucher::JOURNAL => $money !== [] ? 'journal' : null,
+            Voucher::CONTRA => $nonMoney && $otherThanCharge ? 'contra' : null,
+            Voucher::RECEIPT => bccomp($moneyIn, '0', 4) <= 0 || bccomp($moneyOut, '0', 4) > 0 ? 'receipt' : null,
+            Voucher::PAYMENT => bccomp($moneyOut, '0', 4) <= 0 || bccomp($moneyIn, '0', 4) > 0 ? 'payment' : null,
+            Voucher::EXPENSE => bccomp($moneyIn, '0', 4) > 0 || (bccomp($moneyOut, '0', 4) <= 0 && ! $owesSomeone) ? 'expense' : null,
+            default => null,
+        };
+
+        if ($broken !== null) {
+            throw ValidationException::withMessages(['lines' => __('accounts::voucher.template_'.$broken)]);
+        }
+
+        if ($type !== Voucher::JOURNAL) {
+            return;
+        }
+
+        $control = $this->controlAccounts([StandardChart::RECEIVABLE, StandardChart::PAYABLE_GROUP]);
+        $headerHasParty = filled($headerParty[0] ?? null) && filled($headerParty[1] ?? null);
+
+        foreach ($lines as $line) {
+            $id = (int) ($line['account_id'] ?? 0);
+
+            if ($headerHasParty || ! in_array($id, $control, true)
+                || (filled($line['party_type'] ?? null) && filled($line['party_id'] ?? null))) {
+                continue;
+            }
+
+            throw ValidationException::withMessages(['lines' => __('accounts::voucher.template_control_needs_party', [
+                'account' => (string) Account::query()->whereKey($id)->first()?->label(),
+            ])]);
+        }
+    }
+
+    /**
+     * পাওনা/দেনার নিয়ন্ত্রণ-খাতের পরিবার — id-গুলো ([[accountsThatHoldAParty()]]-এর মতো পুরো বংশ)।
+     *
+     * @param  list<string>  $codes
+     * @return list<int>
+     */
+    private function controlAccounts(array $codes): array
+    {
+        $ids = [];
+
+        foreach ($codes as $code) {
+            foreach (StandardChart::find($code)?->selfAndDescendants() ?? [] as $account) {
+                $ids[] = (int) $account->id;
+            }
+        }
+
+        return $ids;
     }
 
     /**

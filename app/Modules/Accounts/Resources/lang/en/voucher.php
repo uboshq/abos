@@ -21,4 +21,10 @@ return [
         'purchase' => 'Purchase',
         'sales' => 'Sales',
     ],
+    'template_journal' => 'A journal takes no cash, bank or mobile account. When money moves use a contra, receipt or payment voucher.',
+    'template_contra' => 'A contra takes only cash, bank or mobile accounts. With other accounts use a receipt, payment or journal.',
+    'template_receipt' => 'A receipt brings money in: a cash/bank account must be debited and none credited.',
+    'template_payment' => 'A payment takes money out: a cash/bank account must be credited and none debited.',
+    'template_expense' => 'An expense either takes money out (credit a cash/bank account) or creates a payable (credit a payable account, with a party), and debits no cash/bank account.',
+    'template_control_needs_party' => ':account is held per party. Give the line a party (who owes us, or whom we owe).',
 ];
