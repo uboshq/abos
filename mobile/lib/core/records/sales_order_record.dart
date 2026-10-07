@@ -36,7 +36,7 @@ class SalesOrderRecord {
   /// The name if this phone has the shop cached, the bare id if not: an order
   /// can outlive a customer dropping out of the local catalogue.
   String get customerName =>
-      CustomerRecord.byId(customerId)?.name ?? 'অজানা গ্রাহক';
+      CustomerRecord.byId(customerId)?.label ?? 'অজানা গ্রাহক';
 
   DateTime? get trxDate => _date('trxDate');
 

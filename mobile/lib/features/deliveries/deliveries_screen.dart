@@ -7,6 +7,7 @@ import '../../core/records/money.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../scan/receive_screen.dart';
+import '../../core/records/customer_record.dart';
 
 /// ⭐ আজকের ডেলিভারি — মালিকের বিক্রয় পরিকল্পনা (সংস্করণ ২) ধাপ ৭, ৬ অক্টোবর ২০২৬।
 ///
@@ -41,7 +42,7 @@ class DeliveryRunRow {
   factory DeliveryRunRow.fromJson(Map<String, dynamic> j) => DeliveryRunRow(
         token: j['token']?.toString() ?? '',
         documentNo: j['document_no']?.toString() ?? '',
-        customer: j['customer']?.toString() ?? '',
+        customer: withPoint(j['customer']?.toString() ?? '', j['customer_point']),
         saleNo: j['sale_no']?.toString(),
         phone: j['phone']?.toString() ?? '',
         address: j['address']?.toString() ?? '',

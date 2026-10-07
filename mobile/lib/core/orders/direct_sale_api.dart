@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart' show visibleForTesting;
 
 import '../api_client/api_client.dart';
 import '../widgets/confirm_overview_sheet.dart';
+import '../records/customer_record.dart';
 
 /// ফোনের কাউন্টার — `/sales/direct` (0.4.9, মালিক ৪ অক্টোবর ২০২৬: *"direct sales er counter banaw app e"*)।
 ///
@@ -309,7 +310,7 @@ class CounterDraftSummary {
       CounterDraftSummary(
         id: json['id']?.toString() ?? '',
         no: json['no']?.toString() ?? '',
-        customer: json['customer']?.toString() ?? '',
+        customer: withPoint(json['customer']?.toString() ?? '', json['customer_point']),
         total: json['total']?.toString() ?? '0',
         date: json['date']?.toString(),
         lines: (json['lines'] as num?)?.toInt() ?? 0,
@@ -335,7 +336,7 @@ class CounterDraft {
         id: json['id']?.toString() ?? '',
         no: json['no']?.toString() ?? '',
         customerId: json['customer']?.toString() ?? '',
-        customerName: json['customerName']?.toString() ?? '',
+        customerName: withPoint(json['customerName']?.toString() ?? '', json['customerPoint']),
         lines: [
           for (final l in (json['lines'] as List?) ?? const [])
             if (l is Map)

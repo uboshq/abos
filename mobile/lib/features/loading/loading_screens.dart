@@ -5,6 +5,7 @@ import '../../core/api_client/network_errors.dart';
 import '../../core/records/money.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
+import '../../core/records/customer_record.dart';
 
 /// ⭐ লোডিং শিট — মালিকের বিক্রয় পরিকল্পনা (সংস্করণ ২) ধাপ ৪, ৬ অক্টোবর ২০২৬: "পণ্য ধরে কত তুলতে হবে, চালান ধরে কার জন্য"।
 ///
@@ -120,7 +121,7 @@ class LoadingChallan {
 
   factory LoadingChallan.fromJson(Map<String, dynamic> j) => LoadingChallan(
         documentNo: j['document_no']?.toString() ?? '',
-        customer: j['customer']?.toString() ?? '',
+        customer: withPoint(j['customer']?.toString() ?? '', j['customer_point']),
         packed: j['packed'] == true,
         lines: [
           for (final l in (j['lines'] as List?) ?? const [])

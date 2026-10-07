@@ -91,7 +91,8 @@ class ScannedPaper {
       saleNo: json['sale_no']?.toString(),
       date: json['trx_date']?.toString(),
       stage: json['stage']?.toString() ?? '',
-      customer: [customer['name'], customer['code']]
+      // ⭐ নাম · পয়েন্ট · কোড — মালিক, ৭ অক্টোবর ২০২৬ ("customer er pase obosoi point")
+      customer: [customer['name'], customer['point'], customer['code']]
           .where((v) => v != null && v.toString().isNotEmpty)
           .join(' · '),
       lines: [

@@ -50,6 +50,13 @@ class ApprovalsApi {
   /// the server's (`ApprovalEngine::approve(..., ?string $remarks)` against
   /// `reject(..., string $remarks)`), kept rather than smoothed over: saying
   /// yes needs no explanation, saying no does.
+  /// ⭐ সইয়ের আগে বিস্তারিত — `GET /approvals/{id}/sheet` (মালিক, ৭ অক্টোবর ২০২৬: "approval e kono kichui details
+  /// dekhay na")। কাগজ নিজে যা বলে: ঘর আর মান, সারি, যোগফল — সবই লেখা, ফোন কেবল আঁকে।
+  static Future<ApprovalSheet> sheet(String id) async {
+    final response = await ApiClient.dio.get<Map<String, dynamic>>('/approvals/$id/sheet');
+    return ApprovalSheet.fromJson(response.data ?? const {});
+  }
+
   static Future<void> approve(String id, {String? remarks}) async {
     await ApiClient.dio.post<Map<String, dynamic>>(
       '/approvals/$id/approve',
@@ -73,6 +80,58 @@ class ApprovalsApi {
       '/approvals/$id/reject',
       data: {'remarks': reason},
     );
+  }
+}
+
+class ApprovalSheet {
+  const ApprovalSheet({this.facts = const [], this.columns = const [], this.rows = const [], this.totals = const {}});
+
+  /// ঘর আর মান — তারিখ, পক্ষ, মাধ্যম, বর্ণনা …
+  final List<(String, String)> facts;
+
+  /// কলাম: key, নাম, অঙ্ক কি না
+  final List<(String, String, bool)> columns;
+  final List<Map<String, String?>> rows;
+  final Map<String, String> totals;
+
+  factory ApprovalSheet.fromJson(Map<String, dynamic> json) => ApprovalSheet(
+        facts: [
+          for (final f in (json['facts'] as List?) ?? const [])
+            if (f is Map) (f['label']?.toString() ?? '', f['value']?.toString() ?? ''),
+        ],
+        columns: [
+          for (final c in (json['columns'] as List?) ?? const [])
+            if (c is Map) (c['key']?.toString() ?? '', c['label']?.toString() ?? '', c['numeric'] == true),
+        ],
+        rows: [
+          for (final r in (json['rows'] as List?) ?? const [])
+            if (r is Map) {for (final e in r.entries) e.key.toString(): e.value?.toString()},
+        ],
+        totals: {
+          for (final e in ((json['totals'] as Map?) ?? const {}).entries) e.key.toString(): e.value?.toString() ?? '',
+        },
+      );
+
+  /// এক সারি এক লাইনে — মালিকের নিয়ম, টেবিল নয়: "খাত · পক্ষ · বর্ণনা — ডেবিট ৳…"
+  String lineOf(Map<String, String?> row) {
+    final words = [
+      for (final c in columns)
+        if (!c.$3 && (row[c.$1] ?? '').trim().isNotEmpty) row[c.$1]!.trim(),
+    ];
+    final money = [
+      for (final c in columns)
+        if (c.$3 && (row[c.$1] ?? '').trim().isNotEmpty) '${c.$2} ${row[c.$1]!.trim()}',
+    ];
+    return [words.join(' · '), money.join(' · ')].where((s) => s.isNotEmpty).join(' — ');
+  }
+
+  /// যোগফল এক লাইনে: "মোট — ডেবিট … · ক্রেডিট …"
+  String? get totalLine {
+    final parts = [
+      for (final c in columns)
+        if (totals[c.$1] != null && totals[c.$1]!.trim().isNotEmpty) '${c.$2} ${totals[c.$1]}',
+    ];
+    return parts.isEmpty ? null : 'মোট — ${parts.join(' · ')}';
   }
 }
 

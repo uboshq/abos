@@ -1049,11 +1049,11 @@ class _CounterScreenState extends State<CounterScreen> {
             child: ListTile(
               key: const ValueKey('counter-customer'),
               leading: const Icon(Icons.storefront_outlined),
-              title: Text(_customer?.name ?? 'ক্রেতা বাছুন'),
+              title: Text(_customer?.label ?? 'ক্রেতা বাছুন'),
               trailing: const Icon(Icons.chevron_right),
               onTap: () async {
                 final picked = await _pick<CustomerRecord>(
-                    'ক্রেতা বাছুন', _customers, (c) => c.name);
+                    'ক্রেতা বাছুন', _customers, (c) => c.label);
                 if (picked == null) return;
                 setState(() => _customer = picked);
                 // ⓘ পণ্য আগে বাছা থাকলে (নতুন সারি) — দরটা এই ক্রেতার তালিকা থেকে

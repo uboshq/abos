@@ -1,5 +1,6 @@
 import '../api_client/api_client.dart';
 import '../widgets/confirm_overview_sheet.dart';
+import '../records/customer_record.dart';
 
 /// ⭐ ফোনে বিক্রি ফেরত — `/sales/returns` (মালিক, ৪ অক্টোবর ২০২৬; কাউন্টারের "ফেরত" বোতাম)।
 ///
@@ -45,7 +46,7 @@ class ReturnSetup {
               ReturnInvoice(
                 id: i['id'].toString(),
                 no: i['no']?.toString() ?? '',
-                customer: i['customer']?.toString() ?? '',
+                customer: withPoint(i['customer']?.toString() ?? '', i['customer_point']),
                 total: i['total']?.toString() ?? '0',
                 date: i['date']?.toString(),
               ),
@@ -84,7 +85,7 @@ class ReturnBill {
   factory ReturnBill.fromJson(Map<String, dynamic> json) => ReturnBill(
         id: json['id']?.toString() ?? '',
         no: json['no']?.toString() ?? '',
-        customerName: json['customerName']?.toString() ?? '',
+        customerName: withPoint(json['customerName']?.toString() ?? '', json['customerPoint']),
         lines: [
           for (final l in (json['lines'] as List?) ?? const [])
             if (l is Map)

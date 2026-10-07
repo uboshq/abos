@@ -58,6 +58,19 @@ class ApprovalRecord {
         'Payment' => 'পরিশোধ',
         'StockTransfer' => 'মজুদ স্থানান্তর',
         'Payroll' => 'বেতন',
+        // ⓘ বাকিগুলোও বাংলায় — মালিক কেবল বাংলা পড়েন; আগে "Voucher" ইংরেজিতে দেখাত
+        'Voucher' => 'ভাউচার',
+        'DeliveryOrder' => 'ডেলিভারি অর্ডার',
+        'SalesOrder' => 'বিক্রয় আদেশ',
+        'SalesInvoice' => 'বিক্রয় বিল',
+        'DeliveryChallan' => 'চালান',
+        'SalesQuotation' => 'দরপত্র',
+        'SalesReturn' => 'বিক্রয় ফেরত',
+        'Collection' => 'আদায়',
+        'ExpenseClaim' => 'খরচের দাবি',
+        'Note' => 'নোট',
+        'MoneyTransfer' => 'টাকা স্থানান্তর',
+        'Promotion' => 'অফার',
         _ => documentType.isEmpty ? 'নথি' : documentType,
       };
 

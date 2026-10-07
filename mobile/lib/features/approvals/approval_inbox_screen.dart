@@ -28,6 +28,7 @@ class ApprovalInboxScreen extends StatefulWidget {
     this.loadPending,
     this.approve,
     this.reject,
+    this.loadSheet,
   });
 
   /// Seams, so this screen can be driven in a test without a server.
@@ -38,6 +39,9 @@ class ApprovalInboxScreen extends StatefulWidget {
   final Future<ApprovalPage> Function()? loadPending;
   final Future<void> Function(String id, String? remarks)? approve;
   final Future<void> Function(String id, String remarks)? reject;
+
+  /// সইয়ের আগে বিস্তারিত — না দিলে সার্ভার ([[ApprovalsApi.sheet]])
+  final Future<ApprovalSheet> Function(String id)? loadSheet;
 
   @override
   State<ApprovalInboxScreen> createState() => _ApprovalInboxScreenState();
@@ -218,6 +222,8 @@ class _ApprovalInboxScreenState extends State<ApprovalInboxScreen> {
                   else
                     ...rows.map((approval) => _ApprovalCard(
                           approval: approval,
+                          onDetails: () => _ApprovalDetails.show(context, approval,
+                              (widget.loadSheet ?? ApprovalsApi.sheet)(approval.id)),
                           onApprove:
                               _busy ? null : () => _confirmApprove(approval),
                           onReject:
@@ -238,9 +244,11 @@ class _ApprovalCard extends StatelessWidget {
     required this.approval,
     required this.onApprove,
     required this.onReject,
+    required this.onDetails,
   });
 
   final ApprovalRecord approval;
+  final VoidCallback onDetails;
   final VoidCallback? onApprove;
   final VoidCallback? onReject;
 
@@ -293,6 +301,16 @@ class _ApprovalCard extends StatelessWidget {
               Text(approval.summary!),
             ],
             const SizedBox(height: AppSpacing.sm),
+            // ⭐ বিস্তারিত — সারি, খাত, বর্ণনা, যোগফল, সই দেওয়ার আগে (মালিক, ৭ অক্টোবর ২০২৬)
+            Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton.icon(
+                key: Key('approval-details-${approval.id}'),
+                onPressed: onDetails,
+                icon: const Icon(Icons.list_alt_outlined, size: 18),
+                label: const Text('বিস্তারিত'),
+              ),
+            ),
             Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
@@ -411,4 +429,63 @@ class _RemarksDialogState extends State<_RemarksDialog> {
       ],
     );
   }
+}
+
+/// ⭐ সইয়ের আগে কাগজের বিস্তারিত — কাগজ নিজে যা বলে ([[ApprovalSheet]]); এক লাইনে এক জিনিস, টেবিল নয় (মালিকের নিয়ম)।
+class _ApprovalDetails extends StatelessWidget {
+  const _ApprovalDetails({required this.approval, required this.sheet});
+
+  final ApprovalRecord approval;
+  final Future<ApprovalSheet> sheet;
+
+  static Future<void> show(BuildContext context, ApprovalRecord approval, Future<ApprovalSheet> sheet) =>
+      showModalBottomSheet<void>(
+        context: context,
+        isScrollControlled: true,
+        builder: (_) => _ApprovalDetails(approval: approval, sheet: sheet),
+      );
+
+  @override
+  Widget build(BuildContext context) => SafeArea(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.85),
+          child: FutureBuilder<ApprovalSheet>(
+            future: sheet,
+            builder: (context, snap) {
+              final title = [approval.documentTypeLabel, if (approval.documentNo != null) approval.documentNo!].join(' · ');
+              if (snap.connectionState != ConnectionState.done) {
+                return const Padding(padding: EdgeInsets.all(AppSpacing.lg), child: LinearProgressIndicator());
+              }
+              if (snap.hasError) {
+                return Padding(
+                  padding: const EdgeInsets.all(AppSpacing.md),
+                  child: Text(errorMessageFor(snap.error!, fallback: 'বিস্তারিত আনা গেল না।'),
+                      style: const TextStyle(color: AppColors.danger)),
+                );
+              }
+              final s = snap.data!;
+              return ListView(
+                shrinkWrap: true,
+                padding: const EdgeInsets.all(AppSpacing.md),
+                children: [
+                  Text(title, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
+                  if (approval.amount != null) Text(Money.taka(approval.amount), style: const TextStyle(fontWeight: FontWeight.w700)),
+                  const SizedBox(height: AppSpacing.sm),
+                  for (final (label, value) in s.facts) Text('$label: $value'),
+                  if (s.rows.isNotEmpty) ...[
+                    const Divider(),
+                    for (final row in s.rows) Padding(
+                      padding: const EdgeInsets.only(bottom: AppSpacing.xs),
+                      child: Text(s.lineOf(row)),
+                    ),
+                  ],
+                  if (s.totalLine != null) Text(s.totalLine!, style: const TextStyle(fontWeight: FontWeight.w700)),
+                  if (s.facts.isEmpty && s.rows.isEmpty)
+                    const Text('এই কাগজের বিস্তারিত ফোনে নেই — "কাগজ দেখুন" চেপে পুরো কাগজটা দেখুন।'),
+                ],
+              );
+            },
+          ),
+        ),
+      );
 }
