@@ -50,8 +50,10 @@ final class PartyLedger
      * সারিগুলো পুরনো থেকে নতুন; পর্দা চাইলে পরে উল্টায়।
      *
      * @param  Builder<LedgerEntry>  $base  এই পার্টির সব সারি (শাখা আর কোম্পানির দেয়াল আগেই বসানো)
+     * @param  int|null  $page  ডাকনেওয়ালার নিজের পাতা — ⓘ নাহলে পাতা আসে চলতি অনুরোধের `?page=` থেকে (পাতা-ভাগকারী
+     *                          `$request`-কে নয়, অ্যাপের অনুরোধকে পড়ে) — যেমন ফোন, যার পাতা ১ খাতার শেষ পাতা
      */
-    public static function page(Builder $base, Request $request, bool $openAtEnd = false): LengthAwarePaginator
+    public static function page(Builder $base, Request $request, bool $openAtEnd = false, ?int $page = null): LengthAwarePaginator
     {
         /* ⭐ সম্পাদিত কাগজের আগের সারি আর তার উল্টো সারি বাদ — জের, প্রারম্ভিক আর দেখানো সারি, তিনটা থেকেই ([[withoutUndoneEdits()]]) */
         $base = self::withoutUndoneEdits(clone $base);
@@ -63,8 +65,7 @@ final class PartyLedger
          * ⓘ `?page=` না থাকলে তবেই; পাতা বদলের তীর নিজের পাতা পাঠায়। ⛔ আগে প্রথম পাতায় সবচেয়ে পুরনো ৫০টা আসত, আর
          * আজকের বিল দ্বিতীয় পাতায় লুকিয়ে থাকত (বিক্রয় ধারার পরীক্ষা)।
          */
-        $page = null;
-        if ($openAtEnd && ! $request->has('page')) {
+        if ($page === null && $openAtEnd && ! $request->has('page')) {
             $page = max(1, (int) ceil(self::filter(clone $base, $request)->reorder()->count() / self::PER_PAGE));
         }
 

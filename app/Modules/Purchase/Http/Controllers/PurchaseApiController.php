@@ -73,20 +73,33 @@ class PurchaseApiController extends Controller implements HasMiddleware
         ]);
     }
 
-    /** `GET /principals/{public_id}?page=` — মাথা আর খাতা, নতুন আগে (ওয়েবের পাতার মতো) */
+    /**
+     * `GET /principals/{public_id}?page=` — মাথা আর খাতা, নতুন আগে।
+     *
+     * ⛔ ফোনের পাতা ১ = খাতার শেষ পাতা (ওয়েবের খোলা পাতার একই সারি), পাতা ২ = তার আগের ৫০টা … (পুরো ERP অডিট, ৬ অক্টোবর ২০২৬, ফোন ⚠️১৮)। আগে পাতা ১-এ
+     * খাতার সবচেয়ে পুরনো ৫০টা আসত, কেবল নিজের ভেতরে উল্টানো — আজকের বিল শেষ পাতায় লুকিয়ে থাকত। এখন ওয়েবের খাতার মতো শেষ
+     * পাতা থেকে খোলে ([[PartyLedger::page()]], `openAtEnd`), আর ফোনের পাতা পেছনের দিকে গোনা হয়; জের প্রতিটা সারিতে খাতার
+     * সব সারি থেকে, আগের মতোই। ⓘ ফোনের পুরনো সংস্করণও পাতা ১ পাঠায় — বদল লাগে না।
+     */
     public function principal(Request $request, string $id): JsonResponse
     {
         $supplier = Supplier::query()->inViewedBranch()->onlySuppliers()->withPayableInView()->where('suppliers.public_id', $id)->firstOrFail();
 
-        $entries = PartyLedger::page(
-            ViewedBranch::narrow(LedgerEntry::query(), 'ledger_entries.branch_id')
-                ->forParty(Supplier::drillSourceType(), $supplier->id)->orderBy('trx_date')->orderBy('id'),
-            $request,
-        );
+        $ledger = ViewedBranch::narrow(LedgerEntry::query(), 'ledger_entries.branch_id')
+            ->forParty(Supplier::drillSourceType(), $supplier->id)->orderBy('trx_date')->orderBy('id');
+        $asked = max(1, (int) PhoneInput::text($request, 'page', '1'));
+        $query = array_diff_key($request->query(), ['page' => true]);
+
+        $entries = PartyLedger::page(clone $ledger, $request->duplicate($query), openAtEnd: true);
+        $last = $entries->lastPage();
+        if ($asked > 1) {
+            $entries = $asked > $last ? null
+                : PartyLedger::page(clone $ledger, $request->duplicate($query), page: $last - $asked + 1);
+        }
 
         return response()->json([
             ...$this->principalRow($supplier),
-            'entries' => $entries->getCollection()->reverse()->values()->map(fn (LedgerEntry $e) => [
+            'entries' => collect($entries?->items() ?? [])->reverse()->values()->map(fn (LedgerEntry $e) => [
                 'date' => $e->trx_date?->toDateString(),
                 'no' => (string) ($e->document_no ?? ''),
                 'narration' => (string) ($e->narration ?? ''),
@@ -95,7 +108,8 @@ class PurchaseApiController extends Controller implements HasMiddleware
                 // ⓘ সরবরাহকারীর জের — ক্রেডিট − ডেবিট (ধনাত্মক = দিতে হবে), ওয়েবের পাতার `running_balance`-এর একই অর্থ
                 'balance' => Money::round(bcmul((string) $e->net_balance, '-1', 4), 4),
             ]),
-            'next_page' => $entries->hasMorePages() ? $entries->currentPage() + 1 : null,
+            // ⓘ আরও পুরনো থাকলে তবেই — খাতার আগের পাতা
+            'next_page' => $entries !== null && $entries->currentPage() > 1 ? $asked + 1 : null,
         ]);
     }
 
