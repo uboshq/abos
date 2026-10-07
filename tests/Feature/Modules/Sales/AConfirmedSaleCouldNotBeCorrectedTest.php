@@ -237,6 +237,42 @@ final class AConfirmedSaleCouldNotBeCorrectedTest extends TestCase
         $this->assertSame(0, bccomp((string) $mine['qty'], '1', 4), '⛔ সম্পাদনায় নিজের নেওয়া ১টা লটে ফেরত গোনা হয়নি।');
     }
 
+    /**
+     * ⭐ সই-ছক থাকলে সম্পাদনা সইয়ের অপেক্ষায় যায়, উল্টে যায় না — মালিক, ৭ অক্টোবর ২০২৬ ("এডিট করতে গিয়ে আটকে গেছে")।
+     * ⛔ আগে নতুন চালান সইয়ে গেলেই "সম্পাদনা শেষ হয়নি" — ADI-তে প্রতিটা চালানে সই, তাই কোনো সম্পাদনাই বসত না।
+     * ⓘ সই পড়লে একই নম্বরে নতুন মোটে পাকা।
+     */
+    public function test_an_edit_under_a_challan_signature_waits_and_then_posts_on_the_same_number(): void
+    {
+        $sale = $this->sell('2');
+        $numbers = [$sale->document_no, $this->challanOf($sale)->document_no];
+
+        $company = Company::query()->where('code', 'TDEPOT')->firstOrFail();
+        $signer = User::factory()->create(['current_company_id' => $company->id]);
+        $signer->companies()->attach($company->id, ['is_active' => true]);
+        $flow = \App\Models\ApprovalFlow::query()->create(['company_id' => $company->id, 'module' => 'sales', 'action' => 'challan',
+            'document_type' => '', 'threshold_amount' => null, 'is_active' => true]);
+        \App\Models\ApprovalFlowStep::query()->create(['approval_flow_id' => $flow->id, 'level' => 1,
+            'approver_type' => \App\Models\ApprovalFlowStep::BY_USER, 'approver_id' => $signer->id]);
+        $this->app->forgetInstance(\App\Core\Engines\Approval\ApprovalEngine::class);
+        $this->app->forgetScopedInstances();
+
+        $edited = app(SaleEditor::class)->edit($sale, $this->data, $this->lines('5'));
+
+        $this->assertNotSame(DocumentStatus::CONFIRMED, $edited->status, 'প্রস্তুতিটাই ভুল — সম্পাদনা সইয়ে যায়নি।');
+        $this->assertTrue(DirectSaleService::isHeldForSignature($edited), '⛔ সম্পাদনা সইয়ের অপেক্ষায় নেই — উল্টে গেছে।');
+        $this->assertSame($numbers, [$edited->document_no, $this->challanOf($edited)->document_no], '⛔ সম্পাদনায় নম্বর বদলেছে।');
+
+        $approval = \App\Models\Approval::query()->where('status', \App\Models\Approval::PENDING)->latest('id')->firstOrFail();
+        $this->actingAs($signer);
+        app(\App\Core\Engines\Approval\ApprovalEngine::class)->approve($approval->fresh(), $signer);
+
+        $final = $edited->fresh();
+        $this->assertSame(DocumentStatus::CONFIRMED, $final->status, '⛔ শেষ সইয়ের পরেও সম্পাদিত বিক্রি পাকা হয়নি।');
+        $this->assertSame($numbers[0], $final->document_no);
+        $this->assertSame(0, bccomp('50', (string) $final->total, 4), '⛔ সই পড়ার পর নতুন মোট বসেনি।');
+    }
+
     private function sell(string $qty): SalesInvoice
     {
         return app(DirectSaleService::class)->complete($this->data, $this->lines($qty))['invoice']->fresh();

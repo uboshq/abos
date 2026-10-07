@@ -645,9 +645,11 @@ class DirectSaleController extends Controller implements HasMiddleware
                     ->with('approval_failed', true);
             }
 
+            // ⓘ সই-ছক থাকলে নতুন রূপ সইয়ের অপেক্ষায় ([[SaleEditor::edit()]]) — বার্তা সেটাই বলে
             return redirect()
                 ->route('sales.invoice.show', $edited)
-                ->with('saved', __('sales::message.sale_edited', ['no' => $edited->document_no]));
+                ->with('saved', __($edited->status === \App\Core\Support\DocumentStatus::CONFIRMED
+                    ? 'sales::message.sale_edited' : 'sales::message.sale_edited_awaiting', ['no' => $edited->document_no]));
         }
 
         try {

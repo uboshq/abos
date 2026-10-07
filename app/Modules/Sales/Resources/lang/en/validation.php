@@ -62,6 +62,7 @@ return [
     'edit_no_draft' => 'A confirmed sale does not go back to draft — press "Update".',
     'edit_no_new_money' => 'No new deposit while editing — take money on the collection page.',
     'edit_could_not_finish' => ':no could not be edited — nothing changed.',
+    'edit_awaiting_signature' => 'the new version waits for a signature — it is posted under the same number on the last signature',
     'edited_after_confirm' => ':no edited after confirmation — earlier entries reversed',
     'edited_totals' => 'Total was :before, now :after',
     'unknown_product' => 'That product is not in this company\'s list.',

@@ -135,6 +135,24 @@ final class SaleEditor
             $fresh = $invoice->fresh();
             $freshChallan = $challan->fresh();
 
+            /*
+             * ⭐ সম্পাদনা সইয়ের অপেক্ষায় — মালিক, ৭ অক্টোবর ২০২৬ ("এডিট করতে গিয়ে আটকে গেছে"; ADI-তে প্রতিটা চালানে সই লাগে)।
+             * ⛔ আগে নতুন চালান সইয়ে গেলেই "সম্পাদনা শেষ হয়নি" বলে পুরোটা উল্টাত, তাই সই-ছক থাকা কোম্পানিতে পাকা বিক্রি কখনো
+             * সম্পাদনা করা যেত না। ⓘ আন্তর্জাতিক নিয়মে পাকা কাগজের বদল আবার অনুমোদনে যায়: পুরনোটা উল্টানো থাকে, নতুনটা একই
+             * নম্বরে সইয়ের অপেক্ষায়; শেষ সই পড়লে আগের মতোই পাকা হয় ([[HeldCounterSaleFinisher]])। গেট পাসের আগেই কেবল সম্পাদনা
+             * চলে, তাই মাল তখনো গুদামে।
+             */
+            if ($fresh->status !== DocumentStatus::CONFIRMED
+                && [$fresh->document_no, $freshChallan->document_no, $fresh->sale_no] === $numbers
+                && DirectSaleService::isHeldForSignature($fresh)) {
+                $fresh->auditAction('edited', (string) __('sales::validation.edited_totals', [
+                    'before' => $before,
+                    'after' => (string) $fresh->total,
+                ]).' — '.__('sales::validation.edit_awaiting_signature'));
+
+                return $fresh;
+            }
+
             // ⛔ নিশ্চিত না হয়ে ফিরলে (যেকোনো কারণে খসড়ায় থেকে গেলে) পুরো সম্পাদনা উল্টো — অর্ধেক-উল্টানো বিক্রি নয়
             if ($fresh->status !== DocumentStatus::CONFIRMED || $freshChallan->status !== DocumentStatus::CONFIRMED
                 || [$fresh->document_no, $freshChallan->document_no, $fresh->sale_no] !== $numbers) {

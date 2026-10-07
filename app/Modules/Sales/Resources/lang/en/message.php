@@ -16,6 +16,7 @@ return [
     'delivery_view_only' => 'Sale confirmed — goods not delivered yet. View only; delivery is confirmed on the challan page.',
     'editing_sale_hint' => 'Update reverses the earlier entries and posts the new ones — the invoice and challan keep their numbers.',
     'sale_edited' => ':no updated — earlier entries reversed and posted again, same number.',
+    'sale_edited_awaiting' => ':no edited — the new version waits for a signature and is posted under the same number once signed.',
     'draft_discarded' => 'Draft :no cancelled.',
     'bill_voided' => 'The bill is voided — the reason stays in the audit.',
     'held_sale_finished' => ':no confirmed — the goods are out, and the invoice and deposit are on the books.',
