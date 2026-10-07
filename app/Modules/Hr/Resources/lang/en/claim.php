@@ -57,5 +57,6 @@ return [
     'reason_required' => 'Write the reason.',
     'head_bad' => 'Pick an expense head — a postable, active expense account.',
     'spent_in_future' => 'The spending date cannot be after today.',
+    'no_owner_to_sign' => 'This company does not have exactly one owner (super_admin) role, so nobody can be set to sign the claim. Tell the owner.',
     'head_missing' => 'Account :code is missing from the chart.',
 ];

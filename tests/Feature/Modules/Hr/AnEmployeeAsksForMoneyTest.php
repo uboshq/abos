@@ -92,9 +92,10 @@ final class AnEmployeeAsksForMoneyTest extends TestCase
 
     public function test_an_expense_claim_with_no_signature_flow_waits_for_the_cashier_who_pays_from_his_own_till(): void
     {
-        $claim = $this->submit(ExpenseClaim::EXPENSE, '1200', receipt: UploadedFile::fake()->image('bus.jpg'));
+        // ⓘ ছক নেই — মালিকের সইয়ের অপেক্ষা, তারপর ক্যাশিয়ার ([[AClaimNeverPassesWithoutASignatureTest]], ৭ অক্টোবর ২০২৬)
+        $claim = $this->signed($this->submit(ExpenseClaim::EXPENSE, '1200', receipt: UploadedFile::fake()->image('bus.jpg')));
 
-        $this->assertSame(ExpenseClaim::APPROVED, $claim->status, 'ছক নেই — সাথে সাথে অনুমোদিত');
+        $this->assertSame(ExpenseClaim::APPROVED, $claim->status, 'মালিকের সইয়ে অনুমোদিত');
         $voucher = $claim->paymentVoucher;
         $this->assertNotNull($voucher, '⛔ অনুমোদনের পরে খসড়া ভাউচার হয়নি');
         $this->assertTrue($voucher->isDraft(), '⛔ ক্যাশিয়ারের আগেই টাকা খাতায়');
@@ -115,7 +116,7 @@ final class AnEmployeeAsksForMoneyTest extends TestCase
 
     public function test_an_advance_is_given_in_the_employees_name_and_the_next_expense_is_settled_from_it_first(): void
     {
-        $advance = $this->submit(ExpenseClaim::ADVANCE, '3000');
+        $advance = $this->signed($this->submit(ExpenseClaim::ADVANCE, '3000'));
         $this->actingAs($this->cashier);
         app(VoucherService::class)->post($advance->paymentVoucher);
 
@@ -123,7 +124,7 @@ final class AnEmployeeAsksForMoneyTest extends TestCase
         $this->assertMoney('3000', $this->open(), '⛔ অগ্রিম কর্মীর নামে বসেনি');
 
         // ⓘ ২,০০০-এর খরচ — পুরোটা অগ্রিম থেকে, নগদ লাগে না, সাথে সাথে "টাকা দেওয়া"
-        $first = $this->submit(ExpenseClaim::EXPENSE, '2000');
+        $first = $this->signed($this->submit(ExpenseClaim::EXPENSE, '2000'));
         $this->assertSame(ExpenseClaim::PAID, $first->status, '⛔ অগ্রিম থেকে পুরোটা মিটলেও ক্যাশিয়ারের অপেক্ষা');
         $this->assertMoney('2000', $first->from_advance, 'অগ্রিম থেকে');
         $this->assertNull($first->payment_voucher_id, '⛔ অগ্রিম থাকতেও নগদের খসড়া');
@@ -131,7 +132,7 @@ final class AnEmployeeAsksForMoneyTest extends TestCase
         $this->assertMoney('1000', $this->open(), '⛔ খরচ কর্মীর অগ্রিম থেকে কাটেনি');
 
         // ⓘ ১,৫০০-এর খরচ — ১,০০০ অগ্রিম থেকে, বাকি ৫০০ নগদে
-        $second = $this->submit(ExpenseClaim::EXPENSE, '1500');
+        $second = $this->signed($this->submit(ExpenseClaim::EXPENSE, '1500'));
         $this->assertMoney('1000', $second->from_advance, '⛔ বাকি অগ্রিমের বেশি বা কম কাটা');
         $this->assertSame(ExpenseClaim::APPROVED, $second->status);
         $this->assertMoney('500', $second->paymentVoucher->lines()->sum('debit'), '⛔ নগদের খসড়া বাকিটুকুর নয়');
@@ -166,8 +167,11 @@ final class AnEmployeeAsksForMoneyTest extends TestCase
         // ⛔ একবার দেওয়া দাবির বিপরীতে দ্বিতীয়বার নয়
         $this->assertRefused(fn () => $this->payAgainst($claim->fresh(), '800'), 'against_id', '⛔ দেওয়া দাবির বিপরীতে আবার টাকা দেওয়া গেল');
 
-        // ⓘ অগ্রিমের নিজের ছক — খরচের দাবির ছক অগ্রিমকে আটকায় না (দুইটার আলাদা সীমা)
-        $this->assertSame(ExpenseClaim::APPROVED, $this->submit(ExpenseClaim::ADVANCE, '400')->status, '⛔ অগ্রিম খরচের দাবির ছকে আটকাল');
+        // ⓘ অগ্রিমের নিজের ছক — খরচের দাবির ছক অগ্রিমকে ধরে না (দুইটার আলাদা সীমা); নিজের ছক নেই বলে মালিকের অপেক্ষায়
+        $advance = $this->submit(ExpenseClaim::ADVANCE, '400');
+        $this->assertSame(ExpenseClaim::SUBMITTED, $advance->status);
+        $this->assertSame(ExpenseClaim::ACTION_ADVANCE, Approval::query()->where('approvable_id', $advance->id)
+            ->where('approvable_type', $advance->getMorphClass())->sole()->action, '⛔ অগ্রিম খরচের দাবির ছকে আটকাল');
 
         // ⓘ "না" — ফেরানো, কোনো ভাউচার নয়
         $refused = $this->submit(ExpenseClaim::EXPENSE, '900');
@@ -206,7 +210,7 @@ final class AnEmployeeAsksForMoneyTest extends TestCase
         app(SettingsService::class)->set(PhoneModules::PREFIX.'hr', true);
         $this->getJson(route('api.hr.claim.heads'))->assertOk()->assertJsonFragment(['id' => $this->expense->id]);
         $this->postJson(route('api.hr.claim.store'), $this->data(ExpenseClaim::ADVANCE, '700'))->assertCreated()
-            ->assertJsonPath('kind', ExpenseClaim::ADVANCE)->assertJsonPath('status', ExpenseClaim::APPROVED);
+            ->assertJsonPath('kind', ExpenseClaim::ADVANCE)->assertJsonPath('status', ExpenseClaim::SUBMITTED);
         $this->getJson(route('api.hr.claim.index'))->assertOk()->assertJsonCount(2, 'claims')->assertJsonPath('open_advance', '0.00');
         $this->getJson(route('api.hr.claim.show', $claim->public_id))->assertOk()->assertJsonPath('number', $claim->document_no);
 
@@ -239,6 +243,17 @@ final class AnEmployeeAsksForMoneyTest extends TestCase
         $this->actingAs($this->worker);
         $claim = app(ExpenseClaimService::class)->submit($this->worker, $this->data($kind, $amount), $receipt);
         $this->actingAs($this->owner);
+
+        return $claim->fresh(['paymentVoucher', 'settleVoucher']);
+    }
+
+    /** মালিকের সই — ছক না থাকলে বসা ছকের একমাত্র স্তর ([[ClaimSigner]]) */
+    private function signed(ExpenseClaim $claim): ExpenseClaim
+    {
+        $this->assertSame(ExpenseClaim::SUBMITTED, $claim->status, '⛔ সইয়ের আগেই দাবি এগোল');
+
+        app(ApprovalEngine::class)->approve(Approval::query()->where('approvable_type', $claim->getMorphClass())
+            ->where('approvable_id', $claim->id)->where('status', Approval::PENDING)->sole(), $this->owner);
 
         return $claim->fresh(['paymentVoucher', 'settleVoucher']);
     }

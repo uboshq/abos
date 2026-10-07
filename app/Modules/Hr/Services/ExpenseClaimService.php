@@ -19,6 +19,7 @@ use App\Modules\Accounts\Services\VoucherService;
 use App\Modules\Hr\Models\Employee;
 use App\Modules\Hr\Models\ExpenseClaim;
 use App\Modules\Hr\Support\AdvanceBalance;
+use App\Modules\Hr\Support\ClaimSigner;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -64,7 +65,7 @@ final class ExpenseClaimService
     }
 
     /**
-     * ⭐ অনুরোধ — কর্মী নিজে। সই না লাগলে (ছক নেই বা সীমার নিচে) সাথে সাথে অনুমোদিত।
+     * ⭐ অনুরোধ — কর্মী নিজে। সবসময় সই চায় — ছক না থাকলে মালিকের ([[ClaimSigner]]); কোম্পানির নিজের ছকের সীমার নিচে হলে সাথে সাথে।
      *
      * @param  array<string, mixed>  $data
      */
@@ -112,6 +113,13 @@ final class ExpenseClaimService
             }
         }
 
+        /*
+         * ⛔ সই ছাড়া কখনো নয় — সমন্বয়কের আদেশ (অ্যাপ-অডিট, ৭ অক্টোবর ২০২৬; মালিকের নিয়ম "স্বয়ংক্রিয় অনুমোদন বাদ")।
+         * ⓘ আগে ছক না থাকলে ইঞ্জিন `null` দিত আর দাবি সাথে সাথে অনুমোদিত হত। এখন ছক না থাকলে মালিকের সইয়ের ছক বসে
+         * ([[ClaimSigner]]) — দাবি লেখার আগে, যাতে মালিক না পেলে দাবিটাই না বসে; কোম্পানির নিজের ছক থাকলে আগের মতোই সেটা।
+         */
+        $approvals = app(ClaimSigner::class)->ensure(ExpenseClaim::ACTIONS[$kind]) ? app(DocumentApproval::class) : $this->approvals;
+
         $claim = DB::transaction(function () use ($user, $employee, $kind, $amount, $reason, $account, $spentOn, $receipt) {
             $claim = ExpenseClaim::query()->create([
                 'company_id' => CompanyContext::id(),
@@ -145,10 +153,10 @@ final class ExpenseClaimService
             return $claim;
         });
 
-        // ⓘ সই চাওয়া — ছক না থাকলে বা অঙ্ক সীমার নিচে হলে `null`, তখন সাথে সাথে অনুমোদিত
+        // ⓘ সই চাওয়া — `null` কেবল কোম্পানির নিজের ছকের সীমার নিচে হলে, তখন সাথে সাথে অনুমোদিত
         $waits = $claim->kind === ExpenseClaim::ADVANCE
-            ? $this->approvals->stopping($claim, module: 'hr', action: ExpenseClaim::ACTION_ADVANCE, amount: (string) $claim->amount)
-            : $this->approvals->stopping($claim, module: 'hr', action: ExpenseClaim::ACTION_EXPENSE, amount: (string) $claim->amount);
+            ? $approvals->stopping($claim, module: 'hr', action: ExpenseClaim::ACTION_ADVANCE, amount: (string) $claim->amount)
+            : $approvals->stopping($claim, module: 'hr', action: ExpenseClaim::ACTION_EXPENSE, amount: (string) $claim->amount);
 
         if ($waits === null) {
             $this->approve($claim);
