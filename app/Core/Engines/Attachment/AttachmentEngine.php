@@ -281,9 +281,24 @@ final class AttachmentEngine
         return [
             'path' => $path,
             'extension' => $extension,
-            'mime' => $file->getClientMimeType(),
+            // ⛔ বাইট থেকে ধরা ধরন, ব্রাউজারের দাবি নয় (পুরো ERP অডিট, ৬ অক্টোবর ২০২৬, ফোন ⚠️১৩: text/html দাবি করা ফাইল সেই ধরনে জমা হত)
+            'mime' => $file->getMimeType() ?: 'application/octet-stream',
             'bytes' => (int) Storage::disk($this->disk)->size($path),
         ];
+    }
+
+    /**
+     * ⭐ পাতার ভেতরে খোলা যায় এমন ধরন — ছবি আর PDF; বাকি সব নামানো হিসেবে (পুরো ERP অডিট, ৬ অক্টোবর ২০২৬, ফোন ⚠️১৩: জমা ধরন
+     * যা-ই হোক, HTML বা স্ক্রিপ্ট কখনো পাতায় খোলে না — পুরনো সারির ভুল ধরনও এখানেই আটকায়)।
+     */
+    public const INLINE_SAFE = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'application/pdf'];
+
+    /** খোলার ধরন — অনুমতি-তালিকায় থাকলে সেটাই, নইলে null (তখন নামানো, `application/octet-stream`) */
+    public static function inlineType(?string $mime): ?string
+    {
+        $mime = strtolower(trim((string) $mime));
+
+        return in_array($mime, self::INLINE_SAFE, true) ? $mime : null;
     }
 
     /**

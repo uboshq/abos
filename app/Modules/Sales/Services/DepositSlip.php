@@ -75,11 +75,14 @@ final class DepositSlip
         $slip = $this->of($claim);
         abort_if($slip === null || ! $this->attachments->exists($slip), 404);
 
+        // ⛔ কেবল ছবি আর PDF পাতায় খোলে; বাকি সব নামানো হিসেবে ([[AttachmentEngine::inlineType()]], অডিট ফোন ⚠️১৩)
+        $inline = AttachmentEngine::inlineType($slip->mime_type);
+
         return response()->streamDownload(
             fn () => print ($this->attachments->contents($slip)),
             $slip->original_name,
-            ['Content-Type' => $slip->mime_type ?: 'application/octet-stream'],
-            'inline',
+            ['Content-Type' => $inline ?? 'application/octet-stream', 'X-Content-Type-Options' => 'nosniff'],
+            $inline === null ? 'attachment' : 'inline',
         );
     }
 }
