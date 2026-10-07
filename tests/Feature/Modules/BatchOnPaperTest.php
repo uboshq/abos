@@ -57,6 +57,14 @@ class BatchOnPaperTest extends TestCase
          * বেঁধে দেওয়া — নইলে পরীক্ষাটা মাপার কাগজই পেত না।
          */
         app(\App\Core\Services\SettingsService::class)->set('sales.print.design.invoice', 'standard');
+
+        /*
+         * ⓘ লট ছাপা এখন কোম্পানির পছন্দ — মালিক, ৪ অক্টোবর ২০২৬ (6d582592): বিল আর চালানে লট ডিফল্ট বন্ধ। এই দাবিগুলো
+         * "লট চাইলে ঠিক লটটা আসে" মাপে, তাই সুইচ চালু করে নেওয়া; বন্ধ থাকলে কী হয়, সেটা
+         * [[test_with_the_switch_off_the_lot_stays_off_the_paper()]]। ⚠️ আগে সুইচ ছিল না, আর তিনটা দাবি খালি নোট পেয়ে লাল ছিল।
+         */
+        app(\App\Core\Services\SettingsService::class)->set('sales.print.challan_show.lot', true);
+        app(\App\Core\Services\SettingsService::class)->set('sales.print.show.lot', true);
         $this->actingAs(User::query()->where('email', 'owner@abos.test')->firstOrFail());
 
         $this->warehouse = Warehouse::query()->where('is_default', true)->firstOrFail();
@@ -151,6 +159,21 @@ class BatchOnPaperTest extends TestCase
 
         $this->assertStringContainsString('SOON', $note);
         $this->assertStringContainsString('LATE', $note);
+    }
+
+    /**
+     * ⭐ সুইচ বন্ধ (মালিকের ডিফল্ট) — চালানে লট নেই; গেটপাসে তবু থাকে, কারণ দারোয়ানের কাগজে সুইচই নেই।
+     */
+    public function test_with_the_switch_off_the_lot_stays_off_the_paper(): void
+    {
+        app(\App\Core\Services\SettingsService::class)->set('sales.print.challan_show.lot', false);
+        $this->lot('B1', now()->addMonths(8)->toDateString(), '50');
+
+        $challan = $this->sell('5');
+
+        $this->assertStringNotContainsString('B1', (string) $this->printed('sales.print.challan', $challan)['doc']->lines[0]['note'],
+            '⛔ লট বন্ধ, তবু চালানে লট ছাপা হলো।');
+        $this->assertStringContainsString('B1', (string) $this->printed('sales.print.gatepass', $challan)['doc']->lines[0]['note']);
     }
 
     /** গেটপাসেও — দারোয়ান লট মিলিয়ে দেখেন, দাম দেখেন না। */
