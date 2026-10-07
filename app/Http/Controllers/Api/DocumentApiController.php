@@ -204,6 +204,16 @@ final class DocumentApiController extends Controller
         abort_if($abilities === [], 403);
 
         /*
+         * ⭐ সইয়ের আগে কাগজটা — অনুরোধকারী বা যিনি সিদ্ধান্ত দিতে পারেন, কাগজের চাবি না থাকলেও (মালিক, ৭ অক্টোবর ২০২৬: "app e
+         * voucher view korte hobe approval e")। ওয়েবের অনুমোদনের পাতার একই নিয়ম ([[ApprovalInboxController::show()]]-এর
+         * `$mayReadDocument`): কেবল **অপেক্ষমাণ** সইয়ে; সই হয়ে গেলে আগের মতো কাগজের নিজের চাবি। বেতনের কাগজ এমনিতেই এই
+         * দরজার বাইরে ([[DESK_ONLY_PREFIX]])।
+         */
+        if ($this->signsFor($user, $document)) {
+            return;
+        }
+
+        /*
          * ⭐ ক্যাশিয়ার নিজের লেখা ভাউচার ছাপেন — আদায় বা পরিশোধের রসিদ পক্ষের হাতে দেওয়া এই কাজেরই অংশ (সমন্বয়ক, ৭ অক্টোবর
          * ২০২৬)। ⓘ রিপোর্টের চাবি (`accounts.report`) থাকলে সব ভাউচার, আগের মতো; না থাকলে কেবল লেখার চাবিওয়ালার নিজের লেখা
          * ভাউচার। শাখার দেয়াল মডেলের নিজের (খোঁজাতেই, [[ScopedToUserBranch]])।
@@ -224,6 +234,19 @@ final class DocumentApiController extends Controller
          * `41abd596`), আর ফোন সেই কাগজটাই পায়: চাবি ছাড়া দাম-ছাড়া, চাবিসহ দামসহ।
          */
 
+    }
+
+    /** এই কাগজের অপেক্ষমাণ সইয়ে এই মানুষ অনুরোধকারী বা সিদ্ধান্তদাতা কি না */
+    private function signsFor(User $user, Model $document): bool
+    {
+        $engine = app(\App\Core\Engines\Approval\ApprovalEngine::class);
+
+        return \App\Models\Approval::query()
+            ->where('approvable_type', $document->getMorphClass())
+            ->where('approvable_id', $document->getKey())
+            ->pending()
+            ->get()
+            ->contains(fn (\App\Models\Approval $a): bool => (int) $a->requested_by === (int) $user->id || $engine->canDecide($a, $user));
     }
 
     /**
