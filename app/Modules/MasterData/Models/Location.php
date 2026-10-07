@@ -10,7 +10,9 @@ use App\Core\Concerns\HasPublicId;
 use App\Core\Concerns\IsAudited;
 use App\Core\Concerns\IsMasterRecord;
 use App\Core\Contracts\Drillable;
+use App\Core\Services\DataScope;
 use App\Core\Services\SettingsService;
+use App\Models\Branch;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
@@ -81,8 +83,17 @@ class Location extends Model implements Drillable
      */
     public const OPTIONAL_LEVELS = [self::REGION, self::TERRITORY];
 
+    /**
+     * ⭐ যে স্তরগুলো একটা শাখার নিজের — মালিক, ৬ অক্টোবর ২০২৬ (*"এলাকা ও রুট সব ব্রাঞ্চে একই দেখায় কেন?"*)।
+     *
+     * ⓘ দেশ, বিভাগ আর অঞ্চল সব শাখার (`branch_id` null) — ময়মনসিংহ বিভাগ দুই শাখারই।
+     *
+     * @var list<string>
+     */
+    public const BRANCHED_LEVELS = [self::AREA, self::TERRITORY, self::POINT, self::ROUTE];
+
     protected $fillable = [
-        'company_id', 'parent_id', 'code', 'name_en', 'name_bn',
+        'company_id', 'branch_id', 'parent_id', 'code', 'name_en', 'name_bn',
         'level', 'assigned_to', 'is_active', 'created_by',
     ];
 
@@ -112,9 +123,70 @@ class Location extends Model implements Drillable
         return $this->belongsTo(User::class, 'created_by');
     }
 
+    public function branch(): BelongsTo
+    {
+        return $this->belongsTo(Branch::class);
+    }
+
     public function scopeAtLevel(Builder $query, string|array $level): Builder
     {
         return $query->whereIn('level', (array) $level);
+    }
+
+    /**
+     * ⭐ দেখার শাখার এলাকা — তালিকা, বাছাই, রুটের সময়সূচি, রিপোর্টের ছাঁকনি, খোঁজা (৬ অক্টোবর ২০২৬)।
+     *
+     * ⓘ হেডারে একটা শাখা বাছা থাকলে সেটা আর শাখাহীন (সব শাখার) এলাকা; "সব শাখা"-তে নাগাল আর
+     * শাখাহীন; সীমাহীন মানুষ (মালিক "সব শাখা"-তে) সব।
+     *
+     * ── ⚠️ কেন global scope নয় ─────────────────────────────────────────────
+     * দোকানের দাম ([[SalesPrice::chainOf()]]), স্কিম, চালান আর বিলের কাগজের পয়েন্ট-নাম, এলাকা ধরে বিক্রির
+     * রিপোর্ট ([[SalesArea]]) — সবাই গ্রাহকের এলাকা থেকে **উপরে** হাঁটে। ⛔ দেখার মানুষের শাখা ধরে সারি লুকালে
+     * ঐ হাঁটা মাঝপথে থামত: দামের তালিকা নীরবে বাদ, কাগজে পয়েন্টের নাম ফাঁকা। ⭐ তাই ছাঁকনি কেবল
+     * **বাছাইয়ের** জায়গায়, নাম ধরে; কাগজ আর দাম পুরো গাছই পড়ে।
+     */
+    public function scopeInViewedBranch(Builder $query): Builder
+    {
+        $user = auth()->user();
+
+        if (! $user instanceof User) {
+            return $query;
+        }
+
+        $ids = app(DataScope::class)->viewBranchIds($user);
+        $column = $this->qualifyColumn('branch_id');
+
+        return $query->when($ids !== null, fn ($q) => $q->where(fn ($w) => $w->whereIn($column, $ids)->orWhereNull($column)));
+    }
+
+    /**
+     * ⭐ নতুন এলাকার শাখা — বাবার শাখা থাকলে সেটা, নইলে হেডারে বাছা শাখা; "সব শাখা"-তে বা উপরের
+     * স্তরে (দেশ, বিভাগ, অঞ্চল) null।
+     */
+    public static function branchForNew(string $level, ?self $parent): ?int
+    {
+        if (! in_array($level, self::BRANCHED_LEVELS, true)) {
+            return null;
+        }
+
+        if ($parent?->branch_id !== null) {
+            return (int) $parent->branch_id;
+        }
+
+        $user = auth()->user();
+        $scope = app(DataScope::class);
+
+        return $user instanceof User && $scope->viewsOneBranch($user) ? ($scope->viewBranchIds($user)[0] ?? null) : null;
+    }
+
+    /**
+     * ⭐ ঠিকানায় অন্য শাখার এলাকা — দেখা নেই, বদলানো নেই (৪০৪)।
+     *
+     * ⓘ পর্দার প্রতিটা দরজা (`show`, `edit`, `update`, নিষ্ক্রিয়, মোছা) এই পথেই মডেল পায়।
+     */
+    public function resolveRouteBinding($value, $field = null): ?Model
+    {
+        return $this->resolveRouteBindingQuery($this->newQuery()->inViewedBranch(), $value, $field)->first();
     }
 
     /**

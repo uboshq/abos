@@ -167,7 +167,7 @@ final class PriceBookController extends Controller implements HasMiddleware
         return [
             'customers' => Customer::query()->inViewedBranch()->active()->orderBy('name_en')->get(['id', 'code', 'name_en', 'name_bn']),
             'tiers' => PartyType::query()->active()->whereIn('applies_to', [PartyType::CUSTOMER, PartyType::BOTH])->orderBy('code')->get(),
-            'places' => Location::query()->active()->orderBy('code')->get(),
+            'places' => Location::query()->inViewedBranch()->active()->orderBy('code')->get(),
         ];
     }
 

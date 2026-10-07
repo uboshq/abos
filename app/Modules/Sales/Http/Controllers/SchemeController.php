@@ -276,7 +276,7 @@ class SchemeController extends Controller implements HasMiddleware
                 ->pluck('name_en', 'id')->all(),
             Scheme::BRAND => Brand::query()->orderBy('code')
                 ->pluck('name_en', 'id')->all(),
-            Scheme::TERRITORY => Location::query()->orderBy('name_en')
+            Scheme::TERRITORY => Location::query()->inViewedBranch()->orderBy('name_en')
                 ->pluck('name_en', 'id')->all(),
             Scheme::DEALER_TIER => PartyType::query()->orderBy('code')
                 ->pluck('name_en', 'id')->all(),

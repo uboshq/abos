@@ -13,6 +13,7 @@ return [
     'parent_not_found' => 'That parent location was not found.',
     'wrong_parent_level' => 'The parent should be a :expected, not a :given.',
     'parent_cannot_be_own_descendant' => 'A location cannot sit under itself.',
+    'parent_in_other_branch' => 'That location belongs to another branch, so this one cannot move under it.',
     'default_cannot_deactivate' => 'The default cannot be deactivated — make another one default first.',
     'unit_cycle' => 'A unit cannot be its own base, directly or in a loop.',
     'factor_must_be_positive' => 'The conversion factor must be more than zero.',

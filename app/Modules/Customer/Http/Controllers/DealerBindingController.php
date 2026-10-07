@@ -64,7 +64,7 @@ final class DealerBindingController extends Controller implements HasMiddleware
             // ⓘ বাঁধার ঘর — দেয়াল ছাড়া (অন্য কর্মীর ডিলারও বাঁধা যায়), হেডারের শাখায়
             'customers' => Customer::acrossDealers()->inViewedBranch()->active()->orderBy('code')
                 ->get(['id', 'code', 'name_en', 'name_bn']),
-            'areas' => Location::query()->orderBy('name_en')->get(['id', 'name_en', 'name_bn', 'level', 'parent_id']),
+            'areas' => Location::query()->inViewedBranch()->orderBy('name_en')->get(['id', 'name_en', 'name_bn', 'level', 'parent_id']),
             'switchOn' => $this->scope->switchOn(),
             'filterUser' => $userId,
             'today' => Carbon::today()->toDateString(),

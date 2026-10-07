@@ -16,6 +16,7 @@ use App\Models\Approval;
 use App\Models\IssuedNumber;
 use App\Modules\Accounts\Services\OpeningBalanceService;
 use App\Modules\Customer\Models\Customer;
+use App\Modules\MasterData\Models\Location;
 use App\Modules\MasterData\Models\PartyType;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -49,6 +50,7 @@ final class CustomerService
         $this->assertBanglaNameIfRequired($data);
         $this->assertNotADuplicate($data);
         $this->assertOnlyOneDistributorPerPoint($data);
+        $this->assertPointIsInTheCustomersBranch($data['location_id'] ?? null, $data['branch_id'] ?? CompanyContext::branchId());
 
         return DB::transaction(function () use ($data) {
             // কোড না দিলে সিরিজ থেকে — নম্বর ইস্যু ট্রানজেকশনের ভেতরে,
@@ -116,6 +118,10 @@ final class CustomerService
         $this->assertBanglaNameIfRequired($data, $customer);
         $this->assertNotADuplicate($data, $customer->id, $customer->branch_id);
         $this->assertOnlyOneDistributorPerPoint($data, $customer);
+        $this->assertPointIsInTheCustomersBranch(
+            array_key_exists('location_id', $data) ? $data['location_id'] : $customer->location_id,
+            array_key_exists('branch_id', $data) ? $data['branch_id'] : $customer->branch_id,
+        );
 
         if (isset($data['code']) && $data['code'] !== $customer->code) {
             $this->assertCodeIsFree($data['code'], $customer->id);
@@ -594,6 +600,26 @@ final class CustomerService
         }
 
         return fn ($q) => $q->where('branch_id', (int) $branch);
+    }
+
+    /**
+     * ⭐ দোকানের পয়েন্ট দোকানের শাখার, বা সব শাখার — মালিক, ৬ অক্টোবর ২০২৬ (*"প্রতিটা শাখা পুরোপুরি আলাদা"*)।
+     *
+     * ⓘ ফর্মের বাছাই কেবল দেখার শাখার পয়েন্ট দেখায়, কিন্তু ইমপোর্ট আর হাতে বানানো অনুরোধ বাছাই দেখে না —
+     * তাই নিয়মটা এখানে, [[assertOnlyOneDistributorPerPoint()]]-এর একই কারণে। শাখাহীন দোকান (কোম্পানি-স্তরের)
+     * যেকোনো পয়েন্টে বসতে পারে।
+     */
+    private function assertPointIsInTheCustomersBranch(mixed $locationId, mixed $branchId): void
+    {
+        if (blank($locationId) || blank($branchId)) {
+            return;
+        }
+
+        $pointBranch = Location::query()->whereKey((int) $locationId)->value('branch_id');
+
+        if ($pointBranch !== null && (int) $pointBranch !== (int) $branchId) {
+            throw ValidationException::withMessages(['location_id' => __('customer::validation.point_in_other_branch')]);
+        }
     }
 
     /**

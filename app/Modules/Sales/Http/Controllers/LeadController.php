@@ -187,7 +187,7 @@ class LeadController extends Controller implements HasMiddleware
 
     private function locations()
     {
-        return Location::query()->active()->orderBy('name_en')->get()
+        return Location::query()->inViewedBranch()->active()->orderBy('name_en')->get()
             ->mapWithKeys(fn (Location $l) => [$l->id => $l->label()]);
     }
 }

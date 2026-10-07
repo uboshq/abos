@@ -191,7 +191,7 @@ class EveryRawQueryNamesItsCompanyTest extends TestCase
 
         'app/Modules/MasterData/Services/LocationService.php' => 'মোছার আগে কে এই এলাকার দিকে দেখায় (purge) — '
             .'information_schema থেকে পাওয়া টেবিলে এলাকার id দিয়ে, আর এলাকাটা নিজেই কোম্পানি-স্কোপে বাছা; '
-            .'MasterListService-এর একই কারণ',
+            .'MasterListService-এর একই কারণ; tiesOf()-ও তাই (শাখায় ভরাটের "কী বাঁধা", ৬ অক্টোবর ২০২৬)',
         'app/Modules/Inventory/Services/PackSnapshot.php' => 'গোটা ডেটাবেসের আঙুলের ছাপ, ইচ্ছে করে কোম্পানি-নিরপেক্ষ: '
             .'প্রমাণটা "কোনো কোম্পানিতেই মজুদ বা লাইন বদলায়নি"; লাইন-টেবিলে company_id নেই; '
             .'আর ছাপে কেবল সারির সংখ্যা ও md5 বেরোয়, কোনো সারির লেখা নয়',

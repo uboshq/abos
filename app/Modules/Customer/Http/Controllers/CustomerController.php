@@ -168,8 +168,9 @@ class CustomerController extends Controller implements HasMiddleware
             'distributorType' => $distributorType,
             'partyTypeFilter' => $request->integer('party_type') ?: null,
             'rankTitle' => $rankTitle,
-            'areas' => Location::query()->atLevel(Location::TERRITORY)->where('is_active', true)->orderBy('name_en')->get(),
-            'points' => Location::query()->atLevel(Location::POINT)->where('is_active', true)->orderBy('name_en')->get(),
+            // ⭐ দেখার শাখার এলাকা ([[Location::scopeInViewedBranch()]], ৬ অক্টোবর ২০২৬)
+            'areas' => Location::query()->inViewedBranch()->atLevel(Location::TERRITORY)->where('is_active', true)->orderBy('name_en')->get(),
+            'points' => Location::query()->inViewedBranch()->atLevel(Location::POINT)->where('is_active', true)->orderBy('name_en')->get(),
         ]);
     }
 
@@ -336,7 +337,9 @@ class CustomerController extends Controller implements HasMiddleware
              * কেউ রুট পর্যন্ত যায়। ধাপটা কড়া করে বাঁধলে যে কোম্পানির
              * পয়েন্ট নেই তার গ্রাহক কোথাও বসানো যেত না।
              */
+            // ⭐ কেবল দেখার শাখার পয়েন্ট — অন্য শাখারটা [[CustomerService::assertPointIsInTheCustomersBranch()]] ফেরায়
             'locations' => Location::query()
+                ->inViewedBranch()
                 ->atLevel([Location::TERRITORY, Location::POINT, Location::ROUTE])
                 ->active()
                 ->orderBy('name_en')

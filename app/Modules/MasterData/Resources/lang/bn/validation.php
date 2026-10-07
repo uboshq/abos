@@ -13,6 +13,7 @@ return [
     'parent_not_found' => 'উপরের এলাকাটা পাওয়া গেল না।',
     'wrong_parent_level' => 'উপরে :expected থাকার কথা, :given নয়।',
     'parent_cannot_be_own_descendant' => 'একটা এলাকা নিজের নিচে বসতে পারে না।',
+    'parent_in_other_branch' => 'ঐ এলাকাটা অন্য শাখার — এটাকে তার নিচে সরানো যায় না।',
     'default_cannot_deactivate' => 'ডিফল্ট রেকর্ড নিষ্ক্রিয় করা যাবে না — আগে অন্য একটাকে ডিফল্ট করুন।',
     'unit_cycle' => 'একক নিজের ভিত্তি হতে পারে না, ঘুরেও নয়।',
     'factor_must_be_positive' => 'রূপান্তরের সংখ্যা শূন্যের বেশি হতে হবে।',

@@ -10,7 +10,7 @@ use Illuminate\Database\Eloquent\Builder;
 
 /**
  * রিপোর্টের ছাঁকনি "এলাকা/পয়েন্ট" — রিপোর্ট সেন্টার ধাপ ১ ([[\App\Core\Contracts\ReportFilterSource]])।
- * ⓘ দেয়াল মডেলের নিজের: কোম্পানি; রিপোর্ট নিজে সাব-ট্রি ধরে।
+ * ⓘ দেয়াল মডেলের নিজের: কোম্পানি; রিপোর্ট নিজে সাব-ট্রি ধরে। ⭐ বাছাইয়ে দেখার শাখার এলাকা (৬ অক্টোবর ২০২৬)।
  */
 final class LocationFilter extends ModelFilterSource
 {
@@ -21,6 +21,6 @@ final class LocationFilter extends ModelFilterSource
 
     protected function query(): Builder
     {
-        return Location::query()->orderBy('code');
+        return Location::query()->inViewedBranch()->orderBy('code');
     }
 }

@@ -105,7 +105,7 @@ final class MasterDataDashboard implements ProvidesDashboard
 
                 new Stat(
                     label: __('master_data::menu.locations'),
-                    value: (string) Location::query()->count(),
+                    value: (string) Location::query()->inViewedBranch()->count(),
                     hint: __('master_data::dashboard.locations_hint'),
                     href: route('master_data.location.index'),
                 ),

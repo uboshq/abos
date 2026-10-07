@@ -212,7 +212,7 @@ class ShipmentController extends Controller implements HasMiddleware
                 ->limit(300)
                 ->get(),
             'warehouses' => Warehouse::query()->active()->orderBy('code')->get(),
-            'routes' => Location::query()->active()->atLevel('route')->orderBy('name_en')->get(),
+            'routes' => Location::query()->inViewedBranch()->active()->atLevel('route')->orderBy('name_en')->get(),
 
             /*
              * বহরের গাড়িগুলো — সুইচ বন্ধ থাকলে খালি, ঠিক চালানের মতো।

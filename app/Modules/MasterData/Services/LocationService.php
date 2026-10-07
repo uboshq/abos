@@ -47,13 +47,15 @@ final class LocationService
             }
 
             $this->assertCodeIsFree($code);
-            $this->assertNameIsFree($level, $parent, $data['name_en'] ?? null, $data['name_bn'] ?? null);
+            $this->assertNameIsFree($level, $parent, $data['name_en'] ?? null, $data['name_bn'] ?? null, branchId: Location::branchForNew($level, $parent));
 
             return Location::create([
                 ...$data,
                 'code' => $code,
                 'level' => $level,
                 'parent_id' => $parent?->id,
+                // ⭐ বাবার শাখা, নইলে হেডারের শাখা; উপরের স্তর সব শাখার ([[Location::branchForNew()]], ৬ অক্টোবর ২০২৬)
+                'branch_id' => Location::branchForNew($level, $parent),
                 'is_active' => $data['is_active'] ?? true,
                 'created_by' => auth()->id(),
             ]);
@@ -103,12 +105,26 @@ final class LocationService
                 unset($data['code']);
             }
 
+            /*
+             * ⛔ অন্য শাখার এলাকার নিচে সরানো যায় না — ৬ অক্টোবর ২০২৬।
+             *
+             * ⓘ শাখা A-র এরিয়ার নিচে শাখা B-র (বা সব শাখার) পয়েন্ট বসলে A-র মানুষ পয়েন্টটা দেখতেন না,
+             * আর B-র মানুষ পয়েন্ট দেখতেন অথচ তার এরিয়া নয় — গাছটা দুই শাখায় দুই রকম। শাখা নিজে
+             * এখানে বদলায় না ([[Location::branchForNew()]] কেবল নতুনে)।
+             */
+            if ($parent?->branch_id !== null && (int) $parent->branch_id !== (int) $location->branch_id) {
+                throw ValidationException::withMessages([
+                    'parent_id' => __('master_data::validation.parent_in_other_branch'),
+                ]);
+            }
+
             $this->assertNameIsFree(
                 $location->level,
                 $parent,
                 array_key_exists('name_en', $data) ? $data['name_en'] : $location->name_en,
                 array_key_exists('name_bn', $data) ? $data['name_bn'] : $location->name_bn,
                 $location->id,
+                $location->branch_id === null ? null : (int) $location->branch_id,
             );
 
             $location->update([...$data, 'parent_id' => $parent?->id]);
@@ -213,6 +229,41 @@ final class LocationService
     }
 
     /**
+     * ⭐ কোন এলাকায় কোন টেবিলের কয়টা সারি বাঁধা — শাখায় ভরাটের "কী বাঁধা" ([[LocationBranchBackfill]], ৬ অক্টোবর ২০২৬)।
+     *
+     * ⓘ [[purge()]]-এর একই উৎস: ডাটাবেজের নিজের বিদেশি-চাবির তালিকা, হাতে লেখা নয় — নতুন টেবিল এলে নিজেই ধরা পড়ে।
+     * ⓘ টেবিলগুলো কোম্পানির দেয়াল জানে না, তাই প্রশ্নটা কেবল ডাকা এলাকার id ধরে; ডাকার মানুষ কোম্পানি-স্কোপে বাছা id দেন।
+     *
+     * @param  list<int>  $ids
+     * @param  list<string>  $except  যে টেবিলগুলো "বাঁধন" নয় (যেমন `customers` — দোকান সরানো যায়)
+     * @return array<int, array<string, int>>  এলাকা → [টেবিল → সারি]
+     */
+    public function tiesOf(array $ids, array $except = []): array
+    {
+        $links = DB::select(
+            'SELECT TABLE_NAME AS child, COLUMN_NAME AS child_column
+               FROM information_schema.KEY_COLUMN_USAGE
+              WHERE TABLE_SCHEMA = DATABASE()
+                AND REFERENCED_TABLE_NAME = ?',
+            ['mdm_locations'],
+        );
+        $out = [];
+
+        foreach ($links as $link) {
+            if (in_array($link->child, $except, true)) {
+                continue;
+            }
+
+            foreach (DB::table($link->child)->whereIn($link->child_column, $ids ?: [0])
+                ->selectRaw($link->child_column.' AS node, COUNT(*) AS n')->groupBy($link->child_column)->get() as $row) {
+                $out[(int) $row->node][$link->child] = ($out[(int) $row->node][$link->child] ?? 0) + (int) $row->n;
+            }
+        }
+
+        return $out;
+    }
+
+    /**
      * সংখ্যাটা পাঠকের অঙ্কে — বাংলায় "৩টা", "3টা" নয়।
      *
      * ⓘ `Number::format()` intl চায়, আর লাইভ সার্ভারে সেটা আছে কি না
@@ -263,7 +314,8 @@ final class LocationService
             ]);
         }
 
-        $parent = Location::query()->find($parentId);
+        // ⭐ দেখার শাখার বাইরের বাবা "নেই" — ঠিকানায় অন্য শাখার এরিয়ার নম্বর লিখে ঢোকা যায় না (৬ অক্টোবর ২০২৬)
+        $parent = Location::query()->inViewedBranch()->find($parentId);
 
         if ($parent === null) {
             throw ValidationException::withMessages([
@@ -343,9 +395,16 @@ final class LocationService
         ?string $nameEn,
         ?string $nameBn,
         ?int $exceptId = null,
+        ?int $branchId = null,
     ): void {
         $siblings = Location::query()
             ->where('level', $level)
+            /*
+             * ⭐ শাখা ধরে — ৬ অক্টোবর ২০২৬। ⓘ দুই শাখার নিজের "সদর পয়েন্ট" একই বাবার নিচে থাকতে পারে, কারণ
+             * কেউ দুইটা একসাথে দেখে না (মিশ্র পয়েন্টের শাখা-নকল ঠিক এমন, [[LocationBranchBackfill]])। ⛔ সব
+             * শাখার নোড সবার চোখে পড়ে, তাই সে নিজে বা যমজটা শাখাহীন হলে আগের মতোই আটকায়।
+             */
+            ->when($branchId !== null, fn ($q) => $q->where(fn ($w) => $w->whereNull('branch_id')->orWhere('branch_id', $branchId)))
             ->when(
                 $parent === null,
                 fn ($q) => $q->whereNull('parent_id'),

@@ -95,7 +95,9 @@ class LocationController extends Controller implements HasMiddleware
          * ⓘ ট্যাবের সংখ্যায় নিষ্ক্রিয়গুলোও — ২০ সেপ্টেম্বর ২০২৬। স্তরের তালিকা
          * এখন নিষ্ক্রিয় সারিও দেখায় (অবস্থার কলামে), তাই সংখ্যা আর সারি মেলে।
          */
+        // ⭐ দেখার শাখার এলাকা — এই পাতার প্রতিটা প্রশ্নে ([[Location::scopeInViewedBranch()]], ৬ অক্টোবর ২০২৬)
         $counts = Location::query()
+            ->inViewedBranch()
             ->selectRaw('level, count(*) as n')
             ->groupBy('level')
             ->pluck('n', 'level');
@@ -105,6 +107,7 @@ class LocationController extends Controller implements HasMiddleware
         }
 
         $query = Location::query()
+            ->inViewedBranch()
             ->when(! $showInactive, fn ($b) => $b->active())
             /*
              * দায়িত্বে কে — সারির সাথেই।
@@ -159,6 +162,7 @@ class LocationController extends Controller implements HasMiddleware
         $q = $request->query('q');
 
         $rows = Location::query()
+            ->inViewedBranch()
             ->atLevel($level)
 
             /*
@@ -203,7 +207,7 @@ class LocationController extends Controller implements HasMiddleware
              * আর ফর্মের ড্রপডাউন খালি — ঠিক যে অন্ধ গলিটা এটা বন্ধ করতে এল।
              */
             'parentsMissing' => $parentLevel !== null
-                && Location::query()->atLevel($parentLevel)->active()->doesntExist(),
+                && Location::query()->inViewedBranch()->atLevel($parentLevel)->active()->doesntExist(),
         ]);
     }
 
@@ -298,7 +302,8 @@ class LocationController extends Controller implements HasMiddleware
              * সন্তানদের দায়িত্বপ্রাপ্তও একসাথে — পর্দাটা প্রতিটা সন্তানের
              * পাশে নামটা দেখায়, তাই আলাদা করে আনলে সন্তান যত, কোয়েরিও তত।
              */
-            'location' => $location->load(['parent', 'assignee', 'children.assignee']),
+            // ⓘ সব শাখার এলাকার নিচে কেবল দেখার শাখার সন্তান (৬ অক্টোবর ২০২৬)
+            'location' => $location->load(['parent', 'assignee', 'children' => fn ($q) => $q->inViewedBranch()->with('assignee')]),
             'childLevel' => Location::childLevelOf($location->level),
         ]);
     }
@@ -402,6 +407,7 @@ class LocationController extends Controller implements HasMiddleware
         }
 
         return Location::query()
+            ->inViewedBranch()
             ->atLevel($parentLevel)
             ->active()
 

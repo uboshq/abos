@@ -54,7 +54,9 @@ class RouteAccountController extends Controller implements HasMiddleware
     {
         [$month, $from, $to] = $this->period($request);
 
+        // ⭐ দেখার শাখার রুট ([[Location::scopeInViewedBranch()]], ৬ অক্টোবর ২০২৬)
         $routes = Location::query()
+            ->inViewedBranch()
             ->atLevel(Location::ROUTE)
             ->with('parent')
             ->when($this->text($request, 'q'), function ($q, string $term) {
