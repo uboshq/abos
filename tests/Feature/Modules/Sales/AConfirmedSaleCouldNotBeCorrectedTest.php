@@ -213,6 +213,30 @@ final class AConfirmedSaleCouldNotBeCorrectedTest extends TestCase
 
     // ── যন্ত্রপাতি ──────────────────────────────────────────────────────
 
+    /**
+     * ⭐ সম্পাদনায় খুললে বিক্রির নিজের মাল লটে ফেরত গোনা — মালিক, ৭ অক্টোবর ২০২৬ (CHA-0004: "লট Opening-এ 0, সারিতে 1")।
+     * ⛔ লটে একটাই ছিল আর এই বিক্রিই নিয়েছে; পর্দা ০ দেখাত। ⓘ নতুন বিক্রির কাউন্টারে আগের মতোই ০ (তালিকায় নেই)।
+     */
+    public function test_editing_a_sale_counts_its_own_goods_back_into_the_lot(): void
+    {
+        $unit = \App\Modules\MasterData\Models\Unit::query()->orderBy('id')->firstOrFail();
+        $lotted = Product::query()->create(['code' => 'ONE-LOT', 'name_en' => 'One Lot', 'name_bn' => 'One Lot', 'is_active' => true,
+            'track_batch' => true, 'unit_id' => $unit->id, 'sale_price' => '10']);
+        $batch = app(\App\Modules\Inventory\Services\BatchService::class)->receive(product: $lotted, batchNo: 'Opening');
+        app(\App\Modules\Inventory\Services\OpeningStockService::class)->bringIn($lotted, $this->warehouse, '1', '8', now()->subDay(), null, $batch);
+
+        $sale = app(DirectSaleService::class)->complete($this->data,
+            [['product_id' => $lotted->id, 'qty' => '1', 'rate' => '10', 'free_qty' => '0', 'batch_id' => $batch->id]])['invoice']->fresh();
+
+        $fresh = $this->get(route('sales.direct.create', ['warehouse_id' => $this->warehouse->id]))->assertOk()->viewData('lots');
+        $this->assertArrayNotHasKey((string) $lotted->id, $fresh, 'প্রস্তুতিটাই ভুল — নতুন বিক্রিতে খালি লটটা তালিকায়।');
+
+        $lots = $this->get(route('sales.direct.create', ['warehouse_id' => $this->warehouse->id, 'edit' => $sale->id]))->assertOk()->viewData('lots');
+        $mine = collect($lots[(string) $lotted->id] ?? $lots[$lotted->id] ?? [])->firstWhere('id', (string) $batch->id);
+        $this->assertNotNull($mine, '⛔ সম্পাদনায় বিক্রির নিজের লটটাই তালিকায় নেই।');
+        $this->assertSame(0, bccomp((string) $mine['qty'], '1', 4), '⛔ সম্পাদনায় নিজের নেওয়া ১টা লটে ফেরত গোনা হয়নি।');
+    }
+
     private function sell(string $qty): SalesInvoice
     {
         return app(DirectSaleService::class)->complete($this->data, $this->lines($qty))['invoice']->fresh();

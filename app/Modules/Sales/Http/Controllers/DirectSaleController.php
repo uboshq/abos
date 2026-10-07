@@ -182,7 +182,7 @@ class DirectSaleController extends Controller implements HasMiddleware
              * বাছার পর আলাদা অনুরোধ পাঠালে কাউন্টারে প্রতিটা সারিতে
              * একটা করে অপেক্ষা যোগ হত।
              */
-            'lots' => $this->lotsFor($warehouse),
+            'lots' => $this->withOwnGoods($this->lotsFor($warehouse), $warehouse, $editing),
 
             /*
              * ── প্যাকের একক — "২ বাক্স @ ৮০০" ─────────────────────────
@@ -781,6 +781,77 @@ class DirectSaleController extends Controller implements HasMiddleware
      *
      * @return array<int, list<array<string, string>>> পণ্যের আইডি ধরে
      */
+    /**
+     * ⭐ সম্পাদনায় বিক্রির নিজের মাল লটে ফেরত গোনা — মালিক, ৭ অক্টোবর ২০২৬ (CHA-0004 আর CHA-0002 সম্পাদনায় খুলতেই
+     * "খসড়া রাখার পরে মজুদ বদলেছে — লট Opening-এ 0, সারিতে 1")।
+     *
+     * ⛔ লটে একটাই ছিল আর এই বিক্রিই সেটা নিয়েছে; পর্দা লটের এখনকার মাল দেখাত, নিজের নেওয়াটা বাদ দিয়ে — নিজের মাল নিজের
+     * কাছেই "কম" পড়ত। ⓘ সম্পাদনা পুরনোটা উল্টে নতুন বসায় ([[SaleEditor]]), তাই এই বিক্রির চালান যতটা নিয়েছে ততটা আবার পাওয়া
+     * যায়: প্রতিটা লটে + (−চালানের তাক-চলাচল)। খালি হয়ে তালিকা থেকে বাদ পড়া লটও ফেরে।
+     *
+     * @param  array<string, list<array<string, string>>>  $lots
+     * @return array<string, list<array<string, string>>>
+     */
+    private function withOwnGoods(array $lots, ?Warehouse $warehouse, ?SalesInvoice $editing): array
+    {
+        if ($editing === null || $warehouse === null) {
+            return $lots;
+        }
+
+        $challanIds = DB::table('sal_invoice_lines as il')
+            ->join('sal_challan_lines as cl', 'cl.id', '=', 'il.delivery_challan_line_id')
+            ->where('il.sales_invoice_id', $editing->id)
+            ->distinct()
+            ->pluck('cl.delivery_challan_id')
+            ->all();
+
+        if ($challanIds === []) {
+            return $lots;
+        }
+
+        $own = DB::table('inv_stock_movements')
+            ->where('company_id', CompanyContext::id())
+            ->where('warehouse_id', $warehouse->id)
+            ->where('source_type', 'like', 'delivery_challan%')
+            ->whereIn('source_id', $challanIds)
+            ->whereNotNull('batch_id')
+            ->groupBy('batch_id')
+            ->selectRaw('batch_id, -SUM(floor_change) as qty')
+            ->pluck('qty', 'batch_id');
+
+        foreach ($own as $batchId => $qty) {
+            if (bccomp((string) $qty, '0', 4) <= 0) {
+                continue;
+            }
+
+            $found = false;
+
+            foreach ($lots as $productId => $rows) {
+                foreach ($rows as $i => $row) {
+                    if ((string) $row['id'] === (string) $batchId) {
+                        $lots[$productId][$i]['qty'] = bcadd((string) $row['qty'], (string) $qty, 4);
+                        $found = true;
+                    }
+                }
+            }
+
+            if (! $found && ($batch = \App\Modules\Inventory\Models\Batch::query()->find($batchId)) !== null) {
+                $came = app(\App\Modules\Inventory\Services\FreeRatio::class)->arrivedIn($batch);
+                $lots[(string) $batch->product_id][] = [
+                    'id' => (string) $batch->id,
+                    'productId' => (string) $batch->product_id,
+                    'no' => (string) $batch->batch_no,
+                    'expiry' => $batch->expiry_date?->toDateString() ?? '',
+                    'qty' => bcadd('0', (string) $qty, 4),
+                    'paid' => $came['paid'],
+                    'free' => $came['free'],
+                ];
+            }
+        }
+
+        return $lots;
+    }
+
     private function lotsFor(?Warehouse $warehouse): array
     {
         // ⓘ ফোনের কাউন্টারের সাথে একই তালিকা ([[DirectSaleOptions::lots()]], ৪ অক্টোবর ২০২৬)
