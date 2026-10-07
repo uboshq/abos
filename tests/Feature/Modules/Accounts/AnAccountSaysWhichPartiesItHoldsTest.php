@@ -59,6 +59,24 @@ final class AnAccountSaysWhichPartiesItHoldsTest extends TestCase
         $this->assertTrue(Account::query()->holdingParty()->whereKey(StandardChart::find(StandardChart::PAYABLE_GROUP)->id)->exists(), 'গ্রুপ খাতও তালিকায়');
     }
 
+    public function test_a_child_made_directly_takes_its_parents_parties_too(): void
+    {
+        // ⓘ সরবরাহকারীর খাত, সিডার আর পরীক্ষা সরাসরি মডেল দিয়ে খোলে — ধর্মটা তখনো মায়ের থেকে
+        $direct = Account::query()->create([
+            'company_id' => $this->company->id, 'code' => '2119-D', 'name_en' => 'Direct Payable', 'name_bn' => 'সরাসরি দেনা',
+            'parent_id' => StandardChart::find(StandardChart::PAYABLE_GROUP)->id, 'type' => Account::LIABILITY, 'nature' => Account::CREDIT,
+            'is_group' => false, 'is_active' => true, 'status' => \App\Core\Support\DocumentStatus::CONFIRMED,
+        ]);
+        $this->assertSame(['person', 'supplier'], $direct->fresh()->party_types, '⛔ সরাসরি খোলা দেনার খাত ধর্ম পায়নি');
+
+        $own = Account::query()->create([
+            'company_id' => $this->company->id, 'code' => '2119-E', 'name_en' => 'Own Types', 'name_bn' => 'নিজের ধর্ম',
+            'parent_id' => StandardChart::find(StandardChart::PAYABLE_GROUP)->id, 'type' => Account::LIABILITY, 'nature' => Account::CREDIT,
+            'is_group' => false, 'is_active' => true, 'status' => \App\Core\Support\DocumentStatus::CONFIRMED, 'party_types' => ['supplier'],
+        ]);
+        $this->assertSame(['supplier'], $own->fresh()->party_types, 'নিজে দেওয়া ধর্ম থাকার কথা');
+    }
+
     public function test_a_party_lands_only_where_it_belongs(): void
     {
         $receivable = StandardChart::find(StandardChart::RECEIVABLE)->id;

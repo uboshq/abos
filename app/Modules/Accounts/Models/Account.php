@@ -101,6 +101,17 @@ class Account extends Model implements Drillable
      */
     protected static function booted(): void
     {
+        /*
+         * ⭐ নতুন খাত মায়ের পক্ষ-ধর্ম পায় — যে পথেই খোলা হোক (অডিট হিসাব ⚠️১২, ৭ অক্টোবর ২০২৬; [[holdsParty()]])। ⓘ প্রথমে
+         * কেবল [[AccountService::create()]]-এ ছিল; কিন্তু সরবরাহকারীর খাত, সিডার আর পরীক্ষা সরাসরি `Account::create()` ডাকে — দেনার
+         * পরিবারের নিচে এমন খাত ধর্ম ছাড়া বসত, আর ভাউচারের মাথার পক্ষ সেখানে আর নামত না। নিজে ধর্ম দিলে সেটাই থাকে।
+         */
+        static::creating(function (Account $account): void {
+            if ($account->party_types === null && $account->parent_id !== null) {
+                $account->party_types = static::query()->withoutGlobalScopes()->whereKey($account->parent_id)->first(['party_types'])?->party_types;
+            }
+        });
+
         static::addGlobalScope('viewed-branch-till', function (Builder $builder): void {
             // ⛔ "সব শাখা"-তেও নাগালের ভেতরে — অডিট ⛔১১ (৬ অক্টোবর ২০২৬); সীমাহীন হলে `null`, কিছুই বাদ নয় ([[CashTill::visibleBranchIds()]])
             $ids = CashTill::visibleBranchIds();
