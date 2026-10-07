@@ -711,6 +711,16 @@ final class DeliveryChallanService
      * বসে `create()`-এর **পরে** (stampExtras), তাই `confirm()`-ই একমাত্র
      * মুহূর্ত যেখানে সংখ্যাটা নিশ্চিতভাবে আছে।
      */
+    /**
+     * ⭐ পাকা চালানে পরে লেখা ভাড়া খাতায় — চালানের পরিবহন পর্দা থেকে ([[FarePayment::recordOnConfirmed()]], ৭ অক্টোবর ২০২৬)।
+     * ⓘ পাকা করার একই পথ ([[postTransportCost()]]) — দুই নিয়ম নয়। চালানের নিজের দাখিলা-নামে কেবল ভাড়াই বসে
+     * (ফ্রি আর উপহার `:free`, `:gift` নামে), আর আগে ভাড়া লেখা চালানে এটা ডাকা হয় না — তাই খাতা "আগেই বসেছে" বলে থামে না।
+     */
+    public function bookFare(DeliveryChallan $challan): void
+    {
+        DB::transaction(fn () => $this->postTransportCost($challan));
+    }
+
     private function postTransportCost(DeliveryChallan $challan): void
     {
         $cost = (string) ($challan->transport_cost ?? '0');

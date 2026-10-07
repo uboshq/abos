@@ -99,6 +99,14 @@ final class ChallanTransportController extends Controller implements HasMiddlewa
                 'carrier_id' => null, 'carrier_name' => null],
         };
 
+        /*
+         * ⛔ পরে-দেব ভাড়ার বাহক থাকে — মালিক, ৭ অক্টোবর ২০২৬ ([[FarePayment]])। ⓘ দেনাটা (২১১৬) তাঁর নামে বসে আছে বা
+         * বসবে; এখানে মুছলে পরে দেওয়ার ভাউচার কার নামে যাবে, সেটা হারাত — আর খসড়ায় মুছলে পাকা করার সময় থামত।
+         */
+        if ($challan->fare_rule === \App\Modules\Sales\Services\FarePayment::RULE && $challan->fare_status === \App\Modules\Sales\Services\FarePayment::DUE) {
+            unset($fields['carrier_id']);
+        }
+
         $challan->forceFill($fields)->save();
 
         // ⓘ পরিবহন বরাদ্দের তালিকা থেকে এলে সেখানেই ফেরা — পরের চালানটা ধরতে ([[TransportAssignmentController]])

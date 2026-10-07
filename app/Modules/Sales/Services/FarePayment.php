@@ -76,6 +76,129 @@ final class FarePayment
             return;
         }
 
+        [$account, $reference, $payer] = $this->moneyFrom($data);
+
+        $challan->forceFill([
+            'fare_rule' => self::RULE, 'fare_status' => self::NOW, 'fare_account_id' => $account->id,
+            'fare_reference' => $reference, 'fare_payer_id' => $payer,
+        ])->save();
+    }
+
+    /**
+     * ⭐ পাকা চালানে প্রথমবার ভাড়া লেখা — চালানের পরিবহন পর্দা থেকে (মালিক, ৭ অক্টোবর ২০২৬)।
+     *
+     * ⓘ পর্দাটা "নিশ্চিতের পরে, ছাপার আগে" — তাই ভাড়া প্রায়ই চালান পাকা হওয়ার পরে জানা যায়। একই নিয়মে বসে
+     * ([[stamp()]]), আর সাথে সাথে খাতায়: এখনই দিলে EV, পরে দিলে বাহকের নামে ২১১৬ ([[DeliveryChallanService::bookFare()]])।
+     * ⛔ "বিলে যোগ" এখানে নয় — বিল আগেই খাতায় বসেছে, তার মোট বদলানো যায় না; ওটা কেবল কাউন্টারে।
+     * ⛔ আগে ভাড়া লেখা থাকলে (পুরনো বা নতুন নিয়মে) আবার নয় — খরচ দুইবার বসত।
+     *
+     * @param  array<string, mixed>  $data  transport_cost, fare_paid_by (us · customer · none), carrier_id, আর stamp()-এর ঘর
+     */
+    public function recordOnConfirmed(DeliveryChallan $challan, array $data): void
+    {
+        if ($challan->status !== \App\Core\Support\DocumentStatus::CONFIRMED) {
+            throw ValidationException::withMessages(['fare' => __('sales::fare.only_confirmed')]);
+        }
+
+        if ($challan->fare_rule !== null || (is_numeric($challan->transport_cost) && bccomp((string) $challan->transport_cost, '0', 4) > 0)) {
+            throw ValidationException::withMessages(['fare' => __('sales::fare.already_recorded')]);
+        }
+
+        $who = (string) ($data['fare_paid_by'] ?? '');
+
+        if (! in_array($who, ['us', 'customer', 'none'], true)) {
+            throw ValidationException::withMessages(['fare_paid_by' => __('sales::fare.who_pays')]);
+        }
+
+        $amount = (string) ($data['transport_cost'] ?? '');
+
+        if ($who === 'us' && (! is_numeric($amount) || bccomp($amount, '0', 4) <= 0)) {
+            throw ValidationException::withMessages(['transport_cost' => __('sales::fare.needs_amount')]);
+        }
+
+        \Illuminate\Support\Facades\DB::transaction(function () use ($challan, $data, $who, $amount): void {
+            $challan->forceFill([
+                'fare_paid_by' => $who,
+                'transport_cost' => $who === 'us' ? $amount : (is_numeric($amount) ? $amount : null),
+                'carrier_id' => ($data['carrier_id'] ?? null) ?: $challan->carrier_id,
+            ])->save();
+
+            if ($who !== 'us') {
+                return;
+            }
+
+            $this->stamp($challan->fresh(), $data);
+            app(DeliveryChallanService::class)->bookFare($challan->fresh());
+        });
+    }
+
+    /**
+     * ⭐ পরে-দেওয়া ভাড়া দেওয়া — PV: Dr ২১১৬ প্রদেয় পরিবহন (বাহকের নামে) / Cr বাছা খাত (সিদ্ধান্ত খ)।
+     *
+     * ⓘ হাতে লেখা ভাউচারের পথে ([[VoucherWriter::store()]]) — সই আর লেখক ≠ পাকাকারী পুরো খাটে (সিদ্ধান্ত ক)। সই বা
+     * অন্য হাতের অপেক্ষায় থাকলে ভাউচার খসড়া, চালানে বাঁধা থাকে; বাতিল হলে আবার দেওয়া যায়।
+     *
+     * @return array{0: Voucher, 1: bool|string}  [[VoucherWriter::store()]]-এর একই উত্তর
+     */
+    public function payDue(DeliveryChallan $challan, array $data): array
+    {
+        if (! $this->isDue($challan)) {
+            throw ValidationException::withMessages(['fare' => __('sales::fare.nothing_due')]);
+        }
+
+        [$account, $reference, $payer] = $this->moneyFrom($data);
+        $payable = StandardChart::find(StandardChart::TRANSPORT_PAYABLE);
+        $narration = __('sales::fare.paid_narration', ['challan' => $challan->document_no, 'by' => $this->payee($challan) ?? '—']);
+
+        $lines = $this->vouchers->twoLineEntry(Voucher::PAYMENT, (int) $account->id, (int) $payable->id, (string) $challan->transport_cost, $narration);
+
+        // ⓘ দেনাটা বাহকের নামে বসেছিল — মোছেও তাঁর নামেই
+        foreach ($lines as $i => $line) {
+            if ((int) $line['account_id'] === (int) $payable->id) {
+                $lines[$i]['party_type'] = 'supplier';
+                $lines[$i]['party_id'] = (int) $challan->carrier_id;
+            }
+        }
+
+        [$voucher, $state] = app(\App\Modules\Accounts\Services\VoucherWriter::class)->store([
+            'type' => Voucher::PAYMENT,
+            'trx_date' => now()->toDateString(),
+            'branch_id' => $challan->branch_id,
+            'party_type' => 'supplier',
+            'party_id' => (int) $challan->carrier_id,
+            'instrument' => $account->isCash() ? 'cash' : ($account->isMfs() ? 'mfs' : 'transfer'),
+            'instrument_no' => $reference,
+            'narration' => $narration,
+            'payee_name' => $this->payee($challan),
+            'against_type' => DeliveryChallan::drillSourceType(),
+            'against_id' => $challan->id,
+        ], $lines, asDraft: false);
+
+        $challan->forceFill(['fare_voucher_id' => $voucher->id, 'fare_account_id' => $account->id,
+            'fare_reference' => $reference, 'fare_payer_id' => $payer])->save();
+
+        return [$voucher, $state];
+    }
+
+    /** পরে-দেব ভাড়া এখনো দেওয়া হয়নি — ভাউচার নেই, বা যেটা ছিল সেটা বাতিল */
+    public function isDue(DeliveryChallan $challan): bool
+    {
+        if ($challan->fare_rule !== self::RULE || $challan->fare_status !== self::DUE || $challan->carrier_id === null
+            || $challan->status !== \App\Core\Support\DocumentStatus::CONFIRMED) {
+            return false;
+        }
+
+        return $challan->fare_voucher_id === null
+            || (Voucher::query()->whereKey($challan->fare_voucher_id)->value('status') === \App\Core\Support\DocumentStatus::CANCELLED);
+    }
+
+    /**
+     * টাকার খাত, TrxID আর কে দিলেন — এখনই দেওয়া আর পরে দেওয়া, দুই পথের একই নিয়ম।
+     *
+     * @return array{0: Account, 1: ?string, 2: ?int}
+     */
+    private function moneyFrom(array $data): array
+    {
         $accountId = (int) ($data['fare_account_id'] ?? 0);
 
         // ⛔ Main Counter আর নিজে থেকে বসে না — খাত বাছতেই হবে
@@ -92,27 +215,23 @@ final class FarePayment
                 throw ValidationException::withMessages(['fare_account_id' => __('sales::fare.not_your_till')]);
             }
 
-            $payer = auth()->id();
-            $reference = null;
-        } else {
-            $reference = trim((string) ($data['fare_reference'] ?? ''));
-
-            if (mb_strlen($reference) < 4) {
-                throw ValidationException::withMessages(['fare_reference' => __('sales::fare.needs_reference')]);
-            }
-
-            $payer = (int) ($data['fare_payer_id'] ?? 0) ?: auth()->id();
-
-            if ($payer !== null && ! User::query()->whereKey($payer)
-                ->whereHas('companies', fn ($q) => $q->whereKey(CompanyContext::id()))->exists()) {
-                throw ValidationException::withMessages(['fare_payer_id' => __('sales::fare.unknown_payer')]);
-            }
+            return [$account, null, auth()->id()];
         }
 
-        $challan->forceFill([
-            'fare_rule' => self::RULE, 'fare_status' => self::NOW, 'fare_account_id' => $account->id,
-            'fare_reference' => $reference, 'fare_payer_id' => $payer,
-        ])->save();
+        $reference = trim((string) ($data['fare_reference'] ?? ''));
+
+        if (mb_strlen($reference) < 4) {
+            throw ValidationException::withMessages(['fare_reference' => __('sales::fare.needs_reference')]);
+        }
+
+        $payer = (int) ($data['fare_payer_id'] ?? 0) ?: auth()->id();
+
+        if ($payer !== null && ! User::query()->whereKey($payer)
+            ->whereHas('companies', fn ($q) => $q->whereKey(CompanyContext::id()))->exists()) {
+            throw ValidationException::withMessages(['fare_payer_id' => __('sales::fare.unknown_payer')]);
+        }
+
+        return [$account, $reference, $payer];
     }
 
     /**

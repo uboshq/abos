@@ -65,4 +65,7 @@
             </form>
         @endif
     </section>
+
+    {{-- ⭐ ভাড়া — লেখা আর পরে দেওয়া, গেট পাস হলেও (মালিক, ৭ অক্টোবর ২০২৬) --}}
+    @include('sales::challan.partials.fare', ['challan' => $challan])
 </x-layouts.app>

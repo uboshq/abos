@@ -521,6 +521,11 @@ Route::middleware('auth')->prefix('sales')->group(function () {
         ->whereNumber('challan')->name('challan.transport');
     Route::put('/transport/challan/{challan}', [\App\Modules\Sales\Http\Controllers\ChallanTransportController::class, 'update'])
         ->whereNumber('challan')->name('challan.transport.update');
+    // ⭐ ভাড়া — পাকা চালানে লেখা, আর পরে-দেব ভাড়া দেওয়া (মালিক, ৭ অক্টোবর ২০২৬; [[ChallanFareController]])
+    Route::post('/transport/challan/{challan}/fare', [\App\Modules\Sales\Http\Controllers\ChallanFareController::class, 'record'])
+        ->whereNumber('challan')->name('challan.fare.record');
+    Route::post('/transport/challan/{challan}/fare/pay', [\App\Modules\Sales\Http\Controllers\ChallanFareController::class, 'pay'])
+        ->whereNumber('challan')->name('challan.fare.pay');
 
     Route::prefix('print')->name('print.')->group(function () {
         Route::get('/invoice/{invoice}', [SalesPrintController::class, 'invoice'])

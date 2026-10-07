@@ -12,6 +12,7 @@ return [
     'tab_unassigned' => 'Transport not set',
     'tab_assigned' => 'Transport set',
     'tab_passed' => 'Gate pass issued',
+    'tab_fare_due' => 'Fare due',
     'empty_unassigned' => 'Every confirmed challan has its transport.',
     'empty_assigned' => 'No challan is waiting for a gate pass.',
     'empty_passed' => 'No challan has a gate pass yet.',

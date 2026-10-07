@@ -42,7 +42,8 @@ final class TransportAssignmentController extends Controller implements HasMiddl
     use FiltersByDate;
     use GrandTotals;
 
-    public const TABS = ['unassigned', 'assigned', 'passed'];
+    // ⭐ "ভাড়া বাকি" — পরে-দেব ভাড়া, এখনো দেওয়া হয়নি (মালিক, ৭ অক্টোবর ২০২৬; [[FarePayment::isDue()]])
+    public const TABS = ['unassigned', 'assigned', 'passed', 'fare_due'];
 
     public function __construct(
         private readonly MenuBuilder $menu,
@@ -131,6 +132,13 @@ final class TransportAssignmentController extends Controller implements HasMiddl
             ->orWhere(fn ($w) => $w->whereNotNull('sal_challans.carrier_name')->where('sal_challans.carrier_name', '<>', ''));
 
         return match ($tab) {
+            // ⓘ [[FarePayment::isDue()]]-এর একই শর্ত, কোয়েরিতে: পরে-দেব, বাহক আছে, ভাউচার নেই বা বাতিল
+            'fare_due' => $query->where('sal_challans.fare_rule', \App\Modules\Sales\Services\FarePayment::RULE)
+                ->where('sal_challans.fare_status', \App\Modules\Sales\Services\FarePayment::DUE)
+                ->whereNotNull('sal_challans.carrier_id')
+                ->where(fn ($w) => $w->whereNull('sal_challans.fare_voucher_id')
+                    ->orWhereIn('sal_challans.fare_voucher_id', \App\Modules\Accounts\Models\Voucher::query()
+                        ->where('status', DocumentStatus::CANCELLED)->select('id'))),
             'passed' => $query->whereExists($passed),
             'assigned' => $query->whereNotExists($passed)->where($named),
             default => $query->whereNotExists($passed)->whereNot($named),
