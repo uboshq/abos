@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Accounts\Services;
 
 use App\Core\Engines\Coding\CodeSuggester;
+use App\Core\Services\PermissionSyncer;
 use App\Core\Support\CompanyContext;
 use App\Core\Support\DocumentStatus;
 use App\Modules\Accounts\Models\Account;
@@ -91,6 +92,11 @@ final class AccountService
 
             $account = Account::create([
                 ...$data,
+                /*
+                 * ⭐ পক্ষ রাখে কি না — মায়ের থেকে (হিসাব ⚠️১২; [[Account::holdsParty()]])। ⓘ পাওনার নিচে "ঢাকার ডিলার" খুললে সেটাও
+                 * গ্রাহক রাখে; নইলে প্রথম বিলেই ইঞ্জিন আটকাত। বদলানো যায় কেবল মালিকের হাতে ([[update()]])।
+                 */
+                'party_types' => $parent?->party_types ?: null,
                 'code' => $code,
                 'type' => $type,
                 // ⛔ ইনপুট যা-ই পাঠাক, ধরনটা গাছ থেকেই আসে
@@ -176,6 +182,25 @@ final class AccountService
             // নিয়ম, একই কারণে: লেজার আর এই সংখ্যা দুই রকম বললে কোনটা
             // সত্যি তা বলার উপায় থাকে না। বদলাতে জাবেদা ভাউচার।
             unset($data['opening_balance'], $data['opening_date'], $data['is_system']);
+
+            /*
+             * ⛔ পক্ষ রাখে কি না — কেবল মালিক বদলান (অডিট হিসাব ⚠️১২; সমন্বয়কের সিদ্ধান্ত, ৭ অক্টোবর ২০২৬)। ⓘ ধর্মটা ঠিক করে কোন
+             * খাতে পক্ষের নাম বসতে পারে, আর বকেয়া কোথায় জমে; ভুল টিকে পাওনার খাত পক্ষ হারালে প্রথম বিলই আটকাত। কেবল নতুন
+             * সারিতে খাটে — পুরনো সারি অক্ষত।
+             */
+            if (array_key_exists('party_types', $data)) {
+                $wanted = array_values(array_unique(array_map('strval', (array) ($data['party_types'] ?? []))));
+                sort($wanted);
+
+                if ($wanted !== ($account->party_types ?? [])
+                    && ! (bool) auth()->user()?->roles->contains('name', PermissionSyncer::SUPER_ADMIN_ROLE)) {
+                    throw ValidationException::withMessages([
+                        'party_types' => __('accounts::validation.party_types_owner_only'),
+                    ]);
+                }
+
+                $data['party_types'] = $wanted === [] ? null : $wanted;
+            }
 
             $code = trim((string) ($data['code'] ?? '')) !== ''
                 ? trim((string) $data['code'])

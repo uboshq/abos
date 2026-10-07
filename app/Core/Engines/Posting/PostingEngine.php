@@ -373,7 +373,7 @@ final class PostingEngine
         $found = DB::table('accounts')
             ->whereIn('id', $wanted)
             ->where('company_id', CompanyContext::id())
-            ->get(['id', 'code', 'is_group'])
+            ->get(['id', 'code', 'is_group', 'party_types'])
             ->keyBy('id');
 
         foreach ($lines as $index => $line) {
@@ -385,6 +385,26 @@ final class PostingEngine
                     "Line {$index} of {$sourceType}#{$sourceId} points at account {$id}, which does not "
                     .'exist in this company. Nothing was written.'
                 );
+            }
+
+            /*
+             * ⛔ পক্ষ কেবল পক্ষ-রাখা খাতে, আর ধরন মিলিয়ে — পুরো-ERP অডিট, ৬ অক্টোবর ২০২৬ (হিসাব ⚠️১২; সমন্বয়কের সিদ্ধান্ত,
+             * ৭ অক্টোবর ২০২৬; [[AnAccountSaysWhichPartiesItHoldsTest]])। ⓘ আগে যেকোনো সারিতে যেকোনো পক্ষ বসত, আর পক্ষের খাতা ও বকেয়া
+             * পক্ষের নামের সব সারি যোগ করে — খরচের সারিতে গ্রাহকের নাম দিলে তাঁর বকেয়া বদলাত, পাওনার খাত নয়। কেবল নতুন সারি;
+             * উল্টো দাখিলা পুরনো সারি হুবহু নকল করে ([[reverse()]]), তাই আগের কাগজ আগের মতোই ফেরানো যায়।
+             */
+            $partyType = $line['party_type'] ?? null;
+
+            if ($partyType !== null && $partyType !== '') {
+                $holds = json_decode((string) ($account->party_types ?? '[]'), true) ?: [];
+
+                if (! in_array($partyType, $holds, true)) {
+                    throw new PostingException(
+                        "Line {$index} of {$sourceType}#{$sourceId} names a {$partyType} on account {$account->code}, which "
+                        .($holds === [] ? 'holds no party' : 'holds only '.implode(', ', $holds)).'. A party sits only on the '
+                        .'control account that keeps its balance — otherwise its dues change while the account does not. Nothing was written.'
+                    );
+                }
             }
 
             if ($account->is_group) {

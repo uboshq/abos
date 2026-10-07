@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Accounts\Http\Requests;
 
+use App\Core\Services\PartyRegistry;
 use App\Core\Support\CompanyContext;
 use App\Modules\Accounts\Models\Account;
 use Illuminate\Foundation\Http\FormRequest;
@@ -85,6 +86,10 @@ class AccountRequest extends FormRequest
             'held_by' => ['nullable', 'integer', Rule::exists('company_user', 'user_id')->where('company_id', CompanyContext::id())],
 
             'is_active' => ['nullable', 'boolean'],
+
+            // ⭐ পক্ষ রাখে — কেবল মালিক বদলান ([[AccountService::update()]]; অডিট হিসাব ⚠️১২)
+            'party_types' => ['nullable', 'array'],
+            'party_types.*' => ['string', Rule::in(app(PartyRegistry::class)->types())],
         ];
     }
 
@@ -96,6 +101,11 @@ class AccountRequest extends FormRequest
         $this->merge([
             'is_group' => $this->boolean('is_group'),
         ]);
+
+        // ⓘ পক্ষের ঘর দেখানো হলে (মালিক) সব টিক তুলে দেওয়াও একটা উত্তর — "পক্ষ রাখে না"
+        if ($this->has('party_types_shown')) {
+            $this->merge(['party_types' => array_values((array) $this->input('party_types', []))]);
+        }
     }
 
     /** @return array<string, string> */

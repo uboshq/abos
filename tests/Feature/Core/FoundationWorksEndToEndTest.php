@@ -112,7 +112,8 @@ class FoundationWorksEndToEndTest extends TestCase
         $vat = Account::query()->where('code', StandardChart::VAT_PAYABLE)->firstOrFail();
 
         $posting->post('journal_voucher', 1, '2026-08-04', [
-            ['account_id' => $till->account->id, 'debit' => 11500, 'party_type' => 'customer', 'party_id' => 7],
+            // ⓘ গ্রাহকের নাম কেবল পাওনার খাতে — নগদের খাত পক্ষ রাখে না (অডিট হিসাব ⚠️১২, [[Account::holdsParty()]])
+            ['account_id' => Account::query()->where('code', StandardChart::RECEIVABLE)->firstOrFail()->id, 'debit' => 11500, 'party_type' => 'customer', 'party_id' => 7],
             ['account_id' => $sales->id, 'credit' => 10000],
             ['account_id' => $vat->id, 'credit' => 1500],
         ], documentNo: $documentNo);

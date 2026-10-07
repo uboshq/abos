@@ -122,6 +122,8 @@ class Account extends Model implements Drillable
         'opening_balance', 'opening_date',
         'account_number', 'bank_name', 'branch_name', 'account_title', 'routing_no',
         'status', 'is_active', 'created_by',
+        // ⭐ পক্ষ রাখে — কোন ধরনের পক্ষ এই খাতে বসে (অডিট হিসাব ⚠️১২, ৭ অক্টোবর ২০২৬; [[holdsParty()]])
+        'party_types',
     ];
 
     protected function casts(): array
@@ -132,7 +134,33 @@ class Account extends Model implements Drillable
             'is_active' => 'boolean',
             'opening_balance' => 'decimal:4',
             'opening_date' => 'date',
+            'party_types' => 'array',
         ];
+    }
+
+    /**
+     * ⭐ খাতটা কি পক্ষ রাখে — পুরো-ERP অডিট, ৬ অক্টোবর ২০২৬ (হিসাব ⚠️১২; সমন্বয়কের সিদ্ধান্ত ৭ অক্টোবর ২০২৬; [[AnAccountSaysWhichPartiesItHoldsTest]])।
+     *
+     * ⓘ আন্তর্জাতিক নিয়মে পক্ষ চলে কেবল sub-ledger নিয়ন্ত্রণ-খাতে — পাওনা, দেনা, কর্মীর অগ্রিম, হাতধার, ভাড়া, লাভ প্রদেয়, মূলধন।
+     * আগে জাবেদার যেকোনো সারিতে যেকোনো পক্ষ বসত: খরচের সারিতে গ্রাহকের নাম দিলে তাঁর "বকেয়া" বদলাত, পাওনার খাত নয়। এখন খাত বলে
+     * কোন ধরনের পক্ষ নেয় ([[StandardChart::PARTY_HOLDERS]] আর আজকের খাতা থেকে); ইঞ্জিন নতুন সারিতে মেলায়
+     * ([[PostingEngine::assertAccountsCanHoldMoney()]]), পুরনো সারি অক্ষত। পক্ষ রাখে মানে পক্ষ লাগে আর চলে; না রাখলে চলে না।
+     */
+    public function holdsParty(): bool
+    {
+        return ($this->party_types ?? []) !== [];
+    }
+
+    /** এই ধরনের পক্ষ (customer · supplier · employee · person) এই খাতে বসে কি না */
+    public function takesParty(string $type): bool
+    {
+        return in_array($type, $this->party_types ?? [], true);
+    }
+
+    /** যে খাতগুলো পক্ষ রাখে — গ্রুপসহ, কোম্পানির স্কোপে */
+    public function scopeHoldingParty(Builder $query): Builder
+    {
+        return $query->whereNotNull('party_types')->where('party_types', '<>', '[]');
     }
 
     /**

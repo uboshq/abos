@@ -184,6 +184,27 @@
 
             </div>
 
+            {{-- ⭐ পক্ষ রাখে — কেবল মালিক দেখেন আর বদলান (অডিট হিসাব ⚠️১২, ৭ অক্টোবর ২০২৬; [[Account::holdsParty()]]) --}}
+            @if (! $isNew && auth()->user()?->roles->contains('name', \App\Core\Services\PermissionSyncer::SUPER_ADMIN_ROLE))
+                <fieldset class="mt-3" data-party-types>
+                    <legend class="mb-1 text-sm font-medium">{{ __('accounts::field.party_types') }}</legend>
+                    <input type="hidden" name="party_types_shown" value="1">
+                    <div class="flex flex-wrap gap-x-4">
+                        @foreach (app(\App\Core\Services\PartyRegistry::class)->all() as $partyType => $partyLabel)
+                            <label class="flex min-h-(--spacing-touch) items-center gap-2 text-sm">
+                                <input type="checkbox" name="party_types[]" value="{{ $partyType }}" class="size-4"
+                                       @checked(in_array($partyType, (array) old('party_types', $account->party_types ?? []), true))>
+                                <span>{{ __($partyLabel) }}</span>
+                            </label>
+                        @endforeach
+                    </div>
+                    <span class="block text-2xs text-(--color-ink-muted)">{{ __('accounts::field.party_types_hint') }}</span>
+                    @error('party_types')
+                        <span class="mt-1 block text-2xs text-(--color-danger)">{{ $message }}</span>
+                    @enderror
+                </fieldset>
+            @endif
+
             {{-- ⭐ টাকার ধরন — জিজ্ঞেস নয়, জানানো।
 
                  আগে এখানে দুইটা টিক ছিল। সেগুলো তুলে দেওয়ার কারণ

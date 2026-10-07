@@ -20,6 +20,7 @@ use App\Modules\Finance\Services\HandLoanService;
 use App\Modules\MasterData\Models\Person;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Tests\Concerns\PutsMoneyInTheTill;
 use Tests\TestCase;
 
@@ -78,11 +79,15 @@ final class HandLoanReportsAddUpTest extends TestCase
             ['account_id' => $this->till, 'debit' => '0', 'credit' => '300'],
         ], 'TST-1');
 
-        // ⓘ আর অন্য পক্ষের নামে ২০০ (গ্রাহক) — আইডি ইচ্ছে করে করিমের সমান: পক্ষের ধরন না দেখলে করিমের সারিতে মিশত
+        // ⓘ আর অন্য পক্ষের নামে ২০০ (গ্রাহক) — আইডি ইচ্ছে করে করিমের সমান: পক্ষের ধরন না দেখলে করিমের সারিতে মিশত।
+        // ⓘ নতুন সারিতে হাতধারের খাত গ্রাহক নেয় না (অডিট হিসাব ⚠️১২, [[Account::holdsParty()]]) — তাই এটা নিয়মের আগের পুরনো সারি:
+        // ইঞ্জিনে নামছাড়া বসিয়ে, তারপর খাতায় সরাসরি নাম, ঠিক যেমন লাইভের পুরনো খাতায় থাকতে পারে
         app(PostingEngine::class)->post('test:other-party', 2, now()->subDays(3)->toDateString(), [
-            ['account_id' => $head->id, 'debit' => '200', 'credit' => '0', 'party_type' => 'customer', 'party_id' => $karim->id],
+            ['account_id' => $head->id, 'debit' => '200', 'credit' => '0'],
             ['account_id' => $this->till, 'debit' => '0', 'credit' => '200'],
         ], 'TST-2');
+        DB::table('ledger_entries')->where('source_type', 'test:other-party')->where('account_id', $head->id)
+            ->update(['party_type' => 'customer', 'party_id' => $karim->id]);
 
         $result = $this->report(HandLoanReports::RECONCILE);
         $rows = collect($result->rows)->keyBy(fn (array $r) => $r['person_id'] === null ? 'nameless' : (int) $r['person_id']);

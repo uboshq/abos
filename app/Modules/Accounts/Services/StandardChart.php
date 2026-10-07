@@ -744,8 +744,66 @@ final class StandardChart implements ProvisionsCompany
                 $created++;
             }
 
+            // ⭐ পক্ষ রাখে এমন পরিবার — নতুন আর পুরনো কোম্পানি একই নিয়মে (হিসাব ⚠️১২)
+            $this->markPartyHolders();
+
             return $created;
         });
+    }
+
+    /**
+     * ⭐ যে খাত-পরিবার পক্ষ রাখে, আর কোন ধরনের — পুরো-ERP অডিট, ৬ অক্টোবর ২০২৬ (হিসাব ⚠️১২; [[Account::holdsParty()]])।
+     *
+     * ⓘ প্রতিটা সারি কোড ধরে বসানো কাগজগুলো থেকে (মানুষের নামে পাওনা, দেনা আর অগ্রিমও চলে): বিক্রি-আদায় ১১১০, কেনা-পরিশোধ ২১১০ পরিবার, কর্মীর অগ্রিম
+     * ১১৩১, হাতধার ১১৭০, ভাড়াটের পাওনা ১১২৫ আর জামানত ২১৫৫, মাল-এসেছে-বিল-আসেনি ২১৬০, লাভ প্রদেয় ২১৯০, মালিকের মূলধন ৩১০০।
+     * পুরো বংশ পায় — নিচে খোলা খাতও। ⛔ এখানে না থাকলে নতুন কোম্পানির প্রথম মূলধন বা ভাড়ার দাখিলাই ইঞ্জিনে আটকাত।
+     *
+     * @var array<string, list<string>>
+     */
+    public const PARTY_HOLDERS = [
+        // ⓘ মানুষের (person) নামেও — পাওনা সরানো, হাতধার, ব্যক্তির অগ্রিম; মালিকের ৫ অক্টোবর ২০২৬-এর অভিযোগ (AVA RCV-0001)
+        self::RECEIVABLE => ['customer', 'person'],
+        self::PAYABLE_GROUP => ['person', 'supplier'],
+        self::EMPLOYEE_ADVANCE => ['employee', 'person'],
+        self::HAND_LOAN => ['person'],
+        self::RENT_RECEIVABLE => ['customer', 'person'],
+        self::TENANT_DEPOSITS => ['customer', 'person'],
+        self::GOODS_RECEIVED_NOT_INVOICED => ['supplier'],
+        self::PROFIT_PAYABLE => ['person'],
+        self::OWNER_CAPITAL => ['person'],
+    ];
+
+    /**
+     * পরিবারগুলোয় ধরন বসানো — কেবল যোগ, কখনো বাদ নয় (কোম্পানি বা আজকের খাতা যা দিয়েছে তা থাকে)।
+     *
+     * @return array<string, list<string>> কোড => নতুন তালিকা, যেগুলো বদলাল
+     */
+    public function markPartyHolders(): array
+    {
+        $changed = [];
+
+        foreach (self::PARTY_HOLDERS as $code => $types) {
+            // ⓘ PHP সংখ্যার মতো চাবিকে int বানায় — কোড স্ট্রিং
+            $root = self::find((string) $code);
+
+            if ($root === null) {
+                continue;
+            }
+
+            $ids = $root->selfAndDescendants()->pluck('id')->all();
+
+            foreach (Account::query()->whereIn('id', $ids)->get() as $account) {
+                $merged = array_values(array_unique([...($account->party_types ?? []), ...$types]));
+                sort($merged);
+
+                if ($merged !== ($account->party_types ?? [])) {
+                    $account->forceFill(['party_types' => $merged])->save();
+                    $changed[(string) $account->code] = $merged;
+                }
+            }
+        }
+
+        return $changed;
     }
 
     /** কোড দিয়ে একটা খাত — না পেলে null, কারণ কোম্পানি ছকটা বদলাতে পারে। */

@@ -157,8 +157,9 @@ final class OnlyAnOwnedAccountKeepsAPartyTest extends TestCase
                 ['account_id' => $expense, 'debit' => '400', 'credit' => '0'],
                 [
                     'account_id' => $payable, 'debit' => '0', 'credit' => '400',
-                    // সারির নিজের পক্ষ — হেডারেরটা থেকে আলাদা
-                    'party_type' => 'customer', 'party_id' => $this->aCustomerId(),
+                    // সারির নিজের পক্ষ — হেডারেরটা থেকে আলাদা। ⓘ দেনার খাত এখন কেবল সরবরাহকারী আর মানুষ রাখে
+                    // ([[Account::holdsParty()]], অডিট হিসাব ⚠️১২), তাই এখানে মানুষ — গ্রাহক নয়
+                    'party_type' => 'person', 'party_id' => $this->aPersonId(),
                 ],
             ],
         );
@@ -166,7 +167,7 @@ final class OnlyAnOwnedAccountKeepsAPartyTest extends TestCase
         $lines = $this->ledgerOf(app(VoucherService::class)->post($voucher));
 
         $this->assertSame(
-            ['customer', $this->aCustomerId()],
+            ['person', $this->aPersonId()],
             [$lines[$payable]['party_type'], (int) $lines[$payable]['party_id']],
             'সারিতে লেখা পক্ষটা হেডারেরটার নিচে চাপা পড়েছে।',
         );
@@ -247,9 +248,9 @@ final class OnlyAnOwnedAccountKeepsAPartyTest extends TestCase
             ->where('company_id', CompanyContext::id())->orderBy('id')->value('id');
     }
 
-    private function aCustomerId(): int
+    private function aPersonId(): int
     {
-        return (int) DB::table('customers')
-            ->where('company_id', CompanyContext::id())->orderBy('id')->value('id');
+        return (int) (\App\Modules\MasterData\Models\Person::query()->orderBy('id')->value('id')
+            ?? \App\Modules\MasterData\Models\Person::query()->create(['code' => 'P-LINE', 'name_en' => 'Line Person'])->id);
     }
 }

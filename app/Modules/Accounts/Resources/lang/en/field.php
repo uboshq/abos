@@ -72,6 +72,8 @@ return [
     'type' => 'Type',
     'nature' => 'Nature',
     'is_group' => 'Group account',
+    'party_types' => 'Holds parties',
+    'party_types_hint' => 'Which kinds of party may be named on this account\'s lines. None ticked means the account holds no party. Applies to new lines only.',
     'is_cash' => 'Cash account',
     'is_bank' => 'Bank or MFS account',
     'opening_balance' => 'Opening balance',
