@@ -509,6 +509,23 @@ final class CoreReports
             'accounts::menu.balance_sheet',
             Account::BALANCE_SHEET_TYPES,
             dateRange: false,
+
+            /*
+             * ⛔ বন্ধ-না-হওয়া লাভ এক লাইনে — পুরো-ERP অডিট, ৬ অক্টোবর ২০২৬ (হিসাব ⚠️১১; [[TheEngineBalanceSheetNamesTheUnclosedProfitTest]])।
+             * ⓘ এই সংস্করণ ফোনের রিপোর্ট আর নির্ধারিত রিপোর্টে খোলে, অথচ আয়-ব্যয় এখানে থাকে না — বছর বন্ধের আগে সম্পদ আর
+             * দায়-মূলধনের ফারাক কোথাও ব্যাখ্যা হত না, আর রিপোর্টটা কখনো মিলত না। খাতা সবসময় মেলে, তাই এখানের নিট ডেবিট ঠিক
+             * চলতি বছরের বন্ধ-না-হওয়া লাভ ([[BalanceSheetService::profitSoFar()]]-এর একই অঙ্ক) — সেটাই নাম ধরে দেখানো।
+             */
+            summary: function (array $totals): array {
+                $profit = bcsub((string) ($totals['debit'] ?? '0') ?: '0', (string) ($totals['credit'] ?? '0') ?: '0', 4);
+                $good = bccomp($profit, '0', 4) >= 0;
+
+                return [
+                    'label' => $good ? __('accounts::message.unclosed_profit') : __('accounts::message.unclosed_loss'),
+                    'value' => $good ? $profit : bcmul($profit, '-1', 4),
+                    'good' => $good,
+                ];
+            },
             /* ⓘ লাইভের ব্যালেন্স শিটের পাতা আলাদা নিয়ামক ([[BalanceSheetController]]),
                আর সেটা কেবল এই চাবি চায় — ইঞ্জিনের এই সংস্করণ ওয়েবে পৌঁছায়ই না */
             permission: 'accounts.report.final',

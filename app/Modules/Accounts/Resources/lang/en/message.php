@@ -198,6 +198,8 @@ return [
     'count_matched' => 'The cash count matched',
     'count_off_by' => 'The cash count was off by :amount',
     'net_profit' => 'Net profit',
+    'unclosed_profit' => 'Profit for the year so far (year not closed) — the gap between assets and liabilities plus equity',
+    'unclosed_loss' => 'Loss for the year so far (year not closed) — the gap between assets and liabilities plus equity',
     'net_loss' => 'Net loss',
     'bill_tag_hint' => 'If one truck brought several bills, tick them all. Tick none and this is an indirect cost; tick one and it is direct - the money rides on that stock.',
     'no_bill_to_tag' => 'There is no bill to tag right now - either nothing has been purchased yet, or every bill already carries its costs.',
