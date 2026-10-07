@@ -214,7 +214,9 @@ final class CoreReports
                 ['key' => 'credit', 'label' => 'core.table.credit', 'type' => ReportColumn::MONEY],
                 // চলমান ব্যালেন্স যোগ করা হয় না — শেষ সারির মানটাই ব্যালেন্স,
                 // যোগফল দেখালে অর্থহীন একটা সংখ্যা আসত।
-                ['key' => 'balance', 'label' => 'core.table.balance', 'type' => ReportColumn::MONEY, 'total' => false],
+                // ⭐ "(Dr) 250.79" / "(Cr) 22,958.21" — খালি বিয়োগ নয় (অডিট ⓘ১৬, ৭ অক্টোবর ২০২৬; মালিকের নিয়ম, ৩ অক্টোবর ২০২৬;
+                // [[TheTrialBalanceShowsNetBalancesTest]])। খাতা, প্রকল্পের খাতা আর নগদ/ব্যাংক বই — তিনটাই।
+                ['key' => 'balance', 'label' => 'core.table.balance', 'type' => ReportColumn::DR_CR, 'width' => '10rem', 'total' => false],
             ],
         );
     }
@@ -294,12 +296,19 @@ final class CoreReports
                 ['key' => 'narration', 'label' => 'core.table.narration'],
                 ['key' => 'debit', 'label' => 'core.table.debit', 'type' => ReportColumn::MONEY],
                 ['key' => 'credit', 'label' => 'core.table.credit', 'type' => ReportColumn::MONEY],
-                ['key' => 'balance', 'label' => 'core.table.balance', 'type' => ReportColumn::MONEY, 'total' => false],
+                ['key' => 'balance', 'label' => 'core.table.balance', 'type' => ReportColumn::DR_CR, 'width' => '10rem', 'total' => false],
             ],
         );
     }
 
-    /** রেওয়ামিল — প্রতি হিসাবের ডেবিট ও ক্রেডিটের যোগফল। */
+    /**
+     * রেওয়ামিল — প্রতি হিসাবের নিট জের, ডেবিট বা ক্রেডিট কলামে।
+     *
+     * ⭐ আন্তর্জাতিক উপস্থাপন — পুরো-ERP অডিট, ৬ অক্টোবর ২০২৬ (ⓘ১৬; সমন্বয়কের আদেশ ৭ অক্টোবর ২০২৬, মালিক ১০০% আন্তর্জাতিক মান চেয়েছেন;
+     * [[TheTrialBalanceShowsNetBalancesTest]])। ⓘ আগে প্রতিটা খাতের মোট ডেবিট আর মোট ক্রেডিট পাশাপাশি বসত — লেনদেনের যোগফল, জের নয়;
+     * নগদের খাতে দুই কলামেই লাখ লাখ, অথচ হাতে কত তা পড়ে বুঝতে হত। এখন প্রতিটা খাতের জের একটাই কলামে: ডেবিট-জের ডেবিটে, ক্রেডিট-জের
+     * ক্রেডিটে; শূন্য-জেরের খাত বাদ। খাতা মেলে বলে দুই কলামের মোট আগের মতোই সমান।
+     */
     public static function trialBalance(): ReportDefinition
     {
         return new ReportDefinition(
@@ -339,9 +348,11 @@ final class CoreReports
                 ->select([
                     'ledger_entries.account_id',
                     self::accountName(),
-                    DB::raw('SUM(ledger_entries.debit) as debit'),
-                    DB::raw('SUM(ledger_entries.credit) as credit'),
-                ]),
+                    DB::raw('CASE WHEN SUM(ledger_entries.debit) > SUM(ledger_entries.credit) THEN SUM(ledger_entries.debit) - SUM(ledger_entries.credit) ELSE 0 END as debit'),
+                    DB::raw('CASE WHEN SUM(ledger_entries.credit) > SUM(ledger_entries.debit) THEN SUM(ledger_entries.credit) - SUM(ledger_entries.debit) ELSE 0 END as credit'),
+                ])
+                // ⓘ জের শূন্য — রেওয়ামিলে সারি নেই
+                ->havingRaw('SUM(ledger_entries.debit) <> SUM(ledger_entries.credit)'),
             columns: [
                 ['key' => 'account_name', 'label' => 'core.print.account'],
                 ['key' => 'debit', 'label' => 'core.table.debit', 'type' => ReportColumn::MONEY],
@@ -435,7 +446,7 @@ final class CoreReports
                 ['key' => 'narration', 'label' => 'core.table.narration'],
                 ['key' => 'debit', 'label' => 'accounts::field.received', 'type' => ReportColumn::MONEY],
                 ['key' => 'credit', 'label' => 'accounts::field.paid', 'type' => ReportColumn::MONEY],
-                ['key' => 'balance', 'label' => 'core.table.balance', 'type' => ReportColumn::MONEY, 'total' => false],
+                ['key' => 'balance', 'label' => 'core.table.balance', 'type' => ReportColumn::DR_CR, 'width' => '10rem', 'total' => false],
             ],
         );
     }

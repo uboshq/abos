@@ -176,8 +176,8 @@
                      'render' => fn ($e) => \App\Core\Support\Money::isZero($e->debit) ? '' : \App\Core\Support\Money::format($e->debit)],
                     ['key' => 'credit', 'label' => __('core.table.credit'), 'numeric' => true, 'width' => '8rem',
                      'render' => fn ($e) => \App\Core\Support\Money::isZero($e->credit) ? '' : \App\Core\Support\Money::format($e->credit)],
-                    ['key' => 'balance', 'label' => __('core.table.balance'), 'numeric' => true, 'width' => '9rem',
-                     'render' => fn ($e) => \App\Core\Support\Money::format($e->running_balance)],
+                    ['key' => 'balance', 'label' => __('core.table.balance'), 'numeric' => true, 'width' => '10rem',
+                     'render' => fn ($e) => \App\Core\Support\Money::drCr($e->running_balance)],
                 ]" />
 
             <x-ui.pager :rows="$entries" />

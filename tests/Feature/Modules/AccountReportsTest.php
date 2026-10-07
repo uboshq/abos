@@ -119,6 +119,24 @@ class AccountReportsTest extends TestCase
      * ব্যক্তিগত হেল্পারের নাম ওগুলোর সাথে মেলানো যায় না। তিনবারই একই
      * ভুল হয়েছে; নামটা আলাদা রাখাই সহজ।
      */
+    /** রেওয়ামিলে প্রধান বাক্সের নিট জের — ডেবিট − ক্রেডিট */
+    private function tillRow(): string
+    {
+        $row = collect($this->report('accounts.trial_balance')->rows)->firstWhere('account_id', $this->till->account_id);
+
+        return $row === null ? '0' : bcsub((string) $row['debit'], (string) $row['credit'], 2);
+    }
+
+    /** খাতা থেকে আলাদা করে: যে খাতগুলোর জের ডেবিটে, তাদের জেরের যোগ */
+    private function debitBalancesUpTo(string $to): string
+    {
+        return (string) \Illuminate\Support\Facades\DB::query()->fromSub(
+            \Illuminate\Support\Facades\DB::table('ledger_entries')->where('company_id', CompanyContext::id())->where('trx_date', '<=', $to)
+                ->groupBy('account_id')->selectRaw('SUM(debit) - SUM(credit) as net'),
+            'nets',
+        )->where('net', '>', 0)->sum('net');
+    }
+
     private function report(string $key, array $filters = []): ReportResult
     {
         return app(ReportEngine::class)->run($key, [
@@ -203,15 +221,11 @@ class AccountReportsTest extends TestCase
         $this->assertSame($result->totals['debit'], $result->totals['credit']);
 
         /*
-         * ৮,৭১,০০০ = এই টেস্টের তিনটা ভাউচারের ৩১,০০০ + ডেমো ডেটার
-         * ৮,৪০,০০০ খোলা মজুদ (০১/০৭/২০২৬ তারিখে বসানো)।
-         *
-         * আগে এখানে ৩১,০০০ লেখা ছিল, আর সেটাই ভুলটাকে সবুজ রেখেছিল:
-         * রেওয়ামিল "from" তারিখের আগের সব দাখিলা বাদ দিত, টেস্টও ঠিক
-         * ততটুকুই চাইত। আসল পর্দায় খোলা মজুদ ৮,৪০,০০০ থাকা সত্ত্বেও
-         * ৩,৪০০ দেখাচ্ছিল, অথচ ডেবিট-ক্রেডিট সমান বলে কিছু ধরা পড়েনি।
+         * ⭐ নিট জের — অডিট ⓘ১৬, ৭ অক্টোবর ২০২৬ ([[TheTrialBalanceShowsNetBalancesTest]])। আগে এখানে ৮,৭১,০০০ ছিল: লেনদেনের
+         * মোট ডেবিট (তিন ভাউচারের ৩১,০০০ + ডেমোর ৮,৪০,০০০ খোলা মজুদ)। এখন যোগফল প্রতিটা ডেবিট-জেরের খাতের জের — খাতা থেকে
+         * আলাদা করে মেপে মেলানো। ⓘ আর আগের শিক্ষাটা থাকে: খোলা মজুদ "from"-এর আগের হলেও গোনা হয়।
          */
-        $this->assertSame('871000.00', $result->totals['debit']);
+        $this->assertSame(bcadd($this->debitBalancesUpTo('2026-08-31'), '0', 2), $result->totals['debit']);
     }
 
     /**
@@ -278,7 +292,7 @@ class AccountReportsTest extends TestCase
 
     public function test_the_trial_balance_carries_everything_before_the_from_date(): void
     {
-        $before = $this->report('accounts.trial_balance')->totals['debit'];
+        $before = $this->tillRow();
 
         // পরিসরের আগের একটা দাখিলা — যেমন খোলা ব্যালেন্স বা গত মাসের
         // লেনদেন
@@ -289,9 +303,9 @@ class AccountReportsTest extends TestCase
             $svc->twoLineEntry(Voucher::CONTRA, $this->bank, $this->till->account_id, '7500', 'আগের মাসের'),
         ));
 
-        $after = $this->report('accounts.trial_balance')->totals['debit'];
+        $after = $this->tillRow();
 
-        // ৭,৫০০ যোগ হয়েছে, যদিও তারিখটা "from"-এর আগে
+        // ৭,৫০০ বাক্সের জেরে ঢুকেছে, যদিও তারিখটা "from"-এর আগে (নিট জের — অডিট ⓘ১৬)
         $this->assertSame(0, bccomp(bcsub($after, $before, 2), '7500.00', 2));
 
         // আর তবু দুই দিক সমান
