@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../features/approvals/approval_inbox_screen.dart';
 import '../../features/attendance/attendance_screen.dart';
 import '../../features/claims/claims_screens.dart';
+import '../../features/vouchers/voucher_screens.dart';
 import '../../features/auth/login_screen.dart';
 import '../../features/customers/customer_detail_screen.dart';
 import '../../features/customers/customer_list_screen.dart';
@@ -97,6 +98,12 @@ final goRouterProvider = Provider<GoRouter>((ref) {
             path: 'attendance',
             builder: (context, state) => const ModuleGateView(
                 path: 'attendance', child: AttendanceScreen()),
+          ),
+          GoRoute(
+            path: 'vouchers',
+            // ⭐ অফিসের লোকের ভাউচার (৭ অক্টোবর ২০২৬) — ফোনের হিসাব-সুইচের পিছনে
+            builder: (context, state) => const ModuleGateView(
+                path: 'vouchers', child: VoucherListScreen()),
           ),
           GoRoute(
             path: 'claims',

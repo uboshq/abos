@@ -363,6 +363,14 @@ class MenuRepository {
             icon: Icons.how_to_reg_outlined,
             routeName: 'attendance',
           ),
+        // ⭐ অফিসের লোকের ভাউচার — ওয়েবের লেখার চাবি (মালিক, ৭ অক্টোবর ২০২৬: "সব ভাউচার দেওয়ার কথা ছিল")
+        if (user.can('accounts.voucher.create'))
+          const MenuItem(
+            key: 'accounts.voucher.create',
+            label: 'ভাউচার',
+            icon: Icons.receipt_long_outlined,
+            routeName: 'vouchers',
+          ),
         // ⭐ খরচের দাবি আর অগ্রিম — কর্মীর নিজের (টাকা-আসা-যাওয়ার পরিকল্পনা ১৩, ৭ অক্টোবর ২০২৬; ওয়েবের একই চাবি)
         if (user.can('hr.claim.self'))
           const MenuItem(

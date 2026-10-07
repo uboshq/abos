@@ -33,6 +33,7 @@ class ModuleGate {
     'approvals': 'approval',
     'attendance': 'hr',
     'claims': 'hr',
+    'vouchers': 'accounts',
     'customers': 'customer',
     'dues': 'customer',
     'orders': 'sales',
