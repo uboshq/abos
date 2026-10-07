@@ -232,6 +232,7 @@ class ACancelledPaperLooksValidTest extends TestCase
             'purchase.print.return' => 'ক্রয়ের চারটা কাগজ — একই সেলাই',
             'inventory.transfer.print' => 'স্থানান্তর — StockPrintController নিজে চিহ্ন বসায়',
             'accounts.transfer.print' => 'টাকা হস্তান্তরের স্লিপ — HandoverSlipTest ধরে',
+            'accounts.year_end.closing.print' => 'বছরশেষের সমাপনী ভাউচার — বাতিল হয় না; বছর আবার খুললে উল্টো দাখিলা একই কাগজেই ছাপা হয় (TheYearClosedWithoutAPaperTest)',
             'accounts.note.print' => 'ডেবিট/ক্রেডিট নোট — ANoteCouldNotBePrintedTest ধরে (বাতিল নোট "বাতিল" বলে)',
             'hr.payslip.print' => 'পে-স্লিপ — বাতিল হয় না, খসড়া হয়',
             'inventory.label.print' => 'পণ্যের লেবেল — কোনো ডকুমেন্ট নয়',

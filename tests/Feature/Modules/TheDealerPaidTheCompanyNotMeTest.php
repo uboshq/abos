@@ -266,9 +266,14 @@ class TheDealerPaidTheCompanyNotMeTest extends TestCase
             'type' => Voucher::JOURNAL,
             'trx_date' => now()->toDateString(),
             'narration' => 'পরীক্ষার বিবরণ', // ⓘ বিবরণ বাধ্যতামূলক (ভাউচারের পরিকল্পনা ৩খ, ৭ অক্টোবর ২০২৬)
+            /*
+             * ⓘ কারো নামে বসে না এমন দুই খাত — ৭ অক্টোবর ২০২৬ থেকে হাতে লেখা জাবেদায় পাওনা/দেনার সারিতে পক্ষ বাধ্যতামূলক
+             * (ভাউচারের পরিকল্পনা ৩ক, fe; [[TheVoucherTypeSaidOneThingAndTheLinesAnotherTest]])। দাবিটা একই: পক্ষ লাগে না
+             * এমন জাবেদা পক্ষ ছাড়াই চলে।
+             */
             'lines' => [
-                ['account_id' => $this->payable->id, 'debit' => '700'],
-                ['account_id' => $this->receivable->id, 'credit' => '700'],
+                ['account_id' => \App\Modules\Accounts\Services\StandardChart::find(\App\Modules\Accounts\Services\StandardChart::HAMMALI)->id, 'debit' => '700'],
+                ['account_id' => \App\Modules\Accounts\Services\StandardChart::find(\App\Modules\Accounts\Services\StandardChart::RENT_INCOME)->id, 'credit' => '700'],
             ],
         ])->assertSessionHasNoErrors();
     }
