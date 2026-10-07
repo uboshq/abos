@@ -168,6 +168,38 @@ final class TheOpeningCartHadNoFreeNoPriceAndNoOpeningLotTest extends TestCase
         $this->assertSame(0, StockMovement::query()->where('product_id', $p->id)->count(), '⛔ সেবাদাতাকে প্রিন্সিপাল ধরে মজুদ বসেছে।');
     }
 
+    /**
+     * ⭐ কেবল পরের দিনের ক্রয় ঢুকেছে, কিছু বের হয়নি — খোলা মজুদ তার আগের তারিখে বসে (মালিক, ৭ অক্টোবর ২০২৬: SL Lion WH-এ ১৪টা
+     * পণ্য "ইতিমধ্যেই নড়াচড়া করেছে", আসলে কেবল ৬ অক্টোবরের ক্রয়-বিল)। ⛔ পরের তারিখে নয় (বার্তা দিন বলে), আর কিছু বের হলে একেবারেই নয়।
+     */
+    public function test_opening_goes_in_before_a_later_purchase_but_not_after_goods_went_out(): void
+    {
+        $p = $this->product('LATE-A');
+        $stock = app(\App\Modules\Inventory\Services\StockService::class);
+        $bought = now()->subDays(1)->toDateString();
+        $stock->move(product: $p, warehouse: $this->store, sourceType: 'purchase_bill', sourceId: 7777, floor: '50', date: $bought, documentNo: 'PBL-7777');
+
+        $row = [['product' => 'LATE-A', 'qty' => '10', 'unit_cost' => '20', 'batch_no' => '']];
+
+        // ⛔ ক্রয়ের পরের দিনে — বার্তা ক্রয়ের তারিখটা বলে দেয়
+        $this->post(route('inventory.stock.opening.cart'), ['warehouse_id' => $this->store->id, 'trx_date' => now()->toDateString(), 'rows' => $row])
+            ->assertSessionHasErrors();
+        $this->assertSame(0, StockMovement::query()->where('product_id', $p->id)->where('source_type', 'opening')->count(), '⛔ ক্রয়ের পরের তারিখে খোলা মজুদ বসল — FIFO-র সারিতে শেষে দাঁড়াত।');
+
+        // ⭐ ক্রয়ের আগের দিনে — বসে
+        $this->post(route('inventory.stock.opening.cart'), ['warehouse_id' => $this->store->id, 'trx_date' => now()->subDays(2)->toDateString(), 'rows' => $row])
+            ->assertSessionHasNoErrors();
+        $this->assertSame(1, StockMovement::query()->where('product_id', $p->id)->where('source_type', 'opening')->count(), '⛔ কেবল পরের ক্রয় থাকায়ও খোলা মজুদ নিল না।');
+
+        // ⛔ মাল বেরোলে আর নয়, আগের তারিখ দিলেও
+        $q = $this->product('LATE-B');
+        $stock->move(product: $q, warehouse: $this->store, sourceType: 'purchase_bill', sourceId: 7778, floor: '50', date: $bought, documentNo: 'PBL-7778');
+        $stock->move(product: $q, warehouse: $this->store, sourceType: 'sales_challan', sourceId: 7779, floor: '-5', date: $bought, documentNo: 'CHA-7779');
+        $this->post(route('inventory.stock.opening.cart'), ['warehouse_id' => $this->store->id, 'trx_date' => now()->subDays(2)->toDateString(),
+            'rows' => [['product' => 'LATE-B', 'qty' => '10', 'unit_cost' => '20', 'batch_no' => '']]])->assertSessionHasErrors();
+        $this->assertSame(0, StockMovement::query()->where('product_id', $q->id)->where('source_type', 'opening')->count(), '⛔ মাল বেরোনোর পরেও খোলা মজুদ বসল।');
+    }
+
     /** @param  list<array<string, string>>  $rows */
     private function cart(array $rows)
     {

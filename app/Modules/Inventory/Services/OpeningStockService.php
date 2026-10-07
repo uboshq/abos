@@ -85,7 +85,7 @@ final class OpeningStockService
         // ⭐ মালটা কোন সরবরাহকারী/প্রিন্সিপালের — ঐচ্ছিক; স্তরে বসে, "আসল" কমিশন সেখান থেকে পড়ে (মালিক, ৬ অক্টোবর ২০২৬)
         ?int $supplierId = null,
     ): StockMovement {
-        $this->assertSane($product, $warehouse, $qty, $unitCost, $batch);
+        $this->assertSane($product, $warehouse, $qty, $unitCost, $batch, false, $date ?? now());
 
         return DB::transaction(function () use ($product, $warehouse, $qty, $unitCost, $date, $narration, $batch, $supplierId) {
             $movement = $this->stock->move(
@@ -229,7 +229,7 @@ final class OpeningStockService
             $batch = app(BatchService::class)->receive(product: $product, batchNo: $no, expiry: ($row['expiry_date'] ?? null) ?: null);
         }
 
-        $this->assertSane($product, $warehouse, $qty, $cost, $batch, $topUp ?? false);
+        $this->assertSane($product, $warehouse, $qty, $cost, $batch, $topUp ?? false, $date ?? now());
 
         // ⭐ ফ্রি — খরচ ছাড়া, একই লটে (ক্রয়ের মতো); খরচের স্তরে বসে না
         $free = trim((string) ($row['free_qty'] ?? ''));
@@ -363,7 +363,7 @@ final class OpeningStockService
             $oldValue = bcmul((string) $movement->floor_change, (string) $layer->unit_cost, 4);
             $undo = $this->undo($movement, $product, $warehouse, $batch);
 
-            $this->assertSane($product, $warehouse, $qty, $cost, $newBatch, $topUp);
+            $this->assertSane($product, $warehouse, $qty, $cost, $newBatch, $topUp, $movement->trx_date);
 
             $date = $movement->trx_date;
             $new = $this->stock->move(
@@ -455,7 +455,7 @@ final class OpeningStockService
         $warehouse = Warehouse::query()->findOrFail($movement->warehouse_id);
 
         // ⛔ এই পণ্যের এই গুদামে বিক্রি, স্থানান্তর, সমন্বয় বা সংরক্ষণ — কিছু ঘটে থাকলে আর নয়
-        if (! $this->stillOpen($product, $warehouse)) {
+        if (! $this->stillOpen($product, $warehouse, $movement->trx_date)) {
             throw ValidationException::withMessages(['movement' => __('inventory::message.opening_edit_too_late', [
                 'product' => $product->name(),
                 'warehouse' => $warehouse->name(),
@@ -525,13 +525,34 @@ final class OpeningStockService
      * মজুদের সময় পেরিয়ে গেছে। ভুল হলে সমন্বয়ের পর্দা আছে — সেটা কারণ
      * চায়, চিহ্ন রাখে, আর FIFO-কেও সঠিক ক্রমে জানায়।
      */
-    public function stillOpen(Product $product, Warehouse $warehouse): bool
+    public function stillOpen(Product $product, Warehouse $warehouse, Carbon|string|null $date = null): bool
     {
-        return ! StockMovement::query()
+        $moves = StockMovement::query()
             ->where('product_id', $product->id)
             ->where('warehouse_id', $warehouse->id)
             // ⓘ অন্য লটের খোলা মজুদ লেনদেন নয় — চালুর দিন সব লট একই সারিতে বসে (ম২৪); তার সংশোধনও নয় (৬ অক্টোবর ২০২৬)
-            ->whereNotIn('source_type', [self::SOURCE_TYPE, self::CORRECTED])
+            ->whereNotIn('source_type', [self::SOURCE_TYPE, self::CORRECTED]);
+
+        if ($date === null) {
+            return ! $moves->exists();
+        }
+
+        /*
+         * ⭐ তারিখ দিলে — মালিক, ৭ অক্টোবর ২০২৬ (ছবি: SL Lion WH-এ ২০টা পণ্য, ১৪টা "ইতিমধ্যেই নড়াচড়া করেছে"; আসলে কেবল ৬
+         * অক্টোবরের ক্রয়-বিল ঢুকেছিল, কিছুই বেরোয়নি)।
+         * ⓘ FIFO তারিখ ধরে টানে ([[CostLayerService]]: trx_date, তারপর id), তাই খোলা মজুদের তারিখ প্রথম চলাচলের আগে বা সেদিন হলে
+         * শুরুর মাল ঠিকই সারির মাথায় বসে। ⛔ তবু আটকায়: (ক) খোলার তারিখের আগের কোনো চলাচল; (খ) কোনো বের হওয়া — সারির মোট
+         * (তাক + অপেক্ষা + ফ্রি) ঋণাত্মক (বিক্রি, স্থানান্তর, সমন্বয়ে ঘাটতি); (গ) কোনো ধরা বা আটকানো (বিক্রির পথে মাল)।
+         * ⓘ বসানোর সারি (অপেক্ষা → তাক) নিটে শূন্য, তাই সে বের হওয়া নয়।
+         */
+        $day = Carbon::parse($date)->toDateString();
+
+        return ! $moves->where(fn ($q) => $q
+            ->whereDate('trx_date', '<', $day)
+            ->orWhereRaw('(floor_change + unplaced_change + free_change + unplaced_free_change) < 0')
+            ->orWhere('reserved_change', '!=', 0)
+            ->orWhere('free_reserved_change', '!=', 0)
+            ->orWhere('hold_change', '!=', 0))
             ->exists();
     }
 
@@ -568,6 +589,7 @@ final class OpeningStockService
         string $unitCost,
         ?Batch $batch = null,
         bool $topUp = false,
+        Carbon|string|null $date = null,
     ): void {
         /*
          * ⛔ লট ধরা পণ্যে লট ছাড়া শুরুর মজুদ নয়।
@@ -627,12 +649,23 @@ final class OpeningStockService
             ]);
         }
 
-        if (! $this->stillOpen($product, $warehouse)) {
+        if (! $this->stillOpen($product, $warehouse, $date)) {
+            // ⓘ কিছুই বের না হয়ে থাকলে পথটা বলে দেওয়া — খোলার তারিখ প্রথম চলাচলের দিন বা তার আগে
+            $first = StockMovement::query()->where('product_id', $product->id)->where('warehouse_id', $warehouse->id)
+                ->whereNotIn('source_type', [self::SOURCE_TYPE, self::CORRECTED])->min('trx_date');
+            $onlyLater = $first !== null && $this->stillOpen($product, $warehouse, $first);
+
             throw ValidationException::withMessages([
-                'product_id' => __('inventory::message.opening_too_late', [
-                    'product' => $product->name(),
-                    'warehouse' => $warehouse->name(),
-                ]),
+                'product_id' => $onlyLater
+                    ? __('inventory::message.opening_date_before_first', [
+                        'product' => $product->name(),
+                        'warehouse' => $warehouse->name(),
+                        'date' => \App\Core\Support\DateFormat::format($first),
+                    ])
+                    : __('inventory::message.opening_too_late', [
+                        'product' => $product->name(),
+                        'warehouse' => $warehouse->name(),
+                    ]),
             ]);
         }
     }

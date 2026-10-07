@@ -65,6 +65,7 @@ return [
     'opening_needs_cost' => 'Opening stock needs a rate. Goods at zero cost are not an asset on the balance sheet, yet selling them would show the whole price as profit.',
     'opening_already_done' => 'Opening stock for :product at :warehouse has already been entered. Use Count & Adjust to change it.',
     'opening_too_late' => ':product has already moved at :warehouse, so the moment for opening stock has passed. FIFO draws layers in the order they were laid down — entering it now would put the opening goods at the back of the queue and quietly distort the profit. Use Count & Adjust instead.',
+    'opening_date_before_first' => ':product first came into :warehouse on :date and nothing has gone out yet — set the opening date to :date or earlier and it will go in (the opening goods stay first in FIFO).',
     'opening_none' => 'No opening stock has been entered yet.',
     'opening_note' => 'What was on the shelf the day the old books were carried into ABOS. The rate is needed beside the quantity — without it the first sale asks FIFO what the goods cost, and there is no answer.',
     'opening_total' => 'Entered so far',
