@@ -385,7 +385,8 @@ class SalesPrintController extends Controller implements HasMiddleware
             'invoice_due' => $due,
             'previous_due' => $earlier,
             /* ⓘ গ্রাহকের আসল জের — অগ্রিম থাকলে ঋণাত্মক; আগের + এই বিলের বাকি = এটাই ([[earlierDue()]]) */
-            'outstanding' => $invoice->customer !== null ? (string) $invoice->customer->outstanding() : bcadd($earlier, $due, 4),
+            // ⛔ বিলের মুহূর্ত ধরে, আজকের পাওনা নয় — আবার ছাপলেও একই ([[balanceAfterBill()]], অডিট ৬ অক্টোবর ২০২৬)
+            'outstanding' => $invoice->customer !== null ? $this->balanceAfterBill($invoice, $earlier) : bcadd($earlier, $due, 4),
         ];
 
         /*
@@ -1391,9 +1392,49 @@ class SalesPrintController extends Controller implements HasMiddleware
          * ৮৯৩.৮৮ আগের বকেয়া কমিয়েছে। `dueAmount()` শূন্যে থামে, তাই আগের বকেয়া ছাপত ২৯,৭৪৮.২৭ (আজকের মোট), অথচ
          * আসল ৩০,৬৪২.১৫। ⓘ তাই এখানে মোট − আদায় − ফেরত, বিয়োগে কোনো থামা নেই।
          */
+        /*
+         * ⛔ বিলের মুহূর্তের জের, আজকের নয় — অডিট, ৬ অক্টোবর ২০২৬ (সমন্বয়ক): আগে গ্রাহকের আজকের মোট পাওনা থেকে এই বিলের
+         * বাকি বাদ দেওয়া হত, তাই বিলের পরের প্রতিটা বিল বা জমা পুরনো বিলের "আগের বকেয়া" বদলে দিত — একই বিল দুইবার ছাপলে
+         * দুই অঙ্ক। ⭐ এখন খাতায় এই বিল বসার আগে যা উঠেছিল ([[balanceBeforeBill()]]), এই বিলের নিজের সারি বাদ — যতবার ছাপা
+         * হোক একই অঙ্ক। ⓘ `$due` আর লাগে না; ডাকার জায়গাগুলো আগের মতোই দেয়।
+         */
+        return $this->balanceBeforeBill($invoice, (int) $customer->id);
+    }
+
+    /**
+     * গ্রাহকের খাতায় এই বিল বসার আগের জের — চিহ্নসহ (অগ্রিম ঋণাত্মক)।
+     *
+     * ⓘ "আগে" মানে খাতায় লেখার ক্রম (`id`), তারিখ নয়: বিলের পরে পেছনের তারিখে বসানো কোনো সারি প্রথম ছাপায় ছিল না, তাই
+     * আবার ছাপায়ও আসে না — নাহলে অঙ্কটা আবার বদলাত। ⛔ এই বিলের নিজের সারি (বসা, বাতিল, সম্পাদনার উল্টো) কখনো নয়।
+     * ⓘ বিল এখনো খাতায় না বসলে (খসড়া) — এখন পর্যন্ত খাতার সবটা; খসড়ার কাগজ এমনিতেই চূড়ান্ত নয়।
+     */
+    private function balanceBeforeBill(SalesInvoice $invoice, int $customerId): string
+    {
+        $own = fn ($q) => $q->where('source_id', $invoice->id)
+            ->whereIn('source_type', ['sales_invoice', 'sales_invoice:cancel', 'sales_invoice:reversal', 'sales_invoice_cancellation']);
+
+        $mark = \App\Models\LedgerEntry::query()->forParty('customer', $customerId)->where($own)->min('id');
+
+        $net = \App\Models\LedgerEntry::query()->forParty('customer', $customerId)
+            ->when($mark !== null, fn ($q) => $q->where('id', '<', $mark))
+            ->whereNot($own)
+            ->selectRaw('COALESCE(SUM(debit) - SUM(credit), 0) as net')
+            ->value('net');
+
+        return bcadd((string) ($net ?? 0), '0', 4);
+    }
+
+    /**
+     * ⭐ বিলের পরের জের — বিলের আগের জের + এই বিলের নিজের বাকি (চিহ্নসহ; বাড়তি জমা হলে ঋণাত্মক)।
+     *
+     * ⛔ আজকের মোট পাওনা নয় — তাহলে পরের বিলগুলো পুরনো বিলের শেষ লাইন বদলে দিত (একই অডিট)। ⓘ এই বিলের নিজের পরের
+     * আদায় বা ফেরত অঙ্কে আসে — সেটা এই বিলেরই কথা; অন্য কাগজের নয়। তাই "আগের + এই বিলের বাকি = শেষ জের" সবসময় মেলে।
+     */
+    private function balanceAfterBill(SalesInvoice $invoice, string $earlier): string
+    {
         $own = bcsub(bcsub((string) $invoice->total, $invoice->collectedAmount(), 4), $invoice->returnedAmount(), 4);
 
-        return bcsub($customer->outstanding(), bccomp($due, '0', 4) > 0 ? $due : $own, 4);
+        return bcadd($earlier, $own, 4);
     }
 
     private function invoiceTotals(SalesInvoice $invoice, bool $roll = false): array
@@ -1439,7 +1480,8 @@ class SalesPrintController extends Controller implements HasMiddleware
             }
 
             // ⓘ গ্রাহকের আসল জের — বাড়তি জমায় `$due` শূন্যে থামে, তাই আগের + এই বিল দিয়ে নয় (৩ অক্টোবর ২০২৬)
-            $rows['sales::print.outstanding'] = $this->money(bcadd($customer->outstanding(), '0', 4));
+            // ⛔ বিলের মুহূর্ত ধরে — আবার ছাপলেও একই (অডিট, ৬ অক্টোবর ২০২৬; [[balanceAfterBill()]])
+            $rows['sales::print.outstanding'] = $this->money($this->balanceAfterBill($invoice, $earlier));
         }
 
         return $rows;
