@@ -10,6 +10,8 @@ use App\Core\Support\CompanyContext;
 use App\Http\Controllers\Controller;
 use App\Models\FinancialYear;
 use App\Models\PeriodLock;
+use App\Modules\Accounts\Services\MonthEndChecklist;
+use Carbon\CarbonImmutable;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
@@ -123,6 +125,26 @@ class PeriodLockController extends Controller implements HasMiddleware
          */
         if ($data['year'] === (int) now()->year && $data['month'] === (int) now()->month) {
             return back()->withErrors(['month' => __('accounts::validation.cannot_close_this_month')]);
+        }
+
+        /*
+         * ⛔ ভবিষ্যতের মাস নয়, আর খোলা কাগজসহ মাস নয় — পুরো-ERP অডিট, ৬ অক্টোবর ২০২৬ (হিসাব ⚠️৯; [[AMonthLocksOnlyWhenItIsDoneTest]])।
+         * ⓘ আগে যেকোনো মাস তালাবন্ধ করা যেত: আগামী মাস বন্ধ হলে সেই মাস এলে প্রথম বিলেই সব থামত; আর খসড়া বা সইয়ের অপেক্ষার কাগজ
+         * থাকা মাস বন্ধ হলে ওই কাগজ আর কখনো খাতায় উঠতে পারত না — বছর বন্ধের একই নিয়ম ([[YearEndService::assertCanClose()]])।
+         * মাস-শেষের তালিকাই মাপে ([[MonthEndChecklist]]), সব শাখা জুড়ে।
+         */
+        $month = CarbonImmutable::create($data['year'], $data['month'], 1);
+
+        if ($month->greaterThan(CarbonImmutable::now()->startOfMonth())) {
+            return back()->withErrors(['month' => __('accounts::validation.cannot_close_future_month')]);
+        }
+
+        $rows = collect(app(MonthEndChecklist::class)->run($month))->keyBy('key');
+        $drafts = (int) ($rows['drafts']['count'] ?? 0);
+        $awaiting = (int) ($rows['awaiting']['count'] ?? 0);
+
+        if ($drafts + $awaiting > 0) {
+            return back()->withErrors(['month' => __('accounts::validation.month_has_open_papers', ['drafts' => $drafts, 'awaiting' => $awaiting])]);
         }
 
         $lock = PeriodLock::query()->firstOrCreate(

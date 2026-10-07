@@ -117,6 +117,8 @@ return [
     'against_wrong_party' => 'The party does not match — the money must belong to the party on the paper.',
 
     // মাস বন্ধ ও খোলা
+    'cannot_close_future_month' => 'A month that has not come yet cannot be closed.',
+    'month_has_open_papers' => 'This month still has :drafts draft(s) and :awaiting voucher(s) awaiting signature — post or cancel them first, or they could never reach the books.',
     'cannot_close_this_month' => 'This month cannot be closed — today’s sales would stop.',
 
     // চেকের খাতা

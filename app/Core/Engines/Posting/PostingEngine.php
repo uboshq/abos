@@ -23,6 +23,9 @@ use Illuminate\Support\Str;
  */
 final class PostingEngine
 {
+    /** ⓘ বছর বন্ধের দাখিলার উৎস — মাসের তালা আর পেছনের সীমা পেরোয় (হিসাব ⚠️৯; [[YearEndService::CLOSE_SOURCE]] একই নাম) */
+    public const YEAR_CLOSE = 'year_close';
+
     public function __construct(
         private readonly OpenPeriod $period,
     ) {}
@@ -59,8 +62,14 @@ final class PostingEngine
          *
          * অর্থবছরের তালাটা ঠিক নিচেই (`resolveFinancialYear`), আর
          * তিনটা স্তর একসাথেই সত্যি: বছর, মাস, আর কত দিন পেছনে।
+         *
+         * ⛔ বছর বন্ধের দাখিলা বাদ — পুরো-ERP অডিট, ৬ অক্টোবর ২০২৬ (হিসাব ⚠️৯; [[TheYearClosesPastTheMonthLockTest]])। ⓘ সেটা বসে
+         * বছরের শেষ দিনে, আর স্বাভাবিক ক্রমে সেই মাস ততদিনে তালাবন্ধ, তারিখটাও পেছনের সীমার বাইরে — তাই বছর বন্ধ কখনো হত না।
+         * বছরের তালা নিচে আগের মতোই খাটে: বন্ধ বছরে কিছুই বসে না।
          */
-        $this->period->assertOpen($trxDate);
+        if ($sourceType !== self::YEAR_CLOSE) {
+            $this->period->assertOpen($trxDate);
+        }
 
         $financialYear = $this->resolveFinancialYear($trxDate);
         $this->assertBalanced($lines, $sourceType, $sourceId);
@@ -219,8 +228,12 @@ final class PostingEngine
          * মাস খোলা। আটকায় কেবল **বন্ধ মাসের ভেতরে** উল্টো এন্ট্রি বসানো,
          * কারণ সেটা ছাপা হয়ে যাওয়া হিসাব বদলে দিত — আর তালার পুরো
          * উদ্দেশ্যই তাই।
+         *
+         * ⓘ বছর আবার খোলার উল্টো দাখিলা বাদ — একই কারণে (হিসাব ⚠️৯): সেটাও বছরের শেষ দিনে বসে।
          */
-        $this->period->assertOpen($reversalDate);
+        if ($sourceType !== self::YEAR_CLOSE) {
+            $this->period->assertOpen($reversalDate);
+        }
 
         $financialYear = $this->resolveFinancialYear($reversalDate);
         $userId = $userId ?? \App\Core\Support\Actor::userId();
