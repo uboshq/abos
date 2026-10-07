@@ -162,6 +162,8 @@
                      'canReopen' => $canReopen,
                      'reopenableId' => $reopenableId,
                  ])],
+                ['key' => 'closing', 'label' => __('accounts::voucher.closing_voucher'), 'width' => '12rem',
+                 'render' => fn ($y) => view('accounts::year-end.partials.closing-link', ['year' => $y, 'no' => ($closingNos ?? [])[$y->id] ?? null])],
             ]" />
     </section>
 </x-layouts.app>

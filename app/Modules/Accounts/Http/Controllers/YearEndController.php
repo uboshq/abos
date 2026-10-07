@@ -68,6 +68,9 @@ class YearEndController extends Controller implements HasMiddleware
              */
             'canReopen' => $this->yearEnd->canReopen($request->user()),
             'reopenableId' => $this->yearEnd->reopenableYear()?->id,
+
+            // ⭐ সমাপনী ভাউচারের নম্বর — বছর ধরে, পাতার লিঙ্কের জন্য (৩ঙ)
+            'closingNos' => $this->yearEnd->closingNumbers(),
         ]);
     }
 
@@ -134,5 +137,52 @@ class YearEndController extends Controller implements HasMiddleware
         return redirect()
             ->route('accounts.year_end.index')
             ->with('saved', __('accounts::message.year_reopened', ['name' => $year->name]));
+    }
+
+    /**
+     * ⭐ বছরশেষের সমাপনী ভাউচার — পাতা (ভাউচারের পরিকল্পনা ৩ঙ, ৭ অক্টোবর ২০২৬; [[YearEndService::closingPaper()]])।
+     *
+     * ⓘ বন্ধের সমাপনী আর (বছর আবার খুললে) তার উল্টো, একই নম্বরে পাশাপাশি। বছর এখনো বন্ধ না হলে দেখানোর কিছু নেই — ৪০৪।
+     */
+    public function closing(Request $request, FinancialYear $year): View
+    {
+        $papers = $this->yearEnd->closingPaper($year);
+        abort_if($papers === [], 404);
+
+        return view('accounts::year-end.closing', [
+            'menu' => $this->menu->forUser($request->user()),
+            'year' => $year,
+            'papers' => $papers,
+        ]);
+    }
+
+    /** ⭐ সমাপনী ভাউচারের ছাপা — পাতার একই তথ্য, A4 ([[closing()]])। */
+    public function closingPrint(Request $request, FinancialYear $year): \Illuminate\Http\Response
+    {
+        $papers = $this->yearEnd->closingPaper($year);
+        abort_if($papers === [], 404);
+
+        $paper = \App\Core\Engines\Print\PaperSize::chosen($request->query('paper'), 'a4');
+        $asFile = $request->boolean('download');
+        $no = (string) $papers[array_key_last($papers)]['document_no'];
+
+        $pdf = app(\App\Core\Engines\Print\PrintEngine::class)->render(
+            template: 'print.year-closing',
+            data: [
+                'title' => __('accounts::voucher.closing_voucher').' '.$no,
+                'year' => $year->name,
+                'papers' => $papers,
+                'signatures' => [
+                    (string) __('accounts::print.prepared_by'),
+                    (string) __('accounts::print.approved_by'),
+                ],
+            ],
+            paper: $paper,
+        );
+
+        return response($pdf, 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => ($asFile ? 'attachment' : 'inline').'; filename="'.str_replace('/', '-', $no).'.pdf"',
+        ]);
     }
 }

@@ -10,6 +10,7 @@ use App\Core\Engines\Posting\PostingException;
 use App\Core\Services\NumberSeriesProvisioner;
 use App\Core\Services\PermissionSyncer;
 use App\Core\Support\CompanyContext;
+use App\Core\Support\DateFormat;
 use App\Core\Support\DocumentStatus;
 use App\Models\Company;
 use App\Models\FinancialYear;
@@ -77,6 +78,98 @@ final class YearEndService
     public static function closingSources(): array
     {
         return [self::CLOSE_SOURCE, self::CLOSE_REVERSAL];
+    }
+
+    /**
+     * ⭐ সমাপনী ভাউচারের নম্বর — "YC-<বছর>", আবার খুলে আবার বন্ধ করলে "YC-<বছর>/২" (ভাউচারের পরিকল্পনা ৩ঙ, ৭ অক্টোবর ২০২৬)।
+     *
+     * ⓘ বছরে একটাই সমাপনী, তাই নম্বরটা বছরের নামেই — চলমান সিরিজ নয়। ⛔ আগে নম্বর ছিল কেবল বছরের নাম ("2026-2027"),
+     * খাতায় অন্য কোনো কাগজের মতো চেনা যেত না।
+     */
+    public static function closingNumber(FinancialYear $year, int $round = 1): string
+    {
+        return 'YC-'.$year->name.($round > 1 ? '/'.$round : '');
+    }
+
+    /**
+     * প্রতিটা বছরের শেষ সমাপনীর নম্বর — বছরশেষের তালিকার লিঙ্কের জন্য ([[YearEndController::index()]])।
+     *
+     * @return array<int, string>  বছরের id => নম্বর
+     */
+    public function closingNumbers(): array
+    {
+        return LedgerEntry::query()
+            ->where('source_type', self::CLOSE_SOURCE)
+            ->selectRaw('source_id, MAX(id) as last_id')
+            ->groupBy('source_id')
+            ->pluck('last_id', 'source_id')
+            ->map(fn ($id) => (string) LedgerEntry::query()->whereKey($id)->value('document_no'))
+            ->all();
+    }
+
+    /** এই বছরের সবচেয়ে শেষে বসা সমাপনীর নম্বর — না থাকলে `null` (আগের বছরে বছরের নামই নম্বর ছিল, সেটাই ফেরে)। */
+    public function closingNumberOf(FinancialYear $year): ?string
+    {
+        $no = LedgerEntry::query()
+            ->where('source_type', self::CLOSE_SOURCE)
+            ->where('source_id', $year->id)
+            ->orderByDesc('id')
+            ->value('document_no');
+
+        return $no === null ? null : (string) $no;
+    }
+
+    /**
+     * ⭐ সমাপনী ভাউচারের কাগজ — পাতা আর ছাপা একই তথ্যে ([[YearEndController::closing()]])।
+     *
+     * ⓘ প্রতিটা দাখিলা আলাদা: বন্ধের সমাপনী, আর বছর আবার খুললে তার উল্টো (একই নম্বর বহন করে, [[reopen()]])। আবার বন্ধ করলে
+     * নতুন নম্বরে নতুন সমাপনী। সারিগুলো সব শাখার — সমাপনী গোটা কোম্পানির কাগজ।
+     *
+     * @return list<array{kind: string, document_no: string, date: string, narration: string, debit: string, credit: string,
+     *     lines: list<array{account: string, branch: string, debit: string, credit: string}>}>
+     */
+    public function closingPaper(FinancialYear $year): array
+    {
+        $rows = LedgerEntry::query()
+            ->whereIn('source_type', self::closingSources())
+            ->where('source_id', $year->id)
+            ->orderBy('id')
+            ->get(['id', 'source_type', 'document_no', 'trx_date', 'account_id', 'branch_id', 'debit', 'credit', 'narration']);
+
+        if ($rows->isEmpty()) {
+            return [];
+        }
+
+        $accounts = Account::query()->whereKey($rows->pluck('account_id')->unique())->get()->keyBy('id');
+        $branches = \App\Models\Branch::query()->whereKey($rows->pluck('branch_id')->filter()->unique())->get()->keyBy('id');
+
+        $papers = [];
+
+        foreach ($rows as $row) {
+            $key = $row->source_type.'|'.$row->document_no;
+
+            $papers[$key] ??= [
+                'kind' => $row->source_type === self::CLOSE_SOURCE ? 'close' : 'reversal',
+                'document_no' => (string) $row->document_no,
+                'date' => DateFormat::format($row->trx_date),
+                'narration' => (string) $row->narration,
+                'debit' => '0',
+                'credit' => '0',
+                'lines' => [],
+            ];
+
+            $account = $accounts->get($row->account_id);
+            $papers[$key]['lines'][] = [
+                'account' => $account === null ? '#'.$row->account_id : $account->code.' — '.$account->name(),
+                'branch' => $branches->get($row->branch_id)?->name() ?? '',
+                'debit' => (string) $row->debit,
+                'credit' => (string) $row->credit,
+            ];
+            $papers[$key]['debit'] = bcadd($papers[$key]['debit'], (string) $row->debit, 4);
+            $papers[$key]['credit'] = bcadd($papers[$key]['credit'], (string) $row->credit, 4);
+        }
+
+        return array_values($papers);
     }
 
     /**
@@ -185,12 +278,22 @@ final class YearEndService
             $closing = $this->closingLines($year);
 
             if ($closing !== []) {
+                /*
+                 * ⭐ নিজের নম্বর — YC-<বছর> (৩ঙ)। ⓘ আগে বন্ধ হয়ে খোলা বছরে আগের সমাপনী(গুলো)র নম্বর খাতায় থেকে যায়, তাই
+                 * এবারেরটা পরের পালা: আগের যত নম্বর, তার পরেরটা।
+                 */
+                $round = 1 + LedgerEntry::query()
+                    ->where('source_type', self::CLOSE_SOURCE)
+                    ->where('source_id', $year->id)
+                    ->distinct()
+                    ->count('document_no');
+
                 $this->posting->post(
                     sourceType: self::CLOSE_SOURCE,
                     sourceId: $year->id,
                     trxDate: $year->ends_on,
                     lines: $closing,
-                    documentNo: $year->name,
+                    documentNo: self::closingNumber($year, $round),
                 );
             }
 
@@ -336,12 +439,16 @@ final class YearEndService
             ])->save();
 
             if ($hasClosingRows) {
+                // ⭐ উল্টো দাখিলা যে সমাপনী উল্টায় তার নম্বরই বহন করে — সমাপনীর পাতায় দুটো পাশাপাশি (৩ঙ)
+                $closingNo = $this->closingNumberOf($year);
+
                 $this->posting->reverse(
                     sourceType: self::CLOSE_SOURCE,
                     sourceId: $year->id,
                     reversalDate: $year->ends_on,
-                    reason: __('accounts::message.year_reopened', ['name' => $year->name]),
+                    reason: __('accounts::message.year_reopened', ['name' => $year->name]).($closingNo !== null ? ' — '.$closingNo : ''),
                     userId: $user->id,
+                    documentNo: $closingNo,
                 );
             }
 

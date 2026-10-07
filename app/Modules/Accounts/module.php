@@ -539,6 +539,8 @@ return [
         'money_transfer' => MoneyTransfer::class,
         'cash_count' => CashCount::class,
         'money_category' => MoneyCategory::class,
+        // ⭐ বছরশেষের সমাপনী ভাউচার — খাতার "YC-…" সারি থেকে তার পাতা (৩ঙ; ':reversal' নিজেই কেটে যায়)
+        'year_close' => \App\Modules\Accounts\Models\YearClosing::class,
 
         /*
          * ঋণ নিজে খতিয়ানে বসে না — তার নড়াচড়া আর কিস্তিগুলো বসে।

@@ -320,6 +320,12 @@ Route::middleware('auth')->prefix('accounts')->group(function () {
          */
         Route::post('/{year}/reopen', [YearEndController::class, 'reopen'])
             ->whereNumber('year')->name('reopen');
+
+        // ⭐ সমাপনী ভাউচার — পাতা আর ছাপা (ভাউচারের পরিকল্পনা ৩ঙ, ৭ অক্টোবর ২০২৬)
+        Route::get('/{year}/closing', [YearEndController::class, 'closing'])
+            ->whereNumber('year')->name('closing');
+        Route::get('/{year}/closing/print', [YearEndController::class, 'closingPrint'])
+            ->whereNumber('year')->name('closing.print');
     });
 
     /*
