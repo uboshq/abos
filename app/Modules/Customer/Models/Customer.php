@@ -324,6 +324,26 @@ class Customer extends Model implements AuthenticatableContract, Drillable
     }
 
     /**
+     * ⭐ দোকানের পয়েন্টের নাম — নিজের ধাপ পয়েন্ট হলে সেটা, নইলে তার মা; বাংলা আগে; পয়েন্টে না বসলে null।
+     *
+     * ⓘ মালিক, ৭ অক্টোবর ২০২৬: *"app e sob jaygay customer er pase obosoi point dibe nahoy cina zayna"* — ফোনের প্রতিটা
+     * দরজা গ্রাহকের নামের পাশে এটাই পাঠায়; সিঙ্কও ([[CustomerSync]])। এক নিয়ম, এক জায়গায়। ডাকার আগে `location.parent`
+     * একসাথে আনুন, নইলে তালিকায় সারি-প্রতি ডাক।
+     */
+    public function pointName(): ?string
+    {
+        foreach ([$this->location, $this->location?->parent] as $place) {
+            if ($place !== null && $place->level === Location::POINT) {
+                $name = trim((string) ($place->name_bn ?: $place->name_en));
+
+                return $name === '' ? null : $name;
+            }
+        }
+
+        return null;
+    }
+
+    /**
      * উপরের এরিয়াটা — জমা রাখা নয়, গাছ থেকে গোনা।
      *
      * ── কেন কলামে রাখা হয় না ────────────────────────────────────────

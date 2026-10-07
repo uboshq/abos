@@ -89,7 +89,7 @@ final class SaleTracking
         };
 
         $challans = $narrow(DeliveryChallan::query())
-            ->with(['customer', 'order'])
+            ->with(['customer.location.parent', 'order'])
             ->when($customerId, fn ($q, $id) => $q->where('customer_id', $id))
             ->when($term, fn ($q, $t) => $q->where(fn ($w) => $w
                 ->where('document_no', 'like', "%{$t}%")
@@ -102,7 +102,7 @@ final class SaleTracking
 
         // যে আদেশের কোনো (বাতিল নয়) চালান নেই — "অর্ডার" ধাপ
         $orders = $narrow(SalesOrder::query())
-            ->with('customer')
+            ->with('customer.location.parent')
             ->where('status', '<>', DocumentStatus::CANCELLED)
             ->whereNotExists(fn ($q) => $q->selectRaw('1')->from('sal_challans as c')
                 ->whereColumn('c.sales_order_id', 'sal_orders.id')
@@ -129,6 +129,8 @@ final class SaleTracking
                 'document_no' => (string) $challan->document_no,
                 'date' => $challan->trx_date?->toDateString(),
                 'customer' => $challan->customer?->name(),
+                // ⭐ পয়েন্ট — মালিক, ৭ অক্টোবর ২০২৬: "app e sob jaygay customer er pase obosoi point dibe" ([[Customer::pointName()]])
+                'customer_point' => $challan->customer?->pointName(),
                 'total' => bcadd((string) $challan->total, '0', 2),
                 'step' => $steps[$challan->id],
                 'billed' => isset($billed[$challan->id]),
@@ -145,6 +147,7 @@ final class SaleTracking
                 'document_no' => (string) $order->document_no,
                 'date' => $order->trx_date?->toDateString(),
                 'customer' => $order->customer?->name(),
+                'customer_point' => $order->customer?->pointName(),
                 'total' => bcadd((string) $order->total, '0', 2),
                 'step' => $this->orderStep($order),
                 'billed' => false,
@@ -715,6 +718,7 @@ final class SaleTracking
             'document_no' => (string) $sale->document_no,
             'date' => $sale->trx_date?->toDateString(),
             'customer' => $sale->customer?->name(),
+            'customer_point' => $sale->customer?->pointName(),
             'total' => bcadd((string) $sale->total, '0', 2),
             'step' => $step,
             'category' => self::CATEGORY_OF_STEP[$step],

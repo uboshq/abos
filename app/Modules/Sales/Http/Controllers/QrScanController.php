@@ -210,7 +210,7 @@ class QrScanController extends Controller
             'trx_date' => $challan->trx_date?->toDateString(),
             'status' => (string) $challan->status,
             'stage' => $stage,
-            'customer' => ['name' => $challan->customer?->name(), 'code' => $challan->customer?->code],
+            'customer' => ['name' => $challan->customer?->name(), 'code' => $challan->customer?->code, 'point' => $challan->customer?->pointName()],
             'lines' => $challan->lines->map(fn ($l) => [
                 // ⓘ সারির ক্রমিক — "আংশিক পৌঁছেছে"-তে ফোন এটা দিয়েই সারি চেনায় ([[deliver()]])
                 'line' => (int) $l->line_no,

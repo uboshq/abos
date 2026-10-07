@@ -168,7 +168,7 @@ class DirectSaleApiController extends Controller implements HasMiddleware
     public function drafts(Request $request): JsonResponse
     {
         $drafts = DirectSaleService::trueDrafts()
-            ->with(['customer', 'lines'])
+            ->with(['customer.location.parent', 'lines'])
             ->orderByDesc('id')
             ->limit(50)
             ->get();
@@ -177,6 +177,8 @@ class DirectSaleApiController extends Controller implements HasMiddleware
             'id' => (string) $d->public_id,
             'no' => (string) $d->document_no,
             'customer' => (string) ($d->customer?->name() ?? ''),
+            // ⭐ পয়েন্ট — মালিক, ৭ অক্টোবর ২০২৬: "app e sob jaygay customer er pase obosoi point dibe" ([[Customer::pointName()]])
+            'customer_point' => $d->customer?->pointName(),
             'date' => $d->trx_date?->toDateString(),
             'total' => (string) $d->total,
             'lines' => $d->lines->count(),
@@ -206,6 +208,7 @@ class DirectSaleApiController extends Controller implements HasMiddleware
             'no' => (string) $draft->document_no,
             'customer' => (string) ($draft->customer?->public_id ?? ''),
             'customerName' => (string) ($draft->customer?->name() ?? ''),
+            'customerPoint' => $draft->customer?->pointName(),
             'lines' => array_map(fn (array $l) => [
                 'product' => (string) ($productIds[(int) $l['id']] ?? ''),
                 'name' => (string) $l['name'],

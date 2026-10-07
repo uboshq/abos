@@ -75,6 +75,8 @@ final class ApprovalFacts
                  * মডেলটাকে জিজ্ঞেস করা হয়, কাগজটাকে নয়।
                  */
                 ->when($this->linesCarryAccounts($class), fn ($q) => $q->with('lines.account'))
+                // ⓘ গ্রাহকের পয়েন্ট — নামের পাশে (নিচের [[party()]]); কাগজগুলোর সাথে একবারে
+                ->when(method_exists($class, 'customer'), fn ($q) => $q->with('customer.location.parent'))
                 ->whereKey(array_values(array_unique($ids)))
                 ->get()
                 ->keyBy(fn (Model $m) => (int) $m->getKey());
@@ -146,7 +148,13 @@ final class ApprovalFacts
          */
         foreach (['customer', 'supplier'] as $relation) {
             if ($this->has($document, $relation) && $document->{$relation} instanceof Model) {
-                return $this->nameOf($document->{$relation});
+                /*
+                 * ⭐ গ্রাহকের পাশে পয়েন্ট — মালিক, ৭ অক্টোবর ২০২৬: "app e sob jaygay customer er pase obosoi point dibe
+                 * nahoy cina zayna"। ফোনের সই-বাক্স আর ওয়েবের ইনবক্স একই সারি দেখায় ([[Customer::pointName()]])।
+                 */
+                $point = method_exists($document->{$relation}, 'pointName') ? $document->{$relation}->pointName() : null;
+
+                return $this->nameOf($document->{$relation}).($point === null ? '' : ' · '.$point);
             }
         }
 

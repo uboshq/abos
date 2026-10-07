@@ -45,7 +45,7 @@ class DeliveryRunApiController extends Controller implements HasMiddleware
         $challans = ViewedBranch::narrow(DeliveryChallan::query(), 'sal_challans.branch_id')
             ->whereIn('sal_challans.id', $onTheWay)
             // ⓘ গাড়ি আর বাহক পাতায় একবার — আগে প্রতিটা চালানে আলাদা ডাক ([[DeliveryChallan::transportFacts()]]; অডিট ফোন ⚠️১৭)
-            ->with(['customer', 'lines.product', 'vehicle.vehicleType', 'carrier'])
+            ->with(['customer.location.parent', 'lines.product', 'vehicle.vehicleType', 'carrier'])
             ->orderBy('sal_challans.trx_date')->orderBy('sal_challans.id')
             // ⓘ পাতা ভাগ — ৫০টা করে, পরের পাতার নম্বরসহ ([[EveryListScreenPaginatesTest]])
             ->paginate(self::PER_PAGE);
@@ -61,6 +61,8 @@ class DeliveryRunApiController extends Controller implements HasMiddleware
                     'sale_no' => $c->sale_no,
                     'date' => $c->trx_date?->toDateString(),
                     'customer' => (string) ($c->customer?->name() ?? ''),
+                    // ⭐ পয়েন্ট — মালিক, ৭ অক্টোবর ২০২৬: "app e sob jaygay customer er pase obosoi point dibe" ([[Customer::pointName()]])
+                    'customer_point' => $c->customer?->pointName(),
                     'phone' => (string) ($c->customer?->phone ?? ''),
                     'address' => (string) ($c->customer?->address() ?? ''),
                     'vehicle' => $t['vehicle_no'] ?? null,

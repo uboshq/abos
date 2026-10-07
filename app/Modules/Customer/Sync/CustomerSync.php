@@ -13,7 +13,6 @@ use App\Core\Engines\Sync\SyncRejection;
 use App\Core\Support\CompanyContext;
 use App\Models\User;
 use App\Modules\Customer\Models\Customer;
-use App\Modules\MasterData\Models\Location;
 use Illuminate\Support\Carbon;
 
 /**
@@ -42,18 +41,10 @@ final class CustomerSync implements SyncsToDevices
         return 'Customer';
     }
 
-    /** দোকানের পয়েন্টের নাম — নিজের ধাপ পয়েন্ট হলে সেটা, নইলে তার মা; বাংলা আগে */
+    /** দোকানের পয়েন্টের নাম — এক নিয়ম, মডেলে ([[Customer::pointName()]]) */
     private static function pointName(Customer $customer): ?string
     {
-        foreach ([$customer->location, $customer->location?->parent] as $place) {
-            if ($place !== null && $place->level === Location::POINT) {
-                $name = trim((string) ($place->name_bn ?: $place->name_en));
-
-                return $name === '' ? null : $name;
-            }
-        }
-
-        return null;
+        return $customer->pointName();
     }
 
     /**

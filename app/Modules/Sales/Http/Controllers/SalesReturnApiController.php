@@ -49,7 +49,7 @@ final class SalesReturnApiController extends Controller implements HasMiddleware
         $invoices = SalesInvoice::query()
             ->where('status', DocumentStatus::CONFIRMED)
             ->when($customer !== null, fn ($q) => $q->where('customer_id', $customer->id))
-            ->with('customer')
+            ->with('customer.location.parent')
             ->orderByDesc('trx_date')->orderByDesc('id')
             ->limit(50)
             ->get()
@@ -63,6 +63,8 @@ final class SalesReturnApiController extends Controller implements HasMiddleware
                 'no' => (string) $i->document_no,
                 'date' => $i->trx_date?->toDateString(),
                 'customer' => (string) ($i->customer?->name() ?? ''),
+                // ⭐ পয়েন্ট — মালিক, ৭ অক্টোবর ২০২৬: "app e sob jaygay customer er pase obosoi point dibe" ([[Customer::pointName()]])
+                'customer_point' => $i->customer?->pointName(),
                 'total' => (string) $i->total,
             ])->values(),
         ]);
@@ -79,6 +81,7 @@ final class SalesReturnApiController extends Controller implements HasMiddleware
             'no' => (string) $invoice->document_no,
             'customer' => (string) ($invoice->customer?->public_id ?? ''),
             'customerName' => (string) ($invoice->customer?->name() ?? ''),
+            'customerPoint' => $invoice->customer?->pointName(),
             'lines' => $invoice->lines->sortBy('line_no')->values()->map(fn (SalesInvoiceLine $l) => [
                 'id' => (string) $l->public_id,
                 'product' => (string) ($l->product?->public_id ?? ''),

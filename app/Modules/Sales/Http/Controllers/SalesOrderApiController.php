@@ -54,7 +54,8 @@ class SalesOrderApiController extends Controller implements HasMiddleware
     public function index(Request $request): JsonResponse
     {
         $rows = SalesOrder::query()
-            ->with('customer')
+            // ⭐ পয়েন্ট — মালিক, ৭ অক্টোবর ২০২৬: "app e sob jaygay customer er pase obosoi point dibe" ([[Customer::pointName()]])
+            ->with('customer.location.parent')
             ->when(trim(PhoneInput::text($request, 'customer', '')), fn ($q, $c) => $q->where('customer_id', $this->customer($c)->id))
             ->when($request->query('scope') === 'awaiting_me', fn ($q) => $q->where('status', SalesOrderStatus::AWAITING_APPROVAL)
                 ->whereIn('id', app(ApprovalEngine::class)->pendingQueryFor($request->user())
@@ -264,7 +265,7 @@ class SalesOrderApiController extends Controller implements HasMiddleware
      */
     private function facts(SalesOrder $o, bool $withLines, ?array $progress = null, ?array $latest = null): array
     {
-        $o->loadMissing($withLines ? ['customer', 'lines.product'] : ['customer']);
+        $o->loadMissing($withLines ? ['customer.location.parent', 'lines.product'] : ['customer.location.parent']);
         $progress ??= app(OrderProgress::class)->of($o);
         $pending = $o->status === SalesOrderStatus::AWAITING_APPROVAL
             ? ($latest === null ? app(ApprovalEngine::class)->latestFor($o, SalesOrderService::APPROVAL_ACTION) : ($latest[(int) $o->id] ?? null)) : null;
@@ -275,7 +276,7 @@ class SalesOrderApiController extends Controller implements HasMiddleware
             'id' => (string) $o->public_id,
             'no' => (string) $o->document_no,
             'date' => $o->trx_date?->toDateString(),
-            'customer' => ['id' => (string) $o->customer?->public_id, 'name' => $o->customer?->name()],
+            'customer' => ['id' => (string) $o->customer?->public_id, 'name' => $o->customer?->name(), 'point' => $o->customer?->pointName()],
             'status' => (string) $o->status,
             'status_label' => SalesOrderStatus::label((string) $o->status),
             'total' => bcadd((string) $o->total, '0', 2),

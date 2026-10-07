@@ -57,7 +57,7 @@ class LoadingApiController extends Controller implements HasMiddleware
     public function show(string $id): JsonResponse
     {
         $trip = $this->trip($id);
-        $trip->load(['lines.challan.customer', 'lines.challan.lines.product.unit', 'lines.challan.lines.batch']);
+        $trip->load(['lines.challan.customer.location.parent', 'lines.challan.lines.product.unit', 'lines.challan.lines.batch']);
 
         $stages = DeliveryState::query()
             ->whereIn('delivery_challan_id', $trip->lines->pluck('delivery_challan_id'))
@@ -77,6 +77,8 @@ class LoadingApiController extends Controller implements HasMiddleware
             'challans' => $trip->lines->filter(fn ($l) => $l->challan !== null)->map(fn ($l): array => [
                 'document_no' => (string) $l->challan->document_no,
                 'customer' => (string) ($l->challan->customer?->name() ?? ''),
+                // ⭐ পয়েন্ট — মালিক, ৭ অক্টোবর ২০২৬: "app e sob jaygay customer er pase obosoi point dibe" ([[Customer::pointName()]])
+                'customer_point' => $l->challan->customer?->pointName(),
                 'stage' => $stages[$l->challan->id] ?? null,
                 'packed' => in_array($stages[$l->challan->id] ?? null, TripPacking::LOADABLE, true) === false && isset($stages[$l->challan->id]),
                 'lines' => $l->challan->lines->map(fn ($x): array => [

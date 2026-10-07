@@ -102,7 +102,7 @@ class CollectionApiController extends Controller implements HasMiddleware
             ->tap(fn (Builder $q) => self::method($q, $data['method'] ?? null));
 
         $total = (string) (clone $query)->sum('sal_collections.amount');
-        $page = (clone $query)->with(['customer', 'account'])
+        $page = (clone $query)->with(['customer.location.parent', 'account'])
             ->orderByDesc('sal_collections.trx_date')->orderByDesc('sal_collections.id')
             ->paginate(self::PER_PAGE);
 
@@ -120,7 +120,7 @@ class CollectionApiController extends Controller implements HasMiddleware
     public function show(string $id): JsonResponse
     {
         $collection = ViewedBranch::narrow(Collection::query(), 'sal_collections.branch_id')
-            ->where('public_id', $id)->with(['customer', 'account', 'lines.invoice', 'creator'])->firstOrFail();
+            ->where('public_id', $id)->with(['customer.location.parent', 'account', 'lines.invoice', 'creator'])->firstOrFail();
 
         return response()->json([
             ...$this->row($collection),
@@ -146,6 +146,8 @@ class CollectionApiController extends Controller implements HasMiddleware
             'no' => (string) $c->document_no,
             'date' => $c->trx_date?->toDateString(),
             'customer' => (string) ($c->customer?->name() ?? ''),
+            // ⭐ পয়েন্ট — মালিক, ৭ অক্টোবর ২০২৬: "app e sob jaygay customer er pase obosoi point dibe" ([[Customer::pointName()]])
+            'customer_point' => $c->customer?->pointName(),
             'account' => (string) ($c->account?->name() ?? ''),
             'method' => self::methodOf($c),
             'amount' => Money::round((string) $c->amount, 4),
