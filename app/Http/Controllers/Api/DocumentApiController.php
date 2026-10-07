@@ -150,8 +150,8 @@ final class DocumentApiController extends Controller
             $response = (new Pipeline(app()))
                 ->send($target)
                 ->through([RefuseSwitchedOffScreens::class, RefuseWorkWithoutALicence::class])
-                ->then(function (Request $target) use ($request, $user, $documentType, $class, $route, $then, $paperAsked): Response {
-                    $this->mayOpen($user, $documentType, $class);
+                ->then(function (Request $target) use ($request, $user, $documentType, $class, $route, $then, $paperAsked, $document): Response {
+                    $this->mayOpen($user, $documentType, $class, $document);
 
                     if ($paperAsked) {
                         /*
@@ -181,11 +181,22 @@ final class DocumentApiController extends Controller
      *
      * @param  class-string<Model>  $class
      */
-    private function mayOpen(User $user, string $documentType, string $class): void
+    private function mayOpen(User $user, string $documentType, string $class, Model $document): void
     {
         $abilities = PaperTrail::abilitiesFor($documentType);
 
         abort_if($abilities === [], 403);
+
+        /*
+         * ⭐ ক্যাশিয়ার নিজের লেখা ভাউচার ছাপেন — আদায় বা পরিশোধের রসিদ পক্ষের হাতে দেওয়া এই কাজেরই অংশ (সমন্বয়ক, ৭ অক্টোবর
+         * ২০২৬)। ⓘ রিপোর্টের চাবি (`accounts.report`) থাকলে সব ভাউচার, আগের মতো; না থাকলে কেবল লেখার চাবিওয়ালার নিজের লেখা
+         * ভাউচার। শাখার দেয়াল মডেলের নিজের (খোঁজাতেই, [[ScopedToUserBranch]])।
+         */
+        if ($documentType === 'accounts_voucher' && ! $user->can('accounts.report')) {
+            abort_unless($user->can('accounts.voucher.create') && (int) $document->getAttribute('created_by') === (int) $user->id, 403);
+
+            return;
+        }
 
         foreach ($abilities as $ability) {
             abort_unless($user->can($ability), 403);
