@@ -572,21 +572,15 @@ final class CreditExposure implements CreditHolds
          * এক সংখ্যা দেখাত আর দেয়াল আরেক সংখ্যায় আটকাত।
          */
 
-        $billed = DB::table('sal_invoice_lines as il')
-            ->join('sal_invoices as i', 'i.id', '=', 'il.sales_invoice_id')
-            ->whereColumn('il.delivery_challan_line_id', 'cl.id')
-            ->whereNull('i.deleted_at')
-            ->where('i.status', '!=', DocumentStatus::CANCELLED);
-
         $challans = DB::table('sal_challan_lines as cl')
             ->join('sal_challans as c', 'c.id', '=', 'cl.delivery_challan_id')
+            ->leftJoinSub(self::billedPerLine(), 'b', 'b.challan_line_id', '=', 'cl.id')
             ->whereIn('c.customer_id', $customerIds)
             ->where('c.company_id', CompanyContext::id())
             ->whereNull('c.deleted_at')
             ->whereIn('c.status', DocumentStatus::POSTED)
-            ->whereNotExists($billed)
             ->groupBy('c.customer_id')
-            ->selectRaw('c.customer_id, SUM(cl.amount) as held')
+            ->selectRaw('c.customer_id, SUM('.self::UNBILLED_SHARE.') as held')
             ->pluck('held', 'customer_id');
 
         $drafts = DB::table('sal_invoices as i')
@@ -802,23 +796,41 @@ final class CreditExposure implements CreditHolds
      */
     private function unbilledChallans(Customer $customer): string
     {
-        $billed = DB::table('sal_invoice_lines as il')
-            ->join('sal_invoices as i', 'i.id', '=', 'il.sales_invoice_id')
-            ->whereColumn('il.delivery_challan_line_id', 'cl.id')
-            ->whereNull('i.deleted_at')
-            ->where('i.status', '!=', DocumentStatus::CANCELLED);
-
         $sum = DB::table('sal_challan_lines as cl')
             ->join('sal_challans as c', 'c.id', '=', 'cl.delivery_challan_id')
+            ->leftJoinSub(self::billedPerLine(), 'b', 'b.challan_line_id', '=', 'cl.id')
             ->where('c.customer_id', $customer->id)
             ->where('c.company_id', $customer->company_id)
             ->whereNull('c.deleted_at')
             ->whereIn('c.status', DocumentStatus::POSTED)
-            ->whereNotExists($billed)
             ->when($this->readLatest, fn ($q) => $q->sharedLock())
-            ->sum('cl.amount');
+            ->selectRaw('COALESCE(SUM('.self::UNBILLED_SHARE.'), 0) as held')
+            ->value('held');
 
         return bcadd((string) $sum, '0', 4);
+    }
+
+    /**
+     * ⛔ চালান-সারির বিল না হওয়া ভাগ — পুরো-ERP অডিট, ৬ অক্টোবর ২০২৬ (বিক্রয় ⚠️৮; [[APartlyBilledChallanStillCountsTowardsTheLimitTest]])।
+     *
+     * ⓘ আগে একটা বিল-সারি থাকলেই পুরো চালান-সারি বাদ: ১০-এর ৬ বিল হলে বাকি ৪-এর দাম গোনা হত শূন্য — মাল গ্রাহকের হাতে, অথচ
+     * বাকির সীমায় নেই (মালিকের নিয়ম: সীমা পরম)। এখন সারির অঙ্ক × (পাঠানো `delivered_qty` − বিল হওয়া) ÷ পাঠানো। একটাও বিল না হলে আগের মতোই
+     * পুরো অঙ্ক; পুরো বিল হলে শূন্য। বিল-সারি গোনা হয় বাতিল আর মোছা বিল বাদে ([[DeliveryChallanLine::invoicedQty()]]-এর নিয়ম);
+     * খসড়া বিল তার নিজের ঘরে ([[draftInvoices()]]) — সেই ভাগ এখানে দুবার নয়।
+     */
+    private const UNBILLED_SHARE = 'CASE WHEN cl.delivered_qty > 0 THEN cl.amount * GREATEST(cl.delivered_qty - COALESCE(b.billed, 0), 0) / cl.delivered_qty ELSE 0 END';
+
+    /** প্রতিটা চালান-সারির কতটুকু বিলে এসেছে */
+    private static function billedPerLine(): \Illuminate\Database\Query\Builder
+    {
+        return DB::table('sal_invoice_lines as il')
+            ->join('sal_invoices as i', 'i.id', '=', 'il.sales_invoice_id')
+            ->whereNotNull('il.delivery_challan_line_id')
+            ->where('i.company_id', CompanyContext::id())
+            ->whereNull('i.deleted_at')
+            ->where('i.status', '!=', DocumentStatus::CANCELLED)
+            ->groupBy('il.delivery_challan_line_id')
+            ->selectRaw('il.delivery_challan_line_id as challan_line_id, SUM(il.qty) as billed');
     }
 
     /** খসড়া বিলের মোট — নিজেকে আর নিজের চালানের বিলকে বাদ দিয়ে। */
