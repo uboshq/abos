@@ -183,6 +183,18 @@ final class BalanceSheetService
         $out = [];
 
         foreach ($accounts->where('type', $type)->whereNull('parent_id') as $root) {
+            /*
+             * ⛔ গোড়ায় বসা পাতা-খাত নিজেই মাথা — পুরো-ERP অডিট, ৬ অক্টোবর ২০২৬ (হিসাব ⚠️১০;
+             * [[ARootAccountStillCountsOnTheBalanceSheetTest]])। ⓘ খাতের পর্দা মা-ছাড়া পোস্টযোগ্য খাত বানাতে দেয়; আগে গাছটা কেবল
+             * গোড়ার সন্তান থেকে শুরু হত, তাই এমন খাতের জের স্থিতিপত্রে কোথাও উঠত না — রেওয়ামিলে খাতটা আছে, অথচ স্থিতিপত্র
+             * "মেলে না" বলত।
+             */
+            if (! $root->is_group) {
+                $out[] = ['head' => $root, 'lines' => [], 'total' => $this->signed($this->treeTotal($accounts, $balances, $root), $creditSide)];
+
+                continue;
+            }
+
             foreach ($accounts->where('parent_id', $root->id) as $head) {
                 $lines = [];
 
