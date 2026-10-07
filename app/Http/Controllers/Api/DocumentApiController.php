@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api;
 
+use App\Core\Contracts\GuardsThePrint;
 use App\Core\Engines\Print\PaperSize;
 use App\Core\Services\PaperTrail;
 use App\Core\Services\PhoneModules;
@@ -19,6 +20,7 @@ use Illuminate\Pipeline\Pipeline;
 use Illuminate\Routing\Route as RoutingRoute;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use ReflectionNamedType;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -152,6 +154,20 @@ final class DocumentApiController extends Controller
                 ->through([RefuseSwitchedOffScreens::class, RefuseWorkWithoutALicence::class])
                 ->then(function (Request $target) use ($request, $user, $documentType, $class, $route, $then, $paperAsked, $document): Response {
                     $this->mayOpen($user, $documentType, $class, $document);
+
+                    /*
+                     * ⛔ ওয়েবের ছাপার রুটের নিজের পাহারা — যেমন পরিবহন না বাছলে চালান নয় (অডিট ফোন ⚠️৮)। কন্ট্রোলার সরাসরি চলে
+                     * বলে মিডলওয়্যার চলত না; তাই রুটের যে মিডলওয়্যার [[GuardsThePrint]] সই করেছে, তাকে জিজ্ঞেস — ৪২২, তার কারণসহ।
+                     */
+                    foreach ($route->gatherMiddleware() as $middleware) {
+                        $guard = is_string($middleware) ? explode(':', $middleware, 2)[0] : null;
+                        if ($guard !== null && class_exists($guard) && is_subclass_of($guard, GuardsThePrint::class)) {
+                            $why = app($guard)->whyNotPrint($target);
+                            if ($why !== null) {
+                                throw ValidationException::withMessages(['print' => $why]);
+                            }
+                        }
+                    }
 
                     if ($paperAsked) {
                         /*

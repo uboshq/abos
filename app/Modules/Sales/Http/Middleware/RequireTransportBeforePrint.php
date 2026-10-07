@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Sales\Http\Middleware;
 
+use App\Core\Contracts\GuardsThePrint;
 use App\Core\Support\DocumentStatus;
 use App\Modules\Sales\Models\DeliveryChallan;
 use App\Modules\Sales\Models\GatePass;
@@ -21,27 +22,37 @@ use Symfony\Component\HttpFoundation\Response;
  * ⓘ রুটের মিডলওয়্যার, ছাপার কন্ট্রোলার ছোঁয়া হয় না — চালান (`{challan}`) আর গেট পাস (`{gatePass}`) দুই দরজাই।
  * ⓘ কোম্পানি পরিবহনের ঘর বন্ধ রাখলে (`sales.field_transport` = না) প্রশ্নই নেই — [[TransportRule::applies()]]।
  */
-final class RequireTransportBeforePrint
+final class RequireTransportBeforePrint implements GuardsThePrint
 {
     public function __construct(private readonly TransportRule $rule) {}
 
     public function handle(Request $request, Closure $next): Response
     {
-        $challan = $this->challanOf($request);
-
-        /*
-         * ⓘ কেবল পাকা চালানে — মাল বেরোয় ওটাতেই। বাতিল কাগজ "বাতিল" ছাপে ([[ACancelledPaperLooksValidTest]]),
-         * আর খসড়ার ছাপা না-করা কন্ট্রোলারের নিজের উত্তর ([[TheDraftHeldTheLimitAndTouchedNoBookTest]]) — এখানে আগ বাড়িয়ে নয়।
-         */
-        if ($challan === null || $challan->status !== DocumentStatus::CONFIRMED
-            || ! $this->rule->applies() || TransportRule::named($challan)) {
+        if ($this->whyNotPrint($request) === null) {
             return $next($request);
         }
 
         return redirect()
-            ->route('sales.challan.show', $challan)
+            ->route('sales.challan.show', $this->challanOf($request))
             ->withErrors(['transport' => __('sales::transport.needed_before_print')])
-            ->with('ask_transport', $challan->id);
+            ->with('ask_transport', $this->challanOf($request)?->id);
+    }
+
+    /**
+     * ⓘ কেবল পাকা চালানে — মাল বেরোয় ওটাতেই। বাতিল কাগজ "বাতিল" ছাপে ([[ACancelledPaperLooksValidTest]]),
+     * আর খসড়ার ছাপা না-করা কন্ট্রোলারের নিজের উত্তর ([[TheDraftHeldTheLimitAndTouchedNoBookTest]]) — এখানে আগ বাড়িয়ে নয়।
+     * ⭐ ফোনের দলিল-দরজাও এটাই জিজ্ঞেস করে ([[GuardsThePrint]]; অডিট ফোন ⚠️৮)।
+     */
+    public function whyNotPrint(Request $request): ?string
+    {
+        $challan = $this->challanOf($request);
+
+        if ($challan === null || $challan->status !== DocumentStatus::CONFIRMED
+            || ! $this->rule->applies() || TransportRule::named($challan)) {
+            return null;
+        }
+
+        return (string) __('sales::transport.needed_before_print');
     }
 
     private function challanOf(Request $request): ?DeliveryChallan

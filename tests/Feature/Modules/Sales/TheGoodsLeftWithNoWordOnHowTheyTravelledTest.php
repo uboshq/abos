@@ -134,6 +134,27 @@ final class TheGoodsLeftWithNoWordOnHowTheyTravelledTest extends TestCase
         }
     }
 
+    /** ⛔ ফোনের দলিল-দরজাও একই নিয়মে — পরিবহন না বললে চালান ছাপা নয়, কারণসহ ৪২২; বললে ছাপা (অডিট ফোন ⚠️৮) */
+    public function test_the_phone_prints_the_challan_only_once_the_transport_is_named(): void
+    {
+        $this->sell()->assertSessionHasNoErrors();
+        $challan = $this->lastChallan();
+        $owner = User::query()->where('email', 'owner@abos.test')->firstOrFail();
+        $url = '/api/v1/documents/DeliveryChallan/'.$challan->public_id.'/pdf';
+
+        $this->app['auth']->forgetGuards();
+        \Laravel\Sanctum\Sanctum::actingAs($owner, [\App\Http\Controllers\Api\AuthController::APP]);
+        $this->getJson($url)->assertStatus(422)->assertJsonPath('errors.print.0', (string) __('sales::transport.needed_before_print'));
+
+        $this->app['auth']->forgetGuards();
+        $this->actingAs($owner);
+        $this->answer($challan, ['mode' => 'own'])->assertSessionHasNoErrors();
+
+        $this->app['auth']->forgetGuards();
+        \Laravel\Sanctum\Sanctum::actingAs($owner, [\App\Http\Controllers\Api\AuthController::APP]);
+        $this->get($url)->assertOk();
+    }
+
     /** ⭐ তিন পথের প্রতিটা চালানে ঠিক ঘরে বসে; ⛔ "গাড়িতে" বললে নম্বর ছাড়া নয়। */
     public function test_each_of_the_three_answers_lands_on_the_challan(): void
     {
