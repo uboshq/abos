@@ -287,6 +287,7 @@ class _DepositRequestScreenState extends State<DepositRequestScreen> {
                           _ => AppColors.pending,
                         })),
                     if (row.date != null) Text('তারিখ ${row.date}'),
+                    if (row.submittedBy != null) Text('পাঠালেন ${row.submittedBy}'),
                     if (row.reference != null) Text('নম্বর ${row.reference}'),
                     for (final (no, amount) in row.bills) Text('বিল $no · ${Money.taka(amount)}'),
                     if (row.status == 'rejected' || (row.reason ?? '').isNotEmpty)

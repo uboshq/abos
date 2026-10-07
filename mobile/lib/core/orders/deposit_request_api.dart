@@ -52,6 +52,7 @@ class DepositRequestRow {
     required this.hasSlip,
     this.serverLabel = '',
     this.bills = const [],
+    this.submittedBy,
   });
 
   final String? date;
@@ -68,6 +69,9 @@ class DepositRequestRow {
   /// বাছা বিল — নম্বর আর অঙ্ক; পুরনো সার্ভারে বা না বাছলে খালি
   final List<(String, double)> bills;
 
+  /// কে পাঠালেন (`submitted_by_name`) — ঐচ্ছিক; পুরনো সার্ভারে null
+  final String? submittedBy;
+
   factory DepositRequestRow.fromJson(Map<String, dynamic> json) => DepositRequestRow(
         date: json['claimed_on']?.toString(),
         amount: Money.valueOrZero(json['amount']),
@@ -77,19 +81,25 @@ class DepositRequestRow {
         reason: json['decision_reason']?.toString(),
         hasSlip: json['has_slip'] == true,
         serverLabel: json['status_label']?.toString() ?? '',
+        submittedBy: (json['submitted_by_name']?.toString().trim().isEmpty ?? true) ? null : json['submitted_by_name'].toString().trim(),
         bills: [
           for (final b in (json['bills'] as List?) ?? const [])
             if (b is Map) (b['no']?.toString() ?? '', Money.valueOrZero(b['amount'])),
         ],
       );
 
-  /// ⭐ চার অবস্থা: পাঠানো · যাচাই চলছে · গৃহীত · প্রত্যাখ্যাত (কারণসহ, [reason])
-  String get statusLabel => switch (status) {
-        'pending' => 'পাঠানো',
-        'accepted' => 'গৃহীত',
-        'rejected' => 'প্রত্যাখ্যাত',
-        _ => serverLabel.isNotEmpty ? serverLabel : 'যাচাই চলছে',
-      };
+  /// ⭐ চার অবস্থা: পাঠানো · যাচাই চলছে · গৃহীত · প্রত্যাখ্যাত (কারণসহ, [reason])।
+  /// ⓘ সার্ভারের নিজের নাম (`status_label`) আগে — a6, ৭ অক্টোবর ২০২৬: "এটাই দেখিয়ো"; পুরনো সার্ভারে নিজের চার নাম।
+  /// `verifying` বসান হিসাবরক্ষক (ওয়েবের "যাচাই শুরু"); ফোন কখনো পাঠায় না, কেবল পড়ে।
+  String get statusLabel => serverLabel.isNotEmpty
+      ? serverLabel
+      : switch (status) {
+          'pending' => 'পাঠানো',
+          'verifying' => 'যাচাই চলছে',
+          'accepted' => 'গৃহীত',
+          'rejected' => 'প্রত্যাখ্যাত',
+          _ => 'যাচাই চলছে',
+        };
 }
 
 abstract class DepositRequestApi {
