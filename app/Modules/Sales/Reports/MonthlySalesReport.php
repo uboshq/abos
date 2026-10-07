@@ -10,6 +10,7 @@ use App\Core\Engines\Report\ReportEngine;
 use App\Core\Support\DocumentStatus;
 use App\Modules\Accounts\Models\Voucher;
 use App\Modules\Sales\Models\Collection;
+use App\Modules\Sales\Models\SalesInvoice;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Facades\DB;
 
@@ -25,7 +26,13 @@ use Illuminate\Support\Facades\DB;
  *   আদায়       গ্রাহকের নামে টাকা আসা — আদায় আর রসিদ ভাউচার (কাউন্টারের জমাও), খাতা থেকে,
  *              উল্টে দেওয়াগুলো বাদ ([[SalesCustomerTrade::lastPayment()]]-এর একই উৎস)
  *   বাকি যোগ    নিট বিক্রি − আদায় (ঋণাত্মক মানে সেই মাসে পুরনো বাকি কমেছে)
- *   মোট লাভ     (মোট − ভ্যাট − বিক্রিত মালের খরচ) বিলে, ফেরতে উল্টো — `sales.cost.view`-এর পেছনে
+ *   মোট লাভ     (মোট − ভ্যাট − বিলের ভাড়া − বিক্রিত মালের খরচ) বিলে, ফেরতে উল্টো — `sales.cost.view`-এর পেছনে
+ *
+ * ── ⛔ খাতার সাথে এক কথা — পুরো-ERP অডিট, ৬ অক্টোবর ২০২৬ (বিক্রয় ⚠️১০; [[TheMonthlySalesAgreeWithTheBooksTest]]) ─────
+ * ⓘ লাভে বিলে যোগ করা ভাড়াও ঢুকত (খাতায় সেটা ভাড়ার আয়, বিক্রি নয়); পণ্য ধরলে ফেরতের সারির অঙ্ক আগেই ভ্যাট-বাদ, তবু আবার ভ্যাট
+ * বাদ যেত, আর "ফেরত" ভ্যাট-বাদ অথচ "বিক্রি" ভ্যাট-সহ; আর বাতিল বিল নিজের মাস থেকেই উধাও হত — অথচ খাতায় আয় সেই মাসেই থাকে,
+ * উল্টো দাখিলা বসে বাতিলের মাসে। এখন: লাভ থেকে ভাড়া বাদ; ফেরত ভ্যাট-সহ, ভ্যাট একবার বাদ; খাতায় বসা বিল বাতিল হলেও নিজের মাসে
+ * থাকে, আর বাতিলের মাসে একটা উল্টো সারি ([[cancellations()]]) — খাতার মতোই।
  *
  * ── ⚠️ পণ্য/ব্র্যান্ড/ক্যাটাগরি বাছলে ────────────────────────────────────────
  * হিসাব লাইন থেকে, বিলের মাথা থেকে নয় — নাহলে একটা পণ্য বাছলেও গোটা বিলের অঙ্ক আসত।
@@ -48,8 +55,8 @@ final class MonthlySalesReport
                 $byLine = ! empty($f['product_id']) || ! empty($f['brand_id']) || ! empty($f['category_id']);
 
                 $rows = $byLine
-                    ? self::invoiceLines($f)->unionAll(self::returnLines($f))
-                    : self::invoices($f)->unionAll(self::returns($f))->unionAll(self::payments($f));
+                    ? self::invoiceLines($f)->unionAll(self::returnLines($f))->unionAll(self::cancelledLines($f))
+                    : self::invoices($f)->unionAll(self::returns($f))->unionAll(self::payments($f))->unionAll(self::cancellations($f));
 
                 return DB::query()->fromSub($rows, 'x')
                     ->groupBy('x.month')
@@ -79,15 +86,80 @@ final class MonthlySalesReport
         );
     }
 
-    /** পাকা বিল, মাথা থেকে */
+    /** পাকা বিল, মাথা থেকে — পরে বাতিল হলেও, খাতায় বসে থাকলে নিজের মাসে ([[cancellations()]] বাতিলের মাসে উল্টায়) */
     private static function invoices(array $f): Builder
     {
         return self::walled(DB::table('sal_invoices as d'), $f)
-            ->whereIn('d.status', DocumentStatus::POSTED)
+            ->tap(fn ($q) => self::postedOrBookedThenCancelled($q, $f))
             ->selectRaw("DATE_FORMAT(d.trx_date, '%Y-%m') as month, d.id as invoice_id")
             ->selectRaw('d.subtotal as gross, d.discount + d.bill_discount as discount')
             ->selectRaw('d.total as sold, 0 as returned, 0 as collected')
-            ->selectRaw('d.total - d.tax - d.cost_of_goods as profit');
+            // ⓘ বিলে যোগ করা ভাড়া খাতায় ভাড়ার আয়, বিক্রি নয় ([[SalesInvoiceService::postToLedger()]]) — লাভে নয়
+            ->selectRaw('d.total - d.tax - d.freight_charge - d.cost_of_goods as profit');
+    }
+
+    /**
+     * ⭐ বাতিলের মাসে উল্টো — খাতার মতো (বিক্রয় ⚠️১০)। ⓘ তারিখ বাতিল-কাগজের (CXL), না থাকলে বাতিলের দিন; বিলের সংখ্যায় গোনা নয়।
+     */
+    private static function cancellations(array $f): Builder
+    {
+        return self::cancelledInRange(DB::table('sal_invoices as d'), $f)
+            ->selectRaw("DATE_FORMAT(COALESCE(cx.on_date, DATE(d.cancelled_at)), '%Y-%m') as month, NULL as invoice_id")
+            ->selectRaw('-d.subtotal as gross, -(d.discount + d.bill_discount) as discount')
+            ->selectRaw('-d.total as sold, 0 as returned, 0 as collected')
+            ->selectRaw('-(d.total - d.tax - d.freight_charge - d.cost_of_goods) as profit');
+    }
+
+    /** পণ্য ধরে — বাতিলের মাসে বিলের লাইনগুলো উল্টো */
+    private static function cancelledLines(array $f): Builder
+    {
+        return self::cancelledInRange(DB::table('sal_invoices as d')->join('sal_invoice_lines as l', 'l.sales_invoice_id', '=', 'd.id'), $f)
+            ->tap(fn ($q) => self::productFilters($q, $f))
+            ->selectRaw("DATE_FORMAT(COALESCE(cx.on_date, DATE(d.cancelled_at)), '%Y-%m') as month, NULL as invoice_id")
+            ->selectRaw('-(l.qty * l.rate) as gross, -l.discount as discount')
+            ->selectRaw('-l.amount as sold, 0 as returned, 0 as collected')
+            ->selectRaw('-(l.amount - l.tax - l.qty * l.unit_cost) as profit');
+    }
+
+    /** পাকা, বা খাতায় বসার পরে বাতিল — বাতিলের আগে আয়টা খাতায় ছিল */
+    private static function postedOrBookedThenCancelled(Builder $q, array $f): void
+    {
+        $q->where(fn ($w) => $w->whereIn('d.status', DocumentStatus::POSTED)
+            ->orWhere(fn ($c) => $c->where('d.status', DocumentStatus::CANCELLED)->whereExists(self::booked($f))));
+    }
+
+    /** বিলটা কখনো খাতায় বসেছিল কি না — খসড়া অবস্থায় বাতিল হলে বসেনি */
+    private static function booked(array $f): \Closure
+    {
+        return fn ($q) => $q->from('ledger_entries as bk')
+            ->where('bk.company_id', $f['company_id'])
+            ->where('bk.source_type', SalesInvoice::drillSourceType())
+            ->whereColumn('bk.source_id', 'd.id');
+    }
+
+    /** খাতায় বসার পরে বাতিল, আর বাতিলের দিন পরিসরে — দেয়াল আর কার বিক্রি আগের মতো */
+    private static function cancelledInRange(Builder $q, array $f): Builder
+    {
+        return $q->leftJoinSub(
+            DB::table('sal_invoice_cancellations')
+                ->where('company_id', $f['company_id'])
+                ->where('status', DocumentStatus::CONFIRMED)
+                ->whereNull('deleted_at')
+                ->groupBy('sales_invoice_id')
+                ->selectRaw('sales_invoice_id, MAX(trx_date) as on_date'),
+            'cx',
+            'cx.sales_invoice_id',
+            '=',
+            'd.id',
+        )
+            ->where('d.company_id', $f['company_id'])
+            ->tap(ReportEngine::branchWall($f, 'd.branch_id'))
+            ->tap(ReportEngine::dealerWall($f, 'd.customer_id'))
+            ->whereNull('d.deleted_at')
+            ->where('d.status', DocumentStatus::CANCELLED)
+            ->whereExists(self::booked($f))
+            ->whereRaw('COALESCE(cx.on_date, DATE(d.cancelled_at)) BETWEEN ? AND ?', [$f['from'], $f['to']])
+            ->tap(fn ($w) => self::whoFilters($w, $f, 'd.customer_id'));
     }
 
     /** পাকা ফেরত, মাথা থেকে — লাভ উল্টো */
@@ -127,7 +199,7 @@ final class MonthlySalesReport
     private static function invoiceLines(array $f): Builder
     {
         return self::walled(DB::table('sal_invoice_lines as l')->join('sal_invoices as d', 'd.id', '=', 'l.sales_invoice_id'), $f)
-            ->whereIn('d.status', DocumentStatus::POSTED)
+            ->tap(fn ($q) => self::postedOrBookedThenCancelled($q, $f))
             ->tap(fn ($q) => self::productFilters($q, $f))
             ->selectRaw("DATE_FORMAT(d.trx_date, '%Y-%m') as month, d.id as invoice_id")
             ->selectRaw('l.qty * l.rate as gross, l.discount as discount')
@@ -143,8 +215,9 @@ final class MonthlySalesReport
             ->whereIn('d.status', DocumentStatus::POSTED)
             ->tap(fn ($q) => self::productFilters($q, $f))
             ->selectRaw("DATE_FORMAT(d.trx_date, '%Y-%m') as month, NULL as invoice_id")
-            ->selectRaw('0 as gross, 0 as discount, 0 as sold, l.amount as returned, 0 as collected')
-            ->selectRaw('-(l.amount - l.tax - l.qty * COALESCE(il.unit_cost, 0)) as profit');
+            // ⓘ ফেরতের সারির `amount` ভ্যাট-বাদ ([[SalesReturnService]]) — "ফেরত" ভ্যাট-সহ, বিক্রির মতো; লাভে ভ্যাট আর বাদ নয়
+            ->selectRaw('0 as gross, 0 as discount, 0 as sold, l.amount + l.tax as returned, 0 as collected')
+            ->selectRaw('-(l.amount - l.qty * COALESCE(il.unit_cost, 0)) as profit');
     }
 
     /** কোম্পানি, শাখার দেয়াল, তারিখ, মুছে-ফেলা বাদ, আর কার বিক্রি */
