@@ -76,6 +76,53 @@ final class TheSignerCouldNotSeeTheVoucherTest extends TestCase
         $this->phone($signer)->get($url)->assertForbidden();
     }
 
+    /**
+     * ⭐ সইয়ের আগে বিস্তারিত — মালিক, ৭ অক্টোবর ২০২৬: *"approval e kono kichui details dekhay na"*
+     * ([[ApprovalApiController::sheet()]])। সইকারী ভাউচারের ঘর, সারি আর যোগফল পান; অন্য কেউ ৪০৩; সই হয়ে গেলে ৪০৯।
+     */
+    public function test_the_signer_reads_the_vouchers_lines_before_signing_and_nobody_else_does(): void
+    {
+        $this->seed(DemoSeeder::class);
+        $this->company = Company::query()->where('code', 'TDEPOT')->firstOrFail();
+        CompanyContext::set($this->company->id, $this->company->defaultBranch()?->id);
+        $this->actingAs(User::query()->where('email', 'owner@abos.test')->firstOrFail());
+        app(StandardChart::class)->install();
+        app(SettingsService::class)->set(VoucherService::MAKER_CHECKER, false);
+
+        $signer = $this->person(['approval.decide']);
+        $stranger = $this->person(['approval.decide']);
+        $writer = $this->person(['accounts.voucher.create']);
+        $flow = ApprovalFlow::create(['company_id' => $this->company->id, 'module' => 'accounts', 'action' => 'journal', 'is_active' => true]);
+        ApprovalFlowStep::create(['approval_flow_id' => $flow->id, 'level' => 1, 'approver_type' => 'user', 'approver_id' => $signer->id]);
+
+        [$a, $b] = Account::query()->postable()->active()->whereNull('money_kind')->where('code', 'like', '5%')->orderBy('code')->take(2)->get()->all();
+        $this->app['auth']->forgetGuards();
+        $this->actingAs($writer);
+        $out = app(SyncService::class)->push($writer, 'phone-d', 'accounts', [[
+            'changeId' => 'sheet-1', 'entityType' => 'Voucher', 'operation' => 'CREATE',
+            'payloadJson' => json_encode(['type' => Voucher::JOURNAL, 'trx_date' => now()->toDateString(), 'narration' => 'মাসের সমন্বয়',
+                'lines' => [['account_id' => $a->id, 'debit' => '750', 'credit' => '0'], ['account_id' => $b->id, 'debit' => '0', 'credit' => '750']]]),
+        ]]);
+        $voucher = Voucher::query()->where('public_id', $out[0]['entityId'])->firstOrFail();
+        $approval = Approval::query()->where('approvable_type', Voucher::class)->where('approvable_id', $voucher->id)->pending()->firstOrFail();
+        $url = '/api/v1/approvals/'.$approval->public_id.'/sheet';
+
+        $sheet = $this->phone($signer)->getJson($url)->assertOk()->json();
+        $this->assertSame([$voucher->document_no, 'Voucher'], [$sheet['documentNo'], $sheet['documentType']]);
+        $this->assertContains('মাসের সমন্বয়', array_column($sheet['facts'], 'value'), '⛔ ভাউচারের বর্ণনা বিস্তারিতে নেই।');
+        $this->assertSame([$a->label(), $b->label()], array_column($sheet['rows'], 'account'), '⛔ ভাউচারের সারি নেই।');
+        $this->assertSame(['debit', 'credit'], array_keys($sheet['totals']));
+        $this->assertContains('debit', array_column($sheet['columns'], 'key'));
+
+        $this->phone($stranger)->getJson($url)->assertForbidden();
+        $this->phone($writer)->getJson($url)->assertForbidden();
+
+        $this->app['auth']->forgetGuards();
+        $this->actingAs($signer);
+        app(ApprovalEngine::class)->approve($approval, $signer);
+        $this->phone($signer)->getJson($url)->assertStatus(409);
+    }
+
     /** @param  list<string>  $keys */
     private function person(array $keys): User
     {

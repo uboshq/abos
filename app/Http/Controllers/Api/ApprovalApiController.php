@@ -146,6 +146,41 @@ final class ApprovalApiController extends Controller
         ]);
     }
 
+    /**
+     * `GET /approvals/{approval}/sheet` — সইয়ের আগে কাগজের বিস্তারিত: ঘর আর মান, সারি, যোগফল।
+     *
+     * ⭐ মালিক, ৭ অক্টোবর ২০২৬: *"app e voucher approvale asle … details dekhayna, approval e kono kichui details dekhay
+     * na"*। ওয়েবের অনুমোদনের পাতা যা দেখায়, তাই — কাগজ নিজে বলে ([[ShowsItselfForSigning]]: ভাউচার, চালান, বিক্রয় বিল);
+     * যে কাগজ বলে না, তার জন্য সারির নিজের কথা ([[ApprovalFacts]]: কার, কী বাবদ, কোথায়)। মান সবই লেখা — ফোন কেবল আঁকে।
+     * ⛔ সই-দরজার একই পাহারা ([[decidable()]]): অপেক্ষমাণ, আর যিনি সিদ্ধান্ত দিতে পারেন; বেতন ফোনে আসেই না।
+     */
+    public function sheet(Request $request, string $approval): JsonResponse
+    {
+        $entry = $this->decidable($request, $approval);
+        $document = $this->documentsOf(collect([$entry]))[$entry->approvable_type][(int) $entry->approvable_id] ?? null;
+        abort_if($document === null, 404);
+
+        if ($document instanceof \App\Core\Contracts\ShowsItselfForSigning) {
+            $sheet = $document->signingSheet();
+        } else {
+            $fact = app(ApprovalFacts::class)->of(collect([$entry]))[(int) $entry->id] ?? [];
+            $sheet = ['facts' => array_values(array_filter([
+                ['label' => __('approval::field.party'), 'value' => (string) ($fact['party'] ?? '')],
+                ['label' => __('approval::field.what_for'), 'value' => (string) ($fact['about'] ?? $entry->requested_reason ?? '')],
+                ['label' => __('approval::field.where_money'), 'value' => (string) ($fact['where'] ?? '')],
+            ], fn (array $f) => trim($f['value']) !== '')), 'columns' => [], 'rows' => []];
+        }
+
+        return response()->json([
+            'documentType' => class_basename((string) $entry->approvable_type),
+            'documentNo' => $document->getAttribute('document_no'),
+            'facts' => array_values(array_map(fn (array $f) => ['label' => (string) $f['label'], 'value' => (string) $f['value']], $sheet['facts'] ?? [])),
+            'columns' => array_values(array_map(fn (array $c) => ['key' => (string) $c['key'], 'label' => (string) $c['label'], 'numeric' => (bool) ($c['numeric'] ?? false)], $sheet['columns'] ?? [])),
+            'rows' => array_values(array_map(fn (array $r) => array_map(fn ($v) => $v === null ? null : (string) $v, $r), $sheet['rows'] ?? [])),
+            'totals' => array_map('strval', $sheet['totals'] ?? []),
+        ]);
+    }
+
     /** `POST /approvals/{approval}/approve` — মন্তব্য ঐচ্ছিক, ওয়েবের মতো। */
     public function approve(Request $request, string $approval): JsonResponse
     {

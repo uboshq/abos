@@ -220,6 +220,10 @@ Route::prefix('v1')
         Route::get('/approvals/pending', [ApprovalApiController::class, 'pending'])
             ->middleware(['can:approval.decide', \App\Http\Middleware\RefuseModulesOffOnThePhone::class.':approval'])
             ->name('approvals.pending');
+        // ⭐ সইয়ের আগে কাগজের বিস্তারিত — মালিক, ৭ অক্টোবর ২০২৬ ("approval e kono kichui details dekhay na")
+        Route::get('/approvals/{approval}/sheet', [ApprovalApiController::class, 'sheet'])
+            ->middleware(['can:approval.decide', \App\Http\Middleware\RefuseModulesOffOnThePhone::class.':approval'])
+            ->name('approvals.sheet');
         Route::post('/approvals/{approval}/approve', [ApprovalApiController::class, 'approve'])
             ->middleware(['can:approval.decide', \App\Http\Middleware\RefuseModulesOffOnThePhone::class.':approval'])
             ->name('approvals.approve');
