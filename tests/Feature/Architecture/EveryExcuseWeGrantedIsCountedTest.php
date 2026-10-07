@@ -344,7 +344,12 @@ final class EveryExcuseWeGrantedIsCountedTest extends TestCase
      *   −৩  ThePortalDoesNotCallThemDealersAgainTest::ALLOWED — পাহারা কেবল দেখা লেখা গোনে; তিনটা ছাড়ের শব্দই মন্তব্যে
      *       বা শনাক্তকারীতে ছিল, তাই তালিকা খালি
      */
-    private const CEILING = 342;
+    /*
+     * ── ⚠️ ৩৪২ → ৩৪৩, ৭ অক্টোবর ২০২৬ (abos-a4, ফোনের ক্র্যাশের খবর) ─────────────────────────────────────────────
+     *   +১  EveryRouteIsGuardedTest::OPEN_TO_THE_WORLD — api.app.crash: লগইনের পর্দাতেও অ্যাপ ভাঙে, তাই টোকেন ছাড়া;
+     *       কেবল ভুলের খাতায় লেখে, কিছু ফেরায় না, throttle:10,1 আর প্রতিটা ঘরের আকারের সীমা (সমন্বয়কের অ্যাপ-অডিট)
+     */
+    private const CEILING = 343;
 
     /*
      * ── ⚠️ ২২২ → ২২৪, ২৩ সেপ্টেম্বর ২০২৬ ───────────────────────────
