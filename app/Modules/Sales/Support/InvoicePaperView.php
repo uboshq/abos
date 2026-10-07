@@ -301,6 +301,15 @@ final class InvoicePaperView
      */
     public function previousBeforeBill(): string
     {
+        /*
+         * ⛔ ফেরতও গোনা — অডিট, ৬ অক্টোবর ২০২৬ (সমন্বয়ক): নিচের যোগে এই বিলের ফেরত ছিল না, তাই বিলের মাল ফেরত এলে শেষ জের
+         * কমত আর "আগের জের"-ও ততটা কমে ছাপত — যেন ফেরতটা আগের কোনো বিলের। ⭐ বিলের নিজের হিসাবটাই নেওয়া হয়
+         * (`signed_sums.previous_due` — খাতায় এই বিল বসার আগের জের, ফেরত-আদায় কিছুই ছোঁয় না); না থাকলে পুরনো যোগ।
+         */
+        if (isset($this->signed['previous_due'])) {
+            return Money::format($this->plain($this->signed['previous_due']));
+        }
+
         $before = bcadd(bcsub($this->plain($this->signed['outstanding'] ?? '0'), $this->plain($this->sums['net_payable'] ?? '0'), 4),
             $this->plain($this->sums['paid'] ?? '0'), 4);
 

@@ -78,9 +78,10 @@ final class TheSpecialForDbBillSpeaksTheDealersWordsTest extends TestCase
      */
     public function test_the_previous_due_is_the_balance_before_this_bill(): void
     {
+        // ⓘ ৬ অক্টোবর ২০২৬ থেকে `previous_due` খাতায় এই বিল বসার আগের জের ([[SalesPrintController::balanceBeforeBill()]]) — আসল ৩০,৬৪২.১৫
         $v = $this->paperView([
             'net_payable' => '39,106.12', 'paid' => '40,000.00', 'invoice_due' => '0.00',
-            'previous_due' => '29,748.27', 'outstanding' => '29,748.27',
+            'previous_due' => '30,642.15', 'outstanding' => '29,748.27',
         ]);
 
         $this->assertSame('30,642.15', $v->previousBeforeBill(), '⛔ আগের বকেয়া কাটার পরের অঙ্কে বসেছে।');
@@ -93,6 +94,16 @@ final class TheSpecialForDbBillSpeaksTheDealersWordsTest extends TestCase
             'previous_due' => '3,000.00', 'outstanding' => '12,500.00',
         ]);
         $this->assertSame('3,000.00', $v->previousBeforeBill());
+
+        /*
+         * ⛔ ফেরতও — অডিট, ৬ অক্টোবর ২০২৬ (সমন্বয়ক): এই বিলের ২,০০০ টাকার মাল ফেরত এলে শেষ জের ১০,৫০০; আগে "আগের জের"
+         * ছাপত শেষ জের − প্রদেয় + পরিশোধ = ১,০০০, যেন ফেরতটা আগের কোনো বিলের। আগের জের ৩,০০০-ই থাকে।
+         */
+        $v = $this->paperView([
+            'net_payable' => '14,500.00', 'paid' => '5,000.00', 'invoice_due' => '7,500.00',
+            'previous_due' => '3,000.00', 'outstanding' => '10,500.00',
+        ]);
+        $this->assertSame('3,000.00', $v->previousBeforeBill(), '⛔ এই বিলের ফেরত "আগের জের" কমিয়ে দিল।');
     }
 
     public function test_a_name_that_already_says_ms_is_not_prefixed_again(): void
