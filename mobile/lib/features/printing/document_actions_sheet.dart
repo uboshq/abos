@@ -7,6 +7,7 @@ import '../../core/printing/document_delivery.dart';
 import '../../core/printing/documents_api.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
+import 'pdf_view_page.dart';
 
 /// "প্রিন্ট / শেয়ার" for one document, from anywhere in the app.
 ///
@@ -147,6 +148,13 @@ class _DocumentActionsSheetState extends State<DocumentActionsSheet> {
   void _say(String message) => ScaffoldMessenger.of(context)
       .showSnackBar(SnackBar(content: Text(message)));
 
+  /// ⭐ পর্দায় দেখা — সইয়ের আগে বা যেকোনো সময় ([[PdfViewPage]]; মালিক, ৭ অক্টোবর ২০২৬)
+  Future<void> _view() => _run((pdf) async {
+        if (!mounted) return null;
+        await widget.delivery.view(context, pdf: pdf, title: widget.title);
+        return null;
+      });
+
   Future<void> _printToSystem() => _run((pdf) async {
         // False means the person closed the dialog. Not an error, and saying
         // "প্রিন্ট হয়নি" for a deliberate cancel teaches people to distrust
@@ -260,6 +268,12 @@ class _DocumentActionsSheetState extends State<DocumentActionsSheet> {
               ),
               const SizedBox(height: AppSpacing.md),
               ListTile(
+                key: const Key('document-view'),
+                leading: const Icon(Icons.visibility_outlined),
+                title: const Text('পর্দায় দেখুন'),
+                onTap: _busy || paper == null ? null : _view,
+              ),
+              ListTile(
                 leading: const Icon(Icons.print_outlined),
                 title: const Text('প্রিন্ট করুন'),
                 subtitle: const Text('ওয়াইফাই, USB, বা ফোনের প্রিন্ট তালিকা'),
@@ -303,7 +317,14 @@ class DocumentDeliveryPorts {
     this.savePdf,
     this.pairedPrinters,
     this.bluetoothPrint,
+    this.viewPdf,
   });
+
+  /// পর্দায় দেখা — পরীক্ষায় নকল; না দিলে [PdfViewPage]
+  final Future<void> Function(BuildContext context, {required Uint8List pdf, required String title})? viewPdf;
+
+  Future<void> view(BuildContext context, {required Uint8List pdf, required String title}) =>
+      (viewPdf ?? PdfViewPage.open)(context, pdf: pdf, title: title);
 
   final Future<bool> Function({required Uint8List pdf, required String documentName})?
       systemPrint;

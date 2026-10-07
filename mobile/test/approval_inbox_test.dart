@@ -200,4 +200,53 @@ void main() {
     // does not appear AND a non-payroll one that does — because a
     // filter-everything query would pass "the list is empty" on its own.
   });
+
+  testWidgets('a voucher waiting for a signature shows its lines, its facts and its totals before signing (owner, 7 Oct 2026)', (tester) async {
+    const voucher = <String, dynamic>{
+      'id': '01a0c3f0-0000-7000-8000-0000000000v1', 'documentType': 'Voucher', 'documentNo': 'RCV-0007',
+      'documentId': '01a115da-bfcf-7284-8468-c419d8e00420', 'action': 'receipt', 'amount': '5000.0000', 'currentLevel': 1,
+    };
+    String? askedFor;
+    tester.view.physicalSize = const Size(900, 2400);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(MaterialApp(
+      home: ApprovalInboxScreen(
+        loadPending: () async => const ApprovalPage(rows: [ApprovalRecord(voucher)]),
+        approve: (_, __) async {},
+        reject: (_, __) async {},
+        loadSheet: (id) async {
+          askedFor = id;
+          return ApprovalSheet.fromJson({
+            'facts': [
+              {'label': 'তারিখ', 'value': '07 Oct 2026'},
+              {'label': 'বর্ণনা', 'value': 'রহিম স্টোরের আদায়'},
+            ],
+            'columns': [
+              {'key': 'account', 'label': 'খাত'},
+              {'key': 'party', 'label': 'পক্ষ'},
+              {'key': 'debit', 'label': 'ডেবিট', 'numeric': true},
+              {'key': 'credit', 'label': 'ক্রেডিট', 'numeric': true},
+            ],
+            'rows': [
+              {'account': 'নগদ', 'party': null, 'debit': '5,000.00', 'credit': null},
+              {'account': 'প্রাপ্য', 'party': 'রহিম স্টোর', 'debit': null, 'credit': '5,000.00'},
+            ],
+            'totals': {'debit': '5,000.00', 'credit': '5,000.00'},
+          });
+        },
+      ),
+    ));
+    await tester.pumpAndSettle();
+
+    expect(find.text('ভাউচার'), findsOneWidget, reason: 'ধরন বাংলায় — আগে "Voucher"');
+    await tester.tap(find.byKey(const Key('approval-details-01a0c3f0-0000-7000-8000-0000000000v1')));
+    await tester.pumpAndSettle();
+
+    expect(askedFor, '01a0c3f0-0000-7000-8000-0000000000v1');
+    expect(find.text('বর্ণনা: রহিম স্টোরের আদায়'), findsOneWidget);
+    expect(find.text('নগদ — ডেবিট 5,000.00'), findsOneWidget);
+    expect(find.text('প্রাপ্য · রহিম স্টোর — ক্রেডিট 5,000.00'), findsOneWidget);
+    expect(find.text('মোট — ডেবিট 5,000.00 · ক্রেডিট 5,000.00'), findsOneWidget);
+  });
 }

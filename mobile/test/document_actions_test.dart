@@ -177,4 +177,23 @@ void main() {
     expect(sentWidth, 80);
     expect(find.textContaining('পাঠানো হয়েছে'), findsOneWidget);
   });
+
+  testWidgets('the paper can be looked at on the screen, the paper picked (owner, 7 Oct 2026: "view hoyna")', (tester) async {
+    String? asked;
+    Uint8List? shown;
+    await tester.pumpWidget(sheet(
+      loadPdf: (paper) async {
+        asked = paper;
+        return pdfBytes;
+      },
+      delivery: DocumentDeliveryPorts(viewPdf: (context, {required pdf, required title}) async => shown = pdf),
+    ));
+    await tester.pumpAndSettle();
+
+    expect(find.text('পর্দায় দেখুন'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('document-view')));
+    await tester.pumpAndSettle();
+    expect(asked, 'a4');
+    expect(shown, pdfBytes, reason: '⛔ সার্ভারের PDF এল, কিন্তু পর্দায় গেল না');
+  });
 }
