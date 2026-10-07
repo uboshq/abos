@@ -7,6 +7,7 @@ import 'package:flutter/foundation.dart';
 import 'package:hive/hive.dart';
 
 import '../api_client/api_client.dart';
+import '../api_client/network_errors.dart';
 import '../auth/token_storage.dart';
 import '../config/app_config.dart';
 import '../storage/hive_encryption.dart';
@@ -298,8 +299,7 @@ class SyncEngine {
   ///
   /// Throws [UnsupportedError] for any [entityType] outside
   /// [_writableOffline] — see that field's own doc comment.
-  /// ⓘ Returns the change's own id — a screen that wants the server's record
-  /// once it lands (a receipt) asks [appliedEntityId] with it.
+  /// ⓘ Returns the change's own id.
   Future<String> enqueue({
     required String module,
     required String entityType,
@@ -348,13 +348,59 @@ class SyncEngine {
     return changeId;
   }
 
-  /// ⭐ The server's id for a change that has landed — in memory only, for the
-  /// screen that just sent it (a collection's receipt, 7 Oct 2026). Null while
-  /// it waits, or after the app restarts; the record is then in the synced
-  /// list as usual.
-  String? appliedEntityId(String changeId) => _appliedEntityIds[changeId];
+  /// ⭐ একটা নতুন বদলের চাবি — সারির বাইরে সরাসরি পাঠানোর জন্য ([[pushNow]])। পর্দা একবার বানিয়ে রাখে আর একই কাজ
+  /// আবার পাঠালে একই চাবি দেয়, তাই দুবার চাপলে বা উত্তর হারালেও সার্ভারে একটাই বসে (সার্ভারের changeId-পাহারা)।
+  String newChangeId() => _newChangeId();
 
-  final Map<String, String> _appliedEntityIds = {};
+  /// ⛔ নেট থাকলে এখনই, সারিতে নয় — অফিসের আদায় (৭ অক্টোবর ২০২৬; সমন্বয়কের অ্যাপ-অডিট: "নতুন আদায়" সারিতে উঠতই
+  /// না, কারণ মালিকের নিয়মে নেট ছাড়া কেবল অর্ডার — [[_writableOffline]])।
+  ///
+  /// <p>সিঙ্কের একই দরজা (`/sync/{module}/push`), একটা বদল, এখনই। নেট না থাকলে [NoNetworkForThis] — পর্দা বলে
+  /// "নেট লাগবে"; কিছুই ফোনে জমা থাকে না। সার্ভার ফেরালে কারণসহ [PushOutcome.refusal]।
+  Future<PushOutcome> pushNow({
+    required String module,
+    required String entityType,
+    required String changeId,
+    required Map<String, dynamic> payload,
+  }) async {
+    final deviceId = await TokenStorage.instance.deviceId();
+    final Response<Map<String, dynamic>> response;
+    try {
+      response = await ApiClient.dio.post<Map<String, dynamic>>(
+        '/sync/$module/push',
+        queryParameters: {'deviceId': deviceId},
+        data: [
+          <String, dynamic>{
+            'changeId': changeId,
+            'entityType': entityType,
+            'entityId': null,
+            'operation': 'CREATE',
+            'payloadJson': jsonEncode(payload),
+            'clientVersion': 1,
+          },
+        ],
+      );
+    } catch (error) {
+      if (isNetworkError(error)) throw const NoNetworkForThis();
+      rethrow;
+    }
+
+    final outcomes = (response.data?['outcomes'] as List?) ?? const [];
+    final outcome = outcomes
+        .whereType<Map>()
+        .map((o) => o.cast<String, dynamic>())
+        .where((o) => o['changeId'] == changeId)
+        .firstOrNull;
+    if (outcome == null) {
+      throw StateError('The server answered without this change ($changeId).');
+    }
+    final refusal = reasonIfRejected(outcome);
+    final landed = outcome['entityId'];
+    return PushOutcome(
+      refusal: refusal,
+      landedId: refusal == null && landed is String && landed.isNotEmpty ? landed : null,
+    );
+  }
 
   /// The decoded payloads of everything still queued for one entity type.
   ///
@@ -501,10 +547,6 @@ class SyncEngine {
             });
           } else if (outcome != null) {
             // APPLIED or DUPLICATE — genuinely done.
-            final landed = outcome['entityId'];
-            if (landed is String && landed.isNotEmpty) {
-              _appliedEntityIds[row['changeId'] as String] = landed;
-            }
             toDelete.add(key);
           }
           // No outcome for this changeId at all (should not happen, but a
@@ -575,6 +617,19 @@ class SyncEngine {
 ///
 /// <p>Null for APPLIED, DUPLICATE, or a changeId with no outcome at all (kept
 /// pending by the caller, treated as neither done nor refused).
+/// ⭐ [SyncEngine.pushNow]-এর উত্তর — বসলে সার্ভারের আইডি, ফেরালে কারণ।
+class PushOutcome {
+  const PushOutcome({this.landedId, this.refusal});
+
+  final String? landedId;
+  final String? refusal;
+}
+
+/// নেট নেই — যে কাজ কেবল নেট থাকলে হয় ([[SyncEngine.pushNow]]), তার জন্য।
+class NoNetworkForThis implements Exception {
+  const NoNetworkForThis();
+}
+
 String? reasonIfRejected(Map<String, dynamic>? outcome) {
   if (outcome == null) return null;
   final status = outcome['status'] as String?;

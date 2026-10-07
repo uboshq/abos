@@ -1,6 +1,7 @@
 import 'package:abos_mobile/core/books/books_api.dart';
 import 'package:abos_mobile/core/books/collection_entry.dart';
 import 'package:abos_mobile/core/records/customer_record.dart';
+import 'package:abos_mobile/core/sync_engine/sync_engine.dart';
 import 'package:abos_mobile/features/books/collect_screen.dart';
 import 'package:abos_mobile/features/books/money_in_screens.dart';
 import 'package:flutter/material.dart';
@@ -16,24 +17,33 @@ const _bkash =
 final _shop = CustomerRecord(
     const {'id': 'cus-1', 'nameBn': 'রহিম স্টোর', 'pointName': 'ফুলপুর বাজার'});
 
+/// ⓘ পর্দার পরীক্ষা — তারে কী যায় তার পরীক্ষা আসল পথে: collection_goes_online_test
 class _FakeEntry implements CollectionEntryApi {
-  _FakeEntry({this.lands});
+  _FakeEntry({this.lands, this.refuses, this.offlineTimes = 0});
 
   final String? lands;
+  final String? refuses;
+  int offlineTimes;
   CollectionDraft? sent;
+  final List<String> keys = [];
 
   @override
   Future<List<CollectionAccount>> accounts() async => const [_cash, _bkash];
 
   @override
-  Future<String> send(CollectionDraft draft) async {
+  Future<PushOutcome> send(CollectionDraft draft, String changeId) async {
+    keys.add(changeId);
+    if (offlineTimes > 0) {
+      offlineTimes--;
+      throw const NoNetworkForThis();
+    }
     sent = draft;
-    return 'chg-1';
+    return PushOutcome(landedId: lands, refusal: refuses);
   }
-
-  @override
-  String? landedId(String changeId) => changeId == 'chg-1' ? lands : null;
 }
+
+var _seq = 0;
+String _key() => 'key-${_seq++}';
 
 class _FakeBooks implements BooksApi {
   @override
@@ -74,7 +84,7 @@ void main() {
       (tester) async {
     final api = _FakeEntry();
     await _pump(tester,
-        CollectScreen(api: api, books: _FakeBooks(), customers: [_shop]));
+        CollectScreen(api: api, books: _FakeBooks(), customers: [_shop], newChangeId: _key));
 
     await tester.enterText(find.byKey(const ValueKey('collect-amount')), '500');
     await tester.tap(find.byKey(const ValueKey('collect-send')));
@@ -90,15 +100,16 @@ void main() {
   });
 
   testWidgets(
-      'an mfs collection carries the account, the TrxID and "confirm now"; offline it waits on the phone',
+      'an mfs collection carries the account, the TrxID and "confirm now"; a refusal shows its reason',
       (tester) async {
-    final api = _FakeEntry();
+    final api = _FakeEntry(refuses: 'TrxID আগে ব্যবহার হয়েছে');
     await _pump(
         tester,
         CollectScreen(
             api: api,
             books: _FakeBooks(),
             customers: [_shop],
+            newChangeId: _key,
             today: DateTime(2026, 10, 7)));
 
     await _pickTheShop(tester);
@@ -122,8 +133,33 @@ void main() {
     expect(payload['instrument'], 'মোবাইল ব্যাংকিং');
     expect(payload['instrumentNo'], 'TRX-7781');
     expect(payload['confirm'], true);
-    expect(find.byKey(const ValueKey('collect-notice')), findsOneWidget,
-        reason: 'নেট না থাকলে বলা দরকার — ফোনে জমা, পরে যাবে');
+    expect(find.text('TrxID আগে ব্যবহার হয়েছে'), findsOneWidget);
+
+    // ⓘ ফেরানো কাজ ঠিক করে আবার — নতুন চাবি (ফেরানো চাবি আবার পাঠালে সার্ভার আবার ফেরাত)
+    await tester.tap(find.byKey(const ValueKey('collect-send')));
+    await tester.pumpAndSettle();
+    expect(api.keys, hasLength(2));
+    expect(api.keys[0], isNot(api.keys[1]), reason: '⛔ ফেরানো চাবিতেই আবার পাঠাল');
+  });
+
+  testWidgets('no network: "নেট লাগবে", and the retry carries the same key so it lands once',
+      (tester) async {
+    final api = _FakeEntry(lands: 'col-1', offlineTimes: 1);
+    await _pump(tester,
+        CollectScreen(api: api, books: _FakeBooks(), customers: [_shop], newChangeId: _key));
+
+    await _pickTheShop(tester);
+    await tester.enterText(find.byKey(const ValueKey('collect-amount')), '750.50');
+    await tester.tap(find.byKey(const ValueKey('collect-send')));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('আদায় দিতে নেট লাগবে'), findsOneWidget);
+    expect(api.sent, isNull);
+
+    await tester.tap(find.byKey(const ValueKey('collect-send')));
+    await tester.pumpAndSettle();
+    expect(api.keys, hasLength(2));
+    expect(api.keys[0], api.keys[1], reason: '⛔ নেট ফেরার পরে নতুন চাবি — দুবার চাপলে দুটো আদায় বসতে পারত');
+    expect(find.text('COL-0042'), findsWidgets, reason: 'বসে গেলে রসিদ');
   });
 
   testWidgets(
@@ -131,7 +167,7 @@ void main() {
       (tester) async {
     final api = _FakeEntry(lands: 'col-1');
     await _pump(tester,
-        CollectScreen(api: api, books: _FakeBooks(), customers: [_shop]));
+        CollectScreen(api: api, books: _FakeBooks(), customers: [_shop], newChangeId: _key));
 
     await _pickTheShop(tester);
     await tester.enterText(
