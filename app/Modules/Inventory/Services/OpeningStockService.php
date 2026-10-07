@@ -253,7 +253,12 @@ final class OpeningStockService
         $supplier = $row['supplier_id'] ?? null;
 
         // ⛔ প্রিন্সিপাল এই কোম্পানির সরবরাহকারীই — অন্যের id পাঠালে সারিটা থামে
-        if (filled($supplier) && ! DB::table('suppliers')->where('company_id', $product->company_id)->where('id', (int) $supplier)->whereNull('deleted_at')->exists()) {
+        // ⛔ আর প্রিন্সিপাল মানে কারখানা — সেবাদাতা (পরিবহন, হাম্মালি…) নয় (মালিক, ৭ অক্টোবর ২০২৬; পর্দার তালিকার একই নিয়ম)
+        if (filled($supplier) && ! DB::table('suppliers')
+            ->leftJoin('mdm_party_types as pt', 'pt.id', '=', 'suppliers.party_type_id')
+            ->where('suppliers.company_id', $product->company_id)->where('suppliers.id', (int) $supplier)->whereNull('suppliers.deleted_at')
+            ->where(fn ($q) => $q->whereNull('suppliers.party_type_id')->orWhere('pt.code', 'VENDOR'))
+            ->exists()) {
             throw ValidationException::withMessages(['supplier_id' => __('inventory::message.opening_unknown_principal')]);
         }
 

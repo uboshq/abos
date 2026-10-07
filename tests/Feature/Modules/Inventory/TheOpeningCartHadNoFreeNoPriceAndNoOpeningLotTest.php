@@ -134,6 +134,40 @@ final class TheOpeningCartHadNoFreeNoPriceAndNoOpeningLotTest extends TestCase
         $this->assertSame(1, StockMovement::query()->where('product_id', $picked->id)->count(), '⛔ সার্চ থেকে বাছা পণ্য বসেনি।');
     }
 
+    /**
+     * ⭐ প্রিন্সিপালের তালিকায় কেবল এই শাখার কারখানা — মালিক, ৭ অক্টোবর ২০২৬ (ছবি: লায়নের সারিতে "Star Line (Super)" আর
+     * পরিবহনের "Hirra Miya")। ⛔ অন্য শাখার প্রিন্সিপাল আর সেবাদাতা তালিকায় নেই, আর সার্ভারও সেবাদাতাকে প্রিন্সিপাল নেয় না।
+     */
+    public function test_the_principal_list_keeps_to_the_branch_and_leaves_out_service_providers(): void
+    {
+        $company = CompanyContext::id();
+        $here = (int) CompanyContext::branchId();
+        $there = \App\Models\Branch::create(['company_id' => $company, 'code' => 'ZLION', 'name_en' => 'Lion'])->id;
+        $vendor = \App\Modules\MasterData\Models\PartyType::query()->firstOrCreate(['company_id' => $company, 'code' => 'VENDOR'], ['name_en' => 'Principal', 'applies_to' => 'supplier', 'is_active' => true]);
+        $transport = \App\Modules\MasterData\Models\PartyType::query()->firstOrCreate(['company_id' => $company, 'code' => 'TRANSPORT'], ['name_en' => 'Transport', 'applies_to' => 'supplier', 'is_active' => true]);
+
+        $row = fn (string $code, int $branch, int $type) => \Illuminate\Support\Facades\DB::table('suppliers')->insertGetId([
+            'company_id' => $company, 'branch_id' => $branch, 'party_type_id' => $type, 'code' => $code, 'name_en' => $code,
+            'is_active' => true, 'created_at' => now(), 'updated_at' => now(),
+        ]);
+        $mine = $row('ZP-HERE', $here, $vendor->id);
+        $theirs = $row('ZP-THERE', $there, $vendor->id);
+        $lorry = $row('ZT-LORRY', $here, $transport->id);
+
+        $owner = User::query()->where('email', 'owner@abos.test')->firstOrFail();
+        $this->actingAs($owner)->post(route('branch.switch'), ['branch_id' => (string) $here]);
+        $listed = array_keys($this->actingAs($owner->fresh())->get(route('inventory.stock.opening'))->assertOk()->viewData('suppliers'));
+
+        $this->assertContains($mine, $listed, 'প্রস্তুতিটাই ভুল — নিজের শাখার প্রিন্সিপাল নেই।');
+        $this->assertNotContains($theirs, $listed, '⛔ অন্য শাখার প্রিন্সিপাল তালিকায়।');
+        $this->assertNotContains($lorry, $listed, '⛔ পরিবহন (সেবাদাতা) প্রিন্সিপালের তালিকায়।');
+
+        $p = $this->product('PRIN-T');
+        $this->cart([['product' => 'PRIN-T', 'qty' => '1', 'unit_cost' => '10', 'batch_no' => 'PT-1', 'supplier_id' => (string) $lorry]])
+            ->assertSessionHasErrors();
+        $this->assertSame(0, StockMovement::query()->where('product_id', $p->id)->count(), '⛔ সেবাদাতাকে প্রিন্সিপাল ধরে মজুদ বসেছে।');
+    }
+
     /** @param  list<array<string, string>>  $rows */
     private function cart(array $rows)
     {

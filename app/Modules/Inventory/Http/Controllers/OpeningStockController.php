@@ -92,11 +92,23 @@ class OpeningStockController extends Controller implements HasMiddleware
     {
         $bn = app()->getLocale() === 'bn';
 
-        return DB::table('suppliers')
-            ->where('company_id', CompanyContext::id())
-            ->whereNull('deleted_at')
-            ->orderBy('name_en')
-            ->get(['id', 'short_name', 'name_en', 'name_bn'])
+        /*
+         * ⭐ কেবল এই শাখার প্রিন্সিপাল — মালিক, ৭ অক্টোবর ২০২৬ (ছবি: লায়নের সারিতে "Star Line (Super)" আর
+         * পরিবহনের "Hirra Miya"): *"প্রিন্সিপাল এক ব্রাঞ্চের টা অন্য ব্রাঞ্চে দেখায়, ট্রান্সপোর্টার প্রিন্সিপালে দেখায়"*।
+         * ⓘ খোলা মজুদের প্রিন্সিপাল মানে মালের কারখানা — তাই সেবাদাতা (পরিবহন, হাম্মালি…) নয়: ধরন VENDOR, বা
+         * ধরন বসানো নেই ([[Supplier::scopeOnlySuppliers()]]-এর একই নিয়ম; মজুদ সরবরাহকারী মডিউলের ক্লাস ডাকে না, তাই এখানে
+         * কাঁচা)। ⛔ চালু কেবল; আর হেডারে বাছা শাখার, নয়তো শাখাহীন ([[ViewedBranch::narrow()]]); "সব শাখা"-য় নাগালের সব।
+         */
+        $query = DB::table('suppliers')
+            ->leftJoin('mdm_party_types as pt', 'pt.id', '=', 'suppliers.party_type_id')
+            ->where('suppliers.company_id', CompanyContext::id())
+            ->whereNull('suppliers.deleted_at')
+            ->where('suppliers.is_active', true)
+            ->where(fn ($q) => $q->whereNull('suppliers.party_type_id')->orWhere('pt.code', 'VENDOR'));
+
+        return \App\Core\Support\ViewedBranch::narrow($query, 'suppliers.branch_id')
+            ->orderBy('suppliers.name_en')
+            ->get(['suppliers.id', 'suppliers.short_name', 'suppliers.name_en', 'suppliers.name_bn'])
             ->mapWithKeys(fn ($s) => [(int) $s->id => filled($s->short_name) ? (string) $s->short_name
                 : ($bn && filled($s->name_bn) ? (string) $s->name_bn : (string) $s->name_en)])
             ->all();
