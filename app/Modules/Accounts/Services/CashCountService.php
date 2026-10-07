@@ -7,6 +7,7 @@ namespace App\Modules\Accounts\Services;
 use App\Core\Concerns\ReadsTheRowUnderLock;
 use App\Core\Engines\Approval\DocumentApproval;
 use App\Core\Engines\NumberSeries\NumberSeriesEngine;
+use App\Core\Services\PermissionSyncer;
 use App\Core\Support\CompanyContext;
 use App\Core\Support\DateFormat;
 use App\Core\Support\DocumentStatus;
@@ -96,6 +97,7 @@ final class CashCountService
     public function approve(CashCount $count): CashCount
     {
         $this->assertNotApproved($count);
+        $this->assertSomeoneElseApproves($count);
 
         /*
          * ⭐ অনুমোদন — মালিকের সিদ্ধান্ত, ১৮ সেপ্টেম্বর ২০২৬।
@@ -139,6 +141,7 @@ final class CashCountService
              * তার সমন্বয়টা "খাতা বলে"-তে যোগ হয়, আর পার্থক্য আবার গোনা হয়। মিলে গেলে কিছুই বসে না।
              */
             $this->allowForLaterAdjustments($count);
+            $this->assertTheBooksStillSayTheSame($count);
 
             if (! $count->matches()) {
                 $count->forceFill(['adjustment_voucher_id' => $this->adjustmentFor($count)->id])->save();
@@ -152,6 +155,51 @@ final class CashCountService
 
             return $count->fresh();
         });
+    }
+
+    /**
+     * ⛔ যিনি গুনলেন তিনি নিজের গোনা মানেন না — পুরো-ERP অডিট, ৬ অক্টোবর ২০২৬ (হিসাব ⚠️১৪; [[ACashCountIsApprovedBySomeoneElseTest]])।
+     *
+     * ⓘ অনুমোদনেই তফাত খাতায় বসে — ঘাটতি ক্ষমা পায়। সইয়ের ছক চালু না থাকলে আগে গণনাকারী নিজেই "মানলাম" চাপতে পারতেন, আর
+     * জিম্মা চালু থাকলে সমন্বয় টিলের নিয়মে আটকাত বলে কার্যত ধারক (যিনি গোনেন) ছাড়া কেউ পারতেনও না। এখন অন্য কেউ — সমন্বয়টা
+     * ব্যবস্থার কাগজ, টিলের নিয়ম পেরোয় (`origin` = [[Voucher::ORIGIN_CASH_COUNT]])। মালিক (সুপার অ্যাডমিন) আগের মতো সব পারেন,
+     * সইয়ের ইঞ্জিনের একই নিয়ম।
+     */
+    private function assertSomeoneElseApproves(CashCount $count): void
+    {
+        $user = auth()->user();
+
+        if ($user === null || (int) $count->counted_by !== (int) $user->id
+            || $user->roles->contains('name', PermissionSyncer::SUPER_ADMIN_ROLE)) {
+            return;
+        }
+
+        throw ValidationException::withMessages([
+            'status' => __('accounts::validation.count_needs_another_approver'),
+        ]);
+    }
+
+    /**
+     * ⛔ গোনার পরে খাতা বদলালে অনুমোদন থামে — পুরো-ERP অডিট, ৬ অক্টোবর ২০২৬ (হিসাব ⚠️১৪)।
+     *
+     * ⓘ "খাতা বলে" নেওয়া হয় লেখার মুহূর্তে। পরে সেই তারিখে বা আগে কোনো ভাউচার বসলে (পেছনের তারিখের রসিদ, দেরিতে পাকা খসড়া)
+     * পুরনো অঙ্কে তফাতটা ভুল — অথচ অনুমোদনে সেটাই ঘাটতি বা উদ্বৃত্ত হয়ে খাতায় বসত। নীরবে নতুন অঙ্ক নেওয়াও ঠিক নয়: গোনার পরে
+     * একই দিনে বসা রসিদ তখন "ঘাটতি" হয়ে খরচে উঠত। তাই থামা, আর আবার গোনা। অন্য গণনার সমন্বয় আগেই ধরা ([[allowForLaterAdjustments()]])।
+     */
+    private function assertTheBooksStillSayTheSame(CashCount $count): void
+    {
+        $now = $count->till->balance($count->trx_date->toDateString());
+
+        if (bccomp($now, (string) $count->expected_amount, 2) === 0) {
+            return;
+        }
+
+        throw ValidationException::withMessages([
+            'status' => __('accounts::validation.count_books_moved', [
+                'then' => Money::format((string) $count->expected_amount),
+                'now' => Money::format($now),
+            ]),
+        ]);
     }
 
     /** অন্য গণনার পরের সমন্বয় ধরে "খাতা বলে" আর পার্থক্য নতুন করে — [[approve()]]-এর তালার ভেতরে ডাকা। */
@@ -211,6 +259,8 @@ final class CashCountService
                 'trx_date' => $count->trx_date->toDateString(),
                 'narration' => $note,
                 'branch_id' => $count->branch_id,
+                // ⓘ ব্যবস্থার কাগজ — টিলের নিয়ম পেরোয় ([[VoucherService::assertCashLandsInOwnTill()]])
+                'origin' => Voucher::ORIGIN_CASH_COUNT,
             ],
             $shortage
                 ? [
@@ -227,11 +277,10 @@ final class CashCountService
     }
 
     /**
-     * প্রমিত ছকের খাতটা, না পেলে ওই ধরনের প্রথমটা।
+     * প্রমিত ছকের খাতটা — না থাকলে থামা।
      *
-     * কোম্পানি প্রমিত ছক বদলে ফেলতে পারে, আর তখন "৫২৯৯ বিবিধ খরচ"
-     * নাও থাকতে পারে। ব্যতিক্রম ছুঁড়লে গণনার অনুমোদনটাই আটকে যেত,
-     * অথচ টাকাটা তো সত্যিই কম পড়েছে — সেটা কোথাও বসাতেই হবে।
+     * ⛔ আগে না পেলে ওই ধরনের কোড-ক্রমে প্রথম খাতে বসত — পুরো-ERP অডিট, ৬ অক্টোবর ২০২৬ (হিসাব ⚠️১৪)। ⓘ ঘাটতি তখন "ভাড়া" বা
+     * "বেতন"-এর মতো যেকোনো খাতে উঠত, আর কেউ খুঁজে পেত না। এখন খাতের কোড বলে থামে — ছকে যোগ করে আবার অনুমোদন।
      */
     private function accountOr(string $code, string $type): Account
     {
@@ -241,15 +290,9 @@ final class CashCountService
             return $account;
         }
 
-        $fallback = Account::query()->ofType($type)->postable()->active()->orderBy('code')->first();
-
-        if ($fallback === null) {
-            throw ValidationException::withMessages([
-                'difference' => __('accounts::validation.no_adjustment_account', ['type' => __('accounts::type.'.$type)]),
-            ]);
-        }
-
-        return $fallback;
+        throw ValidationException::withMessages([
+            'difference' => __('accounts::validation.adjustment_account_missing', ['code' => $code, 'type' => __('accounts::type.'.$type)]),
+        ]);
     }
 
     /**

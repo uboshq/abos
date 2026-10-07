@@ -67,6 +67,9 @@ class Voucher extends Model implements Drillable, RepostsAfterRevision, ShowsIts
      */
     public const ORIGIN_COUNTER = 'counter';
 
+    /** ⓘ নগদ গোনার সমন্বয় — ব্যবস্থার কাগজ, টিলের নিয়ম পেরোয় (অডিট হিসাব ⚠️১৪, ৬ অক্টোবর ২০২৬; [[CashCountService]]) */
+    public const ORIGIN_CASH_COUNT = 'cash_count';
+
     /** @var list<string> */
     /**
      * টাকা কীভাবে হাতবদল হলো — পাঁচটা, আর কেবল পাঁচটা।

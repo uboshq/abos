@@ -1222,7 +1222,12 @@ final class VoucherService
     {
         $userId = (int) (auth()->id() ?? 0);
 
-        if ($userId === 0) {
+        /*
+         * ⓘ নগদ গোনার সমন্বয় ব্যবস্থার কাগজ — কেউ বাক্সে টাকা নেননি বা দেননি, গোনা আর খাতার তফাত খাতায় ওঠে মাত্র; অনুমোদন দেন
+         * গণনাকারী ছাড়া অন্য কেউ, যিনি সাধারণত বাক্সের ধারক নন। পুরো-ERP অডিট, ৬ অক্টোবর ২০২৬ (হিসাব ⚠️১৪;
+         * [[ACashCountIsApprovedBySomeoneElseTest]])। চিহ্নটা কেবল [[CashCountService]] বসায় — ফর্ম বা অনুরোধ থেকে আসে না।
+         */
+        if ($userId === 0 || $voucher->origin === Voucher::ORIGIN_CASH_COUNT) {
             return;
         }
 
