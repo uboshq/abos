@@ -7,6 +7,7 @@ namespace App\Http\Controllers\Api;
 use App\Core\Engines\Approval\ApprovalEngine;
 use App\Core\Engines\Report\ReportEngine;
 use App\Core\Services\DataScope;
+use App\Core\Services\PhoneModules;
 use App\Core\Support\CompanyContext;
 use App\Http\Controllers\Controller;
 use App\Models\Branch;
@@ -78,14 +79,21 @@ class DashboardTodayController extends Controller
             'asOf' => now()->toIso8601String(),
         ];
 
-        if ($user->can('sales.invoice.view')) {
+        /*
+         * ⛔ প্রতিটা ভাগ তার মডিউলের ফোন-সুইচও মানে (পুরো ERP অডিট, ৬ অক্টোবর ২০২৬, ফোন ⚠️১০: আজকের পাতা সুইচই দেখত না —
+         * কোম্পানি ফোনে হিসাব বন্ধ রাখলেও হাতের নগদ আর দেনা ফোনে যেত)। ⓘ চাবি আগের মতোই দেখা হয়।
+         */
+        $phone = app(PhoneModules::class);
+        $on = fn (string $module): bool => $phone->isOn($module);
+
+        if ($on('sales') && $user->can('sales.invoice.view')) {
             $body['sales'] = [
                 'count' => SalesInvoice::query()->posted()->whereBetween('trx_date', [$today, $today])->count(),
                 'amount' => self::money(SalesMetrics::salesToday()->value()),
             ];
         }
 
-        if ($user->can('sales.collection.view')) {
+        if ($on('sales') && $user->can('sales.collection.view')) {
             /* ⓘ গোনা আর টাকা একই দুই উৎসে — আদায়ের কাগজ আর গ্রাহকের রসিদ ভাউচার
                ([[SalesMetrics::collectionTotal()]]) */
             $body['collections'] = [
@@ -95,7 +103,7 @@ class DashboardTodayController extends Controller
             ];
         }
 
-        if ($user->can('accounts.till.view')) {
+        if ($on('accounts') && $user->can('accounts.till.view')) {
             $body['cashInHand'] = ['amount' => self::money(AccountsWidgets::cashInHand())];
 
             /*
@@ -114,7 +122,7 @@ class DashboardTodayController extends Controller
             ];
         }
 
-        if ($user->can('accounts.view')) {
+        if ($on('accounts') && $user->can('accounts.view')) {
             $facts = app(AccountsFacts::class);
 
             // ⭐ আজকের ইনফ্লো — আজ যত টাকা ঢুকল, নগদ-ব্যাংক-MFS মিলিয়ে, নিজের মধ্যে স্থানান্তর বাদ (মালিক, ৬ অক্টোবর ২০২৬)
@@ -135,7 +143,7 @@ class DashboardTodayController extends Controller
          * ⭐ প্রিন্সিপালের কমিশন — রিপোর্টের পুরো ফল (মালিক, ৬ অক্টোবর ২০২৬: "ডিলাররা যে টাকা দেয়, এখান থেকে আমি কত
          * পার্সেন্টেজ পাব, কত দেওয়া হয়েছে, কত ব্যালেন্স")। নিজে গোনা নয় — [[PrincipalCommissionReport]], শাখার দেয়ালসহ।
          */
-        if ($user->can('supplier.report') && class_exists(PrincipalCommissionReport::class)) {
+        if ($on('purchase') && $user->can('supplier.report') && class_exists(PrincipalCommissionReport::class)) {
             $body['principals'] = array_map(fn (array $r) => [
                 // ⭐ সংক্ষিপ্ত নাম, না থাকলে নাম — কোড নয় (মালিক, ৬ অক্টোবর ২০২৬; রিপোর্টের সারিতেই)
                 'name' => (string) $r['supplier_name'],
@@ -155,11 +163,11 @@ class DashboardTodayController extends Controller
             ], app(ReportEngine::class)->run(PrincipalCommissionReport::KEY, [], 1, 50)->rows);
         }
 
-        if ($user->can('customer.report')) {
+        if ($on('customer') && $user->can('customer.report')) {
             $body['dues'] = $this->customers->dues($user, $today);
         }
 
-        if ($user->can('approval.decide')) {
+        if ($on('approval') && $user->can('approval.decide')) {
             /* ⛔ ফোনের ইনবক্সের একই ছাঁকনি — বেতন ডেস্কে সই হয়, ফোনে আসে না;
                গুনলে পাতা "৩টা অপেক্ষায়" বলত আর ইনবক্সে থাকত ২টা (§৫-এর এজেন্টের ধরা) */
             $body['approvals'] = ['pending' => ApprovalApiController::forThePhone(

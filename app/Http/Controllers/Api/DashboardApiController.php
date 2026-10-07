@@ -37,6 +37,9 @@ final class DashboardApiController extends Controller
     /** একটা তালিকার সর্বোচ্চ সারি — ফোনের পর্দায় পুরো খাতা নামানোর জায়গা নয়; পুরোটা রিপোর্টে */
     private const MAX_ROWS = 20;
 
+    /** ⛔ ফোনে কখনো নয় — ডেস্কের মডিউল (HR: বেতন) */
+    private const DESK_ONLY = ['hr'];
+
     public function __construct(
         private readonly DashboardEngine $engine,
         private readonly PhoneModules $phone,
@@ -51,7 +54,7 @@ final class DashboardApiController extends Controller
         $out = [];
 
         foreach ($this->engine->overall($request->user()) as $row) {
-            if (! $this->phone->isOn($row['module']) || $this->switchedOff($row['module'])) {
+            if (in_array($row['module'], self::DESK_ONLY, true) || ! $this->phone->isOn($row['module']) || $this->switchedOff($row['module'])) {
                 continue;
             }
 
@@ -71,7 +74,11 @@ final class DashboardApiController extends Controller
          * ⚠️ `isOn()`, `isReachable()` নয়: পৌঁছানো মানে অন্য চালু মডিউলের তথ্যের জন্য এর ডেটা ফোনে নামে (বিক্রি চালু থাকলে
          * মজুদের দাম); কিন্তু ড্যাশবোর্ড মডিউলের **নিজের পর্দা** — ফোনে মডিউলটা বন্ধ থাকলে পর্দাও বন্ধ ([[ModuleGateView]])।
          */
-        if (! $this->phone->isOn($module)) {
+        /*
+         * ⛔ HR-এর ড্যাশবোর্ড কেবল ডেস্কে — বেতন-খরচ ফোনে নয় (চুক্তি §৪; পুরো ERP অডিট, ৬ অক্টোবর ২০২৬, ফোন ⚠️১০: ফোনে HR চালু
+         * থাকলে মাসের বেতন-খরচ ফোনে যেত — HR ফোনে চালু হয় কেবল হাজিরা আর খরচের দাবির জন্য)। দলিলের দরজার একই নিয়ম ([[DocumentApiController::DESK_ONLY_PREFIX]])।
+         */
+        if (in_array($module, self::DESK_ONLY, true) || ! $this->phone->isOn($module)) {
             return response()->json(['message' => __('mobile.module_off'), 'reason' => PhoneModules::REASON, 'module' => $module], 403);
         }
 
