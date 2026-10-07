@@ -154,6 +154,11 @@ class SalesOrderApiController extends Controller implements HasMiddleware
                 ->when(Str::isUuid($l['product']), fn ($q) => $q->where('public_id', $l['product']), fn ($q) => $q->whereKey((int) $l['product']))
                 ->first();
 
+            // ⛔ দাম শূন্য হলে আদেশ নয় — ওয়েবের `gt:0` আর অফলাইন আদেশের একই নিয়ম (অডিট ফোন ⚠️১৫)
+            if ($product !== null && bccomp((string) app(\App\Modules\Sales\Services\SalesPrice::class)->for($customer, $product)->price, '0', 4) <= 0) {
+                throw ValidationException::withMessages(['lines' => __('sales::sync.order_line_has_no_price', ['product' => (string) ($product->name_bn ?: $product->name_en)])]);
+            }
+
             return [
                 'product_id' => (int) $product?->id,
                 'ordered_qty' => (string) $l['qty'],

@@ -230,11 +230,21 @@ final class DeliveryOrderService
             $branch = $order->branch_id ?? \App\Core\Support\CompanyContext::branchId();
             app(\App\Modules\Inventory\Services\SellableHere::class)->assert($product, $branch === null ? null : (int) $branch, "lines.{$i}.product_id");
 
+            // ⭐ ডিলারের দর তালিকার দাম, নাহলে পণ্যের দাম ([[SalesPrice]], ৫ অক্টোবর ২০২৬)
+            $rate = (string) app(SalesPrice::class)->for($order->customer, $product, $order->trx_date)->price;
+
+            /*
+             * ⛔ দাম শূন্য হলে DO নয় — মালিকের "sales price chara entry nibe na", ওয়েবের `gt:0`-এর একই কথা (পুরো ERP অডিট, ৬ অক্টোবর
+             * ২০২৬, ফোন ⚠️১৫: শূন্য দরের DO বাকির যাচাই আর অনুমোদনের সীমার নিচ দিয়ে যেত)। ডেস্ক, পোর্টাল আর ফোন — তিন দরজাই এখানে।
+             */
+            if (bccomp($rate, '0', 4) <= 0) {
+                throw ValidationException::withMessages(["lines.{$i}.product_id" => __('sales::sync.order_line_has_no_price', ['product' => (string) ($product->name_bn ?: $product->name_en)])]);
+            }
+
             $order->lines()->create([
                 'product_id' => $product->id,
                 'qty' => $qty,
-                // ⭐ ডিলারের দর তালিকার দাম, নাহলে পণ্যের দাম ([[SalesPrice]], ৫ অক্টোবর ২০২৬)
-                'rate' => app(SalesPrice::class)->for($order->customer, $product, $order->trx_date)->price,
+                'rate' => $rate,
                 'free_qty' => (string) ($line['free_qty'] ?? '0'),
                 'note' => $line['note'] ?? null,
             ]);
