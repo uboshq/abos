@@ -96,6 +96,10 @@
                             bg-(--color-surface-card) p-4">
                 <h2 class="mb-3 font-semibold">{{ __('accounts::field.next_year') }}</h2>
 
+                {{-- ⛔ বন্ধের নিজের চাবি — দেখা যায়, বন্ধ করা যায় না (অডিট হিসাব ⚠️৭) --}}
+                @cannot('accounts.year.close')
+                    <p class="text-sm text-(--color-text-muted)">{{ __('accounts::message.year_close_needs_key') }}</p>
+                @else
                 <form method="POST" action="{{ route('accounts.year_end.close', $year) }}"
                       x-data="{ busy: false }"
                       @submit="busy ? $event.preventDefault() : (busy = true)"
@@ -131,6 +135,7 @@
                         {{ __('accounts::action.close_year') }}
                     </x-ui.button>
                 </form>
+                @endcannot
             </section>
         </div>
     @endif

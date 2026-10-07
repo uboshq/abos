@@ -34,7 +34,11 @@ class YearEndController extends Controller implements HasMiddleware
 
     public static function middleware(): array
     {
-        return [new Middleware('can:accounts.report.final')];
+        return [
+            new Middleware('can:accounts.report.final'),
+            // ⛔ দেখা এক চাবি, বন্ধ আরেক — অডিট হিসাব ⚠️৭ (৬ অক্টোবর ২০২৬)
+            new Middleware('can:accounts.year.close', only: ['close']),
+        ];
     }
 
     /**

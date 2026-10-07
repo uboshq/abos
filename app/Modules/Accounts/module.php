@@ -357,6 +357,12 @@ return [
 
         'accounts.period.close',
         'accounts.period.reopen',
+        /*
+         * ⛔ বছর বন্ধের নিজের চাবি — পুরো-ERP অডিট, ৬ অক্টোবর ২০২৬ (হিসাব ⚠️৭; [[ClosingTheYearHasItsOwnKeyTest]])।
+         * ⓘ আগে দরজা ছিল `accounts.report.final` — চূড়ান্ত হিসাব **দেখার** চাবি। যিনি কেবল লাভ-ক্ষতি দেখেন তিনিও বছর বন্ধ করে
+         * আয়-ব্যয় শূন্য করতে পারতেন। চালু কোম্পানিতে চাবিটা পায় কেবল যার মাস বন্ধের চাবি আছে (মাইগ্রেশন ২০২৭_০২_১৫)।
+         */
+        'accounts.year.close',
         'accounts.report',
         'accounts.report.final',
 
