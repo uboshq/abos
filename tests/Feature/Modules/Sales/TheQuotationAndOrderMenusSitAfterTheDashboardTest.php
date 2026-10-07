@@ -100,7 +100,14 @@ final class TheQuotationAndOrderMenusSitAfterTheDashboardTest extends TestCase
         asort($sorted);
         $this->assertSame(array_keys($order), array_keys($sorted), '⛔ মেনুর ক্রম মালিকের দেওয়া ক্রম নয়: '.json_encode($order));
 
-        $this->assertStringContainsString(e(__('core.menu.delivery_orders')), $html, '⛔ "Delivery Order (DO)" ভাঁজ নেই।');
+        /*
+         * ⭐ DO অর্ডারের ভাঁজের ভিতরে — মালিক, ৭ অক্টোবর ২০২৬ (ছবি): *"এই DO গ্রুপটা ঠিক করে দাও, এটা অর্ডারের ভিতরে দেওয়ার
+         * কথা ছিল, আন্তর্জাতিক মান অনুযায়ী"*। ⓘ SAP/Dynamics-এ Sales Order আর তার Delivery Order একই "Orders" মেনুতে।
+         * ⛔ আলাদা "ডেলিভারি অর্ডার (DO)" ভাঁজ আর নেই; সারিগুলো অর্ডারের পরে, সরাসরি বিক্রয়ের আগে (উপরের ক্রমের দাবি)।
+         */
+        $this->assertStringNotContainsString(e(__('core.menu.delivery_orders')), $html, '⛔ DO এখনো আলাদা ভাঁজে — অর্ডারের ভিতরে যাওয়ার কথা।');
+        $ordersAt = strpos($html, e(__('core.menu.sales_orders')));
+        $this->assertTrue($ordersAt < $order['do_list'] && $order['do_list'] < $order['direct'], '⛔ DO-র সারি অর্ডারের ভাঁজে নয়।');
         $this->assertStringNotContainsString('href="'.e(route('sales.do.index', ['tab' => 'cancelled'])).'"', $html,
             '⛔ পুরনো "DO তালিকা"-র ধাপগুলো মেনুতে ফিরে এসেছে — ওগুলো তালিকার পাতার ট্যাবে।');
 

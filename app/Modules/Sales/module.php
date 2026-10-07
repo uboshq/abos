@@ -183,15 +183,15 @@ return [
              */
             // ⓘ আসল DO কাগজের ডেস্কে — ৩ অক্টোবর ২০২৬ ([[DeliveryOrderDeskController]]); আংশিক আর ব্যাক আসবে abos-86-এর মজুদ-আটকানোর সাথে
             // ⭐ বিক্রয় আদেশ DO-র কাজ নিলে (`sales.orders_replace_do`) ভাঁজটা মেনু থেকে সরে — খোলা DO-র পাতা আর লিংক চলে (৪ অক্টোবর ২০২৬)
-            ['label' => 'sales::planned.do_list', 'cluster' => 'delivery_orders', 'icon' => 'book', 'route' => 'sales.delivery_order.index',
+            ['label' => 'sales::planned.do_list', 'cluster' => 'sales_orders', 'icon' => 'book', 'route' => 'sales.delivery_order.index',
                 'permission' => 'sales.do.view', 'hidden_when' => 'sales.orders_replace_do'],
-            ['label' => 'sales::planned.do_pending', 'cluster' => 'delivery_orders', 'icon' => 'book', 'route' => 'sales.delivery_order.index',
+            ['label' => 'sales::planned.do_pending', 'cluster' => 'sales_orders', 'icon' => 'book', 'route' => 'sales.delivery_order.index',
                 'route_params' => ['tab' => 'pending'], 'permission' => 'sales.do.view', 'hidden_when' => 'sales.orders_replace_do'],
-            ['label' => 'sales::planned.do_partial', 'cluster' => 'delivery_orders', 'icon' => 'book', 'route' => 'sales.delivery_order.index',
+            ['label' => 'sales::planned.do_partial', 'cluster' => 'sales_orders', 'icon' => 'book', 'route' => 'sales.delivery_order.index',
                 'route_params' => ['tab' => 'partial'], 'permission' => 'sales.do.view', 'hidden_when' => 'sales.orders_replace_do'],
-            ['label' => 'sales::planned.do_back', 'cluster' => 'delivery_orders', 'icon' => 'book', 'route' => 'sales.delivery_order.index',
+            ['label' => 'sales::planned.do_back', 'cluster' => 'sales_orders', 'icon' => 'book', 'route' => 'sales.delivery_order.index',
                 'route_params' => ['tab' => 'back'], 'permission' => 'sales.do.view', 'hidden_when' => 'sales.orders_replace_do'],
-            ['label' => 'sales::planned.do_history', 'cluster' => 'delivery_orders', 'icon' => 'book', 'route' => 'sales.delivery_order.index',
+            ['label' => 'sales::planned.do_history', 'cluster' => 'sales_orders', 'icon' => 'book', 'route' => 'sales.delivery_order.index',
                 'route_params' => ['tab' => 'history'], 'permission' => 'sales.do.view', 'hidden_when' => 'sales.orders_replace_do'],
 
             /* ⭐ সরাসরি বিক্রয় — মাঝের সব ধাপ এক চাপে, সোজা বিলে (মালিক, ২৮ সেপ্টেম্বর ২০২৬) */
