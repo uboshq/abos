@@ -138,7 +138,11 @@ class DeliveryOrderApiController extends Controller implements HasMiddleware
                 ->when(Str::isUuid($l['product']), fn ($q) => $q->where('public_id', $l['product']), fn ($q) => $q->whereKey((int) $l['product']))
                 ->value('id'),
             'qty' => (string) $l['qty'],
-            'free_qty' => (string) ($l['free_qty'] ?? '0'),
+            /*
+             * ⛔ ফ্রি ফোনের কথায় নয় — অফার থেকে, বিক্রির সময় সার্ভার গোনে (পুরো ERP অডিট, ৬ অক্টোবর ২০২৬, ফোন ⚠️১৪: ফোন যা পাঠাত
+             * তা-ই জমা হয়ে কাউন্টার আর ছাপায় যেত; ওয়েবের ডেস্ক আর পোর্টাল ফ্রি নেয়ই না)। ⓘ ঘরটা এলেও ফেরানো নয় — পুরনো অ্যাপ ভাঙে না।
+             */
+            'free_qty' => '0',
             'note' => $l['note'] ?? null,
         ], array_values($lines));
     }
