@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../../core/api_client/network_errors.dart';
+import '../../core/api_client/once_key.dart';
 import '../../core/orders/delivery_order_api.dart';
 import '../../core/records/customer_record.dart';
 import '../../core/records/product_record.dart';
@@ -167,6 +168,8 @@ class _NewDeliveryOrderScreenState extends State<NewDeliveryOrderScreen> {
   CustomerRecord? _customer;
   final List<(ProductRecord, int)> _lines = [];
   final _note = TextEditingController();
+  /// ⭐ এই কাজের চাবি — দুবার চাপলে বা উত্তর হারালে একবারই বসে ([[OnceKey]], অডিট ফোন ⚠️১২)
+  final _once = OnceKey();
   bool _busy = false;
   String? _error;
 
@@ -211,12 +214,12 @@ class _NewDeliveryOrderScreenState extends State<NewDeliveryOrderScreen> {
       _error = null;
     });
     try {
-      final made = await widget.api.create(
+      final made = await _once.send(() => widget.api.create(
         customerId: customer.id,
         lines: [for (final l in _lines) WantedLine(l.$1.id, l.$2)],
         submit: submit,
         note: _note.text,
-      );
+      ));
       if (mounted) Navigator.of(context).pop(made);
     } catch (e) {
       if (mounted) {

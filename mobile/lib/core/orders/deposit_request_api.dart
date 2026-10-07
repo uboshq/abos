@@ -15,6 +15,32 @@ class BankChoice {
   final String name;
 }
 
+/// ⭐ ডিলারের খোলা বিল — বিজ্ঞপ্তির "কোন বিলের বিপরীতে" (টাকার পরিকল্পনা ২, ৭ অক্টোবর ২০২৬; সার্ভার
+/// `GET /sales/deposit-requests/bills`)। বকেয়া সার্ভারের, আদায়ের পর্দার একই অঙ্ক।
+class OpenBill {
+  const OpenBill({required this.id, required this.no, this.date, required this.due});
+
+  final String id;
+  final String no;
+  final String? date;
+  final double due;
+
+  factory OpenBill.fromJson(Map<String, dynamic> json) => OpenBill(
+        id: json['id']?.toString() ?? '',
+        no: json['no']?.toString() ?? '',
+        date: json['date']?.toString(),
+        due: Money.valueOrZero(json['due']),
+      );
+}
+
+/// একটা বিলে কত — পাঠানোর সময়; গ্রহণের মুহূর্তে সার্ভার তখনকার বকেয়া মেপে মেলায়
+class BillShare {
+  const BillShare(this.invoiceId, this.amount);
+
+  final String invoiceId;
+  final String amount;
+}
+
 class DepositRequestRow {
   const DepositRequestRow({
     required this.date,
@@ -25,6 +51,7 @@ class DepositRequestRow {
     this.reason,
     required this.hasSlip,
     this.serverLabel = '',
+    this.bills = const [],
   });
 
   final String? date;
@@ -38,6 +65,9 @@ class DepositRequestRow {
   /// সার্ভারের নিজের লেখা (`status_label`) — নতুন কোনো অবস্থা এলে এটাই দেখায়; পুরনো সার্ভারে ''
   final String serverLabel;
 
+  /// বাছা বিল — নম্বর আর অঙ্ক; পুরনো সার্ভারে বা না বাছলে খালি
+  final List<(String, double)> bills;
+
   factory DepositRequestRow.fromJson(Map<String, dynamic> json) => DepositRequestRow(
         date: json['claimed_on']?.toString(),
         amount: Money.valueOrZero(json['amount']),
@@ -47,6 +77,10 @@ class DepositRequestRow {
         reason: json['decision_reason']?.toString(),
         hasSlip: json['has_slip'] == true,
         serverLabel: json['status_label']?.toString() ?? '',
+        bills: [
+          for (final b in (json['bills'] as List?) ?? const [])
+            if (b is Map) (b['no']?.toString() ?? '', Money.valueOrZero(b['amount'])),
+        ],
       );
 
   /// ⭐ চার অবস্থা: পাঠানো · যাচাই চলছে · গৃহীত · প্রত্যাখ্যাত (কারণসহ, [reason])
@@ -63,6 +97,9 @@ abstract class DepositRequestApi {
 
   Future<List<DepositRequestRow>> forCustomer(String customerId);
 
+  /// এই দোকানের খোলা বিল, পুরনো আগে
+  Future<List<OpenBill>> openBills(String customerId);
+
   Future<DepositRequestRow> send({
     required String customerId,
     required DateTime date,
@@ -72,6 +109,7 @@ abstract class DepositRequestApi {
     String? reference,
     String? note,
     String? slipPath,
+    List<BillShare> bills = const [],
   });
 }
 
@@ -100,6 +138,18 @@ class ServerDepositRequestApi implements DepositRequestApi {
   }
 
   @override
+  Future<List<OpenBill>> openBills(String customerId) async {
+    final response = await ApiClient.dio.get<Map<String, dynamic>>(
+      '/sales/deposit-requests/bills',
+      queryParameters: {'customer': customerId},
+    );
+    return [
+      for (final row in (response.data?['bills'] as List?) ?? const [])
+        if (row is Map) OpenBill.fromJson(Map<String, dynamic>.from(row)),
+    ];
+  }
+
+  @override
   Future<DepositRequestRow> send({
     required String customerId,
     required DateTime date,
@@ -109,6 +159,7 @@ class ServerDepositRequestApi implements DepositRequestApi {
     String? reference,
     String? note,
     String? slipPath,
+    List<BillShare> bills = const [],
   }) async {
     final form = FormData.fromMap({
       'customer': customerId,
@@ -119,6 +170,11 @@ class ServerDepositRequestApi implements DepositRequestApi {
       if (reference != null && reference.isNotEmpty) 'reference': reference,
       if (note != null && note.isNotEmpty) 'note': note,
       if (slipPath != null) 'slip': await MultipartFile.fromFile(slipPath, filename: slipPath.split(RegExp(r'[\\/]')).last),
+      // ⓘ ঘরের নাম হাতে — ফর্মের ভেতরের তালিকা dio নিজে যেভাবে লেখে তার উপর ভরসা নয়
+      for (var i = 0; i < bills.length; i++) ...{
+        'bills[$i][invoice]': bills[i].invoiceId,
+        'bills[$i][amount]': bills[i].amount,
+      },
     });
     final response = await ApiClient.dio.post<Map<String, dynamic>>('/sales/deposit-requests', data: form);
     return DepositRequestRow.fromJson(response.data ?? const {});

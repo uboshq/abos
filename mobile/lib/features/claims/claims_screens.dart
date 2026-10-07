@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../../core/api_client/network_errors.dart';
+import '../../core/api_client/once_key.dart';
 import '../../core/hr/claims_api.dart';
 import '../../core/records/money.dart';
 import '../../core/theme/app_colors.dart';
@@ -186,6 +187,8 @@ class _NewClaimScreenState extends State<NewClaimScreen> {
 
   final _amount = TextEditingController();
   final _reason = TextEditingController();
+  /// ⭐ এই কাজের চাবি — দুবার চাপলে বা উত্তর হারালে একবারই বসে ([[OnceKey]], অডিট ফোন ⚠️১২)
+  final _once = OnceKey();
 
   String _kind = 'expense';
   int? _head;
@@ -255,14 +258,14 @@ class _NewClaimScreenState extends State<NewClaimScreen> {
       _error = null;
     });
     try {
-      final claim = await widget.api.send(ClaimDraft(
+      final claim = await _once.send(() => widget.api.send(ClaimDraft(
         kind: _kind,
         amount: amount,
         reason: reason,
         headId: _head,
         spentOn: _spentOn,
         receiptPath: _receipt,
-      ));
+      )));
       if (mounted) Navigator.of(context).pop(claim);
     } catch (e) {
       if (mounted) setState(() => _error = errorMessageFor(e, fallback: 'পাঠানো যায়নি। আবার চেষ্টা করুন।'));

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../core/api_client/network_errors.dart';
+import '../../core/api_client/once_key.dart';
 import '../../core/orders/sales_return_api.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
@@ -27,6 +28,8 @@ class _ReturnScreenState extends State<ReturnScreen> {
   String? _reasonId;
   final Map<String, TextEditingController> _qty = {};
   final _note = TextEditingController();
+  /// ⭐ এই কাজের চাবি — দুবার চাপলে বা উত্তর হারালে একবারই বসে ([[OnceKey]], অডিট ফোন ⚠️১২)
+  final _once = OnceKey();
   bool _busy = false;
   String? _error;
 
@@ -105,8 +108,8 @@ class _ReturnScreenState extends State<ReturnScreen> {
       _error = null;
     });
     try {
-      final id = await widget.api.draft(
-          invoiceId: bill.id, reasonId: reason, lines: lines, note: _note.text);
+      final id = await _once.send(() => widget.api.draft(
+          invoiceId: bill.id, reasonId: reason, lines: lines, note: _note.text));
       final overview = await widget.api.overview(id);
       if (!mounted) return;
       setState(() => _busy = false);

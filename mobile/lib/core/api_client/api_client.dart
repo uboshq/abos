@@ -1,3 +1,4 @@
+import 'once_key.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 
@@ -73,6 +74,11 @@ class ApiClient {
             if (token != null && token.isNotEmpty) {
               options.headers['Authorization'] = 'Bearer $token';
             }
+          }
+          // ⭐ একটা কাজ একবারই — পর্দা [OnceKey.send] দিয়ে পাঠালে এই জোনের প্রতিটা লেখায় চাবি (অডিট ফোন ⚠️১২)
+          final once = OnceKey.current;
+          if (once != null && options.method.toUpperCase() == 'POST') {
+            options.headers['Idempotency-Key'] = once;
           }
           handler.next(options);
         },

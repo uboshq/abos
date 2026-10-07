@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../core/api_client/network_errors.dart';
+import '../../core/api_client/once_key.dart';
 import '../../core/orders/quotation_api.dart';
 import '../../core/records/customer_record.dart';
 import '../../core/records/money.dart';
@@ -162,6 +163,8 @@ class _NewQuotationScreenState extends State<NewQuotationScreen> {
   CustomerRecord? _customer;
   final List<(ProductRecord, int, double?)> _lines = [];
   final _note = TextEditingController();
+  /// ⭐ এই কাজের চাবি — দুবার চাপলে বা উত্তর হারালে একবারই বসে ([[OnceKey]], অডিট ফোন ⚠️১২)
+  final _once = OnceKey();
   bool _busy = false;
   String? _error;
 
@@ -205,12 +208,12 @@ class _NewQuotationScreenState extends State<NewQuotationScreen> {
       _error = null;
     });
     try {
-      final made = await widget.api.create(
+      final made = await _once.send(() => widget.api.create(
         customerId: customer.id,
         lines: [for (final l in _lines) QuotedLine(l.$1.id, l.$2, l.$3)],
         submit: submit,
         note: _note.text,
-      );
+      ));
       if (mounted) Navigator.of(context).pop(made);
     } catch (e) {
       if (mounted) setState(() => _error = errorMessageFor(e, fallback: 'উদ্ধৃতি রাখা গেল না। আবার চেষ্টা করুন।'));

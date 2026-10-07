@@ -1,3 +1,4 @@
+import 'package:abos_mobile/core/api_client/once_key.dart';
 import 'package:abos_mobile/core/auth/auth_user.dart';
 import 'package:abos_mobile/core/hr/claims_api.dart';
 import 'package:abos_mobile/core/menu/menu_repository.dart';
@@ -14,6 +15,7 @@ class _FakeClaims implements ClaimsApi {
   final List<Claim> claims;
   final double? openAdvance;
   ClaimDraft? sent;
+  String? sentKey;
 
   @override
   Future<List<ClaimHead>> heads() async =>
@@ -28,6 +30,7 @@ class _FakeClaims implements ClaimsApi {
   @override
   Future<Claim> send(ClaimDraft draft) async {
     sent = draft;
+    sentKey = OnceKey.current;
     return Claim(id: 'new', number: 'EXC-0009', kind: draft.kind, status: 'submitted', amount: double.parse(draft.amount));
   }
 }
@@ -135,6 +138,7 @@ void main() {
     expect(api.sent!.toFields()['expense_account_id'], '51');
     expect(api.sent!.toFields()['spent_on'], '2026-10-07');
     expect(api.sent!.receiptPath, '/tmp/r.jpg');
+    expect(api.sentKey, isNotNull, reason: '⛔ দাবি চাবি ছাড়া গেল (অডিট ফোন ⚠️১২)');
   });
 
   testWidgets('an advance needs no head and shows no receipt button', (tester) async {
