@@ -9,7 +9,6 @@ use App\Core\Engines\Coding\CodeSuggester;
 use App\Core\Services\LedgerBalances;
 use App\Core\Services\MenuBuilder;
 use App\Core\Support\CompanyContext;
-use App\Core\Support\RunningBalance;
 use App\Core\Support\ViewedBranch;
 use App\Http\Controllers\Controller;
 use App\Models\LedgerEntry;
@@ -211,19 +210,25 @@ class ChartOfAccountsController extends Controller implements HasMiddleware
          */
         $opening = '0';
 
+        /*
+         * ⛔ পাতার আগের সারিগুলোর জের — ডেটাবেসেই এক যোগফলে (পুরো-ERP অডিট হিসাব ⚠️১৫-এর একই ফাঁক, ৭ অক্টোবর ২০২৬;
+         * [[TheAccountPageSumsItsPastInTheDatabaseTest]])। ⓘ আগে সেই সব সারি PHP-তে তুলে যোগ হত — ব্যস্ত খাতের দশম পাতায় ৪৫০টা
+         * সারি মেমরিতে, কেবল একটা সংখ্যার জন্য। বাক্সের পাতা ([[CashTillController::show()]]) একই উপায়ে সারানো।
+         */
         if ($page > 1) {
-            $opening = RunningBalance::sumOf(
-                LedgerEntry::query()
-                    ->forAccount($account->id)
-                    ->when($branch, fn ($q, int $b) => $q->where('branch_id', $b))
-                    ->orderBy('trx_date')
-                    ->orderBy('id')
-                    ->forPage(1, ($page - 1) * 50)
-                    ->get(),
-                fn (LedgerEntry $e) => $e->debit,
-                fn (LedgerEntry $e) => $e->credit,
-                $opening,
-            );
+            $opening = bcadd((string) LedgerEntry::query()->withoutGlobalScopes()
+                ->fromSub(
+                    LedgerEntry::query()
+                        ->forAccount($account->id)
+                        ->when($branch, fn ($q, int $b) => $q->where('branch_id', $b))
+                        ->orderBy('trx_date')
+                        ->orderBy('id')
+                        ->forPage(1, ($page - 1) * 50)
+                        ->select(['debit', 'credit']),
+                    'before_page',
+                )
+                ->selectRaw('COALESCE(SUM(debit), 0) - COALESCE(SUM(credit), 0) as n')
+                ->value('n'), '0', 4);
         }
 
         $account->withRunningBalance($entries->getCollection(), $opening);
