@@ -1,0 +1,428 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Http\Controllers\Api;
+
+use App\Core\Engines\Sync\SyncService;
+use App\Core\Security\CredentialCheck;
+use App\Core\Security\MfaCodeRequired;
+use App\Core\Support\CompanyContext;
+use App\Http\Controllers\Controller;
+use App\Http\Middleware\RefuseInactiveAccounts;
+use App\Models\User;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Laravel\Sanctum\PersonalAccessToken;
+
+/**
+ * ফোনের ঢোকা ও বেরোনো — টোকেনে, সেশনে নয়।
+ *
+ * ── কেন যাচাইটা এখানে লেখা নেই ──────────────────────────────────────
+ * পুরোটাই [[CredentialCheck]]-এ, আর ওয়েবের দরজাও ঠিক সেটাই ডাকে। এখানে
+ * নকল করলে **তালা, throttle আর `login_history` তিনটাই কেবল ওয়েবের
+ * দরজায় থাকত** — অর্থাৎ আক্রমণকারী শুধু প্রথম দরজাটা ব্যবহার করা বন্ধ
+ * করে দিতেন। দুইটার একটাতে তালা মানে তালা নেই।
+ *
+ * ── কেন দুইটা টোকেন, একটা নয় ───────────────────────────────────────
+ * একটা লম্বা-মেয়াদি টোকেন সহজ, কিন্তু সেটা ফোনে মাসের পর মাস বসে
+ * থাকে আর প্রতিটা অনুরোধে যায়। চুরি গেলে মেয়াদ শেষ না হওয়া পর্যন্ত
+ * খোলা।
+ *
+ * তাই ছোট মেয়াদের **access** টোকেন যায় প্রতিটা অনুরোধে, আর লম্বা
+ * মেয়াদের **refresh** টোকেন যায় কেবল নবায়নের সময় — দিনে কয়েকবার।
+ * চুরির জানালাটা ৩০ মিনিট, চিরকাল নয়।
+ *
+ * ── ⚠️ ability কেন অপরিহার্য ───────────────────────────────────────
+ * `auth:sanctum` **যেকোনো** বৈধ টোকেন মেনে নেয় — refresh টোকেনও।
+ * সেটা না আটকালে চুরি যাওয়া refresh টোকেন দিয়েই সরাসরি সিঙ্কের
+ * সব দরজা খোলা যেত, আর নবায়নের পুরো ব্যবস্থাটা অর্থহীন হত।
+ *
+ * তাই সিঙ্কের রুটগুলো `abilities:sync` চায়, আর নবায়নের রুটটা
+ * `abilities:refresh`। **দুইটা টোকেন, দুইটা আলাদা কাজ, কোনোটাই
+ * অন্যটার কাজ করতে পারে না।**
+ */
+class AuthController extends Controller
+{
+    /** প্রতিটা অনুরোধে যায় — তাই ছোট। */
+    private const ACCESS_MINUTES = 30;
+
+    /** কেবল নবায়নে যায় — তাই লম্বা, কিন্তু অসীম নয়। */
+    private const REFRESH_DAYS = 30;
+
+    public const ACCESS = 'sync';
+
+    /*
+     * অ্যাপের নিজের দরজা — সিঙ্ক নয়।
+     *
+     * ── কেন `sync` চাবিটা এখানে ব্যবহার করা হয়নি ────────────────────
+     * `/me` কোনো ব্যবসার ডেটা আনে না; সে কেবল বলে **"তুমি কে, তুমি কী
+     * দেখবে"**। ওটাকে `abilities:sync` দাবি করালে আজ কাজ করত, কিন্তু
+     * কাল অ্যাপের প্রতিটা নতুন দরজা (মেনু, প্রোফাইল, বিজ্ঞপ্তি) একই
+     * ভুল নামে বসত — আর তখন `sync` নামটার আর কোনো মানে থাকত না।
+     *
+     * ⓘ নামটা বদলানো সস্তা ছিল, তাই বদলানো হয়েছে: মেপে দেখা গেছে
+     * `ACCESS` ধ্রুবকটা মাত্র দুই জায়গায় (এখানে আর `routes/api.php`),
+     * টেস্টে বা ফোনের কোডে কোথাও হাতে লেখা নেই।
+     *
+     * ⚠️ দুইটাই access টোকেনে বসে, refresh টোকেনে নয় — তাই চুরি যাওয়া
+     * একটা refresh টোকেন দিয়ে অ্যাপের দরজাও খোলা যায় না।
+     */
+    public const APP = 'app';
+
+    public const REFRESH = 'refresh';
+
+    public function __construct(
+        private readonly CredentialCheck $credentials,
+        private readonly SyncService $sync,
+    ) {}
+
+    /**
+     * `POST /auth/login`
+     *
+     * ⚠️ রুটে `throttle` বসানো আছে, আর সেটা এখানে সরানো যায় না —
+     * throttle রুটের জিনিস। ওয়েবের দরজায় `throttle:10,1`; এই দরজাটা
+     * তার চেয়ে ঢিলা হলে আক্রমণকারী শুধু এটাই ব্যবহার করতেন।
+     */
+    public function login(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'identifier' => ['required', 'string', 'max:191'],
+            'password' => ['required', 'string'],
+            'code' => ['nullable', 'string', 'max:16'],
+            'deviceId' => ['required', 'string', 'max:64'],
+            'appVersion' => ['nullable', 'string', 'max:32'],
+            'platform' => ['nullable', 'string', 'max:32'],
+        ]);
+
+        try {
+            $user = $this->credentials->verify(
+                $data['identifier'],
+                $data['password'],
+                $data['code'] ?? null,
+            );
+        } catch (MfaCodeRequired $needsCode) {
+            /*
+             * ৪০৯, ৪২২ নয় — অনুরোধটা ভুল ছিল না, **অসম্পূর্ণ** ছিল।
+             *
+             * `needsCode` পতাকাটা দিয়ে অ্যাপ কোডের পর্দাটা খোলে। বার্তার
+             * লেখা পড়ে সিদ্ধান্ত নিলে অনুবাদ বদলানোর দিন পর্দাটা নীরবে
+             * ভেঙে যেত।
+             */
+            return response()->json([
+                'needsCode' => true,
+                'codeWasWrong' => $needsCode->wasWrong,
+                'message' => $needsCode->getMessage(),
+            ], 409);
+        }
+
+        /*
+         * ⚠️ ঢোকার সাথে সাথেই কোম্পানির প্রসঙ্গ — টোকেন বানানোর আগেই।
+         *
+         * [[SyncService::register()]] `sync_devices`-এ লেখে, আর ওই
+         * মডেলটা `BelongsToCompany`। প্রসঙ্গ ছাড়া লিখতে গেলে সেটা
+         * ব্যতিক্রম ছুঁড়ত — যা ঠিকই করত, কিন্তু লগইনটা ৫০০ হয়ে যেত।
+         *
+         * ওয়েবে এই কাজটা করে `ResolveCompanyContext` মিডলওয়্যার, কিন্তু
+         * সেটা `auth:sanctum`-এর পরে চলে — আর এই রুটে লগইনের আগে কোনো
+         * টোকেনই নেই।
+         */
+        /*
+         * ⛔ `current_company_id` খালি হতে পারে, আর তখন এটা ৫০০ দিত।
+         *
+         * ── কী ঘটেছিল, ১৩ সেপ্টেম্বর ২০২৬ ────────────────────────────
+         * লাইভে প্রথম বিক্রয়কর্মীর অ্যাকাউন্ট বানিয়ে অ্যাপ থেকে ঢুকতে
+         * গিয়ে:
+         *
+         *     SQLSTATE[23000]: Column 'company_id' cannot be null
+         *     (insert into `sync_devices` …)
+         *
+         * ঘরটা খালি থাকে **যতক্ষণ না কেউ একবার কোম্পানি বাছেন**, আর
+         * সেটা ঘটে ওয়েবে ঢোকার সময়। ⚠️ অর্থাৎ যে কর্মী কোনোদিন ওয়েবে
+         * ঢোকেননি — মাঠের বিক্রয়কর্মী, ঠিক যাঁর জন্য অ্যাপটা — তিনি
+         * **প্রথম লগইনেই ৫০০** পেতেন, আর বার্তায় কোনো কারণ থাকত না।
+         *
+         * ⭐ ওয়েবে এই পতনের পথটা আগে থেকেই আছে
+         * ([[ResolveCompanyContext]]): খালি হলে মিডলওয়্যার ব্যবহারকারীর
+         * প্রথম কোম্পানিটা বেছে নেয়, আর মন্তব্যেও লেখা "প্রথমবার লগইন"।
+         * ⛔ API-তে ওই পথটা ছিল না — একই প্রশ্ন, দুই জায়গায় দুই উত্তর,
+         * যা আজকের গোটা দিনের রোগ।
+         *
+         * ⓘ `switchCompany()` ডাকা হয় যাতে পছন্দটা **সারিতে বসে যায়** —
+         * নাহলে প্রতিবার লগইনে আবার বাছতে হত, আর ওয়েব ও অ্যাপ দুই
+         * কোম্পানিতে বসে থাকতে পারত।
+         */
+        $companyId = $user->current_company_id;
+
+        if ($companyId === null || ! $user->canAccessCompany($companyId)) {
+            $companyId = $user->companies()->where('companies.is_active', true)->orderBy('companies.id')->value('companies.id');
+
+            if ($companyId === null) {
+                /*
+                 * কোনো কোম্পানিতেই নেই — পরিচয় ঠিক, কিন্তু কাজ করার
+                 * জায়গা নেই। ⓘ ৪০৩, ৫০০ নয়: অনুরোধটা ভুল ছিল না, আর
+                 * বার্তাটা পড়ে ব্যবস্থাপক বুঝবেন কী করতে হবে।
+                 */
+                return response()->json([
+                    'message' => __('auth.no_company'),
+                ], 403);
+            }
+
+            $user->switchCompany($companyId);
+            $user->refresh();
+        }
+
+        CompanyContext::set($companyId, $user->current_branch_id);
+
+        $this->sync->register(
+            $user,
+            $data['deviceId'],
+            $data['appVersion'] ?? null,
+            $data['platform'] ?? null,
+        );
+
+        // ⛔ নতুন লগইনে ফোনের ক্যাশ খালি — তাই জলচিহ্নও গোড়ায় ([[SyncService::startOver()]])
+        $this->sync->startOver($data['deviceId']);
+
+        $this->credentials->recordSuccess($data['identifier'], $user);
+
+        return response()->json($this->issue($user, $data['deviceId']));
+    }
+
+    /**
+     * `POST /auth/refresh` — নতুন জোড়া, পুরনোটা বাতিল।
+     *
+     * ── কেন পুরনো refresh টোকেনটা মুছে ফেলা হয় (rotation) ────────────
+     * নবায়নের পরেও পুরনোটা বৈধ থাকলে চুরি যাওয়া একটা টোকেন **চিরকাল**
+     * নতুন access টোকেন বানাতে পারত — লম্বা মেয়াদটা তখন কার্যত অসীম।
+     *
+     * ঘোরানোর দ্বিতীয় লাভ: একটা টোকেন দুইবার ব্যবহার হলে সেটা চুরির
+     * চিহ্ন, আর এখন সেটা ধরা পড়ে (দ্বিতীয়বার ৪০১)।
+     */
+    public function refresh(Request $request): JsonResponse
+    {
+        $current = $this->refreshTokenFrom($request);
+
+        if ($current === null) {
+            return response()->json(['message' => 'Unauthenticated.'], 401); // ⓘ Laravel-এর নিজের ৪০১-এর একই কথা — অ্যাপ এটাই চেনে
+        }
+
+        $user = $current->tokenable;
+        /*
+         * বার্তাসহ, কারণ `abilities` মিডলওয়্যারও ৪০৩ দেয় — আর দুইটা
+         * খালি ৪০৩ দেখতে হুবহু এক। ব্যর্থ টেস্ট তখন বলে "কোথাও একটা
+         * দেয়াল", কোনটা তা বলে না; আর ওই অস্পষ্টতাই মাপা আটকে দেয়।
+         */
+        abort_unless($user instanceof User, 403, 'staff-token-only');
+
+        /*
+         * ⛔ বরখাস্ত মানুষ নবায়ন পান না — নিরীক্ষা §১.৫, ২৭ সেপ্টেম্বর ২০২৬।
+         *
+         * আগে এই দরজা `is_active` দেখত না, তাই নিষ্ক্রিয় করার পরেও ফোন
+         * প্রতিবার নতুন ৩০ দিনের জোড়া পেত — অর্থাৎ **চিরকাল** ভেতরে।
+         * ⓘ [[RefuseInactiveAccounts]] প্রতিটা API অনুরোধেই এটা ধরে; এখানে
+         * আবার দেখা হয় কারণ এই দরজাটাই চিরকালের চাবি, আর মিডলওয়্যার একদিন
+         * কোনো গ্রুপ থেকে বাদ পড়তে পারে।
+         */
+        if (! $user->is_active) {
+            RefuseInactiveAccounts::revokeStandingAccess($user);
+
+            return response()->json(['message' => __('auth.dismissed')], 401);
+        }
+
+        $data = $request->validate([
+            'deviceId' => ['nullable', 'string', 'max:64'],
+        ]);
+
+        /*
+         * ⓘ deviceId না পাঠালে টোকেনের নিজের নাম থেকে (`refresh:<deviceId>`) — অ্যাপ ০.৪.৮ পর্যন্ত নবায়নে deviceId
+         * পাঠাত না, আর তাতে প্রতিটা নবায়ন ৪২২ হত ([[refreshTokenFrom()]], ৪ অক্টোবর ২০২৬)।
+         */
+        $deviceId = filled($data['deviceId'] ?? null)
+            ? (string) $data['deviceId']
+            : ($current instanceof PersonalAccessToken && str_starts_with((string) $current->name, self::REFRESH.':')
+                ? substr((string) $current->name, strlen(self::REFRESH) + 1) : '');
+
+        if ($deviceId === '') {
+            return response()->json(['message' => __('validation.required', ['attribute' => 'deviceId'])], 422);
+        }
+
+        $current->delete();
+
+        return response()->json($this->issue($user, $deviceId));
+    }
+
+    /**
+     * ⛔ নবায়নের টোকেন — হেডারে, না পেলে body-তে (`refreshToken`); অ্যাপ ০.৪.৮ পর্যন্ত body-তেই পাঠাত, হেডার ছাড়া, আর
+     * দরজা কেবল হেডার পড়ত — প্রতিটা নবায়ন ৪০১, ৩০ মিনিট পরে সব ফোন চুপ (মালিক, ৪ অক্টোবর ২০২৬)।
+     * ⓘ পাহারা আগের মতোই, কেবল এখানে স্পষ্ট: টোকেন আছে, মেয়াদ ফুরোয়নি, ক্ষমতা `refresh` (access টোকেনে নবায়ন নয়),
+     * আর ব্যবহার করা টোকেন মুছে যায় বলে দ্বিতীয়বার চলে না।
+     */
+    private function refreshTokenFrom(Request $request): ?PersonalAccessToken
+    {
+        $plain = $request->bearerToken();
+
+        if (! is_string($plain) || $plain === '') {
+            $plain = $request->input('refreshToken');
+        }
+
+        if (! is_string($plain) || $plain === '') {
+            return null;
+        }
+
+        $token = PersonalAccessToken::findToken($plain);
+
+        if ($token === null || ! $token->can(self::REFRESH)
+            || ($token->expires_at !== null && $token->expires_at->isPast())) {
+            return null;
+        }
+
+        return $token;
+    }
+
+    /**
+     * `POST /auth/logout` — এই ফোনের সব টোকেন বাতিল।
+     *
+     * ── কেন এই ডিভাইসেরগুলোই, সবগুলো নয় ────────────────────────────
+     * একজনের দুইটা ফোন থাকতে পারে। একটা থেকে বেরোলে অন্যটাও বেরিয়ে
+     * যাওয়া মানে গুদামের ট্যাবটা বন্ধ হয়ে যেত কারণ সেলসম্যান নিজের
+     * ফোনে লগআউট করেছেন।
+     *
+     * ⚠️ `sync_devices`-এর সারিটা **থাকে**। ওটা পরিচয় নয়, একটা
+     * হ্যান্ডসেট — আর ওয়াটারমার্কটা ওই হ্যান্ডসেটের, ব্যক্তির নয়।
+     * মুছে দিলে পরের লগইনে পুরো ক্যাটালগ আবার নামত।
+     */
+    public function logout(Request $request): JsonResponse
+    {
+        $user = $request->user();
+        /*
+         * বার্তাসহ, কারণ `abilities` মিডলওয়্যারও ৪০৩ দেয় — আর দুইটা
+         * খালি ৪০৩ দেখতে হুবহু এক। ব্যর্থ টেস্ট তখন বলে "কোথাও একটা
+         * দেয়াল", কোনটা তা বলে না; আর ওই অস্পষ্টতাই মাপা আটকে দেয়।
+         */
+        abort_unless($user instanceof User, 403, 'staff-token-only');
+
+        $deviceId = trim((string) $request->input('deviceId', ''));
+
+        // ⭐ বের হলে এই ফোনে আর বার্তা নয় — FCM টোকেন মোছা ([[PushTokenController]], ২ অক্টোবর ২০২৬)
+        if ($deviceId !== '') {
+            \App\Models\SyncDevice::query()->withoutGlobalScopes()
+                ->where('device_id', $deviceId)->where('user_id', $user->id)
+                ->update(['push_token' => null, 'push_token_at' => null]);
+        }
+
+        $tokens = $user->tokens();
+
+        if ($deviceId !== '') {
+            /*
+             * ⚠️ `whereIn`, দুইটা শর্ত `orWhere` দিয়ে নয়।
+             *
+             * ── কী ভাঙত ─────────────────────────────────────────────
+             * `$user->tokens()` মানে `tokenable_id = X`। তার সাথে
+             * `->where(A)->orWhere(B)` জুড়লে SQL দাঁড়ায়
+             *
+             *     WHERE tokenable_id = X AND name = A OR name = B
+             *
+             * আর `AND`-এর অগ্রাধিকার বেশি, তাই এটা পড়া হয়
+             *
+             *     (tokenable_id = X AND name = A) OR (name = B)
+             *
+             * অর্থাৎ **`orWhere`-টা ব্যবহারকারীর সীমানা ছাড়িয়ে যেত**:
+             * একজন লগআউট করলে ওই একই deviceId-র নামে অন্য যেকোনো
+             * ব্যবহারকারীর refresh টোকেনও মুছে যেত। একটা ফোন হাতবদল
+             * হলে ঠিক ওই নামটাই আবার ব্যবহার হয়, তাই ঘটনাটা কল্পনা নয়।
+             *
+             * লেখার সময়ই ধরা পড়েছে, চলার আগে — কিন্তু ধরনটা মনে রাখার
+             * মতো: **`orWhere` সবসময় একটা গোষ্ঠীর ভেতরে**, নাহলে সে
+             * উপরের প্রতিটা শর্ত বাতিল করে দেয়।
+             */
+            $tokens->whereIn('name', [
+                $this->tokenName($deviceId, self::ACCESS),
+                $this->tokenName($deviceId, self::REFRESH),
+            ]);
+        }
+
+        $tokens->delete();
+
+        return response()->json(['ok' => true]);
+    }
+
+    /**
+     * একটা নতুন জোড়া।
+     *
+     * টোকেনের নামে `deviceId` বসানো হয় যাতে লগআউট ঠিক ওই ফোনেরগুলোই
+     * বাতিল করতে পারে — Sanctum টোকেনের সাথে ডিভাইসের কোনো সম্পর্ক
+     * নিজে থেকে রাখে না।
+     *
+     * @return array<string, mixed>
+     */
+    private function issue(User $user, string $deviceId): array
+    {
+        /*
+         * একই ডিভাইসের পুরনো জোড়াটা আগে সরানো হয়।
+         *
+         * নাহলে প্রতিটা লগইনে দুইটা করে সারি জমত, আর ছয় মাস পরে একটা
+         * ফোনের পঞ্চাশটা বৈধ টোকেন থাকত — যার প্রতিটাই চুরির একটা
+         * সুযোগ, অথচ একটাও ব্যবহার হচ্ছে না।
+         */
+        $user->tokens()
+            ->whereIn('name', [
+                $this->tokenName($deviceId, self::ACCESS),
+                $this->tokenName($deviceId, self::REFRESH),
+            ])
+            ->delete();
+
+        $access = $user->createToken(
+            $this->tokenName($deviceId, self::ACCESS),
+
+            /*
+             * একটাই access টোকেন, দুইটা চাবি।
+             *
+             * ⓘ আলাদা টোকেন দিলে ফোনকে দুইটা রাখতে ও দুইটাই নবায়ন
+             * করতে হত, আর একটার মেয়াদ শেষ হলে অ্যাপের অর্ধেক কাজ
+             * করত — অর্ধেক না-করা সবচেয়ে বিভ্রান্তিকর অবস্থা।
+             */
+            [self::ACCESS, self::APP],
+            now()->addMinutes(self::ACCESS_MINUTES),
+        );
+
+        $refresh = $user->createToken(
+            $this->tokenName($deviceId, self::REFRESH),
+            [self::REFRESH],
+            now()->addDays(self::REFRESH_DAYS),
+        );
+
+        return [
+            /*
+             * নামগুলো `api_client.dart` যা পড়ে — `accessToken` আর
+             * `refreshToken`। বদলালে ফোন নবায়ন করতে পারবে না, আর
+             * ব্যর্থতাটা দেখাবে "সেশন শেষ" হিসেবে, যা কারণ লুকায়।
+             */
+            'accessToken' => $access->plainTextToken,
+            'refreshToken' => $refresh->plainTextToken,
+            'expiresInSeconds' => self::ACCESS_MINUTES * 60,
+            'user' => [
+                'id' => (string) $user->public_id,
+                'name' => $user->name,
+                'email' => $user->email,
+
+                /*
+                 * রোল ও অনুমতি — অ্যাপ এগুলো দিয়ে **মেনু** সাজায়,
+                 * সিদ্ধান্ত নেয় না।
+                 *
+                 * ⚠️ ফোনে লুকানো একটা সারি নিরাপত্তা নয়। আসল ছাঁকনি
+                 * সার্ভারে: প্রতিটা `SyncsToDevices::requiredPermission()`
+                 * আর প্রতিটা মডিউলের নিজের নিয়ম। এটা কেবল যাতে
+                 * সেলসম্যানকে এমন বোতাম দেখানো না হয় যেটা চাপলে ৪০৩।
+                 */
+                'roles' => $user->getRoleNames()->all(),
+                'permissions' => $user->getAllPermissions()->pluck('name')->all(),
+            ],
+        ];
+    }
+
+    private function tokenName(string $deviceId, string $kind): string
+    {
+        return $kind.':'.$deviceId;
+    }
+}

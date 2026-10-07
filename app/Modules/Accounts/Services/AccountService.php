@@ -1,0 +1,535 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Modules\Accounts\Services;
+
+use App\Core\Engines\Coding\CodeSuggester;
+use App\Core\Services\PermissionSyncer;
+use App\Core\Support\CompanyContext;
+use App\Core\Support\DocumentStatus;
+use App\Modules\Accounts\Models\Account;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
+
+/**
+ * খাত তৈরি, সম্পাদনা ও নিষ্ক্রিয় করা।
+ *
+ * নিয়মগুলো এখানে, কন্ট্রোলারে নয় (সেকশন ১৯.৬) — কারণ খাত তৈরি হবে
+ * স্ক্রিন থেকে, প্রমিত ছক বসানোর সময়, আর পরে ইমপোর্ট থেকেও। তিন জায়গায়
+ * তিনবার নিয়ম লিখলে একদিন একটায় ফাঁক থাকত, আর ফাঁকটা দিয়ে ঢোকা একটা
+ * ভুল খাত পুরো ব্যালেন্স শিট নষ্ট করত।
+ */
+final class AccountService
+{
+    /*
+     * ── কেন সেবাটা এখানে ইনজেক্ট করা হয় না, লেজি করে নেওয়া হয় ─────
+     * `OpeningBalanceService` `PostingEngine` চায়, আর সেটা টানলে
+     * প্রমিত ছক বসানোর সময় একটা চক্র হত: ছক বসাতে `AccountService`
+     * লাগে, আর পোস্টিং ইঞ্জিন বুট হতে ছকের খাত খোঁজে।
+     *
+     * জেরটা কেবল তখনই লাগে যখন সংখ্যাটা শূন্যের বেশি — অর্থাৎ প্রায়
+     * কখনোই নয়। তাই দরকারের মুহূর্তে কনটেইনার থেকে নেওয়াই সস্তা ও
+     * নিরাপদ।
+     */
+    private function openings(): OpeningBalanceService
+    {
+        return app(OpeningBalanceService::class);
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     */
+    /**
+     * @param  array<string, mixed>  $data
+     * @param  bool  $withAKeeper  ⛔ কেবল [[CashTillService]] এটা `true` পাঠায়।
+     *
+     * ⓘ পতাকাটা "নিয়মটা এড়িয়ে যাও" বলে না — বলে **"নিয়ন্ত্রক ইতিমধ্যে
+     * বসানো হচ্ছে"**। টিল নিজেই তার খাতটা বানায়, আর টিলের সারিতে
+     * `holder_id` থাকে; অর্থাৎ শর্তটা মিটে গেছে, এড়ানো হয়নি।
+     *
+     * ⚠️ নামটা `$skipGuard` নয় ইচ্ছাকৃতভাবে: একটা পতাকা যার নাম বলে
+     * "পাহারা বন্ধ করো", সেটা একদিন এমন জায়গায় বসে যেখানে পাহারাটা
+     * সত্যিই দরকার ছিল।
+     */
+    public function create(array $data, bool $withAKeeper = false): Account
+    {
+        return DB::transaction(function () use ($data, $withAKeeper) {
+            $parent = $this->resolveParent($data['parent_id'] ?? null);
+
+            $type = $this->resolveType($data, $parent);
+
+            $code = trim((string) ($data['code'] ?? ''));
+
+            /*
+             * কোড না লিখলে নিজে থেকে বসে — মালিকের নিয়ম, ২ সেপ্টেম্বর ২০২৬।
+             *
+             * ── কেন সিরিজ নয়, কেন `ACC-0001` নয় ────────────────────
+             * হিসাবের কোড একটা সংখ্যা নয়, **একটা ঠিকানা**: প্রথম অঙ্ক
+             * বলে সম্পদ না দায় না আয় না ব্যয়, পরেরগুলো বলে কোন শাখায়।
+             * অভিজ্ঞ হিসাবরক্ষক ওই কাঠামো ধরেই খাতা পড়েন — `1000`
+             * সম্পদ, `1100` চলতি সম্পদ, `1101` হাতে নগদ।
+             *
+             * `ACC-0007` দিলে কোডটা আর কিছুই বলে না, শুধু গোনে; আর
+             * প্রতিবেদনগুলো কোড ধরে সাজে বলে খাতাটা এলোমেলো দেখাত।
+             *
+             * তাই [[CodeSuggester::underParent()]] — অভিভাবকের নিচে
+             * ভাইদের ধাপ মেপে পরের খালি নম্বর।
+             */
+            if ($code === '') {
+                $code = app(CodeSuggester::class)->underParent(
+                    Account::class,
+                    $parent,
+                    (bool) ($data['is_group'] ?? false),
+                );
+            }
+
+            $this->assertCodeIsFree($code);
+            if (! $withAKeeper) {
+                $this->assertCashHasAKeeper($data, $code, $parent, (bool) ($data['is_group'] ?? false));
+            }
+
+            $account = Account::create([
+                ...$data,
+                /*
+                 * ⭐ পক্ষ রাখে কি না — মায়ের থেকে (হিসাব ⚠️১২; [[Account::holdsParty()]])। ⓘ পাওনার নিচে "ঢাকার ডিলার" খুললে সেটাও
+                 * গ্রাহক রাখে; নইলে প্রথম বিলেই ইঞ্জিন আটকাত। বদলানো যায় কেবল মালিকের হাতে ([[update()]])।
+                 */
+                'party_types' => $parent?->party_types ?: null,
+                'code' => $code,
+                'type' => $type,
+                // ⛔ ইনপুট যা-ই পাঠাক, ধরনটা গাছ থেকেই আসে
+                'money_kind' => $this->moneyKindFor($code, $parent),
+                'nature' => $data['nature'] ?? Account::defaultNatureFor($type),
+                'is_group' => (bool) ($data['is_group'] ?? false),
+                'is_active' => $data['is_active'] ?? true,
+                // সিস্টেমের খাত স্ক্রিন থেকে তৈরি হয় না — শুধু প্রমিত ছক
+                // বসানোর সময়, আর সেটা markAsSystem() দিয়ে।
+                'is_system' => false,
+                'status' => DocumentStatus::CONFIRMED,
+                // branch_id এখানে ছিল, অথচ accounts টেবিলে ওই কলামই নেই —
+                // হিসাবের ছক কোম্পানি-ব্যাপী, শাখাভিত্তিক নয়। সাধারণ
+                // অবস্থায় mass assignment ওটা ফেলে দিত বলে কিছু হত না,
+                // কিন্তু সিডারে গার্ড বন্ধ থাকে, আর তখন ইনসার্টটাই ভাঙত।
+                'created_by' => auth()->id(),
+            ]);
+
+            /*
+             * ঘোষিত জেরটা এখানেই খাতায় বসে।
+             *
+             * ── কেন তৈরির সাথেই, পরে নয় ─────────────────────────────
+             * আগে সংখ্যাটা কেবল কলামে বসত, আর [[Account::balanceOn()]]
+             * সেটা কোডে যোগ করত। রিপোর্টগুলো খতিয়ান পড়ে, তাই খাতের
+             * পাতা ৮০,০০০ দেখাত আর ট্রায়াল ব্যালেন্স ৩০,০০০ — এক
+             * সংখ্যার দুই উৎস, দুই উত্তর। ২৯ আগস্ট ২০২৬-এ HP ধরেছে।
+             */
+            $this->openings()->forAccount($account);
+
+            return $account;
+        });
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     */
+    public function update(Account $account, array $data): Account
+    {
+        return DB::transaction(function () use ($account, $data) {
+            // ফাঁকা মানে "বদলাবেন না" — ঘরটা আর `required` নয়, তাই
+            // ফাঁকা কোড এখন সত্যিই আসতে পারে
+            if (trim((string) ($data['code'] ?? '')) !== ''
+                && trim((string) $data['code']) !== $account->code) {
+                $this->assertNotSystem($account, 'code');
+                $this->assertCodeIsFree(trim((string) $data['code']), $account->id);
+            }
+
+            $parent = $this->resolveParent($data['parent_id'] ?? $account->parent_id, $account);
+
+            if (array_key_exists('type', $data) && $data['type'] !== $account->type) {
+                $this->assertNotSystem($account, 'type');
+                $this->assertTypeCanChange($account);
+            }
+
+            $type = $this->resolveType($data + ['type' => $account->type], $parent);
+
+            /*
+             * গ্রুপ ↔ সাধারণ বদলানোর দুইটা নিষেধ।
+             *
+             * এন্ট্রি আছে এমন খাত গ্রুপ বানানো যায় না: গ্রুপে সরাসরি এন্ট্রি
+             * থাকতে পারে না, আর আগের এন্ট্রিগুলো তখন কোথাও গোনা হত না —
+             * ট্রায়াল ব্যালেন্স নীরবে কম দেখাত।
+             *
+             * সন্তান আছে এমন গ্রুপ সাধারণ বানানো যায় না: তখন সন্তানরা
+             * এমন এক বাবার নিচে থাকত যাতে নিজেরও টাকা বসে, আর মাথার
+             * যোগফল আর সন্তানদের যোগফল আলাদা হত।
+             */
+            $wantsGroup = (bool) ($data['is_group'] ?? $account->is_group);
+
+            if ($wantsGroup && ! $account->is_group && $account->hasEntries()) {
+                throw ValidationException::withMessages([
+                    'is_group' => __('accounts::validation.has_entries_cannot_group'),
+                ]);
+            }
+
+            if (! $wantsGroup && $account->is_group && $account->children()->exists()) {
+                throw ValidationException::withMessages([
+                    'is_group' => __('accounts::validation.has_children_must_stay_group'),
+                ]);
+            }
+
+            // খোলা ব্যালেন্স সম্পাদনায় বদলায় না — গ্রাহকের ক্ষেত্রেও একই
+            // নিয়ম, একই কারণে: লেজার আর এই সংখ্যা দুই রকম বললে কোনটা
+            // সত্যি তা বলার উপায় থাকে না। বদলাতে জাবেদা ভাউচার।
+            unset($data['opening_balance'], $data['opening_date'], $data['is_system']);
+
+            /*
+             * ⛔ পক্ষ রাখে কি না — কেবল মালিক বদলান (অডিট হিসাব ⚠️১২; সমন্বয়কের সিদ্ধান্ত, ৭ অক্টোবর ২০২৬)। ⓘ ধর্মটা ঠিক করে কোন
+             * খাতে পক্ষের নাম বসতে পারে, আর বকেয়া কোথায় জমে; ভুল টিকে পাওনার খাত পক্ষ হারালে প্রথম বিলই আটকাত। কেবল নতুন
+             * সারিতে খাটে — পুরনো সারি অক্ষত।
+             */
+            if (array_key_exists('party_types', $data)) {
+                $wanted = array_values(array_unique(array_map('strval', (array) ($data['party_types'] ?? []))));
+                sort($wanted);
+
+                if ($wanted !== ($account->party_types ?? [])
+                    && ! (bool) auth()->user()?->roles->contains('name', PermissionSyncer::SUPER_ADMIN_ROLE)) {
+                    throw ValidationException::withMessages([
+                        'party_types' => __('accounts::validation.party_types_owner_only'),
+                    ]);
+                }
+
+                $data['party_types'] = $wanted === [] ? null : $wanted;
+            }
+
+            $code = trim((string) ($data['code'] ?? '')) !== ''
+                ? trim((string) $data['code'])
+                : $account->code;
+
+            $account->update([
+                ...$data,
+                'code' => $code,
+                'type' => $type,
+                'nature' => $data['nature'] ?? $account->nature,
+                'is_group' => $wantsGroup,
+                /*
+                 * ⚠️ `$parent`, `$account->parent` নয়।
+                 *
+                 * সম্পর্কটা **পুরনো** বাবাকে ধরে রাখে — `parent_id` এই
+                 * একই `update()`-এ বদলাচ্ছে, আর Eloquent সম্পর্কটা আগেই
+                 * লোড করে রেখেছে। প্রথমে ওটাই লিখেছিলাম, আর ফল: "Bank"
+                 * থেকে "MFS"-এ সরানো শাখা `bank` লেখা নিয়েই বসে থাকত।
+                 * ⓘ পরীক্ষাটা ধরেছে, পড়া ধরেনি।
+                 */
+                'money_kind' => $this->moneyKindFor($code, $parent),
+            ]);
+
+            // ধরন বদলালে নিচের সবারও বদলায় — সন্তান বাবার চেয়ে অন্য ধরনের
+            // হতে পারে না, নাহলে একটা সম্পদের নিচে একটা খরচ ঝুলত।
+            if ($account->wasChanged('type')) {
+                $this->cascadeType($account);
+            }
+
+            /*
+             * খাতটা সরালে নিচের সবার টাকার ধরনও সরে।
+             *
+             * ⚠️ এটা না থাকলে "Bank" মাথার নিচ থেকে একটা শাখা "MFS"-এ
+             * সরালে শাখাটা `bank` লেখা নিয়েই বসে থাকত — আর তারপর
+             * বিকাশের টাকা ব্যাংক বইয়ে দেখাত, ব্যাংক মিলকরণে একটা
+             * চিরস্থায়ী অমিল হয়ে।
+             */
+            if ($account->wasChanged('money_kind')) {
+                $this->cascadeMoneyKind($account);
+            }
+
+            return $account->fresh();
+        });
+    }
+
+    /**
+     * নিষ্ক্রিয় করা — মোছা নয় (নিয়ম ৫)।
+     *
+     * এন্ট্রি থাকা খাত মুছলে ওই এন্ট্রিগুলো কোন খাতের তা বলার উপায় থাকত না,
+     * আর ট্রায়াল ব্যালেন্সে "অজানা খাত" নামের একটা সারি জন্মাত।
+     */
+    public function deactivate(Account $account): Account
+    {
+        $this->assertNotSystem($account, 'is_active');
+
+        return DB::transaction(function () use ($account) {
+            // নিচের সবগুলোও — একটা সক্রিয় সন্তান নিষ্ক্রিয় বাবার নিচে
+            // ঝুললে ড্রপডাউনে সেটা দেখা যেত কিন্তু গাছে খুঁজে পাওয়া যেত না।
+            $this->setActive($account->selfAndDescendants(), false);
+
+            return $account->fresh();
+        });
+    }
+
+    public function activate(Account $account): Account
+    {
+        return DB::transaction(function () use ($account) {
+            // উপরের দিকে — নিষ্ক্রিয় বাবার নিচে সক্রিয় সন্তান রাখা যায় না
+            $this->setActive($account->ancestors()->push($account), true);
+
+            return $account->fresh();
+        });
+    }
+
+    /**
+     * সক্রিয়/নিষ্ক্রিয় লেখা — প্রতিটা সারিতে সত্যিই।
+     *
+     * refresh() দরকার, কারণ save() শুধু বদলানো ঘরগুলো লেখে। ডাকার
+     * জায়গায় ধরে রাখা পুরনো একটা ইনস্ট্যান্সে is_active ইতিমধ্যেই কাঙ্ক্ষিত
+     * মান হলে Eloquent কোনো UPDATE পাঠাত না, অথচ ডাটাবেজে উল্টোটা থাকত।
+     *
+     * ঠিক এটাই ঘটেছিল: বাবাকে নিষ্ক্রিয় করার পর সন্তানকে সক্রিয় করতে গেলে
+     * সন্তানের মেমোরির কপিতে is_active এখনো true, তাই কিছুই লেখা হত না
+     * আর সন্তানটা নিষ্ক্রিয়ই থেকে যেত — নীরবে।
+     *
+     * একটা whereIn আপডেটে সমস্যাটা মিটত, কিন্তু তখন মডেল ইভেন্ট চলত না,
+     * আর অডিট (নিয়ম ২) ওই ইভেন্টের উপরেই দাঁড়াবে।
+     *
+     * @param  Collection<int, Account>|\Illuminate\Database\Eloquent\Collection<int, Account>  $nodes
+     */
+    private function setActive(iterable $nodes, bool $active): void
+    {
+        foreach ($nodes as $node) {
+            $node->refresh()->forceFill(['is_active' => $active])->save();
+        }
+    }
+
+    /**
+     * প্রমিত ছক বসানোর সময় খাতটাকে সিস্টেমের বলে চিহ্নিত করা।
+     *
+     * আলাদা পদ্ধতি, create()-এর প্যারামিটার নয়: স্ক্রিন বা ইমপোর্ট থেকে
+     * কেউ যেন নিজের খাতকে সিস্টেমের বলে দাবি করতে না পারে।
+     */
+    public function markAsSystem(Account $account): Account
+    {
+        $account->forceFill(['is_system' => true])->save();
+
+        return $account;
+    }
+
+    private function resolveParent(mixed $parentId, ?Account $moving = null): ?Account
+    {
+        if (blank($parentId)) {
+            return null;
+        }
+
+        $parent = Account::query()->find($parentId);
+
+        if ($parent === null) {
+            throw ValidationException::withMessages([
+                'parent_id' => __('accounts::validation.parent_not_found'),
+            ]);
+        }
+
+        if (! $parent->is_group) {
+            throw ValidationException::withMessages([
+                'parent_id' => __('accounts::validation.parent_must_be_group'),
+            ]);
+        }
+
+        if ($moving !== null) {
+            // নিজের নিচে নিজেকে বসানো — গাছটা চক্র হয়ে যেত, আর তখন
+            // ব্যালেন্স গুনতে গিয়ে অসীম লুপ।
+            $descendantIds = $moving->selfAndDescendants()->pluck('id')->all();
+
+            if (in_array($parent->id, $descendantIds, true)) {
+                throw ValidationException::withMessages([
+                    'parent_id' => __('accounts::validation.parent_cannot_be_own_descendant'),
+                ]);
+            }
+        }
+
+        return $parent;
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     */
+    private function resolveType(array $data, ?Account $parent): string
+    {
+        // বাবা থাকলে বাবার ধরনই চলে — একটা সম্পদের নিচে খরচ থাকতে পারে না
+        if ($parent !== null) {
+            return $parent->type;
+        }
+
+        $type = $data['type'] ?? null;
+
+        if (! in_array($type, Account::TYPES, true)) {
+            throw ValidationException::withMessages([
+                'type' => __('accounts::validation.unknown_type'),
+            ]);
+        }
+
+        return $type;
+    }
+
+    /**
+     * এই খাতটা কোন ধরনের টাকা ধরে — নগদ, ব্যাংক, MFS, নাকি টাকাই নয়।
+     *
+     * ── কেন প্রশ্নটা কাউকে জিজ্ঞেস করা হয় না ──────────────────────────
+     * আগে ফর্মে দুইটা টিক ছিল, "নগদ খাত" আর "ব্যাংক বা MFS খাত"। ⛔ তার
+     * তিনটা ফল হয়েছিল:
+     *
+     *   ১. প্রমিত ছকের একটা সারিও টিক দুইটা পাঠাত না, তাই নতুন
+     *      কোম্পানিতে প্রতিটা খাত "টাকার খাত নয়" হয়ে বসত — অথচ ছকে
+     *      ১১০১, ১১০২, ১১০৫ তিনটা মা পরিষ্কার আলাদা ছিল।
+     *   ২. ফলে Finance-এর পর্দাগুলো পতাকা ছেড়ে গাছ ধরতে শুরু করে
+     *      ([[StandardChart::MONEY_PARENTS]]), আর Accounts-এর পাহারা
+     *      পতাকাই ধরে থাকে — **এক প্রশ্নের দুইটা উত্তর**।
+     *   ৩. ব্যাংক আর MFS একই টিকে বসত, তাই "ব্যাংকে কত আছে" সংখ্যাটায়
+     *      বিকাশের টাকা মিশে থাকত।
+     *
+     * ⭐ কাঠামোটা আগে থেকেই সঠিক উত্তরটা জানত। তাই প্রশ্নটা তুলে দেওয়া
+     * হলো, আর উত্তরটা যেখানে ছিল সেখান থেকেই নেওয়া হয়: বাবার খাত।
+     *
+     * ⓘ তিনটা মা নিজেরা কোড দিয়ে চেনা হয়, কারণ তাদের বাবা (১১০০ চলতি
+     * সম্পদ) টাকার খাত নয় — শিকড়টা কোথাও না কোথাও নাম ধরে বসাতেই হয়।
+     * ওগুলো [[StandardChart::SYSTEM_CODES]]-এ, তাই কোড বদলানো যায় না।
+     */
+    private function moneyKindFor(string $code, ?Account $parent): ?string
+    {
+        return match ($code) {
+            StandardChart::CASH_IN_HAND => Account::CASH,
+            StandardChart::BANK => Account::BANK,
+            StandardChart::MOBILE_MONEY => Account::MFS,
+            default => $parent?->money_kind,
+        };
+    }
+
+    /**
+     * ⛔ নগদ খাতে কে ধরবেন, সেটা লেখা থাকতেই হবে।
+     *
+     * ── মালিকের প্রশ্ন ও সংশোধন, ১৩ সেপ্টেম্বর ২০২৬ ───────────────────
+     * প্রথম প্রশ্ন: *"এই অ্যাকাউন্টে নিয়ন্ত্রক কে? সেটাই নাই।"*
+     *
+     * ⛔ প্রথম সারাইটা ভুল ছিল: ছক থেকে নগদ খাত বানানোই বন্ধ করা
+     * হয়েছিল, আর সবাইকে টিলের পর্দায় পাঠানো হচ্ছিল। মালিক সাথে সাথে
+     * ধরিয়ে দিলেন:
+     *
+     *     "টিল তো POS-এর জন্য। অফিসে অ্যাকাউন্টসের ক্যাশ কীভাবে হবে?
+     *      কাউন্টার আর ক্যাশ অ্যাকাউন্ট এক না — যদিও দুইটাই ক্যাশের
+     *      নিচে।"
+     *
+     * ⭐ কথাটা ঠিক। একটা কাউন্টার (টিল) আর অফিসের সিন্দুক দুইটা আলাদা
+     * জিনিস, আর দ্বিতীয়টাকে কাউন্টার বানাতে বাধ্য করা মানে ব্যবসার
+     * গড়নটাই বদলে দেওয়া।
+     *
+     * ⭐ তাই নিয়মটা **"টিল হতে হবে"** নয়, নিয়মটা **"কার হাতে সেটা
+     * লেখা থাকতে হবে"**। টিল একটা উত্তর, অফিসের সিন্দুক আরেকটা — আর
+     * দুইটাই এখন একই প্রশ্নের উত্তর দেয়।
+     *
+     * ⓘ দল ছাড় পায়: একটা দল কেবল শিরোনাম, সেখানে টাকা বসে না।
+     *
+     * @param  array<string, mixed>  $data
+     */
+    private function assertCashHasAKeeper(array $data, string $code, ?Account $parent, bool $isGroup): void
+    {
+        if ($isGroup || $this->moneyKindFor($code, $parent) !== Account::CASH) {
+            return;
+        }
+
+        if ((int) ($data['held_by'] ?? 0) > 0) {
+            return;
+        }
+
+        throw ValidationException::withMessages([
+            'held_by' => __('accounts::validation.cash_needs_a_keeper'),
+        ]);
+    }
+
+    private function cascadeMoneyKind(Account $account): void
+    {
+        foreach ($account->children as $child) {
+            // forceFill — কোডে বসা ধরন, তাই fillable-এর ছাঁকনি এখানে
+            // অর্থহীন; আর মায়ের কোডে বসা সন্তান নিজের কোডই রাখে
+            $child->forceFill([
+                'money_kind' => $this->moneyKindFor($child->code, $account),
+            ])->save();
+
+            $this->cascadeMoneyKind($child);
+        }
+    }
+
+    private function cascadeType(Account $account): void
+    {
+        foreach ($account->children as $child) {
+            $child->forceFill([
+                'type' => $account->type,
+                'nature' => Account::defaultNatureFor($account->type),
+            ])->save();
+
+            $this->cascadeType($child);
+        }
+    }
+
+    private function assertTypeCanChange(Account $account): void
+    {
+        if ($account->hasEntries()) {
+            throw ValidationException::withMessages([
+                'type' => __('accounts::validation.has_entries_cannot_retype'),
+            ]);
+        }
+    }
+
+    private function assertNotSystem(Account $account, string $field): void
+    {
+        if ($account->is_system) {
+            throw ValidationException::withMessages([
+                $field => __('accounts::validation.system_account_locked', ['name' => $account->name()]),
+            ]);
+        }
+    }
+
+    private function assertCodeIsFree(string $code, ?int $exceptId = null): void
+    {
+        $taken = Account::query()
+            ->where('code', $code)
+            ->when($exceptId, fn ($q, $id) => $q->whereKeyNot($id))
+            // মুছে ফেলা খাতের কোডও ধরা হয়: soft delete মানে সারিটা আছে,
+            // আর unique ইনডেক্সও সেটা দেখে — না দেখলে সেভ করার সময়
+            // ডাটাবেজ ব্যতিক্রম দিত, ব্যবহারকারী বুঝত না কী হয়েছে।
+            ->withTrashed()
+            ->exists();
+
+        if ($taken) {
+            throw ValidationException::withMessages([
+                'code' => __('accounts::validation.code_taken', ['code' => $code]),
+            ]);
+        }
+    }
+
+    /**
+     * ইমপোর্টে বসানোর আগে যাচাই — কিছু সেভ না করে।
+     *
+     * "check()-এ সবুজ, import()-এ ব্যর্থ" ফাঁদ এড়াতে create()-এর
+     * পূর্বশর্তগুলোই এখানে চালানো হয় — অভিভাবক, ধরন, কোডের অনন্যতা —
+     * সেভ ছাড়া। নিয়মটা এক জায়গায় থাকে, তাই ইমপোর্ট আর হাতে-বসানো খাত
+     * কোনোদিন আলাদা নিয়মে চলে না (CustomerService::assertImportable-এর মতো)।
+     *
+     * @param  array<string, mixed>  $data
+     */
+    public function assertImportable(array $data): void
+    {
+        $parent = $this->resolveParent($data['parent_id'] ?? null);
+
+        $this->resolveType($data, $parent);
+
+        $code = trim((string) ($data['code'] ?? ''));
+
+        if ($code !== '') {
+            $this->assertCodeIsFree($code);
+        }
+    }
+
+    /** কোম্পানির প্রসঙ্গ আছে কি না — ছক বসানোর আগে দেখা হয়। */
+    public function assertCompanyContext(): void
+    {
+        if (CompanyContext::id() === null) {
+            throw new \RuntimeException('No company in context. Chart of accounts is per company.');
+        }
+    }
+}

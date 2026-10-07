@@ -1,0 +1,272 @@
+{{--
+    কোম্পানি — খোলা ও সম্পাদনা।
+
+    ── নতুন কোম্পানির পাতায় শাখা ও অর্থবছরও থাকে, আর সেটাই আসল কথা ────
+    একটা কোম্পানি শুধু একটা নাম নয়। শাখা ছাড়া কোনো লেনদেন কোথায় বসবে
+    তা বলা যায় না, আর অর্থবছর ছাড়া কোনো তারিখই বৈধ নয়। দুইটা পরে
+    চাইলে মানুষ কোম্পানিটা খুলে চলে যেতেন, আর প্রথম বিল লিখতে গিয়ে
+    আবিষ্কার করতেন কিছুই কাজ করছে না।
+
+    তাই তিনটা একসাথে — একবারে ভরে দিলে কোম্পানিটা সত্যিই চালু হয়ে যায়।
+
+    ── সম্পাদনায় ওই দুইটা থাকে না ─────────────────────────────────────
+    অর্থবছর ততদিনে চালু, তার তারিখ বদলানো মানে বসে যাওয়া লেনদেনগুলোর
+    ভিত নাড়ানো — সেটা Accounts-এর Year End পর্দার কাজ। শাখা যোগ করা
+    যায়, নিচে।
+--}}
+@php
+    $isNew = ! $company->exists;
+@endphp
+
+<x-layouts.app :menu="$menu">
+    <x-slot:title>{{ $isNew ? __('core.action.create') : $company->name() }}</x-slot:title>
+
+    <x-slot:header>
+        <x-ui.page-header
+            :title="$isNew ? __('core.action.create') : $company->name()"
+            :subtitle="__('system_admin::menu.companies')" />
+    </x-slot:header>
+
+    @if (session('saved'))
+        <div role="status"
+             class="mb-4 rounded-(--radius-field) bg-(--color-badge-success-bg) px-3 py-2 text-sm
+                    text-(--color-badge-success-ink)">
+            {{ session('saved') }}
+        </div>
+    @endif
+
+    @if ($errors->any())
+        <div role="alert"
+             class="mb-4 rounded-(--radius-field) bg-(--color-badge-danger-bg) px-3 py-2 text-sm
+                    text-(--color-badge-danger-ink)">
+            <ul class="list-inside list-disc">
+                @foreach ($errors->all() as $error)
+                    <li>{{ $error }}</li>
+                @endforeach
+            </ul>
+        </div>
+    @endif
+
+    {{-- ⚠️ `enctype` ছাড়া ফাইলটা **কখনো সার্ভারে পৌঁছায় না** — ব্রাউজার
+         কেবল নামটা পাঠায়, আর `$request->file('logo')` চিরকাল `null`।
+         ⓘ কোনো ত্রুটিও দেখায় না; সেভ হয়ে যায়, শুধু লোগো বসে না। --}}
+    <form method="POST" enctype="multipart/form-data"
+          action="{{ $isNew ? route('system_admin.company.store') : route('system_admin.company.update', $company->id) }}"
+          class="space-y-4">
+        @csrf
+        @unless ($isNew) @method('PUT') @endunless
+
+        <section data-boxed class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
+            <h2 class="mb-3 font-semibold">{{ __('master_data::section.identity') }}</h2>
+
+            <div class="grid gap-3 sm:grid-cols-2">
+                {{-- ⭐ কোডটা বদলানো যায় — কেবল প্রথম কাগজ বেরোনোর আগ পর্যন্ত।
+
+                     ⓘ ছাপা কাগজে, রপ্তানি ফাইলে আর ব্যাংকের বিবরণীতে কোডটা
+                     বসে যায়, তাই একটা নম্বর ইস্যু হয়ে গেলে ঘরটা আর খোলে না।
+                     ⛔ কিন্তু খালি কোম্পানিতে ঐ কারণটা নেই — মালিক নাম বদলে
+                     দেখলেন কোড আগের প্রতিষ্ঠানেরই রয়ে গেছে (২০ সেপ্টেম্বর
+                     ২০২৬)। শর্তটা [[Company::canChangeCode()]]-এ, আর
+                     যাচাইও ঐ একই উত্তরে। --}}
+                @if ($isNew || $company->canChangeCode())
+                    <x-ui.field name="code" :label="__('master_data::field.code')"
+                                :value="old('code', $company->code)"
+                                :placeholder="$isNew ? __('core.create.code_auto') : null"
+                                :hint="$isNew ? __('core.create.code_auto_hint') : __('system_admin::message.code_still_free')" />
+                @elseif (auth()->user()?->roles->contains('name', \App\Core\Services\PermissionSyncer::SUPER_ADMIN_ROLE))
+                    {{-- ⭐ কাগজ বেরিয়ে গেছে, তবু সুপার অ্যাডমিন বদলাতে পারেন —
+                         ২০ সেপ্টেম্বর ২০২৬। ⓘ নিশ্চিত করতে পুরনো কোডটা হুবহু
+                         লিখতে হয়, বছর খোলার মতোই। --}}
+                    <x-ui.field name="code" :label="__('master_data::field.code')"
+                                :value="old('code', $company->code)"
+                                :hint="__('system_admin::message.code_needs_confirm', ['code' => $company->code])" />
+
+                    <x-ui.field name="code_confirm" :label="__('system_admin::field.confirm_old_code', ['code' => $company->code])"
+                                :value="old('code_confirm')"
+                                :hint="__('system_admin::message.code_locked')" />
+                @else
+                    {{-- ⓘ লুকানো নয়, তালাবদ্ধ: কোডটা দেখা যায়, আর কেন বদলানো
+                         যায় না সেটাও লেখা থাকে। --}}
+                    <x-ui.field name="code_locked" :label="__('master_data::field.code')"
+                                :value="$company->code" :readonly="true"
+                                :hint="__('system_admin::message.code_locked')" />
+                @endif
+
+                <x-ui.field name="name_en" :label="__('system_admin::field.company_name_en')"
+                            :value="old('name_en', $company->name_en)" required />
+
+                <x-ui.field name="name_bn" :label="__('system_admin::field.company_name_bn')"
+                            :value="old('name_bn', $company->name_bn)" />
+
+                <x-ui.field name="legal_name" :label="__('system_admin::field.legal_name')"
+                            :value="old('legal_name', $company->legal_name)" />
+
+                <x-ui.field name="phone" :label="__('core.print.phone')"
+                            :value="old('phone', $company->phone)" />
+
+                <x-ui.field name="email" type="email" :label="__('system_admin::field.email')"
+                            :value="old('email', $company->email)" />
+
+                <x-ui.field name="bin" :label="__('system_admin::field.bin')"
+                            :value="old('bin', $company->bin)" />
+
+                <x-ui.field name="tin" :label="__('system_admin::field.tin')"
+                            :value="old('tin', $company->tin)" />
+
+                {{--
+                    প্রতিষ্ঠানের লোগো — ছাপা কাগজে যেটা বসে।
+
+                    ── কেন এটা এখানে, "সেটিংস"-এ নয় ────────────────────
+                    ⓘ লোগো কোম্পানির **পরিচয়ের অংশ**, কোনো সুইচ নয় —
+                    নাম, ঠিকানা আর BIN-এর পাশেই তার জায়গা। মালিকের
+                    স্থায়ী নিয়মও তাই: আপলোড-সম্পাদনা-মোছা যে জিনিসের,
+                    তার নিজের পর্দাতেই।
+
+                    ⚠️ SVG নেওয়া হয় না: ওতে স্ক্রিপ্ট বসানো যায়, আর
+                    ফাইলটা পরে সরাসরি ব্রাউজারে পরিবেশিত হয়।
+                --}}
+                <div class="sm:col-span-2">
+                    <span class="text-2xs text-(--color-ink-muted)">
+                        {{ __('system_admin::field.logo') }}
+                    </span>
+
+                    <div class="mt-1 flex flex-wrap items-center gap-4">
+                        @if (! $isNew && $company->logoUrl())
+                            {{-- ⓘ যা আছে সেটা দেখানো হয় — নাহলে ব্যবহারকারী
+                                 জানতেন না লোগো বসানো আছে কি না, আর প্রতিবার
+                                 আবার আপলোড করতেন। --}}
+                            <img src="{{ $company->logoUrl() }}"
+                                 alt="{{ $company->name() }}"
+                                 {{-- ⚠️ উচ্চতাটা টোকেনে, হাতে লেখা `h-12`-তে নয়।
+                                      ⓘ `EveryScreenObeysTheTheme` গোল কোণ আর
+                                      হাতে লেখা উচ্চতা একসাথে দেখলে ওটাকে একটা
+                                      **নিয়ন্ত্রণ** ধরে — আর নিয়ন্ত্রণের মাপ থিম
+                                      ঠিক করে, পর্দা নয়। ⭐ ছবিটা নিয়ন্ত্রণ নয়,
+                                      কিন্তু ঘরগুলোর পাশে বসে; একই টোকেন নিলে
+                                      সারিটা সব থিমে সমান উঁচু থাকে। --}}
+                                 class="h-(--spacing-field) w-auto max-w-40 rounded-(--radius-field)
+                                        border border-(--color-border) bg-white object-contain p-1">
+
+                            <label class="flex items-center gap-2 text-2xs text-(--color-ink-muted)">
+                                <input type="checkbox" name="remove_logo" value="1" class="size-4">
+                                {{ __('system_admin::action.remove_logo') }}
+                            </label>
+                        @endif
+
+                        {{-- ⛔ এখানে স্ক্যানের পর্দা ইচ্ছাকৃতভাবে **নেই**।
+                             লোগো কাগজ নয় (সোজা করার কিছু নেই), আর বর্গও
+                             নয় — বেশিরভাগ লোগো চওড়া। ⚠️ আর পর্দাটা JPEG
+                             ফেরত দেয়, অর্থাৎ স্বচ্ছ PNG-র স্বচ্ছতা মারা
+                             যেত। ⭐ সার্ভারের `ImageEngine::mark()` এটাকে
+                             PNG রেখেই ছোট করে। --}}
+                        <input type="file" name="logo" accept="image/png,image/jpeg,image/webp"
+                               class="text-sm file:me-3 file:rounded-(--radius-field)
+                                      file:border file:border-(--color-border)
+                                      file:bg-(--color-surface-app) file:px-3 file:py-1.5
+                                      file:text-sm file:text-(--color-ink)">
+                    </div>
+
+                    <p class="mt-1 text-2xs text-(--color-ink-muted)">
+                        {{ __('system_admin::message.logo_hint') }}
+                    </p>
+
+                    @error('logo')
+                        <p class="mt-1 text-2xs text-(--color-badge-danger-ink)">{{ $message }}</p>
+                    @enderror
+                </div>
+            </div>
+
+            <div class="mt-3 grid gap-3 sm:grid-cols-2">
+                <x-ui.field name="address_en" :label="__('system_admin::field.address_en')"
+                            :value="old('address_en', $company->address_en)" />
+
+                <x-ui.field name="address_bn" :label="__('system_admin::field.address_bn')"
+                            :value="old('address_bn', $company->address_bn)" />
+            </div>
+        </section>
+
+        @if ($isNew)
+            <section data-boxed class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
+                <h2 class="mb-1 font-semibold">{{ __('system_admin::field.main_branch') }}</h2>
+                <p class="mb-3 max-w-(--spacing-prose-max) text-sm text-(--color-ink-muted)">
+                    {{ __('system_admin::message.main_branch_note') }}
+                </p>
+
+                <div class="grid gap-3 sm:grid-cols-3">
+                    <x-ui.field name="branch_code" :label="__('master_data::field.code')"
+                                :value="old('branch_code', 'MAIN')" required />
+
+                    <x-ui.field name="branch_name_en" :label="__('system_admin::field.branch_name_en')"
+                                :value="old('branch_name_en')" required />
+
+                    <x-ui.field name="branch_name_bn" :label="__('system_admin::field.branch_name_bn')"
+                                :value="old('branch_name_bn')" />
+                </div>
+            </section>
+
+            <section data-boxed class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
+                <h2 class="mb-1 font-semibold">{{ __('system_admin::field.financial_year') }}</h2>
+                <p class="mb-3 max-w-(--spacing-prose-max) text-sm text-(--color-ink-muted)">
+                    {{ __('system_admin::message.financial_year_note') }}
+                </p>
+
+                <div class="grid gap-3 sm:grid-cols-3">
+                    <x-ui.field name="year_name" :label="__('master_data::field.name')"
+                                :value="old('year_name', $year['name'])" required />
+
+                    <x-ui.field name="year_starts_on" type="date" :label="__('core.table.from_date')"
+                                :value="old('year_starts_on', $year['starts_on'])" required />
+
+                    <x-ui.field name="year_ends_on" type="date" :label="__('core.table.to_date')"
+                                :value="old('year_ends_on', $year['ends_on'])" required />
+                </div>
+            </section>
+        @endif
+
+        <div class="flex flex-wrap gap-2">
+            <x-ui.button type="submit" tone="primary">{{ __('core.action.save') }}</x-ui.button>
+            <x-ui.button tone="secondary" :href="route('system_admin.company.index')">
+                {{ __('core.action.cancel') }}
+            </x-ui.button>
+        </div>
+    </form>
+
+    @unless ($isNew)
+        {{-- শাখাগুলো কোম্পানির পাতাতেই — আলাদা পাতায় রাখলে প্রথম
+             প্রশ্নটাই হত "কোন কোম্পানির শাখা?" --}}
+        <section data-boxed class="mt-4 rounded-(--radius-card) border border-(--color-border)
+                        bg-(--color-surface-card) p-4">
+            <h2 class="mb-3 font-semibold">{{ __('system_admin::menu.branches') }}</h2>
+
+            <ul class="mb-4 divide-y divide-(--color-border) text-sm">
+                @foreach ($branches as $branch)
+                    <li class="flex items-center justify-between py-2">
+                        <span>
+                            <span class="font-medium">{{ $branch->code }}</span>
+                            <span class="text-(--color-ink-muted)"> — {{ $branch->name() }}</span>
+                        </span>
+
+                        @if ($branch->is_default)
+                            <x-ui.badge tone="info">{{ __('master_data::field.is_default') }}</x-ui.badge>
+                        @endif
+                    </li>
+                @endforeach
+            </ul>
+
+            <form method="POST" action="{{ route('system_admin.company.branch.store', $company->id) }}"
+                  class="grid gap-3 sm:grid-cols-4">
+                @csrf
+
+                <x-ui.field name="code" :label="__('master_data::field.code')" required />
+                <x-ui.field name="name_en" :label="__('system_admin::field.branch_name_en')" required />
+                <x-ui.field name="name_bn" :label="__('system_admin::field.branch_name_bn')" />
+
+                <div class="flex items-end">
+                    <x-ui.button type="submit" tone="secondary">
+                        {{ __('core.action.create') }}
+                    </x-ui.button>
+                </div>
+            </form>
+        </section>
+    @endunless
+</x-layouts.app>

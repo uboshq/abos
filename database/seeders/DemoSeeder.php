@@ -1,0 +1,1064 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Database\Seeders;
+
+use App\Core\Services\CompanyProvisioner;
+use App\Core\Services\PermissionSyncer;
+use App\Core\Services\SettingsService;
+use App\Core\Support\CompanyContext;
+use App\Models\ApprovalFlow;
+use App\Models\ApprovalFlowStep;
+use App\Models\Branch;
+use App\Models\Company;
+use App\Models\User;
+use App\Modules\Accounts\Services\OpeningBalanceService;
+use App\Modules\Customer\Services\CustomerService;
+use App\Modules\Hr\Models\Employee;
+use App\Modules\Inventory\Models\Product;
+use App\Modules\Inventory\Models\Warehouse;
+use App\Modules\Inventory\Services\CostLayerService;
+use App\Modules\Inventory\Services\ProductService;
+use App\Modules\Inventory\Services\StockService;
+use App\Modules\Inventory\Services\WarehouseService;
+use App\Modules\MasterData\Models\Designation;
+use App\Modules\MasterData\Models\Location;
+use App\Modules\MasterData\Models\ReasonCode;
+use App\Modules\MasterData\Models\Unit;
+use App\Modules\MasterData\Services\LocationService;
+use App\Modules\Sales\Models\PricingRule;
+use App\Modules\Supplier\Services\SupplierService;
+use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Storage;
+use Spatie\Permission\Models\Permission;
+use Spatie\Permission\Models\Role;
+
+/**
+ * চালিয়ে দেখার মতো একটা অবস্থা — দুইটা কোম্পানি, শাখা, অর্থবছর, নম্বর সিরিজ,
+ * অনুমোদনের ছক আর কয়েকজন ব্যবহারকারী।
+ *
+ * দুইটা কোম্পানি ইচ্ছাকৃত: একটা দিয়ে টেন্যান্ট আলাদা থাকার ব্যাপারটা হাতে-কলমে
+ * দেখা যায় না। সুইচ করে দেখলেই বোঝা যায় এক কোম্পানির ডাটা অন্যটায় নেই।
+ */
+class DemoSeeder extends Seeder
+{
+    /**
+     * ⛔ এই বীজ কেবল উন্নয়ন ও পরীক্ষার মেশিনে বসে।
+     *
+     * ── ⚠️ কেন এই পাহারাটা লাগল, ১২ সেপ্টেম্বর ২০২৬ ─────────────────────
+     * এই সিডারটা তিনজন ব্যবহারকারী বানায়, আর তাদের **সবার পাসওয়ার্ড
+     * `password`** — নিচে `Hash::make('password')` লেখাই আছে। একজনের রোল
+     * `owner`, অর্থাৎ পুরো ব্যবস্থার সবচেয়ে বড় চাবি।
+     *
+     * ⛔ পাহারা ছিল না। `DatabaseSeeder` এটাকে শর্তহীনভাবে ডাকে, তাই
+     * উৎপাদন সার্ভারে একটা `php artisan db:seed --force` চললেই
+     * **`owner@abos.test` / `password`** নামে একটা মালিক-অ্যাকাউন্ট বসে
+     * যেত — কোনো সতর্কতা নয়, কোনো প্রশ্ন নয়।
+     *
+     * ⓘ ভাগ্য ভালো যে `infra/deploy.sh` কখনো seed চালায় না (যাচাই করা),
+     * আর `composer setup`-ও কেবল `migrate --force` চালায়। অর্থাৎ আজ
+     * পর্যন্ত পথটা কেবল হাতে চালানো কমান্ড। **কিন্তু "কেউ ওটা চালায় না"
+     * কোনো নিয়ন্ত্রণ নয়** — প্রথম সেটআপের রাতে, ডেটা না দেখে, কেউ
+     * "একবার seed দিয়ে দেখি" ভাবতেই পারেন।
+     *
+     * ⭐ ধরিয়ে দিয়েছে মোবাইল অ্যাপের সেশন (abos-33): তারা `DemoSeeder`
+     * পড়ে দেখেছে পরিচয়গুলো কী, আর জিজ্ঞেস করেছে ওগুলো লাইভে আছে কি না।
+     * ⚠️ প্রশ্নটার উত্তর এখানে দেওয়া যায় না — লাইভ সার্ভারে কী বসে আছে
+     * তা এই রিপো থেকে দেখা যায় না। **তাই ওটা আলাদা করে যাচাই করতে হবে:
+     * `abos.univer.com.bd`-তে `@abos.test` ইমেইলের কোনো অ্যাকাউন্ট আছে
+     * কি না, আর থাকলে সাথে সাথে নিষ্ক্রিয় করা।** এই পাহারাটা কেবল
+     * **ভবিষ্যতের** পথটা বন্ধ করে, অতীতের নয়।
+     *
+     * ── কেন ব্যতিক্রম ছোঁড়া, আর নীরবে ফিরে যাওয়া নয় ────────────────────
+     * নীরবে ফিরলে CI বা ডেভে কেউ কোনোদিন বুঝত না কেন ডেমো ডাটা আসেনি,
+     * আর সেটা খোঁজার জায়গা হত ভুল ফাইল। জোরে ভাঙলে কারণটা পর্দাতেই
+     * লেখা থাকে।
+     */
+    public function run(): void
+    {
+        if (! app()->environment(['local', 'testing'])) {
+            throw new RuntimeException(
+                '⛔ DemoSeeder কেবল local ও testing পরিবেশে চলে — এখন চলছে '
+                .'"'.app()->environment().'" পরিবেশে।'."\n\n"
+                .'এই সিডার তিনজন ব্যবহারকারী বানায় যাদের সবার পাসওয়ার্ড '
+                .'"password", আর একজনের রোল owner। উৎপাদনে সেটা বসানো মানে '
+                ."ব্যবস্থার সবচেয়ে বড় চাবি সবার জানা পাসওয়ার্ডে খুলে দেওয়া।\n\n"
+                .'নতুন কোম্পানি বসাতে হলে CompanyProvisioner ব্যবহার করুন '
+                .'(system_admin.company.manage পর্দা), ডেমো বীজ নয়।'
+            );
+        }
+
+        $this->putLogosWhereTheRowsSayTheyAre();
+        $alpha = Company::create([
+            'code' => 'TDEPOT',
+            'name_en' => 'Trade Depot',
+            'name_bn' => 'ট্রেড ডিপো',
+            'address_en' => 'Ganginar Par, Mymensingh 2200',
+            'address_bn' => 'গাঙ্গিনার পাড়, ময়মনসিংহ ২২০০',
+            'phone' => '+8801700000000',
+            'bin' => '000123456-0101',
+            'logo_path' => 'logos/Trade Depot.png',
+            'currency' => 'BDT',
+            'locale' => 'bn',
+        ]);
+
+        $beta = Company::create([
+            'code' => 'FMART',
+            'name_en' => 'Family Mart',
+            'name_bn' => 'ফ্যামিলি মার্ট',
+            'address_en' => 'Charpara, Mymensingh 2200',
+            'address_bn' => 'চরপাড়া, ময়মনসিংহ ২২০০',
+            'phone' => '+8801700000001',
+            'logo_path' => 'logos/FamilyMart.png',
+            'currency' => 'BDT',
+            'locale' => 'bn',
+        ]);
+
+        // প্রতিটা module.php-তে ঘোষিত অনুমতি ডাটাবেজে বসাও — নাহলে মেনু
+        // ফাঁকা থাকবে, কারণ মেনু অনুমতি দেখে ফিল্টার হয়।
+        app(PermissionSyncer::class)->sync();
+
+        /*
+         * ── ⛔ রোলগুলো এখন কোম্পানির ভেতরে, ৭ সেপ্টেম্বর ২০২৬ ────────────
+         *
+         * ⚠️ spatie-র teams চালু হওয়ার পর `Role::findOrCreate()` **চলতি
+         * টিম** ধরে কাজ করে। ⓘ এখানে কোনো কোম্পানি-প্রসঙ্গ ছিল না, তাই
+         * তিনটা রোলই `company_id = null` নিয়ে বসত — অর্থাৎ **কারও নয়**।
+         *
+         * ⛔ ফলটা গোটা সুইট জুড়ে: প্রতিটা টেস্ট যে ব্যবহারকারীর নামে চলে
+         * তাঁর কোনো রোল থাকত না, আর প্রতিটা পর্দা ৪০৩ ফেরাত। ⚠️ আর
+         * ভুলটা এখানে দেখাই যেত না — দেখা যেত অন্য দুইশো ফাইলে।
+         *
+         * ⭐ [[CompanyContext::forCompany()]] টিমটাও বসায়, তাই কেবল
+         * মোড়ানোই যথেষ্ট — আলাদা করে কিছু মনে রাখতে হয় না।
+         */
+        CompanyContext::forCompany($alpha->id, function () use (&$roles) {
+            $roles = [];
+
+            foreach ([PermissionSyncer::SUPER_ADMIN_ROLE, 'accountant', 'salesman'] as $role) {
+                $roles[$role] = Role::findOrCreate($role);
+            }
+
+            // মালিক সব পারেন। বাকিদের সীমা module.php-র prefix ধরে —
+            // হিসাবরক্ষক accounts.*, বিক্রয়কর্মী sales.* ও customer.*।
+            $roles[PermissionSyncer::SUPER_ADMIN_ROLE]->syncPermissions(Permission::all());
+
+            $roles['accountant']->syncPermissions(
+                Permission::query()
+                    ->where('name', 'like', 'accounts.%')
+
+                    /*
+                     * সীমা অতিক্রমের অনুমতিগুলো হিসাবরক্ষকের নয়।
+                     *
+                     * ── এটা তৃতীয়বার ঘটল ────────────────────────────────
+                     * নিচে বিক্রয়কর্মীর ঘরে দুইবার এই ফাঁদটার কথা লেখা আছে
+                     * (`sales.discount.override`, `sales.target.manage`), আর
+                     * আজ ঠিক একই জিনিস এখানে হলো: `accounts.backdate.override`
+                     * ঘোষিত হওয়ামাত্র ঢালাও `accounts.%` নিয়মটা সেটা
+                     * হিসাবরক্ষককে **দিয়ে দিল** — কোনো ভুল বার্তা ছাড়াই।
+                     * ধরা পড়ল কেবল একটা টেস্টে, যেখানে তাঁর ৪০ দিন আগের
+                     * এন্ট্রি আটকানোর কথা ছিল আর আটকায়নি।
+                     *
+                     * দুইটাই সীমা অতিক্রম: একটা রোজকার জানালা ডিঙায়, আরেকটা
+                     * বন্ধ করা মাস খোলে। যিনি রোজ ভাউচার লেখেন তাঁর হাতে
+                     * নিজের কাজের পাহারা খোলার চাবি থাকা উচিত নয়।
+                     */
+                    ->whereNotIn('name', [
+                        'accounts.backdate.override',
+                        'accounts.period.reopen',
+
+                        /*
+                         * ⛔ চতুর্থবার — ২৫ সেপ্টেম্বর ২০২৬।
+                         *
+                         * ⓘ উপরের মন্তব্য বলে ফাঁদটা তিনবার ঘটেছে। এবার
+                         * `accounts.report.group` ঘোষণা করামাত্র ঢালাও
+                         * `accounts.%` নিয়মটা সেটা হিসাবরক্ষককে **দিয়ে
+                         * দিল** — আবারও কোনো ভুলবার্তা ছাড়াই।
+                         *
+                         * ⚠️ আর এটা আগের তিনটার চেয়েও গুরুতর: ওগুলো
+                         * নিজের কোম্পানির ভেতরের সীমা ডিঙাত, এটা
+                         * **কোম্পানির সীমানা** পেরোয়। ⓘ হিসাবরক্ষক
+                         * TDEPOT-এ বসেন; এই চাবি পেলে তিনি গ্রুপের পাতাটা
+                         * খুলতে পারতেন। ⭐ ফাঁস হত না (পাতা কেবল তাঁর
+                         * নিজের পিভটের কোম্পানিগুলো দেখায়), কিন্তু পাতাটা
+                         * তাঁর জন্য নয় — গ্রুপের ছবি মালিকের।
+                         *
+                         * ⓘ ধরা পড়ল
+                         * [[TheOwnerCouldNotSeeHisCompaniesTogetherTest::test_the_group_page_needs_its_own_key]]-এ।
+                         */
+                        'accounts.report.group',
+
+                        /*
+                         * ⛔ পঞ্চমবার — একই দিনে, একই ঢালাও নিয়মে।
+                         *
+                         * ⓘ `accounts.inter_company` **অন্য কোম্পানির
+                         * খাতায় দাখিলা লেখে**। ⚠️ উপরের চারটা ছিল সীমা
+                         * ডিঙানোর চাবি; এটা সীমা **পেরোনোর**।
+                         *
+                         * ⭐ এবার ফাঁদটা ধরা পড়েছে টেস্টের আগেই — কারণ
+                         * আজ সকালে ঠিক এই জায়গাতেই ঠোকর খেয়েছি, আর
+                         * নিয়মটা চেনা হয়ে গেছে: `accounts.` দিয়ে শুরু
+                         * হওয়া প্রতিটা নতুন চাবি হিসাবরক্ষক **আপনাআপনি**
+                         * পান, আর কেউ কিছু বলে না।
+                         */
+                        'accounts.inter_company',
+                    ])
+                    ->get()
+            );
+
+            $roles['salesman']->syncPermissions(
+                Permission::query()
+                    /*
+                     * দুইটা উপসর্গ বন্ধনীর ভেতরে — নাহলে AND আগে বাঁধে।
+                     *
+                     * আগে এটা ->where(...)->orWhere(...)->where('name','!=',...)
+                     * ছিল, আর SQL দাঁড়াত: sales.% OR (customer.% AND নয়-এটা)।
+                     * অর্থাৎ বাদ দেওয়ার নিয়মটা কেবল দ্বিতীয় উপসর্গে খাটত, আর
+                     * বিক্রয়কর্মী চিরকাল ধারের সীমা পার করার অনুমতি পেয়ে
+                     * এসেছেন — মন্তব্যে ঠিক উল্টোটা লেখা থাকা সত্ত্বেও।
+                     */
+                    ->where(fn ($q) => $q->where('name', 'like', 'sales.%')
+                        ->orWhere('name', 'like', 'customer.%')
+
+                        /*
+                         * পণ্যের তালিকা — মালিকের সিদ্ধান্ত, ২ সেপ্টেম্বর ২০২৬:
+                         * *"বিক্রয়কর্মী ডিলার শুধু পণ্যের তালিকা দেখবেন,
+                         * ক্রয়মূল্য দেখবেন না, স্টকও দেখতে পারবে না।"*
+                         *
+                         * ── কেন এটা ছাড়া অফলাইন অর্ডার অসম্ভব ─────────────
+                         * মাঠে নেট ছাড়া অর্ডার লেখার মানেই পণ্যটা বাছতে পারা,
+                         * আর সেটা ক্যাশে করা তালিকা ছাড়া হয় না। সিঙ্কের
+                         * হ্যান্ডলার এই চাবিটাই চায় ([[ProductSync]]), তাই
+                         * চাবি ছাড়া ফোনে পণ্যের তালিকা কোনোদিন নামত না —
+                         * আর সেলসম্যান দোকানে দাঁড়িয়ে কিছুই লিখতে পারতেন না।
+                         *
+                         * ── ⚠️ কেন হুবহু একটা নাম, `inventory.%` নয় ────────
+                         * এই ফাইলটাই পাঁচবার একই শিক্ষা দিয়েছে, ঠিক নিচেই
+                         * লেখা: ঢালাও উপসর্গ নতুন কোনো অনুমতি ঘোষিত হওয়ার
+                         * দিন সেটাও নীরবে দিয়ে দেয়। `inventory.%` লিখলে
+                         * বিক্রয়কর্মী **আজই** পেয়ে যেতেন `inventory.cost.view`
+                         * (ক্রয়মূল্য) আর `inventory.stock.view` (মজুদ) —
+                         * অর্থাৎ মালিক যে দুইটা জিনিস স্পষ্ট করে **না** বলেছেন,
+                         * ঠিক সেই দুইটাই।
+                         *
+                         * তাই একটা নাম, আর ষষ্ঠবার ফাঁদটায় পা না দিয়ে।
+                         */
+                        ->orWhere('name', 'inventory.product.view')
+
+                        /*
+                         * নিজের হাজিরা — মাঠকর্মী ফোন থেকে নেট ছাড়াই দেন
+                         * ([[AttendanceSync]])। এটা সরু চাবি (`hr.attendance.self`),
+                         * `hr.%` ঢালাও নয়: ঢালাও দিলে সে গোটা দলের হাজিরা ও
+                         * বেতনও দেখে ফেলত। একটা নাম, ঠিক যেমন পণ্যের তালিকা।
+                         */
+                        ->orWhere('name', 'hr.attendance.self'))
+                    /*
+                     * সীমা অতিক্রমের অনুমতিগুলো বিক্রয়কর্মীর নেই — সেটাই
+                     * অনুমোদন চাওয়ার কারণ।
+                     *
+                     * তালিকাটা আলাদা করে লেখা, কারণ "sales.%" ধরনের ঢালাও
+                     * অনুমতি নতুন কিছু যোগ হলেই তাকেও দিয়ে দেয়। ঠিক সেটাই
+                     * হয়েছিল: Sales মডিউল sales.discount.override ঘোষণা করল,
+                     * আর বিক্রয়কর্মী নীরবে ধারের সীমা পার করার ক্ষমতা পেয়ে
+                     * গেলেন — কোনো ভুল বার্তা ছাড়াই।
+                     */
+                    ->whereNotIn('name', [
+                        'sales.discount.override',
+
+                        /*
+                         * নিজের টার্গেট নিজে বসানো — এটাও সীমা অতিক্রম।
+                         *
+                         * ঠিক যে ফাঁদের কথা উপরে লেখা, সেটাই আবার ঘটেছিল:
+                         * Sales মডিউল `sales.target.manage` ঘোষণা করল, আর
+                         * ঢালাও `sales.%` নিয়মটা সেটা বিক্রয়কর্মীকে দিয়ে
+                         * দিল — কোনো ভুল বার্তা ছাড়াই। মাসের ২৮ তারিখে
+                         * সংখ্যাটা নামিয়ে দিলে অর্জন হঠাৎ ১২০% দেখাত।
+                         */
+                        'sales.target.manage',
+
+                        /*
+                         * কমিশনের সীমা ছাড়ানো — চতুর্থবার একই ফাঁদ।
+                         *
+                         * উপরে তিনবার এর কথা লেখা আছে, আর প্রতিবারই ধরা
+                         * পড়েছে ঘোষণার **পরে**। এবার ঘোষণার সাথেই সারিটা
+                         * বসানো হলো, যাতে বিক্রয়কর্মী কোনোদিন নিজের দেওয়া
+                         * ৫০% কমিশন নিজেই অনুমোদন করতে না পারেন।
+                         */
+                        'sales.commission.override',
+
+                        /*
+                         * রুটের খাতা — একই ফাঁদ, ঘোষণার সাথেই বসানো (NEXUS §২৭)।
+                         *
+                         * দেখার চাবিতে সব রুটের সব ডিলারের বাকি; বিক্রয়কর্মী
+                         * কেবল নিজের ডিলার দেখবেন (মালিক, ২৬ সেপ্টেম্বর) — আর
+                         * ছক/লক্ষ্য নিজে বসানো মানে নিজের লক্ষ্য নিজে ঠিক করা।
+                         */
+                        'sales.route.view',
+                        'sales.route.manage',
+
+                        /*
+                         * ডিলারকে পোর্টালের চাবি দেওয়া — পঞ্চমবার একই ফাঁদ।
+                         *
+                         * উপরে চারবার লেখা আছে, আর চারবারই ধরা পড়েছে
+                         * ঘোষণার পরে। এবারও ঢালাও `customer.%` নিয়মটা
+                         * `customer.portal` ঘোষণামাত্র বিক্রয়কর্মীকে দিয়ে
+                         * দিত — কোনো ভুল বার্তা ছাড়াই।
+                         *
+                         * এটা বাকিগুলোর চেয়েও আলাদা: সীমা অতিক্রম নয়,
+                         * দরজা খোলা। যিনি চাবি দিতে পারেন তিনি যেকোনো
+                         * ডিলারের পাসওয়ার্ড বসাতে পারেন — অর্থাৎ নিজের
+                         * জানা একটা পাসওয়ার্ড বসিয়ে সেই ডিলার সেজে ঢুকতে
+                         * পারেন। ওই সিদ্ধান্তটা মালিকের।
+                         */
+                        'customer.portal',
+
+                        // ⛔ দর তালিকা বসানো — কে কত দেবেন তা ঠিক করা; ঘোষণার সাথেই বাদ (৫ অক্টোবর ২০২৬)
+                        'sales.price_list.manage',
+
+                        /*
+                         * ⛔ সবার লিড ও সুযোগ দেখার চাবি — একই ফাঁদ আবার।
+                         * মালিকের নিয়ম (২৬ সেপ্টেম্বর): বিক্রয়কর্মী কেবল নিজেরটা।
+                         */
+                        'sales.lead.manage',
+                        'sales.opportunity.manage',
+
+                        /*
+                         * ⛔ ডিলারের বাঁধনের দুইটা চাবি — সপ্তমবার একই ফাঁদ (⛔১৬, ২ অক্টোবর ২০২৬)।
+                         * ⓘ `all` আর `binding.manage` দেয়াল ভাঙে বা বসায় — বিক্রয়কর্মীর নয়।
+                         * ⭐ `own` (দেয়ালের চিহ্ন) ঢালাও `customer.%` থেকে **পান** — মালিকের উত্তর "ক",
+                         * ৩ অক্টোবর ২০২৬: ডেমোতে দেয়ালটা দেখা যাক। বাঁধন নিচে, গ্রাহক বসার পরে।
+                         */
+                        'customer.dealers.all',
+                        'customer.binding.manage',
+                    ])
+                    ->get()
+            );
+
+            // একটা ডিপোর প্রধান কার্যালয় ও তিনটা উপজেলা শাখা — বাস্তব বিন্যাস।
+            // শাখা আলাদা করে না রাখলে সব এন্ট্রি একটাতেই বসে, যা DMS-এ একটা
+            // আলাদা ফিক্স লেগেছিল।
+        });
+
+        /*
+         * ⭐ দ্বিতীয় কোম্পানিও নিজের কপি পায়।
+         *
+         * ⓘ না দিলে মালিক ওখানে লগইন করে **কিছুই করতে পারতেন না** — আর
+         * সুইচার-পরীক্ষার টেস্টগুলো ঠিক সেটাই করে।
+         */
+        CompanyContext::forCompany($beta->id, function () {
+            app(PermissionSyncer::class)->sync();
+        });
+
+        $this->setUpCompany($alpha, [
+            ['code' => 'MMS', 'name_en' => 'Main Mymensingh', 'name_bn' => 'প্রধান ময়মনসিংহ', 'is_default' => true],
+            ['code' => 'NTK', 'name_en' => 'Netrakona', 'name_bn' => 'নেত্রকোনা'],
+            ['code' => 'DMD', 'name_en' => 'Dumdy', 'name_bn' => 'ডুমডি'],
+            ['code' => 'KDA', 'name_en' => 'Kendua', 'name_bn' => 'কেন্দুয়া'],
+        ]);
+
+        $this->setUpCompany($beta, [
+            ['code' => 'MAIN', 'name_en' => 'Main Office', 'name_bn' => 'প্রধান কার্যালয়', 'is_default' => true],
+        ]);
+
+        /*
+         * ── ⛔ ক্রমটা বদলাতে হলো, ৭ সেপ্টেম্বর ২০২৬ ──────────────────────
+         *
+         * আগে ব্যবহারকারী তৈরির সাথে সাথেই রোল বসত (`user()`-এর ভেতরে),
+         * আর কোম্পানিতে যুক্ত হত তার **পরে**।
+         *
+         * ⚠️ teams চালু হওয়ার পর ওটা আর চলে না: বরাদ্দের সারিতেও এখন
+         * `company_id` বসে, আর প্রসঙ্গ ছাড়া বসালে সেটা `null` — অর্থাৎ
+         * বরাদ্দটা **কোনো কোম্পানিতেই নয়**। ⛔ লগইন হত, মেনু খালি থাকত।
+         *
+         * ⭐ তাই এখন: আগে মানুষ, তারপর কোম্পানি, **সবশেষে রোল** — প্রতিটা
+         * কোম্পানির প্রসঙ্গে আলাদা করে।
+         */
+        $owner = $this->user('Al-Amin Shuvo', 'owner@abos.test');
+        $accountant = $this->user('হিসাবরক্ষক', 'accounts@abos.test');
+        $salesman = $this->user('বিক্রয়কর্মী', 'sales@abos.test');
+
+        // মালিক দুই কোম্পানিতেই — সুইচার পরীক্ষা করার জন্য এটাই দরকার।
+        /*
+         * ⭐ মালিকের দুই ধাপ আগে থেকেই বসানো — ২৮ সেপ্টেম্বর ২০২৬।
+         *
+         * ── ⓘ কেন ফিকশ্চারে, মিডলওয়্যারে ছাড় নয় ────────────────
+         * সুপার অ্যাডমিনে দুই ধাপ বাধ্যতামূলক
+         * ([[SuperAdminMustHaveTwoSteps]])। ⛔ মালিকের অ্যাকাউন্ট দিয়ে শত
+         * পরীক্ষা পর্দা খোলে, তাই এটা না বসালে প্রতিটাই /two-step-এ
+         * পাঠানো হত।
+         *
+         * ⚠️ মিডলওয়্যারে `app()->environment('testing')` দিয়ে ছাড় দেওয়া
+         * যেত — আর সেটাই সবচেয়ে খারাপ সমাধান: তাতে নিয়মটা পরীক্ষা
+         * হত **কেবল প্রোডাকশনে** — অর্থাৎ যেখানে ভুল হলে সবচেয়ে দামি।
+         * ⭐ তাই তালাটা সব পরিবেশে এক, আর ফিকশ্চারটা তালার ভিতর দিয়ে যায়,
+         * পাশ কাটিয়ে নয়।
+         *
+         * ── ⛔ চাবিটা লাইভে পৌঁছাতে পারে না ──────────────────────
+         * ⓘ এই সিডার `local`/`testing` ছাড়া চলতেই পারে না (উপরের
+         * পাহারা, এই ফাইলের মাথায়) — যাচাই করা, ধরে নেওয়া নয়।
+         * ⚠️ চাবিটা স্থির আর খোলাখুলি ডেমোর — গোপন কিছু নয়, আর এমন
+         * ভাবেই লেখা যেন কেউ এটা কোথাও নকল করতে না যান।
+         */
+        $owner->forceFill([
+            'mfa_secret' => 'DEMOONLYDEMOONLYDEMOONLYDEMOONLY',
+            'mfa_confirmed_at' => now(),
+            'mfa_recovery_codes' => null,
+        ])->save();
+
+        $owner->companies()->attach([$alpha->id, $beta->id]);
+        $accountant->companies()->attach([$alpha->id]);
+        $salesman->companies()->attach([$alpha->id]);
+
+        /*
+         * ⓘ মালিক দুই কোম্পানিতেই মালিক — তাই দুইটা বরাদ্দ, দুইটা আলাদা
+         * রোলের দিকে। ⚠️ teams-এর আগে একটা সারিই যথেষ্ট ছিল, আর ঠিক
+         * সেজন্যই এই বদলটা সহজে চোখ এড়িয়ে যায়।
+         */
+        CompanyContext::forCompany($alpha->id, function () use ($owner, $accountant, $salesman) {
+            $owner->assignRole(PermissionSyncer::SUPER_ADMIN_ROLE);
+            $accountant->assignRole('accountant');
+            $salesman->assignRole('salesman');
+        });
+
+        CompanyContext::forCompany($beta->id, fn () => $owner->assignRole(PermissionSyncer::SUPER_ADMIN_ROLE));
+
+        $owner->switchCompany($alpha->id);
+        $accountant->switchCompany($alpha->id);
+        $salesman->switchCompany($alpha->id);
+
+        /*
+         * ছাড়ে অনুমোদন — ⭐ যেকোনো ছাড়ে মালিকের সই, সীমা ছাড়া (মালিকের নিয়ম, ১ অক্টোবর ২০২৬)।
+         * ⓘ আগে এখানে হাতে ১,০০০ টাকার সীমার ছক বসত; এখন কোম্পানি খোলার সময়েই [[OwnerSignsDiscounts]] বসায়,
+         * আর মালিক এখানে আগে super_admin হন — তাই আবার ডাকা (দুইবার নিরাপদ)।
+         */
+        app(\App\Modules\Approval\Services\OwnerSignsDiscounts::class)->ensure($alpha);
+
+        // সরবরাহকারী, গুদাম, পণ্য আর চারটা অবস্থাতেই কিছু মাল — নাহলে
+        // মজুদের পর্দা খুললে ফাঁকা টেবিল, আর ফাঁকা টেবিল দেখে বোঝা যায় না
+        // অঙ্কটা ঠিক আছে কি না।
+        CompanyContext::forCompany($alpha->id, function () {
+            /*
+             * ⓘ ডেমো কোম্পানির খোলা জের সংরক্ষিত মুনাফায় — ৫ অক্টোবর ২০২৬ থেকে আসল কোম্পানিতে ডিফল্ট মালিকের মূলধন
+             * ([[OpeningBalanceService::openingEquity()]]), কিন্তু ডেমোর পরীক্ষাগুলো এই জেরকেই "আগের বছরের লাভ" ধরে
+             * মুনাফা ভাগ করে। ⚠️ নতুন নিয়মের নিজের পরীক্ষা সুইচ চালু করে মাপে ([[TheOpeningBalanceIsTheOwnersCapitalTest]])।
+             */
+            app(SettingsService::class)->set('accounts.opening_to_capital', false);
+            $this->setUpSuppliers();
+            $this->setUpCustomers();
+            $this->setUpStock();
+        });
+
+        /*
+         * ⭐ ডেমোর বিক্রয়কর্মী নিজের ডিলারে বাঁধা — মালিকের উত্তর "ক", ৩ অক্টোবর ২০২৬ (⛔১৬)।
+         *
+         * ⓘ চিহ্ন আছে (উপরে), তাই বাঁধন ছাড়া তিনি কিছুই দেখতেন না। সব ডিলার বাঁধা, কেবল
+         * "Niloy Store" নয় — ডেমোতে দেয়ালটা চোখে পড়ুক: মালিকের চোখে আছে, বিক্রয়কর্মীর চোখে নেই।
+         * ⓘ শুরু বছরের গোড়া থেকে, যাতে পুরনো তারিখের নমুনা-বিলও তাঁর নামে গোনা হয়।
+         */
+        CompanyContext::forCompany($alpha->id, function () use ($salesman, $alpha) {
+            // ⭐ ডেমোতে দেয়াল চালু — লাইভে ডিফল্ট বন্ধ, মালিক নিজে চালু করেন (৪ অক্টোবর ২০২৬)
+            app(\App\Core\Services\SettingsService::class)->set('customer.dealer_scope_enabled', true);
+
+            $dealers = \App\Modules\Customer\Models\Customer::acrossDealers()
+                ->where('name_en', '<>', 'Niloy Store')
+                ->orderBy('id')
+                ->pluck('id');
+
+            foreach ($dealers as $dealerId) {
+                \App\Modules\Customer\Models\DealerBinding::create([
+                    'company_id' => $alpha->id,
+                    'user_id' => $salesman->id,
+                    'customer_id' => $dealerId,
+                    'starts_on' => '2026-01-01',
+                ]);
+            }
+        });
+
+        /*
+         * ⭐ মালিকের নিজের কর্মী-রেকর্ড — ১৪ সেপ্টেম্বর ২০২৬।
+         *
+         * ── কেন লাগল ────────────────────────────────────────────────
+         * ফুটারে এখন নামের পাশে **পদবি** বসে (`shell/statusbar`), আর
+         * পদবি আসে HR-এর কর্মী রেকর্ড থেকে — `hr_employees.user_id`
+         * ধরে। ⓘ ঐ সংযোগটা ছাড়া ডেমোতে কারও পদবিই থাকত না, আর ফুটার
+         * কেবল নাম দেখাত।
+         *
+         * ⚠️ মালিকের নির্দেশ: *"tumi koro eta demo tai tumi koro"* —
+         * অর্থাৎ ডেমোতে জিনিসটা **বসানো থাকবে**, কাউকে হাতে ট্যাগ করতে
+         * হবে না।
+         */
+        CompanyContext::forCompany($alpha->id, fn () => $this->setUpOwnersDesk($owner));
+
+        CompanyContext::clear();
+
+        $this->command?->info('ডেমো ডাটা তৈরি হয়েছে।');
+        $this->command?->table(
+            ['ব্যবহারকারী', 'ইমেইল', 'রোল', 'কোম্পানি'],
+            [
+                ['Al-Amin Shuvo', 'owner@abos.test', PermissionSyncer::SUPER_ADMIN_ROLE, $alpha->code.' + '.$beta->code],
+                ['হিসাবরক্ষক', 'accounts@abos.test', 'accountant', $alpha->code],
+                ['বিক্রয়কর্মী', 'sales@abos.test', 'salesman', $alpha->code],
+            ],
+        );
+        $this->command?->comment('সবার পাসওয়ার্ড: password');
+    }
+
+    /**
+     * ডেমো কোম্পানিটাও ঠিক সেই পথেই চালু হয় যেভাবে আসলটা হবে।
+     *
+     * রেসিপিটা আগে এখানেই লেখা ছিল। পর্দা থেকে কোম্পানি বানানোর পথ
+     * খোলার পর দুই জায়গায় দুইটা রেসিপি থাকত, আর একদিন একটায় নতুন ধাপ
+     * যোগ হত আর অন্যটায় না — তখন পর্দা দিয়ে বানানো কোম্পানিগুলো নীরবে
+     * অসম্পূর্ণ থাকত, আর ডেমোতে সব ঠিক দেখাত।
+     *
+     * এখন দুইটাই CompanyProvisioner ডাকে। ডেমোতে যা কাজ করে, আসলেও তাই
+     * করে — আর সেটাই ডেমো রাখার একমাত্র কারণ।
+     */
+    private function setUpCompany(Company $company, array $branches): void
+    {
+        app(CompanyProvisioner::class)->setUp($company, $branches, [
+            'name' => '2026-2027',
+            'starts_on' => '2026-07-01',
+            'ends_on' => '2027-06-30',
+        ]);
+
+        $this->clearTheApprovalFlows($company);
+    }
+
+    /**
+     * ⛔ ডেমো কোম্পানির সইয়ের ছকগুলো মুছে ফেলা — ২৯ সেপ্টেম্বর ২০২৬।
+     *
+     * ── ⓘ কেন এটা এখানে, আর provisioner-এ কোনো সুইচ নয় ─────────────────
+     * [[CompanyProvisioner]] এখন প্রতিটা নতুন কোম্পানিতে ঘোষিত টাকার কাজের
+     * সইয়ের ছক বসায়, আর সেটাই মালিকের কোম্পানিতে দরকার। ⚠️ কিন্তু সিডার
+     * সেই একই পথে **ডেমো** কোম্পানি বানায়।
+     *
+     * ⛔ provisioner-কে "ছক ছাড়া বানাও" বলার কোনো ঘর রাখা হয়নি, আর
+     * রাখা হবেও না: টেস্টে বন্ধ করা যায় এমন সুইচ একদিন লাইভে বন্ধ থাকে।
+     * ⭐ তাই provisioner তার পুরো কাজ করে, আর সিডার তার **নিজের** ঘর
+     * গুছিয়ে নেয় — এটা সুইচ নয়, ডেমোর নিজের সিদ্ধান্ত।
+     *
+     * ── ⚠️ কেন মুছে ফেলা, নিষ্ক্রিয় করা নয় ────────────────────────────
+     * প্রথমে নিষ্ক্রিয় করেছিলাম। ⛔ তাতে ডেমোতে এমন একটা দশা তৈরি হত
+     * **যা লাইভে কোথাও নেই** — পনেরোটা বন্ধ ছক — আর ঐ দশাতেই যেসব টেস্ট
+     * নিজে ছক বসায় তারা থেমে যেত ("এই কাজের ছক আগে থেকেই আছে")। ⓘ মেপে
+     * দেখা: এগারোটা ফাইলে নিশ্চিত সংঘর্ষ, আরও উনিশটায় সম্ভাব্য।
+     *
+     * ⭐ মুছে ফেললে ডেমো হুবহু আজকের চেনা দশাতেই থাকে, আর কোনো টেস্ট নড়ে না।
+     *
+     * ── ⓘ লাইভ এতে ছোঁয়াও যায় না ──────────────────────────────────────
+     * `DemoSeeder` লাইভে কখনো চলে না; ডিপ্লয় কেবল `migrate` চালায়। আর
+     * মালিকের পথটা ([[CompanyProvisioner::create()]]) পাহারায় আছে:
+     * [[\Tests\Feature\Modules\SystemAdmin\ANewCompanyTookMoneyWithNobodyToSignTest]]
+     * দাবি করে ওখানে প্রতিটা ছক **থাকে আর চালু থাকে**।
+     */
+    private function clearTheApprovalFlows(Company $company): void
+    {
+        DB::table('approval_flows')->where('company_id', $company->id)->delete();
+    }
+
+    /**
+     * দুইজন সরবরাহকারী।
+     *
+     * ক্রয়ের কোনো পর্দাই সরবরাহকারী ছাড়া খোলা যায় না — আদেশ, চালান,
+     * বিল তিনটাতেই প্রথম ঘরটা সরবরাহকারীর। ফাঁকা তালিকা রেখে দিলে নতুন
+     * কেউ ক্রয় দেখতে গিয়ে ভাবতেন মডিউলটা কাজ করে না।
+     */
+    private function setUpSuppliers(): void
+    {
+        $suppliers = app(SupplierService::class);
+
+        $suppliers->create([
+            'name_en' => 'Pran RFL Distribution',
+            'name_bn' => 'প্রাণ আরএফএল ডিস্ট্রিবিউশন',
+            'phone' => '+8801711000001',
+            'address_en' => 'Ganginar Par, Mymensingh',
+            'address_bn' => 'গাঙ্গিনার পাড়, ময়মনসিংহ',
+        ]);
+
+        $suppliers->create([
+            'name_en' => 'Bismillah Distribution',
+            'name_bn' => 'বিসমিল্লাহ ডিস্ট্রিবিউশন',
+            'phone' => '+8801711000003',
+            'address_en' => 'Kendua, Netrakona',
+            'address_bn' => 'কেন্দুয়া, নেত্রকোনা',
+        ]);
+
+        $suppliers->create([
+            'name_en' => 'Akij Food & Beverage',
+            'name_bn' => 'আকিজ ফুড অ্যান্ড বেভারেজ',
+            'phone' => '+8801711000002',
+            'address_en' => 'Charpara, Mymensingh',
+            'address_bn' => 'চরপাড়া, ময়মনসিংহ',
+        ]);
+    }
+
+    /**
+     * তিনজন গ্রাহক।
+     *
+     * সরবরাহকারীর মতোই কারণ: বিক্রয়ের চারটা পর্দার প্রথম ঘরটাই গ্রাহকের,
+     * তাই তালিকা ফাঁকা থাকলে অর্ডারই খোলা যায় না।
+     *
+     * একজনের ধারের সীমা বসানো আছে — সীমার নিয়মটা চোখে দেখার জন্য।
+     * সীমা ছাড়া সবাই সমান হলে ব্যাপারটা আছে কি না তা বোঝাই যেত না।
+     */
+    /**
+     * ডিপোর নিজের এলাকা-ছক — এরিয়া আর তার নিচের পয়েন্ট।
+     *
+     * দেশ ও বিভাগ কোর নিজে বসায় (LocationService::installBangladesh),
+     * কারণ ওগুলো সবার জন্য এক। এরিয়া থেকে নিচে ব্যবসার নিজের ছক, তাই
+     * ডেমো ডিপোরটা এখানে।
+     *
+     * ── কেন এটা লাগল ────────────────────────────────────────────────
+     * গ্রাহকের তালিকায় পয়েন্ট ও এরিয়ার কলাম আছে (মালিকের চাওয়া ক্রম),
+     * আর ওগুলো ফাঁকা থাকলে কলাম দুইটা দেখেই বোঝা যেত না তারা কী দেখাবে।
+     * ফাঁকা ড্যাশ ভরা একটা তালিকা দিয়ে ডিজাইন যাচাই করা যায় না।
+     *
+     * @return array<string, int> পয়েন্টের কোড => id
+     */
+    private function setUpLocations(): array
+    {
+        $locations = app(LocationService::class);
+        $locations->installBangladesh();
+
+        $mymensingh = Location::query()
+            ->where('level', Location::DIVISION)
+            ->where('code', 'MYM')
+            ->firstOrFail();
+
+        $points = [];
+
+        /*
+         * এরিয়া › টেরিটরি › পয়েন্ট — মাঝের ধাপটা বাদ দেওয়া যায় না।
+         *
+         * প্রথমে পয়েন্টগুলো সরাসরি এরিয়ার নিচে বসানো হয়েছিল, আর
+         * LocationService থামিয়ে দিল: "উপরে টেরিটরি থাকার কথা, এরিয়া
+         * নয়।" সে ঠিকই বলছিল — ধাপটা এই কোম্পানিতে চালু আছে, আর চালু
+         * ধাপ এড়িয়ে গেলে গাছটার মাঝখানে ফাঁক পড়ত।
+         *
+         * বাস্তবেও ধাপটা কাজের: একজন এসআর একটা টেরিটরি চালান, আর তার
+         * নিচে কয়েকটা বাজার (পয়েন্ট)।
+         */
+        foreach ([
+            ['MYM-SAD', 'Mymensingh Sadar', 'ময়মনসিংহ সদর', [
+                ['TR-MYM1', 'Mymensingh Town', 'ময়মনসিংহ শহর', [
+                    ['PT-GNG', 'Ganginar Par', 'গাঙ্গিনার পাড়'],
+                    ['PT-CHR', 'Charpara', 'চরপাড়া'],
+                ]],
+            ]],
+            ['NTK', 'Netrakona', 'নেত্রকোনা', [
+                ['TR-NTK1', 'Kendua Route', 'কেন্দুয়া রুট', [
+                    ['PT-KDA', 'Kendua Bazar', 'কেন্দুয়া বাজার'],
+                    ['PT-DMD', 'Dumdy Bazar', 'ডুমডি বাজার'],
+                ]],
+            ]],
+        ] as [$areaCode, $areaEn, $areaBn, $territoryRows]) {
+            $area = $locations->create([
+                'code' => $areaCode,
+                'name_en' => $areaEn,
+                'name_bn' => $areaBn,
+                'level' => Location::AREA,
+                'parent_id' => $mymensingh->id,
+            ]);
+
+            foreach ($territoryRows as [$trCode, $trEn, $trBn, $pointRows]) {
+                $territory = $locations->create([
+                    'code' => $trCode,
+                    'name_en' => $trEn,
+                    'name_bn' => $trBn,
+                    'level' => Location::TERRITORY,
+                    'parent_id' => $area->id,
+                ]);
+
+                foreach ($pointRows as [$code, $en, $bn]) {
+                    $points[$code] = $locations->create([
+                        'code' => $code,
+                        'name_en' => $en,
+                        'name_bn' => $bn,
+                        'level' => Location::POINT,
+                        'parent_id' => $territory->id,
+                    ])->id;
+                }
+            }
+        }
+
+        return $points;
+    }
+
+    private function setUpCustomers(): void
+    {
+        $customers = app(CustomerService::class);
+        $points = $this->setUpLocations();
+
+        /*
+         * নামগুলো ubos-dms থেকে নেওয়া — বানানো নয়।
+         *
+         * দুইটা পণ্য একই ব্যবসার, তাই ডেমো ডাটাও এক রাখলে একটাতে দেখা
+         * পর্দা অন্যটায় চিনতে অসুবিধা হয় না। আর DMS-এর নামগুলো আসল
+         * ডিপোর তালিকা থেকে এসেছে, তাই সেগুলো দিয়ে পরীক্ষা করলে যা দেখা
+         * যায় তা বাস্তবেও ওরকমই দেখাবে — "Test Customer 1" দিয়ে যা
+         * কোনোদিন দেখা যেত না।
+         */
+        /*
+         * মালিকের নাম আর পয়েন্ট — দোকানের নামের সাথে মিলিয়ে।
+         *
+         * "মায়ের দোয়া স্টোর"-এ ফোন করলে "রফিকুল ইসলাম"-কে চাইতে হয়;
+         * দুইটা আলাদা তথ্য, তাই আলাদা ঘরে। আর পয়েন্টটা ঠিকানার সাথে
+         * মেলানো — কেন্দুয়ার দোকান কেন্দুয়া পয়েন্টে, নইলে তালিকার
+         * এরিয়া কলামটা ঠিকানার সাথে অমিল দেখাত।
+         */
+        foreach ([
+            ['Rahim Traders', 'রহিম ট্রেডার্স', 'Md. Rahim Uddin', 'PT-KDA', '+8801811000001',
+                'Kendua Bazar, Netrakona', 'কেন্দুয়া বাজার, নেত্রকোনা', '50000', 15],
+            ['Karim Stores', 'করিম স্টোর্স', 'Abdul Karim', 'PT-DMD', '+8801811000002',
+                'Dumdy Bazar, Mymensingh', 'ডুমডি বাজার, ময়মনসিংহ', '20000', 7],
+            ['Bismillah Enterprise', 'বিসমিল্লাহ এন্টারপ্রাইজ', 'Shahidul Islam', 'PT-GNG', '+8801811000003',
+                'Ganginar Par, Mymensingh', 'গাঙ্গিনার পাড়, ময়মনসিংহ', '75000', 30],
+            ['Alam Store', 'আলম স্টোর', 'Nurul Alam', 'PT-KDA', '+8801811000004',
+                'Kendua, Netrakona', 'কেন্দুয়া, নেত্রকোনা', '10000', 7],
+            ['Niloy Store', 'নিলয় স্টোর', 'Niloy Chandra Das', 'PT-CHR', '+8801811000005',
+                'Charpara, Mymensingh', 'চরপাড়া, ময়মনসিংহ', '0', 0],
+        ] as [$en, $bn, $owner, $point, $phone, $addressEn, $addressBn, $limit, $days]) {
+            /*
+             * ⓘ সীমা পরে বসে, সরাসরি — নিরীক্ষা §১.২ (২৭ সেপ্টেম্বর ২০২৬): নতুন গ্রাহক
+             * শূন্য সীমায় জন্মায়, সীমা বাড়ে কেবল সইয়ে। ⚠️ নমুনা-তথ্য বিশ্বস্ত পথ,
+             * কোনো ব্যবহারকারী নয় — তাই এখানে সই চাওয়ার কেউ নেই; সীমাটা
+             * `forceFill` দিয়ে বসে, সেবার দরজা দিয়ে নয়।
+             */
+            $customer = $customers->create([
+                'name_en' => $en,
+                'name_bn' => $bn,
+                'owner_name' => $owner,
+                'location_id' => $points[$point] ?? null,
+                'phone' => $phone,
+                'address_en' => $addressEn,
+                'address_bn' => $addressBn,
+                'credit_limit' => '0',
+                'credit_days' => $days,
+            ]);
+
+            if (bccomp($limit, '0', 4) > 0) {
+                $customer->forceFill(['credit_limit' => $limit])->save();
+            }
+        }
+
+        /*
+         * নগদ গ্রাহক — কাউন্টারের বিক্রি এই নামে বসে।
+         *
+         * POS-এ প্রতিবার গ্রাহক বাছতে বললে লাইন দাঁড়িয়ে যায়, তাই একজন
+         * আগে থেকে বসানো থাকে। আলাদা POS-তালিকা নয়, এই একই মাস্টারেরই
+         * একটা সারি — দুইটা তালিকা রাখলে একই দোকানের হিসাব দুই জায়গায়
+         * ভাগ হয়ে যেত।
+         */
+        $walkin = $customers->create([
+            'name_en' => 'Cash Customer',
+            'name_bn' => 'নগদ গ্রাহক',
+            'credit_limit' => 0,
+            'credit_days' => 0,
+        ]);
+
+        app(SettingsService::class)->set('sales.walkin_customer_id', $walkin->id);
+
+        /*
+         * ⭐ ডেমো ডেটায় দামের কড়াকড়ি বন্ধ — ২৩ সেপ্টেম্বর ২০২৬।
+         *
+         * ── ⛔ কেন এটা দরকার হলো ────────────────────────────────────
+         * মালিকের নিয়ম: নির্ধারিত দামের নিচে বিক্রয় নেওয়া হবে না। ⓘ
+         * নিয়মটা [[SalesDefaults]] নতুন কোম্পানি খোলার দিনে বসায় — আর
+         * `DemoSeeder`ও কোম্পানি খোলে, তাই ডেমোতেও বসে যেত।
+         *
+         * ⚠️ ফল ছিল বিক্রয়ের সুইটে **২৫টা লাল**, প্রতিটা এক বার্তায়:
+         * *"দরটা মান দাম থেকে % এর বেশি সরে গেছে"*। ⓘ ফিক্সচারগুলো
+         * ৩,৫৫০ টাকার চাল **১০০ টাকায়** বেচে — ওটা চেক, ডিপোজিট বা
+         * ব্যান্ডের পরীক্ষা, দামের নয়, আর দরটা সেখানে আকস্মিক।
+         *
+         * ⛔ পঁচিশটা ফিক্সচারের দর বদলানো যেত, কিন্তু সেটা ভুল সারাই:
+         * ঐ পরীক্ষাগুলো দাম মাপে না, আর প্রতিটায় একটা "ঠিক" দর বসানো
+         * মানে একদিন পণ্যের দাম বদলালে পঁচিশটাই আবার লাল।
+         *
+         * ⭐ ডেমো ডেটা দেখে-শুনে চেষ্টা করার জিনিস — সেখানে দামের বাধা
+         * শেখার পথে দাঁড়ায়। ⚠️ আসল কোম্পানিতে নিয়মটা চালুই থাকে, আর
+         * সেটা [[TheCounterRefusedToSellBelowTheSetPrice]] মেপে দেখে।
+         */
+        app(SettingsService::class)->set(PricingRule::POLICY, PricingRule::ALLOW);
+
+        /*
+         * ⓘ ডেমো কোম্পানিতে ভ্যাট দুই দিকেই চালু — মালিকের সিদ্ধান্তে ডিফল্ট বন্ধ (২৮ সেপ্টেম্বর ২০২৬),
+         * কিন্তু আজকের দাবিগুলোর অনেকগুলো ভ্যাটের পথটাই মাপে; বন্ধ থাকলে ওরা চুপচাপ অন্য জিনিস
+         * মাপত। ⭐ "বন্ধ" নিজের দাবিতে, সেটিং মুছে দেখা ([[DirectPurchaseCostsLandRightTest]],
+         * [[EveryCounterSaleMustMatchTheBooksFiveWaysTest]])। ⚠️ লাইভের কোম্পানি এই সিডার থেকে নয় —
+         * সেখানে ডিফল্টই খাটে: বন্ধ।
+         */
+        app(SettingsService::class)->set('purchase.vat_enabled', true);
+        app(SettingsService::class)->set('sales.vat_enabled', true);
+        app(SettingsService::class)->flush();
+    }
+
+    /**
+     * দুইটা গুদাম, কয়েকটা পণ্য, আর চারটা অবস্থাতেই মাল।
+     *
+     * পরিমাণগুলো ইচ্ছাকৃতভাবে আলাদা: একটা পণ্যে শুধু তাকের মাল, একটায়
+     * অর্ডারে ধরা আছে, একটায় আটকানো, আর একটায় তিনটাই। তাতে মজুদের পর্দা
+     * খুললেই Floor − Reserved − Hold = Available অঙ্কটা চোখে পড়ে, আর
+     * ভুল হলে সেটাও চোখে পড়ে।
+     */
+    private function setUpStock(): void
+    {
+        $warehouses = app(WarehouseService::class);
+        $products = app(ProductService::class);
+        $stock = app(StockService::class);
+
+        $main = $warehouses->create([
+            'code' => 'WH-MMS',
+            'name_en' => 'Mymensingh Store',
+            'name_bn' => 'ময়মনসিংহ গুদাম',
+            'branch_id' => Branch::query()->where('code', 'MMS')->value('id'),
+            'is_default' => true,
+        ]);
+
+        $netrakona = $warehouses->create([
+            'code' => 'WH-NTK',
+            'name_en' => 'Netrakona Store',
+            'name_bn' => 'নেত্রকোনা গুদাম',
+            'branch_id' => Branch::query()->where('code', 'NTK')->value('id'),
+        ]);
+
+        $unit = Unit::query()->where('code', 'PCS')->value('id');
+        $sack = Unit::query()->where('code', 'BAG')->value('id') ?? $unit;
+
+        /*
+         * পণ্যের নাম ও বাংলা রীতি ubos-dms থেকে — বিশেষ করে মাপের অংশটা।
+         *
+         * DMS-এর নাম-পরামর্শক "Milk Powder 1kg" থেকে "গুঁড়া দুধ ১ কেজি"
+         * বানায়: সংখ্যাটা বাংলা অঙ্কে, আর এককটা বাংলা শব্দে ("gm" →
+         * "গ্রাম", "জিএম" নয়)। একই ছক এখানেও, নাহলে এক পণ্যের বাংলা নাম
+         * দুই পণ্যে দুই রকম হত।
+         */
+        $rows = [
+            ['Miniket Rice 50kg', 'মিনিকেট চাল ৫০ কেজি', $sack, '3400', '3550', '8901000000017'],
+            ['Soyabean Oil 5 ltr', 'সয়াবিন তেল ৫ লিটার', $unit, '820', '880', '8901000000024'],
+            ['Milk Powder 1kg', 'গুঁড়া দুধ ১ কেজি', $unit, '690', '740', '8901000000031'],
+            ['Cosmos Biscuit 40gm', 'কসমস বিস্কুট ৪০ গ্রাম', $unit, '8', '10', '8901000000048'],
+            ['Premium Tea 250gm', 'প্রিমিয়াম চা ২৫০ গ্রাম', $unit, '145', '165', '8901000000055'],
+            ['Soap 100gm', 'সাবান ১০০ গ্রাম', $unit, '42', '50', '8901000000062'],
+        ];
+
+        $made = [];
+
+        foreach ($rows as [$en, $bn, $unitId, $buy, $sell, $barcode]) {
+            $made[] = $products->create([
+                'name_en' => $en,
+                'name_bn' => $bn,
+                'unit_id' => $unitId,
+                'purchase_price' => $buy,
+                'sale_price' => $sell,
+                'reorder_level' => '20',
+                'barcode' => $barcode,
+            ]);
+        }
+
+        [$rice, $oil, $milk, $biscuit, $tea, $soap] = $made;
+
+        // খোলা মজুদ — উৎস 'opening', যাতে ড্রিল-ডাউনে "কোথা থেকে এল"
+        // প্রশ্নের একটা উত্তর থাকে
+        foreach ([[$rice, '120'], [$oil, '75'], [$milk, '240'], [$biscuit, '1800'],
+            [$tea, '260'], [$soap, '400']] as [$product, $qty]) {
+            $this->openWith($product, $main, $qty);
+        }
+
+        $this->openWith($rice, $netrakona, '40');
+
+        // অর্ডারে ধরা — মাল তাকেই আছে, কিন্তু অন্যের নামে
+        $stock->move(
+            product: $milk, warehouse: $main,
+            sourceType: 'sales_order', sourceId: 1,
+            reserved: '60', documentNo: 'SO-000001',
+        );
+
+        $stock->move(
+            product: $biscuit, warehouse: $main,
+            sourceType: 'sales_order', sourceId: 2,
+            reserved: '25', documentNo: 'SO-000002',
+        );
+
+        // আটকানো — দুইটা কারণে, আর কারণ দুইটা এক জিনিস নয়
+        $stock->hold($rice, $main, '30', $this->reason('HOLD-PRICE'));
+        $stock->hold($soap, $main, '12', $this->reason('HOLD-DMG'));
+    }
+
+    /**
+     * খোলা মজুদ — মাল আর তার দাম, একসাথে।
+     *
+     * ── কেন দামটাও ─────────────────────────────────────────────────────
+     * খোলা মজুদ মানে "ব্যবসা শুরুর দিন তাকে যা ছিল", আর তাকে থাকা মালের
+     * একটা দাম থাকেই — নইলে ওটা সম্পদ হিসেবে ব্যালেন্স শিটে বসত না।
+     *
+     * দামটা না বসালে প্রথম বিক্রয়েই আটকে যেত: FIFO জিজ্ঞেস করে "এই
+     * মালটা কোন চালানে, কত দামে ঢুকেছিল?", আর খোলা মজুদের কোনো উত্তর
+     * থাকত না। ঠিক এটাই ধরা পড়েছে — স্তর বসানোর পর ছয়টা পুরনো টেস্ট
+     * লাল হয়ে গিয়েছিল, আর তারা ঠিকই বলছিল।
+     *
+     * বাস্তব ডিপোতেও নিয়মটা এক: পুরনো হিসাব থেকে ABOS-এ আসার দিন
+     * প্রতিটা পণ্যের পরিমাণের পাশে তার দরও লিখতে হবে।
+     */
+    private function openWith(Product $product, Warehouse $warehouse, string $qty): void
+    {
+        $movement = app(StockService::class)->move(
+            product: $product, warehouse: $warehouse,
+            sourceType: 'opening', sourceId: $product->id,
+            floor: $qty, narration: 'খোলা মজুদ',
+        );
+
+        $value = bcmul($qty, (string) $product->purchase_price, 4);
+
+        app(CostLayerService::class)->receive(
+            product: $product,
+            qty: $qty,
+            unitCost: (string) $product->purchase_price,
+            sourceType: 'opening',
+            sourceId: $product->id,
+            documentNo: 'OPENING',
+        );
+
+        /*
+         * খতিয়ানেও বসে — নইলে তাকে মাল থাকে আর ব্যালেন্স শিটে শূন্য।
+         *
+         * আগে এই লাইনটা ছিল না, আর তাতে ডিপোর ৮,৪০,০০০ টাকার মাল খাতার
+         * বাইরে পড়ে থাকত। ধরা পড়েছে FIFO বসানোর পর, স্তরের মূল্য আর
+         * খতিয়ানের মজুদ পাশাপাশি রেখে — আগে দুইটা সংখ্যা কখনো একসাথে
+         * দেখা হত না।
+         */
+        app(OpeningBalanceService::class)->forInventory(
+            sourceId: $movement->id,
+            documentNo: 'OPENING',
+            amount: $value,
+        );
+    }
+
+    private function reason(string $code): ReasonCode
+    {
+        return ReasonCode::query()->where('code', $code)->firstOrFail();
+    }
+
+    /**
+     * ⭐ মালিককে একজন কর্মী হিসেবেও বসানো — যাতে তাঁর একটা পদবি থাকে।
+     *
+     * ── কেন এটা দরকার ───────────────────────────────────────────────
+     * ফুটারে নামের পাশে পদবি দেখায় ([[shell.statusbar]]), আর পদবি
+     * আসে HR থেকে — লগইন ও কর্মীর মধ্যে `user_id` সেতু ধরে।
+     * ⓘ ⚠️ ঐ সেতুটা বসানোর ঘরটা ফর্মে **আজই প্রথম আঁকা হলো**; কলামটা
+     * ২০২৬-০৮-০৯ থেকে থাকলেও কেউ কোনোদিন বসাতে পারেনি।
+     *
+     * ── ⓘ কেন "CEO" পদবিটা এখানে বানানো হয়, মাস্টার তালিকায় নয় ──────
+     * `MasterListService`-এর ডিফল্ট সাতটা পদবি ডিপোর কাজের — ব্যবস্থাপক,
+     * বিক্রয় প্রতিনিধি, গুদামরক্ষী, চালক। ⚠️ প্রতিটা নতুন প্রতিষ্ঠানে
+     * "CEO" বসানো ভুল হত: বেশিরভাগ ডিপোতে ঐ পদবির কেউ নেই, আর
+     * মাস্টার ডাটায় অব্যবহৃত সারি জমলে তালিকাটা পড়া কঠিন হয়।
+     * ⭐ তাই ওটা **ডেমোর তথ্য**, আর ডেমোর ফাইলেই থাকে।
+     *
+     * ── ⚠️ কেন `Employee::create()`, সেবাটা নয় ──────────────────────
+     * [[EmployeeService::create()]] কোড বসায় নম্বর-সিরিজ থেকে, আর
+     * সিডারে সেটা চালালে ডেমোর কর্মী-কোড আর বাস্তব ব্যবহারের কোড একই
+     * সিরিজ ভাগ করত। ⓘ এখানে কোডটা হাতে বসানো (`EMP-0001`), যেভাবে
+     * ডেমোর বাকি সব কোড বসে।
+     */
+    private function setUpOwnersDesk(User $owner): void
+    {
+        $ceo = Designation::create([
+            'code' => 'CEO',
+            'name_en' => 'Chief Executive Officer',
+            'name_bn' => 'প্রধান নির্বাহী',
+            'is_active' => true,
+        ]);
+
+        Employee::create([
+            'branch_id' => Branch::query()->orderBy('id')->value('id'),
+            'code' => 'EMP-0001',
+            'name_en' => $owner->name,
+            'name_bn' => $owner->name,
+            'mobile' => '01711134341',
+            'email' => $owner->email,
+
+            /*
+             * ⭐ এই লাইনটাই পুরো কাজের কারণ — লগইনটা মানুষটার সাথে
+             * বাঁধা। ⓘ এটা ছাড়া ফুটার কেবল নাম দেখাত, পদবি নয়।
+             */
+            'user_id' => $owner->id,
+
+            'designation_id' => $ceo->id,
+            'joining_date' => now()->subYears(2)->toDateString(),
+            'payment_method' => 'cash',
+            'is_active' => true,
+        ]);
+    }
+
+    private function user(string $name, string $email): User
+    {
+        $user = User::create([
+            'name' => $name,
+            'email' => $email,
+            'password' => Hash::make('password'),
+            'locale' => 'bn',
+            'is_active' => true,
+        ]);
+
+        /*
+         * ⚠️ রোল এখানে বসে না — ৭ সেপ্টেম্বর ২০২৬।
+         *
+         * ⓘ teams চালু হওয়ার পর বরাদ্দের সারিতে `company_id` লাগে, আর
+         * এই মুহূর্তে ব্যবহারকারী কোনো কোম্পানিতেই যুক্ত নন। ⛔ এখানে
+         * বসালে বরাদ্দটা `company_id = null` নিয়ে বসত — কারও নয়।
+         */
+        return $user;
+    }
+
+    /**
+     * লোগোর ফাইলগুলো সেখানে বসানো, যেখানে সারিগুলো বলে সেগুলো আছে।
+     *
+     * ── কী ভাঙা ছিল ─────────────────────────────────────────────────
+     * সিডার `logo_path` বসাত (`logos/Trade Depot.png`), কিন্তু ফাইলটা
+     * বসাত না। ফাইলটা ছিল কেবল যে মেশিনে একদিন হাতে আপলোড করা
+     * হয়েছিল সেখানে — আর `storage/app/public/*` gitignored, তাই
+     * সার্ভারে কোনোদিন পৌঁছাত না।
+     *
+     * ফল: `Company::logoData()` চুপচাপ `null` ফেরাত, আর **A4 ছাপায়
+     * লোগো বসত না**। মালিকের রিপোর্ট, ২২ আগস্ট: "A4 ছাপায় লোগো
+     * ভাঙা"। কোডে কিছুই ভাঙা ছিল না — ছবিটাই ছিল না।
+     *
+     * ── কেন ফাইলগুলো এখন রিপোতে ────────────────────────────────────
+     * সিডার একটা পথ ঘোষণা করলে সেই পথে সত্যিই কিছু থাকা তার নিজের
+     * দায়িত্ব। নাহলে সিডারটা একটা মিথ্যা বলে, আর মিথ্যাটা ধরা পড়ে
+     * ছাপার কাগজে — ছাপা হয়ে যাওয়ার পরে।
+     *
+     * ── কেন `copy`, `move` নয় ──────────────────────────────────────
+     * উৎসটা রিপোর নিজের ফাইল। সরিয়ে নিলে দ্বিতীয়বার সিড করা যেত না।
+     */
+    private function putLogosWhereTheRowsSayTheyAre(): void
+    {
+        $from = database_path('seeders/assets/logos');
+
+        if (! is_dir($from)) {
+            return;
+        }
+
+        foreach (glob($from.DIRECTORY_SEPARATOR.'*.png') ?: [] as $file) {
+            $target = 'logos/'.basename($file);
+
+            /*
+             * আগে থেকে থাকলে ছোঁয়া হয় না।
+             *
+             * চালু সার্ভারে কোম্পানি নিজের আসল লোগো আপলোড করে থাকতে
+             * পারে। সিড করলেই সেটা ডেমোর ছবি দিয়ে চাপা পড়লে ছাপার
+             * কাগজে অন্য কারো লোগো বসত।
+             */
+            if (Storage::disk('public')->exists($target)) {
+                continue;
+            }
+
+            Storage::disk('public')->put($target, (string) file_get_contents($file));
+        }
+    }
+}

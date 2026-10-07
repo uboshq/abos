@@ -1,0 +1,250 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Modules\MasterData\Http\Controllers;
+
+use App\Core\Engines\NumberSeries\NumberSeriesEngine;
+use App\Core\Module\ModuleRegistry;
+use App\Core\Services\MenuBuilder;
+use App\Core\Services\NumberSeriesProvisioner;
+use App\Http\Controllers\Controller;
+use App\Models\FinancialYear;
+use App\Models\NumberSeries;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Illuminate\Routing\Controllers\HasMiddleware;
+use Illuminate\Routing\Controllers\Middleware;
+use Illuminate\View\View;
+
+/**
+ * ডকুমেন্ট নম্বর সিরিজ।
+ *
+ * সিরিজগুলো মডিউলের ঘোষণা থেকে নিজে থেকে তৈরি হয়
+ * (NumberSeriesProvisioner), তাই এখানে "নতুন" বোতাম নেই — শুধু উপসর্গ
+ * ও শূন্যের সংখ্যা বদলানো যায়।
+ *
+ * পরের নম্বরটা এখানে বদলানো যায় না, ইচ্ছাকৃতভাবে: পিছিয়ে দিলে একই
+ * নম্বর দুইবার ইস্যু হত, আর এগিয়ে দিলে অডিটে একটা ফাঁক থাকত যার কোনো
+ * ব্যাখ্যা নেই। দুইটাই এমন ভুল যা মাস পরে ধরা পড়ে।
+ */
+class NumberSeriesController extends Controller implements HasMiddleware
+{
+    /**
+     * ছকে যে চিহ্নগুলো বসানো যায়।
+     *
+     * তালিকাটা পর্দায় দেখানো হয়। না দেখালে ব্যবহারকারী জানতেন না
+     * কী কী লেখা যায়, আর অনুমান করে ভুল চিহ্ন লিখলে সেটা হুবহু
+     * নম্বরে বসে যেত — "INV-{MONTH}-0001"।
+     *
+     * @var array<string, string>
+     */
+    private const PLACEHOLDERS = [
+        '{PREFIX}' => 'master_data::field.prefix',
+        '{SUFFIX}' => 'master_data::field.suffix',
+        '{FY}' => 'master_data::field.financial_year',
+        '{YYYY}' => 'master_data::field.year_four',
+        '{YY}' => 'master_data::field.year_two',
+        '{MM}' => 'master_data::field.month',
+        '{DD}' => 'master_data::field.day',
+        '{BRANCH}' => 'core.company.branch',
+        '{SEQ}' => 'master_data::field.sequence',
+    ];
+
+    public function __construct(
+        private readonly MenuBuilder $menu,
+        private readonly ModuleRegistry $registry,
+        private readonly NumberSeriesEngine $numbers,
+        private readonly NumberSeriesProvisioner $provisioner,
+    ) {}
+
+    public static function middleware(): array
+    {
+        /*
+         * ⛔ চাবিটা `system_admin.settings.manage` — ৬ সেপ্টেম্বর ২০২৬।
+         *
+         * ── কেন বদলাল ───────────────────────────────────────────────
+         * মালিকের নিয়ম: *"মাস্টারে তৈরি হয়, **কন্ট্রোল প্যানেলে
+         * নিয়ন্ত্রণ হয়**।"* ⓘ সারিটা তাই System Admin-এর মেনুতে গেছে।
+         *
+         * ⚠️ কিন্তু মেনুর চাবি আর রুটের চাবি আলাদা রেখে দিয়েছিলাম, আর
+         * [[TheMenuAsksWhatTheRouteAsksTest]] ঠিকই ধরেছে: যাঁর মেনুর চাবি
+         * আছে অথচ রুটেরটা নেই, **তিনি সারিটা দেখবেন আর ক্লিক করলে ৪০৩
+         * পাবেন — নিজের কাজের পর্দায়, রোজ**।
+         *
+         * ⓘ আগের মন্তব্যে লিখেছিলাম *"কন্ট্রোলারের চাবি বদলানো মানে কার
+         * হাতে ক্ষমতা যাবে সেই সিদ্ধান্ত, আর সেটা মালিকের"* — যুক্তিটা ঠিক
+         * ছিল, তাই মেপে দেখেছি: **যে রোলে `master_data.manage` আছে, তার
+         * `system_admin.settings.manage`-ও আছে** (owner, একমাত্র)। ⛔ অর্থাৎ
+         * কেউ কিছু হারাচ্ছে না, আর অপেক্ষা করার কারণটাই নেই।
+         *
+         * ⚠️ ভবিষ্যতে যদি কোনো রোলে একটা থাকে আর অন্যটা না থাকে, এই
+         * বদলটা তার কাছ থেকে পর্দাটা কেড়ে নেবে — তখন সিদ্ধান্তটা আবার
+         * মালিকের।
+         */
+        return [new Middleware('can:system_admin.settings.manage')];
+    }
+
+    /**
+     * ⛔ পাতা ভাগ নেই, ইচ্ছাকৃত — সারির সংখ্যা কোডে বাঁধা।
+     *
+     * একটা সারি মানে একটা মডিউলের একটা ডকুমেন্টের ধরন, আর ওই তালিকাটা
+     * ডাটাবেজ নয়, **সোর্স কোড** ঠিক করে ([[provision]] ঠিক নিচেই সেটা
+     * বসায়)। ব্যবহারকারী যত কাজই করুন, সারি বাড়ে কেবল তখনই যখন কেউ
+     * নতুন একটা ডকুমেন্টের ধরন লেখে।
+     *
+     * কারণটা `EveryListScreenPaginatesTest`-এর ছাড়ের তালিকাতেও আছে।
+     */
+    public function index(Request $request): View
+    {
+        /*
+         * তালিকা দেখানোর আগে অনুপস্থিত সিরিজগুলো বসিয়ে নেওয়া।
+         *
+         * ── কেন এখানে ───────────────────────────────────────────────
+         * সিরিজ তৈরি হয় বছর খোলার সময়। কিন্তু নতুন একটা মডিউল (বা
+         * পুরনো মডিউলে নতুন একটা ডকুমেন্ট) মাঝপথে যোগ হলে চলতি বছরে
+         * তার সিরিজ থাকে না, আর প্রথম ডকুমেন্ট বানাতে গিয়ে ব্যবহারকারী
+         * পান: "সিরিজ নেই, Master Data → ডকুমেন্ট নম্বর সিরিজে বসান।"
+         *
+         * তিনি এখানে এসে দেখতেন সারিটাই নেই, আর বসানোরও কোনো বোতাম
+         * নেই — বার্তাটা তাকে এমন এক পর্দায় পাঠাত যেখানে কিছু করার নেই।
+         *
+         * কাজটা নিরীহ: যা আছে তা ছোঁয়া হয় না, শুধু অনুপস্থিতগুলো বসে।
+         */
+        $this->provisioner->provision();
+
+        /*
+         * ⭐ এক বছরের সিরিজ একবার — মালিক, ২ অক্টোবর ২০২৬: *"Sob Dabole keno"*।
+         *
+         * ⓘ প্রতিটা অর্থবছরের নিজের সিরিজ থাকে। দুই বছর খোলা কোম্পানিতে তালিকায় প্রতিটা কাগজ দুইবার আসত,
+         * অথচ সারিতে বছরের নাম ছিল না — দেখতে হুবহু এক, যেন ভুলে দুইবার বসেছে। এখন একটা বছরের সারিই
+         * দেখায় (ডিফল্ট চলতি বছর), আর একাধিক বছর থাকলে উপরে বছর বাছার ঘর।
+         */
+        $years = FinancialYear::query()
+            ->whereIn('id', NumberSeries::query()->select('financial_year_id'))
+            ->orderByDesc('starts_on')
+            ->get(['id', 'name', 'is_current']);
+
+        $year = $years->firstWhere('id', (int) $request->query('fy'))
+            ?? $years->firstWhere('is_current', true)
+            ?? $years->first();
+
+        return view('master_data::series.index', [
+            'menu' => $this->menu->forUser($request->user()),
+            'series' => NumberSeries::query()
+                ->when($year, fn ($q) => $q->where('financial_year_id', $year->id))
+                ->orderBy('module')
+                ->orderBy('doc_type')
+                ->get(),
+            'years' => $years,
+            'year' => $year,
+            'labels' => $this->docTypeLabels(),
+            // নমুনাটা আসল নম্বরের কোড থেকেই আসে, তাই দুইটা আলাদা হতে
+            // পারে না — আগে ভিউ নিজে হাতে জুড়ে দেখাত, আর ছক বদলালে
+            // নমুনাটা মিথ্যা বলত
+            'engine' => $this->numbers,
+            'placeholders' => self::PLACEHOLDERS,
+        ]);
+    }
+
+    public function update(Request $request, NumberSeries $series): RedirectResponse
+    {
+        $validated = $request->validate([
+            'prefix' => ['required', 'string', 'max:16', 'regex:/^[A-Za-z0-9\-]+$/'],
+            'suffix' => ['nullable', 'string', 'max:16', 'regex:/^[A-Za-z0-9\-]*$/'],
+            'padding' => ['required', 'integer', 'min:1', 'max:12'],
+
+            /*
+             * ছকে {SEQ} থাকতেই হবে।
+             *
+             * না থাকলে প্রতিটা ডকুমেন্ট একই নম্বর পেত — "INV-2026" বারবার।
+             * ব্যাপারটা সেভ করার সময় কোনো ভুল দেখাত না; ধরা পড়ত অনেক পরে,
+             * যখন দুইটা ভিন্ন বিলের নম্বর এক হয়ে যেত। তাই এখানেই আটকানো।
+             */
+            'format' => [
+                'required', 'string', 'max:64',
+                'regex:/\{SEQ\}/',
+            ],
+
+            // বছর শেষে ক্রম আবার ১ থেকে শুরু হবে কি না — বাংলাদেশে
+            // বেশিরভাগ প্রতিষ্ঠান অর্থবছর ধরে গোনে
+            'reset_yearly' => ['nullable', 'boolean'],
+
+            // ⭐ রোজ ০১ থেকে — লটের জন্য (মালিক, ৫ অক্টোবর ২০২৬), যেকোনো সিরিজে বসানো যায়
+            'reset_daily' => ['nullable', 'boolean'],
+        ], [
+            /*
+             * ডিফল্ট বার্তাটা ছিল "The format field format is invalid" —
+             * ইংরেজি, আর কী ভুল হয়েছে তা বলে না। ব্যবহারকারী দেখতেন
+             * শুধু "invalid" আর অনুমান করতেন।
+             */
+            'format.regex' => __('master_data::validation.format_needs_sequence'),
+        ]);
+
+        /*
+         * ⛔ নম্বরে বছর না থাকলে রিসেট বসবেই না — মালিকের নিয়ম,
+         * ৫ সেপ্টেম্বর ২০২৬: *"এই সিরিজ দিলে অটো রিসেট বন্ধ,
+         * ম্যান্ডেটরি।"*
+         *
+         * ── কেন এটা সতর্কবার্তা নয়, নিয়ম ────────────────────────────
+         * `{PREFIX}-{SEQ}` + প্রতি বছর ১ থেকে শুরু = ২০২৬-এর
+         * `INV-0001` আর ২০২৭-এর `INV-0001`, **দুইটা আলাদা বিলে এক
+         * নম্বর**। ⚠️ ভুলটা ধরা পড়ত পরের অর্থবছরের প্রথম বিলে, আর
+         * তখন নিরীক্ষায় প্রমাণ করা যেত না কোনটা কোনটা।
+         *
+         * ⓘ সতর্কবার্তা দিয়ে ছেড়ে দিলে কেউ একদিন ওটা পার হয়ে যেতেন —
+         * আর দামটা একটা ভুল ক্লিকের চেয়ে অনেক বেশি। তাই ঘরটা নীরবে
+         * নয়, **কারণসহ** বন্ধ হয়।
+         */
+        $validated['reset_yearly'] = $request->boolean('reset_yearly')
+            && NumberSeriesProvisioner::resetsWith($validated['format']);
+
+        if ($request->boolean('reset_yearly') && ! $validated['reset_yearly']) {
+            session()->flash('warning', __('master_data::message.reset_needs_a_year'));
+        }
+
+        // ⛔ একই নিয়ম দিনে: পুরো তারিখ ছাড়া রোজ ০১ মানে দুই দিনের দুই কাগজে এক নম্বর
+        $validated['reset_daily'] = $request->boolean('reset_daily')
+            && NumberSeriesProvisioner::resetsDailyWith($validated['format']);
+
+        if ($request->boolean('reset_daily') && ! $validated['reset_daily']) {
+            session()->flash('warning', __('master_data::message.reset_needs_a_day'));
+        }
+
+        /*
+         * অনুসর্গ খালি রাখা যায়, কিন্তু কলামটা NOT NULL।
+         *
+         * null পাঠালে সেভ করার সময় ডাটাবেজ ব্যতিক্রম ছুঁড়ত, আর
+         * ব্যবহারকারী পেতেন একটা ৫০০ পাতা — অথচ ভুলটা তার নয়, ঘরটা
+         * ঐচ্ছিকই। খালি স্ট্রিং-ই এখানে "কিছু নেই"।
+         */
+        $validated['suffix'] = (string) ($validated['suffix'] ?? '');
+
+        // next_number ইচ্ছাকৃতভাবে বাদ — উপরের মন্তব্য দেখুন
+        $series->update($validated);
+
+        return back()->with('saved', __('master_data::message.updated'));
+    }
+
+    /**
+     * ডকুমেন্ট টাইপের পড়ার মতো নাম — মডিউলের ঘোষণা থেকে।
+     *
+     * "RV" দেখে কেউ বলতে পারে না কোন ডকুমেন্ট। module.php-তে প্রতিটার
+     * অনুবাদের কী ঘোষিত আছে, আর সেটাই ব্যবহার হয় — এখানে আলাদা তালিকা
+     * রাখলে নতুন ডকুমেন্ট টাইপে সেটা হালনাগাদ করতে কেউ ভুলত।
+     *
+     * @return array<string, string>
+     */
+    private function docTypeLabels(): array
+    {
+        $labels = [];
+
+        foreach ($this->registry->all() as $module) {
+            foreach ($module->docTypes as $code => $label) {
+                $labels[$code] = $label;
+            }
+        }
+
+        return $labels;
+    }
+}

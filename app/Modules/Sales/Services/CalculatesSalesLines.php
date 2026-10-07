@@ -1,0 +1,196 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Modules\Sales\Services;
+
+use App\Core\Services\SettingsService;
+use App\Modules\MasterData\Models\Tax;
+use Illuminate\Validation\ValidationException;
+
+/**
+ * লাইনের অঙ্ক — বিক্রয়ের ডকুমেন্টগুলোতে একই নিয়মে।
+ *
+ * আদেশ, চালান আর বিল তিনটাতেই "পরিমাণ × দর − ছাড় + ভ্যাট" গোনা হয়। তিন
+ * জায়গায় আলাদা করে লিখলে একদিন একটায় ছাড় ভ্যাটের আগে বসত আর অন্যটায়
+ * পরে, আর বিলের মোট আদেশের মোটের সাথে মিলত না — মিলত না বলে কেউ বুঝতেও
+ * পারত না কোনটা ভুল।
+ *
+ * সবটাই bcmath-এ। float-এ ০.১ + ০.২ ≠ ০.৩, আর পাঁচশো লাইনের বিলে ওই
+ * ভুলটা টাকায় গিয়ে দাঁড়ায়।
+ */
+trait CalculatesSalesLines
+{
+    /**
+     * এক লাইনের চারটা সংখ্যা।
+     *
+     * ছাড় ভ্যাটের আগে বসে — ছাড়ের পরের টাকার উপরেই ভ্যাট, কারণ সরকারকে
+     * যা নেওয়া হয়নি তার উপর ভ্যাট দিতে হয় না।
+     *
+     * @return array{base: string, discount: string, tax: string, tax_variance: ?string, amount: string}
+     */
+    private function lineFigures(string $qty, string $rate, mixed $discount, mixed $tax, ?Tax $standard = null): array
+    {
+        $base = bcmul($qty, $rate, 4);
+        $discount = $this->money($discount);
+
+        if (bccomp($discount, $base, 4) > 0) {
+            throw ValidationException::withMessages([
+                'lines' => __('sales::validation.discount_over_line'),
+            ]);
+        }
+
+        $net = bcsub($base, $discount, 4);
+
+        /*
+         * ⛔ বিক্রির ভ্যাট বন্ধ মানে বন্ধ — মালিক, ২৮ সেপ্টেম্বর ২০২৬ (রাত): *"ETAT jonno duti switch
+         * dibe. tobe by default vat sob jaygay off"*।
+         *
+         * ⓘ সুইচ বিক্রির নিজের (`sales.vat_enabled`, ডিফল্ট বন্ধ) — ক্রয়েরটা আলাদা, আর কোনো দিক অন্যটা
+         * পড়ে না। বন্ধ থাকলে পাঠানো ভ্যাট প্রত্যাখ্যান, পণ্যের নিজের হারও খাটে না — বিল, আদেশ, চালান,
+         * উদ্ধৃতি, কাউন্টার সবাই এই এক জায়গা দিয়ে যায়। ⚠️ চুপচাপ শূন্য করা হয় না: তাহলে
+         * ক্রেতার হাতের কাগজ আর খাতা দুই কথা বলত।
+         */
+        if (! (bool) app(SettingsService::class)->get('sales.vat_enabled', false)) {
+            if ($tax !== null && $tax !== '' && bccomp($this->money($tax), '0', 4) !== 0) {
+                throw ValidationException::withMessages([
+                    'lines' => __('sales::validation.vat_is_off'),
+                ]);
+            }
+
+            $tax = '0';
+            $standard = null;
+        }
+
+        /*
+         * ভ্যাট কোথা থেকে আসে — আর কেন দুইটা পথ।
+         *
+         * ── কী ভাঙা ছিল, ৩১ আগস্ট ২০২৬ ──────────────────────────────
+         * আগে এখানে কেবল `$this->money($tax)` ছিল, অর্থাৎ **যে যা
+         * পাঠিয়েছে তাই**। সরাসরি বিক্রয়ের পর্দা ভ্যাট গুনে "নিট প্রদেয়"-তে
+         * যোগ করত আর বিক্রেতা ভ্যাটসহ টাকাটাই নিতেন — কিন্তু ওই ঘরটার
+         * HTML-এ কোনো `name=` ছিল না, তাই সংখ্যাটা **কখনো সার্ভারে
+         * পৌঁছাত না**। বিলে ভ্যাট বসত শূন্য, জমা মোটের চেয়ে বেশি হয়ে
+         * "ফেরত" হয়ে যেত, আর ড্রয়ার মিলত না।
+         *
+         * ── এখন নিয়মটা ────────────────────────────────────────────
+         * অঙ্কটা **অনুপস্থিত** থাকলে পণ্যের নিজের করের হার থেকে গোনা হয়।
+         * অঙ্কটা **দেওয়া** থাকলে সেটাই মানা হয় — নথির পর্দাগুলোয় ঘরটা
+         * সত্যিই আছে, আর সেখানে হাতে লেখা মান বদলে দেওয়া মানে
+         * ব্যবহারকারীর টাইপ করা সংখ্যা নীরবে উড়িয়ে দেওয়া।
+         *
+         * শূন্য "অনুপস্থিত" নয়: কেউ ইচ্ছা করে ০ লিখলে সেটা একটা
+         * সিদ্ধান্ত, আর সেটা মানা হয়।
+         *
+         * ── দামের ভেতরের ভ্যাট ─────────────────────────────────────
+         * `amount = net + tax` লিখলে ভেতরের ভ্যাটে **দুইবার** ভ্যাট বসত।
+         * ভেতরের বেলায় দরেই ওটা আছে, তাই মোট বাড়ে না — কেবল কতটুকু কর
+         * তা আলাদা করে খাতায় ওঠে।
+         */
+        $inclusive = false;
+        $variance = null;
+
+        if ($tax === null || $tax === '') {
+            $tax = $standard?->amountOn($net) ?? '0.0000';
+            $inclusive = (bool) $standard?->is_inclusive;
+        } else {
+            $tax = $this->money($tax);
+
+            /*
+             * হাতে দেওয়া অঙ্কটা হারের অঙ্ক থেকে কতটা সরে আছে।
+             *
+             * ── কেন বদলে দেওয়া হয় না, কেবল লেখা হয় ─────────────────
+             * নথির পর্দায় ঘরটা সত্যিই আছে, আর সেখানে টাইপ করা সংখ্যা
+             * নীরবে উড়িয়ে দেওয়া মানে ব্যবহারকারীর সিদ্ধান্ত মুছে ফেলা।
+             * ছাড়েরও সীমা আছে, ভ্যাটের নেই — আর সেটাই ছিল ফাঁক:
+             * **কেউ বদলে দিলে কোথাও কোনো চিহ্ন থাকত না।**
+             *
+             * এখন সংখ্যাটা মানা হয়, কিন্তু পার্থক্যটা সারিতে বসে।
+             * ছাড়ও থাকে, হিসাবও থাকে।
+             *
+             * ── কেন `$standard` না থাকলে কিছু নয় ───────────────────
+             * পণ্যের কোনো হার বসানো না থাকলে "সরে যাওয়া" কথাটারই মানে
+             * নেই — কোথা থেকে সরল? তখন `null` মানে "মাপার কিছু ছিল না"।
+             */
+            if ($standard !== null) {
+                $expected = $standard->amountOn($net);
+
+                if (bccomp($tax, $expected, 4) !== 0) {
+                    $variance = bcsub($tax, $expected, 4);
+                }
+            }
+        }
+
+        return [
+            'base' => $base,
+            'discount' => $discount,
+            'tax' => $tax,
+            'tax_variance' => $variance,
+            'amount' => $inclusive ? $net : bcadd($net, $tax, 4),
+        ];
+    }
+
+    /**
+     * @param  array{subtotal: string, discount: string, tax: string, total: string}  $totals
+     * @param  array{base: string, discount: string, tax: string, amount: string}  $figures
+     * @return array{subtotal: string, discount: string, tax: string, total: string}
+     */
+    private function addToTotals(array $totals, array $figures): array
+    {
+        return [
+            'subtotal' => bcadd($totals['subtotal'], $figures['base'], 4),
+            'discount' => bcadd($totals['discount'], $figures['discount'], 4),
+            'tax' => bcadd($totals['tax'], $figures['tax'], 4),
+            'total' => bcadd($totals['total'], $figures['amount'], 4),
+        ];
+    }
+
+    /** টাকার ঘর — খালি মানে শূন্য, ঋণাত্মক নয়। */
+    private function money(mixed $value): string
+    {
+        $value = trim((string) ($value ?? ''));
+
+        if ($value === '') {
+            return '0.0000';
+        }
+
+        if (! is_numeric($value)) {
+            throw ValidationException::withMessages([
+                'lines' => __('sales::validation.not_a_number'),
+            ]);
+        }
+
+        if (bccomp($value, '0', 4) < 0) {
+            throw ValidationException::withMessages([
+                'lines' => __('sales::validation.negative_amount'),
+            ]);
+        }
+
+        return bcadd($value, '0', 4);
+    }
+
+    /**
+     * পরিমাণের ঘর — শূন্য চলবে না।
+     *
+     * শূন্য পরিমাণের লাইন কোনো কাজ করে না, অথচ বিলের কাগজে একটা সারি
+     * দখল করে থাকে আর মোট মেলানোর সময় বিভ্রান্ত করে।
+     */
+    private function positive(mixed $value, string $field): string
+    {
+        $value = trim((string) ($value ?? ''));
+
+        if ($value === '' || ! is_numeric($value)) {
+            throw ValidationException::withMessages([
+                'lines' => __('sales::validation.not_a_number'),
+            ]);
+        }
+
+        if (bccomp($value, '0', 4) <= 0) {
+            throw ValidationException::withMessages([
+                'lines' => __('sales::validation.quantity_must_be_positive', ['field' => $field]),
+            ]);
+        }
+
+        return bcadd($value, '0', 4);
+    }
+}

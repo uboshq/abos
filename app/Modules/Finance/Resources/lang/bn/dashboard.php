@@ -1,0 +1,68 @@
+<?php
+
+declare(strict_types=1);
+
+return [
+    'cash_position' => 'হাতে নগদ',
+    'cash_position_hint' => 'সব ড্রয়ার ও নগদ খাত মিলিয়ে',
+    'bank_position' => 'ব্যাংকে',
+    'bank_position_hint' => 'ব্যাংকের হিসাবগুলোতে — MFS বাদে',
+    'mfs_position' => 'মোবাইল ব্যাংকিং',
+    'mfs_position_hint' => 'বিকাশ, নগদ, রকেট — আলাদা করে, কারণ চার্জ ও মিলকরণ আলাদা',
+    'receivable_overview' => 'গ্রাহকের কাছে পাওনা',
+    'receivable_overview_hint' => 'মোট বকেয়া — বয়স ধরে দেখতে ক্লিক করুন',
+    'payable_overview' => 'সরবরাহকারীকে দেনা',
+    'payable_overview_hint' => 'মোট প্রদেয় — বয়স ধরে দেখতে ক্লিক করুন',
+
+    // চারটা দরজা ও খরচের ভাগ — ৪ সেপ্টেম্বর ২০২৬
+    'pending_approvals' => 'অপেক্ষমাণ অনুমোদন',
+    'expense_heads' => 'খরচের খাত',
+    'product_costing' => 'পণ্যের খরচ',
+    'who_approves_what' => 'কে কী অনুমোদন করেন',
+    'where_money_went' => 'এই মাসে টাকা কোথায় গেল',
+    'where_money_went_hint' => 'সবচেয়ে বেশি খরচের ছয়টা খাত — ক্লিক করলে পুরো তালিকা',
+
+    'title' => 'ড্যাশবোর্ড',
+    'subtitle' => 'মালিকের টাকা — কত ঢুকল, কত বেরোল',
+    'capital_in' => 'মূলধন এসেছে',
+    'capital_in_hint' => 'মালিক ও অংশীদারদের দেওয়া টাকা',
+    'withdrawn' => 'উত্তোলন',
+    'withdrawn_hint' => 'ব্যবসা থেকে যত টাকা তোলা হয়েছে',
+    'deposits' => 'জমা',
+    'deposits_hint' => 'চলতি জমার সংখ্যা',
+    'contributors' => 'যাঁরা দিয়েছেন',
+    'contributors_hint' => 'আলাদা আলাদা নাম',
+    'recent_capital' => 'সদ্য মূলধন',
+    'document' => 'নম্বর',
+    'contributor' => 'যিনি দিয়েছেন',
+    'amount' => 'অঙ্ক',
+    'no_capital' => 'কোনো মূলধনের সারি নেই।',
+
+    'cash_flow' => 'নগদ প্রবাহ — গত ছয় মাস (নগদ, ব্যাংক, MFS)',
+    'cash_in' => 'এল',
+    'cash_out' => 'গেল',
+    // ৫ অক্টোবর ২০২৬ — মোট তহবিল, আজকের আদায়-পরিশোধ, ব্যাংক, মিলকরণ, দেনার মেয়াদ, বাজেটের পার্থক্য
+    'total_fund' => 'মোট তহবিল',
+    'total_fund_hint' => 'নগদ + ব্যাংক + MFS — উপরের তিন ঘরের যোগফল',
+    'today_collection' => 'আজকের আদায়',
+    'today_collection_hint' => 'আজ গ্রাহকের বকেয়া যতটা কমল',
+    'today_payment' => 'আজকের পরিশোধ',
+    'today_payment_hint' => 'আজ সরবরাহকারীর পাওনা যতটা মেটানো হলো',
+    'net_cash_flow_month' => 'এ মাসের নিট নগদ প্রবাহ',
+    'net_cash_flow_month_hint' => 'এল বাদ গেল — নগদ প্রবাহের চার্টের এ মাসের দুই দণ্ড',
+    'bank_wise' => 'ব্যাংক অনুযায়ী জের',
+    'bank_wise_hint' => 'প্রতিটা ব্যাংক খাতে আজ কত',
+    'reconciliation_pending' => 'মিলকরণ বাকি',
+    'reconciliation_pending_hint' => 'ব্যাংকের বিবরণীর যে সারি খাতার সাথে মেলানো হয়নি · খসড়া মিলকরণ :drafts',
+    'payables_next_week' => 'সামনের ৭ দিনে দেয়',
+    'payables_next_week_hint' => ':count বিলের মেয়াদ আজ থেকে ৭ দিনের মধ্যে',
+    'payables_overdue' => 'মেয়াদোত্তীর্ণ দেনা',
+    'payables_overdue_hint' => ':count বিলের মেয়াদ পেরিয়ে গেছে, টাকা বাকি',
+    'bank_instalments_overdue' => 'ব্যাংক ঋণের কিস্তি দিন পার',
+    'bank_instalments_overdue_hint' => ':count কিস্তির দিন পার · নবায়ন বাকি :renewals ঋণের',
+    'hand_loans_overdue' => 'হাতধারের ফেরতের দিন পার',
+    'hand_loans_overdue_hint' => ':count জনের ফেরতের দিন পার · আমাদের দেওয়ার দিন পার :ours জনের',
+    // ৫ অক্টোবর ২০২৬ — হোমের বাছা সময় ধরে
+    'where_money_went_today' => 'আজ টাকা কোথায় গেল',
+    'where_money_went_year' => 'এ বছর টাকা কোথায় গেল',
+];

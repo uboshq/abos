@@ -1,0 +1,576 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Tests\Feature\Architecture;
+
+use App\Models\User;
+use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Route;
+use ReflectionClass;
+use ReflectionMethod;
+use Tests\TestCase;
+
+/**
+ * নীতিতে লেখা প্রতিটা নিয়ম সত্যিই কোথাও না কোথাও ডাকা হয়।
+ *
+ * ── কেন এই পাহারাটা দরকার ────────────────────────────────────────────
+ * ২ সেপ্টেম্বর ২০২৬-এ একটা নিরীক্ষা বলেছিল *"২১টা নীতি, অথচ
+ * `authorize()` ডাকা হয় মাত্র ৭ জায়গায় — নীতিগুলো মৃত।"* মেপে দেখা
+ * গেল কথাটা **ভুল**: ২০টা রিসোর্স কন্ট্রোলার [[AuthorizesResource]]
+ * দিয়ে সাতটা পদ্ধতিতেই `can:{ability},{model}` বসায়, অর্থাৎ নীতিগুলো
+ * প্রতিটা অনুরোধে চলে। `$this->authorize(` গুনে প্রশ্নটাই ভুল করা
+ * হয়েছিল।
+ *
+ * **কিন্তু একটা নিয়ম সত্যিই মৃত ছিল** — `CustomerPolicy::overrideCreditLimit()`।
+ * একই সিদ্ধান্ত তিন জায়গায় লেখা ছিল, আর যে দুইটা চলত তারা নীতিটা
+ * ছুঁতই না। তার মধ্যে একটা **ভুল চাবি** ধরেছিল: ক্রয়াদেশে
+ * `sales.discount.override`, অথচ ধারের সীমার নিজের চাবি আলাদা।
+ *
+ * ── অর্থাৎ আসল প্রশ্নটা "কতবার ডাকা হয়" নয় ───────────────────────────
+ * প্রশ্নটা: **প্রতিটা লেখা নিয়ম কি কোনো পথে পৌঁছায়?** একটা মৃত নিয়ম
+ * নীরবে বিপজ্জনক — পরেরজন সেটা পড়ে বিশ্বাস করেন যে ওটাই পাহারা,
+ * অথচ আসল সিদ্ধান্ত অন্য কোথাও, অন্যভাবে নেওয়া হচ্ছে।
+ *
+ * ── কেন রুট টেবিল পড়া হয়, উৎস grep করা নয় ────────────────────────────
+ * `viewAny`/`view`/`update` — এই নামগুলো উৎসের কোথাও লেখা নেই।
+ * [[AuthorizesResource]] সেগুলো **চলার সময়** বানায়। তাই grep করলে
+ * প্রতিটা CRUD নিয়ম "পৌঁছায়" দেখাত কেবল ওই এক ফাইলের কারণে — সবুজ,
+ * অথচ কিছুই মাপা হয়নি।
+ *
+ * নিবন্ধিত রুটগুলোর মিডলওয়্যার পড়লে উত্তরটা **যা সত্যি তাই** হয়:
+ * কোন ক্ষমতা কোন লক্ষ্যের উপর সত্যিই চাওয়া হচ্ছে।
+ */
+class EveryPolicyRuleIsActuallyReachedTest extends TestCase
+{
+    /**
+     * যেসব নিয়ম ইচ্ছাকৃতভাবে কোনো পথে নেই — আর কেন।
+     *
+     * ── কেন তালিকাটা এখানে, নীতির ফাইলে একটা মন্তব্যে নয় ─────────────
+     * নীতির ফাইলে লিখলে সেটা লেখা মাত্রই ভুলে যাওয়া যেত। এখানে লিখতে
+     * হলে সিদ্ধান্তটা একবার অন্তত ভাবতে হয়, আর পরেরজন সব ব্যতিক্রম
+     * এক জায়গায় পড়তে পারেন।
+     *
+     * @var array<string, string> 'ShortPolicyName::ability' => কারণ
+     */
+    private const UNREACHED_ON_PURPOSE = [];
+
+    /**
+     * যে নীতিগুলো রুট থেকে নয়, কাগজপত্রের ঘর থেকে পৌঁছায় — কারণসহ।
+     *
+     * ── ⓘ ২১ সেপ্টেম্বর ২০২৬ ─────────────────────────────
+     * এই পাঁচটা নীতি লেখা হয়েছিল একটাই কারণে: [[components/ui/attachments]]
+     * জিজ্ঞেস করে `can('create', $document)`, আর নীতি না থাকলে Laravel
+     * নীরবে `false` বলত — কাগজ তোলার ঘরটাই পর্দায় আসত না, মালিকের
+     * জন্যও নয়। ⓘ ডাকটা ব্লেড থেকে, রুট থেকে নয় — তাই রুট টেবিল
+     * ধরে খুঁজলে ওদের অনাথ মনে হয়।
+     *
+     * ⚠️ তালিকায় বসানো মানে ছাড় দেওয়া নয় — পর্দার পাহারা ওখানে
+     * অনুমতির মিডলওয়্যারে ([[EveryRouteIsGuardedTest]] সেটা দেখে)।
+     *
+     * @var array<string, string>
+     */
+    private const REACHED_WITHOUT_A_ROUTE = [
+        'BankFacilityPolicy' => 'কাগজপত্রের ঘর থেকে ডাকা হয়; পর্দার পাহারা অনুমতির মিডলওয়্যারে',
+        'CapitalEntryPolicy' => 'একই কারণে',
+        'DepositPolicy' => 'একই কারণে',
+        'HandLoanAccountPolicy' => 'একই কারণে',
+        'RentalContractPolicy' => 'একই কারণে',
+
+        /*
+         * ⓘ নিচের তিনটা অন্য কারণে — ২১ সেপ্টেম্বর ২০২৬।
+         *
+         * ৪ারা পৌঁছায় কন্ট্রোলারের ভিতর থেকে, স্পষ্ট `$this->authorize()` ডাকে —
+         * রুট টেবিলে নয়, কারণ কন্ট্রোলারগুলো `resourcePermissions()` ব্যবহার
+         * করে না। ⚠️ এই পরীক্ষাটা ইচ্ছাকৃতভাবে কেবল রুট টেবিল পড়ে (উপরের
+         * মন্তব্যে কারণ লেখা), তাই স্পষ্ট ডাকগুলো তার চোখে পড়ে না।
+         *
+         * ⓘ যাচাই করা হয়েছে, ডাকগুলো সত্যিই আছে — নিচে পথসহ লেখা,
+         * যাতে পরের জন নিজে দেখে নিতে পারেন — আর সরানো হলে লাল হয়।
+         */
+        'EmployeePolicy' => 'EmployeeController:131,147,158,170 — authorize() ধরে, রুট ধরে নয়',
+        'PayslipPolicy' => 'PayslipPrintController:49 — পাতাটা যায় তার রানের শাখা ধরে',
+        'UserPolicy' => 'UserController:177,192 — আর জোড়াটা দুই সুতোয়, test_the_gate_really_reaches_the_user_policy() দেখুন',
+    ];
+
+    /**
+     * Laravel-এর নিজের নিয়ম, নীতিলেখকের নয়।
+     *
+     * `before()` প্রতিটা প্রশ্নের আগে চলে আর কোনো ক্ষমতার নাম নয়;
+     * `deny`/`allow` সহায়ক। এগুলোকে "পৌঁছায়নি" বলা অর্থহীন হত।
+     *
+     * @var list<string>
+     */
+    private const NOT_ABILITIES = ['before', 'allow', 'deny', '__construct'];
+
+    public function test_every_rule_written_in_a_policy_is_reached_by_some_path(): void
+    {
+        $policies = $this->policyClasses();
+
+        $this->assertNotSame([], $policies, implode(PHP_EOL, [
+            'একটাও নীতি খুঁজে পাওয়া গেল না।',
+            '',
+            'তাহলে এই পাহারাটা কিছুই দেখছে না — আর সবুজ থাকছে ঠিক সেই',
+            'কারণে যেটা সবচেয়ে খারাপ: দেখার মতো কিছু নেই বলে।',
+        ]));
+
+        $reachedByRoute = $this->abilitiesTheRouteTableAsksFor();
+        $reachedInSource = $this->abilitiesNamedInSource();
+
+        $unreached = [];
+
+        foreach ($policies as $policy) {
+            $model = $this->modelFor($policy);
+            $short = class_basename($policy);
+
+            foreach ($this->abilitiesOf($policy) as $ability) {
+                if (array_key_exists($short.'::'.$ability, self::UNREACHED_ON_PURPOSE)) {
+                    continue;
+                }
+
+                $viaRoute = in_array($ability, $reachedByRoute[$model] ?? [], true);
+
+                if ($viaRoute || in_array($ability, $reachedInSource, true)) {
+                    continue;
+                }
+
+                $unreached[] = $short.'::'.$ability.'()';
+            }
+        }
+
+        $this->assertSame([], $unreached, implode(PHP_EOL, [
+            'এই নিয়মগুলো লেখা আছে, কিন্তু কোনো পথে পৌঁছায় না:',
+            '',
+            implode(PHP_EOL, $unreached),
+            '',
+            'অর্থাৎ কেউ ওগুলো পড়ে বিশ্বাস করবেন যে এটাই পাহারা, অথচ',
+            'সিদ্ধান্তটা অন্য কোথাও অন্যভাবে নেওয়া হচ্ছে — বা কোথাও',
+            'নেওয়াই হচ্ছে না।',
+            '',
+            'হয় নিয়মটা যেখানে দরকার সেখানে ডাকুন (Gate::allows / @can /',
+            'authorize), নয় এই ফাইলের UNREACHED_ON_PURPOSE তালিকায়',
+            'কারণসহ লিখুন।',
+        ]));
+    }
+
+    /**
+     * প্রতিটা নীতির অন্তত একটা নিয়ম রুট টেবিল থেকেই পৌঁছায়।
+     *
+     * ── কেন এটা আলাদা করে দেখা হয় ───────────────────────────────────
+     * উপরের পরীক্ষাটা উৎসে নামটা খুঁজে পেলেই সন্তুষ্ট। কিন্তু নামগুলো
+     * সাধারণ — `view`, `update`, `create`। এক মডিউলের একটা `@can('view'`
+     * অন্য মডিউলের নীতিকেও "পৌঁছেছে" দেখিয়ে দিত।
+     *
+     * রুট টেবিলে লক্ষ্যটা **মডেলের শ্রেণিনাম ধরে** মেলে, তাই এখানে
+     * ভুল করার জায়গা নেই। একটা নীতির কোনো নিয়মই যদি কোনো রুট থেকে
+     * না চাওয়া হয়, তবে ওই নীতিটা কার্যত অনাথ।
+     */
+    public function test_no_policy_is_an_orphan(): void
+    {
+        $reachedByRoute = $this->abilitiesTheRouteTableAsksFor();
+
+        $orphans = [];
+
+        foreach ($this->policyClasses() as $policy) {
+            $name = class_basename($policy);
+
+            if (array_key_exists($name, self::REACHED_WITHOUT_A_ROUTE)) {
+                continue;
+            }
+
+            if (($reachedByRoute[$this->modelFor($policy)] ?? []) === []) {
+                $orphans[] = $name;
+            }
+        }
+
+        $this->assertSame([], $orphans, implode(PHP_EOL, [
+            'এই নীতিগুলোর কোনো নিয়মই কোনো রুট থেকে চাওয়া হয় না:',
+            '',
+            implode(PHP_EOL, $orphans),
+            '',
+            'কন্ট্রোলারটা সম্ভবত resourcePermissions() ব্যবহার করে না,',
+            'অথবা মডেলের নাম আর নীতির নাম আর মেলে না।',
+        ]));
+    }
+
+    /**
+     * ⭐ ব্যবহারকারীর নীতিটা সত্যিই দরজায় বসানো আছে।
+     *
+     * ── ⚠️ কেন এই একটা নীতির জন্য আলাদা পরীক্ষা, ২১ সেপ্টেম্বর ২০২৬ ──
+     * abos-8b বলেছিলেন: *"সরানোর পর ইচ্ছা করে ভাঙুন — `Gate::policy()`
+     * লাইনটা মন্তব্য করে দেখুন [[TheUserAdminCouldTakeTheOwnersKeyTest]]
+     * লাল হয়। না হলে পলিসিটা আসলে কেউ ডাকছে না, আর তখন সেটাই বড় খবর।"*
+     *
+     * ⓘ ভাঙা হলো, আর **লাল হলো না** — কিন্তু কারণটা ভয়ের নয়, উল্টোটা:
+     * ফাইলটা আজ `app/Policies/UserPolicy.php`-এ সরেছে, আর ঠিক ওখানেই
+     * Laravel নিজে থেকে খোঁজে (`App\Models\User` → `App\Policies\UserPolicy`)।
+     * অর্থাৎ জোড়াটা এখন **দুই সুতোয়** ঝুলছে: স্পষ্ট `Gate::policy()`
+     * আর Laravel-এর নিজের অনুমান।
+     *
+     * ⛔ আর সেখানেই ফাঁদ: দুইটা সুতোর যেকোনো একটা ছিঁড়লে কিছুই লাল হয়
+     * না, তাই কেউ *"লাইনটা তো অকেজো"* ভেবে মুছে দিতে পারেন, আর পরে কেউ
+     * ফাইলটা আবার মডিউলে ফেরত নিলে **নীরবে** সব দরজা খুলে যায় —
+     * নীতি না থাকলে Laravel প্রশ্নটা কন্ট্রোলারের অনুমতির চাবির হাতে
+     * ছেড়ে দেয়, আর রেকর্ড-স্তরের পাহারাটা আর থাকে না।
+     *
+     * ⭐ তাই সুতোদুটো নয়, **ফলটা** মাপা হয়: দরজা সত্যিই কোন নীতিতে
+     * পৌঁছায়। দুইটাই ছিঁড়লে এই পরীক্ষাটা লাল হয়।
+     */
+    public function test_the_gate_really_reaches_the_user_policy(): void
+    {
+        $reached = Gate::getPolicyFor(User::class);
+
+        /*
+         * ⚠️ `assertInstanceOf(UserPolicy::class, …)` লেখা হয়নি ইচ্ছা করে।
+         *
+         * ⓘ মেপে দেখা গেল: ফাইলটা সরিয়ে ফেললে ঐ লাইনটা *"Class does not
+         * exist"* বলে **থেমে** যায়, আর নিচের কথাগুলো কেউ পড়েই না। ⛔
+         * অর্থাৎ ঠিক যে অবস্থাটা সবচেয়ে বিপজ্জনক, সেটাতেই বার্তাটা
+         * হারিয়ে যেত। তাই শ্রেণিটা নাম ধরে ছোঁয়া হয় না।
+         */
+        $this->assertNotNull($reached, implode(PHP_EOL, [
+            'ব্যবহারকারীর মডেলের জন্য দরজা কোনো নীতিতেই পৌঁছাচ্ছে না।',
+            '',
+            'মানে কে কার খাতা বদলাতে পারেন সেই সিদ্ধান্তটা আর কোথাও নেওয়া',
+            'হচ্ছে না — ব্যবহারকারী-প্রশাসক আবার মালিকের ইমেইল আর পাসওয়ার্ড',
+            'বদলাতে পারেন, তারপর মালিক হয়ে ঢুকতে পারেন।',
+            '(দেখুন TheUserAdminCouldTakeTheOwnersKeyTest)',
+            '',
+            'হয় AppServiceProvider-এ Gate::policy(User::class, UserPolicy::class)',
+            'ফিরিয়ে আনুন, নয় ফাইলটা app/Policies-এ রাখুন — Laravel ওখানেই',
+            'নিজে থেকে খোঁজে।',
+        ]));
+
+        $this->assertSame('UserPolicy', class_basename($reached), implode(PHP_EOL, [
+            'দরজাটা পৌঁছাচ্ছে, কিন্তু অন্য একটা নীতিতে: '.$reached::class,
+            '',
+            'অর্থাৎ কারও নতুন নীতি ব্যবহারকারীর মডেল দখল করে নিয়েছে, আর',
+            'উপরের নিয়মগুলো আর চলছে না।',
+        ]));
+    }
+
+    // ── মাপার যন্ত্রপাতি ─────────────────────────────────────────────
+
+    /**
+     * সব নীতি ক্লাস।
+     *
+     * পথ ধরে বাছা হয়, নাম ধরে নয়: `ContentSecurityPolicy` নামেও
+     * "Policy", কিন্তু ওটা মিডলওয়্যার — `app/Http/Middleware/`-এ থাকে
+     * আর কোনো ক্ষমতার প্রশ্নের উত্তর দেয় না।
+     *
+     * @return list<class-string>
+     */
+    private function policyClasses(): array
+    {
+        $classes = [];
+
+        $walk = new \RecursiveIteratorIterator(
+            new \RecursiveDirectoryIterator(app_path(), \FilesystemIterator::SKIP_DOTS)
+        );
+
+        foreach ($walk as $file) {
+            $path = str_replace(DIRECTORY_SEPARATOR, '/', $file->getPathname());
+
+            if (! $file->isFile() || ! str_contains($path, '/Policies/') || ! str_ends_with($path, 'Policy.php')) {
+                continue;
+            }
+
+            $class = 'App\\'.str_replace('/', '\\', substr(
+                $path,
+                strpos($path, '/app/') + 5,
+                -4,
+            ));
+
+            if (class_exists($class)) {
+                $classes[] = $class;
+            }
+        }
+
+        sort($classes);
+
+        return $classes;
+    }
+
+    /**
+     * নীতি → মডেল।
+     *
+     * `App\Modules\Sales\Policies\SalesInvoicePolicy`
+     *   → `App\Modules\Sales\Models\SalesInvoice`
+     *
+     * @param  class-string  $policy
+     * @return class-string|string
+     */
+    private function modelFor(string $policy): string
+    {
+        return str_replace('\\Policies\\', '\\Models\\', substr($policy, 0, -6));
+    }
+
+    /**
+     * একটা নীতির ঘোষিত ক্ষমতাগুলো।
+     *
+     * @param  class-string  $policy
+     * @return list<string>
+     */
+    private function abilitiesOf(string $policy): array
+    {
+        $abilities = [];
+
+        foreach ((new ReflectionClass($policy))->getMethods(ReflectionMethod::IS_PUBLIC) as $method) {
+            if ($method->getDeclaringClass()->getName() !== $policy) {
+                continue;
+            }
+
+            if (in_array($method->getName(), self::NOT_ABILITIES, true)) {
+                continue;
+            }
+
+            $abilities[] = $method->getName();
+        }
+
+        return $abilities;
+    }
+
+    /**
+     * রুট টেবিল সত্যিই কোন মডেলের উপর কোন ক্ষমতা চায়।
+     *
+     * ── লক্ষ্য দুই রকম, আর সেটাই এখানকার একমাত্র জটিলতা ───────────────
+     * `index`/`create`/`store`-এ তখনো কোনো রেকর্ড নেই, তাই লক্ষ্যটা
+     * **মডেলের শ্রেণিনাম**। বাকি চারটায় লক্ষ্যটা **রুট প্যারামিটারের
+     * নাম** (`invoice`, `till`, `challan`) — কারণ ওখানে একটা নির্দিষ্ট
+     * রেকর্ড আছে।
+     *
+     * দ্বিতীয়টা মডেলে ফেরাতে রুটের বাঁধা মডেলটা দেখা হয়: Laravel-এর
+     * নিজের বাইন্ডিং তথ্য, আমাদের অনুমান নয়।
+     *
+     * @return array<string, list<string>> মডেল => ক্ষমতার তালিকা
+     */
+    private function abilitiesTheRouteTableAsksFor(): array
+    {
+        $asked = [];
+
+        foreach (Route::getRoutes() as $route) {
+            $bindings = $this->modelsBoundTo($route);
+
+            foreach ($route->gatherMiddleware() as $middleware) {
+                if (! is_string($middleware) || ! str_starts_with($middleware, 'can:')) {
+                    continue;
+                }
+
+                $parts = explode(',', substr($middleware, 4), 2);
+                $ability = trim($parts[0]);
+                $target = trim($parts[1] ?? '');
+
+                if ($target === '') {
+                    continue;
+                }
+
+                $model = class_exists($target) ? $target : ($bindings[$target] ?? null);
+
+                if ($model === null) {
+                    continue;
+                }
+
+                $asked[$model][] = $ability;
+            }
+
+            /*
+             * ⭐ দরজাটা এক ধাপ ভেতরেও জিজ্ঞেস করতে পারে — আর সেটাও
+             * "রুট থেকে চাওয়া"।
+             *
+             * ── কেন এটা লাগল, ৪ সেপ্টেম্বর ২০২৬ ─────────────────────
+             * `ReportRunPolicy::download` কে "অনাথ" বলা হচ্ছিল, অথচ
+             * `ReportDownloadController::download()`-এর প্রথম লাইনই
+             * `Gate::authorize('download', $run)`। রুটে স্থির চাবি
+             * বসানো হয়নি, আর সেটা **ইচ্ছাকৃত** — রুট ফাইলের নিজের
+             * মন্তব্যে লেখা: "প্রাপক ব্যবস্থাপক না-ও হতে পারেন, তাই
+             * অনুমতি রেকর্ড দেখে, স্থির চাবি নয়"।
+             *
+             * ⛔ দুইটা পাহারা তখন একই দরজা নিয়ে দুই কথা বলছিল:
+             * [[EveryRouteIsGuardedTest]] পদ্ধতির ভিতরের `authorize()`
+             * বৈধ মানে ("কোন ডকুমেন্টের কাগজ, না জেনে বলা যায় না কার
+             * অনুমতি লাগবে"), আর এই পাহারাটা মানত না। একটাকে সবুজ
+             * করলে অন্যটা লাল — আর তখন কেউ না কেউ **নকশাটা** বদলে
+             * ফেলত পাহারাকে খুশি করতে। পাহারা বাস্তবতার সেবক।
+             *
+             * ⓘ একের বেশি মডেল বাঁধা থাকলে ছেড়ে দেওয়া হয়: তখন কোন
+             * মডেলের উপর ক্ষমতাটা চাওয়া হচ্ছে সেটা আর নিশ্চিত নয়,
+             * আর অনুমান করে বসলে পাহারাটা ভুল কারণে সবুজ হত।
+             */
+            if (count($bindings) === 1) {
+                $model = reset($bindings);
+
+                foreach ($this->abilitiesTheActionAsksFor($route) as $ability) {
+                    $asked[$model][] = $ability;
+                }
+            }
+        }
+
+        return array_map(fn (array $a): array => array_values(array_unique($a)), $asked);
+    }
+
+    /**
+     * রুটের নিজের পদ্ধতি ভেতরে যে ক্ষমতাগুলো চায়।
+     *
+     * ⚠️ মন্তব্য বাদ দিয়ে পড়া হয়। না দিলে একটা **মন্তব্য করে রাখা**
+     * `// Gate::authorize('download', $run)` লাইনও "চাওয়া" গণ্য হত, আর
+     * পাহারাটা এমন একটা দরজা নিয়ে নিশ্চিন্ত থাকত যেটা আর কিছুই
+     * জিজ্ঞেস করে না।
+     *
+     * @return list<string>
+     */
+    private function abilitiesTheActionAsksFor(\Illuminate\Routing\Route $route): array
+    {
+        $action = $route->getActionName();
+
+        if (! str_contains($action, '@')) {
+            return [];
+        }
+
+        [$controller, $method] = explode('@', $action, 2);
+
+        if (! class_exists($controller) || ! method_exists($controller, $method)) {
+            return [];
+        }
+
+        $reflection = new ReflectionMethod($controller, $method);
+        $file = $reflection->getFileName();
+        $start = $reflection->getStartLine();
+        $end = $reflection->getEndLine();
+
+        if (! is_string($file) || $start === false || $end === false) {
+            return [];
+        }
+
+        $lines = explode("\n", $this->withoutComments((string) file_get_contents($file)));
+        $body = implode("\n", array_slice($lines, $start - 1, $end - $start + 1));
+
+        $found = [];
+
+        foreach ([
+            "/Gate::(?:allows|denies|authorize|any)\(\s*'([a-zA-Z]+)'/",
+            "/\\\$this->authorize\(\s*'([a-zA-Z]+)'/",
+        ] as $pattern) {
+            if (preg_match_all($pattern, $body, $matches) > 0) {
+                $found = array_merge($found, $matches[1]);
+            }
+        }
+
+        return array_values(array_unique($found));
+    }
+
+    /**
+     * কোডটুকু — মন্তব্য ছাড়া, লাইনের সংখ্যা অটুট রেখে।
+     *
+     * নতুন লাইনগুলো রাখা হয় বলেই লাইন-নম্বর ধরে পদ্ধতির শরীর কাটা
+     * যায়; পুরো মন্তব্যটা স্পেস দিয়ে বদলালে বহু-লাইনের doc-block এক
+     * লাইনে নেমে আসত আর কাটাটা ভুল জায়গা থেকে হত।
+     */
+    private function withoutComments(string $source): string
+    {
+        $kept = '';
+
+        foreach (token_get_all($source) as $token) {
+            if (is_array($token)) {
+                $kept .= in_array($token[0], [T_COMMENT, T_DOC_COMMENT], true)
+                    ? (string) preg_replace('/[^\n]/', ' ', $token[1])
+                    : $token[1];
+
+                continue;
+            }
+
+            $kept .= $token;
+        }
+
+        return $kept;
+    }
+
+    /**
+     * একটা রুটের প্যারামিটারগুলো কোন মডেলে বাঁধা।
+     *
+     * কন্ট্রোলারের পদ্ধতির টাইপ-হিন্ট থেকে পড়া হয় — ওটাই Laravel
+     * নিজেও ব্যবহার করে, তাই উত্তরটা অনুমান নয়।
+     *
+     * @return array<string, class-string>
+     */
+    private function modelsBoundTo(\Illuminate\Routing\Route $route): array
+    {
+        $action = $route->getActionName();
+
+        if (! str_contains($action, '@')) {
+            return [];
+        }
+
+        [$controller, $method] = explode('@', $action, 2);
+
+        if (! class_exists($controller) || ! method_exists($controller, $method)) {
+            return [];
+        }
+
+        $bound = [];
+
+        foreach ((new ReflectionMethod($controller, $method))->getParameters() as $parameter) {
+            $type = $parameter->getType();
+
+            if ($type instanceof \ReflectionNamedType && ! $type->isBuiltin()) {
+                $bound[$parameter->getName()] = $type->getName();
+            }
+        }
+
+        return $bound;
+    }
+
+    /**
+     * উৎসে যে ক্ষমতার নামগুলো স্পষ্ট করে ডাকা হয়েছে।
+     *
+     * CRUD-বহির্ভূত নিয়মগুলো (`overrideCreditLimit`, `managePortal`,
+     * `confirm`) রুট টেবিলে থাকে না — সেগুলো সেবা স্তরে বা ব্লেডে
+     * ডাকা হয়। তাই দুইটা উৎস মিলিয়ে দেখা হয়।
+     *
+     * @return list<string>
+     */
+    private function abilitiesNamedInSource(): array
+    {
+        $found = [];
+
+        $patterns = [
+            "/Gate::(?:allows|denies|authorize|any)\(\s*'([a-zA-Z]+)'/",
+            "/->(?:can|cannot|cant)\(\s*'([a-zA-Z]+)'\s*,/",
+            "/\\\$this->authorize\(\s*'([a-zA-Z]+)'/",
+            "/@(?:can|cannot)\(\s*'([a-zA-Z]+)'\s*,/",
+        ];
+
+        $walk = new \RecursiveIteratorIterator(
+            new \RecursiveDirectoryIterator(app_path(), \FilesystemIterator::SKIP_DOTS)
+        );
+
+        foreach ($walk as $file) {
+            $path = str_replace(DIRECTORY_SEPARATOR, '/', $file->getPathname());
+
+            if (! $file->isFile() || ! str_ends_with($path, '.php')) {
+                continue;
+            }
+
+            /*
+             * নীতির ফাইলগুলো নিজেরাই বাদ।
+             *
+             * না বাদ দিলে একটা নীতি নিজের নাম নিজেই "পৌঁছেছে" প্রমাণ
+             * করত, আর পাহারাটা সবসময় সবুজ থাকত।
+             */
+            if (str_contains($path, '/Policies/')) {
+                continue;
+            }
+
+            $source = (string) file_get_contents($path);
+
+            foreach ($patterns as $pattern) {
+                if (preg_match_all($pattern, $source, $matches) > 0) {
+                    foreach ($matches[1] as $ability) {
+                        $found[] = $ability;
+                    }
+                }
+            }
+        }
+
+        return array_values(array_unique($found));
+    }
+}

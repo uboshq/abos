@@ -1,0 +1,93 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Modules\Sales\Http\Requests;
+
+use App\Core\Support\CompanyContext;
+use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
+
+/**
+ * বিক্রয় আদেশের ইনপুট।
+ *
+ * exists নিয়মে company_id বসাতেই হবে: গ্লোবাল স্কোপ ভ্যালিডেটরের কাঁচা
+ * কোয়েরিতে চলে না, তাই ওটা ছাড়া অন্য কোম্পানির গ্রাহকের id পাঠিয়ে দেওয়া
+ * যেত আর সেটা নীরবে গৃহীত হত।
+ */
+class SalesOrderRequest extends FormRequest
+{
+    public function rules(): array
+    {
+        $companyId = CompanyContext::id();
+
+        return [
+            'customer_id' => ['required', 'integer',
+                Rule::exists('customers', 'id')->where('company_id', $companyId),
+                /*
+                 * ⛔ বিক্রয়কর্মী কেবল নিজের বাঁধা ডিলারের অর্ডার দেন — ⛔১৬, ২ অক্টোবর ২০২৬।
+                 * ⓘ `exists` কাঁচা কোয়েরি, ডিলারের দেয়াল সেখানে চলে না; তাই আলাদা প্রশ্ন।
+                 */
+                static function (string $attribute, mixed $value, \Closure $fail): void {
+                    if (! app(\App\Core\Services\DealerScope::class)->allowsCustomer((int) $value)) {
+                        $fail(__('customer::binding.dealer_out_of_reach'));
+                    }
+                }],
+            'warehouse_id' => ['nullable', 'integer',
+                Rule::exists('inv_warehouses', 'id')->where('company_id', $companyId)],
+            'trx_date' => ['required', 'date', 'before_or_equal:today'],
+            'deliver_on' => ['nullable', 'date', 'after_or_equal:trx_date'],
+            'narration' => ['nullable', 'string', 'max:500'],
+
+            'lines' => ['required', 'array', 'min:1'],
+            'lines.*.product_id' => ['required', 'integer',
+                Rule::exists('inv_products', 'id')->where('company_id', $companyId)],
+            'lines.*.ordered_qty' => ['required', 'numeric', 'gt:0'],
+
+            // কোন প্যাকে লেখা — খালি মানে পণ্যের নিজের একক
+            'lines.*.unit_id' => ['nullable', 'integer',
+                Rule::exists('mdm_units', 'id')->where('company_id', $companyId)],
+
+            /*
+             * ⛔ দর শূন্য নয় — মালিকের নির্দেশ, ২৩ সেপ্টেম্বর ২০২৬।
+             *
+             * তাঁর কথা: *"sales price chara entry nibe na"*।
+             *
+             * ── ⚠️ শূন্য দরে বিক্রির ক্ষতিটা নীরব ─────────────────────
+             * ⓘ মাল গুদাম থেকে নামে, খরচ খাতায় বসে, কিন্তু আয় শূন্য —
+             * ⛔ অর্থাৎ প্রতিটা শূন্য-দরের সারি খাতায় **সরাসরি লোকসান**
+             * লেখে, আর কোনো পর্দা লাল হয় না।
+             *
+             * ⓘ ফ্রি বা উপহারের মাল এতে আটকায় না: ওগুলোর নিজের ঘর ও
+             * নিজের টেবিল আছে (`free_qty`, উপহারের সারি), আর সেখানে দর
+             * চাওয়াই হয় না।
+             */
+            'lines.*.rate' => ['required', 'numeric', 'gt:0'],
+            'lines.*.discount' => ['nullable', 'numeric', 'min:0'],
+            'lines.*.tax' => ['nullable', 'numeric', 'min:0'],
+            'lines.*.narration' => ['nullable', 'string', 'max:500'],
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function documentData(): array
+    {
+        return $this->safe()->only([
+            'customer_id', 'warehouse_id', 'trx_date', 'deliver_on', 'narration',
+        ]);
+    }
+
+    /**
+     * @return list<array<string, mixed>>
+     */
+    public function lineData(): array
+    {
+        // ফাঁকা সারি বাদ — ফর্মে সবসময় একটা খালি লাইন থাকে
+        return array_values(array_filter(
+            $this->validated()['lines'] ?? [],
+            fn (array $line) => filled($line['product_id'] ?? null),
+        ));
+    }
+}

@@ -1,0 +1,168 @@
+{{--
+    একটা পণ্য — চারটা অবস্থা ও তার পেছনের চলাচল।
+
+    চারটা সংখ্যা পাশাপাশি, আর নিচে সেই সারিগুলো যেগুলো যোগ হয়ে
+    সংখ্যাগুলো হয়েছে (নিয়ম ১)। "৪৭ কেন" প্রশ্নের উত্তর এক ক্লিক দূরে।
+--}}
+<x-layouts.app :menu="$menu">
+    <x-slot:title>{{ $product->name() }}</x-slot:title>
+
+    <x-slot:header>
+        <x-ui.page-header :title="$product->name()" :subtitle="$product->code">
+            <x-slot:actions>
+                @can('update', $product)
+                    <x-ui.button tone="secondary" :href="route('inventory.product.edit', $product)">
+                        {{ __('core.action.edit') }}
+                    </x-ui.button>
+                @endcan
+
+                @can('delete', $product)
+                    @if ($product->is_active)
+                        <form method="POST" action="{{ route('inventory.product.destroy', $product) }}">
+                            @csrf
+                            @method('DELETE')
+                            <x-ui.button type="submit" tone="secondary">
+                                {{ __('inventory::action.deactivate') }}
+                            </x-ui.button>
+                        </form>
+                    @else
+                        <form method="POST" action="{{ route('inventory.product.activate', $product) }}">
+                            @csrf
+                            <x-ui.button type="submit" tone="secondary">
+                                {{ __('inventory::action.activate') }}
+                            </x-ui.button>
+                        </form>
+                    @endif
+                @endcan
+            </x-slot:actions>
+        </x-ui.page-header>
+    </x-slot:header>
+
+    @if (session('saved'))
+        <div role="status"
+             class="mb-4 rounded-(--radius-field) bg-(--color-badge-success-bg) px-3 py-2 text-sm
+                    text-(--color-badge-success-ink)">
+            {{ session('saved') }}
+        </div>
+    @endif
+
+    <x-ui.errors />
+
+    {{-- চারটা অবস্থা — সব গুদাম মিলিয়ে --}}
+    <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        @foreach ([
+            'inventory::field.floor' => $states['floor'],
+            'inventory::field.reserved' => $states['reserved'],
+            'inventory::field.hold' => $states['hold'],
+            'inventory::field.available' => $states['available'],
+        ] as $label => $value)
+            <div class="rounded-(--radius-card) border border-(--color-border)
+                        bg-(--color-surface-card) p-4">
+                <p class="text-sm text-(--color-ink-muted)">{{ __($label) }}</p>
+                <p class="num mt-1 text-2xl font-semibold">{{ \App\Core\Support\Money::format($value) }}</p>
+            </div>
+        @endforeach
+    </div>
+
+    <p class="mt-2 max-w-(--spacing-prose-max) text-2xs text-(--color-ink-muted)">
+        {{ __('inventory::message.stock_math') }}
+    </p>
+
+    <div class="mt-4 grid gap-4 lg:grid-cols-3">
+        <section data-boxed class="rounded-(--radius-card) border border-(--color-border)
+                        bg-(--color-surface-card) p-4 lg:col-span-2">
+            <div class="mb-3 flex items-center justify-between gap-2">
+                <h2 class="font-semibold">{{ __('inventory::section.identity') }}</h2>
+                @include('inventory::partials.state-badge', ['record' => $product])
+            </div>
+
+            <dl class="grid gap-x-4 gap-y-2 sm:grid-cols-2">
+                @foreach ([
+                    'inventory::field.barcode' => $product->barcode,
+                    'inventory::field.brand' => $product->brandRow?->name(),
+                    'inventory::field.category' => $product->categoryRow?->name(),
+                    'inventory::field.unit' => $product->unit?->name(),
+                    'inventory::field.tax' => $product->tax?->name(),
+                ] as $label => $value)
+                    @if (filled($value))
+                        <div>
+                            <dt class="text-2xs text-(--color-ink-muted)">{{ __($label) }}</dt>
+                            <dd class="text-sm">{{ $value }}</dd>
+                        </div>
+                    @endif
+                @endforeach
+            </dl>
+        </section>
+
+        <section data-boxed class="rounded-(--radius-card) border border-(--color-border)
+                        bg-(--color-surface-card) p-4">
+            <h2 class="mb-3 font-semibold">{{ __('inventory::section.pricing') }}</h2>
+
+            {{--
+                ক্রয়মূল্য সবার জন্য নয়।
+
+                ── কী ভাঙা ছিল (২ সেপ্টেম্বর ২০২৬) ─────────────────────
+                এই তিনটা ঘর একসাথে ছাপা হত, কোনো পাহারা ছাড়াই। যিনি
+                পণ্য দেখতে পান — কার্যত সবাই — তিনি প্রতিটা পণ্য কত
+                দামে কেনা হয়েছে তা দেখতে পেতেন।
+
+                বিক্রির সময় প্রথম প্রশ্নটা ঠিক এটাই, আর উত্তরটা ছিল
+                "হ্যাঁ"।
+
+                ── কেন ঘরটা লুকানো হয় না, ঢাকা হয় ─────────────────────
+                সারিটা তুলে দিলে একজন ভাবতেন ক্রয়মূল্য বসানোই হয়নি,
+                আর মাস্টার "ঠিক" করতে গিয়ে হয়তো নতুন একটা দর বসিয়ে
+                দিতেন। চিহ্নটা বলে **আছে, কিন্তু আপনার জন্য নয়**।
+            --}}
+            <dl class="space-y-2">
+                @foreach ([
+                    'inventory::field.purchase_price' => ['purchase_price', $product->purchase_price],
+                    'inventory::field.sale_price' => [null, $product->sale_price],
+                    'inventory::field.reorder_level' => [null, $product->reorder_level],
+                ] as $label => [$guarded, $value])
+                    <div class="flex items-baseline justify-between gap-3">
+                        <dt class="text-sm text-(--color-ink-muted)">{{ __($label) }}</dt>
+                        <dd class="num font-medium">
+                            @if ($guarded && ! \App\Core\Security\FieldSecurity::visible($product, $guarded))
+                                <span class="text-(--color-ink-muted)"
+                                      title="{{ __('core.field.hidden') }}">{{ \App\Core\Security\FieldSecurity::mask() }}</span>
+                            @else
+                                {{ \App\Core\Support\Money::format($value) }}
+                            @endif
+                        </dd>
+                    </div>
+                @endforeach
+            </dl>
+        </section>
+    </div>
+
+    {{-- চলাচল — সংখ্যাগুলো কোথা থেকে এল (নিয়ম ১) --}}
+    <section id="movements"
+             class="scroll-mt-24 mt-4 overflow-hidden rounded-(--radius-card) border border-(--color-border)
+                    bg-(--color-surface-card)">
+        <h2 class="border-b border-(--color-border) bg-(--color-section-head) px-4 py-3 font-semibold">
+            {{ __('inventory::section.movements') }}
+        </h2>
+
+        <x-ui.table
+            :empty="__('inventory::message.no_movements')"
+            :rows="$movements"
+            :columns="[
+                ['key' => 'trx_date', 'label' => __('core.table.date'), 'width' => '8rem',
+                 'render' => fn ($m) => \App\Core\Support\DateFormat::format($m->trx_date)],
+                ['key' => 'document', 'label' => __('core.table.document'),
+                 'render' => fn ($m) => view('inventory::partials.movement-source', ['movement' => $m])],
+                ['key' => 'warehouse_id', 'label' => __('inventory::field.warehouse'),
+                 'render' => fn ($m) => $m->warehouse?->name()],
+                ['key' => 'reason_code_id', 'label' => __('inventory::field.reason'),
+                 'render' => fn ($m) => $m->reasonCode?->name()],
+                ['key' => 'floor_change', 'label' => __('inventory::field.floor'), 'numeric' => true, 'width' => '8rem',
+                 'render' => fn ($m) => \App\Core\Support\Money::isZero($m->floor_change) ? '' : \App\Core\Support\Money::format($m->floor_change)],
+                ['key' => 'hold_change', 'label' => __('inventory::field.hold'), 'numeric' => true, 'width' => '8rem',
+                 'render' => fn ($m) => \App\Core\Support\Money::isZero($m->hold_change) ? '' : \App\Core\Support\Money::format($m->hold_change)],
+            ]" />
+
+        <x-ui.pager :rows="$movements" />
+        <x-ui.list-totals :rows="$movements" />
+    </section>
+</x-layouts.app>

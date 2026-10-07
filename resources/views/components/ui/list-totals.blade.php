@@ -1,0 +1,106 @@
+@props([
+    /**
+     * এই তালিকার যোগফলগুলো — [['label' => 'মোট', 'value' => '৪২,১৮,৯৫০', 'tone' => 'ink'], …]
+     *
+     * `tone` ঐচ্ছিক: `ink` (সাধারণ) · `ok` (আদায়) · `bad` (বকেয়া)।
+     */
+    'totals' => [],
+
+    /**
+     * ⭐ সারির সংখ্যা — paginator (`total()` গোটা ছাঁকনির গোনা) বা সরাসরি একটা সংখ্যা।
+     * মালিক, ৫ অক্টোবর ২০২৬: পট্টিটা **প্রতিটা** তালিকায়; টাকা না থাকলেও অন্তত "১২৪টি সারি"।
+     */
+    'rows' => null,
+
+    /**
+     * ⭐ টেবিলের সর্বমোট ([[GrandTotals]]) আর কলামগুলো — দিলে যে কলাম যোগ দেখায় (`'total' => 'money'|'quantity'`)
+     * তার সর্বমোট এখানেও বসে, কলামের নিজের নামে। ⓘ একই সংখ্যা, একই উৎস: টেবিলের নিচের সর্বমোট আর এই পট্টি
+     * কখনো আলাদা কথা বলে না।
+     */
+    'grand' => [],
+    'columns' => [],
+])
+
+@php
+    $head = [];
+
+    // ⓘ paginator-এর `total()` গোটা ছাঁকনির গোনা (পাতা ভাগের নিজের COUNT), এই পাতার নয়
+    if ($rows instanceof \Illuminate\Contracts\Pagination\LengthAwarePaginator) {
+        $rows = $rows->total();
+    } elseif ($rows instanceof \Countable) {
+        $rows = count($rows);
+    }
+
+    if (is_int($rows)) {
+        $head[] = ['value' => __('core.list.rows', ['count' => number_format($rows)])];
+    }
+
+    foreach ($grand === [] ? [] : $columns as $column) {
+        $kind = $column['total'] ?? null;
+
+        if (! in_array($kind, ['money', 'quantity'], true) || ! array_key_exists($column['key'] ?? '', $grand)) {
+            continue;
+        }
+
+        $head[] = [
+            'label' => (string) $column['label'],
+            'value' => \App\View\Components\Ui\Table::format((string) $grand[$column['key']], $kind),
+        ];
+    }
+
+    $totals = [...$head, ...$totals];
+@endphp
+
+{{--
+    তালিকার যোগফল — পর্দা **ঘোষণা করে**, দেখায় না।
+
+    ── কেন এই কম্পোনেন্টটা নিজে কিছুই আঁকে না ───────────────────────────
+    যোগফলের পট্টিটা ABOS-এর নিজের রূপের জিনিস (`listfoot=totals`), বাকি
+    ন'টায় নেই। ⚠️ কিন্তু পর্দায় `@if ($look === 'navy')` লেখা যাবে না —
+    তাহলে রূপের নামটা ১০২টা পর্দায় ছড়িয়ে পড়ত, আর দশম রূপ যোগ করতে ওই
+    একশোটা ফাইল খুলতে হত।
+
+    ⭐ তাই কাজটা দুই ভাগে:
+
+        পর্দা      "আমার যোগফল এই তিনটা"     ← এই কম্পোনেন্ট, `@push`
+        খোলস      "আমি ওগুলো দেখাব কি না"    ← `chrome/navy.blade.php`
+
+    ⓘ ফল: পর্দা রূপের নাম জানে না, আর যে রূপ চায় না তার পাতায় ঘোষণাটা
+    চুপচাপ পড়ে থাকে, কিছুই আঁকে না।
+
+    ── কেন `@push`, আর কেন সেটা কাজ করে ────────────────────────────────
+    লেআউটটা কম্পোনেন্ট-ভিত্তিক (`<x-layouts.app>`), তাই স্লটের ভেতরটা
+    **আগে** রেন্ডার হয়, খোলসটা তার পরে। অর্থাৎ খোলস যখন `@stack` পড়ে,
+    পর্দার ঘোষণাটা তখন সেখানে বসে আছে।
+
+    ⚠️ উল্টো ক্রমে (খোলস আগে) এটা নীরবে খালি আসত — আর সেটাই এই ধরনের
+    কৌশলের চেনা ফাঁদ।
+
+    ── খালি হলে কিছুই নয় ───────────────────────────────────────────────
+    ⛔ যোগফল না থাকলে ঘোষণাও নেই। একটা খালি পট্টি পর্দার নিচে জায়গা
+    নিত আর কিছুই বলত না — এই কোডবেসে ওটাকেই "মৃত বোতাম" বলা হয়।
+--}}
+
+@if ($totals !== [])
+    @push('list-totals')
+        @foreach ($totals as $total)
+            @php
+                $tone = $total['tone'] ?? 'ink';
+            @endphp
+
+            {{-- ⓘ `label` ঐচ্ছিক। নমুনার প্রথম ঘরটা কেবল "১২৪টি সারি" —
+                 সেখানে লেবেল আর মান আলাদা নয়, এক টুকরো লেখা। ⚠️ লেবেল
+                 বাধ্যতামূলক করলে ওখানে একটা খালি ঘর বসত। --}}
+            <span class="inline-flex items-baseline gap-1.5">
+                @isset($total['label'])
+                    <span class="text-(--color-ink-muted)">{{ $total['label'] }}</span>
+                @endisset
+                <span @class([
+                    'num font-semibold',
+                    'text-(--color-badge-success-ink)' => $tone === 'ok',
+                    'text-(--color-danger)' => $tone === 'bad',
+                ])>{{ $total['value'] }}</span>
+            </span>
+        @endforeach
+    @endpush
+@endif

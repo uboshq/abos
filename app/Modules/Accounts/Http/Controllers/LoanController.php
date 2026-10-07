@@ -1,0 +1,427 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Modules\Accounts\Http\Controllers;
+
+use App\Core\Concerns\GrandTotals;
+use App\Core\Services\MenuBuilder;
+use App\Core\Support\CompanyContext;
+use App\Http\Controllers\Controller;
+use App\Modules\Accounts\Models\Account;
+use App\Modules\Accounts\Models\Loan;
+use App\Modules\Accounts\Models\LoanInstalment;
+use App\Modules\Accounts\Services\LoanSchedule;
+use App\Modules\Accounts\Services\LoanService;
+use App\Modules\Accounts\Services\StandardChart;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Illuminate\Routing\Controllers\HasMiddleware;
+use Illuminate\Routing\Controllers\Middleware;
+use Illuminate\Validation\Rule;
+use Illuminate\View\View;
+
+/**
+ * ঋণ — টার্ম লোন ও CC।
+ *
+ * ── কেন খাত দিয়ে কাজ চলে না ─────────────────────────────────────────
+ * ২২১০ ব্যাংক ঋণ আর ২২২০ অন্যান্য ঋণ — খাত দুইটা আগে থেকেই ছিল, তাই
+ * ভাউচার দিয়ে টাকা জমা-খরচ লেখা যেত। কিন্তু খাত একটা যোগফল ছাড়া কিছু
+ * জানে না। সে বলতে পারে না কিস্তি কবে, কতটা আসল আর কতটা সুদ, কত বাকি,
+ * কিংবা সীমার আর কতটা খালি — অথচ ঋণ নিয়ে প্রতিটা প্রশ্ন ঠিক ওগুলোই।
+ */
+class LoanController extends Controller implements HasMiddleware
+{
+    use GrandTotals;
+
+    public function __construct(
+        private readonly LoanService $loans,
+        private readonly MenuBuilder $menu,
+    ) {}
+
+    public static function middleware(): array
+    {
+        return [
+            new Middleware('can:accounts.loan.view', only: ['index', 'show']),
+            new Middleware('can:accounts.loan.manage', only: [
+                'create', 'store', 'drawDown', 'payInstalment', 'repay', 'chargeInterest',
+            ]),
+        ];
+    }
+
+    public function index(Request $request): View
+    {
+        $list = Loan::query()
+            /*
+             * খোঁজা — কাগজের নম্বর, ঋণদাতা আর ব্যাংকের হিসাব নম্বর।
+             *
+             * ⚠️ নিচের "মোট বকেয়া" খোঁজা মানে না, ইচ্ছাকৃত — ওটা সব ঋণের
+             * মোট (কারণ নিচে লেখা), খোঁজার ফল নয়।
+             */
+            ->when(trim((string) $request->query('q')) ?: null, fn ($query, $term) => $query->where(
+                fn ($w) => $w->where('document_no', 'like', "%{$term}%")
+                    ->orWhere('lender', 'like', "%{$term}%")
+                    ->orWhere('account_no', 'like', "%{$term}%")
+            ))
+            ->orderByDesc('id');
+
+        /*
+         * ⭐ সর্বমোট — ছাঁকা তালিকার সব পাতা মিলে ([[GrandTotals]])। ⓘ বকেয়া সারি ধরে হিসাব হয় ([[Loan::outstanding()]]),
+         * তাই সেটা গোটা তালিকা হেঁটে — ঋণ হাতে গোনা কয়েকটা।
+         */
+        $grand = $this->grandTotals($list, ['sanctioned' => 't.sanctioned']) + ['outstanding' => (clone $list)->get()
+            ->reduce(fn (string $sum, Loan $l) => bcadd($sum, (string) $l->outstanding(), 4), '0')];
+        $loans = $list->paginate(50)->withQueryString();
+
+        return view('accounts::loan.index', [
+            'menu' => $this->menu->forUser($request->user()),
+            'loans' => $loans,
+            'grand' => $grand,
+            'q' => $request->query('q'),
+
+            /*
+             * মোট বকেয়া খতিয়ান থেকে গোনা, আলাদা কোনো কলাম থেকে নয়।
+             *
+             * দুই জায়গায় একই সংখ্যা রাখলে একদিন আলাদা হবেই — একটা
+             * পরিশোধ দুইবার বসলে, বা কেউ ভাউচার দিয়ে সরাসরি ঋণের খাতে
+             * হাত দিলে।
+             *
+             * ── কেন উপরের `$loans` থেকে নয়, নিজের কোয়েরিতে ───────────
+             * আগে এটা `$loans->reduce(...)` ছিল, আর তখন তালিকাটা পুরোটাই
+             * আসত বলে যোগফলও পুরোটার হত। পাতা ভাগ বসার পর ওই লেখাটা
+             * **চুপচাপ এই পাতার যোগফল** হয়ে যেত — শিরোনামে "মোট বকেয়া"
+             * লেখা থাকত, অথচ সংখ্যাটা হত প্রথম পঞ্চাশটার। পাতা বদলালে
+             * "মোট" বদলে যেত, আর কোনটা সত্যি তা পর্দা দেখে বলার উপায়
+             * থাকত না।
+             *
+             * মোটের প্রশ্ন মোট থেকেই — তাই এটা নিজের কোয়েরি, পাতার
+             * বাইরে।
+             *
+             * ⚠️ **জানা সীমা:** `outstanding()` প্রতিটা ঋণের জন্য একটা
+             * করে খতিয়ান-কোয়েরি চালায়, তাই এই যোগফলটা ঋণের সংখ্যার
+             * সাথে বাড়ে — পাতা ভাগ ওটা কমায় না, কারণ মোট মানেই সবগুলো।
+             * সারির সংখ্যা কমেছে (পঞ্চাশে বাঁধা), যোগফলের কোয়েরিগুলো নয়।
+             *
+             * ঠিক উত্তরটা হলো `outstanding()`-কে একটা group-by কোয়েরিতে
+             * নামানো। সেটা টাকার হিসাব, আর এই মুহূর্তে টেস্ট চালানোর
+             * উপায় নেই (MySQL বন্ধ) — না মেপে টাকার অঙ্ক বদলানোর চেয়ে
+             * সীমাটা লিখে রাখা সৎ। ঋণ ধীরে জমে, তাই এটা আজকের সমস্যা নয়।
+             */
+            'total' => Loan::query()->get()->reduce(
+                fn (string $sum, Loan $l) => bcadd($sum, $l->outstanding(), 4),
+                '0',
+            ),
+        ]);
+    }
+
+    public function create(Request $request): View
+    {
+        /*
+         * সুদের খাত আগে থেকেই বাছা — কিন্তু বদলানো যায়।
+         *
+         * ── কেন ডিফল্ট লাগল ─────────────────────────────────────────
+         * ঘরটা বাধ্যতামূলক, আর তালিকায় ত্রিশটা খরচের খাত। প্রথম ঋণ
+         * বসানোর সময় মানুষ যেটা চেনা মনে হয় সেটাই বেছে নেন — আর
+         * "ব্যাংক চার্জ" নামটা কাছাকাছি শোনায় বলে সুদ ওখানেই গিয়ে বসত।
+         * পরীক্ষায় ঠিক সেটাই হয়েছিল (HP, ১৩ আগস্ট)।
+         *
+         * দুইটা মিশে গেলে "ধার করতে বছরে কত খরচ হলো" প্রশ্নের উত্তর
+         * দেওয়া যায় না, আর নিরীক্ষক সুদ আলাদা করে দেখতে চান।
+         *
+         * তবু ঘরটা খোলা: কেউ ব্যাংক-ঋণ ও ব্যক্তি-ঋণের সুদ আলাদা খাতে
+         * রাখেন, আর সেটা তাঁদের সিদ্ধান্ত।
+         */
+        $loan = new Loan;
+        $loan->interest_account_id = Account::query()
+            ->where('code', StandardChart::INTEREST_EXPENSE)
+            ->value('id');
+
+        return view('accounts::loan.form', [
+            'menu' => $this->menu->forUser($request->user()),
+            'loan' => $loan,
+            'principalAccounts' => $this->accountsUnder('2200'),
+            'interestAccounts' => $this->postableAccounts(Account::EXPENSE),
+            'moneyAccounts' => $this->moneyAccounts(),
+
+            /*
+             * বন্ধক রাখার তালিকাটা এখানে ছিল, ৩০ আগস্ট ২০২৬-এ
+             * [[DepositController]]-এ চলে গেছে -- FD-র সাথেই, কারণ
+             * বন্ধন এখন জমা থেকে ধারের দিকে, ধার থেকে ধারে নয়।
+             */
+        ]);
+    }
+
+    public function store(Request $request): RedirectResponse
+    {
+        $data = $request->validate([
+            'lender' => ['required', 'string', 'max:160'],
+            'account_no' => ['nullable', 'string', 'max:64'],
+            'kind' => ['required', Rule::in([Loan::TERM, Loan::CC, Loan::HAND])],
+
+            /*
+             * দিক — কেবল হাতধারে অর্থবহ।
+             *
+             * ব্যাংক ঋণ সবসময় নেওয়া; কেউ ব্যাংককে ধার দেয় না। তাই
+             * ঘরটা ফর্মে শুধু হাতধার বাছলে দেখা যায়, আর না এলে ডিফল্ট
+             * `taken` — যেটা আজ পর্যন্ত সব সারির সত্যি।
+             */
+            'direction' => ['nullable', Rule::in([Loan::TAKEN, Loan::GIVEN])],
+
+            /*
+             * ফেরতের কথা দেওয়া তারিখ — হাতধারের একমাত্র সময়সীমা।
+             *
+             * কিস্তির সূচি নেই বলে দেরি ধরার আর কোনো উপায় নেই। খালি
+             * রাখা যায়: কেউ তারিখ না বললে কথা ভাঙার প্রশ্নও ওঠে না।
+             */
+            'due_on' => ['nullable', 'date'],
+
+            /*
+             * মেয়াদ শেষের তারিখ — FD ও DPS-এ।
+             *
+             * `due_on` থেকে আলাদা: একটা প্রতিশ্রুতি, অন্যটা চুক্তি।
+             * হাতধারের তারিখ পেরোলে দেরি; FD-র তারিখ পেরোলে প্রাপ্য।
+             */
+            'matures_on' => ['nullable', 'date'],
+
+            /*
+             * এই FD কোন ঋণের বিপরীতে বাঁধা।
+             *
+             * বাঁধা FD তালিকায় "আছে" দেখায়, অথচ ভাঙানো যায় না — আর
+             * ওই টাকার উপর ভরসা করে নেওয়া সিদ্ধান্তই সবচেয়ে দামি ভুল।
+             */
+            'sanctioned' => ['required', 'numeric', 'gt:0'],
+            'interest_rate' => ['required', 'numeric', 'min:0', 'max:100'],
+            'start_date' => ['required', 'date'],
+            'principal_account_id' => ['required', 'integer', Rule::exists('accounts', 'id')->where('company_id', CompanyContext::id())],
+            'interest_account_id' => ['required', 'integer', Rule::exists('accounts', 'id')->where('company_id', CompanyContext::id())],
+            'security' => ['nullable', 'string', 'max:500'],
+            'narration' => ['nullable', 'string', 'max:500'],
+
+            /*
+             * টার্ম লোনেই কেবল মেয়াদ, পদ্ধতি ও প্রথম কিস্তির তারিখ।
+             *
+             * CC-তে কিস্তি বলে কিছু নেই, তাই ঘরগুলো ফর্মেই দেখা যায় না
+             * — আর যাচাইও শর্তসাপেক্ষ, নইলে CC বসাতে গেলে এমন ঘর চাইত
+             * যা পর্দায় নেই।
+             */
+            'interest_method' => ['nullable', Rule::in([LoanSchedule::REDUCING, LoanSchedule::FLAT])],
+            'tenure_months' => ['nullable', 'integer', 'min:1', 'max:600'],
+            'first_instalment_on' => ['nullable', 'date'],
+
+            // টাকাটা কোথায় ঢুকল — টার্ম লোনে বাধ্যতামূলক
+            'into_account_id' => ['nullable', 'integer', Rule::exists('accounts', 'id')->where('company_id', CompanyContext::id())],
+        ]);
+
+        if ($data['kind'] === Loan::TERM) {
+            $request->validate([
+                'interest_method' => ['required'],
+                'tenure_months' => ['required'],
+                'into_account_id' => ['required'],
+            ]);
+        }
+
+        /*
+         * হাতধারেও টাকাটা কোথায় গেল বা কোথা থেকে এল সেটা লাগে।
+         *
+         * টার্ম লোনের মতোই পুরো টাকা একবারেই নড়ে, তাই ঘরটা ছাড়া
+         * দাখিলাটাই বসত না — ধারটা খাতায় থাকত অথচ টাকাটা কোথাও নড়ত
+         * না, আর নগদ মিলত না।
+         */
+        if ($data['kind'] === Loan::HAND) {
+            $request->validate(['into_account_id' => ['required']]);
+        }
+
+        $loan = $this->loans->create(
+            data: [
+                'lender' => $data['lender'],
+                'account_no' => $data['account_no'] ?? null,
+                'kind' => $data['kind'],
+                /*
+                 * দিকটা শুধু পাঠানো হয়; ঠিক করে LoanService।
+                 *
+                 * নিয়মটা এখানেও লিখলে এক নিয়ম দুই জায়গায় থাকত, আর
+                 * দুই জায়গার নিয়ম একদিন আলাদা হয়ই।
+                 */
+                'direction' => $data['direction'] ?? null,
+                'due_on' => $data['kind'] === Loan::HAND ? ($data['due_on'] ?? null) : null,
+                /*
+                  * ব্যাংকে রাখা টাকার ঘরগুলো (মেয়াদ, বন্ধক) এখানে ছিল,
+                  * ৩০ আগস্ট ২০২৬-এ সরানো হলো -- জমার নিজের পর্দা আছে
+                  * ([[DepositController]]), আর দুই দরজা রাখা যায় না।
+                  */
+                'interest_method' => $data['kind'] === Loan::TERM ? $data['interest_method'] : null,
+                'sanctioned' => $data['sanctioned'],
+                'interest_rate' => $data['interest_rate'],
+                'tenure_months' => $data['kind'] === Loan::TERM ? $data['tenure_months'] : null,
+                'start_date' => $data['start_date'],
+                'first_instalment_on' => $data['first_instalment_on'] ?? $data['start_date'],
+                'principal_account_id' => $data['principal_account_id'],
+                'interest_account_id' => $data['interest_account_id'],
+                'security' => $data['security'] ?? null,
+                'narration' => $data['narration'] ?? null,
+            ],
+            intoAccountId: in_array($data['kind'], [Loan::TERM, Loan::HAND], true)
+                ? (int) $data['into_account_id']
+                : null,
+        );
+
+        return redirect()
+            ->route('accounts.loan.show', $loan->id)
+            ->with('saved', __('accounts::message.loan_created'));
+    }
+
+    public function show(Request $request, Loan $loan): View
+    {
+        return view('accounts::loan.show', [
+            'menu' => $this->menu->forUser($request->user()),
+            'loan' => $loan->load('instalments', 'movements.counterAccount', 'principalAccount', 'interestAccount'),
+            'moneyAccounts' => $this->moneyAccounts(),
+        ]);
+    }
+
+    /** CC-তে টাকা তোলা — সীমার ভেতরে। */
+    public function drawDown(Request $request, Loan $loan): RedirectResponse
+    {
+        $data = $request->validate([
+            'amount' => ['required', 'numeric', 'gt:0'],
+            'into_account_id' => ['required', 'integer', Rule::exists('accounts', 'id')->where('company_id', CompanyContext::id())],
+            'trx_date' => ['nullable', 'date', 'before_or_equal:today'],
+        ]);
+
+        $this->loans->drawDown(
+            $loan,
+            (string) $data['amount'],
+            (int) $data['into_account_id'],
+            $data['trx_date'] ?? null,
+        );
+
+        return back()->with('saved', __('accounts::message.loan_drawn'));
+    }
+
+    /** একটা কিস্তি পরিশোধ — আসল দায় কমায়, সুদ খরচে যায়। */
+    public function payInstalment(Request $request, Loan $loan, int|string $instalment): RedirectResponse
+    {
+        $row = LoanInstalment::query()
+            ->where('loan_id', $loan->id)
+            ->whereKey($instalment)
+            ->firstOrFail();
+
+        $data = $request->validate([
+            'from_account_id' => ['required', 'integer', Rule::exists('accounts', 'id')->where('company_id', CompanyContext::id())],
+            'trx_date' => ['nullable', 'date', 'before_or_equal:today'],
+
+            /*
+             * ব্যাংক কখনো সূচির চেয়ে কম-বেশি কাটে (জরিমানা, ছাড়)।
+             *
+             * খালি রাখলে সূচির অঙ্কই ধরা হয়। দিলে সুদটা সূচির মানেই
+             * থাকে আর বাকিটা আসলে যায় — উল্টো করলে খরচের খাত ব্যাংকের
+             * কাগজের সাথে মিলত না, আর সুদের অঙ্ক করের হিসাবেও যায়।
+             */
+            'amount' => ['nullable', 'numeric', 'gt:0'],
+        ]);
+
+        $this->loans->payInstalment(
+            $row,
+            (int) $data['from_account_id'],
+            $data['trx_date'] ?? null,
+            isset($data['amount']) ? (string) $data['amount'] : null,
+        );
+
+        return back()->with('saved', __('accounts::message.instalment_paid'));
+    }
+
+    /** CC-তে জমা — কেবল দায় কমে। */
+    public function repay(Request $request, Loan $loan): RedirectResponse
+    {
+        $data = $request->validate([
+            'amount' => ['required', 'numeric', 'gt:0'],
+            'from_account_id' => ['required', 'integer', Rule::exists('accounts', 'id')->where('company_id', CompanyContext::id())],
+            'trx_date' => ['nullable', 'date', 'before_or_equal:today'],
+        ]);
+
+        $this->loans->repay(
+            $loan,
+            (string) $data['amount'],
+            (int) $data['from_account_id'],
+            $data['trx_date'] ?? null,
+        );
+
+        return back()->with('saved', __('accounts::message.loan_repaid'));
+    }
+
+    /**
+     * মাসের সুদ বসানো — CC-তে।
+     *
+     * অঙ্কটা ব্যাংকের বিবরণী থেকে হাতে লেখা হয়, নিজে গোনা হয় না।
+     * প্রতিদিনের বকেয়ার উপর সুদ ব্যাংক তার নিজের নিয়মে গোনে (কোন দিন
+     * থেকে কোন দিন, ছুটির দিন কীভাবে) — আমরা গুনলে দুইটা সংখ্যা কখনো
+     * এক হত না, আর প্রতি মাসে কেউ মেলাতে বসত।
+     *
+     * LoanSchedule::interestOnDailyBalance আছে যাচাই করার জন্য: ব্যাংকের
+     * অঙ্ক সন্দেহজনক হলে নিজে গুনে দেখা যায়।
+     */
+    public function chargeInterest(Request $request, Loan $loan): RedirectResponse
+    {
+        $data = $request->validate([
+            'amount' => ['required', 'numeric', 'gt:0'],
+            'trx_date' => ['nullable', 'date', 'before_or_equal:today'],
+        ]);
+
+        $this->loans->chargeInterest($loan, (string) $data['amount'], $data['trx_date'] ?? null);
+
+        return back()->with('saved', __('accounts::message.interest_charged'));
+    }
+
+    /** একটা মাথার নিচের সব খাত — যেগুলোয় সত্যিই দাখিলা বসে। */
+    private function accountsUnder(string $parentCode)
+    {
+        $parent = Account::query()->postable()->where('code', $parentCode)->first();
+
+        return $parent === null
+            ? collect()
+            : Account::query()
+                ->where('parent_id', $parent->id)
+                ->where('is_group', false)
+                ->orderBy('code')
+                ->get();
+    }
+
+    private function postableAccounts(string $type)
+    {
+        return Account::query()
+            ->where('type', $type)
+            ->where('is_group', false)
+            ->orderBy('code')
+            ->get();
+    }
+
+    /** নগদ ও ব্যাংক — টাকাটা কোথায় ঢুকল বা কোথা থেকে গেল। */
+    private function moneyAccounts()
+    {
+        /*
+         * ⛔ এখানে `postable()` ছিল, আর তাতে তালিকাটা **সবসময় খালি** — ১৯ সেপ্টেম্বর ২০২৬।
+         *
+         * ⓘ `postable()` মানে `is_group = false`। অথচ টাকার তিন মা —
+         * ১১০১ নগদ · ১১০২ ব্যাংক · ১১০৫ MFS — **তিনটাই দল**। ⚠️ তাই মা
+         * খোঁজাটা শূন্য ফেরাত, আর শূন্য মায়ের সন্তানও শূন্য।
+         *
+         * ⛔ ফল: "Paid from" ঘরটা **প্রতিটা উপায়ে খালি** থাকত — নগদ,
+         * ব্যাংক, সব। আর পর্দা বলত *"এই ধরনের কোনো খাত এখনো
+         * বসানো নেই"* — অথচ প্রধান কাউন্টার শুরু থেকেই ছিল।
+         * ⚠️ বার্তাটা মিথ্যা ছিল, আর মালিক সেটা বিশ্বাস করে ব্যাংক খাত
+         * বসাতে চেয়েছিলেন।
+         *
+         * ⭐ মা খোঁজায় `postable()` নেই — মা দল হবেই, আর দল বাদ
+         * পড়ে নিচের `is_group = false`-এ, যেখানে ওটাই ঠিক জায়গা।
+         */
+        $heads = Account::query()
+            ->whereIn('code', StandardChart::MONEY_PARENTS)
+            ->pluck('id');
+
+        return Account::query()
+            ->where(fn ($q) => $q->whereIn('parent_id', $heads)->orWhereIn('id', $heads))
+            ->where('is_group', false)
+            ->orderBy('code')
+            ->get();
+    }
+}

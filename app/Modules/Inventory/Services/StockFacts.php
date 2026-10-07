@@ -1,0 +1,673 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Modules\Inventory\Services;
+
+use App\Core\Security\FieldSecurity;
+use App\Core\Support\CompanyContext;
+use App\Core\Support\Money;
+use App\Core\Support\ViewedBranch;
+use App\Models\LedgerEntry;
+use App\Modules\Accounts\Services\StandardChart;
+use App\Modules\Inventory\Models\Product;
+use App\Modules\Inventory\Models\StockMovement;
+use App\Modules\Inventory\Models\Warehouse;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
+
+/**
+ * মজুদের সংখ্যাগুলোর সংজ্ঞা — একটাই জায়গা।
+ *
+ * ── কেন এটা লাগল ────────────────────────────────────────────────────
+ * [[SalesMetrics]]-এর গল্পটাই এখানেও: "আজকের বিক্রয়" চার জায়গায় গোনা
+ * হত আর একবার দুইটা আলাদা উত্তর দিয়েছিল। মজুদে ঠিক সেই ঝুঁকিটা তৈরি
+ * হচ্ছিল — [[InventoryWidgets]]-এ "ফুরিয়ে আসছে"-র হিসাবটা লেখা ছিল, আর
+ * ড্যাশবোর্ড লিখতে গিয়ে দ্বিতীয়বার লিখতে যাচ্ছিলাম।
+ *
+ * দুইটা লেখা মানে একদিন দুইটা উত্তর, আর তখন কেউ বলতে পারত না কোনটা
+ * ঠিক। তাই হিসাবটা এখানে এলো, আর widget এখান থেকেই নেয়।
+ *
+ * ── কেন `Metric` নয় ─────────────────────────────────────────────────
+ * [[Metric]] ডকুমেন্টের **অবস্থা** ছাড়া তৈরিই হয় না (`statuses === []`
+ * হলে ব্যতিক্রম) — আর সেটা ঠিক, কারণ টাকার প্রতিটা সংখ্যার পেছনে
+ * প্রশ্নটা থাকে "খসড়া গোনা হয়েছে কি না"।
+ *
+ * মজুদের নড়াচড়ার কোনো অবস্থা নেই: [[StockService]] দিয়ে একটা সারি বসা
+ * মানেই মালটা নড়েছে। জোর করে একটা অবস্থা বসালে সেটা মিথ্যা হত।
+ */
+final class StockFacts
+{
+    /**
+     * চারটা অবস্থা — তাকে, অর্ডারে ধরা, আটকানো, আর বিক্রয়যোগ্য।
+     *
+     * ── কেন চারটাই একসাথে ───────────────────────────────────────────
+     * "গুদামে কত মাল" প্রশ্নটার একটা উত্তর নেই। তাকে ১০০ থাকতে পারে
+     * অথচ বেচার মতো ৭৫ — বাকিটা কারও অর্ডারে ধরা বা কোনো কারণে
+     * আটকানো। একটা সংখ্যা দেখালে বিক্রয়কর্মী ১০০ বেচার প্রতিশ্রুতি
+     * দিতেন, আর ভুলটা ধরা পড়ত মাল দিতে গিয়ে।
+     *
+     * @return array{floor: string, reserved: string, hold: string, available: string, unplaced: string}
+     */
+    public function states(?int $warehouseId = null): array
+    {
+        $row = StockMovement::query()
+            ->when($warehouseId, fn ($q) => $q->where('warehouse_id', $warehouseId))
+            ->selectRaw('COALESCE(SUM(floor_change), 0) as floor')
+            ->selectRaw('COALESCE(SUM(reserved_change), 0) as reserved')
+            ->selectRaw('COALESCE(SUM(hold_change), 0) as hold')
+            ->selectRaw('COALESCE(SUM(unplaced_change), 0) as unplaced')
+            ->first();
+
+        $floor = (string) ($row->floor ?? '0');
+        $reserved = (string) ($row->reserved ?? '0');
+        $hold = (string) ($row->hold ?? '0');
+        $unplaced = (string) ($row->unplaced ?? '0');
+
+        return [
+            'floor' => $floor,
+            'reserved' => $reserved,
+            'hold' => $hold,
+            /*
+             * বিক্রয়যোগ্য = তাকে − অর্ডারে ধরা − আটকানো।
+             *
+             * ঠিক এই হিসাবটাই স্টক পর্দার "Available" কলামে দেখায়, তাই
+             * ড্যাশবোর্ড থেকে ক্লিক করে নামলে সংখ্যাটা মেলে। দুই
+             * জায়গায় দুই হিসাব থাকলে মিলত না, আর মানুষ কোনটা বিশ্বাস
+             * করবেন বুঝতেন না।
+             */
+            'available' => bcsub(bcsub($floor, $reserved, 4), $hold, 4),
+
+            /*
+             * বসেনি — আর এটাই সেই সংখ্যা যেটা মানুষকে Placement-এর
+             * পর্দায় নিয়ে যাবে।
+             *
+             * ⚠️ এটা ফিচারটার সবচেয়ে বড় ঝুঁকির উত্তর, আর ঝুঁকিটা কোডে
+             * নয় — অভ্যাসে: যিনি বসাবেন তিনি যদি না জানেন কিছু বসার
+             * অপেক্ষায় আছে, পর্দাটা কেউ খুলবেই না, আর মাল চিরকাল
+             * "বসেনি" ঘরে থেকে যাবে।
+             *
+             * ⛔ আর তখন লক্ষণটা দেখা দিত **বিক্রয়ে** ("মাল নেই"), অথচ
+             * কারণটা **মজুদে** — কাউন্টারের লোক আর গুদামের লোক দুইজনেই
+             * সত্যি বলতেন, আর কেউ মিলাতে পারতেন না।
+             */
+            'unplaced' => $unplaced,
+        ];
+    }
+
+    /**
+     * পুনঃক্রয় সীমার নিচে কতগুলো পণ্য।
+     *
+     * সীমা বসানো হয়নি (০) এমন পণ্য বাদ — নাহলে প্রতিটা নতুন পণ্য
+     * "ফুরিয়ে গেছে" হিসেবে গোনা হত, আর সংখ্যাটা এত বড় হত যে কেউ আর
+     * তাকাত না।
+     */
+    public function belowReorder(): int
+    {
+        return $this->belowReorderQuery()->count();
+    }
+
+    /**
+     * ফুরিয়ে আসা পণ্যগুলো, সবচেয়ে জরুরিটা আগে।
+     *
+     * @return Collection<int, Product>
+     */
+    public function lowStock(int $limit = 8)
+    {
+        return $this->belowReorderQuery()
+            ->with('unit')
+            ->select('inv_products.*')
+            ->selectRaw($this->availableSql().' as available_qty')
+            ->orderByRaw($this->availableSql().' asc')
+            ->limit($limit)
+            ->get();
+    }
+
+    /**
+     * একেবারে শূন্য হয়ে যাওয়া পণ্য।
+     *
+     * "ফুরিয়ে আসছে"-র চেয়ে আলাদা প্রশ্ন: ওটা সতর্কতা, এটা ঘটে যাওয়া
+     * ঘটনা — আজ কেউ চাইলে দেওয়া যাবে না।
+     */
+    public function outOfStock(): int
+    {
+        return Product::query()
+            ->active()
+            ->whereRaw($this->availableSql().' <= 0')
+            ->count();
+    }
+
+    /**
+     * মজুদের মূল্য — অবশিষ্ট স্তরগুলোর যোগফল।
+     *
+     * ── কেন cost layer থেকে, নড়াচড়া থেকে নয় ────────────────────────
+     * প্রতিটা স্তরে (`inv_cost_layers`) লেখা আছে কত ঢুকেছিল, কত এখনো
+     * বাকি, আর কত দরে। অর্থাৎ **আজকের মজুদ কোন দরে কেনা** সেটা সেখানেই
+     * আছে। নড়াচড়া থেকে গুনলে আজকের দর দিয়ে পুরনো মাল মূল্যায়ন করা
+     * হত, আর দাম বাড়লে-কমলে সংখ্যাটা লাফাত।
+     *
+     * ⚠️ **`null` ফেরে যদি দেখার অনুমতি না থাকে।** এটা কোনো কারিগরি
+     * ব্যর্থতা নয় — মজুদের মূল্য একটা **খরচের সংখ্যা**, আর [[FieldSecurity]]
+     * ঠিক ওটাই `inventory.cost.view`-এর পেছনে রাখে। এই পর্দাটা যদি
+     * সংখ্যাটা এমনিই দেখাত, তবে ঘরের পাহারা টপকানোর সবচেয়ে সহজ দরজা
+     * হত এটাই: পণ্যের পাতায় ক্রয়মূল্য ঢাকা, অথচ ড্যাশবোর্ডে গোটা
+     * গুদামের দাম খোলা।
+     */
+    public function value(): ?string
+    {
+        if (! FieldSecurity::visible(StockMovement::class, 'unit_cost')) {
+            return null;
+        }
+
+        /*
+         * ⭐ এক শাখা বাছা থাকলে সেই শাখার মজুদের খাতের জের — মালিকের নির্দেশ, ১ অক্টোবর ২০২৬:
+         * *"প্রতিটা শাখা পুরোপুরি আলাদা"*। ⓘ স্তরগুলো কোম্পানির (শাখা বা গুদাম নেই), তাই ওখান
+         * থেকে শাখার ভাগ বের হয় না; খাতা প্রতিটা ঢোকা-বেরোনো কেনা দরে শাখা ধরে রাখে।
+         */
+        $branch = ViewedBranch::one();
+
+        if ($branch !== null) {
+            $inventory = StandardChart::find(StandardChart::INVENTORY);
+
+            return $inventory === null ? '0.00' : bcadd($inventory->balanceOn(null, $branch), '0', 2);
+        }
+
+        $total = DB::table('inv_cost_layers')
+            ->where('company_id', CompanyContext::id())
+            ->selectRaw('COALESCE(SUM(qty_remaining * unit_cost), 0) as total')
+            ->value('total');
+
+        return bcadd((string) $total, '0', 2);
+    }
+
+    /**
+     * ⭐ মাসে মাসে কত **টাকার** মাল ঢুকল আর বেরোল — কেনা দরে, মজুদের খাত (১১২০) থেকে।
+     *
+     * ── কেন খাতা, পরিমাণ নয় (মালিক, ১ অক্টোবর ২০২৬: "chart e takar amount") ─────────
+     * [[monthlyFlow()]] নড়াচড়ার **পরিমাণ** যোগ করে — বস্তা, কার্টুন আর পিস এক যোগফলে, তাই সংখ্যাটা
+     * দুই মাস মেলাতে কাজে লাগলেও নিজে কিছু বলে না। মজুদের খাতে প্রতিটা ঢোকা ডেবিট আর প্রতিটা
+     * বেরোনো ক্রেডিট, কেনা দরে — চার্ট ঠিক সেই কথাই বলে যা খাতা বলে।
+     *
+     * ⓘ খরচের সংখ্যা: [[value()]]-এর একই চাবি (`inventory.cost.view`); চাবি না থাকলে `null`, আর
+     * পর্দা তখন আগের পরিমাণের চার্ট দেখায়। ⓘ হেডারে বাছা শাখা মানে ([[ViewedBranch::narrow()]])।
+     *
+     * @return list<array{month: string, in: string, out: string}>|null
+     */
+    public function monthlyValueFlow(int $months = 7): ?array
+    {
+        if (! FieldSecurity::visible(StockMovement::class, 'unit_cost')) {
+            return null;
+        }
+
+        $inventory = StandardChart::find(StandardChart::INVENTORY);
+
+        if ($inventory === null) {
+            return null;
+        }
+
+        $from = Carbon::today()->startOfMonth()->subMonths($months - 1);
+
+        $rows = ViewedBranch::narrow(LedgerEntry::query(), 'ledger_entries.branch_id')
+            ->where('ledger_entries.company_id', CompanyContext::id())
+            ->where('account_id', $inventory->id)
+            ->where('trx_date', '>=', $from->toDateString())
+            ->selectRaw("DATE_FORMAT(trx_date, '%Y-%m') as ym")
+            ->selectRaw('COALESCE(SUM(debit), 0) as moved_in')
+            ->selectRaw('COALESCE(SUM(credit), 0) as moved_out')
+            ->groupBy('ym')
+            ->get()
+            ->keyBy('ym');
+
+        $out = [];
+        $cursor = $from->copy();
+
+        for ($i = 0; $i < $months; $i++) {
+            $row = $rows->get($cursor->format('Y-m'));
+
+            $out[] = [
+                'month' => $cursor->translatedFormat('M'),
+                'in' => Money::round($row->moved_in ?? '0'),
+                'out' => Money::round($row->moved_out ?? '0'),
+            ];
+
+            $cursor->addMonth();
+        }
+
+        return $out;
+    }
+
+    /**
+     * টাকার অঙ্ক ছোট করে — চার্টের সরু বারের মাথায় ধরার মতো: "১২.৫ লাখ", "৩.২ কোটি", "৮৫ হাজার"।
+     *
+     * ⓘ পুরো অঙ্ক বারের উপর মাউস রাখলে ([[Money::format()]])।
+     */
+    public static function shortTaka(string $amount): string
+    {
+        // ⓘ স্ট্রিং আর bcmath-এ, float নয় (৬ অক্টোবর ২০২৬, MoneyIsNeverAFloatTest) — বড় অঙ্কে float শেষ ঘর হারায়
+        $value = ltrim(Money::of($amount), '-');
+        $trim = fn (string $n) => str_contains($n, '.') ? rtrim(rtrim($n, '0'), '.') : $n;
+
+        foreach ([['10000000', 'crore'], ['100000', 'lakh'], ['1000', 'thousand']] as [$unit, $word]) {
+            if (bccomp($value, $unit, 4) >= 0) {
+                $figure = $trim(Money::round(bcdiv($value, $unit, 4), 1));
+
+                return $figure.' '.__('inventory::overview.short_'.$word);
+            }
+        }
+
+        return $trim(Money::round($value, 0));
+    }
+
+    /** আজ কতগুলো নড়াচড়া লেখা হয়েছে। */
+    public function movementsToday(): int
+    {
+        return StockMovement::query()
+            ->where('trx_date', Carbon::today()->toDateString())
+            ->count();
+    }
+
+    /**
+     * শেষ কয়েক মাসের ঢোকা ও বেরোনো।
+     *
+     * ── কেন ঢোকা-বেরোনো, মজুদের যোগফল নয় ───────────────────────────
+     * মজুদের যোগফলের রেখা প্রায় সমান থাকে, তাই চোখে কিছুই বলে না।
+     * ঢোকা আর বেরোনো পাশাপাশি রাখলে **ব্যবসাটা দেখা যায়**: কোন মাসে
+     * বেশি কিনেছি, কোন মাসে বেশি বেরিয়েছে, আর দুইটার ফারাক বাড়ছে
+     * কি না।
+     *
+     * @return list<array{month: string, in: string, out: string}>
+     */
+    public function monthlyFlow(int $months = 7): array
+    {
+        $from = Carbon::today()->startOfMonth()->subMonths($months - 1);
+
+        $rows = StockMovement::query()
+            ->where('trx_date', '>=', $from->toDateString())
+            ->selectRaw("DATE_FORMAT(trx_date, '%Y-%m') as ym")
+            ->selectRaw('COALESCE(SUM(GREATEST(floor_change, 0)), 0) as moved_in')
+            ->selectRaw('COALESCE(SUM(GREATEST(-floor_change, 0)), 0) as moved_out')
+            ->groupBy('ym')
+            ->pluck('moved_out', 'ym')
+            ->all();
+
+        $ins = StockMovement::query()
+            ->where('trx_date', '>=', $from->toDateString())
+            ->selectRaw("DATE_FORMAT(trx_date, '%Y-%m') as ym")
+            ->selectRaw('COALESCE(SUM(GREATEST(floor_change, 0)), 0) as moved_in')
+            ->groupBy('ym')
+            ->pluck('moved_in', 'ym')
+            ->all();
+
+        $out = [];
+        $cursor = $from->copy();
+
+        /*
+         * প্রতিটা মাস তালিকায় থাকে, নড়াচড়া না থাকলেও।
+         *
+         * কেবল যেসব মাসে সারি আছে সেগুলো দেখালে ফাঁকা মাসগুলো চার্ট
+         * থেকে **উধাও** হত, আর সাতটা বারের বদলে পাঁচটা দেখে কেউ
+         * ভাবতেন ব্যবসা সাত মাস চলেনি।
+         */
+        for ($i = 0; $i < $months; $i++) {
+            $key = $cursor->format('Y-m');
+
+            $out[] = [
+                'month' => $cursor->translatedFormat('M'),
+                'in' => bcadd((string) ($ins[$key] ?? '0'), '0', 2),
+                'out' => bcadd((string) ($rows[$key] ?? '0'), '0', 2),
+            ];
+
+            $cursor->addMonth();
+        }
+
+        return $out;
+    }
+
+    /**
+     * সদ্য যা নড়েছে।
+     *
+     * @return Collection<int, StockMovement>
+     */
+    public function recentMovements(int $limit = 8)
+    {
+        return StockMovement::query()
+            ->with(['product', 'warehouse'])
+            ->latest('id')
+            ->limit($limit)
+            ->get();
+    }
+
+    /**
+     * কত দিনের জানালায় দেখা হবে — বৈধ পছন্দগুলো।
+     *
+     * ── কেন হাতে লেখা যেকোনো সংখ্যা নয় ──────────────────────────────
+     * মানটা ঠিকানা থেকে আসে। খোলা রাখলে কেউ `?days=99999` দিয়ে পুরো
+     * ইতিহাস স্ক্যান করাতে পারতেন, আর পর্দাটা মিনিটের পর মিনিট ঝুলত।
+     * তিনটা পছন্দই বাস্তবে লাগে: সপ্তাহ, মাস, ত্রৈমাসিক।
+     *
+     * @var list<int>
+     */
+    public const WINDOWS = [7, 30, 90];
+
+    /**
+     * ধীরগতির মাল — আছে, নড়েছে, কিন্তু বেরোয়নি।
+     *
+     * ── কেন "নড়েছে" শর্তটা লাগে ─────────────────────────────────────
+     * ওটা না দিলে ধীরগতি আর নিশ্চল এক হয়ে যেত, আর দুইটা সংখ্যা একই
+     * পণ্য দুইবার গুনত। দুইটা আলাদা ঘটনা, আর আলাদা কাজ দাবি করে:
+     * ধীরগতির মালে **দাম বা প্রচার** লাগে, নিশ্চল মালে **প্রশ্ন** —
+     * ওটা কি আদৌ বিক্রির জিনিস, নাকি ভুলে পড়ে আছে।
+     */
+    public function slowMoving(int $days): int
+    {
+        return $this->onHandQuery()
+            ->whereRaw($this->movementSql($days, 'any').' > 0')
+            ->whereRaw($this->movementSql($days, 'out').' = 0')
+            ->count();
+    }
+
+    /** নিশ্চল মাল — আছে, অথচ কেউ ছোঁয়নি। */
+    public function nonMoving(int $days): int
+    {
+        return $this->onHandQuery()
+            ->whereRaw($this->movementSql($days, 'any').' = 0')
+            ->count();
+    }
+
+    /**
+     * বেরোচ্ছে না — আছে, কিন্তু জানালায় কিছুই বেরোয়নি (ধীর + নিশ্চল একসাথে)।
+     *
+     * stagnant() তালিকার হুবহু সংখ্যা-জোড়া: একই `out = 0` শর্ত, তাই
+     * "বেরোচ্ছে না ১২" ক্লিক করলে ঠিক ১২টাই দেখা যায়। ব্যবসায়িকভাবে এটাই
+     * সবচেয়ে কাজের ভাগ — ডিপোর টাকা ঠিক এখানে আটকে থাকে।
+     */
+    public function stagnantCount(int $days): int
+    {
+        return $this->onHandQuery()
+            ->whereRaw($this->movementSql($days, 'out').' = 0')
+            ->count();
+    }
+
+    /**
+     * ধীরগতির ও নিশ্চল মালের তালিকা, সবচেয়ে বেশি টাকা আটকে থাকা আগে।
+     *
+     * ── কেন পরিমাণ নয়, আটকে থাকা টাকা ───────────────────────────────
+     * পাঁচশো পিস সস্তা কলম পড়ে থাকার চেয়ে দশটা দামি যন্ত্র পড়ে থাকা
+     * অনেক বেশি ক্ষতি। পরিমাণ ধরে সাজালে তালিকার মাথায় সবসময় সস্তা
+     * জিনিসগুলোই উঠত, আর যেটা নিয়ে সত্যিই কিছু করার আছে সেটা নিচে
+     * পড়ে থাকত।
+     *
+     * @return Collection<int, Product>
+     */
+    public function stagnant(int $days, int $limit = 8)
+    {
+        return $this->onHandQuery()
+            ->whereRaw($this->movementSql($days, 'out').' = 0')
+            ->with('unit')
+            ->select('inv_products.*')
+            ->selectRaw($this->availableSql().' as available_qty')
+            ->selectRaw($this->movementSql($days, 'any').' as touches')
+            ->orderByRaw($this->availableSql().' * COALESCE(inv_products.purchase_price, 0) desc')
+            ->limit($limit)
+            ->get();
+    }
+
+    /**
+     * ধীরগতির মালের তালিকা — সংখ্যা slowMoving()-এর হুবহু একই শর্ত।
+     *
+     * ড্যাশবোর্ডে "ধীরগতি ৫" ক্লিক করলে ঠিক ওই পাঁচটাই দেখা যায়: predicate
+     * এক জায়গা থেকে (movementSql), তাই সংখ্যা আর তালিকা কোনোদিন আলাদা বলে না।
+     *
+     * @return Collection<int, Product>
+     */
+    public function slowMovingList(int $days, int $limit = 100)
+    {
+        return $this->onHandQuery()
+            ->whereRaw($this->movementSql($days, 'any').' > 0')
+            ->whereRaw($this->movementSql($days, 'out').' = 0')
+            ->with('unit')
+            ->select('inv_products.*')
+            ->selectRaw($this->availableSql().' as available_qty')
+            ->selectRaw($this->movementSql($days, 'any').' as touches')
+            ->orderByRaw($this->availableSql().' * COALESCE(inv_products.purchase_price, 0) desc')
+            ->limit($limit)
+            ->get();
+    }
+
+    /**
+     * নিশ্চল মালের তালিকা — সংখ্যা nonMoving()-এর হুবহু একই শর্ত।
+     *
+     * @return Collection<int, Product>
+     */
+    public function nonMovingList(int $days, int $limit = 100)
+    {
+        return $this->onHandQuery()
+            ->whereRaw($this->movementSql($days, 'any').' = 0')
+            ->with('unit')
+            ->select('inv_products.*')
+            ->selectRaw($this->availableSql().' as available_qty')
+            ->orderByRaw($this->availableSql().' * COALESCE(inv_products.purchase_price, 0) desc')
+            ->limit($limit)
+            ->get();
+    }
+
+    /**
+     * দ্রুতগতির মাল — আছে, আর জানালার ভেতরে বেরিয়েছে।
+     *
+     * ধীরগতি ও নিশ্চলের আয়না: ওরা বেরোয়নি, এরা বেরিয়েছে। একই onHandQuery
+     * আর movementSql, শুধু `out > 0`।
+     */
+    public function fastMoving(int $days): int
+    {
+        return $this->onHandQuery()
+            ->whereRaw($this->movementSql($days, 'out').' > 0')
+            ->count();
+    }
+
+    /**
+     * দ্রুতগতির মালের তালিকা — সবচেয়ে বেশি বেরিয়েছে আগে।
+     *
+     * @return Collection<int, Product>
+     */
+    public function fastMovingList(int $days, int $limit = 100)
+    {
+        return $this->onHandQuery()
+            ->whereRaw($this->movementSql($days, 'out').' > 0')
+            ->with('unit')
+            ->select('inv_products.*')
+            ->selectRaw($this->availableSql().' as available_qty')
+            ->selectRaw($this->movementSql($days, 'out').' as sold_moves')
+            ->orderByRaw($this->movementSql($days, 'out').' desc')
+            ->limit($limit)
+            ->get();
+    }
+
+    /**
+     * স্টকের বয়স — FIFO স্তর ধরে, প্রাপ্তির তারিখ থেকে। বাকেটে আটকে থাকা টাকা।
+     *
+     * ── কেন স্তর, "সর্বশেষ inbound" নয় ──────────────────────────────
+     * একটা পণ্য প্রতি সপ্তাহে নতুন এলেও পুরনো ইউনিট পড়ে থাকতে পারে।
+     * সর্বশেষ inbound ধরলে "বয়স ৩ দিন" দেখাত, অথচ কিছু মাল ৮ মাসের — ঠিক
+     * যেখানে টাকা আটকে, সেটাই লুকাত। inv_cost_layers-এর প্রতিটা স্তরের
+     * নিজের trx_date ও qty_remaining আছে, তাই বয়সটা আসল।
+     *
+     * ⚠️ এই রিপোর্ট স্তরে কেবল **পড়ে, লেখে না** — স্তরগুলো খরচের জন্য
+     * ([[CostLayerService]]); বয়সের সংজ্ঞা যেন খরচের সংজ্ঞা থেকে আলাদা না হয়।
+     *
+     * সংখ্যা (আটকে টাকা) আর তালিকা এক শর্ত (agingScope) থেকে — তাই বাকেটের
+     * অঙ্ক আর তার তালিকার যোগফল কখনো আলাদা বলে না।
+     *
+     * $minDays ≤ বয়স < $maxDays (maxDays null = খোলা, সবচেয়ে পুরনো বাকেট)।
+     */
+    public function agingValue(int $minDays, ?int $maxDays = null): ?string
+    {
+        /*
+         * ⭐ খরচের সংখ্যা, তাই [[value()]]-এর একই চাবি; চাবি না থাকলে `null` — Inventory অডিট ম১৪, ৫ অক্টোবর ২০২৬।
+         * ⛔ আগে বয়সের পাতা আর ঝুঁকির বোর্ড চাবি ছাড়াই আটকে থাকা টাকা দেখাত।
+         */
+        if (! FieldSecurity::visible(StockMovement::class, 'unit_cost')) {
+            return null;
+        }
+
+        $row = $this->agingScope($minDays, $maxDays)
+            ->selectRaw('COALESCE(SUM(l.qty_remaining * l.unit_cost), 0) as v')
+            ->first();
+
+        return bcadd((string) ($row->v ?? '0'), '0', 2);
+    }
+
+    /**
+     * বয়স-বাকেটের স্তর-তালিকা — সবচেয়ে পুরনো আগে, বয়স ও আটকে থাকা টাকাসহ।
+     *
+     * @return Collection<int, object>
+     */
+    public function agingLayers(int $minDays, ?int $maxDays = null, int $limit = 100): Collection
+    {
+        return $this->agingScope($minDays, $maxDays)
+            ->join('inv_products as p', function ($j) {
+                $j->on('p.id', '=', 'l.product_id')
+                    ->on('p.company_id', '=', 'l.company_id');
+            })
+            ->selectRaw('l.id, l.product_id, l.document_no, l.trx_date,
+                         l.qty_remaining, l.unit_cost,
+                         (l.qty_remaining * l.unit_cost) as value_stuck,
+                         DATEDIFF(?, l.trx_date) as age_days,
+                         p.code as product_code, p.name_en, p.name_bn',
+                [Carbon::today()->toDateString()])
+            ->orderBy('l.trx_date') // পুরনো আগে
+            ->limit($limit)
+            ->get();
+    }
+
+    /**
+     * বয়স-বাকেটের এক শর্ত — সংখ্যা ও তালিকা যেন কখনো আলাদা না হয়।
+     * শুধু যে স্তরে মাল এখনো পড়ে আছে (qty_remaining > 0)।
+     */
+    private function agingScope(int $minDays, ?int $maxDays)
+    {
+        /*
+         * আজকের তারিখটা অ্যাপ থেকে, `CURDATE()` থেকে নয়।
+         *
+         * ── কেন এটা মজুদের ক্ষেত্রে বিশেষভাবে জরুরি ─────────────────
+         * ডাটাবেসের ঘড়ি অ্যাপের ঘড়ি নয়। দুইটা আলাদা টাইমজোনে বা
+         * আলাদা মেশিনে থাকলে **"৩০ দিনের পুরনো মাল" ভুল দিন থেকে গোনা
+         * হয়** — আর তখন একটা লট বাকেট বদলে ফেলে।
+         *
+         * ⚠️ ভুলটা এক দিনের, তাই চোখে পড়ে না — কিন্তু সীমানার ঠিক
+         * উপরে-নিচে থাকা লটগুলো একদিন এক বাকেটে, পরদিন অন্যটায় দেখা
+         * যায়, আর কেউ বুঝতে পারে না কেন সংখ্যাটা নড়ছে।
+         *
+         * ⓘ আর টেস্টে সময় জমিয়ে রাখা (`Carbon::setTestNow`) তখনই কাজ
+         * করে যখন তারিখটা অ্যাপ থেকে আসে — ডাটাবেস ওই জমাটা মানে না।
+         */
+
+        /*
+         * ⭐ শর্তটা কলামের **উপর** নয়, কলামের **বিপরীতে** — ২১ সেপ্টেম্বর ২০২৬।
+         *
+         * ── ⛔ আগে কী ছিল ────────────────────────────────────────────
+         *     DATEDIFF(?, l.trx_date) >= ?
+         *
+         * ⚠️ কলামটা একটা ফাংশনের ভিতরে ঢুকে গেলে MySQL আর সূচক ব্যবহার
+         * করতে পারে না — তাকে **প্রতিটা সারিতে** ফাংশনটা চালিয়ে দেখতে
+         * হয়। ⓘ `cost_layer_fifo (company_id, product_id, trx_date, id)`
+         * সূচকটা আছে, কিন্তু এই শর্তে সেটা অকেজো ছিল।
+         *
+         * ── ⓘ অ্যাপের ঘড়িটাই রাখা হয়েছে ────────────────────────────
+         * তারিখটা আগের মতোই PHP থেকে আসে (`Carbon::today()`), ডাটাবেসের
+         * `CURDATE()` থেকে নয় — [[NobodyAsksTheDatabaseWhatDayItIsTest]]
+         * ঠিক সেটাই পাহারা দেয়। ⭐ কেবল বিয়োগটা এখন আগেই হয়ে যায়, আর
+         * কলামের সাথে তুলনা হয় সরল বড়/ছোট দিয়ে।
+         *
+         * ⚠️ দিক উল্টে যায়: "যত **পুরনো**" মানে তারিখ তত **ছোট**।
+         * তাই `DATEDIFF >= minDays` হয় `trx_date <= আজ - minDays`।
+         */
+        $q = DB::table('inv_cost_layers as l')
+            ->where('l.company_id', CompanyContext::id())
+            ->where('l.qty_remaining', '>', 0)
+            ->where('l.trx_date', '<=', Carbon::today()->subDays($minDays)->toDateString());
+
+        if ($maxDays !== null) {
+            /* ⓘ `<` ছিল, তাই এখানে `>` — সীমাটা ঠিক ঐ দিনেই শেষ। */
+            $q->where('l.trx_date', '>', Carbon::today()->subDays($maxDays)->toDateString());
+        }
+
+        return $q;
+    }
+
+    /**
+     * মাল আছে এমন সচল পণ্যগুলো।
+     *
+     * দুইটা সংখ্যারই ভিত্তি একই: **যার কিছুই নেই তাকে "পড়ে আছে" বলা
+     * অর্থহীন**। শূন্য মজুদ আলাদা একটা সমস্যা, আর তার নিজের সংখ্যা আছে।
+     */
+    private function onHandQuery()
+    {
+        return Product::query()
+            ->active()
+            ->whereRaw($this->availableSql().' > 0');
+    }
+
+    /**
+     * এই পণ্যে গত কয়েক দিনে কতগুলো নড়াচড়া।
+     *
+     * `any` — যেকোনো সারি; `out` — কেবল যেগুলোয় মাল কমেছে।
+     */
+    private function movementSql(int $days, string $kind): string
+    {
+        $from = Carbon::today()->subDays($days)->toDateString();
+        $extra = $kind === 'out' ? ' and m.floor_change < 0' : '';
+
+        return "(select COUNT(*)
+                 from inv_stock_movements m
+                 where m.product_id = inv_products.id
+                   and m.company_id = inv_products.company_id
+                   and m.trx_date >= '{$from}'{$extra}{$this->viewedWarehouses()})";
+    }
+
+    /**
+     * ফুরিয়ে আসা পণ্যের কোয়েরি — একটাই সংজ্ঞা, দুই জায়গায় ব্যবহার।
+     */
+    private function belowReorderQuery()
+    {
+        // ⭐ শাখায় বিক্রি হওয়া পণ্যই — হোমের উইজেটের সাথে এক প্রশ্ন (Inventory অডিট ম২৮; [[InventoryWidgets::belowReorder()]])
+        return Product::query()->soldInViewedBranch()
+            ->active()
+            ->where('reorder_level', '>', 0)
+            ->whereRaw($this->availableSql().' <= inv_products.reorder_level');
+    }
+
+    /**
+     * বিক্রয়যোগ্য পরিমাণের SQL।
+     *
+     * ⚠️ এটা আর [[StockFacts::states()]]-এর `available` **একই নিয়ম**।
+     * একটা বদলালে অন্যটাও বদলাতে হবে, নাহলে ড্যাশবোর্ডের ডোনাট আর
+     * "ফুরিয়ে আসছে"-র সংখ্যা দুইটা আলাদা বাস্তবতা দেখাবে।
+     */
+    private function availableSql(): string
+    {
+        return '(select COALESCE(SUM(m.floor_change - m.reserved_change - m.hold_change), 0)
+                 from inv_stock_movements m
+                 where m.product_id = inv_products.id
+                   and m.company_id = inv_products.company_id'.$this->viewedWarehouses().')';
+    }
+
+    /**
+     * ⭐ এক শাখা বাছা থাকলে কেবল সেই শাখার গুদামের চলাচল — মালিকের নির্দেশ, ১ অক্টোবর ২০২৬:
+     * *"প্রতিটা শাখা পুরোপুরি আলাদা"*। "সব শাখা"-য় খালি — আগের মতো গোটা কোম্পানি।
+     *
+     * ⓘ কাঁচা SQL, তাই গুদামের দেয়াল ([[ScopedToUserWarehouse]]) নিজে চলে না; তালিকাটা তার
+     * কাছ থেকেই আসে ([[Warehouse::idsInViewedBranch()]])। সংখ্যাগুলো int, তাই সোজা বসানো নিরাপদ।
+     * ⚠️ গুদামহীন শাখায় `1 = 0` — "কিছুই নয়", গোটা কোম্পানি নয়।
+     */
+    private function viewedWarehouses(): string
+    {
+        $ids = Warehouse::idsInViewedBranch();
+
+        if ($ids === null) {
+            return '';
+        }
+
+        return $ids === [] ? ' and 1 = 0' : ' and m.warehouse_id in ('.implode(',', $ids).')';
+    }
+}

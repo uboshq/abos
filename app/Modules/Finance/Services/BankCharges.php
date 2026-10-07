@@ -1,0 +1,154 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Modules\Finance\Services;
+
+use App\Models\LedgerEntry;
+use App\Modules\Accounts\Models\Account;
+use App\Modules\Accounts\Services\StandardChart;
+use App\Modules\Finance\Models\InstitutionAccount;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Collection;
+
+/**
+ * ব্যাংক চার্জ — কোন ব্যাংক/MFS কত কাটল (মানচিত্র §৯)।
+ *
+ * ── কোথা থেকে পড়ে ────────────────────────────────────────────────────
+ * খতিয়ান থেকে, আর কোথাও না: ৫২১০ (ব্যাংক চার্জ) আর ৫২১১ (MFS চার্জ),
+ * আর তাদের নিচে কেউ খাত খুলে থাকলে সেগুলোও। ⓘ চার্জ বসে তিনভাবে — রসিদের
+ * "চার্জ" ঘরে ([[VoucherService::withCharge]]), মূলধনের পোস্টিংয়ে, আর
+ * হাতে লেখা খরচ/পরিশোধ ভাউচারে। তিনটাই শেষে এই দুই খাতে নামে, তাই এখান
+ * থেকে পড়লে কোনোটা বাদ পড়ে না।
+ *
+ * ── "কোন ব্যাংক" কীভাবে জানা যায় ────────────────────────────────────
+ * চার্জের দাখিলার নিজের সারিতে ব্যাংকের নাম নেই; আছে **একই কাগজের**
+ * আরেকটা সারিতে — ব্যাংক বা MFS-এর খাত। ⓘ সেটাই একটা উপ-প্রশ্ন হয়ে
+ * প্রতিটা সারির সাথে আসে ([[BANK_OF]])। ⚠️ এক কাগজে দুইটা ব্যাংক থাকলে
+ * (ব্যাংক থেকে ব্যাংকে কন্ট্রা) ছোট আইডিরটা ধরা হয় — চার্জ দুইবার গোনা
+ * হয় না, এটাই জরুরি। ব্যাংকের সারি না পেলে "অজানা" — লুকানো হয় না।
+ *
+ * ── ⚠️ তালিকা আর যোগফল আলাদা দুইটা প্রশ্ন ───────────────────────────
+ * সারিগুলো পাতা ভাগ করে আসে, আর উপরের "ব্যাংক ধরে" যোগফল আসে পুরো
+ * সময়ের উপর আলাদা সমষ্টি-প্রশ্নে। ⓘ একই তালিকা থেকে গুনলে দ্বিতীয়
+ * পাতায় গিয়ে "মোট" বদলে যেত, অথচ লেবেল বলত মাসের মোট
+ * ([[Tests\Feature\Architecture\EveryListScreenPaginatesTest]])।
+ *
+ * ⓘ অঙ্ক = ডেবিট − ক্রেডিট: চার্জ ফেরত এলে (ক্রেডিট) কমে।
+ */
+final class BankCharges
+{
+    /** একই কাগজের ব্যাংক/MFS খাত — না পেলে `null` */
+    private const BANK_OF = '(select min(s.account_id) from ledger_entries s
+        where s.source_type = ledger_entries.source_type
+          and s.source_id = ledger_entries.source_id
+          and s.account_id in (select id from accounts where money_kind in (?, ?) and is_group = 0))';
+
+    /**
+     * @param  ?int  $bankId  কেবল এই ব্যাংকের কাটাগুলো — "কতবার" সংখ্যাটার পিছনের তালিকা
+     * @return LengthAwarePaginator<int, LedgerEntry>
+     */
+    public function rows(string $from, string $to, int $perPage = 100, ?int $bankId = null): LengthAwarePaginator
+    {
+        $query = $this->base($from, $to)
+            ->selectRaw('ledger_entries.*, '.self::BANK_OF.' as bank_id', [Account::BANK, Account::MFS]);
+
+        /*
+         * ⚠️ `where bank_id = ?` চলবে না — ওটা একটা উপ-কোয়েরির ছদ্মনাম, আর
+         * MySQL WHERE-এ ছদ্মনাম চেনে না। ⓘ তাই উপ-কোয়েরিটাই আবার লেখা হয়;
+         * প্যারামিটারের ক্রমও তাই তিনটা: BANK, MFS, তারপর খাতটা।
+         */
+        if ($bankId !== null) {
+            $query->whereRaw(self::BANK_OF.' = ?', [Account::BANK, Account::MFS, $bankId]);
+        }
+
+        return $query
+            ->orderByDesc('trx_date')
+            ->orderByDesc('id')
+            ->paginate($perPage)
+            ->withQueryString();
+    }
+
+    /**
+     * ব্যাংক ধরে — কতবার আর কত, পুরো সময়ের উপর।
+     *
+     * @return Collection<int, array{bank: ?Account, institution: ?string, institution_id: ?int, count: int, amount: string}>
+     */
+    public function byBank(string $from, string $to): Collection
+    {
+        $rows = $this->base($from, $to)
+            ->toBase()
+            ->selectRaw(self::BANK_OF.' as bank_id, COUNT(*) as n, COALESCE(SUM(debit - credit), 0) as amount',
+                [Account::BANK, Account::MFS])
+            ->groupBy('bank_id')
+            ->get();
+
+        /* ⓘ `postable()` — আইডিগুলো খাতা থেকে আসে বলে দল আসার কথা নয়,
+           তবু লেখা থাকলে পড়ে বোঝা যায় এখানে দল অসম্ভব */
+        $banks = Account::query()->postable()
+            ->whereIn('id', $rows->pluck('bank_id')->filter())->get()->keyBy('id');
+
+        $institutions = InstitutionAccount::query()
+            ->with('institution')
+            ->whereIn('account_id', $banks->keys())
+            ->get()
+            /*
+             * ⭐ নামের সাথে আইডিটাও (২০ সেপ্টেম্বর ২০২৬)।
+             *
+             * ⚠️ আগে কেবল নামটা আসত, আর তাতেই পর্দায় ঘরটা মরা থাকত: নাম
+             * দিয়ে কোনো পাতায় যাওয়া যায় না। ⓘ মালিকের নিয়মটা এখানে খাটে —
+             * ঘরে যদি কোনো জিনিসের নাম থাকে, ঘরটা সেই জিনিসটা খোলে।
+             */
+            ->mapWithKeys(fn (InstitutionAccount $l) => [$l->account_id => [
+                'label' => $l->institution?->label(),
+                'id' => $l->institution_id === null ? null : (int) $l->institution_id,
+            ]]);
+
+        return $rows
+            ->map(fn ($r) => [
+                'bank' => $banks[$r->bank_id] ?? null,
+                'institution' => $institutions[$r->bank_id]['label'] ?? null,
+                'institution_id' => $institutions[$r->bank_id]['id'] ?? null,
+                'count' => (int) $r->n,
+                'amount' => (string) $r->amount,
+            ])
+            /* ⓘ সাজানোও bcmath-এ — float-এ নিলে দুই পয়সার ফারাকে
+               সারি দুইটা উলটাপালটা বসত, আর সেটা কেউ ধরত না */
+            ->sort(fn ($a, $b) => bccomp((string) $b['amount'], (string) $a['amount'], 4))
+            ->values()
+            ->values();
+    }
+
+    public function total(string $from, string $to): string
+    {
+        return (string) ($this->base($from, $to)
+            ->toBase()
+            ->selectRaw('COALESCE(SUM(debit - credit), 0) as t')
+            ->value('t') ?? '0');
+    }
+
+    /** @return Builder<LedgerEntry> */
+    private function base(string $from, string $to): Builder
+    {
+        $ids = $this->chargeAccountIds();
+
+        return LedgerEntry::query()
+            ->whereIn('account_id', $ids === [] ? [0] : $ids)
+            ->whereBetween('trx_date', [$from, $to]);
+    }
+
+    /** @return list<int> ৫২১০, ৫২১১ আর তাদের নিচের সব খাত */
+    private function chargeAccountIds(): array
+    {
+        return Account::query()
+            ->postable()
+            ->whereIn('code', [StandardChart::BANK_CHARGES, StandardChart::MFS_CHARGES])
+            ->get()
+            ->flatMap(fn (Account $a) => $a->selfAndDescendants()->pluck('id'))
+            ->map(fn ($id) => (int) $id)
+            ->unique()
+            ->values()
+            ->all();
+    }
+}

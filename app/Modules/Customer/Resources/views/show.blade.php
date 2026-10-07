@@ -1,0 +1,372 @@
+{{--
+    একজন গ্রাহক।
+
+    বকেয়ার অঙ্কটা এখানে নিছক একটা সংখ্যা নয় — নিয়ম ১ বলে প্রতিটা অঙ্ক থেকে
+    তার উৎসে যাওয়া যাবে। তাই অঙ্কটা লেজারের লিংক, আর নিচে সেই লেনদেনগুলোই
+    দেখানো হয় যেগুলো যোগ হয়ে অঙ্কটা হয়েছে। খোলা ব্যালেন্সও আলাদা সারি,
+    কারণ সেটা কোনো ডকুমেন্ট থেকে আসেনি — সেটা না বললে যোগফল মেলে না।
+--}}
+<x-layouts.app :menu="$menu">
+    <x-slot:title>{{ $customer->name() }}</x-slot:title>
+
+    <x-slot:header>
+        <x-ui.page-header :title="$customer->name()" :subtitle="$customer->code">
+            <x-slot:actions>
+                {{-- ⭐ 👁 — বাকি সব (বকেয়া, পরিচয়, আচরণ, পোর্টাল) এক পপ-আপে; পাতায় খোলা থাকে কেবল লেনদেন (মালিক, ৩ অক্টোবর ২০২৬) --}}
+                <x-ui.button tone="secondary" type="button" x-data @click="$dispatch('party-eye')" data-party-eye>
+                    👁 {{ __('customer::action.details') }}
+                </x-ui.button>
+                @can('update', $customer)
+                    <x-ui.button tone="secondary" :href="route('customer.edit', $customer)">
+                        {{ __('core.action.edit') }}
+                    </x-ui.button>
+                @endcan
+
+                @can('delete', $customer)
+                    @if ($customer->is_active)
+                        <form method="POST" action="{{ route('customer.destroy', $customer) }}"
+                              data-confirm="{{ __('customer::message.deactivate_confirm') }}">
+                            @csrf
+                            @method('DELETE')
+                            <x-ui.button type="submit" tone="secondary">
+                                {{ __('customer::action.deactivate') }}
+                            </x-ui.button>
+                        </form>
+                    @endif
+                @endcan
+            </x-slot:actions>
+        </x-ui.page-header>
+    </x-slot:header>
+
+    {{-- ওডুর smart buttons — রেকর্ডের একদম মাথায়, শিরোনামের ঠিক নিচে।
+
+         বাকি ন'টা রূপে এখানে কিছুই আঁকা হয় না; ওখানে একই তথ্য নিচের
+         ঘরগুলোর সাথে সারি হিসেবে বসে। জায়গাটা রূপের সিদ্ধান্ত, পাতার নয়। --}}
+
+    @if (session('saved'))
+        <div role="status"
+             class="mb-4 rounded-(--radius-field) bg-(--color-badge-success-bg) px-3 py-2 text-sm
+                    text-(--color-badge-success-ink)">
+            {{ session('saved') }}
+        </div>
+    @endif
+
+    <x-ui.errors />
+
+    {{-- ⭐ "বাকি বন্ধ" — পাতার মাথায়, পপ-আপের বাইরে: কাউন্টারের আগে এখানেই চোখে পড়ুক (বাকি ও আদায়, ৫ অক্টোবর ২০২৬) --}}
+    @if ($customer->isCreditBlocked())
+        <div role="alert" data-credit-blocked
+             class="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-(--radius-field)
+                    bg-(--color-badge-danger-bg) px-3 py-2 text-sm text-(--color-badge-danger-ink)">
+            <div>
+                <span class="font-semibold">{{ __('customer::credit_block.badge') }}</span>
+                · {{ __('customer::credit_block.reason') }}: {{ $customer->credit_block_reason }}
+                · {{ __('customer::credit_block.by_on', [
+                        'user' => $customer->creditBlocker?->name ?? '—',
+                        'date' => \App\Core\Support\DateFormat::format($customer->credit_blocked_at),
+                    ]) }}
+            </div>
+            @can('update', $customer)
+                <form method="POST" action="{{ route('customer.credit_block.destroy', $customer) }}" class="flex items-center gap-2">
+                    @csrf
+                    @method('DELETE')
+                    <input type="text" name="reason" required maxlength="500"
+                           placeholder="{{ __('customer::credit_block.clear_reason') }}"
+                           class="h-(--spacing-field-dense) rounded-(--radius-field) border border-(--color-border)
+                                  bg-(--color-surface-card) px-2 text-sm text-(--color-ink)">
+                    <x-ui.button type="submit" tone="secondary">{{ __('customer::credit_block.clear') }}</x-ui.button>
+                </form>
+            @endcan
+        </div>
+    @endif
+
+    {{-- ⭐ পার্টির পাতায় কেবল লেনদেনের ছক খোলা — বাকিটা 👁 চাপলে এই পপ-আপে (মালিক, ৩ অক্টোবর ২০২৬:
+         "লেনদেন টেবিল খোলা, বাকি 👁-এর পেছনে")। ⓘ ঘরগুলো পাতাতেই থাকে, কেবল লুকানো। --}}
+    <div x-data="{ open: false }" @party-eye.window="open = true" @keydown.escape.window="open = false">
+    <div x-show="open" x-cloak @click.self="open = false" data-party-details
+         class="fixed inset-0 z-40 flex items-start justify-center overflow-y-auto bg-black/40 p-4">
+    <div class="w-full max-w-5xl rounded-(--radius-card) bg-(--color-surface-app) p-4 shadow-lg">
+        <div class="mb-3 flex justify-end">
+            <button type="button" @click="open = false" class="px-2 text-lg leading-none text-(--color-ink-muted)"
+                    aria-label="{{ __('core.action.close') }}">&times;</button>
+        </div>
+    <x-ui.record-facts :facts="$facts" region="head" />
+
+    <div class="grid gap-4 lg:grid-cols-3">
+
+        {{-- বকেয়া --}}
+        <section data-boxed class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
+            <h2 class="text-sm font-medium text-(--color-ink-muted)">
+                {{ __('customer::field.outstanding') }}
+            </h2>
+
+            {{-- num ক্লাসটা ট্যাবুলার অঙ্ক দেয় — একই প্রস্থে প্রতিটা সংখ্যা,
+                 তাই দুই অঙ্ক পাশাপাশি রাখলে দশমিক বিন্দু এক লাইনে থাকে। --}}
+            {{-- অঙ্কটাই লিংক — নিচের টেবিলে ঠিক সেই লেনদেনগুলো আছে
+                 যেগুলো যোগ হয়ে এই সংখ্যাটা হয়েছে (নিয়ম ১) --}}
+            <p class="mt-1 text-2xl font-semibold">
+                {{-- ⭐ (Dr)/(Cr), চিহ্ন নয় — মালিক, ৩ অক্টোবর ২০২৬ ("+- dile bujte kosto hobe"); (Dr) = গ্রাহক দেবেন --}}
+                <a href="#transactions" @click="open = false" class="num" data-balance-drcr>{{ \App\Core\Support\Money::drCr($outstanding) }}</a>
+            </p>
+
+            {{-- ⭐ এক শাখা বাছা থাকলে ওপরের অঙ্কটা কেবল সেই শাখার (৩০ সেপ্টেম্বর ২০২৬);
+                 সীমা মাপা হয় সব শাখা মিলিয়ে, তাই সেটাও এখানে — নাহলে "বকেয়া ১০ হাজার,
+                 সীমা পার" দেখে মানুষ ধাঁধায় পড়তেন। --}}
+            @if ($outstandingAll !== null)
+                <p class="mt-1 text-2xs text-(--color-ink-muted)" data-due-all-branches>
+                    {{ __('customer::field.outstanding_all_branches') }}:
+                    <span class="num">{{ \App\Core\Support\Money::format($outstandingAll) }}</span>
+                </p>
+            @endif
+
+            @if ($creditLimitOn && bccomp((string) $customer->credit_limit, '0', 4) > 0)
+                <p class="mt-2 text-2xs text-(--color-ink-muted)">
+                    {{ __('customer::field.credit_limit') }}:
+                    <span class="num">{{ \App\Core\Support\Money::format($customer->credit_limit) }}</span>
+                    @if ($customer->credit_days > 0)
+                        · {{ $customer->credit_days }} {{ __('customer::field.credit_days') }}
+                    @endif
+                </p>
+
+                {{-- আর কত ধার দেওয়া যায় — সীমার নিচেই, কারণ প্রশ্নটা
+                     সবসময় জোড়ায় আসে: "সীমা কত, আর কতটা বাকি আছে"। --}}
+                <p class="mt-1 text-2xs text-(--color-ink-muted)">
+                    {{ __('customer::field.available_limit') }}:
+                    <span class="num">
+                        {{ $customer->availableLimit() === null
+                            ? '—'
+                            : \App\Core\Support\Money::format($customer->availableLimit()) }}
+                    </span>
+                </p>
+
+                @if ($customer->wouldExceedCreditLimit($customer->heldCredit()))
+                    {{-- সীমা ইতিমধ্যেই ছাড়িয়ে গেছে — এটা বিক্রির পর্দায় জানার
+                         চেয়ে এখানে জানা ভালো। --}}
+                    <p class="mt-2 rounded-(--radius-field) bg-(--color-badge-danger-bg) px-2 py-1
+                              text-2xs text-(--color-badge-danger-ink)">
+                        {{ __('customer::message.over_limit') }}
+                    </p>
+                @endif
+            @endif
+
+            {{-- ⭐ "বাকি বন্ধ" বসানো — সীমা বদলানোর একই চাবিতে, কারণসহ ([[CreditBlockController]]) --}}
+            @if (! $customer->isCreditBlocked())
+                @can('update', $customer)
+                    <form method="POST" action="{{ route('customer.credit_block.store', $customer) }}"
+                          class="mt-3 flex flex-wrap items-center gap-2" data-credit-block-form>
+                        @csrf
+                        <input type="text" name="reason" required maxlength="500"
+                               placeholder="{{ __('customer::credit_block.reason') }}"
+                               class="h-(--spacing-field-dense) min-w-0 flex-1 rounded-(--radius-field) border
+                                      border-(--color-border) bg-(--color-surface-card) px-2 text-sm">
+                        <x-ui.button type="submit" tone="secondary">{{ __('customer::credit_block.block') }}</x-ui.button>
+                    </form>
+                    <p class="mt-1 text-2xs text-(--color-ink-muted)">{{ __('customer::credit_block.help') }}</p>
+                @endcan
+            @endif
+        </section>
+
+        {{-- পরিচয় --}}
+        <section data-boxed class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4
+                        lg:col-span-2">
+            <div class="mb-3 flex items-center justify-between gap-2">
+                <h2 class="font-semibold">{{ __('customer::section.identity') }}</h2>
+                @include('customer::partials.state-badge', ['customer' => $customer])
+            </div>
+
+            <dl class="grid gap-x-4 gap-y-2 sm:grid-cols-2">
+                {{-- ক্রমটা মালিকের দেওয়া তালিকার মতোই: কে চালান, কোথায়
+                     বসে, কীভাবে ধরা যায় — তারপর বাকি সব। --}}
+                @foreach ([
+                    'customer::field.owner_name' => $customer->owner_name,
+                    'customer::field.point' => $customer->location?->name(),
+                    'customer::field.area' => $customer->area()?->name(),
+                    'customer::field.phone' => $customer->phone,
+                    'customer::field.email' => $customer->email,
+                    'customer::field.type' => $customer->typeName(),
+                    'customer::channel.field' => $customer->channel?->name() ?? __('customer::channel.none'),
+                    'core.company.branch' => $customer->branch?->name(),
+                    'customer::field.address' => $customer->address(),
+                ] as $label => $value)
+                    @if (filled($value))
+                        <div>
+                            <dt class="text-2xs text-(--color-ink-muted)">{{ __($label) }}</dt>
+                            <dd class="text-sm">{{ $value }}</dd>
+                        </div>
+                    @endif
+                @endforeach
+
+                {{-- বাকি মডিউলরা এই গ্রাহক সম্পর্কে যা জানে — "শেষ কেনা
+                     কবে" বিক্রয়ের কথা, গ্রাহকের নয়। এই পাতা জানে না কে
+                     কী দিল, শুধু জিজ্ঞেস করে।
+
+                     আঁকার দায়িত্ব কম্পোনেন্টের: ওডুতে এগুলো রেকর্ডের
+                     মাথায় smart buttons হয় (উপরে `head` অঞ্চল), বাকি
+                     রূপে এখানেই তথ্যের সারি। --}}
+                <x-ui.record-facts :facts="$facts" region="body" />
+            </dl>
+        </section>
+    </div>
+
+    {{-- পার্টির আচরণ — Status বলে না, কাউন্টারে যা জানা দরকার --}}
+    @include('customer::partials.conduct', ['customer' => $customer])
+
+    {{-- গ্রাহক পোর্টালের চাবি --}}
+    @can('managePortal', $customer)
+        <section data-portal class="mt-4 rounded-(--radius-card) border border-(--color-border)
+                        bg-(--color-surface-card) p-4">
+            <div class="mb-1 flex flex-wrap items-center gap-2">
+                <h2 class="font-semibold">{{ __('customer::section.portal') }}</h2>
+                <x-ui.badge :tone="$customer->portal_enabled ? 'success' : 'draft'">
+                    {{ __($customer->portal_enabled
+                        ? 'customer::state.portal_on'
+                        : 'customer::state.portal_off') }}
+                </x-ui.badge>
+            </div>
+
+            <p class="text-xs text-(--color-ink-muted)">{{ __('customer::message.portal_note') }}</p>
+
+            @if ($customer->portal_enabled)
+                {{-- চালু থাকলে দুইটা তথ্যই কাজে লাগে: কোডটা গ্রাহককে বলতে
+                     হয়, আর শেষ ঢোকার সময় দেখে বোঝা যায় তিনি সত্যিই
+                     পাতাটা ব্যবহার করছেন কি না। --}}
+                <dl class="mt-3 grid gap-x-4 gap-y-2 sm:grid-cols-2">
+                    <div>
+                        <dt class="text-2xs text-(--color-ink-muted)">
+                            {{ __('customer::field.portal_code') }}
+                        </dt>
+                        <dd class="num text-sm font-medium">{{ $customer->code }}</dd>
+                    </div>
+                    <div>
+                        <dt class="text-2xs text-(--color-ink-muted)">
+                            {{ __('customer::field.portal_last_login') }}
+                        </dt>
+                        <dd class="text-sm">
+                            @if ($customer->portal_last_login_at)
+                                <span class="num">{{ \App\Core\Support\DateFormat::formatWithTime($customer->portal_last_login_at) }}</span>
+                            @else
+                                <span class="text-(--color-ink-muted)">
+                                    {{ __('customer::message.portal_never') }}
+                                </span>
+                            @endif
+                        </dd>
+                    </div>
+                </dl>
+            @endif
+
+            <div class="mt-4 grid gap-4 lg:grid-cols-3">
+                {{-- পাসওয়ার্ড বসানোর ফর্ম — চালু করা আর বদলানো একই ফর্ম,
+                     কারণ মালিকের দিক থেকে কাজটা একই: "একটা পাসওয়ার্ড
+                     দিলাম"। --}}
+                <form method="POST" action="{{ route('customer.portal.store', $customer) }}"
+                      class="grid gap-3 sm:grid-cols-2 lg:col-span-2">
+                    @csrf
+
+                    <x-ui.field name="password" type="password" required
+                                autocomplete="new-password"
+                                :label="__('customer::field.portal_password')"
+                                :hint="__('customer::message.portal_password_hint')" />
+
+                    {{-- দ্বিতীয়বার লেখানো হয়, কারণ পাসওয়ার্ডটা আর কোথাও
+                         দেখা যায় না। টাইপো হলে মালিক গ্রাহককে একটা ভুল
+                         পাসওয়ার্ড বলতেন, আর দুইজনেই ভাবতেন পোর্টালটা
+                         নষ্ট। --}}
+                    <x-ui.field name="password_confirmation" type="password" required
+                                autocomplete="new-password"
+                                :label="__('customer::field.portal_password_again')" />
+
+                    <div class="sm:col-span-2">
+                        <x-ui.button type="submit" tone="primary">
+                            {{ __($customer->portal_enabled
+                                ? 'customer::action.portal_reset'
+                                : 'customer::action.portal_enable') }}
+                        </x-ui.button>
+                    </div>
+                </form>
+
+                @if ($customer->portal_enabled)
+                    <form method="POST" action="{{ route('customer.portal.destroy', $customer) }}"
+                          data-confirm="{{ __('customer::message.portal_disable_confirm') }}"
+                          class="flex items-end">
+                        @csrf
+                        @method('DELETE')
+                        <x-ui.button type="submit" tone="secondary">
+                            {{ __('customer::action.portal_disable') }}
+                        </x-ui.button>
+                    </form>
+                @endif
+            </div>
+        </section>
+    @endcan
+
+    {{-- লেনদেন — অঙ্কটা কোথা থেকে এল (নিয়ম ১) --}}
+    @php
+        /*
+         * খতিয়ানের কলামগুলো একবার লেখা — টুলবার আর ছক দুইজনেই পড়ে।
+         *
+         * ⛔ আগে এগুলো `x-ui.table`-এর ভিতরে ইনলাইন ছিল, আর সেজন্যই
+         * টুলবারের "কলাম" মেনুটা এখানে বসানোই যেত না: সে তালিকাটা
+         * হাতে পায় না বলে **কিছুই দেখাত না**, আর নামমাত্র একটা বোতাম
+         * হয়ে থাকত।
+         */
+        $ledgerColumns = [
+            ['key' => 'trx_date', 'label' => __('core.table.date'), 'width' => '8rem',
+             'render' => fn ($e) => \App\Core\Support\DateFormat::format($e->trx_date)],
+            ['key' => 'document', 'label' => __('core.table.document'),
+             'render' => fn ($e) => view('customer::partials.entry-source', ['entry' => $e])],
+            ['key' => 'narration', 'label' => __('core.table.narration')],
+            ['key' => 'debit', 'label' => __('core.table.debit'), 'numeric' => true, 'width' => '8rem',
+             'render' => fn ($e) => \App\Core\Support\Money::isZero($e->debit) ? '' : \App\Core\Support\Money::format($e->debit)],
+            ['key' => 'credit', 'label' => __('core.table.credit'), 'numeric' => true, 'width' => '8rem',
+             'render' => fn ($e) => \App\Core\Support\Money::isZero($e->credit) ? '' : \App\Core\Support\Money::format($e->credit)],
+            ['key' => 'balance', 'label' => __('core.table.balance'), 'numeric' => true, 'width' => '9rem',
+             'render' => fn ($e) => \App\Core\Support\Money::drCr($e->net_balance)],
+        ];
+    @endphp
+
+    </div>
+    </div>
+    </div>
+
+    <section id="transactions" data-boxed class="scroll-mt-24 mt-4 overflow-hidden rounded-(--radius-card) border border-(--color-border)
+                    bg-(--color-surface-card)">
+        {{--
+            ⭐ টুলবার — মালিকের নির্দেশ, ২১ সেপ্টেম্বর ২০২৬:
+            *"lal mak kora joygay eta bosabe, same vabe customer e o"*।
+
+            ── ⭐ খোঁজা আর ছাঁকনি — ৩ অক্টোবর ২০২৬ থেকে সত্যি ─────────────
+            মালিক: *"ফিল্টার অপশন দিতে হবে সার্চ অপশন দিতে হবে"*। কন্ট্রোলার এখন
+            চাবিগুলো পড়ে ([[PartyLedger::filter()]]): নম্বর/বিবরণ/অঙ্ক, তারিখ,
+            কাগজের ধরন, কেবল ডেবিট বা ক্রেডিট। ⓘ আগে বোতামগুলো ইচ্ছে করে লুকানো
+            ছিল, কারণ তখন কন্ট্রোলার পড়ত না — মৃত বোতামের চেয়ে না থাকা ভালো।
+            ⚠️ জের ছাঁকনিতেও খাতার সব লেনদেন থেকে, কখনো শূন্য থেকে নয়।
+
+            ── ⭐ ছাপাটা এখানে লিংক, বোতাম নয় ──────────────────────────
+            পর্দায় আজকেরটা উপরে, কাগজে ব্যাংকের খাতার মতো পুরনো আগে।
+            ⓘ তাই ছাপার আগে `?ledger=asc` ঠিকানায় যাওয়া হয়, আর সেখানে
+            পৌঁছেই ছাপা শুরু হয়।
+        --}}
+        <form method="GET" class="contents">
+            <x-ui.toolbar :title="__('customer::section.transactions')"
+                          :search-placeholder="__('party_ledger.search')"
+                          :columns="$ledgerColumns"
+                          {{-- ℹ এই দুইটা ছাঁকনি নয়, দৃশ্যের অবস্থা — না বললে টুলবার
+                               "asc" আর "1" লেখা দুইটা কাঁচা চিপ তুলত, আর সরাতে গেলে
+                               কাগজের ক্রমটাই হারাত। --}}
+                          :quiet="['ledger', 'print']"
+                          :print-href="request()->fullUrlWithQuery(['ledger' => 'asc', 'print' => 1])">
+                {{-- ⭐ খোঁজা আর ছাঁকনি — মালিক, ৩ অক্টোবর ২০২৬; কন্ট্রোলার পড়ে [[PartyLedger::filter()]], জের খাতার সব লেনদেন থেকে --}}
+                <x-ui.party-ledger-filters party="customer" />
+            </x-ui.toolbar>
+        </form>
+
+        <x-ui.table
+            :empty="\App\Core\Support\PartyLedger::filtered(request()) ? __('core.empty.no_results') : __('customer::message.no_transactions')"
+            :rows="$entries"
+            :compact="request()->boolean('compact')"
+            :columns="$ledgerColumns" />
+
+        <x-ui.pager :rows="$entries" />
+        <x-ui.list-totals :rows="$entries" />
+    </section>
+</x-layouts.app>

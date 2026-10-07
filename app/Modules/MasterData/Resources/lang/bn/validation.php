@@ -1,0 +1,42 @@
+<?php
+
+declare(strict_types=1);
+
+return [
+    'format_needs_sequence' => 'নম্বরের ছকে {SEQ} থাকতেই হবে — ওটা না থাকলে প্রতিটা ডকুমেন্ট একই নম্বর পেত।',
+    'code_required' => 'কোড দিতে হবে।',
+    'code_taken' => ':code কোডে আরেকটা রেকর্ড আছে।',
+    'unknown_level' => 'এলাকার স্তরটা ঠিক নয়।',
+    'level_disabled' => ':level স্তরটা এই প্রতিষ্ঠানে বন্ধ। সেটিংস থেকে চালু করুন।',
+    'level_cannot_change' => 'এলাকার স্তর বদলানো যায় না — নিচের সব এলাকা তখন ভুল জায়গায় পড়ত। নতুন একটা তৈরি করে পুরনোটা নিষ্ক্রিয় করুন।',
+    'parent_required' => 'উপরের :level বাছতে হবে।',
+    'parent_not_found' => 'উপরের এলাকাটা পাওয়া গেল না।',
+    'wrong_parent_level' => 'উপরে :expected থাকার কথা, :given নয়।',
+    'parent_cannot_be_own_descendant' => 'একটা এলাকা নিজের নিচে বসতে পারে না।',
+    'parent_in_other_branch' => 'ঐ এলাকাটা অন্য শাখার — এটাকে তার নিচে সরানো যায় না।',
+    'default_cannot_deactivate' => 'ডিফল্ট রেকর্ড নিষ্ক্রিয় করা যাবে না — আগে অন্য একটাকে ডিফল্ট করুন।',
+    'unit_cycle' => 'একক নিজের ভিত্তি হতে পারে না, ঘুরেও নয়।',
+    'factor_must_be_positive' => 'রূপান্তরের সংখ্যা শূন্যের বেশি হতে হবে।',
+    'rate_out_of_range' => 'করের হার ০ থেকে ১০০-র মধ্যে হতে হবে।',
+    'top_level_has_no_parent' => ':level সবচেয়ে উপরের স্তর — এর উপরে কিছু বসে না।',
+    'base_currency_has_no_rate' => 'ভিত্তি মুদ্রার হার হয় না — নিজের সাপেক্ষে হার সবসময় ১।',
+    'rate_must_be_positive' => 'হার শূন্যের বেশি হতে হবে।',
+    'in_use_cannot_delete' => ':where টেবিলে ব্যবহার হয়ে গেছে, তাই মোছা যাবে না।',
+    'default_cannot_delete' => 'এটা ডিফল্ট, তাই মোছা যাবে না। আগে অন্য একটাকে ডিফল্ট করুন।',
+    /* WarehouseService এটা চাইত, অথচ কোনোদিন লেখা হয়নি — ডিফল্ট গুদাম
+       নিষ্ক্রিয় করতে গেলে কারণের বদলে কাঁচা কী দেখা যেত
+       (৩ সেপ্টেম্বর ২০২৬-এ ধরা পড়ে) */
+    'default_cannot_be_deactivated' => 'এটা ডিফল্ট, তাই নিষ্ক্রিয় করা যাবে না। আগে অন্য একটাকে ডিফল্ট করুন।',
+    /* এলাকা মোছা — LocationService::purge(), ১৯ সেপ্টেম্বর ২০২৬ */
+    'location_has_children' => ':name মোছা যাবে না — এর নিচে :count টা :level আছে। আগে ওগুলো মুছুন বা অন্য জায়গায় সরান।',
+    'location_in_use' => ':name মোছা যাবে না — :count টা :where এটার সাথে বাঁধা। কাজে না লাগলে নিষ্ক্রিয় করুন।',
+    'location_used_by' => [
+        'customers' => 'গ্রাহক',
+        'sal_shipments' => 'গাড়ির চালান',
+    ],
+    /* একই বাবার নিচে একই নাম — LocationService::assertNameIsFree(), ১৯ সেপ্টেম্বর ২০২৬ */
+    'location_name_taken' => ':name নামে একটা :level :parent-এর নিচে আগে থেকেই আছে (:code)।',
+    'location_name_taken_top' => ':name নামে একটা :level আগে থেকেই আছে (:code)।',
+    /* পদ্ধতি আর খাতের ধরন — [[MethodFitsAccount]], ২৭ সেপ্টেম্বর ২০২৬ */
+    'method_does_not_fit_account' => '":method" পদ্ধতিটা :kind ধরনের, অথচ টাকা যাচ্ছে :account-এ — পদ্ধতি আর খাতের ধরন মিলছে না। :kind ধরনের একটা খাত বাছুন।',
+];

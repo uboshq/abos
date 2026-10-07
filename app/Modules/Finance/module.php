@@ -1,0 +1,720 @@
+<?php
+
+declare(strict_types=1);
+use App\Core\Contracts\KnowsWhereAPersonsMoneyBelongs;
+use App\Core\Events\ApprovalDecided;
+use App\Modules\Accounts\Events\AccountFormOpened;
+use App\Modules\Accounts\Events\AccountSaved;
+use App\Modules\Accounts\Events\VoucherPosted;
+use App\Modules\Finance\Dashboard\FinanceDashboard;
+use App\Modules\Finance\Listeners\CapitalFromReceipt;
+use App\Modules\Finance\Listeners\FinishTheFinancePaperOnTheLastSignature;
+use App\Modules\Finance\Listeners\InstitutionFieldOnAccountForm;
+use App\Modules\Finance\Listeners\InstitutionFromAccountForm;
+use App\Modules\Finance\Listeners\PostTheProfitOnTheLastSignature;
+use App\Modules\Finance\Models\BankFacility;
+use App\Modules\Finance\Models\CapitalEntry;
+use App\Modules\Finance\Models\Deposit;
+use App\Modules\Finance\Models\DepositMovement;
+use App\Modules\Finance\Models\HandLoanAccount;
+use App\Modules\Finance\Models\HandLoanMovement;
+use App\Modules\Finance\Models\Institution;
+use App\Modules\Finance\Models\InsurancePremium;
+use App\Modules\Finance\Models\RentalAdjustment;
+use App\Modules\Finance\Models\RentalContract;
+use App\Modules\Finance\Models\Withdrawal;
+use App\Modules\Finance\Services\CapitalContributors;
+
+/**
+ * অর্থ — টাকা কোথা থেকে আসে, কোথায় থাকে, কোথায় যায়, আর কার।
+ *
+ * ── কেন হিসাব থেকে আলাদা, ২৯ আগস্ট ২০২৬ ──────────────────────────────
+ * মালিক তেত্রিশ বিভাগের Finance পরিকল্পনা দিয়ে বললেন অ্যাকাউন্টস আর
+ * ফিন্যান্স আলাদা দুইটা মডিউল হবে।
+ *
+ * সীমারেখাটা একটা প্রশ্ন: **এটা কি খাতায় দাখিলা লেখে, নাকি টাকার
+ * সিদ্ধান্ত নেয়?** খাতা লেখে → হিসাব। সিদ্ধান্ত নেয়, আর ফল খাতায় যায়
+ * → অর্থ।
+ *
+ * আর যেখানে দুইটাই সত্যি মনে হয়, দ্বিতীয় প্রশ্ন — **কে করে, কখন করে?**
+ * চেক ক্যাশিয়ার রোজ দেখেন; মিলকরণ হিসাবরক্ষক মাসে একবার। খরচ ডিপো
+ * ম্যানেজার রোজ লেখেন; জাবেদা হিসাবরক্ষক দরকারে।
+ *
+ * Ava-তেও ঠিক এই ভাগ (`অ্যাকাউন্টস` ও `অর্থ`), আর স্বাধীনভাবে একই
+ * জায়গায় পৌঁছানোটাই সীমারেখাটার সবচেয়ে বড় সমর্থন।
+ *
+ * ── কেন হিসাবের উপর নির্ভরতা ────────────────────────────────────────
+ * অর্থের প্রতিটা সিদ্ধান্তের ফল খাতায় বসে — মূলধন ঢুকলে ভাউচার হয়,
+ * ঋণ শোধ হলে দাখিলা হয়। তাই অর্থ হিসাবকে চেনে, উল্টোটা নয়। উল্টো
+ * নির্ভরতা বসালে হিসাব মডিউল একা দাঁড়াতে পারত না, অথচ খাতা টাকার
+ * সিদ্ধান্ত ছাড়াও চলে।
+ */
+return [
+    'code' => 'finance',
+
+    'name' => [
+        'en' => 'Finance',
+        'bn' => 'অর্থ',
+    ],
+
+    'version' => '1.0.0',
+
+    /*
+     * সাইডবারে কোথায় — নির্ভরতার ক্রম নয়, মানুষের ক্রম।
+     *
+     * মূলধন, বিনিয়োগ, ধার — হিসাবের খাতার উপরে বসা স্তর, তাই তার পরে।
+     *
+     * দলগুলোর তালিকা আর কেন এটা `depends_on`-এর থেকে আলাদা:
+     * [[ModuleDefinition::NAV_SECTIONS]].
+     */
+    'nav' => ['section' => 'finance', 'order' => 20],
+
+    /*
+     * হিসাবের উপর — খাত, ভাউচার ও ছক ওখান থেকে আসে।
+     *
+     * মাস্টার ডাটার উপরও, কারণ খরচের কেন্দ্র ও কর ওখানে বসে।
+     */
+    'depends_on' => [
+        /*
+         * ⓘ নগদের পূর্বাভাস ক্রয় ও বিক্রয়ের বকেয়া পড়ে
+         * ([[CashForecast]]), আর ঝুঁকির বোর্ড মজুদ পড়ে
+         * ([[RiskBoard]])। ⚠️ তিনটার একটাও finance-এর উপর দাঁড়ায়
+         * না, তাই চক্র হয় না (২১ সেপ্টেম্বর ২০২৬ — সীমারেখার নিরীক্ষা)।
+         */
+        'purchase',
+        'sales',
+        'inventory', 'accounts', 'master_data'],
+
+    'dashboard' => FinanceDashboard::class,
+
+    'menu' => [
+        'dashboard' => [
+            ['label' => 'finance::dashboard.title', 'icon' => 'dashboard', 'route' => 'module.dashboard',
+                'route_params' => ['module' => 'finance'], 'permission' => 'finance.capital.view'],
+        ],
+
+        /*
+            ⛔ অর্থে "মাস্টার" দলটা আর নেই — মালিকের সিদ্ধান্ত, ১৮ সেপ্টেম্বর ২০২৬।
+
+            মালিকের প্রশ্ন: *"মূলধন ও বিনিয়োগ master theke ber kore dile
+            kemon hoy, finance e master dorkar ache bole mone hoy na"*।
+
+            ── ⓘ কেন তিনি ঠিক ────────────────────────────────────────
+            মাস্টার মানে **রেফারেন্স তালিকা** — যা কালেভদ্রে বদলায়, আর
+            যার উপর লেনদেন দাঁড়ায়: পণ্য, শাখা, পক্ষের ধরন। ⓘ অর্থের
+            নিজের সে ধরনের কিছু নেই; ব্যাংক, পক্ষের ধরন আর ট্রান্সফার
+            মোড সবই মাস্টার ডেটা মডিউলে বসে।
+
+            ⛔ আর যে দুইটা এখানে বসেছিল, একটাও মাস্টার নয়:
+              · **ফিন্যান্স মানচিত্র** একটা দলিল — কোনটা হয়েছে, কোনটা বাকি
+              · **মূলধন ও বিনিয়োগ** সরাসরি খাতা — টাকা ঢোকে, বের হয়
+
+            ⚠️ দলটা থাকায় দুইটাই একটা ড্রপডাউনের ভিতরে লুকানো ছিল, আর
+            ব্যবহারকারীকে একটা বাড়তি ক্লিক করতে হত এমন কিছুর জন্য যা
+            আসলে রোজকার কাজ।
+
+            ⓘ তাই দুইটাই নিচের দলে, আর ক্রমটা মালিকের লেখা তালিকা ধরে।
+        */
+
+        /*
+            ⭐ মালিকের ছয়টা ভাগ — ২০ সেপ্টেম্বর ২০২৬।
+
+            তিনি নিজের ক্রম লিখে দিলেন:
+
+                দেখা · মালিকানা · দায় · সঞ্চয় · চুক্তি · সেটআপ
+
+            ── ⛔ কেন এগুলো "দল" নয়, ভাঁজ ──────────────────────────────
+            কোরে দলের নাম ছয়টাই নির্দিষ্ট — ড্যাশবোর্ড · মাস্টার ·
+            লেনদেন · অনুমোদন · প্রতিবেদন · সেটিংস
+            ([[ModuleDefinition::MENU_GROUPS]])। ⚠️ অচেনা নাম দিলে অ্যাপ
+            বুটেই থেমে যায়, আর ভুলটা আগে একবার হয়েছিল।
+
+            ⓘ নামগুলো ইচ্ছাকৃতভাবে এক: এক মডিউল শিখলে সব চেনা যায়।
+            তাই মালিকের নামগুলো বসেছে লেনদেনের **ভিতরের ভাঁজ** হিসেবে
+            (`cluster`) — অ্যাকাউন্টসের "ভাউচার" ভাঁজটা যেভাবে বসেছে।
+            ⭐ পর্দায় ফলটা তিনি যা চেয়েছেন তাই: এক সারিতে দেখা ·
+            মালিকানা · দায় · সঞ্চয় · চুক্তি, আর শেষে সেটিংস।
+
+            ⓘ এক সারির ভাঁজ ড্রপডাউন হয় না, সরাসরি ঘর — খুলে দেখার মতো
+            কিছু থাকে না বলে ([[shell/modulebar]])। তাই "মালিকানা" দেখায়
+            *মূলধন ও বিনিয়োগ*, আর "সঞ্চয়" দেখায় *আমানত*।
+        */
+        'transactions' => [
+            /*
+             * ── দেখা ────────────────────────────────────────────────
+             * যে পর্দাগুলো কেবল দেখায়, কিছু লেখায় না।
+             *
+             * মানচিত্র সবার আগে: তেত্রিশ বিভাগের কোনটা হয়েছে আর কোনটা
+             * বাকি — মালিক ঠিক এটাই চেয়েছেন, *"দেখলে বুঝা যাবে আমি কোন
+             * কাজটা করছি আর কোনটা করি নাই"*।
+             *
+             * ⓘ আয় এই ভাঁজেই, আর সেটা ইচ্ছাকৃত: ডিপোতে প্রশ্নটা "কতটা
+             * এল বিক্রয় ছাড়া" — ওটা পড়ার পর্দা, লেখার নয়। লেখা হয়
+             * বিক্রয়ে আর ভাউচারে।
+             */
+            ['label' => 'finance::menu.plan', 'cluster' => 'overview', 'icon' => 'book',
+                'route' => 'finance.plan', 'permission' => 'finance.plan.view'],
+
+            /* ⭐ পরিকল্পনা — মানচিত্র §১, §৮, §১৬, §২৯; ২০ সেপ্টেম্বর ২০২৬ */
+            ['label' => 'finance::forecast.cfo', 'cluster' => 'overview', 'icon' => 'dashboard',
+                'route' => 'finance.cfo', 'permission' => 'finance.forecast.view'],
+            ['label' => 'finance::budget.title', 'cluster' => 'overview', 'icon' => 'reports',
+                'route' => 'finance.budget.index', 'permission' => 'finance.budget.view'],
+            ['label' => 'finance::forecast.title', 'cluster' => 'overview', 'icon' => 'cash',
+                'route' => 'finance.forecast.cash', 'permission' => 'finance.forecast.view'],
+            ['label' => 'finance::menu.income', 'cluster' => 'overview', 'icon' => 'inbox',
+                'route' => 'finance.income.index', 'permission' => 'finance.income.view'],
+
+            /*
+             * ── মালিকানা ────────────────────────────────────────────
+             * মালিক কত দিলেন, কত তুললেন।
+             *
+             * ⓘ উত্তোলনের আলাদা সারি নেই — ওটা এই পর্দারই দ্বিতীয় দিক,
+             * মালিকের সিদ্ধান্ত ১৮ সেপ্টেম্বর ২০২৬ (নিচের ব্যাখ্যা)।
+             * ⚠️ তাই ভাঁজে সারি একটাই, আর পর্দায় ওটা সরাসরি ঘর।
+             */
+            ['label' => 'finance::menu.capital', 'cluster' => 'ownership', 'icon' => 'building',
+                'route' => 'finance.capital.index', 'permission' => 'finance.capital.view'],
+
+            /* ⭐ লাভ বণ্টন — মালিকানার দলেই, মূলধনের পাশে */
+            ['label' => 'finance::menu.profit_share', 'cluster' => 'ownership', 'icon' => 'scale',
+                'route' => 'finance.profit.index', 'permission' => 'finance.capital.view'],
+
+            /*
+             * ── দায় ─────────────────────────────────────────────────
+             * যা ফেরত দিতে হবে। ⭐ মালিকের ক্রমে দায় আগে, সম্পদ পরে —
+             * খাতা যে ক্রমে পড়া হয়।
+             *
+             * ⭐ ভাঁজ নেই — "ব্যাংক ঋণ" আর "হাতধার" উপরের ট্যাবে আর বাঁয়ের মেনুতে নিজের নিজের সারি
+             * (মালিকের সরাসরি আদেশ, ৫ অক্টোবর ২০২৬, সমন্বয়কের মারফত: "দায়" দলটা সরাও)। ⓘ পাশাপাশি থাকে, কারণ
+             * মানুষ দুইটা একসাথেই খোঁজেন; ⚠️ এক পর্দায় মেলানো যেত না — মঞ্জুরি, জামানত, ড্রয়িং পাওয়ার আর নবায়ন,
+             * একটাও হাতধারে নেই।
+             */
+
+            ['label' => 'finance::menu.bank_facility', 'icon' => 'building',
+                'route' => 'finance.bank_facility.index', 'permission' => 'finance.bank_facility.view'],
+            ['label' => 'finance::menu.hand_loan', 'icon' => 'handover',
+                'route' => 'finance.hand_loan.index', 'permission' => 'finance.hand_loan.view'],
+
+            /*
+             * ⭐ আর্থিক প্রতিষ্ঠান — দায়ের **পরে**, আমানতের **আগে**।
+             * মালিকের নির্দেশ, ২১ সেপ্টেম্বর ২০২৬।
+             *
+             * ── ⛔ দুইবার ভুল জায়গায় বসেছে, আর দুইবারই আলাদা কারণে ──
+             * ২০ সেপ্টেম্বরের মেনু গোছানোয় সারিটা "সেটআপ" দলে নেমে
+             * গিয়েছিল, আর মালিক সেটা **খুঁজেই পাননি** — বললেন *"আগে
+             * ছিল এখন নাই"*। ⚠️ সারিটা মোছা হয়নি, কিন্তু যেখানে চোখ যায়
+             * সেখান থেকে সরানো আর মুছে ফেলা — খুঁজতে বসা মানুষের কাছে
+             * এক জিনিস।
+             *
+             * ⛔ তারপর ওটা `liability` দলে বসানো হয়েছিল, আর তাতে উপরের
+             * পট্টিতে চিপটা **"দায় › আর্থিক প্রতিষ্ঠান"** হয়ে গেল —
+             * অর্থাৎ প্রতিষ্ঠান দেখতে গেলে আগে দায়ের ভাঁজ খুলতে হত।
+             *
+             * ⭐ তাই `cluster` নেই: দলহীন সারি [[shell/modulebar]]-এ
+             * নিজের নামেই আলাদা চিপ হয় (সদস্য দুইয়ের কম হলে ভাঁজ বসে
+             * না, `modulebar.blade.php:292`)। ⓘ "মূলধন ও বিনিয়োগ"ও ঠিক
+             * এভাবেই একা দাঁড়ায়।
+             *
+             * ⓘ জায়গাটা কাজের ক্রমেই: যার কাছে দায়, তার কাছেই আমানত —
+             * প্রতিষ্ঠানটা ঠিক দুইয়ের মাঝখানে পড়ে।
+             */
+            ['label' => 'finance::institution.title', 'icon' => 'building',
+                'route' => 'finance.institution.index', 'permission' => 'finance.institution.view'],
+
+            /*
+             * ── সঞ্চয় ───────────────────────────────────────────────
+             * ⭐ তিনটা সারি এক হলো — মালিকের সিদ্ধান্ত, ২০ সেপ্টেম্বর ২০২৬।
+             *
+             * ⛔ আগে ছিল ব্যাংক আমানত · সঞ্চয়পত্র · বন্ড — তিনটা সারি,
+             * একটাই পর্দা, কেবল `issuer` আলাদা। ⓘ যুক্তি ছিল "কেউ জমা
+             * খোঁজে না, খোঁজে সঞ্চয়পত্র"। ⚠️ কিন্তু তাতে মেনুটা লম্বা
+             * হত আর তিনটা প্রায়-একই নাম পাশাপাশি বসত।
+             *
+             * ⭐ নামগুলো হারায়নি: ওরা এখন পর্দার উপরের ট্যাব, প্রতিটার
+             * পাশে গোনা সহ। ⓘ ইস্যুকারীটা পথেই থাকে
+             * (`/deposits/{issuer}`), তাই পুরনো বুকমার্ক আগের জায়গাতেই
+             * নামে আর বাঁ পাশের সারিটাও জ্বলে থাকে।
+             */
+            ['label' => 'finance::menu.deposits', 'cluster' => 'savings', 'icon' => 'building',
+                'route' => 'finance.deposit.index', 'route_params' => ['issuer' => 'bank'],
+                'permission' => 'finance.deposit.view'],
+
+            /*
+             * ── চুক্তি ──────────────────────────────────────────────
+             * ভাড়া আর বীমা — দুইটাই কাগজে বাঁধা দায়, রোজকার লেনদেন নয়।
+             *
+             * ⓘ প্রিমিয়াম দেওয়ার দায় আর নবায়নের তারিখ — বীমার দুইটাই
+             * ভাড়ার চুক্তির মতো আচরণ করে, তাই একই ভাঁজে।
+             */
+            ['label' => 'finance::menu.rental', 'cluster' => 'contracts', 'icon' => 'building',
+                'route' => 'finance.rental.index', 'permission' => 'finance.rental.view'],
+            // ⭐ ভাড়াটে — আমরা যখন জায়গা ভাড়া দিই (মালিকের সিদ্ধান্ত প্র৩, ৬ অক্টোবর ২০২৬)
+            ['label' => 'finance::tenancy.title', 'cluster' => 'contracts', 'icon' => 'building',
+                'route' => 'finance.tenancy.index', 'permission' => 'finance.rental.view'],
+            ['label' => 'finance::insurance.title', 'cluster' => 'contracts', 'icon' => 'lock',
+                'route' => 'finance.insurance.index', 'permission' => 'finance.insurance.view'],
+
+            /*
+             * ⛔ খরচ এখানে নেই — মালিকের সিদ্ধান্ত, ১৮ সেপ্টেম্বর ২০২৬।
+             * "expance dui jaygay keno?" — তারপর *"finance থেকে তুলে দাও
+             * … যা রাখতে হয় accounts-এ রাখো"*। ⭐ যা হারায়নি: খাতভিত্তিক
+             * খরচ হিসাবের রিপোর্টে, আর অনুমোদনের অপেক্ষার সংখ্যা খরচ
+             * ভাউচারের তালিকার মাথায় চিপ হয়ে।
+             *
+             * ⛔ উত্তোলনের নিজস্ব সারিও নেই — একই দিনের সিদ্ধান্ত।
+             * ⚠️ তালিকা, মাসিক সীমা আর মাসের হিসাব
+             * [[finance.withdrawal.index]]-এ রয়ে গেছে, আর সেখানে যাওয়ার
+             * পথ মূলধনের পাতার "তালিকা ও মাসিক সীমা" বোতাম। ⛔ রুট বা
+             * অনুমতি কিছুই মোছা হয়নি — কেবল মেনুর সারিটা।
+             */
+        ],
+
+        /*
+            ── সেটআপ ──────────────────────────────────────────────────
+            ⭐ মালিকের ছয় নম্বর ভাগ, আর এটাই একমাত্র যেটা কোরের দলের
+            নামের সাথে মিলে যায় (সেটিংস)।
+
+            ⓘ দুইটাই তালিকা, যার উপর রোজকার কাগজগুলো দাঁড়ায়: কোন
+            স্কিমে FD খোলা যাবে, আর কোন ব্যাংক-শাখার নাম বাছা যাবে।
+            ⚠️ লেনদেনের সারির পাশে রাখলে দিনে একবারও লাগে না এমন দুইটা
+            পর্দা রোজকার কাজের জায়গা নিত।
+        */
+        'settings' => [
+            ['label' => 'finance::menu.deposit_kinds', 'icon' => 'settings',
+                'route' => 'finance.deposit_kind.index', 'permission' => 'finance.deposit.view'],
+
+            /*
+             * ⓘ আর্থিক প্রতিষ্ঠান এখান থেকে উপরে গেছে, দায়ের আগে
+             * (২১ সেপ্টেম্বর ২০২৬) — একই সারি দুই জায়গায় রাখলে মেনু
+             * নিজেই বলত না কোনটা আসল জায়গা।
+             */
+        ],
+    ],
+
+    /*
+     * ⭐ একজন ব্যক্তির টাকা কোন খাতে — মূলধনের কথা Finance-ই জানে।
+     *
+     * ⚠️ ২১ সেপ্টেম্বর ২০২৬: আগে Accounts নিজে `CapitalEntry` খুঁজত, আর
+     * তাতে তীরটা উল্টো হত — নিচের `depends_on`-এ লেখা আছে Finance
+     * accounts চেনে, উল্টোটা নয়। ⛔ Accounts-কে Finance চিনতে হলে
+     * Finance বন্ধ করে দিলে ভাউচারের পর্দাই ভাঙত।
+     *
+     * ⓘ এখন কথাটা যার, সে-ই বলে; Accounts কেবল চুক্তিটা চায়।
+     */
+    'bindings' => [
+        KnowsWhereAPersonsMoneyBelongs::class => CapitalContributors::class,
+    ],
+
+    'permissions' => [
+        'finance.plan.view',
+
+        /* বাজেট — দেখা আর লেখা আলাদা: যিনি বাজেট দেখে খরচ সামলান, বাজেট
+           বদলানোর ক্ষমতা তাঁর দরকার নেই। পূর্বাভাস আর CFO ড্যাশবোর্ড শুধু
+           দেখার — ওখানে লেখার কিছু নেই। (২০ সেপ্টেম্বর ২০২৬) */
+        'finance.budget.view',
+        'finance.budget.create',
+        'finance.forecast.view',
+
+        /* মূলধন — দেখা, লেখা, আর খাতায় বসানো আলাদা তিনটা ক্ষমতা।
+           যে কেরানি সারি লিখতে পারেন, তাঁর খাতায় বসানোর ক্ষমতা
+           থাকার দরকার নেই। */
+        'finance.capital.view',
+        'finance.capital.create',
+        'finance.capital.delete',
+        'finance.capital.post',
+
+        /* খরচ দেখা — লেখা হয় ভাউচারে, তাই লেখার অনুমতি ওখানেই */
+        'finance.expense.view',
+
+        /* আয় দেখা — একই কারণে, লেখার অনুমতি বিক্রয় ও ভাউচারে */
+        'finance.income.view',
+
+        /*
+         * সঞ্চয় ও বিনিয়োগ।
+         *
+         * `move` আলাদা, কারণ কিস্তি দেওয়া আর FD ভাঙা এক ক্ষমতা নয়
+         * বলা যেত — কিন্তু দুইটাই টাকা নাড়ায়, আর যে একটা পারে সে
+         * অন্যটাও পারে। খোলা আলাদা: নতুন FD খোলা মানে বড় টাকা
+         * সরানো, আর সেটা প্রায়ই মালিকের নিজের সিদ্ধান্ত।
+         */
+        'finance.deposit.view',
+        'finance.deposit.create',
+        'finance.deposit.move',
+
+        /*
+         * ⭐ ধরনের সেটিংস — আলাদা চাবি, ২০ সেপ্টেম্বর ২০২৬ (মানচিত্র §১৪ক)।
+         *
+         * ⚠️ যিনি রোজ FD খোলেন, স্কিমের তালিকা বদলানোর ক্ষমতা তাঁর দরকার
+         * নেই। ⛔ এক চাবিতে বাঁধলে একজন কেরানি ভুল করে ধরনই মুছে ফেলতেন।
+         */
+        'finance.deposit_kind.manage',
+
+        /*
+         * বাতিল আলাদা চাবি — আর সবচেয়ে কড়াটা।
+         *
+         * ভাঙা রোজকার কাজ; বাতিল মানে খাতার দাখিলা ফিরিয়ে নেওয়া।
+         * ক্যাশিয়ার প্রথমটা করতে পারেন, দ্বিতীয়টা নয়।
+         */
+        'finance.deposit.cancel',
+
+        /*
+         * হাতধার — দেখা, খোলা, আর টাকা নাড়ানো।
+         *
+         * দেখাটা আলাদা রাখা জরুরি: কে কার কাছে কত ধার নিয়েছে সেটা
+         * ব্যক্তিগত তথ্য, আর ডিপোর সব কর্মীর সেটা জানার দরকার নেই।
+         */
+        'finance.hand_loan.view',
+        'finance.hand_loan.create',
+        'finance.hand_loan.move',
+
+        /*
+         * ব্যাংকের সুবিধা।
+         *
+         * ⓘ এখানে `move` নেই, আর সেটাই নকশার কথা: টাকা নাড়ে ভাউচার।
+         * ⚠️ `close` আলাদা ক্ষমতা, কারণ একটা সুবিধা বন্ধ করা মানে
+         * ব্যবসার ধার তোলার পথ বন্ধ করা — যে কেরানি নথিটা লিখতে
+         * পারেন, তাঁর ঐ ক্ষমতা থাকার দরকার নেই।
+         */
+        'finance.institution.view',
+        'finance.institution.manage',
+
+        'finance.insurance.view',
+        'finance.insurance.manage',
+
+        'finance.bank_facility.view',
+        'finance.bank_facility.create',
+        'finance.bank_facility.close',
+
+        /*
+         * উত্তোলন — চারটা ক্ষমতা, আর `cap` সবচেয়ে কড়া।
+         *
+         * সীমা বদলানো মানে নিয়মটাই বদলানো। যে কেরানি উত্তোলন লিখতে
+         * পারেন তাঁর ওই ক্ষমতা থাকার কথা নয় — নাহলে সীমাটা কেবল
+         * একটা সাজানো সংখ্যা।
+         */
+        'finance.withdrawal.view',
+        'finance.withdrawal.create',
+        'finance.withdrawal.post',
+        'finance.withdrawal.cap',
+
+        /*
+         * ভাড়ার চুক্তি ও জামানত।
+         *
+         * ── কেন দেখা আর লেখা আলাদা ─────────────────────────────────
+         * চুক্তির পাতায় **কত জামানত কার কাছে পড়ে আছে** লেখা থাকে, আর
+         * ওটা ম্যানেজারের দেখার জিনিস। ⛔ কিন্তু মাসের সমন্বয় বসানো
+         * মানে খতিয়ানে ভাউচার — সেটা আলাদা ক্ষমতা।
+         *
+         * ⚠️ `close` তৃতীয় চাবি, আর কারণটা টাকার: চুক্তি শেষ করা মানে
+         * **বাকি জামানতটা ফেরত এসেছে বলে খাতায় লেখা**। ভুল করে বা
+         * ইচ্ছে করে ওটা করলে লাখ টাকার একটা পাওনা নীরবে খাতা থেকে
+         * মুছে যেত, অথচ টাকাটা বাড়িওয়ালার কাছেই থেকে যেত।
+         */
+        'finance.rental.view',
+        'finance.rental.create',
+        'finance.rental.close',
+    ],
+
+    /* নতুন ইনস্টলে (§৫): Manager অর্থের মূল দিকগুলো দেখা (বানানো/পোস্ট নয়)। */
+    'role_templates' => [
+        /*
+         * ⭐ হিসাবরক্ষক — প্রতিটা কোম্পানিতে ডিফল্টে থাকে। মালিকের নির্দেশ, ২৭
+         * সেপ্টেম্বর ২০২৬: *"Accountant role by defolt erp te create thakbe"*।
+         * ⓘ জমার দাবির মঞ্জুরি কেবল তাঁর (মালিক, ২৬ সেপ্টেম্বর)।
+         */
+        'Accountant' => [
+            'finance.capital.view',
+            'finance.capital.create',
+            'finance.capital.post',
+            'finance.deposit.view',
+            'finance.deposit.create',
+            'finance.deposit.move',
+            'finance.hand_loan.view',
+            'finance.hand_loan.create',
+            'finance.hand_loan.move',
+            'finance.withdrawal.view',
+            'finance.withdrawal.create',
+            'finance.withdrawal.post',
+            'finance.bank_facility.view',
+            'finance.bank_facility.create',
+            'finance.insurance.view',
+            'finance.institution.view',
+            'finance.rental.view',
+            'finance.budget.view',
+            'finance.expense.view',
+            'finance.income.view',
+            'finance.plan.view',
+            'finance.forecast.view',
+        ],
+        /*
+         * ⭐ ভাড়ার চুক্তি ম্যানেজারও দেখেন — লেখেন না।
+         *
+         * ⚠️ কারণটা ব্যবহারিক: "কোন চুক্তি কবে শেষ, আর কত ফেরত পাব"
+         * প্রশ্নটা মালিকের চেয়ে ম্যানেজারের বেশি দরকার হয়, আর তিনিই
+         * বাড়িওয়ালাকে ফোন করেন। দেখতে না পেলে তারিখটা আবার কারো
+         * মাথায় ফিরে যেত — আর এই গোটা মডিউলটা ঠিক ওই সমস্যাটার জন্যই।
+         */
+        /*
+         * ⭐ ব্যাংকের সুবিধাও ম্যানেজার দেখেন — খোলেন বা বন্ধ করেন না।
+         *
+         * ⚠️ কারণটা ভাড়ার চুক্তির হুবহু একই: **যাঁর চেক ফেরত আসে,
+         * তাঁকেই ড্রয়িং পাওয়ারটা দেখতে দিতে হয়**। ⓘ স্টক কমলে সীমা
+         * কমে, আর ম্যানেজার সেটা না দেখলে সরবরাহকারীর সামনে গিয়ে
+         * জানতে পারেন।
+         *
+         * ⛔ `create` ও `close` দেওয়া হয়নি: একটা সুবিধা বন্ধ করা মানে
+         * ব্যবসার ধার তোলার পথ বন্ধ করা — ওটা মালিকের সিদ্ধান্ত।
+         */
+        'Manager' => [
+            'finance.expense.view', 'finance.income.view', 'finance.deposit.view',
+            'finance.rental.view', 'finance.bank_facility.view',
+            // ⓘ বাজেট দেখা — খরচ যিনি সামলান, সীমাটা তাঁরই জানা দরকার
+            'finance.budget.view',
+        ],
+    ],
+
+    /*
+     * নিজের নম্বর সিরিজ।
+     *
+     * ── ছাঁচটা এখানে ঠিক হয় না, সিরিজের সারিতে হয় ────────────────────
+     * এই তালিকা কেবল বলে কোন কোন কাগজের নিজের নম্বর লাগবে; ছাঁচটা
+     * ([[NumberSeriesEngine]]) সিরিজের নিজের সারিতে বসে, আর কোম্পানি
+     * সেটিংস থেকে বদলাতে পারে।
+     *
+     * বসানো ছাঁচে অর্থবছর থাকে — `DEP-2026-2027-0001`। এখানে আগে লেখা
+     * ছিল "অর্থবছর ছাড়া", আর ব্রাউজারে প্রথম জমাটা খুলেই দেখা গেল
+     * কথাটা মিথ্যা। মন্তব্য যা বলে কোড তা না করলে পরের জন কোডের বদলে
+     * মন্তব্যটাকেই বিশ্বাস করে।
+     *
+     * ── অর্থবছর থাকাটা কি ঠিক ───────────────────────────────────────
+     * একটা FD পাঁচ বছর চলে, তাই নম্বরে বছরটা "কবে শেষ" বলে না — বলে
+     * "কবে খোলা"। ওটাই দরকারি: কাগজ খুঁজতে হয় খোলার বছর ধরে, আর
+     * ব্যাংকও ওভাবেই খোঁজে।
+     */
+    'doc_types' => [
+        'CAP' => 'finance::doc.capital',
+
+        /* ⭐ লাভ বণ্টন — নিজের নম্বর, কারণ এক ঘোষণায় অনেক সারি */
+        'PDS' => 'finance::doc.profit_share',
+
+        /*
+         * ⭐ বছর শেষে মূলধনে — নিজের নম্বর, কারণ এটা
+         * ঘোষণাও না, তোলাও নয় — তৃতীয় একটা ঘটনা।
+         *
+         * ⚠️ `CAP` ব্যবহার করলে বছর-শেষের সারিগুলো হাতে
+         * লেখা মূলধনের সারির সাথে মিশে যেত, আর পরে কেউ
+         * বলতে পারত না কোন টাকাটা বাইরে থেকে এল।
+         */
+        'PCAP' => 'finance::doc.profit_to_capital',
+        'DEP' => 'finance::doc.deposit',
+
+        /* উত্তোলন — নিজের নম্বর, কারণ অনুমোদনে এটাই পরিচয় */
+        'WDR' => 'finance::doc.withdrawal',
+
+        /*
+         * ⭐ দুইটাই ১৫ সেপ্টেম্বর ২০২৬-এ যোগ হলো — মালিক লোকালে একটা
+         * ভাড়ার চুক্তি জমা দিয়ে ধরিয়ে দিয়েছেন।
+         *
+         * ⛔ `document_no` কলামটা দুইটা টেবিলেই ছিল, কিন্তু কোনো সার্ভিস
+         * নম্বর চাইত না — সব সারি `NULL` নিয়ে বসে থাকত। ⚠️ ফলে একটা
+         * চুক্তির কথা বলার কোনো উপায় ছিল না: বাড়িওয়ালা ফোন করলে
+         * "কোন চুক্তি" প্রশ্নের উত্তর কেবল আইডি, আর ওটা কাগজে থাকে না।
+         */
+        'RNT' => 'finance::doc.rental',
+        // ⭐ ভাড়াটের চুক্তি — মালিকের সিদ্ধান্ত প্র৩, ৬ অক্টোবর ২০২৬
+        'TNT' => 'finance::doc.tenancy',
+        'BFC' => 'finance::doc.bank_facility',
+    ],
+
+    /*
+     * অনুমোদন লাগতে পারে এমন কাজ।
+     *
+     * ⚠️ ── এই সারিটা না থাকায় উত্তোলনে অনুমোদন কোনোদিন চাওয়া হয়নি ──
+     * `WithdrawalService` শুরু থেকেই ইঞ্জিনকে ডাকে
+     * (`request(module: 'finance', action: 'withdrawal', …)`), কিন্তু
+     * `ApprovalFlowService::choices()` কেবল **ঘোষিত** কাজগুলো ছকের
+     * পর্দায় দেখায়, আর `assertKnownAction()` অঘোষিত কাজে ছক বসাতেই
+     * দেয় না। ফল: ছক তৈরি করার কোনো পথ ছিল না → `flowFor()` সবসময়
+     * `null` → `request()` সবসময় `null` → **টাকা বেরোনোর সময় কেউ
+     * কোনোদিন সই চায়নি।**
+     *
+     * আর কিছুই ভাঙত না বলে ধরাও পড়ত না: অনুমোদন না চাওয়া দেখতে হুবহু
+     * "এই কোম্পানি অনুমোদন চায় না"-র মতো। ধরা পড়েছে মেপে — কোড যে
+     * `module.action` চায়, তার প্রতিটা ঘোষিত কি না তা গুনে
+     * (`EveryApprovalAskedForCanBeConfiguredTest`)।
+     *
+     * ⓘ সারিটা কারো আজকের কাজ থামায় না — ছক না বসানো পর্যন্ত
+     * `request()` আগের মতোই `null` ফেরায়। এটা কেবল **দরজাটা খোলে**।
+     */
+    'approvals' => [
+        'withdrawal' => 'finance::approval.withdrawal',
+        // ⭐ মুনাফা ঘোষণা — সই ছাড়া লাভ ভাগ নয় (মালিকের নিয়ম; [[ProfitDistribution::declare()]], ১ অক্টোবর ২০২৬)
+        'profit' => 'finance::approval.profit',
+
+        /*
+         * ⛔ অর্থের বাকি টাকার কাজ — অডিট গ১, ৪ অক্টোবর ২০২৬ ([[FinanceSignature]])।
+         *
+         * ⓘ এগুলো ভাউচার বানিয়ে সাথে সাথে খাতায় বসাত, সই ছাড়া — হিসাবের পর্দায় যে টাকায় সই লাগে, অর্থের
+         * পর্দা দিয়ে সেই টাকাই সই ছাড়া নড়ত। ছক না বসালে আগের মতোই সাথে সাথে; নতুন কোম্পানিতে ছক নিজে বসে
+         * (`moves_money` → [[MoneyFlowDefaults]])।
+         */
+        'hand_loan' => 'finance::approval.hand_loan',
+        'deposit' => 'finance::approval.deposit',
+        'rental' => 'finance::approval.rental',
+        'bank_facility' => 'finance::approval.bank_facility',
+        'capitalise' => 'finance::approval.capitalise',
+    ],
+
+    /*
+     * ⛔ যে কাজগুলোতে **টাকা নড়ে** — ২৪ সেপ্টেম্বর ২০২৬।
+     *
+     * ⭐ মালিকের সিদ্ধান্ত: এগুলোতে **একসাথে সই দেওয়া যায় না**
+     * ([[BulkApproval]]) — একটা একটা করে দেখে দিতে হবে।
+     *
+     * ⓘ উত্তোলন — টাকা বেরিযয়ে যায়।
+     *
+     * ⚠️ নামগুলো `approvals`-এ থাকতেই হবে — [[ModuleDefinition]]
+     * মিলিয়ে দেখে। ⛔ একটা টাইপো নীরবে কাগজটাকে bulk-এ
+     * ঢুকিয়ে দিত।
+     */
+    'moves_money' => ['withdrawal', 'profit', 'hand_loan', 'deposit', 'rental', 'bank_facility', 'capitalise'],
+
+    /*
+     * ⛔ এই ব্লকটা এতদিন **ছিলই না**, আর সেটা একটা নীরব ফাঁক ছিল।
+     *
+     * ── কী এটা করে ───────────────────────────────────────────────────
+     * ধরনের নামটা (`capital_entry`) ক্লাসের সাথে বাঁধে। দুই জায়গায়
+     * লাগে, আর দুইটাই নীরবে ব্যর্থ হত:
+     *
+     *   ১. খতিয়ানের সারি থেকে মূলধনের নথিতে ফিরে যাওয়া (Drill)
+     *   ২. ⭐ রসিদ পোস্ট হলে সারিটা নিষ্পন্ন করা
+     *      ([[App\Core\Contracts\SettledByAVoucher]])
+     *
+     * ── ⚠️ কেন এটাই একমাত্র পথ ──────────────────────────────────────
+     * [[App\Modules\Accounts\Services\VoucherService]] কোনোদিন জানবে না
+     * `capital_entry` মানে কোন ক্লাস — Accounts-এর `depends_on` ফাঁকা,
+     * বাকি সবাই তার উপরে দাঁড়ায়। ⓘ ওই ফাইলে Finance-এর নাম লিখলে
+     * চক্রাকার নির্ভরতা, আর [[Tests\Feature\Architecture\BoundariesTest]]
+     * ঠিকই ধরত। তাই নামটা এখানে, আর `DrillResolver` খুলে দেয়।
+     *
+     * ⛔ ব্লকটা না থাকলে যা হত — আর ১৪ সেপ্টেম্বর ২০২৬ পর্যন্ত হচ্ছিল:
+     * রসিদ পোস্ট হত, খাতায় টাকা বসত, অথচ মূলধনের সারিটা **চিরকাল
+     * খসড়া** থেকে যেত। দুইটা পর্দা দুই কথা বলত, আর কোথাও কোনো ভুলের
+     * চিহ্ন থাকত না।
+     */
+    /*
+     * ⛔ এই ব্লকটা কেবল ড্রিল-ডাউনের নয় — নিষ্পত্তিরও।
+     *
+     * ── কেন নামগুলো এখানে থাকতেই হবে ─────────────────────────────────
+     * [[App\Modules\Accounts\Services\VoucherService]] কখনোই জানবে না
+     * `withdrawal` মানে কোন ক্লাস — Accounts-এর `depends_on` ফাঁকা, বাকি
+     * সবাই তার উপর দাঁড়ায়। ⓘ তাই ধরনের নামটা এখানে বাঁধা থাকে,
+     * [[App\Core\Engines\Drill\DrillResolver]] খুলে দেয়, আর Accounts কেবল
+     * Core-এর চুক্তিটা চেনে ([[App\Core\Contracts\SettledByAVoucher]])।
+     *
+     * ⚠️ নাম না থাকলে হুকটা **নীরবে কিছুই করবে না** — ভাউচার পোস্ট হবে,
+     * টাকা খাতায় বসবে, আর অর্থের সারিটা চিরকাল খসড়া থেকে যাবে। ⛔ এটাই
+     * এই কাজের সবচেয়ে খারাপ ফল, কারণ পর্দা সবুজ দেখাবে।
+     *
+     * ⓘ ১৪ সেপ্টেম্বর ২০২৬-এ মূলধনের সারিতে ঠিক এটাই ঘটছিল, আর ধরা
+     * পড়েছিল কেবল পর্দায় তাকিয়ে।
+     */
+    /*
+     * ⭐ এক নামে দুইটা প্রতিষ্ঠান নয় — ২১ সেপ্টেম্বর ২০২৬।
+     *
+     * ⓘ প্রতিষ্ঠানের তালিকাটাই বসানো হয়েছিল যেন "IBBL" আর "Islami Bank"
+     * দুই ব্যাংক না হয়ে যায়। ⚠️ কিন্তু তালিকায় নতুন নাম যোগ করার
+     * সময় কোনো পাহারা ছিল না — একই ব্যাংক দুইবার লেখা যেত, আর তখন
+     * "এই ব্যাংকে আমাদের মোট কত" প্রশ্নটাই আবার উত্তরহীন হত।
+     *
+     * ⓘ পাহারাটা নরম ([[DuplicationEngine]]) — নাম মিললে থামে, কিন্তু
+     * জেনেশুনে এগোনো যায়: একই নামে দুই শাখা সত্যিই থাকতে পারে।
+     */
+    'duplicates' => [
+        ['model' => Institution::class, 'name' => ['name_en', 'name_bn']],
+    ],
+
+    'drill_sources' => [
+        'capital_entry' => CapitalEntry::class,
+        'insurance_premium' => InsurancePremium::class,
+        // ⭐ মাস শেষের অগ্রিম বীমা — ভাউচার থেকে পলিসিতে ফেরা (পরিকল্পনা ৬.৩)
+        'insurance_prepayment' => \App\Modules\Finance\Models\InsurancePrepayment::class,
+        // ⭐ বীমার দাবি — টাকা আসার রসিদ এর বিপরীতে, পোস্ট হলে দাবি নিজে গোনে (পরিকল্পনা ৬.৪)
+        'insurance_claim' => \App\Modules\Finance\Models\InsuranceClaim::class,
+        'withdrawal' => Withdrawal::class,
+        'deposit_movement' => DepositMovement::class,
+        'hand_loan_movement' => HandLoanMovement::class,
+        'rental_adjustment' => RentalAdjustment::class,
+        'bank_facility' => BankFacility::class,
+
+        /*
+         * ⭐ খাতাগুলো নিজেরাই — ১৫ সেপ্টেম্বর ২০২৬।
+         *
+         * ⛔ এতদিন কেবল **নড়াচড়া** এখানে ছিল, খাতা নয়। ⚠️ আর
+         * [[components/ui/attachments]] এই তালিকা ধরেই কাগজ খোঁজে,
+         * তাই FDR-এর সার্টিফিকেট, ধারের স্ট্যাম্প বা ভাড়ার চুক্তিপত্র
+         * **কোথাও তোলা যেত না** — অথচ ঝগড়া বাধলে ঐ কাগজটাই প্রমাণ।
+         */
+        'deposit' => Deposit::class,
+        'hand_loan' => HandLoanAccount::class,
+        'rental_contract' => RentalContract::class,
+        // ⭐ ভাড়াটের চুক্তি — তার ভাউচার থেকে চুক্তিতে ফেরা, আর চুক্তিপত্র তোলা (প্র৩)
+        'tenancy' => \App\Modules\Finance\Models\Tenancy::class,
+    ],
+
+    // ⭐ হাতধার আর ব্যাংক ঋণের খাতা — মালিক, ৫ অক্টোবর ২০২৬ ([[LoanLedgerReports]])
+    'reports' => [
+        \App\Modules\Finance\Reports\LoanLedgerReports::class,
+        // ⭐ হাতধারের রিপোর্ট ৩–৭ — অর্থ-মডিউলের পরিকল্পনা, ৫ অক্টোবর ২০২৬
+        \App\Modules\Finance\Reports\HandLoanReports::class,
+        // ⭐ ব্যাংক ঋণের কিস্তি আর সীমার ব্যবহার — অর্থ-মডিউলের পরিকল্পনা ৩, ৬ অক্টোবর ২০২৬
+        \App\Modules\Finance\Reports\BankLoanReports::class,
+        // ⭐ বীমার প্রিমিয়ামের সূচি — অর্থ-মডিউলের পরিকল্পনা ৬.২, ৬ অক্টোবর ২০২৬
+        \App\Modules\Finance\Reports\InsuranceReports::class,
+        // ⭐ মূলধন ও বিনিয়োগের রিপোর্ট — অর্থ-মডিউলের পরিকল্পনা, অংশ ২
+        \App\Modules\Finance\Reports\CapitalReports::class,
+        // ⭐ ভাড়ার চুক্তি ও জামানতের রিপোর্ট — অর্থ-মডিউলের পরিকল্পনা, অংশ ৫
+        \App\Modules\Finance\Reports\RentalReports::class,
+        // ⭐ আমানতের রিপোর্ট — অর্থ-মডিউলের পরিকল্পনা, অংশ ৪
+        \App\Modules\Finance\Reports\DepositReports::class,
+        // ⭐ ভাড়াটের আদায় আর বকেয়া — মালিকের সিদ্ধান্ত প্র৩, ৬ অক্টোবর ২০২৬
+        \App\Modules\Finance\Reports\TenancyReports::class,
+    ],
+
+    'events' => [],
+
+    /*
+     * ⓘ রসিদ মূলধনের খাতে (3100) গেলে মূলধনের তালিকাতেও ওঠে — ১৯ সেপ্টেম্বর
+     * ২০২৬, মালিকের কথায়। বিস্তার [[CapitalFromReceipt]]-এ।
+     */
+    'listeners' => [
+        VoucherPosted::class => [CapitalFromReceipt::class],
+
+        // ⓘ খাতের ফর্মে "কোন প্রতিষ্ঠান" — ঘর আঁকা আর জমা ([[InstitutionFieldOnAccountForm]])
+        AccountFormOpened::class => [InstitutionFieldOnAccountForm::class],
+        AccountSaved::class => [InstitutionFromAccountForm::class],
+
+        // ⭐ মুনাফা ঘোষণার শেষ সই — খসড়া ঘোষণা খাতায়, "না" হলে বাতিল ([[PostTheProfitOnTheLastSignature]])
+        // ⭐ অর্থের বাকি টাকার কাজের শেষ সই — খসড়া খাতায়, "না" হলে বাতিল; উত্তোলনের "না" বাতিল করে ([[FinishTheFinancePaperOnTheLastSignature]])
+        ApprovalDecided::class => [PostTheProfitOnTheLastSignature::class, FinishTheFinancePaperOnTheLastSignature::class],
+
+        // ⭐ খোলা জের মালিকের মূলধনে — রেজিস্টারে মালিকের নামে, শাখা ধরে ([[ReconcileOpeningCapital]])
+        \App\Modules\Accounts\Events\OpeningCapitalBooked::class => [\App\Modules\Finance\Listeners\ReconcileOpeningCapital::class],
+    ],
+
+    /*
+     * ⭐ কোম্পানির মালিক — মূলধনের রেজিস্টারে শুরুর মূলধন কার নামে বসবে (মালিকের আদেশ, ৫ অক্টোবর ২০২৬; [[OwnerCapital]])।
+     * ⓘ বাছাই কেবল এই কোম্পানির চালু ব্যক্তিদের মধ্যে; খালি থাকলে মূলধনের পাতা প্রথমবার বাছতে বা বানাতে বলে।
+     */
+    'settings' => [
+        [
+            'key' => 'finance.owner_person_id',
+            'label' => 'finance::settings.owner_person',
+            'type' => 'integer',
+            'options' => [\App\Modules\Finance\Services\OwnerCapital::class, 'choices'],
+            'default' => 0,
+            'group' => 'capital',
+        ],
+    ],
+];

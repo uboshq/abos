@@ -1,0 +1,124 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Modules\Accounts\Http\Requests;
+
+use App\Core\Services\PartyRegistry;
+use App\Core\Support\CompanyContext;
+use App\Modules\Accounts\Models\Account;
+use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
+
+/**
+ * খাতের ইনপুট যাচাই — অলঙ্ঘনীয় শর্ত ৪।
+ *
+ * এখানে শুধু আকারের যাচাই: ধরনটা তালিকার একটা কি না, সংখ্যা সংখ্যা কি না।
+ * "এই বাবার নিচে বসানো যায় কি না", "এন্ট্রি থাকলে ধরন বদলানো যায় কি না"
+ * — ওগুলো AccountService-এ, কারণ ওগুলো ব্যবসার নিয়ম, আর ইমপোর্ট বা
+ * প্রমিত ছক বসানোর সময়ও ওগুলো মানতে হয়, যেখানে এই ক্লাসটা চলে না।
+ */
+class AccountRequest extends FormRequest
+{
+    public function authorize(): bool
+    {
+        return true;
+    }
+
+    /** @return array<string, mixed> */
+    public function rules(): array
+    {
+        return [
+            'code' => ['required', 'string', 'max:32', 'regex:/^[A-Za-z0-9][A-Za-z0-9\-\.\/]*$/'],
+
+            'name_en' => ['required', 'string', 'max:160'],
+            'name_bn' => ['nullable', 'string', 'max:160'],
+
+            'parent_id' => ['nullable', 'integer'],
+
+            // বাবা থাকলে ধরন বাবার থেকেই আসে, তাই তখন এটা ঐচ্ছিক
+            'type' => ['nullable', Rule::in(Account::TYPES)],
+            'nature' => ['nullable', Rule::in([Account::DEBIT, Account::CREDIT])],
+
+            'is_group' => ['nullable', 'boolean'],
+
+            /*
+             * ⛔ `is_cash` ও `is_bank` এখানে আর নেই, আর সেটা ইচ্ছাকৃত।
+             *
+             * টাকার ধরনটা এখন গাছ থেকে আসে
+             * ([[AccountService::moneyKindFor()]]) — কেউ পাঠালেও গ্রাহ্য
+             * হয় না। তাই `money_kind`-এরও কোনো নিয়ম নেই: যে ঘরটা
+             * কখনো পড়া হয় না, তার যাচাই একটা প্রতিশ্রুতির ভান।
+             */
+
+            'opening_balance' => ['nullable', 'numeric'],
+            /*
+             * তারিখ লাগে কেবল অশূন্য খোলা ব্যালেন্সে — ক্যাশ টিলের ফর্মে
+             * একই ভুল ছিল, একই কারণে।
+             *
+             * `required_with` ঘরটা খালি কিনা দেখে না, শুধু পাঠানো হয়েছে
+             * কিনা দেখে। ঘরে ডিফল্ট "0" বসানো থাকলে প্রতিবারই তারিখ
+             * চাইত, যদিও কেউ কোনো খোলা ব্যালেন্স দেননি।
+             */
+            'opening_date' => ['nullable', 'date', Rule::requiredIf(
+                fn () => bccomp((string) ($this->input('opening_balance') ?: '0'), '0', 4) !== 0,
+            )],
+
+            'account_number' => ['nullable', 'string', 'max:64'],
+            'bank_name' => ['nullable', 'string', 'max:120'],
+            'branch_name' => ['nullable', 'string', 'max:120'],
+            'account_title' => ['nullable', 'string', 'max:160'],
+            'routing_no' => ['nullable', 'string', 'max:32'],
+
+            /*
+             * নগদ কার হাতে।
+             *
+             * ⚠️ `exists` কেবল যথেষ্ট নয় — কোম্পানির শর্ত ছাড়া ঠিকানায়
+             * অন্য কোম্পানির একটা id বসিয়ে দিলে সেই মানুষের নামে এই
+             * কোম্পানির নগদ বসে যেত, আর কোনো পর্দায় সেটা দেখা যেত না।
+             * ⓘ আজ ঠিক এই ভুলটা মালিকানার পর্দাতেও ধরা পড়েছে।
+             *
+             * ⓘ `nullable` এখানে, কারণ ব্যাংক বা খরচের খাতে ঘরটা লাগে
+             * না। **নগদে লাগবেই**, আর সেই শর্তটা
+             * [[AccountService::assertCashHasAKeeper()]]-এ — যেখানে
+             * জানা যায় খাতটা আদৌ নগদ কি না।
+             */
+            'held_by' => ['nullable', 'integer', Rule::exists('company_user', 'user_id')->where('company_id', CompanyContext::id())],
+
+            'is_active' => ['nullable', 'boolean'],
+
+            // ⭐ পক্ষ রাখে — কেবল মালিক বদলান ([[AccountService::update()]]; অডিট হিসাব ⚠️১২)
+            'party_types' => ['nullable', 'array'],
+            'party_types.*' => ['string', Rule::in(app(PartyRegistry::class)->types())],
+        ];
+    }
+
+    protected function prepareForValidation(): void
+    {
+        // চেকবক্স না দেখালে ব্রাউজার কিছুই পাঠায় না, আর তখন "মিথ্যা" আর
+        // "দেওয়া হয়নি" আলাদা করা যায় না — ফলে একটা ফিল্ড লুকানো থাকলে
+        // সম্পাদনায় সেটা নিজে থেকে মিথ্যা হয়ে যেত।
+        $this->merge([
+            'is_group' => $this->boolean('is_group'),
+        ]);
+
+        // ⓘ পক্ষের ঘর দেখানো হলে (মালিক) সব টিক তুলে দেওয়াও একটা উত্তর — "পক্ষ রাখে না"
+        if ($this->has('party_types_shown')) {
+            $this->merge(['party_types' => array_values((array) $this->input('party_types', []))]);
+        }
+    }
+
+    /** @return array<string, string> */
+    public function attributes(): array
+    {
+        return [
+            'code' => __('accounts::field.code'),
+            'name_en' => __('accounts::field.name_en'),
+            'name_bn' => __('accounts::field.name_bn'),
+            'parent_id' => __('accounts::field.parent'),
+            'type' => __('accounts::field.type'),
+            'opening_balance' => __('accounts::field.opening_balance'),
+            'opening_date' => __('accounts::field.opening_date'),
+        ];
+    }
+}

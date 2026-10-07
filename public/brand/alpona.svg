@@ -1,0 +1,187 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    আলপনা — লগইনের খালি জায়গার জমিন।
+
+    ── প্রথমবার যা ভুল ছিল ─────────────────────────────────────────────
+    আটটা পাপড়ির একটা চাকা বসানো হয়েছিল। জ্যামিতি ঠিক, কিন্তু ওটা
+    আলপনা নয় — বাংলা আলপনায় যা চোখ ধরে সেটা প্রতিসাম্য নয়, **কলকা**:
+    পাক খাওয়া ডগা, তার গা বেয়ে লতা, আর সবটুকু ফাঁক ভরা বিন্দুর সারি।
+    আর রেখা সব এক পুরুত্বের হয় না — মোটা টানে গড়ন, সরু টানে ভেতরের
+    কাজ। ওই দুইটাই বাদ ছিল, তাই নকশাটা আঁকা নয়, ছাপা মনে হত।
+
+    ── গড়ন ─────────────────────────────────────────────────────────────
+    টালি ২৪০ পিক্সেল। মাঝে দুই স্তরের পদ্ম, চার কোণে বাইরের দিকে মুখ
+    করা কলকা, আর তাদের মাঝে লতা ও বিন্দুর সারি। কোণের মোটিফ চার ভাগে
+    ভাগ করা — পাশাপাশি টালি জোড়া লাগলে চারটা টুকরো মিলে একটা গোটা
+    কলকা হয়, তাই সীমানার রেখাটা চোখে পড়ে না।
+
+    ── কেন সোনালি রেখা, রঙিন ভরাট নয় ──────────────────────────────────
+    নমুনাগুলো রঙিন, কিন্তু ওগুলো কাগজ বা মেঝের আলপনা — পেছনে কিছু
+    থাকে না। এখানে এর উপরে একটা সাদা কার্ড আর তার ভেতরে পড়ার মতো
+    লেখা বসে। রঙিন ভরাট দিলে জমিনটা ছবি হয়ে কার্ডের সাথে লড়ত। সোনা
+    কেবল সৌন্দর্যের জায়গায় — লগইন, ছাপা, খালি পর্দা; কোনো টেবিল বা
+    ফর্মে নয়।
+-->
+<svg xmlns="http://www.w3.org/2000/svg" width="240" height="240" viewBox="0 0 240 240">
+    <defs>
+        <!-- একটা পাপড়ি — ডগায় সরু, গোড়ায় চওড়া, ভেতরে একটা সরু শিরা -->
+        <g id="petal">
+            <path d="M0 -8 C 9 -20, 13 -38, 0 -52 C -13 -38, -9 -20, 0 -8 Z"
+                  fill="none" stroke="#ffc107" stroke-width="1.6" stroke-linejoin="round"/>
+            <path d="M0 -14 C 4 -24, 5 -34, 0 -43"
+                  fill="none" stroke="#ffc107" stroke-width="0.7" stroke-linecap="round"/>
+            <path d="M0 -14 C -4 -24, -5 -34, 0 -43"
+                  fill="none" stroke="#ffc107" stroke-width="0.7" stroke-linecap="round"/>
+        </g>
+
+        <!-- ভেতরের ছোট পাপড়ি, দুই স্তরের পদ্মের নিচের স্তর -->
+        <g id="petal-inner">
+            <path d="M0 -6 C 7 -14, 9 -24, 0 -32 C -9 -24, -7 -14, 0 -6 Z"
+                  fill="none" stroke="#ffc107" stroke-width="1.1" stroke-linejoin="round"/>
+        </g>
+
+        <!--
+            কলকা — আলপনার প্রাণ।
+
+            বাইরের রেখাটা ফোঁটার মতো, ডগাটা ভেতরে পাক খেয়ে ঢোকে। ভেতরে
+            আরেকটা ছোট কলকা, আর তার ভেতরে বিন্দু — তিন স্তর না হলে
+            জিনিসটা ফাঁকা দেখায়।
+        -->
+        <g id="kolka" fill="none" stroke="#ffc107" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M0 34 C -20 32, -30 16, -25 0 C -20 -16, -2 -28, 12 -22
+                     C 24 -17, 26 -2, 16 4 C 8 9, 0 4, 3 -3 C 5 -8, 12 -8, 13 -2"
+                  stroke-width="1.7"/>
+            <path d="M0 26 C -13 24, -20 13, -17 2 C -13 -10, -1 -19, 8 -15
+                     C 16 -12, 17 -3, 11 1"
+                  stroke-width="0.9"/>
+
+            <!-- ভেতরের বিন্দুর সারি — কলকার বাঁক ধরে -->
+            <circle cx="-8" cy="14" r="1.5" fill="#ffc107" stroke="none"/>
+            <circle cx="-11" cy="5" r="1.5" fill="#ffc107" stroke="none"/>
+            <circle cx="-9" cy="-4" r="1.5" fill="#ffc107" stroke="none"/>
+            <circle cx="-3" cy="-11" r="1.5" fill="#ffc107" stroke="none"/>
+        </g>
+
+        <!--
+            লতা — কলকার গা বেয়ে বেরোনো পাক খাওয়া ডাল।
+
+            শেষ মাথাটা গোল হয়ে ঘোরে (আলপনার চেনা "শামুক"), আর গায়ে
+            দুইটা ছোট পাতা।
+        -->
+        <g id="scroll" fill="none" stroke="#ffc107" stroke-linecap="round">
+            <path d="M0 0 C 14 -4, 26 -14, 30 -28 C 33 -38, 28 -46, 21 -45
+                     C 15 -44, 13 -37, 18 -34 C 21 -32, 25 -35, 24 -38"
+                  stroke-width="1.3"/>
+            <path d="M12 -6 C 15 -13, 22 -15, 26 -12 C 22 -6, 16 -4, 12 -6 Z"
+                  stroke-width="0.9"/>
+            <path d="M4 -1 C 4 -8, 9 -13, 14 -13 C 13 -6, 9 -2, 4 -1 Z"
+                  stroke-width="0.9"/>
+        </g>
+
+        <!-- বিন্দুর সারি — ফাঁকা জায়গা ভরে, আর নকশাটাকে হাতে আঁকা দেখায় -->
+        <g id="dots" fill="#ffc107">
+            <circle cx="0" cy="0" r="1.6"/>
+            <circle cx="9" cy="-3" r="1.3"/>
+            <circle cx="17" cy="-8" r="1.1"/>
+            <circle cx="24" cy="-15" r="0.9"/>
+        </g>
+    </defs>
+
+    <g opacity="0.42">
+        <!-- মাঝের পদ্ম — বাইরে ১২টা, ভেতরে ১২টা আধা ঘোরানো -->
+
+        <g transform="translate(120 120)">
+            <g>
+                <use href="#petal"/>
+                <use href="#petal" transform="rotate(30)"/>
+                <use href="#petal" transform="rotate(60)"/>
+                <use href="#petal" transform="rotate(90)"/>
+                <use href="#petal" transform="rotate(120)"/>
+                <use href="#petal" transform="rotate(150)"/>
+                <use href="#petal" transform="rotate(180)"/>
+                <use href="#petal" transform="rotate(210)"/>
+                <use href="#petal" transform="rotate(240)"/>
+                <use href="#petal" transform="rotate(270)"/>
+                <use href="#petal" transform="rotate(300)"/>
+                <use href="#petal" transform="rotate(330)"/>
+            </g>
+
+            <g>
+                <use href="#petal-inner" transform="rotate(15)"/>
+                <use href="#petal-inner" transform="rotate(45)"/>
+                <use href="#petal-inner" transform="rotate(75)"/>
+                <use href="#petal-inner" transform="rotate(105)"/>
+                <use href="#petal-inner" transform="rotate(135)"/>
+                <use href="#petal-inner" transform="rotate(165)"/>
+                <use href="#petal-inner" transform="rotate(195)"/>
+                <use href="#petal-inner" transform="rotate(225)"/>
+                <use href="#petal-inner" transform="rotate(255)"/>
+                <use href="#petal-inner" transform="rotate(285)"/>
+                <use href="#petal-inner" transform="rotate(315)"/>
+                <use href="#petal-inner" transform="rotate(345)"/>
+            </g>
+
+            <!-- কেন্দ্র — বিন্দুর বলয়সহ, নাহলে মাঝখানটা ফাঁকা গর্ত দেখায় -->
+            <circle r="9" fill="none" stroke="#ffc107" stroke-width="1.4"/>
+            <circle r="4.5" fill="none" stroke="#ffc107" stroke-width="0.8"/>
+            <circle r="1.8" fill="#ffc107"/>
+        </g>
+
+        <!-- চার দিকের কলকা — পদ্মের চার পাশে, বাইরের দিকে মুখ করা -->
+        <g transform="translate(120 120)">
+            <g transform="rotate(45) translate(0 -86)"><use href="#kolka"/></g>
+            <g transform="rotate(135) translate(0 -86)"><use href="#kolka"/></g>
+            <g transform="rotate(225) translate(0 -86)"><use href="#kolka"/></g>
+            <g transform="rotate(315) translate(0 -86)"><use href="#kolka"/></g>
+        </g>
+
+        <!-- পদ্ম থেকে বেরোনো লতা, চার দিকে -->
+        <g transform="translate(120 120)">
+            <g transform="rotate(0) translate(0 -58)"><use href="#scroll"/></g>
+            <g transform="rotate(90) translate(0 -58)"><use href="#scroll"/></g>
+            <g transform="rotate(180) translate(0 -58)"><use href="#scroll"/></g>
+            <g transform="rotate(270) translate(0 -58)"><use href="#scroll"/></g>
+        </g>
+
+        <!-- বিন্দুর সারি — কোণের দিকে ছড়ানো -->
+        <g transform="translate(120 120)">
+            <g transform="rotate(45) translate(0 -46)"><use href="#dots"/></g>
+            <g transform="rotate(135) translate(0 -46)"><use href="#dots"/></g>
+            <g transform="rotate(225) translate(0 -46)"><use href="#dots"/></g>
+            <g transform="rotate(315) translate(0 -46)"><use href="#dots"/></g>
+        </g>
+
+        <!--
+            কোণের ফুল — চার টুকরোয় ভাগ।
+
+            টালির চার কোণে একই মোটিফ বসে, তাই পাশাপাশি চারটা টালি
+            মিললে একটা গোটা ফুল তৈরি হয় আর জোড়ের রেখাটা মিলিয়ে যায়।
+        -->
+        <g>
+            <g transform="translate(0 0)">
+                <use href="#petal-inner" transform="rotate(135) scale(0.8)"/>
+                <use href="#petal-inner" transform="rotate(180) scale(0.8)"/>
+                <use href="#petal-inner" transform="rotate(225) scale(0.8)"/>
+                <circle r="3" fill="none" stroke="#ffc107" stroke-width="1"/>
+            </g>
+            <g transform="translate(240 0)">
+                <use href="#petal-inner" transform="rotate(135) scale(0.8)"/>
+                <use href="#petal-inner" transform="rotate(180) scale(0.8)"/>
+                <use href="#petal-inner" transform="rotate(225) scale(0.8)"/>
+                <circle r="3" fill="none" stroke="#ffc107" stroke-width="1"/>
+            </g>
+            <g transform="translate(0 240)">
+                <use href="#petal-inner" transform="rotate(-45) scale(0.8)"/>
+                <use href="#petal-inner" transform="rotate(0) scale(0.8)"/>
+                <use href="#petal-inner" transform="rotate(45) scale(0.8)"/>
+                <circle r="3" fill="none" stroke="#ffc107" stroke-width="1"/>
+            </g>
+            <g transform="translate(240 240)">
+                <use href="#petal-inner" transform="rotate(-45) scale(0.8)"/>
+                <use href="#petal-inner" transform="rotate(0) scale(0.8)"/>
+                <use href="#petal-inner" transform="rotate(45) scale(0.8)"/>
+                <circle r="3" fill="none" stroke="#ffc107" stroke-width="1"/>
+            </g>
+        </g>
+    </g>
+</svg>

@@ -1,0 +1,586 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Modules\Customer\Models;
+
+use App\Core\Concerns\BelongsToCompany;
+use App\Core\Concerns\HasActiveState;
+use App\Core\Concerns\HasDocumentStatus;
+use App\Core\Concerns\HasPublicId;
+use App\Core\Concerns\IsAudited;
+use App\Core\Contracts\CreditHolds;
+use App\Core\Contracts\Drillable;
+use App\Core\Support\ViewedBranch;
+use App\Models\Branch;
+use App\Models\LedgerEntry;
+use App\Models\User;
+use App\Modules\Customer\Support\ConductType;
+use App\Modules\MasterData\Models\Location;
+use App\Modules\MasterData\Models\PartyType;
+use Illuminate\Auth\Authenticatable;
+use Illuminate\Contracts\Auth\Authenticatable as AuthenticatableContract;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
+
+/**
+ * একজন গ্রাহক।
+ *
+ * Phase 2-এর কাজ: এই মডিউলটা দিয়েই ভিত্তিটা প্রমাণ করা (সেকশন ২.৩)।
+ * তাই এখানে কোনো নতুন কৌশল নেই — যা যা Phase 1-এ বানানো হয়েছে সেগুলোই
+ * ব্যবহার করা হচ্ছে: company scope, status, drill-down, নম্বর সিরিজ,
+ * সেটিংস, অনুমতি। কোথাও কিছু আলাদা করে লিখতে হলে সেটাই ভিত্তির ফাঁক।
+ */
+/*
+ * পোর্টালে ঢোকার জন্য গ্রাহক নিজেই প্রমাণীকরণযোগ্য।
+ *
+ * ── কেন আলাদা টেবিল নয় ──────────────────────────────────────────────
+ * যিনি ঢোকেন তিনিই গ্রাহক। মাঝখানে একটা "পোর্টাল ব্যবহারকারী" টেবিল
+ * বসালে "কোন লগইন কোন গ্রাহকের" প্রশ্নটা একটা জোড়ের উপর নির্ভর করত,
+ * আর ওই জোড়ে একদিন ভুল হত — আর সেই একটা ভুলে এক গ্রাহক আরেকজনের
+ * খাতা দেখে ফেলতেন।
+ *
+ * এখানে ভুল হওয়ার জায়গাই নেই: সারিটাই গ্রাহক।
+ */
+class Customer extends Model implements AuthenticatableContract, Drillable
+{
+    use Authenticatable;
+    use BelongsToCompany;
+    use HasActiveState;
+    use HasDocumentStatus;
+    use HasFactory;
+    use HasPublicId;
+    use IsAudited;
+    // ⭐ বিক্রয়কর্মী কেবল নিজের বাঁধা ডিলারের কাগজ দেখেন — ⛔১৬, ২ অক্টোবর ২০২৬ ([[DealerScope]])
+    use \App\Core\Concerns\ScopedToUserDealers;
+    use SoftDeletes;
+
+    protected $fillable = [
+        'company_id', 'branch_id', 'location_id', 'code', 'name_en', 'name_bn', 'owner_name',
+        'phone', 'email', 'address_en', 'address_bn', 'customer_type', 'party_type_id', 'channel_id',
+        'credit_limit', 'credit_days', 'opening_balance', 'opening_date',
+        'receivable_account_id', 'status', 'is_active', 'created_by',
+    ];
+
+    /*
+     * পাসওয়ার্ডটা কখনো `fillable`-এ নয়।
+     *
+     * গ্রাহক তৈরি বা সম্পাদনার ফর্ম থেকে ওটা বসানো যাবে না; বসে কেবল
+     * পোর্টাল সার্ভিস থেকে, hash করে। fillable-এ থাকলে একটা সাধারণ
+     * সম্পাদনার অনুরোধেই কেউ অন্যের পোর্টাল পাসওয়ার্ড বদলে দিতে
+     * পারতেন।
+     */
+    protected $hidden = ['portal_password', 'remember_token'];
+
+    /**
+     * অডিটে যা কখনো বসবে না।
+     *
+     * ── কেন hash-টাও নয় ────────────────────────────────────────────
+     * bcrypt hash পড়ে পাসওয়ার্ড বলা যায় না, তাই প্রথমে মনে হয়
+     * ওটা লিখে রাখায় ক্ষতি নেই। কিন্তু নিরীক্ষার পর্দা যিনি দেখতে
+     * পান তিনি তখন প্রতিটা গ্রাহকের hash হাতে পান — আর অফলাইনে
+     * hash ভাঙা যায়, সময় নিয়ে, কেউ না জেনে।
+     *
+     * কোরের `NEVER_LOGGED` তালিকায় `password` আছে, কিন্তু ঘরটার নাম
+     * এখানে `portal_password` (কেন, তা নিচে লেখা) — তাই ওই তালিকাটা
+     * একে চেনে না। মডেলকেই বলতে হয়।
+     *
+     * ঘটনাটা হারায় না: `CustomerPortalService` কাজটা আলাদা করে
+     * খাতায় তোলে, মান ছাড়া।
+     *
+     * @return list<string>
+     */
+    public function auditIgnores(): array
+    {
+        return ['portal_password'];
+    }
+
+    /**
+     * পাসওয়ার্ডের ঘরটা `password` নয়, `portal_password`।
+     *
+     * ── কেন নামটা আলাদা ─────────────────────────────────────────────
+     * `customers` টেবিলটা প্রথমে একটা মাস্টার ডাটার টেবিল, তারপর একটা
+     * লগইনের টেবিল। `password` নামে একটা ঘর বসালে গ্রাহকের রপ্তানি,
+     * ইমপোর্ট আর API-তে ওটা নীরবে ঘুরে বেড়াত, আর কেউ না কেউ একদিন
+     * সেটা দেখে ফেলত।
+     *
+     * ── এই দুইটা পদ্ধতি না থাকলে যা হত ──────────────────────────────
+     * `Authenticatable` ট্রেইট ডিফল্টে `$this->password` খোঁজে, যেটা
+     * এখানে সবসময় null। ফলে `attempt()` **কখনোই সফল হত না** — সঠিক
+     * পাসওয়ার্ডেও নয়। আর ব্যর্থতাটা নীরব: পর্দা কেবল বলত "কোড আর
+     * পাসওয়ার্ড মিলছে না", আর কেউ ধরতে পারত না দোষটা কোথায়।
+     *
+     * ধরা পড়েছে টেস্টে — লগইন সফল দেখাচ্ছিল, অথচ গার্ডে কোনো
+     * ব্যবহারকারী বসছিল না।
+     */
+    /**
+     * ⭐ ডিলারের দেয়াল গ্রাহকের নিজের সারিতে — ডিলারটা সারিটাই (⛔১৬, ২ অক্টোবর ২০২৬)।
+     *
+     * ⓘ শাখার দেয়াল এখানে ইচ্ছা করে গ্লোবাল নয় ([[scopeInViewedBranch()]]), কারণ কাগজ এক
+     * শাখার আর পক্ষ শাখা পেরোয়। ডিলারের দেয়ালে সেই সমস্যা নেই: একটা কাগজ দেখা যায় ঠিক তখনই,
+     * যখন তার ডিলার দেখা যায় — তাই `$invoice->customer` কখনো খালি আসে না।
+     */
+    public function dealerScopeColumn(): string
+    {
+        return 'id';
+    }
+
+    public function getAuthPasswordName(): string
+    {
+        return 'portal_password';
+    }
+
+    public function getAuthPassword(): string
+    {
+        return (string) $this->portal_password;
+    }
+
+    protected function casts(): array
+    {
+        return [
+            'credit_limit' => 'decimal:4',
+            'credit_days' => 'integer',
+            'opening_balance' => 'decimal:4',
+            'opening_date' => 'date',
+            'portal_enabled' => 'boolean',
+            'portal_last_login_at' => 'datetime',
+            'portal_password' => 'hashed',
+            'is_active' => 'boolean',
+            'credit_blocked_at' => 'datetime',
+        ];
+    }
+
+    /**
+     * ⭐ "বাকি বন্ধ" — হাতে বসানো পতাকা, বাকি ও আদায় (৫ অক্টোবর ২০২৬; [[CustomerService::blockCredit()]])।
+     *
+     * ⓘ বসানো থাকলে নতুন বাকি কোনো পথে যায় না, পুরো টাকা দিলে কেনা চলে ([[CreditExposure::stopsFor()]])।
+     * ⛔ `fillable`-এ নয় — সম্পাদনার ফর্ম থেকে নীরবে বসানো-তোলা যেত, কারণ আর কে-কবে ছাড়াই।
+     */
+    public function isCreditBlocked(): bool
+    {
+        return $this->credit_blocked_at !== null;
+    }
+
+    /** কে বাকি বন্ধ করেছেন */
+    public function creditBlocker(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'credit_blocked_by');
+    }
+
+    public function branch(): BelongsTo
+    {
+        return $this->belongsTo(Branch::class);
+    }
+
+    /**
+     * গ্রাহকের ধরন — খুচরা, পাইকারি, ডিলার।
+     *
+     * মাস্টার তালিকা থেকে, মুক্ত লেখা নয়: আগে customer_type ছিল একটা
+     * string, আর কেউ "খুচরা", কেউ "Retail", কেউ শেষে একটা স্পেস দিয়ে
+     * লিখত। "কোন ধরনের গ্রাহক সবচেয়ে বেশি" প্রশ্নের উত্তর তখন বের করা
+     * যেত না।
+     */
+    public function partyType(): BelongsTo
+    {
+        return $this->belongsTo(PartyType::class, 'party_type_id');
+    }
+
+    /** বিক্রয়ের পথ — কাগজে বিক্রির দিনেরটাই বসে (CarriesTheSalesChannel), তাই এটা বদলালে ইতিহাস বদলায় না। */
+    public function channel(): BelongsTo
+    {
+        return $this->belongsTo(\App\Modules\MasterData\Models\SalesChannel::class, 'channel_id')->withTrashed();
+    }
+
+    /**
+     * ধরনের নাম — নতুন সম্পর্ক থেকে, না থাকলে পুরনো লেখাটা।
+     *
+     * পুরনো কলামটা রাখা হয়েছে যাতে মাইগ্রেশনে যেগুলো নাম মিলিয়ে জোড়া
+     * যায়নি সেগুলো হারিয়ে না যায় — কেউ পরে হাতে মিলিয়ে দিতে পারবে।
+     */
+    public function typeName(): ?string
+    {
+        return $this->partyType?->name() ?? $this->customer_type;
+    }
+
+    public function creator(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'created_by');
+    }
+
+    /** সব আচরণ-নোট — চলমান ও নামানো, নতুন আগে (গ্রাহকের পাতার ইতিহাসে)। */
+    public function conductNotes(): HasMany
+    {
+        return $this->hasMany(CustomerConduct::class)->latest('recorded_at');
+    }
+
+    /**
+     * চলমান পতাকা — সরাসরি বিক্রয়ে এটাই EAGER-LOAD করা হয়।
+     *
+     * সম্পর্ক (কোয়েরি নয়) বলেই `Customer::with('activeConductNotes')` দিয়ে
+     * সব গ্রাহকের পতাকা এক কোয়েরিতে ওঠে — ৯১ পার্টি, ৯১ রিকোয়েস্ট নয়।
+     */
+    public function activeConductNotes(): HasMany
+    {
+        return $this->hasMany(CustomerConduct::class)
+            ->where('is_active', true)
+            ->latest('recorded_at');
+    }
+
+    /**
+     * চলমান আচরণ, চিপ আঁকার জন্য — গুরুত্বের ক্রমে: ঝুঁকি আগে, তারপর
+     * লক্ষণীয়, ভালো শেষে।
+     *
+     * কাউন্টারে দাঁড়িয়ে "চেক ফেরত গেছে" জানাটা "দ্রুত নামায়"-এর চেয়ে
+     * জরুরি, তাই ঝুঁকি আগে। label/severity ভান্ডার ([[ConductType]])
+     * থেকে গোনা — লোড করা সম্পর্কের উপর, তাই বাড়তি কোনো কোয়েরি নেই।
+     *
+     * @return Collection<int, array{label: string, severity: string, recorded_at: Carbon|null}>
+     */
+    public function activeConduct(?string $locale = null): Collection
+    {
+        $rank = [ConductType::RISK => 0, ConductType::NOTICE => 1, ConductType::GOOD => 2];
+
+        return $this->activeConductNotes
+            ->map(fn (CustomerConduct $note): array => [
+                'label' => $note->label($locale),
+                'severity' => $note->severity(),
+                'recorded_at' => $note->recorded_at,
+            ])
+            ->sortBy(fn (array $row): int => $rank[$row['severity']] ?? 1)
+            ->values();
+    }
+
+    /** ব্যবহারকারীর ভাষায় নাম — বাংলা না থাকলে ইংরেজি (সেকশন ১৮.৩)। */
+    public function name(?string $locale = null): string
+    {
+        $locale = $locale ?? app()->getLocale();
+
+        if ($locale === 'bn' && filled($this->name_bn)) {
+            return $this->name_bn;
+        }
+
+        return $this->name_en;
+    }
+
+    public function address(?string $locale = null): ?string
+    {
+        $locale = $locale ?? app()->getLocale();
+
+        if ($locale === 'bn' && filled($this->address_bn)) {
+            return $this->address_bn;
+        }
+
+        return $this->address_en;
+    }
+
+    /**
+     * নাম, কোড, ফোন, মালিকের নাম, ঠিকানা, পয়েন্ট বা এরিয়া — যেকোনোটা দিয়ে খোঁজা।
+     *
+     * কাউন্টারে দাঁড়ানো অবস্থায় কেউ গ্রাহকের কোড মনে রাখে না, কিন্তু
+     * ফোন নম্বরটা প্রায়ই হাতের কাছে থাকে।
+     */
+    public function scopeSearch(Builder $query, ?string $term): Builder
+    {
+        if (blank($term)) {
+            return $query;
+        }
+
+        $like = '%'.str_replace(['%', '_'], ['\%', '\_'], trim($term)).'%';
+
+        /*
+         * ⭐ মালিক, ১ অক্টোবর ২০২৬: *"কোড, নাম, পয়েন্ট, এরিয়া, ঠিকানা, মালিকের নাম, মোবাইল —
+         * egulo zekono titei hobe"*। ⓘ পয়েন্ট আর এরিয়া গাছে থাকে: গ্রাহকের নিজের জায়গা,
+         * তার উপরের ধাপ, আর তারও উপরের ধাপ — যেকোনোটার নাম মিললেই।
+         */
+        return $query->where(function (Builder $q) use ($like) {
+            $q->where('name_en', 'like', $like)
+                ->orWhere('name_bn', 'like', $like)
+                ->orWhere('code', 'like', $like)
+                ->orWhere('phone', 'like', $like)
+                ->orWhere('owner_name', 'like', $like)
+                ->orWhere('address_en', 'like', $like)
+                ->orWhere('address_bn', 'like', $like)
+                ->orWhereIn('location_id', fn ($s) => $s->select('l.id')->from('mdm_locations as l')
+                    ->leftJoin('mdm_locations as p', 'p.id', '=', 'l.parent_id')
+                    ->leftJoin('mdm_locations as g', 'g.id', '=', 'p.parent_id')
+                    ->where(fn ($w) => $w->where('l.name_en', 'like', $like)->orWhere('l.name_bn', 'like', $like)
+                        ->orWhere('p.name_en', 'like', $like)->orWhere('p.name_bn', 'like', $like)
+                        ->orWhere('g.name_en', 'like', $like)->orWhere('g.name_bn', 'like', $like)));
+        });
+    }
+
+    /**
+     * দোকানটা গাছের কোন ধাপে বসে — সচরাচর পয়েন্ট।
+     */
+    public function location(): BelongsTo
+    {
+        return $this->belongsTo(Location::class);
+    }
+
+    /**
+     * উপরের এরিয়াটা — জমা রাখা নয়, গাছ থেকে গোনা।
+     *
+     * ── কেন কলামে রাখা হয় না ────────────────────────────────────────
+     * একটা পয়েন্ট একদিন অন্য এরিয়ায় সরতে পারে (এলাকা ভাগ হয়, নতুন
+     * এরিয়া খোলে)। কলামে জমা থাকলে ওই দিনের পর গ্রাহকের সারিতে পুরনো
+     * এরিয়াটাই লেখা থেকে যেত, আর তালিকা ও গাছ দুই রকম কথা বলত।
+     *
+     * গ্রাহক নিজেই এরিয়ায় বসলে সেটাই ফেরে — নিচের ধাপ না থাকলে উপরে
+     * খোঁজার কিছু নেই।
+     */
+    public function area(): ?Location
+    {
+        $node = $this->location;
+
+        if ($node === null) {
+            return null;
+        }
+
+        if ($node->level === Location::AREA) {
+            return $node;
+        }
+
+        return $node->ancestors()->firstWhere('level', Location::AREA);
+    }
+
+    /**
+     * মইয়ের একটা নির্দিষ্ট ধাপ — গ্রাহকের নিজের জায়গা থেকে উপরে খুঁজে।
+     *
+     * ⓘ তালিকার "পয়েন্ট" আর "এরিয়া" কলামের জন্য, ১৯ সেপ্টেম্বর ২০২৬।
+     * ⚠️ "এরিয়া" এখন `territory` চাবি — মালিক নাম বদলেছেন (06e0d8cd:
+     * Territory → Area, Area → Region), চাবি নয়। [[area()]] পুরনো `area`
+     * চাবিটাই খোঁজে (যেটা এখন "Region" লেখে), আর অন্য পর্দা ওটা ব্যবহার করে;
+     * তাই এটা আলাদা, আর ধাপটা ডাকার সময় বলা হয়।
+     *
+     * ⓘ মই আগে থেকে আনা থাকলে ([[CustomerController::index()]] ছয় ধাপ আনে)
+     * কোনো নতুন কোয়েরি হয় না।
+     */
+    public function ladderNode(string $level): ?Location
+    {
+        $node = $this->location;
+
+        while ($node !== null) {
+            if ($node->level === $level) {
+                return $node;
+            }
+
+            $node = $node->parent;
+        }
+
+        return null;
+    }
+
+    /**
+     * আর কত ধার দেওয়া যায়।
+     *
+     * ── সীমা শূন্য মানে সীমাহীন, বন্ধ নয় ────────────────────────────
+     * wouldExceedCreditLimit()-এ একই সিদ্ধান্ত, একই কারণে: শূন্যকে
+     * "কিছুই বাকি রাখা যাবে না" ধরলে নতুন গ্রাহকের প্রথম বিলটাই আটকে
+     * যেত। তাই সীমা বসানো না থাকলে এখানে null ফেরে — "প্রযোজ্য নয়",
+     * আর পর্দায় একটা ড্যাশ। শূন্য দেখালে মানুষ ভাবত ধার শেষ।
+     *
+     * ঋণাত্মক হয় না: সীমা ছাড়িয়ে গেলে বাকি "শূন্য", আর ছাড়িয়ে যাওয়ার
+     * খবরটা আলাদা করে দেখানো হয় (over_limit বার্তা)।
+     */
+    public function availableLimit(): ?string
+    {
+        $limit = (string) $this->credit_limit;
+
+        if (bccomp($limit, '0', 4) === 0) {
+            return null;
+        }
+
+        /*
+         * ⭐ আটকে থাকা টাকাও বাদ — ২৬ সেপ্টেম্বর ২০২৬।
+         *
+         * ⓘ বিল না হওয়া ডিও আর খসড়া বিল সীমা আটকায় (মালিকের নির্দেশ)।
+         * ⚠️ কেবল খাতা দেখলে এই পাতা কাউন্টারের চেয়ে বেশি দেখাত, আর
+         * একই গ্রাহকের দুই পর্দায় দুই সংখ্যা থাকত।
+         */
+        $left = bcsub(bcsub($limit, $this->outstanding(), 4), $this->heldCredit(), 4);
+
+        return bccomp($left, '0', 4) > 0 ? $left : '0.0000';
+    }
+
+    /**
+     * খাতার বাইরে আটকে থাকা বাকি — বিল না হওয়া ডিও আর খসড়া বিল।
+     *
+     * ⓘ হিসাবটা বিক্রয়ের ([[CreditHolds]]); এই মডেল কেবল জিজ্ঞেস করে।
+     */
+    public function heldCredit(): string
+    {
+        return app(CreditHolds::class)->heldFor((int) $this->id);
+    }
+
+    /*
+     * এখানে একসময় lastPurchaseOn() ছিল, আর সেটা `SalesInvoice` খুঁজত।
+     *
+     * ── কেন সেটা সরল ────────────────────────────────────────────────
+     * Sales নির্ভর করে Customer-এর উপর। Customer আবার Sales খুঁজলে
+     * চক্র — customer → sales → customer। module.php-তে ঘোষণা করে
+     * দিলে চক্রটা "বৈধ" হত, সমাধান হত না: দুইটার একটাকেও আলাদা করে
+     * বন্ধ বা বদলানো যেত না, আর বিক্রয় বন্ধ থাকা প্রতিষ্ঠানে গ্রাহকের
+     * পাতাটাই খুলত না।
+     *
+     * "শেষ কেনা কবে" কথাটা আসলে বিক্রয়ের, গ্রাহক কেবল তার বিষয়। তাই
+     * উত্তরটা এখন Sales দেয় (SalesFacts), আর গ্রাহকের পাতা কেবল
+     * জিজ্ঞেস করে "এই রেকর্ড সম্পর্কে কারও কিছু বলার আছে?" — কে বলল
+     * তা না জেনেই।
+     */
+
+    /**
+     * এই গ্রাহকের বর্তমান পাওনা।
+     *
+     * পুরোটাই লেজার থেকে। লেজারে সব লেনদেনই আছে (Posting engine ছাড়া কেউ
+     * লেখে না), তাই আলাদা করে "due" কলাম রাখা হয়নি — রাখলে সেটা একদিন
+     * লেজারের সাথে অমিল হত, আর কোনটা সত্যি তা বলার উপায় থাকত না।
+     *
+     * খোলা ব্যালেন্স আগে এখানে যোগ করা হত, কারণ ওটা শুধু গ্রাহকের সারিতে
+     * বসত। ফল: এই পাতায় পাওনা দেখাত, অথচ ট্রায়াল ব্যালেন্স বা বকেয়া
+     * তালিকায় অঙ্কটা কোথাও ছিল না — ওরা লেজার থেকে গোনে। এখন খোলা
+     * ব্যালেন্সও একটা দাখিলা (OpeningBalanceService), তাই এখানে যোগ
+     * করলে দ্বিগুণ হত।
+     */
+    public function outstanding(): string
+    {
+        /*
+         * তালিকা withOutstanding() দিয়ে এলে নিটটা সারির সাথেই এসেছে —
+         * তখন আবার কোয়েরি চালানো মানে ৫০ সারিতে ৫০টা কোয়েরি।
+         */
+        $net = $this->getAttribute('outstanding_net')
+            ?? LedgerEntry::query()
+                ->forParty('customer', $this->id)
+                ->selectRaw('COALESCE(SUM(debit) - SUM(credit), 0) as net')
+                ->value('net')
+            ?? 0;
+
+        return bcadd((string) $net, '0', 4);
+    }
+
+    /**
+     * তালিকার জন্য বকেয়া — সারি প্রতি একটা নয়, পুরোটার জন্য একটা কোয়েরি।
+     *
+     * সাব-কোয়েরি হওয়ায় এটা দিয়ে ডাটাবেজেই সাজানো যায়। PHP-তে সাজালে
+     * শুধু চলতি পাতাটা সাজত — "সবচেয়ে বেশি বকেয়া আগে" বেছে নিয়েও
+     * ব্যবহারকারী দ্বিতীয় পাতায় আরও বড় অঙ্ক পেতেন।
+     */
+    public function scopeWithOutstanding(Builder $query): Builder
+    {
+        $net = LedgerEntry::query()
+            ->selectRaw('COALESCE(SUM(debit) - SUM(credit), 0)')
+            ->whereColumn('ledger_entries.party_id', 'customers.id')
+            ->where('ledger_entries.party_type', self::drillSourceType());
+
+        // customers.* না দিলে addSelect শুধু সাব-কোয়েরিটাই আনত
+        return $query->addSelect(['customers.*', 'outstanding_net' => $net]);
+    }
+
+    /**
+     * ⭐ হেডারে বাছা শাখার গ্রাহক — তালিকা আর পিকারের জন্য (৩০ সেপ্টেম্বর ২০২৬)।
+     *
+     * ⛔ মালিকের প্রশ্ন: *"সব শাখার পার্টি এক জায়গায় কেন দেখায়?"* UNIVER-এর সাত শাখা
+     * সাতটা আলাদা ব্যবসা। এক শাখা বাছলে কেবল সেই শাখার; শাখাহীন কেবল "সব শাখা"-য়
+     * ([[ViewedBranch::narrow()]])।
+     *
+     * ⚠️ ইচ্ছা করেই গ্লোবাল স্কোপ নয়: কাগজ এক শাখার, কিন্তু পক্ষ শাখা পেরিয়ে আসে (কাউন্টারের
+     * "নগদ গ্রাহক" একজনই)। গ্লোবাল স্কোপ হলে `$invoice->customer` অন্য শাখায় খালি আসত, আর
+     * বাকির সীমা বা পোস্টিং পক্ষ খুঁজে পেত না। তাই কেবল দেখানোর জায়গায়, নাম ধরে।
+     */
+    public function scopeInViewedBranch(Builder $query): Builder
+    {
+        return ViewedBranch::narrow($query, $query->getModel()->getTable().'.branch_id');
+    }
+
+    /**
+     * ⭐ তালিকার বকেয়া, হেডারে বাছা শাখায় — **দেখানোর** জন্য আলাদা ঘরে (৩০ সেপ্টেম্বর ২০২৬)।
+     *
+     * ⛔ `outstanding_net`-এ বসানো হয় না: [[outstanding()]] ওই ঘরটা পড়ে, আর ওটা
+     * বাকির সীমার উপকরণ ([[availableLimit()]], বিক্রির পর্দা)। একই মডেলে শাখার
+     * অঙ্ক বসলে সীমা এক শাখার বকেয়া দিয়ে মাপা হত — মালিকের "সীমা পরম" ভাঙত।
+     * তাই নাম আলাদা: `outstanding_in_view`।
+     */
+    public function scopeWithOutstandingInView(Builder $query): Builder
+    {
+        $net = ViewedBranch::narrow(LedgerEntry::query(), 'ledger_entries.branch_id')
+            ->selectRaw('COALESCE(SUM(debit) - SUM(credit), 0)')
+            ->whereColumn('ledger_entries.party_id', 'customers.id')
+            ->where('ledger_entries.party_type', self::drillSourceType());
+
+        return $query->addSelect(['customers.*', 'outstanding_in_view' => $net]);
+    }
+
+    /**
+     * যাঁদের বকেয়া ধারের সীমা ছাড়িয়ে গেছে।
+     *
+     * ── শূন্য সীমাও গোনা হয় ─────────────────────────────────────────
+     * শূন্য মানে শূন্য — সীমা না থাকা গ্রাহকের যেকোনো বকেয়াই সীমা ছাড়ানো, ঠিক যেমন
+     * `wouldExceedCreditLimit()` ধরে (মালিকের চূড়ান্ত কথা, ১ অক্টোবর ২০২৬)।
+     *
+     * ── কেন SQL-এ, PHP-তে নয় ────────────────────────────────────────
+     * সংখ্যাটা ড্যাশবোর্ডে গোনা হয় আর তালিকায় ছাঁকা হয়। দুই জায়গায়
+     * দুই রকম করে লিখলে একদিন দুইটা আলাদা উত্তর দিত — "৩ জন ছাড়িয়েছেন"
+     * দেখে ক্লিক করে চারজন পাওয়া।
+     */
+    public function scopeOverCreditLimit(Builder $query): Builder
+    {
+        $net = LedgerEntry::query()
+            ->selectRaw('COALESCE(SUM(debit) - SUM(credit), 0)')
+            ->whereColumn('ledger_entries.party_id', 'customers.id')
+            ->where('ledger_entries.party_type', self::drillSourceType());
+
+        /*
+         * ⛔ শূন্য মানে শূন্য, সবসময় — মালিকের চূড়ান্ত কথা, ১ অক্টোবর ২০২৬ ("THATS FINAL")।
+         * ⓘ সীমা না থাকা গ্রাহকের এক পয়সা বকেয়াও সীমা ছাড়ানো; আগে এটা
+         * `customer.zero_limit_blocks` সুইচে বাঁধা ছিল, সেটা আর দেয়াল নরম করে না।
+         */
+        return $query->whereRaw('('.$net->toRawSql().') > COALESCE(customers.credit_limit, 0)');
+    }
+
+    /**
+     * এই বিলটা করলে ক্রেডিট লিমিট ছাড়াবে কি না।
+     *
+     * ⛔ শূন্য মানে শূন্য — কোনো সুইচ নেই। বকেয়া আর এই বিলের বাকি মিলে সীমা পেরোলে না।
+     */
+    public function wouldExceedCreditLimit(string $additional): bool
+    {
+        /*
+         * ⛔ শূন্য (বা খালি) মানে শূন্য, সবসময় — মালিকের চূড়ান্ত কথা, ১ অক্টোবর ২০২৬: সীমা না থাকলে
+         * বাকি নয়, হয় টাকা নিন নয় বিল কমান। ⓘ আগে এটা `customer.zero_limit_blocks` সুইচে বাঁধা ছিল,
+         * আর সুইচ বন্ধ থাকায় ডেমোতে শূন্য-সীমার গ্রাহকের ৪১,৬৫১ টাকার বাকি বিল দেয়াল পার হয়ে সইয়ের
+         * সারিতে গিয়েছিল (S-0009)। সুইচটা আর দেয়াল নরম করে না
+         * ([[NoLimitMeansNoCreditForAnyoneTest]])।
+         */
+        $limit = (string) ($this->credit_limit ?? '0');
+        $limit = $limit === '' ? '0' : $limit;
+
+        return bccomp(bcadd($this->outstanding(), $additional, 4), $limit, 4) > 0;
+    }
+
+    // ── Drillable — নিয়ম ১ ────────────────────────────────────────────
+
+    public static function drillSourceType(): string
+    {
+        return 'customer';
+    }
+
+    public function drillDocumentNo(): string
+    {
+        return $this->code;
+    }
+
+    public function drillLabel(): string
+    {
+        return $this->name();
+    }
+
+    public function drillRoute(): array
+    {
+        return ['customer.show', ['customer' => $this->id]];
+    }
+}

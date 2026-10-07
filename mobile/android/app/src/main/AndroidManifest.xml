@@ -1,0 +1,147 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+    <!--
+      Bluetooth, for the shop's thermal receipt printer.
+
+      Those printers speak ESC/POS over a serial link and have no Android
+      print service, so the system print dialog cannot see them at all — see
+      core/printing/document_delivery.dart for why there are two roads to
+      paper and why both print the same server-rendered PDF.
+
+      Two sets, because Android 12 (API 31) split them. Before 31 a single
+      BLUETOOTH permission was granted at install; from 31 CONNECT and SCAN
+      are runtime permissions the person must allow. Declaring only the new
+      pair would leave older handsets unable to print, and only the old one
+      would fail silently on every recent phone, which reads in a shop as
+      "the printer is broken".
+
+      (A double hyphen is illegal inside an XML comment, and this file is the
+      one place in the repository where that bites: it parses nowhere else,
+      so the failure is a manifest merge error naming only the file.)
+
+      neverForLocation on SCAN: this app looks for a paired printer, never
+      for where anybody is. Without it Android treats a Bluetooth scan as a
+      location request and asks the person for location permission, which is
+      a frightening thing to be asked by a billing app and is not something
+      it needs.
+    -->
+    <uses-permission android:name="android.permission.BLUETOOTH"
+        android:maxSdkVersion="30" />
+    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN"
+        android:maxSdkVersion="30" />
+    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+    <uses-permission android:name="android.permission.BLUETOOTH_SCAN"
+        android:usesPermissionFlags="neverForLocation" />
+
+    <!-- A phone with no Bluetooth radio can still do everything else this app
+         does, so the feature is wanted, not required: marking it required
+         would hide the app in Play for those handsets. -->
+    <uses-feature android:name="android.hardware.bluetooth"
+        android:required="false" />
+
+    <!-- চালান/গেট পাসের QR পড়ার ক্যামেরা (0.4.3) — কেবল "কাগজ স্ক্যান" পর্দা খুললে চায়।
+         ক্যামেরা ছাড়া ফোনেও বাকি সব চলে, তাই required নয়। -->
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-feature android:name="android.hardware.camera"
+        android:required="false" />
+
+    <!--
+      Installing the app's own update (docs/Contract section 6, rule kha).
+
+      The app downloads the APK, checks its size and its SHA-256 against what
+      the server said, and only then hands it to the system package installer.
+      Without this permission the installer refuses with "For your security,
+      your phone is set to block..." even though the person is looking
+      straight at the install prompt they meant to open.
+
+      From Android 8 this buys only the right to ASK. The person still has to
+      switch "install unknown apps" on for this app once, and Android still
+      shows its own confirmation before every install. Neither is this app's
+      to remove, and nothing here installs silently.
+    -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+
+    <!-- ⭐ App lock: fingerprint or the phone's own PIN (local_auth), 7 Oct 2026 -->
+    <uses-permission android:name="android.permission.USE_BIOMETRIC"/>
+    <application
+        android:label="ABOS"
+        android:name="${applicationName}"
+        android:icon="@mipmap/ic_launcher">
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:launchMode="singleTop"
+            android:taskAffinity=""
+            android:theme="@style/LaunchTheme"
+            android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
+            android:hardwareAccelerated="true"
+            android:windowSoftInputMode="adjustResize">
+            <!-- Specifies an Android theme to apply to this Activity as soon as
+                 the Android process has started. This theme is visible to the user
+                 while the Flutter UI initializes. After that, this theme continues
+                 to determine the Window background behind the Flutter UI. -->
+            <meta-data
+              android:name="io.flutter.embedding.android.NormalTheme"
+              android:resource="@style/NormalTheme"
+              />
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN"/>
+                <category android:name="android.intent.category.LAUNCHER"/>
+            </intent-filter>
+        </activity>
+        <!--
+          The two home-screen widgets.
+
+          Registered here rather than discovered: a widget is a broadcast
+          receiver the launcher talks to, and one the manifest does not name
+          simply does not exist as far as the system is concerned. It fails by
+          not appearing in the widget picker, which reads as "the phone does
+          not support it".
+        -->
+        <receiver
+            android:name=".TodayWidgetProvider"
+            android:label="@string/today_widget_name"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/today_widget_info" />
+        </receiver>
+        <receiver
+            android:name=".ApprovalsWidgetProvider"
+            android:label="@string/approvals_widget_name"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/approvals_widget_info" />
+        </receiver>
+
+        <!-- Don't delete the meta-data below.
+             This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
+        <meta-data
+            android:name="flutterEmbedding"
+            android:value="2" />
+        <!--
+          Glance comes in with home_widget but the app has no Glance widgets.
+          Its package-replaced receiver runs in the app's own process right after
+          every update; if it throws, the first launch after updating dies (0.4.1).
+        -->
+        <receiver android:name="androidx.glance.appwidget.MyPackageReplacedReceiver" tools:node="remove" />
+    </application>
+    <!-- Required to query activities that can process text, see:
+         https://developer.android.com/training/package-visibility and
+         https://developer.android.com/reference/android/content/Intent#ACTION_PROCESS_TEXT.
+
+         In particular, this is used by the Flutter engine in io.flutter.plugin.text.ProcessTextPlugin. -->
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.PROCESS_TEXT"/>
+            <data android:mimeType="text/plain"/>
+        </intent>
+    </queries>
+</manifest>

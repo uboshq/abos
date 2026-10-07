@@ -1,0 +1,316 @@
+{{--
+    একটা ভাউচার — যা লেখা হয়েছে, আর যা লেজারে বসেছে।
+
+    সারিগুলো ডেবিট-ক্রেডিট আকারেই দেখানো হয়, এমনকি সহজ ফর্মে লেখা
+    ভাউচারেও। কারণ এটাই আসল রেকর্ড: পর্দায় "কার কাছ থেকে" লেখা হলেও
+    হিসাবের খাতায় সেটা দুইটা সারি, আর ছাপা কাগজেও তাই থাকবে।
+--}}
+@php
+    $totals = $voucher->totals();
+    $canEdit = $voucher->isEditable();
+
+    /*
+     * ⭐ পোস্ট হওয়া ভাউচার সম্পাদনা — সুপার অ্যাডমিন (মালিকের আদেশ, ৫ অক্টোবর ২০২৬)।
+     * ⓘ বোতাম আসে কেবল যখন [[PostedEdit::assertMay()]] পাস করে (সুইচ চালু, সুপার অ্যাডমিন, খোলা মাস)। তখন ভাউচারটা অন্য
+     * কিছুর সাথে বাঁধা থাকলে বোতামের জায়গায় কারণটা দেখায় ([[VoucherService::whyNotRevisable()]]) — চুপচাপ লুকায় না।
+     */
+    $mayRevise = false;
+    $whyNotRevise = null;
+
+    if ($voucher->isPosted() && auth()->user() !== null) {
+        try {
+            app(\App\Core\Services\PostedEdit::class)->assertMay($voucher, auth()->user());
+            $mayRevise = true;
+            $whyNotRevise = app(\App\Modules\Accounts\Services\VoucherService::class)->whyNotRevisable($voucher);
+        } catch (\Illuminate\Validation\ValidationException) {
+            $mayRevise = false;
+        }
+    }
+
+    /*
+     * ব্যাংকে গেলে লেনদেনের নম্বরটা এখানেই চাওয়া হয়, লেখার সময় নয়।
+     *
+     * লেখার মুহূর্তে বিকাশের TrxID জন্মায়ইনি — তখন চাইলে মানুষ `0`
+     * বসিয়ে এগিয়ে যেতেন। লেজারে বসানোর মুহূর্তেই টাকাটা সত্যিই নড়ে,
+     * তাই নম্বরটাও তখন হাতে থাকে।
+     */
+    /*
+     * ব্যাংক ও MFS দুইটাতেই নম্বর লাগে — শর্তটা হুবহু
+     * [[VoucherService::assertBankReferenceIsFree()]]-এর মতো, নাহলে পর্দা
+     * নম্বরটা চাইত না অথচ নিশ্চিত করার সময় পাহারা আটকাত।
+     */
+    $bankAccount = $voucher->lines->map(fn ($line) => $line->account)
+        ->first(fn ($a) => $a !== null && ($a->isBank() || $a->isMfs()));
+    $needsReference = $bankAccount !== null && blank($voucher->instrument_no);
+
+    /*
+     * ⭐ অনুমোদনের অপেক্ষা পাতা নিজেই বলে — ২৭ সেপ্টেম্বর ২০২৬, লাইভে RCV-0001।
+     *
+     * ⛔ আগে এটা জানা যেত কেবল পোস্ট চাপার পরের একবারের ফ্ল্যাশে, আর সেটা
+     * `back()`-এর উপর নির্ভর করত। পাতা আবার খুললে বা দ্বিতীয়বার চাপলে কিছুই
+     * বলা হত না। ⓘ এখন খসড়া যতক্ষণ সইয়ের অপেক্ষায়, পাতায় স্থায়ী লেখা থাকে।
+     */
+    $awaitingApproval = $voucher->isDraft() && \App\Models\Approval::query()
+        ->where('approvable_type', $voucher::class)
+        ->where('approvable_id', $voucher->id)
+        ->pending()
+        ->exists();
+@endphp
+
+@php
+    /* কলাম ধরে — `x-ui.table` স্লট পড়ে না, সারি আসে :rows থেকে। */
+    $columns = [
+        ['key' => 'account', 'label' => __('core.print.account'),
+         'render' => fn ($l) => view('accounts::voucher.partials.account', ['line' => $l])],
+        ['key' => 'narration', 'label' => __('core.table.narration'),
+         'render' => fn ($l) => $l->narration],
+        ['key' => 'debit', 'label' => __('core.table.debit'), 'numeric' => true, 'width' => '11rem',
+         'render' => fn ($l) => bccomp((string) $l->debit, '0', 4) > 0
+             ? \App\Core\Support\Money::format($l->debit) : ''],
+        ['key' => 'credit', 'label' => __('core.table.credit'), 'numeric' => true, 'width' => '11rem',
+         'render' => fn ($l) => bccomp((string) $l->credit, '0', 4) > 0
+             ? \App\Core\Support\Money::format($l->credit) : ''],
+    ];
+@endphp
+
+<x-layouts.app :menu="$menu">
+    <x-slot:title>{{ $voucher->document_no }}</x-slot:title>
+
+    <x-slot:header>
+        <x-ui.page-header :title="$voucher->document_no" :subtitle="$voucher->originLabel() ?? $voucher->typeLabel()">
+            <x-slot:actions>
+                @if ($mayRevise)
+                    @if ($whyNotRevise === null)
+                        <x-ui.button tone="secondary" :href="route('accounts.voucher.revise', $voucher)" data-revise>
+                            {{ __('accounts::revision.edit') }}
+                        </x-ui.button>
+                    @else
+                        <p role="status" data-revise-blocked
+                           class="max-w-md rounded-(--radius-field) bg-(--color-badge-warning-bg) px-3 py-1.5 text-sm text-(--color-badge-warning-ink)">
+                            {{ $whyNotRevise }}
+                        </p>
+                    @endif
+                @endif
+
+                @if ($voucher->isDraft())
+                    @can('accounts.voucher.update')
+                        <x-ui.button tone="secondary" :href="route('accounts.voucher.edit', $voucher)">
+                            {{ __('core.action.edit') }}
+                        </x-ui.button>
+
+                        @if ($awaitingApproval)
+                            {{-- ⚠️ কেবল বান্ডিলে থাকা শ্রেণি — লাইভে node নেই, তাই নতুন শ্রেণি
+                                 (যেমন `self-center`) চুপচাপ উপেক্ষা হত (Architecture ধরেছে)। --}}
+                            <p role="status"
+                               class="rounded-(--radius-field) bg-(--color-badge-warning-bg) px-3 py-1.5
+                                      text-sm text-(--color-badge-warning-ink)">
+                                {{ __('accounts::message.voucher_approval_pending', ['no' => $voucher->document_no]) }}
+                            </p>
+                        @endif
+
+                        <form method="POST" action="{{ route('accounts.voucher.post', $voucher) }}"
+                              data-confirm-overview="{{ route('accounts.voucher.overview', $voucher) }}"
+                              class="flex items-end gap-2">
+                            @csrf
+                            {{-- ⛔ `required` নেই — ২৭ সেপ্টেম্বর ২০২৬, লাইভে RCV-0001।
+                                 ঘর খালি রেখে চাপলে ব্রাউজার জমাটাই পাঠাত না: সার্ভারে কিছু
+                                 পৌঁছাত না, কেবল ক্ষণস্থায়ী বুদবুদ — মানুষ ভাবতেন বোতাম
+                                 কাজ করে না। ⓘ এখন খালি পাঠালে সার্ভার পাতায় স্পষ্ট বলে
+                                 কেন আটকাল ([[VoucherService::assertBankReferenceIsFree()]])। --}}
+                            @if ($needsReference)
+                                <x-ui.field name="instrument_no"
+                                            :label="__('accounts::field.bank_reference')"
+                                            :hint="$bankAccount->label()"
+                                            :value="old('instrument_no')"
+                                            class="w-56" />
+                            @endif
+                            <x-ui.button type="submit" tone="primary" data-overview-trigger>
+                                {{ __('accounts::action.post_now') }}
+                            </x-ui.button>
+                        </form>
+                    @endcan
+                @endif
+
+                {{-- ⭐ ছাপার বোতাম — ২০ সেপ্টেম্বর ২০২৬।
+
+                     ⚠️ রুটটা (`accounts.voucher.print`) অনেক আগে থেকেই ছিল,
+                     কিন্তু কোনো পর্দা থেকে সেখানে যাওয়ার পথ ছিল না: ভাউচার
+                     ছাপতে হলে ঠিকানা হাতে লিখতে হত। ⓘ তাই মাপ, ফাইল আর
+                     গোনা — তিনটাই এখানে একসাথে এল। --}}
+                <x-ui.print-menu :documents="[[
+                    'label' => $voucher->document_no,
+                    'url' => route('accounts.voucher.print', $voucher),
+                    'paper_setting' => 'accounts.print.paper.voucher',
+                    'type' => 'accounts_voucher',
+                    'id' => $voucher->id,
+                    'no' => $voucher->document_no,
+                ]]" />
+
+                @unless ($voucher->isCancelled())
+                    @can('accounts.voucher.delete')
+                        {{-- বাতিলের কারণ বাধ্যতামূলক — কারণ ছাড়া বাতিল করা
+                             ভাউচার পরে কেউ ব্যাখ্যা করতে পারে না --}}
+                        <form method="POST" action="{{ route('accounts.voucher.cancel', $voucher) }}"
+                              x-data="reasonPrompt({ question: @js(__('accounts::message.cancel_reason_prompt')), empty: @js(__('core.form.cancel_needs_reason')) })"
+                              @submit="ask($event)">
+                            @csrf
+                            <input type="hidden" name="cancel_reason" x-ref="reason">
+                            <x-ui.button type="submit" tone="secondary">
+                                {{ __('accounts::action.cancel_voucher') }}
+                            </x-ui.button>
+                        </form>
+                    @endcan
+                @endunless
+            </x-slot:actions>
+        </x-ui.page-header>
+    </x-slot:header>
+
+    {{-- ⭐ উল্টো কাগজের সূত্র (মালিকের সংস্করণ ২, ৪ অক্টোবর ২০২৬) --}}
+    @include('accounts::partials.reversal-reference', ['type' => 'voucher', 'id' => $voucher->id])
+
+    @if (session('saved'))
+        <div role="status"
+             class="mb-4 rounded-(--radius-field) bg-(--color-badge-success-bg) px-3 py-2 text-sm
+                    text-(--color-badge-success-ink)">
+            {{ session('saved') }}
+        </div>
+    @endif
+
+    {{--
+        অনুমোদনের কারণে যেটা পোস্ট হলো না।
+
+        ── কেন এই ব্লকটা লাগল ──────────────────────────────────────────
+        `post()` অনুমোদন আটকালে `back()->with('warning', …)` ফেরত দেয়,
+        কিন্তু ⛔ **`warning` এই অ্যাপের কোনো পাতায় রেন্ডার হত না** —
+        পাঠানো হত এক জায়গা থেকে, দেখানো হত শূন্য জায়গায়।
+
+        ⚠️ ফল: ব্যবহারকারী "Post now" চাপতেন, পাতা রিলোড হত, ভাউচার
+        খসড়াই থাকত, আর **কোনো ব্যাখ্যা আসত না**। স্বাভাবিকভাবেই তিনি
+        আবার চাপতেন — আর প্রতিবার একটা করে নতুন অনুমোদনের সারি তৈরি
+        হত। ⓘ কাজটা ঠিকই হচ্ছিল, কেবল কেউ জানত না।
+
+        ⓘ `role="alert"`, `status` নয় — এটা খবর নয়, বাধা: পড়ুয়া
+        যন্ত্র যেন সাথে সাথে পড়ে শোনায়।
+
+        ⚠️ এই পাতাটাই যথেষ্ট, কারণ `voucher.post` **কেবল এখানেই**
+        আছে, তাই `back()` সবসময় এখানেই ফেরে। ⛔ কিন্তু নিয়ম হিসেবে
+        যথেষ্ট নয় — কাল অন্য কেউ `warning` পাঠালে সেটা আবার নীরবে
+        হারাবে। flash এই রিপোতে লেআউটে নেই, ১০০টা পাতা নিজে নিজে
+        দেখায়।
+    --}}
+    @if (session('warning'))
+        <div role="alert"
+             class="mb-4 rounded-(--radius-field) bg-(--color-badge-warning-bg) px-3 py-2 text-sm
+                    text-(--color-badge-warning-ink)">
+            {{ session('warning') }}
+        </div>
+    @endif
+
+    @if ($errors->any())
+        <div role="alert"
+             class="mb-4 rounded-(--radius-field) bg-(--color-badge-danger-bg) px-3 py-2 text-sm
+                    text-(--color-badge-danger-ink)">
+            <ul class="list-inside list-disc">
+                @foreach ($errors->all() as $error)
+                    <li>{{ $error }}</li>
+                @endforeach
+            </ul>
+        </div>
+    @endif
+
+    @if ($voucher->isCancelled())
+        {{-- বাতিল হলে সেটাই প্রথম যা চোখে পড়া উচিত, নাহলে কেউ এই
+             কাগজটা দেখে ভাবত হিসাবটা এখনো চালু আছে --}}
+        <div role="status"
+             class="mb-4 rounded-(--radius-card) border border-(--color-danger) bg-(--color-badge-danger-bg)
+                    px-4 py-3 text-sm text-(--color-badge-danger-ink)">
+            <p class="font-semibold">{{ __('accounts::message.this_is_cancelled') }}</p>
+            <p class="mt-1">{{ $voucher->cancel_reason }}</p>
+            <p class="mt-1 text-2xs">
+                {{ $voucher->canceller?->name }} ·
+                {{ \App\Core\Support\DateFormat::formatWithTime($voucher->cancelled_at) }}
+            </p>
+        </div>
+    @endif
+
+    <div class="grid gap-4 lg:grid-cols-3">
+        <section data-boxed class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
+            <h2 class="text-sm font-medium text-(--color-ink-muted)">{{ __('accounts::field.amount') }}</h2>
+            <p class="num mt-1 text-2xl font-semibold">{{ \App\Core\Support\Money::format($voucher->amount) }}</p>
+
+            <div class="mt-3">
+                @include('accounts::voucher.partials.status', ['voucher' => $voucher])
+            </div>
+        </section>
+
+        <section data-boxed class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4
+                        lg:col-span-2">
+            <h2 class="mb-3 font-semibold">{{ __('accounts::section.details') }}</h2>
+
+            <dl class="grid gap-x-4 gap-y-2 sm:grid-cols-3">
+                @foreach ([
+                    'accounts::field.date' => \App\Core\Support\DateFormat::format($voucher->trx_date),
+                    'core.company.branch' => $voucher->branch?->name(),
+                    'accounts::field.instrument' => $voucher->wayInWords(),
+                    'accounts::field.instrument_no' => $voucher->instrument_no,
+                    'accounts::field.instrument_date' => \App\Core\Support\DateFormat::format($voucher->instrument_date),
+                    'core.table.narration' => $voucher->narration,
+                ] as $label => $value)
+                    @if (filled($value))
+                        <div>
+                            <dt class="text-2xs text-(--color-ink-muted)">{{ __($label) }}</dt>
+                            <dd class="text-sm">{{ $value }}</dd>
+                        </div>
+                    @endif
+                @endforeach
+            </dl>
+
+            {{-- কে লিখল ও কে পোস্ট করল — নিয়ম ২। কাগজের ভাউচারে দুইটা
+                 সই থাকে; পর্দাতেও দুইটা নাম থাকা দরকার। --}}
+            <p class="mt-3 border-t border-(--color-border) pt-3 text-2xs text-(--color-ink-muted)">
+                {{ __('core.print.prepared_by') }}: {{ $voucher->creator?->name ?? '—' }}
+                @if ($voucher->approver)
+                    · {{ __('core.print.approved_by') }}: {{ $voucher->approver->name }}
+                    ({{ \App\Core\Support\DateFormat::formatWithTime($voucher->approved_at) }})
+                @endif
+            </p>
+        </section>
+    </div>
+
+    <section data-boxed class="mt-4 overflow-hidden rounded-(--radius-card) border border-(--color-border)
+                    bg-(--color-surface-card)">
+        <h2 class="border-b border-(--color-border) bg-(--color-section-head) px-4 py-3 font-semibold">
+            {{ __('accounts::section.entries') }}
+        </h2>
+
+        <div class="overflow-x-auto">
+        <x-ui.table :rows="$voucher->lines"
+                    :columns="$columns"
+                    :totals="[
+                        'debit' => \App\Core\Support\Money::format($totals['debit']),
+                        'credit' => \App\Core\Support\Money::format($totals['credit']),
+                    ]"
+                    :totalsLabel="__('core.print.total')"
+                    :empty="__('core.empty.no_results')" />
+        </div>
+    </section>
+
+    {{--
+        কাগজপত্র — বিল, রসিদ, ছবি।
+
+        ── কেন ভাউচারেও ─────────────────────────────────────────────────
+        ⚠️ কম্পোনেন্টটা আগে থেকেই ছিল আর বিল · চালান · রসিদে বসানো, কিন্তু
+        **ভাউচারে নয়** — অথচ খরচের প্রমাণ প্রায় সবসময় একটা কাগজ:
+        হাম্মালির স্লিপ, রিকশাভাড়ার রসিদ, দোকানের চিরকুট।
+
+        ⓘ কাগজটা না থাকলে নিরীক্ষার সময় কেবল একটা সংখ্যা থাকে, আর
+        "এই দুই হাজার টাকা কীসের" প্রশ্নের উত্তর কারও মনে থাকে না।
+    --}}
+    {{-- ⓘ ব্যাংক বা বিকাশের টাকা হলে কাগজটা স্লিপ — কেবল ছবি বা PDF ([[AttachmentEngine::SLIP]]) --}}
+    <x-ui.attachments :document="$voucher" :slip="$bankAccount !== null" />
+
+    {{-- ⭐ সংশোধনের ইতিহাস — পোস্ট হওয়ার পরে কে কী বদলেছেন, আগে আর পরে (মালিক, ৩ অক্টোবর ২০২৬) --}}
+    <x-ui.revisions :document="$voucher" />
+    {{-- ⭐ পোস্টের আগে সারাংশের পপ-আপ ([[confirm-overview.js]], ৪ অক্টোবর ২০২৬) — ভাউচারটা আগেই খসড়া, তাই "খসড়া রাখুন" নেই --}}
+    <x-ui.confirm-overview :draft="false" />
+</x-layouts.app>

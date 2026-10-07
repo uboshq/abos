@@ -1,0 +1,216 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Modules\Accounts\Models;
+
+use App\Core\Concerns\BelongsToCompany;
+use App\Core\Concerns\HasPublicId;
+use App\Core\Concerns\IsAudited;
+use App\Core\Contracts\Drillable;
+use App\Core\Support\DocumentStatus;
+use App\Models\Branch;
+use App\Models\User;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\SoftDeletes;
+
+/**
+ * এক হাত থেকে আরেক হাতে টাকা।
+ *
+ * দুই ধাপ, ইচ্ছাকৃতভাবে: দেওয়া আর নেওয়া আলাদা ঘটনা। গ্রহণ নিশ্চিত না
+ * হওয়া পর্যন্ত টাকাটা দাতার হিসাবেই থাকে, তাই পথে কিছু হলে সেটা কার
+ * দায়িত্বে তা নিয়ে তর্ক থাকে না।
+ */
+class MoneyTransfer extends Model implements Drillable
+{
+    use BelongsToCompany;
+    use HasFactory;
+    use HasPublicId;
+    use IsAudited;
+    use SoftDeletes;
+
+    /**
+     * ⛔ শাখার দেয়াল — অডিট ⛔৪ (৬ অক্টোবর ২০২৬)। ⓘ বদলির দুই দিক: পাঠানোর শাখা (`branch_id`, যে টিল থেকে) আর
+     * পাওয়ার টিল। ⭐ যেকোনো দিক মানুষের নাগালে থাকলে দেখা যায় — নাহলে পাওয়ার শাখার মানুষ নিজের টিলে আসা টাকা গ্রহণই
+     * করতে পারতেন না। ব্যাংকে জমা (পাওয়ার টিল নেই) পাঠানোর শাখার। নিয়ম [[ScopedToUserBranch]]-এর মতোই: এক শাখা বাছা →
+     * সেটা; "সব শাখা" → নাগাল আর শাখাহীন; সীমাহীন (মালিক) → সব; লগইন নেই (কাজ, কমান্ড) → সব।
+     */
+    protected static function booted(): void
+    {
+        static::addGlobalScope('user-branch', function (\Illuminate\Database\Eloquent\Builder $builder): void {
+            $user = auth()->user();
+
+            if (! $user instanceof \App\Models\User) {
+                return;
+            }
+
+            $scope = app(\App\Core\Services\DataScope::class);
+            $ids = $scope->viewBranchIds($user);
+
+            if ($ids === null) {
+                return;
+            }
+
+            $withUnbranched = ! $scope->viewsOneBranch($user);
+            $table = $builder->getModel()->getTable();
+            $tills = CashTill::query()->withoutGlobalScopes()->whereIn('branch_id', $ids ?: [0])->select('id');
+
+            $builder->where(function ($q) use ($table, $ids, $withUnbranched, $tills): void {
+                $q->whereIn($table.'.branch_id', $ids ?: [0])
+                    ->orWhereIn($table.'.to_till_id', $tills)
+                    ->orWhereIn($table.'.from_till_id', (clone $tills));
+
+                if ($withUnbranched) {
+                    $q->orWhereNull($table.'.branch_id');
+                }
+            });
+        });
+    }
+
+    protected $fillable = [
+        'company_id', 'branch_id', 'financial_year_id', 'document_no', 'trx_date',
+        'from_till_id', 'to_till_id', 'to_account_id',
+        'given_by', 'received_by', 'amount', 'narration',
+        'status', 'confirmed_at', 'confirmed_by',
+        'cancelled_by', 'cancelled_at', 'cancel_reason', 'created_by',
+    ];
+
+    protected function casts(): array
+    {
+        return [
+            'trx_date' => 'date',
+            'amount' => 'decimal:4',
+            'confirmed_at' => 'datetime',
+            'cancelled_at' => 'datetime',
+        ];
+    }
+
+    public function fromTill(): BelongsTo
+    {
+        // ⓘ দুই দিকের টিল নাম ধরে — শাখার দেয়ালের বাইরে ([[CashTill::booted()]])
+        return $this->belongsTo(CashTill::class, 'from_till_id')->withoutGlobalScope('viewed-branch');
+    }
+
+    public function toTill(): BelongsTo
+    {
+        return $this->belongsTo(CashTill::class, 'to_till_id')->withoutGlobalScope('viewed-branch');
+    }
+
+    public function toAccount(): BelongsTo
+    {
+        return $this->belongsTo(Account::class, 'to_account_id');
+    }
+
+    public function giver(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'given_by');
+    }
+
+    public function receiver(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'received_by');
+    }
+
+    public function branch(): BelongsTo
+    {
+        return $this->belongsTo(Branch::class);
+    }
+
+    public function creator(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'created_by');
+    }
+
+    public function confirmer(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'confirmed_by');
+    }
+
+    /** যে খাতে টাকাটা যাবে — কাউন্টার হোক বা ব্যাংক। */
+    public function destinationAccountId(): ?int
+    {
+        return $this->to_account_id ?? $this->toTill?->account_id;
+    }
+
+    public function destinationName(): string
+    {
+        return $this->toTill?->name() ?? $this->toAccount?->name() ?? '—';
+    }
+
+    /**
+     * ⭐ সইয়ের অপেক্ষায় — টাকা এখনো দাতার ড্রয়ারে, খাতায় কিছু বসেনি (Accounts-Finance অডিট ম৬, ৪ অক্টোবর ২০২৬)।
+     *
+     * ⓘ সই এখন হস্তান্তরের আগে; শেষ সইয়ে পাঠানোর পা বসে আর কাগজ "গ্রহণের অপেক্ষায়" (`draft`) হয়
+     * ([[MoneyTransferService::finishSigned()]])। ⚠️ এই অবস্থায় গ্রহণ চলে না — টাকা তো এখনো হাতবদলই হয়নি।
+     */
+    public const AWAITING = 'awaiting';
+
+    public function isAwaiting(): bool
+    {
+        return $this->status === self::AWAITING;
+    }
+
+    public function isPending(): bool
+    {
+        return $this->status === DocumentStatus::DRAFT;
+    }
+
+    public function isConfirmed(): bool
+    {
+        return $this->status === DocumentStatus::CONFIRMED;
+    }
+
+    public function isCancelled(): bool
+    {
+        return $this->status === DocumentStatus::CANCELLED;
+    }
+
+    public function scopePending(Builder $query): Builder
+    {
+        return $query->where('status', DocumentStatus::DRAFT);
+    }
+
+    /** যেগুলো এই ব্যবহারকারীর গ্রহণের অপেক্ষায়। */
+    public function scopeAwaiting(Builder $query, int $userId): Builder
+    {
+        return $query->pending()->where('received_by', $userId);
+    }
+
+    public function scopeSearch(Builder $query, ?string $term): Builder
+    {
+        if (blank($term)) {
+            return $query;
+        }
+
+        $like = '%'.str_replace(['%', '_'], ['\%', '\_'], trim($term)).'%';
+
+        return $query->where(fn (Builder $q) => $q
+            ->where('document_no', 'like', $like)
+            ->orWhere('narration', 'like', $like));
+    }
+
+    // ── Drillable — নিয়ম ১ ────────────────────────────────────────────
+
+    public static function drillSourceType(): string
+    {
+        return 'money_transfer';
+    }
+
+    public function drillDocumentNo(): string
+    {
+        return $this->document_no;
+    }
+
+    public function drillLabel(): string
+    {
+        return __('accounts::menu.money_transfer').' — '.$this->document_no;
+    }
+
+    public function drillRoute(): array
+    {
+        return ['accounts.transfer.show', ['transfer' => $this->id]];
+    }
+}

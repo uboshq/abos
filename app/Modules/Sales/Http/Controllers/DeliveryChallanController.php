@@ -1,0 +1,303 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Modules\Sales\Http\Controllers;
+
+use App\Core\Concerns\AuthorizesResource;
+use App\Core\Concerns\FiltersByDate;
+use App\Core\Concerns\GrandTotals;
+use App\Core\Concerns\SortsLists;
+use App\Core\Services\MenuBuilder;
+use App\Core\Services\SettingsService;
+use App\Core\Support\DocumentStatus;
+use App\Core\Support\ProcessBand;
+use App\Http\Controllers\Controller;
+use App\Modules\Customer\Models\Customer;
+use App\Modules\Inventory\Models\Product;
+use App\Modules\Inventory\Models\Warehouse;
+use App\Modules\Inventory\Services\StockService;
+use App\Modules\MasterData\Models\Vehicle;
+use App\Modules\Sales\Http\Requests\DeliveryChallanRequest;
+use App\Modules\Sales\Models\DeliveryChallan;
+use App\Modules\Sales\Models\SalesOrder;
+use App\Modules\Sales\Services\DeliveryChallanService;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Illuminate\Routing\Controllers\HasMiddleware;
+use Illuminate\Routing\Controllers\Middleware;
+use Illuminate\View\View;
+
+/**
+ * ডেলিভারি চালান — পর্দা।
+ */
+class DeliveryChallanController extends Controller implements HasMiddleware
+{
+    use AuthorizesResource;
+    use FiltersByDate;
+    use GrandTotals;
+    use SortsLists;
+
+    public function __construct(
+        private readonly DeliveryChallanService $service,
+        private readonly MenuBuilder $menu,
+        private readonly SettingsService $settings,
+    ) {}
+
+    public static function middleware(): array
+    {
+        return [
+            ...static::resourcePermissions(DeliveryChallan::class, 'challan'),
+            new Middleware('can:sales.challan.create', only: ['confirm']),
+            new Middleware('can:sales.challan.cancel', only: ['cancel']),
+        ];
+    }
+
+    public function index(Request $request): View
+    {
+        // ⭐ ধাপের ট্যাব — আগের আলাদা "DO" পাতার, এখন এই তালিকারই (৩ অক্টোবর ২০২৬, [[DeliveryOrderTabs]])
+        $tabs = app(\App\Modules\Sales\Services\DeliveryOrderTabs::class);
+        $tab = in_array($request->query('tab'), \App\Modules\Sales\Services\DeliveryOrderTabs::LISTED, true)
+            ? (string) $request->query('tab') : null;
+
+        $query = DeliveryChallan::query()
+            ->search($request->query('q'))
+            /*
+             * ⭐ কাউন্টারের রাখা খসড়া এখানে নয় — মালিকের নির্দেশ, ২৮ সেপ্টেম্বর ২০২৬:
+             * *"খসড়া challan r Invoice list e zabena, sekhane sudu pure challan guloi"*।
+             * ⓘ খসড়াগুলোর নিজের পাতা আছে ([[DirectSaleController::drafts()]]);
+             * এখানে দেখালে একই বিক্রি দুই জায়গায় থাকত।
+             */
+            // ⓘ খসড়া চালান যার বিলও খসড়া — কাউন্টারের খসড়া ([[DirectSaleService::openCounterDrafts()]])
+            ->whereNot(fn ($q) => $q->where('sal_challans.status', DocumentStatus::DRAFT)
+                ->whereExists(fn ($e) => $e->selectRaw('1')
+                    ->from('sal_challan_lines as cl')
+                    ->join('sal_invoice_lines as il', 'il.delivery_challan_line_id', '=', 'cl.id')
+                    ->join('sal_invoices as i', 'i.id', '=', 'il.sales_invoice_id')
+                    ->whereColumn('cl.delivery_challan_id', 'sal_challans.id')
+                    ->where('i.status', DocumentStatus::DRAFT)))
+            ->with(['customer.location', 'warehouse'])
+            // বাতিলগুলো লুকানো, মোছা নয় (নিয়ম ৫)
+            ->when(! $request->boolean('cancelled') && $tab !== 'cancelled',
+                fn ($q) => $q->where('status', '<>', DocumentStatus::CANCELLED))
+            ->when($tab !== null, fn ($q) => $q->whereIn('sal_challans.id', $tabs->query($tab)->select('sal_challans.id')));
+
+        // ধাপের পটির হিসাব অবস্থার ছাঁকনির আগে — কারণটা
+        // [[ProcessBand::forStatuses()]]-এ লেখা
+        $bandBase = clone $query;
+
+        $stage = (string) $request->query('stage', '');
+
+        if (in_array($stage, DocumentStatus::ALL, true)) {
+            $query->where('status', $stage);
+        } else {
+            $stage = '';
+        }
+
+        $dates = $this->applyDateRange($query, $request);
+
+        $sort = $this->applySort($query, $request, [
+            'recent' => fn ($q) => $q->orderByDesc('trx_date')->orderByDesc('id'),
+            'oldest' => fn ($q) => $q->orderBy('trx_date')->orderBy('id'),
+            'largest' => fn ($q) => $q->orderByDesc('total'),
+            'customer' => fn ($q) => $q->orderBy('customer_id')->orderByDesc('trx_date'),
+        ]);
+
+        return view('sales::challan.index', [
+            'menu' => $this->menu->forUser($request->user()),
+            'grand' => $this->grandTotals($query, ['total' => 't.total']),
+            'challans' => $query->paginate(50)->withQueryString(),
+            'q' => $request->query('q'),
+            'dates' => $dates,
+            'sort' => $sort,
+            'sortOptions' => $this->sortLabels(),
+            'showCancelled' => $request->boolean('cancelled'),
+            'stage' => $stage,
+            'tab' => $tab,
+            'processBand' => ProcessBand::forStatuses(
+                $bandBase,
+                [
+                    ['status' => DocumentStatus::DRAFT, 'label' => __('core.status.draft')],
+                    ['status' => DocumentStatus::CONFIRMED, 'label' => __('core.status.confirmed')],
+                    ['status' => DocumentStatus::CLOSED, 'label' => __('core.status.closed')],
+                ],
+                'sales.challan.index',
+                $request->except(['stage', 'page']),
+                $stage !== '' ? $stage : null,
+            ),
+        ]);
+    }
+
+    public function create(Request $request): View
+    {
+        return view('sales::challan.form', [
+            'menu' => $this->menu->forUser($request->user()),
+            'challan' => new DeliveryChallan(['trx_date' => now()->toDateString()]),
+            'order' => $this->chosenOrder($request),
+            ...$this->formData(),
+        ]);
+    }
+
+    public function store(DeliveryChallanRequest $request): RedirectResponse
+    {
+        $document = $this->service->create($request->documentData(), $request->lineData());
+
+        return redirect()
+            ->route('sales.challan.show', $document)
+            ->with('saved', __('sales::message.challan_created'));
+    }
+
+    public function show(Request $request, DeliveryChallan $challan): View
+    {
+        $challan->load(['lines.product.unit', 'customer', 'warehouse', 'order', 'creator']);
+
+        $bills = app(\App\Modules\Sales\Services\ChallanBills::class);
+
+        return view('sales::challan.show', [
+            'menu' => $this->menu->forUser($request->user()),
+            'challan' => $challan,
+            // ⭐ বিল হয়ে থাকলে বোতামের বদলে বিলের লিংক ([[ChallanBills]])
+            'bills' => $bills->of($challan),
+            'leftToBill' => $bills->leftToBill($challan),
+            'offerPanel' => $this->offerPanel($request, $challan),
+        ]);
+    }
+
+    /**
+     * ⭐ অফারের প্যানেল — অফারের ব্যবস্থা চালু আর চাবি থাকলে (অডিট §১১, ২৯ সেপ্টেম্বর ২০২৬)।
+     *
+     * ⓘ `null` মানে প্যানেলটাই আঁকা হয় না। ⚠️ কাউন্টারের বা পাকা চালানে প্যানেলটা আসে,
+     * কিন্তু কেবল দেখার জন্য (`editable` মিথ্যা) — বসানো হয় কেবল অফিসের খসড়ায়।
+     *
+     * @return array{editable: bool, counter: bool, rows: list<array<string, mixed>>}|null
+     */
+    private function offerPanel(Request $request, DeliveryChallan $challan): ?array
+    {
+        $offers = app(\App\Modules\Sales\Services\ChallanOffers::class);
+
+        if (! $offers->enabled() || ! $request->user()?->can('promotion.apply')) {
+            return null;
+        }
+
+        return [
+            'editable' => $offers->editable($challan),
+            'counter' => $offers->isCounterDraft($challan),
+            'rows' => $offers->panel($challan),
+        ];
+    }
+
+    public function edit(Request $request, DeliveryChallan $challan): View
+    {
+        $challan->load(['lines.product', 'order.lines']);
+
+        return view('sales::challan.form', [
+            'menu' => $this->menu->forUser($request->user()),
+            'challan' => $challan,
+            'order' => $challan->order,
+            ...$this->formData(),
+        ]);
+    }
+
+    public function update(DeliveryChallanRequest $request, DeliveryChallan $challan): RedirectResponse
+    {
+        $this->service->update($challan, $request->documentData(), $request->lineData());
+
+        return redirect()
+            ->route('sales.challan.show', $challan)
+            ->with('saved', __('sales::message.challan_updated'));
+    }
+
+    public function confirm(DeliveryChallan $challan): RedirectResponse
+    {
+        // ⓘ মাল কীভাবে যাবে — প্রশ্নটা এখন ছাপার দরজায়, নিশ্চিতে নয় (মালিকের অনুমোদিত বদল, ১ অক্টোবর ২০২৬; [[RequireTransportBeforePrint]])
+
+        $this->service->confirm($challan);
+
+        return redirect()
+            ->route('sales.challan.show', $challan)
+            ->with('saved', __('sales::message.challan_confirmed'));
+    }
+
+    public function cancel(Request $request, DeliveryChallan $challan): RedirectResponse
+    {
+        $reason = $request->validate([
+            'reason' => ['required', 'string', 'max:500'],
+        ])['reason'];
+
+        $this->service->cancel($challan, $reason);
+
+        return redirect()
+            ->route('sales.challan.show', $challan)
+            ->with('saved', __('sales::message.challan_cancelled'));
+    }
+
+    /**
+     * অর্ডার ধরে খোলা হলে লাইনগুলো আগে থেকে ভরা থাকে — যা বাকি ঠিক ততটুকু।
+     *
+     * গুদামের লোক গাড়ির পাশে দাঁড়িয়ে এটা লেখেন; প্রতিটা লাইন হাতে খুঁজতে
+     * বললে তাড়াহুড়োয় ভুল পণ্য বাছা হত।
+     */
+    private function chosenOrder(Request $request): ?SalesOrder
+    {
+        $id = $request->integer('sales_order_id');
+
+        if ($id <= 0) {
+            return null;
+        }
+
+        return SalesOrder::query()->open()->with(['lines.product.unit', 'customer'])->find($id);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function formData(): array
+    {
+        return [
+            'customers' => Customer::query()->inViewedBranch()->active()->orderBy('name_en')->get(),
+            'warehouses' => Warehouse::query()->active()->orderBy('code')->get(),
+            'products' => Product::query()->soldInViewedBranch()->active()->with('unit')->orderBy('name_en')->get(),
+
+            /*
+             * গোটা ক্যাটালগের মজুদ — চার্ট/বাল্ক শীটের জন্য, এক কোয়েরিতে।
+             *
+             * পণ্য ধরে ধরে গুনলে চারশো পণ্যে চারশো কোয়েরি হত। তার চেয়েও
+             * বড় কথা, আলাদা মুহূর্তে গোনা সংখ্যাগুলো একে অন্যের সাথে
+             * না-ও মিলতে পারে — শীটটা একই মুহূর্তের ছবি হওয়া দরকার।
+             *
+             * গুদাম বাছার আগে ডিফল্ট গুদামের সংখ্যা, কারণ শীটটা ফর্ম
+             * খোলার সময়েই বসে; ভুল গুদামের সংখ্যা দেখানোর চেয়ে
+             * প্রতিষ্ঠানের প্রধান গুদামেরটা দেখানো কম বিভ্রান্তিকর।
+             */
+            'stock' => app(StockService::class)->statesForAll(
+                Warehouse::query()->where('is_default', true)->first()
+            ),
+            'orders' => SalesOrder::query()->open()->with('customer')
+                ->orderByDesc('trx_date')->limit(200)->get(),
+
+            /*
+             * বহরের গাড়িগুলো — সুইচ বন্ধ থাকলে খালি।
+             *
+             * খালি হলে ফর্মে শুধু লেখা নম্বরের ঘরটাই থাকে, ঠিক আগের
+             * মতো। যে প্রতিষ্ঠান বহরের তালিকা রাখে না, তার পর্দায়
+             * চিরকাল খালি একটা ড্রপডাউন ঝুলে থাকা উচিত নয়।
+             */
+            'vehicles' => $this->settings->get('master_data.vehicle_enabled')
+                ? Vehicle::query()->active()->orderBy('code')->get()
+                : collect(),
+        ];
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    private function sortLabels(): array
+    {
+        return [
+            'recent' => __('sales::sort.recent'),
+            'oldest' => __('sales::sort.oldest'),
+            'largest' => __('sales::sort.largest'),
+            'customer' => __('sales::sort.customer'),
+        ];
+    }
+}

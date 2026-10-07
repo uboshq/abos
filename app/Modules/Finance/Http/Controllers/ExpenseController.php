@@ -1,0 +1,261 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Modules\Finance\Http\Controllers;
+
+use App\Core\Services\MenuBuilder;
+use App\Http\Controllers\Controller;
+use App\Models\Approval;
+use App\Modules\Accounts\Models\Account;
+use App\Modules\Accounts\Models\Voucher;
+use App\Modules\Accounts\Services\StandardChart;
+use App\Modules\Accounts\Services\VoucherApproval;
+use App\Modules\Finance\Services\HeadTotals;
+use Illuminate\Http\Request;
+use Illuminate\Routing\Controllers\HasMiddleware;
+use Illuminate\Routing\Controllers\Middleware;
+use Illuminate\Support\Collection;
+use Illuminate\View\View;
+
+/**
+ * খরচ — কোন খাতে কত গেল, আর সেটা কোন কাগজে।
+ *
+ * ── কেন খরচ অর্থে, হিসাবে নয় ─────────────────────────────────────────
+ * ২৯ আগস্ট ২০২৬-এ দুই মডিউলের সীমা টানার সময় প্রথমে বলেছিলাম "ভাউচার
+ * হিসাবে, ব্যবস্থাপনা অর্থে"। ওটা ভুল ছিল — ব্যবহারকারীকে দুই দরজায়
+ * পাঠাত, ঠিক যে বিভ্রান্তি এড়ানোর জন্য মডিউল দুইটা করা হচ্ছে।
+ *
+ * আসল প্রশ্ন **কে করে**: ডিপো ম্যানেজার রোজ খরচ লেখেন — ভাড়া, হাম্মালি,
+ * জ্বালানি, নাশতা। হিসাবরক্ষক জাবেদা লেখেন। দুইটা আলাদা মানুষ।
+ *
+ * ── কেন এটা আরেকটা ভাউচার তালিকা নয় ─────────────────────────────────
+ * তালিকাটা হিসাবে আছেই (`accounts/vouchers/expense`), আর ওখানেই থাকবে —
+ * খরচ সত্যিই একটা ভাউচার। এখানকার প্রশ্ন আলাদা: **কোন খাতে কত গেল**।
+ * ম্যানেজার তালিকা পড়েন না, তিনি জানতে চান এই মাসে জ্বালানিতে কত গেল
+ * আর গত মাসের চেয়ে বেশি না কম।
+ *
+ * একটাই সত্য, দুই দিক থেকে দেখা — আর প্রতিটা সংখ্যা ক্লিক করলে ওই
+ * খাতের খতিয়ানে নিয়ে যায় (নিয়ম ১)।
+ *
+ * ── কেন শ্রেণির আলাদা টেবিল নেই ──────────────────────────────────────
+ * খরচের শ্রেণিগুলো ছকেই আছে — `5200 পরিচালন ব্যয়`-এর নিচে ষোলোটা খাত:
+ * বেতন, ভাড়া, বিদ্যুৎ, জ্বালানি ও পরিবহন, মেরামত, আপ্যায়ন, বিপণন…।
+ * আলাদা টেবিল বানালে দুই জায়গায় দুই তালিকা থাকত, আর একদিন একটায়
+ * নতুন শ্রেণি যোগ হত অন্যটায় না — তখন খরচ লেখা যেত এমন শ্রেণিতে যা
+ * খাতায় নেই।
+ *
+ * কোম্পানি নতুন শ্রেণি চাইলে ছকে একটা খাত যোগ করে — খোলা তালিকার
+ * নিয়ম, আর ওটা এখানে বিনা খরচেই মেনে চলা হয়।
+ */
+class ExpenseController extends Controller implements HasMiddleware
+{
+    /**
+     * ঝুলে থাকা খরচের তালিকায় সর্বোচ্চ কয়টা সারি।
+     *
+     * পঞ্চাশ — বাকি তালিকাগুলোর পাতার মাপের সমান, যাতে "এক পর্দা কত"
+     * সংখ্যাটা পুরো সিস্টেমে একটাই থাকে। এটা কাজের সীমা নয়, দেখার
+     * সীমা: মোট সংখ্যাটা পাশেই লেখা থাকে।
+     */
+    private const WAITING_LIMIT = 50;
+
+    public function __construct(private readonly MenuBuilder $menu) {}
+
+    /** @return list<Middleware> */
+    public static function middleware(): array
+    {
+        return [new Middleware('can:finance.expense.view')];
+    }
+
+    /**
+     * ⛔ পাতা ভাগ নেই, ইচ্ছাকৃত — এটা ব্যবস্থাপনার ছবি, তালিকা নয়।
+     *
+     * `heads` হলো ছকের `5200`-এর নিচের খাতগুলো — সংখ্যাটা ছক ঠিক করে,
+     * ব্যবসার আয়তন নয়। `recent` আগে থেকেই `limit(20)`, আর তার কাজই
+     * "আজ কী কী লেখা হয়েছে" — একুশতম সারিটা ওই প্রশ্নের উত্তর নয়।
+     * `waiting`-এ এখন [[WAITING_LIMIT]], আর কাটা পড়লে পর্দায় লেখা থাকে।
+     *
+     * ⓘ "আরও দেখুন"-এর উত্তর এখানে নয় — প্রতিটা খাতের সংখ্যা ক্লিক
+     * করলে ওই খাতের খতিয়ানে নিয়ে যায় (নিয়ম ১), আর সেখানে পাতা ভাগ আছে।
+     *
+     * কারণটা `EveryListScreenPaginatesTest`-এর ছাড়ের তালিকাতেও আছে।
+     */
+    public function index(Request $request): View
+    {
+        [$from, $to] = $this->range($request);
+
+        return view('finance::expense.index', [
+            'menu' => $this->menu->forUser($request->user()),
+            'from' => $from,
+            'to' => $to,
+            'heads' => $this->matching($this->heads($from, $to), trim((string) $request->query('q', ''))),
+            'waiting' => $this->waiting(),
+
+            /*
+             * ঝুলে থাকা মোট কয়টা — তালিকার দৈর্ঘ্য থেকে নয়, নিজের গোনা থেকে।
+             *
+             * নিচের তালিকাটা `WAITING_LIMIT`-এ বাঁধা, তাই `$waiting->count()`
+             * বড়জোর পঞ্চাশ বলবে। শিরোনামের ব্যাজে ওই সংখ্যাটা বসালে
+             * একশো সাঁইত্রিশটা ঝুলে থাকা খরচ পর্দায় "৫০" হয়ে যেত — আর
+             * সেটা কম দেখানোর সবচেয়ে খারাপ রূপ, কারণ ব্যাজটা দেখতে
+             * ঠিক আগের মতোই।
+             */
+            'waitingTotal' => $this->waitingCount(),
+            'recent' => Voucher::query()
+                ->ofType(Voucher::EXPENSE)
+                ->orderByDesc('trx_date')->orderByDesc('id')
+                ->limit(20)->get(),
+        ]);
+    }
+
+    /**
+     * খোঁজা — খাতের নাম (বাংলা বা ইংরেজি) বা কোড দিয়ে, কেবল "খাত ধরে" তালিকায়।
+     *
+     * ⓘ ১৯ সেপ্টেম্বর ২০২৬ — মালিক: *"সব পাতাতেই সমস্যা"*। টুলবারটা বসে
+     * খাতের তালিকার মাথায়, তাই খোঁজাও ওটাকেই ছাঁকে। নিচের "অপেক্ষায়" আর
+     * "সাম্প্রতিক" নিজের নিজের প্রশ্নের উত্তর — ওগুলো অটুট।
+     *
+     * ⓘ সস্তা: সারিগুলো আগেই মেমরিতে, আর খাত হাতে গোনা — নতুন কোয়েরি
+     * লাগে না। আয়ের পর্দাতেও হুবহু একই নিয়ম।
+     *
+     * @param  list<array{account: Account, now: string, before: string}>  $rows
+     * @return list<array{account: Account, now: string, before: string}>
+     */
+    private function matching(array $rows, string $q): array
+    {
+        if ($q === '') {
+            return $rows;
+        }
+
+        return array_values(array_filter(
+            $rows,
+            fn (array $row) => collect([$row['account']->code, $row['account']->name_en, $row['account']->name_bn])
+                ->contains(fn ($text) => filled($text) && mb_stripos((string) $text, $q) !== false),
+        ));
+    }
+
+    /**
+     * অনুমোদনের অপেক্ষায় পড়ে থাকা খরচ।
+     *
+     * ── কেন এটা এই পর্দায় ───────────────────────────────────────────
+     * খাত ধরে যোগফলে এগুলো **নেই** — খসড়া খতিয়ানে বসেনি, তাই কোনো
+     * খাতে যোগও হয়নি। অর্থাৎ পর্দাটা বলছে "এই মাসে জ্বালানিতে এত গেল",
+     * আর পাশেই তিনটে জ্বালানির খরচ ঝুলে আছে যা কেউ দেখছে না।
+     *
+     * ⚠️ **সংখ্যাটা কম দেখানোর চেয়ে খারাপ কিছু নেই যদি না বলা হয় কেন।**
+     * ম্যানেজার মাসের খরচ দেখে সিদ্ধান্ত নেন; ঝুলে থাকাগুলো না দেখলে
+     * তিনি কম খরচ ধরে এগোতেন, আর মাস শেষে অনুমোদন হয়ে গেলে সংখ্যাটা
+     * হঠাৎ বেড়ে যেত।
+     *
+     * ── কেন Approval Centre-এ লিংক নয় ───────────────────────────────
+     * ইনবক্স কেবল **যিনি সিদ্ধান্ত দিতে পারেন** তাঁকে দেখায়। যে
+     * ম্যানেজার খরচটা লিখেছেন কিন্তু অনুমোদনকারী নন, তিনি ওখানে গিয়ে
+     * খালি পাতা পেতেন — একটা সংখ্যা যা কোথাও নিয়ে যায় না। তাই
+     * কাগজগুলো এখানেই, আর প্রতিটা সারি নিজের ভাউচারে নিয়ে যায় (নিয়ম ১)।
+     *
+     * ⓘ সময়সীমা ইচ্ছাকৃতভাবে **নেই**: ঝুলে থাকা খরচ যত পুরনো তত জরুরি,
+     * আর মাস বদলালে সেটা চোখের আড়ালে চলে যাওয়াই সবচেয়ে খারাপ ফল।
+     *
+     * ── কেন এখন পঞ্চাশে বাঁধা (১২ সেপ্টেম্বর ২০২৬) ──────────────────
+     * সময়সীমা নেই মানে তালিকাটারও সীমা ছিল না। যে কোম্পানিতে কেউ ছয়
+     * মাস অনুমোদন করেননি, সেখানে এই এক অংশই কয়েক হাজার সারি টানত —
+     * আর পর্দাটা ধীরে খোলা ছাড়া কোনো লক্ষণ দিত না।
+     *
+     * ⚠️ ক্রমটা বদলায়নি — **পুরনোটা আগেই**, তাই সীমাটা নতুনগুলোকে নয়,
+     * কেবল সবচেয়ে কম জরুরিগুলোকে কেটে দেয়। উদ্দেশ্যটা অটুট।
+     *
+     * ⛔ আর কাটাটা লুকানো হয় না: মোট সংখ্যা [[waitingCount]] আলাদা
+     * কোয়েরিতে গোনা হয় আর পর্দায় লেখা থাকে "৫০টি দেখানো হচ্ছে, মোট
+     * ঝুলে আছে ১৩৭টি"। লম্বা সারিটা নিজেই একটা সংকেত — কেউ অনুমোদন
+     * করছেন না — আর সংকেতটা লুকানোর মানে হত না।
+     *
+     * @return Collection<int, Voucher>
+     */
+    private function waiting()
+    {
+        $ids = $this->waitingIds();
+
+        if ($ids->isEmpty()) {
+            return collect();
+        }
+
+        return Voucher::query()
+            ->whereIn('id', $ids)
+            ->orderBy('trx_date')->orderBy('id')
+            ->limit(self::WAITING_LIMIT)
+            ->get();
+    }
+
+    /**
+     * ঝুলে থাকা খরচ সত্যিই কয়টা — সীমার বাইরেরগুলোসহ।
+     *
+     * গোনাটা ডাটাবেজে, সারি না এনে: প্রশ্নটা "কয়টা", আর তার জন্য
+     * কাগজগুলো মেমরিতে তোলার দরকার নেই।
+     */
+    private function waitingCount(): int
+    {
+        $ids = $this->waitingIds();
+
+        return $ids->isEmpty()
+            ? 0
+            : Voucher::query()->whereIn('id', $ids)->count();
+    }
+
+    /**
+     * অনুমোদনের অপেক্ষায় থাকা খরচ-ভাউচারের আইডি।
+     *
+     * তালিকা আর গোনা — দুইজনেরই একই ছাঁকনি লাগে। দুই জায়গায় লিখলে
+     * একদিন একটায় শর্ত যোগ হত অন্যটায় নয়, আর তখন ব্যাজের সংখ্যা আর
+     * নিচের সারির সংখ্যা দুই রকম কথা বলত।
+     *
+     * @return Collection<int, int>
+     */
+    private function waitingIds()
+    {
+        return Approval::query()
+            ->where('approvable_type', Voucher::class)
+            ->where('module', VoucherApproval::MODULE)
+            ->where('action', Voucher::EXPENSE)
+            ->pending()
+            ->pluck('approvable_id');
+    }
+
+    /**
+     * চলতি মাস, যদি না অন্য কিছু চাওয়া হয়।
+     *
+     * ── কেন মাস, আর কেন আজ নয় ───────────────────────────────────────
+     * খরচের প্রশ্নটা কখনোই "আজ কত গেল" নয় — আজ হয়তো কিছুই যায়নি।
+     * প্রশ্নটা "এই মাসে কত গেল", কারণ ভাড়া, বেতন আর বিদ্যুৎ মাসের
+     * হিসাব।
+     *
+     * @return array{0: string, 1: string}
+     */
+    private function range(Request $request): array
+    {
+        return [
+            (string) $request->query('from', now()->startOfMonth()->toDateString()),
+            (string) $request->query('to', now()->endOfMonth()->toDateString()),
+        ];
+    }
+
+    /**
+     * খাত ধরে খরচ — এই সময়ে কত, আর তার আগের সমান সময়ে কত।
+     *
+     * ── কেন হিসাবটা এখানে নয়, ভাগ করা সেবায় ────────────────────────
+     * আয়ের পর্দা বানাতে গিয়ে দেখা গেল প্রশ্নটা হুবহু এক — কেবল মাথা
+     * আর চিহ্ন আলাদা। কপি করে বসালে একদিন একটায় সংশোধন হত অন্যটায়
+     * নয়, আর তখন একই ব্যবসার আয় ও খরচ দুই নিয়মে গোনা হত।
+     *
+     * @return list<array{account: Account, now: string, before: string}>
+     */
+    private function heads(string $from, string $to): array
+    {
+        return app(HeadTotals::class)->forParent(
+            StandardChart::OPERATING_EXPENSES,
+            $from,
+            $to,
+            /* খরচ ডেবিটে বাড়ে */
+            debitPositive: true,
+        );
+    }
+}

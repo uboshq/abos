@@ -1,0 +1,103 @@
+<?php
+
+declare(strict_types=1);
+
+use App\Modules\Governance\Http\Controllers\AuditController;
+use App\Modules\Governance\Http\Controllers\AuditReportController;
+use App\Modules\Governance\Http\Controllers\ErrorLogController;
+use App\Modules\Governance\Http\Controllers\ExportLogController;
+use App\Modules\Governance\Http\Controllers\LoginHistoryController;
+use App\Modules\Governance\Http\Controllers\RetentionController;
+use App\Modules\Governance\Http\Controllers\SessionController;
+use Illuminate\Support\Facades\Route;
+
+/*
+ * শুধু পড়ার রুট — POST, PUT বা DELETE নেই।
+ *
+ * অডিটে লেখার কোনো পথ পর্দা থেকে থাকা উচিত নয়, তাই সেই পথটা এখানে
+ * নেই-ই। মডেলেও নিষেধ বসানো আছে, কিন্তু দুইটা পাহারা একটার চেয়ে ভালো।
+ */
+Route::middleware('auth')->prefix('governance')->group(function () {
+    Route::get('/audit', [AuditController::class, 'index'])->name('audit.index');
+
+    // ⭐ নিরীক্ষার খাতা — রিপোর্ট সেন্টার ধাপ ৬ ([[AuditReports]])
+    Route::get('/reports/{slug}', [AuditReportController::class, 'show'])->name('report.show');
+
+    Route::get('/audit/{trail}', [AuditController::class, 'show'])
+        ->whereNumber('trail')->name('audit.show');
+
+    /*
+     * একটা রেকর্ডের পুরো ইতিহাস।
+     *
+     * ঠিকানায় ক্লাসের নাম যায় না — সেটা ভেতরের কথা, আর URL-এ থাকলে
+     * কেউ যেকোনো ক্লাসের নাম বসিয়ে দেখতে পারত। বদলে অডিটের সারির id
+     * ধরে গিয়ে সেখান থেকে রেকর্ডটা চেনা হয়।
+     */
+    Route::get('/audit/{trail}/record', [AuditController::class, 'record'])
+        ->whereNumber('trail')->name('audit.record');
+
+    /*
+     * "ওইদিন এই কাগজটা কেমন ছিল" — সময়যন্ত্র।
+     *
+     * ইতিহাসের পাতাটার পাশেই, আর একই সারির id ধরে, একই কারণে: ঠিকানায়
+     * ক্লাসের নাম যায় না।
+     *
+     * তারিখটা কোয়েরি-স্ট্রিং-এ (`?on=`), পথে নয় — একই কাগজের একই
+     * পাতা, কেবল অন্য একটা মুহূর্ত থেকে দেখা। পথে বসালে প্রতিটা
+     * তারিখ আলাদা একটা "সম্পদ" মনে হত, যা ওটা নয়।
+     */
+    Route::get('/audit/{trail}/at', [AuditController::class, 'at'])
+        ->whereNumber('trail')->name('audit.at');
+
+    /*
+     * রপ্তানির খাতা — কে কোন তালিকা নামিয়ে নিয়ে গেছে।
+     *
+     * অডিটের পাশেই, কারণ দুইটাই একই প্রশ্নের দুই দিক: একটা বলে কী
+     * বদলেছে, অন্যটা বলে কী বেরিয়ে গেছে।
+     */
+    Route::get('/exports', [ExportLogController::class, 'index'])->name('export.index');
+
+    /*
+     * কাগজ সংরক্ষণ নীতি — মানচিত্রের §২৮, ২০ সেপ্টেম্বর ২০২৬।
+     * ⓘ কেবল পড়া, আর যা সত্যিই ঘটে তাই দেখায় ([[WhatIsKeptHowLong]])।
+     */
+    Route::get('/retention', [RetentionController::class, 'index'])->name('retention.index');
+
+    /*
+     * ঢোকার খাতা — কে ঢুকল, আর কে ঢুকতে চেয়ে পারল না।
+     *
+     * অডিটের পাশে, কারণ প্রশ্নটা একই: "কে কী করেছে"। অডিট বলে বিলে কী
+     * বসেছে; এটা বলে লোকটা আদৌ ঢুকেছিল কি না।
+     */
+    Route::get('/logins', [LoginHistoryController::class, 'index'])->name('login.index');
+
+    /*
+     * ভুলের খাতা — ব্যবস্থাটা নিজে যা লিখে রাখে।
+     *
+     * ── কেন নিজের চাবি ──────────────────────────────────────────────
+     * অডিট বলে কে কী বদলেছে; এটা দেখায় ফাইলের পথ, লাইন নম্বর আর
+     * স্ট্যাক ট্রেস। দুইটা আলাদা প্রশ্ন, আর দ্বিতীয়টা সবার দেখার নয়।
+     *
+     * "দেখেছি" বলা যায়, মোছা যায় না — মুছতে দিলে যে ভুলটা কেউ বুঝতে
+     * পারেনি সেটাই সবার আগে মুছে যেত।
+     */
+    Route::get('/errors', [ErrorLogController::class, 'index'])->name('error.index');
+    Route::post('/errors/{error}/seen', [ErrorLogController::class, 'acknowledge'])
+        ->whereNumber('error')->name('error.acknowledge');
+    // ⭐ সব দেখা হয়েছে — তালিকা পরিষ্কার (মালিক, ১ অক্টোবর ২০২৬)
+    Route::post('/errors/seen-all', [ErrorLogController::class, 'acknowledgeAll'])->name('error.acknowledge_all');
+
+    /*
+     * নিজের খোলা সেশনগুলো — অনুমতি ছাড়া, কারণ এগুলো নিজেরই।
+     *
+     * ── কেন `governance.audit.view` লাগে না ─────────────────────────
+     * "আমি কোথায় কোথায় লগইন আছি" প্রতিটা ব্যবহারকারীর নিজের প্রশ্ন,
+     * প্রশাসনিক নয়। চাবির পেছনে রাখলে যাঁর সবচেয়ে বেশি দরকার — যে
+     * কর্মী কাউন্টারে লগইন রেখে এসেছেন — তিনিই পৌঁছাতে পারতেন না।
+     *
+     * কেবল নিজেরটাই দেখা যায় ও বন্ধ করা যায়; অন্যেরটা নয়।
+     */
+    Route::get('/my-sessions', [SessionController::class, 'index'])->name('session.index');
+    Route::delete('/my-sessions/others', [SessionController::class, 'destroyOthers'])->name('session.others');
+    Route::delete('/my-sessions/{id}', [SessionController::class, 'destroy'])->name('session.destroy');
+});

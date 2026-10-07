@@ -1,0 +1,1086 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Modules\MasterData\Services;
+
+use App\Core\Contracts\ProvisionsCompany;
+use App\Core\Engines\Coding\CodeSuggester;
+use App\Core\Engines\Duplication\DuplicationEngine;
+use App\Core\Support\CompanyContext;
+use App\Models\Company;
+use App\Modules\Accounts\Models\Account;
+use App\Modules\Accounts\Services\StandardChart;
+use App\Modules\MasterData\Models\Currency;
+use App\Modules\MasterData\Models\Department;
+use App\Modules\MasterData\Models\Designation;
+use App\Modules\MasterData\Models\EmploymentType;
+use App\Modules\MasterData\Models\PartyType;
+use App\Modules\MasterData\Models\PaymentMethod;
+use App\Modules\MasterData\Models\PaymentTerm;
+use App\Modules\MasterData\Models\PriceList;
+use App\Modules\MasterData\Models\ReasonCode;
+use App\Modules\MasterData\Models\Tax;
+use App\Modules\MasterData\Models\TransferMode;
+use App\Modules\MasterData\Models\Unit;
+use App\Modules\MasterData\Models\VehicleType;
+use App\Modules\MasterData\Support\CodeConventions;
+use App\Modules\MasterData\Support\SalesReturnReasons;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
+
+/**
+ * ছয়টা সরল মাস্টার তালিকা — একই নিয়মে।
+ *
+ * একক, কর, শর্ত, দর তালিকা, পক্ষের ধরন ও কারণ কোড — ছয়টাতেই একই
+ * তিনটা নিয়ম: কোড অনন্য, ডিফল্ট একটাই, আর ব্যবহৃত রেকর্ড মোছা যায় না।
+ * ছয়বার লিখলে একদিন একটায় ফাঁক থাকত।
+ *
+ * যা এখানে নেই: প্রতিটার নিজস্ব যাচাই (এককের চক্র, করের হারের সীমা)।
+ * ওগুলো নিচে আলাদা পদ্ধতিতে, কারণ ওগুলো সত্যিই আলাদা।
+ */
+final class MasterListService implements ProvisionsCompany
+{
+    /**
+     * যে মুদ্রাগুলো নতুন কোম্পানিতে বসে — কোড, ইংরেজি নাম, বাংলা নাম, বাকিটা।
+     *
+     * ── কেন এটা ধ্রুবক, আর ভিতরে লেখা অ্যারে নয় ──────────────────────
+     * সেটআপের পর্দাটাকেও এই তালিকাটা জানতে হয়: ক্রেতা প্রথম দিনে কোন
+     * মুদ্রায় খাতা রাখবেন তা বেছে নেন, অথচ তখনো একটাও `currencies` সারি
+     * নেই — কোম্পানিটাই তো তৈরি হয়নি। তালিকাটা দুই জায়গায় লিখলে একটায়
+     * নতুন মুদ্রা যোগ করে অন্যটায় ভুলে যাওয়া কেবল সময়ের ব্যাপার, আর
+     * তখন ক্রেতা এমন একটা মুদ্রা বাছতে পারতেন যেটা পরে বসেই না।
+     *
+     * @var list<array{0: string, 1: string, 2: string, 3: array<string, mixed>}>
+     */
+    public const CURRENCIES = [
+        ['BDT', 'Bangladeshi Taka', 'বাংলাদেশি টাকা', ['symbol' => '৳', 'decimal_places' => 2]],
+        ['USD', 'US Dollar', 'মার্কিন ডলার', ['symbol' => '$', 'decimal_places' => 2]],
+        ['EUR', 'Euro', 'ইউরো', ['symbol' => '€', 'decimal_places' => 2]],
+        ['INR', 'Indian Rupee', 'ভারতীয় রুপি', ['symbol' => '₹', 'decimal_places' => 2]],
+    ];
+
+    /**
+     * নতুন কোম্পানি হলে ডিফল্ট তালিকাগুলো বসে।
+     *
+     * seed() প্রতিটা তালিকায় আগে দেখে নেয় কিছু আছে কি না, তাই বারবার
+     * ডাকলেও দুইবার বসে না।
+     */
+    public function provisionCompany(): void
+    {
+        $this->installDefaults();
+    }
+
+    public function __construct(
+        private readonly CodeSuggester $codes,
+        private readonly DuplicationEngine $duplicates,
+    ) {}
+
+    /**
+     * @param  class-string<Model>  $model
+     * @param  array<string, mixed>  $data
+     * @param  string  $kind  URL-এ যে নামে তালিকাটা চেনা যায় — `units`, `currencies`
+     */
+    public function create(string $model, array $data, string $kind = ''): Model
+    {
+        return DB::transaction(function () use ($model, $data, $kind) {
+            /*
+             * একই নামে দুইবার নয় — নাম মিললে [[DuplicationEngine]] সতর্ক করে
+             * থামে, আর `allow_duplicate` টিকে এগোতে দেয়। এক দরজা, আর
+             * MasterListController-এর প্রতিটা ঘোষিত তালিকা এতে ঢাকা পড়ে।
+             *
+             * ⚠️ override নীরব নয়: কেউ জোর করে ডুপ্লিকেট বসালে সেটা অডিটে বসে
+             * ("কে বসাল" পরে জানা যায়)। তাই টিকটা check()-এর আগে পড়া হয় —
+             * check() ওটা $data থেকে মুছে দেয়।
+             */
+            $overridden = (bool) ($data['allow_duplicate'] ?? false);
+            $this->duplicates->check($model, $data);
+
+            $code = trim((string) ($data['code'] ?? ''));
+
+            /*
+             * কোড না লিখলে নিজে থেকে বসে — মালিকের নিয়ম, ২ সেপ্টেম্বর ২০২৬।
+             *
+             * ── কেন সিরিজ নয় ─────────────────────────────────────
+             * এখানে `UNIT-0001` বসানো নিষেধ, আর কারণটা কাগজে: এককের
+             * কোড চালানে ছাপা হয়। নামটাই উৎস — `Kilogram` → `KG`,
+             * `Value Added Tax` → `VAT`। যেগুলোর প্রচলিত রূপ নিয়মে আসে
+             * না ([[CodeConventions]]) সেগুলো অভিধান থেকে।
+             *
+             * ── ইংরেজি নামটাই কেন ───────────────────────────────────
+             * কোড ASCII, আর বাংলা নাম থেকে ASCII সংক্ষেপ বের হয় না।
+             * ইংরেজি নামও খালি থাকলে তালিকার নিজের নাম উপসর্গ হয়
+             * (`units` → `UNI`), যাতে ঘরটা কখনো খালি না থাকে।
+             */
+            if ($code === '') {
+                $code = $this->codes->fromName(
+                    $model,
+                    $data['name_en'] ?? null,
+                    CodeConventions::forKind($kind),
+                    $kind === '' ? null : substr($kind, 0, 3),
+                );
+            }
+
+            $this->assertCodeIsFree($model, $code);
+
+            /*
+             * যে তালিকায় "ডিফল্ট" বলে কিছু নেই, সেখানে ঘরটা ফেলে দেওয়া।
+             *
+             * ফর্মটা সব তালিকার জন্য একটাই, তাই গাড়ির পর্দা থেকেও
+             * is_default আসে — অথচ mdm_vehicles-এ ওই ঘরই নেই। নিচের
+             * spread ওটা বয়ে নিয়ে যেত, আর Eloquent চুপ করে ফেলে দিত।
+             * ফেলে দেওয়াই ঠিক, কিন্তু চুপ করে নয়: strict mode চালু
+             * হওয়ার পর ওটাই পুরো সংরক্ষণ ভেঙে দিত।
+             */
+            if (! $model::supportsDefault()) {
+                unset($data['is_default']);
+            }
+
+            $record = $model::create([
+                ...$data,
+                'code' => $code,
+                'is_active' => $data['is_active'] ?? true,
+                /*
+                 * ডিফল্ট আলাদা করে বসানো হয়, কারণ একটাই থাকতে পারে —
+                 * কিন্তু শুধু সেই তালিকাগুলোয় যাদের ঘরটা আছে। একক ও
+                 * কারণ-কোডে নেই: ওখানে "ডিফল্ট একক" বলে কিছু নেই।
+                 *
+                 * শর্তটা ছাড়া কোয়েরিতে অস্তিত্বহীন কলাম যেত। সাধারণ
+                 * অবস্থায় mass assignment ওটা ফেলে দিত, কিন্তু সিডারে
+                 * গার্ড বন্ধ থাকে — আর তখন প্রতিটা ইনসার্ট ভাঙত।
+                 */
+                ...($model::supportsDefault() ? ['is_default' => false] : []),
+                'created_by' => auth()->id(),
+            ]);
+
+            $this->afterSave($record, $data);
+
+            // জোর করে ডুপ্লিকেট বসানো হলে অডিটে চিহ্ন — নীরব নয়
+            if ($overridden) {
+                $record->auditAction('overridden', __('master_data::message.duplicate_overridden'));
+            }
+
+            return $record->fresh();
+        });
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     */
+    public function update(Model $record, array $data): Model
+    {
+        return DB::transaction(function () use ($record, $data) {
+            // নাম বদলে আরেকটার সাথে মিলে গেলেও একই পাহারা — নিজেকে বাদ দিয়ে
+            $overridden = (bool) ($data['allow_duplicate'] ?? false);
+            $this->duplicates->check($record::class, $data, $record->getKey());
+
+            /*
+             * সম্পাদনায় ফাঁকা মানে "বদলাবেন না", "মুছে দিন" নয়।
+             *
+             * ── কেন এই লাইনটা লাগল (২ সেপ্টেম্বর ২০২৬) ────────────
+             * ঘরটা থেকে `required` তুলে নেওয়ার আগে ফাঁকা কোড ফর্ম
+             * থেকেই আসতে পারত না। এখন পারে — আর তখন `trim('')` গিয়ে
+             * **কোডটা মুছে দিত**, নীরবে। তৈরির সময় ফাঁকা মানে "তুমি
+             * বসাও", সম্পাদনার সময় ফাঁকা মানে "হাত দিও না"।
+             */
+            $code = trim((string) ($data['code'] ?? '')) !== ''
+                ? trim((string) $data['code'])
+                : $record->code;
+
+            if ($code !== $record->code) {
+                $this->assertCodeIsFree($record::class, $code, $record->getKey());
+            }
+
+            // ডিফল্ট এখানে বসে না — makeDefault() দিয়ে, নাহলে দুইটা
+            // ডিফল্ট থাকার একটা মুহূর্ত তৈরি হত
+            $wantsDefault = (bool) ($data['is_default'] ?? false);
+            unset($data['is_default']);
+
+            $record->update([...$data, 'code' => $code]);
+
+            $this->afterSave($record, $data);
+
+            if ($wantsDefault) {
+                $record->makeDefault();
+            }
+
+            if ($overridden) {
+                $record->auditAction('overridden', __('master_data::message.duplicate_overridden'));
+            }
+
+            return $record->fresh();
+        });
+    }
+
+    /**
+     * নিষ্ক্রিয় করা — মোছা নয় (নিয়ম ৫)।
+     *
+     * ডিফল্ট রেকর্ড নিষ্ক্রিয় করা যায় না: ডিফল্ট না থাকলে নতুন
+     * লেনদেনে কোনটা বসবে তা নির্ধারিত থাকত না, আর তখন ব্যবহারকারী
+     * প্রতিবার হাতে বাছতে বাধ্য হত — অথচ সে জানত না কেন।
+     */
+    public function deactivate(Model $record): Model
+    {
+        if (($record->is_default ?? false) === true) {
+            throw ValidationException::withMessages([
+                'is_active' => __('master_data::validation.default_cannot_deactivate'),
+            ]);
+        }
+
+        $record->refresh()->forceFill(['is_active' => false])->save();
+
+        return $record->fresh();
+    }
+
+    /**
+     * ফেরার পথ — নিষ্ক্রিয় করা একমুখী দরজা হতে পারে না।
+     *
+     * ── কেন এটা আলাদা করে লিখতে হল ─────────────────────────────────
+     * এতদিন কেবল deactivate ছিল। ভুল করে একটা একক বা কারণ কোড বন্ধ
+     * করে ফেললে ফেরানোর কোনো উপায় ছিল না — তালিকায় সারিটা ধূসর হয়ে
+     * পড়ে থাকত, আর নতুন করে বানাতে গেলে একই কোড দুইবার বসাতে গিয়ে
+     * আটকাত। গুদামে ঠিক এই ফাঁদটাই আগে ধরা পড়েছিল, আর সেখানে ফেরার
+     * পথ বানানো হয়েছিল; এই তালিকাগুলোয় রয়ে গিয়েছিল।
+     *
+     * মুছে ফেলা হয় না, নিষ্ক্রিয় করা হয় — কারণ ব্যবহার হয়ে যাওয়া একটা
+     * একক সত্যিই মুছে দিলে পুরনো প্রতিটা পণ্য, চালান আর বিলের সারি
+     * এমন কিছুর দিকে দেখাত যা আর নেই।
+     */
+    public function activate(Model $record): Model
+    {
+        $record->refresh()->forceFill(['is_active' => true])->save();
+
+        return $record->fresh();
+    }
+
+    /**
+     * মুছে ফেলা — কেবল মালিকের চাবিতে।
+     *
+     * ── নিষ্ক্রিয় করা আর মোছার তফাত ─────────────────────────────────
+     * নিষ্ক্রিয় = তালিকায় থাকে, ধূসর হয়ে; নতুন কাগজে আসে না।
+     * মোছা      = তালিকা থেকেও চলে যায়।
+     *
+     * প্রথমটা রোজকার কাজ (সরবরাহ বন্ধ, ঋতু শেষ)। দ্বিতীয়টা ভুল সংশোধন
+     * — ভুল করে বানানো একটা সারি, যেটা কারো চোখে পড়ারই দরকার নেই।
+     * তাই দ্বিতীয়টার চাবি আলাদা, আর সেটা মালিকের (মালিকের সিদ্ধান্ত,
+     * ২০২৬-০৮-০৯)।
+     *
+     * ── একটাই বোতাম, দুইটা আচরণ ────────────────────────────────────
+     * মালিকের নিয়ম (২০২৬-০৮-০৯): "কোথাও ব্যবহার না হলে হার্ড ডিলিট
+     * হবে, নাহলে ইনঅ্যাকটিভ হবে।"
+     *
+     * ব্যবহার হয়নি → সত্যিই মুছে যায়। ভুল করে বানানো একটা সারি
+     * তালিকায় চিরকাল পড়ে থাকার কোনো কারণ নেই, আর কোনো কাগজ ওটার দিকে
+     * দেখাচ্ছে না বলে হারানোর কিছুও নেই।
+     *
+     * ব্যবহার হয়েছে → নিষ্ক্রিয় হয়, মোছে না। সত্যিকারের মোছা এখানে
+     * নীরবে ক্ষতি করত, আর ডাটাবেজ আটকাত না: `unit_id` ঘোষিত
+     * `nullOnDelete()` দিয়ে, অর্থাৎ একক মুছলে ওটা ব্যবহার করা **প্রতিটা
+     * পণ্যের একক নীরবে খালি হয়ে যেত** — ধরা পড়ত ছয় মাস পর, কোনো চালান
+     * ছাপতে গিয়ে।
+     *
+     * নিষ্ক্রিয় করা বেছে নেওয়া হয়েছে সফট ডিলিটের বদলে, যদিও দুইটাই
+     * মালিক বলেছেন: সফট ডিলিটে সারিটা তালিকা থেকেও হারিয়ে যায়, আর তখন
+     * ওই একক ব্যবহার করা পুরনো পণ্যটা সম্পাদনা করতে গেলে ড্রপডাউনে
+     * এককটাই থাকত না। নিষ্ক্রিয় সারি তালিকায় থাকে, ধূসর হয়ে — পুরনো
+     * কাগজ অক্ষত, নতুন কাগজে আসে না।
+     *
+     * @return bool সত্যিই মুছেছে কি না (মিথ্যা মানে নিষ্ক্রিয় হয়েছে)
+     */
+    public function delete(Model $record): bool
+    {
+        /*
+         * ডিফল্ট সারির নিজের বার্তা।
+         *
+         * আগে নিষ্ক্রিয় করার বার্তাটাই ব্যবহার হত — "The default cannot
+         * be deactivated"। কাজটা ঠিকই আটকাত, কিন্তু মানুষ Delete চেপে
+         * "deactivated" পড়ে ভাবতেন অন্য কিছু ঘটেছে। যে বার্তা যে কাজের
+         * কথা বলে না, সেটা ভুল বার্তা।
+         */
+        if (($record->is_default ?? false) === true) {
+            throw ValidationException::withMessages([
+                'code' => __('master_data::validation.default_cannot_delete'),
+            ]);
+        }
+
+        if ($this->referencesTo($record) !== null) {
+            $this->deactivate($record);
+
+            return false;
+        }
+
+        // forceDelete, delete নয় — মডেলে SoftDeletes আছে, তাই সাধারণ
+        // delete কেবল deleted_at বসাত আর সারিটা টেবিলে থেকেই যেত
+        $record->forceDelete();
+
+        return true;
+    }
+
+    /**
+     * এই সারিটার দিকে কেউ দেখাচ্ছে কি না — দেখালে কোন টেবিল।
+     *
+     * ── তালিকাটা হাতে লেখা নয় ──────────────────────────────────────
+     * কোন কোন টেবিল এই টেবিলটার দিকে দেখায়, সেটা ডাটাবেজকেই জিজ্ঞেস
+     * করা হয়। হাতে লিখলে একদিন নতুন একটা টেবিল যোগ হত আর তালিকাটা
+     * পুরনো থেকে যেত — আর তখন পাহারাটা **থাকা অবস্থাতেই** ডাটা নষ্ট
+     * হত, যা পাহারা না থাকার চেয়েও খারাপ: সবাই ভাবত পাহারা আছে।
+     *
+     * @return string|null প্রথম যে টেবিলে ব্যবহার পাওয়া গেল
+     */
+    private function referencesTo(Model $record): ?string
+    {
+        $links = DB::select(
+            'SELECT TABLE_NAME AS child, COLUMN_NAME AS child_column
+               FROM information_schema.KEY_COLUMN_USAGE
+              WHERE TABLE_SCHEMA = DATABASE()
+                AND REFERENCED_TABLE_NAME = ?',
+            [$record->getTable()],
+        );
+
+        foreach ($links as $link) {
+            if (DB::table($link->child)->where($link->child_column, $record->getKey())->exists()) {
+                return $link->child;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * প্রতিটা মাস্টারের নিজস্ব যাচাই — সংরক্ষণের পর।
+     *
+     * @param  array<string, mixed>  $data
+     */
+    private function afterSave(Model $record, array $data): void
+    {
+        if ($record instanceof Unit) {
+            $this->assertUnitHasNoCycle($record);
+        }
+
+        if ($record instanceof Tax) {
+            $this->assertRateIsSane($record);
+        }
+
+        /*
+         * ⛔ পদ্ধতির ধরন আর খাতের ধরন এক — ২৭ সেপ্টেম্বর ২০২৬।
+         *
+         * ⚠️ আগে প্রতিটা ঘর আলাদা করে দেখা হত (`Rule::in`), জোড়াটা নয় —
+         * "নগদ" পদ্ধতি বিকাশের খাতে বাঁধা যেত, আর কাউন্টারে ক্যাশিয়ার
+         * "নগদ" চাপলে টাকা বসত বিকাশে। ⓘ নিয়মটা এক জায়গায়
+         * ([[MethodFitsAccount]]); কাউন্টার আর সরাসরি বিক্রয়ও ওটাই ডাকে।
+         */
+        if ($record instanceof PaymentMethod && $record->account_id !== null) {
+            $account = Account::query()->find($record->account_id);
+
+            if ($account !== null) {
+                app(MethodFitsAccount::class)->assert($account, $record, 'account_id');
+            }
+        }
+    }
+
+    /**
+     * একক নিজের ভিত্তি হতে পারে না, ঘুরেও নয়।
+     *
+     * "কার্টন = ১২ পিস, পিস = ০.০৮ কার্টন" লিখতে দিলে toBase() কখনো
+     * থামত না। সেখানে গভীরতার সীমা আছে বটে, কিন্তু সীমা দিয়ে ভুল
+     * ঢাকা হয় — এখানে ভুলটাই ঠেকানো হয়।
+     */
+    private function assertUnitHasNoCycle(Unit $unit): void
+    {
+        $seen = [$unit->id];
+        $node = $unit->baseUnit;
+
+        while ($node !== null) {
+            if (in_array($node->id, $seen, true)) {
+                throw ValidationException::withMessages([
+                    'base_unit_id' => __('master_data::validation.unit_cycle'),
+                ]);
+            }
+
+            $seen[] = $node->id;
+            $node = $node->baseUnit;
+        }
+
+        /*
+         * খালি রূপান্তরকে ১ ধরা হয়, ছোড়া হয় না।
+         *
+         * আগে সরাসরি bccomp((string) $unit->factor, ...) ডাকা হত। খালি
+         * হলে সেটা bccomp('') হয়ে যেত, আর PHP 8 ওতে ValueError ছোড়ে —
+         * ভ্যালিডেশনের বার্তা নয়, সাদা ৫০০।
+         *
+         * "রূপান্তর বলা হয়নি" মানে "১" — এই এককই মূল একক। ওটাই ধরে
+         * নেওয়া হয়, কারণ অন্য কোনো অর্থ হয় না।
+         */
+        $factor = trim((string) $unit->factor);
+
+        if ($factor === '') {
+            $unit->forceFill(['factor' => 1])->save();
+
+            return;
+        }
+
+        if (bccomp($factor, '0', 6) <= 0) {
+            throw ValidationException::withMessages([
+                'factor' => __('master_data::validation.factor_must_be_positive'),
+            ]);
+        }
+    }
+
+    /**
+     * করের হার ০ থেকে ১০০-র মধ্যে।
+     *
+     * ১০০-র বেশি হার গাণিতিকভাবে সম্ভব, ব্যবসায়িকভাবে নয় — আর
+     * দামের ভেতরের করে ১০০% মানে শূন্য দিয়ে ভাগ।
+     */
+    private function assertRateIsSane(Tax $tax): void
+    {
+        if (bccomp((string) $tax->rate, '0', 4) < 0 || bccomp((string) $tax->rate, '100', 4) >= 0) {
+            throw ValidationException::withMessages([
+                'rate' => __('master_data::validation.rate_out_of_range'),
+            ]);
+        }
+    }
+
+    /**
+     * @param  class-string<Model>  $model
+     */
+    private function assertCodeIsFree(string $model, string $code, int|string|null $exceptId = null): void
+    {
+        if ($code === '') {
+            throw ValidationException::withMessages([
+                'code' => __('master_data::validation.code_required'),
+            ]);
+        }
+
+        $taken = $model::query()
+            ->where('code', $code)
+            ->when($exceptId, fn ($q, $id) => $q->whereKeyNot($id))
+            ->withTrashed()
+            ->exists();
+
+        if ($taken) {
+            throw ValidationException::withMessages([
+                'code' => __('master_data::validation.code_taken', ['code' => $code]),
+            ]);
+        }
+    }
+
+    /**
+     * প্রমিত তালিকাগুলো — নতুন কোম্পানির শুরুর অবস্থা।
+     *
+     * এগুলো ছাড়া প্রথম বিলটাই লেখা যায় না: একক নেই মানে পরিমাণের
+     * কোনো এককই নেই, শর্ত নেই মানে বকেয়ার তারিখ নেই। খালি রেখে
+     * "ব্যবহারকারী নিজে বানাবে" বলাটা কাজ ঠেলে দেওয়া, নকশা নয়।
+     *
+     * @return array<string, int>
+     */
+    /**
+     * যে তালিকাগুলোর প্রমিত সারি আছে — `installDefaults()` ঠিক এগুলোই বসায়।
+     *
+     * ── কেন এই ঘোষণাটা লাগল ─────────────────────────────────────────
+     * পর্দাটা সতেরোটা তালিকা দেখায়, আর "প্রমিত তালিকা বসান" বোতামটা
+     * উঠত **যেকোনো** খালি তালিকায়। কিন্তু নিচের পদ্ধতি বসায় ছয়টা।
+     * বাকি এগারোটায় বোতামটা এসে **কিছুই করত না**।
+     *
+     * ধরা পড়েছে ২৫ আগস্ট ২০২৬: Brands-এর পর্দায় লেখা উঠেছিল
+     * *"তালিকাগুলো এখনো খালি — একক, কর, শর্ত ও কারণ কোড ছাড়া প্রথম
+     * বিলটাই লেখা যায় না"*, অথচ এককে ছয়টা, করে চারটা, শর্তে চারটা
+     * সারি বসে আছে। বার্তাটা মিথ্যা বলছিল, আর বোতামটা অকেজো ছিল।
+     *
+     * কোডের ঠিক উপরে মন্তব্যে নিয়মটা লেখাই ছিল — "একটাও খালি না হলে
+     * নয়, নাহলে বোতামটা কিছুই করত না" — কিন্তু কোড সেটা মানত না।
+     *
+     * ── যে চারটা এখানে নেই ──────────────────────────────────────────
+     * `cost-centers`, `brands`, `product-categories`, `vehicles` —
+     * এগুলোর কোনো প্রমিত সারি নেই, আর থাকার কথাও নয়: ব্র্যান্ড, শ্রেণি
+     * ও খরচ-কেন্দ্র প্রতিটা ব্যবসার নিজের।
+     *
+     * তাই ওই চারটায় খালি অবস্থাই স্বাভাবিক, আর প্রস্তাবটা আসে না।
+     *
+     * ⚠️ **`payment-methods` এখানে ছিল, আর যুক্তিটা ছিল**: *"কোন হিসাবের
+     * খাতে বসবে তা কোম্পানি ছাড়া কেউ জানে না"*। আপত্তিটা ঠিক ছিল, কিন্তু
+     * উপসংহারটা নয় — ⭐ **উপায় আর খাত দুইটা আলাদা প্রশ্ন**: সারিটা বলে
+     * *টাকা কীভাবে এল*, খাত বলে *কোথায় গেল*। খাতটা খালি রেখে সারিগুলো
+     * দেওয়া যায়, আর কাউন্টারের পর্দা খাতটা নিজেই জিজ্ঞেস করে।
+     *
+     * ⚠️ খালি রাখার দাম মাপা গেছে (৪ সেপ্টেম্বর ২০২৬): সরাসরি বিক্রয়ের
+     * জমার ঘরে "Method" আর "Reference" **চিরকাল ফাঁকা** থাকত, কারণ
+     * বাছার মতো একটা সারিও নেই — অর্থাৎ চেকের নম্বর বা bKash-এর TrxID
+     * লেখার জায়গাই খুলত না, আর মাস শেষে ব্যাংকের কাগজের সাথে মেলানো
+     * যেত না।
+     *
+     * ── কেন এটা হাতে লেখা তালিকা, তবু নিরাপদ ────────────────────────
+     * `AButtonThatOfferedToInstallNothingTest` ঘোষণাটা পড়ে না — সে
+     * সত্যিই বোতামটা চেপে দেখে কারা ভরে, তারপর মেলায়। প্রথম রানেই
+     * সে আমার লেখা ছয়টার তালিকা ভুল প্রমাণ করেছে: আসলে এগারোটা।
+     *
+     * @var list<string>
+     */
+    public const HAS_DEFAULTS = [
+        'units', 'taxes', 'payment-terms', 'party-types', 'price-lists',
+        'reason-codes', 'currencies', 'departments', 'designations',
+        'employment-types', 'vehicle-types', 'payment-methods', 'transfer-modes',
+        'sales-channels',
+    ];
+
+    public function installDefaults(): array
+    {
+        $made = [];
+
+        $made['units'] = $this->seed(Unit::class, [
+            /*
+             * ⚠️ 'pcs', not 'Piece' — the owner's instruction (3 Sep 2026):
+             * *"Piece = pcs"*.
+             *
+             * The unit's name is not read on its own; it is read **after a
+             * number**, in the tightest row on the busiest screen —
+             * "Available 1775 pcs". A trade document has said "pcs" for a
+             * century, and the full word cost four extra characters in the
+             * one place where width is scarcest.
+             *
+             * ⓘ This is only the **starting** row a new company gets. Units
+             * are settings rows, so any buyer can rename it — which is why
+             * the change is here and not hardcoded on the screen.
+             *
+             * ⓘ The other five still carry full words; the owner named this
+             * one. Shortening the rest is his call, not a tidy-up.
+             */
+            ['PCS', 'pcs', 'পিস', ['factor' => 1]],
+            ['DOZ', 'Dozen', 'ডজন', ['factor' => 12]],
+            ['CTN', 'Carton', 'কার্টন', ['factor' => 1]],
+            ['KG', 'Kilogram', 'কেজি', ['factor' => 1, 'allows_fraction' => true]],
+            ['LTR', 'Litre', 'লিটার', ['factor' => 1, 'allows_fraction' => true]],
+            ['BAG', 'Bag', 'বস্তা', ['factor' => 1]],
+        ]);
+
+        /*
+         * ⭐ ডজন = ১২ পিস — সত্যিই জোড়া, ১৯ সেপ্টেম্বর ২০২৬।
+         *
+         * ⛔ উপরের সারিতে ডজনের factor ১২ লেখা থাকত, কিন্তু base কিছু নয় —
+         * অর্থাৎ "১২ কিসের?" প্রশ্নের উত্তর ছিল না, আর রূপান্তর কোথাও
+         * কাজ করত না। লাইভের প্রতিটা কোম্পানিতে ঠিক এই অবস্থা পাওয়া গেছে।
+         *
+         * ⓘ base-টা এখানে, সারির ভেতরে নয়: পিসের id সারিগুলো তৈরির পরেই
+         * জানা যায়। পুরনো কোম্পানির জন্য একই কাজ `abos:packs-backfill`।
+         */
+        $piece = Unit::query()->where('code', 'PCS')->first();
+        $dozen = Unit::query()->where('code', 'DOZ')->whereNull('base_unit_id')->first();
+
+        if ($piece !== null && $dozen !== null) {
+            $dozen->forceFill(['base_unit_id' => $piece->id])->save();
+        }
+
+        /*
+         * টাকা কীভাবে এল — চারটা, আর এই চারটাই বাংলাদেশে যথেষ্ট শুরু।
+         *
+         * ⓘ `account_id` ইচ্ছাকৃতভাবে খালি: কোন হিসাবের খাতে বসবে সেটা
+         * কোম্পানির নিজের সিদ্ধান্ত, আর কাউন্টারের পর্দা প্রতিবার খাতটা
+         * জিজ্ঞেসও করে। সেটিংসে একবার বসিয়ে দিলে পর্দায় আপনা থেকে আসে।
+         *
+         * ⚠️ নগদ ছাড়া বাকি তিনটায় `needs_reference` — চেকের নম্বর,
+         * TrxID, বা ব্যাংকের রেফারেন্স ছাড়া **টাকাটা আর খুঁজে পাওয়া যায়
+         * না**, আর মাস শেষে ব্যাংকের কাগজের সাথে মেলানোও যায় না।
+         *
+         * ⓘ তালিকাটা খোলা — কোম্পানি bKash, নগদ, রকেট আলাদা করে যোগ
+         * করতে পারে; এগুলো সারি, কোডের ধ্রুবক নয়।
+         */
+        $made['payment-methods'] = $this->seed(PaymentMethod::class, [
+            ['CASH', 'Cash', 'নগদ', ['kind' => 'cash', 'is_default' => true]],
+            ['CHQ', 'Cheque', 'চেক', ['kind' => 'cheque', 'needs_reference' => true]],
+            ['BANK', 'Bank transfer', 'ব্যাংক ট্রান্সফার', ['kind' => 'bank', 'needs_reference' => true]],
+            // ⓘ MFS — নামটা দুই ভাষাতেই "MFS" (acronym), বাংলা বানান নয়:
+            // বিকাশ-নগদের জগতে ওটা এভাবেই পড়া হয়, আর accounts::instrument-এর
+            // লেবেলটাও এখন এক (দুই জায়গায় দুই নাম হলে কাগজে অমিল হত)।
+            ['MFS', 'MFS', 'MFS', ['kind' => 'mfs', 'needs_reference' => true]],
+        ]);
+
+        $made['taxes'] = $this->seed(Tax::class, [
+            // বাংলাদেশের প্রচলিত হারগুলো — ব্যবসা নিজের হার যোগ করবে
+            ['VAT15', 'VAT 15%', 'ভ্যাট ১৫%', ['rate' => 15, 'kind' => 'vat']],
+            ['VAT75', 'VAT 7.5%', 'ভ্যাট ৭.৫%', ['rate' => 7.5, 'kind' => 'vat']],
+            ['VAT5', 'VAT 5%', 'ভ্যাট ৫%', ['rate' => 5, 'kind' => 'vat']],
+            ['NIL', 'No VAT', 'ভ্যাট নেই', ['rate' => 0, 'kind' => 'vat']],
+        ]);
+
+        /*
+         * ⭐ মাস-শেষ ও বছর-শেষ — মালিকের নির্দেশ, ১৬ সেপ্টেম্বর ২০২৬।
+         *
+         * ── ⚠️ কেন `days` শূন্য, ৩০ বা ৩৬৫ নয় ───────────────────────
+         * বাকি চারটা শর্ত বলে *"বিলের N দিন পরে"*। ⛔ কিন্তু "মাসের শেষ"
+         * N দিন পরে নয়, একটা **ঘটনা** — ১ তারিখের বিলে সেটা ৩০ দিন, আর
+         * ২৮ তারিখের বিলে ২ দিন।
+         *
+         * ⛔ তাই `days => 30` বসালে তালিকায় নামটা ঠিক দেখাত আর তারিখটা
+         * নীরবে ভুল হত। ⓘ শূন্য মানে "দিন দিয়ে এটা মাপা যায় না", আর
+         * সেটাই সৎ উত্তর।
+         *
+         * ── ⓘ শূন্য বসানোর একটা বাড়তি লাভও আছে ──────────────────────
+         * [[App\Modules\Purchase\Http\Controllers\DirectPurchaseController]]
+         * ক্রয়ের পর্দায় বাকির তালিকা বানানোর সময় `days <= 0` সারিগুলো
+         * **বাদ দেয়**। ⭐ তাই এই দুইটা ওখানে "০ দিনের বাকি" নামে একটা
+         * অর্থহীন বিকল্প হয়ে বসবে না। ⓘ ঐ পর্দায় `month_end` আচরণটা
+         * আগে থেকেই কোডে আছে, আলাদা করে।
+         *
+         * ── ⓘ সরবরাহকারীর দিকে এটা কী করে ───────────────────────────
+         * `suppliers.payment_term_id` কেবল **রাখা ও দেখানো** হয় — মেপে
+         * দেখা, কোথাও কোনো দেয়-তারিখ এটা থেকে হিসাব হয় না। ⭐ তাই এই
+         * দুইটা সারি যোগ করা নিরাপদ: কোনো পুরনো হিসাব বদলায় না।
+         */
+        $made['terms'] = $this->seed(PaymentTerm::class, [
+            ['CASH', 'Cash', 'নগদ', ['days' => 0]],
+            ['NET7', '7 days', '৭ দিন', ['days' => 7]],
+            ['NET15', '15 days', '১৫ দিন', ['days' => 15]],
+            ['NET30', '30 days', '৩০ দিন', ['days' => 30]],
+            ['MONTH_END', 'Month closing', 'মাস শেষে', ['days' => 0]],
+            ['YEAR_END', 'Yearly closing', 'বছর শেষে', ['days' => 0]],
+        ]);
+
+        /*
+         * পক্ষের ধরন — মালিকের চূড়ান্ত তালিকা, ৪ সেপ্টেম্বর ২০২৬।
+         *
+         * ── গ্রাহকের দিকে: একটা সিঁড়ি ─────────────────────────────────
+         * পরিবেশক → পাইকারি → খুচরা → ভোক্তা; প্রত্যেকে পরেরজনের কাছে বেচেন,
+         * শেষজন (ভোক্তা) আর বেচেন না। **ডিফল্ট পরিবেশক** — এটা পরিবেশক ডিপো,
+         * দিনের প্রায় প্রতিটা গ্রাহকই পরিবেশক; খুচরা ডিফল্ট হলে প্রতিবার ঘরটা
+         * বদলাতে হত, আর ভুললে গ্রাহক ভুল শ্রেণিতে বসত।
+         * ⓘ ভোক্তা (CONSUMER) — POS-এর "নগদ গ্রাহক" সারিটা এই ধরনের।
+         *
+         * ── দুই দিকেই: প্রতিষ্ঠান ──────────────────────────────────────
+         * স্কুল/হাসপাতাল/অফিস আমাদের কাছ থেকে কেনে (গ্রাহক), আবার সেবা বেচতেও
+         * পারে (সরবরাহকারী) — তাই BOTH, দুই তালিকাতেই দেখা যায়।
+         *
+         * ── সরবরাহকারী ও ভেন্ডরের দিকে ─────────────────────────────────
+         * সবাই সরবরাহকারী (হিসাব চলতি, drill সরবরাহকারীর যন্ত্রেই); কেবল
+         * শ্রেণি আলাদা, `suppliers.party_type_id` ধরে ছাঁকা যায়।
+         *
+         * ⚠️ কোড একবার বসলে বদলায় না (অনুমতি/রিপোর্ট কোড ধরে চেনে); নাম
+         * যেকোনো দিন বদলানো যায়। তালিকা খোলা — ক্রেতা নতুন ধরন যোগ করতে পারেন।
+         */
+        $made['party_types'] = $this->seed(PartyType::class, [
+            // গ্রাহকের সিঁড়ি
+            ['DISTRIB', 'Distributor', 'পরিবেশক', ['applies_to' => PartyType::CUSTOMER, 'is_default' => true]],
+            ['WHOLE', 'Wholesaler', 'পাইকারি বিক্রেতা', ['applies_to' => PartyType::CUSTOMER]],
+            ['RETAIL', 'Retailer', 'খুচরা বিক্রেতা', ['applies_to' => PartyType::CUSTOMER]],
+            ['CONSUMER', 'Consumer', 'ভোক্তা', ['applies_to' => PartyType::CUSTOMER]],
+
+            // দুই দিকেই
+            ['INST', 'Institution', 'প্রতিষ্ঠান', ['applies_to' => PartyType::BOTH]],
+
+            // সরবরাহকারী ও ভেন্ডর
+            // ⭐ মালিক, ৬ অক্টোবর ২০২৬: "প্রিন্সিপাল শুধু ম্যানুফ্যাকচারারের জন্য, ডিপোর জন্য; সাধারণ সরবরাহকারী সেবাদাতায়"।
+            // ⓘ কোড VENDOR থাকে (মূল সরবরাহকারী তালিকা এই কোড ধরে চেনে — [[Supplier::VENDOR_CODE]]), নাম প্রিন্সিপাল।
+            ['VENDOR', 'Principal', 'প্রিন্সিপাল', ['applies_to' => PartyType::SUPPLIER]],
+            ['GENERAL', 'Supplier', 'সরবরাহকারী', ['applies_to' => PartyType::SUPPLIER]],
+            ['TRANSPORT', 'Transport Vendor', 'পরিবহনকারী', ['applies_to' => PartyType::SUPPLIER]],
+            ['LABOUR', 'Labour Contractor', 'হাম্মালি ঠিকাদার', ['applies_to' => PartyType::SUPPLIER]],
+            ['COURIER', 'Courier', 'কুরিয়ার', ['applies_to' => PartyType::SUPPLIER]],
+            ['SERVICE', 'Service Provider', 'সার্ভিস প্রোভাইডার', ['applies_to' => PartyType::SUPPLIER]],
+        ]);
+
+        $made['price_lists'] = $this->seed(PriceList::class, [
+            ['RETAIL', 'Retail Price', 'খুচরা দর', []],
+            ['WHOLE', 'Wholesale Price', 'পাইকারি দর', []],
+        ]);
+
+        $made['reasons'] = $this->seed(ReasonCode::class, self::reasonRows());
+
+        /*
+         * মুদ্রা ও গাড়ির ধরন — সুইচ বন্ধ থাকলেও বসে।
+         *
+         * সুইচ খোলার দিনটা তালিকা বানানোর দিন হওয়া উচিত নয়: যে
+         * প্রতিষ্ঠান আজ ডলারে বিল করতে শুরু করল, তাকে প্রথমে "টাকা"
+         * নামের একটা সারি হাতে বানাতে বললে কাজটা সেখানেই থামত।
+         *
+         * টাকাই ডিফল্ট — ভিত্তি মুদ্রা, আর বাকি সবার হার এর সাপেক্ষে।
+         */
+        /*
+         * ভিত্তি মুদ্রা — কোম্পানি যেটা বলেছে, নাহলে টাকা।
+         *
+         * ── কেন কোম্পানির ঘরটা পড়া হয়, ৪ সেপ্টেম্বর ২০২৬ ─────────────
+         * `companies.currency` কলামটা শুরু থেকেই ছিল আর `'BDT'` ডিফল্ট
+         * নিয়ে বসত, কিন্তু **কেউ ওটা পড়ত না** — ভিত্তি মুদ্রা এখানে
+         * কোড ধরে খোঁজা হত। অর্থাৎ সেটআপে মুদ্রার ঘর বসালে সেটা এমন
+         * একটা কলামে লিখত যা কারও কাজে লাগে না: পর্দায় পছন্দ নেওয়া হত,
+         * আর বই চলত টাকায়। ঘরটা কাজ করত বলে মনে হত, করত না।
+         *
+         * এখন ওই কলামটাই সূত্র। ⚠️ আর এটা সাজসজ্জা নয় — প্রতিটা
+         * বিনিময় হার ভিত্তি মুদ্রার সাপেক্ষে বসে ([[Currency::rateOn()]]),
+         * তাই ভুল ভিত্তি মানে প্রতিটা রূপান্তর ভুল।
+         *
+         * ⚠️ চিহ্নটা `seed()`-কেই দেওয়া হয়, পরে শুধরে নয়। `seed()` নিজেই
+         * ডিফল্ট বসায় — কেউ `is_default` না বললে **প্রথম সারিটা**। তাই
+         * বসানোর পর "কেউ ডিফল্ট না থাকলে বসাব" লিখলে শর্তটা কোনোদিন
+         * সত্যি হত না, আর ভিত্তি চিরকাল টাকাই থাকত। ⓘ ঠিক এই ভুলটা
+         * প্রথমে লেখা হয়েছিল, আর টেস্ট ধরিয়ে দিয়েছে।
+         */
+        $wanted = Company::find(CompanyContext::id())?->currency ?: 'BDT';
+
+        $currencies = array_map(
+            static function (array $row) use ($wanted): array {
+                if ($row[0] === $wanted) {
+                    $row[3]['is_default'] = true;
+                }
+
+                return $row;
+            },
+            self::CURRENCIES,
+        );
+
+        $made['currencies'] = $this->seed(Currency::class, $currencies);
+
+        /*
+         * প্রতিষ্ঠানের গড়ন।
+         *
+         * প্রথম কর্মীটা যোগ করার সময় বিভাগ ও পদবির ঘর খালি থাকলে কাজটা
+         * সেখানেই থামত — আর মানুষ তখন "সাধারণ" নামে একটা বিভাগ বানিয়ে
+         * সবাইকে তাতে ফেলে দিত, যা পরে আর ঠিক হত না।
+         */
+        $made['departments'] = $this->seed(Department::class, [
+            ['SALES', 'Sales', 'বিক্রয়', []],
+            ['STORE', 'Warehouse', 'গুদাম', []],
+            ['ACCT', 'Accounts', 'হিসাব', []],
+            ['ADMIN', 'Administration', 'প্রশাসন', []],
+            ['DELIV', 'Delivery', 'সরবরাহ', []],
+        ]);
+
+        $made['designations'] = $this->seed(Designation::class, [
+            ['MGR', 'Manager', 'ব্যবস্থাপক', []],
+            ['ASTMGR', 'Assistant Manager', 'সহকারী ব্যবস্থাপক', []],
+            ['SR', 'Sales Representative', 'বিক্রয় প্রতিনিধি', []],
+            ['STOREKP', 'Storekeeper', 'গুদামরক্ষী', []],
+            ['ACCT', 'Accountant', 'হিসাবরক্ষক', []],
+            ['DRIVER', 'Driver', 'চালক', []],
+            ['HELPER', 'Helper', 'সহকারী', []],
+        ]);
+
+        /*
+         * দৈনিক কর্মী আলাদা: তার বেতন হাজিরার সাথে বাঁধা, মাসের সাথে নয়।
+         * তাই ধরনটা কেবল একটা লেবেল নয়, বেতনের হিসাবের শর্ত।
+         */
+        $made['employment_types'] = $this->seed(EmploymentType::class, [
+            ['PERM', 'Permanent', 'স্থায়ী', []],
+            ['PROB', 'Probation', 'শিক্ষানবিশ', []],
+            ['CONTRACT', 'Contract', 'চুক্তিভিত্তিক', []],
+            ['DAILY', 'Daily wage', 'দৈনিক মজুরি', []],
+            ['PART', 'Part time', 'খণ্ডকালীন', []],
+        ]);
+
+        $made['vehicle_types'] = $this->seed(VehicleType::class, [
+            ['TRUCK', 'Truck', 'ট্রাক', []],
+            ['PICKUP', 'Pickup', 'পিকআপ', []],
+            ['VAN', 'Van', 'ভ্যান', []],
+            ['CNG', 'CNG / Auto', 'সিএনজি', []],
+            ['RICKSHAW', 'Rickshaw Van', 'রিকশা ভ্যান', []],
+            ['BOAT', 'Boat', 'নৌকা', []],
+        ]);
+
+        /*
+         * টাকা কোন মাধ্যমে সরল — বাংলাদেশের প্রচলিত ব্যাংক-চ্যানেলগুলো।
+         *
+         * ⓘ ছয়টাই `applies_to='bank'`: আজকের মাধ্যমগুলো ব্যাংকের। MFS-এর
+         * নিজের মাধ্যম (Send Money · Payment · Cash Out) কোম্পানি পরে
+         * `applies_to='mfs'` দিয়ে সারি যোগ করে নিতে পারে — তালিকা খোলা।
+         */
+        $made['transfer-modes'] = $this->seed(TransferMode::class, [
+            ['ONLINE', 'Online / In-house', 'অনলাইন / একই ব্যাংক', ['applies_to' => 'bank']],
+            ['NPSB', 'NPSB', 'এনপিএসবি', ['applies_to' => 'bank']],
+            ['BEFTN', 'BEFTN', 'বিইএফটিএন', ['applies_to' => 'bank']],
+            ['RTGS', 'RTGS', 'আরটিজিএস', ['applies_to' => 'bank']],
+            ['DEPOSIT', 'Cash / Cheque deposit', 'নগদ / চেক জমা', ['applies_to' => 'bank']],
+            ['PO_DD', 'Pay Order / Demand Draft', 'পে-অর্ডার / ডিমান্ড ড্রাফট', ['applies_to' => 'bank']],
+        ]);
+
+        /*
+         * ⭐ বিক্রয়ের পথ — NEXUS §২৮। যোগমুখী (যা নেই কেবল তা), তাই
+         * seed()-এর "একটাও থাকলে থামো" নিয়ম এখানে খাটে না।
+         * ⓘ app() দিয়ে, কনস্ট্রাক্টরে নয় — ওটা এই সার্ভিসটাই চায়, চক্র হত।
+         */
+        $made['sales-channels'] = app(\App\Modules\MasterData\Services\SalesChannelDefaults::class)->installMissing();
+
+        $this->linkIssueReasonsToAccounts();
+
+        return $made;
+    }
+
+    /**
+     * বিক্রি ছাড়া মাল বেরোনোর কারণগুলোকে তাদের খাতে জোড়া।
+     *
+     * ── কেন এটা seed()-এর ভেতরে নয় ─────────────────────────────────
+     * seed() কোড আর নাম নিয়ে কাজ করে; খাতের id সে জানে না, আর জানার
+     * কথাও নয় — খাতগুলো তৈরি হয় ছক বসার সময়, যেটা আলাদা একটা ধাপ
+     * (CompanyProvisioner: series → chart → lists)।
+     *
+     * খাত না পেলে কারণটা জোড়াহীন থেকে যায়, আর তখন মাল বেরোলে টাকাটা
+     * মজুদ ঘাটতিতে যাবে — ভুল জায়গা, কিন্তু হিসাব তবু মেলে। চুপচাপ
+     * একটা খাত বানিয়ে ফেলার চেয়ে সেটাই ভালো: ছকটা প্রতিষ্ঠানের নিজের,
+     * আর কোন খরচ কোন খাতে যাবে তা তারাই ঠিক করে।
+     */
+    private function linkIssueReasonsToAccounts(): void
+    {
+        $map = [
+            'ENTERTAIN' => StandardChart::ENTERTAINMENT,
+            'GIFT' => StandardChart::GIFTS_AND_DONATIONS,
+            'OWNUSE' => StandardChart::DRAWINGS,
+            'SAMPLE' => StandardChart::MARKETING,
+        ];
+
+        foreach ($map as $code => $accountCode) {
+            $reason = ReasonCode::query()
+                ->where('code', $code)
+                ->whereNull('account_id')
+                ->first();
+
+            if ($reason === null) {
+                continue;
+            }
+
+            $account = Account::query()->postable()->where('code', $accountCode)->first();
+
+            if ($account !== null) {
+                $reason->forceFill(['account_id' => $account->id])->save();
+            }
+        }
+    }
+
+    /**
+     * @param  class-string<Model>  $model
+     * @param  list<array{0:string,1:string,2:string,3:array<string,mixed>}>  $rows
+     */
+    /**
+     * ⭐ কারণ কোডের আদি তালিকা — এক জায়গায়, ২৫ সেপ্টেম্বর ২০২৬।
+     *
+     * ── ⛔ কেন আলাদা পদ্ধতিতে সরানো হলো ──────────────────────────────
+     * তালিকাটা [[installDefaults()]]-এর ভিতরে লেখা ছিল, আর ওটা চলে
+     * **কেবল নতুন কোম্পানি বসানোর সময়**। ⚠️ ফলে পরে যোগ করা কোনো কারণ
+     * চলমান কোম্পানিতে কোনোদিন পৌঁছাত না — [[seed()]] শুরুতেই থামে যদি
+     * তালিকায় একটাও সারি থাকে।
+     *
+     * ⓘ একই ভুল ছকে ও অনুমতিতে আগে দুইবার হয়েছে
+     * ([[SyncChart]], [[SyncPermissions]])। এটা তৃতীয়বার, আর এবার
+     * তালিকাটা দুই জায়গা থেকে পড়া যায়।
+     *
+     * @return list<array{0: string, 1: string, 2: string, 3: array<string, mixed>}>
+     */
+    public static function reasonRows(): array
+    {
+        return [
+            ['DAMAGE', 'Damaged goods', 'ক্ষতিগ্রস্ত পণ্য',
+                ['context' => ReasonCode::SALES_RETURN, 'returns_to_stock' => false]],
+            ['EXPIRED', 'Expired', 'মেয়াদোত্তীর্ণ',
+                ['context' => ReasonCode::SALES_RETURN, 'returns_to_stock' => false, 'needs_lot' => true]],
+            ['WRONG', 'Wrong item delivered', 'ভুল পণ্য দেওয়া হয়েছে',
+                ['context' => ReasonCode::SALES_RETURN, 'returns_to_stock' => true]],
+            ['UNSOLD', 'Not sold', 'বিক্রি হয়নি',
+                ['context' => ReasonCode::SALES_RETURN, 'returns_to_stock' => true]],
+            ['COUNT', 'Counting difference', 'গণনার পার্থক্য',
+                ['context' => ReasonCode::STOCK_ADJUSTMENT, 'returns_to_stock' => true]],
+            ['LOST', 'Lost or stolen', 'হারানো বা চুরি',
+                ['context' => ReasonCode::STOCK_ADJUSTMENT, 'returns_to_stock' => false,
+                    'needs_approval' => true]],
+            ['MISTAKE', 'Entry mistake', 'এন্ট্রির ভুল',
+                ['context' => ReasonCode::CANCELLATION, 'returns_to_stock' => true]],
+
+            /*
+             * বিক্রি ছাড়া মাল বেরোনোর তিনটা কারণ, তিনটা আলাদা খাত।
+             *
+             * খাতগুলো এখানে বসে না — কোড থেকে খাতের id জানা যায় না, আর
+             * প্রতিষ্ঠানভেদে খরচের খাত আলাদাও হতে পারে। বসানো হয় ছক
+             * ইনস্টল হওয়ার পর (CompanyProvisioner-এর ক্রম), আর সেটাই
+             * ReasonCode::linkStandardAccounts() করে।
+             *
+             * তৃতীয়টার খাত ৩২০০ উত্তোলন — খরচ নয়। মালিকের নিজের
+             * ব্যবহারকে খরচ লিখলে ব্যবসার মুনাফা কম দেখায় আর বছরশেষে
+             * কে কত নিল তা বলার উপায় থাকে না।
+             */
+            ['ENTERTAIN', 'Office entertainment', 'অফিসের আপ্যায়ন',
+                ['context' => ReasonCode::STOCK_ISSUE, 'returns_to_stock' => false]],
+            ['GIFT', 'Gift given', 'উপহার দেওয়া হয়েছে',
+                ['context' => ReasonCode::STOCK_ISSUE, 'returns_to_stock' => false,
+                    'needs_approval' => true]],
+            ['OWNUSE', 'Owner personal use', 'মালিকের ব্যক্তিগত ব্যবহার',
+                ['context' => ReasonCode::STOCK_ISSUE, 'returns_to_stock' => false,
+                    'needs_approval' => true]],
+            ['SAMPLE', 'Sample given', 'নমুনা দেওয়া হয়েছে',
+                ['context' => ReasonCode::STOCK_ISSUE, 'returns_to_stock' => false]],
+
+            /*
+             * মাল আটকে রাখার কারণ — তিনটা, আর তৃতীয়টা বাকি দুইটার মতো নয়।
+             *
+             * প্রথম দুইটা সমস্যা: মাল নষ্ট, বা ফেরত এসেছে আর দেখা হয়নি।
+             * তৃতীয়টা সিদ্ধান্ত — মালিক দাম বাড়ার অপেক্ষায় মাল ছাড়ছেন না।
+             * একই "আটকানো" সংখ্যার নিচে তিনটাই থাকে, তাই কারণ আলাদা না
+             * রাখলে "৪০ বস্তা আটকানো" দেখে মালিক ভাবতেন তার মালে সমস্যা,
+             * অথচ ৩৫ বস্তা তিনি নিজেই আটকে রেখেছেন।
+             *
+             * এই তিনটা না থাকলে আটকানোর ফর্মের কারণের ঘর ফাঁকা থাকত, আর
+             * কারণ ছাড়া আটকানো যায় না — মানে সুবিধাটাই অচল থাকত।
+             */
+            ['HOLD-DMG', 'Damaged, awaiting decision', 'ক্ষতিগ্রস্ত, সিদ্ধান্তের অপেক্ষায়',
+                ['context' => ReasonCode::HOLD, 'returns_to_stock' => false]],
+            ['HOLD-RET', 'Returned, awaiting check', 'ফেরত এসেছে, যাচাইয়ের অপেক্ষায়',
+                ['context' => ReasonCode::HOLD, 'returns_to_stock' => true]],
+            ['HOLD-PRICE', 'Held back for a better price', 'দাম বাড়ার অপেক্ষায় আটকানো',
+                ['context' => ReasonCode::HOLD, 'returns_to_stock' => true]],
+
+            /*
+             * ⭐ চতুর্থটা — বাতিল, ২৪ সেপ্টেম্বর ২০২৬।
+             *
+             * ── ⓘ কেন এটা তিনটার সাথে ছিল না ───────────────────────
+             * উপরের তিনটা **অপেক্ষার** কারণ: সিদ্ধান্ত এখনো হয়নি।
+             * ⚠️ এটা সিদ্ধান্তের **পরের** অবস্থা — দেখা হয়েছে, আর
+             * মালটা নেওয়া হবে না।
+             *
+             * ⭐ মালিকের স্পেকে এটাই `REJECTED`, আর তার পাশের
+             * `QUARANTINE` হলো উপরের `HOLD-RET` (ফেরত এসেছে, যাচাইয়ের
+             * অপেক্ষায়)। ⓘ অর্থাৎ অবস্থাগুলো ABOS-এ আলাদা বালতি নয়,
+             * **আটকানোর কারণ** — আর সেটাই ঠিক: মালটা একই তাকে থাকে,
+             * কেবল কেন আটকে আছে সেটা বদলায়।
+             *
+             * ⛔ আলাদা বালতি বানালে `available = floor − reserved −
+             * hold` সূত্রটা ভাঙত, আর প্রতিটা রিপোর্টে নতুন কলাম বসত —
+             * অথচ মালিকের প্রশ্নটা একটাই: *"মাল আছে, বেচা যাচ্ছে না
+             * কেন"*, আর সেটার উত্তর ইতিমধ্যে আটকানোর রিপোর্টে আছে।
+             *
+             * ⚠️ `returns_to_stock => false` — বাতিল মাল ছেড়ে দিলে
+             * সেটা বিক্রয়যোগ্য মজুদে ফেরে না; ⛔ ফিরলে যে মাল
+             * পরিদর্শনে বাদ পড়েছে সেটাই পরদিন বিক্রি হয়ে যেত।
+             */
+            ['HOLD-REJ', 'Rejected on inspection', 'পরিদর্শনে বাতিল',
+                ['context' => ReasonCode::HOLD, 'returns_to_stock' => false]],
+
+            /*
+             * ⭐ পঞ্চমটা — পথে, ২৪ সেপ্টেম্বর ২০২৬।
+             *
+             * ── ⛔ যে ফাঁকটা ছিল ───────────────────────────────────
+             * স্থানান্তর রওনা হলে মালটা উৎসেই আটকে যায়
+             * ([[StockTransferService::dispatch()]]), কিন্তু **কোনো
+             * কারণ ছাড়া**। ⚠️ ফলে আটকানোর রিপোর্টে পথের মাল আর
+             * সমস্যার মাল একই রকম দেখাত — কারণের ঘরটা ফাঁকা।
+             *
+             * ⓘ ঐ রিপোর্টের একমাত্র কাজই কারণ আলাদা করা: *"৫
+             * ক্ষতিগ্রস্ত, ৩৫ দাম বাড়ার অপেক্ষায়"*। ⛔ কারণহীন একটা
+             * বড় সারি ঠিক সেই কাজটাই নষ্ট করত, আর মালিক ভাবতেন তাঁর
+             * মালে সমস্যা।
+             *
+             * ⭐ মালিকের স্পেকে এটাই `IN_TRANSIT` — ⓘ এখানেও আলাদা
+             * বালতি নয়, আটকানোর একটা কারণ, বাকি চারটার মতোই।
+             *
+             * ⚠️ `returns_to_stock => true` — ট্রাক ফিরে এলে মালটা
+             * দিব্যি বিক্রয়যোগ্য; ⛔ মালে কোনো দোষ নেই, কেবল ঠিকানা
+             * বদলাচ্ছিল।
+             */
+            ['HOLD-TRN', 'On the way to another warehouse', 'অন্য গুদামের পথে',
+                ['context' => ReasonCode::HOLD, 'returns_to_stock' => true]],
+
+            /*
+             * ⭐ বিক্রয় ফেরতের বাকি চারটা কারণ — NEXUS §২৪, ২৭ সেপ্টেম্বর ২০২৬।
+             * ⓘ তালিকাটা [[SalesReturnReasons]]-এ, ব্যাখ্যাও সেখানে; এখানে
+             * মেশানো হয় যাতে নতুন কোম্পানি আর সিঙ্ক একই সারি পায়।
+             */
+            ...SalesReturnReasons::rows(),
+        ];
+    }
+
+    /**
+     * ⭐ যে কারণগুলো এখনো নেই, কেবল সেগুলো বসায় — ২৫ সেপ্টেম্বর ২০২৬।
+     *
+     * ── ⛔ কেন [[seed()]]-কে যোগমুখী করা হয়নি ─────────────────────────
+     * ঐ একটা পদ্ধতি আটটা মাস্টার তালিকা বসায়। ⚠️ যোগমুখী করলে কোনো
+     * কোম্পানি যে সারিগুলো **ইচ্ছাকৃতভাবে মুছেছেন** সেগুলোও ফিরে আসত,
+     * আর `makeDefault()` তাঁর বেছে নেওয়া ডিফল্ট উল্টে দিতে পারত।
+     *
+     * ⛔ একটা ফাঁকা কলামের চেয়ে সেটা অনেক খারাপ: ⓘ ফাঁকা কলাম দেখা যায়,
+     * আর নিজে থেকে ফিরে আসা সারি দেখা যায় না।
+     *
+     * ── ⓘ কারণ-কোডে ডিফল্ট বলে কিছু নেই ─────────────────────────────
+     * তাই এখানে `makeDefault()`-এর প্রশ্নই ওঠে না — ⚠️ এই তালিকাটার
+     * জন্য যোগ করা নিরাপদ, বাকিগুলোর জন্য নয়।
+     *
+     * ⚠️ একটা সারিতে ব্যতিক্রম হলে গোটা সিঙ্ক থামে না: ⛔ থামলে
+     * প্রথম গড়বড়ওয়ালা কোম্পানির পরের সবাই বাদ পড়ত, আর কেউ জানত না
+     * কতদূর হয়েছে।
+     *
+     * @return int কয়টা নতুন সারি বসল
+     */
+    public function installMissingReasons(): int
+    {
+        /*
+         * ⛔ `withTrashed()` — নাহলে সিঙ্কটা নিজের প্রতিশ্রুতিই ভাঙত।
+         *
+         * ⚠️ কারণ-কোড soft-delete করে। মুছে ফেলা সারি সাধারণ কোয়েরিতে
+         * দেখা যায় না, তাই কোডটা "নেই" মনে হত আর সিঙ্ক ওটা **আবার
+         * বসিয়ে দিত** — অর্থাৎ কোম্পানি যে কারণটা ইচ্ছাকৃতভাবে সরিয়েছেন
+         * সেটাই পরদিন তালিকায় ফিরে আসত।
+         *
+         * ⓘ ঠিক এই আচরণটা এড়াতেই [[seed()]] যোগমুখী করা হয়নি; একই
+         * ভুল এখানে পিছনের দরজা দিয়ে ঢুকছিল।
+         */
+        $have = ReasonCode::withTrashed()->pluck('code')->all();
+        $added = 0;
+
+        foreach (self::reasonRows() as [$code, $en, $bn, $extra]) {
+            if (in_array($code, $have, true)) {
+                continue;
+            }
+
+            unset($extra['is_default']);
+
+            $this->create(ReasonCode::class, [
+                'code' => $code,
+                'name_en' => $en,
+                'name_bn' => $bn,
+                ...$extra,
+            ]);
+
+            $added++;
+        }
+
+        return $added;
+    }
+
+    private function seed(string $model, array $rows): int
+    {
+        if ($model::query()->exists()) {
+            return 0;
+        }
+
+        /*
+         * কোনটা ডিফল্ট, সেটা এখন আলাদা করে বলা — ক্রম দিয়ে নয়।
+         *
+         * আগে নিয়ম ছিল "প্রথমটাই ডিফল্ট"। তাতে দুইটা আলাদা প্রশ্নের
+         * একটাই উত্তর দিতে হত: তালিকায় কোনটা আগে দেখাবে, আর নতুন
+         * কাগজে কোনটা আপনা থেকে বসবে। মালিক ডিলারকে ডিফল্ট চাইলেন
+         * (২০২৬-০৮-০৯) — এটা ডিপো, খুচরা দোকান নয় — আর তাতে ডিলারকে
+         * তালিকার মাথায় তুলতে হত, যদিও পড়ার স্বাভাবিক ক্রম খুচরা →
+         * পাইকারি → ডিলার।
+         *
+         * কেউ চিহ্নিত না থাকলে আগের নিয়মই — প্রথমটা।
+         */
+        $marked = null;
+
+        foreach ($rows as $index => [, , , $extra]) {
+            if ($extra['is_default'] ?? false) {
+                $marked = $index;
+                break;
+            }
+        }
+
+        foreach ($rows as $index => [$code, $en, $bn, $extra]) {
+            unset($extra['is_default']);
+
+            $record = $this->create($model, [
+                'code' => $code,
+                'name_en' => $en,
+                'name_bn' => $bn,
+                ...$extra,
+            ]);
+
+            if ($index === ($marked ?? 0) && $record::supportsDefault()) {
+                $record->makeDefault();
+            }
+        }
+
+        return count($rows);
+    }
+}

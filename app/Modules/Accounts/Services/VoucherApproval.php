@@ -1,0 +1,378 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Modules\Accounts\Services;
+
+use App\Core\Engines\Approval\ApprovalEngine;
+use App\Core\Engines\Approval\DocumentFingerprint;
+use App\Models\Approval;
+use App\Modules\Accounts\Models\CashTill;
+use App\Modules\Accounts\Models\Voucher;
+use App\Modules\Accounts\Models\VoucherLine;
+
+/**
+ * ভাউচার পোস্ট করার আগে অনুমোদন লাগে কি না।
+ *
+ * ── কেন নতুন কোনো ইঞ্জিন লেখা হয়নি ──────────────────────────────────
+ * অনুমোদনের ইঞ্জিন কোরেই আছে ([[ApprovalEngine]]) আর সে ধরন-নিরপেক্ষ:
+ * `request(Model $document, …)` যেকোনো ডকুমেন্ট নেয়। স্তর, একই স্তরে
+ * একাধিক অনুমোদনকারী, টাকার অঙ্ক ধরে সীমা, নিজের অনুরোধ নিজে অনুমোদনের
+ * নিষেধ, Approval Centre-এর ইনবক্স — সব তৈরি। **আজ পর্যন্ত কেবল
+ * বিক্রয়ের ছাড় ওটা ব্যবহার করত।** এই ফাইলটা কেবল ভাউচারকে ওই ইঞ্জিনের
+ * সাথে যুক্ত করে।
+ *
+ * ── কেন ধরনটাই কাজের নাম ────────────────────────────────────────────
+ * `action` হিসেবে ভাউচারের নিজের ধরন (`expense`) ব্যবহার করা হয়, তাই
+ * ভবিষ্যতে কেউ `payment`-এও অনুমোদন চাইলে কেবল `module.php`-তে একটা
+ * সারি যোগ করলেই হয় — এই ফাইলে কিছু লিখতে হয় না।
+ *
+ * ⚠️ ── ডিফল্ট পথটাই সবচেয়ে জরুরি ────────────────────────────────────
+ * কোনো কোম্পানি অনুমোদনের ছক না বসালে `request()` **`null`** ফেরত দেয়
+ * (প্রবাহ নেই, বা অঙ্ক সীমার নিচে), আর তখন পোস্টিং **আজকের মতোই** চলে।
+ * এটা সুবিধা নয়, **শর্ত**: এই ফাইলটা যোগ করার পর যেন এমন একটাও
+ * প্রতিষ্ঠান না থাকে যেখানে খরচ পোস্ট করা বন্ধ হয়ে গেল।
+ */
+final class VoucherApproval
+{
+    /** অনুমোদনের ছকে মডিউলের নাম — `module.php`-র `code`। */
+    public const MODULE = 'accounts';
+
+    /** কাউন্টারের ডিপোজিটের অনুমোদনের কাজ — [[stopping()]]। */
+    public const COUNTER_DEPOSIT = 'counter_deposit';
+
+    /**
+     * ক্রয়ের কাউন্টারে দেওয়া টাকা — ২০ সেপ্টেম্বর ২০২৬।
+     *
+     * ⓘ মালিকের কথা: *"বিক্রয় কাউন্টারের নিয়মেই করো।"* ⚠️ তবু ছকটা
+     * আলাদা, কারণ ঘটনাটাই উল্টো: ওখানে টাকা আসে, এখানে টাকা যায়। ⛔ এক
+     * ছকে বাঁধলে যিনি ক্রয়ে সই চান তিনি বিক্রয়ের প্রতিটা জমাও আটকাতেন।
+     */
+    public const COUNTER_PAYMENT = 'counter_payment';
+
+    public function __construct(private readonly ApprovalEngine $approvals) {}
+
+    /**
+     * পোস্ট আটকাচ্ছে এমন কিছু আছে কি?
+     *
+     * `null` মানে **এগিয়ে যাও** — হয় অনুমোদন লাগে না, নয় ইতিমধ্যে
+     * পাওয়া গেছে। কিছু ফেরত এলে সেটাই কারণ, আর তার `status` বলে দেয়
+     * অপেক্ষায় নাকি প্রত্যাখ্যাত।
+     */
+    public function stopping(Voucher $voucher): ?Approval
+    {
+        /*
+         * ⭐ কাউন্টারের ডিপোজিট নিজের নিয়মে — মালিকের নির্দেশ, ১৯ সেপ্টেম্বর।
+         *
+         * ⓘ *"কাউন্টারের জন্য আলাদা নিয়ম, বাকিগুলো আলাদা।"* ⚠️ না করলে
+         * কাউন্টারে সই চাইতে গিয়ে হিসাবের প্রতিটা হাতে লেখা রসিদ আটকাত।
+         */
+        /*
+         * ⭐ নিজের বাক্সে নগদ — সই লাগে না, ২১ সেপ্টেম্বর ২০২৬।
+         *
+         * ── ⓘ মালিকের নিয়ম ─────────────────────────────────────────
+         * *"bank mfs e gele approval e asbe, cash e sudu tar nijer cash
+         * accounts e taka nite parbe tai app er dorkar nai — din sese
+         * emnite tar kachtekei buje nibe"*।
+         *
+         * ── ⚠️ ছাড়টা একা দাঁড়ায় না ────────────────────────────────
+         * এর শর্ত [[VoucherService::assertCashLandsInOwnTill()]]: নগদ
+         * কেবল **নিজের নামে বসা বাক্সেই** যেতে পারে। ⛔ ঐ সীমা ছাড়া
+         * এই ছাড়টা মানে যে কেউ যেকোনো ক্যাশ খাতে টাকা বসিয়ে দিতে
+         * পারত, আর দিন শেষে মেলানোর সময় ধরাই পড়ত না।
+         *
+         * ⓘ তাই দুইটা একসাথে পড়তে হয়: সীমাটা আগে বসেছে, ছাড়টা পরে।
+         *
+         * ── ⓘ কেবল রসিদ, আর কেবল নগদ ─────────────────────────────
+         * ⚠️ পরিশোধে (টাকা বেরোনো) ছাড় নেই — নিজের বাক্স থেকে টাকা
+         * বের করা আর নিজের বাক্সে টাকা নেওয়া এক ঝুঁকি নয়।
+         * ⛔ ব্যাংক ও MFS-এ টাকা প্রতিষ্ঠানের খাতে যায়, তাই সেখানে
+         * সই আগের মতোই লাগে।
+         */
+        $action = $this->actionFor($voucher);
+
+        if ($action === null) {
+            return null;
+        }
+
+        $latest = $this->approvals->latestFor($voucher, $action);
+
+        /*
+         * অনুমোদন পাওয়া গেছে — এগোও, আর **নতুন অনুরোধ কোরো না**।
+         *
+         * ⚠️ `ApprovalEngine::approve()` নিজে কাজটা এগোয় না, কেবল
+         * অনুরোধটাকে `approved` করে আর খবর দেয়। অর্থাৎ মানুষটাকে ফিরে
+         * এসে আবার "পোস্ট" চাপতে হয়। ওই দ্বিতীয় চাপে যদি আমরা আবার
+         * `request()` ডাকতাম, সে **পুরনো অনুরোধটা pending নয় বলে
+         * খুঁজে পেত না** আর একটা নতুন অনুরোধ বানাত — অনুমোদনটা তখন
+         * অসীম লুপে পড়ত, আর কেউ কোনোদিন খরচটা পোস্ট করতে পারত না।
+         */
+        /*
+         * ⚠️ …তবে সইটা যে অঙ্কের উপর দেওয়া হয়েছিল, ভাউচারটা এখনো সেই
+         * অঙ্কেই আছে কি না সেটা দেখে ([[Approval::covers()]])।
+         *
+         * ⛔ ২২ সেপ্টেম্বর ২০২৬ পর্যন্ত দেখত না: সইয়ের পর ভাউচারটা খসড়াই
+         * থাকে, তাই অঙ্কটা বাড়িয়ে "পোস্ট" চাপলে পুরনো সইটাই ছেড়ে দিত।
+         *
+         * ⓘ নিয়মটা কোরের [[DocumentApproval]]-এ একবারই লেখা — এই ক্লাসটা
+         * ওর যমজ, আর দুই জায়গায় দুই রকম নিয়ম লিখলে পার্থক্যটা **নীরব**
+         * হত: ভাউচারের সই টিকে যেত, বাকি সব কাগজের যেত না।
+         */
+        $superseded = null;
+
+        /*
+         * ⭐ কাগজটা সইয়ের দিন যেমন ছিল — তার ছাপ।
+         *
+         * ── ⛔ এই ফাঁকটা ঠিক টাকার পথেই খোলা ছিল ──────────────
+         * ⓘ [[DocumentApproval::stopping()]] ২৪ সেপ্টেম্বর থেকে গোটা
+         * কাগজের ছাপ মেলায় (মালিকের সিদ্ধান্ত: *"যেকোনো ঘর
+         * বদলালেই"*)। ⚠️ কিন্তু এই যমজ ক্লাসটা কেবল অঙ্ক দেখত।
+         *
+         * ⛔ ফল: অঙ্ক ঠিক রেখে ভাউচারের খাত, পক্ষ, বা তারিখ
+         * বদলে "পোস্ট" চাপলে পুরনো সইটাই চলত — আর সেটা
+         * সবচেয়ে খারাপ জায়গা, কারণ ভাউচারেই টাকা নড়ে।
+         */
+        $hash = app(DocumentFingerprint::class)->of($voucher);
+
+        if ($latest?->status === Approval::APPROVED) {
+            if ($latest->stillCovers((string) $voucher->amount, $hash)) {
+                return null;
+            }
+
+            /*
+             * ⭐ পুরনো সইটা কোন অঙ্কের ছিল — নিয়মটা কোরের
+             * [[DocumentApproval::stopping()]]-এ একবারই লেখা।
+             *
+             * ⚠️ অঙ্ক বদলালে নিচে নতুন অনুরোধ বসে, আর সইকারীর ইনবক্সে
+             * একই ভাউচার দ্বিতীয়বার আসে। ⛔ কারণ না জানলে সেটা ভুলের
+             * মতো দেখায়।
+             */
+            $superseded = $latest;
+        }
+
+        /*
+         * প্রত্যাখ্যাত — আর তারপর কাগজটা বদলায়নি।
+         *
+         * ── কেন এখানে নীরবে আবার অনুরোধ পাঠানো হয় না ────────────────
+         * পাঠালে **প্রত্যাখ্যানের কোনো মানে থাকত না**: যিনি "না" শুনলেন
+         * তিনি আবার বোতামটা চেপে আবার অনুরোধ পাঠাতেন, আর অনুমোদনকারী
+         * একই কাগজ বারবার দেখতেন। ইঞ্জিনের নিজের মন্তব্যেও লেখা —
+         * আবার চাইলে অনুরোধটা **নতুন করে** করতে হবে।
+         *
+         * ── তাহলে আবার চাওয়ার পথ কী ─────────────────────────────────
+         * কাগজটা বদলানো। "না" বলার কারণ থাকে (`reject()` কারণ ছাড়া
+         * নেয় না), আর কারণটা মেটানো মানেই ভাউচারে হাত দেওয়া। তাই
+         * সম্পাদনার পর (`updated_at` সিদ্ধান্তের পরে) নিচের
+         * `request()` স্বাভাবিকভাবেই নতুন একটা অনুরোধ বানায়।
+         */
+        if ($latest?->status === Approval::REJECTED && ! $this->changedSince($voucher, $latest)) {
+            return $latest;
+        }
+
+        /*
+         * এখানে `request()` নিজেই তিনটা সিদ্ধান্ত নেয়:
+         *   প্রবাহ ঘোষিত নেই / অঙ্ক সীমার নিচে → null → এগোও
+         *   আগের একটা অনুরোধ এখনো pending      → সেটাই ফেরে, নতুন নয়
+         *   নাহলে                              → নতুন অনুরোধ
+         */
+        return $this->approvals->request(
+            document: $voucher,
+            module: self::MODULE,
+            action: $action,
+            amount: (string) $voucher->amount,
+
+            /*
+             * ⓘ ছাপটা এখানেও যায় — নাহলে পরে মেলানোর কিছু থাকত না।
+             * ⚠️ অর্থাৎ উপরের `stillCovers()` সবসময় *"হাঁ, ঢাকে"* বলত
+             * (`state_hash` খালি মানে পুরনো আচরণ), আর দাবিটা সবুজ
+             * থাকত — কারণ সে কখনো দেখতেই যেত না।
+             */
+            stateHash: $hash,
+
+            /*
+             * ⭐ শর্ত মাপা হয় গোটা ভাউচার দিয়ে।
+             *
+             * ⛔ এটা না দিলে `payload` মাপা হত, আর সেটা এখানে খালি —
+             * অর্থাৎ হিসাবের কোনো কাজে শর্ত বসালে প্রবাহটা **কখনো
+             * ধরত না**, আর অনুমোদন নীরবে উঠে যেত।
+             *
+             * ⓘ নিয়মটা [[ApprovalEngine::fieldsOf()]]-এ, এই ফাইলে নয় —
+             * দুই যমজে দুই নিয়ম হলে পার্থক্যটা নীরব হত।
+             */
+            matchOn: ApprovalEngine::fieldsOf($voucher),
+
+            // ⓘ কারণসহ [[DocumentApproval::stopping()]]-এ — ঘরটা এতদিন খালি পড়ে ছিল।
+            payload: $superseded === null ? null : [
+                'supersedes' => (int) $superseded->id,
+                'was_amount' => $superseded->amount === null ? null : (string) $superseded->amount,
+            ],
+
+            /*
+             * ⚠️ কে চাইছেন — `auth()->id()`-র উপর ছেড়ে দেওয়া যায় না।
+             *
+             * `ApprovalEngine::request()` কিছু না পেলে `auth()->id()`
+             * নেয়, আর `approvals.requested_by` **null নিতে পারে না**।
+             * অর্থাৎ লগইন করা কেউ না থাকলে সারিটা বসতেই পারত না, আর
+             * পুরো পোস্টিং একটা ডাটাবেস ত্রুটিতে ভেঙে পড়ত।
+             *
+             * ── কখন লগইন করা কেউ থাকে না ────────────────────────────
+             * কমান্ড লাইন, সিডার, কিউ ওয়ার্কার, ইমপোর্ট — সব জায়গায়।
+             * ওগুলোতেও ভাউচার পোস্ট হয়, আর তখন "কে চাইলেন" প্রশ্নের
+             * উত্তর একটাই সৎ উত্তর: **যিনি কাগজটা লিখেছিলেন**।
+             *
+             * ⓘ টেস্টে ধরা পড়েছে (৩ সেপ্টেম্বর ২০২৬), কিন্তু ফাঁদটা
+             * টেস্টের নয় — লাইভেও রাতের কোনো কাজ খরচ পোস্ট করতে গেলে
+             * ঠিক এখানেই ভাঙত।
+             */
+            userId: auth()->id() ?? $voucher->created_by,
+        );
+    }
+
+    /**
+     * কোন ছকে সই চাওয়া হয় — `null` মানে এই ভাউচারে সই লাগেই না (নিজের বাক্সে নগদ রসিদ)।
+     *
+     * ⓘ [[stopping()]] থেকে হুবহু তোলা (৪ অক্টোবর ২০২৬) — "পোস্ট"-এর আগের সারাংশও ([[VoucherOverview]]) একই প্রশ্ন
+     * করে, আর দুই জায়গায় দুই উত্তর হলে সারাংশ "সই লাগবে না" বলত অথচ পোস্ট আটকে যেত।
+     */
+    public function actionFor(Voucher $voucher): ?string
+    {
+        if ($voucher->type === Voucher::RECEIPT && $this->landsInCash($voucher)) {
+            return null;
+        }
+
+        /*
+         * ⭐ যে কাগজের বিপরীতে ভাউচার, সেটা আগেই শেষ সই পেয়েছে — আবার সই নয় (কর্মীর খরচের দাবি, মালিকের আদেশ ৭ অক্টোবর
+         * ২০২৬; [[SignedBeforeItIsPaid]])। ⓘ সই একবার, কাগজে; খসড়া ভাউচার কেবল টাকা দেওয়ার নির্দেশ।
+         */
+        if ($this->paperAlreadySigned($voucher)) {
+            return null;
+        }
+
+        return match (true) {
+            // ⓘ ২০ সেপ্টেম্বর: ক্রয়ের কাউন্টারের পরিশোধও কাউন্টারের নিজের ছকে
+            $voucher->origin === Voucher::ORIGIN_COUNTER && $voucher->type === Voucher::PAYMENT => self::COUNTER_PAYMENT,
+
+            $voucher->origin === Voucher::ORIGIN_COUNTER => self::COUNTER_DEPOSIT,
+
+            default => (string) $voucher->type,
+        };
+    }
+
+    private function paperAlreadySigned(Voucher $voucher): bool
+    {
+        $type = (string) ($voucher->against_type ?? '');
+
+        if ($type === '' || (int) ($voucher->against_id ?? 0) <= 0) {
+            return false;
+        }
+
+        $class = app(\App\Core\Engines\Drill\DrillResolver::class)->map()[$type] ?? null;
+
+        if ($class === null || ! is_subclass_of($class, \App\Core\Contracts\SignedBeforeItIsPaid::class)) {
+            return false;
+        }
+
+        $paper = $class::query()->find((int) $voucher->against_id);
+
+        return $paper instanceof \App\Core\Contracts\SignedBeforeItIsPaid && $paper->signedBeforeItIsPaid();
+    }
+
+    /**
+     * ⭐ "পোস্ট" চাপলে সই কী বলবে — কিছু না লিখে (৪ অক্টোবর ২০২৬; [[VoucherOverview]])।
+     *
+     * ⓘ [[stopping()]]-এর একই ধাপ, একই ক্রমে; কেবল শেষের `request()`-এর বদলে [[ApprovalEngine::requires()]] — কারণ
+     * `request()` অনুরোধ লেখে, আর সারাংশ দেখতে গিয়ে সইয়ের সারিতে কাগজ চলে যাওয়া চলে না।
+     *
+     * @return 'signed'|'rejected'|'awaiting'|null  `null` = সই লাগে না
+     */
+    public function waitFor(Voucher $voucher): ?string
+    {
+        $action = $this->actionFor($voucher);
+
+        if ($action === null) {
+            return null;
+        }
+
+        $latest = $this->approvals->latestFor($voucher, $action);
+
+        if ($latest?->status === Approval::APPROVED
+            && $latest->stillCovers((string) $voucher->amount, app(DocumentFingerprint::class)->of($voucher))) {
+            return 'signed';
+        }
+
+        if ($latest?->status === Approval::REJECTED && ! $this->changedSince($voucher, $latest)) {
+            return 'rejected';
+        }
+
+        if ($latest?->status === Approval::PENDING) {
+            return 'awaiting';
+        }
+
+        return $this->approvals->requires(self::MODULE, $action, (string) $voucher->amount, class_basename(Voucher::class),
+            ApprovalEngine::fieldsOf($voucher)) ? 'awaiting' : null;
+    }
+
+    /**
+     * সিদ্ধান্তের পর কাগজটা বদলেছে কি?
+     *
+     * `decided_at` না থাকলে (তাত্ত্বিকভাবে সম্ভব) ধরে নেওয়া হয় বদলায়নি
+     * — অর্থাৎ **আটকে থাকাই ডিফল্ট**। উল্টোটা ধরলে একটা অসম্পূর্ণ সারি
+     * প্রত্যাখ্যানটাকে নীরবে অকেজো করে দিত।
+     */
+    private function changedSince(Voucher $voucher, Approval $approval): bool
+    {
+        /*
+         * ⭐ প্রশ্নটা ছাপকে, ঘড়িকে নয় — নিয়মটা
+         * [[DocumentApproval::changedSince()]]-এর অবিকল এক।
+         *
+         * ⛔ `updated_at > decided_at` সেকেন্ডে মাপে, তাই একই সেকেন্ডে
+         * ফেরত আর সংশোধন হলে দ্বিতীয় অনুরোধটা নীরবে গিলে ফেলা হত।
+         *
+         * ⚠️ দুই জায়গায় দুই নিয়ম হলে পার্থক্যটা নীরব হত: ভাউচার
+         * আবার পাঠানো যেত, বাকি সব কাগজ যেত না — বা উল্টোটা।
+         */
+        if ($approval->state_hash !== null) {
+            return ! hash_equals(
+                (string) $approval->state_hash,
+                app(DocumentFingerprint::class)->of($voucher),
+            );
+        }
+
+        if ($approval->decided_at === null || $voucher->updated_at === null) {
+            return false;
+        }
+
+        return $voucher->updated_at->greaterThan($approval->decided_at);
+    }
+
+    /**
+     * টাকাটা কি নগদে নামছে?
+     *
+     * ⓘ সারিগুলো দেখা হয়, হেডারের `money_account_id` নয় — ওটা বসে
+     * পোস্ট করার **সময়**, আর অনুমোদনের প্রশ্নটা তারও আগে ওঠে।
+     * ⚠️ হেডার দেখলে উত্তরটা সবসময় "না" আসত, আর ছাড়টা কোনোদিন
+     * খাটত না।
+     */
+    private function landsInCash(Voucher $voucher): bool
+    {
+        /*
+         * ⭐ নগদ কেবল **ঢুকছে** — গ৩, Accounts-Finance অডিট, ৪ অক্টোবর ২০২৬।
+         *
+         * ⛔ আগে কোনো একটা সারি নগদে পড়লেই ছাড় মিলত। তাই রসিদের নামে "নিজের বাক্স থেকে সরবরাহকারীকে" লিখলে
+         * আসলে টাকা বেরোত, অথচ সই লাগত না; এক বাক্স থেকে আরেক বাক্সেও তাই।
+         *
+         * ⓘ এখন কোনো নগদ সারিতে ক্রেডিট নয় (টাকা কেবল ঢোকে), আর প্রতিটা বাক্সই এই মানুষটার
+         * নিজের ([[CashTill::mayUse()]] — পোস্টের পাহারার সাথে একই নিয়ম)।
+         */
+        $cash = $voucher->lines->filter(fn (VoucherLine $line) => $line->account !== null && $line->account->isCash());
+
+        if ($cash->isEmpty()) {
+            return false;
+        }
+
+        $userId = auth()->id() === null ? null : (int) auth()->id();
+
+        return $cash->every(fn (VoucherLine $line) => bccomp((string) $line->credit, '0', 4) === 0
+            && CashTill::mayUse($userId, (int) $line->account_id));
+    }
+}

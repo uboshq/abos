@@ -1,0 +1,464 @@
+<?php
+
+declare(strict_types=1);
+
+use App\Modules\Accounts\Http\Controllers\AccountsDashboardController;
+use App\Modules\Accounts\Http\Controllers\AccountsSettingsController;
+use App\Modules\Accounts\Http\Controllers\BalanceSheetController;
+use App\Modules\Accounts\Http\Controllers\BankReconciliationController;
+use App\Modules\Accounts\Http\Controllers\BooksIntegrityController;
+use App\Modules\Accounts\Http\Controllers\CashCountController;
+use App\Modules\Accounts\Http\Controllers\CashTillController;
+use App\Modules\Accounts\Http\Controllers\ChartOfAccountsController;
+use App\Modules\Accounts\Http\Controllers\ChequeController;
+use App\Modules\Accounts\Http\Controllers\FinanceControlController;
+use App\Modules\Accounts\Http\Controllers\FixedAssetController;
+use App\Modules\Accounts\Http\Controllers\FinalAccountsReportController;
+use App\Modules\Accounts\Http\Controllers\GroupReportController;
+use App\Modules\Accounts\Http\Controllers\InterCompanyController;
+use App\Modules\Accounts\Http\Controllers\LoanController;
+use App\Modules\Accounts\Http\Controllers\MoneyCustodyController;
+use App\Modules\Accounts\Http\Controllers\MoneyTransferController;
+use App\Modules\Accounts\Http\Controllers\MoneyTransferPrintController;
+use App\Modules\Accounts\Http\Controllers\NoteController;
+use App\Modules\Accounts\Http\Controllers\NotePrintController;
+use App\Modules\Accounts\Http\Controllers\PeriodLockController;
+use App\Modules\Accounts\Http\Controllers\ReportController;
+use App\Modules\Accounts\Http\Controllers\VoucherController;
+use App\Modules\Accounts\Http\Controllers\VoucherListController;
+use App\Modules\Accounts\Http\Controllers\VoucherPrintController;
+use App\Modules\Accounts\Http\Controllers\VoucherSampleController;
+use App\Modules\Accounts\Http\Controllers\YearEndController;
+use App\Modules\Accounts\Models\Account;
+use Illuminate\Support\Facades\Route;
+
+/*
+ * Accounts মডিউলের নিজের রুট — ModuleServiceProvider নিজে থেকে নিবন্ধন
+ * করে (সেকশন ১৯.৩)। নামের উপসর্গ "accounts." আপনাআপনি বসে।
+ */
+
+Route::middleware('auth')->prefix('accounts')->group(function () {
+
+    Route::get('/', [AccountsDashboardController::class, 'show'])->name('dashboard');
+
+    Route::get('/settings', [AccountsSettingsController::class, 'edit'])->name('settings');
+    Route::put('/settings', [AccountsSettingsController::class, 'update'])->name('settings.update');
+
+    Route::prefix('chart-of-accounts')->name('coa.')->group(function () {
+        Route::get('/', [ChartOfAccountsController::class, 'index'])->name('index');
+        Route::get('/create', [ChartOfAccountsController::class, 'create'])->name('create');
+        Route::post('/', [ChartOfAccountsController::class, 'store'])->name('store');
+
+        /*
+         * install রুটটা {account} প্যাটার্নের আগে — নাহলে
+         * /chart-of-accounts/install-standard কে একটা খাতের id ভেবে
+         * বাইন্ডিং ৪০৪ দিত।
+         */
+        Route::post('/install-standard', [ChartOfAccountsController::class, 'installStandardChart'])
+            ->middleware('can:create,'.Account::class)
+            ->name('install');
+
+        /*
+         * এটাও {account}-এর আগে, আর একই কারণে।
+         *
+         * অনুমতিটা হাতে লেখা: AuthorizesResource কেবল সাতটা চেনা
+         * পদ্ধতিকে ক্ষমতা দেয়, তাই নতুন পদ্ধতি যোগ করলে সেটা নিজে থেকে
+         * পাহারায় পড়ে না — EveryRouteIsGuardedTest ওটা ধরবে, কিন্তু
+         * ধরার আগেই বসানো ভালো। `create`, কারণ পরের খালি কোডটা জানা
+         * আর নতুন খাত বানানো একই কাজের দুই ধাপ।
+         */
+        Route::get('/next-code', [ChartOfAccountsController::class, 'nextCode'])
+            ->middleware('can:create,'.Account::class)
+            ->name('next-code');
+
+        Route::get('/{account}', [ChartOfAccountsController::class, 'show'])->name('show');
+        Route::get('/{account}/edit', [ChartOfAccountsController::class, 'edit'])->name('edit');
+        Route::put('/{account}', [ChartOfAccountsController::class, 'update'])->name('update');
+        Route::delete('/{account}', [ChartOfAccountsController::class, 'destroy'])->name('destroy');
+    });
+
+    /*
+     * ঋণ — টার্ম লোন ও CC।
+     *
+     * মোছার কোনো রুট নেই: ঋণ একটা চুক্তি, আর তার প্রতিটা কিস্তি
+     * খতিয়ানে বসে গেছে। ভুল হলে বিপরীত দাখিলা, মুছে ফেলা নয়।
+     */
+    Route::prefix('loans')->name('loan.')->group(function () {
+        Route::get('/', [LoanController::class, 'index'])->name('index');
+        Route::get('/create', [LoanController::class, 'create'])->name('create');
+        Route::post('/', [LoanController::class, 'store'])->name('store');
+        Route::get('/{loan}', [LoanController::class, 'show'])->whereNumber('loan')->name('show');
+
+        // টাকা তোলা ও জমা — CC-তে যতবার খুশি, টার্ম লোনে একবারই
+        Route::post('/{loan}/draw', [LoanController::class, 'drawDown'])
+            ->whereNumber('loan')->name('draw');
+        Route::post('/{loan}/repay', [LoanController::class, 'repay'])
+            ->whereNumber('loan')->name('repay');
+        Route::post('/{loan}/interest', [LoanController::class, 'chargeInterest'])
+            ->whereNumber('loan')->name('interest');
+        Route::post('/{loan}/instalments/{instalment}', [LoanController::class, 'payInstalment'])
+            ->whereNumber('loan')->whereNumber('instalment')->name('instalment.pay');
+    });
+
+    Route::prefix('cash-tills')->name('till.')->group(function () {
+        Route::get('/', [CashTillController::class, 'index'])->name('index');
+        Route::get('/create', [CashTillController::class, 'create'])->name('create');
+        Route::post('/', [CashTillController::class, 'store'])->name('store');
+        Route::get('/{till}', [CashTillController::class, 'show'])->name('show');
+        Route::get('/{till}/edit', [CashTillController::class, 'edit'])->name('edit');
+        Route::put('/{till}', [CashTillController::class, 'update'])->name('update');
+        Route::delete('/{till}', [CashTillController::class, 'destroy'])->name('destroy');
+
+        // resource ছকের বাইরে, তাই অনুমতি কন্ট্রোলারে হাতে যাচাই করা হয়
+        Route::post('/{till}/primary', [CashTillController::class, 'makePrimary'])->name('primary');
+        // ⭐ দায়িত্ব হস্তান্তর — জের গুনে, সই নিয়ে (অডিট ম৮)
+        Route::post('/{till}/handover', [CashTillController::class, 'handOver'])->name('handover');
+        Route::post('/{till}/handover/{handover}/cancel', [CashTillController::class, 'cancelHandover'])->name('handover.cancel');
+    });
+
+    /*
+     * ভাউচার — ধরনটা URL-এ।
+     *
+     * /vouchers/receipt, /vouchers/journal — মেনুর পাঁচটা সারি পাঁচটা
+     * আলাদা ঠিকানায় যায়, অথচ কন্ট্রোলার এক। ধরনটা ক্যোয়ারি প্যারামিটার
+     * হলে ছাপার শিরোনাম ও ব্রেডক্রাম্ব দুইটাই অনিশ্চিত হত।
+     *
+     * {voucher} রুটগুলো ধরন ছাড়া, কারণ একটা ভাউচার নিজেই জানে সে কোন
+     * ধরনের — ঠিকানায় ধরনটা আবার লিখলে দুইটা অমিল হতে পারত।
+     */
+    /*
+     * ⭐ সব ভাউচার এক পর্দায়, সাতটা ট্যাবে — [[VoucherListController]] (১৯ সেপ্টেম্বর)।
+     * ⓘ `/vouchers/{type}`-এর ভেতরে নয়, আলাদা পথে — নাহলে "list"-কে একটা ভাউচারের
+     * ধরন ভেবে বসত, ঠিক নিচের মন্তব্যটা যে ফাঁদের কথা বলে।
+     */
+    Route::get('voucher-list', [VoucherListController::class, 'index'])
+        ->name('voucher.list');
+
+    Route::prefix('vouchers')->name('voucher.')->group(function () {
+        Route::get('/{voucher}', [VoucherController::class, 'show'])
+            ->whereNumber('voucher')->name('show');
+
+        /*
+         * কাগজটা — /vouchers/{id}/print?paper=80mm
+         *
+         * স্থির পথটা {voucher}-এর পরে বসেছে কিন্তু নিজের অংশ নিয়ে,
+         * তাই সংঘাত নেই: /{voucher} শুধু সংখ্যা মানে (whereNumber)।
+         */
+        /* ⭐ ছাপার নিয়ন্ত্রণের ভাউচার-নকশার নমুনা — বানানো তথ্যে ([[VoucherSampleController]]) */
+        Route::get('/sample', [VoucherSampleController::class, 'show'])->name('sample');
+        Route::get('/{voucher}/print', VoucherPrintController::class)
+            ->whereNumber('voucher')->name('print');
+        Route::get('/{voucher}/edit', [VoucherController::class, 'edit'])
+            ->whereNumber('voucher')->name('edit');
+        Route::put('/{voucher}', [VoucherController::class, 'update'])
+            ->whereNumber('voucher')->name('update');
+        // ⭐ পোস্ট হওয়া ভাউচার সম্পাদনা — সুপার অ্যাডমিন, কারণসহ (মালিকের আদেশ, ৫ অক্টোবর ২০২৬; [[VoucherController::revise()]])
+        Route::get('/{voucher}/revise', [VoucherController::class, 'revise'])
+            ->whereNumber('voucher')->name('revise');
+        Route::put('/{voucher}/revise', [VoucherController::class, 'saveRevision'])
+            ->whereNumber('voucher')->name('revise.save');
+        Route::post('/{voucher}/post', [VoucherController::class, 'post'])
+            ->whereNumber('voucher')->name('post');
+        // ⭐ পোস্টের আগে সারাংশ — পপ-আপের ভিতর ([[VoucherOverviewController]], ৪ অক্টোবর ২০২৬)
+        Route::post('/{voucher}/overview', \App\Modules\Accounts\Http\Controllers\VoucherOverviewController::class)
+            ->whereNumber('voucher')->name('overview');
+        Route::post('/{voucher}/cancel', [VoucherController::class, 'cancel'])
+            ->whereNumber('voucher')->name('cancel');
+
+        /*
+         * একজন পক্ষের কাছে এখন কত পাওনা — ফর্মের "Collectable" ঘরটা।
+         *
+         * ── কেন একটা আলাদা ঠিকানা, পাতার সাথে পাঠানো নয় ─────────────
+         * ⛔ সব পক্ষের বকেয়া আগেভাগে পাঠানো যেত না: একটা ডিপোতে
+         * কয়েকশো গ্রাহক, আর প্রত্যেকের বকেয়া মানে খতিয়ানে একটা করে
+         * যোগফল। ভাউচারের ফর্মটা খুলতেই কয়েকশো কোয়েরি হত — আর তার
+         * প্রায় সবটাই অপচয়, কারণ ব্যবহারকারী একজনকেই বাছেন।
+         *
+         * ⓘ স্থির পথ, তাই /{type}-এর **আগে** — নাহলে "due" কে একটা
+         * ভাউচারের ধরন ভেবে বসত, ঠিক নিচের মন্তব্যটা যে ফাঁদের কথা বলে।
+         */
+        Route::get('due', [VoucherController::class, 'due'])->name('due');
+
+        // ধরনভিত্তিক রুটগুলো শেষে — নাহলে /vouchers/receipt কে একটা
+        // ভাউচারের id ভেবে বাইন্ডিং ৪০৪ দিত
+        Route::get('/{type}', [VoucherController::class, 'index'])->name('index');
+        Route::get('/{type}/create', [VoucherController::class, 'create'])->name('create');
+        Route::post('/{type}', [VoucherController::class, 'store'])->name('store');
+    });
+
+    /*
+     * টাকা ও হেফাজত — কোন টাকা কার কাছে আছে।
+     *
+     * হস্তান্তরের আগে, কারণ পড়ার ক্রমটাই তাই: আগে জানতে হয় টাকা কোথায়,
+     * তারপর সেটা সরানোর কথা ওঠে।
+     */
+    Route::get('money-custody', MoneyCustodyController::class)->name('custody');
+
+    /*
+     * খাতা নিজেই মেলে কি না — চালিয়ে দেখা।
+     *
+     * পরীক্ষা বলে কোডটা ঠিক; এটা বলে **এই কোম্পানির আজকের খাতাটা**
+     * ঠিক। দুইটা আলাদা প্রশ্ন, আর কোড সারালে পুরনো সারিগুলো নিজে থেকে
+     * ঠিক হয় না।
+     */
+    Route::get('books-check', BooksIntegrityController::class)->name('integrity');
+
+    /*
+     * খাতার নিয়ন্ত্রণ — পোস্টিং মনিটর, ব্যর্থ পোস্টিং, মাস-শেষের চেকলিস্ট,
+     * পটভূমির কাজ, নম্বর সিরিজ মেলানো ([[FinanceControlController]])।
+     * ফিন্যান্স মানচিত্রের §২, §২৪, §৩১, §৩৩ — ২০ সেপ্টেম্বর ২০২৬।
+     */
+    Route::prefix('control')->name('control.')->group(function () {
+        Route::get('/posting', [FinanceControlController::class, 'posting'])->name('posting');
+        Route::get('/failed', [FinanceControlController::class, 'failed'])->name('failed');
+        Route::get('/month-end', [FinanceControlController::class, 'monthEnd'])->name('month_end');
+        Route::get('/jobs', [FinanceControlController::class, 'jobs'])->name('jobs');
+        Route::get('/duplicates', [FinanceControlController::class, 'duplicates'])->name('duplicates');
+        Route::get('/numbers', [FinanceControlController::class, 'numbers'])->name('numbers');
+        Route::post('/numbers', [FinanceControlController::class, 'catchUp'])->name('catch_up');
+    });
+
+    Route::prefix('money-transfers')->name('transfer.')->group(function () {
+        Route::get('/', [MoneyTransferController::class, 'index'])->name('index');
+        Route::get('/create', [MoneyTransferController::class, 'create'])->name('create');
+        Route::post('/', [MoneyTransferController::class, 'store'])->name('store');
+        Route::get('/{transfer}', [MoneyTransferController::class, 'show'])->name('show');
+        Route::post('/{transfer}/confirm', [MoneyTransferController::class, 'confirm'])->name('confirm');
+        Route::post('/{transfer}/cancel', [MoneyTransferController::class, 'cancel'])->name('cancel');
+
+        /*
+         * স্লিপটা — /money-transfers/{id}/print?paper=80mm
+         *
+         * দুইজনের সইয়ের কাগজ। কেন এটা দরকার, সেটা কন্ট্রোলারে লেখা।
+         */
+        Route::get('/{transfer}/print', MoneyTransferPrintController::class)
+            ->whereNumber('transfer')->name('print');
+    });
+
+    /*
+     * রিপোর্ট — আটটা, একটাই কন্ট্রোলার।
+     *
+     * ঠিকানায় engine-এর ভেতরের কী নয়, পড়ার মতো নাম: /reports/day-book।
+     * ভেতরের কী বদলালে বুকমার্ক ভাঙত।
+     */
+    /*
+     * স্থিতিপত্র — সাধারণ রিপোর্টের পথের **আগে**, ইচ্ছাকৃতভাবে।
+     *
+     * নিচের `/reports/{slug}` যেকোনো slug ধরে, তাই এটা পরে বসালে
+     * কোনোদিন ডাকা হত না। ক্রমটাই এখানে নিয়ম।
+     *
+     * ── কেন আলাদা পাতা ──────────────────────────────────────────────
+     * রিপোর্ট-ইঞ্জিন সাধারণ টেবিল আঁকে; স্থিতিপত্র বিবৃতি — দুই পক্ষ,
+     * ভেতরে ভাগ, উপমোট, আর শেষে সমতার দাবি।
+     */
+    Route::get('/reports/balance-sheet', [BalanceSheetController::class, 'show'])
+        ->name('balance_sheet');
+
+    /*
+     * গ্রুপের হিসাব — স্থিতিপত্রের মতোই catch-all-এর **আগে**।
+     *
+     * ── ⛔ কেন এটাও ইঞ্জিনের বাইরে ───────────────────────────────────
+     * ⚠️ [[ReportEngine]] ছাঁকনিতে একটাই `company_id` বসায়
+     * (`ReportEngine.php` — `$filters['company_id'] = CompanyContext::id()`),
+     * আর প্রতিটা রিপোর্ট-ক্লোজার ঐ একটা মানই `where`-এ বসায়।
+     *
+     * ⓘ মেপে দেখা: ঐ ছাঁকনিটা **৫৩ জায়গায়, ১০টা রিপোর্ট ফাইলে**
+     * ব্যবহৃত। ⛔ ইঞ্জিনটাকে একাধিক কোম্পানি নিতে শেখালে ঐ ৫৩টা
+     * জায়গার প্রতিটাতে `=` থেকে `whereIn` বদলাতে হত — আর একটাও বাদ
+     * পড়লে ঐ রিপোর্ট নীরবে **কেবল এক কোম্পানির** সংখ্যা দেখাত।
+     * ⚠️ গ্রুপের যোগফলে ভুল সংখ্যা দেখতে ঠিক সঠিকের মতোই লাগে।
+     *
+     * ⭐ তাই আলাদা পাতা, আর সে [[GroupLedgerService]] দিয়ে সোজা
+     * query builder-এ পড়ে — দেয়াল ছোঁয়া ছাড়াই।
+     */
+    Route::get('/reports/group', [GroupReportController::class, 'show'])
+        ->name('group_report');
+
+    /*
+     * ভাই-কোম্পানির টাকা — দুই খাতায় এক লেনদেন।
+     *
+     * ⓘ রিপোর্টের নিচে নয়, নিজের পথে: এটা **পড়ার** পর্দা নয়, লেখার।
+     * ⚠️ আর যা লেখে তা সাধারণ ভাউচার নয় — অন্য কোম্পানির খাতায় দাখিলা।
+     * ⛔ তাই চাবিটাও আলাদা (`accounts.inter_company`), ভাউচারের নয়।
+     */
+    Route::prefix('inter-company')->name('inter_company.')->group(function () {
+        Route::get('/', [InterCompanyController::class, 'index'])->name('index');
+        Route::get('/create', [InterCompanyController::class, 'create'])->name('create');
+        Route::post('/', [InterCompanyController::class, 'store'])->name('store');
+        // ⭐ দুই পাশ একসাথে উল্টানো — গ১২ ([[InterCompanyService::reverse()]])
+        Route::post('/{transfer}/reverse', [InterCompanyController::class, 'reverse'])->whereNumber('transfer')->name('reverse');
+    });
+
+    /*
+     * ⭐ লাভ-ক্ষতি আর নগদ প্রবাহ — নিজের দরজা, catch-all-এর আগে (১ অক্টোবর ২০২৬)। ⓘ লিংক বানানো
+     * হয় আগের মতোই `report.show` দিয়ে; ঠিকানাটা প্রথমে এই রুটে মেলে। কারণ [[FinalAccountsReportController]]-এ।
+     */
+    foreach (FinalAccountsReportController::SLUGS as $finalSlug) {
+        Route::get('/reports/'.$finalSlug, [FinalAccountsReportController::class, 'show'])
+            ->defaults('slug', $finalSlug)
+            ->name('report.final.'.str_replace('-', '_', $finalSlug));
+    }
+
+    Route::get('/reports/{slug}', [ReportController::class, 'show'])->name('report.show');
+
+    /*
+     * বছর সমাপনী।
+     *
+     * {year} সংখ্যায় বাঁধা, আর index আলাদা পথে — নাহলে ভবিষ্যতে
+     * /year-end/settings জাতীয় কিছু যোগ করলে সেটাকে একটা id ভেবে
+     * বাইন্ডিং ৪০৪ দিত।
+     */
+    Route::prefix('year-end')->name('year_end.')->group(function () {
+        Route::get('/', [YearEndController::class, 'index'])->name('index');
+        Route::post('/{year}/close', [YearEndController::class, 'close'])
+            ->whereNumber('year')->name('close');
+
+        /*
+         * আবার খোলা — সুপার অ্যাডমিন ছাড়া কেউ পারে না, আর সেই পাহারাটা
+         * সেবার ভিতরে ([[YearEndService::reopen()]]), কারণ এটা অনুমতির
+         * প্রশ্ন নয়, রোলের।
+         */
+        Route::post('/{year}/reopen', [YearEndController::class, 'reopen'])
+            ->whereNumber('year')->name('reopen');
+
+        // ⭐ সমাপনী ভাউচার — পাতা আর ছাপা (ভাউচারের পরিকল্পনা ৩ঙ, ৭ অক্টোবর ২০২৬)
+        Route::get('/{year}/closing', [YearEndController::class, 'closing'])
+            ->whereNumber('year')->name('closing');
+        Route::get('/{year}/closing/print', [YearEndController::class, 'closingPrint'])
+            ->whereNumber('year')->name('closing.print');
+    });
+
+    /*
+     * মাস বন্ধ করা ও খোলা।
+     *
+     * খোলার রুটটা তালার সারিটাই ধরে (`{lock}`), মাস-বছর নয় — যে মাস
+     * বন্ধই নয় তাকে খোলার অনুরোধ তখন রুট-স্তরেই ৪০৪ হয়।
+     */
+    /*
+     * চেকের খাতা।
+     *
+     * তালিকাই প্রধান পর্দা, আর জমা/পাশ/ফেরত তিনটাই সারি থেকে — আলাদা
+     * পাতায় পাঠালে প্রতিটা সিদ্ধান্তে যাওয়া-আসা করতে হত, আর দিনে দশটা
+     * চেকে সেটা অসহ্য।
+     *
+     * বসানোটা অন্য জিনিস, আর ওটা এখন নিজের পাতায় (`/create`): তালিকার
+     * নিচে গোঁজা ফর্মটা সেখানে **সরানো** হয়েছে, নকল করা হয়নি।
+     */
+    Route::prefix('cheques')->name('cheque.')->group(function () {
+        Route::get('/', [ChequeController::class, 'index'])->name('index');
+
+        /*
+         * বসানোর পর্দাটা আলাদা — আর `/create` অবশ্যই `/{cheque}`-এর আগে,
+         * `install-standard`-এর মতোই: পরে বসালে বাইন্ডিং "create" কে
+         * একটা চেকের id ভেবে ৪০৪ দিত।
+         */
+        Route::get('/create', [ChequeController::class, 'create'])->name('create');
+        Route::post('/', [ChequeController::class, 'store'])->name('store');
+        Route::post('/{cheque}/deposit', [ChequeController::class, 'deposit'])
+            ->whereNumber('cheque')->name('deposit');
+        Route::post('/{cheque}/clear', [ChequeController::class, 'clear'])
+            ->whereNumber('cheque')->name('clear');
+        Route::post('/{cheque}/bounce', [ChequeController::class, 'bounce'])
+            ->whereNumber('cheque')->name('bounce');
+    });
+
+    /*
+     * ব্যাংক মিলকরণ।
+     *
+     * চেকের মতো এক পাতায় নয়: ওখানে সিদ্ধান্ত সারিপ্রতি, এখানে সিদ্ধান্ত
+     * পুরো কাগজটা নিয়ে। তাই তালিকা আর কাজের পর্দা আলাদা।
+     */
+    /*
+     * ⭐ ডেবিট ও ক্রেডিট নোট — মানচিত্র §৭, ২০ সেপ্টেম্বর ২০২৬।
+     *
+     * ⓘ একটাই পর্দা, ট্যাবে দুই দিক — কাজটা এক (টাকার অঙ্কটা ভুল ছিল,
+     * শোধরাও), কেবল কাকে দেওয়া হচ্ছে সেটা আলাদা।
+     *
+     * ⚠️ `/create` `/{note}`-এর আগে, বাকি সব পর্দার মতোই — নাহলে
+     * "create" নামের একটা নোট খোঁজা হত।
+     */
+    Route::prefix('notes')->name('note.')->group(function () {
+        Route::get('/', [NoteController::class, 'index'])->name('index');
+        Route::get('/create', [NoteController::class, 'create'])->name('create');
+        Route::post('/', [NoteController::class, 'store'])->name('store');
+        Route::get('/{note}', [NoteController::class, 'show'])
+            ->whereNumber('note')->name('show');
+        Route::post('/{note}/confirm', [NoteController::class, 'confirm'])
+            ->whereNumber('note')->name('confirm');
+        Route::post('/{note}/cancel', [NoteController::class, 'cancel'])
+            ->whereNumber('note')->name('cancel');
+        // ⭐ ছাপা — মালিক, ৩ অক্টোবর ২০২৬: নোটের কোনো ছাপা ছিল না ([[NotePrintController]])
+        Route::get('/{note}/print', NotePrintController::class)
+            ->whereNumber('note')->name('print');
+    });
+
+    Route::prefix('reconciliations')->name('reconciliation.')->group(function () {
+        Route::get('/', [BankReconciliationController::class, 'index'])->name('index');
+
+        /*
+         * খোলার পর্দা — `/{reconciliation}`-এর আগে, একই কারণে।
+         *
+         * ⓘ তিন ধাপ: এখানে অধিবেশনটা খোলা হয় (`store`), আর তারপর
+         * ব্যবহারকারী `show`-এ গিয়ে লাইন ধরে টিক দেন। তাই `store`
+         * আগের মতোই `show`-এ পাঠায়, তালিকায় নয়।
+         */
+        Route::get('/create', [BankReconciliationController::class, 'create'])->name('create');
+        Route::post('/', [BankReconciliationController::class, 'store'])->name('store');
+        Route::get('/{reconciliation}', [BankReconciliationController::class, 'show'])
+            ->whereNumber('reconciliation')->name('show');
+        Route::post('/{reconciliation}/mark', [BankReconciliationController::class, 'mark'])
+            ->whereNumber('reconciliation')->name('mark');
+        /*
+         * ⭐ ব্যাংকের স্টেটমেন্ট তোলা — মানচিত্র §৯, ২০ সেপ্টেম্বর ২০২৬।
+         * ⓘ হিসাবরক্ষকের অনুমতিতেই (`reconciliation.manage`), প্রশাসকের
+         * ইমপোর্ট পর্দায় যাওয়ার দরকার নেই।
+         */
+        Route::post('/{reconciliation}/statement', [BankReconciliationController::class, 'statement'])
+            ->whereNumber('reconciliation')->name('statement');
+        Route::post('/{reconciliation}/confirm', [BankReconciliationController::class, 'confirm'])
+            ->whereNumber('reconciliation')->name('confirm');
+        Route::post('/{reconciliation}/reopen', [BankReconciliationController::class, 'reopen'])
+            ->whereNumber('reconciliation')->name('reopen');
+    });
+
+    /*
+     * স্থায়ী সম্পদ ও অবচয়।
+     *
+     * মাস শেষের দৌড়টা তালিকার রুটেই (POST /assets/depreciate), আলাদা
+     * পর্দায় নয় — ওটা একটা বোতাম, একটা পাতা নয়।
+     */
+    Route::prefix('assets')->name('asset.')->group(function () {
+        Route::get('/', [FixedAssetController::class, 'index'])->name('index');
+
+        // বসানোর পর্দা — `/{asset}`-এর আগে, নাহলে "create" একটা id ভেবে ৪০৪
+        Route::get('/create', [FixedAssetController::class, 'create'])->name('create');
+        Route::post('/', [FixedAssetController::class, 'store'])->name('store');
+        Route::post('/depreciate', [FixedAssetController::class, 'depreciate'])->name('depreciate');
+        Route::get('/{asset}', [FixedAssetController::class, 'show'])
+            ->whereNumber('asset')->name('show');
+        Route::post('/{asset}/dispose', [FixedAssetController::class, 'dispose'])
+            ->whereNumber('asset')->name('dispose');
+
+        /*
+         * ⭐ শাখা বদল — মানচিত্র §১৫, ২১ সেপ্টেম্বর ২০২৬।
+         * ⓘ প্রতিটা স্থানান্তরের নিজের সারি, তাই একই সম্পদ বহুবার সরতে পারে।
+         */
+        Route::post('/{asset}/transfer', [FixedAssetController::class, 'transfer'])
+            ->whereNumber('asset')->name('transfer');
+    });
+
+    Route::prefix('periods')->name('period.')->group(function () {
+        Route::get('/', [PeriodLockController::class, 'index'])->name('index');
+        Route::post('/close', [PeriodLockController::class, 'close'])->name('close');
+        Route::post('/{lock}/reopen', [PeriodLockController::class, 'reopen'])
+            ->whereNumber('lock')->name('reopen');
+    });
+
+    Route::prefix('cash-counts')->name('count.')->group(function () {
+        Route::get('/', [CashCountController::class, 'index'])->name('index');
+        Route::get('/create', [CashCountController::class, 'create'])->name('create');
+        Route::post('/', [CashCountController::class, 'store'])->name('store');
+        Route::get('/{count}', [CashCountController::class, 'show'])->name('show');
+        Route::post('/{count}/approve', [CashCountController::class, 'approve'])->name('approve');
+    });
+});

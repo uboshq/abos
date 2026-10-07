@@ -1,0 +1,180 @@
+<?php
+
+declare(strict_types=1);
+
+/**
+ * Governance Center — প্ল্যানের সপ্তাহ ২৩–২৫।
+ *
+ * ── এই মডিউলটা কী নয় ────────────────────────────────────────────────
+ * নতুন কোনো সংগ্রহ ব্যবস্থা নয়। অডিট ইঞ্জিন প্রতিটা পরিবর্তনে পুরাতন ও
+ * নতুন মান লিখে রাখে; এই মডিউলটা তার উপর একটা পর্দা। ডেটা এখানে তৈরি
+ * হয় না, কেবল পড়া হয়।
+ *
+ * ── কেন কিছু লেখা যায় না ────────────────────────────────────────────
+ * এখানে কোনো ফর্ম নেই, কোনো সম্পাদনার পথ নেই, কোনো মোছার বোতাম নেই।
+ * অডিট বদলানো গেলে অডিট বলে কিছু থাকে না — আর সেই নিষেধটা মডেলেই
+ * বসানো, তাই এই পর্দা দিয়ে চেষ্টা করলেও কিছু হত না।
+ */
+use App\Modules\Governance\Dashboard\GovernanceDashboard;
+use App\Modules\Governance\Integrity\GovernanceChecks;
+
+return [
+    'code' => 'governance',
+
+    'name' => [
+        'en' => 'Governance',
+        'bn' => 'নিয়ন্ত্রণ ও নিরীক্ষা',
+    ],
+
+    'version' => '1.0.0',
+
+    /*
+     * সাইডবারে কোথায় — নির্ভরতার ক্রম নয়, মানুষের ক্রম।
+     *
+     * অডিট ও নিরীক্ষা — কে কী করল তা দেখে।
+     *
+     * দলগুলোর তালিকা আর কেন এটা `depends_on`-এর থেকে আলাদা:
+     * [[ModuleDefinition::NAV_SECTIONS]].
+     */
+    'nav' => ['section' => 'people', 'order' => 20],
+
+    // কারও উপর নির্ভর করে না: অডিট কোরের ইঞ্জিন, কোনো মডিউলের নয়
+    'depends_on' => [
+        /*
+         * ⓘ তথ্য রাখার মেয়াদের পর্দা অর্থের সারিগুলোও দেখায়।
+         * ⚠️ চক্র হয় না: finance governance চেনে না (২১ সেপ্টেম্বর ২০২৬ — সীমারেখার নিরীক্ষা)।
+         */
+        'finance',],
+
+    'dashboard' => GovernanceDashboard::class,
+
+    'menu' => [
+        'dashboard' => [
+            ['label' => 'governance::dashboard.title', 'icon' => 'dashboard', 'route' => 'module.dashboard',
+                'route_params' => ['module' => 'governance'], 'permission' => 'governance.audit.view'],
+        ],
+
+        'reports' => [
+            ['label' => 'governance::menu.audit_trail', 'icon' => 'list', 'route' => 'governance.audit.index', 'permission' => 'governance.audit.view'],
+            // ⭐ নিরীক্ষার খাতা — রিপোর্ট সেন্টার ধাপ ৬ (মালিক, ১ অক্টোবর ২০২৬)
+            ['label' => 'governance::audit_report.changes_title', 'icon' => 'edit', 'route' => 'governance.report.show',
+                'route_params' => ['slug' => 'changes'], 'permission' => 'governance.audit.view'],
+            ['label' => 'governance::audit_report.backdated_title', 'icon' => 'clock', 'route' => 'governance.report.show',
+                'route_params' => ['slug' => 'backdated'], 'permission' => 'governance.audit.view'],
+            ['label' => 'governance::audit_report.periods_title', 'icon' => 'calendar', 'route' => 'governance.report.show',
+                'route_params' => ['slug' => 'periods'], 'permission' => 'governance.audit.view'],
+
+            /*
+             * রপ্তানির খাতা — অডিটের ঠিক পাশে।
+             *
+             * দুইটাই একই প্রশ্নের দুই দিক: একটা বলে কী বদলেছে, অন্যটা
+             * বলে কী বেরিয়ে গেছে। আলাদা জায়গায় রাখলে কেউ একটা দেখে
+             * ভাবত পুরো ছবিটা দেখা হয়ে গেছে।
+             */
+            ['label' => 'governance::menu.export_log', 'icon' => 'download', 'route' => 'governance.export.index', 'permission' => 'governance.export.view'],
+            /*
+             * কাগজ সংরক্ষণ নীতি — রপ্তানির লগের পাশে, কারণ দুইটাই একই
+             * প্রশ্নের দুই দিক: কী বেরিয়ে গেল, আর কী কতদিন থাকে।
+             */
+            ['label' => 'governance::menu.retention', 'icon' => 'book', 'route' => 'governance.retention.index', 'permission' => 'governance.audit.view'],
+            ['label' => 'governance::menu.login_history', 'icon' => 'clock', 'route' => 'governance.login.index', 'permission' => 'governance.login.view'],
+
+            /*
+             * ভুলের খাতা — বাকি তিনটার পাশে, কিন্তু নিজের চাবিতে।
+             *
+             * তিনটাই একই প্রশ্নের ভিন্ন দিক: কী বদলেছে, কী বেরিয়েছে,
+             * কে ঢুকেছে। চতুর্থটা বলে **কী ভেঙেছে** — আর এতদিন সেই
+             * প্রশ্নটার কোনো উত্তরই কোথাও ছিল না।
+             */
+            ['label' => 'governance::menu.error_log', 'icon' => 'alert-triangle', 'route' => 'governance.error.index', 'permission' => 'governance.error.view'],
+        ],
+    ],
+
+    'permissions' => [
+        /*
+         * অডিট পড়ার অনুমতি আলাদা, আর ইচ্ছাকৃতভাবে সংকীর্ণ।
+         *
+         * এখানে সব মডিউলের পরিবর্তন এক জায়গায় — কার বেতন কত হল, কোন
+         * বিলে ছাড় বসল, কে দাম বদলাল। মডিউল ধরে ধরে অনুমতি থাকলেও
+         * এই পর্দাটা সব একসাথে দেখায়, তাই এটার নিজের চাবি লাগে।
+         */
+        'governance.audit.view',
+
+        /*
+         * ভুলের খাতার চাবি — অডিটের চেয়ে আলাদা, আর ইচ্ছাকৃতভাবে।
+         *
+         * অডিট ব্যবসার ভাষায় কথা বলে: কোন বিলে ছাড় বসল, কার বেতন কত
+         * হল। ভুলের খাতা ভিতরের গড়ন দেখায় — ফাইলের পথ, লাইন নম্বর,
+         * স্ট্যাক ট্রেস। হিসাবরক্ষকের প্রথমটা দরকার, দ্বিতীয়টা নয়।
+         */
+        'governance.error.view',
+
+        /*
+         * ⭐ রপ্তানির খাতা ও লগইনের খাতা — নিজের নিজের চাবি।
+         * ── ১৮ সেপ্টেম্বর ২০২৬, নিরীক্ষার ধাপ ৩.৪ ─────────────────────
+         *
+         * ⛔ এতদিন দুইটাই `governance.audit.view`-এ খুলত, আর যুক্তিটা
+         * ছিল *"একই প্রশ্নের দুই দিক"*। ⚠️ যুক্তিটা ভুল নয়, কিন্তু
+         * উল্টো দিকটা দেখেনি: **এক চাবি মানে কম দেওয়ার উপায় নেই।**
+         *
+         * ⓘ কাউকে "কে কী নামিয়েছে" দেখাতে হলে তাকে পুরো অডিট ট্রেইলও
+         * দিতে হত — প্রতিটা বেতন, প্রতিটা দর, প্রতিটা ছাড়। ⛔ আর IT-র
+         * লোককে লগইনের ঠিকানা দেখাতে গিয়েও ঠিক তাই।
+         *
+         * ⭐ নিরীক্ষার কথা: *"চারটি আলাদা চাবিতে ভাগ করুন।"* এখন চারটাই
+         * আছে, আর ভূমিকা-ছাঁচে আগের মতোই একসাথে দেওয়া — কিন্তু **আলাদা
+         * করে কম দেওয়াও যায়**, আর অনুমতির পুরো মানেই সেটা।
+         */
+        'governance.export.view',
+        'governance.login.view',
+
+        /*
+         * ⭐ ফোনের সিঙ্কের দ্বন্দ্ব **মেটানো** — ৩০ সেপ্টেম্বর ২০২৬।
+         *
+         * ⛔ আগে মেটানোর দরজা `governance.audit.view` চাইত: যাঁর কাজ কেবল দেখা, তিনি
+         * দ্বন্দ্বটা মিটিয়ে সারি থেকে সরিয়ে দিতে পারতেন। ⓘ ছাঁচে দেওয়া হয়নি —
+         * মালিক (super_admin) নিজে থেকেই পান, আর কাকে দেবেন সেটা ব্যবসার সিদ্ধান্ত।
+         */
+        'governance.sync.resolve',
+    ],
+
+    /*
+     * ⭐ ভূমিকার ছাঁচ — চারটা চাবি ভাগ করার পরেই এটা অর্থবহ হলো।
+     *
+     * ── ⓘ কেন দুইটা আলাদা ছাঁচ ───────────────────────────────────────
+     * চারটা খাতা দুই রকম মানুষের: হিসাবের লোক দেখেন **কী বদলেছে ও কী
+     * বেরিয়েছে**; IT-র লোক দেখেন **কে ঢুকেছে ও কী ভেঙেছে**।
+     *
+     * ⚠️ এক ছাঁচে সব দিলে ভাগ করাটাই অর্থহীন হত — আর ঠিক সেটাই এতদিন
+     * ঘটছিল, একটামাত্র চাবির কারণে।
+     */
+    'role_templates' => [
+        /*
+         * ⓘ নিরীক্ষক — ব্যবসার খাতা। ⛔ `error.view` নেই: স্ট্যাক ট্রেস
+         * তাঁর কাজে লাগে না, আর ওখানে ভিতরের গড়ন দেখা যায়।
+         */
+        'Auditor' => ['governance.audit.view', 'governance.export.view'],
+
+        /*
+         * ⓘ যিনি সার্ভার দেখেন — কে ঢুকল, কী ভাঙল। ⛔ `audit.view` নেই,
+         * কারণ প্রতিটা বেতন ও দর দেখার দরকার তাঁর নেই।
+         */
+        'Security Watch' => ['governance.login.view', 'governance.error.view'],
+    ],
+
+    /*
+     * সততা যাচাই — অনুমতিগুলো সত্যিই বসেছে কি না।
+     *
+     * এই মডিউলে বসল কারণ প্রশ্নটা "কে কী পারে" নিয়ে, আর ওটাই এই
+     * মডিউলের বিষয়। কোরে বসালে কোরকে মডিউলের তালিকা ধরে হাঁটতে হত
+     * নিজের নামে, যেটা ১৯.৭ ঠিক উল্টো বলে।
+     */
+    'integrity' => [
+        GovernanceChecks::class,
+    ],
+
+    // ⭐ নিরীক্ষার খাতা — Report engine boot-এ নিবন্ধন করে
+    'reports' => [
+        \App\Modules\Governance\Reports\AuditReports::class,
+    ],
+];

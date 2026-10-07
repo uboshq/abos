@@ -1,0 +1,50 @@
+<?php
+
+declare(strict_types=1);
+
+/*
+ * ⭐ Hand-loan reports 3–7 — finance module plan, 5 Oct 2026 ([[HandLoanReports]]).
+ */
+return [
+    'reports' => 'Hand-loan reports',
+    'reconcile_title' => 'People books against the hand-loan account',
+    'reconcile_short' => 'Match with the account',
+    'reconcile_summary' => 'Gap between the list and the account',
+    'reconcile_text' => 'All people :list · hand-loan account :books · gap :gap',
+    'nameless' => 'In the account without a name',
+    'list_balance' => 'In the hand-loan list',
+    'books_balance' => 'In the hand-loan account',
+    'gap' => 'Gap',
+    'receivable_title' => 'Hand loans receivable — they will pay',
+    'payable_title' => 'Hand loans payable — we have to pay',
+    'receivable_short' => 'Receivable list',
+    'payable_short' => 'Payable list',
+    'address' => 'Address',
+    'mobile' => 'Mobile',
+    'they_owe' => 'They owe',
+    'we_owe' => 'We owe',
+    'last_given' => 'Last given',
+    'last_taken' => 'Last taken',
+    'age_receivable_title' => 'Hand loans receivable by age',
+    'age_payable_title' => 'Hand loans payable by age',
+    'age_receivable_short' => 'Receivable age',
+    'age_payable_short' => 'Payable age',
+    'bucket_0' => '0–30 days',
+    'bucket_30' => '31–60 days',
+    'bucket_60' => '61–90 days',
+    'bucket_90' => '90+ days',
+    'oldest' => 'Oldest unpaid',
+    'activity_title' => 'Hand loans — who gave or took how much',
+    'activity_short' => 'Given and taken',
+    'kind' => 'Kind',
+    'schedule_title' => 'Hand loans — repayment schedule',
+    'schedule_short' => 'Repayment schedule',
+    'made_on' => 'Given or taken on',
+    'state' => 'State',
+    'days_left' => 'Days left',
+    'state_overdue' => 'Overdue',
+    'state_today' => 'Today',
+    'state_upcoming' => 'Coming up',
+    'state_undated' => 'No date',
+    'all_states' => 'Every state',
+];

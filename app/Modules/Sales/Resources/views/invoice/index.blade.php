@@ -1,0 +1,164 @@
+{{--
+    বিক্রয় বিল — তালিকা।
+--}}
+@php
+    // ⓘ ডেলিভারির কথা এক প্রশ্নে, পুরো পাতার — [[DeliveryStageService::invoiceSummaries()]]
+    $delivery = app(\App\Modules\Sales\Services\DeliveryStageService::class)
+        ->invoiceSummaries(collect($invoices->items())->pluck('id'));
+
+    $columns = [
+        [
+            'key' => 'trx_date',
+            'label' => __('sales::field.date'),
+            'width' => '7rem',
+            'render' => fn ($d) => \App\Core\Support\DateFormat::format($d->trx_date),
+        ],
+        [
+            'key' => 'document_no',
+            'label' => __('sales::field.document_no'),
+            'width' => '12rem',
+            'render' => fn ($d) => view('sales::components.doc-link', [
+                'document' => $d,
+                'route' => 'sales.invoice.show',
+            ]),
+        ],
+        [
+            'key' => 'customer_id',
+            'label' => __('sales::field.customer'),
+            'render' => fn ($d) => $d->customer?->name(),
+        ],
+        [
+            // ⭐ গ্রাহকের পরে পয়েন্ট — মালিকের নির্দেশ, ২৮ সেপ্টেম্বর ২০২৬: সব তালিকায় অবশ্যই
+            'key' => 'point',
+            'label' => __('customer::field.point'),
+            'width' => '9rem',
+            'render' => fn ($d) => $d->customer?->location?->name() ?? '—',
+        ],
+        [
+            'key' => 'due_on',
+            'label' => __('sales::field.due_on'),
+            'width' => '8rem',
+            'render' => fn ($d) => \App\Core\Support\DateFormat::format($d->due_on),
+        ],
+        [
+            'key' => 'total',
+            'total' => 'money',
+            'label' => __('sales::field.total'),
+            'numeric' => true,
+            'width' => '10rem',
+            'render' => fn ($d) => view('ui.amount-link', [
+                'value' => $d->total,
+                'href' => route('sales.invoice.show', $d),
+            ]),
+        ],
+        [
+            'key' => 'status',
+            'label' => __('sales::field.state'),
+            'width' => '8rem',
+            'render' => fn ($d) => view('sales::components.status-badge', ['document' => $d]),
+        ],
+        [
+            // ⭐ মালিকের পরিকল্পনা, ধাপ ৪ — বিলের চালান পৌঁছেছে কি না
+            'key' => 'delivery',
+            'label' => __('sales::delivery.summary.column'),
+            'width' => '10rem',
+            'render' => fn ($d) => view('sales::delivery.partials.summary', ['summary' => $delivery[$d->id] ?? null]),
+        ],
+
+        /*
+         * ⭐ সারির কাজ — ২১ সেপ্টেম্বর ২০২৬, মালিকের নির্দেশে।
+         *
+         * ⓘ ছবিতে তিনি ডান ধারের **খালি কলামটা** দাগ দিয়ে দেখিয়েছেন,
+         * আর কথাটা ন্যায্য ছিল: জায়গাটা রাখা ছিল, কিছু বসানো হয়নি।
+         * ⚠️ খালি কলাম মৃত বোতামের মতোই — পর্দা বলে কিছু একটা আছে,
+         * আর নেই।
+         *
+         * ⛔ "মুছুন" নেই, আর সেটা ইচ্ছাকৃত — কারণ [[invoice.partials
+         * .row-actions]]-এ লেখা।
+         */
+        [
+            'key' => 'actions',
+            'label' => __('core.table.actions'),
+            'width' => '4rem',
+            'render' => fn ($d) => view('sales::invoice.partials.row-actions', ['invoice' => $d]),
+        ],
+    ];
+
+    /*
+     * ⭐ সারি থেকেই "পৌঁছেছে" — মালিক, ৩ অক্টোবর ২০২৬: "sob jaygathekei"। বিলের চালান রওনা হয়ে থাকলে, ধাপ বদলানোর
+     * চাবিতে ([[DeliveryRowActions::forInvoices()]]); ফর্ম যায় চালানের পুরনো `sales.delivery.move`-এ।
+     */
+    $arrive = app(\App\Modules\Sales\Services\DeliveryRowActions::class)->forInvoices(collect($invoices->items())->pluck('id'));
+
+    if ($arrive !== []) {
+        array_splice($columns, count($columns) - 1, 0, [[
+            'key' => 'arrive',
+            'label' => __('sales::delivery.column.next'),
+            'width' => '10rem',
+            'render' => fn ($d) => isset($arrive[$d->id])
+                ? view('sales::delivery.partials.row-action', ['challan' => $arrive[$d->id]['challan'], 'choices' => $arrive[$d->id]['choices'], 'trip' => null, 'vehicles' => collect()])
+                : '',
+        ]]);
+    }
+@endphp
+
+<x-layouts.app :menu="$menu" :process-band="$processBand ?? []">
+    <x-slot:title>{{ __('sales::menu.invoices') }}</x-slot:title>
+
+    @if (session('saved'))
+        <div role="status"
+             class="mb-4 rounded-(--radius-field) bg-(--color-badge-success-bg) px-3 py-2 text-sm
+                    text-(--color-badge-success-ink)">
+            {{ session('saved') }}
+        </div>
+    @endif
+
+    <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
+        <form method="GET" class="contents">
+            <x-ui.toolbar :title="__('sales::menu.invoices')" :count="__('sales::message.invoice_note')"
+                :columns="$columns" :search-placeholder="__('sales::message.invoice_search')"
+                          :sort="$sortOptions">
+        {{-- ⭐ "New invoice" নেই — মালিকের নির্দেশ, ১৯ সেপ্টেম্বর ২০২৬: *"Direct Sales আছে।"*
+             বিল জন্মায় সরাসরি বিক্রয়ে, আর (পরের কাজ) শিপমেন্ট থেকে আদেশ ধরে। ⓘ চালানের পাতার
+             "এই চালানের বিল করুন" থাকল — সেই ব্যবস্থা তৈরি হওয়া পর্যন্ত আদেশের মালের একমাত্র পথ। --}}
+                <x-ui.date-range :dates="$dates" />
+
+                <label class="flex min-h-(--spacing-touch) items-center gap-2 text-sm">
+                    <input type="checkbox" name="cancelled" value="1" @checked($showCancelled) class="size-4">
+                    {{ __('sales::action.show_cancelled') }}
+                </label>
+            </x-ui.toolbar>
+        </form>
+
+        <x-ui.table
+            :grand="['total' => $totals['money']]"
+            :view-url="fn ($d) => route('sales.invoice.show', $d)"
+            :empty="$q ? __('core.empty.no_results') : __('sales::message.no_invoices')"
+            :rows="$invoices"
+            :compact="request()->boolean('compact')"
+            :columns="$columns" />
+
+        <x-ui.pager :rows="$invoices" />
+
+        {{-- তালিকার যোগফল — পর্দা কেবল **ঘোষণা করে**।
+
+             ⓘ দেখানো হবে কি না সেটা রূপ ঠিক করে ([[Ui::listFoot]]), আর
+             সেই কারণেই এখানে কোনো রূপের নাম লেখা নেই। যে রূপ চায় না,
+             তার পাতায় এই ঘোষণাটা চুপচাপ পড়ে থাকে।
+
+             ⚠️ **সংখ্যাগুলো গোটা ছাঁকনির, এই পাতার নয়** — কন্ট্রোলারে
+             আলাদা করে গোনা (`clone $query`)।
+
+             ⓘ মালিকের নমুনায় লেখা ছিল *"এই পাতার মোট"*, আর শব্দটা
+             সেখান থেকেই নেওয়া। ⚠️ কিন্তু অঙ্কটা ইচ্ছে করে **ছাঁকনির**:
+             কেউ "এই মাস" ছেঁকে মোট জানতে চান, প্রথম পঞ্চাশটার মোট নয়।
+             ⛔ ৫০ সারির পাতায় ১২৪টা বিলের মোট দেখানোটাই দরকারি সংখ্যা;
+             পাতার যোগফল দেখালে পাতা বদলালেই "মোট" বদলে যেত। --}}
+        <x-ui.list-totals :totals="[
+            ['value' => __('core.list.rows', ['count' => number_format($totals['rows'])])],
+            ['label' => __('core.list.page_total'), 'value' => \App\Core\Support\Money::format($totals['money'])],
+            ['label' => __('sales::field.collected'), 'value' => \App\Core\Support\Money::format($totals['collected']), 'tone' => 'ok'],
+            ['label' => __('sales::field.due'), 'value' => \App\Core\Support\Money::format($totals['due']), 'tone' => 'bad'],
+        ]" />
+    </div>
+</x-layouts.app>

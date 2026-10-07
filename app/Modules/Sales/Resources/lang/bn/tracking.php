@@ -1,0 +1,82 @@
+<?php
+
+declare(strict_types=1);
+
+// ডেলিভারি ট্র্যাকিং — ২ অক্টোবর ২০২৬ ([[SaleTracking]])
+return [
+    'title' => 'ডেলিভারি ট্র্যাকিং',
+    'search' => 'বিক্রয় নম্বর, ডিও বা দোকান',
+    'find' => 'খুঁজুন',
+    'all' => 'সব',
+    'yes' => 'হ্যাঁ',
+    'branch' => 'শাখা',
+    'history' => 'কে কখন কী করলেন',
+    'notice' => [
+        'title' => ':no — :step',
+        'body' => ':customer',
+        // ⓘ লক-স্ক্রিনে কেবল নম্বর আর ধাপ — দোকানের নাম বা টাকা নয় (সমন্বয়কের শর্ত ২)
+        'order_held' => ':no — বাকির সীমায় আটকে',
+        'order_awaits' => ':no — আপনার সইয়ের অপেক্ষায়',
+    ],
+    'empty' => 'কোনো বিক্রি নেই।',
+    'step' => [
+        'ordered' => 'অর্ডার এসেছে',
+        'credit_hold' => 'বাকির সীমায় আটকে',
+        'draft' => 'খসড়া',
+        'approval' => 'অনুমোদনের অপেক্ষায়',
+        'warehouse' => 'গুদামে',
+        'gate_out' => 'গেট পেরিয়েছে',
+        'partial' => 'কিছু পৌঁছেছে',
+        'delivered' => 'পৌঁছেছে',
+        'cancelled' => 'বাতিল',
+        'billed' => 'বিল হয়েছে',
+    ],
+    // ⭐ টিকচিহ্নের দাগ — মালিকের আদেশ, ২ অক্টোবর ২০২৬
+    // ⭐ চালানের সময়রেখা — সাত ধাপ ([[SaleTracking::timeline()]], ৪ অক্টোবর ২০২৬)
+    'timeline' => [
+        'title' => 'সময়রেখা',
+        'created' => 'তৈরি',
+        'vehicle' => 'গাড়ি',
+        'loading' => 'লোডিং',
+        'packed' => 'প্যাক',
+        'gate_pass' => 'গেট পাস',
+        'on_the_way' => 'পথে',
+        'delivered' => 'পৌঁছেছে',
+        'now' => 'এখন',
+        'not_yet' => 'এখনো নয়',
+        'by' => 'করেছেন',
+        'car' => 'গাড়ি',
+        'driver' => 'চালক',
+        'received_by' => 'বুঝে নিলেন',
+    ],
+    'milestone' => [
+        'order_created' => 'অর্ডার তৈরি',
+        'approval_level' => 'অনুমোদন — স্তর :level',
+        'challan_draft' => 'চালানের খসড়া',
+        'challan_confirmed' => 'চালান নিশ্চিত',
+        'stock_allocated' => 'মাল বরাদ্দ',
+        'transport_assigned' => 'পরিবহন ঠিক',
+        'loading_started' => 'লোডিং শুরু',
+        'loading_completed' => 'লোডিং শেষ',
+        'invoice_generated' => 'বিল তৈরি',
+        'gate_pass_generated' => 'গেট পাস',
+        'dispatched' => 'রওনা',
+        'delivered' => 'পৌঁছেছে',
+    ],
+    'ordered' => 'অর্ডার :no দেওয়া হলো',
+    // ⭐ নতুন ধারার আদেশ — DO+SO মেশানো, ধাপ ১১ (৫ অক্টোবর ২০২৬)
+    'submitted' => 'আদেশ জমা হলো',
+    'credit_held' => 'বাকির সীমায় আটকে — টাকা এলে নিজেই এগোবে',
+    'back_order' => 'বাকি মাল পরে যাবে',
+    'do_written' => 'ডিও :no লেখা হলো',
+    'sent_for_signature' => 'সইয়ের জন্য পাঠানো হলো',
+    'decision' => [
+        'approved' => 'অনুমোদন দিলেন',
+        'rejected' => 'ফেরত দিলেন',
+        'forwarded' => 'অন্যকে পাঠালেন',
+        'other' => 'সিদ্ধান্ত দিলেন',
+    ],
+    'received_by' => 'মাল নিলেন :name',
+    'gate_pass' => 'গেট পাস :no, গাড়ি :vehicle',
+    'billed' => 'বিল :no, মোট :total',
+];

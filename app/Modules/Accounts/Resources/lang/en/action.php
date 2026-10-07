@@ -1,0 +1,56 @@
+<?php
+
+declare(strict_types=1);
+
+return [
+    'close_year' => 'Close the year',
+    'new_account' => 'New account',
+    'edit_account' => 'Edit account',
+    'install_chart' => 'Install standard chart',
+    'show_inactive' => 'Show inactive too',
+    'show_zero' => 'Show zero balances too',
+    'new_till' => 'New counter',
+    'edit_till' => 'Edit counter',
+    'close_till' => 'Close counter',
+    'make_primary' => 'Make main',
+    'show_closed' => 'Show closed too',
+    'new_voucher' => 'New voucher',
+    'save_and_post' => 'Save and post',
+    'send_for_approval' => 'Send for approval',
+    'show_all' => 'Show all',
+    'save_draft' => 'Save as draft',
+    'post_now' => 'Post now',
+    'cancel_voucher' => 'Cancel voucher',
+    'new_transfer' => 'New transfer',
+    'hand_over' => 'Hand over',
+    'receive' => 'I received it',
+    'new_count' => 'New count',
+    'save_count' => 'Save count',
+    'approve_count' => 'Approve',
+    'approve_and_adjust' => 'Approve and adjust',
+    'deactivate' => 'Deactivate',
+    'activate' => 'Activate',
+    'new_loan' => 'New loan',
+    'save_loan' => 'Save loan',
+    'draw_down' => 'Draw down',
+    'repay' => 'Repay',
+    'charge_interest' => 'Charge interest',
+    'pay_instalment' => 'Pay',
+    'expand_all' => 'Expand all',
+    'collapse_all' => 'Collapse all',
+
+    // মাস বন্ধ ও খোলা
+    'close_month' => 'Close the month',
+    'reopen' => 'Reopen',
+
+    // তালিকার উপরের "+ নতুন …" বোতামগুলো
+    'new_cheque' => 'New cheque',
+    'new_asset' => 'New asset',
+    'new_reconciliation' => 'New reconciliation',
+
+    // চেকের খাতা
+    'cheque_deposit' => 'Deposited',
+    'cheque_clear' => 'Cleared',
+    'cheque_bounce' => 'Bounced',
+    'reopen_year' => 'Reopen the year',
+];

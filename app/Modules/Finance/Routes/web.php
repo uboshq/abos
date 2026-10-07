@@ -1,0 +1,472 @@
+<?php
+
+declare(strict_types=1);
+
+use App\Modules\Finance\Http\Controllers\AccountAnalysisController;
+use App\Modules\Finance\Http\Controllers\BankChargeController;
+use App\Modules\Finance\Http\Controllers\BankFacilityController;
+use App\Modules\Finance\Http\Controllers\CapitalController;
+use App\Modules\Finance\Http\Controllers\CarrierAndLabourController;
+use App\Modules\Finance\Http\Controllers\DepositController;
+use App\Modules\Finance\Http\Controllers\DepositKindController;
+use App\Modules\Finance\Http\Controllers\ExpenseController;
+use App\Modules\Finance\Http\Controllers\HandLoanController;
+use App\Modules\Finance\Http\Controllers\IncomeController;
+use App\Modules\Finance\Http\Controllers\InstitutionController;
+use App\Modules\Finance\Http\Controllers\InsuranceClaimController;
+use App\Modules\Finance\Http\Controllers\InsuranceController;
+use App\Modules\Finance\Http\Controllers\PlanController;
+use App\Modules\Finance\Http\Controllers\ProfitDistributionController;
+use App\Modules\Finance\Http\Controllers\RentalContractController;
+use App\Modules\Finance\Http\Controllers\WithdrawalController;
+use App\Modules\Finance\Models\DepositKind;
+use Illuminate\Support\Facades\Route;
+
+/*
+ * অর্থের পর্দাগুলো।
+ *
+ * ── কেন `finance/` উপসর্গ, `accounts/` নয় ────────────────────────────
+ * ঠিকানাটাই বলে দেয় জিনিসটা কার। কেউ `accounts/capital` বুকমার্ক করে
+ * রাখলে সে নতুন জায়গায় পৌঁছায় — নিচের পুনর্নির্দেশটা সেজন্যই, আর
+ * সেটা মডিউল ভাগ করার সময়কার একটা নিয়ম: পুরনো ঠিকানা ভাঙে না।
+ */
+/*
+ * `web` ও `finance.` উপসর্গ দুইটাই প্রদানকারী বসায়
+ * ([[ModuleServiceProvider::registerRoutes()]])। এখানে আবার লিখলে
+ * নামটা `finance.finance.capital.index` হয়ে যেত — প্রথম চেষ্টায় ঠিক
+ * তাই হয়েছিল, আর রুটের তালিকাতেই ধরা পড়ল।
+ */
+Route::middleware('auth')->prefix('finance')->group(function () {
+    Route::get('/plan', [PlanController::class, 'index'])->name('plan');
+
+    /*
+     * খরচ — কোন খাতে কত গেল।
+     *
+     * লেখার পথ নেই: খরচ লেখা হয় ভাউচারেই। দুইটা পথ থাকলে দুইটার
+     * যাচাই একদিন আলাদা হয়ে যেত।
+     */
+    Route::get('/expenses', [ExpenseController::class, 'index'])->name('expense.index');
+
+    /*
+     * আয় — খরচের আয়না, একই প্রশ্ন উল্টো দিক থেকে।
+     *
+     * লেখার পথ নেই, খরচের মতোই: আয় বসে বিক্রয়ের বিলে বা ভাউচারে।
+     * দুইটা পথ থাকলে দুইটার যাচাই একদিন আলাদা হয়ে যেত।
+     */
+    Route::get('/income', [IncomeController::class, 'index'])->name('income.index');
+
+    /*
+     * মূলধন ও বিনিয়োগ।
+     *
+     * `post` আলাদা একটা POST, কারণ ওটাই আসল ঘটনা: লিখে রাখা নিরীহ,
+     * পোস্ট করা মানে খাতায় টাকা বসে যাওয়া।
+     */
+    /*
+     * ⭐ লাভ বণ্টন — মালিক, ২২ সেপ্টেম্বর ২০২৬।
+     *
+     * ⓘ মূলধনের পাশে, কারণ প্রশ্নটা একই মানুষের: কে কত দিয়েছেন,
+     * আর কে কত পাবেন। ⚠️ `preview` POST, GET নয় — সংখ্যাটা
+     * ঠিকানায় বসলে কেউ লিংক শেয়ার করলেই অন্যের পর্দায় অন্য
+     * মুনাফার ভাগ দেখাত।
+     */
+    Route::prefix('profit')->name('profit.')->group(function () {
+        Route::get('/', [ProfitDistributionController::class, 'index'])->name('index');
+        Route::post('/preview', [ProfitDistributionController::class, 'preview'])->name('preview');
+        Route::post('/declare', [ProfitDistributionController::class, 'declare'])->name('declare');
+
+        /*
+         * ⭐ বছর শেষে যা বাকি — মালিকের তৃতীয় ধাপ।
+         *
+         * ⓘ একই পাতায়, কারণ প্রশ্নটা একই: কার কত পাওনা
+         * ছিল, আর সেটা এখন কোথায় যাচ্ছে।
+         */
+        Route::post('/capitalise', [ProfitDistributionController::class, 'capitalise'])->name('capitalise');
+    });
+
+    Route::prefix('capital')->name('capital.')->group(function () {
+        Route::get('/', [CapitalController::class, 'index'])->name('index');
+        Route::get('/create', [CapitalController::class, 'create'])->name('create');
+        Route::post('/', [CapitalController::class, 'store'])->name('store');
+        // ⭐ কোম্পানির মালিক — শুরুর মূলধন তাঁর নামে (মালিকের আদেশ, ৫ অক্টোবর ২০২৬)
+        Route::post('/owner', [CapitalController::class, 'setOwner'])->name('owner');
+        // ⭐ মূলধন ও বিনিয়োগের রিপোর্ট — অর্থ-মডিউলের পরিকল্পনা, অংশ ২ ([[CapitalReportController]], ৫ অক্টোবর ২০২৬)
+        Route::get('/reports/{slug}', [\App\Modules\Finance\Http\Controllers\CapitalReportController::class, 'show'])
+            ->where('slug', '[a-z\-]+')->name('report.show');
+        /*
+         * সম্পাদনা ও মোছা — ⛔ কেবল খসড়া, আর পাহারাটা কন্ট্রোলারে।
+         *
+         * ⓘ `edit` তালিকার পাতাটাই আবার আঁকে, ঘরগুলো ভরা অবস্থায় —
+         * আলাদা পাতা নয়, কারণ ফর্মটা ঐ পাতাতেই বসে।
+         */
+        Route::get('/{entry}/edit', [CapitalController::class, 'edit'])
+            ->whereNumber('entry')->name('edit');
+        Route::put('/{entry}', [CapitalController::class, 'update'])
+            ->whereNumber('entry')->name('update');
+        Route::delete('/{entry}', [CapitalController::class, 'destroy'])
+            ->whereNumber('entry')->name('destroy');
+
+        // ⛔ `/{entry}/post` আর নেই — সই ছাড়া, যেকোনো খাতে মূলধন বসানোর পুরনো দরজা (অডিট গ১৫, ৪ অক্টোবর ২০২৬)
+    });
+
+    /*
+     * সঞ্চয় ও বিনিয়োগ — এক পর্দা, তিনটা ঠিকানা।
+     *
+     * ── কেন ইস্যুয়ারটা পথের অংশ, প্রশ্নচিহ্নের পরে নয় ────────────────
+     * মেনু কোন সারিটা সক্রিয় তা রুটের প্যারামিটার মিলিয়ে বলে
+     * ([[MenuBuilder::paramsMatch()]])। কোয়েরি স্ট্রিং হলে তিনটা সারিই
+     * একসাথে সক্রিয় দেখাত, আর ব্যবহারকারী জানত না সে কোথায় আছে।
+     */
+    /*
+     * ── কেন প্রতিটা ঠিকানায় ইস্যুয়ারটা থেকে যায়, রেকর্ডের পাতাতেও ────
+     * মেনুর সারিটা সক্রিয় থাকে ইস্যুয়ার মিললে। একটা FD খুলে ভেতরে
+     * ঢুকলে যদি প্যারামিটারটা হারিয়ে যেত, বাঁ পাশের মেনুতে "ব্যাংক
+     * আমানত" নিভে যেত — আর ব্যবহারকারী জানত না সে কোথায় আছে।
+     */
+    /*
+     * উত্তোলন — মালিক/অংশীদারের টাকা তোলা।
+     *
+     * ── কেন `cap` আলাদা POST, একই পর্দায় ────────────────────────────
+     * সীমা বদলানো উত্তোলন লেখার চেয়ে কড়া ক্ষমতা: যে কেরানি উত্তোলন
+     * লিখতে পারেন, তাঁর সীমা বদলানোর ক্ষমতা থাকার কথা নয়। আলাদা
+     * পথ মানে আলাদা চাবি।
+     */
+    Route::prefix('withdrawals')->name('withdrawal.')->group(function () {
+        Route::get('/', [WithdrawalController::class, 'index'])->name('index');
+        /*
+         * ⭐ লেখার পাতা — নমুনার কাঠামোয়, ১৮ সেপ্টেম্বর ২০২৬।
+         *
+         * ⓘ `index` রয়ে গেছে **পড়ার** পাতা হিসেবে: মাসের হিসাব, কে
+         * কোথায় দাঁড়িয়ে, মাসিক সীমা, আর তোলা টাকার তালিকা।
+         *
+         * ⛔ দুইটা এক পাতায় ছিল, আর নমুনার সাথে মিলত না: নমুনায়
+         * উত্তোলন হলো মালিকের পুঁজির **দ্বিতীয় দিক**, আলাদা চেহারার
+         * পাতা নয়।
+         */
+        Route::get('/create', [WithdrawalController::class, 'create'])->name('create');
+        Route::post('/', [WithdrawalController::class, 'store'])->name('store');
+        Route::post('/cap', [WithdrawalController::class, 'cap'])->name('cap');
+
+        Route::post('/{withdrawal}/post', [WithdrawalController::class, 'post'])
+            ->whereNumber('withdrawal')->name('post');
+    });
+
+    /*
+     * হাতধার — নিজের মেনু, নিজের পূর্ণাঙ্গ হিসাব।
+     *
+     * মালিকের নির্দেশ: *"hand loan আলাদা মেনু করো মানে পূর্ণাঙ্গ হিসাব
+     * আলাদা"*। ঋণের ফর্মে এটা একটা `kind` ছিল, আর HP-র রিপোর্টে ওই
+     * ব্যবস্থার ফলটাই ধরা পড়েছে: "Hand loan" বাছলে সেভ হত "CC" হিসেবে।
+     */
+    /*
+     * ব্যাংকের সুবিধা — ১৬ সেপ্টেম্বর ২০২৬।
+     *
+     * ⛔ হাতধারের সাথে এক পর্দায় রাখা যেত না: মঞ্জুরিপত্র · জামানত ·
+     * ড্রয়িং পাওয়ার · বার্ষিক নবায়ন — একটাও হাতধারে নেই।
+     *
+     * ⚠️ আর `move`/`settle` এখানে **নেই**, ইচ্ছাকৃতভাবে: টাকা নাড়ে
+     * ভাউচার, খাতা নয়। ⓘ এখানে কেবল নথিটা খোলা ও বন্ধ করা যায়।
+     */
+    Route::prefix('bank-facilities')->name('bank_facility.')->group(function () {
+        Route::get('/', [BankFacilityController::class, 'index'])->name('index');
+        // ⓘ নতুন সুবিধার ফর্ম নিজের পাতায় — ১৯ সেপ্টেম্বর ২০২৬
+        Route::get('/create', [BankFacilityController::class, 'create'])->name('create');
+        Route::post('/', [BankFacilityController::class, 'store'])->name('store');
+
+        Route::get('/{bankFacility}', [BankFacilityController::class, 'show'])
+            ->whereNumber('bankFacility')->name('show');
+
+        Route::post('/{bankFacility}/close', [BankFacilityController::class, 'close'])
+            ->whereNumber('bankFacility')->name('close');
+
+        // ⭐ মাস শেষের সুদ জমা — অর্থ-মডিউলের পরিকল্পনা ৩.৩, ৬ অক্টোবর ২০২৬
+        Route::post('/accruals', [BankFacilityController::class, 'accrue'])->name('accrue');
+
+        // ⭐ ব্যাংকের বিবরণীর জের — অর্থ-মডিউলের পরিকল্পনা ৩.৬, ৬ অক্টোবর ২০২৬
+        Route::post('/{bankFacility}/statements', [BankFacilityController::class, 'statement'])
+            ->whereNumber('bankFacility')->name('statement');
+    });
+
+    // ⭐ অর্থের খাতা — হাতধার (পরে ব্যাংক ঋণ), গ্রাহকের খাতার একই পাতায় ([[FinanceReportController]], ৫ অক্টোবর ২০২৬)
+    Route::get('/reports/{slug}', [\App\Modules\Finance\Http\Controllers\FinanceReportController::class, 'show'])->name('report.show');
+
+    Route::prefix('hand-loans')->name('hand_loan.')->group(function () {
+        Route::get('/', [HandLoanController::class, 'index'])->name('index');
+        // ⓘ নতুন হাতধারের ফর্ম নিজের পাতায় — ১৯ সেপ্টেম্বর ২০২৬
+        Route::get('/create', [HandLoanController::class, 'create'])->name('create');
+        Route::post('/', [HandLoanController::class, 'store'])->name('store');
+
+        /*
+         * ⭐ তালিকায় নতুন নাম — মালিকের নির্দেশ, ২০ সেপ্টেম্বর ২০২৬।
+         * ⓘ "কার সাথে" ট্যাবেই নাম যোগ হয়, মাস্টারে যেতে হয় না।
+         * ⛔ তবু সারিটা `mdm_people`-তেই বসে — দ্বিতীয় কোনো তালিকা নয়।
+         */
+        Route::post('/people', [HandLoanController::class, 'storePerson'])->name('person.store');
+
+        // ⭐ জের নিশ্চিতকরণের চিঠি — একজন মানুষের নামে, একটা তারিখে (অর্থ-মডিউলের পরিকল্পনা ১.৯, ৫ অক্টোবর ২০২৬)
+        Route::get('/people/{person}/letter', \App\Modules\Finance\Http\Controllers\HandLoanLetterController::class)
+            ->whereNumber('person')->name('letter');
+
+        Route::get('/{handLoan}', [HandLoanController::class, 'show'])
+            ->whereNumber('handLoan')->name('show');
+
+        /*
+         * ⭐ পক্ষের সাথে জোড়া — মানচিত্র §১৪খ, ২১ সেপ্টেম্বর ২০২৬।
+         * ⓘ নতুন হাতধারের ফর্মে ঘরটা ছিল; পুরনো সারির জন্য এই দরজাটা।
+         */
+        Route::post('/{handLoan}/link', [HandLoanController::class, 'link'])
+            ->whereNumber('handLoan')->name('link');
+
+        Route::post('/{handLoan}/move', [HandLoanController::class, 'move'])
+            ->whereNumber('handLoan')->name('move');
+
+        Route::post('/{handLoan}/settle', [HandLoanController::class, 'settle'])
+            ->whereNumber('handLoan')->name('settle');
+    });
+
+    /*
+     * ভাড়ার চুক্তি ও জামানত।
+     *
+     * ⓘ হাতধারের ঠিক পরে, কারণ দুইটাই একই আকৃতির: একটা চলমান হিসাব,
+     * তার উপরে ঘটনা, আর প্রতিটা ঘটনা একটা ভাউচার।
+     */
+    Route::prefix('rentals')->name('rental.')->group(function () {
+        Route::get('/', [RentalContractController::class, 'index'])->name('index');
+        // ⓘ নতুন চুক্তির ফর্ম নিজের পাতায় — ১৯ সেপ্টেম্বর ২০২৬
+        Route::get('/create', [RentalContractController::class, 'create'])->name('create');
+        Route::post('/', [RentalContractController::class, 'store'])->name('store');
+
+        /*
+         * নতুন বাড়িওয়ালা — "কার সাথে" ট্যাব থেকেই।
+         *
+         * ⓘ `{contract}`-এর আগে, কারণ `/people` একটা সংখ্যা নয় আর
+         * নিচের রুটটা `whereNumber` দিয়ে বাঁধা — তবু ক্রমটা স্পষ্ট
+         * রাখা হলো, যাতে পরে কেউ শর্তটা তুলে দিলেও এটা আগে মেলে।
+         */
+        Route::post('/people', [RentalContractController::class, 'storePerson'])->name('person.store');
+
+        // ⭐ ভাড়ার চুক্তি ও জামানতের রিপোর্ট — অর্থ-মডিউলের পরিকল্পনা, অংশ ৫ ([[RentalReportController]], ৬ অক্টোবর ২০২৬)
+        Route::get('/reports/{slug}', [\App\Modules\Finance\Http\Controllers\RentalReportController::class, 'show'])
+            ->where('slug', '[a-z\-]+')->name('report.show');
+
+        // ⭐ মাসের ভাড়া প্রদেয় হিসেবে — মালিকের সিদ্ধান্ত প্র২ ([[RentalAccrualService]], ৬ অক্টোবর ২০২৬)
+        Route::post('/accruals', [RentalContractController::class, 'accrue'])->name('accrue');
+
+        Route::get('/{contract}', [RentalContractController::class, 'show'])
+            ->whereNumber('contract')->name('show');
+
+        Route::post('/{contract}/adjust', [RentalContractController::class, 'adjust'])
+            ->whereNumber('contract')->name('adjust');
+
+        /*
+         * ⓘ শর্ত বদল `PUT` — সে বিদ্যমান কিছু বদলায়, নতুন কিছু বানায়
+         * না। বাকিগুলো `POST`, কারণ প্রতিটা একটা **নতুন ঘটনা**: এক
+         * মাসের ভাড়া, জামানতে টাকা, চুক্তি শেষ।
+         */
+        Route::put('/{contract}', [RentalContractController::class, 'revise'])
+            ->whereNumber('contract')->name('revise');
+
+        Route::post('/{contract}/top-up', [RentalContractController::class, 'topUp'])
+            ->whereNumber('contract')->name('topup');
+
+        Route::post('/{contract}/close', [RentalContractController::class, 'close'])
+            ->whereNumber('contract')->name('close');
+    });
+
+    /*
+     * ⭐ ভাড়াটে — আমরা যখন জায়গা ভাড়া দিই (মালিকের সিদ্ধান্ত প্র৩, ৬ অক্টোবর ২০২৬; [[TenancyController]])।
+     * ⓘ `reports/` আর `charges` `{tenancy}`-এর আগে, আর `{tenancy}` সংখ্যায় বাঁধা।
+     */
+    Route::prefix('tenancies')->name('tenancy.')->group(function () {
+        Route::get('/', [\App\Modules\Finance\Http\Controllers\TenancyController::class, 'index'])->name('index');
+        Route::get('/create', [\App\Modules\Finance\Http\Controllers\TenancyController::class, 'create'])->name('create');
+        Route::post('/', [\App\Modules\Finance\Http\Controllers\TenancyController::class, 'store'])->name('store');
+        Route::post('/charges', [\App\Modules\Finance\Http\Controllers\TenancyController::class, 'charge'])->name('charge');
+        Route::get('/reports/{slug}', [\App\Modules\Finance\Http\Controllers\TenancyController::class, 'report'])
+            ->where('slug', '[a-z\-]+')->name('report.show');
+
+        Route::get('/{tenancy}', [\App\Modules\Finance\Http\Controllers\TenancyController::class, 'show'])
+            ->whereNumber('tenancy')->name('show');
+        Route::post('/{tenancy}/collect', [\App\Modules\Finance\Http\Controllers\TenancyController::class, 'collect'])
+            ->whereNumber('tenancy')->name('collect');
+        Route::post('/{tenancy}/deposit', [\App\Modules\Finance\Http\Controllers\TenancyController::class, 'receiveDeposit'])
+            ->whereNumber('tenancy')->name('deposit');
+        Route::post('/{tenancy}/from-deposit', [\App\Modules\Finance\Http\Controllers\TenancyController::class, 'fromDeposit'])
+            ->whereNumber('tenancy')->name('from-deposit');
+        Route::post('/{tenancy}/refund', [\App\Modules\Finance\Http\Controllers\TenancyController::class, 'refund'])
+            ->whereNumber('tenancy')->name('refund');
+        Route::put('/{tenancy}', [\App\Modules\Finance\Http\Controllers\TenancyController::class, 'revise'])
+            ->whereNumber('tenancy')->name('revise');
+        Route::post('/{tenancy}/close', [\App\Modules\Finance\Http\Controllers\TenancyController::class, 'close'])
+            ->whereNumber('tenancy')->name('close');
+    });
+
+    /*
+     * ⭐ জমার ধরন — অর্থের মানচিত্র §১৪ক, ২০ সেপ্টেম্বর ২০২৬।
+     *
+     * ⓘ `deposits/` গ্রুপের **বাইরে**, আর সেটা ইচ্ছাকৃত: ওখানে `/{issuer}`
+     * বসে আছে, আর "kinds" ঐ তিনটা নামের একটা নয়। ⛔ ভিতরে রাখলে
+     * বাইন্ডিং ওটাকে একটা ইস্যুয়ার ভেবে ৪০৪ দিত।
+     */
+    Route::prefix('deposit-kinds')->name('deposit_kind.')->group(function () {
+        Route::get('/', [DepositKindController::class, 'index'])->name('index');
+        Route::get('/create', [DepositKindController::class, 'create'])->name('create');
+        Route::post('/', [DepositKindController::class, 'store'])->name('store');
+
+        Route::get('/{depositKind}/edit', [DepositKindController::class, 'edit'])
+            ->whereNumber('depositKind')->name('edit');
+        Route::put('/{depositKind}', [DepositKindController::class, 'update'])
+            ->whereNumber('depositKind')->name('update');
+
+        // ⓘ চালু-বন্ধ POST-এ: অবস্থা বদলানো পড়ার কাজ নয়
+        Route::post('/{depositKind}/toggle', [DepositKindController::class, 'toggle'])
+            ->whereNumber('depositKind')->name('toggle');
+
+        Route::delete('/{depositKind}', [DepositKindController::class, 'destroy'])
+            ->whereNumber('depositKind')->name('destroy');
+    });
+
+    Route::prefix('deposits')->name('deposit.')->group(function () {
+        /*
+         * সব জমা — ড্যাশবোর্ডের টালি এখানে নামে।
+         *
+         * ⓘ `/{issuer}`-এর সাথে সংঘর্ষ নেই: ওটা `whereIn(ISSUERS)` দিয়ে
+         * বাঁধা, তাই কেবল তিনটা নামই মানে।
+         */
+        Route::get('/', [DepositController::class, 'all'])->name('all');
+
+        // ⭐ মাস শেষের অর্জিত মুনাফা — অর্থ-মডিউলের পরিকল্পনা ৪.২ ([[DepositAccrualService]], ৬ অক্টোবর ২০২৬)
+        Route::post('/accruals', [DepositController::class, 'accrue'])->name('accrue');
+
+        // ⭐ আমানতের রিপোর্ট — অর্থ-মডিউলের পরিকল্পনা, অংশ ৪ ([[DepositReportController]], ৬ অক্টোবর ২০২৬); ⓘ `reports` কোনো
+        // ইস্যুকারীর নাম নয়, তাই `/{issuer}`-এর সাথে সংঘর্ষ নেই
+        Route::get('/reports/{slug}', [\App\Modules\Finance\Http\Controllers\DepositReportController::class, 'show'])
+            ->where('slug', '[a-z\-]+')->name('report.show');
+
+        Route::get('/{issuer}', [DepositController::class, 'index'])
+            ->whereIn('issuer', DepositKind::ISSUERS)->name('index');
+
+        // ⓘ নতুন জমার ফর্ম নিজের পাতায়, ইস্যুয়ার সহ — ১৯ সেপ্টেম্বর ২০২৬
+        Route::get('/{issuer}/create', [DepositController::class, 'create'])
+            ->whereIn('issuer', DepositKind::ISSUERS)->name('create');
+
+        Route::post('/{issuer}', [DepositController::class, 'store'])
+            ->whereIn('issuer', DepositKind::ISSUERS)->name('store');
+
+        /*
+         * একটা জমার নিজের পাতা।
+         *
+         * ── কেন তালিকার ঘরে কাজগুলো নয় ─────────────────────────────
+         * কিস্তি দিতে চাই তারিখ, টাকা আর কোন খাত — তিনটা ঘর। ওগুলো
+         * তালিকার শেষ কলামে গুঁজলে কলামটা এত সরু হত যে ছোট পর্দায়
+         * একটার ঘাড়ে আরেকটা পড়ত, আর টেবিলের স্ক্রলার প্যানেলটা
+         * কেটে দিত — টপ-নেভে ঠিক এই ভুলটাই ধরা পড়েছিল।
+         *
+         * আর চলাচলের ইতিহাসটাও এখানেই: প্রতিটা সংখ্যা তার ভাউচারে
+         * নামায় (নিয়ম ১), আর তালিকার একটা ঘরে ষাটটা কিস্তি ধরত না।
+         */
+        Route::get('/{issuer}/{deposit}', [DepositController::class, 'show'])
+            ->whereIn('issuer', DepositKind::ISSUERS)->whereNumber('deposit')->name('show');
+
+        Route::post('/{issuer}/{deposit}/movement', [DepositController::class, 'movement'])
+            ->whereIn('issuer', DepositKind::ISSUERS)->whereNumber('deposit')->name('movement');
+
+        Route::post('/{issuer}/{deposit}/close', [DepositController::class, 'close'])
+            ->whereIn('issuer', DepositKind::ISSUERS)->whereNumber('deposit')->name('close');
+
+        // ⭐ ব্যাংক জামানত ভাঙিয়ে ঋণ শোধ করল — অর্থ-মডিউলের পরিকল্পনা ৪.৫ (প্র৫, ৬ অক্টোবর ২০২৬)
+        Route::post('/{issuer}/{deposit}/lien', [DepositController::class, 'lien'])
+            ->whereIn('issuer', DepositKind::ISSUERS)->whereNumber('deposit')->name('lien');
+
+        /*
+         * ভুল এন্ট্রি ফিরিয়ে নেওয়া — `close` থেকে আলাদা পথ।
+         *
+         * একই পথে রাখলে একটা পতাকা দিয়ে দুইটা আলাদা ঘটনা আলাদা করতে
+         * হত, আর অনুমতিও এক হয়ে যেত। ভাঙা রোজকার কাজ; ভুল ফেরানো
+         * খাতায় হাত দেওয়া।
+         */
+        Route::post('/{issuer}/{deposit}/cancel', [DepositController::class, 'cancel'])
+            ->whereIn('issuer', DepositKind::ISSUERS)->whereNumber('deposit')->name('cancel');
+    });
+
+    /*
+     * ব্যাংক চার্জ — মানচিত্র §৯; কেবল দেখা, চার্জ বসে ভাউচারে।
+     */
+    Route::get('/bank-charges', [BankChargeController::class, 'index'])->name('bank_charge.index');
+
+    /*
+     * খাত বিশ্লেষণ — মানচিত্র §৪; খতিয়ানের দাখিলা মাস/কাগজ/পক্ষ ধরে।
+     */
+    Route::get('/account-analysis', [AccountAnalysisController::class, 'index'])->name('account_analysis.index');
+
+    /*
+     * পরিবহন ও শ্রমিকের খতিয়ান — মানচিত্র §৬; ২১১৬/২১১৭ পক্ষ ধরে।
+     */
+    Route::get('/carrier-labour', [CarrierAndLabourController::class, 'index'])->name('carrier_labour.index');
+    /*
+     * আর্থিক প্রতিষ্ঠান — ব্যাংক, আর্থিক প্রতিষ্ঠান/লিজিং, বীমা, মোবাইল ব্যাংকিং।
+     * ⓘ মালিকের কথায় তালিকাটা কেবল অর্থে (*"eta sudu ekhanei bebohar hobe"*)।
+     */
+    Route::prefix('institutions')->name('institution.')->group(function () {
+        Route::get('/', [InstitutionController::class, 'index'])->name('index');
+        Route::get('/create', [InstitutionController::class, 'create'])->name('create');
+        Route::post('/', [InstitutionController::class, 'store'])->name('store');
+        Route::get('/{institution}/edit', [InstitutionController::class, 'edit'])->whereNumber('institution')->name('edit');
+        Route::put('/{institution}', [InstitutionController::class, 'update'])->whereNumber('institution')->name('update');
+        Route::patch('/{institution}/toggle', [InstitutionController::class, 'toggle'])->whereNumber('institution')->name('toggle');
+        Route::get('/{institution}', [InstitutionController::class, 'show'])->whereNumber('institution')->name('show');
+        // ⓘ "খাত জোড়ো" — ব্যাংক/MFS খাত এই প্রতিষ্ঠানের
+        Route::post('/{institution}/accounts', [InstitutionController::class, 'link'])->whereNumber('institution')->name('link');
+        Route::delete('/{institution}/accounts/{account}', [InstitutionController::class, 'unlink'])
+            ->whereNumber('institution')->whereNumber('account')->name('unlink');
+    });
+
+    /*
+     * বীমা পলিসি — প্রিমিয়াম দেওয়া হয় পরিশোধ ভাউচারে, এখানে নয়।
+     */
+    Route::prefix('insurance')->name('insurance.')->group(function () {
+        Route::get('/', [InsuranceController::class, 'index'])->name('index');
+        Route::get('/create', [InsuranceController::class, 'create'])->name('create');
+        Route::post('/', [InsuranceController::class, 'store'])->name('store');
+        // ⭐ মাস শেষের অগ্রিম বীমা — অর্থ-মডিউলের পরিকল্পনা ৬.৩ ([[InsurancePrepaymentService]])
+        Route::post('/prepayments', [InsuranceController::class, 'prepay'])->name('prepay');
+        Route::get('/{policy}', [InsuranceController::class, 'show'])->whereNumber('policy')->name('show');
+        Route::get('/{policy}/edit', [InsuranceController::class, 'edit'])->whereNumber('policy')->name('edit');
+        Route::put('/{policy}', [InsuranceController::class, 'update'])->whereNumber('policy')->name('update');
+        Route::get('/{policy}/renew', [InsuranceController::class, 'renewForm'])->whereNumber('policy')->name('renew_form');
+        Route::post('/{policy}/renew', [InsuranceController::class, 'renew'])->whereNumber('policy')->name('renew');
+        Route::patch('/{policy}/toggle', [InsuranceController::class, 'toggle'])->whereNumber('policy')->name('toggle');
+
+        // ⭐ বীমার দাবির খাতা — অর্থ-মডিউলের পরিকল্পনা ৬.৪ ([[InsuranceClaimService]])
+        Route::post('/{policy}/claims', [InsuranceClaimController::class, 'store'])->whereNumber('policy')->name('claim.store');
+        Route::get('/claims/{claim}', [InsuranceClaimController::class, 'show'])->whereNumber('claim')->name('claim.show');
+        Route::post('/claims/{claim}/approve', [InsuranceClaimController::class, 'approve'])->whereNumber('claim')->name('claim.approve');
+        Route::post('/claims/{claim}/receive', [InsuranceClaimController::class, 'receive'])->whereNumber('claim')->name('claim.receive');
+        Route::post('/claims/{claim}/close', [InsuranceClaimController::class, 'close'])->whereNumber('claim')->name('claim.close');
+        Route::post('/claims/{claim}/reject', [InsuranceClaimController::class, 'reject'])->whereNumber('claim')->name('claim.reject');
+    });
+});
+
+/*
+ * পুরনো ঠিকানা — একদিনের জন্য মূলধন `accounts/capital`-এ ছিল।
+ *
+ * ── কেন পুনর্নির্দেশ, আর কেন স্থায়ী নয় ──────────────────────────────
+ * ওই ঠিকানাটা মাত্র কয়েক ঘণ্টা লাইভে ছিল, তবু কেউ বুকমার্ক করে
+ * থাকতে পারেন। ৩০২ (স্থায়ী নয়), কারণ ঠিকানাটা ভুল ছিল না — কেবল
+ * মডিউল ভাগ হওয়ায় সরেছে, আর ব্রাউজারের ক্যাশে চিরকাল বসিয়ে রাখার
+ * মতো কিছু নয়।
+ */
+/*
+ * নামটা স্পষ্ট, ইচ্ছাকৃতভাবে।
+ *
+ * নাম না দিলে প্রদানকারীর উপসর্গটাই পুরো নাম হয়ে যেত — `finance.` —
+ * আর [[EveryRouteIsGuardedTest]]-এর তালিকায় ওটা এমন একটা এন্ট্রি হত
+ * যার মানে পরের জন বুঝত না।
+ */
+Route::middleware('auth')
+    ->get('/accounts/capital', fn () => redirect()->route('finance.capital.index'))
+    ->name('capital.moved');
+
+/*
+ * ⭐ পরিকল্পনার পর্দা (বাজেট, নগদের পূর্বাভাস, CFO) নিজের ফাইলে — কারণ planning.php-এ।
+ */
+require __DIR__.'/planning.php';

@@ -1,0 +1,230 @@
+<?php
+
+declare(strict_types=1);
+
+use App\Http\Controllers\AttachmentController;
+use App\Http\Controllers\HealthController;
+use App\Http\Controllers\LicenceController;
+use App\Http\Controllers\MfaController;
+use App\Http\Controllers\ModuleDashboardController;
+use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\PaperHistoryController;
+use App\Http\Controllers\PaperShareController;
+use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\ReportCenterController;
+use App\Http\Controllers\SavedViewController;
+use App\Http\Controllers\SearchController;
+use App\Http\Controllers\SharedPaperController;
+use App\Http\Controllers\WorkspaceController;
+use Illuminate\Support\Facades\Route;
+
+/*
+ * শেলের নিজের রুট। মডিউলের রুট এখানে নয় — প্রতিটা মডিউল নিজের
+ * Routes/web.php রাখে আর ModuleServiceProvider সেটা নিজে থেকে নিবন্ধন করে
+ * (সেকশন ১৯.৩)। এখানে মডিউলের নাম লিখলে "কোর না ছুঁয়ে নতুন মডিউল"
+ * কথাটাই মিথ্যা হয়ে যায়।
+ */
+
+Route::middleware('auth')->group(function () {
+    Route::get('/', [WorkspaceController::class, 'dashboard'])->name('dashboard');
+    // ⭐ হোমের সাজ — কেবল নিজের (মালিক, ৪ অক্টোবর ২০২৬: "লেআউট সাজান")
+    Route::post('/home/layout', [WorkspaceController::class, 'saveLayout'])->name('home.layout');
+
+    /*
+     * ⭐ কাগজের অবস্থা — আর এই পর্দাটা তালার বাইরে।
+     *
+     * ⓘ [[RefuseWorkWithoutALicence]] বাকি সব পথ বন্ধ করে এখানে পাঠায়।
+     * ⛔ এটাও তালাবদ্ধ হলে মানুষ একটা অন্তহীন চক্রে পড়তেন — তালাবদ্ধ
+     * পর্দা থেকে তালাবদ্ধ পর্দায়, আর কোথাও কারণ লেখা থাকত না।
+     *
+     * ⚠️ `auth`-এর ভিতরেই, কারণ কাগজের বিবরণ (ক্রেতার নাম, মেয়াদ)
+     * বাইরের কারো দেখার কথা নয় — কেবল তালাটার বাইরে, লগইনের নয়।
+     */
+    Route::get('/licence', [LicenceController::class, 'show'])->name('licence.show');
+
+    /*
+     * উপরের খোঁজার ঘরের পিছনের তার।
+     *
+     * ⓘ `data-no-prefetch` লাগে না — এটা কোনো লিংক নয়, JavaScript
+     * নিজে ডাকে। ⚠️ কিন্তু লেআউটের speculation rules `/*` ধরে prefetch
+     * করে, আর এই ঠিকানায় `?q=` ছাড়া কেউ আসে না, তাই ওটা নিরীহ।
+     */
+    Route::get('/search', SearchController::class)->name('search');
+
+    /*
+     * মডিউলের নিজস্ব ড্যাশবোর্ড — মালিকের নির্দেশ, ২ সেপ্টেম্বর ২০২৬।
+     *
+     * ── কেন `/dashboard/{module}`, `/inventory/dashboard` নয় ────────
+     * দ্বিতীয়টা দেখতে সুন্দর, কিন্তু তাতে বারোটা মডিউলের রুট ফাইলে
+     * বারোটা প্রায়-একই লাইন লিখতে হত, আর নতুন মডিউল ওটা লিখতে ভুলে
+     * গেলে ড্যাশবোর্ডটা **নীরবে থাকত না**।
+     *
+     * এখানে রুট একটাই, আর মডিউল কেবল `module.php`-তে ঘোষণা করে।
+     * অনুমতি ইঞ্জিন দেখে, সংখ্যা ধরে ধরে।
+     */
+    Route::get('/dashboard/{module}', [ModuleDashboardController::class, 'show'])
+        ->name('module.dashboard');
+    Route::get('/components', [WorkspaceController::class, 'components'])->name('components');
+
+    /*
+     * ডকুমেন্টের কাগজপত্র — যেকোনো মডিউলের যেকোনো ডকুমেন্টে।
+     *
+     * শেলের রুট, কারণ কাগজ কোনো একটা মডিউলের জিনিস নয়। তবু এখানে
+     * কোনো মডিউলের নাম নেই: কাগজটা কার, সেটা (source_type, id) জোড়া
+     * থেকেই বেরোয় — ঠিক যেভাবে ড্রিল-ডাউন কাজ করে।
+     */
+    Route::post('/attachments', [AttachmentController::class, 'store'])->name('attachment.store');
+    Route::get('/attachments/{attachment}', [AttachmentController::class, 'download'])
+        ->whereNumber('attachment')->name('attachment.download');
+    Route::delete('/attachments/{attachment}', [AttachmentController::class, 'destroy'])
+        ->whereNumber('attachment')->name('attachment.destroy');
+
+    /*
+     * বিজ্ঞপ্তি — নিজের কোনো পাতা নেই, কেবল খোলা ও পড়া।
+     *
+     * খবরটা যেখানে নিয়ে যাওয়ার কথা সেখানেই নিয়ে যায়; "বিজ্ঞপ্তির
+     * তালিকা" নামে আলাদা পাতা বানালে সেটা আরেকটা ইনবক্স হত।
+     */
+    Route::get('/notifications/{notification}', [NotificationController::class, 'open'])
+        ->whereNumber('notification')->name('notifications.open');
+    Route::post('/notifications/read-all', [NotificationController::class, 'readAll'])
+        ->name('notifications.read-all');
+
+    /*
+     * কে কোন খবর পেতে চান — ২০ সেপ্টেম্বর ২০২৬, মালিকের *"বিজ্ঞপ্তির
+     * সেটিংস ta koro"*। ⓘ স্থির পথ, তাই /{notification}-এর নিচে বসলেও
+     * সমস্যা নেই: ঐ রুটে `whereNumber` আছে, তাই "settings" ওখানে মেলে না।
+     */
+    Route::get('/notifications/settings', [NotificationController::class, 'settings'])
+        ->name('notifications.settings');
+    Route::put('/notifications/settings', [NotificationController::class, 'updateSettings'])
+        ->name('notifications.settings.update');
+
+    Route::get('/profile', [ProfileController::class, 'edit'])->name('profile');
+    Route::put('/profile', [ProfileController::class, 'update'])->name('profile.update');
+    Route::post('/profile/avatar', [ProfileController::class, 'updateAvatar'])->name('profile.avatar');
+    Route::delete('/profile/avatar', [ProfileController::class, 'removeAvatar'])->name('profile.avatar.remove');
+
+    /*
+     * পাসওয়ার্ড বদল — নিজের, আর তাই নিজের পথ।
+     *
+     * ⚠️ পরিচয়ের ফর্মটার সাথে জোড়া হয়নি, আর সেটা ইচ্ছাকৃত: নাম ঠিক
+     * করতে গিয়ে পাসওয়ার্ডের ঘর খালি থাকলে হয় ফর্ম আটকে যেত, নয়তো
+     * পাসওয়ার্ড মুছে যেত। ⓘ একই কারণে ছবি, নাম আর ছবি-মোছা আগে থেকেই
+     * তিনটা আলাদা ফর্ম।
+     */
+    Route::put('/profile/password', [ProfileController::class, 'updatePassword'])
+        ->name('profile.password');
+
+    /*
+     * ইমেইল বদলানোর অনুরোধ — এখানে কিছুই বদলায় না, কেবল চিঠি যায়।
+     * ⓘ নিশ্চিতকরণের পথটা নিচে, লগইনের বাইরে।
+     */
+    Route::post('/profile/email', [ProfileController::class, 'requestEmailChange'])
+        ->name('profile.email.request');
+
+    Route::get('/appearance', [WorkspaceController::class, 'appearance'])->name('appearance');
+    Route::post('/appearance', [WorkspaceController::class, 'saveAppearance'])->name('appearance.save');
+
+    /*
+     * দুই ধাপের লগইন — নিজের অ্যাকাউন্টে, তাই নিজের পর্দা।
+     *
+     * প্রশাসকের হাতে দিলে সেটা "চালু করে দেওয়া" হত, আর যাঁর ফোনে অ্যাপ
+     * নেই তিনি নিজের ব্যবস্থা থেকে বাইরে থাকতেন। চেহারা বা প্রোফাইলের
+     * মতোই — নিজের সিদ্ধান্ত।
+     */
+    Route::get('/two-step', [MfaController::class, 'show'])->name('mfa');
+    Route::post('/two-step', [MfaController::class, 'begin'])->name('mfa.begin');
+    Route::post('/two-step/confirm', [MfaController::class, 'confirm'])->name('mfa.confirm');
+    Route::delete('/two-step', [MfaController::class, 'destroy'])->name('mfa.destroy');
+
+    /*
+     * সংরক্ষিত দৃশ্য — নিজের ছাঁকনি, নাম দিয়ে রাখা।
+     *
+     * চেহারা, ভাষা বা প্রোফাইলের মতোই ব্যক্তিগত পছন্দ, তাই শেলের রুট।
+     * একটা দৃশ্য যেকোনো তালিকার পর্দার হতে পারে, তাই কোনো একটা মডিউলের
+     * ভেতরে রাখলে ওটা ভুল জায়গা হত — ঠিক কাগজপত্রের মতোই।
+     *
+     * `index` নেই, আর সেটা ইচ্ছাকৃত — কারণটা কন্ট্রোলারে লেখা।
+     */
+    Route::post('/views', [SavedViewController::class, 'store'])->name('views.store');
+    Route::post('/views/{savedView}/default', [SavedViewController::class, 'makeDefault'])
+        ->whereNumber('savedView')->name('views.default');
+    Route::delete('/views/{savedView}', [SavedViewController::class, 'destroy'])
+        ->whereNumber('savedView')->name('views.destroy');
+
+    /*
+     * ⭐ রিপোর্ট সেন্টার — সব মডিউলের রিপোর্ট এক পাতায়, আর নিজের প্রিয় (রিপোর্ট সেন্টার ধাপ ১, ২ অক্টোবর ২০২৬)।
+     *
+     * ⓘ শেলের রুট, কোনো মডিউলের নয়: পাতাটা সব মডিউলের মেনু পড়ে। ⛔ `can:` নেই, ইচ্ছাকৃত — প্রতিটা সারি তার নিজের
+     * চাবিতে ছাঁকা ([[ReportCenterController]]); চাবিহীন মানুষ খালি পাতা পান।
+     */
+    Route::get('/reports', [ReportCenterController::class, 'show'])->name('reports.center');
+
+    Route::post('/company/switch', [WorkspaceController::class, 'switchCompany'])->name('company.switch');
+    Route::post('/branch/switch', [WorkspaceController::class, 'switchBranch'])->name('branch.switch');
+    /*
+     * "গ্রাহককে পাঠান" — কাগজটার গোপন লিংক বানানো।
+     * ⓘ অনুমতি ঐ কাগজের ছাপার রুট থেকেই নেওয়া হয়, আলাদা ক্ষমতা নয়
+     * ([[App\Http\Controllers\PaperShareController]])।
+     */
+    Route::post('/papers/share', [PaperShareController::class, 'store'])->name('paper.share');
+
+    /*
+     * ⭐ গোনাটার পিছনের তালিকা — "৪ বার ছাপা" চাপলে কে কখন, তা খোলে।
+     * মালিকের কথা, ২০ সেপ্টেম্বর ২০২৬: *"সব জায়গায় হাইপার লিংক"*, আর
+     * এই সংখ্যাটা তো গোনার জন্য নয় — জবাবদিহির জন্য।
+     */
+    Route::get('/papers/history', [PaperHistoryController::class, 'show'])->name('paper.history');
+
+    /*
+     * ⛔ ভুল লোককে পাঠানো লিংকটা এখনই মেরে ফেলা — ২১ সেপ্টেম্বর ২০২৬।
+     * ⓘ `revoked_at` ঘরটা ছিল, লেখার পথ ছিল না (abos-8b-র অডিট, খ৪)।
+     */
+    Route::post('/papers/shares/{share}/revoke', [PaperShareController::class, 'revoke'])
+        ->whereNumber('share')->name('paper.revoke');
+
+    Route::post('/locale/switch', [WorkspaceController::class, 'switchLocale'])->name('locale.switch');
+    Route::post('/theme/switch', [WorkspaceController::class, 'switchTheme'])->name('theme.switch');
+});
+
+/*
+ * ইমেইল বদলের নিশ্চিতকরণ — ⚠️ ইচ্ছাকৃতভাবে `auth`-এর **বাইরে**।
+ *
+ * ⓘ চিঠিটা যায় নতুন ঠিকানায়, আর সেটা তিনি হয়তো ফোনে খুলবেন যেখানে
+ * ABOS-এ লগইন করা নেই। ⛔ লগইন বাধ্যতামূলক করলে তাঁকে আগে **পুরনো**
+ * ঠিকানা দিয়ে ঢুকতে হত — আর যিনি ইমেইল বদলাচ্ছেন কারণ পুরনোটা আর
+ * খোলেন না, তাঁর পক্ষে ওটা অসম্ভব।
+ *
+ * ⭐ প্রমাণটা টোকেনেই আছে: ওটা কেবল ঐ ইনবক্সে গেছে, ডাটাবেজে আছে তার
+ * হ্যাশ, আর মেয়াদ এক ঘণ্টা। ⓘ পাসওয়ার্ড রিসেটের লিংকও ঠিক এই
+ * যুক্তিতেই লগইনের বাইরে।
+ */
+Route::get('/profile/email/confirm/{token}', [ProfileController::class, 'confirmEmailChange'])
+    ->name('profile.email.confirm');
+
+/*
+ * গ্রাহকের হাতে যাওয়া কাগজের লিংক — ⚠️ ইচ্ছাকৃতভাবে `auth`-এর বাইরে।
+ *
+ * ⓘ মালিকের সিদ্ধান্ত, ২০ সেপ্টেম্বর ২০২৬: বিল বা রসিদ হোয়াটসঅ্যাপে
+ * পাঠানো যাবে। গ্রাহকের লগইন নেই, তাই লিংকটাই চাবি — অনুমান করা যায় না
+ * এমন ৬৪ অক্ষর, একটা মাত্র কাগজ, আর ৩০ দিনে নিজে থেকে মৃত্যু।
+ *
+ * ⛔ এই পথে আর কিছুতে পৌঁছানো যায় না, আর কোনো সেশনও তৈরি হয় না —
+ * বিস্তার [[App\Http\Controllers\SharedPaperController]]-এ।
+ */
+Route::get('/p/{token}', [SharedPaperController::class, 'show'])
+    ->where('token', '[A-Za-z0-9]{64}')
+    ->name('paper.shared');
+
+/*
+ * গভীর স্বাস্থ্য-পরীক্ষা — ডাটাবেস, ডিস্ক, ব্যাকআপের বয়স। `/up` থাকে কেবল
+ * "বেঁচে আছে কি না"-র জন্য। ⚠️ `web` বাদ, কারণ সেশন আর কোম্পানির প্রসঙ্গ
+ * নিজেরাই ডাটাবেস ছোঁয় — বিস্তার [[App\Http\Controllers\HealthController]]-এ।
+ */
+Route::get('/health', HealthController::class)
+    ->withoutMiddleware('web')
+    ->middleware('throttle:'.HealthController::PER_MINUTE.',1,health')
+    ->name('health');
+
+require __DIR__.'/auth.php';

@@ -1,0 +1,129 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Modules\Supplier\Http\Controllers;
+
+use App\Core\Engines\Report\ReportEngine;
+use App\Core\Services\MenuBuilder;
+use App\Http\Controllers\Controller;
+use App\Models\Branch;
+use App\Modules\MasterData\Models\PartyType;
+use App\Modules\Supplier\Reports\PrincipalCommissionReport;
+use Illuminate\Http\Request;
+use Illuminate\Routing\Controllers\HasMiddleware;
+use Illuminate\Routing\Controllers\Middleware;
+use Illuminate\View\View;
+
+/**
+ * সরবরাহকারীর দুইটা রিপোর্ট, হিসাবের পর্দার ভিউ দিয়েই।
+ *
+ * accounts::report.show ভিউটা ReportDefinition ছাড়া আর কিছু জানে না —
+ * কলাম, ফিল্টার, যোগফল, ছাপা, রপ্তানি সবই সংজ্ঞা থেকে আসে। তাই এখানে
+ * নতুন ভিউ লেখার মানে হত একই টেবিল দ্বিতীয়বার লেখা, আর দুইটার একটা
+ * পরে ঠিক করতে ভুলে যাওয়া (সেকশন ১৯.৮)।
+ */
+class SupplierReportController extends Controller implements HasMiddleware
+{
+    /**
+     * URL-বান্ধব নাম থেকে রিপোর্টের কী।
+     *
+     * /suppliers/reports/ageing — engine-এর ভেতরের কী (supplier.ageing)
+     * ঠিকানায় না দেখানোই ভালো: ওটা বদলালে বুকমার্ক ভাঙত।
+     *
+     * @var array<string, string>
+     */
+    private const SLUGS = [
+        'payable-list' => 'supplier.payable_list',
+        'ageing' => 'supplier.ageing',
+        // ⭐ খাতা মেলানো — রিপোর্ট সেন্টার ধাপ ৬ (মালিক, ১ অক্টোবর ২০২৬)
+        'ledger-check' => 'supplier.ledger_check',
+
+        /*
+         * পরিশোধের সময়সূচি — "এই সপ্তাহে কার টাকা দিতে হবে"।
+         *
+         * ⓘ সারিটা এখানেই বসানো হলো, রিপোর্টটা লেখার একই মুহূর্তে।
+         * ⚠️ ভুলে গেলে পাতাটা ৪০৪ দিত, আর কারণ খুঁজে পাওয়া কঠিন হত —
+         * ঠিক সেটাই আজ দুইবার ঘটেছে (মরা slug)।
+         */
+        'payment-schedule' => 'supplier.payment_schedule',
+
+        // ⭐ প্রিন্সিপালের কমিশন — মালিক, ৫ অক্টোবর ২০২৬ ([[PrincipalCommissionReport]])
+        'principal-commission' => PrincipalCommissionReport::KEY,
+    ];
+
+    public function __construct(
+        private readonly ReportEngine $reports,
+        private readonly MenuBuilder $menu,
+    ) {}
+
+    public static function middleware(): array
+    {
+        return [new Middleware('can:supplier.report')];
+    }
+
+    public function show(Request $request, string $slug): View
+    {
+        abort_unless(isset(self::SLUGS[$slug]), 404);
+
+        $key = self::SLUGS[$slug];
+        $definition = $this->reports->get($key);
+
+        $result = $this->reports->run(
+            $key,
+            /*
+             * ⭐ ঘরগুলো ঘোষণা থেকেই — ২১ সেপ্টেম্বর ২০২৬।
+             *
+             * ⛔ আগে এখানে একটা হাতে লেখা তালিকা ছিল, আর আটটা রিপোর্ট
+             * কন্ট্রোলারে আটটা তালিকা এক ছিল না। ⚠️ ছয়টা `party_type_id`
+             * পাঠাত না, অথচ রিপোর্টগুলো ছাঁকনিটা ঘোষণা করত আর পর্দায় ঘরটা
+             * আঁকা হত — ব্যবহারকারী বেছে দিতেন আর কিছুই বদলাত না।
+             *
+             * ⓘ যে ঘোষণা থেকে ঘরটা আঁকা হয়, এখন সেখান থেকেই পড়া হয়।
+             */
+            $request->only($definition->requestKeys()),
+            page: max(1, (int) $request->query('page', 1)),
+            // ⭐ "সব শাখা"-তে শাখা ধরে ভাগ + সর্বমোট — ভাগ হবে কি না ইঞ্জিন ঠিক করে ([[ReportEngine::branchPlan()]])
+            byBranch: true,
+        );
+
+        /* ⭐ প্রিন্সিপালের কমিশন — মাস বাছার নিজের ঘর আর "কেবল রিপোর্ট" কথাটা; বাকি রিপোর্টে কিছুই বদলায় না */
+        $principal = $key === PrincipalCommissionReport::KEY;
+
+        return view('accounts::report.show', [
+            'menu' => $this->menu->forUser($request->user()),
+            'slug' => $slug,
+            ...($principal ? ['extraFilters' => 'supplier::reports.month-filter', 'notice' => __('supplier::principal.notice')] : []),
+            'report' => $definition,
+            'result' => $result,
+            'branches' => $definition->hasFilter('branch')
+                ? Branch::query()->active()->orderBy('name_en')->get()
+                : collect(),
+            'accounts' => collect(),
+            /*
+             * পক্ষের ধরনের ছাঁকনি — কেবল যে রিপোর্ট চেয়েছে তার জন্য।
+             *
+             * ঘোষণা না করলে তালিকাটা খালি যায়, আর পর্দা ঘরটাই আঁকে না।
+             * সব রিপোর্টে জোর করে বসালে মজুদের রিপোর্টেও "পক্ষের ধরন"
+             * ড্রপডাউন বসত, যেখানে প্রশ্নটার কোনো মানে নেই।
+             */
+            /*
+             * ⚠️ কেবল সরবরাহকারীের দিকের ধরনগুলো — `for()` স্কোপ।
+             *
+             * আগে **সব ধরন** দেখাত, গ্রাহকেরগুলোও। ছাঁকলে সবসময় শূন্য
+             * আসত, তাই মনে হত ক্ষতি নেই — **কিন্তু শূন্যটাই মিথ্যা বলত**:
+             * ব্যবহারকারী "ডিলার" বেছে শূন্য দেখে ভাবতেন তাঁর কোনো
+             * ডিলার-সরবরাহকারী নেই, অথচ আসল কথা হলো **ডিলার সরবরাহকারী
+             * হতেই পারেন না**।
+             *
+             * ⭐ শূন্য একটা উত্তর, আর **ভুল প্রশ্নের শূন্য উত্তর মিথ্যা বলে**।
+             *
+             * ⓘ `for()` "both"-ও আনে — "প্রতিষ্ঠান" একইসাথে গ্রাহক ও
+             * সরবরাহকারী হতে পারেন (মডেলে কারণটা লেখা)।
+             */
+            'partyTypes' => $definition->hasFilter('party_type')
+                ? PartyType::query()->active()->for(PartyType::SUPPLIER)->orderBy('code')->get()
+                : collect(),
+        ]);
+    }
+}

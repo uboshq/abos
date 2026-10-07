@@ -1,0 +1,50 @@
+<?php
+
+declare(strict_types=1);
+
+return [
+    'waiting_for_me' => 'Waiting for my decision',
+    'my_pending' => 'My requests still waiting',
+
+    'title' => 'Dashboard',
+    'subtitle' => 'What is waiting on a decision',
+    'pending' => 'Waiting',
+    'pending_hint' => 'Somebody is held up until this is decided',
+    'approved' => 'Approved',
+    'approved_hint' => 'Approved so far',
+    'rejected' => 'Rejected',
+    'rejected_hint' => 'Rejected so far',
+    'waiting_now' => 'Waiting right now',
+    'module' => 'Module',
+    'action' => 'Action',
+    'amount' => 'Amount',
+    'nothing_waiting' => 'Nothing is waiting on a decision.',
+    'how_long' => 'How long it has been waiting',
+    'how_long_hint' => 'Pending approvals, counted from when they were sent',
+    'under_a_day' => 'Under a day',
+    'one_to_three' => '1–3 days',
+    'three_to_seven' => '3–7 days',
+    'over_a_week' => 'Over a week',
+    'by_person' => 'Waiting with whom',
+    'by_person_hint' => 'Whose desk the signature sits on',
+    'anyone' => 'No one in particular',
+    'others' => 'Others',
+    'by_module' => 'Waiting, by module',
+    'by_module_hint' => 'Where signatures are held up',
+
+    // ⭐ মালিকের পুরো নকশা, ৬ অক্টোবর ২০২৬
+    'approved_today' => 'Approved today',
+    'approved_today_hint' => 'Given the final yes today',
+    'rejected_today' => 'Rejected today',
+    'rejected_today_hint' => 'Turned down today',
+    'average_time' => 'Average time to decide',
+    'average_time_hint' => 'This month, from sending to the final yes or no · :count decided',
+    'hours' => ':n hours',
+    'days' => ':n days',
+    'overdue' => 'Past the time limit',
+    'overdue_hint' => 'Waiting past the flow time limit · no-limit requests left out',
+    'delegations_today' => 'Signing handed over today',
+    'delegations_today_hint' => 'Hand-overs in force today and not withdrawn',
+    'my_queue' => 'Waiting for my signature, by module',
+    'my_queue_hint' => ':count in my inbox',
+];

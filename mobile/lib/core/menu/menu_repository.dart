@@ -1,0 +1,392 @@
+import 'package:flutter/material.dart';
+
+import '../auth/auth_user.dart';
+import '../auth/session_profile.dart';
+import 'me_api.dart';
+import 'menu_item.dart';
+import 'menu_module.dart';
+import 'route_registry.dart';
+
+/// Where the signed-in person's home menu comes from: `GET /me`, filtered
+/// twice before a row becomes a tile —
+///
+///  1. by the server, against that person's permissions (already done by the
+///     time this file sees the response);
+///  2. by [RouteRegistry], against what **this app build** actually has a
+///     screen for — see that file's own doc comment for why the server
+///     cannot do this filtering itself.
+///
+/// <p><b>"নতুন অর্ডার" is not one of `/me`'s menu rows</b> — the
+/// coordinating session confirmed 4 September that placing an order is an
+/// action inside the order list, gated by the `sales.order.create`
+/// permission directly, not a navigable menu entry. This file adds that tile
+/// itself, from the same `permissions` list every other check already reads,
+/// rather than waiting for a menu row that will never arrive.
+///
+/// <p>Offline, `GET /me` cannot be called at all, and a blank home screen the
+/// one time someone opens the app with no signal is worse than a slightly
+/// stale menu — so [menuFor] falls back to [_localFallback], built from the
+/// same `permissions` list already saved on this device by the last
+/// successful login (see `SessionRepository`). The fallback is
+/// permission-filtered the identical way, so it degrades to "the same menu,
+/// no icons any fresher than the last sign-in" rather than to nothing.
+class HomeMenu {
+  const HomeMenu({required this.items, this.profile, this.me});
+
+  final List<MenuItem> items;
+
+  /// `/me`-র মানুষটা — পদবি আর ছবিসহ; অফলাইনে null।
+  final AuthUser? me;
+
+  /// Null when `/me` could not be reached and the menu is the local
+  /// fallback — see [MenuRepository.homeFor].
+  final SessionProfile? profile;
+}
+
+class MenuRepository {
+  const MenuRepository();
+
+  static const _newOrderPermission = 'sales.order.create';
+
+  /// Marking *your own* attendance — never the whole team's.
+  ///
+  /// <p>⛔ The menu can never carry this. `/me`'s `hr.attendance.index` row
+  /// requires `hr.attendance.view`, which is the permission for seeing
+  /// everybody's attendance and is deliberately withheld from field staff;
+  /// their templates carry `hr.attendance.self`. A tile built from the menu
+  /// would have been invisible to exactly the people who need it — and
+  /// perfectly visible to whoever checked it from an office, which is how a
+  /// bug like that survives. See docs/Contract §৭.
+  static const _ownAttendancePermission = 'hr.attendance.self';
+
+  /// The due list — who owes what, largest first.
+  ///
+  /// <p>Synthetic rather than a menu row, and for a different reason than
+  /// হাজিরা: the server *does* have a row for it, but its route is
+  /// `customer.report.show` — the same route name four different reports
+  /// share, told apart only by a `route_params.slug` this app does not read.
+  /// Mapping by route name alone would make "বকেয়া তালিকা", "বয়সভিত্তিক",
+  /// "আদায়" and "সীমাহীন" indistinguishable, and three of the four would
+  /// open the wrong screen.
+  ///
+  /// <p>⚠️ Worth revisiting when route_params is read: then it becomes an
+  /// ordinary menu row and this tile can go.
+  static const _dueListPermission = 'customer.view';
+
+  /// One icon per app path segment — `/me` sends a label for every row but
+  /// no icon, so the icon is this app's own, keyed by the path it already
+  /// resolved the row to rather than by the server's route name (one path
+  /// can only ever want one icon; the server's naming is not this app's
+  /// concern here).
+  static const Map<String, IconData> _iconByAppPath = {
+    'approvals': Icons.fact_check_outlined,
+    'attendance': Icons.how_to_reg_outlined,
+    'dues': Icons.account_balance_wallet_outlined,
+    'today': Icons.insights_outlined,
+    'reports': Icons.bar_chart_outlined,
+    'customers': Icons.people_alt_outlined,
+    'products': Icons.inventory_2_outlined,
+    'stock': Icons.warehouse_outlined,
+    'orders': Icons.receipt_long_outlined,
+  };
+
+  Future<List<MenuItem>> menuFor(AuthUser user) async =>
+      (await homeFor(user)).items;
+
+  /// The menu plus which company and branch `/me` says this session is in —
+  /// one call, because they arrive in one response and the home screen
+  /// wants both. [HomeMenu.profile] is null on the offline fallback: the
+  /// header then reads the names the last successful `/me` left in
+  /// `SessionRepository`, and only after that falls back to the person's own
+  /// name.
+  Future<HomeMenu> homeFor(AuthUser user) async {
+    try {
+      final response = await MeApi.fetch();
+      final items = <MenuItem>[];
+      for (final module in response.menu) {
+        for (final entry in module.allEntries) {
+          final tile = tileFor(entry);
+          if (tile != null) items.add(tile);
+        }
+      }
+      return HomeMenu(
+        items: ordered(items, response.user,
+            ordersReplaceDo: response.profile.ordersReplaceDo),
+        profile: response.profile,
+        me: response.user,
+      );
+    } catch (_) {
+      return HomeMenu(items: ordered(_localFallback(user), user));
+    }
+  }
+
+  /// One `/me` menu row turned into a tile, or null when it has no place on
+  /// this build's home grid.
+  ///
+  /// <p><b>Two different "there is no screen", and they must not end the same
+  /// way.</b>
+  ///
+  /// <p>The server says `planned` — the *system* does not have the thing yet,
+  /// on the web either. That row is shown dimmed and inert, never omitted,
+  /// which is the web side's own convention and the reason `MeController`
+  /// sends the flag at all. Hiding it would let a person conclude the feature
+  /// is not coming and ask the office for it again; showing it greyed says
+  /// "planned, not yet" in the one place they are already looking.
+  ///
+  /// <p>The route is live but [RouteRegistry] has no path for it — the
+  /// *server* has the screen and this *build* has not caught up. That row is
+  /// dropped silently, which is correct rather than a gap; see
+  /// RouteRegistry's own doc comment.
+  ///
+  /// <p>Until this method existed the first case could never happen: every
+  /// row went through the RouteRegistry filter first, and a planned row has
+  /// no path by definition, so all twenty-two of them were dropped before the
+  /// dimmed tile that home_shell.dart had already built for them could ever
+  /// draw. The tile, the flag, the parsing and the "শীঘ্রই আসছে" label were
+  /// all in place and unreachable.
+  @visibleForTesting
+  MenuItem? tileFor(MenuRouteEntry entry) {
+    if (entry.planned) {
+      return MenuItem(
+        key: entry.route,
+        label: entry.label,
+        // No path was resolved and none is wanted — the tile is inert. The
+        // clock is this app's own choice for "not yet", not a server icon.
+        icon: Icons.schedule_outlined,
+        routeName: '',
+        planned: true,
+      );
+    }
+
+    final appPath = RouteRegistry.appPathFor(entry.route);
+    if (appPath == null) return null;
+
+    return MenuItem(
+      key: entry.route,
+      label: entry.label,
+      icon: _iconByAppPath[appPath] ?? Icons.circle_outlined,
+      routeName: appPath,
+    );
+  }
+
+  List<MenuItem> _localFallback(AuthUser user) {
+    final items = <MenuItem>[];
+    const localLabels = {
+      'customer.index': ('গ্রাহক', 'customer.view', Icons.people_alt_outlined),
+      'sales.order.index': (
+        'অর্ডারের অবস্থা',
+        'sales.order.view',
+        Icons.receipt_long_outlined
+      ),
+      'inventory.product.index': (
+        'পণ্যের তালিকা',
+        'inventory.product.view',
+        Icons.inventory_2_outlined
+      ),
+      'inventory.stock.index': (
+        'হাতে থাকা মজুদ',
+        'inventory.stock.view',
+        Icons.warehouse_outlined
+      ),
+    };
+    localLabels.forEach((serverRoute, tuple) {
+      final (label, permission, icon) = tuple;
+      final appPath = RouteRegistry.appPathFor(serverRoute);
+      if (appPath == null || !user.can(permission)) return;
+      items.add(MenuItem(
+          key: serverRoute, label: label, icon: icon, routeName: appPath));
+    });
+    return items;
+  }
+
+  /// Everything this person can open, in the order a day actually uses it.
+  ///
+  /// <p><b>Work first, "coming soon" last.</b> Seen on a real device on 15
+  /// September: a super_admin's grid put নতুন অর্ডার, হাজিরা and সিঙ্কের অবস্থা
+  /// — the three things used every single day — *below twenty greyed tiles
+  /// for features that do not exist yet*. Someone had to scroll past
+  /// everything that does not work to reach everything that does.
+  ///
+  /// <p>The planned rows still belong on screen (docs/Contract: hiding them
+  /// lets a person conclude the feature is never coming and ask the office
+  /// for it again) — they just do not belong in front.
+  ///
+  /// <p>⚠️ Within the live group the server's own order is preserved
+  /// untouched. That order is a decision made on the web side — the menu
+  /// stands in the order the goods actually move — and this file has no
+  /// business second-guessing it. All that changes here is that dead tiles
+  /// sink.
+  @visibleForTesting
+  List<MenuItem> ordered(List<MenuItem> items, AuthUser user,
+      {bool ordersReplaceDo = false}) {
+    final live = <MenuItem>[];
+    final planned = <MenuItem>[];
+    for (final item in items) {
+      (item.planned ? planned : live).add(item);
+    }
+    return [...live, ..._syntheticTiles(user, ordersReplaceDo), ...planned];
+  }
+
+  /// Tiles that are not `/me` menu rows at all — see this class's own doc
+  /// comment for "নতুন অর্ডার" and হাজিরা, and the trailing comment below for
+  /// the sync-status tile every role gets regardless.
+  List<MenuItem> _syntheticTiles(AuthUser user,
+          [bool ordersReplaceDo = false]) =>
+      [
+        if (user.can(_newOrderPermission))
+          const MenuItem(
+            key: 'sales.order.create',
+            label: 'নতুন অর্ডার',
+            icon: Icons.add_shopping_cart_outlined,
+            routeName: 'new-order',
+          ),
+        // ⭐ ডেলিভারি ট্র্যাকিং (0.4.6, মালিক ২ অক্টোবর ২০২৬) — SR-এর অর্ডার দেখার চাবি, বা গুদাম/ডেলিভারির চাবি।
+        // মেনু-সারি নয়: ওয়েবের সারিটা `sales.screen_orders`-এর পেছনে, আর গুদামের মানুষ ওটা পান না।
+        if (user.can('sales.order.view') || user.can('sales.delivery.view'))
+          const MenuItem(
+            key: 'sales.tracking',
+            label: 'ডেলিভারি ট্র্যাকিং',
+            icon: Icons.local_shipping_outlined,
+            routeName: 'tracking',
+          ),
+        // ⭐ আজকের রুট — ছকে আজ যে রুট আর তার দোকান; মাঠের মানুষের আদেশ দেখার চাবিতে (সমন্বয়কের ক্রম "ঘ")
+        if (user.can('sales.order.view'))
+          const MenuItem(
+            key: 'sales.my_route',
+            label: 'আজকের রুট',
+            icon: Icons.route_outlined,
+            routeName: 'my-route',
+          ),
+        // ⭐ লিড — মাঠ থেকে নতুন দোকানের খোঁজ, ওয়েবের লিডের একই চাবি
+        if (user.can('sales.lead.view'))
+          const MenuItem(
+            key: 'sales.lead',
+            label: 'লিড',
+            icon: Icons.person_search_outlined,
+            routeName: 'leads',
+          ),
+        // ⭐ উদ্ধৃতি — ওয়েবের উদ্ধৃতির একই চাবি
+        if (user.can('sales.quotation.view'))
+          const MenuItem(
+            key: 'sales.quotation',
+            label: 'উদ্ধৃতি',
+            icon: Icons.request_quote_outlined,
+            routeName: 'quotations',
+          ),
+        // ⭐ আজকের ডেলিভারি — যিনি পৌঁছানো লিখতে পারেন (ধাপ ৭, ৬ অক্টোবর ২০২৬)
+        if (user.can('sales.delivery.update'))
+          const MenuItem(
+            key: 'sales.deliveries',
+            label: 'আজকের ডেলিভারি',
+            icon: Icons.local_shipping_outlined,
+            routeName: 'deliveries',
+          ),
+        // ⭐ লোডিং শিট — পণ্য ধরে কত, চালান ধরে কার জন্য, "প্যাক হয়েছে" (ধাপ ৪, ৬ অক্টোবর ২০২৬); দেখা ট্রিপের চাবিতে
+        if (user.can('sales.shipment.view'))
+          const MenuItem(
+            key: 'sales.loading',
+            label: 'লোডিং শিট',
+            icon: Icons.inventory_2_outlined,
+            routeName: 'loading',
+          ),
+        // ⭐ টাকা আদায়, প্রিন্সিপাল আর ক্রয় — কেবল পড়া, ওয়েবের দেখার চাবিতে (মালিক, ৬ অক্টোবর ২০২৬)
+        if (user.can('sales.collection.view'))
+          const MenuItem(
+            key: 'sales.collections',
+            label: 'টাকা আদায়',
+            icon: Icons.payments_outlined,
+            routeName: 'collections',
+          ),
+        if (user.can('supplier.view'))
+          const MenuItem(
+            key: 'purchase.principals',
+            label: 'প্রিন্সিপাল',
+            icon: Icons.business_outlined,
+            routeName: 'principals',
+          ),
+        if (user.can('purchase.bill.view'))
+          const MenuItem(
+            key: 'purchase.purchases',
+            label: 'ক্রয়',
+            icon: Icons.shopping_cart_outlined,
+            routeName: 'purchases',
+          ),
+        // ⭐ সরাসরি বিক্রয়ের কাউন্টার (0.4.9) — ওয়েবের কাউন্টারের একই চাবি
+        if (user.can('sales.challan.create'))
+          const MenuItem(
+            key: 'sales.direct',
+            label: 'সরাসরি বিক্রয়',
+            icon: Icons.point_of_sale_outlined,
+            routeName: 'counter',
+          ),
+        // ⭐ ডেলিভারি অর্ডার (0.4.8) — DO দেখার চাবি যাঁর; লেখা আর সই পর্দার ভিতরে নিজের চাবিতে।
+        // ⭐ কোম্পানি বিক্রয় আদেশে চলে গেলে একই টাইল "বিক্রয় আদেশ" — আদেশ দেখার চাবিতে (DO+SO মেশানো, ধাপ ১০)
+        if (ordersReplaceDo
+            ? user.can('sales.order.view')
+            : user.can('sales.do.view'))
+          MenuItem(
+            key: 'sales.delivery_order',
+            label: ordersReplaceDo ? 'বিক্রয় আদেশ' : 'ডেলিভারি অর্ডার',
+            icon: Icons.assignment_outlined,
+            routeName: 'delivery-orders',
+          ),
+        // First tile on the grid for whoever can see the day's sales — it is
+        // the question asked most often and from the furthest away.
+        if (user.can('sales.order.view'))
+          const MenuItem(
+            key: 'dashboard.today',
+            label: 'আজকের হিসাব',
+            icon: Icons.insights_outlined,
+            routeName: 'today',
+          ),
+        // One tile for every report the server will let this person run —
+        // docs/Contract §৯. Which ones those are is the server's answer, not
+        // a list kept here; the tile only opens the door.
+        if (user.can('sales.order.view') || user.can('customer.view'))
+          const MenuItem(
+            key: 'reports',
+            label: 'রিপোর্ট',
+            icon: Icons.bar_chart_outlined,
+            routeName: 'reports',
+          ),
+        if (user.can(_dueListPermission))
+          const MenuItem(
+            key: 'customer.dues',
+            label: 'বকেয়া তালিকা',
+            icon: Icons.account_balance_wallet_outlined,
+            routeName: 'dues',
+          ),
+        if (user.can(_ownAttendancePermission))
+          const MenuItem(
+            key: 'hr.attendance.self',
+            label: 'হাজিরা',
+            icon: Icons.how_to_reg_outlined,
+            routeName: 'attendance',
+          ),
+        // ⭐ অফিসের লোকের ভাউচার — ওয়েবের লেখার চাবি (মালিক, ৭ অক্টোবর ২০২৬: "সব ভাউচার দেওয়ার কথা ছিল")
+        if (user.can('accounts.voucher.create'))
+          const MenuItem(
+            key: 'accounts.voucher.create',
+            label: 'ভাউচার',
+            icon: Icons.receipt_long_outlined,
+            routeName: 'vouchers',
+          ),
+        // ⭐ খরচের দাবি আর অগ্রিম — কর্মীর নিজের (টাকা-আসা-যাওয়ার পরিকল্পনা ১৩, ৭ অক্টোবর ২০২৬; ওয়েবের একই চাবি)
+        if (user.can('hr.claim.self'))
+          const MenuItem(
+            key: 'hr.claim.self',
+            label: 'খরচের দাবি',
+            icon: Icons.request_quote_outlined,
+            routeName: 'claims',
+          ),
+        // What this device has and has not sent is a fact about the phone,
+        // not a business permission — every signed-in role can open it, live
+        // menu or fallback alike.
+        const MenuItem(
+          key: 'sync_status',
+          label: 'সিঙ্কের অবস্থা',
+          icon: Icons.sync_outlined,
+          routeName: 'sync-status',
+        ),
+      ];
+}

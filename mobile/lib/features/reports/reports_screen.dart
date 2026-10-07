@@ -1,0 +1,457 @@
+import 'dart:typed_data';
+
+import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
+
+import '../../core/api_client/network_errors.dart';
+import '../../core/printing/documents_api.dart';
+import '../../core/records/report_record.dart';
+import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_spacing.dart';
+import '../../core/widgets/empty_state.dart';
+import '../printing/document_actions_sheet.dart';
+
+/// Every report this person may run — docs/Contract §৯.
+///
+/// <p><b>One screen for thirty-three reports.</b> The server already has a
+/// `ReportEngine` with a registry, typed columns and per-column permissions;
+/// the phone needs to know none of that, only how to draw what it is handed.
+/// A report registered on the server tomorrow appears here without a mobile
+/// release — the same reasoning as `GET /sync/capabilities`.
+class ReportsScreen extends StatefulWidget {
+  const ReportsScreen(
+      {super.key, this.loadList, this.open, this.module, this.title});
+
+  final Future<List<ReportSummary>> Function()? loadList;
+
+  /// ⭐ এক মডিউলের রিপোর্টই — "মজুদের রিপোর্ট" (মালিক, ৪ অক্টোবর ২০২৬); null মানে সব
+  final String? module;
+  final String? title;
+  final Future<ReportPage> Function(
+      String key, int page, Map<String, dynamic> filters)? open;
+
+  @override
+  State<ReportsScreen> createState() => _ReportsScreenState();
+}
+
+class _ReportsScreenState extends State<ReportsScreen> {
+  List<ReportSummary>? _reports;
+  String? _error;
+  bool _busy = false;
+  String _query = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
+    try {
+      final list = await (widget.loadList ?? ReportsApi.list)();
+      final shown = widget.module == null
+          ? list
+          : list.where((r) => r.module == widget.module).toList();
+      if (mounted) setState(() => _reports = shown);
+    } catch (error) {
+      if (mounted) {
+        setState(() => _error = errorMessageFor(error,
+            fallback: 'রিপোর্টের তালিকা আনা গেল না।',
+            whenAbsent: 'রিপোর্ট এখনো এই সার্ভারে নেই — অ্যাপটা সার্ভারের '
+                'চেয়ে নতুন। অফিসে জানান।'));
+      }
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final reports = _reports;
+    final filtered = reports == null
+        ? const <ReportSummary>[]
+        : reports
+            .where((r) =>
+                _query.trim().isEmpty ||
+                r.title.toLowerCase().contains(_query.toLowerCase()) ||
+                r.key.toLowerCase().contains(_query.toLowerCase()))
+            .toList();
+
+    return Scaffold(
+      appBar: AppBar(title: Text(widget.title ?? 'রিপোর্ট')),
+      body: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(AppSpacing.md),
+            child: TextField(
+              decoration: const InputDecoration(
+                hintText: 'রিপোর্টের নাম দিয়ে খুঁজুন',
+                prefixIcon: Icon(Icons.search),
+              ),
+              onChanged: (v) => setState(() => _query = v),
+            ),
+          ),
+          if (_busy) const LinearProgressIndicator(),
+          Expanded(
+            child: RefreshIndicator(
+              onRefresh: _load,
+              child: ListView(
+                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+                children: [
+                  if (_error != null)
+                    EmptyState(
+                      icon: Icons.cloud_off_outlined,
+                      title: 'তালিকা আনা গেল না',
+                      message: _error,
+                    )
+                  else if (reports == null)
+                    const SizedBox(height: 200)
+                  else if (reports.isEmpty)
+                    const EmptyState(
+                      icon: Icons.bar_chart_outlined,
+                      // Not an error: the server sends only what this person
+                      // may run, and for some roles that is nothing.
+                      title: 'আপনার জন্য কোনো রিপোর্ট নেই',
+                    )
+                  else if (filtered.isEmpty)
+                    const EmptyState(
+                        icon: Icons.search_off, title: 'কোনো মিল পাওয়া যায়নি')
+                  else
+                    ...filtered.map((r) => Card(
+                          margin: const EdgeInsets.only(bottom: AppSpacing.xs),
+                          child: ListTile(
+                            leading: const Icon(Icons.bar_chart_outlined),
+                            title: Text(r.title),
+                            subtitle: r.module == null ? null : Text(r.module!),
+                            trailing: const Icon(Icons.chevron_right),
+                            onTap: () => Navigator.of(context).push(
+                              MaterialPageRoute<void>(
+                                builder: (_) => ReportViewScreen(
+                                  report: r,
+                                  open: widget.open,
+                                ),
+                              ),
+                            ),
+                          ),
+                        )),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// One report, drawn entirely from what the server said its columns are.
+class ReportViewScreen extends StatefulWidget {
+  const ReportViewScreen(
+      {super.key, required this.report, this.open, this.today, this.exportPdf});
+
+  final ReportSummary report;
+
+  /// Injected in tests. ⓘ The filters go with every call — the date range lives here, on this screen.
+  final Future<ReportPage> Function(
+      String key, int page, Map<String, dynamic> filters)? open;
+
+  /// The day "today" is, injected in tests so a date range does not depend on when the test runs.
+  final DateTime Function()? today;
+
+  /// The PDF of this report with these filters — injected in tests (the real one is `GET /reports/{key}/export?format=pdf`).
+  final Future<Uint8List> Function(String key, Map<String, dynamic> filters)?
+      exportPdf;
+
+  @override
+  State<ReportViewScreen> createState() => _ReportViewScreenState();
+}
+
+class _ReportViewScreenState extends State<ReportViewScreen> {
+  ReportPage? _page;
+  String? _error;
+  bool _busy = false;
+  int _pageNo = 1;
+
+  /// ⭐ তারিখ ধরে — মালিক, ৪ অক্টোবর ২০২৬: *"all ledger & report date veue print share"*। Only for a report whose
+  /// definition declares `date_range` ([[ReportSummary.takesDateRange]]); the server validates it (422 on a wrong one).
+  /// ⓘ Starts on the first of this month.
+  DateTimeRange? _range;
+
+  static final DateFormat _wire = DateFormat('yyyy-MM-dd');
+  static final DateFormat _shown = DateFormat('dd/MM/yyyy');
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.report.takesDateRange) {
+      final now = (widget.today ?? DateTime.now)();
+      final day = DateTime(now.year, now.month, now.day);
+      _range = DateTimeRange(start: DateTime(day.year, day.month, 1), end: day);
+    }
+    _load();
+  }
+
+  Map<String, dynamic> get _filters {
+    final range = _range;
+    return range == null
+        ? const {}
+        : {'from': _wire.format(range.start), 'to': _wire.format(range.end)};
+  }
+
+  Future<void> _pickRange() async {
+    final now = (widget.today ?? DateTime.now)();
+    final picked = await showDateRangePicker(
+      context: context,
+      firstDate: DateTime(2020),
+      lastDate: DateTime(now.year, now.month, now.day),
+      initialDateRange: _range,
+      helpText: 'কোন তারিখ থেকে কোন তারিখ',
+      saveText: 'দেখান',
+    );
+    if (picked == null || !mounted) return;
+    setState(() {
+      _range = picked;
+      _pageNo = 1;
+    });
+    _load();
+  }
+
+  Future<void> _load() async {
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
+    try {
+      final result = await (widget.open ??
+          (String k, int p, Map<String, dynamic> f) =>
+              ReportsApi.run(k, page: p, filters: f))(
+        widget.report.key,
+        _pageNo,
+        _filters,
+      );
+      if (mounted) setState(() => _page = result);
+    } catch (error) {
+      if (mounted) {
+        // ⛔ No whenAbsent here, unlike the list above. This call names a
+        // particular report, so a 404 is at least as likely to mean that key
+        // is gone as that the route is — and "your app is newer than the
+        // server" would then be a confident, wrong explanation.
+        setState(() =>
+            _error = errorMessageFor(error, fallback: 'রিপোর্ট আনা গেল না।'));
+      }
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final page = _page;
+
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(page?.title ?? widget.report.title),
+        actions: [
+          // ⭐ PDF — দেখা, ছাপা, পাঠানো; এই পর্দার একই তারিখ আর ছাঁকনিতে, সব সারি (মালিক, ৪ অক্টোবর ২০২৬)
+          IconButton(
+            key: const Key('report-pdf'),
+            tooltip: 'PDF — দেখা, ছাপা, পাঠানো',
+            icon: const Icon(Icons.picture_as_pdf_outlined),
+            onPressed: page == null
+                ? null
+                : () => showModalBottomSheet<void>(
+                      context: context,
+                      isScrollControlled: true,
+                      builder: (_) => DocumentActionsSheet(
+                        type: 'report',
+                        id: widget.report.key,
+                        title: page.title,
+                        fileStem:
+                            'abos-${widget.report.key.replaceAll('.', '-')}',
+                        loadPapers: () async => const ['a4'],
+                        loadPdf: (_) => (widget.exportPdf ??
+                            (String k, Map<String, dynamic> f) =>
+                                DocumentsApi.export(
+                                    slug: k, format: 'pdf', filters: f))(
+                          widget.report.key,
+                          _filters,
+                        ),
+                      ),
+                    ),
+          ),
+        ],
+      ),
+      body: Column(
+        children: [
+          if (_busy) const LinearProgressIndicator(),
+          if (_range != null)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.md, AppSpacing.sm, AppSpacing.md, 0),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: OutlinedButton.icon(
+                  key: const Key('report-range'),
+                  onPressed: _busy ? null : _pickRange,
+                  icon: const Icon(Icons.date_range_outlined, size: 18),
+                  label: Text(
+                      '${_shown.format(_range!.start)} — ${_shown.format(_range!.end)}'),
+                ),
+              ),
+            ),
+          if (page != null)
+            Container(
+              width: double.infinity,
+              color: AppColors.surfaceMuted,
+              padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.md, vertical: AppSpacing.sm),
+              // ⚠️ Says which slice of the report is on screen. Without it a
+              // person reads one page of four hundred rows as the whole
+              // report, and every conclusion after that is drawn from a
+              // hundred rows they believed were all of them.
+              child: Text(page.rangeSentence,
+                  style: const TextStyle(fontSize: 12.5)),
+            ),
+          Expanded(
+            // ⛔ Both empty branches sit inside the RefreshIndicator, over a
+            // scrollable. Outside one, the pull gesture is not recognised at
+            // all — and with no rows there is no pager either, so a failed
+            // report became a dead end that could only be left by going back
+            // and tapping the report again. Same shape as the bug found on
+            // four list screens; see pull_to_refresh_test.dart.
+            //
+            // ⓘ The RefreshIndicator goes around the empty branches only, not
+            // around _Table. A table scrolls horizontally on the outside, and
+            // a RefreshIndicator ignores a horizontal scrollable — wrapping
+            // the whole thing would have looked right in the source and done
+            // nothing on a phone, which is this bug's entire habit. Rows on
+            // screen have the pager instead.
+            child: page != null && page.rows.isNotEmpty
+                ? _Table(page: page)
+                : RefreshIndicator(
+                    onRefresh: _load,
+                    child: ListView(
+                      children: [
+                        if (_error != null)
+                          EmptyState(
+                            icon: Icons.cloud_off_outlined,
+                            title: 'রিপোর্ট আনা গেল না',
+                            message: _error,
+                          )
+                        else if (page == null)
+                          const SizedBox(height: 200)
+                        else
+                          const EmptyState(
+                            icon: Icons.inbox_outlined,
+                            title: 'এই সময়ে কোনো সারি নেই',
+                          ),
+                      ],
+                    ),
+                  ),
+          ),
+          if (page != null && (page.page > 1 || page.hasMore))
+            _Pager(
+              page: page,
+              onPrevious: page.page > 1 && !_busy
+                  ? () {
+                      setState(() => _pageNo = page.page - 1);
+                      _load();
+                    }
+                  : null,
+              onNext: page.hasMore && !_busy
+                  ? () {
+                      setState(() => _pageNo = page.page + 1);
+                      _load();
+                    }
+                  : null,
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _Table extends StatelessWidget {
+  const _Table({required this.page});
+
+  final ReportPage page;
+
+  @override
+  Widget build(BuildContext context) {
+    final columns = page.columns;
+
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: SingleChildScrollView(
+        child: DataTable(
+          columnSpacing: AppSpacing.lg,
+          columns: [
+            for (final c in columns)
+              DataColumn(label: Text(c.label), numeric: c.isNumeric),
+          ],
+          rows: [
+            for (final row in page.rows)
+              DataRow(cells: [
+                for (final c in columns) DataCell(Text(c.format(row[c.key]))),
+              ]),
+            // ⛔ The server's totals, placed as their own row. Never summed
+            // from what is on screen — see ReportPage.totals.
+            if (page.totals.isNotEmpty)
+              DataRow(
+                color: WidgetStatePropertyAll(
+                    AppColors.primary.withValues(alpha: 0.06)),
+                cells: [
+                  for (var i = 0; i < columns.length; i++)
+                    DataCell(Text(
+                      i == 0
+                          ? 'মোট'
+                          : columns[i].format(page.totals[columns[i].key]),
+                      style: const TextStyle(fontWeight: FontWeight.w700),
+                    )),
+                ],
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _Pager extends StatelessWidget {
+  const _Pager({required this.page, this.onPrevious, this.onNext});
+
+  final ReportPage page;
+  final VoidCallback? onPrevious;
+  final VoidCallback? onNext;
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.md, vertical: AppSpacing.sm),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            TextButton.icon(
+              onPressed: onPrevious,
+              icon: const Icon(Icons.chevron_left),
+              label: const Text('আগের'),
+            ),
+            Text('পাতা ${page.page} / ${page.lastPage}',
+                style: Theme.of(context).textTheme.bodySmall),
+            TextButton.icon(
+              onPressed: onNext,
+              icon: const Icon(Icons.chevron_right),
+              label: const Text('পরের'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}

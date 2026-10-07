@@ -1,0 +1,188 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Modules\Accounts\Http\Controllers;
+
+use App\Core\Services\MenuBuilder;
+use App\Http\Controllers\Controller;
+use App\Models\FinancialYear;
+use App\Modules\Accounts\Services\YearEndService;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Illuminate\Routing\Controllers\HasMiddleware;
+use Illuminate\Routing\Controllers\Middleware;
+use Illuminate\View\View;
+
+/**
+ * বছর সমাপনী।
+ *
+ * বছরে একবার খোলা হয়, আর কাজটা ফেরানো যায় না — তাই পর্দাটা অন্য
+ * স্ক্রিনের চেয়ে বেশি কথা বলে: কী ঘটবে তা আগে দেখায়, তারপর একবার
+ * জিজ্ঞেস করে।
+ *
+ * চূড়ান্ত হিসাবের অনুমতি লাগে (accounts.report.final), শুধু ভাউচার
+ * লেখার অনুমতি নয়: বছর বন্ধ করা মানে প্রতিষ্ঠানের বছরের ফল চূড়ান্ত
+ * করে দেওয়া, আর সেটা হিসাবরক্ষকের রোজকার কাজ নয়।
+ */
+class YearEndController extends Controller implements HasMiddleware
+{
+    public function __construct(
+        private readonly YearEndService $yearEnd,
+        private readonly MenuBuilder $menu,
+    ) {}
+
+    public static function middleware(): array
+    {
+        return [
+            new Middleware('can:accounts.report.final'),
+            // ⛔ দেখা এক চাবি, বন্ধ আরেক — অডিট হিসাব ⚠️৭ (৬ অক্টোবর ২০২৬)
+            new Middleware('can:accounts.year.close', only: ['close']),
+        ];
+    }
+
+    /**
+     * ⛔ পাতা ভাগ নেই, ইচ্ছাকৃত — সারি বাড়ে **বছরে একটা**।
+     *
+     * `years` হলো অর্থবছরের তালিকা। পঞ্চাশ সারিতে পৌঁছাতে একটা
+     * প্রতিষ্ঠানকে পঞ্চাশ বছর চলতে হবে, আর তখনো পাতাটা এক পাতাতেই ধরত।
+     * এই রিপোর তালিকাগুলোর মধ্যে এটাই সবচেয়ে ধীরে বাড়ে।
+     *
+     * কারণটা `EveryListScreenPaginatesTest`-এর ছাড়ের তালিকাতেও আছে।
+     */
+    public function index(Request $request): View
+    {
+        $current = FinancialYear::query()->where('is_current', true)->first();
+
+        return view('accounts::year-end.index', [
+            'menu' => $this->menu->forUser($request->user()),
+            'year' => $current,
+            // চলতি বছর না থাকলে দেখানোর কিছুই নেই, আর preview() ডাকলে
+            // ব্যতিক্রম পড়ত
+            'preview' => $current !== null ? $this->yearEnd->preview($current) : null,
+            'years' => FinancialYear::query()->orderByDesc('starts_on')->get(),
+
+            /*
+             * ⭐ আবার খোলার দরজা — কেবল সুপার অ্যাডমিন, আর কেবল সবচেয়ে
+             * পরে বন্ধ হওয়া বছরটায় ([[YearEndService::reopen()]])।
+             */
+            'canReopen' => $this->yearEnd->canReopen($request->user()),
+            'reopenableId' => $this->yearEnd->reopenableYear()?->id,
+
+            // ⭐ সমাপনী ভাউচারের নম্বর — বছর ধরে, পাতার লিঙ্কের জন্য (৩ঙ)
+            'closingNos' => $this->yearEnd->closingNumbers(),
+        ]);
+    }
+
+    public function close(Request $request, FinancialYear $year): RedirectResponse
+    {
+        $data = $request->validate([
+            'name' => ['nullable', 'string', 'max:32'],
+            'starts_on' => ['nullable', 'date'],
+            'ends_on' => ['nullable', 'date', 'after:starts_on'],
+
+            /*
+             * নামটা হাতে লিখে নিশ্চিত করা।
+             *
+             * সাধারণ confirm() যথেষ্ট নয়: মানুষ নিশ্চিতকরণের বাক্স না
+             * পড়েই "হ্যাঁ" চাপে। বছরের নামটা লিখতে বললে অন্তত একবার
+             * চোখ বুলাতে হয় — আর এই কাজটা ফেরানো যায় না।
+             */
+            'confirm' => ['required', 'string'],
+        ]);
+
+        if (trim($data['confirm']) !== $year->name) {
+            return back()
+                ->withInput()
+                ->withErrors(['confirm' => __('accounts::validation.year_confirm_name', ['name' => $year->name])]);
+        }
+
+        $newYear = $this->yearEnd->close($year, [
+            'name' => $data['name'] ?? null,
+            'starts_on' => $data['starts_on'] ?? null,
+            'ends_on' => $data['ends_on'] ?? null,
+        ]);
+
+        return redirect()
+            ->route('accounts.year_end.index')
+            ->with('saved', __('accounts::message.year_closed', [
+                'closed' => $year->name,
+                'opened' => $newYear->name,
+            ]));
+    }
+
+    /**
+     * বন্ধ বছর আবার খোলা — সুপার অ্যাডমিনের নিজের দরজা।
+     *
+     * ⓘ অনুমতি দিয়ে নয়, রোল দিয়ে ([[YearEndService::reopen()]])। মালিকের
+     * কথা: *"super admin er kache seta thakte hobe"* — অর্থাৎ এটা রোজকার
+     * কারো কাজ নয়, একজনের হাতে রাখা দরজা।
+     *
+     * ⚠️ নামটা হুবহু লিখতে হয়, বন্ধ করার মতোই: ভুল করে চাপা ঠেকাতে।
+     */
+    public function reopen(Request $request, FinancialYear $year): RedirectResponse
+    {
+        $data = $request->validate([
+            'confirm' => ['required', 'string'],
+        ]);
+
+        if (trim($data['confirm']) !== $year->name) {
+            return back()
+                ->withInput()
+                ->withErrors(['confirm' => __('accounts::validation.year_confirm_name', ['name' => $year->name])]);
+        }
+
+        $this->yearEnd->reopen($year, $request->user());
+
+        return redirect()
+            ->route('accounts.year_end.index')
+            ->with('saved', __('accounts::message.year_reopened', ['name' => $year->name]));
+    }
+
+    /**
+     * ⭐ বছরশেষের সমাপনী ভাউচার — পাতা (ভাউচারের পরিকল্পনা ৩ঙ, ৭ অক্টোবর ২০২৬; [[YearEndService::closingPaper()]])।
+     *
+     * ⓘ বন্ধের সমাপনী আর (বছর আবার খুললে) তার উল্টো, একই নম্বরে পাশাপাশি। বছর এখনো বন্ধ না হলে দেখানোর কিছু নেই — ৪০৪।
+     */
+    public function closing(Request $request, FinancialYear $year): View
+    {
+        $papers = $this->yearEnd->closingPaper($year);
+        abort_if($papers === [], 404);
+
+        return view('accounts::year-end.closing', [
+            'menu' => $this->menu->forUser($request->user()),
+            'year' => $year,
+            'papers' => $papers,
+        ]);
+    }
+
+    /** ⭐ সমাপনী ভাউচারের ছাপা — পাতার একই তথ্য, A4 ([[closing()]])। */
+    public function closingPrint(Request $request, FinancialYear $year): \Illuminate\Http\Response
+    {
+        $papers = $this->yearEnd->closingPaper($year);
+        abort_if($papers === [], 404);
+
+        $paper = \App\Core\Engines\Print\PaperSize::chosen($request->query('paper'), 'a4');
+        $asFile = $request->boolean('download');
+        $no = (string) $papers[array_key_last($papers)]['document_no'];
+
+        $pdf = app(\App\Core\Engines\Print\PrintEngine::class)->render(
+            template: 'print.year-closing',
+            data: [
+                'title' => __('accounts::voucher.closing_voucher').' '.$no,
+                'year' => $year->name,
+                'papers' => $papers,
+                'signatures' => [
+                    (string) __('accounts::print.prepared_by'),
+                    (string) __('accounts::print.approved_by'),
+                ],
+            ],
+            paper: $paper,
+        );
+
+        return response($pdf, 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => ($asFile ? 'attachment' : 'inline').'; filename="'.str_replace('/', '-', $no).'.pdf"',
+        ]);
+    }
+}

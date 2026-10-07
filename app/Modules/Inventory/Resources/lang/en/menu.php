@@ -1,0 +1,40 @@
+<?php
+
+declare(strict_types=1);
+
+return [
+    'stock_by_batch' => 'Stock by batch',
+    'products' => 'Products',
+    'warehouses' => 'Warehouses',
+    'stock' => 'Stock',
+    'goods_receipt' => 'Goods Receipt',
+    'placement' => 'Stock Placement',
+    'adjust' => 'Count & Adjust',
+    'stock_ledger' => 'Stock Ledger',
+    'stock_summary' => 'Stock Summary',
+    'hold_report' => 'Held Stock',
+    'stock_movement' => 'Dead & Slow-moving Stock',
+    'stock_age' => 'Stock Age',
+    'transfers' => 'Stock Transfers',
+    'opening' => 'Opening Stock',
+    'lot_assign' => 'Assign a lot',
+    'issue' => 'Stock Issue',
+    'expiring' => 'Expiring Soon',
+    'trace' => 'Trace a lot (recall)',
+
+    /* Recipes sit under master data — a rule, not a transaction. */
+    'recipes' => 'Recipes',
+    'production' => 'Cooking',
+    'food_cost' => 'Food cost',
+    'kitchen_board' => 'Kitchen board',
+    'kitchen_tickets' => 'Kitchen screen',
+    'places' => 'Places in the warehouse',
+    'stock_value' => 'Stock with value',
+    'stock_by_warehouse' => 'Stock by warehouse',
+    'adjustments' => 'Who changed the stock',
+    'reserved_report' => 'Reserved stock',
+    'counts' => 'Stock Counts',
+    'quality' => 'Quality Inspection',
+    'replenishment' => 'What to buy',
+    'serials' => 'Serial Numbers',
+];

@@ -1,0 +1,748 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Modules\Accounts\Services;
+
+use App\Core\Engines\NumberSeries\NumberSeriesEngine;
+use App\Core\Engines\Posting\PostingEngine;
+use App\Core\Services\PartyRegistry;
+use App\Core\Support\CompanyContext;
+use App\Core\Support\Money;
+use App\Models\FinancialYear;
+use App\Modules\Accounts\Models\Account;
+use App\Modules\Accounts\Models\AssetTransfer;
+use App\Modules\Accounts\Models\DepreciationEntry;
+use App\Modules\Accounts\Models\FixedAsset;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
+
+/**
+ * সম্পদের খাতা আর মাসের অবচয়।
+ *
+ * ── অবচয় না বসলে যা হয় ──────────────────────────────────────────────
+ * ডেলিভারি ভ্যানটা কেনার দিনের দামেই খাতায় বসে থাকে যতদিন না বিক্রি
+ * হয়, আর বছরের মুনাফা ঠিক ওই ক্ষয়ের পরিমাণ বেশি দেখায়।
+ *
+ * দ্বিতীয়টা বেশি ক্ষতিকর: বেশি মুনাফা দেখে বেশি টাকা তোলা হয়, আর
+ * ভ্যানটা বদলানোর দিন টাকাটা থাকে না।
+ */
+final class FixedAssetService
+{
+    /** মালিক বা বিনিয়োগকারী দিয়েছেন — মূলধনে ক্রেডিট, তাঁর নামে। */
+    public const FUNDED_CAPITAL = 'capital';
+
+    /** ব্যাংক বা নগদ থেকে দেওয়া হয়েছে — ঐ খাতে ক্রেডিট। */
+    public const FUNDED_MONEY = 'money';
+
+    /** বাকিতে কেনা — বিক্রেতার পাওনায় ক্রেডিট। */
+    public const FUNDED_CREDIT = 'credit';
+
+    /** পুরনো খাতার জের — ব্যবসার আগে থেকেই ছিল। */
+    public const FUNDED_OPENING = 'opening';
+
+    /** আগেই ভাউচার কাটা হয়েছে — এখানে কিছু বসবে না। */
+    public const FUNDED_ALREADY = 'already';
+
+    /** @var list<string> */
+    public const FUNDING_WAYS = [
+        self::FUNDED_CAPITAL,
+        self::FUNDED_MONEY,
+        self::FUNDED_CREDIT,
+        self::FUNDED_OPENING,
+        self::FUNDED_ALREADY,
+    ];
+
+    public function __construct(
+        private readonly NumberSeriesEngine $numbers,
+        private readonly PostingEngine $posting,
+    ) {}
+
+    /**
+     * খাতায় একটা সম্পদ তোলা — আর টাকাটা কোথা থেকে এল, সেটাও।
+     *
+     * ── কেন এখন দাখিলাও এখানে বসে, ২০ সেপ্টেম্বর ২০২৬ ───────────────
+     * আগে এখানে কোনো দাখিলা বসত না, আর ধরে নেওয়া হত জিনিসটা একটা ক্রয়
+     * বা পেমেন্ট ভাউচার দিয়ে কেনা হয়েছে। ⛔ মালিক মেপে দেখালেন সেটা
+     * হয় না: অফিসের পাঁচ লাখ টাকার কম্পিউটার বসিয়ে দেখা গেল খাতায়
+     * একটা সারিও ওঠেনি — অথচ অবচয় ঠিকই বসতে থাকে (খরচ ডেবিট / সঞ্চিত
+     * অবচয় ক্রেডিট)। ⚠️ ফল: স্থিতিপত্রে সম্পদের দাম **ঋণাত্মক**, আর
+     * লাভ-ক্ষতিতে এমন জিনিসের খরচ যেটা খাতা অনুযায়ী নেই-ই।
+     *
+     * ⭐ তাই ফর্ম এখন জিজ্ঞেস করে "টাকাটা কোথা থেকে এল", আর উত্তর ধরে
+     * দাখিলাটা এখানেই বসে: সম্পদের খাত ডেবিট / উৎস ক্রেডিট।
+     *
+     * ⓘ `already` বিকল্পটা ইচ্ছাকৃত — যিনি আগেই ভাউচার কেটেছেন তিনি
+     * ওটা বেছে নেন, আর তখন কিছুই বসে না। ওটা না রাখলে পুরনো অভ্যাসে
+     * কাজ করা মানুষের কেনা **দুইবার** খাতায় উঠত।
+     *
+     * @param  array<string, mixed>  $data
+     */
+    public function register(array $data): FixedAsset
+    {
+        $method = $data['method'] ?? FixedAsset::STRAIGHT_LINE;
+
+        if ($method === FixedAsset::STRAIGHT_LINE && (int) ($data['life_months'] ?? 0) <= 0) {
+            throw ValidationException::withMessages([
+                'life_months' => __('accounts::asset.life_required'),
+            ]);
+        }
+
+        if ($method === FixedAsset::REDUCING && bccomp((string) ($data['rate'] ?? '0'), '0', 4) <= 0) {
+            throw ValidationException::withMessages([
+                'rate' => __('accounts::asset.rate_required'),
+            ]);
+        }
+
+        /*
+         * বাতিল মূল্য কেনার দামের চেয়ে বেশি হতে পারে না।
+         *
+         * হলে ক্ষয় ঋণাত্মক হত, অর্থাৎ প্রতি মাসে জিনিসটার দাম বাড়ত —
+         * আর খরচের খাতে ঋণাত্মক অঙ্ক বসে মুনাফা বাড়িয়ে দিত।
+         */
+        if (bccomp((string) ($data['salvage'] ?? '0'), (string) $data['cost'], 4) > 0) {
+            throw ValidationException::withMessages([
+                'salvage' => __('accounts::asset.salvage_over_cost'),
+            ]);
+        }
+
+        $funding = $this->fundingFrom($data);
+
+        /* ⓘ এ পর্যন্ত যতটা ক্ষয় ধরা হয়েছে — সিদ্ধান্তের ঘর, কাগজের কলাম নয় */
+        $openingDepreciation = (string) ($data['opening_accumulated'] ?? '0');
+
+        unset(
+            $data['funded_by'], $data['funding_person_id'],
+            $data['funding_account_id'], $data['funding_supplier_id'],
+            $data['opening_accumulated'],
+        );
+
+        /*
+         * ⭐ ভুলবার্তাটা ফরমের ঘরে ফেরানো — ২০ সেপ্টেম্বর ২০২৬।
+         *
+         * ⛔ পোস্টিং ইঞ্জিন অভিযোগ করে `trx_date` নামে ([[OpenPeriod::assertOpen]]),
+         * আর সম্পদের ফরমে ওই নামে কোনো ঘর নেই — ঘরটার নাম `acquired_on`।
+         * ⚠️ ফলে বার্তাটা পর্দায় কোথাও বসত না: ব্যবহারকারী সেভ চাপতেন,
+         * পাতা ফিরে আসত, আর **কেন হলো না সেটা কোথাও লেখা থাকত না**।
+         */
+        try {
+            return DB::transaction(function () use ($data, $method, $funding, $openingDepreciation) {
+                $asset = FixedAsset::create([
+                    ...$data,
+                    'company_id' => CompanyContext::id(),
+                    'branch_id' => $data['branch_id'] ?? CompanyContext::branchId(),
+                    'document_no' => $this->numbers->next('FA'),
+                    'method' => $method,
+                    // ⓘ টাকার উৎস থাকলে আগে সইয়ের অপেক্ষায় — নিচে সই লাগে না দেখলে তখনই চালু
+                    'status' => $funding !== null ? FixedAsset::AWAITING : FixedAsset::ACTIVE,
+                    'created_by' => auth()->id(),
+                ]);
+
+                /*
+                 * ⭐ সই — গ১, Accounts-Finance অডিট, ৪ অক্টোবর ২০২৬ ([[AccountsSignature]])।
+                 *
+                 * ⛔ আগে সম্পদ নিবন্ধনেই টাকার উৎস (নগদ, ব্যাংক, দেনা, ব্যক্তি) সই ছাড়া খাতায় বসত। ⓘ ছক চালু থাকলে সম্পদ
+                 * "সইয়ের অপেক্ষায়" থাকে — অবচয় ধরে না, খাতায় নেই; শেষ সইয়ে [[finishRegistered()]] ঠিক এই উৎস দিয়েই
+                 * দাখিলা বসায়। ছক বন্ধে (UB) আগের মতো এখনই।
+                 */
+                if ($funding !== null && app(AccountsSignature::class)->holds($asset, AccountsSignature::FIXED_ASSET_REGISTER,
+                    (string) $asset->cost, (string) $asset->name, ['funding' => $funding, 'opening_depreciation' => $openingDepreciation])) {
+                    return $asset;
+                }
+
+                if ($funding !== null) {
+                    $asset->forceFill(['status' => FixedAsset::ACTIVE])->save();
+
+                    $this->posting->post(
+                        sourceType: FixedAsset::drillSourceType(),
+                        sourceId: $asset->id,
+                        trxDate: $this->postableDate($asset->acquired_on),
+                        lines: [
+                            [
+                                'account_id' => (int) $asset->asset_account_id,
+                                'debit' => (string) $asset->cost,
+                                'narration' => $asset->name,
+                            ],
+                            [
+                                'account_id' => $funding['account_id'],
+                                'credit' => (string) $asset->cost,
+                                'party_type' => $funding['party_type'],
+                                'party_id' => $funding['party_id'],
+                                'narration' => $asset->name,
+                            ],
+                        ],
+                        documentNo: $asset->document_no,
+                    );
+                }
+
+                $this->openingDepreciation($asset, $openingDepreciation);
+
+                return $asset;
+            });
+        } catch (ValidationException $e) {
+            throw $this->onTheDateField($e);
+        }
+    }
+
+    /**
+     * তারিখের অভিযোগ হলে সেটা ফরমের ঘরে বসায়।
+     *
+     * ⓘ অন্য সব ভুল অবিকল থাকে — কেবল `trx_date` নামটা বদলায়,
+     * কারণ এই পর্দায় তারিখের ঘরটার নাম আলাদা।
+     */
+    /**
+     * শেষ সইয়ের পরে — সই চাওয়ার মুহূর্তের উৎস দিয়ে দাখিলা, তারপর চালু ([[FinishTheAccountsPaperOnTheLastSignature]])।
+     *
+     * ⓘ সারিতে তালা দিয়ে, অপেক্ষায় থাকলেই — একই সই দুইবার ঘটনা পাঠালে দ্বিতীয়বার কিছু হয় না।
+     *
+     * @param  array{funding?: array{account_id: int, party_type: ?string, party_id: ?int}, opening_depreciation?: string}  $signed
+     */
+    public function finishRegistered(FixedAsset $asset, array $signed): FixedAsset
+    {
+        return DB::transaction(function () use ($asset, $signed) {
+            $locked = FixedAsset::query()->whereKey($asset->id)->lockForUpdate()->firstOrFail();
+            $funding = $signed['funding'] ?? null;
+
+            if (! $locked->isAwaiting() || ! is_array($funding)) {
+                return $locked;
+            }
+
+            $locked->forceFill(['status' => FixedAsset::ACTIVE])->save();
+
+            $this->posting->post(
+                sourceType: FixedAsset::drillSourceType(),
+                sourceId: $locked->id,
+                trxDate: $this->postableDate($locked->acquired_on),
+                lines: [
+                    ['account_id' => (int) $locked->asset_account_id, 'debit' => (string) $locked->cost, 'narration' => $locked->name],
+                    ['account_id' => (int) $funding['account_id'], 'credit' => (string) $locked->cost,
+                        'party_type' => $funding['party_type'] ?? null, 'party_id' => $funding['party_id'] ?? null, 'narration' => $locked->name],
+                ],
+                documentNo: $locked->document_no,
+            );
+
+            $this->openingDepreciation($locked, (string) ($signed['opening_depreciation'] ?? '0'));
+
+            return $locked->refresh();
+        });
+    }
+
+    private function onTheDateField(ValidationException $e): ValidationException
+    {
+        $errors = $e->errors();
+
+        if (! isset($errors['trx_date'])) {
+            return $e;
+        }
+
+        $errors['acquired_on'] = $errors['trx_date'];
+        unset($errors['trx_date']);
+
+        return ValidationException::withMessages($errors);
+    }
+
+    /**
+     * দাখিলার তারিখ — পুরনো হলে চলতি বছরের প্রথম দিনে।
+     *
+     * ── ⛔ কী ভাঙা ছিল, ২০ সেপ্টেম্বর ২০২৬ ─────────────────
+     * তিন বছরের পুরনো একটা ভ্যান তুলতে গেলে কেনার তারিখে দাখিলা
+     * বসানোর চেষ্টা হত। ⚠️ ওই তারিখ কোনো চালু অর্থবছরে পড়ত না, তাই
+     * পোস্টিং ইঞ্জিন ঠিকই আটকাত — আর লেনদেন ফিরে যাওয়ায়
+     * **সম্পদের সারিটাই তৈরি হত না**। ⛔ ফল: ফরম ভরে সেভ চাপেন,
+     * আর কিছুই থাকে না।
+     *
+     * ⓘ নিয়মটা [[OpeningBalanceService::dateFor]]-এর হুবহু এক: খাতা যেদিন
+     * শুরু, তার আগের কোনো দিনে দাখিলা বসানোর মানে হয় না। ⭐ আসল
+     * কেনার তারিখ হারায় না — সেটা `acquired_on` ঘরেই থাকে।
+     */
+    private function postableDate(Carbon $date): string
+    {
+        $year = FinancialYear::query()->where('is_current', true)->first();
+
+        if ($year === null) {
+            return $date->toDateString();
+        }
+
+        $start = Carbon::parse($year->starts_on);
+
+        return $date->lt($start) ? $start->toDateString() : $date->toDateString();
+    }
+
+    /**
+     * এ পর্যন্ত যতটা ক্ষয় ধরা হয়ে গেছে — ব্যবস্থায় তোলার আগেই।
+     *
+     * ── ⭐ কেন লাগল, ২০ সেপ্টেম্বর ২০২৬ ────────────────────
+     * তিন বছর চলা একটা ভ্যান নতুন হিসাবে ঢুকত: খাতায় তার দাম পুরো
+     * দেখাত, আর অবচয় শুরু হত আজ থেকে — অর্থাৎ তিন বছরের ক্ষয়
+     * একবারে মুছে যেত। ⚠️ স্থিতিপত্রে সম্পদটা ফুলে থাকত, আর পরের
+     * বছরগুলোয় খরচ বেশি দেখাত।
+     *
+     * ── ⓘ কেন একটা অবচয়ের সারি, আলাদা কলাম নয় ─────────────
+     * ⭐ [[FixedAsset::accumulated]] অবচয়ের সারিগুলোই যোগ করে। সারি হলে
+     * খাতার মান, বইয়ের দাম আর মাসের দৌড় — তিনটাই নিজে থেকে ঠিক
+     * জায়গা থেকে শুরু করে। ⛔ আলাদা কলাম হলে তিন জায়গায় তিনটা যোগ
+     * লিখতে হত, আর একদিন একটায় সংশোধন হত বাকি দুইটায় নয়।
+     *
+     * ⚠️ খরচের খাতে যায় না — যায় সঞ্চিত মুনাফায়। ওই ক্ষয় আগের
+     * বছরগুলোর, এই বছরের খরচ নয় — খরচে ফেললে প্রথম মাসেই তিন
+     * বছরের অবচয় লাভ খেয়ে ফেলত।
+     */
+    private function openingDepreciation(FixedAsset $asset, string $amount): void
+    {
+        if (bccomp($amount, '0', 4) <= 0) {
+            return;
+        }
+
+        $equity = StandardChart::find(StandardChart::RETAINED_EARNINGS);
+
+        if ($equity === null) {
+            throw ValidationException::withMessages([
+                'opening_accumulated' => __('accounts::asset.opening_needs_the_chart'),
+            ]);
+        }
+
+        $on = $this->postableDate($asset->acquired_on);
+
+        $entry = DepreciationEntry::create([
+            'company_id' => $asset->company_id,
+            'fixed_asset_id' => $asset->id,
+            'period_end' => $on,
+            'amount' => $amount,
+            'document_no' => $asset->document_no.'/OPEN',
+            'created_by' => auth()->id(),
+        ]);
+
+        $this->posting->post(
+            sourceType: DepreciationEntry::drillSourceType(),
+            sourceId: $entry->id,
+            trxDate: $on,
+            lines: [
+                ['account_id' => (int) $equity->id, 'debit' => $amount],
+                ['account_id' => (int) $asset->accumulated_account_id, 'credit' => $amount],
+            ],
+            documentNo: $entry->document_no,
+        );
+    }
+
+    /**
+     * টাকাটা কোথা থেকে এল — উত্তরটা খাতার একটা খাতে অনুবাদ করা।
+     *
+     * ⚠️ খাতগুলো ছকে না থাকলে থামা হয়, নীরবে অন্য খাতে বসানো হয় না:
+     * ভুল খাতে বসা পাঁচ লাখ খুঁজে বের করার চেয়ে একটা পরিষ্কার ভুল-বার্তা
+     * ঢের ভালো।
+     *
+     * @param  array<string, mixed>  $data
+     * @return array{account_id: int, party_type: ?string, party_id: ?int}|null
+     */
+    /** @param  array<string, mixed>  $data */
+    private function assertFunderIsOurs(string $how, array $data): void
+    {
+        [$field, $ours] = match ($how) {
+            // ⓘ খাতের কোম্পানি-স্কোপই অন্য কোম্পানির খাত বাদ দেয় ([[BelongsToCompany]])
+            self::FUNDED_MONEY => ['funding_account_id', Account::query()->postable()
+                ->whereKey((int) ($data['funding_account_id'] ?? 0))
+                ->exists()],
+            self::FUNDED_CAPITAL => ['funding_person_id',
+                app(PartyRegistry::class)->exists('person', (int) ($data['funding_person_id'] ?? 0))],
+            self::FUNDED_CREDIT => ['funding_supplier_id',
+                app(PartyRegistry::class)->exists('supplier', (int) ($data['funding_supplier_id'] ?? 0))],
+            default => [null, true],
+        };
+
+        if (! $ours) {
+            throw ValidationException::withMessages([
+                $field => __('accounts::asset.funding_not_found'),
+            ]);
+        }
+    }
+
+    private function fundingFrom(array $data): ?array
+    {
+        $how = (string) ($data['funded_by'] ?? self::FUNDED_ALREADY);
+
+        if ($how === self::FUNDED_ALREADY) {
+            return null;
+        }
+
+        /*
+         * ⛔ অর্থদাতা এই কোম্পানির — চূড়ান্ত অডিট ⛔৯, ৩০ সেপ্টেম্বর ২০২৬
+         * ([[ANoteNamedAPartyFromAnotherCompanyTest]])। ⓘ আগে id-টা কোথাও না কোথাও থাকলেই চলত,
+         * তাই অন্য কোম্পানির বিক্রেতার কাছে দেনা বা অন্য কোম্পানির খাত থেকে টাকা বসত।
+         */
+        $this->assertFunderIsOurs($how, $data);
+
+        if ($how === self::FUNDED_MONEY) {
+            return [
+                'account_id' => (int) $data['funding_account_id'],
+                'party_type' => null,
+                'party_id' => null,
+            ];
+        }
+
+        $code = match ($how) {
+            self::FUNDED_CAPITAL => StandardChart::OWNER_CAPITAL,
+            self::FUNDED_CREDIT => StandardChart::VENDOR_PAYABLE,
+            default => StandardChart::RETAINED_EARNINGS,
+        };
+
+        $account = StandardChart::find($code);
+
+        if ($account === null) {
+            throw ValidationException::withMessages([
+                'funded_by' => __('accounts::asset.funding_account_missing', ['code' => $code]),
+            ]);
+        }
+
+        return [
+            'account_id' => (int) $account->id,
+            'party_type' => match ($how) {
+                self::FUNDED_CAPITAL => 'person',
+                self::FUNDED_CREDIT => 'supplier',
+                default => null,
+            },
+            'party_id' => match ($how) {
+                self::FUNDED_CAPITAL => (int) $data['funding_person_id'],
+                self::FUNDED_CREDIT => (int) $data['funding_supplier_id'],
+                default => null,
+            },
+        ];
+    }
+
+    /**
+     * একটা মাসের ক্ষয় কত।
+     *
+     * সরলরৈখিক: (দাম − বাতিল মূল্য) ÷ আয়ুর মাস। প্রতি মাসে একই অঙ্ক।
+     *
+     * ক্রমহ্রাসমান: খাতায় এখনকার দামের উপর বাৎসরিক হার ÷ ১২। প্রথম
+     * বছরগুলোয় বেশি, পরে কম — যা যানবাহনের বাস্তবতার কাছাকাছি।
+     *
+     * দুইটাতেই শেষে একটা ছাঁকনি: বাকি থাকা ক্ষয়ের চেয়ে বেশি বসে না।
+     * নাহলে ক্রমহ্রাসমানে দাম কোনোদিন বাতিল মূল্যে থামত না, আর
+     * সরলরৈখিকে শেষ মাসে এক-দুই পয়সা বেশি বসে যেত।
+     */
+    public function monthlyAmount(FixedAsset $asset, ?Carbon $upTo = null): string
+    {
+        $left = $asset->depreciableLeft($upTo);
+
+        if (bccomp($left, '0', 4) <= 0) {
+            return '0.0000';
+        }
+
+        $amount = $asset->method === FixedAsset::REDUCING
+            ? bcdiv(bcmul($asset->bookValue($upTo), bcdiv((string) $asset->rate, '100', 8), 8), '12', 4)
+            : bcdiv(bcsub((string) $asset->cost, (string) $asset->salvage, 4), (string) $asset->life_months, 4);
+
+        return bccomp($amount, $left, 4) > 0 ? $left : $amount;
+    }
+
+    /**
+     * এক সম্পদের এক মাসের অবচয় বসানো।
+     *
+     * @throws ValidationException
+     */
+    public function depreciate(FixedAsset $asset, Carbon|string $month): ?DepreciationEntry
+    {
+        $periodEnd = Carbon::parse($month)->endOfMonth()->startOfDay();
+
+        if (! $asset->isActive()) {
+            throw ValidationException::withMessages([
+                // ⓘ সইয়ের অপেক্ষা "আর ব্যবহারে নেই" নয় — আলাদা কথা (গ১)
+                'status' => $asset->isAwaiting() ? __('accounts::asset.awaiting_signature') : __('accounts::asset.not_active'),
+            ]);
+        }
+
+        /*
+         * কেনার আগের মাসে ক্ষয় হয় না।
+         *
+         * না আটকালে কেউ একবার পুরনো মাস ধরে চালালে ভ্যানটা কেনার আগেই
+         * ক্ষয়ে যাওয়া শুরু করত — আর সংখ্যাটা দেখতে বৈধই লাগত।
+         */
+        if ($periodEnd->lessThan($asset->acquired_on->copy()->endOfMonth()->startOfDay())) {
+            throw ValidationException::withMessages([
+                'period_end' => __('accounts::asset.before_acquisition'),
+            ]);
+        }
+
+        $amount = Money::of($this->monthlyAmount($asset, $periodEnd));
+
+        if (bccomp($amount, '0', 4) <= 0) {
+            return null;
+        }
+
+        return DB::transaction(function () use ($asset, $periodEnd, $amount) {
+            /*
+             * একই মাস দুইবার আটকায় ডাটাবেসের unique — কোডের if নয়।
+             *
+             * কোডে দেখলে দুইজন একসাথে চালালে দুইটাই "নেই" দেখে দুইটাই
+             * বসিয়ে দিত। মাস শেষে সবাই একসাথে কাজ করেন, তাই এটা
+             * তাত্ত্বিক ঝুঁকি নয়।
+             */
+            $entry = DepreciationEntry::create([
+                'company_id' => $asset->company_id,
+                'fixed_asset_id' => $asset->id,
+                'period_end' => $periodEnd->toDateString(),
+                'amount' => $amount,
+                'document_no' => $asset->document_no.'/'.$periodEnd->format('Y-m'),
+                'created_by' => auth()->id(),
+            ]);
+
+            /* খরচ বাড়ল, আর সঞ্চিত ক্ষয় বাড়ল — সম্পদের খাত ছোঁয়া হয় না। */
+            $this->posting->post(
+                sourceType: DepreciationEntry::drillSourceType(),
+                sourceId: $entry->id,
+                trxDate: $periodEnd->toDateString(),
+                lines: [
+                    ['account_id' => $asset->expense_account_id, 'debit' => $amount],
+                    ['account_id' => $asset->accumulated_account_id, 'credit' => $amount],
+                ],
+                documentNo: $entry->document_no,
+            );
+
+            return $entry;
+        });
+    }
+
+    /**
+     * মাস শেষের দৌড় — সব সচল সম্পদে একবারে।
+     *
+     * যেগুলো ইতিমধ্যে বসানো, বা যেগুলোর ক্ষয় শেষ, সেগুলো নীরবে বাদ
+     * যায়। দৌড়টা পুরো ব্যর্থ হয় না — একটা সম্পদের সমস্যায় বাকি
+     * চল্লিশটা আটকে গেলে কেউ আর মাস শেষে দৌড়ায় না।
+     *
+     * @return array{posted: int, skipped: int, total: string}
+     */
+    public function runFor(Carbon|string $month): array
+    {
+        $periodEnd = Carbon::parse($month)->endOfMonth()->startOfDay();
+        $posted = 0;
+        $skipped = 0;
+        $total = '0';
+
+        foreach (FixedAsset::query()->active()->get() as $asset) {
+            $already = DepreciationEntry::query()
+                ->where('fixed_asset_id', $asset->id)
+                ->where('period_end', $periodEnd->toDateString())
+                ->exists();
+
+            if ($already) {
+                $skipped++;
+
+                continue;
+            }
+
+            try {
+                $entry = $this->depreciate($asset, $periodEnd);
+            } catch (ValidationException) {
+                $skipped++;
+
+                continue;
+            }
+
+            if ($entry === null) {
+                $skipped++;
+
+                continue;
+            }
+
+            $posted++;
+            $total = bcadd($total, (string) $entry->amount, 4);
+        }
+
+        return ['posted' => $posted, 'skipped' => $skipped, 'total' => $total];
+    }
+
+    /**
+     * সম্পদ বিদায় — বিক্রি, বা ফেলে দেওয়া।
+     *
+     * ── কেন এখানে লাভ-লোকসান বেরোয় ─────────────────────────────────
+     * জিনিসটা খাতায় যত দামে বসে আছে (দাম − সঞ্চিত ক্ষয়), আর যত টাকায়
+     * গেল — এই দুইটার তফাতই লাভ বা লোকসান। তফাতটা না বসালে কেনার দাম
+     * আর ক্ষয় দুইটাই খাতায় ঝুলে থাকত, আর ব্যালেন্স শিটে এমন একটা
+     * ভ্যান দেখাত যা ছয় মাস আগে বিক্রি হয়ে গেছে।
+     */
+    /**
+     * ⭐ সম্পদ এক শাখা থেকে আরেক শাখায় — মানচিত্র §১৫, ২১ সেপ্টেম্বর ২০২৬।
+     *
+     * ── ⚠️ কেন খাতায় দাখিলা লাগে, কেবল কলাম বদলানো নয় ─────────────
+     * ফ্রিজটা ঢাকা থেকে খুলনায় গেলে **দুইটা শাখার স্থিতিপত্রই** বদলায়:
+     * একটা থেকে সম্পদ যায়, অন্যটায় আসে। ⓘ কেবল `branch_id` বদলালে
+     * খতিয়ানের পুরনো সারিগুলো ঢাকার নামেই পড়ে থাকত, আর শাখা ধরে
+     * স্থিতিপত্র চাইলে দুইটাই ভুল আসত।
+     *
+     * ⛔ সঞ্চিত অবচয়টাও সাথে যায়, আর সেটা ভুলে যাওয়া সহজ: সম্পদের খাত
+     * সরিয়ে ক্ষয়ের খাত রেখে দিলে নতুন শাখায় জিনিসটা **নতুনের দামে**
+     * বসত, আর পুরনো শাখায় একটা ক্ষয় ঝুলে থাকত যার কোনো সম্পদ নেই।
+     *
+     * ⓘ মোট অঙ্ক শূন্য — এটা টাকার চলাচল নয়, জায়গা বদল। ⚠️ তবু দাখিলা
+     * দুই দিকেই বসে, কারণ শাখাটা সারির নিজের ঘরে থাকে।
+     */
+    public function transfer(
+        FixedAsset $asset,
+        int $toBranchId,
+        Carbon|string|null $date = null,
+        ?string $note = null,
+    ): AssetTransfer {
+        if (! $asset->isActive()) {
+            throw ValidationException::withMessages([
+                'status' => __('accounts::asset.not_active'),
+            ]);
+        }
+
+        if ((int) $asset->branch_id === $toBranchId) {
+            throw ValidationException::withMessages([
+                'to_branch_id' => __('accounts::asset.already_there'),
+            ]);
+        }
+
+        $on = Carbon::parse($date ?? now())->startOfDay();
+        $from = $asset->branch_id === null ? null : (int) $asset->branch_id;
+        $accumulated = $asset->accumulated();
+
+        return DB::transaction(function () use ($asset, $toBranchId, $on, $from, $accumulated, $note) {
+            $move = AssetTransfer::query()->create([
+                'company_id' => CompanyContext::id(),
+                'asset_id' => $asset->id,
+                'from_branch_id' => $from,
+                'to_branch_id' => $toBranchId,
+                'moved_on' => $on->toDateString(),
+                'note' => $note,
+                'created_by' => auth()->id(),
+            ]);
+
+            /*
+             * ⓘ কেনা দামটা পুরনো শাখা থেকে নতুন শাখায়।
+             * ⚠️ প্রতিটা সারিতে নিজের `branch_id` — এটাই গোটা দাখিলার
+             * একমাত্র কারণ ([[PostingEngine]] সারি-প্রতি শাখা মানে)।
+             */
+            $lines = [
+                ['account_id' => $asset->asset_account_id, 'credit' => (string) $asset->cost, 'branch_id' => $from],
+                ['account_id' => $asset->asset_account_id, 'debit' => (string) $asset->cost, 'branch_id' => $toBranchId],
+            ];
+
+            if (bccomp($accumulated, '0', 4) > 0) {
+                /* ⛔ ক্ষয়টাও সাথে যায় — নাহলে নতুন শাখায় জিনিসটা নতুন দেখাত */
+                $lines[] = ['account_id' => $asset->accumulated_account_id, 'debit' => $accumulated, 'branch_id' => $from];
+                $lines[] = ['account_id' => $asset->accumulated_account_id, 'credit' => $accumulated, 'branch_id' => $toBranchId];
+            }
+
+            /*
+             * ⚠️ চাবিটা **স্থানান্তরের নিজের সারির** আইডিতে, সম্পদের নয়।
+             * ⛔ সম্পদের আইডি দিলে দ্বিতীয় স্থানান্তরটা নীরবে আটকে যেত —
+             * ঠিক যে ফাঁদে বিদায় পড়েছিল ([[FixedAsset::disposalSourceType]])।
+             */
+            $this->posting->post(
+                sourceType: AssetTransfer::drillSourceType(),
+                sourceId: $move->id,
+                trxDate: $on->toDateString(),
+                lines: $lines,
+                documentNo: $asset->document_no.'/MOVE',
+            );
+
+            $asset->update(['branch_id' => $toBranchId]);
+
+            return $move->refresh();
+        });
+    }
+
+    public function dispose(
+        FixedAsset $asset,
+        string $amount,
+        int $intoAccountId,
+        Carbon|string|null $date = null,
+    ): FixedAsset {
+        if (! $asset->isActive()) {
+            throw ValidationException::withMessages([
+                'status' => __('accounts::asset.not_active'),
+            ]);
+        }
+
+        $on = Carbon::parse($date ?? now())->startOfDay();
+        $proceeds = Money::of($amount);
+
+        /*
+         * ⭐ সই — গ১ ([[AccountsSignature]])। ⓘ বিক্রির অঙ্ক, টাকার খাত আর তারিখ সইয়ের সারিতে থাকে; শেষ সইয়ে
+         * [[FinishTheAccountsPaperOnTheLastSignature]] ঠিক এগুলো দিয়েই এই মেথড আবার ডাকে। ছক বন্ধে আগের মতো এখনই।
+         */
+        if (app(AccountsSignature::class)->holds($asset, AccountsSignature::FIXED_ASSET_DISPOSE, $proceeds, null,
+            ['amount' => $proceeds, 'into_account_id' => $intoAccountId, 'on' => $on->toDateString()])) {
+            return $asset->refresh();
+        }
+
+        $book = $asset->bookValue();
+        $accumulated = $asset->accumulated();
+
+        return DB::transaction(function () use ($asset, $on, $proceeds, $book, $accumulated, $intoAccountId) {
+            $lines = [];
+
+            if (bccomp($proceeds, '0', 4) > 0) {
+                $lines[] = ['account_id' => $intoAccountId, 'debit' => $proceeds];
+            }
+
+            /* সঞ্চিত ক্ষয়টা ডেবিট করে মুছে ফেলা হয় — ওটা ক্রেডিট প্রকৃতির। */
+            if (bccomp($accumulated, '0', 4) > 0) {
+                $lines[] = ['account_id' => $asset->accumulated_account_id, 'debit' => $accumulated];
+            }
+
+            /* সম্পদের খাত থেকে পুরো কেনা দামটা বেরিয়ে যায়। */
+            $lines[] = ['account_id' => $asset->asset_account_id, 'credit' => (string) $asset->cost];
+
+            $difference = bcsub($proceeds, $book, 4);
+
+            if (bccomp($difference, '0', 4) !== 0) {
+                /*
+                 * ⭐ লাভ নিজের আয়ের খাতে, লোকসান নিজের খরচের খাতে — চেকলিস্ট (অডিট ২৭ সেপ্টেম্বর) §২,
+                 * ২ অক্টোবর ২০২৬ ([[TheAssetSaleGainHidInTheDepreciationTest]])। ⛔ আগে দুইটাই অবচয়ের খাতে বসত —
+                 * লাভ হলে অবচয় ঋণাত্মক দেখাত, আর লাভ-ক্ষতিতে এককালীন বিক্রির লাভটা চালু খরচ কমানোর মতো পড়ত।
+                 */
+                $gain = bccomp($difference, '0', 4) > 0;
+                $head = $this->disposalHead($gain ? StandardChart::ASSET_DISPOSAL_GAIN : StandardChart::ASSET_DISPOSAL_LOSS);
+
+                $lines[] = $gain
+                    ? ['account_id' => $head->id, 'credit' => $difference]
+                    : ['account_id' => $head->id, 'debit' => bcmul($difference, '-1', 4)];
+            }
+
+            /*
+             * ⚠️ নিবন্ধনের চাবি নয়, বিদায়ের নিজস্ব চাবি
+             * ([[FixedAsset::disposalSourceType]])। ⛔ একই চাবি দিলে যে সম্পদের
+             * টাকার উৎস লেখা আছে তার বিদায় পোস্টিং ইঞ্জিন আটকে দেয়,
+             * আর গোটা লেনদেন ফিরে যায় — বিক্রির টাকাও খাতায় বসে না।
+             */
+            $this->posting->post(
+                sourceType: FixedAsset::disposalSourceType(),
+                sourceId: $asset->id,
+                trxDate: $on->toDateString(),
+                lines: $lines,
+                documentNo: $asset->document_no.'/OUT',
+            );
+
+            $asset->update([
+                'status' => FixedAsset::DISPOSED,
+                'disposed_on' => $on->toDateString(),
+                'disposal_amount' => $proceeds,
+            ]);
+
+            return $asset->refresh();
+        });
+    }
+
+    /**
+     * সম্পদ বিক্রির লাভ বা লোকসানের খাত — ছকে না থাকলে পরিষ্কার কথা।
+     *
+     * ⓘ খাত দুইটা ২ অক্টোবর ২০২৬-এ ছকে এল; পুরনো কোম্পানিতে `abos:sync-chart` চালালে বসে। ⛔ চুপচাপ অবচয়ের
+     * খাতে ফিরে যাওয়া হয় না — তাহলে ভুলটাই নীরবে ফিরে আসত।
+     */
+    private function disposalHead(string $code): Account
+    {
+        $account = Account::query()->postable()->where('code', $code)->first();
+
+        if ($account === null) {
+            throw ValidationException::withMessages([
+                'amount' => __('accounts::asset.disposal_head_missing', ['code' => $code]),
+            ]);
+        }
+
+        return $account;
+    }
+}

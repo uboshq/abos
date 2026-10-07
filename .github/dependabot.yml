@@ -1,0 +1,61 @@
+# নির্ভরতার হালনাগাদ — নিরীক্ষার ধাপ ১.৩, ১৯ সেপ্টেম্বর ২০২৬।
+#
+# CI-তে `composer audit` আর `npm audit` আছে, কিন্তু ওরা কেবল **আজকের**
+# জানা দুর্বলতা ধরে, আর কেবল যখন কেউ কমিট করে। ⚠️ তিন সপ্তাহ কেউ কিছু
+# না ছুঁলে একটা নতুন দুর্বলতা তিন সপ্তাহ ধরে লাইভে বসে থাকত, আর কেউ
+# জানত না — কারণ কোনো রান হয়নি।
+#
+# ⭐ Dependabot প্রতি সপ্তাহে নিজে থেকে দেখে, আর হালনাগাদের একটা PR খোলে।
+# PR খুললেই উপরের গেট (ci.yml) সেটার উপর পুরো পরীক্ষা চালায় — তাই
+# হালনাগাদটা কিছু ভাঙলে মার্জের **আগেই** লাল দেখা যায়।
+#
+# ⓘ কেন সাপ্তাহিক, দৈনিক নয়: এই অ্যাপ একজন মানুষ দেখেন। প্রতিদিন PR এলে
+# ওগুলো জমে থাকত, আর জমে থাকা PR কেউ পড়ে না — নিরাপত্তার PR-ও নয়।
+# নিরাপত্তার হালনাগাদ (security updates) এই সময়সূচির অপেক্ষা করে না।
+#
+# ⓘ কেন ছোট হালনাগাদগুলো একসাথে: একটা PR-এ বিশটা প্যাচ মানে একবার
+# পরীক্ষা, একবার মার্জ। বড় সংস্করণ (major) আলাদা থাকে — ওগুলো ভাঙে।
+
+version: 2
+
+updates:
+  - package-ecosystem: composer
+    directory: /
+    schedule:
+      interval: weekly
+      day: sunday
+      timezone: Asia/Dhaka
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "Dependencies"
+    groups:
+      php-minor-and-patch:
+        update-types: [minor, patch]
+
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: sunday
+      timezone: Asia/Dhaka
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "Dependencies"
+    groups:
+      js-minor-and-patch:
+        update-types: [minor, patch]
+    ignore:
+      # ⚠️ Alpine-এর CSP সংস্করণ আর সাধারণ সংস্করণ একই নম্বরে চলে।
+      # বড় সংস্করণে পার্সারের নিয়ম বদলাতে পারে — তখন
+      # resources/js/csp-expressions.test.js আগে দেখতে হবে, হাতে।
+      - dependency-name: "@alpinejs/csp"
+        update-types: [version-update:semver-major]
+
+  # CI নিজেও নির্ভরতা — actions/checkout, setup-php, setup-node
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+      timezone: Asia/Dhaka
+    commit-message:
+      prefix: "CI"

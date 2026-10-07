@@ -1,0 +1,141 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Modules\Purchase\Models;
+
+use App\Core\Concerns\BelongsToCompanyThroughParent;
+use App\Core\Concerns\HasPublicId;
+use App\Core\Concerns\IsAudited;
+use App\Modules\Inventory\Concerns\HasEnteredPack;
+use App\Modules\Inventory\Models\Product;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+
+/**
+ * আদেশের একটা লাইন।
+ *
+ * `ordered_qty` জমা থাকে কারণ ওটা একটা ঘোষণা — কোনো চলাচলের যোগফল নয়।
+ * `received_qty` জমা থাকে না, ওটা চালানের লাইনগুলো থেকে গোনা হয়; জমা
+ * রাখলে একদিন গোনার সাথে মিলত না, আর তখন "কত বাকি" প্রশ্নের দুইটা উত্তর
+ * থাকত।
+ *
+ * company_id নেই — বাবার আছে। সন্তান-টেবিলে আলাদা করে রাখলে দুইটা একদিন
+ * আলাদা হয়ে যেতে পারত।
+ */
+class PurchaseOrderLine extends Model
+{
+    use BelongsToCompanyThroughParent;
+    use HasEnteredPack;
+    use HasPublicId;
+    use IsAudited;
+
+    protected $table = 'pur_order_lines';
+
+    protected $fillable = [
+        'purchase_order_id', 'product_id', 'ordered_qty',
+        'entered_qty', 'entered_unit_id', 'rate',
+        'discount', 'tax', 'tax_variance', 'amount', 'line_no', 'narration',
+    ];
+
+    protected function casts(): array
+    {
+        return [
+            'ordered_qty' => 'decimal:4',
+            'entered_qty' => 'decimal:4',
+            'rate' => 'decimal:4',
+            'discount' => 'decimal:4',
+            'tax' => 'decimal:4',
+            'amount' => 'decimal:4',
+            /*
+             * ব্যতিক্রমের সংখ্যাগুলোও টাকা — তাই decimal, string নয়।
+             *
+             * cast না দিলে মানটা string হয়ে ফিরত, আর কেউ দুইটা সারির
+             * পার্থক্য যোগ করতে গেলে PHP ওটাকে float বানিয়ে ফেলত।
+             * এই রিপোতে টাকা কোনোদিন float হয় না ([[MoneyIsNeverAFloatTest]])।
+             */
+            'tax_variance' => 'decimal:4',
+        ];
+    }
+
+    /**
+     * এই সারির কাগজ — আর তার `company_id`-ই এটাকে বাঁধে।
+     *
+     * ⓘ পুরো কারণটা [[BelongsToCompanyThroughParent]]-এ।
+     */
+    protected function companyParent(): string
+    {
+        return 'order';
+    }
+
+    public function order(): BelongsTo
+    {
+        return $this->belongsTo(PurchaseOrder::class, 'purchase_order_id');
+    }
+
+    public function product(): BelongsTo
+    {
+        return $this->belongsTo(Product::class);
+    }
+
+    public function receiptLines(): HasMany
+    {
+        return $this->hasMany(PurchaseReceiptLine::class, 'purchase_order_line_id');
+    }
+
+    /** এই লাইনের বিপরীতে এ পর্যন্ত কত মাল এসেছে। */
+    public function receivedQty(): string
+    {
+        $received = $this->receiptLines()
+            ->whereHas('receipt', fn ($q) => $q->where('status', '<>', 'cancelled'))
+            ->sum('received_qty');
+
+        return (string) ($received ?: '0');
+    }
+
+    /** আর কত আসা বাকি — ঋণাত্মক হয় না, বেশি এলে শূন্য। */
+    public function pendingQty(): string
+    {
+        $pending = bcsub((string) $this->ordered_qty, $this->receivedQty(), 4);
+
+        return bccomp($pending, '0', 4) > 0 ? $pending : '0.0000';
+    }
+
+    public function billLines(): HasMany
+    {
+        return $this->hasMany(PurchaseBillLine::class, 'purchase_order_line_id');
+    }
+
+    /**
+     * এই লাইনের বিপরীতে এ পর্যন্ত কত বিল হয়েছে।
+     *
+     * ── ⭐ সংখ্যাটা জমা থাকে না, গোনা হয় ─────────────────────────────
+     * মালিকের কথা: *"Parsial Bill hole setaw dite hobe"* — ১০০ কার্টনের
+     * আদেশে ৬০ এল, ৬০-এর বিল আজ, ৪০ পরে।
+     *
+     * ⚠️ এটা একটা **চলমান সংখ্যা**, আর চলমান সংখ্যা জমা রাখার ফাঁদটা
+     * পরিচিত: বাড়ানোর কোড লেখা হয়, কমানোরটা নয় — আর তখন বাতিল হওয়া
+     * বিলের পরেও আদেশটা চিরকাল *"৪০ বাকি"* বলত।
+     *
+     * ⭐ তাই উপরের `receivedQty()`-র হুবহু নিয়ম: **জমা নয়, গোনা** — আর
+     * বাতিল বিল গোনা থেকে বাদ। ⓘ বাতিল হলে সংখ্যাটা নিজে থেকেই ফিরে
+     * আসে, কারণ ফেরানোর কোনো কোডই নেই।
+     */
+    public function billedQty(): string
+    {
+        $billed = $this->billLines()
+            ->whereHas('bill', fn ($q) => $q->where('status', '<>', 'cancelled'))
+            ->sum('qty');
+
+        return (string) ($billed ?: '0');
+    }
+
+    /** আর কত বিল হওয়া বাকি — ঋণাত্মক হয় না। */
+    public function pendingBillQty(): string
+    {
+        $pending = bcsub((string) $this->ordered_qty, $this->billedQty(), 4);
+
+        return bccomp($pending, '0', 4) > 0 ? $pending : '0.0000';
+    }
+}

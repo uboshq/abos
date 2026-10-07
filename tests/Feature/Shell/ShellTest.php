@@ -1,0 +1,680 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Tests\Feature\Shell;
+
+use App\Core\Module\ModuleDefinition;
+use App\Core\Module\ModuleRegistry;
+use App\Core\Services\MenuBuilder;
+use App\Core\Services\PermissionSyncer;
+use App\Core\Support\CompanyContext;
+use App\Models\Branch;
+use App\Models\Company;
+use App\Models\User;
+use Database\Seeders\DemoSeeder;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Blade;
+use Illuminate\Validation\ValidationException;
+use Tests\Concerns\SignsInPastTheSecondStep;
+use Tests\TestCase;
+
+/**
+ * অ্যাপ শেল — মেনু, লগইন, কোম্পানি সুইচ, ভাষা।
+ *
+ * ব্রাউজারে চালিয়ে দেখতে গিয়ে দুইটা বাগ ধরা পড়েছিল যা কোড পড়ে ধরা পড়ত না:
+ * লগইন বোতাম নিজেকে নিষ্ক্রিয় করে ফর্ম সাবমিট আটকে দিত, আর গাঢ় প্যানেলে
+ * হেডিং কালো হয়ে অদৃশ্য হয়ে যেত। এখানকার টেস্টগুলো প্রথমটার পুনরাবৃত্তি
+ * ঠেকায়; দ্বিতীয়টা DesignTokenTest-এ।
+ */
+class ShellTest extends TestCase
+{
+    use RefreshDatabase;
+    use SignsInPastTheSecondStep;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->seed(DemoSeeder::class);
+        CompanyContext::clear();
+    }
+
+    protected function tearDown(): void
+    {
+        CompanyContext::clear();
+        parent::tearDown();
+    }
+
+    /**
+     * মালিকের মেনু — **তাঁর কোম্পানিতে দাঁড়িয়ে**।
+     *
+     * ── ⚠️ কেন মোড়কটা লাগল, ৭ সেপ্টেম্বর ২০২৬ ──────────────────────────
+     * এই ফাইলের `setUp()` ইচ্ছে করেই প্রসঙ্গ পরিষ্কার করে — শেলের দাবি
+     * অনেকগুলোই "প্রসঙ্গ ছাড়া কী হয়" নিয়ে।
+     *
+     * ⓘ কিন্তু teams চালু হওয়ার পর `MenuBuilder` প্রতিটা সারিতে
+     * `$user->can()` দেখে, আর সেই প্রশ্নের উত্তর চলতি টিমের উপর নির্ভর
+     * করে। ⛔ প্রসঙ্গ ছাড়া `can()` সবসময় "না" বলে, তাই মেনুটা **খালি**
+     * আসত — আর দাবিগুলো "মেনু খালি" বলে লাল হত, যদিও মেনু ঠিকই আছে।
+     *
+     * ⭐ আর এটাই সত্যি অবস্থা: মানুষ মেনু দেখেন একটা কোম্পানিতে দাঁড়িয়ে।
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    private function menuOf(User $user): array
+    {
+        return CompanyContext::forCompany(
+            (int) ($user->current_company_id ?? $this->company()->id),
+            fn () => app(MenuBuilder::class)->forUser($user),
+        );
+    }
+
+    private function owner(): User
+    {
+        return User::query()->where('email', 'owner@abos.test')->firstOrFail();
+    }
+
+    private function company(): Company
+    {
+        return Company::query()->where('code', 'TDEPOT')->firstOrFail();
+    }
+
+    /**
+     * মন্তব্য বাদ দিয়ে শুধু কোডটুকু।
+     *
+     * এই টেস্টগুলো যা নিষিদ্ধ তা খোঁজে, আর নিষেধটা ব্যাখ্যা করা মন্তব্যেও
+     * সেই শব্দগুলো থাকে — প্রথমবার চালিয়ে ঠিক সেটাই ধরা পড়েছিল। নিয়মটা
+     * কোড নিয়ে, তাই মন্তব্য সরিয়েই দেখা উচিত।
+     */
+    private function codeOf(string $path): string
+    {
+        return preg_replace('/\{\{--.*?--\}\}/s', '', file_get_contents($path));
+    }
+
+    public function test_the_login_page_renders_without_asking_which_company(): void
+    {
+        $response = $this->get('/login');
+
+        $response->assertOk();
+        $response->assertSee('ABOS', false);
+
+        // সেকশন ১৬.৩ — লগইনের আগে কোম্পানির তালিকা দেখানো Zero Trust ভাঙে:
+        // যে কেউ URL খুলেই জেনে যেত সার্ভারে কোন প্রতিষ্ঠানগুলো আছে।
+        $response->assertDontSee('Alpha Traders');
+        $response->assertDontSee('Beta Distribution');
+    }
+
+    public function test_signing_in_actually_works(): void
+    {
+        // ব্রাউজারে ধরা পড়া বাগটার পাহারা: বোতাম নিজেকে নিষ্ক্রিয় করে
+        // ফেলায় POST কখনো যেত না।
+        $response = $this->post('/login', [
+            'identifier' => 'owner@abos.test',
+            'password' => 'password',
+            // ⓘ মালিকের দুই ধাপ চালু (acda6265) — কোডটাও যায়, [[SignsInPastTheSecondStep]]
+            'code' => $this->secondStepCode('owner@abos.test'),
+        ]);
+
+        $response->assertRedirect('/');
+        $this->assertAuthenticated();
+    }
+
+    public function test_the_submit_button_never_disables_itself(): void
+    {
+        // disabled বোতাম ফর্ম সাবমিট করে না। দ্বিতীয় ক্লিক ঠেকাতে হলে
+        // pointer-events, disabled নয়।
+        /*
+         * ফাইলটা বদলেছে ২ সেপ্টেম্বর ২০২৬ — দাবিটা নয়।
+         *
+         * ABOS-এর এখন দুইটা দরজা (`/login` পরিচয়ের, `/signin` কাজের),
+         * আর ফর্মটা দুইটার মাঝে ভাগ করা একটাই ফাইল। বোতামটা তাই
+         * এখন এখানে, আর **এখানেই একবার পরীক্ষা করলে দুইটা দরজাই ঢাকা
+         * পড়ে** — আগে দুই জায়গায় দেখতে হত, আর একটা বাদ পড়া সহজ ছিল।
+         */
+        $markup = $this->codeOf(resource_path('views/auth/_form.blade.php'));
+
+        $this->assertStringNotContainsString(':disabled="busy"', $markup);
+        $this->assertStringContainsString('pointer-events-none', $markup);
+    }
+
+    public function test_a_wrong_password_says_the_same_thing_as_a_wrong_name(): void
+    {
+        $wrongPassword = $this->post('/login', [
+            'identifier' => 'owner@abos.test',
+            'password' => 'not-the-password',
+        ]);
+
+        $noSuchUser = $this->post('/login', [
+            'identifier' => 'nobody@abos.test',
+            'password' => 'password',
+        ]);
+
+        // এক বার্তা, নাহলে আক্রমণকারী আগে ব্যবহারকারীর তালিকা বের করে
+        // নেয় (সেকশন ১৬.৫)।
+        $this->assertSame(
+            $wrongPassword->exception?->getMessage(),
+            $noSuchUser->exception?->getMessage(),
+        );
+        $this->assertGuest();
+    }
+
+    public function test_an_inactive_user_cannot_sign_in(): void
+    {
+        $this->owner()->forceFill(['is_active' => false])->save();
+
+        $this->post('/login', ['identifier' => 'owner@abos.test', 'password' => 'password']);
+
+        $this->assertGuest();
+    }
+
+    public function test_the_dashboard_needs_a_signed_in_user(): void
+    {
+        $this->get('/')->assertRedirect('/login');
+    }
+
+    public function test_the_dashboard_shows_the_company_the_user_is_in(): void
+    {
+        $response = $this->actingAs($this->owner())->get('/');
+
+        $response->assertOk();
+        $response->assertSee('ট্রেড ডিপো', false);
+        $response->assertSee('প্রধান ময়মনসিংহ', false);
+    }
+
+    public function test_the_menu_is_built_from_module_files_and_is_translated(): void
+    {
+        $response = $this->actingAs($this->owner())->get('/');
+
+        // মডিউলের নিজের module.php থেকে আসা সারি, কোরে লেখা নয়
+        $response->assertSee('গ্রাহক', false);
+
+        // কাঁচা অনুবাদ কী পাতায় থাকা মানে lang ফাইল নেই — নিয়ম ৯।
+        $response->assertDontSee('::menu.', false);
+
+        // জাবেদার পর্দাটা এখন সত্যিই আছে, তাই মেনুতেও আছে।
+        //
+        // কিছুক্ষণ আগে এখানে উল্টো যাচাই ছিল (assertDontSee), কারণ তখন
+        // স্ক্রিনটা লেখা হয়নি আর সারিটা planned ছিল। এই দুইটা যাচাই
+        // একসাথে প্রমাণ করে যে planned পতাকাটা সত্যিই কাজ করে।
+        //
+        // ⚠️ লেবেলটা ছিল "জাবেদা ভাউচার", ছোট হয়ে "জাবেদা" হয়েছে
+        // ১৩ সেপ্টেম্বর ২০২৬-এ (853b6f78) — সাইডবারে "ভাউচার" শব্দটা
+        // পাঁচবার ফিরে আসছিল। ⛔ দাবিটা তখন হালনাগাদ হয়নি, তাই
+        // পরীক্ষাটা দুইদিন ধরে লাল ছিল, আর কেউ ধরেনি।
+        //
+        // ⓘ তাই এখন লেবেলটা হাতে লেখা নয়, lang ফাইল থেকেই নেওয়া —
+        // নাম বদলালে দাবিটা নিজে থেকেই তাল মেলায়, আর তবু "সারিটা
+        // মেনুতে আছে" কথাটা প্রমাণ হয়।
+        $response->assertSee(__('accounts::menu.journal', [], 'bn'), false);
+
+        // রেওয়ামিলও আছে — Accounts-এর পনেরোটা সারিই এখন তৈরি
+        $response->assertSee('রেওয়ামিল', false);
+
+        // "এখনো নেই" ধরনের যাচাই এখানে আর নেই: Accounts-এর প্রতিটা
+        // স্ক্রিন লেখা হয়ে গেছে, তাই অনুপস্থিত থাকার মতো কিছু বাকি নেই।
+        // planned পতাকাটা সত্যিই কাজ করে কি না সেটা ModuleMenuTest
+        // দুই দিক থেকে যাচাই করে — এখানে আবার করার দরকার নেই।
+    }
+
+    public function test_the_menu_hides_what_a_role_cannot_reach(): void
+    {
+        $salesman = User::query()->where('email', 'sales@abos.test')->firstOrFail();
+
+        $menu = $this->menuOf($salesman);
+        $codes = array_column($menu, 'code');
+
+        // বিক্রয়কর্মীর গ্রাহক দেখার অধিকার আছে, তাই মডিউলটা আছে।
+        $this->assertContains('customer', $codes);
+
+        // অধিকার না থাকলে মডিউলটাই তালিকায় নেই — ধূসর করে দেখানো হয় না,
+        // সেটা শুধু জানায় সে কী পারে না।
+        $stranger = User::factory()->create();
+        $stranger->companies()->attach($this->company(), ['is_active' => true]);
+        $stranger->forceFill(['current_company_id' => $this->company()->id])->save();
+
+        $this->assertSame([], $this->menuOf($stranger->fresh()));
+    }
+
+    /**
+     * module.php-তে যে ক্রমেই লেখা হোক, প্রদর্শনের ক্রম এক — সেকশন ১৫.২।
+     * নাহলে "একটা মডিউল শিখলে সব চেনা" কথাটা মিথ্যা হয়ে যায়।
+     *
+     * কোনো একটা মডিউলের নাম ধরে নয়, সব মডিউলের উপর: আগে এটা accounts-এর
+     * পাঁচটা গ্রুপ ধরে লেখা ছিল, আর ওই গ্রুপগুলো এখন লুকানো (স্ক্রিন তৈরি
+     * হয়নি) — তাই পরীক্ষাটা মডিউলের অগ্রগতির সাথে ভেঙে যেত, নিয়ম ভাঙলে নয়।
+     */
+    public function test_the_menu_groups_stay_in_the_same_order_everywhere(): void
+    {
+        $canonical = ModuleDefinition::MENU_GROUPS;
+
+        $menu = $this->menuOf($this->owner());
+
+        $this->assertNotEmpty($menu, 'মালিকের মেনু খালি — তাহলে কিছুই যাচাই হত না।');
+
+        foreach ($menu as $module) {
+            $shown = array_keys($module['groups']);
+
+            // যেগুলো দেখানো হচ্ছে সেগুলো নির্দিষ্ট ক্রমেরই একটা উপ-ক্রম
+            $this->assertSame(
+                array_values(array_intersect($canonical, $shown)),
+                $shown,
+                "{$module['code']} মডিউলের গ্রুপের ক্রম ঠিক নেই।",
+            );
+        }
+    }
+
+    public function test_switching_company_lands_on_the_dashboard_of_the_new_one(): void
+    {
+        $owner = $this->owner();
+        $beta = Company::query()->where('code', 'FMART')->firstOrFail();
+
+        $response = $this->actingAs($owner)->post('/company/switch', ['company_id' => $beta->id]);
+
+        $response->assertRedirect(route('dashboard'));
+        $this->assertSame($beta->id, $owner->fresh()->current_company_id);
+
+        // শাখাও বদলেছে — আগেরটা ধরে রাখলে পরের এন্ট্রি ভুল কোম্পানির
+        // শাখায় বসত।
+        $branchCompany = Branch::acrossAllCompanies()
+            ->whereKey($owner->fresh()->current_branch_id)
+            ->value('company_id');
+
+        $this->assertSame($beta->id, $branchCompany);
+    }
+
+    public function test_switching_into_a_company_you_do_not_belong_to_fails(): void
+    {
+        $salesman = User::query()->where('email', 'sales@abos.test')->firstOrFail();
+        $beta = Company::query()->where('code', 'FMART')->firstOrFail();
+        $before = $salesman->current_company_id;
+
+        /*
+         * দাবিটা বদলেছে ২ সেপ্টেম্বর ২০২৬ — দেয়ালটা নয়।
+         *
+         * আগে `RuntimeException` উঠত, অর্থাৎ ব্যবহারকারী একটা ভাঙা
+         * ৫০০ পাতা দেখতেন। কিন্তু এটা ব্যবস্থার ভুল নয় — এটা "আপনার
+         * ওখানে ঢোকার অধিকার নেই"। এখন সেটাই বলা হয়, তাঁর ভাষায়।
+         *
+         * নিচের `finally`-র দাবিটাই আসল, আর সেটা একই আছে:
+         * **কোম্পানি বদলায়নি।**
+         */
+        $this->withoutExceptionHandling();
+        $this->expectException(ValidationException::class);
+
+        try {
+            $this->actingAs($salesman)->post('/company/switch', ['company_id' => $beta->id]);
+        } finally {
+            // যাই হোক, কোম্পানি বদলায়নি — এটাই আসল কথা।
+            $this->assertSame($before, $salesman->fresh()->current_company_id);
+        }
+    }
+
+    public function test_the_language_choice_is_stored_on_the_user(): void
+    {
+        $owner = $this->owner();
+
+        $this->actingAs($owner)->post('/locale/switch', ['locale' => 'en']);
+
+        // রেকর্ডে, সেশনে নয় — অন্য ডিভাইসে লগইন করলেও একই ভাষা (নিয়ম ৯)।
+        $this->assertSame('en', $owner->fresh()->locale);
+
+        // মডিউলের লেবেলও ইংরেজিতে — অনুবাদ পুরো পাতায়, শুধু শিরোনামে নয়।
+        //
+        // লেবেলটা রেজিস্ট্রি থেকে নেওয়া, হাতে লেখা নয়: আগে এখানে একটা
+        // নির্দিষ্ট মেনু সারির নাম লেখা ছিল, আর নতুন একটা মডিউল সক্রিয়
+        // হওয়ামাত্র সাইডবারে অন্য মডিউলের সারিগুলো দেখাতে শুরু করায়
+        // পরীক্ষাটা ভেঙে গিয়েছিল — নিয়ম ভাঙায় নয়, অগ্রগতিতে।
+        $label = app(ModuleRegistry::class)->all()['customer']->name['en'];
+
+        $this->actingAs($owner->fresh())->get('/')->assertSee($label, false);
+    }
+
+    public function test_every_module_permission_is_registered_in_the_database(): void
+    {
+        $drift = app(PermissionSyncer::class)->drift();
+
+        // ঘোষিত অথচ নিবন্ধিত নয় এমন অনুমতি মানে ওই মেনু আইটেম কেউ
+        // কোনোদিন দেখবে না, আর কেন দেখবে না তার কোনো চিহ্নও থাকবে না।
+        $this->assertSame([], $drift['unregistered']);
+    }
+
+    /**
+     * টপবারের উচ্চতা আর রং — দুইটাই টোকেনে, স্থির মানে নয়।
+     *
+     * ── ⛔ এই পরীক্ষাটার অর্ধেক মরে গিয়েছিল, ১৩ সেপ্টেম্বর ২০২৬ ──────
+     * আগে নাম ছিল `test_the_brand_plate_has_room_for_the_lockup`, আর
+     * মূল দাবি ছিল সাইডবারের ৮৮px ব্র্যান্ড-পাটাতন টপবারের ৬৪px-এর
+     * চেয়ে উঁচু — নাহলে লকআপটা কোণে চেপে বসত (মালিক ধরিয়ে দেন,
+     * ১৪ আগস্ট)।
+     *
+     * ⭐ কিন্তু ১৩ সেপ্টেম্বর মালিকের নির্দেশে পাটাতনটাই তুলে দেওয়া হয় —
+     * *"topbar bame misaba na sidebar upore utaba?"* → মেনু ৮৮px উপরে
+     * উঠে আসে, ব্র্যান্ড নামে ফুটারে।
+     *
+     * ⚠️ দাবিটা তখন হালনাগাদ হয়নি। ফল: পরীক্ষাটা **দুইদিন ধরে লাল**,
+     * আর সে পাহারা দিচ্ছিল এমন একটা জিনিস যেটা মালিক নিজেই সরাতে
+     * বলেছেন। ⛔ বাসি লাল পরীক্ষা সবচেয়ে বিপজ্জনক — মানুষ লাল দেখতে
+     * অভ্যস্ত হয়ে যায়, তারপর আসল লালটাও আর চোখে পড়ে না।
+     *
+     * ⓘ `--spacing-brand-plate` টোকেনটাও একই দিনে অনাথ হয়ে যায় (একমাত্র
+     * ব্যবহারকারী ছিল ঐ পাটাতন), তাই সেটাও `tokens.css` থেকে গেল।
+     *
+     * ── ⭐ যা এখনো সত্য, আর সেটাই এখানে থাকল ────────────────────────
+     * টপবারের উচ্চতা ও রং দুইটাই টোকেন থেকে আসে, হাতে লেখা মান থেকে
+     * নয় — আর ক্লাসিকে সেই রংটা কার্ডের সাদা। ⓘ আটটা চেহারার পাঁচটার
+     * পরিচয় ঐ উপরের বারেই থাকে, তাই বারটা স্থির রঙে বাঁধা পড়লে
+     * নকলগুলো আর চেনা যেত না।
+     */
+    public function test_the_topbar_keeps_its_height_and_colour_in_tokens(): void
+    {
+        $topbar = $this->codeOf(resource_path('views/components/shell/topbar.blade.php'));
+        $tokens = file_get_contents(resource_path('css/tokens.css'));
+
+        $this->assertStringContainsString('h-(--spacing-header)', $topbar);
+
+        preg_match('/--spacing-header:\s*(\d+)px/', (string) $tokens, $h);
+
+        $this->assertNotEmpty($h, 'টপবারের উচ্চতার টোকেনটা নেই।');
+
+        /*
+         * রং দুইটাই এক — কিন্তু নামটা আর এক নয়।
+         *
+         * ── কী বদলেছে, আর কেন দাবিটাও বদলাতে হল ──────────────────────
+         * টপবার এখন `--color-topbar` পরে, `--color-surface-card` নয়।
+         * কারণ আটটা চেহারার পাঁচটার পরিচয় ওই উপরের বারেই থাকে —
+         * Odoo-র বেগুনি, Fiori-র নীলচে-ধূসর, Redwood-এর প্রায়-কালো।
+         * বারটা কার্ডের সাদায় বাঁধা থাকলে নকলগুলো চেনা যেত না।
+         *
+         * পরীক্ষাটার আসল দাবি ছিল **"উপরের-বাঁ কোণটা এক পাটাতন"** —
+         * প্লেট আর বার একই রঙে। ⛔ প্লেটটা আর নেই (১৩ সেপ্টেম্বর), তাই
+         * ঐ জোড়া মেলানোর দাবিটাও গেল।
+         *
+         * ⭐ যেটা থাকল সেটাই আসল নিয়ম: বারটা **টোকেন পরে, স্থির রং নয়**,
+         * আর ক্লাসিকে সেই টোকেনটা কার্ডের সাদাতেই দাঁড়ায়।
+         */
+        $this->assertStringContainsString('bg-(--color-topbar)', $topbar);
+
+        $this->assertMatchesRegularExpression(
+            '/--color-topbar:\s*var\(--color-surface-card\)/', (string) $tokens,
+            'ক্লাসিকে টপবার আর ব্র্যান্ড প্লেট আলাদা রঙে বসছে — কোণটা দুই পাটাতন।',
+        );
+    }
+
+    public function test_the_full_product_name_is_never_shown_clipped(): void
+    {
+        $sidebar = $this->codeOf(resource_path('views/components/shell/sidebar.blade.php'));
+        $footer = $this->codeOf(resource_path('views/components/shell/statusbar.blade.php'));
+        $markup = $sidebar.$footer;
+
+        // নামটা এখন টাইপ করা লেখা নয়, ডিজাইনারের নিজের লেটারিংয়ে আঁকা
+        // ওয়ার্ডমার্ক। ছবি প্রস্থ অনুযায়ী ছোট-বড় হয়, কেটে যায় না — তাই
+        // "All Business Operating Syste" সমস্যাটার আর অস্তিত্বই নেই।
+
+        /*
+         * ⛔ ওয়ার্ডমার্কটা সাইডবারে নেই আর — ১৩ সেপ্টেম্বর ২০২৬।
+         *
+         * মালিকের নির্দেশে ৮৮px ব্র্যান্ড-পাটাতনটা তুলে দেওয়া হয়, আর
+         * ব্র্যান্ড নামে **ফুটারের বাঁ কোণে** ([[shell/statusbar]])।
+         * ⚠️ দাবিটা তখন সাইডবারেই খুঁজতে থাকে, তাই পরীক্ষাটা দুইদিন
+         * ধরে লাল ছিল।
+         *
+         * ⭐ নিয়মটা এক চুলও বদলায়নি — **পূর্ণ নামটা কোথাও না কোথাও
+         * অবিকৃত থাকতে হবে** — কেবল জায়গাটা বদলেছে, আর এই পরীক্ষার
+         * ইতিহাসে সেটা চতুর্থবার। ⓘ তাই এখন দুইটা ফাইল একসাথে দেখা
+         * হয়: ব্র্যান্ড শেলের যেখানেই বসুক, দাবিটা তাকে পায়।
+         */
+
+        /*
+         * সাদা মাথায় সাদা-জমিনের রূপ।
+         *
+         * ── এই দাবিটা আগে উল্টো ছিল ─────────────────────────────────
+         * এখানে লেখা ছিল `abos-wordmark-dark.png`, যুক্তি ছিল "গাঢ়
+         * সাইডবারে গাঢ়-জমিনের রূপ"। কিন্তু মাথাটা গাঢ় নয় — উপরের
+         * পরীক্ষাটাই দাবি করে ওটা `--color-surface-card`, অর্থাৎ সাদা।
+         * দুইটা পরীক্ষা পরস্পরবিরোধী ছিল, আর এটা ভুলটাকেই পাহারা দিচ্ছিল।
+         *
+         * `-dark` মানে "গাঢ় জমিনের জন্য আঁকা", আর সাদা মাথায় ওটা বসালে
+         * অক্ষরগুলোই ধুয়ে যায়। মালিক ছবি পাঠিয়ে ধরিয়ে দেন, ১৪ আগস্ট।
+         *
+         * ── নাম দুইবার বদলেছে, নিয়ম একবারও নয় ───────────────────────
+         * প্রথমে ওয়ার্ডমার্ক থেকে পূর্ণ লকআপ। তারপর ২ সেপ্টেম্বর ২০২৬-এ
+         * মালিকের সিদ্ধান্তে **ADI কোথাও রইল না, শুধু ABOS** — তাই
+         * ফাইলগুলোর নাম এখন `abos-lockup.png` আর তার গাঢ়-জমিনের
+         * জোড়া `abos-lockup-dark.png`।
+         *
+         * দাবিটা প্রতিবারই একই থেকেছে, কেবল ফাইলের নাম বদলেছে — আর
+         * সেটাই ঠিক: নিয়মটা ব্র্যান্ডের নাম নিয়ে নয়, **কোন জমিনে কোন
+         * রূপ** তা নিয়ে।
+         *
+         * ── দাবিটা কেন আর "গাঢ়টা কখনো নয়" নয় ───────────────────────
+         * Linear আসার আগে প্যানেলটা **সবসময়** সাদা ছিল, তাই নিয়মটা
+         * সহজ ছিল: গাঢ় ফাইলটার নামই যেন এখানে না থাকে।
+         *
+         * Linear-এর প্যানেল প্রায়-কালো (#0E0F11)। সেখানে সাদা-জমিনের
+         * লকআপটা বসলে গাঢ় নীল অক্ষরগুলো কালোয় মিলিয়ে যেত — ঠিক
+         * উল্টো দিক থেকে একই ভুল।
+         *
+         * তাই দাবিটা কড়া থাকল, কেবল সঠিক জায়গায়: গাঢ় ফাইলটা
+         * ব্যবহার করা যাবে **শুধু** `Ui::panelIsDark()`-এর শর্তে।
+         * কেউ ওটা শর্ত ছাড়া বসালে এই পরীক্ষাটাই ভাঙে, আর ১৪ আগস্টের
+         * ভুলটা আবার ফিরতে পারে না।
+         */
+        /*
+         * ⚠️ লকআপ নয়, ওয়ার্ডমার্ক — ৪ সেপ্টেম্বর ২০২৬।
+         *
+         * লকআপের ছবিটা **মার্ক + নাম** দুইটাই বহন করে, আর মার্কটা পাশের
+         * রেলের টাইলে এমনিতেই বসে। ফলে "A" চিহ্নটা পাশাপাশি **দুইবার**
+         * দেখা যেত — মালিক ধরিয়ে দেন। ⓘ ডুপ্লিকেশনটা কোডে খুঁজে পাওয়া
+         * যেত না, কারণ ওটা ছবির ভিতরে ছিল।
+         *
+         * ⭐ নিয়মটা এক চুলও বদলায়নি — কোন জমিনে কোন রূপ — কেবল ফাইলের
+         * নাম বদলেছে, আর সেটা এই পরীক্ষার ইতিহাসে তৃতীয়বার।
+         */
+        $this->assertStringContainsString('abos-wordmark-transparent.png', $markup);
+
+        if (str_contains($markup, 'abos-lockup-dark.png')) {
+            $this->assertMatchesRegularExpression(
+                '/panelIsDark.{0,120}abos-lockup-dark\.png/s',
+                $markup,
+                'গাঢ়-জমিনের লকআপটা শর্ত ছাড়া বসেছে — সাদা মাথায় অক্ষরগুলো ধুয়ে যাবে।',
+            );
+
+            $this->assertMatchesRegularExpression(
+                '/abos-lockup-dark\.png.{0,120}abos-lockup\.png/s',
+                $markup,
+                'শর্তের অন্য দিকে সাদা-জমিনের লকআপটা নেই — হালকা প্যানেলে ব্র্যান্ডই থাকত না।',
+            );
+        }
+        $this->assertStringContainsString('object-contain', $markup);
+
+        // সরু সাইডবারে (৪৪px) লকআপ ধরে না, তাই সেখানে শুধু মার্ক।
+        $this->assertStringContainsString('abos-icon-transparent.png', $markup);
+
+        // স্ক্রিন রিডারের জন্য পূর্ণরূপটা লেখা হিসেবেও থাকে — একটা ছবির
+        // alt="ABOS" পড়ে শোনালে পূর্ণরূপটা হারিয়ে যেত।
+        $this->assertStringContainsString('sr-only', $markup);
+    }
+
+    public function test_the_top_bar_shows_the_companys_own_logo(): void
+    {
+        $response = $this->actingAs($this->owner())->get('/');
+
+        // গ্রাহকের নিজের লোগো, ABOS-এর নয়: প্রোডাক্টের মার্ক সাইডবারের
+        // মাথায়, আর এখানে ব্যবহারকারী দেখে সে কোন প্রতিষ্ঠানের হয়ে
+        // কাজ করছে।
+        $response->assertSee('logos/Trade Depot.png', false);
+    }
+
+    public function test_switching_company_swaps_the_logo_too(): void
+    {
+        $owner = $this->owner();
+        $familyMart = Company::query()->where('code', 'FMART')->firstOrFail();
+
+        $owner->switchCompany($familyMart->id);
+
+        $response = $this->actingAs($owner->fresh())->get('/');
+
+        $response->assertSee('logos/FamilyMart.png', false);
+
+        // Trade Depot-এর লোগো পাতা থেকে উধাও হয় না — সেটা এখন সুইচারের
+        // তালিকায়, "কোথায় যেতে পারি" হিসেবে। যা বদলেছে তা হলো কোনটা
+        // চলতি: স্ট্যাটাস বার ও শিরোনাম দুটোই নতুন কোম্পানির।
+        $response->assertSee('ফ্যামিলি মার্ট', false);
+        $response->assertSee('প্রধান কার্যালয়', false);
+    }
+
+    public function test_a_company_without_a_logo_still_renders(): void
+    {
+        // লোগো ঐচ্ছিক — না থাকলে শুধু নামটা দেখাবে, ভাঙা ছবির আইকন নয়।
+        Company::query()->update(['logo_path' => null]);
+
+        $this->actingAs($this->owner())->get('/')->assertOk();
+    }
+
+    public function test_the_top_bar_has_a_full_screen_button(): void
+    {
+        $markup = $this->codeOf(resource_path('views/components/shell/topbar.blade.php'));
+        $toggle = $this->codeOf(resource_path('views/components/shell/fullscreen-toggle.blade.php'));
+
+        $this->assertStringContainsString('fullscreen-toggle', $markup);
+
+        // অবস্থাটা document থেকে পড়া, নিজে মনে রাখা নয়: Esc বা F11 দিয়েও
+        // ফুল-স্ক্রিন ছাড়া যায়, আর তখন নিজের রাখা boolean বাস্তবের সাথে
+        // অমিল হয়ে বোতামটা ভুল আইকন দেখাত।
+        // ⓘ CSP-র পর (d9aeeb94) যুক্তিটা JS-এ — ব্লেডে কেবল ঘটনার বাঁধন, পড়াটা [[fullscreenToggle]]-এ (৫ অক্টোবর ২০২৬)
+        $this->assertStringContainsString('x-data="fullscreenToggle"', $toggle);
+        $this->assertStringContainsString('@fullscreenchange.document="sync()"', $toggle);
+        $js = file_get_contents(resource_path('js/components/shell.js'));
+        $body = substr($js, (int) strpos($js, 'export function fullscreenToggle'), 600);
+        $this->assertStringContainsString('this.full = Boolean(document.fullscreenElement)', $body,
+            'ফুল-স্ক্রিনের অবস্থা document থেকে পড়া হচ্ছে না।');
+    }
+
+    /** রেলে যে মডিউলগুলো সত্যিই বসে — মেনু থেকেই নেওয়া, হাতে লেখা নয়। */
+    private function railModules(): array
+    {
+        return $this->menuOf($this->owner());
+    }
+
+    /**
+     * রেলে তাকিয়ে মডিউলটা চেনা যায়।
+     *
+     * ── প্রশ্নটা কী ──────────────────────────────────────────────────
+     * রেলে কোনো লেখা নেই। বারোটা চিহ্ন উপর-নিচে বসে, আর ২০px-এ একরঙা
+     * আউটলাইনে গুদাম আর বাক্স প্রায় একই ধূসর আকার। তাই দুইটা সংকেত:
+     * আলাদা আঁকা, আর আলাদা রং। যেকোনো একটা মিলে গেলে ওই জোড়াটা চেনা
+     * যায় না।
+     *
+     * ── কেন মেনু থেকে মডিউলের তালিকা ───────────────────────────────
+     * হাতে লেখা তালিকায় নতুন মডিউল যোগ করতে ভুলে গেলে পরীক্ষাটা সবুজই
+     * থাকত, আর রেলে একটা ফাঁকা ঘর বসত।
+     */
+    public function test_every_module_on_the_rail_can_be_told_apart(): void
+    {
+        $icons = $this->codeOf(resource_path('views/components/ui/icon.blade.php'));
+        $tokens = file_get_contents(resource_path('css/tokens.css'));
+
+        $modules = $this->railModules();
+        $this->assertGreaterThanOrEqual(8, count($modules), 'রেলে মডিউলই নেই।');
+
+        $drawings = [];
+        $colours = [];
+
+        foreach ($modules as $module) {
+            $code = $module['code'];
+
+            /*
+             * ১ · চিহ্নটা আছে, আর ফাঁকা নয়।
+             *
+             * `<svg` নয় — ২৮ আগস্ট ২০২৬ থেকে মডিউলের চিহ্ন ইমোজি,
+             * কাজেরগুলো আঁকা। এখানকার দাবিটা কখনোই "SVG" ছিল না,
+             * ছিল "রেলে ফাঁকা ঘর বসে না"।
+             */
+            $mark = trim(Blade::render('<x-ui.icon name="'.$module['icon'].'" />'));
+            $this->assertNotSame('', $mark, "{$code}: রেলে ফাঁকা ঘর বসবে।");
+            $drawings[$code] = $mark;
+
+            // ২ · রঙের টোকেনটা আছে — নাম হুবহু মডিউলের কোড
+            $this->assertMatchesRegularExpression(
+                '/--color-module-'.preg_quote($code, '/').'\s*:\s*(#[0-9a-f]{3,8})/i',
+                $tokens,
+                "{$code}: --color-module-{$code} টোকেনটা নেই, তাই টাইলটা ব্র্যান্ড নীলে পড়বে।",
+            );
+
+            preg_match('/--color-module-'.preg_quote($code, '/').'\s*:\s*(#[0-9a-f]{3,8})/i', $tokens, $m);
+            $colours[$code] = strtolower($m[1]);
+        }
+
+        // ৩ · কেউ কারও আঁকা বা রং ভাগ করে না
+        $this->assertSame(count($drawings), count(array_unique($drawings)),
+            'দুইটা মডিউল একই আঁকা ব্যবহার করছে: '.implode(', ', array_keys($drawings)));
+        $this->assertSame(count($colours), count(array_unique($colours)),
+            'দুইটা মডিউল একই রং ব্যবহার করছে: '.json_encode($colours));
+
+        $this->assertStringNotContainsString('$modules = [', $icons,
+            'আইকন সেটে মডিউলের একটা আলাদা টেবিল ফিরে এসেছে।');
+    }
+
+    /**
+     * রেলের রং আসে টোকেন থেকে, কোড ধরে — নাম ধরে নয়।
+     *
+     * শেল কোনো মডিউলের নাম বলতে পারে না (§১৯.৭)। আগে core-এ একটা
+     * অনুবাদ টেবিল ছিল (accounts → finance, customer → crm), আর সেটাই
+     * নিয়মটা ভাঙত। এখন টোকেনের নামই কোড, তাই শেল শুধু কোডটা বসায়।
+     */
+    public function test_the_rail_names_no_module_of_its_own(): void
+    {
+        $markup = $this->codeOf(resource_path('views/components/shell/sidebar.blade.php'));
+
+        $this->assertStringContainsString('--color-module-{{ $module[\'code\'] }}', $markup,
+            'রেল রংটা কোড ধরে নিচ্ছে না।');
+
+        // টোকেন না থাকলেও পর্দা ভাঙে না
+        $this->assertStringContainsString('var(--color-brand-600)', $markup,
+            'টোকেন না থাকলে টাইলটা রংহীন হয়ে যাবে।');
+
+        foreach ($this->railModules() as $module) {
+            $this->assertStringNotContainsString("'".$module['code']."'", $markup,
+                "সাইডবার {$module['code']} মডিউলের নাম ধরে কথা বলছে (§১৯.৭)।");
+        }
+    }
+
+    public function test_the_sidebar_stays_put_while_the_page_scrolls(): void
+    {
+        $markup = $this->codeOf(resource_path('views/components/shell/sidebar.blade.php'));
+
+        // ভেতরের nav-এ overflow-y-auto থাকলেও যথেষ্ট নয়: বাইরের aside-এর
+        // উচ্চতা ভিউপোর্টে বাঁধা না থাকলে সেটা কনটেন্টের সাথে লম্বা হয়ে
+        // যায় আর পুরো পাতার সাথে উপরে উঠে যায় — লোগো ও মেনু চোখের
+        // বাইরে চলে যায়।
+        $this->assertStringContainsString('sticky', $markup);
+        $this->assertStringContainsString('h-dvh', $markup);
+        $this->assertStringContainsString('overflow-y-auto', $markup);
+    }
+
+    public function test_the_top_bar_stays_put_too(): void
+    {
+        $markup = $this->codeOf(resource_path('views/components/shell/topbar.blade.php'));
+
+        $this->assertStringContainsString('sticky', $markup);
+    }
+
+    public function test_the_shell_never_asks_the_server_whether_this_is_a_mobile(): void
+    {
+        // সেকশন ২০.৭ — ট্যাবলেট, ছোট করা উইন্ডো ও zoom সবই ভুল উত্তর দেয়।
+        $files = [
+            ...glob(resource_path('views/components/**/*.blade.php')),
+            ...glob(resource_path('views/**/*.blade.php')),
+        ];
+
+        $this->assertNotEmpty($files, 'No Blade files were checked — the glob is wrong.');
+
+        foreach ($files as $file) {
+            $markup = $this->codeOf($file);
+
+            $this->assertStringNotContainsString('isMobile', $markup, basename($file));
+            $this->assertStringNotContainsString('user_agent', $markup, basename($file));
+            $this->assertStringNotContainsString('userAgent', $markup, basename($file));
+        }
+    }
+}

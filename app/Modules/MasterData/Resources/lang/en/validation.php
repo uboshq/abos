@@ -1,0 +1,42 @@
+<?php
+
+declare(strict_types=1);
+
+return [
+    'format_needs_sequence' => 'The number format must contain {SEQ} — without it every document would get the same number.',
+    'code_required' => 'A code is required.',
+    'code_taken' => 'Another record already uses code :code.',
+    'unknown_level' => 'That is not a valid location level.',
+    'level_disabled' => 'The :level level is switched off for this company. Turn it on in settings.',
+    'level_cannot_change' => 'A location cannot change level — everything under it would sit in the wrong place. Create a new one and deactivate the old.',
+    'parent_required' => 'Choose the parent :level.',
+    'parent_not_found' => 'That parent location was not found.',
+    'wrong_parent_level' => 'The parent should be a :expected, not a :given.',
+    'parent_cannot_be_own_descendant' => 'A location cannot sit under itself.',
+    'parent_in_other_branch' => 'That location belongs to another branch, so this one cannot move under it.',
+    'default_cannot_deactivate' => 'The default cannot be deactivated — make another one default first.',
+    'unit_cycle' => 'A unit cannot be its own base, directly or in a loop.',
+    'factor_must_be_positive' => 'The conversion factor must be more than zero.',
+    'rate_out_of_range' => 'A tax rate must be between 0 and 100.',
+    'top_level_has_no_parent' => ':level is the top level — nothing sits above it.',
+    'base_currency_has_no_rate' => 'The base currency has no rate — against itself it is always 1.',
+    'rate_must_be_positive' => 'The rate must be greater than zero.',
+    'in_use_cannot_delete' => 'Used in :where, so it cannot be deleted.',
+    'default_cannot_delete' => 'This is the default, so it cannot be deleted. Make another one the default first.',
+    /* WarehouseService asked for this one and it had never been written,
+       so switching off a default warehouse showed the raw key instead of
+       the reason (found 3 September 2026) */
+    'default_cannot_be_deactivated' => 'This is the default, so it cannot be switched off. Make another one the default first.',
+    /* Deleting a location — LocationService::purge(), 19 September 2026 */
+    'location_has_children' => ':name cannot be deleted — it has :count :level under it. Delete or move those first.',
+    'location_in_use' => ':name cannot be deleted — :count :where are tied to it. Deactivate it if it is no longer needed.',
+    'location_used_by' => [
+        'customers' => 'customers',
+        'sal_shipments' => 'vehicle trips',
+    ],
+    /* Same name under the same parent — LocationService::assertNameIsFree(), 19 September 2026 */
+    'location_name_taken' => 'A :level named :name already exists under :parent (:code).',
+    'location_name_taken_top' => 'A :level named :name already exists (:code).',
+    /* Method and account kind — [[MethodFitsAccount]], 27 September 2026 */
+    'method_does_not_fit_account' => 'The method ":method" is :kind, but the money would go to :account — the method and the account are not the same kind. Choose a :kind account.',
+];

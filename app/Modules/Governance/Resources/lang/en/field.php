@@ -1,0 +1,38 @@
+<?php
+
+declare(strict_types=1);
+
+return [
+    'when' => 'When',
+    'what_broke' => 'What broke',
+    'where_in_code' => 'Where',
+    'how_many_times' => 'Times',
+    'who' => 'Who',
+    'action' => 'Action',
+    'record' => 'Record',
+    'module' => 'Module',
+    'field' => 'Field',
+    'old_value' => 'Old value',
+    'new_value' => 'New value',
+    'reason' => 'Reason',
+    'ip' => 'IP',
+    'device' => 'Device',
+    'branch' => 'Branch',
+    'changes' => 'Changes',
+    'from' => 'From',
+    'to' => 'To',
+    'search' => 'Number or name',
+    'what_was_taken' => 'What was taken',
+    'rows' => 'Rows',
+    'filters' => 'Filters',
+    'identifier' => 'What was typed',
+    'result' => 'Result',
+    'why' => 'Why',
+    'where_from' => 'From',
+    'place' => 'Place',
+    'last_seen' => 'Last seen',
+    'as_on' => 'As on',
+    'the_field' => 'Field',
+    'value_then' => 'Value that day',
+    'how_sure' => 'How certain',
+];

@@ -1,0 +1,238 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Modules\Sales\Services;
+
+use App\Core\Support\Money;
+use App\Modules\Accounts\Services\MoneyAccountRule;
+use App\Modules\Customer\Models\Customer;
+use App\Modules\MasterData\Services\MethodFitsAccount;
+use App\Modules\Sales\Models\DepositClaim;
+use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
+
+/**
+ * জমার দাবি — তোলা, গ্রহণ, প্রত্যাখ্যান।
+ *
+ * ── দাবি আর আদায়ের মাঝখানে একটা মানুষ থাকে, ইচ্ছাকৃতভাবে ────────────
+ * গ্রাহক দাবি তোলেন; ডিপো ব্যাংকের কাগজে খুঁজে দেখে গ্রহণ করে। গ্রহণের
+ * মুহূর্তে আদায়টা তৈরি হয়, আর তখনই খাতায় টাকা বসে।
+ *
+ * মাঝখানের মানুষটা না থাকলে যে কেউ বসে বসে নিজের বকেয়া শূন্য করে
+ * ফেলতে পারতেন — আর ধরা পড়ত মাস শেষে, ব্যাংক মিলকরণে, যদি কেউ
+ * মিলকরণটা করত।
+ */
+final class DepositClaimService
+{
+    public function __construct(private readonly CollectionService $collections) {}
+
+    /**
+     * গ্রাহক একটা দাবি তুলছেন।
+     *
+     * @param  array<string, mixed>  $data
+     */
+    public function raise(Customer $customer, array $data): DepositClaim
+    {
+        $amount = Money::of((string) ($data['amount'] ?? '0'));
+
+        if (bccomp($amount, '0', 4) <= 0) {
+            throw ValidationException::withMessages([
+                'amount' => __('sales::portal.amount_must_be_positive'),
+            ]);
+        }
+
+        $claimedOn = Carbon::parse((string) ($data['claimed_on'] ?? now()))->startOfDay();
+
+        /*
+         * আগামীকালের জমা বলে কিছু নেই।
+         *
+         * না আটকালে কেউ ভবিষ্যতের তারিখ দিয়ে দাবি তুলতেন, আর ডিপোর
+         * তালিকায় ওটা সবার উপরে বসে থাকত — অথচ ব্যাংকের কাগজে ওটা
+         * কোনোদিন আসত না।
+         */
+        if ($claimedOn->greaterThan(Carbon::today())) {
+            throw ValidationException::withMessages([
+                'claimed_on' => __('sales::portal.not_in_the_future'),
+            ]);
+        }
+
+        return DepositClaim::create([
+            'company_id' => $customer->company_id,
+            'branch_id' => $customer->branch_id,
+            'customer_id' => $customer->id,
+            'claimed_on' => $claimedOn->toDateString(),
+            'amount' => $amount,
+            'method' => $data['method'] ?? DepositClaim::BANK,
+            'reference' => filled($data['reference'] ?? null) ? trim((string) $data['reference']) : null,
+            'bank_account_id' => $data['bank_account_id'] ?? null,
+            'note' => $data['note'] ?? null,
+            'status' => DepositClaim::PENDING,
+        ]);
+    }
+
+    /**
+     * ডিপো দাবিটা যাচাই করে গ্রহণ করছে — আর তখনই আদায়টা তৈরি হয়।
+     *
+     * @param  array<string, mixed>  $overrides  ডিপো যা সংশোধন করেছে
+     */
+    public function accept(DepositClaim $claim, int $accountId, array $overrides = []): DepositClaim
+    {
+        return DB::transaction(function () use ($claim, $accountId, $overrides) {
+            // ⛔ অডিট §১.৪ — সারি আটকে আবার পড়া; দেখুন lockPending()
+            $this->lockPending($claim);
+
+            /*
+             * ডিপো অঙ্ক ও তারিখ সংশোধন করতে পারে।
+             *
+             * গ্রাহক ৫০,০০০ লিখেছেন, ব্যাংকে এসেছে ৪৯,৯৫০ (চার্জ কাটা) —
+             * ওরকম হয়ই। খাতায় বসবে যা সত্যিই এসেছে, যা দাবি করা
+             * হয়েছে তা নয়। দাবির সারিটা অক্ষত থাকে, তাই তফাতটাও
+             * পরে দেখা যায়।
+             */
+            $amount = Money::of((string) ($overrides['amount'] ?? $claim->amount));
+            $date = Carbon::parse((string) ($overrides['trx_date'] ?? $claim->claimed_on))->toDateString();
+
+            /*
+             * ⛔ গ্রাহক যে পথে পাঠালেন, টাকা সেই ধরনের খাতেই — ২৮ সেপ্টেম্বর ২০২৬।
+             *
+             * ⓘ অনুমোদনের পর্দা যেকোনো টাকার খাত বাছতে দেয়। "বিকাশে পাঠালাম"
+             * দাবি ব্যাংকের খাতে মঞ্জুর হলে ব্যাংক-বিবরণী আর খাতা কোনোদিন
+             * মিলত না, আর বিকাশের জের কম দেখাত। নিয়ম এক জায়গায়
+             * ([[MethodFitsAccount]]) — কাউন্টার আর সেটিংসও ওটাই ডাকে।
+             */
+            // ⓘ আগে: টাকার খাত তো? (খরচের খাতে মঞ্জুর হলে বকেয়া মুছত, টাকা কোথাও আসত না)
+            $account = app(MoneyAccountRule::class)->assert($accountId);
+
+            if (! $account->is_active) {
+                throw ValidationException::withMessages([
+                    'account_id' => __('accounts::validation.inactive_account', ['name' => $account->label()]),
+                ]);
+            }
+
+            $methods = app(MethodFitsAccount::class);
+
+            /*
+             * ⚠️ "নগদ" দাবি ব্যাংকেও বসতে পারে — ডিলাররা কোম্পানির ব্যাংকের
+             * শাখায় নগদ জমা দেন, পোর্টালে লেখেন "নগদ"। ⛔ কিন্তু বিকাশে নয়:
+             * ওটা নগদ জমার কোনো পথ নয়।
+             */
+            $fits = $methods->fitsKind($account, $claim->method)
+                || ($claim->method === DepositClaim::CASH && $account->isBank());
+
+            if (! $fits) {
+                throw ValidationException::withMessages([
+                    'account_id' => $methods->message(
+                        $account,
+                        __('master_data::payment_kind.'.$claim->method),
+                        (string) $claim->method,
+                    ),
+                ]);
+            }
+
+            $collection = $this->collections->create([
+                'customer_id' => $claim->customer_id,
+                'branch_id' => $claim->branch_id,
+                'trx_date' => $date,
+                'amount' => $amount,
+                'account_id' => $accountId,
+                'instrument' => $claim->method,
+                'instrument_no' => $claim->reference,
+                'narration' => __('sales::portal.from_claim', ['no' => $claim->public_id]),
+            ], []);
+
+            $this->collections->confirm($collection);
+
+            $claim->update([
+                'status' => DepositClaim::ACCEPTED,
+                'collection_id' => $collection->id,
+                'decided_by' => \App\Core\Support\Actor::userId(),
+                'decided_at' => now(),
+            ]);
+
+            return $claim->refresh();
+        });
+    }
+
+    /**
+     * দাবিটা ব্যাংকে পাওয়া যায়নি।
+     *
+     * কারণ বাধ্যতামূলক, আর সেটা গ্রাহক দেখতে পান। কারণ ছাড়া
+     * প্রত্যাখ্যান মানে গ্রাহক আবার ফোন করবেন — আর ফোনটা এড়ানোই এই
+     * পুরো ব্যবস্থার উদ্দেশ্য।
+     */
+    public function reject(DepositClaim $claim, string $reason): DepositClaim
+    {
+        if (trim($reason) === '') {
+            throw ValidationException::withMessages([
+                'decision_reason' => __('sales::portal.reason_required'),
+            ]);
+        }
+
+        return DB::transaction(function () use ($claim, $reason) {
+            // ⛔ গ্রহণের সাথে একই তালা — নইলে গৃহীত দাবি পুরনো পাতা থেকে "নাকচ" হত
+            $this->lockPending($claim);
+
+            $claim->update([
+                'status' => DepositClaim::REJECTED,
+                'decision_reason' => $reason,
+                'decided_by' => \App\Core\Support\Actor::userId(),
+                'decided_at' => now(),
+            ]);
+
+            return $claim->refresh();
+        });
+    }
+
+    /**
+     * এই গ্রাহকের দাবিগুলো — আর কারো নয়।
+     *
+     * @return Collection<int, DepositClaim>
+     */
+    public function forCustomer(Customer $customer): Collection
+    {
+        return DepositClaim::query()
+            ->where('customer_id', $customer->id)
+            ->where('company_id', $customer->company_id)
+            ->orderByDesc('claimed_on')
+            ->orderByDesc('id')
+            ->get();
+    }
+
+    /**
+     * দাবির সারিটা আটকে **ডাটাবেজ থেকে আবার পড়া**, তারপর অপেক্ষমাণ কি না দেখা।
+     *
+     * ── ⛔ অডিট §১.৪, ২৭ সেপ্টেম্বর ২০২৬ ─────────────────────────────
+     * আগে অবস্থাটা দেখা হত লেনদেনের বাইরে, হাতে থাকা মডেল থেকে। ⚠️ দুইবার
+     * ক্লিক করলে দুইটা অনুরোধই দাবিটা "অপেক্ষমাণ" পড়ত, আর প্রতিটা একটা
+     * **নতুন** আদায় বানাত — পোস্টিং ইঞ্জিনের "এক কাগজ একবার" পাহারা তাই
+     * ধরত না। ৳২,৫০,০০০-এর দাবিতে বকেয়া কমত ৳৫,০০,০০০।
+     *
+     * ⭐ এখন `lockForUpdate()` দ্বিতীয় অনুরোধকে প্রথমটার লেনদেন শেষ হওয়া
+     * পর্যন্ত দাঁড় করায়, আর সে পড়ে প্রথমটার ফল — "সিদ্ধান্ত হয়ে গেছে"।
+     * ⓘ হাতের মডেলটাও তাজা সারিতে বদলে দেওয়া হয়, যাতে বাকি কাজ পুরনো
+     * ছবির উপর না চলে। অবশ্যই `DB::transaction`-এর ভিতরে ডাকতে হবে।
+     */
+    private function lockPending(DepositClaim $claim): void
+    {
+        $fresh = DepositClaim::query()
+            ->whereKey($claim->getKey())
+            ->lockForUpdate()
+            ->firstOrFail();
+
+        $claim->setRawAttributes($fresh->getAttributes(), true);
+
+        $this->assertPending($claim);
+    }
+
+    private function assertPending(DepositClaim $claim): void
+    {
+        if (! $claim->isPending()) {
+            throw ValidationException::withMessages([
+                'status' => __('sales::portal.already_decided'),
+            ]);
+        }
+    }
+}

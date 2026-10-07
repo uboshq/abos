@@ -1,0 +1,82 @@
+{{--
+    ঋণের তালিকা।
+
+    ── দুই ধরনের ঋণ এক তালিকায়, কিন্তু কলামগুলো একই ─────────────────
+    টার্ম লোনে "মঞ্জুরিকৃত", CC-তে "সীমা" — শব্দ আলাদা, প্রশ্ন এক:
+    সর্বোচ্চ কত। তাই একটাই কলাম, আর ধরনটা পাশে লেখা থাকে।
+
+    বকেয়া খতিয়ান থেকে গোনা হয়, কোনো কলামে জমা রাখা নয় — দুই জায়গায়
+    একই সংখ্যা রাখলে একদিন আলাদা হবেই।
+--}}
+@php
+    /* কলামগুলো এখানে তোলা — টেবিল আর টুলবারের Columns মেনু একই তালিকা পড়ে। */
+    $columns = [
+        ['key' => 'document_no', 'label' => __('core.print.document_no'), 'width' => '13rem',
+         'render' => fn ($l) => new \Illuminate\Support\HtmlString(
+             '<a href=\'' . route('accounts.loan.show', $l->id) . '\' '
+             . 'class=\'text-(--color-brand-500) underline-offset-2 hover:underline\'>'
+             . e($l->document_no) . '</a>')],
+        ['key' => 'lender', 'label' => __('accounts::field.lender'),
+         'render' => fn ($l) => $l->lender],
+        ['key' => 'kind', 'label' => __('accounts::field.loan_kind'), 'width' => '9rem',
+         'render' => fn ($l) => $l->kindLabel()],
+        ['key' => 'sanctioned', 'total' => 'money', 'label' => __('accounts::field.sanctioned'),
+         'numeric' => true, 'width' => '10rem',
+         'render' => fn ($l) => \App\Core\Support\Money::format($l->sanctioned)],
+        ['key' => 'rate', 'label' => __('accounts::field.interest_rate'),
+         'numeric' => true, 'width' => '7rem',
+         'render' => fn ($l) => rtrim(rtrim((string) $l->interest_rate, '0'), '.')],
+        ['key' => 'outstanding', 'total' => 'money', 'raw' => fn ($l) => $l->outstanding(), 'label' => __('accounts::message.loan_outstanding'),
+         'numeric' => true, 'width' => '11rem',
+         'render' => fn ($l) => $l->isSettled()
+             ? __('accounts::message.loan_settled')
+             : \App\Core\Support\Money::format($l->outstanding())],
+    ];
+@endphp
+
+<x-layouts.app :menu="$menu">
+    <x-slot:title>{{ __('accounts::menu.loans') }}</x-slot:title>
+
+    @if (session('saved'))
+        <div role="status"
+             class="mb-4 rounded-(--radius-field) bg-(--color-badge-success-bg) px-3 py-2 text-sm
+                    text-(--color-badge-success-ink)">
+            {{ session('saved') }}
+        </div>
+    @endif
+
+    <p class="mb-4 max-w-(--spacing-prose-max) text-sm text-(--color-ink-muted)">
+        {{ __('accounts::message.loan_note') }}
+    </p>
+
+    {{-- ⭐ শিরোনাম, মোট বকেয়া আর "তৈরি" তালিকার মাথায়, একই বাক্সে — মালিকের
+         নির্দেশ, ১৯ সেপ্টেম্বর ২০২৬: *"সব মডিউলেই একই অবস্থা, সব ঠিক করো"*। --}}
+    <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border)
+                bg-(--color-surface-card)">
+        <form method="GET" class="contents">
+            <x-ui.toolbar :title="__('accounts::menu.loans')"
+                :count="__('accounts::message.loan_total') . ': ' . \App\Core\Support\Money::format($total)"
+                :search-placeholder="__('accounts::message.loan_search')"
+                :columns="$columns">
+                <x-slot:actions>
+                    @can('accounts.loan.manage')
+                        <x-ui.button tone="primary" icon="plus" :href="route('accounts.loan.create')">
+                            {{ __('core.action.create') }}
+                        </x-ui.button>
+                    @endcan
+                </x-slot:actions>
+            </x-ui.toolbar>
+        </form>
+
+        <x-ui.table
+            :grand="$grand ?? []"
+            :view-url="fn ($l) => route('accounts.loan.show', $l)"
+            :compact="request()->boolean('compact')"
+            :empty="$q ? __('core.empty.no_results') : __('accounts::message.no_loans')"
+            :rows="$loans"
+            :columns="$columns" />
+
+        <x-ui.pager :rows="$loans" />
+        <x-ui.list-totals :rows="$loans" :grand="$grand ?? []" :columns="$columns" />
+    </div>
+</x-layouts.app>

@@ -1,0 +1,642 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Modules\Accounts\Models;
+
+use App\Core\Concerns\BelongsToCompany;
+use App\Core\Concerns\HasActiveState;
+use App\Core\Concerns\HasDocumentStatus;
+use App\Core\Concerns\HasPublicId;
+use App\Core\Concerns\IsAudited;
+use App\Core\Contracts\Drillable;
+use App\Core\Services\LedgerBalances;
+use App\Core\Support\RunningBalance;
+use App\Models\LedgerEntry;
+use App\Models\User;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
+
+/**
+ * হিসাবের একটা খাত।
+ *
+ * পুরো সিস্টেমের সবচেয়ে নিচের স্তর: বিক্রয়, ক্রয়, বেতন, ঋণ — প্রতিটা
+ * লেনদেন শেষমেশ দুইটা খাতের মধ্যে টাকা সরায়। তাই এই মডেলটা ভুল হলে বাকি
+ * সব মডিউল ভুল হয়।
+ */
+class Account extends Model implements Drillable
+{
+    use BelongsToCompany;
+    use HasActiveState;
+    use HasDocumentStatus;
+    use HasFactory;
+    use HasPublicId;
+    use IsAudited;
+    use SoftDeletes;
+
+    /** পাঁচটা মূল ধরন — এর বাইরে কিছু নেই। */
+    public const ASSET = 'asset';
+
+    public const LIABILITY = 'liability';
+
+    public const EQUITY = 'equity';
+
+    public const INCOME = 'income';
+
+    public const EXPENSE = 'expense';
+
+    /** @var list<string> */
+    public const TYPES = [self::ASSET, self::LIABILITY, self::EQUITY, self::INCOME, self::EXPENSE];
+
+    /**
+     * ব্যালেন্স শিটে যায় যেগুলো — বাকিগুলো লাভ-লোকসানে।
+     *
+     * @var list<string>
+     */
+    public const BALANCE_SHEET_TYPES = [self::ASSET, self::LIABILITY, self::EQUITY];
+
+    public const DEBIT = 'debit';
+
+    public const CREDIT = 'credit';
+
+    /**
+     * টাকার খাত কোন ধরনের — অথবা `null` হলে টাকার খাতই নয়।
+     *
+     * ── কেন তিনটা পতাকা নয়, একটা ঘর ─────────────────────────────────
+     * আগে দুইটা পতাকা ছিল, `is_cash` আর `is_bank`, আর দ্বিতীয়টা ব্যাংক ও
+     * MFS দুইটাকেই বোঝাত। তিন পতাকায় আটটা সম্ভাব্য অবস্থা হত, যার ছয়টা
+     * অর্থহীন — "নগদ এবং ব্যাংক", "নগদ এবং MFS" — আর সেগুলো ঠেকাতে
+     * ফর্মে হাতে লেখা XOR নিয়ম বসত। ⭐ একটা ঘরে অবৈধ অবস্থাটা জন্মায়ই
+     * না, তাই নিয়মটারও দরকার পড়ে না।
+     *
+     * ⚠️ এটা হাতে লেখা হয় না — বাবার খাত থেকে বসে
+     * ([[AccountService::moneyKindFrom()]])। কারণ টাকার তিনটা মা
+     * ([[StandardChart::MONEY_PARENTS]]) ছকে আগে থেকেই আলাদা, আর
+     * পাশাপাশি একটা হাতে-টিক দেওয়া পতাকা রাখা মানে একই প্রশ্নের দুইটা
+     * উত্তর — যা দুইটা আলাদা হলে ধরা পড়ত কেবল টাকা আটকে যাওয়ায়।
+     */
+    public const CASH = 'cash';
+
+    public const BANK = 'bank';
+
+    public const MFS = 'mfs';
+
+    /** @var list<string> */
+    public const MONEY_KINDS = [self::CASH, self::BANK, self::MFS];
+
+    /**
+     * ⭐ এক শাখা বাছা থাকলে অন্য শাখার (আর শাখাহীন) টিলের নগদ খাত দেখায় না — মালিকের নির্দেশ,
+     * ১ অক্টোবর ২০২৬: *"প্রতিটা শাখা পুরোপুরি আলাদা"*। হিসাবের ছক, ঋণ, মূলধন, উত্তোলন,
+     * ভাড়া, খাত-বিশ্লেষণ, মাস্টার ডাটার খাত-পিকার — সব এক দেয়ালে ([[scopeNotAnotherBranchsTill()]]
+     * একই নিয়ম, এখন সব কোয়েরিতে)।
+     *
+     * ⓘ কেবল টিলের খাত সরে; ব্যাংক, MFS, অফিসের সিন্দুক আর বাকি সব খাত থাকে। "সব শাখা"-য় কিছুই
+     * বাদ নয়। ⚠️ খাতার সারি নয়, খাত — জের আর পোস্টিং ([[PostingEngine]]-এর কাঁচা যাচাই) গোটা
+     * কোম্পানির থাকে।
+     */
+    protected static function booted(): void
+    {
+        static::addGlobalScope('viewed-branch-till', function (Builder $builder): void {
+            // ⛔ "সব শাখা"-তেও নাগালের ভেতরে — অডিট ⛔১১ (৬ অক্টোবর ২০২৬); সীমাহীন হলে `null`, কিছুই বাদ নয় ([[CashTill::visibleBranchIds()]])
+            $ids = CashTill::visibleBranchIds();
+
+            if ($ids === null) {
+                return;
+            }
+
+            $builder->whereNotIn($builder->getModel()->getTable().'.id', CashTill::query()->withoutGlobalScope('viewed-branch')
+                ->whereNotNull('account_id')
+                ->whereNotNull('branch_id')->whereNotIn('branch_id', $ids ?: [0]) // ⭐ শাখাহীন টিল সব শাখার — মালিক, ৬ অক্টোবর ২০২৬
+                ->select('account_id'));
+        });
+    }
+
+    protected $fillable = [
+        'company_id', 'parent_id', 'code', 'name_en', 'name_bn',
+        'type', 'nature', 'is_group', 'money_kind', 'held_by', 'is_system',
+        'opening_balance', 'opening_date',
+        'account_number', 'bank_name', 'branch_name', 'account_title', 'routing_no',
+        'status', 'is_active', 'created_by',
+        // ⭐ পক্ষ রাখে — কোন ধরনের পক্ষ এই খাতে বসে (অডিট হিসাব ⚠️১২, ৭ অক্টোবর ২০২৬; [[holdsParty()]])
+        'party_types',
+    ];
+
+    protected function casts(): array
+    {
+        return [
+            'is_group' => 'boolean',
+            'is_system' => 'boolean',
+            'is_active' => 'boolean',
+            'opening_balance' => 'decimal:4',
+            'opening_date' => 'date',
+            'party_types' => 'array',
+        ];
+    }
+
+    /**
+     * ⭐ খাতটা কি পক্ষ রাখে — পুরো-ERP অডিট, ৬ অক্টোবর ২০২৬ (হিসাব ⚠️১২; সমন্বয়কের সিদ্ধান্ত ৭ অক্টোবর ২০২৬; [[AnAccountSaysWhichPartiesItHoldsTest]])।
+     *
+     * ⓘ আন্তর্জাতিক নিয়মে পক্ষ চলে কেবল sub-ledger নিয়ন্ত্রণ-খাতে — পাওনা, দেনা, কর্মীর অগ্রিম, হাতধার, ভাড়া, লাভ প্রদেয়, মূলধন।
+     * আগে জাবেদার যেকোনো সারিতে যেকোনো পক্ষ বসত: খরচের সারিতে গ্রাহকের নাম দিলে তাঁর "বকেয়া" বদলাত, পাওনার খাত নয়। এখন খাত বলে
+     * কোন ধরনের পক্ষ নেয় ([[StandardChart::PARTY_HOLDERS]] আর আজকের খাতা থেকে); ইঞ্জিন নতুন সারিতে মেলায়
+     * ([[PostingEngine::assertAccountsCanHoldMoney()]]), পুরনো সারি অক্ষত। পক্ষ রাখে মানে পক্ষ লাগে আর চলে; না রাখলে চলে না।
+     */
+    public function holdsParty(): bool
+    {
+        return ($this->party_types ?? []) !== [];
+    }
+
+    /** এই ধরনের পক্ষ (customer · supplier · employee · person) এই খাতে বসে কি না */
+    public function takesParty(string $type): bool
+    {
+        return in_array($type, $this->party_types ?? [], true);
+    }
+
+    /** যে খাতগুলো পক্ষ রাখে — গ্রুপসহ, কোম্পানির স্কোপে */
+    public function scopeHoldingParty(Builder $query): Builder
+    {
+        return $query->whereNotNull('party_types')->where('party_types', '<>', '[]');
+    }
+
+    /**
+     * কোন ধরনের স্বাভাবিক দিক কী।
+     *
+     * সম্পদ ও খরচ বাড়ে ডেবিটে; দায়, মূলধন ও আয় বাড়ে ক্রেডিটে। এটাই
+     * নতুন খাতের ডিফল্ট, কিন্তু বাধ্যতামূলক নয় — "সঞ্চিত অবচয়" সম্পদ
+     * হয়েও ক্রেডিট প্রকৃতির, আর সেটা হাতে বদলানো যায়।
+     */
+    public static function defaultNatureFor(string $type): string
+    {
+        return in_array($type, [self::ASSET, self::EXPENSE], true) ? self::DEBIT : self::CREDIT;
+    }
+
+    public function parent(): BelongsTo
+    {
+        return $this->belongsTo(self::class, 'parent_id');
+    }
+
+    public function children(): HasMany
+    {
+        return $this->hasMany(self::class, 'parent_id')->orderBy('code');
+    }
+
+    public function creator(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'created_by');
+    }
+
+    /**
+     * নগদটা কার হাতে।
+     *
+     * ⓘ কেবল নগদ খাতে ভরা থাকে। ব্যাংক বা MFS-এ খালি, আর সেটা ফাঁক নয় —
+     * ব্যাংকের টাকা কারও ড্রয়ারে থাকে না, ওটা ব্যাংকের কাছে।
+     */
+    public function keeper(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'held_by');
+    }
+
+    /** ব্যবহারকারীর ভাষায় নাম — বাংলা না থাকলে ইংরেজি (সেকশন ১৮.৩)। */
+    public function name(?string $locale = null): string
+    {
+        $locale = $locale ?? app()->getLocale();
+
+        if ($locale === 'bn' && filled($this->name_bn)) {
+            return $this->name_bn;
+        }
+
+        return $this->name_en;
+    }
+
+    /** কোড ও নাম একসাথে — ড্রপডাউনে ও রিপোর্টে এই রূপেই দেখা যায়। */
+    public function label(?string $locale = null): string
+    {
+        return $this->code.' — '.$this->name($locale);
+    }
+
+    /** যেগুলোতে সরাসরি এন্ট্রি বসানো যায়। */
+    public function scopePostable(Builder $query): Builder
+    {
+        return $query->where('is_group', false);
+    }
+
+    public function scopeOfType(Builder $query, string|array $type): Builder
+    {
+        return $query->whereIn('type', (array) $type);
+    }
+
+    /**
+     * নগদ, ব্যাংক বা MFS — যেখানে সত্যিকারের টাকা বসে।
+     *
+     * ⚠️ `is_group` বাদ ইচ্ছাকৃত: তিনটা মা (১১০১, ১১০২, ১১০৫) নিজেরাও
+     * ধরনটা বহন করে, কারণ সন্তানরা সেটা তাদের কাছ থেকেই পায়। কিন্তু
+     * মা একটা শিরোনাম — সেখানে টাকা বসে না, আর পুরনো `is_cash`/`is_bank`
+     * পতাকা দুইটাও গ্রুপে কখনো true হত না। শর্তটা না থাকলে টাকার
+     * খাতের প্রতিটা তালিকায় হঠাৎ তিনটা শিরোনাম বাছাইযোগ্য হয়ে উঠত।
+     */
+    public function scopeMoney(Builder $query): Builder
+    {
+        return $query->whereNotNull('money_kind')->where('is_group', false);
+    }
+
+    /**
+     * ⭐ অন্য শাখার টিলের নগদ খাত বাদ — টাকার খাতের পিকারের জন্য (৩০ সেপ্টেম্বর ২০২৬)।
+     *
+     * হেডারে এক শাখা বাছা থাকলে রসিদ, পরিশোধ, আদায় আর সরাসরি বিক্রি-কেনার "টাকা কোথায়"
+     * ঘরে কেবল সেই শাখার টিলের খাত; অন্য শাখার আর শাখাহীন টিলের খাত বাদ। ব্যাংক, MFS আর
+     * টিলহীন নগদ (অফিসের সিন্দুক) কোম্পানির — থাকে। "সব শাখা"-য় কিছুই বাদ নয়।
+     * ⚠️ কেবল পিকার; যাচাই ([[MoneyAccountRule]]) আর পোস্টিং গোটা কোম্পানির।
+     */
+    public function scopeNotAnotherBranchsTill(Builder $query): Builder
+    {
+        // ⛔ "সব শাখা"-তেও নাগালের ভেতরে — অডিট ⛔১১ (৬ অক্টোবর ২০২৬); সীমাহীন হলে কিছুই বাদ নয় ([[CashTill::visibleBranchIds()]])
+        $ids = CashTill::visibleBranchIds();
+
+        if ($ids === null) {
+            return $query;
+        }
+
+        // ⚠️ টিলের নিজের শাখার দেয়ালের বাইরে পড়তে হয় — নাহলে বাদ দেওয়ার তালিকাটাই খালি হত
+        return $query->whereNotIn($query->getModel()->getTable().'.id', CashTill::query()->withoutGlobalScope('viewed-branch')
+            ->whereNotNull('account_id')
+            ->whereNotNull('branch_id')->whereNotIn('branch_id', $ids ?: [0]) // ⭐ শাখাহীন টিল সব শাখার — মালিক, ৬ অক্টোবর ২০২৬
+            ->select('account_id'));
+    }
+
+    /** কেবল এক ধরনের টাকার খাত — `ofMoneyKind(Account::BANK)`। */
+    public function scopeOfMoneyKind(Builder $query, string|array $kind): Builder
+    {
+        return $query->whereIn('money_kind', (array) $kind)->where('is_group', false);
+    }
+
+    public function isCash(): bool
+    {
+        return $this->money_kind === self::CASH;
+    }
+
+    /**
+     * ব্যাংক — ⛔ MFS নয়।
+     *
+     * এই পার্থক্যটা কোথায় লাগে: ব্যাংক মিলকরণের কাগজ বিবরণী, MFS-এর
+     * অ্যাপের লগ; চেক কেবল ব্যাংকে হয়; বিকাশ ক্যাশ-আউটে চার্জ কাটে।
+     * "ব্যাংকে কত আছে" সংখ্যাটায় MFS মিশলে সংখ্যাটাই মিথ্যা।
+     */
+    public function isBank(): bool
+    {
+        return $this->money_kind === self::BANK;
+    }
+
+    public function isMfs(): bool
+    {
+        return $this->money_kind === self::MFS;
+    }
+
+    /** টাকার খাত কি না — কোনটা তা নয়। */
+    public function isMoney(): bool
+    {
+        return $this->money_kind !== null;
+    }
+
+    public function scopeSearch(Builder $query, ?string $term): Builder
+    {
+        if (blank($term)) {
+            return $query;
+        }
+
+        $like = '%'.str_replace(['%', '_'], ['\%', '\_'], trim($term)).'%';
+
+        return $query->where(function (Builder $q) use ($like) {
+            $q->where('code', 'like', $like)
+                ->orWhere('name_en', 'like', $like)
+                ->orWhere('name_bn', 'like', $like);
+        });
+    }
+
+    /**
+     * এই খাতের ব্যালেন্স — একটা তারিখ পর্যন্ত।
+     *
+     * গ্রুপ খাতে নিজের কোনো এন্ট্রি থাকে না, তাই সন্তানদের যোগফল ফেরত
+     * দেওয়া হয়। এটা না করলে ব্যালেন্স শিটে প্রতিটা মাথা শূন্য দেখাত আর
+     * শুধু পাতার খাতগুলোতে সংখ্যা থাকত।
+     *
+     * ফেরত আসে স্বাভাবিক দিক অনুযায়ী ধনাত্মক: ক্রেডিট প্রকৃতির খাতে
+     * ক্রেডিট বেশি হলে সংখ্যাটা ধনাত্মক। নাহলে প্রতিটা রিপোর্টে আলাদা
+     * করে চিহ্ন উল্টাতে হত, আর কোথাও না কোথাও বাদ পড়ত।
+     */
+    /**
+     * ⭐ দেখার জের — হেডারে এক শাখা বাছা থাকলে সেই শাখার, "সব শাখা"-তে মানুষের নাগালের শাখা আর শাখাহীন সারির (অডিট ⛔১১,
+     * ৬ অক্টোবর ২০২৬)। ⓘ সীমাহীন মানুষ (মালিক) বা এক শাখা বাছা — হুবহু [[balanceOn()]], আগের মতো।
+     * ⛔ কেবল দেখানোর জন্য; টাকার যাচাই (টিল শূন্যের নিচে নয়, সীমা) গোটা কোম্পানির [[balanceOn()]] পড়ে।
+     */
+    public function balanceInView(): string
+    {
+        $scope = app(\App\Core\Services\DataScope::class);
+        $user = auth()->user();
+        $ids = $scope->viewBranchIds($user);
+
+        if ($ids === null || $scope->viewsOneBranch($user)) {
+            return $this->balanceOn(null, $ids[0] ?? null);
+        }
+
+        if ($this->is_group) {
+            return $this->children()->get()->reduce(fn (string $sum, self $child) => bcadd($sum, $child->balanceInView(), 4), '0');
+        }
+
+        $row = $scope->inView(LedgerEntry::query()->forAccount($this->id), 'ledger_entries.branch_id')
+            ->selectRaw('COALESCE(SUM(debit), 0) as d, COALESCE(SUM(credit), 0) as c')
+            ->first();
+        $net = bcsub((string) ($row->d ?? 0), (string) ($row->c ?? 0), 4);
+
+        return $this->nature === self::CREDIT ? bcmul($net, '-1', 4) : $net;
+    }
+
+    public function balanceOn(?string $upto = null, ?int $branchId = null): string
+    {
+        if ($this->is_group) {
+            return $this->groupBalanceOn($upto, $branchId);
+        }
+
+        /*
+         * ⭐ আগে থেকে তোলা থাকলে সেটাই — ২১ সেপ্টেম্বর ২০২৬।
+         *
+         * ⓘ [[LedgerBalances]] অনেক খাতের কাঁচা যোগফল **একবারে** তোলে
+         * (`GROUP BY account_id`), আর ছকের পর্দা সেটা আগে ডেকে নেয়।
+         * ⛔ না তুললে `null` আসে আর নিচের পথটাই চলে — অর্থাৎ সেবাটা
+         * কেবল দ্রুত পথ, আচরণের অংশ নয়।
+         *
+         * ⚠️ চিহ্নের নিয়মটা এখানেই থাকে, নিচে, আগের মতোই — কাঁচা
+         * ডেবিট-ক্রেডিট তোলা আর প্রকৃতি ধরে চিহ্ন বসানো দুইটা আলাদা
+         * কাজ, আর দ্বিতীয়টা টাকার নিয়ম।
+         */
+        $preloaded = app(LedgerBalances::class)->raw($this->id, $upto, $branchId);
+
+        $row = $preloaded === null
+            ? LedgerEntry::query()
+                ->forAccount($this->id)
+                ->when($upto, fn (Builder $q, string $date) => $q->where('trx_date', '<=', $date))
+                ->when($branchId, fn (Builder $q, int $branch) => $q->where('branch_id', $branch))
+                ->selectRaw('COALESCE(SUM(debit), 0) as d, COALESCE(SUM(credit), 0) as c')
+                ->first()
+            : (object) ['d' => $preloaded[0], 'c' => $preloaded[1]];
+
+        /*
+         * ── খোলার জের এখানে আর যোগ হয় না, ২৯ আগস্ট ২০২৬ ────────────
+         * আগে `openingWithin()` দিয়ে সংখ্যাটা কোডে যোগ করা হত, অথচ
+         * ট্রায়াল ব্যালেন্স ও স্থিতিপত্র সরাসরি খতিয়ান পড়ে — তাই
+         * একই খাতের ব্যালেন্স দুই পর্দায় দুই রকম আসত। এখন জেরটা
+         * সত্যিকারের দাখিলা হয়ে খতিয়ানেই বসে
+         * ([[OpeningBalanceService]]), আর এখানে যোগ করলে দ্বিগুণ হত।
+         */
+        $net = bcsub((string) ($row->d ?? 0), (string) ($row->c ?? 0), 4);
+
+        return $this->nature === self::CREDIT ? bcmul($net, '-1', 4) : $net;
+    }
+
+    /**
+     * ⭐ দলের জের — পুরো সাবট্রি, তবে গাছ যত গভীরই হোক দুইটা কোয়ারি।
+     *
+     * ── ⛔ কী ঘটত, ২৯ সেপ্টেম্বর ২০২৬ ───────────────────
+     * আগে `$this->children` ধরে নিচে নামা হত। ⓘ যে পর্দা আগে
+     * সব সন্তান তুলে রাখে ([[ChartOfAccountsController]]) তার কোনো অসুবিধা
+     * হত না — কিন্তু যে ডাকে `StandardChart::find('1100')?->balanceOn()`
+     * বলে ([[CfoFigures]], [[AccountsFacts]], [[MoneyCustodyController]]),
+     * তার কাছে সম্পর্কটা তোলা থাকত না।
+     *
+     * ⚠️ তাতে দুই জায়গায় দুই রকম ফল:
+     *   • স্থানীয়ভাবে `preventLazyLoading` চালু, তাই `/finance/cfo` ৫০০।
+     *   • লাইভে ওটা বন্ধ, তাই পাতা খোলে — কেবল খাত যত, কোয়ারিও তত।
+     * ⛔ অর্থাৎ লাইভে কোনো লক্ষণ থাকত না, শুধু পাতাটা ধীরে খুলত।
+     *
+     * ── ⭐ আর টাকার নিয়মটা এখানে এক বিন্দুও বদলায় নি ───────
+     * ⓘ চিহ্ন বসে আগের জায়গাতেই, পাতা-খাতের নিজের প্রকৃতি ধরে:
+     * পথটা পাতা-খাতগুলো খুঁজে বের করে, কাঁচা যোগফল **একবারে** তোলে
+     * ([[LedgerBalances::preload()]]), আর তারপর প্রতিটা খাতকে নিজের
+     * জের বলতে বলে — যা তখন কোনো কোয়ারি করে না।
+     * ⭐ অর্থাৎ উত্তরটা **নির্মাণগতভাবেই** হুবহু আগের মতো।
+     *
+     * ⚠️ সম্পর্কটা আগে থেকে তোলা থাকলে সেটাই ব্যবহার হয় — তাহলে
+     * বাড়তি কোয়ারিটাও লাগে না, আর ছকের পাতার দ্রুত পথটা অক্ষত থাকে।
+     */
+    private function groupBalanceOn(?string $upto, ?int $branchId): string
+    {
+        $family = $this->relationLoaded('children')
+            ? $this->gather(null)
+            : $this->gather($this->balancePool());
+
+        $leaves = $family->reject(fn (self $account) => (bool) $account->is_group);
+
+        app(LedgerBalances::class)->preload(
+            $leaves->map(fn (self $account) => (int) $account->getKey())->values()->all(),
+            $upto,
+            $branchId,
+        );
+
+        return $leaves->reduce(
+            fn (string $carry, self $leaf) => bcadd($carry, $leaf->balanceOn($upto, $branchId), 4),
+            '0',
+        );
+    }
+
+    /**
+     * কোম্পানির পুরো ছক এক কোয়ারিতে, বাবা ধরে সাজানো।
+     *
+     * ⓘ `company_id` হাতে লেখা হয় নি, আর সেটা ইচ্ছাকৃত:
+     * [[BelongsToCompany]] গ্লোবাল স্কোপ প্রতিটা কোয়ারিতে বসায়, আর ওই
+     * ফাইলেই লেখা আছে হাতে লিখলে একদিন কেউ লিখতে ভুলবে।
+     * ⭐ [[AGroupsBalanceWalkedTheWholeTreeTest]] দুই কোম্পানি বসিয়ে মাপে
+     * স্কোপটা সত্যিই ধরে কি না — মন্তব্য কোনো পাহারা নয়।
+     *
+     * ⚠️ দরকারি চারটা ঘরই তোলা হয়, আর `nature` তার মধ্যে — ওটা না
+     * থাকলে চিহ্নটা নেভানো যেত আর সংখ্যাটা উল্টো দিকে বসত।
+     *
+     * @return \Illuminate\Support\Collection<int|string, Collection<int, self>>
+     */
+    private function balancePool(): \Illuminate\Support\Collection
+    {
+        return static::query()
+            ->select(['id', 'parent_id', 'is_group', 'nature'])
+            ->get()
+            ->groupBy('parent_id');
+    }
+
+    /** এই খাতে কোনো এন্ট্রি বসেছে কি না — মোছার আগে দেখা হয়। */
+    public function hasEntries(): bool
+    {
+        return LedgerEntry::query()->forAccount($this->id)->exists();
+    }
+
+    /**
+     * পূর্বপুরুষ থেকে নিজে পর্যন্ত পথ — "১১০০ চলতি সম্পদ › ১১০১ নগদ"।
+     *
+     * @return Collection<int, self>
+     */
+    public function ancestors(): Collection
+    {
+        /*
+         * তালিকা primeAncestry() দিয়ে এলে শিকড়টা সারির সাথেই এসেছে।
+         *
+         * না দেখলে প্রতিটা সারির জন্য parent, তার parent, তার parent —
+         * স্তরে স্তরে একটা করে কোয়েরি। হিসাবের ছকের পাতায় ঠিক সেটাই
+         * হচ্ছিল: ৮০টা খাত × ৩ স্তর, আর পাতাটা ১.১ সেকেন্ড নিত যেখানে
+         * বাকি সব পাতা ০.১৫। বকেয়ার ক্ষেত্রে যেভাবে outstanding_net
+         * বসিয়ে দেওয়া হয়, এটাও ঠিক তাই।
+         */
+        $primed = $this->getAttribute('ancestor_chain');
+
+        if ($primed instanceof Collection) {
+            return $primed;
+        }
+
+        $chain = new Collection;
+        $node = $this->parent;
+
+        // গভীরতার সীমা: তথ্য নষ্ট হয়ে চক্র তৈরি হলে (parent নিজের সন্তান)
+        // এই লুপটা কখনো থামত না আর পাতাটা ঝুলে যেত। AccountService চক্র
+        // তৈরি হতে দেয় না, কিন্তু পড়ার কোড তার উপর নির্ভর করে না।
+        for ($depth = 0; $node !== null && $depth < 32; $depth++) {
+            $chain->prepend($node);
+            $node = $node->parent;
+        }
+
+        return $chain;
+    }
+
+    /**
+     * একগুচ্ছ খাতের শিকড় একবারেই বসিয়ে দেওয়া — সারিপ্রতি নয়, সব মিলিয়ে একটা কোয়েরি।
+     *
+     * ── কেন গোটা কোম্পানির খাত আনা হয়, শুধু দেখানোরগুলো নয় ──────────
+     * তালিকায় সচরাচর সক্রিয় খাতগুলোই থাকে, কিন্তু একটা সক্রিয় খাতের
+     * উপরের গোষ্ঠীটা নিষ্ক্রিয় হতে পারে। তখন শুধু তালিকার খাতগুলো দিয়ে
+     * শিকড় বানালে পথটা মাঝপথে কেটে যেত — "১১০১ নগদ" দেখাত, অথচ ওটা
+     * "১১০০ চলতি সম্পদ"-এর নিচে। পথ ভুল দেখানোর চেয়ে একটা বাড়তি
+     * কোয়েরি সস্তা।
+     *
+     * @param  Collection<int, self>  $accounts
+     * @return Collection<int, self>
+     */
+    public static function primeAncestry(Collection $accounts): Collection
+    {
+        if ($accounts->isEmpty()) {
+            return $accounts;
+        }
+
+        $nodes = static::query()
+            ->select(['id', 'parent_id', 'code', 'name_en', 'name_bn'])
+            ->get()
+            ->keyBy('id');
+
+        foreach ($accounts as $account) {
+            $chain = new Collection;
+            $node = $nodes->get($account->parent_id);
+
+            // একই ৩২ স্তরের সীমা, একই কারণে — চক্র থাকলে থেমে যেতে হবে।
+            for ($depth = 0; $node !== null && $depth < 32; $depth++) {
+                $chain->prepend($node);
+                $node = $nodes->get($node->parent_id);
+            }
+
+            $account->setAttribute('ancestor_chain', $chain);
+
+            /*
+             * ঘরটা টেবিলে নেই, তাই "বদলে গেছে" তালিকাতেও থাকা চলবে না।
+             *
+             * না সরালে এরপর কেউ ওই মডেলটা save() করলে Eloquent
+             * ancestor_chain নামের একটা কলাম লিখতে যেত আর SQL ভেঙে
+             * পড়ত — দেখানোর জন্য বসানো একটা ঘর লেখার পথে বাধা হয়ে
+             * দাঁড়াত।
+             */
+            $account->syncOriginalAttribute('ancestor_chain');
+        }
+
+        return $accounts;
+    }
+
+    /**
+     * নিজে ও নিচের সব — শাখা সরানো বা নিষ্ক্রিয় করার সময় লাগে।
+     *
+     * @return Collection<int, self>
+     */
+    public function selfAndDescendants(): Collection
+    {
+        /*
+         * সম্পর্ক আগে থেকে আনা থাকলে সেটাই — নাহলে এক কোয়েরিতে সবাই।
+         *
+         * ── আগে যা হত ───────────────────────────────────────────────
+         * `$this->children` ধরে নিচে নামা হত, আর প্রতিটা ধাপে একটা করে
+         * কোয়েরি যেত। সম্পাদনার পর্দা এটাকেই ডাকে ("নিজে ও নিজের নিচের
+         * কেউ বাবা হতে পারে না"), তাই মাথার একটা খাত খুলতে গেলে ছকের
+         * গভীরতা যত, কোয়েরিও তত — আর কোনো লক্ষণ নেই, শুধু পাতা ধীরে খোলে।
+         *
+         * এখন কোম্পানির সব খাত একবারে এনে স্মৃতিতে গাছ বানানো হয়:
+         * দুইশো সারির ছকে একটাই কোয়েরি। ধরা পড়েছে preventLazyLoading
+         * চালু করার পর, ৩১ আগস্ট ২০২৬-এ পর্দা খুলে।
+         */
+        $pool = $this->relationLoaded('children')
+            ? null
+            : static::query()->select(['id', 'parent_id'])->get()->groupBy('parent_id');
+
+        return $this->gather($pool);
+    }
+
+    /**
+     * নিজে ও নিচের সবাই — আগে থেকে আনা তালিকা ধরে।
+     *
+     * @param  \Illuminate\Support\Collection<int|string, Collection<int, self>>|null  $pool
+     * @return Collection<int, self>
+     */
+    private function gather(?\Illuminate\Support\Collection $pool): Collection
+    {
+        $all = new Collection([$this]);
+
+        $children = $pool === null
+            ? $this->children
+            : ($pool->get($this->getKey()) ?? new Collection);
+
+        foreach ($children as $child) {
+            $all = $all->merge($child->gather($pool));
+        }
+
+        return $all;
+    }
+
+    /**
+     * লেজারের সারিগুলো চলমান ব্যালেন্স সহ — খাতের পাতা ও Ledger রিপোর্ট।
+     *
+     * @param  \Illuminate\Support\Collection<int, LedgerEntry>|Collection<int, LedgerEntry>  $entries
+     */
+    public function withRunningBalance(iterable $entries, string $opening = '0'): void
+    {
+        $running = new RunningBalance($opening);
+
+        foreach ($entries as $entry) {
+            $entry->running_balance = $running->add($entry->debit, $entry->credit);
+        }
+    }
+
+    // ── Drillable — নিয়ম ১ ────────────────────────────────────────────
+
+    public static function drillSourceType(): string
+    {
+        return 'account';
+    }
+
+    public function drillDocumentNo(): string
+    {
+        return $this->code;
+    }
+
+    public function drillLabel(): string
+    {
+        return $this->name();
+    }
+
+    public function drillRoute(): array
+    {
+        return ['accounts.coa.show', ['account' => $this->id]];
+    }
+}

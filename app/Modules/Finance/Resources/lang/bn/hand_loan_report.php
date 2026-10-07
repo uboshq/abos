@@ -1,0 +1,50 @@
+<?php
+
+declare(strict_types=1);
+
+/*
+ * ⭐ হাতধারের রিপোর্ট ৩–৭ — অর্থ-মডিউলের পরিকল্পনা, ৫ অক্টোবর ২০২৬ ([[HandLoanReports]])।
+ */
+return [
+    'reports' => 'হাতধারের রিপোর্ট',
+    'reconcile_title' => 'ব্যক্তির খাতা বনাম হাতধার খাত',
+    'reconcile_short' => 'খাতের সাথে মেলানো',
+    'reconcile_summary' => 'তালিকা আর খাতের ফাঁক',
+    'reconcile_text' => 'সব ব্যক্তির যোগফল :list · হাতধার খাতের জের :books · ফাঁক :gap',
+    'nameless' => 'খাতে কারও নাম ছাড়া',
+    'list_balance' => 'হাতধারের তালিকায়',
+    'books_balance' => 'হাতধার খাতে',
+    'gap' => 'ফাঁক',
+    'receivable_title' => 'হাতধারের পাওনা — তিনি দেবেন',
+    'payable_title' => 'হাতধারের দেনা — আমাদের দিতে হবে',
+    'receivable_short' => 'পাওনা তালিকা',
+    'payable_short' => 'দেনা তালিকা',
+    'address' => 'ঠিকানা',
+    'mobile' => 'মোবাইল',
+    'they_owe' => 'তিনি দেবেন',
+    'we_owe' => 'আমরা দেব',
+    'last_given' => 'শেষ দেওয়া',
+    'last_taken' => 'শেষ নেওয়া',
+    'age_receivable_title' => 'হাতধারের পাওনার বয়স',
+    'age_payable_title' => 'হাতধারের দেনার বয়স',
+    'age_receivable_short' => 'পাওনার বয়স',
+    'age_payable_short' => 'দেনার বয়স',
+    'bucket_0' => '০–৩০ দিন',
+    'bucket_30' => '৩১–৬০ দিন',
+    'bucket_60' => '৬১–৯০ দিন',
+    'bucket_90' => '৯০+ দিন',
+    'oldest' => 'সবচেয়ে পুরনো বাকি',
+    'activity_title' => 'হাতধার — কে কত দিল বা নিল',
+    'activity_short' => 'কে কত দিল/নিল',
+    'kind' => 'ধরন',
+    'schedule_title' => 'হাতধার — পরিশোধের সময়সূচি',
+    'schedule_short' => 'পরিশোধের সময়সূচি',
+    'made_on' => 'দেওয়া/নেওয়ার দিন',
+    'state' => 'অবস্থা',
+    'days_left' => 'দিন বাকি',
+    'state_overdue' => 'দিন পার',
+    'state_today' => 'আজ',
+    'state_upcoming' => 'সামনে',
+    'state_undated' => 'তারিখ নেই',
+    'all_states' => 'সব অবস্থা',
+];

@@ -1,0 +1,249 @@
+import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+
+import '../../core/records/customer_record.dart';
+import '../../core/records/list_queries.dart';
+import '../../core/records/money.dart';
+import '../../core/sync_engine/reference_sync.dart';
+import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_spacing.dart';
+import '../../core/widgets/empty_state.dart';
+import '../../core/widgets/list_controls.dart';
+
+/// Who owes what — the whole round's debt on one page.
+///
+/// <p><b>Needs nothing new from the server.</b> `CustomerDue` has been
+/// syncing to the phone since the engine was built, and `CustomerDueSync`
+/// goes to real trouble to keep it fresh: its watermark comes from the
+/// ledger's last movement rather than the customer row, precisely so a phone
+/// showing "৫,০০০ বাকি" cannot go on showing it while the real figure walks
+/// to ৮০,০০০.
+///
+/// <p>Until now the only place that number appeared was one line on a
+/// customer row and one notice on the order screen. Neither answers the
+/// question an owner actually asks on a Thursday: *where is my money*.
+///
+/// <p><b>Sorted by what is owed, largest first</b> — not alphabetically.
+/// A list of eighty shops sorted by name is a list nobody reads to the end;
+/// the four that matter are at the top of this one. That stays the default;
+/// সাজান can change it for this visit only (মালিক, ২ অক্টোবর — DueListQuery).
+class DueListScreen extends StatefulWidget {
+  const DueListScreen({super.key});
+
+  @override
+  State<DueListScreen> createState() => _DueListScreenState();
+}
+
+class _DueListScreenState extends State<DueListScreen> {
+  bool _refreshing = false;
+  String _query = '';
+  // ফিল্টার আর সাজানো — শুধু স্ক্রিন খোলা থাকা পর্যন্ত (দেখুন ListControls)।
+  String _sort = DueListQuery.defaultSort;
+  ListFilters _filters = const {};
+
+  Future<void> _refresh() async {
+    setState(() => _refreshing = true);
+    try {
+      await ReferenceSync.syncAll();
+    } catch (_) {
+      // See CustomerListScreen's own comment on the same catch.
+    } finally {
+      if (mounted) setState(() => _refreshing = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // Why the last pull brought nothing down, when that is what happened —
+    // null after a clean pull, and an empty list then means an empty list.
+    final trouble = ReferenceSync.troubleSentence;
+    final rows = _owing();
+    final filtered =
+        DueListQuery.apply(rows, query: _query, sort: _sort, filters: _filters);
+    // ⓘ মোট সবসময় পুরো তালিকার — ফিল্টারে কটা দোকান লুকালেও মোট বকেয়া বদলায়
+    // না, কারণ এই সংখ্যাটার জন্যই মালিক পাতাটা খোলেন।
+    // ⭐ দেখার শাখার বকেয়া — ওয়েবের তালিকার একই সংখ্যা (মালিক, ৬ অক্টোবর ২০২৬)
+    final total =
+        rows.fold<double>(0, (sum, row) => sum + row.due.outstandingInView);
+
+    return Scaffold(
+      appBar: AppBar(title: const Text('বকেয়া তালিকা')),
+      body: Column(
+        children: [
+          if (rows.isNotEmpty) _TotalStrip(total: total, shops: rows.length),
+          Padding(
+            padding: const EdgeInsets.all(AppSpacing.md),
+            child: TextField(
+              decoration: const InputDecoration(
+                hintText: 'নাম বা মোবাইল দিয়ে খুঁজুন',
+                prefixIcon: Icon(Icons.search),
+              ),
+              onChanged: (value) => setState(() => _query = value),
+            ),
+          ),
+          if (rows.isNotEmpty)
+            ListControls(
+              sortOptions: DueListQuery.sortOptions,
+              sort: _sort,
+              onSort: (value) => setState(() => _sort = value),
+              filterGroups: DueListQuery.filterGroups(rows),
+              filters: _filters,
+              onFilters: (value) => setState(() => _filters = value),
+            ),
+          if (_refreshing) const LinearProgressIndicator(),
+          Expanded(
+            child: RefreshIndicator(
+              onRefresh: _refresh,
+              child: rows.isEmpty
+                  ? ListView(
+                      children: [
+                        EmptyState(
+                          icon: trouble == null
+                              ? Icons.check_circle_outline
+                              : Icons.cloud_off_outlined,
+                          // ⛔ The worst one on this list to get wrong. After a
+                          // clean pull, 'কারো কাছে বকেয়া নেই' is good news,
+                          // not an error — the same distinction the approvals
+                          // inbox draws. After a failed pull it is a claim
+                          // about money made on no data, and somebody acts on
+                          // it: no collection round, no call, a credit limit
+                          // read as headroom. An empty list is only news when
+                          // the list actually arrived.
+                          title: trouble == null
+                              ? 'কারো কাছে বকেয়া নেই'
+                              : 'বকেয়ার তালিকা আনা যায়নি',
+                          message:
+                              trouble ?? 'সিঙ্ক হয়নি মনে হলে নিচে টেনে দেখুন।',
+                        ),
+                      ],
+                    )
+                  : filtered.isEmpty
+                      ? ListView(
+                          children: [
+                            EmptyState(
+                              icon: Icons.search_off,
+                              title: 'কোনো মিল পাওয়া যায়নি',
+                              // ফিল্টার চালু থাকলে খালি তালিকার কারণ সেটাও হতে পারে।
+                              message: _filters.isEmpty
+                                  ? null
+                                  : 'ফিল্টার মুছে আবার দেখুন।',
+                            ),
+                          ],
+                        )
+                      : ListView.separated(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: AppSpacing.md),
+                          itemCount: filtered.length,
+                          separatorBuilder: (_, __) =>
+                              const SizedBox(height: AppSpacing.xs),
+                          itemBuilder: (context, index) =>
+                              _DueTile(row: filtered[index]),
+                        ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Only shops that actually owe.
+  ///
+  /// <p>⚠️ A shop in advance (a negative balance) is deliberately left out
+  /// rather than shown as a negative row. This page answers one question —
+  /// *who owes me* — and money the business owes back is a different question
+  /// with a different urgency; mixing the two makes the total meaningless.
+  ///
+  /// <p>A shop whose `CustomerDue` has not arrived yet is also absent, and
+  /// that is not the same as owing nothing. The two entity types have
+  /// separate watermarks, so one can lag the other by a sync.
+  List<DueRow> _owing() {
+    final rows = <DueRow>[];
+    for (final customer in CustomerRecord.all()) {
+      final due = CustomerDueRecord.forCustomer(customer.id);
+      if (due == null || due.outstandingInView <= 0) continue;
+      rows.add(DueRow(customer: customer, due: due));
+    }
+    return rows;
+  }
+}
+
+/// The one number an owner opens this page for.
+class _TotalStrip extends StatelessWidget {
+  const _TotalStrip({required this.total, required this.shops});
+
+  final double total;
+  final int shops;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      color: AppColors.primary,
+      padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.md, vertical: AppSpacing.md),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('মোট বকেয়া',
+              style: TextStyle(color: Colors.white70, fontSize: 12.5)),
+          const SizedBox(height: AppSpacing.xs),
+          Text(
+            Money.taka(total),
+            style: const TextStyle(
+                color: Colors.white, fontSize: 26, fontWeight: FontWeight.w700),
+          ),
+          Text('$shops টি দোকান',
+              style: const TextStyle(color: Colors.white70, fontSize: 12.5)),
+        ],
+      ),
+    );
+  }
+}
+
+/// One shop, two lines — the owner's own layout, 6 Oct 2026:
+///
+///     M/S. Alif mim International Enterprise
+///     পয়েন্ট: ফুলপুর                      বকেয়া: ৳3,543
+///
+/// The mobile number, the credit days and the limit are not on the row: they
+/// are on the shop's own page, which a tap opens ("mobile no to click ba
+/// touch kore open korle vitore ache"). A shop on no point keeps the second
+/// line with the due alone. The limit is still never judged here or there —
+/// see the detail page and `CustomerDueSync`.
+class _DueTile extends StatelessWidget {
+  const _DueTile({required this.row});
+
+  final DueRow row;
+
+  @override
+  Widget build(BuildContext context) {
+    final point = row.customer.pointName;
+
+    return Card(
+      child: ListTile(
+        onTap: () => context.push('/home/customers/${row.customer.id}'),
+        title: Text(row.customer.name,
+            style: const TextStyle(fontWeight: FontWeight.w600)),
+        subtitle: Row(
+          children: [
+            Expanded(
+              child: Text(
+                point == null ? '' : 'পয়েন্ট: $point',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            const SizedBox(width: AppSpacing.sm),
+            Text(
+              'বকেয়া: ${Money.taka(row.due.outstandingInView)}',
+              style: const TextStyle(
+                  fontWeight: FontWeight.w700,
+                  fontSize: 15,
+                  color: AppColors.danger),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}

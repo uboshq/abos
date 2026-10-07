@@ -1,0 +1,228 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Modules\Accounts\Http\Controllers;
+
+use App\Core\Concerns\GrandTotals;
+use App\Core\Concerns\SortsLists;
+use App\Core\Services\MenuBuilder;
+use App\Core\Services\PartyRegistry;
+use App\Core\Support\CompanyContext;
+use App\Http\Controllers\Controller;
+use App\Modules\Accounts\Models\Account;
+use App\Modules\Accounts\Models\Cheque;
+use App\Modules\Accounts\Services\ChequeService;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Illuminate\Routing\Controllers\HasMiddleware;
+use Illuminate\Routing\Controllers\Middleware;
+use Illuminate\Validation\Rule;
+use Illuminate\View\View;
+
+/**
+ * চেকের খাতা।
+ *
+ * ── পাতাটার আসল প্রশ্ন ──────────────────────────────────────────────
+ * "আজ কোন চেকগুলো পাশ হওয়ার কথা, আর কোনগুলোর তারিখ পেরিয়ে গেছে অথচ
+ * এখনো ঝুলে আছে।" দ্বিতীয়টাই বেশি জরুরি: আগাম তারিখের চেক ফেলে রাখা
+ * স্বাভাবিক, কিন্তু তারিখ পেরোনোর পরেও ঝুলে থাকা মানে হয় কেউ জমা দিতে
+ * ভুলে গেছে, নয় ব্যাংক থেকে খবর আসেনি।
+ */
+class ChequeController extends Controller implements HasMiddleware
+{
+    use GrandTotals;
+    use SortsLists;
+
+    public function __construct(
+        private readonly ChequeService $cheques,
+        private readonly MenuBuilder $menu,
+    ) {}
+
+    public static function middleware(): array
+    {
+        return [
+            new Middleware('can:accounts.cheque.view', only: ['index']),
+            new Middleware('can:accounts.cheque.manage', only: ['create', 'store', 'deposit', 'clear', 'bounce']),
+        ];
+    }
+
+    public function index(Request $request): View
+    {
+        $query = Cheque::query()
+            ->when($request->query('status'), fn ($q, $s) => $q->where('status', $s))
+            ->when($request->query('direction'), fn ($q, $d) => $q->where('direction', $d))
+            /*
+             * উপরের দুইটা সংখ্যা (ঝুলন্ত মোট · তারিখ-পেরোনো) ক্লিক করে ঠিক
+             * ওই চেকগুলোই দেখা যায় — মালিকের নিয়ম: প্রতিটা সংখ্যা থেকে উৎসে।
+             */
+            ->when($request->query('filter') === 'open', fn ($q) => $q->open())
+            ->when($request->query('filter') === 'ripe', fn ($q) => $q->ripe())
+            /*
+             * খোঁজা — চেক নম্বর, ব্যাংক, কাগজের নম্বর আর বিবরণ।
+             *
+             * ⓘ পক্ষের নাম নয়: পক্ষ দুই টেবিলের (গ্রাহক/সরবরাহকারী) যেকোনোটা,
+             * আর দুইটাতেই whereHas চালানো এই তালিকার জন্য ভারী। মানুষ চেক
+             * খোঁজেন হাতের কাগজের নম্বর দেখে — সেটা এখানেই আছে।
+             */
+            ->when(trim((string) $request->query('q')) ?: null, fn ($query, $term) => $query->where(
+                fn ($w) => $w->where('cheque_no', 'like', "%{$term}%")
+                    ->orWhere('bank_name', 'like', "%{$term}%")
+                    ->orWhere('document_no', 'like', "%{$term}%")
+                    ->orWhere('narration', 'like', "%{$term}%")
+            ));
+
+        $sort = $this->applySort($query, $request, $this->sorts());
+
+        return view('accounts::cheque.index', [
+            'menu' => $this->menu->forUser($request->user()),
+            'grand' => $this->grandTotals($query, ['amount' => 't.amount']),
+            'cheques' => $query->paginate(50)->withQueryString(),
+            'q' => $request->query('q'),
+            /*
+             * ⓘ পক্ষের তালিকাটা আর এখানে নয় — ফর্মটা `create`-এ সরার পর
+             * তালিকার পাতায় ওটার কোনো ব্যবহারকারী নেই, আর
+             * [[PartyRegistry::forPicker()]] প্রতিবার গ্রাহক ও সরবরাহকারী
+             * দুইটা টেবিলই পড়ত।
+             *
+             * ⚠️ খাতের তালিকাটা থাকল: সারির "জমা দিলাম" ফর্মটা ওটা চায়
+             * ([[cheque/partials/actions]])।
+             */
+            // ⚠️ দল বাদ — কারণটা [[BankReconciliationController]]-এ; শর্তটা
+            // এখন `ofMoneyKind()`-এর ভিতরেই।
+            // ⭐ কেবল `BANK`: MFS-এ চেক বলে কিছু নেই, তাই বিকাশ-নগদের
+            // খাত চেকের তালিকায় থাকাটা কেবল ভুল বাছাইয়ের সুযোগ।
+            'banks' => Account::query()->ofMoneyKind(Account::BANK)->active()->orderBy('code')->get(),
+            'status' => $request->query('status'),
+            'direction' => $request->query('direction'),
+            'sortOptions' => $this->sortLabels(),
+            'sort' => $sort,
+
+            /*
+             * তারিখ পেরোনো অথচ ঝুলে থাকা চেকের সংখ্যা — উপরে, বড় করে।
+             *
+             * এটাই পাতাটার একমাত্র সতর্কতা, আর এটাই রোজ সকালে দেখার
+             * জিনিস।
+             */
+            'ripe' => Cheque::query()->ripe()->count(),
+            'openTotal' => (string) (Cheque::query()->open()->sum('amount') ?: '0'),
+        ]);
+    }
+
+    /**
+     * নতুন চেক বসানোর পর্দা।
+     *
+     * ⭐ কেবল ফর্মের দুইটা তালিকা — চেকের তালিকা, যোগফল বা ছাঁকনির
+     * কিছুই এখানে তোলা হয় না: এই পাতায় একটাও সারি দেখানো হয় না, তাই
+     * সেগুলো তোলা মানে প্রতিবার অকারণে পঞ্চাশটা সারি ও দুইটা যোগফল।
+     *
+     * ⛔ খাতের কোয়েরিটা `index()`-এরই হুবহু নকল (`ofMoneyKind(BANK)`) —
+     * দুই পর্দায় দুই রকম তালিকা দেখালে একদিন একটা বদলাত, অন্যটা নয়।
+     */
+    public function create(Request $request): View
+    {
+        return view('accounts::cheque.create', [
+            'menu' => $this->menu->forUser($request->user()),
+            'parties' => app(PartyRegistry::class)->forPicker(),
+            'banks' => Account::query()->ofMoneyKind(Account::BANK)->active()->orderBy('code')->get(),
+        ]);
+    }
+
+    /** @return array<string, \Closure> */
+    private function sorts(): array
+    {
+        return [
+            'due' => fn ($q) => $q->orderBy('cheque_date')->orderBy('id'),
+            'latest' => fn ($q) => $q->orderByDesc('received_on')->orderByDesc('id'),
+            'amount' => fn ($q) => $q->orderByDesc('amount'),
+        ];
+    }
+
+    /** @return array<string, string> */
+    private function sortLabels(): array
+    {
+        return [
+            'due' => __('accounts::field.cheque_date'),
+            'latest' => __('accounts::sort.latest'),
+            'amount' => __('accounts::sort.amount'),
+        ];
+    }
+
+    public function store(Request $request): RedirectResponse
+    {
+        $companyId = CompanyContext::id();
+
+        $data = $request->validate([
+            'direction' => ['required', Rule::in([Cheque::RECEIVED, Cheque::ISSUED])],
+            'cheque_no' => ['required', 'string', 'max:40'],
+            'bank_name' => ['nullable', 'string', 'max:120'],
+            'cheque_date' => ['required', 'date'],
+            'received_on' => ['nullable', 'date'],
+            'amount' => ['required', 'numeric', 'gt:0'],
+            'party' => ['nullable', 'string', 'max:64'],
+            'bank_account_id' => ['nullable', 'integer',
+                Rule::exists('accounts', 'id')->where('company_id', $companyId)],
+            'narration' => ['nullable', 'string', 'max:500'],
+        ]);
+
+        /*
+         * পক্ষের ঘরটা এক টুকরো ("customer:12") — জাবেদার মতোই।
+         *
+         * দুইটা আলাদা ঘর দিলে একটা ভরে অন্যটা খালি রাখা যেত, আর
+         * খতিয়ানে একটা আধা-পক্ষ বসত।
+         */
+        if (filled($data['party'] ?? null) && str_contains((string) $data['party'], ':')) {
+            [$type, $id] = explode(':', (string) $data['party'], 2);
+            $data['party_type'] = trim($type);
+            $data['party_id'] = (int) $id;
+        }
+
+        $cheque = $this->cheques->create($data);
+
+        return back()->with('saved', __('accounts::message.cheque_saved', ['no' => $cheque->cheque_no]));
+    }
+
+    public function deposit(Request $request, Cheque $cheque): RedirectResponse
+    {
+        $data = $request->validate([
+            'bank_account_id' => ['nullable', 'integer', Rule::exists('accounts', 'id')->where('company_id', CompanyContext::id())],
+        ]);
+
+        $this->cheques->deposit($cheque, $data['bank_account_id'] ?? null);
+
+        return back()->with('saved', __('accounts::message.cheque_deposited'));
+    }
+
+    public function clear(Request $request, Cheque $cheque): RedirectResponse
+    {
+        $data = $request->validate([
+            'bank_account_id' => ['nullable', 'integer', Rule::exists('accounts', 'id')->where('company_id', CompanyContext::id())],
+        ]);
+
+        $was = $cheque->status;
+        $cheque = $this->cheques->clear($cheque, $data['bank_account_id'] ?? null);
+
+        // ⓘ সইয়ের জন্য থামলে অবস্থা বদলায় না — "পাশ হলো" বলা মিথ্যা হত ([[AccountsSignature]])
+        if ($cheque->status === $was) {
+            return back()->with('saved', __('accounts::cheque.awaiting_signature'));
+        }
+
+        return back()->with('saved', __('accounts::message.cheque_cleared'));
+    }
+
+    public function bounce(Request $request, Cheque $cheque): RedirectResponse
+    {
+        $data = $request->validate([
+            'bounce_reason' => ['required', 'string', 'min:3', 'max:255'],
+        ]);
+
+        $was = $cheque->status;
+        $cheque = $this->cheques->bounce($cheque, $data['bounce_reason']);
+
+        if ($cheque->status === $was) {
+            return back()->with('saved', __('accounts::cheque.awaiting_signature'));
+        }
+
+        return back()->with('saved', __('accounts::message.cheque_bounced'));
+    }
+}

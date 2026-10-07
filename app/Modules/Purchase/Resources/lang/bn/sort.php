@@ -1,0 +1,12 @@
+<?php
+
+declare(strict_types=1);
+
+return [
+    'recent' => 'নতুন আগে',
+    'oldest' => 'পুরনো আগে',
+    'largest' => 'বড় অঙ্ক আগে',
+    'supplier' => 'সরবরাহকারী অনুযায়ী',
+    'requisition_waiting' => 'সিদ্ধান্ত বাকিগুলো আগে',
+    'rfq_waiting' => 'জবাবের অপেক্ষায় থাকাগুলো আগে',
+];
