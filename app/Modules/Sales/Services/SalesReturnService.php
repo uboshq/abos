@@ -718,8 +718,16 @@ final class SalesReturnService
         $linesTotal = $invoice === null ? '0' : $invoice->lines()->pluck('amount')
             ->reduce(fn (string $sum, $amount) => bcadd($sum, (string) $amount, 4), '0');
 
+        /*
+         * ⛔ ভাড়া বাদ দিয়ে ভাগ — পুরো-ERP অডিট, ৬ অক্টোবর ২০২৬ (বিক্রয় ⚠️৯; [[AReturnDoesNotRefundTheFreightTest]])। ⓘ বিলের মোটে
+         * বিলে যোগ করা ভাড়াও আছে, আর খাতায় সেটা ভাড়ার আয়ে বসেছিল ([[SalesInvoiceService::postToLedger()]]); মোট ধরে ভাগ করলে
+         * ফেরতে ভাড়ার ভাগও বিক্রয়-ফেরতে ডেবিট হত আর গ্রাহক ফেরত পেতেন — বিক্রি কম, ভাড়ার আয় বেশি। মাল ফেরতে ভাড়া ফেরত নয়;
+         * বিলের ছাড় আর গোল-সংশোধন বিক্রির ভেতরে, তাই সেগুলো আগের মতো ভাগে।
+         */
+        $goods = $invoice === null ? '0' : bcsub((string) $invoice->total, (string) ($invoice->freight_charge ?? '0'), 4);
+
         $credit = bccomp($linesTotal, '0', 4) > 0
-            ? bcdiv(bcmul($gross, (string) $invoice->total, 8), $linesTotal, 4)
+            ? bcdiv(bcmul($gross, $goods, 8), $linesTotal, 4)
             : bcadd($gross, '0', 4);
 
         return [bcsub($credit, $tax, 4), $tax];
