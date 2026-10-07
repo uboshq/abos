@@ -105,6 +105,14 @@ Route::get('v1/app/version', AppVersionController::class)
     ->name('api.app.version');
 
 /*
+ * ⭐ ফোনের ক্র্যাশের খবর — টোকেন ছাড়াও (লগইনের পর্দাতেও অ্যাপ ভাঙে), তাই সীমা কড়া: মিনিটে ১০টা, আর প্রতিটা ঘরের
+ * আকারের সীমা দরজায় ([[AppCrashController]])। কেবল ভুলের খাতায় যায়, কিছু ফেরে না (সমন্বয়কের অ্যাপ-অডিট, ৭ অক্টোবর ২০২৬)।
+ */
+Route::post('v1/app/crash', \App\Http\Controllers\Api\AppCrashController::class)
+    ->middleware('throttle:10,1,app-crash')
+    ->name('api.app.crash');
+
+/*
  * অ্যাপের নিজের দরজা — সিঙ্ক নয়।
  *
  * ── কেন আলাদা গ্রুপ, নিচের গ্রুপের ভিতরে নয় ─────────────────────────

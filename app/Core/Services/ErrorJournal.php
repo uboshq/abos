@@ -98,6 +98,47 @@ final class ErrorJournal
         }
     }
 
+    /**
+     * ⭐ ফোনের ক্র্যাশ — একই খাতায় (সমন্বয়কের অ্যাপ-অডিট, ৭ অক্টোবর ২০২৬: "মাঠের ফোনে অ্যাপ বন্ধ হলে অফিস জানতেই পারে না")।
+     *
+     * ⓘ বাইরে কিছু যায় না — নিজের সার্ভার, নিজের খাতা ([[AppCrashController]])। ফোন পাঠায় কেবল সংস্করণ, পর্দা, ভুলের
+     * লেখা আর stack; ব্যক্তিগত তথ্য বা টোকেন নয়। একই ভুল (ধরন + stack-এর প্রথম লাইন + সংস্করণ) আবার এলে গোনা বাড়ে।
+     * ⚠️ এখানেও কিছু ছোড়া হয় না — ফাইল-লগে নামে, ওপরের [[record()]]-এর মতো।
+     */
+    public function recordFromPhone(string $class, string $message, string $screen, string $version, string $stack, ?int $userId, ?int $companyId): void
+    {
+        try {
+            $top = trim((string) strtok($stack, "\n"));
+            $fingerprint = ErrorEvent::fingerprintFor('phone:'.$class, $version.' '.$top, 0);
+            $existing = ErrorEvent::query()->where('fingerprint', $fingerprint)->where('company_id', $companyId)->first();
+
+            if ($existing !== null) {
+                $existing->forceFill(['times' => $existing->times + 1, 'last_seen_at' => now()])->save();
+
+                return;
+            }
+
+            ErrorEvent::create([
+                'company_id' => $companyId,
+                'user_id' => $userId,
+                'fingerprint' => $fingerprint,
+                'class' => $this->trim('phone:'.$class, 191),
+                'message' => $this->trim($message, 2000),
+                'file' => $this->trim('app '.$version.' · '.$top, 500),
+                'line' => 0,
+                'route' => 'api.app.crash',
+                'method' => 'APP',
+                'path' => $this->trim($screen, 500),
+                'trace' => $this->trim($stack, 4000),
+                'times' => 1,
+                'first_seen_at' => now(),
+                'last_seen_at' => now(),
+            ]);
+        } catch (Throwable $second) {
+            logger()->critical('ফোনের ক্র্যাশ খাতায় লেখা যায়নি।', ['class' => $class, 'while_writing' => $second->getMessage()]);
+        }
+    }
+
     private function isNotAFault(Throwable $e): bool
     {
         foreach (self::NOT_A_FAULT as $ignored) {
