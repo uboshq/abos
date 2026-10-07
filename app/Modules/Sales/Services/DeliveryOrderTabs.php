@@ -33,6 +33,8 @@ final class DeliveryOrderTabs
         'new' => 'sales::do.tab.new',
         'drafts' => 'sales::do.tab.drafts',
         'approval' => 'sales::do.tab.approval',
+        // ⭐ সই হয়েছে, শেষ হয়নি — থাকলেই দেখায় ([[HeldCounterSaleFinisher::signedNotFinished()]])
+        'signed' => 'sales::auto_finish.tab',
         'awaiting' => 'sales::do.tab.awaiting',
         'delivered' => 'sales::do.tab.delivered',
         'all' => 'sales::do.tab.all',
@@ -44,7 +46,7 @@ final class DeliveryOrderTabs
     public const LISTED = ['awaiting', 'delivered', 'all', 'cancelled'];
 
     /** গোনা হয় এমন ট্যাব — নতুন আর ট্র্যাকিং তালিকা নয়। */
-    public const COUNTED = ['drafts', 'approval', 'awaiting', 'delivered', 'all', 'cancelled'];
+    public const COUNTED = ['drafts', 'approval', 'signed', 'awaiting', 'delivered', 'all', 'cancelled'];
 
     public function href(string $tab): string
     {
@@ -52,6 +54,7 @@ final class DeliveryOrderTabs
             'new' => route('sales.direct.create'),
             'drafts' => route('sales.direct.drafts'),
             'approval' => route('sales.direct.drafts', ['tab' => 'approval']),
+            'signed' => route('sales.direct.drafts', ['tab' => 'signed']),
             // ⭐ ডেলিভারি ট্র্যাকিং — প্রতিটা বিক্রি কোথায় (মালিক, ২ অক্টোবর ২০২৬, [[SaleTracking]])
             'tracking' => route('sales.tracking.index'),
             // ⭐ ধাপের ট্যাব এখন "ডেলিভারি চালান তালিকা"-রই — আসল DO-র নিজের ডেস্ক আছে (৩ অক্টোবর ২০২৬)
@@ -102,8 +105,9 @@ final class DeliveryOrderTabs
     public function counts(): array
     {
         return [
-            'drafts' => DirectSaleService::trueDrafts()->count(),
+            'drafts' => HeldCounterSaleFinisher::exceptSigned(DirectSaleService::trueDrafts())->count(),
             'approval' => DirectSaleService::awaitingApproval()->count(),
+            'signed' => HeldCounterSaleFinisher::signedNotFinished()->count(),
             'awaiting' => $this->query('awaiting')->count(),
             'delivered' => $this->query('delivered')->count(),
             'all' => $this->query('all')->count(),

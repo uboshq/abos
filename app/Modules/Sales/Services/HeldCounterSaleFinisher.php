@@ -6,15 +6,19 @@ namespace App\Modules\Sales\Services;
 
 use App\Core\Engines\Approval\HeldForApproval;
 use App\Core\Engines\Audit\AuditEngine;
+use App\Core\Services\NotificationService;
+use App\Core\Services\PermissionSyncer;
 use App\Core\Support\CompanyContext;
 use App\Models\Approval;
 use App\Models\User;
 use App\Modules\Accounts\Models\Voucher;
+use App\Modules\Accounts\Services\VoucherService;
 use App\Modules\Sales\Models\DeliveryChallan;
 use App\Modules\Sales\Models\SalesInvoice;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
 use Throwable;
@@ -70,10 +74,110 @@ final class HeldCounterSaleFinisher
     /** ⓘ অডিটের কাজের নাম — ঘরটা ২৪ অক্ষরের (`audit_trails.action`) */
     public const AUDIT_ACTION = 'auto_finished_signed';
 
+    /**
+     * ⭐ সই হলো, শেষ হলো না — কারণটা বিলের নিরীক্ষায় (লাইভ DRF-0008, ৭ অক্টোবর ২০২৬; fe)।
+     *
+     * ⛔ আগে কারণটা কেবল লগে যেত: বিলটা সইয়ের অপেক্ষাতেও নেই, খোলা খসড়াতেও নেই, আর কাউন্টার বলত "খসড়াটা আর খোলা নেই"।
+     * ⓘ এখন কারণ বিলের গায়ে ([[lastRefusal()]]), তালিকায় নিজের ভাগ ([[signedNotFinished()]]), আর দুজনকে খবর ([[tell()]])।
+     */
+    public const AUDIT_REFUSED = 'auto_finish_refused';
+
+    /** ⭐ খবরের ধরন — পাঠানেওয়ালা আর সইকারী দুজনেই পান ([[tell()]]) */
+    public const NOTICE = 'sales.signed_sale_stuck';
+
     public function __construct(
         private readonly DirectSaleService $sales,
         private readonly AuditEngine $audit,
+        private readonly NotificationService $notices,
     ) {}
+
+    /**
+     * ⭐ সই হয়েছে, শেষ হয়নি — খসড়া বিল আর খসড়া চালান, কাউন্টারের রাখা খসড়া নয় (`counter_draft` খালি) অথচ পর্দার ছবি
+     * আছে (`counter_screen` — সইয়ে পাঠানোর ছাপ), আর কোনো সই অপেক্ষায় নেই ([[DirectSaleService::trueDrafts()]])।
+     *
+     * ⓘ দুই রকম: সবগুলো "হ্যাঁ" অথচ শেষ করতে গিয়ে থামল ([[finish()]] REFUSED — ধরুন ফ্রির দেয়াল), নয় কেউ "না" বলেছেন।
+     * দুটোই আগে কোনো তালিকায় ছিল না।
+     *
+     * @param  \Illuminate\Database\Eloquent\Builder<SalesInvoice>|null  $query
+     * @return \Illuminate\Database\Eloquent\Builder<SalesInvoice>
+     */
+    public static function signedNotFinished($query = null)
+    {
+        return DirectSaleService::trueDrafts($query)
+            ->whereNull('sal_invoices.counter_draft')
+            ->whereNotNull('sal_invoices.counter_screen');
+    }
+
+    /**
+     * আসল খসড়া — উপরের ভাগ বাদে (খসড়ার ট্যাব আর গোনা দুজনেই এটা নেয়)।
+     *
+     * @param  \Illuminate\Database\Eloquent\Builder<SalesInvoice>  $query
+     * @return \Illuminate\Database\Eloquent\Builder<SalesInvoice>
+     */
+    public static function exceptSigned($query)
+    {
+        return $query->where(fn ($q) => $q->whereNotNull('sal_invoices.counter_draft')
+            ->orWhereNull('sal_invoices.counter_screen'));
+    }
+
+    /**
+     * কেন আটকে — শেষ চেষ্টার কারণ (নিরীক্ষা থেকে), নাহলে এখনকার অবস্থা ([[readiness()]] — যেমন "সই প্রত্যাখ্যাত")।
+     */
+    public function lastRefusal(SalesInvoice $invoice): string
+    {
+        $ready = $this->readiness($invoice);
+
+        if ($ready['state'] !== self::FINISHED) {
+            return $ready['reason'];
+        }
+
+        return (string) (\App\Models\AuditTrail::query()
+            ->where('auditable_type', $invoice->getMorphClass())
+            ->where('auditable_id', $invoice->id)
+            ->where('action', self::AUDIT_REFUSED)
+            ->latest('id')
+            ->value('reason') ?? '');
+    }
+
+    /**
+     * ⭐ খসড়ায় ফেরান — সইয়ের পরে থেমে থাকা বিক্রি আবার কাউন্টারের খসড়া হয়, বদলে আবার পাঠানোর জন্য (fe, ৭ অক্টোবর ২০২৬)।
+     *
+     * ⓘ [[DirectSaleService::withdrawHeld()]]-এর একই কাজ, সইয়ের পরের অবস্থার জন্য: কাউন্টারের জমা-ভাউচার (খসড়া) বাতিল, পর্দার
+     * ছবি খসড়ায় ফেরে। দেওয়া সইগুলো ইতিহাসে থাকে। ⛔ কেবল বিক্রির বানানেওয়ালা বা মালিক (সুপার অ্যাডমিন); সারি তালা দিয়ে আবার
+     * দেখা হয়, যাতে একই মুহূর্তে "আবার চেষ্টা" পাকা করে ফেললে খসড়ায় ফেরানো থামে।
+     */
+    public function returnToDraft(SalesInvoice $invoice, User $user): void
+    {
+        DB::transaction(function () use ($invoice, $user): void {
+            $locked = SalesInvoice::query()->lockForUpdate()->find($invoice->getKey());
+
+            if ($locked === null || ! self::signedNotFinished()->whereKey($locked->id)->exists()) {
+                throw ValidationException::withMessages(['invoice' => __('sales::auto_finish.not_stuck')]);
+            }
+
+            $owner = $user->roles->contains('name', PermissionSyncer::SUPER_ADMIN_ROLE);
+
+            if ((int) $locked->created_by !== (int) $user->id && ! $owner) {
+                throw ValidationException::withMessages(['invoice' => __('sales::auto_finish.return_only_maker')]);
+            }
+
+            $vouchers = Voucher::acrossBranches()
+                ->where('origin', Voucher::ORIGIN_COUNTER)
+                ->where('against_type', SalesInvoice::drillSourceType())
+                ->where('against_id', $locked->id)
+                ->get();
+
+            foreach ($vouchers as $voucher) {
+                if (! $voucher->isCancelled()) {
+                    app(VoucherService::class)->cancel($voucher, __('sales::auto_finish.returned_reason'));
+                }
+            }
+
+            $locked->update(['counter_draft' => $locked->counter_screen, 'counter_screen' => null]);
+
+            $this->audit->recordAction($locked, 'returned_to_draft', __('sales::auto_finish.returned_reason'));
+        });
+    }
 
     /**
      * অনুমোদনের কাগজটা কোন কাউন্টার-বিলের — চালান, বিল, বা বিলের বিপরীতে জমা।
@@ -149,12 +253,17 @@ final class HeldCounterSaleFinisher
      *
      * @return array{state: string, reason: string}
      */
-    public function finish(SalesInvoice $invoice, ?User $signer = null): array
+    public function finish(SalesInvoice $invoice, ?User $signer = null, bool $tell = true): array
     {
         $ready = $this->readiness($invoice);
 
         if ($ready['state'] !== self::FINISHED) {
             $this->log($invoice, $ready);
+
+            // ⓘ বানানেওয়ালা নেই — সই পড়েছে, তবু শেষ হবে না; সইকারীকে জানানো (বিলটা "সই হয়েছে, শেষ হয়নি" ভাগে)
+            if ($ready['state'] === self::MAKER_GONE && $tell) {
+                $this->stuck($invoice, $signer, $ready['reason']);
+            }
 
             return $ready;
         }
@@ -190,6 +299,15 @@ final class HeldCounterSaleFinisher
 
         if (isset($result)) {
             $this->log($invoice, $result);
+
+            /*
+             * ⭐ থামল — কারণটা বিলের গায়ে আর দুজনকে খবর (লাইভ DRF-0008)। ⚠️ লগইন ফেরত দেওয়ার **পরে**: বানানেওয়ালার নামে
+             * চলতে থাকলে [[NotificationService::send()]] তাঁর নিজের খবর নিজেকে পাঠাত না ([[SignedChallanConfirmer]]-এর শিক্ষা)।
+             * ⓘ হাতের "আবার চেষ্টা" খবর পাঠায় না — যিনি চাপলেন তিনি পর্দাতেই কারণ দেখেন; কারণটা তবু লেখা হয়।
+             */
+            if ($result['state'] === self::REFUSED) {
+                $this->stuck($invoice, $signer, $result['reason'], $tell);
+            }
 
             return $result;
         }
@@ -295,6 +413,39 @@ final class HeldCounterSaleFinisher
                 'maker' => $maker->name,
             ]),
         );
+    }
+
+    /** কারণ নিরীক্ষায় — আর (চাইলে) বানানেওয়ালা ও সইকারীকে খবর। কোনো ব্যর্থতা বাইরে যায় না। */
+    private function stuck(SalesInvoice $invoice, ?User $signer, string $reason, bool $tell = true): void
+    {
+        try {
+            $this->audit->recordAction($invoice, self::AUDIT_REFUSED, $reason);
+        } catch (Throwable $e) {
+            report($e);
+        }
+
+        if (! $tell) {
+            return;
+        }
+
+        $people = collect([User::query()->find((int) $invoice->created_by), $signer])
+            ->filter()->unique(fn (User $u) => $u->id);
+
+        foreach ($people as $person) {
+            try {
+                $this->notices->send(
+                    $person,
+                    self::NOTICE,
+                    __('sales::auto_finish.sale_stuck_title', ['no' => $invoice->document_no]),
+                    __('sales::auto_finish.sale_stuck_body', ['reason' => $reason]),
+                    route('sales.direct.drafts', ['tab' => 'signed']),
+                    // ⓘ সইকারী নিজেই সই দিলেন, কিন্তু থেমে যাওয়াটা দেখেননি — তাই নিজের কাজ হলেও খবর
+                    evenToSelf: true,
+                );
+            } catch (Throwable $e) {
+                report($e);
+            }
+        }
     }
 
     /** @param  array{state: string, reason: string}  $result */

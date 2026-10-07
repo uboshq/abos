@@ -1237,6 +1237,7 @@ return [
             'hand_loan_due_note' => 'Overdue, or due within thirty days. ⓘ Loans with no date never send one.',
             'backup_failed' => 'When a backup fails',
             'signed_challan_stuck' => 'When a signed challan could not be confirmed',
+            'signed_sale_stuck' => 'When a signed counter sale could not be finished',
             'delivery_stage' => 'When a sale moves to its next delivery step',
             'order_credit_held' => 'When a sales order is held at the credit limit',
             'order_awaits_you' => 'When a sales order waits for my signature',

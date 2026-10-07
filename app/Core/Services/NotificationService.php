@@ -48,6 +48,11 @@ final class NotificationService
         string $title,
         ?string $body = null,
         ?string $url = null,
+        /*
+         * ⓘ নিজের কাজের খবরও — কেবল যখন কাজটার **ফল** তিনি দেখেননি: সই দিলেন, তারপর সইয়ের পরের ধাপ থেমে গেল
+         * (লাইভ DRF-0008, ৭ অক্টোবর ২০২৬; [[HeldCounterSaleFinisher]])। ডিফল্টে বন্ধ — বাকি সব আগের মতো।
+         */
+        bool $evenToSelf = false,
     ): ?Notification {
         $userId = $user instanceof User ? $user->id : $user;
 
@@ -58,7 +63,7 @@ final class NotificationService
          * নিজেকে "আপনার দাবি অনুমোদিত" পাঠাত। ওরকম একটা খবর ঘণ্টায়
          * বসে থাকে, কিছু জানায় না, শুধু সংখ্যাটা বাড়ায়।
          */
-        if ($userId === \App\Core\Support\Actor::userId()) {
+        if (! $evenToSelf && $userId === \App\Core\Support\Actor::userId()) {
             return null;
         }
 

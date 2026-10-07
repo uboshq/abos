@@ -57,6 +57,8 @@ final class NotificationKinds
              * ⓘ পায় কেবল চালান যিনি বানিয়েছিলেন ([[SignedChallanConfirmer]])।
              */
             'sales.signed_challan_stuck' => 'core.notify.kind.signed_challan_stuck',
+            // ⭐ সই হলো, অথচ কাউন্টারের বিক্রি শেষ হলো না — পান বানানেওয়ালা আর সইকারী (লাইভ DRF-0008; [[HeldCounterSaleFinisher]])
+            'sales.signed_sale_stuck' => 'core.notify.kind.signed_sale_stuck',
 
             /*
              * ⭐ ডেলিভারির ধাপ বদলাল — ২ অক্টোবর ২০২৬ ([[TrackingNotices]])।
@@ -106,6 +108,8 @@ final class NotificationKinds
 
         /* ⓘ একই কারণ: সই হয়ে গেছে, তবু চালান তাঁর টেবিলে আটকে — তিনি না ধরলে মাল নড়ে না */
         'sales.signed_challan_stuck',
+        /* ⓘ একই কারণ: সই হয়ে গেছে, তবু বিক্রি থেমে — কেউ না ধরলে বিল কোথাও দেখা যায় না */
+        'sales.signed_sale_stuck',
 
         /*
          * ⭐ সূচির গোটা মানেই "না চাইতেই এসে পৌঁছাবে"।

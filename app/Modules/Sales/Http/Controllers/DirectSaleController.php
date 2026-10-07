@@ -30,6 +30,7 @@ use App\Modules\Sales\Models\SalesInvoice;
 use App\Modules\Sales\Services\CounterSaleSources;
 use App\Modules\Sales\Services\CreditExposure;
 use App\Modules\Sales\Services\DirectSaleService;
+use App\Modules\Sales\Services\HeldCounterSaleFinisher;
 use App\Modules\Sales\Services\SaleNumber;
 use App\Modules\Sales\Services\MarginGuard;
 use App\Modules\Sales\Services\SaleEditor;
@@ -949,10 +950,17 @@ class DirectSaleController extends Controller implements HasMiddleware
     {
         $q = trim((string) $request->query('q', ''));
 
-        /* ⭐ দুই ট্যাব — খসড়া আর অনুমোদনের অপেক্ষায় (মালিক, ২৮ সেপ্টেম্বর ২০২৬) */
-        $tab = $request->query('tab') === 'approval' ? 'approval' : 'drafts';
+        /* ⭐ দুই ট্যাব — খসড়া আর অনুমোদনের অপেক্ষায় (মালিক, ২৮ সেপ্টেম্বর ২০২৬); ⭐ তৃতীয় — সই হয়েছে, শেষ হয়নি
+           (লাইভ DRF-0008, fe, ৭ অক্টোবর ২০২৬; [[HeldCounterSaleFinisher::signedNotFinished()]]) */
+        $tab = in_array($request->query('tab'), ['approval', 'signed'], true) ? (string) $request->query('tab') : 'drafts';
 
-        $query = ($tab === 'approval' ? DirectSaleService::awaitingApproval() : DirectSaleService::trueDrafts())
+        $query = match ($tab) {
+            'approval' => DirectSaleService::awaitingApproval(),
+            'signed' => HeldCounterSaleFinisher::signedNotFinished(),
+            default => HeldCounterSaleFinisher::exceptSigned(DirectSaleService::trueDrafts()),
+        };
+
+        $query = $query
             ->with(['customer.location', 'lines.challanLine.challan', 'lines.product'])
             ->when($q !== '', fn ($query) => $query->search($q))
             ->orderByDesc('id');
@@ -962,13 +970,17 @@ class DirectSaleController extends Controller implements HasMiddleware
         return view('sales::direct.drafts', [
             'menu' => $this->menu->forUser($request->user()),
             'drafts' => $drafts,
-            'why' => $this->whyStuck($drafts->getCollection()),
+            // ⓘ সইয়ের পরে থামা বিক্রির কারণ — শেষ চেষ্টার, বিলের নিরীক্ষা থেকে
+            'why' => $tab === 'signed'
+                ? $drafts->getCollection()->mapWithKeys(fn (SalesInvoice $d) => [$d->id => app(HeldCounterSaleFinisher::class)->lastRefusal($d)])->all()
+                : $this->whyStuck($drafts->getCollection()),
             // ⭐ যোগফলের পট্টি — এই ট্যাবের গোটা ছাঁকনির মোট, পাতার নয় (মালিক, ৫ অক্টোবর ২০২৬)
             'grand' => $this->grandTotals($query, ['total' => 't.total']),
             'tab' => $tab,
             'tabCounts' => [
-                'drafts' => DirectSaleService::trueDrafts()->count(),
+                'drafts' => HeldCounterSaleFinisher::exceptSigned(DirectSaleService::trueDrafts())->count(),
                 'approval' => DirectSaleService::awaitingApproval()->count(),
+                'signed' => HeldCounterSaleFinisher::signedNotFinished()->count(),
             ],
             'held' => $drafts->getCollection()->mapWithKeys(
                 fn (SalesInvoice $d) => [$d->id => DirectSaleService::isHeldForSignature($d)])->all(),
@@ -1053,6 +1065,34 @@ class DirectSaleController extends Controller implements HasMiddleware
             ->with('saved', __('sales::message.held_withdrawn', ['no' => $invoice->document_no]));
     }
 
+    /**
+     * ⭐ সইয়ের পরে থামা বিক্রি — আবার চেষ্টা ([[HeldCounterSaleFinisher::finish()]], একই পথ; লাইভ DRF-0008, ৭ অক্টোবর ২০২৬)।
+     *
+     * ⓘ বাধাটা সরে গেলে (ধরুন ফ্রির দেয়াল তোলা) একই finisher বিক্রিটা পাকা করে; না হলে কারণটা পর্দায় আসে আর বিলের গায়ে লেখা
+     * হয়। খবর যায় না — যিনি চাপলেন তিনি এখনই দেখছেন।
+     */
+    public function retrySigned(Request $request, SalesInvoice $invoice): RedirectResponse
+    {
+        abort_unless(HeldCounterSaleFinisher::signedNotFinished()->whereKey($invoice->id)->exists(), 404);
+
+        $result = app(HeldCounterSaleFinisher::class)->finish($invoice, $request->user(), tell: false);
+
+        return $result['state'] === HeldCounterSaleFinisher::FINISHED
+            ? redirect()->route('sales.direct.drafts', ['tab' => 'signed'])
+                ->with('saved', __('sales::auto_finish.retried', ['no' => $invoice->document_no]))
+            : redirect()->route('sales.direct.drafts', ['tab' => 'signed'])
+                ->withErrors(['invoice' => __('sales::auto_finish.retry_stopped', ['no' => $invoice->document_no, 'reason' => $result['reason']])]);
+    }
+
+    /** ⭐ সইয়ের পরে থামা বিক্রি — খসড়ায় ফেরান ([[HeldCounterSaleFinisher::returnToDraft()]]); কাউন্টারে খসড়া হয়ে খোলে। */
+    public function returnSigned(Request $request, SalesInvoice $invoice): RedirectResponse
+    {
+        app(HeldCounterSaleFinisher::class)->returnToDraft($invoice, $request->user());
+
+        return redirect()->route('sales.direct.create', ['draft' => $invoice->id])
+            ->with('saved', __('sales::auto_finish.returned', ['no' => $invoice->document_no]));
+    }
+
     /** খসড়া নিষ্ক্রিয় — তালিকার বোতাম ([[DirectSaleService::pauseDraft()]]). */
     public function pauseDraft(SalesInvoice $invoice): RedirectResponse
     {
@@ -1096,7 +1136,9 @@ class DirectSaleController extends Controller implements HasMiddleware
             ->groupBy('customer_id')
             ->map(fn (Collection $drafts) => $drafts->map(fn (SalesInvoice $draft) => [
                 'id' => (int) $draft->id,
-                'no' => (string) $draft->document_no,
+                /* ⭐ সই হয়েছে, শেষ হয়নি — নম্বরের পাশেই বলে, আর চাপলে নিজের ট্যাবে (কারণ, আবার চেষ্টা, খসড়ায় ফেরান);
+                   ⛔ আগে "খসড়া" হয়ে কাউন্টারে খুলত আর বলত "খসড়াটা আর খোলা নেই" (লাইভ DRF-0008) */
+                'no' => (string) $draft->document_no.($this->signedNotFinished($draft, $held) ? ' · '.__('sales::auto_finish.tab') : ''),
                 // ⓘ ক্রেতা না বাছা থাকলে ড্রপডাউনে সবার খসড়া আসে — তখন নামটাই পরিচয়
                 'customer' => (string) ($draft->customer?->name() ?? ''),
                 'total' => (string) $draft->total,
@@ -1105,9 +1147,11 @@ class DirectSaleController extends Controller implements HasMiddleware
                 /* ⭐ সব ভাগ কাউন্টারেই খোলে — মালিকের অনুমোদিত নকশা, ২৮ সেপ্টেম্বর ২০২৬; সইয়ের
                    অপেক্ষারটা কেবল দেখার জন্য ([[resumeFrom()]] `viewOnly`)। ⓘ পর্দার ছবি ছাড়া
                    পুরনো বিক্রি (এই বদলের আগের) দেখানোর কিছু নেই — সেটা অনুমোদনের পাতায়। */
-                'url' => $held->has($draft->id) && $draft->counter_screen === null
-                    ? $this->approvalUrlFor($draft)
-                    : route('sales.direct.create', ['draft' => $draft->id]),
+                'url' => match (true) {
+                    $this->signedNotFinished($draft, $held) => route('sales.direct.drafts', ['tab' => 'signed']),
+                    $held->has($draft->id) && $draft->counter_screen === null => $this->approvalUrlFor($draft),
+                    default => route('sales.direct.create', ['draft' => $draft->id]),
+                },
             ])->values()->all())
             ->all();
 
@@ -1127,6 +1171,12 @@ class DirectSaleController extends Controller implements HasMiddleware
         }
 
         return $groups;
+    }
+
+    /** ⓘ [[HeldCounterSaleFinisher::signedNotFinished()]]-এর একই শর্ত, তোলা সারিতে — অপেক্ষায় নয়, রাখা খসড়া নয়, ছবি আছে */
+    private function signedNotFinished(SalesInvoice $draft, \Illuminate\Support\Collection $held): bool
+    {
+        return ! $held->has($draft->id) && $draft->counter_draft === null && $draft->counter_screen !== null;
     }
 
     /**

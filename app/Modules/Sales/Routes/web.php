@@ -178,6 +178,9 @@ Route::middleware('auth')->prefix('sales')->group(function () {
         Route::post('/drafts/{invoice}/resume', [DirectSaleController::class, 'resumeDraft'])->name('draft_resume');
         // ⓘ সইয়ের অপেক্ষা থেকে খসড়ায় ফেরানো — কেবল যিনি পাঠিয়েছেন (মালিক, ২৮ সেপ্টেম্বর ২০২৬)
         Route::post('/drafts/{invoice}/withdraw', [DirectSaleController::class, 'withdrawHeld'])->name('draft_withdraw');
+        // ⭐ সই হয়েছে, শেষ হয়নি — আবার চেষ্টা আর খসড়ায় ফেরান (লাইভ DRF-0008, ৭ অক্টোবর ২০২৬)
+        Route::post('/drafts/{invoice}/retry', [DirectSaleController::class, 'retrySigned'])->name('signed_retry');
+        Route::post('/drafts/{invoice}/return', [DirectSaleController::class, 'returnSigned'])->name('signed_return');
 
         /*
          * এই মালে কতটা ফ্রি — সারি যোগ করার আগে জিজ্ঞাসা।

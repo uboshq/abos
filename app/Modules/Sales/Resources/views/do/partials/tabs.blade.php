@@ -10,7 +10,9 @@
 <nav class="mb-3 flex flex-wrap gap-2" aria-label="{{ __('sales::menu.delivery_orders') }}">
     @foreach (\App\Modules\Sales\Services\DeliveryOrderTabs::TABS as $key => $label)
         {{-- ⓘ চাবি ছাড়া যে পাতা খোলে না, তার ট্যাবও নয় — চাপলে ৪০৩ দেখানোর চেয়ে না দেখানো ভালো --}}
-        @continue (in_array($key, ['new', 'drafts', 'approval'], true) && ! $canSell)
+        @continue (in_array($key, ['new', 'drafts', 'approval', 'signed'], true) && ! $canSell)
+        {{-- ⓘ সই হয়েছে, শেষ হয়নি — কিছু না থাকলে ট্যাবটাই নয় (খোলা থাকলে ছাড়া) --}}
+        @continue ($key === 'signed' && ($doCounts['signed'] ?? 0) === 0 && $active !== 'signed')
         @continue ($key === 'tracking' && ! (auth()->user()?->can('sales.delivery.view') ?? false))
         <a href="{{ $doTabs->href($key) }}"
            @if ($active === $key) aria-current="page" @endif

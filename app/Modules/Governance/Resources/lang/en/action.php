@@ -66,4 +66,6 @@ return [
     'three_hands_override' => 'Same person on a payment: proposed/signed/paid',
     'maker_checker_override' => 'Own voucher posted by its writer',
     'adjusting_reversed' => 'Adjusting journal reversed on its date',
+    'auto_finish_refused' => 'Sale not finished after signing',
+    'returned_to_draft' => 'Signed-but-stuck sale returned to draft',
 ];

@@ -60,7 +60,9 @@
             'key' => 'actions',
             'label' => __('core.table.actions'),
             'width' => '24rem',
-            'render' => fn ($d) => view('sales::direct.partials.draft-actions', ['draft' => $d, 'why' => $why[$d->id] ?? '', 'held' => $held[$d->id] ?? false]),
+            'render' => fn ($d) => $tab === 'signed'
+                ? view('sales::direct.partials.signed-actions', ['draft' => $d])
+                : view('sales::direct.partials.draft-actions', ['draft' => $d, 'why' => $why[$d->id] ?? '', 'held' => $held[$d->id] ?? false]),
         ],
     ];
 @endphp
@@ -87,12 +89,12 @@
     {{-- ⭐ ডেলিভারি অর্ডারের ট্যাব-সারি — এই পাতাটাই DO-র "খসড়া" আর "অনুমোদনের অপেক্ষায়"
          ট্যাব (মালিকের অনুমোদিত নকশা, ধাপ ৩, ২৮ সেপ্টেম্বর ২০২৬: খসড়া তালিকা DO মেনুর ভিতরে)।
          ⓘ নিশ্চিত করে সইয়ে পাঠানো বিক্রি খসড়া নয়, তাই আলাদা ট্যাবে; ওখানে কেবল দেখা। --}}
-    @include('sales::do.partials.tabs', ['active' => $tab === 'approval' ? 'approval' : 'drafts'])
+    @include('sales::do.partials.tabs', ['active' => $tab])
 
     <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
         <form method="GET" class="contents">
-            @if ($tab === 'approval')
-                <input type="hidden" name="tab" value="approval">
+            @if ($tab !== 'drafts')
+                <input type="hidden" name="tab" value="{{ $tab }}">
             @endif
             <x-ui.toolbar :title="__('sales::menu.direct_drafts')"
                           :columns="$columns" :search-placeholder="__('sales::message.invoice_search')">
