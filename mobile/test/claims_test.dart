@@ -69,6 +69,9 @@ void main() {
     expect(c.head, 'যাতায়াত খরচ');
     expect(c.stateLabel, 'অনুমোদিত');
     expect(Claim.fromJson({'status': 'paid'}).stateLabel, 'পরিশোধিত');
+    // ⛔ নতুন দাবি সইয়ের আগে — "submitted" (cb b1a1e7a2, ৭ অক্টোবর ২০২৬: মালিকের সই ছাড়া পার নয়); কখনো "অনুমোদিত" নয়
+    expect(Claim.fromJson({'status': 'submitted'}).stateLabel, 'সইয়ের অপেক্ষায়');
+    expect(Claim.fromJson({'status': 'submitted'}).stateLabel, isNot(contains('অনুমোদিত')));
     expect(Claim.fromJson({'status': 'somethingNew'}).stateLabel, 'অপেক্ষায়');
   });
 
