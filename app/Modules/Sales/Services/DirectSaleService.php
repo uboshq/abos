@@ -2343,17 +2343,16 @@ final class DirectSaleService
 
         $layers = app(\App\Modules\Inventory\Services\CostLayerService::class);
 
-        $cost = bccomp($layers->qtyOnHand($product), $qty, 4) >= 0
-            ? $layers->issue(
-                product: $product,
-                qty: $qty,
-                sourceType: $sourceType,
-                sourceId: (int) $challan->id,
-                documentNo: $challan->document_no,
-                date: $challan->trx_date,
-                batch: $chosen,
-            )['cost']
-            : bcmul((string) ($product->purchase_price ?? '0'), $qty, 4);
+        // ⓘ স্তরে যতটুকু, FIFO-তে; কেবল ঘাটতিটুকু কেনা দামে (ⓘ১২, [[CostLayerService::issueOrPrice()]])
+        $cost = $layers->issueOrPrice(
+            product: $product,
+            qty: $qty,
+            sourceType: $sourceType,
+            sourceId: (int) $challan->id,
+            documentNo: $challan->document_no,
+            date: $challan->trx_date,
+            batch: $chosen,
+        );
 
         $this->freeFromStockCost[$sourceType] = bcadd($this->freeFromStockCost[$sourceType] ?? '0', $cost, 4);
     }

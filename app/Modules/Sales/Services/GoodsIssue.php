@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Sales\Services;
 
 use App\Core\Support\DocumentStatus;
+use App\Models\FinancialYear;
 use App\Modules\Sales\Models\DeliveryChallan;
 use App\Modules\Sales\Models\SalesInvoice;
 
@@ -47,7 +48,15 @@ final class GoodsIssue
          * ⓘ বিলের তারিখ মাল বেরোনোর দিন — আয় স্বীকৃত হয় মাল বেরোনোয়, নিশ্চিতে নয় (IFRS ১৫); খরচও আজকের ([[DeliveryChallanService::issueHeldGoods()]])।
          */
         if ($draft !== null) {
-            $draft->update(['trx_date' => now()->toDateString()]);
+            /*
+             * ⛔ তারিখের সাথে অর্থবছরও — পুরো-ERP অডিট, ৬ অক্টোবর ২০২৬ (বিক্রয় ⓘ১২; [[TheGateBillTakesTodaysYearTest]])। ⓘ আগে কেবল
+             * তারিখ আজকের হত, বছর পুরনো থাকত: জুনে লেখা বিল জুলাইয়ে গেট পার হলে নতুন বছরের তারিখে, পুরনো বছরের নম্বরের ঘরে। আজকের
+             * কোনো বছর না পেলে আগেরটাই — খাতা নিজে তারিখ ধরে বছর খোঁজে আর তখন পরিষ্কার কথায় থামে।
+             */
+            $draft->update([
+                'trx_date' => now()->toDateString(),
+                'financial_year_id' => FinancialYear::forDate(now())?->id ?? $draft->financial_year_id,
+            ]);
         }
 
         $invoice = $draft === null ? null : $this->invoices->confirm($draft->fresh(['lines']), '0');

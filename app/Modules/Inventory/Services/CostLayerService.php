@@ -39,6 +39,39 @@ final class CostLayerService
      * বিনামূল্যের মাল হলে দর শূন্য — কিন্তু সেটা তখন লেখা থাকে, অনুমান
      * করা হয় না।
      */
+    /**
+     * ⭐ স্তরে যতটুকু আছে FIFO-তে, বাকিটুকু কেনা দামে — পুরো-ERP অডিট, ৬ অক্টোবর ২০২৬ (বিক্রয় ⓘ১২; [[FreeGoodsTakeTheirCostFromTheLayersFirstTest]])।
+     *
+     * ⓘ ফ্রি মাল আর উপহার ([[DirectSaleService::giveFromStock()]], [[GiftIssuer::bookTheCost()]]) আগে স্তরে পুরোটা না কুলালে পুরো
+     * পরিমাণ কেনা দামে ধরত, স্তর না ছুঁয়ে — যেটুকু স্তরে ছিল তাও FIFO-র বাইরে, আর সেই সস্তা বা দামি স্তর পরের বিক্রিতে পড়ে থাকত।
+     * এখন যতটুকু স্তরে আছে ততটুকু [[issue()]]-এ (একই FIFO, একই লটের নিয়ম), কেবল ঘাটতিটুকু পণ্যের কেনা দামে — খোলা মজুদের মতো
+     * স্তরহীন মাল দেওয়া আগের মতো চলে, থামে না। ঘাটতি না থাকলে আগের [[issue()]] হুবহু।
+     *
+     * @return string মোট খরচ
+     */
+    public function issueOrPrice(
+        Product $product,
+        string $qty,
+        string $sourceType,
+        int $sourceId,
+        ?string $documentNo = null,
+        Carbon|string|null $date = null,
+        ?Batch $batch = null,
+    ): string {
+        $have = $this->qtyOnHand($product);
+        $fromLayers = bccomp($have, $qty, 4) >= 0 ? $qty : (bccomp($have, '0', 4) > 0 ? $have : '0');
+
+        $cost = bccomp($fromLayers, '0', 4) > 0
+            ? $this->issue($product, $fromLayers, $sourceType, $sourceId, $documentNo, $date, $batch)['cost']
+            : '0';
+
+        $short = bcsub($qty, $fromLayers, 4);
+
+        return bccomp($short, '0', 4) > 0
+            ? bcadd($cost, bcmul((string) ($product->purchase_price ?? '0'), $short, 4), 4)
+            : $cost;
+    }
+
     public function receive(
         Product $product,
         string $qty,

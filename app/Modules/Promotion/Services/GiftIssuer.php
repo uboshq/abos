@@ -363,17 +363,16 @@ final class GiftIssuer
          * ⓘ স্তরে কুলালে FIFO খরচ, স্তর থেকে টেনে; না কুলালে আগের মতো কেনা দামে, স্তর না ছুঁয়ে — খরচের স্তর ছাড়া তাকে
          * আসা মাল (পুরনো খোলা মজুদ) উপহারে দেওয়া আগে চলত, এখনো চলে; কেবল খাতায় খরচটা এখন ওঠে।
          */
-        $cost = bccomp($layers->qtyOnHand($product), $qty, 4) >= 0
-            ? $layers->issue(
-                product: $product,
-                qty: $qty,
-                sourceType: 'promotion:gift',
-                sourceId: (int) $issue->id,
-                documentNo: $issue->code,
-                date: $date,
-                batch: $batch,
-            )['cost']
-            : bcmul((string) ($product->purchase_price ?? '0'), $qty, 4);
+        // ⓘ স্তরে যতটুকু, FIFO-তে; কেবল ঘাটতিটুকু কেনা দামে (ⓘ১২, [[CostLayerService::issueOrPrice()]])
+        $cost = $layers->issueOrPrice(
+            product: $product,
+            qty: $qty,
+            sourceType: 'promotion:gift',
+            sourceId: (int) $issue->id,
+            documentNo: $issue->code,
+            date: $date,
+            batch: $batch,
+        );
 
         $issue->forceFill(['unit_cost' => bcdiv($cost, $qty, 4)])->save();
 
