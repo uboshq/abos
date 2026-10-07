@@ -162,9 +162,13 @@ class DeliveryChallan extends Model implements Drillable, ShowsItselfForSigning
             return (string) $this->carrier_name;
         }
 
-        return $this->carrier_id !== null
-            ? (string) \App\Modules\Supplier\Models\Supplier::query()->find($this->carrier_id)?->name()
-            : '';
+        return $this->carrier_id !== null ? (string) $this->carrier?->name() : '';
+    }
+
+    /** ⓘ তালিকার বাহক — সম্পর্ক, যাতে পাতায় একবারে আসে ([[transportLabel()]]) */
+    public function carrier(): BelongsTo
+    {
+        return $this->belongsTo(\App\Modules\Supplier\Models\Supplier::class, 'carrier_id');
     }
 
     /**

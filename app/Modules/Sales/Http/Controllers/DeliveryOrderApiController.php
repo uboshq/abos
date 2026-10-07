@@ -7,6 +7,7 @@ namespace App\Modules\Sales\Http\Controllers;
 use App\Core\Engines\Approval\ApprovalEngine;
 use App\Core\Support\PhoneInput;
 use App\Http\Controllers\Controller;
+use App\Models\Approval;
 use App\Modules\Customer\Models\Customer;
 use App\Modules\Inventory\Models\Product;
 use App\Modules\Sales\Models\DeliveryOrder;
@@ -14,6 +15,7 @@ use App\Modules\Sales\Models\DeliveryOrderLine;
 use App\Modules\Sales\Models\SalesOrder;
 use App\Modules\Sales\Services\DeliveryOrderService;
 use App\Modules\Sales\Support\DeliveryOrderStatus;
+use App\Modules\Sales\Support\LatestApprovals;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
@@ -56,8 +58,10 @@ class DeliveryOrderApiController extends Controller implements HasMiddleware
                 fn ($q) => $q->where('status', PhoneInput::text($request, 'status')))
             ->latest('trx_date')->latest('id')->paginate(50);
 
+        $latest = LatestApprovals::of($rows->items(), DeliveryOrder::class, DeliveryOrderStatus::SUPERVISOR_PENDING, DeliveryOrderService::APPROVAL_ACTION);
+
         return response()->json([
-            'orders' => collect($rows->items())->map(fn (DeliveryOrder $o) => $this->facts($o, false))->values(),
+            'orders' => collect($rows->items())->map(fn (DeliveryOrder $o) => $this->facts($o, false, $latest))->values(),
             'next_page' => $rows->hasMorePages() ? $rows->currentPage() + 1 : null,
         ]);
     }
@@ -167,12 +171,16 @@ class DeliveryOrderApiController extends Controller implements HasMiddleware
         return DeliveryOrder::query()->where('public_id', $id)->firstOrFail();
     }
 
-    /** @return array<string, mixed> */
-    private function facts(DeliveryOrder $o, bool $withLines): array
+    /**
+     * @param  array<int, Approval>|null  $latest  পুরো পাতার, এক ডাকে — না থাকা মানে অনুমোদন নেই; `null` হলে (একটা খোলা) এখানে
+     * @return array<string, mixed>
+     */
+    private function facts(DeliveryOrder $o, bool $withLines, ?array $latest = null): array
     {
-        $o->loadMissing(['customer', 'lines.product']);
+        // ⓘ সারি কেবল খুললে; তালিকার অনুমোদন এক ডাকে ([[LatestApprovals]]) — অডিট ফোন ⚠️১৭
+        $o->loadMissing($withLines ? ['customer', 'lines.product'] : ['customer']);
         $pending = $o->status === DeliveryOrderStatus::SUPERVISOR_PENDING
-            ? app(ApprovalEngine::class)->latestFor($o, DeliveryOrderService::APPROVAL_ACTION) : null;
+            ? ($latest === null ? app(ApprovalEngine::class)->latestFor($o, DeliveryOrderService::APPROVAL_ACTION) : ($latest[(int) $o->id] ?? null)) : null;
         $user = request()->user();
 
         return [

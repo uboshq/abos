@@ -7,6 +7,7 @@ namespace App\Modules\Sales\Http\Controllers;
 use App\Core\Engines\Approval\ApprovalEngine;
 use App\Core\Support\PhoneInput;
 use App\Http\Controllers\Controller;
+use App\Models\Approval;
 use App\Models\User;
 use App\Modules\Customer\Models\Customer;
 use App\Modules\Inventory\Models\Product;
@@ -14,6 +15,7 @@ use App\Modules\Sales\Models\SalesOrder;
 use App\Modules\Sales\Models\SalesOrderLine;
 use App\Modules\Sales\Services\OrderProgress;
 use App\Modules\Sales\Services\SalesOrderService;
+use App\Modules\Sales\Support\LatestApprovals;
 use App\Modules\Sales\Support\SalesOrderStatus;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -63,9 +65,11 @@ class SalesOrderApiController extends Controller implements HasMiddleware
 
         // ⓘ ওয়েবের আদেশ-তালিকার চিপের একই গোনা, পঞ্চাশটায় একবার ([[OrderProgress::compute()]])
         $progress = app(OrderProgress::class)->compute($rows->getCollection());
+        $latest = LatestApprovals::of($rows->items(), SalesOrder::class, SalesOrderStatus::AWAITING_APPROVAL, SalesOrderService::APPROVAL_ACTION);
 
         return response()->json([
-            'orders' => collect($rows->items())->map(fn (SalesOrder $o) => $this->facts($o, false, $progress[(int) $o->id] ?? null))->values(),
+            'orders' => collect($rows->items())
+                ->map(fn (SalesOrder $o) => $this->facts($o, false, $progress[(int) $o->id] ?? null, $latest))->values(),
             'next_page' => $rows->hasMorePages() ? $rows->currentPage() + 1 : null,
         ]);
     }
@@ -250,13 +254,19 @@ class SalesOrderApiController extends Controller implements HasMiddleware
             })->values()->all();
     }
 
-    /** @return array<string, mixed> */
-    private function facts(SalesOrder $o, bool $withLines, ?array $progress = null): array
+    /**
+     * ⓘ তালিকা পুরো পাতার `$latest` আগেই এক ডাকে আনে ([[LatestApprovals]]) — সেখানে না থাকা মানে অনুমোদন নেই; একটা
+     * আদেশ খুললে (`null`) এখানে। সারির পণ্য কেবল খুললে — তালিকায় লাগে না (অডিট ফোন ⚠️১৭: আগে তালিকার প্রতিটা আদেশে সারি আর পণ্যের আলাদা ডাক যেত)।
+     *
+     * @param  array<int, Approval>|null  $latest
+     * @return array<string, mixed>
+     */
+    private function facts(SalesOrder $o, bool $withLines, ?array $progress = null, ?array $latest = null): array
     {
-        $o->loadMissing(['customer', 'lines.product']);
+        $o->loadMissing($withLines ? ['customer', 'lines.product'] : ['customer']);
         $progress ??= app(OrderProgress::class)->of($o);
         $pending = $o->status === SalesOrderStatus::AWAITING_APPROVAL
-            ? app(ApprovalEngine::class)->latestFor($o, SalesOrderService::APPROVAL_ACTION) : null;
+            ? ($latest === null ? app(ApprovalEngine::class)->latestFor($o, SalesOrderService::APPROVAL_ACTION) : ($latest[(int) $o->id] ?? null)) : null;
         $user = request()->user();
 
         return [

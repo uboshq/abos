@@ -65,14 +65,21 @@ class DirectSaleApiController extends Controller implements HasMiddleware
          */
         $seesStock = (bool) $request->user()?->can('inventory.stock.view');
 
+        /*
+         * ⓘ পণ্য আর লটের public_id দুই ডাকে, সবগুলোর — আগে প্রতিটা পণ্যে দুইটা করে ডাক যেত (পুরো ERP অডিট, ৬ অক্টোবর ২০২৬,
+         * ফোন ⚠️১৭)।
+         */
+        $options = $this->options->lots($warehouse);
+        $products = Product::query()->whereKey(array_map('intval', array_keys($options)))->pluck('public_id', 'id');
+        $ids = Batch::query()->whereKey(array_map('intval', array_merge([], ...array_map(fn (array $rows) => array_column($rows, 'id'), array_values($options)))))
+            ->pluck('public_id', 'id');
+
         $lots = [];
-        foreach ($this->options->lots($warehouse) as $productId => $rows) {
-            $product = Product::query()->find((int) $productId);
-            if ($product === null) {
+        foreach ($options as $productId => $rows) {
+            if (! isset($products[(int) $productId])) {
                 continue;
             }
-            $ids = Batch::query()->whereKey(array_column($rows, 'id'))->pluck('public_id', 'id');
-            $lots[(string) $product->public_id] = array_map(fn (array $lot) => [
+            $lots[(string) $products[(int) $productId]] = array_map(fn (array $lot) => [
                 'id' => (string) ($ids[(int) $lot['id']] ?? ''),
                 'no' => $lot['no'],
                 'expiry' => $lot['expiry'],

@@ -47,7 +47,8 @@ class SalesQuotationApiController extends Controller implements HasMiddleware
     public function index(Request $request): JsonResponse
     {
         $rows = SalesQuotation::query()
-            ->with('customer')
+            // ⓘ ক্রেতা আর আদেশ পাতায় একবার — আগে প্রতিটা দরপত্রে আদেশের আলাদা ডাক (অডিট ফোন ⚠️১৭)
+            ->with(['customer', 'order'])
             ->when(trim(PhoneInput::text($request, 'customer', '')), fn ($q, $c) => $q->where('customer_id', $this->customer($c)->id))
             ->when(in_array($request->query('status'), SalesQuotation::STATES, true),
                 fn ($q) => $q->where('status', PhoneInput::text($request, 'status')))
@@ -174,7 +175,7 @@ class SalesQuotationApiController extends Controller implements HasMiddleware
     /** @return array<string, mixed> */
     private function facts(SalesQuotation $q, bool $withLines): array
     {
-        $q->loadMissing(['customer', 'lines.product', 'order']);
+        $q->loadMissing($withLines ? ['customer', 'lines.product', 'order'] : ['customer', 'order']);
         $user = request()->user();
 
         return [

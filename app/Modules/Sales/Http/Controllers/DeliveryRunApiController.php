@@ -44,7 +44,8 @@ class DeliveryRunApiController extends Controller implements HasMiddleware
 
         $challans = ViewedBranch::narrow(DeliveryChallan::query(), 'sal_challans.branch_id')
             ->whereIn('sal_challans.id', $onTheWay)
-            ->with(['customer', 'lines.product'])
+            // ⓘ গাড়ি আর বাহক পাতায় একবার — আগে প্রতিটা চালানে আলাদা ডাক ([[DeliveryChallan::transportFacts()]]; অডিট ফোন ⚠️১৭)
+            ->with(['customer', 'lines.product', 'vehicle.vehicleType', 'carrier'])
             ->orderBy('sal_challans.trx_date')->orderBy('sal_challans.id')
             // ⓘ পাতা ভাগ — ৫০টা করে, পরের পাতার নম্বরসহ ([[EveryListScreenPaginatesTest]])
             ->paginate(self::PER_PAGE);
