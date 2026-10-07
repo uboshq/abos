@@ -446,6 +446,8 @@ class VoucherRequest extends FormRequest
              * থাকত — অর্থাৎ হিসাবটা উল্টো দিকে ভুল হত।
              */
             'reverse_on' => ['nullable', 'date', 'after:trx_date'],
+            // ⭐ মাসশেষের সমন্বয়ের দাগ (৩ঘ) — জাবেদার পর্দার টিক; অন্য ধরনে সেবা দাগ বসায় না
+            'is_adjusting' => ['sometimes', 'boolean'],
 
             /*
              * ── খরচ ভাউচারের নিজের ঘর, ১৫ সেপ্টেম্বর ২০২৬ ─────────────

@@ -76,6 +76,7 @@ final class RentIsOwedFromTheFirstOfTheMonthTest extends TestCase
 
         $accrual = RentalAccrual::query()->sole();
         $this->assertSame(DocumentStatus::CONFIRMED, $accrual->voucher->status);
+        $this->assertTrue($accrual->voucher->is_adjusting, '⛔ ভাড়ার বকেয়ায় সমন্বয় দাগ নেই।'); // ⭐ মাসশেষের সমন্বয় দাগ (ভাউচারের পরিকল্পনা ৩ঘ, ৭ অক্টোবর ২০২৬)
         $this->assertSame($this->month(0)->toDateString(), $accrual->voucher->trx_date->toDateString(), 'মাসের প্রথম দিনে');
         $this->assertMoney('-10000', $this->net(StandardChart::RENT_PAYABLE), 'মাসের শুরুতে দায়');
         $this->assertMoney('10000', $this->netOf($contract->expense_account_id), 'মাসের শুরুতে খরচ');
@@ -182,6 +183,11 @@ final class RentIsOwedFromTheFirstOfTheMonthTest extends TestCase
         $this->assertSame(0, app(RentalAccrualService::class)->run(now()->startOfMonth())['accrued'], '⛔ আগাম মাস দুইবার খরচে');
         $this->assertMoney(bcadd($base, '10000', 4), $this->netOf($expense), '⛔ আগাম মাস নিজের মাসে খরচে যায়নি');
         $this->assertMoney('0', $this->net(StandardChart::PREPAID_RENT), '⛔ অগ্রিম মোছেনি');
+        // ⭐ মাসশেষের সমন্বয় দাগ (ভাউচারের পরিকল্পনা ৩ঘ, ৭ অক্টোবর ২০২৬)
+        $released = \App\Modules\Accounts\Models\Voucher::query()->where('type', \App\Modules\Accounts\Models\Voucher::JOURNAL)
+            ->whereHas('lines', fn ($q) => $q->where('account_id', StandardChart::find(StandardChart::PREPAID_RENT)->id)->where('credit', '>', 0))->get();
+        $this->assertNotEmpty($released);
+        $this->assertTrue($released->every(fn ($v) => $v->is_adjusting), '⛔ অগ্রিম ভাড়া সরানোয় সমন্বয় দাগ নেই।');
         $this->assertMoney('0', $this->net(StandardChart::RENT_PAYABLE), '⛔ আগাম দেওয়া মাসে আবার প্রদেয় বসল');
         $this->assertSame(now()->startOfMonth()->toDateString(), RentalAccrual::query()->sole()->voucher->trx_date->toDateString(), 'মাসের প্রথম দিনে');
 

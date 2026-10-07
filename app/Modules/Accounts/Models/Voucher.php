@@ -217,6 +217,10 @@ class Voucher extends Model implements Drillable, RepostsAfterRevision, ShowsIts
         'counterparty_phone', 'charge_borne_by', 'transfer_mode_id',
         'from_branch', 'from_account_name', 'deposit_slip_no', 'lands_on',
         'reverse_on',
+        // ⭐ মাসশেষের সমন্বয় — ভাউচারের পরিকল্পনা ৩ঘ (৭ অক্টোবর ২০২৬); কেবল জাবেদায় ([[VoucherService::create()]])
+        'is_adjusting',
+        // ⭐ নিজে-উল্টো জাবেদা কোন আসলের — একবারই ([[AdjustingReversals]])
+        'reversal_of_id',
 
         // ১৫ সেপ্টেম্বর — খরচ ভাউচারের নিজের ঘর
         'cost_centre_id', 'expense_account_id', 'bill_no',
@@ -235,6 +239,7 @@ class Voucher extends Model implements Drillable, RepostsAfterRevision, ShowsIts
             'trx_date' => 'date',
             'ref_date' => 'date',
             'reverse_on' => 'date',
+            'is_adjusting' => 'boolean',
             'instrument_date' => 'date',
             'amount' => 'decimal:4',
             'charge_amount' => 'decimal:4',
@@ -495,7 +500,15 @@ class Voucher extends Model implements Drillable, RepostsAfterRevision, ShowsIts
      */
     public function fingerprintIgnores(): array
     {
-        return ['instrument_no'];
+        /*
+         * ⓘ সমন্বয়ের দাগ (৩ঘ) — দাগ না থাকলে ছাপের বাইরে, থাকলে ভিতরে। ⛔ নতুন ঘরটা শূন্য-মানেও ছাপে ঢুকলে মাইগ্রেশনের
+         * পরে সইয়ের অপেক্ষার প্রতিটা ভাউচারের ছাপ বদলাত আর আজকের সই বাতিল হত; দাগ বসালে বা তুললে কাগজ বদলায়, সই চায়।
+         */
+        return [
+            'instrument_no',
+            ...($this->is_adjusting ? [] : ['is_adjusting']),
+            ...($this->reversal_of_id === null ? ['reversal_of_id'] : []),
+        ];
     }
 
     /**
@@ -533,7 +546,8 @@ class Voucher extends Model implements Drillable, RepostsAfterRevision, ShowsIts
 
     public function typeLabel(): string
     {
-        return __('accounts::voucher.'.$this->type);
+        // ⭐ "সমন্বয় জাবেদা" — পাতা, ছাপা, সারাংশ আর সইয়ের পাতা একই নাম পায় (ভাউচারের পরিকল্পনা ৩ঘ)
+        return __('accounts::voucher.'.($this->type === self::JOURNAL && $this->is_adjusting ? 'adjusting_journal' : $this->type));
     }
 
     /**

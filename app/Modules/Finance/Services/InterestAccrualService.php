@@ -125,6 +125,7 @@ final class InterestAccrualService
 
                 $voucher = $this->vouchers->create([
                     'type' => Voucher::JOURNAL,
+                    'is_adjusting' => true, // ⭐ মাসশেষের সমন্বয় (ভাউচারের পরিকল্পনা ৩ঘ, ৭ অক্টোবর ২০২৬)
                     'trx_date' => $end->toDateString(),
                     'narration' => __('finance::bank_loan_report.accrual_narration', [
                         'month' => $start->translatedFormat('F Y'), 'facility' => trim($facility->bank.' · '.$facility->document_no, ' ·'),
@@ -194,6 +195,7 @@ final class InterestAccrualService
 
                 $reversal = $this->vouchers->create([
                     'type' => Voucher::JOURNAL,
+                    'is_adjusting' => true, // ⭐ মাসশেষের সমন্বয় (ভাউচারের পরিকল্পনা ৩ঘ, ৭ অক্টোবর ২০২৬)
                     'trx_date' => $on,
                     'narration' => __('finance::bank_loan_report.accrual_reversal_narration', [
                         'month' => $fresh->for_month->translatedFormat('F Y'),

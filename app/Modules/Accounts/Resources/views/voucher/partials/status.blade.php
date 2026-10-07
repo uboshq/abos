@@ -38,3 +38,7 @@
 @if ($revised ?? false)
     <x-ui.badge tone="warning" data-revised>{{ __('accounts::revision.revised') }}</x-ui.badge>
 @endif
+{{-- ⭐ মাসশেষের সমন্বয় — ভাউচারের পরিকল্পনা ৩ঘ (৭ অক্টোবর ২০২৬) --}}
+@if ($voucher->is_adjusting)
+    <x-ui.badge tone="info" data-adjusting>{{ __('accounts::voucher.adjusting_badge') }}</x-ui.badge>
+@endif

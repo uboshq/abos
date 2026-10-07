@@ -484,6 +484,9 @@ return [
 
         // স্থায়ী সম্পদ — FA-2026-2027-0001
         'FA' => 'accounts::doc.fixed_asset',
+
+        // ⭐ খোলা জের — OB-0001, নিজের ক্রম (ভাউচারের পরিকল্পনা ৩ঘ, ৭ অক্টোবর ২০২৬; [[OpeningBalanceService::SERIES]])
+        'OB' => 'accounts::doc.opening_balance',
     ],
 
     /*

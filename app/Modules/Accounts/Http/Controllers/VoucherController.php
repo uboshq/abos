@@ -121,7 +121,9 @@ class VoucherController extends Controller implements HasMiddleware
              * ⛔ খালি তালিকায় `whereIn` দিলে শূন্য সারি আসে, আর সেটাই
              * ঠিক: ঝুলে থাকা কিছু না থাকলে ছাঁকনিটাও খালি দেখাবে।
              */
-            ->when($request->boolean('awaiting'), fn ($q) => $q->whereIn('id', $awaitingIds));
+            ->when($request->boolean('awaiting'), fn ($q) => $q->whereIn('id', $awaitingIds))
+            // ⭐ কেবল মাসশেষের সমন্বয় — জাবেদার তালিকায় (ভাউচারের পরিকল্পনা ৩ঘ, ৭ অক্টোবর ২০২৬)
+            ->when($type === Voucher::JOURNAL && $request->boolean('adjusting'), fn ($q) => $q->where('is_adjusting', true));
 
         $sort = $this->applySort($query, $request, $this->sorts());
 
@@ -154,6 +156,7 @@ class VoucherController extends Controller implements HasMiddleware
             'awaitingCount' => $awaitingIds->count(),
             'awaitingIds' => $awaitingIds->map(fn ($id) => (int) $id)->all(),
             'awaiting' => $request->boolean('awaiting'),
+            'adjusting' => $type === Voucher::JOURNAL && $request->boolean('adjusting'),
 
             // ⭐ "সংশোধিত" দাগ — এই পাতার ভাউচারগুলোর, একটা প্রশ্নে (পাকা ভাউচার সম্পাদনা, ৫ অক্টোবর ২০২৬)
             'revisedIds' => DocumentRevision::query()

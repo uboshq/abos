@@ -129,6 +129,15 @@
                 <x-ui.field name="trx_date" type="date" :label="__('accounts::field.date')"
                             :value="old('trx_date', $voucher->trx_date?->format('Y-m-d') ?? now()->format('Y-m-d'))"
                             required />
+
+                {{-- ⭐ মাসশেষের সমন্বয় — বকেয়া, অগ্রিম সরানো, অবচয়, প্রভিশন (ভাউচারের পরিকল্পনা ৩ঘ, ৭ অক্টোবর ২০২৬).
+                     ⓘ লুকানো 0 আগে — টিক তুলে নিলে সম্পাদনায় দাগ সত্যিই ওঠে --}}
+                <label class="flex items-center gap-2 self-end text-sm" data-adjusting-mark>
+                    <input type="hidden" name="is_adjusting" value="0">
+                    <input type="checkbox" name="is_adjusting" value="1" class="size-4"
+                           @checked(old('is_adjusting', $voucher->is_adjusting))>
+                    <span>{{ __('accounts::voucher.adjusting_mark') }}</span>
+                </label>
             </div>
 
             <label class="mt-3 block">

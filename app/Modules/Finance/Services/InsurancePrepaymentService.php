@@ -156,6 +156,7 @@ final class InsurancePrepaymentService
 
                 $voucher = $this->vouchers->create([
                     'type' => Voucher::JOURNAL,
+                    'is_adjusting' => true, // ⭐ মাসশেষের সমন্বয় (ভাউচারের পরিকল্পনা ৩ঘ, ৭ অক্টোবর ২০২৬)
                     'trx_date' => $end->toDateString(),
                     'narration' => __('finance::insurance.prepaid_narration', [
                         'month' => $start->translatedFormat('F Y'), 'policy' => $policy->policy_no,
@@ -206,6 +207,7 @@ final class InsurancePrepaymentService
 
             $reversal = $this->vouchers->create([
                 'type' => Voucher::JOURNAL,
+                'is_adjusting' => true, // ⭐ মাসশেষের সমন্বয় (ভাউচারের পরিকল্পনা ৩ঘ, ৭ অক্টোবর ২০২৬)
                 'trx_date' => $paper->for_month->copy()->endOfMonth()->addDay()->toDateString(),
                 'narration' => __('finance::insurance.prepaid_reversal_narration', [
                     'month' => $paper->for_month->translatedFormat('F Y'), 'policy' => (string) $paper->policy?->policy_no,

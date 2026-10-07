@@ -67,6 +67,7 @@ final class DepositProfitIsAccruedEveryMonthTest extends TestCase
         $this->assertSame('1220.00', bcadd((string) $accrual->amount, '0', 2));
         $this->assertSame('2026-08-31', $accrual->voucher->trx_date->toDateString());
         $this->assertSame(DocumentStatus::CONFIRMED, $accrual->voucher->status);
+        $this->assertTrue($accrual->voucher->is_adjusting, '⛔ জমার মুনাফার বকেয়ায় সমন্বয় দাগ নেই।'); // ⭐ মাসশেষের সমন্বয় দাগ (ভাউচারের পরিকল্পনা ৩ঘ, ৭ অক্টোবর ২০২৬)
         $this->assertMoney('1220', $this->balance(StandardChart::ACCRUED_INTEREST), 'অর্জিত মুনাফা (১১৬৫)');
         $this->assertMoney('-1220', $this->balance(StandardChart::INTEREST_INCOME), 'সুদ আয় (৪৩১০, ক্রেডিট)');
 
@@ -83,6 +84,7 @@ final class DepositProfitIsAccruedEveryMonthTest extends TestCase
         $this->assertSame(1, $done['reversed']);
         $august = DepositAccrual::query()->where('for_month', '2026-08-01')->sole();
         $this->assertSame('2026-09-01', $august->reversalVoucher->trx_date->toDateString(), 'উল্টো দাখিলা পরের মাসের প্রথম দিনে');
+        $this->assertTrue($august->reversalVoucher->is_adjusting, '⛔ মুনাফার বকেয়ার উল্টোয় সমন্বয় দাগ নেই।'); // ⭐ মাসশেষের সমন্বয় দাগ (ভাউচারের পরিকল্পনা ৩ঘ, ৭ অক্টোবর ২০২৬)
 
         // ⓘ ১১৬৫-এ কেবল সেপ্টেম্বরের শেষের মোট; আয় দুই মাসে মোট ১,৮২০ — একবারই
         $this->assertMoney('1820', $this->balance(StandardChart::ACCRUED_INTEREST), 'অর্জিত মুনাফা সেপ্টেম্বরের শেষে');

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Accounts\Services;
 
+use App\Core\Engines\NumberSeries\NumberSeriesEngine;
 use App\Core\Engines\Posting\PostingEngine;
 use App\Core\Engines\Posting\PostingException;
 use App\Core\Support\CompanyContext;
@@ -46,6 +47,15 @@ final class OpeningBalanceService
      * পুরনো সারি খুঁজতে [[PostMissingOpenings]]-ও একই নাম ব্যবহার করে।
      */
     public const ACCOUNT_SOURCE = 'account';
+
+    /**
+     * ⭐ খোলা জেরের নিজের নম্বর-সিরিজ — OB-0001 (ভাউচারের আন্তর্জাতিক পরিকল্পনা, অংশ ৩ঘ, ৭ অক্টোবর ২০২৬)।
+     *
+     * ⓘ প্রতিটা খোলা দাখিলা (পক্ষ, ছকের খাত, মজুদ, মজুদের সংশোধন) একটা OB নম্বর পায়, ফাঁক ছাড়া — খাতা আর রিপোর্টে
+     * খোলা জের আলাদা চেনা যায়। ⛔ আগে নম্বর ছিল ডাকার জায়গার: পক্ষের কোড, খাতের কোড, মজুদে "OPENING"। আজকের বসানো
+     * দাখিলা যেমন আছে থাকে।
+     */
+    public const SERIES = 'OB';
 
     public function __construct(private readonly PostingEngine $posting) {}
 
@@ -149,7 +159,7 @@ final class OpeningBalanceService
 
         $narration = $this->narration();
 
-        return $this->announce($equity, $this->posting->post(
+        return $this->announce($equity, $this->numbered(
             sourceType: 'opening_stock',
             sourceId: $sourceId,
             trxDate: $this->dateFor($date),
@@ -157,7 +167,6 @@ final class OpeningBalanceService
                 ['account_id' => $inventory->id, 'debit' => $amount, 'narration' => $narration],
                 ['account_id' => $equity->id, 'credit' => $amount, 'narration' => $narration],
             ],
-            documentNo: $documentNo,
             branchId: $branchId,
         ));
     }
@@ -193,7 +202,7 @@ final class OpeningBalanceService
 
         $narration = $this->narration();
 
-        return $this->posting->post(
+        return $this->numbered(
             sourceType: 'opening_stock:withdrawn',
             sourceId: $sourceId,
             trxDate: $this->dateFor($date),
@@ -201,7 +210,6 @@ final class OpeningBalanceService
                 ['account_id' => $equity->id, 'debit' => $amount, 'narration' => $narration],
                 ['account_id' => $inventory->id, 'credit' => $amount, 'narration' => $narration],
             ],
-            documentNo: $documentNo,
             branchId: $branchId,
         );
     }
@@ -257,9 +265,10 @@ final class OpeningBalanceService
          */
         $accountIsDebit = $account->nature !== Account::CREDIT;
 
-        $narration = $this->narration();
+        // ⓘ খাতের কোড বিবরণে — খাতার নম্বর এখন OB সিরিজের ([[SERIES]])
+        $narration = $this->narration().' · '.$account->code;
 
-        return $this->announce($equity, $this->posting->post(
+        return $this->announce($equity, $this->numbered(
             sourceType: self::ACCOUNT_SOURCE.self::SOURCE_SUFFIX,
             sourceId: $account->id,
             trxDate: $this->dateFor($account->opening_date),
@@ -275,7 +284,6 @@ final class OpeningBalanceService
                     $accountIsDebit ? 'credit' : 'debit' => $amount,
                 ],
             ],
-            documentNo: $account->code,
         ));
     }
 
@@ -397,7 +405,8 @@ final class OpeningBalanceService
             );
         }
 
-        $narration = $this->narration();
+        // ⓘ পক্ষের কোড বিবরণে — খাতার নম্বর এখন OB সিরিজের ([[SERIES]])
+        $narration = $this->narration().' · '.$documentNo;
 
         $partyLine = [
             'account_id' => $party->id,
@@ -413,12 +422,11 @@ final class OpeningBalanceService
             $partyIsDebit ? 'credit' : 'debit' => $amount,
         ];
 
-        return $this->announce($equity, $this->posting->post(
+        return $this->announce($equity, $this->numbered(
             sourceType: $partyType.self::SOURCE_SUFFIX,
             sourceId: $partyId,
             trxDate: $this->dateFor($date),
             lines: [$partyLine, $equityLine],
-            documentNo: $documentNo,
             /*
              * ⭐ পক্ষের নিজের শাখায় — অডিট ⓘ১৭ (৬ অক্টোবর ২০২৬)। ⛔ আগে শাখা পাঠানো হত না, তাই খোলা জের বসত যিনি ঢোকালেন
              * তাঁর শাখায় (পোস্টিংয়ের ডিফল্ট) — নেত্রকোনার গ্রাহকের পুরনো বাকি ময়মনসিংহের খাতায়। শাখা না দিলে আগের মতো।
@@ -448,6 +456,24 @@ final class OpeningBalanceService
      * আজকের তারিখ নয়: খোলা ব্যালেন্স বছরের শুরুর অবস্থা, আর মাঝপথে
      * বসালে ওই তারিখের আগের যেকোনো রিপোর্টে সংখ্যাটা উধাও হয়ে যেত।
      */
+    /**
+     * ⭐ OB নম্বর নিয়ে দাখিলা — এক লেনদেনে, যাতে দাখিলা না বসলে নম্বরও খরচ না হয় (ফাঁক ছাড়া; [[SERIES]])।
+     *
+     * @param  list<array<string, mixed>>  $lines
+     * @return list<LedgerEntry>
+     */
+    private function numbered(string $sourceType, int $sourceId, Carbon $trxDate, array $lines, ?int $branchId = null): array
+    {
+        return DB::transaction(fn () => $this->posting->post(
+            sourceType: $sourceType,
+            sourceId: $sourceId,
+            trxDate: $trxDate,
+            lines: $lines,
+            documentNo: app(NumberSeriesEngine::class)->next(self::SERIES, $branchId, $trxDate, $sourceType, $sourceId),
+            branchId: $branchId,
+        ));
+    }
+
     private function dateFor(Carbon|string|null $date): Carbon
     {
         $year = FinancialYear::query()->where('is_current', true)->first();

@@ -17,4 +17,5 @@ return [
 
     // চেকের খাতা
     'cheque' => 'Cheque',
+    'opening_balance' => 'Opening balance',
 ];

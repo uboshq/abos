@@ -123,6 +123,7 @@ final class DepositAccrualService
 
                 $voucher = $this->vouchers->create([
                     'type' => Voucher::JOURNAL,
+                    'is_adjusting' => true, // ⭐ মাসশেষের সমন্বয় (ভাউচারের পরিকল্পনা ৩ঘ, ৭ অক্টোবর ২০২৬)
                     'trx_date' => $end->toDateString(),
                     'narration' => __('finance::deposit_report.accrual_narration', [
                         'month' => $start->translatedFormat('F Y'), 'deposit' => $deposit->document_no, 'institution' => $deposit->institution,
@@ -186,6 +187,7 @@ final class DepositAccrualService
 
                 $reversal = $this->vouchers->create([
                     'type' => Voucher::JOURNAL,
+                    'is_adjusting' => true, // ⭐ মাসশেষের সমন্বয় (ভাউচারের পরিকল্পনা ৩ঘ, ৭ অক্টোবর ২০২৬)
                     'trx_date' => $fresh->for_month->copy()->endOfMonth()->addDay()->toDateString(),
                     'narration' => __('finance::deposit_report.accrual_reversal_narration', [
                         'month' => $fresh->for_month->translatedFormat('F Y'), 'deposit' => (string) $accrual->deposit?->document_no,

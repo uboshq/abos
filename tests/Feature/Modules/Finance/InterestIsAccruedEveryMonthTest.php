@@ -81,6 +81,7 @@ final class InterestIsAccruedEveryMonthTest extends TestCase
         $this->assertSame(1, $done['accrued']);
 
         $voucher = $this->settle($accrual->voucher);
+        $this->assertTrue($voucher->is_adjusting, '⛔ সুদের বকেয়ায় সমন্বয় দাগ নেই।'); // ⭐ মাসশেষের সমন্বয় দাগ (ভাউচারের পরিকল্পনা ৩ঘ, ৭ অক্টোবর ২০২৬)
         $this->assertSame('2026-08-31', $voucher->trx_date->toDateString(), 'জমা মাসের শেষ দিনে নয়।');
         $this->assertSame(0, bccomp($this->balance(StandardChart::INTEREST_PAYABLE), bcadd((string) $accrual->amount, '0', 4), 2),
             '⛔ প্রদেয় সুদে জমাটা বসেনি।');
@@ -113,6 +114,7 @@ final class InterestIsAccruedEveryMonthTest extends TestCase
         $this->assertSame(1, $done['reversed']);
         $reversal = Voucher::query()->findOrFail($august->fresh()->reversal_voucher_id);
         $this->assertSame('2026-09-01', $reversal->trx_date->toDateString(), 'উল্টো দাখিলা পরের মাসের প্রথম দিনে নয়।');
+        $this->assertTrue($reversal->is_adjusting, '⛔ সুদের বকেয়ার উল্টোয় সমন্বয় দাগ নেই।'); // ⭐ মাসশেষের সমন্বয় দাগ (ভাউচারের পরিকল্পনা ৩ঘ, ৭ অক্টোবর ২০২৬)
 
         // ⓘ ২১৪৫-এ কেবল সেপ্টেম্বরের জমা — আগস্টেরটা ফিরে গেছে
         $this->assertSame(0, bccomp($this->balance(StandardChart::INTEREST_PAYABLE), bcadd((string) $september->amount, '0', 4), 2),

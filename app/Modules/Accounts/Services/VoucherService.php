@@ -61,6 +61,7 @@ final class VoucherService
             $type = $this->assertType($data['type'] ?? null);
 
             $this->assertNoChequeReceived($type, $data['instrument'] ?? null);
+
             // ⓘ ধরনের ছাঁচ কেবল হাতে লেখা ভাউচারে — ব্যবস্থার নিজের পোস্টিং (নগদ গণনার ঘাটতি, আন্তঃকোম্পানি, ভাড়ার জমা…) তার সেবার ছাঁচ মানে
             if ($byHand) {
                 $this->assertTemplate($type, $lines, [$data['party_type'] ?? null, $data['party_id'] ?? null]);
@@ -152,6 +153,10 @@ final class VoucherService
                 'deposit_slip_no' => $data['deposit_slip_no'] ?? null,
                 'lands_on' => $data['lands_on'] ?? null,
                 'reverse_on' => $data['reverse_on'] ?? null,
+                // ⭐ মাসশেষের সমন্বয় — কেবল জাবেদায়; অন্য ধরনে দাগ বসে না (ভাউচারের পরিকল্পনা ৩ঘ, ৭ অক্টোবর ২০২৬)
+                'is_adjusting' => $type === Voucher::JOURNAL && (bool) ($data['is_adjusting'] ?? false),
+                // ⓘ কেবল ব্যবস্থার উল্টো জাবেদা বসায় ([[AdjustingReversals]]) — পর্দার নিয়মে ঘরটা নেই
+                'reversal_of_id' => $data['reversal_of_id'] ?? null,
 
                 /*
                  * ── খরচ ভাউচারের নিজের ছয়টা, ১৫ সেপ্টেম্বর ২০২৬ ────────
@@ -809,6 +814,10 @@ final class VoucherService
             // ⛔ কেবল মাথার ঘর — জাবেদার পর্দা `lines` পাঠায়, আর তা মাথায় ঢালতে গেলে খসড়া সম্পাদনা ৫০০ দিত (৭ অক্টোবর ২০২৬;
             // সংশোধনের পথ একই ছাঁকনি নেয়, [[VoucherController::saveRevision()]])
             ...array_intersect_key($data, array_flip($voucher->getFillable())),
+            // ⓘ সমন্বয়ের দাগ কেবল জাবেদায় — সম্পাদনাতেও ([[create()]]-এর একই শর্ত)
+            ...(array_key_exists('is_adjusting', $data)
+                ? ['is_adjusting' => $voucher->type === Voucher::JOURNAL && (bool) $data['is_adjusting']]
+                : []),
             // ধরন ও নম্বর কখনো বদলায় না: নম্বরটা সিরিজ থেকে এসেছে আর
             // ধরন বদলালে ওই সিরিজটাই ভুল হয়ে যেত
             'type' => $voucher->type,

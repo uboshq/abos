@@ -260,6 +260,17 @@ Schedule::command('abos:rent-accrue')
         logger()->critical('মাসের প্রদেয় ভাড়া বসানো ব্যর্থ হয়েছে — হাতে দেখতে হবে।');
     });
 
+/*
+ * ⭐ সমন্বয় জাবেদা নিজের উল্টো দাখিলার তারিখে উল্টায় — ভাউচারের পরিকল্পনা ৩ঘ (fe, ৭ অক্টোবর ২০২৬; [[AdjustingReverse]])।
+ * ⓘ ঘণ্টায় একবার: একটা জাবেদা একবারই উল্টায় (অনন্য index), তাই বারবার দেখায় ক্ষতি নেই, আর একটা মিনিট ফসকালে দিনটা হারায় না।
+ */
+Schedule::command('abos:adjusting-reverse')
+    ->hourlyAt(20)
+    ->withoutOverlapping()
+    ->onFailure(function () {
+        logger()->critical('সমন্বয় জাবেদা নিজে উল্টানো ব্যর্থ হয়েছে — হাতে দেখতে হবে।');
+    });
+
 Schedule::command('abos:money-due')
     ->dailyAt('08:00')
     ->withoutOverlapping()

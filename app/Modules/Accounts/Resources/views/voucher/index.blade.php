@@ -121,6 +121,24 @@
             ⛔ শূন্য হলে সারিটাই আঁকা হয় না — "০টি অপেক্ষায়" লেখা
             একটা পট্টি রোজ জায়গা নিত আর কিছুই বলত না।
         --}}
+        {{-- ⭐ কেবল মাসশেষের সমন্বয় — জাবেদার তালিকায় (ভাউচারের পরিকল্পনা ৩ঘ, ৭ অক্টোবর ২০২৬) --}}
+        @if ($type === \App\Modules\Accounts\Models\Voucher::JOURNAL)
+            <div class="flex flex-wrap items-center gap-2 border-t border-(--color-border) px-3 py-2" data-adjusting-filter>
+                @if ($adjusting ?? false)
+                    <a href="{{ route('accounts.voucher.index', $type) }}"
+                       class="rounded-full border border-(--color-border) px-3 py-1 text-xs">
+                        {{ __('accounts::action.show_all') }}
+                    </a>
+                    <span class="text-xs text-(--color-ink-muted)">{{ __('accounts::voucher.adjusting_only') }}</span>
+                @else
+                    <a href="{{ route('accounts.voucher.index', [$type, 'adjusting' => 1]) }}"
+                       class="rounded-full border border-(--color-border) px-3 py-1 text-xs">
+                        {{ __('accounts::voucher.adjusting_filter') }}
+                    </a>
+                @endif
+            </div>
+        @endif
+
         @if (($awaitingCount ?? 0) > 0 || ($awaiting ?? false))
             <div class="flex flex-wrap items-center gap-2 border-t border-(--color-border) px-3 py-2">
                 @if ($awaiting ?? false)

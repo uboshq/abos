@@ -75,6 +75,8 @@ final class APremiumIsExpensedMonthByMonthTest extends TestCase
         // ⓘ সেপ্টেম্বর — আগস্টেরটা ১ সেপ্টেম্বর উল্টায়, তারপর ২৭৩ দিনের অগ্রিম
         $this->assertSame(['prepaid' => 1, 'reversed' => 1], $this->prepaid->run(Carbon::parse('2026-09-01')));
         $this->assertSame('2026-09-01', $aug->fresh()->reversalVoucher->trx_date->toDateString(), 'উল্টো দাখিলা পরের মাসের ১ তারিখে নয়।');
+        // ⭐ মাসশেষের সমন্বয় দাগ (ভাউচারের পরিকল্পনা ৩ঘ, ৭ অক্টোবর ২০২৬)
+        $this->assertTrue($aug->fresh()->voucher->is_adjusting && $aug->fresh()->reversalVoucher->is_adjusting, '⛔ বিমার অগ্রিম বা তার উল্টোয় সমন্বয় দাগ নেই।');
         $this->assertSame(0, bccomp($this->balance(StandardChart::PREPAID_INSURANCE, '2026-09-30'), '8975.34', 4),
             '⛔ মাস শেষে অগ্রিম কেবল এই মাসের — আগেরটা উল্টায়নি?');
         $this->assertSame(0, bccomp($this->balance(StandardChart::INSURANCE_PREMIUM, '2026-09-30'), '3024.66', 4),

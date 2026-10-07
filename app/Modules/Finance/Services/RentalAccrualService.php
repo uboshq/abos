@@ -106,6 +106,7 @@ final class RentalAccrualService
 
                 $voucher = $this->vouchers->create([
                     'type' => Voucher::JOURNAL,
+                    'is_adjusting' => true, // ⭐ মাসশেষের সমন্বয় (ভাউচারের পরিকল্পনা ৩ঘ, ৭ অক্টোবর ২০২৬)
                     'branch_id' => $contract->branch_id,
                     'trx_date' => $on->toDateString(),
                     'narration' => __('finance::message.rent_accrual_narration', [
@@ -184,6 +185,7 @@ final class RentalAccrualService
 
             $voucher = $this->vouchers->create([
                 'type' => Voucher::JOURNAL,
+                'is_adjusting' => true, // ⭐ মাসশেষের সমন্বয় (ভাউচারের পরিকল্পনা ৩ঘ, ৭ অক্টোবর ২০২৬)
                 'branch_id' => $contract->branch_id,
                 'trx_date' => $start->toDateString(),
                 'narration' => __('finance::message.rent_prepaid_release_narration', [
