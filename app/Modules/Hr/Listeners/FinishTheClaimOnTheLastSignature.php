@@ -36,8 +36,13 @@ final class FinishTheClaimOnTheLastSignature
             return;
         }
 
-        $approval->status === Approval::APPROVED
-            ? app(ExpenseClaimService::class)->approve($claim)
-            : app(ExpenseClaimService::class)->refuse($claim);
+        if ($approval->status === Approval::APPROVED) {
+            app(ExpenseClaimService::class)->noteTheRequesterSigned($claim, $approval);
+            app(ExpenseClaimService::class)->approve($claim);
+
+            return;
+        }
+
+        app(ExpenseClaimService::class)->refuse($claim);
     }
 }

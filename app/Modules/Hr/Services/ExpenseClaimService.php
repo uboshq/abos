@@ -6,10 +6,13 @@ namespace App\Modules\Hr\Services;
 
 use App\Core\Concerns\ReadsTheRowUnderLock;
 use App\Core\Engines\Approval\DocumentApproval;
+use App\Core\Engines\Audit\AuditEngine;
 use App\Core\Engines\Attachment\AttachmentEngine;
 use App\Core\Engines\Attachment\AttachmentException;
 use App\Core\Engines\NumberSeries\NumberSeriesEngine;
 use App\Core\Support\CompanyContext;
+use App\Models\Approval;
+use App\Models\ApprovalDecision;
 use App\Models\User;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Models\Voucher;
@@ -163,6 +166,28 @@ final class ExpenseClaimService
         }
 
         return $claim->fresh();
+    }
+
+    /**
+     * ⭐ যিনি চাইলেন তিনিই সই দিলেন — নিরীক্ষার খাতায় "একই মানুষ" দাগ (টাকার পরিকল্পনা, দায়িত্বের ছক; ৭ অক্টোবর ২০২৬;
+     * [[AnOwnersOwnClaimIsMarkedTest]])।
+     *
+     * ⓘ সইয়ের ইঞ্জিন নিজের কাগজে সই কেবল মালিককে (সুপার অ্যাডমিন) দেয়। পরিকল্পনার নিয়ম: মালিক একাই সব করলে কাজ আটকায় না, কিন্তু
+     * দাগ থাকে — পরিশোধের তিন-হাতের ([[PaymentService]] `three_hands_override`) একই ধাঁচ। সিদ্ধান্তের সারিতে দুই নাম আগেও ছিল,
+     * কিন্তু আলাদা করে খোঁজা যেত না; এখন নিরীক্ষার পাতায় নিজের নামে একটা কাজ।
+     */
+    public function noteTheRequesterSigned(ExpenseClaim $claim, Approval $approval): void
+    {
+        $self = $approval->decisions()
+            ->where('user_id', $claim->requested_by)
+            ->where('decision', ApprovalDecision::APPROVED)
+            ->exists();
+
+        if (! $self) {
+            return;
+        }
+
+        app(AuditEngine::class)->recordAction($claim, 'own_claim_signed', __('hr::claim.own_claim_signed', ['no' => $claim->document_no]));
     }
 
     /** ⭐ শেষ সই পড়ল — অনুমোদিত; অগ্রিম থেকে কাটা খাতায়, বাকিটুকুর খসড়া ভাউচার ক্যাশিয়ারের জন্য। দুবার খবর এলেও একবার। */
