@@ -145,7 +145,7 @@ class _VoucherListScreenState extends State<VoucherListScreen> {
                   subtitle: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                     Text(Money.taka(v.amount), style: const TextStyle(fontWeight: FontWeight.w700)),
                     Text(v.stateWords, style: TextStyle(color: voucherStateColour(v.state))),
-                    if (v.party != null) Text(v.party!),
+                    if (v.party != null) Text('${v.partyWords}: ${v.party!}'),
                     if (v.date != null) Text(dayOf(v.date)),
                   ]),
                   onTap: () async {
@@ -261,7 +261,8 @@ class _VoucherScreenState extends State<VoucherScreen> {
             FactRow('অবস্থা', p.row.stateWords, colour: voucherStateColour(p.row.state)),
             FactRow('টাকা', Money.taka(p.row.amount)),
             if (p.row.date != null) FactRow('তারিখ', dayOf(p.row.date)),
-            if (p.row.party != null) FactRow('পক্ষ', p.row.party!),
+            if (p.row.party != null) FactRow(p.row.partyWords, p.row.party!),
+            if (p.moneyAccount != null) FactRow(p.moneyLabel ?? 'টাকার খাত', p.moneyAccount!),
             if ((p.instrumentNo ?? '').isNotEmpty) FactRow('লেনদেন নম্বর', p.instrumentNo!),
             if (p.row.narration.isNotEmpty) FactRow('বিবরণ', p.row.narration),
             if (p.writtenBy.isNotEmpty) FactRow('লেখক', p.writtenBy),
@@ -271,7 +272,10 @@ class _VoucherScreenState extends State<VoucherScreen> {
                 dense: true,
                 contentPadding: EdgeInsets.zero,
                 title: Text(l.account),
-                subtitle: l.narration.isEmpty ? null : Text(l.narration),
+                // ⓘ সারির পক্ষ আর বিবরণ এক লাইনে
+                subtitle: l.narration.isEmpty && l.party == null
+                    ? null
+                    : Text([if (l.party != null) l.party!, if (l.narration.isNotEmpty) l.narration].join(' · ')),
                 trailing: Text(l.debit > 0 ? 'ডেবিট ${Money.taka(l.debit)}' : 'ক্রেডিট ${Money.taka(l.credit)}'),
               ),
             if (p.awaitsAnotherHand)

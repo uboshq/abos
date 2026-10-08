@@ -75,6 +75,11 @@ void main() {
     // ⓘ সার্ভারের নতুন অবস্থা — তার নিজের লেখা; লেখা না থাকলে "যাচাই চলছে", কখনো কাঁচা চাবি নয়
     expect(DepositRequestRow.fromJson({'status': 'verifying', 'status_label': 'যাচাই চলছে'}).statusLabel, 'যাচাই চলছে');
     expect(DepositRequestRow.fromJson({'status': 'somethingNew'}).statusLabel, 'যাচাই চলছে');
+    // ⓘ a6-এর আকার: সার্ভারের নাম আগে; verifying নিজের নামেও; কে পাঠালেন ঐচ্ছিক
+    expect(DepositRequestRow.fromJson({'status': 'accepted', 'status_label': 'গৃহীত হয়েছে'}).statusLabel, 'গৃহীত হয়েছে');
+    expect(DepositRequestRow.fromJson({'status': 'verifying'}).statusLabel, 'যাচাই চলছে');
+    expect(DepositRequestRow.fromJson({'status': 'pending', 'submitted_by_name': 'কাউসার'}).submittedBy, 'কাউসার');
+    expect(DepositRequestRow.fromJson({'status': 'pending', 'submitted_by_name': ' '}).submittedBy, isNull);
   });
 
   testWidgets('a rejected advice shows why, in red; the four names are on the list', (tester) async {

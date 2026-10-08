@@ -147,6 +147,7 @@ class VoucherRow {
     this.stateLabel = '',
     this.date,
     this.party,
+    this.partyLabel = '',
     this.narration = '',
   });
 
@@ -161,7 +162,19 @@ class VoucherRow {
   final String? date;
   final double amount;
   final String? party;
+
+  /// ⭐ পক্ষের ঘরের নাম, ধরন ধরে — আদায়ে "কার কাছ থেকে", পরিশোধ আর খরচে "কাকে" (মালিক, ৭ অক্টোবর ২০২৬: "kake dibe
+  /// kar kach theke nibe seta nai")। পুরনো সার্ভারে খালি — তখন ফোন নিজে ধরন দেখে বলে ([[partyWords]])।
+  final String partyLabel;
   final String narration;
+
+  String get partyWords => partyLabel.isNotEmpty
+      ? partyLabel
+      : switch (type) {
+          'receipt' => 'কার কাছ থেকে',
+          'payment' || 'expense' => 'কাকে',
+          _ => 'পক্ষ',
+        };
 
   factory VoucherRow.fromJson(Map<String, dynamic> j) => VoucherRow(
         id: j['id']?.toString() ?? '',
@@ -173,6 +186,7 @@ class VoucherRow {
         date: j['date']?.toString(),
         amount: Money.valueOrZero(j['amount']),
         party: j['party']?.toString(),
+        partyLabel: j['party_label']?.toString() ?? '',
         narration: j['narration']?.toString() ?? '',
       );
 
@@ -190,12 +204,15 @@ class VoucherRow {
 }
 
 class VoucherLineView {
-  const VoucherLineView({required this.account, required this.debit, required this.credit, this.narration = ''});
+  const VoucherLineView({required this.account, required this.debit, required this.credit, this.narration = '', this.party});
 
   final String account;
   final double debit;
   final double credit;
   final String narration;
+
+  /// সারির নিজের পক্ষ — জাবেদায় প্রতিটা সারির; না থাকলে null
+  final String? party;
 }
 
 class VoucherPage {
@@ -207,9 +224,16 @@ class VoucherPage {
     this.writtenBy = '',
     this.canPost = false,
     this.awaitsAnotherHand = false,
+    this.moneyAccount,
+    this.moneyLabel,
   });
 
   final VoucherRow row;
+
+  /// ⭐ টাকার খাত, পক্ষের উল্টো দিক — আদায়ে "কোথায় জমা হলো", পরিশোধে "কোথা থেকে গেল" (মালিক, ৭ অক্টোবর ২০২৬)।
+  /// পুরনো সার্ভারে null।
+  final String? moneyAccount;
+  final String? moneyLabel;
   final List<VoucherLineView> lines;
   final String? instrument;
   final String? instrumentNo;
@@ -224,6 +248,8 @@ class VoucherPage {
         writtenBy: j['written_by']?.toString() ?? '',
         canPost: j['can_post'] == true,
         awaitsAnotherHand: j['awaits_another_hand'] == true,
+        moneyAccount: j['money_account']?.toString(),
+        moneyLabel: j['money_label']?.toString(),
         lines: [
           for (final l in (j['lines'] as List?) ?? const [])
             if (l is Map)
@@ -232,6 +258,7 @@ class VoucherPage {
                 debit: Money.valueOrZero(l['debit']),
                 credit: Money.valueOrZero(l['credit']),
                 narration: l['narration']?.toString() ?? '',
+                party: (l['party']?.toString().trim().isEmpty ?? true) ? null : l['party'].toString(),
               ),
         ],
       );
