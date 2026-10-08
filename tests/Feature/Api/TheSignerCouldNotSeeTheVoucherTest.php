@@ -123,6 +123,38 @@ final class TheSignerCouldNotSeeTheVoucherTest extends TestCase
         $this->phone($signer)->getJson($url)->assertStatus(409);
     }
 
+    /**
+     * ⛔ যে কাগজ নিজে সইয়ের পাতা দেয় না (ডেলিভারি অর্ডার), তার বিস্তারিতও আসে — মালিক, ৮ অক্টোবর ২০২৬: *"approval a
+     * bistarito vew dile anagelona dekhay"*। খালি যোগফল JSON-এ `[]` হয়ে যেত, আর ফোন বস্তু চাইত — তাই "আনা গেল না"।
+     * এখন যোগফল সবসময় বস্তু (`{}`), আর সারির নিজের তথ্য (পক্ষ · পয়েন্ট, কী বাবদ) ঘর হয়ে আসে।
+     */
+    public function test_a_paper_without_its_own_sheet_still_answers_with_an_object_of_totals_and_its_facts(): void
+    {
+        $this->seed(DemoSeeder::class);
+        $this->company = Company::query()->where('code', 'TDEPOT')->firstOrFail();
+        CompanyContext::set($this->company->id, $this->company->defaultBranch()?->id);
+        $owner = User::query()->where('email', 'owner@abos.test')->firstOrFail();
+        $this->actingAs($owner);
+        app(SettingsService::class)->set('customer.credit_limit_enabled', false);
+
+        $signer = $this->person(['approval.decide']);
+        $flow = ApprovalFlow::create(['company_id' => $this->company->id, 'module' => 'sales',
+            'action' => \App\Modules\Sales\Services\DeliveryOrderService::APPROVAL_ACTION, 'is_active' => true]);
+        ApprovalFlowStep::create(['approval_flow_id' => $flow->id, 'level' => 1, 'approver_type' => 'user', 'approver_id' => $signer->id]);
+
+        $shop = \App\Modules\Customer\Models\Customer::query()->where('name_en', 'Rahim Traders')->firstOrFail();
+        $product = \App\Modules\Inventory\Models\Product::query()->where('name_en', 'Cosmos Biscuit 40gm')->firstOrFail();
+        $service = app(\App\Modules\Sales\Services\DeliveryOrderService::class);
+        $order = $service->submit($service->create(['customer_id' => $shop->id, 'trx_date' => now()->toDateString()],
+            [['product_id' => $product->id, 'qty' => '2']], $owner), $owner);
+        $approval = Approval::query()->where('approvable_type', $order::class)->where('approvable_id', $order->id)->pending()->firstOrFail();
+
+        $response = $this->phone($signer)->getJson('/api/v1/approvals/'.$approval->public_id.'/sheet')->assertOk();
+        $this->assertStringContainsString('"totals":{}', (string) $response->getContent(), '⛔ খালি যোগফল তালিকা হয়ে গেল — ফোন পড়তে পারে না।');
+        $this->assertSame((string) $order->document_no, $response->json('documentNo'));
+        $this->assertContains($shop->nameWithPoint(), array_column($response->json('facts'), 'value'), '⛔ বিস্তারিতে পক্ষ নেই।');
+    }
+
     /** @param  list<string>  $keys */
     private function person(array $keys): User
     {

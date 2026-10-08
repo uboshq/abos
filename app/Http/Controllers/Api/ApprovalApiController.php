@@ -177,7 +177,11 @@ final class ApprovalApiController extends Controller
             'facts' => array_values(array_map(fn (array $f) => ['label' => (string) $f['label'], 'value' => (string) $f['value']], $sheet['facts'] ?? [])),
             'columns' => array_values(array_map(fn (array $c) => ['key' => (string) $c['key'], 'label' => (string) $c['label'], 'numeric' => (bool) ($c['numeric'] ?? false)], $sheet['columns'] ?? [])),
             'rows' => array_values(array_map(fn (array $r) => array_map(fn ($v) => $v === null ? null : (string) $v, $r), $sheet['rows'] ?? [])),
-            'totals' => array_map('strval', $sheet['totals'] ?? []),
+            /*
+             * ⛔ সবসময় বস্তু — খালি PHP তালিকা JSON-এ `[]` হয়, আর ফোন যোগফলকে চাবি-মানের বস্তু হিসেবে পড়ে; যে কাগজের যোগফল
+             * নেই (DO, আদেশ, খরচের দাবি …) তার বিস্তারিত ফোনে "আনা গেল না" দেখাত (মালিক, ৮ অক্টোবর ২০২৬)।
+             */
+            'totals' => (object) array_map('strval', $sheet['totals'] ?? []),
         ]);
     }
 
@@ -348,7 +352,9 @@ final class ApprovalApiController extends Controller
                 continue;
             }
 
+            // ⓘ সইয়ের কাগজ হেডারের শাখায় লুকায় না — [[ApprovalFacts::VIEW_WALLS]] (ওয়েবের পাতার একই নিয়ম)
             $found[$class] = $class::query()
+                ->withoutGlobalScopes(ApprovalFacts::VIEW_WALLS)
                 ->whereKey($group->pluck('approvable_id')->unique()->values()->all())
                 ->get()
                 ->keyBy(fn (Model $m) => (int) $m->getKey());
