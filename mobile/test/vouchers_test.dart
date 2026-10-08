@@ -318,6 +318,34 @@ void main() {
     });
   });
 
+  test('who the money comes from or goes to reads by type; the server\'s own word first (owner, 7 Oct 2026)', () {
+    const receipt = VoucherRow(id: 'a', no: 'RV-1', type: 'receipt', state: 'draft', amount: 1, party: 'রহিম স্টোর');
+    const payment = VoucherRow(id: 'b', no: 'PV-1', type: 'payment', state: 'draft', amount: 1);
+    const journal = VoucherRow(id: 'c', no: 'JV-1', type: 'journal', state: 'draft', amount: 1);
+    expect([receipt.partyWords, payment.partyWords, journal.partyWords], ['কার কাছ থেকে', 'কাকে', 'পক্ষ']);
+    expect(VoucherRow.fromJson({'type': 'expense', 'party_label': 'কাকে দেওয়া'}).partyWords, 'কাকে দেওয়া');
+    final page = VoucherPage.fromJson({'type': 'receipt', 'party': 'রহিম স্টোর', 'lines': [
+      {'account': '1101 নগদ', 'debit': '500', 'credit': '0'},
+      {'account': '1110 প্রাপ্য', 'debit': '0', 'credit': '500', 'party': 'রহিম স্টোর'},
+    ]});
+    expect([page.row.party, page.lines[0].party, page.lines[1].party], ['রহিম স্টোর', null, 'রহিম স্টোর']);
+  });
+
+  testWidgets('the voucher page says who the money came from, and the line carries its party', (tester) async {
+    await _pump(tester, VoucherScreen(id: 'v1', api: _FakeVouchers(page: const VoucherPage(
+      row: VoucherRow(id: 'v1', no: 'RV-0001', type: 'receipt', state: 'draft', amount: 500, party: 'রহিম স্টোর', partyLabel: 'কার কাছ থেকে'),
+      moneyAccount: '1101 নগদ টিল', moneyLabel: 'কোথায় জমা হলো',
+      lines: [
+        VoucherLineView(account: '1101 নগদ', debit: 500, credit: 0),
+        VoucherLineView(account: '1110 প্রাপ্য', debit: 0, credit: 500, party: 'রহিম স্টোর', narration: 'বিল INV-1'),
+      ],
+    ))));
+    expect(find.text('কার কাছ থেকে'), findsOneWidget);
+    expect(find.text('কোথায় জমা হলো'), findsOneWidget);
+    expect(find.text('1101 নগদ টিল'), findsOneWidget);
+    expect(find.text('রহিম স্টোর · বিল INV-1'), findsOneWidget);
+  });
+
   testWidgets('the list shows each state, and "সইয়ের অপেক্ষায়" asks the server for those only', (tester) async {
     final api = _FakeVouchers();
     await _pump(tester, VoucherListScreen(api: api, newChangeId: _key));
