@@ -1008,6 +1008,7 @@ class ApprovalInboxController extends Controller implements HasMiddleware
             return null;
         }
 
-        return $class::query()->find($entry->approvable_id);
+        // ⓘ হেডারের শাখা সইয়ের কাগজ লুকায় না — [[ApprovalFacts::VIEW_WALLS]]; ডাক আসে কেবল `$mayReadDocument`-এ
+        return $class::query()->withoutGlobalScopes(ApprovalFacts::VIEW_WALLS)->find($entry->approvable_id);
     }
 }

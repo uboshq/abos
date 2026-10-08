@@ -130,6 +130,47 @@ final class TheSignerSeesThePaperBeforeSigningTest extends TestCase
         $this->assertFact($sheet, __('approval::field.where_money'), $bank->fresh()->label());
     }
 
+    /**
+     * ⛔ হেডারে অন্য শাখা বাছা থাকলেও সইকারী কাগজটা দেখেন — মালিক, ৮ অক্টোবর ২০২৬।
+     *
+     * লাইভে মালিকের হেডারে সুপার, আর কাউসারের লায়নের রসিদ RCV-0010 তাঁর সইয়ের অপেক্ষায়: পাতায় না ভাউচার, না
+     * সারি, আর তালিকায় Party · What for · Where খালি। ⓘ শাখার দেয়াল কাগজটা লুকাত ([[ApprovalFacts::VIEW_WALLS]])।
+     */
+    public function test_a_signer_viewing_another_branch_still_sees_the_paper_and_its_facts(): void
+    {
+        $this->flowFor(Voucher::RECEIPT, $this->signer);
+
+        [$bank, $other] = $this->bankAndOther();
+        $voucher = $this->draft(Voucher::RECEIPT, [
+            ['account_id' => $bank->id, 'debit' => '7000', 'credit' => '0', 'narration' => 'SHEET-FAR-DR'],
+            ['account_id' => $other->id, 'debit' => '0', 'credit' => '7000', 'narration' => 'SHEET-FAR-CR'],
+        ], ['instrument' => 'transfer']);
+        $approval = $this->hold($voucher, 'TRX-FAR-2B8D');
+
+        $far = Branch::query()->create([
+            'company_id' => $this->company->id, 'code' => 'FARSIGN',
+            'name_en' => 'Far branch', 'name_bn' => 'দূরের শাখা', 'is_active' => true,
+        ]);
+        Voucher::query()->withoutGlobalScopes()->whereKey($voucher->id)->update(['branch_id' => $far->id]);
+
+        $near = (int) ($this->company->defaultBranch()?->id);
+        $this->signer->forceFill(['view_all_branches' => false, 'current_branch_id' => $near])->save();
+        CompanyContext::set($this->company->id, $near);
+
+        // ⓘ দেয়ালটা সত্যিই দাঁড়িয়ে — নইলে নিচের দাবি কিছুই মাপত না
+        $this->actingAs($this->signer);
+        $this->assertNull(Voucher::query()->find($voucher->id), 'হেডারের শাখার দেয়াল দাঁড়ায়নি — পরীক্ষাটা ভুল জিনিস মাপছে।');
+
+        $sheet = $this->sheetOf($this->page($this->signer, $approval));
+        $this->assertStringContainsString('SHEET-FAR-DR', $sheet, 'অন্য শাখার কাগজের সারি সইয়ের পাতায় নেই।');
+
+        // ⓘ তালিকার Party · What for · Where — ইনবক্স আর ফোন দুটোই এই সেবা থেকে পড়ে
+        $facts = app(\App\Modules\Approval\Services\ApprovalFacts::class)->of(collect([$approval->fresh()]))[$approval->id];
+        $this->assertSame($voucher->fresh()->document_no, $facts['no'],
+            'তালিকায় অন্য শাখার কাগজটা পাওয়া যায়নি — Party · What for · Where খালি।');
+        $this->assertNotNull($facts['where'], 'অন্য শাখার কাগজের "কোথায়" ঘর খালি।');
+    }
+
     // ── ২. পক্ষ গ্রাহক: ফোন, পয়েন্ট, বকেয়া, সীমা ──────────────────────────
 
     public function test_a_customer_receipt_shows_the_customers_card(): void

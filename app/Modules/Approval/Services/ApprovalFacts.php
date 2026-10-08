@@ -39,6 +39,17 @@ final class ApprovalFacts
     /** টাকার খাত যে ঘরগুলোয় বসতে পারে, অগ্রাধিকারের ক্রমে। */
     private const ACCOUNT_FIELDS = ['money_account_id', 'account_id', 'bank_account_id', 'to_account_id', 'from_account_id'];
 
+    /**
+     * ⛔ দেখার দেয়াল — সইয়ের কাগজ পড়তে এগুলো তোলা হয় (মালিক, ৮ অক্টোবর ২০২৬: *"Receipt voucher approval e
+     * full details & voucher vew dekhay na … Party, What for, Where egulo astechena"*)।
+     *
+     * ⓘ মালিকের হেডারে সুপার বাছা, আর কাউসারের লায়নের রসিদ RCV-0010 সইয়ের জন্য তাঁর কাছেই — তবু কাগজটা
+     * শাখার দেয়ালে লুকাত: ঘর খালি, পাতায় না ভাউচার, না সারি। ⚠️ যাঁর কাছে কাগজটা পড়ে (সইকারী বা
+     * অনুরোধকারী) তাঁকে কাগজটা দেখতেই হয় — না দেখে সই চাওয়া যায় না। কোম্পানির দেয়াল (টেন্যান্ট) থাকে।
+     * ⓘ ডাকেন কেবল সেই পথগুলো যারা আগেই "ইনি সিদ্ধান্ত দেন বা নিজের অনুরোধ" যাচাই করেছে।
+     */
+    public const VIEW_WALLS = ['user-branch', 'user-warehouse', 'viewed-branch-warehouse'];
+
     public function __construct(private readonly PartyRegistry $parties) {}
 
     /**
@@ -64,6 +75,7 @@ final class ApprovalFacts
             }
 
             $documents = $class::query()
+                ->withoutGlobalScopes(self::VIEW_WALLS)
                 /*
                  * ⓘ ভাউচারে টাকার খাতটা মাথায় নয়, দাখিলার লাইনে — তাই
                  * লাইনগুলোও একবারেই আসে।
