@@ -30,6 +30,8 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  */
 class SalesReturn extends Model implements Drillable
 {
+    // ⭐ বিজ্ঞপ্তিতে "নাম · পয়েন্ট" ([[NamesItsCustomerInNotices]])
+    use \App\Modules\Sales\Models\Concerns\NamesItsCustomerInNotices;
     use BelongsToCompany;
     use \App\Modules\Sales\Models\Concerns\CarriesTheSalesChannel;
     use HasDocumentStatus;

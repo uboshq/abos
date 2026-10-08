@@ -160,7 +160,7 @@ final class ApprovalsDue extends Command
             $notify->send(
                 $userId,
                 'approval.reminder',
-                __('core.notify.approval_reminder', ['document' => $approval->module.' · '.$approval->action]),
+                __('core.notify.approval_reminder', ['document' => app(\App\Core\Engines\Approval\ApprovalEngine::class)->noticeLabel($approval)]),
                 null,
                 Route::has('approval.inbox.index') ? route('approval.inbox.index') : null,
             );
@@ -191,7 +191,7 @@ final class ApprovalsDue extends Command
             $notify->send(
                 $userId,
                 'approval.escalated',
-                __('core.notify.approval_escalated', ['document' => $approval->module.' · '.$approval->action]),
+                __('core.notify.approval_escalated', ['document' => app(\App\Core\Engines\Approval\ApprovalEngine::class)->noticeLabel($approval)]),
                 null,
                 Route::has('approval.inbox.index') ? route('approval.inbox.index') : null,
             );

@@ -36,6 +36,8 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  */
 class DeliveryChallan extends Model implements Drillable, ShowsItselfForSigning
 {
+    // ⭐ বিজ্ঞপ্তিতে "নাম · পয়েন্ট" ([[NamesItsCustomerInNotices]])
+    use \App\Modules\Sales\Models\Concerns\NamesItsCustomerInNotices;
     use BelongsToCompany;
     use \App\Modules\Sales\Models\Concerns\CarriesTheSalesChannel;
     use TellsTheDeliveryStage;

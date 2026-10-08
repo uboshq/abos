@@ -30,6 +30,8 @@ use Illuminate\Validation\ValidationException;
  */
 class DeliveryOrder extends Model implements CounterSaleSource
 {
+    // ⭐ বিজ্ঞপ্তিতে "নাম · পয়েন্ট" ([[NamesItsCustomerInNotices]])
+    use \App\Modules\Sales\Models\Concerns\NamesItsCustomerInNotices;
     use BelongsToCompany;
     use HasPublicId;
     use IsAudited;
