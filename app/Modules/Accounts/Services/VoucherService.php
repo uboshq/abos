@@ -837,23 +837,24 @@ final class VoucherService
      * ⛔ দুই জায়গায় লিখলে হেডারের পক্ষ কোন সারিতে নামে সেই নিয়মটা ([[post()]]-এর মন্তব্য) একদিন এক
      * পথে বদলাত আর অন্যটায় না — আর সংশোধিত ভাউচারের খাতা আসলটার থেকে আলাদা বসত।
      *
-     * @param  list<int>  $ownable  যে খাতগুলো কারো নামে বসে ([[accountsThatHoldAParty()]])
+     * @param  array<int, list<string>>  $ownable  যে খাতগুলো কারো নামে বসে, আর কোন ধরনের ([[accountsThatHoldAParty()]])
      * @return list<array<string, mixed>>
      */
     private function ledgerLines(Voucher $voucher, array $ownable): array
     {
+        /*
+         * ⓘ মাথার পক্ষ নামে কেবল সেই সারিতে, যার খাত ঐ ধরনের পক্ষ নেয় — খাতের ধর্ম ([[Account::takesParty()]])। ⛔ নাহলে গ্রাহক
+         * মাথায় থাকা রসিদের মূলধন-সারিতে (৩১০০ কেবল মানুষ নেয়) গ্রাহক বসতে যেত, আর ইঞ্জিন পুরো পোস্ট আটকাত।
+         */
+        $lands = fn (VoucherLine $line): bool => $voucher->party_type !== null
+            && in_array((string) $voucher->party_type, $ownable[(int) $line->account_id] ?? [], true);
+
         return $voucher->lines->map(fn (VoucherLine $line) => [
             'account_id' => $line->account_id,
             'debit' => $line->debit,
             'credit' => $line->credit,
-            'party_type' => $line->party_type
-                ?? (in_array((int) $line->account_id, $ownable, true)
-                    ? $voucher->party_type
-                    : null),
-            'party_id' => $line->party_id
-                ?? (in_array((int) $line->account_id, $ownable, true)
-                    ? $voucher->party_id
-                    : null),
+            'party_type' => $line->party_type ?? ($lands($line) ? $voucher->party_type : null),
+            'party_id' => $line->party_id ?? ($lands($line) ? $voucher->party_id : null),
             'cost_center_id' => $line->cost_center_id,
             'narration' => $line->narration ?? $voucher->narration,
             'source_line_id' => $line->id,
@@ -1438,46 +1439,21 @@ final class VoucherService
     }
 
     /**
-     * যে খাতগুলো কারো নামে বসে থাকে — পাওনা ও দেনার গোটা পরিবার।
+     * ⭐ যে খাতগুলো কারো নামে বসে, আর কোন ধরনের পক্ষ — খাতের নিজের "পক্ষ রাখে" ধর্ম থেকে (cb, অডিট হিসাব ⚠️১২, 9a5d265e;
+     * fe-র "এক সত্য", ৭ অক্টোবর ২০২৬)।
      *
-     * ── কেন কোড নয়, পরিবার ─────────────────────────────────────────
-     * ছকটা ক্রেতা নিজে বাড়াতে পারেন, আর প্রদেয় ইতিমধ্যেই চার ঘরে ভাগ
-     * হয়েছে (মালের সরবরাহকারী · পরিবহন · হাম্মালি · সেবা)। ⛔ একটা
-     * কোড ধরে মেলালে ঠিক ওই ভাগ হওয়ার দিন নিয়মটা নিভে যেত — যেমন
-     * `PAYABLE` ধরে যাচাই করতে গিয়ে একবার হয়েছিল।
+     * ⓘ দুই জায়গায় খাটে: পোস্টে মাথার পক্ষ কোন সারিতে নামে ([[ledgerLines()]] — কেবল যে খাত ঐ ধরন নেয়), আর হাতে লেখা জাবেদায়
+     * "পক্ষ লাগবে" ([[assertTemplate()]])। ⛔ আগে এখানে চারটা পরিবারের নিজের তালিকা ছিল (১১১০, ২১১০, ১১৭০, ১১৩১) — খাতের
+     * ধর্ম আর এই তালিকা একদিন আলাদা হতো। ⓘ ধর্ম গ্রুপসহ ফেরে; গ্রুপে দাখিলা বসেই না ([[assertLinesArePostable()]])।
      *
-     * ⚠️ `selfAndDescendants()` কেবল `id` ও `parent_id` আনে — বাকি
-     * ঘরগুলো `null`। তাই এখানে **কেবল id** মেলানো হয়; `code` বা
-     * `is_group` দেখতে গেলে চারটা `null`-এর সাথে তুলনা করে নীরবে ভুল
-     * উত্তর আসত।
-     *
-     * ⓘ গ্রুপ খাত তালিকায় থাকলেও ক্ষতি নেই — গ্রুপে দাখিলা বসেই না,
-     * `assertLinesArePostable()` তার আগেই আটকায়।
-     *
-     * @return list<int>
+     * @return array<int, list<string>>  খাতের id => যে ধরনের পক্ষ নেয়
      */
     private function accountsThatHoldAParty(): array
     {
-        $ids = [];
-
-        /*
-         * ⛔ হাতধার (১১৭০) আর কর্মীর অগ্রিম (১১৩১)-ও কারো নামে বসে — মালিকের অভিযোগ, ৫ অক্টোবর ২০২৬ (আভা ট্রেড RCV-0001)।
-         * ⚠️ আগে কেবল পাওনা আর দেনা ছিল: ব্যক্তির নামে হাতধার ফেরতের রসিদে মাথায় পক্ষ থাকলেও খাতার ১১৭০-সারিতে পক্ষ বসত
-         * না — তাই "Aminul কত দেবেন" প্রশ্নের উত্তরে টাকাটা আসতই না।
-         */
-        foreach ([StandardChart::RECEIVABLE, StandardChart::PAYABLE_GROUP, StandardChart::HAND_LOAN, StandardChart::EMPLOYEE_ADVANCE] as $code) {
-            $root = StandardChart::find($code);
-
-            if ($root === null) {
-                continue;
-            }
-
-            foreach ($root->selfAndDescendants() as $account) {
-                $ids[] = (int) $account->id;
-            }
-        }
-
-        return $ids;
+        // ⓘ দল বাদ — দলে দাখিলা বসেই না, আর সারির খাত সবসময় ঘর ([[MoneyNeverLandsOnAGroupAccountTest]])
+        return Account::query()->holdingParty()->postable()->get(['id', 'party_types'])
+            ->mapWithKeys(fn (Account $a) => [(int) $a->id => array_values((array) $a->party_types)])
+            ->all();
     }
 
     /**
@@ -1655,7 +1631,7 @@ final class VoucherService
          * ⓘ যে খাতগুলো কারো নামে বসে — পাওনা, দেনা, হাতধার, কর্মীর অগ্রিম (fe, ৭ অক্টোবর ২০২৬)। ⭐ খাতার সারিতে পক্ষ বসানোর
          * একই তালিকা ([[accountsThatHoldAParty()]]) — দুই তালিকা একদিন আলাদা হতো। ⓘ cb-র খাতের "পক্ষ রাখে" ধর্ম এলে ওটাই পড়বে।
          */
-        $control = $this->accountsThatHoldAParty();
+        $control = array_keys($this->accountsThatHoldAParty());
         $headerHasParty = filled($headerParty[0] ?? null) && filled($headerParty[1] ?? null);
 
         foreach ($lines as $line) {
