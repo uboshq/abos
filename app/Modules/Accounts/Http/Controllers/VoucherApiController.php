@@ -216,10 +216,13 @@ final class VoucherApiController extends Controller implements HasMiddleware
             return ['money_account' => null, 'money_label' => null];
         }
 
-        $money = $v->money_account_id !== null
-            ? Account::query()->find($v->money_account_id)
-            : $v->lines->map(fn (VoucherLine $l) => $l->account)
+        // ⓘ খাতটা আগেই বাছা (ভাউচারের নিজের ঘর) — `whereKey`, তালিকা থেকে বাছাই নয় ([[MoneyNeverLandsOnAGroupAccountTest]])
+        if ($v->money_account_id !== null) {
+            $money = Account::query()->whereKey($v->money_account_id)->first();
+        } else {
+            $money = $v->lines->map(fn (VoucherLine $l) => $l->account)
                 ->first(fn (?Account $a) => $a !== null && ($a->isBank() || $a->isMfs() || $a->isCash()));
+        }
 
         return [
             'money_account' => $money?->label(),
