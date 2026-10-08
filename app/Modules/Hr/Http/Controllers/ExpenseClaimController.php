@@ -87,10 +87,25 @@ class ExpenseClaimController extends Controller implements HasMiddleware
     {
         $this->authorize('view', $claim);
 
+        $claim->load(['employee', 'expenseAccount', 'paymentVoucher', 'settleVoucher', 'requester']);
+
         return view('hr::claim.show', [
             'menu' => $this->menu->forUser($request->user()),
-            'claim' => $claim->load(['employee', 'expenseAccount', 'paymentVoucher', 'settleVoucher', 'requester']),
+            'claim' => $claim,
+            // ⓘ অগ্রিমের পাতায় — বাকি অগ্রিম নগদে ফেরতের ঘরের জন্য ([[ExpenseClaimService::takeBackAdvance()]])
+            'openAdvance' => $claim->kind === ExpenseClaim::ADVANCE && $claim->employee !== null ? $this->claims->openAdvance($claim->employee) : null,
         ]);
+    }
+
+    /** ⭐ বাকি অগ্রিম নগদে ফেরত — খসড়া আদায় ভাউচার, ক্যাশিয়ার নিজের টিলে পাকা করেন (টাকার পরিকল্পনা দফা ১৩, ধাপ ৪) */
+    public function takeBackAdvance(Request $request, ExpenseClaim $claim): RedirectResponse
+    {
+        $data = $request->validate(['amount' => ['required', 'numeric', 'gt:0']]);
+
+        $voucher = $this->claims->takeBackAdvance($claim, (string) $data['amount']);
+
+        return redirect()->route('accounts.voucher.show', $voucher)
+            ->with('saved', __('hr::claim.return_drafted', ['no' => $voucher->document_no]));
     }
 
     // ── ফোন ─────────────────────────────────────────────────────────────

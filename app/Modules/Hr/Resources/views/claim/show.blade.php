@@ -68,5 +68,24 @@
         @endif
     </section>
 
+    {{-- ⭐ বাকি অগ্রিম নগদে ফেরত — খসড়া আদায়, ক্যাশিয়ার নিজের টিলে পাকা করেন (টাকার পরিকল্পনা দফা ১৩, ধাপ ৪) --}}
+    @if ($claim->status === \App\Modules\Hr\Models\ExpenseClaim::PAID && $openAdvance !== null
+        && bccomp((string) $openAdvance, '0', 2) > 0)
+        @can('accounts.voucher.create')
+            <section data-take-back class="mb-4 rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4 text-sm">
+                <h2 class="mb-2 font-semibold">{{ __('hr::claim.take_back_title') }}</h2>
+                <p class="mb-3 text-2xs text-(--color-ink-muted)">
+                    {{ __('hr::claim.take_back_note', ['open' => \App\Core\Support\Money::format($openAdvance)]) }}
+                </p>
+                <form method="POST" action="{{ route('hr.claim.take_back', $claim) }}" class="flex flex-wrap items-end gap-3">
+                    @csrf
+                    <x-ui.field name="amount" type="number" step="0.01" inputmode="decimal" :label="__('hr::claim.amount')"
+                                :value="old('amount', \App\Core\Support\Money::round($openAdvance, 2))" required />
+                    <x-ui.button type="submit" tone="primary">{{ __('hr::claim.take_back') }}</x-ui.button>
+                </form>
+            </section>
+        @endcan
+    @endif
+
     <x-ui.attachments :document="$claim" :slip="true" />
 </x-layouts.app>

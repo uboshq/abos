@@ -54,6 +54,9 @@ Route::middleware('auth')->prefix('hr')->group(function () {
         Route::post('/', [ExpenseClaimController::class, 'store'])->name('store');
         // ⓘ নিজের দাবি, বা সবার-চাবি আর নাগাল ([[ExpenseClaimPolicy]])
         Route::get('/{claim}', [ExpenseClaimController::class, 'show'])->whereNumber('claim')->middleware('can:view,claim')->name('show');
+        // ⭐ বাকি অগ্রিম নগদে ফেরত — দাবি দেখতে পারেন আর ভাউচার লেখেন এমন মানুষ (টাকার পরিকল্পনা দফা ১৩, ধাপ ৪)
+        Route::post('/{claim}/take-back', [ExpenseClaimController::class, 'takeBackAdvance'])->whereNumber('claim')
+            ->middleware(['can:view,claim', 'can:accounts.voucher.create'])->name('take_back');
     });
 
     Route::prefix('payroll')->name('payroll.')->group(function () {

@@ -11,6 +11,7 @@ use App\Core\Engines\Attachment\AttachmentEngine;
 use App\Core\Engines\Attachment\AttachmentException;
 use App\Core\Engines\NumberSeries\NumberSeriesEngine;
 use App\Core\Support\CompanyContext;
+use App\Core\Support\DocumentStatus;
 use App\Models\Approval;
 use App\Models\ApprovalDecision;
 use App\Models\User;
@@ -251,6 +252,60 @@ final class ExpenseClaimService
                 $claim->forceFill(['status' => ExpenseClaim::REJECTED, 'decided_at' => now()])->save();
             }
         });
+    }
+
+    /**
+     * ⭐ বাকি অগ্রিম নগদে ফেরত — খসড়া আদায়, ক্যাশিয়ার নিজের টিলে পাকা করেন (টাকার পরিকল্পনা দফা ১৩, ধাপ ৪: "বাকি থাকলে ফেরত বা
+     * বেতন থেকে কাটা"; ৭ অক্টোবর ২০২৬; [[AnUnspentAdvanceComesBackInCashTest]])।
+     *
+     * ⓘ বেতন থেকে কাটা আগে থেকেই ([[PayrollService]], খোলা অগ্রিম পর্যন্ত)। নগদ ফেরতের পথ ছিল কেবল হাতে লেখা আদায় ভাউচার — কর্মীর
+     * নাম আর ১১৩১ ঠিক বাছতে হত। এখন অগ্রিমের পাতা থেকে: Dr নগদ / Cr ১১৩১ কর্মীর নামে, খসড়া; নগদ আসে যিনি পাকা করেন তাঁর টিলে
+     * ("নগদ কেবল নিজের টিলে")। অঙ্ক খোলা অগ্রিমের বেশি নয়, আর একজনের ফেরতের খসড়া একটাই — দুইটা খসড়া পাকা হলে অগ্রিম ঋণাত্মক হত।
+     */
+    public function takeBackAdvance(ExpenseClaim $claim, string $amount): Voucher
+    {
+        if ($claim->kind !== ExpenseClaim::ADVANCE || $claim->status !== ExpenseClaim::PAID) {
+            throw ValidationException::withMessages(['amount' => __('hr::claim.return_only_paid_advance')]);
+        }
+
+        $amount = bcadd($amount, '0', 2);
+
+        if (bccomp($amount, '0', 2) <= 0) {
+            throw ValidationException::withMessages(['amount' => __('hr::claim.amount_bad')]);
+        }
+
+        $employee = $claim->employee;
+        $advance = $this->head(StandardChart::EMPLOYEE_ADVANCE);
+
+        $waiting = Voucher::query()
+            ->where('status', DocumentStatus::DRAFT)
+            ->where('type', Voucher::RECEIPT)
+            ->whereHas('lines', fn ($q) => $q->where('account_id', $advance->id)
+                ->where('party_type', Employee::drillSourceType())->where('party_id', $employee->id))
+            ->value('document_no');
+
+        if ($waiting !== null) {
+            throw ValidationException::withMessages(['amount' => __('hr::claim.return_waiting', ['no' => $waiting])]);
+        }
+
+        $open = $this->advances->open($employee, Carbon::today());
+
+        if (bccomp($amount, $open, 2) > 0) {
+            throw ValidationException::withMessages(['amount' => __('hr::claim.return_over_open', ['open' => \App\Core\Support\Money::format($open)])]);
+        }
+
+        $party = ['party_type' => Employee::drillSourceType(), 'party_id' => (int) $employee->id];
+
+        return $this->vouchers->create([
+            'type' => Voucher::RECEIPT,
+            'branch_id' => $claim->branch_id,
+            'trx_date' => Carbon::today()->toDateString(),
+            'narration' => __('hr::claim.narration_return', ['no' => $claim->document_no, 'who' => $employee->name()]),
+            ...$party,
+        ], [
+            ['account_id' => (int) app(CashTillService::class)->ensurePrimaryTill()->account_id, 'debit' => $amount, 'credit' => '0'],
+            ['account_id' => (int) $advance->id, 'debit' => '0', 'credit' => $amount, ...$party],
+        ]);
     }
 
     /** কর্মীর খোলা অগ্রিম — পর্দা আর ফোনের জন্য */
