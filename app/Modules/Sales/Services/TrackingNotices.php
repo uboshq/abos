@@ -50,7 +50,7 @@ final class TrackingNotices
             return;
         }
 
-        $challan = DeliveryChallan::query()->withoutGlobalScopes()->with('customer')->find($event->delivery_challan_id);
+        $challan = DeliveryChallan::query()->withoutGlobalScopes()->with('customer.location.parent')->find($event->delivery_challan_id);
 
         if ($challan === null) {
             return;
@@ -74,7 +74,8 @@ final class TrackingNotices
                 $users->all(),
                 self::TYPE,
                 $title,
-                __('sales::tracking.notice.body', ['customer' => (string) $challan->customer?->name()], 'bn'),
+                // ⭐ গ্রাহকের পাশে পয়েন্ট — মালিক, ৭ অক্টোবর ২০২৬ ([[Customer::nameWithPoint()]])
+                __('sales::tracking.notice.body', ['customer' => (string) $challan->customer?->nameWithPoint()], 'bn'),
                 route('sales.tracking.show', ['challan', $challan->public_id]),
             );
 
@@ -150,7 +151,7 @@ final class TrackingNotices
         }
 
         $sent = $this->notices->sendMany($users, $type, $title,
-            __('sales::tracking.notice.body', ['customer' => (string) $order->customer?->name()], 'bn'), $url);
+            __('sales::tracking.notice.body', ['customer' => (string) $order->customer?->nameWithPoint()], 'bn'), $url);
 
         foreach ($sent->pluck('user_id')->unique() as $userId) {
             \App\Jobs\SendPushToUser::dispatch((int) $userId, $title, [

@@ -233,6 +233,41 @@ final class ThePhoneWritesVouchersLikeTheWebTest extends TestCase
 
     // ── যন্ত্রপাতি ─────────────────────────────────────────────────────────
 
+    /**
+     * ⭐ টাকা কার, আর কোথায় — মালিক, ৭ অক্টোবর ২০২৬: *"vauture e kake dibe kar kach theke nibe seta nai"*। পক্ষ সারিতে
+     * বসলেও তালিকা আর পাতায় আসে, ধরন ধরে ঘরের নাম (আদায়ে "কার কাছ থেকে", পরিশোধে "কাকে"); পাতায় টাকার খাত ("কোথায় জমা
+     * হলো" / "কোথা থেকে গেল"); প্রতিটা সারির পক্ষ ([[VoucherApiController::partyOf()]], [[VoucherApiController::moneySide()]])।
+     */
+    public function test_the_phone_says_who_the_money_is_from_or_to_and_which_money_account(): void
+    {
+        $reader = $this->person(['accounts.voucher.create', 'accounts.report']);
+        $out = $this->push($reader, [$this->change('p-1', $this->journal())]);
+        $voucher = Voucher::query()->where('public_id', $out[0]['entityId'])->with('lines')->firstOrFail();
+        $shop = \App\Modules\Customer\Models\Customer::query()->orderBy('id')->firstOrFail();
+        $till = Account::query()->postable()->active()->where('money_kind', Account::CASH)->orderBy('code')->firstOrFail();
+        // ⓘ আদায়ের আকার: টাকা টিলে (ডেবিট), পক্ষ প্রাপ্যের সারিতে (ক্রেডিট) — মাথায় পক্ষ নেই
+        $voucher->lines[0]->forceFill(['account_id' => $till->id])->save();
+        $voucher->lines[1]->forceFill(['party_type' => 'customer', 'party_id' => $shop->id])->save();
+        $voucher->forceFill(['type' => Voucher::RECEIPT, 'party_type' => null, 'party_id' => null])->save();
+
+        $row = collect($this->phone($reader)->getJson('/api/v1/accounts/vouchers')->assertOk()->json('rows'))->firstWhere('id', $voucher->public_id);
+        $this->assertSame($shop->drillLabel(), $row['party'], '⛔ সারির পক্ষ তালিকায় এল না।');
+        $this->assertSame('কার কাছ থেকে', $row['party_label']);
+
+        $page = $this->phone($reader)->getJson('/api/v1/accounts/vouchers/'.$voucher->public_id)->assertOk()->json();
+        $this->assertSame([$shop->drillLabel(), 'কার কাছ থেকে'], [$page['party'], $page['party_label']]);
+        $this->assertSame([$till->label(), 'কোথায় জমা হলো'], [$page['money_account'], $page['money_label']], '⛔ টাকা কোথায় জমা হলো, পাতায় নেই।');
+        $this->assertSame([null, $shop->drillLabel()], array_column($page['lines'], 'party'));
+
+        $voucher->forceFill(['type' => Voucher::PAYMENT])->save();
+        $page = $this->phone($reader)->getJson('/api/v1/accounts/vouchers/'.$voucher->public_id)->assertOk()->json();
+        $this->assertSame(['কাকে', 'কোথা থেকে গেল'], [$page['party_label'], $page['money_label']]);
+
+        $voucher->forceFill(['type' => Voucher::JOURNAL])->save();
+        $page = $this->phone($reader)->getJson('/api/v1/accounts/vouchers/'.$voucher->public_id)->assertOk()->json();
+        $this->assertSame(['পক্ষ', null], [$page['party_label'], $page['money_label']]);
+    }
+
     /** @param  list<string>  $keys */
     private function person(array $keys): User
     {

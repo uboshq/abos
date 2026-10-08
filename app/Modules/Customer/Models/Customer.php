@@ -344,6 +344,17 @@ class Customer extends Model implements AuthenticatableContract, Drillable
     }
 
     /**
+     * নাম আর পয়েন্ট একসাথে — "নাম · পয়েন্ট"; পয়েন্টে না বসলে কেবল নাম। ফোনের বিজ্ঞপ্তির লেখায় (মালিক, ৭ অক্টোবর ২০২৬:
+     * "app e notification e customer er sathe point nai") — ফোন নিজে যেখানে জোড়ে, সেখানে এটা লাগে না।
+     */
+    public function nameWithPoint(): string
+    {
+        $point = $this->pointName();
+
+        return $this->name().($point === null ? '' : ' · '.$point);
+    }
+
+    /**
      * উপরের এরিয়াটা — জমা রাখা নয়, গাছ থেকে গোনা।
      *
      * ── কেন কলামে রাখা হয় না ────────────────────────────────────────

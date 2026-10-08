@@ -97,7 +97,16 @@ final class EveryPhoneDoorNamesTheShopsPointTest extends TestCase
             'customer_id' => $this->shop->id, 'warehouse_id' => Warehouse::query()->where('is_default', true)->firstOrFail()->id,
             'trx_date' => now()->toDateString(),
         ], [['product_id' => $this->product->id, 'delivered_qty' => '1', 'rate' => '10']]));
+        // ⓘ অন্য একজন ধাপ বদলান — যিনি বদলান তিনি নিজে খবর পান না; লেখক (মালিক) পান
+        $mover = User::factory()->create(['is_active' => true, 'current_company_id' => $this->company->id]);
+        $mover->companies()->attach($this->company->id, ['is_active' => true]);
+        $this->actingAs($mover);
         app(DeliveryStageService::class)->move($challan->fresh(), DeliveryStage::DISPATCHED);
+        $this->actingAs($this->owner);
+
+        // ⭐ বিজ্ঞপ্তিতেও — মালিক, ৭ অক্টোবর ২০২৬: "app e notification e customer er sathe point nai" ([[TrackingNotices]])
+        $bodies = \App\Models\Notification::query()->where('user_id', $this->owner->id)->pluck('body')->all();
+        $this->assertContains($this->shop->name().' · কারওয়ান বাজার', $bodies, '⛔ ট্র্যাকিং-বিজ্ঞপ্তিতে গ্রাহকের পাশে পয়েন্ট নেই।');
 
         $this->phone($this->owner);
         $money = collect($this->getJson('/api/v1/sales/collections?from='.now()->subDay()->toDateString().'&to='.now()->toDateString())->assertOk()->json('rows'))

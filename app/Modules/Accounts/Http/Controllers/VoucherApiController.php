@@ -117,6 +117,8 @@ final class VoucherApiController extends Controller implements HasMiddleware
             ->paginate(self::PER_PAGE);
 
         $rows = $page->getCollection();
+        // ⓘ সারির পক্ষও লাগে (নিচে [[partyOf()]]) — পাতায় একবারে
+        $rows->load('lines:id,voucher_id,party_type,party_id');
         $names = $this->partyNames($rows);
         $awaiting = $this->awaitingIds($rows->modelKeys());
 
@@ -202,12 +204,72 @@ final class VoucherApiController extends Controller implements HasMiddleware
             ->pluck('approvable_id')->map(fn ($id) => (int) $id)->all();
     }
 
-    /** @param  Collection<int, Voucher>  $rows  @return array<string, string> */
+    /** @return array{money_account: ?string, money_label: ?string} */
+    private function moneySide(Voucher $v): array
+    {
+        $role = match ($v->type) {
+            Voucher::RECEIPT => 'into',
+            Voucher::PAYMENT, Voucher::EXPENSE => 'out_of',
+            default => null,
+        };
+        if ($role === null) {
+            return ['money_account' => null, 'money_label' => null];
+        }
+
+        $money = $v->money_account_id !== null
+            ? Account::query()->find($v->money_account_id)
+            : $v->lines->map(fn (VoucherLine $l) => $l->account)
+                ->first(fn (?Account $a) => $a !== null && ($a->isBank() || $a->isMfs() || $a->isCash()));
+
+        return [
+            'money_account' => $money?->label(),
+            'money_label' => $money === null ? null : (string) __('accounts::phone_voucher.money_'.$role),
+        ];
+    }
+
+    /**
+     * মাথার পক্ষ আর সারির পক্ষ — দুটোরই নাম, এক ডাকে।
+     *
+     * @param  Collection<int, Voucher>  $rows
+     * @return array<string, string>
+     */
     private function partyNames(Collection $rows): array
     {
-        return $this->parties->labelsOf($rows
-            ->filter(fn (Voucher $v) => $v->party_type !== null && $v->party_id !== null)
-            ->map(fn (Voucher $v) => [(string) $v->party_type, (int) $v->party_id]));
+        $pairs = [];
+        foreach ($rows as $v) {
+            if ($v->party_type !== null && $v->party_id !== null) {
+                $pairs[] = [(string) $v->party_type, (int) $v->party_id];
+            }
+            foreach ($v->lines as $l) {
+                if ($l->party_type !== null && $l->party_id !== null) {
+                    $pairs[] = [(string) $l->party_type, (int) $l->party_id];
+                }
+            }
+        }
+
+        return $this->parties->labelsOf($pairs);
+    }
+
+    /**
+     * ⭐ টাকা কার — মাথায় পক্ষ থাকলে সেটা, নইলে প্রথম যে সারিতে পক্ষ বসে (মালিক, ৭ অক্টোবর ২০২৬: *"vauture e kake dibe kar
+     * kach theke nibe seta nai"*)। আদায় আর পরিশোধের পক্ষ প্রায়ই সারিতে বসে (প্রাপ্য বা প্রদেয়ের সারি), মাথায় নয় — তাই আগে
+     * ফোনে কিছুই দেখাত না।
+     *
+     * @param  array<string, string>  $names
+     */
+    private function partyOf(Voucher $v, array $names): ?string
+    {
+        if ($v->party_type !== null && $v->party_id !== null) {
+            return $names[$v->party_type.':'.$v->party_id] ?? null;
+        }
+
+        foreach ($v->lines->sortBy('id') as $l) {
+            if ($l->party_type !== null && $l->party_id !== null && isset($names[$l->party_type.':'.$l->party_id])) {
+                return $names[$l->party_type.':'.$l->party_id];
+            }
+        }
+
+        return null;
     }
 
     /**
@@ -236,7 +298,13 @@ final class VoucherApiController extends Controller implements HasMiddleware
             'amount' => bcadd((string) $v->amount, '0', 2),
             'state' => $state,
             'state_label' => (string) __('accounts::phone_voucher.state_'.$state),
-            'party' => $v->party_type === null ? null : ($names[$v->party_type.':'.$v->party_id] ?? null),
+            'party' => $this->partyOf($v, $names),
+            // ⭐ পক্ষের ঘরের নাম, ধরন ধরে: আদায়ে "কার কাছ থেকে", পরিশোধ আর খরচে "কাকে" — দিক বোঝা যায়
+            'party_label' => (string) __('accounts::phone_voucher.party_'.match ($v->type) {
+                Voucher::RECEIPT => 'from',
+                Voucher::PAYMENT, Voucher::EXPENSE => 'to',
+                default => 'any',
+            }),
             'narration' => (string) ($v->narration ?? ''),
         ];
     }
@@ -253,12 +321,20 @@ final class VoucherApiController extends Controller implements HasMiddleware
             'instrument' => $v->instrument,
             'instrument_no' => $v->instrument_no,
             'written_by' => (string) ($v->creator?->name ?? ''),
+            /*
+             * ⭐ টাকার খাত — পক্ষের উল্টো দিক (মালিক, ৭ অক্টোবর ২০২৬: "Received from R paid into … Paid from R Paid to")।
+             * আদায়ে "কোথায় জমা হলো" (নগদ/ব্যাংক/বিকাশ), পরিশোধ আর খরচে "কোথা থেকে গেল"। পোস্টের আগে `money_account_id` বসে না,
+             * তাই সারি থেকে খোঁজা — সইয়ের পাতার একই নিয়ম ([[Voucher::signingSheet()]])।
+             */
+            ...$this->moneySide($v),
             'cancel_reason' => $v->cancel_reason,
             'lines' => $v->lines->map(fn (VoucherLine $l) => [
                 'account' => trim(($l->account?->code ?? '').' '.($l->account?->name() ?? '')),
                 'debit' => bcadd((string) $l->debit, '0', 2),
                 'credit' => bcadd((string) $l->credit, '0', 2),
                 'narration' => (string) ($l->narration ?? ''),
+                // ⓘ সারির পক্ষ — জাবেদায় প্রতিটা সারির নিজের
+                'party' => $l->party_type === null || $l->party_id === null ? null : ($names[$l->party_type.':'.$l->party_id] ?? null),
             ])->values(),
             /*
              * ⓘ পাকা করার বোতাম — চাবি, খসড়া, সই ঝুলে নেই, আর লেখক নিজে নন (অংশ ৩গ)। ⓘ বোতাম কেবল ইঙ্গিত; চাপলে

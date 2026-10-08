@@ -11,4 +11,11 @@ return [
     'unknown_type' => 'Unknown voucher type. Update the app and write it again.',
     'posted' => ':no is posted.',
     'saved_draft' => ':no is kept as a draft.',
+
+    // ⭐ টাকা কার — মালিক, ৭ অক্টোবর ২০২৬ ("kake dibe kar kach theke nibe")
+    'party_from' => 'Received from',
+    'party_to' => 'Paid to',
+    'party_any' => 'Party',
+    'money_into' => 'Paid into',
+    'money_out_of' => 'Paid from',
 ];
