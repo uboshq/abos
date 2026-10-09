@@ -6,6 +6,7 @@ namespace App\Modules\Documents\Http\Controllers;
 
 use App\Core\Services\MenuBuilder;
 use App\Http\Controllers\Controller;
+use App\Modules\Documents\Models\AbeRule;
 use App\Modules\Documents\Models\DocumentCategory;
 use App\Modules\Documents\Models\DocumentTag;
 use App\Modules\Documents\Models\DocumentType;
@@ -46,6 +47,7 @@ final class DocumentAdminController extends Controller
             'categories' => DocumentCategory::query()->orderBy('name_en')->get(),
             'tags' => DocumentTag::query()->orderBy('name')->get(),
             'fields' => MetadataField::query()->orderBy('name_en')->get(),
+            'abeRules' => AbeRule::query()->orderBy('kind')->orderBy('doc_type')->orderBy('id')->get(),
             'allTypes' => $this->choices->types(true),
             'storage' => DocumentFiles::limits(),
         ]);

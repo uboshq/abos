@@ -43,4 +43,7 @@ return [
     'save_scan' => 'Save',
     'show_text' => 'Show the full text',
     'save_text' => 'Save the text',
+    'use_type' => 'Use this type',
+    'back_to_document' => 'Back to the document',
+    'abe' => 'ABE',
 ];

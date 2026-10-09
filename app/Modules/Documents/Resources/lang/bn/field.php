@@ -68,4 +68,10 @@ return [
     'ocr_date' => 'তারিখ',
     'ocr_party' => 'সরবরাহকারী / পক্ষ',
     'ocr_amount' => 'অঙ্ক',
+    'keywords' => 'শব্দ (কমা দিয়ে)',
+    'weight' => 'ওজন',
+    'rule_label' => 'তথ্যের নাম',
+    'pattern' => 'প্যাটার্ন',
+    'rule_kind' => 'নিয়মের ধরন',
+    'rule' => 'নিয়ম',
 ];

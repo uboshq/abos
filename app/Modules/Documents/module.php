@@ -56,7 +56,7 @@ return [
         'bn' => 'ডকুমেন্ট ম্যানেজমেন্ট',
     ],
 
-    'version' => '0.6.0',
+    'version' => '0.7.0',
 
     /*
      * ⭐ সাইডবারে মাস্টার ডাটা (৫) আর সিস্টেম অ্যাডমিনের (১০) মাঝখানে — মালিক, ৩০ সেপ্টেম্বর ২০২৬:
@@ -101,8 +101,9 @@ return [
             // ⭐ স্ক্যান ও OCR (পঞ্চম ধাপ) — লেখা পড়া ব্যবহারকারীর ব্রাউজারে, নিজের সার্ভারের ফাইলে
             ['label' => 'documents::menu.scan', 'icon' => 'receipt', 'route' => 'documents.scan',
                 'permission' => 'documents.upload'],
-            ['label' => 'documents::menu.intelligence', 'icon' => 'filter', 'route' => 'documents.screen',
-                'route_params' => ['screen' => 'intelligence'], 'permission' => 'documents.view'],
+            // ⭐ Document Intelligence (ABE) — নিয়মে, নিজের সার্ভারে (ষষ্ঠ ধাপ)
+            ['label' => 'documents::menu.intelligence', 'icon' => 'filter', 'route' => 'documents.intelligence',
+                'permission' => 'documents.view'],
             ['label' => 'documents::menu.mine', 'icon' => 'list', 'route' => 'documents.mine',
                 'permission' => 'documents.view'],
             ['label' => 'documents::menu.shared', 'icon' => 'share', 'route' => 'documents.shared',
@@ -257,6 +258,14 @@ return [
         ['key' => 'documents.ocr_languages', 'label' => 'documents::settings.ocr_languages',
             'type' => 'choice', 'options' => ['ben+eng', 'ben', 'eng'], 'option_label' => 'documents::settings.language_',
             'default' => 'ben+eng', 'group' => 'entry'],
+
+        /*
+         * ⭐ ABE (§২০ Intelligence Settings; ষষ্ঠ ধাপ) — চালু কি না, আর সারাংশে কয়টা লাইন।
+         */
+        ['key' => 'documents.abe_enabled', 'label' => 'documents::settings.abe_enabled',
+            'type' => 'boolean', 'default' => true, 'group' => 'entry'],
+        ['key' => 'documents.abe_summary_lines', 'label' => 'documents::settings.abe_summary_lines',
+            'type' => 'integer', 'default' => 5, 'group' => 'entry'],
     ],
 
     /*

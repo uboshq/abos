@@ -26,4 +26,5 @@ return [
     'pages' => 'পাতা',
     'ocr_review' => 'পড়া লেখা — দেখে ঠিক করুন',
     'ocr' => 'পড়া লেখা (OCR)',
+    'admin_abe' => 'Document Intelligence (ABE)-র নিয়ম',
 ];

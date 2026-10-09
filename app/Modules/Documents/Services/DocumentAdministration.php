@@ -6,6 +6,7 @@ namespace App\Modules\Documents\Services;
 
 use App\Core\Support\Actor;
 use App\Core\Support\CompanyContext;
+use App\Modules\Documents\Models\AbeRule;
 use App\Modules\Documents\Models\DocumentCategory;
 use App\Modules\Documents\Models\DocumentTag;
 use App\Modules\Documents\Models\DocumentType;
@@ -25,7 +26,7 @@ use Illuminate\Validation\Rule;
 final class DocumentAdministration
 {
     /** @var list<string> */
-    public const KINDS = ['types', 'categories', 'tags', 'fields'];
+    public const KINDS = ['types', 'categories', 'tags', 'fields', 'classify', 'extract'];
 
     /**
      * @param  array<string, mixed>  $input
@@ -53,6 +54,30 @@ final class DocumentAdministration
                 ]),
                 'company_id' => $companyId, 'created_by' => $actor, 'updated_by' => $actor,
             ]),
+            // ⭐ ষষ্ঠ ধাপ — ABE-র নিয়ম (§৮, §২০ Intelligence Settings)
+            'classify' => AbeRule::query()->create([
+                ...$this->validate($input, [
+                    'doc_type' => ['required', Rule::in(array_keys(app(DocumentChoices::class)->types(true)))],
+                    'keywords' => ['required', 'string', 'max:500'],
+                    'weight' => ['nullable', 'integer', 'between:1,10'],
+                ]),
+                'kind' => AbeRule::CLASSIFY, 'company_id' => $companyId, 'is_active' => true,
+                'created_by' => $actor, 'updated_by' => $actor,
+            ]),
+            'extract' => AbeRule::query()->create([
+                ...$this->validate($input, [
+                    'doc_type' => ['required', Rule::in(array_keys(app(DocumentChoices::class)->types(true)))],
+                    'label' => ['required', 'string', 'max:120'],
+                    // ⛔ ভাঙা প্যাটার্ন আগেই ফেরে — নইলে প্রতিটা কাগজে চুপচাপ খালি ফল আসত
+                    'pattern' => ['required', 'string', 'max:500', function ($attr, $value, $fail) {
+                        if (! DocumentIntelligence::validPattern((string) $value)) {
+                            $fail(__('documents::message.abe_bad_pattern'));
+                        }
+                    }],
+                ]),
+                'kind' => AbeRule::EXTRACT, 'company_id' => $companyId, 'is_active' => true,
+                'created_by' => $actor, 'updated_by' => $actor,
+            ]),
             'fields' => MetadataField::query()->create([
                 ...$this->named($input, 'dms_metadata_fields', [], [
                     'kind' => ['required', Rule::in(MetadataField::KINDS)],
@@ -78,6 +103,7 @@ final class DocumentAdministration
         $model = match ($kind) {
             'types' => DocumentType::class,
             'categories' => DocumentCategory::class,
+            'classify', 'extract' => AbeRule::class,
             default => MetadataField::class,
         };
 
@@ -124,6 +150,10 @@ final class DocumentAdministration
             'name' => __('documents::field.tag'),
             'kind' => __('documents::field.field_kind'),
             'doc_type' => __('documents::field.doc_type'),
+            'keywords' => __('documents::field.keywords'),
+            'weight' => __('documents::field.weight'),
+            'label' => __('documents::field.rule_label'),
+            'pattern' => __('documents::field.pattern'),
         ])->validate();
     }
 }

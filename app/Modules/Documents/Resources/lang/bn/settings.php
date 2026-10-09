@@ -15,4 +15,6 @@ return [
     'language_ben+eng' => 'বাংলা আর ইংরেজি',
     'language_ben' => 'কেবল বাংলা',
     'language_eng' => 'কেবল ইংরেজি',
+    'abe_enabled' => 'Document Intelligence (ABE) চালু',
+    'abe_summary_lines' => 'সারাংশে কয়টা লাইন (১–১৫)',
 ];

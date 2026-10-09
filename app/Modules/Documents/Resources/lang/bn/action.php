@@ -43,4 +43,7 @@ return [
     'save_scan' => 'রাখুন',
     'show_text' => 'পুরো লেখা দেখুন',
     'save_text' => 'লেখা রাখুন',
+    'use_type' => 'এই ধরন বসান',
+    'back_to_document' => 'কাগজে ফিরুন',
+    'abe' => 'ABE',
 ];

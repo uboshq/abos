@@ -38,6 +38,11 @@
                     @endcan
                 @endif
 
+                {{-- ⭐ Document Intelligence (ABE) — নিয়মে, এই কাগজেই (ষষ্ঠ ধাপ) --}}
+                <x-ui.button icon="filter" :href="route('documents.intelligence', ['document' => $document->id])">
+                    {{ __('documents::action.abe') }}
+                </x-ui.button>
+
                 @can('update', $document)
                     <x-ui.button icon="edit" :href="route('documents.edit', $document)">
                         {{ __('documents::action.edit_details') }}

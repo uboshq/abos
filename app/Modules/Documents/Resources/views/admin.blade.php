@@ -191,5 +191,68 @@
                 </div>
             </form>
         </section>
+
+        {{-- ── ⭐ ABE-র নিয়ম (§৮; ষষ্ঠ ধাপ) — শ্রেণি চেনার শব্দ আর তথ্য তোলার প্যাটার্ন ── --}}
+        <section id="abe" data-boxed class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) xl:col-span-2">
+            <h2 class="border-b border-(--color-border) bg-(--color-section-head) px-4 py-3 font-semibold">
+                {{ __('documents::section.admin_abe') }}
+            </h2>
+            <p class="px-4 pt-2 text-2xs text-(--color-ink-muted)">{{ __('documents::message.admin_abe_hint') }}</p>
+
+            <table class="ui-list w-full border-collapse text-sm">
+                <thead>
+                    <tr>
+                        <th class="text-start">{{ __('documents::field.rule_kind') }}</th>
+                        <th class="text-start">{{ __('documents::field.doc_type') }}</th>
+                        <th class="text-start">{{ __('documents::field.rule') }}</th>
+                        <th class="text-end">{{ __('core.table.actions') }}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @forelse ($abeRules as $rule)
+                        <tr data-abe-rule="{{ $rule->id }}" @class(['opacity-60' => ! $rule->is_active])>
+                            <td>{{ __('documents::message.abe_rule_'.$rule->kind) }}</td>
+                            <td>{{ $allTypes[$rule->doc_type] ?? $rule->doc_type }}</td>
+                            <td class="max-w-[40rem] truncate">
+                                @if ($rule->kind === 'classify')
+                                    {{ $rule->keywords }} <span class="text-2xs text-(--color-ink-muted)">× {{ $rule->weight }}</span>
+                                @else
+                                    {{ $rule->label }}: <code class="text-2xs">{{ $rule->pattern }}</code>
+                                @endif
+                            </td>
+                            <td class="text-end">
+                                <form method="POST" action="{{ route('documents.admin.toggle', [$rule->kind, $rule->id]) }}">
+                                    @csrf
+                                    <button type="submit" class="text-(--color-link) hover:underline">
+                                        {{ $rule->is_active ? __('documents::action.turn_off') : __('documents::action.turn_on') }}
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                    @empty
+                        <tr><td colspan="4" class="text-(--color-ink-muted)">{{ __('documents::message.admin_none') }}</td></tr>
+                    @endforelse
+                </tbody>
+            </table>
+
+            <div class="grid gap-4 border-t border-(--color-border) px-4 py-3 lg:grid-cols-2">
+                <form method="POST" action="{{ route('documents.admin.store', 'classify') }}" class="grid gap-2 sm:grid-cols-[10rem_minmax(0,1fr)_5rem_auto] sm:items-end">
+                    @csrf
+                    <x-ui.select name="doc_type" :label="__('documents::field.doc_type')" :options="$allTypes" required />
+                    <x-ui.field name="keywords" :label="__('documents::field.keywords')" maxlength="500" required />
+                    <x-ui.field name="weight" type="number" min="1" max="10" :label="__('documents::field.weight')" value="1" />
+                    <x-ui.button type="submit" tone="primary" icon="plus">{{ __('documents::action.add') }}</x-ui.button>
+                </form>
+
+                <form method="POST" action="{{ route('documents.admin.store', 'extract') }}" class="grid gap-2 sm:grid-cols-[10rem_minmax(0,1fr)_minmax(0,1fr)_auto] sm:items-end">
+                    @csrf
+                    <x-ui.select name="doc_type" :label="__('documents::field.doc_type')" :options="$allTypes" required />
+                    <x-ui.field name="label" :label="__('documents::field.rule_label')" maxlength="120" required />
+                    <x-ui.field name="pattern" :label="__('documents::field.pattern')" maxlength="500" required
+                                :hint="__('documents::message.pattern_hint')" />
+                    <x-ui.button type="submit" tone="primary" icon="plus">{{ __('documents::action.add') }}</x-ui.button>
+                </form>
+            </div>
+        </section>
     </div>
 </x-layouts.app>

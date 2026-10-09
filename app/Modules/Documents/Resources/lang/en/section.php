@@ -26,4 +26,5 @@ return [
     'pages' => 'Pages',
     'ocr_review' => 'Read text — check and correct',
     'ocr' => 'Read text (OCR)',
+    'admin_abe' => 'Document Intelligence (ABE) rules',
 ];

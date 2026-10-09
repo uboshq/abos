@@ -68,4 +68,10 @@ return [
     'ocr_date' => 'Date',
     'ocr_party' => 'Supplier / party',
     'ocr_amount' => 'Amount',
+    'keywords' => 'Words (comma separated)',
+    'weight' => 'Weight',
+    'rule_label' => 'Field name',
+    'pattern' => 'Pattern',
+    'rule_kind' => 'Rule kind',
+    'rule' => 'Rule',
 ];

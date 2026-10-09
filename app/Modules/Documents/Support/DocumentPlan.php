@@ -100,6 +100,7 @@ final class DocumentPlan
      * ⭐ তৃতীয় ধাপ: অনুমোদনের সারি আর মেয়াদ ও নবায়নও — বাকি দশটা আগের মতোই।
      * ⭐ চতুর্থ ধাপ: শেয়ার করা ডকুমেন্ট আর সই কেন্দ্রও — বাকি আটটা আগের মতোই।
      * ⭐ পঞ্চম ধাপ: স্ক্যান ও OCR-ও — বাকি সাতটা আগের মতোই।
+     * ⭐ ষষ্ঠ ধাপ: Document Intelligence (ABE)-ও — বাকি ছয়টা আগের মতোই।
      *
      * ⓘ `group` — ABOS-এর ছয়-ভাগ মেনুর কোন ভাগে ([[ModuleDefinition::MENU_GROUPS]])।
      * ⓘ `sections` — পরিকল্পনার কোন অংশগুলো এই পর্দার কথা বলে।
@@ -111,8 +112,6 @@ final class DocumentPlan
     public const SCREENS = [
         'inbox' => ['icon' => 'inbox', 'group' => 'transactions', 'sections' => [2, 10, 11, 23],
             'systems' => ['notification', 'approval'], 'new' => false],
-        'intelligence' => ['icon' => 'filter', 'group' => 'transactions', 'sections' => [8],
-            'systems' => ['search', 'audit_engine'], 'new' => true],
         'favourite' => ['icon' => 'star', 'group' => 'transactions', 'sections' => [2],
             'systems' => ['data_scope'], 'new' => true],
         'templates' => ['icon' => 'columns', 'group' => 'transactions', 'sections' => [2, 21],
@@ -142,7 +141,7 @@ final class DocumentPlan
         5 => ['status' => self::LIVE, 'systems' => ['print', 'approval', 'audit_engine']],
         6 => ['status' => self::LIVE, 'systems' => ['attachment', 'image']],
         7 => ['status' => self::LIVE, 'systems' => ['image', 'attachment']],
-        8 => ['status' => self::PLANNED, 'systems' => ['search']],
+        8 => ['status' => self::LIVE, 'systems' => ['search']],
         9 => ['status' => self::PARTLY, 'systems' => ['attachment', 'audit_trait']],
         10 => ['status' => self::LIVE, 'systems' => ['approval']],
         11 => ['status' => self::LIVE, 'systems' => ['approval', 'approval_flow']],

@@ -7,6 +7,7 @@ use App\Modules\Documents\Http\Controllers\DocumentBinController;
 use App\Modules\Documents\Http\Controllers\DocumentController;
 use App\Modules\Documents\Http\Controllers\DocumentFileController;
 use App\Modules\Documents\Http\Controllers\DocumentGrantController;
+use App\Modules\Documents\Http\Controllers\DocumentIntelligenceController;
 use App\Modules\Documents\Http\Controllers\DocumentLinkController;
 use App\Modules\Documents\Http\Controllers\DocumentScanController;
 use App\Modules\Documents\Http\Controllers\DocumentShareController;
@@ -73,6 +74,9 @@ Route::middleware(['auth', 'can:documents.view'])->prefix('documents')->group(fu
         ->middleware('can:documents.upload')->name('scan.store');
     Route::post('/ocr/fields', [DocumentScanController::class, 'fields'])->name('ocr.fields');
 
+    // ⭐ ষষ্ঠ ধাপ — Document Intelligence (ABE), নিয়মে (§৮)
+    Route::get('/intelligence', [DocumentIntelligenceController::class, 'workbench'])->name('intelligence');
+
     Route::get('/upload', [DocumentController::class, 'create'])
         ->middleware('can:documents.upload')->name('create');
     Route::post('/upload', [DocumentController::class, 'store'])
@@ -127,6 +131,9 @@ Route::middleware(['auth', 'can:documents.view'])->prefix('documents')->group(fu
         Route::delete('/links/{link}', [DocumentLinkController::class, 'destroy'])
             ->whereNumber('link')->scopeBindings()
             ->middleware('can:link,document')->name('link.destroy');
+
+        Route::post('/classify', [DocumentIntelligenceController::class, 'apply'])
+            ->middleware('can:update,document')->name('classify');
 
         Route::post('/versions/{version}/ocr', [DocumentScanController::class, 'saveText'])
             ->whereNumber('version')->scopeBindings()

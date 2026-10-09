@@ -15,4 +15,6 @@ return [
     'language_ben+eng' => 'Bengali and English',
     'language_ben' => 'Bengali only',
     'language_eng' => 'English only',
+    'abe_enabled' => 'Document Intelligence (ABE) on',
+    'abe_summary_lines' => 'Lines in a summary (1–15)',
 ];

@@ -55,6 +55,8 @@ final class TheDocumentModuleShowsItsPlanTest extends TestCase
         'documents.shared', 'documents.signatures',
         // ⭐ পঞ্চম ধাপ — নিজের টেস্টে ([[AScannedPageIsReadOnOurOwnServerTest]])
         'documents.scan',
+        // ⭐ ষষ্ঠ ধাপ — নিজের টেস্টে ([[TheIntelligenceIsRulesOnOurOwnServerTest]])
+        'documents.intelligence',
     ];
 
     public function test_every_menu_page_is_shut_without_the_key_and_opens_with_it_for_the_same_person(): void
