@@ -105,7 +105,7 @@ final class ApprovalApiController extends Controller
 
         $approvals = collect($page->items());
 
-        $facts = app(ApprovalFacts::class)->of($approvals);
+        $facts = app(ApprovalFacts::class)->of($approvals, true); // ⓘ নিজের অপেক্ষার সারি — সইকারী নিজেই
         $documents = $this->documentsOf($approvals);
 
         $rows = $approvals->map(function (Approval $approval) use ($facts, $documents): array {
@@ -163,7 +163,7 @@ final class ApprovalApiController extends Controller
         if ($document instanceof \App\Core\Contracts\ShowsItselfForSigning) {
             $sheet = $document->signingSheet();
         } else {
-            $fact = app(ApprovalFacts::class)->of(collect([$entry]))[(int) $entry->id] ?? [];
+            $fact = app(ApprovalFacts::class)->of(collect([$entry]), true)[(int) $entry->id] ?? [];
             $sheet = ['facts' => array_values(array_filter([
                 ['label' => __('approval::field.party'), 'value' => (string) ($fact['party'] ?? '')],
                 ['label' => __('approval::field.what_for'), 'value' => (string) ($fact['about'] ?? $entry->requested_reason ?? '')],
