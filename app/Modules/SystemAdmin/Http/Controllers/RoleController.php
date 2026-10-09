@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\SystemAdmin\Http\Controllers;
 
+use App\Core\Engines\Audit\AuditEngine;
 use App\Core\Module\ModuleRegistry;
 use App\Core\Services\MenuBuilder;
 use App\Core\Services\PermissionSyncer;
@@ -16,6 +17,7 @@ use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
@@ -43,6 +45,7 @@ class RoleController extends Controller implements HasMiddleware
     public function __construct(
         private readonly MenuBuilder $menu,
         private readonly ModuleRegistry $modules,
+        private readonly AuditEngine $audit,
     ) {}
 
     public static function middleware(): array
@@ -96,9 +99,14 @@ class RoleController extends Controller implements HasMiddleware
     public function store(Request $request): RedirectResponse
     {
         $data = $this->validated($request, null);
+        $wanted = $this->grantable($request, null, $data['permissions'] ?? []);
 
-        $role = Role::create(['name' => $data['name'], 'guard_name' => 'web']);
-        $role->syncPermissions($data['permissions'] ?? []);
+        $role = DB::transaction(function () use ($data, $wanted): Role {
+            $role = Role::create(['name' => $data['name'], 'guard_name' => 'web']);
+            $this->syncAndRecord($role, $wanted);
+
+            return $role;
+        });
 
         /*
          * ⭐ সংরক্ষণের পর রোলটাতেই থাকা — ২৪ সেপ্টেম্বর ২০২৬।
@@ -133,9 +141,12 @@ class RoleController extends Controller implements HasMiddleware
         $this->assertNotTheOwnerRole($role);
 
         $data = $this->validated($request, $role);
+        $wanted = $this->grantable($request, $role, $data['permissions'] ?? []);
 
-        $role->update(['name' => $data['name']]);
-        $role->syncPermissions($data['permissions'] ?? []);
+        DB::transaction(function () use ($role, $data, $wanted): void {
+            $role->update(['name' => $data['name']]);
+            $this->syncAndRecord($role, $wanted);
+        });
 
         /* ⓘ কারণটা [[store()]]-এ একবারই লেখা। */
         return redirect()
@@ -159,6 +170,96 @@ class RoleController extends Controller implements HasMiddleware
      * id** খুলে দেয়। ⓘ তালিকায় নামটা না দেখেও কেউ ঠিকানা বদলে ঢুকতে
      * পারতেন — ছাঁকনি ভুল ঠেকায়, দরজা পাহারা আক্রমণ ঠেকায়।
      */
+    /**
+     * কোন চাবিগুলো কেউ কোনোদিন কোনো রোলে বসাতে পারেন না — পুনঃনিরীক্ষা, ৯ অক্টোবর ২০২৬।
+     *
+     * ⓘ মালিকানা হস্তান্তর কেবল মালিকের ([[OwnershipController]] নিজেও
+     * পরিচয় দেখে)। ⚠️ তবু চাবিটা অন্য রোলে বসলে মেনুতে দরজাটা দেখা দিত,
+     * আর একদিন কেউ পরিচয়ের যাচাইটা সরালে দরজাটাই খুলে যেত।
+     * ⭐ মালিকের রোলে এগুলো বসায় [[PermissionSyncer]], এই পর্দা নয়।
+     *
+     * @var list<string>
+     */
+    private const OWNER_ONLY = ['system_admin.ownership.transfer'];
+
+    /**
+     * ⛔ যা নিজের হাতে নেই, তা অন্যকে দেওয়া যায় না — পুনঃনিরীক্ষা, ৯ অক্টোবর ২০২৬।
+     *
+     * ── কী ভুল ছিল ───────────────────────────────────────────────────
+     * ⚠️ `system_admin.role.manage` যাঁর আছে, তিনি যেকোনো রোলে যেকোনো
+     * চাবি বসাতে পারতেন — নিজের রোলেও। অর্থাৎ রোল সামলানোর চাবিটাই
+     * আসলে **সব চাবি**: একজন নিজের রোলে টাকার অনুমোদন বসিয়ে নিজেই
+     * সই করতে পারতেন।
+     *
+     * ⭐ এখন কেবল **নতুন যোগ** হওয়া চাবিগুলো দেখা হয়: যা আগেই ছিল তা
+     * ফর্মে আবার এলে আটকায় না, আর সরানো সবসময় চলে (কম দেওয়া
+     * কখনো ঝুঁকি নয়)। ⓘ সুপার অ্যাডমিন সব চাবিই ধরেন, তাই তাঁর
+     * জন্য প্রশ্নটা ওঠে না — কেবল মালিকের-চাবি তাঁর জন্যও বন্ধ।
+     *
+     * @param  list<string>  $wanted
+     * @return list<string>
+     */
+    private function grantable(Request $request, ?Role $role, array $wanted): array
+    {
+        $wanted = array_values(array_unique($wanted));
+        $before = $role?->permissions->pluck('name')->all() ?? [];
+        $added = array_values(array_diff($wanted, $before));
+
+        $ownerOnly = array_values(array_intersect($added, self::OWNER_ONLY));
+
+        if ($ownerOnly !== []) {
+            throw ValidationException::withMessages([
+                'permissions' => __('system_admin::validation.owner_only_permission', ['keys' => implode(', ', $ownerOnly)]),
+            ]);
+        }
+
+        $actor = $request->user();
+
+        if (! $actor->hasRole(PermissionSyncer::SUPER_ADMIN_ROLE)) {
+            $notHeld = array_values(array_filter($added, fn (string $name): bool => ! $actor->hasPermissionTo($name)));
+
+            if ($notHeld !== []) {
+                throw ValidationException::withMessages([
+                    'permissions' => __('system_admin::validation.cannot_grant_what_you_lack', ['keys' => implode(', ', $notHeld)]),
+                ]);
+            }
+        }
+
+        return $wanted;
+    }
+
+    /**
+     * চাবি বসানো, আর কী যোগ হলো কী গেল তা অডিটের খাতায় — পুনঃনিরীক্ষা, ৯ অক্টোবর ২০২৬।
+     *
+     * ⚠️ আগে রোলের চাবি বদল কোনো দাগ রাখত না: কে কবে কোন রোলে টাকার
+     * চাবি বসিয়েছিলেন, তার উত্তর কোথাও ছিল না। ⓘ মানুষের রোল বদল
+     * (`roles_changed`) লেখা হত, অথচ রোলের **ভিতরটা** বদলানো একই রকম
+     * বড় কাজ — একটা টিকেই ঐ রোলের সবার হাতে নতুন চাবি।
+     *
+     * @param  list<string>  $wanted
+     */
+    private function syncAndRecord(Role $role, array $wanted): void
+    {
+        $before = $role->permissions()->pluck('name')->all();
+
+        $role->syncPermissions($wanted);
+
+        $added = array_values(array_diff($wanted, $before));
+        $removed = array_values(array_diff($before, $wanted));
+
+        if ($added === [] && $removed === []) {
+            return;
+        }
+
+        sort($added);
+        sort($removed);
+
+        $this->audit->record($role, 'role_permissions_changed', [
+            'permissions_added' => [null, implode(', ', $added)],
+            'permissions_removed' => [implode(', ', $removed), null],
+        ]);
+    }
+
     private function mustBeInThisCompany(Role $role): void
     {
         abort_unless((int) $role->company_id === (int) CompanyContext::id(), 404);

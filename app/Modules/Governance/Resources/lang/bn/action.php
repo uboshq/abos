@@ -23,6 +23,7 @@ return [
     'password_set' => 'পাসওয়ার্ড বসানো',
     'password_reset' => 'নিজে পাসওয়ার্ড রিসেট',
     'roles_changed' => 'রোল বদল',
+    'role_permissions_changed' => 'রোলের অনুমতি বদল',
     /*
      * ⭐ মালিকানা হাতবদল `roles_changed`-এর ভিতরে লুকিয়ে থাকে না।
      *

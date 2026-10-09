@@ -23,6 +23,7 @@ return [
     'password_set' => 'Password set',
     'password_reset' => 'Password reset by the user',
     'roles_changed' => 'Roles changed',
+    'role_permissions_changed' => 'Role permissions changed',
     // Kept separate from roles_changed on purpose: an audit starts with
     // "who holds the biggest key, and since when". Buried under the same
     // label as ten other role edits, that answer takes opening every row.

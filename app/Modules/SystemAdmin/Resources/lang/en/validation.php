@@ -9,6 +9,8 @@ return [
     'cannot_deactivate_yourself' => 'You cannot deactivate yourself — nobody would be left who could undo it.',
     'cannot_drop_your_own_key' => 'You cannot take user management away from yourself — the only way back would be the command line.',
     'owner_role_is_fixed' => 'The owner role cannot be edited; every deploy puts those permissions back.',
+    'owner_only_permission' => 'This permission belongs to the owner alone and cannot be put on a role: :keys',
+    'cannot_grant_what_you_lack' => 'You cannot give a role a permission you do not hold yourself: :keys',
 
     // Every refusal names the way out as well. "You cannot" alone leaves
     // the next question unanswered — "then how do I hand it over?" — and
