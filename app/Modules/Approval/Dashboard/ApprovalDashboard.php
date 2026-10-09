@@ -11,9 +11,11 @@ use App\Core\Engines\Dashboard\DashboardDefinition;
 use App\Core\Engines\Dashboard\Listing;
 use App\Core\Engines\Dashboard\Stat;
 use App\Core\Engines\Dashboard\Tile;
+use App\Core\Module\ModuleRegistry;
 use App\Core\Support\Money;
 use App\Models\Approval;
 use App\Models\ApprovalDelegation;
+use App\Models\User;
 use Illuminate\Support\Carbon;
 
 /**
@@ -26,6 +28,17 @@ use Illuminate\Support\Carbon;
  */
 final class ApprovalDashboard implements ProvidesDashboard
 {
+    /**
+     * ⭐ সইয়ের অপেক্ষায় কয়টা — এই পাতার প্রথম সংখ্যার একমাত্র সংজ্ঞা।
+     *
+     * ⓘ মালিকের কেন্দ্র ([[Figures]]) ঠিক এটাই ডাকে, প্রতিটা কোম্পানির ভিতরে — ⛔ নিজের COUNT লিখলে
+     * একদিন দুই পর্দা দুই সংখ্যা বলত (৮ অক্টোবর ২০২৬)। ⓘ শাখা ধরে ভাগ হয় না: অনুমোদনের সারিতে শাখা নেই।
+     */
+    public static function pendingCount(): int
+    {
+        return Approval::query()->where('status', Approval::PENDING)->count();
+    }
+
     public static function dashboard(): DashboardDefinition
     {
         return new DashboardDefinition(
@@ -42,7 +55,7 @@ final class ApprovalDashboard implements ProvidesDashboard
             stats: [
                 new Stat(
                     label: __('approval::dashboard.pending'),
-                    value: (string) Approval::query()->where('status', Approval::PENDING)->count(),
+                    value: (string) self::pendingCount(),
                     hint: __('approval::dashboard.pending_hint'),
                     href: route('approval.inbox.index'),
                     tone: Stat::WARN,
@@ -143,7 +156,7 @@ final class ApprovalDashboard implements ProvidesDashboard
             return [];
         }
 
-        $names = \App\Models\User::query()->whereKey($rows->pluck('assigned_to')->filter()->all())->pluck('name', 'id');
+        $names = User::query()->whereKey($rows->pluck('assigned_to')->filter()->all())->pluck('name', 'id');
 
         $parts = $rows->take(6)->map(fn ($r) => [
             'label' => $r->assigned_to === null ? __('approval::dashboard.anyone') : ($names[$r->assigned_to] ?? '—'),
@@ -188,7 +201,7 @@ final class ApprovalDashboard implements ProvidesDashboard
             return [];
         }
 
-        $registry = app(\App\Core\Module\ModuleRegistry::class);
+        $registry = app(ModuleRegistry::class);
         $locale = app()->getLocale();
 
         return [new Breakdown(
@@ -327,7 +340,7 @@ final class ApprovalDashboard implements ProvidesDashboard
             return [];
         }
 
-        $registry = app(\App\Core\Module\ModuleRegistry::class);
+        $registry = app(ModuleRegistry::class);
         $locale = app()->getLocale();
 
         return [new Breakdown(

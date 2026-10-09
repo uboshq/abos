@@ -6,6 +6,7 @@ namespace App\Core\Engines\Report;
 
 use App\Core\Services\DataScope;
 use App\Core\Services\DealerScope;
+use App\Core\Services\ListExport;
 use App\Core\Support\CompanyContext;
 use App\Core\Support\RunningBalance;
 use App\Models\Branch;
@@ -324,36 +325,17 @@ final class ReportEngine
             return null;
         }
 
-        $from = Carbon::parse($filters['from']);
-        $to = Carbon::parse($filters['to']);
-
         /*
-         * দুইটা তুলনাই দরকার, আর তারা আলাদা প্রশ্ন।
+         * দুইটা তুলনাই দরকার, আর তারা আলাদা প্রশ্ন — আগের মাস বলে **গতি**, গত বছরের একই মাস বলে
+         * **মৌসুম বাদে** কেমন।
          *
-         * আগের মাস বলে **গতি** — বাড়ছে না কমছে। গত বছরের একই মাস বলে
-         * **মৌসুম বাদে** কেমন — রোজার মাসের বিক্রয় আগের মাসের চেয়ে
-         * সবসময়ই বেশি, আর ওই তুলনাটা তাই কিছুই বলে না।
+         * ⭐ তারিখের নিয়মটা এখন [[Trend::previous()]]-এ — মালিকের কেন্দ্রের ধারা আর তুলনার পাতাও ঠিক
+         * এটাই ডাকে, তাই "আগের একই সময়" দুই জায়গায় দুই রকম হতে পারে না (৮ অক্টোবর ২০২৬)। ⓘ নিয়মটা
+         * অক্ষত সরানো: ঠিক ততদিন আগে (ক্যালেন্ডারের মাস নয়), আর গত বছরের হুবহু একই তারিখ।
          */
-        return match ($want) {
-            self::COMPARE_PREVIOUS => [
-                'key' => self::COMPARE_PREVIOUS,
-                /*
-                 * ঠিক ততদিন আগে, "গত মাস" নয়।
-                 *
-                 * ক্যালেন্ডারের মাস ধরলে ১–১০ তারিখের একটা পরিসর গোটা
-                 * আগের মাসের সাথে তুলনা হত — দশ দিনের সাথে ত্রিশ দিনের,
-                 * আর সংখ্যাটা সবসময় ভয়ংকর কমে যাওয়া দেখাত।
-                 */
-                'from' => $from->copy()->subDays($from->diffInDays($to) + 1)->toDateString(),
-                'to' => $from->copy()->subDay()->toDateString(),
-            ],
-            self::COMPARE_LAST_YEAR => [
-                'key' => self::COMPARE_LAST_YEAR,
-                'from' => $from->copy()->subYear()->toDateString(),
-                'to' => $to->copy()->subYear()->toDateString(),
-            ],
-            default => null,
-        };
+        $window = Trend::previous((string) $want, (string) $filters['from'], (string) $filters['to']);
+
+        return $window === null ? null : ['key' => (string) $want, ...$window];
     }
 
     /**
@@ -788,7 +770,7 @@ final class ReportEngine
      * কেবল লেখার কলামে — নাম, নথি, তারিখ। ⛔ টাকার কলামে নয়: `১২৩`
      * টাইপ করলে `১২৩৪৫.০০`ও মিলত, আর ফলটা দেখতে এলোমেলো লাগত।
      *
-     * @param  Builder|\Illuminate\Database\Eloquent\Builder  $query
+     * @param  Builder|EloquentBuilder  $query
      */
     private function applySearch(ReportDefinition $report, $query, mixed $term)
     {
@@ -813,7 +795,7 @@ final class ReportEngine
          */
         $needle = '%'.str_replace(['\\', '%', '_'], ['\\\\', '\%', '\_'], $term).'%';
 
-        $base = $query instanceof \Illuminate\Database\Eloquent\Builder ? $query->getQuery() : $query;
+        $base = $query instanceof EloquentBuilder ? $query->getQuery() : $query;
 
         /*
          * ⓘ `GROUP BY` থাকলে `HAVING` লাইভেও চলে — আগের মতো, ছদ্মনামের উপর।
@@ -838,7 +820,7 @@ final class ReportEngine
         $order = $this->orderSql($base);
 
         if ($order !== null) {
-            $innerBase = $inner instanceof \Illuminate\Database\Eloquent\Builder ? $inner->getQuery() : $inner;
+            $innerBase = $inner instanceof EloquentBuilder ? $inner->getQuery() : $inner;
 
             if ($innerBase->columns === null) {
                 $inner->select('*');
@@ -866,7 +848,7 @@ final class ReportEngine
      *
      * @return array{0: string, 1: list<mixed>}|null
      */
-    private function orderSql(\Illuminate\Database\Query\Builder $base): ?array
+    private function orderSql(Builder $base): ?array
     {
         if (empty($base->orders)) {
             return null;
@@ -1005,7 +987,6 @@ final class ReportEngine
             return false;
         }
 
-        return request()->boolean('print') || app(\App\Core\Services\ListExport::class)->wanted();
+        return request()->boolean('print') || app(ListExport::class)->wanted();
     }
-
 }
