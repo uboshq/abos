@@ -248,7 +248,8 @@ class DirectSaleApiController extends Controller implements HasMiddleware
         }
 
         $customer = filled($data['customer'] ?? null)
-            ? Customer::query()->where('public_id', $data['customer'])->first()
+            // ⛔ দেখা শাখার গ্রাহকই — অন্য শাখার দোকানের নামে নিরীক্ষার সারি নয় (পুরো ERP অডিট, ৯ অক্টোবর ২০২৬)
+            ? Customer::query()->inViewedBranch()->where('public_id', $data['customer'])->first()
             : Customer::query()->find((int) app(SettingsService::class)->get('sales.walkin_customer_id', 0));
 
         if ($customer !== null) {
