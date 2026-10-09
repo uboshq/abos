@@ -43,7 +43,11 @@ final class TheDocumentModuleShowsItsPlanTest extends TestCase
      * ⭐ যে সারিগুলো এখন আসল পর্দা খোলে, পরিকল্পনার পাতা নয় — প্রথম ধাপ (৮ অক্টোবর ২০২৬)।
      * ⓘ এদের কাজ নিজের টেস্টে ([[ADocumentKeepsEveryVersionTest]], [[ADocumentStaysBehindItsWallsTest]])।
      */
-    private const REAL_SCREENS = ['documents.index', 'documents.create', 'documents.mine', 'documents.recent'];
+    private const REAL_SCREENS = [
+        'documents.index', 'documents.create', 'documents.mine', 'documents.recent',
+        // ⓘ ড্যাশবোর্ডের সারি ৬ অক্টোবর থেকেই ড্যাশবোর্ড ইঞ্জিনের আসল পাতা ([[DocumentsDashboard]]), পরিকল্পনা নয়
+        'module.dashboard',
+    ];
 
     public function test_every_menu_page_is_shut_without_the_key_and_opens_with_it_for_the_same_person(): void
     {

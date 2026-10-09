@@ -43,7 +43,7 @@ final class EveryDocumentActionIsWrittenDownTest extends TestCase
 
         $actions = AuditTrail::query()->forRecord(Document::class, $document->id)->pluck('action')->all();
 
-        foreach (['document_previewed', 'document_printed', 'document_version_added', 'document_version_restored'] as $action) {
+        foreach (['document_previewed', 'document_printed', 'document_version_added', 'doc_version_restored'] as $action) {
             $this->assertContains($action, $actions, $action.' অডিটে নেই।');
         }
     }

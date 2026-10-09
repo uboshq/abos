@@ -88,7 +88,7 @@ return [
     'document_downloaded' => 'ডকুমেন্ট নামানো',
     'document_printed' => 'ডকুমেন্ট ছাপার জন্য খোলা',
     'document_version_added' => 'ডকুমেন্টের নতুন ভার্সন',
-    'document_version_restored' => 'ডকুমেন্টের পুরনো ভার্সন ফেরানো',
+    'doc_version_restored' => 'ডকুমেন্টের পুরনো ভার্সন ফেরানো',
     'document_archived' => 'ডকুমেন্ট আর্কাইভে',
     'document_unarchived' => 'ডকুমেন্ট আর্কাইভ থেকে ফেরানো',
 ];

@@ -144,7 +144,7 @@ final class DocumentLibrary
                 restoredFrom: (int) $from->id,
             );
 
-            $locked->auditAction('document_version_restored', 'v'.$from->label().' → v'.$version->label());
+            $locked->auditAction('doc_version_restored', 'v'.$from->label().' → v'.$version->label());
 
             return $version;
         });

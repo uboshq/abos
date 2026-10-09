@@ -45,6 +45,12 @@ class Document extends Model
 
     protected $table = 'dms_documents';
 
+    /**
+     * ⛔ নাম ফাঁকা নতুন কাগজেও ঘরটা থাকে — নাহলে `$document->name` পড়তে গিয়ে Eloquent
+     * `name()`-কে (অডিটের লেবেল) সম্পর্ক ভেবে ডাকত, আর আপলোডের ফর্ম ৫০০ দিত।
+     */
+    protected $attributes = ['name' => null];
+
     protected $fillable = [
         'company_id', 'branch_id', 'document_no', 'name', 'doc_type', 'folder',
         'department_id', 'owner_id', 'document_date', 'expiry_date', 'confidentiality',
@@ -76,7 +82,8 @@ class Document extends Model
     /** অডিটের লেবেল — কাগজের নাম ([[AuditEngine::labelFor()]]) */
     public function name(): string
     {
-        return (string) $this->getAttribute('name');
+        // ⛔ getAttribute নয় — নাম ফাঁকা থাকলে Eloquent `name()`-কে সম্পর্ক ভেবে আবার এখানেই ডাকত (অসীম লুপ)
+        return (string) ($this->attributes['name'] ?? '');
     }
 
     public function versions(): HasMany

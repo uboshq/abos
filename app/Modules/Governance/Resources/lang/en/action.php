@@ -74,7 +74,7 @@ return [
     'document_downloaded' => 'Document downloaded',
     'document_printed' => 'Document opened for printing',
     'document_version_added' => 'New document version',
-    'document_version_restored' => 'Earlier document version restored',
+    'doc_version_restored' => 'Earlier document version restored',
     'document_archived' => 'Document archived',
     'document_unarchived' => 'Document restored from the archive',
 ];
