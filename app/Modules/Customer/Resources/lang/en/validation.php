@@ -11,4 +11,5 @@ return [
     'opening_needs_key' => 'An opening balance puts money in the books and needs its own permission (the accountant\'s). Create the customer with zero; the accountant sets the opening balance.',
     'point_in_other_branch' => 'This point belongs to another branch. Pick a point in the customer\'s own branch.',
     'limit_on_create' => 'A new customer starts with a zero credit limit. A limit needs a signature — create the customer first, then raise the limit from Edit; the approval request goes from there.',
+    'branch_out_of_reach' => 'This branch is outside your reach — you can only open or change customers of your own branches.',
 ];

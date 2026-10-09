@@ -4,7 +4,10 @@ declare(strict_types=1);
 
 namespace App\Modules\Customer\Http\Requests;
 
+use App\Core\Services\DataScope;
 use App\Core\Support\CompanyContext;
+use App\Core\Support\Money;
+use App\Models\UserDataScope;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -107,6 +110,12 @@ class CustomerRequest extends FormRequest
             'branch_id' => [
                 'nullable', 'integer',
                 Rule::exists('branches', 'id')->where('company_id', CompanyContext::id()),
+                // ⛔ নিজের নাগালের শাখাতেই — পুনঃঅডিট ৯ অক্টোবর ২০২৬ (গ্রাহক ১১); আগে কেবল কোম্পানি দেখা হত
+                function (string $attribute, mixed $value, \Closure $fail): void {
+                    if (! app(DataScope::class)->allows($this->user(), UserDataScope::BRANCH, (int) $value)) {
+                        $fail(__('customer::validation.branch_out_of_reach'));
+                    }
+                },
             ],
             'is_active' => ['nullable', 'boolean'],
         ];
@@ -134,7 +143,7 @@ class CustomerRequest extends FormRequest
 
         $plain = ltrim($amount, '-+');
 
-        $this->merge(['opening_balance' => $side === 'cr' && ! \App\Core\Support\Money::isZero($plain) ? '-'.$plain : $plain]);
+        $this->merge(['opening_balance' => $side === 'cr' && ! Money::isZero($plain) ? '-'.$plain : $plain]);
     }
 
     /** @return array<string, string> */
