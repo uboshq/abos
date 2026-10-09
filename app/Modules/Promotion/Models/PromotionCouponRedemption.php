@@ -32,6 +32,7 @@ class PromotionCouponRedemption extends Model
     protected function casts(): array
     {
         return [
+            'carried_amount' => 'decimal:4',
             'redeemed_at' => 'datetime',
             'reversed_at' => 'datetime',
         ];

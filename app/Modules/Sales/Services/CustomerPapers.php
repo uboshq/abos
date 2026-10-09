@@ -6,6 +6,7 @@ namespace App\Modules\Sales\Services;
 
 use App\Core\Services\LoginJournal;
 use App\Core\Support\CompanyContext;
+use App\Models\FinancialYear;
 use App\Models\LedgerEntry;
 use App\Modules\Customer\Models\Customer;
 use App\Modules\Inventory\Models\Product;
@@ -14,6 +15,7 @@ use App\Modules\Sales\Models\DeliveryOrder;
 use App\Modules\Sales\Models\SalesInvoice;
 use App\Modules\Sales\Models\SalesOrder;
 use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 
@@ -143,6 +145,21 @@ final class CustomerPapers
      * ⚠️ এটা না গুনলে জেরের কলাম শূন্য থেকে শুরু হত, আর গ্রাহক পড়তেন
      * "আমার কোনো বকেয়া ছিল না" — যা প্রায় সবসময়ই মিথ্যা।
      */
+    /**
+     * ⭐ খতিয়ানের ডিফল্ট শুরু — গ্রাহকের কোম্পানির চলতি অর্থবছরের প্রথম দিন, না থাকলে বছরের প্রথম দিন (পুনঃঅডিট ৯ অক্টোবর ২০২৬, গ্রাহক ১৫)।
+     * ⓘ গ্রাহক আসে গার্ড থেকে, তাই কোম্পানি তাঁরই।
+     */
+    public function yearStart(): string
+    {
+        $start = FinancialYear::query()->withoutGlobalScopes()
+            ->where('company_id', $this->customer()->company_id)
+            ->whereDate('starts_on', '<=', now()->toDateString())
+            ->whereDate('ends_on', '>=', now()->toDateString())
+            ->value('starts_on');
+
+        return $start === null ? now()->startOfYear()->toDateString() : Carbon::parse($start)->toDateString();
+    }
+
     public function openingBefore(string $from): string
     {
         return (string) ($this->ledgerRows()

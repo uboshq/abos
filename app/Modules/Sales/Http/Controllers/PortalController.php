@@ -10,7 +10,6 @@ use App\Core\Services\LoginJournal;
 use App\Core\Services\SettingsService;
 use App\Core\Support\CompanyContext;
 use App\Http\Controllers\Controller;
-use App\Models\FinancialYear;
 use App\Models\LedgerEntry;
 use App\Models\LoginAttempt;
 use App\Modules\Accounts\Models\Account;
@@ -23,7 +22,6 @@ use App\Modules\Sales\Services\SalesOrderService;
 use App\Modules\Sales\Services\SaleTracking;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
@@ -359,15 +357,8 @@ class PortalController extends Controller
          * "আগের জের" সারিতে একটা অঙ্ক হয়ে আসে ([[CustomerPapers::openingBefore()]]), তাই শেষ জের একই থাকে, কেবল বছরের পর বছরের সারি
          * একবারে টানা হয় না। পুরনো সময় দেখতে ছাঁকনি আছে।
          */
-        $customer = $this->customer();
-        $yearStart = FinancialYear::query()->withoutGlobalScopes()
-            ->where('company_id', $customer->company_id)
-            ->whereDate('starts_on', '<=', now()->toDateString())
-            ->whereDate('ends_on', '>=', now()->toDateString())
-            ->value('starts_on');
-
         return [
-            (string) $request->query('from', $yearStart === null ? now()->startOfYear()->toDateString() : Carbon::parse($yearStart)->toDateString()),
+            (string) $request->query('from', $this->papers->yearStart()),
             (string) $request->query('to', now()->toDateString()),
         ];
     }

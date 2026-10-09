@@ -42,7 +42,6 @@ class EveryExistsRuleNamesItsCompanyTest extends TestCase
         'app/Modules/Finance/Http/Controllers/DepositController.php' => 6,
         'app/Modules/Finance/Http/Controllers/HandLoanController.php' => 2,
         'app/Modules/Finance/Http/Controllers/WithdrawalController.php' => 1,
-        'app/Modules/Hr/Http/Controllers/EmployeeController.php' => 1,
         'app/Modules/Inventory/Http/Controllers/StockCountController.php' => 1,
         'app/Modules/Inventory/Http/Controllers/StorageLocationController.php' => 1,
         'app/Modules/MasterData/Http/Controllers/LocationController.php' => 1,
