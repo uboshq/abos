@@ -3,7 +3,9 @@
 declare(strict_types=1);
 
 use App\Modules\Executive\Http\Controllers\AlertsController;
+use App\Modules\Executive\Http\Controllers\AnalysisController;
 use App\Modules\Executive\Http\Controllers\CompareController;
+use App\Modules\Executive\Http\Controllers\ExecutiveReportController;
 use App\Modules\Executive\Http\Controllers\HistoryController;
 use App\Modules\Executive\Http\Controllers\OpenController;
 use App\Modules\Executive\Http\Controllers\TodayController;
@@ -20,6 +22,15 @@ Route::middleware('auth')->prefix('owner')->group(function () {
 
     Route::get('/compare', [CompareController::class, 'show'])
         ->name('compare')
+        ->middleware('can:executive.view');
+
+    Route::get('/analysis', [AnalysisController::class, 'show'])
+        ->name('analysis')
+        ->middleware('can:executive.view');
+
+    // ⓘ মালিকের কেন্দ্রের নিজের রিপোর্ট — কেন্দ্রীয় রিপোর্টের পাতায়
+    Route::get('/reports/{slug}', [ExecutiveReportController::class, 'show'])
+        ->name('report.show')
         ->middleware('can:executive.view');
 
     Route::get('/alerts', [AlertsController::class, 'show'])

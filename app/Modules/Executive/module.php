@@ -48,8 +48,11 @@ return [
 
         'reports' => [
             ['label' => 'executive::menu.compare', 'icon' => 'scale', 'route' => 'executive.compare', 'permission' => 'executive.view'],
+            ['label' => 'executive::menu.analysis', 'icon' => 'reports', 'route' => 'executive.analysis', 'permission' => 'executive.view'],
             ['label' => 'executive::menu.alerts', 'icon' => 'alert-triangle', 'route' => 'executive.alerts', 'permission' => 'executive.view'],
             ['label' => 'executive::menu.history', 'icon' => 'clock', 'route' => 'executive.history', 'permission' => 'executive.view'],
+            ['label' => 'executive::analysis.profit_by_customer', 'icon' => 'customer', 'route' => 'executive.report.show',
+                'route_params' => ['slug' => 'profit-by-customer'], 'permission' => 'executive.view'],
         ],
 
     ],

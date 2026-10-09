@@ -73,4 +73,44 @@ final class Rankings
 
         return ['rows' => array_slice($rows, 0, $limit), 'refused' => $refused];
     }
+
+    /**
+     * রিপোর্টের নিজের যোগফল — সব কোম্পানির যোগ (যেমন বাকির বয়সের খোপগুলো)।
+     *
+     * ⓘ রিপোর্ট যোগফল গোনে গোটা ফলের উপর ([[ReportEngine::run()]]), পাতার নয়; এখানে কেবল কোম্পানিগুলো যোগ।
+     *
+     * @param  list<array{id: int, name: string, only?: ?int}>  $companies
+     * @param  list<string>  $columns
+     * @param  array<string, mixed>  $filters
+     * @return array{totals: array<string, string>, refused: list<string>}
+     */
+    public function totals(User $user, array $companies, string $report, array $columns, array $filters = []): array
+    {
+        $totals = array_fill_keys($columns, '0');
+        $refused = [];
+
+        foreach ($companies as $company) {
+            $key = implode(':', ['executive-total', 'u'.$user->id, 'c'.$company['id'], 'b'.($company['only'] ?? 'all'), $report, md5(serialize($filters)), Board::version($user)]);
+
+            $part = Cache::remember($key, Board::CACHE_SECONDS, fn () => $this->lens->within($user, $company['id'], $company['only'] ?? null, function () use ($user, $report, $filters): ?array {
+                if (! $this->reports->get($report)->allows($user)) {
+                    return null;
+                }
+
+                return $this->reports->run($report, $filters, 1, 1)->totals;
+            }));
+
+            if ($part === null) {
+                $refused[] = $company['name'];
+
+                continue;
+            }
+
+            foreach ($columns as $column) {
+                $totals[$column] = bcadd($totals[$column], (string) ($part[$column] ?? '0'), 4);
+            }
+        }
+
+        return ['totals' => $totals, 'refused' => $refused];
+    }
 }
