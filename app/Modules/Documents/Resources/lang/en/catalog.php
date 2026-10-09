@@ -93,4 +93,10 @@ return [
         'purchase_bill' => 'Purchase bill',
         'employee' => 'Employee',
     ],
+
+    'basis' => [
+        'created' => 'Upload date',
+        'document_date' => 'Document date',
+        'expiry_date' => 'Expiry date',
+    ],
 ];

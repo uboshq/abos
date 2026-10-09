@@ -111,4 +111,6 @@ return [
     'document_unlinked' => 'ডকুমেন্টের জোড়া খোলা',
     'document_ocr_saved' => 'ডকুমেন্টের পড়া লেখা রাখা',
     'document_abe_used' => 'ডকুমেন্টে ABE ব্যবহার',
+    'document_from_template' => 'ছাঁচ থেকে ডকুমেন্ট',
+    'document_retained' => 'রাখার নিয়মে ডকুমেন্ট বিনে',
 ];

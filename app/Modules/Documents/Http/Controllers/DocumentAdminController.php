@@ -11,6 +11,7 @@ use App\Modules\Documents\Models\DocumentCategory;
 use App\Modules\Documents\Models\DocumentTag;
 use App\Modules\Documents\Models\DocumentType;
 use App\Modules\Documents\Models\MetadataField;
+use App\Modules\Documents\Models\RetentionPolicy;
 use App\Modules\Documents\Services\DocumentAdministration;
 use App\Modules\Documents\Services\DocumentChoices;
 use App\Modules\Documents\Services\DocumentFiles;
@@ -47,6 +48,8 @@ final class DocumentAdminController extends Controller
             'categories' => DocumentCategory::query()->orderBy('name_en')->get(),
             'tags' => DocumentTag::query()->orderBy('name')->get(),
             'fields' => MetadataField::query()->orderBy('name_en')->get(),
+            'policies' => RetentionPolicy::query()->orderBy('id')->get(),
+            'allFolders' => $this->choices->folders(true),
             'abeRules' => AbeRule::query()->orderBy('kind')->orderBy('doc_type')->orderBy('id')->get(),
             'allTypes' => $this->choices->types(true),
             'storage' => DocumentFiles::limits(),

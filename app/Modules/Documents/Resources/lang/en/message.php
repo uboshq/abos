@@ -146,4 +146,21 @@ return [
     'abe_rule_classify' => 'Classify words',
     'abe_rule_extract' => 'Extract pattern',
     'pattern_hint' => 'The part in brackets is the value, for example: Policy No[:\\s]*(\\S+)',
+    'audit_subtitle' => 'Who, what, when, which IP, which device — only for documents you can see. Nobody can delete it.',
+    'audit_action_hint' => 'For example: document_downloaded',
+    'templates_subtitle' => 'Fill a template to make a new document — a PDF from the ABOS print engine',
+    'no_templates' => 'No templates yet.',
+    'editor_subtitle' => 'Text and {{ name }} fields — save to see a sample below',
+    'editor_rules' => '# Heading
+## Sub-heading
+**bold text**
+Blank line = new paragraph
+--- = rule
+{{ field_name }} = a field to fill (lowercase letters, digits, _)',
+    'fill_subtitle' => 'Fill the fields — it becomes a new document as a PDF',
+    'template_saved' => 'Template saved.',
+    'from_template' => 'From the :template template',
+    'by_policy' => 'Retention rule #:id',
+    'retention_hint' => 'After the set days a document goes to the archive, then to the recycle bin — once a night. A rule never deletes for good, and never touches a document that is under approval.',
+    'bin_after_archive' => 'The recycle bin days must come after the archive days.',
 ];

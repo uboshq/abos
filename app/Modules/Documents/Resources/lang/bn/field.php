@@ -74,4 +74,10 @@ return [
     'pattern' => 'প্যাটার্ন',
     'rule_kind' => 'নিয়মের ধরন',
     'rule' => 'নিয়ম',
+    'template_title' => 'ছাঁচের নাম',
+    'template_body' => 'লেখা',
+    'is_active' => 'চালু',
+    'basis' => 'কোন তারিখ ধরে',
+    'archive_after_days' => 'কতদিন পরে আর্কাইভ',
+    'bin_after_days' => 'কতদিন পরে রিসাইকেল বিন',
 ];

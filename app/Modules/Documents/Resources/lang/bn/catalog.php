@@ -95,4 +95,10 @@ return [
         'purchase_bill' => 'ক্রয়ের বিল',
         'employee' => 'কর্মী',
     ],
+
+    'basis' => [
+        'created' => 'তোলার দিন',
+        'document_date' => 'কাগজের তারিখ',
+        'expiry_date' => 'মেয়াদের তারিখ',
+    ],
 ];

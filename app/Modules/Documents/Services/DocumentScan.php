@@ -99,7 +99,7 @@ final class DocumentScan
                 'fields' => $fields,
                 'language' => in_array($ocr['language'] ?? null, self::LANGUAGES, true) ? $ocr['language'] : $this->language(),
                 'engine' => self::ENGINE,
-                'confidence' => is_numeric($ocr['confidence'] ?? null) ? max(0, min(100, (float) $ocr['confidence'])) : null,
+                'confidence' => $this->confidence($ocr['confidence'] ?? null),
                 'pages' => max(1, $pages),
                 'updated_by' => Actor::userId(),
             ]);
@@ -134,5 +134,21 @@ final class DocumentScan
         $file = preg_replace('/[^\pL\pN\-_ ]+/u', '', $name) ?: 'scan';
 
         return new UploadedFile($path, mb_substr($file, 0, 80).'.pdf', 'application/pdf', null, true);
+    }
+
+    /** ⓘ আস্থা ০–১০০, দুই ঘর দশমিক — ভাসমান সংখ্যা নয়, লেখা-সংখ্যায় সীমা টানা */
+    private function confidence(mixed $value): ?string
+    {
+        if ((! is_string($value) && ! is_int($value)) || preg_match('/^-?\d{1,6}(\.\d+)?$/', (string) $value) !== 1) {
+            return null;
+        }
+
+        $value = bcadd((string) $value, '0', 2);
+
+        return match (true) {
+            bccomp($value, '0', 2) < 0 => '0.00',
+            bccomp($value, '100', 2) > 0 => '100.00',
+            default => $value,
+        };
     }
 }

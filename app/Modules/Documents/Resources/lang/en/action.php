@@ -46,4 +46,8 @@ return [
     'use_type' => 'Use this type',
     'back_to_document' => 'Back to the document',
     'abe' => 'ABE',
+    'new_template' => 'New template',
+    'use_template' => 'Fill and make',
+    'edit_template' => 'Edit',
+    'make_document' => 'Make the document',
 ];

@@ -316,3 +316,15 @@ Schedule::command('abos:documents-expiry')
     ->onFailure(function () {
         logger()->critical('ডকুমেন্টের মেয়াদের খবর পাঠানো ব্যর্থ হয়েছে — হাতে দেখতে হবে।');
     });
+
+/*
+ * ডকুমেন্টের রাখার নিয়ম — আর্কাইভ, তারপর রিসাইকেল বিন; ⛔ কখনো চিরতরে মোছা নয় (ডকুমেন্ট পরিকল্পনা §২০, ৯ অক্টোবর ২০২৬)।
+ *
+ * ⓘ রাতে একবার — অবস্থা দেখে চলে, তাই বাদ পড়া রাত পরের রাতে ধরে ([[DocumentRetention]])।
+ */
+Schedule::command('abos:documents-retention')
+    ->dailyAt('02:40')
+    ->withoutOverlapping()
+    ->onFailure(function () {
+        logger()->critical('ডকুমেন্টের রাখার নিয়ম চালানো ব্যর্থ হয়েছে — হাতে দেখতে হবে।');
+    });

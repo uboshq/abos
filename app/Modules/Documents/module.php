@@ -8,6 +8,7 @@ use App\Modules\Documents\Listeners\MoveTheDocumentOnItsSignature;
 use App\Modules\Documents\Models\DocumentCategory;
 use App\Modules\Documents\Models\DocumentType;
 use App\Modules\Documents\Models\MetadataField;
+use App\Modules\Documents\Reports\DocumentReports;
 use App\Modules\Documents\Services\DocumentAccess;
 use App\Modules\Documents\Services\DocumentLinks;
 use App\Modules\Documents\Services\DocumentSignatures;
@@ -56,7 +57,7 @@ return [
         'bn' => 'ডকুমেন্ট ম্যানেজমেন্ট',
     ],
 
-    'version' => '0.7.0',
+    'version' => '1.0.0',
 
     /*
      * ⭐ সাইডবারে মাস্টার ডাটা (৫) আর সিস্টেম অ্যাডমিনের (১০) মাঝখানে — মালিক, ৩০ সেপ্টেম্বর ২০২৬:
@@ -112,10 +113,11 @@ return [
                 'permission' => 'documents.view'],
             ['label' => 'documents::menu.favourite', 'icon' => 'star', 'route' => 'documents.screen',
                 'route_params' => ['screen' => 'favourite'], 'permission' => 'documents.view'],
-            ['label' => 'documents::menu.templates', 'icon' => 'columns', 'route' => 'documents.screen',
-                'route_params' => ['screen' => 'templates'], 'permission' => 'documents.view'],
-            ['label' => 'documents::menu.editor', 'icon' => 'edit', 'route' => 'documents.screen',
-                'route_params' => ['screen' => 'editor'], 'permission' => 'documents.view'],
+            // ⭐ সপ্তম ধাপ — ছাঁচ আর সম্পাদক (ABOS-এর ছাপার যন্ত্রে PDF)
+            ['label' => 'documents::menu.templates', 'icon' => 'columns', 'route' => 'documents.templates',
+                'permission' => 'documents.view'],
+            ['label' => 'documents::menu.editor', 'icon' => 'edit', 'route' => 'documents.templates.create',
+                'permission' => 'documents.templates'],
             ['label' => 'documents::menu.expiry', 'icon' => 'calendar', 'route' => 'documents.expiry',
                 'permission' => 'documents.view'],
             // ⭐ দ্বিতীয় ধাপের আসল পর্দা (৯ অক্টোবর ২০২৬) — আর্কাইভ, রিসাইকেল বিন, বিস্তারিত খোঁজ
@@ -136,10 +138,11 @@ return [
         ],
 
         'reports' => [
-            ['label' => 'documents::menu.reports', 'icon' => 'reports', 'route' => 'documents.screen',
-                'route_params' => ['screen' => 'reports'], 'permission' => 'documents.view'],
-            ['label' => 'documents::menu.audit', 'icon' => 'eye', 'route' => 'documents.screen',
-                'route_params' => ['screen' => 'audit'], 'permission' => 'documents.view'],
+            // ⭐ সপ্তম ধাপ — ABOS-এর রিপোর্ট ইঞ্জিনে চৌদ্দটা রিপোর্ট, আর অডিট ট্রেইল
+            ['label' => 'documents::menu.reports', 'icon' => 'reports', 'route' => 'documents.reports',
+                'permission' => 'documents.report'],
+            ['label' => 'documents::menu.audit', 'icon' => 'eye', 'route' => 'documents.audit',
+                'permission' => 'documents.audit'],
         ],
 
         'settings' => [
@@ -193,6 +196,13 @@ return [
          */
         'documents.share',
         'documents.signature_request',
+
+        /*
+         * ⭐ সপ্তম ধাপ (৯ অক্টোবর ২০২৬) — রিপোর্ট (§১৭), অডিট ট্রেইল (§১৮), ছাঁচ লেখা (§২)।
+         */
+        'documents.report',
+        'documents.audit',
+        'documents.templates',
 
         /*
          * ⭐ গোপনীয়তার সিঁড়ি — পরিকল্পনা §১৪ (*"restricted-এ বাড়তি permission"*)।
@@ -285,6 +295,11 @@ return [
      * ⭐ রেকর্ডের পাতায় জোড়া কাগজ (§১৫; চতুর্থ ধাপ) — কোরের চুক্তি, যাতে গ্রাহক বা ক্রয়ের পাতা DOC-এর
      * কোনো ক্লাস না চেনে ([[x-ui.linked-documents]])।
      */
+    /*
+     * ⭐ রিপোর্ট (§১৭; সপ্তম ধাপ) — ABOS-এর রিপোর্ট ইঞ্জিনে; পাতা ABOS-এর এক রিপোর্টের পাতা।
+     */
+    'reports' => [DocumentReports::class],
+
     'bindings' => [
         LinkedDocuments::class => DocumentLinks::class,
     ],

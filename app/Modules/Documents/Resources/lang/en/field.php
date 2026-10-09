@@ -74,4 +74,10 @@ return [
     'pattern' => 'Pattern',
     'rule_kind' => 'Rule kind',
     'rule' => 'Rule',
+    'template_title' => 'Template name',
+    'template_body' => 'Text',
+    'is_active' => 'Active',
+    'basis' => 'Counted from',
+    'archive_after_days' => 'Archive after (days)',
+    'bin_after_days' => 'Recycle bin after (days)',
 ];

@@ -53,6 +53,7 @@
                 @endforelse
             </ul>
 
+            <x-ui.list-totals :rows="$picks" />
             <x-ui.pager :rows="$picks" />
         </section>
     @else

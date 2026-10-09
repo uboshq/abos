@@ -27,4 +27,7 @@ return [
     'ocr_review' => 'Read text — check and correct',
     'ocr' => 'Read text (OCR)',
     'admin_abe' => 'Document Intelligence (ABE) rules',
+    'editor_rules' => 'Writing rules',
+    'built_in_fields' => 'Fields filled for you',
+    'admin_retention' => 'Retention and archive rules',
 ];

@@ -97,4 +97,6 @@ return [
     'document_unlinked' => 'Document link removed',
     'document_ocr_saved' => 'Document read text saved',
     'document_abe_used' => 'Document Intelligence (ABE) used',
+    'document_from_template' => 'Document made from a template',
+    'document_retained' => 'Document moved to the bin by a retention rule',
 ];

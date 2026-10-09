@@ -11,6 +11,7 @@ use App\Modules\Documents\Models\DocumentCategory;
 use App\Modules\Documents\Models\DocumentTag;
 use App\Modules\Documents\Models\DocumentType;
 use App\Modules\Documents\Models\MetadataField;
+use App\Modules\Documents\Models\RetentionPolicy;
 use App\Modules\Documents\Support\DocumentCatalog;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
@@ -26,7 +27,7 @@ use Illuminate\Validation\Rule;
 final class DocumentAdministration
 {
     /** @var list<string> */
-    public const KINDS = ['types', 'categories', 'tags', 'fields', 'classify', 'extract'];
+    public const KINDS = ['types', 'categories', 'tags', 'fields', 'classify', 'extract', 'retention'];
 
     /**
      * @param  array<string, mixed>  $input
@@ -78,6 +79,22 @@ final class DocumentAdministration
                 'kind' => AbeRule::EXTRACT, 'company_id' => $companyId, 'is_active' => true,
                 'created_by' => $actor, 'updated_by' => $actor,
             ]),
+            // ⭐ সপ্তম ধাপ — রাখার নিয়ম (§২০ Retention / Archive Policies); ⛔ চিরতরে মোছা কখনো নয়
+            'retention' => RetentionPolicy::query()->create([
+                ...$this->validate($input, [
+                    'folder' => ['nullable', Rule::in(array_keys(app(DocumentChoices::class)->folders(true)))],
+                    'doc_type' => ['nullable', Rule::in(array_keys(app(DocumentChoices::class)->types(true)))],
+                    'basis' => ['required', Rule::in(RetentionPolicy::BASES)],
+                    'archive_after_days' => ['nullable', 'integer', 'between:1,36500', 'required_without:bin_after_days'],
+                    // ⓘ বিনের দিন আর্কাইভের পরে — আগে আর্কাইভ, তারপর বিন
+                    'bin_after_days' => ['nullable', 'integer', 'between:1,36500', function ($attr, $value, $fail) use ($input) {
+                        if (filled($input['archive_after_days'] ?? null) && (int) $value <= (int) $input['archive_after_days']) {
+                            $fail(__('documents::message.bin_after_archive'));
+                        }
+                    }],
+                ]),
+                'company_id' => $companyId, 'is_active' => true, 'created_by' => $actor, 'updated_by' => $actor,
+            ]),
             'fields' => MetadataField::query()->create([
                 ...$this->named($input, 'dms_metadata_fields', [], [
                     'kind' => ['required', Rule::in(MetadataField::KINDS)],
@@ -104,6 +121,7 @@ final class DocumentAdministration
             'types' => DocumentType::class,
             'categories' => DocumentCategory::class,
             'classify', 'extract' => AbeRule::class,
+            'retention' => RetentionPolicy::class,
             default => MetadataField::class,
         };
 
@@ -154,6 +172,9 @@ final class DocumentAdministration
             'weight' => __('documents::field.weight'),
             'label' => __('documents::field.rule_label'),
             'pattern' => __('documents::field.pattern'),
+            'basis' => __('documents::field.basis'),
+            'archive_after_days' => __('documents::field.archive_after_days'),
+            'bin_after_days' => __('documents::field.bin_after_days'),
         ])->validate();
     }
 }

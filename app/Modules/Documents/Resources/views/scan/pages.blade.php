@@ -8,7 +8,7 @@
 <head>
     <meta charset="utf-8">
     <title>{{ $title }}</title>
-    <style>
+    <style @nonce>
         body { margin: 0; }
         .page { text-align: center; }
         .page img { max-width: 100%; max-height: 270mm; }

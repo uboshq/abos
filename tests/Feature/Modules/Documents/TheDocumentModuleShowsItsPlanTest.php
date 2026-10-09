@@ -57,6 +57,8 @@ final class TheDocumentModuleShowsItsPlanTest extends TestCase
         'documents.scan',
         // ⭐ ষষ্ঠ ধাপ — নিজের টেস্টে ([[TheIntelligenceIsRulesOnOurOwnServerTest]])
         'documents.intelligence',
+        // ⭐ সপ্তম ধাপ — নিজের টেস্টে ([[TheShelfReportsAndRemembersTest]])
+        'documents.templates', 'documents.templates.create', 'documents.reports', 'documents.audit',
     ];
 
     public function test_every_menu_page_is_shut_without_the_key_and_opens_with_it_for_the_same_person(): void
@@ -94,7 +96,11 @@ final class TheDocumentModuleShowsItsPlanTest extends TestCase
         // ⓘ আপলোডের সারি নিজের চাবি চায় (§১৩) — সেটাও, যাতে সাইডবারে ২১টা সারিই আসে
         Permission::findOrCreate('documents.upload', 'web');
         Permission::findOrCreate('documents.admin', 'web');
-        $person->givePermissionTo(['documents.view', 'documents.upload', 'documents.admin']);
+        foreach (['documents.templates', 'documents.report', 'documents.audit'] as $key) {
+            Permission::findOrCreate($key, 'web');
+        }
+        $person->givePermissionTo(['documents.view', 'documents.upload', 'documents.admin',
+            'documents.templates', 'documents.report', 'documents.audit']);
         app(PermissionRegistrar::class)->forgetCachedPermissions();
         $person = $person->fresh();
 

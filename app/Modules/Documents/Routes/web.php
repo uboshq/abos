@@ -3,15 +3,18 @@
 declare(strict_types=1);
 
 use App\Modules\Documents\Http\Controllers\DocumentAdminController;
+use App\Modules\Documents\Http\Controllers\DocumentAuditController;
 use App\Modules\Documents\Http\Controllers\DocumentBinController;
 use App\Modules\Documents\Http\Controllers\DocumentController;
 use App\Modules\Documents\Http\Controllers\DocumentFileController;
 use App\Modules\Documents\Http\Controllers\DocumentGrantController;
 use App\Modules\Documents\Http\Controllers\DocumentIntelligenceController;
 use App\Modules\Documents\Http\Controllers\DocumentLinkController;
+use App\Modules\Documents\Http\Controllers\DocumentReportController;
 use App\Modules\Documents\Http\Controllers\DocumentScanController;
 use App\Modules\Documents\Http\Controllers\DocumentShareController;
 use App\Modules\Documents\Http\Controllers\DocumentSignatureController;
+use App\Modules\Documents\Http\Controllers\DocumentTemplateController;
 use App\Modules\Documents\Http\Controllers\DocumentVersionController;
 use App\Modules\Documents\Http\Controllers\DocumentWorkflowController;
 use App\Modules\Documents\Http\Controllers\PlanController;
@@ -73,6 +76,28 @@ Route::middleware(['auth', 'can:documents.view'])->prefix('documents')->group(fu
     Route::post('/scan', [DocumentScanController::class, 'store'])
         ->middleware('can:documents.upload')->name('scan.store');
     Route::post('/ocr/fields', [DocumentScanController::class, 'fields'])->name('ocr.fields');
+
+    // ⭐ সপ্তম ধাপ — ছাঁচ আর সম্পাদক (§২), অডিট ট্রেইল (§১৮)
+    Route::get('/templates', [DocumentTemplateController::class, 'index'])->name('templates');
+    Route::middleware('can:documents.templates')->group(function () {
+        Route::get('/templates/new', [DocumentTemplateController::class, 'editor'])->name('templates.create');
+        Route::post('/templates', [DocumentTemplateController::class, 'store'])->name('templates.store');
+        Route::get('/templates/{template}/edit', [DocumentTemplateController::class, 'editor'])
+            ->whereNumber('template')->name('templates.edit');
+        Route::put('/templates/{template}', [DocumentTemplateController::class, 'update'])
+            ->whereNumber('template')->name('templates.update');
+    });
+    Route::middleware('can:documents.upload')->group(function () {
+        Route::get('/templates/{template}/fill', [DocumentTemplateController::class, 'fill'])
+            ->whereNumber('template')->name('templates.fill');
+        Route::post('/templates/{template}/generate', [DocumentTemplateController::class, 'generate'])
+            ->whereNumber('template')->name('templates.generate');
+    });
+    Route::get('/audit', [DocumentAuditController::class, 'trail'])->name('audit');
+
+    // ⭐ সপ্তম ধাপ — রিপোর্ট (§১৭); চাবি কন্ট্রোলারে (`documents.report`)
+    Route::get('/reports', [DocumentReportController::class, 'center'])->name('reports');
+    Route::get('/reports/{slug}', [DocumentReportController::class, 'show'])->name('report.show');
 
     // ⭐ ষষ্ঠ ধাপ — Document Intelligence (ABE), নিয়মে (§৮)
     Route::get('/intelligence', [DocumentIntelligenceController::class, 'workbench'])->name('intelligence');

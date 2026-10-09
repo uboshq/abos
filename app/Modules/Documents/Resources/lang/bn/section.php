@@ -27,4 +27,7 @@ return [
     'ocr_review' => 'পড়া লেখা — দেখে ঠিক করুন',
     'ocr' => 'পড়া লেখা (OCR)',
     'admin_abe' => 'Document Intelligence (ABE)-র নিয়ম',
+    'editor_rules' => 'লেখার নিয়ম',
+    'built_in_fields' => 'নিজে থেকে ভরা ঘর',
+    'admin_retention' => 'রাখার আর আর্কাইভের নিয়ম',
 ];

@@ -254,5 +254,59 @@
                 </form>
             </div>
         </section>
+
+        {{-- ── ⭐ রাখার নিয়ম (§২০; সপ্তম ধাপ) — আর্কাইভ, তারপর রিসাইকেল বিন; ⛔ চিরতরে মোছা কখনো নয় ── --}}
+        <section id="retention" data-boxed class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) xl:col-span-2">
+            <h2 class="border-b border-(--color-border) bg-(--color-section-head) px-4 py-3 font-semibold">
+                {{ __('documents::section.admin_retention') }}
+            </h2>
+            <p class="px-4 pt-2 text-2xs text-(--color-ink-muted)">{{ __('documents::message.retention_hint') }}</p>
+
+            <table class="ui-list w-full border-collapse text-sm">
+                <thead>
+                    <tr>
+                        <th class="text-start">{{ __('documents::field.folder') }}</th>
+                        <th class="text-start">{{ __('documents::field.doc_type') }}</th>
+                        <th class="text-start">{{ __('documents::field.basis') }}</th>
+                        <th class="text-end">{{ __('documents::field.archive_after_days') }}</th>
+                        <th class="text-end">{{ __('documents::field.bin_after_days') }}</th>
+                        <th class="text-end">{{ __('core.table.actions') }}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @forelse ($policies as $policy)
+                        <tr data-policy="{{ $policy->id }}" @class(['opacity-60' => ! $policy->is_active])>
+                            <td>{{ $policy->folder ? ($allFolders[$policy->folder] ?? $policy->folder) : __('documents::message.every_type') }}</td>
+                            <td>{{ $policy->doc_type ? ($allTypes[$policy->doc_type] ?? $policy->doc_type) : __('documents::message.every_type') }}</td>
+                            <td>{{ __('documents::catalog.basis.'.$policy->basis) }}</td>
+                            <td class="num text-end">{{ $policy->archive_after_days ?? '—' }}</td>
+                            <td class="num text-end">{{ $policy->bin_after_days ?? '—' }}</td>
+                            <td class="text-end">
+                                <form method="POST" action="{{ route('documents.admin.toggle', ['retention', $policy->id]) }}">
+                                    @csrf
+                                    <button type="submit" class="text-(--color-link) hover:underline">
+                                        {{ $policy->is_active ? __('documents::action.turn_off') : __('documents::action.turn_on') }}
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                    @empty
+                        <tr><td colspan="6" class="text-(--color-ink-muted)">{{ __('documents::message.admin_none') }}</td></tr>
+                    @endforelse
+                </tbody>
+            </table>
+
+            <form method="POST" action="{{ route('documents.admin.store', 'retention') }}"
+                  class="grid gap-2 border-t border-(--color-border) px-4 py-3 sm:grid-cols-[repeat(5,minmax(0,1fr))_auto] sm:items-end">
+                @csrf
+                <x-ui.select name="folder" :label="__('documents::field.folder')" :options="$allFolders" :placeholder="__('documents::message.every_type')" />
+                <x-ui.select name="doc_type" :label="__('documents::field.doc_type')" :options="$allTypes" :placeholder="__('documents::message.every_type')" />
+                <x-ui.select name="basis" :label="__('documents::field.basis')" required selected="created"
+                             :options="collect(\App\Modules\Documents\Models\RetentionPolicy::BASES)->mapWithKeys(fn ($b) => [$b => __('documents::catalog.basis.'.$b)])->all()" />
+                <x-ui.field name="archive_after_days" type="number" min="1" :label="__('documents::field.archive_after_days')" />
+                <x-ui.field name="bin_after_days" type="number" min="1" :label="__('documents::field.bin_after_days')" />
+                <x-ui.button type="submit" tone="primary" icon="plus">{{ __('documents::action.add') }}</x-ui.button>
+            </form>
+        </section>
     </div>
 </x-layouts.app>

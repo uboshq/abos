@@ -46,4 +46,8 @@ return [
     'use_type' => 'এই ধরন বসান',
     'back_to_document' => 'কাগজে ফিরুন',
     'abe' => 'ABE',
+    'new_template' => 'নতুন ছাঁচ',
+    'use_template' => 'ভরে কাগজ বানান',
+    'edit_template' => 'বদলান',
+    'make_document' => 'কাগজ বানান',
 ];

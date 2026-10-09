@@ -101,6 +101,7 @@ final class DocumentPlan
      * ⭐ চতুর্থ ধাপ: শেয়ার করা ডকুমেন্ট আর সই কেন্দ্রও — বাকি আটটা আগের মতোই।
      * ⭐ পঞ্চম ধাপ: স্ক্যান ও OCR-ও — বাকি সাতটা আগের মতোই।
      * ⭐ ষষ্ঠ ধাপ: Document Intelligence (ABE)-ও — বাকি ছয়টা আগের মতোই।
+     * ⭐ সপ্তম ধাপ: ছাঁচ, সম্পাদক, রিপোর্ট আর অডিট ট্রেইলও — বাকি দুইটা (ইনবক্স, প্রিয়) আগের মতোই।
      *
      * ⓘ `group` — ABOS-এর ছয়-ভাগ মেনুর কোন ভাগে ([[ModuleDefinition::MENU_GROUPS]])।
      * ⓘ `sections` — পরিকল্পনার কোন অংশগুলো এই পর্দার কথা বলে।
@@ -114,14 +115,6 @@ final class DocumentPlan
             'systems' => ['notification', 'approval'], 'new' => false],
         'favourite' => ['icon' => 'star', 'group' => 'transactions', 'sections' => [2],
             'systems' => ['data_scope'], 'new' => true],
-        'templates' => ['icon' => 'columns', 'group' => 'transactions', 'sections' => [2, 21],
-            'systems' => ['print', 'number_series'], 'new' => false],
-        'editor' => ['icon' => 'edit', 'group' => 'transactions', 'sections' => [9],
-            'systems' => ['audit_trait', 'audit_engine', 'attachment'], 'new' => true],
-        'reports' => ['icon' => 'reports', 'group' => 'reports', 'sections' => [17],
-            'systems' => ['report', 'data_scope'], 'new' => false],
-        'audit' => ['icon' => 'eye', 'group' => 'reports', 'sections' => [18],
-            'systems' => ['audit_engine', 'audit_trait'], 'new' => false],
     ];
 
     /**
@@ -136,13 +129,13 @@ final class DocumentPlan
     public const SECTIONS = [
         1 => ['status' => self::LIVE, 'systems' => ['attachment', 'approval', 'audit_engine']],
         2 => ['status' => self::SHELL, 'systems' => ['menu', 'permissions']],
-        3 => ['status' => self::PLANNED, 'systems' => ['dashboard', 'data_scope']],
+        3 => ['status' => self::LIVE, 'systems' => ['dashboard', 'data_scope']],
         4 => ['status' => self::LIVE, 'systems' => ['attachment', 'data_scope', 'branch_wall']],
         5 => ['status' => self::LIVE, 'systems' => ['print', 'approval', 'audit_engine']],
         6 => ['status' => self::LIVE, 'systems' => ['attachment', 'image']],
         7 => ['status' => self::LIVE, 'systems' => ['image', 'attachment']],
         8 => ['status' => self::LIVE, 'systems' => ['search']],
-        9 => ['status' => self::PARTLY, 'systems' => ['attachment', 'audit_trait']],
+        9 => ['status' => self::LIVE, 'systems' => ['attachment', 'audit_trait']],
         10 => ['status' => self::LIVE, 'systems' => ['approval']],
         11 => ['status' => self::LIVE, 'systems' => ['approval', 'approval_flow']],
         12 => ['status' => self::LIVE, 'systems' => ['notification']],
@@ -150,11 +143,11 @@ final class DocumentPlan
         14 => ['status' => self::LIVE, 'systems' => ['permissions']],
         15 => ['status' => self::LIVE, 'systems' => ['drill']],
         16 => ['status' => self::LIVE, 'systems' => ['search', 'data_scope']],
-        17 => ['status' => self::PLANNED, 'systems' => ['report', 'data_scope']],
-        18 => ['status' => self::PLANNED, 'systems' => ['audit_engine', 'audit_trait']],
+        17 => ['status' => self::LIVE, 'systems' => ['report', 'data_scope']],
+        18 => ['status' => self::LIVE, 'systems' => ['audit_engine', 'audit_trait']],
         19 => ['status' => self::LIVE, 'systems' => ['audit_engine']],
-        20 => ['status' => self::PARTLY, 'systems' => ['settings', 'number_series']],
-        21 => ['status' => self::PARTLY, 'systems' => ['number_series', 'company_wall', 'branch_wall']],
+        20 => ['status' => self::LIVE, 'systems' => ['settings', 'number_series']],
+        21 => ['status' => self::LIVE, 'systems' => ['number_series', 'company_wall', 'branch_wall']],
         22 => ['status' => self::LIVE, 'systems' => ['approval']],
         23 => ['status' => self::LIVE, 'systems' => ['notification']],
         24 => ['status' => self::RULE, 'systems' => ['menu']],
