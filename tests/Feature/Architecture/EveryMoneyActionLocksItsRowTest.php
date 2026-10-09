@@ -22,7 +22,10 @@ use PHPUnit\Framework\TestCase;
  */
 final class EveryMoneyActionLocksItsRowTest extends TestCase
 {
-    private const NAMES = ['confirm', 'approve', 'cancel', 'post', 'close', 'reverse', 'finish', 'finishHeld', 'reopen', 'dispose', 'payout', 'declare'];
+    // ⓘ 'recordOnConfirmed', 'payDue' — গাড়ি ভাড়া লেখা আর বাকি ভাড়া শোধ ([[FarePayment]]); পুরো ERP অডিট ৯ অক্টোবর ২০২৬:
+    //   নাম তালিকায় ছিল না বলে তালা ছাড়াই পার হয়েছিল — দুবার চাপলে দুবার
+    private const NAMES = ['confirm', 'approve', 'cancel', 'post', 'close', 'reverse', 'finish', 'finishHeld', 'reopen', 'dispose', 'payout', 'declare',
+        'recordOnConfirmed', 'payDue'];
 
     private const LOCK = '/lockFresh\(|lockForUpdate\(|assertRoomLocked\(|lockCustomer\(|lockPending\(|->lock\(|CashOnHand::lock|sharedLock\(/';
 

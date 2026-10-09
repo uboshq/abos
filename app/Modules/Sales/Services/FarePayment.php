@@ -96,14 +96,6 @@ final class FarePayment
      */
     public function recordOnConfirmed(DeliveryChallan $challan, array $data): void
     {
-        if ($challan->status !== \App\Core\Support\DocumentStatus::CONFIRMED) {
-            throw ValidationException::withMessages(['fare' => __('sales::fare.only_confirmed')]);
-        }
-
-        if ($challan->fare_rule !== null || (is_numeric($challan->transport_cost) && bccomp((string) $challan->transport_cost, '0', 4) > 0)) {
-            throw ValidationException::withMessages(['fare' => __('sales::fare.already_recorded')]);
-        }
-
         $who = (string) ($data['fare_paid_by'] ?? '');
 
         if (! in_array($who, ['us', 'customer', 'none'], true)) {
@@ -117,6 +109,21 @@ final class FarePayment
         }
 
         \Illuminate\Support\Facades\DB::transaction(function () use ($challan, $data, $who, $amount): void {
+            /*
+             * ⛔ সারি তালা দিয়ে আসল অবস্থা — পুরো ERP অডিট, ৯ অক্টোবর ২০২৬: *"গাড়ি ভাড়া লেখায় তালা নেই — দুবার চাপলে
+             * দুবার"*। ⓘ দুই চাপ একসাথে এলে দুটোই "ভাড়া লেখা নেই" দেখত আর দুটো EV বসাত; এখন দ্বিতীয়টা প্রথমটার পরে
+             * সারিটা পায়, আর "আগেই লেখা" দেখে থামে ([[EveryMoneyActionLocksItsRowTest]])।
+             */
+            $challan = DeliveryChallan::query()->lockForUpdate()->findOrFail($challan->id);
+
+            if ($challan->status !== \App\Core\Support\DocumentStatus::CONFIRMED) {
+                throw ValidationException::withMessages(['fare' => __('sales::fare.only_confirmed')]);
+            }
+
+            if ($challan->fare_rule !== null || (is_numeric($challan->transport_cost) && bccomp((string) $challan->transport_cost, '0', 4) > 0)) {
+                throw ValidationException::withMessages(['fare' => __('sales::fare.already_recorded')]);
+            }
+
             $challan->forceFill([
                 'fare_paid_by' => $who,
                 'transport_cost' => $who === 'us' ? $amount : (is_numeric($amount) ? $amount : null),
@@ -142,6 +149,19 @@ final class FarePayment
      */
     public function payDue(DeliveryChallan $challan, array $data): array
     {
+        return \Illuminate\Support\Facades\DB::transaction(fn (): array => $this->payDueLocked($challan, $data));
+    }
+
+    /**
+     * ⛔ সারি তালা দিয়ে আসল অবস্থা — পুরো ERP অডিট, ৯ অক্টোবর ২০২৬: *"বাকি ভাড়া শোধে তালা নেই — দুবার চাপলে দুবার"*।
+     * ⓘ দুই চাপ একসাথে এলে দুটোই "বাকি" দেখত আর বাহককে দুবার টাকা যেত; এখন দ্বিতীয়টা প্রথমটার ভাউচার দেখে থামে।
+     *
+     * @return array{0: Voucher, 1: bool|string}
+     */
+    private function payDueLocked(DeliveryChallan $challan, array $data): array
+    {
+        $challan = DeliveryChallan::query()->lockForUpdate()->findOrFail($challan->id);
+
         if (! $this->isDue($challan)) {
             throw ValidationException::withMessages(['fare' => __('sales::fare.nothing_due')]);
         }
