@@ -10,6 +10,9 @@ use App\Core\Integrity\IntegrityCheck;
 use App\Core\Integrity\IntegrityFinding;
 use App\Core\Support\CompanyContext;
 use App\Core\Support\Money;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Query\Builder;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -32,6 +35,8 @@ final class AccountsChecks implements ChecksItsOwnBooks
             self::everyEntryHasAnAccount(),
             // ⭐ কাগজ মুছে গেছে অথচ দাখিলা খাতায় — ২ অক্টোবর ২০২৬
             self::everyEntryHasItsPaper(),
+            // ⭐ পক্ষের খাতার যোগ = নিয়ন্ত্রণ খাতের জের — পুনঃঅডিট, ৯ অক্টোবর ২০২৬
+            self::partiesAddUpToTheirControlAccount(),
         ];
     }
 
@@ -99,16 +104,15 @@ final class AccountsChecks implements ChecksItsOwnBooks
                     ->selectRaw('source_type, source_id,
                                  MIN(document_no) as document_no,
                                  COALESCE(SUM(debit), 0) as d,
-                                 COALESCE(SUM(credit), 0) as c')
-                    /*
-                     * প্রথম একশোটা।
-                     *
-                     * সব ভাঙা থাকলে (যেমন একটা মাইগ্রেশন সব ভেঙে দিলে)
-                     * তালিকাটা হাজার সারির হত, আর পাতাটা খুলতই না।
-                     * একশোটা দেখেই বোঝা যায় ধরনটা কী, আর সেটাই কাজ
-                     * শুরু করার জন্য যথেষ্ট।
-                     */
-                    ;
+                                 COALESCE(SUM(credit), 0) as c');
+                /*
+                 * প্রথম একশোটা।
+                 *
+                 * সব ভাঙা থাকলে (যেমন একটা মাইগ্রেশন সব ভেঙে দিলে)
+                 * তালিকাটা হাজার সারির হত, আর পাতাটা খুলতই না।
+                 * একশোটা দেখেই বোঝা যায় ধরনটা কী, আর সেটাই কাজ
+                 * শুরু করার জন্য যথেষ্ট।
+                 */
 
                 [$rows, $more] = self::firstHundred($query);
 
@@ -206,7 +210,7 @@ final class AccountsChecks implements ChecksItsOwnBooks
                 $total = 0;
 
                 foreach (app(DrillResolver::class)->map() as $sourceType => $modelClass) {
-                    /** @var \Illuminate\Database\Eloquent\Model $model */
+                    /** @var Model $model */
                     $model = new $modelClass;
                     $table = $model->getTable();
                     $key = $model->getKeyName();
@@ -243,14 +247,73 @@ final class AccountsChecks implements ChecksItsOwnBooks
     }
 
     /**
+     * ⭐ প্রতিটা নিয়ন্ত্রণ খাতের জের = তার পক্ষগুলোর জেরের যোগ — পুরো-ERP পুনঃঅডিট, ৯ অক্টোবর ২০২৬ (হিসাব, ঠিক ৫)।
+     *
+     * ⓘ নতুন সারিতে পক্ষ কেবল পক্ষ-রাখা খাতে বসে ([[PostingEngine]]), কিন্তু উল্টো দিকটা কেউ মাপত না: পাওনার খাতে পক্ষ
+     * ছাড়া (বা অন্য ধরনের পক্ষসহ) পুরনো সারি থাকলে খাতের জের আর গ্রাহকদের বকেয়ার যোগ আলাদা — স্থিতিপত্র এক অঙ্ক বলে,
+     * পক্ষের খাতা আরেক, আর কোনটা ঠিক কেউ জানে না।
+     * ⭐ কেবল পড়ে, কিছু বদলায় না: প্রতিটা পক্ষ-রাখা খাতে মোট জের, খাতের নিজের ধরনের পক্ষের নামে বসা জের, আর ফারাক।
+     * ⓘ জের ডেবিট−ক্রেডিট, সব শাখা জুড়ে — এটা যাচাই, দেখার শাখা নয়।
+     */
+    public static function partiesAddUpToTheirControlAccount(): IntegrityCheck
+    {
+        return new IntegrityCheck(
+            key: 'accounts.parties_add_up_to_their_control_account',
+            label: __('accounts::integrity.party_control'),
+            question: __('accounts::integrity.party_control_q'),
+            whenBroken: __('accounts::integrity.party_control_broken'),
+            permission: 'accounts.report',
+            run: function (): array {
+                // ⓘ ONLY_FULL_GROUP_BY: কেবল গোষ্ঠীর কলাম আর যোগফল; নাম পরে আলাদা করে
+                $rows = DB::table('ledger_entries as le')
+                    ->join('accounts as a', fn ($join) => $join
+                        ->on('a.id', '=', 'le.account_id')
+                        ->on('a.company_id', '=', 'le.company_id'))
+                    ->where('le.company_id', CompanyContext::id())
+                    ->whereNotNull('a.party_types')
+                    ->where('a.party_types', '<>', '[]')
+                    ->groupBy('le.account_id')
+                    ->selectRaw('le.account_id,
+                        COALESCE(SUM(le.debit), 0) - COALESCE(SUM(le.credit), 0) AS control,
+                        COALESCE(SUM(CASE WHEN le.party_id IS NOT NULL AND JSON_CONTAINS(a.party_types, JSON_QUOTE(le.party_type))
+                            THEN le.debit - le.credit ELSE 0 END), 0) AS parties')
+                    ->orderBy('le.account_id')
+                    ->get()
+                    ->filter(fn ($row) => bccomp(Money::of($row->control), Money::of($row->parties), 2) !== 0);
+
+                if ($rows->isEmpty()) {
+                    return [];
+                }
+
+                $accounts = DB::table('accounts')->whereIn('id', $rows->pluck('account_id'))->get(['id', 'code', 'name_en', 'name_bn'])->keyBy('id');
+
+                return $rows->map(function ($row) use ($accounts): IntegrityFinding {
+                    $account = $accounts->get($row->account_id);
+                    $name = $account === null ? '#'.$row->account_id
+                        : $account->code.' — '.((app()->getLocale() === 'bn' ? $account->name_bn : null) ?: $account->name_en);
+
+                    return new IntegrityFinding(
+                        what: $name,
+                        detail: __('accounts::integrity.party_control_detail', [
+                            'control' => Money::format(Money::of($row->control), 2),
+                            'parties' => Money::format(Money::of($row->parties), 2),
+                            'diff' => Money::format(bcsub(Money::of($row->control), Money::of($row->parties), 4), 2),
+                        ]),
+                    );
+                })->values()->all();
+            },
+        );
+    }
+
+    /**
      * প্রথম একশোটা — আর বাকিগুলো কয়টা, একটা সারিতে।
      *
      * ⛔ আগে একশোয় থেমে যেত আর কিছু বলত না — ৫,০০০ ভাঙা কাগজ আর ১০০টা একই রকম দেখাত, অথচ প্রথমটা একটা
      * মাইগ্রেশনের দুর্ঘটনা আর দ্বিতীয়টা কয়েকটা ভুল হাতের কাজ (abos-bb-র নিরীক্ষা, ২ অক্টোবর ২০২৬)।
      *
-     * @return array{0: \Illuminate\Support\Collection<int, object>, 1: list<IntegrityFinding>}
+     * @return array{0: Collection<int, object>, 1: list<IntegrityFinding>}
      */
-    private static function firstHundred(\Illuminate\Database\Query\Builder $query): array
+    private static function firstHundred(Builder $query): array
     {
         $total = DB::query()->fromSub(clone $query, 'x')->count();
         $rows = $query->limit(100)->get();
