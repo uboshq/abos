@@ -28,4 +28,10 @@ return [
     'turn_on' => 'চালু করুন',
     'open_settings' => 'ফাইলের সীমা বদলান',
     'open_number_series' => 'নম্বর সিরিজ',
+    'open' => 'খুলুন',
+    'review' => 'দেখে সই দিন',
+    'open_in_inbox' => 'ইনবক্সে খুলুন',
+    'submit' => 'অনুমোদনে পাঠান',
+    'withdraw' => 'অনুরোধ ফেরত নিন',
+    'publish' => 'প্রকাশ করুন',
 ];

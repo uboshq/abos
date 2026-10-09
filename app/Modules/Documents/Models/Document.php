@@ -9,9 +9,11 @@ use App\Core\Concerns\HasPublicId;
 use App\Core\Concerns\IsAudited;
 use App\Core\Concerns\ListedInViewedBranch;
 use App\Core\Concerns\ScopedToUserBranch;
+use App\Core\Contracts\ShowsItselfForSigning;
 use App\Models\Branch;
 use App\Models\User;
 use App\Modules\Documents\Services\DocumentAccess;
+use App\Modules\Documents\Services\DocumentChoices;
 use App\Modules\Documents\Support\DocumentCatalog;
 use App\Modules\MasterData\Models\Department;
 use Illuminate\Database\Eloquent\Builder;
@@ -34,7 +36,7 @@ use Illuminate\Support\Carbon;
  * অডিট আর ড্যাশবোর্ডের গোনা ধাপ না দেখেও কাগজ চেনে; তাই সেটা দুই জায়গায়:
  * তালিকার [[scopeVisibleTo()]] আর ঠিকানা থেকে কাগজ তোলার [[resolveRouteBinding()]]।
  */
-class Document extends Model
+class Document extends Model implements ShowsItselfForSigning
 {
     use BelongsToCompany;
     use HasPublicId;
@@ -204,6 +206,79 @@ class Document extends Model
             return null;
         }
 
-        return $query->visibleTo($user)->first();
+        $visible = (clone $query)->visibleTo($user)->first();
+
+        if ($visible !== null) {
+            return $visible;
+        }
+
+        // ⭐ সইকারী — তালিকার দেয়ালের বাইরে, কিন্তু সইয়ের অপেক্ষায় তাঁর সামনে ([[DocumentAccess::isSigner()]])
+        $waiting = $query->whereIn($this->getTable().'.status', [DocumentCatalog::SUBMITTED, DocumentCatalog::UNDER_REVIEW])->first();
+
+        return $waiting !== null && app(DocumentAccess::class)->isSigner($user, $waiting) ? $waiting : null;
+    }
+
+    /**
+     * ⓘ ছাপের বাইরে ([[DocumentFingerprint]]) — কে শেষ ছুঁয়েছেন, আর্কাইভ/মোছার হিসাব। কাগজের কথা
+     * নয়; ধরলে প্রতিটা আর্কাইভে সই অচল হত।
+     *
+     * @return list<string>
+     */
+    public function fingerprintIgnores(): array
+    {
+        return ['updated_by', 'archived_at', 'archived_by', 'archived_from_status',
+            'deleted_by', 'deleted_from_status', 'deleted_at'];
+    }
+
+    /**
+     * সইয়ের পাতায় কাগজটা নিজে কী বলে (§১০) — নম্বর, ধরন, গোপনীয়তা, ভার্সন আর ⭐ ফাইলের SHA-256:
+     * সইকারী জানেন ঠিক কোন বাইটে সই দিচ্ছেন। নিচে ভার্সনগুলো, নতুনটা আগে।
+     */
+    public function signingSheet(): array
+    {
+        $choices = app(DocumentChoices::class);
+        $current = $this->currentVersion;
+
+        return [
+            'facts' => array_values(array_filter([
+                ['label' => __('documents::field.document_no'), 'value' => (string) $this->document_no],
+                ['label' => __('documents::field.name'), 'value' => $this->name()],
+                ['label' => __('documents::field.doc_type'), 'value' => $choices->typeName($this->doc_type)],
+                ['label' => __('documents::field.folder'), 'value' => $choices->folderName($this->folder)],
+                ['label' => __('documents::field.confidentiality'), 'value' => (string) __('documents::catalog.level.'.$this->confidentiality)],
+                ['label' => __('documents::field.version'), 'value' => $current ? 'v'.$current->label() : ''],
+                ['label' => __('documents::field.file_hash'), 'value' => (string) ($current?->file_hash ?? '')],
+                ['label' => __('documents::field.expiry_date'), 'value' => (string) ($this->expiry_date?->toDateString() ?? '')],
+            ], fn (array $f) => $f['value'] !== '')),
+            'columns' => [
+                ['key' => 'version', 'label' => __('documents::field.version')],
+                ['key' => 'author', 'label' => __('documents::field.author')],
+                ['key' => 'comment', 'label' => __('documents::field.comment')],
+            ],
+            'rows' => $this->versions()->with('author')->orderByDesc('major')->orderByDesc('minor')->limit(10)->get()
+                ->map(fn (DocumentVersion $v) => [
+                    'version' => 'v'.$v->label(),
+                    'author' => $v->author?->name,
+                    'comment' => $v->comment,
+                ])->all(),
+        ];
+    }
+
+    // ── ইনবক্সের লিংক (ড্রিলের নাম নয় — [[DocumentLibrary::ENTITY]]) ─────────────
+
+    public function drillDocumentNo(): string
+    {
+        return (string) $this->document_no;
+    }
+
+    public function drillLabel(): string
+    {
+        return $this->name();
+    }
+
+    /** @return array{0: string, 1: array<string, int>} */
+    public function drillRoute(): array
+    {
+        return ['documents.show', ['document' => (int) $this->getKey()]];
     }
 }

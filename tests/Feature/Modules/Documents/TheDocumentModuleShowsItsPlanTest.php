@@ -49,6 +49,8 @@ final class TheDocumentModuleShowsItsPlanTest extends TestCase
         'module.dashboard',
         // ⭐ দ্বিতীয় ধাপ (৯ অক্টোবর ২০২৬) — নিজের টেস্টে ([[TheBinTheSearchAndTheAdminWorkTest]])
         'documents.archived', 'documents.bin', 'documents.search', 'documents.admin',
+        // ⭐ তৃতীয় ধাপ — নিজের টেস্টে ([[ADocumentGoesThroughItsSignaturesTest]])
+        'documents.approval', 'documents.expiry',
     ];
 
     public function test_every_menu_page_is_shut_without_the_key_and_opens_with_it_for_the_same_person(): void

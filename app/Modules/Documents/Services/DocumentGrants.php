@@ -23,6 +23,8 @@ use Spatie\Permission\Models\Role;
  */
 final class DocumentGrants
 {
+    public function __construct(private readonly DocumentNotices $notices) {}
+
     /** @var list<string> */
     public const TYPES = [DocumentGrant::USER, DocumentGrant::ROLE];
 
@@ -31,7 +33,7 @@ final class DocumentGrants
      */
     public function grant(Document $document, string $type, int $granteeId, array $abilities): DocumentGrant
     {
-        return DB::transaction(function () use ($document, $type, $granteeId, $abilities) {
+        $made = DB::transaction(function () use ($document, $type, $granteeId, $abilities) {
             $flags = [];
 
             foreach (DocumentGrant::ABILITIES as $ability => $column) {
@@ -61,6 +63,10 @@ final class DocumentGrants
 
             return $grant;
         });
+
+        $this->notices->permissionChanged($document, $made, removed: false);
+
+        return $made;
     }
 
     public function revoke(Document $document, DocumentGrant $grant): void
@@ -71,6 +77,8 @@ final class DocumentGrants
 
             $document->auditAction('doc_access_changed', $name.': —');
         });
+
+        $this->notices->permissionChanged($document, $grant, removed: true);
     }
 
     /**

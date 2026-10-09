@@ -80,4 +80,12 @@ return [
     'document_restored' => 'Document restored from the recycle bin',
     'document_purged' => 'Document deleted for good',
     'doc_access_changed' => 'Document access changed',
+    'document_submitted' => 'Document sent for approval',
+    'document_approved' => 'Document approved',
+    'document_withdrawn' => 'Document approval request withdrawn',
+    'document_published' => 'Document published',
+    'document_returned' => 'Document sent back for changes',
+    'document_rejected' => 'Document rejected',
+    'document_expired' => 'Document expired',
+    'document_renewed' => 'Document renewed',
 ];

@@ -80,4 +80,10 @@ return [
         'number' => 'সংখ্যা',
         'date' => 'তারিখ',
     ],
+
+    'decision' => [
+        'approved' => 'অনুমোদন',
+        'rejected' => 'না / ফেরত',
+        'forwarded' => 'অন্যের কাছে পাঠানো',
+    ],
 ];

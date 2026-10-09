@@ -19,4 +19,5 @@ return [
     'admin_categories' => 'Folders',
     'admin_tags' => 'Tags',
     'admin_fields' => 'Extra fields',
+    'approval' => 'Approval',
 ];

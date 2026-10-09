@@ -4,9 +4,12 @@ declare(strict_types=1);
 
 namespace App\Modules\Documents\Services;
 
+use App\Core\Engines\Approval\ApprovalEngine;
 use App\Core\Services\DataScope;
 use App\Core\Support\CompanyContext;
+use App\Models\Approval;
 use App\Models\User;
+use App\Models\UserDataScope;
 use App\Modules\Documents\Models\Document;
 use App\Modules\Documents\Models\DocumentGrant;
 use App\Modules\Documents\Support\DocumentCatalog;
@@ -85,6 +88,21 @@ final class DocumentAccess
     /** এই মানুষ এই কাগজটা দেখতে পান কি না — নিজের, অধিকার, নয়তো ধাপ আর বিভাগ। */
     public function canSee(User $user, Document $document): bool
     {
+        // ⭐ সইকারী শাখার দেয়ালের বাইরেও পড়েন — ABOS-এর সইয়ের নিয়ম ([[ApprovalFacts::VIEW_WALLS]])
+        if ($this->isSigner($user, $document)) {
+            return true;
+        }
+
+        /*
+         * ⛔ শাখার দেয়াল — তালিকায় আর ঠিকানায় এটা মডেলের গ্লোবাল স্কোপ; কিন্তু খবরের প্রাপক বাছাই আর
+         * নির্ধারিত কাজ কাগজটা স্কোপ ছাড়াই হাতে পায়। ⚠️ এখানে না দেখলে অন্য শাখার মানুষ কাগজ-ধরে
+         * অধিকারের খবরে কাগজের নাম পেয়ে যেতেন (তৃতীয় ধাপে ধরা পড়ল)।
+         */
+        // ⓘ শাখাহীন (গোটা কোম্পানির) কাগজ সবার নাগালে — ABOS-এর নিয়ম ([[DataScope::allows()]])
+        if (! $this->scope->allows($user, UserDataScope::BRANCH, $document->branch_id === null ? null : (int) $document->branch_id)) {
+            return false;
+        }
+
         if ($this->isOwn($user, $document) || $this->granted($user, $document, 'view')) {
             return true;
         }
@@ -192,6 +210,25 @@ final class DocumentAccess
             ->pluck('model_has_roles.role_id')
             ->map(fn ($id) => (int) $id)
             ->all();
+    }
+
+    /**
+     * ⭐ যাঁর কাছে এই কাগজ সইয়ের অপেক্ষায় — তিনি পড়েই সই দেন (তৃতীয় ধাপ)।
+     *
+     * ⓘ ভাউচারের মতোই ([[ApprovalInboxController::show()]]-এর `$mayReadDocument`): গোপনীয়তার ধাপ না থাকলেও
+     * যিনি এখন সই দিতে পারেন তিনি কাগজটা খোলেন; সই পড়ে গেলে আবার নিজের ধাপ। ⛔ তালিকায় নয় — কেবল
+     * কাগজের নিজের পাতা, প্রিভিউ আর নামানো (দেখার নিয়ম যেখানে কাগজ ধরে জিজ্ঞেস করে)।
+     */
+    public function isSigner(User $user, Document $document): bool
+    {
+        if (! in_array($document->status, [DocumentCatalog::SUBMITTED, DocumentCatalog::UNDER_REVIEW], true)) {
+            return false;
+        }
+
+        $engine = app(ApprovalEngine::class);
+        $approval = $engine->latestFor($document, DocumentWorkflow::ACTION);
+
+        return $approval !== null && $approval->status === Approval::PENDING && $engine->canDecide($approval, $user);
     }
 
     private function isOwn(User $user, Document $document): bool

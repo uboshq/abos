@@ -50,6 +50,7 @@ final class DocumentLibrary
     public function __construct(
         private readonly AttachmentEngine $attachments,
         private readonly NumberSeriesEngine $numbers,
+        private readonly DocumentNotices $notices,
     ) {}
 
     /**
@@ -68,7 +69,7 @@ final class DocumentLibrary
     {
         $many = count($files) > 1;
 
-        return DB::transaction(function () use ($files, $details, $many) {
+        $made = DB::transaction(function () use ($files, $details, $many) {
             $made = [];
 
             foreach ($files as $file) {
@@ -105,6 +106,13 @@ final class DocumentLibrary
 
             return $made;
         });
+
+        // ⓘ খবর লেনদেনের পরে — কাগজ সত্যিই বসার পরেই মালিক জানেন (§২৩ New Document)
+        foreach ($made as $document) {
+            $this->notices->created($document);
+        }
+
+        return $made;
     }
 
     /**
@@ -114,7 +122,7 @@ final class DocumentLibrary
      */
     public function addVersion(Document $document, UploadedFile $file, bool $major, ?string $comment): DocumentVersion
     {
-        return DB::transaction(function () use ($document, $file, $major, $comment) {
+        $made = DB::transaction(function () use ($document, $file, $major, $comment) {
             $locked = $this->lock($document);
             [$nextMajor, $nextMinor] = $this->nextNumber($locked, $major);
 
@@ -124,6 +132,10 @@ final class DocumentLibrary
 
             return $version;
         });
+
+        $this->notices->updated($document, 'v'.$made->label());
+
+        return $made;
     }
 
     /**
@@ -168,7 +180,24 @@ final class DocumentLibrary
                 ...$this->detailFields($details),
                 'name' => mb_substr(trim((string) $details['name']), 0, 191),
                 'updated_by' => Actor::userId(),
-            ])->save();
+            ]);
+
+            /*
+             * ⭐ নবায়ন (§১২ Renewal) — মেয়াদোত্তীর্ণ কাগজে নতুন মেয়াদ বসলে কাগজ আবার খসড়া, আবার
+             * অনুমোদনের পথে। ⓘ অবস্থার বদল অডিটে নিজের নামে; বাকি বদল অডিট নিজেই লেখে।
+             */
+            $renewed = $document->status === DocumentCatalog::EXPIRED
+                && $document->expiry_date !== null && ! $document->isExpired();
+
+            if ($renewed) {
+                $document->status = DocumentCatalog::DRAFT;
+            }
+
+            $document->save();
+
+            if ($renewed) {
+                $document->auditAction('document_renewed', $document->expiry_date->toDateString());
+            }
 
             $this->saveMetadata($document, (array) ($details['meta'] ?? []));
         });

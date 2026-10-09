@@ -78,4 +78,10 @@ return [
         'number' => 'Number',
         'date' => 'Date',
     ],
+
+    'decision' => [
+        'approved' => 'Approved',
+        'rejected' => 'Rejected / sent back',
+        'forwarded' => 'Forwarded',
+    ],
 ];

@@ -94,4 +94,12 @@ return [
     'document_restored' => 'ডকুমেন্ট রিসাইকেল বিন থেকে ফেরানো',
     'document_purged' => 'ডকুমেন্ট চিরতরে মোছা',
     'doc_access_changed' => 'ডকুমেন্টের অধিকার বদল',
+    'document_submitted' => 'ডকুমেন্ট অনুমোদনে পাঠানো',
+    'document_approved' => 'ডকুমেন্ট অনুমোদিত',
+    'document_withdrawn' => 'ডকুমেন্টের অনুমোদন-অনুরোধ ফেরত',
+    'document_published' => 'ডকুমেন্ট প্রকাশিত',
+    'document_returned' => 'ডকুমেন্ট সংশোধনে ফেরত',
+    'document_rejected' => 'ডকুমেন্ট বাতিল',
+    'document_expired' => 'ডকুমেন্টের মেয়াদ শেষ',
+    'document_renewed' => 'ডকুমেন্ট নবায়ন',
 ];

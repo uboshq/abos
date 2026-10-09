@@ -34,6 +34,9 @@ final class DocumentFinder
 
     public const SEARCH = 'search';
 
+    /** ⭐ তৃতীয় ধাপ — মেয়াদ ও নবায়ন (§১২) */
+    public const EXPIRY = 'expiry';
+
     /**
      * ছাঁকনিসহ তালিকার কোয়েরি — পাতা ভাগ আর সাজানো কন্ট্রোলারে।
      *
@@ -52,6 +55,16 @@ final class DocumentFinder
 
         if ($view === self::RECENT) {
             $this->recentFor($query, $user);
+        }
+
+        if ($view === self::EXPIRY) {
+            // ⓘ ছাঁকনি না বাছলে: পেরোনো আর ৯০ দিনের মধ্যে — সবচেয়ে কাছেরটা আগে
+            if (! in_array((string) ($filters['expiry'] ?? ''), DocumentCatalog::EXPIRY_WINDOWS, true)) {
+                $query->whereNotNull('dms_documents.expiry_date')
+                    ->whereDate('dms_documents.expiry_date', '<=', Carbon::today()->addDays(90)->toDateString());
+            }
+
+            $query->orderBy('dms_documents.expiry_date')->orderBy('dms_documents.id');
         }
 
         /*

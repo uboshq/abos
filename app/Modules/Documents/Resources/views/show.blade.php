@@ -301,6 +301,75 @@
         @endcan
     </section>
 
+    {{-- ── ⭐ অনুমোদন (§১০) — অবস্থা, কোন স্তরে, কে কী বলেছেন; সই ইনবক্সে ── --}}
+    <section id="approval" data-boxed class="mt-4 rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
+        <h2 class="border-b border-(--color-border) bg-(--color-section-head) px-4 py-3 font-semibold">
+            {{ __('documents::section.approval') }}
+        </h2>
+
+        <div class="flex flex-wrap items-center gap-x-6 gap-y-2 px-4 py-3 text-sm">
+            <span>@include('documents::partials.status-badge', ['status' => $document->status])</span>
+
+            @if ($approval)
+                <span>
+                    <span class="text-(--color-ink-muted)">{{ __('documents::field.level') }}:</span>
+                    <span class="num">{{ $approval->current_level }}</span>
+                </span>
+                @if ($approval->due_at && $approval->status === \App\Models\Approval::PENDING)
+                    <span>
+                        <span class="text-(--color-ink-muted)">{{ __('documents::field.due_date') }}:</span>
+                        {{ DateFormat::formatWithTime($approval->due_at) }}
+                    </span>
+                @endif
+                <a href="{{ route('approval.inbox.show', $approval->id) }}" class="text-(--color-link) hover:underline">
+                    {{ __('documents::action.open_in_inbox') }}
+                </a>
+            @else
+                <span class="text-(--color-ink-muted)">{{ __('documents::message.never_submitted') }}</span>
+            @endif
+        </div>
+
+        @if ($approval && $approval->decisions->isNotEmpty())
+            <ul class="border-t border-(--color-border) px-4 py-3 text-sm">
+                @foreach ($approval->decisions as $decision)
+                    <li data-decision="{{ $decision->decision }}">
+                        <span class="num">{{ $decision->level }}</span> ·
+                        {{ $decision->user?->name ?? '—' }} ·
+                        {{ __('documents::catalog.decision.'.$decision->decision) }} ·
+                        {{ DateFormat::formatWithTime($decision->decided_at) }}
+                        @if (filled($decision->remarks)) — {{ $decision->remarks }} @endif
+                    </li>
+                @endforeach
+            </ul>
+        @endif
+
+        {{-- ⓘ তিনটা কাজ, প্রতিটা নিজের চাবি আর অবস্থায় --}}
+        <div class="flex flex-wrap items-end gap-2 border-t border-(--color-border) px-4 py-3">
+            @can('submit', $document)
+                @if (\App\Modules\Documents\Services\DocumentWorkflow::canBeSubmitted($document))
+                    <form method="POST" action="{{ route('documents.submit', $document) }}" class="flex flex-wrap items-end gap-2">
+                        @csrf
+                        <x-ui.field name="note" :label="__('documents::field.submit_note')" maxlength="255" />
+                        <x-ui.button type="submit" tone="primary" icon="check_circle">{{ __('documents::action.submit') }}</x-ui.button>
+                    </form>
+                @elseif ($approval && $approval->status === \App\Models\Approval::PENDING && (int) $approval->requested_by === (int) auth()->id())
+                    <form method="POST" action="{{ route('documents.withdraw', $document) }}"
+                          data-confirm="{{ __('documents::message.withdraw_confirm') }}">
+                        @csrf
+                        <x-ui.button type="submit">{{ __('documents::action.withdraw') }}</x-ui.button>
+                    </form>
+                @endif
+            @endcan
+
+            @can('publish', $document)
+                <form method="POST" action="{{ route('documents.publish', $document) }}">
+                    @csrf
+                    <x-ui.button type="submit" tone="primary">{{ __('documents::action.publish') }}</x-ui.button>
+                </form>
+            @endcan
+        </div>
+    </section>
+
     {{-- ── ⭐ কাগজ-ধরে অধিকার (§১৩) — কে এই কাগজে কী পারেন; দেখা সবসময় চালু ── --}}
     @can('grant', $document)
         <section id="access" data-boxed class="mt-4 rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">

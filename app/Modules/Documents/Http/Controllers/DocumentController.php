@@ -17,6 +17,7 @@ use App\Modules\Documents\Services\DocumentFiles;
 use App\Modules\Documents\Services\DocumentFinder;
 use App\Modules\Documents\Services\DocumentGrants;
 use App\Modules\Documents\Services\DocumentLibrary;
+use App\Modules\Documents\Services\DocumentWorkflow;
 use App\Modules\Documents\Support\DocumentCatalog;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -39,6 +40,7 @@ final class DocumentController extends Controller
         private readonly DocumentLibrary $library,
         private readonly DocumentChoices $choices,
         private readonly DocumentGrants $grants,
+        private readonly DocumentWorkflow $workflow,
     ) {}
 
     /** ডকুমেন্ট সেন্টার — সব কাগজ, ফোল্ডার ধরে (§৪) */
@@ -69,6 +71,12 @@ final class DocumentController extends Controller
     public function bin(Request $request): View
     {
         return $this->list($request, DocumentFinder::BIN);
+    }
+
+    /** মেয়াদ ও নবায়ন (§১২) — ৯০ দিনের মধ্যে শেষ হবে বা শেষ হয়ে গেছে, আগেরটা আগে */
+    public function expiry(Request $request): View
+    {
+        return $this->list($request, DocumentFinder::EXPIRY);
     }
 
     /** বিস্তারিত খোঁজ — সব ছাঁকনি একসাথে, আর্কাইভসহ (§১৬) */
@@ -104,6 +112,7 @@ final class DocumentController extends Controller
     public function show(Request $request, Document $document): View
     {
         $this->library->viewed($document);
+        $this->workflow->sync($document);
 
         $document->load(['owner', 'creator', 'archiver', 'department', 'branch', 'currentVersion.attachment',
             'metadata.field', 'grants']);
@@ -129,6 +138,7 @@ final class DocumentController extends Controller
             'trail' => $trail,
             'inline' => $this->library->opensInline($document->currentVersion),
             'mime' => $document->currentVersion?->attachment?->mime_type,
+            'approval' => $this->workflow->latest($document)?->load(['decisions.user']),
             'people' => $request->user()?->can('grant', $document) ? $this->grants->people() : [],
             'roles' => $request->user()?->can('grant', $document) ? $this->grants->roles() : [],
         ]);
@@ -192,8 +202,12 @@ final class DocumentController extends Controller
 
         $query = $this->finder->query($user, $view, $filters);
 
-        /* ⓘ সাম্প্রতিকের ক্রম নিজেই ঠিক — শেষ ছোঁয়া আগে; বাকি দুইটায় বাছা ক্রম */
-        $sort = $view === DocumentFinder::RECENT ? 'recent' : $this->applySort($query, $request, $this->sorts());
+        /* ⓘ সাম্প্রতিক আর মেয়াদের ক্রম নিজেই ঠিক; বাকিগুলোয় বাছা ক্রম */
+        $sort = match ($view) {
+            DocumentFinder::RECENT => 'recent',
+            DocumentFinder::EXPIRY => 'expiry',
+            default => $this->applySort($query, $request, $this->sorts()),
+        };
 
         return view('documents::index', [
             'menu' => $this->menu->forUser($request->user()),
@@ -212,7 +226,7 @@ final class DocumentController extends Controller
                 fn ($s) => __('documents::catalog.status.'.$s), DocumentCatalog::STATUSES)),
             'branches' => $this->choices->branches($user),
             'owners' => $this->choices->owners(),
-            'sortOptions' => $view === DocumentFinder::RECENT ? [] : $this->sortLabels(),
+            'sortOptions' => in_array($view, [DocumentFinder::RECENT, DocumentFinder::EXPIRY], true) ? [] : $this->sortLabels(),
             'sort' => $sort,
             'heading' => __('documents::menu.'.$view),
         ]);

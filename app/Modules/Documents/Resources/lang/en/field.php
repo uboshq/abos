@@ -52,4 +52,8 @@ return [
     'max_size' => 'Limit per file',
     'allowed_kinds' => 'Files allowed',
     'is_required' => 'Required',
+    'requester' => 'Requested by',
+    'level' => 'Level',
+    'due_date' => 'Due',
+    'submit_note' => 'Note for the approver',
 ];

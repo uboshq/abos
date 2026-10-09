@@ -1,11 +1,14 @@
 <?php
 
 declare(strict_types=1);
+use App\Core\Events\ApprovalDecided;
 use App\Modules\Documents\Dashboard\DocumentsDashboard;
+use App\Modules\Documents\Listeners\MoveTheDocumentOnItsSignature;
 use App\Modules\Documents\Models\DocumentCategory;
 use App\Modules\Documents\Models\DocumentType;
 use App\Modules\Documents\Models\MetadataField;
 use App\Modules\Documents\Services\DocumentAccess;
+use App\Modules\Documents\Services\DocumentWorkflow;
 use App\Modules\MasterData\Models\Department;
 
 /**
@@ -50,7 +53,7 @@ return [
         'bn' => 'ডকুমেন্ট ম্যানেজমেন্ট',
     ],
 
-    'version' => '0.3.0',
+    'version' => '0.4.0',
 
     /*
      * ⭐ সাইডবারে মাস্টার ডাটা (৫) আর সিস্টেম অ্যাডমিনের (১০) মাঝখানে — মালিক, ৩০ সেপ্টেম্বর ২০২৬:
@@ -108,8 +111,8 @@ return [
                 'route_params' => ['screen' => 'templates'], 'permission' => 'documents.view'],
             ['label' => 'documents::menu.editor', 'icon' => 'edit', 'route' => 'documents.screen',
                 'route_params' => ['screen' => 'editor'], 'permission' => 'documents.view'],
-            ['label' => 'documents::menu.expiry', 'icon' => 'calendar', 'route' => 'documents.screen',
-                'route_params' => ['screen' => 'expiry'], 'permission' => 'documents.view'],
+            ['label' => 'documents::menu.expiry', 'icon' => 'calendar', 'route' => 'documents.expiry',
+                'permission' => 'documents.view'],
             // ⭐ দ্বিতীয় ধাপের আসল পর্দা (৯ অক্টোবর ২০২৬) — আর্কাইভ, রিসাইকেল বিন, বিস্তারিত খোঁজ
             ['label' => 'documents::menu.archive', 'icon' => 'drawer', 'route' => 'documents.archived',
                 'permission' => 'documents.view'],
@@ -120,8 +123,9 @@ return [
         ],
 
         'approval' => [
-            ['label' => 'documents::menu.approval', 'icon' => 'check_circle', 'route' => 'documents.screen',
-                'route_params' => ['screen' => 'approval'], 'permission' => 'documents.view'],
+            // ⭐ অনুমোদনের সারি — ABOS-এর সইয়ের ইনবক্স, কেবল ডকুমেন্ট ছেঁকে (তৃতীয় ধাপ)
+            ['label' => 'documents::menu.approval', 'icon' => 'check_circle', 'route' => 'documents.approval',
+                'permission' => 'documents.view'],
             ['label' => 'documents::menu.signature', 'icon' => 'handover', 'route' => 'documents.screen',
                 'route_params' => ['screen' => 'signature'], 'permission' => 'documents.view'],
         ],
@@ -170,6 +174,13 @@ return [
         'documents.purge',
         'documents.permissions', // একটা কাগজে কাউকে দেখা/নামানো/ছাপা/বদলের অধিকার দেওয়া (§১৩)
         'documents.admin',       // প্রশাসন — ধরন, ফোল্ডার, ট্যাগ, বাড়তি ঘর (§২০)
+
+        /*
+         * ⭐ তৃতীয় ধাপ (৯ অক্টোবর ২০২৬) — অনুমোদনের ধারা (§১০)।
+         * ⓘ সই দেওয়ার চাবি ABOS-এর অনুমোদনের নিজের (`approval.decide`); এখানে কেবল কাগজের দিক।
+         */
+        'documents.submit',     // অনুমোদনে পাঠানো আর ফেরত নেওয়া
+        'documents.publish',    // অনুমোদিত কাগজ প্রকাশ করা
 
         /*
          * ⭐ গোপনীয়তার সিঁড়ি — পরিকল্পনা §১৪ (*"restricted-এ বাড়তি permission"*)।
@@ -227,6 +238,18 @@ return [
             'type' => 'boolean', 'default' => true, 'group' => 'limits'],
     ],
 
-    // ⓘ টাকা নড়ে না, অনুমোদনও চায় না (অনুমোদনের ধারা §১০ পরের ধাপে)
+    /*
+     * ⭐ অনুমোদন (§১০; তৃতীয় ধাপ) — ধারা ঠিক হয় ABOS-এর অনুমোদনের ধারার পর্দায়, নতুন যন্ত্র নয়।
+     * ⓘ শেষ সইয়ে কাগজ নিজে নড়ে ([[MoveTheDocumentOnItsSignature]])।
+     */
+    'approvals' => [
+        DocumentWorkflow::ACTION => 'documents::approval.document',
+    ],
+
+    // ⓘ টাকা নড়ে না — তাই একসাথে অনেক অনুমোদনেও চলে
     'moves_money' => [],
+
+    'listeners' => [
+        ApprovalDecided::class => [MoveTheDocumentOnItsSignature::class],
+    ],
 ];

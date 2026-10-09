@@ -28,4 +28,10 @@ return [
     'turn_on' => 'Turn on',
     'open_settings' => 'Change file limits',
     'open_number_series' => 'Number series',
+    'open' => 'Open',
+    'review' => 'Review and sign',
+    'open_in_inbox' => 'Open in the inbox',
+    'submit' => 'Send for approval',
+    'withdraw' => 'Withdraw the request',
+    'publish' => 'Publish',
 ];

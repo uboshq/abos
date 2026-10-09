@@ -116,6 +116,8 @@ final class AGrantOpensOneDocumentAndNoWallTest extends TestCase
             ->assertSessionHasNoErrors();
         $this->useCompany();
 
+        $this->assertSame(0, \App\Models\Notification::query()->withoutGlobalScopes()->where('user_id', $clerk->id)->count(),
+            'অন্য শাখার মানুষ কাগজ-ধরে অধিকারের খবর পেলেন — খবরে কাগজের নাম যায়।');
         $this->assertShut($clerk, $document, 'Mymensingh tender');
     }
 
@@ -224,6 +226,15 @@ final class AGrantOpensOneDocumentAndNoWallTest extends TestCase
 
     private function assertShut(User $user, Document $document, string $name): void
     {
+        /*
+         * ⓘ অধিকার থাকার সময়ে আসা খবর (ঘণ্টিতে নামসহ) ইতিহাস — তখন তিনি সত্যিই দেখতেন। দাবি পাতার
+         * নিজের অংশের, তাই পুরনো খবর সরিয়ে দেখা। ⛔ যে খবর কখনো যাওয়ারই কথা নয় (অন্য শাখা), সেটা
+         * [[test_a_grant_never_opens_the_branch_wall]] নিজে আলাদা করে দেখে।
+         */
+        if ($this->name() !== 'test_a_grant_never_opens_the_branch_wall') {
+            \App\Models\Notification::query()->withoutGlobalScopes()->where('user_id', $user->id)->delete();
+        }
+
         $this->assertStringNotContainsString($name, $this->listFor($user), $name.' তালিকায় দেখা যায়।');
 
         foreach (['documents.show', 'documents.download', 'documents.preview', 'documents.print'] as $door) {

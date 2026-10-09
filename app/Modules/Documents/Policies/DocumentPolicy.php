@@ -7,6 +7,7 @@ namespace App\Modules\Documents\Policies;
 use App\Models\User;
 use App\Modules\Documents\Models\Document;
 use App\Modules\Documents\Services\DocumentAccess;
+use App\Modules\Documents\Support\DocumentCatalog;
 
 /**
  * ডকুমেন্টের দরজা — প্রতিটা কাজের নিজের চাবি (§১৩; ৮-৯ অক্টোবর ২০২৬)।
@@ -107,6 +108,19 @@ class DocumentPolicy
     public function grant(User $user, Document $document): bool
     {
         return $user->can('documents.permissions') && $this->view($user, $document);
+    }
+
+    /** অনুমোদনে পাঠানো আর ফেরত নেওয়া (§১০) — কাগজ দেখতে পারতে হবে */
+    public function submit(User $user, Document $document): bool
+    {
+        return $user->can('documents.submit') && $this->view($user, $document) && ! $document->isArchived();
+    }
+
+    /** প্রকাশ — কেবল অনুমোদিত কাগজ */
+    public function publish(User $user, Document $document): bool
+    {
+        return $user->can('documents.publish') && $this->view($user, $document)
+            && $document->status === DocumentCatalog::APPROVED;
     }
 
     private function mayEdit(User $user, Document $document): bool

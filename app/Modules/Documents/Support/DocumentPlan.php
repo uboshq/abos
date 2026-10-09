@@ -97,6 +97,7 @@ final class DocumentPlan
      * ⭐ ৮ অক্টোবর ২০২৬, প্রথম ধাপ: সেন্টার, আপলোড, আমার আর সাম্প্রতিক নিজের আসল রুটে
      * সরেছে ([[DocumentController]]) আর এখান থেকে মুছেছে।
      * ⭐ ৯ অক্টোবর ২০২৬, দ্বিতীয় ধাপ: আর্কাইভ, রিসাইকেল বিন, বিস্তারিত খোঁজ আর প্রশাসনও — বাকি বারোটা আগের মতোই।
+     * ⭐ তৃতীয় ধাপ: অনুমোদনের সারি আর মেয়াদ ও নবায়নও — বাকি দশটা আগের মতোই।
      *
      * ⓘ `group` — ABOS-এর ছয়-ভাগ মেনুর কোন ভাগে ([[ModuleDefinition::MENU_GROUPS]])।
      * ⓘ `sections` — পরিকল্পনার কোন অংশগুলো এই পর্দার কথা বলে।
@@ -120,12 +121,8 @@ final class DocumentPlan
             'systems' => ['print', 'number_series'], 'new' => false],
         'editor' => ['icon' => 'edit', 'group' => 'transactions', 'sections' => [9],
             'systems' => ['audit_trait', 'audit_engine', 'attachment'], 'new' => true],
-        'approval' => ['icon' => 'check_circle', 'group' => 'approval', 'sections' => [10, 22],
-            'systems' => ['approval', 'notification'], 'new' => false],
         'signature' => ['icon' => 'handover', 'group' => 'approval', 'sections' => [11],
             'systems' => ['approval', 'approval_flow', 'notification'], 'new' => false],
-        'expiry' => ['icon' => 'calendar', 'group' => 'transactions', 'sections' => [12],
-            'systems' => ['notification'], 'new' => false],
         'reports' => ['icon' => 'reports', 'group' => 'reports', 'sections' => [17],
             'systems' => ['report', 'data_scope'], 'new' => false],
         'audit' => ['icon' => 'eye', 'group' => 'reports', 'sections' => [18],
@@ -151,9 +148,9 @@ final class DocumentPlan
         7 => ['status' => self::PLANNED, 'systems' => ['image', 'attachment']],
         8 => ['status' => self::PLANNED, 'systems' => ['search']],
         9 => ['status' => self::PARTLY, 'systems' => ['attachment', 'audit_trait']],
-        10 => ['status' => self::PLANNED, 'systems' => ['approval']],
+        10 => ['status' => self::LIVE, 'systems' => ['approval']],
         11 => ['status' => self::PLANNED, 'systems' => ['approval', 'approval_flow']],
-        12 => ['status' => self::PARTLY, 'systems' => ['notification']],
+        12 => ['status' => self::LIVE, 'systems' => ['notification']],
         13 => ['status' => self::LIVE, 'systems' => ['permissions', 'data_scope', 'branch_wall']],
         14 => ['status' => self::LIVE, 'systems' => ['permissions']],
         15 => ['status' => self::PLANNED, 'systems' => ['drill']],
@@ -163,8 +160,8 @@ final class DocumentPlan
         19 => ['status' => self::LIVE, 'systems' => ['audit_engine']],
         20 => ['status' => self::PARTLY, 'systems' => ['settings', 'number_series']],
         21 => ['status' => self::PARTLY, 'systems' => ['number_series', 'company_wall', 'branch_wall']],
-        22 => ['status' => self::PARTLY, 'systems' => ['approval']],
-        23 => ['status' => self::PLANNED, 'systems' => ['notification']],
+        22 => ['status' => self::LIVE, 'systems' => ['approval']],
+        23 => ['status' => self::PARTLY, 'systems' => ['notification']],
         24 => ['status' => self::RULE, 'systems' => ['menu']],
         25 => ['status' => self::RULE, 'systems' => ['attachment', 'search', 'approval', 'audit_engine']],
     ];

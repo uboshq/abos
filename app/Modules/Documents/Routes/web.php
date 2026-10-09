@@ -8,6 +8,7 @@ use App\Modules\Documents\Http\Controllers\DocumentController;
 use App\Modules\Documents\Http\Controllers\DocumentFileController;
 use App\Modules\Documents\Http\Controllers\DocumentGrantController;
 use App\Modules\Documents\Http\Controllers\DocumentVersionController;
+use App\Modules\Documents\Http\Controllers\DocumentWorkflowController;
 use App\Modules\Documents\Http\Controllers\PlanController;
 use App\Modules\Documents\Services\DocumentAdministration;
 use App\Modules\Documents\Support\DocumentPlan;
@@ -39,6 +40,10 @@ Route::middleware(['auth', 'can:documents.view'])->prefix('documents')->group(fu
     Route::get('/search', [DocumentController::class, 'search'])->name('search');
 
     Route::get('/recycle', [DocumentController::class, 'bin'])->name('bin');
+
+    // ⭐ তৃতীয় ধাপ — অনুমোদনের সারি (ইনবক্সে) আর মেয়াদ ও নবায়ন (§১০, §১২)
+    Route::get('/approval', [DocumentWorkflowController::class, 'queue'])->name('approval');
+    Route::get('/expiry', [DocumentController::class, 'expiry'])->name('expiry');
     // ⓘ মোছা কাগজ সাধারণ `{document}` চেনে না — নিজের দরজা, পলিসি কন্ট্রোলারে (`restore`, `forceDelete`)
     Route::post('/recycle/{document}/restore', [DocumentBinController::class, 'restore'])
         ->whereNumber('document')->middleware('can:documents.restore')->name('bin.restore');
@@ -67,6 +72,13 @@ Route::middleware(['auth', 'can:documents.view'])->prefix('documents')->group(fu
             ->middleware('can:update,document')->name('update');
         Route::delete('/', [DocumentController::class, 'destroy'])
             ->middleware('can:delete,document')->name('destroy');
+
+        Route::post('/submit', [DocumentWorkflowController::class, 'submit'])
+            ->middleware('can:submit,document')->name('submit');
+        Route::post('/withdraw', [DocumentWorkflowController::class, 'withdraw'])
+            ->middleware('can:submit,document')->name('withdraw');
+        Route::post('/publish', [DocumentWorkflowController::class, 'publish'])
+            ->middleware('can:publish,document')->name('publish');
 
         Route::post('/archive', [DocumentController::class, 'archive'])
             ->middleware('can:archive,document')->name('archive');

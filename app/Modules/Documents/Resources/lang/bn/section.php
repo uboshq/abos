@@ -19,4 +19,5 @@ return [
     'admin_categories' => 'ফোল্ডার',
     'admin_tags' => 'ট্যাগ',
     'admin_fields' => 'বাড়তি ঘর',
+    'approval' => 'অনুমোদন',
 ];

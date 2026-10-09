@@ -52,4 +52,8 @@ return [
     'max_size' => 'একটা ফাইলের সীমা',
     'allowed_kinds' => 'যে ফাইল চলে',
     'is_required' => 'দিতেই হবে',
+    'requester' => 'অনুরোধকারী',
+    'level' => 'স্তর',
+    'due_date' => 'শেষ সময়',
+    'submit_note' => 'অনুমোদনকারীর জন্য কথা',
 ];
