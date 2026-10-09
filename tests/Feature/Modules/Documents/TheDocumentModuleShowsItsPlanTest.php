@@ -39,6 +39,12 @@ final class TheDocumentModuleShowsItsPlanTest extends TestCase
 {
     use RefreshDatabase;
 
+    /**
+     * ⭐ যে সারিগুলো এখন আসল পর্দা খোলে, পরিকল্পনার পাতা নয় — প্রথম ধাপ (৮ অক্টোবর ২০২৬)।
+     * ⓘ এদের কাজ নিজের টেস্টে ([[ADocumentKeepsEveryVersionTest]], [[ADocumentStaysBehindItsWallsTest]])।
+     */
+    private const REAL_SCREENS = ['documents.index', 'documents.create', 'documents.mine', 'documents.recent'];
+
     public function test_every_menu_page_is_shut_without_the_key_and_opens_with_it_for_the_same_person(): void
     {
         $this->seed(DemoSeeder::class);
@@ -71,7 +77,9 @@ final class TheDocumentModuleShowsItsPlanTest extends TestCase
         ]));
 
         /* ── একই মানুষ, এবার চাবিসহ ── */
-        $person->givePermissionTo('documents.view');
+        // ⓘ আপলোডের সারি নিজের চাবি চায় (§১৩) — সেটাও, যাতে সাইডবারে ২১টা সারিই আসে
+        Permission::findOrCreate('documents.upload', 'web');
+        $person->givePermissionTo(['documents.view', 'documents.upload']);
         app(PermissionRegistrar::class)->forgetCachedPermissions();
         $person = $person->fresh();
 
@@ -90,6 +98,14 @@ final class TheDocumentModuleShowsItsPlanTest extends TestCase
             }
 
             $html = (string) $response->getContent();
+
+            /* ⭐ প্রথম ধাপের আসল পর্দা (৮ অক্টোবর ২০২৬) — ফর্ম আছে, "আসছে" ব্যাজ নেই; কেবল খোলা আর সাইডবার */
+            if (in_array($name, self::REAL_SCREENS, true)) {
+                $this->sidebarHasEveryRow($html, $pages, $sidebarMisses);
+
+                continue;
+            }
+
             $own = $this->ownPart($html);
 
             if ($own === null) {
@@ -110,14 +126,7 @@ final class TheDocumentModuleShowsItsPlanTest extends TestCase
                 $badgeless[] = $name.json_encode($params);
             }
 
-            /* সাইডবারে DOC-এর ২১টা সারিই, প্রতিটা নিজের ঠিকানাসহ */
-            $aside = $this->sidebar($html);
-
-            foreach ($pages as [, , $rowUrl]) {
-                if ($aside === null || ! str_contains($aside, 'href="'.e($rowUrl).'"')) {
-                    $sidebarMisses[$rowUrl] = $rowUrl;
-                }
-            }
+            $this->sidebarHasEveryRow($html, $pages, $sidebarMisses);
         }
 
         $this->assertSame([], $shut, implode("\n", [
@@ -203,6 +212,23 @@ final class TheDocumentModuleShowsItsPlanTest extends TestCase
         sort($planned);
 
         $this->assertSame($planned, $onMenu, 'মেনুর সারি আর পরিকল্পনার পর্দা এক তালিকা নয়।');
+    }
+
+    /**
+     * সাইডবারে DOC-এর ২১টা সারিই, প্রতিটা নিজের ঠিকানাসহ।
+     *
+     * @param  list<array{0: string, 1: array<string, mixed>, 2: string}>  $pages
+     * @param  array<string, string>  $misses
+     */
+    private function sidebarHasEveryRow(string $html, array $pages, array &$misses): void
+    {
+        $aside = $this->sidebar($html);
+
+        foreach ($pages as [, , $rowUrl]) {
+            if ($aside === null || ! str_contains($aside, 'href="'.e($rowUrl).'"')) {
+                $misses[$rowUrl] = $rowUrl;
+            }
+        }
     }
 
     /**
