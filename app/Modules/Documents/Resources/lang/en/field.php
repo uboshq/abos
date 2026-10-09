@@ -25,6 +25,7 @@ return [
     'file' => 'File',
     'comment' => 'Comment',
     'size' => 'Size',
+    'file_hash' => 'File fingerprint (SHA-256)',
     'author' => 'Uploaded by',
     'date' => 'Date',
     'created_by' => 'Uploaded by',

@@ -207,6 +207,7 @@
                         <th class="text-start">{{ __('documents::field.version') }}</th>
                         <th class="text-start">{{ __('documents::field.file') }}</th>
                         <th class="text-end">{{ __('documents::field.size') }}</th>
+                        <th class="text-start">{{ __('documents::field.file_hash') }}</th>
                         <th class="text-start">{{ __('documents::field.author') }}</th>
                         <th class="text-start">{{ __('documents::field.date') }}</th>
                         <th class="text-start">{{ __('documents::field.comment') }}</th>
@@ -225,6 +226,8 @@
                             </td>
                             <td class="max-w-[18rem] truncate">{{ $version->attachment?->original_name ?? '—' }}</td>
                             <td class="num text-end">{{ $version->attachment?->humanSize() ?? '—' }}</td>
+                            {{-- ⓘ SHA-256-এর প্রথম ১২ অক্ষর; পুরোটা ছোঁয়ালে দেখা যায় --}}
+                            <td class="num text-2xs" title="{{ $version->file_hash }}">{{ $version->file_hash ? substr($version->file_hash, 0, 12).'…' : '—' }}</td>
                             <td>{{ $version->author?->name ?? '—' }}</td>
                             <td class="whitespace-nowrap">{{ DateFormat::formatWithTime($version->created_at) }}</td>
                             <td>

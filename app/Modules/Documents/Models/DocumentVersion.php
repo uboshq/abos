@@ -39,7 +39,7 @@ class DocumentVersion extends Model
 
     protected $fillable = [
         'company_id', 'branch_id', 'document_id', 'major', 'minor',
-        'attachment_id', 'restored_from_id', 'comment', 'created_by',
+        'attachment_id', 'file_hash', 'restored_from_id', 'comment', 'created_by',
     ];
 
     protected function casts(): array

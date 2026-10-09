@@ -336,6 +336,8 @@ final class DocumentLibrary
             'major' => $major,
             'minor' => $minor,
             'attachment_id' => $attachmentId,
+            // ⭐ SHA-256 — ভার্সনের নিজের সারিতে, সংযুক্তির খাতা থেকে একবার পড়া (§২১ file_hash)
+            'file_hash' => Attachment::query()->whereKey($attachmentId)->value('checksum'),
             'restored_from_id' => $restoredFrom,
             'comment' => filled($comment) ? mb_substr(trim((string) $comment), 0, 500) : null,
             'created_by' => Actor::userId(),
