@@ -49,7 +49,7 @@ final class RentalAccrualService
     /**
      * ⭐ মাসটা বসানো — চালু প্রতিটা চুক্তি, যার মেয়াদে মাসটা পড়ে, আর যার মাসটা এখনো বসেনি বা দেওয়া হয়নি।
      *
-     * @return array{accrued: int, held: int}
+     * @return array{accrued: int, held: int, failed: list<string>} `failed` — যে চুক্তিগুলো বসেনি, নম্বর আর কারণসহ
      */
     public function run(Carbon $month): array
     {
@@ -70,6 +70,7 @@ final class RentalAccrualService
 
         $accrued = 0;
         $held = 0;
+        $failed = [];
 
         $contracts = RentalContract::query()->active()
             ->whereDate('starts_on', '<=', $end->toDateString())
@@ -77,68 +78,92 @@ final class RentalAccrualService
             ->orderBy('id')->get();
 
         foreach ($contracts as $contract) {
-            // ⭐ মাসটা আগাম দেওয়া — অগ্রিম থেকে খরচে সরানো (অডিট ⛔৬); অন্যভাবে দেওয়া বা বসানো মাস আগের মতোই বাদ
-            if (! $this->accrued($contract, $start) && $contract->adjustments()->whereDate('for_month', $start->toDateString())->exists()) {
-                $accrued += $this->release($contract, $start);
+            /*
+             * ⛔ এক চুক্তির ভুল বাকি কোম্পানির মাস থামায় না — পুরো-ERP পুনঃঅডিট, ৯ অক্টোবর ২০২৬। ⓘ আগে একটা চুক্তির খাত মুছে
+             * যাওয়া বা ভুল শর্তে ব্যতিক্রম উঠলে তার পরের সব চুক্তির মাস বসত না, আর বার্তা বলত কেবল ঐ একটার কথা। প্রতিটা
+             * চুক্তি নিজের লেনদেনে, তাই ভুলটা কেবল সেই চুক্তির — নাম ধরে জানানো হয়, বাকিরা চলে।
+             */
+            try {
+                // ⭐ মাসটা আগাম দেওয়া — অগ্রিম থেকে খরচে সরানো (অডিট ⛔৬); অন্যভাবে দেওয়া বা বসানো মাস আগের মতোই বাদ
+                if (! $this->accrued($contract, $start) && $contract->adjustments()->whereDate('for_month', $start->toDateString())->exists()) {
+                    $accrued += $this->release($contract, $start);
 
-                continue;
-            }
-
-            if ($this->monthTaken($contract, $start)) {
-                continue;
-            }
-
-            $wasHeld = DB::transaction(function () use ($contract, $start, &$accrued): ?bool {
-                $this->lockFresh($contract);
-
-                // ⛔ তালার পরে আবার — দুইজন একসাথে একই মাস চালালেও একবারই
-                if (! $contract->isActive() || $this->monthTaken($contract, $start)) {
-                    return null;
+                    continue;
                 }
 
-                $amount = bcadd($contract->rentFor($start), '0', 2);
-
-                if (bccomp($amount, '0', 2) <= 0) {
-                    return null;
+                if ($this->monthTaken($contract, $start)) {
+                    continue;
                 }
 
-                $on = $contract->starts_on->gt($start) ? $contract->starts_on->copy() : $start->copy();
+                $wasHeld = DB::transaction(function () use ($contract, $start): ?bool {
+                    $this->lockFresh($contract);
 
-                $voucher = $this->vouchers->create([
-                    'type' => Voucher::JOURNAL,
-                    'is_adjusting' => true, // ⭐ মাসশেষের সমন্বয় (ভাউচারের পরিকল্পনা ৩ঘ, ৭ অক্টোবর ২০২৬)
-                    'branch_id' => $contract->branch_id,
-                    'trx_date' => $on->toDateString(),
-                    'narration' => __('finance::message.rent_accrual_narration', [
-                        'who' => $contract->counterparty, 'month' => $start->translatedFormat('F Y'),
-                    ]),
-                    'against_type' => RentalContract::drillSourceType(),
-                    'against_id' => $contract->id,
-                ], [
-                    ['account_id' => $contract->expense_account_id, 'debit' => $amount, 'credit' => '0'],
-                    ['account_id' => self::payable()->id, 'debit' => '0', 'credit' => $amount],
-                ]);
+                    // ⛔ তালার পরে আবার — দুইজন একসাথে একই মাস চালালেও একবারই
+                    if (! $contract->isActive() || $this->monthTaken($contract, $start)) {
+                        return null;
+                    }
 
-                RentalAccrual::query()->create([
-                    'company_id' => CompanyContext::id(),
-                    'branch_id' => $contract->branch_id,
-                    'rental_contract_id' => $contract->id,
-                    'for_month' => $start->toDateString(),
-                    'amount' => $amount,
-                    'voucher_id' => $voucher->id,
-                    'created_by' => auth()->id(),
-                ]);
+                    $amount = bcadd($contract->rentFor($start), '0', 2);
 
-                $accrued++;
+                    if (bccomp($amount, '0', 2) <= 0) {
+                        return null;
+                    }
 
-                // ⛔ ছক থাকলে খসড়া, সই হলে খাতায় ([[finishSigned()]])
-                return $this->signature->postOrHold($voucher, FinanceSignature::RENTAL, $amount);
-            });
+                    $on = $contract->starts_on->gt($start) ? $contract->starts_on->copy() : $start->copy();
 
-            $held += $wasHeld === true ? 1 : 0;
+                    $voucher = $this->vouchers->create([
+                        'type' => Voucher::JOURNAL,
+                        'is_adjusting' => true, // ⭐ মাসশেষের সমন্বয় (ভাউচারের পরিকল্পনা ৩ঘ, ৭ অক্টোবর ২০২৬)
+                        'branch_id' => $contract->branch_id,
+                        'trx_date' => $on->toDateString(),
+                        'narration' => __('finance::message.rent_accrual_narration', [
+                            'who' => $contract->counterparty, 'month' => $start->translatedFormat('F Y'),
+                        ]),
+                        'against_type' => RentalContract::drillSourceType(),
+                        'against_id' => $contract->id,
+                    ], [
+                        ['account_id' => $contract->expense_account_id, 'debit' => $amount, 'credit' => '0'],
+                        ['account_id' => self::payable()->id, 'debit' => '0', 'credit' => $amount],
+                    ]);
+
+                    RentalAccrual::query()->create([
+                        'company_id' => CompanyContext::id(),
+                        'branch_id' => $contract->branch_id,
+                        'rental_contract_id' => $contract->id,
+                        'for_month' => $start->toDateString(),
+                        'amount' => $amount,
+                        'voucher_id' => $voucher->id,
+                        'created_by' => auth()->id(),
+                    ]);
+
+                    // ⛔ ছক থাকলে খসড়া, সই হলে খাতায় ([[finishSigned()]])
+                    return $this->signature->postOrHold($voucher, FinanceSignature::RENTAL, $amount);
+                });
+
+                // ⓘ গোনা লেনদেনের পরে — ভেতরে ভুল উঠে সব ফিরে গেলে "বসল" গোনা হত না
+                $accrued += $wasHeld === null ? 0 : 1;
+                $held += $wasHeld === true ? 1 : 0;
+            } catch (\Throwable $e) {
+                $failed[] = $this->failure($contract, $e);
+            }
         }
 
-        return ['accrued' => $accrued, 'held' => $held];
+        return ['accrued' => $accrued, 'held' => $held, 'failed' => $failed];
+    }
+
+    /** একটা চুক্তি বসল না — নম্বর আর কারণ; যাচাইয়ের বার্তা যেমন আছে, বাকি ভুল লগে যায় আর পর্দায় সাধারণ কথা */
+    private function failure(RentalContract $contract, \Throwable $e): string
+    {
+        if ($e instanceof ValidationException) {
+            $why = (string) collect($e->errors())->flatten()->first();
+        } else {
+            report($e);
+            $why = __('finance::message.rent_accrual_contract_broke');
+        }
+
+        return __('finance::message.rent_accrual_contract_failed', [
+            'no' => $contract->document_no ?? '#'.$contract->id, 'who' => $contract->counterparty, 'why' => $why,
+        ]);
     }
 
     /** মাসটা কি আগেই বসেছে, বা দেওয়া হয়ে গেছে */

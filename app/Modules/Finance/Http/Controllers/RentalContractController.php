@@ -396,7 +396,11 @@ class RentalContractController extends Controller implements HasMiddleware
         $done = app(RentalAccrualService::class)
             ->run(Carbon::createFromFormat('Y-m-d', $data['month'].'-01'));
 
-        return back()->with('saved', __('finance::message.rent_accrual_done', $done));
+        $saved = back()->with('saved', __('finance::message.rent_accrual_done', ['accrued' => $done['accrued'], 'held' => $done['held']]));
+
+        // ⛔ যে চুক্তিগুলো বসেনি — নাম ধরে, যাতে চুপচাপ বাদ না পড়ে (পুনঃঅডিট, ৯ অক্টোবর ২০২৬)
+        return $done['failed'] === [] ? $saved
+            : $saved->withErrors(['month' => __('finance::message.rent_accrual_some_failed', ['list' => implode(' · ', $done['failed'])])]);
     }
 
     /**
