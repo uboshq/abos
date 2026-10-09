@@ -468,7 +468,17 @@ final class PayrollService
     {
         $debits = [];
         $credits = [];
-        $net = '0';
+        $net = [];
+
+        /*
+         * ⛔ প্রতিটা কর্মীর সারি তাঁর নিজের শাখায় — পুরো-ERP পুনঃঅডিট, ৯ অক্টোবর ২০২৬ (HR ৬; [[TheSalaryIsBookedWhereThePersonWorksTest]])।
+         * ⓘ রানটা গোটা কোম্পানির ([[build()]]), অথচ পুরো দাখিলা বসত রান-বানানো মানুষের শাখায় — ঢাকার কেরানি চালালে নেত্রকোনার বেতন-খরচও
+         * ঢাকার লাভ-ক্ষতিতে। এখন খাত আর শাখা ধরে জড়ো; শাখা লেখা নেই এমন কর্মী (প্রধান অফিস) কোম্পানির প্রধান শাখায়। প্রতিটা বেতনশিট
+         * নিজেই মেলে (আয় = কর্তন + নিট), তাই প্রতিটা শাখার দাখিলাও মেলে।
+         */
+        $head = Company::query()->find($run->company_id)?->defaultBranch()?->id ?? $run->branch_id;
+        $branchOf = fn (Payslip $slip): ?int => $slip->employee?->branch_id === null ? $head : (int) $slip->employee->branch_id;
+        $run->loadMissing(['payslips.employee' => fn ($q) => $q->withTrashed()]);
 
         /*
          * ⛔ অগ্রিমের আদায় কর্মী ধরে, তাঁর নামে — পুরো-ERP অডিট, ৬ অক্টোবর ২০২৬ (HR ⛔৪)। ⓘ অগ্রিম দেওয়া হয় ভাউচারে কর্মীর নামে
@@ -486,10 +496,13 @@ final class PayrollService
         $short = [];
 
         foreach ($run->payslips as $slip) {
+            $branch = $branchOf($slip);
+
             if (bccomp((string) $slip->net, '0', 4) < 0) {
-                $short[(int) $slip->employee_id] = bcadd($short[(int) $slip->employee_id] ?? '0', bcsub('0', (string) $slip->net, 4), 4);
+                $key = $slip->employee_id.':'.$branch;
+                $short[$key] = [(int) $slip->employee_id, $branch, bcadd($short[$key][2] ?? '0', bcsub('0', (string) $slip->net, 4), 4)];
             } else {
-                $net = bcadd($net, (string) $slip->net, 4);
+                $net[(string) $branch] = bcadd($net[(string) $branch] ?? '0', (string) $slip->net, 4);
             }
 
             foreach ($slip->lines as $line) {
@@ -502,14 +515,15 @@ final class PayrollService
                 }
 
                 if (! $line->isEarning() && $this->isAdvance((int) $accountId)) {
-                    $key = $accountId.':'.$slip->employee_id;
-                    $owed[$key] = [(int) $accountId, (int) $slip->employee_id, bcadd($owed[$key][2] ?? '0', (string) $line->amount, 4)];
+                    $key = $accountId.':'.$slip->employee_id.':'.$branch;
+                    $owed[$key] = [(int) $accountId, (int) $slip->employee_id, $branch, bcadd($owed[$key][3] ?? '0', (string) $line->amount, 4)];
 
                     continue;
                 }
 
                 $bucket = $line->isEarning() ? 'debits' : 'credits';
-                ${$bucket}[$accountId] = bcadd(${$bucket}[$accountId] ?? '0', (string) $line->amount, 4);
+                $key = $accountId.':'.$branch;
+                ${$bucket}[$key] = [(int) $accountId, $branch, bcadd(${$bucket}[$key][2] ?? '0', (string) $line->amount, 4)];
             }
         }
 
@@ -528,12 +542,12 @@ final class PayrollService
 
         $lines = [];
 
-        foreach ($debits as $accountId => $amount) {
+        foreach ($debits as [$accountId, $branch, $amount]) {
             if (bccomp($amount, '0', 4) === 0) {
                 continue;
             }
 
-            $lines[] = ['account_id' => (int) $accountId, 'debit' => $amount, 'narration' => $narration];
+            $lines[] = ['account_id' => $accountId, 'debit' => $amount, 'narration' => $narration, 'branch_id' => $branch];
         }
 
         $advance = $short === [] ? null : $this->accountByCode(StandardChart::EMPLOYEE_ADVANCE);
@@ -544,10 +558,10 @@ final class PayrollService
             ]);
         }
 
-        foreach ($short as $employeeId => $amount) {
+        foreach ($short as [$employeeId, $branch, $amount]) {
             $lines[] = [
                 'account_id' => (int) $advance->id, 'debit' => $amount, 'narration' => $narration,
-                'party_type' => Employee::drillSourceType(), 'party_id' => $employeeId,
+                'party_type' => Employee::drillSourceType(), 'party_id' => $employeeId, 'branch_id' => $branch,
             ];
         }
 
@@ -558,26 +572,28 @@ final class PayrollService
          * পড়ে। আলাদা করে যোগ করলে এক ডকুমেন্টে একই খাতে দুইটা ক্রেডিট
          * সারি বসত — খতিয়ানে দেখতে যেন দুইবার কিছু হয়েছে, অথচ হয়নি।
          */
-        if (bccomp($net, '0', 4) !== 0) {
-            $credits[$payable->id] = bcadd($credits[$payable->id] ?? '0', $net, 4);
+        foreach ($net as $branch => $amount) {
+            $branch = $branch === '' ? null : (int) $branch;
+            $key = $payable->id.':'.$branch;
+            $credits[$key] = [(int) $payable->id, $branch, bcadd($credits[$key][2] ?? '0', $amount, 4)];
         }
 
-        foreach ($credits as $accountId => $amount) {
+        foreach ($credits as [$accountId, $branch, $amount]) {
             if (bccomp($amount, '0', 4) === 0) {
                 continue;
             }
 
-            $lines[] = ['account_id' => (int) $accountId, 'credit' => $amount, 'narration' => $narration];
+            $lines[] = ['account_id' => $accountId, 'credit' => $amount, 'narration' => $narration, 'branch_id' => $branch];
         }
 
-        foreach ($owed as [$accountId, $employeeId, $amount]) {
+        foreach ($owed as [$accountId, $employeeId, $branch, $amount]) {
             if (bccomp($amount, '0', 4) === 0) {
                 continue;
             }
 
             $lines[] = [
                 'account_id' => $accountId, 'credit' => $amount, 'narration' => $narration,
-                'party_type' => Employee::drillSourceType(), 'party_id' => $employeeId,
+                'party_type' => Employee::drillSourceType(), 'party_id' => $employeeId, 'branch_id' => $branch,
             ];
         }
 
