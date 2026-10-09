@@ -187,4 +187,6 @@ return [
     'qty_first' => 'Enter a quantity — nothing goes to the cart at 0 or blank.',
     'discount_over_line_cap' => 'The discount on :product is :given%, above the line limit of :cap%. Lower the discount.',
     'discount_over_bill_cap' => 'The discount on the whole bill is :given%, above the bill limit of :cap%. Lower the discount.',
+    'commission_bill_not_theirs' => ':no is not a posted bill of this dealer — commission only on the dealer\'s own posted bill.',
+    'commission_bill_claimed' => ':no already has a commission claim (:claim) — one claim per bill.',
 ];
