@@ -536,6 +536,11 @@ final class CoreReports
             'accounts::menu.balance_sheet',
             Account::BALANCE_SHEET_TYPES,
             dateRange: false,
+            /*
+             * ⭐ অগ্রিম নিজের লাইনে — পর্দার স্থিতিপত্রের মতো ([[BalanceSheetService]]) — পুরো-ERP পুনঃঅডিট, ৯ অক্টোবর ২০২৬
+             * (হিসাব, ঠিক ৮)। ⚠️ আগে পাওনা আর দেনা নিট দেখাত, তাই একই খাতায় দুই স্থিতিপত্রের মোট সম্পদ আর মোট দায় আলাদা।
+             */
+            advancesApart: true,
 
             /*
              * ⛔ বন্ধ-না-হওয়া লাভ এক লাইনে — পুরো-ERP অডিট, ৬ অক্টোবর ২০২৬ (হিসাব ⚠️১১; [[TheEngineBalanceSheetNamesTheUnclosedProfitTest]])।
@@ -572,6 +577,7 @@ final class CoreReports
         ?\Closure $summary = null,
         string|array $permission = ['accounts.report', 'accounts.report.final'],
         bool $grossProfit = false,
+        bool $advancesApart = false,
     ): ReportDefinition {
         return new ReportDefinition(
             key: $key,
@@ -593,7 +599,7 @@ final class CoreReports
             summary: $summary,
 
             groupBy: 'account_id',
-            query: fn (array $f) => DB::table('ledger_entries')
+            query: fn (array $f) => $advancesApart ? self::sheetWithAdvancesApart($f, $types) : DB::table('ledger_entries')
                 ->leftJoin('accounts', 'accounts.id', '=', 'ledger_entries.account_id')
                 ->where('ledger_entries.company_id', $f['company_id'])
                 ->whereIn('accounts.type', $types)
@@ -652,6 +658,92 @@ final class CoreReports
                 ...($grossProfit ? [['key' => 'gross', 'label' => 'accounts::message.gross_profit', 'type' => ReportColumn::MONEY]] : []),
             ],
         );
+    }
+
+    /**
+     * ⭐ ইঞ্জিনের স্থিতিপত্র — পাওনা আর দেনা মোট অঙ্কে, অগ্রিম আলাদা লাইনে (পুনঃঅডিট, ৯ অক্টোবর ২০২৬; হিসাব, ঠিক ৮)।
+     *
+     * ⓘ পর্দার নিয়মই ([[BalanceSheetService::build()]]): পাওনার খাতে (১১১০) যে গ্রাহকদের জের ক্রেডিট, তাঁদের যোগ "গ্রাহকের
+     * অগ্রিম" — দায়ের দিকে; দেনার খাতে (২১১১) যে সরবরাহকারীদের জের ডেবিট, তাঁদের যোগ "সরবরাহকারীর অগ্রিম" — সম্পদের দিকে।
+     * ⭐ খাতার সারির পাশে দুই জোড়া হিসাবের সারি বসে: পক্ষের খাতে উল্টো দিকে অগ্রিমটা (খাতটা মোট দেখায়), আর অগ্রিমের নিজের
+     * লাইনে একই অঙ্ক। জোড়া সমান, তাই নিট ডেবিট আর বন্ধ-না-হওয়া লাভ একটুও নড়ে না। ⛔ খাতায় কিছু লেখা হয় না।
+     * ⓘ শাখার দেয়াল দুই জায়গাতেই একই ([[ReportEngine::branchWall()]])।
+     *
+     * @param  list<string>  $types
+     */
+    private static function sheetWithAdvancesApart(array $f, array $types): Builder
+    {
+        $codes = DB::table('accounts')->where('company_id', $f['company_id'])->whereNull('deleted_at')
+            ->whereIn('code', [StandardChart::RECEIVABLE, StandardChart::PAYABLE])->pluck('id', 'code');
+
+        $lines = DB::table('ledger_entries')
+            ->where('ledger_entries.company_id', $f['company_id'])
+            ->tap(ReportEngine::branchWall($f, 'ledger_entries.branch_id'))
+            ->where('ledger_entries.trx_date', '<=', $f['to'])
+            ->selectRaw('ledger_entries.account_id, ledger_entries.debit, ledger_entries.credit, NULL as advance');
+
+        foreach ([
+            [StandardChart::RECEIVABLE, true, 'customer_advance'],
+            [StandardChart::PAYABLE, false, 'supplier_advance'],
+        ] as [$code, $creditSide, $label]) {
+            $accountId = $codes[$code] ?? null;
+
+            if ($accountId === null) {
+                continue;
+            }
+
+            $amount = self::partyAdvances($f, (int) $accountId, $creditSide);
+
+            if (bccomp($amount, '0', 4) === 0) {
+                continue;
+            }
+
+            // ⓘ গ্রাহকের অগ্রিম: পাওনায় ডেবিট (খাতটা মোট দেখায়), অগ্রিমে ক্রেডিট; সরবরাহকারীর অগ্রিম ঠিক উল্টো
+            [$onParty, $onAdvance] = $creditSide ? [[$amount, '0'], ['0', $amount]] : [['0', $amount], [$amount, '0']];
+            $lines->unionAll(DB::query()->selectRaw('?, ?, ?, NULL', [(int) $accountId, ...$onParty]));
+            $lines->unionAll(DB::query()->selectRaw('NULL, ?, ?, ?', [...$onAdvance, $label]));
+        }
+
+        $name = app()->getLocale() === 'bn' ? "COALESCE(NULLIF(accounts.name_bn, ''), accounts.name_en)" : 'accounts.name_en';
+        $advance = "CASE t.advance WHEN 'customer_advance' THEN ? ELSE ? END";
+        $labels = [__('accounts::field.customer_advance'), __('accounts::field.supplier_advance')];
+
+        return DB::query()->fromSub($lines, 't')
+            ->leftJoin('accounts', 'accounts.id', '=', 't.account_id')
+            ->where(fn ($q) => $q->whereIn('accounts.type', $types)->orWhereNotNull('t.advance'))
+            ->groupBy('t.account_id', 't.advance', 'accounts.code', 'accounts.name_en', 'accounts.name_bn', 'accounts.type')
+            // ⓘ অগ্রিমের লাইন ছকে তার নিজের জায়গায় — গ্রাহকের অগ্রিম ২১৫০, সরবরাহকারীর অগ্রিম ১১৩০-এর পাশে
+            ->orderByRaw("COALESCE(accounts.code, CASE t.advance WHEN 'customer_advance' THEN '2150' ELSE '1130' END)")
+            ->selectRaw('t.account_id')
+            ->selectRaw("COALESCE(accounts.type, CASE t.advance WHEN 'customer_advance' THEN '".Account::LIABILITY."' ELSE '".Account::ASSET."' END) as type")
+            ->selectRaw("CASE WHEN t.advance IS NULL THEN COALESCE(CONCAT(accounts.code, ' — ', {$name}), CONCAT('#', t.account_id)) ELSE {$advance} END as account_name", $labels)
+            ->selectRaw('SUM(t.debit) as debit, SUM(t.credit) as credit, SUM(t.debit) - SUM(t.credit) as net');
+    }
+
+    /** পক্ষ ধরে জের, একটা দিকের যোগ — [[BalanceSheetService]]-এর `partyAdvances()`-এর একই হিসাব, রিপোর্টের ছাঁকনিতে */
+    private static function partyAdvances(array $f, int $accountId, bool $creditSide): string
+    {
+        $nets = DB::table('ledger_entries')
+            ->where('ledger_entries.company_id', $f['company_id'])
+            ->where('ledger_entries.account_id', $accountId)
+            ->whereNotNull('ledger_entries.party_id')
+            ->where('ledger_entries.trx_date', '<=', $f['to'])
+            ->tap(ReportEngine::branchWall($f, 'ledger_entries.branch_id'))
+            ->groupBy('ledger_entries.party_type', 'ledger_entries.party_id')
+            ->selectRaw('SUM(ledger_entries.debit) - SUM(ledger_entries.credit) as net')
+            ->pluck('net');
+
+        $sum = '0';
+
+        foreach ($nets as $net) {
+            $net = (string) $net;
+
+            if ($creditSide ? bccomp($net, '0', 4) < 0 : bccomp($net, '0', 4) > 0) {
+                $sum = bcadd($sum, $creditSide ? bcmul($net, '-1', 4) : $net, 4);
+            }
+        }
+
+        return $sum;
     }
 
     /**
