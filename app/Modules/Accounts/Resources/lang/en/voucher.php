@@ -33,6 +33,8 @@ return [
     'template_expense' => 'An expense either takes money out (credit a cash/bank account) or creates a payable (credit a payable account, with a party), and debits no cash/bank account.',
     'template_control_needs_party' => ':account is held per party. Give the line a party (who owes us, whom we owe, or whose loan or advance it is).',
     'adjusting_reversal_narration' => 'Reversing entry for :no (:date)',
+    'adjusting_reversal_stuck' => 'Adjusting journal :no could not reverse itself',
+    'adjusting_reversal_stuck_body' => 'It was due to reverse on :date. Reason: :why. If the month is locked, unlock it and the next hourly run reverses it. Until then the accrual is still counted in the next month.',
     'adjusting_reversal_cancel_reason' => 'The original adjusting journal :no was cancelled, so its reversal is cancelled too. Reason: :reason',
     'closing_voucher' => 'Closing voucher',
     'closing_kind_close' => 'Year closed: income and expense zeroed into retained earnings',
