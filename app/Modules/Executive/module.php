@@ -49,6 +49,7 @@ return [
         'reports' => [
             ['label' => 'executive::menu.compare', 'icon' => 'scale', 'route' => 'executive.compare', 'permission' => 'executive.view'],
             ['label' => 'executive::menu.alerts', 'icon' => 'alert-triangle', 'route' => 'executive.alerts', 'permission' => 'executive.view'],
+            ['label' => 'executive::menu.history', 'icon' => 'clock', 'route' => 'executive.history', 'permission' => 'executive.view'],
         ],
 
     ],

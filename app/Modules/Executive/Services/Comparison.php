@@ -34,6 +34,7 @@ final class Comparison
     public function __construct(
         private readonly CompanyLens $lens,
         private readonly Figures $figures,
+        private readonly Snapshots $snapshots,
     ) {}
 
     /**
@@ -130,7 +131,7 @@ final class Comparison
      */
     private function compare(User $user, array $place, array $now, array $was): array
     {
-        return $this->lens->within($user, $place['company_id'], $place['branch_id'], function () use ($user, $now, $was): array {
+        return $this->lens->within($user, $place['company_id'], $place['branch_id'], function () use ($user, $place, $now, $was): array {
             $out = ['now' => [], 'was' => [], 'change' => []];
 
             foreach (Figures::COMPARED as $key) {
@@ -139,7 +140,7 @@ final class Comparison
                 $previous = match (true) {
                     $current === null => null,
                     Figures::definition($key)['period'] => $this->figures->value($user, $key, $was['from'], $was['to']),
-                    default => null,
+                    default => $this->snapshots->valueOn($user, $place['company_id'], $place['branch_id'], $key, $was['to']),
                 };
 
                 $out['now'][$key] = $current ?? Figures::HIDDEN;
