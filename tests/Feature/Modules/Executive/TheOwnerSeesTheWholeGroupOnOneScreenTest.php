@@ -24,6 +24,7 @@ use App\Modules\Sales\Services\DirectSaleService;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Spatie\Permission\Models\Role;
+use Spatie\Permission\PermissionRegistrar;
 use Tests\Concerns\PutsMoneyInTheTill;
 use Tests\TestCase;
 
@@ -411,7 +412,7 @@ final class TheOwnerSeesTheWholeGroupOnOneScreenTest extends TestCase
             }
         });
         $user->unsetRelation('roles')->unsetRelation('permissions');
-        app(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
     }
 
     private function branch(string $code): Branch

@@ -20,11 +20,13 @@ use App\Modules\Executive\Services\Comparison;
 use App\Modules\Executive\Services\Figures;
 use App\Modules\Inventory\Models\Product;
 use App\Modules\Inventory\Models\Warehouse;
+use App\Modules\Sales\Metrics\SalesMetrics;
 use App\Modules\Sales\Services\DirectSaleService;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
 use Spatie\Permission\Models\Role;
+use Spatie\Permission\PermissionRegistrar;
 use Tests\TestCase;
 
 /**
@@ -141,7 +143,7 @@ final class TheOwnerComparesAndIsWarnedTest extends TestCase
             $whole = '0';
             foreach ($places as $place) {
                 $whole = bcadd($whole, CompanyContext::forCompany($place['company_id'],
-                    fn () => \App\Modules\Sales\Metrics\SalesMetrics::invoiceTotal($from, $to)), 4);
+                    fn () => SalesMetrics::invoiceTotal($from, $to)), 4);
             }
 
             $this->assertSame(0, bccomp($sum, $whole, 4), "⛔ '{$grain}' ধারার খোপগুলোর যোগ {$sum}, অথচ গোটা পরিসরের বিক্রি {$whole}।");
@@ -183,7 +185,7 @@ final class TheOwnerComparesAndIsWarnedTest extends TestCase
     {
         $salesman = User::query()->where('email', 'sales@abos.test')->firstOrFail();
         CompanyContext::forCompany((int) $this->alpha->id, fn () => Role::findByName('salesman')->givePermissionTo('executive.view'));
-        app(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
 
         $this->actingAs($salesman->fresh());
         $alerts = collect(app(Alerts::class)->all($salesman->fresh(), [['id' => (int) $this->alpha->id, 'name' => 'A', 'only' => null]]))->keyBy('kind');
@@ -231,6 +233,6 @@ final class TheOwnerComparesAndIsWarnedTest extends TestCase
             }
         });
         $user->unsetRelation('roles')->unsetRelation('permissions');
-        app(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
     }
 }

@@ -142,7 +142,6 @@ final class CompanyLens
         });
     }
 
-
     private function companyName(Company $company): string
     {
         return $company->name();

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Executive\Services;
 
 use App\Core\Engines\Dashboard\DashboardEngine;
+use App\Core\Engines\Report\Trend;
 use App\Models\User;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Services\AccountsFacts;
@@ -113,7 +114,7 @@ final class Figures
         $today = ($today ?? Carbon::today())->copy()->startOfDay();
 
         return match ($period) {
-            self::WEEK => [$today->copy()->startOfWeek(\App\Core\Engines\Report\Trend::WEEK_STARTS)->toDateString(), $today->toDateString()],
+            self::WEEK => [$today->copy()->startOfWeek(Trend::WEEK_STARTS)->toDateString(), $today->toDateString()],
             self::MONTH => [$today->copy()->startOfMonth()->toDateString(), $today->toDateString()],
             default => [$today->toDateString(), $today->toDateString()],
         };
