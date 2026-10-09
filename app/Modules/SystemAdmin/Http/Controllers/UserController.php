@@ -5,13 +5,14 @@ declare(strict_types=1);
 namespace App\Modules\SystemAdmin\Http\Controllers;
 
 use App\Core\Engines\Audit\AuditEngine;
-use App\Core\Security\MfaService;
 use App\Core\Module\ModuleRegistry;
+use App\Core\Security\MfaService;
 use App\Core\Services\DataScope;
 use App\Core\Services\MenuBuilder;
 use App\Core\Services\Ownership;
 use App\Core\Services\PermissionSyncer;
 use App\Core\Support\CompanyContext;
+use App\Core\Support\LoginMobile;
 use App\Core\Support\RoleLabel;
 use App\Http\Controllers\Controller;
 use App\Http\Middleware\RefuseInactiveAccounts;
@@ -938,6 +939,9 @@ class UserController extends Controller implements HasMiddleware
      */
     private function validated(Request $request, ?User $user, array $reach): array
     {
+        // ⛔ মোবাইল লগইনের ছাঁদে আর একজনের একটাই — পুনঃনিরীক্ষা, ৯ অক্টোবর ২০২৬ ([[LoginMobile]])
+        LoginMobile::prepare($request);
+
         $data = $request->validate([
             'name' => ['required', 'string', 'max:191'],
             'email' => ['required', 'email', 'max:191',
@@ -976,7 +980,7 @@ class UserController extends Controller implements HasMiddleware
              * ⛔ কড়া ছাঁচ বসালে সঠিক নম্বরও আটকাত, আর ঘরটা তখন
              * না-থাকার চেয়েও খারাপ হত।
              */
-            'mobile' => ['nullable', 'string', 'max:25'],
+            'mobile' => LoginMobile::rules($user?->id),
             'remarks' => ['nullable', 'string', 'max:255'],
 
             /*
@@ -1075,7 +1079,7 @@ class UserController extends Controller implements HasMiddleware
             'warehouse_scope.*' => ['nullable', 'array'],
             'warehouse_scope.*.*' => ['integer'],
             'default_branch.*' => ['nullable', 'integer'],
-        ]);
+        ], LoginMobile::messages());
 
         $this->assertPlacesBelongToTheirCompany($data, $reach);
         $this->assertScopesWithinMine($data);

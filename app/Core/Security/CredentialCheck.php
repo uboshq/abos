@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Core\Security;
 
 use App\Core\Services\LoginJournal;
+use App\Core\Support\LoginMobile;
 use App\Models\LoginAttempt;
 use App\Models\User;
 use Illuminate\Support\Facades\Hash;
@@ -227,7 +228,9 @@ final class CredentialCheck
             ->where(function ($query) use ($identifier): void {
                 $query->where('email', $identifier)
                     ->orWhere(fn ($q) => $q->whereNotNull('login_id')->where('login_id', $identifier))
-                    ->orWhere(fn ($q) => $q->whereNotNull('mobile')->where('mobile', $identifier));
+                    // ⓘ "01711-000000" লিখলেও মেলে — নম্বর এখন লগইনের ছাঁদে বসে ([[LoginMobile]], ৯ অক্টোবর ২০২৬)
+                    ->orWhere(fn ($q) => $q->whereNotNull('mobile')
+                        ->whereIn('mobile', array_values(array_unique([$identifier, (string) LoginMobile::normalise($identifier)]))));
             })
             ->limit(2)
             ->get();

@@ -59,6 +59,8 @@ return [
 
     'branch_out_of_reach' => 'This branch is outside the branches you may see.',
     'report_bad_date' => 'That date is not right. Fix the day, month and year and try again.',
+    'login_mobile_format' => 'Use digits only for the mobile number, 10 to 15 of them (a leading + is fine), for example 01711000000 — type it the same way to sign in.',
+    'login_mobile_taken' => 'This mobile number already belongs to another sign-in. One number can belong to one person only.',
 
     'custom' => [],
 
