@@ -90,6 +90,7 @@
                     @endforelse
                 </tbody>
             </table>
+            <x-ui.list-totals :rows="$links" />
             <x-ui.pager :rows="$links" />
         </section>
     </div>
