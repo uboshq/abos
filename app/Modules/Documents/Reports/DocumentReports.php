@@ -26,7 +26,8 @@ use Illuminate\Support\Facades\DB;
  */
 final class DocumentReports
 {
-    public const PERMISSION = 'documents.report';
+    /** ⓘ দরজা দুইটা চাবি চায় — মডিউলের দলে `documents.view`, কন্ট্রোলারে `documents.report` */
+    public const PERMISSION = ['documents.view', 'documents.report'];
 
     public static function registerAll(ReportEngine $engine): void
     {
