@@ -60,4 +60,12 @@ return [
     'share_until' => 'Shared until',
     'link_type' => 'Link to',
     'link_record' => 'Find',
+    'pages' => 'Pages',
+    'page' => 'Page',
+    'add_pages' => 'Add pages (camera or file)',
+    'ocr_text' => 'Read text',
+    'ocr_invoice_no' => 'Invoice / bill no.',
+    'ocr_date' => 'Date',
+    'ocr_party' => 'Supplier / party',
+    'ocr_amount' => 'Amount',
 ];

@@ -12,12 +12,14 @@ use App\Models\User;
 use App\Modules\Documents\Http\Requests\DocumentDetailsRequest;
 use App\Modules\Documents\Http\Requests\DocumentUploadRequest;
 use App\Modules\Documents\Models\Document;
+use App\Modules\Documents\Models\DocumentOcr;
 use App\Modules\Documents\Services\DocumentChoices;
 use App\Modules\Documents\Services\DocumentFiles;
 use App\Modules\Documents\Services\DocumentFinder;
 use App\Modules\Documents\Services\DocumentGrants;
 use App\Modules\Documents\Services\DocumentLibrary;
 use App\Modules\Documents\Services\DocumentLinks;
+use App\Modules\Documents\Services\DocumentScan;
 use App\Modules\Documents\Services\DocumentSignatures;
 use App\Modules\Documents\Services\DocumentWorkflow;
 use App\Modules\Documents\Support\DocumentCatalog;
@@ -45,6 +47,7 @@ final class DocumentController extends Controller
         private readonly DocumentWorkflow $workflow,
         private readonly DocumentSignatures $signatures,
         private readonly DocumentLinks $links,
+        private readonly DocumentScan $scan,
     ) {}
 
     /** ডকুমেন্ট সেন্টার — সব কাগজ, ফোল্ডার ধরে (§৪) */
@@ -149,6 +152,14 @@ final class DocumentController extends Controller
             'inline' => $this->library->opensInline($document->currentVersion),
             'mime' => $document->currentVersion?->attachment?->mime_type,
             'approval' => $this->workflow->latest($document)?->load(['decisions.user']),
+
+            // ⭐ পঞ্চম ধাপ — চলতি ভার্সনের পড়া লেখা; ছবির কাগজে ব্রাউজারেই পড়া যায়
+            'ocr' => $document->current_version_id
+                ? DocumentOcr::query()->where('version_id', $document->current_version_id)->first()
+                : null,
+            'ocrPossible' => $this->scan->enabled() && $document->current_version_id !== null
+                && str_starts_with((string) $document->currentVersion?->attachment?->mime_type, 'image/'),
+            'ocrLanguage' => $this->scan->language(),
 
             // ⭐ চতুর্থ ধাপ — সই, শেয়ার, সম্পর্ক
             'signatureState' => $this->signatures->state($document),

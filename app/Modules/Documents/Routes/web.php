@@ -8,6 +8,7 @@ use App\Modules\Documents\Http\Controllers\DocumentController;
 use App\Modules\Documents\Http\Controllers\DocumentFileController;
 use App\Modules\Documents\Http\Controllers\DocumentGrantController;
 use App\Modules\Documents\Http\Controllers\DocumentLinkController;
+use App\Modules\Documents\Http\Controllers\DocumentScanController;
 use App\Modules\Documents\Http\Controllers\DocumentShareController;
 use App\Modules\Documents\Http\Controllers\DocumentSignatureController;
 use App\Modules\Documents\Http\Controllers\DocumentVersionController;
@@ -65,6 +66,13 @@ Route::middleware(['auth', 'can:documents.view'])->prefix('documents')->group(fu
             ->whereIn('kind', DocumentAdministration::KINDS)->whereNumber('id')->name('admin.toggle');
     });
 
+    // ⭐ পঞ্চম ধাপ — স্ক্যান ও OCR (§৭); লেখা পড়া ব্রাউজারে, এখানে কেবল জমা আর তথ্যের প্রস্তাব
+    Route::get('/scan', [DocumentScanController::class, 'create'])
+        ->middleware('can:documents.upload')->name('scan');
+    Route::post('/scan', [DocumentScanController::class, 'store'])
+        ->middleware('can:documents.upload')->name('scan.store');
+    Route::post('/ocr/fields', [DocumentScanController::class, 'fields'])->name('ocr.fields');
+
     Route::get('/upload', [DocumentController::class, 'create'])
         ->middleware('can:documents.upload')->name('create');
     Route::post('/upload', [DocumentController::class, 'store'])
@@ -119,6 +127,10 @@ Route::middleware(['auth', 'can:documents.view'])->prefix('documents')->group(fu
         Route::delete('/links/{link}', [DocumentLinkController::class, 'destroy'])
             ->whereNumber('link')->scopeBindings()
             ->middleware('can:link,document')->name('link.destroy');
+
+        Route::post('/versions/{version}/ocr', [DocumentScanController::class, 'saveText'])
+            ->whereNumber('version')->scopeBindings()
+            ->middleware('can:ocr,document')->name('version.ocr');
 
         Route::post('/versions', [DocumentVersionController::class, 'store'])
             ->middleware('can:addVersion,document')->name('version.store');

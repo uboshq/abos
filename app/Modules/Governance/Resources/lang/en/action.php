@@ -95,4 +95,5 @@ return [
     'document_shared' => 'Document shared',
     'document_linked' => 'Document linked to a record',
     'document_unlinked' => 'Document link removed',
+    'document_ocr_saved' => 'Document read text saved',
 ];

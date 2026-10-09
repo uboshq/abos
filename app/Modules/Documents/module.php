@@ -56,7 +56,7 @@ return [
         'bn' => 'ডকুমেন্ট ম্যানেজমেন্ট',
     ],
 
-    'version' => '0.5.0',
+    'version' => '0.6.0',
 
     /*
      * ⭐ সাইডবারে মাস্টার ডাটা (৫) আর সিস্টেম অ্যাডমিনের (১০) মাঝখানে — মালিক, ৩০ সেপ্টেম্বর ২০২৬:
@@ -98,8 +98,9 @@ return [
                 'route_params' => ['screen' => 'inbox'], 'permission' => 'documents.view'],
             ['label' => 'documents::menu.upload', 'icon' => 'attachment', 'route' => 'documents.create',
                 'permission' => 'documents.upload'],
-            ['label' => 'documents::menu.scan', 'icon' => 'receipt', 'route' => 'documents.screen',
-                'route_params' => ['screen' => 'scan'], 'permission' => 'documents.view'],
+            // ⭐ স্ক্যান ও OCR (পঞ্চম ধাপ) — লেখা পড়া ব্যবহারকারীর ব্রাউজারে, নিজের সার্ভারের ফাইলে
+            ['label' => 'documents::menu.scan', 'icon' => 'receipt', 'route' => 'documents.scan',
+                'permission' => 'documents.upload'],
             ['label' => 'documents::menu.intelligence', 'icon' => 'filter', 'route' => 'documents.screen',
                 'route_params' => ['screen' => 'intelligence'], 'permission' => 'documents.view'],
             ['label' => 'documents::menu.mine', 'icon' => 'list', 'route' => 'documents.mine',
@@ -246,6 +247,16 @@ return [
             'type' => 'boolean', 'default' => true, 'group' => 'limits'],
         ['key' => 'documents.allow_text', 'label' => 'documents::settings.allow_text',
             'type' => 'boolean', 'default' => true, 'group' => 'limits'],
+
+        /*
+         * ⭐ OCR (§২০ OCR Settings; পঞ্চম ধাপ) — ব্রাউজারে লেখা পড়া চালু কি না, আর কোন ভাষায়।
+         * ⓘ বাংলা+ইংরেজি একসাথে ধীর কিন্তু মিশ্র কাগজে ঠিক; কেবল একটা ভাষার কাগজে সেটা বাছলে দ্রুত।
+         */
+        ['key' => 'documents.ocr_enabled', 'label' => 'documents::settings.ocr_enabled',
+            'type' => 'boolean', 'default' => true, 'group' => 'entry'],
+        ['key' => 'documents.ocr_languages', 'label' => 'documents::settings.ocr_languages',
+            'type' => 'choice', 'options' => ['ben+eng', 'ben', 'eng'], 'option_label' => 'documents::settings.language_',
+            'default' => 'ben+eng', 'group' => 'entry'],
     ],
 
     /*

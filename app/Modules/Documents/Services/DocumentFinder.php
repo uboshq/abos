@@ -177,8 +177,7 @@ final class DocumentFinder
     /**
      * বিস্তারিত খোঁজের বাকি ছাঁকনি (§১৬) — তারিখের সীমা, ভার্সন, ট্যাগ, আর লেখা।
      *
-     * ⓘ "লেখা" (content) — নাম আর বিবরণের সাথে প্রতিটা ভার্সনের মন্তব্য; OCR-এর লেখা এলে
-     * (পঞ্চম ধাপ) সেটাও এখানেই যোগ হবে। ⓘ LIKE, কারণ কাগজ প্রতি কোম্পানিতে কয়েক হাজার —
+     * ⓘ "লেখা" (content) — নাম, বিবরণ, প্রতিটা ভার্সনের মন্তব্য, বাড়তি ঘর, আর ⭐ OCR-এর লেখা (পঞ্চম ধাপ)। ⓘ LIKE, কারণ কাগজ প্রতি কোম্পানিতে কয়েক হাজার —
      * আর FULLTEXT একই লেনদেনে লেখা সারি দেখে না, তাই "এইমাত্র তোলা কাগজ খুঁজে পাই না" হত।
      *
      * @param  array<string, mixed>  $filters
@@ -216,7 +215,9 @@ final class DocumentFinder
                 ->where('dms_documents.name', 'like', $like)
                 ->orWhere('dms_documents.description', 'like', $like)
                 ->orWhereHas('versions', fn (Builder $v) => $v->where('comment', 'like', $like))
-                ->orWhereHas('metadata', fn (Builder $m) => $m->where('value', 'like', $like)));
+                ->orWhereHas('metadata', fn (Builder $m) => $m->where('value', 'like', $like))
+                // ⭐ পঞ্চম ধাপ — স্ক্যান করা পাতার পড়া লেখা (§১৬ "OCR-এর লেখাসহ")
+                ->orWhereHas('ocrTexts', fn (Builder $o) => $o->where('text', 'like', $like)));
         }
     }
 

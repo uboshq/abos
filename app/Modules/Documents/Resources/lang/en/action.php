@@ -39,4 +39,8 @@ return [
     'share' => 'Share',
     'link' => 'Link',
     'find' => 'Find',
+    'read_text' => 'Read the text',
+    'save_scan' => 'Save',
+    'show_text' => 'Show the full text',
+    'save_text' => 'Save the text',
 ];

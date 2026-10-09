@@ -109,4 +109,5 @@ return [
     'document_shared' => 'ডকুমেন্ট শেয়ার',
     'document_linked' => 'ডকুমেন্ট রেকর্ডে জোড়া',
     'document_unlinked' => 'ডকুমেন্টের জোড়া খোলা',
+    'document_ocr_saved' => 'ডকুমেন্টের পড়া লেখা রাখা',
 ];

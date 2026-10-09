@@ -10,4 +10,9 @@ return [
     'allow_images' => 'ছবি তোলা চলবে',
     'allow_office' => 'Word, Excel, PowerPoint চলবে',
     'allow_text' => 'লেখার ফাইল (txt, csv) চলবে',
+    'ocr_enabled' => 'ব্রাউজারে লেখা পড়া (OCR) চালু',
+    'ocr_languages' => 'লেখা পড়ার ভাষা',
+    'language_ben+eng' => 'বাংলা আর ইংরেজি',
+    'language_ben' => 'কেবল বাংলা',
+    'language_eng' => 'কেবল ইংরেজি',
 ];

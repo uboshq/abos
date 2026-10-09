@@ -23,4 +23,7 @@ return [
     'signatures' => 'Signatures',
     'share' => 'Sharing',
     'links' => 'Linked records',
+    'pages' => 'Pages',
+    'ocr_review' => 'Read text — check and correct',
+    'ocr' => 'Read text (OCR)',
 ];

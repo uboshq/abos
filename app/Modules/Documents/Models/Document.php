@@ -108,6 +108,11 @@ class Document extends Model implements ShowsItselfForSigning
         return $this->hasMany(DocumentSignature::class, 'document_id');
     }
 
+    public function ocrTexts(): HasMany
+    {
+        return $this->hasMany(DocumentOcr::class, 'document_id');
+    }
+
     public function links(): HasMany
     {
         return $this->hasMany(DocumentLink::class, 'document_id');

@@ -378,6 +378,80 @@
         </div>
     </section>
 
+    {{-- ── ⭐ পড়া লেখা (§৭) — ব্রাউজারে OCR করা, মানুষের দেখা; ছবির কাগজে এখানেই পড়া যায় ── --}}
+    @if ($ocr || ($ocrPossible && auth()->user()->can('ocr', $document)))
+        <section id="ocr" data-boxed class="mt-4 rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
+            <h2 class="border-b border-(--color-border) bg-(--color-section-head) px-4 py-3 font-semibold">
+                {{ __('documents::section.ocr') }}
+            </h2>
+
+            @if ($ocr)
+                <dl class="grid grid-cols-2 gap-x-3 gap-y-1 px-4 pt-3 text-sm lg:grid-cols-4">
+                    @foreach (\App\Modules\Documents\Services\DocumentFieldExtractor::FIELDS as $field)
+                        <div>
+                            <dt class="text-(--color-ink-muted)">{{ __('documents::field.ocr_'.$field) }}</dt>
+                            <dd data-ocr-value="{{ $field }}">{{ $ocr->fields[$field] ?? '—' }}</dd>
+                        </div>
+                    @endforeach
+                </dl>
+                <p class="px-4 pt-2 text-2xs text-(--color-ink-muted)">
+                    {{ __('documents::message.ocr_meta', ['engine' => $ocr->engine, 'language' => $ocr->language,
+                        'confidence' => $ocr->confidence ?? '—', 'pages' => $ocr->pages]) }}
+                </p>
+                <details class="px-4 py-3 text-sm">
+                    <summary class="cursor-pointer text-(--color-link)">{{ __('documents::action.show_text') }}</summary>
+                    <pre class="mt-2 max-h-[40vh] overflow-auto whitespace-pre-wrap rounded-(--radius-field) bg-(--color-surface-app) p-3 text-xs">{{ $ocr->text }}</pre>
+                </details>
+            @endif
+
+            @if ($ocrPossible)
+                @can('ocr', $document)
+                    <form method="POST" action="{{ route('documents.version.ocr', [$document, $document->currentVersion]) }}"
+                          x-data="documentScan"
+                          data-image-url="{{ route('documents.preview', $document) }}"
+                          data-ocr-base="{{ asset('vendor/tesseract') }}"
+                          data-ocr-languages="{{ $ocrLanguage }}"
+                          data-fields-url="{{ route('documents.ocr.fields') }}"
+                          data-csrf="{{ csrf_token() }}"
+                          data-word-loading="{{ __('documents::message.ocr_loading') }}"
+                          data-word-reading="{{ __('documents::message.ocr_reading') }}"
+                          data-word-done="{{ __('documents::message.ocr_done') }}"
+                          data-word-failed="{{ __('documents::message.ocr_failed') }}"
+                          class="space-y-3 border-t border-(--color-border) px-4 py-3">
+                        @csrf
+                        <input type="hidden" name="ocr_language" value="{{ $ocrLanguage }}">
+                        <input type="hidden" name="ocr_confidence" x-bind:value="confidence">
+
+                        <div class="flex flex-wrap items-center gap-3">
+                            <x-ui.button type="button" icon="search" x-on:click="readExisting" ::disabled="busy">
+                                {{ __('documents::action.read_text') }}
+                            </x-ui.button>
+                            <span class="text-sm text-(--color-ink-muted)" x-text="status" aria-live="polite"></span>
+                        </div>
+
+                        <div class="grid gap-3 sm:grid-cols-4">
+                            @foreach (\App\Modules\Documents\Services\DocumentFieldExtractor::FIELDS as $field)
+                                <x-ui.field :name="'ocr_fields['.$field.']'" :label="__('documents::field.ocr_'.$field)"
+                                            :type="$field === 'date' ? 'date' : 'text'" maxlength="120"
+                                            :value="$ocr->fields[$field] ?? ''" :data-ocr-field="$field" />
+                            @endforeach
+                        </div>
+
+                        <textarea name="ocr_text" rows="6" x-ref="text" required maxlength="200000"
+                                  aria-label="{{ __('documents::field.ocr_text') }}"
+                                  class="w-full rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-3 py-2 text-sm">{{ $ocr?->text }}</textarea>
+
+                        <x-ui.button type="submit" tone="primary">{{ __('documents::action.save_text') }}</x-ui.button>
+                    </form>
+
+                    @push('scripts')
+                        <script src="{{ asset('vendor/tesseract/tesseract.min.js') }}" @nonce defer></script>
+                    @endpush
+                @endcan
+            @endif
+        </section>
+    @endif
+
     {{-- ── ⭐ সই (§১১) — কে, কবে, কোন ভার্সনের কোন হ্যাশে; যাচাই ডিস্কের ফাইল আবার হ্যাশ করে ── --}}
     <section id="signatures" data-boxed class="mt-4 rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
         <h2 class="border-b border-(--color-border) bg-(--color-section-head) px-4 py-3 font-semibold">

@@ -143,6 +143,12 @@ class DocumentPolicy
         return $this->mayEdit($user, $document);
     }
 
+    /** পড়া লেখা রাখা (§৭) — ফাইল বদলায় না, তাই অবস্থার তালা নেই; বদলের চাবি লাগে */
+    public function ocr(User $user, Document $document): bool
+    {
+        return $this->mayEdit($user, $document) && ! $document->isArchived();
+    }
+
     private function mayEdit(User $user, Document $document): bool
     {
         return $this->view($user, $document)

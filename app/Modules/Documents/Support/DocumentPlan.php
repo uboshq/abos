@@ -99,6 +99,7 @@ final class DocumentPlan
      * ⭐ ৯ অক্টোবর ২০২৬, দ্বিতীয় ধাপ: আর্কাইভ, রিসাইকেল বিন, বিস্তারিত খোঁজ আর প্রশাসনও — বাকি বারোটা আগের মতোই।
      * ⭐ তৃতীয় ধাপ: অনুমোদনের সারি আর মেয়াদ ও নবায়নও — বাকি দশটা আগের মতোই।
      * ⭐ চতুর্থ ধাপ: শেয়ার করা ডকুমেন্ট আর সই কেন্দ্রও — বাকি আটটা আগের মতোই।
+     * ⭐ পঞ্চম ধাপ: স্ক্যান ও OCR-ও — বাকি সাতটা আগের মতোই।
      *
      * ⓘ `group` — ABOS-এর ছয়-ভাগ মেনুর কোন ভাগে ([[ModuleDefinition::MENU_GROUPS]])।
      * ⓘ `sections` — পরিকল্পনার কোন অংশগুলো এই পর্দার কথা বলে।
@@ -110,8 +111,6 @@ final class DocumentPlan
     public const SCREENS = [
         'inbox' => ['icon' => 'inbox', 'group' => 'transactions', 'sections' => [2, 10, 11, 23],
             'systems' => ['notification', 'approval'], 'new' => false],
-        'scan' => ['icon' => 'receipt', 'group' => 'transactions', 'sections' => [7],
-            'systems' => ['image', 'attachment', 'search'], 'new' => true],
         'intelligence' => ['icon' => 'filter', 'group' => 'transactions', 'sections' => [8],
             'systems' => ['search', 'audit_engine'], 'new' => true],
         'favourite' => ['icon' => 'star', 'group' => 'transactions', 'sections' => [2],
@@ -141,8 +140,8 @@ final class DocumentPlan
         3 => ['status' => self::PLANNED, 'systems' => ['dashboard', 'data_scope']],
         4 => ['status' => self::LIVE, 'systems' => ['attachment', 'data_scope', 'branch_wall']],
         5 => ['status' => self::LIVE, 'systems' => ['print', 'approval', 'audit_engine']],
-        6 => ['status' => self::PARTLY, 'systems' => ['attachment', 'image']],
-        7 => ['status' => self::PLANNED, 'systems' => ['image', 'attachment']],
+        6 => ['status' => self::LIVE, 'systems' => ['attachment', 'image']],
+        7 => ['status' => self::LIVE, 'systems' => ['image', 'attachment']],
         8 => ['status' => self::PLANNED, 'systems' => ['search']],
         9 => ['status' => self::PARTLY, 'systems' => ['attachment', 'audit_trait']],
         10 => ['status' => self::LIVE, 'systems' => ['approval']],

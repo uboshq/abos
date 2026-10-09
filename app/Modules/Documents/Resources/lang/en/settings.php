@@ -10,4 +10,9 @@ return [
     'allow_images' => 'Allow images',
     'allow_office' => 'Allow Word, Excel, PowerPoint',
     'allow_text' => 'Allow text files (txt, csv)',
+    'ocr_enabled' => 'Text reading (OCR) in the browser',
+    'ocr_languages' => 'Reading language',
+    'language_ben+eng' => 'Bengali and English',
+    'language_ben' => 'Bengali only',
+    'language_eng' => 'English only',
 ];
