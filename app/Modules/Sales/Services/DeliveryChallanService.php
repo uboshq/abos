@@ -168,6 +168,8 @@ final class DeliveryChallanService
                 'carrier_id' => $data['carrier_id'] ?? null,
                 'carrier_name' => $data['carrier_name'] ?? null,
                 'transport_cost' => $data['transport_cost'] ?? null,
+                // ⭐ ভাড়া কে দেবে — অফিসের চালানের পর্দাও পাঠায় (মালিক, ৭ অক্টোবর ২০২৬)
+                'fare_paid_by' => $data['fare_paid_by'] ?? null,
                 'own_transport' => (bool) ($data['own_transport'] ?? false), // ⓘ ধাপ ৫ — [[TransportRule]]
                 'narration' => $data['narration'] ?? null,
                 'status' => DocumentStatus::DRAFT,
@@ -175,6 +177,7 @@ final class DeliveryChallanService
             ]);
 
             $this->replaceLines($challan, $lines);
+            $this->stampFare($challan, $data);
 
             IssuedNumber::query()
                 ->where('document_no', $documentNo)
@@ -220,6 +223,8 @@ final class DeliveryChallanService
                 'carrier_id' => $data['carrier_id'] ?? null,
                 'carrier_name' => $data['carrier_name'] ?? null,
                 'transport_cost' => $data['transport_cost'] ?? null,
+                // ⓘ কেবল পাঠানো হলে — কাউন্টারের খসড়া এই পর্দায় খুললে তার "কে দেবে" চুপচাপ মুছত না
+                'fare_paid_by' => array_key_exists('fare_paid_by', $data) ? $data['fare_paid_by'] : $challan->fare_paid_by,
                 'own_transport' => (bool) ($data['own_transport'] ?? false), // ⓘ ধাপ ৫ — [[TransportRule]]
                 'narration' => $data['narration'] ?? null,
                 'financial_year_id' => $this->resolveFinancialYear($trxDate)->id,
@@ -233,9 +238,23 @@ final class DeliveryChallanService
             app(\App\Modules\Sales\Services\ChallanOffers::class)->reverseAll($challan);
 
             $this->replaceLines($challan, $lines);
+            $this->stampFare($challan, $data);
 
             return $challan->fresh(['lines']);
         });
+    }
+
+    /**
+     * ⭐ অফিসের চালানের পর্দার ভাড়ার ঘর — কাউন্টারের একই নিয়মে (মালিক, ৭ অক্টোবর ২০২৬: *"যা-ই করো, সব জায়গায় একই
+     * রকম"*; [[FarePayment::stamp()]])। ⓘ পর্দা ঘরগুলো পাঠালে তবেই; না পাঠালে (অন্য দরজা) কিছুই বদলায় না।
+     *
+     * @param  array<string, mixed>  $data
+     */
+    private function stampFare(DeliveryChallan $challan, array $data): void
+    {
+        if (array_key_exists('fare_when', $data) || array_key_exists('fare_account_id', $data)) {
+            app(FarePayment::class)->stamp($challan->fresh(), $data);
+        }
     }
 
     /**
