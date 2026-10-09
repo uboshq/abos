@@ -1,0 +1,16 @@
+<?php
+
+declare(strict_types=1);
+
+/*
+ * Document page sections — the detail page's four sections become tabs in the anchor bar (8 October 2026).
+ */
+return [
+    'files' => 'Files',
+    'what' => 'What the paper is',
+    'whose' => 'Whose, and who may see it',
+    'preview' => 'Preview',
+    'details' => 'Details',
+    'versions' => 'Versions',
+    'audit' => 'Audit',
+];

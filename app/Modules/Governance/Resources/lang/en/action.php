@@ -69,4 +69,12 @@ return [
     'adjusting_reversed' => 'Adjusting journal reversed on its date',
     'auto_finish_refused' => 'Sale not finished after signing',
     'returned_to_draft' => 'Signed-but-stuck sale returned to draft',
+    'document_viewed' => 'Document viewed',
+    'document_previewed' => 'Document file opened on the page',
+    'document_downloaded' => 'Document downloaded',
+    'document_printed' => 'Document opened for printing',
+    'document_version_added' => 'New document version',
+    'document_version_restored' => 'Earlier document version restored',
+    'document_archived' => 'Document archived',
+    'document_unarchived' => 'Document restored from the archive',
 ];

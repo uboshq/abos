@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 /**
- * ডকুমেন্ট ম্যানেজমেন্ট (DOC) — আজ কেবল কাঠামো, কোড পরে।
+ * ডকুমেন্ট ম্যানেজমেন্ট (DOC) — প্রথম ধাপ চালু, বাকিটা পরিকল্পনার পাতায়।
  *
  * ⭐ মালিকের নির্দেশ, ৩০ সেপ্টেম্বর ২০২৬: *"ei plan soho live e ekta module
  * baniye rakho but code pore korbo"*। পরিকল্পনা:
@@ -14,10 +14,17 @@ declare(strict_types=1);
  * প্রতিটা সারি একটা **সত্যিকারের পাতা** খোলে — পাতাটা পরিকল্পনা থেকে বলে
  * পর্দাটা কী করবে, কীসের উপর দাঁড়াবে, আর উপরে "আসছে"।
  *
- * ── ⛔ আজ কী নেই, আর ইচ্ছাকৃতভাবে ───────────────────────────────────
- * কোনো টেবিল, মাইগ্রেশন, মডেল, ফর্ম বা বোতাম নেই। ⚠️ কাজ-না-করা একটা
- * বোতাম না-থাকা বোতামের চেয়ে খারাপ — মানুষ চাপেন, কিছু হয় না, আর ভাবেন
- * ব্যবস্থাটা নষ্ট।
+ * ── ⭐ প্রথম ধাপ, ৮ অক্টোবর ২০২৬ ────────────────────────────────────
+ * চারটা সারি এখন আসল পর্দা খোলে: ডকুমেন্ট সেন্টার, আপলোড, আমার ডকুমেন্ট আর
+ * সাম্প্রতিক ([[DocumentController]]); আর প্রতিটা কাগজের নিজের বিস্তারিত পাতা —
+ * প্রিভিউ, বিবরণ, ভার্সন, অডিট। ভিত: `dms_documents` আর `dms_document_versions`,
+ * ফাইল ABOS-এর সংযুক্তির খাতায় ([[AttachmentEngine]])। পরিকল্পনার §১, §৪, §৫, §৬,
+ * §৯, §১২-র মেয়াদের তারিখ আর §১৩-১৪-র দেয়াল।
+ *
+ * ── ⛔ আজও কী নেই, আর ইচ্ছাকৃতভাবে ─────────────────────────────────
+ * বাকি ষোলোটা সারি আগের মতোই পরিকল্পনার পাতা — স্ক্যান/OCR, ABE, অনুমোদন, সই,
+ * শেয়ার, মনে করানো, রিসাইকেল বিন… ⚠️ কাজ-না-করা একটা বোতাম না-থাকা বোতামের
+ * চেয়ে খারাপ — মানুষ চাপেন, কিছু হয় না, আর ভাবেন ব্যবস্থাটা নষ্ট।
  *
  * ── ⓘ কেন `planned` পতাকা নয় ─────────────────────────────────────────
  * `planned` সারি মেনুতে নিভে থাকে, ক্লিক করা যায় না ([[MenuBuilder]])।
@@ -25,10 +32,9 @@ declare(strict_types=1);
  * আসল রুটে যায় ([[PlanController]]), ঠিক বিক্রয়ের "মেনুতে আগে, কোড পরে"
  * পাতার ছাঁচে ([[PlannedScreenController]])।
  *
- * ── ⓘ কেন একটাই চাবি ─────────────────────────────────────────────────
- * আজ পাতাগুলো কেবল পড়ার, আর সবগুলো একই কথা বলে (পরিকল্পনা)। বিশটা চাবি
- * বানালে ভূমিকার পর্দায় বিশটা টিক বসত যারা কিছুই আটকায় না। ⭐ পর্দা
- * তৈরির দিন তার নিজের চাবি আসবে (§১৩: VIEW, UPLOAD, EDIT, …)।
+ * ── ⓘ চাবি ─────────────────────────────────────────────────────────────
+ * পরিকল্পনার পাতাগুলো এখনো একটাই চাবি চায় (`documents.view`)। ⭐ আসল পর্দার
+ * প্রতিটা কাজের নিজের চাবি এসেছে (§১৩) — নিচের `permissions`-এ, কারণসহ।
  */
 return [
     'code' => 'documents',
@@ -38,7 +44,7 @@ return [
         'bn' => 'ডকুমেন্ট ম্যানেজমেন্ট',
     ],
 
-    'version' => '0.1.0',
+    'version' => '0.2.0',
 
     /*
      * ⭐ সাইডবারে মাস্টার ডাটা (৫) আর সিস্টেম অ্যাডমিনের (১০) মাঝখানে — মালিক, ৩০ সেপ্টেম্বর ২০২৬:
@@ -47,10 +53,11 @@ return [
     'nav' => ['section' => 'system', 'order' => 7],
 
     /*
-     * ⓘ কারও উপর নির্ভর করে না: যে ব্যবস্থাগুলোর কথা পাতায় লেখা
-     * (অনুমোদন, অডিট, নম্বর সিরিজ…) সবই কোরের, কোনো মডিউলের নয়।
+     * ⓘ যে ব্যবস্থাগুলোর কথা পাতায় লেখা (অনুমোদন, অডিট, নম্বর সিরিজ…) সবই কোরের।
+     * ⭐ একটাই মডিউল — মাস্টার ডাটা, কাগজের "বিভাগ" ঘরের জন্য (§৬: Department)।
+     * ⚠️ বিভাগের তালিকা দ্বিতীয়বার বানালে HR আর DOC-এ একই বিভাগ দুই নামে থাকত।
      */
-    'depends_on' => [],
+    'depends_on' => ['master_data'],
 
     /*
      * ⭐ আসল ড্যাশবোর্ড — ERP-তে জোড়া নথি, ভাগ করা লিংক আর পাঠানো কাগজ থেকে
@@ -72,22 +79,23 @@ return [
          * "সেটিংস"-এ — প্রতিটা মডিউলে একই ছয়-ভাগ ক্রম ([[MenuBuilder::inFixedOrder()]])।
          */
         'transactions' => [
-            ['label' => 'documents::menu.center', 'icon' => 'building', 'route' => 'documents.screen',
-                'route_params' => ['screen' => 'center'], 'permission' => 'documents.view'],
+            // ⭐ প্রথম ধাপের আসল পর্দা (৮ অক্টোবর ২০২৬) — সেন্টার, আপলোড, আমার, সাম্প্রতিক
+            ['label' => 'documents::menu.center', 'icon' => 'building', 'route' => 'documents.index',
+                'permission' => 'documents.view'],
             ['label' => 'documents::menu.inbox', 'icon' => 'inbox', 'route' => 'documents.screen',
                 'route_params' => ['screen' => 'inbox'], 'permission' => 'documents.view'],
-            ['label' => 'documents::menu.upload', 'icon' => 'attachment', 'route' => 'documents.screen',
-                'route_params' => ['screen' => 'upload'], 'permission' => 'documents.view'],
+            ['label' => 'documents::menu.upload', 'icon' => 'attachment', 'route' => 'documents.create',
+                'permission' => 'documents.upload'],
             ['label' => 'documents::menu.scan', 'icon' => 'receipt', 'route' => 'documents.screen',
                 'route_params' => ['screen' => 'scan'], 'permission' => 'documents.view'],
             ['label' => 'documents::menu.intelligence', 'icon' => 'filter', 'route' => 'documents.screen',
                 'route_params' => ['screen' => 'intelligence'], 'permission' => 'documents.view'],
-            ['label' => 'documents::menu.mine', 'icon' => 'list', 'route' => 'documents.screen',
-                'route_params' => ['screen' => 'mine'], 'permission' => 'documents.view'],
+            ['label' => 'documents::menu.mine', 'icon' => 'list', 'route' => 'documents.mine',
+                'permission' => 'documents.view'],
             ['label' => 'documents::menu.shared', 'icon' => 'share', 'route' => 'documents.screen',
                 'route_params' => ['screen' => 'shared'], 'permission' => 'documents.view'],
-            ['label' => 'documents::menu.recent', 'icon' => 'clock', 'route' => 'documents.screen',
-                'route_params' => ['screen' => 'recent'], 'permission' => 'documents.view'],
+            ['label' => 'documents::menu.recent', 'icon' => 'clock', 'route' => 'documents.recent',
+                'permission' => 'documents.view'],
             ['label' => 'documents::menu.favourite', 'icon' => 'star', 'route' => 'documents.screen',
                 'route_params' => ['screen' => 'favourite'], 'permission' => 'documents.view'],
             ['label' => 'documents::menu.templates', 'icon' => 'columns', 'route' => 'documents.screen',
@@ -126,16 +134,47 @@ return [
 
     'permissions' => [
         /*
-         * পরিকল্পনা পড়ার চাবি — আজ একটাই।
+         * দেখার চাবি — সেন্টার, তালিকা, বিস্তারিত আর প্রিভিউ; পরিকল্পনার পাতাগুলোও।
          *
          * ⓘ ডিপ্লয়ের `abos:sync-permissions` (deploy.sh আর `abos:optimise`
-         * দুইটাই ডাকে) চাবিটা বানায় আর প্রতিটা কোম্পানির super_admin-এ বসায়
+         * দুইটাই ডাকে) চাবিগুলো বানায় আর প্রতিটা কোম্পানির super_admin-এ বসায়
          * ([[PermissionSyncer::keepOwnerComplete()]])। ⚠️ বাকি চলমান ভূমিকায়
-         * নিজে থেকে যায় না — কে DOC দেখবেন সেটা মালিকের সিদ্ধান্ত।
+         * নিজে থেকে যায় না — কে DOC-এ কী করবেন সেটা মালিকের সিদ্ধান্ত। তাই
+         * `role_templates`-ও নেই।
          */
         'documents.view',
+
+        /*
+         * ⭐ প্রতিটা কাজের নিজের চাবি — পরিকল্পনা §১৩ (৮ অক্টোবর ২০২৬)।
+         * ⓘ কাগজের উপর প্রতিটা কাজ আগে "দেখা" চায় ([[DocumentPolicy]])।
+         */
+        'documents.upload',     // নতুন কাগজ তোলা
+        'documents.edit',       // বিবরণ বদল আর নতুন ভার্সন
+        'documents.delete',     // মোছা — নরম; ফেরানোর পর্দা রিসাইকেল বিনে (§১৯, পরের ধাপ)
+        'documents.download',   // ফাইল নামানো, পুরনো ভার্সনসহ
+        'documents.print',      // ছাপা — ফাইল নিজের ট্যাবে খোলে, অডিটে "ছাপা"
+        'documents.share',      // শেয়ার (§১৪+) — পরের ধাপ; চাবিটা আগে, যাতে ভূমিকা আজই সাজানো যায়
+        'documents.archive',    // আর্কাইভ — সেন্টার থেকে সরে, মোছে না
+        'documents.restore',    // আর্কাইভ থেকে ফেরানো, আর পুরনো ভার্সন ফেরানো
+
+        /*
+         * ⭐ গোপনীয়তার সিঁড়ি — পরিকল্পনা §১৪ (*"restricted-এ বাড়তি permission"*)।
+         * ⓘ সবার জন্য আর অভ্যন্তরীণ — দেখার চাবিতেই; উপরের ধাপের চাবি নিচের সব ধাপ
+         * খোলে ([[DocumentAccess]])। কাগজের মালিক আর যিনি তুলেছেন, তাঁরা নিজের কাগজ
+         * সবসময় দেখেন।
+         */
+        'documents.confidential',
+        'documents.highly_confidential',
+        'documents.restricted',
     ],
 
-    // ⓘ টাকা নড়ে না, অনুমোদনও চায় না — আজ কোনো কাজই নেই
+    /*
+     * ⭐ প্রতিটা কাগজের নিজের ফাঁকহীন নম্বর — DOC-0001 (পরিকল্পনা §২১: document_number)।
+     */
+    'doc_types' => [
+        'DOC' => 'documents::doc.document_no',
+    ],
+
+    // ⓘ টাকা নড়ে না, অনুমোদনও চায় না (অনুমোদনের ধারা §১০ পরের ধাপে)
     'moves_money' => [],
 ];
