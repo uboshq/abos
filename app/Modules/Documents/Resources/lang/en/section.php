@@ -13,4 +13,10 @@ return [
     'details' => 'Details',
     'versions' => 'Versions',
     'audit' => 'Audit',
+    'metadata' => 'Extra fields',
+    'access' => 'Who may do what with this document',
+    'admin_types' => 'Document types',
+    'admin_categories' => 'Folders',
+    'admin_tags' => 'Tags',
+    'admin_fields' => 'Extra fields',
 ];

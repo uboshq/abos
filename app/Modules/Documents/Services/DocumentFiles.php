@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Documents\Services;
 
+use App\Core\Services\SettingsService;
 use Illuminate\Http\UploadedFile;
 
 /**
@@ -65,10 +66,76 @@ final class DocumentFiles
         'text/csv' => ['csv'],
     ];
 
+    /**
+     * ⭐ নিয়ন্ত্রণ প্যানেলের সুইচ (§২০ Storage Settings; দ্বিতীয় ধাপ) — কোন পরিবারের ফাইল চলে।
+     * ⓘ PDF সবসময় চলে; ছবি, অফিসের ফাইল আর লেখার ফাইল কোম্পানি বন্ধ করতে পারে।
+     *
+     * @var array<string, list<string>> সুইচের চাবি => বাইটের ধরন
+     */
+    private const FAMILIES = [
+        'documents.allow_images' => ['image/jpeg', 'image/png', 'image/webp', 'image/gif'],
+        'documents.allow_office' => [
+            'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+            'application/vnd.oasis.opendocument.text', 'application/vnd.oasis.opendocument.spreadsheet',
+            'application/zip', 'application/msword', 'application/vnd.ms-excel', 'application/vnd.ms-powerpoint',
+            'application/vnd.ms-office', 'application/cdfv2', 'application/x-ole-storage',
+        ],
+        'documents.allow_text' => ['text/plain', 'text/csv'],
+    ];
+
+    /**
+     * আজ এই কোম্পানিতে যা চলে — [[ALLOWED]] থেকে, বন্ধ পরিবার বাদে।
+     *
+     * @return array<string, list<string>>
+     */
+    public static function allowed(): array
+    {
+        $settings = app(SettingsService::class);
+        $allowed = self::ALLOWED;
+
+        foreach (self::FAMILIES as $key => $mimes) {
+            if (! (bool) $settings->get($key, true)) {
+                $allowed = array_diff_key($allowed, array_flip($mimes));
+            }
+        }
+
+        return $allowed;
+    }
+
+    /**
+     * একটা ফাইলের সীমা, বাইটে — সেটিং থেকে (১ থেকে ১০ MB), ⛔ কখনো ১০ MB-র বেশি নয়।
+     */
+    public static function maxBytes(): int
+    {
+        return self::maxMb() * 1024 * 1024;
+    }
+
+    public static function maxMb(): int
+    {
+        $mb = (int) app(SettingsService::class)->get('documents.max_upload_mb', 10);
+
+        return max(1, min(10, $mb));
+    }
+
+    /**
+     * প্রশাসনের পাতার জন্য — আজকের সীমা, কথায়।
+     *
+     * @return array{max: string, kinds: list<string>}
+     */
+    public static function limits(): array
+    {
+        return [
+            'max' => self::maxMb().' MB',
+            'kinds' => array_values(array_unique(array_merge(...array_values(self::allowed())))),
+        ];
+    }
+
     /** ফর্মের `extensions:` নিয়ম — নামের লেজ, প্রথম ছাঁকনি */
     public static function extensions(): string
     {
-        return implode(',', array_values(array_unique(array_merge(...array_values(self::ALLOWED)))));
+        return implode(',', array_values(array_unique(array_merge(...array_values(self::allowed())))));
     }
 
     /**
@@ -83,7 +150,7 @@ final class DocumentFiles
             return 'wrong_kind';
         }
 
-        if ($file->getSize() > self::MAX_BYTES) {
+        if ($file->getSize() > self::maxBytes()) {
             return 'too_big';
         }
 
@@ -91,7 +158,9 @@ final class DocumentFiles
         $sniffed = $path === false ? '' : strtolower((string) (new \finfo(FILEINFO_MIME_TYPE))->file($path));
         $extension = strtolower($file->getClientOriginalExtension());
 
-        return isset(self::ALLOWED[$sniffed]) && in_array($extension, self::ALLOWED[$sniffed], true)
+        $allowed = self::allowed();
+
+        return isset($allowed[$sniffed]) && in_array($extension, $allowed[$sniffed], true)
             ? null
             : 'wrong_kind';
     }

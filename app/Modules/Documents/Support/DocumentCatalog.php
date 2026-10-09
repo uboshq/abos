@@ -11,7 +11,8 @@ namespace App\Modules\Documents\Support;
  * গোপনীয়তা §১৪, অবস্থা §২২, মেয়াদ §১২।
  *
  * ⓘ লেখা lang-এ (`documents::catalog.*`); এখানে কেবল চাবি আর ক্রম।
- * ⚠️ নিজের ফোল্ডার বা ধরন বানানোর পর্দা প্রশাসনের (§২০) — সেদিন তালিকাটা টেবিলে সরবে।
+ * ⭐ দ্বিতীয় ধাপ (৯ অক্টোবর ২০২৬): কোম্পানি নিজের ফোল্ডার আর ধরন যোগ করতে পারে প্রশাসনের
+ * পর্দায় ([[DocumentType]], [[DocumentCategory]]) — মালিকের তালিকা তবুও কোডেই, সবার আগে।
  */
 final class DocumentCatalog
 {
@@ -57,19 +58,56 @@ final class DocumentCatalog
         self::PUBLIC, self::INTERNAL, self::CONFIDENTIAL, self::HIGHLY_CONFIDENTIAL, self::RESTRICTED,
     ];
 
-    /** অবস্থা — আজ খসড়া আর আর্কাইভ; অনুমোদনের ধারা (§১০) এলে বাকিগুলো */
+    /*
+     * ── ⭐ অবস্থা — পরিকল্পনা §২২-এর দশটা (দ্বিতীয় ধাপ, ৯ অক্টোবর ২০২৬) ────────────
+     * খসড়া → জমা → পর্যালোচনায় → (বদল চাওয়া / বাতিল) → অনুমোদিত → প্রকাশিত → আর্কাইভ।
+     * মেয়াদ পেরোলে "মেয়াদোত্তীর্ণ"; মুছলে "মোছা" (রিসাইকেল বিনে)।
+     */
     public const DRAFT = 'draft';
 
+    public const SUBMITTED = 'submitted';
+
+    public const UNDER_REVIEW = 'under_review';
+
+    public const CHANGES_REQUESTED = 'changes_requested';
+
     /**
-     * ⭐ অনুমোদিত — আজ কোনো পর্দা এখানে পৌঁছায় না, কিন্তু নিয়মটা আজই বাঁধা (§৯):
-     * অনুমোদিত কাগজ নিজের জায়গায় বদলায় না, বদল মানে নতুন ভার্সন ([[DocumentPolicy::update()]])।
+     * ⭐ অনুমোদিত — নিয়মটা প্রথম দিন থেকে বাঁধা (§৯): অনুমোদিত কাগজ নিজের জায়গায় বদলায় না,
+     * বদল মানে নতুন ভার্সন ([[DocumentPolicy::update()]])।
      */
     public const APPROVED = 'approved';
 
+    public const REJECTED = 'rejected';
+
+    public const PUBLISHED = 'published';
+
+    public const EXPIRED = 'expired';
+
     public const ARCHIVED = 'archived';
 
+    public const DELETED = 'deleted';
+
     /** @var list<string> */
-    public const STATUSES = [self::DRAFT, self::APPROVED, self::ARCHIVED];
+    public const STATUSES = [
+        self::DRAFT, self::SUBMITTED, self::UNDER_REVIEW, self::CHANGES_REQUESTED, self::APPROVED,
+        self::REJECTED, self::PUBLISHED, self::EXPIRED, self::ARCHIVED, self::DELETED,
+    ];
+
+    /**
+     * ⓘ যে অবস্থায় বিবরণ নিজের জায়গায় বদলানো যায় — খসড়া, বা ফেরত আসা কাগজ।
+     * ⛔ জমা/পর্যালোচনায় থাকা কাগজ নয় (যিনি সই করছেন তিনি যা দেখছেন সেটা নড়বে না), আর
+     * অনুমোদিত/প্রকাশিত তো নয়ই (§৯)।
+     *
+     * @var list<string>
+     */
+    public const EDITABLE = [self::DRAFT, self::CHANGES_REQUESTED, self::REJECTED, self::EXPIRED];
+
+    /**
+     * ⓘ অনুমোদিত বা তার পরের — এদের বদল কেবল নতুন ভার্সন হয়ে।
+     *
+     * @var list<string>
+     */
+    public const SEALED = [self::APPROVED, self::PUBLISHED];
 
     /**
      * সেন্টারের মেয়াদের ছাঁকনি (§১২) — `expired` আর সামনের ৭/৩০/৯০ দিন।

@@ -19,4 +19,13 @@ return [
     'restore_version' => 'এটা ফেরান',
     'new_version' => 'নতুন ভার্সনের ফাইল',
     'upload_version' => 'নতুন ভার্সন তুলুন',
+    'restore_from_bin' => 'ফেরান',
+    'purge' => 'চিরতরে মুছুন',
+    'remove' => 'সরান',
+    'grant' => 'অধিকার দিন',
+    'add' => 'যোগ করুন',
+    'turn_off' => 'বন্ধ করুন',
+    'turn_on' => 'চালু করুন',
+    'open_settings' => 'ফাইলের সীমা বদলান',
+    'open_number_series' => 'নম্বর সিরিজ',
 ];

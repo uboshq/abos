@@ -55,7 +55,7 @@ class Document extends Model
         'company_id', 'branch_id', 'document_no', 'name', 'doc_type', 'folder',
         'department_id', 'owner_id', 'document_date', 'expiry_date', 'confidentiality',
         'tags', 'description', 'status', 'current_version_id',
-        'archived_at', 'archived_by', 'archived_from_status',
+        'archived_at', 'archived_by', 'archived_from_status', 'deleted_from_status',
         'created_by', 'updated_by', 'deleted_by',
     ];
 
@@ -96,6 +96,21 @@ class Document extends Model
         return $this->belongsTo(DocumentVersion::class, 'current_version_id');
     }
 
+    public function grants(): HasMany
+    {
+        return $this->hasMany(DocumentGrant::class, 'document_id');
+    }
+
+    public function metadata(): HasMany
+    {
+        return $this->hasMany(DocumentMetadata::class, 'document_id');
+    }
+
+    public function deleter(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'deleted_by');
+    }
+
     public function owner(): BelongsTo
     {
         return $this->belongsTo(User::class, 'owner_id');
@@ -129,7 +144,13 @@ class Document extends Model
     /** ⛔ অনুমোদিত কাগজ নিজের জায়গায় বদলায় না — বদল মানে নতুন ভার্সন (§৯) */
     public function isApproved(): bool
     {
-        return $this->status === DocumentCatalog::APPROVED;
+        return in_array($this->status, DocumentCatalog::SEALED, true);
+    }
+
+    /** ⓘ বিবরণ নিজের জায়গায় বদলানো যায় এমন অবস্থা ([[DocumentCatalog::EDITABLE]]) */
+    public function isEditableInPlace(): bool
+    {
+        return in_array($this->status, DocumentCatalog::EDITABLE, true);
     }
 
     /** মেয়াদ পেরিয়েছে কি না — আজকের তারিখ PHP থেকে, ডাটাবেজ থেকে নয় */
@@ -145,20 +166,14 @@ class Document extends Model
     }
 
     /**
-     * এই মানুষ যে কাগজগুলো দেখতে পান — গোপনীয়তার ধাপ, নয়তো নিজের কাগজ ([[DocumentAccess]])।
+     * এই মানুষ যে কাগজগুলো দেখতে পান — ধাপ আর বিভাগ, নিজের কাগজ, নয়তো কাগজ-ধরে অধিকার
+     * ([[DocumentAccess::visibleScope()]])।
      *
      * ⚠️ কোম্পানি আর শাখার দেয়াল গ্লোবাল স্কোপে আগেই বসে; এটা তৃতীয় দেয়াল।
      */
     public function scopeVisibleTo(Builder $query, User $user): Builder
     {
-        $levels = app(DocumentAccess::class)->levelsFor($user);
-        $table = $this->getTable();
-
-        return $query->where(function (Builder $q) use ($levels, $user, $table) {
-            $q->whereIn($table.'.confidentiality', $levels)
-                ->orWhere($table.'.owner_id', $user->getKey())
-                ->orWhere($table.'.created_by', $user->getKey());
-        });
+        return app(DocumentAccess::class)->visibleScope($query, $user);
     }
 
     /** সেন্টারে কেবল চলতি কাগজ — আর্কাইভ করা সরে যায়, মোছে না */

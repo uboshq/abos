@@ -9,6 +9,7 @@
     অবস্থা · মেয়াদ · বদল (পরিকল্পনা §৪: Name, Type, Owner, Version, Status)।
 --}}
 @php
+    $choices = app(\App\Modules\Documents\Services\DocumentChoices::class);
     use App\Modules\Documents\Models\Document;
     use App\Modules\Documents\Services\DocumentFinder;
 
@@ -35,13 +36,13 @@
             'key' => 'doc_type',
             'label' => __('documents::field.doc_type'),
             'width' => '8rem',
-            'render' => fn ($d) => __('documents::catalog.type.'.$d->doc_type),
+            'render' => fn ($d) => $choices->typeName($d->doc_type),
         ],
         [
             'key' => 'folder',
             'label' => __('documents::field.folder'),
             'width' => '9rem',
-            'render' => fn ($d) => __('documents::catalog.folder.'.$d->folder),
+            'render' => fn ($d) => $choices->folderName($d->folder),
         ],
         [
             'key' => 'owner_id',
@@ -80,6 +81,32 @@
             'render' => fn ($d) => \App\Core\Support\DateFormat::format($d->updated_at),
         ],
     ];
+
+    /*
+     * ⭐ রিসাইকেল বিন (§১৯) — কে মুছলেন, কবে, আর দুই কাজ: ফেরানো আর চিরতরে মোছা।
+     * ⓘ বিনের কাগজ খোলা যায় না (বিস্তারিত পাতা মোছা কাগজ চেনে না), তাই সারিতে দেখার লিংক নেই।
+     */
+    if ($view === DocumentFinder::BIN) {
+        $columns = array_values(array_filter($columns, fn ($c) => ! in_array($c['key'], ['expiry_date', 'updated_at', 'status'], true)));
+        $columns[] = [
+            'key' => 'deleted_by',
+            'label' => __('documents::field.deleted_by'),
+            'width' => '9rem',
+            'render' => fn ($d) => $d->deleter?->name ?? '—',
+        ];
+        $columns[] = [
+            'key' => 'deleted_at',
+            'label' => __('documents::field.deleted_at'),
+            'width' => '9rem',
+            'render' => fn ($d) => \App\Core\Support\DateFormat::formatWithTime($d->deleted_at),
+        ];
+        $columns[] = [
+            'key' => 'bin_actions',
+            'label' => __('core.table.actions'),
+            'width' => '14rem',
+            'render' => fn ($d) => view('documents::partials.bin-actions', ['document' => $d]),
+        ];
+    }
 
     /* ⓘ ফোল্ডারের ট্যাব — কেবল সেন্টারে; "সব" প্রথমে, তারপর মালিকের ক্রমে */
     $tabs = [];
@@ -155,16 +182,45 @@
                                  ->mapWithKeys(fn ($w) => [$w => __('documents::catalog.expiry.'.$w)])->all()"
                              :selected="$filters['expiry']" placeholder="—" />
 
+                {{-- ⭐ বিস্তারিত খোঁজ (§১৬) — বাকি ছাঁকনিগুলো কেবল এই পর্দায় --}}
+                @if ($view === DocumentFinder::SEARCH)
+                    <x-ui.select name="status" :label="__('documents::field.status')"
+                                 :options="$statuses" :selected="$filters['status']" placeholder="—" />
+
+                    <x-ui.select name="branch_id" :label="__('documents::field.branch')"
+                                 :options="$branches" :selected="$filters['branch_id']" placeholder="—" />
+
+                    <x-ui.select name="owner_id" :label="__('documents::field.owner')"
+                                 :options="$owners" :selected="$filters['owner_id']" placeholder="—" />
+
+                    <x-ui.field name="date_from" type="date" :label="__('documents::field.date_from')"
+                                :value="$filters['date_from']" />
+
+                    <x-ui.field name="date_to" type="date" :label="__('documents::field.date_to')"
+                                :value="$filters['date_to']" />
+
+                    <x-ui.field name="version" type="number" min="1" :label="__('documents::field.major_version')"
+                                :value="$filters['version']" />
+
+                    <x-ui.field name="tag" :label="__('documents::field.tag')" maxlength="40"
+                                :value="$filters['tag']" />
+
+                    <x-ui.field name="content" :label="__('documents::field.content')" maxlength="100"
+                                :value="$filters['content']" :hint="__('documents::message.content_hint')" />
+                @endif
+
                 {{-- ⓘ আর্কাইভ করা কাগজ সেন্টারে দেখা যায় না — এই টিকে কেবল সেগুলোই, ফেরানোর জন্য --}}
+                @if (in_array($view, [DocumentFinder::CENTER, DocumentFinder::MINE], true))
                 <label class="flex min-h-(--spacing-touch) items-center gap-2 text-sm">
                     <input type="checkbox" name="archived" value="1" @checked($filters['archived']) class="size-4">
                     {{ __('documents::action.show_archived') }}
                 </label>
+                @endif
             </x-ui.toolbar>
         </form>
 
         <x-ui.table
-            :view-url="fn ($d) => route('documents.show', $d)"
+            :view-url="$view === DocumentFinder::BIN ? null : fn ($d) => route('documents.show', $d)"
             :empty="filled($filters['q']) ? __('core.empty.no_results') : __('documents::message.none_yet')"
             :rows="$documents"
             :compact="request()->boolean('compact')"

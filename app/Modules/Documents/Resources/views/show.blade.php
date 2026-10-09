@@ -9,6 +9,7 @@
     চাবি চায় আর অডিটে লেখে। প্রিভিউ পাতার ভিতরে কেবল PDF আর ছবি; বাকি সব নামিয়ে দেখা।
 --}}
 @php
+    $choices = app(\App\Modules\Documents\Services\DocumentChoices::class);
     use App\Core\Support\DateFormat;
     use App\Models\AuditTrail;
 
@@ -21,7 +22,7 @@
 
     <x-slot:header>
         <x-ui.page-header :title="$document->name"
-                          :subtitle="$document->document_no.' · '.__('documents::catalog.folder.'.$document->folder)">
+                          :subtitle="$document->document_no.' · '.$choices->folderName($document->folder)">
             <x-slot:actions>
                 @can('download', $document)
                     <x-ui.button icon="download" :href="route('documents.download', $document)">
@@ -114,10 +115,10 @@
                 <dd class="num">{{ $document->document_no }}</dd>
 
                 <dt class="text-(--color-ink-muted)">{{ __('documents::field.doc_type') }}</dt>
-                <dd>{{ __('documents::catalog.type.'.$document->doc_type) }}</dd>
+                <dd>{{ $choices->typeName($document->doc_type) }}</dd>
 
                 <dt class="text-(--color-ink-muted)">{{ __('documents::field.folder') }}</dt>
-                <dd>{{ __('documents::catalog.folder.'.$document->folder) }}</dd>
+                <dd>{{ $choices->folderName($document->folder) }}</dd>
 
                 <dt class="text-(--color-ink-muted)">{{ __('documents::field.version') }}</dt>
                 <dd>{{ $current ? 'v'.$current->label() : '—' }}</dd>
@@ -151,6 +152,14 @@
                         —
                     @endforelse
                 </dd>
+
+                {{-- ⭐ বাড়তি ঘর (§২০) — প্রশাসনে বানানো, যেমন "লাইসেন্স নম্বর" --}}
+                @foreach ($document->metadata as $meta)
+                    @if ($meta->field)
+                        <dt class="text-(--color-ink-muted)">{{ $meta->field->name() }}</dt>
+                        <dd>{{ $meta->value }}</dd>
+                    @endif
+                @endforeach
 
                 <dt class="text-(--color-ink-muted)">{{ __('documents::field.created_by') }}</dt>
                 <dd>{{ $document->creator?->name ?? '—' }} · {{ DateFormat::formatWithTime($document->created_at) }}</dd>
@@ -291,6 +300,85 @@
             </form>
         @endcan
     </section>
+
+    {{-- ── ⭐ কাগজ-ধরে অধিকার (§১৩) — কে এই কাগজে কী পারেন; দেখা সবসময় চালু ── --}}
+    @can('grant', $document)
+        <section id="access" data-boxed class="mt-4 rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
+            <h2 class="border-b border-(--color-border) bg-(--color-section-head) px-4 py-3 font-semibold">
+                {{ __('documents::section.access') }}
+            </h2>
+
+            <p class="px-4 pt-3 text-2xs text-(--color-ink-muted)">{{ __('documents::message.access_hint') }}</p>
+
+            <div class="overflow-x-auto">
+                <table class="ui-list w-full border-collapse text-sm">
+                    <thead>
+                        <tr>
+                            <th class="text-start">{{ __('documents::field.grantee') }}</th>
+                            @foreach (array_keys(\App\Modules\Documents\Models\DocumentGrant::ABILITIES) as $ability)
+                                <th class="text-center">{{ __('documents::catalog.ability.'.$ability) }}</th>
+                            @endforeach
+                            <th class="text-end">{{ __('core.table.actions') }}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @forelse ($document->grants as $grant)
+                            <tr data-grant="{{ $grant->grantee_type }}-{{ $grant->grantee_id }}">
+                                <td>
+                                    {{ $grant->granteeName() }}
+                                    <span class="text-2xs text-(--color-ink-muted)">· {{ __('documents::catalog.grantee.'.$grant->grantee_type) }}</span>
+                                </td>
+                                @foreach (\App\Modules\Documents\Models\DocumentGrant::ABILITIES as $column)
+                                    <td class="text-center">{{ $grant->{$column} ? '✓' : '—' }}</td>
+                                @endforeach
+                                <td class="text-end">
+                                    <form method="POST" action="{{ route('documents.grant.destroy', [$document, $grant]) }}"
+                                          data-confirm="{{ __('documents::message.access_remove_confirm') }}">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit" class="text-(--color-danger) hover:underline">{{ __('documents::action.remove') }}</button>
+                                    </form>
+                                </td>
+                            </tr>
+                        @empty
+                            <tr><td colspan="7" class="text-(--color-ink-muted)">{{ __('documents::message.access_none') }}</td></tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
+
+            <form method="POST" action="{{ route('documents.grant.store', $document) }}"
+                  x-data="{ type: 'user' }"
+                  class="grid gap-3 border-t border-(--color-border) px-4 py-3 lg:grid-cols-[10rem_minmax(0,1fr)_minmax(0,2fr)_auto] lg:items-end">
+                @csrf
+                <x-ui.select name="grantee_type" :label="__('documents::field.grantee_type')"
+                             :options="['user' => __('documents::catalog.grantee.user'), 'role' => __('documents::catalog.grantee.role')]"
+                             selected="user" x-model="type" />
+
+                <div x-show="type === 'user'">
+                    <x-ui.select name="grantee_id" :label="__('documents::field.grantee')" :options="$people" placeholder="—"
+                                 x-bind:disabled="type !== 'user'" />
+                </div>
+                <div x-show="type === 'role'" x-cloak>
+                    <x-ui.select name="grantee_id" :label="__('documents::field.grantee')" :options="$roles" placeholder="—"
+                                 x-bind:disabled="type !== 'role'" />
+                </div>
+
+                <fieldset class="flex flex-wrap gap-3 text-sm">
+                    <legend class="mb-1 font-medium">{{ __('documents::field.abilities') }}</legend>
+                    @foreach (array_keys(\App\Modules\Documents\Models\DocumentGrant::ABILITIES) as $ability)
+                        @continue($ability === 'view')
+                        <label class="flex items-center gap-1">
+                            <input type="checkbox" name="abilities[]" value="{{ $ability }}" class="size-4">
+                            {{ __('documents::catalog.ability.'.$ability) }}
+                        </label>
+                    @endforeach
+                </fieldset>
+
+                <x-ui.button type="submit" tone="primary">{{ __('documents::action.grant') }}</x-ui.button>
+            </form>
+        </section>
+    @endcan
 
     {{-- ── অডিট ── --}}
     <section data-boxed class="mt-4 rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">

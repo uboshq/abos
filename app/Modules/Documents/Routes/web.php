@@ -2,10 +2,14 @@
 
 declare(strict_types=1);
 
+use App\Modules\Documents\Http\Controllers\DocumentAdminController;
+use App\Modules\Documents\Http\Controllers\DocumentBinController;
 use App\Modules\Documents\Http\Controllers\DocumentController;
 use App\Modules\Documents\Http\Controllers\DocumentFileController;
+use App\Modules\Documents\Http\Controllers\DocumentGrantController;
 use App\Modules\Documents\Http\Controllers\DocumentVersionController;
 use App\Modules\Documents\Http\Controllers\PlanController;
+use App\Modules\Documents\Services\DocumentAdministration;
 use App\Modules\Documents\Support\DocumentPlan;
 use Illuminate\Support\Facades\Route;
 
@@ -29,6 +33,25 @@ Route::middleware(['auth', 'can:documents.view'])->prefix('documents')->group(fu
     Route::get('/center', [DocumentController::class, 'index'])->name('index');
     Route::get('/mine', [DocumentController::class, 'mine'])->name('mine');
     Route::get('/recent', [DocumentController::class, 'recent'])->name('recent');
+
+    // ⭐ দ্বিতীয় ধাপ (৯ অক্টোবর ২০২৬) — আর্কাইভ, রিসাইকেল বিন, বিস্তারিত খোঁজ, প্রশাসন
+    Route::get('/archive', [DocumentController::class, 'archived'])->name('archived');
+    Route::get('/search', [DocumentController::class, 'search'])->name('search');
+
+    Route::get('/recycle', [DocumentController::class, 'bin'])->name('bin');
+    // ⓘ মোছা কাগজ সাধারণ `{document}` চেনে না — নিজের দরজা, পলিসি কন্ট্রোলারে (`restore`, `forceDelete`)
+    Route::post('/recycle/{document}/restore', [DocumentBinController::class, 'restore'])
+        ->whereNumber('document')->middleware('can:documents.restore')->name('bin.restore');
+    Route::delete('/recycle/{document}', [DocumentBinController::class, 'purge'])
+        ->whereNumber('document')->middleware('can:documents.purge')->name('bin.purge');
+
+    Route::middleware('can:documents.admin')->prefix('/admin')->group(function () {
+        Route::get('/', [DocumentAdminController::class, 'index'])->name('admin');
+        Route::post('/{kind}', [DocumentAdminController::class, 'store'])
+            ->whereIn('kind', DocumentAdministration::KINDS)->name('admin.store');
+        Route::post('/{kind}/{id}/toggle', [DocumentAdminController::class, 'toggle'])
+            ->whereIn('kind', DocumentAdministration::KINDS)->whereNumber('id')->name('admin.toggle');
+    });
 
     Route::get('/upload', [DocumentController::class, 'create'])
         ->middleware('can:documents.upload')->name('create');
@@ -56,6 +79,13 @@ Route::middleware(['auth', 'can:documents.view'])->prefix('documents')->group(fu
             ->middleware('can:download,document')->name('download');
         Route::get('/print', [DocumentFileController::class, 'print'])
             ->middleware('can:print,document')->name('print');
+
+        // ⭐ কাগজ-ধরে অধিকার (§১৩) — ⓘ scopeBindings: অধিকারটা এই কাগজেরই
+        Route::post('/access', [DocumentGrantController::class, 'store'])
+            ->middleware('can:grant,document')->name('grant.store');
+        Route::delete('/access/{grant}', [DocumentGrantController::class, 'destroy'])
+            ->whereNumber('grant')->scopeBindings()
+            ->middleware('can:grant,document')->name('grant.destroy');
 
         Route::post('/versions', [DocumentVersionController::class, 'store'])
             ->middleware('can:addVersion,document')->name('version.store');

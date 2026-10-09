@@ -2,6 +2,11 @@
 
 declare(strict_types=1);
 use App\Modules\Documents\Dashboard\DocumentsDashboard;
+use App\Modules\Documents\Models\DocumentCategory;
+use App\Modules\Documents\Models\DocumentType;
+use App\Modules\Documents\Models\MetadataField;
+use App\Modules\Documents\Services\DocumentAccess;
+use App\Modules\MasterData\Models\Department;
 
 /**
  * ডকুমেন্ট ম্যানেজমেন্ট (DOC) — প্রথম ধাপ চালু, বাকিটা পরিকল্পনার পাতায়।
@@ -45,7 +50,7 @@ return [
         'bn' => 'ডকুমেন্ট ম্যানেজমেন্ট',
     ],
 
-    'version' => '0.2.0',
+    'version' => '0.3.0',
 
     /*
      * ⭐ সাইডবারে মাস্টার ডাটা (৫) আর সিস্টেম অ্যাডমিনের (১০) মাঝখানে — মালিক, ৩০ সেপ্টেম্বর ২০২৬:
@@ -105,12 +110,13 @@ return [
                 'route_params' => ['screen' => 'editor'], 'permission' => 'documents.view'],
             ['label' => 'documents::menu.expiry', 'icon' => 'calendar', 'route' => 'documents.screen',
                 'route_params' => ['screen' => 'expiry'], 'permission' => 'documents.view'],
-            ['label' => 'documents::menu.archive', 'icon' => 'drawer', 'route' => 'documents.screen',
-                'route_params' => ['screen' => 'archive'], 'permission' => 'documents.view'],
-            ['label' => 'documents::menu.recycle', 'icon' => 'trash', 'route' => 'documents.screen',
-                'route_params' => ['screen' => 'recycle'], 'permission' => 'documents.view'],
-            ['label' => 'documents::menu.search', 'icon' => 'search', 'route' => 'documents.screen',
-                'route_params' => ['screen' => 'search'], 'permission' => 'documents.view'],
+            // ⭐ দ্বিতীয় ধাপের আসল পর্দা (৯ অক্টোবর ২০২৬) — আর্কাইভ, রিসাইকেল বিন, বিস্তারিত খোঁজ
+            ['label' => 'documents::menu.archive', 'icon' => 'drawer', 'route' => 'documents.archived',
+                'permission' => 'documents.view'],
+            ['label' => 'documents::menu.recycle', 'icon' => 'trash', 'route' => 'documents.bin',
+                'permission' => 'documents.view'],
+            ['label' => 'documents::menu.search', 'icon' => 'search', 'route' => 'documents.search',
+                'permission' => 'documents.view'],
         ],
 
         'approval' => [
@@ -128,8 +134,8 @@ return [
         ],
 
         'settings' => [
-            ['label' => 'documents::menu.admin', 'icon' => 'settings', 'route' => 'documents.screen',
-                'route_params' => ['screen' => 'admin'], 'permission' => 'documents.view'],
+            ['label' => 'documents::menu.admin', 'icon' => 'settings', 'route' => 'documents.admin',
+                'permission' => 'documents.admin'],
         ],
     ],
 
@@ -155,7 +161,15 @@ return [
         'documents.download',   // ফাইল নামানো, পুরনো ভার্সনসহ
         'documents.print',      // ছাপা — ফাইল নিজের ট্যাবে খোলে, অডিটে "ছাপা"
         'documents.archive',    // আর্কাইভ — সেন্টার থেকে সরে, মোছে না
-        'documents.restore',    // আর্কাইভ থেকে ফেরানো, আর পুরনো ভার্সন ফেরানো
+        'documents.restore',    // আর্কাইভ থেকে ফেরানো, পুরনো ভার্সন ফেরানো, আর রিসাইকেল বিন থেকে ফেরানো
+
+        /*
+         * ⭐ দ্বিতীয় ধাপ (৯ অক্টোবর ২০২৬)।
+         * ⛔ চিরতরে মোছা নিজের চাবিতে — পরিকল্পনা §১৯: *"permission অনুযায়ী permanent delete"*।
+         */
+        'documents.purge',
+        'documents.permissions', // একটা কাগজে কাউকে দেখা/নামানো/ছাপা/বদলের অধিকার দেওয়া (§১৩)
+        'documents.admin',       // প্রশাসন — ধরন, ফোল্ডার, ট্যাগ, বাড়তি ঘর (§২০)
 
         /*
          * ⭐ গোপনীয়তার সিঁড়ি — পরিকল্পনা §১৪ (*"restricted-এ বাড়তি permission"*)।
@@ -173,6 +187,44 @@ return [
      */
     'doc_types' => [
         'DOC' => 'documents::doc.document_no',
+    ],
+
+    /*
+     * ⭐ বিভাগের সীমা (দেয়ালের তৃতীয় ধাপ: কোম্পানি → শাখা → **বিভাগ** → কর্মী → কাগজ)।
+     * ⓘ ব্যবহারকারীর পর্দায় শাখা আর গুদামের পাশে "বিভাগ" ঘর বসে ([[UserController::scopeKinds()]]);
+     * সীমা দিলে তিনি কেবল ঐ বিভাগগুলোর কাগজ (আর বিভাগহীন কাগজ) দেখেন ([[DocumentAccess]])।
+     * ⓘ বিভাগের তালিকা মাস্টার ডাটার — দ্বিতীয়বার বানানো নয়।
+     */
+    'data_scopes' => [
+        DocumentAccess::DEPARTMENT_SCOPE => [
+            'model' => Department::class,
+            'label' => 'documents::field.department',
+        ],
+    ],
+
+    /*
+     * ⓘ কোম্পানির নিজের ধরন, ফোল্ডার আর বাড়তি ঘর — একই নামে দুইবার নয় ([[DuplicateGuard]])।
+     */
+    'duplicates' => [
+        ['model' => DocumentType::class, 'name' => ['name_en', 'name_bn']],
+        ['model' => DocumentCategory::class, 'name' => ['name_en', 'name_bn']],
+        ['model' => MetadataField::class, 'name' => ['name_en', 'name_bn']],
+    ],
+
+    /*
+     * ⭐ ফাইলের সীমা — পরিকল্পনা §২০ "Storage Settings" (দ্বিতীয় ধাপ)।
+     * ⓘ PDF সবসময় চলে; বাকি তিন পরিবার কোম্পানি বন্ধ করতে পারে ([[DocumentFiles::allowed()]])।
+     * ⛔ মাপ ১ থেকে ১০ MB — ১০-এর বেশি লিখলেও ১০ (শেয়ার্ড সার্ভারের সীমা)।
+     */
+    'settings' => [
+        ['key' => 'documents.max_upload_mb', 'label' => 'documents::settings.max_upload_mb',
+            'type' => 'integer', 'default' => 10, 'group' => 'limits'],
+        ['key' => 'documents.allow_images', 'label' => 'documents::settings.allow_images',
+            'type' => 'boolean', 'default' => true, 'group' => 'limits'],
+        ['key' => 'documents.allow_office', 'label' => 'documents::settings.allow_office',
+            'type' => 'boolean', 'default' => true, 'group' => 'limits'],
+        ['key' => 'documents.allow_text', 'label' => 'documents::settings.allow_text',
+            'type' => 'boolean', 'default' => true, 'group' => 'limits'],
     ],
 
     // ⓘ টাকা নড়ে না, অনুমোদনও চায় না (অনুমোদনের ধারা §১০ পরের ধাপে)

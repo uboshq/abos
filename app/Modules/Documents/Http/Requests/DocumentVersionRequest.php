@@ -25,7 +25,7 @@ class DocumentVersionRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'file' => ['required', 'file', 'max:'.DocumentFiles::MAX_KB, 'extensions:'.DocumentFiles::extensions()],
+            'file' => ['required', 'file', 'max:'.(DocumentFiles::maxMb() * 1024), 'extensions:'.DocumentFiles::extensions()],
             'major' => ['nullable', 'boolean'],
             'comment' => ['nullable', 'string', 'max:500'],
         ];
@@ -47,7 +47,7 @@ class DocumentVersionRequest extends FormRequest
                 if ($refusal !== null) {
                     $validator->errors()->add('file', __('documents::message.file_'.$refusal, [
                         'name' => $file->getClientOriginalName(),
-                        'max' => '10 MB',
+                        'max' => DocumentFiles::maxMb().' MB',
                     ]));
                 }
             },

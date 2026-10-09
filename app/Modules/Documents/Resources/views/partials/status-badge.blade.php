@@ -1,7 +1,9 @@
-{{-- অবস্থা (§২২) — আজ খসড়া, অনুমোদিত, আর্কাইভে --}}
+{{-- অবস্থা (§২২) — দশটা, প্রতিটার নিজের রং --}}
 @php
     $tone = match ($status) {
-        'approved' => 'success',
+        'approved', 'published' => 'success',
+        'submitted', 'under_review' => 'pending',
+        'changes_requested', 'rejected', 'expired', 'deleted' => 'danger',
         'archived' => 'info',
         default => 'draft',
     };

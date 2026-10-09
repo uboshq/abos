@@ -9,8 +9,13 @@ use App\Core\Support\CompanyContext;
 use App\Core\Support\ViewedBranch;
 use App\Models\Branch;
 use App\Models\User;
+use App\Modules\Documents\Models\DocumentCategory;
+use App\Modules\Documents\Models\DocumentTag;
+use App\Modules\Documents\Models\DocumentType;
+use App\Modules\Documents\Models\MetadataField;
 use App\Modules\Documents\Support\DocumentCatalog;
 use App\Modules\MasterData\Models\Department;
+use Illuminate\Support\Collection;
 
 /**
  * ডকুমেন্টের ফর্মের বাছাইগুলো — ফোল্ডার, ধরন, গোপনীয়তা, শাখা, বিভাগ, মালিক।
@@ -25,16 +30,79 @@ final class DocumentChoices
         private readonly DataScope $scope,
     ) {}
 
-    /** @return array<string, string> */
-    public function folders(): array
+    /** @var array<string, array<string, string>> অনুরোধের ভিতরে — একবার পড়া */
+    private array $own = [];
+
+    /**
+     * ফোল্ডার — মালিকের ন'টা আগে, তারপর কোম্পানির নিজের (প্রশাসনের পর্দা থেকে)।
+     *
+     * @return array<string, string>
+     */
+    public function folders(bool $withInactive = false): array
     {
-        return $this->words(DocumentCatalog::FOLDERS, 'folder');
+        return $this->words(DocumentCatalog::FOLDERS, 'folder') + $this->own(DocumentCategory::class, $withInactive);
     }
 
-    /** @return array<string, string> */
-    public function types(): array
+    /**
+     * ধরন — মালিকের তালিকা আগে, তারপর কোম্পানির নিজের।
+     *
+     * @return array<string, string>
+     */
+    public function types(bool $withInactive = false): array
     {
-        return $this->words(DocumentCatalog::TYPES, 'type');
+        return $this->words(DocumentCatalog::TYPES, 'type') + $this->own(DocumentType::class, $withInactive);
+    }
+
+    /** ফোল্ডারের নাম — বন্ধ করা নিজের ফোল্ডারও, যাতে পুরনো কাগজে নাম থাকে */
+    public function folderName(?string $code): string
+    {
+        return $this->folders(true)[(string) $code] ?? (string) $code;
+    }
+
+    public function typeName(?string $code): string
+    {
+        return $this->types(true)[(string) $code] ?? (string) $code;
+    }
+
+    /**
+     * এই ধরনের কাগজে যে বাড়তি ঘরগুলো আসে (§২০ Metadata Fields)।
+     *
+     * @return Collection<int, MetadataField>
+     */
+    public function metadataFields(?string $docType = null, bool $all = false): Collection
+    {
+        return MetadataField::query()
+            ->active()
+            ->orderBy('name_en')
+            ->get()
+            ->filter(fn (MetadataField $f) => $all || $f->appliesTo($docType))
+            ->values();
+    }
+
+    /**
+     * প্রশাসনের ঠিক করা ট্যাগ — তোলার ফর্মে পরামর্শ।
+     *
+     * @return list<string>
+     */
+    public function tags(): array
+    {
+        return DocumentTag::query()->orderBy('name')->pluck('name')->map(fn ($t) => (string) $t)->all();
+    }
+
+    /**
+     * @param  class-string<DocumentType|DocumentCategory>  $model
+     * @return array<string, string>
+     */
+    private function own(string $model, bool $withInactive): array
+    {
+        $key = $model.($withInactive ? ':all' : ':active');
+
+        return $this->own[$key] ??= $model::query()
+            ->when(! $withInactive, fn ($q) => $q->active())
+            ->orderBy('name_en')
+            ->get()
+            ->mapWithKeys(fn ($row) => [(string) $row->code => $row->name()])
+            ->all();
     }
 
     /**

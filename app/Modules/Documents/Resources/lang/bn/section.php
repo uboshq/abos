@@ -13,4 +13,10 @@ return [
     'details' => 'বিস্তারিত',
     'versions' => 'ভার্সন',
     'audit' => 'অডিট',
+    'metadata' => 'বাড়তি ঘর',
+    'access' => 'কে এই কাগজে কী পারেন',
+    'admin_types' => 'ডকুমেন্টের ধরন',
+    'admin_categories' => 'ফোল্ডার',
+    'admin_tags' => 'ট্যাগ',
+    'admin_fields' => 'বাড়তি ঘর',
 ];

@@ -47,6 +47,8 @@ final class TheDocumentModuleShowsItsPlanTest extends TestCase
         'documents.index', 'documents.create', 'documents.mine', 'documents.recent',
         // ⓘ ড্যাশবোর্ডের সারি ৬ অক্টোবর থেকেই ড্যাশবোর্ড ইঞ্জিনের আসল পাতা ([[DocumentsDashboard]]), পরিকল্পনা নয়
         'module.dashboard',
+        // ⭐ দ্বিতীয় ধাপ (৯ অক্টোবর ২০২৬) — নিজের টেস্টে ([[TheBinTheSearchAndTheAdminWorkTest]])
+        'documents.archived', 'documents.bin', 'documents.search', 'documents.admin',
     ];
 
     public function test_every_menu_page_is_shut_without_the_key_and_opens_with_it_for_the_same_person(): void
@@ -83,7 +85,8 @@ final class TheDocumentModuleShowsItsPlanTest extends TestCase
         /* ── একই মানুষ, এবার চাবিসহ ── */
         // ⓘ আপলোডের সারি নিজের চাবি চায় (§১৩) — সেটাও, যাতে সাইডবারে ২১টা সারিই আসে
         Permission::findOrCreate('documents.upload', 'web');
-        $person->givePermissionTo(['documents.view', 'documents.upload']);
+        Permission::findOrCreate('documents.admin', 'web');
+        $person->givePermissionTo(['documents.view', 'documents.upload', 'documents.admin']);
         app(PermissionRegistrar::class)->forgetCachedPermissions();
         $person = $person->fresh();
 

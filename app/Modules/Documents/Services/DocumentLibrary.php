@@ -12,11 +12,13 @@ use App\Core\Support\Actor;
 use App\Core\Support\CompanyContext;
 use App\Models\Attachment;
 use App\Modules\Documents\Models\Document;
+use App\Modules\Documents\Models\DocumentMetadata;
 use App\Modules\Documents\Models\DocumentVersion;
 use App\Modules\Documents\Support\DocumentCatalog;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
@@ -94,6 +96,7 @@ final class DocumentLibrary
                 );
 
                 $document->save();
+                $this->saveMetadata($document, (array) ($details['meta'] ?? []));
 
                 $this->addVersionRow($document, $this->store($file, $document), 1, 0, $details['comment'] ?? null);
 
@@ -160,11 +163,15 @@ final class DocumentLibrary
      */
     public function update(Document $document, array $details): Document
     {
-        $document->fill([
-            ...$this->detailFields($details),
-            'name' => mb_substr(trim((string) $details['name']), 0, 191),
-            'updated_by' => Actor::userId(),
-        ])->save();
+        DB::transaction(function () use ($document, $details) {
+            $document->fill([
+                ...$this->detailFields($details),
+                'name' => mb_substr(trim((string) $details['name']), 0, 191),
+                'updated_by' => Actor::userId(),
+            ])->save();
+
+            $this->saveMetadata($document, (array) ($details['meta'] ?? []));
+        });
 
         return $document;
     }
@@ -207,16 +214,85 @@ final class DocumentLibrary
     }
 
     /**
-     * মোছা — নরম: সারি আর ফাইল থাকে, কেবল কোথাও দেখা যায় না।
+     * মোছা — নরম: সারি আর ফাইল থাকে, কাগজ রিসাইকেল বিনে যায় (§১৯)।
      *
-     * ⓘ কে মুছলেন সারিতে লেখা (`deleted_by`), আর অডিট নিজেই "মোছা" লেখে। ফেরানোর পর্দা
-     * রিসাইকেল বিনের (§১৯) — পরের ধাপে।
+     * ⓘ কে মুছলেন সারিতে লেখা (`deleted_by`), আগের অবস্থা মনে রাখা (`deleted_from_status`),
+     * আর অডিট নিজেই "মোছা" লেখে।
      */
     public function delete(Document $document): void
     {
         DB::transaction(function () use ($document) {
-            $document->forceFill(['deleted_by' => Actor::userId()])->saveQuietly();
+            $document->forceFill([
+                'deleted_by' => Actor::userId(),
+                'deleted_from_status' => $document->status,
+                'status' => DocumentCatalog::DELETED,
+            ])->saveQuietly();
             $document->delete();
+        });
+    }
+
+    /** রিসাইকেল বিন থেকে ফেরানো — আগের অবস্থায়, আগের জায়গায় */
+    public function restoreFromBin(Document $document): void
+    {
+        DB::transaction(function () use ($document) {
+            $document->forceFill([
+                'status' => $document->deleted_from_status ?: DocumentCatalog::DRAFT,
+                'deleted_from_status' => null,
+                'deleted_by' => null,
+                'deleted_at' => null,
+                'updated_by' => Actor::userId(),
+            ])->saveQuietly();
+
+            $document->auditAction('document_restored');
+        });
+    }
+
+    /**
+     * ⛔ চিরতরে মোছা — কেবল বিন থেকে, নিজের চাবিতে ([[DocumentPolicy::forceDelete()]])।
+     *
+     * ⓘ ক্রম: আগে অডিটে "চিরতরে মোছা" (নাম আর নম্বরসহ, কারণ সারিটা আর থাকবে না), তারপর
+     * ভার্সনের সারি, তারপর ফাইল, শেষে কাগজ। ⭐ অডিটের খাতা থেকে যায় — কেউ জানতে চাইলে দেখা
+     * যায় কে, কবে, কোন কাগজ চিরতরে মুছলেন (§১৯ "audit kept")।
+     *
+     * ⚠️ ভার্সনের সারি মডেল দিয়ে মোছা যায় না ([[DocumentVersion]] থামায়) — এটাই একমাত্র পথ,
+     * তাই এখানে সরাসরি টেবিলে, আর কেবল এই কাগজের সারিগুলো।
+     */
+    public function purge(Document $document): void
+    {
+        DB::transaction(function () use ($document) {
+            $document->auditAction('document_purged', $document->document_no.' · '.$document->name);
+
+            $attachments = DB::table('dms_document_versions')
+                ->where('company_id', $document->company_id)
+                ->where('document_id', $document->getKey())
+                ->pluck('attachment_id')
+                ->unique()
+                ->all();
+
+            DB::table('dms_documents')
+                ->where('company_id', $document->company_id)
+                ->where('id', $document->getKey())
+                ->update(['current_version_id' => null]);
+
+            DB::table('dms_document_versions')
+                ->where('company_id', $document->company_id)
+                ->where('document_id', $document->getKey())
+                ->update(['restored_from_id' => null]);
+
+            DB::table('dms_document_versions')
+                ->where('company_id', $document->company_id)
+                ->where('document_id', $document->getKey())
+                ->delete();
+
+            foreach (Attachment::query()->withTrashed()->whereIn('id', $attachments)->get() as $file) {
+                Storage::disk('local')->delete($file->stored_path);
+                $file->forceDelete();
+            }
+
+            DB::table('dms_documents')
+                ->where('company_id', $document->company_id)
+                ->where('id', $document->getKey())
+                ->delete();
         });
     }
 
@@ -298,6 +374,43 @@ final class DocumentLibrary
         ];
     }
 
+    /**
+     * বাড়তি ঘরের মান (§২০) — কেবল এই ধরনের কাগজে যে ঘরগুলো আসে; ফাঁকা মান মানে সারি নেই।
+     *
+     * ⓘ ঘরের id ফর্ম থেকে আসে, তাই কেবল এই কোম্পানির চালু ঘরগুলো ধরা হয় — অচেনা id চুপচাপ বাদ।
+     *
+     * @param  array<int|string, mixed>  $values
+     */
+    private function saveMetadata(Document $document, array $values): void
+    {
+        $fields = app(DocumentChoices::class)->metadataFields((string) $document->doc_type);
+
+        foreach ($fields as $field) {
+            $value = trim((string) ($values[$field->id] ?? ''));
+            $row = DocumentMetadata::query()
+                ->where('document_id', $document->getKey())
+                ->where('field_id', $field->id)
+                ->first();
+
+            if ($value === '') {
+                $row?->delete();
+
+                continue;
+            }
+
+            if ($row === null) {
+                DocumentMetadata::query()->create([
+                    'company_id' => $document->company_id,
+                    'document_id' => $document->getKey(),
+                    'field_id' => $field->id,
+                    'value' => mb_substr($value, 0, 500),
+                ]);
+            } elseif ($row->value !== $value) {
+                $row->update(['value' => mb_substr($value, 0, 500)]);
+            }
+        }
+    }
+
     /** ফাইলটা সংযুক্তির খাতায় — ফিরলে ফর্মের ভুল, ৫০০ নয় */
     private function store(UploadedFile $file, Document $document): int
     {
@@ -307,16 +420,16 @@ final class DocumentLibrary
                 module: self::MODULE,
                 entity: self::ENTITY,
                 entityId: (int) $document->getKey(),
-                maxBytes: DocumentFiles::MAX_BYTES,
-                only: DocumentFiles::ALLOWED,
+                maxBytes: DocumentFiles::maxBytes(),
+                only: DocumentFiles::allowed(),
             )->getKey();
         } catch (NotASlip $refused) {
             throw ValidationException::withMessages([
-                'file' => __('documents::message.file_'.$refused->reason, ['max' => '10 MB']),
+                'file' => __('documents::message.file_'.$refused->reason, ['max' => DocumentFiles::maxMb().' MB']),
             ]);
         } catch (AttachmentException) {
             throw ValidationException::withMessages([
-                'file' => __('documents::message.file_wrong_kind', ['max' => '10 MB']),
+                'file' => __('documents::message.file_wrong_kind', ['max' => DocumentFiles::maxMb().' MB']),
             ]);
         }
     }

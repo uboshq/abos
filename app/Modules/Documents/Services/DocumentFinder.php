@@ -27,6 +27,13 @@ final class DocumentFinder
 
     public const RECENT = 'recent';
 
+    /** ⭐ দ্বিতীয় ধাপ — আর্কাইভের পর্দা, রিসাইকেল বিন আর বিস্তারিত খোঁজ (§১৬, §১৯) */
+    public const ARCHIVE = 'archive';
+
+    public const BIN = 'recycle';
+
+    public const SEARCH = 'search';
+
     /**
      * ছাঁকনিসহ তালিকার কোয়েরি — পাতা ভাগ আর সাজানো কন্ট্রোলারে।
      *
@@ -35,7 +42,7 @@ final class DocumentFinder
     public function query(User $user, string $view, array $filters): Builder
     {
         $query = $this->base($user)
-            ->with(['owner:id,name', 'currentVersion', 'department']);
+            ->with(['owner:id,name', 'deleter:id,name', 'currentVersion', 'department']);
 
         if ($view === self::MINE) {
             $query->where(fn (Builder $q) => $q
@@ -47,13 +54,24 @@ final class DocumentFinder
             $this->recentFor($query, $user);
         }
 
-        // ⭐ আর্কাইভ সেন্টার থেকে সরে; "আর্কাইভ করা" টিক দিলে কেবল সেগুলোই — ফেরানোর পথ
-        ($filters['archived'] ?? false) ? $query->onlyArchived() : $query->notArchived();
+        /*
+         * ⭐ আর্কাইভ সেন্টার থেকে সরে; "আর্কাইভ করা" টিক বা আর্কাইভের পর্দায় কেবল সেগুলোই।
+         * ⓘ বিনে কেবল মোছা কাগজ; বিস্তারিত খোঁজে আর্কাইভসহ সব (মোছা ছাড়া) — খোঁজের মানুষ
+         * জানেন না কাগজটা কোথায় সরেছে।
+         */
+        match (true) {
+            $view === self::BIN => $query->onlyTrashed(),
+            $view === self::ARCHIVE, (bool) ($filters['archived'] ?? false) => $query->onlyArchived(),
+            $view === self::SEARCH => null,
+            default => $query->notArchived(),
+        };
 
         $this->search($query, (string) ($filters['q'] ?? ''));
 
-        foreach (['folder' => DocumentCatalog::FOLDERS, 'doc_type' => DocumentCatalog::TYPES,
-            'confidentiality' => DocumentCatalog::LEVELS] as $column => $allowed) {
+        $choices = app(DocumentChoices::class);
+
+        foreach (['folder' => array_keys($choices->folders(true)), 'doc_type' => array_keys($choices->types(true)),
+            'confidentiality' => DocumentCatalog::LEVELS, 'status' => DocumentCatalog::STATUSES] as $column => $allowed) {
             $value = (string) ($filters[$column] ?? '');
 
             if (in_array($value, $allowed, true)) {
@@ -61,11 +79,14 @@ final class DocumentFinder
             }
         }
 
-        if (filled($filters['department_id'] ?? null)) {
-            $query->where('dms_documents.department_id', (int) $filters['department_id']);
+        foreach (['department_id', 'branch_id', 'owner_id'] as $column) {
+            if (filled($filters[$column] ?? null)) {
+                $query->where('dms_documents.'.$column, (int) $filters[$column]);
+            }
         }
 
         $this->expiring($query, (string) ($filters['expiry'] ?? ''));
+        $this->advanced($query, $filters);
 
         return $query;
     }
@@ -131,6 +152,65 @@ final class DocumentFinder
             ->orWhere('dms_documents.document_no', 'like', $like)
             ->orWhere('dms_documents.tags', 'like', $like)
             ->orWhere('dms_documents.description', 'like', $like));
+    }
+
+    /**
+     * বিস্তারিত খোঁজের বাকি ছাঁকনি (§১৬) — তারিখের সীমা, ভার্সন, ট্যাগ, আর লেখা।
+     *
+     * ⓘ "লেখা" (content) — নাম আর বিবরণের সাথে প্রতিটা ভার্সনের মন্তব্য; OCR-এর লেখা এলে
+     * (পঞ্চম ধাপ) সেটাও এখানেই যোগ হবে। ⓘ LIKE, কারণ কাগজ প্রতি কোম্পানিতে কয়েক হাজার —
+     * আর FULLTEXT একই লেনদেনে লেখা সারি দেখে না, তাই "এইমাত্র তোলা কাগজ খুঁজে পাই না" হত।
+     *
+     * @param  array<string, mixed>  $filters
+     */
+    private function advanced(Builder $query, array $filters): void
+    {
+        $from = $this->date($filters['date_from'] ?? null);
+        $to = $this->date($filters['date_to'] ?? null);
+
+        if ($from !== null) {
+            $query->whereDate('dms_documents.document_date', '>=', $from);
+        }
+
+        if ($to !== null) {
+            $query->whereDate('dms_documents.document_date', '<=', $to);
+        }
+
+        if (filled($filters['version'] ?? null) && ctype_digit((string) $filters['version'])) {
+            // ⓘ মূল ভার্সন — "২" মানে চলতি ভার্সন v2.x
+            $query->whereHas('currentVersion', fn (Builder $v) => $v->where('major', (int) $filters['version']));
+        }
+
+        $tag = trim((string) ($filters['tag'] ?? ''));
+
+        if ($tag !== '') {
+            $query->where('dms_documents.tags', 'like', '%'.addcslashes($tag, '\\%_').'%');
+        }
+
+        $content = trim((string) ($filters['content'] ?? ''));
+
+        if ($content !== '') {
+            $like = '%'.addcslashes($content, '\\%_').'%';
+
+            $query->where(fn (Builder $q) => $q
+                ->where('dms_documents.name', 'like', $like)
+                ->orWhere('dms_documents.description', 'like', $like)
+                ->orWhereHas('versions', fn (Builder $v) => $v->where('comment', 'like', $like))
+                ->orWhereHas('metadata', fn (Builder $m) => $m->where('value', 'like', $like)));
+        }
+    }
+
+    private function date(mixed $value): ?string
+    {
+        if (! is_string($value) || $value === '') {
+            return null;
+        }
+
+        try {
+            return Carbon::parse($value)->toDateString();
+        } catch (\Throwable) {
+            return null;
+        }
     }
 
     /**

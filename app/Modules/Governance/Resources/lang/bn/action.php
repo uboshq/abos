@@ -91,4 +91,7 @@ return [
     'doc_version_restored' => 'ডকুমেন্টের পুরনো ভার্সন ফেরানো',
     'document_archived' => 'ডকুমেন্ট আর্কাইভে',
     'document_unarchived' => 'ডকুমেন্ট আর্কাইভ থেকে ফেরানো',
+    'document_restored' => 'ডকুমেন্ট রিসাইকেল বিন থেকে ফেরানো',
+    'document_purged' => 'ডকুমেন্ট চিরতরে মোছা',
+    'doc_access_changed' => 'ডকুমেন্টের অধিকার বদল',
 ];

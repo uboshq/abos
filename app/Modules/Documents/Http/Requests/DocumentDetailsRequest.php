@@ -8,7 +8,6 @@ use App\Core\Support\CompanyContext;
 use App\Models\User;
 use App\Modules\Documents\Models\Document;
 use App\Modules\Documents\Services\DocumentChoices;
-use App\Modules\Documents\Support\DocumentCatalog;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -55,8 +54,9 @@ class DocumentDetailsRequest extends FormRequest
 
         return [
             'name' => [$this->nameIsRequired() ? 'required' : 'nullable', 'string', 'max:191'],
-            'doc_type' => ['required', Rule::in(DocumentCatalog::TYPES)],
-            'folder' => ['required', Rule::in(DocumentCatalog::FOLDERS)],
+            // ⓘ মালিকের তালিকা আর কোম্পানির নিজের চালু ধরন/ফোল্ডার ([[DocumentChoices]])
+            'doc_type' => ['required', Rule::in(array_keys($choices->types()))],
+            'folder' => ['required', Rule::in(array_keys($choices->folders()))],
 
             // ⛔ শাখা কেবল নিজের দেয়ালের ভিতরের; ফাঁকা (গোটা কোম্পানি) কেবল যিনি সব দেখেন
             'branch_id' => [$companyWide ? 'nullable' : 'required', 'integer', Rule::in($branches)],
@@ -74,7 +74,32 @@ class DocumentDetailsRequest extends FormRequest
 
             'tags' => ['nullable', 'string', 'max:500'],
             'description' => ['nullable', 'string', 'max:5000'],
+
+            ...$this->metadataRules($choices),
         ];
+    }
+
+    /**
+     * বাড়তি ঘরের নিয়ম (§২০) — কেবল বাছা ধরনের কাগজে যে ঘরগুলো আসে, তাদের ধরন মেনে।
+     *
+     * @return array<string, mixed>
+     */
+    private function metadataRules(DocumentChoices $choices): array
+    {
+        $rules = ['meta' => ['nullable', 'array']];
+
+        foreach ($choices->metadataFields((string) $this->input('doc_type')) as $field) {
+            $rules['meta.'.$field->id] = [
+                $field->is_required ? 'required' : 'nullable',
+                ...match ($field->kind) {
+                    'number' => ['numeric'],
+                    'date' => ['date'],
+                    default => ['string', 'max:500'],
+                },
+            ];
+        }
+
+        return $rules;
     }
 
     /** @return array<string, string> */
@@ -96,6 +121,8 @@ class DocumentDetailsRequest extends FormRequest
             'files.*' => __('documents::field.file'),
             'file' => __('documents::field.file'),
             'comment' => __('documents::field.comment'),
+            ...app(DocumentChoices::class)->metadataFields(all: true)
+                ->mapWithKeys(fn ($f) => ['meta.'.$f->id => $f->name()])->all(),
         ];
     }
 }

@@ -77,4 +77,7 @@ return [
     'doc_version_restored' => 'Earlier document version restored',
     'document_archived' => 'Document archived',
     'document_unarchived' => 'Document restored from the archive',
+    'document_restored' => 'Document restored from the recycle bin',
+    'document_purged' => 'Document deleted for good',
+    'doc_access_changed' => 'Document access changed',
 ];

@@ -95,7 +95,8 @@ final class DocumentPlan
      * মেনুর যে পর্দাগুলো এখনো পরিকল্পনার পাতা খোলে, মালিকের দেওয়া ক্রমে।
      *
      * ⭐ ৮ অক্টোবর ২০২৬, প্রথম ধাপ: সেন্টার, আপলোড, আমার আর সাম্প্রতিক নিজের আসল রুটে
-     * সরেছে ([[DocumentController]]) আর এখান থেকে মুছেছে — বাকি ষোলোটা আগের মতোই।
+     * সরেছে ([[DocumentController]]) আর এখান থেকে মুছেছে।
+     * ⭐ ৯ অক্টোবর ২০২৬, দ্বিতীয় ধাপ: আর্কাইভ, রিসাইকেল বিন, বিস্তারিত খোঁজ আর প্রশাসনও — বাকি বারোটা আগের মতোই।
      *
      * ⓘ `group` — ABOS-এর ছয়-ভাগ মেনুর কোন ভাগে ([[ModuleDefinition::MENU_GROUPS]])।
      * ⓘ `sections` — পরিকল্পনার কোন অংশগুলো এই পর্দার কথা বলে।
@@ -125,18 +126,10 @@ final class DocumentPlan
             'systems' => ['approval', 'approval_flow', 'notification'], 'new' => false],
         'expiry' => ['icon' => 'calendar', 'group' => 'transactions', 'sections' => [12],
             'systems' => ['notification'], 'new' => false],
-        'archive' => ['icon' => 'drawer', 'group' => 'transactions', 'sections' => [10, 20],
-            'systems' => ['audit_trait', 'data_scope'], 'new' => false],
-        'recycle' => ['icon' => 'trash', 'group' => 'transactions', 'sections' => [19],
-            'systems' => ['audit_engine', 'audit_trait'], 'new' => false],
-        'search' => ['icon' => 'search', 'group' => 'transactions', 'sections' => [16],
-            'systems' => ['search', 'data_scope', 'branch_wall'], 'new' => false],
         'reports' => ['icon' => 'reports', 'group' => 'reports', 'sections' => [17],
             'systems' => ['report', 'data_scope'], 'new' => false],
         'audit' => ['icon' => 'eye', 'group' => 'reports', 'sections' => [18],
             'systems' => ['audit_engine', 'audit_trait'], 'new' => false],
-        'admin' => ['icon' => 'settings', 'group' => 'settings', 'sections' => [20, 13, 14],
-            'systems' => ['settings', 'number_series', 'approval', 'permissions'], 'new' => false],
     ];
 
     /**
@@ -161,14 +154,14 @@ final class DocumentPlan
         10 => ['status' => self::PLANNED, 'systems' => ['approval']],
         11 => ['status' => self::PLANNED, 'systems' => ['approval', 'approval_flow']],
         12 => ['status' => self::PARTLY, 'systems' => ['notification']],
-        13 => ['status' => self::PARTLY, 'systems' => ['permissions', 'data_scope', 'branch_wall']],
+        13 => ['status' => self::LIVE, 'systems' => ['permissions', 'data_scope', 'branch_wall']],
         14 => ['status' => self::LIVE, 'systems' => ['permissions']],
         15 => ['status' => self::PLANNED, 'systems' => ['drill']],
-        16 => ['status' => self::PLANNED, 'systems' => ['search', 'data_scope']],
+        16 => ['status' => self::LIVE, 'systems' => ['search', 'data_scope']],
         17 => ['status' => self::PLANNED, 'systems' => ['report', 'data_scope']],
         18 => ['status' => self::PLANNED, 'systems' => ['audit_engine', 'audit_trait']],
-        19 => ['status' => self::PLANNED, 'systems' => ['audit_engine']],
-        20 => ['status' => self::PLANNED, 'systems' => ['settings', 'number_series']],
+        19 => ['status' => self::LIVE, 'systems' => ['audit_engine']],
+        20 => ['status' => self::PARTLY, 'systems' => ['settings', 'number_series']],
         21 => ['status' => self::PARTLY, 'systems' => ['number_series', 'company_wall', 'branch_wall']],
         22 => ['status' => self::PARTLY, 'systems' => ['approval']],
         23 => ['status' => self::PLANNED, 'systems' => ['notification']],

@@ -27,7 +27,7 @@
     <form method="POST"
           action="{{ $isNew ? route('documents.store') : route('documents.update', $document) }}"
           @if ($isNew) enctype="multipart/form-data" @endif
-          x-data="{ busy: false }"
+          x-data="{ busy: false, docType: @js(old('doc_type', $document->doc_type)) }"
           @submit="busy ? $event.preventDefault() : (busy = true)"
           class="space-y-4">
         @csrf
@@ -62,7 +62,7 @@
                               file:px-3 file:py-1.5 file:text-sm">
 
                 <p id="files-hint" class="mt-1 text-2xs text-(--color-ink-muted)">
-                    {{ __('documents::message.files_hint', ['max' => '10 MB', 'count' => $maxFiles]) }}
+                    {{ __('documents::message.files_hint', ['max' => $maxMb.' MB', 'count' => $maxFiles]) }}
                 </p>
             </section>
         @endif
@@ -77,7 +77,8 @@
 
                 <div class="grid gap-3 sm:grid-cols-2">
                     <x-ui.select name="doc_type" :label="__('documents::field.doc_type')" :options="$types"
-                                 :selected="old('doc_type', $document->doc_type)" required placeholder="—" />
+                                 :selected="old('doc_type', $document->doc_type)" required placeholder="—"
+                                 x-on:change="docType = $event.target.value" />
 
                     <x-ui.select name="folder" :label="__('documents::field.folder')" :options="$folders"
                                  :selected="old('folder', $document->folder)" required placeholder="—" />
@@ -92,8 +93,15 @@
                                 :hint="__('documents::message.expiry_hint')" />
                 </div>
 
-                <x-ui.field name="tags" :label="__('documents::field.tags')" maxlength="500"
+                <x-ui.field name="tags" :label="__('documents::field.tags')" maxlength="500" list="dms-tag-choices"
                             :value="old('tags', $document->tags)" :hint="__('documents::message.tags_hint')" />
+
+                {{-- ⓘ প্রশাসনের ঠিক করা ট্যাগ — পরামর্শ, বাধ্য নয় (§২০ Tags) --}}
+                <datalist id="dms-tag-choices">
+                    @foreach ($tagChoices as $tag)
+                        <option value="{{ $tag }}"></option>
+                    @endforeach
+                </datalist>
 
                 <label class="block text-sm">
                     <span class="mb-1 block font-medium">{{ __('documents::field.description') }}</span>
@@ -128,6 +136,23 @@
                                  :selected="old('confidentiality', $document->confidentiality)" required
                                  :hint="__('documents::message.level_hint')" />
                 </section>
+
+                {{-- ⭐ বাড়তি ঘর (§২০ Metadata Fields) — কেবল বাছা ধরনের কাগজে যেগুলো আসে --}}
+                @if ($metaFields->isNotEmpty())
+                    <section data-boxed class="space-y-3 rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
+                        <h2 class="font-semibold">{{ __('documents::section.metadata') }}</h2>
+
+                        @foreach ($metaFields as $field)
+                            <div @if (filled($field->doc_type)) x-show="docType === @js($field->doc_type)" @endif>
+                                <x-ui.field :name="'meta['.$field->id.']'" :label="$field->name()"
+                                            :type="$field->kind === 'number' ? 'number' : ($field->kind === 'date' ? 'date' : 'text')"
+                                            step="any"
+                                            :value="old('meta.'.$field->id, $metaValues[$field->id] ?? '')"
+                                            :hint="$field->is_required ? __('documents::message.meta_required') : null" />
+                            </div>
+                        @endforeach
+                    </section>
+                @endif
 
                 <div class="flex flex-wrap justify-end gap-2">
                     <x-ui.button :href="$isNew ? route('documents.index') : route('documents.show', $document)">

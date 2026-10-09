@@ -42,8 +42,15 @@ return [
 
     'status' => [
         'draft' => 'Draft',
+        'submitted' => 'Submitted',
+        'under_review' => 'Under review',
+        'changes_requested' => 'Changes requested',
         'approved' => 'Approved',
+        'rejected' => 'Rejected',
+        'published' => 'Published',
+        'expired' => 'Expired',
         'archived' => 'Archived',
+        'deleted' => 'Deleted',
     ],
 
     'expiry' => [
@@ -51,5 +58,24 @@ return [
         '7' => 'Expires within 7 days',
         '30' => 'Expires within 30 days',
         '90' => 'Expires within 90 days',
+    ],
+
+    'ability' => [
+        'view' => 'View',
+        'download' => 'Download',
+        'print' => 'Print',
+        'share' => 'Share',
+        'edit' => 'Edit',
+    ],
+
+    'grantee' => [
+        'user' => 'Person',
+        'role' => 'Role',
+    ],
+
+    'field_kind' => [
+        'text' => 'Text',
+        'number' => 'Number',
+        'date' => 'Date',
     ],
 ];

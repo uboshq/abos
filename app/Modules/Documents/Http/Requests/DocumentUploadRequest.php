@@ -28,7 +28,7 @@ class DocumentUploadRequest extends DocumentDetailsRequest
         return [
             ...parent::rules(),
             'files' => ['required', 'array', 'min:1', 'max:'.DocumentFiles::MAX_FILES],
-            'files.*' => ['required', 'file', 'max:'.DocumentFiles::MAX_KB, 'extensions:'.DocumentFiles::extensions()],
+            'files.*' => ['required', 'file', 'max:'.(DocumentFiles::maxMb() * 1024), 'extensions:'.DocumentFiles::extensions()],
             'comment' => ['nullable', 'string', 'max:500'],
         ];
     }
@@ -48,7 +48,7 @@ class DocumentUploadRequest extends DocumentDetailsRequest
                     if ($refusal !== null) {
                         $validator->errors()->add('files.'.$i, __('documents::message.file_'.$refusal, [
                             'name' => $file->getClientOriginalName(),
-                            'max' => '10 MB',
+                            'max' => DocumentFiles::maxMb().' MB',
                         ]));
                     }
                 }

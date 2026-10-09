@@ -19,4 +19,13 @@ return [
     'restore_version' => 'Restore this',
     'new_version' => 'File for the new version',
     'upload_version' => 'Upload new version',
+    'restore_from_bin' => 'Restore',
+    'purge' => 'Delete for good',
+    'remove' => 'Remove',
+    'grant' => 'Give access',
+    'add' => 'Add',
+    'turn_off' => 'Turn off',
+    'turn_on' => 'Turn on',
+    'open_settings' => 'Change file limits',
+    'open_number_series' => 'Number series',
 ];

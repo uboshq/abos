@@ -15,6 +15,7 @@ use App\Modules\Documents\Models\Document;
 use App\Modules\Documents\Services\DocumentChoices;
 use App\Modules\Documents\Services\DocumentFiles;
 use App\Modules\Documents\Services\DocumentFinder;
+use App\Modules\Documents\Services\DocumentGrants;
 use App\Modules\Documents\Services\DocumentLibrary;
 use App\Modules\Documents\Support\DocumentCatalog;
 use Illuminate\Http\RedirectResponse;
@@ -37,6 +38,7 @@ final class DocumentController extends Controller
         private readonly DocumentFinder $finder,
         private readonly DocumentLibrary $library,
         private readonly DocumentChoices $choices,
+        private readonly DocumentGrants $grants,
     ) {}
 
     /** ডকুমেন্ট সেন্টার — সব কাগজ, ফোল্ডার ধরে (§৪) */
@@ -55,6 +57,24 @@ final class DocumentController extends Controller
     public function recent(Request $request): View
     {
         return $this->list($request, DocumentFinder::RECENT);
+    }
+
+    /** আর্কাইভ — সেন্টার থেকে সরানো কাগজ, ফেরানোর জন্য (§১০, §২০) */
+    public function archived(Request $request): View
+    {
+        return $this->list($request, DocumentFinder::ARCHIVE);
+    }
+
+    /** রিসাইকেল বিন — মোছা কাগজ, কে কবে মুছলেন; ফেরানো আর চিরতরে মোছা ([[DocumentBinController]]) */
+    public function bin(Request $request): View
+    {
+        return $this->list($request, DocumentFinder::BIN);
+    }
+
+    /** বিস্তারিত খোঁজ — সব ছাঁকনি একসাথে, আর্কাইভসহ (§১৬) */
+    public function search(Request $request): View
+    {
+        return $this->list($request, DocumentFinder::SEARCH);
     }
 
     public function create(Request $request): View
@@ -85,7 +105,8 @@ final class DocumentController extends Controller
     {
         $this->library->viewed($document);
 
-        $document->load(['owner', 'creator', 'archiver', 'department', 'branch', 'currentVersion.attachment']);
+        $document->load(['owner', 'creator', 'archiver', 'department', 'branch', 'currentVersion.attachment',
+            'metadata.field', 'grants']);
 
         $versions = $document->versions()
             ->with(['attachment', 'author', 'restoredFrom'])
@@ -108,6 +129,8 @@ final class DocumentController extends Controller
             'trail' => $trail,
             'inline' => $this->library->opensInline($document->currentVersion),
             'mime' => $document->currentVersion?->attachment?->mime_type,
+            'people' => $request->user()?->can('grant', $document) ? $this->grants->people() : [],
+            'roles' => $request->user()?->can('grant', $document) ? $this->grants->roles() : [],
         ]);
     }
 
@@ -157,6 +180,14 @@ final class DocumentController extends Controller
             'confidentiality' => $request->query('confidentiality'),
             'expiry' => $request->query('expiry'),
             'archived' => $request->boolean('archived'),
+            'status' => $request->query('status'),
+            'branch_id' => $request->query('branch_id'),
+            'owner_id' => $request->query('owner_id'),
+            'date_from' => $request->query('date_from'),
+            'date_to' => $request->query('date_to'),
+            'version' => $request->query('version'),
+            'tag' => $request->query('tag'),
+            'content' => $request->query('content'),
         ];
 
         $query = $this->finder->query($user, $view, $filters);
@@ -177,6 +208,10 @@ final class DocumentController extends Controller
             'levels' => array_combine(DocumentCatalog::LEVELS, array_map(
                 fn ($l) => __('documents::catalog.level.'.$l), DocumentCatalog::LEVELS)),
             'departments' => $this->choices->departments(),
+            'statuses' => array_combine(DocumentCatalog::STATUSES, array_map(
+                fn ($s) => __('documents::catalog.status.'.$s), DocumentCatalog::STATUSES)),
+            'branches' => $this->choices->branches($user),
+            'owners' => $this->choices->owners(),
             'sortOptions' => $view === DocumentFinder::RECENT ? [] : $this->sortLabels(),
             'sort' => $sort,
             'heading' => __('documents::menu.'.$view),
@@ -201,6 +236,10 @@ final class DocumentController extends Controller
             'owners' => $this->choices->owners(),
             'accept' => '.'.str_replace(',', ',.', DocumentFiles::extensions()),
             'maxFiles' => DocumentFiles::MAX_FILES,
+            'maxMb' => DocumentFiles::maxMb(),
+            'metaFields' => $this->choices->metadataFields(all: true),
+            'metaValues' => $document->exists ? $document->metadata()->pluck('value', 'field_id')->all() : [],
+            'tagChoices' => $this->choices->tags(),
         ]);
     }
 
