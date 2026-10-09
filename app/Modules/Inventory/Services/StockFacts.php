@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Inventory\Services;
 
 use App\Core\Security\FieldSecurity;
+use App\Core\Services\DataScope;
 use App\Core\Support\CompanyContext;
 use App\Core\Support\Money;
 use App\Core\Support\ViewedBranch;
@@ -171,6 +172,20 @@ final class StockFacts
             $inventory = StandardChart::find(StandardChart::INVENTORY);
 
             return $inventory === null ? '0.00' : bcadd($inventory->balanceOn(null, $branch), '0', 2);
+        }
+
+        /*
+         * ⛔ শাখা-সীমিত মানুষ "সব শাখা"-তে — পুনঃনিরীক্ষা, ৯ অক্টোবর ২০২৬।
+         *
+         * ⚠️ স্তরগুলো কোম্পানির, তাই নিচের যোগফল গোটা কোম্পানির মজুদ — এক শাখার মানুষ
+         * অন্য শাখার মালের দামও দেখতেন। ⭐ তাঁর বেলায় মজুদের খাতের জের তাঁর নাগালে
+         * ([[Account::balanceInView()]]) — হিসাবের বাকি ঘরগুলো যে নিয়মে চলে।
+         * ⓘ সীমাহীন মানুষের (মালিক) সংখ্যা আগের মতোই স্তর থেকে।
+         */
+        if (app(DataScope::class)->viewBranchIds(auth()->user()) !== null) {
+            $inventory = StandardChart::find(StandardChart::INVENTORY);
+
+            return $inventory === null ? '0.00' : bcadd($inventory->balanceInView(), '0', 2);
         }
 
         $total = DB::table('inv_cost_layers')
