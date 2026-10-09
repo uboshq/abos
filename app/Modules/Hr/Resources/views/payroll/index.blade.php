@@ -5,7 +5,7 @@
         ['key' => 'document_no', 'label' => __('hr::field.document_no'), 'width' => '11rem',
          'render' => fn ($r) => view('hr::payroll.partials.no', ['run' => $r])],
         ['key' => 'month', 'label' => __('hr::field.month'), 'width' => '10rem',
-         'render' => fn ($r) => $r->month->format('M Y')],
+         'render' => fn ($r) => $r->month->locale(app()->getLocale())->translatedFormat('F Y')],
         ['key' => 'employee_count', 'label' => __('hr::field.employee_count'), 'numeric' => true,
          'width' => '7rem', 'render' => fn ($r) => $r->seen_count ?? $r->employee_count],
         ['key' => 'gross_total', 'total' => 'money', 'label' => __('hr::field.gross'), 'numeric' => true, 'width' => '10rem',

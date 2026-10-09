@@ -5,11 +5,13 @@ declare(strict_types=1);
 namespace App\Modules\Hr\Services;
 
 use App\Core\Services\PermissionSyncer;
+use App\Core\Support\DocumentStatus;
 use App\Models\User;
 use App\Modules\Hr\Models\Attendance;
 use App\Modules\Hr\Models\Employee;
 use App\Modules\Hr\Models\LeaveApplication;
 use App\Modules\Hr\Models\LeaveType;
+use App\Modules\Hr\Models\PayrollRun;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -122,6 +124,27 @@ final class LeaveService
         if ($application->status === LeaveApplication::CANCELLED) {
             throw ValidationException::withMessages([
                 'status' => __('hr::validation.leave_already_cancelled'),
+            ]);
+        }
+
+        /*
+         * ⛔ বেতন হয়ে যাওয়া মাসের হাজিরা মোছা নয় — পুরো-ERP পুনঃঅডিট, ৯ অক্টোবর ২০২৬ (HR ১০; [[ALeaveInAPaidMonthStaysTest]])।
+         * ⓘ প্রত্যাহারে ছুটির দিনগুলোর হাজিরা মুছে যেত, অথচ সেই মাসের বেতন ওই হাজিরা ধরেই হিসাব হয়ে খাতায় বসে গেছে — বেতনশিট আর
+         * হাজিরার পাতা আলাদা কথা বলত, আর বিনা বেতনের ছুটি হলে কাটা টাকার কোনো কারণ আর খুঁজে পাওয়া যেত না। আগে সে মাসের রান বাতিল।
+         */
+        $paid = PayrollRun::acrossBranches()
+            ->where('status', DocumentStatus::CONFIRMED)
+            ->whereDate('month', '>=', $application->from_date->copy()->startOfMonth()->toDateString())
+            ->whereDate('month', '<=', $application->to_date->copy()->startOfMonth()->toDateString())
+            ->orderBy('month')
+            ->first();
+
+        if ($paid !== null) {
+            throw ValidationException::withMessages([
+                'status' => __('hr::validation.leave_month_paid', [
+                    'month' => $paid->month->locale(app()->getLocale())->translatedFormat('F Y'),
+                    'no' => $paid->document_no,
+                ]),
             ]);
         }
 
