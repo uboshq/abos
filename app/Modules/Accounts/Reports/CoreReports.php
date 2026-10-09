@@ -8,7 +8,9 @@ use App\Core\Engines\Report\ReportColumn;
 use App\Core\Engines\Report\ReportDefinition;
 use App\Core\Engines\Report\ReportEngine;
 use App\Modules\Accounts\Models\Account;
+use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Accounts\Services\YearEndService;
+use Illuminate\Database\Query\Builder;
 use Illuminate\Database\Query\Expression;
 use Illuminate\Support\Facades\DB;
 
@@ -389,7 +391,7 @@ final class CoreReports
     }
 
     /** পরিসরের আগের জের — ডেবিট − ক্রেডিট ([[ReportDefinition::$opening]]; অডিট গ৯) */
-    private static function openingOf(\Illuminate\Database\Query\Builder $before, string $debit, string $credit): string
+    private static function openingOf(Builder $before, string $debit, string $credit): string
     {
         return (string) ($before->selectRaw("COALESCE(SUM({$debit}), 0) - COALESCE(SUM({$credit}), 0) as net")->value('net') ?? '0');
     }
@@ -465,6 +467,12 @@ final class CoreReports
             'accounts::menu.profit_loss',
             [Account::INCOME, Account::EXPENSE],
             dateRange: true,
+            /*
+             * ⭐ বিক্রয়, বিক্রীত পণ্যের ব্যয়, মোট মুনাফা — তারপর বাকি আয় আর খরচ (IAS 1) — পুরো-ERP পুনঃঅডিট, ৯ অক্টোবর ২০২৬
+             * (হিসাব, ঠিক ৭)। ⚠️ আগে সব আয়-খরচ কোড ধরে এক তালিকায়: বিক্রয় থেকে মালের দাম বাদে কত থাকল — ব্যবসার প্রথম
+             * প্রশ্ন — কোথাও লেখা ছিল না। ⓘ ভাগটা খাতের ধরন আর ছকের জায়গা থেকে ([[plSections()]]), খাতা বদলায় না।
+             */
+            grossProfit: true,
 
             /*
              * ⭐ ফলটা এক লাইনে, সবার উপরে — ৭ সেপ্টেম্বর ২০২৬।
@@ -489,7 +497,15 @@ final class CoreReports
 
                 $profit = bccomp($net, '0', 4) >= 0;
 
+                // ⓘ মোট মুনাফা — বিক্রয় আর বিক্রীত পণ্যের ব্যয়ের সারির `gross` ঘরের যোগ ([[summaryByAccount()]])
+                $gross = (string) ($totals['gross'] ?? '0') ?: '0';
+                $grossGood = bccomp($gross, '0', 4) >= 0;
+
                 return [
+                    'lines' => [[
+                        'label' => $grossGood ? __('accounts::message.gross_profit') : __('accounts::message.gross_loss'),
+                        'value' => $grossGood ? $gross : bcmul($gross, '-1', 4),
+                    ]],
                     'label' => $profit
                         ? __('accounts::message.net_profit')
                         : __('accounts::message.net_loss'),
@@ -555,6 +571,7 @@ final class CoreReports
         bool $dateRange,
         ?\Closure $summary = null,
         string|array $permission = ['accounts.report', 'accounts.report.final'],
+        bool $grossProfit = false,
     ): ReportDefinition {
         return new ReportDefinition(
             key: $key,
@@ -608,6 +625,7 @@ final class CoreReports
                     'ledger_entries.account_id', 'accounts.code',
                     'accounts.name_en', 'accounts.name_bn', 'accounts.type',
                 )
+                ->when($grossProfit, fn ($q) => $q->orderByRaw(self::plSections((int) $f['company_id'])['rank']))
                 ->orderBy('accounts.code')
                 ->select([
                     'ledger_entries.account_id',
@@ -616,26 +634,89 @@ final class CoreReports
                     DB::raw('SUM(ledger_entries.debit) as debit'),
                     DB::raw('SUM(ledger_entries.credit) as credit'),
                     DB::raw('SUM(ledger_entries.debit) - SUM(ledger_entries.credit) as net'),
-                ]),
+                ])
+                ->when($grossProfit, function ($q) use ($f) {
+                    $sections = self::plSections((int) $f['company_id']);
+
+                    $q->selectRaw($sections['label'].' as section', $sections['bindings'])
+                        // ⓘ কেবল বিক্রয় আর বিক্রীত পণ্যের ব্যয়ের সারিতে — যোগফলই মোট মুনাফা
+                        ->selectRaw($sections['gross'].' as gross');
+                }),
             columns: [
                 ['key' => 'account_name', 'label' => 'core.print.account'],
+                ...($grossProfit ? [['key' => 'section', 'label' => 'accounts::field.pl_section', 'width' => '12rem']] : []),
                 ['key' => 'type', 'label' => 'accounts::field.type', 'width' => '8rem'],
                 ['key' => 'debit', 'label' => 'core.table.debit', 'type' => ReportColumn::MONEY],
                 ['key' => 'credit', 'label' => 'core.table.credit', 'type' => ReportColumn::MONEY],
                 ['key' => 'net', 'label' => 'core.table.balance', 'type' => ReportColumn::MONEY],
+                ...($grossProfit ? [['key' => 'gross', 'label' => 'accounts::message.gross_profit', 'type' => ReportColumn::MONEY]] : []),
             ],
         );
     }
 
     /**
-     * ক্যাশ ফ্লো — টাকার খাতে কী ঢুকল আর কী বেরোল, দিনে দিনে।
+     * ⭐ লাভ-ক্ষতির চার ভাগ — বিক্রয়, বিক্রীত পণ্যের ব্যয়, অন্যান্য আয়, খরচ (IAS 1; পুনঃঅডিট, ৯ অক্টোবর ২০২৬)।
      *
-     * অ্যাকাউন্টিং মানের তিন-ভাগ (পরিচালন, বিনিয়োগ, অর্থায়ন) ক্যাশ ফ্লো
-     * নয়, ইচ্ছাকৃতভাবে: ওই ভাগটা করতে প্রতিটা খাতকে তিন ভাগের একটায়
-     * ফেলতে হয়, আর সেই মানচিত্রটা ব্যবসাভেদে আলাদা। ভুল মানচিত্রে তৈরি
-     * একটা "মানসম্মত" রিপোর্টের চেয়ে সত্যিকারের দিনভিত্তিক নগদ চলাচল
-     * বেশি কাজে লাগে — বিশেষত যে প্রশ্নটা আসলে জিজ্ঞাসা করা হয়:
-     * "এই মাসে টাকা কোথায় গেল"।
+     * ⓘ বিক্রয় = ৪১০০ আর ৪১১০ (ফেরত বিক্রয় কমায়) ও তাদের নিচের খাত; বিক্রীত পণ্যের ব্যয় = ৫১০০ আর ৫১৫০ (ক্রয়মূল্যের
+     * পার্থক্য মালেরই দাম) ও নিচের খাত। ⛔ ৫১৬০ (মজুদ ঘাটতি) নয় — তার নিজের মন্তব্য বলে ওটা বিক্রির খরচ নয়
+     * ([[StandardChart::INVENTORY_SHORTAGE_SURPLUS]])। বাকি আয়ের খাত "অন্যান্য আয়", বাকি খরচ "খরচ"।
+     * ⓘ সব শর্ত `ledger_entries.account_id` আর `accounts.type`-এ — দুইটাই গোষ্ঠীতে, তাই ONLY_FULL_GROUP_BY-তে বৈধ।
+     *
+     * @return array{label: string, bindings: list<string>, gross: string, rank: string}
+     */
+    private static function plSections(int $companyId): array
+    {
+        $in = fn (array $codes) => 'ledger_entries.account_id IN ('.(implode(',', self::subtreeIds($companyId, $codes)) ?: '0').')';
+        $revenue = $in([StandardChart::SALES, StandardChart::SALES_RETURN]);
+        $cost = $in([StandardChart::COST_OF_GOODS_SOLD, StandardChart::PURCHASE_PRICE_VARIANCE]);
+        $income = "accounts.type = '".Account::INCOME."'";
+
+        return [
+            'label' => "CASE WHEN {$revenue} THEN ? WHEN {$cost} THEN ? WHEN {$income} THEN ? ELSE ? END",
+            'bindings' => [
+                __('accounts::message.pl_revenue'), __('accounts::message.pl_cost_of_sales'),
+                __('accounts::message.pl_other_income'), __('accounts::message.pl_expenses'),
+            ],
+            'gross' => "CASE WHEN {$revenue} OR {$cost} THEN SUM(ledger_entries.credit) - SUM(ledger_entries.debit) END",
+            'rank' => "CASE WHEN {$revenue} THEN 1 WHEN {$cost} THEN 2 WHEN {$income} THEN 3 ELSE 4 END",
+        ];
+    }
+
+    /**
+     * ছকের কয়েকটা খাত আর তাদের নিচের সব খাতের id — একটা কোয়েরিতে, কোম্পানি ধরে।
+     *
+     * @param  list<string>  $codes
+     * @return list<int>
+     */
+    private static function subtreeIds(int $companyId, array $codes): array
+    {
+        $all = DB::table('accounts')->where('company_id', $companyId)->whereNull('deleted_at')->get(['id', 'parent_id', 'code']);
+        $children = $all->groupBy('parent_id');
+        $ids = [];
+        $queue = $all->whereIn('code', $codes)->pluck('id')->all();
+
+        while ($queue !== []) {
+            $id = (int) array_shift($queue);
+
+            if (isset($ids[$id])) {
+                continue;
+            }
+
+            $ids[$id] = $id;
+            array_push($queue, ...($children->get($id)?->pluck('id')->all() ?? []));
+        }
+
+        return array_values($ids);
+    }
+
+    /**
+     * ক্যাশ ফ্লো — টাকা কোথা থেকে এল আর কোথায় গেল, পরিচালন / বিনিয়োগ / অর্থায়নে ভাগ করে (IAS 7)।
+     *
+     * ⛔ পুরো-ERP পুনঃঅডিট, ৯ অক্টোবর ২০২৬ (হিসাব, ঠিক ৭)। ⚠️ আগে টাকার খাতের সব সারি দিনে দিনে যোগ হত: নগদ থেকে ব্যাংকে
+     * জমা একবার "ঢুকল" আর একবার "বেরোল" দেখাত — দুই দিকই ফুলত, অথচ কোম্পানির টাকা এক পয়সাও নড়েনি। আর তিন ভাগ ছিলই না।
+     * ⭐ এখন সারি হলো টাকার **উল্টো দিকের** খাত — যে কাগজে টাকার খাত আছে, তার বাকি সারিগুলো ([[cashFlowSections()]]):
+     * গ্রাহকের পাওনা জমা হলে টাকা এল, খরচে ডেবিট হলে গেল। ⓘ তাই নিজের দুই টাকার খাতের মধ্যে স্থানান্তরের কোনো সারিই
+     * আসে না, আর স্থানান্তরের ব্যাংক চার্জ ঠিক চার্জটুকুই আসে। ভাগটা খাতের ধরন আর ছকের জায়গা থেকে।
      */
     public static function cashFlow(): ReportDefinition
     {
@@ -646,30 +727,68 @@ final class CoreReports
             permission: 'accounts.report.final',
             title: 'accounts::menu.cash_flow',
             filters: ['date_range', 'branch'],
-            groupBy: 'trx_date',
-            runningBalance: true,
-            query: fn (array $f) => DB::table('ledger_entries')
-                ->leftJoin('accounts', 'accounts.id', '=', 'ledger_entries.account_id')
-                ->where('ledger_entries.company_id', $f['company_id'])
-                // টাকার যেকোনো খাত — নগদ, ব্যাংক, MFS ([[Account::scopeMoney]])
-                ->whereNotNull('accounts.money_kind')
-                ->where('accounts.is_group', false)
-                ->tap(ReportEngine::branchWall($f, 'ledger_entries.branch_id'))
-                ->whereBetween('ledger_entries.trx_date', [$f['from'], $f['to']])
-                ->groupBy('ledger_entries.trx_date')
-                ->orderBy('ledger_entries.trx_date')
-                ->select([
-                    'ledger_entries.trx_date',
-                    DB::raw('SUM(ledger_entries.debit) as debit'),
-                    DB::raw('SUM(ledger_entries.credit) as credit'),
-                ]),
+            groupBy: 'account_id',
+            query: function (array $f) {
+                $sections = self::cashFlowSections((int) $f['company_id']);
+
+                return DB::table('ledger_entries')
+                    ->leftJoin('accounts', 'accounts.id', '=', 'ledger_entries.account_id')
+                    ->where('ledger_entries.company_id', $f['company_id'])
+                    // ⓘ টাকার খাতের বাইরের সারি…
+                    ->whereNull('accounts.money_kind')
+                    ->tap(ReportEngine::branchWall($f, 'ledger_entries.branch_id'))
+                    ->whereBetween('ledger_entries.trx_date', [$f['from'], $f['to']])
+                    // …যে কাগজে টাকার খাতের অন্তত একটা সারি আছে — টাকা নড়ার উল্টো দিক
+                    ->whereExists(fn ($q) => $q->selectRaw('1')->from('ledger_entries as m')
+                        ->join('accounts as ma', 'ma.id', '=', 'm.account_id')
+                        ->whereColumn('m.company_id', 'ledger_entries.company_id')
+                        ->whereColumn('m.source_type', 'ledger_entries.source_type')
+                        ->whereColumn('m.source_id', 'ledger_entries.source_id')
+                        ->whereNotNull('ma.money_kind'))
+                    ->groupBy('ledger_entries.account_id', 'accounts.code', 'accounts.name_en', 'accounts.name_bn', 'accounts.type')
+                    ->orderByRaw($sections['rank'])
+                    ->orderBy('accounts.code')
+                    ->select([
+                        'ledger_entries.account_id',
+                        self::accountName(),
+                        // ⓘ উল্টো দিকে ক্রেডিট মানে টাকা এল (গ্রাহকের পাওনা কমল), ডেবিট মানে গেল
+                        DB::raw('SUM(ledger_entries.credit) as money_in'),
+                        DB::raw('SUM(ledger_entries.debit) as money_out'),
+                        DB::raw('SUM(ledger_entries.credit) - SUM(ledger_entries.debit) as net'),
+                    ])
+                    ->selectRaw($sections['label'].' as section', $sections['bindings']);
+            },
             columns: [
-                ['key' => 'trx_date', 'label' => 'core.print.date', 'type' => ReportColumn::DATE, 'width' => '9rem'],
-                ['key' => 'debit', 'label' => 'accounts::field.money_in', 'type' => ReportColumn::MONEY],
-                ['key' => 'credit', 'label' => 'accounts::field.money_out', 'type' => ReportColumn::MONEY],
-                ['key' => 'balance', 'label' => 'accounts::field.net_change', 'type' => ReportColumn::MONEY, 'total' => false],
+                ['key' => 'section', 'label' => 'accounts::field.cf_section', 'width' => '10rem'],
+                ['key' => 'account_name', 'label' => 'core.print.account'],
+                ['key' => 'money_in', 'label' => 'accounts::field.money_in', 'type' => ReportColumn::MONEY],
+                ['key' => 'money_out', 'label' => 'accounts::field.money_out', 'type' => ReportColumn::MONEY],
+                ['key' => 'net', 'label' => 'accounts::field.net_change', 'type' => ReportColumn::MONEY],
             ],
         );
+    }
+
+    /**
+     * ⭐ নগদ প্রবাহের তিন ভাগ (IAS 7) — উল্টো দিকের খাতের ধরন আর ছকের জায়গা ধরে (পুনঃঅডিট, ৯ অক্টোবর ২০২৬)।
+     *
+     * ⓘ বিনিয়োগ: স্থায়ী সম্পদ (১২০০), সঞ্চয় ও বিনিয়োগ (১১৬০–১১৬৩), দেওয়া হাতধার (১১৭০) — ও নিচের খাত।
+     * ⓘ অর্থায়ন: মূলধনের যেকোনো খাত (মালিকের টাকা, উত্তোলন), দীর্ঘমেয়াদি ঋণ (২২০০), LTR (২১৭০), নেওয়া হাতধার (২১৮০),
+     *   প্রদেয় মুনাফা (২১৯০) — ও নিচের খাত।
+     * ⓘ পরিচালন: বাকি সব — আয়, খরচ, পাওনা, দেনা, মজুদ, অগ্রিম, ভ্যাট, বেতন।
+     *
+     * @return array{label: string, bindings: list<string>, rank: string}
+     */
+    private static function cashFlowSections(int $companyId): array
+    {
+        $in = fn (array $codes) => 'ledger_entries.account_id IN ('.(implode(',', self::subtreeIds($companyId, $codes)) ?: '0').')';
+        $investing = $in([StandardChart::FIXED_ASSETS, StandardChart::DEPOSITS_AND_INVESTMENTS, '1161', '1162', '1163', StandardChart::HAND_LOAN]);
+        $financing = "(accounts.type = '".Account::EQUITY."' OR ".$in(['2200', '2170', '2180', StandardChart::PROFIT_PAYABLE]).')';
+
+        return [
+            'label' => "CASE WHEN {$investing} THEN ? WHEN {$financing} THEN ? ELSE ? END",
+            'bindings' => [__('accounts::message.cf_investing'), __('accounts::message.cf_financing'), __('accounts::message.cf_operating')],
+            'rank' => "CASE WHEN {$investing} THEN 2 WHEN {$financing} THEN 3 ELSE 1 END",
+        ];
     }
 
     /**

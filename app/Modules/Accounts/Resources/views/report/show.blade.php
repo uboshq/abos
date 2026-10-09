@@ -149,6 +149,11 @@
 
             <span class="flex-1"></span>
 
+            {{-- ⭐ বাড়তি অঙ্ক — লাভ-ক্ষতিতে মোট মুনাফা (পুনঃঅডিট, ৯ অক্টোবর ২০২৬; [[CoreReports::profitAndLoss()]]) --}}
+            @foreach ($summary['lines'] ?? [] as $line)
+                <span class="text-sm" data-summary-line>{{ $line['label'] }}: <span class="num tabular-nums">{{ \App\Core\Support\Money::format($line['value']) }}</span></span>
+            @endforeach
+
             <strong class="num text-lg tabular-nums">
                 {{-- ⓘ `text` দিলে সেটাই — খাতার জের "(Dr) 250.79" ([[PartyLedgerReports]]) --}}
                 {{ $summary['text'] ?? \App\Core\Support\Money::format($summary['value']) }}
