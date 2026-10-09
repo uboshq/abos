@@ -66,6 +66,7 @@ return [
     'signature_refused' => 'The signer turned it down — it is cancelled and nothing was posted.',
 
     // Full-ERP re-audit, 9 Oct 2026 — the money on a rent contract before it closes
+    'rental_close_unpaid_months' => 'Rent was booked for these months but not paid: :months (:amount in all, owed to the landlord). Pay those months first — in cash or from the deposit — then close the contract.',
     'rental_close_prepaid_not_expensed' => 'Rent paid ahead for :months is still in Prepaid Rent and has not gone to expense. Book that month\'s rent as payable first (from the rent list page), then close the contract.',
     'rental_close_prepaid_needs_refund' => 'Rent for :months after the closing date was paid ahead (:amount) — the landlord gives it back. Pick the money account it comes back to; it goes on the same receipt as the deposit.',
 ];
