@@ -58,7 +58,6 @@ final class EveryRightWeHandOutStopsSomethingTest extends TestCase
         'restaurant.kitchen.manage' => 'একই — রান্নাঘরের পর্দা এখনো এটা মাপে না',
         'hr.identity.view' => 'কর্মীর পরিচয়পত্রের ঘরগুলো এখনো আলাদা করে পাহারা পায়নি',
         'system_admin.audit.view' => 'অডিট পর্দা `governance.audit.view` মাপে; এই নামটা রয়ে গেছে',
-        'documents.share' => 'DOC-এর শেয়ার (পরিকল্পনা §১৪+) পরের ধাপে; চাবিটা প্রথম ধাপে ঘোষিত যাতে মালিক ভূমিকা আগেই সাজাতে পারেন (৮ অক্টোবর ২০২৬)',
     ];
 
     public function test_every_declared_permission_is_checked_somewhere(): void

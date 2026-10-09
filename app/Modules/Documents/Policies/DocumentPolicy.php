@@ -23,11 +23,6 @@ class DocumentPolicy
 {
     public function __construct(private readonly DocumentAccess $access) {}
 
-    public function viewAny(User $user): bool
-    {
-        return $user->can('documents.view');
-    }
-
     public function view(User $user, Document $document): bool
     {
         return $user->can('documents.view') && $this->access->canSee($user, $document);
