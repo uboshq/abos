@@ -14,6 +14,7 @@ use App\Core\Support\DocumentStatus;
 use App\Core\Support\Money;
 use App\Models\Company;
 use App\Models\FinancialYear;
+use App\Models\User;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Hr\Models\Employee;
@@ -22,6 +23,7 @@ use App\Modules\Hr\Models\Payslip;
 use App\Modules\Hr\Models\PayslipLine;
 use App\Modules\Hr\Models\SalaryHead;
 use App\Modules\Hr\Support\AdvanceBalance;
+use App\Modules\Hr\Support\BranchReach;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -206,6 +208,8 @@ final class PayrollService
             $this->lockFresh($run);
             $this->assertDraft($run);
 
+            $this->capAdvancesNow($run);
+
             $lines = $this->ledgerLines($run);
 
             $this->posting->post(
@@ -277,10 +281,10 @@ final class PayrollService
      *
      * @return array{name: string, content: string, rows: int}
      */
-    public function bankFile(PayrollRun $run, ?\App\Models\User $user = null): array
+    public function bankFile(PayrollRun $run, ?User $user = null): array
     {
         // ⓘ নাম ধরে কেউ চাইলে কেবল তাঁর নাগালের কর্মী ([[BranchReach]], অডিট HR ⛔২)
-        $slips = ($user === null ? $run->payslips()->getQuery() : app(\App\Modules\Hr\Support\BranchReach::class)->throughEmployee($run->payslips()->getQuery(), $user))
+        $slips = ($user === null ? $run->payslips()->getQuery() : app(BranchReach::class)->throughEmployee($run->payslips()->getQuery(), $user))
             ->with('employee')
             ->where('payment_method', 'bank')
             ->get();
@@ -578,6 +582,66 @@ final class PayrollService
         }
 
         return $lines;
+    }
+
+    /**
+     * ⛔ নিশ্চিত করার মুহূর্তে অগ্রিমের কিস্তি আবার মাপা — পুরো-ERP পুনঃঅডিট, ৯ অক্টোবর ২০২৬ ([[TheAdvanceIsNotTakenTwiceTest]])।
+     *
+     * ⓘ খসড়া বানানোর সময় কিস্তি মাস-শেষের খোলা অগ্রিমে আটকানো হয় ([[buildPayslip()]])। কিন্তু খসড়া আর নিশ্চিতের মাঝে, বা মাস-শেষের
+     * পরে, কর্মী অগ্রিম নগদে ফেরত দিতে পারেন বা খরচের দাবি দিয়ে মেটাতে পারেন — তখনও বেতন থেকে পুরো কিস্তি কাটা হত, আর তাঁর নামের
+     * ১১৩১ ঋণাত্মক হত (একই টাকা দুইবার আদায়)। এখন কর্মীর সারিতে তালা দিয়ে আজ পর্যন্ত খাতায় বসা জের পড়া হয়, কিস্তি তার বেশি হলে
+     * কমে, আর বেতনশিট ও রানের মোট আবার গোনা হয়। তালাটা খরচের দাবির সাথে একই ([[AdvanceBalance::lock()]])।
+     */
+    private function capAdvancesNow(PayrollRun $run): void
+    {
+        // ⓘ চলে যাওয়া (মুছে ফেলা) কর্মীর শেষ মাসের শিটও থাকতে পারে — তাঁর অগ্রিমও তাঁর নামেই
+        $run->load(['payslips.lines', 'payslips.employee' => fn ($q) => $q->withTrashed()]);
+
+        $owing = $run->payslips->filter(fn (Payslip $slip) => $slip->lines
+            ->contains(fn (PayslipLine $line) => ! $line->isEarning() && $this->isAdvance($line->account_id === null ? null : (int) $line->account_id)));
+
+        if ($owing->isEmpty()) {
+            return;
+        }
+
+        app(AdvanceBalance::class)->lock($owing->pluck('employee_id')->map(fn ($id) => (int) $id)->sort()->values()->all());
+
+        // ⓘ খাতায় যা আজ পর্যন্ত বসেছে — মাস-শেষের পরের ফেরতও ধরে; রানের তারিখ পরে হলে সেদিন পর্যন্ত
+        $on = $run->trx_date->greaterThan(Carbon::today()) ? $run->trx_date->copy() : Carbon::today();
+        $changed = false;
+
+        foreach ($owing as $slip) {
+            $left = $this->advanceOpen($slip->employee, $on);
+            $left = bccomp($left, '0', 2) > 0 ? $left : '0';
+            $cut = '0';
+
+            foreach ($slip->lines as $line) {
+                if ($line->isEarning() || ! $this->isAdvance($line->account_id === null ? null : (int) $line->account_id)) {
+                    continue;
+                }
+
+                $take = bccomp((string) $line->amount, $left, 2) > 0 ? Money::round($left, 2) : (string) $line->amount;
+                $left = bcsub($left, $take, 4);
+
+                if (bccomp($take, (string) $line->amount, 2) !== 0) {
+                    $cut = bcadd($cut, bcsub((string) $line->amount, $take, 4), 4);
+                    $line->forceFill(['amount' => $take])->save();
+                }
+            }
+
+            if (bccomp($cut, '0', 4) !== 0) {
+                $slip->forceFill([
+                    'deductions' => bcsub((string) $slip->deductions, $cut, 4),
+                    'net' => bcadd((string) $slip->net, $cut, 4),
+                ])->save();
+                $changed = true;
+            }
+        }
+
+        if ($changed) {
+            $this->recount($run);
+            $run->load('payslips.lines');
+        }
     }
 
     /** খাতটা কি কর্মীর অগ্রিম (১১৩১ বা তার নিচে) — কারও নামে বসে এমন খাত ([[AdvanceBalance]]) */
