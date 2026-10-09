@@ -10,10 +10,13 @@ use App\Core\Support\CompanyContext;
 use App\Core\Support\DocumentStatus;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Models\Voucher;
+use App\Modules\Accounts\Services\AccountsFacts;
 use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Accounts\Services\VoucherService;
 use App\Modules\Finance\Models\HandLoanAccount;
 use App\Modules\Finance\Models\HandLoanMovement;
+use App\Modules\Finance\Reports\LoanLedgerReports;
+use App\Modules\MasterData\Models\Person;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -188,6 +191,8 @@ final class HandLoanService
             $voucher = $this->vouchers->create(
                 [
                     'type' => $out ? Voucher::PAYMENT : Voucher::RECEIPT,
+                    // ⛔ খাতার নিজের শাখায় — হেডারের শাখায় নয় (পুরো-ERP পুনঃঅডিট, ৯ অক্টোবর ২০২৬; ভাড়ার একই নিয়ম): অন্য শাখা থেকে দিলে ১১৭০ শাখা ধরে কখনো মিলত না
+                    'branch_id' => $account->branch_id,
                     'trx_date' => $on,
                     'narration' => ($data['note'] ?? '') ?: __('finance::message.hand_loan_narration', [
                         'who' => $account->person?->name() ?? '',
@@ -324,7 +329,7 @@ final class HandLoanService
      */
     private function looseOf(array $personIds): array
     {
-        return \App\Modules\Finance\Reports\LoanLedgerReports::looseRows((int) CompanyContext::id(), $personIds)
+        return LoanLedgerReports::looseRows((int) CompanyContext::id(), $personIds)
             ->groupBy('le.party_id')
             ->selectRaw('le.party_id as person_id, COALESCE(SUM(le.debit), 0) as d, COALESCE(SUM(le.credit), 0) as c')
             ->get()
@@ -512,7 +517,7 @@ final class HandLoanService
          * ⭐ সব ব্যক্তি, কেবল যাঁদের হাতধার আছে তাঁরা নন — মালিকের কলামের আদেশ, ৫ অক্টোবর ২০২৬ (সমন্বয়কের মারফত)।
          * ⓘ যাঁর হাতধার নেই তাঁর "মোট পাওনা" তবু খতিয়ানে থাকতে পারে (জাবেদায় তাঁর নামে বসানো টাকা) — ঠিক সেই প্রশ্নটার জন্যই।
          */
-        foreach (\App\Modules\MasterData\Models\Person::query()->active()->whereNotIn('id', array_keys($people) ?: [0])->get() as $person) {
+        foreach (Person::query()->active()->whereNotIn('id', array_keys($people) ?: [0])->get() as $person) {
             $people[(int) $person->id] = ['person' => $person, 'given' => '0', 'taken' => '0', 'open' => null, 'due_on' => null];
         }
 
@@ -525,7 +530,7 @@ final class HandLoanService
             $people[$id]['taken'] = bcadd($people[$id]['taken'], $credit, 4);
         }
 
-        $books = app(\App\Modules\Accounts\Services\AccountsFacts::class)->dueFromMany('person', array_keys($people));
+        $books = app(AccountsFacts::class)->dueFromMany('person', array_keys($people));
         $totals = ['given' => '0', 'taken' => '0', 'balance' => '0', 'books' => '0'];
 
         foreach ($people as $id => &$row) {

@@ -7,6 +7,7 @@ namespace App\Modules\Finance\Services;
 use App\Core\Concerns\ReadsTheRowUnderLock;
 use App\Core\Support\CompanyContext;
 use App\Core\Support\DocumentStatus;
+use App\Core\Support\Money;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Models\Voucher;
 use App\Modules\Accounts\Models\VoucherLine;
@@ -88,8 +89,8 @@ final class InsuranceClaimService
             if (bccomp($amount, '0', 4) <= 0 || bccomp($amount, (string) $claim->claimed_amount, 4) > 0
                 || bccomp($amount, (string) $claim->received_amount, 4) < 0) {
                 throw ValidationException::withMessages(['approved_amount' => __('finance::insurance_claim.approved_out_of_range', [
-                    'received' => \App\Core\Support\Money::format($claim->received_amount),
-                    'claimed' => \App\Core\Support\Money::format($claim->claimed_amount),
+                    'received' => Money::format($claim->received_amount),
+                    'claimed' => Money::format($claim->claimed_amount),
                 ])]);
             }
 
@@ -130,7 +131,7 @@ final class InsuranceClaimService
 
             if (bccomp($amount, '0', 2) <= 0 || bccomp($amount, $claim->outstanding(), 4) > 0) {
                 throw ValidationException::withMessages(['amount' => __('finance::insurance_claim.amount_over', [
-                    'left' => \App\Core\Support\Money::format($claim->outstanding()),
+                    'left' => Money::format($claim->outstanding()),
                 ])]);
             }
 
@@ -138,6 +139,8 @@ final class InsuranceClaimService
 
             $voucher = $this->vouchers->create([
                 'type' => Voucher::RECEIPT,
+                // ⛔ দাবির শাখায় — হেডারের শাখায় নয় (পুরো-ERP পুনঃঅডিট, ৯ অক্টোবর ২০২৬): ১১৫২ নইলে শাখা ধরে কখনো মিলত না
+                'branch_id' => $claim->branch_id,
                 'trx_date' => $data['received_on'],
                 'narration' => __('finance::insurance_claim.receipt_narration', ['claim' => $this->label($claim)]),
                 'instrument_no' => trim((string) ($data['instrument_no'] ?? '')) ?: null,
@@ -302,6 +305,8 @@ final class InsuranceClaimService
 
         $voucher = $this->vouchers->create([
             'type' => Voucher::JOURNAL,
+            // ⛔ দাবির শাখায় — অনুমোদন আর বন্ধ একই শাখায় বসে, যে শাখাতেই হেডার থাকুক (পুনঃঅডিট, ৯ অক্টোবর ২০২৬)
+            'branch_id' => $claim->branch_id,
             'trx_date' => $on,
             'narration' => $narration,
         ], [
