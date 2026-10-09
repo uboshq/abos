@@ -8,11 +8,11 @@ use App\Core\Concerns\ReadsTheRowUnderLock;
 use App\Core\Support\CompanyContext;
 use App\Core\Support\DocumentStatus;
 use App\Core\Support\Money;
+use App\Models\Approval;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Models\Voucher;
 use App\Modules\Accounts\Models\VoucherLine;
 use App\Modules\Accounts\Services\StandardChart;
-use App\Modules\Accounts\Services\VoucherApproval;
 use App\Modules\Accounts\Services\VoucherService;
 use App\Modules\Finance\Models\InsuranceClaim;
 use App\Modules\Finance\Models\InsurancePolicy;
@@ -28,13 +28,15 @@ use Illuminate\Validation\ValidationException;
  *   · লিখিত অনুমোদন ([[approve()]]) — চিঠির নম্বর ছাড়া নয়; অনুমোদিত অঙ্কের যা এখনো আসেনি:
  *     Dr 1152 বীমা দাবি প্রাপ্য / Cr 4370 বীমা দাবি আদায়, অনুমোদনের দিনে
  *   · টাকা এল ([[receive()]]) — রসিদ ভাউচার দাবির বিপরীতে: Dr টাকার খাত / Cr 1152 (অনুমোদন খাতায় থাকলে) বা 4370;
- *     ⓘ হিসাবের রসিদের নিজের সইয়ের নিয়মে ([[VoucherApproval::stopping()]]) — ছক থাকলে খসড়া, সই হলে ভাউচারের পাতা
- *     থেকে পোস্ট; ভাউচারের পর্দা থেকে সরাসরি লেখা রসিদও একই পথে ([[refresh()]])
+ *     ভাউচারের পর্দা থেকে সরাসরি লেখা রসিদও দাবি নিজে আবার গোনে ([[refresh()]])
  *   · বন্ধ ([[close()]]) — বাকিটা আর আসবে না: অনুমোদনের না-আসা অংশ উল্টো (Dr 4370 / Cr 1152)
  *   · নাকচ ([[reject()]]) — কিছুই আসেনি; অনুমোদন খাতায় থাকলে পুরোটা উল্টো
  *
- * ⛔ অনুমোদন আর বন্ধের দাখিলায় সই নেই — নগদ নড়ে না, লিখিত চিঠি বা বন্ধের কারণ সারিতে থাকে (সমন্বয়কের সিদ্ধান্ত ক-এর একই
- * যুক্তি); বোতাম কেবল বীমা চালানোর চাবিতে। টাকা আসার রসিদে হিসাবের সই খাটে।
+ * ⛔ অনুমোদন, টাকা আসা আর বন্ধ — তিনটা দাখিলাই অর্থের সইয়ের ছকে ([[FinanceSignature::INSURANCE_CLAIM]]; পুরো-ERP পুনঃঅডিট,
+ * ৯ অক্টোবর ২০২৬)। ⓘ আগে অনুমোদন আর বন্ধ সই ছাড়াই খাতায় বসত, আর নগদে টাকা এলে হিসাবের রসিদের ছাড় (নিজের বাক্সে নগদ)
+ * খাটায় সেটাও — বীমার টাকা কারও সই ছাড়াই আয় হত। ছক থাকলে খসড়া, শেষ সই [[finishSigned()]] খাতায় বসায়, "না" হলে
+ * [[dropRefused()]] দাবিটা আগের অবস্থায় ফেরায়। কোম্পানির সব ছক বন্ধ থাকলে বাকি অ্যাপের মতোই সাথে সাথে খাতায়।
+ * সই বাকি থাকলে দাবিতে আর কিছু বসে না ([[assertNothingWaiting()]])।
  */
 final class InsuranceClaimService
 {
@@ -42,7 +44,6 @@ final class InsuranceClaimService
 
     public function __construct(
         private readonly VoucherService $vouchers,
-        private readonly VoucherApproval $approvals,
         private readonly FinanceSignature $signature,
     ) {}
 
@@ -81,6 +82,9 @@ final class InsuranceClaimService
             if (! $claim->isOpen() || $claim->approved_amount !== null) {
                 throw ValidationException::withMessages(['approved_amount' => __('finance::insurance_claim.not_open_for_approval')]);
             }
+
+            // ⛔ অপেক্ষার রসিদ থাকলে নয় — অনুমোদনের পরে রসিদের খাত বদলায় (৪৩৭০ → ১১৫২), সই পড়লে রসিদটা ভুল খাতে আটকাত
+            $this->assertNothingWaiting($claim, 'approved_amount');
 
             if ($ref === '') {
                 throw ValidationException::withMessages(['approval_ref' => __('finance::insurance_claim.approval_ref_required')]);
@@ -129,6 +133,9 @@ final class InsuranceClaimService
                 throw ValidationException::withMessages(['amount' => __('finance::insurance_claim.not_open')]);
             }
 
+            // ⛔ অনুমোদন বা আগের রসিদ সইয়ের অপেক্ষায় থাকলে নয় — খাত আর বাকি তখনো ঠিক নয়
+            $this->assertNothingWaiting($claim, 'amount');
+
             if (bccomp($amount, '0', 2) <= 0 || bccomp($amount, $claim->outstanding(), 4) > 0) {
                 throw ValidationException::withMessages(['amount' => __('finance::insurance_claim.amount_over', [
                     'left' => Money::format($claim->outstanding()),
@@ -151,12 +158,10 @@ final class InsuranceClaimService
                 ['account_id' => $this->expectedAccount($claim)->id, 'debit' => '0', 'credit' => $amount],
             ]);
 
-            // ⓘ হিসাবের রসিদের নিজের সই — ছক থাকলে খসড়া; পোস্ট হলে দাবি নিজে আবার গোনে ([[InsuranceClaim::settleWith()]])
-            if ($this->approvals->stopping($voucher) !== null) {
-                return ['voucher' => $voucher->fresh(), 'held' => true];
-            }
+            // ⛔ অর্থের সই — ছক থাকলে খসড়া; পোস্ট হলে দাবি নিজে আবার গোনে ([[InsuranceClaim::settleWith()]])
+            $held = $this->signature->postOrHold($voucher, FinanceSignature::INSURANCE_CLAIM, $amount);
 
-            return ['voucher' => $this->vouchers->post($voucher), 'held' => false];
+            return ['voucher' => $voucher->fresh(), 'held' => $held];
         });
     }
 
@@ -245,6 +250,9 @@ final class InsuranceClaimService
                 throw ValidationException::withMessages(['close_note' => __('finance::insurance_claim.not_open')]);
             }
 
+            // ⛔ সইয়ের অপেক্ষার রসিদ বা অনুমোদন থাকলে বন্ধ নয় — সই পড়লে টাকাটা একটা বন্ধ দাবিতে ঢুকত
+            $this->assertNothingWaiting($claim, 'close_note');
+
             if ($note === '') {
                 throw ValidationException::withMessages(['close_note' => __('finance::insurance_claim.close_note_required')]);
             }
@@ -297,7 +305,7 @@ final class InsuranceClaimService
         }
     }
 
-    /** অনুমোদন (Dr 1152 / Cr 4370) বা তার উল্টো (Dr 4370 / Cr 1152) — সই ছাড়া, নগদ নড়ে না */
+    /** অনুমোদন (Dr 1152 / Cr 4370) বা তার উল্টো (Dr 4370 / Cr 1152) — অর্থের সইয়ের ছকে; ছক থাকলে খসড়া */
     private function journal(InsuranceClaim $claim, string $on, string $amount, bool $receivable, string $narration): int
     {
         $due = $this->account(StandardChart::INSURANCE_CLAIM_RECEIVABLE);
@@ -314,7 +322,104 @@ final class InsuranceClaimService
             ['account_id' => ($receivable ? $income : $due)->id, 'debit' => '0', 'credit' => $amount],
         ]);
 
-        return (int) $this->vouchers->post($voucher)->id;
+        // ⛔ সই ছাড়া খাতায় নয় — পুনঃঅডিট, ৯ অক্টোবর ২০২৬; শেষ সই [[finishSigned()]] বসায়
+        $this->signature->postOrHold($voucher, FinanceSignature::INSURANCE_CLAIM, $amount);
+
+        return (int) $voucher->id;
+    }
+
+    /** ⭐ শেষ সই পড়ল — অপেক্ষার দাখিলা খাতায় ([[FinishTheFinancePaperOnTheLastSignature]]); দুইবার খবর এলেও একবার */
+    public function finishSigned(Voucher $voucher): void
+    {
+        DB::transaction(function () use ($voucher): void {
+            $claim = $this->claimOf($voucher);
+
+            if ($claim !== null) {
+                $this->lockFresh($claim);
+            }
+
+            $this->lockFresh($voucher);
+
+            // ⓘ রসিদ পোস্ট হলে দাবি নিজে আবার গোনে ([[InsuranceClaim::settleWith()]]); অনুমোদন আর বন্ধের সারি আগেই বসানো
+            if ($voucher->isDraft()) {
+                $this->vouchers->post($voucher);
+            }
+        });
+    }
+
+    /**
+     * ⭐ সইকারী "না" বললেন — খসড়া বাতিল, আর দাবি আগের অবস্থায়: অনুমোদন "না" হলে অনুমোদনের ঘরগুলো খালি, বন্ধ "না" হলে
+     * দাবি আবার খোলা, রসিদ "না" হলে পাওয়া টাকা আবার গোনা।
+     */
+    public function dropRefused(Voucher $voucher, string $reason): void
+    {
+        DB::transaction(function () use ($voucher, $reason): void {
+            $claim = $this->claimOf($voucher);
+
+            if ($claim !== null) {
+                $this->lockFresh($claim);
+            }
+
+            $this->lockFresh($voucher);
+
+            if (! $voucher->isDraft()) {
+                return;
+            }
+
+            $this->vouchers->cancel($voucher, $reason);
+
+            if ($claim === null) {
+                return;
+            }
+
+            if ((int) $claim->approval_voucher_id === (int) $voucher->id) {
+                $claim->forceFill(['approved_amount' => null, 'approved_on' => null, 'approval_ref' => null, 'approval_voucher_id' => null]);
+            }
+
+            if ((int) $claim->close_voucher_id === (int) $voucher->id) {
+                $claim->forceFill(['closed_on' => null, 'close_note' => null, 'close_voucher_id' => null]);
+            }
+
+            $claim->save();
+            $this->refresh($claim, excluding: (int) $voucher->id);
+        });
+    }
+
+    /** ভাউচারটা কোন দাবির — রসিদ বিপরীত ধরে, অনুমোদন বা বন্ধের দাখিলা দাবির নিজের ঘর ধরে */
+    private function claimOf(Voucher $voucher): ?InsuranceClaim
+    {
+        if ($voucher->against_type === InsuranceClaim::drillSourceType()) {
+            return InsuranceClaim::query()->find($voucher->against_id);
+        }
+
+        return InsuranceClaim::query()
+            ->where(fn ($q) => $q->where('approval_voucher_id', $voucher->id)->orWhere('close_voucher_id', $voucher->id))
+            ->first();
+    }
+
+    /**
+     * ⛔ এই দাবির কোনো দাখিলা সইয়ের অপেক্ষায় থাকলে আরেকটা নয় — ভাড়ার চুক্তির একই নিয়ম।
+     *
+     * ⓘ অপেক্ষা মানে: অনুমোদন বা বন্ধের খসড়া দাখিলা, বা দাবির বিপরীতে এমন খসড়া রসিদ যার সই চাওয়া হয়েছে। ভাউচারের পর্দায়
+     * ফেলে রাখা সাধারণ খসড়া দাবি আটকায় না। শাখার দেয়াল ছাড়া খোঁজা — হেডারে অন্য শাখা থাকলে অপেক্ষার ভাউচারটা চোখের
+     * আড়ালে থেকে পাহারা ফাঁকি দিত।
+     */
+    private function assertNothingWaiting(InsuranceClaim $claim, string $field): void
+    {
+        $own = array_values(array_filter([(int) $claim->approval_voucher_id, (int) $claim->close_voucher_id]));
+
+        $asked = Approval::query()->where('approvable_type', Voucher::class)->where('status', Approval::PENDING)->select('approvable_id');
+
+        $waiting = Voucher::query()->withoutGlobalScope('user-branch')
+            ->where('status', DocumentStatus::DRAFT)
+            ->where(fn ($q) => $q
+                ->where(fn ($v) => $v->where('against_type', InsuranceClaim::drillSourceType())->where('against_id', $claim->id)->whereIn('id', $asked))
+                ->when($own !== [], fn ($v) => $v->orWhereIn('id', $own)))
+            ->exists();
+
+        if ($waiting) {
+            throw ValidationException::withMessages([$field => __('finance::validation.awaits_signature_first')]);
+        }
     }
 
     private function label(InsuranceClaim $claim): string
