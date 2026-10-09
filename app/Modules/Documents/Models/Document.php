@@ -103,6 +103,16 @@ class Document extends Model implements ShowsItselfForSigning
         return $this->hasMany(DocumentGrant::class, 'document_id');
     }
 
+    public function signatures(): HasMany
+    {
+        return $this->hasMany(DocumentSignature::class, 'document_id');
+    }
+
+    public function links(): HasMany
+    {
+        return $this->hasMany(DocumentLink::class, 'document_id');
+    }
+
     public function metadata(): HasMany
     {
         return $this->hasMany(DocumentMetadata::class, 'document_id');
@@ -213,7 +223,7 @@ class Document extends Model implements ShowsItselfForSigning
         }
 
         // ⭐ সইকারী — তালিকার দেয়ালের বাইরে, কিন্তু সইয়ের অপেক্ষায় তাঁর সামনে ([[DocumentAccess::isSigner()]])
-        $waiting = $query->whereIn($this->getTable().'.status', [DocumentCatalog::SUBMITTED, DocumentCatalog::UNDER_REVIEW])->first();
+        $waiting = $query->first();
 
         return $waiting !== null && app(DocumentAccess::class)->isSigner($user, $waiting) ? $waiting : null;
     }

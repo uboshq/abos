@@ -20,4 +20,7 @@ return [
     'admin_tags' => 'ট্যাগ',
     'admin_fields' => 'বাড়তি ঘর',
     'approval' => 'অনুমোদন',
+    'signatures' => 'সই',
+    'share' => 'শেয়ার',
+    'links' => 'সম্পর্ক',
 ];

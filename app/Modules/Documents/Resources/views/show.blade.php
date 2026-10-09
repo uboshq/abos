@@ -55,6 +55,14 @@
         </div>
     @endif
 
+    @if (session('warning'))
+        <div role="alert"
+             class="mb-4 rounded-(--radius-field) bg-(--color-badge-danger-bg) px-3 py-2 text-sm
+                    text-(--color-badge-danger-ink)">
+            {{ session('warning') }}
+        </div>
+    @endif
+
     @if ($errors->any())
         <div role="alert"
              class="mb-4 rounded-(--radius-field) bg-(--color-badge-danger-bg) px-3 py-2 text-sm
@@ -368,6 +376,173 @@
                 </form>
             @endcan
         </div>
+    </section>
+
+    {{-- ── ⭐ সই (§১১) — কে, কবে, কোন ভার্সনের কোন হ্যাশে; যাচাই ডিস্কের ফাইল আবার হ্যাশ করে ── --}}
+    <section id="signatures" data-boxed class="mt-4 rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
+        <h2 class="border-b border-(--color-border) bg-(--color-section-head) px-4 py-3 font-semibold">
+            {{ __('documents::section.signatures') }}
+        </h2>
+
+        <p class="px-4 pt-3 text-sm" data-signature-state="{{ $signatureState }}">
+            {{ __('documents::message.signature_state_'.$signatureState) }}
+        </p>
+
+        @if ($signatureRows->isNotEmpty())
+            <div class="overflow-x-auto">
+                <table class="ui-list w-full border-collapse text-sm">
+                    <thead>
+                        <tr>
+                            <th class="text-start">{{ __('documents::field.signer') }}</th>
+                            <th class="text-end">{{ __('documents::field.level') }}</th>
+                            <th class="text-start">{{ __('documents::field.date') }}</th>
+                            <th class="text-start">{{ __('documents::field.version') }}</th>
+                            <th class="text-start">{{ __('documents::field.file_hash') }}</th>
+                            <th class="text-end">{{ __('core.table.actions') }}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach ($signatureRows as $signature)
+                            <tr data-signature="{{ $signature->id }}">
+                                <td>{{ $signature->signer?->name ?? '—' }}</td>
+                                <td class="num text-end">{{ $signature->level }}</td>
+                                <td class="whitespace-nowrap">{{ DateFormat::formatWithTime($signature->signed_at) }}</td>
+                                <td>v{{ $signature->version?->label() }}
+                                    @if ((int) $signature->version_id !== (int) $document->current_version_id)
+                                        <span class="text-2xs text-(--color-ink-muted)">· {{ __('documents::message.older_version') }}</span>
+                                    @endif
+                                </td>
+                                <td class="num text-2xs" title="{{ $signature->file_hash }}">{{ substr($signature->file_hash, 0, 12) }}…</td>
+                                <td class="text-end">
+                                    <form method="POST" action="{{ route('documents.signature.verify', [$document, $signature]) }}">
+                                        @csrf
+                                        <button type="submit" class="text-(--color-link) hover:underline">{{ __('documents::action.verify') }}</button>
+                                    </form>
+                                </td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+        @endif
+
+        @can('requestSignature', $document)
+            @if (in_array($signatureState, ['none', 'stale'], true))
+                <form method="POST" action="{{ route('documents.signature.request', $document) }}"
+                      class="flex flex-wrap items-end gap-2 border-t border-(--color-border) px-4 py-3">
+                    @csrf
+                    <x-ui.field name="note" :label="__('documents::field.submit_note')" maxlength="255" />
+                    <x-ui.button type="submit" tone="primary" icon="handover">{{ __('documents::action.ask_signature') }}</x-ui.button>
+                </form>
+            @endif
+        @endcan
+    </section>
+
+    {{-- ── ⭐ শেয়ার (§১৪) — ABOS-এর ভিতরে, মেয়াদসহ; ইন্টারনেটের খোলা লিংক নয় ── --}}
+    @can('share', $document)
+        <section id="share" data-boxed class="mt-4 rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
+            <h2 class="border-b border-(--color-border) bg-(--color-section-head) px-4 py-3 font-semibold">
+                {{ __('documents::section.share') }}
+            </h2>
+
+            <ul class="px-4 pt-3 text-sm">
+                @forelse ($document->grants->where('via_share', true) as $shareRow)
+                    <li data-share="{{ $shareRow->grantee_type }}-{{ $shareRow->grantee_id }}" @class(['opacity-60' => $shareRow->isExpired()])>
+                        {{ $shareRow->granteeName() }}
+                        · {{ $shareRow->can_download ? __('documents::catalog.ability.download') : __('documents::message.view_only') }}
+                        · {{ $shareRow->expires_at ? __('documents::message.until', ['date' => $shareRow->expires_at->toDateString()]) : __('documents::message.no_end') }}
+                    </li>
+                @empty
+                    <li class="text-(--color-ink-muted)">{{ __('documents::message.not_shared') }}</li>
+                @endforelse
+            </ul>
+
+            <form method="POST" action="{{ route('documents.share.store', $document) }}" x-data="{ type: 'user' }"
+                  class="grid gap-3 px-4 py-3 lg:grid-cols-[10rem_minmax(0,1fr)_10rem_auto_auto] lg:items-end">
+                @csrf
+                <x-ui.select name="grantee_type" :label="__('documents::field.grantee_type')"
+                             :options="['user' => __('documents::catalog.grantee.user'), 'role' => __('documents::catalog.grantee.role')]"
+                             selected="user" x-model="type" />
+                <div x-show="type === 'user'">
+                    <x-ui.select name="grantee_id" :label="__('documents::field.grantee')" :options="$sharePeople" placeholder="—"
+                                 x-bind:disabled="type !== 'user'" />
+                </div>
+                <div x-show="type === 'role'" x-cloak>
+                    <x-ui.select name="grantee_id" :label="__('documents::field.grantee')" :options="$shareRoles" placeholder="—"
+                                 x-bind:disabled="type !== 'role'" />
+                </div>
+                <x-ui.field name="expires_on" type="date" :label="__('documents::field.share_until')" />
+                <label class="flex min-h-(--spacing-touch) items-center gap-2 text-sm">
+                    <input type="checkbox" name="download" value="1" class="size-4">
+                    {{ __('documents::message.may_download') }}
+                </label>
+                <x-ui.button type="submit" tone="primary" icon="share">{{ __('documents::action.share') }}</x-ui.button>
+            </form>
+        </section>
+    @endcan
+
+    {{-- ── ⭐ সম্পর্ক (§১৫) — গ্রাহক, সরবরাহকারী, ক্রয়ের কাগজ, কর্মী ── --}}
+    <section id="links" data-boxed class="mt-4 rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
+        <h2 class="border-b border-(--color-border) bg-(--color-section-head) px-4 py-3 font-semibold">
+            {{ __('documents::section.links') }}
+        </h2>
+
+        <ul class="divide-y divide-(--color-border) text-sm">
+            @forelse ($links as $item)
+                <li class="flex items-center gap-3 px-4 py-2" data-link="{{ $item['link']->source_type }}-{{ $item['link']->source_id }}">
+                    <span class="text-(--color-ink-muted)">{{ $item['type'] }}</span>
+                    <span class="num">{{ $item['no'] }}</span>
+                    @if ($item['url'])
+                        <a href="{{ $item['url'] }}" class="min-w-0 flex-1 truncate text-(--color-link) hover:underline">{{ $item['label'] }}</a>
+                    @else
+                        <span class="min-w-0 flex-1 truncate text-(--color-ink-muted)">{{ $item['label'] }}</span>
+                    @endif
+                    @can('link', $document)
+                        <form method="POST" action="{{ route('documents.link.destroy', [$document, $item['link']]) }}"
+                              data-confirm="{{ __('documents::message.unlink_confirm') }}">
+                            @csrf
+                            @method('DELETE')
+                            <button type="submit" class="text-(--color-danger) hover:underline">{{ __('documents::action.remove') }}</button>
+                        </form>
+                    @endcan
+                </li>
+            @empty
+                <li class="px-4 py-2 text-(--color-ink-muted)">{{ __('documents::message.no_links') }}</li>
+            @endforelse
+        </ul>
+
+        @can('link', $document)
+            @if ($linkTypes !== [])
+                {{-- ⓘ আগে খোঁজ (GET, এই পাতাতেই), তারপর বাছাই করে জোড়া (POST) --}}
+                <form method="GET" action="{{ route('documents.show', $document) }}#links"
+                      class="grid gap-3 border-t border-(--color-border) px-4 py-3 sm:grid-cols-[12rem_minmax(0,1fr)_auto] sm:items-end">
+                    <x-ui.select name="link_type" :label="__('documents::field.link_type')" :options="$linkTypes"
+                                 :selected="$linkType" required />
+                    <x-ui.field name="link_q" :label="__('documents::field.link_record')" :value="$linkQuery" minlength="2" required
+                                :hint="__('documents::message.link_hint')" />
+                    <x-ui.button type="submit" icon="search">{{ __('documents::action.find') }}</x-ui.button>
+                </form>
+
+                @if ($linkQuery !== '')
+                    <ul class="border-t border-(--color-border) text-sm">
+                        @forelse ($linkCandidates as $candidate)
+                            <li class="flex items-center gap-3 px-4 py-2" data-candidate="{{ $candidate['type'] }}-{{ $candidate['id'] }}">
+                                <span class="num">{{ $candidate['no'] }}</span>
+                                <span class="min-w-0 flex-1 truncate">{{ $candidate['label'] }}</span>
+                                <form method="POST" action="{{ route('documents.link.store', $document) }}">
+                                    @csrf
+                                    <input type="hidden" name="source_type" value="{{ $candidate['type'] }}">
+                                    <input type="hidden" name="source_id" value="{{ $candidate['id'] }}">
+                                    <button type="submit" class="text-(--color-link) hover:underline">{{ __('documents::action.link') }}</button>
+                                </form>
+                            </li>
+                        @empty
+                            <li class="px-4 py-2 text-(--color-ink-muted)">{{ __('core.empty.no_results') }}</li>
+                        @endforelse
+                    </ul>
+                @endif
+            @endif
+        @endcan
     </section>
 
     {{-- ── ⭐ কাগজ-ধরে অধিকার (§১৩) — কে এই কাগজে কী পারেন; দেখা সবসময় চালু ── --}}

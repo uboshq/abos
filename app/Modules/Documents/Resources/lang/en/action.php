@@ -34,4 +34,9 @@ return [
     'submit' => 'Send for approval',
     'withdraw' => 'Withdraw the request',
     'publish' => 'Publish',
+    'verify' => 'Verify',
+    'ask_signature' => 'Ask for signatures',
+    'share' => 'Share',
+    'link' => 'Link',
+    'find' => 'Find',
 ];

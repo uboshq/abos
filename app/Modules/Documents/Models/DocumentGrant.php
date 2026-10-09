@@ -46,7 +46,7 @@ class DocumentGrant extends Model
     protected $fillable = [
         'company_id', 'document_id', 'grantee_type', 'grantee_id',
         'can_view', 'can_download', 'can_print', 'can_share', 'can_edit',
-        'created_by', 'updated_by',
+        'via_share', 'expires_at', 'created_by', 'updated_by',
     ];
 
     protected function casts(): array
@@ -57,12 +57,20 @@ class DocumentGrant extends Model
             'can_print' => 'boolean',
             'can_share' => 'boolean',
             'can_edit' => 'boolean',
+            'via_share' => 'boolean',
+            'expires_at' => 'datetime',
         ];
     }
 
     public function auditIgnores(): array
     {
         return ['updated_by'];
+    }
+
+    /** শেয়ারের মেয়াদ পেরিয়েছে কি না — পেরোলে অধিকারটা আর কিছুই খোলে না ([[DocumentAccess]]) */
+    public function isExpired(): bool
+    {
+        return $this->expires_at !== null && $this->expires_at->isPast();
     }
 
     public function document(): BelongsTo

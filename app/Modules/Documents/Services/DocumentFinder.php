@@ -34,6 +34,9 @@ final class DocumentFinder
 
     public const SEARCH = 'search';
 
+    /** ⭐ চতুর্থ ধাপ — আমার সাথে শেয়ার করা (§১৪) */
+    public const SHARED = 'shared';
+
     /** ⭐ তৃতীয় ধাপ — মেয়াদ ও নবায়ন (§১২) */
     public const EXPIRY = 'expiry';
 
@@ -55,6 +58,10 @@ final class DocumentFinder
 
         if ($view === self::RECENT) {
             $this->recentFor($query, $user);
+        }
+
+        if ($view === self::SHARED) {
+            app(DocumentAccess::class)->sharedWith($query, $user);
         }
 
         if ($view === self::EXPIRY) {

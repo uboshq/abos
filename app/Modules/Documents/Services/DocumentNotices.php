@@ -82,13 +82,7 @@ final class DocumentNotices
     /** অধিকার বদল — মানুষটা নিজে, বা ভূমিকার সবাই */
     public function permissionChanged(Document $document, DocumentGrant $grant, bool $removed): void
     {
-        $ids = $grant->grantee_type === DocumentGrant::USER
-            ? [(int) $grant->grantee_id]
-            : DB::table('model_has_roles')
-                ->where('model_has_roles.company_id', $document->company_id)
-                ->where('model_has_roles.role_id', $grant->grantee_id)
-                ->where('model_has_roles.model_type', (new User)->getMorphClass())
-                ->pluck('model_has_roles.model_id')->map(fn ($id) => (int) $id)->all();
+        $ids = $this->granteeIds($document, $grant);
 
         // ⓘ সরানো হলে তিনি আর কাগজটা দেখেন না — তাই খবরে নাম নেই, কেবল নম্বর, আর লিংকও নয়
         $this->tell($this->people($ids), self::PERMISSION_CHANGED, $removed ? null : $document,
@@ -123,6 +117,43 @@ final class DocumentNotices
             null);
     }
 
+    /** সই চাওয়া — এখনকার স্তরে যাঁরা সই দিতে পারেন (চতুর্থ ধাপ) */
+    public function signatureRequired(Document $document, Approval $approval): void
+    {
+        $signers = $this->companyPeople()->filter(fn (User $u) => $this->engine->canDecide($approval, $u));
+
+        $this->tell($signers, self::SIGNATURE_REQUIRED, $document,
+            __('documents::notice.signature_required', ['name' => $document->name]),
+            __('documents::notice.signature_required_body', ['version' => (string) ($approval->payload['version'] ?? '')]),
+            route('approval.inbox.show', $approval->id),
+            guarded: false);
+    }
+
+    /** সব সই পড়ল — যিনি চেয়েছিলেন আর কাগজের মালিক */
+    public function signatureCompleted(Document $document, Approval $approval): void
+    {
+        $this->tell($this->people([(int) $approval->requested_by, (int) $document->owner_id]), self::SIGNATURE_COMPLETED, $document,
+            __('documents::notice.signature_completed', ['name' => $document->name]),
+            __('documents::notice.signature_required_body', ['version' => (string) ($approval->payload['version'] ?? '')]));
+    }
+
+    /** সই হলো না — যিনি চেয়েছিলেন আর মালিক; ⓘ ইঞ্জিনের নিজের "না"-এর খবর চাওয়াকারী আলাদা পান */
+    public function signatureRefused(Document $document, Approval $approval): void
+    {
+        $ids = array_diff([(int) $document->owner_id], [(int) $approval->requested_by]);
+
+        $this->tell($this->people($ids), self::REJECTED, $document,
+            __('documents::notice.signature_refused', ['name' => $document->name]), null);
+    }
+
+    /** শেয়ার — যাঁকে বা যে ভূমিকাকে শেয়ার করা হলো (চতুর্থ ধাপ) */
+    public function shared(Document $document, DocumentGrant $grant): void
+    {
+        $this->tell($this->people($this->granteeIds($document, $grant)), self::SHARED, $document,
+            __('documents::notice.shared', ['name' => $document->name]),
+            $grant->expires_at !== null ? __('documents::notice.shared_until', ['date' => $grant->expires_at->toDateString()]) : null);
+    }
+
     /**
      * মেয়াদ — ৯০/৬০ দিনে সতর্কতা, ৩০/১৫/৭/১ দিনে নবায়নের ডাক, পেরোলে "মেয়াদ শেষ" ([[DocumentExpiry]])।
      *
@@ -148,6 +179,18 @@ final class DocumentNotices
         return $this->tell($people, $type, $document,
             __($title, ['name' => $document->name, 'days' => $days]),
             __('documents::notice.expiry_body', ['date' => $document->expiry_date?->toDateString()]));
+    }
+
+    /** @return list<int> অধিকারের মানুষটা, বা ভূমিকার সবাই — এই কোম্পানিতে */
+    private function granteeIds(Document $document, DocumentGrant $grant): array
+    {
+        return $grant->grantee_type === DocumentGrant::USER
+            ? [(int) $grant->grantee_id]
+            : DB::table('model_has_roles')
+                ->where('model_has_roles.company_id', $document->company_id)
+                ->where('model_has_roles.role_id', $grant->grantee_id)
+                ->where('model_has_roles.model_type', (new User)->getMorphClass())
+                ->pluck('model_has_roles.model_id')->map(fn ($id) => (int) $id)->all();
     }
 
     /**

@@ -51,6 +51,8 @@ final class TheDocumentModuleShowsItsPlanTest extends TestCase
         'documents.archived', 'documents.bin', 'documents.search', 'documents.admin',
         // ⭐ তৃতীয় ধাপ — নিজের টেস্টে ([[ADocumentGoesThroughItsSignaturesTest]])
         'documents.approval', 'documents.expiry',
+        // ⭐ চতুর্থ ধাপ — নিজের টেস্টে ([[ASignatureBelongsToTheBytesItSignedTest]])
+        'documents.shared', 'documents.signatures',
     ];
 
     public function test_every_menu_page_is_shut_without_the_key_and_opens_with_it_for_the_same_person(): void

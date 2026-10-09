@@ -56,4 +56,8 @@ return [
     'level' => 'স্তর',
     'due_date' => 'শেষ সময়',
     'submit_note' => 'অনুমোদনকারীর জন্য কথা',
+    'signer' => 'সইকারী',
+    'share_until' => 'শেয়ার কতদিন',
+    'link_type' => 'কীসের সাথে',
+    'link_record' => 'খুঁজুন',
 ];

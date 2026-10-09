@@ -7,6 +7,7 @@ namespace App\Modules\Documents\Listeners;
 use App\Core\Events\ApprovalDecided;
 use App\Core\Support\CompanyContext;
 use App\Models\Approval;
+use App\Modules\Documents\Services\DocumentSignatures;
 use App\Modules\Documents\Services\DocumentWorkflow;
 
 /**
@@ -20,8 +21,10 @@ final class MoveTheDocumentOnItsSignature
 {
     public function handle(ApprovalDecided $event): void
     {
+        $action = $event->payload['action'] ?? null;
+
         if (($event->payload['module'] ?? null) !== DocumentWorkflow::MODULE
-            || ($event->payload['action'] ?? null) !== DocumentWorkflow::ACTION
+            || ! in_array($action, [DocumentWorkflow::ACTION, DocumentSignatures::ACTION], true)
             || ! in_array($event->payload['status'] ?? null, [Approval::APPROVED, Approval::REJECTED], true)) {
             return;
         }
@@ -32,6 +35,9 @@ final class MoveTheDocumentOnItsSignature
             return;
         }
 
-        CompanyContext::forCompany((int) $approval->company_id, fn () => app(DocumentWorkflow::class)->decided($approval));
+        // ⭐ চতুর্থ ধাপ — সইয়ের অনুরোধের শেষ সিদ্ধান্তে প্রতিটা সই নিজের সারিতে ([[DocumentSignatures::decided()]])
+        CompanyContext::forCompany((int) $approval->company_id, fn () => $action === DocumentSignatures::ACTION
+            ? app(DocumentSignatures::class)->decided($approval)
+            : app(DocumentWorkflow::class)->decided($approval));
     }
 }

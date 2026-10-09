@@ -98,6 +98,7 @@ final class DocumentPlan
      * সরেছে ([[DocumentController]]) আর এখান থেকে মুছেছে।
      * ⭐ ৯ অক্টোবর ২০২৬, দ্বিতীয় ধাপ: আর্কাইভ, রিসাইকেল বিন, বিস্তারিত খোঁজ আর প্রশাসনও — বাকি বারোটা আগের মতোই।
      * ⭐ তৃতীয় ধাপ: অনুমোদনের সারি আর মেয়াদ ও নবায়নও — বাকি দশটা আগের মতোই।
+     * ⭐ চতুর্থ ধাপ: শেয়ার করা ডকুমেন্ট আর সই কেন্দ্রও — বাকি আটটা আগের মতোই।
      *
      * ⓘ `group` — ABOS-এর ছয়-ভাগ মেনুর কোন ভাগে ([[ModuleDefinition::MENU_GROUPS]])।
      * ⓘ `sections` — পরিকল্পনার কোন অংশগুলো এই পর্দার কথা বলে।
@@ -113,16 +114,12 @@ final class DocumentPlan
             'systems' => ['image', 'attachment', 'search'], 'new' => true],
         'intelligence' => ['icon' => 'filter', 'group' => 'transactions', 'sections' => [8],
             'systems' => ['search', 'audit_engine'], 'new' => true],
-        'shared' => ['icon' => 'share', 'group' => 'transactions', 'sections' => [5, 13, 23],
-            'systems' => ['notification', 'data_scope', 'audit_engine'], 'new' => false],
         'favourite' => ['icon' => 'star', 'group' => 'transactions', 'sections' => [2],
             'systems' => ['data_scope'], 'new' => true],
         'templates' => ['icon' => 'columns', 'group' => 'transactions', 'sections' => [2, 21],
             'systems' => ['print', 'number_series'], 'new' => false],
         'editor' => ['icon' => 'edit', 'group' => 'transactions', 'sections' => [9],
             'systems' => ['audit_trait', 'audit_engine', 'attachment'], 'new' => true],
-        'signature' => ['icon' => 'handover', 'group' => 'approval', 'sections' => [11],
-            'systems' => ['approval', 'approval_flow', 'notification'], 'new' => false],
         'reports' => ['icon' => 'reports', 'group' => 'reports', 'sections' => [17],
             'systems' => ['report', 'data_scope'], 'new' => false],
         'audit' => ['icon' => 'eye', 'group' => 'reports', 'sections' => [18],
@@ -143,17 +140,17 @@ final class DocumentPlan
         2 => ['status' => self::SHELL, 'systems' => ['menu', 'permissions']],
         3 => ['status' => self::PLANNED, 'systems' => ['dashboard', 'data_scope']],
         4 => ['status' => self::LIVE, 'systems' => ['attachment', 'data_scope', 'branch_wall']],
-        5 => ['status' => self::PARTLY, 'systems' => ['print', 'approval', 'audit_engine']],
+        5 => ['status' => self::LIVE, 'systems' => ['print', 'approval', 'audit_engine']],
         6 => ['status' => self::PARTLY, 'systems' => ['attachment', 'image']],
         7 => ['status' => self::PLANNED, 'systems' => ['image', 'attachment']],
         8 => ['status' => self::PLANNED, 'systems' => ['search']],
         9 => ['status' => self::PARTLY, 'systems' => ['attachment', 'audit_trait']],
         10 => ['status' => self::LIVE, 'systems' => ['approval']],
-        11 => ['status' => self::PLANNED, 'systems' => ['approval', 'approval_flow']],
+        11 => ['status' => self::LIVE, 'systems' => ['approval', 'approval_flow']],
         12 => ['status' => self::LIVE, 'systems' => ['notification']],
         13 => ['status' => self::LIVE, 'systems' => ['permissions', 'data_scope', 'branch_wall']],
         14 => ['status' => self::LIVE, 'systems' => ['permissions']],
-        15 => ['status' => self::PLANNED, 'systems' => ['drill']],
+        15 => ['status' => self::LIVE, 'systems' => ['drill']],
         16 => ['status' => self::LIVE, 'systems' => ['search', 'data_scope']],
         17 => ['status' => self::PLANNED, 'systems' => ['report', 'data_scope']],
         18 => ['status' => self::PLANNED, 'systems' => ['audit_engine', 'audit_trait']],
@@ -161,7 +158,7 @@ final class DocumentPlan
         20 => ['status' => self::PARTLY, 'systems' => ['settings', 'number_series']],
         21 => ['status' => self::PARTLY, 'systems' => ['number_series', 'company_wall', 'branch_wall']],
         22 => ['status' => self::LIVE, 'systems' => ['approval']],
-        23 => ['status' => self::PARTLY, 'systems' => ['notification']],
+        23 => ['status' => self::LIVE, 'systems' => ['notification']],
         24 => ['status' => self::RULE, 'systems' => ['menu']],
         25 => ['status' => self::RULE, 'systems' => ['attachment', 'search', 'approval', 'audit_engine']],
     ];

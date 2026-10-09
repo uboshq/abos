@@ -7,4 +7,5 @@ declare(strict_types=1);
  */
 return [
     'document' => 'ডকুমেন্ট অনুমোদন',
+    'signature' => 'ডকুমেন্টে সই',
 ];

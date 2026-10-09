@@ -1,6 +1,7 @@
 <?php
 
 declare(strict_types=1);
+use App\Core\Contracts\LinkedDocuments;
 use App\Core\Events\ApprovalDecided;
 use App\Modules\Documents\Dashboard\DocumentsDashboard;
 use App\Modules\Documents\Listeners\MoveTheDocumentOnItsSignature;
@@ -8,6 +9,8 @@ use App\Modules\Documents\Models\DocumentCategory;
 use App\Modules\Documents\Models\DocumentType;
 use App\Modules\Documents\Models\MetadataField;
 use App\Modules\Documents\Services\DocumentAccess;
+use App\Modules\Documents\Services\DocumentLinks;
+use App\Modules\Documents\Services\DocumentSignatures;
 use App\Modules\Documents\Services\DocumentWorkflow;
 use App\Modules\MasterData\Models\Department;
 
@@ -53,7 +56,7 @@ return [
         'bn' => 'ডকুমেন্ট ম্যানেজমেন্ট',
     ],
 
-    'version' => '0.4.0',
+    'version' => '0.5.0',
 
     /*
      * ⭐ সাইডবারে মাস্টার ডাটা (৫) আর সিস্টেম অ্যাডমিনের (১০) মাঝখানে — মালিক, ৩০ সেপ্টেম্বর ২০২৬:
@@ -101,8 +104,8 @@ return [
                 'route_params' => ['screen' => 'intelligence'], 'permission' => 'documents.view'],
             ['label' => 'documents::menu.mine', 'icon' => 'list', 'route' => 'documents.mine',
                 'permission' => 'documents.view'],
-            ['label' => 'documents::menu.shared', 'icon' => 'share', 'route' => 'documents.screen',
-                'route_params' => ['screen' => 'shared'], 'permission' => 'documents.view'],
+            ['label' => 'documents::menu.shared', 'icon' => 'share', 'route' => 'documents.shared',
+                'permission' => 'documents.view'],
             ['label' => 'documents::menu.recent', 'icon' => 'clock', 'route' => 'documents.recent',
                 'permission' => 'documents.view'],
             ['label' => 'documents::menu.favourite', 'icon' => 'star', 'route' => 'documents.screen',
@@ -126,8 +129,8 @@ return [
             // ⭐ অনুমোদনের সারি — ABOS-এর সইয়ের ইনবক্স, কেবল ডকুমেন্ট ছেঁকে (তৃতীয় ধাপ)
             ['label' => 'documents::menu.approval', 'icon' => 'check_circle', 'route' => 'documents.approval',
                 'permission' => 'documents.view'],
-            ['label' => 'documents::menu.signature', 'icon' => 'handover', 'route' => 'documents.screen',
-                'route_params' => ['screen' => 'signature'], 'permission' => 'documents.view'],
+            ['label' => 'documents::menu.signature', 'icon' => 'handover', 'route' => 'documents.signatures',
+                'permission' => 'documents.view'],
         ],
 
         'reports' => [
@@ -181,6 +184,13 @@ return [
          */
         'documents.submit',     // অনুমোদনে পাঠানো আর ফেরত নেওয়া
         'documents.publish',    // অনুমোদিত কাগজ প্রকাশ করা
+
+        /*
+         * ⭐ চতুর্থ ধাপ (৯ অক্টোবর ২০২৬) — শেয়ার (§১৪), সই চাওয়া (§১১)।
+         * ⓘ সই দেওয়া নিজে ABOS-এর অনুমোদনের চাবিতে (`approval.decide`), কাগজ জোড়া বদলের চাবিতে।
+         */
+        'documents.share',
+        'documents.signature_request',
 
         /*
          * ⭐ গোপনীয়তার সিঁড়ি — পরিকল্পনা §১৪ (*"restricted-এ বাড়তি permission"*)।
@@ -244,10 +254,20 @@ return [
      */
     'approvals' => [
         DocumentWorkflow::ACTION => 'documents::approval.document',
+        // ⭐ সই (§১১; চতুর্থ ধাপ) — একজন, অনেকে বা পরপর: ধারার পর্দায় স্তর আর "সবাই/অন্তত N জন"
+        DocumentSignatures::ACTION => 'documents::approval.signature',
     ],
 
     // ⓘ টাকা নড়ে না — তাই একসাথে অনেক অনুমোদনেও চলে
     'moves_money' => [],
+
+    /*
+     * ⭐ রেকর্ডের পাতায় জোড়া কাগজ (§১৫; চতুর্থ ধাপ) — কোরের চুক্তি, যাতে গ্রাহক বা ক্রয়ের পাতা DOC-এর
+     * কোনো ক্লাস না চেনে ([[x-ui.linked-documents]])।
+     */
+    'bindings' => [
+        LinkedDocuments::class => DocumentLinks::class,
+    ],
 
     'listeners' => [
         ApprovalDecided::class => [MoveTheDocumentOnItsSignature::class],

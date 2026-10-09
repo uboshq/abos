@@ -9,6 +9,7 @@ use App\Core\Support\CompanyContext;
 use App\Models\User;
 use App\Modules\Documents\Models\Document;
 use App\Modules\Documents\Models\DocumentGrant;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Spatie\Permission\Models\Role;
 
@@ -49,6 +50,9 @@ final class DocumentGrants
 
             $grant->fill([
                 ...$flags,
+                // ⓘ প্রশাসকের দেওয়া অধিকার শেয়ার নয় — মেয়াদ নেই, আগের শেয়ারটাকেও ঢেকে দেয়
+                'via_share' => false,
+                'expires_at' => null,
                 'company_id' => $document->company_id ?? CompanyContext::id(),
                 'updated_by' => Actor::userId(),
             ]);
@@ -65,6 +69,50 @@ final class DocumentGrants
         });
 
         $this->notices->permissionChanged($document, $made, removed: false);
+
+        return $made;
+    }
+
+    /**
+     * ⭐ শেয়ার (চতুর্থ ধাপ) — একই অধিকারের খাতা, কেবল "দেখা" আর ইচ্ছা হলে "নামানো", আর ঐচ্ছিক মেয়াদ।
+     *
+     * ⓘ শেয়ার অধিকারের মতোই দেয়াল মানে ([[DocumentAccess]]) — অন্য শাখা বা কোম্পানির মানুষের জন্য কিছুই
+     * খোলে না। ⛔ ইন্টারনেটের খোলা লিংক নয় — কেবল ABOS-এর ভিতরের মানুষ বা ভূমিকা।
+     * ⓘ আগে থেকে পূর্ণ অধিকার থাকলে শেয়ার সেটা কমায় না — বেশি অধিকারটাই থাকে।
+     */
+    public function share(Document $document, string $type, int $granteeId, bool $download, ?Carbon $expiresAt): DocumentGrant
+    {
+        $made = DB::transaction(function () use ($document, $type, $granteeId, $download, $expiresAt) {
+            $grant = DocumentGrant::query()->firstOrNew([
+                'document_id' => $document->getKey(),
+                'grantee_type' => $type,
+                'grantee_id' => $granteeId,
+            ]);
+
+            $wasFull = $grant->exists && ! $grant->via_share;
+
+            $grant->fill([
+                'company_id' => $document->company_id ?? CompanyContext::id(),
+                'can_view' => true,
+                'can_download' => $download || ($wasFull && $grant->can_download),
+                'via_share' => ! $wasFull,
+                'expires_at' => $wasFull ? null : $expiresAt?->endOfDay(),
+                'updated_by' => Actor::userId(),
+            ]);
+
+            if (! $grant->exists) {
+                $grant->created_by = Actor::userId();
+            }
+
+            $grant->save();
+
+            $document->auditAction('document_shared', $grant->granteeName()
+                .($expiresAt !== null ? ' → '.$expiresAt->toDateString() : ''));
+
+            return $grant;
+        });
+
+        $this->notices->shared($document, $made);
 
         return $made;
     }

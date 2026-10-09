@@ -21,4 +21,10 @@ return [
     'renewal_required' => 'Renewal needed — :days days left: :name',
     'expired' => 'Expired: :name',
     'expiry_body' => 'Expiry date :date.',
+    'signature_required' => 'Signature needed: :name',
+    'signature_required_body' => 'Version :version',
+    'signature_completed' => 'All signatures are in: :name',
+    'signature_refused' => 'Signature refused: :name',
+    'shared' => 'A document was shared with you: :name',
+    'shared_until' => 'You can see it until :date.',
 ];

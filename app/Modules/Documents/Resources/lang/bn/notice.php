@@ -21,4 +21,10 @@ return [
     'renewal_required' => 'নবায়ন দরকার — :days দিন বাকি: :name',
     'expired' => 'মেয়াদ শেষ: :name',
     'expiry_body' => 'মেয়াদের তারিখ :date।',
+    'signature_required' => 'সই দরকার: :name',
+    'signature_required_body' => 'ভার্সন :version',
+    'signature_completed' => 'সব সই হয়ে গেছে: :name',
+    'signature_refused' => 'সই হলো না: :name',
+    'shared' => 'আপনার সাথে একটা ডকুমেন্ট শেয়ার করা হলো: :name',
+    'shared_until' => ':date পর্যন্ত দেখতে পারবেন।',
 ];

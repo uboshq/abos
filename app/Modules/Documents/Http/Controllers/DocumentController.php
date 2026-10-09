@@ -17,6 +17,8 @@ use App\Modules\Documents\Services\DocumentFiles;
 use App\Modules\Documents\Services\DocumentFinder;
 use App\Modules\Documents\Services\DocumentGrants;
 use App\Modules\Documents\Services\DocumentLibrary;
+use App\Modules\Documents\Services\DocumentLinks;
+use App\Modules\Documents\Services\DocumentSignatures;
 use App\Modules\Documents\Services\DocumentWorkflow;
 use App\Modules\Documents\Support\DocumentCatalog;
 use Illuminate\Http\RedirectResponse;
@@ -41,6 +43,8 @@ final class DocumentController extends Controller
         private readonly DocumentChoices $choices,
         private readonly DocumentGrants $grants,
         private readonly DocumentWorkflow $workflow,
+        private readonly DocumentSignatures $signatures,
+        private readonly DocumentLinks $links,
     ) {}
 
     /** ডকুমেন্ট সেন্টার — সব কাগজ, ফোল্ডার ধরে (§৪) */
@@ -77,6 +81,12 @@ final class DocumentController extends Controller
     public function expiry(Request $request): View
     {
         return $this->list($request, DocumentFinder::EXPIRY);
+    }
+
+    /** আমার সাথে শেয়ার করা কাগজ (§১৪ Shared Documents) */
+    public function shared(Request $request): View
+    {
+        return $this->list($request, DocumentFinder::SHARED);
     }
 
     /** বিস্তারিত খোঁজ — সব ছাঁকনি একসাথে, আর্কাইভসহ (§১৬) */
@@ -139,6 +149,19 @@ final class DocumentController extends Controller
             'inline' => $this->library->opensInline($document->currentVersion),
             'mime' => $document->currentVersion?->attachment?->mime_type,
             'approval' => $this->workflow->latest($document)?->load(['decisions.user']),
+
+            // ⭐ চতুর্থ ধাপ — সই, শেয়ার, সম্পর্ক
+            'signatureState' => $this->signatures->state($document),
+            'signatureRows' => $document->signatures()->with(['signer', 'version'])->orderByDesc('signed_at')->orderByDesc('id')->get(),
+            'links' => $this->links->of($document, $this->user($request)),
+            'linkTypes' => $this->links->types(),
+            'linkType' => (string) $request->query('link_type', ''),
+            'linkQuery' => (string) $request->query('link_q', ''),
+            'linkCandidates' => $request->filled('link_q') && $request->user()?->can('link', $document)
+                ? $this->links->candidates((string) $request->query('link_type'), (string) $request->query('link_q'), $this->user($request))
+                : [],
+            'sharePeople' => $request->user()?->can('share', $document) ? $this->grants->people() : [],
+            'shareRoles' => $request->user()?->can('share', $document) ? $this->grants->roles() : [],
             'people' => $request->user()?->can('grant', $document) ? $this->grants->people() : [],
             'roles' => $request->user()?->can('grant', $document) ? $this->grants->roles() : [],
         ]);

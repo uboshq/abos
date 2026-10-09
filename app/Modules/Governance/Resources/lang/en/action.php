@@ -88,4 +88,11 @@ return [
     'document_rejected' => 'Document rejected',
     'document_expired' => 'Document expired',
     'document_renewed' => 'Document renewed',
+    'signature_requested' => 'Document signature requested',
+    'document_signed' => 'Document signed',
+    'signature_refused' => 'Document signature refused',
+    'signature_verified' => 'Document signature verified',
+    'document_shared' => 'Document shared',
+    'document_linked' => 'Document linked to a record',
+    'document_unlinked' => 'Document link removed',
 ];

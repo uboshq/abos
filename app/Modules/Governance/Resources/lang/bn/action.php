@@ -102,4 +102,11 @@ return [
     'document_rejected' => 'ডকুমেন্ট বাতিল',
     'document_expired' => 'ডকুমেন্টের মেয়াদ শেষ',
     'document_renewed' => 'ডকুমেন্ট নবায়ন',
+    'signature_requested' => 'ডকুমেন্টে সই চাওয়া',
+    'document_signed' => 'ডকুমেন্টে সই হলো',
+    'signature_refused' => 'ডকুমেন্টে সই হলো না',
+    'signature_verified' => 'ডকুমেন্টের সই যাচাই',
+    'document_shared' => 'ডকুমেন্ট শেয়ার',
+    'document_linked' => 'ডকুমেন্ট রেকর্ডে জোড়া',
+    'document_unlinked' => 'ডকুমেন্টের জোড়া খোলা',
 ];

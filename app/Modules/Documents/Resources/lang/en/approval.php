@@ -7,4 +7,5 @@ declare(strict_types=1);
  */
 return [
     'document' => 'Document approval',
+    'signature' => 'Document signature',
 ];

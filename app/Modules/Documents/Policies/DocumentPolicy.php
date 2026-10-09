@@ -123,6 +123,26 @@ class DocumentPolicy
             && $document->status === DocumentCatalog::APPROVED;
     }
 
+    /** শেয়ার (§১৪) — শেয়ারের চাবি, বা এই কাগজে "শেয়ার" অধিকার */
+    public function share(User $user, Document $document): bool
+    {
+        return $this->view($user, $document) && ! $document->isArchived()
+            && ($user->can('documents.share') || $this->access->granted($user, $document, 'share'));
+    }
+
+    /** সই চাওয়া (§১১) — কাগজে অন্তত একটা ভার্সন থাকতে হবে */
+    public function requestSignature(User $user, Document $document): bool
+    {
+        return $user->can('documents.signature_request') && $this->view($user, $document)
+            && ! $document->isArchived() && $document->current_version_id !== null;
+    }
+
+    /** জোড়া (§১৫) — কাগজের ফাইল বা বিবরণ বদলায় না, তাই অবস্থার তালা নেই; বদলের চাবি লাগে */
+    public function link(User $user, Document $document): bool
+    {
+        return $this->mayEdit($user, $document);
+    }
+
     private function mayEdit(User $user, Document $document): bool
     {
         return $this->view($user, $document)

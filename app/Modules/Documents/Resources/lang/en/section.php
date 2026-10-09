@@ -20,4 +20,7 @@ return [
     'admin_tags' => 'Tags',
     'admin_fields' => 'Extra fields',
     'approval' => 'Approval',
+    'signatures' => 'Signatures',
+    'share' => 'Sharing',
+    'links' => 'Linked records',
 ];

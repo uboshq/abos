@@ -86,4 +86,13 @@ return [
         'rejected' => 'না / ফেরত',
         'forwarded' => 'অন্যের কাছে পাঠানো',
     ],
+
+    'link_type' => [
+        'customer' => 'গ্রাহক',
+        'supplier' => 'সরবরাহকারী',
+        'purchase_order' => 'ক্রয়াদেশ',
+        'purchase_receipt' => 'মাল গ্রহণ',
+        'purchase_bill' => 'ক্রয়ের বিল',
+        'employee' => 'কর্মী',
+    ],
 ];

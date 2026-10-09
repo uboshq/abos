@@ -7,6 +7,9 @@ use App\Modules\Documents\Http\Controllers\DocumentBinController;
 use App\Modules\Documents\Http\Controllers\DocumentController;
 use App\Modules\Documents\Http\Controllers\DocumentFileController;
 use App\Modules\Documents\Http\Controllers\DocumentGrantController;
+use App\Modules\Documents\Http\Controllers\DocumentLinkController;
+use App\Modules\Documents\Http\Controllers\DocumentShareController;
+use App\Modules\Documents\Http\Controllers\DocumentSignatureController;
 use App\Modules\Documents\Http\Controllers\DocumentVersionController;
 use App\Modules\Documents\Http\Controllers\DocumentWorkflowController;
 use App\Modules\Documents\Http\Controllers\PlanController;
@@ -44,6 +47,10 @@ Route::middleware(['auth', 'can:documents.view'])->prefix('documents')->group(fu
     // ⭐ তৃতীয় ধাপ — অনুমোদনের সারি (ইনবক্সে) আর মেয়াদ ও নবায়ন (§১০, §১২)
     Route::get('/approval', [DocumentWorkflowController::class, 'queue'])->name('approval');
     Route::get('/expiry', [DocumentController::class, 'expiry'])->name('expiry');
+
+    // ⭐ চতুর্থ ধাপ — শেয়ার করা কাগজ আর সই কেন্দ্র (§১১, §১৪)
+    Route::get('/shared', [DocumentController::class, 'shared'])->name('shared');
+    Route::get('/signatures', [DocumentSignatureController::class, 'center'])->name('signatures');
     // ⓘ মোছা কাগজ সাধারণ `{document}` চেনে না — নিজের দরজা, পলিসি কন্ট্রোলারে (`restore`, `forceDelete`)
     Route::post('/recycle/{document}/restore', [DocumentBinController::class, 'restore'])
         ->whereNumber('document')->middleware('can:documents.restore')->name('bin.restore');
@@ -98,6 +105,20 @@ Route::middleware(['auth', 'can:documents.view'])->prefix('documents')->group(fu
         Route::delete('/access/{grant}', [DocumentGrantController::class, 'destroy'])
             ->whereNumber('grant')->scopeBindings()
             ->middleware('can:grant,document')->name('grant.destroy');
+
+        // ⭐ শেয়ার, সই আর সম্পর্ক (§১১, §১৪, §১৫) — ⓘ scopeBindings: সই আর জোড়া এই কাগজেরই
+        Route::post('/share', [DocumentShareController::class, 'store'])
+            ->middleware('can:share,document')->name('share.store');
+        Route::post('/signatures', [DocumentSignatureController::class, 'request'])
+            ->middleware('can:requestSignature,document')->name('signature.request');
+        Route::post('/signatures/{signature}/verify', [DocumentSignatureController::class, 'verify'])
+            ->whereNumber('signature')->scopeBindings()
+            ->middleware('can:view,document')->name('signature.verify');
+        Route::post('/links', [DocumentLinkController::class, 'store'])
+            ->middleware('can:link,document')->name('link.store');
+        Route::delete('/links/{link}', [DocumentLinkController::class, 'destroy'])
+            ->whereNumber('link')->scopeBindings()
+            ->middleware('can:link,document')->name('link.destroy');
 
         Route::post('/versions', [DocumentVersionController::class, 'store'])
             ->middleware('can:addVersion,document')->name('version.store');

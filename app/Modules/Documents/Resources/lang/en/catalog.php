@@ -84,4 +84,13 @@ return [
         'rejected' => 'Rejected / sent back',
         'forwarded' => 'Forwarded',
     ],
+
+    'link_type' => [
+        'customer' => 'Customer',
+        'supplier' => 'Supplier',
+        'purchase_order' => 'Purchase order',
+        'purchase_receipt' => 'Goods receipt',
+        'purchase_bill' => 'Purchase bill',
+        'employee' => 'Employee',
+    ],
 ];

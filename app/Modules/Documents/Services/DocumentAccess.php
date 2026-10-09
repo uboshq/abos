@@ -163,6 +163,17 @@ final class DocumentAccess
     }
 
     /**
+     * আমার সাথে শেয়ার করা কাগজ — চালু শেয়ার, আমার নামে বা আমার ভূমিকার নামে (§১৪ Shared Documents)।
+     */
+    public function sharedWith(Builder $query, User $user): Builder
+    {
+        $ids = $this->grantsQuery($user)->where('dms_document_permissions.via_share', true)
+            ->select('dms_document_permissions.document_id');
+
+        return $query->whereIn($query->getModel()->getTable().'.id', $ids);
+    }
+
+    /**
      * ধাপগুলোর মধ্যে কোনগুলো এই মানুষ কাগজে **বসাতে** পারেন।
      *
      * ⓘ যে ধাপ নিজে দেখেন না, সেই ধাপে কাগজ লুকানো যায় না।
@@ -187,6 +198,9 @@ final class DocumentAccess
 
         return DB::table('dms_document_permissions')
             ->where('dms_document_permissions.company_id', $companyId)
+            // ⭐ শেয়ারের মেয়াদ — পেরোলে অধিকারটা নিজে থেকেই বন্ধ (চতুর্থ ধাপ); সময় PHP থেকে
+            ->where(fn ($q) => $q->whereNull('dms_document_permissions.expires_at')
+                ->orWhere('dms_document_permissions.expires_at', '>', now()->toDateTimeString()))
             ->where(function ($q) use ($user, $roles) {
                 $q->where(fn ($u) => $u->where('dms_document_permissions.grantee_type', DocumentGrant::USER)
                     ->where('dms_document_permissions.grantee_id', $user->getKey()));
@@ -221,14 +235,22 @@ final class DocumentAccess
      */
     public function isSigner(User $user, Document $document): bool
     {
-        if (! in_array($document->status, [DocumentCatalog::SUBMITTED, DocumentCatalog::UNDER_REVIEW], true)) {
-            return false;
+        $engine = app(ApprovalEngine::class);
+
+        // ⓘ অনুমোদন — কেবল জমা বা পর্যালোচনায় থাকা কাগজে; সই (চতুর্থ ধাপ) — যেকোনো চলমান সই-অনুরোধে
+        $actions = in_array($document->status, [DocumentCatalog::SUBMITTED, DocumentCatalog::UNDER_REVIEW], true)
+            ? [DocumentWorkflow::ACTION, DocumentSignatures::ACTION]
+            : [DocumentSignatures::ACTION];
+
+        foreach ($actions as $action) {
+            $approval = $engine->latestFor($document, $action);
+
+            if ($approval !== null && $approval->status === Approval::PENDING && $engine->canDecide($approval, $user)) {
+                return true;
+            }
         }
 
-        $engine = app(ApprovalEngine::class);
-        $approval = $engine->latestFor($document, DocumentWorkflow::ACTION);
-
-        return $approval !== null && $approval->status === Approval::PENDING && $engine->canDecide($approval, $user);
+        return false;
     }
 
     private function isOwn(User $user, Document $document): bool

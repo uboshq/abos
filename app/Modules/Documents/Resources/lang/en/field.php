@@ -56,4 +56,8 @@ return [
     'level' => 'Level',
     'due_date' => 'Due',
     'submit_note' => 'Note for the approver',
+    'signer' => 'Signer',
+    'share_until' => 'Shared until',
+    'link_type' => 'Link to',
+    'link_record' => 'Find',
 ];
