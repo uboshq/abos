@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Hr\Services;
 
+use App\Core\Services\PermissionSyncer;
 use App\Models\User;
 use App\Modules\Hr\Models\Attendance;
 use App\Modules\Hr\Models\Employee;
@@ -66,8 +67,24 @@ final class LeaveService
     public function approve(LeaveApplication $application, User $decider, ?string $remarks = null): LeaveApplication
     {
         $this->assertPending($application);
+        $this->assertNotOwn($application, $decider);
 
         return DB::transaction(function () use ($application, $decider, $remarks) {
+            /*
+             * ⛔ তালা দিয়ে তাজা অবস্থা, আর কোটা আবার — পুরো-ERP পুনঃঅডিট, ৯ অক্টোবর ২০২৬ (HR ৮; [[LeaveIsCountedWhenItIsApprovedTest]])।
+             * ⓘ আবেদনের সময় কোটা মাপা হত কেবল মঞ্জুর হওয়াগুলো ধরে; একই কর্মীর তিনটা অপেক্ষমাণ আবেদন একে একে (বা দুইজন একসাথে)
+             * মঞ্জুর করলে প্রত্যেকটা আলাদাভাবে পার হত, আর বছরের ছুটি সীমা ছাড়াত। কর্মীর সারিতে তালা, যাতে একই কর্মীর দুইটা মঞ্জুরি
+             * একসাথে গুনতে না পারে; তারপর এই আবেদন বাদে মঞ্জুর হওয়াগুলোর উপর আবার মাপা।
+             */
+            Employee::query()->withoutGlobalScopes()->whereKey($application->employee_id)->lockForUpdate()->first();
+            $fresh = LeaveApplication::query()->whereKey($application->id)->lockForUpdate()->firstOrFail();
+            $application->setRawAttributes($fresh->getAttributes(), true);
+            $this->assertPending($application);
+
+            $employee = Employee::query()->withoutGlobalScopes()->findOrFail($application->employee_id);
+            $type = LeaveType::query()->withoutGlobalScopes()->findOrFail($application->leave_type_id);
+            $this->assertWithinYearlyLimit($employee, $type, $application->from_date->copy(), (string) $application->days);
+
             $application->forceFill([
                 'status' => LeaveApplication::APPROVED,
                 'decided_by' => $decider->id,
@@ -162,6 +179,12 @@ final class LeaveService
         $day = $application->from_date->copy();
 
         while ($day->lte($application->to_date)) {
+            /*
+             * ⛔ আধা দিন লেখা থাকে — একই পুনঃঅডিট (HR ৮)। ⓘ "১.৫ দিন" দুই তারিখে বসত দুইটা পুরো দিনের সারি হয়ে, আর বিনা বেতনের
+             * ছুটিতে বেতন থেকে দুই দিন কাটত। দিনের ভাগটা [[Attendance::leaveShare()]] গোনে; এখানে কেবল পর্দার জন্য মন্তব্য।
+             */
+            $share = Attendance::shareOf($application, $day);
+
             Attendance::query()->updateOrCreate(
                 [
                     'employee_id' => $application->employee_id,
@@ -170,11 +193,27 @@ final class LeaveService
                 [
                     'status' => Attendance::LEAVE,
                     'leave_application_id' => $application->id,
+                    'remarks' => bccomp($share, '1', 1) < 0 ? __('hr::message.leave_part_day', ['share' => $share]) : null,
                     'created_by' => auth()->id(),
                 ],
             );
 
             $day->addDay();
+        }
+    }
+
+    /**
+     * ⛔ নিজের ছুটি নিজে মঞ্জুর নয় — একই পুনঃঅডিট (HR ৮)। ⓘ ছুটি মঞ্জুরের চাবি থাকলে ব্যবস্থাপক নিজের আবেদনও মঞ্জুর করতে
+     * পারতেন। সইয়ের ইঞ্জিনের নিয়মেই ([[ApprovalEngine::canDecide()]]) কেবল মালিক (সুপার অ্যাডমিন) নিজের কাগজে সই দিতে পারেন।
+     */
+    private function assertNotOwn(LeaveApplication $application, User $decider): void
+    {
+        $own = Employee::query()->withoutGlobalScopes()->whereKey($application->employee_id)->value('user_id');
+
+        if ($own !== null && (int) $own === (int) $decider->id && ! $decider->hasRole(PermissionSyncer::SUPER_ADMIN_ROLE)) {
+            throw ValidationException::withMessages([
+                'status' => __('hr::validation.leave_own_approval'),
+            ]);
         }
     }
 

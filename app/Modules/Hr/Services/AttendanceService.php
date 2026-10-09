@@ -144,9 +144,10 @@ final class AttendanceService
             }
 
             // মঞ্জুর হওয়া ছুটি, কিন্তু বিনা বেতনের ধরনে
+            // ⓘ আধা দিনের ছুটি আধা দিনই কাটে ([[Attendance::leaveShare()]], পুনঃঅডিট ৯ অক্টোবর ২০২৬, HR ৮)
             if ($row->status === Attendance::LEAVE
                 && $row->leaveApplication?->leaveType?->is_paid === false) {
-                $unpaid = bcadd($unpaid, '1', 1);
+                $unpaid = bcadd($unpaid, $row->leaveShare(), 1);
             }
         }
 
