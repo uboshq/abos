@@ -140,6 +140,8 @@ final class PromotionDesk
 
             $applied = PromotionApplication::query()->create([
                 'promotion_id' => $offer->id,
+                // ⓘ কাগজের শাখা — দেখানোর দেয়ালের জন্য (পুনঃঅডিট ৯ অক্টোবর ২০২৬, প্রমোশন ২১); বাজেট গোটা কোম্পানির
+                'branch_id' => isset($line['branch_id']) ? (int) $line['branch_id'] : null,
                 'source_type' => $sourceType,
                 'source_id' => $sourceId,
                 'source_line_id' => $sourceLineId,

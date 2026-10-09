@@ -7,6 +7,8 @@ namespace App\Modules\Sales\Models;
 use App\Core\Concerns\BelongsToCompany;
 use App\Core\Concerns\HasPublicId;
 use App\Core\Concerns\IsAudited;
+use App\Core\Concerns\ScopedToUserBranch;
+use App\Core\Concerns\ScopedToUserDealers;
 use App\Core\Contracts\Drillable;
 use App\Models\Branch;
 use App\Models\User;
@@ -35,8 +37,15 @@ class CommissionClaim extends Model implements Drillable
     use BelongsToCompany;
     use HasPublicId;
     use IsAudited;
+
+    /*
+     * ⛔ হেডারের শাখা আর নাগাল — পুরো-ERP পুনঃঅডিট, ৯ অক্টোবর ২০২৬ (প্রমোশন ২১; [[ACommissionClaimStaysInItsBranchTest]])। ⓘ দাবির মাথায়
+     * শাখা লেখা হয়, অথচ তালিকা আর পাতা সব শাখার দাবি দেখাত — বাকি কাগজের মতো দেয়াল ছিল না।
+     */
+    use ScopedToUserBranch;
+
     // ⭐ বিক্রয়কর্মী কেবল নিজের বাঁধা ডিলারের কাগজ দেখেন — ⛔১৬, ২ অক্টোবর ২০২৬ ([[DealerScope]])
-    use \App\Core\Concerns\ScopedToUserDealers;
+    use ScopedToUserDealers;
     use SoftDeletes;
 
     /** দেওয়া হয়েছে, কোম্পানি এখনো কিছু বলেনি। */

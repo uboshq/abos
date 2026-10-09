@@ -253,7 +253,8 @@ final class CommissionClaimService
 
     private function assertNoClaimOnTheBill(SalesInvoice $invoice): void
     {
-        $taken = CommissionClaim::query()->where('sales_invoice_id', $invoice->id)->value('document_no');
+        // ⓘ দেয়াল ছাড়া — অন্য শাখার কেউ এই বিলে দাবি লিখে থাকলেও সেটা আছে
+        $taken = CommissionClaim::query()->withoutGlobalScopes(['user-branch'])->where('sales_invoice_id', $invoice->id)->value('document_no');
 
         if ($taken !== null) {
             throw ValidationException::withMessages([
