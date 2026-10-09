@@ -32,7 +32,13 @@ final class DocumentAdminController extends Controller
         private readonly DocumentChoices $choices,
     ) {}
 
-    public function index(Request $request): View
+    /**
+     * প্রশাসনের পাতা — নিয়ন্ত্রণ প্যানেলের মতো একটা সেটিংসের পাতা, লেনদেনের তালিকা নয়।
+     *
+     * ⓘ চারটা তালিকাই কোম্পানির নিজের যোগ করা নাম (ধরন, ফোল্ডার, ট্যাগ, ঘর) — কয়েক ডজন, কাগজের
+     * মতো রোজ বাড়ে না; তাই পাতা ভাগ নেই। ⚠️ কোনোদিন শতের ঘরে গেলে আলাদা পর্দায় ভাগ করতে হবে।
+     */
+    public function show(Request $request): View
     {
         return view('documents::admin', [
             'menu' => $this->menu->forUser($request->user()),

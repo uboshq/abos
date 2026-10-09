@@ -99,7 +99,7 @@ final class DocumentAdministration
             'code' => ['required', 'string', 'max:24', 'regex:/^[a-z][a-z0-9_]*$/', Rule::notIn($reserved),
                 Rule::unique($table, 'code')->where('company_id', CompanyContext::id())],
             'name_en' => ['required', 'string', 'max:120'],
-            'name_bn' => ['required', 'string', 'max:120'],
+            'name_bn' => ['nullable', 'string', 'max:120'],
             ...$extra,
         ]);
 

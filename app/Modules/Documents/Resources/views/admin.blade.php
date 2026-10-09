@@ -94,7 +94,7 @@
                       class="grid gap-2 border-t border-(--color-border) px-4 py-3 sm:grid-cols-[8rem_minmax(0,1fr)_minmax(0,1fr)_auto] sm:items-end">
                     @csrf
                     <x-ui.field name="code" :label="__('documents::field.code')" maxlength="24" required />
-                    <x-ui.field name="name_bn" :label="__('documents::field.name_bn')" maxlength="120" required />
+                    <x-ui.field name="name_bn" :label="__('documents::field.name_bn')" maxlength="120" />
                     <x-ui.field name="name_en" :label="__('documents::field.name_en')" maxlength="120" required />
                     <x-ui.button type="submit" tone="primary" icon="plus">{{ __('documents::action.add') }}</x-ui.button>
                 </form>
@@ -173,7 +173,7 @@
                   class="grid gap-2 border-t border-(--color-border) px-4 py-3 sm:grid-cols-3 sm:items-end">
                 @csrf
                 <x-ui.field name="code" :label="__('documents::field.code')" maxlength="24" required />
-                <x-ui.field name="name_bn" :label="__('documents::field.name_bn')" maxlength="120" required />
+                <x-ui.field name="name_bn" :label="__('documents::field.name_bn')" maxlength="120" />
                 <x-ui.field name="name_en" :label="__('documents::field.name_en')" maxlength="120" required />
                 <x-ui.select name="kind" :label="__('documents::field.field_kind')" required
                              :options="collect(\App\Modules\Documents\Models\MetadataField::KINDS)

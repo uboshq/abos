@@ -46,7 +46,7 @@ Route::middleware(['auth', 'can:documents.view'])->prefix('documents')->group(fu
         ->whereNumber('document')->middleware('can:documents.purge')->name('bin.purge');
 
     Route::middleware('can:documents.admin')->prefix('/admin')->group(function () {
-        Route::get('/', [DocumentAdminController::class, 'index'])->name('admin');
+        Route::get('/', [DocumentAdminController::class, 'show'])->name('admin');
         Route::post('/{kind}', [DocumentAdminController::class, 'store'])
             ->whereIn('kind', DocumentAdministration::KINDS)->name('admin.store');
         Route::post('/{kind}/{id}/toggle', [DocumentAdminController::class, 'toggle'])

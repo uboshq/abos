@@ -36,7 +36,7 @@ return new class extends Migration
             $table->foreignId('company_id')->constrained('companies')->cascadeOnDelete();
             $table->string('code', 24);
             $table->string('name_en', 120);
-            $table->string('name_bn', 120);
+            $table->string('name_bn', 120)->nullable(); // ⓘ ফাঁকা থাকলে ইংরেজি নাম দেখায় ([[IsMasterRecord::name()]])
             $table->boolean('is_active')->default(true);
             $table->foreignId('created_by')->nullable()->constrained('users')->nullOnDelete();
             $table->foreignId('updated_by')->nullable()->constrained('users')->nullOnDelete();
@@ -51,7 +51,7 @@ return new class extends Migration
             $table->foreignId('company_id')->constrained('companies')->cascadeOnDelete();
             $table->string('code', 24);
             $table->string('name_en', 120);
-            $table->string('name_bn', 120);
+            $table->string('name_bn', 120)->nullable(); // ⓘ ফাঁকা থাকলে ইংরেজি নাম দেখায় ([[IsMasterRecord::name()]])
             $table->boolean('is_active')->default(true);
             $table->foreignId('created_by')->nullable()->constrained('users')->nullOnDelete();
             $table->foreignId('updated_by')->nullable()->constrained('users')->nullOnDelete();
@@ -78,7 +78,7 @@ return new class extends Migration
             $table->foreignId('company_id')->constrained('companies')->cascadeOnDelete();
             $table->string('code', 40);
             $table->string('name_en', 120);
-            $table->string('name_bn', 120);
+            $table->string('name_bn', 120)->nullable(); // ⓘ ফাঁকা থাকলে ইংরেজি নাম দেখায় ([[IsMasterRecord::name()]])
 
             // ⓘ text, number, date — ঘরের ধরন
             $table->string('kind', 12)->default('text');
