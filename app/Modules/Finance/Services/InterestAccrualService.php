@@ -13,6 +13,7 @@ use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Accounts\Services\VoucherService;
 use App\Modules\Finance\Models\BankFacility;
 use App\Modules\Finance\Models\InterestAccrual;
+use App\Modules\Finance\Support\ActingBranches;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -60,7 +61,11 @@ final class InterestAccrualService
             ->map(fn ($id) => (int) $id)->all();
         $rows = [];
 
-        $facilities = BankFacility::query()->live()->inViewedBranch()
+        /*
+         * ⛔ নাগালের শাখা, হেডারের নয় — পুরো-ERP পুনঃঅডিট, ৯ অক্টোবর ২০২৬ ([[ActingBranches]])। ⓘ আগে এক শাখা বাছা থাকলে নতুন
+         * জমা বসত কেবল সেই শাখায়, অথচ [[reverseBefore()]] সব শাখার আগের জমা উল্টাত — বাকি শাখার সুদ সে মাসে খরচ থেকে উধাও।
+         */
+        $facilities = ActingBranches::narrow(BankFacility::query()->live(), 'fin_bank_facilities.branch_id')
             ->where('kind', '!=', BankFacility::GUARANTEE)
             ->where('interest_rate', '>', 0)
             ->where(fn ($q) => $q->whereNull('sanctioned_on')->orWhere('sanctioned_on', '<=', $end->toDateString()))
@@ -126,6 +131,8 @@ final class InterestAccrualService
                 $voucher = $this->vouchers->create([
                     'type' => Voucher::JOURNAL,
                     'is_adjusting' => true, // ⭐ মাসশেষের সমন্বয় (ভাউচারের পরিকল্পনা ৩ঘ, ৭ অক্টোবর ২০২৬)
+                    // ⛔ ঋণের শাখায় — জমার সারির একই শাখা; হেডারের শাখায় বসলে ২১৪৫ শাখা ধরে কখনো উল্টাত না (পুনঃঅডিট, ৯ অক্টোবর ২০২৬)
+                    'branch_id' => $facility->branch_id,
                     'trx_date' => $end->toDateString(),
                     'narration' => __('finance::bank_loan_report.accrual_narration', [
                         'month' => $start->translatedFormat('F Y'), 'facility' => trim($facility->bank.' · '.$facility->document_no, ' ·'),
@@ -170,10 +177,12 @@ final class InterestAccrualService
     {
         $count = 0;
 
-        $open = InterestAccrual::query()
+        // ⛔ আগাম দেখার একই শাখাগুলো ([[preview()]]) — যা বসানো যায়, কেবল তা-ই উল্টায়
+        $open = ActingBranches::narrow(InterestAccrual::query(), 'fin_interest_accruals.branch_id')
             ->whereNull('reversal_voucher_id')
             ->where('for_month', '<', $start->toDateString())
-            ->with(['voucher', 'facility'])
+            // ⓘ ভাউচারের শাখার দেয়াল ছাড়া — হেডারে অন্য শাখা থাকলে জমার ভাউচার "নেই" হয়ে উল্টো দাখিলা চুপচাপ বাদ পড়ত
+            ->with(['voucher' => fn ($q) => $q->withoutGlobalScope('user-branch'), 'facility'])
             ->orderBy('for_month')->orderBy('id')->get();
 
         foreach ($open as $accrual) {
@@ -190,12 +199,14 @@ final class InterestAccrualService
                 }
 
                 $on = $fresh->for_month->copy()->endOfMonth()->addDay()->toDateString();
+
                 $amount = bcadd((string) $fresh->amount, '0', 2);
                 $facility = $accrual->facility;
 
                 $reversal = $this->vouchers->create([
                     'type' => Voucher::JOURNAL,
                     'is_adjusting' => true, // ⭐ মাসশেষের সমন্বয় (ভাউচারের পরিকল্পনা ৩ঘ, ৭ অক্টোবর ২০২৬)
+                    'branch_id' => $fresh->branch_id,
                     'trx_date' => $on,
                     'narration' => __('finance::bank_loan_report.accrual_reversal_narration', [
                         'month' => $fresh->for_month->translatedFormat('F Y'),
