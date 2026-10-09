@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:intl/intl.dart';
 
 import 'package:abos_mobile/core/auth/auth_controller.dart';
 import 'package:abos_mobile/core/auth/auth_state.dart';
@@ -160,7 +161,8 @@ void main() {
     expect(find.text('৳31,000'), findsOneWidget);
     expect(find.text('৳812,500'), findsOneWidget);
     expect(find.textContaining('3 টি নথি'), findsOneWidget);
-    expect(find.textContaining('10:04 AM'), findsOneWidget);
+    // ⓘ যন্ত্রের নিজের সময়-অঞ্চলে (ঢাকায় 10:04 AM) — পরীক্ষা যেকোনো অঞ্চলের যন্ত্রে চলে
+    expect(find.textContaining(DateFormat('hh:mm a').format(DateTime.parse('2026-09-27T10:04:11+06:00').toLocal())), findsOneWidget);
     // No cash block came back, so no cash card — absent is not zero.
     expect(find.text('হাতে নগদ'), findsNothing);
   });
