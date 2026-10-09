@@ -184,6 +184,16 @@
                             @endforeach
                         </tbody>
                         <tfoot class="sticky bottom-0 bg-(--color-surface-card)">
+                            @if ($board['eliminated'] !== null)
+                                <tr data-row="eliminated" class="border-t border-(--color-border) text-(--color-ink-muted)">
+                                    <td class="px-3 py-1.5" title="{{ __('executive::today.eliminated_hint') }}">{{ __('executive::today.eliminated') }}</td>
+                                    @foreach (Figures::KEYS as $key)
+                                        <td class="tabular px-3 py-1.5 text-right" data-cell="{{ $key }}">
+                                            {{ isset($board['eliminated'][$key]) ? '−'.Money::format($board['eliminated'][$key], 0) : '' }}
+                                        </td>
+                                    @endforeach
+                                </tr>
+                            @endif
                             <tr data-row="group" class="border-t-2 border-(--color-border) font-bold">
                                 <td class="px-3 py-2">{{ __('executive::today.group_total') }}</td>
                                 @foreach (Figures::KEYS as $key)

@@ -39,7 +39,7 @@ return [
      * ⓘ যাদের সংখ্যা পড়া হয় — প্রতিটা মডিউলের নিজের সংজ্ঞা, নিজের ক্লাস।
      * ⚠️ চক্র হয় না: এদের কেউ মালিকের কেন্দ্রের উপর দাঁড়ায় না।
      */
-    'depends_on' => ['accounts', 'sales', 'customer', 'inventory', 'approval', 'governance'],
+    'depends_on' => ['accounts', 'sales', 'customer', 'supplier', 'inventory', 'approval', 'governance'],
 
     'menu' => [
         'dashboard' => [
@@ -56,6 +56,10 @@ return [
                 'route_params' => ['slug' => 'profit-by-customer'], 'permission' => 'executive.view'],
         ],
 
+        'settings' => [
+            ['label' => 'executive::menu.links', 'icon' => 'building', 'route' => 'executive.links', 'permission' => 'executive.links.manage'],
+        ],
+
     ],
 
     'permissions' => [
@@ -68,6 +72,12 @@ return [
          * পর্দায় আসে না — নামটাও না।
          */
         'executive.view',
+
+        /*
+         * ভাই-কোম্পানির পক্ষ জোড়া দেওয়া — দেখার চাবি থেকে আলাদা: একটা জোড়া গ্রুপের বিক্রির সংখ্যা বদলায়,
+         * তাই যিনি পর্দা দেখেন তিনিই সংখ্যা বদলাতে পারবেন, এমন নয়।
+         */
+        'executive.links.manage',
     ],
 
     'reports' => [

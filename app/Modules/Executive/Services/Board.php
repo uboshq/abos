@@ -38,6 +38,7 @@ final class Board
     public function __construct(
         private readonly CompanyLens $lens,
         private readonly Figures $figures,
+        private readonly Eliminations $eliminations,
     ) {}
 
     /**
@@ -47,6 +48,7 @@ final class Board
      *     companies: list<array<string, mixed>>,
      *     total: array<string, ?string>,
      *     partial: array<string, bool>,
+     *     eliminated: array<string, string>|null,
      *     header_branch: ?int,
      *     period: string, from: string, to: string,
      *     trend: list<array{label: string, date: string, sales: string, collections: string}>,
@@ -100,10 +102,24 @@ final class Board
 
         [$total, $partial] = $this->groupTotal($companies);
 
+        /*
+         * ⭐ ভাই-কোম্পানি বাদ — গ্রুপের ভিতরের বিক্রি, পাওনা আর দেনা গ্রুপের মোট থেকে (IFRS 10)।
+         * ⓘ ছকে নিজের সারিতে দেখায়, তাই গ্রুপের মোট = সারিগুলোর যোগ − এই সারি; জোড়া না থাকলে সারিটাই নেই।
+         */
+        $eliminated = $this->eliminations->amounts($user, array_map(
+            fn (array $c) => ['id' => $c['id'], 'name' => $c['name'], 'only' => $c['only']], $companies), $from, $to);
+
+        foreach ($eliminated ?? [] as $key => $amount) {
+            if ($total[$key] !== Figures::HIDDEN) {
+                $total[$key] = bcsub($total[$key], $amount, 4);
+            }
+        }
+
         return [
             'companies' => $companies,
             'total' => $total,
             'partial' => $partial,
+            'eliminated' => $eliminated,
             'header_branch' => $header,
             'period' => $period,
             'from' => $from,

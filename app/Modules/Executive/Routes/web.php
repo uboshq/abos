@@ -7,6 +7,7 @@ use App\Modules\Executive\Http\Controllers\AnalysisController;
 use App\Modules\Executive\Http\Controllers\CompareController;
 use App\Modules\Executive\Http\Controllers\ExecutiveReportController;
 use App\Modules\Executive\Http\Controllers\HistoryController;
+use App\Modules\Executive\Http\Controllers\LinksController;
 use App\Modules\Executive\Http\Controllers\OpenController;
 use App\Modules\Executive\Http\Controllers\ReportsController;
 use App\Modules\Executive\Http\Controllers\TodayController;
@@ -45,6 +46,20 @@ Route::middleware('auth')->prefix('owner')->group(function () {
     Route::get('/history', [HistoryController::class, 'show'])
         ->name('history')
         ->middleware('can:executive.view');
+
+    // ⭐ ভাই-কোম্পানির পক্ষ — জোড়া দেওয়া ও তোলা আলাদা চাবিতে
+    Route::get('/sister-links', [LinksController::class, 'index'])
+        ->name('links')
+        ->middleware('can:executive.links.manage');
+
+    Route::post('/sister-links', [LinksController::class, 'store'])
+        ->name('links.store')
+        ->middleware('can:executive.links.manage');
+
+    Route::delete('/sister-links/{link}', [LinksController::class, 'destroy'])
+        ->whereNumber('link')
+        ->name('links.destroy')
+        ->middleware('can:executive.links.manage');
 
     Route::post('/refresh', [TodayController::class, 'refresh'])
         ->name('refresh')

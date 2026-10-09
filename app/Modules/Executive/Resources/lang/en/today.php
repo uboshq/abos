@@ -24,6 +24,8 @@ return [
     'unsplit' => 'Not split by branch',
     'unsplit_hint' => 'Rows with no branch (such as owner capital or the company-wide stock layers) — the company total less the branches',
     'company_total' => ':company — total',
+    'eliminated' => 'Sister companies removed',
+    'eliminated_hint' => 'What one group company sold to another, and the dues between them — only for parties linked as sister companies. Taken off the group total.',
     'group_total' => 'Group total',
     'partial' => 'You may not see this figure in some companies — the total is incomplete',
     'not_by_branch' => 'This figure is not split by branch',
