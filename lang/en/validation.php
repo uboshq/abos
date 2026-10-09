@@ -58,6 +58,7 @@ return [
     ],
 
     'branch_out_of_reach' => 'This branch is outside the branches you may see.',
+    'report_bad_date' => 'That date is not right. Fix the day, month and year and try again.',
 
     'custom' => [],
 

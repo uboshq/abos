@@ -6,6 +6,7 @@ namespace App\Core\Engines\Report;
 
 use App\Core\Services\DataScope;
 use App\Core\Services\DealerScope;
+use App\Core\Services\ListExport;
 use App\Core\Support\CompanyContext;
 use App\Core\Support\RunningBalance;
 use App\Models\Branch;
@@ -627,6 +628,17 @@ final class ReportEngine
             $filters['from'] = $filters['from'] ?? Carbon::today()->startOfMonth()->toDateString();
             $filters['to'] = $filters['to'] ?? Carbon::today()->toDateString();
 
+            /*
+             * ⛔ ভুল তারিখ মানে ৪২২, ৫০০ নয় — পুনঃনিরীক্ষা, ৯ অক্টোবর ২০২৬।
+             *
+             * ⚠️ `Carbon::parse()` অচেনা লেখায় ব্যতিক্রম ছোঁড়ে, আর ঠিকানার ঘরে
+             * `from=abc` বা `from[]=1` লিখলেই রিপোর্টের পাতা ৫০০ দিত — মানুষ
+             * ভাবতেন ব্যবস্থাটাই ভেঙেছে। ⭐ এখন ঘরের নামসহ একটা বাংলা বার্তা।
+             */
+            foreach (['from', 'to'] as $edge) {
+                $filters[$edge] = $this->dateOrRefuse($edge, $filters[$edge]);
+            }
+
             if (Carbon::parse($filters['from'])->gt(Carbon::parse($filters['to']))) {
                 throw new RuntimeException(
                     'The start date is after the end date — that range holds nothing.'
@@ -788,7 +800,7 @@ final class ReportEngine
      * কেবল লেখার কলামে — নাম, নথি, তারিখ। ⛔ টাকার কলামে নয়: `১২৩`
      * টাইপ করলে `১২৩৪৫.০০`ও মিলত, আর ফলটা দেখতে এলোমেলো লাগত।
      *
-     * @param  Builder|\Illuminate\Database\Eloquent\Builder  $query
+     * @param  Builder|EloquentBuilder  $query
      */
     private function applySearch(ReportDefinition $report, $query, mixed $term)
     {
@@ -813,7 +825,7 @@ final class ReportEngine
          */
         $needle = '%'.str_replace(['\\', '%', '_'], ['\\\\', '\%', '\_'], $term).'%';
 
-        $base = $query instanceof \Illuminate\Database\Eloquent\Builder ? $query->getQuery() : $query;
+        $base = $query instanceof EloquentBuilder ? $query->getQuery() : $query;
 
         /*
          * ⓘ `GROUP BY` থাকলে `HAVING` লাইভেও চলে — আগের মতো, ছদ্মনামের উপর।
@@ -838,7 +850,7 @@ final class ReportEngine
         $order = $this->orderSql($base);
 
         if ($order !== null) {
-            $innerBase = $inner instanceof \Illuminate\Database\Eloquent\Builder ? $inner->getQuery() : $inner;
+            $innerBase = $inner instanceof EloquentBuilder ? $inner->getQuery() : $inner;
 
             if ($innerBase->columns === null) {
                 $inner->select('*');
@@ -866,7 +878,7 @@ final class ReportEngine
      *
      * @return array{0: string, 1: list<mixed>}|null
      */
-    private function orderSql(\Illuminate\Database\Query\Builder $base): ?array
+    private function orderSql(Builder $base): ?array
     {
         if (empty($base->orders)) {
             return null;
@@ -927,6 +939,26 @@ final class ReportEngine
     }
 
     /**
+     * একটা তারিখের ঘর — চেনা তারিখ হলে `Y-m-d`, নইলে ঘরের নামসহ ৪২২।
+     */
+    private function dateOrRefuse(string $edge, mixed $value): string
+    {
+        if ($value instanceof \DateTimeInterface) {
+            return $value->format('Y-m-d');
+        }
+
+        if (is_string($value) && preg_match('/^\d{4}-\d{2}-\d{2}$/', $value) === 1) {
+            [$y, $m, $d] = array_map('intval', explode('-', $value));
+
+            if (checkdate($m, $d, $y)) {
+                return $value;
+            }
+        }
+
+        throw ValidationException::withMessages([$edge => __('validation.report_bad_date')]);
+    }
+
+    /**
      * চলমান ব্যালেন্স — লেজারে প্রতিটা সারির পর কত দাঁড়াল।
      *
      * দ্বিতীয় পাতায় শুরুটা শূন্য নয়, আগের পাতাগুলোর যোগফল। এটা না করলে
@@ -963,7 +995,13 @@ final class ReportEngine
              * কারণ **কোন** সারিগুলো গোনা হবে সেটা ক্রমই ঠিক করে; বাইরের
              * যোগফল ক্রম নিয়ে মাথা ঘামায় না।
              */
-            $earlier = $this->queryFor($report, $filters)->forPage(1, ($page - 1) * $perPage);
+            /*
+             * ⛔ খোঁজার শব্দটাও — পুনঃনিরীক্ষা, ৯ অক্টোবর ২০২৬। ⚠️ পর্দার সারিগুলো খোঁজা ফল থেকে
+             * আসে ([[run()]]), অথচ আগের পাতাগুলোর যোগফল আসত **না-খোঁজা** কোয়েরি থেকে — তাই
+             * খুঁজে দ্বিতীয় পাতায় গেলে প্রথম জেরটা অন্য সারিগুলোর যোগফল, আর চলমান জের মিথ্যা।
+             */
+            $earlier = $this->applySearch($report, $this->queryFor($report, $filters), $filters['q'] ?? null)
+                ->forPage(1, ($page - 1) * $perPage);
 
             $sums = DB::connection($earlier->getConnection()->getName())
                 ->query()
@@ -1005,7 +1043,6 @@ final class ReportEngine
             return false;
         }
 
-        return request()->boolean('print') || app(\App\Core\Services\ListExport::class)->wanted();
+        return request()->boolean('print') || app(ListExport::class)->wanted();
     }
-
 }
