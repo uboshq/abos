@@ -39,4 +39,5 @@ return [
     'location_name_taken_top' => ':name নামে একটা :level আগে থেকেই আছে (:code)।',
     /* পদ্ধতি আর খাতের ধরন — [[MethodFitsAccount]], ২৭ সেপ্টেম্বর ২০২৬ */
     'method_does_not_fit_account' => '":method" পদ্ধতিটা :kind ধরনের, অথচ টাকা যাচ্ছে :account-এ — পদ্ধতি আর খাতের ধরন মিলছে না। :kind ধরনের একটা খাত বাছুন।',
+    'user_not_in_company' => 'এই ব্যবহারকারী এই কোম্পানির নন — এলাকার দায়িত্ব কেবল এই কোম্পানির কাউকে দেওয়া যায়।',
 ];
