@@ -36,20 +36,29 @@ final class AClosedPhoneNeverHeardItsSaleMoveTest extends TestCase
         $this->company = Company::create(['code' => 'PU', 'name_en' => 'Push Co']);
     }
 
-    public function test_a_phone_registers_its_own_token_and_takes_it_from_whoever_had_it(): void
+    /**
+     * ⭐ ফোন নিজের টোকেন বসায়, আর নিজেরই পুরনো ইনস্টলের সারি থেকে সেটা সরে আসে। ⛔ আরেকজনের ফোনের টোকেন নয় — ৪০৯, কিছু
+     * বদলায় না (পুরো ERP অডিট, ৯ অক্টোবর ২০২৬: আগে যেকোনো সারি থেকে কেড়ে নেওয়া যেত)। ⓘ ফোনপ্রতি সারি একটাই — একই ফোনে
+     * লোক বদলালে সারিটাই নতুন জনের হয়।
+     */
+    public function test_a_phone_takes_its_token_from_its_own_old_install_but_never_from_another_persons_phone(): void
     {
-        $before = $this->member();
+        $someone = $this->member();
         $now = $this->member();
-        $old = $this->device($before, 'dev-old', 'tok-shared');
+        $stale = $this->device($now, 'dev-old-install', 'tok-mine');
         $mine = $this->device($now, 'dev-new');
 
         Sanctum::actingAs($now, [AuthController::APP]);
-        $this->postJson('/api/v1/devices/push-token', ['deviceId' => 'dev-new', 'token' => 'tok-shared'])->assertOk();
+        $this->postJson('/api/v1/devices/push-token', ['deviceId' => 'dev-new', 'token' => 'tok-mine'])->assertOk();
+        $this->assertSame('tok-mine', $mine->fresh()->push_token);
+        $this->assertNull($stale->fresh()->push_token, '⛔ পুরনো ইনস্টলে টোকেন থেকে গেল — একই বার্তা দুবার যেত।');
 
-        $this->assertSame('tok-shared', $mine->fresh()->push_token);
-        $this->assertNull($old->fresh()->push_token, '⛔ একই ফোনে আগের জনের টোকেন থেকে গেল — তাঁর বার্তা এই ফোনে আসত।');
+        $theirs = $this->device($someone, 'dev-theirs', 'tok-theirs');
+        $this->postJson('/api/v1/devices/push-token', ['deviceId' => 'dev-new', 'token' => 'tok-theirs'])->assertStatus(409);
+        $this->assertSame('tok-theirs', $theirs->fresh()->push_token, '⛔ অন্যের ফোনের টোকেন কেড়ে নেওয়া গেল।');
+        $this->assertSame('tok-mine', $mine->fresh()->push_token);
 
-        $this->postJson('/api/v1/devices/push-token', ['deviceId' => 'dev-old', 'token' => 'x'])->assertNotFound();
+        $this->postJson('/api/v1/devices/push-token', ['deviceId' => 'dev-theirs', 'token' => 'x'])->assertNotFound();
     }
 
     public function test_signing_out_stops_the_pushes_to_that_phone(): void
