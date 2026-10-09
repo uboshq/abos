@@ -26,7 +26,7 @@ class PromotionCouponRedemption extends Model
 
     protected $fillable = [
         'coupon_id', 'promotion_application_id', 'customer_id',
-        'source_type', 'source_id', 'redeemed_at', 'reversed_at', 'reversed_by',
+        'source_type', 'source_id', 'carried_amount', 'redeemed_at', 'reversed_at', 'reversed_by',
     ];
 
     protected function casts(): array
