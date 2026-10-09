@@ -1,6 +1,7 @@
 <?php
 
 declare(strict_types=1);
+use App\Modules\Documents\Dashboard\DocumentsDashboard;
 
 /**
  * ডকুমেন্ট ম্যানেজমেন্ট (DOC) — প্রথম ধাপ চালু, বাকিটা পরিকল্পনার পাতায়।
@@ -65,7 +66,7 @@ return [
      * তাই মেনু পরিকল্পনার পাতায় যেত; সেই পাতা ([[PlanController::dashboard()]])
      * এখনো আছে, প্রতিটা ডকুমেন্ট পর্দার নিচের "গোটা পরিকল্পনা দেখুন" লিংকে।
      */
-    'dashboard' =>\App\Modules\Documents\Dashboard\DocumentsDashboard::class,
+    'dashboard' => DocumentsDashboard::class,
 
     'menu' => [
         'dashboard' => [

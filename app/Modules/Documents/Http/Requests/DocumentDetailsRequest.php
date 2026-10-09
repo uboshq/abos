@@ -6,6 +6,7 @@ namespace App\Modules\Documents\Http\Requests;
 
 use App\Core\Support\CompanyContext;
 use App\Models\User;
+use App\Modules\Documents\Models\Document;
 use App\Modules\Documents\Services\DocumentChoices;
 use App\Modules\Documents\Support\DocumentCatalog;
 use Illuminate\Foundation\Http\FormRequest;
@@ -46,7 +47,7 @@ class DocumentDetailsRequest extends FormRequest
            গিয়ে মালিককে ধাপ নামাতে বাধ্য করা হয় না */
         $current = $this->route('document');
 
-        if ($current instanceof \App\Modules\Documents\Models\Document) {
+        if ($current instanceof Document) {
             $levels[] = (string) $current->confidentiality;
         }
         $branches = $user instanceof User ? array_keys($choices->branches($user)) : [];
