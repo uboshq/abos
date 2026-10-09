@@ -294,6 +294,7 @@ class DirectSaleApiController extends Controller implements HasMiddleware
     public function overview(Request $request): JsonResponse
     {
         $input = $this->translate($request->all());
+        $this->plainNumbers($input);
         $data = Validator::make($input, DirectSaleRules::store(CompanyContext::id(), $input))->validate();
 
         return response()->json(app(DirectSaleOverview::class)->build($data, $data['lines'])->toArray());
@@ -307,6 +308,7 @@ class DirectSaleApiController extends Controller implements HasMiddleware
     public function store(Request $request): JsonResponse
     {
         $input = $this->translate($request->all());
+        $this->plainNumbers($input);
         $data = Validator::make($input, DirectSaleRules::store(CompanyContext::id(), $input))->validate();
         $gifts = array_values(array_filter($data['gifts'] ?? [],
             fn (array $g) => filled($g['product_id'] ?? null) && is_numeric($g['qty'] ?? null) && bccomp((string) $g['qty'], '0', 4) > 0));
@@ -349,6 +351,23 @@ class DirectSaleApiController extends Controller implements HasMiddleware
     }
 
     // ── যন্ত্রপাতি ──────────────────────────────────────────────────────
+
+    /**
+     * ⛔ ফোনের টাকা আর পরিমাণ সাধারণ দশমিকে — "1e3" বা ১৫ অঙ্কের বেশি নয় (পুরো ERP অডিট, ৯ অক্টোবর ২০২৬: দরে "1e3" ৫০০
+     * দিত, কারণ ওয়েবের নিয়মে কেবল `numeric`, আর bcmath বৈজ্ঞানিক রূপ পড়ে না)। তালিকার দরজাগুলোর একই নিয়ম
+     * ([[PhoneInput::DECIMAL]]), বিক্রি আর দাম-হিসাব ([[store()]], [[overview()]]) দুই দরজায়। ⓘ কেবল ফোনের দরজায় — ওয়েবের
+     * কাউন্টার জাভাস্ক্রিপ্টে হিসাব করা দশমিক পাঠায়, তার নিয়ম ([[DirectSaleRules]]) যেমন ছিল।
+     *
+     * @param  array<string, mixed>  $input
+     */
+    private function plainNumbers(array $input): void
+    {
+        Validator::make($input, array_fill_keys([
+            'discount_amount', 'expense_amount', 'transport_cost', 'deposit',
+            'deposits.*.amount', 'deposits.*.charge_amount',
+            'lines.*.qty', 'lines.*.free_qty', 'lines.*.rate', 'lines.*.discount_percent', 'gifts.*.qty',
+        ], ['nullable', PhoneInput::DECIMAL]) + ['rounding_amount' => ['nullable', 'regex:/^-?\d{1,14}(\.\d{1,4})?$/']])->validate();
+    }
 
     /**
      * ফোনের public_id → ওয়েবের ঘরের ভেতরের id। ⓘ না মিললে ৪২২ — কোন ঘর, সেটা বলে; অন্য কোম্পানির id মডেলের দেয়ালেই
