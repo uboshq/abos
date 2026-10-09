@@ -285,7 +285,7 @@ final class AccountsChecks implements ChecksItsOwnBooks
                     return [];
                 }
 
-                $accounts = DB::table('accounts')->whereIn('id', $rows->pluck('account_id'))->get(['id', 'code', 'name_en', 'name_bn'])->keyBy('id');
+                $accounts = DB::table('accounts')->where('company_id', CompanyContext::id())->whereIn('id', $rows->pluck('account_id'))->get(['id', 'code', 'name_en', 'name_bn'])->keyBy('id');
 
                 return $rows->map(function ($row) use ($accounts): IntegrityFinding {
                     $account = $accounts->get($row->account_id);
