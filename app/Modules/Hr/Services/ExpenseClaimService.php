@@ -82,6 +82,15 @@ final class ExpenseClaimService
             throw ValidationException::withMessages(['employee' => __('hr::claim.no_employee')]);
         }
 
+        /*
+         * ⛔ চলে যাওয়া বা মুছে ফেলা কর্মী টাকা চান না — পুরো-ERP পুনঃঅডিট, ৯ অক্টোবর ২০২৬ (HR ৩; [[AGoneEmployeeCannotAskForMoneyTest]])।
+         * ⓘ খাতা খোঁজা হয় সব ছাঁকনি সরিয়ে ([[employeeOf()]] — কোম্পানি-ভাগের সুইচের জন্য), তাতে মুছে ফেলা খাতাও উঠত; আর নিষ্ক্রিয়
+         * বা ছাড়ার তারিখ পেরোনো কর্মীর লগইন খোলা থাকলে তিনি অগ্রিম চাইতে পারতেন, যা আর বেতন থেকে কাটার উপায় নেই।
+         */
+        if ($employee->trashed() || ! $employee->is_active || ($employee->leaving_date !== null && $employee->leaving_date->lt(Carbon::today()))) {
+            throw ValidationException::withMessages(['employee' => __('hr::claim.employee_gone')]);
+        }
+
         $kind = (string) ($data['kind'] ?? '');
 
         if (! in_array($kind, ExpenseClaim::KINDS, true)) {
