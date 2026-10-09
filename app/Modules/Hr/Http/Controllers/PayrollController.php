@@ -8,6 +8,7 @@ use App\Core\Concerns\GrandTotals;
 use App\Core\Services\MenuBuilder;
 use App\Http\Controllers\Controller;
 use App\Modules\Hr\Models\PayrollRun;
+use App\Modules\Hr\Models\Payslip;
 use App\Modules\Hr\Services\PayrollService;
 use App\Modules\Hr\Support\BranchReach;
 use Illuminate\Http\RedirectResponse;
@@ -44,11 +45,28 @@ class PayrollController extends Controller implements HasMiddleware
 
     public function index(Request $request): View
     {
+        /*
+         * ⛔ সীমিত ম্যানেজারের তালিকায় কেবল নাগালের কর্মীদের মোট — পুরো-ERP পুনঃঅডিট, ৯ অক্টোবর ২০২৬ (HR ৫;
+         * [[ThePayrollListShowsOnlyMyPeopleTest]])। ⓘ রানের পাতা ([[show()]]) আগেই নাগাল মানত, তালিকা মানত না: প্রতিটা রানের সারিতে
+         * গোটা কোম্পানির জন, মোট, কর্তন আর নিট। এখন সীমা থাকলে প্রতিটা রানের অঙ্ক নাগালের বেতনশিট থেকে গোনা; সীমা না থাকলে (মালিক)
+         * রানের নিজের মোটই, আগের মতো।
+         */
+        $reach = app(BranchReach::class);
+        $limited = $reach->branches($request->user()) !== null;
+        $seen = fn (string $sum) => $reach->throughEmployee(Payslip::query(), $request->user())
+            ->whereColumn('hr_payslips.payroll_run_id', 'hr_payroll_runs.id')
+            ->selectRaw($sum)->toBase();
+
         return view('hr::payroll.index', [
             'menu' => $this->menu->forUser($request->user()),
             // ⭐ সর্বমোট — ছাঁকা তালিকার সব পাতা মিলে ([[GrandTotals]]); পাতা ভাঙার আগে, কারণ paginate() কোয়েরিতে সীমা বসায়
             'grand' => $this->grandTotals($list = PayrollRun::query()
                 ->with('branch')
+                ->when($limited, fn ($q) => $q->select('hr_payroll_runs.*')
+                    ->selectSub($seen('COUNT(*)'), 'seen_count')
+                    ->selectSub($seen('COALESCE(SUM(hr_payslips.gross), 0)'), 'seen_gross')
+                    ->selectSub($seen('COALESCE(SUM(hr_payslips.deductions), 0)'), 'seen_deductions')
+                    ->selectSub($seen('COALESCE(SUM(hr_payslips.net), 0)'), 'seen_net'))
                 /*
                  * ⭐ খোঁজা — টুলবারের ঘরটা সত্যিই কাজ করে (১৯ সেপ্টেম্বর ২০২৬)।
                  * ⓘ রানের নম্বর আর বিবরণ।
@@ -58,7 +76,9 @@ class PayrollController extends Controller implements HasMiddleware
                         ->orWhere('narration', 'like', "%{$term}%"),
                 ))
                 ->orderByDesc('month')->orderByDesc('id'),
-                ['gross_total' => 't.gross_total', 'deduction_total' => 't.deduction_total', 'net_total' => 't.net_total']),
+                $limited
+                    ? ['gross_total' => 't.seen_gross', 'deduction_total' => 't.seen_deductions', 'net_total' => 't.seen_net']
+                    : ['gross_total' => 't.gross_total', 'deduction_total' => 't.deduction_total', 'net_total' => 't.net_total']),
             // ⓘ withQueryString — পরের পাতায় গেলে খোঁজা আর ঘনত্ব হারায় না
             'runs' => $list->paginate(50)->withQueryString(),
         ]);

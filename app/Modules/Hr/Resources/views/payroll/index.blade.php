@@ -1,4 +1,5 @@
-{{-- বেতনের রানের তালিকা — নতুন মাস আগে। --}}
+{{-- বেতনের রানের তালিকা — নতুন মাস আগে।
+     ⛔ seen_* — সীমিত ম্যানেজারের নাগালের বেতনশিটের মোট (পুনঃঅডিট, ৯ অক্টোবর ২০২৬, HR ৫); না থাকলে রানের নিজের মোট। --}}
 @php
     $columns = [
         ['key' => 'document_no', 'label' => __('hr::field.document_no'), 'width' => '11rem',
@@ -6,13 +7,13 @@
         ['key' => 'month', 'label' => __('hr::field.month'), 'width' => '10rem',
          'render' => fn ($r) => $r->month->format('M Y')],
         ['key' => 'employee_count', 'label' => __('hr::field.employee_count'), 'numeric' => true,
-         'width' => '7rem', 'render' => fn ($r) => $r->employee_count],
+         'width' => '7rem', 'render' => fn ($r) => $r->seen_count ?? $r->employee_count],
         ['key' => 'gross_total', 'total' => 'money', 'label' => __('hr::field.gross'), 'numeric' => true, 'width' => '10rem',
-         'render' => fn ($r) => \App\Core\Support\Money::format($r->gross_total)],
+         'render' => fn ($r) => \App\Core\Support\Money::format($r->seen_gross ?? $r->gross_total)],
         ['key' => 'deduction_total', 'total' => 'money', 'label' => __('hr::field.deductions'), 'numeric' => true,
-         'width' => '10rem', 'render' => fn ($r) => \App\Core\Support\Money::format($r->deduction_total)],
+         'width' => '10rem', 'render' => fn ($r) => \App\Core\Support\Money::format($r->seen_deductions ?? $r->deduction_total)],
         ['key' => 'net_total', 'total' => 'money', 'label' => __('hr::field.net'), 'numeric' => true, 'width' => '10rem',
-         'render' => fn ($r) => \App\Core\Support\Money::format($r->net_total)],
+         'render' => fn ($r) => \App\Core\Support\Money::format($r->seen_net ?? $r->net_total)],
         ['key' => 'status', 'label' => __('hr::field.status'), 'width' => '8rem',
          'render' => fn ($r) => __('core.status.' . $r->status)],
     ];
