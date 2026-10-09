@@ -31,13 +31,14 @@
     <x-slot:title>{{ __('executive::compare.title') }}</x-slot:title>
 
     @include('executive::partials.open-form')
+    @include('executive::partials.fit')
 
     <div data-executive-compare class="flex flex-col gap-3">
-        <div class="flex items-center justify-between gap-3 rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) px-4"
+        <div data-fit class="flex flex-wrap items-center justify-between gap-3 rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) px-4"
              style="height: 56px">
             <h1 class="truncate text-lg font-bold text-(--color-ink)">{{ __('executive::compare.title') }}</h1>
 
-            <form method="GET" action="{{ route('executive.compare') }}" class="flex items-center gap-2">
+            <form method="GET" action="{{ route('executive.compare') }}" class="flex flex-wrap items-center gap-2">
                 <label class="sr-only" for="cmp-mode">{{ __('executive::compare.mode') }}</label>
                 <select id="cmp-mode" name="mode" class="h-9 rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-2 text-sm">
                     @foreach ([Comparison::COMPANIES, Comparison::BRANCHES] as $mode)

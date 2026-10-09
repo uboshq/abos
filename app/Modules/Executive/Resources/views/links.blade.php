@@ -5,13 +5,14 @@
     দুইয়ের মাঝের বিক্রি, পাওনা আর দেনা বাদ যায় ([[Eliminations]])। ⛔ নাম মিলিয়ে কিছু আন্দাজ করা হয় না।
 --}}
 <x-layouts.app :menu="$menu">
+    @include('executive::partials.fit')
     <x-slot:title>{{ __('executive::links.title') }}</x-slot:title>
 
     <div data-executive-links class="flex flex-col gap-3">
-        <div class="flex items-center justify-between gap-3 rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) px-4"
+        <div data-fit class="flex flex-wrap items-center justify-between gap-3 rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) px-4"
              style="height: 56px">
             <h1 class="truncate text-lg font-bold text-(--color-ink)">{{ __('executive::links.title') }}</h1>
-            <form method="GET" action="{{ route('executive.links') }}" class="flex items-center gap-2">
+            <form method="GET" action="{{ route('executive.links') }}" class="flex flex-wrap items-center gap-2">
                 <label for="ln-company" class="text-sm text-(--color-ink-muted)">{{ __('executive::links.company') }}</label>
                 <select id="ln-company" name="company" class="h-9 rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-2 text-sm">
                     @foreach ($companies as $company)
@@ -60,7 +61,7 @@
             </form>
         @endif
 
-        <section class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
+        <section class="overflow-x-auto rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
             <table class="w-full text-sm">
                 <thead>
                     <tr class="text-left text-2xs text-(--color-ink-muted)">
@@ -89,6 +90,7 @@
                     @endforelse
                 </tbody>
             </table>
+            <x-ui.pager :rows="$links" />
         </section>
     </div>
 </x-layouts.app>

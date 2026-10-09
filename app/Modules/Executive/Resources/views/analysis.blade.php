@@ -27,15 +27,16 @@
     <x-slot:title>{{ __('executive::analysis.title') }}</x-slot:title>
 
     @include('executive::partials.open-form')
+    @include('executive::partials.fit')
 
     <div data-executive-analysis class="flex flex-col gap-3">
-        <div class="flex items-center justify-between gap-3 rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) px-4"
+        <div data-fit class="flex flex-wrap items-center justify-between gap-3 rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) px-4"
              style="height: 56px">
             <h1 class="truncate text-lg font-bold text-(--color-ink)">{{ __('executive::analysis.title') }}</h1>
 
             <span class="text-2xs text-(--color-ink-muted)">{{ \App\Core\Engines\Dashboard\DateRange::label($range['from'], $range['to']) }}</span>
 
-            <form method="GET" action="{{ route('executive.analysis') }}" class="flex items-center gap-2">
+            <form method="GET" action="{{ route('executive.analysis') }}" class="flex flex-wrap items-center gap-2">
                 <label class="sr-only" for="an-period">{{ __('executive::today.period') }}</label>
                 <select id="an-period" name="period" class="h-9 rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-2 text-sm">
                     @foreach (AnalysisController::PERIODS as $p)

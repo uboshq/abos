@@ -12,12 +12,13 @@
     <x-slot:title>{{ __('executive::alerts_page.title') }}</x-slot:title>
 
     @include('executive::partials.open-form')
+    @include('executive::partials.fit')
 
     <div data-executive-alerts class="flex flex-col gap-3">
-        <div class="flex items-center justify-between gap-3 rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) px-4"
+        <div data-fit class="flex flex-wrap items-center justify-between gap-3 rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) px-4"
              style="height: 56px">
             <h1 class="truncate text-lg font-bold text-(--color-ink)">{{ __('executive::alerts_page.title') }}</h1>
-            <form method="POST" action="{{ route('executive.refresh') }}" class="flex items-center gap-2">
+            <form method="POST" action="{{ route('executive.refresh') }}" class="flex flex-wrap items-center gap-2">
                 @csrf
                 <span class="text-2xs text-(--color-ink-muted)">{{ __('executive::today.cached_note') }}</span>
                 <x-ui.button type="submit"><x-ui.icon name="refresh" :size="14" /> {{ __('executive::today.refresh') }}</x-ui.button>
@@ -25,7 +26,7 @@
         </div>
 
         <div class="grid gap-3 xl:grid-cols-3">
-            <section data-alert-grid class="min-w-0 overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) xl:col-span-2">
+            <section data-alert-grid class="min-w-0 overflow-x-auto rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) xl:col-span-2">
                 <table class="w-full text-sm">
                     <thead>
                         <tr class="text-left text-2xs text-(--color-ink-muted)">

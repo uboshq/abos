@@ -47,25 +47,26 @@ final class LinksController extends Controller implements HasMiddleware
         $chosen = $companies->has($request->integer('company')) ? $request->integer('company') : $companies->keys()->first();
 
         $parties = $chosen === null ? [] : $this->lens->within($user, (int) $chosen, null, fn () => [
-            SisterLink::CUSTOMER => Customer::acrossDealers()->orderBy('code')->get()->map(fn (Customer $c) => ['id' => (int) $c->id, 'name' => trim($c->code.' — '.$c->name())])->all(),
-            SisterLink::SUPPLIER => Supplier::query()->orderBy('code')->get()->map(fn (Supplier $s) => ['id' => (int) $s->id, 'name' => trim($s->code.' — '.$s->name())])->all(),
+            SisterLink::CUSTOMER => Customer::acrossDealers()->inViewedBranch()->orderBy('code')->get()->map(fn (Customer $c) => ['id' => (int) $c->id, 'name' => trim($c->code.' — '.$c->name())])->all(),
+            SisterLink::SUPPLIER => Supplier::query()->inViewedBranch()->orderBy('code')->get()->map(fn (Supplier $s) => ['id' => (int) $s->id, 'name' => trim($s->code.' — '.$s->name())])->all(),
         ]);
 
         $links = SisterLink::acrossAllCompanies()
             ->whereIn('company_id', $companies->keys()->all() ?: [0])
             ->whereIn('sister_company_id', $companies->keys()->all() ?: [0])
             ->orderBy('company_id')
-            ->get()
-            ->map(fn (SisterLink $link) => [
+            ->orderBy('id')
+            ->paginate(50)
+            ->withQueryString()
+            ->through(fn (SisterLink $link) => [
                 'id' => (int) $link->id,
                 'company' => $companies[$link->company_id]['name'],
                 'sister' => $companies[$link->sister_company_id]['name'],
                 'type' => $link->party_type,
                 'party' => $this->lens->within($user, (int) $link->company_id, null, fn () => ($link->party_type === SisterLink::CUSTOMER
-                    ? Customer::acrossDealers()->find($link->party_id)
-                    : Supplier::query()->find($link->party_id))?->name() ?? '#'.$link->party_id),
-            ])
-            ->all();
+                    ? Customer::acrossDealers()->inViewedBranch()->find($link->party_id)
+                    : Supplier::query()->inViewedBranch()->find($link->party_id))?->name() ?? '#'.$link->party_id),
+            ]);
 
         return view('executive::links', [
             'menu' => $this->menu->forUser($user),
@@ -96,8 +97,8 @@ final class LinksController extends Controller implements HasMiddleware
 
         // ⓘ পক্ষটা ঐ কোম্পানিরই কি না — ঐ কোম্পানিতে বসে খোঁজা
         $exists = $this->lens->within($user, $company, null, fn () => $type === SisterLink::CUSTOMER
-            ? Customer::acrossDealers()->whereKey((int) $partyId)->exists()
-            : Supplier::query()->whereKey((int) $partyId)->exists());
+            ? Customer::acrossDealers()->inViewedBranch()->whereKey((int) $partyId)->exists()
+            : Supplier::query()->inViewedBranch()->whereKey((int) $partyId)->exists());
 
         if (! $exists) {
             throw ValidationException::withMessages(['party' => __('executive::links.no_such_party')]);

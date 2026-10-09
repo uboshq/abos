@@ -29,13 +29,14 @@
     );
 @endphp
 <x-layouts.app :menu="$menu">
+    @include('executive::partials.fit')
     <x-slot:title>{{ __('executive::history.title') }}</x-slot:title>
 
     <div data-executive-history class="flex flex-col gap-3">
-        <div class="flex items-center justify-between gap-3 rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) px-4"
+        <div data-fit class="flex flex-wrap items-center justify-between gap-3 rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) px-4"
              style="height: 56px">
             <h1 class="truncate text-lg font-bold text-(--color-ink)">{{ __('executive::history.title') }}</h1>
-            <form method="GET" action="{{ route('executive.history') }}" class="flex items-center gap-2">
+            <form method="GET" action="{{ route('executive.history') }}" class="flex flex-wrap items-center gap-2">
                 <label for="hist-date" class="text-sm text-(--color-ink-muted)">{{ __('executive::history.date') }}</label>
                 <input id="hist-date" type="date" name="date" value="{{ $date }}" max="{{ now()->toDateString() }}"
                        class="h-9 rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-2 text-sm">

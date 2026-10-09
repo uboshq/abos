@@ -32,17 +32,18 @@
     <x-slot:title>{{ __('executive::today.title') }}</x-slot:title>
 
     @include('executive::partials.open-form')
+    @include('executive::partials.fit')
 
     <div data-executive-today class="flex flex-col gap-3">
 
         {{-- ── উপরের দণ্ড — ৫৬px ───────────────────────────────────────── --}}
-        <div data-topbar class="flex items-center justify-between gap-3 rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) px-4"
+        <div data-topbar data-fit class="flex flex-wrap items-center justify-between gap-3 rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) px-4"
              style="height: 56px">
             <div class="min-w-0">
                 <h1 class="truncate text-lg font-bold text-(--color-ink)">{{ __('executive::today.title') }}</h1>
             </div>
 
-            <form method="GET" action="{{ route('executive.today') }}" class="flex items-center gap-2">
+            <form method="GET" action="{{ route('executive.today') }}" class="flex flex-wrap items-center gap-2">
                 <label class="sr-only" for="ex-company">{{ __('executive::today.company') }}</label>
                 <select id="ex-company" name="company"
                         class="h-9 rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-2 text-sm">
@@ -76,7 +77,7 @@
                 <x-ui.button type="submit">{{ __('executive::today.show') }}</x-ui.button>
             </form>
 
-            <form method="POST" action="{{ route('executive.refresh') }}" class="flex items-center gap-2">
+            <form method="POST" action="{{ route('executive.refresh') }}" class="flex flex-wrap items-center gap-2">
                 @csrf
                 <span class="hidden text-2xs text-(--color-ink-muted) xl:inline">{{ __('executive::today.cached_note') }}</span>
                 <x-ui.button type="submit">
@@ -96,7 +97,7 @@
         @else
 
         {{-- ── আটটা সংখ্যা — ৯০px ──────────────────────────────────────── --}}
-        <div data-headline class="grid gap-3" style="grid-template-columns: repeat(8, minmax(0, 1fr))">
+        <div data-headline class="grid gap-3">
             @foreach (Figures::KEYS as $key)
                 @php $module = Figures::dashboardOf($key); @endphp
                 @if ($single !== null && $board['total'][$key] !== Figures::HIDDEN)
@@ -124,7 +125,7 @@
         </div>
 
         {{-- ── ছক + সতর্কতা — ৪২০px ───────────────────────────────────── --}}
-        <div class="grid gap-3 xl:grid-cols-4" style="height: 420px">
+        <div data-fit class="grid gap-3 xl:grid-cols-4" style="height: 420px">
             <section id="executive-grid" data-grid
                      class="flex min-h-0 min-w-0 flex-col overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) xl:col-span-3">
                 <div class="flex items-center justify-between gap-2 border-b border-(--color-border) px-4 py-2">
@@ -259,7 +260,7 @@
         </div>
 
         {{-- ── ধারা আর সেরা পাঁচ — ২৬০px ───────────────────────────────── --}}
-        <div class="grid gap-3 xl:grid-cols-4" style="height: 260px">
+        <div data-fit class="grid gap-3 xl:grid-cols-4" style="height: 260px">
             <section data-trend class="min-w-0 overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) xl:col-span-2">
                 @if ($trend !== null)
                     <h2 class="px-4 pt-2 text-sm font-semibold text-(--color-ink)">{{ $trend->label }}</h2>
