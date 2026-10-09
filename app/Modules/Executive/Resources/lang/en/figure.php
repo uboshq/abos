@@ -11,6 +11,8 @@ return [
     'stock' => 'Stock value',
     'profit' => 'Profit',
     'signatures' => 'Waiting for signature',
+    'expenses' => 'Expenses',
+    'cash_flow' => 'Net cash flow',
 
     'sales_hint' => 'Posted bills, by bill date — the same figure as the sales dashboard',
     'collections_hint' => 'Posted collections and customer receipt vouchers — the same figure as the sales dashboard',

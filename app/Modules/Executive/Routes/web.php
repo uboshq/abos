@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use App\Modules\Executive\Http\Controllers\AlertsController;
+use App\Modules\Executive\Http\Controllers\CompareController;
 use App\Modules\Executive\Http\Controllers\OpenController;
 use App\Modules\Executive\Http\Controllers\TodayController;
 use Illuminate\Support\Facades\Route;
@@ -13,6 +15,14 @@ Route::middleware('auth')->prefix('owner')->group(function () {
 
     Route::get('/', [TodayController::class, 'show'])
         ->name('today')
+        ->middleware('can:executive.view');
+
+    Route::get('/compare', [CompareController::class, 'show'])
+        ->name('compare')
+        ->middleware('can:executive.view');
+
+    Route::get('/alerts', [AlertsController::class, 'show'])
+        ->name('alerts')
         ->middleware('can:executive.view');
 
     Route::post('/refresh', [TodayController::class, 'refresh'])

@@ -45,6 +45,14 @@ final class Figures
 
     public const SIGNATURES = 'signatures';
 
+    /** তুলনার পাতার বাড়তি দুইটা — খরচ আর টাকার নিট প্রবাহ */
+    public const EXPENSES = 'expenses';
+
+    public const CASH_FLOW = 'cash_flow';
+
+    /** @var list<string> তুলনার কলাম — নকশার ক্রমে */
+    public const COMPARED = [self::SALES, self::COLLECTIONS, self::RECEIVABLE, self::PROFIT, self::EXPENSES, self::CASH_FLOW];
+
     /** @var list<string> পর্দার ক্রম — নকশার ক্রম */
     public const KEYS = [
         self::SALES, self::COLLECTIONS, self::RECEIVABLE, self::PAYABLE,
@@ -88,6 +96,9 @@ final class Figures
             self::STOCK => ['module' => 'inventory', 'money' => true, 'byBranch' => true, 'period' => false, 'permission' => null],
             self::PROFIT => ['module' => 'accounts', 'money' => true, 'byBranch' => true, 'period' => true, 'permission' => null],
             self::SIGNATURES => ['module' => 'approval', 'money' => false, 'byBranch' => false, 'period' => false, 'permission' => null],
+            self::EXPENSES => ['module' => 'accounts', 'money' => true, 'byBranch' => true, 'period' => true, 'permission' => null],
+            // ⓘ অর্থের ড্যাশবোর্ডের "এ মাসের নিট নগদ প্রবাহ" — হিসাবের চাবিও চায়, তহবিলের মতোই
+            self::CASH_FLOW => ['module' => 'finance', 'money' => true, 'byBranch' => true, 'period' => true, 'permission' => 'accounts.view'],
             default => throw new InvalidArgumentException("Unknown executive figure '{$key}'."),
         };
     }
@@ -151,6 +162,12 @@ final class Figures
                 $accounts->netOfType(Account::EXPENSE, Carbon::parse($from), Carbon::parse($to)),
             ),
             self::SIGNATURES => (string) ApprovalDashboard::pendingCount(),
+            self::EXPENSES => $accounts->netOfType(Account::EXPENSE, Carbon::parse($from), Carbon::parse($to)),
+            self::CASH_FLOW => (function () use ($accounts, $from, $to): string {
+                $flow = $accounts->moneyFlowBetween($from, $to);
+
+                return bcsub($flow['in'], $flow['out'], 4);
+            })(),
         };
 
         return $value === null ? null : bcadd((string) $value, '0', 4);

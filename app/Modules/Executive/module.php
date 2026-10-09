@@ -46,6 +46,11 @@ return [
             ['label' => 'executive::menu.today', 'icon' => 'dashboard', 'route' => 'executive.today', 'permission' => 'executive.view'],
         ],
 
+        'reports' => [
+            ['label' => 'executive::menu.compare', 'icon' => 'scale', 'route' => 'executive.compare', 'permission' => 'executive.view'],
+            ['label' => 'executive::menu.alerts', 'icon' => 'alert-triangle', 'route' => 'executive.alerts', 'permission' => 'executive.view'],
+        ],
+
     ],
 
     'permissions' => [

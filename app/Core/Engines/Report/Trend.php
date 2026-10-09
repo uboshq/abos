@@ -36,6 +36,15 @@ final class Trend
     /** @var list<string> */
     public const GRAINS = [self::DAILY, self::WEEKLY, self::MONTHLY, self::QUARTERLY, self::YEARLY];
 
+    /**
+     * ⭐ আগের মাসের একই দিনগুলো — "এ মাস বনাম আগের মাস" (মালিকের কেন্দ্রের তুলনা, ৯ অক্টোবর ২০২৬)।
+     *
+     * ⓘ রিপোর্টের "আগের সময়" ঠিক ততদিন আগে — ১–৯ অক্টোবরের আগে ২২–৩০ সেপ্টেম্বর। মালিক মাস ধরে
+     * ভাবেন: ১–৯ অক্টোবর বনাম ১–৯ সেপ্টেম্বর। ⚠️ দুইটা আলাদা প্রশ্ন, তাই আলাদা নাম — রিপোর্টের
+     * নিয়ম বদলায় না।
+     */
+    public const PREVIOUS_MONTH = 'previous_month';
+
     /** ⚠️ সপ্তাহ শুরু শনিবারে — এখানকার অফিসের সপ্তাহ, শুক্রবার ছুটি ([[PromotionCalendar::WEEK_STARTS]]-এর একই নিয়ম) */
     public const WEEK_STARTS = Carbon::SATURDAY;
 
@@ -128,6 +137,11 @@ final class Trend
             ReportEngine::COMPARE_LAST_YEAR => [
                 'from' => $start->copy()->subYear()->toDateString(),
                 'to' => $end->copy()->subYear()->toDateString(),
+            ],
+            // ⚠️ মাসের শেষ পেরোয় না: ৩১ মার্চ → ২৮/২৯ ফেব্রুয়ারি, ১ মার্চ নয়
+            self::PREVIOUS_MONTH => [
+                'from' => $start->copy()->subMonthNoOverflow()->toDateString(),
+                'to' => $end->copy()->subMonthNoOverflow()->toDateString(),
             ],
             default => null,
         };
