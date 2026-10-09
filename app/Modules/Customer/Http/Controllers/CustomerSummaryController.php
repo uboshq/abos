@@ -7,7 +7,9 @@ namespace App\Modules\Customer\Http\Controllers;
 use App\Core\Contracts\CustomerTrade;
 use App\Core\Services\MenuBuilder;
 use App\Core\Services\SettingsService;
+use App\Core\Support\ViewedBranch;
 use App\Http\Controllers\Controller;
+use App\Models\LedgerEntry;
 use App\Modules\Customer\Models\Customer;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
@@ -52,7 +54,15 @@ final class CustomerSummaryController extends Controller implements HasMiddlewar
         return view('customer::summary', [
             'menu' => $this->menu->forUser($request->user()),
             'customer' => $customer,
-            'outstanding' => $customer->outstanding(),
+            /*
+             * ⛔ হেডারে বাছা শাখায় — পুরো-ERP পুনঃঅডিট, ৯ অক্টোবর ২০২৬ (গ্রাহক ১৩; [[TheSummaryFollowsTheBranchInTheHeaderTest]])।
+             * ⓘ কার্ডের বিলের অঙ্ক বিলের শাখার দেয়ালে ছাঁকা, অথচ বকেয়া গোটা কোম্পানির — "ময়মনসিংহ" বেছে নেত্রকোনার বকেয়াও দেখাত, আর
+             * অঙ্কটা চাপলে যে খাতা খোলে তার শেষ জেরের সাথে মিলত না। এখন গ্রাহকের পাতার একই ছাঁকনি ([[CustomerController::show()]])।
+             */
+            'outstanding' => bcadd((string) (ViewedBranch::narrow(LedgerEntry::query(), 'ledger_entries.branch_id')
+                ->forParty(Customer::drillSourceType(), $customer->id)
+                ->selectRaw('COALESCE(SUM(debit) - SUM(credit), 0) as net')
+                ->value('net') ?? 0), '0', 4),
             'creditLimitOn' => $this->settings->enabled('customer.credit_limit_enabled'),
             'trade' => $this->trade->glanceFor(
                 (int) $customer->id,
