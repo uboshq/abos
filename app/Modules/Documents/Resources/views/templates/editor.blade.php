@@ -75,7 +75,7 @@
         <section data-boxed class="mt-4 rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
             <h2 class="border-b border-(--color-border) bg-(--color-section-head) px-4 py-3 font-semibold">{{ __('documents::section.preview') }}</h2>
             {{-- ⓘ নিরাপদ করা লেখা ([[DocumentTemplates::html()]]) — কেবল আমাদের চিহ্ন HTML --}}
-            <div class="prose max-w-none px-6 py-4 text-sm" data-template-preview>{!! $preview !!}</div>
+            <div class="max-w-none [&_h2]:mb-2 [&_h2]:text-lg [&_h2]:font-semibold [&_h3]:mb-1 [&_h3]:font-semibold [&_p]:mb-2 [&_hr]:my-3 px-6 py-4 text-sm" data-template-preview>{!! $preview !!}</div>
         </section>
     @endif
 </x-layouts.app>
