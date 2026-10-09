@@ -69,6 +69,7 @@ return [
     'inter_company_amount' => 'The amount must be more than zero.',
     'already_posted' => 'Voucher :no has already been posted.',
     'already_cancelled' => 'This voucher is already cancelled.',
+    'adjusting_reversal_month_locked' => 'Its automatic reversal :no must be cancelled too, but :month is locked. Unlock the month first, then cancel.',
     'cancelled_cannot_post' => 'A cancelled voucher cannot be posted.',
     'posted_cannot_edit' => ':no is posted and cannot be changed. '
         .'To correct it, cancel and issue a new voucher — that is the rule on paper too.',
