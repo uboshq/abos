@@ -261,6 +261,13 @@ final class PartyReports
             query: function (array $f) {
                 $asOf = Carbon::parse($f['to']);
 
+                /*
+                 * ⛔ আদায় সবচেয়ে পুরনো বকেয়া থেকে (FIFO), আর অগ্রিম আলাদা ঘরে — পুরো-ERP পুনঃঅডিট, ৯ অক্টোবর ২০২৬ (গ্রাহক ১২;
+                 * [[TheCollectionPaysTheOldestDueFirstTest]])। ⓘ আগে প্রতিটা বালতি নিজের তারিখের ডেবিট − ক্রেডিট ছিল: গত সপ্তাহের আদায়
+                 * "০–৩০ দিন"-এ ঋণাত্মক হয়ে বসত আর ৯০+ দিনের পুরনো বকেয়া কখনো কমত না — উপরের মন্তব্যের নিয়মটাই কোডে ছিল না। আর আগাম
+                 * জমা রাখা গ্রাহক ঋণাত্মক বকেয়া হয়ে মোটে মিশত, অন্যদের বকেয়া কম দেখাত। এখন বালতিতে কেবল ডেবিট, মোট ক্রেডিট পুরনো
+                 * বালতি থেকে কেটে নিচে নামে; বকেয়া শূন্যের নিচে নামে না, বাড়তিটা "অগ্রিম" ঘরে।
+                 */
                 $bucket = function (?int $from, ?int $to) use ($asOf) {
                     $conditions = [];
 
@@ -276,10 +283,19 @@ final class PartyReports
 
                     $where = $conditions === [] ? '1=1' : implode(' AND ', $conditions);
 
-                    return "SUM(CASE WHEN {$where} THEN ledger_entries.debit - ledger_entries.credit ELSE 0 END)";
+                    return "SUM(CASE WHEN {$where} THEN ledger_entries.debit ELSE 0 END)";
                 };
 
                 [$b1, $b2, $b3] = self::BUCKETS;
+
+                // ⓘ পুরনো থেকে নতুন: প্রতিটা বালতির পরে আদায়ের যা বাকি থাকে, সেটা পরের বালতিতে নামে
+                $left = 'SUM(ledger_entries.credit)';
+                $fifo = [];
+
+                foreach (['bucket_90' => $bucket($b3, null), 'bucket_60' => $bucket($b2, $b3), 'bucket_30' => $bucket($b1, $b2), 'bucket_current' => $bucket(null, $b1)] as $key => $debits) {
+                    $fifo[$key] = "GREATEST({$debits} - {$left}, 0)";
+                    $left = "GREATEST({$left} - {$debits}, 0)";
+                }
 
                 return DB::table('ledger_entries')
                     ->join('customers', 'customers.id', '=', 'ledger_entries.party_id')
@@ -287,7 +303,7 @@ final class PartyReports
                     ->where('ledger_entries.company_id', $f['company_id'])
                     ->where('ledger_entries.party_type', Customer::drillSourceType())
                     ->tap(ReportEngine::branchWall($f, 'ledger_entries.branch_id'))
-                ->tap(ReportEngine::dealerWall($f, 'customers.id'))
+                    ->tap(ReportEngine::dealerWall($f, 'customers.id'))
                     /* একই ছাঁকনি — প্রশ্নটা এখানেও একই */
                     ->when($f['party_type_id'] ?? null,
                         fn ($q, $type) => $q->where('customers.party_type_id', $type))
@@ -299,11 +315,12 @@ final class PartyReports
                         'ledger_entries.party_id',
                         ...self::identity(),
                         DB::raw("'".Customer::drillSourceType()."' as party_type_literal"),
-                        DB::raw($bucket(null, $b1).' as bucket_current'),
-                        DB::raw($bucket($b1, $b2).' as bucket_30'),
-                        DB::raw($bucket($b2, $b3).' as bucket_60'),
-                        DB::raw($bucket($b3, null).' as bucket_90'),
-                        DB::raw('SUM(ledger_entries.debit) - SUM(ledger_entries.credit) as outstanding'),
+                        DB::raw($fifo['bucket_current'].' as bucket_current'),
+                        DB::raw($fifo['bucket_30'].' as bucket_30'),
+                        DB::raw($fifo['bucket_60'].' as bucket_60'),
+                        DB::raw($fifo['bucket_90'].' as bucket_90'),
+                        DB::raw('GREATEST(SUM(ledger_entries.debit) - SUM(ledger_entries.credit), 0) as outstanding'),
+                        DB::raw('GREATEST(SUM(ledger_entries.credit) - SUM(ledger_entries.debit), 0) as advance'),
                         DB::raw('MAX(CASE WHEN ledger_entries.debit > 0 THEN ledger_entries.trx_date END) as last_billed'),
                         DB::raw('MAX(CASE WHEN ledger_entries.credit > 0 THEN ledger_entries.trx_date END) as last_collected'),
                         // ⓘ গ্রুপের বাইরের ঘর — কারণটা [[identity()]]-এ
@@ -317,6 +334,8 @@ final class PartyReports
                 ['key' => 'bucket_60', 'label' => 'customer::field.bucket_60', 'type' => ReportColumn::MONEY],
                 ['key' => 'bucket_90', 'label' => 'customer::field.bucket_90', 'type' => ReportColumn::MONEY],
                 ['key' => 'outstanding', 'label' => 'customer::field.outstanding', 'type' => ReportColumn::MONEY],
+                // ⓘ আগাম জমা — বকেয়ার মোটে মেশে না (পুনঃঅডিট ৯ অক্টোবর ২০২৬, গ্রাহক ১২)
+                ['key' => 'advance', 'label' => 'customer::field.advance_held', 'type' => ReportColumn::MONEY],
 
                 /*
                  * ⭐ মালিক জানতে চেয়েছেন আর কী দেওয়া যায় — ১৯ সেপ্টেম্বর ২০২৬।
