@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Finance\Services;
 
 use App\Core\Concerns\ReadsTheRowUnderLock;
+use App\Core\Services\OpenPeriod;
 use App\Core\Support\CompanyContext;
 use App\Core\Support\DocumentStatus;
 use App\Modules\Accounts\Models\Account;
@@ -46,6 +47,7 @@ final class InterestAccrualService
         private readonly BankFacilityService $facilities,
         private readonly VoucherService $vouchers,
         private readonly FinanceSignature $signature,
+        private readonly OpenPeriod $period,
     ) {}
 
     /**
@@ -107,6 +109,13 @@ final class InterestAccrualService
         if ($end->gte(Carbon::today())) {
             throw ValidationException::withMessages([
                 'month' => __('finance::bank_loan_report.accrual_month_not_over'),
+            ]);
+        }
+
+        // ⛔ বন্ধ মাসে নয় — আর কিছু লেখার আগেই থামা, যাতে উল্টো দাখিলা বসে জমা আটকে না থাকে (পুনঃঅডিট, ৯ অক্টোবর ২০২৬)
+        if (($lock = $this->period->lockOn($end)) !== null) {
+            throw ValidationException::withMessages([
+                'month' => __('finance::bank_loan_report.accrual_month_closed', ['month' => $lock->label()]),
             ]);
         }
 
@@ -190,7 +199,7 @@ final class InterestAccrualService
                 continue;
             }
 
-            DB::transaction(function () use ($accrual, &$count): void {
+            DB::transaction(function () use ($accrual, $start, &$count): void {
                 $fresh = $accrual;
                 $this->lockFresh($fresh);
 
@@ -200,6 +209,16 @@ final class InterestAccrualService
 
                 $on = $fresh->for_month->copy()->endOfMonth()->addDay()->toDateString();
 
+                /*
+                 * ⛔ উল্টানোর দিনটা বন্ধ মাসে পড়লে — চালানো মাসের প্রথম দিনে (পুরো-ERP পুনঃঅডিট, ৯ অক্টোবর ২০২৬)।
+                 *
+                 * ⓘ আগে খাতা বন্ধ মাসে উল্টো দাখিলা নিত না, আর পুরো চালটা থেমে যেত: সেই ঋণের জমা কোনোদিন উল্টাত না, আর
+                 * পরের কোনো মাসই বসানো যেত না — যতদিন না কেউ পুরনো মাস খোলেন। চালানো মাসটা উপরে খোলা দেখা হয়েছে, তাই
+                 * এখানে থামে না; বন্ধ মাসের খরচ আর বদলায় না, উল্টোটা প্রথম খোলা মাসে বসে — মোট সুদ একই।
+                 */
+                if ($this->period->lockOn($on) !== null) {
+                    $on = $start->toDateString();
+                }
                 $amount = bcadd((string) $fresh->amount, '0', 2);
                 $facility = $accrual->facility;
 
