@@ -181,6 +181,8 @@ final class PurchaseWidgets implements DashboardWidgets
          */
         $sum = fn (string $table) => self::inView(DB::table($table), $table.'.branch_id')
             ->where('company_id', CompanyContext::id())
+            // ⛔ মোছা কাগজ নয় — `DB::table()` নরম-মোছার স্কোপ মানে না (পুনঃনিরীক্ষা, ৯ অক্টোবর ২০২৬)
+            ->whereNull('deleted_at')
             ->whereIn('status', DocumentStatus::POSTED)
             ->whereBetween('trx_date', $month)
             ->selectRaw('COALESCE(SUM(total - tax), 0) as sold, COALESCE(SUM(cost_of_goods), 0) as cost')

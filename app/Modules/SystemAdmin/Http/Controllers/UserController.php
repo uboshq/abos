@@ -920,7 +920,8 @@ class UserController extends Controller implements HasMiddleware
         }
 
         $keeps = collect($data['roles'] ?? [])
-            ->contains(fn (string $role) => Role::query()->where('name', $role)->first()
+            // ⛔ এই কোম্পানির রোল — নামটা অন্য কোম্পানিতেও থাকতে পারে, অন্য চাবিসহ (পুনঃনিরীক্ষা, ৯ অক্টোবর ২০২৬)
+            ->contains(fn (string $role) => Role::query()->where('name', $role)->where('company_id', CompanyContext::id())->first()
                 ?->hasPermissionTo('system_admin.user.manage') ?? false);
 
         if (! $keeps) {
