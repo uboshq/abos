@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Core\Engines\Report;
 
+use App\Core\Engines\Print\PrintEngine;
 use App\Core\Services\ListExport;
 use App\Core\Support\DateFormat;
 use App\Core\Support\Money;
@@ -92,6 +93,24 @@ final class ReportExport
                 return self::text($columns[$index], is_array($row) ? ($row[$column['key']] ?? null) : null);
             },
         );
+
+        /*
+         * ⭐ মোটের সারি ফাইলেও — পুনঃনিরীক্ষা, ৯ অক্টোবর ২০২৬।
+         *
+         * ⚠️ শাখা-ভাগ ছাড়া রিপোর্টে পর্দার নিচে "মোট" সারি থাকত, অথচ CSV/Excel/PDF-এ
+         * কেবল সারিগুলো — হিসাবরক্ষক ফাইলে নিজে যোগ করতেন, আর হার-দামের ঘরও যোগ হয়ে যেত।
+         * ⓘ যোগফল গোটা ফলের ([[ReportEngine::run()]]), তাই পাতা জোড়া লাগলেও একবারই বসে
+         * (ফুটার একটা, সারি নয়)। শাখা-ভাগে মোটগুলো আগে থেকেই সারি হয়ে আছে ([[rowsOf()]])।
+         */
+        if (! $result->isSplitByBranch() && $result->totals !== []) {
+            $export->footer(array_map(
+                fn (ReportColumn $column, int $i): string => $i === 0
+                    ? (string) __('core.print.total')
+                    : ($column->total && isset($result->totals[$column->key]) ? self::text($column, $result->totals[$column->key]) : ''),
+                $columns,
+                array_keys($columns),
+            ));
+        }
 
         /*
          * ⭐ রিপোর্টের সব পাতা ফাইলে যায় (৩০ সেপ্টেম্বর ২০২৬) — [[ExportListing]] পাতাগুলো জোড়ে।
