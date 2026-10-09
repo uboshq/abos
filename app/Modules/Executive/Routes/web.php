@@ -8,6 +8,7 @@ use App\Modules\Executive\Http\Controllers\CompareController;
 use App\Modules\Executive\Http\Controllers\ExecutiveReportController;
 use App\Modules\Executive\Http\Controllers\HistoryController;
 use App\Modules\Executive\Http\Controllers\OpenController;
+use App\Modules\Executive\Http\Controllers\ReportsController;
 use App\Modules\Executive\Http\Controllers\TodayController;
 use Illuminate\Support\Facades\Route;
 
@@ -26,6 +27,10 @@ Route::middleware('auth')->prefix('owner')->group(function () {
 
     Route::get('/analysis', [AnalysisController::class, 'show'])
         ->name('analysis')
+        ->middleware('can:executive.view');
+
+    Route::get('/reports', [ReportsController::class, 'show'])
+        ->name('reports')
         ->middleware('can:executive.view');
 
     // ⓘ মালিকের কেন্দ্রের নিজের রিপোর্ট — কেন্দ্রীয় রিপোর্টের পাতায়
