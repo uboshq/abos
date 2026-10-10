@@ -31,6 +31,7 @@ return [
     'user_count' => 'Users',
     'last_login' => 'Last signed in',
     'never_signed_in' => 'Never signed in',
+    'identity_and_login' => 'Identity and sign-in',
     'two_step' => '2FA',
     'two_step_on' => 'On',
     'two_step_off' => 'Off',
