@@ -96,6 +96,7 @@ class CustomerPolicy
      */
     public function managePortal(User $user, Customer $customer): bool
     {
-        return $user->can('customer.portal');
+        // ⛔ শাখার দেয়ালও — শাখায় সীমিত মানুষ ঠিকানা লিখে অন্য শাখার গ্রাহকের চাবি দিতে বা কাড়তে পারতেন (রিভিউ, ১০ অক্টোবর ২০২৬)
+        return $user->can('customer.portal') && $this->reaches($user, $customer);
     }
 }

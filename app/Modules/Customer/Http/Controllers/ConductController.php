@@ -29,6 +29,9 @@ final class ConductController extends Controller implements HasMiddleware
 
     public function store(Request $request, Customer $customer): RedirectResponse
     {
+        // ⛔ গ্রাহক দেখার নাগাল — শাখার দেয়াল ([[CustomerPolicy::view()]]); আগে কেবল চাবি দেখা হত, তাই অন্য শাখার গ্রাহকে নোট বসত (রিভিউ, ১০ অক্টোবর ২০২৬)
+        \Illuminate\Support\Facades\Gate::authorize('view', $customer);
+
         $data = $request->validate([
             'type' => ['required', 'string', 'max:40'],
             'note' => ['nullable', 'string', 'max:500'],
@@ -42,6 +45,9 @@ final class ConductController extends Controller implements HasMiddleware
 
     public function retire(CustomerConduct $conduct): RedirectResponse
     {
+        // ⛔ একই দেয়াল — অন্য শাখার গ্রাহকের নোট তোলা নয়
+        \Illuminate\Support\Facades\Gate::authorize('view', $conduct->customer()->firstOrFail());
+
         $this->conduct->retire($conduct);
 
         return back()->with('status', __('customer::conduct.was_retired'));

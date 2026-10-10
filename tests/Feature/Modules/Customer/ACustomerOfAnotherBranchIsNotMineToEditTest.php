@@ -76,6 +76,37 @@ final class ACustomerOfAnotherBranchIsNotMineToEditTest extends TestCase
         $this->post(route('customer.store'), ['name_en' => 'Placed Here', 'branch_id' => $this->mine->id])->assertSessionHasNoErrors();
     }
 
+    /**
+     * ⛔ পোর্টালের চাবি আর আচরণের নোট — শাখার দেয়াল এখানেও (cloud/people-fixes রিভিউ, ১০ অক্টোবর ২০২৬;
+     * [[CustomerPolicy::managePortal()]], [[ConductController]])। আগে কেবল চাবি দেখা হত, তাই আইডি লিখে অন্য শাখার গ্রাহকের
+     * পোর্টাল খোলা-বন্ধ আর নোট লেখা-নামানো যেত।
+     */
+    public function test_another_branchs_portal_and_conduct_are_out_of_reach(): void
+    {
+        $theirs = $this->customer('Their Shop', $this->theirs);
+        $ours = $this->customer('Our Shop', $this->mine);
+        $this->clerk->givePermissionTo([
+            \Spatie\Permission\Models\Permission::findOrCreate('customer.portal', 'web'),
+            \Spatie\Permission\Models\Permission::findOrCreate('customer.conduct.manage', 'web'),
+        ]);
+        $note = \App\Modules\Customer\Models\CustomerConduct::query()->create(['company_id' => $this->company->id,
+            'customer_id' => $theirs->id, 'type' => 'LATE_PAYMENT', 'note' => 'late', 'is_active' => true, 'recorded_by' => User::query()->where('email', 'owner@abos.test')->value('id'), 'recorded_at' => now()]);
+
+        $this->actingAs($this->clerk);
+        $this->post(route('customer.portal.store', $theirs), ['password' => 'Strong-pass-2026x', 'password_confirmation' => 'Strong-pass-2026x'])->assertForbidden();
+        $this->delete(route('customer.portal.destroy', $theirs))->assertForbidden();
+        $this->assertFalse((bool) $theirs->fresh()->portal_enabled, '⛔ অন্য শাখার গ্রাহকের পোর্টাল খুলে গেল');
+
+        $this->post(route('customer.conduct.store', $theirs), ['type' => 'LATE_PAYMENT', 'note' => 'x'])->assertForbidden();
+        $this->post(route('customer.conduct.retire', $note))->assertForbidden();
+        $this->assertSame(1, \App\Modules\Customer\Models\CustomerConduct::query()->where('customer_id', $theirs->id)->count(), '⛔ অন্য শাখার গ্রাহকে নোট বসল');
+        $this->assertTrue((bool) $note->fresh()->is_active, '⛔ অন্য শাখার গ্রাহকের নোট নামল');
+
+        // ⓘ নিজের শাখার গ্রাহক — আগের মতোই
+        $this->post(route('customer.conduct.store', $ours), ['type' => 'LATE_PAYMENT', 'note' => 'x'])->assertSessionHasNoErrors()->assertRedirect();
+        $this->assertSame(1, \App\Modules\Customer\Models\CustomerConduct::query()->where('customer_id', $ours->id)->count());
+    }
+
     private function customer(string $name, Branch $branch): Customer
     {
         return Customer::query()->create(['company_id' => $this->company->id, 'code' => strtoupper(substr(md5($name), 0, 8)),
