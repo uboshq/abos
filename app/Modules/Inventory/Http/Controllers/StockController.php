@@ -154,6 +154,8 @@ class StockController extends Controller implements HasMiddleware
             ->selectSub($this->sumOf('floor_change', $warehouse), 'floor_total')
             ->selectSub($this->sumOf('reserved_change', $warehouse), 'reserved_total')
             ->selectSub($this->sumOf('hold_change', $warehouse), 'hold_total')
+            // ⓘ বিক্রয়যোগ্য একটাই সূত্রে — মেয়াদ পেরোনো লট বাদ ([[StockService::availableSql()]], মজুদ M27)
+            ->selectSub($this->sumOf(StockService::availableSql(), $warehouse), 'available_total')
 
             /*
              * ⭐ ফ্রি মাল আলাদা — ১৮ সেপ্টেম্বর ২০২৬, মালিকের নির্দেশে।
@@ -227,7 +229,7 @@ class StockController extends Controller implements HasMiddleware
             'floor' => 't.floor_total',
             'reserved' => 't.reserved_total',
             'hold' => 't.hold_total',
-            'available' => 't.floor_total - t.reserved_total - t.hold_total',
+            'available' => 't.available_total',
             'free' => 't.free_total',
             'free_available' => 't.free_total - t.free_reserved_total',
             'unplaced' => 't.unplaced_total',
@@ -428,7 +430,7 @@ class StockController extends Controller implements HasMiddleware
     {
         // সাব-সিলেক্টের নাম দিয়েই সাজানো — ব্যবহারকারীর পাঠানো কোনো লেখা
         // এখানে পৌঁছায় না, শুধু এই ঘোষিত ছয়টা চাবির একটা
-        $available = 'floor_total - reserved_total - hold_total';
+        $available = 'available_total';
 
         return [
             'available' => fn ($q) => $q->orderByRaw("{$available} asc")->orderBy('inv_products.name_en'),

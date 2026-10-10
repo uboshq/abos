@@ -7,6 +7,7 @@ namespace App\Modules\Inventory\Reports;
 use App\Core\Engines\Report\ReportColumn;
 use App\Core\Engines\Report\ReportDefinition;
 use App\Core\Engines\Report\ReportEngine;
+use App\Modules\Inventory\Services\StockService;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
@@ -229,7 +230,7 @@ final class InventoryControlReports
                         ->groupBy('m.product_id')
                         ->selectRaw('m.product_id')
                         ->selectRaw('SUM(m.floor_change + m.unplaced_change) as on_hand')
-                        ->selectRaw('SUM(m.floor_change - m.reserved_change - m.hold_change) as available'),
+                        ->selectRaw('SUM('.StockService::availableSql('m.').') as available'),
                     's',
                 )
                 ->join('inv_products as p', 'p.id', '=', 's.product_id')

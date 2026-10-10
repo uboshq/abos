@@ -9,6 +9,7 @@ use App\Core\Engines\Report\ReportDefinition;
 use App\Core\Engines\Report\ReportEngine;
 use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Inventory\Services\OpeningStockService;
+use App\Modules\Inventory\Services\StockService;
 use Carbon\CarbonPeriod;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Carbon;
@@ -198,7 +199,7 @@ final class InventoryAnalysisReports
                     ->selectRaw('SUM(m.hold_change) as held')
                     ->selectRaw('SUM(m.reserved_change) as reserved')
                     ->selectRaw('SUM(m.floor_change + m.unplaced_change) as on_hand')
-                    ->selectRaw('SUM(m.floor_change - m.reserved_change - m.hold_change) as sellable')
+                    ->selectRaw('SUM('.StockService::availableSql('m.').') as sellable')
                     ->selectRaw('SUM((m.floor_change + m.unplaced_change) * COALESCE(('.self::avgCost().'), 0)) as value');
             },
             columns: [

@@ -605,7 +605,7 @@ final class StockReports
                      * *গুদামে কত আছে* আর *কতটা বেচা যাবে*।
                      */
                     DB::raw('SUM(m.unplaced_change) as unplaced'),
-                    DB::raw('SUM(m.floor_change) - SUM(m.reserved_change) - SUM(m.hold_change) as available'),
+                    DB::raw('SUM('.StockService::availableSql('m.').') as available'),
                 ]),
             columns: [
                 [
@@ -761,7 +761,7 @@ final class StockReports
                      * ⛔ `available`-এ `unplaced` নেই, আর থাকবেও না —
                      * বসানো হয়নি এমন মাল বিক্রয়যোগ্য নয়।
                      */
-                    DB::raw('SUM(m.floor_change) - SUM(m.reserved_change) - SUM(m.hold_change) as available'),
+                    DB::raw('SUM('.StockService::availableSql('m.').') as available'),
                 ]),
             columns: [
                 [
@@ -1008,7 +1008,7 @@ final class StockReports
      */
     public static function replenishment(): ReportDefinition
     {
-        $available = '(select COALESCE(SUM(m.floor_change - m.reserved_change - m.hold_change), 0)
+        $available = '(select COALESCE(SUM('.StockService::availableSql('m.').'), 0)
                        from inv_stock_movements m
                        where m.product_id = p.id and m.company_id = p.company_id)';
 

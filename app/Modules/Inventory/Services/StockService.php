@@ -834,6 +834,27 @@ final class StockService
     // ── অবস্থাগুলো ─────────────────────────────────────────────────────
 
     /**
+     * ⭐ "বিক্রয়যোগ্য"-এর একটাই সূত্র, চলাচলের প্রতি সারিতে — তাকে − অর্ডারে ধরা − আটকানো − মেয়াদ পেরোনো লটে পড়ে থাকা মাল
+     * (পুরো-ERP অডিট, মজুদ M27; fe-র সিদ্ধান্ত (ক), ১০ অক্টোবর ২০২৬; [[TheExpiredLotIsNotForSaleAnywhereTest]])।
+     *
+     * ⛔ আগে মেয়াদ পেরোনো লট "পাওয়া যায়"-তে গোনা হত, অথচ বেচতে গেলে লট-বাছাই ([[BatchAllocator]]) সেটা নিত না — পর্দা বলত
+     * আছে, কাউন্টার বলত নেই। ⓘ মেয়াদ পেরোনো মানে [[Batch::scopeUnexpired()]]-এর উল্টো: মেয়াদের দিন আজকের আগে; সেই লটের
+     * তাক − আটকানো বাদ যায় (আটকানোটা আগেই বাদ)। ⓘ সূত্রটা ১৪ জায়গায় হাতে লেখা ছিল; এখন সবাই এটা ডাকে, আর
+     * [[NobodyCountsAvailableByHandTest]] নতুন হাতে-লেখা দেখলে লাল হয়। ⓘ নিচের দুই তালা-গোনা (আটকানো আর বিক্রির
+     * সংরক্ষণ) ইচ্ছা করে পুরনো সূত্রে — ওরা "তাকের বেশি বেরোল কি না" দেখে, বেচার যোগ্যতা নয়; মেয়াদি লট আটকানো তো দরকারই।
+     *
+     * @param  string  $prefix  চলাচলের টেবিলের নাম-আগে, যেমন `m.`
+     */
+    public static function availableSql(string $prefix = ''): string
+    {
+        $day = now()->toDateString();
+
+        return "{$prefix}floor_change - {$prefix}reserved_change - {$prefix}hold_change"
+            ." - CASE WHEN {$prefix}batch_id IN (select eb.id from inv_batches eb where eb.expiry_date < '{$day}')"
+            ." THEN {$prefix}floor_change - {$prefix}hold_change ELSE 0 END";
+    }
+
+    /**
      * সবগুলো সংখ্যা একসাথে — একটা কোয়েরিতে।
      *
      * আলাদা করে বারবার গুনলে একই পাতায় অনেকগুলো কোয়েরি হত, আর তালিকায়
@@ -862,7 +883,8 @@ final class StockService
                 COALESCE(SUM(free_change), 0) as free,
                 COALESCE(SUM(free_reserved_change), 0) as free_reserved,
                 COALESCE(SUM(unplaced_change), 0) as unplaced,
-                COALESCE(SUM(unplaced_free_change), 0) as unplaced_free
+                COALESCE(SUM(unplaced_free_change), 0) as unplaced_free,
+                COALESCE(SUM('.self::availableSql().'), 0) as available
             ')
             ->first();
 
@@ -878,8 +900,8 @@ final class StockService
             'floor' => $floor,
             'reserved' => $reserved,
             'hold' => $hold,
-            // বিক্রয়যোগ্য = তাকে যা আছে − ধরা − আটকানো
-            'available' => bcsub(bcsub($floor, $reserved, 4), $hold, 4),
+            // বিক্রয়যোগ্য = তাকে যা আছে − ধরা − আটকানো − মেয়াদ পেরোনো লট ([[availableSql()]], মজুদ M27)
+            'available' => (string) ($row->available ?? 0),
 
             'free' => $free,
             'free_reserved' => $freeReserved,
@@ -933,7 +955,8 @@ final class StockService
                 COALESCE(SUM(free_change), 0) as free,
                 COALESCE(SUM(free_reserved_change), 0) as free_reserved,
                 COALESCE(SUM(unplaced_change), 0) as unplaced,
-                COALESCE(SUM(unplaced_free_change), 0) as unplaced_free
+                COALESCE(SUM(unplaced_free_change), 0) as unplaced_free,
+                COALESCE(SUM('.self::availableSql().'), 0) as available
             ')
             ->get();
 
@@ -952,7 +975,7 @@ final class StockService
                 'floor' => $floor,
                 'reserved' => $reserved,
                 'hold' => $hold,
-                'available' => bcsub(bcsub($floor, $reserved, 4), $hold, 4),
+                'available' => (string) $row->available,
                 'free' => $free,
                 'free_reserved' => $freeReserved,
                 'free_available' => bcsub($free, $freeReserved, 4),

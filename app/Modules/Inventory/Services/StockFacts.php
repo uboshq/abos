@@ -79,6 +79,8 @@ final class StockFacts
             ->selectRaw('COALESCE(SUM(reserved_change), 0) as reserved')
             ->selectRaw('COALESCE(SUM(hold_change), 0) as hold')
             ->selectRaw('COALESCE(SUM(unplaced_change), 0) as unplaced')
+            // ⓘ বিক্রয়যোগ্য একই সূত্রে — মেয়াদ পেরোনো লট বাদ ([[StockService::availableSql()]], মজুদ M27)
+            ->selectRaw('COALESCE(SUM('.StockService::availableSql().'), 0) as available')
             ->first();
 
         $floor = (string) ($row->floor ?? '0');
@@ -98,7 +100,7 @@ final class StockFacts
              * জায়গায় দুই হিসাব থাকলে মিলত না, আর মানুষ কোনটা বিশ্বাস
              * করবেন বুঝতেন না।
              */
-            'available' => bcsub(bcsub($floor, $reserved, 4), $hold, 4),
+            'available' => (string) ($row->available ?? '0'),
 
             /*
              * বসেনি — আর এটাই সেই সংখ্যা যেটা মানুষকে Placement-এর
@@ -690,7 +692,7 @@ final class StockFacts
      */
     private function availableSql(): string
     {
-        return '(select COALESCE(SUM(m.floor_change - m.reserved_change - m.hold_change), 0)
+        return '(select COALESCE(SUM('.StockService::availableSql('m.').'), 0)
                  from inv_stock_movements m
                  where m.product_id = inv_products.id
                    and m.company_id = inv_products.company_id'.$this->viewedWarehouses().')';
