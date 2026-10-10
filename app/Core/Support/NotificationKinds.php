@@ -77,6 +77,10 @@ final class NotificationKinds
              */
             'sales.order_credit_held' => 'core.notify.kind.order_credit_held',
             'sales.order_awaits_you' => 'core.notify.kind.order_awaits_you',
+
+            // ⭐ বিজ্ঞপ্তি ব্যবস্থাপনা, ধাপ ৩ — সূচিমতো খবর আর টেমপ্লেটের পরীক্ষা ([[ScheduleRunner]], টেমপ্লেট স্টুডিও)
+            'notification.scheduled' => 'core.notify.kind.notification_scheduled',
+            'notification.template_test' => 'core.notify.kind.notification_template_test',
         ];
     }
 
@@ -120,6 +124,8 @@ final class NotificationKinds
             $type === 'sales.order_awaits_you' => ['approval', 'high'],
             in_array($type, ['sales.order_credit_held', 'sales.signed_challan_stuck', 'sales.signed_sale_stuck', 'finance.rent_overdue'], true) => ['task', 'high'],
             $type === 'sales.delivery_stage', $type === 'report_ready' => ['update', 'low'],
+            $type === 'notification.scheduled' => ['update', 'normal'],
+            $type === 'notification.template_test' => ['system', 'low'],
             $type === 'backup.failed' => ['system', 'critical'],
             default => ['task', 'normal'],
         };
@@ -169,6 +175,9 @@ final class NotificationKinds
      * @var list<string>
      */
     private const MAIL_BY_DEFAULT = [
+        /* ⓘ টেমপ্লেট লেখক নিজের কাছে পরীক্ষা পাঠান — চিঠিটা কেমন দেখায় সেটাই তো দেখতে চান (ধাপ ৩) */
+        'notification.template_test',
+
         /* কাগজটা তাঁর টেবিলে ফেরত — তিনি না ধরলে কিছুই এগোয় না */
         'approval.rejected',
 

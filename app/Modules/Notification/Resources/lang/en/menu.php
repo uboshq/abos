@@ -10,4 +10,9 @@ return [
     'logs' => 'Delivery logs',
     'health' => 'Channel health',
     'channels' => 'Channel configuration',
+    'schedules' => 'Notification schedule',
+    'rules' => 'Notification rules',
+    'templates' => 'Notification templates',
+    'groups' => 'Recipient groups',
+    'quiet' => 'Quiet hours & digest',
 ];

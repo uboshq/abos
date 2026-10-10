@@ -11,8 +11,11 @@ use App\Core\Support\CompanyContext;
 use App\Jobs\DeliverNotification;
 use App\Models\Notification;
 use App\Models\NotificationDeliveryAttempt;
+use App\Models\NotificationEvent;
 use App\Models\NotificationJob;
+use App\Models\NotificationSuppression;
 use App\Models\User;
+use Carbon\CarbonImmutable;
 use Throwable;
 
 /**
@@ -45,6 +48,7 @@ final class DeliveryService
     public function __construct(
         private readonly ChannelRegistry $channels,
         private readonly DeliveryRouter $router,
+        private readonly PreferenceBook $prefs,
     ) {}
 
     /**
@@ -59,26 +63,75 @@ final class DeliveryService
                 return;
             }
 
-            foreach ($this->router->channelsFor($bell, $user) as $key) {
+            $plan = $this->router->plan($bell, $user);
+
+            foreach ($plan['suppressed'] as $key => $reason) {
+                $this->suppress($bell, $key, $reason);
+            }
+
+            [$after, $quiet, $frequency] = $this->timing($bell, $user);
+
+            foreach ($plan['channels'] as $key) {
+                // ⭐ ধাপ ৩ — সারসংক্ষেপে ধরে রাখা, নয়তো নীরব সময় বা নিয়মের দেরি পর্যন্ত পিছানো
+                $held = DigestService::holds($key, (string) $bell->priority, $frequency);
+                $wait = $held ? null : collect([$after, $quiet])->filter()->max();
+
                 $job = NotificationJob::query()->withoutGlobalScopes()->createOrFirst(
                     ['notification_id' => $bell->id, 'channel' => $key],
                     [
                         'company_id' => $bell->company_id,
                         'event_id' => $bell->event_id,
                         'user_id' => $user->id,
-                        'status' => NotificationJob::QUEUED,
+                        'status' => $held ? NotificationJob::HELD : NotificationJob::QUEUED,
+                        'next_attempt_at' => $wait,
                         'max_attempts' => $this->maxAttempts(),
                         'provider' => $this->channels->get($key)?->provider($this->channels->config((int) $bell->company_id, $key)),
                     ],
                 );
 
-                if ($job->wasRecentlyCreated) {
+                if (! $job->wasRecentlyCreated) {
+                    continue;
+                }
+
+                if ($held) {
+                    $this->suppress($bell, $key, 'digest');
+                } elseif ($quiet !== null && $wait == $quiet) {
+                    $this->suppress($bell, $key, 'quiet_hours');
+                } elseif ($wait === null) {
                     DeliverNotification::dispatch((int) $job->id);
                 }
             }
         } catch (Throwable $e) {
             report($e);
         }
+    }
+
+    /**
+     * ⭐ বাইরের মাধ্যমে কখন — নিয়মের দেরি, নীরব সময়ের শেষ (⛔ জরুরিতে নয়), আর মানুষটার ঘনত্ব (সাথে সাথে / দিনে / সপ্তাহে)।
+     *
+     * @return array{0: ?CarbonImmutable, 1: ?CarbonImmutable, 2: string}
+     */
+    private function timing(Notification $bell, User $user): array
+    {
+        $company = (int) $bell->company_id;
+        $deliverAfter = $bell->event_id === null ? null
+            : NotificationEvent::query()->withoutGlobalScopes()->whereKey($bell->event_id)->value('deliver_after');
+        $after = $deliverAfter === null ? null : CarbonImmutable::parse($deliverAfter);
+
+        $pref = $this->prefs->for((int) $user->id, $company);
+        $quiet = $bell->priority === 'critical' ? null : $pref->quietUntil(now(), $this->prefs->zone($company));
+        $frequency = $bell->priority === 'critical' ? 'instant' : (string) ($pref->frequency ?: 'instant');
+
+        return [$after !== null && $after->isFuture() ? $after : null, $quiet, $frequency];
+    }
+
+    /** কোনো মাধ্যমে আটকানো বা পিছানো — কেন, লেখা থাকে (স্পেক §১৭ "Preference & Suppression") */
+    private function suppress(Notification $bell, string $channel, string $reason): void
+    {
+        NotificationSuppression::query()->withoutGlobalScopes()->create([
+            'company_id' => $bell->company_id, 'user_id' => $bell->user_id, 'event_id' => $bell->event_id,
+            'type' => (string) $bell->type, 'channel' => $channel, 'reason' => $reason,
+        ]);
     }
 
     /**
@@ -108,6 +161,19 @@ final class DeliveryService
         $config = $this->channels->config((int) $job->company_id, (string) $job->channel);
         $bell = Notification::query()->withoutGlobalScopes()->find($job->notification_id);
         $user = User::query()->withoutGlobalScope('company')->find($job->user_id);
+
+        // ⭐ ধাপ ৩ — মেয়াদ পেরোনো খবর আর বাইরে যায় না (নিয়মের "Expiry"); ঘণ্টায় তো আছেই
+        $expires = $job->event_id === null ? null : NotificationEvent::query()->withoutGlobalScopes()->whereKey($job->event_id)->value('expires_at');
+
+        if ($expires !== null && now()->greaterThan($expires)) {
+            $job->forceFill(['status' => NotificationJob::CANCELLED, 'claimed_at' => null, 'next_attempt_at' => null, 'resolution' => 'expired'])->save();
+
+            if ($bell !== null) {
+                $this->suppress($bell, (string) $job->channel, 'expired');
+            }
+
+            return;
+        }
 
         try {
             $result = match (true) {
@@ -179,10 +245,12 @@ final class DeliveryService
             ->where('next_attempt_at', '<=', now())
             ->orderBy('next_attempt_at')->limit(500)->pluck('id');
 
-        // ⓘ কিউয়ে দেওয়া হয়েছিল, অথচ দশ মিনিটেও কেউ ধরেনি (কিউয়ের সারি হারিয়েছে) — আবার
+        // ⓘ কিউয়ে দেওয়া হয়েছিল, অথচ দশ মিনিটেও কেউ ধরেনি (কিউয়ের সারি হারিয়েছে) — আবার; আর নীরব সময় বা নিয়মের দেরিতে
+        //   পিছানো সারির সময় হলো (ধাপ ৩)
         $lost = NotificationJob::query()->withoutGlobalScopes()
             ->where('status', NotificationJob::QUEUED)
-            ->where('created_at', '<', now()->subMinutes(10))
+            ->where(fn ($q) => $q->where(fn ($w) => $w->whereNull('next_attempt_at')->where('created_at', '<', now()->subMinutes(10)))
+                ->orWhere('next_attempt_at', '<=', now()))
             ->limit(500)->pluck('id');
 
         foreach ($due->concat($lost) as $id) {

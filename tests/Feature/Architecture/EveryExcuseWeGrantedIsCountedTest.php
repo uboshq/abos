@@ -366,7 +366,13 @@ final class EveryExcuseWeGrantedIsCountedTest extends TestCase
      *       পৌঁছানোর খাতা; মানুষের আবার-চেষ্টা আর বাতিল notification_audit_logs-এ) আর NotificationSubscription (ব্যক্তির
      *       নিজের ব্রাউজার; চালু-বন্ধ নিরীক্ষায়)। NotificationChannel নিরীক্ষিত — ছাড় নয়
      */
-    private const CEILING = 357;
+    /*
+     * ── ⚠️ ৩৫৭ → ৩৬২, ১০ অক্টোবর ২০২৬ (বিজ্ঞপ্তি ব্যবস্থাপনা, ধাপ ৩ — নিয়ম ও টেমপ্লেট) ─────────────────────────────────
+     *   +৫  EveryChangeableRowRemembersWhoChangedItTest::EXEMPT — NotificationTemplateVersion আর NotificationRuleVersion
+     *       (একবার-লেখা সংস্করণ, নিজেরাই ইতিহাস), NotificationPreference (ব্যক্তির নিজের পছন্দ, NotificationChoice-এর
+     *       মতো), NotificationDigest আর NotificationSuppression (যন্ত্রের খাতা)। নিয়ম, টেমপ্লেট, দল আর সূচি নিরীক্ষিত
+     */
+    private const CEILING = 362;
 
     /*
      * ── ⚠️ ২২২ → ২২৪, ২৩ সেপ্টেম্বর ২০২৬ ───────────────────────────

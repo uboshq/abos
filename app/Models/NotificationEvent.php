@@ -27,6 +27,8 @@ class NotificationEvent extends Model
     protected $fillable = [
         'company_id', 'branch_id', 'module', 'type', 'category', 'priority', 'title', 'body', 'url',
         'subject_type', 'subject_id', 'idempotency_key', 'actor_id', 'recipients', 'archived_at',
+        // ⭐ ধাপ ৩ — টেমপ্লেট, চলকের মান, নিয়মের মাধ্যম, খাটা নিয়ম, বাইরে কখন থেকে, মেয়াদ
+        'template_version_id', 'data', 'channels', 'rule_ids', 'deliver_after', 'expires_at',
     ];
 
     protected function casts(): array
@@ -35,7 +37,17 @@ class NotificationEvent extends Model
             'subject_id' => 'integer',
             'recipients' => 'integer',
             'archived_at' => 'datetime',
+            'data' => 'array',
+            'channels' => 'array',
+            'rule_ids' => 'array',
+            'deliver_after' => 'datetime',
+            'expires_at' => 'datetime',
         ];
+    }
+
+    public function template(): BelongsTo
+    {
+        return $this->belongsTo(NotificationTemplateVersion::class, 'template_version_id');
     }
 
     public function deliveries(): HasMany

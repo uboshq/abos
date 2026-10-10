@@ -28,6 +28,8 @@ return [
             // ⭐ ধাপ ২ — ডেলিভারির কিউ আর ব্যর্থ-তালিকা
             ['label' => 'notification::menu.queue', 'icon' => 'outbox', 'route' => 'notification.deliveries.queue', 'permission' => 'notification.deliveries'],
             ['label' => 'notification::menu.failed', 'icon' => 'alert-triangle', 'route' => 'notification.deliveries.failed', 'permission' => 'notification.deliveries'],
+            // ⭐ ধাপ ৩ — সূচিমতো খবর
+            ['label' => 'notification::menu.schedules', 'icon' => 'calendar', 'route' => 'notification.schedules.index', 'permission' => 'notification.schedules'],
         ],
         'reports' => [
             // ⭐ কে কখন কোন খবরে কী করলেন (স্পেক §১৩)
@@ -39,6 +41,11 @@ return [
         'settings' => [
             // ⭐ ধাপ ২ — মাধ্যমের সাজানো আর সংযোগ পরীক্ষা
             ['label' => 'notification::menu.channels', 'icon' => 'settings', 'route' => 'notification.channels.index', 'permission' => 'notification.channels'],
+            // ⭐ ধাপ ৩ — নিয়ম, টেমপ্লেট, প্রাপক-দল, নীরব সময় ও সারসংক্ষেপ
+            ['label' => 'notification::menu.rules', 'icon' => 'filter', 'route' => 'notification.rules.index', 'permission' => 'notification.rules'],
+            ['label' => 'notification::menu.templates', 'icon' => 'documents', 'route' => 'notification.templates.index', 'permission' => 'notification.templates'],
+            ['label' => 'notification::menu.groups', 'icon' => 'people', 'route' => 'notification.groups.index', 'permission' => 'notification.recipients'],
+            ['label' => 'notification::menu.quiet', 'icon' => 'moon', 'route' => 'notification.quiet.index', 'permission' => 'notification.preferences'],
         ],
     ],
 
@@ -49,12 +56,22 @@ return [
         'notification.channels',   // মাধ্যম সাজানো, চাবি, সংযোগ পরীক্ষা (ধাপ ২)
         'notification.deliveries', // কিউ, লগ, ব্যর্থ-তালিকা, স্বাস্থ্য দেখা
         'notification.retry',      // হাতে আবার চেষ্টা বা বাতিল
+        'notification.rules',      // নিয়ম লেখা ও পরীক্ষা (ধাপ ৩)
+        'notification.templates',  // টেমপ্লেট লেখা, পূর্বরূপ, পরীক্ষার পাঠানো
+        'notification.templates.publish', // টেমপ্লেট প্রকাশ বা আগের সংস্করণে ফেরা
+        'notification.recipients', // প্রাপক-দল
+        'notification.schedules',  // সূচিমতো খবর
+        'notification.preferences', // কোম্পানির স্বাভাবিক নীরব সময়, কে কী বেছেছেন
     ],
 
     'role_templates' => [
         'Notification Watcher' => ['notification.center'],
         'Notification Manager' => ['notification.center', 'notification.manage', 'notification.audit',
-            'notification.channels', 'notification.deliveries', 'notification.retry'],
+            'notification.channels', 'notification.deliveries', 'notification.retry',
+            'notification.rules', 'notification.templates', 'notification.templates.publish', 'notification.recipients',
+            'notification.schedules', 'notification.preferences'],
+        // ⭐ ধাপ ৩ — লেখেন, প্রকাশ করেন না (প্রকাশ আরেকজন)
+        'Notification Writer' => ['notification.rules', 'notification.templates', 'notification.recipients', 'notification.schedules'],
     ],
 
     'settings' => [
@@ -84,6 +101,22 @@ return [
             'type' => 'integer',
             'default' => 5,
             'group' => 'delivery',
+        ],
+        [
+            // ⭐ ধাপ ৩ — কোম্পানির স্বাভাবিক নীরব সময় (HH:MM, ঢাকার নয় — কোম্পানির সময় অঞ্চলে); ফাঁকা = নীরব সময় নেই।
+            // ⓘ মালিকের প্রশ্ন খোলা: কোন সময়টা স্বাভাবিক হবে — তাই ডিফল্টে ফাঁকা
+            'key' => 'notification.quiet_start',
+            'label' => 'notification::settings.quiet_start',
+            'type' => 'string',
+            'default' => '',
+            'group' => 'quiet',
+        ],
+        [
+            'key' => 'notification.quiet_end',
+            'label' => 'notification::settings.quiet_end',
+            'type' => 'string',
+            'default' => '',
+            'group' => 'quiet',
         ],
     ],
 

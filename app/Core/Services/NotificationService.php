@@ -7,12 +7,19 @@ namespace App\Core\Services;
 use App\Core\Contracts\Drillable;
 use App\Core\Engines\Drill\DrillResolver;
 use App\Core\Notifications\DeliveryService;
+use App\Core\Notifications\NotificationVariables;
+use App\Core\Notifications\RecipientResolver;
+use App\Core\Notifications\RuleEngine;
 use App\Core\Support\Actor;
 use App\Core\Support\CompanyContext;
 use App\Core\Support\NotificationKinds;
+use App\Models\Branch;
+use App\Models\Company;
 use App\Models\Notification;
 use App\Models\NotificationChoice;
 use App\Models\NotificationEvent;
+use App\Models\NotificationSuppression;
+use App\Models\NotificationTemplateVersion;
 use App\Models\User;
 use App\Models\UserDataScope;
 use Illuminate\Database\Eloquent\Builder;
@@ -70,16 +77,102 @@ final class NotificationService
         ?string $priority = null,
         ?string $key = null,
         ?Model $about = null,
+        /*
+         * ⭐ ধাপ ৩ — টেমপ্লেটের চলকের মান (`['amount' => '১,২৫,০০০', 'paper_no' => 'PV-0042']`); কেবল অনুমোদিত চলক থাকে
+         * ([[NotificationVariables::clean()]])। নিয়মের শর্তও এগুলোই মেলায়। আর সরাসরি একটা টেমপ্লেট-সংস্করণ (সূচি, পরীক্ষা)।
+         */
+        ?array $data = null,
+        ?NotificationTemplateVersion $template = null,
     ): ?Notification {
-        return $this->deliver($user, fn () => $this->event($type, $title, $body, $url, $priority, $key, $about), $type, $evenToSelf);
+        $plan = $this->plan($type, $title, $body, $priority, $about, $data, $template);
+        $event = null;
+        $once = function () use (&$event, $type, $title, $body, $url, $key, $about, $plan): NotificationEvent {
+            return $event ??= $this->event($type, $title, $body, $url, $key, $about, $plan);
+        };
+
+        $bell = $this->deliver($user, $once, $type, $evenToSelf, $plan);
+        $this->ruleRecipients($plan, $once, $type, $about, [$user instanceof User ? $user->id : (int) $user => true]);
+
+        return $bell;
+    }
+
+    /**
+     * ⭐ নিয়ম মিলিয়ে এই খবরের পরিকল্পনা — একবারই, সব প্রাপকের জন্য (ধাপ ৩; [[RuleEngine::plan()]])।
+     *
+     * ⓘ কোনো নিয়ম না থাকলে সব আগের মতো: মডিউলের গুরুত্ব, মডিউলের লেখা, স্বাভাবিক মাধ্যম।
+     *
+     * @param  array<string, mixed>|null  $data
+     * @return array<string, mixed>
+     */
+    private function plan(string $type, string $title, ?string $body, ?string $priority, ?Model $about, ?array $data, ?NotificationTemplateVersion $template): array
+    {
+        $kind = NotificationKinds::classify($type);
+        $branchId = $about !== null && array_key_exists('branch_id', $about->getAttributes()) && $about->getAttribute('branch_id') !== null
+            ? (int) $about->getAttribute('branch_id') : null;
+        $priority = NotificationKinds::isPriority($priority) ? $priority : $kind['priority'];
+        $clean = NotificationVariables::clean($data);
+
+        $rules = app(RuleEngine::class)->plan($type, $branchId, $priority, $clean);
+        $template ??= $rules['template'];
+
+        return [
+            'kind' => $kind,
+            'branch_id' => $branchId,
+            'priority' => $rules['priority'] ?? $priority,
+            'data' => $clean,
+            // ⓘ চলকের মান কেবল টেমপ্লেট থাকলে — নাহলে বাড়তি কোয়েরি নয়
+            'values' => $template === null ? [] : $clean + [
+                'title' => $title,
+                'body' => (string) $body,
+                'actor' => (string) (Actor::userId() === null ? '' : User::query()->withoutGlobalScope('company')->whereKey(Actor::userId())->value('name')),
+                'company' => (string) (Company::query()->whereKey(CompanyContext::id())->value('name_bn') ?? ''),
+                'branch' => (string) ($branchId === null ? '' : Branch::query()->withoutGlobalScopes()->whereKey($branchId)->value('name_bn')),
+                'date' => now()->format('d/m/Y'),
+            ],
+            'template' => $template,
+            'channels' => $rules['channels'],
+            'rules' => $rules['rules'],
+            'delay' => $rules['delay'],
+            'expires' => $rules['expires'],
+            'cooldown' => $rules['cooldown'],
+        ];
+    }
+
+    /**
+     * ⭐ নিয়মের যোগ করা প্রাপক — মডিউলের নিজের প্রাপকদের পরে, একই ঘটনায় (ধাপ ৩)। দেয়াল [[RecipientResolver]]-এ।
+     *
+     * @param  array<string, mixed>  $plan
+     * @param  array<int, true>  $seen
+     * @return Collection<int, Notification>
+     */
+    private function ruleRecipients(array $plan, \Closure $once, string $type, ?Model $about, array $seen): Collection
+    {
+        $sent = collect();
+
+        foreach ($plan['rules'] as $rule) {
+            foreach (app(RecipientResolver::class)->resolve((array) ($rule->recipients ?? []), $plan['branch_id'], $about) as $user) {
+                if (isset($seen[$user->id])) {
+                    continue;
+                }
+
+                $seen[$user->id] = true;
+
+                if (($one = $this->deliver($user, $once, $type, false, $plan)) !== null) {
+                    $sent->push($one);
+                }
+            }
+        }
+
+        return $sent;
     }
 
     /**
      * একজন প্রাপকের সারি — ঘটনাটা দরকার হলে তবেই লেখা হয় (নিজের কাজ বা বন্ধ করা ধরন হলে ঘটনাও বসে না)।
      *
      * @param  \Closure(): NotificationEvent  $event
+     * @param  array<string, mixed>  $plan
      */
-    private function deliver(User|int $user, \Closure $event, string $type, bool $evenToSelf): ?Notification
+    private function deliver(User|int $user, \Closure $event, string $type, bool $evenToSelf, array $plan): ?Notification
     {
         $userId = $user instanceof User ? $user->id : $user;
 
@@ -110,6 +203,21 @@ final class NotificationService
         $event = $event();
 
         /*
+         * ⭐ একই কাগজের একই খবর একজনের কাছে নিয়মের বলা সময়ের মধ্যে আবার নয় (ধাপ ৩; স্পেক §৮ "Duplicate Prevention")।
+         * ⓘ আটকানোটা লেখা থাকে — কেন পাননি তা পরে জানা যায়।
+         */
+        if ($plan['cooldown'] > 0 && $this->toldRecently($userId, $event, (int) $plan['cooldown'])) {
+            NotificationSuppression::query()->create([
+                'company_id' => $event->company_id, 'user_id' => $userId, 'event_id' => $event->id,
+                'rule_id' => $plan['rules']->first()?->id, 'type' => $event->type, 'reason' => 'cooldown',
+            ]);
+
+            return null;
+        }
+
+        [$title, $body] = $this->wording($user, $event, $plan);
+
+        /*
          * ⛔ একই ঘটনায় একজনের একটাই সারি — চাবি আর অনন্য সূচক মিলে (`notify_recipient_once`)। ⓘ দুইজন একসাথে একই ঘটনা
          * পাঠালেও একটাই বসে: দ্বিতীয়টা সূচকে আটকায়, আর `createOrFirst` তখন আগেরটা ফেরত দেয়।
          */
@@ -122,8 +230,8 @@ final class NotificationService
                 'module' => $event->module,
                 'category' => $event->category,
                 'priority' => $event->priority,
-                'title' => $event->title,
-                'body' => $event->body,
+                'title' => $title,
+                'body' => $body,
                 'url' => $event->url,
                 'subject_type' => $event->subject_type,
                 'subject_id' => $event->subject_id,
@@ -150,23 +258,39 @@ final class NotificationService
     /**
      * ঘটনাটা — চাবি থাকলে আগের ঘটনাই, নাহলে নতুন।
      */
-    private function event(string $type, string $title, ?string $body, ?string $url, ?string $priority, ?string $key, ?Model $about): NotificationEvent
+    /** @param  array<string, mixed>  $plan */
+    private function event(string $type, string $title, ?string $body, ?string $url, ?string $key, ?Model $about, array $plan): NotificationEvent
     {
-        $kind = NotificationKinds::classify($type);
+        $kind = $plan['kind'];
+        $template = $plan['template'];
+
+        // ⓘ টেমপ্লেট থাকলে ঘটনার নিজের লেখা অ্যাপের ভাষায়; প্রত্যেক প্রাপক পান নিজের ভাষায় ([[wording()]])
+        if ($template !== null) {
+            $locale = (string) config('app.locale');
+            $title = NotificationVariables::render($template->part('title', $locale), $plan['values']);
+            $body = NotificationVariables::render($template->part('body', $locale), $plan['values']) ?: null;
+        }
 
         $values = [
             'company_id' => CompanyContext::id(),
-            'branch_id' => $about !== null && array_key_exists('branch_id', $about->getAttributes()) ? $about->getAttribute('branch_id') : null,
+            'branch_id' => $plan['branch_id'],
             'module' => $kind['module'],
             'type' => $type,
             'category' => $kind['category'],
-            'priority' => NotificationKinds::isPriority($priority) ? $priority : $kind['priority'],
+            'priority' => $plan['priority'],
             'title' => mb_substr($title, 0, 191),
             'body' => $body === null ? null : mb_substr($body, 0, 500),
             'url' => $url,
             'subject_type' => $about instanceof Drillable ? $about::drillSourceType() : null,
             'subject_id' => $about instanceof Drillable ? (int) $about->getKey() : null,
             'actor_id' => Actor::userId(),
+            // ⭐ ধাপ ৩
+            'template_version_id' => $template?->id,
+            'data' => $plan['data'] ?: null,
+            'channels' => $plan['channels'],
+            'rule_ids' => $plan['rules']->isEmpty() ? null : $plan['rules']->pluck('id')->all(),
+            'deliver_after' => $plan['delay'] > 0 ? now()->addMinutes((int) $plan['delay']) : null,
+            'expires_at' => $plan['expires'] !== null ? now()->addMinutes((int) $plan['expires']) : null,
         ];
 
         if ($key === null) {
@@ -191,6 +315,44 @@ final class NotificationService
      * ⚠️ উত্তরটা অনুরোধের মধ্যে মনে রাখা হয়: একটা ছকে দশজন অনুমোদনকারী
      * থাকলে sendMany() দশবার একই প্রশ্ন করত।
      */
+    /**
+     * এই প্রাপকের ভাষায় শিরোনাম আর বার্তা — টেমপ্লেট থাকলে তাঁর ভাষার লেখায় চলক বসিয়ে, নাহলে ঘটনার নিজের লেখা।
+     *
+     * @param  array<string, mixed>  $plan
+     * @return array{0: string, 1: ?string}
+     */
+    private function wording(User|int $user, NotificationEvent $event, array $plan): array
+    {
+        $template = $plan['template'];
+
+        if ($template === null) {
+            return [(string) $event->title, $event->body];
+        }
+
+        $user = $user instanceof User ? $user : User::query()->withoutGlobalScope('company')->find($user);
+        $locale = in_array($user?->locale, ['bn', 'en'], true) ? (string) $user->locale : (string) config('app.locale');
+        $values = $plan['values'] + ['recipient' => (string) ($user?->name ?? '')];
+
+        $title = NotificationVariables::render($template->part('title', $locale), $values);
+        $body = NotificationVariables::render($template->part('body', $locale), $values);
+
+        return [mb_substr($title !== '' ? $title : (string) $event->title, 0, 191), $body === '' ? null : mb_substr($body, 0, 500)];
+    }
+
+    /** একই কাগজের একই ধরনের খবর এই মানুষটা শেষ কয়েক মিনিটে পেয়েছেন কি না */
+    private function toldRecently(int $userId, NotificationEvent $event, int $minutes): bool
+    {
+        return Notification::query()->withoutGlobalScopes()
+            ->where('user_id', $userId)
+            ->where('type', $event->type)
+            ->where('event_id', '!=', $event->id)
+            ->where(fn ($q) => $event->subject_type === null
+                ? $q->whereNull('subject_type')
+                : $q->where('subject_type', $event->subject_type)->where('subject_id', $event->subject_id))
+            ->where('created_at', '>=', now()->subMinutes($minutes))
+            ->exists();
+    }
+
     private function wants(int $userId, string $type): bool
     {
         if (! array_key_exists($userId, $this->silenced)) {
@@ -209,14 +371,17 @@ final class NotificationService
         ?string $priority = null,
         ?string $key = null,
         ?Model $about = null,
+        ?array $data = null,
+        ?NotificationTemplateVersion $template = null,
     ): Collection {
         $sent = collect();
         $seen = [];
+        $plan = $this->plan($type, $title, $body, $priority, $about, $data, $template);
 
         // ⭐ একই খবর সবার জন্য একটাই ঘটনা — প্রথম যাঁকে সত্যিই পাঠানো হয় তখন লেখা হয় (ধাপ ১)
         $event = null;
-        $once = function () use (&$event, $type, $title, $body, $url, $priority, $key, $about): NotificationEvent {
-            return $event ??= $this->event($type, $title, $body, $url, $priority, $key, $about);
+        $once = function () use (&$event, $type, $title, $body, $url, $key, $about, $plan): NotificationEvent {
+            return $event ??= $this->event($type, $title, $body, $url, $key, $about, $plan);
         };
 
         foreach ($users as $user) {
@@ -234,14 +399,15 @@ final class NotificationService
              * ⚠️ `post()` প্রতিটা প্রাপকের জন্য আবার একটা কোয়েরি করত।
              * একটা ছকে দশজন অনুমোদনকারী থাকলে দশটা বাড়তি কোয়েরি।
              */
-            $one = $this->deliver($user instanceof User ? $user : $id, $once, $type, false);
+            $one = $this->deliver($user instanceof User ? $user : $id, $once, $type, false, $plan);
 
             if ($one !== null) {
                 $sent->push($one);
             }
         }
 
-        return $sent;
+        // ⭐ ধাপ ৩ — নিয়মের যোগ করা প্রাপক, মডিউলের তালিকার পরে
+        return $sent->concat($this->ruleRecipients($plan, $once, $type, $about, $seen));
     }
 
     /** @return Collection<int, Notification> */

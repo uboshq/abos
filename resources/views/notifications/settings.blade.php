@@ -91,6 +91,97 @@
             @endforeach
         </ul>
 
+        {{--
+            ⭐ কীভাবে আর কখন পাবেন — মাধ্যম, চুপ করা শ্রেণি, ঘনত্ব, নীরব সময় (মালিকের স্পেক §৪ "Preferences", §১৪;
+            বিজ্ঞপ্তি ব্যবস্থাপনা, ধাপ ৩)। একই ফর্মে, একই "সংরক্ষণ" — অর্ধেক বদল সংরক্ষিত হওয়ার ভয় নেই।
+            ⛔ জরুরি খবর নীরব সময়েও আসে, চুপও হয় না — লেখা থাকে, যাতে কেউ ভুল না বোঝেন।
+        --}}
+        <div data-notify-preferences class="space-y-3 border-t border-(--color-border) px-4 py-4">
+            <div>
+                <p class="font-medium">{{ __('core.notify.pref_title') }}</p>
+                <p class="text-2xs text-(--color-ink-muted)">{{ __('core.notify.pref_note') }}</p>
+            </div>
+
+            <div class="grid gap-4 md:grid-cols-3">
+                <fieldset class="space-y-1">
+                    <legend class="text-2xs text-(--color-ink-muted)">{{ __('core.notify.pref_channels') }}</legend>
+                    @foreach (\App\Models\NotificationChannel::ALL as $channel)
+                        <label class="flex items-center gap-2 text-sm">
+                            <input type="checkbox" name="pref[channels][]" value="{{ $channel }}" @checked($pref->allowsChannel($channel))>
+                            {{ __('core.notify.channel_name.'.$channel) }}
+                        </label>
+                    @endforeach
+                </fieldset>
+
+                <fieldset class="space-y-1">
+                    <legend class="text-2xs text-(--color-ink-muted)">{{ __('core.notify.pref_muted') }}</legend>
+                    @foreach (\App\Core\Support\NotificationKinds::CATEGORIES as $category)
+                        <label class="flex items-center gap-2 text-sm">
+                            <input type="checkbox" name="pref[muted][]" value="{{ $category }}" @checked($pref->mutes($category))>
+                            {{ __('core.notify.category.'.$category) }}
+                        </label>
+                    @endforeach
+                </fieldset>
+
+                <div class="space-y-2">
+                    <label class="grid gap-1 text-2xs text-(--color-ink-muted)">
+                        {{ __('core.notify.pref_frequency') }}
+                        <select name="pref[frequency]" class="h-(--spacing-field) rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-2 text-sm">
+                            @foreach (\App\Models\NotificationPreference::FREQUENCIES as $frequency)
+                                <option value="{{ $frequency }}" @selected($pref->frequency === $frequency)>{{ __('core.notify.frequency.'.$frequency) }}</option>
+                            @endforeach
+                        </select>
+                    </label>
+                    <div class="grid grid-cols-2 gap-2">
+                        <label class="grid gap-1 text-2xs text-(--color-ink-muted)">
+                            {{ __('core.notify.pref_digest_hour') }}
+                            <select name="pref[digest_hour]" class="h-(--spacing-field) rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-2 text-sm">
+                                @for ($h = 0; $h < 24; $h++)
+                                    <option value="{{ $h }}" @selected((int) $pref->digest_hour === $h)>{{ sprintf('%02d:00', $h) }}</option>
+                                @endfor
+                            </select>
+                        </label>
+                        <label class="grid gap-1 text-2xs text-(--color-ink-muted)">
+                            {{ __('core.notify.pref_digest_day') }}
+                            <select name="pref[digest_day]" class="h-(--spacing-field) rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-2 text-sm">
+                                @for ($d = 0; $d < 7; $d++)
+                                    <option value="{{ $d }}" @selected((int) $pref->digest_day === $d)>{{ __('core.notify.days.'.$d) }}</option>
+                                @endfor
+                            </select>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid gap-3 md:grid-cols-4">
+                <label class="flex items-center gap-2 self-end text-sm">
+                    <input type="hidden" name="pref[quiet_enabled]" value="0">
+                    <input type="checkbox" name="pref[quiet_enabled]" value="1" @checked($pref->quiet_enabled)>
+                    {{ __('core.notify.pref_quiet_on') }}
+                </label>
+                <label class="grid gap-1 text-2xs text-(--color-ink-muted)">
+                    {{ __('core.notify.pref_quiet_start') }}
+                    <input type="time" name="pref[quiet_start]" value="{{ substr((string) $pref->quiet_start, 0, 5) }}"
+                           class="h-(--spacing-field) rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-2 text-sm">
+                </label>
+                <label class="grid gap-1 text-2xs text-(--color-ink-muted)">
+                    {{ __('core.notify.pref_quiet_end') }}
+                    <input type="time" name="pref[quiet_end]" value="{{ substr((string) $pref->quiet_end, 0, 5) }}"
+                           class="h-(--spacing-field) rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-2 text-sm">
+                </label>
+                <label class="grid gap-1 text-2xs text-(--color-ink-muted)">
+                    {{ __('core.notify.pref_timezone') }}
+                    <select name="pref[timezone]" class="h-(--spacing-field) rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-2 text-sm">
+                        <option value="">{{ __('core.notify.pref_timezone_company') }}</option>
+                        @foreach (\App\Models\NotificationPreference::ZONES as $zone)
+                            <option value="{{ $zone }}" @selected($pref->timezone === $zone)>{{ $zone }}</option>
+                        @endforeach
+                    </select>
+                </label>
+            </div>
+            <p class="text-2xs text-(--color-ink-muted)">{{ __('core.notify.pref_critical') }}</p>
+        </div>
+
         <div class="flex items-center gap-3 border-t border-(--color-border) px-4 py-3">
             <x-ui.button type="submit" tone="primary">{{ __('core.action.save') }}</x-ui.button>
 

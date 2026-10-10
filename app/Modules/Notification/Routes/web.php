@@ -6,6 +6,11 @@ use App\Modules\Notification\Http\Controllers\NotificationAuditController;
 use App\Modules\Notification\Http\Controllers\NotificationCenterController;
 use App\Modules\Notification\Http\Controllers\NotificationChannelController;
 use App\Modules\Notification\Http\Controllers\NotificationDeliveryController;
+use App\Modules\Notification\Http\Controllers\NotificationGroupController;
+use App\Modules\Notification\Http\Controllers\NotificationQuietController;
+use App\Modules\Notification\Http\Controllers\NotificationRuleController;
+use App\Modules\Notification\Http\Controllers\NotificationScheduleController;
+use App\Modules\Notification\Http\Controllers\NotificationTemplateController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -48,4 +53,49 @@ Route::middleware('auth')->prefix('notification')->group(function () {
         ->whereNumber('job')->middleware('can:notification.retry')->name('deliveries.retry');
     Route::post('/deliveries/{job}/cancel', [NotificationDeliveryController::class, 'cancel'])
         ->whereNumber('job')->middleware('can:notification.retry')->name('deliveries.cancel');
+
+    // ⭐ ধাপ ৩ — নিয়ম: তালিকা, লেখা, সংস্করণ, শুকনো পরীক্ষা
+    Route::get('/rules', [NotificationRuleController::class, 'index'])->middleware('can:notification.rules')->name('rules.index');
+    Route::get('/rules/create', [NotificationRuleController::class, 'create'])->middleware('can:notification.rules')->name('rules.create');
+    Route::post('/rules', [NotificationRuleController::class, 'store'])->middleware('can:notification.rules')->name('rules.store');
+    Route::get('/rules/{rule}', [NotificationRuleController::class, 'edit'])
+        ->whereNumber('rule')->middleware('can:notification.rules')->name('rules.edit');
+    Route::put('/rules/{rule}', [NotificationRuleController::class, 'update'])
+        ->whereNumber('rule')->middleware('can:notification.rules')->name('rules.update');
+    Route::post('/rules/{rule}/test', [NotificationRuleController::class, 'test'])
+        ->whereNumber('rule')->middleware(['can:notification.rules', 'throttle:30,1'])->name('rules.test');
+
+    // ⭐ ধাপ ৩ — টেমপ্লেট স্টুডিও; প্রকাশ আলাদা চাবিতে
+    Route::get('/templates', [NotificationTemplateController::class, 'index'])->middleware('can:notification.templates')->name('templates.index');
+    Route::get('/templates/create', [NotificationTemplateController::class, 'create'])->middleware('can:notification.templates')->name('templates.create');
+    Route::post('/templates', [NotificationTemplateController::class, 'store'])->middleware('can:notification.templates')->name('templates.store');
+    Route::get('/templates/{template}', [NotificationTemplateController::class, 'edit'])
+        ->whereNumber('template')->middleware('can:notification.templates')->name('templates.edit');
+    Route::put('/templates/{template}', [NotificationTemplateController::class, 'update'])
+        ->whereNumber('template')->middleware('can:notification.templates')->name('templates.update');
+    Route::post('/templates/{template}/publish', [NotificationTemplateController::class, 'publish'])
+        ->whereNumber('template')->middleware('can:notification.templates.publish')->name('templates.publish');
+    Route::post('/templates/{template}/test', [NotificationTemplateController::class, 'test'])
+        ->whereNumber('template')->middleware(['can:notification.templates', 'throttle:6,1'])->name('templates.test');
+
+    // ⭐ ধাপ ৩ — প্রাপক-দল আর সূচি
+    Route::get('/groups', [NotificationGroupController::class, 'index'])->middleware('can:notification.recipients')->name('groups.index');
+    Route::get('/groups/create', [NotificationGroupController::class, 'create'])->middleware('can:notification.recipients')->name('groups.create');
+    Route::post('/groups', [NotificationGroupController::class, 'store'])->middleware('can:notification.recipients')->name('groups.store');
+    Route::get('/groups/{group}', [NotificationGroupController::class, 'edit'])
+        ->whereNumber('group')->middleware('can:notification.recipients')->name('groups.edit');
+    Route::put('/groups/{group}', [NotificationGroupController::class, 'update'])
+        ->whereNumber('group')->middleware('can:notification.recipients')->name('groups.update');
+
+    Route::get('/schedules', [NotificationScheduleController::class, 'index'])->middleware('can:notification.schedules')->name('schedules.index');
+    Route::get('/schedules/create', [NotificationScheduleController::class, 'create'])->middleware('can:notification.schedules')->name('schedules.create');
+    Route::post('/schedules', [NotificationScheduleController::class, 'store'])->middleware('can:notification.schedules')->name('schedules.store');
+    Route::get('/schedules/{schedule}', [NotificationScheduleController::class, 'edit'])
+        ->whereNumber('schedule')->middleware('can:notification.schedules')->name('schedules.edit');
+    Route::put('/schedules/{schedule}', [NotificationScheduleController::class, 'update'])
+        ->whereNumber('schedule')->middleware('can:notification.schedules')->name('schedules.update');
+
+    // ⭐ ধাপ ৩ — নীরব সময় আর সারসংক্ষেপ: কোম্পানির স্বাভাবিক নীরব সময়, কে কী বেছেছেন
+    Route::get('/quiet', [NotificationQuietController::class, 'index'])->middleware('can:notification.preferences')->name('quiet.index');
+    Route::post('/quiet', [NotificationQuietController::class, 'save'])->middleware('can:notification.preferences')->name('quiet.save');
 });

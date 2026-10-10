@@ -36,11 +36,14 @@ class NotificationJob extends Model
 
     public const CANCELLED = 'cancelled';
 
+    /** ⭐ ধাপ ৩ — সারসংক্ষেপ চিঠির জন্য ধরে রাখা ([[DigestService]]) */
+    public const HELD = 'held';
+
     /** @var list<string> এখনো শেষ হয়নি — কিউয়ের পর্দা */
-    public const OPEN = [self::QUEUED, self::PROCESSING, self::RETRYING];
+    public const OPEN = [self::QUEUED, self::PROCESSING, self::RETRYING, self::HELD];
 
     protected $fillable = [
-        'company_id', 'notification_id', 'event_id', 'user_id', 'channel', 'status', 'attempts', 'max_attempts',
+        'company_id', 'notification_id', 'event_id', 'digest_id', 'user_id', 'channel', 'status', 'attempts', 'max_attempts',
         'next_attempt_at', 'claimed_at', 'provider', 'provider_ref', 'error_kind', 'last_error', 'sent_at', 'dead_at',
         'resolved_by', 'resolution',
     ];

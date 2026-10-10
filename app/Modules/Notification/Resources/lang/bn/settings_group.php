@@ -5,4 +5,5 @@ declare(strict_types=1);
 return [
     'bell' => 'ঘণ্টা',
     'delivery' => 'পৌঁছানো',
+    'quiet' => 'নীরব সময়',
 ];

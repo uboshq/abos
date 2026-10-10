@@ -227,6 +227,9 @@ Schedule::call(fn () => app(FormIsNotSubmittedTwice::class)->prune())
  */
 Schedule::command('abos:notifications-deliver')->everyMinute()->withoutOverlapping();
 Schedule::command('abos:notifications-health')->hourly()->withoutOverlapping();
+// ⭐ বিজ্ঞপ্তি ব্যবস্থাপনা, ধাপ ৩ — সূচিমতো খবর (প্রতি মিনিটে) আর দিনের/সপ্তাহের সারসংক্ষেপ (প্রতি ঘণ্টায়)
+Schedule::command('abos:notifications-schedule')->everyMinute()->withoutOverlapping();
+Schedule::command('abos:notifications-digest')->hourly()->withoutOverlapping();
 
 Schedule::command('queue:work --stop-when-empty --max-time=50 --tries=3')
     ->everyMinute()
