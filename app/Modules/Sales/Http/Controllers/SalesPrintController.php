@@ -279,12 +279,19 @@ class SalesPrintController extends Controller implements HasMiddleware
      */
     private function challanMoney(DeliveryChallan $challan): array
     {
-        $invoice = SalesInvoice::query()
-            ->where('status', '<>', DocumentStatus::CANCELLED)
+        /*
+         * ⛔ চালানের নিজের একটাই পাকা বিল — পুরো-ERP পুনঃঅডিট, ৯ অক্টোবর ২০২৬ (ছাপা ১২; [[TheMoneyChallanShowsItsOwnBillTest]])।
+         * ⓘ আগে খসড়াসহ যেকোনো বিল, কোনো ক্রম ছাড়া `first()`: আংশিক দুই বিলের একটার, খসড়ার, বা কয়েকটা চালান মেলানো বিলের মোট
+         * চালানে বসত। এখন কেবল পাকা বিল; ঠিক একটা থাকলে আর তার সব সারি এই চালানেরই হলে সেটার হিসাব, নাহলে চালানের নিজেরটাই।
+         */
+        $bills = SalesInvoice::query()
+            ->whereIn('status', DocumentStatus::POSTED)
             ->whereHas('lines.challanLine', fn ($q) => $q->where('delivery_challan_id', $challan->id))
-            ->first();
+            ->orderBy('id')
+            ->get();
+        $invoice = $bills->count() === 1 ? $bills->first() : null;
 
-        if ($invoice === null) {
+        if ($invoice === null || $invoice->lines()->whereDoesntHave('challanLine', fn ($q) => $q->where('delivery_challan_id', $challan->id))->exists()) {
             return [];
         }
 
