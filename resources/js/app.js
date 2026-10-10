@@ -16,6 +16,7 @@ import openingCart from './counter/opening-cart.js'
 import { registerComponents } from './components/index.js'
 import documentScan from './document-scan.js'
 import { listenForColumnChoice } from './columns.js'
+import { listenForFreshData } from './live.js'
 
 /*
  * Alpine শুধু ছোট UI ইন্টারঅ্যাকশনে — ড্রপডাউন, পাসওয়ার্ড দেখানো, ট্যাব
@@ -149,6 +150,9 @@ searchAsYouType()
  * ⓘ এটা না থাকায় মেনুটা কোনো তালিকাতেই কিছু লুকাত না; কারণ `columns.js`-এ।
  */
 listenForColumnChoice()
+
+// ⭐ রিয়েল-টাইম সিঙ্ক — অন্য কেউ কিছু লিখলে খোলা পাতায় "নতুন তথ্য এসেছে" (মালিক, ১০ অক্টোবর ২০২৬)
+listenForFreshData()
 
 /*
  * ⛔ ছাপা ও "বদলালেই জমা" — CSP ইনলাইন হ্যান্ডলার চালাতে দেয় না।

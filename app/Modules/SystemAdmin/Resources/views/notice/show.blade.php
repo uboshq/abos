@@ -9,6 +9,9 @@
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ $notice->title }}</x-slot:title>
 
+    {{-- ⛔ কেন হলো না, এই পাতাতেই — বোতাম আটকালে বার্তাটা এখানে দেখায় (ARefusalNobodyEverSawTest, ১০ অক্টোবর ২০২৬) --}}
+    <x-ui.errors />
+
     <x-slot:header>
         <x-ui.page-header :title="$notice->title"
                           :subtitle="$notice->starts_on?->format('d M Y')">

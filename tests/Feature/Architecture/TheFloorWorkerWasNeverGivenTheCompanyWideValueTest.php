@@ -55,7 +55,8 @@ final class TheFloorWorkerWasNeverGivenTheCompanyWideValueTest extends TestCase
         'inventory.stock.adjust',
         'inventory.stock.hold',
         'inventory.stock.place',
-        'inventory.stock.opening',
+        // ⓘ `inventory.stock.opening` আর মেঝের কাজ নয় — খাতায় শুরুর টাকা বসায়, গুদামের ছাঁচ থেকে সরেছে (মজুদ M12a,
+        // [[TheWarehouseTemplateNoLongerOpensTheBooksTest]]); কোনো ছাঁচে না থাকায় নীচের "নামগুলো সত্যি" দাবি তাকে আর চাইতে পারে না
         'inventory.transfer.receive',
     ];
 

@@ -183,15 +183,18 @@
              (খাত বাধ্যতামূলক, ব্যাংক বা MFS-এ TrxID আর কে দিলেন) বা পরে দেব (বাহকের নামে দেনা)। Main Counter আর নিজে
              থেকে নয়। ⓘ `moneyAccounts` কাউন্টারের নিজের তালিকা (অন্যের নগদ বাক্স আর অন্য শাখার টিল বাদ)। --}}
         @php($farePayers = app(\App\Modules\Sales\Services\DirectSaleOptions::class)->farePayers())
-        <div class="sm:col-span-3" x-show="farePaidBy === 'us' || farePaidBy === 'us_add_to_bill'"
-             x-data="{ fareWhen: @js((string) old('fare_when', 'now')), fareAccount: @js((string) old('fare_account_id', '')),
-                       get fareByBank() { const a = moneyAccounts.find(x => x.id === this.fareAccount); return a !== undefined && a.parent !== '1101'; } }">
+        {{-- ⛔ নিজের x-data নেই — আগে এখানে `get fareByBank() {…}` সহ একটা ছিল, আর CSP-Alpine বস্তুর ভেতরে getter পড়তে
+             পারে না, তাই গোটা অংশটা চলতই না ("পরে দেব" বাছা যেত না, TrxID দেখাত না)। ⓘ অবস্থা আর হিসাব এখন কাউন্টারের
+             নিজের (`fareWhen`, `fareAccount`, `fareByBank` — direct-sale.js); পুরনো মান লুকানো ঘর থেকে বসে (১০ অক্টোবর ২০২৬)। --}}
+        <div class="sm:col-span-3" x-show="farePaidBy === 'us' || farePaidBy === 'us_add_to_bill'">
+            <input type="hidden" value="{{ (string) old('fare_account_id', '') }}" x-init="seedDriver($el, 'fareAccount')">
             <span class="mb-1 block text-2xs text-(--color-ink-muted)">{{ __('sales::fare.when') }}</span>
             <div class="ds-seg" role="radiogroup">
                 <button type="button" @click="fareWhen = 'now'" :class="fareWhen === 'now' ? 'is-on' : ''">{{ __('sales::fare.now') }}</button>
                 <button type="button" @click="fareWhen = 'later'" :class="fareWhen === 'later' ? 'is-on' : ''">{{ __('sales::fare.later') }}</button>
             </div>
-            <input type="hidden" name="fare_when" :value="fareWhen">
+            <input type="hidden" name="fare_when" value="{{ (string) old('fare_when', 'now') }}"
+                   x-init="seedDriver($el, 'fareWhen')" :value="fareWhen">
 
             <div class="mt-2 grid gap-2 sm:grid-cols-3" x-show="fareWhen === 'now'">
                 <label class="block">

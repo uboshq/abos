@@ -7,6 +7,7 @@ namespace App\Modules\Inventory\Reports;
 use App\Core\Engines\Report\ReportColumn;
 use App\Core\Engines\Report\ReportDefinition;
 use App\Core\Engines\Report\ReportEngine;
+use App\Modules\Inventory\Services\StockService;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
@@ -49,6 +50,7 @@ final class InventoryControlReports
                 ->join('inv_warehouses as w', 'w.id', '=', 'm.warehouse_id')
                 ->where('m.company_id', $f['company_id'])
                 ->tap(ReportEngine::branchWall($f, 'w.branch_id'))
+                ->tap(ReportEngine::warehouseWall($f, 'm.warehouse_id'))
                 ->whereBetween('m.trx_date', [$f['from'], $f['to']])
                 ->whereRaw("({$qty} <> 0 OR {$free} <> 0)")
                 ->when(! empty($f['batch_id']), fn ($q) => $q->where('m.batch_id', (int) $f['batch_id']))
@@ -143,6 +145,7 @@ final class InventoryControlReports
                             ->join('inv_warehouses as w', 'w.id', '=', 'm.warehouse_id')
                             ->where('m.company_id', $f['company_id'])
                             ->tap(ReportEngine::branchWall($f, 'w.branch_id'))
+                            ->tap(ReportEngine::warehouseWall($f, 'm.warehouse_id'))
                             ->when(! empty($f['warehouse_id']), fn ($q) => $q->where('m.warehouse_id', (int) $f['warehouse_id']))
                             ->groupBy('m.product_id')
                             ->selectRaw('m.product_id')
@@ -223,11 +226,12 @@ final class InventoryControlReports
                         ->join('inv_warehouses as w', 'w.id', '=', 'm.warehouse_id')
                         ->where('m.company_id', $f['company_id'])
                         ->tap(ReportEngine::branchWall($f, 'w.branch_id'))
+                        ->tap(ReportEngine::warehouseWall($f, 'm.warehouse_id'))
                         ->when(! empty($f['warehouse_id']), fn ($q) => $q->where('m.warehouse_id', (int) $f['warehouse_id']))
                         ->groupBy('m.product_id')
                         ->selectRaw('m.product_id')
                         ->selectRaw('SUM(m.floor_change + m.unplaced_change) as on_hand')
-                        ->selectRaw('SUM(m.floor_change - m.reserved_change - m.hold_change) as available'),
+                        ->selectRaw('SUM('.StockService::availableSql('m.').') as available'),
                     's',
                 )
                 ->join('inv_products as p', 'p.id', '=', 's.product_id')
@@ -280,6 +284,7 @@ final class InventoryControlReports
                 ->leftJoin('inv_batches as b', 'b.id', '=', 'l.batch_id')
                 ->where('c.company_id', $f['company_id'])
                 ->tap(ReportEngine::branchWall($f, 'c.branch_id'))
+                ->tap(ReportEngine::warehouseWall($f, 'c.warehouse_id'))
                 ->whereBetween('c.count_date', [$f['from'], $f['to']])
                 ->whereNull('c.deleted_at')
                 ->where('c.status', '<>', 'cancelled')

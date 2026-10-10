@@ -232,4 +232,14 @@ Route::get('/health', HealthController::class)
     ->middleware('throttle:'.HealthController::PER_MINUTE.',1,health')
     ->name('health');
 
+/*
+ * ⭐ রিয়েল-টাইম সিঙ্ক — খোলা পাতার "নতুন কিছু?" (মালিক, ১০ অক্টোবর ২০২৬)। ⛔ `web` বাদ: সেশন ছুঁলে খোলা-রাখা
+ * পাতা মানুষকে চিরকাল লগইন রাখত। চাবি পাতার ভেতরে, সই করা; উত্তরে কেবল সময়-চিহ্ন ([[LiveStamp]])।
+ */
+Route::get('/live/{key}', \App\Http\Controllers\LiveController::class)
+    ->where('key', 'c[0-9]{1,10}\.[a-f0-9]{24}')
+    ->withoutMiddleware('web')
+    ->middleware('throttle:'.\App\Http\Controllers\LiveController::PER_MINUTE.',1,live')
+    ->name('live.pulse');
+
 require __DIR__.'/auth.php';

@@ -83,7 +83,9 @@ final class TheLoanKnewThePersonButNotTheDealerTest extends TestCase
         // ⓘ তালিকায় নামটাও — সারি ধরে কোয়েরি নয়, একবারেই তোলা
         $rows = app(HandLoanService::class)->standing()['rows'];
 
-        $this->assertSame($customer->name(), collect($rows)
+        // ⓘ ডিলারের নামের পাশে পয়েন্ট — মালিক, ৭ অক্টোবর ২০২৬ ("customer er pase obosoi point dibe"; [[PartyRegistry::labelsOf()]])
+        $this->assertNotSame($customer->name(), $customer->nameWithPoint(), 'দৃশ্যটাই বানানো যায়নি — এই ডিলারের পয়েন্ট নেই');
+        $this->assertSame($customer->nameWithPoint(), collect($rows)
             ->firstWhere('account.id', $account->id)['partner_name'] ?? null);
 
         // ⓘ হিসাব ধরে তালিকা এখন "সব হিসাব" ট্যাবে — পাতা খোলে ব্যক্তির তালিকায় (মালিক, ৫ অক্টোবর ২০২৬)

@@ -322,6 +322,115 @@ final class StockAdjustmentService
     }
 
     /**
+     * ⭐ ফ্রি মালের জানা পার্থক্য বসানো — ধনাত্মক বাড়তি, ঋণাত্মক ঘাটতি (পুরো-ERP অডিট, মজুদ ⚠️৬ক; fe, ১০ অক্টোবর ২০২৬;
+     * [[TheFreeGoodsCanBeSetRightTest]])।
+     *
+     * ⛔ আগে সমন্বয় কেবল দামি মাল নাড়ত — হারানো ফ্রি কার্টন, বা গুনে পাওয়া বাড়তি ফ্রি, সারানোর কোনো পথ ছিল না; ভুল গুদামের
+     * ফ্রি মালও না (এখন দুই গুদামে দুই সমন্বয়)।
+     *
+     * ⓘ [[settle()]]-এর মতোই, তিনটা তফাত:
+     *   · ফ্রি মালের দাম নেই — খরচের স্তর নেই, খাতায় কিছু যায় না, দর চাওয়া হয় না;
+     *   · ঘাটতি অর্ডারে ধরা ফ্রি মাল খায় না — (ফ্রি − ফ্রি-ধরা)-র বেশি নয়, তালাসহ;
+     *   · লট দেওয়া থাকলে ঘাটতি সেই লট থেকেই, না থাকলে লট-ধরা পণ্যে মেয়াদের ক্রমে ([[BatchAllocator::allocateFree()]])।
+     * ⛔ বাড়তি লট-ধরা পণ্যে লট ছাড়া ওঠে না — দামি মালের সেই একই নিয়ম।
+     */
+    public function settleFree(
+        Product $product,
+        Warehouse $warehouse,
+        string $difference,
+        ReasonCode $reason,
+        Carbon|string|null $date = null,
+        ?string $narration = null,
+        ?Batch $batch = null,
+    ): ?StockMovement {
+        if (bccomp($difference, '0', 4) === 0) {
+            return null;
+        }
+
+        $surplus = bccomp($difference, '0', 4) > 0;
+
+        if ($surplus && $product->track_batch && $batch === null) {
+            throw ValidationException::withMessages([
+                'batch_no' => __('inventory::validation.batch_no_required', ['product' => $product->name()]),
+            ]);
+        }
+
+        if ($batch !== null && (int) $batch->product_id !== (int) $product->id) {
+            throw ValidationException::withMessages([
+                'batch_no' => __('inventory::validation.lot_of_another_product', [
+                    'lot' => $batch->batch_no,
+                    'product' => $product->name(),
+                ]),
+            ]);
+        }
+
+        return DB::transaction(function () use ($product, $warehouse, $difference, $surplus, $reason, $date, $narration, $batch) {
+            $write = fn (string $qty, ?Batch $lot) => $this->stock->move(
+                product: $product,
+                warehouse: $warehouse,
+                sourceType: StockService::ADJUSTMENT,
+                sourceId: $product->id,
+                reason: $reason,
+                date: $date,
+                narration: $narration,
+                free: $qty,
+                batch: $lot,
+            );
+
+            if ($surplus) {
+                return $write($difference, $batch);
+            }
+
+            $short = bcmul($difference, '-1', 4);
+
+            // ⛔ অর্ডারে ধরা ফ্রি মাল ঘাটতিতে যায় না — আগে অর্ডার ছাড়ুন; তালাসহ, দুই সমন্বয় একসাথে শেষ কার্টন দুবার নেয় না
+            $spare = (string) StockMovement::query()->withoutGlobalScopes(StockService::VIEW_WALLS)
+                ->where('product_id', $product->id)
+                ->where('warehouse_id', $warehouse->id)
+                ->lockForUpdate()
+                ->selectRaw('COALESCE(SUM(free_change - free_reserved_change), 0) as spare')
+                ->value('spare');
+
+            if (bccomp($short, $spare, 4) > 0) {
+                throw ValidationException::withMessages([
+                    'counted' => __('inventory::validation.free_short_beyond_spare', [
+                        'product' => $product->name(),
+                        'spare' => rtrim(rtrim($spare, '0'), '.') ?: '0',
+                    ]),
+                ]);
+            }
+
+            $allocator = app(BatchAllocator::class);
+
+            if ($batch !== null) {
+                if (bccomp($short, $allocator->lockedFreeBalance($batch, $warehouse), 4) > 0) {
+                    throw ValidationException::withMessages([
+                        'counted' => __('inventory::validation.free_batch_short', [
+                            'product' => $product->name(),
+                            'short' => rtrim(rtrim($short, '0'), '.'),
+                        ]),
+                    ]);
+                }
+
+                return $write(bcmul($short, '-1', 4), $batch);
+            }
+
+            if (! $product->track_batch) {
+                return $write(bcmul($short, '-1', 4), null);
+            }
+
+            $first = null;
+
+            foreach ($allocator->allocateFree($product, $warehouse, $short) as $take) {
+                $out = $write(bcmul($take['qty'], '-1', 4), $take['batch']);
+                $first ??= $out;
+            }
+
+            return $first;
+        });
+    }
+
+    /**
      * গোনা লটের ঘাটতি — ঐ লট থেকেই, আর লটে যা আছে তার বেশি নয়।
      */
     private function lotShortage(

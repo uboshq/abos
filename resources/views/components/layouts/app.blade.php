@@ -78,6 +78,19 @@
     <title>{{ isset($title) ? $title . ' — ABOS' : 'ABOS' }}</title>
 
     <link rel="icon" href="{{ asset('favicon.ico') }}" sizes="any">
+
+    {{-- ⭐ রিয়েল-টাইম সিঙ্ক — পাতা কোন মুহূর্তের তথ্য দেখাচ্ছে, আর জিজ্ঞাসার চাবি ([[LiveStamp]], মালিক, ১০ অক্টোবর ২০২৬) --}}
+    @if (auth()->check() && \App\Core\Support\CompanyContext::id() !== null)
+        @php
+            $live = app(\App\Core\Services\LiveStamp::class);
+            $liveCompany = (int) \App\Core\Support\CompanyContext::id();
+        @endphp
+        <meta name="abos-live"
+              content="{{ route('live.pulse', ['key' => $live->key($liveCompany)]) }}"
+              data-stamp="{{ $live->read($liveCompany) }}"
+              data-message="{{ __('live.fresh') }}"
+              data-action="{{ __('live.refresh') }}">
+    @endif
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 
     {{--

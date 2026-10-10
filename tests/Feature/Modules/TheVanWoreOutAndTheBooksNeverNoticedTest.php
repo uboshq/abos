@@ -302,12 +302,18 @@ class TheVanWoreOutAndTheBooksNeverNoticedTest extends TestCase
         // খাতায় দাম ১১,৯০,০০০; গেল ১১,০০,০০০-এ → ৯০,০০০ লোকসান
         $this->assets->dispose($van->refresh(), '1100000', $this->money()->id, '2026-09-15');
 
+        /*
+         * ⓘ লোকসান নিজের খাতে, অবচয়ের খরচে মেশে না — 4978c2fe-র সিদ্ধান্ত (সম্পদ বিক্রির লাভ-লোকসান আলাদা সারি, IAS 16)।
+         * আগে দুটো এক খাতে বসত বলে দাবি ১,০০,০০০ চাইত (main-এর লাল সারাই, ১০ অক্টোবর ২০২৬)।
+         */
         $expense = $this->account(StandardChart::DEPRECIATION_EXPENSE)->id;
+        $loss = $this->account(StandardChart::ASSET_DISPOSAL_LOSS)->id;
 
-        $debits = LedgerEntry::query()->where('account_id', $expense)->sum('debit');
-
-        // ১০,০০০ অবচয় + ৯০,০০০ লোকসান
-        $this->assertSame('100000.0000', (string) $debits);
+        // ১০,০০০ অবচয়
+        $this->assertSame('10000.0000', (string) LedgerEntry::query()->where('account_id', $expense)->sum('debit'));
+        // ৯০,০০০ লোকসান — খাতায় দাম ১১,৯০,০০০, পাওয়া ১১,০০,০০০
+        $this->assertSame('90000.0000', (string) LedgerEntry::query()->where('account_id', $loss)->sum('debit'));
+        $this->assertSame('0.0000', (string) LedgerEntry::query()->where('account_id', $loss)->sum('credit'));
     }
 
     public function test_a_disposed_asset_cannot_be_depreciated_again(): void

@@ -183,9 +183,11 @@
                 <template x-for="(row, i) in rows" :key="i">
                     <tr class="border-b border-(--color-border)">
                         <td class="cell-input" data-label="{{ __('purchase::field.product') }}">
+                            {{-- ⛔ বারো কলামের ছকে ঘরটা চেপে যেত, আর পণ্যের জায়গায় দেখাত কেবল "7" — কোডের প্রথম অক্ষর
+                                 (পাতা-ঝাড়ু ধাপ ০, ১০ অক্টোবর ২০২৬); ⓘ এখন অন্তত কোড আর নামের শুরু, ছক নিজের ঘরে পাশে সরে --}}
                             <select :name="'lines[' + (i) + '][product_id]'" x-model="row.product_id" required
-                                    @change="pickProduct(row)"
-                                    class="h-(--spacing-field-compact) w-full rounded-(--radius-field) border border-(--color-border)
+                                    @change="pickProduct(row)" data-product-pick
+                                    class="h-(--spacing-field-compact) w-full min-w-64 rounded-(--radius-field) border border-(--color-border)
                                            bg-(--color-surface-card) px-2">
                                 <option value="">-</option>
                                 @foreach ($products as $product)

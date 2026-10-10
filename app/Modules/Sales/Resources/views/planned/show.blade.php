@@ -2,6 +2,9 @@
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ __('sales::planned.'.$screen) }}</x-slot:title>
 
+    {{-- ⛔ কেন হলো না, এই পাতাতেই — বোতাম আটকালে বার্তাটা এখানে দেখায় (ARefusalNobodyEverSawTest, ১০ অক্টোবর ২০২৬) --}}
+    <x-ui.errors />
+
     <div data-boxed class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-6">
         <h1 class="text-xl font-semibold text-(--color-ink)">{{ __('sales::planned.'.$screen) }}</h1>
 

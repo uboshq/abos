@@ -169,7 +169,6 @@ return [
     'rental_place_gone' => 'জিনিসটা আর তালিকায় নেই',
     'rental_for_place' => 'এই জায়গার চুক্তি',
 
-
     /* ⭐ "কার সাথে" ট্যাব — মালিকের নির্দেশ, ২০ সেপ্টেম্বর ২০২৬ */
     'person_added' => ':who তালিকায় যোগ হলো।',
     'no_people_yet' => 'তালিকায় এখনো কেউ নেই।',
@@ -209,4 +208,8 @@ return [
     'branch_capital' => 'শাখা ধরে মূলধন',
     'branch_none' => 'শাখা ছাড়া',
     'company_total' => 'কোম্পানির মোট',
+    // ⛔ পুনঃঅডিট, ৯ অক্টোবর ২০২৬ — এক চুক্তির ভুল বাকিদের থামায় না
+    'rent_accrual_some_failed' => 'এই চুক্তিগুলোর ভাড়া বসেনি, বাকিগুলোর বসেছে: :list',
+    'rent_accrual_contract_failed' => ':no (:who) — :why',
+    'rent_accrual_contract_broke' => 'কারিগরি ত্রুটি, লগে লেখা আছে',
 ];
