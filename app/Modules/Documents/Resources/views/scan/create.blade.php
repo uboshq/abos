@@ -49,10 +49,10 @@
                 <label class="block text-sm">
                     <span class="mb-1 block font-medium">{{ __('documents::field.add_pages') }}</span>
                     {{-- ⓘ `capture` — ফোনে সরাসরি ক্যামেরা খোলে; কম্পিউটারে সাধারণ ফাইল বাছাই --}}
-                    <input type="file" accept="image/jpeg,image/png,image/webp" capture="environment" multiple
-                           x-on:change="addPages"
-                           class="block w-full text-sm file:me-2 file:rounded-(--radius-field) file:border file:border-(--color-border)
-                                  file:bg-(--color-surface-app) file:px-3 file:py-1.5 file:text-sm">
+                    {{-- ⭐ বাংলা বোতাম (documents রিভিউ ⛔৫)। ⓘ `form` এমন একটা ফর্মের নাম যা নেই — বাছা ছবি এই ঘর দিয়ে জমা যায় না
+                         (নইলে নিচের আসল ঘরের সাথে দুইবার যেত); কেবল `addPages` পড়ে --}}
+                    <x-ui.file-input id="scan-pick" name="scan_pick" :multiple="true" accept="image/jpeg,image/png,image/webp"
+                                     capture="environment" form="no-such-form" x-on:change="addPages" />
                 </label>
 
                 {{-- ⓘ আসল জমার ঘর — সব পাতা এখানে জোড়া হয় ([[documentScan.syncInput]]) --}}

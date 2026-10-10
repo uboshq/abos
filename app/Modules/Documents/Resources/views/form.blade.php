@@ -55,11 +55,8 @@
                     <span class="sr-only">({{ __('core.form.required') }})</span>
                 </label>
 
-                <input type="file" id="files" name="files[]" multiple required accept="{{ $accept }}"
-                       aria-describedby="files-hint"
-                       class="block w-full text-sm file:me-2 file:rounded-(--radius-field)
-                              file:border file:border-(--color-border) file:bg-(--color-surface-app)
-                              file:px-3 file:py-1.5 file:text-sm">
+                {{-- ⭐ বাংলা বোতাম, ব্রাউজারের "Choose File" নয় (documents রিভিউ ⛔৫; [[x-ui.file-input]]) — নাম `files[]` থাকে --}}
+                <x-ui.file-input id="files" name="files" :multiple="true" :required="true" :accept="$accept" aria-describedby="files-hint" />
 
                 <p id="files-hint" class="mt-1 text-2xs text-(--color-ink-muted)">
                     {{ __('documents::message.files_hint', ['max' => $maxMb.' MB', 'count' => $maxFiles]) }}
