@@ -190,6 +190,8 @@ return [
         'mobile' => 'Mobile app',
         'invoice_info' => 'Set Your Invoice Information',
         'print_paper' => 'Paper size',
+        // ⓘ Finance: who the owner is in the capital register
+        'capital' => 'Capital',
     ],
 
     'action' => [

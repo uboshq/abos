@@ -233,6 +233,8 @@ return [
         'mobile' => 'মোবাইল অ্যাপ',
         'invoice_info' => 'Set Your Invoice Information',
         'print_paper' => 'ছাপার কাগজ',
+        // ⓘ অর্থ: মূলধনের রেজিস্টারে মালিক কে (main-এর লাল সারাই, ১০ অক্টোবর ২০২৬)
+        'capital' => 'মূলধন',
     ],
 
     'action' => [
