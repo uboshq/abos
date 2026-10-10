@@ -40,6 +40,9 @@ final class AssetVerificationService
         $on = Carbon::parse($on ?? now())->startOfDay();
 
         return DB::transaction(function () use ($branchId, $title, $on) {
+            // ⓘ আগে আছে এমন সারিতে তালা — খালি পরিসরে তালা দুইজনকে একে অপরের অপেক্ষায় আটকাত, একজন ৫০০ পেতেন (রিভিউ, ১১ অক্টোবর ২০২৬)
+            Branch::query()->whereKey($branchId)->lockForUpdate()->first();
+
             // ⛔ শাখায় একসাথে একটাই খোলা অভিযান — দুইটা হলে একই জিনিস দুই তালিকায় দুই রকম ফল পেত
             $already = AssetVerification::query()->withoutGlobalScope('user-branch')
                 ->where('branch_id', $branchId)->where('status', AssetVerification::OPEN)->lockForUpdate()->exists();
@@ -96,6 +99,13 @@ final class AssetVerificationService
         }
 
         return DB::transaction(function () use ($line, $result, $foundLocation, $note, $photo) {
+            // ⓘ অভিযানে তালা দিয়ে আবার — বন্ধ হওয়ার মুহূর্তে চলতে থাকা ফল বন্ধের পরে বসে জমানো হিসাব বদলাত (রিভিউ, ১১ অক্টোবর ২০২৬)
+            $open = AssetVerification::query()->withoutGlobalScope('user-branch')->whereKey($line->verification_id)->lockForUpdate()->first();
+
+            if (! $open?->isOpen()) {
+                throw ValidationException::withMessages(['result' => __('accounts::asset.verify_closed')]);
+            }
+
             $line->update([
                 'result' => $result,
                 'found_location' => ($foundLocation ?? '') ?: null,

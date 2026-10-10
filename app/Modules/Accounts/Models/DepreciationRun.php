@@ -15,7 +15,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
- * ⭐ মাসের অবচয়ের দৌড় — এক শাখার এক মাসের একটা কাগজ (DEP-…), সারি খাতের জোড়া ধরে (স্থায়ী সম্পদ ধাপ ২)।
+ * ⭐ মাসের অবচয়ের দৌড় — এক শাখার এক মাসের একটা কাগজ (FAD-…), সারি খাতের জোড়া ধরে (স্থায়ী সম্পদ ধাপ ২)।
  *
  * ⓘ খাতায় একটা দাখিলা, ভেতরে প্রতিটা সম্পদের নিজের অবচয়ের সারি ([[DepreciationEntry]]) — খাতা পড়েন হিসাবরক্ষক,
  * সম্পদের পাতা পড়েন মালিক; দুইজনেই একই অঙ্ক দেখেন।
@@ -27,7 +27,8 @@ class DepreciationRun extends Model implements Drillable
     use IsAudited;
     use ScopedToUserBranch;
 
-    public const SERIES = 'DEP';
+    // ⓘ FAD — DEP অর্থ মডিউলের আমানতের ক্রম; এক কোড দুই কাগজে একই গোনা ভাগ করত (fixed-assets রিভিউ, ১১ অক্টোবর ২০২৬)
+    public const SERIES = 'FAD';
 
     protected $table = 'acc_depreciation_runs';
 

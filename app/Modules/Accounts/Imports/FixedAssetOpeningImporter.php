@@ -68,14 +68,23 @@ final class FixedAssetOpeningImporter implements Importer, ImportNeedsKeys, Refu
         foreach (['cost', 'accumulated', 'salvage'] as $column) {
             $value = trim((string) ($row[$column] ?? ''));
 
-            if (($column === 'cost' || $value !== '') && (! is_numeric($value) || bccomp($value, '0', 4) < 0)) {
+            // ⓘ সাধারণ দশমিক — is_numeric "1e5" মানত, তারপর bccomp ভেঙে গোটা যাচাই ৫০০ দিত (fixed-assets রিভিউ, ১১ অক্টোবর ২০২৬)
+            if (($column === 'cost' || $value !== '') && ! self::plainAmount($value)) {
                 $errors[] = __('core.import.not_a_number', ['column' => $column]);
             }
         }
 
-        if (is_numeric($row['cost'] ?? null) && is_numeric($row['accumulated'] ?? null)
-            && bccomp((string) $row['accumulated'], (string) $row['cost'], 4) > 0) {
+        $cost = trim((string) ($row['cost'] ?? ''));
+        $accumulated = trim((string) ($row['accumulated'] ?? ''));
+
+        if (self::plainAmount($cost) && self::plainAmount($accumulated) && bccomp($accumulated, $cost, 4) > 0) {
             $errors[] = __('accounts::asset.import_accumulated_over_cost');
+        }
+
+        $tag = trim((string) ($row['tag_no'] ?? ''));
+
+        if ($tag !== '' && preg_match('/^[\x20-\x7E]+$/', $tag) !== 1) {
+            $errors[] = __('accounts::asset.tag_ascii');
         }
 
         return $errors;
@@ -94,13 +103,18 @@ final class FixedAssetOpeningImporter implements Importer, ImportNeedsKeys, Refu
             'name' => trim((string) $row['name']),
             'tag_no' => ($row['tag_no'] ?? null) ?: null,
             'acquired_on' => $this->date((string) $row['acquired_on'])?->toDateString(),
-            'cost' => (string) $row['cost'],
-            'salvage' => filled($row['salvage'] ?? null) ? (string) $row['salvage'] : null,
+            'cost' => trim((string) $row['cost']),
+            'salvage' => filled($row['salvage'] ?? null) ? trim((string) $row['salvage']) : null,
             'location' => ($row['location'] ?? null) ?: null,
             'serial_no' => ($row['serial_no'] ?? null) ?: null,
             'funded_by' => FixedAssetService::FUNDED_OPENING,
-            'opening_accumulated' => filled($row['accumulated'] ?? null) ? (string) $row['accumulated'] : '0',
+            'opening_accumulated' => filled($row['accumulated'] ?? null) ? trim((string) $row['accumulated']) : '0',
         ]);
+    }
+
+    private static function plainAmount(string $value): bool
+    {
+        return preg_match('/^\d+(\.\d{1,4})?$/', $value) === 1;
     }
 
     public function refusalNotice(): string

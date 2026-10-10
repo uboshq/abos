@@ -215,7 +215,12 @@ class FixedAssetController extends Controller implements HasMiddleware
     {
         $data = $request->validate([
             'name' => ['required', 'string', 'max:191'],
-            'tag_no' => ['nullable', 'string', 'max:64'],
+            // ⓘ লেবেলের বারকোড কেবল ASCII পড়ে — একটা বাংলা ট্যাগে গোটা শাখার লেবেল-পাতা ৫০০ দিত (রিভিউ, ১১ অক্টোবর ২০২৬)
+            'tag_no' => ['nullable', 'string', 'max:64', function (string $attribute, mixed $value, \Closure $fail): void {
+                if (preg_match('/^[\x20-\x7E]+$/', (string) $value) !== 1) {
+                    $fail(__('accounts::asset.tag_ascii'));
+                }
+            }],
             // ⓘ শ্রেণি থাকলে খাত শ্রেণি থেকে; দামের ভাগ বা ক্রয় বিল থাকলে দাম সেখান থেকে (ধাপ ১)
             'asset_account_id' => ['nullable', 'required_without:category_id', 'integer', Rule::exists('accounts', 'id')->where('company_id', CompanyContext::id())],
             'cost' => ['nullable', 'numeric', 'gt:0',
@@ -239,7 +244,13 @@ class FixedAssetController extends Controller implements HasMiddleware
             // ⭐ নিবন্ধনের নতুন ঘর — স্থায়ী সম্পদ ধাপ ১ (IAS 16)
             'category_id' => ['nullable', 'integer', Rule::exists('acc_asset_categories', 'id')->where('company_id', CompanyContext::id())],
             'parent_id' => ['nullable', 'integer', Rule::exists('acc_fixed_assets', 'id')->where('company_id', CompanyContext::id())],
-            'branch_id' => ['nullable', 'integer', Rule::exists('branches', 'id')->where('company_id', CompanyContext::id())],
+            // ⛔ নিজের নাগালের শাখায় — শাখায় সীমিত মানুষ অন্য শাখায় সম্পদ আর তার টাকা বসাতে পারতেন (fixed-assets রিভিউ, ১১ অক্টোবর ২০২৬)
+            'branch_id' => ['nullable', 'integer', Rule::exists('branches', 'id')->where('company_id', CompanyContext::id()),
+                function (string $attribute, mixed $value, \Closure $fail) use ($request): void {
+                    if (! app(\App\Core\Services\DataScope::class)->allows($request->user(), \App\Models\UserDataScope::BRANCH, (int) $value)) {
+                        $fail(__('accounts::asset.branch_out_of_reach'));
+                    }
+                }],
             'location' => ['nullable', 'string', 'max:120'],
             'department' => ['nullable', 'string', 'max:120'],
             'custodian_id' => ['nullable', 'integer'],

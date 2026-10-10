@@ -57,14 +57,14 @@ final class BillLinesForAssets implements CapitalisesABillLine
 
     public function line(int $lineId): ?array
     {
-        $line = $this->query()->whereKey($lineId)->first();
+        $line = $this->query(walled: false)->whereKey($lineId)->first();
 
         return $line === null ? null : $this->shape($line);
     }
 
     public function capitalise(int $lineId, string $qty, int $assetAccountId, int $assetId, string $documentNo, Carbon $on, string $narration): string
     {
-        $line = $this->query()->whereKey($lineId)->first();
+        $line = $this->query(walled: false)->whereKey($lineId)->first();
         $account = Account::query()->postable()->whereKey($assetAccountId)->first();
         $inventory = StandardChart::find(StandardChart::INVENTORY);
         $warehouse = $line?->bill?->warehouse;
@@ -119,12 +119,27 @@ final class BillLinesForAssets implements CapitalisesABillLine
         return $cost;
     }
 
-    /** @return Builder<PurchaseBillLine> */
-    private function query()
+    /**
+     * ⛔ সারিতে তালা — দুইজন একই সারির শেষ এককটা একসাথে তুলতে পারেন না (fixed-assets রিভিউ, ১১ অক্টোবর ২০২৬)। ⓘ লেনদেনের ভেতরে ডাকতে হয়।
+     */
+    public function lock(int $lineId): void
     {
+        PurchaseBillLine::query()->whereKey($lineId)->lockForUpdate()->first();
+    }
+
+    /**
+     * ⓘ বাছাইয়ের তালিকা হেডারের শাখায়; একটা সারি পড়া আর তোলা দেয়াল ছাড়া — শেষ সই অন্য শাখা থেকে এলেও বিলটা "নেই" হয় না
+     * (fixed-assets রিভিউ, ১১ অক্টোবর ২০২৬)। কোম্পানির দেয়াল থাকে।
+     *
+     * @return Builder<PurchaseBillLine>
+     */
+    private function query(bool $walled = true)
+    {
+        $bill = fn ($b) => $walled ? $b : $b->withoutGlobalScope('user-branch');
+
         return PurchaseBillLine::query()
-            ->with(['bill.supplier', 'bill.warehouse', 'product', 'receiptLine'])
-            ->whereHas('bill', fn ($b) => $b->whereIn('status', DocumentStatus::POSTED))
+            ->with(['bill' => $bill, 'bill.supplier', 'bill.warehouse', 'product', 'receiptLine'])
+            ->whereHas('bill', fn ($b) => $bill($b)->whereIn('status', DocumentStatus::POSTED))
             ->where('qty', '>', 0);
     }
 

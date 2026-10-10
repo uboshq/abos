@@ -34,5 +34,8 @@ interface CapitalisesABillLine
      *
      * @return string যত টাকার মাল সরল — সম্পদের দাম এটাই
      */
+    /** ⛔ সারিতে তালা — লেনদেনের ভেতরে, বাকি পরিমাণ মাপার আগে (fixed-assets রিভিউ, ১১ অক্টোবর ২০২৬) */
+    public function lock(int $lineId): void;
+
     public function capitalise(int $lineId, string $qty, int $assetAccountId, int $assetId, string $documentNo, Carbon $on, string $narration): string;
 }

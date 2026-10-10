@@ -33,7 +33,7 @@ use Illuminate\Validation\ValidationException;
  *
  * ── মাসের দৌড় ([[run()]]) ───────────────────────────────────────────────
  *   · আগে দেখা ([[preview()]]) — কিছু লেখে না; দৌড় ঠিক সেই সারিগুলোই বসায়।
- *   · বন্ধ মাসে থামে, বাংলায় কারণ বলে। প্রতি শাখায় একটা কাগজ (DEP-…), ভেতরে খাতের জোড়া ধরে সারি (শ্রেণির খাত)।
+ *   · বন্ধ মাসে থামে, বাংলায় কারণ বলে। প্রতি শাখায় একটা কাগজ (FAD-…), ভেতরে খাতের জোড়া ধরে সারি (শ্রেণির খাত)।
  *   · দুইবার চালালে একবারই বসে: (কোম্পানি, মাস, শাখা) ডাটাবেজে অনন্য, আর প্রতিটা সম্পদের মাসও অনন্য।
  */
 final class DepreciationEngine
@@ -81,6 +81,14 @@ final class DepreciationEngine
         // ⓘ `$once` না দিলে এই প্রশ্নটা ডাটাবেজের অনন্য সারি তোলে ([[FixedAssetService::depreciate()]] — আগের আচরণ)
         if ($once && $asset->depreciation()->where('period_end', $periodEnd->toDateString())->exists()) {
             return $none('already');
+        }
+
+        /*
+         * ⛔ পরের মাস আগেই বসে গেলে বাদ পড়া আগের মাস আর নয় — fixed-assets রিভিউ, ১১ অক্টোবর ২০২৬। ⓘ "বাকি" মাপা হয় এই মাস পর্যন্ত,
+         * পরের মাসের অবচয় তাতে নেই: সেপ্টেম্বর বাদ দিয়ে অক্টোবর-ডিসেম্বর চালালে, পরে সেপ্টেম্বর চালালে দামের বেশি ক্ষয় বসত।
+         */
+        if ($asset->depreciation()->where('period_end', '>', $periodEnd->toDateString())->exists()) {
+            return $none('later_posted');
         }
 
         $left = $asset->depreciableLeft($periodEnd);

@@ -23,6 +23,7 @@ use App\Modules\Accounts\Services\MoneyTransferService;
 use App\Modules\Accounts\Services\NoteService;
 use App\Modules\Accounts\Services\OpeningBalanceService;
 use App\Modules\Accounts\Services\TillHandoverService;
+use Illuminate\Database\Eloquent\Relations\Relation;
 
 /**
  * ⭐ শেষ সই পড়লে হিসাবের কাগজটা নিজেই শেষ হয় — গ১, Accounts-Finance অডিট, ৪ অক্টোবর ২০২৬ ([[AccountsSignature]])।
@@ -44,11 +45,33 @@ final class FinishTheAccountsPaperOnTheLastSignature
 
         $approval = Approval::query()->find((int) ($event->payload['approval_id'] ?? 0));
 
-        if ($approval?->status !== Approval::APPROVED) {
+        if ($approval === null) {
             return;
         }
 
-        $paper = $approval->approvable;
+        /*
+         * ⛔ সই দেওয়া মানুষের হেডারের শাখা দিয়ে নয় — fixed-assets রিভিউ, ১১ অক্টোবর ২০২৬। ⓘ `approvable` সম্পর্কটা সইদাতার শাখার
+         * দেয়াল দিয়ে পড়ত: হেডারে A বাছা মালিক B-র সম্পদের শেষ সই দিলে কাগজ "নেই", কিছুই বসত না — সই APPROVED, কাগজ চিরকাল অপেক্ষায়।
+         * কোম্পানির দেয়াল থাকে।
+         */
+        $type = Relation::getMorphedModel((string) $approval->approvable_type) ?? (string) $approval->approvable_type;
+        $paper = class_exists($type) ? $type::query()->withoutGlobalScope('user-branch')->find($approval->approvable_id) : null;
+
+        // ⓘ সম্পদের সই ফেরত — ঘটনা বাতিল, অপেক্ষার নিবন্ধন মুছে যায়; নইলে সম্পদ চিরকাল আটকে থাকত (fixed-assets রিভিউ, ১১ অক্টোবর ২০২৬)
+        if ($approval->status === Approval::REJECTED) {
+            match (true) {
+                $paper instanceof AssetEvent => app(AssetEventService::class)->rejectSigned($paper),
+                $paper instanceof FixedAsset && in_array($approval->action, [AccountsSignature::FIXED_ASSET_REGISTER, AccountsSignature::FIXED_ASSET_OPENING], true)
+                    => app(FixedAssetService::class)->rejectRegistered($paper),
+                default => null,
+            };
+
+            return;
+        }
+
+        if ($approval->status !== Approval::APPROVED) {
+            return;
+        }
 
         // ⓘ খসড়া থাকলেই — একই সই দুইবার ঘটনা পাঠালে বা কেউ হাতে আগেই পাকা করলে দ্বিতীয়বার কিছু হয় না
         if ($paper instanceof Note && $paper->isDraft()) {

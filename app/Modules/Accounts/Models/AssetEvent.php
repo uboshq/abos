@@ -50,6 +50,9 @@ class AssetEvent extends Model implements Drillable
 
     public const POSTED = 'posted';
 
+    // ⓘ সই ফেরত — খাতায় কিছু ওঠেনি, সম্পদ আবার নতুন ঘটনা নিতে পারে (fixed-assets রিভিউ, ১১ অক্টোবর ২০২৬)
+    public const CANCELLED = 'cancelled';
+
     protected $table = 'acc_asset_events';
 
     protected $fillable = [
@@ -100,6 +103,11 @@ class AssetEvent extends Model implements Drillable
     public function isAwaiting(): bool
     {
         return $this->status === self::AWAITING;
+    }
+
+    public function isCancelled(): bool
+    {
+        return $this->status === self::CANCELLED;
     }
 
     public function kindLabel(): string

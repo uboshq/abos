@@ -58,7 +58,13 @@ class AssetVerificationController extends Controller implements HasMiddleware
     public function store(Request $request): RedirectResponse
     {
         $data = $request->validate([
-            'branch_id' => ['required', 'integer'],
+            // ⛔ কোম্পানির আর নিজের নাগালের শাখা — শাখার মডেলে শাখার দেয়াল নেই; অন্য শাখার গণনা খুলে তার আসল গণনা আটকানো যেত (রিভিউ, ১১ অক্টোবর ২০২৬)
+            'branch_id' => ['required', 'integer', Rule::exists('branches', 'id')->where('company_id', \App\Core\Support\CompanyContext::id()),
+                function (string $attribute, mixed $value, \Closure $fail) use ($request): void {
+                    if (! app(\App\Core\Services\DataScope::class)->allows($request->user(), \App\Models\UserDataScope::BRANCH, (int) $value)) {
+                        $fail(__('accounts::asset.branch_out_of_reach'));
+                    }
+                }],
             'title' => ['nullable', 'string', 'max:191'],
             'started_on' => ['required', 'date', 'before_or_equal:today'],
         ]);

@@ -179,6 +179,11 @@ final class FixedAssetService
          */
         try {
             return DB::transaction(function () use ($data, $method, $funding, $openingDepreciation, $parts, $bill, $action) {
+                if ($bill !== null) {
+                    app(CapitalisesABillLine::class)->lock((int) $bill['line_id']);
+                    $this->assertBillLineHasRoom((int) $bill['line_id'], (string) $bill['line_qty'], (string) $bill['qty']);
+                }
+
                 $documentNo = $this->numbers->next('FA');
 
                 $asset = FixedAsset::create([
@@ -246,6 +251,8 @@ final class FixedAssetService
                             ],
                         ],
                         documentNo: $asset->document_no,
+                        // ⛔ সম্পদের শাখায় — হেডারের শাখায় নয়; নইলে কেনা এক শাখায়, অবচয় আর বিক্রি আরেক শাখায় (fixed-assets রিভিউ, ১১ অক্টোবর ২০২৬)
+                        branchId: $asset->branch_id === null ? null : (int) $asset->branch_id,
                     );
                 }
 
@@ -341,14 +348,11 @@ final class FixedAssetService
             throw ValidationException::withMessages(['purchase_bill_line_id' => __('accounts::asset.bill_line_missing')]);
         }
 
-        $taken = (string) FixedAsset::acrossBranches()
-            ->where('purchase_bill_line_id', $line['id'])
-            ->whereNotIn('status', [FixedAsset::DISPOSED, FixedAsset::WRITTEN_OFF, FixedAsset::LOST])
-            ->sum('capitalised_qty');
-        $left = bcsub($line['qty'], $taken, 4);
+        $this->assertBillLineHasRoom((int) $line['id'], (string) $line['qty'], $qty);
 
-        if (bccomp($qty, '0', 4) <= 0 || bccomp($qty, $left, 4) > 0) {
-            throw ValidationException::withMessages(['capitalised_qty' => __('accounts::asset.bill_qty_over', ['left' => Money::quantity($left)])]);
+        // ⛔ বিলের মাল বিলের শাখার মজুদ থেকে সরে, তাই সম্পদও সেই শাখার — অন্য শাখা বাছলে দাম এক শাখায়, সম্পদ আরেক শাখায় (রিভিউ, ১১ অক্টোবর ২০২৬)
+        if (filled($data['branch_id'] ?? null) && $line['branch_id'] !== null && (int) $data['branch_id'] !== (int) $line['branch_id']) {
+            throw ValidationException::withMessages(['branch_id' => __('accounts::asset.bill_branch_differs')]);
         }
 
         $data['purchase_bill_id'] = $line['bill_id'];
@@ -358,7 +362,21 @@ final class FixedAssetService
         $data['cost'] = bcmul($line['unit_cost'], $qty, 4);
         $data['branch_id'] = ($data['branch_id'] ?? null) ?: $line['branch_id'];
 
-        return ['line_id' => $line['id'], 'qty' => $qty];
+        return ['line_id' => $line['id'], 'qty' => $qty, 'line_qty' => (string) $line['qty']];
+    }
+
+    /**
+     * ⛔ সারির বাকি — খাতা থেকে বেরিয়ে যাওয়া সম্পদও গোনা হয়, নইলে বিক্রি হওয়া ফ্রিজের পরে একই সারি থেকে আরেকটা উঠত আর মজুদ আবার
+     * কমত (fixed-assets রিভিউ, ১১ অক্টোবর ২০২৬)। ⓘ নিবন্ধনের লেনদেনে সারিতে তালা দিয়ে আবার ডাকা হয়।
+     */
+    private function assertBillLineHasRoom(int $lineId, string $lineQty, string $qty): void
+    {
+        $taken = (string) FixedAsset::acrossBranches()->where('purchase_bill_line_id', $lineId)->sum('capitalised_qty');
+        $left = bcsub($lineQty, $taken, 4);
+
+        if (bccomp($qty, '0', 4) <= 0 || bccomp($qty, $left, 4) > 0) {
+            throw ValidationException::withMessages(['capitalised_qty' => __('accounts::asset.bill_qty_over', ['left' => Money::quantity($left)])]);
+        }
     }
 
     /**
@@ -405,6 +423,21 @@ final class FixedAssetService
      * কারণ এই পর্দায় তারিখের ঘরটার নাম আলাদা।
      */
     /**
+     * ⓘ নিবন্ধনের সই ফেরত — অপেক্ষার সম্পদটা মুছে যায় (soft): খাতায় কিছু ওঠেনি, আর বিলের সারির পরিমাণও আবার খোলে
+     * (fixed-assets রিভিউ, ১১ অক্টোবর ২০২৬)। চালু হয়ে গেলে কিছু হয় না।
+     */
+    public function rejectRegistered(FixedAsset $asset): void
+    {
+        DB::transaction(function () use ($asset) {
+            $locked = FixedAsset::acrossBranches()->whereKey($asset->id)->lockForUpdate()->first();
+
+            if ($locked?->isAwaiting()) {
+                $locked->delete();
+            }
+        });
+    }
+
+    /**
      * শেষ সইয়ের পরে — সই চাওয়ার মুহূর্তের উৎস দিয়ে দাখিলা, তারপর চালু ([[FinishTheAccountsPaperOnTheLastSignature]])।
      *
      * ⓘ সারিতে তালা দিয়ে, অপেক্ষায় থাকলেই — একই সই দুইবার ঘটনা পাঠালে দ্বিতীয়বার কিছু হয় না।
@@ -422,6 +455,7 @@ final class FixedAssetService
              * (ধাপ ১; [[CapitalisesABillLine]])। ⛔ বিক্রেতার পাওনা নড়ে না — কেনাটা বিলের দিনই খাতায় উঠেছে।
              */
             if ($locked->isAwaiting() && is_array($signed['bill'] ?? null)) {
+                app(CapitalisesABillLine::class)->lock((int) $signed['bill']['line_id']);
                 $moved = app(CapitalisesABillLine::class)->capitalise(
                     (int) $signed['bill']['line_id'],
                     (string) $signed['bill']['qty'],
@@ -453,6 +487,8 @@ final class FixedAssetService
                         'party_type' => $funding['party_type'] ?? null, 'party_id' => $funding['party_id'] ?? null, 'narration' => $locked->name],
                 ],
                 documentNo: $locked->document_no,
+                // ⛔ সম্পদের শাখায় — শেষ সইদাতার হেডারের শাখায় নয় (fixed-assets রিভিউ, ১১ অক্টোবর ২০২৬)
+                branchId: $locked->branch_id === null ? null : (int) $locked->branch_id,
             );
 
             $this->openingDepreciation($locked, (string) ($signed['opening_depreciation'] ?? '0'));
@@ -555,6 +591,7 @@ final class FixedAssetService
                 ['account_id' => (int) $asset->accumulated_account_id, 'credit' => $amount],
             ],
             documentNo: $entry->document_no,
+            branchId: $asset->branch_id === null ? null : (int) $asset->branch_id,
         );
     }
 
@@ -917,9 +954,28 @@ final class FixedAssetService
         }
 
         $on = Carbon::parse($date ?? now())->startOfDay();
-        $accumulated = $asset->accumulated();
 
-        return DB::transaction(function () use ($asset, $toBranchId, $on, $from, $accumulated, $note, $branchMoves, $after) {
+        return DB::transaction(function () use ($asset, $toBranchId, $on, $from, $note, $branchMoves, $after) {
+            /*
+             * ⛔ সারিতে তালা, তারপর আবার দেখা — fixed-assets রিভিউ, ১১ অক্টোবর ২০২৬। ⓘ দুই চাপ একসাথে A→B: দুটোই A থেকে সরাত,
+             * খাতে A-তে দুইবার কেনা দাম বেরোত আর B-তে দুইবার ঢুকত। এখন দ্বিতীয়টা দেখে সম্পদ আর A-তে নেই।
+             */
+            $locked = FixedAsset::acrossBranches()->whereKey($asset->id)->lockForUpdate()->firstOrFail();
+
+            if (! $locked->isInService()) {
+                throw ValidationException::withMessages(['status' => __('accounts::asset.not_active')]);
+            }
+
+            if (($locked->branch_id === null ? null : (int) $locked->branch_id) !== $from
+                || (int) $locked->custodian_id !== (int) $asset->custodian_id
+                || (string) $locked->location !== (string) $asset->location
+                || (string) $locked->department !== (string) $asset->department) {
+                throw ValidationException::withMessages(['to_branch_id' => __('accounts::asset.already_there')]);
+            }
+
+            $asset = $locked;
+            $accumulated = $asset->accumulated();
+
             $move = AssetTransfer::query()->create([
                 'company_id' => CompanyContext::id(),
                 'asset_id' => $asset->id,
@@ -1047,10 +1103,25 @@ final class FixedAssetService
             return $asset->refresh();
         }
 
-        $book = $asset->bookValue();
-        $accumulated = $asset->accumulated();
+        return DB::transaction(function () use ($asset, $on, $proceeds, $intoAccountId, $as, $reason) {
+            /*
+             * ⛔ সারিতে তালা, তারপর অবস্থা আর অঙ্ক — fixed-assets রিভিউ, ১১ অক্টোবর ২০২৬। ⓘ আগে দাম আর সঞ্চিত ক্ষয় তালার বাইরে পড়া
+             * হত: একই সময়ে চলা মাসের অবচয় বা আরেকটা বিদায় পুরনো অঙ্কে বসত।
+             */
+            $asset = FixedAsset::acrossBranches()->whereKey($asset->id)->lockForUpdate()->firstOrFail();
 
-        return DB::transaction(function () use ($asset, $on, $proceeds, $book, $accumulated, $intoAccountId, $as, $reason) {
+            if (! $asset->isInService()) {
+                throw ValidationException::withMessages(['status' => __('accounts::asset.not_active')]);
+            }
+
+            if ($asset->events()->where('status', AssetEvent::AWAITING)->exists()) {
+                throw ValidationException::withMessages(['status' => __('accounts::asset.event_pending')]);
+            }
+
+            $this->assertDisposalDate($asset, $on);
+
+            $book = $asset->bookValue();
+            $accumulated = $asset->accumulated();
             $lines = [];
 
             if (bccomp($proceeds, '0', 4) > 0) {
@@ -1109,6 +1180,26 @@ final class FixedAssetService
 
             return $asset->refresh();
         });
+    }
+
+    /**
+     * ⛔ বিদায়ের দিন — ভবিষ্যতে নয়, আর যে মাসের অবচয় খাতায় বসে গেছে তার আগের মাসে নয় (fixed-assets রিভিউ, ১১ অক্টোবর ২০২৬;
+     * IAS 16.55)। ⓘ আগে আগস্টের বিক্রি সেপ্টেম্বর-অক্টোবরের অবচয়ের পরে লিখলে ওই দুই মাসের অবচয়ও মোছা হত — খরচ আর লাভ দুটোই বাড়ত।
+     * বিদায়ের মাসের নিজের অবচয় থাকে (মাস পুরো ধরা হয়)।
+     */
+    private function assertDisposalDate(FixedAsset $asset, Carbon $on): void
+    {
+        if ($on->greaterThan(Carbon::today())) {
+            throw ValidationException::withMessages(['disposed_on' => __('accounts::asset.disposal_in_future')]);
+        }
+
+        $later = $asset->depreciation()->reorder()->where('period_end', '>', $on->copy()->endOfMonth()->toDateString())->max('period_end');
+
+        if ($later !== null) {
+            throw ValidationException::withMessages(['disposed_on' => __('accounts::asset.disposal_before_depreciation', [
+                'month' => Carbon::parse((string) $later)->format('m/Y'),
+            ])]);
+        }
     }
 
     /**

@@ -158,6 +158,23 @@ final class AssetEventService
     }
 
     /**
+     * ⓘ ঘটনার সই ফেরত — ঘটনাটা বাতিল, খাতায় কিছু ওঠেনি। আগে "অপেক্ষায়" চিরকাল থাকত, আর সম্পদে আর কোনো ঘটনা বা বিদায় বসত না
+     * (fixed-assets রিভিউ, ১১ অক্টোবর ২০২৬)। পাকা হয়ে গেলে কিছু হয় না।
+     */
+    public function rejectSigned(AssetEvent $event): AssetEvent
+    {
+        return DB::transaction(function () use ($event) {
+            $locked = AssetEvent::query()->withoutGlobalScope('user-branch')->whereKey($event->id)->lockForUpdate()->firstOrFail();
+
+            if ($locked->isAwaiting()) {
+                $locked->update(['status' => AssetEvent::CANCELLED]);
+            }
+
+            return $locked->refresh();
+        });
+    }
+
+    /**
      * ⭐ ঘটনাটা খাতায় বসানো — সই পেলে বা সইয়ের ছক না থাকলে।
      *
      * ⓘ একবারই: সারিতে তালা দিয়ে অবস্থা দেখা; পাকা হয়ে গেলে কিছুই হয় না।
@@ -351,6 +368,21 @@ final class AssetEventService
         }
 
         return DB::transaction(function () use ($asset, $kind, $data, $on, $signFor, $fields, $payload) {
+            /*
+             * ⛔ সারিতে তালা দিয়ে আবার দেখা — fixed-assets রিভিউ, ১১ অক্টোবর ২০২৬। ⓘ উপরের দেখাটা তালার বাইরে: দুইজন একসাথে জমা দিলে
+             * দুইটা ঘটনা অপেক্ষায় বসত, আর দুটোতে সই হলে সংযোজন দুইবার খাতায়।
+             */
+            $asset = FixedAsset::acrossBranches()->whereKey($asset->id)->lockForUpdate()->firstOrFail();
+
+            if (! $asset->isInService()) {
+                throw ValidationException::withMessages(['status' => __('accounts::asset.not_active')]);
+            }
+
+            if (AssetEvent::query()->withoutGlobalScope('user-branch')->where('fixed_asset_id', $asset->id)
+                ->where('status', AssetEvent::AWAITING)->exists()) {
+                throw ValidationException::withMessages(['amount' => __('accounts::asset.event_pending')]);
+            }
+
             $event = AssetEvent::query()->create([
                 ...$fields,
                 'company_id' => CompanyContext::id(),

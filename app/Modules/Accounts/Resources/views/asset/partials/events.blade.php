@@ -84,6 +84,8 @@
                     <span>{{ $event->kindLabel() }}</span>
                     @if ($event->isAwaiting())
                         <x-ui.badge tone="pending">{{ __('accounts::asset.status_awaiting') }}</x-ui.badge>
+                    @elseif ($event->isCancelled())
+                        <x-ui.badge tone="danger">{{ __('accounts::asset.event_cancelled') }}</x-ui.badge>
                     @endif
                     @if (filled($event->reason))
                         <span class="min-w-0 truncate text-2xs text-(--color-ink-muted)">{{ $event->reason }}</span>
