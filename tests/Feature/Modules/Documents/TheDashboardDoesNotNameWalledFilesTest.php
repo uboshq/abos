@@ -35,7 +35,7 @@ final class TheDashboardDoesNotNameWalledFilesTest extends TestCase
 
         $board = DocumentsDashboard::dashboard();
 
-        $recent = collect($board->panels)->first(fn ($p) => $p instanceof Listing && $p->label === __('documents::dashboard.recent'));
+        $recent = collect($board->listings)->first(fn ($p) => $p instanceof Listing && $p->label === __('documents::dashboard.recent'));
         $this->assertNotNull($recent, 'ⓘ "সদ্য জোড়া" টালিই নেই — দাবিটা কিছু মাপছে না।');
         $this->assertSame([], collect($recent->rows)->pluck('original_name')->filter(fn ($n) => $n === 'ceo-salary-2026.pdf')->values()->all(),
             '⛔ সংরক্ষিত কাগজের ফাইলের নাম দেয়ালহীন টালিতে।');
