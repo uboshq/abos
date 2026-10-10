@@ -64,7 +64,7 @@ final class DepositClaimService
         $bills = $this->billsOf($customer, (array) ($data['bills'] ?? []), $amount);
 
         return DB::transaction(function () use ($customer, $data, $amount, $claimedOn, $bills) {
-            $this->assertReferenceIsFree($data);
+            $this->assertReferenceIsFree($data, $customer);
 
             return $this->write($customer, $data, $amount, $claimedOn, $bills);
         });
@@ -80,21 +80,28 @@ final class DepositClaimService
      *
      * @param  array<string, mixed>  $data
      */
-    private function assertReferenceIsFree(array $data): void
+    private function assertReferenceIsFree(array $data, Customer $customer): void
     {
         $reference = self::plainReference($data['reference'] ?? null);
         $account = $data['bank_account_id'] ?? null;
 
-        if ($reference === '' || $account === null) {
+        if ($reference === '') {
             return;
         }
 
-        \App\Modules\Accounts\Models\Account::query()->whereKey($account)->lockForUpdate()->first();
+        /*
+         * ⛔ খাত না বললেও — ১০ অক্টোবর ২০২৬: ব্যাংক খাত ঐচ্ছিক ঘর, আর আগে খাত না থাকলে এই পাহারা কিছুই দেখত না; পুরনো unique
+         * (দোকান + রেফারেন্স) অন্তত একই দোকানের একই রেফারেন্স আটকাত, তাই 6b1dcc50-এর পরে সেটুকুও খোলা ছিল। ⓘ খাতবিহীন
+         * বিজ্ঞপ্তিগুলো নিজেদের মধ্যে মেলে; তালা তখন দোকানের সারিতে (দুইবার চাপ সাধারণত একই দোকানের)।
+         */
+        $account === null
+            ? Customer::query()->withoutGlobalScopes()->whereKey($customer->getKey())->lockForUpdate()->first()
+            : \App\Modules\Accounts\Models\Account::query()->whereKey($account)->lockForUpdate()->first();
 
         $taken = DepositClaim::query()->withoutGlobalScopes()
             ->where('company_id', \App\Core\Support\CompanyContext::id())
             ->whereNull('deleted_at')
-            ->where('bank_account_id', $account)
+            ->when($account === null, fn ($q) => $q->whereNull('bank_account_id'), fn ($q) => $q->where('bank_account_id', $account))
             ->where('status', '!=', DepositClaim::REJECTED)
             ->whereNotNull('reference')
             ->whereRaw("UPPER(REPLACE(reference, ' ', '')) = ?", [$reference])
