@@ -6,6 +6,7 @@ namespace App\Modules\Accounts\Http\Controllers;
 
 use App\Core\Engines\Print\PaperSize;
 use App\Core\Engines\Print\PrintEngine;
+use App\Core\Engines\Print\PrintsInItsBranch;
 use App\Core\Services\PaperTrail;
 use App\Core\Services\SettingsService;
 use App\Core\Support\AmountInWords;
@@ -35,6 +36,9 @@ use Illuminate\Routing\Controllers\Middleware;
  */
 class MoneyTransferPrintController extends Controller implements HasMiddleware
 {
+    // ⭐ শাখার মাথা আর লোগো — বিক্রয়ের ছাপার মতো (পুনঃঅডিট ৯ অক্টোবর ২০২৬, ছাপা ১৮)
+    use PrintsInItsBranch;
+
     public function __construct(
         private readonly PrintEngine $print,
 
