@@ -129,6 +129,7 @@ final class DocumentLibrary
             $version = $this->addVersionRow($locked, $this->store($file, $locked), $nextMajor, $nextMinor, $comment);
 
             $locked->auditAction('document_version_added', 'v'.$version->label());
+            $this->backToDraftIfSigned($locked, $version);
 
             return $version;
         });
@@ -160,9 +161,28 @@ final class DocumentLibrary
             );
 
             $locked->auditAction('doc_version_restored', 'v'.$from->label().' → v'.$version->label());
+            $this->backToDraftIfSigned($locked, $version);
 
             return $version;
         });
+    }
+
+    /**
+     * ⛔ অনুমোদিত বা প্রকাশিত কাগজে নতুন ফাইল এলে কাগজটা খসড়ায় ফেরে — নতুন বাইট কেউ অনুমোদন করেননি (১১ অক্টোবর ২০২৬,
+     * documents রিভিউ ⛔২)।
+     *
+     * ⓘ নিয়মটা প্রথম দিন থেকে লেখা (§৯: "অনুমোদিত কাগজ নিজের জায়গায় বদলায় না, বদল মানে নতুন ভার্সন"), কিন্তু অবস্থা বদলাত না:
+     * নতুন, অননুমোদিত ফাইলের মাথায় "অনুমোদিত/প্রকাশিত" বসে থাকত, আর [[DocumentWorkflow::canBeSubmitted()]] খসড়া ছাড়া কিছু নেয়
+     * না বলে সেটা আর কোনোদিন অনুমোদনে পাঠানোও যেত না। ⭐ এখন খসড়া, অডিটে কোন ভার্সনের জন্য — আবার জমা দিলে সেই পথ।
+     */
+    private function backToDraftIfSigned(Document $locked, DocumentVersion $version): void
+    {
+        if (! in_array($locked->status, [DocumentCatalog::APPROVED, DocumentCatalog::PUBLISHED], true)) {
+            return;
+        }
+
+        $locked->forceFill(['status' => DocumentCatalog::DRAFT])->saveQuietly();
+        $locked->auditAction('document_back_to_draft', 'v'.$version->label());
     }
 
     /**

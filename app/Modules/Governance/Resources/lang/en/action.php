@@ -78,6 +78,7 @@ return [
     'document_printed' => 'Document opened for printing',
     'document_version_added' => 'New document version',
     'doc_version_restored' => 'Earlier document version restored',
+    'document_back_to_draft' => 'Document back to draft on a new file',
     'document_archived' => 'Document archived',
     'document_unarchived' => 'Document restored from the archive',
     'document_restored' => 'Document restored from the recycle bin',

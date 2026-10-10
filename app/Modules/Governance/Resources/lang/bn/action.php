@@ -95,6 +95,7 @@ return [
     'document_printed' => 'ডকুমেন্ট ছাপার জন্য খোলা',
     'document_version_added' => 'ডকুমেন্টের নতুন ভার্সন',
     'doc_version_restored' => 'ডকুমেন্টের পুরনো ভার্সন ফেরানো',
+    'document_back_to_draft' => 'নতুন ফাইলে ডকুমেন্ট খসড়ায় ফিরল',
     'document_archived' => 'ডকুমেন্ট আর্কাইভে',
     'document_unarchived' => 'ডকুমেন্ট আর্কাইভ থেকে ফেরানো',
     'document_restored' => 'ডকুমেন্ট রিসাইকেল বিন থেকে ফেরানো',
