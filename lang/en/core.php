@@ -1008,6 +1008,13 @@ return [
         'clear_filters' => 'Clear filters and show all',
     ],
 
+    'file' => [
+        'choose' => 'Choose a file',
+        'choose_many' => 'Choose files',
+        'none' => 'No file chosen',
+        'many' => ':count files chosen',
+    ],
+
     'status_bar' => [
         'operational' => 'Operational',
         'maintenance' => 'Maintenance',

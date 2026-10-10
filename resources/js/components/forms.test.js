@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { imagePreview } from './forms.js'
+import { filePick, imagePreview } from './forms.js'
 
 /*
  * বিলের লোগো বাছলেই দেখা — মালিক, ৩ অক্টোবর ২০২৬: *"upload hole ekhane dekhar bebosta koro"*।
@@ -28,5 +28,31 @@ describe('imagePreview', () => {
         expect(freed).toHaveBeenCalledWith('blob:one')
         expect(box.picked).toBe(false)
         expect(box.url).toBe('/storage/invoice-logos/old.png')
+    })
+})
+
+/*
+ * ⭐ ফাইল তোলার বাংলা বোতাম — পাতা সাজানো ধাপ ১, ১০ অক্টোবর ২০২৬। ⓘ ব্রাউজারের "No file chosen"-এর জায়গায় নিজের লেখা,
+ * একটা ফাইলে তার নাম, কয়েকটায় সংখ্যা, মুছলে আবার "কিছু বাছা হয়নি"।
+ */
+describe('filePick', () => {
+    const change = (files) => ({ target: { files } })
+
+    it('says nothing is chosen, then the file name, then how many, then nothing again', () => {
+        const box = filePick({ none: 'কোনো ফাইল বাছা হয়নি', many: ':count টা ফাইল' })
+
+        expect(box.label).toBe('কোনো ফাইল বাছা হয়নি')
+        expect(box.picked).toBe(false)
+
+        box.pick(change([new File(['x'], 'চালান.pdf')]))
+        expect(box.label).toBe('চালান.pdf')
+        expect(box.picked).toBe(true)
+
+        box.pick(change([new File(['x'], 'a.png'), new File(['y'], 'b.png'), new File(['z'], 'c.png')]))
+        expect(box.label).toBe('3 টা ফাইল')
+
+        box.pick(change([]))
+        expect(box.label).toBe('কোনো ফাইল বাছা হয়নি')
+        expect(box.picked).toBe(false)
     })
 })
