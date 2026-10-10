@@ -48,6 +48,6 @@
         <x-ui.table :rows="$categories" :columns="$columns" :empty="__('accounts::asset.category_empty')" />
     </div>
 
-    <div class="mt-3">{{ $categories->links() }}
-    </div>
+    <div class="mt-3">{{ $categories->links() }}</div>
+    <x-ui.list-totals :rows="$categories" :columns="$columns" />
 </x-layouts.app>
