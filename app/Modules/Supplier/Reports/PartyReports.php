@@ -8,6 +8,7 @@ use App\Core\Engines\Report\ReportColumn;
 use App\Core\Engines\Report\ReportDefinition;
 use App\Core\Engines\Report\ReportEngine;
 use App\Core\Support\DocumentStatus;
+use App\Modules\Purchase\Models\PurchaseBill;
 use App\Modules\Supplier\Models\Supplier;
 use Illuminate\Database\Query\Expression;
 use Illuminate\Support\Carbon;
@@ -154,35 +155,19 @@ final class PartyReports
             filters: ['date_range', 'branch', 'party_type'],
             query: function (array $f) {
                 /*
-                 * বিলপ্রতি শোধ — আলাদা সাব-কোয়েরিতে, যাতে সংখ্যাটা
-                 * ছাঁকনি ও কলাম **দুই জায়গাতেই** একই উৎস থেকে আসে।
+                 * ⛔ বিলের বাকি — বিলের নিজের সংজ্ঞায় ([[PurchaseBill::settledSql()]]) — পুনঃনিরীক্ষা, ৯ অক্টোবর ২০২৬।
+                 *
+                 * ⚠️ আগে কেবল পরিশোধের সারি বাদ যেত: বিলের বিপরীতে ভাউচারে দেওয়া টাকা আর পাকা ফেরত সূচিতে বাকি
+                 * থেকে যেত, অথচ সরবরাহকারীর খাতায় সেগুলো দেনা কমিয়েছে — সূচি আর খাতা দুই কথা বলত, আর সূচি
+                 * দেখে টাকা দিলে দ্বিতীয়বার দেওয়া হত। ⓘ সংজ্ঞা একটাই, পরিশোধের পর্দা যা দেখে তাই।
                  */
-                $paid = DB::table('pur_payment_lines as pl')
-                    ->join('pur_payments as p', 'p.id', '=', 'pl.payment_id')
-
-                    /*
-                     * ⚠️ কোম্পানির ছাঁকনি এখানেও, যদিও বাইরের কোয়েরি
-                     * বিলগুলোকে এই কোম্পানিতেই আটকে রেখেছে।
-                     *
-                     * ⓘ join-এর উপর ভরসা করে বিচ্ছিন্নতা ছেড়ে দেওয়া
-                     * ভঙ্গুর: কেউ একদিন join-টা বদলালে ছাঁকনিটা নীরবে
-                     * চলে যেত। **বহু-টেন্যান্টে বিচ্ছিন্নতা সুবিধা নয়,
-                     * আইনি বাধ্যবাধকতা** — তাই প্রতিটা কাঁচা কোয়েরি
-                     * নিজেই বলে সে কোন কোম্পানির।
-                     */
-                    ->where('pl.company_id', $f['company_id'])
-                    ->where('p.company_id', $f['company_id'])
-                    ->whereIn('p.status', DocumentStatus::POSTED)
-                    ->whereNull('p.deleted_at')
-                    ->groupBy('pl.purchase_bill_id')
-                    ->selectRaw('pl.purchase_bill_id, COALESCE(SUM(pl.amount), 0) as paid');
+                [$settled, $settledBindings] = PurchaseBill::settledSql();
 
                 // GREATEST — [[PurchaseBill::dueAmount]]-এর ঋণাত্মক-ক্ল্যাম্প
-                $due = 'GREATEST(pur_bills.total - COALESCE(paid.paid, 0), 0)';
+                $due = 'GREATEST(pur_bills.total - '.$settled.', 0)';
 
                 return DB::table('pur_bills')
                     ->join('suppliers', 'suppliers.id', '=', 'pur_bills.supplier_id')
-                    ->leftJoinSub($paid, 'paid', 'paid.purchase_bill_id', '=', 'pur_bills.id')
                     ->where('pur_bills.company_id', $f['company_id'])
                     ->where('pur_bills.status', DocumentStatus::CONFIRMED)
                     ->whereNull('pur_bills.deleted_at')
@@ -199,7 +184,7 @@ final class PartyReports
                      * অবস্থা**, পরিসরের নয় ([[payableList]]-এ একই যুক্তি)।
                      */
                     ->where('pur_bills.trx_date', '<=', $f['to'])
-                    ->whereRaw($due.' > 0')
+                    ->whereRaw($due.' > 0', $settledBindings)
 
                     /*
                      * তারিখ আগে, তারিখহীনরা শেষে — MySQL-এ `NULL` ডিফল্টে
@@ -214,7 +199,7 @@ final class PartyReports
                         self::supplierName(),
                         DB::raw("'".Supplier::drillSourceType()."' as party_type_literal"),
                         'pur_bills.supplier_id as party_id',
-                        DB::raw($due.' as due_amount'),
+                        DB::raw(DB::getQueryGrammar()->substituteBindingsIntoRawSql($due.' as due_amount', $settledBindings)),
                     ]);
             },
             columns: [

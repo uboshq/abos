@@ -401,12 +401,27 @@ class PurchaseBill extends Model implements Drillable, SettlementTerms
      */
     public function scopeStillOwed(Builder $query): Builder
     {
+        [$sql, $bindings] = self::settledSql();
+
+        return $query->whereRaw('pur_bills.total > '.$sql, $bindings);
+    }
+
+    /**
+     * ⭐ বিলের মেটানো অংশ — একটা SQL অভিব্যক্তি (`pur_bills.id` ধরে), বাঁধা মানসহ।
+     *
+     * ⓘ কাঁচা রিপোর্টও ([[PartyReports::paymentSchedule()]]) ঠিক এই সংজ্ঞায় বাকি গোনে — পরিশোধ, পরিশোধের
+     * ভাউচার আর পাকা ফেরত, গোটা কোম্পানি ধরে; নাহলে সূচি আর খাতা দুই কথা বলত (পুনঃনিরীক্ষা, ৯ অক্টোবর ২০২৬)।
+     *
+     * @return array{0: string, 1: array<int, mixed>}
+     */
+    public static function settledSql(): array
+    {
         [$paid, $byVoucher, $returned] = self::settledParts();
 
-        return $query->whereRaw(
-            'pur_bills.total > ('.$paid->toSql().') + ('.$byVoucher->toSql().') + ('.$returned->toSql().')',
+        return [
+            '(('.$paid->toSql().') + ('.$byVoucher->toSql().') + ('.$returned->toSql().'))',
             [...$paid->getBindings(), ...$byVoucher->getBindings(), ...$returned->getBindings()],
-        );
+        ];
     }
 
     public function scopeWithPaid(Builder $query): Builder
