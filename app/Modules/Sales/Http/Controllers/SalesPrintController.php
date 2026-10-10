@@ -389,10 +389,18 @@ class SalesPrintController extends Controller implements HasMiddleware
         $due = $invoice->dueAmount();
         $earlier = $this->earlierDue($invoice, $due);
 
+        /*
+         * ⛔ "ভ্যাট" সারিতে কেবল উপরে যোগ হওয়া ভ্যাট ([[vatSplit()]], PR #17 রিভিউ ⛔৩) — প্রতিটা নকশায় সর্বমোট − ছাড় + ভ্যাট
+         * + পয়সা + ভাড়া = দেয়। দামের ভিতরেরটা আর ভাড়া নিজের সারিতে ([[invoice-sums]], [[invoice-thermal]]), শূন্য হলে নেই।
+         */
+        [$vatAdded, $vatIncluded] = $this->vatSplit($invoice);
+
         $sums = [
             'grand_total' => (string) $invoice->subtotal,
             'discount' => bcadd((string) ($invoice->discount ?? '0'), (string) ($invoice->bill_discount ?? '0'), 4),
-            'vat' => (string) ($invoice->tax ?? '0'),
+            'vat' => $vatAdded,
+            'vat_included' => $vatIncluded,
+            'freight' => (string) ($invoice->freight_charge ?? '0'),
             'rounding' => (string) ($invoice->rounding_amount ?? '0'),
             'net_payable' => (string) $invoice->total,
             'paid' => $paid,
@@ -1923,6 +1931,31 @@ class SalesPrintController extends Controller implements HasMiddleware
     /**
      * @return array<string, string>
      */
+    /**
+     * ভ্যাটের দুই ভাগ — উপরে যোগ হওয়া, আর দামের ভিতরের — মোট থেকেই মাপা ([[totals()]] আর নামওয়ালা নকশার `sums`, দুইয়েরই)।
+     *
+     * ⓘ দামের ভিতরের ভ্যাট মোটে আবার যোগ হয় না; যতটা সত্যিই উপরে বসেছে সেটাই "ভ্যাট"। ⛔ ভাগটা এক জায়গায় (১১ অক্টোবর
+     * ২০২৬, PR #17 রিভিউ ⛔৩): আগে কেবল `totals()` জানত, আর ডিফল্ট `mono_light`-সহ নামওয়ালা নকশাগুলো পুরো ভ্যাটকে
+     * সাধারণ সারিতে ছাপত — ১০০০ টাকার বিলে ভিতরে ১৩০ ভ্যাট: মোট ১০০০ + ভ্যাট ১৩০ = দেয় ১০০০।
+     *
+     * @return array{0: string, 1: string}
+     */
+    private function vatSplit(object $document): array
+    {
+        $tax = (string) ($document->tax ?? '0');
+
+        if (bccomp($tax, '0', 4) <= 0) {
+            return ['0', '0'];
+        }
+
+        $before = bcsub(bcsub((string) $document->subtotal, (string) $document->discount, 4), (string) ($document->bill_discount ?? '0'), 4);
+        $before = bcadd(bcadd($before, (string) ($document->rounding_amount ?? '0'), 4), (string) ($document->freight_charge ?? '0'), 4);
+        $added = bcsub((string) $document->total, $before, 4);
+        $added = bccomp($added, '0', 4) < 0 ? '0' : (bccomp($added, $tax, 4) > 0 ? $tax : $added);
+
+        return [$added, bcsub($tax, $added, 4)];
+    }
+
     private function totals(object $document): array
     {
         $rows = [];
@@ -1940,22 +1973,14 @@ class SalesPrintController extends Controller implements HasMiddleware
          * ⓘ ভেতরের ভ্যাট মোটে আবার যোগ হয় না, অথচ কাগজে সাধারণ "ভ্যাট" সারি হয়ে বসত — উপমোট − ছাড় + ভ্যাট আর মোট মিলত না।
          * এখন মোট থেকেই মাপা: যতটা ভ্যাট সত্যিই উপরে যোগ হয়েছে সেটা "ভ্যাট", বাকিটা "ভ্যাট (দামের ভিতরে)" — শুধু জানানোর সারি।
          */
-        $tax = (string) $document->tax;
+        [$added, $included] = $this->vatSplit($document);
 
-        if (bccomp($tax, '0', 4) > 0) {
-            $before = bcsub(bcsub((string) $document->subtotal, (string) $document->discount, 4), (string) ($document->bill_discount ?? '0'), 4);
-            $before = bcadd(bcadd($before, (string) ($document->rounding_amount ?? '0'), 4), (string) ($document->freight_charge ?? '0'), 4);
-            $added = bcsub((string) $document->total, $before, 4);
-            $added = bccomp($added, '0', 4) < 0 ? '0' : (bccomp($added, $tax, 4) > 0 ? $tax : $added);
-            $included = bcsub($tax, $added, 4);
+        if (bccomp($added, '0', 4) > 0) {
+            $rows['core.print.tax'] = $this->money($added);
+        }
 
-            if (bccomp($added, '0', 4) > 0) {
-                $rows['core.print.tax'] = $this->money($added);
-            }
-
-            if (bccomp($included, '0', 4) > 0) {
-                $rows['core.print.tax_included'] = $this->money($included);
-            }
+        if (bccomp($included, '0', 4) > 0) {
+            $rows['core.print.tax_included'] = $this->money($included);
         }
 
         /*

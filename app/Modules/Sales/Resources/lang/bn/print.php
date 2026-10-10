@@ -75,6 +75,8 @@ return [
         'grand_total' => 'সর্বমোট',
         'discount' => 'ছাড়',
         'vat' => 'ভ্যাট',
+        'vat_included' => 'ভ্যাট (দামের ভিতরে)',
+        'freight' => 'ভাড়া',
         'rounding' => 'পয়সা সমন্বয়',
         'net_payable' => 'নিট প্রদেয়',
         'paid' => 'পরিশোধিত',

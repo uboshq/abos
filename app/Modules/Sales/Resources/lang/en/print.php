@@ -68,6 +68,8 @@ return [
         'grand_total' => 'Grand Total',
         'discount' => 'Discount',
         'vat' => 'VAT',
+        'vat_included' => 'VAT (included in price)',
+        'freight' => 'Freight',
         'rounding' => 'Rounding',
         'net_payable' => 'Net Payable Amount',
         'paid' => 'Paid Amount',
