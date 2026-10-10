@@ -769,6 +769,21 @@ return [
         'super_admin' => 'Super Admin',
         'accountant' => 'Accountant',
         'salesman' => 'Salesman',
+
+        /* ⓘ মডিউলের রোল-ছাঁচ — ইংরেজিতে নামটাই, বাংলা ফাইলের জোড়া (BothLanguagesSayTheSameThingTest) */
+        'Accountant' => 'Accountant',
+        'Manager' => 'Manager',
+        'Counter' => 'Counter',
+        'Field Sales' => 'Field Sales',
+        'Warehouse' => 'Warehouse',
+        'HR' => 'HR',
+        'Auditor' => 'Auditor',
+        'Security Watch' => 'Security Watch',
+        'Backup Watcher' => 'Backup Watcher',
+        'Backup Operator' => 'Backup Operator',
+        'Kitchen' => 'Kitchen',
+        'User Admin' => 'User Admin',
+        'Settings Keeper' => 'Settings Keeper',
     ],
 
     /*

@@ -38,6 +38,7 @@ return [
     'permission_count' => 'কয়টা অনুমতি',
     'user_count' => 'কতজন',
     'last_login' => 'শেষ ঢোকা',
+    'never_signed_in' => 'কখনো ঢোকেননি',
     'two_step' => 'দুই ধাপ',
     'two_step_on' => 'চালু',
     'two_step_off' => 'বন্ধ',
