@@ -688,6 +688,36 @@ class PurchaseTest extends TestCase
         $this->assertArrayNotHasKey('total', $result->totals, '⛔ আদেশ, চালান আর বিলের অঙ্ক একসাথে যোগ হলো।');
     }
 
+    /**
+     * ⛔ দুই ট্যাব থেকে একই চালান বাতিল — দ্বিতীয়টা ফেরে, মাল আর খাতা একবারই উল্টায় (পুনঃনিরীক্ষা, ৯ অক্টোবর ২০২৬)।
+     *
+     * ⚠️ বাতিলের যাচাই হাতের কপি দেখত, তালা ছাড়া। ⓘ এখানে দুই ট্যাবের কপি একই সময়ে খোলা — প্রথমটা বাতিল
+     * করার পরেও দ্বিতীয়টা নিজের চোখে "নিশ্চিত"।
+     */
+    public function test_a_receipt_cancelled_from_two_tabs_is_reversed_once(): void
+    {
+        $receipt = $this->receipts()->confirm($this->makeReceipt(null, '10', '50'));
+        $tabOne = PurchaseReceipt::query()->findOrFail($receipt->id);
+        $tabTwo = PurchaseReceipt::query()->findOrFail($receipt->id);
+
+        $this->receipts()->cancel($tabOne, 'প্রথম ট্যাব');
+
+        $reversals = fn () => LedgerEntry::query()->where('source_type', PurchaseReceipt::drillSourceType().':reversal')
+            ->where('source_id', $receipt->id)->count();
+        $once = $reversals();
+        $shelf = $this->onHand();
+
+        try {
+            $this->receipts()->cancel($tabTwo, 'দ্বিতীয় ট্যাব');
+            $this->fail('⛔ বাতিল চালান আবার বাতিল হলো।');
+        } catch (ValidationException $e) {
+            $this->assertArrayHasKey('status', $e->errors());
+        }
+
+        $this->assertSame($once, $reversals(), '⛔ চালানের দাখিলা দুইবার উল্টানো হলো।');
+        $this->assertSame(0, bccomp($this->onHand(), $shelf, 4), '⛔ মাল দুইবার ফেরত গেল।');
+    }
+
     // ── ক্রয়ের কাগজে বিক্রয়মূল্য ──────────────────────────────────────
 
     /**

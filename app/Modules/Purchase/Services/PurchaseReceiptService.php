@@ -51,11 +51,10 @@ use Illuminate\Validation\ValidationException;
  */
 final class PurchaseReceiptService
 {
-    use ReadsTheRowUnderLock;
-
     use BringsInLots;
     use CalculatesLineTotals;
     use ReadsPackedQuantities;
+    use ReadsTheRowUnderLock;
 
     public function __construct(
         private readonly NumberSeriesEngine $numbers,
@@ -492,6 +491,22 @@ final class PurchaseReceiptService
         $date = $onDate === null ? now() : Carbon::parse($onDate);
 
         return DB::transaction(function () use ($receipt, $reason, $date) {
+            /*
+             * ⛔ তালা, তারপর আবার দেখা — পুনঃনিরীক্ষা, ৯ অক্টোবর ২০২৬।
+             * ⚠️ উপরের দুইটা যাচাই হাতের কপি দেখে, তালা ছাড়া: দুই ট্যাব থেকে একই চালান বাতিল করলে দ্বিতীয়টাও
+             * "নিশ্চিত" দেখে মাল আর খাতা আবার উল্টাতে যেত, আর মাঝে বিল বসলে বিল-হওয়া চালানও বাতিল হত।
+             * ⓘ বিলের সারিতে যেমন ([[PurchaseBillService::cancel()]]), এখানেও সারিটা তালায় তাজা পড়া হয়।
+             */
+            $this->lockFresh($receipt);
+
+            if ($receipt->status === DocumentStatus::CANCELLED) {
+                throw ValidationException::withMessages([
+                    'status' => __('purchase::validation.already_cancelled', ['no' => $receipt->document_no]),
+                ]);
+            }
+
+            $this->assertNotBilled($receipt);
+
             if ($receipt->status === DocumentStatus::CONFIRMED) {
                 /*
                  * দামটা আগে তোলা হয়, মাল সরানোর আগে — ইচ্ছাকৃতভাবে।
