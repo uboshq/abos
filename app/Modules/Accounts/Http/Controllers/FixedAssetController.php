@@ -9,15 +9,18 @@ use App\Core\Contracts\CapitalisesABillLine;
 use App\Core\Services\MenuBuilder;
 use App\Core\Services\OpenPeriod;
 use App\Core\Services\PartyRegistry;
+use App\Core\Services\SettingsService;
 use App\Core\Support\CompanyContext;
 use App\Http\Controllers\Controller;
 use App\Models\Branch;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Models\AssetCategory;
 use App\Modules\Accounts\Models\AssetCostPart;
+use App\Modules\Accounts\Models\AssetEvent;
 use App\Modules\Accounts\Models\AssetTransfer;
 use App\Modules\Accounts\Models\DepreciationRun;
 use App\Modules\Accounts\Models\FixedAsset;
+use App\Modules\Accounts\Services\AssetEventService;
 use App\Modules\Accounts\Services\DepreciationEngine;
 use App\Modules\Accounts\Services\FixedAssetService;
 use App\Modules\Accounts\Services\StandardChart;
@@ -52,7 +55,7 @@ class FixedAssetController extends Controller implements HasMiddleware
             // ⓘ সম্পদের নীতিও পথ থেকে পৌঁছায় — একই চাবি, নীতির ভাষায় ([[FixedAssetPolicy]]; ধাপ ১)
             new Middleware('can:view,asset', only: ['show']),
             new Middleware('can:create,'.FixedAsset::class, only: ['create', 'store']),
-            new Middleware('can:accounts.asset.manage', only: ['create', 'store', 'depreciate', 'dispose', 'transfer', 'status', 'preview', 'estimate', 'usage']),
+            new Middleware('can:accounts.asset.manage', only: ['create', 'store', 'depreciate', 'dispose', 'transfer', 'status', 'preview', 'estimate', 'usage', 'event']),
         ];
     }
 
@@ -171,7 +174,7 @@ class FixedAssetController extends Controller implements HasMiddleware
     {
         return view('accounts::asset.show', [
             'menu' => $this->menu->forUser($request->user()),
-            'asset' => $asset->load(['depreciation', 'assetAccount', 'category', 'parent', 'components', 'costParts', 'branch', 'usages', 'estimateChanges.creator']),
+            'asset' => $asset->load(['depreciation', 'assetAccount', 'category', 'parent', 'components', 'costParts', 'branch', 'usages', 'estimateChanges.creator', 'events']),
             // ⓘ পক্ষের নাম কোর থেকে — কর্মী আর বিক্রেতা ([[PartyRegistry]]), মডিউলের মডেল থেকে নয়
             'custodian' => $asset->custodian_id === null ? null
                 : (app(PartyRegistry::class)->labelsOf([['employee', (int) $asset->custodian_id]])['employee:'.$asset->custodian_id] ?? null),
@@ -191,6 +194,14 @@ class FixedAssetController extends Controller implements HasMiddleware
             'branches' => Branch::query()
                 ->where('id', '!=', $asset->branch_id)
                 ->orderBy('code')->get(),
+
+            // ⭐ ধাপ ৩: ঘটনার ফর্ম আর কর্মী বদলের তালিকা
+            'employees' => $employees = $this->partyList('employee'),
+            'people' => $employees,
+            'suppliers' => $this->partyList('supplier'),
+            'expenseAccounts' => Account::query()->postable()->active()->ofType(Account::EXPENSE)->orderBy('code')->get(),
+            'equityAccounts' => Account::query()->postable()->active()->ofType(Account::EQUITY)->orderBy('code')->get(),
+            'revaluationOn' => (bool) app(SettingsService::class)->get(AssetEventService::REVALUATION, false),
 
             /* ⓘ কোথায় কোথায় ছিল — ইতিহাসটাই এই ঘরটার আসল দাম */
             'moves' => AssetTransfer::query()
@@ -369,20 +380,29 @@ class FixedAssetController extends Controller implements HasMiddleware
     public function transfer(Request $request, FixedAsset $asset): RedirectResponse
     {
         $data = $request->validate([
-            'to_branch_id' => ['required', 'integer',
+            // ⓘ খালি মানে একই শাখা — কেবল কর্মী বা জায়গা বদল (ধাপ ৩)
+            'to_branch_id' => ['nullable', 'integer',
                 Rule::exists('branches', 'id')->where('company_id', CompanyContext::id())],
+            'custodian_id' => ['nullable', 'integer'],
+            'location' => ['nullable', 'string', 'max:120'],
+            'department' => ['nullable', 'string', 'max:120'],
             'moved_on' => ['required', 'date', 'before_or_equal:today'],
             'note' => ['nullable', 'string', 'max:500'],
         ]);
 
-        $this->assets->transfer(
+        $move = $this->assets->transfer(
             $asset,
-            (int) $data['to_branch_id'],
+            filled($data['to_branch_id'] ?? null) ? (int) $data['to_branch_id'] : null,
             (string) $data['moved_on'],
             ($data['note'] ?? '') ?: null,
+            [
+                'custodian_id' => filled($data['custodian_id'] ?? null) ? (int) $data['custodian_id'] : null,
+                'location' => $data['location'] ?? null,
+                'department' => $data['department'] ?? null,
+            ],
         );
 
-        return back()->with('saved', __('accounts::asset.moved'));
+        return back()->with('saved', $move->movedBranch() ? __('accounts::asset.moved') : __('accounts::asset.custody_moved'));
     }
 
     /**
@@ -402,19 +422,54 @@ class FixedAssetController extends Controller implements HasMiddleware
     {
         $data = $request->validate([
             'disposal_amount' => ['required', 'numeric', 'min:0'],
-            'into_account_id' => ['required', 'integer', Rule::exists('accounts', 'id')->where('company_id', CompanyContext::id())],
+            // ⓘ বাতিল বা হারানোয় টাকা না-ও আসতে পারে — তখন খাত লাগে না (ধাপ ৩)
+            'into_account_id' => ['nullable', 'required_unless:disposal_amount,0', 'integer', Rule::exists('accounts', 'id')->where('company_id', CompanyContext::id())],
             'disposed_on' => ['required', 'date'],
+            'as' => ['nullable', Rule::in(FixedAsset::LEAVING)],
+            'reason' => ['nullable', 'string', 'max:500'],
         ]);
 
         $after = $this->assets->dispose(
             $asset,
             (string) $data['disposal_amount'],
-            (int) $data['into_account_id'],
+            filled($data['into_account_id'] ?? null) ? (int) $data['into_account_id'] : null,
             $data['disposed_on'],
+            $data['as'] ?? FixedAsset::DISPOSED,
+            ($data['reason'] ?? '') ?: null,
         );
 
         // ⓘ সইয়ের অপেক্ষায় সম্পদটা এখনো চালু — "বিক্রি হয়েছে" বলা মিথ্যা হত ([[AccountsSignature]])
         return back()->with('status', $after->isInService() ? __('accounts::asset.awaiting_signature') : __('accounts::asset.disposed'));
+    }
+
+    /**
+     * ⭐ সম্পদের ঘটনা — সংযোজন, মেরামত, পুনর্মূল্যায়ন, দাম পড়া (স্থায়ী সম্পদ ধাপ ৩; [[AssetEventService]])।
+     * ⓘ নিয়ম সেবায়; এখানে কেবল ঘরের আকার। টাকা নড়লে সই চাওয়া হয়, তাই বার্তা দুই রকম।
+     */
+    public function event(Request $request, FixedAsset $asset, string $kind, AssetEventService $events): RedirectResponse
+    {
+        abort_unless(in_array($kind, AssetEvent::KINDS, true), 404);
+
+        $data = $request->validate([
+            'amount' => ['required', 'numeric', 'min:0'],
+            'happened_on' => ['required', 'date', 'before_or_equal:today'],
+            'funded_by' => ['nullable', 'string', 'max:20'],
+            'funding_account_id' => ['nullable', 'integer'],
+            'funding_supplier_id' => ['nullable', 'integer'],
+            'charge_account_id' => ['nullable', 'integer'],
+            'account_id' => ['nullable', 'integer'],
+            'extend_months' => ['nullable', 'integer', 'min:0', 'max:600'],
+            'reason' => [in_array($kind, [AssetEvent::REVALUATION, AssetEvent::IMPAIRMENT], true) ? 'required' : 'nullable', 'string', 'max:500'],
+        ]);
+
+        $event = match ($kind) {
+            AssetEvent::ADDITION => $events->addition($asset, $data),
+            AssetEvent::REPAIR => $events->repair($asset, $data),
+            AssetEvent::REVALUATION => $events->revalue($asset, $data),
+            AssetEvent::IMPAIRMENT => $events->impair($asset, $data),
+        };
+
+        return back()->with('status', $event->isAwaiting() ? __('accounts::asset.awaiting_signature') : __('accounts::asset.event_saved'));
     }
 
     /** @return Collection<int, Account> */

@@ -21,6 +21,7 @@ use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Models\AssetCapitalisationPaper;
 use App\Modules\Accounts\Models\AssetCategory;
 use App\Modules\Accounts\Models\AssetDisposalPaper;
+use App\Modules\Accounts\Models\AssetEvent;
 use App\Modules\Accounts\Models\AssetTransfer;
 use App\Modules\Accounts\Models\CashCount;
 use App\Modules\Accounts\Models\CashTill;
@@ -507,6 +508,8 @@ return [
         'FA' => 'accounts::doc.fixed_asset',
         // ⭐ মাসের অবচয়ের দৌড় — শাখায় একটা কাগজ, DEP-… (স্থায়ী সম্পদ ধাপ ২)
         'DEP' => 'accounts::doc.depreciation_run',
+        // ⭐ সম্পদের ঘটনা — সংযোজন, মেরামত, পুনর্মূল্যায়ন, দাম পড়া, FAE-… (স্থায়ী সম্পদ ধাপ ৩)
+        'FAE' => 'accounts::doc.asset_event',
 
         // ⭐ খোলা জের — OB-0001, নিজের ক্রম (ভাউচারের পরিকল্পনা ৩ঘ, ৭ অক্টোবর ২০২৬; [[OpeningBalanceService::SERIES]])
         'OB' => 'accounts::doc.opening_balance',
@@ -591,6 +594,8 @@ return [
         'depreciation_run' => DepreciationRun::class,
         // ⓘ ক্রয় বিলের মাল মজুদ থেকে সম্পদে — দাখিলা ক্রয়ের ([[BillLinesForAssets]]), উৎস-আইডি সম্পদের
         'asset_capitalise' => AssetCapitalisationPaper::class,
+        // ⭐ সম্পদের ঘটনা — নিজের কাগজ, নিজের চাবি (স্থায়ী সম্পদ ধাপ ৩)
+        'asset_event' => AssetEvent::class,
     ],
 
     /*
@@ -695,6 +700,11 @@ return [
         'fixed_asset_dispose' => 'accounts::approval.fixed_asset_dispose',
         // ⭐ ABOS-এর আগে কেনা সম্পদ তোলা — পুরনো খাতার জের (স্থায়ী সম্পদ ধাপ ১)
         'fixed_asset_opening' => 'accounts::approval.fixed_asset_opening',
+        // ⭐ সম্পদের ঘটনা — প্রতিটার নিজের সই (স্থায়ী সম্পদ ধাপ ৩)
+        'fixed_asset_addition' => 'accounts::approval.fixed_asset_addition',
+        'fixed_asset_repair' => 'accounts::approval.fixed_asset_repair',
+        'fixed_asset_revalue' => 'accounts::approval.fixed_asset_revalue',
+        'fixed_asset_impair' => 'accounts::approval.fixed_asset_impair',
         // ⭐ ক্যাশবাক্সের দায়িত্ব হস্তান্তর (অডিট ম৮)
         'till_handover' => 'accounts::approval.till_handover',
     ],
@@ -711,7 +721,7 @@ return [
      * মিলিয়ে দেখে। ⛔ একটা টাইপো নীরবে কাগজটাকে bulk-এ
      * ঢুকিয়ে দিত।
      */
-    'moves_money' => ['expense', 'counter_deposit', 'counter_payment', 'transfer', 'receipt', 'payment', 'journal', 'contra', 'year_end', 'note', 'cheque_clear', 'cheque_bounce', 'inter_company', 'till_opening', 'fixed_asset_register', 'fixed_asset_dispose', 'till_handover', 'fixed_asset_opening'],
+    'moves_money' => ['expense', 'counter_deposit', 'counter_payment', 'transfer', 'receipt', 'payment', 'journal', 'contra', 'year_end', 'note', 'cheque_clear', 'cheque_bounce', 'inter_company', 'till_opening', 'fixed_asset_register', 'fixed_asset_dispose', 'till_handover', 'fixed_asset_opening', 'fixed_asset_addition', 'fixed_asset_repair', 'fixed_asset_revalue', 'fixed_asset_impair'],
 
     // রিপোর্ট সরবরাহকারী — কোর নিজে থেকে ডেকে নেবে (সেকশন ১৯.৩)।
     // কোর ফাইলে মডিউলের নাম লিখতে হয় না।
@@ -890,6 +900,15 @@ return [
             'key' => 'accounts.asset.auto_run',
             'super_admin_only' => true,
             'label' => 'accounts::settings.asset_auto_run',
+            'type' => 'boolean',
+            'default' => false,
+            'group' => 'entry',
+        ],
+        [
+            // ⭐ পুনর্মূল্যায়ন — ডিফল্টে বন্ধ, খরচের মডেল (IAS 16.30); মালিকের প্রশ্ন (স্থায়ী সম্পদ ধাপ ৩)
+            'key' => 'accounts.asset.revaluation',
+            'super_admin_only' => true,
+            'label' => 'accounts::settings.asset_revaluation',
             'type' => 'boolean',
             'default' => false,
             'group' => 'entry',

@@ -44,4 +44,7 @@ return [
     'paper_note' => 'Paper for debit and credit notes',
     'note_footnote' => 'Footnote on debit and credit notes',
     'voucher_maker_checker' => 'Whoever writes a voucher does not post it; someone else does',
+
+    // ⭐ Fixed assets phase 3
+    'asset_revaluation' => 'Allow fixed asset revaluation (off means the cost model)',
 ];

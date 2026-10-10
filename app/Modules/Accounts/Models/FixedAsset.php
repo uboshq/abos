@@ -76,6 +76,9 @@ class FixedAsset extends Model implements Drillable
     /** @var list<string> হাতে বদলানো যায় এমন অবস্থা — টাকা নড়ে না */
     public const SWITCHABLE = [self::ACTIVE, self::IDLE, self::UNDER_REPAIR];
 
+    /** @var list<string> খাতা থেকে বিদায়ের তিন পথ — বিক্রি, বাতিল, হারানো/চুরি (ধাপ ৩) */
+    public const LEAVING = [self::DISPOSED, self::WRITTEN_OFF, self::LOST];
+
     /** @var list<string> পর্দা আর ছাঁকনির ক্রম */
     public const STATUSES = [self::AWAITING, self::ACTIVE, self::IDLE, self::UNDER_REPAIR, self::DISPOSED, self::WRITTEN_OFF, self::LOST];
 
@@ -85,7 +88,7 @@ class FixedAsset extends Model implements Drillable
         'company_id', 'branch_id', 'document_no', 'name', 'tag_no',
         'asset_account_id', 'accumulated_account_id', 'expense_account_id',
         'cost', 'salvage', 'acquired_on', 'method', 'life_months', 'rate',
-        'status', 'disposed_on', 'disposal_amount', 'narration', 'created_by',
+        'status', 'disposed_on', 'disposal_amount', 'disposal_reason', 'narration', 'created_by',
         // ⭐ নিবন্ধনের ঘর — ধাপ ১ (মালিক, ১০ অক্টোবর ২০২৬)
         'category_id', 'parent_id', 'location', 'department', 'custodian_id', 'supplier_id',
         'purchase_bill_id', 'purchase_bill_line_id', 'capitalised_qty', 'put_in_use_on',
@@ -216,7 +219,12 @@ class FixedAsset extends Model implements Drillable
         return __('accounts::asset.status_'.$this->status);
     }
 
-    /** এ পর্যন্ত মোট কতটা ক্ষয় ধরা হয়েছে। */
+    /**
+     * এ পর্যন্ত মোট কতটা ক্ষয় ধরা হয়েছে।
+     *
+     * ⭐ পাকা ঘটনাগুলোও (ধাপ ৩): দাম পড়ার লোকসান সঞ্চিত ক্ষয়ে যোগ হয় (IAS 36), পুনর্মূল্যায়নে সঞ্চিত ক্ষয় মুছে যায়
+     * (IAS 16.35খ)। খাতার সঞ্চিত ক্ষয়ের খাতও ঠিক এভাবেই নড়ে, তাই খাতা আর সম্পদের পাতা এক অঙ্ক দেখায়।
+     */
     public function accumulated(?Carbon $upTo = null): string
     {
         $query = $this->depreciation();
@@ -225,7 +233,48 @@ class FixedAsset extends Model implements Drillable
             $query->where('period_end', '<=', $upTo->toDateString());
         }
 
-        return (string) ($query->sum('amount') ?: '0');
+        $events = $this->postedEvents($upTo)->sum('accumulated_change') ?: '0';
+
+        return bcadd((string) ($query->sum('amount') ?: '0'), (string) $events, 4);
+    }
+
+    /**
+     * ⭐ কোনো দিনে সম্পদের দাম — সেদিনের পরের সংযোজন আর পুনর্মূল্যায়ন বাদ দিয়ে (ধাপ ৩)।
+     *
+     * ⓘ সারির `cost` সবসময় আজকের দাম। পুরনো মাসের অবচয় হিসাব করতে গেলে পরের মাসের সংযোজন তাতে ঢুকে যেত।
+     */
+    public function costOn(?Carbon $upTo = null): string
+    {
+        if ($upTo === null) {
+            return (string) $this->cost;
+        }
+
+        $later = AssetEvent::query()->withoutGlobalScope('user-branch')
+            ->where('fixed_asset_id', $this->id)->posted()
+            ->where('happened_on', '>', $upTo->toDateString())
+            ->sum('cost_change') ?: '0';
+
+        return bcsub((string) $this->cost, (string) $later, 4);
+    }
+
+    /**
+     * পাকা ঘটনা, দিন পর্যন্ত।
+     *
+     * ⚠️ শাখার দেয়াল ছাড়া: সম্পদ অন্য শাখায় গেলে আগের শাখার ঘটনাও তার হিসাবের অংশ। দেয়ালটা সম্পদের সারিতে থাকে।
+     *
+     * @return Builder<AssetEvent>
+     */
+    public function postedEvents(?Carbon $upTo = null): Builder
+    {
+        return AssetEvent::query()->withoutGlobalScope('user-branch')
+            ->where('fixed_asset_id', $this->id)->posted()
+            ->when($upTo !== null, fn ($q) => $q->where('happened_on', '<=', $upTo->toDateString()));
+    }
+
+    public function events(): HasMany
+    {
+        return $this->hasMany(AssetEvent::class, 'fixed_asset_id')->withoutGlobalScope('user-branch')
+            ->orderByDesc('happened_on')->orderByDesc('id');
     }
 
     /**
@@ -236,7 +285,7 @@ class FixedAsset extends Model implements Drillable
      */
     public function bookValue(?Carbon $upTo = null): string
     {
-        return bcsub((string) $this->cost, $this->accumulated($upTo), 4);
+        return bcsub($this->costOn($upTo), $this->accumulated($upTo), 4);
     }
 
     /**
@@ -248,7 +297,7 @@ class FixedAsset extends Model implements Drillable
      */
     public function depreciableLeft(?Carbon $upTo = null): string
     {
-        $floor = bcsub((string) $this->cost, (string) $this->salvage, 4);
+        $floor = bcsub($this->costOn($upTo), (string) $this->salvage, 4);
         $done = $this->accumulated($upTo);
         $left = bcsub($floor, $done, 4);
 

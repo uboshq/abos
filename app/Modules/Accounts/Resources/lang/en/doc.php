@@ -19,4 +19,7 @@ return [
     // চেকের খাতা
     'cheque' => 'Cheque',
     'opening_balance' => 'Opening balance',
+
+    // ⭐ Fixed assets phase 3
+    'asset_event' => 'Asset event',
 ];

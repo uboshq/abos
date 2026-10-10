@@ -47,6 +47,15 @@ final class AccountsSignature
     /** ⭐ ABOS-এর আগে কেনা সম্পদ — পুরনো খাতার জের আর এ পর্যন্ত ক্ষয়, নিজের সই (ধাপ ১, ১০ অক্টোবর ২০২৬) */
     public const FIXED_ASSET_OPENING = 'fixed_asset_opening';
 
+    /** ⭐ সম্পদের ঘটনা — প্রতিটার নিজের সই, কাগজ [[AssetEvent]] (স্থায়ী সম্পদ ধাপ ৩, ১০ অক্টোবর ২০২৬) */
+    public const FIXED_ASSET_ADDITION = 'fixed_asset_addition';
+
+    public const FIXED_ASSET_REPAIR = 'fixed_asset_repair';
+
+    public const FIXED_ASSET_REVALUE = 'fixed_asset_revalue';
+
+    public const FIXED_ASSET_IMPAIR = 'fixed_asset_impair';
+
     // ⭐ ক্যাশবাক্সের দায়িত্ব হস্তান্তর — টাকার দায় বদলায় (Accounts-Finance অডিট ম৮; [[TillHandoverService]])
     public const TILL_HANDOVER = 'till_handover';
 
@@ -54,6 +63,7 @@ final class AccountsSignature
     public const ACTIONS = [
         self::NOTE, self::CHEQUE_CLEAR, self::CHEQUE_BOUNCE, self::INTER_COMPANY, self::TILL_OPENING,
         self::FIXED_ASSET_REGISTER, self::FIXED_ASSET_DISPOSE, self::TILL_HANDOVER, self::FIXED_ASSET_OPENING,
+        self::FIXED_ASSET_ADDITION, self::FIXED_ASSET_REPAIR, self::FIXED_ASSET_REVALUE, self::FIXED_ASSET_IMPAIR,
     ];
 
     public function __construct(private readonly DocumentApproval $approval) {}

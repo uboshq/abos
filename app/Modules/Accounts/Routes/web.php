@@ -461,6 +461,10 @@ Route::middleware('auth')->prefix('accounts')->group(function () {
         Route::post('/{asset}/usage', [FixedAssetController::class, 'usage'])
             ->whereNumber('asset')->name('usage');
 
+        // ⭐ সম্পদের ঘটনা — সংযোজন, মেরামত, পুনর্মূল্যায়ন, দাম পড়া (স্থায়ী সম্পদ ধাপ ৩)
+        Route::post('/{asset}/event/{kind}', [FixedAssetController::class, 'event'])
+            ->whereNumber('asset')->whereIn('kind', ['addition', 'repair', 'revaluation', 'impairment'])->name('event');
+
         /*
          * ⭐ সম্পদের শ্রেণি — পাঁচ খাত আর ডিফল্ট আয়ু (স্থায়ী সম্পদ ধাপ ১, ১০ অক্টোবর ২০২৬)।
          * ⓘ `/{asset}`-এর সাথে ঝগড়া নেই — সংখ্যা ছাড়া কিছু ওখানে মেলে না।

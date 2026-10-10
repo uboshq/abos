@@ -30,4 +30,10 @@ return [
     'fixed_asset_dispose' => 'Fixed asset sold or written off',
     'fixed_asset_opening' => 'Fixed asset brought in from before ABOS',
     'till_handover' => 'Handover of a cash box',
+
+    // ⭐ Fixed assets phase 3
+    'fixed_asset_addition' => 'Fixed asset addition',
+    'fixed_asset_repair' => 'Fixed asset repair',
+    'fixed_asset_revalue' => 'Fixed asset revaluation',
+    'fixed_asset_impair' => 'Fixed asset impairment',
 ];

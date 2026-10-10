@@ -6,6 +6,7 @@ namespace App\Modules\Accounts\Listeners;
 
 use App\Core\Events\ApprovalDecided;
 use App\Models\Approval;
+use App\Modules\Accounts\Models\AssetEvent;
 use App\Modules\Accounts\Models\CashTill;
 use App\Modules\Accounts\Models\Cheque;
 use App\Modules\Accounts\Models\FixedAsset;
@@ -14,6 +15,7 @@ use App\Modules\Accounts\Models\MoneyTransfer;
 use App\Modules\Accounts\Models\Note;
 use App\Modules\Accounts\Models\TillHandover;
 use App\Modules\Accounts\Services\AccountsSignature;
+use App\Modules\Accounts\Services\AssetEventService;
 use App\Modules\Accounts\Services\ChequeService;
 use App\Modules\Accounts\Services\FixedAssetService;
 use App\Modules\Accounts\Services\InterCompanyService;
@@ -69,11 +71,23 @@ final class FinishTheAccountsPaperOnTheLastSignature
             match ($approval->action) {
                 // ⓘ পুরনো খাতার জের তোলাও একই শেষ — কেবল সইটা নিজের (ধাপ ১)
                 AccountsSignature::FIXED_ASSET_REGISTER, AccountsSignature::FIXED_ASSET_OPENING => app(FixedAssetService::class)->finishRegistered($paper, $signed),
+                // ⓘ বিক্রি, বাতিল বা হারানো — কোনটা, সেটা সইয়ের সারিতে (ধাপ ৩; পুরনো সারিতে নেই, তাই বিক্রি)
                 AccountsSignature::FIXED_ASSET_DISPOSE => $paper->isInService()
-                    ? app(FixedAssetService::class)->dispose($paper, (string) ($signed['amount'] ?? '0'), (int) ($signed['into_account_id'] ?? 0), $signed['on'] ?? null)
+                    ? app(FixedAssetService::class)->dispose($paper, (string) ($signed['amount'] ?? '0'),
+                        isset($signed['into_account_id']) ? (int) $signed['into_account_id'] : null, $signed['on'] ?? null,
+                        (string) ($signed['as'] ?? FixedAsset::DISPOSED), $signed['reason'] ?? null)
                     : null,
                 default => null,
             };
+
+            return;
+        }
+
+        // ⭐ সম্পদের ঘটনা — সংযোজন, মেরামত, পুনর্মূল্যায়ন, দাম পড়া (ধাপ ৩); সইয়ের অপেক্ষায় থাকলেই
+        if ($paper instanceof AssetEvent) {
+            if ($paper->isAwaiting()) {
+                app(AssetEventService::class)->finish($paper, (array) ($approval->payload ?? []));
+            }
 
             return;
         }

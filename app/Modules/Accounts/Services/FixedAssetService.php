@@ -16,6 +16,7 @@ use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Models\AssetCategory;
 use App\Modules\Accounts\Models\AssetCostPart;
 use App\Modules\Accounts\Models\AssetEstimateChange;
+use App\Modules\Accounts\Models\AssetEvent;
 use App\Modules\Accounts\Models\AssetTransfer;
 use App\Modules\Accounts\Models\AssetUsage;
 use App\Modules\Accounts\Models\DepreciationEntry;
@@ -589,7 +590,7 @@ final class FixedAssetService
         }
     }
 
-    private function fundingFrom(array $data): ?array
+    public function fundingFrom(array $data): ?array
     {
         $how = (string) ($data['funded_by'] ?? self::FUNDED_ALREADY);
 
@@ -869,11 +870,17 @@ final class FixedAssetService
      * ⓘ মোট অঙ্ক শূন্য — এটা টাকার চলাচল নয়, জায়গা বদল। ⚠️ তবু দাখিলা
      * দুই দিকেই বসে, কারণ শাখাটা সারির নিজের ঘরে থাকে।
      */
+    /**
+     * ⭐ ধাপ ৩: কর্মী, জায়গা আর বিভাগের বদলও স্থানান্তর। ⓘ শাখা না বদলালে খাতায় কিছু বসে না — কেবল ইতিহাসের সারি।
+     *
+     * @param  array{custodian_id?: ?int, location?: ?string, department?: ?string}  $custody  যে ঘর দেওয়া হয়, সেটাই বদলায়
+     */
     public function transfer(
         FixedAsset $asset,
-        int $toBranchId,
+        ?int $toBranchId,
         Carbon|string|null $date = null,
         ?string $note = null,
+        array $custody = [],
     ): AssetTransfer {
         if (! $asset->isInService()) {
             throw ValidationException::withMessages([
@@ -881,26 +888,60 @@ final class FixedAssetService
             ]);
         }
 
-        if ((int) $asset->branch_id === $toBranchId) {
+        $from = $asset->branch_id === null ? null : (int) $asset->branch_id;
+        $toBranchId ??= $from;
+        $branchMoves = $toBranchId !== null && $toBranchId !== $from;
+
+        $after = [
+            'custodian_id' => array_key_exists('custodian_id', $custody) ? ($custody['custodian_id'] ?: null) : $asset->custodian_id,
+            'location' => array_key_exists('location', $custody) ? (($custody['location'] ?? '') ?: null) : $asset->location,
+            'department' => array_key_exists('department', $custody) ? (($custody['department'] ?? '') ?: null) : $asset->department,
+        ];
+        $custodyMoves = (int) $after['custodian_id'] !== (int) $asset->custodian_id
+            || (string) $after['location'] !== (string) $asset->location
+            || (string) $after['department'] !== (string) $asset->department;
+
+        if (! $branchMoves && ! $custodyMoves) {
             throw ValidationException::withMessages([
                 'to_branch_id' => __('accounts::asset.already_there'),
             ]);
         }
 
+        // ⓘ শাখাহীন সম্পদের কেবল জায়গা বদলেও একটা শাখা লাগে — ইতিহাসের সারিতে "কোথায়" খালি রাখা যায় না
+        if ($toBranchId === null) {
+            throw ValidationException::withMessages(['to_branch_id' => __('accounts::asset.branch_needed')]);
+        }
+
+        if ($after['custodian_id'] !== null && ! app(PartyRegistry::class)->exists('employee', (int) $after['custodian_id'])) {
+            throw ValidationException::withMessages(['custodian_id' => __('accounts::asset.funding_not_found')]);
+        }
+
         $on = Carbon::parse($date ?? now())->startOfDay();
-        $from = $asset->branch_id === null ? null : (int) $asset->branch_id;
         $accumulated = $asset->accumulated();
 
-        return DB::transaction(function () use ($asset, $toBranchId, $on, $from, $accumulated, $note) {
+        return DB::transaction(function () use ($asset, $toBranchId, $on, $from, $accumulated, $note, $branchMoves, $after) {
             $move = AssetTransfer::query()->create([
                 'company_id' => CompanyContext::id(),
                 'asset_id' => $asset->id,
                 'from_branch_id' => $from,
                 'to_branch_id' => $toBranchId,
+                'from_custodian_id' => $asset->custodian_id,
+                'to_custodian_id' => $after['custodian_id'],
+                'from_location' => $asset->location,
+                'to_location' => $after['location'],
+                'from_department' => $asset->department,
+                'to_department' => $after['department'],
                 'moved_on' => $on->toDateString(),
                 'note' => $note,
                 'created_by' => auth()->id(),
             ]);
+
+            $asset->update($after);
+
+            // ⓘ একই শাখার ভেতরে সরানো টাকার ঘটনা নয় — দাখিলা নেই
+            if (! $branchMoves) {
+                return $move->refresh();
+            }
 
             /*
              * ⓘ কেনা দামটা পুরনো শাখা থেকে নতুন শাখায়।
@@ -960,11 +1001,19 @@ final class FixedAssetService
         });
     }
 
+    /**
+     * ⭐ খাতা থেকে বিদায় — বিক্রি, বাতিল (ভাঙারি) বা হারানো/চুরি (স্থায়ী সম্পদ ধাপ ৩; IAS 16.67-72)।
+     *
+     * ⓘ তিনটাই একই দাখিলা: সঞ্চিত ক্ষয় মোছা, কেনা দাম বের করা, পাওয়া টাকা (বিক্রির দাম, ভাঙারির দাম, বিমার দাবি) ঢোকা,
+     * পার্থক্য লাভ বা লোকসান। কেবল শেষ অবস্থা আলাদা। লাভ-লোকসান শ্রেণির নিজের খাতে, শ্রেণি না থাকলে ছকের খাতে।
+     */
     public function dispose(
         FixedAsset $asset,
         string $amount,
-        int $intoAccountId,
+        ?int $intoAccountId,
         Carbon|string|null $date = null,
+        string $as = FixedAsset::DISPOSED,
+        ?string $reason = null,
     ): FixedAsset {
         if (! $asset->isInService()) {
             throw ValidationException::withMessages([
@@ -972,22 +1021,36 @@ final class FixedAssetService
             ]);
         }
 
+        if (! in_array($as, FixedAsset::LEAVING, true)) {
+            throw ValidationException::withMessages(['as' => __('accounts::asset.leaving_unknown')]);
+        }
+
         $on = Carbon::parse($date ?? now())->startOfDay();
         $proceeds = Money::of($amount);
+
+        // ⛔ টাকা পাওয়া গেলে তা কোন খাতে ঢুকল বলতেই হবে
+        if (bccomp($proceeds, '0', 4) > 0 && ! Account::query()->postable()->whereKey((int) $intoAccountId)->exists()) {
+            throw ValidationException::withMessages(['into_account_id' => __('accounts::asset.into_account_required')]);
+        }
+
+        // ⛔ ঝুলন্ত ঘটনা থাকলে বিদায় নয় — ঘটনাটা পরে খাতায় বসলে এমন সম্পদে বসত যেটা আর নেই
+        if ($asset->events()->where('status', AssetEvent::AWAITING)->exists()) {
+            throw ValidationException::withMessages(['status' => __('accounts::asset.event_pending')]);
+        }
 
         /*
          * ⭐ সই — গ১ ([[AccountsSignature]])। ⓘ বিক্রির অঙ্ক, টাকার খাত আর তারিখ সইয়ের সারিতে থাকে; শেষ সইয়ে
          * [[FinishTheAccountsPaperOnTheLastSignature]] ঠিক এগুলো দিয়েই এই মেথড আবার ডাকে। ছক বন্ধে আগের মতো এখনই।
          */
         if (app(AccountsSignature::class)->holds($asset, AccountsSignature::FIXED_ASSET_DISPOSE, $proceeds, null,
-            ['amount' => $proceeds, 'into_account_id' => $intoAccountId, 'on' => $on->toDateString()])) {
+            ['amount' => $proceeds, 'into_account_id' => $intoAccountId, 'on' => $on->toDateString(), 'as' => $as, 'reason' => $reason])) {
             return $asset->refresh();
         }
 
         $book = $asset->bookValue();
         $accumulated = $asset->accumulated();
 
-        return DB::transaction(function () use ($asset, $on, $proceeds, $book, $accumulated, $intoAccountId) {
+        return DB::transaction(function () use ($asset, $on, $proceeds, $book, $accumulated, $intoAccountId, $as, $reason) {
             $lines = [];
 
             if (bccomp($proceeds, '0', 4) > 0) {
@@ -1011,11 +1074,13 @@ final class FixedAssetService
                  * লাভ হলে অবচয় ঋণাত্মক দেখাত, আর লাভ-ক্ষতিতে এককালীন বিক্রির লাভটা চালু খরচ কমানোর মতো পড়ত।
                  */
                 $gain = bccomp($difference, '0', 4) > 0;
-                $head = $this->disposalHead($gain ? StandardChart::ASSET_DISPOSAL_GAIN : StandardChart::ASSET_DISPOSAL_LOSS);
+                // ⭐ শ্রেণির নিজের লাভ/লোকসানের খাত আগে (ধাপ ৩)
+                $head = ($gain ? $asset->category?->gain_account_id : $asset->category?->loss_account_id)
+                    ?? $this->disposalAccount($gain);
 
                 $lines[] = $gain
-                    ? ['account_id' => $head->id, 'credit' => $difference]
-                    : ['account_id' => $head->id, 'debit' => bcmul($difference, '-1', 4)];
+                    ? ['account_id' => (int) $head, 'credit' => $difference]
+                    : ['account_id' => (int) $head, 'debit' => bcmul($difference, '-1', 4)];
             }
 
             /*
@@ -1030,10 +1095,13 @@ final class FixedAssetService
                 trxDate: $on->toDateString(),
                 lines: $lines,
                 documentNo: $asset->document_no.'/OUT',
+                // ⓘ সম্পদের নিজের শাখায় — যিনি চাপলেন তাঁর শাখায় নয় (ধাপ ৩)
+                branchId: $asset->branch_id === null ? null : (int) $asset->branch_id,
             );
 
             $asset->update([
-                'status' => FixedAsset::DISPOSED,
+                'status' => $as,
+                'disposal_reason' => $reason,
                 'disposed_on' => $on->toDateString(),
                 'disposal_amount' => $proceeds,
             ]);
@@ -1048,6 +1116,12 @@ final class FixedAssetService
      * ⓘ খাত দুইটা ২ অক্টোবর ২০২৬-এ ছকে এল; পুরনো কোম্পানিতে `abos:sync-chart` চালালে বসে। ⛔ চুপচাপ অবচয়ের
      * খাতে ফিরে যাওয়া হয় না — তাহলে ভুলটাই নীরবে ফিরে আসত।
      */
+    /** ⓘ বিক্রির লাভ বা লোকসানের ছকের খাত — শ্রেণিতে খাত না থাকলে ([[AssetEventService]]ও এটা নেয়) */
+    public function disposalAccount(bool $gain): int
+    {
+        return (int) $this->disposalHead($gain ? StandardChart::ASSET_DISPOSAL_GAIN : StandardChart::ASSET_DISPOSAL_LOSS)->id;
+    }
+
     private function disposalHead(string $code): Account
     {
         $account = Account::query()->postable()->where('code', $code)->first();
