@@ -174,6 +174,32 @@ final class ASignatureBelongsToTheBytesItSignedTest extends TestCase
     // ── সহায়ক ─────────────────────────────────────────────────────────
 
     /**
+     * ⛔ অন্য শাখার সইকারী যে কাগজে সই চাওয়া তা খুলতে পারেন — ৪০৪ নয় (১১ অক্টোবর ২০২৬, documents রিভিউ ⚠️১৩)।
+     * ⓘ ঠিকানার শাখা-দেয়াল সইকারীর ছাড়ের আগেই কাগজটা ফেলে দিত; আর দরজাটা কেবল সইকারীর জন্য — অন্য শাখার সাধারণ মানুষ আগের মতো ৪০৪।
+     */
+    public function test_a_signer_in_another_branch_can_open_the_paper_they_are_asked_to_sign(): void
+    {
+        $this->useCompany();
+        $flow = ApprovalFlow::query()->create(['company_id' => $this->company->id, 'code' => 'DOCSIGN', 'module' => 'documents',
+            'action' => DocumentSignatures::ACTION, 'threshold_amount' => null, 'is_active' => true]);
+        $signer = $this->person('far-signer@abos.test', self::SIGNER, $this->netrakona);
+        $this->useCompany();
+        ApprovalFlowStep::query()->create(['approval_flow_id' => $flow->id, 'level' => 1, 'step_name' => 'level 1',
+            'approver_type' => ApprovalFlowStep::BY_USER, 'approver_id' => $signer->id, 'requires_all' => false]);
+
+        $document = $this->upload('Main branch lease');   // ⓘ প্রধান শাখায়
+        $stranger = $this->person('far-stranger@abos.test', self::SIGNER, $this->netrakona);
+
+        $this->actingAs($this->owner)->post(route('documents.signature.request', $document))->assertSessionHasNoErrors();
+        $this->useCompany();
+
+        $this->actingAs($signer)->get(route('documents.show', $document))->assertOk();
+        $this->useCompany();
+        $this->assertContains($this->actingAs($stranger)->get(route('documents.show', $document))->getStatusCode(), [403, 404],
+            '⛔ সই চাওয়া হয়নি এমন অন্য শাখার মানুষও কাগজ খুললেন।');
+    }
+
+    /**
      * সইয়ের ধারা — প্রতিটা ভিতরের তালিকা একটা স্তর, তাতে যতজন সইকারী।
      *
      * @param  list<list<int>>  $levels
