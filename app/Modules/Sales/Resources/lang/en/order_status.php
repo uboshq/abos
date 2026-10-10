@@ -13,7 +13,7 @@ return [
         'awaiting_approval' => 'Awaiting approval',
         'approved' => 'Approved',
         'credit_held' => 'Credit hold',
-        'confirmed' => 'Reserved',
+        'confirmed' => 'Confirmed',
         'closed' => 'Closed',
         'rejected' => 'Rejected',
         'cancelled' => 'Cancelled',

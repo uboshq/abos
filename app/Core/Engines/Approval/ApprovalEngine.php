@@ -523,7 +523,7 @@ final class ApprovalEngine
                  * অনুবাদ করা নামই যায় ("বিক্রয় · ছাড়"), কাঁচা কী নয় —
                  * ব্যবহারকারী `sales.discount` দেখে কিছু বোঝেন না।
                  */
-                'document' => $this->documentLabel($approval),
+                'document' => $this->noticeLabel($approval),
             ]),
             $remarks,
             Route::has('approval.inbox.index') ? route('approval.inbox.index') : null,
@@ -571,8 +571,40 @@ final class ApprovalEngine
      * অনুবাদ থাকলে সেটাই, নাহলে কাঁচা নামটাই — অনুপস্থিত অনুবাদের
      * জায়গায় `core.module.sales` লেখা দেখানোর চেয়ে `sales` ভালো।
      */
+    /**
+     * ⭐ বিজ্ঞপ্তির কাগজ — ধরন, নম্বর, আর কার কাগজ (মালিক, ৮ অক্টোবর ২০২৬: *"notification e point name ase na"*)।
+     *
+     * ⓘ কোর কোনো পক্ষের নাম জানে না; কাগজ নিজে বলে `noticeParty()` দিয়ে (বিক্রির কাগজে "নাম · পয়েন্ট",
+     * [[NamesItsCustomerInNotices]])। যে কাগজ বলে না, তার জন্য আগের মতো ধরন আর নম্বর। মনে করানো আর উপরে পাঠানোর
+     * বিজ্ঞপ্তিও এটাই ডাকে ([[ApprovalsDue]]) — আগে সেখানে কাঁচা ইংরেজি চাবি যেত ("sales · delivery_order")।
+     */
+    public function noticeLabel(Approval $approval): string
+    {
+        $document = $approval->approvable;
+        $party = $document !== null && method_exists($document, 'noticeParty') ? $document->noticeParty() : null;
+
+        return implode(' · ', array_filter([
+            $this->documentLabel($approval),
+            $document?->getAttribute('document_no'),
+            $party,
+        ], fn ($part) => $part !== null && trim((string) $part) !== ''));
+    }
+
     private function documentLabel(Approval $approval): string
     {
+        /*
+         * ⭐ মডিউল নিজে যা ঘোষণা করে, সেই নামে — মডিউলের নাম আর তার `approvals`-এর কাজের লেবেল ([[ModuleDefinition]])।
+         * ⛔ আগে `core.module.*` আর `core.approval.action.*` খোঁজা হত, যা কখনো লেখাই হয়নি — বিজ্ঞপ্তিতে কাঁচা ইংরেজি যেত
+         * ("sales · delivery_order"), অথচ মালিক কেবল বাংলা পড়েন (৮ অক্টোবর ২০২৬)। মডিউল না চিনলে আগের মতো।
+         */
+        $definition = app(\App\Core\Module\ModuleRegistry::class)->get((string) $approval->module);
+        if ($definition !== null) {
+            $key = $definition->approvals[(string) $approval->action] ?? null;
+            $action = $key === null ? null : __($key);
+
+            return trim($definition->label().' · '.($action === null || $action === $key ? $approval->action : $action));
+        }
+
         $module = __('core.module.'.$approval->module);
         $action = __('core.approval.action.'.$approval->action);
 

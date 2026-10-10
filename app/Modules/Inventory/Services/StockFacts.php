@@ -592,6 +592,25 @@ final class StockFacts
             $q->where('l.trx_date', '>', Carbon::today()->subDays($maxDays)->toDateString());
         }
 
+        /*
+         * ⛔ দেখার গুদামে যে পণ্যের মাল আছে, কেবল সেটা — পুরো-ERP অডিট, ৬ অক্টোবর ২০২৬, মজুদ ⚠️৯
+         * ([[TheAgePageStaysInsideTheWallTest]])।
+         *
+         * ⓘ স্তর কোম্পানির (গুদাম বা শাখা নেই), তাই এক শাখা বাছা বা গুদাম-সীমিত মানুষও সব শাখার পণ্য, কাগজ আর পরিমাণ
+         * দেখতেন। এখন [[Warehouse::idsInViewedBranch()]] — সব দেখেন এমন মানুষে `null`, আগের মতোই সব। ⚠️ পণ্যটা তালিকায়
+         * এলে তার স্তর পুরোটাই আসে — কোন স্তরের মাল কোন গুদামে, সেটা স্তর জানে না; গুদামে না থাকা পণ্য আর আসে না।
+         */
+        $warehouses = Warehouse::idsInViewedBranch();
+
+        if ($warehouses !== null) {
+            $q->whereIn('l.product_id', DB::table('inv_stock_movements')
+                ->where('company_id', CompanyContext::id())
+                ->whereIn('warehouse_id', $warehouses === [] ? [0] : $warehouses)
+                ->groupBy('product_id')
+                ->havingRaw('SUM(floor_change + unplaced_change) > 0')
+                ->select('product_id'));
+        }
+
         return $q;
     }
 

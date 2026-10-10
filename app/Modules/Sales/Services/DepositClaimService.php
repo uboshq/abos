@@ -63,6 +63,60 @@ final class DepositClaimService
 
         $bills = $this->billsOf($customer, (array) ($data['bills'] ?? []), $amount);
 
+        return DB::transaction(function () use ($customer, $data, $amount, $claimedOn, $bills) {
+            $this->assertReferenceIsFree($data);
+
+            return $this->write($customer, $data, $amount, $claimedOn, $bills);
+        });
+    }
+
+    /**
+     * ⛔ একই ব্যাংক খাত আর একই রেফারেন্সে দুইটা খোলা বা গৃহীত বিজ্ঞপ্তি নয় — টাকার পরিকল্পনা ৪ (সমন্বয়ক, ৭ অক্টোবর ২০২৬)।
+     *
+     * ⓘ একই স্লিপ SR একবার, দোকানি পোর্টালে আবার পাঠালে দুটোই গ্রহণ হয়ে একই টাকা দুইবার জমা হত। প্রত্যাখ্যাত বাদ — ভুল
+     * ধরে আবার পাঠানো যায়। রেফারেন্স মেলে বড়-ছোট হাত আর ফাঁকা জায়গা বাদ দিয়ে; অন্য দোকানের নামেও থামে, কারণ ব্যাংকের
+     * একটা লেনদেন একজনেরই। ⛔ খাতের সারিতে তালা — একই মুহূর্তে দুই দরজা দিয়ে এলেও দ্বিতীয়টা প্রথমটাকে দেখে।
+     * ⓘ ডিলারের দেয়াল বাদ দিয়ে খোঁজা — SR যে দোকান দেখেন না, তার বিজ্ঞপ্তিও একই স্লিপ ধরে রাখে; কোম্পানির দেয়াল থাকে।
+     *
+     * @param  array<string, mixed>  $data
+     */
+    private function assertReferenceIsFree(array $data): void
+    {
+        $reference = self::plainReference($data['reference'] ?? null);
+        $account = $data['bank_account_id'] ?? null;
+
+        if ($reference === '' || $account === null) {
+            return;
+        }
+
+        \App\Modules\Accounts\Models\Account::query()->whereKey($account)->lockForUpdate()->first();
+
+        $taken = DepositClaim::query()->withoutGlobalScopes()
+            ->where('company_id', \App\Core\Support\CompanyContext::id())
+            ->whereNull('deleted_at')
+            ->where('bank_account_id', $account)
+            ->where('status', '!=', DepositClaim::REJECTED)
+            ->whereNotNull('reference')
+            ->whereRaw("UPPER(REPLACE(reference, ' ', '')) = ?", [$reference])
+            ->exists();
+
+        if ($taken) {
+            throw ValidationException::withMessages(['reference' => __('sales::portal.reference_taken')]);
+        }
+    }
+
+    /** ⓘ মেলানোর রূপ — বড় হাত, ফাঁকা জায়গা ছাড়া */
+    private static function plainReference(mixed $reference): string
+    {
+        return strtoupper(str_replace(' ', '', trim((string) $reference)));
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     * @param  array<int, mixed>  $bills
+     */
+    private function write(Customer $customer, array $data, string $amount, Carbon $claimedOn, array $bills): DepositClaim
+    {
         return DepositClaim::create([
             'company_id' => $customer->company_id,
             'branch_id' => $customer->branch_id,
@@ -303,6 +357,29 @@ final class DepositClaimService
     }
 
     /**
+     * ⭐ যাচাই শুরু — পাঠানো বিজ্ঞপ্তি "যাচাই চলছে" হয় (টাকার পরিকল্পনা ১, ৭ অক্টোবর ২০২৬; Submitted → Under Verification)।
+     *
+     * ⓘ দোকানি আর SR পোর্টালে বা ফোনে দেখেন কেউ ধরেছেন — "দেখছে কেউ?" ফোনটা লাগে না। ⛔ কেবল পাঠানো অবস্থা থেকে, তালা দিয়ে:
+     * এইমাত্র গৃহীত বা প্রত্যাখ্যাত বিজ্ঞপ্তি পুরনো পাতা থেকে আবার "যাচাই চলছে" হয় না। খাতায় কিছু ওঠে না।
+     */
+    public function startVerifying(DepositClaim $claim): DepositClaim
+    {
+        return DB::transaction(function () use ($claim) {
+            $fresh = DepositClaim::query()->whereKey($claim->getKey())->lockForUpdate()->firstOrFail();
+
+            if ($fresh->status !== DepositClaim::PENDING) {
+                throw ValidationException::withMessages([
+                    'status' => __($fresh->isOpen() ? 'sales::portal.already_verifying' : 'sales::portal.already_decided'),
+                ]);
+            }
+
+            $fresh->update(['status' => DepositClaim::VERIFYING]);
+
+            return $claim->setRawAttributes($fresh->refresh()->getAttributes(), true);
+        });
+    }
+
+    /**
      * এই গ্রাহকের দাবিগুলো — আর কারো নয়।
      *
      * @return Collection<int, DepositClaim>
@@ -345,7 +422,8 @@ final class DepositClaimService
 
     private function assertPending(DepositClaim $claim): void
     {
-        if (! $claim->isPending()) {
+        // ⓘ যাচাই চলছে এমন বিজ্ঞপ্তিও এখনো খোলা — সিদ্ধান্ত সেখান থেকেও (টাকার পরিকল্পনা ১, ৭ অক্টোবর ২০২৬)
+        if (! $claim->isOpen()) {
             throw ValidationException::withMessages([
                 'status' => __('sales::portal.already_decided'),
             ]);

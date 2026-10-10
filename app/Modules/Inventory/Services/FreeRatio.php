@@ -45,7 +45,14 @@ final class FreeRatio
      * (সুপার গ্রুপ)-এ ফ্রি দেওয়া যায় না — সর্বাধিক 0"*। ⛔ খোলা মজুদের কার্টে ফ্রি একই লটে বসে (17e93450), কিন্তু এখানে
      * উৎসটা ছিল না, তাই ১৯ কার্টন ফ্রি থাকা লটেও "যতটা ফ্রি এসেছিল" শূন্য গোনা হত আর কাউন্টার ফ্রি আটকাত।
      */
-    private const ARRIVES_FROM = ['purchase_bill', 'purchase_receipt', \App\Modules\Inventory\Services\OpeningStockService::SOURCE_TYPE];
+    /*
+     * ⭐ লট-বাছাইও ([[StrandedStock]], `lot_assignment`) — পুরো-ERP অডিট, ৬ অক্টোবর ২০২৬, মজুদ ⓘ১৩
+     * ([[LotsGivenLaterCountTheirFreeTest]])। ⛔ লট ধরার আগের মাল পরে লট পেলে তার কাগজ মাল আনে না, কেবল নাম বসায় — তবু এই
+     * লটে মাল আর ফ্রি "আসে" ঐ সারি দিয়েই। বাদ পড়লে লটটার আসা শূন্য গোনা হত, আর কাউন্টার ফ্রি আটকাত। ⓘ লট-ছাড়া ঘরের বিয়োগের
+     * সারিতে `batch_id` নেই, তাই লট ধরে গোনায় সে আসে না — দুইবার গোনার ভয় নেই।
+     */
+    private const ARRIVES_FROM = ['purchase_bill', 'purchase_receipt', \App\Modules\Inventory\Services\OpeningStockService::SOURCE_TYPE,
+        StrandedStock::SOURCE_TYPE];
 
     /**
      * অনেক লটের অনুপাত একসাথে — কাউন্টারের লট-তালিকার জন্য, একটাই প্রশ্নে (মালিক, ৪ অক্টোবর ২০২৬:

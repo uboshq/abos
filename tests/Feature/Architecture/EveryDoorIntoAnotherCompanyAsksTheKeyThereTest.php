@@ -31,6 +31,8 @@ final class EveryDoorIntoAnotherCompanyAsksTheKeyThereTest extends TestCase
     private const DOORS = [
         'app/Modules/Accounts/Http/Controllers/InterCompanyController.php' => null,
         'app/Modules/Accounts/Services/InterCompanyService.php' => null,
+        // ⓘ দলগত রিপোর্ট — প্রতিটা কোম্পানিতে শাখার নাগাল পড়তে ঢোকে; কোম্পানির তালিকাই আগে সেখানের চাবি দেখে (পুনঃঅডিট, ৯ অক্টোবর ২০২৬)
+        'app/Modules/Accounts/Services/GroupLedgerService.php' => null,
         // ⭐ মালিকের কেন্দ্র — প্রতিটা কোম্পানিতে `executive.view` ঐ কোম্পানিতে বসে জিজ্ঞেস করে (৯ অক্টোবর ২০২৬)
         'app/Modules/Executive/Services/CompanyLens.php' => null,
         'app/Modules/Executive/Services/Snapshots.php' => 'রাতের ক্রন — মানুষ নেই, প্রতিটা কোম্পানির নিজের super_admin-এর চোখে লেখে; '

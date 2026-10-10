@@ -132,6 +132,10 @@ final class StockAdjustmentService
         ?string $unitCost = null,
         ?Batch $batch = null,
     ): ?StockMovement {
+        // ⛔ পিস-বাক্সে আধা গোনা যায় না, কেজি-লিটারে যায় (পুরো-ERP অডিট, ৬ অক্টোবর ২০২৬, মজুদ ⚠️১২;
+        // [[AHalfPieceIsNeitherCountedNorAdjustedTest]]) — [[issue()]] এখানেই আসে (তাক − দেওয়া), তাই দিয়ে-দেওয়াও থামে
+        app(PackConversion::class)->toStockQty($product, $countedQty);
+
         $current = $this->stock->floorQty($product, $warehouse);
 
         return $this->settle(

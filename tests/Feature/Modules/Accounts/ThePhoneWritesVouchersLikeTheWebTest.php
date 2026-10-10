@@ -244,6 +244,8 @@ final class ThePhoneWritesVouchersLikeTheWebTest extends TestCase
         $out = $this->push($reader, [$this->change('p-1', $this->journal())]);
         $voucher = Voucher::query()->where('public_id', $out[0]['entityId'])->with('lines')->firstOrFail();
         $shop = \App\Modules\Customer\Models\Customer::query()->orderBy('id')->firstOrFail();
+        // ⓘ প্রথমে পয়েন্ট ছাড়া — নিচে পয়েন্ট বসিয়ে আলাদা দেখা
+        $shop->forceFill(['location_id' => null])->save();
         $till = Account::query()->postable()->active()->where('money_kind', Account::CASH)->orderBy('code')->firstOrFail();
         // ⓘ আদায়ের আকার: টাকা টিলে (ডেবিট), পক্ষ প্রাপ্যের সারিতে (ক্রেডিট) — মাথায় পক্ষ নেই
         $voucher->lines[0]->forceFill(['account_id' => $till->id])->save();
@@ -266,6 +268,19 @@ final class ThePhoneWritesVouchersLikeTheWebTest extends TestCase
         $voucher->forceFill(['type' => Voucher::JOURNAL])->save();
         $page = $this->phone($reader)->getJson('/api/v1/accounts/vouchers/'.$voucher->public_id)->assertOk()->json();
         $this->assertSame(['পক্ষ', null], [$page['party_label'], $page['money_label']]);
+
+        /*
+         * ⭐ পক্ষের পাশে পয়েন্ট — মালিক, ১০ অক্টোবর ২০২৬: "ha dekhate hobe" ([[PartyRegistry::labelsOf()]])। দোকান একটা পয়েন্টে
+         * বসলে পাতায় আর সারিতে "নাম · পয়েন্ট"।
+         */
+        $point = \App\Modules\MasterData\Models\Location::query()->create([
+            'company_id' => $this->company->id, 'code' => 'PT-VP', 'name_en' => 'Kawran Bazar', 'name_bn' => 'কারওয়ান বাজার',
+            'level' => \App\Modules\MasterData\Models\Location::POINT, 'is_active' => true,
+        ]);
+        $shop->forceFill(['location_id' => $point->id])->save();
+        $page = $this->phone($reader)->getJson('/api/v1/accounts/vouchers/'.$voucher->public_id)->assertOk()->json();
+        $this->assertSame($shop->drillLabel().' · কারওয়ান বাজার', $page['party'], '⛔ ভাউচারের পক্ষে পয়েন্ট নেই।');
+        $this->assertSame([null, $shop->drillLabel().' · কারওয়ান বাজার'], array_column($page['lines'], 'party'));
     }
 
     /** @param  list<string>  $keys */

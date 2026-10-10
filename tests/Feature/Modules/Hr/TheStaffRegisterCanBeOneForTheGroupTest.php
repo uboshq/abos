@@ -10,6 +10,7 @@ use App\Core\Services\SettingsService;
 use App\Core\Support\CompanyContext;
 use App\Models\Company;
 use App\Models\Setting;
+use App\Models\User;
 use App\Modules\Hr\Models\Employee;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -194,6 +195,24 @@ final class TheStaffRegisterCanBeOneForTheGroupTest extends TestCase
             '⚠️ ফলে কর্মীর তালিকা চওড়া হবে আর তাঁর কাগজ হবে না — পর্দায়',
             'নাম, কিন্তু খুললে কিছু নেই। ⓘ ধরা পড়বে বেতনের দিনে।',
         ]));
+    }
+
+    /**
+     * ⛔ সুইচটা কেবল সুপার অ্যাডমিনের — পূর্ণ নিরীক্ষা §১.৬ (২৭ সেপ্টেম্বর), ৯ অক্টোবরেও খোলা।
+     *
+     * ⚠️ একই সুইচ, দুই মানুষ: সাধারণ জন পারেন না, মালিক পারেন। ⓘ কেবল "না" দেখলে
+     * সবাইকে আটকানো একটা ভাঙা পাহারাও সবুজ হত।
+     */
+    public function test_only_a_super_admin_may_open_the_wall(): void
+    {
+        $settings = app(SettingsService::class);
+        $clerk = User::factory()->create();
+        $owner = User::query()->where('email', 'owner@abos.test')->firstOrFail();
+
+        $this->assertFalse($settings->mayChange('hr.shared_across_companies', $clerk),
+            '⛔ সাধারণ ব্যবহারকারী সব কোম্পানির কর্মী-খাতা খুলে দিতে পারেন।');
+        $this->assertTrue($settings->mayChange('hr.shared_across_companies', $owner),
+            'মালিকও সুইচটা বদলাতে পারেন না — পাহারা সবাইকে আটকাচ্ছে।');
     }
 
     private function openTheWall(): void

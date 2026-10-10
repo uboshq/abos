@@ -13,6 +13,7 @@ use App\Http\Middleware\RefuseInactiveAccounts;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Laravel\Sanctum\PersonalAccessToken;
 
 /**
@@ -204,6 +205,8 @@ class AuthController extends Controller
         $current = $this->refreshTokenFrom($request);
 
         if ($current === null) {
+            $this->refuseAReusedToken($request);
+
             return response()->json(['message' => 'Unauthenticated.'], 401); // ⓘ Laravel-এর নিজের ৪০১-এর একই কথা — অ্যাপ এটাই চেনে
         }
 
@@ -235,21 +238,74 @@ class AuthController extends Controller
         ]);
 
         /*
-         * ⓘ deviceId না পাঠালে টোকেনের নিজের নাম থেকে (`refresh:<deviceId>`) — অ্যাপ ০.৪.৮ পর্যন্ত নবায়নে deviceId
-         * পাঠাত না, আর তাতে প্রতিটা নবায়ন ৪২২ হত ([[refreshTokenFrom()]], ৪ অক্টোবর ২০২৬)।
+         * ⛔ ডিভাইস টোকেনের নিজের নাম থেকে (`refresh:<deviceId>`) — ফোনের পাঠানো নামে নয় (পুরো ERP অডিট, ৯ অক্টোবর ২০২৬:
+         * আগে body-র deviceId আগে নেওয়া হত, তাই চুরি যাওয়া একটা নবায়ন-টোকেন দিয়ে অন্য যেকোনো ফোনের নামে জোড়া বানানো যেত)।
+         * ⓘ নামে ডিভাইস না থাকলে তবেই body — অ্যাপ ০.৪.৮ পর্যন্ত deviceId পাঠাত না ([[refreshTokenFrom()]], ৪ অক্টোবর ২০২৬)।
          */
-        $deviceId = filled($data['deviceId'] ?? null)
-            ? (string) $data['deviceId']
-            : ($current instanceof PersonalAccessToken && str_starts_with((string) $current->name, self::REFRESH.':')
-                ? substr((string) $current->name, strlen(self::REFRESH) + 1) : '');
+        $deviceId = str_starts_with((string) $current->name, self::REFRESH.':')
+            ? substr((string) $current->name, strlen(self::REFRESH) + 1)
+            : (string) ($data['deviceId'] ?? '');
 
         if ($deviceId === '') {
             return response()->json(['message' => __('validation.required', ['attribute' => 'deviceId'])], 422);
         }
 
-        $current->delete();
+        /*
+         * ⛔ একটা টোকেন একবারই — মুছে ফেলাটাই প্রমাণ: দুইটা নবায়ন একসাথে এলে কেবল যে মুছতে পেরেছে সে নতুন জোড়া পায়
+         * (আগে দুটোই পেত)। ব্যবহার করা টোকেনের ছাপ রাখা হয়, যাতে পরে কেউ আবার আনলে চুরি বলে ধরা পড়ে ([[refuseAReusedToken()]])।
+         */
+        if (PersonalAccessToken::query()->whereKey($current->getKey())->delete() !== 1) {
+            return response()->json(['message' => 'Unauthenticated.'], 401);
+        }
+        Cache::put(self::usedKey((string) $this->plainRefreshToken($request)), [
+            'user' => (int) $user->id, 'device' => $deviceId, 'at' => now()->getTimestamp(),
+        ], now()->addDays(self::REFRESH_DAYS + 1));
 
         return response()->json($this->issue($user, $deviceId));
+    }
+
+    /**
+     * ⛔ ব্যবহার হয়ে যাওয়া নবায়ন-টোকেন আবার এলে — চুরির চিহ্ন (পুরো ERP অডিট, ৯ অক্টোবর ২০২৬; OAuth-এর refresh-token
+     * rotation-এর "reuse detection")। ঘোরানোর পরে আসল ফোন নতুন টোকেন রাখে; পুরনোটা যে আনে সে অন্য কেউ, অথবা আসল ফোন আর
+     * চোর দুজনই একই টোকেন পেয়েছে। তাই ঐ ফোনের নামের সব টোকেন বাতিল — দুজনকেই আবার লগইন করতে হয়, আর চোর বেরিয়ে যায়।
+     * ⓘ ঘোরানোর পর এক মিনিটের মধ্যে আবার এলে বাতিল নয়: দুর্বল নেটে একই নবায়ন দুবার যেতে পারে, আর তখন আসল ফোনকে বের করে
+     * দেওয়া ভুল হত।
+     */
+    private function refuseAReusedToken(Request $request): void
+    {
+        $plain = $this->plainRefreshToken($request);
+        $used = is_string($plain) && $plain !== '' ? Cache::get(self::usedKey($plain)) : null;
+
+        if (! is_array($used) || now()->getTimestamp() - (int) ($used['at'] ?? 0) < self::REUSE_GRACE_SECONDS) {
+            return;
+        }
+
+        PersonalAccessToken::query()
+            ->where('tokenable_type', (new User)->getMorphClass())
+            ->where('tokenable_id', (int) ($used['user'] ?? 0))
+            ->whereIn('name', [
+                $this->tokenName((string) ($used['device'] ?? ''), self::ACCESS),
+                $this->tokenName((string) ($used['device'] ?? ''), self::REFRESH),
+            ])
+            ->delete();
+    }
+
+    private const REUSE_GRACE_SECONDS = 60;
+
+    private static function usedKey(string $plain): string
+    {
+        return 'refresh-used:'.hash('sha256', $plain);
+    }
+
+    /** নবায়ন-টোকেনের লেখা — হেডারে, না পেলে body-তে */
+    private function plainRefreshToken(Request $request): ?string
+    {
+        $plain = $request->bearerToken();
+        if (! is_string($plain) || $plain === '') {
+            $plain = $request->input('refreshToken');
+        }
+
+        return is_string($plain) && $plain !== '' ? $plain : null;
     }
 
     /**

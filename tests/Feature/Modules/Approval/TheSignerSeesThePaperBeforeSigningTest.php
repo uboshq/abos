@@ -165,10 +165,18 @@ final class TheSignerSeesThePaperBeforeSigningTest extends TestCase
         $this->assertStringContainsString('SHEET-FAR-DR', $sheet, 'অন্য শাখার কাগজের সারি সইয়ের পাতায় নেই।');
 
         // ⓘ তালিকার Party · What for · Where — ইনবক্স আর ফোন দুটোই এই সেবা থেকে পড়ে
-        $facts = app(\App\Modules\Approval\Services\ApprovalFacts::class)->of(collect([$approval->fresh()]))[$approval->id];
+        $service = app(\App\Modules\Approval\Services\ApprovalFacts::class);
+        $facts = $service->of(collect([$approval->fresh()]), true)[$approval->id];
         $this->assertSame($voucher->fresh()->document_no, $facts['no'],
             'তালিকায় অন্য শাখার কাগজটা পাওয়া যায়নি — Party · What for · Where খালি।');
         $this->assertNotNull($facts['where'], 'অন্য শাখার কাগজের "কোথায়" ঘর খালি।');
+
+        /*
+         * ⛔ উল্টো দিক — ৯ অক্টোবর ২০২৬ (অডিট): দেয়াল তোলা কেবল সইকারী/অনুরোধকারীর পথে। ইনবক্সে `?person=`
+         * দিয়ে অন্যের সারি দেখা রিপোর্ট-পাঠক ডিফল্টে ডাকেন — তখন দেয়াল দাঁড়িয়ে থাকে, তথ্য খালি।
+         */
+        $walled = $service->of(collect([$approval->fresh()]))[$approval->id];
+        $this->assertNull($walled['no'], 'ডিফল্টে দেয়াল উঠে গেছে — অন্যের সারি দেখা পাঠক অন্য শাখার কাগজ দেখছেন।');
     }
 
     // ── ২. পক্ষ গ্রাহক: ফোন, পয়েন্ট, বকেয়া, সীমা ──────────────────────────

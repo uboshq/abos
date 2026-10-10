@@ -66,6 +66,16 @@
             ]),
         ],
         [
+            // ⭐ বিল-না-আসা মাল — দেনা থেকে আলাদা (ক্রয় ⚠️১২, মালিক, ১০ অক্টোবর ২০২৬; [[Supplier::goodsNotBilled()]])
+            'key' => 'goods_not_billed',
+            'total' => 'money',
+            'raw' => fn ($s) => $s->grni_in_view ?? $s->goodsNotBilled(),
+            'label' => __('supplier::field.goods_not_billed'),
+            'numeric' => true,
+            'width' => '10rem',
+            'render' => fn ($s) => \App\Core\Support\Money::format((string) ($s->grni_in_view ?? $s->goodsNotBilled())),
+        ],
+        [
             'key' => 'is_active',
             'label' => __('supplier::field.state'),
             'width' => '7rem',

@@ -57,6 +57,18 @@ final class ChallanFareController extends Controller implements HasMiddleware
         });
     }
 
+    /** ⭐ ট্রিপের পরে-দেব ভাড়া দেওয়া — চালানের একই পথ, একই নিয়ম (সিদ্ধান্ত ঘ; [[FarePayment::payDue()]]) */
+    public function payTrip(Request $request, \App\Modules\Sales\Models\Shipment $shipment): RedirectResponse
+    {
+        [$voucher, $state] = $this->fares->payDue($shipment, $request->validate($this->rules()));
+
+        return back()->with('saved', match (true) {
+            $state === true => __('sales::fare.paid_waits_signature', ['no' => $voucher->document_no]),
+            $state === 'checker' => __('sales::fare.paid_waits_checker', ['no' => $voucher->document_no]),
+            default => __('sales::fare.paid', ['no' => $voucher->document_no]),
+        });
+    }
+
     /** @return array<string, list<mixed>> */
     private function rules(): array
     {

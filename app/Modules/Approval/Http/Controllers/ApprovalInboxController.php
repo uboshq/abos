@@ -297,7 +297,8 @@ class ApprovalInboxController extends Controller implements HasMiddleware
              * ⭐ কার · কী বাবদ · কোথায় — ২০ সেপ্টেম্বর ২০২৬। কাগজগুলো ধরন
              * ধরে একবারে তোলা হয় ([[ApprovalFacts]]), সারি ধরে নয়।
              */
-            'facts' => $this->facts->of($waiting),
+            // ⓘ দেয়াল তোলা কেবল নিজের সারিতে — অন্যের সারি দেখা রিপোর্ট-পাঠক নিজের দেয়ালেই ([[ApprovalFacts::VIEW_WALLS]])
+            'facts' => $this->facts->of($waiting, $subject->is($user)),
             'visibleTotal' => $visibleTotal,
             'labels' => $this->flows->labels(),
             'modules' => $modules,
@@ -561,7 +562,7 @@ class ApprovalInboxController extends Controller implements HasMiddleware
              * আর অঙ্ক লেখা থাকত।
              */
             'facts' => $mayReadDocument
-                ? ($this->facts->of(collect([$entry]))[$entry->id] ?? [])
+                ? ($this->facts->of(collect([$entry]), true)[$entry->id] ?? [])
                 : [],
 
             /*
@@ -918,7 +919,9 @@ class ApprovalInboxController extends Controller implements HasMiddleware
     /** কাগজের নাম — নম্বর থাকলে নম্বর, নাহলে ধরন আর আইডি। */
     private function paperName(Approval $entry): string
     {
-        $document = $this->documentOf($entry);
+        // ⓘ ভুল-বার্তার নাম — পাঠক সইকারী নাও হতে পারেন, তাই দেয়ালসহ খোঁজা (৯ অক্টোবর ২০২৬, অডিট)
+        $class = (string) $entry->approvable_type;
+        $document = class_exists($class) ? $class::query()->find($entry->approvable_id) : null;
 
         return $document !== null && method_exists($document, 'drillDocumentNo')
             ? (string) $document->drillDocumentNo()

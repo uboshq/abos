@@ -112,6 +112,9 @@ class DirectSaleApiController extends Controller implements HasMiddleware
             'depositMethods' => $this->publicMethods(),
             'carriers' => $this->publicCarriers(),
 
+            // ⭐ ভাড়া কে দিলেন — ব্যাংক বা MFS-এ বাছার তালিকা; নগদে লগইন করা মানুষ নিজেই (ওয়েবের একই, [[DirectSaleOptions::farePayers()]])
+            'farePayers' => $this->publicFarePayers(),
+
             // ⓘ বিল বাতিলের কারণ — ওয়েবের পপ-আপের একই তালিকা (`sales::field.cancel_reasons`)
             'voidReasons' => array_values(array_filter(explode('|', (string) __('sales::field.cancel_reasons')))),
         ]);
@@ -248,7 +251,8 @@ class DirectSaleApiController extends Controller implements HasMiddleware
         }
 
         $customer = filled($data['customer'] ?? null)
-            ? Customer::query()->where('public_id', $data['customer'])->first()
+            // ⛔ দেখা শাখার গ্রাহকই — অন্য শাখার দোকানের নামে নিরীক্ষার সারি নয় (পুরো ERP অডিট, ৯ অক্টোবর ২০২৬)
+            ? Customer::query()->inViewedBranch()->where('public_id', $data['customer'])->first()
             : Customer::query()->find((int) app(SettingsService::class)->get('sales.walkin_customer_id', 0));
 
         if ($customer !== null) {
@@ -294,6 +298,7 @@ class DirectSaleApiController extends Controller implements HasMiddleware
     public function overview(Request $request): JsonResponse
     {
         $input = $this->translate($request->all());
+        $this->plainNumbers($input);
         $data = Validator::make($input, DirectSaleRules::store(CompanyContext::id(), $input))->validate();
 
         return response()->json(app(DirectSaleOverview::class)->build($data, $data['lines'])->toArray());
@@ -307,6 +312,7 @@ class DirectSaleApiController extends Controller implements HasMiddleware
     public function store(Request $request): JsonResponse
     {
         $input = $this->translate($request->all());
+        $this->plainNumbers($input);
         $data = Validator::make($input, DirectSaleRules::store(CompanyContext::id(), $input))->validate();
         $gifts = array_values(array_filter($data['gifts'] ?? [],
             fn (array $g) => filled($g['product_id'] ?? null) && is_numeric($g['qty'] ?? null) && bccomp((string) $g['qty'], '0', 4) > 0));
@@ -349,6 +355,23 @@ class DirectSaleApiController extends Controller implements HasMiddleware
     }
 
     // ── যন্ত্রপাতি ──────────────────────────────────────────────────────
+
+    /**
+     * ⛔ ফোনের টাকা আর পরিমাণ সাধারণ দশমিকে — "1e3" বা ১৫ অঙ্কের বেশি নয় (পুরো ERP অডিট, ৯ অক্টোবর ২০২৬: দরে "1e3" ৫০০
+     * দিত, কারণ ওয়েবের নিয়মে কেবল `numeric`, আর bcmath বৈজ্ঞানিক রূপ পড়ে না)। তালিকার দরজাগুলোর একই নিয়ম
+     * ([[PhoneInput::DECIMAL]]), বিক্রি আর দাম-হিসাব ([[store()]], [[overview()]]) দুই দরজায়। ⓘ কেবল ফোনের দরজায় — ওয়েবের
+     * কাউন্টার জাভাস্ক্রিপ্টে হিসাব করা দশমিক পাঠায়, তার নিয়ম ([[DirectSaleRules]]) যেমন ছিল।
+     *
+     * @param  array<string, mixed>  $input
+     */
+    private function plainNumbers(array $input): void
+    {
+        Validator::make($input, array_fill_keys([
+            'discount_amount', 'expense_amount', 'transport_cost', 'deposit',
+            'deposits.*.amount', 'deposits.*.charge_amount',
+            'lines.*.qty', 'lines.*.free_qty', 'lines.*.rate', 'lines.*.discount_percent', 'gifts.*.qty',
+        ], ['nullable', PhoneInput::DECIMAL]) + ['rounding_amount' => ['nullable', 'regex:/^-?\d{1,14}(\.\d{1,4})?$/']])->validate();
+    }
 
     /**
      * ফোনের public_id → ওয়েবের ঘরের ভেতরের id। ⓘ না মিললে ৪২২ — কোন ঘর, সেটা বলে; অন্য কোম্পানির id মডেলের দেয়ালেই
@@ -396,9 +419,35 @@ class DirectSaleApiController extends Controller implements HasMiddleware
             $out['resume_invoice_id'] = $this->idOf(SalesInvoice::class, $in['resume'], 'resume');
         }
 
-        unset($out['customer'], $out['warehouse'], $out['carrier'], $out['resume']);
+        /*
+         * ⭐ ভাড়া কোন খাত থেকে, কে দিলেন — ফোনেও ওয়েবের একই নিয়ম (মালিক, ৭ অক্টোবর ২০২৬; [[FarePayment::stamp()]])।
+         * ⛔ পুরো ERP অডিট, ৯ অক্টোবর ২০২৬: *"ফোনের কাউন্টারে ভাড়া এখনো Main Counter থেকে; সার্ভার `_id` ঘর ফেলে দেয়, তাই
+         * খাত পৌঁছায় না"*। ⓘ খাত আর কে দিলেন public_id হয়ে আসে (`fare_account`, `fare_payer`); `fare_when` আর
+         * `fare_reference` সরাসরি। ⓘ কে দিলেন অন্য কোম্পানির কেউ হলে সেবা থামায় ([[FarePayment::moneyFrom()]])।
+         */
+        if (filled($in['fare_account'] ?? null)) {
+            $out['fare_account_id'] = $this->idOf(Account::class, $in['fare_account'], 'fare_account');
+        }
+        if (filled($in['fare_payer'] ?? null)) {
+            $out['fare_payer_id'] = $this->idOf(\App\Models\User::class, $in['fare_payer'], 'fare_payer');
+        }
+
+        unset($out['customer'], $out['warehouse'], $out['carrier'], $out['resume'], $out['fare_account'], $out['fare_payer']);
 
         return $out;
+    }
+
+    /**
+     * ভাড়া কে দিলেন — ওয়েবের তালিকা, id-গুলো public_id (ক্রমিক নয়)।
+     *
+     * @return list<array{id: string, label: string}>
+     */
+    private function publicFarePayers(): array
+    {
+        $rows = $this->options->farePayers();
+        $ids = \App\Models\User::query()->whereKey(array_map(fn ($r) => (int) $r['id'], $rows))->pluck('public_id', 'id');
+
+        return array_map(fn (array $r): array => ['id' => (string) ($ids[(int) $r['id']] ?? ''), 'label' => $r['label']], $rows);
     }
 
     /** @return list<array<string, mixed>> */

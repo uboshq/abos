@@ -55,6 +55,14 @@ use Illuminate\Support\Facades\Validator;
  */
 final class SalesOrderSync implements SyncsToDevices
 {
+    /**
+     * ⛔ অফলাইন আদেশ কত দিন পেছনের তারিখে বসতে পারে — পুরো ERP অডিট, ৯ অক্টোবর ২০২৬ (⚠️ ফোন)।
+     *
+     * দর এখন আদেশের তারিখ ধরে আসে ([[SalesPrice]]), আর তারিখের নিচে কোনো সীমা ছিল না — পুরনো তারিখ দিলে পুরনো (কম)
+     * দাম পাওয়া যেত। সাত দিন: নেট ছাড়া এক সপ্তাহ মাঠে থাকা ফোনও তার আদেশ পাঠাতে পারে, তার বেশি পেছনে নয়।
+     */
+    public const OFFLINE_DAYS = 7;
+
     public function __construct(private readonly SalesOrderService $orders) {}
 
     public static function module(): string
@@ -158,7 +166,7 @@ final class SalesOrderSync implements SyncsToDevices
          */
         $rules = Validator::make($payload, [
             'customerId' => ['required', 'string', 'max:64'],
-            'trxDate' => ['nullable', 'date_format:Y-m-d', 'before_or_equal:today'],
+            'trxDate' => ['nullable', 'date_format:Y-m-d', 'before_or_equal:today', 'after_or_equal:'.now()->subDays(self::OFFLINE_DAYS)->toDateString()],
             'deliverOn' => ['nullable', 'date_format:Y-m-d', 'after_or_equal:'.((is_string($payload['trxDate'] ?? null) && $payload['trxDate'] !== '') ? 'trxDate' : 'today')],
             'narration' => ['nullable', 'string', 'max:500'],
             'lines' => ['required', 'array', 'min:1', 'max:200'],
@@ -166,6 +174,7 @@ final class SalesOrderSync implements SyncsToDevices
             'lines.*.productId' => ['required', 'string', 'max:64'],
             'lines.*.qty' => ['required', 'regex:/^\d{1,14}(\.\d{1,4})?$/', 'not_regex:/^0+(\.0+)?$/'],
         ], [
+            'trxDate.after_or_equal' => __('sales::sync.order_too_old', ['days' => self::OFFLINE_DAYS]),
             'lines.required' => __('sales::sync.order_has_no_lines'),
             'lines.min' => __('sales::sync.order_has_no_lines'),
         ]);
