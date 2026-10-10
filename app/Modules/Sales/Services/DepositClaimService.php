@@ -128,6 +128,8 @@ final class DepositClaimService
             'company_id' => $customer->company_id,
             'branch_id' => $customer->branch_id,
             'customer_id' => $customer->id,
+            // ⭐ কে পাঠালেন — কর্মী হলে তিনি, পোর্টালের দোকানি হলে খালি (টাকার পরিকল্পনা ৩; [[DepositClaim::booted()]]-এর পাহারা)
+            'submitted_by' => \App\Core\Support\Actor::userId(),
             'claimed_on' => $claimedOn->toDateString(),
             'amount' => $amount,
             'method' => $data['method'] ?? DepositClaim::BANK,
