@@ -49,7 +49,7 @@ final class ADocumentGoesThroughItsSignaturesTest extends TestCase
 
         $actions = AuditTrail::query()->forRecord(Document::class, $document->id)->pluck('action')->all();
         $this->assertContains('document_submitted', $actions);
-        $this->assertContains('document_published_without_approval', $actions, 'অডিটে "অনুমোদন ছাড়া প্রকাশিত" নেই।');
+        $this->assertContains('doc_published_unapproved', $actions, 'অডিটে "অনুমোদন ছাড়া প্রকাশিত" নেই।');
         $this->assertNotContains('document_approved', $actions, '⛔ অডিটে মিথ্যা "অনুমোদিত"।');
 
         $page = (string) $this->actingAs($this->owner)->get(route('documents.show', $document))->assertOk()->getContent();

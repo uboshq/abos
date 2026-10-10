@@ -69,6 +69,7 @@ return [
     'cannot_publish' => 'Only an approved document can be published.',
     'submitted_submitted' => 'The document went for approval — the signers have been told.',
     'submitted_approved' => 'There is no approval flow, so the document was approved straight away.',
+    'submitted_published_unapproved' => 'Approvals are off, so the document was published without approval.',
     'withdrawn' => 'The approval request was withdrawn — the document is a draft again.',
     'published' => 'The document was published.',
     'never_submitted' => 'Not sent for approval yet.',

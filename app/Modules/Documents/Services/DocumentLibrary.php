@@ -270,7 +270,7 @@ final class DocumentLibrary
         }
 
         if ($pending->isNotEmpty()) {
-            $document->auditAction('document_requests_cancelled', (string) $pending->count());
+            $document->auditAction('doc_requests_cancelled', (string) $pending->count());
         }
 
         return $pending->isNotEmpty();

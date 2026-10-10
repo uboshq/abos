@@ -80,7 +80,7 @@ final class DocumentWorkflow
             $locked->auditAction('document_submitted', $note);
 
             if ($approval === null) {
-                $locked->auditAction('document_published_without_approval', __('documents::message.no_flow_needed'));
+                $locked->auditAction('doc_published_unapproved', __('documents::message.no_flow_needed'));
             }
 
             return $approval;
