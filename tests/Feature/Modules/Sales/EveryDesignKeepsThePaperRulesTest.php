@@ -139,7 +139,8 @@ final class EveryDesignKeepsThePaperRulesTest extends TestCase
         /* ⓘ পরের ডাকের composer যেন এই ফলটা না ছোঁয় */
         View::getFacadeRoot()->getDispatcher()->forget('composing: '.$view);
 
-        return $html;
+        // ⓘ বাংলা নকশা অঙ্ক বাংলায় ছাপে (মালিক, ১০ অক্টোবর ২০২৬; [[BanglaDigits]]) — মাপ অঙ্কের মানে, অক্ষরে নয়
+        return strtr($html, array_flip(['০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯']));
     }
 
     private function aChallanWithARate(): DeliveryChallan
