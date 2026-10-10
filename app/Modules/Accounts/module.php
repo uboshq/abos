@@ -23,6 +23,7 @@ use App\Modules\Accounts\Models\AssetCategory;
 use App\Modules\Accounts\Models\AssetDisposalPaper;
 use App\Modules\Accounts\Models\AssetEvent;
 use App\Modules\Accounts\Models\AssetTransfer;
+use App\Modules\Accounts\Models\AssetVerificationLine;
 use App\Modules\Accounts\Models\CashCount;
 use App\Modules\Accounts\Models\CashTill;
 use App\Modules\Accounts\Models\Cheque;
@@ -296,6 +297,7 @@ return [
             ['label' => 'accounts::menu.reconciliations', 'icon' => 'check-circle', 'route' => 'accounts.reconciliation.index', 'permission' => 'accounts.reconciliation.view'],
             ['label' => 'accounts::menu.assets', 'icon' => 'building', 'route' => 'accounts.asset.index', 'permission' => 'accounts.asset.view'],
             // ⭐ সম্পদের শ্রেণি — পাঁচ খাত আর ডিফল্ট আয়ু (স্থায়ী সম্পদ ধাপ ১)
+            ['label' => 'accounts::menu.asset_verifications', 'icon' => 'building', 'route' => 'accounts.asset.verify.index', 'permission' => 'accounts.asset.view'],
             ['label' => 'accounts::menu.asset_categories', 'icon' => 'building', 'route' => 'accounts.asset.category.index', 'permission' => 'accounts.asset.manage'],
             ['label' => 'accounts::menu.periods', 'icon' => 'clock', 'route' => 'accounts.period.index', 'permission' => 'accounts.period.close'],
             ['label' => 'accounts::menu.year_end', 'route' => 'accounts.year_end.index', 'permission' => 'accounts.report.final'],
@@ -370,6 +372,8 @@ return [
          * ১০ অক্টোবর ২০২৬)। ⓘ পুরনো খাতার জের আর এ পর্যন্ত ক্ষয় একসাথে বসে — রোজকার "সম্পদ যোগ"-এর চাবিতে নয়।
          */
         'accounts.asset.import',
+        // ⭐ সরেজমিন গোনা — গুদামের মানুষ গোনেন, সম্পদ বদলাতে পারেন না (স্থায়ী সম্পদ ধাপ ৪)
+        'accounts.asset.verify',
 
         'accounts.note.view',
         'accounts.note.manage',
@@ -510,6 +514,8 @@ return [
         'DEP' => 'accounts::doc.depreciation_run',
         // ⭐ সম্পদের ঘটনা — সংযোজন, মেরামত, পুনর্মূল্যায়ন, দাম পড়া, FAE-… (স্থায়ী সম্পদ ধাপ ৩)
         'FAE' => 'accounts::doc.asset_event',
+        // ⭐ সরেজমিন গোনার অভিযান, FAV-… (স্থায়ী সম্পদ ধাপ ৪)
+        'FAV' => 'accounts::doc.asset_verification',
 
         // ⭐ খোলা জের — OB-0001, নিজের ক্রম (ভাউচারের পরিকল্পনা ৩ঘ, ৭ অক্টোবর ২০২৬; [[OpeningBalanceService::SERIES]])
         'OB' => 'accounts::doc.opening_balance',
@@ -596,6 +602,8 @@ return [
         'asset_capitalise' => AssetCapitalisationPaper::class,
         // ⭐ সম্পদের ঘটনা — নিজের কাগজ, নিজের চাবি (স্থায়ী সম্পদ ধাপ ৩)
         'asset_event' => AssetEvent::class,
+        // ⓘ গোনার সারি — ছবির সংযুক্তি নিজের কাগজ এই নামে খোঁজে (ধাপ ৪)
+        'asset_verification_line' => AssetVerificationLine::class,
     ],
 
     /*
@@ -791,6 +799,15 @@ return [
             'group' => 'print_paper',
             'print_designs' => ['paper' => 'voucher', 'size' => $size, 'sample_route' => 'accounts.voucher.sample'],
         ], VoucherDesigns::SIZES),
+        // ⭐ সম্পদের লেবেলের কাগজ — A4 স্টিকার শীট বা রোল (স্থায়ী সম্পদ ধাপ ৪)
+        [
+            'key' => 'accounts.print.paper.asset_labels',
+            'label' => 'accounts::settings.paper_asset_labels',
+            'type' => 'choice',
+            'options' => PaperSize::all(),
+            'default' => PaperSize::A4,
+            'group' => 'print',
+        ],
         [
             'key' => 'accounts.print.paper.transfer',
             'label' => 'accounts::settings.paper_transfer',

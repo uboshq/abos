@@ -67,6 +67,23 @@
 
     @include('accounts::asset.partials.details')
 
+    {{-- ⭐ দায়িত্বে থাকা কর্মীর স্বীকৃতি আর লেবেল (ধাপ ৪) --}}
+    <div class="mb-5 flex flex-wrap items-center gap-3 rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) px-4 py-3 text-sm">
+        <span class="text-2xs uppercase tracking-wide text-(--color-ink-muted)">{{ __('accounts::asset.custodian_ack') }}</span>
+        @if ($asset->custodian_id === null)
+            <span>—</span>
+        @elseif ($ack = $asset->acknowledgedByCustodian())
+            <x-ui.badge tone="success">{{ __('accounts::asset.ack_done', ['date' => $ack->acknowledged_at?->format('d M Y')]) }} · {{ __('accounts::asset.ack_'.$ack->condition) }}</x-ui.badge>
+        @else
+            <x-ui.badge tone="pending">{{ __('accounts::asset.custodian_ack_none') }}</x-ui.badge>
+        @endif
+        <span class="ms-auto">
+            <x-ui.button tone="secondary" icon="printer" :href="route('accounts.asset.labels', ['assets' => [$asset->id]])" target="_blank">
+                {{ __('accounts::asset.labels_action') }}
+            </x-ui.button>
+        </span>
+    </div>
+
     @include('accounts::asset.partials.estimate')
 
     @include('accounts::asset.partials.events')

@@ -22,4 +22,7 @@ return [
 
     // ⭐ Fixed assets phase 3
     'asset_event' => 'Asset event',
+
+    // ⭐ Fixed assets phase 4
+    'asset_verification' => 'Asset count',
 ];

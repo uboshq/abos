@@ -5,6 +5,8 @@ declare(strict_types=1);
 use App\Modules\Accounts\Http\Controllers\AccountsDashboardController;
 use App\Modules\Accounts\Http\Controllers\AccountsSettingsController;
 use App\Modules\Accounts\Http\Controllers\AssetCategoryController;
+use App\Modules\Accounts\Http\Controllers\AssetCustodyController;
+use App\Modules\Accounts\Http\Controllers\AssetVerificationController;
 use App\Modules\Accounts\Http\Controllers\BalanceSheetController;
 use App\Modules\Accounts\Http\Controllers\BankReconciliationController;
 use App\Modules\Accounts\Http\Controllers\BooksIntegrityController;
@@ -439,6 +441,21 @@ Route::middleware('auth')->prefix('accounts')->group(function () {
         // ⭐ মাসের দৌড় — আগে দেখা, আর শাখার কাগজ (স্থায়ী সম্পদ ধাপ ২)
         Route::get('/run', [FixedAssetController::class, 'preview'])->name('run.preview');
         Route::get('/runs/{run}', [FixedAssetController::class, 'run'])->whereNumber('run')->name('run.show');
+
+        /*
+         * ⭐ সরেজমিন গোনা, দায়িত্ব আর লেবেল (স্থায়ী সম্পদ ধাপ ৪)।
+         * ⓘ "আমার সম্পদ" আর "বুঝে নিয়েছি"-র পাহারা নিয়ামকের ভেতরে নীতি দিয়ে — দেয়ালটা দায়িত্বের, চাবির নয়।
+         */
+        Route::get('/mine', [AssetCustodyController::class, 'mine'])->name('mine');
+        Route::post('/{asset}/acknowledge', [AssetCustodyController::class, 'acknowledge'])->whereNumber('asset')->name('acknowledge');
+        Route::get('/labels', [AssetCustodyController::class, 'labels'])->name('labels');
+        Route::prefix('verify')->name('verify.')->group(function () {
+            Route::get('/', [AssetVerificationController::class, 'index'])->name('index');
+            Route::post('/', [AssetVerificationController::class, 'store'])->name('store');
+            Route::get('/{verification}', [AssetVerificationController::class, 'show'])->whereNumber('verification')->name('show');
+            Route::post('/{verification}/close', [AssetVerificationController::class, 'close'])->whereNumber('verification')->name('close');
+            Route::post('/lines/{line}', [AssetVerificationController::class, 'mark'])->whereNumber('line')->name('mark');
+        });
         Route::get('/{asset}', [FixedAssetController::class, 'show'])
             ->whereNumber('asset')->name('show');
         Route::post('/{asset}/dispose', [FixedAssetController::class, 'dispose'])

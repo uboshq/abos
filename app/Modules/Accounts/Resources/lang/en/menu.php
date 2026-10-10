@@ -49,4 +49,7 @@ return [
     'expense_by_head' => 'Expenses by head',
     'income_by_head' => 'Income by head',
     'project_ledger' => 'Project ledger',
+
+    // ⭐ Fixed assets phase 4
+    'asset_verifications' => 'Asset counts',
 ];

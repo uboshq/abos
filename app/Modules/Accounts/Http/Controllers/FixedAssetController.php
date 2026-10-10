@@ -174,7 +174,7 @@ class FixedAssetController extends Controller implements HasMiddleware
     {
         return view('accounts::asset.show', [
             'menu' => $this->menu->forUser($request->user()),
-            'asset' => $asset->load(['depreciation', 'assetAccount', 'category', 'parent', 'components', 'costParts', 'branch', 'usages', 'estimateChanges.creator', 'events']),
+            'asset' => $asset->load(['depreciation', 'assetAccount', 'category', 'parent', 'components', 'costParts', 'branch', 'usages', 'estimateChanges.creator', 'events', 'acknowledgements']),
             // ⓘ পক্ষের নাম কোর থেকে — কর্মী আর বিক্রেতা ([[PartyRegistry]]), মডিউলের মডেল থেকে নয়
             'custodian' => $asset->custodian_id === null ? null
                 : (app(PartyRegistry::class)->labelsOf([['employee', (int) $asset->custodian_id]])['employee:'.$asset->custodian_id] ?? null),

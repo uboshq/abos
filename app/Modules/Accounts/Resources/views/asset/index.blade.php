@@ -131,6 +131,11 @@
                 :filter-labels="['category' => __('accounts::asset.category'), 'status' => __('accounts::asset.status')]">
                 {{-- শর্তটা হুবহু সেটাই যেটায় আগে নিচের ফর্মটা দেখা যেত। --}}
                 <x-slot:actions>
+                    {{-- ⭐ লেবেল ছাপা — এই তালিকার ছাঁকা শাখার সব চালু সম্পদ (ধাপ ৪) --}}
+                    <x-ui.button tone="secondary" icon="printer" target="_blank"
+                                 :href="route('accounts.asset.labels', array_filter(['branch_id' => request('branch')]))">
+                        {{ __('accounts::asset.labels_action') }}
+                    </x-ui.button>
                     @can('accounts.asset.manage')
                         <x-ui.button tone="primary" icon="plus" :href="route('accounts.asset.create')">
                             {{ __('accounts::action.new_asset') }}

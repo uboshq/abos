@@ -70,4 +70,7 @@ return [
     'expense_by_head' => 'খাতভিত্তিক খরচ',
     'income_by_head' => 'খাতভিত্তিক আয়',
     'project_ledger' => 'প্রকল্পভিত্তিক খতিয়ান',
+
+    // ⭐ স্থায়ী সম্পদ ধাপ ৪
+    'asset_verifications' => 'সম্পদ গোনা',
 ];

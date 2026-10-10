@@ -47,4 +47,7 @@ return [
 
     // ⭐ Fixed assets phase 3
     'asset_revaluation' => 'Allow fixed asset revaluation (off means the cost model)',
+
+    // ⭐ Fixed assets phase 4
+    'paper_asset_labels' => 'Paper for asset labels',
 ];

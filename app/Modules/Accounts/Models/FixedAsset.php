@@ -161,6 +161,22 @@ class FixedAsset extends Model implements Drillable
         return $this->hasMany(AssetEstimateChange::class, 'fixed_asset_id')->orderByDesc('changed_on')->orderByDesc('id');
     }
 
+    /** ⭐ দায়িত্বে থাকা কর্মীর "বুঝে নিয়েছি" — নতুনটা আগে (ধাপ ৪) */
+    public function acknowledgements(): HasMany
+    {
+        return $this->hasMany(AssetAcknowledgement::class, 'fixed_asset_id')->orderByDesc('acknowledged_at')->orderByDesc('id');
+    }
+
+    /** ⓘ এখনকার কর্মী স্বীকার করেছেন কি না — কর্মী বদলালে পুরনো স্বীকৃতি খাটে না */
+    public function acknowledgedByCustodian(): ?AssetAcknowledgement
+    {
+        if ($this->custodian_id === null) {
+            return null;
+        }
+
+        return $this->acknowledgements->firstWhere('employee_id', (int) $this->custodian_id);
+    }
+
     public function costParts(): HasMany
     {
         return $this->hasMany(AssetCostPart::class, 'fixed_asset_id')->orderBy('id');

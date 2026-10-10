@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Accounts\Policies;
 
+use App\Core\Contracts\KnowsAUsersEmployee;
 use App\Models\User;
 use App\Modules\Accounts\Models\FixedAsset;
 
@@ -23,5 +24,22 @@ class FixedAssetPolicy
     public function create(User $user): bool
     {
         return $user->can('accounts.asset.manage');
+    }
+
+    /**
+     * ⭐ "আমার সম্পদ" — দায়িত্বে থাকা কর্মী নিজের জিনিস দেখেন, হিসাবের চাবি ছাড়াই (ধাপ ৪)।
+     * ⓘ ব্যবহারকারী কোনো কর্মী না হলে পাতাটা তাঁর জন্য নয় ([[KnowsAUsersEmployee]])।
+     */
+    public function viewOwn(User $user): bool
+    {
+        return app(KnowsAUsersEmployee::class)->employeeIdOf((int) $user->id) !== null;
+    }
+
+    /** ⓘ কেবল যিনি এখন দায়িত্বে — অন্যের জিনিস "বুঝে নিয়েছি" বলা যায় না */
+    public function acknowledge(User $user, FixedAsset $asset): bool
+    {
+        $employee = app(KnowsAUsersEmployee::class)->employeeIdOf((int) $user->id);
+
+        return $employee !== null && (int) $asset->custodian_id === $employee;
     }
 }
