@@ -192,6 +192,8 @@ final class NotificationReports
             filters: $filters,
             rankBy: $rankBy,
             permission: self::PERMISSION,
+            // ⛔ ফাইলে নেওয়া আলাদা চাবিতে — ওয়েব আর ফোন দুই দরজায় একই (cb-র রিভিউ, ১১ অক্টোবর ২০২৬)
+            exportPermission: 'notification.reports.export',
             branchless: $branchless,
         );
     }
