@@ -93,12 +93,14 @@
                         ],
 
                         /* ⛔ খসড়ায় পাঠানোর পথ নেই: ওটা এখনো চূড়ান্ত নয়, আর
-                           গ্রাহকের হাতে গেলে সেটাই বিল বলে ধরে নেওয়া হত */
-                        [
+                           গ্রাহকের হাতে গেলে সেটাই বিল বলে ধরে নেওয়া হত।
+                           ⛔ পাকা বিলে "চূড়ান্ত নয়" ছাপার পথটাও নেই — দরজাই ফিরিয়ে দেয়
+                           (পুনঃঅডিট ৯ অক্টোবর ২০২৬, ছাপা ১৭) */
+                        ...(in_array($invoice->status, \App\Core\Support\DocumentStatus::POSTED, true) ? [] : [[
                             'label' => __('core.print.draft_notice'),
                             'url' => route('sales.print.draft', $invoice),
                             'paper_setting' => 'sales.print.paper.invoice',
-                        ],
+                        ]]),
                     ]" />
                 @endunless
             </x-slot:actions>
