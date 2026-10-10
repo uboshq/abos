@@ -316,6 +316,7 @@ final class StockReports
 
                 ->where('m.company_id', $f['company_id'])
                 ->tap(ReportEngine::branchWall($f, 'm.branch_id'))
+                ->tap(ReportEngine::warehouseWall($f, 'm.warehouse_id'))
                 /*
                  * ⛔ `w.name_bn` এখানে ছিল না — ২২ সেপ্টেম্বর ২০২৬।
                  *
@@ -457,6 +458,7 @@ final class StockReports
                 ->whereNull('b.deleted_at')
                 ->whereNotNull('b.expiry_date')
                 ->tap(ReportEngine::branchWall($f, 'm.branch_id'))
+                ->tap(ReportEngine::warehouseWall($f, 'm.warehouse_id'))
                 ->groupBy('b.id', 'b.batch_no', 'b.expiry_date', 'b.mrp', 'p.code', 'p.name_en')
                 // শূন্য বা ঋণাত্মক লট বাদ — তালিকাটা কাজের জিনিস, ইতিহাস নয়
                 ->havingRaw('COALESCE(SUM(m.floor_change), 0) > 0')
@@ -519,6 +521,7 @@ final class StockReports
                 ->join('inv_warehouses as w', 'w.id', '=', 'm.warehouse_id')
                 ->where('m.company_id', $f['company_id'])
                 ->tap(ReportEngine::branchWall($f, 'm.branch_id'))
+                ->tap(ReportEngine::warehouseWall($f, 'm.warehouse_id'))
                 ->whereBetween('m.trx_date', [$f['from'], $f['to']])
                 ->orderBy('m.trx_date')
                 ->orderBy('m.id')
@@ -572,6 +575,7 @@ final class StockReports
                 ->join('inv_products as p', 'p.id', '=', 'm.product_id')
                 ->where('m.company_id', $f['company_id'])
                 ->tap(ReportEngine::branchWall($f, 'm.branch_id'))
+                ->tap(ReportEngine::warehouseWall($f, 'm.warehouse_id'))
                 // শুরুর তারিখ ধরা হয় না: মজুদ একটা মুহূর্তের অবস্থা,
                 // পরিসরের নয় — ব্যালেন্স শিটে ঠিক একই যুক্তি
                 ->where('m.trx_date', '<=', $f['to'])
@@ -641,6 +645,7 @@ final class StockReports
                 ->leftJoin('mdm_reason_codes as r', 'r.id', '=', 'm.reason_code_id')
                 ->where('m.company_id', $f['company_id'])
                 ->tap(ReportEngine::branchWall($f, 'm.branch_id'))
+                ->tap(ReportEngine::warehouseWall($f, 'm.warehouse_id'))
                 ->where('m.trx_date', '<=', $f['to'])
                 ->where('m.hold_change', '<>', 0)
                 ->groupBy('m.product_id', 'p.code', 'p.name_en', 'p.name_bn', 'm.reason_code_id', 'r.name_en', 'r.name_bn')
@@ -713,6 +718,7 @@ final class StockReports
                 ->join('inv_warehouses as w', 'w.id', '=', 'm.warehouse_id')
                 ->where('m.company_id', $f['company_id'])
                 ->tap(ReportEngine::branchWall($f, 'm.branch_id'))
+                ->tap(ReportEngine::warehouseWall($f, 'm.warehouse_id'))
 
                 /*
                  * ⓘ শুরুর তারিখ ধরা হয় না — মজুদ একটা মুহূর্তের অবস্থা,
@@ -822,6 +828,7 @@ final class StockReports
                 ->leftJoin('users as u', 'u.id', '=', 'm.created_by')
                 ->where('m.company_id', $f['company_id'])
                 ->tap(ReportEngine::branchWall($f, 'm.branch_id'))
+                ->tap(ReportEngine::warehouseWall($f, 'm.warehouse_id'))
 
                 /* ⓘ এটা ঘটনার তালিকা, অবস্থার নয় — তাই পুরো পরিসর। */
                 ->whereBetween('m.trx_date', [$f['from'], $f['to']])
@@ -925,6 +932,7 @@ final class StockReports
                 ->leftJoin('sal_challans as c', fn ($j) => $j->on('c.id', '=', 'm.source_id')
                     ->whereIn('m.source_type', ['delivery_challan', 'delivery_challan:cancel']))
                 ->tap(ReportEngine::branchWall($f, 'm.branch_id'))
+                ->tap(ReportEngine::warehouseWall($f, 'm.warehouse_id'))
                 ->where('m.trx_date', '<=', $f['to'])
                 ->where('m.reserved_change', '<>', 0)
                 ->groupBy(

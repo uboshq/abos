@@ -537,6 +537,28 @@ final class ReportEngine
     }
 
     /**
+     * ⭐ গুদামের দেয়াল — রিপোর্টের কোয়েরিতে `->tap(ReportEngine::warehouseWall($f, 'm.warehouse_id'))` (পুরো-ERP অডিট,
+     * মজুদ ⛔, ১০ অক্টোবর ২০২৬; [[TheStockReportsStayInsideTheWarehouseWallTest]])।
+     *
+     * ⛔ মজুদের রিপোর্ট কাঁচা কোয়েরি, তাই মডেলের গুদাম-ছাঁকনি ([[ScopedToUserWarehouse]]) সেখানে পৌঁছাত না — এক গুদামে সীমিত
+     * মানুষ লট, খতিয়ান, গুদাম-ভিত্তিক মজুদ আর আটকানো মালের রিপোর্টে সব গুদামের সারি পেতেন। ⓘ সীমা না থাকলে কিছুই নয়;
+     * সীমা থাকলে কেবল তাঁর গুদাম ([[normaliseFilters()]]-এ `warehouse_ids`, নির্ধারিত ফাইলেও যাঁর নামে চলে তাঁর)।
+     *
+     * @param  array<string, mixed>  $f
+     * @return Closure(Builder|EloquentBuilder): void
+     */
+    public static function warehouseWall(array $f, string $column): Closure
+    {
+        return function ($query) use ($f, $column): void {
+            $ids = $f['warehouse_ids'] ?? null;
+
+            if ($ids !== null) {
+                $query->whereIn($column, $ids === [] ? [0] : $ids);
+            }
+        };
+    }
+
+    /**
      * ⭐ ডিলারের দেয়াল — রিপোর্টের কোয়েরিতে `->tap(ReportEngine::dealerWall($f, 'i.customer_id'))`
      * (⛔১৬, ২ অক্টোবর ২০২৬)।
      *
@@ -700,6 +722,9 @@ final class ReportEngine
 
         $filters['branch_ids'] = $allowed;
         $filters['branch_nulls'] = true;
+
+        // ⭐ গুদামের সীমা — দেখার মানুষ গুদামে সীমিত হলে তাঁর গুদামগুলো; [[warehouseWall()]] এটাই পড়ে (মজুদ অডিট ⛔, ১০ অক্টোবর ২০২৬)
+        $filters['warehouse_ids'] = app(DataScope::class)->idsFor(auth()->user(), UserDataScope::WAREHOUSE);
 
         // ⭐ ডিলারের দেয়াল — দেখার মানুষ বিক্রয়কর্মী কি না; প্রশ্নটা প্রতি রানে নতুন (⛔১৬)
         $filters['dealer_walled'] = app(DealerScope::class)->walled();

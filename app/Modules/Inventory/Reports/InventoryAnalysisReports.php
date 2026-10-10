@@ -297,6 +297,7 @@ final class InventoryAnalysisReports
             ->join('inv_warehouses as w', 'w.id', '=', 'm.warehouse_id')
             ->where('m.company_id', $f['company_id'])
             ->tap(ReportEngine::branchWall($f, 'w.branch_id'))
+            ->tap(ReportEngine::warehouseWall($f, 'm.warehouse_id'))
             ->when(! empty($f['warehouse_id']), fn ($q) => $q->where('m.warehouse_id', (int) $f['warehouse_id']))
             ->when(! empty($f['product_id']), fn ($q) => $q->where('m.product_id', (int) $f['product_id']))
             ->when(! empty($f['brand_id']), fn ($q) => $q->where('p.brand_id', (int) $f['brand_id']))
