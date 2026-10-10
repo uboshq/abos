@@ -57,8 +57,13 @@ final class RuleEngine
         $plan = ['rules' => $rules, 'priority' => null, 'channels' => null, 'template' => null, 'delay' => 0, 'expires' => null, 'cooldown' => 0];
 
         foreach ($rules as $rule) {
+            /*
+             * ⛔ নিয়ম গুরুত্ব কেবল বাড়ায়, কখনো নামায় না — তুলনা খবরের নিজের গুরুত্ব থেকে শুরু (cb-র রিভিউ, মেশানোর আগে, ১১ অক্টোবর
+             * ২০২৬; [[ARuleNeverLowersACriticalNoticeTest]])। ⚠️ আগে প্রথম মেলা নিয়মের গুরুত্বই বসত: `backup.failed` (জরুরি)-এ
+             * কেউ "উঁচু" বাছলে রাত ২টার খবর নীরব সময়ে সকাল ৮টা পর্যন্ত আটকাত, ফোনের পুশও যেত না।
+             */
             if (NotificationKinds::isPriority($rule->priority)
-                && ($plan['priority'] === null || self::RANK[$rule->priority] > self::RANK[$plan['priority']])) {
+                && self::RANK[$rule->priority] > self::RANK[$plan['priority'] ?? (NotificationKinds::isPriority($priority) ? $priority : 'low')]) {
                 $plan['priority'] = $rule->priority;
             }
 
