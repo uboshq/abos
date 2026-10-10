@@ -658,6 +658,17 @@ class SalesPrintController extends Controller implements HasMiddleware
         }
 
         /*
+         * ⛔ পাকা বিল "চূড়ান্ত নয়" হয়ে ছাপা নয় — পুরো-ERP পুনঃঅডিট, ৯ অক্টোবর ২০২৬ (ছাপা ১৭; [[APostedBillIsNotPrintedAsADraftTest]])।
+         * ⓘ এই দরজা খাতায় বসা বিলও "খসড়া — চূড়ান্ত বিল নয়" লিখে ছাপত; গ্রাহক তখন ভাবতেন বিলটা বাতিল বা বদলাবে। পাকা বিল ছাপা হয়
+         * আসল দরজায় ([[invoice()]]), গোনা আর DUPLICATE-সহ।
+         */
+        if (in_array($invoice->status, DocumentStatus::POSTED, true)) {
+            throw ValidationException::withMessages([
+                'status' => __('sales::validation.posted_not_a_draft_print', ['no' => $invoice->document_no]),
+            ]);
+        }
+
+        /*
          * ⚠️ `lines.challanLine` — নইলে ছাপার পাতা ৫০০ দেয়।
          *
          * ── কী ঘটেছিল (মাপা, ৩ সেপ্টেম্বর ২০২৬) ─────────────────────
