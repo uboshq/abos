@@ -66,6 +66,11 @@ class LabelController extends Controller implements HasMiddleware
      *
      * কারণটা `EveryListScreenPaginatesTest`-এর ছাড়ের তালিকাতেও আছে।
      */
+    /** ⓘ এক ছাপায় সর্বোচ্চ পণ্য আর সর্বোচ্চ লেবেল — একটা রোল বা এক বান্ডিল A4-এর মাপ (মজুদ ছ৫) */
+    private const MAX_PRODUCTS = 500;
+
+    private const MAX_LABELS = 2000;
+
     public function index(Request $request): View
     {
         return view('inventory::label.index', [
@@ -77,7 +82,12 @@ class LabelController extends Controller implements HasMiddleware
     public function print(Request $request): Response
     {
         $data = $request->validate([
-            'products' => ['required', 'array', 'min:1'],
+            /*
+             * ⛔ পণ্যের সংখ্যারও সীমা — পুরো-ERP অডিট, মজুদ ছ৫ (মালিকের "সব খোলা ভুল", ১০ অক্টোবর ২০২৬;
+             * [[ALabelRunHasALimitTest]])। ⚠️ আগে সীমা কেবল কপিতে: হাজার পণ্য × ২০০ কপি এক অনুরোধে লাখ লেবেলের PDF বানাত,
+             * আর সার্ভার মিনিট ধরে আটকে থাকত। ⓘ নিচে মোট লেবেলেরও সীমা ([[self::MAX_LABELS]])।
+             */
+            'products' => ['required', 'array', 'min:1', 'max:'.self::MAX_PRODUCTS],
             'products.*' => ['integer'],
 
             /*
@@ -93,6 +103,12 @@ class LabelController extends Controller implements HasMiddleware
         ]);
 
         $copies = (int) ($data['copies'] ?? 1);
+
+        if (count($data['products']) * $copies > self::MAX_LABELS) {
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'copies' => __('inventory::validation.too_many_labels', ['max' => self::MAX_LABELS]),
+            ]);
+        }
         $withPrice = (bool) ($data['price'] ?? false);
 
         $paper = in_array($data['paper'] ?? '', PaperSize::all(), true)
