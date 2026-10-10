@@ -88,7 +88,14 @@ final class DocumentExpiry
                     'threshold' => $threshold,
                 ]);
 
-                if ($threshold === 0 && $document->status !== DocumentCatalog::EXPIRED) {
+                /*
+                 * ⛔ জমা বা পর্যালোচনায় থাকা কাগজের অবস্থা মেয়াদের রান বদলায় না (১১ অক্টোবর ২০২৬, documents রিভিউ ⚠️১৫)। ⓘ আগে
+                 * "মেয়াদোত্তীর্ণ" বসিয়ে দিত, অথচ অনুমোদন ইনবক্সে ঝুলে থাকত; শেষ সইয়ের পর [[DocumentWorkflow::decided()]] মেয়াদোত্তীর্ণ
+                 * কাগজকে ছুঁত না — অনুমোদন বলত "অনুমোদিত", কাগজ বলত "মেয়াদোত্তীর্ণ"। খবর আগের মতোই যায়।
+                 */
+                $reviewing = in_array($document->status, [DocumentCatalog::SUBMITTED, DocumentCatalog::UNDER_REVIEW], true);
+
+                if ($threshold === 0 && $document->status !== DocumentCatalog::EXPIRED && ! $reviewing) {
                     $document->forceFill(['status' => DocumentCatalog::EXPIRED])->saveQuietly();
                     $document->auditAction('document_expired', $document->expiry_date->toDateString());
                     $out['expired']++;

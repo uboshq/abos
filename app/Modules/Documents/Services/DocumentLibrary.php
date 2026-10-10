@@ -234,8 +234,10 @@ final class DocumentLibrary
     public function archive(Document $document, ?string $reason): void
     {
         DB::transaction(function () use ($document, $reason) {
+            $dropped = $this->dropPendingRequests($document);
+
             $document->forceFill([
-                'archived_from_status' => $document->status,
+                'archived_from_status' => $dropped ? DocumentCatalog::DRAFT : $document->status,
                 'status' => DocumentCatalog::ARCHIVED,
                 'archived_at' => now(),
                 'archived_by' => Actor::userId(),
@@ -244,6 +246,34 @@ final class DocumentLibrary
 
             $document->auditAction('document_archived', $reason);
         });
+    }
+
+    /**
+     * ⛔ আর্কাইভ বা বিনে যাওয়া কাগজের চলমান অনুরোধ — অনুমোদন আর সই — বাতিল (১১ অক্টোবর ২০২৬, documents রিভিউ ⚠️১৪)।
+     *
+     * ⓘ আগে অনুরোধগুলো সইকারীদের ইনবক্সে চিরকাল বসে থাকত; কেউ সই করলে [[DocumentSignatures::decided()]] (নরম-মোছা না দেখে পড়ে)
+     * বিনের কাগজেও সইয়ের সারি লিখত। অনুরোধকারী ছাড়া অন্য কেউ আর্কাইভ করতে পারেন, তাই ইঞ্জিনের "প্রত্যাহার"
+     * ([[ApprovalEngine::cancel()]], কেবল অনুরোধকারী) নয় — তালা দিয়ে সরাসরি বাতিল, আর অডিটে লেখা।
+     * ⭐ ফেরানোর অবস্থা তখন খসড়া — "জমা" অবস্থায় ফিরলে অনুমোদন ছাড়াই ঝুলে থাকত। ফেরত `true` হলে কিছু বাতিল হয়েছে।
+     */
+    private function dropPendingRequests(Document $document): bool
+    {
+        $pending = \App\Models\Approval::query()
+            ->where('approvable_type', $document::class)
+            ->where('approvable_id', $document->getKey())
+            ->where('status', \App\Models\Approval::PENDING)
+            ->lockForUpdate()
+            ->get();
+
+        foreach ($pending as $approval) {
+            $approval->update(['status' => \App\Models\Approval::CANCELLED, 'decided_at' => now()]);
+        }
+
+        if ($pending->isNotEmpty()) {
+            $document->auditAction('document_requests_cancelled', (string) $pending->count());
+        }
+
+        return $pending->isNotEmpty();
     }
 
     /** আর্কাইভ থেকে ফেরানো — আগের অবস্থায়, সেন্টারে আবার দেখা যায় */
@@ -271,9 +301,11 @@ final class DocumentLibrary
     public function delete(Document $document): void
     {
         DB::transaction(function () use ($document) {
+            $dropped = $this->dropPendingRequests($document);
+
             $document->forceFill([
                 'deleted_by' => Actor::userId(),
-                'deleted_from_status' => $document->status,
+                'deleted_from_status' => $dropped ? DocumentCatalog::DRAFT : $document->status,
                 'status' => DocumentCatalog::DELETED,
             ])->saveQuietly();
             $document->delete();
