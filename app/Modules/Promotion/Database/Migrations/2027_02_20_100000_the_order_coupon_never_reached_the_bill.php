@@ -19,6 +19,11 @@ return new class extends Migration
 {
     public function up(): void
     {
+        // ⓘ দ্বিতীয়বার চালালে কিছুই বদলায় না
+        if (Schema::hasColumn('promotion_coupon_redemptions', 'carried_amount')) {
+            return;
+        }
+
         Schema::table('promotion_coupon_redemptions', function (Blueprint $table) {
             $table->decimal('carried_amount', 18, 4)->default(0)->after('source_id');
         });

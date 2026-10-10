@@ -20,10 +20,13 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::table('promotion_applications', function (Blueprint $table) {
-            $table->foreignId('branch_id')->nullable()->after('company_id')
-                ->constrained('branches', 'id', 'pa_branch_fk')->nullOnDelete();
-        });
+        // ⓘ দ্বিতীয়বার চালালে কলাম আর বসে না, আর ভরাট কেবল খালি সারিতে — কাগজ না পেলে শাখা খালিই থাকে
+        if (! Schema::hasColumn('promotion_applications', 'branch_id')) {
+            Schema::table('promotion_applications', function (Blueprint $table) {
+                $table->foreignId('branch_id')->nullable()->after('company_id')
+                    ->constrained('branches', 'id', 'pa_branch_fk')->nullOnDelete();
+            });
+        }
 
         foreach (['sales_invoice' => 'sal_invoices', 'sales_order' => 'sal_orders', 'delivery_challan' => 'sal_challans'] as $type => $table) {
             if (! Schema::hasTable($table)) {
