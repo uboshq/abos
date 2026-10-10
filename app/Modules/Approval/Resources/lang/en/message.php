@@ -92,4 +92,5 @@ return [
     'bundle_confirmed' => ':count papers confirmed.',
     'bundle_nothing' => 'Nothing in this sale is still waiting to be confirmed.',
     'bundle_remark' => 'Confirmed together on one page',
+    'escalation_fallback' => 'With no target: Manager → super admin',
 ];
