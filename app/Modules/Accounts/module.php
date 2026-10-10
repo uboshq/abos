@@ -579,6 +579,8 @@ return [
         'asset_disposal' => FixedAsset::class,
         'depreciation' => DepreciationEntry::class,
         'asset_transfer' => AssetTransfer::class,
+        // ⓘ ক্রয় বিলের মাল মজুদ থেকে সম্পদে — দাখিলা ক্রয়ের ([[BillLinesForAssets]]), উৎস-আইডি সম্পদের
+        'asset_capitalise' => FixedAsset::class,
     ],
 
     /*

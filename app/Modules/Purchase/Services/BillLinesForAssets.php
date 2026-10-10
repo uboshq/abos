@@ -5,14 +5,15 @@ declare(strict_types=1);
 namespace App\Modules\Purchase\Services;
 
 use App\Core\Contracts\CapitalisesABillLine;
+use App\Core\Engines\Posting\PostingEngine;
 use App\Core\Support\DocumentStatus;
-use App\Models\LedgerEntry;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Services\StandardChart;
-use App\Modules\Inventory\Services\StockAdjustmentService;
+use App\Modules\Inventory\Services\CostLayerService;
 use App\Modules\Inventory\Services\StockService;
-use App\Modules\MasterData\Models\ReasonCode;
+use App\Modules\Purchase\Models\PurchaseBill;
 use App\Modules\Purchase\Models\PurchaseBillLine;
+use App\Modules\Purchase\Models\PurchaseReceipt;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Carbon;
 use Illuminate\Validation\ValidationException;
@@ -20,14 +21,22 @@ use Illuminate\Validation\ValidationException;
 /**
  * ⭐ ক্রয় বিলের সারি স্থায়ী সম্পদে — ক্রয়ের দিক থেকে ([[CapitalisesABillLine]]; স্থায়ী সম্পদ ধাপ ১, ১০ অক্টোবর ২০২৬)।
  *
- * ⓘ কেবল পাকা বিল। মালটা বিলের গুদাম থেকে মজুদের নিজের "বের করে দেওয়া" পথে বেরোয় ([[StockAdjustmentService::issue()]]),
- * কারণের খাত সম্পদের খাত — তাই মজুদের দাখিলাই হয় সম্পদ ডেবিট / মজুদ ক্রেডিট, মজুদের নিজের দামে (স্তর ধরে)। ⛔ বিক্রেতার
- * পাওনা, বিল, কিছুই নড়ে না — কেনাটা দুইবার খাতায় ওঠে না।
- * ⓘ কারণটা প্রতি সম্পদ-খাতে একটাই (`FA-<খাতের কোড>`), প্রথমবার বসে — ছয় মাস পরে মজুদের পাতায় "কেন বেরোল" পড়া যায়।
+ * ⓘ কেবল পাকা বিল। তিন ধাপ, ক্রয় ফেরতের হুবহু নিয়মে ([[PurchaseReturnService::takeCostFromLayers()]]):
+ *   ১. মালটা বিলের গুদামের তাক থেকে বেরোয় (মজুদের চলাচল, উৎস `asset_capitalise` আর সম্পদের আইডি);
+ *   ২. দাম আসে **ঐ বিলেরই** স্তর থেকে — না কুলালে FIFO ([[CostLayerService::issueFromSource()]])। ⛔ সাধারণ FIFO হলে
+ *      ১০০ টাকায় কেনা ফ্রিজ তাকের পুরনো দামি মালের দরে সম্পদ হত — IAS 16 বলে দাম তার নিজের কেনা দাম;
+ *   ৩. দাখিলা: সম্পদ ডেবিট / মজুদ ক্রেডিট, ঠিক ঐ দামে।
+ * ⛔ বিক্রেতার পাওনা, বিল, কিছুই নড়ে না — কেনাটা বিলের দিনই খাতায় উঠেছে, দুইবার নয়।
  */
 final class BillLinesForAssets implements CapitalisesABillLine
 {
-    public function __construct(private readonly StockAdjustmentService $adjustments) {}
+    public const SOURCE = 'asset_capitalise';
+
+    public function __construct(
+        private readonly StockService $stock,
+        private readonly CostLayerService $costs,
+        private readonly PostingEngine $posting,
+    ) {}
 
     public function lines(?string $term = null, int $limit = 50): array
     {
@@ -53,51 +62,68 @@ final class BillLinesForAssets implements CapitalisesABillLine
         return $line === null ? null : $this->shape($line);
     }
 
-    public function capitalise(int $lineId, string $qty, int $assetAccountId, Carbon $on, string $narration): string
+    public function capitalise(int $lineId, string $qty, int $assetAccountId, int $assetId, string $documentNo, Carbon $on, string $narration): string
     {
         $line = $this->query()->whereKey($lineId)->first();
         $account = Account::query()->postable()->whereKey($assetAccountId)->first();
+        $inventory = StandardChart::find(StandardChart::INVENTORY);
+        $warehouse = $line?->bill?->warehouse;
 
-        if ($line === null || $account === null || $line->bill?->warehouse === null || $line->product === null) {
+        if ($line === null || $account === null || $inventory === null || $warehouse === null || $line->product === null) {
             throw ValidationException::withMessages(['purchase_bill_line_id' => __('accounts::asset.bill_line_missing')]);
         }
 
-        $reason = ReasonCode::query()->firstOrCreate(
-            ['code' => 'FA-'.$account->code],
-            [
-                'name_en' => 'Capitalised as a fixed asset ('.$account->code.')',
-                'name_bn' => 'স্থায়ী সম্পদে তোলা ('.$account->code.')',
-                'context' => ReasonCode::STOCK_ISSUE,
-                'account_id' => $account->id,
-                'returns_to_stock' => false,
-                'is_active' => true,
-            ],
-        );
+        // ⛔ তাকে যা নেই তা সম্পদ হয় না — বিক্রি হয়ে গেলে তোলার কিছু নেই
+        if (bccomp($qty, $this->stock->floorQty($line->product, $warehouse), 4) > 0) {
+            throw ValidationException::withMessages(['capitalised_qty' => __('accounts::asset.bill_stock_short')]);
+        }
 
-        $movement = $this->adjustments->issue(
+        $this->stock->move(
             product: $line->product,
-            warehouse: $line->bill->warehouse,
-            qty: $qty,
-            reason: $reason,
+            warehouse: $warehouse,
+            sourceType: self::SOURCE,
+            sourceId: $assetId,
+            floor: bcmul($qty, '-1', 4),
             date: $on,
-            narration: $narration.' — '.$line->bill->document_no,
+            documentNo: $documentNo,
+            narration: $narration,
         );
 
-        // ⓘ যত টাকার মাল সরল — মজুদের নিজের দাখিলার মজুদ-ক্রেডিট, স্তরের দামে
-        $inventory = StandardChart::find(StandardChart::INVENTORY);
+        $taken = $this->costs->issueFromSource(
+            product: $line->product,
+            qty: $qty,
+            fromSourceType: $line->purchase_receipt_line_id !== null ? PurchaseReceipt::STOCK_SOURCE : PurchaseBill::STOCK_SOURCE,
+            fromSourceId: $line->purchase_receipt_line_id !== null ? (int) ($line->receiptLine?->purchase_receipt_id ?? 0) : (int) $line->purchase_bill_id,
+            sourceType: self::SOURCE,
+            sourceId: $assetId,
+            documentNo: $documentNo,
+            date: $on,
+        );
 
-        return $movement === null || $inventory === null ? '0' : (string) bcadd((string) LedgerEntry::query()
-            ->where('source_type', StockService::ADJUSTMENT)
-            ->where('source_id', $movement->id)
-            ->where('account_id', $inventory->id)
-            ->sum('credit'), '0', 4);
+        $cost = bcadd((string) $taken['cost'], '0', 4);
+
+        if (bccomp($cost, '0', 4) > 0) {
+            $this->posting->post(
+                sourceType: self::SOURCE,
+                sourceId: $assetId,
+                trxDate: $on,
+                lines: [
+                    ['account_id' => (int) $account->id, 'debit' => $cost, 'narration' => $narration],
+                    ['account_id' => (int) $inventory->id, 'credit' => $cost, 'narration' => $narration],
+                ],
+                documentNo: $documentNo,
+                branchId: $line->bill->branch_id === null ? null : (int) $line->bill->branch_id,
+            );
+        }
+
+        return $cost;
     }
 
     /** @return Builder<PurchaseBillLine> */
     private function query()
     {
         return PurchaseBillLine::query()
-            ->with(['bill.supplier', 'bill.warehouse', 'product'])
+            ->with(['bill.supplier', 'bill.warehouse', 'product', 'receiptLine'])
             ->whereHas('bill', fn ($b) => $b->whereIn('status', DocumentStatus::POSTED))
             ->where('qty', '>', 0);
     }

@@ -172,6 +172,7 @@ return [
     'bill_line_note' => 'The asset takes the cost at which stock releases the goods.',
     'bill_line_missing' => 'This bill line was not found. Check that the bill is posted.',
     'bill_qty_over' => 'No more than :left can be taken from this line.',
+    'bill_stock_short' => 'The warehouse does not hold that much now. Check whether it was sold or used.',
     'capitalised_qty' => 'Quantity',
     'below_threshold' => 'An asset must cost at least :limit. Record anything cheaper on an expense voucher.',
 

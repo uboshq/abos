@@ -23,7 +23,7 @@ final class NoCapitalisesABillLine implements CapitalisesABillLine
         return null;
     }
 
-    public function capitalise(int $lineId, string $qty, int $assetAccountId, Carbon $on, string $narration): string
+    public function capitalise(int $lineId, string $qty, int $assetAccountId, int $assetId, string $documentNo, Carbon $on, string $narration): string
     {
         throw ValidationException::withMessages(['purchase_bill_line_id' => __('accounts::asset.bill_line_missing')]);
     }

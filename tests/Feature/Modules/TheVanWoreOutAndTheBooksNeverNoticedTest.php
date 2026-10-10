@@ -303,11 +303,14 @@ class TheVanWoreOutAndTheBooksNeverNoticedTest extends TestCase
         $this->assets->dispose($van->refresh(), '1100000', $this->money()->id, '2026-09-15');
 
         $expense = $this->account(StandardChart::DEPRECIATION_EXPENSE)->id;
+        $loss = $this->account(StandardChart::ASSET_DISPOSAL_LOSS)->id;
 
-        $debits = LedgerEntry::query()->where('account_id', $expense)->sum('debit');
-
-        // ১০,০০০ অবচয় + ৯০,০০০ লোকসান
-        $this->assertSame('100000.0000', (string) $debits);
+        /*
+         * ⓘ ২ অক্টোবর ২০২৬ থেকে লোকসান নিজের খাতে (৫৩২০), অবচয়ে নয় ([[TheAssetSaleGainHidInTheDepreciationTest]]) — এই দাবি
+         * তখনো পুরনো কথা বলত (১০,০০০ + ৯০,০০০ অবচয়ে), তাই main-এ লাল ছিল। এখন দুইটা আলাদা খাতে (স্থায়ী সম্পদ ধাপ ১)।
+         */
+        $this->assertSame('10000.0000', (string) LedgerEntry::query()->where('account_id', $expense)->sum('debit'), 'অবচয়ে কেবল ১০,০০০।');
+        $this->assertSame('90000.0000', (string) LedgerEntry::query()->where('account_id', $loss)->sum('debit'), '⛔ ৯০,০০০ লোকসান নিজের খাতে বসেনি।');
     }
 
     public function test_a_disposed_asset_cannot_be_depreciated_again(): void

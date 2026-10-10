@@ -416,6 +416,8 @@ final class FixedAssetService
                     (int) $signed['bill']['line_id'],
                     (string) $signed['bill']['qty'],
                     (int) $locked->asset_account_id,
+                    (int) $locked->id,
+                    (string) $locked->document_no,
                     Carbon::parse($this->postableDate($locked->acquired_on)),
                     $locked->name.' — '.$locked->document_no,
                 );

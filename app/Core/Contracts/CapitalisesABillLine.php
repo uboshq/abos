@@ -29,9 +29,10 @@ interface CapitalisesABillLine
     public function line(int $lineId): ?array;
 
     /**
-     * মালটা মজুদ থেকে সম্পদের খাতে — মজুদের নিজের দাখিলায় (সম্পদ ডেবিট / মজুদ ক্রেডিট), মজুদের দামে।
+     * মালটা মজুদ থেকে সম্পদের খাতে — সম্পদ ডেবিট / মজুদ ক্রেডিট, **ঐ বিলেরই** দামে (ক্রয় ফেরতের নিয়মে: আগে বিলের নিজের
+     * স্তর, না কুলালে FIFO)। ⓘ দাখিলার উৎস `asset_capitalise` আর সম্পদের আইডি — একই সম্পদ দুইবার তোলা যায় না।
      *
      * @return string যত টাকার মাল সরল — সম্পদের দাম এটাই
      */
-    public function capitalise(int $lineId, string $qty, int $assetAccountId, Carbon $on, string $narration): string;
+    public function capitalise(int $lineId, string $qty, int $assetAccountId, int $assetId, string $documentNo, Carbon $on, string $narration): string;
 }
