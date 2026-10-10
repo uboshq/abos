@@ -128,7 +128,7 @@ final class EveryLedgerReaderSaysWhetherItShowsOrChecksTest extends TestCase
      * @var array<string, string>
      */
     private const WHOLE_BY_DECISION = [
-        'app/Modules/Accounts/Services/GroupLedgerService.php' => 'কয়েক কোম্পানির একসাথে লাভ-ক্ষতি — শাখার আইডি কেবল চলতি কোম্পানির, ছাঁকলে বাকি কোম্পানিগুলো শূন্য হত',
+        'app/Modules/Accounts/Services/GroupLedgerService.php' => 'কয়েক কোম্পানির একসাথে লাভ-ক্ষতি — হেডারের শাখার আইডি কেবল চলতি কোম্পানির, ছাঁকলে বাকি কোম্পানিগুলো শূন্য হত; তবে প্রতিটা কোম্পানিতে মানুষটার নিজের শাখার নাগাল খাটে (পুনঃঅডিট, ৯ অক্টোবর ২০২৬)',
         'app/Modules/Finance/Services/BudgetService.php' => 'বাজেটে শাখা নেই (`fin_budgets`) — এক শাখার খরচ গোটা কোম্পানির বাজেটের পাশে বসলে তুলনাটাই মিথ্যা হত',
     ];
 

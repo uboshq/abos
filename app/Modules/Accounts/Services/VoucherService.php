@@ -6,10 +6,15 @@ namespace App\Modules\Accounts\Services;
 
 use App\Core\Contracts\SettledByAVoucher;
 use App\Core\Contracts\SettlementTerms;
+use App\Core\Engines\Audit\AuditEngine;
 use App\Core\Engines\Drill\DrillResolver;
 use App\Core\Engines\NumberSeries\NumberSeriesEngine;
 use App\Core\Engines\Posting\PostingEngine;
+use App\Core\Services\OpenPeriod;
+use App\Core\Services\PermissionSyncer;
 use App\Core\Services\RevisionKeeper;
+use App\Core\Services\SettingsService;
+use App\Core\Support\Actor;
 use App\Core\Support\CompanyContext;
 use App\Core\Support\DateFormat;
 use App\Core\Support\DocumentStatus;
@@ -20,8 +25,8 @@ use App\Models\IssuedNumber;
 use App\Models\User;
 use App\Modules\Accounts\Events\VoucherPosted;
 use App\Modules\Accounts\Models\Account;
-use App\Modules\Accounts\Models\CashTill;
 use App\Modules\Accounts\Models\BankStatementLine;
+use App\Modules\Accounts\Models\CashTill;
 use App\Modules\Accounts\Models\InterCompanyTransfer;
 use App\Modules\Accounts\Models\Voucher;
 use App\Modules\Accounts\Models\VoucherLine;
@@ -924,6 +929,8 @@ final class VoucherService
                 );
             }
 
+            $this->cancelItsAutoReversal($voucher, $reason, $onDate);
+
             $voucher->forceFill([
                 'status' => DocumentStatus::CANCELLED,
                 'cancelled_by' => auth()->id(),
@@ -945,6 +952,52 @@ final class VoucherService
 
             return $voucher->fresh(['lines']);
         });
+    }
+
+    /**
+     * ⛔ আসল সমন্বয় বাতিল হলে তার নিজে-বসা উল্টোটাও যায় — পুরো-ERP পুনঃঅডিট, ৯ অক্টোবর ২০২৬ (হিসাব, ঠিক ১)।
+     *
+     * ⓘ সমন্বয় জাবেদা তার তারিখে নিজে উল্টায় ([[AdjustingReversals]]), উল্টোটা `reversal_of_id`-এ আসলটাকে চেনে। ⚠️ আগে
+     * আসলটা বাতিল করলে কেবল আসলটাই ফিরত — উল্টোটা খাতায় থেকে যেত, আর দুই খাতে উল্টো দিকে একই অঙ্ক বসে থাকত: বকেয়া
+     * আয় বাতিল করলে পরের মাসের আয় সেই অঙ্কে কমেই থাকত।
+     * ⭐ এখন একই লেনদেনে উল্টোটাও বাতিল হয় (তারও দাখিলা ফেরে) — দুই খাতের মোট ফল শূন্য। কোনো একটা না পারলে (বন্ধ মাস,
+     * ব্যাংকে মেলানো) দুইটার কোনোটাই বাতিল হয় না, আর কারণটা বাংলায় ফেরে।
+     * ⓘ উল্টোটার বাতিল-তারিখ তার নিজের তারিখের আগে পড়ে না — পেছনের তারিখের উল্টো কাগজেও খাতায় ক্রম ঠিক থাকে।
+     */
+    private function cancelItsAutoReversal(Voucher $voucher, string $reason, ?string $onDate): void
+    {
+        if (! $voucher->is_adjusting || $voucher->reversal_of_id !== null) {
+            return;
+        }
+
+        $reversal = Voucher::acrossBranches()
+            ->where('reversal_of_id', $voucher->id)
+            ->where('status', '!=', DocumentStatus::CANCELLED)
+            ->first();
+
+        if ($reversal === null) {
+            return;
+        }
+
+        $on = $onDate ?? now()->toDateString();
+
+        if ($reversal->trx_date !== null && $reversal->trx_date->toDateString() > $on) {
+            $on = $reversal->trx_date->toDateString();
+        }
+
+        if (($lock = app(OpenPeriod::class)->lockOn($on)) !== null) {
+            throw ValidationException::withMessages([
+                'status' => __('accounts::validation.adjusting_reversal_month_locked', [
+                    'no' => $reversal->document_no,
+                    'month' => $lock->label(),
+                ]),
+            ]);
+        }
+
+        $this->cancel($reversal, __('accounts::voucher.adjusting_reversal_cancel_reason', [
+            'no' => $voucher->document_no,
+            'reason' => $reason,
+        ]), $on);
     }
 
     /**
@@ -1446,7 +1499,7 @@ final class VoucherService
      * "পক্ষ লাগবে" ([[assertTemplate()]])। ⛔ আগে এখানে চারটা পরিবারের নিজের তালিকা ছিল (১১১০, ২১১০, ১১৭০, ১১৩১) — খাতের
      * ধর্ম আর এই তালিকা একদিন আলাদা হতো। ⓘ ধর্ম গ্রুপসহ ফেরে; গ্রুপে দাখিলা বসেই না ([[assertLinesArePostable()]])।
      *
-     * @return array<int, list<string>>  খাতের id => যে ধরনের পক্ষ নেয়
+     * @return array<int, list<string>> খাতের id => যে ধরনের পক্ষ নেয়
      */
     private function accountsThatHoldAParty(): array
     {
@@ -1676,11 +1729,11 @@ final class VoucherService
      */
     public function writerMayNotPost(Voucher $voucher): bool
     {
-        if (! (bool) app(\App\Core\Services\SettingsService::class)->get(self::MAKER_CHECKER, true)) {
+        if (! (bool) app(SettingsService::class)->get(self::MAKER_CHECKER, true)) {
             return false;
         }
 
-        $actor = (int) (\App\Core\Support\Actor::userId() ?? 0);
+        $actor = (int) (Actor::userId() ?? 0);
 
         return $actor !== 0 && $actor === (int) ($voucher->created_by ?? 0) && ! $this->actorIsOwner();
     }
@@ -1693,9 +1746,9 @@ final class VoucherService
             ]);
         }
 
-        if ((bool) app(\App\Core\Services\SettingsService::class)->get(self::MAKER_CHECKER, true)
-            && (int) (\App\Core\Support\Actor::userId() ?? 0) === (int) ($voucher->created_by ?? 0)) {
-            app(\App\Core\Engines\Audit\AuditEngine::class)->recordAction($voucher, 'maker_checker_override',
+        if ((bool) app(SettingsService::class)->get(self::MAKER_CHECKER, true)
+            && (int) (Actor::userId() ?? 0) === (int) ($voucher->created_by ?? 0)) {
+            app(AuditEngine::class)->recordAction($voucher, 'maker_checker_override',
                 __('accounts::validation.maker_checker', ['no' => $voucher->document_no]));
         }
     }
@@ -1704,7 +1757,7 @@ final class VoucherService
     {
         $user = auth()->user();
 
-        return $user instanceof User && $user->roles->contains('name', \App\Core\Services\PermissionSyncer::SUPER_ADMIN_ROLE);
+        return $user instanceof User && $user->roles->contains('name', PermissionSyncer::SUPER_ADMIN_ROLE);
     }
 
     private function assertType(mixed $type): string
