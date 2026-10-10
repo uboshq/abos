@@ -284,6 +284,17 @@ Schedule::command('abos:owner-snapshot')
         logger()->critical('মালিকের কেন্দ্রের রাতের হিসাব লেখা ব্যর্থ হয়েছে — হাতে দেখতে হবে।');
     });
 
+/*
+ * ⭐ মালিকের কেন্দ্রের সকালের মেইল — মালিকের উত্তর ৪, ১০ অক্টোবর ২০২৬ ([[OwnerMorningMail]])।
+ * ⓘ সকাল ৮টা — রাত ২৩:৫৫-র হিসাব লেখা হয়ে গেছে, দিনের কাজ শুরুর আগে।
+ */
+Schedule::command('abos:owner-morning-mail')
+    ->dailyAt('08:00')
+    ->withoutOverlapping()
+    ->onFailure(function () {
+        logger()->critical('মালিকের সকালের সারাংশ মেইল পাঠানো ব্যর্থ হয়েছে — হাতে দেখতে হবে।');
+    });
+
 Schedule::command('abos:money-due')
     ->dailyAt('08:00')
     ->withoutOverlapping()
