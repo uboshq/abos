@@ -128,7 +128,7 @@
                     @if (! $result['text'])
                         <p class="text-(--color-ink-muted)">{{ __('documents::message.abe_no_text_both') }}</p>
                     @else
-                        <pre class="max-h-[50vh] overflow-auto rounded-(--radius-field) bg-(--color-surface-app) p-3 text-xs">@foreach ($result['lines'] as $row)<span data-diff="{{ $row['op'] }}" @class(['block', 'text-(--color-danger) line-through' => $row['op'] === 'del', 'text-(--color-state-on)' => $row['op'] === 'add'])>{{ $row['op'] === 'add' ? '+ ' : ($row['op'] === 'del' ? '− ' : '  ') }}{{ $row['line'] }}</span>@endforeach</pre>
+                        <pre class="max-h-[50vh] overflow-auto rounded-(--radius-field) bg-(--color-surface-app) p-3 text-xs">@foreach ($result['lines'] as $row)<span data-diff="{{ $row['op'] }}" @class(['block', 'text-(--color-danger) line-through' => $row['op'] === 'del', 'text-(--color-badge-success-ink)' => $row['op'] === 'add'])>{{ $row['op'] === 'add' ? '+ ' : ($row['op'] === 'del' ? '− ' : '  ') }}{{ $row['line'] }}</span>@endforeach</pre>
                     @endif
                 @endif
             @elseif ($tool === 'ask')

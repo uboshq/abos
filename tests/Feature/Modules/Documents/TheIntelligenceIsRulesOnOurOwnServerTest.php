@@ -107,6 +107,8 @@ final class TheIntelligenceIsRulesOnOurOwnServerTest extends TestCase
 
         $this->assertMatchesRegularExpression('/data-diff="del"[^>]*>− Clause 1: pay in 30 days/u', $page);
         $this->assertMatchesRegularExpression('/data-diff="add"[^>]*>\+ Clause 1: pay in 45 days/u', $page);
+        // ⛔ যোগ হওয়া লাইন পড়ার মতো সবুজে — সুইচের উজ্জ্বল সবুজ (~২:১) নয়, ব্যাজের গাঢ় সবুজ (৬.৪৯:১; documents রিভিউ, ১১ অক্টোবর ২০২৬)
+        $this->assertMatchesRegularExpression('/data-diff="add" class="[^"]*text-\(--color-badge-success-ink\)/u', $page, '⛔ যোগ হওয়া লাইন এখনো হালকা সবুজে।');
         $this->assertStringContainsString('data-abe-meta="changed"', $page, 'হ্যাশ বদল তুলনায় দেখা যায় না।');
     }
 
