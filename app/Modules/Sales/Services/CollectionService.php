@@ -20,11 +20,11 @@ use App\Modules\Accounts\Services\CashTillService;
 use App\Modules\Accounts\Services\ChequeService;
 use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\MasterData\Models\PaymentMethod;
+use App\Modules\Sales\Events\CollectionConfirmed;
 use App\Modules\Sales\Models\Collection;
 use App\Modules\Sales\Models\CollectionLine;
 use App\Modules\Sales\Models\SalesInvoice;
 use Illuminate\Support\Carbon;
-use App\Modules\Sales\Events\CollectionConfirmed;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -142,6 +142,22 @@ final class CollectionService
 
         return DB::transaction(function () use ($collection, $data, $lines) {
             $trxDate = Carbon::parse($data['trx_date'] ?? $collection->trx_date);
+
+            /*
+             * ⛔ সম্পাদনাতেও একই স্লিপের পাহারা, নিজেকে বাদ দিয়ে — পুরো-ERP পুনঃঅডিট, ৯ অক্টোবর ২০২৬ (বিক্রয় ৪;
+             * [[AnEditedCollectionCannotReuseASlipTest]])। ⓘ পাহারা ছিল কেবল নতুন আদায়ে ([[create()]]); খসড়া খুলে আরেকটা আদায়ের
+             * বিকাশ TrxID বসালে কিছুই আটকাত না, আর পাকা করলে গ্রাহকের পাওনা দুইবার কমত।
+             */
+            $this->slips->check(
+                table: 'sal_collections',
+                slipNo: $data['instrument_no'] ?? null,
+                partyId: (int) $collection->customer_id,
+                party: 'customer_id',
+                message: __('sales::validation.slip_used_twice', [
+                    'no' => trim((string) ($data['instrument_no'] ?? '')),
+                ]),
+                exceptId: (int) $collection->id,
+            );
 
             $collection->update([
                 'account_id' => $this->resolveMoneyAccount(
@@ -330,7 +346,7 @@ final class CollectionService
      * পাহারা — [[assertNoCheque()]] আর [[assertStillFits()]] (তালা ছাড়া) — দুটোই কেবল পড়ে; সইয়ের পাহারা নয়, কারণ সেটা
      * অনুরোধ লেখে।
      *
-     * @return list<string>  থামার কারণগুলো; খালি মানে কিছুই থামাবে না
+     * @return list<string> থামার কারণগুলো; খালি মানে কিছুই থামাবে না
      */
     public function whatWouldStopTheConfirm(Collection $collection): array
     {

@@ -80,8 +80,8 @@ final class AmountInWords
         $negative = bccomp($amount, '0', 4) < 0;
         $amount = $negative ? bcmul($amount, '-1', 4) : bcadd($amount, '0', 4);
 
-        // পয়সা আলাদা — দুই দশমিক ঘর, আর পঞ্চম ঘর থেকে রাউন্ড নয় বরং
-        // ছেঁটে ফেলা: কাগজে যা ছাপা আছে কথাতেও ঠিক তা-ই থাকতে হবে
+        // পয়সা আলাদা — দুই দশমিক ঘর, অঙ্কের ঘরের ([[Money::format()]]) একই গোল করায়:
+        // কাগজে যা ছাপা আছে কথাতেও ঠিক তা-ই থাকতে হবে
         [$whole, $fraction] = self::split($amount);
 
         $words = $locale === 'bn'
@@ -98,7 +98,8 @@ final class AmountInWords
      */
     private static function split(string $amount): array
     {
-        $rounded = bcadd($amount, '0', 2);
+        // ⛔ গোল করা, কাটা নয় — ১০.০০৫ লেখায় "দশ টাকা এক পয়সা", অঙ্কের ঘরের মতোই (পুনঃঅডিট ৯ অক্টোবর ২০২৬, ছাপা ১১; [[Money::round()]])
+        $rounded = Money::round($amount, 2);
         $parts = explode('.', $rounded);
 
         return [$parts[0], (int) ($parts[1] ?? 0)];

@@ -106,27 +106,27 @@
     <tr>
         @if ($v->shows('previous_due'))
             <td class="tile" data-previous-due>
-                <div class="tile-cap">Previous balance</div>
+                <div class="tile-cap">{{ __('sales::print.previous_balance') }}</div>
                 <div class="fig">{{ $v->previousBeforeBill() }}</div>
             </td>
             <td class="gap"></td>
         @endif
         <td class="tile">
-            <div class="tile-cap">This invoice</div>
+            <div class="tile-cap">{{ __('sales::print.this_invoice') }}</div>
             <div class="fig">{{ $paper->money($s['net_payable']) }}</div>
         </td>
         <td class="gap"></td>
         <td class="tile">
-            <div class="tile-cap">Received today</div>
+            <div class="tile-cap">{{ __('sales::print.received_today') }}</div>
             <div class="fig">{{ $paper->money($s['paid']) }}</div>
         </td>
         <td class="gap"></td>
         <td class="tile-dark">
             @if ($v->shows('previous_due'))
-                <div class="tile-cap-dark">Closing balance</div>
+                <div class="tile-cap-dark">{{ __('sales::print.closing_balance') }}</div>
                 <div class="fig">{{ $v->balanceAmount() }} <span data-balance-word>{{ $v->balanceWord() }}</span></div>
             @else
-                <div class="tile-cap-dark">This invoice</div>
+                <div class="tile-cap-dark">{{ __('sales::print.this_invoice') }}</div>
                 <div class="fig">{{ $v->billLeftAmount() }} {{ $v->billLeftWord() }}</div>
             @endif
         </td>

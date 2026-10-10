@@ -6,6 +6,7 @@ namespace App\Modules\Sales\Services;
 
 use App\Core\Concerns\ReadsTheRowUnderLock;
 use App\Core\Contracts\RecipeBook;
+use App\Core\Contracts\SalesOffers;
 use App\Core\Engines\Approval\ApprovalEngine;
 use App\Core\Engines\Approval\HeldForApproval;
 use App\Core\Engines\NumberSeries\NumberSeriesEngine;
@@ -13,16 +14,19 @@ use App\Core\Engines\Posting\PostingEngine;
 use App\Core\Services\SettingsService;
 use App\Core\Support\CompanyContext;
 use App\Core\Support\DocumentStatus;
+use App\Core\Support\Money;
 use App\Models\Approval;
 use App\Models\FinancialYear;
 use App\Models\IssuedNumber;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Inventory\Models\Batch;
+use App\Modules\Inventory\Models\CostLayerUse;
 use App\Modules\Inventory\Models\Product;
 use App\Modules\Inventory\Models\StockMovement;
 use App\Modules\Inventory\Models\Warehouse;
 use App\Modules\Inventory\Services\CostLayerService;
+use App\Modules\Inventory\Services\PrintedPriceCeiling;
 use App\Modules\Inventory\Services\ReadsPackedQuantities;
 use App\Modules\Inventory\Services\SellableHere;
 use App\Modules\Inventory\Services\StockService;
@@ -59,8 +63,8 @@ use Illuminate\Validation\ValidationException;
 final class SalesInvoiceService
 {
     use CalculatesSalesLines;
-    use ReadsTheRowUnderLock;
     use ReadsPackedQuantities;
+    use ReadsTheRowUnderLock;
 
     public function __construct(
         private readonly NumberSeriesEngine $numbers,
@@ -188,7 +192,12 @@ final class SalesInvoiceService
             return;
         }
 
-        if ($decided?->status === Approval::REJECTED) {
+        /*
+         * ⛔ "না" কেবল সেই অঙ্কের — পুরো-ERP পুনঃঅডিট, ৯ অক্টোবর ২০২৬ (বিক্রয় ৬; [[ARejectedDiscountCanAskAgainWhenItChangesTest]])।
+         * ⓘ আগে যেকোনো প্রত্যাখ্যাত সই বিলটা চিরকাল আটকাত: সইকারী "এত ছাড় নয়" বলার পর ছাড় কমিয়েও আর নতুন সই চাওয়া যেত না।
+         * এখন একই অঙ্ক আবার এলে আগের মতো "নামঞ্জুর"; অঙ্ক বদলালে নিচে নতুন অনুরোধ — সইকারী আবার দেখেন।
+         */
+        if ($decided?->status === Approval::REJECTED && $decided->covers($discount)) {
             throw ValidationException::withMessages([
                 'discount' => __('sales::validation.discount_rejected'),
             ]);
@@ -341,7 +350,9 @@ final class SalesInvoiceService
             $given = trim((string) ($data['document_no'] ?? ''));
 
             if ($given !== '') {
-                $taken = SalesInvoice::query()
+                // ⛔ গোটা কোম্পানিতে, শাখার দেয়াল ছাড়া — পুনঃঅডিট ৯ অক্টোবর ২০২৬, বিক্রয় ৫ ([[AManualBillNumberIsCheckedAcrossTheCompanyTest]]);
+                // ⓘ আগে কেবল নিজের শাখায় দেখা হত, অন্য শাখার একই নম্বর ইউনিক ইনডেক্সে ধাক্কা খেয়ে ৫০০ দিত (ক্রয়ের দিক আগেই এভাবে)
+                $taken = SalesInvoice::acrossBranches()
                     ->where('document_no', $given)
                     ->exists();
 
@@ -841,7 +852,7 @@ final class SalesInvoiceService
         $invoice->loadMissing(['lines.product', 'lines.challanLine', 'warehouse']);
 
         // ⭐ অফার, উপহার, কুপন আর পয়েন্টও ফেরে — চালানের সাধারণ বাতিলের মতো (পুরো ERP অডিট, প্রমোশন ⛔১, ৬ অক্টোবর ২০২৬)
-        app(\App\Core\Contracts\SalesOffers::class)->reverseAll(SalesInvoice::drillSourceType(), (int) $invoice->id);
+        app(SalesOffers::class)->reverseAll(SalesInvoice::drillSourceType(), (int) $invoice->id);
 
         $this->unpost($invoice, $date, $reason, $paperNo);
 
@@ -928,7 +939,7 @@ final class SalesInvoiceService
      */
     private function putCostBackInLayers(SalesInvoice $invoice, Carbon $date): void
     {
-        $outstanding = \App\Modules\Inventory\Models\CostLayerUse::query()
+        $outstanding = CostLayerUse::query()
             ->whereIn('source_type', [SalesInvoice::STOCK_SOURCE, SalesInvoice::STOCK_SOURCE.':cancel'])
             ->where('source_id', $invoice->id)
             ->groupBy('product_id')
@@ -1133,7 +1144,7 @@ final class SalesInvoiceService
              * ⓘ সারির `discount` = মানুষের নিজের ছাড় + এই ভাগ; ভাগটা আলাদা ঘরেও থাকে, তাই খসড়া
              * আবার সংরক্ষণে পর্দা কেবল নিজের অংশ পাঠায় আর ভাগ দুইবার যোগ হয় না।
              */
-            $promotion = app(\App\Modules\Sales\Services\ChallanOfferShare::class)->of($challanLine, $qty, (int) $invoice->id);
+            $promotion = app(ChallanOfferShare::class)->of($challanLine, $qty, (int) $invoice->id);
 
             $figures = $this->lineFigures($qty, $rate, bcadd($this->money($line['discount'] ?? '0'), $promotion, 4), $line['tax'] ?? null, $product->tax);
 
@@ -1278,8 +1289,8 @@ final class SalesInvoiceService
             throw ValidationException::withMessages([
                 'discount_amount' => __('sales::validation.bill_discount_over_total', [
                     'no' => $invoice->document_no,
-                    'discount' => \App\Core\Support\Money::format($billDiscount),
-                    'total' => \App\Core\Support\Money::format(bcadd($totals['total'], $rounding, 4)),
+                    'discount' => Money::format($billDiscount),
+                    'total' => Money::format(bcadd($totals['total'], $rounding, 4)),
                 ]),
             ]);
         }
@@ -1402,7 +1413,7 @@ final class SalesInvoiceService
      * FIFO-তে। ⛔ লটের স্তরে না কুলালে [[CostLayerService::issue()]] নিজেই FIFO-তে পড়ে আর চিহ্ন রাখে — নীরবে নয়।
      *
      * @param  array<int, array<int, string>>  $lots  পণ্য → [লট → এখনো ভাগ না হওয়া পরিমাণ]; ভাগ হলে কমে
-     * @return array{cost: string, uses: list<\App\Modules\Inventory\Models\CostLayerUse>}
+     * @return array{cost: string, uses: list<CostLayerUse>}
      */
     private function costByLot(SalesInvoice $invoice, SalesInvoiceLine $line, array &$lots): array
     {
@@ -1749,7 +1760,7 @@ final class SalesInvoiceService
      * ⓘ ক্রেতা প্রতি এককে যা দেন, সারির ছাড়ের পরে — চালানের [[DeliveryChallanService::assertWithinPrintedPrice()]]-এর একই মাপ;
      * ⚠️ ছাড় না বাদ দিলে ঋণাত্মক ছাড় বসিয়ে সীমা পেরোনো যেত।
      *
-     * @param  iterable<\App\Modules\Inventory\Models\StockMovement>  $movements
+     * @param  iterable<StockMovement>  $movements
      */
     private function assertWithinPrintedPrice(SalesInvoiceLine $line, iterable $movements): void
     {
@@ -1760,7 +1771,7 @@ final class SalesInvoiceService
 
         foreach ($movements as $movement) {
             if ($movement->batch !== null) {
-                app(\App\Modules\Inventory\Services\PrintedPriceCeiling::class)->assertWithin($movement->batch, $net);
+                app(PrintedPriceCeiling::class)->assertWithin($movement->batch, $net);
             }
         }
     }

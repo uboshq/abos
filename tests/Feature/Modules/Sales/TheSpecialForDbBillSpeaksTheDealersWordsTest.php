@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Modules\Sales;
 
+use App\Core\Engines\Print\PaperSize;
 use App\Core\Engines\Print\PrintableDocument;
 use App\Core\Engines\Print\PrintProfile;
 use App\Core\Support\CompanyContext;
@@ -46,7 +47,9 @@ final class TheSpecialForDbBillSpeaksTheDealersWordsTest extends TestCase
 
         $paper = $this->get(route('sales.invoice_sample', ['design' => 'special_db']))->assertOk()->getContent();
 
-        foreach (['INVOICE', 'With Accounts Statement', 'Karim', 'TARGET REMINDER', 'INVOICE SUMMARY', 'data-balance-word', 'Special for DB'] as $must) {
+        foreach (['INVOICE', 'With Accounts Statement', 'Karim', 'TARGET REMINDER', 'INVOICE SUMMARY', 'data-balance-word',
+            // ⓘ নকশার নাম এখন ভাষা-ফাইল থেকে, মালিকের ভাষায় (পুনঃঅডিট ৯ অক্টোবর, ছাপা ১৯)
+            trans('sales::settings.design.special_db', [], auth()->user()->locale ?? config('app.locale'))] as $must) {
             $this->assertStringContainsString($must, (string) $paper, "⛔ নকশায় «{$must}» নেই।");
         }
 
@@ -133,7 +136,7 @@ final class TheSpecialForDbBillSpeaksTheDealersWordsTest extends TestCase
         $html = view('sales::print.partials.invoice-items', [
             'v' => $this->paperView([]),
             'facts' => ['items' => ['rows' => [], 'totals' => ['qty' => '168 Ctn, 7 Mbag', 'free' => '2 Ctn', 'total_qty' => '170 Ctn, 7 Mbag', 'amount' => '39,106.12']]],
-            'paper' => \App\Core\Engines\Print\PaperSize::of('a4'),
+            'paper' => PaperSize::of('a4'),
         ])->render();
 
         $this->assertStringContainsString('168 Ctn<br>7 Mbag', $html);

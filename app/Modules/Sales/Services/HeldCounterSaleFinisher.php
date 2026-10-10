@@ -10,13 +10,14 @@ use App\Core\Services\NotificationService;
 use App\Core\Services\PermissionSyncer;
 use App\Core\Support\CompanyContext;
 use App\Models\Approval;
+use App\Models\AuditTrail;
 use App\Models\User;
 use App\Modules\Accounts\Models\Voucher;
 use App\Modules\Accounts\Services\VoucherService;
 use App\Modules\Sales\Models\DeliveryChallan;
 use App\Modules\Sales\Models\SalesInvoice;
 use Illuminate\Contracts\Auth\Authenticatable;
-use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -98,8 +99,8 @@ final class HeldCounterSaleFinisher
      * ⓘ দুই রকম: সবগুলো "হ্যাঁ" অথচ শেষ করতে গিয়ে থামল ([[finish()]] REFUSED — ধরুন ফ্রির দেয়াল), নয় কেউ "না" বলেছেন।
      * দুটোই আগে কোনো তালিকায় ছিল না।
      *
-     * @param  \Illuminate\Database\Eloquent\Builder<SalesInvoice>|null  $query
-     * @return \Illuminate\Database\Eloquent\Builder<SalesInvoice>
+     * @param  Builder<SalesInvoice>|null  $query
+     * @return Builder<SalesInvoice>
      */
     public static function signedNotFinished($query = null)
     {
@@ -111,8 +112,8 @@ final class HeldCounterSaleFinisher
     /**
      * আসল খসড়া — উপরের ভাগ বাদে (খসড়ার ট্যাব আর গোনা দুজনেই এটা নেয়)।
      *
-     * @param  \Illuminate\Database\Eloquent\Builder<SalesInvoice>  $query
-     * @return \Illuminate\Database\Eloquent\Builder<SalesInvoice>
+     * @param  Builder<SalesInvoice>  $query
+     * @return Builder<SalesInvoice>
      */
     public static function exceptSigned($query)
     {
@@ -131,7 +132,7 @@ final class HeldCounterSaleFinisher
             return $ready['reason'];
         }
 
-        return (string) (\App\Models\AuditTrail::query()
+        return (string) (AuditTrail::query()
             ->where('auditable_type', $invoice->getMorphClass())
             ->where('auditable_id', $invoice->id)
             ->where('action', self::AUDIT_REFUSED)
@@ -148,7 +149,8 @@ final class HeldCounterSaleFinisher
      */
     public function returnToDraft(SalesInvoice $invoice, User $user): void
     {
-        DB::transaction(function () use ($invoice, $user): void {
+        // ⛔ বিলের নিজের শাখায় — শেষ করার একই কারণে (পুনঃঅডিট ৯ অক্টোবর ২০২৬, বিক্রয় ১)
+        CompanyContext::inBranch($invoice->branch_id === null ? null : (int) $invoice->branch_id, fn () => DB::transaction(function () use ($invoice, $user): void {
             $locked = SalesInvoice::query()->lockForUpdate()->find($invoice->getKey());
 
             if ($locked === null || ! self::signedNotFinished()->whereKey($locked->id)->exists()) {
@@ -176,7 +178,7 @@ final class HeldCounterSaleFinisher
             $locked->update(['counter_draft' => $locked->counter_screen, 'counter_screen' => null]);
 
             $this->audit->recordAction($locked, 'returned_to_draft', __('sales::auto_finish.returned_reason'));
-        });
+        }));
     }
 
     /**
@@ -275,7 +277,9 @@ final class HeldCounterSaleFinisher
         try {
             Auth::setUser($maker);
 
-            $this->sales->finishHeld(SalesInvoice::query()->findOrFail($invoice->id));
+            // ⛔ বিলের নিজের শাখায় — হেডারে অন্য শাখা থাকলে বিলটা "নেই" হত (পুনঃঅডিট ৯ অক্টোবর ২০২৬, বিক্রয় ১; [[CompanyContext::inBranch()]])
+            CompanyContext::inBranch($invoice->branch_id === null ? null : (int) $invoice->branch_id,
+                fn () => $this->sales->finishHeld(SalesInvoice::query()->findOrFail($invoice->id)));
         } catch (HeldForApproval) {
             /*
              * ⓘ শেষ করতে গিয়ে আরেকটা সই চাওয়া হলো — যেমন চালানের নিজের ছক

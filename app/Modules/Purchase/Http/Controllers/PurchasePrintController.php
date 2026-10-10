@@ -7,6 +7,7 @@ namespace App\Modules\Purchase\Http\Controllers;
 use App\Core\Engines\Print\PaperSize;
 use App\Core\Engines\Print\PrintableDocument;
 use App\Core\Engines\Print\PrintEngine;
+use App\Core\Engines\Print\PrintsInItsBranch;
 use App\Core\Security\FieldSecurity;
 use App\Core\Services\PaperTrail;
 use App\Core\Services\SettingsService;
@@ -47,6 +48,9 @@ use Illuminate\Support\Collection;
  */
 class PurchasePrintController extends Controller implements HasMiddleware
 {
+    // ⭐ শাখার মাথা আর লোগো — বিক্রয়ের ছাপার মতো (পুনঃঅডিট ৯ অক্টোবর ২০২৬, ছাপা ১৮)
+    use PrintsInItsBranch;
+
     public function __construct(
         private readonly PrintEngine $print,
 
@@ -446,6 +450,13 @@ class PurchasePrintController extends Controller implements HasMiddleware
             $doc = $doc->withNotice(__('core.print.cancelled_notice'));
         }
 
+        // ⛔ খসড়া ক্রয়ের কাগজেও "খসড়া" — পাকা কাগজের মতো ছাপা হত (পুনঃঅডিট ৯ অক্টোবর ২০২৬, ছাপা ১০)
+        $draft = ($document?->status ?? null) === DocumentStatus::DRAFT;
+
+        if ($draft) {
+            $doc = $doc->withNotice(__('core.print.draft_paper_notice'));
+        }
+
         $pdf = $this->print->render(
             template: $template,
             data: [
@@ -460,7 +471,7 @@ class PurchasePrintController extends Controller implements HasMiddleware
              * সরবরাহকারীর কাছে দাবি করা যেত, আর উপরের বাক্সটা কেটে
              * ফেলা যায়।
              */
-            watermark: $cancelled ? __('core.print.cancelled_watermark') : null,
+            watermark: $cancelled ? __('core.print.cancelled_watermark') : ($draft ? __('core.print.draft_watermark') : null),
         );
 
         /*

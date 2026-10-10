@@ -117,4 +117,15 @@ return [
     // ⭐ চালান ছাপার দুই বোতাম (মালিক, ২ অক্টোবর ২০২৬)
     'challan_with_amounts' => 'চালান — টাকাসহ',
     'challan_without_amounts' => 'চালান — টাকা ছাড়া',
+    // ⓘ হিসাবসহ নকশার লেখা — আগে ইংরেজিতে বসানো ছিল (পুনঃঅডিট ৯ অক্টোবর ২০২৬, ছাপা ১৯)
+    'closing_balance' => 'সমাপনী জের',
+    'this_invoice' => 'এই বিল',
+    'previous_short' => 'আগের',
+    'bill_short' => 'বিল',
+    'previous_balance' => 'আগের জের',
+    'received_today' => 'আজ জমা',
+    'received_short' => 'জমা',
+    'closing_short' => 'সমাপনী',
+    'owed_by_customer' => 'গ্রাহকের দেনা',
+    'paid_by_customer' => 'গ্রাহকের জমা',
 ];
