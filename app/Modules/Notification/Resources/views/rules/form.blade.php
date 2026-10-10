@@ -129,7 +129,7 @@
                 </label>
             </div>
 
-            <div class="grid gap-3 md:grid-cols-5">
+            <div class="grid gap-3 md:grid-cols-3">
                 @foreach (['delay_minutes', 'expires_minutes', 'cooldown_minutes'] as $number)
                     <label class="grid gap-1 text-2xs text-(--color-ink-muted)">
                         {{ __('notification::rule.'.$number) }}
