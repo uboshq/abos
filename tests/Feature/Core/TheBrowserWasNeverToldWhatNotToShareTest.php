@@ -104,8 +104,15 @@ final class TheBrowserWasNeverToldWhatNotToShareTest extends TestCase
 
         $policy = (string) $response->headers->get('Permissions-Policy');
 
-        foreach (['camera=()', 'microphone=()', 'geolocation=()', 'payment=()', 'usb=()'] as $denied) {
+        foreach (['camera=()', 'microphone=()', 'payment=()', 'usb=()'] as $denied) {
             $this->assertStringContainsString($denied, $policy, "⛔ {$page}: Permissions-Policy-তে {$denied} নেই।");
         }
+
+        /*
+         * ⓘ লোকেশন কেবল নিজের সাইটের জন্য — মালিক, ১ অক্টোবর ২০২৬: লগইনের জায়গা খাতায় ([[LoginPlace]])।
+         * ⛔ বাইরের কোনো ফ্রেম বা সাইট নয়: `()` বা `(self)` ছাড়া কিছু নয়।
+         */
+        $this->assertMatchesRegularExpression('/(^|,\s*)geolocation=\((self)?\)(,|$)/', $policy,
+            "⛔ {$page}: Permissions-Policy-তে লোকেশন বাইরের জন্য খোলা, বা নেই।");
     }
 }
