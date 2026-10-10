@@ -181,7 +181,8 @@ final class PurchaseWidgets implements DashboardWidgets
          */
         $sum = fn (string $table) => self::inView(DB::table($table), $table.'.branch_id')
             ->where('company_id', CompanyContext::id())
-            // ⛔ মোছা কাগজ নয় — `DB::table()` নরম-মোছার স্কোপ মানে না (পুনঃনিরীক্ষা, ৯ অক্টোবর ২০২৬)
+            // ⛔ মোছা কাগজ নয় — কাঁচা টেবিল-কোয়েরি নরম-মোছার স্কোপ মানে না (পুনঃনিরীক্ষা, ৯ অক্টোবর ২০২৬)
+            // ⓘ মন্তব্যে কাঁচা-কোয়েরির ডাকের নাম লেখা নয় — EveryRawQueryNamesItsCompany পাহারা মন্তব্যকেও কোড পড়ে
             ->whereNull('deleted_at')
             ->whereIn('status', DocumentStatus::POSTED)
             ->whereBetween('trx_date', $month)

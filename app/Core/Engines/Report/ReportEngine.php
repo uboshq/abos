@@ -648,6 +648,9 @@ final class ReportEngine
             }
 
             $filters['to'] = $filters['to'] ?? Carbon::today()->toDateString();
+            // ⛔ "শেষ" তারিখ আগে যাচাই — তার থেকেই নিচে শুরুর তারিখ গোনা হয়, আর `to=abc` বা `to[]=x` তখন ৪২২-এর আগেই ৫০০ দিত
+            // (cb-র রিভিউ, cloud/security-fixes মেশানোর সময়, ১১ অক্টোবর ২০২৬; main-এর পাতা-ঝাড়ু বদল আর এই শাখার যাচাইয়ের মাঝখানে)
+            $filters['to'] = $this->dateOrRefuse('to', $filters['to']);
             // ⛔ শুরু না দিলে "শেষ" তারিখের মাসের ১ তারিখ, আজকের মাসের নয় — পাতা-ঝাড়ু ধাপ ০ (১০ অক্টোবর ২০২৬): রেওয়ামিলে "যে
             // তারিখ পর্যন্ত" ৩০ সেপ্টেম্বর বাছলে শুরু বসত ১ অক্টোবর, আর পাতা ৫০০ (শুরুর ঘর ওখানে দেখানোই হয় না)
             $filters['from'] = $filters['from'] ?? Carbon::parse($filters['to'])->startOfMonth()->toDateString();

@@ -95,6 +95,16 @@ final class AReportBrokeOnABadDateAndASearchTest extends TestCase
         } catch (ValidationException $e) {
             $this->assertArrayHasKey('from', $e->errors());
         }
+
+        // ⛔ শুরু না দিয়ে কেবল ভুল "শেষ" — শুরুর তারিখ শেষ থেকে গোনা হয়, তাই যাচাই তার আগে (cb-র রিভিউ, ১১ অক্টোবর ২০২৬)
+        foreach (['abc', ['x']] as $bad) {
+            try {
+                app(ReportEngine::class)->run('accounts.ledger', ['to' => $bad]);
+                $this->fail('শুরু ছাড়া ভুল শেষ-তারিখ মেনে নেওয়া হলো।');
+            } catch (ValidationException $e) {
+                $this->assertArrayHasKey('to', $e->errors());
+            }
+        }
     }
 
     /**
