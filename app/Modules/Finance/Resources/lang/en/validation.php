@@ -60,6 +60,7 @@ return [
     // Audit 4 Oct 2026 — signatures, money accounts, pledged deposits, profit shares
     'not_a_money_account' => 'That is not a money account — pick an active cash, bank or mobile banking account.',
     'awaits_signature_first' => 'A money step on this is still waiting for its signature — try again once it is signed or refused.',
+    'rental_close_day_out_of_range' => 'The closing day must fall between the contract start (:from) and today (:to).',
     'deposit_is_pledged' => ':no is pledged against a loan — it cannot be encashed until the loan is repaid.',
     'shares_pay_more_than_declared' => 'The shares add up to :total, but the declaration is :asked — correct the shares, then declare.',
     'shares_over_a_hundred' => 'The agreed shares add up to :total% — more than 100% cannot be shared. Correct them on the capital page.',
