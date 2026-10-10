@@ -10,6 +10,7 @@ use App\Core\Engines\Dashboard\Breakdown;
 use App\Core\Engines\Dashboard\DashboardDefinition;
 use App\Core\Engines\Dashboard\DateRange;
 use App\Core\Engines\Dashboard\Listing;
+use App\Core\Engines\Dashboard\Series;
 use App\Core\Engines\Dashboard\Stat;
 use App\Core\Engines\Dashboard\Tile;
 use App\Core\Engines\Report\ReportEngine;
@@ -31,6 +32,8 @@ use App\Modules\Finance\Reports\HandLoanReports;
 use App\Modules\Finance\Services\BankFacilityService;
 use App\Modules\Finance\Services\BudgetService;
 use App\Modules\Finance\Services\HeadTotals;
+use App\Modules\Finance\Services\InsuranceDues;
+use App\Modules\Finance\Services\RentalDues;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
@@ -452,7 +455,7 @@ final class FinanceDashboard implements ProvidesDashboard
      * ⛔ ঐ তিন ঘরের একই চাবি (`accounts.view`) — চাবি ছাড়া চার্টই নেই।
      * ⓘ নতুন ড্যাশবোর্ডের অংশ — বাকিগুলোর সাথে একসাথে চালু হবে (config abos.dashboards_v2)।
      *
-     * @return list<\App\Core\Engines\Dashboard\Series>
+     * @return list<Series>
      */
     private static function cashFlow(AccountsFacts $facts): array
     {
@@ -460,7 +463,7 @@ final class FinanceDashboard implements ProvidesDashboard
             return [];
         }
 
-        return [new \App\Core\Engines\Dashboard\Series(
+        return [new Series(
             label: __('finance::dashboard.cash_flow'),
             points: array_map(fn (array $m) => [
                 'label' => $m['month'],
@@ -495,7 +498,8 @@ final class FinanceDashboard implements ProvidesDashboard
             return [];
         }
 
-        $fund = bcadd(bcadd($money['cash'], $money['bank'], 4), $money['mfs'], 4);
+        // ⓘ সংজ্ঞাটা [[AccountsFacts::fund()]]-এ — মালিকের কেন্দ্রও ঠিক এটাই পড়ে (৮ অক্টোবর ২০২৬)
+        $fund = $facts->fund($money);
         $today = $facts->today();
 
         $flow = $facts->moneyFlowByMonth(1);
@@ -692,9 +696,9 @@ final class FinanceDashboard implements ProvidesDashboard
             ->whereRaw("{$left} > 0")
             ->selectRaw(
                 "COALESCE(SUM(CASE WHEN b.due_on < ? THEN {$left} ELSE 0 END), 0) as overdue,"
-                ."COALESCE(SUM(CASE WHEN b.due_on < ? THEN 1 ELSE 0 END), 0) as overdue_count,"
+                .'COALESCE(SUM(CASE WHEN b.due_on < ? THEN 1 ELSE 0 END), 0) as overdue_count,'
                 ."COALESCE(SUM(CASE WHEN b.due_on >= ? THEN {$left} ELSE 0 END), 0) as soon,"
-                ."COALESCE(SUM(CASE WHEN b.due_on >= ? THEN 1 ELSE 0 END), 0) as soon_count",
+                .'COALESCE(SUM(CASE WHEN b.due_on >= ? THEN 1 ELSE 0 END), 0) as soon_count',
                 [$today, $today, $today, $today],
             )
             ->first();
@@ -753,7 +757,7 @@ final class FinanceDashboard implements ProvidesDashboard
             return [];
         }
 
-        $dues = app(\App\Modules\Finance\Services\RentalDues::class);
+        $dues = app(RentalDues::class);
         $ending = $dues->ending(inView: true);
         $overdue = $dues->overdue(inView: true);
 
@@ -779,7 +783,7 @@ final class FinanceDashboard implements ProvidesDashboard
             return [];
         }
 
-        $dues = app(\App\Modules\Finance\Services\InsuranceDues::class);
+        $dues = app(InsuranceDues::class);
         $renewals = $dues->renewals(inView: true);
         $premiums = $dues->premiumsDue(inView: true);
 
@@ -792,5 +796,4 @@ final class FinanceDashboard implements ProvidesDashboard
             tone: $premiums->isNotEmpty() ? Stat::BAD : ($renewals->isNotEmpty() ? Stat::WARN : Stat::NEUTRAL),
         )];
     }
-
 }
