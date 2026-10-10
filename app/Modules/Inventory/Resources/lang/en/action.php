@@ -52,4 +52,5 @@ return [
     'dispose' => 'Dispose of rejected goods',
     'add_split_place' => '+ Another place',
     'remove_split_place' => 'Remove',
+    'serial_back_to_stock' => 'Checked — back into stock',
 ];

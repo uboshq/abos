@@ -15,3 +15,13 @@
 @endphp
 
 <x-ui.badge :tone="$tone">{{ $label }}</x-ui.badge>
+
+{{-- ⭐ ফেরত পিস — দেখে গুদামে ফেরত নিন (মজুদ ছ৩); কেবল মজুদ-সমন্বয়ের চাবিতে --}}
+@if ($serial->status === \App\Modules\Inventory\Models\SerialNumber::RETURNED)
+    @can('inventory.stock.adjust')
+        <form method="POST" action="{{ route('inventory.serial.back_to_stock', $serial) }}" class="inline" data-back-to-stock>
+            @csrf
+            <x-ui.button type="submit" size="sm" tone="secondary">{{ __('inventory::action.serial_back_to_stock') }}</x-ui.button>
+        </form>
+    @endcan
+@endif

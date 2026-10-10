@@ -211,4 +211,6 @@ return [
     'opening_cart_qty_total' => 'মোট পরিমাণ',
     'opening_cart_import' => 'Excel/CSV থেকে বসান',
     'opening_cart_row_error' => 'লাল সারিগুলো ঠিক করুন — একটা সারি ভুল থাকলে কোনোটাই বসে না।',
+    // ⭐ ফেরত পিস গুদামে (মজুদ ছ৩)
+    'serial_back_in_stock' => ':no পিসটা দেখে গুদামে ফেরত নেওয়া হলো — এখন বেচা যায়।',
 ];

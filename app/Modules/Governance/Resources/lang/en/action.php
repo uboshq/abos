@@ -69,4 +69,5 @@ return [
     'adjusting_reversed' => 'Adjusting journal reversed on its date',
     'auto_finish_refused' => 'Sale not finished after signing',
     'returned_to_draft' => 'Signed-but-stuck sale returned to draft',
+    'serial_back_to_stock' => 'Returned piece checked and taken back into stock',
 ];
