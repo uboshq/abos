@@ -446,6 +446,13 @@ class PurchasePrintController extends Controller implements HasMiddleware
             $doc = $doc->withNotice(__('core.print.cancelled_notice'));
         }
 
+        // ⛔ খসড়া ক্রয়ের কাগজেও "খসড়া" — পাকা কাগজের মতো ছাপা হত (পুনঃঅডিট ৯ অক্টোবর ২০২৬, ছাপা ১০)
+        $draft = ($document?->status ?? null) === DocumentStatus::DRAFT;
+
+        if ($draft) {
+            $doc = $doc->withNotice(__('core.print.draft_paper_notice'));
+        }
+
         $pdf = $this->print->render(
             template: $template,
             data: [
@@ -460,7 +467,7 @@ class PurchasePrintController extends Controller implements HasMiddleware
              * সরবরাহকারীর কাছে দাবি করা যেত, আর উপরের বাক্সটা কেটে
              * ফেলা যায়।
              */
-            watermark: $cancelled ? __('core.print.cancelled_watermark') : null,
+            watermark: $cancelled ? __('core.print.cancelled_watermark') : ($draft ? __('core.print.draft_watermark') : null),
         );
 
         /*

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Accounts\Http\Controllers;
 
+use App\Core\Engines\Drill\DrillResolver;
 use App\Core\Engines\Print\PaperSize;
 use App\Core\Engines\Print\PrintEngine;
 use App\Core\Services\BranchSettings;
@@ -108,7 +109,8 @@ class VoucherPrintController extends Controller implements HasMiddleware
                 'title' => $voucher->typeLabel().' '.$voucher->document_no,
                 'voucher' => $this->paper($voucher),
                 'signatures' => $this->signatures($voucher),
-                'notice' => $voucher->isCancelled() ? __('accounts::print.cancelled') : null,
+                // ⛔ খসড়া ভাউচারেও "খসড়া" — পাকা রসিদের মতো ছাপা হত (পুনঃঅডিট ৯ অক্টোবর ২০২৬, ছাপা ১০)
+                'notice' => $voucher->isCancelled() ? __('accounts::print.cancelled') : ($voucher->isDraft() ? __('core.print.draft_paper_notice') : null),
             ],
             paper: $paper,
 
@@ -218,7 +220,7 @@ class VoucherPrintController extends Controller implements HasMiddleware
             return '';
         }
 
-        $party = app(\App\Core\Engines\Drill\DrillResolver::class)->resolve((string) $type, (int) $id);
+        $party = app(DrillResolver::class)->resolve((string) $type, (int) $id);
 
         return $party !== null && method_exists($party, 'name') ? (string) $party->name() : '';
     }
@@ -270,7 +272,8 @@ class VoucherPrintController extends Controller implements HasMiddleware
      */
     private function watermarkFor(Voucher $voucher): ?string
     {
-        return $voucher->isCancelled() ? __('core.print.cancelled_watermark') : null;
+        return $voucher->isCancelled() ? __('core.print.cancelled_watermark')
+            : ($voucher->isDraft() ? __('core.print.draft_watermark') : null);
     }
 
     /**

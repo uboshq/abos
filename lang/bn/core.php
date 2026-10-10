@@ -873,6 +873,7 @@ return [
         'cancelled_watermark' => 'বাতিল',
         // ⛔ খসড়া টাকার রসিদ — টাকা এখনো খাতায় ওঠেনি (অডিট, ৬ অক্টোবর ২০২৬; [[SalesPrintController::pdf()]])
         'draft_receipt_notice' => 'খসড়া — এটি চূড়ান্ত রসিদ নয়, টাকা এখনো খাতায় ওঠেনি',
+        'draft_paper_notice' => 'খসড়া — এটি চূড়ান্ত কাগজ নয়, মাল বা টাকা এর ভরসায় ছাড়বেন না',
         'draft_watermark' => 'খসড়া',
         'print' => 'ছাপুন',
         'choose_paper' => 'কাগজ বাছুন',

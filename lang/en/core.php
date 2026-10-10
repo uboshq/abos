@@ -738,6 +738,7 @@ return [
         'cancelled_watermark' => 'CANCELLED',
         // ⛔ খসড়া টাকার রসিদ — টাকা এখনো খাতায় ওঠেনি (অডিট, ৬ অক্টোবর ২০২৬; [[SalesPrintController::pdf()]])
         'draft_receipt_notice' => 'DRAFT — this is not a final receipt; the money is not in the books yet',
+        'draft_paper_notice' => 'DRAFT — this is not a final paper; do not release goods or money on it',
         'draft_watermark' => 'DRAFT',
         'print' => 'Print',
         'choose_paper' => 'Choose paper',
