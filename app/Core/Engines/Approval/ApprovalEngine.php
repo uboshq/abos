@@ -757,6 +757,13 @@ final class ApprovalEngine
                  *
                  * ⓘ ঠিক এই পার্থক্যটার জন্যই [[TheInboxAgreesWithTheDecisionTest]]।
                  */
+                // ⭐ গন্তব্যহীন ধাপের দেরির কাগজ — ব্যবস্থাপক বা সুপার অ্যাডমিনের তালিকায় ([[fallbackEscalatedIds()]])
+                $fallback = $this->fallbackEscalatedIds($user);
+
+                if ($fallback !== []) {
+                    $outer->orWhere(fn (Builder $up) => $up->whereIn('id', $fallback)->whereNull('assigned_to'));
+                }
+
                 if ($escalated !== []) {
                     $outer->orWhere(function (Builder $up) use ($escalated): void {
                         $up->whereNotNull('escalated_at')
@@ -1406,8 +1413,9 @@ final class ApprovalEngine
     {
         $target = app(ApprovalSla::class)->escalationTarget($approval->currentStep());
 
+        // ⭐ ধাপে গন্তব্য নেই — মালিকের ক্রম, ঠিক যাঁদের খবর গেছে তাঁরাই সই দেন ([[ApprovalSla::fallbackRecipients()]])
         if ($target === null) {
-            return false;
+            return in_array((int) $user->id, app(ApprovalSla::class)->fallbackRecipients($approval), true);
         }
 
         if ($target['type'] === ApprovalFlowStep::BY_USER) {
@@ -1449,6 +1457,34 @@ final class ApprovalEngine
      *
      * @return list<int>
      */
+    /**
+     * ⓘ উপরে পাঠানো কাগজ, যার ধাপে নিজের গন্তব্য নেই, আর এই মানুষটা মালিকের ক্রমে তার প্রাপক।
+     * ⓘ সংখ্যায় অল্প (অপেক্ষমাণ আর উপরে-পাঠানো) — তাই প্রতিটার প্রাপক মেমরিতে মাপা; যাঁর ব্যবস্থাপক বা সুপার অ্যাডমিন
+     * রোলই নেই, তাঁর জন্য কোয়েরিও নয়।
+     *
+     * @return list<int>
+     */
+    private function fallbackEscalatedIds(User $user): array
+    {
+        $names = $user->roles->pluck('name')->all();
+
+        if (! in_array(ApprovalSla::FALLBACK_ROLE, $names, true) && ! in_array(\App\Core\Services\PermissionSyncer::SUPER_ADMIN_ROLE, $names, true)) {
+            return [];
+        }
+
+        $sla = app(ApprovalSla::class);
+
+        return Approval::query()->pending()
+            ->whereNotNull('escalated_at')
+            ->whereNull('assigned_to')
+            ->get()
+            ->filter(fn (Approval $approval) => $sla->escalationTarget($approval->currentStep()) === null
+                && in_array((int) $user->id, $sla->fallbackRecipients($approval), true))
+            ->map(fn (Approval $approval) => (int) $approval->id)
+            ->values()
+            ->all();
+    }
+
     private function roleIds(User $user): array
     {
         return $this->roleCache[$user->id] ??= array_map('intval', $user->roles->modelKeys());

@@ -110,7 +110,10 @@ final class ApprovalsDue extends Command
                              * হলে তিনি কোনোদিন জানতে পারতেন না। তাই গোনা হয়, আর
                              * কমান্ডের শেষে সংখ্যাটা বলা হয়।
                              */
-                            if ($target === null) {
+                            // ⭐ ধাপে গন্তব্য না থাকলে মালিকের ক্রম: ব্যবস্থাপক → সুপার অ্যাডমিন ([[ApprovalSla::fallbackRecipients()]])
+                            $users = $target !== null ? $this->holdersOfTarget($target) : $sla->fallbackRecipients($approval);
+
+                            if ($users === []) {
                                 $holes++;
 
                                 continue;
@@ -131,7 +134,7 @@ final class ApprovalsDue extends Command
                              *
                              * ⭐ একটা নিয়ম, এক জায়গায়।
                              */
-                            $this->escalate($approval, $target, $notify);
+                            $this->escalate($approval, $users, $notify);
                             $escalated++;
                         }
 
@@ -175,13 +178,20 @@ final class ApprovalsDue extends Command
 
     /**
      * @param  array{type: string, id: int}  $target
+     * @return list<int>
      */
-    private function escalate(Approval $approval, array $target, NotificationService $notify): void
+    private function holdersOfTarget(array $target): array
     {
-        $users = $target['type'] === 'user'
-            ? [$target['id']]
-            : User::query()->whereHas('roles', fn ($q) => $q->whereKey($target['id']))->pluck('id')->all();
+        return $target['type'] === 'user'
+            ? [(int) $target['id']]
+            : User::query()->whereHas('roles', fn ($q) => $q->whereKey($target['id']))->pluck('id')->map(fn ($id) => (int) $id)->all();
+    }
 
+    /**
+     * @param  list<int>  $users
+     */
+    private function escalate(Approval $approval, array $users, NotificationService $notify): void
+    {
         /*
          * ⚠️ `escalated_to` একজনের ঘর, আর রোলে অনেকজন থাকতে পারেন।
          * ⓘ তখন প্রথম জনের নাম বসে — কাগজটা কার হাতে গেল সেটা জানার
