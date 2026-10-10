@@ -76,6 +76,54 @@ final class FinancePapersPostInTheirOwnBranchTest extends TestCase
         ]);
 
         $this->assertRowsIn($movement->voucher_id, 'MMS', 'হাতধার');
+
+        // ⛔ জের হিসাবের নিজের সব চলাচল ধরে — হেডারে অন্য শাখা দেখানো অবস্থায়ও (রিভিউ ⚠️১, ১০ অক্টোবর ২০২৬; [[HandLoanMovement::scopeCounted()]])
+        $this->assertSame(0, bccomp(app(HandLoanService::class)->balanceOf($account->fresh()), '5000', 4),
+            '⛔ অন্য শাখা দেখানো অবস্থায় হাতধারের জের ভাউচারটা বাদ দিয়ে গুনল');
+    }
+
+    /** ⛔ সইয়ের অপেক্ষার চলাচল অন্য শাখা দেখানো অবস্থায়ও চোখে পড়ে — দ্বিতীয় চলাচল থামে (রিভিউ ⚠️১; [[HandLoanService::waiting()]]) */
+    public function test_a_waiting_hand_loan_movement_is_seen_from_another_branch(): void
+    {
+        $flow = \App\Models\ApprovalFlow::query()->create(['module' => 'finance', 'action' => 'hand_loan', 'is_active' => true]);
+        \App\Models\ApprovalFlowStep::query()->create([
+            'approval_flow_id' => $flow->id, 'level' => 1, 'approver_type' => \App\Models\ApprovalFlowStep::BY_USER,
+            'approver_id' => User::query()->where('email', 'accounts@abos.test')->value('id'),
+        ]);
+        $this->app->forgetInstance(\App\Core\Engines\Approval\ApprovalEngine::class);
+
+        $this->choose('MMS');
+        $account = app(HandLoanService::class)->open(['person_id' => $this->person('Waiting Karim')->id]);
+        $first = app(HandLoanService::class)->move($account->fresh(), [
+            'direction' => 'out', 'amount' => '1000', 'moved_on' => now()->toDateString(), 'money_account_id' => $this->cash()->id,
+        ]);
+        $this->assertSame(\App\Core\Support\DocumentStatus::DRAFT, Voucher::acrossBranches()->find($first->voucher_id)?->status,
+            'দৃশ্যটাই বানানো যায়নি — প্রথম চলাচল সইয়ের অপেক্ষায় নেই');
+
+        $this->choose('NTK');
+        $this->app->forgetInstance(\App\Core\Engines\Approval\ApprovalEngine::class);
+
+        // ⓘ জের শূন্য (খসড়া গোনা হয় না) — অপেক্ষাটা না দেখলে হিসাব "চুকে গেছে" হয়ে যেত, আর সই পড়লে টাকা বন্ধ খাতায় বসত
+        try {
+            app(HandLoanService::class)->settle($account->fresh());
+            $this->fail('⛔ অন্য শাখা দেখানো অবস্থায় অপেক্ষার চলাচল চোখ এড়াল — সইয়ের অপেক্ষায় টাকা রেখেই হিসাব চুকল');
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            $this->assertSame(__('finance::validation.awaits_signature_first'), $e->errors()['status'][0] ?? null, 'অন্য কারণে থামল');
+        }
+    }
+
+    /** ⛔ উত্তোলন নিজের শাখায় খাতায় বসে, হেডারে যে শাখাই দেখানো থাক (রিভিউ ⚠️১, ১০ অক্টোবর ২০২৬; [[WithdrawalService::post()]]) */
+    public function test_a_withdrawal_posts_in_its_own_branch(): void
+    {
+        $this->choose('MMS');
+        $withdrawal = app(\App\Modules\Finance\Services\WithdrawalService::class)->request([
+            'person_id' => $this->person('Branch Owner')->id, 'amount' => '2000', 'trx_date' => now()->toDateString(),
+        ]);
+
+        $this->choose('NTK');
+        $posted = app(\App\Modules\Finance\Services\WithdrawalService::class)->post($withdrawal->fresh(), $this->cash());
+
+        $this->assertRowsIn((int) $posted->voucher_id, 'MMS', 'উত্তোলন');
     }
 
     public function test_an_insurance_claim_books_its_approval_and_money_in_the_policys_branch(): void
