@@ -41,7 +41,11 @@ final class DocumentRetention
             }
 
             if ($policy->bin_after_days !== null) {
-                foreach ($this->due($policy, (int) $policy->bin_after_days)->onlyArchived()->get() as $document) {
+                /*
+                 * ⛔ বিনে যাওয়ার দিন গোনা আর্কাইভের দিন থেকে — নিয়মের ভিত্তি (তৈরি/তারিখ/মেয়াদ) থেকে নয় (১১ অক্টোবর ২০২৬,
+                 * documents রিভিউ ⚠️১৭)। ⓘ আগে তিন বছরের পুরনো কাগজ আজ হাতে আর্কাইভ করলে আজ রাতেই বিনে চলে যেত।
+                 */
+                foreach ($this->due($policy, (int) $policy->bin_after_days, 'dms_documents.archived_at')->onlyArchived()->get() as $document) {
                     $this->library->delete($document);
                     $document->auditAction('document_retained', __('documents::message.by_policy', ['id' => $policy->id]));
                     $out['binned']++;
@@ -53,9 +57,9 @@ final class DocumentRetention
     }
 
     /** এই নিয়মের কাগজ, যাদের দিন পেরিয়েছে — কোম্পানির, শাখার দেয়াল ছাড়া (কাজটা কারও হয়ে চলে না) */
-    private function due(RetentionPolicy $policy, int $days): Builder
+    private function due(RetentionPolicy $policy, int $days, ?string $since = null): Builder
     {
-        $column = match ($policy->basis) {
+        $column = $since ?? match ($policy->basis) {
             'document_date' => 'dms_documents.document_date',
             'expiry_date' => 'dms_documents.expiry_date',
             default => 'dms_documents.created_at',

@@ -340,7 +340,14 @@ final class DocumentLibrary
      */
     public function purge(Document $document): void
     {
-        DB::transaction(function () use ($document) {
+        /*
+         * ⛔ ডিস্কের ফাইল মোছা ট্রানজ্যাকশন শেষ হওয়ার পরে (১১ অক্টোবর ২০২৬, documents রিভিউ ⚠️১৬)। ⓘ আগে ভিতরেই মুছত, শেষ DELETE-এর
+         * আগে — পরে কিছু ব্যর্থ হলে সারিগুলো ফিরে আসত, কিন্তু ফাইল চলে গেছে; ভার্সনগুলো তখন না-থাকা ফাইলের দিকে দেখাত।
+         * ⭐ এখন আগে সারি, পাকা হলে তবে ফাইল; ফাইল মোছায় কিছু হলে বড়জোর একটা অনাথ ফাইল থাকে, ভাঙা কাগজ নয়।
+         */
+        $paths = [];
+
+        DB::transaction(function () use ($document, &$paths) {
             $document->auditAction('document_purged', $document->document_no.' · '.$document->name);
 
             $attachments = DB::table('dms_document_versions')
@@ -366,7 +373,7 @@ final class DocumentLibrary
                 ->delete();
 
             foreach (Attachment::query()->withTrashed()->whereIn('id', $attachments)->get() as $file) {
-                Storage::disk('local')->delete($file->stored_path);
+                $paths[] = (string) $file->stored_path;
                 $file->forceDelete();
             }
 
@@ -375,6 +382,10 @@ final class DocumentLibrary
                 ->where('id', $document->getKey())
                 ->delete();
         });
+
+        foreach ($paths as $path) {
+            Storage::disk('local')->delete($path);
+        }
     }
 
     /**
