@@ -39,6 +39,13 @@ final class DocumentShareController extends Controller
             'expires_on' => __('documents::field.share_until'),
         ]);
 
+        /*
+         * ⛔ নিজেকে শেয়ার নয়, আর যা নিজের হাতে নেই তা দেওয়া নয় (১১ অক্টোবর ২০২৬, documents রিভিউ ⚠️৪)। ⓘ আগে কেবল
+         * `documents.share` থাকা মানুষ নিজেকেই "নামানো সহ" শেয়ার করে নামিয়ে নিতেন — নামানোর চাবি ছাড়াই।
+         */
+        $this->refuseSelfAndBeyond($request, $data['grantee_type'], (int) $data['grantee_id'],
+            (bool) ($data['download'] ?? false) && ! ($request->user()?->can('download', $document) ?? false));
+
         $this->grants->share(
             $document,
             $data['grantee_type'],
@@ -48,5 +55,16 @@ final class DocumentShareController extends Controller
         );
 
         return redirect()->to(route('documents.show', $document).'#share')->with('saved', __('documents::message.shared'));
+    }
+
+    private function refuseSelfAndBeyond(Request $request, string $type, int $granteeId, bool $givesWhatTheyLack): void
+    {
+        if ($type === DocumentGrant::USER && $granteeId === (int) $request->user()?->getKey()) {
+            throw \Illuminate\Validation\ValidationException::withMessages(['grantee_id' => __('documents::message.not_to_yourself')]);
+        }
+
+        if ($givesWhatTheyLack) {
+            throw \Illuminate\Validation\ValidationException::withMessages(['download' => __('documents::message.cannot_give_download')]);
+        }
     }
 }

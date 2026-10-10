@@ -40,6 +40,14 @@ final class DocumentGrantController extends Controller
             'abilities' => __('documents::field.abilities'),
         ]);
 
+        /*
+         * ⛔ নিজেকে অধিকার নয় (১১ অক্টোবর ২০২৬, documents রিভিউ ⚠️১০)। ⓘ `documents.permissions` থাকা মানুষ যে কাগজ দেখেন তাতে
+         * নিজেকে বদল, শেয়ার বা নামানোর অধিকার দিতে পারতেন — চাবির বাইরে নিজের হাত বাড়ানো। অন্যকে দেওয়া চলে, নিজেকে নয়।
+         */
+        if ($data['grantee_type'] === DocumentGrant::USER && (int) $data['grantee_id'] === (int) $request->user()?->getKey()) {
+            throw \Illuminate\Validation\ValidationException::withMessages(['grantee_id' => __('documents::message.not_to_yourself')]);
+        }
+
         $this->grants->grant($document, $data['grantee_type'], (int) $data['grantee_id'], array_values($data['abilities'] ?? []));
 
         return redirect()->to(route('documents.show', $document).'#access')
