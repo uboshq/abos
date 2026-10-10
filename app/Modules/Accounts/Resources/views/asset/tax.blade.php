@@ -11,7 +11,7 @@
 
     <x-ui.errors />
 
-    <div class="mb-5 grid gap-5 lg:grid-cols-2">
+    <div class="mb-5 grid gap-4 lg:grid-cols-2">
         @can('accounts.asset.manage')
             <form method="POST" action="{{ route('accounts.asset.tax.run') }}"
                   class="flex flex-wrap items-end gap-3 rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">

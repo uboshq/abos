@@ -46,6 +46,7 @@ class AssetCategory extends Model
             'rate' => 'decimal:4',
             'residual_percent' => 'decimal:4',
             'capitalisation_threshold' => 'decimal:4',
+            'tax_rate' => 'decimal:4',
             'is_active' => 'boolean',
         ];
     }
