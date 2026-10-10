@@ -44,8 +44,25 @@ return [
     'cheques' => 'Cheque register',
     'reconciliations' => 'Bank reconciliation',
     'assets' => 'Fixed assets',
+    'asset_categories' => 'Asset categories',
     'by_cost_centre' => 'By cost centre',
     'expense_by_head' => 'Expenses by head',
     'income_by_head' => 'Income by head',
     'project_ledger' => 'Project ledger',
+
+    // ⭐ Fixed assets phase 4
+    'asset_verifications' => 'Asset counts',
+
+    // ⭐ Fixed assets phase 5
+    'asset_dashboard' => 'Fixed asset dashboard',
+    'asset_register' => 'Fixed asset register',
+    'asset_schedule' => 'Depreciation schedule',
+    'asset_movement' => 'Fixed asset movement',
+    'asset_nbv' => 'Asset book value',
+    'asset_disposals' => 'Asset disposals and gain/loss',
+    'asset_fully_depreciated' => 'Fully depreciated assets',
+    'asset_expiring' => 'Warranty and insurance expiring',
+    'asset_variance' => 'Asset count variance',
+    'asset_book_vs_tax' => 'Book vs tax depreciation',
+    'asset_maintenance' => 'Asset maintenance cost',
 ];

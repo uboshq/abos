@@ -2,20 +2,25 @@
 
 declare(strict_types=1);
 
+use App\Core\Contracts\CapitalisesABillLine;
 use App\Core\Engines\Print\PaperSize;
 use App\Modules\Purchase\Dashboard\PurchaseDashboard;
 use App\Modules\Purchase\Dashboard\PurchaseWidgets;
-use App\Modules\Purchase\Integrity\PurchaseChecks;
 use App\Modules\Purchase\Events\GoodsReceived;
+use App\Modules\Purchase\Integrity\PurchaseChecks;
 use App\Modules\Purchase\Listeners\OpenInspectionsForGoodsThatNeedThem;
 use App\Modules\Purchase\Models\Payment;
 use App\Modules\Purchase\Models\PurchaseBill;
 use App\Modules\Purchase\Models\PurchaseOrder;
 use App\Modules\Purchase\Models\PurchaseReceipt;
 use App\Modules\Purchase\Models\PurchaseReturn;
+use App\Modules\Purchase\Reports\PaymentDueReport;
+use App\Modules\Purchase\Reports\PurchaseAnalysisReports;
+use App\Modules\Purchase\Reports\PurchaseRegisterReports;
 use App\Modules\Purchase\Reports\PurchaseReports;
 use App\Modules\Purchase\Reports\ReturnOnCapitalReport;
 use App\Modules\Purchase\Reports\SettlementReport;
+use App\Modules\Purchase\Services\BillLinesForAssets;
 use App\Modules\Purchase\Services\TaggableBillsOnTheVoucherForm;
 
 /**
@@ -85,6 +90,14 @@ return [
      * চার মডিউলের নামই যে জানতে পারে, রিপোর্ট দুইটা তারই।
      */
     'depends_on' => ['master_data', 'accounts', 'inventory', 'supplier', 'sales'],
+
+    /*
+     * ⭐ পাকা বিলের সারি স্থায়ী সম্পদে — হিসাব ক্রয় চেনে না, চুক্তি চেনে ([[CapitalisesABillLine]]; স্থায়ী সম্পদ ধাপ ১,
+     * ১০ অক্টোবর ২০২৬)। ⓘ ক্রয় বন্ধ থাকলে কোরের শূন্য-বাস্তবায়ন — তালিকা খালি।
+     */
+    'bindings' => [
+        CapitalisesABillLine::class => BillLinesForAssets::class,
+    ],
 
     'menu' => [
         'dashboard' => [
@@ -553,12 +566,12 @@ return [
 
     'reports' => [
         PurchaseReports::class,
-        \App\Modules\Purchase\Reports\PurchaseRegisterReports::class,
-        \App\Modules\Purchase\Reports\PurchaseAnalysisReports::class,
+        PurchaseRegisterReports::class,
+        PurchaseAnalysisReports::class,
         SettlementReport::class,
         ReturnOnCapitalReport::class,
         // ⭐ পরিশোধের সূচি — রিপোর্ট সেন্টার ধাপ ৪ (২ অক্টোবর ২০২৬)
-        \App\Modules\Purchase\Reports\PaymentDueReport::class,
+        PaymentDueReport::class,
     ],
 
     'dashboard' => PurchaseDashboard::class,

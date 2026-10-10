@@ -2,20 +2,35 @@
 
 declare(strict_types=1);
 use App\Core\Engines\Print\PaperSize;
+use App\Core\Events\ApprovalDecided;
 use App\Modules\Accounts\Dashboard\AccountsActivity;
 use App\Modules\Accounts\Dashboard\AccountsDashboard;
 use App\Modules\Accounts\Dashboard\AccountsWidgets;
 use App\Modules\Accounts\Events\AccountFormOpened;
 use App\Modules\Accounts\Events\AccountSaved;
+use App\Modules\Accounts\Events\ChequeCleared;
+use App\Modules\Accounts\Events\OpeningCapitalBooked;
 use App\Modules\Accounts\Events\VoucherPosted;
 use App\Modules\Accounts\Imports\BankStatementImporter;
 use App\Modules\Accounts\Imports\ChartOfAccountsImporter;
+use App\Modules\Accounts\Imports\FixedAssetOpeningImporter;
 use App\Modules\Accounts\Imports\OpeningBalanceImporter;
 use App\Modules\Accounts\Integrity\AccountsChecks;
+use App\Modules\Accounts\Integrity\FixedAssetChecks;
+use App\Modules\Accounts\Listeners\FinishTheAccountsPaperOnTheLastSignature;
 use App\Modules\Accounts\Models\Account;
+use App\Modules\Accounts\Models\AssetCapitalisationPaper;
+use App\Modules\Accounts\Models\AssetCategory;
+use App\Modules\Accounts\Models\AssetDisposalPaper;
+use App\Modules\Accounts\Models\AssetEvent;
+use App\Modules\Accounts\Models\AssetTransfer;
+use App\Modules\Accounts\Models\AssetVerificationLine;
 use App\Modules\Accounts\Models\CashCount;
 use App\Modules\Accounts\Models\CashTill;
 use App\Modules\Accounts\Models\Cheque;
+use App\Modules\Accounts\Models\DepreciationEntry;
+use App\Modules\Accounts\Models\DepreciationRun;
+use App\Modules\Accounts\Models\FixedAsset;
 use App\Modules\Accounts\Models\Loan;
 use App\Modules\Accounts\Models\LoanInstalment;
 use App\Modules\Accounts\Models\LoanMovement;
@@ -23,7 +38,10 @@ use App\Modules\Accounts\Models\MoneyCategory;
 use App\Modules\Accounts\Models\MoneyTransfer;
 use App\Modules\Accounts\Models\Note;
 use App\Modules\Accounts\Models\Voucher;
+use App\Modules\Accounts\Models\YearClosing;
+use App\Modules\Accounts\Reports\BranchDuesReports;
 use App\Modules\Accounts\Reports\CoreReports;
+use App\Modules\Accounts\Reports\FixedAssetReports;
 use App\Modules\Accounts\Services\CashTillService;
 use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Accounts\Support\VoucherDesigns;
@@ -168,6 +186,28 @@ return [
             ['label' => 'accounts::menu.cheque_register', 'icon' => 'book', 'route' => 'accounts.report.show',
                 'route_params' => ['slug' => 'cheque-register'], 'permission' => 'accounts.report'],
 
+            // ⭐ স্থায়ী সম্পদের কাগজ — নিবন্ধন, অবচয়, চলাচল, খাতা বনাম কর (স্থায়ী সম্পদ ধাপ ৫)
+            ['label' => 'accounts::menu.asset_register', 'icon' => 'building', 'route' => 'accounts.report.show',
+                'route_params' => ['slug' => 'asset-register'], 'permission' => 'accounts.report'],
+            ['label' => 'accounts::menu.asset_schedule', 'icon' => 'building', 'route' => 'accounts.report.show',
+                'route_params' => ['slug' => 'asset-depreciation'], 'permission' => 'accounts.report'],
+            ['label' => 'accounts::menu.asset_movement', 'icon' => 'building', 'route' => 'accounts.report.show',
+                'route_params' => ['slug' => 'asset-movement'], 'permission' => 'accounts.report'],
+            ['label' => 'accounts::menu.asset_nbv', 'icon' => 'building', 'route' => 'accounts.report.show',
+                'route_params' => ['slug' => 'asset-nbv'], 'permission' => 'accounts.report'],
+            ['label' => 'accounts::menu.asset_disposals', 'icon' => 'building', 'route' => 'accounts.report.show',
+                'route_params' => ['slug' => 'asset-disposals'], 'permission' => 'accounts.report'],
+            ['label' => 'accounts::menu.asset_fully_depreciated', 'icon' => 'building', 'route' => 'accounts.report.show',
+                'route_params' => ['slug' => 'asset-fully-depreciated'], 'permission' => 'accounts.report'],
+            ['label' => 'accounts::menu.asset_expiring', 'icon' => 'building', 'route' => 'accounts.report.show',
+                'route_params' => ['slug' => 'asset-expiring'], 'permission' => 'accounts.report'],
+            ['label' => 'accounts::menu.asset_variance', 'icon' => 'building', 'route' => 'accounts.report.show',
+                'route_params' => ['slug' => 'asset-variance'], 'permission' => 'accounts.report'],
+            ['label' => 'accounts::menu.asset_book_vs_tax', 'icon' => 'building', 'route' => 'accounts.report.show',
+                'route_params' => ['slug' => 'asset-book-vs-tax'], 'permission' => 'accounts.report'],
+            ['label' => 'accounts::menu.asset_maintenance', 'icon' => 'building', 'route' => 'accounts.report.show',
+                'route_params' => ['slug' => 'asset-maintenance'], 'permission' => 'accounts.report'],
+
             // ⭐ খরচের বিশ্লেষণ — কোন খাতে হঠাৎ বাড়ল, সবচেয়ে বড় খরচ কত (রিপোর্ট সেন্টার ধাপ ৪)
             ['label' => 'accounts::expense.title', 'icon' => 'reports', 'route' => 'accounts.report.show',
                 'route_params' => ['slug' => 'expense-analysis'], 'permission' => 'accounts.report'],
@@ -280,6 +320,10 @@ return [
 
             ['label' => 'accounts::menu.reconciliations', 'icon' => 'check-circle', 'route' => 'accounts.reconciliation.index', 'permission' => 'accounts.reconciliation.view'],
             ['label' => 'accounts::menu.assets', 'icon' => 'building', 'route' => 'accounts.asset.index', 'permission' => 'accounts.asset.view'],
+            // ⭐ সম্পদের শ্রেণি — পাঁচ খাত আর ডিফল্ট আয়ু (স্থায়ী সম্পদ ধাপ ১)
+            ['label' => 'accounts::menu.asset_dashboard', 'icon' => 'dashboard', 'route' => 'accounts.asset.dashboard', 'permission' => 'accounts.asset.view'],
+            ['label' => 'accounts::menu.asset_verifications', 'icon' => 'building', 'route' => 'accounts.asset.verify.index', 'permission' => 'accounts.asset.view'],
+            ['label' => 'accounts::menu.asset_categories', 'icon' => 'building', 'route' => 'accounts.asset.category.index', 'permission' => 'accounts.asset.manage'],
             ['label' => 'accounts::menu.periods', 'icon' => 'clock', 'route' => 'accounts.period.index', 'permission' => 'accounts.period.close'],
             ['label' => 'accounts::menu.year_end', 'route' => 'accounts.year_end.index', 'permission' => 'accounts.report.final'],
             ['label' => 'accounts::menu.settings', 'route' => 'accounts.settings', 'permission' => 'accounts.manage'],
@@ -348,6 +392,13 @@ return [
          */
         'accounts.asset.view',
         'accounts.asset.manage',
+        /*
+         * ⭐ ABOS-এর আগে কেনা সম্পদের তালিকা একবারে তোলা — নিজের চাবি আর নিজের সই (স্থায়ী সম্পদ ধাপ ১, মালিক,
+         * ১০ অক্টোবর ২০২৬)। ⓘ পুরনো খাতার জের আর এ পর্যন্ত ক্ষয় একসাথে বসে — রোজকার "সম্পদ যোগ"-এর চাবিতে নয়।
+         */
+        'accounts.asset.import',
+        // ⭐ সরেজমিন গোনা — গুদামের মানুষ গোনেন, সম্পদ বদলাতে পারেন না (স্থায়ী সম্পদ ধাপ ৪)
+        'accounts.asset.verify',
 
         'accounts.note.view',
         'accounts.note.manage',
@@ -484,6 +535,12 @@ return [
 
         // স্থায়ী সম্পদ — FA-2026-2027-0001
         'FA' => 'accounts::doc.fixed_asset',
+        // ⭐ মাসের অবচয়ের দৌড় — শাখায় একটা কাগজ, DEP-… (স্থায়ী সম্পদ ধাপ ২)
+        'DEP' => 'accounts::doc.depreciation_run',
+        // ⭐ সম্পদের ঘটনা — সংযোজন, মেরামত, পুনর্মূল্যায়ন, দাম পড়া, FAE-… (স্থায়ী সম্পদ ধাপ ৩)
+        'FAE' => 'accounts::doc.asset_event',
+        // ⭐ সরেজমিন গোনার অভিযান, FAV-… (স্থায়ী সম্পদ ধাপ ৪)
+        'FAV' => 'accounts::doc.asset_verification',
 
         // ⭐ খোলা জের — OB-0001, নিজের ক্রম (ভাউচারের পরিকল্পনা ৩ঘ, ৭ অক্টোবর ২০২৬; [[OpeningBalanceService::SERIES]])
         'OB' => 'accounts::doc.opening_balance',
@@ -516,6 +573,8 @@ return [
      */
     'duplicates' => [
         ['model' => MoneyCategory::class, 'name' => ['name_en', 'name_bn']],
+        // ⭐ সম্পদের শ্রেণি — "যানবাহন" দুইবার নয় (স্থায়ী সম্পদ ধাপ ১)
+        ['model' => AssetCategory::class, 'name' => ['name_en', 'name_bn']],
     ],
 
     'drill_sources' => [
@@ -540,7 +599,7 @@ return [
         'cash_count' => CashCount::class,
         'money_category' => MoneyCategory::class,
         // ⭐ বছরশেষের সমাপনী ভাউচার — খাতার "YC-…" সারি থেকে তার পাতা (৩ঙ; ':reversal' নিজেই কেটে যায়)
-        'year_close' => \App\Modules\Accounts\Models\YearClosing::class,
+        'year_close' => YearClosing::class,
 
         /*
          * ঋণ নিজে খতিয়ানে বসে না — তার নড়াচড়া আর কিস্তিগুলো বসে।
@@ -552,6 +611,24 @@ return [
         'loan' => Loan::class,
         'loan_movement' => LoanMovement::class,
         'loan_instalment' => LoanInstalment::class,
+
+        /*
+         * ⭐ স্থায়ী সম্পদের দাখিলা — নিবন্ধন, মাসের অবচয়, শাখা বদল, বিদায় (ধাপ ১, ১০ অক্টোবর ২০২৬)। ⓘ আগে খাতার এই
+         * সারিগুলো কোনো কাগজে খুলত না, আর সম্পদের পাতায় ছবি-কাগজ রাখার দরজাও ছিল না (সংযুক্তি উৎস চেনে এখান থেকে)।
+         * বিদায়ের সারির উৎস-আইডি সম্পদেরই ([[FixedAsset::disposalSourceType()]])।
+         */
+        'fixed_asset' => FixedAsset::class,
+        'asset_disposal' => AssetDisposalPaper::class,
+        'depreciation' => DepreciationEntry::class,
+        'asset_transfer' => AssetTransfer::class,
+        // ⭐ মাসের অবচয়ের দৌড় — শাখায় একটা দাখিলা (স্থায়ী সম্পদ ধাপ ২)
+        'depreciation_run' => DepreciationRun::class,
+        // ⓘ ক্রয় বিলের মাল মজুদ থেকে সম্পদে — দাখিলা ক্রয়ের ([[BillLinesForAssets]]), উৎস-আইডি সম্পদের
+        'asset_capitalise' => AssetCapitalisationPaper::class,
+        // ⭐ সম্পদের ঘটনা — নিজের কাগজ, নিজের চাবি (স্থায়ী সম্পদ ধাপ ৩)
+        'asset_event' => AssetEvent::class,
+        // ⓘ গোনার সারি — ছবির সংযুক্তি নিজের কাগজ এই নামে খোঁজে (ধাপ ৪)
+        'asset_verification_line' => AssetVerificationLine::class,
     ],
 
     /*
@@ -594,6 +671,8 @@ return [
          * নমুনা ফাইল আর ভুল-সারির তালিকা বিনা খরচে পাওয়া যায়।
          */
         'bank_statement' => BankStatementImporter::class,
+        // ⭐ ABOS-এর আগে কেনা সম্পদ — নিজের চাবি (`accounts.asset.import`) আর নিজের সই (স্থায়ী সম্পদ ধাপ ১)
+        'fixed_asset_opening' => FixedAssetOpeningImporter::class,
     ],
 
     /*
@@ -652,6 +731,13 @@ return [
         'till_opening' => 'accounts::approval.till_opening',
         'fixed_asset_register' => 'accounts::approval.fixed_asset_register',
         'fixed_asset_dispose' => 'accounts::approval.fixed_asset_dispose',
+        // ⭐ ABOS-এর আগে কেনা সম্পদ তোলা — পুরনো খাতার জের (স্থায়ী সম্পদ ধাপ ১)
+        'fixed_asset_opening' => 'accounts::approval.fixed_asset_opening',
+        // ⭐ সম্পদের ঘটনা — প্রতিটার নিজের সই (স্থায়ী সম্পদ ধাপ ৩)
+        'fixed_asset_addition' => 'accounts::approval.fixed_asset_addition',
+        'fixed_asset_repair' => 'accounts::approval.fixed_asset_repair',
+        'fixed_asset_revalue' => 'accounts::approval.fixed_asset_revalue',
+        'fixed_asset_impair' => 'accounts::approval.fixed_asset_impair',
         // ⭐ ক্যাশবাক্সের দায়িত্ব হস্তান্তর (অডিট ম৮)
         'till_handover' => 'accounts::approval.till_handover',
     ],
@@ -668,13 +754,15 @@ return [
      * মিলিয়ে দেখে। ⛔ একটা টাইপো নীরবে কাগজটাকে bulk-এ
      * ঢুকিয়ে দিত।
      */
-    'moves_money' => ['expense', 'counter_deposit', 'counter_payment', 'transfer', 'receipt', 'payment', 'journal', 'contra', 'year_end', 'note', 'cheque_clear', 'cheque_bounce', 'inter_company', 'till_opening', 'fixed_asset_register', 'fixed_asset_dispose', 'till_handover'],
+    'moves_money' => ['expense', 'counter_deposit', 'counter_payment', 'transfer', 'receipt', 'payment', 'journal', 'contra', 'year_end', 'note', 'cheque_clear', 'cheque_bounce', 'inter_company', 'till_opening', 'fixed_asset_register', 'fixed_asset_dispose', 'till_handover', 'fixed_asset_opening', 'fixed_asset_addition', 'fixed_asset_repair', 'fixed_asset_revalue', 'fixed_asset_impair'],
 
     // রিপোর্ট সরবরাহকারী — কোর নিজে থেকে ডেকে নেবে (সেকশন ১৯.৩)।
     // কোর ফাইলে মডিউলের নাম লিখতে হয় না।
     'reports' => [
         CoreReports::class,
-        \App\Modules\Accounts\Reports\BranchDuesReports::class,
+        BranchDuesReports::class,
+        // ⭐ স্থায়ী সম্পদের দশটা কাগজ (ধাপ ৫)
+        FixedAssetReports::class,
     ],
 
     // হোম পর্দার টাকার সংখ্যাগুলো
@@ -692,6 +780,8 @@ return [
      */
     'integrity' => [
         AccountsChecks::class,
+        // ⭐ সম্পদের খাতা = হিসাবের খাতা (স্থায়ী সম্পদ ধাপ ৫)
+        FixedAssetChecks::class,
     ],
 
     // "সদ্য কী হয়েছে" — টাকার দিক থেকে
@@ -738,6 +828,15 @@ return [
             'group' => 'print_paper',
             'print_designs' => ['paper' => 'voucher', 'size' => $size, 'sample_route' => 'accounts.voucher.sample'],
         ], VoucherDesigns::SIZES),
+        // ⭐ সম্পদের লেবেলের কাগজ — A4 স্টিকার শীট বা রোল (স্থায়ী সম্পদ ধাপ ৪)
+        [
+            'key' => 'accounts.print.paper.asset_labels',
+            'label' => 'accounts::settings.paper_asset_labels',
+            'type' => 'choice',
+            'options' => PaperSize::all(),
+            'default' => PaperSize::A4,
+            'group' => 'print',
+        ],
         [
             'key' => 'accounts.print.paper.transfer',
             'label' => 'accounts::settings.paper_transfer',
@@ -817,6 +916,57 @@ return [
             'default' => true,
             'group' => 'entry',
         ],
+        /*
+         * ⭐ মূলধনীকরণের সীমা — এর নিচের কেনা খরচে যায়, সম্পদের খাতায় নয় (স্থায়ী সম্পদ ধাপ ১; IAS 16-এর বস্তুগততা)।
+         * ⓘ শূন্য = কোনো সীমা নেই (আজকের আচরণ)। শ্রেণির নিজের সীমা থাকলে সেটা জেতে। ⛔ কেবল মালিক — টাকার নিয়ম।
+         */
+        /*
+         * ⭐ অবচয়ের তিন সুইচ — স্থায়ী সম্পদ ধাপ ২ ([[DepreciationEngine]])। ⓘ ডিফল্ট আজকের আচরণ: প্রথম মাস পুরো, অলস
+         * জিনিসও ক্ষয় ধরে (IAS 16.55), আর মাসের দৌড় হাতে। ⛔ কেবল মালিক — খাতার অঙ্ক বদলায়।
+         */
+        [
+            'key' => 'accounts.asset.prorata',
+            'super_admin_only' => true,
+            'label' => 'accounts::settings.asset_prorata',
+            'type' => 'choice',
+            'options' => ['full_month', 'daily'],
+            'option_label' => 'accounts::settings.asset_prorata_',
+            'default' => 'full_month',
+            'group' => 'entry',
+        ],
+        [
+            'key' => 'accounts.asset.idle_stops_depreciation',
+            'super_admin_only' => true,
+            'label' => 'accounts::settings.asset_idle_stops_depreciation',
+            'type' => 'boolean',
+            'default' => false,
+            'group' => 'entry',
+        ],
+        [
+            'key' => 'accounts.asset.auto_run',
+            'super_admin_only' => true,
+            'label' => 'accounts::settings.asset_auto_run',
+            'type' => 'boolean',
+            'default' => false,
+            'group' => 'entry',
+        ],
+        [
+            // ⭐ পুনর্মূল্যায়ন — ডিফল্টে বন্ধ, খরচের মডেল (IAS 16.30); মালিকের প্রশ্ন (স্থায়ী সম্পদ ধাপ ৩)
+            'key' => 'accounts.asset.revaluation',
+            'super_admin_only' => true,
+            'label' => 'accounts::settings.asset_revaluation',
+            'type' => 'boolean',
+            'default' => false,
+            'group' => 'entry',
+        ],
+        [
+            'key' => 'accounts.asset.capitalisation_threshold',
+            'super_admin_only' => true,
+            'label' => 'accounts::settings.asset_capitalisation_threshold',
+            'type' => 'number',
+            'default' => 0,
+            'group' => 'entry',
+        ],
         [
             'key' => 'accounts.print_signature_lines',
             'label' => 'accounts::settings.print_signature_lines',
@@ -835,13 +985,13 @@ return [
         AccountSaved::class,
         AccountFormOpened::class,
         // ⭐ চেক পাশ — টাকার জন্য আটকে থাকা DO আবার যাচাই হয় (বিক্রয়ের কাজের ধারা, ২ অক্টোবর ২০২৬)
-        \App\Modules\Accounts\Events\ChequeCleared::class,
+        ChequeCleared::class,
         // ⭐ খোলা জের মালিকের মূলধনে — অর্থ রেজিস্টারে মালিকের নামে তোলে (মালিকের আদেশ, ৫ অক্টোবর ২০২৬)
-        \App\Modules\Accounts\Events\OpeningCapitalBooked::class,
+        OpeningCapitalBooked::class,
     ],
 
     // ⭐ শেষ সই পড়লে হিসাবের কাগজ নিজেই শেষ হয় — গ১ ([[AccountsSignature]])
     'listeners' => [
-        \App\Core\Events\ApprovalDecided::class => [\App\Modules\Accounts\Listeners\FinishTheAccountsPaperOnTheLastSignature::class],
+        ApprovalDecided::class => [FinishTheAccountsPaperOnTheLastSignature::class],
     ],
 ];

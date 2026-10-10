@@ -2,12 +2,18 @@
 
 declare(strict_types=1);
 
+use App\Core\Contracts\KnowsAUsersEmployee;
+use App\Core\Engines\Print\PaperSize;
+use App\Core\Events\ApprovalDecided;
 use App\Modules\Hr\Dashboard\HrDashboard;
 use App\Modules\Hr\Dashboard\HrWidgets;
+use App\Modules\Hr\Listeners\FinishTheClaimOnTheLastSignature;
 use App\Modules\Hr\Models\Employee;
+use App\Modules\Hr\Models\ExpenseClaim;
 use App\Modules\Hr\Models\PayrollRun;
 use App\Modules\Hr\Models\Payslip;
 use App\Modules\Hr\Panels\EmployeeFacts;
+use App\Modules\Hr\Services\UserEmployee;
 
 /**
  * HR ও পে-রোল — প্ল্যানের ফেজ ৯।
@@ -259,7 +265,7 @@ return [
         'employee' => Employee::class,
         'payroll_run' => PayrollRun::class,
         // ⭐ খরচের দাবি — ভাউচার থেকে দাবিতে ফেরা, রসিদের ছবি, আর ক্যাশিয়ারের ভাউচার পাকা হলে "টাকা দেওয়া হয়েছে"
-        'expense_claim' => \App\Modules\Hr\Models\ExpenseClaim::class,
+        'expense_claim' => ExpenseClaim::class,
     ],
 
     /*
@@ -282,6 +288,11 @@ return [
      */
     'parties' => [
         'employee' => 'hr::menu.employees',
+    ],
+
+    // ⭐ কোন ব্যবহারকারী কোন কর্মী — সম্পদের দায়িত্বে থাকা মানুষ নিজের সম্পদ দেখেন (স্থায়ী সম্পদ ধাপ ৪)
+    'bindings' => [
+        KnowsAUsersEmployee::class => UserEmployee::class,
     ],
 
     /*
@@ -321,8 +332,8 @@ return [
             'key' => 'hr.print.paper.payslip',
             'label' => 'hr::settings.paper_payslip',
             'type' => 'choice',
-            'options' => \App\Core\Engines\Print\PaperSize::all(),
-            'default' => \App\Core\Engines\Print\PaperSize::A4,
+            'options' => PaperSize::all(),
+            'default' => PaperSize::A4,
             'group' => 'print',
         ],
         /*
@@ -427,7 +438,7 @@ return [
      * ⭐ খরচের দাবি বা অগ্রিমের শেষ সই — অনুমোদিত আর খসড়া ভাউচার; "না" হলে ফেরানো ([[FinishTheClaimOnTheLastSignature]])।
      */
     'listeners' => [
-        \App\Core\Events\ApprovalDecided::class => [\App\Modules\Hr\Listeners\FinishTheClaimOnTheLastSignature::class],
+        ApprovalDecided::class => [FinishTheClaimOnTheLastSignature::class],
     ],
 
     'sensitive_fields' => [

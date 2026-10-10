@@ -28,4 +28,10 @@ return [
     'party_control_detail' => 'Account balance :control, parties add up to :parties, difference :diff',
     'and_more_what' => 'More',
     'and_more' => 'The first hundred are shown; :more more (:total in all).',
+
+    // ⭐ Fixed assets phase 5
+    'asset_register' => 'Asset register vs ledger',
+    'asset_register_q' => 'Do the register\'s cost and accumulated depreciation equal the asset accounts\' balances?',
+    'asset_register_broken' => 'The asset pages say one figure and the ledger another — look for a hand journal, an asset registered as "already in the books", or a row changed by hand.',
+    'asset_register_detail' => 'Register :register, ledger :ledger, difference :diff',
 ];

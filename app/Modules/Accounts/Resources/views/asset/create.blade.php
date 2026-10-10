@@ -28,10 +28,24 @@
     @endif
 
     <form method="POST" action="{{ route('accounts.asset.store') }}"
-          x-data="{ method: @js(old('method', \App\Modules\Accounts\Models\FixedAsset::STRAIGHT_LINE)) }"
+          x-data="{ method: @js(old('method', '')) }"
           class="grid gap-3 rounded-(--radius-card) border border-(--color-border)
                  bg-(--color-surface-card) p-4 md:grid-cols-2 lg:grid-cols-4">
         @csrf
+
+        {{-- ⭐ শ্রেণি — পাঁচ খাত, পদ্ধতি, আয়ু আর শেষ দামের হার একবারে (স্থায়ী সম্পদ ধাপ ১)। ⓘ নিচের খাত-পদ্ধতি খালি
+             রাখলে শ্রেণিরটাই বসে; হাতে দিলে হাতেরটা জেতে। --}}
+        <label class="flex flex-col gap-1">
+            <span class="text-sm font-medium">{{ __('accounts::asset.category') }}</span>
+            <select name="category_id"
+                    class="h-(--spacing-field) rounded-(--radius-field) border border-(--color-border)
+                           bg-(--color-surface-app) px-2">
+                <option value="">{{ __('accounts::asset.no_category') }}</option>
+                @foreach ($categories as $category)
+                    <option value="{{ $category->id }}" @selected(old('category_id') == $category->id)>{{ $category->label() }}</option>
+                @endforeach
+            </select>
+        </label>
 
         <label class="flex flex-col gap-1">
             <span class="text-sm font-medium">{{ __('accounts::asset.name') }}</span>
@@ -42,25 +56,27 @@
 
         <label class="flex flex-col gap-1">
             <span class="text-sm font-medium">{{ __('accounts::asset.account') }}</span>
-            <select name="asset_account_id" required
+            <select name="asset_account_id"
                     class="h-(--spacing-field) rounded-(--radius-field) border border-(--color-border)
                            bg-(--color-surface-app) px-2">
+                <option value="">{{ __('accounts::asset.from_category') }}</option>
                 @foreach ($assetAccounts as $account)
-                    <option value="{{ $account->id }}">{{ $account->label() }}</option>
+                    <option value="{{ $account->id }}" @selected(old('asset_account_id') == $account->id)>{{ $account->label() }}</option>
                 @endforeach
             </select>
         </label>
 
         <label class="flex flex-col gap-1">
             <span class="text-sm font-medium">{{ __('accounts::asset.cost') }}</span>
-            <input type="number" step="0.01" min="0" name="cost" required value="{{ old('cost') }}"
+            <input type="number" step="0.01" min="0" name="cost" value="{{ old('cost') }}"
                    class="num h-(--spacing-field) rounded-(--radius-field) border border-(--color-border)
                           bg-(--color-surface-app) px-2 text-end">
+            <span class="text-2xs text-(--color-ink-muted)">{{ __('accounts::asset.cost_hint') }}</span>
         </label>
 
         <label class="flex flex-col gap-1">
             <span class="text-sm font-medium">{{ __('accounts::asset.salvage') }}</span>
-            <input type="number" step="0.01" min="0" name="salvage" value="{{ old('salvage', 0) }}"
+            <input type="number" step="0.01" min="0" name="salvage" value="{{ old('salvage') }}"
                    class="num h-(--spacing-field) rounded-(--radius-field) border border-(--color-border)
                           bg-(--color-surface-app) px-2 text-end">
         </label>
@@ -98,17 +114,28 @@
             <select name="method" x-model="method"
                     class="h-(--spacing-field) rounded-(--radius-field) border border-(--color-border)
                            bg-(--color-surface-app) px-2">
+                <option value="">{{ __('accounts::asset.from_category') }}</option>
                 <option value="{{ \App\Modules\Accounts\Models\FixedAsset::STRAIGHT_LINE }}">
                     {{ __('accounts::asset.straight') }}
                 </option>
                 <option value="{{ \App\Modules\Accounts\Models\FixedAsset::REDUCING }}">
                     {{ __('accounts::asset.reducing') }}
                 </option>
+                <option value="{{ \App\Modules\Accounts\Models\FixedAsset::UNITS }}">
+                    {{ __('accounts::asset.units') }}
+                </option>
             </select>
         </label>
 
         {{-- একটা পদ্ধতিতে আয়ু লাগে, অন্যটায় হার — দুইটা একসাথে নয়। --}}
-        <label class="flex flex-col gap-1" x-show="method === 'straight'">
+        <label class="flex flex-col gap-1" x-show="method === 'units'" x-cloak>
+            <span class="text-sm font-medium">{{ __('accounts::asset.total_units') }}</span>
+            <input type="number" step="0.01" min="0" name="total_units" value="{{ old('total_units') }}"
+                   class="num h-(--spacing-field) rounded-(--radius-field) border border-(--color-border)
+                          bg-(--color-surface-app) px-2 text-end">
+        </label>
+
+        <label class="flex flex-col gap-1" x-show="method !== 'reducing' && method !== 'units'">
             <span class="text-sm font-medium">{{ __('accounts::asset.life_months') }}</span>
             <input type="number" step="1" min="1" name="life_months" value="{{ old('life_months') }}"
                    class="num h-(--spacing-field) rounded-(--radius-field) border border-(--color-border)
@@ -122,6 +149,60 @@
                           bg-(--color-surface-app) px-2 text-end">
         </label>
 
+        {{-- ⭐ কোথায়, কার হাতে, কী জিনিস — নিবন্ধনের ঘর (স্থায়ী সম্পদ ধাপ ১, IAS 16)। ⓘ সব ঐচ্ছিক; পরে গণনা, ওয়ারেন্টি
+             আর বীমার মেয়াদের তালিকা এগুলো থেকেই আসে। --}}
+        <fieldset class="grid gap-3 md:col-span-2 md:grid-cols-2 lg:col-span-4 lg:grid-cols-4">
+            <legend class="mb-1 text-sm font-semibold">{{ __('accounts::asset.details') }}</legend>
+
+            <x-ui.select name="branch_id" :label="__('accounts::asset.branch')"
+                         :options="$branches->mapWithKeys(fn ($b) => [$b->id => $b->name()])->all()"
+                         :selected="old('branch_id', \App\Core\Support\CompanyContext::branchId())" placeholder="—" />
+            <x-ui.field name="location" :label="__('accounts::asset.location')" :value="old('location')" />
+            <x-ui.field name="department" :label="__('accounts::asset.department')" :value="old('department')" />
+            <x-ui.select name="custodian_id" :label="__('accounts::asset.custodian')" :options="$employees"
+                         :selected="old('custodian_id')" placeholder="—" />
+            <x-ui.select name="supplier_id" :label="__('accounts::asset.supplier')" :options="$suppliers"
+                         :selected="old('supplier_id')" placeholder="—" />
+            <x-ui.select name="parent_id" :label="__('accounts::asset.parent')"
+                         :options="$parents->mapWithKeys(fn ($p) => [$p->id => $p->document_no.' — '.$p->name])->all()"
+                         :selected="old('parent_id')" placeholder="—" :hint="__('accounts::asset.parent_hint')" />
+            <x-ui.field name="tag_no" :label="__('accounts::asset.tag_no')" :value="old('tag_no')" :hint="__('accounts::asset.tag_hint')" />
+            <label class="flex flex-col gap-1">
+                <span class="text-sm font-medium">{{ __('accounts::asset.put_in_use_on') }}</span>
+                <x-ui.date name="put_in_use_on" :value="old('put_in_use_on')" />
+            </label>
+            <x-ui.field name="serial_no" :label="__('accounts::asset.serial_no')" :value="old('serial_no')" />
+            <x-ui.field name="model_no" :label="__('accounts::asset.model_no')" :value="old('model_no')" />
+            <label class="flex flex-col gap-1">
+                <span class="text-sm font-medium">{{ __('accounts::asset.warranty_ends_on') }}</span>
+                <x-ui.date name="warranty_ends_on" :value="old('warranty_ends_on')" />
+            </label>
+            <x-ui.field name="insurance_policy_no" :label="__('accounts::asset.insurance_policy_no')" :value="old('insurance_policy_no')" />
+            <label class="flex flex-col gap-1">
+                <span class="text-sm font-medium">{{ __('accounts::asset.insured_until') }}</span>
+                <x-ui.date name="insured_until" :value="old('insured_until')" />
+            </label>
+        </fieldset>
+
+        {{-- ⭐ দামের ভাগ — কেনা, আনা, বসানো, শুল্ক (IAS 16.16)। ⓘ ভরলে যোগফলই দাম, উপরের "দাম" ঘর খালি রাখুন। --}}
+        <fieldset class="md:col-span-2 lg:col-span-4">
+            <legend class="text-sm font-semibold">{{ __('accounts::asset.cost_parts') }}</legend>
+            <p class="mb-2 text-2xs text-(--color-ink-muted)">{{ __('accounts::asset.cost_parts_note') }}</p>
+
+            <div class="grid gap-2 md:grid-cols-2 lg:grid-cols-5">
+                @foreach (\App\Modules\Accounts\Models\AssetCostPart::KINDS as $i => $kind)
+                    <label class="flex flex-col gap-1">
+                        <span class="text-xs">{{ __('accounts::asset.part_'.$kind) }}</span>
+                        <input type="hidden" name="cost_parts[{{ $i }}][kind]" value="{{ $kind }}">
+                        <input type="number" step="0.01" min="0" name="cost_parts[{{ $i }}][amount]"
+                               value="{{ old('cost_parts.'.$i.'.amount') }}"
+                               class="num h-(--spacing-field) rounded-(--radius-field) border border-(--color-border)
+                                      bg-(--color-surface-app) px-2 text-end">
+                    </label>
+                @endforeach
+            </div>
+        </fieldset>
+
         {{-- ⭐ টাকাটা কোথা থেকে এল — ২০ সেপ্টেম্বর ২০২৬।
 
              ⛔ আগে এই প্রশ্নটাই ছিল না, তাই সম্পদটা কেবল একটা রেকর্ড হয়ে
@@ -132,7 +213,7 @@
              ⓘ শেষ বিকল্পটা ("আগেই বসানো") না রাখলে পুরনো অভ্যাসে যিনি
              ভাউচার কেটে আসেন, তাঁর কেনা দুইবার খাতায় উঠত। --}}
         <fieldset class="md:col-span-2 lg:col-span-4"
-                  x-data="{ funded: @js(old('funded_by', \App\Modules\Accounts\Services\FixedAssetService::FUNDED_CAPITAL)) }">
+                  x-data="{ funded: @js(old('funded_by', $pickedLine ? \App\Modules\Accounts\Services\FixedAssetService::FUNDED_BILL : \App\Modules\Accounts\Services\FixedAssetService::FUNDED_CAPITAL)) }">
             <legend class="text-sm font-medium">{{ __('accounts::asset.funded_by') }}</legend>
             <p class="mb-2 text-2xs text-(--color-ink-muted)">{{ __('accounts::asset.funded_by_note') }}</p>
 
@@ -174,6 +255,31 @@
                             <option value="{{ $account->id }}" @selected(old('funding_account_id') == $account->id)>{{ $account->label() }}</option>
                         @endforeach
                     </select>
+                </label>
+
+                {{-- ⭐ পাকা ক্রয় বিলের সারি — মালটা মজুদ থেকে সম্পদে সরে, কেনাটা আবার বসে না (স্থায়ী সম্পদ ধাপ ১) --}}
+                <label class="flex flex-col gap-1 md:col-span-2" x-show="funded === 'bill'" x-cloak>
+                    <span class="text-sm font-medium">{{ __('accounts::asset.bill_line') }}</span>
+                    <select name="purchase_bill_line_id"
+                            class="h-(--spacing-field) rounded-(--radius-field) border border-(--color-border)
+                                   bg-(--color-surface-app) px-2">
+                        <option value="">—</option>
+                        @foreach ($billLines as $line)
+                            <option value="{{ $line['id'] }}" @selected(old('purchase_bill_line_id', $pickedLine) == $line['id'])>
+                                {{ $line['bill_no'] }} · {{ $line['date'] }} · {{ $line['supplier'] }} · {{ $line['product'] }}
+                                {{-- ⓘ ক্রয়মূল্য এখানে নয় — দামের চাবি ছাড়া কারও চোখে পড়ার কথা নয় ([[FieldSecurity]]) --}}
+                                ({{ \App\Core\Support\Money::quantity($line['qty']) }})
+                            </option>
+                        @endforeach
+                    </select>
+                    <span class="text-2xs text-(--color-ink-muted)">{{ __('accounts::asset.bill_line_note') }}</span>
+                </label>
+
+                <label class="flex flex-col gap-1" x-show="funded === 'bill'" x-cloak>
+                    <span class="text-sm font-medium">{{ __('accounts::asset.capitalised_qty') }}</span>
+                    <input type="number" step="0.0001" min="0" name="capitalised_qty" value="{{ old('capitalised_qty', 1) }}"
+                           class="num h-(--spacing-field) rounded-(--radius-field) border border-(--color-border)
+                                  bg-(--color-surface-app) px-2 text-end">
                 </label>
 
                 <label class="flex flex-col gap-1" x-show="funded === 'credit'" x-cloak>
