@@ -30,8 +30,11 @@ final class TheBengaliBillDesignsSpeakBengaliTest extends TestCase
 
     private const BENGALI_DESIGNS = ['mono_light_bn', 'bangla_heritage', 'world_standard_bn', 'mono_bold_classic_bn'];
 
-    /** ⓘ অডিটের ধরা লেখাগুলো — নকশায় যেগুলো এখন ভাষা-ফাইল থেকে আসে */
-    private const KEYS = ['closing_balance', 'previous_short', 'bill_short', 'this_invoice', 'owed_by_customer', 'paid_by_customer',
+    /**
+     * ⓘ অডিটের ধরা লেখাগুলো — নকশায় যেগুলো এখন ভাষা-ফাইল থেকে আসে। ⚠️ `bill_short` ("বিল") আর `paid` বাদ: শব্দ দুটো এত ছোট
+     * যে কাগজের অন্য বাংলা লেখায় (প্রতিষ্ঠানের নিজের পাদটীকা ইত্যাদি) ভেতরেই মিলে যায় — দাবিটা তখন ভুল জায়গায় লাল হত।
+     */
+    private const KEYS = ['closing_balance', 'previous_short', 'this_invoice', 'owed_by_customer', 'paid_by_customer',
         'received_short', 'closing_short', 'previous_balance', 'received_today'];
 
     protected function setUp(): void

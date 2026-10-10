@@ -48,8 +48,8 @@ final class TheSpecialForDbBillSpeaksTheDealersWordsTest extends TestCase
         $paper = $this->get(route('sales.invoice_sample', ['design' => 'special_db']))->assertOk()->getContent();
 
         foreach (['INVOICE', 'With Accounts Statement', 'Karim', 'TARGET REMINDER', 'INVOICE SUMMARY', 'data-balance-word',
-            // ⓘ নকশার নাম এখন ভাষা-ফাইল থেকে, মালিকের ভাষায় (পুনঃঅডিট ৯ অক্টোবর, ছাপা ১৯)
-            trans('sales::settings.design.special_db', [], auth()->user()->locale ?? config('app.locale'))] as $must) {
+            // ⓘ নকশার নাম ভাষা-ফাইল থেকে, কিন্তু ইংরেজি নকশায় ইংরেজিতে — মিশ্র কাগজ নয় (fe, ১১ অক্টোবর ২০২৬; [[TheBengaliBillDesignsSpeakBengaliTest]])
+            trans('sales::settings.design.special_db', [], 'en')] as $must) {
             $this->assertStringContainsString($must, (string) $paper, "⛔ নকশায় «{$must}» নেই।");
         }
 
