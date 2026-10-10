@@ -27,6 +27,10 @@ return [
 
     'status_shell' => 'Frame is live',
     'status_planned' => 'Coming soon',
+    'status_live' => 'Live',
+    'status_partly' => 'Partly live',
+    'phase_one_live' => 'Phase one live',
+    'phase_one_what' => 'Working today: the document centre (folders, search, filters, expiry), upload (one or many files), and for each document its preview, details, versions and audit, archive, and five confidentiality levels. The other screens are still plan pages.',
     'status_rule' => 'Rule to follow',
 
     'screens_heading' => 'The menu pages',

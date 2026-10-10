@@ -11,9 +11,18 @@ use App\Core\Engines\Dashboard\DateRange;
 use App\Core\Engines\Dashboard\Listing;
 use App\Core\Engines\Dashboard\Series;
 use App\Core\Engines\Dashboard\Stat;
+use App\Core\Module\ModuleRegistry;
 use App\Core\Services\DataScope;
 use App\Core\Support\CompanyContext;
+use App\Models\Approval;
 use App\Models\Attachment;
+use App\Models\User;
+use App\Modules\Documents\Models\Document;
+use App\Modules\Documents\Services\DocumentChoices;
+use App\Modules\Documents\Services\DocumentSignatures;
+use App\Modules\Documents\Services\DocumentWorkflow;
+use App\Modules\Documents\Support\DocumentCatalog;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
@@ -39,6 +48,9 @@ final class DocumentsDashboard implements ProvidesDashboard
             subtitle: __('documents::dashboard.subtitle'),
 
             stats: [
+                // ⭐ সপ্তম ধাপ — DOC-এর নিজের নয়টা সংখ্যা (পরিকল্পনা §৩), দেখা যায় এমন কাগজ থেকে
+                ...self::shelf($today),
+
                 new Stat(
                     label: __('documents::dashboard.total'),
                     value: (string) (clone $live)->count(),
@@ -72,9 +84,181 @@ final class DocumentsDashboard implements ProvidesDashboard
                 self::monthly($today),
                 self::byKind(),
                 self::byModule(),
+                // ⭐ সপ্তম ধাপ — DOC-এর কাজ আর অবস্থা (পরিকল্পনা §৩)
+                self::shelfActivity($today),
+                self::shelfStatus(),
             ],
 
-            listings: [self::recent()],
+            listings: [self::shelfRecent(), self::recent()],
+        );
+    }
+
+    /**
+     * ⭐ তাকের কাগজ — যিনি দেখছেন তিনি যে কাগজগুলো দেখতে পান (তিন দেয়াল, বিভাগ, গোপনীয়তা), তাদের গোড়া।
+     * ⛔ গোনাও দেয়ালের ভিতরে — "অতি গোপন" কাগজ যিনি দেখেন না তাঁর মোটে সেটা ঢোকে না।
+     */
+    private static function shelfBase(): Builder
+    {
+        $user = auth()->user();
+        $query = Document::query()->inViewedBranch();
+
+        return $user instanceof User ? $query->visibleTo($user) : $query->whereRaw('1 = 0');
+    }
+
+    /** @return list<Stat> মালিকের §৩-এর নয়টা */
+    private static function shelf(Carbon $today): array
+    {
+        $base = self::shelfBase();
+        $userId = (int) auth()->id();
+        $soon = $today->copy()->addDays(30)->toDateString();
+
+        $count = fn (callable $narrow) => (string) $narrow(clone $base)->count();
+
+        $pendingSignature = Approval::query()
+            ->where('module', DocumentWorkflow::MODULE)
+            ->where('action', DocumentSignatures::ACTION)
+            ->pending()
+            ->whereIn('approvable_id', (clone $base)->select('dms_documents.id'))
+            ->count();
+
+        $bytes = (string) (DB::table('attachments')
+            ->where('attachments.company_id', CompanyContext::id())
+            ->whereIn('attachments.id', DB::table('dms_document_versions')
+                ->where('dms_document_versions.company_id', CompanyContext::id())
+                ->whereIn('dms_document_versions.document_id', (clone $base)->select('dms_documents.id'))
+                ->select('dms_document_versions.attachment_id'))
+            ->sum('attachments.size_bytes') ?: '0');
+
+        return [
+            new Stat(label: __('documents::dashboard.doc_total'), value: $count(fn ($q) => $q),
+                hint: __('documents::dashboard.doc_total_hint'), href: route('documents.index')),
+            new Stat(label: __('documents::dashboard.doc_active'),
+                value: $count(fn ($q) => $q->notArchived()->whereNotIn('dms_documents.status', [DocumentCatalog::EXPIRED])),
+                hint: __('documents::dashboard.doc_active_hint'), tone: Stat::GOOD),
+            new Stat(label: __('documents::dashboard.doc_mine'),
+                value: $count(fn ($q) => $q->where(fn ($w) => $w->where('dms_documents.owner_id', $userId)->orWhere('dms_documents.created_by', $userId))),
+                hint: __('documents::dashboard.doc_mine_hint'), href: route('documents.mine')),
+            new Stat(label: __('documents::dashboard.doc_pending_approval'),
+                value: $count(fn ($q) => $q->whereIn('dms_documents.status', [DocumentCatalog::SUBMITTED, DocumentCatalog::UNDER_REVIEW])),
+                hint: __('documents::dashboard.doc_pending_approval_hint'), href: route('documents.approval'), tone: Stat::WARN),
+            new Stat(label: __('documents::dashboard.doc_pending_signature'), value: (string) $pendingSignature,
+                hint: __('documents::dashboard.doc_pending_signature_hint'), href: route('documents.signatures'), tone: Stat::WARN),
+            new Stat(label: __('documents::dashboard.doc_expiring'),
+                value: $count(fn ($q) => $q->notArchived()->whereNotNull('dms_documents.expiry_date')
+                    ->whereDate('dms_documents.expiry_date', '>=', $today->toDateString())
+                    ->whereDate('dms_documents.expiry_date', '<=', $soon)),
+                hint: __('documents::dashboard.doc_expiring_hint'), href: route('documents.expiry'), tone: Stat::WARN),
+            new Stat(label: __('documents::dashboard.doc_expired'),
+                value: $count(fn ($q) => $q->notArchived()->whereNotNull('dms_documents.expiry_date')
+                    ->whereDate('dms_documents.expiry_date', '<', $today->toDateString())),
+                hint: __('documents::dashboard.doc_expired_hint'), href: route('documents.expiry'), tone: Stat::BAD),
+            new Stat(label: __('documents::dashboard.doc_archived'), value: $count(fn ($q) => $q->onlyArchived()),
+                hint: __('documents::dashboard.doc_archived_hint'), href: route('documents.archived')),
+            new Stat(label: __('documents::dashboard.doc_storage'), value: self::size($bytes),
+                hint: __('documents::dashboard.doc_storage_hint')),
+        ];
+    }
+
+    /** ⭐ গত চৌদ্দ দিনে কত কাগজ উঠল আর কতবার নামানো হলো — অডিটের খাতা থেকে, দেখা যায় এমন কাগজের */
+    private static function shelfActivity(Carbon $today): Series
+    {
+        $start = $today->copy()->subDays(13);
+        $ids = self::shelfBase()->select('dms_documents.id');
+
+        $uploaded = self::shelfBase()
+            ->whereBetween('dms_documents.created_at', [$start->toDateString().' 00:00:00', $today->toDateString().' 23:59:59'])
+            ->toBase()
+            ->selectRaw('DATE(dms_documents.created_at) as d, COUNT(*) as n')
+            ->groupByRaw('DATE(dms_documents.created_at)')
+            ->pluck('n', 'd');
+
+        $downloaded = DB::table('audit_trails')
+            ->where('audit_trails.company_id', CompanyContext::id())
+            ->where('audit_trails.auditable_type', Document::class)
+            ->where('audit_trails.action', 'document_downloaded')
+            ->whereIn('audit_trails.auditable_id', $ids)
+            ->whereBetween('audit_trails.created_at', [$start->toDateString().' 00:00:00', $today->toDateString().' 23:59:59'])
+            ->selectRaw('DATE(audit_trails.created_at) as d, COUNT(*) as n')
+            ->groupByRaw('DATE(audit_trails.created_at)')
+            ->pluck('n', 'd');
+
+        $points = [];
+
+        for ($day = $start->copy(); $day->lte($today); $day->addDay()) {
+            $key = $day->toDateString();
+            $points[] = [
+                'label' => $day->locale(app()->getLocale())->translatedFormat('j M'),
+                'first' => (string) ($uploaded[$key] ?? 0),
+                'second' => (string) ($downloaded[$key] ?? 0),
+            ];
+        }
+
+        return new Series(
+            label: __('documents::dashboard.doc_activity'),
+            points: $points,
+            firstLabel: __('documents::dashboard.doc_uploaded'),
+            secondLabel: __('documents::dashboard.doc_downloaded'),
+            chart: 'line',
+            range: DateRange::label($start, $today),
+        );
+    }
+
+    /** ⭐ অবস্থা — অনুমোদিত, অপেক্ষায়, খসড়া, আর্কাইভ (পরিকল্পনা §৩) */
+    private static function shelfStatus(): Breakdown
+    {
+        $groups = [
+            'approved' => [DocumentCatalog::APPROVED, DocumentCatalog::PUBLISHED],
+            'pending' => [DocumentCatalog::SUBMITTED, DocumentCatalog::UNDER_REVIEW, DocumentCatalog::CHANGES_REQUESTED],
+            'draft' => [DocumentCatalog::DRAFT, DocumentCatalog::REJECTED, DocumentCatalog::EXPIRED],
+            'archived' => [DocumentCatalog::ARCHIVED],
+        ];
+
+        $byStatus = self::shelfBase()->toBase()
+            ->select('dms_documents.status')
+            ->selectRaw('COUNT(*) as n')
+            ->groupBy('dms_documents.status')
+            ->pluck('n', 'status');
+
+        $parts = [];
+
+        foreach ($groups as $key => $statuses) {
+            $parts[] = [
+                'label' => __('documents::dashboard.doc_status_'.$key),
+                'value' => (string) collect($statuses)->sum(fn ($s) => (int) ($byStatus[$s] ?? 0)),
+            ];
+        }
+
+        return new Breakdown(
+            label: __('documents::dashboard.doc_status'),
+            parts: $parts,
+            hint: __('documents::dashboard.doc_status_hint'),
+            chart: 'donut',
+        );
+    }
+
+    /** ⭐ সাম্প্রতিক কাগজ — নাম · ধরন · মালিক · ভার্সন · অবস্থা · বদল (পরিকল্পনা §৩) */
+    private static function shelfRecent(): Listing
+    {
+        $choices = app(DocumentChoices::class);
+
+        return new Listing(
+            label: __('documents::dashboard.doc_recent'),
+            columns: [
+                ['key' => 'name', 'label' => __('documents::field.name'), 'render' => fn (Document $d) => $d->name],
+                ['key' => 'type', 'label' => __('documents::field.doc_type'), 'width' => '8rem',
+                    'render' => fn (Document $d) => $choices->typeName($d->doc_type)],
+                ['key' => 'owner', 'label' => __('documents::field.owner'), 'width' => '9rem',
+                    'render' => fn (Document $d) => $d->owner?->name ?? '—'],
+                ['key' => 'version', 'label' => __('documents::field.version'), 'width' => '5rem',
+                    'render' => fn (Document $d) => $d->currentVersion ? 'v'.$d->currentVersion->label() : '—'],
+                ['key' => 'status', 'label' => __('documents::field.status'), 'width' => '8rem',
+                    'render' => fn (Document $d) => __('documents::catalog.status.'.$d->status)],
+                ['key' => 'updated', 'label' => __('documents::field.updated_at'), 'width' => '9rem',
+                    'render' => fn (Document $d) => $d->updated_at?->locale(app()->getLocale())->translatedFormat('j M, H:i') ?? ''],
+            ],
+            rows: self::shelfBase()->with(['owner:id,name', 'currentVersion'])->latest('dms_documents.updated_at')->limit(8)->get(),
+            empty: __('documents::message.none_yet'),
+            href: route('documents.index'),
         );
     }
 
@@ -118,12 +302,24 @@ final class DocumentsDashboard implements ProvidesDashboard
         );
     }
 
+    /**
+     * ⛔ অন্য কাজে জোড়া নথি — ডকুমেন্টের নিজের ফাইল বাদ (১১ অক্টোবর ২০২৬, documents রিভিউ ⚠️৭)।
+     *
+     * ⓘ এই তিন টালি ("সদ্য জোড়া", ধরন, মডিউল) ডকুমেন্ট মডিউলের আগের — বিল, ভাউচার, কর্মীর কাগজে জোড়া ফাইল গোনে। ডকুমেন্টের ফাইলও
+     * এখন attachments-এ বসে, আর এই টালিগুলো দেয়াল দেখে না: "সংরক্ষিত" কাগজের আসল ফাইলের নাম যে-কারও ড্যাশবোর্ডে উঠত। ডকুমেন্টের
+     * নিজের সংখ্যা উপরের টালিগুলোয়, দেয়াল মেনে।
+     */
+    private static function attachedElsewhere(): \Illuminate\Database\Eloquent\Builder
+    {
+        return Attachment::query()->where('source_module', '!=', \App\Modules\Documents\Services\DocumentLibrary::MODULE);
+    }
+
     /** নথির ধরন — PDF, ছবি, হিসাবের খাতা (এক্সেল/CSV), লেখা (ওয়ার্ড), অন্যান্য; ডোনাট */
     private static function byKind(): Breakdown
     {
         $kinds = ['pdf' => 0, 'image' => 0, 'sheet' => 0, 'word' => 0, 'other' => 0];
 
-        foreach (Attachment::query()->selectRaw('mime_type, COUNT(*) as n')->groupBy('mime_type')->pluck('n', 'mime_type') as $mime => $n) {
+        foreach (self::attachedElsewhere()->selectRaw('mime_type, COUNT(*) as n')->groupBy('mime_type')->pluck('n', 'mime_type') as $mime => $n) {
             $kinds[self::kindOf((string) $mime)] += (int) $n;
         }
 
@@ -138,7 +334,7 @@ final class DocumentsDashboard implements ProvidesDashboard
     /** কোন কাজে কত নথি জোড়া — মডিউল ধরে, বড় ছয়টা; আড়াআড়ি দণ্ড */
     private static function byModule(): Breakdown
     {
-        $rows = Attachment::query()
+        $rows = self::attachedElsewhere()
             ->selectRaw('source_module, COUNT(*) as n')
             ->groupBy('source_module')
             ->orderByDesc('n')
@@ -173,7 +369,7 @@ final class DocumentsDashboard implements ProvidesDashboard
                 ['key' => 'when', 'label' => __('documents::dashboard.col_when'), 'width' => '9rem',
                     'render' => fn (Attachment $a) => $a->created_at?->locale(app()->getLocale())->translatedFormat('j M, H:i') ?? ''],
             ],
-            rows: Attachment::query()->latest('id')->limit(8)->get(),
+            rows: self::attachedElsewhere()->latest('id')->limit(8)->get(),
             empty: __('documents::dashboard.none_yet'),
         );
     }
@@ -199,7 +395,7 @@ final class DocumentsDashboard implements ProvidesDashboard
     /** মডিউলের নাম, পর্দার ভাষায় — না থাকলে কোডটাই */
     private static function moduleName(string $code): string
     {
-        $name = app(\App\Core\Module\ModuleRegistry::class)->get($code)?->name ?? [];
+        $name = app(ModuleRegistry::class)->get($code)?->name ?? [];
 
         return (string) ($name[app()->getLocale()] ?? $name['en'] ?? $code);
     }
