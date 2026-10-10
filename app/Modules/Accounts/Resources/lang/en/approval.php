@@ -28,5 +28,6 @@ return [
     'till_opening' => 'Opening balance of a new cash till',
     'fixed_asset_register' => 'Fixed asset registered (with funding)',
     'fixed_asset_dispose' => 'Fixed asset sold or written off',
+    'fixed_asset_opening' => 'Fixed asset brought in from before ABOS',
     'till_handover' => 'Handover of a cash box',
 ];

@@ -4,13 +4,17 @@ declare(strict_types=1);
 
 namespace App\Modules\Accounts\Services;
 
+use App\Core\Contracts\CapitalisesABillLine;
 use App\Core\Engines\NumberSeries\NumberSeriesEngine;
 use App\Core\Engines\Posting\PostingEngine;
 use App\Core\Services\PartyRegistry;
+use App\Core\Services\SettingsService;
 use App\Core\Support\CompanyContext;
 use App\Core\Support\Money;
 use App\Models\FinancialYear;
 use App\Modules\Accounts\Models\Account;
+use App\Modules\Accounts\Models\AssetCategory;
+use App\Modules\Accounts\Models\AssetCostPart;
 use App\Modules\Accounts\Models\AssetTransfer;
 use App\Modules\Accounts\Models\DepreciationEntry;
 use App\Modules\Accounts\Models\FixedAsset;
@@ -45,6 +49,14 @@ final class FixedAssetService
     /** আগেই ভাউচার কাটা হয়েছে — এখানে কিছু বসবে না। */
     public const FUNDED_ALREADY = 'already';
 
+    /**
+     * ⭐ পাকা ক্রয় বিলের সারি থেকে — মালটা মজুদ থেকে সম্পদে সরে, কেনাটা আবার বসে না (ধাপ ১; [[CapitalisesABillLine]])।
+     */
+    public const FUNDED_BILL = 'bill';
+
+    /** ⭐ মূলধনীকরণের সীমা — এর নিচের কেনা খরচ, সম্পদ নয় (মালিকের সেটিং; ধাপ ১) */
+    public const THRESHOLD = 'accounts.asset.capitalisation_threshold';
+
     /** @var list<string> */
     public const FUNDING_WAYS = [
         self::FUNDED_CAPITAL,
@@ -52,6 +64,7 @@ final class FixedAssetService
         self::FUNDED_CREDIT,
         self::FUNDED_OPENING,
         self::FUNDED_ALREADY,
+        self::FUNDED_BILL,
     ];
 
     public function __construct(
@@ -81,7 +94,19 @@ final class FixedAssetService
      */
     public function register(array $data): FixedAsset
     {
+        $data = $this->withCategory($data);
+        $parts = $this->costParts($data);
+        $bill = $this->billLine($data);
+
+        if ($parts !== [] && $bill === null) {
+            $data['cost'] = array_reduce($parts, fn (string $sum, array $p) => bcadd($sum, $p['amount'], 4), '0');
+        }
+
         $method = $data['method'] ?? FixedAsset::STRAIGHT_LINE;
+
+        if (! in_array($method, FixedAsset::METHODS, true)) {
+            throw ValidationException::withMessages(['method' => __('accounts::asset.method_unknown')]);
+        }
 
         if ($method === FixedAsset::STRAIGHT_LINE && (int) ($data['life_months'] ?? 0) <= 0) {
             throw ValidationException::withMessages([
@@ -93,6 +118,11 @@ final class FixedAssetService
             throw ValidationException::withMessages([
                 'rate' => __('accounts::asset.rate_required'),
             ]);
+        }
+
+        // ⓘ শেষ দাম না দিলে শ্রেণির হার ধরে — দামের শতকরা (ধাপ ১)
+        if (blank($data['salvage'] ?? null) && isset($data['residual_percent'])) {
+            $data['salvage'] = bcdiv(bcmul((string) $data['cost'], (string) $data['residual_percent'], 8), '100', 4);
         }
 
         /*
@@ -107,15 +137,26 @@ final class FixedAssetService
             ]);
         }
 
-        $funding = $this->fundingFrom($data);
+        $this->assertAboveThreshold((string) $data['cost'], $data['category_id'] ?? null);
+        $this->assertTheRestIsOurs($data);
+
+        $funding = $bill === null ? $this->fundingFrom($data) : null;
 
         /* ⓘ এ পর্যন্ত যতটা ক্ষয় ধরা হয়েছে — সিদ্ধান্তের ঘর, কাগজের কলাম নয় */
         $openingDepreciation = (string) ($data['opening_accumulated'] ?? '0');
 
+        /*
+         * ⭐ কোন সই — পুরনো খাতার জের তোলার নিজের সই ([[AccountsSignature::FIXED_ASSET_OPENING]]), বাকিগুলো নিবন্ধনের
+         * (মালিক, ১০ অক্টোবর ২০২৬: আমদানির নিজের চাবি আর নিজের সই)।
+         */
+        $action = ($data['funded_by'] ?? null) === self::FUNDED_OPENING
+            ? AccountsSignature::FIXED_ASSET_OPENING
+            : AccountsSignature::FIXED_ASSET_REGISTER;
+
         unset(
             $data['funded_by'], $data['funding_person_id'],
             $data['funding_account_id'], $data['funding_supplier_id'],
-            $data['opening_accumulated'],
+            $data['opening_accumulated'], $data['cost_parts'], $data['residual_percent'],
         );
 
         /*
@@ -123,21 +164,43 @@ final class FixedAssetService
          *
          * ⛔ পোস্টিং ইঞ্জিন অভিযোগ করে `trx_date` নামে ([[OpenPeriod::assertOpen]]),
          * আর সম্পদের ফরমে ওই নামে কোনো ঘর নেই — ঘরটার নাম `acquired_on`।
-         * ⚠️ ফলে বার্তাটা পর্দায় কোথাও বসত না: ব্যবহারকারী সেভ চাপতেন,
+         * ⚠️ ফলে বার্তাটা পর্দায় কোথাও বসত না: ব্যবহারকারী সেভ চাপতেন,
          * পাতা ফিরে আসত, আর **কেন হলো না সেটা কোথাও লেখা থাকত না**।
          */
         try {
-            return DB::transaction(function () use ($data, $method, $funding, $openingDepreciation) {
+            return DB::transaction(function () use ($data, $method, $funding, $openingDepreciation, $parts, $bill, $action) {
+                $documentNo = $this->numbers->next('FA');
+
                 $asset = FixedAsset::create([
                     ...$data,
                     'company_id' => CompanyContext::id(),
                     'branch_id' => $data['branch_id'] ?? CompanyContext::branchId(),
-                    'document_no' => $this->numbers->next('FA'),
+                    'document_no' => $documentNo,
+                    // ⓘ গায়ের ট্যাগ না দিলে কাগজের নম্বরই ট্যাগ — নম্বরের ক্রম থেকে, কখনো দুইবার নয় (ধাপ ১)
+                    'tag_no' => ($data['tag_no'] ?? null) ?: $documentNo,
                     'method' => $method,
                     // ⓘ টাকার উৎস থাকলে আগে সইয়ের অপেক্ষায় — নিচে সই লাগে না দেখলে তখনই চালু
-                    'status' => $funding !== null ? FixedAsset::AWAITING : FixedAsset::ACTIVE,
+                    'status' => ($funding !== null || $bill !== null) ? FixedAsset::AWAITING : FixedAsset::ACTIVE,
                     'created_by' => auth()->id(),
                 ]);
+
+                foreach ($bill === null ? $parts : [] as $part) {
+                    $asset->costParts()->create([...$part, 'company_id' => $asset->company_id]);
+                }
+
+                /*
+                 * ⭐ ক্রয় বিলের সারি থেকে — সইয়ের পরে মালটা মজুদ থেকে সরে ([[finishRegistered()]]); ছক বন্ধে এখনই।
+                 */
+                if ($bill !== null) {
+                    $signed = ['bill' => $bill];
+
+                    if (app(AccountsSignature::class)->holds($asset, AccountsSignature::FIXED_ASSET_REGISTER,
+                        (string) $asset->cost, (string) $asset->name, $signed)) {
+                        return $asset;
+                    }
+
+                    return $this->finishRegistered($asset, $signed);
+                }
 
                 /*
                  * ⭐ সই — গ১, Accounts-Finance অডিট, ৪ অক্টোবর ২০২৬ ([[AccountsSignature]])।
@@ -146,7 +209,7 @@ final class FixedAssetService
                  * "সইয়ের অপেক্ষায়" থাকে — অবচয় ধরে না, খাতায় নেই; শেষ সইয়ে [[finishRegistered()]] ঠিক এই উৎস দিয়েই
                  * দাখিলা বসায়। ছক বন্ধে (UB) আগের মতো এখনই।
                  */
-                if ($funding !== null && app(AccountsSignature::class)->holds($asset, AccountsSignature::FIXED_ASSET_REGISTER,
+                if ($funding !== null && app(AccountsSignature::class)->holds($asset, $action,
                     (string) $asset->cost, (string) $asset->name, ['funding' => $funding, 'opening_depreciation' => $openingDepreciation])) {
                     return $asset;
                 }
@@ -186,6 +249,146 @@ final class FixedAssetService
     }
 
     /**
+     * ⭐ শ্রেণির ছাঁচ — যে ঘর খালি, সেখানে শ্রেণির খাত, পদ্ধতি, আয়ু আর হার (ধাপ ১)।
+     *
+     * ⓘ হাতে দেওয়া ঘর জেতে — শ্রেণি কেবল খালি ঘর ভরে। শেষ দাম না দিলে দামের উপর শ্রেণির হার (শতকরা), [[register()]]-এ।
+     *
+     * @param  array<string, mixed>  $data
+     * @return array<string, mixed>
+     */
+    private function withCategory(array $data): array
+    {
+        if (blank($data['category_id'] ?? null)) {
+            unset($data['category_id']);
+
+            return $data;
+        }
+
+        $category = AssetCategory::query()->active()->whereKey((int) $data['category_id'])->first();
+
+        if ($category === null) {
+            throw ValidationException::withMessages(['category_id' => __('accounts::asset.category_not_found')]);
+        }
+
+        foreach (['asset_account_id', 'accumulated_account_id', 'expense_account_id', 'method', 'life_months', 'rate'] as $field) {
+            if (blank($data[$field] ?? null) && $category->{$field} !== null) {
+                $data[$field] = $category->{$field};
+            }
+        }
+
+        $data['category_id'] = (int) $category->id;
+        $data['residual_percent'] = (string) $category->residual_percent;
+
+        return $data;
+    }
+
+    /**
+     * ⭐ দামের ভাগ — কেনা দাম, আনা, বসানো, শুল্ক (IAS 16.16)। ⓘ শূন্যের ভাগ বাদ; থাকলে যোগফলই দাম।
+     *
+     * @param  array<string, mixed>  $data
+     * @return list<array{kind: string, amount: string, note: ?string}>
+     */
+    private function costParts(array $data): array
+    {
+        $parts = [];
+
+        foreach ((array) ($data['cost_parts'] ?? []) as $part) {
+            $amount = (string) ($part['amount'] ?? '0');
+
+            if (! is_numeric($amount) || bccomp($amount, '0', 4) === 0) {
+                continue;
+            }
+
+            if (bccomp($amount, '0', 4) < 0 || ! in_array($part['kind'] ?? null, AssetCostPart::KINDS, true)) {
+                throw ValidationException::withMessages(['cost_parts' => __('accounts::asset.cost_part_wrong')]);
+            }
+
+            $parts[] = ['kind' => (string) $part['kind'], 'amount' => Money::of($amount), 'note' => ($part['note'] ?? null) ?: null];
+        }
+
+        return $parts;
+    }
+
+    /**
+     * ⭐ ক্রয় বিলের সারি — কোন সারি, কতটা; আগে তোলা অংশ বাদে (ধাপ ১; [[CapitalisesABillLine]])।
+     *
+     * ⛔ একই সারি দুইবার পুরোটা তোলা যায় না — সইয়ের অপেক্ষায় থাকা অংশও গোনা হয়, নইলে দুইজন একসাথে একই ফ্রিজ তুলতেন।
+     * ⓘ দাম আপাতত বিলের দরে; সইয়ের পরে মজুদ যে দামে ছাড়ে সেটাই আসল দাম হয়ে বসে ([[finishRegistered()]])।
+     *
+     * @param  array<string, mixed>  $data
+     * @return array{line_id: int, qty: string}|null
+     */
+    private function billLine(array &$data): ?array
+    {
+        if (($data['funded_by'] ?? null) !== self::FUNDED_BILL) {
+            return null;
+        }
+
+        $line = app(CapitalisesABillLine::class)->line((int) ($data['purchase_bill_line_id'] ?? 0));
+        $qty = Money::of($data['capitalised_qty'] ?? '0');
+
+        if ($line === null) {
+            throw ValidationException::withMessages(['purchase_bill_line_id' => __('accounts::asset.bill_line_missing')]);
+        }
+
+        $taken = (string) FixedAsset::acrossBranches()
+            ->where('purchase_bill_line_id', $line['id'])
+            ->whereNotIn('status', [FixedAsset::DISPOSED, FixedAsset::WRITTEN_OFF, FixedAsset::LOST])
+            ->sum('capitalised_qty');
+        $left = bcsub($line['qty'], $taken, 4);
+
+        if (bccomp($qty, '0', 4) <= 0 || bccomp($qty, $left, 4) > 0) {
+            throw ValidationException::withMessages(['capitalised_qty' => __('accounts::asset.bill_qty_over', ['left' => Money::quantity($left)])]);
+        }
+
+        $data['purchase_bill_id'] = $line['bill_id'];
+        $data['purchase_bill_line_id'] = $line['id'];
+        $data['capitalised_qty'] = $qty;
+        $data['supplier_id'] = ($data['supplier_id'] ?? null) ?: $line['supplier_id'];
+        $data['cost'] = bcmul($line['unit_cost'], $qty, 4);
+        $data['branch_id'] = ($data['branch_id'] ?? null) ?: $line['branch_id'];
+
+        return ['line_id' => $line['id'], 'qty' => $qty];
+    }
+
+    /**
+     * ⭐ সীমার নিচের কেনা খরচ — সম্পদ নয় (মালিকের সেটিং; শ্রেণির নিজের সীমা থাকলে সেটা)। ⓘ শূন্য মানে কোনো সীমা নেই।
+     */
+    private function assertAboveThreshold(string $cost, mixed $categoryId): void
+    {
+        $own = $categoryId === null ? null : AssetCategory::query()->whereKey((int) $categoryId)->value('capitalisation_threshold');
+        $limit = Money::of($own ?? app(SettingsService::class)->get(self::THRESHOLD, 0));
+
+        if (bccomp($limit, '0', 4) > 0 && bccomp($cost, $limit, 4) < 0) {
+            throw ValidationException::withMessages([
+                'cost' => __('accounts::asset.below_threshold', ['limit' => Money::format($limit)]),
+            ]);
+        }
+    }
+
+    /**
+     * ⛔ মূল সম্পদ, দায়িত্বের কর্মী আর বিক্রেতা — এই কোম্পানির, আর মূলটা খাতায় আছে (ধাপ ১)।
+     *
+     * @param  array<string, mixed>  $data
+     */
+    private function assertTheRestIsOurs(array $data): void
+    {
+        if (filled($data['parent_id'] ?? null)) {
+            $parent = FixedAsset::acrossBranches()->whereKey((int) $data['parent_id'])->first();
+
+            if ($parent === null || ! ($parent->isInService() || $parent->isAwaiting()) || $parent->parent_id !== null) {
+                throw ValidationException::withMessages(['parent_id' => __('accounts::asset.parent_wrong')]);
+            }
+        }
+
+        foreach (['custodian_id' => 'employee', 'supplier_id' => 'supplier'] as $field => $type) {
+            if (filled($data[$field] ?? null) && ! app(PartyRegistry::class)->exists($type, (int) $data[$field])) {
+                throw ValidationException::withMessages([$field => __('accounts::asset.funding_not_found')]);
+            }
+        }
+    }
+
+    /**
      * তারিখের অভিযোগ হলে সেটা ফরমের ঘরে বসায়।
      *
      * ⓘ অন্য সব ভুল অবিকল থাকে — কেবল `trx_date` নামটা বদলায়,
@@ -201,8 +404,26 @@ final class FixedAssetService
     public function finishRegistered(FixedAsset $asset, array $signed): FixedAsset
     {
         return DB::transaction(function () use ($asset, $signed) {
-            $locked = FixedAsset::query()->whereKey($asset->id)->lockForUpdate()->firstOrFail();
+            $locked = FixedAsset::acrossBranches()->whereKey($asset->id)->lockForUpdate()->firstOrFail();
             $funding = $signed['funding'] ?? null;
+
+            /*
+             * ⭐ ক্রয় বিলের সারি — মালটা মজুদ থেকে সম্পদে, মজুদের নিজের দাখিলায় আর মজুদের দামে; সেটাই সম্পদের দাম
+             * (ধাপ ১; [[CapitalisesABillLine]])। ⛔ বিক্রেতার পাওনা নড়ে না — কেনাটা বিলের দিনই খাতায় উঠেছে।
+             */
+            if ($locked->isAwaiting() && is_array($signed['bill'] ?? null)) {
+                $moved = app(CapitalisesABillLine::class)->capitalise(
+                    (int) $signed['bill']['line_id'],
+                    (string) $signed['bill']['qty'],
+                    (int) $locked->asset_account_id,
+                    Carbon::parse($this->postableDate($locked->acquired_on)),
+                    $locked->name.' — '.$locked->document_no,
+                );
+
+                $locked->forceFill(['status' => FixedAsset::ACTIVE, 'cost' => $moved])->save();
+
+                return $locked->refresh();
+            }
 
             if (! $locked->isAwaiting() || ! is_array($funding)) {
                 return $locked;
@@ -445,7 +666,8 @@ final class FixedAssetService
     {
         $periodEnd = Carbon::parse($month)->endOfMonth()->startOfDay();
 
-        if (! $asset->isActive()) {
+        // ⓘ অলস আর মেরামতে থাকা জিনিসও ক্ষয় ধরে — IAS 16.55 (ধাপ ১; [[FixedAsset::IN_SERVICE]])
+        if (! $asset->isInService()) {
             throw ValidationException::withMessages([
                 // ⓘ সইয়ের অপেক্ষা "আর ব্যবহারে নেই" নয় — আলাদা কথা (গ১)
                 'status' => $asset->isAwaiting() ? __('accounts::asset.awaiting_signature') : __('accounts::asset.not_active'),
@@ -519,7 +741,7 @@ final class FixedAssetService
         $skipped = 0;
         $total = '0';
 
-        foreach (FixedAsset::query()->active()->get() as $asset) {
+        foreach (FixedAsset::query()->inService()->get() as $asset) {
             $already = DepreciationEntry::query()
                 ->where('fixed_asset_id', $asset->id)
                 ->where('period_end', $periodEnd->toDateString())
@@ -583,7 +805,7 @@ final class FixedAssetService
         Carbon|string|null $date = null,
         ?string $note = null,
     ): AssetTransfer {
-        if (! $asset->isActive()) {
+        if (! $asset->isInService()) {
             throw ValidationException::withMessages([
                 'status' => __('accounts::asset.not_active'),
             ]);
@@ -645,13 +867,36 @@ final class FixedAssetService
         });
     }
 
+    /**
+     * ⭐ অবস্থা বদল — ব্যবহারে, অলস, মেরামতে (ধাপ ১)। ⓘ তিনটাই খাতায় থাকে আর ক্ষয় ধরে (IAS 16.55), তাই টাকা নড়ে না।
+     * ⛔ খাতায় নেই এমন (সইয়ের অপেক্ষা, বিদায়, বাতিল, হারানো) সম্পদের অবস্থা এখান দিয়ে বদলায় না — সারিতে তালা দিয়ে দেখা।
+     */
+    public function changeStatus(FixedAsset $asset, string $status): FixedAsset
+    {
+        if (! in_array($status, FixedAsset::SWITCHABLE, true)) {
+            throw ValidationException::withMessages(['status' => __('accounts::asset.status_not_switchable')]);
+        }
+
+        return DB::transaction(function () use ($asset, $status) {
+            $locked = FixedAsset::query()->whereKey($asset->id)->lockForUpdate()->firstOrFail();
+
+            if (! $locked->isInService()) {
+                throw ValidationException::withMessages(['status' => __('accounts::asset.not_active')]);
+            }
+
+            $locked->update(['status' => $status]);
+
+            return $locked->refresh();
+        });
+    }
+
     public function dispose(
         FixedAsset $asset,
         string $amount,
         int $intoAccountId,
         Carbon|string|null $date = null,
     ): FixedAsset {
-        if (! $asset->isActive()) {
+        if (! $asset->isInService()) {
             throw ValidationException::withMessages([
                 'status' => __('accounts::asset.not_active'),
             ]);

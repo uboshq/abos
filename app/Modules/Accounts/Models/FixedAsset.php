@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace App\Modules\Accounts\Models;
 
 use App\Core\Concerns\BelongsToCompany;
-use App\Core\Concerns\ScopedToUserBranch;
 use App\Core\Concerns\HasPublicId;
 use App\Core\Concerns\IsAudited;
+use App\Core\Concerns\ScopedToUserBranch;
 use App\Core\Contracts\Drillable;
 use App\Models\Branch;
 use App\Models\User;
@@ -30,10 +30,11 @@ use Illuminate\Support\Carbon;
 class FixedAsset extends Model implements Drillable
 {
     use BelongsToCompany;
-    // ⛔ শাখার দেয়াল — হেডারের শাখা আর মানুষের নাগাল (অডিট ⛔৪, ৬ অক্টোবর ২০২৬; [[ScopedToUserBranch]])
-    use ScopedToUserBranch;
+
     use HasPublicId;
     use IsAudited;
+    // ⛔ শাখার দেয়াল — হেডারের শাখা আর মানুষের নাগাল (অডিট ⛔৪, ৬ অক্টোবর ২০২৬; [[ScopedToUserBranch]])
+    use ScopedToUserBranch;
     use SoftDeletes;
 
     /** সমান কিস্তিতে ক্ষয় — প্রতি মাসে একই অঙ্ক। */
@@ -42,12 +43,38 @@ class FixedAsset extends Model implements Drillable
     /** অবশিষ্ট দামের উপর হার — প্রথম বছরগুলোয় বেশি, পরে কম। */
     public const REDUCING = 'reducing';
 
+    /** @var list<string> */
+    public const METHODS = [self::STRAIGHT_LINE, self::REDUCING];
+
     public const ACTIVE = 'active';
 
     public const DISPOSED = 'disposed';
 
     /** ⭐ নিবন্ধন সইয়ের অপেক্ষায় — অবচয় ধরে না, খাতায় নেই (গ১, ৪ অক্টোবর ২০২৬) */
     public const AWAITING = 'awaiting';
+
+    /*
+     * ⭐ ব্যবহারের অবস্থা — অলস, মেরামতে, বাতিল, হারানো (মালিক, ১০ অক্টোবর ২০২৬; IAS 16.55)।
+     * ⓘ "ব্যবহারে" আগের মতোই `active` — পুরনো সারি, পুরনো কোড অক্ষত। অলস আর মেরামতে থাকা জিনিসও খাতায় থাকে আর ক্ষয়
+     * ধরে ([[inService()]]): IAS 16 বলে অলস থাকলেও অবচয় থামে না। বাতিল আর হারানো খাতা থেকে বেরোনোর ঘটনা — টাকার কাজ,
+     * তাই সইসহ আলাদা পথে (ধাপ ৩)।
+     */
+    public const IDLE = 'idle';
+
+    public const UNDER_REPAIR = 'under_repair';
+
+    public const WRITTEN_OFF = 'written_off';
+
+    public const LOST = 'lost';
+
+    /** @var list<string> খাতায় আছে, কাজে লাগছে বা লাগতে পারে */
+    public const IN_SERVICE = [self::ACTIVE, self::IDLE, self::UNDER_REPAIR];
+
+    /** @var list<string> হাতে বদলানো যায় এমন অবস্থা — টাকা নড়ে না */
+    public const SWITCHABLE = [self::ACTIVE, self::IDLE, self::UNDER_REPAIR];
+
+    /** @var list<string> পর্দা আর ছাঁকনির ক্রম */
+    public const STATUSES = [self::AWAITING, self::ACTIVE, self::IDLE, self::UNDER_REPAIR, self::DISPOSED, self::WRITTEN_OFF, self::LOST];
 
     protected $table = 'acc_fixed_assets';
 
@@ -56,6 +83,10 @@ class FixedAsset extends Model implements Drillable
         'asset_account_id', 'accumulated_account_id', 'expense_account_id',
         'cost', 'salvage', 'acquired_on', 'method', 'life_months', 'rate',
         'status', 'disposed_on', 'disposal_amount', 'narration', 'created_by',
+        // ⭐ নিবন্ধনের ঘর — ধাপ ১ (মালিক, ১০ অক্টোবর ২০২৬)
+        'category_id', 'parent_id', 'location', 'department', 'custodian_id', 'supplier_id',
+        'purchase_bill_id', 'purchase_bill_line_id', 'capitalised_qty', 'put_in_use_on',
+        'serial_no', 'model_no', 'warranty_ends_on', 'insurance_policy_no', 'insured_until',
     ];
 
     protected function casts(): array
@@ -68,6 +99,10 @@ class FixedAsset extends Model implements Drillable
             'acquired_on' => 'date',
             'disposed_on' => 'date',
             'life_months' => 'integer',
+            'capitalised_qty' => 'decimal:4',
+            'put_in_use_on' => 'date',
+            'warranty_ends_on' => 'date',
+            'insured_until' => 'date',
         ];
     }
 
@@ -89,6 +124,27 @@ class FixedAsset extends Model implements Drillable
     public function expenseAccount(): BelongsTo
     {
         return $this->belongsTo(Account::class, 'expense_account_id');
+    }
+
+    public function category(): BelongsTo
+    {
+        return $this->belongsTo(AssetCategory::class, 'category_id');
+    }
+
+    /** ⓘ অংশ হলে তার মূল সম্পদ (IAS 16.43) */
+    public function parent(): BelongsTo
+    {
+        return $this->belongsTo(self::class, 'parent_id');
+    }
+
+    public function components(): HasMany
+    {
+        return $this->hasMany(self::class, 'parent_id')->orderBy('id');
+    }
+
+    public function costParts(): HasMany
+    {
+        return $this->hasMany(AssetCostPart::class, 'fixed_asset_id')->orderBy('id');
     }
 
     public function branch(): BelongsTo
@@ -120,6 +176,28 @@ class FixedAsset extends Model implements Drillable
     public function scopeActive(Builder $query): Builder
     {
         return $query->where('status', self::ACTIVE);
+    }
+
+    /** খাতায় আছে আর ক্ষয় ধরে — ব্যবহারে, অলস বা মেরামতে */
+    public function isInService(): bool
+    {
+        return in_array($this->status, self::IN_SERVICE, true);
+    }
+
+    public function scopeInService(Builder $query): Builder
+    {
+        return $query->whereIn('status', self::IN_SERVICE);
+    }
+
+    /** ⓘ ক্ষয় শুরুর দিন — ব্যবহার শুরু লেখা থাকলে সেটা, নইলে কেনার দিন (IAS 16.55) */
+    public function depreciatesFrom(): Carbon
+    {
+        return ($this->put_in_use_on ?? $this->acquired_on)->copy()->startOfDay();
+    }
+
+    public function statusLabel(): string
+    {
+        return __('accounts::asset.status_'.$this->status);
     }
 
     /** এ পর্যন্ত মোট কতটা ক্ষয় ধরা হয়েছে। */

@@ -11,8 +11,8 @@ use App\Modules\Accounts\Models\Cheque;
 use App\Modules\Accounts\Models\FixedAsset;
 use App\Modules\Accounts\Models\InterCompanyTransfer;
 use App\Modules\Accounts\Models\MoneyTransfer;
-use App\Modules\Accounts\Models\TillHandover;
 use App\Modules\Accounts\Models\Note;
+use App\Modules\Accounts\Models\TillHandover;
 use App\Modules\Accounts\Services\AccountsSignature;
 use App\Modules\Accounts\Services\ChequeService;
 use App\Modules\Accounts\Services\FixedAssetService;
@@ -67,8 +67,9 @@ final class FinishTheAccountsPaperOnTheLastSignature
             $signed = (array) ($approval->payload ?? []);
 
             match ($approval->action) {
-                AccountsSignature::FIXED_ASSET_REGISTER => app(FixedAssetService::class)->finishRegistered($paper, $signed),
-                AccountsSignature::FIXED_ASSET_DISPOSE => $paper->isActive()
+                // ⓘ পুরনো খাতার জের তোলাও একই শেষ — কেবল সইটা নিজের (ধাপ ১)
+                AccountsSignature::FIXED_ASSET_REGISTER, AccountsSignature::FIXED_ASSET_OPENING => app(FixedAssetService::class)->finishRegistered($paper, $signed),
+                AccountsSignature::FIXED_ASSET_DISPOSE => $paper->isInService()
                     ? app(FixedAssetService::class)->dispose($paper, (string) ($signed['amount'] ?? '0'), (int) ($signed['into_account_id'] ?? 0), $signed['on'] ?? null)
                     : null,
                 default => null,

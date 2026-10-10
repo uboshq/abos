@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Modules\Accounts\Http\Controllers\AccountsDashboardController;
 use App\Modules\Accounts\Http\Controllers\AccountsSettingsController;
+use App\Modules\Accounts\Http\Controllers\AssetCategoryController;
 use App\Modules\Accounts\Http\Controllers\BalanceSheetController;
 use App\Modules\Accounts\Http\Controllers\BankReconciliationController;
 use App\Modules\Accounts\Http\Controllers\BooksIntegrityController;
@@ -11,9 +12,9 @@ use App\Modules\Accounts\Http\Controllers\CashCountController;
 use App\Modules\Accounts\Http\Controllers\CashTillController;
 use App\Modules\Accounts\Http\Controllers\ChartOfAccountsController;
 use App\Modules\Accounts\Http\Controllers\ChequeController;
+use App\Modules\Accounts\Http\Controllers\FinalAccountsReportController;
 use App\Modules\Accounts\Http\Controllers\FinanceControlController;
 use App\Modules\Accounts\Http\Controllers\FixedAssetController;
-use App\Modules\Accounts\Http\Controllers\FinalAccountsReportController;
 use App\Modules\Accounts\Http\Controllers\GroupReportController;
 use App\Modules\Accounts\Http\Controllers\InterCompanyController;
 use App\Modules\Accounts\Http\Controllers\LoanController;
@@ -26,6 +27,7 @@ use App\Modules\Accounts\Http\Controllers\PeriodLockController;
 use App\Modules\Accounts\Http\Controllers\ReportController;
 use App\Modules\Accounts\Http\Controllers\VoucherController;
 use App\Modules\Accounts\Http\Controllers\VoucherListController;
+use App\Modules\Accounts\Http\Controllers\VoucherOverviewController;
 use App\Modules\Accounts\Http\Controllers\VoucherPrintController;
 use App\Modules\Accounts\Http\Controllers\VoucherSampleController;
 use App\Modules\Accounts\Http\Controllers\YearEndController;
@@ -160,7 +162,7 @@ Route::middleware('auth')->prefix('accounts')->group(function () {
         Route::post('/{voucher}/post', [VoucherController::class, 'post'])
             ->whereNumber('voucher')->name('post');
         // ⭐ পোস্টের আগে সারাংশ — পপ-আপের ভিতর ([[VoucherOverviewController]], ৪ অক্টোবর ২০২৬)
-        Route::post('/{voucher}/overview', \App\Modules\Accounts\Http\Controllers\VoucherOverviewController::class)
+        Route::post('/{voucher}/overview', VoucherOverviewController::class)
             ->whereNumber('voucher')->name('overview');
         Route::post('/{voucher}/cancel', [VoucherController::class, 'cancel'])
             ->whereNumber('voucher')->name('cancel');
@@ -445,6 +447,22 @@ Route::middleware('auth')->prefix('accounts')->group(function () {
          */
         Route::post('/{asset}/transfer', [FixedAssetController::class, 'transfer'])
             ->whereNumber('asset')->name('transfer');
+
+        // ⭐ অবস্থা — ব্যবহারে, অলস, মেরামতে; টাকা নড়ে না (স্থায়ী সম্পদ ধাপ ১)
+        Route::post('/{asset}/status', [FixedAssetController::class, 'status'])
+            ->whereNumber('asset')->name('status');
+
+        /*
+         * ⭐ সম্পদের শ্রেণি — পাঁচ খাত আর ডিফল্ট আয়ু (স্থায়ী সম্পদ ধাপ ১, ১০ অক্টোবর ২০২৬)।
+         * ⓘ `/{asset}`-এর সাথে ঝগড়া নেই — সংখ্যা ছাড়া কিছু ওখানে মেলে না।
+         */
+        Route::prefix('categories')->name('category.')->group(function () {
+            Route::get('/', [AssetCategoryController::class, 'index'])->name('index');
+            Route::get('/create', [AssetCategoryController::class, 'create'])->name('create');
+            Route::post('/', [AssetCategoryController::class, 'store'])->name('store');
+            Route::get('/{category}/edit', [AssetCategoryController::class, 'edit'])->whereNumber('category')->name('edit');
+            Route::put('/{category}', [AssetCategoryController::class, 'update'])->whereNumber('category')->name('update');
+        });
     });
 
     Route::prefix('periods')->name('period.')->group(function () {

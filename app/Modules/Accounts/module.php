@@ -2,20 +2,28 @@
 
 declare(strict_types=1);
 use App\Core\Engines\Print\PaperSize;
+use App\Core\Events\ApprovalDecided;
 use App\Modules\Accounts\Dashboard\AccountsActivity;
 use App\Modules\Accounts\Dashboard\AccountsDashboard;
 use App\Modules\Accounts\Dashboard\AccountsWidgets;
 use App\Modules\Accounts\Events\AccountFormOpened;
 use App\Modules\Accounts\Events\AccountSaved;
+use App\Modules\Accounts\Events\ChequeCleared;
+use App\Modules\Accounts\Events\OpeningCapitalBooked;
 use App\Modules\Accounts\Events\VoucherPosted;
 use App\Modules\Accounts\Imports\BankStatementImporter;
 use App\Modules\Accounts\Imports\ChartOfAccountsImporter;
+use App\Modules\Accounts\Imports\FixedAssetOpeningImporter;
 use App\Modules\Accounts\Imports\OpeningBalanceImporter;
 use App\Modules\Accounts\Integrity\AccountsChecks;
+use App\Modules\Accounts\Listeners\FinishTheAccountsPaperOnTheLastSignature;
 use App\Modules\Accounts\Models\Account;
+use App\Modules\Accounts\Models\AssetTransfer;
 use App\Modules\Accounts\Models\CashCount;
 use App\Modules\Accounts\Models\CashTill;
 use App\Modules\Accounts\Models\Cheque;
+use App\Modules\Accounts\Models\DepreciationEntry;
+use App\Modules\Accounts\Models\FixedAsset;
 use App\Modules\Accounts\Models\Loan;
 use App\Modules\Accounts\Models\LoanInstalment;
 use App\Modules\Accounts\Models\LoanMovement;
@@ -23,6 +31,8 @@ use App\Modules\Accounts\Models\MoneyCategory;
 use App\Modules\Accounts\Models\MoneyTransfer;
 use App\Modules\Accounts\Models\Note;
 use App\Modules\Accounts\Models\Voucher;
+use App\Modules\Accounts\Models\YearClosing;
+use App\Modules\Accounts\Reports\BranchDuesReports;
 use App\Modules\Accounts\Reports\CoreReports;
 use App\Modules\Accounts\Services\CashTillService;
 use App\Modules\Accounts\Services\StandardChart;
@@ -280,6 +290,8 @@ return [
 
             ['label' => 'accounts::menu.reconciliations', 'icon' => 'check-circle', 'route' => 'accounts.reconciliation.index', 'permission' => 'accounts.reconciliation.view'],
             ['label' => 'accounts::menu.assets', 'icon' => 'building', 'route' => 'accounts.asset.index', 'permission' => 'accounts.asset.view'],
+            // ⭐ সম্পদের শ্রেণি — পাঁচ খাত আর ডিফল্ট আয়ু (স্থায়ী সম্পদ ধাপ ১)
+            ['label' => 'accounts::menu.asset_categories', 'icon' => 'building', 'route' => 'accounts.asset.category.index', 'permission' => 'accounts.asset.manage'],
             ['label' => 'accounts::menu.periods', 'icon' => 'clock', 'route' => 'accounts.period.index', 'permission' => 'accounts.period.close'],
             ['label' => 'accounts::menu.year_end', 'route' => 'accounts.year_end.index', 'permission' => 'accounts.report.final'],
             ['label' => 'accounts::menu.settings', 'route' => 'accounts.settings', 'permission' => 'accounts.manage'],
@@ -348,6 +360,11 @@ return [
          */
         'accounts.asset.view',
         'accounts.asset.manage',
+        /*
+         * ⭐ ABOS-এর আগে কেনা সম্পদের তালিকা একবারে তোলা — নিজের চাবি আর নিজের সই (স্থায়ী সম্পদ ধাপ ১, মালিক,
+         * ১০ অক্টোবর ২০২৬)। ⓘ পুরনো খাতার জের আর এ পর্যন্ত ক্ষয় একসাথে বসে — রোজকার "সম্পদ যোগ"-এর চাবিতে নয়।
+         */
+        'accounts.asset.import',
 
         'accounts.note.view',
         'accounts.note.manage',
@@ -540,7 +557,7 @@ return [
         'cash_count' => CashCount::class,
         'money_category' => MoneyCategory::class,
         // ⭐ বছরশেষের সমাপনী ভাউচার — খাতার "YC-…" সারি থেকে তার পাতা (৩ঙ; ':reversal' নিজেই কেটে যায়)
-        'year_close' => \App\Modules\Accounts\Models\YearClosing::class,
+        'year_close' => YearClosing::class,
 
         /*
          * ঋণ নিজে খতিয়ানে বসে না — তার নড়াচড়া আর কিস্তিগুলো বসে।
@@ -552,6 +569,16 @@ return [
         'loan' => Loan::class,
         'loan_movement' => LoanMovement::class,
         'loan_instalment' => LoanInstalment::class,
+
+        /*
+         * ⭐ স্থায়ী সম্পদের দাখিলা — নিবন্ধন, মাসের অবচয়, শাখা বদল, বিদায় (ধাপ ১, ১০ অক্টোবর ২০২৬)। ⓘ আগে খাতার এই
+         * সারিগুলো কোনো কাগজে খুলত না, আর সম্পদের পাতায় ছবি-কাগজ রাখার দরজাও ছিল না (সংযুক্তি উৎস চেনে এখান থেকে)।
+         * বিদায়ের সারির উৎস-আইডি সম্পদেরই ([[FixedAsset::disposalSourceType()]])।
+         */
+        'fixed_asset' => FixedAsset::class,
+        'asset_disposal' => FixedAsset::class,
+        'depreciation' => DepreciationEntry::class,
+        'asset_transfer' => AssetTransfer::class,
     ],
 
     /*
@@ -594,6 +621,8 @@ return [
          * নমুনা ফাইল আর ভুল-সারির তালিকা বিনা খরচে পাওয়া যায়।
          */
         'bank_statement' => BankStatementImporter::class,
+        // ⭐ ABOS-এর আগে কেনা সম্পদ — নিজের চাবি (`accounts.asset.import`) আর নিজের সই (স্থায়ী সম্পদ ধাপ ১)
+        'fixed_asset_opening' => FixedAssetOpeningImporter::class,
     ],
 
     /*
@@ -652,6 +681,8 @@ return [
         'till_opening' => 'accounts::approval.till_opening',
         'fixed_asset_register' => 'accounts::approval.fixed_asset_register',
         'fixed_asset_dispose' => 'accounts::approval.fixed_asset_dispose',
+        // ⭐ ABOS-এর আগে কেনা সম্পদ তোলা — পুরনো খাতার জের (স্থায়ী সম্পদ ধাপ ১)
+        'fixed_asset_opening' => 'accounts::approval.fixed_asset_opening',
         // ⭐ ক্যাশবাক্সের দায়িত্ব হস্তান্তর (অডিট ম৮)
         'till_handover' => 'accounts::approval.till_handover',
     ],
@@ -668,13 +699,13 @@ return [
      * মিলিয়ে দেখে। ⛔ একটা টাইপো নীরবে কাগজটাকে bulk-এ
      * ঢুকিয়ে দিত।
      */
-    'moves_money' => ['expense', 'counter_deposit', 'counter_payment', 'transfer', 'receipt', 'payment', 'journal', 'contra', 'year_end', 'note', 'cheque_clear', 'cheque_bounce', 'inter_company', 'till_opening', 'fixed_asset_register', 'fixed_asset_dispose', 'till_handover'],
+    'moves_money' => ['expense', 'counter_deposit', 'counter_payment', 'transfer', 'receipt', 'payment', 'journal', 'contra', 'year_end', 'note', 'cheque_clear', 'cheque_bounce', 'inter_company', 'till_opening', 'fixed_asset_register', 'fixed_asset_dispose', 'till_handover', 'fixed_asset_opening'],
 
     // রিপোর্ট সরবরাহকারী — কোর নিজে থেকে ডেকে নেবে (সেকশন ১৯.৩)।
     // কোর ফাইলে মডিউলের নাম লিখতে হয় না।
     'reports' => [
         CoreReports::class,
-        \App\Modules\Accounts\Reports\BranchDuesReports::class,
+        BranchDuesReports::class,
     ],
 
     // হোম পর্দার টাকার সংখ্যাগুলো
@@ -817,6 +848,18 @@ return [
             'default' => true,
             'group' => 'entry',
         ],
+        /*
+         * ⭐ মূলধনীকরণের সীমা — এর নিচের কেনা খরচে যায়, সম্পদের খাতায় নয় (স্থায়ী সম্পদ ধাপ ১; IAS 16-এর বস্তুগততা)।
+         * ⓘ শূন্য = কোনো সীমা নেই (আজকের আচরণ)। শ্রেণির নিজের সীমা থাকলে সেটা জেতে। ⛔ কেবল মালিক — টাকার নিয়ম।
+         */
+        [
+            'key' => 'accounts.asset.capitalisation_threshold',
+            'super_admin_only' => true,
+            'label' => 'accounts::settings.asset_capitalisation_threshold',
+            'type' => 'number',
+            'default' => 0,
+            'group' => 'entry',
+        ],
         [
             'key' => 'accounts.print_signature_lines',
             'label' => 'accounts::settings.print_signature_lines',
@@ -835,13 +878,13 @@ return [
         AccountSaved::class,
         AccountFormOpened::class,
         // ⭐ চেক পাশ — টাকার জন্য আটকে থাকা DO আবার যাচাই হয় (বিক্রয়ের কাজের ধারা, ২ অক্টোবর ২০২৬)
-        \App\Modules\Accounts\Events\ChequeCleared::class,
+        ChequeCleared::class,
         // ⭐ খোলা জের মালিকের মূলধনে — অর্থ রেজিস্টারে মালিকের নামে তোলে (মালিকের আদেশ, ৫ অক্টোবর ২০২৬)
-        \App\Modules\Accounts\Events\OpeningCapitalBooked::class,
+        OpeningCapitalBooked::class,
     ],
 
     // ⭐ শেষ সই পড়লে হিসাবের কাগজ নিজেই শেষ হয় — গ১ ([[AccountsSignature]])
     'listeners' => [
-        \App\Core\Events\ApprovalDecided::class => [\App\Modules\Accounts\Listeners\FinishTheAccountsPaperOnTheLastSignature::class],
+        ApprovalDecided::class => [FinishTheAccountsPaperOnTheLastSignature::class],
     ],
 ];

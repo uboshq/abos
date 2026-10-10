@@ -8,6 +8,7 @@ return [
     'cash_ceiling_enabled' => 'Cash ceiling per person',
     'cash_ceiling_blocks' => 'Block money in over the ceiling (otherwise only warn)',
     'require_narration' => 'Narration required on vouchers',
+    'asset_capitalisation_threshold' => 'Fixed asset capitalisation threshold: anything cheaper goes to expense (0 means no threshold)',
     'print_signature_lines' => 'Signature lines on printouts',
     'paper_voucher' => 'Paper for vouchers',
     'design_voucher' => 'Voucher design',

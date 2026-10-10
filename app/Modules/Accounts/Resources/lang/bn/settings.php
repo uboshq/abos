@@ -9,6 +9,7 @@ return [
     'cash_ceiling_enabled' => 'ব্যক্তিপ্রতি নগদ সীমা চালু',
     'cash_ceiling_blocks' => 'সীমা ছাড়ালে টাকা নেওয়া আটকে দাও (নাহলে শুধু সতর্ক করবে)',
     'require_narration' => 'ভাউচারে বিবরণ বাধ্যতামূলক',
+    'asset_capitalisation_threshold' => 'স্থায়ী সম্পদের সর্বনিম্ন দাম — এর কম দামের জিনিস খরচে যাবে (০ মানে কোনো সীমা নেই)',
     'print_signature_lines' => 'প্রিন্টে স্বাক্ষরের ঘর রাখো',
     'paper_voucher' => 'ভাউচার কোন কাগজে',
     'design_voucher' => 'ভাউচারের নকশা',

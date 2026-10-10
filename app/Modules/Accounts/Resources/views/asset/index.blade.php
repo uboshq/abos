@@ -25,6 +25,13 @@
             'label' => __('accounts::asset.account'),
             'render' => fn ($a) => $a->assetAccount?->label(),
         ],
+        // ⭐ শ্রেণি — স্থায়ী সম্পদ ধাপ ১
+        [
+            'key' => 'category',
+            'label' => __('accounts::asset.category'),
+            'width' => '10rem',
+            'render' => fn ($a) => $a->category?->name() ?? '—',
+        ],
         [
             'key' => 'acquired_on',
             'label' => __('accounts::asset.acquired_on'),
@@ -119,7 +126,8 @@
             <x-ui.toolbar :title="__('accounts::asset.title')"
                 :subtitle="__('accounts::asset.subtitle')"
                 :search-placeholder="__('accounts::message.asset_search')"
-                :columns="$columns">
+                :columns="$columns"
+                :filter-labels="['category' => __('accounts::asset.category'), 'status' => __('accounts::asset.status')]">
                 {{-- শর্তটা হুবহু সেটাই যেটায় আগে নিচের ফর্মটা দেখা যেত। --}}
                 <x-slot:actions>
                     @can('accounts.asset.manage')
@@ -128,6 +136,24 @@
                         </x-ui.button>
                     @endcan
                 </x-slot:actions>
+
+                {{-- ⭐ শ্রেণি আর অবস্থা ধরে ছাঁকা (স্থায়ী সম্পদ ধাপ ১) --}}
+                <select name="category" aria-label="{{ __('accounts::asset.category') }}"
+                        class="h-(--spacing-field-compact) rounded-(--radius-field) border border-(--color-border)
+                               bg-(--color-surface-app) px-2 text-sm">
+                    <option value="">{{ __('accounts::asset.all_categories') }}</option>
+                    @foreach ($categories as $category)
+                        <option value="{{ $category->id }}" @selected((int) request('category') === $category->id)>{{ $category->name() }}</option>
+                    @endforeach
+                </select>
+                <select name="status" aria-label="{{ __('accounts::asset.status') }}"
+                        class="h-(--spacing-field-compact) rounded-(--radius-field) border border-(--color-border)
+                               bg-(--color-surface-app) px-2 text-sm">
+                    <option value="">{{ __('accounts::asset.all_statuses') }}</option>
+                    @foreach (\App\Modules\Accounts\Models\FixedAsset::STATUSES as $status)
+                        <option value="{{ $status }}" @selected(request('status') === $status)>{{ __('accounts::asset.status_'.$status) }}</option>
+                    @endforeach
+                </select>
             </x-ui.toolbar>
         </form>
 

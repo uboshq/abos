@@ -65,6 +65,8 @@
         @endforeach
     </div>
 
+    @include('accounts::asset.partials.details')
+
     {{-- ── ⭐ শাখা বদল — মানচিত্র §১৫, ২১ সেপ্টেম্বর ২০২৬ ──────────────
 
          ⚠️ কেন কেবল একটা কলাম বদলানো যথেষ্ট নয়: ফ্রিজটা ঢাকা থেকে খুলনায়
@@ -73,7 +75,7 @@
 
          ⓘ ইতিহাসটা নিচে থাকে, কারণ "গত বছর এটা কোথায় ছিল" প্রশ্নটা
          ছয় মাস পরে ওঠে, আর তখন উত্তর দেওয়ার মতো আর কিছু থাকে না। --}}
-    @if ($asset->isActive() && $branches->isNotEmpty())
+    @if ($asset->isInService() && $branches->isNotEmpty())
         @can('accounts.asset.manage')
             <form method="POST" action="{{ route('accounts.asset.transfer', $asset) }}"
                   class="mb-5 grid gap-3 rounded-(--radius-card) border border-(--color-border)
@@ -129,7 +131,7 @@
         </section>
     @endif
 
-    @if ($asset->isActive())
+    @if ($asset->isInService())
         @can('accounts.asset.manage')
             <form method="POST" action="{{ route('accounts.asset.dispose', $asset) }}"
                   class="mb-5 grid gap-3 rounded-(--radius-card) border border-(--color-border)
@@ -173,5 +175,10 @@
     <x-ui.table :rows="$asset->depreciation"
                 :columns="$columns"
                 :empty="__('accounts::asset.empty_entries')" />
+
+    {{-- ⭐ ছবি আর কাগজ — রসিদ, ওয়ারেন্টি কার্ড, জিনিসের ছবি (স্থায়ী সম্পদ ধাপ ১; সংযুক্তির ইঞ্জিন) --}}
+    <div class="mt-5">
+        <x-ui.attachments :document="$asset" />
+    </div>
 
 </x-layouts.app>

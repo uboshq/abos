@@ -5,12 +5,15 @@ declare(strict_types=1);
 namespace App\Modules\Accounts\Http\Controllers;
 
 use App\Core\Concerns\GrandTotals;
+use App\Core\Contracts\CapitalisesABillLine;
 use App\Core\Services\MenuBuilder;
 use App\Core\Services\PartyRegistry;
 use App\Core\Support\CompanyContext;
 use App\Http\Controllers\Controller;
 use App\Models\Branch;
 use App\Modules\Accounts\Models\Account;
+use App\Modules\Accounts\Models\AssetCategory;
+use App\Modules\Accounts\Models\AssetCostPart;
 use App\Modules\Accounts\Models\AssetTransfer;
 use App\Modules\Accounts\Models\FixedAsset;
 use App\Modules\Accounts\Services\FixedAssetService;
@@ -43,14 +46,18 @@ class FixedAssetController extends Controller implements HasMiddleware
     {
         return [
             new Middleware('can:accounts.asset.view', only: ['index', 'show']),
-            new Middleware('can:accounts.asset.manage', only: ['create', 'store', 'depreciate', 'dispose', 'transfer']),
+            new Middleware('can:accounts.asset.manage', only: ['create', 'store', 'depreciate', 'dispose', 'transfer', 'status']),
         ];
     }
 
     public function index(Request $request): View
     {
         $query = FixedAsset::query()
-            ->with(['assetAccount'])
+            ->with(['assetAccount', 'category'])
+            // ⭐ শ্রেণি আর অবস্থা ধরে ছাঁকা (স্থায়ী সম্পদ ধাপ ১)
+            ->when($request->integer('category') ?: null, fn ($q, $id) => $q->where('category_id', $id))
+            ->when(in_array($request->query('status'), FixedAsset::STATUSES, true) ? $request->query('status') : null,
+                fn ($q, $status) => $q->where('status', $status))
             // খোঁজা — নাম, কাগজের নম্বর আর গায়ের ট্যাগ; গুদামে দাঁড়িয়ে
             // মানুষের হাতে ট্যাগ নম্বরটাই থাকে।
             ->when(trim((string) $request->query('q')) ?: null, fn ($query, $term) => $query->where(
@@ -66,6 +73,7 @@ class FixedAssetController extends Controller implements HasMiddleware
             // ⭐ যোগফলের পট্টি — ছাঁকা সব সম্পদের কেনা দাম, পাতার নয় (মালিক, ৫ অক্টোবর ২০২৬)
             'grand' => $this->grandTotals($query, ['cost' => 't.cost']),
             'q' => $request->query('q'),
+            'categories' => AssetCategory::query()->orderBy('code')->get(),
             /*
              * ⓘ সম্পদের খাতের তালিকাটা আর এখানে নয় — ফর্মটা `create`-এ
              * সরার পর তালিকার পাতায় ওটার কোনো ব্যবহারকারী নেই।
@@ -101,6 +109,14 @@ class FixedAssetController extends Controller implements HasMiddleware
         return view('accounts::asset.create', [
             'menu' => $this->menu->forUser($request->user()),
             'assetAccounts' => $this->under(StandardChart::FIXED_ASSETS),
+
+            // ⭐ নিবন্ধনের নতুন ঘর — শ্রেণি, মূল সম্পদ, দায়িত্বের কর্মী, ক্রয় বিলের সারি (স্থায়ী সম্পদ ধাপ ১)
+            'categories' => AssetCategory::query()->active()->orderBy('code')->get(),
+            'parents' => FixedAsset::query()->inService()->whereNull('parent_id')->orderBy('document_no')->limit(500)->get(['id', 'document_no', 'name']),
+            'employees' => $this->partyList('employee'),
+            'branches' => Branch::query()->orderBy('code')->get(),
+            'billLines' => app(CapitalisesABillLine::class)->lines($request->query('bill_q'), 200),
+            'pickedLine' => $request->integer('bill_line') ?: null,
 
             /*
              * ⭐ "টাকাটা কোথা থেকে এল" — ২০ সেপ্টেম্বর ২০২৬, মালিকের
@@ -149,7 +165,13 @@ class FixedAssetController extends Controller implements HasMiddleware
     {
         return view('accounts::asset.show', [
             'menu' => $this->menu->forUser($request->user()),
-            'asset' => $asset->load(['depreciation', 'assetAccount']),
+            'asset' => $asset->load(['depreciation', 'assetAccount', 'category', 'parent', 'components', 'costParts', 'branch']),
+            // ⓘ পক্ষের নাম কোর থেকে — কর্মী আর বিক্রেতা ([[PartyRegistry]]), মডিউলের মডেল থেকে নয়
+            'custodian' => $asset->custodian_id === null ? null
+                : (app(PartyRegistry::class)->labelsOf([['employee', (int) $asset->custodian_id]])['employee:'.$asset->custodian_id] ?? null),
+            'supplier' => $asset->supplier_id === null ? null
+                : (app(PartyRegistry::class)->labelsOf([['supplier', (int) $asset->supplier_id]])['supplier:'.$asset->supplier_id] ?? null),
+            'billLine' => $asset->purchase_bill_line_id === null ? null : app(CapitalisesABillLine::class)->line((int) $asset->purchase_bill_line_id),
             // `money()` নিজেই দল ছাঁকে, তাই আলাদা `postable()` লাগে না
             'moneyAccounts' => Account::query()
                 ->money()->active()->orderBy('code')->get(),
@@ -177,8 +199,10 @@ class FixedAssetController extends Controller implements HasMiddleware
         $data = $request->validate([
             'name' => ['required', 'string', 'max:191'],
             'tag_no' => ['nullable', 'string', 'max:64'],
-            'asset_account_id' => ['required', 'integer', Rule::exists('accounts', 'id')->where('company_id', CompanyContext::id())],
-            'cost' => ['required', 'numeric', 'gt:0'],
+            // ⓘ শ্রেণি থাকলে খাত শ্রেণি থেকে; দামের ভাগ বা ক্রয় বিল থাকলে দাম সেখান থেকে (ধাপ ১)
+            'asset_account_id' => ['nullable', 'required_without:category_id', 'integer', Rule::exists('accounts', 'id')->where('company_id', CompanyContext::id())],
+            'cost' => ['nullable', 'numeric', 'gt:0',
+                Rule::requiredIf(fn () => ! $request->filled('cost_parts.0.amount') && $request->input('funded_by') !== FixedAssetService::FUNDED_BILL)],
             'salvage' => ['nullable', 'numeric', 'min:0'],
             'acquired_on' => ['required', 'date'],
 
@@ -188,10 +212,31 @@ class FixedAssetController extends Controller implements HasMiddleware
              * দাম ঋণাত্মক হয়ে যেত।
              */
             'opening_accumulated' => ['nullable', 'numeric', 'min:0', 'lte:cost'],
-            'method' => ['required', Rule::in([FixedAsset::STRAIGHT_LINE, FixedAsset::REDUCING])],
+            'method' => ['nullable', 'required_without:category_id', Rule::in(FixedAsset::METHODS)],
             'life_months' => ['nullable', 'integer', 'min:1', 'max:1200'],
             'rate' => ['nullable', 'numeric', 'min:0', 'max:100'],
             'narration' => ['nullable', 'string', 'max:500'],
+
+            // ⭐ নিবন্ধনের নতুন ঘর — স্থায়ী সম্পদ ধাপ ১ (IAS 16)
+            'category_id' => ['nullable', 'integer', Rule::exists('acc_asset_categories', 'id')->where('company_id', CompanyContext::id())],
+            'parent_id' => ['nullable', 'integer', Rule::exists('acc_fixed_assets', 'id')->where('company_id', CompanyContext::id())],
+            'branch_id' => ['nullable', 'integer', Rule::exists('branches', 'id')->where('company_id', CompanyContext::id())],
+            'location' => ['nullable', 'string', 'max:120'],
+            'department' => ['nullable', 'string', 'max:120'],
+            'custodian_id' => ['nullable', 'integer'],
+            'supplier_id' => ['nullable', 'integer'],
+            'put_in_use_on' => ['nullable', 'date', 'after_or_equal:acquired_on'],
+            'serial_no' => ['nullable', 'string', 'max:120'],
+            'model_no' => ['nullable', 'string', 'max:120'],
+            'warranty_ends_on' => ['nullable', 'date'],
+            'insurance_policy_no' => ['nullable', 'string', 'max:64'],
+            'insured_until' => ['nullable', 'date'],
+            'cost_parts' => ['nullable', 'array', 'max:10'],
+            'cost_parts.*.kind' => ['required_with:cost_parts.*.amount', Rule::in(AssetCostPart::KINDS)],
+            'cost_parts.*.amount' => ['nullable', 'numeric', 'min:0'],
+            'cost_parts.*.note' => ['nullable', 'string', 'max:255'],
+            'purchase_bill_line_id' => ['nullable', 'integer', 'required_if:funded_by,'.FixedAssetService::FUNDED_BILL],
+            'capitalised_qty' => ['nullable', 'numeric', 'gt:0', 'required_if:funded_by,'.FixedAssetService::FUNDED_BILL],
 
             /*
              * ⓘ উৎসটা বাধ্যতামূলক — "কিছু বলিনি" বলে আর পার পাওয়া যায় না।
@@ -213,12 +258,17 @@ class FixedAssetController extends Controller implements HasMiddleware
             ],
         ]);
 
+        /*
+         * ⓘ শ্রেণি থাকলে তার খাত-জোড়া ([[FixedAssetService::register()]] খালি ঘর ভরে); না থাকলে আগের মতো প্রমিত ১২৯০/৫২১২।
+         * শেষ দাম খালি রাখলে শ্রেণির হার খাটে — তাই শ্রেণিতে শূন্য বসানো হয় না।
+         */
         $asset = $this->assets->register([
             ...$data,
-            'salvage' => $data['salvage'] ?? 0,
-            'accumulated_account_id' => Account::query()
+            'cost' => $data['cost'] ?? '0',
+            'salvage' => ($data['salvage'] ?? null) ?? (filled($data['category_id'] ?? null) ? null : 0),
+            'accumulated_account_id' => filled($data['category_id'] ?? null) ? null : Account::query()
                 ->where('code', StandardChart::ACCUMULATED_DEPRECIATION)->value('id'),
-            'expense_account_id' => Account::query()
+            'expense_account_id' => filled($data['category_id'] ?? null) ? null : Account::query()
                 ->where('code', StandardChart::DEPRECIATION_EXPENSE)->value('id'),
         ]);
 
@@ -268,6 +318,19 @@ class FixedAssetController extends Controller implements HasMiddleware
         return back()->with('saved', __('accounts::asset.moved'));
     }
 
+    /**
+     * ⭐ অবস্থা বদল — ব্যবহারে, অলস, মেরামতে (স্থায়ী সম্পদ ধাপ ১)। ⓘ টাকা নড়ে না, তাই সই নয়; কে কবে বদলালেন নিরীক্ষায়
+     * ([[IsAudited]])। ⛔ বাতিল, হারানো আর বিক্রি এখান দিয়ে নয় — ওগুলো খাতা থেকে বেরোনো, নিজের পথে সইসহ।
+     */
+    public function status(Request $request, FixedAsset $asset): RedirectResponse
+    {
+        $data = $request->validate(['status' => ['required', Rule::in(FixedAsset::SWITCHABLE)]]);
+
+        $this->assets->changeStatus($asset, $data['status']);
+
+        return back()->with('status', __('accounts::asset.status_changed'));
+    }
+
     public function dispose(Request $request, FixedAsset $asset): RedirectResponse
     {
         $data = $request->validate([
@@ -284,7 +347,7 @@ class FixedAssetController extends Controller implements HasMiddleware
         );
 
         // ⓘ সইয়ের অপেক্ষায় সম্পদটা এখনো চালু — "বিক্রি হয়েছে" বলা মিথ্যা হত ([[AccountsSignature]])
-        return back()->with('status', $after->isActive() ? __('accounts::asset.awaiting_signature') : __('accounts::asset.disposed'));
+        return back()->with('status', $after->isInService() ? __('accounts::asset.awaiting_signature') : __('accounts::asset.disposed'));
     }
 
     /** @return Collection<int, Account> */
