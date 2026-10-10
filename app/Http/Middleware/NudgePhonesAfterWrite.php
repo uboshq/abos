@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Middleware;
 
+use App\Core\Services\LiveStamp;
 use App\Core\Services\SyncNudge;
 use App\Core\Support\CompanyContext;
 use Closure;
@@ -21,7 +22,10 @@ use Symfony\Component\HttpFoundation\Response;
  */
 final class NudgePhonesAfterWrite
 {
-    public function __construct(private readonly SyncNudge $nudge) {}
+    public function __construct(
+        private readonly SyncNudge $nudge,
+        private readonly LiveStamp $stamps,
+    ) {}
 
     public function handle(Request $request, Closure $next): Response
     {
@@ -30,6 +34,8 @@ final class NudgePhonesAfterWrite
         if (! in_array($request->getMethod(), ['GET', 'HEAD', 'OPTIONS'], true)
             && $response->getStatusCode() < 400
             && ($company = CompanyContext::id()) !== null) {
+            // ⓘ ওয়েবের খোলা পাতার জন্য সময়-চিহ্ন ([[LiveStamp]]), তারপর ফোনের নীরব ডাক
+            $this->stamps->bump($company);
             $this->nudge->touch($company);
         }
 
