@@ -25,7 +25,8 @@
         </div>
     @endif
 
-    @include('system_admin::control-panel.partials.tabs')
+    {{-- ⭐ বাঁয়ে দলবদ্ধ তালিকা আর খোঁজা, ডানে পর্দা — ট্যাবের সারির বদলে (সিস্টেম পর্দার নকশা §১, ১০ অক্টোবর ২০২৬) --}}
+    @component('system_admin::control-panel.partials.side', ['tab' => $tab])
 
     {{-- খালি-অবস্থা এখন গাছটাও হিসেবে ধরে।
 
@@ -65,6 +66,9 @@
                    ([[MenuSwitches::itemIsOn()]])। --}}
               x-data="switchBoard({ on: @js($switchState ?? []) })"
               @change="touch($event.target)"
+              {{-- ⭐ মডিউল বন্ধের আগে নিশ্চিত — নামসহ, প্রভাবসহ (সিস্টেম পর্দার নকশা §১, ১০ অক্টোবর ২০২৬; forms.js confirmOff) --}}
+              @submit="confirmOff($event)"
+              data-confirm-off="{{ __('system_admin::control.confirm_off') }}"
               {{-- ⭐ চওড়ার বাঁধনটা তুলে নেওয়া হলো — মালিকের নির্দেশ, ২৩ সেপ্টেম্বর ২০২৬।
 
                    তাঁর কথা: *"সব কটি পর্দা স্ক্রল করে দেখতে হয়, but এগুলো
@@ -91,8 +95,16 @@
                 ? 'system_admin::control-panel.partials.modules'
                 : 'system_admin::control-panel.partials.tree')
 
+            {{-- ⛔ মডিউল-পেরোনো ট্যাবে (মোবাইল, ...) প্রতিটা মডিউলের কোড ট্যাবের নাম নয় — আগে নিচের শর্ত সবগুলোকেই বাদ দিত, আর
+                 ট্যাবটা ফাঁকা আঁকা হত (ফোনে "সিস্টেম প্রশাসন" বন্ধ করলে ফেরার সুইচটাই পর্দায় ছিল না —
+                 ThePhoneShowedEveryModuleTest, ১০ অক্টোবর ২০২৬)। ⓘ ঐ ট্যাবে কন্ট্রোলার আগেই কেবল সেই ট্যাবের সারি পাঠায়
+                 ([[ControlPanelController::crossTab()]]), তাই এখানে আর ছাঁকতে হয় না। --}}
+            {{-- ⚠️ ব্লক-রূপে, এক-লাইনের রূপে নয়: নিচে একটা ব্লক-php আছে, আর Blade এক-লাইনেরটা থেকে পরের endphp পর্যন্ত গিলে ফেলত --}}
+            @php
+                $crossTab = in_array($tab, app(\App\Modules\SystemAdmin\Support\ControlPanelTabs::class)->crossTabs(), true);
+            @endphp
             @foreach ($modules as $module)
-                @continue ($tab !== $module['code'])
+                @continue (! $crossTab && $tab !== $module['code'])
 
                 <section data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border)
                                 bg-(--color-surface-card)">
@@ -250,4 +262,24 @@
             <x-ui.button type="submit" tone="primary">{{ __('core.action.save') }}</x-ui.button>
         </form>
     @endif
+
+    {{-- ⭐ বদলের ইতিহাস — কে কবে কোন সুইচ বদলালেন (সিস্টেম পর্দার নকশা §১, ১০ অক্টোবর ২০২৬; [[ControlPanelController::history()]])।
+         ⓘ ভাঁজ করা, তাই সুইচের পাতা লম্বা হয় না; চাইলেই খোলে। --}}
+    @if (($history ?? []) !== [])
+        @php($say = fn ($v) => match ((string) $v) { '1' => __('system_admin::control.value_on'), '0', '' => __('system_admin::control.value_off'), default => (string) $v })
+        <details data-control-history class="mt-6 rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
+            <summary class="cursor-pointer px-4 py-3 text-sm font-semibold">{{ __('system_admin::control.history') }}</summary>
+            <ul class="divide-y divide-(--color-border) border-t border-(--color-border)">
+                @foreach ($history as $row)
+                    <li class="flex flex-wrap items-baseline gap-x-3 gap-y-1 px-4 py-2 text-sm">
+                        <span class="tabular text-2xs text-(--color-ink-muted)">{{ \App\Core\Support\DateFormat::formatWithTime($row['when']) }}</span>
+                        <span class="font-medium">{{ $row['label'] }}</span>
+                        <span class="text-(--color-ink-muted)">{{ $say($row['from']) }} → {{ $say($row['to']) }}</span>
+                        <span class="text-2xs text-(--color-ink-muted)">{{ $row['who'] ?? '—' }}</span>
+                    </li>
+                @endforeach
+            </ul>
+        </details>
+    @endif
+    @endcomponent
 </x-layouts.app>

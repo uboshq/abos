@@ -519,6 +519,32 @@ export function switchBoard ({ on = {} } = {}) {
             return Object.keys(this.changed).length
         },
 
+        /*
+         * ⭐ মডিউল বন্ধ করার আগে নিশ্চিত — সিস্টেম পর্দার নকশা §১, ১০ অক্টোবর ২০২৬: *"বন্ধ করার আগে প্রভাব বলা আর নিশ্চিত
+         * করা"*।
+         *
+         * ⓘ কেবল যে মডিউল চালু ছিল আর এখন টিক তোলা (`data-module-label` সারি, `data-was="1"`) — অন্য কোনো বদলে প্রশ্ন নেই।
+         * বার্তা ফর্মের `data-confirm-off`-এ, `:modules` জায়গায় নামগুলো। "না" বললে কিছুই জমা পড়ে না।
+         */
+        confirmOff (event) {
+            const form = event.target
+            const off = Array.from(form.querySelectorAll('input[type=checkbox][data-module-label]'))
+                .filter((box) => box.dataset.was === '1' && ! box.checked)
+                .map((box) => box.dataset.moduleLabel)
+
+            if (off.length === 0) return true
+
+            const ask = (form.dataset.confirmOff || ':modules').replace(':modules', off.join(', '))
+
+            if (! window.confirm(ask)) {
+                event.preventDefault()
+
+                return false
+            }
+
+            return true
+        },
+
         touch (el) {
             const now = el.type === 'checkbox' ? (el.checked ? '1' : '') : el.value
 

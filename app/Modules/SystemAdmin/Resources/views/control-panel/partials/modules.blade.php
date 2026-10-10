@@ -42,7 +42,9 @@
             </thead>
 
             <tbody>
-                @foreach ($tree as $module)
+                {{-- ⭐ কেবল ব্যবসার মডিউল — চালু/বন্ধ করা যায়; ভিত্তির মডিউল নিচে আলাদা, তালাবদ্ধ (সিস্টেম পর্দার নকশা §১,
+                     ১০ অক্টোবর ২০২৬) --}}
+                @foreach (collect($tree)->reject(fn ($m) => $m['essential'] ?? false) as $module)
                     @php $moduleOn = $settings->get($module['key'], true); @endphp
 
                     <tr class="hover:bg-(--color-surface-hover)">
@@ -51,6 +53,7 @@
                                    @checked($moduleOn) data-was="{{ $moduleOn ? '1' : '' }}"
                                    x-model="on['{{ $module['key'] }}']"
                                    aria-label="{{ $module['label'] }}"
+                                   data-module-label="{{ $module['label'] }}"
                                    class="size-4">
                             <input type="hidden" name="scope[]" value="{{ $module['key'] }}">
                         </td>
@@ -65,6 +68,13 @@
                                   class="ms-2 rounded-(--radius-field) bg-(--color-badge-draft-bg) px-2 py-0.5
                                          text-2xs text-(--color-badge-draft-ink)">
                                 {{ __('system_admin::control.module_off') }}
+                            </span>
+
+                            {{-- ⭐ বন্ধ করার আগে প্রভাব — সিস্টেম পর্দার নকশা §১: *"রেস্টুরেন্ট বন্ধ করলে ৬টা পর্দা মেনু থেকে
+                                 সরবে; কোনো তথ্য মুছবে না"*। ⓘ টিক তুলতেই সারিতেই দেখায়, সংরক্ষণের আগে। --}}
+                            <span x-cloak x-show="! on['{{ $module['key'] }}']" data-module-impact
+                                  class="mt-1 block text-2xs text-(--color-badge-warning-ink)">
+                                {{ __('system_admin::control.off_impact', ['screens' => $module['row_count']]) }}
                             </span>
                         </td>
 
@@ -90,3 +100,22 @@
         </table>
     </div>
 </div>
+
+{{-- ⭐ ভিত্তি — বন্ধ করা যায় না (হিসাব, সিস্টেম প্রশাসন, অনুমোদন, মাস্টার ডাটার মতো; মডিউলের নিজের `essential`)।
+     ⓘ আগে এগুলোরও টিক ছিল, অথচ সার্ভার মানত না ([[RefuseSwitchedOffScreens]]) — টিপলে মনে হত বন্ধ হল, হয়নি। এখন টিকই নেই,
+     তালা আর কারণ। --}}
+@php($foundation = collect($tree)->filter(fn ($m) => $m['essential'] ?? false))
+@if ($foundation->isNotEmpty())
+    <section data-boxed data-foundation class="mt-4 rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
+        <h2 class="flex flex-wrap items-center gap-1 text-sm font-semibold"><x-ui.icon name="lock" :size="14" /> {{ __('system_admin::control.foundation') }}
+            <span class="ms-1 text-2xs font-normal text-(--color-ink-muted)">{{ __('system_admin::control.foundation_note') }}</span></h2>
+        <ul class="mt-2 flex flex-wrap gap-2">
+            @foreach ($foundation as $module)
+                <li data-foundation-module="{{ $module['code'] }}"
+                    class="rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-muted) px-3 py-1 text-sm">
+                    <a href="{{ route('system_admin.control-panel', ['tab' => $module['code']]) }}" class="hover:underline">{{ $module['label'] }}</a>
+                </li>
+            @endforeach
+        </ul>
+    </section>
+@endif

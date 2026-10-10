@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { filePick, imagePreview } from './forms.js'
+import { filePick, imagePreview, switchBoard } from './forms.js'
 
 /*
  * বিলের লোগো বাছলেই দেখা — মালিক, ৩ অক্টোবর ২০২৬: *"upload hole ekhane dekhar bebosta koro"*।
@@ -54,5 +54,53 @@ describe('filePick', () => {
         box.pick(change([]))
         expect(box.label).toBe('কোনো ফাইল বাছা হয়নি')
         expect(box.picked).toBe(false)
+    })
+})
+
+/*
+ * ⭐ মডিউল বন্ধের আগে নিশ্চিত — সিস্টেম পর্দার নকশা §১, ১০ অক্টোবর ২০২৬। ⓘ কেবল চালু-থেকে-বন্ধ মডিউলে প্রশ্ন, নামসহ;
+ * "না" বললে জমা থামে; অন্য বদলে বা নতুন করে চালু করলে প্রশ্ন নেই।
+ */
+describe('switchBoard.confirmOff', () => {
+    afterEach(() => {
+        vi.restoreAllMocks()
+        vi.unstubAllGlobals()
+    })
+
+    const form = (boxes) => {
+        const el = document.createElement('form')
+        el.dataset.confirmOff = ':modules বন্ধ হবে — নিশ্চিত?'
+        for (const [label, was, checked] of boxes) {
+            const box = document.createElement('input')
+            box.type = 'checkbox'
+            box.dataset.moduleLabel = label
+            box.dataset.was = was
+            box.checked = checked
+            el.appendChild(box)
+        }
+        return el
+    }
+    const submit = (el) => ({ target: el, preventDefault: vi.fn() })
+
+    it('asks only when a module that was on is now off, and stops the save on no', () => {
+        // ⓘ happy-dom-এ window.confirm নেই — নকল বসানো
+        const ask = vi.fn().mockReturnValue(false)
+        vi.stubGlobal('confirm', ask)
+        window.confirm = ask
+        const board = switchBoard()
+
+        const quiet = submit(form([['বিক্রয়', '1', true], ['রেস্টুরেন্ট', '', true]]))
+        expect(board.confirmOff(quiet)).toBe(true)
+        expect(ask).not.toHaveBeenCalled()
+
+        const off = submit(form([['বিক্রয়', '1', true], ['রেস্টুরেন্ট', '1', false], ['মজুদ', '1', false]]))
+        expect(board.confirmOff(off)).toBe(false)
+        expect(ask).toHaveBeenCalledWith('রেস্টুরেন্ট, মজুদ বন্ধ হবে — নিশ্চিত?')
+        expect(off.preventDefault).toHaveBeenCalled()
+
+        ask.mockReturnValue(true)
+        const yes = submit(form([['রেস্টুরেন্ট', '1', false]]))
+        expect(board.confirmOff(yes)).toBe(true)
+        expect(yes.preventDefault).not.toHaveBeenCalled()
     })
 })

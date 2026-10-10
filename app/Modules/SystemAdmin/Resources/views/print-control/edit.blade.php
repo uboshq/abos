@@ -22,7 +22,8 @@
         </div>
     @endif
 
-    @include('system_admin::control-panel.partials.tabs')
+    {{-- ⭐ বাঁয়ে দলবদ্ধ তালিকা আর খোঁজা, ডানে পর্দা — ট্যাবের সারির বদলে (সিস্টেম পর্দার নকশা §১, ১০ অক্টোবর ২০২৬) --}}
+    @component('system_admin::control-panel.partials.side', ['tab' => $tab])
     @include('system_admin::print-control.partials.papers', ['current' => $paper])
 
     {{-- ── কোন শাখার — মালিক, ৩০ সেপ্টেম্বর ২০২৬: শাখা ধরে আলাদা নকশা ─────────── --}}
@@ -206,4 +207,5 @@
         </div>
         </div>
     @endif
+    @endcomponent
 </x-layouts.app>
