@@ -71,11 +71,12 @@ final class CustomerImporter implements Importer, ImportNeedsKeys
             $errors[] = __('customer::validation.code_taken', ['code' => $row['code']]);
         }
 
-        if (filled($row['opening_balance']) && ! is_numeric($row['opening_balance'])) {
+        // ⛔ কেবল সাধারণ দশমিক — "1e5" `is_numeric`-এ পার হয়ে পরে bccomp-এ ভাঙত বা ১,০০,০০০ হয়ে বসত (রিভিউ ১০ অক্টোবর ২০২৬)
+        if (filled($row['opening_balance']) && ! self::plainDecimal((string) $row['opening_balance'])) {
             $errors[] = __('core.import.not_a_number', ['column' => 'opening_balance']);
         }
 
-        if (filled($row['credit_limit']) && ! is_numeric($row['credit_limit'])) {
+        if (filled($row['credit_limit']) && ! self::plainDecimal((string) $row['credit_limit'])) {
             $errors[] = __('core.import.not_a_number', ['column' => 'credit_limit']);
         }
 
@@ -202,5 +203,11 @@ final class CustomerImporter implements Importer, ImportNeedsKeys
         }
 
         return null;
+    }
+
+    /** সাধারণ দশমিক — ঐচ্ছিক চিহ্ন, অঙ্ক, ঐচ্ছিক দশমিক ভাগ; "1e5", "0x1A", ফাঁকা নয় */
+    private static function plainDecimal(string $value): bool
+    {
+        return preg_match('/^[+-]?\d+(\.\d+)?$/', trim($value)) === 1;
     }
 }

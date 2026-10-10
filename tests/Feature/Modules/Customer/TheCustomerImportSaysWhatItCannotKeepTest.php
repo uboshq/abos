@@ -41,6 +41,12 @@ final class TheCustomerImportSaysWhatItCannotKeepTest extends TestCase
         $this->post(route('customer.store'), ['name_en' => 'E Five Shop', 'opening_balance' => '1e5', 'opening_date' => now()->toDateString()])
             ->assertSessionHasErrors('opening_balance');
         $this->post(route('customer.store'), ['name_en' => 'E Five Shop', 'credit_limit' => '1e5'])->assertSessionHasErrors('credit_limit');
+
+        // ⛔ আসল ফর্ম সবসময় দিক পাঠায় — "পাবে" দিকে "1e5" আগে `Money::isZero()`-এ ৫০০ দিত (রিভিউ, ১০ অক্টোবর ২০২৬)
+        foreach (['cr', 'dr'] as $side) {
+            $this->post(route('customer.store'), ['name_en' => 'E Five Shop', 'opening_balance' => '1e5', 'opening_side' => $side, 'opening_date' => now()->toDateString()])
+                ->assertSessionHasErrors('opening_balance');
+        }
         $this->assertFalse(Customer::query()->where('name_en', 'E Five Shop')->exists());
     }
 
@@ -66,5 +72,18 @@ final class TheCustomerImportSaysWhatItCannotKeepTest extends TestCase
             '⛔ পরিশোধের শর্ত নীরবে হারাল: '.implode(' | ', $errors));
         $this->assertNotContains(__('customer::import.payment_term_not_kept', ['value' => '']), app(CustomerImporter::class)->check(['payment_term' => ''] + $row),
             'শর্ত খালি থাকলে এই কারণে থামে না');
+    }
+
+    /** ⛔ গ্রাহক আমদানিতেও "1e5" — শুরুর বাকি আর সীমায় কারণ, ভাঙা বা ১,০০,০০০ নয় (রিভিউ, ১০ অক্টোবর ২০২৬; [[CustomerImporter::check()]]) */
+    public function test_the_customer_import_refuses_one_e_five_with_a_reason(): void
+    {
+        $row = ['code' => 'IMP-E5', 'name_en' => 'E5 Import', 'name_bn' => '', 'phone' => '', 'email' => '', 'address' => '', 'party_type' => '',
+            'payment_term' => '', 'credit_limit' => '', 'credit_days' => '', 'opening_balance' => '', 'opening_date' => ''];
+
+        foreach (['opening_balance', 'credit_limit'] as $column) {
+            $this->assertContains(__('core.import.not_a_number', ['column' => $column]), app(CustomerImporter::class)->check([$column => '1e5'] + $row),
+                '⛔ আমদানিতে "1e5" সংখ্যা হিসেবে পার হল: '.$column);
+            $this->assertNotContains(__('core.import.not_a_number', ['column' => $column]), app(CustomerImporter::class)->check([$column => '1500.50'] + $row));
+        }
     }
 }

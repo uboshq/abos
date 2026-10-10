@@ -138,7 +138,9 @@ class CustomerRequest extends FormRequest
         $this->request->remove('opening_side');
         $this->query->remove('opening_side');
 
-        if (! in_array($side, ['dr', 'cr'], true) || $amount === '' || ! is_numeric($amount)) {
+        // ⛔ কেবল সাধারণ দশমিক — "1e5" `is_numeric`-এ পার হত, তারপর `Money::isZero()`-এর bccomp-এ ৫০০ ("পাবে" দিক; রিভিউ ১০ অক্টোবর ২০২৬)।
+        // ⓘ না মিললে অঙ্ক যেমন এসেছে তেমন থাকে, আর নিয়ম (`decimal`) কারণসহ ফেরায়
+        if (! in_array($side, ['dr', 'cr'], true) || preg_match('/^[+-]?\d+(\.\d+)?$/', $amount) !== 1) {
             return;
         }
 
