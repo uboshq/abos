@@ -58,6 +58,8 @@ final class TheRegisterAndTheLedgerToldTheSameStoryTest extends TestCase
         $this->owner = User::query()->where('email', 'owner@abos.test')->firstOrFail();
         $this->actingAs($this->owner);
         app(StandardChart::class)->install();
+        // ⓘ এই দাবিগুলো মূলধনী সীমা নিয়ে নয় — মালিকের ৳১০,০০০ ডিফল্টের নিচের জিনিসও এখানে সম্পদ (১১ অক্টোবর ২০২৬)
+        app(\App\Core\Services\SettingsService::class)->set(\App\Modules\Accounts\Services\FixedAssetService::THRESHOLD, 0);
         $this->assets = app(FixedAssetService::class);
     }
 

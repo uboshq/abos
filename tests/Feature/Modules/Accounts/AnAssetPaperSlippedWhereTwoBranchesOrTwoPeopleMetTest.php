@@ -203,7 +203,7 @@ final class AnAssetPaperSlippedWhereTwoBranchesOrTwoPeopleMetTest extends TestCa
     public function test_a_skipped_month_is_not_posted_once_a_later_month_is(): void
     {
         $asset = app(FixedAssetService::class)->register([
-            'category_id' => $this->category()->id, 'name' => 'Laptop', 'acquired_on' => '2026-01-01', 'cost' => '1200', 'salvage' => '0',
+            'category_id' => $this->category()->id, 'name' => 'Laptop', 'acquired_on' => '2026-01-01', 'cost' => '12000', 'salvage' => '0',
             'method' => FixedAsset::STRAIGHT_LINE, 'life_months' => 12, 'funded_by' => FixedAssetService::FUNDED_ALREADY, 'branch_id' => $this->a->id,
         ]);
 
@@ -320,7 +320,7 @@ final class AnAssetPaperSlippedWhereTwoBranchesOrTwoPeopleMetTest extends TestCa
         $warehouse = Warehouse::query()->where('is_default', true)->firstOrFail();
         $bill = app(PurchaseBillService::class)->create(
             ['supplier_id' => Supplier::query()->firstOrFail()->id, 'warehouse_id' => $warehouse->id, 'trx_date' => now()->toDateString()],
-            [['product_id' => Product::query()->firstOrFail()->id, 'qty' => '10', 'rate' => '100']],
+            [['product_id' => Product::query()->firstOrFail()->id, 'qty' => '10', 'rate' => '20000']],
         );
 
         return app(PurchaseBillService::class)->confirm($bill)->fresh();

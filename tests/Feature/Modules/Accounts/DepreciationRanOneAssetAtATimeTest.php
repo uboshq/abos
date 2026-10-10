@@ -51,6 +51,8 @@ final class DepreciationRanOneAssetAtATimeTest extends TestCase
         CompanyContext::set($this->company->id, $this->company->defaultBranch()?->id);
         $this->actingAs(User::query()->where('email', 'owner@abos.test')->firstOrFail());
         app(StandardChart::class)->install();
+        // ⓘ এই দাবিগুলো মূলধনী সীমা নিয়ে নয় — মালিকের ৳১০,০০০ ডিফল্টের নিচের জিনিসও এখানে সম্পদ (১১ অক্টোবর ২০২৬)
+        app(\App\Core\Services\SettingsService::class)->set(\App\Modules\Accounts\Services\FixedAssetService::THRESHOLD, 0);
 
         $this->assets = app(FixedAssetService::class);
         $this->engine = app(DepreciationEngine::class);
