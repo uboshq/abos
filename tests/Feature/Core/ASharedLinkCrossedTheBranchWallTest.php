@@ -312,6 +312,27 @@ final class ASharedLinkCrossedTheBranchWallTest extends TestCase
         $this->assertRendered($this->get(route('paper.shared', $share->token)), $this->theirs);
     }
 
+    /**
+     * ⛔ লিংক বাতিল আর ছাপার ইতিহাস — কাগজটা নাগালে না থাকলে ৪০৪ (পুরো-ERP অডিট, নিরাপত্তা ও সিস্টেম; fe, ১০ অক্টোবর ২০২৬;
+     * [[PaperShareController::visibleDocument()]])। ⓘ একই মানুষ দুইবার: শাখা ছাড়া বন্ধ, শাখা দিলে খোলা।
+     */
+    public function test_a_branch_limited_clerk_cannot_revoke_or_read_the_history_of_another_branchs_paper_until_given_that_branch(): void
+    {
+        $this->mint($this->owner, $this->theirs)->assertRedirect()->assertSessionHas('shared_link');
+        $share = DocumentShare::query()->latest('id')->firstOrFail();
+        $history = route('paper.history', ['type' => self::KIND, 'id' => $this->theirs->id]);
+
+        app(DataScope::class)->forget();
+        $this->actingAs($this->clerk)->post(route('paper.revoke', $share))->assertNotFound();
+        $this->assertNull($share->fresh()->revoked_at, '⛔ নাগালের বাইরের কাগজের লিংক মেরে ফেলা গেল।');
+        $this->actingAs($this->clerk)->get($history)->assertNotFound();
+
+        $this->allowClerk($this->netrokona);
+        $this->actingAs($this->clerk->fresh())->get($history)->assertOk();
+        $this->actingAs($this->clerk->fresh())->post(route('paper.revoke', $share))->assertRedirect();
+        $this->assertNotNull($share->fresh()->revoked_at, '⛔ শাখা পেয়েও লিংক বাতিল হলো না।');
+    }
+
     // ── সাহায্য ──────────────────────────────────────────────────────────
 
     /**

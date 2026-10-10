@@ -60,6 +60,14 @@ final class OnePaymentAdviceForOneBankReferenceTest extends TestCase
         // ⭐ অন্য খাতে একই রেফারেন্স — আলাদা টাকা
         $this->assertNotNull($this->advise($shop, $this->otherBank, 'TRX-7788'));
 
+        // ⛔ খাত না বললেও — খাতবিহীন বিজ্ঞপ্তিগুলোর মধ্যে একই রেফারেন্স একবারই (১০ অক্টোবর ২০২৬; খাত ঐচ্ছিক ঘর)
+        $this->assertNotNull(app(DepositClaimService::class)->raise($shop, [
+            'claimed_on' => now()->subDay()->toDateString(), 'amount' => '5000', 'method' => DepositClaim::BANK, 'reference' => 'TRX-NOACC',
+        ]));
+        $this->assertRefused(fn () => app(DepositClaimService::class)->raise($shop, [
+            'claimed_on' => now()->subDay()->toDateString(), 'amount' => '5000', 'method' => DepositClaim::BANK, 'reference' => 'trx-noacc',
+        ]), '⛔ খাত না বলে একই রেফারেন্স দ্বিতীয়বার পাঠানো গেল।');
+
         // ⭐ প্রথমটা প্রত্যাখ্যাত — ভুল ধরে আবার পাঠানো যায়
         app(DepositClaimService::class)->reject($first, 'অঙ্ক ভুল');
         $again = $this->advise($shop, $this->bank, 'TRX-7788');

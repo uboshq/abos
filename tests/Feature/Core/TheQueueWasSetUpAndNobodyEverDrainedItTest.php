@@ -105,6 +105,11 @@ final class TheQueueWasSetUpAndNobodyEverDrainedItTest extends TestCase
             '--stop-when-empty' => true,
             '--max-time' => 30,
             '--tries' => 1,
+            /*
+             * ⓘ ১২ = স্মৃতির সীমা (Worker::EXIT_MEMORY_LIMIT) — ১০ অক্টোবর ২০২৬। ⚠️ পরীক্ষার প্রক্রিয়া পুরো স্যুট বয়ে
+             * ১২৮ MB পেরিয়ে যায়, তখন ওয়ার্কার কাজ ধরার আগেই থামত। লাইভের ওয়ার্কার নিজের প্রক্রিয়া, তার সীমা আলাদা।
+             */
+            '--memory' => 4096,
         ])->assertSuccessful();
 
         $this->assertFileExists($proof,

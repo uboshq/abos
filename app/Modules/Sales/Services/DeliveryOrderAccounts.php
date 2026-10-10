@@ -6,6 +6,7 @@ namespace App\Modules\Sales\Services;
 
 use App\Core\Services\SettingsService;
 use App\Modules\Inventory\Models\Batch;
+use App\Modules\Inventory\Services\StockService;
 use App\Modules\Sales\Models\DeliveryOrder;
 use App\Modules\Sales\Support\DeliveryOrderStatus;
 use Illuminate\Support\Carbon;
@@ -144,7 +145,7 @@ final class DeliveryOrderAccounts
                     ->when($warehouseId !== null, fn ($q) => $q->where('warehouse_id', $warehouseId))
                     ->whereNotNull('batch_id')
                     ->groupBy('batch_id')
-                    ->havingRaw('SUM(floor_change - reserved_change - hold_change) > 0')
+                    ->havingRaw('SUM('.StockService::availableSql().') > 0')
                     ->select('batch_id'))
                 ->fefo()
                 ->first();

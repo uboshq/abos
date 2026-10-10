@@ -199,7 +199,8 @@ final class SetInvoiceInformationChangesThePaperTest extends TestCase
     {
         $declared = array_keys(array_filter(
             app(SettingsService::class)->definitions(),
-            fn (array $d) => ($d['group'] ?? null) === InvoiceInfoController::GROUP,
+            /* ⓘ লোগো লেখার ঘর নয়, তোলার ঘর — নিচে আলাদা করে মাপা */
+            fn (array $d) => ($d['group'] ?? null) === InvoiceInfoController::GROUP && ($d['part'] ?? null) !== 'logo',
         ));
 
         /* ⛔ নাম হাতে লিখে নয় — ঘোষণা থেকে; তবু খালি তালিকা যেন সবুজ না দেখায় */
@@ -212,6 +213,10 @@ final class SetInvoiceInformationChangesThePaperTest extends TestCase
             $this->assertStringContainsString('settings['.$key.']', $page, "{$key} পাতায় নেই।");
             $this->assertStringNotContainsString('settings['.$key.']', $general, "{$key} সাধারণ সেটিংসেও আঁকা — দুই পর্দা এক সারিতে লিখত।");
         }
+
+        /* ⭐ বিলের লোগো আলাদা তোলার ঘর — মালিক, ৩০ সেপ্টেম্বর ২০২৬: "INVOICE LOGO ALADA UPLOAD MUST" */
+        $this->assertStringContainsString('name="invoice_logo"', $page);
+        $this->assertStringContainsString('enctype="multipart/form-data"', $page);
 
         /* ⓘ ছাপার নিয়ন্ত্রণের কাগজের সারিতে ট্যাবটা আছে */
         $print = $this->get(route('system_admin.print_control'))->assertOk()->getContent();

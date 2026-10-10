@@ -51,6 +51,11 @@
                              :options="$warehouses->mapWithKeys(fn ($w) => [$w->id => $w->name()])"
                              placeholder="-" required />
 
+                {{-- ⭐ কোন মাল গোনা হলো — দামি, না ফ্রি (মজুদ ⚠️৬ক); ফ্রি মালে দর লাগে না, খাতায়ও কিছু যায় না --}}
+                <x-ui.select name="pool" :label="__('inventory::field.pool')"
+                             :options="['paid' => __('inventory::field.pool_paid'), 'free' => __('inventory::field.pool_free')]"
+                             selected="paid" />
+
                 <x-ui.field name="counted" type="number" step="0.01" inputmode="decimal"
                             :label="__('inventory::field.counted')" numeric required />
 

@@ -13,6 +13,9 @@
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ $warehouse->name() }}</x-slot:title>
 
+    {{-- ⛔ কেন হলো না, এই পাতাতেই — বোতাম আটকালে বার্তাটা এখানে দেখায় (ARefusalNobodyEverSawTest, ১০ অক্টোবর ২০২৬) --}}
+    <x-ui.errors />
+
     <x-slot:header>
         <x-ui.page-header :title="$warehouse->name()"
                           :subtitle="$warehouse->code" />

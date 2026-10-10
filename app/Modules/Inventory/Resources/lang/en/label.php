@@ -17,4 +17,5 @@ return [
     'combine_selection' => 'Combine selection for all listed products',
     'purchase_placement' => 'Purchase Related Stock Placement',
     'return_placement' => 'Return Related Stock Placement',
+    'free_adjustment_narration' => 'Free goods adjustment - :document',
 ];

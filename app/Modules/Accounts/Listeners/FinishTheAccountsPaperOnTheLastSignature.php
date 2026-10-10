@@ -10,6 +10,8 @@ use App\Modules\Accounts\Models\CashTill;
 use App\Modules\Accounts\Models\Cheque;
 use App\Modules\Accounts\Models\FixedAsset;
 use App\Modules\Accounts\Models\InterCompanyTransfer;
+use App\Modules\Accounts\Models\LoanInstalment;
+use App\Modules\Accounts\Models\LoanMovement;
 use App\Modules\Accounts\Models\MoneyTransfer;
 use App\Modules\Accounts\Models\TillHandover;
 use App\Modules\Accounts\Models\Note;
@@ -17,6 +19,7 @@ use App\Modules\Accounts\Services\AccountsSignature;
 use App\Modules\Accounts\Services\ChequeService;
 use App\Modules\Accounts\Services\FixedAssetService;
 use App\Modules\Accounts\Services\InterCompanyService;
+use App\Modules\Accounts\Services\LoanService;
 use App\Modules\Accounts\Services\MoneyTransferService;
 use App\Modules\Accounts\Services\NoteService;
 use App\Modules\Accounts\Services\OpeningBalanceService;
@@ -42,11 +45,36 @@ final class FinishTheAccountsPaperOnTheLastSignature
 
         $approval = Approval::query()->find((int) ($event->payload['approval_id'] ?? 0));
 
+        // ⓘ ঋণের অপেক্ষার সারিতে "না" — সারিটা প্রত্যাখ্যাত, খাতায় কিছুই ওঠেনি (অডিট, ১০ অক্টোবর ২০২৬)
+        if ($approval?->status === Approval::REJECTED && $approval->approvable instanceof LoanMovement) {
+            app(LoanService::class)->rejectSigned($approval->approvable);
+
+            return;
+        }
+
         if ($approval?->status !== Approval::APPROVED) {
             return;
         }
 
         $paper = $approval->approvable;
+
+        // ⭐ ঋণের তোলা, শোধ, সুদ — অপেক্ষার সারি এবার খাতায় ([[LoanService::finishSigned()]])
+        if ($paper instanceof LoanMovement) {
+            app(LoanService::class)->finishSigned($paper);
+
+            return;
+        }
+
+        // ⭐ ঋণের কিস্তি — সই চাওয়ার মুহূর্তের তথ্যেই, আর কেবল এখনো বাকি থাকলে (একই সই দুইবার এলে কিছুই নয়)
+        if ($paper instanceof LoanInstalment) {
+            $signed = (array) ($approval->payload ?? []);
+
+            if (! $paper->isPaid()) {
+                app(LoanService::class)->payInstalment($paper, (int) ($signed['from_account_id'] ?? 0), $signed['on'] ?? null, isset($signed['amount']) ? (string) $signed['amount'] : null);
+            }
+
+            return;
+        }
 
         // ⓘ খসড়া থাকলেই — একই সই দুইবার ঘটনা পাঠালে বা কেউ হাতে আগেই পাকা করলে দ্বিতীয়বার কিছু হয় না
         if ($paper instanceof Note && $paper->isDraft()) {

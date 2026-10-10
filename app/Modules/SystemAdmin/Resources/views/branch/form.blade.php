@@ -47,9 +47,7 @@
         <x-ui.field name="address_en" :label="__('system_admin::field.address_en')"
                     :value="old('address_en', $branch->address_en)" />
 
-        <div class="flex items-end gap-2 sm:col-span-2">
-            <x-ui.button type="submit" tone="primary">{{ __('core.action.save') }}</x-ui.button>
-            <x-ui.button tone="secondary" :href="route('system_admin.branch.index')">{{ __('core.action.cancel') }}</x-ui.button>
-        </div>
+        {{-- ⭐ বাতিল · সংরক্ষণ স্থির পট্টিতে, ডানে — সিস্টেম পর্দার নকশা §৪, ১০ অক্টোবর ২০২৬ --}}
+        <x-ui.form-actions class="sm:col-span-2" :cancel="route('system_admin.branch.index')" />
     </form>
 </x-layouts.app>

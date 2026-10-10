@@ -519,6 +519,32 @@ export function switchBoard ({ on = {} } = {}) {
             return Object.keys(this.changed).length
         },
 
+        /*
+         * ⭐ মডিউল বন্ধ করার আগে নিশ্চিত — সিস্টেম পর্দার নকশা §১, ১০ অক্টোবর ২০২৬: *"বন্ধ করার আগে প্রভাব বলা আর নিশ্চিত
+         * করা"*।
+         *
+         * ⓘ কেবল যে মডিউল চালু ছিল আর এখন টিক তোলা (`data-module-label` সারি, `data-was="1"`) — অন্য কোনো বদলে প্রশ্ন নেই।
+         * বার্তা ফর্মের `data-confirm-off`-এ, `:modules` জায়গায় নামগুলো। "না" বললে কিছুই জমা পড়ে না।
+         */
+        confirmOff (event) {
+            const form = event.target
+            const off = Array.from(form.querySelectorAll('input[type=checkbox][data-module-label]'))
+                .filter((box) => box.dataset.was === '1' && ! box.checked)
+                .map((box) => box.dataset.moduleLabel)
+
+            if (off.length === 0) return true
+
+            const ask = (form.dataset.confirmOff || ':modules').replace(':modules', off.join(', '))
+
+            if (! window.confirm(ask)) {
+                event.preventDefault()
+
+                return false
+            }
+
+            return true
+        },
+
         touch (el) {
             const now = el.type === 'checkbox' ? (el.checked ? '1' : '') : el.value
 
@@ -1149,6 +1175,30 @@ export function imagePreview ({ current = '' } = {}) {
 
             this.picked = Boolean(file)
             this.url = file ? URL.createObjectURL(file) : current
+        },
+    }
+}
+
+/*
+ * ⭐ ফাইল তোলার বাংলা বোতাম — পাতা সাজানোর পরিকল্পনা ধাপ ১, ১০ অক্টোবর ২০২৬: *"ব্রাউজারের ইংরেজি 'Choose File' আর
+ * দেখাবে না"*।
+ *
+ * ⓘ ব্রাউজারের ফাইল-ঘর তার লেখা ("Choose File", "No file chosen") নিজের ভাষায় আঁকে, বদলানোর উপায় নেই। ⭐ তাই আসল ঘরটা
+ * লুকানো, আর বাংলা বোতাম তার `<label>`; বাছা ফাইলের নাম (বা কয়টা) এখানে রাখা হয়, পর্দা `label` দেখায়।
+ * ব্যবহার: `x-data="filePick({ none: '…', many: '… :count …' })"`, ঘরে `@change="pick($event)"`, নামে `x-text="label"`।
+ */
+export function filePick ({ none = '', many = ':count' } = {}) {
+    return {
+        label: none,
+        picked: false,
+
+        pick (event) {
+            const files = event.target.files ? Array.from(event.target.files) : []
+
+            this.picked = files.length > 0
+            this.label = files.length === 0
+                ? none
+                : (files.length === 1 ? files[0].name : many.replace(':count', String(files.length)))
         },
     }
 }
