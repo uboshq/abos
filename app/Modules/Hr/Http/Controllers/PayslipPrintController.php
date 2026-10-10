@@ -167,7 +167,7 @@ class PayslipPrintController extends Controller implements HasMiddleware
          * ⭐ কাগজের মাপ মালিকের বসানো, হাতে লেখা A4 নয় (২০ সেপ্টেম্বর ২০২৬)।
          * ⓘ ঠিকানায় চাওয়া মাপ আগে, তারপর সেটিং — কারণ [[PaperSize::chosen()]]-এ।
          */
-        $paper = PaperSize::chosen($request->query('paper'), $this->settings->get('hr.print.paper.payslip'));
+        $paper = PaperSize::chosen(PaperSize::fromQuery($request), $this->settings->get('hr.print.paper.payslip'));
 
         $locale = app()->getLocale();
 

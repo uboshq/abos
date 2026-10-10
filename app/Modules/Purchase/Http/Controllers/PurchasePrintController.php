@@ -104,7 +104,7 @@ class PurchasePrintController extends Controller implements HasMiddleware
          * ⓘ A4/A5-এ; সরু থার্মাল রোলে আগের সাধারণ কাগজই (ওখানে আট কলাম ধরে না)।
          * ⓘ Control Panel-এ `purchase.print.design.bill` = `standard` দিলে আগের কাগজ।
          */
-        $paper = PaperSize::chosen($request->query('paper'), $this->settings->get('purchase.print.paper.bill'));
+        $paper = PaperSize::chosen(PaperSize::fromQuery($request), $this->settings->get('purchase.print.paper.bill'));
         $modern = ! PaperSize::of($paper)->isThermal
             && ($this->settings->get('purchase.print.design.bill') ?? 'modern') === 'modern';
 
@@ -435,7 +435,7 @@ class PurchasePrintController extends Controller implements HasMiddleware
          * ⭐ কাগজের মাপ মালিকের বসানো, হাতে লেখা A4 নয় (২০ সেপ্টেম্বর ২০২৬)।
          * ⓘ ঠিকানায় চাওয়া মাপ আগে, তারপর সেটিং — কারণ [[PaperSize::chosen()]]-এ।
          */
-        $paper = PaperSize::chosen($request->query('paper'), $this->settings->get($paperSetting));
+        $paper = PaperSize::chosen(PaperSize::fromQuery($request), $this->settings->get($paperSetting));
 
         /*
          * বাতিল করা কাগজের গায়ে "বাতিল"।

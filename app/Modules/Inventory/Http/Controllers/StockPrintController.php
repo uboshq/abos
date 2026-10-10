@@ -109,7 +109,7 @@ class StockPrintController extends Controller implements HasMiddleware
          * ⭐ কাগজের মাপ মালিকের বসানো, হাতে লেখা A4 নয় (২০ সেপ্টেম্বর ২০২৬)।
          * ⓘ ঠিকানায় চাওয়া মাপ আগে, তারপর সেটিং — কারণ [[PaperSize::chosen()]]-এ।
          */
-        $paper = PaperSize::chosen($request->query('paper'), $this->settings->get('inventory.print.paper.transfer'));
+        $paper = PaperSize::chosen(PaperSize::fromQuery($request), $this->settings->get('inventory.print.paper.transfer'));
 
         $pdf = $this->print->render(
             template: 'print.document',

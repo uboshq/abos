@@ -39,7 +39,7 @@ final class HandLoanLetterController extends Controller implements HasMiddleware
     public function __invoke(Request $request, Person $person): Response
     {
         $asOf = Carbon::parse((string) ($request->query('as_of') ?: Carbon::today()->toDateString()))->toDateString();
-        $paper = PaperSize::chosen($request->query('paper'), PaperSize::A4);
+        $paper = PaperSize::chosen(PaperSize::fromQuery($request), PaperSize::A4);
         $asFile = $request->boolean('download');
 
         $balance = bcadd((string) HandLoanReports::rows(['company_id' => CompanyContext::id()], wall: false)

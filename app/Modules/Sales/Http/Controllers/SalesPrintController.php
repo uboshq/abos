@@ -2029,13 +2029,8 @@ class SalesPrintController extends Controller implements HasMiddleware
      */
     private function askedPaper(Request $request): ?string
     {
-        $asked = $request->query('paper');
-
-        if ($asked !== null && ! is_string($asked)) {
-            abort(422, __('core.print.paper_not_a_size'));
-        }
-
-        return $asked;
+        // ⓘ নিয়মটা এখন এক জায়গায়, সব ছাপার দরজার জন্য ([[PaperSize::fromQuery()]], PR #17 রিভিউ ⚠️১৩)
+        return PaperSize::fromQuery($request);
     }
 
     private function money(mixed $value): string

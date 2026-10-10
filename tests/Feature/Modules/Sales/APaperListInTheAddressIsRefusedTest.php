@@ -38,4 +38,32 @@ final class APaperListInTheAddressIsRefusedTest extends TestCase
         $this->get(route('sales.print.receipt', $receipt).'?paper[]=a4')->assertStatus(422);
         $this->get(route('sales.print.receipt', $receipt).'?paper=a5')->assertOk();
     }
+
+    /**
+     * ⛔ বাকি ছাপার দরজাগুলোও — ভাউচার, নোট, টাকা হস্তান্তর, মজুদ, ক্রয়, পেস্লিপ, কোটেশন, বছর-শেষ, হ্যান্ড লোন (১১ অক্টোবর ২০২৬,
+     * PR #17 রিভিউ ⚠️১৩)। ⓘ সবাই এখন [[PaperSize::fromQuery()]] ডাকে; কেউ কাঁচা `$request->query('paper')` সরাসরি
+     * [[PaperSize::chosen()]]-এ দিলে আবার ৫০০ — তাই কোড পড়ে দেখা, আর নিয়মটা নিজে মেপে দেখা।
+     */
+    public function test_no_print_door_hands_the_raw_query_to_chosen_and_the_shared_rule_says_422(): void
+    {
+        $raw = [];
+
+        foreach (new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator(app_path(), \FilesystemIterator::SKIP_DOTS)) as $file) {
+            if ($file->getExtension() === 'php' && preg_match('/PaperSize::chosen\(\s*\$request->query\(/', (string) file_get_contents($file->getPathname())) === 1) {
+                $raw[] = str_replace(base_path().DIRECTORY_SEPARATOR, '', $file->getPathname());
+            }
+        }
+
+        $this->assertSame([], $raw, "⛔ এই দরজাগুলো ঠিকানার মাপ যাচাই না করেই নেয় — ?paper[]= দিলে ৫০০:\n".implode("\n", $raw));
+
+        $this->assertSame('a5', \App\Core\Engines\Print\PaperSize::fromQuery(\Illuminate\Http\Request::create('/x?paper=a5')));
+        $this->assertNull(\App\Core\Engines\Print\PaperSize::fromQuery(\Illuminate\Http\Request::create('/x')));
+
+        try {
+            \App\Core\Engines\Print\PaperSize::fromQuery(\Illuminate\Http\Request::create('/x?paper[]=a4'));
+            $this->fail('⛔ তালিকা-মাপ ফিরল না — chosen()-এ গিয়ে ৫০০ হত।');
+        } catch (\Symfony\Component\HttpKernel\Exception\HttpException $e) {
+            $this->assertSame(422, $e->getStatusCode());
+        }
+    }
 }

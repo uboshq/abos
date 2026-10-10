@@ -85,7 +85,7 @@ class VoucherPrintController extends Controller implements HasMiddleware
          * ⭐ কাগজের মাপ মালিকের বসানো, হাতে লেখা A4 নয় (২০ সেপ্টেম্বর ২০২৬)।
          * ⓘ ঠিকানায় চাওয়া মাপ আগে, তারপর সেটিং — কারণ [[PaperSize::chosen()]]-এ।
          */
-        $paper = PaperSize::chosen($request->query('paper'), $this->branch->get('accounts.print.paper.voucher'));
+        $paper = PaperSize::chosen(PaperSize::fromQuery($request), $this->branch->get('accounts.print.paper.voucher'));
 
         /*
          * টেমপ্লেটটা আগে থেকেই ছিল — `resources/views/print/voucher.blade.php`।
