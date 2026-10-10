@@ -123,10 +123,11 @@ final class StatusNotices
                  * আর ফেরত পাঠানো যায় না।
                  */
                 $this->expiryNotice(),
-                // প্রতিষ্ঠানের নিজের নোটিশ সবার শেষে, কিন্তু বারে সবচেয়ে
-                // বেশি জায়গা নেয় — ওটা নিয়ম, ক্ষণিকের অবস্থা নয়, তাই
-                // সিস্টেমের সতর্কতাগুলো আগে চোখে পড়া উচিত
-                $this->companyNotice(),
+                /*
+                 * ⓘ প্রতিষ্ঠানের নিজের নোটিশ এখন যোগাযোগ কেন্দ্রের প্রকাশিত নোটিশ ([[ownNotices()]], a6072a34)।
+                 * ⛔ পুরনো `system.notice` পথটা ১০ অক্টোবর ২০২৬-এ সরানো — সেটিংটা ২৪ সেপ্টেম্বর থেকে ঘোষিত নয়, কেউ লিখতে
+                 * পারত না, আর লাইভের লেখাটা তখনই আসল নোটিশে সরানো হয়েছিল; পথটা কেবল একটা মৃত পড়া ছিল।
+                 */
             ])),
         );
     }
@@ -139,30 +140,6 @@ final class StatusNotices
     public function current(): ?array
     {
         return $this->all()[0] ?? null;
-    }
-
-    /**
-     * প্রতিষ্ঠানের নিজের লেখা নোটিশ।
-     *
-     * সিস্টেমের কোনো অবস্থা নয় — ব্যবসার সিদ্ধান্ত ("বাকি দেওয়া নিষেধ")।
-     * লেখার জায়গা System Management → Control Panel, দেখার জায়গা প্রতিটা
-     * পাতা।
-     *
-     * @return array{text: string, url: ?string, tone: string}|null
-     */
-    private function companyNotice(): ?array
-    {
-        $text = trim((string) app(SettingsService::class)->get('system.notice', ''));
-
-        if ($text === '') {
-            return null;
-        }
-
-        return [
-            'text' => $text,
-            'url' => null,
-            'tone' => 'danger',
-        ];
     }
 
     /**
