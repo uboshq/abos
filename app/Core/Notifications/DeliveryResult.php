@@ -58,4 +58,13 @@ final class DeliveryResult
 
         return mb_substr(trim($error), 0, 255);
     }
+
+    /**
+     * ⛔ প্রোভাইডারের ব্যতিক্রম ভুলের খাতায় — কিন্তু ছাঁটা লেখায় (ধাপ ৫)। লাইব্রেরির ভুলে প্রায়ই ঠিকানা, পাসওয়ার্ড-ভরা URL বা
+     * টোকেন থাকে; কাঁচা ব্যতিক্রম পাঠালে সেটা `error_events`-এ উঠত। এখানে কেবল ধরনের নাম আর [[clean()]] করা লেখা।
+     */
+    public static function report(\Throwable $e, string $where): void
+    {
+        report(new \RuntimeException($where.': '.class_basename($e).': '.self::clean($e->getMessage())));
+    }
 }

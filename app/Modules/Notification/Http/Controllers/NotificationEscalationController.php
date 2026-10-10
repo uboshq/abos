@@ -50,7 +50,8 @@ class NotificationEscalationController extends Controller
             ->paginate(self::PER_PAGE)->withQueryString();
 
         $escalatedTo = User::query()->withoutGlobalScope('company')
-            ->whereIn('id', $rows->pluck('escalated_to')->filter()->unique())->pluck('name', 'id');
+            ->whereHas('companies', fn ($q) => $q->whereKey(CompanyContext::id()))
+            ->whereIn('users.id', $rows->pluck('escalated_to')->filter()->unique())->pluck('name', 'users.id');
 
         $holes = ApprovalFlowStep::query()
             ->join('approval_flows', 'approval_flows.id', '=', 'approval_flow_steps.approval_flow_id')

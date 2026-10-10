@@ -59,7 +59,7 @@ final class EmailChannel implements DeliveryChannel
         } catch (TransportExceptionInterface $e) {
             return DeliveryResult::transient('mail transport: '.$e->getMessage());
         } catch (Throwable $e) {
-            report($e);
+            DeliveryResult::report($e, 'email');
 
             return DeliveryResult::transient('mail: '.class_basename($e));
         }

@@ -103,7 +103,7 @@ final class DigestService
         try {
             $user->notifyNow(new NewsDigestByMail($bells, $pref->frequency));
         } catch (Throwable $e) {
-            report($e);
+            DeliveryResult::report($e, 'digest');
             $digest->forceFill(['period' => $pref->frequency, 'items' => $bells->count(), 'status' => 'failed', 'error' => DeliveryResult::clean(class_basename($e).': '.$e->getMessage())])->save();
 
             return 'failed';

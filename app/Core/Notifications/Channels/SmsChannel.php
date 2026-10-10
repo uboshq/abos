@@ -59,7 +59,7 @@ final class SmsChannel implements DeliveryChannel
         try {
             return $gateway->send((string) $user->mobile, mb_substr((string) $notification->title, 0, 160), (string) $config->sender_id, (array) ($config->credentials ?? []));
         } catch (Throwable $e) {
-            report($e);
+            DeliveryResult::report($e, 'sms');
 
             return DeliveryResult::transient('sms: '.class_basename($e));
         }

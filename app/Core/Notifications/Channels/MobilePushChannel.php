@@ -73,7 +73,7 @@ final class MobilePushChannel implements DeliveryChannel
                 $failed = $failed || $result === FcmSender::FAILED;
             }
         } catch (Throwable $e) {
-            report($e);
+            DeliveryResult::report($e, 'mobile_push');
 
             return DeliveryResult::transient('fcm: '.class_basename($e));
         }

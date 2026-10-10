@@ -102,7 +102,7 @@ final class DeliveryService
                 }
             }
         } catch (Throwable $e) {
-            report($e);
+            DeliveryResult::report($e, 'delivery');
         }
     }
 
@@ -182,7 +182,7 @@ final class DeliveryService
                 default => $channel->send($bell, $user, $config),
             };
         } catch (Throwable $e) {
-            report($e);
+            DeliveryResult::report($e, 'delivery');
             $result = DeliveryResult::transient('adapter: '.class_basename($e));
         }
 

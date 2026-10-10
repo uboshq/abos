@@ -119,7 +119,7 @@ final class WebPushChannel implements DeliveryChannel
                 $why = 'push service refused ('.$status.')';
             }
         } catch (Throwable $e) {
-            report($e);
+            DeliveryResult::report($e, 'web_push');
 
             return DeliveryResult::transient('web push: '.class_basename($e));
         }
