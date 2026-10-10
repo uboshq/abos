@@ -43,8 +43,31 @@ final class BengaliDesignsPrintBengaliDigitsTest extends TestCase
             $text = $this->text($route, $design, $size);
 
             $this->assertMatchesRegularExpression(self::BENGALI, $text, "দৃশ্যটাই বানানো যায়নি — {$design} ({$size}) কাগজে কোনো অঙ্কই নেই");
-            $this->assertDoesNotMatchRegularExpression('/[0-9]/', $text, "⛔ বাংলা নকশা {$design} ({$size}) ইংরেজি অঙ্ক ছাপল");
+
+            /*
+             * ⓘ ইংরেজি অঙ্ক কেবল খোঁজার নম্বরে — কাগজের নম্বর, গাড়ি, TrxID, BIN, ফোন, ইমেইল, ওয়েব (fe-র ডিফল্ট, ১১ অক্টোবর ২০২৬;
+             * [[BanglaDigits::keepsItsDigits()]])। ⛔ টাকা, পরিমাণ বা তারিখে একটা ইংরেজি অঙ্কও নয়।
+             */
+            preg_match_all('/\S*[0-9]\S*/u', $text, $words);
+            $keeps = new \ReflectionMethod(BanglaDigits::class, 'keepsItsDigits');
+            $stray = array_values(array_filter($words[0], fn (string $w) => ! $keeps->invoke(null, $w)));
+            $this->assertSame([], $stray, "⛔ বাংলা নকশা {$design} ({$size}) টাকা/পরিমাণ/তারিখ ইংরেজি অঙ্কে ছাপল");
         }
+    }
+
+    /** ⭐ খোঁজার নম্বর ইংরেজিতে, টাকা-পরিমাণ-তারিখ বাংলায়; আর ভাঙা লেখায় কাগজ ফাঁকা নয় (PR #17 রিভিউ ⚠️৯)। */
+    public function test_numbers_people_search_for_keep_english_digits_and_a_broken_byte_never_blanks_the_paper(): void
+    {
+        $this->assertSame('<p>বিল S-2610-0001 · ৳ ১,২০০.০০ · ১১-১০-২০২৬ · ১২ পিস</p>',
+            BanglaDigits::inText('<p>বিল S-2610-0001 · ৳ 1,200.00 · 11-10-2026 · 12 পিস</p>'));
+
+        foreach (['adi2024@gmail.com', 'www.adi2024.com', 'DHA-GA-11-2233', 'TrxID:9AB1C2D3', '01711-123456', '01711123456', '002345678901'] as $searched) {
+            $this->assertSame("<td>{$searched}</td>", BanglaDigits::inText("<td>{$searched}</td>"), "⛔ «{$searched}» বাংলা অঙ্কে — খোঁজার ঘরে টাইপ করে পাওয়া যাবে না");
+        }
+
+        // ⛔ নষ্ট বাইট — PCRE `null` ফেরায়; আগে গোটা কাগজ ফাঁকা হত
+        $broken = "<p>বিল 12 \xC3\x28</p>";
+        $this->assertSame($broken, BanglaDigits::inText($broken), '⛔ নষ্ট লেখায় কাগজ ফাঁকা হয়ে গেল');
     }
 
     public function test_english_designs_keep_english_digits(): void
