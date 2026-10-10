@@ -46,7 +46,9 @@
                         </td>
                     </tr>
                 @empty
-                    <tr><td colspan="5" class="text-(--color-ink-muted)">{{ __('documents::message.no_templates') }}</td></tr>
+                    {{-- ⭐ খালি তালিকায় পরের কাজ — নতুন ছাঁচ, যাঁর চাবি আছে (documents রিভিউ; [[x-ui.empty-state]]) --}}
+                    <tr><td colspan="5"><x-ui.empty-state :message="__('documents::message.no_templates')"
+                        :action="auth()->user()?->can('documents.templates') ? ['url' => route('documents.templates.create'), 'label' => __('documents::action.new_template')] : null" /></td></tr>
                 @endforelse
             </tbody>
         </table>
