@@ -192,7 +192,12 @@ final class SalesInvoiceService
             return;
         }
 
-        if ($decided?->status === Approval::REJECTED) {
+        /*
+         * ⛔ "না" কেবল সেই অঙ্কের — পুরো-ERP পুনঃঅডিট, ৯ অক্টোবর ২০২৬ (বিক্রয় ৬; [[ARejectedDiscountCanAskAgainWhenItChangesTest]])।
+         * ⓘ আগে যেকোনো প্রত্যাখ্যাত সই বিলটা চিরকাল আটকাত: সইকারী "এত ছাড় নয়" বলার পর ছাড় কমিয়েও আর নতুন সই চাওয়া যেত না।
+         * এখন একই অঙ্ক আবার এলে আগের মতো "নামঞ্জুর"; অঙ্ক বদলালে নিচে নতুন অনুরোধ — সইকারী আবার দেখেন।
+         */
+        if ($decided?->status === Approval::REJECTED && $decided->covers($discount)) {
             throw ValidationException::withMessages([
                 'discount' => __('sales::validation.discount_rejected'),
             ]);
