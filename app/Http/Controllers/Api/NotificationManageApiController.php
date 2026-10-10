@@ -87,7 +87,32 @@ class NotificationManageApiController extends Controller
     public function savePreferences(Request $request): JsonResponse
     {
         $writer = app(PreferenceWriter::class);
-        $pref = $writer->save((int) $request->user()->id, $writer->validate((int) $request->user()->id, $request->all()));
+        $userId = (int) $request->user()->id;
+
+        /*
+         * ⛔ যা পাঠানো হয়নি তা যেমন ছিল তেমন — আংশিক PUT সব বন্ধ করে না (cb-র রিভিউ, মেশানোর আগে, ১১ অক্টোবর ২০২৬;
+         * [[APartialPreferenceChangeKeepsTheRestTest]])। ⚠️ আগে `{"frequency":"daily"}` পাঠালে ইমেইল আর দুই পুশ বন্ধ, মালিকের নীরব
+         * সময় মুছে যেত, ছুটির বদলিও। ⓘ ওয়েবের ফর্ম সব ঘর পাঠায় (না-টিক মানে সত্যিই বন্ধ), তাই এই মেলানো কেবল এই দরজায়।
+         */
+        $now = app(PreferenceBook::class)->for($userId, (int) CompanyContext::id());
+        $current = [
+            // ⓘ না-বলা মাধ্যম মানে চালু ([[NotificationPreference::allowsChannel()]]) — সারি না থাকলেও তাই সব চালু থাকে
+            'channels' => array_values(array_filter(\App\Models\NotificationChannel::ALL, fn (string $c) => $now->allowsChannel($c))),
+            'muted' => (array) ($now->muted_categories ?? []),
+            'frequency' => $now->frequency ?: 'instant',
+            'digest_hour' => $now->digest_hour ?? 9,
+            'digest_day' => $now->digest_day ?? 0,
+            'quiet_enabled' => (bool) $now->quiet_enabled,
+            // ⓘ জমা থাকে '22:00:00', লেখক নেয় H:i — নিচের preferenceJson()-এর মতোই ছাঁটা
+            'quiet_start' => $now->quiet_start === null ? null : substr((string) $now->quiet_start, 0, 5),
+            'quiet_end' => $now->quiet_end === null ? null : substr((string) $now->quiet_end, 0, 5),
+            'timezone' => $now->timezone,
+            'delegate_user_id' => $now->delegate_user_id,
+            'delegate_from' => $now->delegate_from?->toDateString(),
+            'delegate_until' => $now->delegate_until?->toDateString(),
+        ];
+
+        $pref = $writer->save($userId, $writer->validate($userId, $request->all() + $current));
 
         return response()->json(['data' => $this->preferenceJson($pref)]);
     }
