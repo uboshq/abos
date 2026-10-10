@@ -200,7 +200,7 @@ class SalesPrintController extends Controller implements HasMiddleware
             totals: $this->invoiceTotals(
                 $invoice,
                 roll: PaperSize::of(PaperSize::chosen(
-                    $request->query('paper'),
+                    $this->askedPaper($request),
                     $this->branch->get('sales.print.paper.invoice'),
                 ))->isThermal,
             ),
@@ -238,7 +238,7 @@ class SalesPrintController extends Controller implements HasMiddleware
          * ⭐ ছাঁচ আসে কাগজ-মাপের নিজের বাছাই থেকে ([[PaperDesigns]]) — মালিক, ৩০ সেপ্টেম্বর ২০২৬:
          * A4 · A5 · থার্মাল তিনটারই নিজের নকশা। `standard` বা অচেনা → চলতি কাগজ।
          */
-        $chosenPaper = PaperSize::chosen($request->query('paper'), $this->branch->get('sales.print.paper.invoice'));
+        $chosenPaper = PaperSize::chosen($this->askedPaper($request), $this->branch->get('sales.print.paper.invoice'));
         $designSize = PaperDesigns::sizeOf($chosenPaper, PaperSize::of($chosenPaper)->isThermal);
         $designTemplate = PaperDesigns::template(
             'invoice', $designSize,
@@ -317,7 +317,7 @@ class SalesPrintController extends Controller implements HasMiddleware
      */
     private function paperDesign(Request $request, string $kind, string $paperSetting, \Closure $facts): array
     {
-        $paper = PaperSize::chosen($request->query('paper'), $this->branch->get($paperSetting));
+        $paper = PaperSize::chosen($this->askedPaper($request), $this->branch->get($paperSetting));
         $size = PaperDesigns::sizeOf($paper, PaperSize::of($paper)->isThermal);
         $template = PaperDesigns::template($kind, $size, (string) $this->branch->get(PaperDesigns::key($kind, $size)));
 
@@ -1941,6 +1941,21 @@ class SalesPrintController extends Controller implements HasMiddleware
         return $rows;
     }
 
+    /**
+     * ⛔ ঠিকানায় চাওয়া কাগজের মাপ — কেবল লেখা, নইলে ৪২২ (পুরো-ERP পুনঃঅডিট, ৯ অক্টোবর ২০২৬, ছাপা ১৬; [[APaperListInTheAddressIsRefusedTest]])।
+     * ⓘ `?paper[]=a4` এলে মানটা তালিকা, আর [[PaperSize::chosen()]] লেখা ছাড়া কিছু নেয় না — পাতা ভেঙে ৫০০।
+     */
+    private function askedPaper(Request $request): ?string
+    {
+        $asked = $request->query('paper');
+
+        if ($asked !== null && ! is_string($asked)) {
+            abort(422, __('core.print.paper_not_a_size'));
+        }
+
+        return $asked;
+    }
+
     private function money(mixed $value): string
     {
         return Money::format($value);
@@ -1978,7 +1993,7 @@ class SalesPrintController extends Controller implements HasMiddleware
      */
     private function profileFor(Request $request, string $paperSetting, string $target = 'invoice'): PrintProfile
     {
-        $paper = PaperSize::chosen($request->query('paper'), $this->branch->get($paperSetting));
+        $paper = PaperSize::chosen($this->askedPaper($request), $this->branch->get($paperSetting));
 
         if ($target === 'invoice' && PaperSize::of($paper)->isThermal) {
             $target = 'pos';
@@ -2016,7 +2031,7 @@ class SalesPrintController extends Controller implements HasMiddleware
          * ⭐ কাগজের মাপ: ঠিকানায় যা চাওয়া হয়েছে, নয়তো মালিকের বসানো মাপ।
          * ⓘ কারণটা [[PaperSize::chosen()]]-এ — আগে এখানে হাতে লেখা A4 ছিল।
          */
-        $paper = PaperSize::chosen($request->query('paper'), $this->branch->get($paperSetting));
+        $paper = PaperSize::chosen($this->askedPaper($request), $this->branch->get($paperSetting));
 
         /*
          * বাতিল করা কাগজের গায়ে "বাতিল" — সবার আগে।
