@@ -18,9 +18,9 @@ use App\Models\NotificationSuppression;
  * ⭐ আর্কাইভ আর রাখার মেয়াদ — প্রতি ঘণ্টায়, বারবার চালালেও একই ফল (মালিকের স্পেক §৪ "Archive: Retention", §১১, §১৩; ধাপ ৪)।
  *
  * ── কী করে ───────────────────────────────────────────────────────────
- *   · আর্কাইভ (`notification.archive_after_days`, ডিফল্ট ৯০; ০ = কখনো নয়): এত দিনের পুরনো **পড়া** খবর প্রাপকের ঘণ্টা থেকে
+ *   · আর্কাইভ (`notification.archive_after_days`, ডিফল্ট ১৮০ — মালিক, ১১ অক্টোবর ২০২৬; ০ = কখনো নয়): এত দিনের পুরনো **পড়া** খবর প্রাপকের ঘণ্টা থেকে
  *     আর্কাইভে; যে ঘটনার সব প্রাপকের খবর আর্কাইভে, সেই ঘটনাও। ⓘ না-পড়া খবর কখনো নিজে থেকে আর্কাইভ হয় না।
- *   · মুছে ফেলা (`notification.retention_days`, ডিফল্ট ০ = কিছুই মোছা হয় না; বসালে কমপক্ষে ৯০): এত দিনের পুরনো চেষ্টার লগ,
+ *   · মুছে ফেলা (`notification.retention_days`, ডিফল্ট ৩৬৫ — মালিক, ১১ অক্টোবর ২০২৬; ০ = কিছুই মোছা হয় না; বসালে কমপক্ষে ৯০): এত দিনের পুরনো চেষ্টার লগ,
  *     আটকানোর খাতা, সারসংক্ষেপ, শেষ হওয়া ডেলিভারি, আর আর্কাইভ করা খবর ও খালি হয়ে যাওয়া ঘটনা।
  *   · ⛔ নিরীক্ষার খাতা (`notification_audit_logs`) কখনো মোছা হয় না — ওটা নিরীক্ষা, ওটার মেয়াদ এখানে নয়।
  *   · ⛔ চলমান ডেলিভারি (অপেক্ষায়, চলছে, আবার চেষ্টা, ধরে রাখা) কখনো মোছা হয় না।
@@ -57,8 +57,8 @@ final class RetentionService
     public function runFor(int $companyId): array
     {
         $settings = app(SettingsService::class);
-        $archiveDays = max(0, (int) $settings->get('notification.archive_after_days', 90));
-        $retentionDays = max(0, (int) $settings->get('notification.retention_days', 0));
+        $archiveDays = max(0, (int) $settings->get('notification.archive_after_days', 180));
+        $retentionDays = max(0, (int) $settings->get('notification.retention_days', 365));
         $out = ['archived' => 0, 'events' => 0, 'purged' => 0];
 
         if ($archiveDays > 0) {

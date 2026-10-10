@@ -64,8 +64,8 @@ class NotificationArchiveController extends Controller
             'filters' => $f,
             'canExport' => $canExport,
             'modules' => collect(array_keys(NotificationKinds::all()))->map(fn ($t) => NotificationKinds::classify($t)['module'])->unique()->sort()->values(),
-            'archiveDays' => (int) $settings->get('notification.archive_after_days', 90),
-            'retentionDays' => (int) $settings->get('notification.retention_days', 0),
+            'archiveDays' => (int) $settings->get('notification.archive_after_days', 180),
+            'retentionDays' => (int) $settings->get('notification.retention_days', 365),
         ]);
     }
 }

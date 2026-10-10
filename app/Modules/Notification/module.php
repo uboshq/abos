@@ -25,7 +25,8 @@ return [
     'code' => 'notification',
     'name' => ['en' => 'Notifications', 'bn' => 'বিজ্ঞপ্তি'],
     'version' => '1.0.0',
-    'nav' => ['section' => 'system', 'order' => 25],
+    // ⓘ মেনুতে System-এর নিচে, ক্রম ১৩ — মালিকের কেন্দ্র ১১, ডকুমেন্টস ১২, নোটিফিকেশন ১৩, স্থায়ী সম্পদ ১৪ (fe, ১১ অক্টোবর ২০২৬)
+    'nav' => ['section' => 'system', 'order' => 13],
     'depends_on' => [],
 
     // ⭐ ধাপ ৪ — ড্যাশবোর্ড ([[NotificationDashboard]]); চাবি মেনুর ড্যাশবোর্ড সারি থেকে
@@ -170,14 +171,14 @@ return [
             'key' => 'notification.quiet_start',
             'label' => 'notification::settings.quiet_start',
             'type' => 'string',
-            'default' => '',
+            'default' => '22:00',
             'group' => 'quiet',
         ],
         [
             'key' => 'notification.quiet_end',
             'label' => 'notification::settings.quiet_end',
             'type' => 'string',
-            'default' => '',
+            'default' => '08:00',
             'group' => 'quiet',
         ],
         [
@@ -201,7 +202,7 @@ return [
             'key' => 'notification.archive_after_days',
             'label' => 'notification::settings.archive_after_days',
             'type' => 'integer',
-            'default' => 90,
+            'default' => 180,
             'group' => 'retention',
         ],
         [
@@ -209,7 +210,7 @@ return [
             'key' => 'notification.retention_days',
             'label' => 'notification::settings.retention_days',
             'type' => 'integer',
-            'default' => 0,
+            'default' => 365,
             'group' => 'retention',
         ],
     ],

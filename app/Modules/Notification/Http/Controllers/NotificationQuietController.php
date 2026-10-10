@@ -39,8 +39,8 @@ class NotificationQuietController extends Controller
         return view('notification::quiet.index', [
             'menu' => $this->menu->forUser($request->user()),
             'rows' => $rows,
-            'quietStart' => (string) $settings->get('notification.quiet_start', ''),
-            'quietEnd' => (string) $settings->get('notification.quiet_end', ''),
+            'quietStart' => (string) $settings->get('notification.quiet_start', '22:00'),
+            'quietEnd' => (string) $settings->get('notification.quiet_end', '08:00'),
             'deferred' => NotificationSuppression::query()->where('reason', 'quiet_hours')->where('created_at', '>=', now()->subWeek())->count(),
             'held' => NotificationSuppression::query()->where('reason', 'digest')->where('created_at', '>=', now()->subWeek())->count(),
         ]);
