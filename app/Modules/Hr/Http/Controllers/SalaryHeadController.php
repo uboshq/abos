@@ -11,6 +11,7 @@ use App\Http\Controllers\Controller;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\Hr\Models\SalaryHead;
 use App\Modules\Hr\Services\SalaryHeadService;
+use App\Modules\Hr\Support\AdvanceBalance;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
@@ -167,7 +168,25 @@ class SalaryHeadController extends Controller implements HasMiddleware
             'is_basic' => ['boolean'],
             'prorated_by_attendance' => ['boolean'],
             'account_id' => ['nullable', 'integer',
-                Rule::exists('accounts', 'id')->where('company_id', $companyId)],
+                Rule::exists('accounts', 'id')->where('company_id', $companyId),
+                /*
+                 * ⛔ খাতের ধরন মিলিয়ে — পুরো-ERP পুনঃঅডিট, ৯ অক্টোবর ২০২৬ (HR ৯; [[ASalaryHeadPointsOnlyAtTheRightKindOfAccountTest]])।
+                 * ⓘ আগে কেবল "এই কোম্পানির খাত" দেখা হত — বেতনের আয়ের খাত নগদ বা ব্যাংকে বসানো যেত (বেতন নিশ্চিত করলেই নগদ বাড়ত), কর্তন
+                 * আয়ের খাতে, বা মূল খাতে যেখানে কিছু বসে না। এখন চালু, পোস্টযোগ্য খাত: আয়ের খাত খরচে; কর্তন দায়ে, বা কর্মীর অগ্রিমে
+                 * (১১৩১ আর তার নিচে — কিস্তি সেখানেই ফেরে)।
+                 */
+                function (string $attribute, mixed $value, \Closure $fail) use ($request): void {
+                    $account = Account::query()->postable()->active()->find($value);
+                    $earning = $request->input('kind') === SalaryHead::EARNING;
+
+                    $fits = $account !== null && ($earning
+                        ? $account->type === Account::EXPENSE
+                        : $account->type === Account::LIABILITY || app(AdvanceBalance::class)->isAdvance((int) $account->id));
+
+                    if (! $fits) {
+                        $fail(__($earning ? 'hr::validation.head_account_earning' : 'hr::validation.head_account_deduction'));
+                    }
+                }],
             'sort_order' => ['nullable', 'integer', 'min:0', 'max:999'],
         ]);
     }

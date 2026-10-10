@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Sales\Http\Controllers;
 
+use App\Core\Engines\Attachment\AttachmentEngine;
 use App\Core\Security\LoginLock;
 use App\Core\Services\LoginJournal;
 use App\Core\Services\SettingsService;
@@ -16,6 +17,9 @@ use App\Modules\Customer\Models\Customer;
 use App\Modules\Sales\Models\DepositClaim;
 use App\Modules\Sales\Services\CustomerPapers;
 use App\Modules\Sales\Services\DepositClaimService;
+use App\Modules\Sales\Services\DepositSlip;
+use App\Modules\Sales\Services\SalesOrderService;
+use App\Modules\Sales\Services\SaleTracking;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -23,6 +27,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
  * গ্রাহকের নিজের পাতা।
@@ -137,6 +142,12 @@ class PortalController extends Controller
             ->withoutGlobalScopes()
             ->where('code', $data['code'])
             ->where('portal_enabled', true)
+            /*
+             * ⛔ বন্ধ বা মুছে ফেলা গ্রাহক নয় — পুরো-ERP পুনঃঅডিট, ৯ অক্টোবর ২০২৬ (গ্রাহক ১৫; [[AClosedCustomerCannotUseThePortalTest]])।
+             * ⓘ সব ছাঁকনি সরানো বলে মুছে ফেলা গ্রাহকও উঠত, আর নিষ্ক্রিয় গ্রাহক পোর্টালে ঢুকে অর্ডার আর জমার দাবি পাঠাতে পারতেন।
+             */
+            ->where('is_active', true)
+            ->whereNull('deleted_at')
             ->get();
 
         /*
@@ -253,7 +264,7 @@ class PortalController extends Controller
             'invoices' => $this->papers->invoices(20),
             'claims' => $this->claims->forCustomer($customer),
             // ⭐ কোম্পানি বিক্রয় আদেশে চলে গেলে DO-র বোতামের জায়গায় আদেশের বোতাম (DO+SO মেশানো, ধাপ ৯)
-            'ordersOn' => app(\App\Modules\Sales\Services\SalesOrderService::class)->replacesDo(),
+            'ordersOn' => app(SalesOrderService::class)->replacesDo(),
         ]);
     }
 
@@ -341,8 +352,13 @@ class PortalController extends Controller
      */
     private function range(Request $request): array
     {
+        /*
+         * ⛔ ১৯৭০ নয় — পুরো-ERP পুনঃঅডিট, ৯ অক্টোবর ২০২৬ (গ্রাহক ১৫)। ⓘ ডিফল্ট শুরু চলতি অর্থবছরের প্রথম দিন: আগের সব লেনদেন
+         * "আগের জের" সারিতে একটা অঙ্ক হয়ে আসে ([[CustomerPapers::openingBefore()]]), তাই শেষ জের একই থাকে, কেবল বছরের পর বছরের সারি
+         * একবারে টানা হয় না। পুরনো সময় দেখতে ছাঁকনি আছে।
+         */
         return [
-            (string) $request->query('from', '1970-01-01'),
+            (string) $request->query('from', $this->papers->yearStart()),
             (string) $request->query('to', now()->toDateString()),
         ];
     }
@@ -373,16 +389,16 @@ class PortalController extends Controller
             'bank_account_id' => ['nullable', 'integer', 'exists:accounts,id'],
             'note' => ['nullable', 'string', 'max:500'],
             // ⭐ স্লিপের ছবি — ১ অক্টোবর ২০২৬; ধরন আর মাপ দেখে [[DepositSlip]] (কেবল ছবি/PDF, ৫ MB)
-            'slip' => ['nullable', 'file', 'max:'.intdiv(\App\Core\Engines\Attachment\AttachmentEngine::SLIP_MAX_BYTES, 1024)],
+            'slip' => ['nullable', 'file', 'max:'.intdiv(AttachmentEngine::SLIP_MAX_BYTES, 1024)],
             // ⭐ কোন বিলের বিপরীতে — ঐচ্ছিক, কেবল নিজের বিল ([[DepositRequestController::billIds()]]-এর একই পাহারা)
             'bills' => ['nullable', 'array', 'max:50'],
             'bills.*.invoice' => ['required', 'string', 'max:64'],
             'bills.*.amount' => ['nullable', 'numeric', 'min:0'],
         ]);
 
-        $data['bills'] = \App\Modules\Sales\Http\Controllers\DepositRequestController::billIds($customer, (array) ($data['bills'] ?? []));
+        $data['bills'] = DepositRequestController::billIds($customer, (array) ($data['bills'] ?? []));
         unset($data['slip']);
-        app(\App\Modules\Sales\Services\DepositSlip::class)->raise($customer, $data, $request->file('slip'));
+        app(DepositSlip::class)->raise($customer, $data, $request->file('slip'));
 
         return redirect()
             ->route('sales.portal.home')
@@ -405,7 +421,7 @@ class PortalController extends Controller
         return view('sales::portal.claim-show', [
             'customer' => $customer,
             'claim' => $claim,
-            'hasSlip' => app(\App\Modules\Sales\Services\DepositSlip::class)->of($claim) !== null,
+            'hasSlip' => app(DepositSlip::class)->of($claim) !== null,
         ]);
     }
 
@@ -419,7 +435,7 @@ class PortalController extends Controller
 
         return view('sales::portal.tracking', [
             'customer' => $customer,
-            'list' => app(\App\Modules\Sales\Services\SaleTracking::class)->list(null, null, (int) $customer->id),
+            'list' => app(SaleTracking::class)->list(null, null, (int) $customer->id),
         ]);
     }
 
@@ -432,15 +448,15 @@ class PortalController extends Controller
 
         return view('sales::portal.tracking-show', [
             'customer' => $customer,
-            'sale' => app(\App\Modules\Sales\Services\SaleTracking::class)->story($sale),
+            'sale' => app(SaleTracking::class)->story($sale),
         ]);
     }
 
     /** নিজের দাবির স্লিপ — অন্যের দাবিতে ৪০৩, ঠিক [[showOwnClaim()]]-এর মতো */
-    public function ownClaimSlip(DepositClaim $claim): \Symfony\Component\HttpFoundation\StreamedResponse
+    public function ownClaimSlip(DepositClaim $claim): StreamedResponse
     {
         abort_if($claim->customer_id !== $this->customer()->id, 403);
 
-        return app(\App\Modules\Sales\Services\DepositSlip::class)->stream($claim);
+        return app(DepositSlip::class)->stream($claim);
     }
 }

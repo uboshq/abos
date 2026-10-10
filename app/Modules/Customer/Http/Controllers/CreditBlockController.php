@@ -24,7 +24,11 @@ final class CreditBlockController extends Controller implements HasMiddleware
 
     public static function middleware(): array
     {
-        return [new Middleware('can:update,customer')];
+        return [
+            new Middleware('can:update,customer', only: ['store']),
+            // ⛔ তোলা সীমা বাড়ানোর সইকারীর কাজ ([[CustomerPolicy::liftCreditBlock()]], পুনঃঅডিট ৯ অক্টোবর ২০২৬, গ্রাহক ১৬)
+            new Middleware('can:liftCreditBlock,customer', only: ['destroy']),
+        ];
     }
 
     public function store(Request $request, Customer $customer): RedirectResponse

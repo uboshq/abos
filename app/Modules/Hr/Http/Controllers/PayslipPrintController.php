@@ -15,6 +15,7 @@ use App\Http\Controllers\Controller;
 use App\Models\DocumentDelivery;
 use App\Modules\Hr\Models\PayrollRun;
 use App\Modules\Hr\Models\Payslip;
+use App\Modules\Hr\Support\BranchReach;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controllers\HasMiddleware;
@@ -63,7 +64,7 @@ class PayslipPrintController extends Controller implements HasMiddleware
     public function all(Request $request, PayrollRun $run): Response
     {
         // ⛔ কেবল নাগালের কর্মীদের স্লিপ (পুরো-ERP অডিট, ৬ অক্টোবর ২০২৬ HR ⛔২; [[BranchReach]])
-        $run->setRelation('payslips', app(\App\Modules\Hr\Support\BranchReach::class)
+        $run->setRelation('payslips', app(BranchReach::class)
             ->throughEmployee($run->payslips()->getQuery(), $request->user())
             ->with(['employee.department', 'employee.designation', 'lines'])->get());
 
@@ -108,7 +109,7 @@ class PayslipPrintController extends Controller implements HasMiddleware
                 __('hr::field.name') => (string) $employee?->name(),
                 __('hr::field.designation') => (string) $employee?->designation?->name(),
                 __('hr::field.department') => (string) $employee?->department?->name(),
-                __('hr::field.month') => $run->month->format('F Y'),
+                __('hr::field.month') => $run->month->locale(app()->getLocale())->translatedFormat('F Y'),
                 __('hr::field.payment_method') => __('hr::kind.'.$slip->payment_method),
                 // ⛔ পরিচয়ের চাবি ছাড়া ঢাকা (অডিট HR ⛔৩) — কর্মীর পাতার একই নিয়ম ([[FieldSecurity::show()]])
                 // ⓘ নম্বর না থাকলে ঘরটাই নেই — ফাঁকা ঘরে "••••" দেখালে নগদের কর্মীরও একটা নম্বর আছে মনে হত

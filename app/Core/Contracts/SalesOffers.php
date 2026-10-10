@@ -57,4 +57,14 @@ interface SalesOffers
 
     /** কাগজের সব অফার উল্টানো — বাতিলে, আর খসড়া বদলালে (সারিগুলো নতুন করে বসে)। */
     public function reverseAll(string $sourceType, int $sourceId): void;
+
+    /**
+     * ⭐ আদেশে কাটা টাকার কুপন — আদেশের বিল পাকা হলে সেই বিলে (পুরো-ERP পুনঃঅডিট, ৯ অক্টোবর ২০২৬, প্রমোশন ১৮)।
+     *
+     * ⓘ বিল পাকা করার **একই লেনদেনে** ডাকা হয়, বিল খাতায় বসার পরে; ছাড়টা বসে [[CouponPapers::redeemed()]] দিয়ে, বিলের অঙ্কের
+     * বেশি নয় (`$room`)।
+     *
+     * @param  list<int>  $orderIds  বিলটা যে আদেশগুলোর মাল বিল করল
+     */
+    public function carryOrderCoupons(array $orderIds, int $invoiceId, string $room): void;
 }

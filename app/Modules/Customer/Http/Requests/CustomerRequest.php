@@ -4,7 +4,10 @@ declare(strict_types=1);
 
 namespace App\Modules\Customer\Http\Requests;
 
+use App\Core\Services\DataScope;
 use App\Core\Support\CompanyContext;
+use App\Core\Support\Money;
+use App\Models\UserDataScope;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -94,19 +97,26 @@ class CustomerRequest extends FormRequest
             'customer_type' => ['nullable', 'string', 'max:32'],
 
             // ঋণাত্মক সীমার কোনো অর্থ নেই; শূন্য মানে বাকি নেই — কেবল নগদ (মালিক, ১ অক্টোবর ২০২৬)।
-            'credit_limit' => ['nullable', 'numeric', 'min:0'],
+            // ⛔ decimal — "1e5" `numeric` পেরিয়ে bcmath-এ ভাঙত (পুনঃঅডিট ৯ অক্টোবর ২০২৬, গ্রাহক ১৭)
+            'credit_limit' => ['nullable', 'decimal:0,4', 'min:0', 'max:99999999999999'],
             'credit_days' => ['nullable', 'integer', 'min:0', 'max:365'],
 
             /*
              * ⓘ ঋণাত্মক চলে — গ্রাহকের আগাম জমা (অগ্রিম) শুরুর বাকি হিসেবেই আসে। সীমাটা ঘরের মাপের ভিতরে
              * (`decimal(18,4)`); বসানোর চাবি সেবা দেখে ([[CustomerService::assertMayOpenABalance()]])।
              */
-            'opening_balance' => ['nullable', 'numeric', 'min:-999999999999', 'max:999999999999'],
+            'opening_balance' => ['nullable', 'decimal:0,4', 'min:-999999999999', 'max:999999999999'],
             'opening_date' => ['nullable', 'date'],
 
             'branch_id' => [
                 'nullable', 'integer',
                 Rule::exists('branches', 'id')->where('company_id', CompanyContext::id()),
+                // ⛔ নিজের নাগালের শাখাতেই — পুনঃঅডিট ৯ অক্টোবর ২০২৬ (গ্রাহক ১১); আগে কেবল কোম্পানি দেখা হত
+                function (string $attribute, mixed $value, \Closure $fail): void {
+                    if (! app(DataScope::class)->allows($this->user(), UserDataScope::BRANCH, (int) $value)) {
+                        $fail(__('customer::validation.branch_out_of_reach'));
+                    }
+                },
             ],
             'is_active' => ['nullable', 'boolean'],
         ];
@@ -134,7 +144,7 @@ class CustomerRequest extends FormRequest
 
         $plain = ltrim($amount, '-+');
 
-        $this->merge(['opening_balance' => $side === 'cr' && ! \App\Core\Support\Money::isZero($plain) ? '-'.$plain : $plain]);
+        $this->merge(['opening_balance' => $side === 'cr' && ! Money::isZero($plain) ? '-'.$plain : $plain]);
     }
 
     /** @return array<string, string> */

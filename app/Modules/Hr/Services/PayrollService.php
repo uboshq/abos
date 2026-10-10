@@ -14,6 +14,7 @@ use App\Core\Support\DocumentStatus;
 use App\Core\Support\Money;
 use App\Models\Company;
 use App\Models\FinancialYear;
+use App\Models\User;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Hr\Models\Employee;
@@ -22,6 +23,7 @@ use App\Modules\Hr\Models\Payslip;
 use App\Modules\Hr\Models\PayslipLine;
 use App\Modules\Hr\Models\SalaryHead;
 use App\Modules\Hr\Support\AdvanceBalance;
+use App\Modules\Hr\Support\BranchReach;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -206,6 +208,8 @@ final class PayrollService
             $this->lockFresh($run);
             $this->assertDraft($run);
 
+            $this->capAdvancesNow($run);
+
             $lines = $this->ledgerLines($run);
 
             $this->posting->post(
@@ -277,10 +281,10 @@ final class PayrollService
      *
      * @return array{name: string, content: string, rows: int}
      */
-    public function bankFile(PayrollRun $run, ?\App\Models\User $user = null): array
+    public function bankFile(PayrollRun $run, ?User $user = null): array
     {
         // ⓘ নাম ধরে কেউ চাইলে কেবল তাঁর নাগালের কর্মী ([[BranchReach]], অডিট HR ⛔২)
-        $slips = ($user === null ? $run->payslips()->getQuery() : app(\App\Modules\Hr\Support\BranchReach::class)->throughEmployee($run->payslips()->getQuery(), $user))
+        $slips = ($user === null ? $run->payslips()->getQuery() : app(BranchReach::class)->throughEmployee($run->payslips()->getQuery(), $user))
             ->with('employee')
             ->where('payment_method', 'bank')
             ->get();
@@ -464,7 +468,17 @@ final class PayrollService
     {
         $debits = [];
         $credits = [];
-        $net = '0';
+        $net = [];
+
+        /*
+         * ⛔ প্রতিটা কর্মীর সারি তাঁর নিজের শাখায় — পুরো-ERP পুনঃঅডিট, ৯ অক্টোবর ২০২৬ (HR ৬; [[TheSalaryIsBookedWhereThePersonWorksTest]])।
+         * ⓘ রানটা গোটা কোম্পানির ([[build()]]), অথচ পুরো দাখিলা বসত রান-বানানো মানুষের শাখায় — ঢাকার কেরানি চালালে নেত্রকোনার বেতন-খরচও
+         * ঢাকার লাভ-ক্ষতিতে। এখন খাত আর শাখা ধরে জড়ো; শাখা লেখা নেই এমন কর্মী (প্রধান অফিস) কোম্পানির প্রধান শাখায়। প্রতিটা বেতনশিট
+         * নিজেই মেলে (আয় = কর্তন + নিট), তাই প্রতিটা শাখার দাখিলাও মেলে।
+         */
+        $head = Company::query()->find($run->company_id)?->defaultBranch()?->id ?? $run->branch_id;
+        $branchOf = fn (Payslip $slip): ?int => $slip->employee?->branch_id === null ? $head : (int) $slip->employee->branch_id;
+        $run->loadMissing(['payslips.employee' => fn ($q) => $q->withTrashed()]);
 
         /*
          * ⛔ অগ্রিমের আদায় কর্মী ধরে, তাঁর নামে — পুরো-ERP অডিট, ৬ অক্টোবর ২০২৬ (HR ⛔৪)। ⓘ অগ্রিম দেওয়া হয় ভাউচারে কর্মীর নামে
@@ -482,10 +496,13 @@ final class PayrollService
         $short = [];
 
         foreach ($run->payslips as $slip) {
+            $branch = $branchOf($slip);
+
             if (bccomp((string) $slip->net, '0', 4) < 0) {
-                $short[(int) $slip->employee_id] = bcadd($short[(int) $slip->employee_id] ?? '0', bcsub('0', (string) $slip->net, 4), 4);
+                $key = $slip->employee_id.':'.$branch;
+                $short[$key] = [(int) $slip->employee_id, $branch, bcadd($short[$key][2] ?? '0', bcsub('0', (string) $slip->net, 4), 4)];
             } else {
-                $net = bcadd($net, (string) $slip->net, 4);
+                $net[(string) $branch] = bcadd($net[(string) $branch] ?? '0', (string) $slip->net, 4);
             }
 
             foreach ($slip->lines as $line) {
@@ -498,14 +515,15 @@ final class PayrollService
                 }
 
                 if (! $line->isEarning() && $this->isAdvance((int) $accountId)) {
-                    $key = $accountId.':'.$slip->employee_id;
-                    $owed[$key] = [(int) $accountId, (int) $slip->employee_id, bcadd($owed[$key][2] ?? '0', (string) $line->amount, 4)];
+                    $key = $accountId.':'.$slip->employee_id.':'.$branch;
+                    $owed[$key] = [(int) $accountId, (int) $slip->employee_id, $branch, bcadd($owed[$key][3] ?? '0', (string) $line->amount, 4)];
 
                     continue;
                 }
 
                 $bucket = $line->isEarning() ? 'debits' : 'credits';
-                ${$bucket}[$accountId] = bcadd(${$bucket}[$accountId] ?? '0', (string) $line->amount, 4);
+                $key = $accountId.':'.$branch;
+                ${$bucket}[$key] = [(int) $accountId, $branch, bcadd(${$bucket}[$key][2] ?? '0', (string) $line->amount, 4)];
             }
         }
 
@@ -524,12 +542,12 @@ final class PayrollService
 
         $lines = [];
 
-        foreach ($debits as $accountId => $amount) {
+        foreach ($debits as [$accountId, $branch, $amount]) {
             if (bccomp($amount, '0', 4) === 0) {
                 continue;
             }
 
-            $lines[] = ['account_id' => (int) $accountId, 'debit' => $amount, 'narration' => $narration];
+            $lines[] = ['account_id' => $accountId, 'debit' => $amount, 'narration' => $narration, 'branch_id' => $branch];
         }
 
         $advance = $short === [] ? null : $this->accountByCode(StandardChart::EMPLOYEE_ADVANCE);
@@ -540,10 +558,10 @@ final class PayrollService
             ]);
         }
 
-        foreach ($short as $employeeId => $amount) {
+        foreach ($short as [$employeeId, $branch, $amount]) {
             $lines[] = [
                 'account_id' => (int) $advance->id, 'debit' => $amount, 'narration' => $narration,
-                'party_type' => Employee::drillSourceType(), 'party_id' => $employeeId,
+                'party_type' => Employee::drillSourceType(), 'party_id' => $employeeId, 'branch_id' => $branch,
             ];
         }
 
@@ -554,30 +572,92 @@ final class PayrollService
          * পড়ে। আলাদা করে যোগ করলে এক ডকুমেন্টে একই খাতে দুইটা ক্রেডিট
          * সারি বসত — খতিয়ানে দেখতে যেন দুইবার কিছু হয়েছে, অথচ হয়নি।
          */
-        if (bccomp($net, '0', 4) !== 0) {
-            $credits[$payable->id] = bcadd($credits[$payable->id] ?? '0', $net, 4);
+        foreach ($net as $branch => $amount) {
+            $branch = $branch === '' ? null : (int) $branch;
+            $key = $payable->id.':'.$branch;
+            $credits[$key] = [(int) $payable->id, $branch, bcadd($credits[$key][2] ?? '0', $amount, 4)];
         }
 
-        foreach ($credits as $accountId => $amount) {
+        foreach ($credits as [$accountId, $branch, $amount]) {
             if (bccomp($amount, '0', 4) === 0) {
                 continue;
             }
 
-            $lines[] = ['account_id' => (int) $accountId, 'credit' => $amount, 'narration' => $narration];
+            $lines[] = ['account_id' => $accountId, 'credit' => $amount, 'narration' => $narration, 'branch_id' => $branch];
         }
 
-        foreach ($owed as [$accountId, $employeeId, $amount]) {
+        foreach ($owed as [$accountId, $employeeId, $branch, $amount]) {
             if (bccomp($amount, '0', 4) === 0) {
                 continue;
             }
 
             $lines[] = [
                 'account_id' => $accountId, 'credit' => $amount, 'narration' => $narration,
-                'party_type' => Employee::drillSourceType(), 'party_id' => $employeeId,
+                'party_type' => Employee::drillSourceType(), 'party_id' => $employeeId, 'branch_id' => $branch,
             ];
         }
 
         return $lines;
+    }
+
+    /**
+     * ⛔ নিশ্চিত করার মুহূর্তে অগ্রিমের কিস্তি আবার মাপা — পুরো-ERP পুনঃঅডিট, ৯ অক্টোবর ২০২৬ ([[TheAdvanceIsNotTakenTwiceTest]])।
+     *
+     * ⓘ খসড়া বানানোর সময় কিস্তি মাস-শেষের খোলা অগ্রিমে আটকানো হয় ([[buildPayslip()]])। কিন্তু খসড়া আর নিশ্চিতের মাঝে, বা মাস-শেষের
+     * পরে, কর্মী অগ্রিম নগদে ফেরত দিতে পারেন বা খরচের দাবি দিয়ে মেটাতে পারেন — তখনও বেতন থেকে পুরো কিস্তি কাটা হত, আর তাঁর নামের
+     * ১১৩১ ঋণাত্মক হত (একই টাকা দুইবার আদায়)। এখন কর্মীর সারিতে তালা দিয়ে আজ পর্যন্ত খাতায় বসা জের পড়া হয়, কিস্তি তার বেশি হলে
+     * কমে, আর বেতনশিট ও রানের মোট আবার গোনা হয়। তালাটা খরচের দাবির সাথে একই ([[AdvanceBalance::lock()]])।
+     */
+    private function capAdvancesNow(PayrollRun $run): void
+    {
+        // ⓘ চলে যাওয়া (মুছে ফেলা) কর্মীর শেষ মাসের শিটও থাকতে পারে — তাঁর অগ্রিমও তাঁর নামেই
+        $run->load(['payslips.lines', 'payslips.employee' => fn ($q) => $q->withTrashed()]);
+
+        $owing = $run->payslips->filter(fn (Payslip $slip) => $slip->lines
+            ->contains(fn (PayslipLine $line) => ! $line->isEarning() && $this->isAdvance($line->account_id === null ? null : (int) $line->account_id)));
+
+        if ($owing->isEmpty()) {
+            return;
+        }
+
+        app(AdvanceBalance::class)->lock($owing->pluck('employee_id')->map(fn ($id) => (int) $id)->sort()->values()->all());
+
+        // ⓘ খাতায় যা আজ পর্যন্ত বসেছে — মাস-শেষের পরের ফেরতও ধরে; রানের তারিখ পরে হলে সেদিন পর্যন্ত
+        $on = $run->trx_date->greaterThan(Carbon::today()) ? $run->trx_date->copy() : Carbon::today();
+        $changed = false;
+
+        foreach ($owing as $slip) {
+            $left = $this->advanceOpen($slip->employee, $on);
+            $left = bccomp($left, '0', 2) > 0 ? $left : '0';
+            $cut = '0';
+
+            foreach ($slip->lines as $line) {
+                if ($line->isEarning() || ! $this->isAdvance($line->account_id === null ? null : (int) $line->account_id)) {
+                    continue;
+                }
+
+                $take = bccomp((string) $line->amount, $left, 2) > 0 ? Money::round($left, 2) : (string) $line->amount;
+                $left = bcsub($left, $take, 4);
+
+                if (bccomp($take, (string) $line->amount, 2) !== 0) {
+                    $cut = bcadd($cut, bcsub((string) $line->amount, $take, 4), 4);
+                    $line->forceFill(['amount' => $take])->save();
+                }
+            }
+
+            if (bccomp($cut, '0', 4) !== 0) {
+                $slip->forceFill([
+                    'deductions' => bcsub((string) $slip->deductions, $cut, 4),
+                    'net' => bcadd((string) $slip->net, $cut, 4),
+                ])->save();
+                $changed = true;
+            }
+        }
+
+        if ($changed) {
+            $this->recount($run);
+            $run->load('payslips.lines');
+        }
     }
 
     /** খাতটা কি কর্মীর অগ্রিম (১১৩১ বা তার নিচে) — কারও নামে বসে এমন খাত ([[AdvanceBalance]]) */

@@ -28,6 +28,7 @@ use App\Modules\MasterData\Support\CodeConventions;
 use App\Modules\MasterData\Support\SalesReturnReasons;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\ValidationException;
 
 /**
@@ -192,6 +193,8 @@ final class MasterListService implements ProvisionsCompany
                 $this->assertCodeIsFree($record::class, $code, $record->getKey());
             }
 
+            $this->assertUsedFieldsStay($record, [...$data, 'code' => $code]);
+
             // ডিফল্ট এখানে বসে না — makeDefault() দিয়ে, নাহলে দুইটা
             // ডিফল্ট থাকার একটা মুহূর্ত তৈরি হত
             $wantsDefault = (bool) ($data['is_default'] ?? false);
@@ -315,6 +318,74 @@ final class MasterListService implements ProvisionsCompany
         $record->forceDelete();
 
         return true;
+    }
+
+    /**
+     * ⛔ ব্যবহৃত সারির টাকার ঘর জমে যায় — পুরো-ERP পুনঃঅডিট, ৯ অক্টোবর ২০২৬ (মাস্টার ২৪; [[AUsedMasterKeepsItsMoneyFieldsTest]])।
+     *
+     * ⓘ পাহারা ছিল কেবল মোছায় ([[delete()]])। অথচ ব্যবহৃত এককের গুণক বা মূল একক বদলালে পুরনো কাগজের পরিমাণের মানে বদলায় (১ কার্টন =
+     * ১২ পিস ছিল, এখন ২৪); করের হার, ধরন বা "ভিতরে-ধরা" বদলালে পুরনো পণ্যের দর আর বিলের পুনর্গণনা অন্য অঙ্ক দেয়; পরিশোধ-পদ্ধতির
+     * কোড বা ধরন বদলালে পুরনো ভাউচার আর আদায়ে লেখা কোড অন্য জিনিস বোঝায় (নগদ হয়ে যায় চেক)। নাম আর চালু-বন্ধ বদলানো চলে; বাকিটার
+     * জন্য নতুন একটা সারি বানাতে হয়।
+     *
+     * @param  array<string, mixed>  $data
+     */
+    private function assertUsedFieldsStay(Model $record, array $data): void
+    {
+        $frozen = match (true) {
+            $record instanceof Unit => ['base_unit_id', 'factor'],
+            $record instanceof Tax => ['rate', 'kind', 'is_inclusive'],
+            $record instanceof PaymentMethod => ['code', 'kind', 'account_id'],
+            default => [],
+        };
+
+        $changed = array_values(array_filter($frozen, fn (string $field) => array_key_exists($field, $data)
+            && ! $this->sameValue($record->getAttribute($field), $data[$field])));
+
+        if ($changed === [] || ! $this->inUse($record)) {
+            return;
+        }
+
+        throw ValidationException::withMessages([
+            $changed[0] => __('master_data::validation.used_field_frozen', [
+                'name' => (string) ($record->name_bn ?? '') !== '' ? $record->name_bn : $record->name_en,
+            ]),
+        ]);
+    }
+
+    /** কাগজে ব্যবহৃত কি না — ডাটাবেজের সম্পর্ক, আর পরিশোধ-পদ্ধতির বেলায় কাগজে লেখা কোড */
+    private function inUse(Model $record): bool
+    {
+        if ($this->referencesTo($record) !== null) {
+            return true;
+        }
+
+        if (! $record instanceof PaymentMethod) {
+            return false;
+        }
+
+        foreach (['vouchers', 'sal_collections', 'pur_payments'] as $table) {
+            if (Schema::hasTable($table)
+                && DB::table($table)->where('company_id', $record->company_id)->where('instrument', $record->code)->exists()) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /** "১২" আর "12.0000", `true` আর "1" — একই মান; নাহলে না-বদলানো ফর্মও "বদলেছে" বলত */
+    private function sameValue(mixed $old, mixed $new): bool
+    {
+        if (is_bool($old) || is_bool($new)) {
+            return (bool) $old === filter_var($new, FILTER_VALIDATE_BOOLEAN);
+        }
+
+        if (is_numeric($old) && is_numeric($new)) {
+            return bccomp((string) $old, (string) $new, 6) === 0;
+        }
+
+        return (string) ($old ?? '') === (string) ($new ?? '');
     }
 
     /**
@@ -796,7 +867,7 @@ final class MasterListService implements ProvisionsCompany
          * seed()-এর "একটাও থাকলে থামো" নিয়ম এখানে খাটে না।
          * ⓘ app() দিয়ে, কনস্ট্রাক্টরে নয় — ওটা এই সার্ভিসটাই চায়, চক্র হত।
          */
-        $made['sales-channels'] = app(\App\Modules\MasterData\Services\SalesChannelDefaults::class)->installMissing();
+        $made['sales-channels'] = app(SalesChannelDefaults::class)->installMissing();
 
         $this->linkIssueReasonsToAccounts();
 

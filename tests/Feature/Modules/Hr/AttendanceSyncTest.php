@@ -11,6 +11,8 @@ use App\Models\SyncChange;
 use App\Models\User;
 use App\Modules\Hr\Models\Attendance;
 use App\Modules\Hr\Models\Employee;
+use App\Modules\Hr\Models\LeaveApplication;
+use App\Modules\Hr\Models\LeaveType;
 use App\Modules\MasterData\Models\Department;
 use App\Modules\MasterData\Models\Designation;
 use App\Modules\MasterData\Models\EmploymentType;
@@ -100,7 +102,10 @@ class AttendanceSyncTest extends TestCase
             ->firstOrFail();
 
         $this->assertSame('present', $attendance->status);
-        $this->assertStringContainsString('09:05', (string) $attendance->in_time);
+        // ⛔ ঢোকার সময় সার্ভারের ঘড়ির, ফোনের পাঠানো "09:05" নয়; বেরোনোর সময় অফিস বসায় (পুনঃঅডিট ৯ অক্টোবর ২০২৬, HR ৭)
+        $this->assertStringNotContainsString('09:05', (string) $attendance->in_time);
+        $this->assertNotNull($attendance->in_time);
+        $this->assertNull($attendance->out_time);
     }
 
     /** ⛔ অন্য কারো হাজিরা নয় — নীরবে নিজেরটা নয়, প্রত্যাখ্যান। */
@@ -150,21 +155,47 @@ class AttendanceSyncTest extends TestCase
         $this->assertSame(SyncChange::CONFLICT, $second[0]['status']);
     }
 
-    /** ★ ঘড়ি-ফাঁদ — অনেক পুরনো দিন সিঙ্ক হলে remark-এ চিহ্ন, পর্দায় দেখা যায়। */
-    public function test_a_late_synced_day_carries_a_visible_note(): void
+    /**
+     * ⛔ কেবল আজ — পুরনো বা আগামী দিন ফোন থেকে নয় (পুরো-ERP পুনঃঅডিট, ৯ অক্টোবর ২০২৬, HR ৭; [[AttendanceSync::apply()]])।
+     *
+     * ⓘ আগে তিন দিন আগের দিনও বসত, কেবল একটা "দেরিতে সিঙ্ক" চিহ্নসহ — অথচ গত মাসের কামাইয়ের দিন "উপস্থিত" করা যেত, আর বেতন সেই
+     * হাজিরা ধরেই কাটে। পেছনের দিনের ছাড় কোথাও বসানো নেই; পুরনো দিন অফিস ওয়েবে বসান।
+     */
+    public function test_only_today_can_be_marked_from_the_phone(): void
     {
-        $threeDaysAgo = now()->subDays(3)->toDateString();
+        foreach (['p-1' => now()->subDays(3), 'p-2' => now()->subMonth(), 'p-3' => now()->addDay()] as $id => $day) {
+            $out = $this->sync()->push($this->salesman, 'phone-a', 'hr', [
+                $this->change($id, ['workDate' => $day->toDateString(), 'status' => 'present']),
+            ]);
 
-        $this->sync()->push($this->salesman, 'phone-a', 'hr', [
-            $this->change('a-6', ['workDate' => $threeDaysAgo, 'status' => 'present']),
+            $this->assertSame(SyncChange::REJECTED, $out[0]['status'], '⛔ আজ ছাড়া অন্য দিন ('.$day->toDateString().') ফোন থেকে বসল');
+        }
+
+        $this->assertSame(0, Attendance::query()->where('employee_id', $this->employee->id)->count());
+    }
+
+    /** ⛔ "ছুটি" কেবল অনুমোদিত ছুটির দিনে, "ছুটির দিন" অফিস বসায়, আর "দেরি নয়" ফোন বলে না — একই পুনঃঅডিট (HR ৭) */
+    public function test_the_phone_cannot_choose_a_paid_status_or_its_own_lateness(): void
+    {
+        $today = now()->toDateString();
+
+        foreach (['s-1' => 'holiday', 's-2' => 'leave', 's-3' => 'anything'] as $id => $status) {
+            $out = $this->sync()->push($this->salesman, 'phone-a', 'hr', [
+                $this->change($id, ['workDate' => $today, 'status' => $status]),
+            ]);
+            $this->assertSame(SyncChange::REJECTED, $out[0]['status'], "⛔ ফোন থেকে \"{$status}\" বসল");
+        }
+
+        // ⓘ আজকের অনুমোদিত ছুটি থাকলে "ছুটি" বসে
+        LeaveApplication::query()->create([
+            'company_id' => $this->company->id, 'employee_id' => $this->employee->id,
+            'leave_type_id' => LeaveType::query()->value('id') ?? LeaveType::query()->create(['company_id' => $this->company->id, 'code' => 'CL', 'name_en' => 'Casual', 'days_per_year' => 10])->id,
+            'from_date' => $today, 'to_date' => $today, 'days' => 1, 'reason' => 'Sick', 'status' => LeaveApplication::APPROVED,
         ]);
-
-        $attendance = Attendance::query()
-            ->where('employee_id', $this->employee->id)
-            ->whereDate('work_date', $threeDaysAgo)
-            ->firstOrFail();
-
-        $this->assertNotNull($attendance->remarks, 'দেরিতে সিঙ্ক হওয়া দিনে ঘড়ির চিহ্ন বসেনি।');
-        $this->assertStringContainsString('3', (string) $attendance->remarks);
+        $out = $this->sync()->push($this->salesman, 'phone-a', 'hr', [
+            $this->change('s-4', ['workDate' => $today, 'status' => 'leave', 'isLate' => false, 'inTime' => '08:00']),
+        ]);
+        $this->assertSame(SyncChange::APPLIED, $out[0]['status'], 'অনুমোদিত ছুটির দিনে "ছুটি" বসার কথা');
+        $this->assertNull(Attendance::query()->where('employee_id', $this->employee->id)->firstOrFail()->in_time, '⛔ ফোনের সময় বসল');
     }
 }

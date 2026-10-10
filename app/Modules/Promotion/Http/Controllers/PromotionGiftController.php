@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace App\Modules\Promotion\Http\Controllers;
 
+use App\Core\Services\DataScope;
 use App\Core\Services\MenuBuilder;
 use App\Http\Controllers\Controller;
+use App\Models\UserDataScope;
 use App\Modules\Inventory\Models\Batch;
 use App\Modules\Inventory\Models\Warehouse;
 use App\Modules\Promotion\Models\PromotionApplication;
@@ -51,7 +53,11 @@ final class PromotionGiftController extends Controller implements HasMiddleware
      */
     public function index(Request $request): View
     {
-        $rows = PromotionApplication::query()
+        /*
+         * ⛔ শাখার দেয়াল — পুরো-ERP পুনঃঅডিট, ৯ অক্টোবর ২০২৬ (প্রমোশন ২১; [[AGiftIsIssuedOnlyInsideMyBranchTest]])। ⓘ আগে সব শাখার বাকি
+         * উপহার এখানে আসত। কাগজের শাখা ধরে, বাকি কাগজের একই নিয়মে ([[DataScope::inView()]] — "সব শাখা"-তে শাখাহীন সারিও)।
+         */
+        $rows = app(DataScope::class)->inView(PromotionApplication::query(), 'promotion_applications.branch_id')
             ->with(['promotion', 'benefit.giftProduct'])
             ->withSum('gifts as issued_qty', 'qty')
             ->where('benefit_kind', BenefitKind::GOODS->value)
@@ -90,6 +96,10 @@ final class PromotionGiftController extends Controller implements HasMiddleware
 
     public function store(Request $request, PromotionApplication $application): RedirectResponse
     {
+        // ⛔ নাগালের বাইরের শাখার কাগজের উপহার নয় — ঠিকানা বসিয়েও না (প্রমোশন ২১)
+        abort_unless(app(DataScope::class)->allows($request->user(), UserDataScope::BRANCH,
+            $application->branch_id === null ? null : (int) $application->branch_id), 403);
+
         $data = $request->validate([
             'warehouse_id' => ['required', 'integer'],
             'batch_id' => ['nullable', 'integer'],

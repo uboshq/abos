@@ -44,4 +44,5 @@ return [
     'no_leave_types' => 'এখনো কোনো ছুটির ধরন নেই।',
     'empty_leave_types' => 'ছুটির ধরন ছাড়া কেউ ছুটির আবেদন করতে পারে না।',
     'no_employees_for_day' => 'এই দিনে কেউ কর্মরত ছিলেন না।',
+    'leave_part_day' => ':share দিনের ছুটি',
 ];

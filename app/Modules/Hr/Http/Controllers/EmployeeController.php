@@ -19,18 +19,21 @@ use App\Modules\Hr\Models\LeaveType;
 use App\Modules\Hr\Services\AttendanceService;
 use App\Modules\Hr\Services\EmployeePhotoService;
 use App\Modules\Hr\Services\EmployeeService;
+use App\Modules\Hr\Services\JobHistory;
 use App\Modules\Hr\Services\LeaveService;
 use App\Modules\Hr\Services\SalaryStructureService;
+use App\Modules\Hr\Support\BranchReach;
 use App\Modules\MasterData\Models\Department;
 use App\Modules\MasterData\Models\Designation;
 use App\Modules\MasterData\Models\EmploymentType;
-use Illuminate\Support\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
 /**
@@ -175,7 +178,7 @@ class EmployeeController extends Controller implements HasMiddleware
                 : null,
 
             // ⭐ চাকরির ইতিহাস — নিরীক্ষার খাতা থেকে ([[JobHistory]]); প্রোফাইল খোলার চাবিতেই, কারণ পদবি-বিভাগ এখানে আগে থেকেই খোলা
-            'history' => app(\App\Modules\Hr\Services\JobHistory::class)->of($employee),
+            'history' => app(JobHistory::class)->of($employee),
         ]);
     }
 
@@ -216,7 +219,7 @@ class EmployeeController extends Controller implements HasMiddleware
              * ধীরে আসে। ছবি একবার থাকলে প্রতিবার আবার তুলতে হয় না।
              */
             if ($employee?->photo_attachment_id === null) {
-                throw \Illuminate\Validation\ValidationException::withMessages(['photo' => __('hr::validation.photo_required')]);
+                throw ValidationException::withMessages(['photo' => __('hr::validation.photo_required')]);
             }
 
             return;
@@ -227,7 +230,7 @@ class EmployeeController extends Controller implements HasMiddleware
         ]);
 
         if (! app(EmployeePhotoService::class)->looksLikeAnImage($request->file('photo'))) {
-            throw \Illuminate\Validation\ValidationException::withMessages(['photo' => __('hr::validation.photo_only')]);
+            throw ValidationException::withMessages(['photo' => __('hr::validation.photo_only')]);
         }
     }
 
@@ -306,6 +309,17 @@ class EmployeeController extends Controller implements HasMiddleware
              */
             'reports_to_employee_id' => ['nullable', 'integer',
                 Rule::exists('hr_employees', 'id')->where('company_id', $companyId)->whereNull('deleted_at'),
+                // ⛔ শাখার দেয়াল — নাগালের বাইরের কর্মীকে ম্যানেজার বানানো যায় না (পুনঃঅডিট ৯ অক্টোবর ২০২৬, HR ১০; [[formData()]]-এর তালিকার একই নিয়ম)
+                function (string $attribute, mixed $value, \Closure $fail) use ($request, $employee): void {
+                    // ⓘ আগে থেকে বসানো ম্যানেজার অপরিবর্তিত থাকলে আটকায় না — নাম শুধরাতে গিয়ে সেভ আটকে যেত
+                    if ($employee !== null && (int) $value === (int) $employee->reports_to_employee_id) {
+                        return;
+                    }
+
+                    if (! app(BranchReach::class)->reaches($request->user(), Employee::query()->find($value))) {
+                        $fail(__('hr::validation.manager_out_of_reach'));
+                    }
+                },
                 function (string $attribute, mixed $value, \Closure $fail) use ($employee): void {
                     if ($employee === null) {
                         return;
@@ -344,7 +358,17 @@ class EmployeeController extends Controller implements HasMiddleware
              * দুইজন কর্মী এক লগইনে বাঁধা থাকলে "এই এন্ট্রিটা কে করেছে"
              * প্রশ্নের দুইটা উত্তর হত।
              */
-            'user_id' => ['nullable', 'integer', 'exists:users,id',
+            /*
+             * ⛔ এই কোম্পানির ব্যবহারকারীই — পুরো-ERP পুনঃঅডিট, ৯ অক্টোবর ২০২৬ (HR ১০; [[AnEmployeeIsTiedOnlyToThisCompanysPeopleTest]])।
+             * ⓘ `exists:users,id` যেকোনো কোম্পানির লগইন মেনে নিত — অন্য কোম্পানির মানুষ এই কোম্পানির কর্মী হয়ে তাঁর দাবি আর অগ্রিম
+             * চাইতে পারতেন। [[User]] কোম্পানির ছাঁকনি পায় না, তাই পিভট ধরে হাতে ([[taggableUsers()]]-এর একই নিয়ম)।
+             */
+            'user_id' => ['nullable', 'integer',
+                function (string $attribute, mixed $value, \Closure $fail) use ($companyId): void {
+                    if (! User::query()->whereKey($value)->whereHas('companies', fn ($q) => $q->whereKey($companyId))->exists()) {
+                        $fail(__('hr::validation.user_not_in_company'));
+                    }
+                },
                 Rule::unique('hr_employees', 'user_id')
                     ->where('company_id', $companyId)
                     ->ignore($employee?->id)
@@ -384,8 +408,12 @@ class EmployeeController extends Controller implements HasMiddleware
             'taggableUsers' => $this->taggableUsers($employee),
             'bloodGroups' => Employee::BLOOD_GROUPS,
 
-            // ⓘ যাঁর অধীনে বসানো যায় — এই কোম্পানির চালু কর্মীরা, নিজে বাদ (শাখার বেড়া মডেলের স্কোপে)
+            // ⓘ যাঁর অধীনে বসানো যায় — এই কোম্পানির চালু কর্মীরা, নিজে বাদ
+            // ⛔ শাখার দেয়াল — কর্মী মডেলে শাখার স্কোপ নেই, তাই তালিকায় অন্য শাখার সবার নাম-পদবি আসত (পুনঃঅডিট ৯ অক্টোবর ২০২৬, HR ১০)
             'managers' => Employee::query()->active()
+                ->where(fn ($q) => $q->whereIn('id', app(BranchReach::class)->employees(Employee::query(), request()->user())->select('id'))
+                    // ⓘ এখনকার ম্যানেজার নাগালের বাইরে হলেও তালিকায় থাকেন — নইলে সেভ চাপলেই সংযোগটা নীরবে মুছত
+                    ->when($employee->reports_to_employee_id, fn ($w, $id) => $w->orWhere('id', $id)))
                 ->when($employee->exists, fn ($q) => $q->whereKeyNot($employee->id))
                 ->with('designation')->orderBy('name_en')->get(),
         ];

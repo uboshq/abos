@@ -13,6 +13,7 @@ use App\Core\Engines\Sync\SyncRejection;
 use App\Models\User;
 use App\Modules\Hr\Models\Attendance;
 use App\Modules\Hr\Models\Employee;
+use App\Modules\Hr\Models\LeaveApplication;
 use App\Modules\Hr\Services\AttendanceService;
 use Illuminate\Support\Carbon;
 
@@ -160,6 +161,23 @@ final class AttendanceSync implements SyncsToDevices
             throw new SyncRejection(__('hr::sync.attendance_needs_date'));
         }
 
+        /*
+         * ⛔ কেবল আজকের দিন — পুরো-ERP পুনঃঅডিট, ৯ অক্টোবর ২০২৬ (HR ৭; [[ThePhoneMarksOnlyTodayTest]])।
+         * ⓘ ফোন যেকোনো দিন পাঠাতে পারত — গত মাসের কামাইয়ের দিন "উপস্থিত" বা আগামী সপ্তাহ আগেভাগে; বেতন সেই হাজিরা ধরেই কাটে।
+         * পেছনের দিনের কোনো ছাড় (ব্যাক-উইন্ডো) এখনো কোথাও বসানো নেই, তাই কেবল সার্ভারের আজ; পুরনো দিন অফিস ওয়েবে বসান।
+         */
+        try {
+            $day = Carbon::parse($date)->startOfDay();
+        } catch (\Throwable) {
+            throw new SyncRejection(__('hr::sync.attendance_needs_date'));
+        }
+
+        if (! $day->isSameDay(Carbon::today())) {
+            throw new SyncRejection(__('hr::sync.attendance_only_today'));
+        }
+
+        $date = $day->toDateString();
+
         // ওই দিনের সারি আগে থেকে থাকলে সংশোধন নেটওয়ার্কে (mark() নিজে
         // upsert করত, তাই আগে দেখে নেওয়া — নাহলে অফিসের সংশোধন চাপা পড়ত)
         $already = Attendance::query()
@@ -173,10 +191,29 @@ final class AttendanceSync implements SyncsToDevices
 
         $status = (string) ($payload['status'] ?? Attendance::PRESENT);
 
+        /*
+         * ⛔ অবস্থা: উপস্থিত বা অনুপস্থিত; "ছুটি" কেবল অনুমোদিত ছুটির দিনে; "সাপ্তাহিক/সরকারি ছুটি" অফিস বসায় — একই পুনঃঅডিট (HR ৭)।
+         * ⓘ আগে ফোন যা বলত তাই বসত; "ছুটি" বা "ছুটির দিন" বেতনে কাটে না, তাই কামাইয়ের দিনও নিজেই বেতনসহ করা যেত।
+         */
+        if (! in_array($status, [Attendance::PRESENT, Attendance::ABSENT, Attendance::LEAVE], true)) {
+            throw new SyncRejection(__('hr::sync.attendance_status_office_only'));
+        }
+
+        if ($status === Attendance::LEAVE && ! LeaveApplication::query()->approved()
+            ->where('employee_id', $employee->id)
+            ->whereDate('from_date', '<=', $date)->whereDate('to_date', '>=', $date)->exists()) {
+            throw new SyncRejection(__('hr::sync.attendance_leave_needs_approval'));
+        }
+
+        /*
+         * ⛔ সময় সার্ভারের ঘড়িতে, দেরি সার্ভার বলে — একই পুনঃঅডিট (HR ৭)। ⓘ ফোনের পাঠানো ঢোকার-বেরোনোর সময় আর "দেরি নয়" ঘড়ি বদলে
+         * যা খুশি বলা যেত। এখন ঢোকার সময় সার্ভার যখন পেল; বেরোনোর সময় অফিস বসায়। অফিসের শুরুর সময় কোথাও বসানো নেই, তাই দেরি
+         * সার্ভার বিচার করতে পারে না — "দেরি নয়" বসে, অফিস ওয়েবে বদলায় ([[AttendanceService::markDay()]])।
+         */
         $attendance = $this->attendance->mark($employee, $date, $status, [
-            'in_time' => $payload['inTime'] ?? null,
-            'out_time' => $payload['outTime'] ?? null,
-            'is_late' => (bool) ($payload['isLate'] ?? false),
+            'in_time' => $status === Attendance::PRESENT ? now()->format('H:i:s') : null,
+            'out_time' => null,
+            'is_late' => false,
             'remarks' => $this->clockStampedRemark($payload['remarks'] ?? null, $date),
         ]);
 

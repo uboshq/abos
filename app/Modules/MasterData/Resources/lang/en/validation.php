@@ -39,4 +39,6 @@ return [
     'location_name_taken_top' => 'A :level named :name already exists (:code).',
     /* Method and account kind — [[MethodFitsAccount]], 27 September 2026 */
     'method_does_not_fit_account' => 'The method ":method" is :kind, but the money would go to :account — the method and the account are not the same kind. Choose a :kind account.',
+    'user_not_in_company' => 'This user is not in this company — an area can only be given to someone in this company.',
+    'used_field_frozen' => '":name" is already used on papers — changing this field would change the figures or meaning of old papers. You can rename it; for a different value, add a new one and deactivate this one.',
 ];

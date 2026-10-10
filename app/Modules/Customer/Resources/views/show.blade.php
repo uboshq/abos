@@ -66,7 +66,7 @@
                         'date' => \App\Core\Support\DateFormat::format($customer->credit_blocked_at),
                     ]) }}
             </div>
-            @can('update', $customer)
+            @can('liftCreditBlock', $customer)
                 <form method="POST" action="{{ route('customer.credit_block.destroy', $customer) }}" class="flex items-center gap-2">
                     @csrf
                     @method('DELETE')
