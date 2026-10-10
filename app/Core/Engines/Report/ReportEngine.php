@@ -624,8 +624,10 @@ final class ReportEngine
                 $filters['from'] = self::BEGINNING;
             }
 
-            $filters['from'] = $filters['from'] ?? Carbon::today()->startOfMonth()->toDateString();
             $filters['to'] = $filters['to'] ?? Carbon::today()->toDateString();
+            // ⛔ শুরু না দিলে "শেষ" তারিখের মাসের ১ তারিখ, আজকের মাসের নয় — পাতা-ঝাড়ু ধাপ ০ (১০ অক্টোবর ২০২৬): রেওয়ামিলে "যে
+            // তারিখ পর্যন্ত" ৩০ সেপ্টেম্বর বাছলে শুরু বসত ১ অক্টোবর, আর পাতা ৫০০ (শুরুর ঘর ওখানে দেখানোই হয় না)
+            $filters['from'] = $filters['from'] ?? Carbon::parse($filters['to'])->startOfMonth()->toDateString();
 
             if (Carbon::parse($filters['from'])->gt(Carbon::parse($filters['to']))) {
                 throw new RuntimeException(
