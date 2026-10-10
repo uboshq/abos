@@ -646,18 +646,28 @@ final class SyncService
     }
 
     /**
-     * মানুষের সিদ্ধান্তের অপেক্ষায় থাকা দ্বন্দ্বগুলো।
+     * মানুষের সিদ্ধান্তের অপেক্ষায় থাকা দ্বন্দ্বগুলো — এক পাতা, নতুনটা আগে।
      *
-     * @return list<SyncConflict>
+     * ⛔ আগে সবগুলো একবারে (পুরো-ERP অডিট, ফোন; fe, ১০ অক্টোবর ২০২৬; [[TheConflictListComesInPagesTest]]) — হাজার দ্বন্দ্ব
+     * জমলে ফোন আর সার্ভার দুজনেই এক উত্তরে সব টানত। ⓘ পাতার মাপ [[CONFLICTS_PER_PAGE]]; আরও আছে কি না সঙ্গে ফেরে।
+     *
+     * @return array{rows: list<SyncConflict>, total: int, hasMore: bool}
      */
-    public function conflicts(): array
+    public function conflicts(int $page = 1): array
     {
-        return SyncConflict::query()
-            ->where('status', SyncConflict::PENDING)
-            ->orderByDesc('detected_at')
+        $page = max(1, $page);
+        $query = SyncConflict::query()->where('status', SyncConflict::PENDING);
+        $total = (clone $query)->count();
+
+        $rows = $query->orderByDesc('detected_at')->orderByDesc('id')
+            ->forPage($page, self::CONFLICTS_PER_PAGE)
             ->get()
             ->all();
+
+        return ['rows' => $rows, 'total' => $total, 'hasMore' => $page * self::CONFLICTS_PER_PAGE < $total];
     }
+
+    public const CONFLICTS_PER_PAGE = 100;
 
     /**
      * ⛔ কেবল অপেক্ষমাণ দ্বন্দ্ব মেটে, একবারই (৩০ সেপ্টেম্বর ২০২৬, নিরাপত্তা-অডিট খোঁজ ৮)।
