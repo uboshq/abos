@@ -409,6 +409,9 @@ Route::middleware('auth')->prefix('sales')->group(function () {
             ->whereNumber('shipment')->name('close');
         Route::post('/{shipment}/cancel', [ShipmentController::class, 'cancel'])
             ->whereNumber('shipment')->name('cancel');
+        // ⭐ ট্রিপের পরে-দেব ভাড়া দেওয়া (মালিক, ৭ অক্টোবর ২০২৬; সিদ্ধান্ত ঘ; [[ChallanFareController::payTrip()]])
+        Route::post('/{shipment}/fare/pay', [\App\Modules\Sales\Http\Controllers\ChallanFareController::class, 'payTrip'])
+            ->whereNumber('shipment')->name('fare.pay');
     });
 
     /*

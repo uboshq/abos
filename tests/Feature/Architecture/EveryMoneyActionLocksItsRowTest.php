@@ -56,7 +56,6 @@ final class EveryMoneyActionLocksItsRowTest extends TestCase
         'Sales/Services/SalesQuotationService.php::cancel',
         'Sales/Services/SchemeService.php::cancel',
         'Sales/Services/ShipmentService.php::close',
-        'Sales/Services/ShipmentService.php::cancel',
         'Sales/Services/SignedChallanConfirmer.php::confirm',
     ];
 
