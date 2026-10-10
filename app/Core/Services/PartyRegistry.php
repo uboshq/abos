@@ -215,10 +215,17 @@ final class PartyRegistry
                 continue;
             }
 
-            foreach ($model::query()->whereKey(array_unique($ids))->get() as $row) {
-                $labels[$type.':'.$row->getKey()] = method_exists($row, 'drillLabel')
-                    ? $row->drillLabel()
-                    : (string) $row->getKey();
+            /*
+             * ⭐ পয়েন্ট থাকলে নামের পাশে — "নাম · পয়েন্ট" (মালিক, ১০ অক্টোবর ২০২৬: ভাউচারের পক্ষেও "ha dekhate hobe"; সব জায়গায়
+             * পয়েন্টের আগের নিয়মের মতো)। ⓘ কোর পক্ষের ধরন জানে না — যে মডেল নিজের `pointName()` দেয় কেবল তার;
+             * জায়গাটা একবারে আনা হয়, সারি ধরে নয়।
+             */
+            $points = method_exists($model, 'pointName') && method_exists($model, 'location');
+
+            foreach ($model::query()->whereKey(array_unique($ids))->when($points, fn ($q) => $q->with('location.parent'))->get() as $row) {
+                $label = method_exists($row, 'drillLabel') ? $row->drillLabel() : (string) $row->getKey();
+                $point = $points ? $row->pointName() : null;
+                $labels[$type.':'.$row->getKey()] = $point === null ? $label : $label.' · '.$point;
             }
         }
 

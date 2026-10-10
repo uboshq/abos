@@ -351,7 +351,7 @@ final class DirectSaleService
                 $parked = $this->invoices->updateForHeldCounterSale(
                     $parked,
                     $invoiceHeader,
-                    $this->invoiceLines($challan->fresh(['lines'])),
+                    $this->invoiceLines($challan->fresh(['lines']), $data),
                     (int) $challan->id,
                 );
             }
@@ -365,7 +365,7 @@ final class DirectSaleService
              */
             $draft = $parked ?? $this->invoices->createForHeldCounterSale(
                 $invoiceHeader,
-                $this->invoiceLines($challan->fresh(['lines'])),
+                $this->invoiceLines($challan->fresh(['lines']), $data),
                 (int) $challan->id,
             );
 
@@ -395,11 +395,11 @@ final class DirectSaleService
              */
             if ($parked !== null) {
                 // ⓘ সারি উপরে বসে গেছে; নিশ্চিত চালান থেকে আবার লেখা — দাম-পরিমাণ হুবহু, কেবল নিশ্চিত অবস্থায়
-                $invoice = $this->invoices->update($parked, $invoiceHeader, $this->invoiceLines($challan));
+                $invoice = $this->invoices->update($parked, $invoiceHeader, $this->invoiceLines($challan, $data));
                 $invoice->update(['counter_draft' => null]);
             } else {
                 // ⓘ উপরে বাঁধা খসড়াটাই — নিশ্চিত চালান থেকে আবার লেখা, নম্বর একই
-                $invoice = $this->invoices->update($draft, $invoiceHeader, $this->invoiceLines($challan));
+                $invoice = $this->invoices->update($draft, $invoiceHeader, $this->invoiceLines($challan, $data));
             }
 
             /*
@@ -609,13 +609,13 @@ final class DirectSaleService
             $invoice = $parked === null
                 ? $this->invoices->createForHeldCounterSale(
                     $invoiceHeader,
-                    $this->invoiceLines($challan->fresh(['lines'])),
+                    $this->invoiceLines($challan->fresh(['lines']), $data),
                     (int) $challan->id,
                 )
                 : $this->invoices->updateForHeldCounterSale(
                     $parked,
                     $invoiceHeader,
-                    $this->invoiceLines($challan->fresh(['lines'])),
+                    $this->invoiceLines($challan->fresh(['lines']), $data),
                     (int) $challan->id,
                 );
 
@@ -1868,9 +1868,12 @@ final class DirectSaleService
      *
      * @return list<array<string, mixed>>
      */
-    private function invoiceLines(DeliveryChallan $challan): array
+    private function invoiceLines(DeliveryChallan $challan, array $data): array
     {
-        return $challan->lines->map(fn ($line) => [
+        // ⭐ কাউন্টারের ভ্যাট বাছাই বিলেও — পর্দার একই হার ([[CounterVat]], Sales অডিট ১০ অক্টোবর ২০২৬)
+        $vat = CounterVat::rule($data);
+
+        return $challan->lines->map(fn ($line) => array_filter([
             'product_id' => $line->product_id,
             'delivery_challan_line_id' => $line->id,
             'qty' => (string) $line->delivered_qty,
@@ -1886,7 +1889,8 @@ final class DirectSaleService
              */
             'entered_qty' => $line->entered_qty,
             'entered_unit_id' => $line->entered_unit_id,
-        ])->values()->all();
+            'vat_rule' => $vat,
+        ], fn ($value, $key) => $key !== 'vat_rule' || $value !== null, ARRAY_FILTER_USE_BOTH))->values()->all();
     }
 
     /** শতাংশ থেকে টাকা — লাইনের ছাড় নমুনায় শতাংশে বসানো হয়। */
@@ -2003,11 +2007,18 @@ final class DirectSaleService
 
         /*
          * ⭐ ভাড়া কোন খাত থেকে, কে দিলেন — মালিক, ৭ অক্টোবর ২০২৬ ([[FarePayment]])। ⓘ পর্দা ঘরগুলো পাঠালে নতুন নিয়ম:
-         * চালান পাকা হলে পূর্ণাঙ্গ খরচ ভাউচার (বা পরে দিলে বাহকের দেনা), Main Counter আর নিজে থেকে নয়। ⓘ না পাঠালে
-         * (পুরনো ফোনের অ্যাপ) আগের পথ, হুবহু — ফোনের দরজা নিজের ধাপে।
+         * চালান পাকা হলে পূর্ণাঙ্গ খরচ ভাউচার (বা পরে দিলে বাহকের দেনা), Main Counter আর নিজে থেকে নয়।
+         *
+         * ⛔ পুরনো পথ নতুন বিক্রিতে বন্ধ — মালিক, ৭ অক্টোবর ২০২৬: *"যা-ই করো, সব জায়গায় একই রকম"* (fe-র ক্রম: ফোনের পরে)।
+         * ⓘ ঘর না পাঠালে (পুরনো ফোনের অ্যাপ) আর ভাড়া আমাদের, বাহকও নেই — আগে চালান পাকা হলে টাকা প্রধান টিল থেকে নিজে
+         * থেকে কাটত। এখন বিক্রিটাই এখানে থামে, কারণসহ: "কোন খাত থেকে দিলেন, বাছুন"। ⓘ বিক্রি তৈরির দরজায়, পাকা করার
+         * জায়গায় নয় — আগে বানানো খসড়া (সইয়ের অপেক্ষায় থাকা কাউন্টারের বিক্রিও) শেষ হতে আটকায় না, পুরনো কাগজের সম্পাদনাও
+         * নয়। ⓘ বাহক থাকলে পুরনো পথ বাহকের নামে ২১১৬-এ দেনা — সিদ্ধান্ত খ-এর সাথে মেলে, তাই চলে।
          */
         if (array_key_exists('fare_when', $data) || array_key_exists('fare_account_id', $data)) {
             app(FarePayment::class)->stamp($challan->fresh(), $data);
+        } elseif (app(FarePayment::class)->isOurs($challan->fresh()) && $challan->fresh()->carrier_id === null) {
+            throw ValidationException::withMessages(['fare_account_id' => __('sales::fare.needs_account')]);
         }
 
         // ফ্রি পরিমাণ ও লাইনের ছাড় — ক্রম ধরে, কারণ লাইনগুলো ওই ক্রমেই বসেছে

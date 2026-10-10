@@ -8,6 +8,8 @@ use App\Core\Engines\Report\ReportColumn;
 use App\Core\Engines\Report\ReportDefinition;
 use App\Core\Engines\Report\ReportEngine;
 use App\Modules\Accounts\Services\StandardChart;
+use App\Modules\Inventory\Services\OpeningStockService;
+use App\Modules\Inventory\Services\StockService;
 use Carbon\CarbonPeriod;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Carbon;
@@ -197,7 +199,7 @@ final class InventoryAnalysisReports
                     ->selectRaw('SUM(m.hold_change) as held')
                     ->selectRaw('SUM(m.reserved_change) as reserved')
                     ->selectRaw('SUM(m.floor_change + m.unplaced_change) as on_hand')
-                    ->selectRaw('SUM(m.floor_change - m.reserved_change - m.hold_change) as sellable')
+                    ->selectRaw('SUM('.StockService::availableSql('m.').') as sellable')
                     ->selectRaw('SUM((m.floor_change + m.unplaced_change) * COALESCE(('.self::avgCost().'), 0)) as value');
             },
             columns: [
@@ -238,7 +240,14 @@ final class InventoryAnalysisReports
             groupBy: 'product_id',
             query: function (array $f) use ($qty, $in, $source) {
                 $from = $f['from'];
-                $named = ['purchase_receipt', 'purchase_bill', 'opening_stock', 'delivery_challan', 'sales_invoice',
+
+                /*
+                 * ⛔ খোলা মজুদের চলাচল `opening` নামে লেখা ([[OpeningStockService::SOURCE_TYPE]]) — `opening_stock` খাতার
+                 * ভাউচারের নাম, চলাচলের নয়। আগে এখানে সেটা বসানো ছিল, তাই খোলা মজুদ "কেনা"-র বদলে "অন্য"-তে পড়ত
+                 * (পুরো-ERP অডিট, মজুদ ছ৭; [[TheOpeningStockIsCountedAsBroughtInTest]])।
+                 */
+                $opening = OpeningStockService::SOURCE_TYPE;
+                $named = ['purchase_receipt', 'purchase_bill', $opening, 'delivery_challan', 'sales_invoice',
                     'sales_return', 'purchase_return', 'stock_transfer', 'stock_adjustment'];
 
                 return self::movements($f)
@@ -248,7 +257,7 @@ final class InventoryAnalysisReports
                     ->selectRaw('p.id as product_id')
                     ->selectRaw("MAX(CONCAT(p.code, ' - ', ".self::name('p').')) as product_name')
                     ->selectRaw("SUM(CASE WHEN m.trx_date < ? THEN {$qty} ELSE 0 END) as opening", [$from])
-                    ->selectRaw($in(['purchase_receipt', 'purchase_bill', 'opening_stock']).' as bought', [$from])
+                    ->selectRaw($in(['purchase_receipt', 'purchase_bill', $opening]).' as bought', [$from])
                     ->selectRaw('-'.$in(['delivery_challan', 'sales_invoice']).' as sold', [$from])
                     ->selectRaw($in(['sales_return']).' as returned_in', [$from])
                     ->selectRaw('-'.$in(['purchase_return']).' as returned_out', [$from])
@@ -297,6 +306,7 @@ final class InventoryAnalysisReports
             ->join('inv_warehouses as w', 'w.id', '=', 'm.warehouse_id')
             ->where('m.company_id', $f['company_id'])
             ->tap(ReportEngine::branchWall($f, 'w.branch_id'))
+            ->tap(ReportEngine::warehouseWall($f, 'm.warehouse_id'))
             ->when(! empty($f['warehouse_id']), fn ($q) => $q->where('m.warehouse_id', (int) $f['warehouse_id']))
             ->when(! empty($f['product_id']), fn ($q) => $q->where('m.product_id', (int) $f['product_id']))
             ->when(! empty($f['brand_id']), fn ($q) => $q->where('p.brand_id', (int) $f['brand_id']))

@@ -5,6 +5,9 @@
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ $claim->document_no }}</x-slot:title>
 
+    {{-- ⛔ কেন হলো না, এই পাতাতেই — বোতাম আটকালে বার্তাটা এখানে দেখায় (ARefusalNobodyEverSawTest, ১০ অক্টোবর ২০২৬) --}}
+    <x-ui.errors />
+
     <x-slot:header>
         <x-ui.page-header :title="__('hr::claim.kind_'.$claim->kind).' — '.$claim->document_no"
                           :subtitle="__('hr::claim.state_'.$claim->status)" />

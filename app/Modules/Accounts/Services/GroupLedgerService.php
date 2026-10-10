@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace App\Modules\Accounts\Services;
 
+use App\Core\Services\DataScope;
 use App\Core\Support\CompanyContext;
 use App\Models\User;
+use App\Models\UserDataScope;
 use App\Modules\Accounts\Models\Account;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -81,7 +83,7 @@ final class GroupLedgerService
             ];
         }
 
-        $sums = $this->sumsByCompanyAndType(array_keys($mine), $from, $to);
+        $sums = $this->sumsByCompanyAndType($this->branchReach($user, array_keys($mine)), $from, $to);
 
         $companies = [];
         $total = $this->zeroes();
@@ -143,12 +145,34 @@ final class GroupLedgerService
     }
 
     /**
-     * একটাই কোয়েরি — কোম্পানি ও হিসাবের ধরন ধরে যোগফল।
+     * ⛔ প্রতিটা কোম্পানিতে মানুষটার নিজের শাখার নাগাল — পুরো-ERP পুনঃঅডিট, ৯ অক্টোবর ২০২৬ (হিসাব, ঠিক ৪)।
+     *
+     * ⚠️ আগে যোগফল গোটা কোম্পানির: শাখা A-তে সীমিত মানুষও দলগত পাতায় কোম্পানির সব শাখার আয়-ব্যয়-লাভ দেখতেন — যা নিজের
+     * কোম্পানির স্থিতিপত্রেই তাঁর কাছে ঢাকা ([[BalanceSheetService]], অডিট ⛔১১)।
+     * ⓘ নাগাল কোম্পানিভেদে আলাদা ([[DataScope::idsFor()]] চলতি কোম্পানি ধরে), তাই প্রতিটা কোম্পানির প্রসঙ্গে আলাদা করে পড়া।
+     * হেডারে বাছা শাখা নয় — সেটার আইডি কেবল চলতি কোম্পানির ([[EveryLedgerReaderSaysWhetherItShowsOrChecksTest]])।
      *
      * @param  list<int>  $companyIds
+     * @return array<int, list<int>|null> কোম্পানি => নাগালের শাখা; `null` মানে সীমা নেই
+     */
+    private function branchReach(User $user, array $companyIds): array
+    {
+        $reach = [];
+
+        foreach ($companyIds as $id) {
+            $reach[$id] = CompanyContext::forCompany($id, fn () => app(DataScope::class)->idsFor($user, UserDataScope::BRANCH));
+        }
+
+        return $reach;
+    }
+
+    /**
+     * একটাই কোয়েরি — কোম্পানি ও হিসাবের ধরন ধরে যোগফল।
+     *
+     * @param  array<int, list<int>|null>  $reach  কোম্পানি => নাগালের শাখা ([[branchReach()]])
      * @return array<int, array<string, string>>
      */
-    private function sumsByCompanyAndType(array $companyIds, string $from, string $to): array
+    private function sumsByCompanyAndType(array $reach, string $from, string $to): array
     {
         /*
          * ⚠️ লাইভের MySQL-এ `ONLY_FULL_GROUP_BY` চালু।
@@ -172,7 +196,15 @@ final class GroupLedgerService
          */
         $rows = DB::table('ledger_entries')
             ->join('accounts', 'accounts.id', '=', 'ledger_entries.account_id')
-            ->whereIn('ledger_entries.company_id', $companyIds)
+            // ⓘ সীমিত কোম্পানিতে নাগালের শাখা আর শাখাহীন সারি — "সব শাখা"-র নিয়ম ([[DataScope::inView()]])
+            ->where(function ($q) use ($reach) {
+                foreach ($reach as $companyId => $branches) {
+                    $q->orWhere(fn ($one) => $one->where('ledger_entries.company_id', $companyId)
+                        ->when($branches !== null, fn ($w) => $w->where(fn ($b) => $b
+                            ->whereIn('ledger_entries.branch_id', $branches)
+                            ->orWhereNull('ledger_entries.branch_id'))));
+                }
+            })
             ->whereBetween('ledger_entries.trx_date', [$from, $to])
             // ⛔ বছর বন্ধের দাখিলা বাদ — নইলে বছরের শেষ দিন পড়লে আয়-খরচ শূন্য দেখাত ([[YearEndService::closingSources()]])
             // ⓘ কেবল আয়-খরচের সারিতে — সঞ্চিত মুনাফার (মূলধন) দিকটা থাকে, নইলে মালিকানার জের বদলাত

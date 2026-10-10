@@ -22,7 +22,10 @@ use PHPUnit\Framework\TestCase;
  */
 final class EveryMoneyActionLocksItsRowTest extends TestCase
 {
-    private const NAMES = ['confirm', 'approve', 'cancel', 'post', 'close', 'reverse', 'finish', 'finishHeld', 'reopen', 'dispose', 'payout', 'declare'];
+    // ⓘ 'recordOnConfirmed', 'payDue' — গাড়ি ভাড়া লেখা আর বাকি ভাড়া শোধ ([[FarePayment]]); পুরো ERP অডিট ৯ অক্টোবর ২০২৬:
+    //   নাম তালিকায় ছিল না বলে তালা ছাড়াই পার হয়েছিল — দুবার চাপলে দুবার
+    private const NAMES = ['confirm', 'approve', 'cancel', 'post', 'close', 'reverse', 'finish', 'finishHeld', 'reopen', 'dispose', 'payout', 'declare',
+        'recordOnConfirmed', 'payDue'];
 
     private const LOCK = '/lockFresh\(|lockForUpdate\(|assertRoomLocked\(|lockCustomer\(|lockPending\(|->lock\(|CashOnHand::lock|sharedLock\(/';
 
@@ -45,7 +48,6 @@ final class EveryMoneyActionLocksItsRowTest extends TestCase
         'Purchase/Services/PurchaseOrderService.php::confirm',
         'Purchase/Services/PurchaseOrderService.php::cancel',
         'Purchase/Services/PurchaseReceiptService.php::cancel',
-        'Purchase/Services/PurchaseRequisitionService.php::approve',
         'Purchase/Services/PurchaseRequisitionService.php::cancel',
         // ⓘ নিচের তিনটা নিজে কিছু লেখে না — ডাকে এমন সেবাকে যেটা তালা দেয়; তবু পাহারা শরীর পড়ে, তাই তালিকায়
         'Sales/Services/HeldCounterSaleFinisher.php::finish',
@@ -53,7 +55,6 @@ final class EveryMoneyActionLocksItsRowTest extends TestCase
         'Sales/Services/SalesQuotationService.php::cancel',
         'Sales/Services/SchemeService.php::cancel',
         'Sales/Services/ShipmentService.php::close',
-        'Sales/Services/ShipmentService.php::cancel',
         'Sales/Services/SignedChallanConfirmer.php::confirm',
     ];
 

@@ -41,6 +41,9 @@ final class TheScheduleKeyOpenedEveryReportTest extends TestCase
 
     private const PROFIT_LOSS = 'accounts.profit_loss';
 
+    /** দরজা সত্যিই দুই চাবি চায় — `accounts.report` আর চূড়ান্ত হিসাব ([[BranchesSideBySideReport]])। */
+    private const TWO_KEYS = 'accounts.branches_side_by_side';
+
     private const UNDECLARED = 'ec_report_with_no_key';
 
     private Company $company;
@@ -79,15 +82,24 @@ final class TheScheduleKeyOpenedEveryReportTest extends TestCase
             '⛔ দুই চাবি হাতে থাকার পরেও সূচি হলো না — দরজা বন্ধই থেকে গেছে।');
     }
 
-    /** ③ দুই-চাবির রিপোর্টে একটা চাবি যথেষ্ট নয় — যেকোনোটা একা। */
+    /**
+     * ③ দুই-চাবির রিপোর্টে একটা চাবি যথেষ্ট নয় — যেকোনোটা একা।
+     *
+     * ⓘ ১০ অক্টোবর ২০২৬: লাভ-ক্ষতির ওয়েবের দরজা ৬ অক্টোবর থেকে কেবল চূড়ান্ত হিসাবের চাবি চায়
+     * ([[FinalAccountsReportController]], cec88dd3) — তাই সেখানে চূড়ান্ত চাবি একাই যথেষ্ট, সাধারণ চাবি একা নয়।
+     * দুই-চাবির নিয়মটা মাপা হয় যে রিপোর্টের দরজা সত্যিই দুটো চায় তাতে: শাখা পাশাপাশি।
+     */
     public function test_one_of_the_two_keys_is_not_enough(): void
     {
         $clerk = $this->member(['system_admin.reports.schedule', 'accounts.report']);
         $this->assertRefused($clerk, self::PROFIT_LOSS);
+        $this->assertRefused($clerk, self::TWO_KEYS);
 
         $this->take($clerk, 'accounts.report');
         $this->give($clerk, 'accounts.report.final');
-        $this->assertRefused($clerk, self::PROFIT_LOSS);
+        $this->assertRefused($clerk, self::TWO_KEYS);
+        $this->assertNotNull($this->scheduleAs($clerk, self::PROFIT_LOSS),
+            '⛔ চূড়ান্ত হিসাবের চাবিতে ওয়েবে লাভ-ক্ষতি খোলে, অথচ সূচি হলো না — দুই দরজা দুই কথা বলছে।');
     }
 
     /**

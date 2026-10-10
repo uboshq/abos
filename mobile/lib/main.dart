@@ -15,6 +15,7 @@ import 'core/launcher_widgets/launcher_widget_refresh.dart';
 import 'core/launcher_widgets/widget_sync_observer.dart';
 import 'core/push/push_service.dart';
 import 'core/router/app_router.dart';
+import 'core/sync_engine/auto_sync.dart';
 import 'core/sync_engine/background_sync.dart';
 import 'core/sync_engine/reference_cache.dart';
 import 'core/sync_engine/sync_engine.dart';
@@ -79,6 +80,9 @@ class AbosApp extends ConsumerStatefulWidget {
 class _AbosAppState extends ConsumerState<AbosApp> {
   late final WidgetSyncObserver _widgetSync;
 
+  /// ⭐ নিজে থেকে সিঙ্ক — অ্যাপ খোলা থাকলে, সামনে ফিরলে আর প্রতি দশ মিনিটে (মালিক, ১০ অক্টোবর ২০২৬; [[AutoSync]])
+  late final AutoSync _autoSync;
+
   /// ⭐ অ্যাপ-তালা — সংরক্ষিত সেশনে খুললে আর অনেকক্ষণ পরে ফিরলে ([[AppLock]]); এইমাত্র পাসওয়ার্ডে ঢুকলে নয়
   late final AppLock _lock;
   StreamSubscription<Uri?>? _widgetTaps;
@@ -94,6 +98,11 @@ class _AbosAppState extends ConsumerState<AbosApp> {
           ref.read(authStateProvider).status == AuthStatus.signedIn,
     )..start();
 
+    _autoSync = AutoSync(
+      signedIn: () =>
+          ref.read(authStateProvider).status == AuthStatus.signedIn,
+    )..start();
+
     _listenForWidgetTaps();
 
     final signedIn = ref.read(authStateProvider).status == AuthStatus.signedIn;
@@ -103,6 +112,11 @@ class _AbosAppState extends ConsumerState<AbosApp> {
     // ⭐ বার্তায় চাপলে ট্র্যাকিং; নতুন করে ঢুকলে এই ফোনের টোকেন আবার জমা (অন্য কেউ এই ফোনে ঢুকে থাকলে
     // সার্ভার আগের জনের সারি থেকে টোকেন সরায় — [[PushTokenController]])।
     PushService.instance.listenForTaps(_openFromPush);
+    // ⭐ অফিসে কিছু লেখা হলে নীরব ডাক — খোলা অ্যাপ তখনই সিঙ্ক করে (রিয়েল-টাইম, মালিক, ১০ অক্টোবর ২০২৬)
+    PushService.instance.listenForSync(() =>
+        ref.read(authStateProvider).status == AuthStatus.signedIn
+            ? _autoSync.runNow()
+            : Future<void>.value());
     ref.listenManual<AuthState>(authStateProvider, (previous, next) {
       if (previous?.status != AuthStatus.signedIn && next.status == AuthStatus.signedIn) {
         unawaited(PushService.instance.register());
@@ -152,6 +166,7 @@ class _AbosAppState extends ConsumerState<AbosApp> {
   @override
   void dispose() {
     _widgetSync.stop();
+    _autoSync.stop();
     _widgetTaps?.cancel();
     WidgetsBinding.instance.removeObserver(_lock);
     _lock.dispose();

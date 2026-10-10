@@ -7,7 +7,6 @@ namespace Tests\Feature\Modules\Inventory;
 use App\Core\Support\CompanyContext;
 use App\Models\Company;
 use App\Models\User;
-use App\Modules\Inventory\Models\CostLayerUse;
 use App\Modules\Inventory\Models\Product;
 use App\Modules\Inventory\Services\CostLayerService;
 use Database\Seeders\DemoSeeder;
@@ -201,14 +200,13 @@ final class OneBillsReturnAteAnotherBillsHeadroomTest extends TestCase
             'ফেরত বাতিলের পরেও স্তরে মূল্য পড়ে আছে।');
 
         /*
-         * ⭐ সারিগুলো মোছা হয়, উল্টো সারি লেখা নয় — ⚠️ উল্টো সারি থাকলে
-         * "এই বিলের কতটা আগে ফিরেছে" গোনায় বাতিল ফেরতটাও ধরা পড়ত।
+         * ⭐ বাতিল ফেরত আর "আগে ফিরেছে" নয় — পুরো ১০টাই আবার ফেরত নেওয়া যায়, তালিকায় বাতিলটার নাম থাকলেও।
+         * ⓘ আগে এখানে দাবি ছিল "সারিগুলো মোছা হয়"। পুরো-ERP অডিট ⚠️৫ (৬ অক্টোবর ২০২৬): মুছলে ফেরতের দিনের মজুদ-মূল্য
+         * পেছনে বদলাত, তাই এখন উল্টো সারি (`test_return:cancel`) থাকে, আর গোনা তাকে কাটাকাটি করে — দাবিটা আকার নয়,
+         * উদ্দেশ্য মাপে ([[ACancelNeverRewritesAClosedMonthsStockTest]])।
          */
-        $this->assertSame(0, CostLayerUse::query()
-            ->where('source_type', 'test_return')
-            ->where('source_id', 1)
-            ->count(),
-            'বাতিল ফেরতের সারি রয়ে গেছে — পরের ফেরতের গোনায় সেটা ধরা পড়বে।');
+        $this->assertSame('1000.0000', $this->returnFor(invoice: 1, qty: '10', returnId: 2, siblings: [1, 2]),
+            'বাতিল ফেরতটা এখনো "আগে ফিরেছে" গোনা হল — পরের ফেরত আটকে যেত।');
     }
 
     public function test_a_return_whose_goods_have_left_again_cannot_be_cancelled(): void

@@ -102,6 +102,20 @@ final class OneBranchPickedShowsOnlyThatBranchsMoneyTest extends TestCase
 
         $after = $this->readEverything();
 
+        /*
+         * ⓘ গ্রাহকের তালিকা — মালিকের পরের সিদ্ধান্ত (42ec6cef, ১ অক্টোবর ২০২৬): এক শাখা বাছলে কেবল সেই শাখার পক্ষ, শাখাহীন পক্ষ
+         * কেবল "সব শাখা"-য়। এই গ্রাহক শাখাহীন (ডেমো), তাই এক শাখায় তালিকায় নেই — বিক্রির আগে-পরে দুবারই; "সব শাখা"-য় আছে আর
+         * যোগফলের নিয়মে মেলে (নিচে)। ⛔ এক শাখায় দেখা দিলে দাবি লাল (main-এর লাল সারাই, ১০ অক্টোবর ২০২৬)।
+         */
+        $list = 'গ্রাহকের তালিকা — বকেয়া';
+        foreach (['mms', 'ntk'] as $one) {
+            $this->assertSame(['missing', 'missing'], [$before[$one][$list], $after[$one][$list]],
+                "⛔ শাখাহীন গ্রাহক এক শাখার তালিকায় দেখা দিল ({$one})।");
+            unset($before[$one][$list], $after[$one][$list]);
+        }
+        $this->assertSame($expect['all'], bcsub($after['all'][$list], $before['all'][$list], 2), "⛔ {$list}: \"সব শাখা\"-য় পুরো বকেয়া নেই।");
+        unset($before['all'][$list], $after['all'][$list]);
+
         foreach (array_keys($after['all']) as $screen) {
             $mms = bcsub($after['mms'][$screen], $before['mms'][$screen], 2);
             $ntk = bcsub($after['ntk'][$screen], $before['ntk'][$screen], 2);

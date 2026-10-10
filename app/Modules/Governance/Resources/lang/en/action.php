@@ -66,8 +66,12 @@ return [
     'opening_removed' => 'Opening stock row removed',
     'three_hands_override' => 'Same person on a payment: proposed/signed/paid',
     'own_claim_signed' => 'Own claim signed by the same person',
+    'own_advice_accepted' => 'Own payment advice accepted by the same person',
     'maker_checker_override' => 'Own voucher posted by its writer',
     'adjusting_reversed' => 'Adjusting journal reversed on its date',
     'auto_finish_refused' => 'Sale not finished after signing',
     'returned_to_draft' => 'Signed-but-stuck sale returned to draft',
+    'serial_back_to_stock' => 'Returned piece checked and taken back into stock',
+    'free_stock_adjusted' => 'Free goods adjusted',
+    'cost_from_later_layer' => 'Cost drawn from a later-dated layer',
 ];

@@ -102,6 +102,7 @@ class DepositRequestController extends Controller implements HasMiddleware
 
         return response()->json(['requests' => DepositClaim::query()
             ->where('customer_id', $customer->id)
+            ->with('submitter:id,name') // ⓘ "পাঠালেন" — তালিকায় একটা কোয়েরিতে
             ->orderByDesc('claimed_on')->orderByDesc('id')
             ->limit(30)->get()
             ->map(fn (DepositClaim $c) => $this->facts($c))->values()]);
@@ -219,6 +220,10 @@ class DepositRequestController extends Controller implements HasMiddleware
             'method' => (string) $claim->method,
             'reference' => $claim->reference,
             'status' => (string) $claim->status,
+            // ⭐ অবস্থার নাম সার্ভারের ভাষায় — ফোন এটাই দেখায় (টাকার পরিকল্পনা ১, ৭ অক্টোবর ২০২৬; a4, 8e39aaa5)
+            'status_label' => $claim->statusLabel(),
+            // ⭐ কে পাঠালেন — কর্মীর নাম, পোর্টালের দোকানি হলে খালি (টাকার পরিকল্পনা ৩; ফোন "পাঠালেন …" দেখায়, a4 8e39aaa5)
+            'submitted_by_name' => (string) ($claim->submitter?->name ?? ''),
             'decision_reason' => $claim->decision_reason,
             'has_slip' => $this->slips->of($claim) !== null,
             // ⓘ বাছা বিল — দাবির প্রস্তাব; গ্রহণের পরে আসল ভাগ আদায়ের সারিতে

@@ -55,4 +55,6 @@ return [
     'accrual_booked' => 'খাতায়',
     'accrual_waiting' => 'সইয়ের অপেক্ষায়',
     'accrual_reversed' => 'উল্টেছে',
+    // ⛔ পুনঃঅডিট, ৯ অক্টোবর ২০২৬
+    'accrual_month_closed' => ':month বন্ধ — বন্ধ মাসে সুদ জমা বসে না। খাতায় কিছুই বসেনি।',
 ];

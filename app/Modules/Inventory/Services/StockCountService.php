@@ -92,10 +92,14 @@ final class StockCountService
 
             $countDate = Carbon::parse($data['count_date'] ?? now());
 
+            // ⭐ কোন ভাণ্ডার গোনা হচ্ছে — দামি মাল, না ফ্রি (মজুদ ⚠️৬ক); অচেনা লেখা মানে দামি, আগের মতো
+            $kind = ($data['kind'] ?? null) === StockCount::KIND_FREE ? StockCount::KIND_FREE : StockCount::KIND_COUNT;
+
             $count = StockCount::create([
                 'company_id' => CompanyContext::id(),
                 'branch_id' => $warehouse->branch_id ?? CompanyContext::branchId(),
                 'document_no' => $this->numbers->next('SC'),
+                'kind' => $kind,
                 'count_date' => $countDate->toDateString(),
                 'warehouse_id' => $warehouse->id,
                 'narration' => $data['narration'] ?? null,
@@ -114,6 +118,13 @@ final class StockCountService
                 }
 
                 /*
+                 * ⛔ পিস-বাক্সে আধা গোনা যায় না, কেজি-লিটারে যায় — কাগজের লাইনের একই নিয়ম ([[PackConversion::toStockQty()]];
+                 * মালিক, ৬ অক্টোবর ২০২৬)। পুরো-ERP অডিট, ৬ অক্টোবর ২০২৬, মজুদ ⚠️১২: গণনা এই দরজা দিয়ে যেত না, তাই "২.৫ পিস"
+                 * মেনে নিলে আধা পিসের ঘাটতি বা বাড়তি খাতায় বসত ([[AHalfPieceIsNeitherCountedNorAdjustedTest]])।
+                 */
+                app(PackConversion::class)->toStockQty($product, $line['counted_qty']);
+
+                /*
                  * খাতার সংখ্যা — গণনার মুহূর্তের floor, ওই গুদামে।
                  * ⛔ লট ধরে গোনা হলে সেই **লটের** সংখ্যা — ২৯ সেপ্টেম্বর ২০২৬। ⚠️ আগে পুরো
                  * পণ্যের সংখ্যা বসত, তাই লট A-র ৩ গুনলে পার্থক্য হত "১০ থেকে −৭", আর
@@ -126,7 +137,7 @@ final class StockCountService
                  * ⚠️ সমন্বয় সইয়ে আটকালে খসড়াটা পড়ে থাকত, আবার চাপলে আরেকটা; দুটোই একই খাতার সংখ্যা ধরে, তাই
                  * অনুমোদনকারী পরে দুটো মানলে একই ঘাটতি দুইবার বসত। ⓘ আগেরটা মেনে নিন বা বাতিল করুন ([[cancel()]])।
                  */
-                $waiting = $this->sameGoods((int) $product->id, (int) $warehouse->id, $lot?->id)
+                $waiting = $this->sameGoods((int) $product->id, (int) $warehouse->id, $lot?->id, $kind)
                     ->where('status', DocumentStatus::DRAFT)
                     ->value('document_no');
 
@@ -145,24 +156,39 @@ final class StockCountService
                  * খাতা বলত তাকে আছে, হাতে মিলত না — মিথ্যা ঘাটতি, আর মেনে নিলে সেটা খরচে। ⚠️ কোন লট গেছে তা জানা যায় কেবল
                  * পৌঁছানোর দিন, তাই বাদ দিয়ে গোনা যায় না — পৌঁছানো পর্যন্ত থামা।
                  */
+                /*
+                 * ⛔ খোঁজা দেয়াল ছাড়া — বদলি লেখা হয় পাঠকের শাখায়, তাই অন্য শাখার মানুষ পাঠালে এই গুদামের কেরানি সেটা
+                 * দেখতেনই না, আর মিথ্যা ঘাটতি আবার বসত। ⓘ গন্তব্যেও থামা: মাল গুদামে নামলেও গ্রহণ পর্যন্ত খাতায় নেই — তখন
+                 * গুনলে মিথ্যা বাড়তি, মেনে নিলে পরে গ্রহণে দ্বিগুণ (পুরো-ERP অডিট, ৯ অক্টোবর ২০২৬, মজুদের নতুন ⚠️ আর ⓘ;
+                 * [[ACountWaitsForATransferFromAnyBranchTest]])।
+                 */
                 $onTheWay = \App\Modules\Inventory\Models\StockTransfer::query()
-                    ->where('from_warehouse_id', $warehouse->id)
+                    ->withoutGlobalScopes(StockService::VIEW_WALLS)
+                    ->where(fn ($q) => $q->where('from_warehouse_id', $warehouse->id)->orWhere('to_warehouse_id', $warehouse->id))
                     ->where('status', DocumentStatus::CONFIRMED)
                     ->whereHas('lines', fn ($q) => $q->where('product_id', $product->id))
-                    ->value('document_no');
+                    ->first(['document_no', 'to_warehouse_id']);
 
                 if ($onTheWay !== null) {
+                    $arriving = (int) $onTheWay->to_warehouse_id === (int) $warehouse->id;
+
                     throw ValidationException::withMessages([
-                        'lines' => __('inventory::validation.count_while_on_the_way', [
+                        'lines' => __($arriving ? 'inventory::validation.count_while_arriving' : 'inventory::validation.count_while_on_the_way', [
                             'product' => $product->name(),
-                            'transfer' => $onTheWay,
+                            'transfer' => $onTheWay->document_no,
                         ]),
                     ]);
                 }
 
-                $bookQty = $lot !== null
-                    ? $this->adjustments->lotFloor($lot, $warehouse)
-                    : $this->stock->floorQty($product, $warehouse);
+                $free = $kind === StockCount::KIND_FREE;
+
+                // ⓘ ফ্রি কাগজে খাতার সংখ্যা ফ্রি ভাণ্ডারের — লট ধরে গোনা হলে সেই লটের ফ্রি (মজুদ ⚠️৬ক)
+                $bookQty = match (true) {
+                    $free && $lot !== null => $lot->freeBalance($warehouse),
+                    $free => $this->stock->freeQty($product, $warehouse),
+                    $lot !== null => $this->adjustments->lotFloor($lot, $warehouse),
+                    default => $this->stock->floorQty($product, $warehouse),
+                };
 
                 $count->lines()->create([
                     'company_id' => CompanyContext::id(),
@@ -176,7 +202,8 @@ final class StockCountService
                      * ⛔ আগে সবসময় গড় বসত: মানুষ বাড়তির দর লিখলেও ফেলে দেওয়া হত, আর স্তর না থাকলে গড়ও নেই, তাই বাড়তি
                      * খাতায় তোলাই যেত না ("দর লাগবে")। ⓘ মেনে নেওয়ার দিন বাড়তির স্তর এই দরেই বসে ([[StockAdjustmentService::settle()]])।
                      */
-                    'unit_cost' => $line['unit_cost'] ?? $this->averageCost($product),
+                    // ⓘ ফ্রি মালের দাম নেই — দর বসে না, সইয়ের টাকার অঙ্কেও ধরা হয় না
+                    'unit_cost' => $free ? null : ($line['unit_cost'] ?? $this->averageCost($product)),
                     // reason_code_id অনুমোদনের সময় বসবে
                 ]);
             }
@@ -288,7 +315,7 @@ final class StockCountService
                  * ⓘ দুটোই একই খাতার সংখ্যা দেখে লেখা, তাই পার্থক্যটা ওটাই বসিয়ে দিয়েছে; এটা মানলে দ্বিতীয়বার।
                  * ⚠️ নতুন খসড়ায় এমন জোড়া হয়ই না ([[record()]]) — এটা আগের দিনের পড়ে থাকা জোড়ার জন্য।
                  */
-                $settledSince = $this->sameGoods((int) $line->product_id, (int) $count->warehouse_id, $line->batch_id)
+                $settledSince = $this->sameGoods((int) $line->product_id, (int) $count->warehouse_id, $line->batch_id, (string) $count->kind)
                     ->where('status', DocumentStatus::CONFIRMED)
                     ->whereKeyNot($count->id)
                     ->where('approved_at', '>', $count->created_at)
@@ -307,16 +334,30 @@ final class StockCountService
                  * ⛔ গণনার নিজের পার্থক্য — অনুমোদনের মুহূর্তে আবার মাপা নয় (২৯ সেপ্টেম্বর
                  * ২০২৬, অডিটে প্রমাণিত): মাঝের বিক্রি উদ্বৃত্ত হয়ে ফিরত ([[StockAdjustmentService::settle()]])।
                  */
-                $this->adjustments->settle(
-                    product: $line->product,
-                    warehouse: $count->warehouse,
-                    difference: (string) $line->difference,
-                    reason: $reason,
-                    date: $count->count_date,
-                    narration: $count->narration ?: $count->document_no,
-                    unitCost: $line->unit_cost === null ? null : (string) $line->unit_cost,
-                    batch: $line->batch,
-                );
+                // ⭐ ফ্রি কাগজ ফ্রি ভাণ্ডারে বসে, খাতায় কিছু যায় না (মজুদ ⚠️৬ক)
+                $count->isFree()
+                    ? $this->adjustments->settleFree(
+                        product: $line->product,
+                        warehouse: $count->warehouse,
+                        difference: (string) $line->difference,
+                        reason: $reason,
+                        date: $count->count_date,
+                        narration: __('inventory::label.free_adjustment_narration', ['document' => $count->narration ?: $count->document_no]),
+                        batch: $line->batch,
+                        documentNo: $count->document_no,
+                    )
+                    : $this->adjustments->settle(
+                        product: $line->product,
+                        warehouse: $count->warehouse,
+                        difference: (string) $line->difference,
+                        reason: $reason,
+                        date: $count->count_date,
+                        narration: $count->narration ?: $count->document_no,
+                        unitCost: $line->unit_cost === null ? null : (string) $line->unit_cost,
+                        batch: $line->batch,
+                        // ⭐ চলাচল আর খাতার সারিতে গণনার নম্বর (মজুদ ছ২)
+                        documentNo: $count->document_no,
+                    );
 
                 $line->update(['reason_code_id' => $reason->id]);
             }
@@ -326,6 +367,11 @@ final class StockCountService
                 'approved_by' => auth()->id(),
                 'approved_at' => now(),
             ]);
+
+            // ⭐ অডিটে লেখা থাকে এটা ফ্রি মালের সমন্বয় — কে, কোন কাগজ (মজুদ ⚠️৬ক; fe-র শর্ত ৩)
+            if ($count->isFree()) {
+                app(\App\Core\Engines\Audit\AuditEngine::class)->recordAction($count, 'free_stock_adjusted', $count->document_no);
+            }
 
             return $count->fresh(['lines']);
         });
@@ -454,6 +500,7 @@ final class StockCountService
                 reason: $paper->reason,
                 date: $paper->count_date,
                 narration: $paper->narration ?: $paper->document_no,
+                documentNo: $paper->document_no,
             );
 
             $paper->update([
@@ -523,14 +570,14 @@ final class StockCountService
      * ⓘ লট ছাড়া ঘাটতি বেরোয় আগে-মেয়াদ নিয়মে, যেকোনো লট থেকে — তাই লটহীন সারি সব লটের সাথেই মেলে।
      * ⛔ শাখার দেয়াল ছাড়া (কোম্পানির ভিতরে): অন্য শাখার কেউ লিখে রাখা খসড়া না দেখলে জোড়াটা আবার হত।
      */
-    private function sameGoods(int $productId, int $warehouseId, ?int $batchId): \Illuminate\Database\Eloquent\Builder
+    private function sameGoods(int $productId, int $warehouseId, ?int $batchId, string $kind = StockCount::KIND_COUNT): \Illuminate\Database\Eloquent\Builder
     {
         return StockCount::query()
             ->withoutGlobalScopes()
             ->where('company_id', CompanyContext::id())
             ->whereNull('deleted_at')
-            // ⓘ কেবল গণনা — বের করার কাগজ খাতার সংখ্যার ছবি নয়, সত্যিকারের চলাচল (গ৫)
-            ->where('kind', StockCount::KIND_COUNT)
+            // ⓘ কেবল একই ভাণ্ডারের গণনা — বের করার কাগজ খাতার সংখ্যার ছবি নয় (গ৫); দামি আর ফ্রি দুই আলাদা খাতা (⚠️৬ক)
+            ->where('kind', $kind)
             ->where('warehouse_id', $warehouseId)
             ->whereHas('lines', function ($lines) use ($productId, $batchId) {
                 $lines->where('product_id', $productId);

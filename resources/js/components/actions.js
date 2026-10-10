@@ -306,22 +306,30 @@ export function wireActions (root = document) {
      * সারির টিকটা DOM-এ থেকে যায়, তাই জমা দিলেও ঐ অনুমতিগুলো যায়:
      * খোঁজা একটা চশমা, কাঁচি নয়।
      */
+    /*
+     * ⭐ "কেবল দেওয়াগুলো" — সিস্টেম পর্দার নকশা §৩, ১০ অক্টোবর ২০২৬। ⓘ খোঁজার সাথেই একই ছাঁকনি: সারিটা দেখায় যদি লেখা মেলে
+     * **এবং** (ঘরটা বন্ধ, অথবা সারিতে অন্তত একটা টিক)। ⓘ দেখার সময় তোলা টিকের সারি সাথে সাথে লুকায় না — পরের ছাঁকা পর্যন্ত থাকে,
+     * নাহলে ভুল টিক তুলে ফেললে সারিটাই চোখের সামনে থেকে উধাও হত। ⚠️ এটাও চশমা, কাঁচি নয় — কোনো টিক বদলায় না।
+     */
     root.addEventListener('input', (event) => {
-        const field = event.target.closest?.('[data-permission-search]')
+        const field = event.target.closest?.('[data-permission-search], [data-permission-granted-only]')
 
         if (! field) {
             return
         }
 
         const form = field.closest('form') ?? root
-        const term = field.value.trim().toLowerCase()
+        const search = form.querySelector('[data-permission-search]')
+        const term = (search?.value ?? '').trim().toLowerCase()
+        const grantedOnly = form.querySelector('[data-permission-granted-only]')?.checked === true
         let shown = 0
 
         for (const module of form.querySelectorAll('[data-permission-module]')) {
             let inModule = 0
 
             for (const row of module.querySelectorAll('[data-permission-row]')) {
-                const hit = term === '' || (row.dataset.permissionText ?? '').includes(term)
+                const hit = (term === '' || (row.dataset.permissionText ?? '').includes(term))
+                    && (! grantedOnly || row.querySelector('input[name="permissions[]"]:checked') !== null)
 
                 row.hidden = ! hit
                 inModule += hit ? 1 : 0
@@ -345,7 +353,7 @@ export function wireActions (root = document) {
 
             /* ⓘ মেলা মডিউলগুলো নিজে থেকেই খোলে — নাহলে খুঁজে পেয়েও
              * জিনিসটা ভাঁজের ভিতরে লুকানো থাকত। */
-            if (term !== '' && inModule > 0) {
+            if ((term !== '' || grantedOnly) && inModule > 0) {
                 module.open = true
             }
         }
@@ -353,7 +361,7 @@ export function wireActions (root = document) {
         const empty = form.querySelector('[data-permission-empty]')
 
         if (empty) {
-            empty.hidden = shown > 0 || term === ''
+            empty.hidden = shown > 0 || (term === '' && ! grantedOnly)
         }
     })
 

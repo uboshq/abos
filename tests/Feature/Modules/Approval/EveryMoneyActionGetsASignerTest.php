@@ -158,6 +158,33 @@ final class EveryMoneyActionGetsASignerTest extends TestCase
         $this->assertFalse((bool) $this->flowsIn($this->company)->where('module', $module)->where('action', $action)->first()->is_active);
     }
 
+    /**
+     * ⛔ মালিক সব সই বন্ধ রেখেছেন (UB, ৩ অক্টোবর ২০২৬) — নতুন টাকার কাজ এলেও তার চালু ছক বসে না; একটাও চালু ছক থাকলে আগের মতো বসে
+     * (cloud/finance-fixes রিভিউ, ১০ অক্টোবর ২০২৬: `finance.insurance_claim` UB-তে চালু ছক বসিয়ে দিত; ৭ অক্টোবরের ClaimSigner-এর একই ভুল)।
+     */
+    public function test_a_company_with_every_flow_switched_off_gets_no_new_one(): void
+    {
+        $this->accountantRoleIn($this->company);
+        $keys = $this->moneyKeysFromTheRegistry();
+
+        // ⓘ UB-র ছবি: কয়েকটা ছক আছে, সবগুলো বন্ধ; নতুন কাজের (শেষেরটা) কোনো সারিই নেই
+        foreach (array_slice($keys, 0, 2) as $key) {
+            [$module, $action] = explode('.', $key, 2);
+            ApprovalFlow::create(['module' => $module, 'action' => $action, 'document_type' => '', 'is_active' => false]);
+        }
+
+        $report = app(MoneyFlowDefaults::class)->ensure($this->company);
+
+        $this->assertSame([], $report['created'], '⛔ সব সই বন্ধ, তবু নতুন ছক বসল: '.implode(', ', $report['created']));
+        $this->assertContains(end($keys), $report['switched_off'], 'বন্ধ কোম্পানিতে বাদ পড়া কাজের নাম রিপোর্টে নেই।');
+        $this->assertCount(0, $this->flowsIn($this->company)->where('is_active', true), '⛔ বন্ধ কোম্পানিতে চালু ছক জন্মাল।');
+
+        // ⓘ একটা ছক চালু করলে "সব বন্ধ" আর নয় — বাকিগুলো আগের মতো বসে
+        ApprovalFlow::query()->withoutGlobalScopes()->where('company_id', $this->company->id)->limit(1)->update(['is_active' => true]);
+        $report = app(MoneyFlowDefaults::class)->ensure($this->company);
+        $this->assertContains(end($keys), $report['created'], 'চালু ছক আছে, তবু নতুন কাজের ছক বসল না।');
+    }
+
     public function test_without_an_accountant_nothing_is_made_and_no_role_is_invented(): void
     {
         $report = app(MoneyFlowDefaults::class)->ensure($this->company);

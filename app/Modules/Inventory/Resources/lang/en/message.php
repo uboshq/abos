@@ -208,4 +208,5 @@ return [
     'opening_cart_qty_total' => 'Total quantity',
     'opening_cart_import' => 'From Excel/CSV',
     'opening_cart_row_error' => 'Fix the red rows — if one row is wrong, none goes in.',
+    'serial_back_in_stock' => 'The piece :no was checked and taken back into stock — it can be sold again.',
 ];

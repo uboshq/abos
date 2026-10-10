@@ -13,6 +13,7 @@ use App\Modules\Inventory\Models\StockMovement;
 use App\Modules\Inventory\Models\StorageLocation;
 use App\Modules\Inventory\Models\Warehouse;
 use App\Modules\MasterData\Models\ReasonCode;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -38,6 +39,25 @@ use Illuminate\Validation\ValidationException;
 final class StockService
 {
     public function __construct(private readonly OpenPeriod $period) {}
+
+    /**
+     * ⛔ দেখার দেয়াল — শাখা, গুদাম আর হেডারের শাখার গুদাম। মজুদের যাচাই আর লেখার পথে এগুলো নেই, কেবল কোম্পানির দেয়াল
+     * (পুরো-ERP অডিট, ৬ অক্টোবর ২০২৬, মজুদ ⚠️৩; [[TheStockChecksSeeTheWholeWarehouseTest]])।
+     *
+     * ⓘ দেয়াল মানুষের দেখার জন্য, তাকের সত্যির জন্য নয়। আগে প্রতিটা যোগফল দেয়ালসহ: এক গুদামে সীমিত গ্রহণকারী উৎসের
+     * আটকানো "০" পেতেন আর বদলি ফিরত; `reverse()` দেখার বাইরের সারি চুপচাপ বাদ দিত — কাগজ বাতিল, মাল নড়েনি।
+     * কে কোন গুদামে কাজ করতে পারেন, সেটা দরজার (নীতি আর ফর্মের গুদাম-তালিকা) প্রশ্ন; সেবা গোনে পুরো গুদাম।
+     */
+    public const VIEW_WALLS = ['user-branch', 'user-warehouse', StockMovement::VIEWED_BRANCH];
+
+    /**
+     * চলাচলের সারি — দেয়াল ছাড়া ([[VIEW_WALLS]])। ⓘ `$walled` কেবল "সব গুদাম" দেখানোর প্রশ্নে: গুদাম না বললে
+     * মানুষ যা দেখতে পান তার যোগফল — নইলে এক গুদামের কেরানি পুরো কোম্পানির মজুদ দেখতেন।
+     */
+    private function movements(bool $walled = false): Builder
+    {
+        return $walled ? StockMovement::query() : StockMovement::query()->withoutGlobalScopes(self::VIEW_WALLS);
+    }
 
     /** সমন্বয়ের উৎস — ড্রিল-ডাউনে চেনা যায়। */
     public const ADJUSTMENT = 'stock_adjustment';
@@ -310,6 +330,8 @@ final class StockService
         /* ⭐ গ১১ — বিক্রির ডাকে "পাওয়া যায়"-এর পাহারা; অর্থ [[move()]]-এর একই নামের ঘরে */
         bool $fromAvailable = false,
         array $ownReservations = [],
+        // ⭐ ঘাটতি লেখা — লট না বললে মেয়াদ পেরোনো লটও, আগে-মেয়াদ আগে (মজুদ ছ১৩; [[BatchAllocator::allocate()]])
+        bool $anyLot = false,
     ): array {
         $out = bcmul($qty, '-1', 4);
 
@@ -365,7 +387,7 @@ final class StockService
                 $product, $warehouse, $sourceType, $sourceId, $qty, $out, $reserved, $hold,
                 $date, $documentNo, $narration, $reason, $batch, $fromAvailable, $ownReservations
             ) {
-                Batch::query()->whereKey($batch->id)->lockForUpdate()->first();
+                Batch::query()->withoutGlobalScopes(self::VIEW_WALLS)->whereKey($batch->id)->lockForUpdate()->first();
 
                 /*
                  * ⛔ তাকের মাল — তোলার-অপেক্ষারটা নয় ([[Batch::floorBalance()]]); তালাসহ গোনা।
@@ -438,6 +460,7 @@ final class StockService
             $warehouse,
             $qty,
             $date === null ? null : ($date instanceof Carbon ? $date : Carbon::parse($date)),
+            anyLot: $anyLot,
         );
 
         $movements = [];
@@ -511,16 +534,16 @@ final class StockService
          * সারির id-র পরের চলাচলগুলোই খোলা। প্রথমবার ফেরানো সারি নেই, তাই
          * সব — আগের আচরণ অবিকল। [[PostingEngine::reverse()]]-এর একই নিয়ম।
          */
-        $lastReversed = StockMovement::query()
+        $lastReversed = $this->movements()
             ->where('source_type', $reversedType)
             ->where('source_id', $sourceId)
             ->max('id');
 
-        $original = StockMovement::query()
+        $original = $this->movements()
             ->where('source_type', $sourceType)
             ->where('source_id', $sourceId)
             ->when($lastReversed !== null, fn ($q) => $q->where('id', '>', (int) $lastReversed))
-            ->with(['product', 'warehouse', 'batch'])
+            ->with(['product', 'warehouse' => fn ($q) => $q->withoutGlobalScopes(self::VIEW_WALLS), 'batch' => fn ($q) => $q->withoutGlobalScopes(self::VIEW_WALLS)])
             ->get();
 
         $movements = [];
@@ -576,41 +599,6 @@ final class StockService
         }
 
         return $movements;
-    }
-
-    /**
-     * গণনার পর সমন্বয় — তাকে যা পাওয়া গেল সেটাই সত্যি।
-     *
-     * পার্থক্যটা লেখা হয়, নতুন সংখ্যাটা নয়। "৫০ ছিল, ৪৭ পাওয়া গেল, তাই
-     * −৩" — এভাবে লিখলে পরে প্রশ্ন করা যায় "ওই তিনটা কোথায় গেল"। শুধু
-     * ৪৭ লিখে দিলে প্রশ্নটাই আর করা যেত না।
-     */
-    public function adjust(
-        Product $product,
-        Warehouse $warehouse,
-        string $countedQty,
-        ReasonCode $reason,
-        Carbon|string|null $date = null,
-        ?string $narration = null,
-    ): ?StockMovement {
-        $current = $this->floorQty($product, $warehouse);
-        $difference = bcsub($countedQty, $current, 4);
-
-        // মিলে গেলে কোনো সারি নয় — শূন্য সারি খতিয়ানে শুধু ভিড় বাড়ায়
-        if (bccomp($difference, '0', 4) === 0) {
-            return null;
-        }
-
-        return $this->move(
-            product: $product,
-            warehouse: $warehouse,
-            sourceType: self::ADJUSTMENT,
-            sourceId: $product->id,
-            floor: $difference,
-            reason: $reason,
-            date: $date,
-            narration: $narration,
-        );
     }
 
     /**
@@ -678,7 +666,7 @@ final class StockService
              * "বিক্রয়যোগ্য" বলে কিছু নেই। ⓘ তালাসহ গোনা (৪ অক্টোবর ২০২৬) — দুই আটকানো একসাথে এলে দুজনেই
              * পুরনো সংখ্যা দেখত।
              */
-            $available = (string) StockMovement::query()
+            $available = (string) $this->movements()
                 ->forProduct($product->id)
                 ->inWarehouse($warehouse->id)
                 ->lockForUpdate()
@@ -761,7 +749,7 @@ final class StockService
         }
 
         return DB::transaction(function () use ($product, $warehouse, $qty, $reason, $date, $batch, $sourceType, $sourceId) {
-            $held = (string) StockMovement::query()
+            $held = (string) $this->movements()
                 ->forProduct($product->id)
                 ->inWarehouse($warehouse->id)
                 ->where('reason_code_id', $reason->id)
@@ -807,7 +795,7 @@ final class StockService
     public function releaseReservedBy(string $sourceType, int $sourceId, ?string $documentNo = null): array
     {
         return DB::transaction(function () use ($sourceType, $sourceId, $documentNo) {
-            $rows = StockMovement::query()
+            $rows = $this->movements()
                 ->where('source_type', $sourceType)
                 ->where('source_id', $sourceId)
                 ->lockForUpdate()
@@ -849,6 +837,27 @@ final class StockService
     // ── অবস্থাগুলো ─────────────────────────────────────────────────────
 
     /**
+     * ⭐ "বিক্রয়যোগ্য"-এর একটাই সূত্র, চলাচলের প্রতি সারিতে — তাকে − অর্ডারে ধরা − আটকানো − মেয়াদ পেরোনো লটে পড়ে থাকা মাল
+     * (পুরো-ERP অডিট, মজুদ M27; fe-র সিদ্ধান্ত (ক), ১০ অক্টোবর ২০২৬; [[TheExpiredLotIsNotForSaleAnywhereTest]])।
+     *
+     * ⛔ আগে মেয়াদ পেরোনো লট "পাওয়া যায়"-তে গোনা হত, অথচ বেচতে গেলে লট-বাছাই ([[BatchAllocator]]) সেটা নিত না — পর্দা বলত
+     * আছে, কাউন্টার বলত নেই। ⓘ মেয়াদ পেরোনো মানে [[Batch::scopeUnexpired()]]-এর উল্টো: মেয়াদের দিন আজকের আগে; সেই লটের
+     * তাক − আটকানো বাদ যায় (আটকানোটা আগেই বাদ)। ⓘ সূত্রটা ১৪ জায়গায় হাতে লেখা ছিল; এখন সবাই এটা ডাকে, আর
+     * [[NobodyCountsAvailableByHandTest]] নতুন হাতে-লেখা দেখলে লাল হয়। ⓘ নিচের দুই তালা-গোনা (আটকানো আর বিক্রির
+     * সংরক্ষণ) ইচ্ছা করে পুরনো সূত্রে — ওরা "তাকের বেশি বেরোল কি না" দেখে, বেচার যোগ্যতা নয়; মেয়াদি লট আটকানো তো দরকারই।
+     *
+     * @param  string  $prefix  চলাচলের টেবিলের নাম-আগে, যেমন `m.`
+     */
+    public static function availableSql(string $prefix = ''): string
+    {
+        $day = now()->toDateString();
+
+        return "{$prefix}floor_change - {$prefix}reserved_change - {$prefix}hold_change"
+            ." - CASE WHEN {$prefix}batch_id IN (select eb.id from inv_batches eb where eb.expiry_date < '{$day}')"
+            ." THEN {$prefix}floor_change - {$prefix}hold_change ELSE 0 END";
+    }
+
+    /**
      * সবগুলো সংখ্যা একসাথে — একটা কোয়েরিতে।
      *
      * আলাদা করে বারবার গুনলে একই পাতায় অনেকগুলো কোয়েরি হত, আর তালিকায়
@@ -867,7 +876,7 @@ final class StockService
      */
     public function statesFor(Product $product, ?Warehouse $warehouse = null): array
     {
-        $row = StockMovement::query()
+        $row = $this->movements(walled: $warehouse === null)
             ->forProduct($product->id)
             ->inWarehouse($warehouse?->id)
             ->selectRaw('
@@ -877,7 +886,8 @@ final class StockService
                 COALESCE(SUM(free_change), 0) as free,
                 COALESCE(SUM(free_reserved_change), 0) as free_reserved,
                 COALESCE(SUM(unplaced_change), 0) as unplaced,
-                COALESCE(SUM(unplaced_free_change), 0) as unplaced_free
+                COALESCE(SUM(unplaced_free_change), 0) as unplaced_free,
+                COALESCE(SUM('.self::availableSql().'), 0) as available
             ')
             ->first();
 
@@ -893,8 +903,8 @@ final class StockService
             'floor' => $floor,
             'reserved' => $reserved,
             'hold' => $hold,
-            // বিক্রয়যোগ্য = তাকে যা আছে − ধরা − আটকানো
-            'available' => bcsub(bcsub($floor, $reserved, 4), $hold, 4),
+            // বিক্রয়যোগ্য = তাকে যা আছে − ধরা − আটকানো − মেয়াদ পেরোনো লট ([[availableSql()]], মজুদ M27)
+            'available' => (string) ($row->available ?? 0),
 
             'free' => $free,
             'free_reserved' => $freeReserved,
@@ -937,7 +947,7 @@ final class StockService
      */
     public function statesForAll(?Warehouse $warehouse = null): array
     {
-        $rows = StockMovement::query()
+        $rows = $this->movements(walled: $warehouse === null)
             ->inWarehouse($warehouse?->id)
             ->groupBy('product_id')
             ->selectRaw('
@@ -948,7 +958,8 @@ final class StockService
                 COALESCE(SUM(free_change), 0) as free,
                 COALESCE(SUM(free_reserved_change), 0) as free_reserved,
                 COALESCE(SUM(unplaced_change), 0) as unplaced,
-                COALESCE(SUM(unplaced_free_change), 0) as unplaced_free
+                COALESCE(SUM(unplaced_free_change), 0) as unplaced_free,
+                COALESCE(SUM('.self::availableSql().'), 0) as available
             ')
             ->get();
 
@@ -967,7 +978,7 @@ final class StockService
                 'floor' => $floor,
                 'reserved' => $reserved,
                 'hold' => $hold,
-                'available' => bcsub(bcsub($floor, $reserved, 4), $hold, 4),
+                'available' => (string) $row->available,
                 'free' => $free,
                 'free_reserved' => $freeReserved,
                 'free_available' => bcsub($free, $freeReserved, 4),
@@ -1124,7 +1135,7 @@ final class StockService
              * হুবহু দল — বাতিলের `…:cancel` সারিসহ), আর পণ্যের মোট (ক্রয় ফেরত অপেক্ষার ঘর থেকে নিলে নিজের
              * কাগজের নামে নেয়, দলে নয় — মোটটা সেটা ধরে)। ⓘ দুইটাই `FOR UPDATE`।
              */
-            $group = StockMovement::query()
+            $group = $this->movements()
                 ->forProduct($product->id)
                 ->inWarehouse($warehouse->id)
                 ->whereIn('source_type', [$sourceType, $sourceType.':cancel'])
@@ -1136,7 +1147,7 @@ final class StockService
                 ->selectRaw('COALESCE(SUM(unplaced_change), 0) as unplaced, COALESCE(SUM(unplaced_free_change), 0) as unplaced_free')
                 ->first();
 
-            $whole = StockMovement::query()
+            $whole = $this->movements()
                 ->forProduct($product->id)
                 ->inWarehouse($warehouse->id)
                 ->lockForUpdate()
@@ -1195,7 +1206,7 @@ final class StockService
     /** ফ্রির নিজের দলে (`…:free`) কিছু অপেক্ষায় আছে কি না — [[place()]]-এর ভাগের প্রশ্ন */
     private function waitingFreeUnder(Product $product, Warehouse $warehouse, string $sourceType, int $sourceId, ?Batch $batch): bool
     {
-        $waiting = StockMovement::query()
+        $waiting = $this->movements()
             ->forProduct($product->id)
             ->inWarehouse($warehouse->id)
             ->whereIn('source_type', [$sourceType, $sourceType.':cancel'])
@@ -1234,7 +1245,7 @@ final class StockService
      */
     public function netBySource(string $sourceType, int $sourceId): array
     {
-        $rows = StockMovement::query()
+        $rows = $this->movements()
             ->where('source_type', $sourceType)
             ->where('source_id', $sourceId)
             ->groupBy('product_id')
@@ -1336,7 +1347,7 @@ final class StockService
      */
     private function assertEnoughFree(Product $product, Warehouse $warehouse, string $free): void
     {
-        $onHand = StockMovement::query()
+        $onHand = $this->movements()
             ->forProduct($product->id)
             ->inWarehouse($warehouse->id)
             ->lockForUpdate()
@@ -1364,7 +1375,7 @@ final class StockService
      */
     private function lockedLotSum(Batch $batch, Warehouse $warehouse, string $column): string
     {
-        return (string) StockMovement::query()
+        return (string) $this->movements()
             ->where('batch_id', $batch->id)
             ->inWarehouse($warehouse->id)
             ->lockForUpdate()
@@ -1396,7 +1407,7 @@ final class StockService
             return;
         }
 
-        $available = (string) StockMovement::query()
+        $available = (string) $this->movements()
             ->forProduct($product->id)
             ->inWarehouse($warehouse->id)
             ->lockForUpdate()
@@ -1405,7 +1416,7 @@ final class StockService
 
         // ⓘ এই বিক্রিরই অন্য সংরক্ষণ — যতটা এখনো ধরা আছে, ততটা এই বিক্রির জন্যই রাখা
         foreach ($ownReservations as [$type, $id]) {
-            $mine = (string) StockMovement::query()
+            $mine = (string) $this->movements()
                 ->forProduct($product->id)
                 ->inWarehouse($warehouse->id)
                 ->where('source_type', $type)
@@ -1439,7 +1450,7 @@ final class StockService
      */
     private function assertEnoughInTheLot(Product $product, Warehouse $warehouse, Batch $batch, string $floor): void
     {
-        $inLot = StockMovement::query()
+        $inLot = $this->movements()
             ->forProduct($product->id)
             ->inWarehouse($warehouse->id)
             ->where('batch_id', $batch->id)
@@ -1466,7 +1477,7 @@ final class StockService
      */
     private function assertEnoughHeld(Product $product, Warehouse $warehouse, ?Batch $batch, string $hold): void
     {
-        $held = StockMovement::query()
+        $held = $this->movements()
             ->forProduct($product->id)
             ->inWarehouse($warehouse->id)
             ->when($batch !== null, fn ($q) => $q->where('batch_id', $batch->id))
@@ -1487,7 +1498,7 @@ final class StockService
 
     private function assertEnoughOnFloor(Product $product, Warehouse $warehouse, string $floor): void
     {
-        $onFloor = StockMovement::query()
+        $onFloor = $this->movements()
             ->forProduct($product->id)
             ->inWarehouse($warehouse->id)
             ->lockForUpdate()

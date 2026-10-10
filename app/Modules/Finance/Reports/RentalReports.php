@@ -334,14 +334,19 @@ final class RentalReports
                         .'d.source_type, d.source_id, 1 as sort, d.row_id');
 
                 // ⓘ পুরনো জামানত এক সারিতে — চুক্তির অঙ্ক আর খাতায় বসা অংশের বিয়োগ জোড়া লাগিয়ে; সব ভাউচারে বসলে শূন্য, সারি নয়
-                $legacy = $all()
+                /*
+                 * ⛔ GROUP BY ছাড়া HAVING নয় — যোগফলটা ভেতরের কোয়েরিতে, শূন্য বাদ বাইরের WHERE-এ ([[TheReportSearchBrokeOnTheLiveServerTest]];
+                 * main-এর লাল সারাই, ১০ অক্টোবর ২০২৬)। ⓘ খোঁজার ঘর গোটা কোয়েরিকে আরেক স্তরে মোড়ে, আর তখন লাইভের MariaDB এই HAVING-এ ভাঙত।
+                 */
+                $legacy = DB::query()->fromSub($all()
                     ->whereBetween('d.trx_date', [$f['from'], $f['to']])
                     ->where('d.legacy', '<>', 0)
-                    ->havingRaw('SUM(d.legacy) <> 0')
                     ->selectRaw('MIN(d.trx_date) as trx_date, NULL as document_no, '
                         .$pdo->quote((string) __('finance::rental_report.legacy')).' as narration, '
                         .'GREATEST(SUM(d.legacy), 0) as debit, GREATEST(-SUM(d.legacy), 0) as credit, '
-                        .'NULL as source_type, NULL as source_id, 1 as sort, 0 as row_id');
+                        .'NULL as source_type, NULL as source_id, 1 as sort, 0 as row_id'), 'lg')
+                    ->where(fn ($q) => $q->where('lg.debit', '<>', 0)->orWhere('lg.credit', '<>', 0))
+                    ->select('lg.*');
 
                 $running = DB::query()
                     ->fromSub($opening->unionAll($legacy)->unionAll($lines), 'l')

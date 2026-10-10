@@ -346,6 +346,10 @@ final class DirectSaleRules
             'deposits.*.counterparty_phone' => ['nullable', 'string', 'max:20'],
             'narration' => ['nullable', 'string', 'max:500'],
 
+            // ⭐ পুরো কাগজের ভ্যাট বাছাই — সার্ভার এখন মানে ([[CounterVat]], Sales অডিট ১০ অক্টোবর ২০২৬)
+            'vat_mode' => ['nullable', Rule::in(\App\Modules\Sales\Services\CounterVat::MODES)],
+            'vat_rate' => ['nullable', 'required_if:vat_mode,exclusive,inclusive', 'numeric', 'min:0', 'max:100'],
+
             'lines' => ['required', 'array', 'min:1'],
             'lines.*.product_id' => ['required', 'integer',
                 Rule::exists('inv_products', 'id')->where('company_id', $companyId)],

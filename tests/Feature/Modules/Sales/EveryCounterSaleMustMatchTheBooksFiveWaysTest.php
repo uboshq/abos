@@ -537,6 +537,71 @@ final class EveryCounterSaleMustMatchTheBooksFiveWaysTest extends TestCase
     }
 
     /**
+     * ⛔ কাউন্টারের "ভ্যাট" বাছাই বিলে আর খাতায় পৌঁছায় — পর্দার মতোই ([[CounterVat]], Sales অডিট ১০ অক্টোবর ২০২৬)।
+     *
+     * ⓘ বিপজ্জনক ইনপুট: পণ্যের নিজের কোনো ভ্যাট নেই, বাছাই "ভ্যাট বাদে ১৫%"। আগে সার্ভার বাছাইটা পড়তই না —
+     * বিলে ভ্যাট শূন্য বসত, আর পর্দার ভ্যাটসহ টাকা "ফেরত" হয়ে যেত।
+     *
+     * হাতে গোনা:
+     *   ক) ভ্যাট বাদে ১৫%: ৮ × ১৫০ = ১,২০০ · ভ্যাট ১৮০ → মোট ১,৩৮০ · খরচ ৫×১০০ + ৩×১২০ = ৮৬০
+     *   খ) ভ্যাট সহ ১৫%: ১ × ১১৫ → ভ্যাট ১৫, বিক্রয় ১০০, মোট ১১৫ · খরচ ১২০ (প্রথম স্তর শেষ)
+     *   গ) ভ্যাটমুক্ত, ভ্যাটওয়ালা পণ্যে: ৮ × ১৫০ − ১০% = ১,০৮০ · ভ্যাট ০
+     */
+    public function test_the_counter_vat_choice_reaches_the_bill_and_the_books(): void
+    {
+        $before = $this->snapshot($this->plain);
+        $this->sell([$this->line($this->plain, '8', '150')], [$this->cash('1380')], ['vat_mode' => 'exclusive', 'vat_rate' => '15'])
+            ->assertSessionHasNoErrors();
+        $invoice = $this->lastInvoiceOf($this->dealer);
+        $this->assertSame(0, bccomp((string) $invoice->tax, '180', 4), '⛔ পর্দার "ভ্যাট বাদে ১৫%" বিলে বসেনি: '.$invoice->tax);
+        $this->assertBooksMoved($before['ledger'], [
+            $this->tillCode() => '1380',
+            StandardChart::SALES => '-1200',
+            StandardChart::VAT_PAYABLE => '-180',
+            StandardChart::COST_OF_GOODS_SOLD => '860',
+            StandardChart::INVENTORY => '-860',
+        ]);
+        $this->assertDealerMoved($before['ledger'], '0', '⛔ পর্দার ভ্যাটসহ টাকা বিলের সাথে মেলেনি।');
+        $this->assertPrintedTotalIsTheLedgerTotal($invoice, '1380');
+
+        $before = $this->snapshot($this->plain);
+        $this->sell([$this->line($this->plain, '1', '115')], [$this->cash('115')], ['vat_mode' => 'inclusive', 'vat_rate' => '15'])
+            ->assertSessionHasNoErrors();
+        $invoice = $this->lastInvoiceOf($this->dealer);
+        $this->assertSame([0, 0], [bccomp((string) $invoice->tax, '15', 4), bccomp((string) $invoice->total, '115', 4)],
+            '⛔ "ভ্যাট সহ ১৫%": ভ্যাট '.$invoice->tax.', মোট '.$invoice->total.' — দরের ভেতরের ভ্যাট আলাদা হয়নি বা দুইবার বসেছে।');
+        $this->assertBooksMoved($before['ledger'], [
+            $this->tillCode() => '115',
+            StandardChart::SALES => '-100',
+            StandardChart::VAT_PAYABLE => '-15',
+            StandardChart::COST_OF_GOODS_SOLD => '120',
+            StandardChart::INVENTORY => '-120',
+        ]);
+
+        $vatted = $this->vattedProduct();
+        $before = $this->snapshot($vatted);
+        $this->sell([$this->line($vatted, '8', '150', ['discount_percent' => '10'])], [$this->cash('1080')], ['vat_mode' => 'exempt'])
+            ->assertSessionHasNoErrors();
+        $invoice = $this->lastInvoiceOf($this->dealer);
+        $this->assertSame(0, bccomp((string) $invoice->tax, '0', 4), '⛔ "ভ্যাটমুক্ত" বাছাই, অথচ পণ্যের নিজের ভ্যাট বসেছে।');
+        $this->assertBooksMoved($before['ledger'], [
+            $this->tillCode() => '1080',
+            StandardChart::SALES => '-1080',
+            StandardChart::COST_OF_GOODS_SOLD => '800',
+            StandardChart::INVENTORY => '-800',
+        ]);
+    }
+
+    /** ⛔ "ভ্যাট বাদে/সহ" বাছলে হার লাগে, আর অচেনা ধরন থামে — চুপচাপ শূন্য নয় */
+    public function test_a_counter_vat_choice_without_a_rate_or_with_an_unknown_mode_is_refused(): void
+    {
+        $this->sell([$this->line($this->plain, '1', '150')], [$this->cash('150')], ['vat_mode' => 'exclusive'])
+            ->assertSessionHasErrors('vat_rate');
+        $this->sell([$this->line($this->plain, '1', '150')], [$this->cash('150')], ['vat_mode' => 'zero'])
+            ->assertSessionHasErrors('vat_mode');
+    }
+
+    /**
      * ⭐ বিলের ছাড় আর রাউন্ডিং: পর্দা যা নিল, বিল আর খাতাও ঠিক তাই বলে।
      *
      * হাতে গোনা (আগের পরীক্ষার সারি, তার উপর):

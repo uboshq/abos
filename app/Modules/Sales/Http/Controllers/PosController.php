@@ -16,6 +16,7 @@ use App\Modules\Inventory\Models\Batch;
 use App\Modules\Inventory\Models\Product;
 use App\Modules\Inventory\Models\Warehouse;
 use App\Modules\Inventory\Services\PackBarcode;
+use App\Modules\Inventory\Services\StockService;
 use App\Modules\MasterData\Models\PaymentMethod;
 use App\Modules\Sales\Models\SalesInvoice;
 use App\Modules\Sales\Services\CounterApproval;
@@ -600,9 +601,8 @@ class PosController extends Controller implements HasMiddleware
             ->active()
             ->with('unit')
             ->select('inv_products.*')
-            ->selectSub($sum('floor_change'), 'floor_total')
-            ->selectSub($sum('reserved_change'), 'reserved_total')
-            ->selectSub($sum('hold_change'), 'hold_total')
+            // ⓘ বিক্রয়যোগ্য মজুদের একটাই সূত্রে — মেয়াদ পেরোনো লট বাদ ([[StockService::availableSql()]], মজুদ M27)
+            ->selectSub($sum(StockService::availableSql()), 'available_total')
             ->orderBy('name_en')
             ->limit(self::INLINE_CATALOGUE_LIMIT)
             ->get()
@@ -665,11 +665,7 @@ class PosController extends Controller implements HasMiddleware
     {
         return $this->recipes->sellableQty(
             (int) $product->id,
-            bcsub(
-                bcsub((string) $product->floor_total, (string) $product->reserved_total, 4),
-                (string) $product->hold_total,
-                4,
-            ),
+            (string) $product->available_total,
             $warehouse?->id,
         );
     }
