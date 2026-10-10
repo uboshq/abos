@@ -89,6 +89,9 @@ Route::middleware('auth')->group(function () {
         ->whereNumber('notification')->name('notifications.open');
     Route::post('/notifications/read-all', [NotificationController::class, 'readAll'])
         ->name('notifications.read-all');
+    // ⭐ উপরের হলুদ ব্যানার একবার বন্ধ — এই লগইনে (পাতা সাজানো ধাপ ১, ১০ অক্টোবর ২০২৬; [[StatusNotices::forBanner()]])
+    Route::post('/notifications/banner/close', [NotificationController::class, 'closeBanner'])
+        ->name('notifications.banner.close');
 
     /*
      * কে কোন খবর পেতে চান — ২০ সেপ্টেম্বর ২০২৬, মালিকের *"বিজ্ঞপ্তির

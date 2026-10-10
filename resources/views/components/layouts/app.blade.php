@@ -382,6 +382,10 @@
                      ~৯৫px করে ফাঁকা রাখত — মাপা: tools/screen-sweep-1080.py --sidebar collapsed, ২৯২-র ২৯২টা
                      পাতায় খোলসের কলাম ১৬০০/১৭৮৯px = ৮৯.৫%; সীমা তুলে মাপলে ২৯০টা ঠিক। ⓘ পপআপের (পিক) সীমা উপরে আলাদা, অক্ষত। --}}
                 <div class="w-full">
+                    {{-- ⭐ যন্ত্রের লাল সতর্কতা — নিচের বার থেকে এখানে, হলুদে, একবার বন্ধ করা যায় (পাতা সাজানো ধাপ ১,
+                         ১০ অক্টোবর ২০২৬; [[StatusNotices::forBanner()]]) --}}
+                    <x-shell.notice-banner />
+
                     @if ($commandPlacement !== 'bar')
                         @isset($header)
                             <div class="mb-4">{{ $header }}</div>
