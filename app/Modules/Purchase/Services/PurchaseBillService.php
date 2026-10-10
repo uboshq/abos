@@ -28,6 +28,7 @@ use App\Modules\Purchase\Models\PurchaseOrderLine;
 use App\Modules\Purchase\Models\PurchaseReceipt;
 use App\Modules\Purchase\Models\PurchaseReceiptLine;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -54,11 +55,10 @@ use Illuminate\Validation\ValidationException;
  */
 final class PurchaseBillService
 {
-    use ReadsTheRowUnderLock;
-
     use BringsInLots;
     use CalculatesLineTotals;
     use ReadsPackedQuantities;
+    use ReadsTheRowUnderLock;
 
     public function __construct(
         private readonly NumberSeriesEngine $numbers,
@@ -613,8 +613,8 @@ final class PurchaseBillService
      * ([[capitalisedBringingIn()]]), তাই বাকিটুকু কোথাও না বসালে
      * টাকাটা দুই খাতার মাঝখানে হারিয়ে যেত।
      *
-     * @param  \Illuminate\Support\Collection<int, PurchaseBillLine>  $direct
-     * @return array<int, string>  সারির id → তার ভাগ
+     * @param  Collection<int, PurchaseBillLine>  $direct
+     * @return array<int, string> সারির id → তার ভাগ
      */
     private function bringingInShares(PurchaseBill $bill, $direct): array
     {
@@ -1119,7 +1119,41 @@ final class PurchaseBillService
 
         $reason = __('purchase::message.edited_after_posting', ['no' => $bill->document_no]);
 
+        /*
+         * ⛔ অঙ্ক বাড়লে সইয়ের নিয়ম আবার — পুনঃনিরীক্ষা, ৯ অক্টোবর ২০২৬।
+         *
+         * ⚠️ আগে নিশ্চিত বিলের সম্পাদনা সইয়ের নিয়ম আর দেখত না: ৫০ হাজারে সই পাওয়া বিল বদলে
+         * ৫ লাখ করা যেত, কারও সই ছাড়াই। ⓘ নতুন মোট জানতে সারিগুলো একবার শুকনো বসিয়ে দেখা হয়
+         * ([[newTotalOf()]]), তারপর সই চাওয়া হয় **লেনদেনের বাইরে** — নিশ্চিত করার মতোই, যাতে
+         * অনুরোধটা ইনবক্সে টিকে থাকে আর বিল যেমন ছিল তেমনই থাকে।
+         */
+        $newTotal = $this->newTotalOf($bill, $lines);
+
+        if (bccomp($newTotal, (string) $bill->total, 4) > 0) {
+            $this->approvals->assertClear(
+                document: $bill,
+                module: 'purchase',
+                action: 'bill',
+                field: 'status',
+                amount: $newTotal,
+                reason: $bill->narration,
+            );
+        }
+
         return DB::transaction(function () use ($bill, $data, $lines, $reason) {
+            /*
+             * ⛔ তালা, আর তাজা অবস্থা — পুনঃনিরীক্ষা, ৯ অক্টোবর ২০২৬। ⚠️ আগে তালা ছিল না, তাই সম্পাদনার
+             * মাঝে একটা পরিশোধ বসে যেতে পারত, আর নিচের "পরিশোধের কম নয়" যাচাই পুরনো সংখ্যা দেখত।
+             * ⓘ পরিশোধ নিশ্চিত করার সময়ও বিলের সারিতে তালা পড়ে ([[PaymentService]]), তাই দুইটা পালা করে চলে।
+             */
+            $this->lockFresh($bill);
+
+            if ($bill->status !== DocumentStatus::CONFIRMED) {
+                throw ValidationException::withMessages([
+                    'status' => __('purchase::validation.only_draft_confirms', ['no' => $bill->document_no]),
+                ]);
+            }
+
             $date = now();
 
             $this->takeBackDirectLines($bill, $date, $reason);
@@ -1151,12 +1185,60 @@ final class PurchaseBillService
 
             $fresh = $bill->fresh(['lines']);
 
+            /*
+             * ⛔ যা শোধ বা ফেরত হয়ে গেছে, নতুন মোট তার নিচে নয় — পুনঃনিরীক্ষা, ৯ অক্টোবর ২০২৬।
+             * ⚠️ আগে ১ লাখের বিলে ৮০ হাজার শোধের পর বিলটা ৫০ হাজার করা যেত: ৩০ হাজার তখন কোনো
+             * বিলের নামে নয়, ব্যাখ্যাহীন অগ্রিম। ⓘ যোগফল গোটা কোম্পানির ([[PurchaseBill::paidAmount()]]),
+             * আর লেনদেনটা ফিরে যায় — উল্টানো, মাল ফেরত, কিছুই বসে থাকে না।
+             */
+            $settled = bcadd($fresh->paidAmount(), $fresh->returnedAmount(), 4);
+
+            if (bccomp((string) $fresh->total, $settled, 4) < 0) {
+                throw ValidationException::withMessages([
+                    'lines' => __('purchase::validation.edit_below_settled', [
+                        'no' => $bill->document_no,
+                        'total' => Money::format((string) $fresh->total),
+                        'settled' => Money::format($settled),
+                    ]),
+                ]);
+            }
+
             $this->bringInDirectLines($fresh);
             $this->postToLedger($fresh);
             $this->applySalesPrices($fresh);
 
             return $fresh->fresh(['lines']);
         });
+    }
+
+    /**
+     * সারিগুলো বসালে বিলের মোট কত দাঁড়াত — কিছু না রেখে।
+     *
+     * ⓘ মোট গোনার নিয়ম একটাই জায়গায় ([[replaceLines()]]: একক, প্যাক, ভ্যাট, ছাড়); এখানে দ্বিতীয়বার
+     * লিখলে একদিন সইয়ের অঙ্ক আর বিলের অঙ্ক আলাদা হত। ⭐ তাই একটা লেনদেনে বসিয়ে মোটটা পড়ে নিয়ে
+     * পুরোটা ফিরিয়ে দেওয়া হয় — ডাটাবেজে কোনো দাগ থাকে না।
+     *
+     * @param  list<array<string, mixed>>  $lines
+     */
+    private function newTotalOf(PurchaseBill $bill, array $lines): string
+    {
+        $total = null;
+
+        try {
+            DB::transaction(function () use ($bill, $lines, &$total): void {
+                $copy = PurchaseBill::query()->whereKey($bill->id)->firstOrFail();
+                $this->replaceLines($copy, $lines);
+                $total = (string) $copy->fresh()->total;
+
+                throw new \RuntimeException('dry-run');
+            });
+        } catch (\RuntimeException $e) {
+            if ($total === null) {
+                throw $e;
+            }
+        }
+
+        return bcadd((string) $total, '0', 4);
     }
 
     /**
@@ -1194,7 +1276,7 @@ final class PurchaseBillService
                 throw ValidationException::withMessages([
                     'status' => __('purchase::validation.cancel_paid_bill', [
                         'no' => $bill->document_no,
-                        'paid' => \App\Core\Support\Money::format($locked->paidAmount()),
+                        'paid' => Money::format($locked->paidAmount()),
                     ]),
                 ]);
             }
