@@ -118,9 +118,10 @@ final class TheIntelligenceIsRulesOnOurOwnServerTest extends TestCase
         /*
          * ⓘ `<`/`>` থাকা লেখা ফাইলের দরজাতেই ফেরে — বাইট পড়ে ধরন HTML ধরা হয় (নিচের দাবি)। ⚠️ আগে এখানে "a<b & c>d" ছিল, আর
          * ম্যাকের finfo-তে সেটাই HTML ধরা পড়ে আপলোড ফিরত (১১ অক্টোবর ২০২৬; fe: আচরণ ঠিক, দাবির লেখা বদলাও)। এখন সাদা লেখার `&` আর
-         * উদ্ধৃতি — পাতায় এগুলোও কাঁচা বসা উচিত নয়।
+         * উদ্ধৃতি — পাতায় এগুলোও কাঁচা বসা উচিত নয়। ⚠️ প্রথম লাইন "Subject:" নয় — finfo তখন লেখাটাকে ইমেইল (message/rfc822) ধরে
+         * আপলোড ফেরায়, যদিও ফাইলের দরজা ঠিকই করছে।
          */
-        $document = $this->textDocument('Letter', "Subject: delivery delay\nIf qty \"A\" & 'B' then delivery tomorrow\nRegards");
+        $document = $this->textDocument('Letter', "Letter about delivery delay\nIf qty \"A\" & 'B' then delivery tomorrow\nRegards");
 
         $page = (string) $this->actingAs($this->owner)->get(route('documents.intelligence', [
             'document' => $document->id, 'tool' => 'ask', 'ask' => 'delivery',
