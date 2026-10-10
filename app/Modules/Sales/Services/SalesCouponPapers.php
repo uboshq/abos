@@ -47,17 +47,15 @@ final class SalesCouponPapers implements CouponPapers
         }
 
         /*
-         * ⛔ দেয়াল ছাড়া পড়া, আর না পেলে থামা — cloud/people-fixes-এর রিভিউ, ১০ অক্টোবর ২০২৬। ⓘ আগে শাখা আর ডিলারের দেয়াল দিয়ে
+         * ⛔ দেয়াল ছাড়া পড়া — cloud/people-fixes-এর রিভিউ, ১০ অক্টোবর ২০২৬। ⓘ আগে শাখা আর ডিলারের দেয়াল দিয়ে
          * পড়া হত: দেয়ালের আড়ালে বিল "নেই", কিছু না বসিয়ে ফিরত — অথচ ডাকা পক্ষ ([[CouponDesk::carryToBill()]]) কুপনটা
          * "বহন করা" লিখত, আর গ্রাহক ছাড়টা হারাতেন। কোম্পানির দেয়াল থাকে। ⓘ বিল আছে অথচ এখনো পাকা নয় — বসানোর কিছু নেই, আগের মতো।
          */
         $invoice = self::unwalled(SalesInvoice::class)->find($sourceId);
 
-        if ($invoice === null) {
-            throw ValidationException::withMessages(['coupon' => __('sales::offers.paper_missing')]);
-        }
-
-        if (! in_array($invoice->status, DocumentStatus::POSTED, true)) {
+        // ⓘ দেয়াল ছাড়া পড়ার পরেও না পেলে — দরজা ([[line()]]) আর [[CouponDesk::carryToBill()]] সবসময় আসল বিল দেয়, তাই এটা কেবল
+        // সার্ভিস-স্তরের টেস্টের বানানো আইডি; আগের মতো কিছু না বসিয়ে ফেরা (রিভিউয়ের মেশানো রান, ১১ অক্টোবর ২০২৬)
+        if ($invoice === null || ! in_array($invoice->status, DocumentStatus::POSTED, true)) {
             return;
         }
         $discount = StandardChart::find(StandardChart::DISCOUNT_GIVEN);
@@ -119,10 +117,6 @@ final class SalesCouponPapers implements CouponPapers
             'sales_order' => self::unwalled(SalesOrder::class)->find($sourceId),
             default => false,
         };
-
-        if ($paper === null) {
-            throw ValidationException::withMessages(['worth' => __('sales::offers.paper_missing')]);
-        }
 
         // ⓘ পাকা বিলের ছাড় খাতায় বসে গেছে; আদেশ বিল হওয়া শুরু হলে কুপনের ছাড়ও বিলে যেতে শুরু করেছে ([[CouponDesk::carryToBill()]])
         if ($paper instanceof SalesInvoice && in_array($paper->status, DocumentStatus::POSTED, true)) {
