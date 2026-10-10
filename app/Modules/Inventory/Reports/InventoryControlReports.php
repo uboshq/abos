@@ -210,7 +210,16 @@ final class InventoryControlReports
                 WHEN p.max_level > 0 AND s.on_hand > p.max_level THEN 'over'
             END";
 
-        $labels = collect(['negative', 'zero', 'below', 'over'])
+        /*
+         * ⛔ লেখাগুলো রিপোর্ট চালানোর সময় বানানো হয়, সংজ্ঞা লেখার সময় নয় (১০ অক্টোবর ২০২৬)।
+         *
+         * ⓘ রিপোর্টগুলো অ্যাপ চালু হওয়ার মুহূর্তেই নিবন্ধিত হয় ([[ModuleServiceProvider]])। এখানে সরাসরি
+         * `DB::getPdo()` থাকায় অ্যাপ চালু হতেই ডাটাবেজ লাগত — CI-র `composer install`-এর `package:discover`
+         * ডাটাবেজ ছাড়াই চলে, তাই main-এর প্রতিটা রান টেস্টের আগেই ভাঙছিল। ⚠️ আর লেখাটা অ্যাপ চালুর ভাষায়
+         * আটকে যেত, দেখার মানুষের ভাষায় নয়। ⭐ পাশের slowAndDead()-এর একই ছাঁচ: একটা closure, কোয়েরির ভিতরে ডাকা।
+         * ⓘ পাহারা: [[TheAppBootsWithoutADatabaseTest]]।
+         */
+        $labels = fn (): string => collect(['negative', 'zero', 'below', 'over'])
             ->map(fn (string $k) => "WHEN '{$k}' THEN ".DB::getPdo()->quote((string) __('inventory::control.alert_'.$k)))
             ->implode(' ');
 
@@ -244,7 +253,7 @@ final class InventoryControlReports
                 ->orderByRaw("FIELD(({$kind}), 'negative', 'zero', 'below', 'over')")
                 ->orderBy('p.code')
                 ->select([
-                    DB::raw("CASE ({$kind}) {$labels} END as alert"),
+                    DB::raw('CASE ('.$kind.') '.$labels().' END as alert'),
                     DB::raw("CONCAT(p.code, ' - ', ".self::name('p').') as product_name'),
                     's.on_hand',
                     's.available',
