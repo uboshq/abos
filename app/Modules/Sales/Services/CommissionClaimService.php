@@ -59,6 +59,14 @@ final class CommissionClaimService
             ? SalesInvoice::query()->find((int) $data['sales_invoice_id'])
             : null;
 
+        /*
+         * ⛔ বিলের আইডি দেওয়া অথচ পড়া গেল না (অন্য শাখার বা দেয়ালের আড়ালের) — থামা, বিল ছাড়া দাবি নয় (cloud/people-fixes রিভিউ,
+         * ১০ অক্টোবর ২০২৬)। ⓘ আগে `null` এলে বিলের যাচাই বাদ পড়ত, আর দাবি বসত লেখা ভিত্তি-অঙ্কে — বারবার।
+         */
+        if (filled($data['sales_invoice_id'] ?? null) && $invoice === null) {
+            throw ValidationException::withMessages(['sales_invoice_id' => __('sales::validation.commission_bill_not_theirs', ['no' => '#'.(int) $data['sales_invoice_id']])]);
+        }
+
         $this->assertTheBillIsTheirs($invoice, $customer);
 
         $base = $this->baseFor($data, $invoice);
@@ -69,13 +77,15 @@ final class CommissionClaimService
         return DB::transaction(function () use ($data, $customer, $supplier, $invoice, $base, $amount) {
             // ⛔ বিলের সারিতে তালা দিয়ে আবার — দুইজন একসাথে একই বিলে দাবি লিখলে দুইজনেই "নেই" দেখতেন
             if ($invoice !== null) {
-                SalesInvoice::query()->whereKey($invoice->id)->lockForUpdate()->first();
+                // ⓘ তালার পরের তাজা বিল আবার মাপা — মাঝে বাতিল হলে দাবি থামে (রিভিউ, ১০ অক্টোবর ২০২৬)
+                $this->assertTheBillIsTheirs(SalesInvoice::query()->whereKey($invoice->id)->lockForUpdate()->first(), $customer);
                 $this->assertNoClaimOnTheBill($invoice);
             }
 
             $claim = CommissionClaim::query()->create([
                 'company_id' => CompanyContext::id(),
-                'branch_id' => CompanyContext::branchId(),
+                // ⓘ বিলের দাবি বিলের শাখায় — শাখার দেয়াল এখন এই ঘর দেখে (7cd22874); বিল ছাড়া দাবি হেডারের শাখায়
+                'branch_id' => $invoice?->branch_id ?? CompanyContext::branchId(),
                 'document_no' => $this->numbers->next('CMC'),
                 'trx_date' => $data['trx_date'] ?? now()->toDateString(),
                 'customer_id' => $customer->id,

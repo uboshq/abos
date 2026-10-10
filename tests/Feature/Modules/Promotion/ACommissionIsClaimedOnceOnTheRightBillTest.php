@@ -74,6 +74,28 @@ final class ACommissionIsClaimedOnceOnTheRightBillTest extends TestCase
         $this->assertSame(1, CommissionClaim::query()->where('sales_invoice_id', $bill->id)->count());
     }
 
+    /**
+     * ⛔ দেয়ালের আড়ালের বিল — পড়া যেত না, বিলের যাচাই বাদ পড়ত, আর দাবি বসত বিল ছাড়াই (cloud/people-fixes রিভিউ, ১০ অক্টোবর ২০২৬;
+     * [[CommissionClaimService::create()]])। ⭐ বিলের আইডি দিয়ে বিল না পেলে থামে।
+     */
+    public function test_a_bill_hidden_behind_the_wall_is_refused_not_dropped(): void
+    {
+        $bill = $this->bill($this->dealer);
+
+        $owner = User::query()->where('email', 'owner@abos.test')->firstOrFail();
+        $other = \App\Models\Branch::query()->withoutGlobalScopes()->where('company_id', CompanyContext::id())
+            ->where('id', '!=', (int) $bill->branch_id)->orderBy('id')->firstOrFail();
+        $this->post(route('branch.switch'), ['branch_id' => (string) $other->id])->assertRedirect();
+        CompanyContext::set(CompanyContext::id(), $owner->fresh()->current_branch_id);
+        app(\App\Core\Services\DataScope::class)->forget();
+        $this->app->forgetScopedInstances();
+        $this->actingAs($owner->fresh());
+        $this->assertNull(SalesInvoice::query()->find($bill->id), 'দৃশ্যটাই বানানো যায়নি — হেডারের শাখায় বিলটা দেখা যাচ্ছে');
+
+        $this->assertRefused(fn () => $this->claim($bill), '⛔ দেয়ালের আড়ালের বিলে দাবি বসল — বিল ছাড়া');
+        $this->assertSame(0, CommissionClaim::query()->withoutGlobalScopes()->count());
+    }
+
     private function claim(SalesInvoice $bill): CommissionClaim
     {
         return app(CommissionClaimService::class)->create([
