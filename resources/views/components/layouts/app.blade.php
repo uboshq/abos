@@ -386,6 +386,11 @@
                          ১০ অক্টোবর ২০২৬; [[StatusNotices::forBanner()]]) --}}
                     <x-shell.notice-banner />
 
+                    {{-- ⭐ "কোথায় আছি" — ABOS রূপে পাতার মাথার উপরে (পাতা সাজানো ধাপ ১, ১০ অক্টোবর ২০২৬); বাকি রূপের নিজের crumbbar --}}
+                    @if ($shellLook === 'navy')
+                        <x-shell.page-path :menu="$menu ?? []" />
+                    @endif
+
                     @if ($commandPlacement !== 'bar')
                         @isset($header)
                             <div class="mb-4">{{ $header }}</div>
