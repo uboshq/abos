@@ -206,6 +206,23 @@ return [
         'loyalty' => 'লয়্যালটি',
         'recall' => 'ফিরিয়ে নেওয়া',
         'analytics' => 'পরিসংখ্যান',
+
+        /* ⭐ ডকুমেন্টের ক্রিয়া — documents রিভিউ ⛔৮, ১১ অক্টোবর ২০২৬ (TheRoleScreenSaidCoaAndTillTest) */
+        'upload' => 'তোলা',
+        'edit' => 'বদল',
+        'print' => 'ছাপা',
+        'archive' => 'আর্কাইভ',
+        'purge' => 'চিরতরে মোছা',
+        'permissions' => 'অধিকার দেওয়া',
+        'admin' => 'প্রশাসন',
+        'publish' => 'প্রকাশ',
+        'share' => 'শেয়ার',
+        'signature_request' => 'সই চাওয়া',
+        'audit' => 'অডিট দেখা',
+        'templates' => 'ছাঁচ',
+        'confidential' => 'গোপনীয় দেখা',
+        'highly_confidential' => 'অতি গোপনীয় দেখা',
+        'restricted' => 'সংরক্ষিত দেখা',
     ],
 
     // ── পর্দার লেখা ──────────────────────────────────────────────────────

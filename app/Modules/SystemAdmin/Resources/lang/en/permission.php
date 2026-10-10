@@ -180,6 +180,23 @@ return [
         'loyalty' => 'Loyalty',
         'recall' => 'Recall',
         'analytics' => 'Analytics',
+
+        /* ⭐ ডকুমেন্টের ক্রিয়া — documents রিভিউ ⛔৮, ১১ অক্টোবর ২০২৬ (TheRoleScreenSaidCoaAndTillTest) */
+        'upload' => 'Upload',
+        'edit' => 'Edit',
+        'print' => 'Print',
+        'archive' => 'Archive',
+        'purge' => 'Purge',
+        'permissions' => 'Grant access',
+        'admin' => 'Administration',
+        'publish' => 'Publish',
+        'share' => 'Share',
+        'signature_request' => 'Ask for signatures',
+        'audit' => 'Audit trail',
+        'templates' => 'Templates',
+        'confidential' => 'Confidential',
+        'highly_confidential' => 'Highly confidential',
+        'restricted' => 'Restricted',
     ],
 
     'granted_only' => 'Granted only',
