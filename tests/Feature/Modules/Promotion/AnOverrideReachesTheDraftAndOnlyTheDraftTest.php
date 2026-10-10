@@ -84,6 +84,57 @@ final class AnOverrideReachesTheDraftAndOnlyTheDraftTest extends TestCase
         $this->assertFalse((bool) $applied->fresh()->was_overridden);
     }
 
+    /**
+     * ⛔ হেডারে অন্য শাখা — পাকা চালান দেয়ালের আড়ালে "নেই" হয়ে যেত, আর বদলটা চুপচাপ বসত (cloud/people-fixes রিভিউ ⛔,
+     * ১০ অক্টোবর ২০২৬; [[SalesCouponPapers::offerChanged()]])।
+     */
+    public function test_an_override_on_a_confirmed_challan_is_refused_from_another_branch_too(): void
+    {
+        $challan = $this->challanWithOffer();
+        $applied = $this->applied($challan);
+        Customer::query()->whereKey($challan->customer_id)->update(['credit_limit' => '100000000']);
+        app(DeliveryChallanService::class)->confirm($challan->fresh(['lines']));
+
+        $other = \App\Models\Branch::query()->withoutGlobalScopes()->where('company_id', CompanyContext::id())
+            ->where('id', '!=', (int) $challan->branch_id)->orderBy('id')->firstOrFail();
+        $this->post(route('branch.switch'), ['branch_id' => (string) $other->id])->assertRedirect();
+        $this->owner = $this->owner->fresh();
+        CompanyContext::set(CompanyContext::id(), $this->owner->current_branch_id);
+        app(\App\Core\Services\DataScope::class)->forget();
+        $this->app->forgetScopedInstances();
+        $this->actingAs($this->owner);
+        $this->assertNull(DeliveryChallan::query()->find($challan->id), 'দৃশ্যটাই বানানো যায়নি — হেডারের শাখায় চালানটা দেখা যাচ্ছে');
+
+        $this->override($applied, '7')->assertSessionHasErrors('worth');
+
+        $this->assertSame(0, bccomp('10', (string) $applied->fresh()->worth, 4), '⛔ অন্য শাখা দেখানো অবস্থায় পাকা চালানের অফার বদলে গেল');
+        $this->assertFalse((bool) $applied->fresh()->was_overridden);
+    }
+
+    /**
+     * ⓘ দেয়াল ছাড়া পড়ার অন্য দিক — হেডারে অন্য শাখা থাকলেও খসড়া চালানের বদল "কাগজ নেই" বলে থামে না, সারিতে পৌঁছায়
+     * ([[SalesCouponPapers::offerChanged()]])।
+     */
+    public function test_an_override_on_a_draft_challan_reaches_its_line_from_another_branch_too(): void
+    {
+        $challan = $this->challanWithOffer();
+        $applied = $this->applied($challan);
+
+        $other = \App\Models\Branch::query()->withoutGlobalScopes()->where('company_id', CompanyContext::id())
+            ->where('id', '!=', (int) $challan->branch_id)->orderBy('id')->firstOrFail();
+        $this->post(route('branch.switch'), ['branch_id' => (string) $other->id])->assertRedirect();
+        $this->owner = $this->owner->fresh();
+        CompanyContext::set(CompanyContext::id(), $this->owner->current_branch_id);
+        app(\App\Core\Services\DataScope::class)->forget();
+        $this->app->forgetScopedInstances();
+        $this->actingAs($this->owner);
+
+        $this->override($applied, '7')->assertSessionHasNoErrors();
+
+        $this->assertSame('7.0000', (string) $challan->lines()->withoutGlobalScopes()->firstOrFail()->promotion_discount,
+            '⛔ অন্য শাখা দেখানো অবস্থায় খসড়া চালানের বদল সারিতে পৌঁছাল না');
+    }
+
     private function override(PromotionApplication $applied, string $worth): TestResponse
     {
         return $this->post(route('promotion.override', $applied), ['worth' => $worth, 'override_reason' => 'পুরনো ক্রেতা, মালিকের সম্মতিতে']);

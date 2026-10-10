@@ -80,11 +80,15 @@ final class SalesCouponPapers implements CouponPapers
      */
     public function offerChanged(string $sourceType, int $sourceId, ?int $sourceLineId): void
     {
+        /*
+         * ⛔ দেয়াল ছাড়া পড়া, আর না পেলে থামা — cloud/people-fixes-এর রিভিউ ⛔, ১০ অক্টোবর ২০২৬। ⓘ আগে শাখা আর ডিলারের দেয়াল দিয়ে
+         * পড়া হত আর না পেলে চুপচাপ ছেড়ে দিত: হেডারে MMS বাছা অবস্থায় NTK-র পাকা চালানের অফার বদলে যেত। কোম্পানির দেয়াল থাকে।
+         */
         if ($sourceType === DeliveryChallan::drillSourceType()) {
-            $challan = DeliveryChallan::query()->find($sourceId);
+            $challan = self::unwalled(DeliveryChallan::class)->find($sourceId);
 
             if ($challan === null) {
-                return;
+                throw ValidationException::withMessages(['worth' => __('sales::offers.paper_missing')]);
             }
 
             $offers = app(ChallanOffers::class);
@@ -101,15 +105,29 @@ final class SalesCouponPapers implements CouponPapers
         }
 
         $paper = match ($sourceType) {
-            'sales_invoice' => SalesInvoice::query()->find($sourceId),
-            'sales_order' => SalesOrder::query()->find($sourceId),
-            default => null,
+            'sales_invoice' => self::unwalled(SalesInvoice::class)->find($sourceId),
+            'sales_order' => self::unwalled(SalesOrder::class)->find($sourceId),
+            default => false,
         };
+
+        if ($paper === null) {
+            throw ValidationException::withMessages(['worth' => __('sales::offers.paper_missing')]);
+        }
 
         // ⓘ পাকা বিলের ছাড় খাতায় বসে গেছে; আদেশ বিল হওয়া শুরু হলে কুপনের ছাড়ও বিলে যেতে শুরু করেছে ([[CouponDesk::carryToBill()]])
         if ($paper instanceof SalesInvoice && in_array($paper->status, DocumentStatus::POSTED, true)) {
             throw ValidationException::withMessages(['worth' => __('sales::offers.only_draft', ['no' => $paper->document_no])]);
         }
+    }
+
+    /**
+     * কাগজ পড়া শাখা আর ডিলারের দেয়াল ছাড়া — কোম্পানির দেয়াল থাকে (টাকার সিদ্ধান্তে হেডারের শাখা নয়)।
+     *
+     * @param  class-string<\Illuminate\Database\Eloquent\Model>  $class
+     */
+    private static function unwalled(string $class): \Illuminate\Database\Eloquent\Builder
+    {
+        return $class::query()->withoutGlobalScopes(['user-branch', \App\Modules\Customer\Models\Customer::DEALER_WALL]);
     }
 
     /** @return array{customer_id: ?int, branch_id: ?int, warehouse_id: ?int, product_id: int, qty: string, value: string}|null */
