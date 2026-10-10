@@ -340,6 +340,14 @@ final class DocumentLibrary
 
         $inline = $how === 'download' ? null : AttachmentEngine::inlineType($file->mime_type);
 
+        /*
+         * ⛔ পাতার ভিতরে খোলা যায় না এমন ফাইল (docx, xlsx, txt…) প্রিভিউ বা ছাপার দরজায় নামানো হয়েই যায় — তাই সেখানে নামানোর
+         * অনুমতিও লাগে (১১ অক্টোবর ২০২৬, documents রিভিউ ⛔১)। ⓘ আগে প্রিভিউ কেবল "দেখা" চাইত: "শুধু দেখা" শেয়ার বা নামানোর চাবি
+         * ছাড়া মানুষ `/preview` খুলে পুরো ফাইলটা নামিয়ে নিতেন, আর নামানোর চাবি, অধিকার আর শেয়ারের টিক কিছুই আটকাত না।
+         * ⭐ PDF আর ছবি পাতার ভিতরে দেখা — "দেখা" মানে ঠিক এটাই; সেখানে নামানোর চাবি চাওয়া হয় না।
+         */
+        abort_if($inline === null && $how !== 'download' && ! (auth()->user()?->can('download', $document) ?? false), 403);
+
         $document->auditAction(match ($how) {
             'preview' => 'document_previewed',
             'print' => 'document_printed',
