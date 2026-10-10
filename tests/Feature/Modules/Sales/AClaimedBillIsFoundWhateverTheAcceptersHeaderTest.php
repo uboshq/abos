@@ -73,4 +73,39 @@ final class AClaimedBillIsFoundWhateverTheAcceptersHeaderTest extends TestCase
         $this->actingAs($owner->fresh());
         $this->assertSame('0.0000', SalesInvoice::acrossBranches()->findOrFail($bill->id)->dueAmount(), '⛔ বিলের বকেয়া কমেনি');
     }
+
+    /**
+     * ⛔ অন্য শাখার বিল দাবিতে বাছা যায় না — আগেভাগেই কারণসহ ফেরে, গ্রহণের সময় চুপচাপ বাদ নয় (১১ অক্টোবর ২০২৬, PR #17 রিভিউ ⚠️১২)।
+     *
+     * ⓘ আদায় বসে দাবির শাখায় (গ্রাহকের শাখা), আর উপরের সংশোধনে গ্রহণ বিল খোঁজে সেই শাখাতেই। পোর্টালের খোলা-বিল তালিকায়
+     * অন্য শাখার বিলও আসত — বাছা যেত, গ্রহণে বাদ পড়ত, টাকা অ-প্রযুক্ত জমা হয়ে বসত।
+     */
+    public function test_another_branchs_bill_is_refused_when_the_claim_is_raised_and_is_not_offered(): void
+    {
+        $this->seed(DemoSeeder::class);
+        $company = Company::query()->where('code', 'TDEPOT')->firstOrFail();
+        $home = $company->defaultBranch();
+        $elsewhere = Branch::query()->withoutGlobalScopes()->where('company_id', $company->id)->whereKeyNot($home->id)->orderBy('id')->firstOrFail();
+        CompanyContext::set($company->id, $home->id);
+        $owner = User::query()->where('email', 'owner@abos.test')->firstOrFail();
+        $owner->forceFill(['view_all_branches' => true])->save();
+        $this->actingAs($owner->fresh());
+
+        $dealer = Customer::query()->orderBy('id')->firstOrFail();
+        $dealer->forceFill(['branch_id' => $home->id])->save();
+        $there = SalesInvoice::query()->create(['branch_id' => $elsewhere->id, 'document_no' => 'INV-BR-2', 'customer_id' => $dealer->id,
+            'trx_date' => now()->subDays(3)->toDateString(), 'due_on' => now()->addDays(27)->toDateString(),
+            'subtotal' => '400', 'discount' => '0', 'tax' => '0', 'total' => '400', 'status' => DocumentStatus::CONFIRMED]);
+
+        $this->assertNotContains((int) $there->id, app(DepositClaimService::class)->openBills($dealer->fresh())->pluck('id')->map(fn ($i) => (int) $i)->all(),
+            '⛔ অন্য শাখার বিল বাছার তালিকায় — বাছলে গ্রহণে চুপচাপ বাদ পড়বে');
+
+        try {
+            app(DepositClaimService::class)->raise($dealer->fresh(), ['claimed_on' => now()->toDateString(), 'amount' => '400', 'method' => DepositClaim::BANK,
+                'bills' => [['sales_invoice_id' => $there->id, 'amount' => '400']]]);
+            $this->fail('⛔ অন্য শাখার বিলে দাবি উঠে গেল — গ্রহণে বিলটা চুপচাপ বাদ পড়বে।');
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            $this->assertStringContainsString('INV-BR-2', (string) ($e->errors()['bills'][0] ?? ''), 'কারণে বিলের নম্বর নেই');
+        }
+    }
 }

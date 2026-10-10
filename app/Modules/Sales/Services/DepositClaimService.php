@@ -154,6 +154,8 @@ final class DepositClaimService
         return SalesInvoice::query()
             ->where('customer_id', $customer->id)
             ->where('status', DocumentStatus::CONFIRMED)
+            // ⓘ গ্রাহকের নিজের শাখার বিলই — দাবির আদায় সেই শাখায় বসে, অন্যগুলো বাছা যায় না ([[billsOf()]], PR #17 রিভিউ ⚠️১২)
+            ->when($customer->branch_id !== null, fn ($q) => $q->where('sal_invoices.branch_id', $customer->branch_id))
             ->withCollected()
             ->orderBy('trx_date')->orderBy('id')
             ->get()
@@ -187,6 +189,14 @@ final class DepositClaimService
             }
             if ($invoice->status !== DocumentStatus::CONFIRMED) {
                 throw ValidationException::withMessages(['bills' => __('sales::slip.bill_not_open', ['no' => $invoice->document_no])]);
+            }
+            /*
+             * ⛔ অন্য শাখার বিল এই দাবিতে নয় — আগেভাগেই বলা (১১ অক্টোবর ২০২৬, PR #17 রিভিউ ⚠️১২)। ⓘ আদায় বসে দাবির শাখায়
+             * (গ্রাহকের শাখা) আর গ্রহণের সময় বিল খোঁজা হয় সেই শাখাতেই ([[sharesAt()]]) — অন্য শাখার বিল তখন চুপচাপ বাদ পড়ত,
+             * টাকা খাতায় অ-প্রযুক্ত জমা হয়ে বসত, কেউ জানত না কেন। এখন দাবি তোলার মুহূর্তেই ফেরে, বিলের নম্বরসহ।
+             */
+            if ($customer->branch_id !== null && (int) $invoice->branch_id !== (int) $customer->branch_id) {
+                throw ValidationException::withMessages(['bills' => __('sales::slip.bill_other_branch', ['no' => $invoice->document_no])]);
             }
             if (isset($bills[$invoice->id])) {
                 throw ValidationException::withMessages(['bills' => __('sales::slip.bill_twice', ['no' => $invoice->document_no])]);
