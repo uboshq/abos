@@ -85,14 +85,15 @@
                  যেগুলো যোগ হয়ে এই সংখ্যাটা হয়েছে (নিয়ম ১) --}}
             <p class="mt-1 text-2xl font-semibold">
                 {{-- ⭐ (Cr) = আমরা দেব, (Dr) = আগাম দেওয়া — মালিক, ৩ অক্টোবর ২০২৬; লেজারের ছকের একই দিক --}}
-                <a href="{{ request()->fullUrlWithQuery(['part' => 'payable', 'page' => null]) }}#transactions" @click="open = false" class="num" data-balance-drcr>{{ \App\Core\Support\Money::drCr(bcmul((string) $payable, '-1', 4)) }}</a>
+                <a href="{{ $part === 'payable' ? '' : request()->fullUrlWithQuery(['part' => 'payable', 'page' => null]) }}#transactions" @click="open = false" class="num" data-balance-drcr>{{ \App\Core\Support\Money::drCr(bcmul((string) $payable, '-1', 4)) }}</a>
             </p>
 
             {{-- ⭐ বিল-না-আসা মাল — দেনার পাশে আলাদা ভাগ (পুনঃনিরীক্ষা, ৯ অক্টোবর ২০২৬; মালিক: "দুই ভাগে দেখাও")।
-                 ⓘ মাল এসেছে, সরবরাহকারীর বিল আসেনি — বিল না আসা পর্যন্ত শোধযোগ্য নয়; অঙ্কটা খাতার দ্বিতীয় ভাগ খোলে। --}}
+                 ⓘ মাল এসেছে, সরবরাহকারীর বিল আসেনি — বিল না আসা পর্যন্ত শোধযোগ্য নয়; অঙ্কটা খাতার দ্বিতীয় ভাগ খোলে।
+                 ⓘ যে ভাগ খোলা, তার অঙ্ক কেবল `#transactions` — পাতা আবার না এনে ছকে নামে (নিয়ম ১, [[FigureLinksTest]])। --}}
             <p class="mt-1 text-2xs text-(--color-ink-muted)" data-goods-not-billed>
                 {{ __('supplier::field.goods_not_billed') }}:
-                <a href="{{ request()->fullUrlWithQuery(['part' => 'goods_not_billed', 'page' => null]) }}#transactions" @click="open = false" class="num">{{ \App\Core\Support\Money::drCr(bcmul((string) $goodsNotBilled, '-1', 4)) }}</a>
+                <a href="{{ $part === 'goods_not_billed' ? '' : request()->fullUrlWithQuery(['part' => 'goods_not_billed', 'page' => null]) }}#transactions" @click="open = false" class="num">{{ \App\Core\Support\Money::drCr(bcmul((string) $goodsNotBilled, '-1', 4)) }}</a>
             </p>
 
             {{-- ⭐ এক শাখা বাছা থাকলে ওপরের অঙ্কটা কেবল সেই শাখার (৩০ সেপ্টেম্বর ২০২৬);
