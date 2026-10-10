@@ -739,6 +739,60 @@ final class CostLayerService
         });
     }
 
+    /**
+     * ⭐ এতটা মাল এখন বেরোলে কত খরচ টানত — কিছু না টেনে, [[issue()]]-এর হুবহু ক্রমে (পুরো-ERP অডিট, ৬ অক্টোবর ২০২৬,
+     * মজুদ ⚠️৮; [[ABranchTransferCarriesWhatTheGoodsCostTest]])।
+     *
+     * ⓘ লট দিলে আগে সেই লটের নিজের স্তর, তারপর লটহীন, তারপর বাকি সব — পুরনো আগে; লট না দিলে সোজা FIFO। পরের বিক্রি
+     * ঠিক এই খরচই টানবে, তাই শাখা-পেরোনো বদলি এই দামেই মজুদের টাকা সরায়। ⓘ স্তরে না কুলালে বাকিটা কোম্পানির গড়ে
+     * (আগের নিয়ম) — বদলি থামে না; স্তর একদম না থাকলে শূন্য।
+     */
+    public function costOf(Product $product, string $qty, ?Batch $batch = null): string
+    {
+        $cost = '0';
+        $left = $qty;
+        $used = [];
+
+        $draw = function ($layers) use (&$cost, &$left, &$used): void {
+            foreach ($layers as $layer) {
+                if (bccomp($left, '0', 4) <= 0) {
+                    return;
+                }
+
+                $free = bcsub((string) $layer->qty_remaining, $used[$layer->id] ?? '0', 4);
+
+                if (bccomp($free, '0', 4) <= 0) {
+                    continue;
+                }
+
+                $take = bccomp($free, $left, 4) >= 0 ? $left : $free;
+                $used[$layer->id] = bcadd($used[$layer->id] ?? '0', $take, 4);
+                $cost = bcadd($cost, bcmul($take, (string) $layer->unit_cost, 6), 6);
+                $left = bcsub($left, $take, 4);
+            }
+        };
+
+        if ($batch !== null) {
+            $draw(CostLayer::query()->where('product_id', $product->id)->where('batch_id', $batch->id)->open()->get());
+        }
+
+        if (bccomp($left, '0', 4) > 0) {
+            $draw(CostLayer::query()->where('product_id', $product->id)->where('qty_remaining', '>', 0)
+                ->when($batch !== null, fn ($q) => $q->orderByRaw('CASE WHEN batch_id IS NULL THEN 0 ELSE 1 END'))
+                ->orderBy('trx_date')->orderBy('id')->get());
+        }
+
+        if (bccomp($left, '0', 4) > 0) {
+            $onHand = $this->qtyOnHand($product);
+
+            if (bccomp($onHand, '0', 4) > 0) {
+                $cost = bcadd($cost, bcmul($left, bcdiv($this->valueOnHand($product), $onHand, 6), 6), 6);
+            }
+        }
+
+        return bcadd($cost, '0', 4);
+    }
+
     /** এই পণ্যের যত মাল স্তরে পড়ে আছে, তার মোট মূল্য। */
     public function valueOnHand(Product $product): string
     {
