@@ -265,7 +265,8 @@ class OpeningStockController extends Controller implements HasMiddleware
 
         return back()->with('saved', __('inventory::message.opening_saved', [
             'product' => $product->name(),
-            'qty' => Money::format($validated['qty']),
+            // ⛔ পরিমাণ, টাকা নয় — দুই ঘরে গোল হত (পুরো-ERP অডিট, ৬ অক্টোবর ২০২৬, মজুদ ⓘ১৪); মূল্যটা টাকা, তাই format-ই
+            'qty' => Money::quantity($validated['qty']),
             'value' => Money::format(bcmul((string) $validated['qty'], (string) $validated['unit_cost'], 4)),
         ]));
     }

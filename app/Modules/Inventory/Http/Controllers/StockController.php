@@ -534,7 +534,9 @@ class StockController extends Controller implements HasMiddleware
         return back()->with('saved', bccomp($difference, '0', 4) === 0
             ? __('inventory::message.adjust_matched')
             : __('inventory::message.adjusted', [
-                'difference' => Money::format($difference),
+                // ⛔ পরিমাণ, টাকা নয় — Money::format দুই ঘরে গোল করত, ১.২৫৫ কেজি দেখাত ১.২৬ (পুরো-ERP অডিট, ৬ অক্টোবর
+                // ২০২৬, মজুদ ⓘ১৪; [[TheAdjustedMessageSaysTheQuantityTest]])
+                'difference' => Money::quantity($difference),
             ]));
     }
 
