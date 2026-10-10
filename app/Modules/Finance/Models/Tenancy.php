@@ -133,7 +133,8 @@ class Tenancy extends Model implements Drillable
     {
         $waiting = (string) $this->moves()->getQuery()->reorder()
             ->whereIn('kind', [TenancyMove::FROM_DEPOSIT, TenancyMove::REFUND])
-            ->whereHas('voucher', fn ($v) => $v->where('status', DocumentStatus::DRAFT))
+            // ⛔ শাখা-দেয়াল ছাড়া — ভাউচার বসে চুক্তির শাখায়; হেডারে অন্য শাখা বাছা থাকলে অপেক্ষার কাটা চোখ এড়াত আর একই জামানত দুবার কাটা যেত (১০ অক্টোবর ২০২৬)
+            ->whereHas('voucher', fn ($v) => $v->withoutGlobalScope('user-branch')->where('status', DocumentStatus::DRAFT))
             ->sum('amount');
 
         return bcsub($this->depositHeld(), $waiting, 4);

@@ -742,7 +742,8 @@ class RentalContractService
     /** এই চুক্তির কোনো টাকা সইয়ের অপেক্ষায় কি — পর্দার বার্তার জন্যও ([[RentalContractController]])। */
     public function isWaiting(RentalContract $contract): bool
     {
-        return Voucher::query()
+        // ⛔ শাখা-দেয়াল ছাড়া — অন্য শাখা দেখানো অবস্থায় অপেক্ষার কাগজ চোখ এড়াত (১০ অক্টোবর ২০২৬; [[RentalContract::depositFree()]])
+        return Voucher::acrossBranches()
             ->where('status', DocumentStatus::DRAFT)
             ->where(fn ($q) => $q
                 ->where(fn ($v) => $v->where('against_type', RentalContract::drillSourceType())->where('against_id', $contract->id))

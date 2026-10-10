@@ -202,7 +202,8 @@ class RentalContract extends Model implements Drillable
     public function depositFree(): string
     {
         $waiting = (string) $this->adjustments()
-            ->whereHas('voucher', fn ($v) => $v->where('status', DocumentStatus::DRAFT))
+            // ⛔ শাখা-দেয়াল ছাড়া — ভাউচার বসে চুক্তির শাখায়; হেডারে অন্য শাখা বাছা থাকলে অপেক্ষার কাটা চোখ এড়াত আর একই জামানত দুবার কাটা যেত (১০ অক্টোবর ২০২৬)
+            ->whereHas('voucher', fn ($v) => $v->withoutGlobalScope('user-branch')->where('status', DocumentStatus::DRAFT))
             ->sum('from_deposit');
 
         return bcsub($this->depositLeft(), $waiting, 4);

@@ -112,6 +112,89 @@ final class FinancePapersPostInTheirOwnBranchTest extends TestCase
         }
     }
 
+    /**
+     * ⛔ জামানত থেকে কাটা সইয়ের অপেক্ষায় — অন্য শাখা দেখানো অবস্থায় একই মানুষের দ্বিতীয় কাটা থামে, একই জামানত দুবার নয়
+     * (১০ অক্টোবর ২০২৬; [[RentalContract::depositFree()]], [[RentalContractService::isWaiting()]])।
+     */
+    public function test_a_waiting_deposit_cut_is_seen_from_another_branch(): void
+    {
+        $this->choose('MMS');
+        // ⓘ জামানত দিতে নগদ লাগে — জামানত বসে চুক্তি শুরুর দিনে (দুই মাস আগে), তাই টাকা তার আগের তারিখে
+        $this->putMoneyIn($this->cash(), '100000', now()->startOfMonth()->subMonths(3)->toDateString());
+        $contract = app(\App\Modules\Finance\Services\RentalContractService::class)->open([
+            'counterparty' => 'Branch Landlord', 'subject' => 'Branch godown', 'deposit_amount' => '30000', 'monthly_rent' => '20000',
+            'monthly_adjustment' => '0', 'term_months' => 12, 'starts_on' => now()->startOfMonth()->subMonths(2)->toDateString(), 'rent_day' => 5,
+            'money_account_id' => $this->cash()->id,
+        ]);
+        $this->assertSame('30000', bcadd($contract->fresh()->depositFree(), '0', 0), 'দৃশ্যটাই বানানো যায়নি — জামানত ৩০,০০০ নয়');
+
+        // ⓘ ছক এখন — খোলার জামানত আগেই খাতায় (নইলে চুক্তিই চালু হত না), কাটাটা সইয়ের অপেক্ষায়
+        $flow = \App\Models\ApprovalFlow::query()->create(['module' => 'finance', 'action' => 'rental', 'is_active' => true]);
+        \App\Models\ApprovalFlowStep::query()->create([
+            'approval_flow_id' => $flow->id, 'level' => 1, 'approver_type' => \App\Models\ApprovalFlowStep::BY_USER,
+            'approver_id' => User::query()->where('email', 'accounts@abos.test')->value('id'),
+        ]);
+        $this->app->forgetInstance(\App\Core\Engines\Approval\ApprovalEngine::class);
+
+        $pay = fn (int $ago) => app(\App\Modules\Finance\Services\RentalContractService::class)->adjustMonth($contract->fresh(), [
+            'for_month' => now()->startOfMonth()->subMonths($ago)->toDateString(), 'rent' => '20000', 'from_deposit' => '20000',
+            'money_account_id' => $this->cash()->id,
+        ]);
+
+        $pay(2);
+        $this->assertTrue(app(\App\Modules\Finance\Services\RentalContractService::class)->isWaiting($contract->fresh()),
+            'দৃশ্যটাই বানানো যায়নি — প্রথম কাটা সইয়ের অপেক্ষায় নেই');
+
+        $this->choose('NTK');
+        $this->app->forgetInstance(\App\Core\Engines\Approval\ApprovalEngine::class);
+        $this->assertTrue(app(\App\Modules\Finance\Services\RentalContractService::class)->isWaiting($contract->fresh()),
+            '⛔ অন্য শাখা দেখানো অবস্থায় অপেক্ষার কাটা চোখ এড়াল');
+        $this->assertSame('10000', bcadd($contract->fresh()->depositFree(), '0', 0), '⛔ অন্য শাখা থেকে জামানতে অপেক্ষার কাটা বাদ পড়ল না');
+
+        try {
+            $pay(1);
+            $this->fail('⛔ অন্য শাখা থেকে দ্বিতীয় কাটা বসল — একই জামানত দুবার');
+        } catch (\Illuminate\Validation\ValidationException) {
+            $this->assertSame(1, \App\Modules\Finance\Models\RentalAdjustment::query()->where('rental_contract_id', $contract->id)->count());
+        }
+    }
+
+    /** ⛔ ভাড়াটের জামানতেও একই — অন্য শাখা থেকে দ্বিতীয় কাটা থামে (১০ অক্টোবর ২০২৬; [[Tenancy::depositFree()]], [[TenancyService::isWaiting()]]) */
+    public function test_a_waiting_tenant_deposit_cut_is_seen_from_another_branch(): void
+    {
+        $this->choose('MMS');
+        $tenant = $this->person('Branch Tenant');
+        $tenancy = app(\App\Modules\Finance\Services\TenancyService::class)->open([
+            'party_type' => 'person', 'party_id' => $tenant->id, 'tenant' => $tenant->name_en, 'monthly_rent' => '20000',
+            'deposit_amount' => '30000', 'term_months' => 12, 'starts_on' => now()->startOfMonth()->subMonths(2)->toDateString(),
+            'money_account_id' => $this->cash()->id,
+        ]);
+        $this->assertSame('30000', bcadd($tenancy->fresh()->depositFree(), '0', 0), 'দৃশ্যটাই বানানো যায়নি — ভাড়াটের জামানত ৩০,০০০ নয়');
+
+        // ⓘ ছক এখন — খোলার জামানত আগেই খাতায়, কাটাটা সইয়ের অপেক্ষায়
+        $flow = \App\Models\ApprovalFlow::query()->create(['module' => 'finance', 'action' => 'rental', 'is_active' => true]);
+        \App\Models\ApprovalFlowStep::query()->create([
+            'approval_flow_id' => $flow->id, 'level' => 1, 'approver_type' => \App\Models\ApprovalFlowStep::BY_USER,
+            'approver_id' => User::query()->where('email', 'accounts@abos.test')->value('id'),
+        ]);
+        $this->app->forgetInstance(\App\Core\Engines\Approval\ApprovalEngine::class);
+
+        app(\App\Modules\Finance\Services\TenancyService::class)->fromDeposit($tenancy->fresh(), ['amount' => '20000']);
+        $this->assertTrue(app(\App\Modules\Finance\Services\TenancyService::class)->isWaiting($tenancy->fresh()), 'দৃশ্যটাই বানানো যায়নি — কাটা সইয়ের অপেক্ষায় নেই');
+
+        $this->choose('NTK');
+        $this->app->forgetInstance(\App\Core\Engines\Approval\ApprovalEngine::class);
+        $this->assertTrue(app(\App\Modules\Finance\Services\TenancyService::class)->isWaiting($tenancy->fresh()), '⛔ অন্য শাখা থেকে অপেক্ষার কাটা চোখ এড়াল');
+        $this->assertSame('10000', bcadd($tenancy->fresh()->depositFree(), '0', 0), '⛔ অন্য শাখা থেকে অপেক্ষার কাটা জামানতে বাদ পড়ল না');
+
+        try {
+            app(\App\Modules\Finance\Services\TenancyService::class)->fromDeposit($tenancy->fresh(), ['amount' => '20000']);
+            $this->fail('⛔ অন্য শাখা থেকে দ্বিতীয় কাটা বসল — একই জামানত দুবার');
+        } catch (\Illuminate\Validation\ValidationException) {
+            $this->addToAssertionCount(1);
+        }
+    }
+
     /** ⛔ উত্তোলন নিজের শাখায় খাতায় বসে, হেডারে যে শাখাই দেখানো থাক (রিভিউ ⚠️১, ১০ অক্টোবর ২০২৬; [[WithdrawalService::post()]]) */
     public function test_a_withdrawal_posts_in_its_own_branch(): void
     {
