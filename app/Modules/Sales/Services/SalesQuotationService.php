@@ -4,10 +4,13 @@ declare(strict_types=1);
 
 namespace App\Modules\Sales\Services;
 
+use App\Core\Engines\Approval\ApprovalEngine;
 use App\Core\Engines\Approval\DocumentApproval;
+use App\Core\Engines\Approval\HeldForApproval;
 use App\Core\Engines\NumberSeries\NumberSeriesEngine;
 use App\Core\Services\SettingsService;
 use App\Core\Support\CompanyContext;
+use App\Models\Approval;
 use App\Models\FinancialYear;
 use App\Models\IssuedNumber;
 use App\Modules\Inventory\Models\Product;
@@ -383,6 +386,13 @@ final class SalesQuotationService
      */
     public function convert(SalesQuotation $quotation): SalesOrder
     {
+        // ⓘ কেবল রূপান্তরযোগ্য উদ্ধৃতিতে — অন্য অবস্থায় নিচের পাহারা আগের মতো "অবস্থা" বলেই থামায়
+        $current = SalesQuotation::query()->find($quotation->getKey());
+
+        if ($current !== null && $current->status === SalesQuotation::ACCEPTED && $current->sales_order_id === null) {
+            $this->assertDiscountSigned($current);
+        }
+
         return DB::transaction(function () use ($quotation) {
             /** @var SalesQuotation $locked */
             $locked = SalesQuotation::query()->whereKey($quotation->getKey())->lockForUpdate()->firstOrFail();
@@ -454,6 +464,46 @@ final class SalesQuotationService
 
             return $order->fresh(['lines']);
         });
+    }
+
+    /**
+     * ⛔ উদ্ধৃতির ছাড় আদেশে যাওয়ার আগে মালিকের ছাড়ের সই — বিলের একই নিয়ম (পুরো-ERP পুনঃঅডিট, ৯ অক্টোবর ২০২৬, বিক্রয় ৭;
+     * [[AQuotedDiscountNeedsTheOwnersSignatureTest]], [[SalesInvoiceService::assertDiscountApproved()]])।
+     *
+     * ⓘ আগে উদ্ধৃতির সারির আর মাথার ছাড় চুপচাপ আদেশে চলে যেত — কারও সই ছাড়া। এখন ছাড় থাকলে "বিক্রয় — ছাড়" ছকের সই লাগে ঠিক
+     * এই অঙ্কে: সই থাকলে এগোয়; "না" থাকলে থামে; না থাকলে সইয়ের অনুরোধ বসে আর রূপান্তর থামে; ছক না থাকলে থামে (বিলের মতোই, সই
+     * ছাড়া ছাড় নয়)। ⚠️ লেনদেনের **বাইরে** — ভিতরে থাকলে থামার সাথে অনুরোধটাও মুছে যেত।
+     */
+    private function assertDiscountSigned(SalesQuotation $quotation): void
+    {
+        $discount = bcadd((string) ($quotation->discount ?? '0'), '0', 4);
+
+        if (bccomp($discount, '0', 4) <= 0) {
+            return;
+        }
+
+        $engine = app(ApprovalEngine::class);
+        $decided = $engine->latestFor($quotation, 'discount');
+
+        if ($decided?->status === Approval::APPROVED && $decided->covers($discount)) {
+            return;
+        }
+
+        if ($decided?->status === Approval::REJECTED && $decided->covers($discount)) {
+            throw ValidationException::withMessages(['discount' => __('sales::validation.discount_rejected')]);
+        }
+
+        if ($decided?->status === Approval::PENDING && $decided->covers($discount)) {
+            throw HeldForApproval::on($quotation, 'discount', __('sales::validation.discount_awaiting'));
+        }
+
+        $asked = $engine->request(document: $quotation, module: 'sales', action: 'discount', amount: $discount, reason: $quotation->narration);
+
+        if ($asked === null) {
+            throw ValidationException::withMessages(['discount' => __('sales::validation.discount_no_signer')]);
+        }
+
+        throw HeldForApproval::on($quotation, 'discount', __('sales::validation.discount_awaiting'));
     }
 
     /**

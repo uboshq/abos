@@ -7,6 +7,7 @@ namespace App\Modules\Sales\Services;
 use App\Core\Engines\Approval\DocumentApproval;
 use App\Core\Engines\NumberSeries\NumberSeriesEngine;
 use App\Core\Engines\Posting\PostingEngine;
+use App\Core\Services\SettingsService;
 use App\Core\Support\CompanyContext;
 use App\Core\Support\DocumentStatus;
 use App\Models\FinancialYear;
@@ -14,9 +15,11 @@ use App\Models\IssuedNumber;
 use App\Models\LedgerEntry;
 use App\Modules\Accounts\Services\CashTillService;
 use App\Modules\Accounts\Services\StandardChart;
+use App\Modules\Inventory\Models\CostLayerUse;
 use App\Modules\Inventory\Models\Product;
 use App\Modules\Inventory\Models\StockMovement;
 use App\Modules\Inventory\Models\Warehouse;
+use App\Modules\Inventory\Services\CostLayerService;
 use App\Modules\Inventory\Services\PrintedPriceCeiling;
 use App\Modules\Inventory\Services\ReadsPackedQuantities;
 use App\Modules\Inventory\Services\SellableHere;
@@ -157,7 +160,7 @@ final class DeliveryChallanService
                  */
                 'issue_at_gate' => array_key_exists('issue_at_gate', $data)
                     ? (bool) $data['issue_at_gate']
-                    : (bool) app(\App\Core\Services\SettingsService::class)->get('sales.invoice_at_goods_issue', false),
+                    : (bool) app(SettingsService::class)->get('sales.invoice_at_goods_issue', false),
                 'driver_name' => $data['driver_name'] ?? null,
                 // ⓘ কাউন্টার পাঠায়, আগে এখানে চুপচাপ হারাত — নিশ্চিতকরণের পাতায় চালকের ফোন আসত না
                 'driver_phone' => $data['driver_phone'] ?? null,
@@ -235,7 +238,7 @@ final class DeliveryChallanService
              * ⓘ নিচের replaceLines() সারিগুলো মুছে নতুন বসায়; বসানো অফার পুরনো সারির আইডিতে
              * অনাথ হত আর বাজেট ঐ টাকা খরচ ধরে রাখত ([[ChallanOffers::reverseAll()]])।
              */
-            app(\App\Modules\Sales\Services\ChallanOffers::class)->reverseAll($challan);
+            app(ChallanOffers::class)->reverseAll($challan);
 
             $this->replaceLines($challan, $lines);
             $this->stampFare($challan, $data);
@@ -274,8 +277,8 @@ final class DeliveryChallanService
      *                             কাউন্টার পাঠায়। ⓘ অফিসের ডিও-তে শূন্য:
      *                             মাল যায়, টাকা আসে পরে।
      * @param  list<array{0: string, 1: int}>  $ownReservations  এই বিক্রিরই অন্য সংরক্ষণ (যেমন DO-র কড়া
-     *                             আটকানো, [[DeliveryOrderStock::reservationsOf()]]) — "পাওয়া যায়"-এর পাহারায় এগুলো
-     *                             এই চালানের জন্যই রাখা বলে গোনা হয় (অডিট গ১১, ৪ অক্টোবর ২০২৬)।
+     *                                                           আটকানো, [[DeliveryOrderStock::reservationsOf()]]) — "পাওয়া যায়"-এর পাহারায় এগুলো
+     *                                                           এই চালানের জন্যই রাখা বলে গোনা হয় (অডিট গ১১, ৪ অক্টোবর ২০২৬)।
      */
     public function confirm(DeliveryChallan $challan, string $payingNow = '0', array $ownReservations = []): DeliveryChallan
     {
@@ -405,9 +408,9 @@ final class DeliveryChallanService
              * ⛔ আগে ধরে নেওয়া হত আদেশের "অর্ডার − আগে ডেলিভার" পুরোটাই ধরা আছে। অথচ সুইচ বন্ধে নিশ্চিত হওয়া আদেশ
              * কিছুই ধরে না — তার চালান তখন অন্য কাগজের ধরা মাল ছেড়ে দিত।
              */
-            $own = $challan->sales_order_id !== null && $challan->order !== null
-                ? app(SalesOrderService::class)->heldByThisOrder($challan->order)
-                : [];
+            // ⛔ আদেশ শাখার দেয়াল ছাড়া — অন্য শাখার হেডারে থাকা মানুষের নামে পাকা হলেও আদেশটা পাওয়া যায় (পুনঃঅডিট ৯ অক্টোবর ২০২৬, বিক্রয় ১)
+            $order = $challan->sales_order_id === null ? null : SalesOrder::acrossBranches()->find($challan->sales_order_id);
+            $own = $order !== null ? app(SalesOrderService::class)->heldByThisOrder($order) : [];
 
             foreach ($challan->lines->sortBy('line_no') as $line) {
                 $qty = (string) $line->delivered_qty;
@@ -566,7 +569,7 @@ final class DeliveryChallanService
              * ⭐ বাতিলে অফারও ফেরে — ছাড়, বাজেট, কুপন, পয়েন্ট ([[PromotionReversal::forSource()]])।
              * ⓘ খসড়া বা পাকা দুই অবস্থাতেই; বসানো না থাকলে কিছুই হয় না।
              */
-            app(\App\Modules\Sales\Services\ChallanOffers::class)->reverseAll($challan);
+            app(ChallanOffers::class)->reverseAll($challan);
 
             if ($challan->status === DocumentStatus::CONFIRMED) {
                 $this->unpost($challan, $date, $reason);
@@ -1109,7 +1112,7 @@ final class DeliveryChallanService
         $challan->loadMissing(['lines.product', 'lines.orderLine.order', 'warehouse']);
 
         // ⭐ অফার, উপহার, কুপন আর পয়েন্টও ফেরে — চালানের সাধারণ বাতিলের মতো (পুরো ERP অডিট, প্রমোশন ⛔১, ৬ অক্টোবর ২০২৬)
-        app(\App\Modules\Sales\Services\ChallanOffers::class)->reverseAll($challan);
+        app(ChallanOffers::class)->reverseAll($challan);
 
         $this->unpost($challan, $date, $reason, $paperNo);
 
@@ -1336,12 +1339,12 @@ final class DeliveryChallanService
                 continue;
             }
 
-            $drew = \App\Modules\Inventory\Models\CostLayerUse::query()
+            $drew = CostLayerUse::query()
                 ->where('source_type', $sourceType)->where('source_id', $challan->id)
                 ->where('product_id', $productId)->where('qty', '>', 0)->exists();
 
             if ($drew) {
-                app(\App\Modules\Inventory\Services\CostLayerService::class)->returnToLayers(
+                app(CostLayerService::class)->returnToLayers(
                     product: Product::query()->findOrFail($productId),
                     qty: $back,
                     issuedSourceType: $sourceType,

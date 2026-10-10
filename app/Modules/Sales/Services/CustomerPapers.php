@@ -6,6 +6,7 @@ namespace App\Modules\Sales\Services;
 
 use App\Core\Services\LoginJournal;
 use App\Core\Support\CompanyContext;
+use App\Models\FinancialYear;
 use App\Models\LedgerEntry;
 use App\Modules\Customer\Models\Customer;
 use App\Modules\Inventory\Models\Product;
@@ -14,6 +15,7 @@ use App\Modules\Sales\Models\DeliveryOrder;
 use App\Modules\Sales\Models\SalesInvoice;
 use App\Modules\Sales\Models\SalesOrder;
 use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 
@@ -135,6 +137,21 @@ final class CustomerPapers
             ->whereDate('trx_date', '<=', $to)
             ->orderBy('trx_date')->orderBy('id')
             ->get();
+    }
+
+    /**
+     * ⭐ খতিয়ানের ডিফল্ট শুরু — গ্রাহকের কোম্পানির চলতি অর্থবছরের প্রথম দিন, না থাকলে বছরের প্রথম দিন (পুনঃঅডিট ৯ অক্টোবর ২০২৬, গ্রাহক ১৫)।
+     * ⓘ গ্রাহক আসে গার্ড থেকে, তাই কোম্পানি তাঁরই।
+     */
+    public function yearStart(): string
+    {
+        $start = FinancialYear::query()->withoutGlobalScopes()
+            ->where('company_id', $this->customer()->company_id)
+            ->whereDate('starts_on', '<=', now()->toDateString())
+            ->whereDate('ends_on', '>=', now()->toDateString())
+            ->value('starts_on');
+
+        return $start === null ? now()->startOfYear()->toDateString() : Carbon::parse($start)->toDateString();
     }
 
     /**

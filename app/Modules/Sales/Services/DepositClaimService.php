@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Modules\Sales\Services;
 
+use App\Core\Support\Actor;
+use App\Core\Support\CompanyContext;
 use App\Core\Support\DocumentStatus;
 use App\Core\Support\Money;
 use App\Modules\Accounts\Services\MoneyAccountRule;
@@ -152,6 +154,8 @@ final class DepositClaimService
         return SalesInvoice::query()
             ->where('customer_id', $customer->id)
             ->where('status', DocumentStatus::CONFIRMED)
+            // ⓘ গ্রাহকের নিজের শাখার বিলই — দাবির আদায় সেই শাখায় বসে, অন্যগুলো বাছা যায় না ([[billsOf()]], PR #17 রিভিউ ⚠️১২)
+            ->when($customer->branch_id !== null, fn ($q) => $q->where('sal_invoices.branch_id', $customer->branch_id))
             ->withCollected()
             ->orderBy('trx_date')->orderBy('id')
             ->get()
@@ -185,6 +189,14 @@ final class DepositClaimService
             }
             if ($invoice->status !== DocumentStatus::CONFIRMED) {
                 throw ValidationException::withMessages(['bills' => __('sales::slip.bill_not_open', ['no' => $invoice->document_no])]);
+            }
+            /*
+             * ⛔ অন্য শাখার বিল এই দাবিতে নয় — আগেভাগেই বলা (১১ অক্টোবর ২০২৬, PR #17 রিভিউ ⚠️১২)। ⓘ আদায় বসে দাবির শাখায়
+             * (গ্রাহকের শাখা) আর গ্রহণের সময় বিল খোঁজা হয় সেই শাখাতেই ([[sharesAt()]]) — অন্য শাখার বিল তখন চুপচাপ বাদ পড়ত,
+             * টাকা খাতায় অ-প্রযুক্ত জমা হয়ে বসত, কেউ জানত না কেন। এখন দাবি তোলার মুহূর্তেই ফেরে, বিলের নম্বরসহ।
+             */
+            if ($customer->branch_id !== null && (int) $invoice->branch_id !== (int) $customer->branch_id) {
+                throw ValidationException::withMessages(['bills' => __('sales::slip.bill_other_branch', ['no' => $invoice->document_no])]);
             }
             if (isset($bills[$invoice->id])) {
                 throw ValidationException::withMessages(['bills' => __('sales::slip.bill_twice', ['no' => $invoice->document_no])]);
@@ -229,7 +241,16 @@ final class DepositClaimService
                 break;
             }
 
-            $invoice = SalesInvoice::query()->whereKey((int) ($bill['sales_invoice_id'] ?? 0))->first();
+            /*
+             * ⛔ দাবির কোম্পানি, গ্রাহক আর শাখা ধরে — গ্রহণকারীর হেডারের শাখায় নয় (পুরো-ERP পুনঃঅডিট, ৯ অক্টোবর ২০২৬, বিক্রয় ৩;
+             * [[AClaimedBillIsFoundWhateverTheAcceptersHeaderTest]])। ⓘ আগে শাখার দেয়াল গ্রহণকারীর হেডার দেখত: অন্য শাখায় বসে
+             * মঞ্জুর করলে বাছা বিল "নেই", চুপচাপ বাদ, আর টাকা খাতায় খালি জমা হয়ে বসত। ⚠️ বিল দাবির শাখারই হতে হয় — আদায় সেই
+             * শাখায় বসে, অন্য শাখার বিলে ভাগ দিলে দুই শাখার পাওনা ভুল হত।
+             */
+            $invoice = SalesInvoice::acrossBranches()
+                ->where('sal_invoices.company_id', $claim->company_id)
+                ->when($claim->branch_id !== null, fn ($q) => $q->where('sal_invoices.branch_id', $claim->branch_id))
+                ->whereKey((int) ($bill['sales_invoice_id'] ?? 0))->first();
             if ($invoice === null || (int) $invoice->customer_id !== (int) $claim->customer_id || $invoice->status !== DocumentStatus::CONFIRMED) {
                 continue;
             }
@@ -310,7 +331,8 @@ final class DepositClaimService
                 ]);
             }
 
-            $collection = $this->collections->create([
+            // ⓘ আদায় দাবির শাখায় — বিলের ভাগ যাচাইও সেই শাখায় চলে, গ্রহণকারীর হেডারে নয় ([[CompanyContext::inBranch()]])
+            $collection = CompanyContext::inBranch($claim->branch_id === null ? null : (int) $claim->branch_id, fn () => $this->collections->create([
                 'customer_id' => $claim->customer_id,
                 'branch_id' => $claim->branch_id,
                 'trx_date' => $date,
@@ -319,15 +341,15 @@ final class DepositClaimService
                 'instrument' => $claim->method,
                 'instrument_no' => $claim->reference,
                 'narration' => __('sales::portal.from_claim', ['no' => $claim->public_id]),
-            // ⭐ বাছা বিলে মেলে — না বাছলে আগের মতো খালি, গ্রাহকের খাতায় মোট টাকা ([[sharesAt()]])
-            ], $this->sharesAt($claim, $amount));
+                // ⭐ বাছা বিলে মেলে — না বাছলে আগের মতো খালি, গ্রাহকের খাতায় মোট টাকা ([[sharesAt()]])
+            ], $this->sharesAt($claim, $amount)));
 
-            $this->collections->confirm($collection);
+            CompanyContext::inBranch($claim->branch_id === null ? null : (int) $claim->branch_id, fn () => $this->collections->confirm($collection));
 
             $claim->update([
                 'status' => DepositClaim::ACCEPTED,
                 'collection_id' => $collection->id,
-                'decided_by' => \App\Core\Support\Actor::userId(),
+                'decided_by' => Actor::userId(),
                 'decided_at' => now(),
             ]);
 
@@ -357,7 +379,7 @@ final class DepositClaimService
             $claim->update([
                 'status' => DepositClaim::REJECTED,
                 'decision_reason' => $reason,
-                'decided_by' => \App\Core\Support\Actor::userId(),
+                'decided_by' => Actor::userId(),
                 'decided_at' => now(),
             ]);
 

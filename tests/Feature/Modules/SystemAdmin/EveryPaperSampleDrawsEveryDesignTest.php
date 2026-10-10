@@ -107,6 +107,8 @@ final class EveryPaperSampleDrawsEveryDesignTest extends TestCase
             foreach (PaperDesigns::SIZES as $size) {
                 foreach (PaperDesigns::codes($paper, $size) as $code) {
                     $html = (string) $this->get(route($route, ['design' => $code, 'size' => $size]))->assertOk()->getContent();
+                    // ⓘ বাংলা নকশা "২য় ছাপা" বাংলা অঙ্কে লেখে ([[BanglaDigits]], মালিক ১০ অক্টোবর) — মেলানোর আগে ইংরেজি অঙ্কে ফেরানো
+                    $html = strtr($html, ['০' => '0', '১' => '1', '২' => '2', '৩' => '3', '৪' => '4', '৫' => '5', '৬' => '6', '৭' => '7', '৮' => '8', '৯' => '9']);
                     // ⚠️ লেখাটা DUPLICATE-এর নিজের ঘরে (শিরোনামের নিচে) থাকতে হবে — কাগজের কোথাও থাকলেই হবে না:
                     // মাথা চিনতে না পারলে লেখাটা নিচের বড় সতর্ক-বাক্সে চলে যেত, আর মালিক ঠিক সেটাই না চেয়েছিলেন।
                     $inMark = false;

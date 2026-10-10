@@ -7,8 +7,11 @@ namespace App\Modules\Sales\Models;
 use App\Core\Concerns\BelongsToCompany;
 use App\Core\Concerns\HasPublicId;
 use App\Core\Concerns\IsAudited;
+use App\Core\Concerns\ScopedToUserDealers;
+use App\Core\Support\CompanyContext;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\DB;
 
 /**
  * একটা কাগজ, তার অবস্থা, আর কতবার ছাপা হয়েছে।
@@ -29,8 +32,9 @@ class PrintJob extends Model
     use BelongsToCompany;
     use HasPublicId;
     use IsAudited;
+
     // ⭐ বিক্রয়কর্মী কেবল নিজের বাঁধা ডিলারের কাগজ দেখেন — ⛔১৬, ২ অক্টোবর ২০২৬ ([[DealerScope]])
-    use \App\Core\Concerns\ScopedToUserDealers;
+    use ScopedToUserDealers;
 
     /** সারিতে আছে, এখনো ছাপা হয়নি। */
     public const WAITING = 'waiting';
@@ -54,9 +58,28 @@ class PrintJob extends Model
 
     public const CHALLAN = 'sales_challan';
 
+    /*
+     * ⭐ বাকি কাগজগুলোও গোনা হয়, যাতে দ্বিতীয় ছাপায় DUPLICATE বসে (পুরো-ERP পুনঃঅডিট, ৯ অক্টোবর ২০২৬, ছাপা ১৩;
+     * [[EveryReprintSaysDuplicateTest]])। ⓘ আগে কেবল বিল আর চালান — গেটপাস, রসিদ আর আদেশ বারবার হুবহু একই ছাপা হত।
+     */
+    public const CHALLAN_GATEPASS = 'sales_challan_gatepass';
+
+    public const GATE_PASS = 'sales_gate_pass';
+
+    public const ORDER = 'sales_order';
+
+    public const DELIVERY_ORDER = 'sales_delivery_order';
+
+    public const RECEIPT = 'sales_collection';
+
     public const PAPERS = [
         self::INVOICE => ['route' => 'sales.print.invoice', 'param' => 'invoice'],
         self::CHALLAN => ['route' => 'sales.print.challan', 'param' => 'challan'],
+        self::CHALLAN_GATEPASS => ['route' => 'sales.print.gatepass', 'param' => 'challan'],
+        self::GATE_PASS => ['route' => 'sales.print.gate_pass', 'param' => 'gatePass'],
+        self::ORDER => ['route' => 'sales.print.order', 'param' => 'order'],
+        self::DELIVERY_ORDER => ['route' => 'sales.print.delivery_order', 'param' => 'order'],
+        self::RECEIPT => ['route' => 'sales.print.receipt', 'param' => 'collection'],
     ];
 
     protected $table = 'sal_print_jobs';
@@ -68,8 +91,8 @@ class PrintJob extends Model
     public function applyDealerWall(Builder $builder, \Illuminate\Database\Query\Builder $dealerIds): void
     {
         $table = $this->getTable();
-        $invoices = \Illuminate\Support\Facades\DB::table('sal_invoices')->select('sal_invoices.id')
-            ->where('sal_invoices.company_id', \App\Core\Support\CompanyContext::id())
+        $invoices = DB::table('sal_invoices')->select('sal_invoices.id')
+            ->where('sal_invoices.company_id', CompanyContext::id())
             ->whereIn('sal_invoices.customer_id', $dealerIds);
 
         $builder->where(fn ($w) => $w

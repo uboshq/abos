@@ -68,6 +68,8 @@ return [
         'grand_total' => 'Grand Total',
         'discount' => 'Discount',
         'vat' => 'VAT',
+        'vat_included' => 'VAT (included in price)',
+        'freight' => 'Freight',
         'rounding' => 'Rounding',
         'net_payable' => 'Net Payable Amount',
         'paid' => 'Paid Amount',
@@ -109,4 +111,16 @@ return [
     // Two challan print buttons (owner, 2 Oct 2026)
     'challan_with_amounts' => 'Challan — with amounts',
     'challan_without_amounts' => 'Challan — without amounts',
+    'closing_balance' => 'Closing balance',
+    'this_invoice' => 'This invoice',
+    'previous_short' => 'Previous',
+    'bill_short' => 'Bill',
+    'previous_balance' => 'Previous balance',
+    'received_today' => 'Received today',
+    'received_short' => 'Received',
+    'closing_short' => 'Closing',
+    'owed_by_customer' => 'owed by customer',
+    'paid_by_customer' => 'paid by customer',
+    // ⓘ গেট পাসে মাল বেরোনোর পথে ফ্রি মালের নিজের লাইন (মালিক, ১০ অক্টোবর ২০২৬)
+    'free_line' => ':name — Free',
 ];
