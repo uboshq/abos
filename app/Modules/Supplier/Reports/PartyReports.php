@@ -8,7 +8,7 @@ use App\Core\Engines\Report\ReportColumn;
 use App\Core\Engines\Report\ReportDefinition;
 use App\Core\Engines\Report\ReportEngine;
 use App\Core\Support\DocumentStatus;
-use App\Modules\Purchase\Models\PurchaseBill;
+use App\Modules\Accounts\Models\Voucher;
 use App\Modules\Supplier\Models\Supplier;
 use Illuminate\Database\Query\Expression;
 use Illuminate\Support\Carbon;
@@ -155,13 +155,30 @@ final class PartyReports
             filters: ['date_range', 'branch', 'party_type'],
             query: function (array $f) {
                 /*
-                 * ⛔ বিলের বাকি — বিলের নিজের সংজ্ঞায় ([[PurchaseBill::settledSql()]]) — পুনঃনিরীক্ষা, ৯ অক্টোবর ২০২৬।
+                 * ⛔ বিলের বাকি — বিলের নিজের সংজ্ঞায় — পুনঃনিরীক্ষা, ৯ অক্টোবর ২০২৬।
                  *
                  * ⚠️ আগে কেবল পরিশোধের সারি বাদ যেত: বিলের বিপরীতে ভাউচারে দেওয়া টাকা আর পাকা ফেরত সূচিতে বাকি
                  * থেকে যেত, অথচ সরবরাহকারীর খাতায় সেগুলো দেনা কমিয়েছে — সূচি আর খাতা দুই কথা বলত, আর সূচি
                  * দেখে টাকা দিলে দ্বিতীয়বার দেওয়া হত। ⓘ সংজ্ঞা একটাই, পরিশোধের পর্দা যা দেখে তাই।
                  */
-                [$settled, $settledBindings] = PurchaseBill::settledSql();
+                /*
+                 * ⓘ কাঁচা SQL — সরবরাহকারী মডিউল ক্রয়কে চেনে না (ক্রয়ই সরবরাহকারীকে চেনে; উল্টো ঘোষণা চক্র হত)।
+                 * শর্তগুলো [[PurchaseBill::scopeWithPaid()]]-এর হুবহু: পাকা পরিশোধ, বিলের বিপরীতে নিশ্চিত পরিশোধের ভাউচার,
+                 * পাকা ফেরত — গোটা কোম্পানি ধরে, মোছাগুলো বাদ।
+                 */
+                $posted = "'".implode("','", DocumentStatus::POSTED)."'";
+                $company = (int) $f['company_id'];
+                $settled = "((select COALESCE(SUM(pl.amount), 0) from pur_payment_lines pl
+                        join pur_payments p on p.id = pl.payment_id
+                        where pl.purchase_bill_id = pur_bills.id and p.company_id = {$company}
+                          and p.status in ({$posted}) and p.deleted_at is null)
+                    + (select COALESCE(SUM(v.amount), 0) from vouchers v
+                        where v.company_id = {$company} and v.type = '".Voucher::PAYMENT."'
+                          and v.against_type = 'purchase_bill' and v.against_id = pur_bills.id
+                          and v.status = '".DocumentStatus::CONFIRMED."' and v.deleted_at is null)
+                    + (select COALESCE(SUM(t.total), 0) from pur_returns t
+                        where t.purchase_bill_id = pur_bills.id and t.company_id = {$company}
+                          and t.status in ({$posted}) and t.deleted_at is null))";
 
                 // GREATEST — [[PurchaseBill::dueAmount]]-এর ঋণাত্মক-ক্ল্যাম্প
                 $due = 'GREATEST(pur_bills.total - '.$settled.', 0)';
@@ -184,7 +201,7 @@ final class PartyReports
                      * অবস্থা**, পরিসরের নয় ([[payableList]]-এ একই যুক্তি)।
                      */
                     ->where('pur_bills.trx_date', '<=', $f['to'])
-                    ->whereRaw($due.' > 0', $settledBindings)
+                    ->whereRaw($due.' > 0')
 
                     /*
                      * তারিখ আগে, তারিখহীনরা শেষে — MySQL-এ `NULL` ডিফল্টে
@@ -199,7 +216,7 @@ final class PartyReports
                         self::supplierName(),
                         DB::raw("'".Supplier::drillSourceType()."' as party_type_literal"),
                         'pur_bills.supplier_id as party_id',
-                        DB::raw(DB::getQueryGrammar()->substituteBindingsIntoRawSql($due.' as due_amount', $settledBindings)),
+                        DB::raw($due.' as due_amount'),
                     ]);
             },
             columns: [

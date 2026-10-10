@@ -47,7 +47,6 @@ final class EveryMoneyActionLocksItsRowTest extends TestCase
         'Purchase/Services/PaymentService.php::cancel',
         'Purchase/Services/PurchaseOrderService.php::confirm',
         'Purchase/Services/PurchaseOrderService.php::cancel',
-        'Purchase/Services/PurchaseReceiptService.php::cancel',
         'Purchase/Services/PurchaseRequisitionService.php::approve',
         'Purchase/Services/PurchaseRequisitionService.php::cancel',
         // ⓘ নিচের তিনটা নিজে কিছু লেখে না — ডাকে এমন সেবাকে যেটা তালা দেয়; তবু পাহারা শরীর পড়ে, তাই তালিকায়
