@@ -72,4 +72,5 @@ return [
     'returned_to_draft' => 'Signed-but-stuck sale returned to draft',
     'serial_back_to_stock' => 'Returned piece checked and taken back into stock',
     'free_stock_adjusted' => 'Free goods adjusted',
+    'cost_from_later_layer' => 'Cost drawn from a later-dated layer',
 ];
