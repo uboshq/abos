@@ -33,7 +33,7 @@ final class NotificationAudit
 
         return NotificationAuditLog::query()->create([
             'company_id' => $company,
-            'actor_id' => auth()->id(),
+            'actor_id' => \App\Core\Support\Actor::userId(),
             'action' => $action,
             'target_type' => $target === null ? null : class_basename($target),
             'target_id' => $target?->getKey(),

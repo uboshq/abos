@@ -2,9 +2,6 @@
 
 declare(strict_types=1);
 
-use App\Models\NotificationAuditLog;
-use App\Models\NotificationEvent;
-
 /**
  * ⭐ বিজ্ঞপ্তি ব্যবস্থাপনা — মালিকের স্পেক, ১০ অক্টোবর ২০২৬ (`docs/cloud-tasks/notification-management-spec-bn.md`)।
  *
@@ -68,8 +65,5 @@ return [
         ],
     ],
 
-    'audit_exempt' => [
-        NotificationEvent::class => 'খবর একটা ঘটনার প্রতিধ্বনি — আসল ঘটনা নিজের জায়গায় নিরীক্ষিত, আর খবরের ওপর মানুষের কাজ notification_audit_logs-এ',
-        NotificationAuditLog::class => 'নিজেই নিরীক্ষার খাতা, আর কখনো বদলায় না — এর নিরীক্ষা রাখলে প্রতিটা সারি দুইবার লেখা হত',
-    ],
+    // ⓘ নতুন দুই মডেল (NotificationEvent, NotificationAuditLog) কোরের — তাদের অডিট-ছাড় EveryChangeableRowRemembersWhoChangedItTest-এ
 ];

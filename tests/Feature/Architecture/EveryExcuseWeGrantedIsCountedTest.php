@@ -349,7 +349,16 @@ final class EveryExcuseWeGrantedIsCountedTest extends TestCase
      *   +১  EveryRouteIsGuardedTest::OPEN_TO_THE_WORLD — api.app.crash: লগইনের পর্দাতেও অ্যাপ ভাঙে, তাই টোকেন ছাড়া;
      *       কেবল ভুলের খাতায় লেখে, কিছু ফেরায় না, throttle:10,1 আর প্রতিটা ঘরের আকারের সীমা (সমন্বয়কের অ্যাপ-অডিট)
      */
-    private const CEILING = 343;
+    /*
+     * ── ⚠️ ৩৪৩ → ৩৫২, ১০ অক্টোবর ২০২৬ (বিজ্ঞপ্তি ব্যবস্থাপনা, ধাপ ১ — মালিকের স্পেক) ────────────────────────────────
+     *   +৫  EveryRouteIsGuardedTest (চাবিহীন, লগইন) — notifications.index / unread-count / bulk / read / archive: নিজের
+     *       খবরের পাতা ও কাজ; প্রতিটা নিজের সারিতে সীমিত (NotificationService::mine()), অন্যেরটায় ৪০৩। চাবি চাইলে নিজের
+     *       ঘণ্টা দেখতে প্রত্যেক কর্মীকে আলাদা চাবি দিতে হত — notifications.open আর read-all-এর একই যুক্তি
+     *   +২  EveryRouteIsGuardedTest::TOKEN_SYNC — api.notifications.unread-count / archive: ফোনের একই কাজ, অন্যেরটায় ৪০৪
+     *   +২  EveryChangeableRowRemembersWhoChangedItTest::EXEMPT — NotificationEvent (ঘটনার প্রতিধ্বনি) আর
+     *       NotificationAuditLog (নিজেই নিরীক্ষার খাতা), Notification-এর একই যুক্তি
+     */
+    private const CEILING = 352;
 
     /*
      * ── ⚠️ ২২২ → ২২৪, ২৩ সেপ্টেম্বর ২০২৬ ───────────────────────────

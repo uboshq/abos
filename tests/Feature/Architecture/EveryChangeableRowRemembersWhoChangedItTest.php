@@ -104,6 +104,9 @@ class EveryChangeableRowRemembersWhoChangedItTest extends TestCase
         'App\Models\ExportLog' => 'কে কী রপ্তানি করল — নিজেই একটা লগ',
         'App\Models\ErrorEvent' => 'ভুলের খাতা — ব্যবস্থাটা নিজে লেখে, মানুষ নয়',
         'App\Models\Notification' => 'পড়া/না-পড়া ছাড়া কিছু বদলায় না',
+        // ⭐ বিজ্ঞপ্তি ব্যবস্থাপনা, ধাপ ১ (১০ অক্টোবর ২০২৬)
+        'App\Models\NotificationEvent' => 'খবর একটা ঘটনার প্রতিধ্বনি — আসল ঘটনা নিজের জায়গায় নিরীক্ষিত, খবরের ওপর মানুষের কাজ notification_audit_logs-এ',
+        'App\Models\NotificationAuditLog' => 'নিজেই নিরীক্ষার খাতা, আর কখনো বদলায় না',
         'App\Models\DocumentDelivery' => 'কাগজ বেরোনোর ঘটনা — একবার ঘটে, কেউ বদলায় না (২০ সেপ্টেম্বর ২০২৬)',
 
         // ── ব্যক্তির নিজের সুবিধা, ব্যবসার তথ্য নয় ──────────────────
