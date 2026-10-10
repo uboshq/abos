@@ -58,6 +58,8 @@ final class QuietHoursHoldTheNormalButNeverTheCriticalTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        // ⓘ দিনের বেলা, যদি না পরীক্ষা নিজে ঘড়ি বসায় — মালিকের নীরব সময় (২২–০৮) রাতে চালালে বাকি দাবিগুলোর চিঠিও আটকাত
+        $this->travelTo(now()->setTime(12, 0));
         $this->seed(DemoSeeder::class);
 
         $this->company = Company::query()->where('code', 'TDEPOT')->firstOrFail();

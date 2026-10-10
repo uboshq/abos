@@ -141,8 +141,11 @@ final class TheReportsCountWhatTheBellRangTest extends TestCase
         $fresh = $notify->send($this->clerk, 'approval.rejected', 'নতুন পড়া খবর');
         $notify->markRead($old, $this->clerk);
         $notify->markRead($fresh, $this->clerk);
-        $this->age($old, 120);
-        $this->age($oldUnread, 120);
+        // ⓘ মালিকের ডিফল্ট: ১৮০ দিনে আর্কাইভ, ৩৬৫ দিনে মোছা (১১ অক্টোবর ২০২৬) — মোছা আগে বন্ধ রেখে "বসালে তবেই মোছে" দেখা
+        app(SettingsService::class)->set('notification.retention_days', 0);
+        app(SettingsService::class)->flush();
+        $this->age($old, 200);
+        $this->age($oldUnread, 200);
 
         $job = NotificationJob::query()->create(['company_id' => $this->company->id, 'notification_id' => $old->id, 'event_id' => $old->event_id,
             'user_id' => $this->clerk->id, 'channel' => 'email', 'status' => NotificationJob::SENT, 'attempts' => 1, 'max_attempts' => 5]);
