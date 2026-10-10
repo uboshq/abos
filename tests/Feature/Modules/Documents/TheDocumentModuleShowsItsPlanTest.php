@@ -236,7 +236,8 @@ final class TheDocumentModuleShowsItsPlanTest extends TestCase
         }
 
         sort($onMenu);
-        $planned = DocumentPlan::screenSlugs();
+        // ⓘ "ইনবক্স" আর "প্রিয়" পরিকল্পনায় আছে কিন্তু মেনুতে নেই — আসল না হওয়া পর্যন্ত (fe, ১১ অক্টোবর ২০২৬; documents রিভিউ ⛔৪)
+        $planned = array_values(array_diff(DocumentPlan::screenSlugs(), ['favourite', 'inbox']));
         sort($planned);
 
         $this->assertSame($planned, $onMenu, 'মেনুর সারি আর পরিকল্পনার পর্দা এক তালিকা নয়।');

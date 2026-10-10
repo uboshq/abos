@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Modules\Documents;
 
-use App\Modules\Documents\Services\DocumentCatalog;
+use App\Modules\Documents\Support\DocumentCatalog;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Tests\TestCase;
