@@ -75,7 +75,8 @@ Route::middleware(['auth', 'can:documents.view'])->prefix('documents')->group(fu
         ->middleware('can:documents.upload')->name('scan');
     Route::post('/scan', [DocumentScanController::class, 'store'])
         ->middleware('can:documents.upload')->name('scan.store');
-    Route::post('/ocr/fields', [DocumentScanController::class, 'fields'])->name('ocr.fields');
+    // ⛔ গতির সীমা — প্রতিটা ডাকে গ্রাহক আর সরবরাহকারীর হাজারো সারি পড়া হয়; সীমা ছাড়া সার্ভার বসিয়ে দেওয়ার সহজ পথ (documents রিভিউ ⚠️৮)
+    Route::post('/ocr/fields', [DocumentScanController::class, 'fields'])->middleware('throttle:30,1')->name('ocr.fields');
 
     // ⭐ সপ্তম ধাপ — ছাঁচ আর সম্পাদক (§২), অডিট ট্রেইল (§১৮)
     Route::get('/templates', [DocumentTemplateController::class, 'index'])->name('templates');
