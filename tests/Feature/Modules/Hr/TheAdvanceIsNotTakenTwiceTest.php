@@ -119,6 +119,44 @@ final class TheAdvanceIsNotTakenTwiceTest extends TestCase
         $this->assertSame('0', $this->open(), '⛔ কর্মীর অগ্রিম ঋণাত্মক — একই টাকা দুইবার আদায়');
     }
 
+    /**
+     * ⛔ কিস্তি কমায় net বাড়ে — বাড়া অঙ্কে আবার সই (cloud/people-fixes রিভিউ, ১০ অক্টোবর ২০২৬; [[PayrollService::confirm()]])।
+     * ⓘ সই দেখা হত খসড়ার net-এ: সীমার ঠিক নিচে খসড়া, অগ্রিম ফেরতে net সীমা পার — তবু খাতায় বসত, সই ছাড়া।
+     */
+    public function test_a_net_that_rises_past_the_threshold_asks_for_a_signature_again(): void
+    {
+        $run = app(PayrollService::class)->build('2026-08-01');
+        $draftNet = (string) $run->fresh()->net_total;
+
+        \App\Models\ApprovalFlow::query()->withoutGlobalScopes()->where('company_id', $this->company->id)
+            ->where('module', 'hr')->where('action', 'payroll')->update(['is_active' => false]);
+        $signer = User::factory()->create(['current_company_id' => $this->company->id, 'is_active' => true]);
+        $signer->companies()->attach($this->company->id, ['is_active' => true]);
+        $flow = \App\Models\ApprovalFlow::query()->create(['company_id' => $this->company->id, 'module' => 'hr', 'action' => 'payroll',
+            'document_type' => '', 'threshold_amount' => bcadd($draftNet, '1000', 4), 'is_active' => true]);
+        \App\Models\ApprovalFlowStep::query()->create(['approval_flow_id' => $flow->id, 'level' => 1, 'approver_type' => 'user', 'approver_id' => $signer->id]);
+        $this->app->forgetInstance(ApprovalEngine::class);
+        $this->app->forgetScopedInstances();
+
+        // ⓘ খসড়ার পরে ২,০০০ নগদে ফেরত — খোলা ১,০০০, কিস্তি ২,০০০ থেকে ১,০০০; net ১,০০০ বাড়ে, সীমা ছোঁয়
+        app(PostingEngine::class)->post(sourceType: 'receipt_voucher', sourceId: random_int(1, 9_999_999), trxDate: '2026-09-03', lines: [
+            ['account_id' => $this->cash, 'debit' => '2000'],
+            ['account_id' => StandardChart::find(StandardChart::EMPLOYEE_ADVANCE)->id, 'credit' => '2000', 'party_type' => 'employee', 'party_id' => $this->borrower->id],
+        ], branchId: $this->company->defaultBranch()?->id);
+
+        try {
+            app(PayrollService::class)->confirm($run->fresh());
+            $this->fail('⛔ net সীমা পার হল, তবু সই ছাড়া খাতায় বসল');
+        } catch (\Illuminate\Validation\ValidationException) {
+        }
+
+        $this->assertSame(\App\Core\Support\DocumentStatus::DRAFT, $run->fresh()->status, '⛔ রান নিশ্চিত হয়ে গেল');
+        $this->assertSame(0, LedgerEntry::query()->where('source_type', PayrollRun::SOURCE_TYPE)->where('source_id', $run->id)->count(), '⛔ খাতায় বেতন বসল');
+        $asked = Approval::query()->where('approvable_type', $run->getMorphClass())->where('approvable_id', $run->id)->where('status', Approval::PENDING)->sole();
+        $this->assertSame(0, bccomp((string) $asked->amount, bcadd($draftNet, '1000', 4), 4), '⛔ সই চাওয়া হল পুরনো অঙ্কে');
+        $this->assertSame('1000', $this->deducted($run), 'কিস্তি নতুন খোলায় ঠিক হয়ে খসড়ায় থাকে');
+    }
+
     // ── সহায়ক ─────────────────────────────────────────────────────────
 
     private function deducted(PayrollRun $run): string

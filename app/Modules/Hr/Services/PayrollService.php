@@ -200,7 +200,7 @@ final class PayrollService
             reason: $run->narration,
         );
 
-        return DB::transaction(function () use ($run) {
+        $posted = DB::transaction(function () use ($run) {
             /*
              * ⛔ সারিতে তালা দিয়ে তাজা অবস্থা — ১ অক্টোবর ২০২৬ ([[APayrollWasCancelledAfterItWasConfirmedTest]])।
              * ⓘ পুরনো কপি থেকে "নিশ্চিত" চাপলে বাতিল হয়ে যাওয়া রানও খাতায় বসত।
@@ -208,7 +208,19 @@ final class PayrollService
             $this->lockFresh($run);
             $this->assertDraft($run);
 
+            $signedNet = (string) $run->net_total;
+
             $this->capAdvancesNow($run);
+
+            /*
+             * ⛔ অগ্রিম কমায় হাতে-যাওয়া বেতন বাড়লে সই পুরনো অঙ্কের — cloud/people-fixes-এর রিভিউ, ১০ অক্টোবর ২০২৬। ⓘ সই হয়েছিল
+             * খসড়ার net-এ (উপরে), আর অগ্রিম মেপে কিস্তি কমালে net বাড়ে: ১,৯৯,০০০-এ সই, বসত ২,০২,০০০ — সীমা পার, সই ছাড়া।
+             * ⭐ তাই বাড়লে কেবল ঠিক করা খসড়াটা থাকে (খাতায় কিছু নয়), আর নিশ্চিত আবার নতুন অঙ্কে সই দেখে — লেনদেনের বাইরে, যাতে
+             * নতুন সইয়ের অনুরোধটা ফিরে না যায়।
+             */
+            if (bccomp((string) $run->net_total, $signedNet, 4) > 0) {
+                return null;
+            }
 
             $lines = $this->ledgerLines($run);
 
@@ -225,6 +237,9 @@ final class PayrollService
 
             return $run->fresh();
         });
+
+        // ⓘ net বেড়েছিল — নতুন অঙ্কে আবার, শুরু থেকে (সই না থাকলে উপরের assertClear অনুরোধ বসিয়ে থামে); দ্বিতীয়বার কিস্তি আর কমে না
+        return $posted ?? $this->confirm($run->fresh());
     }
 
     /**
