@@ -6,11 +6,13 @@ namespace Tests\Feature\Modules\Sales;
 
 use App\Core\Engines\Approval\ApprovalEngine;
 use App\Core\Support\CompanyContext;
+use App\Core\Support\Money;
 use App\Models\Approval;
 use App\Models\ApprovalFlow;
 use App\Models\ApprovalFlowStep;
 use App\Models\Company;
 use App\Models\User;
+use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Models\Voucher;
 use App\Modules\Accounts\Services\CashTillService;
 use App\Modules\Accounts\Services\StandardChart;
@@ -19,10 +21,12 @@ use App\Modules\Customer\Models\Customer;
 use App\Modules\Inventory\Models\Product;
 use App\Modules\Inventory\Models\Warehouse;
 use App\Modules\Inventory\Services\StockService;
+use App\Modules\Sales\Models\Collection;
 use App\Modules\Sales\Models\DeliveryChallan;
 use App\Modules\Sales\Models\SalesInvoice;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Testing\TestResponse;
 use Tests\TestCase;
 
 /**
@@ -78,11 +82,17 @@ final class TheCounterDepositWaitedForItsSignatureTest extends TestCase
         $this->flow(VoucherApproval::COUNTER_DEPOSIT);
         $floor = $this->floor();
 
-        $response = $this->sell();
+        $response = $this->sell($this->bankDeposit());
 
         $invoice = SalesInvoice::query()->latest('id')->firstOrFail();
 
-        $response->assertRedirect(route('sales.invoice.show', $invoice->id));
+        /*
+         * ⓘ কাউন্টারেই ফেরে, বার্তাটা পপ-আপে — মালিকের ছবি (২৭ সেপ্টেম্বর ২০২৬,
+         * সন্ধ্যা): অনুমোদনের বার্তা পপ-আপ, পাতার মাথায় বা বোতামের নিচে নয়।
+         * ⚠️ আগে এই দাবি বিলের পাতায় যাওয়া চাইত — মালিকের সিদ্ধান্তের পরে সেটাই ভুল।
+         */
+        $response->assertRedirect(route('sales.direct.create'))
+            ->assertSessionHas('approval_notice', __('sales::message.direct_sale_held', ['invoice' => $invoice->document_no]));
 
         $this->assertSame('draft', $invoice->status, 'বিলটা সই ছাড়াই নিশ্চিত হয়ে গেছে।');
         $this->assertTrue($invoice->isHeldAtCounter());
@@ -112,7 +122,7 @@ final class TheCounterDepositWaitedForItsSignatureTest extends TestCase
     public function test_a_held_sale_can_neither_be_printed_nor_edited(): void
     {
         $this->flow(VoucherApproval::COUNTER_DEPOSIT);
-        $this->sell();
+        $this->sell($this->bankDeposit());
 
         $invoice = SalesInvoice::query()->latest('id')->firstOrFail();
         $show = route('sales.invoice.show', $invoice->id);
@@ -140,7 +150,7 @@ final class TheCounterDepositWaitedForItsSignatureTest extends TestCase
     {
         $this->flow(VoucherApproval::COUNTER_DEPOSIT);
         $floor = $this->floor();
-        $this->sell();
+        $this->sell($this->bankDeposit());
 
         $invoice = SalesInvoice::query()->latest('id')->firstOrFail();
         $show = route('sales.invoice.show', $invoice->id);
@@ -196,6 +206,41 @@ final class TheCounterDepositWaitedForItsSignatureTest extends TestCase
     }
 
     /**
+     * ⛔ ছক বসানো থাকলেও নিজের বাক্সে নগদ বিক্রয় আটকায় না — সোজা রসিদে।
+     *
+     * ── ⓘ মালিকের নিয়ম, ২১ সেপ্টেম্বর ২০২৬ ─────────────────────────────
+     * *"bank mfs e gele approval e asbe, cash e sudu tar nijer cash accounts e
+     * taka nite parbe tai app er dorkar nai"* ([[VoucherApproval::stopping()]]
+     * `landsInCash`)।
+     *
+     * ⚠️ কী ভাঙা ছিল: কাউন্টারের আগাম প্রশ্নটা ([[DirectSaleService::counterDepositNeedsApproval()]])
+     * কেবল ছক দেখত — টাকা কোথায় নামছে দেখত না। ⛔ ফল একটা মরা খসড়া: চালান-বিল
+     * আটকে থাকত, মাল বেরোত না, অথচ সইয়ের কোনো অনুরোধই যেত না, আর "শেষ
+     * করুন" সই ছাড়াই পার হয়ে যেত। ⓘ এই ফাইলের প্রথম তিন দাবি ঠিক এই পথে
+     * লাল হয়ে ধরিয়ে দিল — ওরা নগদে সই চাইছিল।
+     */
+    public function test_cash_into_the_own_till_is_not_held_even_with_a_counter_rule(): void
+    {
+        $this->flow(VoucherApproval::COUNTER_DEPOSIT);
+        $floor = $this->floor();
+        $approvals = Approval::query()->count();
+
+        $this->sell()->assertSessionHasNoErrors()->assertRedirectContains('/print/invoice/');
+
+        $invoice = SalesInvoice::query()->latest('id')->firstOrFail();
+
+        $this->assertSame('confirmed', $invoice->status, '⛔ নিজের বাক্সে নগদ, তবু বিক্রয় খসড়ায় আটকে গেছে।');
+        $this->assertFalse($invoice->isHeldAtCounter());
+        $this->assertSame(bcsub($floor, '10', 4), $this->floor(), '⛔ নগদ বিক্রয়ে মাল বেরোয়নি।');
+        $this->assertSame($approvals, Approval::query()->count(), '⛔ নিজের বাক্সের নগদে সই চাওয়া হয়েছে।');
+
+        $voucher = Voucher::query()->where('origin', Voucher::ORIGIN_COUNTER)
+            ->where('against_id', $invoice->id)->firstOrFail();
+
+        $this->assertTrue($voucher->isPosted(), '⛔ নগদ জমার ভাউচার খাতায় বসেনি।');
+    }
+
+    /**
      * ⭐ সই না লাগলেও ডিপোজিটটা রসিদ ভাউচার — আর ভাউচার তালিকার নিজের ট্যাবে।
      *
      * ── মালিকের সিদ্ধান্ত, ১৯ সেপ্টেম্বর ২০২৬ ──────────────────────────
@@ -218,7 +263,7 @@ final class TheCounterDepositWaitedForItsSignatureTest extends TestCase
 
         $this->assertTrue($voucher->isPosted(), 'সই না লাগা ডিপোজিট খাতায় বসেনি।');
         $this->assertSame('0.0000', $invoice->fresh()->dueAmount());
-        $this->assertSame(0, \App\Modules\Sales\Models\Collection::query()
+        $this->assertSame(0, Collection::query()
             ->where('customer_id', $this->customer->id)->where('trx_date', now()->toDateString())->count(),
             'কাউন্টার আবার আদায়ের কাগজ বানাচ্ছে।');
 
@@ -249,7 +294,7 @@ final class TheCounterDepositWaitedForItsSignatureTest extends TestCase
             'lines' => [['product_id' => $this->product->id, 'qty' => '10', 'rate' => '100']],
         ])->assertSessionHas('saved', fn (string $said) => str_contains(
             $said,
-            __('sales::message.direct_extra_kept', ['amount' => \App\Core\Support\Money::format('500')]),
+            __('sales::message.direct_extra_kept', ['amount' => Money::format('500')]),
         ));
 
         $this->assertSame(0, bccomp((string) $this->customer->fresh()->outstanding(), bcsub($before, '500', 4), 4),
@@ -280,15 +325,54 @@ final class TheCounterDepositWaitedForItsSignatureTest extends TestCase
             'হাতে লেখা রসিদের নিয়মে কাউন্টারের বিক্রয় আটকে গেছে।');
     }
 
-    private function sell(): \Illuminate\Testing\TestResponse
+    /**
+     * ১০ × ১০০ = ১,০০০ টাকার বিক্রয়, আর ১,০০০ টাকা জমা।
+     *
+     * ⓘ জমা না বললে পুরনো একক ঘরে নগদ — প্রধান টিলে, অর্থাৎ নিজের বাক্সে।
+     *
+     * @param  array<string, mixed>|null  $deposit
+     */
+    private function sell(?array $deposit = null): TestResponse
     {
         return $this->post(route('sales.direct.store'), [
             'own_transport' => '1', // ⓘ ধাপ ৫ — নিশ্চিতে পরিবহন লাগে ([[TransportRule]]); এই দাবি অন্য কিছু মাপে
             'customer_id' => $this->customer->id,
             'warehouse_id' => $this->warehouse->id,
-            'deposit' => '1000',
+            ...($deposit ?? ['deposit' => '1000']),
             'lines' => [['product_id' => $this->product->id, 'qty' => '10', 'rate' => '100']],
         ]);
+    }
+
+    /**
+     * ব্যাংকে ১,০০০ টাকার জমা — যেটা সত্যিই সই চায়।
+     *
+     * ⚠️ নগদ নয়, ইচ্ছাকৃত: ২১ সেপ্টেম্বর ২০২৬ থেকে নিজের বাক্সে নগদ রসিদ সই
+     * চায় না ([[VoucherApproval::stopping()]] `landsInCash`)। ⛔ এই ফাইলটা ঐ
+     * নিয়মের আগে লেখা, তাই নগদ দিয়েই সই চাইত — আর নিয়মের পর সেটা আর কখনো
+     * আসত না। ⓘ ডেমোতে ব্যাংকের পাতা-খাত না থাকলে একটা বৈধ নগদ খাত নকল করে
+     * কেবল ধরন বদলানো ([[TheParkedBillWaitsAtTheSameCounterTest]]-এর মতো)।
+     *
+     * @return array<string, mixed>
+     */
+    private function bankDeposit(): array
+    {
+        $bank = Account::query()->ofMoneyKind(Account::BANK)->postable()->active()->orderBy('id')->first();
+
+        if ($bank === null) {
+            $sibling = Account::query()->ofMoneyKind(Account::CASH)->postable()->orderBy('id')->firstOrFail();
+
+            $bank = $sibling->replicate(['public_id']);
+            $bank->forceFill([
+                'code' => 'BANK-SIGN',
+                'name_en' => 'BANK-SIGN',
+                'name_bn' => 'BANK-SIGN',
+                'money_kind' => Account::BANK,
+            ])->save();
+        }
+
+        $this->assertTrue($bank->fresh()->isBank(), 'দৃশ্যটাই বানানো যায়নি — খাতটা ব্যাংক নয়।');
+
+        return ['deposits' => [['amount' => '1000', 'account_id' => $bank->id, 'reference' => 'TRX-SIGN']]];
     }
 
     private function flow(string $action): void
