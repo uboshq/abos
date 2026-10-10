@@ -4,10 +4,14 @@ declare(strict_types=1);
 
 namespace App\Core\Engines\Approval;
 
+use App\Core\Events\ApprovalDecided;
+use App\Core\Module\ModuleRegistry;
 use App\Core\Services\NotificationService;
 use App\Core\Services\PermissionSyncer;
 use App\Core\Services\SettingsService;
+use App\Core\Support\Actor;
 use App\Core\Support\CompanyContext;
+use App\Core\Support\PlainNumber;
 use App\Models\Approval;
 use App\Models\ApprovalDecision;
 use App\Models\ApprovalFlow;
@@ -139,8 +143,8 @@ final class ApprovalEngine
          * ওয়েব, বা দুইবার চাপ — দুইজনেই "অপেক্ষমাণ নেই" দেখে দুইটা অনুরোধ বানাত।
          * ⓘ তালাটা কাগজে, অনুমোদনে নয় — যে সারি এখনো নেই তাতে তালা দেওয়া যায় না।
          */
-        $userId ??= $customerId === null ? \App\Core\Support\Actor::userId() : null;
-        $customerId ??= $userId === null ? \App\Core\Support\Actor::portalCustomerId() : null;
+        $userId ??= $customerId === null ? Actor::userId() : null;
+        $customerId ??= $userId === null ? Actor::portalCustomerId() : null;
 
         return DB::transaction(function () use ($document, $flow, $module, $action, $amount, $payload, $reason, $userId, $customerId, $stateHash) {
             $document->newQueryWithoutScopes()->whereKey($document->getKey())->lockForUpdate()->first();
@@ -316,7 +320,7 @@ final class ApprovalEngine
              * ([[ApprovalDecided]])।
              */
             $decided = $approval->fresh();
-            DB::afterCommit(fn () => event(\App\Core\Events\ApprovalDecided::from($decided)));
+            DB::afterCommit(fn () => event(ApprovalDecided::from($decided)));
 
             return $approval->fresh();
         });
@@ -484,7 +488,7 @@ final class ApprovalEngine
              * ⚠️ পুরনো শ্রোতারা (বিক্রির শেষ সই, চালান) কেবল `approved` শোনে — তাদের কিছু বদলায় না।
              */
             $decided = $approval->fresh();
-            DB::afterCommit(fn () => event(\App\Core\Events\ApprovalDecided::from($decided)));
+            DB::afterCommit(fn () => event(ApprovalDecided::from($decided)));
 
             return $approval->fresh();
         });
@@ -597,7 +601,7 @@ final class ApprovalEngine
          * ⛔ আগে `core.module.*` আর `core.approval.action.*` খোঁজা হত, যা কখনো লেখাই হয়নি — বিজ্ঞপ্তিতে কাঁচা ইংরেজি যেত
          * ("sales · delivery_order"), অথচ মালিক কেবল বাংলা পড়েন (৮ অক্টোবর ২০২৬)। মডিউল না চিনলে আগের মতো।
          */
-        $definition = app(\App\Core\Module\ModuleRegistry::class)->get((string) $approval->module);
+        $definition = app(ModuleRegistry::class)->get((string) $approval->module);
         if ($definition !== null) {
             $key = $definition->approvals[(string) $approval->action] ?? null;
             $action = $key === null ? null : __($key);
@@ -1194,7 +1198,12 @@ final class ApprovalEngine
      */
     private function selfLimit(): string
     {
-        return $this->selfLimit ??= (string) (app(SettingsService::class)->get('approval.self_limit') ?? '0');
+        /*
+         * ⛔ আগে বসে যাওয়া "10,000"-এর মতো লেখাও সংখ্যা হয় — নইলে `bccomp()` ভেঙে প্রতিটা অনুমোদন থামত।
+         * ⓘ সংরক্ষণে এখন যাচাই হয় ([[ControlPanelController]]); এটা লাইভে আগেই জমা মানের জন্য
+         * (পুনঃনিরীক্ষা, ৯ অক্টোবর ২০২৬)। পড়া না গেলে ০ — অর্থাৎ নিজের সীমা বন্ধ, কড়া দিকটা।
+         */
+        return $this->selfLimit ??= PlainNumber::from(app(SettingsService::class)->get('approval.self_limit') ?? '0') ?? '0';
     }
 
     /**

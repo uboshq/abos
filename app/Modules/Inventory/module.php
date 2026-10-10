@@ -550,7 +550,12 @@ return [
             /* ⓘ কোন কার্টন কোন লটের, সেটা গুদামের লোকই জানেন */
             'inventory.stock.lot',
 
-            'inventory.stock.opening',
+            /*
+             * ⛔ খোলা মজুদ (`inventory.stock.opening`) নয় — পুরো-ERP অডিট, ৬ অক্টোবর ২০২৬, মজুদ M12a
+             * ([[TheWarehouseTemplateNoLongerOpensTheBooksTest]])। ⓘ খোলা মজুদ খাতায় টাকা বসায় (মজুদ খাতে ডেবিট, খোলা হিসাবে
+             * ক্রেডিট) — শুরুর হিসাবের সিদ্ধান্ত মালিক বা হিসাবের, গুদামের লোকের নয়। ⓘ ছাঁচ চলমান ভূমিকা বড় বা ছোট করে না
+             * ([[role-templates-never-widen-an-existing-role]]) — আজ যাঁর আছে তাঁর থেকে যায়, কেবল নতুন কোম্পানির ছাঁচে আর নেই।
+             */
             'inventory.transfer.view', 'inventory.transfer.create', 'inventory.transfer.receive',
 
             /*

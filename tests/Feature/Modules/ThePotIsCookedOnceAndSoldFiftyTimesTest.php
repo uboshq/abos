@@ -63,6 +63,12 @@ class ThePotIsCookedOnceAndSoldFiftyTimesTest extends TestCase
         CompanyContext::set($company->id, $company->defaultBranch()?->id);
         $this->actingAs($user);
 
+        /*
+         * ⓘ রান্নাঘরের সুইচ খোলা — ২২ সেপ্টেম্বর থেকে (3ad894e2) `restaurant.enabled` ডিফল্টে বন্ধ, আর বন্ধ থাকলে পর্দাগুলো ৪০৪।
+         * এই দাবি পর্দার পথে চলে, তাই সুইচ না খুললে কোনো দাবি না দেখেই লাল থাকত (fe, ১০ অক্টোবর ২০২৬; মালিকের "সব বাগ")।
+         */
+        app(\App\Core\Services\SettingsService::class)->set('restaurant.enabled', true);
+
         $this->warehouse = Warehouse::query()->orderBy('id')->firstOrFail();
 
         $this->rice = $this->product('RICE', 'Rice');

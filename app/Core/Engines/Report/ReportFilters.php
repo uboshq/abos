@@ -62,11 +62,18 @@ final class ReportFilters
             $source = $this->for($key);
             $raw = $filters[$key] ?? null;
 
-            if ($source === null || $raw === null || $raw === '' || ! is_scalar($raw)) {
+            if ($source === null || $raw === null || $raw === '') {
                 continue;
             }
 
-            $id = $source->resolve((string) $raw);
+            /*
+             * ⛔ অ্যারে ফেরত, নীরবে ফেলা নয় — পুনঃনিরীক্ষা, ৯ অক্টোবর ২০২৬।
+             *
+             * ⚠️ আগে `warehouse_id[]=7` এখানে চুপচাপ পার হত, আর রিপোর্টের কোয়েরি
+             * `(int) $f['warehouse_id']` লিখে অ্যারেটাকে **১** বানাত — অর্থাৎ যাচাই ছাড়াই
+             * গুদাম ১-এর মজুদ, যেটা হয়তো অন্য দোকানের। ⓘ একটা ঘরে একটাই মান।
+             */
+            $id = is_scalar($raw) ? $source->resolve((string) $raw) : null;
 
             if ($id === null) {
                 throw ValidationException::withMessages([

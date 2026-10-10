@@ -772,6 +772,19 @@ return [
             'default' => true,
             'group' => 'entry',
         ],
+        [
+            /*
+             * ⭐ চাহিদা যিনি করেন তিনি নিজে মঞ্জুর করেন না — পুরো-ERP অডিট, ১০ অক্টোবর ২০২৬, ক্রয় ⚠️২ (fe: সুইচ, ডিফল্টে বন্ধ)।
+             * ⓘ বন্ধে আজকের আচরণ অবিকল — ছোট ডিপোতে একজনই চান আর মঞ্জুর করেন। মালিক একা করলে আটকায় না, ভাউচারের নিয়মের মতো
+             * ([[PurchaseRequisitionService::requesterMayNotApprove()]])।
+             */
+            'key' => 'purchase.requisition_maker_checker',
+            'super_admin_only' => true,
+            'label' => 'purchase::settings.requisition_maker_checker',
+            'type' => 'boolean',
+            'default' => false,
+            'group' => 'entry',
+        ],
     ],
 
     /*

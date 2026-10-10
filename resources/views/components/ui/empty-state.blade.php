@@ -17,6 +17,16 @@
      * `inbox` — খালি ট্রে, আর সেটাই "কিছু আসেনি"-র চেনা ছবি।
      */
     'icon' => 'inbox',
+
+    /*
+     * ⭐ দুই লাইনের সাহায্য আর পরের কাজের বোতাম — পাতা সাজানোর পরিকল্পনা ধাপ ১, ১০ অক্টোবর ২০২৬: *"খালি অবস্থা:
+     * 'এখনো নেই' + পরের কাজের বোতাম আর দুই লাইনের সাহায্য"*। ⓘ বোতামটা slot-এও দেওয়া যায় (আগের মতো); `action`
+     * দিলে [[x-ui.button]] প্রধান রঙে — একটা পরের ধাপ, স্পষ্ট।
+     *
+     * @var array{label: string, url: string}|null
+     */
+    'hint' => null,
+    'action' => null,
 ])
 
 {{--
@@ -35,8 +45,15 @@
         {{ $message ?? __('core.empty.nothing_here') }}
     </p>
 
-    @if (! $slot->isEmpty())
+    @if ($hint)
+        <p data-empty-hint class="mt-1 max-w-md text-xs text-(--color-ink-muted)">{{ $hint }}</p>
+    @endif
+
+    @if (! $slot->isEmpty() || $action)
         <div class="mt-4 flex flex-wrap items-center justify-center gap-2">
+            @if ($action)
+                <x-ui.button tone="primary" :href="$action['url']" data-empty-action>{{ $action['label'] }}</x-ui.button>
+            @endif
             {{ $slot }}
         </div>
     @endif

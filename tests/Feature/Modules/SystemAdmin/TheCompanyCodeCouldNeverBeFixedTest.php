@@ -148,7 +148,13 @@ final class TheCompanyCodeCouldNeverBeFixedTest extends TestCase
             'is_active' => true,
         ]);
 
-        $this->admin->companies()->syncWithoutDetaching([$company->id]);
+        /*
+         * ⓘ নতুন কোম্পানিতে ঢোকার আসল দরজা দিয়ে — সদস্যপদ আর ঐ কোম্পানিতে সুপার অ্যাডমিনের রোল ([[CompanyProvisioner::grantAccess()]],
+         * কোম্পানি বানানোর পর্দা ঠিক এটাই করে)। ⛔ আগে কেবল সদস্যপদ বসানো হত; ৩০ সেপ্টেম্বর থেকে কোম্পানি বদলাতে **ঐ** কোম্পানির
+         * চাবি লাগে ([[CompanyController::mustBeYourCompany()]]), তাই অর্ধেক-বানানো মালিক ৪০৪ পেতেন আর দাবি দুটো কোডের নিয়ম
+         * না দেখে দরজায় আটকাত (১০ অক্টোবর ২০২৬)।
+         */
+        app(\App\Core\Services\CompanyProvisioner::class)->grantAccess($company, $this->admin);
 
         return $company;
     }

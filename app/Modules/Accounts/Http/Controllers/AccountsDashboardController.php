@@ -7,7 +7,6 @@ namespace App\Modules\Accounts\Http\Controllers;
 use App\Core\Services\MenuBuilder;
 use App\Core\Support\ViewedBranch;
 use App\Http\Controllers\Controller;
-use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Models\CashTill;
 use App\Modules\Accounts\Models\MoneyTransfer;
 use App\Modules\Accounts\Models\Voucher;
@@ -59,10 +58,8 @@ class AccountsDashboardController extends Controller implements HasMiddleware
             // হাতে নগদ — সব কাউন্টার মিলে
             'cashInHand' => $this->facts->sumOf($tills->pluck('account_id')->all()),
 
-            // ⛔ কেবল ব্যাংক — MFS নয়
-            'bankBalance' => $this->facts->sumOf(
-                Account::query()->ofMoneyKind(Account::BANK)->pluck('id')->all()
-            ),
+            // ⛔ কেবল ব্যাংক — MFS নয়; ⭐ দেখার শাখায় (পুনঃনিরীক্ষা, ৯ অক্টোবর ২০২৬)
+            'bankBalance' => $this->facts->bankBalance(),
 
             'receivable' => $this->facts->receivable(),
             'payable' => $this->facts->payable(),

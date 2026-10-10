@@ -143,10 +143,7 @@
                             {{ __('inventory::field.qc_paper') }}
                         </label>
 
-                        <input id="paper" type="file" name="paper"
-                               class="w-full text-sm file:me-2 file:rounded-(--radius-field)
-                                      file:border file:border-(--color-border)
-                                      file:bg-(--color-surface-app) file:px-3 file:py-1.5 file:text-sm">
+                        <x-ui.file-input id="paper" name="paper" />
 
                         <span class="mt-1 block text-2xs text-(--color-ink-muted)">
                             {{ __('inventory::field.qc_paper_hint') }}

@@ -16,6 +16,20 @@
     $filters = $result->filters;
 
     /*
+        ⭐ কোন সময়ের সংখ্যা — শিরোনামের পাশে, সবসময় চোখে (পাতা-ঝাড়ু ধাপ ০, ১০ অক্টোবর ২০২৬)। ⛔ তারিখের ঘর "+ ছাঁকনি"-র
+        ভেতরে লুকোনো, আর ডিফল্ট এই মাস: আগের মাসের তথ্য থাকলেও রিপোর্ট খালি দেখাত, আর কোন সময়ের তা কোথাও লেখা ছিল না।
+    */
+    $period = null;
+    if ($report->hasFilter('date_range') && ! empty($filters['to'])) {
+        $toText = \App\Core\Support\DateFormat::format($filters['to']);
+        $period = match (true) {
+            $report->isAsOfDate() => __('accounts::field.as_on').': '.$toText,
+            ! empty($filters['all_time']) => __('core.report.all_time').' – '.$toText,
+            default => \App\Core\Support\DateFormat::format($filters['from']).' – '.$toText,
+        };
+    }
+
+    /*
         ⛔ শাখায় আটকানো মানুষের তালিকায় কেবল নাগালের শাখা — ইঞ্জিন বাকিগুলো
         ফেরায় (অডিট ২৭ সেপ্টেম্বর, §৩), তাই দেখানো মানে এমন একটা পছন্দ দেওয়া
         যেটা বাছলেই লাল। ⓘ তালিকাটা ইঞ্জিনের নিজের উত্তর (`branch_ids`) থেকে,
@@ -182,7 +196,7 @@
             {{-- ⭐ ছাপা গোটা পরিসর — পর্দায় এক পাতার বেশি সারি থাকলে "ছাপুন" `?print=1`-এ যায়, যেখানে ইঞ্জিন সব সারি আঁকে
                  আর পাতাটা নিজেই ছাপা শুরু করে (মালিক, ৩ অক্টোবর ২০২৬: কাস্টমার লেজার পাতা ধরে ধরে ছাপতে হত;
                  [[ReportEngine::wholeDocumentWanted()]])। ⓘ পুরো পরিসর এক পাতায় থাকলে আগের মতো পর্দাটাই ছাপে। --}}
-            <x-ui.toolbar :title="__($report->title)" :count="trans_choice('accounts::message.row_count', $result->totalRows, ['count' => $result->totalRows])"
+            <x-ui.toolbar :title="__($report->title)" :count="trans_choice('accounts::message.row_count', $result->totalRows, ['count' => $result->totalRows]).($period !== null ? ' · '.$period : '')"
                           :search="$report->searchableColumns() !== []"
                           :print-href="$result->totalRows > $result->perPage ? request()->fullUrlWithQuery(['print' => 1, 'page' => null]) : null"
                           :columns="$menuColumns">

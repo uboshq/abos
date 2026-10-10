@@ -120,7 +120,8 @@
     </section>
 
     @can('finance.rental.create')
-        @if ($contract->isActive())
+        {{-- ⭐ শেষ হওয়া চুক্তিতেও বসানো অথচ না-দেওয়া মাসগুলো দেওয়া যায় (পুরো-ERP পুনঃঅডিট, ৯ অক্টোবর ২০২৬) --}}
+        @if ($contract->isActive() || $owed->isNotEmpty())
             <div class="mb-4 grid gap-4 lg:grid-cols-2">
                 {{-- এক মাসের ভাড়া --}}
                 <section data-boxed
@@ -164,6 +165,7 @@
                 </section>
 
                 {{-- শর্ত বদল ও জামানতে টাকা --}}
+                @if ($contract->isActive())
                 <section data-boxed
                          class="rounded-(--radius-card) border border-(--color-border)
                                 bg-(--color-surface-card) p-4">
@@ -238,8 +240,11 @@
                         </div>
                     </form>
                 </section>
+                @endif
             </div>
+        @endif
 
+        @if ($contract->isActive())
             {{-- চুক্তি শেষ --}}
             <section data-boxed
                      class="mb-4 rounded-(--radius-card) border border-(--color-border)

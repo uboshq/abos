@@ -23,6 +23,7 @@ return [
     'password_set' => 'Password set',
     'password_reset' => 'Password reset by the user',
     'roles_changed' => 'Roles changed',
+    'role_permissions_changed' => 'Role permissions changed',
     // Kept separate from roles_changed on purpose: an audit starts with
     // "who holds the biggest key, and since when". Buried under the same
     // label as ten other role edits, that answer takes opening every row.
@@ -65,8 +66,12 @@ return [
     'opening_removed' => 'Opening stock row removed',
     'three_hands_override' => 'Same person on a payment: proposed/signed/paid',
     'own_claim_signed' => 'Own claim signed by the same person',
+    'own_advice_accepted' => 'Own payment advice accepted by the same person',
     'maker_checker_override' => 'Own voucher posted by its writer',
     'adjusting_reversed' => 'Adjusting journal reversed on its date',
     'auto_finish_refused' => 'Sale not finished after signing',
     'returned_to_draft' => 'Signed-but-stuck sale returned to draft',
+    'serial_back_to_stock' => 'Returned piece checked and taken back into stock',
+    'free_stock_adjusted' => 'Free goods adjusted',
+    'cost_from_later_layer' => 'Cost drawn from a later-dated layer',
 ];

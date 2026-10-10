@@ -147,7 +147,18 @@ class ProductController extends Controller implements HasMiddleware
 
     public function update(ProductRequest $request, Product $product): RedirectResponse
     {
-        $this->products->update($product, $request->validated());
+        $data = $request->validated();
+
+        /*
+         * ⛔ সক্রিয়-নিষ্ক্রিয় বদলানো মোছার চাবিতে — সম্পাদনার পথেও (পুরো-ERP অডিট, মজুদ ছ৪; [[ProductStatusNeedsTheDeleteKeyTest]])।
+         * ⓘ নিষ্ক্রিয় করা ([[destroy()]]) আর আবার চালু ([[activate()]]) মোছার চাবি চায়, অথচ সম্পাদনার ফর্ম `is_active` নিত যেকোনো
+         * সম্পাদকের কাছ থেকে — দরজাটা পাশ দিয়ে খোলা। ফর্ম প্রতিবার ঘরটা পাঠায়, তাই কেবল সত্যিই বদলালে চাবি দেখা হয়।
+         */
+        if (array_key_exists('is_active', $data) && $data['is_active'] !== null && (bool) $data['is_active'] !== (bool) $product->is_active) {
+            $this->authorize('delete', $product);
+        }
+
+        $this->products->update($product, $data);
 
         app(CustomFieldService::class)->save($product, $request->input('custom', []));
 

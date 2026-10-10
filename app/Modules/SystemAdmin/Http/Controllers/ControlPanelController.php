@@ -9,6 +9,7 @@ use App\Core\Services\MenuBuilder;
 use App\Core\Services\MenuSwitches;
 use App\Core\Services\SettingOptions;
 use App\Core\Services\SettingsService;
+use App\Core\Support\PlainNumber;
 use App\Http\Controllers\Controller;
 use App\Modules\SystemAdmin\Support\ControlPanelTabs;
 use Illuminate\Http\RedirectResponse;
@@ -106,7 +107,47 @@ class ControlPanelController extends Controller implements HasMiddleware
              * উপায়ই থাকত না।
              */
             'switchState' => $this->switchState(),
+
+            // ⭐ কে কবে কোন সুইচ বদলালেন — সিস্টেম পর্দার নকশা §১, ১০ অক্টোবর ২০২৬ ([[history()]])
+            'history' => $this->history(),
         ]);
+    }
+
+    /**
+     * ⭐ বদলের ইতিহাস — সিস্টেম পর্দার নকশা §১, ১০ অক্টোবর ২০২৬: *"বদলের ইতিহাস (কে কবে কোন সুইচ বদলালেন)"*।
+     *
+     * ⓘ নতুন কিছু লেখা হয় না: প্রতিটা সেটিং-বদল আগেই নিরীক্ষায় বসে ([[IsAudited]] → `audit_trails` + ঘরের বদল) — এখানে
+     * কেবল এই কোম্পানির শেষ বিশটা পড়া। ⓘ চাবি সেটিং-সারি থেকে (ডিফল্টে ফেরালে সারি নেই — তখন তৈরির সময়ের `key`), নাম
+     * ঘোষণা থেকে, পর্দার ভাষায়।
+     *
+     * @return list<array{when: \Illuminate\Support\Carbon, who: ?string, label: string, from: ?string, to: ?string}>
+     */
+    private function history(): array
+    {
+        $definitions = $this->settings->definitions();
+
+        $trails = \App\Models\AuditTrail::query()
+            ->where('auditable_type', \App\Models\Setting::class)
+            ->with(['changes', 'user'])
+            ->latest('id')
+            ->limit(20)
+            ->get();
+
+        $keys = \App\Models\Setting::query()->whereIn('id', $trails->pluck('auditable_id'))->pluck('key', 'id');
+
+        return $trails->map(function (\App\Models\AuditTrail $trail) use ($definitions, $keys): array {
+            $value = $trail->changes->firstWhere('field', 'value');
+            $key = (string) ($keys[$trail->auditable_id] ?? $trail->changes->firstWhere('field', 'key')?->new_value ?? '');
+            $label = isset($definitions[$key]['label']) ? __((string) $definitions[$key]['label']) : $key;
+
+            return [
+                'when' => $trail->created_at,
+                'who' => $trail->user?->name,
+                'label' => $label !== '' ? $label : '—',
+                'from' => $value?->old_value,
+                'to' => $value?->new_value,
+            ];
+        })->all();
     }
 
     /**
@@ -269,6 +310,31 @@ class ControlPanelController extends Controller implements HasMiddleware
         $refused = [];
         $superAdminOnly = [];
 
+        /*
+         * ⛔ সংখ্যার ঘর আগে যাচাই, কিছু বসানোর আগেই — পুনঃনিরীক্ষা, ৯ অক্টোবর ২০২৬।
+         *
+         * ⚠️ আগে যা লেখা হত তাই বসত: "10,000" টেক্সট হয়ে জমত, আর অনুমোদনের ইঞ্জিনের
+         * `bccomp()` ঐ লেখায় ভেঙে প্রতিটা অনুমোদন থামিয়ে দিত। ⭐ এখন কমা আর বাংলা অঙ্ক
+         * সরিয়ে সংখ্যা বসে ([[PlainNumber]]); সংখ্যাই না হলে কিছুই বসে না, আর পাতায় ঘরের
+         * নাম লেখা আসে — অর্ধেক বসানো ফর্মের চেয়ে পুরোটা ফেরত ভালো।
+         */
+        $notNumbers = [];
+
+        foreach ($this->settings->definitions() as $key => $definition) {
+            $raw = $submitted[$key] ?? null;
+
+            if (isset($scope[$key]) && ($definition['type'] ?? null) === 'number'
+                && $raw !== null && trim((string) (is_scalar($raw) ? $raw : 'x')) !== '' && PlainNumber::from($raw) === null) {
+                $notNumbers[] = __($definition['label']);
+            }
+        }
+
+        if ($notNumbers !== []) {
+            return back()->withInput()->withErrors(['settings' => __('system_admin::validation.setting_not_a_number', [
+                'settings' => implode('; ', $notNumbers),
+            ])]);
+        }
+
         $changed += $this->saveMenuSwitches($scope, $submitted);
 
         foreach ($this->settings->definitions() as $key => $definition) {
@@ -294,6 +360,8 @@ class ControlPanelController extends Controller implements HasMiddleware
                 // অনুপস্থিতিই "বন্ধ"
                 'boolean' => filter_var($raw, FILTER_VALIDATE_BOOLEAN),
                 'integer' => $raw === null || $raw === '' ? null : (int) $raw,
+                // ⭐ "১০,০০০" → "10000"; খালি মানে "যা ছিল তাই থাক" ([[SettingsController]]-এর মতো)
+                'number' => PlainNumber::from($raw),
 
                 /*
                  * ⛔ বাছাইয়ের ঘরে তালিকার বাইরের কিছু নয় — ২৯ সেপ্টেম্বর ২০২৬।
