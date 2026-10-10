@@ -98,6 +98,27 @@ final class TheFreeGoodsLeaveOnTheirOwnGateLineTest extends TestCase
         $this->assertSame(['2', '1', '3'], [$rows[0]['qty'], $rows[0]['free'], $rows[0]['total_qty']]);
     }
 
+    /**
+     * ⛔ কার্টনে বেচা সারির ফ্রি পিসে, কার্টনের ভগ্নাংশে নয় (১১ অক্টোবর ২০২৬, PR #17 রিভিউ ⚠️৬)।
+     *
+     * ⓘ ১২-পিসের কার্টনে ১ পিস ফ্রি আগে ছাপত "০.০৮৩৩ Ctn — ফ্রি" — গেটের লোক গুনতে পারতেন না। এখন ফ্রি লাইন ফ্রি-র নিজের ঘর
+     * (পিসে, যেমন আগে ফ্রি-র কলামে) আর পিসের একক নেয়।
+     */
+    public function test_a_free_piece_on_a_carton_line_reads_as_one_piece(): void
+    {
+        $challan = (new DeliveryChallan)->forceFill(['issue_at_gate' => true]);
+        $rows = [['name' => 'Biscuit', 'code' => '', 'qty' => '1', 'unit' => 'Ctn', 'free' => '1', 'free_unit' => 'Pcs',
+            'total_qty' => '1.0833', 'rate' => '1,200.00', 'amount' => '1,200.00']];
+
+        $out = (new \ReflectionMethod(\App\Modules\Sales\Http\Controllers\SalesPrintController::class, 'freeOnItsOwnLine'))
+            ->invoke(app(\App\Modules\Sales\Http\Controllers\SalesPrintController::class), $challan, $rows);
+
+        $this->assertCount(2, $out);
+        $this->assertSame(['1', 'Ctn', '1'], [$out[0]['qty'], $out[0]['unit'], $out[0]['total_qty']], 'বিক্রির লাইন কার্টনেই');
+        $this->assertSame(['1', 'Pcs', '1'], [$out[1]['qty'], $out[1]['unit'], $out[1]['total_qty']],
+            '⛔ ফ্রি লাইন কার্টনের ভগ্নাংশে — গেটে গোনা যায় না।');
+    }
+
     /** @return array{0: DeliveryChallan, 1: SalesInvoice} */
     private function sell(): array
     {

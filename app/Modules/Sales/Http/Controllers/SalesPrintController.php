@@ -1719,6 +1719,8 @@ class SalesPrintController extends Controller implements HasMiddleware
              * আগের মতো।
              */
             'free' => $this->freeOf($line),
+            // ⓘ ফ্রি-র একক — ফ্রি পরিমাণটা ভিত্তি এককে থাকে (পিস), প্যাকে নয়; গেট পাসের "ফ্রি" লাইন এটাই ছাপে ([[freeOnItsOwnLine()]])
+            'free_unit' => (string) ($line->product?->unit?->name() ?? ''),
 
             /*
              * ⭐ মোট পরিমাণ = পরিমাণ + ফ্রি, প্যাকের এককেই — মালিক, ২ অক্টোবর ২০২৬: *"Challan e total qty nai"*।
@@ -1899,17 +1901,19 @@ class SalesPrintController extends Controller implements HasMiddleware
                 continue;
             }
 
-            // ⓘ ফ্রি সারির এককেই — মোট পরিমাণ − বিক্রির পরিমাণ ([[productLines()]]-এর `total_qty` প্যাকের এককে)
-            $free = bcsub(str_replace(',', '', (string) $row['total_qty']), str_replace(',', '', (string) $row['qty']), 4);
-
+            /*
+             * ⛔ ফ্রি নিজের ভিত্তি এককে — যেমন আগে ফ্রি-র ঘরে ছাপা হত (১১ অক্টোবর ২০২৬, PR #17 রিভিউ ⚠️৬)। ⓘ আগে এখানে মোট − বিক্রি
+             * প্যাকের এককে নেওয়া হত: ১২-পিসের কার্টনে ১ পিস ফ্রি ছাপত "০.০৮৩৩ Ctn — ফ্রি", গেটের লোক গুনতে পারতেন না।
+             */
             $out[] = [...$row, 'free' => '', 'total_qty' => $row['qty']];
             $out[] = [...$row,
                 'name' => (string) __('sales::print.free_line', ['name' => $row['name']]),
-                'qty' => $this->qty($free),
+                'qty' => $row['free'],
+                'unit' => ($row['free_unit'] ?? '') !== '' ? $row['free_unit'] : ($row['unit'] ?? ''),
                 'rate' => $this->money('0'),
                 'amount' => $this->money('0'),
                 'free' => '',
-                'total_qty' => $this->qty($free),
+                'total_qty' => $row['free'],
             ];
         }
 
