@@ -85,6 +85,8 @@ final class CollectionService
              *
              * ⓘ নম্বর নেওয়ার আগে — আটকালে সিরিজে ফাঁক পড়ত।
              */
+            $this->holdTheCustomersSlips((int) $data['customer_id']);
+
             $this->slips->check(
                 table: 'sal_collections',
                 slipNo: $data['instrument_no'] ?? null,
@@ -141,6 +143,15 @@ final class CollectionService
         $this->assertNoCheque($data['instrument'] ?? null);
 
         return DB::transaction(function () use ($collection, $data, $lines) {
+            /*
+             * ⛔ সারিতে তালা, অবস্থা তাজা — নিশ্চিত করার মতোই ([[confirm()]]; ১১ অক্টোবর ২০২৬, PR #17 রিভিউ ⚠️১৪)। ⓘ উপরের
+             * "খসড়া কি না" হাতের কপি থেকে: এক ট্যাবে নিশ্চিত আর আরেক ট্যাবে সম্পাদনা একসাথে হলে সম্পাদনাটা সদ্য খাতায় ওঠা
+             * আদায়ের অঙ্ক আর সারি বদলে দিত — খাতা এক কথা, আদায় আরেক।
+             */
+            $this->lockFresh($collection);
+            $this->assertEditable($collection);
+            $this->holdTheCustomersSlips((int) $collection->customer_id);
+
             $trxDate = Carbon::parse($data['trx_date'] ?? $collection->trx_date);
 
             /*
@@ -655,6 +666,18 @@ final class CollectionService
         }
 
         return bcadd($value, '0', 4);
+    }
+
+    /**
+     * ⛔ একই গ্রাহকের স্লিপ-পাহারা একবারে একজন — গ্রাহকের সারিতে তালা (১১ অক্টোবর ২০২৬, PR #17 রিভিউ ⚠️১৪)।
+     *
+     * ⓘ [[SlipIsNotUsedTwice]] তালা ছাড়া `exists()` দেখে, আর পিছনে কোনো অনন্য সূচি নেই (খালি স্লিপ বৈধ, বাতিলটা বাদ)। একই মুহূর্তে
+     * একই বিকাশ TrxID-এ দুই খসড়া সংরক্ষণ হলে দুটোই "নেই" দেখে বসে যেত, আর পাকা হলে গ্রাহকের পাওনা দুইবার কমত। ⭐ খোঁজার আগে
+     * গ্রাহকের সারি আটকানো — দ্বিতীয়জন প্রথমজনের লেখা শেষ হওয়া পর্যন্ত দাঁড়ায়, তারপর সেটা দেখে থামে। তৈরি আর সম্পাদনা দুই দরজাই।
+     */
+    private function holdTheCustomersSlips(int $customerId): void
+    {
+        \App\Modules\Customer\Models\Customer::query()->withoutGlobalScopes()->whereKey($customerId)->lockForUpdate()->value('id');
     }
 
     private function assertEditable(Collection $collection): void
