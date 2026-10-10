@@ -201,7 +201,13 @@ final class PurchaseBillService
 
             $bill = PurchaseBill::create([
                 'company_id' => CompanyContext::id(),
-                'branch_id' => $data['branch_id'] ?? CompanyContext::branchId(),
+                /*
+                 * ⛔ কাগজের শাখা মালের গুদামের শাখা — পুনঃনিরীক্ষা, ৯ অক্টোবর ২০২৬।
+                 * ⚠️ আগে শাখা আসত হেডারের বাছাই থেকে, আর মাল ঢুকত বিলের গুদামে — শাখা A বাছা থাকতে শাখা B-র
+                 * গুদামে মাল কিনলে দেনা আর মজুদের দাখিলা A-তে, মাল B-তে; দুই শাখার খাতাই ভুল। ⓘ চালান
+                 * ([[PurchaseReceiptService]]) আগে থেকেই এভাবে চলে; গুদাম না থাকলে আগের মতোই।
+                 */
+                'branch_id' => $this->branchOfWarehouse($data['warehouse_id'] ?? null) ?? $data['branch_id'] ?? CompanyContext::branchId(),
                 'financial_year_id' => $year->id,
                 'document_no' => $documentNo,
                 'supplier_id' => $supplierId,
@@ -339,6 +345,8 @@ final class PurchaseBillService
 
             $bill->update([
                 'warehouse_id' => $this->warehouseKept($bill, $data),
+                // ⛔ গুদাম বদলালে শাখাও — create()-এর একই নিয়ম (পুনঃনিরীক্ষা, ৯ অক্টোবর ২০২৬)
+                'branch_id' => $this->branchOfWarehouse($this->warehouseKept($bill, $data)) ?? $bill->branch_id,
                 'trx_date' => $trxDate->toDateString(),
                 'due_on' => $data['due_on'] ?? null,
                 'supplier_bill_no' => $billNo,
@@ -1093,6 +1101,18 @@ final class PurchaseBillService
             : (int) $data['warehouse_id'];
     }
 
+    /** গুদামটা যে শাখার — শাখাহীন গুদাম বা গুদাম না থাকলে null। */
+    private function branchOfWarehouse(mixed $warehouseId): ?int
+    {
+        if ($warehouseId === null || $warehouseId === '') {
+            return null;
+        }
+
+        $branch = Warehouse::query()->whereKey((int) $warehouseId)->value('branch_id');
+
+        return $branch === null ? null : (int) $branch;
+    }
+
     /**
      * নিশ্চিত বিল সম্পাদনা — উল্টে, বদলে, আবার বসিয়ে।
      *
@@ -1174,6 +1194,8 @@ final class PurchaseBillService
 
             $bill->update([
                 'warehouse_id' => $this->warehouseKept($bill, $data),
+                // ⛔ গুদাম বদলালে শাখাও — create()-এর একই নিয়ম (পুনঃনিরীক্ষা, ৯ অক্টোবর ২০২৬)
+                'branch_id' => $this->branchOfWarehouse($this->warehouseKept($bill, $data)) ?? $bill->branch_id,
                 'trx_date' => $trxDate->toDateString(),
                 'due_on' => $data['due_on'] ?? null,
                 'supplier_bill_no' => $billNo,

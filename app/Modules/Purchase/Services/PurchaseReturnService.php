@@ -7,6 +7,7 @@ namespace App\Modules\Purchase\Services;
 use App\Core\Engines\Approval\DocumentApproval;
 use App\Core\Engines\NumberSeries\NumberSeriesEngine;
 use App\Core\Engines\Posting\PostingEngine;
+use App\Core\Services\SettingsService;
 use App\Core\Support\CompanyContext;
 use App\Core\Support\DocumentStatus;
 use App\Models\FinancialYear;
@@ -73,13 +74,16 @@ final class PurchaseReturnService
 
             $documentNo = $this->numbers->next('PR');
 
+            $warehouse = $this->resolveWarehouse($data['warehouse_id'] ?? null);
+
             $return = PurchaseReturn::create([
                 'company_id' => CompanyContext::id(),
-                'branch_id' => $data['branch_id'] ?? CompanyContext::branchId(),
+                // ⛔ কাগজের শাখা মালের গুদামের শাখা — খাতা এক শাখায়, মাল আরেক শাখায় নয় (পুনঃনিরীক্ষা, ৯ অক্টোবর ২০২৬; চালানের একই নিয়ম)
+                'branch_id' => $warehouse->branch_id ?? $data['branch_id'] ?? CompanyContext::branchId(),
                 'financial_year_id' => $year->id,
                 'document_no' => $documentNo,
                 'supplier_id' => $data['supplier_id'],
-                'warehouse_id' => $this->resolveWarehouse($data['warehouse_id'] ?? null)->id,
+                'warehouse_id' => $warehouse->id,
                 'purchase_bill_id' => $data['purchase_bill_id'] ?? null,
                 'reason_code_id' => $data['reason_code_id'] ?? null,
                 'trx_date' => $trxDate->toDateString(),
@@ -113,8 +117,12 @@ final class PurchaseReturnService
         return DB::transaction(function () use ($return, $data, $lines) {
             $trxDate = Carbon::parse($data['trx_date'] ?? $return->trx_date);
 
+            $warehouse = $this->resolveWarehouse($data['warehouse_id'] ?? $return->warehouse_id);
+
             $return->update([
-                'warehouse_id' => $this->resolveWarehouse($data['warehouse_id'] ?? $return->warehouse_id)->id,
+                'warehouse_id' => $warehouse->id,
+                // ⛔ গুদাম বদলালে শাখাও — উপরের create()-এর একই নিয়ম
+                'branch_id' => $warehouse->branch_id ?? $return->branch_id,
                 'purchase_bill_id' => $data['purchase_bill_id'] ?? null,
                 'reason_code_id' => $data['reason_code_id'] ?? null,
                 'trx_date' => $trxDate->toDateString(),
@@ -247,7 +255,7 @@ final class PurchaseReturnService
      * ⓘ "নিশ্চিত করুন"-এর আগের সারাংশ ([[PurchaseReturnOverview]]) এটাই দেখায়; ভিতরে [[assertReadyToConfirm()]] — দরজার নিজের, তালা ছাড়া
      * পাহারাগুলো, হুবহু একই ক্রমে। সইয়ের পাহারা নয়, কারণ সেটা অনুরোধ লেখে।
      *
-     * @return list<string>  থামার কারণগুলো; খালি মানে কিছুই থামাবে না
+     * @return list<string> থামার কারণগুলো; খালি মানে কিছুই থামাবে না
      */
     public function whatWouldStopTheConfirm(PurchaseReturn $return): array
     {
@@ -732,7 +740,7 @@ final class PurchaseReturnService
         $blank = $entered === null || trim((string) $entered) === '';
         $tax = $this->money($blank ? '0' : $entered);
 
-        if (! (bool) app(\App\Core\Services\SettingsService::class)->get('purchase.vat_enabled', false)) {
+        if (! (bool) app(SettingsService::class)->get('purchase.vat_enabled', false)) {
             if (bccomp($tax, '0', 4) !== 0) {
                 throw ValidationException::withMessages([
                     'lines' => __('purchase::validation.vat_is_off'),
@@ -870,7 +878,7 @@ final class PurchaseReturnService
      *     লট-ধরা শুরুর আগের লটহীন মাল।
      * ⓘ প্রতিটা লটে আগে অপেক্ষার ঘর, তারপর তাক (আটকানো বাদ) — পণ্য-স্তরের [[returnable()]]-এর একই ক্রম। গোনা তালাসহ।
      *
-     * @return list<array{batch: ?Batch, waiting: string, shelf: string}>|null  লট ধরা পণ্য না হলে null
+     * @return list<array{batch: ?Batch, waiting: string, shelf: string}>|null লট ধরা পণ্য না হলে null
      */
     private function lotPlan(PurchaseReturnLine $line, ?Warehouse $warehouse): ?array
     {
