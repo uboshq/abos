@@ -89,9 +89,14 @@ final class ADocumentGoesThroughItsSignaturesTest extends TestCase
         $this->actingAs($first)->post(route('approval.inbox.approve', $approval->id))->assertRedirect();
         $this->useCompany();
 
-        $this->actingAs($this->owner)->get(route('documents.show', $document))->assertOk();
+        /*
+         * ⓘ প্রথম সইয়ের পরে পাতা "পর্যালোচনায়" দেখায় — ⛔ কিন্তু পাতা খোলা (GET) সারিতে কিছু লেখে না (১১ অক্টোবর ২০২৬, documents রিভিউ)।
+         * আগে খুললেই অবস্থা বদলে খাতায় বসত, আর `updated_by` হতেন দর্শক।
+         */
+        $page = (string) $this->actingAs($this->owner)->get(route('documents.show', $document))->assertOk()->getContent();
         $this->useCompany();
-        $this->assertSame(DocumentCatalog::UNDER_REVIEW, $document->fresh()->status, 'প্রথম সইয়ের পরে "পর্যালোচনায়" হয়নি।');
+        $this->assertStringContainsString(__('documents::catalog.status.under_review'), $page, 'প্রথম সইয়ের পরে পাতা "পর্যালোচনায়" দেখায় না।');
+        $this->assertSame(DocumentCatalog::SUBMITTED, $document->fresh()->status, '⛔ পাতা খোলায় (GET) অবস্থা বদলে খাতায় বসল।');
 
         // ⛔ পর্যালোচনার মাঝে কাগজ নিজের জায়গায় বদলায় না
         $this->actingAs($this->owner)

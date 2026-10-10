@@ -178,8 +178,14 @@ final class DocumentWorkflow
 
         $approval = $this->pending($document);
 
+        /*
+         * ⛔ কেবল দেখানো, লেখা নয় (১১ অক্টোবর ২০২৬, documents রিভিউ — GET-এ অবস্থা বদল)। ⓘ আগে কাগজের পাতা খুললেই (GET) তালা ছাড়া
+         * অবস্থা বদলে খাতায় বসত, আর `updated_by` হয়ে যেতেন যিনি কেবল দেখছিলেন। মাঝের সইয়ে ইঞ্জিন কোনো ঘটনা ছোড়ে না (কেবল শেষ
+         * সিদ্ধান্তে, [[ApprovalDecided]]), তাই "পর্যালোচনায়" এখানে গুনে দেখানো হয় — সারিতে লেখা হয় না; শেষ সিদ্ধান্তে
+         * [[decided()]] আসল অবস্থা বসায়।
+         */
         if ($approval !== null && $approval->decisions()->where('decision', ApprovalDecision::APPROVED)->exists()) {
-            $this->move($document, DocumentCatalog::UNDER_REVIEW);
+            $document->setAttribute('status', DocumentCatalog::UNDER_REVIEW);
         }
     }
 
