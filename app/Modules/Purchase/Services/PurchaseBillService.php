@@ -2078,6 +2078,13 @@ final class PurchaseBillService
             return;
         }
 
+        /*
+         * ⛔ আগে সরবরাহকারীর সারিতে তালা, তারপর খোঁজ — পুরো-ERP অডিট, ১০ অক্টোবর ২০২৬, ক্রয় ⛔১। তালা ছাড়া দুটো অনুরোধ একসাথে
+         * "নেই" দেখত আর একই বিল নম্বর দুবার বসত (ডাটাবেজে unique নেই)। ⓘ তালাটা লেনদেনের শেষ পর্যন্ত থাকে, তাই দ্বিতীয়জন
+         * প্রথমজনের বিল দেখে থামে। সব ডাকা জায়গা লেনদেনের ভেতরে (create, update, updatePosted)।
+         */
+        DB::table('suppliers')->where('company_id', CompanyContext::id())->where('id', $supplierId)->lockForUpdate()->value('id');
+
         // ⭐ একই সরবরাহকারীর একই বিল অন্য শাখায়ও নয় — দুবার পরিশোধের ঝুঁকি (পুরো ERP অডিট, ক্রয় ⚠️৮, ৬ অক্টোবর ২০২৬)
         $exists = PurchaseBill::acrossBranches()
             ->where('supplier_id', $supplierId)
