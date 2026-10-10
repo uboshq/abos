@@ -24,9 +24,4 @@ class FixedAssetPolicy
     {
         return $user->can('accounts.asset.manage');
     }
-
-    public function update(User $user, FixedAsset $asset): bool
-    {
-        return $user->can('accounts.asset.manage');
-    }
 }

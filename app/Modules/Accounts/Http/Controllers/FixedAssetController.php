@@ -49,6 +49,9 @@ class FixedAssetController extends Controller implements HasMiddleware
     {
         return [
             new Middleware('can:accounts.asset.view', only: ['index', 'show', 'run']),
+            // ⓘ সম্পদের নীতিও পথ থেকে পৌঁছায় — একই চাবি, নীতির ভাষায় ([[FixedAssetPolicy]]; ধাপ ১)
+            new Middleware('can:view,asset', only: ['show']),
+            new Middleware('can:create,'.FixedAsset::class, only: ['create', 'store']),
             new Middleware('can:accounts.asset.manage', only: ['create', 'store', 'depreciate', 'dispose', 'transfer', 'status', 'preview', 'estimate', 'usage']),
         ];
     }
