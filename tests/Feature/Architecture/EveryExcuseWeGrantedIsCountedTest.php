@@ -372,7 +372,12 @@ final class EveryExcuseWeGrantedIsCountedTest extends TestCase
      *       (একবার-লেখা সংস্করণ, নিজেরাই ইতিহাস), NotificationPreference (ব্যক্তির নিজের পছন্দ, NotificationChoice-এর
      *       মতো), NotificationDigest আর NotificationSuppression (যন্ত্রের খাতা)। নিয়ম, টেমপ্লেট, দল আর সূচি নিরীক্ষিত
      */
-    private const CEILING = 362;
+    /*
+     * ── ⚠️ 362 → 365, ১০ অক্টোবর ২০২৬ (বিজ্ঞপ্তি ব্যবস্থাপনা — স্পেক §১২-এর বাকি API) ───────────────────────────────
+     *   +৩  EveryRouteIsGuardedTest::TOKEN_SYNC — api.notifications.show, api.notification-preferences.show / update:
+     *       নিজের খবর আর নিজের পছন্দ, ফোনের ঘণ্টার বাকি দরজার মতোই চাবিহীন; অন্যেরটায় ৪০৪
+     */
+    private const CEILING = 365;
 
     /*
      * ── ⚠️ ২২২ → ২২৪, ২৩ সেপ্টেম্বর ২০২৬ ───────────────────────────

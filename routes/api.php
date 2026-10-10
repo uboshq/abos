@@ -12,6 +12,7 @@ use App\Http\Controllers\Api\DocumentApiController;
 use App\Http\Controllers\Api\MeController;
 use App\Http\Controllers\Api\NoticeApiController;
 use App\Http\Controllers\Api\NotificationApiController;
+use App\Http\Controllers\Api\NotificationManageApiController;
 use App\Http\Controllers\Api\PushTokenController;
 use App\Http\Controllers\Api\ReportApiController;
 use App\Http\Controllers\Api\ReportExportApiController;
@@ -170,6 +171,30 @@ Route::prefix('v1')
         Route::post('/notifications/{notification}/read', [NotificationApiController::class, 'read'])->name('notifications.read');
         Route::get('/notifications/unread-count', [NotificationApiController::class, 'unreadCount'])->name('notifications.unread-count');
         Route::post('/notifications/{notification}/archive', [NotificationApiController::class, 'archive'])->name('notifications.archive');
+        // ⭐ স্পেক §১২-এর বাকি দরজা — নিজের খবরের বিস্তারিত আর নিজের পছন্দে চাবি নেই; বাকিগুলোয় পর্দার সমান চাবি
+        Route::get('/notifications/{notification}', [NotificationManageApiController::class, 'show'])->name('notifications.show');
+        Route::get('/notification-preferences', [NotificationManageApiController::class, 'preferences'])->name('notification-preferences.show');
+        Route::put('/notification-preferences', [NotificationManageApiController::class, 'savePreferences'])->name('notification-preferences.update');
+        Route::get('/notification-rules', [NotificationManageApiController::class, 'rules'])
+            ->middleware('can:notification.rules')->name('notification-rules.index');
+        Route::post('/notification-rules', [NotificationManageApiController::class, 'storeRule'])
+            ->middleware('can:notification.rules')->name('notification-rules.store');
+        Route::put('/notification-rules/{rule}', [NotificationManageApiController::class, 'updateRule'])
+            ->whereNumber('rule')->middleware('can:notification.rules')->name('notification-rules.update');
+        Route::post('/notification-rules/{rule}/test', [NotificationManageApiController::class, 'testRule'])
+            ->whereNumber('rule')->middleware('can:notification.rules')->name('notification-rules.test');
+        Route::get('/notification-templates', [NotificationManageApiController::class, 'templates'])
+            ->middleware('can:notification.templates')->name('notification-templates.index');
+        Route::post('/notification-templates', [NotificationManageApiController::class, 'storeTemplate'])
+            ->middleware('can:notification.templates')->name('notification-templates.store');
+        Route::post('/notification-templates/{template}/publish', [NotificationManageApiController::class, 'publishTemplate'])
+            ->whereNumber('template')->middleware('can:notification.templates.publish')->name('notification-templates.publish');
+        Route::get('/notification-deliveries', [NotificationManageApiController::class, 'deliveries'])
+            ->middleware('can:notification.deliveries')->name('notification-deliveries.index');
+        Route::post('/notification-deliveries/{job}/retry', [NotificationManageApiController::class, 'retryDelivery'])
+            ->middleware('can:notification.retry')->name('notification-deliveries.retry');
+        Route::get('/notification-health', [NotificationManageApiController::class, 'health'])
+            ->middleware('can:notification.deliveries')->name('notification-health');
 
         /*
          * "আমি কে, আর আমি কী দেখব" — অ্যাপের প্রথম প্রশ্ন।

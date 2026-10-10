@@ -1234,6 +1234,8 @@ return [
         ],
         'var_unknown' => 'These variables are not on the approved list: :names',
         'number_needed' => 'Write a number in this field.',
+        'own_version' => 'You wrote this version — a second person publishes it.',
+        'not_retryable' => 'This delivery cannot be retried.',
         'channel_name' => ['email' => 'E-mail', 'web_push' => 'Browser push', 'mobile_push' => 'Mobile push', 'sms' => 'SMS'],
         'frequency' => ['instant' => 'Right away', 'daily' => 'Once a day, together', 'weekly' => 'Once a week, together'],
         'digest_subject' => [

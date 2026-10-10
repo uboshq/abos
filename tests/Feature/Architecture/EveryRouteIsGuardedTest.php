@@ -267,6 +267,9 @@ class EveryRouteIsGuardedTest extends TestCase
         'api.notifications.read' => 'নিজের খবরে পড়ার দাগ — অন্যেরটায় ৪০৪',
         'api.notifications.unread-count' => 'নিজের না-পড়া গোনা — ফোনের ব্যাজ (বিজ্ঞপ্তি ব্যবস্থাপনা, ধাপ ১)',
         'api.notifications.archive' => 'নিজের খবর আর্কাইভে — অন্যেরটায় ৪০৪',
+        'api.notifications.show' => 'নিজের খবরের বিস্তারিত — অন্যেরটায় ৪০৪; কাগজ নাগালে না থাকলে ঠিকানা নয়',
+        'api.notification-preferences.show' => 'নিজের বিজ্ঞপ্তির পছন্দ পড়া',
+        'api.notification-preferences.update' => 'নিজের বিজ্ঞপ্তির পছন্দ বদল — দায়িত্বপ্রাপ্ত কেবল এই কোম্পানির সহকর্মী',
 
         /*
          * পর্দার দুইটা — পাঠকের কাজ, লেখকের নয়।
