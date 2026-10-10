@@ -110,6 +110,47 @@ final class TheOrderCouponReachesTheBillTest extends TestCase
         $this->assertSame(1, Note::query()->count(), '⛔ একই কুপনের ছাড় দুইবার খাতায়');
     }
 
+    /**
+     * ⛔ কাজের শাখা অন্যটা, দেখা "সব শাখা" — বিল পাকা হলে কুপনের নোট বসত কাজের শাখায় আর আজকের দিনে, বিলের শাখা-দিনে নয়
+     * (cloud/people-fixes রিভিউ, ১০ অক্টোবর ২০২৬; [[SalesCouponPapers::redeemed()]])। ⭐ নোট বিলের শাখায়, বিলের দিনে।
+     */
+    public function test_the_note_lands_in_the_bills_branch_even_when_the_header_shows_another(): void
+    {
+        $order = $this->confirmedOrder('4');
+        $line = $order->lines->first();
+        $this->postJson(route('promotion.coupon.redeem'), [
+            'code' => 'ORDER-25', 'source_type' => 'sales_order', 'source_id' => $order->id, 'source_line_id' => $line->id,
+            'product_id' => $this->product->id, 'qty' => '4', 'value' => bcmul('4', (string) $this->product->sale_price, 4),
+        ])->assertOk();
+
+        $challans = app(DeliveryChallanService::class);
+        $challan = $challans->confirm($challans->create(['customer_id' => $this->customer->id, 'warehouse_id' => $this->warehouse->id,
+            'sales_order_id' => $order->id, 'trx_date' => now()->toDateString()],
+            [['product_id' => $this->product->id, 'sales_order_line_id' => $line->id, 'delivered_qty' => '4', 'rate' => (string) $this->product->sale_price]])->fresh(['lines']));
+        $invoices = app(SalesInvoiceService::class);
+        $draft = $invoices->create(['customer_id' => $this->customer->id, 'warehouse_id' => $this->warehouse->id, 'trx_date' => now()->subDay()->toDateString()],
+            [['product_id' => $this->product->id, 'qty' => '4', 'rate' => (string) $this->product->sale_price,
+                'delivery_challan_line_id' => $challan->lines->first()->id]]);
+
+        // ⓘ কাজের শাখা অন্যটা, দেখা "সব শাখা" — বিল দেখা যায়, পাকা করা যায়; তারপর পাকা
+        $other = \App\Models\Branch::query()->withoutGlobalScopes()->where('company_id', CompanyContext::id())
+            ->where('id', '!=', (int) $draft->branch_id)->orderBy('id')->firstOrFail();
+        $this->post(route('branch.switch'), ['branch_id' => (string) $other->id])->assertRedirect();
+        $this->post(route('branch.switch'), ['branch_id' => 'all'])->assertRedirect();
+        $this->owner = $this->owner->fresh();
+        CompanyContext::set(CompanyContext::id(), $this->owner->current_branch_id);
+        app(\App\Core\Services\DataScope::class)->forget();
+        $this->app->forgetScopedInstances();
+        $this->actingAs($this->owner);
+
+        $bill = $invoices->confirm($draft->fresh(['lines']))->fresh();
+
+        $note = Note::query()->withoutGlobalScopes()->where('against_no', $bill->document_no)->first();
+        $this->assertNotNull($note, '⛔ অন্য শাখা দেখানো অবস্থায় কুপনের নোট বসল না — অথচ কুপন "বহন করা"');
+        $this->assertSame((int) $bill->branch_id, (int) $note->branch_id, '⛔ নোট হেডারের শাখায়, বিলের শাখায় নয়');
+        $this->assertSame($bill->trx_date->toDateString(), $note->trx_date->toDateString(), '⛔ নোট আজকের দিনে, বিলের দিনে নয়');
+    }
+
     private function confirmedOrder(string $qty): SalesOrder
     {
         $orders = app(SalesOrderService::class);

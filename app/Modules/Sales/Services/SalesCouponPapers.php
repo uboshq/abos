@@ -46,10 +46,18 @@ final class SalesCouponPapers implements CouponPapers
             return;
         }
 
-        // ⓘ দরজা আগেই কাগজ যাচাই করে ([[line()]]); পাকা বিল না থাকলে খাতায় বসানোর কিছু নেই
-        $invoice = SalesInvoice::query()->whereIn('status', DocumentStatus::POSTED)->find($sourceId);
+        /*
+         * ⛔ দেয়াল ছাড়া পড়া, আর না পেলে থামা — cloud/people-fixes-এর রিভিউ, ১০ অক্টোবর ২০২৬। ⓘ আগে শাখা আর ডিলারের দেয়াল দিয়ে
+         * পড়া হত: দেয়ালের আড়ালে বিল "নেই", কিছু না বসিয়ে ফিরত — অথচ ডাকা পক্ষ ([[CouponDesk::carryToBill()]]) কুপনটা
+         * "বহন করা" লিখত, আর গ্রাহক ছাড়টা হারাতেন। কোম্পানির দেয়াল থাকে। ⓘ বিল আছে অথচ এখনো পাকা নয় — বসানোর কিছু নেই, আগের মতো।
+         */
+        $invoice = self::unwalled(SalesInvoice::class)->find($sourceId);
 
         if ($invoice === null) {
+            throw ValidationException::withMessages(['coupon' => __('sales::offers.paper_missing')]);
+        }
+
+        if (! in_array($invoice->status, DocumentStatus::POSTED, true)) {
             return;
         }
         $discount = StandardChart::find(StandardChart::DISCOUNT_GIVEN);
@@ -60,7 +68,9 @@ final class SalesCouponPapers implements CouponPapers
             'party_kind' => Note::KIND_CUSTOMER,
             'party_id' => (int) $invoice->customer_id,
             'other_account_id' => $discount?->id,
-            'trx_date' => now()->toDateString(),
+            // ⓘ বিলের শাখায় আর বিলের দিনে — হেডারের শাখায় বা আজকের দিনে নয় (রিভিউ, ১০ অক্টোবর ২০২৬)
+            'branch_id' => $invoice->branch_id,
+            'trx_date' => $invoice->trx_date?->toDateString() ?? now()->toDateString(),
             'amount' => bcadd($worth, '0', 4),
             'tax_amount' => '0',
             'reason' => 'agreed_discount',

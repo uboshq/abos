@@ -91,7 +91,8 @@ final class NoteService
 
             $note = Note::query()->create([
                 'company_id' => CompanyContext::id(),
-                'branch_id' => CompanyContext::branchId(),
+                // ⓘ ভেতরের ডাকা (কুপনের নোট) বিলের শাখা দেয়; পর্দা থেকে ঘরটা আসে না (যাচাই করা ঘর কেবল) — তখন হেডারের শাখা
+                'branch_id' => isset($data['branch_id']) ? (int) $data['branch_id'] : CompanyContext::branchId(),
                 'document_no' => $documentNo,
                 'trx_date' => $data['trx_date'],
                 'direction' => $direction,
