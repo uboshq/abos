@@ -102,6 +102,9 @@
                                         @if ($note->body)
                                             <span class="block text-2xs font-normal text-(--color-ink-muted)">{{ $note->body }}</span>
                                         @endif
+                                        @if ($note->on_behalf_of)
+                                            <span class="block text-2xs font-normal text-(--color-ink-muted)" data-on-behalf>{{ __('core.notify.on_behalf', ['name' => $note->onBehalfOf?->name ?? '—']) }}</span>
+                                        @endif
                                     </td>
                                     <td class="text-2xs">{{ \App\Core\Support\NotificationKinds::sourceLabel($note->module) }}</td>
                                     <td class="text-2xs">

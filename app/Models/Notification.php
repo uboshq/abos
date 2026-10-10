@@ -30,6 +30,8 @@ class Notification extends Model
         'company_id', 'user_id', 'type', 'title', 'body', 'url', 'read_at',
         // ⭐ বিজ্ঞপ্তি ব্যবস্থাপনা, ধাপ ১ — কোন ঘটনার, কোন শাখার, কোন কাগজের; শ্রেণি-গুরুত্ব; দেখা আর আর্কাইভ (প্রাপকের নিজের)
         'event_id', 'branch_id', 'module', 'category', 'priority', 'subject_type', 'subject_id', 'seen_at', 'archived_at',
+        // ⭐ ছুটির দায়িত্বপ্রাপ্তের কপি — কার হয়ে এল
+        'on_behalf_of',
     ];
 
     protected function casts(): array
@@ -104,5 +106,11 @@ class Notification extends Model
     public function scopeFor(Builder $query, int $userId): Builder
     {
         return $query->where('user_id', $userId);
+    }
+
+    /** ছুটিতে থাকা যাঁর হয়ে এই কপিটা এল */
+    public function onBehalfOf(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'on_behalf_of');
     }
 }

@@ -31,6 +31,7 @@ class NotificationPreference extends Model
     protected $fillable = [
         'company_id', 'user_id', 'channels', 'muted_categories', 'frequency', 'digest_hour', 'digest_day',
         'quiet_enabled', 'quiet_start', 'quiet_end', 'timezone',
+        'delegate_user_id', 'delegate_from', 'delegate_until',
     ];
 
     protected function casts(): array
@@ -41,12 +42,34 @@ class NotificationPreference extends Model
             'quiet_enabled' => 'boolean',
             'digest_hour' => 'integer',
             'digest_day' => 'integer',
+            'delegate_from' => 'date',
+            'delegate_until' => 'date',
         ];
     }
 
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    /** ⭐ আজ যিনি এই মানুষটার খবর পাবেন (ছুটির দায়িত্ব) — না থাকলে `null` */
+    public function delegateToday(): ?int
+    {
+        if ($this->delegate_user_id === null) {
+            return null;
+        }
+
+        $today = now()->toDateString();
+
+        if ($this->delegate_from !== null && $today < $this->delegate_from->toDateString()) {
+            return null;
+        }
+
+        if ($this->delegate_until !== null && $today > $this->delegate_until->toDateString()) {
+            return null;
+        }
+
+        return (int) $this->delegate_user_id;
     }
 
     public function allowsChannel(string $channel): bool

@@ -8,6 +8,7 @@ use App\Core\Contracts\Drillable;
 use App\Core\Engines\Drill\DrillResolver;
 use App\Core\Notifications\DeliveryService;
 use App\Core\Notifications\NotificationVariables;
+use App\Core\Notifications\PreferenceBook;
 use App\Core\Notifications\RecipientResolver;
 use App\Core\Notifications\RuleEngine;
 use App\Core\Support\Actor;
@@ -172,8 +173,9 @@ final class NotificationService
      * @param  \Closure(): NotificationEvent  $event
      * @param  array<string, mixed>  $plan
      */
-    private function deliver(User|int $user, \Closure $event, string $type, bool $evenToSelf, array $plan): ?Notification
+    private function deliver(User|int $user, \Closure $event, string $type, bool $evenToSelf, array $plan, ?int $onBehalfOf = null): ?Notification
     {
+        $forwarded = $onBehalfOf !== null;
         $userId = $user instanceof User ? $user->id : $user;
 
         /*
@@ -235,6 +237,7 @@ final class NotificationService
                 'url' => $event->url,
                 'subject_type' => $event->subject_type,
                 'subject_id' => $event->subject_id,
+                'on_behalf_of' => $onBehalfOf,
             ],
         );
 
@@ -245,6 +248,11 @@ final class NotificationService
         $event->increment('recipients');
 
         $known = $user instanceof User ? $user : null;
+
+        // ⭐ ছুটিতে থাকলে আরেকজনের কাছেও — এক ধাপ, আর দায়িত্বপ্রাপ্তের নিজের শাখার দেয়ালে (স্পেক §১৪ "ছুটিতে Delegate")
+        if (! $forwarded) {
+            $this->forwardToDelegate($userId, $event, $type, $plan);
+        }
 
         /*
          * ⭐ ঘণ্টার বাইরের মাধ্যম (ইমেইল, Web Push, মোবাইল পুশ) — লেনদেন পাকা হওয়ার পরে কিউয়ে, আবার চেষ্টা আর ব্যর্থ-তালিকাসহ
@@ -337,6 +345,26 @@ final class NotificationService
         $body = NotificationVariables::render($template->part('body', $locale), $values);
 
         return [mb_substr($title !== '' ? $title : (string) $event->title, 0, 191), $body === '' ? null : mb_substr($body, 0, 500)];
+    }
+
+    /**
+     * ছুটির দায়িত্বপ্রাপ্তের কাছে কপি — তিনি এই কোম্পানির সক্রিয় সদস্য আর খবরের শাখা তাঁর নাগালে হলে তবেই।
+     *
+     * @param  array<string, mixed>  $plan
+     */
+    private function forwardToDelegate(int $userId, NotificationEvent $event, string $type, array $plan): void
+    {
+        $delegate = app(PreferenceBook::class)->for($userId, (int) $event->company_id)->delegateToday();
+
+        if ($delegate === null || $delegate === $userId) {
+            return;
+        }
+
+        $allowed = app(RecipientResolver::class)->resolve(['users' => [$delegate]], $event->branch_id === null ? null : (int) $event->branch_id);
+
+        if ($allowed->isNotEmpty()) {
+            $this->deliver($allowed->first(), fn () => $event, $type, false, $plan, $userId);
+        }
     }
 
     /** একই কাগজের একই ধরনের খবর এই মানুষটা শেষ কয়েক মিনিটে পেয়েছেন কি না */

@@ -180,6 +180,29 @@
                 </label>
             </div>
             <p class="text-2xs text-(--color-ink-muted)">{{ __('core.notify.pref_critical') }}</p>
+
+            {{-- ⭐ ছুটিতে থাকলে — এই তারিখগুলোতে আমার খবর অমুকের কাছেও (স্পেক §১৪ "ছুটিতে Delegate") --}}
+            <div class="grid gap-3 md:grid-cols-3" data-notify-delegate>
+                <label class="grid gap-1 text-2xs text-(--color-ink-muted)">
+                    {{ __('core.notify.pref_delegate') }}
+                    <select name="pref[delegate_user_id]" class="h-(--spacing-field) rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-2 text-sm">
+                        <option value="">{{ __('core.notify.pref_delegate_none') }}</option>
+                        @foreach ($colleagues as $id => $name)
+                            <option value="{{ $id }}" @selected((int) $pref->delegate_user_id === (int) $id)>{{ $name }}</option>
+                        @endforeach
+                    </select>
+                </label>
+                <label class="grid gap-1 text-2xs text-(--color-ink-muted)">
+                    {{ __('core.notify.pref_delegate_from') }}
+                    <input type="date" name="pref[delegate_from]" value="{{ $pref->delegate_from?->toDateString() }}"
+                           class="h-(--spacing-field) rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-2 text-sm">
+                </label>
+                <label class="grid gap-1 text-2xs text-(--color-ink-muted)">
+                    {{ __('core.notify.pref_delegate_until') }}
+                    <input type="date" name="pref[delegate_until]" value="{{ $pref->delegate_until?->toDateString() }}"
+                           class="h-(--spacing-field) rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-2 text-sm">
+                </label>
+            </div>
         </div>
 
         <div class="flex items-center gap-3 border-t border-(--color-border) px-4 py-3">

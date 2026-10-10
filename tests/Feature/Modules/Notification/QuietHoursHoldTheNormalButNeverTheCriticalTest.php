@@ -8,18 +8,24 @@ use App\Core\Notifications\Channels\EmailChannel;
 use App\Core\Notifications\DeliveryResult;
 use App\Core\Notifications\DeliveryService;
 use App\Core\Notifications\DigestService;
+use App\Core\Services\DataScope;
 use App\Core\Services\NotificationService;
 use App\Core\Services\SettingsService;
 use App\Core\Support\CompanyContext;
+use App\Core\Support\NotificationKinds;
+use App\Models\Branch;
 use App\Models\Company;
+use App\Models\Notification;
 use App\Models\NotificationDigest;
 use App\Models\NotificationJob;
 use App\Models\NotificationPreference;
 use App\Models\NotificationSuppression;
 use App\Models\User;
+use App\Models\UserDataScope;
 use App\Notifications\NewsDigestByMail;
 use Carbon\CarbonImmutable;
 use Database\Seeders\DemoSeeder;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Notification as Notices;
 use Tests\Feature\Modules\Notification\Support\ScriptedChannel;
@@ -183,6 +189,48 @@ final class QuietHoursHoldTheNormalButNeverTheCriticalTest extends TestCase
         $this->travel(1)->days();
         app(NotificationService::class)->send($this->clerk, 'approval.rejected', 'পরের দিন');
         $this->assertSame(4, $this->mail->calls);
+    }
+
+    public function test_on_leave_a_copy_goes_to_the_cover_person_within_their_own_walls_and_only_for_those_days(): void
+    {
+        $cover = User::factory()->create(['name' => 'দায়িত্বপ্রাপ্ত', 'is_active' => true, 'current_company_id' => $this->company->id]);
+        $cover->companies()->attach($this->company->id, ['is_active' => true]);
+
+        $this->actingAs($this->clerk)->put(route('notifications.settings.update'), ['kinds' => array_keys(NotificationKinds::all()),
+            'pref' => ['channels' => ['email'], 'delegate_user_id' => $cover->id, 'delegate_from' => now()->toDateString(), 'delegate_until' => now()->addDays(3)->toDateString()],
+        ])->assertRedirect();
+
+        $this->actingAs($this->owner);
+        $mine = app(NotificationService::class)->send($this->clerk, 'approval.rejected', 'ছুটির সময়ের খবর');
+        $copy = Notification::query()->where('user_id', $cover->id)->where('event_id', $mine->event_id)->first();
+        $this->assertNotNull($copy, '⛔ ছুটির দায়িত্বপ্রাপ্ত কপি পেলেন না');
+        $this->assertSame($this->clerk->id, (int) $copy->on_behalf_of);
+        $this->actingAs($cover)->get(route('notifications.index'))->assertOk()->assertSee(__('core.notify.on_behalf', ['name' => $this->clerk->name]));
+
+        // ⓘ অন্য শাখায় আটকানো দায়িত্বপ্রাপ্ত সেই শাখার কাগজের কপি পান না
+        $branches = Branch::query()->withoutGlobalScopes()->where('company_id', $this->company->id)->orderBy('id')->pluck('id');
+        UserDataScope::query()->create(['company_id' => $this->company->id, 'user_id' => $cover->id,
+            'scope_type' => UserDataScope::BRANCH, 'scope_id' => $branches[1]]);
+        app(DataScope::class)->forget();
+        $paper = (new class extends Model
+        {
+            protected $guarded = [];
+        })->forceFill(['id' => 5, 'branch_id' => $branches[0]]);
+        $this->actingAs($this->owner);
+        $walled = app(NotificationService::class)->send($this->clerk, 'approval.rejected', 'অন্য শাখার কাগজ', about: $paper);
+        $this->assertFalse(Notification::query()->where('user_id', $cover->id)->where('event_id', $walled->event_id)->exists(), '⛔ দায়িত্বের জোরে শাখার দেয়াল পেরোল');
+
+        // ⓘ ছুটি শেষ হলে আর নয়
+        $this->travel(5)->days();
+        $after = app(NotificationService::class)->send($this->clerk, 'approval.rejected', 'ছুটির পরের খবর');
+        $this->assertFalse(Notification::query()->where('user_id', $cover->id)->where('event_id', $after->event_id)->exists(), '⛔ ছুটি শেষেও কপি গেল');
+
+        // ⓘ নিজেকে বা অন্য কোম্পানির কাউকে দায়িত্ব দেওয়া যায় না
+        $stranger = User::factory()->create(['is_active' => true]);
+        $this->actingAs($this->clerk)->put(route('notifications.settings.update'), ['pref' => ['delegate_user_id' => $stranger->id,
+            'delegate_from' => now()->toDateString(), 'delegate_until' => now()->toDateString()]])->assertSessionHasErrors('pref.delegate_user_id');
+        $this->actingAs($this->clerk)->put(route('notifications.settings.update'), ['pref' => ['delegate_user_id' => $this->clerk->id,
+            'delegate_from' => now()->toDateString(), 'delegate_until' => now()->toDateString()]])->assertSessionHasErrors('pref.delegate_user_id');
     }
 
     public function test_people_set_their_own_preferences_on_their_settings_page(): void

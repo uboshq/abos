@@ -16,6 +16,7 @@ use App\Models\Notification;
 use App\Models\NotificationChannel;
 use App\Models\NotificationChoice;
 use App\Models\NotificationPreference;
+use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -79,6 +80,8 @@ class NotificationController extends Controller
             'pushKey' => $this->pushKey(),
             // ⭐ কীভাবে আর কখন — মাধ্যম, চুপ করা শ্রেণি, ঘনত্ব, নীরব সময় (ধাপ ৩)
             'pref' => app(PreferenceBook::class)->for((int) $user->id, (int) CompanyContext::id()),
+            // ⭐ ছুটির দায়িত্ব — এই কোম্পানির সক্রিয় সদস্যদের মধ্যে, নিজেকে বাদ দিয়ে
+            'colleagues' => $this->colleagues((int) $user->id),
         ]);
     }
 
@@ -116,6 +119,9 @@ class NotificationController extends Controller
             'pref.quiet_start' => ['nullable', 'date_format:H:i', 'required_if:pref.quiet_enabled,1'],
             'pref.quiet_end' => ['nullable', 'date_format:H:i', 'required_if:pref.quiet_enabled,1', 'different:pref.quiet_start'],
             'pref.timezone' => ['nullable', Rule::in(NotificationPreference::ZONES)],
+            'pref.delegate_user_id' => ['nullable', 'integer', Rule::in(array_keys($this->colleagues((int) $user->id)))],
+            'pref.delegate_from' => ['nullable', 'date', 'required_with:pref.delegate_user_id'],
+            'pref.delegate_until' => ['nullable', 'date', 'after_or_equal:pref.delegate_from', 'required_with:pref.delegate_user_id'],
         ])['pref'] ?? null;
 
         if (is_array($pref)) {
@@ -186,8 +192,20 @@ class NotificationController extends Controller
                 'quiet_start' => ($pref['quiet_start'] ?? null) ?: null,
                 'quiet_end' => ($pref['quiet_end'] ?? null) ?: null,
                 'timezone' => ($pref['timezone'] ?? null) ?: null,
+                'delegate_user_id' => ($pref['delegate_user_id'] ?? null) ?: null,
+                'delegate_from' => ($pref['delegate_user_id'] ?? null) ? ($pref['delegate_from'] ?? null) : null,
+                'delegate_until' => ($pref['delegate_user_id'] ?? null) ? ($pref['delegate_until'] ?? null) : null,
             ],
         );
+    }
+
+    /** @return array<int, string> এই কোম্পানির সক্রিয় সহকর্মী — নিজে বাদ */
+    private function colleagues(int $self): array
+    {
+        return User::query()->withoutGlobalScope('company')
+            ->whereHas('companies', fn ($q) => $q->whereKey(CompanyContext::id()))
+            ->where('users.is_active', true)->where('users.id', '!=', $self)
+            ->orderBy('name')->pluck('name', 'users.id')->all();
     }
 
     /** কত খবর এক পাতায় */
@@ -226,7 +244,7 @@ class NotificationController extends Controller
             default => $query->orderByDesc('id'),
         };
 
-        $rows = $query->paginate(self::PER_PAGE)->withQueryString();
+        $rows = $query->with('onBehalfOf:id,name')->paginate(self::PER_PAGE)->withQueryString();
 
         // ⓘ পাতায় যা দেখানো হলো তা "দেখা" — খোলা নয়, তাই পড়া নয় (স্পেক: দেখা আর পড়া আলাদা)
         $this->notifications->markSeen($user, $rows->getCollection()->pluck('id')->map(fn ($id) => (int) $id)->all());
