@@ -138,40 +138,40 @@ final class InventoryControlReports
                 $labels = $labels($state);
 
                 return DB::query()
-                ->fromSub(
-                    DB::table('inv_stock_movements as m')
-                        ->join('inv_warehouses as w', 'w.id', '=', 'm.warehouse_id')
-                        ->where('m.company_id', $f['company_id'])
-                        ->tap(ReportEngine::branchWall($f, 'w.branch_id'))
-                        ->when(! empty($f['warehouse_id']), fn ($q) => $q->where('m.warehouse_id', (int) $f['warehouse_id']))
-                        ->groupBy('m.product_id')
-                        ->selectRaw('m.product_id')
-                        ->selectRaw('SUM(m.floor_change + m.unplaced_change) as on_hand')
-                        ->selectRaw('MAX(CASE WHEN m.floor_change < 0 THEN m.trx_date END) as last_out')
-                        ->selectRaw("SUM(CASE WHEN m.floor_change < 0 AND m.trx_date >= DATE_SUB({$today}, INTERVAL 365 DAY) THEN -m.floor_change ELSE 0 END) as out_year"),
-                    's',
-                )
-                ->join('inv_products as p', 'p.id', '=', 's.product_id')
-                ->whereNull('p.deleted_at')
-                ->where('s.on_hand', '>', 0)
-                ->when(! empty($f['brand_id']), fn ($q) => $q->where('p.brand_id', (int) $f['brand_id']))
-                ->when(! empty($f['category_id']), fn ($q) => $q->where('p.category_id', (int) $f['category_id']))
-                ->whereRaw("({$state}) IS NOT NULL")
-                ->when(in_array($f['status'] ?? null, ['slow', 'dead'], true),
-                    fn ($q) => $q->whereRaw("({$state}) = ?", [$f['status']]))
-                ->orderByRaw('s.last_out IS NOT NULL')
-                ->orderBy('s.last_out')
-                ->orderBy('p.code')
-                ->select([
-                    DB::raw("{$labels} as state"),
-                    DB::raw("CONCAT(p.code, ' - ', ".self::name('p').') as product_name'),
-                    's.last_out',
-                    DB::raw("DATEDIFF({$today}, s.last_out) as idle_days"),
-                    's.on_hand',
-                    's.out_year',
-                    DB::raw('ROUND(s.out_year / s.on_hand, 2) as turns'),
-                    DB::raw("ROUND(s.on_hand * COALESCE({$avgCost}, 0), 4) as value"),
-                ]);
+                    ->fromSub(
+                        DB::table('inv_stock_movements as m')
+                            ->join('inv_warehouses as w', 'w.id', '=', 'm.warehouse_id')
+                            ->where('m.company_id', $f['company_id'])
+                            ->tap(ReportEngine::branchWall($f, 'w.branch_id'))
+                            ->when(! empty($f['warehouse_id']), fn ($q) => $q->where('m.warehouse_id', (int) $f['warehouse_id']))
+                            ->groupBy('m.product_id')
+                            ->selectRaw('m.product_id')
+                            ->selectRaw('SUM(m.floor_change + m.unplaced_change) as on_hand')
+                            ->selectRaw('MAX(CASE WHEN m.floor_change < 0 THEN m.trx_date END) as last_out')
+                            ->selectRaw("SUM(CASE WHEN m.floor_change < 0 AND m.trx_date >= DATE_SUB({$today}, INTERVAL 365 DAY) THEN -m.floor_change ELSE 0 END) as out_year"),
+                        's',
+                    )
+                    ->join('inv_products as p', 'p.id', '=', 's.product_id')
+                    ->whereNull('p.deleted_at')
+                    ->where('s.on_hand', '>', 0)
+                    ->when(! empty($f['brand_id']), fn ($q) => $q->where('p.brand_id', (int) $f['brand_id']))
+                    ->when(! empty($f['category_id']), fn ($q) => $q->where('p.category_id', (int) $f['category_id']))
+                    ->whereRaw("({$state}) IS NOT NULL")
+                    ->when(in_array($f['status'] ?? null, ['slow', 'dead'], true),
+                        fn ($q) => $q->whereRaw("({$state}) = ?", [$f['status']]))
+                    ->orderByRaw('s.last_out IS NOT NULL')
+                    ->orderBy('s.last_out')
+                    ->orderBy('p.code')
+                    ->select([
+                        DB::raw("{$labels} as state"),
+                        DB::raw("CONCAT(p.code, ' - ', ".self::name('p').') as product_name'),
+                        's.last_out',
+                        DB::raw("DATEDIFF({$today}, s.last_out) as idle_days"),
+                        's.on_hand',
+                        's.out_year',
+                        DB::raw('ROUND(s.out_year / s.on_hand, 2) as turns'),
+                        DB::raw("ROUND(s.on_hand * COALESCE({$avgCost}, 0), 4) as value"),
+                    ]);
             },
             columns: [
                 ['key' => 'state', 'label' => 'inventory::control.state', 'width' => '6rem'],
@@ -207,7 +207,8 @@ final class InventoryControlReports
                 WHEN p.max_level > 0 AND s.on_hand > p.max_level THEN 'over'
             END";
 
-        $labels = collect(['negative', 'zero', 'below', 'over'])
+        // ⓘ নামগুলো রিপোর্ট চালানোর সময় গড়া — বুটে নয়: `composer install`-এর package:discover-এ ডেটাবেস থাকে না
+        $labels = fn (): string => collect(['negative', 'zero', 'below', 'over'])
             ->map(fn (string $k) => "WHEN '{$k}' THEN ".DB::getPdo()->quote((string) __('inventory::control.alert_'.$k)))
             ->implode(' ');
 
@@ -240,7 +241,7 @@ final class InventoryControlReports
                 ->orderByRaw("FIELD(({$kind}), 'negative', 'zero', 'below', 'over')")
                 ->orderBy('p.code')
                 ->select([
-                    DB::raw("CASE ({$kind}) {$labels} END as alert"),
+                    DB::raw("CASE ({$kind}) {$labels()} END as alert"),
                     DB::raw("CONCAT(p.code, ' - ', ".self::name('p').') as product_name'),
                     's.on_hand',
                     's.available',
