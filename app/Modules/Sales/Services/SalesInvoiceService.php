@@ -1279,21 +1279,25 @@ final class SalesInvoiceService
          * আর বাইরে বসালে প্রথম হালনাগাদেই ছাড়টা হারাত। খাতা নিজেই মেলে —
          * বিক্রয় = মোট − ভ্যাট ([[postToLedger()]])।
          *
-         * ⚠️ ভ্যাট ছাড়ের আগের দামেই থাকে — পর্দাও তাই গোনে (`grossTotal −
-         * discountValue`)।
+         * ⭐ ভ্যাট বিলের ছাড়ের পরে — মালিক, ১০ অক্টোবর ২০২৬: *"ছাড় বাদ দিয়ে যে দাম, তার উপর ভ্যাট"*
+         * ([[VatIsChargedAfterTheBillDiscountTest]])। ⛔ আগে ভ্যাট ছাড়ের আগের দামে বসত, ক্রেতা যে টাকা দেননি তার উপরেও।
+         * ⓘ ছাড়টা দামে খাটে, তাই সীমাও ভ্যাটের আগের দাম (+ রাউন্ডিং); ভ্যাট বন্ধ থাকলে অঙ্কটা আগের মতোই।
          */
         $billDiscount = (string) ($invoice->bill_discount ?? '0');
+        $beforeVat = bcsub($totals['subtotal'], $totals['discount'], 4);
 
         if (bccomp($billDiscount, '0', 4) < 0
-            || bccomp($billDiscount, bcadd($totals['total'], $rounding, 4), 4) > 0) {
+            || bccomp($billDiscount, bcadd($beforeVat, $rounding, 4), 4) > 0) {
             throw ValidationException::withMessages([
                 'discount_amount' => __('sales::validation.bill_discount_over_total', [
                     'no' => $invoice->document_no,
                     'discount' => Money::format($billDiscount),
-                    'total' => Money::format(bcadd($totals['total'], $rounding, 4)),
+                    'total' => Money::format(bcadd($beforeVat, $rounding, 4)),
                 ]),
             ]);
         }
+
+        $totals = $this->vatAfterBillDiscount($invoice, $totals, $billDiscount, $beforeVat);
 
         $totals['total'] = bcsub(bcadd($totals['total'], $rounding, 4), $billDiscount, 4);
 
@@ -1318,6 +1322,44 @@ final class SalesInvoiceService
         if ($warnings !== []) {
             session()->flash('price_warnings', array_values(array_unique($warnings)));
         }
+    }
+
+    /**
+     * ⭐ বিলের ছাড়ের ভাগে ভ্যাট নেই — প্রতিটা সারির ভ্যাট সেই অনুপাতে কমে (মালিক, ১০ অক্টোবর ২০২৬)।
+     *
+     * ⓘ ছাড়টা সারিগুলোর ভ্যাটের আগের দামের অনুপাতে ভাগ হয়, তাই সারির ভ্যাট × (ছাড় ÷ মোট দাম) কাটা যায় — হারের
+     * ভ্যাটে এটা হুবহু "ছাড়ের পরের দামের উপর হার"। সারিতেই লেখা হয়, কারণ ফেরত আর প্রতিবেদন সারির ভ্যাট পড়ে
+     * ([[SalesReturnService]], [[SalesReports]])। দামের বাইরের ভ্যাট কমলে মোটও কমে; ভেতরের ভ্যাট দামেই ছিল, মোট বদলায় না।
+     *
+     * @param  array{subtotal: string, discount: string, tax: string, total: string}  $totals
+     * @return array{subtotal: string, discount: string, tax: string, total: string}
+     */
+    private function vatAfterBillDiscount(SalesInvoice $invoice, array $totals, string $billDiscount, string $beforeVat): array
+    {
+        if (bccomp($billDiscount, '0', 4) <= 0 || bccomp($totals['tax'], '0', 4) <= 0 || bccomp($beforeVat, '0', 4) <= 0) {
+            return $totals;
+        }
+
+        foreach ($invoice->lines()->get() as $line) {
+            $tax = (string) $line->tax;
+
+            if (bccomp($tax, '0', 4) <= 0) {
+                continue;
+            }
+
+            $cut = Money::round(bcdiv(bcmul($tax, $billDiscount, 8), $beforeVat, 8), 4);
+            $outside = bccomp(bcsub((string) $line->amount, bcsub(bcmul((string) $line->qty, (string) $line->rate, 4), (string) $line->discount, 4), 4), '0', 4) > 0;
+
+            $line->update([
+                'tax' => bcsub($tax, $cut, 4),
+                'amount' => $outside ? bcsub((string) $line->amount, $cut, 4) : (string) $line->amount,
+            ]);
+
+            $totals['tax'] = bcsub($totals['tax'], $cut, 4);
+            $totals['total'] = $outside ? bcsub($totals['total'], $cut, 4) : $totals['total'];
+        }
+
+        return $totals;
     }
 
     /**

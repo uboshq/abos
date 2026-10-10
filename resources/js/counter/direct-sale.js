@@ -2204,9 +2204,23 @@ export default function directSale({
 
             if (! isFinite(n) || n <= 0) return 0;
 
-            const value = isPercent ? this.grossTotal * n / 100 : n;
+            // ⭐ ছাড় দামে খাটে, ভ্যাটে নয় — শতাংশ আর সীমা দুটোই ভ্যাটের আগের দামে (মালিক, ১০ অক্টোবর ২০২৬)
+            const value = isPercent ? this.subTotal * n / 100 : n;
 
-            return Math.min(value, this.grossTotal);
+            return Math.min(value, this.subTotal);
+        },
+
+        /*
+         * ⭐ ভ্যাট বিলের ছাড়ের পরে — ছাড় বাদ দিয়ে যে দাম, তার উপর ভ্যাট (মালিক, ১০ অক্টোবর ২০২৬)।
+         * ⓘ সার্ভারের নিয়মেই ([[SalesInvoiceService::vatAfterBillDiscount()]]): ভ্যাট ছাড়ের অনুপাতে কমে;
+         * দামের বাইরের অংশ কমলে দিতে-হবেও কমে, ভেতরের অংশ দামেই ছিল।
+         */
+        vatShareOff(vat) {
+            return this.subTotal > 0 ? vat * this.discountValue / this.subTotal : 0;
+        },
+
+        get vatAfterDiscount() {
+            return this.vatTotal - this.vatShareOff(this.vatTotal);
         },
 
         /*
@@ -2255,6 +2269,7 @@ export default function directSale({
         get netPayable() {
             return this.grossTotal
                 - this.discountValue
+                - this.vatShareOff(this.grossTotal - this.subTotal)
                 + this.expenseValue
                 + this.freightOnBill
                 + this.roundingValue;

@@ -27,11 +27,13 @@ use App\Modules\MasterData\Models\Tax;
 use App\Modules\MasterData\Models\Unit;
 use App\Modules\Sales\Models\DeliveryChallan;
 use App\Modules\Sales\Models\SalesInvoice;
+use App\Modules\Sales\Services\SalesInvoiceService;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\View;
 use Illuminate\Testing\TestResponse;
+use Illuminate\Validation\ValidationException;
 use Tests\Concerns\PrintsTheStandardPaper;
 use Tests\Concerns\SignsTheDiscountAsTheOwner;
 use Tests\TestCase;
@@ -526,12 +528,12 @@ final class EveryCounterSaleMustMatchTheBooksFiveWaysTest extends TestCase
         app(SettingsService::class)->set('sales.vat_enabled', false);
 
         try {
-            app(\App\Modules\Sales\Services\SalesInvoiceService::class)->create([
+            app(SalesInvoiceService::class)->create([
                 'customer_id' => $this->dealer->id,
                 'trx_date' => now()->toDateString(),
             ], [['product_id' => $this->plain->id, 'qty' => '1', 'rate' => '150', 'tax' => '22.50']]);
             $this->fail('⛔ বিক্রির ভ্যাট বন্ধ, অথচ ভ্যাটওয়ালা বিল বসে গেছে।');
-        } catch (\Illuminate\Validation\ValidationException $e) {
+        } catch (ValidationException $e) {
             $this->assertArrayHasKey('lines', $e->errors());
         }
     }
@@ -541,10 +543,11 @@ final class EveryCounterSaleMustMatchTheBooksFiveWaysTest extends TestCase
      *
      * হাতে গোনা (আগের পরীক্ষার সারি, তার উপর):
      *   সারির মোট ১,২৪২ (ছাড় ১২০, ভ্যাট ১৬২ সহ)
-     *   বিলের ছাড় ৪০ · রাউন্ডিং −২ → দিতে হবে ১,২০০ (পর্দার `netPayable` —
-     *   grossTotal − discountValue + expenseValue + roundingValue)
-     *   ক্রেতা নগদে ১,২০০ দিলেন, বকেয়া শূন্য।
-     *   ভ্যাট ১৬২ (ছাড়ের পরের দামে ভ্যাট আগেই গোনা) · বিক্রয় ১,২০০ − ১৬২ = ১,০৩৮
+     *   বিলের ছাড় ৪০ · রাউন্ডিং −২
+     *   ⭐ ভ্যাট বিলের ছাড়ের পরের দামে (মালিক, ১০ অক্টোবর ২০২৬): ১৬২ × (১ − ৪০ ÷ ১,০৮০) = ১৫৬
+     *   দিতে হবে ১,০৮০ − ৪০ + ১৫৬ − ২ = ১,১৯৪ (পর্দার `netPayable`)
+     *   ক্রেতা নগদে ১,১৯৪ দিলেন, বকেয়া শূন্য।
+     *   বিক্রয় ১,১৯৪ − ১৫৬ = ১,০৩৮
      *   খরচ ৮০০ · লাভ ২৩৮
      *
      * ⚠️ বিলের ছাড় কোন খাতে যায় (নিট বিক্রয়, নাকি আলাদা "ছাড় প্রদত্ত")
@@ -559,27 +562,27 @@ final class EveryCounterSaleMustMatchTheBooksFiveWaysTest extends TestCase
 
         $this->sell(
             [$this->line($vatted, '8', '150', ['discount_percent' => '10'])],
-            [$this->cash('1200')],
+            [$this->cash('1194')],
             ['discount_amount' => '40', 'rounding_amount' => '-2'],
         )->assertSessionHasNoErrors();
 
         $invoice = $this->lastInvoiceOf($this->dealer);
 
-        $this->assertSame(0, bccomp((string) $invoice->total, '1200', 4),
-            '⛔ বিলের মোট '.$invoice->total.', অথচ পর্দা ক্রেতার কাছ থেকে ১,২০০ নিয়েছে '
+        $this->assertSame(0, bccomp((string) $invoice->total, '1194', 4),
+            '⛔ বিলের মোট '.$invoice->total.', অথচ পর্দা ক্রেতার কাছ থেকে ১,১৯৪ নিয়েছে '
             .'(বিলের ছাড় ৪০ আর রাউন্ডিং −২ বিলে পৌঁছায়নি)।');
         $this->assertDealerMoved($before['ledger'], '0',
             '⛔ ক্রেতা পর্দার পুরো টাকা দিয়েও বকেয়া নিয়ে বাড়ি গেলেন।');
         $this->assertBooksMoved($before['ledger'], [
-            $this->tillCode() => '1200',
+            $this->tillCode() => '1194',
             StandardChart::SALES => '-1038',
-            StandardChart::VAT_PAYABLE => '-162',
+            StandardChart::VAT_PAYABLE => '-156',
             StandardChart::COST_OF_GOODS_SOLD => '800',
             StandardChart::INVENTORY => '-800',
         ]);
         $this->assertStockMoved($vatted, $before, '-8', '-800');
         $this->assertGrossProfit($before['ledger'], '238');
-        $this->assertPrintedTotalIsTheLedgerTotal($invoice, '1200');
+        $this->assertPrintedTotalIsTheLedgerTotal($invoice, '1194');
     }
 
     /**

@@ -4,9 +4,10 @@ declare(strict_types=1);
 
 namespace App\Modules\Sales\Services;
 
-use App\Core\Engines\Overview\ConfirmOverview;
 use App\Core\Engines\Approval\ApprovalEngine;
+use App\Core\Engines\Overview\ConfirmOverview;
 use App\Core\Support\DateFormat;
+use App\Core\Support\DocumentStatus;
 use App\Core\Support\Money;
 use App\Modules\Customer\Models\Customer;
 use App\Modules\Inventory\Models\Batch;
@@ -50,6 +51,8 @@ final class DirectSaleOverview
             ->head(__('sales::field.warehouse'), $warehouse?->name());
 
         $sum = '0';
+        $beforeVat = '0';
+        $outsideVat = '0';
         $lineDiscount = '0';
         $hasDiscount = false;
 
@@ -75,6 +78,8 @@ final class DirectSaleOverview
             ], Money::format($figures['amount']));
 
             $sum = bcadd($sum, $figures['amount'], 4);
+            $beforeVat = bcadd($beforeVat, bcsub($figures['base'], $figures['discount'], 4), 4);
+            $outsideVat = bcadd($outsideVat, bcsub($figures['amount'], bcsub($figures['base'], $figures['discount'], 4), 4), 4);
             $lineDiscount = bcadd($lineDiscount, $figures['discount'], 4);
             $hasDiscount = $hasDiscount || bccomp($figures['discount'], '0', 4) > 0;
         }
@@ -83,6 +88,11 @@ final class DirectSaleOverview
         $rounding = (string) ($data['rounding_amount'] ?? '0');
         $rounding = is_numeric($rounding) ? $rounding : '0';
         $net = bcsub(bcadd($sum, $rounding, 4), $billDiscount, 4);
+
+        // ⭐ ভ্যাট বিলের ছাড়ের পরে — বিলের মতোই ([[SalesInvoiceService::vatAfterBillDiscount()]], মালিক, ১০ অক্টোবর ২০২৬)
+        if (bccomp($billDiscount, '0', 4) > 0 && bccomp($beforeVat, '0', 4) > 0) {
+            $net = bcsub($net, Money::round(bcdiv(bcmul($outsideVat, $billDiscount, 8), $beforeVat, 8), 4), 4);
+        }
         $hasDiscount = $hasDiscount || bccomp($billDiscount, '0', 4) > 0;
 
         $o->total(__('sales::overview_confirm.lines_total'), Money::format($sum));
@@ -163,7 +173,7 @@ final class DirectSaleOverview
         }
 
         $old = SalesInvoice::query()->whereKey($id)->where('customer_id', $customer->id)
-            ->where('status', \App\Core\Support\DocumentStatus::CONFIRMED)->value('total');
+            ->where('status', DocumentStatus::CONFIRMED)->value('total');
 
         if ($old === null) {
             return $s;
@@ -199,7 +209,7 @@ final class DirectSaleOverview
         $id = (int) ($data['resume_invoice_id'] ?? 0);
 
         if ($id <= 0 || ! SalesInvoice::query()->whereKey($id)->where('customer_id', $customer->id)
-            ->where('status', \App\Core\Support\DocumentStatus::DRAFT)->exists()) {
+            ->where('status', DocumentStatus::DRAFT)->exists()) {
             return $s;
         }
 
