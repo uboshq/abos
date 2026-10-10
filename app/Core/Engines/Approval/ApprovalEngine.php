@@ -4,10 +4,14 @@ declare(strict_types=1);
 
 namespace App\Core\Engines\Approval;
 
+use App\Core\Events\ApprovalDecided;
+use App\Core\Module\ModuleRegistry;
 use App\Core\Services\NotificationService;
 use App\Core\Services\PermissionSyncer;
 use App\Core\Services\SettingsService;
+use App\Core\Support\Actor;
 use App\Core\Support\CompanyContext;
+use App\Core\Support\Money;
 use App\Models\Approval;
 use App\Models\ApprovalDecision;
 use App\Models\ApprovalFlow;
@@ -139,8 +143,8 @@ final class ApprovalEngine
          * ওয়েব, বা দুইবার চাপ — দুইজনেই "অপেক্ষমাণ নেই" দেখে দুইটা অনুরোধ বানাত।
          * ⓘ তালাটা কাগজে, অনুমোদনে নয় — যে সারি এখনো নেই তাতে তালা দেওয়া যায় না।
          */
-        $userId ??= $customerId === null ? \App\Core\Support\Actor::userId() : null;
-        $customerId ??= $userId === null ? \App\Core\Support\Actor::portalCustomerId() : null;
+        $userId ??= $customerId === null ? Actor::userId() : null;
+        $customerId ??= $userId === null ? Actor::portalCustomerId() : null;
 
         return DB::transaction(function () use ($document, $flow, $module, $action, $amount, $payload, $reason, $userId, $customerId, $stateHash) {
             $document->newQueryWithoutScopes()->whereKey($document->getKey())->lockForUpdate()->first();
@@ -316,7 +320,7 @@ final class ApprovalEngine
              * ([[ApprovalDecided]])।
              */
             $decided = $approval->fresh();
-            DB::afterCommit(fn () => event(\App\Core\Events\ApprovalDecided::from($decided)));
+            DB::afterCommit(fn () => event(ApprovalDecided::from($decided)));
 
             return $approval->fresh();
         });
@@ -484,7 +488,7 @@ final class ApprovalEngine
              * ⚠️ পুরনো শ্রোতারা (বিক্রির শেষ সই, চালান) কেবল `approved` শোনে — তাদের কিছু বদলায় না।
              */
             $decided = $approval->fresh();
-            DB::afterCommit(fn () => event(\App\Core\Events\ApprovalDecided::from($decided)));
+            DB::afterCommit(fn () => event(ApprovalDecided::from($decided)));
 
             return $approval->fresh();
         });
@@ -527,6 +531,11 @@ final class ApprovalEngine
             ]),
             $remarks,
             Route::has('approval.inbox.index') ? route('approval.inbox.index') : null,
+            // ⭐ একই সিদ্ধান্তের খবর একবারই; আর কোন কাগজের — তার শাখা খবরে বসে (বিজ্ঞপ্তি ব্যবস্থাপনা, ধাপ ১)
+            key: 'approval:'.$approval->id.':'.$outcome,
+            about: $approval->approvable instanceof Model ? $approval->approvable : null,
+            // ⭐ নিয়মের শর্ত আর টেমপ্লেটের মান — টাকা, কাগজ, পক্ষ, স্তর, ফল
+            data: $this->noticeData($approval, $outcome),
         );
     }
 
@@ -578,6 +587,26 @@ final class ApprovalEngine
      * [[NamesItsCustomerInNotices]])। যে কাগজ বলে না, তার জন্য আগের মতো ধরন আর নম্বর। মনে করানো আর উপরে পাঠানোর
      * বিজ্ঞপ্তিও এটাই ডাকে ([[ApprovalsDue]]) — আগে সেখানে কাঁচা ইংরেজি চাবি যেত ("sales · delivery_order")।
      */
+    /**
+     * ⭐ বিজ্ঞপ্তির নিয়ম আর টেমপ্লেটের মান (বিজ্ঞপ্তি ব্যবস্থাপনা, ধাপ ৩-এর অনুসরণ) — টাকা, কাগজের নম্বর, পক্ষ, স্তর, অবস্থা।
+     * ⓘ টাকা লেখা হিসেবে (`Money::format`), float কখনো নয়; নিয়মের শর্ত এটাই তুলনা করে। গোপন কিছু নয়।
+     *
+     * @return array<string, string>
+     */
+    public function noticeData(Approval $approval, ?string $status = null): array
+    {
+        $document = $approval->approvable;
+        $party = $document !== null && method_exists($document, 'noticeParty') ? $document->noticeParty() : null;
+
+        return array_filter([
+            'amount' => $approval->amount === null ? '' : Money::format((string) $approval->amount, 2),
+            'paper_no' => (string) ($document?->getAttribute('document_no') ?? ''),
+            'party' => (string) ($party ?? ''),
+            'level' => (string) $approval->current_level,
+            'status' => (string) ($status ?? $approval->status),
+        ], fn ($v) => $v !== '');
+    }
+
     public function noticeLabel(Approval $approval): string
     {
         $document = $approval->approvable;
@@ -597,7 +626,7 @@ final class ApprovalEngine
          * ⛔ আগে `core.module.*` আর `core.approval.action.*` খোঁজা হত, যা কখনো লেখাই হয়নি — বিজ্ঞপ্তিতে কাঁচা ইংরেজি যেত
          * ("sales · delivery_order"), অথচ মালিক কেবল বাংলা পড়েন (৮ অক্টোবর ২০২৬)। মডিউল না চিনলে আগের মতো।
          */
-        $definition = app(\App\Core\Module\ModuleRegistry::class)->get((string) $approval->module);
+        $definition = app(ModuleRegistry::class)->get((string) $approval->module);
         if ($definition !== null) {
             $key = $definition->approvals[(string) $approval->action] ?? null;
             $action = $key === null ? null : __($key);

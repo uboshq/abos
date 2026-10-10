@@ -66,6 +66,9 @@ final class EveryReportStandsBehindTheBranchWallTest extends TestCase
      */
     private const REFUSED = [
         'approval.pending' => '`approvals` has no branch_id; each row is a document of some branch, with its amount',
+        // ⭐ বিজ্ঞপ্তি ব্যবস্থাপনা, ধাপ ৪
+        'notification.channel_availability' => '`notification_channels` is company-level configuration with no branch_id; attempts are counted for the whole company',
+        'notification.audit_report' => '`notification_audit_logs` has no branch_id; it records actions on notifications of every branch',
         'approval.approved' => '`approvals` has no branch_id; each row is a document of some branch, with its amount',
         'approval.rejected' => '`approvals` has no branch_id; each row is a document of some branch, with its amount',
         'approval.by_user' => 'counts decisions on every branch\'s documents; `approval_decisions` has no branch_id',

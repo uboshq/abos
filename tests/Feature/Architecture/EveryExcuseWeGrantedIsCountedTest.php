@@ -349,7 +349,41 @@ final class EveryExcuseWeGrantedIsCountedTest extends TestCase
      *   +১  EveryRouteIsGuardedTest::OPEN_TO_THE_WORLD — api.app.crash: লগইনের পর্দাতেও অ্যাপ ভাঙে, তাই টোকেন ছাড়া;
      *       কেবল ভুলের খাতায় লেখে, কিছু ফেরায় না, throttle:10,1 আর প্রতিটা ঘরের আকারের সীমা (সমন্বয়কের অ্যাপ-অডিট)
      */
-    private const CEILING = 343;
+    /*
+     * ── ⚠️ ৩৪৩ → ৩৫২, ১০ অক্টোবর ২০২৬ (বিজ্ঞপ্তি ব্যবস্থাপনা, ধাপ ১ — মালিকের স্পেক) ────────────────────────────────
+     *   +৫  EveryRouteIsGuardedTest (চাবিহীন, লগইন) — notifications.index / unread-count / bulk / read / archive: নিজের
+     *       খবরের পাতা ও কাজ; প্রতিটা নিজের সারিতে সীমিত (NotificationService::mine()), অন্যেরটায় ৪০৩। চাবি চাইলে নিজের
+     *       ঘণ্টা দেখতে প্রত্যেক কর্মীকে আলাদা চাবি দিতে হত — notifications.open আর read-all-এর একই যুক্তি
+     *   +২  EveryRouteIsGuardedTest::TOKEN_SYNC — api.notifications.unread-count / archive: ফোনের একই কাজ, অন্যেরটায় ৪০৪
+     *   +২  EveryChangeableRowRemembersWhoChangedItTest::EXEMPT — NotificationEvent (ঘটনার প্রতিধ্বনি) আর
+     *       NotificationAuditLog (নিজেই নিরীক্ষার খাতা), Notification-এর একই যুক্তি
+     */
+    /*
+     * ── ⚠️ ৩৫২ → ৩৫৭, ১০ অক্টোবর ২০২৬ (বিজ্ঞপ্তি ব্যবস্থাপনা, ধাপ ২ — পৌঁছানোর মাধ্যম) ──────────────────────────────
+     *   +২  EveryRouteIsGuardedTest (চাবিহীন, লগইন) — notifications.push.subscribe / unsubscribe: নিজের ব্রাউজারের Web
+     *       Push; সারি কেবল নিজের নামে, মাধ্যম সংযুক্ত না হলে ৪০৯, throttle:10,1
+     *   +৩  EveryChangeableRowRemembersWhoChangedItTest::EXEMPT — NotificationJob আর NotificationDeliveryAttempt (যন্ত্রের
+     *       পৌঁছানোর খাতা; মানুষের আবার-চেষ্টা আর বাতিল notification_audit_logs-এ) আর NotificationSubscription (ব্যক্তির
+     *       নিজের ব্রাউজার; চালু-বন্ধ নিরীক্ষায়)। NotificationChannel নিরীক্ষিত — ছাড় নয়
+     */
+    /*
+     * ── ⚠️ ৩৫৭ → ৩৬২, ১০ অক্টোবর ২০২৬ (বিজ্ঞপ্তি ব্যবস্থাপনা, ধাপ ৩ — নিয়ম ও টেমপ্লেট) ─────────────────────────────────
+     *   +৫  EveryChangeableRowRemembersWhoChangedItTest::EXEMPT — NotificationTemplateVersion আর NotificationRuleVersion
+     *       (একবার-লেখা সংস্করণ, নিজেরাই ইতিহাস), NotificationPreference (ব্যক্তির নিজের পছন্দ, NotificationChoice-এর
+     *       মতো), NotificationDigest আর NotificationSuppression (যন্ত্রের খাতা)। নিয়ম, টেমপ্লেট, দল আর সূচি নিরীক্ষিত
+     */
+    /*
+     * ── ⚠️ 362 → 365, ১০ অক্টোবর ২০২৬ (বিজ্ঞপ্তি ব্যবস্থাপনা — স্পেক §১২-এর বাকি API) ───────────────────────────────
+     *   +৩  EveryRouteIsGuardedTest::TOKEN_SYNC — api.notifications.show, api.notification-preferences.show / update:
+     *       নিজের খবর আর নিজের পছন্দ, ফোনের ঘণ্টার বাকি দরজার মতোই চাবিহীন; অন্যেরটায় ৪০৪
+     */
+    /*
+     * ── ⚠️ 365 → 367, ১০ অক্টোবর ২০২৬ (বিজ্ঞপ্তি ব্যবস্থাপনা — প্রোভাইডারের ফেরত-খবর) ─────────────────────────────────
+     *   +১  EveryRouteIsGuardedTest::OPEN_TO_THE_WORLD — api.notification-callbacks: প্রোভাইডার লগইন ছাড়া ডাকে; পাহারা
+     *       মাধ্যমের গোপন চাবির HMAC স্বাক্ষর আর সময়-সীমা
+     *   +১  EveryChangeableRowRemembersWhoChangedItTest::EXEMPT — NotificationProviderEvent (যন্ত্রের একবার-লেখা সারি)
+     */
+    private const CEILING = 367;
 
     /*
      * ── ⚠️ ২২২ → ২২৪, ২৩ সেপ্টেম্বর ২০২৬ ───────────────────────────

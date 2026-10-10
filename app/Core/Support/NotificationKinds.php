@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Core\Support;
 
+use App\Core\Module\ModuleRegistry;
+
 /**
  * কী কী ধরনের খবর পাঠানো হয় — সেটিংসের পর্দা এই তালিকাটাই দেখায়।
  *
@@ -28,6 +30,9 @@ final class NotificationKinds
         return [
             'approval.approved' => 'core.notify.kind.approval_approved',
             'approval.rejected' => 'core.notify.kind.approval_rejected',
+            // ⓘ সময় ফুরিয়ে আসা আর ওপরে যাওয়া — ভাষার সারি আগে থেকেই ছিল, তালিকায় ছিল না, তাই বন্ধ করা যেত না (ধাপ ১)
+            'approval.reminder' => 'core.notify.kind.approval_reminder',
+            'approval.escalated' => 'core.notify.kind.approval_escalated',
             'report_ready' => 'core.notify.kind.report_ready',
 
             /*
@@ -73,6 +78,10 @@ final class NotificationKinds
             'sales.order_credit_held' => 'core.notify.kind.order_credit_held',
             'sales.order_awaits_you' => 'core.notify.kind.order_awaits_you',
 
+            // ⭐ বিজ্ঞপ্তি ব্যবস্থাপনা, ধাপ ৩ — সূচিমতো খবর আর টেমপ্লেটের পরীক্ষা ([[ScheduleRunner]], টেমপ্লেট স্টুডিও)
+            'notification.scheduled' => 'core.notify.kind.notification_scheduled',
+            'notification.template_test' => 'core.notify.kind.notification_template_test',
+
             // ⛔ সমন্বয় জাবেদা নিজের তারিখে উল্টাতে পারল না (প্রায়ই মাস বন্ধ) — একবারই ([[AdjustingReversals]], ৯ অক্টোবর ২০২৬)
             'accounts.adjusting_reversal_stuck' => 'core.notify.kind.adjusting_reversal_stuck',
         ];
@@ -81,6 +90,69 @@ final class NotificationKinds
     public static function knows(string $type): bool
     {
         return array_key_exists($type, self::all());
+    }
+
+    /*
+     * ── ⭐ গুরুত্ব আর শ্রেণি — বিজ্ঞপ্তি ব্যবস্থাপনা, ধাপ ১ (মালিকের স্পেক §৫, §৯ক, ১০ অক্টোবর ২০২৬) ──────────────
+     *
+     * গুরুত্ব (Priority): critical — নিরাপত্তা, গুরুতর সিস্টেম সমস্যা · high — সইয়ের অপেক্ষা, বাকির সীমা পেরোনো, আটকে
+     * থাকা কাজ, বকেয়া ভাড়া · normal — সাধারণ অনুমোদন, তারিখের আগাম খবর · low — অবস্থা বদল, রিপোর্ট তৈরি।
+     * ⓘ গুরুত্ব আর মাধ্যম আলাদা জিনিস (§৫): critical মানেই SMS নয় — কোন মাধ্যমে যাবে সেটা নিয়ম ঠিক করে।
+     *
+     * শ্রেণি (Category) — ঘণ্টার ছাঁকনি: approval (অনুমোদন) · task (কাজ) · system (ব্যবস্থা) · update (অবস্থা বদল)।
+     */
+
+    /** @var list<string> সবচেয়ে জরুরি আগে — সাজানোয় এই ক্রম */
+    public const PRIORITIES = ['critical', 'high', 'normal', 'low'];
+
+    /** @var list<string> */
+    public const CATEGORIES = ['approval', 'task', 'system', 'update'];
+
+    /**
+     * ধরন থেকে মডিউল, শ্রেণি আর গুরুত্ব — ডাকা জায়গা গুরুত্ব নিজে দিলে সেটাই খাটে ([[NotificationService::send()]])।
+     *
+     * ⓘ অচেনা ধরন → মডিউল = বিন্দুর আগের অংশ, শ্রেণি "কাজ", গুরুত্ব "সাধারণ" — নতুন খবর হারায় না, বাড়তি চেঁচায়ও না।
+     * ⚠️ পুরনো সারিগুলো একই নিয়মে একবার বসানো হয়েছিল (মাইগ্রেশন `the_bell_kept_no_record_of_what_it_said`)।
+     *
+     * @return array{module: string, category: string, priority: string}
+     */
+    public static function classify(string $type): array
+    {
+        $module = str_contains($type, '.') ? (string) strstr($type, '.', true) : 'system';
+
+        [$category, $priority] = match (true) {
+            $type === 'approval.approved' => ['approval', 'low'],
+            $type === 'approval.rejected' => ['approval', 'normal'],
+            str_starts_with($type, 'approval.') => ['approval', 'high'],
+            $type === 'sales.order_awaits_you' => ['approval', 'high'],
+            in_array($type, ['sales.order_credit_held', 'sales.signed_challan_stuck', 'sales.signed_sale_stuck', 'finance.rent_overdue'], true) => ['task', 'high'],
+            $type === 'sales.delivery_stage', $type === 'report_ready' => ['update', 'low'],
+            $type === 'notification.scheduled' => ['update', 'normal'],
+            $type === 'notification.template_test' => ['system', 'low'],
+            $type === 'backup.failed' => ['system', 'critical'],
+            default => ['task', 'normal'],
+        };
+
+        return ['module' => $module, 'category' => $category, 'priority' => $priority];
+    }
+
+    /**
+     * খবরটা কোথা থেকে — মডিউলের নিজের নাম, পর্দার ভাষায় (ঘণ্টার "Source", স্পেক §৯ক)। ⓘ অচেনা বা মডিউলহীন → "ব্যবস্থা"।
+     */
+    public static function sourceLabel(?string $module): string
+    {
+        $definition = $module === null ? null : app(ModuleRegistry::class)->get($module);
+
+        if ($definition === null) {
+            return (string) __('core.notify.source_system');
+        }
+
+        return (string) ($definition->name[app()->getLocale()] ?? $definition->name['en'] ?? $module);
+    }
+
+    public static function isPriority(?string $priority): bool
+    {
+        return in_array($priority, self::PRIORITIES, true);
     }
 
     /**
@@ -106,6 +178,9 @@ final class NotificationKinds
      * @var list<string>
      */
     private const MAIL_BY_DEFAULT = [
+        /* ⓘ টেমপ্লেট লেখক নিজের কাছে পরীক্ষা পাঠান — চিঠিটা কেমন দেখায় সেটাই তো দেখতে চান (ধাপ ৩) */
+        'notification.template_test',
+
         /* কাগজটা তাঁর টেবিলে ফেরত — তিনি না ধরলে কিছুই এগোয় না */
         'approval.rejected',
 

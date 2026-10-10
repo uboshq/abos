@@ -171,6 +171,7 @@ class EveryRouteIsGuardedTest extends TestCase
 
         // ⓘ ফোনের ক্র্যাশের খবর — লগইনের আগেও ভাঙে; কেবল ভুলের খাতায় লেখে, কিছু ফেরায় না; throttle আর আকারের সীমা সহ
         'api.app.crash' => 'ফোনের ক্র্যাশের খবর; কেবল লেখে, কিছু ফেরায় না; throttle:10,1 আর ঘরের আকারের সীমা',
+        'api.notification-callbacks' => 'প্রোভাইডারের ফেরত-খবর (রসিদ, bounce) — প্রোভাইডার লগইন ছাড়া ডাকে; পাহারা HMAC স্বাক্ষর আর ৫ মিনিটের সময়-সীমা, throttle:60,1, কিছু ফেরায় না',
 
         /*
          * প্রথম দরজা — একদম নতুন ইনস্টলের একমাত্র প্রবেশপথ
@@ -265,6 +266,11 @@ class EveryRouteIsGuardedTest extends TestCase
         'api.notifications.index' => 'নিজের ঘণ্টার খবর — কেবল এই মানুষটার, এই কোম্পানির',
         'api.notifications.read-all' => 'নিজের ঘণ্টা খালি করা',
         'api.notifications.read' => 'নিজের খবরে পড়ার দাগ — অন্যেরটায় ৪০৪',
+        'api.notifications.unread-count' => 'নিজের না-পড়া গোনা — ফোনের ব্যাজ (বিজ্ঞপ্তি ব্যবস্থাপনা, ধাপ ১)',
+        'api.notifications.archive' => 'নিজের খবর আর্কাইভে — অন্যেরটায় ৪০৪',
+        'api.notifications.show' => 'নিজের খবরের বিস্তারিত — অন্যেরটায় ৪০৪; কাগজ নাগালে না থাকলে ঠিকানা নয়',
+        'api.notification-preferences.show' => 'নিজের বিজ্ঞপ্তির পছন্দ পড়া',
+        'api.notification-preferences.update' => 'নিজের বিজ্ঞপ্তির পছন্দ বদল — দায়িত্বপ্রাপ্ত কেবল এই কোম্পানির সহকর্মী',
 
         /*
          * পর্দার দুইটা — পাঠকের কাজ, লেখকের নয়।
@@ -552,6 +558,15 @@ class EveryRouteIsGuardedTest extends TestCase
          */
         'notifications.open' => 'নিজের খবর — মালিকানা কন্ট্রোলারে যাচাই হয়',
         'notifications.read-all' => 'নিজের ঘণ্টা খালি করা',
+        // ⭐ বিজ্ঞপ্তি ব্যবস্থাপনা, ধাপ ১ — নিজের খবরের পাতা ও কাজ; সব নিজের সারিতে, অন্যেরটায় ৪০৩ (NotificationService::mine())
+        'notifications.index' => 'আমার বিজ্ঞপ্তি — কেবল নিজের খবর, নাগালের শাখার',
+        'notifications.unread-count' => 'নিজের না-পড়া গোনা — ঘণ্টার polling, সুইচে বাঁধা',
+        'notifications.bulk' => 'নিজের বাছা খবরে পড়া/আর্কাইভ — অন্যের সারি ছোঁয় না',
+        'notifications.read' => 'নিজের খবরে পড়ার দাগ — অন্যেরটায় ৪০৩',
+        'notifications.archive' => 'নিজের খবর আর্কাইভে — অন্যেরটায় ৪০৩',
+        // ⭐ ধাপ ২ — নিজের ব্রাউজারের Web Push; অনুমতি ব্রাউজার নিজে চায়, সারি কেবল নিজের নামে
+        'notifications.push.subscribe' => 'এই ব্রাউজারে নিজের Web Push চালু — নিজের নামে, মাধ্যম সংযুক্ত হলে তবেই',
+        'notifications.push.unsubscribe' => 'নিজের ব্রাউজারের Web Push বন্ধ — কেবল নিজের সারি',
         'components' => 'নকশার নমুনা পাতা, কোনো ডেটা নেই',
 
         /*
