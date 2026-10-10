@@ -262,10 +262,26 @@ final class DeliveryService
      */
     public function retryDue(): array
     {
-        $unstuck = NotificationJob::query()->withoutGlobalScopes()
+        /*
+         * ⛔ আটকে যাওয়া পাঠানোও একটা চেষ্টা — নইলে চিরকাল (cb-র রিভিউ, মেশানোর আগে, ১১ অক্টোবর ২০২৬;
+         * [[AStuckSendCountsAsATryTest]])। ⚠️ চেষ্টার সংখ্যা বাড়ত কেবল পাঠানো ফিরলে; কর্মী মাঝপথে মরলে সারিটা ১৫ মিনিট পরে
+         * একই সংখ্যায় আবার চেষ্টায় যেত, `max_attempts` কখনো থামাত না — আর প্রদানকারী আগেই নিয়ে থাকলে মানুষটা প্রতি ১৫ মিনিটে একই
+         * চিঠি পেতেন, অন্তহীন। ⓘ এখন আটকানো = একটা চেষ্টা; সীমায় পৌঁছালে মৃত (ব্যর্থের তালিকায়, হাতে আবার চেষ্টা করা যায়)।
+         */
+        $stuck = fn () => NotificationJob::query()->withoutGlobalScopes()
             ->where('status', NotificationJob::PROCESSING)
-            ->where('claimed_at', '<', now()->subMinutes(self::STUCK_MINUTES))
-            ->update(['status' => NotificationJob::RETRYING, 'claimed_at' => null, 'next_attempt_at' => now()]);
+            ->where('claimed_at', '<', now()->subMinutes(self::STUCK_MINUTES));
+
+        $unstuck = $stuck()->whereRaw('attempts + 1 >= max_attempts')->update([
+            'status' => NotificationJob::DEAD, 'attempts' => \Illuminate\Support\Facades\DB::raw('attempts + 1'),
+            'claimed_at' => null, 'next_attempt_at' => null, 'dead_at' => now(), 'error_kind' => 'stuck',
+            'last_error' => 'The send never came back (worker stopped mid-send).',
+        ]);
+
+        $unstuck += $stuck()->update([
+            'status' => NotificationJob::RETRYING, 'attempts' => \Illuminate\Support\Facades\DB::raw('attempts + 1'),
+            'claimed_at' => null, 'next_attempt_at' => now(),
+        ]);
 
         $due = NotificationJob::query()->withoutGlobalScopes()
             ->where('status', NotificationJob::RETRYING)
