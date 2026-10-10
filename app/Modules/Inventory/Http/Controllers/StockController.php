@@ -233,7 +233,18 @@ class StockController extends Controller implements HasMiddleware
             'unplaced' => 't.unplaced_total',
             'unplaced_free' => 't.unplaced_free_total',
         // ⛔ মূল্যে কেবল কেনা মাল — ফ্রি মালের খরচ শূন্য, তার স্তরই নেই (গ১৯, Inventory অডিট, ৪ অক্টোবর ২০২৬)
-        ] + ($this->maySeeCost($request) ? ['stock_value' => 'CASE WHEN t.layer_qty_total > 0 THEN TRUNCATE((t.floor_total + t.unplaced_total) * TRUNCATE(t.layer_value_total / t.layer_qty_total, 4), 4) ELSE 0 END'] : []));
+        ] + ($this->maySeeCost($request) ? ['stock_value' => 'CASE WHEN t.layer_qty_total > 0 THEN TRUNCATE((t.floor_total + t.unplaced_total) * TRUNCATE(t.layer_value_total / t.layer_qty_total, 4), 4) ELSE 0 END'] : [])
+
+        /*
+         * ⭐ চালান হয়েছে, বিল হয়নি — তাক থেকে বেরিয়েছে, অথচ খরচ এখনো স্তরে আর মজুদের খাতে (বিলের দিনে বেরোয়)। পুরো-ERP অডিট,
+         * মজুদ ⚠️৪; মালিকের "সব খোলা ভুল", ১০ অক্টোবর ২০২৬ ([[TheStockScreenSaysWhatLeftButIsNotBilledTest]])।
+         * ⛔ আগে পর্দার মূল্য কেবল তাকের মাল গুনত, তাই খাতার মজুদ খাতের চেয়ে কম দেখাত — আর কেউ মেলাতে পারত না।
+         * ⓘ (স্তরের পরিমাণ − তাক − বসেনি) × গড় দাম; মূল্য আর এই ঘর মিলে স্তরের মোট = খাতা। ⚠️ কেবল গোটা কোম্পানির দৃশ্যে:
+         * স্তর কোম্পানির, তাক ছাঁকা — গুদাম বা এক শাখা বাছলে পার্থক্যে অন্য গুদামের মালও ঢুকত। নতুন খাত নয়, কেবল পড়া।
+         */
+        + ($this->maySeeCost($request) && $warehouse === null && Warehouse::idsInViewedBranch() === null
+            ? ['not_billed_value' => 'CASE WHEN t.layer_qty_total > t.floor_total + t.unplaced_total THEN TRUNCATE((t.layer_qty_total - t.floor_total - t.unplaced_total) * TRUNCATE(t.layer_value_total / t.layer_qty_total, 4), 4) ELSE 0 END']
+            : []));
 
         $products = $query->paginate(50)->withQueryString();
 
