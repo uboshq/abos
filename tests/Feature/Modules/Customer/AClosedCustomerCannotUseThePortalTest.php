@@ -72,14 +72,21 @@ final class AClosedCustomerCannotUseThePortalTest extends TestCase
         $this->assertFalse(Auth::guard('portal')->check(), '⛔ নিষ্ক্রিয় হওয়ার পরেও সেশন খোলা');
     }
 
-    public function test_the_ledger_opens_on_this_financial_year_not_1970(): void
+    /**
+     * ⭐ খতিয়ান খোলে সবটা নিয়ে (Lifetime, মালিকের চেকলিস্ট — বহাল, fe ১০ অক্টোবর ২০২৬): শুরু গ্রাহকের প্রথম লেনদেনের দিন,
+     * ১৯৭০ নয়, আর চলতি অর্থবছরও নয়।
+     */
+    public function test_the_ledger_opens_on_the_customers_whole_history_not_1970(): void
     {
         $this->signIn();
+        $customer = \App\Modules\Customer\Models\Customer::query()->withoutGlobalScopes()->where('code', 'GATE-1')->firstOrFail();
+        $first = \App\Models\LedgerEntry::query()->withoutGlobalScopes()->where('party_type', 'customer')->where('party_id', $customer->id)->min('trx_date');
 
         $from = $this->get(route('sales.portal.ledger'))->assertOk()->viewData('from');
 
         $this->assertNotSame('1970-01-01', $from, '⛔ খতিয়ান ১৯৭০ থেকে');
-        $this->assertTrue($from <= now()->toDateString() && $from >= now()->subYear()->toDateString(), 'চলতি অর্থবছরের শুরু: '.$from);
+        $this->assertSame($first === null ? now()->toDateString() : \Illuminate\Support\Carbon::parse((string) $first)->toDateString(), $from,
+            '⛔ খতিয়ান গ্রাহকের প্রথম লেনদেন থেকে নয় — Lifetime ভাঙল');
     }
 
     private function signIn(): TestResponse

@@ -160,6 +160,17 @@ final class CustomerPapers
         return $start === null ? now()->startOfYear()->toDateString() : Carbon::parse($start)->toDateString();
     }
 
+    /**
+     * ⭐ গ্রাহকের প্রথম লেনদেনের দিন — খতিয়ানের "সবটা" (Lifetime) এখান থেকে শুরু; কিছু না থাকলে আজ (মালিকের চেকলিস্ট;
+     * রিভিউ, ১০ অক্টোবর ২০২৬)। ⓘ ১৯৭০ বসানোর দরকার নেই — একই সারিগুলো, পর্দায় একটা অর্থবহ তারিখ।
+     */
+    public function firstDay(): string
+    {
+        $first = $this->ledgerRows()->min('trx_date');
+
+        return $first === null ? now()->toDateString() : Carbon::parse((string) $first)->toDateString();
+    }
+
     public function openingBefore(string $from): string
     {
         return (string) ($this->ledgerRows()

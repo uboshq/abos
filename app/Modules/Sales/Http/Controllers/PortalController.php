@@ -353,12 +353,12 @@ class PortalController extends Controller
     private function range(Request $request): array
     {
         /*
-         * ⛔ ১৯৭০ নয় — পুরো-ERP পুনঃঅডিট, ৯ অক্টোবর ২০২৬ (গ্রাহক ১৫)। ⓘ ডিফল্ট শুরু চলতি অর্থবছরের প্রথম দিন: আগের সব লেনদেন
-         * "আগের জের" সারিতে একটা অঙ্ক হয়ে আসে ([[CustomerPapers::openingBefore()]]), তাই শেষ জের একই থাকে, কেবল বছরের পর বছরের সারি
-         * একবারে টানা হয় না। পুরনো সময় দেখতে ছাঁকনি আছে।
+         * ⭐ সবটা (Lifetime) — মালিকের চেকলিস্টের সিদ্ধান্ত, বহাল (fe, ১০ অক্টোবর ২০২৬)। ⓘ ৯ অক্টোবরের পুনঃঅডিট (গ্রাহক ১৫) "১৯৭০"
+         * সরিয়ে চলতি অর্থবছর বসিয়েছিল; সিদ্ধান্তটা উল্টানো হয়নি — শুরু এখন গ্রাহকের নিজের প্রথম লেনদেনের দিন
+         * ([[CustomerPapers::firstDay()]]), তাই পর্দায় ১৯৭০ নেই আর সব সারিই আসে। ছোট সময় দেখতে ছাঁকনি আছে।
          */
         return [
-            (string) $request->query('from', $this->papers->yearStart()),
+            (string) $request->query('from', $this->papers->firstDay()),
             (string) $request->query('to', now()->toDateString()),
         ];
     }
