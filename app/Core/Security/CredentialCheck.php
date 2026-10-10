@@ -230,6 +230,10 @@ final class CredentialCheck
                     ->orWhere(fn ($q) => $q->whereNotNull('login_id')->where('login_id', $identifier))
                     // ⓘ "01711-000000" লিখলেও মেলে — নম্বর এখন লগইনের ছাঁদে বসে ([[LoginMobile]], ৯ অক্টোবর ২০২৬)
                     ->orWhere(fn ($q) => $q->whereNotNull('mobile')
+                        // ⓘ মোবাইলে কেবল চালু লগইন — একই মানুষের পুরনো নিষ্ক্রিয় অ্যাকাউন্টের একই নম্বর চালুজনকে আটকায় না
+                        // (cb-র রিভিউ, fe, ১১ অক্টোবর ২০২৬; [[OneMobileBelongsToOneLiveLoginTest]]); ইমেইল আর আইডি আগের মতোই
+                        // নিষ্ক্রিয়কেও খোঁজে, যাতে তিনি "অ্যাকাউন্ট বন্ধ" বার্তাটা পান
+                        ->where('is_active', true)
                         ->whereIn('mobile', array_values(array_unique([$identifier, (string) LoginMobile::normalise($identifier)]))));
             })
             ->limit(2)

@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Core\Support;
 
 use Illuminate\Http\Request;
-use Illuminate\Validation\Rule;
 
 /**
  * লগইনের মোবাইল নম্বর — যে ছাঁদে লগইন সেটা মেলায়, আর একজনের নম্বর একজনেরই।
@@ -53,8 +52,34 @@ final class LoginMobile
     /** @return list<mixed> */
     public static function rules(?int $ignoreUserId): array
     {
+        /*
+         * ⓘ "একজনেরই" মানে চালু আর না-মোছা লগইনের মধ্যে একজন (cb-র রিভিউ, cloud/security-fixes মেশানোর আগে, fe, ১১ অক্টোবর ২০২৬;
+         * [[OneMobileBelongsToOneLiveLoginTest]])। ⚠️ লাইভে একই মানুষের পুরনো নিষ্ক্রিয় অ্যাকাউন্ট আর নতুন চালুটায় একই নম্বর —
+         * নিষ্ক্রিয়টাকে গুনলে চালুজনের প্রোফাইল বা রোল আর রাখাই যেত না। মোছা বা নিষ্ক্রিয় লগইন ঢুকতেই পারে না, তাই তার নম্বর কিছু
+         * পাহারা দেয় না।
+         */
         return ['nullable', 'string', 'max:25', 'regex:'.self::PATTERN,
-            Rule::unique('users', 'mobile')->ignore($ignoreUserId)];
+            /*
+             * ⓘ কার ঘরে আছে, নামসহ বলা — বিশেষ করে পুরনো নিষ্ক্রিয় অ্যাকাউন্ট আবার চালু করার সময়, যখন নতুন চালুটায় একই নম্বর
+             * (fe, ১১ অক্টোবর ২০২৬; [[OneMobileBelongsToOneLiveLoginTest]])। নইলে দুই চালু লগইনে এক নম্বর, আর মোবাইলে কেউ ঢুকতেন না।
+             * ⓘ `User::query()` নিজেই মোছা সারি বাদ দেয় (SoftDeletes)।
+             */
+            function (string $attribute, mixed $value, \Closure $fail) use ($ignoreUserId): void {
+                if (! is_string($value) || $value === '') {
+                    return;
+                }
+
+                $holder = \App\Models\User::query()
+                    ->where('mobile', $value)
+                    ->where('is_active', true)
+                    ->when($ignoreUserId !== null, fn ($q) => $q->whereKeyNot($ignoreUserId))
+                    ->value('name');
+
+                if ($holder !== null) {
+                    $fail(__('validation.login_mobile_taken_by', ['name' => $holder]));
+                }
+            },
+        ];
     }
 
     /** @return array<string, string> */

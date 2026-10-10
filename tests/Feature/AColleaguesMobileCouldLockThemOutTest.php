@@ -45,7 +45,7 @@ final class AColleaguesMobileCouldLockThemOutTest extends TestCase
         foreach (['01711000111', '০১৭১১-০০০১১১', '01711 000 111'] as $same) {
             $this->actingAs($sales)->put(route('profile.update'), [
                 'name' => $sales->name, 'login_id' => 'salesman1', 'mobile' => $same,
-            ])->assertSessionHasErrors(['mobile' => __('validation.login_mobile_taken')]);
+            ])->assertSessionHasErrors(['mobile' => __('validation.login_mobile_taken_by', ['name' => $this->victim->name])]);
         }
 
         $this->assertNotSame('01711000111', $sales->fresh()->mobile);
@@ -61,7 +61,7 @@ final class AColleaguesMobileCouldLockThemOutTest extends TestCase
             'name' => $sales->name, 'email' => $sales->email, 'locale' => 'bn', 'is_active' => '1',
             'mobile' => '01711-000111',
             'roles' => ['salesman'], 'companies' => [CompanyContext::id()],
-        ])->assertSessionHasErrors(['mobile' => __('validation.login_mobile_taken')]);
+        ])->assertSessionHasErrors(['mobile' => __('validation.login_mobile_taken_by', ['name' => $this->victim->name])]);
 
         $this->assertSignsInWithMobile('01711000111');
     }
