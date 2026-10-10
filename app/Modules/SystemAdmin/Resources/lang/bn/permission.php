@@ -44,6 +44,9 @@ return [
         'customer.conduct' => 'গ্রাহকের আচরণ',
         'customer.credit_limit' => 'বাকির সীমা',
 
+        'executive' => 'মালিকের কেন্দ্র',
+        'executive.links' => 'মালিকের কেন্দ্রের লিংক',
+
         'finance.bank_facility' => 'ব্যাংক ঋণ',
         'finance.capital' => 'মূলধন ও বিনিয়োগ',
         'finance.deposit' => 'আমানত',

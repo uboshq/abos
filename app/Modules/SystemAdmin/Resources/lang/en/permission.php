@@ -27,6 +27,8 @@ return [
         'customer' => 'Customers',
         'customer.conduct' => 'Customer conduct',
         'customer.credit_limit' => 'Credit limit',
+        'executive' => 'Owner\'s centre',
+        'executive.links' => 'Owner\'s centre links',
         'finance.bank_facility' => 'Bank loans',
         'finance.capital' => 'Capital & investment',
         'finance.deposit' => 'Deposits',
