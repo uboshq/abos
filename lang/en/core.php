@@ -1004,6 +1004,8 @@ return [
     'empty' => [
         'nothing_here' => 'Nothing here yet',
         'no_results' => 'Nothing matched that search',
+        'filtered_hint' => 'Nothing here matches the search or filters. Clear them to see the whole list.',
+        'clear_filters' => 'Clear filters and show all',
     ],
 
     'status_bar' => [
