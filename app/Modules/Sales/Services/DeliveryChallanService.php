@@ -246,14 +246,23 @@ final class DeliveryChallanService
 
     /**
      * ⭐ অফিসের চালানের পর্দার ভাড়ার ঘর — কাউন্টারের একই নিয়মে (মালিক, ৭ অক্টোবর ২০২৬: *"যা-ই করো, সব জায়গায় একই
-     * রকম"*; [[FarePayment::stamp()]])। ⓘ পর্দা ঘরগুলো পাঠালে তবেই; না পাঠালে (অন্য দরজা) কিছুই বদলায় না।
+     * রকম"*; [[FarePayment::stamp()]])। ⓘ পর্দা ঘরগুলো পাঠালে তবেই।
+     *
+     * ⛔ ঘর না পাঠালে (হাতে বানানো অনুরোধ, পুরনো খোলা পাতা) আর ভাড়া আমাদের, বাহকও নেই — পাকা হলে টাকা প্রধান টিল থেকে
+     * নিজে থেকে কাটত ([[postTransportCost()]])। এখন চালানটাই এখানে থামে, কাউন্টারের একই কারণে (পুরো ভাড়া-প্রবাহ যাচাই,
+     * ১০ অক্টোবর ২০২৬; [[DirectSaleService::stampExtras()]])। ⓘ কাউন্টারের মাথায় ভাড়া থাকে না — তাই এই থামা কাউন্টারকে ছোঁয় না;
+     * বাহক থাকলে পুরনো পথ বাহকের নামে ২১১৬-এ দেনা (সিদ্ধান্ত খ), তাই চলে।
      *
      * @param  array<string, mixed>  $data
      */
     private function stampFare(DeliveryChallan $challan, array $data): void
     {
+        $fares = app(FarePayment::class);
+
         if (array_key_exists('fare_when', $data) || array_key_exists('fare_account_id', $data)) {
-            app(FarePayment::class)->stamp($challan->fresh(), $data);
+            $fares->stamp($challan->fresh(), $data);
+        } elseif ($fares->isOurs($challan->fresh()) && $challan->fresh()->carrier_id === null) {
+            throw ValidationException::withMessages(['fare_account_id' => __('sales::fare.needs_account')]);
         }
     }
 
