@@ -45,6 +45,10 @@ final class APostedBillIsNotPrintedAsADraftTest extends TestCase
         $this->get(route('sales.print.invoice', $bill))->assertOk()->assertHeader('Content-Type', 'application/pdf');
 
         // ⓘ পর্দার ছাপার মেনুও পাকা বিলে ঐ দরজা দেখায় না — নইলে বোতাম চাপলেই ফেরত আসত
-        $this->get(route('sales.invoice.show', $bill))->assertOk()->assertDontSee(route('sales.print.draft', $bill), false);
+        $screen = $this->get(route('sales.invoice.show', $bill))->assertOk();
+        $screen->assertDontSee(route('sales.print.draft', $bill), false);
+        // ⓘ মেনুটা নিজে আঁকা হয় — ছাঁচের লেখা পর্দায় গলে পড়ে না, আর আসল বিলের ছাপা পথ থাকে
+        $screen->assertDontSee("route('sales.print", false);
+        $screen->assertSee(route('sales.print.invoice', $bill), false);
     }
 }
