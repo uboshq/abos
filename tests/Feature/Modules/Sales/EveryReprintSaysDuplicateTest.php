@@ -59,9 +59,20 @@ final class EveryReprintSaysDuplicateTest extends TestCase
         app(DeliveryStageService::class)->move($challan->fresh(), DeliveryStage::DISPATCHED);
         $pass = GatePass::query()->where('delivery_challan_id', $challan->id)->firstOrFail();
         $orders = app(SalesOrderService::class);
-        $order = $orders->confirm($orders->create(['customer_id' => $customer->id, 'warehouse_id' => $warehouse->id, 'trx_date' => now()->toDateString()],
-            [['product_id' => $product->id, 'ordered_qty' => '2', 'rate' => '100']])->fresh(['lines']));
+        $order = $orders->create(['customer_id' => $customer->id, 'warehouse_id' => $warehouse->id, 'trx_date' => now()->toDateString()],
+            [['product_id' => $product->id, 'ordered_qty' => '2', 'rate' => '100']]);
         $receipt = app(CollectionService::class)->create(['customer_id' => $customer->id, 'trx_date' => now()->toDateString(), 'amount' => '500', 'instrument' => 'cash'], []);
+
+        /*
+         * ⛔ খসড়া ছাপা গোনায় পড়ে না (১১ অক্টোবর ২০২৬, PR #17 রিভিউ ⚠️১০) — খসড়া অর্ডার আর রসিদ মিলিয়ে দেখতে দুইবার করে ছাপা,
+         * তারপর নিশ্চিত। নিচের লুপের "প্রথম ছাপায় DUPLICATE নয়" এখন এটাও মাপে: খসড়া গুনলে পাকা কাগজের প্রথম ছাপাই নকল বলত।
+         */
+        foreach ([route('sales.print.order', $order), route('sales.print.receipt', $receipt)] as $draftUrl) {
+            $this->assertStringNotContainsString('DUPLICATE', $this->notice($draftUrl));
+            $this->assertStringNotContainsString('DUPLICATE', $this->notice($draftUrl), '⛔ খসড়ার দ্বিতীয় ছাপা গোনা হয়েছে।');
+        }
+        $order = $orders->confirm($order->fresh(['lines']))->fresh(['lines']);
+        $receipt = app(CollectionService::class)->confirm($receipt->fresh());
 
         $this->assertStringNotContainsString('DUPLICATE', $firstFromChallan);
         $this->assertStringContainsString(__('core.print.duplicate_notice', ['n' => 2]), $this->notice($gateFromChallan),

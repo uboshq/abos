@@ -2135,7 +2135,14 @@ class SalesPrintController extends Controller implements HasMiddleware
          * কোনো কাগজ বেরোয় না, আর সেটা গুনলে প্রথম সত্যিকারের কাগজেই
          * DUPLICATE বসত।
          */
-        $job = $type === null ? null : $this->queue->queue($type, (int) $id, $paper, $documentNo);
+        /*
+         * ⛔ খসড়া ছাপা গোনায় পড়ে না (১১ অক্টোবর ২০২৬, PR #17 রিভিউ ⚠️১০)। ⓘ খসড়া অর্ডার বা রসিদ মিলিয়ে দেখার জন্য ছাপা হয়,
+         * তার গায়ে "খসড়া" বাক্স আর জলছাপ থাকে। গুনলে অনুমোদনের পরের প্রথম আসল ছাপাতেই "DUPLICATE (২য় ছাপা)" বসত —
+         * আসল কাগজ নিজেকে নকল বলত।
+         */
+        $draftPrint = $this->isDraftMoney($document) || $this->isDraftPaper($document);
+
+        $job = $type === null || $draftPrint ? null : $this->queue->queue($type, (int) $id, $paper, $documentNo);
 
         /*
          * সীমা পেরোলে এখানেই থামে — PDF তৈরির আগে।
