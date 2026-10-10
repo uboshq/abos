@@ -1876,8 +1876,27 @@ class SalesPrintController extends Controller implements HasMiddleware
             $rows['core.print.discount'] = $this->money($document->discount);
         }
 
-        if (bccomp((string) $document->tax, '0', 4) > 0) {
-            $rows['core.print.tax'] = $this->money($document->tax);
+        /*
+         * ⛔ দামের ভিতরের ভ্যাট আলাদা লেখায় — পুরো-ERP পুনঃঅডিট, ৯ অক্টোবর ২০২৬ (ছাপা ১৪; [[TheIncludedVatIsNotAddedTwiceOnPaperTest]])।
+         * ⓘ ভেতরের ভ্যাট মোটে আবার যোগ হয় না, অথচ কাগজে সাধারণ "ভ্যাট" সারি হয়ে বসত — উপমোট − ছাড় + ভ্যাট আর মোট মিলত না।
+         * এখন মোট থেকেই মাপা: যতটা ভ্যাট সত্যিই উপরে যোগ হয়েছে সেটা "ভ্যাট", বাকিটা "ভ্যাট (দামের ভিতরে)" — শুধু জানানোর সারি।
+         */
+        $tax = (string) $document->tax;
+
+        if (bccomp($tax, '0', 4) > 0) {
+            $before = bcsub(bcsub((string) $document->subtotal, (string) $document->discount, 4), (string) ($document->bill_discount ?? '0'), 4);
+            $before = bcadd(bcadd($before, (string) ($document->rounding_amount ?? '0'), 4), (string) ($document->freight_charge ?? '0'), 4);
+            $added = bcsub((string) $document->total, $before, 4);
+            $added = bccomp($added, '0', 4) < 0 ? '0' : (bccomp($added, $tax, 4) > 0 ? $tax : $added);
+            $included = bcsub($tax, $added, 4);
+
+            if (bccomp($added, '0', 4) > 0) {
+                $rows['core.print.tax'] = $this->money($added);
+            }
+
+            if (bccomp($included, '0', 4) > 0) {
+                $rows['core.print.tax_included'] = $this->money($included);
+            }
         }
 
         /*

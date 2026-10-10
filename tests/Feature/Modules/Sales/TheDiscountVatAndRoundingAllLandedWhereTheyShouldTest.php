@@ -6,6 +6,7 @@ namespace Tests\Feature\Modules\Sales;
 
 use App\Core\Support\CompanyContext;
 use App\Core\Support\DocumentStatus;
+use App\Models\Approval;
 use App\Models\Company;
 use App\Models\User;
 use App\Modules\Accounts\Models\Account;
@@ -24,11 +25,11 @@ use App\Modules\MasterData\Models\Unit;
 use App\Modules\Sales\Models\SalesInvoice;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Tests\Concerns\PrintsTheStandardPaper;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\View;
 use Illuminate\Testing\TestResponse;
 use Tests\Concerns\ChecksTheFiveMatches;
+use Tests\Concerns\PrintsTheStandardPaper;
 use Tests\Concerns\SignsTheDiscountAsTheOwner;
 use Tests\TestCase;
 
@@ -434,7 +435,8 @@ final class TheDiscountVatAndRoundingAllLandedWhereTheyShouldTest extends TestCa
         $this->assertPrinted($first, 'a4', [
             'core.print.subtotal' => '1,150.00',
             'core.print.discount' => '115.00',
-            'core.print.tax' => '135.00',
+            // ⓘ দামের ভিতরের ভ্যাট নিজের নামে — যোগে আবার ধরা নয় (পুনঃঅডিট ৯ অক্টোবর ২০২৬, ছাপা ১৪)
+            'core.print.tax_included' => '135.00',
             'core.print.total' => '1,035.00',
             'sales::print.paid' => '1,035.00',
             'sales::print.invoice_due' => '0.00',
@@ -540,7 +542,7 @@ final class TheDiscountVatAndRoundingAllLandedWhereTheyShouldTest extends TestCa
      */
     private function assertItAsksForASignature(TestResponse $response, string $why): void
     {
-        $asked = \App\Models\Approval::query()->where('action', 'discount')->where('status', \App\Models\Approval::PENDING)->count();
+        $asked = Approval::query()->where('action', 'discount')->where('status', Approval::PENDING)->count();
 
         $this->assertGreaterThan($this->askedSoFar, $asked, $why.' ফেরত এসেছে (HTTP '.$response->getStatusCode().')');
         $this->assertNotNull($response->getSession()?->get('approval_notice'), $why.' — কাউন্টার কোনো বার্তা দেয়নি।');
