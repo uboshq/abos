@@ -1,6 +1,13 @@
 <?php
 
 declare(strict_types=1);
+use App\Modules\Notification\Dashboard\NotificationDashboard;
+use App\Modules\Notification\Reports\Filters\ChannelFilter;
+use App\Modules\Notification\Reports\Filters\ModuleFilter;
+use App\Modules\Notification\Reports\Filters\PriorityFilter;
+use App\Modules\Notification\Reports\Filters\RecipientFilter;
+use App\Modules\Notification\Reports\Filters\StatusFilter;
+use App\Modules\Notification\Reports\NotificationReports;
 
 /**
  * ⭐ বিজ্ঞপ্তি ব্যবস্থাপনা — মালিকের স্পেক, ১০ অক্টোবর ২০২৬ (`docs/cloud-tasks/notification-management-spec-bn.md`)।
@@ -21,7 +28,14 @@ return [
     'nav' => ['section' => 'system', 'order' => 25],
     'depends_on' => [],
 
+    // ⭐ ধাপ ৪ — ড্যাশবোর্ড ([[NotificationDashboard]]); চাবি মেনুর ড্যাশবোর্ড সারি থেকে
+    'dashboard' => NotificationDashboard::class,
+
     'menu' => [
+        'dashboard' => [
+            ['label' => 'notification::dashboard.title', 'icon' => 'dashboard', 'route' => 'module.dashboard',
+                'route_params' => ['module' => 'notification'], 'permission' => 'notification.dashboard'],
+        ],
         'transactions' => [
             // ⭐ কোম্পানির সব খবর — কে পেলেন, কে পড়লেন (স্পেক §২, §৪)
             ['label' => 'notification::menu.center', 'icon' => 'bell', 'route' => 'notification.center.index', 'permission' => 'notification.center'],
@@ -30,6 +44,9 @@ return [
             ['label' => 'notification::menu.failed', 'icon' => 'alert-triangle', 'route' => 'notification.deliveries.failed', 'permission' => 'notification.deliveries'],
             // ⭐ ধাপ ৩ — সূচিমতো খবর
             ['label' => 'notification::menu.schedules', 'icon' => 'calendar', 'route' => 'notification.schedules.index', 'permission' => 'notification.schedules'],
+            // ⭐ ধাপ ৪ — ওপরে পাঠানো (অনুমোদন ইঞ্জিনের) আর আর্কাইভ
+            ['label' => 'notification::menu.escalations', 'icon' => 'alert-triangle', 'route' => 'notification.escalations.index', 'permission' => 'notification.escalations'],
+            ['label' => 'notification::menu.archive', 'icon' => 'inbox', 'route' => 'notification.archive.index', 'permission' => 'notification.archive'],
         ],
         'reports' => [
             // ⭐ কে কখন কোন খবরে কী করলেন (স্পেক §১৩)
@@ -37,6 +54,41 @@ return [
             // ⭐ ধাপ ২ — প্রতিটা চেষ্টা, আর মাধ্যমের স্বাস্থ্য
             ['label' => 'notification::menu.logs', 'icon' => 'list', 'route' => 'notification.deliveries.logs', 'permission' => 'notification.deliveries'],
             ['label' => 'notification::menu.health', 'icon' => 'check-circle', 'route' => 'notification.deliveries.health', 'permission' => 'notification.deliveries'],
+            // ⭐ ধাপ ৪ — স্পেক §১৭-এর ১৭টা রিপোর্ট ([[NotificationReports]])
+            ['label' => 'notification::report.menu.summary', 'icon' => 'reports', 'route' => 'notification.report.show',
+                'route_params' => ['slug' => 'summary'], 'permission' => 'notification.reports'],
+            ['label' => 'notification::report.menu.user-wise', 'icon' => 'people', 'route' => 'notification.report.show',
+                'route_params' => ['slug' => 'user-wise'], 'permission' => 'notification.reports'],
+            ['label' => 'notification::report.menu.module-wise', 'icon' => 'grid', 'route' => 'notification.report.show',
+                'route_params' => ['slug' => 'module-wise'], 'permission' => 'notification.reports'],
+            ['label' => 'notification::report.menu.priority-wise', 'icon' => 'star', 'route' => 'notification.report.show',
+                'route_params' => ['slug' => 'priority-wise'], 'permission' => 'notification.reports'],
+            ['label' => 'notification::report.menu.channel-delivery', 'icon' => 'outbox', 'route' => 'notification.report.show',
+                'route_params' => ['slug' => 'channel-delivery'], 'permission' => 'notification.reports'],
+            ['label' => 'notification::report.menu.delivery-status', 'icon' => 'check-circle', 'route' => 'notification.report.show',
+                'route_params' => ['slug' => 'delivery-status'], 'permission' => 'notification.reports'],
+            ['label' => 'notification::report.menu.read-unread', 'icon' => 'eye', 'route' => 'notification.report.show',
+                'route_params' => ['slug' => 'read-unread'], 'permission' => 'notification.reports'],
+            ['label' => 'notification::report.menu.attempt-history', 'icon' => 'list', 'route' => 'notification.report.show',
+                'route_params' => ['slug' => 'attempt-history'], 'permission' => 'notification.reports'],
+            ['label' => 'notification::report.menu.provider-errors', 'icon' => 'alert-triangle', 'route' => 'notification.report.show',
+                'route_params' => ['slug' => 'provider-errors'], 'permission' => 'notification.reports'],
+            ['label' => 'notification::report.menu.retry-dead-letter', 'icon' => 'refresh', 'route' => 'notification.report.show',
+                'route_params' => ['slug' => 'retry-dead-letter'], 'permission' => 'notification.reports'],
+            ['label' => 'notification::report.menu.rule-execution', 'icon' => 'filter', 'route' => 'notification.report.show',
+                'route_params' => ['slug' => 'rule-execution'], 'permission' => 'notification.reports'],
+            ['label' => 'notification::report.menu.template-usage', 'icon' => 'documents', 'route' => 'notification.report.show',
+                'route_params' => ['slug' => 'template-usage'], 'permission' => 'notification.reports'],
+            ['label' => 'notification::report.menu.escalation', 'icon' => 'approval', 'route' => 'notification.report.show',
+                'route_params' => ['slug' => 'escalation'], 'permission' => 'notification.reports'],
+            ['label' => 'notification::report.menu.latency', 'icon' => 'clock', 'route' => 'notification.report.show',
+                'route_params' => ['slug' => 'latency'], 'permission' => 'notification.reports'],
+            ['label' => 'notification::report.menu.channel-availability', 'icon' => 'globe', 'route' => 'notification.report.show',
+                'route_params' => ['slug' => 'channel-availability'], 'permission' => 'notification.reports'],
+            ['label' => 'notification::report.menu.suppression', 'icon' => 'moon', 'route' => 'notification.report.show',
+                'route_params' => ['slug' => 'suppression'], 'permission' => 'notification.reports'],
+            ['label' => 'notification::report.menu.audit', 'icon' => 'book', 'route' => 'notification.report.show',
+                'route_params' => ['slug' => 'audit'], 'permission' => 'notification.reports'],
         ],
         'settings' => [
             // ⭐ ধাপ ২ — মাধ্যমের সাজানো আর সংযোগ পরীক্ষা
@@ -62,6 +114,12 @@ return [
         'notification.recipients', // প্রাপক-দল
         'notification.schedules',  // সূচিমতো খবর
         'notification.preferences', // কোম্পানির স্বাভাবিক নীরব সময়, কে কী বেছেছেন
+        'notification.dashboard',  // ড্যাশবোর্ড (ধাপ ৪)
+        'notification.escalations', // অপেক্ষমাণ অনুমোদনের শেষ সময় আর ওপরে পাঠানো
+        'notification.archive',    // আর্কাইভ দেখা
+        'notification.archive.export', // আর্কাইভ নামানো
+        'notification.reports',    // ১৭টা রিপোর্ট দেখা
+        'notification.reports.export', // রিপোর্ট CSV/XLSX নামানো
     ],
 
     'role_templates' => [
@@ -69,7 +127,11 @@ return [
         'Notification Manager' => ['notification.center', 'notification.manage', 'notification.audit',
             'notification.channels', 'notification.deliveries', 'notification.retry',
             'notification.rules', 'notification.templates', 'notification.templates.publish', 'notification.recipients',
-            'notification.schedules', 'notification.preferences'],
+            'notification.schedules', 'notification.preferences',
+            'notification.dashboard', 'notification.escalations', 'notification.archive', 'notification.archive.export',
+            'notification.reports', 'notification.reports.export'],
+        // ⭐ ধাপ ৪ — দেখেন, বিশ্লেষণ করেন, নামান; কিছু বদলান না
+        'Notification Analyst' => ['notification.dashboard', 'notification.reports', 'notification.reports.export', 'notification.archive'],
         // ⭐ ধাপ ৩ — লেখেন, প্রকাশ করেন না (প্রকাশ আরেকজন)
         'Notification Writer' => ['notification.rules', 'notification.templates', 'notification.recipients', 'notification.schedules'],
     ],
@@ -118,6 +180,35 @@ return [
             'default' => '',
             'group' => 'quiet',
         ],
+        [
+            // ⭐ ধাপ ৪ — এত দিনের পুরনো পড়া খবর নিজে আর্কাইভে (০ = কখনো নয়)
+            'key' => 'notification.archive_after_days',
+            'label' => 'notification::settings.archive_after_days',
+            'type' => 'integer',
+            'default' => 90,
+            'group' => 'retention',
+        ],
+        [
+            // ⓘ এত দিনের পুরনো ডেলিভারির খাতা আর আর্কাইভ মোছা (০ = কিছুই মোছা নয়; বসালে কমপক্ষে ৯০)। মালিকের প্রশ্ন খোলা — তাই ০
+            'key' => 'notification.retention_days',
+            'label' => 'notification::settings.retention_days',
+            'type' => 'integer',
+            'default' => 0,
+            'group' => 'retention',
+        ],
+    ],
+
+    // ⭐ ধাপ ৪ — রিপোর্ট আর তার ছাঁকনি
+    'report_filters' => [
+        'notify_channel_id' => ChannelFilter::class,
+        'notify_priority_id' => PriorityFilter::class,
+        'notify_status_id' => StatusFilter::class,
+        'notify_module_id' => ModuleFilter::class,
+        'notify_recipient_id' => RecipientFilter::class,
+    ],
+
+    'reports' => [
+        NotificationReports::class,
     ],
 
     // ⓘ নতুন দুই মডেল (NotificationEvent, NotificationAuditLog) কোরের — তাদের অডিট-ছাড় EveryChangeableRowRemembersWhoChangedItTest-এ

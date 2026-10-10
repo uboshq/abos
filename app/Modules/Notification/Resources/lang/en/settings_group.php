@@ -6,4 +6,5 @@ return [
     'bell' => 'Bell',
     'delivery' => 'Delivery',
     'quiet' => 'Quiet hours',
+    'retention' => 'Retention',
 ];

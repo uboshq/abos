@@ -2,12 +2,15 @@
 
 declare(strict_types=1);
 
+use App\Modules\Notification\Http\Controllers\NotificationArchiveController;
 use App\Modules\Notification\Http\Controllers\NotificationAuditController;
 use App\Modules\Notification\Http\Controllers\NotificationCenterController;
 use App\Modules\Notification\Http\Controllers\NotificationChannelController;
 use App\Modules\Notification\Http\Controllers\NotificationDeliveryController;
+use App\Modules\Notification\Http\Controllers\NotificationEscalationController;
 use App\Modules\Notification\Http\Controllers\NotificationGroupController;
 use App\Modules\Notification\Http\Controllers\NotificationQuietController;
+use App\Modules\Notification\Http\Controllers\NotificationReportController;
 use App\Modules\Notification\Http\Controllers\NotificationRuleController;
 use App\Modules\Notification\Http\Controllers\NotificationScheduleController;
 use App\Modules\Notification\Http\Controllers\NotificationTemplateController;
@@ -98,4 +101,11 @@ Route::middleware('auth')->prefix('notification')->group(function () {
     // ⭐ ধাপ ৩ — নীরব সময় আর সারসংক্ষেপ: কোম্পানির স্বাভাবিক নীরব সময়, কে কী বেছেছেন
     Route::get('/quiet', [NotificationQuietController::class, 'index'])->middleware('can:notification.preferences')->name('quiet.index');
     Route::post('/quiet', [NotificationQuietController::class, 'save'])->middleware('can:notification.preferences')->name('quiet.save');
+
+    // ⭐ ধাপ ৪ — ওপরে পাঠানো, আর্কাইভ, ১৭টা রিপোর্ট (রিপোর্টের চাবি নিয়ন্ত্রকে)
+    Route::get('/escalations', [NotificationEscalationController::class, 'index'])
+        ->middleware('can:notification.escalations')->name('escalations.index');
+    Route::get('/archive', [NotificationArchiveController::class, 'index'])
+        ->middleware('can:notification.archive')->name('archive.index');
+    Route::get('/reports/{slug}', [NotificationReportController::class, 'show'])->name('report.show');
 });

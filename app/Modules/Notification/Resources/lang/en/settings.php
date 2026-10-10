@@ -8,4 +8,6 @@ return [
     'max_attempts' => 'Most attempts per notification per channel (1–10)',
     'quiet_start' => 'Company default quiet hours start (e.g. 22:00; empty = none)',
     'quiet_end' => 'Company default quiet hours end (e.g. 07:00)',
+    'archive_after_days' => 'Archive read notifications older than this many days (0 = never)',
+    'retention_days' => 'Remove delivery records and the archive older than this many days (0 = nothing; at least 90)',
 ];

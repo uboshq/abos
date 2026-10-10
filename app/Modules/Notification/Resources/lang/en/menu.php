@@ -15,4 +15,6 @@ return [
     'templates' => 'Notification templates',
     'groups' => 'Recipient groups',
     'quiet' => 'Quiet hours & digest',
+    'escalations' => 'Escalation management',
+    'archive' => 'Notification archive',
 ];
