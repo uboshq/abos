@@ -647,6 +647,47 @@ class PurchaseTest extends TestCase
             'নিশ্চিত বিলের পরেও চালানটা রিপোর্টে — দাবি অন্ধ।');
     }
 
+    /**
+     * ⛔ দামের ইতিহাসে খসড়ার দর নয়, আর দর যোগ হয় না — পুনঃনিরীক্ষা, ৯ অক্টোবর ২০২৬ (ⓘ১৬)।
+     */
+    public function test_price_history_leaves_out_draft_bills_and_never_adds_up_rates(): void
+    {
+        $receipt = $this->receipts()->confirm($this->makeReceipt(null, '5', '60'));
+        $this->bills()->confirm($this->makeBill($receipt->fresh('lines'), '5', '60'));
+        $this->makeBill(null, '3', '999'); // খসড়া, ধরা দর ৯৯৯
+
+        $result = app(ReportEngine::class)->run('purchase.price_history', [
+            'from' => now()->subYear()->toDateString(), 'to' => now()->addDay()->toDateString(),
+        ]);
+
+        $rates = array_map(fn ($r) => bcadd((string) ((array) $r)['rate'], '0', 2), $result->rows);
+        $this->assertContains('60.00', $rates, 'নিশ্চিত বিলের দর নেই — দাবি অন্ধ।');
+        $this->assertNotContains('999.00', $rates, '⛔ খসড়া বিলের দর দামের ইতিহাসে এল।');
+
+        foreach (['rate', 'previous_rate', 'rate_change'] as $key) {
+            $this->assertArrayNotHasKey($key, $result->totals, "⛔ '{$key}' দর, অথচ মোটের সারিতে যোগ হলো।");
+        }
+        $this->assertArrayHasKey('qty', $result->totals);
+    }
+
+    /**
+     * ⛔ খাতায় খসড়া বিল "বিল হয়েছে" নয়, আর মিশ্র কাগজের মোট যোগ হয় না — পুনঃনিরীক্ষা, ৯ অক্টোবর ২০২৬ (ⓘ১৭)।
+     */
+    public function test_the_register_counts_only_posted_bills_as_billed_and_does_not_total_mixed_papers(): void
+    {
+        $receipt = $this->receipts()->confirm($this->makeReceipt(null, '100', '50'));
+        $this->makeBill($receipt->fresh('lines'), '100', '50'); // খসড়া
+
+        $result = app(ReportEngine::class)->run('purchase.register', [
+            'from' => now()->subYear()->toDateString(), 'to' => now()->addDay()->toDateString(),
+        ]);
+
+        $row = collect($result->rows)->map(fn ($r) => (array) $r)->firstWhere('document_no', $receipt->document_no);
+        $this->assertNotNull($row, 'চালানটা খাতায় নেই — দাবি অন্ধ।');
+        $this->assertSame(0, (int) $row['billed_pct'], '⛔ কেবল খসড়া বিলেই চালানটা ১০০% "বিল হয়েছে" দেখাল।');
+        $this->assertArrayNotHasKey('total', $result->totals, '⛔ আদেশ, চালান আর বিলের অঙ্ক একসাথে যোগ হলো।');
+    }
+
     // ── ক্রয়ের কাগজে বিক্রয়মূল্য ──────────────────────────────────────
 
     /**

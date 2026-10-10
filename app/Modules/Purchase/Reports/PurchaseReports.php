@@ -394,6 +394,8 @@ final class PurchaseReports
                  * ফেরত গেছে"*, আর কথাটা তাঁরই ঠিক হত।
                  */
                 ->where('b.status', '<>', $cancelled)
+                // ⛔ খসড়াও নয় — খসড়ার দর এখনো কারও দেওয়া নয়, বদলাতে পারে (পুনঃনিরীক্ষা, ৯ অক্টোবর ২০২৬)
+                ->whereIn('b.status', DocumentStatus::POSTED)
                 ->orderBy('p.code')
                 ->orderBy('s.code')
                 ->orderBy('b.trx_date')
@@ -422,15 +424,16 @@ final class PurchaseReports
                 ],
                 ['key' => 'document_no', 'label' => 'core.print.document_no', 'width' => '11rem'],
                 ['key' => 'qty', 'label' => 'purchase::field.quantity', 'type' => ReportColumn::QUANTITY],
-                ['key' => 'previous_rate', 'label' => 'purchase::field.previous_rate', 'type' => ReportColumn::MONEY],
-                ['key' => 'rate', 'label' => 'purchase::field.rate', 'type' => ReportColumn::MONEY],
+                ['key' => 'previous_rate', 'label' => 'purchase::field.previous_rate', 'type' => ReportColumn::MONEY, 'total' => false],
+                ['key' => 'rate', 'label' => 'purchase::field.rate', 'type' => ReportColumn::MONEY, 'total' => false],
 
                 /*
                  * ⓘ পার্থক্যটাই আসল কলাম — ⚠️ দুইটা দর পাশাপাশি থাকলেও
                  * মানুষ মাথায় বিয়োগ করে না, আর তখন যে সারিতে দর লাফ
                  * দিয়েছে সেটা চোখেই পড়ে না।
                  */
-                ['key' => 'rate_change', 'label' => 'purchase::field.rate_change', 'type' => ReportColumn::MONEY],
+                // ⛔ দর যোগ হয় না — দশটা কেনার দর যোগ করলে কোনো দরই নয় (পুনঃনিরীক্ষা, ৯ অক্টোবর ২০২৬)
+                ['key' => 'rate_change', 'label' => 'purchase::field.rate_change', 'type' => ReportColumn::MONEY, 'total' => false],
             ],
         );
     }
