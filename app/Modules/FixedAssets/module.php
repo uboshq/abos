@@ -24,41 +24,42 @@ return [
     // ⓘ সিস্টেম অ্যাডমিন ১০, ব্যাকআপ ২০ — তার মাঝে, অ্যাডমিনের ঠিক নিচে
     'nav' => ['section' => 'system', 'order' => 11],
 
+    // ⓘ প্রতিটা সারি হিসাবের ঘর ধার করে (`'from' => 'accounts'`) — রুট আর চাবি হিসাবের নামে ([[ModuleDefinition]])
     'depends_on' => ['accounts'],
 
     'menu' => [
         'dashboard' => [
-            ['label' => 'accounts::menu.asset_dashboard', 'icon' => 'dashboard', 'route' => 'accounts.asset.dashboard', 'permission' => 'accounts.asset.view'],
+            ['from' => 'accounts', 'label' => 'accounts::menu.asset_dashboard', 'icon' => 'dashboard', 'route' => 'accounts.asset.dashboard', 'permission' => 'accounts.asset.view'],
         ],
         'master' => [
             // ⭐ সম্পদের শ্রেণি — পাঁচ খাত আর ডিফল্ট আয়ু (স্থায়ী সম্পদ ধাপ ১)
-            ['label' => 'accounts::menu.asset_categories', 'icon' => 'building', 'route' => 'accounts.asset.category.index', 'permission' => 'accounts.asset.manage'],
+            ['from' => 'accounts', 'label' => 'accounts::menu.asset_categories', 'icon' => 'building', 'route' => 'accounts.asset.category.index', 'permission' => 'accounts.asset.manage'],
         ],
         'transactions' => [
-            ['label' => 'accounts::menu.assets', 'icon' => 'building', 'route' => 'accounts.asset.index', 'permission' => 'accounts.asset.view'],
-            ['label' => 'accounts::menu.asset_verifications', 'icon' => 'building', 'route' => 'accounts.asset.verify.index', 'permission' => 'accounts.asset.view'],
+            ['from' => 'accounts', 'label' => 'accounts::menu.assets', 'icon' => 'building', 'route' => 'accounts.asset.index', 'permission' => 'accounts.asset.view'],
+            ['from' => 'accounts', 'label' => 'accounts::menu.asset_verifications', 'icon' => 'building', 'route' => 'accounts.asset.verify.index', 'permission' => 'accounts.asset.view'],
         ],
         'reports' => [
             // ⭐ স্থায়ী সম্পদের কাগজ — নিবন্ধন, অবচয়, চলাচল, খাতা বনাম কর (স্থায়ী সম্পদ ধাপ ৫)
-            ['label' => 'accounts::menu.asset_register', 'icon' => 'building', 'route' => 'accounts.report.show',
+            ['from' => 'accounts', 'label' => 'accounts::menu.asset_register', 'icon' => 'building', 'route' => 'accounts.report.show',
                 'route_params' => ['slug' => 'asset-register'], 'permission' => 'accounts.report'],
-            ['label' => 'accounts::menu.asset_schedule', 'icon' => 'building', 'route' => 'accounts.report.show',
+            ['from' => 'accounts', 'label' => 'accounts::menu.asset_schedule', 'icon' => 'building', 'route' => 'accounts.report.show',
                 'route_params' => ['slug' => 'asset-depreciation'], 'permission' => 'accounts.report'],
-            ['label' => 'accounts::menu.asset_movement', 'icon' => 'building', 'route' => 'accounts.report.show',
+            ['from' => 'accounts', 'label' => 'accounts::menu.asset_movement', 'icon' => 'building', 'route' => 'accounts.report.show',
                 'route_params' => ['slug' => 'asset-movement'], 'permission' => 'accounts.report'],
-            ['label' => 'accounts::menu.asset_nbv', 'icon' => 'building', 'route' => 'accounts.report.show',
+            ['from' => 'accounts', 'label' => 'accounts::menu.asset_nbv', 'icon' => 'building', 'route' => 'accounts.report.show',
                 'route_params' => ['slug' => 'asset-nbv'], 'permission' => 'accounts.report'],
-            ['label' => 'accounts::menu.asset_disposals', 'icon' => 'building', 'route' => 'accounts.report.show',
+            ['from' => 'accounts', 'label' => 'accounts::menu.asset_disposals', 'icon' => 'building', 'route' => 'accounts.report.show',
                 'route_params' => ['slug' => 'asset-disposals'], 'permission' => 'accounts.report'],
-            ['label' => 'accounts::menu.asset_fully_depreciated', 'icon' => 'building', 'route' => 'accounts.report.show',
+            ['from' => 'accounts', 'label' => 'accounts::menu.asset_fully_depreciated', 'icon' => 'building', 'route' => 'accounts.report.show',
                 'route_params' => ['slug' => 'asset-fully-depreciated'], 'permission' => 'accounts.report'],
-            ['label' => 'accounts::menu.asset_expiring', 'icon' => 'building', 'route' => 'accounts.report.show',
+            ['from' => 'accounts', 'label' => 'accounts::menu.asset_expiring', 'icon' => 'building', 'route' => 'accounts.report.show',
                 'route_params' => ['slug' => 'asset-expiring'], 'permission' => 'accounts.report'],
-            ['label' => 'accounts::menu.asset_variance', 'icon' => 'building', 'route' => 'accounts.report.show',
+            ['from' => 'accounts', 'label' => 'accounts::menu.asset_variance', 'icon' => 'building', 'route' => 'accounts.report.show',
                 'route_params' => ['slug' => 'asset-variance'], 'permission' => 'accounts.report'],
-            ['label' => 'accounts::menu.asset_book_vs_tax', 'icon' => 'building', 'route' => 'accounts.report.show',
+            ['from' => 'accounts', 'label' => 'accounts::menu.asset_book_vs_tax', 'icon' => 'building', 'route' => 'accounts.report.show',
                 'route_params' => ['slug' => 'asset-book-vs-tax'], 'permission' => 'accounts.report'],
-            ['label' => 'accounts::menu.asset_maintenance', 'icon' => 'building', 'route' => 'accounts.report.show',
+            ['from' => 'accounts', 'label' => 'accounts::menu.asset_maintenance', 'icon' => 'building', 'route' => 'accounts.report.show',
                 'route_params' => ['slug' => 'asset-maintenance'], 'permission' => 'accounts.report'],
         ],
     ],
