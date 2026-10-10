@@ -15,6 +15,7 @@ import 'core/launcher_widgets/launcher_widget_refresh.dart';
 import 'core/launcher_widgets/widget_sync_observer.dart';
 import 'core/push/push_service.dart';
 import 'core/router/app_router.dart';
+import 'core/sync_engine/auto_sync.dart';
 import 'core/sync_engine/background_sync.dart';
 import 'core/sync_engine/reference_cache.dart';
 import 'core/sync_engine/sync_engine.dart';
@@ -79,6 +80,9 @@ class AbosApp extends ConsumerStatefulWidget {
 class _AbosAppState extends ConsumerState<AbosApp> {
   late final WidgetSyncObserver _widgetSync;
 
+  /// ⭐ নিজে থেকে সিঙ্ক — অ্যাপ খোলা থাকলে, সামনে ফিরলে আর প্রতি দশ মিনিটে (মালিক, ১০ অক্টোবর ২০২৬; [[AutoSync]])
+  late final AutoSync _autoSync;
+
   /// ⭐ অ্যাপ-তালা — সংরক্ষিত সেশনে খুললে আর অনেকক্ষণ পরে ফিরলে ([[AppLock]]); এইমাত্র পাসওয়ার্ডে ঢুকলে নয়
   late final AppLock _lock;
   StreamSubscription<Uri?>? _widgetTaps;
@@ -90,6 +94,11 @@ class _AbosAppState extends ConsumerState<AbosApp> {
     // Fills the widgets at the moment somebody leaves for the home screen,
     // which is the moment before they read them.
     _widgetSync = WidgetSyncObserver(
+      signedIn: () =>
+          ref.read(authStateProvider).status == AuthStatus.signedIn,
+    )..start();
+
+    _autoSync = AutoSync(
       signedIn: () =>
           ref.read(authStateProvider).status == AuthStatus.signedIn,
     )..start();
@@ -152,6 +161,7 @@ class _AbosAppState extends ConsumerState<AbosApp> {
   @override
   void dispose() {
     _widgetSync.stop();
+    _autoSync.stop();
     _widgetTaps?.cancel();
     WidgetsBinding.instance.removeObserver(_lock);
     _lock.dispose();

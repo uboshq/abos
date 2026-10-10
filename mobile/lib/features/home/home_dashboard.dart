@@ -23,6 +23,7 @@ class HomeDashboard extends StatelessWidget {
     this.fetchToday,
     this.lastKnownToday,
     this.onRecord,
+    this.onPull,
     this.now,
   });
 
@@ -40,6 +41,9 @@ class HomeDashboard extends StatelessWidget {
   final TodayRecord? Function()? lastKnownToday;
   final void Function(TodayRecord record)? onRecord;
 
+  /// The full sync, run on a pull before the figures refresh ([TodayPanel.onPull]).
+  final Future<void> Function()? onPull;
+
   /// Seam for the greeting — a test can ask for eight in the evening.
   final DateTime Function()? now;
 
@@ -51,6 +55,7 @@ class HomeDashboard extends StatelessWidget {
       lastKnown: lastKnownToday,
       showOrigin: !headerNamesOrg,
       onRecord: onRecord,
+      onPull: onPull,
       onOpenSales: () => context.go('/home/orders'),
       onOpenDues: () => context.go('/home/dues'),
       onOpenApprovals: () => context.go('/home/approvals'),
