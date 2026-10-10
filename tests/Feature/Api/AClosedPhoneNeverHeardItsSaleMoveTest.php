@@ -84,7 +84,10 @@ final class AClosedPhoneNeverHeardItsSaleMoveTest extends TestCase
         Http::assertNothingSent();
     }
 
-    public function test_a_push_carries_only_the_title_and_a_gone_token_is_dropped(): void
+    /**
+     * ⭐ শিরোনামে নম্বর আর ধাপ, নিচের লাইনে দোকানের "নাম · পয়েন্ট" (মালিক, ১০ অক্টোবর ২০২৬: "obosoi point dibe")।
+     */
+    public function test_a_push_carries_the_title_and_the_shop_with_its_point_and_a_gone_token_is_dropped(): void
     {
         $user = $this->member();
         $live = $this->device($user, 'dev-a', 'tok-live');
@@ -98,7 +101,7 @@ final class AClosedPhoneNeverHeardItsSaleMoveTest extends TestCase
                 : Http::response(['name' => 'projects/p/messages/1']),
         ]);
 
-        (new SendPushToUser($user->id, 'S-0007 — গেট পেরিয়েছে', ['open' => 'tracking']))->handle(app(FcmSender::class));
+        (new SendPushToUser($user->id, 'S-0007 — গেট পেরিয়েছে', ['open' => 'tracking'], 'রহিম স্টোর · কারওয়ান বাজার'))->handle(app(FcmSender::class));
 
         Http::assertSent(function ($request) {
             if (! str_contains($request->url(), 'fcm.googleapis.com')) {
@@ -107,7 +110,7 @@ final class AClosedPhoneNeverHeardItsSaleMoveTest extends TestCase
             $message = $request->data()['message'] ?? [];
 
             return ($message['notification']['title'] ?? null) === 'S-0007 — গেট পেরিয়েছে'
-                && ! array_key_exists('body', $message['notification'] ?? []);
+                && ($message['notification']['body'] ?? null) === 'রহিম স্টোর · কারওয়ান বাজার';
         });
         $this->assertSame('tok-live', $live->fresh()->push_token);
         $this->assertNull($gone->fresh()->push_token, '"আর নেই" বলা টোকেন রয়ে গেল।');
