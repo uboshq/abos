@@ -14,8 +14,7 @@ use Tests\TestCase;
  * ⓘ সূত্রটা (তাকে − ধরা − আটকানো) ১৪ জায়গায় হাতে লেখা ছিল, তাই মেয়াদ পেরোনো লট বাদ দিতে চৌদ্দবার বদলাতে হল, আর একটা বাদ
  * পড়লে পর্দা আর কাউন্টার দুই সংখ্যা বলত। এই পাহারা পনেরোতম হাতে-লেখা দেখলেই লাল হয়।
  *
- * ⓘ ছাড়: StockService নিজে (সূত্রের ঘর, আর দুই তালা-গোনা যা "তাকের বেশি বেরোল কি না" দেখে — কারণ সেখানেই লেখা);
- * PosController — এক পিয়ারের খোলা কাজের নিচে, তাদের কমিটের পরে আলাদা হ্যাশে সূত্রে যাবে, তখন এই ছাড় মুছবে।
+ * ⓘ ছাড় কেবল StockService নিজে — সূত্রের ঘর, আর দুই তালা-গোনা যা "তাকের বেশি বেরোল কি না" দেখে, বেচার যোগ্যতা নয়।
  */
 final class NobodyCountsAvailableByHandTest extends TestCase
 {
@@ -30,7 +29,6 @@ final class NobodyCountsAvailableByHandTest extends TestCase
 
     private const ALLOWED = [
         'app/Modules/Inventory/Services/StockService.php',
-        'app/Modules/Sales/Http/Controllers/PosController.php',
     ];
 
     public function test_the_guard_knows_every_old_shape(): void
