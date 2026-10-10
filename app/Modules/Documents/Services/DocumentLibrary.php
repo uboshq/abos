@@ -177,7 +177,7 @@ final class DocumentLibrary
      */
     private function backToDraftIfSigned(Document $locked, DocumentVersion $version): void
     {
-        if (! in_array($locked->status, [DocumentCatalog::APPROVED, DocumentCatalog::PUBLISHED], true)) {
+        if (! in_array($locked->status, DocumentCatalog::SEALED, true)) {
             return;
         }
 

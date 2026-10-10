@@ -81,6 +81,13 @@ final class DocumentCatalog
 
     public const PUBLISHED = 'published';
 
+    /**
+     * ⭐ অনুমোদন ছাড়া প্রকাশিত — কোম্পানিতে কাগজের অনুমোদন বন্ধ থাকলে (fe, ১১ অক্টোবর ২০২৬; মালিকের "সব সইয়ে চালু/বন্ধ সুইচ" নিয়ম)।
+     * ⓘ বন্ধ মানে সই লাগে না — কিন্তু কেউ অনুমোদন না করলে "অনুমোদিত" লেখা মিথ্যা। UB-তে সব ধারা বন্ধ, তাই সেখানে প্রতিটা জমা
+     * আগে "অনুমোদিত" দেখাত।
+     */
+    public const PUBLISHED_UNAPPROVED = 'published_unapproved';
+
     public const EXPIRED = 'expired';
 
     public const ARCHIVED = 'archived';
@@ -90,7 +97,7 @@ final class DocumentCatalog
     /** @var list<string> */
     public const STATUSES = [
         self::DRAFT, self::SUBMITTED, self::UNDER_REVIEW, self::CHANGES_REQUESTED, self::APPROVED,
-        self::REJECTED, self::PUBLISHED, self::EXPIRED, self::ARCHIVED, self::DELETED,
+        self::REJECTED, self::PUBLISHED, self::PUBLISHED_UNAPPROVED, self::EXPIRED, self::ARCHIVED, self::DELETED,
     ];
 
     /**
@@ -107,7 +114,7 @@ final class DocumentCatalog
      *
      * @var list<string>
      */
-    public const SEALED = [self::APPROVED, self::PUBLISHED];
+    public const SEALED = [self::APPROVED, self::PUBLISHED, self::PUBLISHED_UNAPPROVED];
 
     /**
      * সেন্টারের মেয়াদের ছাঁকনি (§১২) — `expired` আর সামনের ৭/৩০/৯০ দিন।

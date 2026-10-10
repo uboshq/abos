@@ -4,7 +4,7 @@
         'approved', 'published' => 'success',
         'submitted', 'under_review' => 'pending',
         'changes_requested', 'rejected', 'expired', 'deleted' => 'danger',
-        'archived' => 'info',
+        'archived', 'published_unapproved' => 'info',
         default => 'draft',
     };
 @endphp

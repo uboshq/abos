@@ -48,6 +48,7 @@ return [
         'approved' => 'Approved',
         'rejected' => 'Rejected',
         'published' => 'Published',
+        'published_unapproved' => 'Published without approval',
         'expired' => 'Expired',
         'archived' => 'Archived',
         'deleted' => 'Deleted',

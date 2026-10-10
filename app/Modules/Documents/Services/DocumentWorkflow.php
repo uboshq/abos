@@ -75,11 +75,12 @@ final class DocumentWorkflow
                 throw ValidationException::withMessages(['status' => __('documents::message.change_before_resubmit')]);
             }
 
-            $this->move($locked, $approval === null ? DocumentCatalog::APPROVED : DocumentCatalog::SUBMITTED);
+            // ⛔ ধারা বন্ধ থাকলে "অনুমোদিত" নয় — "অনুমোদন ছাড়া প্রকাশিত", অডিটেও তাই (fe, ১১ অক্টোবর ২০২৬)
+            $this->move($locked, $approval === null ? DocumentCatalog::PUBLISHED_UNAPPROVED : DocumentCatalog::SUBMITTED);
             $locked->auditAction('document_submitted', $note);
 
             if ($approval === null) {
-                $locked->auditAction('document_approved', __('documents::message.no_flow_needed'));
+                $locked->auditAction('document_published_without_approval', __('documents::message.no_flow_needed'));
             }
 
             return $approval;

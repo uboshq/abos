@@ -50,6 +50,7 @@ return [
         'approved' => 'অনুমোদিত',
         'rejected' => 'বাতিল',
         'published' => 'প্রকাশিত',
+        'published_unapproved' => 'অনুমোদন ছাড়া প্রকাশিত',
         'expired' => 'মেয়াদোত্তীর্ণ',
         'archived' => 'আর্কাইভে',
         'deleted' => 'মোছা',
