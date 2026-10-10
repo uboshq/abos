@@ -15,6 +15,7 @@ return [
     'till_code' => 'ক্যাশ টিলের কোড',
     'loan' => 'ঋণ',
     'fixed_asset' => 'স্থায়ী সম্পদ',
+    'depreciation_run' => 'মাসের অবচয়',
 
     // চেকের খাতা
     'cheque' => 'চেক',

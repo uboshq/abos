@@ -100,10 +100,11 @@
             মাসে কেউ না কেউ অর্ধেক মাসের ক্ষয় পুরো মাস হিসেবে বসিয়ে
             ফেলতেন, আর সংখ্যাটা দেখতে বৈধই লাগত।
         --}}
-        <form method="POST" action="{{ route('accounts.asset.depreciate') }}"
+        {{-- ⭐ আগে দেখা, তারপর বসানো — স্থায়ী সম্পদ ধাপ ২। ⓘ এই বোতাম কিছু লেখে না; পরের পাতায় কোন সম্পদে কত বসবে
+             দেখে "বসান" চাপলে তবে খাতায় ([[DepreciationEngine::preview()]])। --}}
+        <form method="GET" action="{{ route('accounts.asset.run.preview') }}"
               class="mb-5 flex flex-wrap items-end gap-3 rounded-(--radius-card) border
                      border-(--color-border) bg-(--color-surface-card) p-4">
-            @csrf
 
             <label class="flex flex-col gap-1">
                 <span class="text-sm font-medium">{{ __('accounts::asset.run_month') }}</span>
@@ -113,7 +114,7 @@
             </label>
 
             <x-ui.button type="submit" tone="primary">
-                {{ __('accounts::asset.run_action') }}
+                {{ __('accounts::asset.run_preview') }}
             </x-ui.button>
         </form>
     @endcan

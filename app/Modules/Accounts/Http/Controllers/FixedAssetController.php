@@ -7,6 +7,7 @@ namespace App\Modules\Accounts\Http\Controllers;
 use App\Core\Concerns\GrandTotals;
 use App\Core\Contracts\CapitalisesABillLine;
 use App\Core\Services\MenuBuilder;
+use App\Core\Services\OpenPeriod;
 use App\Core\Services\PartyRegistry;
 use App\Core\Support\CompanyContext;
 use App\Http\Controllers\Controller;
@@ -15,7 +16,9 @@ use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Models\AssetCategory;
 use App\Modules\Accounts\Models\AssetCostPart;
 use App\Modules\Accounts\Models\AssetTransfer;
+use App\Modules\Accounts\Models\DepreciationRun;
 use App\Modules\Accounts\Models\FixedAsset;
+use App\Modules\Accounts\Services\DepreciationEngine;
 use App\Modules\Accounts\Services\FixedAssetService;
 use App\Modules\Accounts\Services\StandardChart;
 use Illuminate\Http\RedirectResponse;
@@ -45,8 +48,8 @@ class FixedAssetController extends Controller implements HasMiddleware
     public static function middleware(): array
     {
         return [
-            new Middleware('can:accounts.asset.view', only: ['index', 'show']),
-            new Middleware('can:accounts.asset.manage', only: ['create', 'store', 'depreciate', 'dispose', 'transfer', 'status']),
+            new Middleware('can:accounts.asset.view', only: ['index', 'show', 'run']),
+            new Middleware('can:accounts.asset.manage', only: ['create', 'store', 'depreciate', 'dispose', 'transfer', 'status', 'preview', 'estimate', 'usage']),
         ];
     }
 
@@ -165,7 +168,7 @@ class FixedAssetController extends Controller implements HasMiddleware
     {
         return view('accounts::asset.show', [
             'menu' => $this->menu->forUser($request->user()),
-            'asset' => $asset->load(['depreciation', 'assetAccount', 'category', 'parent', 'components', 'costParts', 'branch']),
+            'asset' => $asset->load(['depreciation', 'assetAccount', 'category', 'parent', 'components', 'costParts', 'branch', 'usages', 'estimateChanges.creator']),
             // ⓘ পক্ষের নাম কোর থেকে — কর্মী আর বিক্রেতা ([[PartyRegistry]]), মডিউলের মডেল থেকে নয়
             'custodian' => $asset->custodian_id === null ? null
                 : (app(PartyRegistry::class)->labelsOf([['employee', (int) $asset->custodian_id]])['employee:'.$asset->custodian_id] ?? null),
@@ -215,6 +218,8 @@ class FixedAssetController extends Controller implements HasMiddleware
             'method' => ['nullable', 'required_without:category_id', Rule::in(FixedAsset::METHODS)],
             'life_months' => ['nullable', 'integer', 'min:1', 'max:1200'],
             'rate' => ['nullable', 'numeric', 'min:0', 'max:100'],
+            // ⭐ ব্যবহারের এককে মোট একক (ধাপ ২)
+            'total_units' => ['nullable', 'numeric', 'gt:0'],
             'narration' => ['nullable', 'string', 'max:500'],
 
             // ⭐ নিবন্ধনের নতুন ঘর — স্থায়ী সম্পদ ধাপ ১ (IAS 16)
@@ -287,10 +292,69 @@ class FixedAssetController extends Controller implements HasMiddleware
 
         $result = $this->assets->runFor($data['month'].'-01');
 
-        return back()->with('status', __('accounts::asset.run_done', [
+        return redirect()->route('accounts.asset.run.preview', ['month' => $data['month']])->with('status', __('accounts::asset.run_done', [
             'posted' => $result['posted'],
             'skipped' => $result['skipped'],
         ]));
+    }
+
+    /**
+     * ⭐ মাসের দৌড় আগে দেখা — কোন সম্পদে কত, কেন কোনোটায় শূন্য; নিচে এই মাসে বসা কাগজগুলো (স্থায়ী সম্পদ ধাপ ২)।
+     * ⓘ কিছু লেখে না; "বসান" চাপলে ঠিক এই সারিগুলোই বসে ([[DepreciationEngine::preview()]])।
+     */
+    public function preview(Request $request): View
+    {
+        $month = DepreciationEngine::assertMonth($request->query('month', Carbon::today()->subMonthNoOverflow()->format('Y-m')));
+        $rows = app(DepreciationEngine::class)->preview($month);
+
+        return view('accounts::asset.run.preview', [
+            'menu' => $this->menu->forUser($request->user()),
+            'month' => $month,
+            'rows' => $rows,
+            'total' => $rows->reduce(fn (string $sum, array $row) => bcadd($sum, $row['amount'], 4), '0'),
+            'runs' => DepreciationRun::acrossBranches()->with('branch')->where('period_end', $month->toDateString())->orderBy('branch_key')->get(),
+            'open' => app(OpenPeriod::class)->isOpen($month),
+        ]);
+    }
+
+    /** ⭐ এক শাখার এক মাসের অবচয়ের কাগজ — ভেতরে সম্পদ ধরে সারি (ধাপ ২) */
+    public function run(Request $request, DepreciationRun $run): View
+    {
+        return view('accounts::asset.run.show', [
+            'menu' => $this->menu->forUser($request->user()),
+            'run' => $run->load(['branch', 'entries.asset.category']),
+        ]);
+    }
+
+    /** ⭐ আয়ু, শেষ দাম, পদ্ধতি, হার বা মোট একক বদল — আগামীর দিকে, কারণসহ (ধাপ ২) */
+    public function estimate(Request $request, FixedAsset $asset): RedirectResponse
+    {
+        $data = $request->validate([
+            'method' => ['nullable', Rule::in(FixedAsset::METHODS)],
+            'life_months' => ['nullable', 'integer', 'min:1', 'max:1200'],
+            'salvage' => ['nullable', 'numeric', 'min:0'],
+            'rate' => ['nullable', 'numeric', 'gt:0', 'max:100'],
+            'total_units' => ['nullable', 'numeric', 'gt:0'],
+            'reason' => ['required', 'string', 'max:500'],
+        ]);
+
+        $this->assets->changeEstimate($asset, $data, (string) $data['reason']);
+
+        return back()->with('status', __('accounts::asset.estimate_changed'));
+    }
+
+    /** ⭐ এক মাসে কত একক চলল — ব্যবহারের এককে ক্ষয়ের জন্য (ধাপ ২) */
+    public function usage(Request $request, FixedAsset $asset): RedirectResponse
+    {
+        $data = $request->validate([
+            'month' => ['required', 'date_format:Y-m'],
+            'units' => ['required', 'numeric', 'min:0'],
+            'note' => ['nullable', 'string', 'max:255'],
+        ]);
+
+        $this->assets->recordUsage($asset, $data['month'].'-01', (string) $data['units'], ($data['note'] ?? null) ?: null);
+
+        return back()->with('status', __('accounts::asset.usage_saved'));
     }
 
     /**

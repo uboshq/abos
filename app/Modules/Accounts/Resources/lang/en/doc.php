@@ -14,6 +14,7 @@ return [
     'till_code' => 'Cash Till Code',
     'loan' => 'Loan',
     'fixed_asset' => 'Fixed asset',
+    'depreciation_run' => 'Monthly depreciation',
 
     // চেকের খাতা
     'cheque' => 'Cheque',

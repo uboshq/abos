@@ -15,7 +15,9 @@ use App\Models\FinancialYear;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Models\AssetCategory;
 use App\Modules\Accounts\Models\AssetCostPart;
+use App\Modules\Accounts\Models\AssetEstimateChange;
 use App\Modules\Accounts\Models\AssetTransfer;
+use App\Modules\Accounts\Models\AssetUsage;
 use App\Modules\Accounts\Models\DepreciationEntry;
 use App\Modules\Accounts\Models\FixedAsset;
 use Illuminate\Support\Carbon;
@@ -117,6 +119,13 @@ final class FixedAssetService
         if ($method === FixedAsset::REDUCING && bccomp((string) ($data['rate'] ?? '0'), '0', 4) <= 0) {
             throw ValidationException::withMessages([
                 'rate' => __('accounts::asset.rate_required'),
+            ]);
+        }
+
+        // ⭐ ব্যবহারের এককে — মোট একক লাগে (ধাপ ২)
+        if ($method === FixedAsset::UNITS && bccomp((string) ($data['total_units'] ?? '0'), '0', 4) <= 0) {
+            throw ValidationException::withMessages([
+                'total_units' => __('accounts::asset.units_required'),
             ]);
         }
 
@@ -633,34 +642,22 @@ final class FixedAssetService
     }
 
     /**
-     * একটা মাসের ক্ষয় কত।
+     * ⭐ পরের মাসে কত বসবে — ইঞ্জিন থেকে ([[DepreciationEngine::amountFor()]]; স্থায়ী সম্পদ ধাপ ২)।
      *
-     * সরলরৈখিক: (দাম − বাতিল মূল্য) ÷ আয়ুর মাস। প্রতি মাসে একই অঙ্ক।
-     *
-     * ক্রমহ্রাসমান: খাতায় এখনকার দামের উপর বাৎসরিক হার ÷ ১২। প্রথম
-     * বছরগুলোয় বেশি, পরে কম — যা যানবাহনের বাস্তবতার কাছাকাছি।
-     *
-     * দুইটাতেই শেষে একটা ছাঁকনি: বাকি থাকা ক্ষয়ের চেয়ে বেশি বসে না।
-     * নাহলে ক্রমহ্রাসমানে দাম কোনোদিন বাতিল মূল্যে থামত না, আর
-     * সরলরৈখিকে শেষ মাসে এক-দুই পয়সা বেশি বসে যেত।
+     * ⓘ মাস না দিলে পরের বাকি মাস: শেষ বসা মাসের পরেরটা, নইলে ক্ষয় শুরুর মাস।
      */
     public function monthlyAmount(FixedAsset $asset, ?Carbon $upTo = null): string
     {
-        $left = $asset->depreciableLeft($upTo);
-
-        if (bccomp($left, '0', 4) <= 0) {
-            return '0.0000';
+        if ($upTo === null) {
+            $last = $asset->depreciation()->max('period_end');
+            $upTo = $last === null ? $asset->depreciatesFrom() : Carbon::parse($last)->addMonthNoOverflow();
         }
 
-        $amount = $asset->method === FixedAsset::REDUCING
-            ? bcdiv(bcmul($asset->bookValue($upTo), bcdiv((string) $asset->rate, '100', 8), 8), '12', 4)
-            : bcdiv(bcsub((string) $asset->cost, (string) $asset->salvage, 4), (string) $asset->life_months, 4);
-
-        return bccomp($amount, $left, 4) > 0 ? $left : $amount;
+        return app(DepreciationEngine::class)->amountFor($asset, $upTo)['amount'];
     }
 
     /**
-     * এক সম্পদের এক মাসের অবচয় বসানো।
+     * এক সম্পদের এক মাসের অবচয় বসানো — নিজের দাখিলায় (মাসের দৌড় শাখায় একটা কাগজে বসায়, [[DepreciationEngine::run()]])।
      *
      * @throws ValidationException
      */
@@ -688,7 +685,8 @@ final class FixedAssetService
             ]);
         }
 
-        $amount = Money::of($this->monthlyAmount($asset, $periodEnd));
+        // ⓘ একই মাস দুইবার — প্রশ্নটা ডাটাবেজের অনন্য সারি তোলে, তাই ইঞ্জিনকে "আগে বসেছে কি না" জিজ্ঞেস করা হয় না
+        $amount = app(DepreciationEngine::class)->amountFor($asset, $periodEnd, once: false)['amount'];
 
         if (bccomp($amount, '0', 4) <= 0) {
             return null;
@@ -728,52 +726,122 @@ final class FixedAssetService
     }
 
     /**
-     * মাস শেষের দৌড় — সব সচল সম্পদে একবারে।
+     * মাস শেষের দৌড় — সব খাতায় থাকা সম্পদে একবারে, শাখায় একটা কাগজ ([[DepreciationEngine::run()]]; ধাপ ২)।
      *
-     * যেগুলো ইতিমধ্যে বসানো, বা যেগুলোর ক্ষয় শেষ, সেগুলো নীরবে বাদ
-     * যায়। দৌড়টা পুরো ব্যর্থ হয় না — একটা সম্পদের সমস্যায় বাকি
-     * চল্লিশটা আটকে গেলে কেউ আর মাস শেষে দৌড়ায় না।
+     * ⓘ যেগুলো ইতিমধ্যে বসানো, বা যেগুলোর ক্ষয় শেষ, সেগুলো নীরবে বাদ যায়। দুইবার চালালে দ্বিতীয়বার কিছু বসে না;
+     * বন্ধ মাসে থামে।
      *
-     * @return array{posted: int, skipped: int, total: string}
+     * @return array{posted: int, skipped: int, total: string, runs: list<int>}
      */
     public function runFor(Carbon|string $month): array
     {
-        $periodEnd = Carbon::parse($month)->endOfMonth()->startOfDay();
-        $posted = 0;
-        $skipped = 0;
-        $total = '0';
+        return app(DepreciationEngine::class)->run($month);
+    }
 
-        foreach (FixedAsset::query()->inService()->get() as $asset) {
-            $already = DepreciationEntry::query()
-                ->where('fixed_asset_id', $asset->id)
-                ->where('period_end', $periodEnd->toDateString())
-                ->exists();
-
-            if ($already) {
-                $skipped++;
-
-                continue;
-            }
-
-            try {
-                $entry = $this->depreciate($asset, $periodEnd);
-            } catch (ValidationException) {
-                $skipped++;
-
-                continue;
-            }
-
-            if ($entry === null) {
-                $skipped++;
-
-                continue;
-            }
-
-            $posted++;
-            $total = bcadd($total, (string) $entry->amount, 4);
+    /**
+     * ⭐ আয়ু, শেষ দাম, পদ্ধতি, হার বা মোট একক বদল — আগামীর দিকে (IAS 16.51, IAS 8.36; স্থায়ী সম্পদ ধাপ ২)।
+     *
+     * ⓘ আগে বসা অবচয় ছোঁয়া হয় না; পরের মাস থেকে বাকি দাম বাকি আয়ুতে ভাগ হয় ([[DepreciationEngine]])। আগে কী ছিল,
+     * কী হলো, কেন — ইতিহাসে থাকে ([[AssetEstimateChange]]), আর সম্পদের নিজের নিরীক্ষাতেও।
+     *
+     * @param  array{life_months?: int|null, salvage?: string|null, method?: string|null, rate?: string|null, total_units?: string|null}  $data
+     */
+    public function changeEstimate(FixedAsset $asset, array $data, string $reason): FixedAsset
+    {
+        if (blank($reason)) {
+            throw ValidationException::withMessages(['reason' => __('accounts::asset.estimate_reason_required')]);
         }
 
-        return ['posted' => $posted, 'skipped' => $skipped, 'total' => $total];
+        return DB::transaction(function () use ($asset, $data, $reason) {
+            $locked = FixedAsset::acrossBranches()->whereKey($asset->id)->lockForUpdate()->firstOrFail();
+
+            if (! $locked->isInService()) {
+                throw ValidationException::withMessages(['status' => __('accounts::asset.not_active')]);
+            }
+
+            $fields = ['life_months', 'salvage', 'method', 'rate', 'total_units'];
+            $before = collect($fields)->mapWithKeys(fn (string $f) => [$f => $locked->{$f} === null ? null : (string) $locked->{$f}])->all();
+            $after = $before;
+
+            foreach ($fields as $field) {
+                if (array_key_exists($field, $data) && filled($data[$field])) {
+                    $after[$field] = (string) $data[$field];
+                }
+            }
+
+            $method = (string) $after['method'];
+
+            if (! in_array($method, FixedAsset::METHODS, true)) {
+                throw ValidationException::withMessages(['method' => __('accounts::asset.method_unknown')]);
+            }
+
+            if ($method === FixedAsset::STRAIGHT_LINE && (int) $after['life_months'] <= 0) {
+                throw ValidationException::withMessages(['life_months' => __('accounts::asset.life_required')]);
+            }
+
+            if ($method === FixedAsset::REDUCING && bccomp((string) $after['rate'], '0', 4) <= 0) {
+                throw ValidationException::withMessages(['rate' => __('accounts::asset.rate_required')]);
+            }
+
+            if ($method === FixedAsset::UNITS && bccomp((string) $after['total_units'], '0', 4) <= 0) {
+                throw ValidationException::withMessages(['total_units' => __('accounts::asset.units_required')]);
+            }
+
+            if (bccomp((string) $after['salvage'], (string) $locked->cost, 4) > 0) {
+                throw ValidationException::withMessages(['salvage' => __('accounts::asset.salvage_over_cost')]);
+            }
+
+            if ($after === $before) {
+                throw ValidationException::withMessages(['reason' => __('accounts::asset.estimate_nothing_changed')]);
+            }
+
+            AssetEstimateChange::query()->create([
+                'company_id' => $locked->company_id,
+                'fixed_asset_id' => $locked->id,
+                'changed_on' => now()->toDateString(),
+                'before' => $before,
+                'after' => $after,
+                'reason' => $reason,
+                'created_by' => auth()->id(),
+            ]);
+
+            $locked->update([
+                'life_months' => $after['life_months'] === null ? null : (int) $after['life_months'],
+                'salvage' => $after['salvage'] ?? '0',
+                'method' => $method,
+                'rate' => $after['rate'],
+                'total_units' => $after['total_units'],
+            ]);
+
+            return $locked->refresh();
+        });
+    }
+
+    /**
+     * ⭐ এক মাসে কত একক চলল — ব্যবহারের এককে ক্ষয়ের জন্য (স্থায়ী সম্পদ ধাপ ২)।
+     *
+     * ⛔ যে মাসের অবচয় বসে গেছে, তার একক আর বদলায় না — নইলে খাতার অঙ্ক আর এককের হিসাব আলাদা হত।
+     */
+    public function recordUsage(FixedAsset $asset, Carbon|string $month, string $units, ?string $note = null): AssetUsage
+    {
+        $periodEnd = Carbon::parse($month)->endOfMonth()->startOfDay();
+
+        if ($asset->method !== FixedAsset::UNITS) {
+            throw ValidationException::withMessages(['units' => __('accounts::asset.units_not_this_method')]);
+        }
+
+        if (! is_numeric($units) || bccomp($units, '0', 4) < 0) {
+            throw ValidationException::withMessages(['units' => __('accounts::asset.units_wrong')]);
+        }
+
+        if ($asset->depreciation()->where('period_end', $periodEnd->toDateString())->exists()) {
+            throw ValidationException::withMessages(['month' => __('accounts::asset.units_month_posted')]);
+        }
+
+        return AssetUsage::query()->updateOrCreate(
+            ['fixed_asset_id' => $asset->id, 'period_end' => $periodEnd->toDateString()],
+            ['company_id' => $asset->company_id, 'units' => Money::of($units), 'note' => $note, 'created_by' => auth()->id()],
+        );
     }
 
     /**

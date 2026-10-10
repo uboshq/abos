@@ -67,6 +67,8 @@
 
     @include('accounts::asset.partials.details')
 
+    @include('accounts::asset.partials.estimate')
+
     {{-- ── ⭐ শাখা বদল — মানচিত্র §১৫, ২১ সেপ্টেম্বর ২০২৬ ──────────────
 
          ⚠️ কেন কেবল একটা কলাম বদলানো যথেষ্ট নয়: ফ্রিজটা ঢাকা থেকে খুলনায়

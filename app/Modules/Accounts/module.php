@@ -26,6 +26,7 @@ use App\Modules\Accounts\Models\CashCount;
 use App\Modules\Accounts\Models\CashTill;
 use App\Modules\Accounts\Models\Cheque;
 use App\Modules\Accounts\Models\DepreciationEntry;
+use App\Modules\Accounts\Models\DepreciationRun;
 use App\Modules\Accounts\Models\FixedAsset;
 use App\Modules\Accounts\Models\Loan;
 use App\Modules\Accounts\Models\LoanInstalment;
@@ -504,6 +505,8 @@ return [
 
         // স্থায়ী সম্পদ — FA-2026-2027-0001
         'FA' => 'accounts::doc.fixed_asset',
+        // ⭐ মাসের অবচয়ের দৌড় — শাখায় একটা কাগজ, DEP-… (স্থায়ী সম্পদ ধাপ ২)
+        'DEP' => 'accounts::doc.depreciation_run',
 
         // ⭐ খোলা জের — OB-0001, নিজের ক্রম (ভাউচারের পরিকল্পনা ৩ঘ, ৭ অক্টোবর ২০২৬; [[OpeningBalanceService::SERIES]])
         'OB' => 'accounts::doc.opening_balance',
@@ -584,6 +587,8 @@ return [
         'asset_disposal' => AssetDisposalPaper::class,
         'depreciation' => DepreciationEntry::class,
         'asset_transfer' => AssetTransfer::class,
+        // ⭐ মাসের অবচয়ের দৌড় — শাখায় একটা দাখিলা (স্থায়ী সম্পদ ধাপ ২)
+        'depreciation_run' => DepreciationRun::class,
         // ⓘ ক্রয় বিলের মাল মজুদ থেকে সম্পদে — দাখিলা ক্রয়ের ([[BillLinesForAssets]]), উৎস-আইডি সম্পদের
         'asset_capitalise' => AssetCapitalisationPaper::class,
     ],
@@ -859,6 +864,36 @@ return [
          * ⭐ মূলধনীকরণের সীমা — এর নিচের কেনা খরচে যায়, সম্পদের খাতায় নয় (স্থায়ী সম্পদ ধাপ ১; IAS 16-এর বস্তুগততা)।
          * ⓘ শূন্য = কোনো সীমা নেই (আজকের আচরণ)। শ্রেণির নিজের সীমা থাকলে সেটা জেতে। ⛔ কেবল মালিক — টাকার নিয়ম।
          */
+        /*
+         * ⭐ অবচয়ের তিন সুইচ — স্থায়ী সম্পদ ধাপ ২ ([[DepreciationEngine]])। ⓘ ডিফল্ট আজকের আচরণ: প্রথম মাস পুরো, অলস
+         * জিনিসও ক্ষয় ধরে (IAS 16.55), আর মাসের দৌড় হাতে। ⛔ কেবল মালিক — খাতার অঙ্ক বদলায়।
+         */
+        [
+            'key' => 'accounts.asset.prorata',
+            'super_admin_only' => true,
+            'label' => 'accounts::settings.asset_prorata',
+            'type' => 'choice',
+            'options' => ['full_month', 'daily'],
+            'option_label' => 'accounts::settings.asset_prorata_',
+            'default' => 'full_month',
+            'group' => 'entry',
+        ],
+        [
+            'key' => 'accounts.asset.idle_stops_depreciation',
+            'super_admin_only' => true,
+            'label' => 'accounts::settings.asset_idle_stops_depreciation',
+            'type' => 'boolean',
+            'default' => false,
+            'group' => 'entry',
+        ],
+        [
+            'key' => 'accounts.asset.auto_run',
+            'super_admin_only' => true,
+            'label' => 'accounts::settings.asset_auto_run',
+            'type' => 'boolean',
+            'default' => false,
+            'group' => 'entry',
+        ],
         [
             'key' => 'accounts.asset.capitalisation_threshold',
             'super_admin_only' => true,

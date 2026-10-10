@@ -121,11 +121,21 @@
                 <option value="{{ \App\Modules\Accounts\Models\FixedAsset::REDUCING }}">
                     {{ __('accounts::asset.reducing') }}
                 </option>
+                <option value="{{ \App\Modules\Accounts\Models\FixedAsset::UNITS }}">
+                    {{ __('accounts::asset.units') }}
+                </option>
             </select>
         </label>
 
         {{-- একটা পদ্ধতিতে আয়ু লাগে, অন্যটায় হার — দুইটা একসাথে নয়। --}}
-        <label class="flex flex-col gap-1" x-show="method !== 'reducing'">
+        <label class="flex flex-col gap-1" x-show="method === 'units'" x-cloak>
+            <span class="text-sm font-medium">{{ __('accounts::asset.total_units') }}</span>
+            <input type="number" step="0.01" min="0" name="total_units" value="{{ old('total_units') }}"
+                   class="num h-(--spacing-field) rounded-(--radius-field) border border-(--color-border)
+                          bg-(--color-surface-app) px-2 text-end">
+        </label>
+
+        <label class="flex flex-col gap-1" x-show="method !== 'reducing' && method !== 'units'">
             <span class="text-sm font-medium">{{ __('accounts::asset.life_months') }}</span>
             <input type="number" step="1" min="1" name="life_months" value="{{ old('life_months') }}"
                    class="num h-(--spacing-field) rounded-(--radius-field) border border-(--color-border)

@@ -30,9 +30,9 @@ use Illuminate\Support\Carbon;
 class FixedAsset extends Model implements Drillable
 {
     use BelongsToCompany;
-
     use HasPublicId;
     use IsAudited;
+
     // ⛔ শাখার দেয়াল — হেডারের শাখা আর মানুষের নাগাল (অডিট ⛔৪, ৬ অক্টোবর ২০২৬; [[ScopedToUserBranch]])
     use ScopedToUserBranch;
     use SoftDeletes;
@@ -43,8 +43,11 @@ class FixedAsset extends Model implements Drillable
     /** অবশিষ্ট দামের উপর হার — প্রথম বছরগুলোয় বেশি, পরে কম। */
     public const REDUCING = 'reducing';
 
+    /** ⭐ ব্যবহারের এককে — চলা কিলোমিটার, যন্ত্রের ঘণ্টা (IAS 16.62; স্থায়ী সম্পদ ধাপ ২, [[DepreciationEngine]]) */
+    public const UNITS = 'units';
+
     /** @var list<string> */
-    public const METHODS = [self::STRAIGHT_LINE, self::REDUCING];
+    public const METHODS = [self::STRAIGHT_LINE, self::REDUCING, self::UNITS];
 
     public const ACTIVE = 'active';
 
@@ -87,6 +90,8 @@ class FixedAsset extends Model implements Drillable
         'category_id', 'parent_id', 'location', 'department', 'custodian_id', 'supplier_id',
         'purchase_bill_id', 'purchase_bill_line_id', 'capitalised_qty', 'put_in_use_on',
         'serial_no', 'model_no', 'warranty_ends_on', 'insurance_policy_no', 'insured_until',
+        // ⭐ ব্যবহারের এককে মোট একক — ধাপ ২
+        'total_units',
     ];
 
     protected function casts(): array
@@ -100,6 +105,7 @@ class FixedAsset extends Model implements Drillable
             'disposed_on' => 'date',
             'life_months' => 'integer',
             'capitalised_qty' => 'decimal:4',
+            'total_units' => 'decimal:4',
             'put_in_use_on' => 'date',
             'warranty_ends_on' => 'date',
             'insured_until' => 'date',
@@ -140,6 +146,16 @@ class FixedAsset extends Model implements Drillable
     public function components(): HasMany
     {
         return $this->hasMany(self::class, 'parent_id')->orderBy('id');
+    }
+
+    public function usages(): HasMany
+    {
+        return $this->hasMany(AssetUsage::class, 'fixed_asset_id')->orderBy('period_end');
+    }
+
+    public function estimateChanges(): HasMany
+    {
+        return $this->hasMany(AssetEstimateChange::class, 'fixed_asset_id')->orderByDesc('changed_on')->orderByDesc('id');
     }
 
     public function costParts(): HasMany

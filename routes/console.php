@@ -271,6 +271,17 @@ Schedule::command('abos:adjusting-reverse')
         logger()->critical('সমন্বয় জাবেদা নিজে উল্টানো ব্যর্থ হয়েছে — হাতে দেখতে হবে।');
     });
 
+/*
+ * ⭐ মাসের অবচয় — মাসের প্রথম দিনে গত মাসেরটা, কেবল যেখানে মালিক `accounts.asset.auto_run` চালু করেছেন
+ * (স্থায়ী সম্পদ ধাপ ২; [[AssetDepreciate]])। ⓘ ডিফল্টে কোথাও কিছু হয় না — দৌড় হাতে, আগে দেখে।
+ */
+Schedule::command('abos:depreciate')
+    ->monthlyOn(1, '02:40')
+    ->withoutOverlapping()
+    ->onFailure(function () {
+        logger()->critical('মাসের অবচয় নিজে বসানো ব্যর্থ হয়েছে — হাতে দেখতে হবে।');
+    });
+
 Schedule::command('abos:money-due')
     ->dailyAt('08:00')
     ->withoutOverlapping()

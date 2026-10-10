@@ -436,6 +436,9 @@ Route::middleware('auth')->prefix('accounts')->group(function () {
         Route::get('/create', [FixedAssetController::class, 'create'])->name('create');
         Route::post('/', [FixedAssetController::class, 'store'])->name('store');
         Route::post('/depreciate', [FixedAssetController::class, 'depreciate'])->name('depreciate');
+        // ⭐ মাসের দৌড় — আগে দেখা, আর শাখার কাগজ (স্থায়ী সম্পদ ধাপ ২)
+        Route::get('/run', [FixedAssetController::class, 'preview'])->name('run.preview');
+        Route::get('/runs/{run}', [FixedAssetController::class, 'run'])->whereNumber('run')->name('run.show');
         Route::get('/{asset}', [FixedAssetController::class, 'show'])
             ->whereNumber('asset')->name('show');
         Route::post('/{asset}/dispose', [FixedAssetController::class, 'dispose'])
@@ -451,6 +454,12 @@ Route::middleware('auth')->prefix('accounts')->group(function () {
         // ⭐ অবস্থা — ব্যবহারে, অলস, মেরামতে; টাকা নড়ে না (স্থায়ী সম্পদ ধাপ ১)
         Route::post('/{asset}/status', [FixedAssetController::class, 'status'])
             ->whereNumber('asset')->name('status');
+
+        // ⭐ আয়ু-শেষ দাম-পদ্ধতি বদল (আগামীর দিকে) আর মাসের একক (স্থায়ী সম্পদ ধাপ ২)
+        Route::post('/{asset}/estimate', [FixedAssetController::class, 'estimate'])
+            ->whereNumber('asset')->name('estimate');
+        Route::post('/{asset}/usage', [FixedAssetController::class, 'usage'])
+            ->whereNumber('asset')->name('usage');
 
         /*
          * ⭐ সম্পদের শ্রেণি — পাঁচ খাত আর ডিফল্ট আয়ু (স্থায়ী সম্পদ ধাপ ১, ১০ অক্টোবর ২০২৬)।
