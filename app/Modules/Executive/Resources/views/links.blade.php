@@ -10,7 +10,7 @@
 
     <div data-executive-links class="flex flex-col gap-3">
         <div data-fit class="flex flex-wrap items-center justify-between gap-3 rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) px-4"
-             style="height: 56px">
+             style="height: var(--exec-bar)">
             <h1 class="truncate text-lg font-bold text-(--color-ink)">{{ __('executive::links.title') }}</h1>
             <form method="GET" action="{{ route('executive.links') }}" class="flex flex-wrap items-center gap-2">
                 <label for="ln-company" class="text-sm text-(--color-ink-muted)">{{ __('executive::links.company') }}</label>

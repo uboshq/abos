@@ -38,7 +38,7 @@
 
         {{-- ── উপরের দণ্ড — ৫৬px ───────────────────────────────────────── --}}
         <div data-topbar data-fit class="flex flex-wrap items-center justify-between gap-3 rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) px-4"
-             style="height: 56px">
+             style="height: var(--exec-bar)">
             <div class="min-w-0">
                 <h1 class="truncate text-lg font-bold text-(--color-ink)">{{ __('executive::today.title') }}</h1>
             </div>
@@ -105,11 +105,11 @@
                             value="{{ $go($single['id'], $single['only'], 'module.dashboard', ['module' => $module]) }}"
                             title="{{ __('executive::figure.'.$key.'_hint') }}"
                             class="flex min-w-0 flex-col items-start justify-center gap-1 rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) px-3 text-left shadow-(--shadow-card) hover:bg-(--color-surface-hover)"
-                            style="height: 90px">
+                            style="height: var(--exec-figure)">
                 @else
                     <a href="#executive-grid" data-figure="{{ $key }}" title="{{ __('executive::figure.'.$key.'_hint') }}"
                        class="flex min-w-0 flex-col items-start justify-center gap-1 rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) px-3 shadow-(--shadow-card) hover:bg-(--color-surface-hover)"
-                       style="height: 90px">
+                       style="height: var(--exec-figure)">
                 @endif
                         <span class="truncate text-sm font-medium text-(--color-ink-muted)">{{ __('executive::figure.'.$key) }}</span>
                         <span class="tabular truncate text-2xl font-bold leading-tight text-(--color-ink)">{{ $show($board['total'][$key], $key) }}</span>
@@ -125,7 +125,7 @@
         </div>
 
         {{-- ── ছক + সতর্কতা — ৪২০px ───────────────────────────────────── --}}
-        <div data-fit class="grid gap-3 xl:grid-cols-4" style="height: 420px">
+        <div data-fit class="grid gap-3 xl:grid-cols-4" style="height: var(--exec-board)">
             <section id="executive-grid" data-grid
                      class="flex min-h-0 min-w-0 flex-col overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) xl:col-span-3">
                 <div class="flex items-center justify-between gap-2 border-b border-(--color-border) px-4 py-2">
@@ -260,7 +260,7 @@
         </div>
 
         {{-- ── ধারা আর সেরা পাঁচ — ২৬০px ───────────────────────────────── --}}
-        <div data-fit class="grid gap-3 xl:grid-cols-4" style="height: 260px">
+        <div data-fit class="grid gap-3 xl:grid-cols-4" style="height: var(--exec-trend)">
             <section data-trend class="min-w-0 overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) xl:col-span-2">
                 @if ($trend !== null)
                     <h2 class="px-4 pt-2 text-sm font-semibold text-(--color-ink)">{{ $trend->label }}</h2>

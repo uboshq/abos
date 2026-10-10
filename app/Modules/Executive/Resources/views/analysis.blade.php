@@ -31,7 +31,7 @@
 
     <div data-executive-analysis class="flex flex-col gap-3">
         <div data-fit class="flex flex-wrap items-center justify-between gap-3 rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) px-4"
-             style="height: 56px">
+             style="height: var(--exec-bar)">
             <h1 class="truncate text-lg font-bold text-(--color-ink)">{{ __('executive::analysis.title') }}</h1>
 
             <span class="text-2xs text-(--color-ink-muted)">{{ \App\Core\Engines\Dashboard\DateRange::label($range['from'], $range['to']) }}</span>
@@ -64,7 +64,7 @@
             @foreach ($cards as [$name, $labelKey, $measure, $kind, $target])
                 @php $list = $lists[$name]; @endphp
                 <section data-list="{{ $name }}" class="flex min-w-0 flex-col overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)"
-                         style="height: 330px">
+                         style="height: var(--exec-list)">
                     <h2 class="border-b border-(--color-border) px-4 py-2 text-sm font-semibold text-(--color-ink)">{{ __('executive::analysis.list_'.$name) }}</h2>
                     <ol class="min-h-0 flex-1 overflow-auto text-sm">
                         @forelse ($list['rows'] as $row)
@@ -100,7 +100,7 @@
             @endforeach
 
             <section class="flex min-w-0 flex-col justify-center gap-2 rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) px-4"
-                     style="height: 330px">
+                     style="height: var(--exec-list)">
                 <a href="{{ route('executive.report.show', ['slug' => 'profit-by-customer', 'from' => $range['from'], 'to' => $range['to']]) }}"
                    class="text-sm font-semibold text-(--color-brand-700) hover:underline">{{ __('executive::analysis.profit_by_customer') }} →</a>
                 <p class="text-2xs text-(--color-ink-muted)">{{ __('executive::analysis.profit_by_customer_hint') }}</p>

@@ -35,7 +35,7 @@
 
     <div data-executive-compare class="flex flex-col gap-3">
         <div data-fit class="flex flex-wrap items-center justify-between gap-3 rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) px-4"
-             style="height: 56px">
+             style="height: var(--exec-bar)">
             <h1 class="truncate text-lg font-bold text-(--color-ink)">{{ __('executive::compare.title') }}</h1>
 
             <form method="GET" action="{{ route('executive.compare') }}" class="flex flex-wrap items-center gap-2">

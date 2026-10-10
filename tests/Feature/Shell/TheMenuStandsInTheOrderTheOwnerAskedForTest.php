@@ -41,6 +41,13 @@ class TheMenuStandsInTheOrderTheOwnerAskedForTest extends TestCase
      * রেলের মাথায় আলাদা করে আঁকে।
      */
     private const AS_HE_ASKED = [
+        /*
+         * ⓘ মালিকের কেন্দ্র — "আলাদা একটা মেনু-ভাঁজ" (নকশা, ৬ অক্টোবর ২০২৬; docs/cloud-tasks/command-center.md)।
+         * ⚠️ কোথায় বসবে তা নকশায় লেখা নেই; বসানো হয়েছে সবার উপরে (`nav.section = top`), আর মার্জের আগে
+         * সমন্বয়কারী মালিকের সাথে মিলিয়ে নেবেন (PR-এ খোলা প্রশ্ন)। বদলালে এই সারিটাও বদলাবে।
+         */
+        ['top', 'executive'],
+
         ['finance', 'accounts'],
         ['finance', 'finance'],
 

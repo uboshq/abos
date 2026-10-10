@@ -14,7 +14,7 @@
 
     <div data-executive-reports class="flex flex-col gap-3">
         <div data-fit class="flex flex-wrap items-center justify-between gap-3 rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) px-4"
-             style="height: 56px">
+             style="height: var(--exec-bar)">
             <h1 class="truncate text-lg font-bold text-(--color-ink)">{{ __('executive::reports.title') }}</h1>
             <a href="{{ route('reports.center') }}" class="text-sm font-semibold text-(--color-brand-700) hover:underline">{{ __('executive::reports.center') }} →</a>
         </div>
