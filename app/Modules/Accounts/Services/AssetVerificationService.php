@@ -114,13 +114,18 @@ final class AssetVerificationService
 
     public function close(AssetVerification $campaign): AssetVerification
     {
-        if (! $campaign->isOpen()) {
-            throw ValidationException::withMessages(['status' => __('accounts::asset.verify_closed')]);
-        }
+        // ⓘ সারিতে তালা দিয়ে আবার দেখা — দুইজন একসাথে বন্ধ চাপলে দ্বিতীয়জন পরিষ্কার কথা পান
+        return DB::transaction(function () use ($campaign) {
+            $locked = AssetVerification::query()->whereKey($campaign->id)->lockForUpdate()->firstOrFail();
 
-        $campaign->update(['status' => AssetVerification::CLOSED, 'closed_on' => now()->toDateString(), 'closed_by' => auth()->id()]);
+            if (! $locked->isOpen()) {
+                throw ValidationException::withMessages(['status' => __('accounts::asset.verify_closed')]);
+            }
 
-        return $campaign->refresh();
+            $locked->update(['status' => AssetVerification::CLOSED, 'closed_on' => now()->toDateString(), 'closed_by' => auth()->id()]);
+
+            return $locked->refresh();
+        });
     }
 
     /**

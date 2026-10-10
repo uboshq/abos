@@ -33,9 +33,9 @@
 
     @can('accounts.asset.verify')
         <form method="POST" action="{{ route('accounts.asset.verify.store') }}"
-              class="mb-5 grid gap-3 rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4 md:grid-cols-4">
+              class="mb-5 grid gap-3 rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4 md:grid-cols-2 lg:grid-cols-4">
             @csrf
-            <div class="md:col-span-4">
+            <div class="lg:col-span-4">
                 <p class="text-sm font-semibold">{{ __('accounts::asset.verify_new') }}</p>
                 <p class="text-2xs text-(--color-ink-muted)">{{ __('accounts::asset.verify_new_hint') }}</p>
             </div>

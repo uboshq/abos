@@ -71,7 +71,7 @@
                             @if ($line->note) {{ $line->note }} · @endif
                             {{ $line->checker?->name }} · {{ $line->checked_at?->format('d M Y H:i') }}
                             @foreach ($photos[$line->id] ?? [] as $photo)
-                                · <a href="{{ route('attachment.download', $photo) }}" class="text-(--color-accent) hover:underline" target="_blank">{{ __('accounts::asset.verify_photo') }}</a>
+                                · <a href="{{ route('attachment.download', $photo) }}" class="text-(--color-brand-500) hover:underline" target="_blank">{{ __('accounts::asset.verify_photo') }}</a>
                             @endforeach
                         </p>
                     @endif
