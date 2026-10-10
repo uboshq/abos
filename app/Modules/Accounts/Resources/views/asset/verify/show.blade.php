@@ -89,7 +89,9 @@
                                    placeholder="{{ __('accounts::asset.verify_found_at') }}" class="{{ $box }}">
                             <input type="text" name="note" maxlength="500" value="{{ $line->note }}"
                                    placeholder="{{ __('core.table.narration') }}" class="{{ $box }} min-w-0 flex-1">
-                            <input type="file" name="photo" accept="image/*" aria-label="{{ __('accounts::asset.verify_photo') }}" class="text-2xs">
+                            <input type="file" name="photo" accept="image/*" aria-label="{{ __('accounts::asset.verify_photo') }}"
+                                   class="min-w-0 text-sm file:me-2 file:rounded-(--radius-field) file:border file:border-(--color-border)
+                                          file:bg-(--color-surface-app) file:px-3 file:py-1.5 file:text-sm">
                             <x-ui.button type="submit" tone="secondary">{{ __('core.action.save') }}</x-ui.button>
                         </form>
                     @endif

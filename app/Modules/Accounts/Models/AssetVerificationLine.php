@@ -75,12 +75,12 @@ class AssetVerificationLine extends Model implements Drillable
 
     public function drillDocumentNo(): string
     {
-        return (string) $this->verification?->document_no;
+        return (string) $this->loadMissing('verification')->verification?->document_no;
     }
 
     public function drillLabel(): string
     {
-        return (string) $this->asset?->name;
+        return (string) $this->loadMissing('asset')->asset?->name;
     }
 
     public function drillRoute(): array

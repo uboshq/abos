@@ -150,7 +150,7 @@ final class AssetEventService
             throw ValidationException::withMessages(['amount' => __('accounts::asset.impairment_not_below')]);
         }
 
-        if ($asset->category?->impairment_account_id === null) {
+        if ($asset->loadMissing('category')->category?->impairment_account_id === null) {
             throw ValidationException::withMessages(['amount' => __('accounts::asset.impairment_account_missing')]);
         }
 
@@ -300,6 +300,7 @@ final class AssetEventService
         $toProfit = bcsub($loss, $fromSurplus, 4);
         $surplusAccount = $this->surplusAccountOf($asset);
 
+        $asset->loadMissing('category');
         $lines = [['account_id' => $asset->accumulated_account_id, 'credit' => $loss, 'narration' => $asset->name]];
 
         if (bccomp($fromSurplus, '0', 4) > 0 && $surplusAccount !== null) {
@@ -465,7 +466,7 @@ final class AssetEventService
     /** লাভ হলে শ্রেণির লাভের খাত, লোকসান হলে দাম-পড়ার খাত (না থাকলে লোকসানের খাত) */
     private function profitAccount(FixedAsset $asset, string $amount): int
     {
-        $category = $asset->category;
+        $category = $asset->loadMissing('category')->category;
 
         if (bccomp($amount, '0', 4) > 0) {
             return (int) ($category?->gain_account_id ?? $this->assets->disposalAccount(true));

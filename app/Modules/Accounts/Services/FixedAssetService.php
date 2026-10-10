@@ -1075,6 +1075,7 @@ final class FixedAssetService
                  */
                 $gain = bccomp($difference, '0', 4) > 0;
                 // ⭐ শ্রেণির নিজের লাভ/লোকসানের খাত আগে (ধাপ ৩)
+                $asset->loadMissing('category');
                 $head = ($gain ? $asset->category?->gain_account_id : $asset->category?->loss_account_id)
                     ?? $this->disposalAccount($gain);
 

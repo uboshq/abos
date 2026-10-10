@@ -91,7 +91,7 @@ final class AssetVerificationService
             throw ValidationException::withMessages(['found_location' => __('accounts::asset.verify_where_found')]);
         }
 
-        if (! $line->verification?->isOpen()) {
+        if (! $line->loadMissing('verification')->verification?->isOpen()) {
             throw ValidationException::withMessages(['result' => __('accounts::asset.verify_closed')]);
         }
 

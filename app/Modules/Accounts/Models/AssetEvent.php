@@ -119,7 +119,7 @@ class AssetEvent extends Model implements Drillable
 
     public function drillLabel(): string
     {
-        return $this->kindLabel().' · '.($this->asset?->name ?? '');
+        return $this->kindLabel().' · '.($this->loadMissing('asset')->asset?->name ?? '');
     }
 
     public function drillRoute(): array
