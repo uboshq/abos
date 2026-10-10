@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Modules\SystemAdmin;
 
+use App\Core\Support\BanglaDigits;
 use App\Core\Support\CompanyContext;
 use App\Models\Company;
 use App\Models\User;
@@ -19,6 +20,7 @@ use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\PermissionRegistrar;
+use Tests\Concerns\TakesTheDealerWallOffTheDemoSalesman;
 use Tests\TestCase;
 
 /**
@@ -33,8 +35,9 @@ use Tests\TestCase;
 final class EveryPaperSampleDrawsEveryDesignTest extends TestCase
 {
     use RefreshDatabase;
+
     // ⓘ এই পরীক্ষার প্রশ্ন ডিলারের দেয়াল নয় — ডেমোর বিক্রয়কর্মীর চিহ্ন তোলা (⛔১৬, ৪ অক্টোবর ২০২৬)
-    use \Tests\Concerns\TakesTheDealerWallOffTheDemoSalesman;
+    use TakesTheDealerWallOffTheDemoSalesman;
 
     private const SALES = ['challan' => 'sales.challan_sample', 'order' => 'sales.order_sample', 'receipt' => 'sales.receipt_sample'];
 
@@ -101,6 +104,8 @@ final class EveryPaperSampleDrawsEveryDesignTest extends TestCase
     {
         // ⓘ নকশা নিজের ভাষায় লেখে (ইংরেজি নকশা ইংরেজিতে, বাংলা নকশা বাংলায়) — তাই দুই ভাষার যেকোনোটা
         $expected = array_map(fn (string $l) => e((string) __('core.print.duplicate_notice', ['n' => 2], $l)), ['en', 'bn']);
+        // ⓘ বাংলা নকশায় অঙ্কও বাংলা — মালিক, ১০ অক্টোবর ২০২৬ ([[BanglaDigits::inText()]])
+        $expected[] = BanglaDigits::of($expected[1]);
         $routes = ['invoice' => 'sales.invoice_sample'] + self::SALES;
 
         foreach ($routes as $paper => $route) {
