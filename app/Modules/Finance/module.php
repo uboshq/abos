@@ -152,8 +152,11 @@ return [
              * এল বিক্রয় ছাড়া" — ওটা পড়ার পর্দা, লেখার নয়। লেখা হয়
              * বিক্রয়ে আর ভাউচারে।
              */
-            ['label' => 'finance::menu.plan', 'cluster' => 'overview', 'icon' => 'book',
-                'route' => 'finance.plan', 'permission' => 'finance.plan.view'],
+            /*
+             * ⛔ মেনু থেকে সরানো — পাতা-ঝাড়ু ধাপ ০ (১০ অক্টোবর ২০২৬; fe): কাজের পর্দার পাশে এটা মালিকের চোখে "এখনও তৈরি
+             * হয়নি"-র তালিকা দেখাত। ⓘ পাতা আর রুট থাকে (`finance.plan`, সরাসরি ঠিকানায় খোলে) — মানচিত্রের খাপ-মেলানোর
+             * পরীক্ষা ([[EveryFinanceScreenIsOnTheMapTest]]) ওটাই পড়ে।
+             */
 
             /* ⭐ পরিকল্পনা — মানচিত্র §১, §৮, §১৬, §২৯; ২০ সেপ্টেম্বর ২০২৬ */
             ['label' => 'finance::forecast.cfo', 'cluster' => 'overview', 'icon' => 'dashboard',
