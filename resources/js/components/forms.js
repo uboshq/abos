@@ -1152,3 +1152,27 @@ export function imagePreview ({ current = '' } = {}) {
         },
     }
 }
+
+/*
+ * ⭐ ফাইল তোলার বাংলা বোতাম — পাতা সাজানোর পরিকল্পনা ধাপ ১, ১০ অক্টোবর ২০২৬: *"ব্রাউজারের ইংরেজি 'Choose File' আর
+ * দেখাবে না"*।
+ *
+ * ⓘ ব্রাউজারের ফাইল-ঘর তার লেখা ("Choose File", "No file chosen") নিজের ভাষায় আঁকে, বদলানোর উপায় নেই। ⭐ তাই আসল ঘরটা
+ * লুকানো, আর বাংলা বোতাম তার `<label>`; বাছা ফাইলের নাম (বা কয়টা) এখানে রাখা হয়, পর্দা `label` দেখায়।
+ * ব্যবহার: `x-data="filePick({ none: '…', many: '… :count …' })"`, ঘরে `@change="pick($event)"`, নামে `x-text="label"`।
+ */
+export function filePick ({ none = '', many = ':count' } = {}) {
+    return {
+        label: none,
+        picked: false,
+
+        pick (event) {
+            const files = event.target.files ? Array.from(event.target.files) : []
+
+            this.picked = files.length > 0
+            this.label = files.length === 0
+                ? none
+                : (files.length === 1 ? files[0].name : many.replace(':count', String(files.length)))
+        },
+    }
+}

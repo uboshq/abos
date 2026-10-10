@@ -13,6 +13,7 @@ use App\Modules\Inventory\Models\Batch;
 use App\Modules\Inventory\Models\Product;
 use App\Modules\Inventory\Models\Warehouse;
 use App\Modules\Inventory\Services\FreeRatio;
+use App\Modules\Inventory\Services\StockService;
 use App\Modules\MasterData\Models\PaymentMethod;
 use App\Modules\MasterData\Models\PaymentTerm;
 use App\Modules\Customer\Models\Customer;
@@ -307,6 +308,8 @@ final class DirectSaleOptions
             ->selectSub($sum('floor_change'), 'floor_total')
             ->selectSub($sum('reserved_change'), 'reserved_total')
             ->selectSub($sum('hold_change'), 'hold_total')
+            // ⓘ বিক্রয়যোগ্য মজুদের একটাই সূত্রে — মেয়াদ পেরোনো লট বাদ ([[StockService::availableSql()]], মজুদ M27)
+            ->selectSub($sum(StockService::availableSql()), 'available_total')
             ->selectSub($sum('free_change'), 'free_total')
             ->selectSub($sum('free_reserved_change'), 'free_reserved_total')
             ->orderBy('name_en')
@@ -324,11 +327,7 @@ final class DirectSaleOptions
                  * ডাকটাই করে, তাই দুই কাউন্টারে একই খাবারের পাশে
                  * দুইটা সংখ্যা বসে না।
                  */
-                $available = app(RecipeBook::class)->sellableQty((int) $p->id, bcsub(
-                    bcsub((string) $p->floor_total, (string) $p->reserved_total, 4),
-                    (string) $p->hold_total,
-                    4,
-                ), $warehouse?->id);
+                $available = app(RecipeBook::class)->sellableQty((int) $p->id, (string) $p->available_total, $warehouse?->id);
 
                 return (object) [
                     'id' => $p->id,

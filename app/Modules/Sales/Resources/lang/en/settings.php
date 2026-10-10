@@ -173,4 +173,5 @@ return [
     'free_by_lot_ratio' => 'Free goods capped by the lot’s purchase ratio (off: free only from schemes, up to the free pool)',
     'free_beyond_pool' => 'Free goods beyond the free pool (the extra comes out of the lot’s own stock, as a promotion cost)',
     'invoice_at_goods_issue' => 'Goods leave and the invoice is made at the gate pass (confirm only holds the goods; "taken now" does everything in one press)',
+    'advice_four_eyes' => 'Whoever sent a payment advice does not accept it (the owner may, and the audit marks it)', // ⭐ টাকার পরিকল্পনা ৩
 ];

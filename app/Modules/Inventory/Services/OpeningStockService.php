@@ -86,6 +86,7 @@ final class OpeningStockService
         ?int $supplierId = null,
     ): StockMovement {
         $this->assertSane($product, $warehouse, $qty, $unitCost, $batch, false, $date ?? now());
+        $this->assertWhole($product, $qty);
 
         return DB::transaction(function () use ($product, $warehouse, $qty, $unitCost, $date, $narration, $batch, $supplierId) {
             $movement = $this->stock->move(
@@ -234,6 +235,7 @@ final class OpeningStockService
         // ⭐ ফ্রি — খরচ ছাড়া, একই লটে (ক্রয়ের মতো); খরচের স্তরে বসে না
         $free = trim((string) ($row['free_qty'] ?? ''));
         $free = is_numeric($free) && bccomp($free, '0', 4) > 0 ? bcadd($free, '0', 4) : '0';
+        $this->assertWhole($product, $qty, $free);
 
         $movement = $this->stock->move(
             product: $product,
@@ -580,6 +582,22 @@ final class OpeningStockService
         }
 
         $product->update($update);
+    }
+
+    /**
+     * ⛔ পিস-বাক্সে আধা খোলা মজুদ নয়, কেজি-লিটারে চলে — কাগজের লাইন, গণনা আর সমন্বয়ের একই নিয়ম ([[PackConversion::toStockQty()]];
+     * মালিক, ৬ অক্টোবর ২০২৬; পুরো-ERP অডিট মজুদ ⚠️১২, এই দরজা 69da3114-এ বাদ পড়েছিল; [[NoHalfPieceComesInAsOpeningStockTest]])।
+     *
+     * ⓘ কেবল নতুন খোলা মজুদে ([[bringIn()]], [[bringInRow()]]) — [[correct()]]-এ নয়: নিয়মের আগে বসা ভগ্নাংশের পুরনো সারি যেন
+     * ঠিক করা বা মোছা যায়, আটকে না থাকে। ⓘ অন্য এককে লেখা পরিমাণ এখানে আসে ভিত্তি এককে, ভাগ হয় কি না তা আগেই রূপান্তর দেখে।
+     */
+    private function assertWhole(Product $product, string ...$quantities): void
+    {
+        foreach ($quantities as $qty) {
+            if (bccomp($qty, '0', 4) > 0) {
+                app(PackConversion::class)->toStockQty($product, $qty);
+            }
+        }
     }
 
     private function assertSane(

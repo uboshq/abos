@@ -274,9 +274,10 @@ class PurchaseTest extends TestCase
     }
 
     /**
-     * বিলের দর আলাদা হলে পার্থক্যটা আলাদা খাতে যায়, মজুদে নয়।
+     * বিলের দর আলাদা হলে — গোটা চালানের বিলে পার্থক্য মালের দামে (মজুদে), ৫১৫০-এ নয়।
      *
-     * মজুদে ঢোকালে গুদামের একই মালের দুই রকম দাম হয়ে যেত, অথচ মালটা একই।
+     * ⓘ ৯ অক্টোবর ২০২৬-এর পুরো-ERP অডিটের ক্রয় ⚠️৩-এ নিয়মটা বদলেছে: মালের আসল দাম বিলের দাম, তাই তাকের মাল বিলের দামে
+     * ([[TheBillsPriceNeverReachedTheShelfTest]])। আংশিক বিলের পার্থক্য আগের মতো ৫১৫০-এ — সেটা ঐ দাবির তৃতীয় পরীক্ষায়।
      */
     public function test_a_price_difference_goes_to_its_own_account(): void
     {
@@ -294,13 +295,12 @@ class PurchaseTest extends TestCase
         // অপেক্ষমাণ খাত শূন্যে ফিরেছে চালানের দরেই (১০০ × ৫০)
         $this->assertSame(0, bccomp($this->balanceOf(StandardChart::GOODS_RECEIVED_NOT_INVOICED), '0', 4));
 
-        // পার্থক্যের ২০০ টাকা খরচে
-        $this->assertSame(0, bccomp($this->balanceOf(StandardChart::PURCHASE_PRICE_VARIANCE), '200', 4));
+        // পার্থক্যের ২০০ টাকা মালের দামে — সব মাল তাকে, তাই পুরোটা মজুদে, ৫১৫০-এ কিছু নয়
+        $this->assertSame(0, bccomp($this->balanceOf(StandardChart::PURCHASE_PRICE_VARIANCE), '0', 4));
 
-        // মজুদ চালানের দামেই আছে
         $this->assertSame(0, bccomp(
             bcsub($this->balanceOf(StandardChart::INVENTORY), $inventoryBefore, 4),
-            '5000',
+            '5200',
             4,
         ));
 

@@ -71,8 +71,8 @@ final class RentIsOwedFromTheFirstOfTheMonthTest extends TestCase
     {
         $contract = $this->open('First Day Landlord', $this->month(-3), '10000');
 
-        $this->assertSame(['accrued' => 1, 'held' => 0], app(RentalAccrualService::class)->run($this->month(0)));
-        $this->assertSame(['accrued' => 0, 'held' => 0], app(RentalAccrualService::class)->run($this->month(0)), '⛔ একই মাস দুইবার');
+        $this->assertSame(['accrued' => 1, 'held' => 0, 'failed' => []], app(RentalAccrualService::class)->run($this->month(0)));
+        $this->assertSame(['accrued' => 0, 'held' => 0, 'failed' => []], app(RentalAccrualService::class)->run($this->month(0)), '⛔ একই মাস দুইবার');
 
         $accrual = RentalAccrual::query()->sole();
         $this->assertSame(DocumentStatus::CONFIRMED, $accrual->voucher->status);
@@ -136,7 +136,7 @@ final class RentIsOwedFromTheFirstOfTheMonthTest extends TestCase
         $contract = $this->open('Signed Landlord', $this->month(-3), '10000');
         $this->flow();
 
-        $this->assertSame(['accrued' => 1, 'held' => 1], app(RentalAccrualService::class)->run($this->month(-1)));
+        $this->assertSame(['accrued' => 1, 'held' => 1, 'failed' => []], app(RentalAccrualService::class)->run($this->month(-1)));
         $this->assertMoney('0', $this->net(StandardChart::RENT_PAYABLE), '⛔ সই ছাড়াই প্রদেয় খাতায়');
         $this->assertRefused(fn () => $this->pay($contract->fresh(), $this->month(-1), '10000'), 'for_month', '⛔ সই বাকি প্রদেয় শোধ হল');
 

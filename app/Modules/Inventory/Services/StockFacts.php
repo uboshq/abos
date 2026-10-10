@@ -40,6 +40,27 @@ use Illuminate\Support\Facades\DB;
 final class StockFacts
 {
     /**
+     * ⭐ পর্দায় বাছা গুদাম — মজুদের overview-র প্রতিটা টালি একই গুদাম দেখে (পুরো-ERP অডিট, মজুদ M28c, ১০ অক্টোবর ২০২৬;
+     * [[TheOverviewTilesFollowThePickedWarehouseTest]])। ⓘ `null` মানে আগের মতোই দেখার শাখার সব গুদাম।
+     */
+    private ?int $pickedWarehouse = null;
+
+    /**
+     * এই গুদামের জন্য একটা কপি — আসল বস্তু বদলায় না, তাই ড্যাশবোর্ড বা অন্য পাঠক কিছুই টের পায় না।
+     *
+     * ⛔ আগে overview-র গুদাম-ছাঁকনি কেবল [[states()]]-এ পৌঁছাত; পুনঃক্রয়ের নিচে, শূন্য, কম মজুদ, আজকের চলাচল, মাসের প্রবাহ
+     * আর সাম্প্রতিক তালিকা গোটা শাখার — এক পর্দায় দুই প্রশ্নের উত্তর। ⓘ মূল্য ([[value()]]) এখানে নয়: স্তরে গুদাম নেই,
+     * আর ঘরটা অন্য কাজের হাতে (⚠️১০)।
+     */
+    public function forWarehouse(?int $warehouseId): static
+    {
+        $copy = clone $this;
+        $copy->pickedWarehouse = $warehouseId;
+
+        return $copy;
+    }
+
+    /**
      * চারটা অবস্থা — তাকে, অর্ডারে ধরা, আটকানো, আর বিক্রয়যোগ্য।
      *
      * ── কেন চারটাই একসাথে ───────────────────────────────────────────
@@ -58,6 +79,8 @@ final class StockFacts
             ->selectRaw('COALESCE(SUM(reserved_change), 0) as reserved')
             ->selectRaw('COALESCE(SUM(hold_change), 0) as hold')
             ->selectRaw('COALESCE(SUM(unplaced_change), 0) as unplaced')
+            // ⓘ বিক্রয়যোগ্য একই সূত্রে — মেয়াদ পেরোনো লট বাদ ([[StockService::availableSql()]], মজুদ M27)
+            ->selectRaw('COALESCE(SUM('.StockService::availableSql().'), 0) as available')
             ->first();
 
         $floor = (string) ($row->floor ?? '0');
@@ -77,7 +100,7 @@ final class StockFacts
              * জায়গায় দুই হিসাব থাকলে মিলত না, আর মানুষ কোনটা বিশ্বাস
              * করবেন বুঝতেন না।
              */
-            'available' => bcsub(bcsub($floor, $reserved, 4), $hold, 4),
+            'available' => (string) ($row->available ?? '0'),
 
             /*
              * বসেনি — আর এটাই সেই সংখ্যা যেটা মানুষকে Placement-এর
@@ -264,6 +287,7 @@ final class StockFacts
     {
         return StockMovement::query()
             ->where('trx_date', Carbon::today()->toDateString())
+            ->tap(fn ($q) => $this->narrowToPicked($q))
             ->count();
     }
 
@@ -284,6 +308,7 @@ final class StockFacts
 
         $rows = StockMovement::query()
             ->where('trx_date', '>=', $from->toDateString())
+            ->tap(fn ($q) => $this->narrowToPicked($q))
             ->selectRaw("DATE_FORMAT(trx_date, '%Y-%m') as ym")
             ->selectRaw('COALESCE(SUM(GREATEST(floor_change, 0)), 0) as moved_in')
             ->selectRaw('COALESCE(SUM(GREATEST(-floor_change, 0)), 0) as moved_out')
@@ -293,6 +318,7 @@ final class StockFacts
 
         $ins = StockMovement::query()
             ->where('trx_date', '>=', $from->toDateString())
+            ->tap(fn ($q) => $this->narrowToPicked($q))
             ->selectRaw("DATE_FORMAT(trx_date, '%Y-%m') as ym")
             ->selectRaw('COALESCE(SUM(GREATEST(floor_change, 0)), 0) as moved_in')
             ->groupBy('ym')
@@ -333,6 +359,7 @@ final class StockFacts
     {
         return StockMovement::query()
             ->with(['product', 'warehouse'])
+            ->tap(fn ($q) => $this->narrowToPicked($q))
             ->latest('id')
             ->limit($limit)
             ->get();
@@ -665,7 +692,7 @@ final class StockFacts
      */
     private function availableSql(): string
     {
-        return '(select COALESCE(SUM(m.floor_change - m.reserved_change - m.hold_change), 0)
+        return '(select COALESCE(SUM('.StockService::availableSql('m.').'), 0)
                  from inv_stock_movements m
                  where m.product_id = inv_products.id
                    and m.company_id = inv_products.company_id'.$this->viewedWarehouses().')';
@@ -683,10 +710,23 @@ final class StockFacts
     {
         $ids = Warehouse::idsInViewedBranch();
 
+        // ⭐ বাছা গুদাম — দেখার সীমার ভেতরে হলে কেবল সেটা, বাইরে হলে কিছুই নয় (M28c)
+        if ($this->pickedWarehouse !== null) {
+            $ids = $ids === null || in_array($this->pickedWarehouse, $ids, true) ? [$this->pickedWarehouse] : [];
+        }
+
         if ($ids === null) {
             return '';
         }
 
         return $ids === [] ? ' and 1 = 0' : ' and m.warehouse_id in ('.implode(',', $ids).')';
+    }
+
+    /** চলাচলের কোয়েরিতে বাছা গুদাম — দেখার দেয়াল মডেলেই বসে, এখানে কেবল বাছাটা (M28c) */
+    private function narrowToPicked($query): void
+    {
+        if ($this->pickedWarehouse !== null) {
+            $query->where('warehouse_id', $this->pickedWarehouse);
+        }
     }
 }

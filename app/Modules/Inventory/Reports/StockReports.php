@@ -316,6 +316,7 @@ final class StockReports
 
                 ->where('m.company_id', $f['company_id'])
                 ->tap(ReportEngine::branchWall($f, 'm.branch_id'))
+                ->tap(ReportEngine::warehouseWall($f, 'm.warehouse_id'))
                 /*
                  * ⛔ `w.name_bn` এখানে ছিল না — ২২ সেপ্টেম্বর ২০২৬।
                  *
@@ -457,6 +458,7 @@ final class StockReports
                 ->whereNull('b.deleted_at')
                 ->whereNotNull('b.expiry_date')
                 ->tap(ReportEngine::branchWall($f, 'm.branch_id'))
+                ->tap(ReportEngine::warehouseWall($f, 'm.warehouse_id'))
                 ->groupBy('b.id', 'b.batch_no', 'b.expiry_date', 'b.mrp', 'p.code', 'p.name_en')
                 // শূন্য বা ঋণাত্মক লট বাদ — তালিকাটা কাজের জিনিস, ইতিহাস নয়
                 ->havingRaw('COALESCE(SUM(m.floor_change), 0) > 0')
@@ -519,6 +521,7 @@ final class StockReports
                 ->join('inv_warehouses as w', 'w.id', '=', 'm.warehouse_id')
                 ->where('m.company_id', $f['company_id'])
                 ->tap(ReportEngine::branchWall($f, 'm.branch_id'))
+                ->tap(ReportEngine::warehouseWall($f, 'm.warehouse_id'))
                 ->whereBetween('m.trx_date', [$f['from'], $f['to']])
                 ->orderBy('m.trx_date')
                 ->orderBy('m.id')
@@ -572,6 +575,7 @@ final class StockReports
                 ->join('inv_products as p', 'p.id', '=', 'm.product_id')
                 ->where('m.company_id', $f['company_id'])
                 ->tap(ReportEngine::branchWall($f, 'm.branch_id'))
+                ->tap(ReportEngine::warehouseWall($f, 'm.warehouse_id'))
                 // শুরুর তারিখ ধরা হয় না: মজুদ একটা মুহূর্তের অবস্থা,
                 // পরিসরের নয় — ব্যালেন্স শিটে ঠিক একই যুক্তি
                 ->where('m.trx_date', '<=', $f['to'])
@@ -601,7 +605,7 @@ final class StockReports
                      * *গুদামে কত আছে* আর *কতটা বেচা যাবে*।
                      */
                     DB::raw('SUM(m.unplaced_change) as unplaced'),
-                    DB::raw('SUM(m.floor_change) - SUM(m.reserved_change) - SUM(m.hold_change) as available'),
+                    DB::raw('SUM('.StockService::availableSql('m.').') as available'),
                 ]),
             columns: [
                 [
@@ -641,6 +645,7 @@ final class StockReports
                 ->leftJoin('mdm_reason_codes as r', 'r.id', '=', 'm.reason_code_id')
                 ->where('m.company_id', $f['company_id'])
                 ->tap(ReportEngine::branchWall($f, 'm.branch_id'))
+                ->tap(ReportEngine::warehouseWall($f, 'm.warehouse_id'))
                 ->where('m.trx_date', '<=', $f['to'])
                 ->where('m.hold_change', '<>', 0)
                 ->groupBy('m.product_id', 'p.code', 'p.name_en', 'p.name_bn', 'm.reason_code_id', 'r.name_en', 'r.name_bn')
@@ -713,6 +718,7 @@ final class StockReports
                 ->join('inv_warehouses as w', 'w.id', '=', 'm.warehouse_id')
                 ->where('m.company_id', $f['company_id'])
                 ->tap(ReportEngine::branchWall($f, 'm.branch_id'))
+                ->tap(ReportEngine::warehouseWall($f, 'm.warehouse_id'))
 
                 /*
                  * ⓘ শুরুর তারিখ ধরা হয় না — মজুদ একটা মুহূর্তের অবস্থা,
@@ -755,7 +761,7 @@ final class StockReports
                      * ⛔ `available`-এ `unplaced` নেই, আর থাকবেও না —
                      * বসানো হয়নি এমন মাল বিক্রয়যোগ্য নয়।
                      */
-                    DB::raw('SUM(m.floor_change) - SUM(m.reserved_change) - SUM(m.hold_change) as available'),
+                    DB::raw('SUM('.StockService::availableSql('m.').') as available'),
                 ]),
             columns: [
                 [
@@ -822,6 +828,7 @@ final class StockReports
                 ->leftJoin('users as u', 'u.id', '=', 'm.created_by')
                 ->where('m.company_id', $f['company_id'])
                 ->tap(ReportEngine::branchWall($f, 'm.branch_id'))
+                ->tap(ReportEngine::warehouseWall($f, 'm.warehouse_id'))
 
                 /* ⓘ এটা ঘটনার তালিকা, অবস্থার নয় — তাই পুরো পরিসর। */
                 ->whereBetween('m.trx_date', [$f['from'], $f['to']])
@@ -915,13 +922,23 @@ final class StockReports
                 ->join('inv_products as p', 'p.id', '=', 'm.product_id')
                 ->leftJoin('inv_warehouses as w', 'w.id', '=', 'm.warehouse_id')
                 ->where('m.company_id', $f['company_id'])
+
+                /*
+                 * ⭐ যে কাগজ মাল ধরে আছে, তার নামে — পাতা-ঝাড়ু ধাপ ০ (১০ অক্টোবর ২০২৬)। ⛔ আগে সারি ছিল চলাচলের নিজের উৎস
+                 * ধরে: আদেশ ধরত +৩, তার চালান ছাড়ত −২ নিজের নামে — তালিকায় "−২" আর "−৫" (ছবিতে), আর কাগজের নম্বরের বদলে
+                 * আইডি। ⓘ চালানের ছাড়া আর চালান-বাতিলের ফেরত তার আদেশের ([[SalesOrderService::heldByThisOrder()]]-এর একই নিয়ম);
+                 * বাতিল/বন্ধ/ফেরানোর সারি (`উৎস:cancel`…) নিজের কাগজের। খাতা বদলায় না — কেবল পড়ার ভাগ।
+                 */
+                ->leftJoin('sal_challans as c', fn ($j) => $j->on('c.id', '=', 'm.source_id')
+                    ->whereIn('m.source_type', ['delivery_challan', 'delivery_challan:cancel']))
                 ->tap(ReportEngine::branchWall($f, 'm.branch_id'))
+                ->tap(ReportEngine::warehouseWall($f, 'm.warehouse_id'))
                 ->where('m.trx_date', '<=', $f['to'])
                 ->where('m.reserved_change', '<>', 0)
                 ->groupBy(
                     'm.product_id', 'p.code', 'p.name_en', 'p.name_bn',
                     'm.warehouse_id', 'w.code', 'w.name_en', 'w.name_bn',
-                    'm.source_type', 'm.source_id',
+                    'holder_type', 'holder_id',
                 )
 
                 /*
@@ -937,8 +954,10 @@ final class StockReports
                     self::productName(),
                     DB::raw("'".Product::drillSourceType()."' as party_type_literal"),
                     self::warehouseName(),
-                    'm.source_type',
-                    'm.source_id',
+                    DB::raw("CASE WHEN c.sales_order_id IS NOT NULL THEN 'sales_order' ELSE SUBSTRING_INDEX(m.source_type, ':', 1) END as holder_type"),
+                    DB::raw('COALESCE(c.sales_order_id, m.source_id) as holder_id'),
+                    // ⓘ ধরে-রাখা কাগজের নিজের সারির নম্বর — আদেশের সারি আদেশের নম্বর লেখে, চালানেরটা চালানের
+                    DB::raw("MAX(CASE WHEN m.source_type = CASE WHEN c.sales_order_id IS NOT NULL THEN 'sales_order' ELSE SUBSTRING_INDEX(m.source_type, ':', 1) END THEN m.document_no END) as holder_no"),
                     DB::raw('SUM(m.reserved_change) as reserved'),
                 ]),
             columns: [
@@ -956,11 +975,11 @@ final class StockReports
                  * উত্তর সংখ্যায় নেই, কাগজটার ভিতরে।
                  */
                 [
-                    'key' => 'source_id',
+                    'key' => 'holder_no',
                     'label' => 'inventory::field.against',
                     'type' => ReportColumn::DOCUMENT,
-                    'source_type' => 'source_type',
-                    'source_id' => 'source_id',
+                    'source_type' => 'holder_type',
+                    'source_id' => 'holder_id',
                 ],
                 ['key' => 'reserved', 'label' => 'inventory::field.reserved', 'type' => ReportColumn::QUANTITY],
             ],
@@ -989,7 +1008,7 @@ final class StockReports
      */
     public static function replenishment(): ReportDefinition
     {
-        $available = '(select COALESCE(SUM(m.floor_change - m.reserved_change - m.hold_change), 0)
+        $available = '(select COALESCE(SUM('.StockService::availableSql('m.').'), 0)
                        from inv_stock_movements m
                        where m.product_id = p.id and m.company_id = p.company_id)';
 

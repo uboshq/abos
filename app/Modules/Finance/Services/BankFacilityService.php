@@ -13,8 +13,11 @@ use App\Core\Support\DocumentStatus;
 use App\Modules\Accounts\Models\Voucher;
 use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Finance\Models\BankFacility;
+use App\Modules\Finance\Models\FacilityStatement;
 use App\Modules\Finance\Models\Institution;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Database\Query\Builder;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -602,7 +605,7 @@ class BankFacilityService
      * জোড়া-ছাড়া সারি কারও নামে বসে না: কোন ঋণের টাকা সেটা খাতা জানে না, আর ভুল ঋণে বসানোর চেয়ে না বসানো
      * ভালো — ভুল সংখ্যা দেখে মানুষ আগাম শোধ করেন।
      */
-    private function ownEntries(BankFacility $facility, int $account): \Illuminate\Database\Query\Builder
+    private function ownEntries(BankFacility $facility, int $account): Builder
     {
         $query = DB::table('ledger_entries')
             ->where('company_id', CompanyContext::id())
@@ -619,7 +622,8 @@ class BankFacilityService
                     ...array_values(Voucher::SOURCE_TYPES),
                     ...array_map(fn (string $t) => $t.':reversal', array_values(Voucher::SOURCE_TYPES)),
                 ])
-                ->whereIn('source_id', Voucher::query()
+                // ⛔ শাখার দেয়াল ছাড়া — জের যাচাইয়ের অঙ্ক; হেডারে অন্য শাখা থাকলে ঋণের ভাউচার "নেই" হয়ে জের শূন্য, আর মাসের সুদ বসত না (পুনঃঅডিট, ৯ অক্টোবর ২০২৬)
+                ->whereIn('source_id', Voucher::query()->withoutGlobalScope('user-branch')
                     ->where('against_type', BankFacility::drillSourceType())
                     ->where('against_id', (int) $facility->id)
                     ->select('id'))));
@@ -732,7 +736,7 @@ class BankFacilityService
      * রিপোর্ট ([[LoanLedgerReports::BANK_LOAN]]) এটাই পড়ে, তাই খাতার শেষ জের আর তালিকার "বাকি আসল" কখনো আলাদা হয় না।
      * ⓘ খাত নেই (গ্যারান্টি) — null।
      */
-    public function ledgerRowsOf(BankFacility $facility): ?\Illuminate\Database\Query\Builder
+    public function ledgerRowsOf(BankFacility $facility): ?Builder
     {
         $account = $this->accountOf($facility);
 
@@ -779,7 +783,7 @@ class BankFacilityService
      *
      * @return array{rows: list<array<string, mixed>>, instalment: string, interest_total: string, paid_total: string, paid: int}|null
      */
-    public function datedSchedule(BankFacility $facility, ?\Illuminate\Support\Carbon $today = null): ?array
+    public function datedSchedule(BankFacility $facility, ?Carbon $today = null): ?array
     {
         $schedule = $this->schedule($facility);
 
@@ -787,7 +791,7 @@ class BankFacilityService
             return null;
         }
 
-        $today = ($today ?? \Illuminate\Support\Carbon::today())->toDateString();
+        $today = ($today ?? Carbon::today())->toDateString();
         $paid = $this->instalmentStanding($facility)['paid'];
         $first = $this->firstInstalmentOn($facility);
 
@@ -820,15 +824,15 @@ class BankFacilityService
     public const UNDATED = 'undated';
 
     /** প্রথম কিস্তির দিন — লেখা থাকলে সেটা, নইলে মঞ্জুরির পরের মাসের একই দিন */
-    public function firstInstalmentOn(BankFacility $facility): ?\Illuminate\Support\Carbon
+    public function firstInstalmentOn(BankFacility $facility): ?Carbon
     {
         if ($facility->first_instalment_on !== null) {
-            return \Illuminate\Support\Carbon::parse($facility->first_instalment_on);
+            return Carbon::parse($facility->first_instalment_on);
         }
 
         return $facility->sanctioned_on === null
             ? null
-            : \Illuminate\Support\Carbon::parse($facility->sanctioned_on)->addMonthNoOverflow();
+            : Carbon::parse($facility->sanctioned_on)->addMonthNoOverflow();
     }
 
     /**
@@ -839,9 +843,9 @@ class BankFacilityService
      *
      * @return list<array{facility: BankFacility, month: int, due_on: ?string, principal: string, interest: string, amount: string, state: string}>
      */
-    public function instalmentsDue(int $days = 30, ?\Illuminate\Support\Carbon $today = null): array
+    public function instalmentsDue(int $days = 30, ?Carbon $today = null): array
     {
-        $today ??= \Illuminate\Support\Carbon::today();
+        $today ??= Carbon::today();
         $until = $today->copy()->addDays($days)->toDateString();
         $out = [];
 
@@ -895,7 +899,7 @@ class BankFacilityService
      * ⭐ ব্যাংকের বিবরণী বনাম খাতা — অর্থ-মডিউলের পরিকল্পনা ৩.৬। প্রতিটা লেখা বিবরণীর পাশে সেই দিনের খাতার দেনা আর ফাঁক
      * (ব্যাংক − খাতা); ধনাত্মক ফাঁক মানে ব্যাংক বেশি বলে — সাধারণত খাতায় না-বসা সুদ বা চার্জ।
      *
-     * @return list<array{statement: \App\Modules\Finance\Models\FacilityStatement, books: string, gap: string}>
+     * @return list<array{statement: FacilityStatement, books: string, gap: string}>
      */
     public function statementGaps(BankFacility $facility): array
     {
@@ -915,9 +919,9 @@ class BankFacilityService
      *
      * @param  array{statement_on: string, bank_balance: string, note?: ?string}  $data
      */
-    public function recordStatement(BankFacility $facility, array $data): \App\Modules\Finance\Models\FacilityStatement
+    public function recordStatement(BankFacility $facility, array $data): FacilityStatement
     {
-        return \App\Modules\Finance\Models\FacilityStatement::query()->updateOrCreate(
+        return FacilityStatement::query()->updateOrCreate(
             ['bank_facility_id' => $facility->id, 'statement_on' => $data['statement_on']],
             [
                 'company_id' => CompanyContext::id(),

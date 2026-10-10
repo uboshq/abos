@@ -9,6 +9,7 @@ use App\Core\Concerns\HasPublicId;
 use App\Core\Concerns\IsAudited;
 use App\Core\Concerns\ListedInViewedBranch;
 use App\Modules\Accounts\Models\Voucher;
+use App\Modules\Finance\Support\OpensOnlyInReach;
 use App\Modules\MasterData\Models\Person;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
@@ -35,6 +36,7 @@ class ProfitShare extends Model
     use HasPublicId;
     use IsAudited;
     use ListedInViewedBranch;
+    use OpensOnlyInReach;
     use SoftDeletes;
 
     public const DRAFT = 'draft';

@@ -99,6 +99,7 @@ return [
     'cheque_needs_number' => 'A cheque needs its number. Write the number printed on the cheque.',
     'slip_used_twice' => 'A payment to this supplier already carries slip :no. Check that one first — entering it twice would show the money leaving twice.',
     'requisition_not_draft' => 'This requisition has already been decided.',
+    'requisition_own' => ':no is your own requisition; someone else approves it.',
     'requisition_needs_lines' => 'A requisition needs at least one line.',
     'requisition_qty_positive' => 'A quantity must be more than zero.',
     'requisition_duplicate_product' => ':product is on the requisition twice. Put the whole quantity on one line.',

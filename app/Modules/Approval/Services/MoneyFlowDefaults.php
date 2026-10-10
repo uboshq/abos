@@ -103,7 +103,8 @@ final class MoneyFlowDefaults implements ProvisionsCompany
      *     skipped: list<string>,
      *     inactive: list<string>,
      *     empty: list<string>,
-     *     wanting: list<string>
+     *     wanting: list<string>,
+     *     switched_off: list<string>
      * }
      */
     public function ensure(Company $company): array
@@ -187,6 +188,7 @@ final class MoneyFlowDefaults implements ProvisionsCompany
             'inactive' => [],
             'empty' => [],
             'wanting' => [],
+            'switched_off' => [],
         ];
 
         foreach ($this->moneyActions() as $pair) {
@@ -229,6 +231,20 @@ final class MoneyFlowDefaults implements ProvisionsCompany
         }
 
         if ($report['wanting'] === []) {
+            return $report;
+        }
+
+        /*
+         * ⛔ মালিক কোম্পানির সব সই বন্ধ করে রাখলে নতুন ছক বসে না — ছক আছে অথচ একটাও চালু নেই মানে "সই বন্ধ", "ছক নেই" নয়
+         * (মালিক, UB ৩ অক্টোবর ২০২৬; ৭ অক্টোবর ClaimSigner-এর একই ভুল, 7394502f; cloud/finance-fixes রিভিউ — নতুন টাকার কাজ
+         * `finance.insurance_claim` UB-তে চালু ছক বসিয়ে দিত)। ⓘ কাজগুলো `switched_off`-এ নাম ধরে, কিছুই লেখা হয় না।
+         */
+        $flows = ApprovalFlow::query()->where('company_id', $company->id);
+
+        if ((clone $flows)->exists() && ! (clone $flows)->where('is_active', true)->exists()) {
+            $report['switched_off'] = $report['wanting'];
+            $report['wanting'] = [];
+
             return $report;
         }
 

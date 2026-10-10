@@ -11,6 +11,7 @@ use App\Core\Concerns\ListedInViewedBranch;
 use App\Core\Contracts\Drillable;
 use App\Core\Support\DocumentStatus;
 use App\Modules\Accounts\Models\Account;
+use App\Modules\Finance\Support\OpensOnlyInReach;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -34,6 +35,7 @@ class Tenancy extends Model implements Drillable
     use HasPublicId;
     use IsAudited;
     use ListedInViewedBranch;
+    use OpensOnlyInReach;
     use SoftDeletes;
 
     public const ACTIVE = 'active';

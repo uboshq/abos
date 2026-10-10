@@ -97,9 +97,34 @@ final class PurchaseRequisitionService
      */
     public function approve(PurchaseRequisition $requisition): PurchaseRequisition
     {
+        /*
+         * ⛔ এক লেনদেনে, তালাসহ — পুরো-ERP অডিট, ১০ অক্টোবর ২০২৬, ক্রয় ⚠️২। আগে লেনদেন বা তালা ছিল না: একই খরচ-কেন্দ্রের দুটো
+         * চাহিদা একসাথে অনুমোদনে দুটোই "বাজেটে জায়গা আছে" দেখত আর দুটোই পার হত, আর একই চাহিদা দুই ক্লিকে দুবার।
+         * ⓘ আগে চাহিদার সারি, তারপর খরচ-কেন্দ্রের সারি — দুটোই তালায় আবার পড়া; দ্বিতীয়জন প্রথমজনের অনুমোদনের পরে গোনে।
+         */
+        return DB::transaction(function () use ($requisition) {
+            $requisition = PurchaseRequisition::query()->withoutGlobalScope('user-branch')->whereKey($requisition->id)->lockForUpdate()->firstOrFail();
+
+            if ($requisition->cost_center_id !== null) {
+                DB::table('acc_cost_centers')->where('company_id', CompanyContext::id())
+                    ->where('id', (int) $requisition->cost_center_id)->lockForUpdate()->value('id');
+            }
+
+            return $this->approveLocked($requisition);
+        });
+    }
+
+    private function approveLocked(PurchaseRequisition $requisition): PurchaseRequisition
+    {
         if ($requisition->status !== DocumentStatus::DRAFT) {
             throw ValidationException::withMessages([
                 'status' => __('purchase::validation.requisition_not_draft'),
+            ]);
+        }
+
+        if ($this->requesterMayNotApprove($requisition)) {
+            throw ValidationException::withMessages([
+                'status' => __('purchase::validation.requisition_own', ['no' => $requisition->document_no]),
             ]);
         }
 
@@ -260,6 +285,25 @@ final class PurchaseRequisitionService
      * to count. Cancelled papers are not counted - a promise withdrawn holds
      * no money.
      */
+    /**
+     * ⭐ চাহিদা যিনি করেছেন (লিখেছেন বা যাঁর নামে) তিনি নিজে মঞ্জুর করেন না — সুইচ `purchase.requisition_maker_checker`
+     * চালু থাকলে (পুরো-ERP অডিট, ১০ অক্টোবর ২০২৬, ক্রয় ⚠️২)। ⓘ বন্ধে আজকের আচরণ অবিকল; মালিক (সুপার অ্যাডমিন) একা করলে
+     * আটকায় না — ভাউচারের একই নিয়ম ([[VoucherService::writerMayNotPost()]])। দরজা যেটাই হোক (পর্দা, ফোন, অনুমোদনের বাক্স), সবাই এখানে আসে।
+     */
+    public function requesterMayNotApprove(PurchaseRequisition $requisition): bool
+    {
+        if (! (bool) app(\App\Core\Services\SettingsService::class)->get('purchase.requisition_maker_checker', false)) {
+            return false;
+        }
+
+        $actor = (int) (\App\Core\Support\Actor::userId() ?? 0);
+        $user = auth()->user();
+        $owner = $user instanceof \App\Models\User && $user->roles->contains('name', \App\Core\Services\PermissionSyncer::SUPER_ADMIN_ROLE);
+
+        return $actor !== 0 && ! $owner
+            && in_array($actor, [(int) ($requisition->created_by ?? 0), (int) ($requisition->requested_by ?? 0)], true);
+    }
+
     private function assertWithinBudget(PurchaseRequisition $requisition): void
     {
         $centre = $requisition->cost_center_id;

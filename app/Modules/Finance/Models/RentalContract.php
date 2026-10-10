@@ -12,6 +12,7 @@ use App\Core\Contracts\Drillable;
 use App\Core\Support\DocumentStatus;
 use App\Models\Branch;
 use App\Modules\Accounts\Models\Account;
+use App\Modules\Finance\Support\OpensOnlyInReach;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -38,6 +39,7 @@ class RentalContract extends Model implements Drillable
     use HasPublicId;
     use IsAudited;
     use ListedInViewedBranch;
+    use OpensOnlyInReach;
     use SoftDeletes;
 
     /** চলছে — মাসের সমন্বয় করা যায়। */
@@ -142,7 +144,7 @@ class RentalContract extends Model implements Drillable
     public function nextAnniversary(?Carbon $today = null): ?Carbon
     {
         $today = ($today ?? now())->copy()->startOfDay();
-        $years = max(1, (int) $this->starts_on->diffInYears($today) );
+        $years = max(1, (int) $this->starts_on->diffInYears($today));
         $next = $this->starts_on->copy()->addYearsNoOverflow($years);
 
         while ($next->lt($today)) {

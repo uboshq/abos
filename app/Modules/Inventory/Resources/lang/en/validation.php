@@ -150,6 +150,8 @@ return [
     'serial_taken' => 'These numbers are already on the books: :no',
     'serial_unknown' => 'No piece carries the number :no.',
     'serial_already_out' => 'The piece :no has already gone out.',
+    'serial_waiting_decision' => 'The piece :no came back and awaits a decision — check it and take it back into stock first.',
+    'serial_not_returned' => 'The piece :no is not in the returned state — there is nothing to take back.',
     'qc_dispose_needs_verdict' => 'Goods cannot be disposed of before the inspection has a verdict.',
     'qc_dispose_needs_qty' => 'How much to dispose of has to be a positive number.',
     'qc_dispose_needs_place' => 'This paper names no product or warehouse, so nothing can be taken off the shelf.',

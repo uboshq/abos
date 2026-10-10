@@ -18,6 +18,7 @@ use App\Modules\Inventory\Services\StockService;
 use App\Modules\MasterData\Models\Unit;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Validation\ValidationException;
 use Tests\TestCase;
 
 /**
@@ -61,8 +62,22 @@ final class TheCountIsSetAgainstTheBookTest extends TestCase
             ['book_qty', 'counted_qty', 'difference', 'difference_value'],
         ), 'খাতা/গোনা/কম-বেশি/টাকা ভুল।');
 
-        $this->assertNull(collect($this->rows(['warehouse_id' => $warehouse->id + 999]))->firstWhere('document_no', $count->document_no),
+        /*
+         * ⓘ অন্য গুদাম বাছলে গণনাটা নেই — সত্যিকারের দ্বিতীয় গুদাম দিয়ে। আগে বানানো নম্বর (`+ 999`) দেওয়া হত, কিন্তু
+         * রিপোর্ট ৩ অক্টোবর থেকে তালিকার বাইরের নম্বর ফিরিয়ে দেয় ([[ReportFilters::resolve()]], b5b4b823), তাই দাবিটা
+         * কিছু না দেখেই লাল হত।
+         */
+        $other = Warehouse::query()->create(['branch_id' => $warehouse->branch_id, 'code' => 'CNT-2', 'name_en' => 'Second store', 'is_active' => true]);
+        $this->assertNull(collect($this->rows(['warehouse_id' => $other->id]))->firstWhere('document_no', $count->document_no),
             '⛔ অন্য গুদাম বাছলেও গণনাটা এসেছে।');
+
+        // ⛔ তালিকার বাইরের নম্বর — রিপোর্ট চলে না, ছাঁকনি ফেলে গোটা তালিকাও দেয় না
+        try {
+            $this->rows(['warehouse_id' => $other->id + 999]);
+            $this->fail('⛔ অজানা গুদাম-নম্বরে রিপোর্ট চলল।');
+        } catch (ValidationException $e) {
+            $this->assertArrayHasKey('warehouse_id', $e->errors());
+        }
 
         $other = Branch::query()->withoutGlobalScopes()->where('company_id', $company->id)
             ->where('id', '<>', $company->defaultBranch()->id)->firstOrFail();
