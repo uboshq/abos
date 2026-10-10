@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Feature\Core;
 
 use App\Core\Services\ErrorJournal;
+use App\Core\Services\LoginJournal;
 use App\Core\Services\PermissionSyncer;
 use App\Core\Support\CompanyContext;
 use App\Models\Company;
@@ -92,7 +93,7 @@ final class ALogWithNoCompanyWasEveryonesTest extends TestCase
         $this->assertNotContains($rows['unknown'], $seen, 'অচেনা নামের কোম্পানিহীন চেষ্টা সাধারণ অ্যাডমিন দেখছেন।');
         $this->assertNotContains($rows['theirs'], $seen, 'কোম্পানি খ-এর সারি ক-তে এসেছে।');
         $this->assertNotContains($rows['theirs_no_company'], $seen, 'খ-এর মানুষের কোম্পানিহীন চেষ্টা ক-তে এসেছে।');
-        $response->assertDontSee(self::UNKNOWN_NAME);
+        $response->assertDontSee(LoginJournal::unknownKey(self::UNKNOWN_NAME));
         $this->assertSame(1, $response->viewData('failedToday'), 'মাথার সংখ্যায় কোম্পানিহীন চেষ্টা গোনা হয়েছে।');
 
         // ── চাবি খোলা: একই মানুষ, এখন সুপার অ্যাডমিন ────────────────
@@ -107,7 +108,7 @@ final class ALogWithNoCompanyWasEveryonesTest extends TestCase
         $this->assertContains($rows['unknown'], $seen, 'সুপার অ্যাডমিনও অচেনা নামের চেষ্টা দেখেন না — পাহারাটা হারিয়ে গেছে।');
         $this->assertNotContains($rows['theirs'], $seen, 'সুপার অ্যাডমিন হলেও খ-এর সারি ক-তে নয়।');
         $this->assertNotContains($rows['theirs_no_company'], $seen, 'খ-এর মানুষের নাম সুপার অ্যাডমিনের কাছেও নয়।');
-        $response->assertSee(self::UNKNOWN_NAME);
+        $response->assertSee(LoginJournal::unknownKey(self::UNKNOWN_NAME));
         $this->assertSame(2, $response->viewData('failedToday'));
     }
 
@@ -199,7 +200,8 @@ final class ALogWithNoCompanyWasEveryonesTest extends TestCase
 
         $row = fn (string $who) => LoginAttempt::query()->where('identifier', $who)->sole();
 
-        $unknown = $row(self::UNKNOWN_NAME);
+        // ⓘ অচেনা নাম খাতায় ঢাকা ছাপে ([[LoginJournal::unknownKey()]], ১০ অক্টোবর ২০২৬)
+        $unknown = $row(LoginJournal::unknownKey(self::UNKNOWN_NAME));
         $this->assertNull($unknown->company_id, 'পূর্বশর্ত: অচেনা নামের সারি কোম্পানিহীন হওয়ার কথা।');
         $this->assertNull($unknown->user_id);
         $this->assertFalse((bool) $unknown->succeeded);

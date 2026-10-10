@@ -116,7 +116,7 @@ final class CustomerService
     public function update(Customer $customer, array $data): Customer
     {
         $this->assertBanglaNameIfRequired($data, $customer);
-        $this->assertNotADuplicate($data, $customer->id, $customer->branch_id);
+        $this->assertNotADuplicate($data, $customer->id, $customer->branch_id, $customer);
         $this->assertOnlyOneDistributorPerPoint($data, $customer);
         $this->assertPointIsInTheCustomersBranch(
             array_key_exists('location_id', $data) ? $data['location_id'] : $customer->location_id,
@@ -551,7 +551,7 @@ final class CustomerService
      *
      * @param  array<string, mixed>  $data
      */
-    private function assertNotADuplicate(array &$data, ?int $exceptId = null, ?int $existingBranch = null): void
+    private function assertNotADuplicate(array &$data, ?int $exceptId = null, ?int $existingBranch = null, ?Customer $current = null): void
     {
         $guard = app(DuplicateGuard::class);
 
@@ -560,9 +560,25 @@ final class CustomerService
 
         $narrow = $this->sameBranch($data, $existingBranch);
 
-        $guard->assertPhoneIsFree(Customer::class, ['phone'], $data['phone'] ?? null, $exceptId, 'phone', $narrow);
+        /*
+         * ⛔ সম্পাদনায় যা বদলায়নি, তা আবার যাচাই নয় — মালিক, ১০ অক্টোবর ২০২৬: CUS-0118 M/S. Maa Enterprise-এর
+         * সীমা বদলাতে গেলে প্রতিবার "এই নামে আগে থেকেই একটা পক্ষ আছে" এসে আটকাত। TRADE DEPOT-এ ঐ নামে চারটা
+         * আলাদা দোকান আছে (UB-র তালিকা থেকে আনা), তাই নাম না ছুঁয়েও প্রতিটা সংরক্ষণ নকল ধরা পড়ত।
+         * ⓘ নকল খোঁজার কাজ নতুন নাম বা নতুন ফোন বসানোর মুহূর্তে; শাখা বদলালে আবার খোঁজা হয়।
+         */
+        $sameBranch = $current === null
+            || ! array_key_exists('branch_id', $data)
+            || (int) $data['branch_id'] === (int) $current->branch_id;
+        $phoneUnchanged = $current !== null && $sameBranch
+            && trim((string) ($data['phone'] ?? $current->phone)) === trim((string) $current->phone);
+        $nameUnchanged = $current !== null && $sameBranch
+            && trim((string) ($data['name_en'] ?? $current->name_en)) === trim((string) $current->name_en);
 
-        if ($allowed) {
+        if (! $phoneUnchanged) {
+            $guard->assertPhoneIsFree(Customer::class, ['phone'], $data['phone'] ?? null, $exceptId, 'phone', $narrow);
+        }
+
+        if ($allowed || $nameUnchanged) {
             return;
         }
 

@@ -8,6 +8,7 @@ use App\Core\Support\CompanyContext;
 use App\Core\Support\DocumentStatus;
 use App\Models\Approval;
 use App\Models\Company;
+use App\Models\FinancialYear;
 use App\Models\PeriodLock;
 use App\Models\User;
 use App\Modules\Accounts\Models\Account;
@@ -16,6 +17,8 @@ use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Accounts\Services\VoucherService;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Carbon;
+use Illuminate\Testing\TestResponse;
 use Tests\TestCase;
 
 /**
@@ -55,6 +58,7 @@ final class AMonthLocksOnlyWhenItIsDoneTest extends TestCase
     {
         $last = now()->subMonthNoOverflow()->startOfMonth();
         $this->clearMonth($last);
+        $this->lockEarlierMonths($last);
 
         $draft = $this->voucher($last->copy()->addDays(3)->toDateString());
 
@@ -79,13 +83,26 @@ final class AMonthLocksOnlyWhenItIsDoneTest extends TestCase
 
     // ── সহায়ক ─────────────────────────────────────────────────────────
 
-    private function lock(int $year, int $month): \Illuminate\Testing\TestResponse
+    private function lock(int $year, int $month): TestResponse
     {
         return $this->from(route('accounts.period.index'))->post(route('accounts.period.close'), ['year' => $year, 'month' => $month]);
     }
 
+    /** ⓘ বছরের আগের মাসগুলো আগে বন্ধ — ক্রম মেনে ([[AnEarlierMonthStayedOpenTest]], পুনঃঅডিট ৯ অক্টোবর ২০২৬) */
+    private function lockEarlierMonths(Carbon $month): void
+    {
+        $cursor = Carbon::parse(FinancialYear::forDate($month)->starts_on)->startOfMonth();
+
+        for (; $cursor->lt($month); $cursor->addMonthNoOverflow()) {
+            PeriodLock::query()->create([
+                'company_id' => $this->company->id, 'year' => (int) $cursor->year, 'month' => (int) $cursor->month,
+                'locked_by' => $this->owner->id, 'locked_at' => now(),
+            ]);
+        }
+    }
+
     /** ⓘ ডেমোর আগের খসড়া বা অপেক্ষা থাকলে সরানো — দৃশ্যটা কেবল এই পরীক্ষার কাগজ */
-    private function clearMonth(\Illuminate\Support\Carbon $month): void
+    private function clearMonth(Carbon $month): void
     {
         Voucher::acrossBranches()->where('status', DocumentStatus::DRAFT)
             ->whereBetween('trx_date', [$month->toDateString(), $month->copy()->endOfMonth()->toDateString()])

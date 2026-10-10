@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Feature\Core;
 
 use App\Core\Security\LoginLock;
+use App\Core\Services\LoginJournal;
 use App\Core\Support\CompanyContext;
 use App\Core\Support\DocumentStatus;
 use App\Models\Company;
@@ -187,7 +188,8 @@ final class ThePortalDoorHadNoLockTest extends TestCase
         $rows = LoginAttempt::query()->orderBy('id')->get(['identifier', 'succeeded', 'reason', 'company_id', 'ip_address', 'user_id']);
 
         $this->assertSame([
-            ['portal:NOBODY-9', false, LoginAttempt::UNKNOWN, null, '10.5.0.1', null],
+            // ⛔ অচেনা কোড ঢাকা ছাপে — ভুলে লেখা পাসওয়ার্ড খাতায় কাঁচা বসে না ([[LoginJournal::unknownKey()]], ১০ অক্টোবর ২০২৬)
+            [LoginJournal::unknownKey('portal:NOBODY-9'), false, LoginAttempt::UNKNOWN, null, '10.5.0.1', null],
             ['portal:LOCK-1', false, LoginAttempt::WRONG_PASSWORD, null, '10.5.0.2', null],
             ['portal:LOCK-1', true, null, $this->company->id, '10.5.0.3', null],
         ], $rows->map(fn (LoginAttempt $r) => [

@@ -755,8 +755,6 @@ return [
         'DS' => 'sales::doc.counter_do',
         // ⭐ ডেলিভারি অর্ডার — নিজের কাগজ, নিজের ক্রম (মালিকের বিক্রয়-ধারা, ২ অক্টোবর ২০২৬; [[DeliveryOrder]])
         'DO' => 'sales::doc.delivery_order',
-        // ⭐ ডেলিভারি অর্ডার — নিজের কাগজ, নিজের ক্রম (মালিকের বিক্রয়-ধারা, ২ অক্টোবর ২০২৬; [[DeliveryOrder]])
-        'DO' => 'sales::doc.delivery_order',
         'TRP' => 'sales::doc.shipment',
         'INV' => 'sales::doc.invoice',
         // ⭐ বাতিল-ইনভয়েস — নিজের ক্রম, CXL-0001 (মালিক, ৪ অক্টোবর ২০২৬); নম্বরের পর্দা থেকে বদলানো যায়

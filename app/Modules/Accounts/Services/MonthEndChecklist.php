@@ -54,6 +54,7 @@ final class MonthEndChecklist
             $this->cashCounted($from, $to),
             $this->depreciated($from, $to),
             $this->balanced($from, $to),
+            $this->reversalsStuck($from, $to),
             $this->locked($month),
         ];
     }
@@ -179,6 +180,28 @@ final class MonthEndChecklist
         return $this->row('balanced', $off ? 1 : 0, 'accounts.integrity');
     }
 
+    /**
+     * ⛔ এই মাসে যে সমন্বয় জাবেদার নিজে উল্টানোর কথা, সেটা উল্টেছে — পুরো-ERP পুনঃঅডিট, ৯ অক্টোবর ২০২৬ (হিসাব, ঠিক ২)।
+     *
+     * ⓘ উল্টোর তারিখ এই মাসে (আজ পর্যন্ত), পাকা, বাতিল নয়, অথচ উল্টো বসেনি ([[AdjustingReversals]])। ⚠️ মাসটা বন্ধ হয়ে
+     * গেলে উল্টো আর বসতে পারে না — তাই বন্ধের আগে সারিটা লাল, আর বন্ধের পরেও আটকে থাকলে লাল থেকেই যায়।
+     */
+    private function reversalsStuck(CarbonImmutable $from, CarbonImmutable $to): array
+    {
+        $until = $to->isAfter(CarbonImmutable::today()) ? CarbonImmutable::today() : $to;
+
+        $count = $until->isBefore($from) ? 0 : Voucher::acrossBranches()
+            ->where('type', Voucher::JOURNAL)
+            ->where('is_adjusting', true)
+            ->where('status', DocumentStatus::CONFIRMED)
+            ->whereBetween('reverse_on', [$from->toDateString(), $until->toDateString()])
+            ->whereNotExists(fn ($q) => $q->from('vouchers as r')
+                ->whereColumn('r.reversal_of_id', 'vouchers.id'))
+            ->count();
+
+        return $this->row('reversals_stuck', $count, 'accounts.voucher.index', params: ['type' => Voucher::JOURNAL, 'adjusting' => 1]);
+    }
+
     /** মাসটা বন্ধ করা হয়েছে — শেষ ধাপ, বাকিগুলো সবুজ হওয়ার পরে। */
     private function locked(CarbonImmutable $month): array
     {
@@ -190,14 +213,14 @@ final class MonthEndChecklist
         return $this->row('locked', $locked ? 0 : 1, 'accounts.period.index');
     }
 
-    private function row(string $key, int $count, string $route, bool $applicable = true): array
+    private function row(string $key, int $count, string $route, bool $applicable = true, array $params = []): array
     {
         return [
             'key' => $key,
             'state' => ! $applicable ? self::NOT_APPLICABLE : ($count === 0 ? self::OK : self::PENDING),
             'count' => $count,
             'route' => $route,
-            'params' => [],
+            'params' => $params,
         ];
     }
 }

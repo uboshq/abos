@@ -219,6 +219,8 @@ class DepositRequestController extends Controller implements HasMiddleware
             'method' => (string) $claim->method,
             'reference' => $claim->reference,
             'status' => (string) $claim->status,
+            // ⭐ অবস্থার নাম সার্ভারের ভাষায় — ফোন এটাই দেখায় (টাকার পরিকল্পনা ১, ৭ অক্টোবর ২০২৬; a4, 8e39aaa5)
+            'status_label' => $claim->statusLabel(),
             'decision_reason' => $claim->decision_reason,
             'has_slip' => $this->slips->of($claim) !== null,
             // ⓘ বাছা বিল — দাবির প্রস্তাব; গ্রহণের পরে আসল ভাগ আদায়ের সারিতে

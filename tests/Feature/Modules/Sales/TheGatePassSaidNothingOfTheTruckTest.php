@@ -60,6 +60,9 @@ final class TheGatePassSaidNothingOfTheTruckTest extends TestCase
         $challan = $this->challan([
             'vehicle_no' => 'ঢাকা মেট্রো ট ১১-২২৩৩', 'carrier_name' => 'রহমান ট্রান্সপোর্ট',
             'driver_name' => 'করিম চালক', 'driver_phone' => '01711000111', 'transport_cost' => '1500',
+            // ⓘ ভাড়া কে দেবে — খাত বা বাহক ছাড়া "আমরা" এখন দরজাতেই থামে (Main Counter পথ বন্ধ, ১০ অক্টোবর ২০২৬; [[FarePayment]]);
+            // এই দাবি গেট পাসের কাগজ নিয়ে, খাতা নয় — আর অঙ্কটা কে দেবে তা নির্বিশেষে ছাপা হয় ([[DeliveryChallan::transportFacts()]])
+            'fare_paid_by' => 'customer',
         ]);
 
         $meta = $this->printGatePass($challan);
@@ -106,6 +109,8 @@ final class TheGatePassSaidNothingOfTheTruckTest extends TestCase
             'trx_date' => now()->toDateString(),
             'vehicle_no' => 'ঢাকা-১২', 'driver_name' => 'করিম', 'driver_phone' => '01711000111',
             'carrier_name' => 'রহমান ট্রান্সপোর্ট', 'transport_cost' => '900',
+            // ⓘ ভাড়া কে দেবে — ঘর ছাড়া "আমরা" এখন থামে (১০ অক্টোবর ২০২৬); এই দাবি ঘরগুলো হারায় কি না, খাতা নয়
+            'fare_paid_by' => 'customer',
             'lines' => [['product_id' => Product::query()->where('name_en', 'Cosmos Biscuit 40gm')->firstOrFail()->id, 'delivered_qty' => '5', 'rate' => '10']],
         ])->assertSessionHasNoErrors()->assertRedirect(route('sales.challan.show', $draft));
 

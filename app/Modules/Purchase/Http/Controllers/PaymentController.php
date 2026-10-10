@@ -230,11 +230,14 @@ class PaymentController extends Controller implements HasMiddleware
                  */
                 ->withPaid()
                 /*
-                 * ⛔ বাকি ছাঁকা SQL-এ, তারপর তোলা — পুনঃনিরীক্ষা, ৯ অক্টোবর ২০২৬। ⚠️ আগে নতুন ২০০টা তুলে
-                 * PHP-তে ছাঁকা হত, তাই তার পরের পুরনো বাকি বিল কোনোদিন বাছা যেত না ([[PurchaseBill::scopeStillOwed()]])।
+                 * ⭐ বাকি থাকা বিল ডাটাবেজেই ছাঁকা, তারপর সীমা — ক্রয় ⚠️১৩ (৬ অক্টোবর ২০২৬; [[PurchaseBill::scopeStillOwed()]])।
+                 * ⛔ আগে সাম্প্রতিক ২০০টা এনে PHP-তে ছাঁকা হত, তাই পুরনো বাকি বিল কোনোদিন আসত না। ⓘ পুরনোটা আগে — আগে
+                 * পুরনো বাকি শোধ।
                  */
                 ->stillOwed()
-                ->orderByDesc('trx_date')
+                ->orderBy('trx_date')
+                ->orderBy('id')
+                ->limit(500)
                 ->get(),
         ];
     }

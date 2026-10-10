@@ -702,8 +702,18 @@ final class CostLayerService
                 ->lockForUpdate()
                 ->get();
 
+            // ⓘ নতুন দামে সরানো স্তর ([[revalue()]]): যতটা নতুন স্তরে গেছে, ততটা "ছোঁয়া" নয়; তার বাইরে বেরোলে ছোঁয়া
+            $moved = CostLayerUse::query()
+                ->where('source_type', $sourceType.':revalue')
+                ->where('source_id', $sourceId)
+                ->groupBy('cost_layer_id')
+                ->selectRaw('cost_layer_id, COALESCE(SUM(qty), 0) as q')
+                ->pluck('q', 'cost_layer_id');
+
             foreach ($layers as $layer) {
-                if (bccomp((string) $layer->qty_remaining, (string) $layer->qty_in, 4) !== 0) {
+                $untouched = bcadd((string) $layer->qty_remaining, (string) ($moved[$layer->id] ?? '0'), 4);
+
+                if (bccomp($untouched, (string) $layer->qty_in, 4) !== 0) {
                     throw ValidationException::withMessages([
                         'status' => __('inventory::validation.layer_already_used', [
                             'document' => $layer->document_no ?? (string) $layer->id,
@@ -713,7 +723,8 @@ final class CostLayerService
             }
 
             foreach ($layers as $layer) {
-                if (bccomp((string) $layer->qty_in, '0', 4) <= 0) {
+                // ⓘ খালি স্তর (পুরোটা নতুন দামের স্তরে গেছে) — খালি করার কিছু নেই
+                if (bccomp((string) $layer->qty_remaining, '0', 4) <= 0) {
                     continue;
                 }
 
@@ -725,9 +736,9 @@ final class CostLayerService
                     'source_id' => $sourceId,
                     'document_no' => $layer->document_no,
                     'trx_date' => $this->date($date),
-                    'qty' => $layer->qty_in,
+                    'qty' => $layer->qty_remaining,
                     'unit_cost' => $layer->unit_cost,
-                    'amount' => bcmul((string) $layer->qty_in, (string) $layer->unit_cost, 4),
+                    'amount' => bcmul((string) $layer->qty_remaining, (string) $layer->unit_cost, 4),
                     'created_by' => auth()->id(),
                 ]);
 
@@ -737,6 +748,151 @@ final class CostLayerService
 
             return $layers->count();
         });
+    }
+
+    /**
+     * ⭐ কেনার দাম বদলাল (সরবরাহকারী অন্য দরে বিল করলেন) — স্তর নতুন দামে, কিছু না মুছে, কিছু না বদলে (পুরো-ERP অডিট,
+     * ৯ অক্টোবর ২০২৬, ক্রয় ⚠️৩, স্তরের দিক; খাতার দিক ec-র [[PurchaseBillService]]; [[ALayerTakesTheBillsPriceFromTheBillsDayTest]])।
+     *
+     * ⛔ স্তরের `unit_cost` সরাসরি বদলানো যায় না: মজুদ-মূল্য রিপোর্ট আগমন গোনে `qty_in × unit_cost` স্তরের নিজের দিনে, তাই
+     * মাল-গ্রহণের মাস থেকে মূল্য পেছনে বদলাত — ⚠️৫-এর একই ভুল। ⓘ তাই প্রতিটা জীবিত স্তরের বাকি মাল `…:revalue` সারিতে
+     * পুরনো দামে খালি হয়, আর একই উৎস, লট আর সরবরাহকারীর নামে নতুন দামে নতুন স্তর বসে — দুটোই `$date`-এ, খাতার দাখিলার দিনে।
+     * ⓘ FIFO-তে নতুন স্তর `$date`-এর জায়গায় দাঁড়ায় (স্কিমা না বদলে আর উপায় নেই; ec রাজি, ১০ অক্টোবর ২০২৬)।
+     *
+     * ⓘ ফেরত: তাকে যতটা (`shelf_qty`, পার্থক্য `shelf_diff` → মজুদ খাত) আর আগেই যতটা বেরিয়েছে (`sold_qty`, পার্থক্য
+     * `sold_diff` → খরচ খাত)। খাতা বসান ডাকার পক্ষ। ⓘ দাম না বদলালে, বা একই দামে দ্বিতীয়বার ডাকলে কিছুই লেখা হয় না —
+     * আগে পুনর্মূল্যায়িত স্তরে চিহ্ন (`…:revalue` সারি, তাকে কিছু না থাকলে শূন্য পরিমাণের) থাকে, তাই তার বেরোনো অংশ দুবার গোনা হয় না।
+     *
+     * @return array{shelf_qty: string, shelf_diff: string, sold_qty: string, sold_diff: string}
+     */
+    public function revalue(string $sourceType, int $sourceId, int $productId, string $newUnitCost, Carbon|string $date): array
+    {
+        return DB::transaction(function () use ($sourceType, $sourceId, $productId, $newUnitCost, $date) {
+            $out = ['shelf_qty' => '0', 'shelf_diff' => '0', 'sold_qty' => '0', 'sold_diff' => '0'];
+
+            $done = CostLayerUse::query()
+                ->whereIn('source_type', [$sourceType.':revalue', $sourceType.':cancel'])
+                ->where('source_id', $sourceId)
+                ->pluck('cost_layer_id');
+
+            $layers = CostLayer::query()
+                ->where('source_type', $sourceType)
+                ->where('source_id', $sourceId)
+                ->where('product_id', $productId)
+                ->whereNotIn('id', $done)
+                ->orderBy('id')
+                ->lockForUpdate()
+                ->get();
+
+            foreach ($layers as $layer) {
+                $per = bcsub($newUnitCost, (string) $layer->unit_cost, 6);
+
+                if (bccomp($per, '0', 6) === 0) {
+                    continue;
+                }
+
+                $shelf = (string) $layer->qty_remaining;
+                $sold = bcsub((string) $layer->qty_in, $shelf, 4);
+
+                $out['shelf_qty'] = bcadd($out['shelf_qty'], $shelf, 4);
+                $out['shelf_diff'] = bcadd($out['shelf_diff'], bcmul($shelf, $per, 6), 6);
+                $out['sold_qty'] = bcadd($out['sold_qty'], $sold, 4);
+                $out['sold_diff'] = bcadd($out['sold_diff'], bcmul($sold, $per, 6), 6);
+
+                // ⓘ পুরনো দামে খালি — তাকে কিছু না থাকলেও চিহ্নটা থাকে (শূন্য পরিমাণ), যাতে বেরোনো অংশ দুবার গোনা না হয়
+                CostLayerUse::create([
+                    'company_id' => $this->companyId(),
+                    'cost_layer_id' => $layer->id,
+                    'product_id' => $layer->product_id,
+                    'source_type' => $sourceType.':revalue',
+                    'source_id' => $sourceId,
+                    'document_no' => $layer->document_no,
+                    'trx_date' => $this->date($date),
+                    'qty' => $shelf,
+                    'unit_cost' => $layer->unit_cost,
+                    'amount' => bcmul($shelf, (string) $layer->unit_cost, 4),
+                    'created_by' => auth()->id(),
+                ]);
+
+                if (bccomp($shelf, '0', 4) <= 0) {
+                    continue;
+                }
+
+                $layer->qty_remaining = '0';
+                $layer->save();
+
+                CostLayer::create([
+                    'company_id' => $this->companyId(),
+                    'product_id' => $layer->product_id,
+                    'source_type' => $sourceType,
+                    'source_id' => $sourceId,
+                    'document_no' => $layer->document_no,
+                    'trx_date' => $this->date($date),
+                    'qty_in' => $shelf,
+                    'qty_remaining' => $shelf,
+                    'unit_cost' => $newUnitCost,
+                    'batch_id' => $layer->batch_id,
+                    'supplier_id' => $layer->supplier_id,
+                    'created_by' => auth()->id(),
+                ]);
+            }
+
+            return array_map(fn (string $v) => bcadd($v, '0', 4), $out);
+        });
+    }
+
+    /**
+     * ⭐ এতটা মাল এখন বেরোলে কত খরচ টানত — কিছু না টেনে, [[issue()]]-এর হুবহু ক্রমে (পুরো-ERP অডিট, ৬ অক্টোবর ২০২৬,
+     * মজুদ ⚠️৮; [[ABranchTransferCarriesWhatTheGoodsCostTest]])।
+     *
+     * ⓘ লট দিলে আগে সেই লটের নিজের স্তর, তারপর লটহীন, তারপর বাকি সব — পুরনো আগে; লট না দিলে সোজা FIFO। পরের বিক্রি
+     * ঠিক এই খরচই টানবে, তাই শাখা-পেরোনো বদলি এই দামেই মজুদের টাকা সরায়। ⓘ স্তরে না কুলালে বাকিটা কোম্পানির গড়ে
+     * (আগের নিয়ম) — বদলি থামে না; স্তর একদম না থাকলে শূন্য।
+     */
+    public function costOf(Product $product, string $qty, ?Batch $batch = null): string
+    {
+        $cost = '0';
+        $left = $qty;
+        $used = [];
+
+        $draw = function ($layers) use (&$cost, &$left, &$used): void {
+            foreach ($layers as $layer) {
+                if (bccomp($left, '0', 4) <= 0) {
+                    return;
+                }
+
+                $free = bcsub((string) $layer->qty_remaining, $used[$layer->id] ?? '0', 4);
+
+                if (bccomp($free, '0', 4) <= 0) {
+                    continue;
+                }
+
+                $take = bccomp($free, $left, 4) >= 0 ? $left : $free;
+                $used[$layer->id] = bcadd($used[$layer->id] ?? '0', $take, 4);
+                $cost = bcadd($cost, bcmul($take, (string) $layer->unit_cost, 6), 6);
+                $left = bcsub($left, $take, 4);
+            }
+        };
+
+        if ($batch !== null) {
+            $draw(CostLayer::query()->where('product_id', $product->id)->where('batch_id', $batch->id)->open()->get());
+        }
+
+        if (bccomp($left, '0', 4) > 0) {
+            $draw(CostLayer::query()->where('product_id', $product->id)->where('qty_remaining', '>', 0)
+                ->when($batch !== null, fn ($q) => $q->orderByRaw('CASE WHEN batch_id IS NULL THEN 0 ELSE 1 END'))
+                ->orderBy('trx_date')->orderBy('id')->get());
+        }
+
+        if (bccomp($left, '0', 4) > 0) {
+            $onHand = $this->qtyOnHand($product);
+
+            if (bccomp($onHand, '0', 4) > 0) {
+                $cost = bcadd($cost, bcmul($left, bcdiv($this->valueOnHand($product), $onHand, 6), 6), 6);
+            }
+        }
+
+        return bcadd($cost, '0', 4);
     }
 
     /** এই পণ্যের যত মাল স্তরে পড়ে আছে, তার মোট মূল্য। */
