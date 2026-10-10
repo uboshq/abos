@@ -709,6 +709,36 @@ final class PurchaseBillService
     {
         $cost = $this->capitalisedBringingIn($bill);
 
+        /*
+         * ⛔ চালানের মালের ভাড়া — পুনঃনিরীক্ষা, ৯ অক্টোবর ২০২৬।
+         *
+         * ⚠️ ভাড়া মালের দামে বসে কেবল চালান-ছাড়া সারিতে ([[bringingInShares()]]); বিলের সব সারির পেছনে চালান
+         * থাকলে ভাড়াটা **কোথাওই** বসত না — গাড়িওয়ালার পাওনা খাতায় নেই, অথচ বিলে লেখা। ⭐ এখন যতটা মালের
+         * দামে বসেনি, ততটা ক্রয়-দর-পার্থক্যে (৫১৫০) আর পাওনা পরিবহনের প্রদেয়-তে।
+         * ⓘ মালের দামে তোলা (চালানের স্তর নতুন করে দামি করা) মজুদের খরচের ইঞ্জিনের কাজ
+         * ([[CostLayerService]]) — ওটা না হওয়া পর্যন্ত খরচটা অন্তত খাতায় সত্যি থাকে, আর মজুদের খাতা স্তরের
+         * সাথে মেলে।
+         */
+        $notInStock = bcsub($this->bringingInCost($bill), $cost, 4);
+
+        if (bccomp($notInStock, '0', 4) > 0) {
+            $narration = __('purchase::message.bringing_in_not_in_stock', ['no' => $bill->document_no]);
+
+            $lines[] = [
+                'account_id' => $this->account(StandardChart::PURCHASE_PRICE_VARIANCE)->id,
+                'debit' => $notInStock,
+                'narration' => $narration,
+            ];
+
+            $lines[] = [
+                'account_id' => $this->account(StandardChart::TRANSPORT_PAYABLE)->id,
+                'credit' => $notInStock,
+                'party_type' => $bill->carrier_id !== null ? 'supplier' : null,
+                'party_id' => $bill->carrier_id,
+                'narration' => $narration,
+            ];
+        }
+
         if (bccomp($cost, '0', 4) <= 0) {
             return;
         }

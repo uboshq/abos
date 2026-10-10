@@ -11,6 +11,7 @@ return [
     'input_vat' => ':no — উপকরণ ভ্যাট',
     'price_variance' => ':no — ক্রয়মূল্যের পার্থক্য',
     'bringing_in_cost' => ':no — মাল আনার খরচ, মালের দামে',
+    'bringing_in_not_in_stock' => ':no — চালানের মাল আনার খরচ, এখনো মালের দামে নয়',
     'payable_to_supplier' => ':no — সরবরাহকারীর প্রদেয়',
     'order_created' => 'ক্রয় আদেশ তৈরি হয়েছে।',
     'order_updated' => 'ক্রয় আদেশ হালনাগাদ হয়েছে।',

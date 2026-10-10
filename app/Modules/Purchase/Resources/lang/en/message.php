@@ -10,6 +10,7 @@ return [
     'input_vat' => ':no — input VAT',
     'price_variance' => ':no — purchase price variance',
     'bringing_in_cost' => ':no — cost of bringing the goods in, into their cost',
+    'bringing_in_not_in_stock' => ':no — cost of bringing in received goods, not yet in their cost',
     'payable_to_supplier' => ':no — payable to the supplier',
     'order_created' => 'Purchase order created.',
     'order_updated' => 'Purchase order updated.',
