@@ -617,7 +617,13 @@ class SalesPrintController extends Controller implements HasMiddleware
     {
         $words = AmountInWords::of($amount, 'en');
         $words = (string) preg_replace('/\s+only$/i', '', trim($words));
-        $words = (string) preg_replace('/\btaka\b\s*/i', '', $words);
+        /*
+         * ⛔ পয়সা থাকলে "Taka" থাকে — পুরো-ERP পুনঃঅডিট, ৯ অক্টোবর ২০২৬ (ছাপা ১৫; [[TheSampleWordsKeepThePaisaApartTest]])। ⓘ আগে সবসময়
+         * কেটে ফেলা হত: ১০০.০৫ ছাপা হত "One Hundred And Five Paisa" — পড়তে একশো পাঁচ পয়সা, টাকা আর পয়সার সীমাটাই হারাত।
+         */
+        if (! preg_match('/\bpaisa\b/i', $words)) {
+            $words = (string) preg_replace('/\btaka\b\s*/i', '', $words);
+        }
         $words = str_replace('-', ' ', $words);
         $words = ucwords(strtolower(trim((string) preg_replace('/\s+/', ' ', $words))));
         $words = (string) preg_replace('/\bLakh\b/', 'Lac', $words);
