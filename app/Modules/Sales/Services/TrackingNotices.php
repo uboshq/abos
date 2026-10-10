@@ -95,7 +95,7 @@ final class TrackingNotices
             foreach ($sent->pluck('user_id')->unique() as $userId) {
                 SendPushToUser::dispatch((int) $userId, $title, [
                     'open' => 'tracking', 'kind' => 'challan', 'id' => (string) $challan->public_id,
-                ]);
+                ], $challan->customer?->nameWithPoint());
             }
         });
     }
@@ -167,7 +167,7 @@ final class TrackingNotices
         foreach ($sent->pluck('user_id')->unique() as $userId) {
             SendPushToUser::dispatch((int) $userId, $title, [
                 'open' => 'tracking', 'kind' => 'order', 'id' => (string) $order->public_id,
-            ]);
+            ], $order->customer?->nameWithPoint());
         }
     }
 

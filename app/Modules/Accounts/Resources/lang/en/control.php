@@ -48,6 +48,7 @@ return [
         'cash_counted' => ['Every cash till was counted at least once', 'Only confirmed counts count.'],
         'depreciated' => ['Depreciation posted for active assets', 'Assets acquired before month end.'],
         'balanced' => ['Debits equal credits for the month', 'If not, the books check shows where.'],
+        'reversals_stuck' => ['Every adjusting journal due to reverse this month has reversed', 'A locked month stops the reversal, and the accrual is counted twice.'],
         'locked' => ['The month is closed', 'The last step. Nobody can date anything into a closed month.'],
     ],
 

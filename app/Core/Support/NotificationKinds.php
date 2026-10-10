@@ -81,6 +81,9 @@ final class NotificationKinds
             // ⭐ বিজ্ঞপ্তি ব্যবস্থাপনা, ধাপ ৩ — সূচিমতো খবর আর টেমপ্লেটের পরীক্ষা ([[ScheduleRunner]], টেমপ্লেট স্টুডিও)
             'notification.scheduled' => 'core.notify.kind.notification_scheduled',
             'notification.template_test' => 'core.notify.kind.notification_template_test',
+
+            // ⛔ সমন্বয় জাবেদা নিজের তারিখে উল্টাতে পারল না (প্রায়ই মাস বন্ধ) — একবারই ([[AdjustingReversals]], ৯ অক্টোবর ২০২৬)
+            'accounts.adjusting_reversal_stuck' => 'core.notify.kind.adjusting_reversal_stuck',
         ];
     }
 
@@ -209,6 +212,9 @@ final class NotificationKinds
          * ব্যাকআপটা ফেরানোর দরকার পড়ে, আর তখন **অনেক দেরি হয়ে গেছে**।
          */
         'backup.failed',
+
+        /* ⓘ উল্টো আটকে — মাস না খোলা পর্যন্ত বকেয়াটা পরের মাসে দুইবার গোনা থাকে, আর খবরটা একবারই যায় */
+        'accounts.adjusting_reversal_stuck',
     ];
 
     /**

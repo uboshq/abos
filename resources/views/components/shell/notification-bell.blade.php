@@ -46,7 +46,9 @@
     $total = count($notices) + $mine->count();
 @endphp
 
-<div x-data="notifyBell" class="relative" data-notify-bell-root
+{{-- ⓘ data-notification-bell — যন্ত্রের সতর্কতা এখন কেবল এখানে আর উপরের ব্যানারে, নিচের বারে নয়; পরীক্ষা এই ঘরটা ধরে
+     দেখে সতর্কতা হারায়নি (পাতা সাজানো ধাপ ১, ১০ অক্টোবর ২০২৬) --}}
+<div x-data="notifyBell" class="relative" data-notify-bell-root data-notification-bell
      data-count="{{ $total }}" data-base="{{ count($notices) }}"
      data-poll-seconds="{{ $pollSeconds }}" data-poll-url="{{ auth()->check() ? route('notifications.unread-count') : '' }}">
     <button type="button"

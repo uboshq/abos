@@ -333,4 +333,23 @@ class NotificationController extends Controller
 
         return back();
     }
+
+    /**
+     * ⭐ উপরের হলুদ ব্যানার একবার বন্ধ — এই লগইনে আর দেখায় না (পাতা সাজানোর পরিকল্পনা ধাপ ১, ১০ অক্টোবর ২০২৬;
+     * [[StatusNotices::forBanner()]])।
+     *
+     * ⓘ বন্ধ হয় কেবল ব্যানারটা, সতর্কতা নয় — ঘণ্টায় লাল ব্যাজসহ থেকে যায়, আর পরের লগইনে ব্যানার আবার আসে যদি সমস্যা
+     * তখনও থাকে। ⓘ লেখার ছাপ ধরে মনে রাখা — আলাদা নতুন সমস্যা এলে (অন্য লেখা) সেটা আবার দেখায়।
+     */
+    public function closeBanner(Request $request): RedirectResponse
+    {
+        $key = (string) $request->input('key', '');
+
+        if (preg_match('/^[a-f0-9]{40}$/', $key) === 1) {
+            $closed = (array) $request->session()->get('shell.banner.closed', []);
+            $request->session()->put('shell.banner.closed', array_values(array_unique([...$closed, $key])));
+        }
+
+        return back();
+    }
 }

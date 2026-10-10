@@ -101,8 +101,12 @@ final class EveryPhoneDoorNamesTheShopsPointTest extends TestCase
         $mover = User::factory()->create(['is_active' => true, 'current_company_id' => $this->company->id]);
         $mover->companies()->attach($this->company->id, ['is_active' => true]);
         $this->actingAs($mover);
+        \Illuminate\Support\Facades\Bus::fake([\App\Jobs\SendPushToUser::class]);
         app(DeliveryStageService::class)->move($challan->fresh(), DeliveryStage::DISPATCHED);
         $this->actingAs($this->owner);
+        // ⭐ লক-স্ক্রিনের পুশেও — নিচের লাইনে "নাম · পয়েন্ট" (মালিক, ১০ অক্টোবর ২০২৬: "obosoi point dibe")
+        \Illuminate\Support\Facades\Bus::assertDispatched(\App\Jobs\SendPushToUser::class,
+            fn (\App\Jobs\SendPushToUser $job) => $job->userId === $this->owner->id && $job->body === $this->shop->name().' · কারওয়ান বাজার');
 
         // ⭐ বিজ্ঞপ্তিতেও — মালিক, ৭ অক্টোবর ২০২৬: "app e notification e customer er sathe point nai" ([[TrackingNotices]])
         $bodies = \App\Models\Notification::query()->where('user_id', $this->owner->id)->pluck('body')->all();

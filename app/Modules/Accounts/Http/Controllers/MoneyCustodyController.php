@@ -162,14 +162,19 @@ class MoneyCustodyController extends Controller implements HasMiddleware
 
         $rows = [];
 
+        /*
+         * ⛔ প্রতিটা সারির জের একবারই — পুনঃঅডিট, ৯ অক্টোবর ২০২৬ (হিসাব, ঠিক ৯)। ⚠️ আগে কাঁচা অঙ্ক আর লেখা অঙ্ক দুইবার আলাদা
+         * করে খাতা পড়ত: প্রতিটা টিল, সিন্দুক আর ব্যাংকে দুইটা একই কোয়েরি।
+         */
         foreach ($tills as $till) {
+            $amount = (string) $till->balance();
             $rows[] = [
                 'code' => $till->code,
                 'name' => $till->name(),
                 'kind' => __('accounts::custody.kind_till'),
                 'holder' => $till->holder?->name,
-                'amount' => (string) $till->balance(),
-                'balance' => Money::format($till->balance()),
+                'amount' => $amount,
+                'balance' => Money::format($amount),
                 'sent' => Money::format((string) ($sentFrom[$till->id] ?? '0')),
                 'url' => route('accounts.till.index'),
                 'active' => $till->is_active,
@@ -185,13 +190,14 @@ class MoneyCustodyController extends Controller implements HasMiddleware
          * পারে না, আর ফাঁকা ঘরটা তাই একটা সতর্কতা — সত্য নয়।
          */
         foreach ($officeCash as $cash) {
+            $amount = (string) $cash->balanceInView();
             $rows[] = [
                 'code' => $cash->code,
                 'name' => $cash->name(),
                 'kind' => __('accounts::custody.kind_office_cash'),
                 'holder' => $cash->keeper?->name,
-                'amount' => (string) $cash->balanceInView(),
-                'balance' => Money::format($cash->balanceInView()),
+                'amount' => $amount,
+                'balance' => Money::format($amount),
                 'sent' => Money::format('0'),
                 'url' => route('accounts.coa.show', $cash),
                 'active' => $cash->is_active,
@@ -200,6 +206,7 @@ class MoneyCustodyController extends Controller implements HasMiddleware
         }
 
         foreach ($banks as $bank) {
+            $amount = (string) $bank->balanceInView();
             $rows[] = [
                 'code' => $bank->code,
                 'name' => $bank->label(),
@@ -213,8 +220,8 @@ class MoneyCustodyController extends Controller implements HasMiddleware
                  * কেবল নগদ কাউন্টারের জন্য।
                  */
                 'holder' => null,
-                'amount' => (string) $bank->balanceInView(),
-                'balance' => Money::format($bank->balanceInView()),
+                'amount' => $amount,
+                'balance' => Money::format($amount),
                 'sent' => Money::format('0'),
                 'url' => route('accounts.coa.index'),
                 'active' => $bank->is_active,

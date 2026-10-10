@@ -61,4 +61,5 @@ return [
     'capital_dealer' => 'Dealer dues (apportioned)',
     'capital_total' => 'Capital tied up',
     'return_percent' => 'Annual return %',
+    'goods_not_billed' => 'Goods not yet billed',
 ];

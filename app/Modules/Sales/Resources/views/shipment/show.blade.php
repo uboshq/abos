@@ -98,6 +98,9 @@
             @endif
         </section>
 
+        {{-- ⭐ ট্রিপের ভাড়া — অবস্থা আর বাকি ভাড়া দেওয়া (মালিক, ৭ অক্টোবর ২০২৬; সিদ্ধান্ত ঘ) --}}
+        @include('sales::shipment.partials.fare', ['shipment' => $shipment])
+
         <section data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border)
                         bg-(--color-surface-card)">
             <h2 class="border-b border-(--color-border) bg-(--color-section-head) px-4 py-3 font-semibold">
