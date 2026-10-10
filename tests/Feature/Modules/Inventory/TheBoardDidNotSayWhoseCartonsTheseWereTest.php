@@ -113,8 +113,13 @@ final class TheBoardDidNotSayWhoseCartonsTheseWereTest extends TestCase
     {
         $other = Product::query()->where('id', '!=', $this->product->id)->firstOrFail();
 
-        $this->waiting('GRN-3', 'test_purchase', 31);
-        $this->waiting('GRN-3', 'test_purchase', 31, $other);
+        /*
+         * ⓘ উৎস `purchase_bill` — আগে বানানো `test_purchase` ছিল, কিন্তু ৪ অক্টোবর থেকে (অডিট গ১৪, 419fe8d3) পর্দা কেবল
+         * সত্যিকারের ক্রয়ের কাগজের নাম নেয় ([[StockPlacementController::PLACEABLE_SOURCES]]), তাই অনুরোধটা পুরোটাই ফিরত আর
+         * দাবিটা "প্রথম সারিটা বসেনি" বলে লাল থাকত — দাবির কিছু না দেখেই।
+         */
+        $this->waiting('GRN-3', 'purchase_bill', 31);
+        $this->waiting('GRN-3', 'purchase_bill', 31, $other);
 
         $this->actingAs($this->owner)
             ->post(route('inventory.stock.placement.store'), [
@@ -123,25 +128,25 @@ final class TheBoardDidNotSayWhoseCartonsTheseWereTest extends TestCase
                     [
                         'product_id' => $this->product->id,
                         'warehouse_id' => $this->warehouse->id,
-                        'source_type' => 'test_purchase',
+                        'source_type' => 'purchase_bill',
                         'source_id' => 31,
                         'qty' => '7',
                     ],
                     [
                         'product_id' => $other->id,
                         'warehouse_id' => $this->warehouse->id,
-                        'source_type' => 'test_purchase',
+                        'source_type' => 'purchase_bill',
                         'source_id' => 31,
                         'qty' => '7',
                     ],
                 ],
-            ])->assertRedirect();
+            ])->assertSessionHasNoErrors()->assertRedirect();
 
         $this->assertSame(
             '7.0000',
             (string) StockMovement::query()
                 ->where('product_id', $this->product->id)
-                ->where('source_type', 'test_purchase')
+                ->where('source_type', 'purchase_bill')
                 ->sum('floor_change'),
             'প্রথম সারিটা বসেনি।',
         );
@@ -150,7 +155,7 @@ final class TheBoardDidNotSayWhoseCartonsTheseWereTest extends TestCase
             '0',
             (string) StockMovement::query()
                 ->where('product_id', $other->id)
-                ->where('source_type', 'test_purchase')
+                ->where('source_type', 'purchase_bill')
                 ->where('floor_change', '>', 0)
                 ->count(),
             'দ্বিতীয় সারিটাও বসে গেছে — তিরচিহ্নটা তাহলে গোটা কাগজ বসায়।',
