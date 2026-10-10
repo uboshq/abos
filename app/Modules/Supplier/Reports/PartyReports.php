@@ -242,6 +242,18 @@ final class PartyReports
         );
     }
 
+    /**
+     * বাকির বয়স — ⭐ FIFO-তে, আর অগ্রিম আলাদা ঘরে (পুনঃনিরীক্ষা, ৯ অক্টোবর ২০২৬)।
+     *
+     * ── ⛔ কী ভুল ছিল ────────────────────────────────────────────────
+     * ⚠️ প্রতিটা ধাপ ছিল সেই সময়ের **নিট** (জমা − খরচ): গত সপ্তাহের পরিশোধ "০–৩০ দিন" ঘর থেকে বাদ যেত, অথচ
+     * টাকাটা শোধ করেছিল চার মাস পুরনো বিল। ফল — পুরনো বাকি বড় দেখাত, নতুন ঘর ঋণাত্মক। ⚠️ আর যাঁকে অগ্রিম
+     * দেওয়া, তিনি ঋণাত্মক বাকি হয়ে মোটে মিশে যেতেন — মোট দেনা অগ্রিমের সমান কম দেখাত।
+     *
+     * ⭐ এখন: প্রতিটা ধাপে কেবল **জমা** (বিল), আর সব খরচ (পরিশোধ, ফেরত) সবচেয়ে পুরনো জমা থেকে মেটে।
+     * জমার চেয়ে খরচ বেশি হলে বাকিটা "অগ্রিম" — ধাপ আর মোট দেনার বাইরে। ⓘ চারটা ধাপের যোগফল এখনো
+     * "প্রদেয়"-র সমান।
+     */
     public static function ageing(): ReportDefinition
     {
         return new ReportDefinition(
@@ -254,7 +266,8 @@ final class PartyReports
             query: function (array $f) {
                 $asOf = Carbon::parse($f['to']);
 
-                $bucket = function (?int $from, ?int $to) use ($asOf) {
+                // ⓘ এই সময়ের **জমা** — খরচ এখানে নয়, সেটা নিচে FIFO-তে মেটে
+                $credits = function (?int $from, ?int $to) use ($asOf) {
                     $conditions = [];
 
                     if ($to !== null) {
@@ -269,12 +282,12 @@ final class PartyReports
 
                     $where = $conditions === [] ? '1=1' : implode(' AND ', $conditions);
 
-                    return "SUM(CASE WHEN {$where} THEN ledger_entries.credit - ledger_entries.debit ELSE 0 END)";
+                    return "COALESCE(SUM(CASE WHEN {$where} THEN ledger_entries.credit ELSE 0 END), 0)";
                 };
 
                 [$b1, $b2, $b3] = self::BUCKETS;
 
-                return DB::table('ledger_entries')
+                $sums = DB::table('ledger_entries')
                     ->join('suppliers', 'suppliers.id', '=', 'ledger_entries.party_id')
                     ->where('ledger_entries.company_id', $f['company_id'])
                     ->where('ledger_entries.party_type', Supplier::drillSourceType())
@@ -287,16 +300,42 @@ final class PartyReports
                     ->where('ledger_entries.trx_date', '<=', $f['to'])
                     ->groupBy('ledger_entries.party_id', 'suppliers.code', 'suppliers.name_en', 'suppliers.name_bn')
                     ->havingRaw('SUM(ledger_entries.credit) - SUM(ledger_entries.debit) <> 0')
-                    ->orderByRaw('SUM(ledger_entries.credit) - SUM(ledger_entries.debit) DESC')
                     ->select([
                         'ledger_entries.party_id',
                         self::supplierName(),
+                        DB::raw($credits($b3, null).' as c90'),
+                        DB::raw($credits($b2, $b3).' as c60'),
+                        DB::raw($credits($b1, $b2).' as c30'),
+                        DB::raw($credits(null, $b1).' as c0'),
+                        DB::raw('COALESCE(SUM(ledger_entries.debit), 0) as paid'),
+                    ]);
+
+                /*
+                 * ⭐ FIFO: খরচ আগে সবচেয়ে পুরনো ধাপ মেটায়, বাকিটা পরের ধাপে গড়ায়।
+                 * ধাপ k-তে যা থাকে = max(0, জমা_k − max(0, খরচ − তার আগের সব ধাপের জমা))।
+                 */
+                $left = fn (string $credit, string $before) => "GREATEST({$credit} - GREATEST(a.paid - ({$before}), 0), 0)";
+                $c90 = $left('a.c90', '0');
+                $c60 = $left('a.c60', 'a.c90');
+                $c30 = $left('a.c30', 'a.c90 + a.c60');
+                $c0 = $left('a.c0', 'a.c90 + a.c60 + a.c30');
+                $payable = "({$c90} + {$c60} + {$c30} + {$c0})";
+
+                return DB::query()
+                    ->fromSub($sums, 'a')
+                    ->orderByRaw($payable.' DESC')
+                    ->orderBy('a.party_id')
+                    ->select([
+                        'a.party_id',
+                        'a.supplier_name',
                         DB::raw("'".Supplier::drillSourceType()."' as party_type_literal"),
-                        DB::raw($bucket(null, $b1).' as bucket_current'),
-                        DB::raw($bucket($b1, $b2).' as bucket_30'),
-                        DB::raw($bucket($b2, $b3).' as bucket_60'),
-                        DB::raw($bucket($b3, null).' as bucket_90'),
-                        DB::raw('SUM(ledger_entries.credit) - SUM(ledger_entries.debit) as payable'),
+                        DB::raw($c0.' as bucket_current'),
+                        DB::raw($c30.' as bucket_30'),
+                        DB::raw($c60.' as bucket_60'),
+                        DB::raw($c90.' as bucket_90'),
+                        DB::raw($payable.' as payable'),
+                        // ⓘ জমার চেয়ে বেশি দেওয়া — অগ্রিম, দেনার মোটে মেশে না
+                        DB::raw('GREATEST(a.paid - (a.c90 + a.c60 + a.c30 + a.c0), 0) as advance'),
                     ]);
             },
             columns: [
@@ -312,6 +351,7 @@ final class PartyReports
                 ['key' => 'bucket_60', 'label' => 'supplier::field.bucket_60', 'type' => ReportColumn::MONEY],
                 ['key' => 'bucket_90', 'label' => 'supplier::field.bucket_90', 'type' => ReportColumn::MONEY],
                 ['key' => 'payable', 'label' => 'supplier::field.payable', 'type' => ReportColumn::MONEY],
+                ['key' => 'advance', 'label' => 'supplier::field.advance_given', 'type' => ReportColumn::MONEY],
             ],
         );
     }
