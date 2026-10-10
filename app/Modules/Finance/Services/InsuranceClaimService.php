@@ -192,7 +192,11 @@ final class InsuranceClaimService
             $this->assertRightHead($claim, $including);
         }
 
-        $receipts = Voucher::query()
+        /*
+         * ⛔ শাখা-দেয়াল ছাড়া, কোম্পানির দেয়াল থাকে — দাবির রসিদ বসে দাবির শাখায়, আর হেডারে অন্য শাখা বাছা মানুষ এখানে এলে
+         * শাখা-বাঁধা গোনা "কিছুই আসেনি" দেখত; তারপর বন্ধ করলে পাওয়া আয়টাও মুছে যেত (cloud/finance-fixes-এর রিভিউ ⛔১, ১০ অক্টোবর ২০২৬)।
+         */
+        $receipts = Voucher::acrossBranches()
             ->where('against_type', InsuranceClaim::drillSourceType())
             ->where('against_id', $claim->id)
             ->where('type', Voucher::RECEIPT)

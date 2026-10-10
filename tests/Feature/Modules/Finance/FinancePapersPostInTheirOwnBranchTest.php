@@ -99,6 +99,32 @@ final class FinancePapersPostInTheirOwnBranchTest extends TestCase
         $this->assertRowsIn((int) $done['voucher']->id, 'MMS', 'বীমা দাবির টাকা');
     }
 
+    /**
+     * ⛔ পাওয়া টাকা দাবির শাখায় বসে — অন্য শাখা দেখানো অবস্থায় আবার গুনলে "কিছুই আসেনি" দেখাত, আর বন্ধে আয় মুছত
+     * (cloud/finance-fixes রিভিউ ⛔১, ১০ অক্টোবর ২০২৬; [[InsuranceClaimService::refresh()]])।
+     */
+    public function test_a_claim_counts_its_money_whichever_branch_the_header_shows(): void
+    {
+        $this->choose('MMS');
+        $claim = app(InsuranceClaimService::class)->lodge($this->policy(), [
+            'incident_on' => now()->subDays(3)->toDateString(), 'claimed_on' => now()->subDays(2)->toDateString(),
+            'incident' => 'Fire', 'claimed_amount' => '100000',
+        ]);
+        $claim = app(InsuranceClaimService::class)->approve($claim->fresh(), [
+            'approved_amount' => '80000', 'approved_on' => now()->toDateString(), 'approval_ref' => 'LTR-2',
+        ]);
+        app(InsuranceClaimService::class)->receive($claim->fresh(), [
+            'money_account_id' => $this->cash()->id, 'amount' => '30000', 'received_on' => now()->toDateString(),
+        ]);
+        $this->assertSame(0, bccomp((string) $claim->fresh()->received_amount, '30000', 4), 'দৃশ্যটাই বানানো যায়নি — টাকা আসেনি।');
+
+        $this->choose('NTK');
+        $again = app(InsuranceClaimService::class)->refresh($claim->fresh());
+
+        $this->assertSame(0, bccomp((string) $again->received_amount, '30000', 4), '⛔ অন্য শাখা দেখানো অবস্থায় পাওয়া টাকা শূন্য গোনা হলো।');
+        $this->assertNotSame(\App\Modules\Finance\Models\InsuranceClaim::APPROVED, $again->status, '⛔ অবস্থা "অনুমোদিত"-তে ফিরে গেল, যেন টাকা আসেনি।');
+    }
+
     public function test_capital_posts_in_the_entrys_branch_and_a_receipt_makes_its_row_in_the_receipts_branch(): void
     {
         $this->choose('MMS');
