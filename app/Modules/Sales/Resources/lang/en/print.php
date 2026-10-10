@@ -119,4 +119,6 @@ return [
     'closing_short' => 'Closing',
     'owed_by_customer' => 'owed by customer',
     'paid_by_customer' => 'paid by customer',
+    // ⓘ গেট পাসে মাল বেরোনোর পথে ফ্রি মালের নিজের লাইন (মালিক, ১০ অক্টোবর ২০২৬)
+    'free_line' => ':name — Free',
 ];

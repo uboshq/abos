@@ -773,11 +773,11 @@ class SalesPrintController extends Controller implements HasMiddleware
         $doc = new PrintableDocument(
             title: __('sales::doc.gatepass'),
             meta: $this->challanMeta($challan),
-            lines: $this->productLines(
+            lines: $this->freeOnItsOwnLine($challan, $this->productLines(
                 $challan->lines,
                 'delivered_qty',
                 $this->lots->forDocument(DeliveryChallan::STOCK_SOURCE, $challan->id),
-            ),
+            )),
             signatures: ['core.print.storekeeper', 'core.print.driver', 'core.print.gate_officer'],
             showMoney: false,
             notice: __('core.print.no_price_notice'),
@@ -886,11 +886,11 @@ class SalesPrintController extends Controller implements HasMiddleware
                 ...$transport,
                 'sales::gate_pass.column.issued_by' => trim(($gatePass->issuer?->name ?? '').' · '.DateFormat::format($gatePass->issued_at), ' ·'),
             ],
-            lines: $this->productLines(
+            lines: $this->freeOnItsOwnLine($challan, $this->productLines(
                 $challan->lines,
                 'delivered_qty',
                 $this->lots->forDocument(DeliveryChallan::STOCK_SOURCE, $challan->id),
-            ),
+            )),
             signatures: ['core.print.storekeeper', 'core.print.driver', 'core.print.gate_officer'],
             showMoney: false,
             notice: __('core.print.no_price_notice'),
@@ -1866,6 +1866,48 @@ class SalesPrintController extends Controller implements HasMiddleware
      * ⓘ শূন্য মানে খালি লেখা, "0" নয় — কাগজে শূন্যের কলাম কেবল জায়গা
      * নেয়, আর সরু রোলে জায়গাটাই সবচেয়ে দামি।
      */
+    /**
+     * ⭐ গেট পাসে মাল বেরোনোর পথে ফ্রি মাল আলাদা লাইনে, "ফ্রি" লেখা — মালিক, ১০ অক্টোবর ২০২৬ (সুইচ
+     * `sales.invoice_at_goods_issue`; [[TheFreeGoodsLeaveOnTheirOwnGateLineTest]])।
+     *
+     * ⓘ এই পথে মাল বেরোয় গেট পাসেই ([[GoodsIssue]]), তাই গেটের লোক যা গোনেন কাগজে তা আলাদা থাকে: বিক্রির পরিমাণ এক লাইনে,
+     * ফ্রি তার নিচে নিজের লাইনে, দাম ০। ⓘ সুইচ বন্ধের পুরনো কাগজ (`issue_at_gate` false) যেমন ছিল তেমন।
+     *
+     * @param  list<array<string, string>>  $rows
+     * @return list<array<string, string>>
+     */
+    private function freeOnItsOwnLine(DeliveryChallan $challan, array $rows): array
+    {
+        if (! $challan->issue_at_gate) {
+            return $rows;
+        }
+
+        $out = [];
+
+        foreach ($rows as $row) {
+            if (($row['free'] ?? '') === '') {
+                $out[] = $row;
+
+                continue;
+            }
+
+            // ⓘ ফ্রি সারির এককেই — মোট পরিমাণ − বিক্রির পরিমাণ ([[productLines()]]-এর `total_qty` প্যাকের এককে)
+            $free = bcsub(str_replace(',', '', (string) $row['total_qty']), str_replace(',', '', (string) $row['qty']), 4);
+
+            $out[] = [...$row, 'free' => '', 'total_qty' => $row['qty']];
+            $out[] = [...$row,
+                'name' => (string) __('sales::print.free_line', ['name' => $row['name']]),
+                'qty' => $this->qty($free),
+                'rate' => $this->money('0'),
+                'amount' => $this->money('0'),
+                'free' => '',
+                'total_qty' => $this->qty($free),
+            ];
+        }
+
+        return $out;
+    }
+
     private function freeOf(object $line): string
     {
         $free = $line->free_qty
