@@ -106,15 +106,14 @@ final class DocumentReports
     /** সারসংক্ষেপ — অবস্থা ধরে গোনা */
     public static function summary(): ReportDefinition
     {
-        $label = self::words('dms_documents.status', 'status', DocumentCatalog::STATUSES);
-
         return new ReportDefinition(
             key: 'documents.summary',
             permission: self::PERMISSION,
             title: 'documents::report.summary',
             filters: ['date_range', 'branch'],
             query: fn (array $f) => self::created(self::documents($f), $f)
-                ->selectRaw($label.' as status_label')
+                // ⓘ নাম রিপোর্ট চালানোর সময় গড়া — বুটে নয়: তখন ডেটাবেস নেই, ভাষাও পরে ঠিক হয়
+                ->selectRaw(self::words('dms_documents.status', 'status', DocumentCatalog::STATUSES).' as status_label')
                 ->selectRaw('COUNT(*) as documents')
                 ->groupBy('dms_documents.status')
                 ->orderByRaw('COUNT(*) desc'),
