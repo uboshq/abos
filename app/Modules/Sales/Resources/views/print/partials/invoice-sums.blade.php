@@ -14,7 +14,7 @@
     <tr><td>{{ $t('discount') }}</td><td class="num">{{ $paper->money($s['discount']) }}</td></tr>
     @if ($v->showVat)<tr><td>{{ $t('vat') }}</td><td class="num">{{ $paper->money($s['vat']) }}</td></tr>@endif
     {{-- ⓘ দামের ভিতরের ভ্যাট আর ভাড়া — শূন্য হলে সারিই নেই (PR #17 রিভিউ ⛔৩) --}}
-    @if ($v->showVat && bccomp((string) ($s['vat_included'] ?? '0'), '0', 4) > 0)<tr data-vat-included><td>{{ $t('vat_included') }}</td><td class="num">{{ $paper->money($s['vat_included']) }}</td></tr>@endif
+    @if (bccomp((string) ($s['vat_included'] ?? '0'), '0', 4) > 0)<tr data-vat-included><td>{{ $t('vat_included') }}</td><td class="num">{{ $paper->money($s['vat_included']) }}</td></tr>@endif
     @if (bccomp((string) ($s['freight'] ?? '0'), '0', 4) > 0)<tr data-freight><td>{{ $t('freight') }}</td><td class="num">{{ $paper->money($s['freight']) }}</td></tr>@endif
     <tr><td>{{ $t('rounding') }}</td><td class="num">{{ $paper->money($s['rounding']) }}</td></tr>
     <tr class="net"><td>{{ $t('net_payable') }}</td><td class="num">{{ $paper->money($s['net_payable']) }}</td></tr>

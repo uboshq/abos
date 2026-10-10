@@ -470,9 +470,10 @@ final class TheDiscountVatAndRoundingAllLandedWhereTheyShouldTest extends TestCa
         ], stock: [$salt->id => ['qty' => '7', 'value' => '490']], dealer: '300', cash: '0', profit: '50.87');
 
         $this->assertTheReceivableDebitIs($second, '300');
+        // ⓘ দামের ভিতরের ভ্যাট নিজের লেখায় (PR #17, ছাপা ১৪) — অঙ্ক একই, সারির নাম "ভ্যাট (দামের ভিতরে)"; মোট আবার যোগ হয় না
         $this->assertPrinted($second, 'a4', [
             'core.print.subtotal' => '300.00',
-            'core.print.tax' => '39.13',
+            'core.print.tax_included' => '39.13',
             'core.print.total' => '300.00',
             'sales::print.invoice_due' => '300.00',
             'sales::print.outstanding' => '300.00',
