@@ -168,6 +168,7 @@ final class ApprovalsDue extends Command
                 // ⭐ একই অনুরোধের একই ধাপের খবর একবারই — ক্রন দুইবার চললেও (বিজ্ঞপ্তি ব্যবস্থাপনা, ধাপ ১)
                 key: 'approval:'.$approval->id.':reminder:'.$approval->current_level,
                 about: $approval->approvable instanceof Model ? $approval->approvable : null,
+                data: app(ApprovalEngine::class)->noticeData($approval),
             );
         }
     }
@@ -202,6 +203,7 @@ final class ApprovalsDue extends Command
                 // ⭐ একই অনুরোধের একই ধাপের খবর একবারই — ক্রন দুইবার চললেও (বিজ্ঞপ্তি ব্যবস্থাপনা, ধাপ ১)
                 key: 'approval:'.$approval->id.':escalated:'.$approval->current_level,
                 about: $approval->approvable instanceof Model ? $approval->approvable : null,
+                data: app(ApprovalEngine::class)->noticeData($approval),
             );
         }
     }

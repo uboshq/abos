@@ -76,6 +76,8 @@ final class RentalNotices
                     'rent' => Money::format($rent), 'next' => Money::format($raised),
                 ]),
                 null,
+                // ⓘ নিয়মের মান (বিজ্ঞপ্তি ব্যবস্থাপনা, ধাপ ৩-এর অনুসরণ)
+                ['party' => (string) $contract->counterparty, 'amount' => Money::format($raised), 'due_date' => $next->format('d/m/Y')],
             );
         }
 
@@ -100,6 +102,7 @@ final class RentalNotices
                     : __('finance::rental_report.notice_ending_body', ['date' => $contract->ends_on->translatedFormat('j M Y'), 'days' => $days]),
                 // ⓘ প্রথম ধাপ একবারই; শেষের ধাপ সপ্তাহে সপ্তাহে
                 $stage === $first ? null : self::QUIET_DAYS,
+                ['party' => (string) $contract->counterparty, 'due_date' => $contract->ends_on->format('d/m/Y'), 'days_left' => (string) $days],
             );
         }
 
@@ -121,6 +124,7 @@ final class RentalNotices
                     'amount' => Money::format($row['amount']),
                 ]),
                 self::QUIET_DAYS,
+                ['party' => (string) $row['contract']->counterparty, 'amount' => Money::format($row['amount']), 'status' => 'overdue'],
             );
         }
 
@@ -137,7 +141,7 @@ final class RentalNotices
      *
      * ⓘ [[DueNotices::tell()]]-এর একই নিয়ম, কেবল "একবারই" ধাপটা বাড়তি।
      */
-    private function tell(string $type, string $url, string $title, string $body, ?int $quietDays): int
+    private function tell(string $type, string $url, string $title, string $body, ?int $quietDays, array $data = []): int
     {
         $sent = 0;
 
@@ -147,7 +151,7 @@ final class RentalNotices
                 ->exists();
 
             // ⭐ একই চুক্তির একই দিনের খবর একবারই (বিজ্ঞপ্তি ব্যবস্থাপনা, ধাপ ১)
-            if (! $told && $this->notifications->send($user, $type, $title, $body, $url, key: $type.':'.sha1($url).':'.now()->toDateString()) !== null) {
+            if (! $told && $this->notifications->send($user, $type, $title, $body, $url, key: $type.':'.sha1($url).':'.now()->toDateString(), data: $data) !== null) {
                 $sent++;
             }
         }

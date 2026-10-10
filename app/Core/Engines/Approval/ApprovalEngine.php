@@ -11,6 +11,7 @@ use App\Core\Services\PermissionSyncer;
 use App\Core\Services\SettingsService;
 use App\Core\Support\Actor;
 use App\Core\Support\CompanyContext;
+use App\Core\Support\Money;
 use App\Models\Approval;
 use App\Models\ApprovalDecision;
 use App\Models\ApprovalFlow;
@@ -533,6 +534,8 @@ final class ApprovalEngine
             // ⭐ একই সিদ্ধান্তের খবর একবারই; আর কোন কাগজের — তার শাখা খবরে বসে (বিজ্ঞপ্তি ব্যবস্থাপনা, ধাপ ১)
             key: 'approval:'.$approval->id.':'.$outcome,
             about: $approval->approvable instanceof Model ? $approval->approvable : null,
+            // ⭐ নিয়মের শর্ত আর টেমপ্লেটের মান — টাকা, কাগজ, পক্ষ, স্তর, ফল
+            data: $this->noticeData($approval, $outcome),
         );
     }
 
@@ -584,6 +587,26 @@ final class ApprovalEngine
      * [[NamesItsCustomerInNotices]])। যে কাগজ বলে না, তার জন্য আগের মতো ধরন আর নম্বর। মনে করানো আর উপরে পাঠানোর
      * বিজ্ঞপ্তিও এটাই ডাকে ([[ApprovalsDue]]) — আগে সেখানে কাঁচা ইংরেজি চাবি যেত ("sales · delivery_order")।
      */
+    /**
+     * ⭐ বিজ্ঞপ্তির নিয়ম আর টেমপ্লেটের মান (বিজ্ঞপ্তি ব্যবস্থাপনা, ধাপ ৩-এর অনুসরণ) — টাকা, কাগজের নম্বর, পক্ষ, স্তর, অবস্থা।
+     * ⓘ টাকা লেখা হিসেবে (`Money::format`), float কখনো নয়; নিয়মের শর্ত এটাই তুলনা করে। গোপন কিছু নয়।
+     *
+     * @return array<string, string>
+     */
+    public function noticeData(Approval $approval, ?string $status = null): array
+    {
+        $document = $approval->approvable;
+        $party = $document !== null && method_exists($document, 'noticeParty') ? $document->noticeParty() : null;
+
+        return array_filter([
+            'amount' => $approval->amount === null ? '' : Money::format((string) $approval->amount, 2),
+            'paper_no' => (string) ($document?->getAttribute('document_no') ?? ''),
+            'party' => (string) ($party ?? ''),
+            'level' => (string) $approval->current_level,
+            'status' => (string) ($status ?? $approval->status),
+        ], fn ($v) => $v !== '');
+    }
+
     public function noticeLabel(Approval $approval): string
     {
         $document = $approval->approvable;

@@ -8,6 +8,7 @@ use App\Core\Engines\Approval\ApprovalEngine;
 use App\Core\Services\NotificationService;
 use App\Core\Services\Ownership;
 use App\Core\Support\CompanyContext;
+use App\Core\Support\Money;
 use App\Jobs\SendPushToUser;
 use App\Models\Approval;
 use App\Models\User;
@@ -162,7 +163,14 @@ final class TrackingNotices
         // সইয়ের অপেক্ষায় যেতে পারে, আর একই মানুষ দুই স্তরে থাকলে দ্বিতীয় খবরটা হারাত
         $sent = $this->notices->sendMany($users, $type, $title,
             __('sales::tracking.notice.body', ['customer' => (string) $order->customer?->nameWithPoint()], 'bn'), $url,
-            about: $order);
+            about: $order,
+            // ⓘ নিয়মের মান — আদেশের নম্বর, টাকা, গ্রাহক, অবস্থা (বিজ্ঞপ্তি ব্যবস্থাপনা, ধাপ ৩-এর অনুসরণ)
+            data: array_filter([
+                'paper_no' => (string) $order->document_no,
+                'amount' => $order->total === null ? '' : Money::format((string) $order->total),
+                'party' => (string) ($order->customer?->nameWithPoint() ?? ''),
+                'status' => (string) $order->status,
+            ], fn ($v) => $v !== ''));
 
         foreach ($sent->pluck('user_id')->unique() as $userId) {
             SendPushToUser::dispatch((int) $userId, $title, [
