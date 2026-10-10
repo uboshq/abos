@@ -149,10 +149,10 @@
                 @csrf
                 <label class="block">
                     <span class="block text-2xs text-(--color-ink-muted)">{{ __('finance::bank_loan_report.accrual_month') }}</span>
-                    <input type="month" name="month" required
-                           value="{{ old('month', now()->subMonthNoOverflow()->format('Y-m')) }}"
-                           max="{{ now()->subMonthNoOverflow()->format('Y-m') }}"
-                           class="h-(--spacing-field-compact) rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-app) px-2 text-sm">
+                    <x-ui.month name="month" required
+                                :value="old('month', now()->subMonthNoOverflow()->format('Y-m'))"
+                                :max="now()->subMonthNoOverflow()->format('Y-m')"
+                                class="h-(--spacing-field-compact) rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-app) px-2 text-sm" />
                 </label>
                 <x-ui.button type="submit" tone="secondary">{{ __('finance::bank_loan_report.accrual_run') }}</x-ui.button>
                 <span class="text-2xs text-(--color-ink-muted)">{{ __('finance::bank_loan_report.accrual_note') }}</span>

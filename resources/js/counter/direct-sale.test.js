@@ -2539,3 +2539,33 @@ describe('নিশ্চিতের পরে কার্ট খালি —
         expect(back.lines).toHaveLength(11)
     })
 })
+
+/*
+ * ⭐ ভাড়ার খাত ব্যাংক বা MFS কি না — কাউন্টারের নিজের হিসাব (১০ অক্টোবর ২০২৬)। ⛔ আগে প্যানেলের x-data-তে getter ছিল, যা
+ * CSP-Alpine পড়তে পারে না — গোটা ভাড়ার অংশটা চলত না। ⓘ নগদ (১১০১-এর নিচে) হলে না, ব্যাংক বা MFS হলে হ্যাঁ, কিছু বাছা
+ * না থাকলে না; খাতের আইডি সংখ্যা বা লেখা — দুইভাবেই মেলে।
+ */
+describe('ভাড়ার খাত', () => {
+    it('knows a bank or MFS account from cash, and nothing chosen is not a bank', () => {
+        const c = counter({ moneyAccounts: [
+            { id: 11, label: 'নগদ বাক্স', parent: '1101' },
+            { id: 12, label: 'ব্যাংক', parent: '1102' },
+            { id: 13, label: 'বিকাশ', parent: '1103' },
+        ] })
+
+        expect(c.fareWhen).toBe('')
+        expect(c.fareByBank).toBe(false)
+
+        c.fareAccount = '11'
+        expect(c.fareByBank).toBe(false)
+
+        c.fareAccount = '12'
+        expect(c.fareByBank).toBe(true)
+
+        c.fareAccount = 13
+        expect(c.fareByBank).toBe(true)
+
+        c.seedDriver({ defaultValue: 'now' }, 'fareWhen')
+        expect(c.fareWhen).toBe('now')
+    })
+})

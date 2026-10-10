@@ -267,6 +267,9 @@ Route::middleware('auth')->prefix('inventory')->group(function () {
          */
         Route::get('/issue', [SerialNumberController::class, 'issue'])->name('issue');
         Route::post('/issue', [SerialNumberController::class, 'storeIssue'])->name('issue.store');
+
+        // ⭐ ফেরত পিস দেখে গুদামে ফেরত — `{serial}` তাই স্থির পথগুলোর নিচে (মজুদ ছ৩)
+        Route::post('/{serial}/back-to-stock', [SerialNumberController::class, 'backToStock'])->whereNumber('serial')->name('back_to_stock');
     });
 
     /*

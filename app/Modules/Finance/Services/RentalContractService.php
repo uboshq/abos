@@ -6,14 +6,19 @@ namespace App\Modules\Finance\Services;
 
 use App\Core\Concerns\ReadsTheRowUnderLock;
 use App\Core\Engines\NumberSeries\NumberSeriesEngine;
+use App\Core\Support\CompanyContext;
 use App\Core\Support\DocumentStatus;
+use App\Core\Support\Money;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Models\Voucher;
 use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Accounts\Services\VoucherService;
+use App\Modules\Finance\Models\RentalAccrual;
 use App\Modules\Finance\Models\RentalAdjustment;
 use App\Modules\Finance\Models\RentalContract;
+use App\Modules\Finance\Models\RentalTerm;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -59,7 +64,7 @@ class RentalContractService
         return DB::transaction(function () use ($data, $deposit, $rent, $adjustment, $term, $starts) {
             $contract = RentalContract::create([
                 // ⭐ কোন শাখার চুক্তি — না বসালে তালিকার শাখার দেয়াল ওটাকে কোনো শাখায় দেখাত না (১ অক্টোবর ২০২৬)
-                'branch_id' => \App\Core\Support\CompanyContext::branchId(),
+                'branch_id' => CompanyContext::branchId(),
                 /*
                  * ⭐ নথি নম্বর — ১৫ সেপ্টেম্বর ২০২৬-এ যোগ হলো।
                  *
@@ -189,9 +194,9 @@ class RentalContractService
      */
     public function adjustMonth(RentalContract $contract, array $data): RentalAdjustment
     {
-        $this->assertActive($contract);
-
         $month = Carbon::parse((string) ($data['for_month'] ?? now()->toDateString()))->startOfMonth();
+
+        $this->assertCanPay($contract, $month);
 
         $rent = (string) ($data['rent'] ?? $contract->monthly_rent);
         $fromDeposit = (string) ($data['from_deposit'] ?? $contract->monthly_adjustment);
@@ -244,7 +249,7 @@ class RentalContractService
         return DB::transaction(function () use ($contract, $data, $month, $rent, $cash, $fromDeposit) {
             // ⛔ সারিতে তালা দিয়ে তাজা অবস্থা আবার — দ্বিতীয় ক্লিক টাকা আবার বসাত (চূড়ান্ত অডিট ⛔১১)
             $this->lockFresh($contract);
-            $this->assertActive($contract);
+            $this->assertCanPay($contract, $month);
             $this->assertNothingWaiting($contract);
             // ⛔ তালার পরে আবার — দুই ক্লিক একসাথে একই মাস দুইবার বসাত, জামানত দুইবার কাটত
             $this->assertMonthNotDone($contract, $month);
@@ -427,7 +432,7 @@ class RentalContractService
     /** শর্তের এক দফা — এক মাসে একটাই; থাকলে হালনাগাদ */
     private function writeTerm(RentalContract $contract, Carbon $from, string $rent, string $adjustment, ?string $note): void
     {
-        \App\Modules\Finance\Models\RentalTerm::query()->updateOrCreate(
+        RentalTerm::query()->updateOrCreate(
             ['rental_contract_id' => $contract->id, 'effective_from' => $from->toDateString()],
             [
                 'company_id' => $contract->company_id, 'branch_id' => $contract->branch_id,
@@ -515,16 +520,49 @@ class RentalContractService
     {
         $this->assertActive($contract);
 
-        $left = $contract->depositLeft();
         $on = (string) ($data['closed_on'] ?? now()->toDateString());
 
-        return DB::transaction(function () use ($contract, $data, $left, $on) {
+        return DB::transaction(function () use ($contract, $data, $on) {
             // ⛔ সারিতে তালা দিয়ে তাজা অবস্থা আবার — দ্বিতীয় ক্লিক টাকা আবার বসাত (চূড়ান্ত অডিট ⛔১১)
             $this->lockFresh($contract);
             $this->assertActive($contract);
             $this->assertNothingWaiting($contract);
 
-            if (bccomp($left, '0', 4) > 0 && filled($data['money_account_id'] ?? null)) {
+            /*
+             * ⛔ বাকি জামানত তালার পরে পড়া, আর শেষের দিন চুক্তির শুরু থেকে আজ পর্যন্ত — cloud/finance-fixes রিভিউ ⚠️৪, ১০ অক্টোবর
+             * ২০২৬। ⓘ আগে জামানত তালার আগে পড়া হত (মাঝে কেউ জামানত বাড়ালে বা কাটলে পুরনো অঙ্ক ফেরত যেত), আর শেষের দিনের সীমা
+             * ছিল না: আগামী বছর বা শুরুর আগের দিনে বন্ধ করা যেত, আর আগাম মাসের ফেরত সেই দিন ধরে গোনা হত।
+             */
+            $left = $contract->depositLeft();
+            $this->assertClosingDay($contract, $on);
+
+            // ⛔ বসানো অথচ না-দেওয়া মাস থাকলে নয় — ২১৪১-এর দায় চুক্তির সাথে হারাত (পুরো-ERP পুনঃঅডিট, ৯ অক্টোবর ২০২৬)
+            $this->assertNothingOwed($contract);
+
+            // ⛔ আগাম দেওয়া মাস — শেষের পরের মাসগুলো ফেরত আসে, আগেরগুলো আগে খরচে যায় ([[prepaidToRefund()]])
+            $ahead = $this->prepaidToRefund($contract, Carbon::parse($on)->startOfMonth(), $data);
+
+            if ((bccomp($left, '0', 4) > 0 || bccomp($ahead, '0', 4) > 0) && filled($data['money_account_id'] ?? null)) {
+                $lines = [[
+                    'account_id' => $this->moneyAccountId($data),
+                    'debit' => bcadd($left, $ahead, 4), 'credit' => '0',
+                ]];
+
+                if (bccomp($left, '0', 4) > 0) {
+                    $lines[] = [
+                        'account_id' => $contract->account_id,
+                        'debit' => '0', 'credit' => $left,
+                    ];
+                }
+
+                // ⭐ আগাম ভাড়ার ফেরত একই রসিদে — ১১৩৭ শূন্যে নামে, আর জামানতের হিসাব ([[sideOf()]]) আলাদা খাতে বলে নড়ে না
+                if (bccomp($ahead, '0', 4) > 0) {
+                    $lines[] = [
+                        'account_id' => RentalAccrualService::prepaid()->id,
+                        'debit' => '0', 'credit' => $ahead,
+                    ];
+                }
+
                 $voucher = $this->vouchers->create(
                     [
                         'type' => Voucher::RECEIPT,
@@ -537,23 +575,14 @@ class RentalContractService
                         'against_type' => RentalContract::drillSourceType(),
                         'against_id' => $contract->id,
                     ],
-                    [
-                        [
-                            'account_id' => $this->moneyAccountId($data),
-                            'debit' => $left, 'credit' => '0',
-                        ],
-                        [
-                            'account_id' => $contract->account_id,
-                            'debit' => '0', 'credit' => $left,
-                        ],
-                    ],
+                    $lines,
                 );
 
                 /*
                  * ⛔ সই-এর আগে চুক্তি শেষ নয়, জামানতও কমে না — অডিট গ১, ৪ অক্টোবর ২০২৬। ⓘ শেষ সই
                  * [[finishSigned()]] দুইটাই করে; ততক্ষণ চুক্তি চলে, আর অপেক্ষার ফেরত নতুন কিছু বসতে দেয় না।
                  */
-                if ($this->signature->postOrHold($voucher, FinanceSignature::RENTAL, $left)) {
+                if ($this->signature->postOrHold($voucher, FinanceSignature::RENTAL, bcadd($left, $ahead, 4))) {
                     return $contract->fresh();
                 }
 
@@ -681,6 +710,21 @@ class RentalContractService
         return ltrim($net, '-');
     }
 
+    /** ⛔ শেষের দিন — চুক্তির শুরু থেকে আজ পর্যন্ত (রিভিউ ⚠️৪; [[close()]]) */
+    private function assertClosingDay(RentalContract $contract, string $on): void
+    {
+        $day = rescue(fn () => Carbon::parse($on)->startOfDay(), null, false);
+
+        if ($day === null || $day->lt($contract->starts_on->copy()->startOfDay()) || $day->gt(Carbon::today())) {
+            throw ValidationException::withMessages([
+                'closed_on' => __('finance::validation.rental_close_day_out_of_range', [
+                    'from' => \App\Core\Support\DateFormat::format($contract->starts_on),
+                    'to' => \App\Core\Support\DateFormat::format(Carbon::today()),
+                ]),
+            ]);
+        }
+    }
+
     /**
      * ⛔ এই চুক্তির কোনো টাকা সই-এর অপেক্ষায় থাকলে আরেকটা নয় — অডিট গ১, ৪ অক্টোবর ২০২৬।
      *
@@ -698,7 +742,8 @@ class RentalContractService
     /** এই চুক্তির কোনো টাকা সইয়ের অপেক্ষায় কি — পর্দার বার্তার জন্যও ([[RentalContractController]])। */
     public function isWaiting(RentalContract $contract): bool
     {
-        return Voucher::query()
+        // ⛔ শাখা-দেয়াল ছাড়া — অন্য শাখা দেখানো অবস্থায় অপেক্ষার কাগজ চোখ এড়াত (১০ অক্টোবর ২০২৬; [[RentalContract::depositFree()]])
+        return Voucher::acrossBranches()
             ->where('status', DocumentStatus::DRAFT)
             ->where(fn ($q) => $q
                 ->where(fn ($v) => $v->where('against_type', RentalContract::drillSourceType())->where('against_id', $contract->id))
@@ -834,6 +879,123 @@ class RentalContractService
                 ]),
             ]);
         }
+    }
+
+    /**
+     * ⭐ মাসের ভাড়া দেওয়া যায় কি — চালু চুক্তিতে যেকোনো মাস; শেষ হওয়া চুক্তিতে কেবল বসানো অথচ না-দেওয়া মাস।
+     *
+     * ⛔ পুরো-ERP পুনঃঅডিট, ৯ অক্টোবর ২০২৬: শেষ হওয়া চুক্তিতে বসানো মাস (Dr খরচ / Cr ২১৪১) আর দেওয়াই যেত না — দায়টা
+     * স্থিতিপত্রে চিরকাল ঝুলত, অথচ বাড়িওয়ালা টাকাটা পাওনা। ⓘ বন্ধের পরে এমন মাস আসে পুরনো চুক্তিতে, বা ফেরতের সইয়ের
+     * অপেক্ষার মাঝে মাসের জমা চললে। নতুন মাস বা আগাম মাস বন্ধ চুক্তিতে নয় — সেটা [[assertActive()]]-এর নিয়মই।
+     */
+    private function assertCanPay(RentalContract $contract, Carbon $month): void
+    {
+        if ($contract->status === RentalContract::CLOSED && $this->owedMonths($contract)->contains(
+            fn (RentalAccrual $accrual) => $accrual->for_month->isSameMonth($month),
+        )) {
+            return;
+        }
+
+        $this->assertActive($contract);
+    }
+
+    /**
+     * ⭐ বসানো অথচ না-দেওয়া মাস — ২১৪১-এ বাড়িওয়ালার পাওনা হয়ে আছে (সইয়ের অপেক্ষার বসানোও, সই পড়লেই দায়)।
+     *
+     * ⓘ আগাম দেওয়া মাসের জমার সারিও ([[RentalAccrualService::release()]]) এই টেবিলে, কিন্তু তার মাসের সারি আছে —
+     * তাই বাদ পড়ে।
+     *
+     * @return Collection<int, RentalAccrual>
+     */
+    public function owedMonths(RentalContract $contract): Collection
+    {
+        return RentalAccrual::query()
+            ->where('rental_contract_id', $contract->id)
+            ->whereNotIn('for_month', $contract->adjustments()->select('for_month'))
+            ->orderBy('for_month')
+            ->get();
+    }
+
+    /**
+     * ⛔ বসানো অথচ না-দেওয়া মাস থাকলে চুক্তি শেষ নয় — পুরো-ERP পুনঃঅডিট, ৯ অক্টোবর ২০২৬।
+     *
+     * ⓘ বন্ধ করলে দায়টা চোখের আড়ালে যেত: চুক্তির পাতায় মাসের ফর্ম থাকে না, আর ২১৪১ ঐ টাকা নিয়ে বসে থাকত।
+     * বার্তাটা বলে কোন মাস, কত, আর কী করতে হবে — আগে মাসগুলো দিন (নগদে বা জামানত থেকে), তারপর শেষ।
+     */
+    private function assertNothingOwed(RentalContract $contract): void
+    {
+        $owed = $this->owedMonths($contract);
+
+        if ($owed->isEmpty()) {
+            return;
+        }
+
+        throw ValidationException::withMessages([
+            'closed_on' => __('finance::validation.rental_close_unpaid_months', [
+                'months' => $owed->map(fn (RentalAccrual $accrual) => $accrual->for_month->translatedFormat('F Y'))->implode(', '),
+                'amount' => Money::format(
+                    $owed->reduce(fn (string $sum, RentalAccrual $accrual) => bcadd($sum, (string) $accrual->amount, 4), '0'),
+                ),
+            ]),
+        ]);
+    }
+
+    /**
+     * ⛔ আগাম দেওয়া মাস (১১৩৭ অগ্রিম ভাড়া) — চুক্তি শেষে চিরকাল সম্পদ হয়ে থাকত (পুরো-ERP পুনঃঅডিট, ৯ অক্টোবর ২০২৬)।
+     *
+     * ⓘ আগাম মাসটা খরচে যায় কেবল মাসের জমায় ([[RentalAccrualService::run()]]), আর সে কেবল চালু চুক্তি দেখে — বন্ধের
+     * পরে ঐ টাকা আর কোথাও যেত না। মালিকের নিয়ম: নীরবে টাকা হারানো চলবে না। তাই:
+     *   · শেষের মাস বা তার আগের আগাম মাস, যা এখনো খরচে যায়নি → থামা: আগে ঐ মাসের জমা চালান (জায়গাটা ঐ মাসে ব্যবহার হয়েছে)
+     *   · শেষের পরের আগাম মাস → বাড়িওয়ালা টাকাটা ফেরত দেন; জামানতের সাথে একই রসিদে ফেরত, তাই টাকার খাত লাগে
+     *
+     * @param  array<string, mixed>  $data
+     * @return string শেষের পরের মাসগুলোর আগাম ভাড়া — রসিদে ১১৩৭-এ ক্রেডিট
+     */
+    private function prepaidToRefund(RentalContract $contract, Carbon $closeMonth, array $data): string
+    {
+        $prepaid = RentalAccrualService::prepaid()->id;
+        $used = [];
+        $ahead = '0';
+        $aheadMonths = [];
+
+        $rows = $contract->adjustments()
+            ->whereNotIn('for_month', RentalAccrual::query()->where('rental_contract_id', $contract->id)->select('for_month'))
+            ->whereHas('voucher', fn ($v) => $v->where('status', DocumentStatus::CONFIRMED))
+            ->with('voucher.lines')
+            ->orderBy('for_month')
+            ->get();
+
+        foreach ($rows as $row) {
+            $amount = bcadd((string) $row->voucher->lines->where('account_id', $prepaid)->sum('debit'), '0', 4);
+
+            if (bccomp($amount, '0', 4) <= 0) {
+                continue;
+            }
+
+            if ($row->for_month->gt($closeMonth)) {
+                $ahead = bcadd($ahead, $amount, 4);
+                $aheadMonths[] = $row->monthLabel();
+            } else {
+                $used[] = $row->monthLabel();
+            }
+        }
+
+        if ($used !== []) {
+            throw ValidationException::withMessages([
+                'closed_on' => __('finance::validation.rental_close_prepaid_not_expensed', ['months' => implode(', ', $used)]),
+            ]);
+        }
+
+        if (bccomp($ahead, '0', 4) > 0 && blank($data['money_account_id'] ?? null)) {
+            throw ValidationException::withMessages([
+                'money_account_id' => __('finance::validation.rental_close_prepaid_needs_refund', [
+                    'months' => implode(', ', $aheadMonths),
+                    'amount' => Money::format($ahead),
+                ]),
+            ]);
+        }
+
+        return $ahead;
     }
 
     private function assertActive(RentalContract $contract): void

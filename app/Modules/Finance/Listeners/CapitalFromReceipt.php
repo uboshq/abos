@@ -45,7 +45,8 @@ final class CapitalFromReceipt
             return;
         }
 
-        $voucher = Voucher::query()->where('public_id', $event->publicId)->with('lines')->first();
+        // ⛔ শাখার দেয়াল ছাড়া — সইকারীর হেডারে অন্য শাখা থাকলে রসিদটা "নেই" হত, আর মূলধনের সারি বসতই না (পুনঃঅডিট, ৯ অক্টোবর ২০২৬)
+        $voucher = Voucher::query()->withoutGlobalScope('user-branch')->where('public_id', $event->publicId)->with('lines')->first();
 
         if ($voucher === null || CapitalEntry::query()->where('voucher_id', $voucher->id)->exists()) {
             return;
@@ -69,6 +70,8 @@ final class CapitalFromReceipt
             ?? CapitalEntry::OWNER;
 
         $entry = app(CapitalService::class)->record([
+            // ⛔ রসিদের শাখায় — সই যিনি দিলেন তাঁর হেডারের শাখায় নয় (পুনঃঅডিট, ৯ অক্টোবর ২০২৬)
+            'branch_id' => $voucher->branch_id,
             'person_id' => $personId,
             'contributor_type' => $role,
             'entry_type' => CapitalEntry::CONTRIBUTION,

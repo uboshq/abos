@@ -106,7 +106,47 @@ class ControlPanelController extends Controller implements HasMiddleware
              * উপায়ই থাকত না।
              */
             'switchState' => $this->switchState(),
+
+            // ⭐ কে কবে কোন সুইচ বদলালেন — সিস্টেম পর্দার নকশা §১, ১০ অক্টোবর ২০২৬ ([[history()]])
+            'history' => $this->history(),
         ]);
+    }
+
+    /**
+     * ⭐ বদলের ইতিহাস — সিস্টেম পর্দার নকশা §১, ১০ অক্টোবর ২০২৬: *"বদলের ইতিহাস (কে কবে কোন সুইচ বদলালেন)"*।
+     *
+     * ⓘ নতুন কিছু লেখা হয় না: প্রতিটা সেটিং-বদল আগেই নিরীক্ষায় বসে ([[IsAudited]] → `audit_trails` + ঘরের বদল) — এখানে
+     * কেবল এই কোম্পানির শেষ বিশটা পড়া। ⓘ চাবি সেটিং-সারি থেকে (ডিফল্টে ফেরালে সারি নেই — তখন তৈরির সময়ের `key`), নাম
+     * ঘোষণা থেকে, পর্দার ভাষায়।
+     *
+     * @return list<array{when: \Illuminate\Support\Carbon, who: ?string, label: string, from: ?string, to: ?string}>
+     */
+    private function history(): array
+    {
+        $definitions = $this->settings->definitions();
+
+        $trails = \App\Models\AuditTrail::query()
+            ->where('auditable_type', \App\Models\Setting::class)
+            ->with(['changes', 'user'])
+            ->latest('id')
+            ->limit(20)
+            ->get();
+
+        $keys = \App\Models\Setting::query()->whereIn('id', $trails->pluck('auditable_id'))->pluck('key', 'id');
+
+        return $trails->map(function (\App\Models\AuditTrail $trail) use ($definitions, $keys): array {
+            $value = $trail->changes->firstWhere('field', 'value');
+            $key = (string) ($keys[$trail->auditable_id] ?? $trail->changes->firstWhere('field', 'key')?->new_value ?? '');
+            $label = isset($definitions[$key]['label']) ? __((string) $definitions[$key]['label']) : $key;
+
+            return [
+                'when' => $trail->created_at,
+                'who' => $trail->user?->name,
+                'label' => $label !== '' ? $label : '—',
+                'from' => $value?->old_value,
+                'to' => $value?->new_value,
+            ];
+        })->all();
     }
 
     /**

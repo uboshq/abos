@@ -109,8 +109,20 @@ final class ThePrintingTabWasNowhereOnTheScreenTest extends TestCase
                 /* ⛔ পুরনো রূপ বাছার ঘর আর রূপের নাম — একটাও না */
                 $this->assertStringNotContainsString('][format]', $html, "{$paper}/{$size}: পুরনো রূপ বাছার ঘর রয়ে গেছে।");
 
+                /*
+                 * ⓘ নতুন নকশার নাম পুরনো রূপের নামের সাথে মিলতে পারে — বিলের থার্মালে মালিকের তালিকায় "compact" একটা আসল
+                 * নকশা (PaperDesigns::THERMAL_ORDER)। ⚠️ ওটাকে পুরনো রূপ ধরলে দাবিটা নতুন নকশাকেই নিষেধ করত (১০ অক্টোবর ২০২৬)।
+                 * তাই এই কাগজ-মাপের চালু নকশাগুলো বাদ — বাকি যেকোনো পুরনো রূপের কার্ড আগের মতোই লাল।
+                 */
+                // ⓘ কোটেশনের এখনো নকশা নেই (নিচে data-no-print-yet); ভাউচারের নকশা হিসাবের নিজের তালিকায় ([[VoucherDesigns]])
+                $current = match ($paper) {
+                    'quotation' => [],
+                    'voucher' => \App\Modules\Accounts\Support\VoucherDesigns::codes($size),
+                    default => \App\Modules\Sales\Support\PaperDesigns::codes($paper, $size),
+                };
+
                 foreach (PrintFormat::all() as $format) {
-                    if ($format === 'standard') {
+                    if ($format === 'standard' || in_array($format, $current, true)) {
                         continue;
                     }
 
@@ -149,7 +161,9 @@ final class ThePrintingTabWasNowhereOnTheScreenTest extends TestCase
         $a5 = $this->actingAs($this->owner)
             ->get(route('system_admin.print_control', ['paper' => 'invoice', 'size' => 'a5']))
             ->getContent();
-        $this->assertSame(21, substr_count($a5, 'data-design-card='));
+        // ⓘ যতগুলো নকশা এই কাগজ-মাপে ঘোষিত, ঠিক ততগুলো কার্ড — হাতে লেখা ২১ নয় (মালিক পরে মোনো আর DB-র নকশা যোগ করেছেন)
+        $this->assertSame(count(\App\Modules\Sales\Support\PaperDesigns::codes('invoice', 'a5')), substr_count($a5, 'data-design-card='));
+        $this->assertGreaterThanOrEqual(21, substr_count($a5, 'data-design-card='));
         $this->assertSame(1, substr_count($a5, 'data-pdf-popup'));
         $this->assertStringContainsString('pdf=1', $a5);
 

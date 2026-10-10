@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Finance\Services;
 
 use App\Core\Concerns\ReadsTheRowUnderLock;
+use App\Core\Services\OpenPeriod;
 use App\Core\Support\CompanyContext;
 use App\Core\Support\DocumentStatus;
 use App\Modules\Accounts\Models\Account;
@@ -13,6 +14,7 @@ use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Accounts\Services\VoucherService;
 use App\Modules\Finance\Models\BankFacility;
 use App\Modules\Finance\Models\InterestAccrual;
+use App\Modules\Finance\Support\ActingBranches;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -45,6 +47,7 @@ final class InterestAccrualService
         private readonly BankFacilityService $facilities,
         private readonly VoucherService $vouchers,
         private readonly FinanceSignature $signature,
+        private readonly OpenPeriod $period,
     ) {}
 
     /**
@@ -60,7 +63,11 @@ final class InterestAccrualService
             ->map(fn ($id) => (int) $id)->all();
         $rows = [];
 
-        $facilities = BankFacility::query()->live()->inViewedBranch()
+        /*
+         * ⛔ নাগালের শাখা, হেডারের নয় — পুরো-ERP পুনঃঅডিট, ৯ অক্টোবর ২০২৬ ([[ActingBranches]])। ⓘ আগে এক শাখা বাছা থাকলে নতুন
+         * জমা বসত কেবল সেই শাখায়, অথচ [[reverseBefore()]] সব শাখার আগের জমা উল্টাত — বাকি শাখার সুদ সে মাসে খরচ থেকে উধাও।
+         */
+        $facilities = ActingBranches::narrow(BankFacility::query()->live(), 'fin_bank_facilities.branch_id')
             ->where('kind', '!=', BankFacility::GUARANTEE)
             ->where('interest_rate', '>', 0)
             ->where(fn ($q) => $q->whereNull('sanctioned_on')->orWhere('sanctioned_on', '<=', $end->toDateString()))
@@ -105,6 +112,13 @@ final class InterestAccrualService
             ]);
         }
 
+        // ⛔ বন্ধ মাসে নয় — আর কিছু লেখার আগেই থামা, যাতে উল্টো দাখিলা বসে জমা আটকে না থাকে (পুনঃঅডিট, ৯ অক্টোবর ২০২৬)
+        if (($lock = $this->period->lockOn($end)) !== null) {
+            throw ValidationException::withMessages([
+                'month' => __('finance::bank_loan_report.accrual_month_closed', ['month' => $lock->label()]),
+            ]);
+        }
+
         $reversed = $this->reverseBefore($start);
         $accrued = 0;
         $held = 0;
@@ -126,6 +140,8 @@ final class InterestAccrualService
                 $voucher = $this->vouchers->create([
                     'type' => Voucher::JOURNAL,
                     'is_adjusting' => true, // ⭐ মাসশেষের সমন্বয় (ভাউচারের পরিকল্পনা ৩ঘ, ৭ অক্টোবর ২০২৬)
+                    // ⛔ ঋণের শাখায় — জমার সারির একই শাখা; হেডারের শাখায় বসলে ২১৪৫ শাখা ধরে কখনো উল্টাত না (পুনঃঅডিট, ৯ অক্টোবর ২০২৬)
+                    'branch_id' => $facility->branch_id,
                     'trx_date' => $end->toDateString(),
                     'narration' => __('finance::bank_loan_report.accrual_narration', [
                         'month' => $start->translatedFormat('F Y'), 'facility' => trim($facility->bank.' · '.$facility->document_no, ' ·'),
@@ -170,10 +186,12 @@ final class InterestAccrualService
     {
         $count = 0;
 
-        $open = InterestAccrual::query()
+        // ⛔ আগাম দেখার একই শাখাগুলো ([[preview()]]) — যা বসানো যায়, কেবল তা-ই উল্টায়
+        $open = ActingBranches::narrow(InterestAccrual::query(), 'fin_interest_accruals.branch_id')
             ->whereNull('reversal_voucher_id')
             ->where('for_month', '<', $start->toDateString())
-            ->with(['voucher', 'facility'])
+            // ⓘ ভাউচারের শাখার দেয়াল ছাড়া — হেডারে অন্য শাখা থাকলে জমার ভাউচার "নেই" হয়ে উল্টো দাখিলা চুপচাপ বাদ পড়ত
+            ->with(['voucher' => fn ($q) => $q->withoutGlobalScope('user-branch'), 'facility'])
             ->orderBy('for_month')->orderBy('id')->get();
 
         foreach ($open as $accrual) {
@@ -181,7 +199,7 @@ final class InterestAccrualService
                 continue;
             }
 
-            DB::transaction(function () use ($accrual, &$count): void {
+            DB::transaction(function () use ($accrual, $start, &$count): void {
                 $fresh = $accrual;
                 $this->lockFresh($fresh);
 
@@ -190,12 +208,24 @@ final class InterestAccrualService
                 }
 
                 $on = $fresh->for_month->copy()->endOfMonth()->addDay()->toDateString();
+
+                /*
+                 * ⛔ উল্টানোর দিনটা বন্ধ মাসে পড়লে — চালানো মাসের প্রথম দিনে (পুরো-ERP পুনঃঅডিট, ৯ অক্টোবর ২০২৬)।
+                 *
+                 * ⓘ আগে খাতা বন্ধ মাসে উল্টো দাখিলা নিত না, আর পুরো চালটা থেমে যেত: সেই ঋণের জমা কোনোদিন উল্টাত না, আর
+                 * পরের কোনো মাসই বসানো যেত না — যতদিন না কেউ পুরনো মাস খোলেন। চালানো মাসটা উপরে খোলা দেখা হয়েছে, তাই
+                 * এখানে থামে না; বন্ধ মাসের খরচ আর বদলায় না, উল্টোটা প্রথম খোলা মাসে বসে — মোট সুদ একই।
+                 */
+                if ($this->period->lockOn($on) !== null) {
+                    $on = $start->toDateString();
+                }
                 $amount = bcadd((string) $fresh->amount, '0', 2);
                 $facility = $accrual->facility;
 
                 $reversal = $this->vouchers->create([
                     'type' => Voucher::JOURNAL,
                     'is_adjusting' => true, // ⭐ মাসশেষের সমন্বয় (ভাউচারের পরিকল্পনা ৩ঘ, ৭ অক্টোবর ২০২৬)
+                    'branch_id' => $fresh->branch_id,
                     'trx_date' => $on,
                     'narration' => __('finance::bank_loan_report.accrual_reversal_narration', [
                         'month' => $fresh->for_month->translatedFormat('F Y'),

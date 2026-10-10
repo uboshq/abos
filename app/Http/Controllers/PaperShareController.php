@@ -188,7 +188,7 @@ class PaperShareController extends Controller
      *
      * @param  array<string, int>  $params
      */
-    private function documentAsTheDoorSeesIt(RoutingRoute $route, array $params, int $documentId): Model
+    private static function documentAsTheDoorSeesIt(RoutingRoute $route, array $params, int $documentId): Model
     {
         $route = clone $route;
 
@@ -272,9 +272,37 @@ class PaperShareController extends Controller
             $this->authorize($ability);
         }
 
+        // ⛔ আসল কাগজটা এই মানুষের দেখার নাগালে কি না — শাখা, গুদাম, নিজের কাগজ (পুরো-ERP অডিট; [[visibleDocument()]])
+        self::visibleDocument((string) $share->document_type, (int) $share->document_id);
+
         $share->forceFill(['revoked_at' => Carbon::now()])->save();
 
         return back()->with('saved', __('core.print.link_revoked'));
+    }
+
+    /**
+     * ⭐ কাগজটা যেভাবে তার নিজের ছাপার দরজা দেখে — রুটের বাঁধন (শাখা, গুদাম, কোম্পানির সব ছাঁকনি) আর নীতির `view`
+     * (পুরো-ERP অডিট, নিরাপত্তা ও সিস্টেম; fe, ১০ অক্টোবর ২০২৬; [[ARevokeAndTheHistoryStayInsideTheWallTest]])।
+     *
+     * ⛔ আগে লিংক বাতিল আর ছাপার ইতিহাস কেবল চাবি মাপত, কাগজটা নয়: অন্য শাখায় আটকানো কেউ চাবির জোরে নাগালের বাইরের
+     * কাগজের লিংক মেরে ফেলতে পারতেন, আর ইতিহাসের পাতায় কে কবে কাকে পাঠাল — সব পড়তে পারতেন। ⓘ লিংক বানানোর পথ
+     * ([[store()]]) এটা আগে থেকেই করত; এখন তিন দরজায় একই প্রশ্ন। না দেখা গেলে ৪০৪ — "আছে, কিন্তু আপনার নয়" নয়।
+     */
+    public static function visibleDocument(string $documentType, int $documentId): Model
+    {
+        $route = Route::getRoutes()->getByName(PaperTrail::DOCUMENT_ROUTES[$documentType] ?? '');
+        $params = PaperTrail::routeParamsFor($documentType, $documentId);
+
+        abort_if($route === null || $params === null, 404);
+
+        $document = self::documentAsTheDoorSeesIt($route, $params, $documentId);
+        $policy = Gate::getPolicyFor($document);
+
+        if ($policy !== null && method_exists($policy, 'view')) {
+            abort_unless(Gate::allows('view', $document), 404);
+        }
+
+        return $document;
     }
 
     /**

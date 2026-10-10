@@ -8,8 +8,10 @@
 
 <label class="flex items-center gap-2 text-sm">
     <span class="text-(--color-ink-muted)">{{ __('supplier::principal.month') }}</span>
-    <input type="month" name="month" value="{{ $pickedMonth }}" data-principal-month
-           class="h-(--spacing-field-compact) rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-app) px-2 text-sm">
+    {{-- ⓘ খালি = চলতি চক্র — তালিকায় তাই প্রথম সারি "চলতি চক্র" (পাতা সাজানো ধাপ ১, ১০ অক্টোবর ২০২৬; [[x-ui.month]]) --}}
+    <x-ui.month name="month" :value="$pickedMonth" data-principal-month
+                :placeholder="__('supplier::principal.current_cycle')"
+                class="h-(--spacing-field-compact) rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-app) px-2 text-sm" />
 </label>
 
 @if ($pickedMonth !== '')

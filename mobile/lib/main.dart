@@ -112,6 +112,11 @@ class _AbosAppState extends ConsumerState<AbosApp> {
     // ⭐ বার্তায় চাপলে ট্র্যাকিং; নতুন করে ঢুকলে এই ফোনের টোকেন আবার জমা (অন্য কেউ এই ফোনে ঢুকে থাকলে
     // সার্ভার আগের জনের সারি থেকে টোকেন সরায় — [[PushTokenController]])।
     PushService.instance.listenForTaps(_openFromPush);
+    // ⭐ অফিসে কিছু লেখা হলে নীরব ডাক — খোলা অ্যাপ তখনই সিঙ্ক করে (রিয়েল-টাইম, মালিক, ১০ অক্টোবর ২০২৬)
+    PushService.instance.listenForSync(() =>
+        ref.read(authStateProvider).status == AuthStatus.signedIn
+            ? _autoSync.runNow()
+            : Future<void>.value());
     ref.listenManual<AuthState>(authStateProvider, (previous, next) {
       if (previous?.status != AuthStatus.signedIn && next.status == AuthStatus.signedIn) {
         unawaited(PushService.instance.register());

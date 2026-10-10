@@ -93,9 +93,16 @@ final class StrandedStock
         Carbon|string|null $date = null,
         ?string $narration = null,
     ): array {
-        $this->assertSane($product, $warehouse, $batch, $qty, $freeQty);
-
         return DB::transaction(function () use ($product, $warehouse, $batch, $qty, $freeQty, $date, $narration) {
+            /*
+             * ⛔ যাচাই লেনদেনের ভিতরে, পণ্যের সারিতে তালা দিয়ে, গোনাও তালাসহ (পুরো-ERP অডিট, মজুদ ছ১২; মালিকের "সব খোলা ভুল",
+             * ১০ অক্টোবর ২০২৬; [[TwoLotAssignmentsCannotShareTheSameCartonsTest]])।
+             * ⚠️ আগে যাচাই হত লেনদেনের বাইরে, তালা ছাড়া — দুজন একসাথে একই লটহীন ১০ কার্টন দুই লটে বসালে দুজনেই "১০ আছে"
+             * দেখতেন, লটহীন মজুদ −১০, আর একই কার্টন দুই লটে (রিকলে দুইবার)। ⓘ এখন দ্বিতীয়জন অপেক্ষা করেন, তারপর শূন্য দেখেন।
+             */
+            Product::query()->withoutGlobalScopes()->whereKey($product->id)->lockForUpdate()->first();
+            $this->assertSane($product, $warehouse, $batch, $qty, $freeQty);
+
             $why = $narration ?? __('inventory::message.lot_assigned_narration', ['lot' => $batch->batch_no]);
 
             /*
@@ -142,6 +149,7 @@ final class StrandedStock
             ->forProduct($product->id)
             ->inWarehouse($warehouse->id)
             ->whereNull('batch_id')
+            ->lockForUpdate()
             ->selectRaw("COALESCE(SUM({$column}), 0) as total")
             ->value('total');
 

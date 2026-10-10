@@ -47,6 +47,9 @@
                    (`resources/js/components/forms.js`-এ `switchBoard`)। --}}
               x-data="switchBoard({ on: @js(collect($modules)->pluck('on', 'code')->all()) })"
               @change="touch($event.target)"
+              {{-- ⭐ শাখায় মডিউল বন্ধের আগে নিশ্চিত — নামসহ, কন্ট্রোল প্যানেলের হুবহু (সিস্টেম পর্দার নকশা §৬, ১০ অক্টোবর ২০২৬) --}}
+              @submit="confirmOff($event)"
+              data-confirm-off="{{ __('system_admin::branch_module.confirm_off', ['branch' => $current->name()]) }}"
               class="max-w-screen-2xl space-y-4 pb-20">
             @csrf
             @method('PUT')
@@ -88,6 +91,7 @@
                                         <input type="checkbox" name="modules[{{ $module['code'] }}]" value="1"
                                                @checked($module['on']) data-was="{{ $module['on'] ? '1' : '' }}"
                                                data-key="{{ $module['code'] }}"
+                                               data-module-label="{{ $module['label'] }}"
                                                x-model="on['{{ $module['code'] }}']"
                                                @disabled($module['locked'])
                                                aria-label="{{ $module['label'] }}"
@@ -126,6 +130,14 @@
                                                      px-2 py-0.5 text-2xs text-(--color-badge-draft-ink)">
                                             {{ __('system_admin::control.module_off') }}
                                         </span>
+
+                                        {{-- ⭐ বন্ধ করলে কী হয় — টিক তুললেই, সংরক্ষণের আগে (নকশা §৬)। ⓘ কেবল এই শাখায়, তথ্য মোছে না। --}}
+                                        @unless ($module['locked'])
+                                            <span x-cloak x-show="! on['{{ $module['code'] }}']" data-module-impact
+                                                  class="mt-1 block text-2xs text-(--color-ink-muted)">
+                                                {{ __('system_admin::branch_module.off_impact', ['screens' => $module['screens'], 'branch' => $current->name()]) }}
+                                            </span>
+                                        @endunless
                                     </td>
 
                                     <td class="num text-(--color-ink-muted)"
@@ -162,7 +174,9 @@
                 </div>
             </div>
 
-            <x-ui.button type="submit" tone="primary">{{ __('core.action.save') }}</x-ui.button>
+            {{-- ⭐ নিচের সংরক্ষণ ডানে, স্থির পট্টিতে — নকশা §৬: *"সংরক্ষণ বাঁয়ে নিচে"* ছিল। ⓘ উপরের ভাসমান পটি বদল জমলে আসে
+                 (গুনতিসহ, কন্ট্রোল প্যানেলের মতো); এটা সবসময় থাকে, তাই কিছু না বদলেও "সংরক্ষণ" কোথায় খুঁজতে হয় না। --}}
+            <x-ui.form-actions />
         </form>
     @endif
 </x-layouts.app>

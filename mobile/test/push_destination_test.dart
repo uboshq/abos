@@ -12,4 +12,16 @@ void main() {
     expect(destinationOf(null), isNull);
     expect(destinationOf(const {}), isNull);
   });
+
+  // ⭐ রিয়েল-টাইম সিঙ্ক — সার্ভারের নীরব ডাক কেবল `{abos: sync}` ([[SyncNudge::DATA]])
+  test('only the silent sync nudge of the server is recognised', () {
+    expect(isSyncNudge({'abos': 'sync'}), isTrue);
+    expect(isSyncNudge({'open': 'tracking'}), isFalse);
+    expect(isSyncNudge({'abos': 'other'}), isFalse);
+    expect(isSyncNudge(null), isFalse);
+  });
+
+  test('a sync nudge opens no screen', () {
+    expect(destinationOf({'abos': 'sync'}), isNull);
+  });
 }
