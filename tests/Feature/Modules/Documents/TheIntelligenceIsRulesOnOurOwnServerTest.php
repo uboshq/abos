@@ -9,6 +9,7 @@ use App\Modules\Documents\Models\AbeRule;
 use App\Modules\Documents\Models\Document;
 use App\Modules\Documents\Models\DocumentVersion;
 use App\Modules\Documents\Services\DocumentIntelligence;
+use App\Modules\Documents\Support\DocumentCatalog;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Tests\TestCase;
@@ -114,16 +115,33 @@ final class TheIntelligenceIsRulesOnOurOwnServerTest extends TestCase
 
     public function test_asking_marks_the_hits_and_never_lets_the_paper_inject_markup(): void
     {
-        // ⓘ <script> লেখা ফাইল ফাইলের দরজাতেই HTML হিসেবে ফেরে; এখানে সাদা লেখার ভিতরের < > &
-        $document = $this->textDocument('Letter', "Subject: delivery delay\nIf qty a<b & c>d then delivery tomorrow\nRegards");
+        /*
+         * ⓘ `<`/`>` থাকা লেখা ফাইলের দরজাতেই ফেরে — বাইট পড়ে ধরন HTML ধরা হয় (নিচের দাবি)। ⚠️ আগে এখানে "a<b & c>d" ছিল, আর
+         * ম্যাকের finfo-তে সেটাই HTML ধরা পড়ে আপলোড ফিরত (১১ অক্টোবর ২০২৬; fe: আচরণ ঠিক, দাবির লেখা বদলাও)। এখন সাদা লেখার `&` আর
+         * উদ্ধৃতি — পাতায় এগুলোও কাঁচা বসা উচিত নয়।
+         */
+        $document = $this->textDocument('Letter', "Subject: delivery delay\nIf qty \"A\" & 'B' then delivery tomorrow\nRegards");
 
         $page = (string) $this->actingAs($this->owner)->get(route('documents.intelligence', [
             'document' => $document->id, 'tool' => 'ask', 'ask' => 'delivery',
         ]))->assertOk()->getContent();
 
         $this->assertStringContainsString('<mark>delivery</mark>', $page);
-        $this->assertStringNotContainsString('a<b & c>d', $page, 'কাগজের লেখা পাতায় কাঁচা চিহ্ন হয়ে বসল।');
-        $this->assertStringContainsString('a&lt;b &amp; c&gt;d', $page);
+        $this->assertStringNotContainsString("\"A\" & 'B'", $page, 'কাগজের লেখা পাতায় কাঁচা চিহ্ন হয়ে বসল।');
+        $this->assertStringContainsString('&quot;A&quot; &amp; &#039;B&#039;', $page);
+    }
+
+    /** ⛔ HTML-এর মতো লেখা ফাইল ("<script>…") তোলার দরজাতেই ফেরে — নাম .txt হলেও (fe, ১১ অক্টোবর ২০২৬) */
+    public function test_a_text_file_carrying_script_is_refused_at_upload(): void
+    {
+        $this->actingAs($this->owner)->post(route('documents.store'), [
+            'name' => 'Script letter', 'doc_type' => 'contract', 'folder' => 'contracts', 'branch_id' => $this->main->id,
+            'confidentiality' => DocumentCatalog::INTERNAL,
+            'files' => [UploadedFile::fake()->createWithContent('letter.txt', "<html><body><script>alert(1)</script></body></html>")],
+        ])->assertSessionHasErrors();
+        $this->useCompany();
+
+        $this->assertSame(0, Document::query()->withoutGlobalScopes()->where('name', 'Script letter')->count(), '⛔ স্ক্রিপ্টওয়ালা লেখা ফাইল বসে গেল।');
     }
 
     public function test_the_glossary_is_only_field_names_and_says_so(): void
