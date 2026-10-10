@@ -303,6 +303,29 @@ final class DepositClaimService
     }
 
     /**
+     * ⭐ যাচাই শুরু — পাঠানো বিজ্ঞপ্তি "যাচাই চলছে" হয় (টাকার পরিকল্পনা ১, ৭ অক্টোবর ২০২৬; Submitted → Under Verification)।
+     *
+     * ⓘ দোকানি আর SR পোর্টালে বা ফোনে দেখেন কেউ ধরেছেন — "দেখছে কেউ?" ফোনটা লাগে না। ⛔ কেবল পাঠানো অবস্থা থেকে, তালা দিয়ে:
+     * এইমাত্র গৃহীত বা প্রত্যাখ্যাত বিজ্ঞপ্তি পুরনো পাতা থেকে আবার "যাচাই চলছে" হয় না। খাতায় কিছু ওঠে না।
+     */
+    public function startVerifying(DepositClaim $claim): DepositClaim
+    {
+        return DB::transaction(function () use ($claim) {
+            $fresh = DepositClaim::query()->whereKey($claim->getKey())->lockForUpdate()->firstOrFail();
+
+            if ($fresh->status !== DepositClaim::PENDING) {
+                throw ValidationException::withMessages([
+                    'status' => __($fresh->isOpen() ? 'sales::portal.already_verifying' : 'sales::portal.already_decided'),
+                ]);
+            }
+
+            $fresh->update(['status' => DepositClaim::VERIFYING]);
+
+            return $claim->setRawAttributes($fresh->refresh()->getAttributes(), true);
+        });
+    }
+
+    /**
      * এই গ্রাহকের দাবিগুলো — আর কারো নয়।
      *
      * @return Collection<int, DepositClaim>
@@ -345,7 +368,8 @@ final class DepositClaimService
 
     private function assertPending(DepositClaim $claim): void
     {
-        if (! $claim->isPending()) {
+        // ⓘ যাচাই চলছে এমন বিজ্ঞপ্তিও এখনো খোলা — সিদ্ধান্ত সেখান থেকেও (টাকার পরিকল্পনা ১, ৭ অক্টোবর ২০২৬)
+        if (! $claim->isOpen()) {
             throw ValidationException::withMessages([
                 'status' => __('sales::portal.already_decided'),
             ]);

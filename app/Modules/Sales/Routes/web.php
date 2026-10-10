@@ -325,6 +325,9 @@ Route::middleware('auth')->prefix('sales')->group(function () {
             ->whereNumber('claim')->name('accept');
         Route::post('/{claim}/reject', [DepositClaimController::class, 'reject'])
             ->whereNumber('claim')->name('reject');
+        // ⭐ যাচাই শুরু — পাঠানো → যাচাই চলছে (টাকার পরিকল্পনা ১, ৭ অক্টোবর ২০২৬)
+        Route::post('/{claim}/verify', [DepositClaimController::class, 'verify'])
+            ->whereNumber('claim')->name('verify');
         // ⭐ স্লিপসহ জমার অনুরোধ — কর্মীর হাতে, আর হিসাবরক্ষকের স্লিপ দেখা (১ অক্টোবর ২০২৬, [[DepositRequestController]])
         Route::get('/request/new', [\App\Modules\Sales\Http\Controllers\DepositRequestController::class, 'create'])->name('request.create');
         Route::post('/request', [\App\Modules\Sales\Http\Controllers\DepositRequestController::class, 'store'])->name('request.store');

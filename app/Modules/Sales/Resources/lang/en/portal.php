@@ -39,9 +39,13 @@ return [
     'send' => 'Send',
 
     'status' => 'Status',
-    'pending' => 'We are checking',
+    // ⭐ জমার বিজ্ঞপ্তি / Payment Advice — চার অবস্থা (টাকার পরিকল্পনা ১, ৭ অক্টোবর ২০২৬); ফোন একই নাম পায় (`status_label`)
+    'pending' => 'Submitted',
+    'verifying' => 'Under verification',
     'accepted' => 'Accepted',
-    'rejected' => 'Not found',
+    'rejected' => 'Rejected',
+    'start_verifying' => 'Start verifying',
+    'already_verifying' => 'Verification has already started on this one.',
 
     'claim_raised' => 'Thank you — we will check it against the bank.',
     'accepted_message' => 'Accepted, and the collection is on the books.',
@@ -54,7 +58,7 @@ return [
     'already_decided' => 'This one has already been decided.',
 
     // ডিপোর দিক
-    'desk_title' => 'Deposit claims',
+    'desk_title' => 'Payment advice',
     'desk_subtitle' => 'What customers say they have paid — check it against the bank before you accept.',
     'customer' => 'Customer',
     'claimed' => 'They say',

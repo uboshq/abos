@@ -38,8 +38,17 @@ class DepositClaim extends Model
     use ListedInViewedBranch;
     use SoftDeletes;
 
-    /** গ্রাহক তুলেছেন, ডিপো এখনো দেখেনি। */
+    /** পাঠানো (Submitted) — গ্রাহক বা কর্মী পাঠিয়েছেন, ডিপো এখনো দেখেনি। */
     public const PENDING = 'pending';
+
+    /**
+     * ⭐ যাচাই চলছে (Under Verification) — হিসাবরক্ষক ব্যাংকের কাগজে মেলাতে শুরু করেছেন (টাকার পরিকল্পনা ১, ৭ অক্টোবর ২০২৬)।
+     * ⓘ চাবিটা ছোট, কারণ `status` ঘর ১৬ অক্ষরের; ফোন একই চাবি পড়ে (a4, 8e39aaa5)। গ্রহণ আর প্রত্যাখ্যান এখান থেকেও চলে।
+     */
+    public const VERIFYING = 'verifying';
+
+    /** ⓘ এখনো সিদ্ধান্ত হয়নি — পাঠানো বা যাচাই চলছে */
+    public const OPEN = [self::PENDING, self::VERIFYING];
 
     /** যাচাই হয়েছে, আদায় বসে গেছে। */
     public const ACCEPTED = 'accepted';
@@ -103,6 +112,12 @@ class DepositClaim extends Model
         return $this->status === self::PENDING;
     }
 
+    /** ⓘ সিদ্ধান্ত বাকি — পাঠানো বা যাচাই চলছে ([[OPEN]]) */
+    public function isOpen(): bool
+    {
+        return in_array($this->status, self::OPEN, true);
+    }
+
     public function isAccepted(): bool
     {
         return $this->status === self::ACCEPTED;
@@ -112,5 +127,21 @@ class DepositClaim extends Model
     public function scopePending(Builder $query): Builder
     {
         return $query->where('status', self::PENDING);
+    }
+
+    /**
+     * ⓘ সিদ্ধান্ত বাকি সব — ডেস্কের "অপেক্ষমাণ" ট্যাব আর গোনা এটাই নেয়, যাতে যাচাই শুরু হওয়া বিজ্ঞপ্তি তালিকা থেকে হারায় না।
+     *
+     * @param  Builder<self>  $query
+     */
+    public function scopeOpen(Builder $query): Builder
+    {
+        return $query->whereIn('status', self::OPEN);
+    }
+
+    /** ⓘ অবস্থার নাম, সার্ভারের ভাষায় — ওয়েব, পোর্টাল আর ফোন একই নাম দেখায় */
+    public function statusLabel(): string
+    {
+        return (string) __('sales::portal.'.$this->status);
     }
 }
