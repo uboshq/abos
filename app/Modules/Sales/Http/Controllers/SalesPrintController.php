@@ -766,7 +766,9 @@ class SalesPrintController extends Controller implements HasMiddleware
             notice: __('core.print.no_price_notice'),
         );
 
+        // ⛔ দ্বিতীয় ছাপায় DUPLICATE — বিলের মতোই গোনা (পুনঃঅডিট ৯ অক্টোবর ২০২৬, ছাপা ১৩; [[EveryReprintSaysDuplicateTest]])
         return $this->pdf($request, $doc, '0', $challan->document_no, document: $challan,
+            type: PrintJob::CHALLAN_GATEPASS, id: (int) $challan->id,
             paperSetting: 'sales.print.paper.challan', target: 'challan');
     }
 
@@ -882,6 +884,7 @@ class SalesPrintController extends Controller implements HasMiddleware
         );
 
         return $this->pdf($request, $doc, '0', $gatePass->document_no, document: $gatePass,
+            type: PrintJob::GATE_PASS, id: (int) $gatePass->id,
             paperSetting: 'sales.print.paper.gate_pass', target: 'challan');
     }
 
@@ -966,6 +969,7 @@ class SalesPrintController extends Controller implements HasMiddleware
         $design = $this->paperDesign($request, 'order', 'sales.print.paper.order', fn () => OrderPaperFacts::order($order));
 
         return $this->pdf($request, $doc, (string) $order->total, $order->document_no, document: $order,
+            type: PrintJob::ORDER, id: (int) $order->id,
             paperSetting: 'sales.print.paper.order', target: 'order',
             template: $design['template'] ?? 'print.document',
             extra: $design['extra'] ?? []);
@@ -1008,6 +1012,7 @@ class SalesPrintController extends Controller implements HasMiddleware
         );
 
         return $this->pdf($request, $doc, '0', $order->document_no, document: $order,
+            type: PrintJob::DELIVERY_ORDER, id: (int) $order->id,
             paperSetting: 'sales.print.paper.order', target: 'order');
     }
 
@@ -1040,6 +1045,7 @@ class SalesPrintController extends Controller implements HasMiddleware
         $design = $this->paperDesign($request, 'receipt', 'sales.print.paper.receipt', fn () => OrderPaperFacts::receipt($collection));
 
         return $this->pdf($request, $doc, (string) $collection->amount, $collection->document_no, document: $collection,
+            type: PrintJob::RECEIPT, id: (int) $collection->id,
             paperSetting: 'sales.print.paper.receipt', target: 'receipt',
             template: $design['template'] ?? 'print.document',
             extra: $design['extra'] ?? []);
