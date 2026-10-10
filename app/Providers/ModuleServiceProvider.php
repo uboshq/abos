@@ -5,12 +5,26 @@ declare(strict_types=1);
 namespace App\Providers;
 
 use App\Core\Contracts\CreditHolds;
+use App\Core\Contracts\CustomerSalesFilters;
+use App\Core\Contracts\CustomerTrade;
+use App\Core\Contracts\FreeGoodsOffers;
+use App\Core\Contracts\HomeSalesFilters;
+use App\Core\Contracts\LinkedDocuments;
+use App\Core\Contracts\PartyOpenBills;
 use App\Core\Contracts\RecipeBook;
+use App\Core\Contracts\SalesOffers;
 use App\Core\Engines\Report\ReportEngine;
 use App\Core\Events\EventRegistry;
 use App\Core\Module\ModuleRegistry;
 use App\Core\Services\NoCreditHolds;
+use App\Core\Services\NoCustomerSalesFilters;
+use App\Core\Services\NoCustomerTrade;
+use App\Core\Services\NoFreeGoodsOffers;
+use App\Core\Services\NoHomeSalesFilters;
+use App\Core\Services\NoLinkedDocuments;
+use App\Core\Services\NoPartyOpenBills;
 use App\Core\Services\NoRecipeBook;
+use App\Core\Services\NoSalesOffers;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
@@ -49,25 +63,28 @@ class ModuleServiceProvider extends ServiceProvider
         $this->app->bind(RecipeBook::class, NoRecipeBook::class);
 
         // ⓘ অফারের মডিউল বন্ধ থাকলে অর্ডারের লাইনে ফ্রি নেই ([[FreeGoodsOffers]])
-        $this->app->bind(\App\Core\Contracts\FreeGoodsOffers::class, \App\Core\Services\NoFreeGoodsOffers::class);
+        $this->app->bind(FreeGoodsOffers::class, NoFreeGoodsOffers::class);
 
         // ⓘ বিক্রয় বন্ধ থাকলে ডিও বা খসড়া বিল নেই — আটকে থাকা টাকা শূন্য
         $this->app->bind(CreditHolds::class, NoCreditHolds::class);
 
         // ⓘ বিক্রয় বন্ধ থাকলে বিল বা আদায় নেই — গ্রাহকের সারাংশ কেবল খাতা আর সীমা দেখায়
-        $this->app->bind(\App\Core\Contracts\CustomerTrade::class, \App\Core\Services\NoCustomerTrade::class);
+        $this->app->bind(CustomerTrade::class, NoCustomerTrade::class);
 
         // ⓘ বিক্রয় বন্ধ থাকলে গ্রাহকের তালিকায় টপ/বটম বিক্রি আর "ভালো কাস্টমার" কাউকে পায় না ([[CustomerSalesFilters]])
-        $this->app->bind(\App\Core\Contracts\CustomerSalesFilters::class, \App\Core\Services\NoCustomerSalesFilters::class);
+        $this->app->bind(CustomerSalesFilters::class, NoCustomerSalesFilters::class);
 
         // ⓘ বিক্রয় বন্ধ থাকলে রসিদে বাছার মতো খোলা বিল নেই ([[PartyOpenBills]], অডিট ম১)
-        $this->app->bind(\App\Core\Contracts\PartyOpenBills::class, \App\Core\Services\NoPartyOpenBills::class);
+        $this->app->bind(PartyOpenBills::class, NoPartyOpenBills::class);
 
         // ⓘ বিক্রয় বন্ধ থাকলে হোমের ছাঁকনিতে বাছার কিছু নেই ([[HomeSalesFilters]])
-        $this->app->bind(\App\Core\Contracts\HomeSalesFilters::class, \App\Core\Services\NoHomeSalesFilters::class);
+        $this->app->bind(HomeSalesFilters::class, NoHomeSalesFilters::class);
 
         // ⓘ অফারের মডিউল বন্ধ থাকলে বিক্রয়ের কাগজে অফারের প্যানেল আঁকা হয় না ([[SalesOffers]])
-        $this->app->bind(\App\Core\Contracts\SalesOffers::class, \App\Core\Services\NoSalesOffers::class);
+        $this->app->bind(SalesOffers::class, NoSalesOffers::class);
+
+        // ⓘ জোড়া কাগজ — ডকুমেন্ট মডিউল বন্ধ থাকলে খালি ([[NoLinkedDocuments]])
+        $this->app->bind(LinkedDocuments::class, NoLinkedDocuments::class);
     }
 
     /**

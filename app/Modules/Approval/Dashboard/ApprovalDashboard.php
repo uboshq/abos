@@ -31,6 +31,17 @@ use Illuminate\Support\Carbon;
  */
 final class ApprovalDashboard implements ProvidesDashboard
 {
+    /**
+     * ⭐ সইয়ের অপেক্ষায় কয়টা — এই পাতার প্রথম সংখ্যার একমাত্র সংজ্ঞা।
+     *
+     * ⓘ মালিকের কেন্দ্র ([[Figures]]) ঠিক এটাই ডাকে, প্রতিটা কোম্পানির ভিতরে — ⛔ নিজের COUNT লিখলে
+     * একদিন দুই পর্দা দুই সংখ্যা বলত (৮ অক্টোবর ২০২৬)। ⓘ শাখা ধরে ভাগ হয় না: অনুমোদনের সারিতে শাখা নেই।
+     */
+    public static function pendingCount(): int
+    {
+        return Approval::query()->where('status', Approval::PENDING)->count();
+    }
+
     public static function dashboard(): DashboardDefinition
     {
         return new DashboardDefinition(

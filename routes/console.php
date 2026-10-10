@@ -219,6 +219,21 @@ Schedule::call(fn () => app(FormIsNotSubmittedTwice::class)->prune())
  * ⓘ কিছু জমা না থাকলে খরচ কার্যত শূন্য — একটা PHP প্রক্রিয়া চালু হয়ে
  * সাথে সাথেই বেরিয়ে যায়।
  */
+/*
+ * ⭐ বিজ্ঞপ্তির আবার-চেষ্টা আর মাধ্যমের স্বাস্থ্য — বিজ্ঞপ্তি ব্যবস্থাপনা, ধাপ ২ (মালিকের স্পেক, ১০ অক্টোবর ২০২৬)।
+ *
+ * ⓘ পাঠানো নিজে নিচের `queue:work`-এ (database কিউ); এই কমান্ড কেবল সময় হওয়া আবার-চেষ্টা কিউয়ে দেয় আর আটকে থাকা সারি
+ * ছাড়ায় ([[DeliveryService::retryDue()]])। স্বাস্থ্য ঘণ্টায় একবার — কিছু পাঠায় না, কেবল "সংযুক্ত কি" লেখে।
+ */
+Schedule::command('abos:notifications-deliver')->everyMinute()->withoutOverlapping();
+Schedule::command('abos:notifications-health')->hourly()->withoutOverlapping();
+// ⭐ বিজ্ঞপ্তি ব্যবস্থাপনা, ধাপ ৩ — সূচিমতো খবর (প্রতি মিনিটে) আর দিনের/সপ্তাহের সারসংক্ষেপ (প্রতি ঘণ্টায়)
+Schedule::command('abos:notifications-schedule')->everyMinute()->withoutOverlapping();
+Schedule::command('abos:notifications-digest')->hourly()->withoutOverlapping();
+// ⭐ বিজ্ঞপ্তি ব্যবস্থাপনা, ধাপ ৪ — আর্কাইভ আর রাখার মেয়াদ। ⓘ ঘণ্টায় একবার, দিনে একবার নয়: ব্যাকআপের শিক্ষা (উপরে) — এক
+//   মিনিট ফসকালে গোটা দিন বাদ যেত; কাজটা বারবার চালালেও একই ফল, আর প্রতিবার সীমিত সারি
+Schedule::command('abos:notifications-retention')->hourlyAt(41)->withoutOverlapping();
+
 Schedule::command('queue:work --stop-when-empty --max-time=50 --tries=3')
     ->everyMinute()
     ->withoutOverlapping()
@@ -271,6 +286,30 @@ Schedule::command('abos:adjusting-reverse')
         logger()->critical('সমন্বয় জাবেদা নিজে উল্টানো ব্যর্থ হয়েছে — হাতে দেখতে হবে।');
     });
 
+/*
+ * ⭐ মালিকের কেন্দ্রের রাতের হিসাব — প্রতিটা কোম্পানি ও শাখার আটটা সংখ্যা (৯ অক্টোবর ২০২৬)।
+ *
+ * ⓘ ২৩:৫৫ — দিনের শেষ কাগজ বসার পরে, তারিখ বদলানোর আগে; "গত মাসের এই দিনে বাকি কত ছিল" এখান থেকেই পড়া হয়।
+ * ⓘ তিন বছরের পুরনো সারি একই আদেশে সরে।
+ */
+Schedule::command('abos:owner-snapshot')
+    ->dailyAt('23:55')
+    ->withoutOverlapping()
+    ->onFailure(function () {
+        logger()->critical('মালিকের কেন্দ্রের রাতের হিসাব লেখা ব্যর্থ হয়েছে — হাতে দেখতে হবে।');
+    });
+
+/*
+ * ⭐ মালিকের কেন্দ্রের সকালের মেইল — মালিকের উত্তর ৪, ১০ অক্টোবর ২০২৬ ([[OwnerMorningMail]])।
+ * ⓘ সকাল ৮টা — রাত ২৩:৫৫-র হিসাব লেখা হয়ে গেছে, দিনের কাজ শুরুর আগে।
+ */
+Schedule::command('abos:owner-morning-mail')
+    ->dailyAt('08:00')
+    ->withoutOverlapping()
+    ->onFailure(function () {
+        logger()->critical('মালিকের সকালের সারাংশ মেইল পাঠানো ব্যর্থ হয়েছে — হাতে দেখতে হবে।');
+    });
+
 Schedule::command('abos:money-due')
     ->dailyAt('08:00')
     ->withoutOverlapping()
@@ -302,4 +341,29 @@ Schedule::command('promotion:expire')
     ->withoutOverlapping()
     ->onFailure(function () {
         logger()->critical('মেয়াদ পেরোনো অফার বন্ধ করা ব্যর্থ হয়েছে — হাতে দেখতে হবে।');
+    });
+
+/*
+ * ডকুমেন্টের মেয়াদের খবর — ৯০ → ৬০ → ৩০ → ১৫ → ৭ → ১ দিন আগে, আর পেরোলে একবার (ডকুমেন্ট পরিকল্পনা §১২, ৯ অক্টোবর ২০২৬)।
+ *
+ * ⓘ ঘণ্টায় একবার — অবস্থা দেখে চলে, তাই একটা ঘণ্টা বাদ পড়লে পরেরটা ধরে; আর প্রতিটা খবর একবারই
+ * যায় ([[DocumentExpiry]], `dms_expiry_notices`)। মাঝের সই পড়া কাগজও এখানে "পর্যালোচনায়" ওঠে।
+ */
+Schedule::command('abos:documents-expiry')
+    ->hourlyAt(35)
+    ->withoutOverlapping()
+    ->onFailure(function () {
+        logger()->critical('ডকুমেন্টের মেয়াদের খবর পাঠানো ব্যর্থ হয়েছে — হাতে দেখতে হবে।');
+    });
+
+/*
+ * ডকুমেন্টের রাখার নিয়ম — আর্কাইভ, তারপর রিসাইকেল বিন; ⛔ কখনো চিরতরে মোছা নয় (ডকুমেন্ট পরিকল্পনা §২০, ৯ অক্টোবর ২০২৬)।
+ *
+ * ⓘ রাতে একবার — অবস্থা দেখে চলে, তাই বাদ পড়া রাত পরের রাতে ধরে ([[DocumentRetention]])।
+ */
+Schedule::command('abos:documents-retention')
+    ->dailyAt('02:40')
+    ->withoutOverlapping()
+    ->onFailure(function () {
+        logger()->critical('ডকুমেন্টের রাখার নিয়ম চালানো ব্যর্থ হয়েছে — হাতে দেখতে হবে।');
     });

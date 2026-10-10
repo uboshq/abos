@@ -158,7 +158,8 @@ final class ScheduledReportRunner
             (int) $schedule->company_id,
             fn (): Collection => $recipients
                 ->filter(fn (User $user): bool => app(DealerScope::class)->walled($user->fresh())
-                    || self::hasBranchLimit($user->fresh(), (int) $schedule->company_id))
+                    || self::hasBranchLimit($user->fresh(), (int) $schedule->company_id)
+                    || self::readsPerPerson((string) $schedule->report_key))
                 ->values(),
         );
         $recipients = $recipients->reject(fn (User $user): bool => $walled->contains('id', $user->id))->values();
@@ -196,6 +197,17 @@ final class ScheduledReportRunner
      * ⓘ প্রাপক কোনো শাখায় সীমিত কি না — কোম্পানির সব শাখা যাঁর হাতে তিনি সীমিত নন ([[ReportEngine::normaliseFilters()]]-এর
      * একই নিয়ম, তাই "সীমিত" মানে দুই জায়গায় এক)।
      */
+    /**
+     * ⛔ ডকুমেন্টের রিপোর্ট প্রত্যেক প্রাপক নিজের পরিচয়ে পান (১১ অক্টোবর ২০২৬, documents রিভিউ ⚠️৬)।
+     *
+     * ⓘ কাগজের দেয়াল শাখা বা ডিলারের নয় — গোপনীয়তার ধাপ, বিভাগ আর কাগজ-ধরে অধিকার, মানুষ ভেদে আলাদা। ভাগের ফাইল সূচির মালিকের চোখে
+     * বানানো, তাই "সংরক্ষিত" চাবি ছাড়া বা অন্য বিভাগের প্রাপকও গোপন কাগজের নাম পেতেন। প্রতিজনের নিজের ফাইল — ডিলারের দেয়ালের মতোই।
+     */
+    private static function readsPerPerson(string $reportKey): bool
+    {
+        return str_starts_with($reportKey, 'documents.');
+    }
+
     private static function hasBranchLimit(User $user, int $companyId): bool
     {
         $allowed = app(DataScope::class)->idsFor($user, UserDataScope::BRANCH);
@@ -348,7 +360,8 @@ final class ScheduledReportRunner
             $told = collect([$owner])->concat($recipients)->unique('id');
 
             foreach ($told as $user) {
-                $this->notify->send($user, 'report_ready', $title, $body, $url);
+                // ⭐ একই চালানোর খবর একবারই (বিজ্ঞপ্তি ব্যবস্থাপনা, ধাপ ১)
+                $this->notify->send($user, 'report_ready', $title, $body, $url, key: 'report:run:'.$run->getKey());
             }
         });
     }

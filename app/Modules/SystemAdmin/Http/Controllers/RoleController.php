@@ -183,6 +183,17 @@ class RoleController extends Controller implements HasMiddleware
     private const OWNER_ONLY = ['system_admin.ownership.transfer'];
 
     /**
+     * ⛔ যে চাবি কেবল সুপার অ্যাডমিন অন্য রোলে দিতে পারেন — মালিকের উত্তর ৬, ১০ অক্টোবর ২০২৬:
+     * "অনলি আমি দেখব আর আমার একটা সেকেন্ড রোলেও যাতে দেখতে পারি অনুমতি দিয়ে"।
+     *
+     * ⓘ মালিকের কেন্দ্র সব কোম্পানির টাকা এক পর্দায় দেখায়। ⚠️ "নিজের হাতে যা আছে তা দেওয়া যায়" নিয়মে
+     * দ্বিতীয় রোলের কেউ রোল সামলানোর চাবি পেলে চাবিটা আরও ছড়িয়ে দিতে পারতেন — এখানে সেটা বন্ধ।
+     *
+     * @var list<string>
+     */
+    private const SUPER_ADMIN_GRANTS = ['executive.view', 'executive.links.manage'];
+
+    /**
      * ⛔ যা নিজের হাতে নেই, তা অন্যকে দেওয়া যায় না — পুনঃনিরীক্ষা, ৯ অক্টোবর ২০২৬।
      *
      * ── কী ভুল ছিল ───────────────────────────────────────────────────
@@ -216,6 +227,14 @@ class RoleController extends Controller implements HasMiddleware
         $actor = $request->user();
 
         if (! $actor->hasRole(PermissionSyncer::SUPER_ADMIN_ROLE)) {
+            $superOnly = array_values(array_intersect($added, self::SUPER_ADMIN_GRANTS));
+
+            if ($superOnly !== []) {
+                throw ValidationException::withMessages([
+                    'permissions' => __('system_admin::validation.super_admin_grants_only', ['keys' => implode(', ', $superOnly)]),
+                ]);
+            }
+
             $notHeld = array_values(array_filter($added, fn (string $name): bool => ! $actor->hasPermissionTo($name)));
 
             if ($notHeld !== []) {

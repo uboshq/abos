@@ -349,7 +349,11 @@ class VoucherPrintTest extends TestCase
     /** চালু ভাউচারে ওই ছাপটা থাকে না। */
     public function test_a_live_voucher_carries_no_cancelled_stamp(): void
     {
-        $voucher = $this->receipt();
+        /*
+         * ⓘ "চালু" মানে পোস্ট করা — খসড়া ভাউচার এখন নিজের "খসড়া" বাক্স পায় (PR #17, 4bbed979: খসড়া কাগজ খসড়া হয়েই ছাপে), তাই
+         * এখানে আগে পোস্ট করা; নইলে দাবিটা আসলে খসড়া মাপত (১১ অক্টোবর ২০২৬)।
+         */
+        $voucher = app(\App\Modules\Accounts\Services\VoucherService::class)->post($this->receipt());
 
         $seen = [];
         View::composer('print.voucher*', function ($view) use (&$seen) {

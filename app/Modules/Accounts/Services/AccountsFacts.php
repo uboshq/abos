@@ -61,6 +61,52 @@ final class AccountsFacts
         return $this->balanceOfCode(StandardChart::PAYABLE);
     }
 
+    /**
+     * ⭐ মোট তহবিল — নগদ + ব্যাংক + MFS, তিন ঝুড়ির যোগ ([[moneyPositions()]])।
+     *
+     * ⓘ অর্থের ড্যাশবোর্ডের "মোট তহবিল" আর মালিকের কেন্দ্রের "নগদ ও ব্যাংক" একই সংখ্যা — তাই সংজ্ঞাটা
+     * এখানে, একবার (৮ অক্টোবর ২০২৬)। ⛔ দুই জায়গায় দুইটা bcadd লিখলে একদিন একটায় MFS বাদ পড়ত।
+     * ⓘ ঝুড়িগুলো আগেই পড়া থাকলে সেটাই দেওয়া যায় — আবার পড়া হয় না।
+     *
+     * @param  array{cash: string, bank: string, mfs: string}|null  $money
+     */
+    public function fund(?array $money = null): string
+    {
+        $money ??= $this->moneyPositions();
+
+        return bcadd(bcadd($money['cash'], $money['bank'], 4), $money['mfs'], 4);
+    }
+
+    /**
+     * ⭐ কয়েকজন পক্ষের জের একটা নিয়ন্ত্রক খাতে (ও তার বংশধরে) — দেখার শাখায়, খাতের স্বাভাবিক দিকে।
+     *
+     * ⓘ মালিকের কেন্দ্রে ভাই-কোম্পানির প্রাপ্য/প্রদেয় বাদ দিতে ([[SisterTrade]]): [[receivable()]] গোটা খাতের
+     * জের, আর এটা তার ভিতরে কেবল ঐ পক্ষগুলোর ভাগ — একই খাত, একই শাখার নিয়ম ([[inView()]]), তাই বাদ দেওয়া
+     * অংশটা কখনো মোটের চেয়ে অন্য হিসাবে গোনা হয় না (৮ অক্টোবর ২০২৬)।
+     * ⚠️ [[dueFrom()]] নয়: সেটা পক্ষের **সব** খাতের সারি (অগ্রিমসহ), আর শাখা মানে না।
+     *
+     * @param  list<int>  $partyIds
+     */
+    public function controlBalanceOf(string $code, string $partyType, array $partyIds): string
+    {
+        $account = StandardChart::find($code);
+
+        if ($account === null || $partyIds === []) {
+            return '0';
+        }
+
+        $row = $this->inView(LedgerEntry::query(), 'ledger_entries.branch_id')
+            ->whereIn('account_id', $account->selfAndDescendants()->pluck('id')->all())
+            ->where('party_type', $partyType)
+            ->whereIn('party_id', $partyIds)
+            ->selectRaw('COALESCE(SUM(debit), 0) as d, COALESCE(SUM(credit), 0) as c')
+            ->first();
+
+        $net = bcsub((string) ($row->d ?? 0), (string) ($row->c ?? 0), 4);
+
+        return $account->nature === Account::CREDIT ? bcmul($net, '-1', 4) : $net;
+    }
+
     /** এই মাসের আয়। */
     public function incomeThisMonth(): string
     {

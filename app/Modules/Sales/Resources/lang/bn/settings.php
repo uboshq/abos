@@ -77,7 +77,7 @@ return [
         'seal_boxes' => 'সিলমোহরের ঘর',
         'statement' => 'বিল + হিসাবের বিবরণী',
         'statement_ledger' => 'আধুনিক বিবরণী',
-        'special_db' => 'Special for DB',
+        'special_db' => 'ডিবির জন্য বিশেষ',
         'acct_classic' => 'হিসাবসহ বিল — ক্লাসিক',
         'acct_sidebar' => 'হিসাবসহ বিল — পাশের ফিতা',
         'acct_sidebar_light' => 'হিসাবসহ বিল — হালকা ফিতা',

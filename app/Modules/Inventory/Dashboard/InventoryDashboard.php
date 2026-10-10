@@ -453,8 +453,9 @@ final class InventoryDashboard implements ProvidesDashboard
      *
      * ⓘ ঘরগুলো স্টক তালিকার ([[StockController::sumOf()]]) মালের চার ঘর: তাকে, বসানো বাকি, ফ্রি, ফ্রি বসানো বাকি।
      * ⓘ অর্ডারে ধরা আর আটকানো মাল নয়, ওগুলো তাকের মালেরই অংশ।
+     * ⓘ খোলা (public), কারণ মালিকের কেন্দ্রের সতর্কতাও ঠিক এই সংখ্যাটাই পড়ে — দ্বিতীয় সংজ্ঞা নয় (৮ অক্টোবর ২০২৬)।
      */
-    private static function negativeStock(): int
+    public static function negativeStock(): int
     {
         $combos = self::movements()
             ->select('product_id', 'warehouse_id')

@@ -417,4 +417,7 @@
             @endif
         </section>
     @endcan
+
+    {{-- ⭐ জোড়া ডকুমেন্ট (ডকুমেন্ট পরিকল্পনা §১৫, ৯ অক্টোবর ২০২৬) — কোরের উপাদান; কিছু না থাকলে কিছুই বসে না --}}
+    <x-ui.linked-documents :record="$employee" />
 </x-layouts.app>

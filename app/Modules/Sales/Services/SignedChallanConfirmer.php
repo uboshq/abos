@@ -7,6 +7,7 @@ namespace App\Modules\Sales\Services;
 use App\Core\Engines\Approval\HeldForApproval;
 use App\Core\Engines\Audit\AuditEngine;
 use App\Core\Services\NotificationService;
+use App\Core\Support\CompanyContext;
 use App\Models\Approval;
 use App\Models\User;
 use App\Modules\Sales\Models\DeliveryChallan;
@@ -91,7 +92,9 @@ final class SignedChallanConfirmer
 
             // ⓘ মাল কীভাবে যাবে — প্রশ্নটা এখন ছাপার দরজায়, নিশ্চিতে নয় (মালিকের অনুমোদিত বদল, ১ অক্টোবর ২০২৬; [[RequireTransportBeforePrint]])
 
-            $this->challans->confirm($challan->fresh());
+            // ⛔ চালানের নিজের শাখায় — হেডারে অন্য শাখা থাকলে আদেশটা "নেই" হত আর আদেশের ধরা মাল ছাড়া হত না (পুনঃঅডিট ৯ অক্টোবর ২০২৬, বিক্রয় ১)
+            CompanyContext::inBranch($challan->branch_id === null ? null : (int) $challan->branch_id,
+                fn () => $this->challans->confirm($challan->fresh()));
         } catch (HeldForApproval) {
             // ⓘ আরেকটা সই বাকি — ঐ সই পড়লে এই পথই আবার চলবে
             return false;
@@ -151,6 +154,9 @@ final class SignedChallanConfirmer
             __('sales::auto_finish.challan_stuck_title', ['no' => $challan->document_no]),
             __('sales::auto_finish.challan_stuck_body', ['reason' => $reason]),
             route('sales.challan.show', $challan),
+            // ⭐ কোন চালান — শাখার দেয়াল খবরেও (বিজ্ঞপ্তি ব্যবস্থাপনা, ধাপ ১); একই আটকানোর খবর দিনে একবার
+            key: 'sales:challan:'.$challan->id.':stuck:'.now()->toDateString(),
+            about: $challan,
         );
     }
 }

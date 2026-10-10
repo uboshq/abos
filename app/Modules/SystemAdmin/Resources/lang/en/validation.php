@@ -12,6 +12,7 @@ return [
     'owner_role_is_fixed' => 'The owner role cannot be edited; every deploy puts those permissions back.',
     'owner_only_permission' => 'This permission belongs to the owner alone and cannot be put on a role: :keys',
     'cannot_grant_what_you_lack' => 'You cannot give a role a permission you do not hold yourself: :keys',
+    'super_admin_grants_only' => 'Only a super admin can give a role this permission: :keys',
 
     // Every refusal names the way out as well. "You cannot" alone leaves
     // the next question unanswered — "then how do I hand it over?" — and

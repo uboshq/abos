@@ -113,7 +113,8 @@ final class TheBellHadNoOffSwitchTest extends TestCase
             $this->assertStringContainsString('value="'.$type.'"', $html, "{$type} পর্দায় নেই।");
         }
 
-        preg_match_all('/<input[^>]*value="([a-z_.]+)"[^>]*>/', $html, $inputs, PREG_SET_ORDER);
+        // ⓘ কেবল ঘণ্টার টিক (`kinds[]`) — একই পাতায় এখন মাধ্যমের পছন্দের টিকও আছে (বিজ্ঞপ্তি ব্যবস্থাপনা, ধাপ ৩)
+        preg_match_all('/<input[^>]*name="kinds\[\]"[^>]*value="([a-z_.]+)"[^>]*>/', $html, $inputs, PREG_SET_ORDER);
 
         $checked = [];
 

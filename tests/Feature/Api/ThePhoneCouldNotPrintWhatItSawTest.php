@@ -341,8 +341,9 @@ final class ThePhoneCouldNotPrintWhatItSawTest extends TestCase
         $printable = (new ReflectionMethod($controller, 'printable'))->invoke($controller);
 
         // ⓘ বাতিলের অনুরোধ আর নোট পরে কাগজের তালিকায় এসেছে ([[PaperTrail::DOCUMENT_ROUTES]]) — ফোনও সেগুলো ছাপে
+        // ⓘ গেট পাস (নিজের মডেল) ছাপা-গোনায় এসেছে (পুনঃঅডিট ৯ অক্টোবর ২০২৬) — ফোনও তার নিজের অনুমতিতে ছাপে
         $this->assertSame([
-            'SalesInvoice', 'SalesInvoiceCancellation', 'DeliveryChallan', 'SalesOrder', 'Collection',
+            'SalesInvoice', 'SalesInvoiceCancellation', 'DeliveryChallan', 'SalesOrder', 'GatePass', 'Collection',
             'PurchaseBill', 'PurchaseOrder', 'PurchaseReceipt', 'PurchaseReturn',
             'Voucher', 'MoneyTransfer', 'Note', 'StockTransfer',
         ], array_keys($printable));
@@ -351,7 +352,15 @@ final class ThePhoneCouldNotPrintWhatItSawTest extends TestCase
             $this->assertSame($type, class_basename($class), '⛔ §৫ class_basename পাঠায়, আর এখানে অন্য নাম।');
         }
 
-        $this->assertCount(count(PaperTrail::DOCUMENT_ROUTES) - 1, $printable, '⛔ বেতনশিট ছাড়া অন্য কোনো কাগজও বাদ পড়েছে।');
+        /*
+         * ⛔ একই মডেলের দ্বিতীয় কাগজ মূলটাকে সরায় না (১১ অক্টোবর ২০২৬)। ⓘ চালানের গেট পাস আর DO বাঁধে চালান আর অর্ডারের
+         * মডেলই — পরেরটা জিতলে ফোন চালান চাইলে দাম-ছাড়া গেট পাস পেত, অর্ডার চাইলে DO।
+         */
+        $this->assertSame('sales_challan', $printable['DeliveryChallan'][0], '⛔ ফোনে চালান চাইলে গেট পাস আসছে।');
+        $this->assertSame('sales_order', $printable['SalesOrder'][0], '⛔ ফোনে অর্ডার চাইলে DO আসছে।');
+
+        // ⓘ বেতনশিট (ডেস্কে) আর ঐ দুই দ্বিতীয় কাগজ বাদে বাকি সবই
+        $this->assertCount(count(PaperTrail::DOCUMENT_ROUTES) - 3, $printable, '⛔ বেতনশিট আর দুই দ্বিতীয় কাগজ ছাড়া অন্য কোনো কাগজও বাদ পড়েছে।');
     }
 
     // ── নথি · নিয়ম ক · ক্রয়মূল্য PDF-এর ভিতরেও ────────────────────────────

@@ -104,6 +104,18 @@ class EveryChangeableRowRemembersWhoChangedItTest extends TestCase
         'App\Models\ExportLog' => 'কে কী রপ্তানি করল — নিজেই একটা লগ',
         'App\Models\ErrorEvent' => 'ভুলের খাতা — ব্যবস্থাটা নিজে লেখে, মানুষ নয়',
         'App\Models\Notification' => 'পড়া/না-পড়া ছাড়া কিছু বদলায় না',
+        // ⭐ বিজ্ঞপ্তি ব্যবস্থাপনা, ধাপ ১ (১০ অক্টোবর ২০২৬)
+        'App\Models\NotificationEvent' => 'খবর একটা ঘটনার প্রতিধ্বনি — আসল ঘটনা নিজের জায়গায় নিরীক্ষিত, খবরের ওপর মানুষের কাজ notification_audit_logs-এ',
+        'App\Models\NotificationAuditLog' => 'নিজেই নিরীক্ষার খাতা, আর কখনো বদলায় না',
+        'App\Models\NotificationJob' => 'যন্ত্রের পৌঁছানোর খাতা — হাতে আবার চেষ্টা আর বাতিল notification_audit_logs-এ',
+        'App\Models\NotificationDeliveryAttempt' => 'প্রতিটা চেষ্টার একবার-লেখা সারি, কখনো বদলায় না',
+        'App\Models\NotificationSubscription' => 'ব্যক্তির নিজের ব্রাউজার — চালু আর বন্ধ notification_audit_logs-এ',
+        'App\Models\NotificationTemplateVersion' => 'টেমপ্লেটের একবার-লেখা সংস্করণ, কখনো বদলায় না; সংরক্ষণ, প্রকাশ আর ফেরা notification_audit_logs-এ',
+        'App\Models\NotificationRuleVersion' => 'নিয়মের সংস্করণের একবার-লেখা ছবি — নিজেই নিয়মের ইতিহাস',
+        'App\Models\NotificationPreference' => 'ব্যক্তির নিজের পছন্দ, NotificationChoice-এর একই যুক্তি',
+        'App\Models\NotificationDigest' => 'যন্ত্রের লেখা সারসংক্ষেপের খাতা',
+        'App\Models\NotificationSuppression' => 'যন্ত্রের একবার-লেখা সারি — কোন খবর কেন আটকানো হলো',
+        'App\Models\NotificationProviderEvent' => 'প্রোভাইডারের ফেরত-খবরের একবার-লেখা সারি — স্বাক্ষর যাচাই করে যন্ত্র লেখে',
         'App\Models\DocumentDelivery' => 'কাগজ বেরোনোর ঘটনা — একবার ঘটে, কেউ বদলায় না (২০ সেপ্টেম্বর ২০২৬)',
 
         // ── ব্যক্তির নিজের সুবিধা, ব্যবসার তথ্য নয় ──────────────────

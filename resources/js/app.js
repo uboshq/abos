@@ -14,6 +14,7 @@ import directSale from './counter/direct-sale.js'
 import directPurchase from './counter/direct-purchase.js'
 import openingCart from './counter/opening-cart.js'
 import { registerComponents } from './components/index.js'
+import documentScan from './document-scan.js'
 import { listenForColumnChoice } from './columns.js'
 import { listenForFreshData } from './live.js'
 
@@ -94,6 +95,12 @@ document.addEventListener('alpine:init', () => {
     Alpine.data('directPurchase', directPurchase)
     // ⭐ খোলা মজুদের কার্ট — সার্চ, ফ্রি, দাম, Enter = পরের ঘর (মালিক, ৬ অক্টোবর ২০২৬)
     Alpine.data('openingCart', openingCart)
+
+    /*
+     * ⭐ ডকুমেন্টের স্ক্যান ও OCR — ব্রাউজারে, নিজের সার্ভারের ফাইলে (ডকুমেন্ট পরিকল্পনা §৭; ৯ অক্টোবর ২০২৬)।
+     * ⓘ কারণ আর পথের পাহারা `document-scan.js`-এ।
+     */
+    Alpine.data('documentScan', documentScan)
 
     /*
      * ⭐ শেল, টাকার ঘর ও বাকি পর্দার ছোট কম্পোনেন্ট — ১৯ সেপ্টেম্বর ২০২৬।

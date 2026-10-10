@@ -169,6 +169,13 @@ final class ReportDefinition
          * ⓘ `fn (array $filters): string` — পরিসরের শুরুর আগের ডেবিট − ক্রেডিট, একই ছাঁকনিতে।
          */
         public readonly ?Closure $opening = null,
+
+        /*
+         * ⭐ ফাইলে নেওয়ার আলাদা চাবি — দেখার চাবির উপরে (cb-র রিভিউ, cloud/notification-management মেশানোর আগে, ১১ অক্টোবর ২০২৬)।
+         * ⓘ `null` (প্রায় সব রিপোর্ট) = দেখার চাবিই যথেষ্ট, আগের মতো। বিজ্ঞপ্তির রিপোর্টে প্রাপকের নাম আর প্রদানকারীর রেফারেন্স,
+         * তাই ওয়েবে রপ্তানি `notification.reports.export` চায় — ফোনের রপ্তানির দরজাও এখন এটাই দেখে।
+         */
+        public readonly ?string $exportPermission = null,
     ) {
         if ($branchless !== null && ! in_array($branchless, [self::WHOLE_COMPANY, self::NO_BRANCH_DATA], true)) {
             throw new \InvalidArgumentException("Report '{$key}' declares an unknown branchless kind '{$branchless}'.");
