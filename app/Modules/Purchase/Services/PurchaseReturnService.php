@@ -711,7 +711,13 @@ final class PurchaseReturnService
         ]);
     }
 
-    /** বিলের সারির এককপ্রতি নিট দর — (পরিমাণ × দর − ছাড়) ÷ পরিমাণ। */
+    /**
+     * বিলের সারির এককপ্রতি নিট দর, ভ্যাট বাদে — (সারির অঙ্ক − ভ্যাট) ÷ পরিমাণ।
+     *
+     * ⛔ পুনঃনিরীক্ষা, ৯ অক্টোবর ২০২৬: আগে (পরিমাণ × দর − ছাড়) ÷ পরিমাণ, আর ভ্যাট "দামের ভিতরে" হলে ঐ দরেই ভ্যাট
+     * থাকে — তার উপর [[returnTax()]] আবার ভ্যাটের ভাগ যোগ করত, তাই ১১৫-র মাল ফেরতে দেনা কমত ১৩০। ⓘ সারির অঙ্ক
+     * থেকে ভ্যাট বাদ দেওয়া দুই রকম ভ্যাটেই ঠিক: দামের বাইরে হলে অঙ্ক = নিট + ভ্যাট, ভিতরে হলে অঙ্ক = নিট (ভ্যাটসহ)।
+     */
     private function netRate(PurchaseBillLine $billLine): string
     {
         $qty = (string) $billLine->qty;
@@ -720,7 +726,7 @@ final class PurchaseReturnService
             return (string) $billLine->rate;
         }
 
-        $net = bcsub(bcmul($qty, (string) $billLine->rate, 4), (string) ($billLine->discount ?? '0'), 4);
+        $net = bcsub((string) $billLine->amount, (string) ($billLine->tax ?? '0'), 4);
 
         return bcdiv($net, $qty, 4);
     }

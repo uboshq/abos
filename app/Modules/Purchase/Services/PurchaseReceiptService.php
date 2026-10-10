@@ -655,7 +655,21 @@ final class PurchaseReceiptService
 
             $orderLine = $this->resolveOrderLine($receipt, $line['purchase_order_line_id'] ?? null, $productId, $qty);
 
+            /*
+             * ⛔ দামের ভেতরের ভ্যাট মালের দামে নয় — পুনঃনিরীক্ষা, ৯ অক্টোবর ২০২৬।
+             *
+             * ⚠️ পণ্যের ভ্যাট "দামের ভিতরে" হলে ১১৫ দরের চালান মজুদে ১১৫ বসাত, অথচ বিল একই মালের মজুদ-মূল্য ধরে
+             * ১০০ আর ভ্যাট ১৫ ([[CalculatesLineTotals::lineFigures()]]) — বিলে তখন ১৫ টাকার মিথ্যা "দর-পার্থক্য",
+             * আর গুদামের মাল ভ্যাটসহ দামি। ⭐ এখন চালানের দর আর মূল্য ভ্যাট বাদে, বিলের হুবহু নিয়মে; বিল
+             * চালানের দর ধরেই ২১৬০ সরায়, তাই দুইটা মেলে। ⓘ ভ্যাট বন্ধ বা দামের বাইরে হলে কিছুই বদলায় না।
+             */
             $amount = bcmul($qty, $rate, 4);
+
+            if ((bool) $product->tax?->is_inclusive) {
+                $figures = $this->lineFigures($qty, $rate, '0', null, $product->tax);
+                $amount = bcsub($figures['amount'], $figures['tax'], 4);
+                $rate = bcdiv($amount, $qty, 4);
+            }
 
             // ফ্রি পরিমাণ একই সারির একই এককে — "১০ বাক্স, ১ বাক্স ফ্রি"
             $free = $this->packed(
