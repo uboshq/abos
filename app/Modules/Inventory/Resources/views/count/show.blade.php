@@ -60,6 +60,11 @@
                 <p class="mt-3 text-sm text-(--color-ink-muted)">{{ $count->narration }}</p>
             @endif
 
+            {{-- ⭐ ফ্রি মালের সমন্বয় — খাতা আর দর ফ্রি ভাণ্ডারের, টাকা নেই (মজুদ ⚠️৬ক) --}}
+            @if ($count->isFree())
+                <p class="mt-3 text-sm font-medium">{{ __('inventory::field.free_count_paper') }}</p>
+            @endif
+
             {{-- ⭐ মাল বের করার কাগজ — কারণটা কাগজেই, টাকা সেই খাতে (অডিট গ৫) --}}
             @if ($count->isIssue())
                 <p class="mt-3 text-sm font-medium">

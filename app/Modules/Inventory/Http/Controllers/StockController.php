@@ -488,6 +488,10 @@ class StockController extends Controller implements HasMiddleware
     {
         $data = $this->validatedMovement($request, ReasonCode::STOCK_ADJUSTMENT, 'counted');
 
+        // ⭐ কোন ভাণ্ডার — দামি মাল, না ফ্রি (মজুদ ⚠️৬ক); না বললে দামি, আগের মতো
+        $request->validate(['pool' => ['nullable', Rule::in(['paid', 'free'])]]);
+        $free = $request->input('pool') === 'free';
+
         /*
          * ⭐ সমন্বয় এখন একটা গণনার কাগজ হয়ে যায় — ১৮ সেপ্টেম্বর ২০২৬।
          *
@@ -509,6 +513,7 @@ class StockController extends Controller implements HasMiddleware
          * একটা কাগজ বেশি তৈরি হয়।
          */
         $count = $this->counts->record([
+            'kind' => $free ? \App\Modules\Inventory\Models\StockCount::KIND_FREE : \App\Modules\Inventory\Models\StockCount::KIND_COUNT,
             'warehouse_id' => $data['warehouse']->id,
             'count_date' => $request->input('trx_date'),
             'narration' => $request->input('narration'),
@@ -524,8 +529,8 @@ class StockController extends Controller implements HasMiddleware
              */
             'batch_no' => $request->input('batch_no'),
             'expiry_date' => $request->input('expiry_date'),
-            // ⭐ পর্দার দর কাগজে যায় — অডিট ম১; ⛔ আগে যাচাই হয়েও পথে ফেলে দেওয়া হত
-            'unit_cost' => $request->input('unit_cost'),
+            // ⭐ পর্দার দর কাগজে যায় — অডিট ম১; ⛔ আগে যাচাই হয়েও পথে ফেলে দেওয়া হত। ⓘ ফ্রি মালের দাম নেই
+            'unit_cost' => $free ? null : $request->input('unit_cost'),
         ]]);
 
         /*
