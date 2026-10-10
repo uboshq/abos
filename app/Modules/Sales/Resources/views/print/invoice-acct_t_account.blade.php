@@ -204,10 +204,10 @@
     <table class="taccount" data-movement>
         <tr class="side">
             <td style="width: 15mm">Dr</td>
-            <td>{{ __('sales::print.owed_by_customer') }}</td>
+            <td>{{ __('sales::print.owed_by_customer', [], 'en') }}</td>
             <td class="num mid" style="width: 26mm">Taka</td>
             <td style="width: 15mm; padding-left: 2.5mm">Cr</td>
-            <td>{{ __('sales::print.paid_by_customer') }}</td>
+            <td>{{ __('sales::print.paid_by_customer', [], 'en') }}</td>
             <td class="num" style="width: 26mm">Taka</td>
         </tr>
         @for ($i = 0; $i < $lines; $i++)
@@ -235,8 +235,8 @@
     </table>
     <table class="strip-wrap">
         <tr>
-            <td data-previous-due>{{ __('sales::print.previous_short') }} {{ $v->previousBeforeBill() }} + {{ __('sales::print.this_invoice') }} {{ $paper->money($s['net_payable']) }} − {{ __('sales::print.received_short') }} {{ $paper->money($s['paid']) }}</td>
-            <td class="closing">{{ __('sales::print.closing_short') }} <span data-balance-word>{{ $v->balanceWord() }}</span> <span style="font-family: dejavusans">{{ $v->balanceAmount() }}</span></td>
+            <td data-previous-due>{{ __('sales::print.previous_short', [], 'en') }} {{ $v->previousBeforeBill() }} + {{ __('sales::print.this_invoice', [], 'en') }} {{ $paper->money($s['net_payable']) }} − {{ __('sales::print.received_short', [], 'en') }} {{ $paper->money($s['paid']) }}</td>
+            <td class="closing">{{ __('sales::print.closing_short', [], 'en') }} <span data-balance-word>{{ $v->balanceWord() }}</span> <span style="font-family: dejavusans">{{ $v->balanceAmount() }}</span></td>
         </tr>
     </table>
 @endif

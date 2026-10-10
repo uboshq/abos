@@ -110,14 +110,14 @@
         </td>
         <td class="hero">
             @if ($v->shows('previous_due'))
-                <div class="hero-cap">{{ __('sales::print.closing_balance') }}</div>
+                <div class="hero-cap">{{ __('sales::print.closing_balance', [], 'en') }}</div>
                 <div class="hero-amount">{{ $v->balanceAmount() }} <span class="hero-word" data-balance-word>{{ $v->balanceWord() }}</span></div>
-                <div class="hero-sub" data-previous-due>{{ __('sales::print.previous_short') }} {{ $v->previousBeforeBill() }}</div>
-                <div class="hero-sub">+ {{ __('sales::print.bill_short') }} {{ $paper->money($s['net_payable']) }} - {{ __('sales::print.paid') }} {{ $paper->money($s['paid']) }}</div>
+                <div class="hero-sub" data-previous-due>{{ __('sales::print.previous_short', [], 'en') }} {{ $v->previousBeforeBill() }}</div>
+                <div class="hero-sub">+ {{ __('sales::print.bill_short', [], 'en') }} {{ $paper->money($s['net_payable']) }} - {{ __('sales::print.paid', [], 'en') }} {{ $paper->money($s['paid']) }}</div>
             @else
-                <div class="hero-cap">{{ __('sales::print.this_invoice') }}</div>
+                <div class="hero-cap">{{ __('sales::print.this_invoice', [], 'en') }}</div>
                 <div class="hero-amount">{{ $v->billLeftAmount() }} <span class="hero-word">{{ $v->billLeftWord() }}</span></div>
-                <div class="hero-sub">{{ __('sales::print.bill_short') }} {{ $paper->money($s['net_payable']) }} - {{ __('sales::print.paid') }} {{ $paper->money($s['paid']) }}</div>
+                <div class="hero-sub">{{ __('sales::print.bill_short', [], 'en') }} {{ $paper->money($s['net_payable']) }} - {{ __('sales::print.paid', [], 'en') }} {{ $paper->money($s['paid']) }}</div>
             @endif
         </td>
         <td style="width: 3mm"></td>
