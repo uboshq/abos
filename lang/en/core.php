@@ -190,6 +190,8 @@ return [
         'mobile' => 'Mobile app',
         'invoice_info' => 'Set Your Invoice Information',
         'print_paper' => 'Paper size',
+        // ⓘ Finance: who the owner is in the capital register
+        'capital' => 'Capital',
     ],
 
     'action' => [
@@ -770,6 +772,21 @@ return [
         'super_admin' => 'Super Admin',
         'accountant' => 'Accountant',
         'salesman' => 'Salesman',
+
+        /* ⓘ মডিউলের রোল-ছাঁচ — ইংরেজিতে নামটাই, বাংলা ফাইলের জোড়া (BothLanguagesSayTheSameThingTest) */
+        'Accountant' => 'Accountant',
+        'Manager' => 'Manager',
+        'Counter' => 'Counter',
+        'Field Sales' => 'Field Sales',
+        'Warehouse' => 'Warehouse',
+        'HR' => 'HR',
+        'Auditor' => 'Auditor',
+        'Security Watch' => 'Security Watch',
+        'Backup Watcher' => 'Backup Watcher',
+        'Backup Operator' => 'Backup Operator',
+        'Kitchen' => 'Kitchen',
+        'User Admin' => 'User Admin',
+        'Settings Keeper' => 'Settings Keeper',
     ],
 
     /*
@@ -939,6 +956,7 @@ return [
         'not_a_date' => ':column is not a date — use day/month/year.',
         'unknown_value' => 'Could not match ":value" in :column.',
         'nothing_to_import' => 'No usable rows, so nothing was saved.',
+        'too_many_rows' => 'The file has more than :max rows - nothing was saved. Split it into parts and send them again.',
         'partial_warning' => 'Some rows did not load. Fix them and upload again — otherwise the import is incomplete.',
     ],
 
@@ -1007,6 +1025,15 @@ return [
     'empty' => [
         'nothing_here' => 'Nothing here yet',
         'no_results' => 'Nothing matched that search',
+        'filtered_hint' => 'Nothing here matches the search or filters. Clear them to see the whole list.',
+        'clear_filters' => 'Clear filters and show all',
+    ],
+
+    'file' => [
+        'choose' => 'Choose a file',
+        'choose_many' => 'Choose files',
+        'none' => 'No file chosen',
+        'many' => ':count files chosen',
     ],
 
     'status_bar' => [
@@ -1247,6 +1274,7 @@ return [
             'delivery_stage' => 'When a sale moves to its next delivery step',
             'order_credit_held' => 'When a sales order is held at the credit limit',
             'order_awaits_you' => 'When a sales order waits for my signature',
+            'adjusting_reversal_stuck' => 'When an adjusting journal could not reverse on its date',
             'backup_failed_note' => 'The nightly backup could not be taken or could not reach a destination, with the reason. ⛔ Off means you learn about it on the day you need the backup.',
         ],
     ],

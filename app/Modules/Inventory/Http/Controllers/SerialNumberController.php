@@ -45,7 +45,17 @@ class SerialNumberController extends Controller implements HasMiddleware
         return [
             new Middleware('can:inventory.serial.view', only: ['index']),
             new Middleware('can:inventory.serial.manage', only: ['create', 'store', 'issue', 'storeIssue']),
+            // ⭐ ফেরত পিস গুদামে ফেরত — মজুদ-সমন্বয়ের চাবিতে (মজুদ ছ৩)
+            new Middleware('can:inventory.stock.adjust', only: ['backToStock']),
         ];
+    }
+
+    /** ⭐ ফেরত আসা পিস দেখে গুদামে ফেরত নেওয়া (মজুদ ছ৩; [[SerialNumberService::backToStock()]]) */
+    public function backToStock(Request $request, SerialNumber $serial): RedirectResponse
+    {
+        $piece = $this->serials->backToStock($serial, $request->string('note')->trim()->value() ?: null);
+
+        return back()->with('saved', __('inventory::message.serial_back_in_stock', ['no' => $piece->serial_no]));
     }
 
     public function index(Request $request): View

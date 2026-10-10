@@ -113,6 +113,94 @@ final class ControlPanelTabs
     }
 
     /**
+     * ⭐ বাঁয়ের দলবদ্ধ তালিকা — পাতা সাজানোর পরিকল্পনা (সিস্টেম পর্দার নকশা §১), ১০ অক্টোবর ২০২৬: *"১৯টা ট্যাবের বদলে
+     * বাঁয়ে দলবদ্ধ তালিকা (মডিউল চালু/বন্ধ, তারপর প্রতিটা মডিউলের সেটিংস)"*।
+     *
+     * ⓘ সারিগুলো [[all()]]-এর হুবহু — কেবল তিন দলে ভাগ: মডিউল চালু/বন্ধ · সাধারণ (ছাপা আর মডিউল-পেরোনো) · প্রতিটা
+     * মডিউলের সেটিংস। ⚠️ নতুন কোনো সারি বানানো হয় না, তাই ঠিকানা আর বুকমার্ক আগের মতো।
+     *
+     * @return list<array{label: string, tabs: list<array{key: string, label: string, url: string}>}>
+     */
+    public function groups(): array
+    {
+        $cross = array_merge(['print'], $this->crossTabs());
+        $groups = ['switches' => [], 'general' => [], 'modules' => []];
+
+        foreach ($this->all() as $tab) {
+            $groups[match (true) {
+                $tab['key'] === 'switches' => 'switches',
+                in_array($tab['key'], $cross, true) => 'general',
+                default => 'modules',
+            }][] = $tab;
+        }
+
+        return array_values(array_filter(array_map(
+            fn (string $key, array $tabs) => ['label' => __('system_admin::control.group_'.$key), 'tabs' => $tabs],
+            array_keys($groups),
+            $groups,
+        ), fn (array $g) => $g['tabs'] !== []));
+    }
+
+    /**
+     * ⭐ সুইচ বা সেটিং খোঁজা — সিস্টেম পর্দার নকশা §১, ১০ অক্টোবর ২০২৬: *"কোন সুইচ কোথায়, খুঁজলেই পাওয়া যাবে"*।
+     *
+     * ⓘ সার্ভারে, জাভাস্ক্রিপ্ট ছাড়া: মেনুর প্রতিটা সারি আর প্রতিটা ঘোষিত সেটিং-এর **পর্দায় দেখা নাম** (চলতি ভাষায়)
+     * মেলানো হয়, আর ফেরে নাম + কোন ট্যাবে + সেই ট্যাবের ঠিকানা। ⓘ সেটিং যে ট্যাবে দেখা যায় সেটাই — মডিউল-পেরোনো
+     * সেটিং-এর নিজের ট্যাব (`tab`), নইলে তার মডিউলের।
+     *
+     * @return list<array{label: string, place: string, url: string}>
+     */
+    public function find(string $query): array
+    {
+        $query = mb_strtolower(trim($query));
+
+        if ($query === '') {
+            return [];
+        }
+
+        $places = array_column($this->all(), null, 'key');
+        $hit = fn (string $text): bool => str_contains(mb_strtolower($text), $query);
+        $found = [];
+
+        foreach ($this->switches->tree() as $module) {
+            $place = $places[$module['code']] ?? null;
+
+            if ($place === null) {
+                continue;
+            }
+
+            if ($hit($module['label'])) {
+                $found[] = ['label' => $module['label'], 'place' => $places['switches']['label'], 'url' => $places['switches']['url']];
+            }
+
+            foreach ($module['groups'] as $group) {
+                foreach ($group['items'] as $item) {
+                    $label = __($item['label']);
+
+                    if ($hit($label)) {
+                        $found[] = ['label' => $label, 'place' => $place['label'], 'url' => $place['url']];
+                    }
+                }
+            }
+        }
+
+        foreach ($this->settings->definitions() as $definition) {
+            if ($definition['menu'] ?? false) {
+                continue;
+            }
+
+            $place = $places[(string) ($definition['tab'] ?? $definition['module'] ?? '')] ?? null;
+            $label = __((string) ($definition['label'] ?? ''));
+
+            if ($place !== null && $hit($label)) {
+                $found[] = ['label' => $label, 'place' => $place['label'], 'url' => $place['url']];
+            }
+        }
+
+        return $found;
+    }
+
+    /**
      * যে ট্যাবগুলো মডিউল পেরিয়ে যায় — ঘোষণা থেকে গোনা।
      *
      * ⓘ ক্রমটা ঘোষণার ক্রম নয়, বর্ণানুক্রমও নয় — **প্রথম যে সেটিং

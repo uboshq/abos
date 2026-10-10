@@ -79,9 +79,9 @@
                 <form method="GET" class="flex items-end gap-2">
                     <label class="text-sm">
                         <span class="mb-1 block text-(--color-ink-muted)">{{ __('sales::route.month') }}</span>
-                        <input type="month" name="month" value="{{ $month->format('Y-m') }}"
-                               class="h-(--spacing-field-compact) rounded-(--radius-field) border border-(--color-border)
-                                      bg-(--color-surface-card) px-2">
+                        <x-ui.month name="month" :value="$month->format('Y-m')"
+                                    class="h-(--spacing-field-compact) rounded-(--radius-field) border border-(--color-border)
+                                           bg-(--color-surface-card) px-2" />
                     </label>
                     <x-ui.button type="submit" tone="secondary">{{ __('core.action.apply') }}</x-ui.button>
                 </form>

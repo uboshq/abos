@@ -10,9 +10,12 @@ use App\Core\Concerns\IsAudited;
 use App\Core\Concerns\ListedInViewedBranch;
 use App\Core\Contracts\Drillable;
 use App\Core\Contracts\SettledByAVoucher;
+use App\Core\Contracts\SettlementTerms;
 use App\Core\Support\DocumentStatus;
+use App\Models\Approval;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Models\Voucher;
+use App\Modules\Finance\Support\OpensOnlyInReach;
 use App\Modules\MasterData\Models\Person;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -27,13 +30,14 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * লিখলে ব্যবসার মুনাফা কম দেখাত, আর বছরশেষে কে কত নিল তা বলার উপায়
  * থাকত না — অথচ অংশীদারি ব্যবসায় ওই সংখ্যাটাই সবচেয়ে বেশি দরকারি।
  */
-class Withdrawal extends Model implements Drillable, SettledByAVoucher, \App\Core\Contracts\SettlementTerms
+class Withdrawal extends Model implements Drillable, SettledByAVoucher, SettlementTerms
 {
     use BelongsToCompany;
     use HasFactory;
     use HasPublicId;
     use IsAudited;
     use ListedInViewedBranch;
+    use OpensOnlyInReach;
 
     /**
      * তিনটা আলাদা জিনিস, আর হিসাবে তিনটার ফল আলাদা।
@@ -245,12 +249,12 @@ class Withdrawal extends Model implements Drillable, SettledByAVoucher, \App\Cor
     public function settlementTerms(): array
     {
         // ⓘ সইয়ের অপেক্ষায় বা ফেরত পাওয়া কাগজ খোলা নয় — সইয়ের পথ ভাউচার দিয়ে এড়ানো যায় না
-        $latest = \App\Models\Approval::query()
+        $latest = Approval::query()
             ->where('approvable_type', static::class)
             ->where('approvable_id', $this->getKey())
             ->latest('id')
             ->first();
-        $signed = $latest === null || $latest->status === \App\Models\Approval::APPROVED;
+        $signed = $latest === null || $latest->status === Approval::APPROVED;
 
         return [
             'voucher_type' => 'payment',

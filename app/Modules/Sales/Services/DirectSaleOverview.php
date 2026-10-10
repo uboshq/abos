@@ -65,7 +65,7 @@ final class DirectSaleOverview
             $rate = (string) $line['rate'];
             $percent = (string) ($line['discount_percent'] ?? '0');
             $discount = bccomp($percent, '0', 4) > 0 ? bcdiv(bcmul(bcmul($qty, $rate, 4), $percent, 4), '100', 4) : '0';
-            $figures = $this->lineFigures($qty, $rate, $discount, null, $product->tax);
+            $figures = $this->lineFigures($qty, $rate, $discount, null, CounterVat::rule($data) ?? $product->tax);
             $lot = filled($line['batch_id'] ?? null) ? Batch::query()->find((int) $line['batch_id'])?->batch_no : null;
             $free = (string) ($line['free_qty'] ?? '0');
 

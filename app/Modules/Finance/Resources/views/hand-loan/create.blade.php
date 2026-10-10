@@ -223,11 +223,7 @@
                     <label for="loan-paper" class="mb-1 block text-sm font-medium">
                         {{ __('finance::field.book_paper') }}
                     </label>
-                    <input id="loan-paper" type="file" name="paper"
-                           x-on:change="$store.scanner.begin($el, 'paper')"
-                           class="w-full text-sm file:me-2 file:rounded-(--radius-field)
-                                  file:border file:border-(--color-border) file:bg-(--color-surface-app)
-                                  file:px-3 file:py-1.5 file:text-sm">
+                    <x-ui.file-input id="loan-paper" name="paper" x-on:change="$store.scanner.begin($el, 'paper')" />
                     <span class="mt-1 block text-2xs text-(--color-ink-muted)">{{ __('finance::field.book_paper_hint') }}</span>
                 </div>
 

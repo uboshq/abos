@@ -49,6 +49,7 @@ class CounterSetup {
     required this.lots,
     this.depositMethods = const [],
     this.carriers = const [],
+    this.farePayers = const [],
     this.voidReasons = const [],
   });
 
@@ -58,6 +59,9 @@ class CounterSetup {
   /// ⭐ টাকা নেওয়ার পদ্ধতি আর বাহক — ওয়েবের কাউন্টারের একই তালিকা (৪ অক্টোবর ২০২৬)
   final List<CounterMethod> depositMethods;
   final List<CounterChoice> carriers;
+
+  /// ভাড়া কে দিলেন — ব্যাংক বা MFS-এ বাছার তালিকা (a5, ১০ অক্টোবর ২০২৬; সার্ভার 272141b9); নগদে সার্ভার নিজেই লগইন করা মানুষ
+  final List<CounterChoice> farePayers;
 
   final String? warehouseId;
   final List<CounterChoice> warehouses;
@@ -96,6 +100,10 @@ class CounterSetup {
         voidReasons: [
           for (final r in (json['voidReasons'] as List?) ?? const [])
             r.toString(),
+        ],
+        farePayers: [
+          for (final p in (json['farePayers'] as List?) ?? const [])
+            if (p is Map) CounterChoice(p['id'].toString(), p['label']?.toString() ?? ''),
         ],
         carriers: [
           for (final c in (json['carriers'] as List?) ?? const [])
@@ -169,6 +177,10 @@ class CounterDelivery {
     this.carrierName,
     this.fare = 0,
     this.farePaidBy,
+    this.fareWhen,
+    this.fareAccount,
+    this.fareReference,
+    this.farePayer,
   });
 
   /// take_now · send_later · pickup_later
@@ -184,6 +196,36 @@ class CounterDelivery {
 
   /// us · us_add_to_bill · customer · none
   final String? farePaidBy;
+
+  /// ⭐ ভাড়া আমরা দিলে — কখন (now · later), কোন খাত থেকে (moneyAccounts-এর id), লেনদেন নম্বর আর কে দিলেন (ব্যাংক বা
+  /// MFS-এ) — মালিক, ৭ অক্টোবর ২০২৬: ভাড়া সব জায়গায় এক নিয়মে; Main Counter থেকে নিজে থেকে আর কাটে না (সার্ভার 272141b9)
+  final String? fareWhen;
+  final String? fareAccount;
+  final String? fareReference;
+  final String? farePayer;
+
+  bool get wePayFare => farePaidBy == 'us' || farePaidBy == 'us_add_to_bill';
+
+  /// একই ঘর, একটা বদলে — পপ-আপগুলো যার যার অংশ বদলায়, বাকিটা রাখে
+  CounterDelivery copyWith({
+    String? mode,
+    String? shipTo,
+    String? shipDate,
+  }) =>
+      CounterDelivery(
+        mode: mode ?? this.mode,
+        shipTo: shipTo,
+        shipDate: shipDate,
+        vehicleOwner: vehicleOwner,
+        carrierId: carrierId,
+        carrierName: carrierName,
+        fare: fare,
+        farePaidBy: farePaidBy,
+        fareWhen: fareWhen,
+        fareAccount: fareAccount,
+        fareReference: fareReference,
+        farePayer: farePayer,
+      );
 
   bool get isEmpty =>
       mode == null &&
@@ -205,6 +247,11 @@ class CounterDelivery {
           'carrier_name': carrierName!.trim(),
         if (fare > 0) 'transport_cost': fare.toStringAsFixed(2),
         if (farePaidBy != null) 'fare_paid_by': farePaidBy,
+        if (wePayFare && fareWhen != null) 'fare_when': fareWhen,
+        if (wePayFare && fareWhen == 'now' && fareAccount != null) 'fare_account': fareAccount,
+        if (wePayFare && fareWhen == 'now' && fareReference != null && fareReference!.trim().isNotEmpty)
+          'fare_reference': fareReference!.trim(),
+        if (wePayFare && fareWhen == 'now' && farePayer != null) 'fare_payer': farePayer,
       };
 }
 

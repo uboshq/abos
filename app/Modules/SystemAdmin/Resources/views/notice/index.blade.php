@@ -101,7 +101,7 @@
                                 <td class="text-(--color-ink-muted)"
                                     data-label="{{ __('system_admin::notice.roles') }}">
                                     @php $who = $row->audience->pluck('role')->all(); @endphp
-                                    {{ $who === [] ? __('system_admin::notice.everyone') : implode(' · ', $who) }}
+                                    {{ $who === [] ? __('system_admin::notice.everyone') : implode(' · ', array_map(\App\Core\Support\RoleLabel::for(...), $who)) }}
                                 </td>
 
                                 <td class="text-(--color-ink-muted)"

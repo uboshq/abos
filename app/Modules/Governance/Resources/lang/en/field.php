@@ -6,6 +6,7 @@ return [
     'when' => 'When',
     'what_broke' => 'What broke',
     'where_in_code' => 'Where',
+    'technical_detail' => 'Technical detail',
     'how_many_times' => 'Times',
     'who' => 'Who',
     'action' => 'Action',

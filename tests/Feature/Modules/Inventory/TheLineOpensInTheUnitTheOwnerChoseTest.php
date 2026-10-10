@@ -136,7 +136,11 @@ final class TheLineOpensInTheUnitTheOwnerChoseTest extends TestCase
     public function test_the_forms_carry_the_right_default(): void
     {
         $buying = $this->get(route('purchase.bill.create'))->assertOk();
-        $selling = $this->get(route('sales.invoice.create'))->assertOk();
+        /*
+         * ⓘ বেচার দিক বিক্রয় অর্ডারের ফর্মে — একই সারি-সম্পাদক, একই `sales` বাছাই। আগে ফাঁকা বিলের ফর্ম খোলা হত, কিন্তু মালিকের
+         * নির্দেশে (২১ সেপ্টেম্বর ২০২৬, e0f0c3a7) বিল কেবল চালান থেকে খোলে, ফাঁকা ফর্ম ৪০৪ — তাই দাবিটা ডিফল্ট না দেখেই লাল থাকত।
+         */
+        $selling = $this->get(route('sales.order.create'))->assertOk();
 
         /*
          * ⓘ `@js(...)` অ্যাট্রিবিউটের ভিতরে বসে, তাই উদ্ধৃতিগুলো `&quot;` হয়ে

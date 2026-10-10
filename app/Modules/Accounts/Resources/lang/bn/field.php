@@ -171,6 +171,8 @@ return [
     'difference' => 'পার্থক্য',
     'counted_by' => 'যিনি গুনলেন',
     'adjustment' => 'সমন্বয়ের জাবেদা',
+    'pl_section' => 'ভাগ',
+    'cf_section' => 'কোন কাজে',
     'money_in' => 'ঢুকল',
     'money_out' => 'বেরোল',
     'net_change' => 'নিট পরিবর্তন',

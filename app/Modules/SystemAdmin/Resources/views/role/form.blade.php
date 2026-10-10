@@ -341,6 +341,13 @@
                         {{ __('system_admin::permission.clear_everything') }}
                     </x-ui.button>
 
+                    {{-- ⭐ "কেবল দেওয়াগুলো" — সিস্টেম পর্দার নকশা §৩, ১০ অক্টোবর ২০২৬: চারশো সারির ভিতরে রোলটা আসলে কী পায়, এক চাপে।
+                         ⓘ খোঁজার সাথেই কাজ করে (actions.js), কোনো টিক বদলায় না। --}}
+                    <label class="flex min-h-(--spacing-touch) cursor-pointer items-center gap-2 text-sm">
+                        <input type="checkbox" data-permission-granted-only class="size-4 rounded border-(--color-border)">
+                        {{ __('system_admin::permission.granted_only') }}
+                    </label>
+
                     {{-- ⭐ ঘরের অবস্থার ব্যাখ্যা — স্পেক §৩।
 
                          ⛔ স্পেকে ছয় রকম ঘর; এখানে **তিনটা**, আর কারণটা
@@ -584,12 +591,9 @@
             @endforeach
             </div>
 
-            <div class="flex flex-wrap justify-end gap-2">
-                <x-ui.button tone="secondary" :href="route('system_admin.role.index')">
-                    {{ __('core.action.cancel') }}
-                </x-ui.button>
-                <x-ui.button type="submit" tone="primary">{{ __('core.action.save') }}</x-ui.button>
-            </div>
+            {{-- ⭐ নিচের বাতিল · সংরক্ষণ স্থির পট্টিতে ([[x-ui.form-actions]]) — সিস্টেম পর্দার নকশা §৩, ১০ অক্টোবর ২০২৬। ⓘ চোদ্দটা
+                 মডিউলের ছক খুললে পাতা কয়েক হাজার পিক্সেল লম্বা; মাথার বোতাম দুটো উপরে থাকে, আর এটা স্ক্রলের সাথে নিচে লেগে থাকে। --}}
+            <x-ui.form-actions :cancel="route('system_admin.role.index')" />
         </form>
         @endif
 

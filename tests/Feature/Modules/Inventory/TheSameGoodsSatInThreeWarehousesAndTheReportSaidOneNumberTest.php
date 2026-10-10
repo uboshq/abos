@@ -421,10 +421,14 @@ final class TheSameGoodsSatInThreeWarehousesAndTheReportSaidOneNumberTest extend
 
         $reason = ReasonCode::query()->firstOrFail();
 
-        app(StockService::class)->adjust(
+        // ⓘ গোনা সংখ্যায় নামানো — পার্থক্যটা সারিতে (মৃত `StockService::adjust()` যা করত, মজুদ ⓘ১৫)
+        $stock = app(StockService::class);
+        $stock->move(
             product: $this->product,
             warehouse: $this->stores[$store],
-            countedQty: $counted,
+            sourceType: StockService::ADJUSTMENT,
+            sourceId: $this->product->id,
+            floor: bcsub($counted, $stock->floorQty($this->product, $this->stores[$store]), 4),
             reason: $reason,
         );
 

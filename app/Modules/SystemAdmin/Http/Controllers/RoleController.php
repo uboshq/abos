@@ -709,12 +709,19 @@ class RoleController extends Controller implements HasMiddleware
         'other' => 'system_admin::permission.sections.other',
     ];
 
+    /*
+     * ⛔ বিষয়ের নাম গোটা অ্যারে থেকে খোঁজা হয়, `__('…subjects.'.$subject)` দিয়ে নয় — ১০ অক্টোবর ২০২৬।
+     *
+     * ⚠️ চাবিগুলো নিজেরাই বিন্দুওয়ালা (`accounts.coa`), আর `__()` বিন্দু ধরে ভেঙে খোঁজে: `subjects` → `accounts` (একটা লেখা,
+     * "পুরো হিসাব মডিউল") → `coa` — পায় না। ⓘ ফলে ভাষা ফাইলে ৮০টার বেশি বাংলা নাম লেখা থাকা সত্ত্বেও পর্দায় বসত Str::headline —
+     * "Coa", "Loan", "Till" (সিস্টেম পর্দার নকশা §৩ এটাই দেখেছিল)। এক অংশের চাবি (`accounts`) কাজ করত, তাই কেউ টের পায়নি।
+     */
     private function subjectLabel(string $subject): string
     {
-        $key = 'system_admin::permission.subjects.'.$subject;
-        $label = __($key);
+        $names = __('system_admin::permission.subjects');
+        $label = is_array($names) ? ($names[$subject] ?? null) : null;
 
-        return is_string($label) && $label !== $key
+        return is_string($label) && $label !== ''
             ? $label
             : Str::headline(str_replace('.', ' ', Str::after($subject, '.')));
     }

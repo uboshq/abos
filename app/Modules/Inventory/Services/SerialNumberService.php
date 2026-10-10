@@ -8,6 +8,8 @@ use App\Core\Support\CompanyContext;
 use App\Modules\Inventory\Models\Batch;
 use App\Modules\Inventory\Models\Product;
 use App\Modules\Inventory\Models\SerialNumber;
+use App\Core\Services\DataScope;
+use App\Models\UserDataScope;
 use App\Modules\Inventory\Models\Warehouse;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -139,6 +141,17 @@ final class SerialNumberService
                     ]);
                 }
 
+                /*
+                 * ⛔ ফেরত আসা পিস সিদ্ধান্তের আগে আবার বেরোয় না (পুরো-ERP অডিট, মজুদ ছ৩; [[AReturnedPieceWaitsForItsDecisionTest]])।
+                 * ⓘ `returned` মানে "ফেরত এসেছে, সিদ্ধান্ত বাকি" — খোলা বাক্সের টিভি কেউ না দেখেই নতুনের দামে যেত। কেউ দেখে গুদামে
+                 * ফেরত নিলে ([[backToStock()]]) তবেই আবার বেচা যায়। ⓘ কেবল `in_stock` বেরোয়।
+                 */
+                if ($piece->status !== SerialNumber::IN_STOCK) {
+                    throw ValidationException::withMessages([
+                        'serials' => __('inventory::validation.serial_waiting_decision', ['no' => $serial]),
+                    ]);
+                }
+
                 $piece->update([
                     'status' => SerialNumber::SOLD,
                     'out_source_type' => $data['source_type'] ?? null,
@@ -161,6 +174,40 @@ final class SerialNumberService
             }
 
             return $out;
+        });
+    }
+
+    /**
+     * ⭐ ফেরত আসা পিস দেখে গুদামে ফেরত নেওয়া — `returned` থেকে `in_stock` (পুরো-ERP অডিট, মজুদ ছ৩; fe-র সিদ্ধান্ত (ক),
+     * ১০ অক্টোবর ২০২৬; [[AReturnedPieceWaitsForItsDecisionTest]])।
+     *
+     * ⓘ মডেলের নিয়ম বলে "ফেরত এসেছে, সিদ্ধান্ত বাকি" — এই দরজাটাই সেই সিদ্ধান্ত। কেবল `returned` পিস; তালাসহ পড়া, যাতে দুইজনে একসাথে
+     * না চাপেন। ⛔ পিসের গুদাম দেখার নাগালে না থাকলে নেই বলে ধরা — সিরিয়ালে কেবল কোম্পানির দেয়াল, শাখা বা গুদামের নয়। ⓘ কে কবে
+     * ফেরত নিলেন, অডিটে লেখা থাকে (`serial_back_to_stock`)।
+     */
+    public function backToStock(SerialNumber $piece, ?string $note = null): SerialNumber
+    {
+        $warehouse = Warehouse::query()->find($piece->warehouse_id);
+        $branches = app(DataScope::class)->idsFor(auth()->user(), UserDataScope::BRANCH);
+
+        // ⓘ গুদামের দেয়াল দেখে গুদাম-সীমা আর হেডারের শাখা; শাখা-সীমিত মানুষ "সব শাখা"-তে থাকলেও অন্য শাখার পিস নয়
+        if ($warehouse === null || ($branches !== null && $warehouse->branch_id !== null && ! in_array((int) $warehouse->branch_id, $branches, true))) {
+            abort(404);
+        }
+
+        return DB::transaction(function () use ($piece, $note) {
+            $locked = SerialNumber::query()->whereKey($piece->id)->lockForUpdate()->firstOrFail();
+
+            if ($locked->status !== SerialNumber::RETURNED) {
+                throw ValidationException::withMessages([
+                    'serial' => __('inventory::validation.serial_not_returned', ['no' => $locked->serial_no]),
+                ]);
+            }
+
+            $locked->update(['status' => SerialNumber::IN_STOCK]);
+            app(\App\Core\Engines\Audit\AuditEngine::class)->recordAction($locked, 'serial_back_to_stock', $note);
+
+            return $locked->fresh();
         });
     }
 

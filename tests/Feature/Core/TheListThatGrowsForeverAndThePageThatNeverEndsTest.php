@@ -52,7 +52,6 @@ final class TheListThatGrowsForeverAndThePageThatNeverEndsTest extends TestCase
         'App\Modules\Accounts\Http\Controllers\YearEndController' => 'কেবল চলতি বছর, একটাই।',
 
         // ── প্রতিষ্ঠানের নিজের সাজানো, আর সাজানো জিনিস গোনা যায় ────────
-        'App\Modules\Approval\Http\Controllers\ApprovalFlowController' => 'অনুমোদনের পথ হাতে বানানো হয় — ডজনখানেক, হাজার নয়।',
         'App\Modules\MasterData\Http\Controllers\NumberSeriesController' => 'প্রতি কাগজের ধরনে একটা সিরিজ — সংখ্যাটা ধরনের সংখ্যায় বাঁধা।',
         'App\Modules\SystemAdmin\Http\Controllers\CompanyController' => 'প্রতিষ্ঠানের কোম্পানি — হাতে গোনা।',
         'App\Modules\SystemAdmin\Http\Controllers\CustomFieldController' => 'নিজের বানানো ঘর — ডজনখানেক।',
@@ -63,7 +62,6 @@ final class TheListThatGrowsForeverAndThePageThatNeverEndsTest extends TestCase
 
         // ── ফাইল বা কাগজের সংখ্যা যেখানে নীতিই বেঁধে দেয় ────────────────
         'App\Modules\Backup\Http\Controllers\BackupController' => 'রাখার মেয়াদ (keep_days) নিজেই সীমা — পুরনোগুলো মুছে যায়।',
-        'App\Modules\SystemAdmin\Http\Controllers\BackupController' => 'একই তালিকা, একই সীমা।',
         'App\Modules\SystemAdmin\Http\Controllers\ImportController' => 'ইমপোর্ট করা যায় এমন ধরনের তালিকা — কোডে লেখা।',
 
         /*
@@ -88,7 +86,6 @@ final class TheListThatGrowsForeverAndThePageThatNeverEndsTest extends TestCase
         'App\Modules\Inventory\Http\Controllers\LabelController' => 'চেকবক্সে পণ্য বাছার পর্দা — পাতা বদলালে আগের পাতার বাছাই হারাত।',
         'App\Modules\Sales\Http\Controllers\PosController' => 'কাউন্টারের ক্যাটালগ — খোঁজা তাৎক্ষণিক হতে হয়, পাতা ভাগ করলে প্রতিটা বিক্রিতে অপেক্ষা।',
         'App\Modules\Restaurant\Http\Controllers\KitchenBoardController' => 'রান্নাঘরের বোর্ড — সব কাজ একসাথে দেখাই উদ্দেশ্য।',
-        'App\Modules\MasterData\Http\Controllers\LocationController' => 'এলাকার গাছ — ডাল কেটে পাতা ভাগ করলে গাছটাই বোঝা যেত না।',
         'App\Modules\Inventory\Http\Controllers\StorageLocationController' => 'গুদামের তাকের ক্রম — হাঁটার পথ ধরে সাজানো, ভাগ করলে পথ ভাঙত।',
 
         // ── তালিকা নয়, হিসাবের পাতা: যোগফল ও কয়েকটা সারি ───────────────
@@ -97,6 +94,40 @@ final class TheListThatGrowsForeverAndThePageThatNeverEndsTest extends TestCase
         'App\Modules\Finance\Http\Controllers\PlanController' => 'পরিকল্পনার ধাপ কোডে লেখা, স্থির।',
         'App\Modules\Finance\Http\Controllers\HandLoanController' => 'চালু হাতধার — শোধ হলে তালিকা থেকে যায়।',
         'App\Modules\Inventory\Http\Controllers\StockOverviewController' => 'মজুদের ড্যাশবোর্ড — যোগফল ও গুদামের ড্রপডাউন।',
+
+        /*
+         * ── ⭐ ১০ অক্টোবর ২০২৬-এ যোগ — প্রতিটা পড়ে দেখা, "আজ সারি কম" নয় ───────────────
+         */
+        'App\Modules\Approval\Http\Controllers\ApprovalLimitController' => 'রোল × শাখা × পথের সীমা — হাতে বসানো নিয়ম, অনুমোদনের পথের মতোই ডজনখানেক।',
+        'App\Modules\Approval\Http\Controllers\ApprovalExceptionController' => 'কেবল খোলা সমস্যা, ঠিক হলেই তালিকা থেকে যায়; প্রতিটা খোঁজ নিজেই সীমাবদ্ধ (LOOK_AT = ২০০)।',
+        'App\Modules\Finance\Http\Controllers\AccountAnalysisController' => 'একটা খাতের এক সময়ের বিশ্লেষণ — যোগফলের পাতা, সারির তালিকা নয়।',
+        'App\Modules\Finance\Http\Controllers\CarrierAndLabourController' => 'পক্ষ ধরে যোগফল — এক পক্ষ এক সারি; একজনের খতিয়ান নিজেই পাতা ভাগ করে।',
+        'App\Modules\Finance\Http\Controllers\CfoController' => 'মালিকের ড্যাশবোর্ড — কার্ডের সংখ্যা কোডে স্থির।',
+        'App\Modules\Finance\Http\Controllers\RiskController' => 'ঝুঁকির খোঁজ কোডে স্থির; ঋণ-সুবিধা প্রতি সুবিধা এক সারি।',
+        'App\Modules\Governance\Http\Controllers\RetentionController' => 'কোন তথ্য কতদিন রাখা হয় — কোডে লেখা স্থির তালিকা।',
+        'App\Modules\Sales\Http\Controllers\SaleTrackingController' => 'খোঁজার উত্তর (JSON) — নিজেই ১০০-তে কাটা; পর্দা নয়।',
+        'App\Modules\Sales\Http\Controllers\SalesOverviewController' => 'বিক্রয়ের ড্যাশবোর্ড — এক সময়ের যোগফল আর কার্ড।',
+        // ⓘ EveryListScreenPaginatesTest::NOT_REALLY_A_LIST-এর একই কারণ — দুই পাহারা এক কথা বলে
+        'App\Modules\Sales\Http\Controllers\CustomerTargetController' => 'ফর্ম — একটাই POST, প্রতি ডিলারের এক সারি; পাতা বদলালে ভরা ঘরগুলো নীরবে হারাত। সারি বাড়ে ডিলারের সংখ্যায়, দিনে নয়।',
+        'App\Modules\Sales\Http\Controllers\DeliveryOrderController' => 'তালিকাই নেই — index() চালানের তালিকায় পাঠায়, সেটা পাতা ভাগ করে।',
+    ];
+
+    /**
+     * ⭐ পাতা ভাগ সেবায় — কন্ট্রোলারে নয় (১০ অক্টোবর ২০২৬)।
+     *
+     * ⓘ স্ক্যানার কেবল কন্ট্রোলারের ফাইলে `paginate(` খোঁজে; অনেক তালিকা সেবায় পাতা ভাগ করে আর কন্ট্রোলার শুধু ডাকে।
+     * ⚠️ ওগুলোকে "পুরোটা ইচ্ছাকৃত"-তে লেখা মিথ্যা হত — তাই আলাদা তালিকা, আর নামা সেবা-পদ্ধতিতে সত্যিই `paginate(` আছে কি না
+     * পরীক্ষা নিজেই পড়ে দেখে ([[test_the_service_that_pages_really_pages()]])।
+     *
+     * @var array<string, string> কন্ট্রোলার => 'সেবা::পদ্ধতি'
+     */
+    private const PAGED_ELSEWHERE = [
+        'App\Modules\Finance\Http\Controllers\BankChargeController' => 'App\Modules\Finance\Services\BankCharges::rows',
+        'App\Modules\Finance\Http\Controllers\BudgetController' => 'App\Modules\Finance\Services\BudgetService::plan',
+        'App\Modules\Sales\Http\Controllers\PortalDeliveryOrderController' => 'App\Modules\Sales\Services\CustomerPapers::deliveryOrders',
+        'App\Modules\Sales\Http\Controllers\PortalOrderController' => 'App\Modules\Sales\Services\CustomerPapers::salesOrders',
+        'App\Modules\Sales\Http\Controllers\PriceBookController' => 'App\Modules\Sales\Services\PriceBookService::lists',
+        'App\Modules\Sales\Http\Controllers\PriceListController' => 'App\Modules\Sales\Services\SalePriceBook::list',
     ];
 
     /**
@@ -107,7 +138,7 @@ final class TheListThatGrowsForeverAndThePageThatNeverEndsTest extends TestCase
         $undeclared = [];
 
         foreach ($this->controllersWithAnIndex() as $class => $paginates) {
-            if ($paginates || isset(self::WHOLE_ON_PURPOSE[$class])) {
+            if ($paginates || isset(self::WHOLE_ON_PURPOSE[$class]) || isset(self::PAGED_ELSEWHERE[$class])) {
                 continue;
             }
 
@@ -135,6 +166,33 @@ final class TheListThatGrowsForeverAndThePageThatNeverEndsTest extends TestCase
      *
      * ⛔ আর ঐভাবেই একটা পাহারা ধীরে ধীরে একটা রূপকথা হয়ে যায়।
      */
+    /**
+     * ⭐ যে সেবার নাম পাতা-ভাগ বলে লেখা, সে সত্যিই `paginate(` ডাকে — নামটা পুরনো হলে বা সেবা `get()`-এ ফিরলে লাল।
+     */
+    public function test_the_service_that_pages_really_pages(): void
+    {
+        $wrong = [];
+
+        foreach (self::PAGED_ELSEWHERE as $controller => $where) {
+            [$class, $method] = explode('::', $where);
+
+            if (! method_exists($class, $method)) {
+                $wrong[] = "{$controller} → {$where} — পদ্ধতিটা নেই।";
+
+                continue;
+            }
+
+            $m = new \ReflectionMethod($class, $method);
+            $lines = array_slice(file((string) $m->getFileName()), $m->getStartLine() - 1, $m->getEndLine() - $m->getStartLine() + 1);
+
+            if (! str_contains(implode('', $lines), 'paginate(')) {
+                $wrong[] = "{$controller} → {$where} — এখানে পাতা ভাগ নেই, পুরোটা দেখায়।";
+            }
+        }
+
+        $this->assertSame([], $wrong, "পাতা-ভাগের সেবা যা বলে তা করে না:\n  ".implode("\n  ", $wrong));
+    }
+
     public function test_the_excuse_list_does_not_rot(): void
     {
         $found = $this->controllersWithAnIndex();

@@ -28,6 +28,7 @@ class TodayPanel extends StatefulWidget {
     this.onOpenDues,
     this.onOpenApprovals,
     this.onRecord,
+    this.onPull,
     this.padding = const EdgeInsets.all(AppSpacing.md),
   });
 
@@ -61,6 +62,11 @@ class TodayPanel extends StatefulWidget {
   /// then the fresh one — so a header outside this widget can name the
   /// company these figures belong to.
   final void Function(TodayRecord record)? onRecord;
+
+  /// ⭐ Run before the figures are fetched again on a pull — the home sends
+  /// the full sync here (owner, 10 Oct 2026). Its failure is said in one line
+  /// and the figures still refresh.
+  final Future<void> Function()? onPull;
 
   final EdgeInsets padding;
 
@@ -116,6 +122,21 @@ class _TodayPanelState extends State<TodayPanel> {
     }
   }
 
+  Future<void> _pull() async {
+    final pull = widget.onPull;
+    if (pull != null) {
+      try {
+        await pull();
+      } catch (_) {
+        if (mounted) {
+          ScaffoldMessenger.maybeOf(context)?.showSnackBar(const SnackBar(
+              content: Text('সিঙ্ক হয়নি — সংযোগ দেখে আবার টানুন। ফোনের কাজ ফোনেই আছে।')));
+        }
+      }
+    }
+    await _load();
+  }
+
   @override
   Widget build(BuildContext context) {
     final today = _today;
@@ -128,7 +149,7 @@ class _TodayPanelState extends State<TodayPanel> {
         if (_busy) const LinearProgressIndicator(minHeight: 2),
         Expanded(
           child: RefreshIndicator(
-            onRefresh: _load,
+            onRefresh: _pull,
             child: ListView(
               padding: widget.padding,
               children: [

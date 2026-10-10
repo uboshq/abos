@@ -62,6 +62,7 @@ final class ShipmentService
             ]);
 
             $this->replaceLines($shipment, $challanIds);
+            $this->stampFare($shipment, $data);
 
             IssuedNumber::query()
                 ->where('document_no', $documentNo)
@@ -96,9 +97,40 @@ final class ShipmentService
             ]);
 
             $this->replaceLines($shipment, $challanIds);
+            $this->stampFare($shipment, $data);
 
             return $shipment->fresh(['lines']);
         });
+    }
+
+    /**
+     * ⭐ ট্রিপের ভাড়া — অঙ্ক, বাহক, এখন বা পরে, খাত (মালিক, ৭ অক্টোবর ২০২৬; সিদ্ধান্ত ঘ; [[FarePayment::stamp()]])।
+     *
+     * ⓘ ফর্ম ঘরগুলো পাঠালে তবেই; না পাঠালে (পুরনো দরজা) কিছুই বদলায় না। ⓘ ভাড়ার ঘর fillable নয় — এখানে forceFill।
+     * ⛔ ভাড়াওয়ালা ট্রিপে নিজের ভাড়াওয়ালা চালান নয় ([[FarePayment::assertOneFarePerTrip()]])।
+     *
+     * @param  array<string, mixed>  $data
+     */
+    private function stampFare(Shipment $shipment, array $data): void
+    {
+        if (! array_key_exists('fare_when', $data) && ! array_key_exists('transport_cost', $data)) {
+            return;
+        }
+
+        $shipment->forceFill([
+            'transport_cost' => is_numeric($data['transport_cost'] ?? null) ? (string) $data['transport_cost'] : null,
+            'carrier_id' => ($data['carrier_id'] ?? null) ?: null,
+        ])->save();
+
+        $fares = app(FarePayment::class);
+        $fares->stamp($shipment->fresh(), $data);
+        $fares->assertOneFarePerTrip($shipment->fresh(), $this->challansOf($shipment));
+    }
+
+    /** @return \Illuminate\Support\Collection<int, DeliveryChallan> */
+    private function challansOf(Shipment $shipment): \Illuminate\Support\Collection
+    {
+        return DeliveryChallan::query()->whereIn('id', ShipmentLine::query()->where('shipment_id', $shipment->id)->select('delivery_challan_id'))->get();
     }
 
     /**
@@ -131,12 +163,29 @@ final class ShipmentService
 
             $this->assertChallansCanTravel($ids, $shipment);
 
-            $shipment->update([
+            /*
+             * ⭐ ট্রাক রওনা — ভাড়াও খাতায়, একই লেনদেনে (সিদ্ধান্ত ঘ; [[FarePayment::bookTrip()]])। ⓘ সারি তালা দিয়ে আসল
+             * অবস্থা — দুই চাপে দুইবার রওনা আর দুইবার ভাড়া নয়; খসড়ার পরে কোনো চালানে ভাড়া বসে থাকলে এখানে আবার ধরা পড়ে।
+             */
+            $locked = Shipment::query()->lockForUpdate()->findOrFail($shipment->id);
+
+            if ($locked->status !== DocumentStatus::DRAFT) {
+                throw ValidationException::withMessages([
+                    'status' => __('sales::validation.only_draft_dispatches', ['no' => $shipment->document_no]),
+                ]);
+            }
+
+            $fares = app(FarePayment::class);
+            $fares->assertOneFarePerTrip($locked, $this->challansOf($locked));
+
+            $locked->update([
                 'status' => DocumentStatus::CONFIRMED,
                 'dispatched_at' => now(),
             ]);
 
-            return $shipment->fresh(['lines']);
+            $fares->bookTrip($locked->fresh());
+
+            return $locked->fresh(['lines']);
         });
     }
 
@@ -260,14 +309,31 @@ final class ShipmentService
             ]);
         }
 
-        $shipment->update([
-            'status' => DocumentStatus::CANCELLED,
-            'cancelled_by' => auth()->id(),
-            'cancelled_at' => now(),
-            'cancel_reason' => $reason,
-        ]);
+        /*
+         * ⭐ ভাড়াও ফেরে — EV বাতিল বা দেনার দাখিলা উল্টো ([[FarePayment::undoTrip()]], ১০ অক্টোবর ২০২৬)। ⓘ টাকা নড়ে,
+         * তাই সারি তালা দিয়ে আসল অবস্থা আবার দেখা — দুই চাপে ভাড়া দুইবার উল্টায় না ([[EveryMoneyActionLocksItsRowTest]])।
+         */
+        return DB::transaction(function () use ($shipment, $reason) {
+            $locked = Shipment::query()->lockForUpdate()->findOrFail($shipment->id);
 
-        return $shipment->fresh(['lines']);
+            if (in_array($locked->status, [DocumentStatus::CANCELLED, DocumentStatus::CLOSED], true)) {
+                throw ValidationException::withMessages([
+                    'status' => __($locked->status === DocumentStatus::CANCELLED ? 'sales::validation.already_cancelled'
+                        : 'sales::validation.a_finished_trip_does_not_cancel', ['no' => $locked->document_no]),
+                ]);
+            }
+
+            $locked->update([
+                'status' => DocumentStatus::CANCELLED,
+                'cancelled_by' => auth()->id(),
+                'cancelled_at' => now(),
+                'cancel_reason' => $reason,
+            ]);
+
+            app(FarePayment::class)->undoTrip($locked->fresh(), $reason);
+
+            return $locked->fresh(['lines']);
+        });
     }
 
     // ── ভেতরের কাজ ──────────────────────────────────────────────────────

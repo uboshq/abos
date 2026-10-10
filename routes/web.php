@@ -89,6 +89,11 @@ Route::middleware('auth')->group(function () {
         ->whereNumber('notification')->name('notifications.open');
     Route::post('/notifications/read-all', [NotificationController::class, 'readAll'])
         ->name('notifications.read-all');
+    // ⭐ উপরের হলুদ ব্যানার একবার বন্ধ — এই লগইনে (পাতা সাজানো ধাপ ১, ১০ অক্টোবর ২০২৬; [[StatusNotices::forBanner()]])
+    // ⓘ ব্যানারটা কেবল ব্যাকআপ দেখার অধিকার যাঁর তাঁর পাতায় আসে ([[StatusNotices::backupNotice()]]) — বন্ধ করার দরজাও তাঁরই
+    Route::post('/notifications/banner/close', [NotificationController::class, 'closeBanner'])
+        ->middleware('can:backup.view')
+        ->name('notifications.banner.close');
 
     /*
      * কে কোন খবর পেতে চান — ২০ সেপ্টেম্বর ২০২৬, মালিকের *"বিজ্ঞপ্তির
@@ -226,5 +231,15 @@ Route::get('/health', HealthController::class)
     ->withoutMiddleware('web')
     ->middleware('throttle:'.HealthController::PER_MINUTE.',1,health')
     ->name('health');
+
+/*
+ * ⭐ রিয়েল-টাইম সিঙ্ক — খোলা পাতার "নতুন কিছু?" (মালিক, ১০ অক্টোবর ২০২৬)। ⛔ `web` বাদ: সেশন ছুঁলে খোলা-রাখা
+ * পাতা মানুষকে চিরকাল লগইন রাখত। চাবি পাতার ভেতরে, সই করা; উত্তরে কেবল সময়-চিহ্ন ([[LiveStamp]])।
+ */
+Route::get('/live/{key}', \App\Http\Controllers\LiveController::class)
+    ->where('key', 'c[0-9]{1,10}\.[a-f0-9]{24}')
+    ->withoutMiddleware('web')
+    ->middleware('throttle:'.\App\Http\Controllers\LiveController::PER_MINUTE.',1,live')
+    ->name('live.pulse');
 
 require __DIR__.'/auth.php';

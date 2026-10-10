@@ -13,7 +13,7 @@ return [
         'awaiting_approval' => 'অনুমোদনের অপেক্ষায়',
         'approved' => 'অনুমোদিত',
         'credit_held' => 'সীমায় আটকে',
-        'confirmed' => 'সংরক্ষিত',
+        'confirmed' => 'নিশ্চিত',
         'closed' => 'বন্ধ',
         'rejected' => 'ফেরত',
         'cancelled' => 'বাতিল',

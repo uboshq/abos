@@ -91,12 +91,11 @@
                     </a>
                 </p>
 
-                <label class="block">
+                {{-- ⓘ বাংলা ফাইল-বোতাম নিজের <label> আনে — তাই বাইরেরটা div (লেবেলের ভেতরে লেবেল চলে না) --}}
+                <div class="block">
                     <span class="mb-1 block text-sm font-medium">{{ __('core.import.file') }}</span>
-                    <input type="file" name="file" accept=".csv,text/csv,text/plain" required
-                           class="w-full rounded-(--radius-field) border border-(--color-border)
-                                  bg-(--color-surface-card) p-2 text-sm">
-                </label>
+                    <x-ui.file-input id="import-file" name="file" accept=".csv,text/csv,text/plain" required />
+                </div>
 
                 <div class="flex flex-wrap gap-2">
                     <x-ui.button type="submit" tone="secondary">

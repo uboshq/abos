@@ -141,7 +141,22 @@ final class SyncService
                 continue;
             }
 
-            $outcomes[] = $this->applyOne($user, $deviceId, $module, $change);
+            /*
+             * ⛔ একটা সারির অপ্রত্যাশিত ভাঙন বাকিদের আটকায় না (পুরো-ERP অডিট, ফোন; fe, ১০ অক্টোবর ২০২৬;
+             * [[OneBadChangeDoesNotHoldTheQueueTest]])।
+             *
+             * ⚠️ আগে ভাঙনটা ছুঁড়ে দেওয়া হত, তাই গোটা পুশ ৫০০ — আর যে সারি প্রতিবার ভাঙে (একটা বাগ), সে প্রতিবার কিউয়ের মাথায় বসে
+             * পরের সব অর্ডার আর আদায় চিরকাল আটকে রাখত। ⓘ এখন ওই সারির **কোনো উত্তর** যায় না — ফোনের চুক্তিতে উত্তরহীন সারি
+             * যেমন ছিল তেমনই থাকে, পরের বার আবার যায় (mobile sync_engine.dart: "left exactly as it was, retried next
+             * flush")। ⛔ নতুন কোনো অবস্থা (যেমন ERROR) পাঠানো যায় না: আজকের ফোন অচেনা অবস্থাকে "হয়ে গেছে" ধরে সারিটা মুছে
+             * ফেলত। ⓘ সারিটা REJECTED-ও লেখা হয় না — সাময়িক ভাঙন চিরকালের "না" নয় ([[applyOne()]]-এর সেই একই কারণ);
+             * ভুলটা ত্রুটির খাতায় যায় ([[report()]])।
+             */
+            try {
+                $outcomes[] = $this->applyOne($user, $deviceId, $module, $change);
+            } catch (Throwable $failure) {
+                report($failure);
+            }
         }
 
         return $outcomes;

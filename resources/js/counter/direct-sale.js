@@ -309,6 +309,9 @@ export default function directSale({
         deliveryMode: '',
         vehicleOwner: '',
         farePaidBy: '',
+        // ⓘ ভাড়া কখন আর কোন খাত থেকে — প্যানেলের লুকানো ঘর থেকে বসে ([[seedDriver()]]); আগে প্যানেলের নিজের x-data-তে ছিল
+        fareWhen: '',
+        fareAccount: '',
         vehicleNo: '',
         noteText: '',
         priceTerm: '',
@@ -2530,6 +2533,20 @@ export default function directSale({
          */
         seedDriver(el, key) {
             if (String(this[key] ?? '') === '') this[key] = el.defaultValue || '';
+        },
+
+        /*
+         * ⭐ ভাড়ার খাত ব্যাংক বা MFS কি না — তাহলে TrxID আর "কে দিলেন" লাগে ([[FarePayment::moneyFrom()]])।
+         *
+         * ⛔ আগে এটা প্যানেলের নিজের x-data-তে `get fareByBank() {…}` হয়ে লেখা ছিল (ভাড়া অংশ ২, df714ebc) — আর আমাদের
+         * Alpine হলো `@alpinejs/csp`, যার পার্সার বস্তুর ভেতরে getter পড়তে পারে না। ফলে গোটা ভাড়ার অংশটার x-data-ই চলত
+         * না: "পরে দেব" বাছা যেত না, ব্যাংকের TrxID-র ঘর দেখাত না (csp-expressions.test.js ধরে ফেলল, ১০ অক্টোবর ২০২৬)।
+         * ⓘ এখন অবস্থাটা কাউন্টারের নিজের (`fareWhen`, `fareAccount`), আর হিসাবটা এখানে — যেখানে `moneyAccounts` আছেই।
+         */
+        get fareByBank() {
+            const a = this.moneyAccounts.find(x => String(x.id) === String(this.fareAccount));
+
+            return a !== undefined && a.parent !== '1101';
         },
 
         pickDriver() {
