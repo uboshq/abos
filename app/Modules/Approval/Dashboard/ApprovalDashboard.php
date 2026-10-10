@@ -11,9 +11,14 @@ use App\Core\Engines\Dashboard\DashboardDefinition;
 use App\Core\Engines\Dashboard\Listing;
 use App\Core\Engines\Dashboard\Stat;
 use App\Core\Engines\Dashboard\Tile;
+use App\Core\Module\ModuleRegistry;
+use App\Core\Services\DataScope;
 use App\Core\Support\Money;
 use App\Models\Approval;
 use App\Models\ApprovalDelegation;
+use App\Models\User;
+use App\Models\UserDataScope;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Carbon;
 
 /**
@@ -42,21 +47,21 @@ final class ApprovalDashboard implements ProvidesDashboard
             stats: [
                 new Stat(
                     label: __('approval::dashboard.pending'),
-                    value: (string) Approval::query()->where('status', Approval::PENDING)->count(),
+                    value: (string) self::seen()->where('status', Approval::PENDING)->count(),
                     hint: __('approval::dashboard.pending_hint'),
                     href: route('approval.inbox.index'),
                     tone: Stat::WARN,
                 ),
                 new Stat(
                     label: __('approval::dashboard.approved'),
-                    value: (string) Approval::query()->where('status', Approval::APPROVED)->count(),
+                    value: (string) self::seen()->where('status', Approval::APPROVED)->count(),
                     hint: __('approval::dashboard.approved_hint'),
                     href: route('approval.inbox.index'),
                     tone: Stat::GOOD,
                 ),
                 new Stat(
                     label: __('approval::dashboard.rejected'),
-                    value: (string) Approval::query()->where('status', Approval::REJECTED)->count(),
+                    value: (string) self::seen()->where('status', Approval::REJECTED)->count(),
                     hint: __('approval::dashboard.rejected_hint'),
                     href: route('approval.inbox.index'),
                     tone: Stat::BAD,
@@ -77,12 +82,84 @@ final class ApprovalDashboard implements ProvidesDashboard
                         ['key' => 'amount', 'label' => __('approval::dashboard.amount'), 'width' => '9rem',
                             'render' => fn ($a) => $a->amount],
                     ],
-                    rows: Approval::query()->where('status', Approval::PENDING)->latest('id')->limit(8)->get(),
+                    rows: self::seen()->where('status', Approval::PENDING)->latest('id')->limit(8)->get(),
                     empty: __('approval::dashboard.nothing_waiting'),
                     href: route('approval.inbox.index'),
                 ),
             ],
         );
+    }
+
+    /**
+     * ⛔ কোন অনুরোধগুলো এই মানুষের চোখে পড়ে — পুনঃনিরীক্ষা, ৯ অক্টোবর ২০২৬।
+     *
+     * ── কী ভুল ছিল ───────────────────────────────────────────────────
+     * ⚠️ পাতাটা কেবল `approval.view` চাইত, অথচ প্রতিটা সংখ্যা আর "এখন
+     * অপেক্ষায়" তালিকা গোটা কোম্পানির — অর্থাৎ নিজের ছুটির খবর নিতে আসা
+     * একজন কর্মীও দেখতেন কোন মডিউলে কত টাকার কী আটকে আছে, কার টেবিলে।
+     *
+     * ⭐ এখন দুই রকম চোখ:
+     *   · রিপোর্টের চাবি (`approval.report`) আর শাখার সীমা নেই — গোটা কোম্পানি,
+     *     অনুমোদনের রিপোর্টগুলোর হুবহু নিয়মে।
+     *   · বাকি সবাই — নিজের: যা নিজে চেয়েছেন, যা নিজের হাতে দেওয়া, যাতে
+     *     নিজে সই দিয়েছেন, আর ইনবক্সের হুবহু সইয়ের তালিকা
+     *     ([[ApprovalEngine::pendingQueryFor()]])।
+     *
+     * ⓘ শাখার সীমা কেন রিপোর্টের চাবিকেও নামিয়ে আনে: অনুমোদনের সারিতে শাখার
+     * ঘর নেই, তাই শাখায় ভাগ করা যায় না — রিপোর্টগুলো তাই `WHOLE_COMPANY`,
+     * আর শাখায় আটকানো মানুষকে ইঞ্জিন ফেরায়। ⛔ এখানে ছাড় দিলে ঐ দেয়ালটা
+     * ড্যাশবোর্ড দিয়ে টপকানো যেত।
+     *
+     * @return Builder<Approval>
+     */
+    private static function seen(): Builder
+    {
+        $user = auth()->user();
+
+        if (! $user instanceof User) {
+            return Approval::query()->whereRaw('1 = 0');
+        }
+
+        if (self::seesTheWholeCompany($user)) {
+            return Approval::query();
+        }
+
+        $queue = $user->can('approval.decide')
+            ? app(ApprovalEngine::class)->pendingQueryFor($user)->reorder()->select('approvals.id')
+            : null;
+
+        return Approval::query()->where(fn (Builder $q) => $q
+            ->where('approvals.requested_by', $user->id)
+            ->orWhere('approvals.assigned_to', $user->id)
+            ->orWhereHas('decisions', fn (Builder $d) => $d->where('user_id', $user->id))
+            ->when($queue !== null, fn (Builder $w) => $w->orWhereIn('approvals.id', $queue)));
+    }
+
+    /**
+     * ভারের হিসাবও একই নিয়মে — গোটা কোম্পানির চোখ না থাকলে কেবল নিজের দেওয়া বা পাওয়া ভার।
+     *
+     * @return Builder<ApprovalDelegation>
+     */
+    private static function delegationsSeen(): Builder
+    {
+        $user = auth()->user();
+
+        if (! $user instanceof User) {
+            return ApprovalDelegation::query()->whereRaw('1 = 0');
+        }
+
+        if (self::seesTheWholeCompany($user)) {
+            return ApprovalDelegation::query();
+        }
+
+        return ApprovalDelegation::query()->where(fn (Builder $q) => $q
+            ->where('from_user_id', $user->id)->orWhere('to_user_id', $user->id));
+    }
+
+    private static function seesTheWholeCompany(User $user): bool
+    {
+        return $user->can('approval.report')
+            && ! app(DataScope::class)->isLimited($user, UserDataScope::BRANCH);
     }
 
     /**
@@ -98,7 +175,7 @@ final class ApprovalDashboard implements ProvidesDashboard
         $three = $now->copy()->subDays(3);
         $seven = $now->copy()->subDays(7);
 
-        $row = Approval::query()->where('status', Approval::PENDING)
+        $row = self::seen()->where('status', Approval::PENDING)
             ->selectRaw('SUM(CASE WHEN requested_at >= ? THEN 1 ELSE 0 END) as fresh', [$day])
             ->selectRaw('SUM(CASE WHEN requested_at < ? AND requested_at >= ? THEN 1 ELSE 0 END) as days', [$day, $three])
             ->selectRaw('SUM(CASE WHEN requested_at < ? AND requested_at >= ? THEN 1 ELSE 0 END) as week', [$three, $seven])
@@ -133,7 +210,7 @@ final class ApprovalDashboard implements ProvidesDashboard
             return [];
         }
 
-        $rows = Approval::query()->where('status', Approval::PENDING)
+        $rows = self::seen()->where('status', Approval::PENDING)
             ->selectRaw('assigned_to, COUNT(*) as n')
             ->groupBy('assigned_to')
             ->orderByDesc('n')
@@ -143,7 +220,7 @@ final class ApprovalDashboard implements ProvidesDashboard
             return [];
         }
 
-        $names = \App\Models\User::query()->whereKey($rows->pluck('assigned_to')->filter()->all())->pluck('name', 'id');
+        $names = User::query()->whereKey($rows->pluck('assigned_to')->filter()->all())->pluck('name', 'id');
 
         $parts = $rows->take(6)->map(fn ($r) => [
             'label' => $r->assigned_to === null ? __('approval::dashboard.anyone') : ($names[$r->assigned_to] ?? '—'),
@@ -178,7 +255,7 @@ final class ApprovalDashboard implements ProvidesDashboard
             return [];
         }
 
-        $rows = Approval::query()->where('status', Approval::PENDING)
+        $rows = self::seen()->where('status', Approval::PENDING)
             ->selectRaw('module, COUNT(*) as n')
             ->groupBy('module')
             ->orderByDesc('n')
@@ -188,7 +265,7 @@ final class ApprovalDashboard implements ProvidesDashboard
             return [];
         }
 
-        $registry = app(\App\Core\Module\ModuleRegistry::class);
+        $registry = app(ModuleRegistry::class);
         $locale = app()->getLocale();
 
         return [new Breakdown(
@@ -227,12 +304,12 @@ final class ApprovalDashboard implements ProvidesDashboard
         $today = Carbon::today();
         $monthStart = $today->copy()->startOfMonth();
 
-        $decidedToday = fn (string $status): string => (string) Approval::query()
+        $decidedToday = fn (string $status): string => (string) self::seen()
             ->where('status', $status)
             ->whereBetween('decided_at', [$today, $today->copy()->endOfDay()])
             ->count();
 
-        $speed = Approval::query()
+        $speed = self::seen()
             ->whereIn('status', [Approval::APPROVED, Approval::REJECTED])
             ->whereBetween('decided_at', [$monthStart, $monthStart->copy()->endOfMonth()])
             ->selectRaw('COUNT(*) as n, AVG(TIMESTAMPDIFF(SECOND, requested_at, decided_at)) as secs')
@@ -240,7 +317,7 @@ final class ApprovalDashboard implements ProvidesDashboard
 
         $decided = (int) ($speed->n ?? 0);
 
-        $overdue = Approval::query()
+        $overdue = self::seen()
             ->where('status', Approval::PENDING)
             ->whereNotNull('due_at')
             ->where('due_at', '<', $now)
@@ -275,7 +352,7 @@ final class ApprovalDashboard implements ProvidesDashboard
             ),
             new Stat(
                 label: __('approval::dashboard.delegations_today'),
-                value: (string) ApprovalDelegation::query()->active($today->toDateString())->count(),
+                value: (string) self::delegationsSeen()->active($today->toDateString())->count(),
                 hint: __('approval::dashboard.delegations_today_hint'),
                 href: route('approval.delegation.index'),
             ),
@@ -327,7 +404,7 @@ final class ApprovalDashboard implements ProvidesDashboard
             return [];
         }
 
-        $registry = app(\App\Core\Module\ModuleRegistry::class);
+        $registry = app(ModuleRegistry::class);
         $locale = app()->getLocale();
 
         return [new Breakdown(

@@ -146,9 +146,12 @@ final class ReportApiController extends Controller
          * ⓘ "শেষ" না দিলে ইঞ্জিন আজকের দিন বসায়, তাই "শুরু" তার সাথেই মেলানো।
          */
         if ($definition->hasFilter('date_range')) {
+            // ⛔ `to[]=…` এলে নিয়মের লেখায় অ্যারে জুড়ে ৫০০ দিত — তাই কেবল লেখা হলে (পুনঃনিরীক্ষা, ৯ অক্টোবর ২০২৬)
+            $to = $request->query('to');
+
             $request->validate([
                 'from' => ['nullable', 'date_format:Y-m-d',
-                    'before_or_equal:'.($request->query('to') ?: Carbon::today()->toDateString())],
+                    'before_or_equal:'.(is_string($to) && $to !== '' ? $to : Carbon::today()->toDateString())],
                 'to' => ['nullable', 'date_format:Y-m-d'],
             ]);
         }

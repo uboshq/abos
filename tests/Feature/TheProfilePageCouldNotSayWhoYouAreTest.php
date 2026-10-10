@@ -93,7 +93,8 @@ final class TheProfilePageCouldNotSayWhoYouAreTest extends TestCase
 
         $this->user->refresh();
 
-        $this->assertSame('01712-345678', $this->user->mobile);
+        // ⓘ লগইনের ছাঁদে — ড্যাশ ছাড়া, যেভাবে লগইন মেলায় ([[LoginMobile]], পুনঃনিরীক্ষা ৯ অক্টোবর ২০২৬)
+        $this->assertSame('01712345678', $this->user->mobile);
         $this->assertSame('+880 1811-223344', $this->user->mobile_alt);
         $this->assertStringContainsString('বনশ্রী', (string) $this->user->address);
     }
