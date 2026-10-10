@@ -30,6 +30,9 @@ use Illuminate\Validation\ValidationException;
  */
 final class PrintQueue
 {
+    /** ছাপার সীমা যে কাগজে খাটে — বিল আর চালান ([[mayPrint()]]) */
+    public const LIMITED = [PrintJob::INVOICE, PrintJob::CHALLAN];
+
     public function __construct(private readonly SettingsService $settings) {}
 
     /**
@@ -87,6 +90,15 @@ final class PrintQueue
      */
     public function mayPrint(PrintJob $job): bool
     {
+        /*
+         * ⛔ সীমা কেবল বিল আর চালানে — আগের মতোই (fe, ১১ অক্টোবর ২০২৬, PR #17 রিভিউ ⚠️১১)। ⓘ অর্ডার, DO, গেট পাস আর রসিদ
+         * এখন গোনায় আছে, তাই DUPLICATE বসে; কিন্তু ফ্রিজে নতুন করে আটকানো চলে না — সীমা বসানো কোম্পানিতে গেটের তৃতীয়
+         * ছাপাটা হঠাৎ থেমে যেত। সীমা এগুলোয় নেবে কি না, সেটা মালিকের পরের সিদ্ধান্ত।
+         */
+        if (! in_array($job->document_type, self::LIMITED, true)) {
+            return true;
+        }
+
         $limit = (int) $this->settings->get('sales.reprint_limit', 0);
 
         if ($limit <= 0 || $job->printed_count < $limit) {
