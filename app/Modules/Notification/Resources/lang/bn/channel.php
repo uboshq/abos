@@ -41,4 +41,6 @@ return [
     'api_key' => 'এপিআই চাবি',
     'api_secret' => 'এপিআই গোপন চাবি',
     'back' => 'সব মাধ্যম',
+    'webhook_secret' => 'প্রোভাইডারের ফেরত-খবরের গোপন চাবি (webhook secret)',
+    'callback_note' => 'প্রোভাইডারের রসিদ আর bounce এই ঠিকানায় পাঠাতে বলুন, উপরের গোপন চাবির HMAC-SHA256 স্বাক্ষরসহ (X-ABOS-Timestamp, X-ABOS-Signature):',
 ];

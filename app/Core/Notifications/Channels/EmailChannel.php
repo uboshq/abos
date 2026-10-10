@@ -64,7 +64,8 @@ final class EmailChannel implements DeliveryChannel
             return DeliveryResult::transient('mail: '.class_basename($e));
         }
 
-        return DeliveryResult::sent();
+        // ⓘ আমাদের নিজের রেফারেন্স চিঠির মাথায় (`X-ABOS-Ref`) — প্রোভাইডারের ফেরত-খবর (bounce, রসিদ) এটা দিয়েই সারিতে মেলে
+        return DeliveryResult::sent($notification->public_id === null ? null : 'abos-'.$notification->public_id);
     }
 
     public function test(User $user, ?NotificationChannel $config): DeliveryResult

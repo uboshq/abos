@@ -12,6 +12,7 @@ use App\Http\Controllers\Api\DocumentApiController;
 use App\Http\Controllers\Api\MeController;
 use App\Http\Controllers\Api\NoticeApiController;
 use App\Http\Controllers\Api\NotificationApiController;
+use App\Http\Controllers\Api\NotificationCallbackController;
 use App\Http\Controllers\Api\NotificationManageApiController;
 use App\Http\Controllers\Api\PushTokenController;
 use App\Http\Controllers\Api\ReportApiController;
@@ -117,6 +118,15 @@ Route::get('v1/app/version', AppVersionController::class)
 Route::post('v1/app/crash', AppCrashController::class)
     ->middleware('throttle:10,1,app-crash')
     ->name('api.app.crash');
+
+/*
+ * ⭐ প্রোভাইডারের ফেরত-খবর — পৌঁছানোর রসিদ, bounce (বিজ্ঞপ্তি ব্যবস্থাপনা)। লগইন নেই: প্রোভাইডার ডাকে। পাহারা মাধ্যমের গোপন
+ * `webhook_secret`-এর HMAC স্বাক্ষরে আর পাঁচ মিনিটের সময়-সীমায়; না মিললে ৪০১, কিছুই বসে না ([[ProviderCallbacks]])।
+ */
+Route::post('v1/notification-callbacks/{company}/{channel}', NotificationCallbackController::class)
+    ->where('channel', 'email|web_push|mobile_push|sms')
+    ->middleware('throttle:60,1,notification-callback')
+    ->name('api.notification-callbacks');
 
 /*
  * অ্যাপের নিজের দরজা — সিঙ্ক নয়।

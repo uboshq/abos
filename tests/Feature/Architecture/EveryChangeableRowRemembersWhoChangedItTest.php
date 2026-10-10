@@ -115,6 +115,7 @@ class EveryChangeableRowRemembersWhoChangedItTest extends TestCase
         'App\Models\NotificationPreference' => 'ব্যক্তির নিজের পছন্দ, NotificationChoice-এর একই যুক্তি',
         'App\Models\NotificationDigest' => 'যন্ত্রের লেখা সারসংক্ষেপের খাতা',
         'App\Models\NotificationSuppression' => 'যন্ত্রের একবার-লেখা সারি — কোন খবর কেন আটকানো হলো',
+        'App\Models\NotificationProviderEvent' => 'প্রোভাইডারের ফেরত-খবরের একবার-লেখা সারি — স্বাক্ষর যাচাই করে যন্ত্র লেখে',
         'App\Models\DocumentDelivery' => 'কাগজ বেরোনোর ঘটনা — একবার ঘটে, কেউ বদলায় না (২০ সেপ্টেম্বর ২০২৬)',
 
         // ── ব্যক্তির নিজের সুবিধা, ব্যবসার তথ্য নয় ──────────────────

@@ -377,7 +377,13 @@ final class EveryExcuseWeGrantedIsCountedTest extends TestCase
      *   +৩  EveryRouteIsGuardedTest::TOKEN_SYNC — api.notifications.show, api.notification-preferences.show / update:
      *       নিজের খবর আর নিজের পছন্দ, ফোনের ঘণ্টার বাকি দরজার মতোই চাবিহীন; অন্যেরটায় ৪০৪
      */
-    private const CEILING = 365;
+    /*
+     * ── ⚠️ 365 → 367, ১০ অক্টোবর ২০২৬ (বিজ্ঞপ্তি ব্যবস্থাপনা — প্রোভাইডারের ফেরত-খবর) ─────────────────────────────────
+     *   +১  EveryRouteIsGuardedTest::OPEN_TO_THE_WORLD — api.notification-callbacks: প্রোভাইডার লগইন ছাড়া ডাকে; পাহারা
+     *       মাধ্যমের গোপন চাবির HMAC স্বাক্ষর আর সময়-সীমা
+     *   +১  EveryChangeableRowRemembersWhoChangedItTest::EXEMPT — NotificationProviderEvent (যন্ত্রের একবার-লেখা সারি)
+     */
+    private const CEILING = 367;
 
     /*
      * ── ⚠️ ২২২ → ২২৪, ২৩ সেপ্টেম্বর ২০২৬ ───────────────────────────

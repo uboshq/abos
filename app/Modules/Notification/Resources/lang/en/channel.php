@@ -41,4 +41,6 @@ return [
     'api_key' => 'API key',
     'api_secret' => 'API secret',
     'back' => 'All channels',
+    'webhook_secret' => 'Provider callback secret (webhook secret)',
+    'callback_note' => 'Ask the provider to send receipts and bounces to this address, signed with HMAC-SHA256 using the secret above (X-ABOS-Timestamp, X-ABOS-Signature):',
 ];

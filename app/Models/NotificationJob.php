@@ -44,7 +44,7 @@ class NotificationJob extends Model
 
     protected $fillable = [
         'company_id', 'notification_id', 'event_id', 'digest_id', 'user_id', 'channel', 'status', 'attempts', 'max_attempts',
-        'next_attempt_at', 'claimed_at', 'provider', 'provider_ref', 'error_kind', 'last_error', 'sent_at', 'dead_at',
+        'next_attempt_at', 'claimed_at', 'provider', 'provider_ref', 'error_kind', 'last_error', 'sent_at', 'dead_at', 'delivered_at', 'receipt',
         'resolved_by', 'resolution',
     ];
 
@@ -56,6 +56,7 @@ class NotificationJob extends Model
             'next_attempt_at' => 'datetime',
             'claimed_at' => 'datetime',
             'sent_at' => 'datetime',
+            'delivered_at' => 'datetime',
             'dead_at' => 'datetime',
         ];
     }

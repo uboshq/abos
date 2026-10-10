@@ -150,7 +150,9 @@ class NotificationChannelController extends Controller
     private function secretKeys(string $channel): array
     {
         return match ($channel) {
-            NotificationChannel::SMS => ['api_key', 'api_secret'],
+            NotificationChannel::SMS => ['api_key', 'api_secret', 'webhook_secret'],
+            // ⓘ ইমেইলের SMTP চাবি `.env`-এ; এখানে কেবল প্রোভাইডারের ফেরত-খবরের স্বাক্ষরের চাবি
+            NotificationChannel::EMAIL => ['webhook_secret'],
             default => [],
         };
     }

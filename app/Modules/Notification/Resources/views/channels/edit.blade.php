@@ -86,6 +86,20 @@
                 @endforeach
             @endif
 
+            @if (in_array($channel, ['email', 'sms'], true))
+                {{-- ⭐ প্রোভাইডারের ফেরত-খবর (রসিদ, bounce) — এই ঠিকানায়, এই গোপন চাবির HMAC স্বাক্ষরে --}}
+                <label class="grid gap-1 text-2xs text-(--color-ink-muted)">
+                    {{ __('notification::channel.webhook_secret') }}
+                    <input type="password" name="secrets[webhook_secret]" value="" autocomplete="new-password" data-secret="webhook_secret"
+                           class="h-(--spacing-field) rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-2 text-sm">
+                    <span>{{ __('notification::channel.'.($hasSecret('webhook_secret') ? 'secret_saved' : 'secret_empty')) }}</span>
+                </label>
+                <p class="text-2xs text-(--color-ink-muted)" data-callback-url>
+                    {{ __('notification::channel.callback_note') }}
+                    <code class="break-all">{{ route('api.notification-callbacks', ['company' => \App\Models\Company::query()->whereKey(\App\Core\Support\CompanyContext::id())->value('public_id'), 'channel' => $channel]) }}</code>
+                </p>
+            @endif
+
             <button type="submit" class="rounded-(--radius-field) bg-(--color-brand-500) px-3 py-1.5 text-sm text-white">{{ __('notification::channel.save') }}</button>
         </form>
 
