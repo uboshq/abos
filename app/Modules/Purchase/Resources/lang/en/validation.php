@@ -10,6 +10,7 @@ return [
     'only_draft_edits' => ':no is not a draft — cancel it and make a new one to change a posted document.',
     'already_cancelled' => ':no was already cancelled.',
     'cancel_paid_bill' => ':no carries :paid in payments. Cancel the payments first, then the bill.',
+    'edit_below_settled' => ':no already has :settled paid and returned, so the new total :total cannot be lower. Cancel a payment or return first.',
     'proposal_empty' => 'Pick at least one bill and give its amount.',
     'proposal_bill_not_open' => ':no is not an open posted bill and cannot be proposed.',
     'proposal_over_due' => ':no has :due left; no more than that can be proposed.',

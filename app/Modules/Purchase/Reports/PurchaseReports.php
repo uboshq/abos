@@ -138,13 +138,19 @@ final class PurchaseReports
     public static function uninvoiced(): ReportDefinition
     {
         // কাঁচা SQL, প্লেসহোল্ডার ছাড়া — কারণটা pendingOrders()-এ লেখা
-        $cancelled = DocumentStatus::CANCELLED;
+        /*
+         * ⛔ কেবল পাকা বিল চালান মেটায় — পুনঃনিরীক্ষা, ৯ অক্টোবর ২০২৬। ⚠️ আগে শর্ত ছিল "বাতিল নয়", তাই একটা
+         * **খসড়া** বিলেই চালানটা "বিল হয়ে গেছে" দেখাত, অথচ ২১৬০ খাত তখনো ভরা — রিপোর্ট আর খাতা মিলত না, আর
+         * খসড়াটা কোনোদিন নিশ্চিত না হলে চালানটা চিরকাল লুকিয়ে থাকত। ⓘ খাতা ২১৬০ খালি করে কেবল নিশ্চিত বিল।
+         */
+        $posted = "'".implode("','", DocumentStatus::POSTED)."'";
 
         $billed = "(select COALESCE(SUM(bl.qty), 0)
                 from pur_bill_lines bl
                 join pur_bills b on b.id = bl.purchase_bill_id
                 where bl.purchase_receipt_line_id = rl.id
-                  and b.status <> '{$cancelled}')";
+                  and b.deleted_at is null
+                  and b.status in ({$posted}))";
 
         return new ReportDefinition(
             key: 'purchase.uninvoiced',
@@ -388,6 +394,8 @@ final class PurchaseReports
                  * ফেরত গেছে"*, আর কথাটা তাঁরই ঠিক হত।
                  */
                 ->where('b.status', '<>', $cancelled)
+                // ⛔ খসড়াও নয় — খসড়ার দর এখনো কারও দেওয়া নয়, বদলাতে পারে (পুনঃনিরীক্ষা, ৯ অক্টোবর ২০২৬)
+                ->whereIn('b.status', DocumentStatus::POSTED)
                 ->orderBy('p.code')
                 ->orderBy('s.code')
                 ->orderBy('b.trx_date')
@@ -416,15 +424,16 @@ final class PurchaseReports
                 ],
                 ['key' => 'document_no', 'label' => 'core.print.document_no', 'width' => '11rem'],
                 ['key' => 'qty', 'label' => 'purchase::field.quantity', 'type' => ReportColumn::QUANTITY],
-                ['key' => 'previous_rate', 'label' => 'purchase::field.previous_rate', 'type' => ReportColumn::MONEY],
-                ['key' => 'rate', 'label' => 'purchase::field.rate', 'type' => ReportColumn::MONEY],
+                ['key' => 'previous_rate', 'label' => 'purchase::field.previous_rate', 'type' => ReportColumn::MONEY, 'total' => false],
+                ['key' => 'rate', 'label' => 'purchase::field.rate', 'type' => ReportColumn::MONEY, 'total' => false],
 
                 /*
                  * ⓘ পার্থক্যটাই আসল কলাম — ⚠️ দুইটা দর পাশাপাশি থাকলেও
                  * মানুষ মাথায় বিয়োগ করে না, আর তখন যে সারিতে দর লাফ
                  * দিয়েছে সেটা চোখেই পড়ে না।
                  */
-                ['key' => 'rate_change', 'label' => 'purchase::field.rate_change', 'type' => ReportColumn::MONEY],
+                // ⛔ দর যোগ হয় না — দশটা কেনার দর যোগ করলে কোনো দরই নয় (পুনঃনিরীক্ষা, ৯ অক্টোবর ২০২৬)
+                ['key' => 'rate_change', 'label' => 'purchase::field.rate_change', 'type' => ReportColumn::MONEY, 'total' => false],
             ],
         );
     }

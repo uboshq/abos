@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Modules\Supplier\Policies;
 
+use App\Core\Services\DataScope;
 use App\Models\User;
+use App\Models\UserDataScope;
 use App\Modules\Supplier\Models\Supplier;
 
 /**
@@ -23,7 +25,7 @@ class SupplierPolicy
 
     public function view(User $user, Supplier $supplier): bool
     {
-        return $user->can('supplier.view');
+        return $user->can('supplier.view') && self::inReach($user, $supplier);
     }
 
     public function create(User $user): bool
@@ -33,7 +35,7 @@ class SupplierPolicy
 
     public function update(User $user, Supplier $supplier): bool
     {
-        return $user->can('supplier.update');
+        return $user->can('supplier.update') && self::inReach($user, $supplier);
     }
 
     /**
@@ -44,6 +46,19 @@ class SupplierPolicy
      */
     public function delete(User $user, Supplier $supplier): bool
     {
-        return $user->can('supplier.delete');
+        return $user->can('supplier.delete') && self::inReach($user, $supplier);
+    }
+
+    /**
+     * ⛔ সরবরাহকারীর শাখা মানুষের নাগালে — পুনঃনিরীক্ষা, ৯ অক্টোবর ২০২৬।
+     *
+     * ⚠️ তালিকা দেখার শাখায় ছাঁকা ছিল, কিন্তু দরজাগুলো কেবল চাবি দেখত — শাখায় আটকানো একজন ঠিকানায় আইডি
+     * বদলে অন্য শাখার সরবরাহকারী খুলতে, বদলাতে আর নিষ্ক্রিয় করতে পারতেন। ⓘ শাখাহীন সরবরাহকারী (গোটা
+     * কোম্পানির) সবার নাগালে — [[DataScope::allows()]]-এর নিয়ম।
+     */
+    private static function inReach(User $user, Supplier $supplier): bool
+    {
+        return app(DataScope::class)->allows($user, UserDataScope::BRANCH,
+            $supplier->branch_id === null ? null : (int) $supplier->branch_id);
     }
 }

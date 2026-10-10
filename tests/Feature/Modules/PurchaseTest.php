@@ -624,6 +624,100 @@ class PurchaseTest extends TestCase
         $this->assertSame(0, bccomp((string) $row['unbilled_value'], '5000', 4));
     }
 
+    /**
+     * ⛔ খসড়া বিল চালান মেটায় না — পুনঃনিরীক্ষা, ৯ অক্টোবর ২০২৬।
+     *
+     * ⚠️ আগে শর্ত ছিল "বাতিল নয়", তাই খসড়া বিলেই চালানটা রিপোর্ট থেকে উধাও হত, অথচ ২১৬০ খাত তখনো ভরা।
+     * ⓘ বিল নিশ্চিত হলে তবেই চালানটা সরে।
+     */
+    public function test_a_draft_bill_does_not_take_a_receipt_off_the_uninvoiced_report(): void
+    {
+        $receipt = $this->receipts()->confirm($this->makeReceipt(null, '100', '50'));
+        $bill = $this->makeBill($receipt->fresh('lines'), '100', '50');
+
+        $range = ['from' => now()->subYear()->toDateString(), 'to' => now()->addDay()->toDateString()];
+        $rows = app(ReportEngine::class)->run('purchase.uninvoiced', $range)->rows;
+
+        $this->assertCount(1, $rows, '⛔ খসড়া বিলেই চালানটা "বিল হয়ে গেছে" ধরা হলো, অথচ খাতায় ২১৬০ তখনো ভরা।');
+        $this->assertSame(0, bccomp((string) ((array) $rows[0])['unbilled_qty'], '100', 4));
+
+        $this->bills()->confirm($bill->fresh());
+
+        $this->assertCount(0, app(ReportEngine::class)->run('purchase.uninvoiced', $range)->rows,
+            'নিশ্চিত বিলের পরেও চালানটা রিপোর্টে — দাবি অন্ধ।');
+    }
+
+    /**
+     * ⛔ দামের ইতিহাসে খসড়ার দর নয়, আর দর যোগ হয় না — পুনঃনিরীক্ষা, ৯ অক্টোবর ২০২৬ (ⓘ১৬)।
+     */
+    public function test_price_history_leaves_out_draft_bills_and_never_adds_up_rates(): void
+    {
+        $receipt = $this->receipts()->confirm($this->makeReceipt(null, '5', '60'));
+        $this->bills()->confirm($this->makeBill($receipt->fresh('lines'), '5', '60'));
+        $this->makeBill(null, '3', '999'); // খসড়া, ধরা দর ৯৯৯
+
+        $result = app(ReportEngine::class)->run('purchase.price_history', [
+            'from' => now()->subYear()->toDateString(), 'to' => now()->addDay()->toDateString(),
+        ]);
+
+        $rates = array_map(fn ($r) => bcadd((string) ((array) $r)['rate'], '0', 2), $result->rows);
+        $this->assertContains('60.00', $rates, 'নিশ্চিত বিলের দর নেই — দাবি অন্ধ।');
+        $this->assertNotContains('999.00', $rates, '⛔ খসড়া বিলের দর দামের ইতিহাসে এল।');
+
+        foreach (['rate', 'previous_rate', 'rate_change'] as $key) {
+            $this->assertArrayNotHasKey($key, $result->totals, "⛔ '{$key}' দর, অথচ মোটের সারিতে যোগ হলো।");
+        }
+        $this->assertArrayHasKey('qty', $result->totals);
+    }
+
+    /**
+     * ⛔ খাতায় খসড়া বিল "বিল হয়েছে" নয়, আর মিশ্র কাগজের মোট যোগ হয় না — পুনঃনিরীক্ষা, ৯ অক্টোবর ২০২৬ (ⓘ১৭)।
+     */
+    public function test_the_register_counts_only_posted_bills_as_billed_and_does_not_total_mixed_papers(): void
+    {
+        $receipt = $this->receipts()->confirm($this->makeReceipt(null, '100', '50'));
+        $this->makeBill($receipt->fresh('lines'), '100', '50'); // খসড়া
+
+        $result = app(ReportEngine::class)->run('purchase.register', [
+            'from' => now()->subYear()->toDateString(), 'to' => now()->addDay()->toDateString(),
+        ]);
+
+        $row = collect($result->rows)->map(fn ($r) => (array) $r)->firstWhere('document_no', $receipt->document_no);
+        $this->assertNotNull($row, 'চালানটা খাতায় নেই — দাবি অন্ধ।');
+        $this->assertSame(0, (int) $row['billed_pct'], '⛔ কেবল খসড়া বিলেই চালানটা ১০০% "বিল হয়েছে" দেখাল।');
+        $this->assertArrayNotHasKey('total', $result->totals, '⛔ আদেশ, চালান আর বিলের অঙ্ক একসাথে যোগ হলো।');
+    }
+
+    /**
+     * ⛔ দুই ট্যাব থেকে একই চালান বাতিল — দ্বিতীয়টা ফেরে, মাল আর খাতা একবারই উল্টায় (পুনঃনিরীক্ষা, ৯ অক্টোবর ২০২৬)।
+     *
+     * ⚠️ বাতিলের যাচাই হাতের কপি দেখত, তালা ছাড়া। ⓘ এখানে দুই ট্যাবের কপি একই সময়ে খোলা — প্রথমটা বাতিল
+     * করার পরেও দ্বিতীয়টা নিজের চোখে "নিশ্চিত"।
+     */
+    public function test_a_receipt_cancelled_from_two_tabs_is_reversed_once(): void
+    {
+        $receipt = $this->receipts()->confirm($this->makeReceipt(null, '10', '50'));
+        $tabOne = PurchaseReceipt::query()->findOrFail($receipt->id);
+        $tabTwo = PurchaseReceipt::query()->findOrFail($receipt->id);
+
+        $this->receipts()->cancel($tabOne, 'প্রথম ট্যাব');
+
+        $reversals = fn () => LedgerEntry::query()->where('source_type', PurchaseReceipt::drillSourceType().':reversal')
+            ->where('source_id', $receipt->id)->count();
+        $once = $reversals();
+        $shelf = $this->onHand();
+
+        try {
+            $this->receipts()->cancel($tabTwo, 'দ্বিতীয় ট্যাব');
+            $this->fail('⛔ বাতিল চালান আবার বাতিল হলো।');
+        } catch (ValidationException $e) {
+            $this->assertArrayHasKey('status', $e->errors());
+        }
+
+        $this->assertSame($once, $reversals(), '⛔ চালানের দাখিলা দুইবার উল্টানো হলো।');
+        $this->assertSame(0, bccomp($this->onHand(), $shelf, 4), '⛔ মাল দুইবার ফেরত গেল।');
+    }
+
     // ── ক্রয়ের কাগজে বিক্রয়মূল্য ──────────────────────────────────────
 
     /**

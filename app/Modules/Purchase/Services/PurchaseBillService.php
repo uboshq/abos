@@ -28,6 +28,7 @@ use App\Modules\Purchase\Models\PurchaseOrderLine;
 use App\Modules\Purchase\Models\PurchaseReceipt;
 use App\Modules\Purchase\Models\PurchaseReceiptLine;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -54,11 +55,10 @@ use Illuminate\Validation\ValidationException;
  */
 final class PurchaseBillService
 {
-    use ReadsTheRowUnderLock;
-
     use BringsInLots;
     use CalculatesLineTotals;
     use ReadsPackedQuantities;
+    use ReadsTheRowUnderLock;
 
     public function __construct(
         private readonly NumberSeriesEngine $numbers,
@@ -201,7 +201,13 @@ final class PurchaseBillService
 
             $bill = PurchaseBill::create([
                 'company_id' => CompanyContext::id(),
-                'branch_id' => $data['branch_id'] ?? CompanyContext::branchId(),
+                /*
+                 * ⛔ কাগজের শাখা মালের গুদামের শাখা — পুনঃনিরীক্ষা, ৯ অক্টোবর ২০২৬।
+                 * ⚠️ আগে শাখা আসত হেডারের বাছাই থেকে, আর মাল ঢুকত বিলের গুদামে — শাখা A বাছা থাকতে শাখা B-র
+                 * গুদামে মাল কিনলে দেনা আর মজুদের দাখিলা A-তে, মাল B-তে; দুই শাখার খাতাই ভুল। ⓘ চালান
+                 * ([[PurchaseReceiptService]]) আগে থেকেই এভাবে চলে; গুদাম না থাকলে আগের মতোই।
+                 */
+                'branch_id' => $this->branchOfWarehouse($data['warehouse_id'] ?? null) ?? $data['branch_id'] ?? CompanyContext::branchId(),
                 'financial_year_id' => $year->id,
                 'document_no' => $documentNo,
                 'supplier_id' => $supplierId,
@@ -339,6 +345,8 @@ final class PurchaseBillService
 
             $bill->update([
                 'warehouse_id' => $this->warehouseKept($bill, $data),
+                // ⛔ গুদাম বদলালে শাখাও — create()-এর একই নিয়ম (পুনঃনিরীক্ষা, ৯ অক্টোবর ২০২৬)
+                'branch_id' => $this->branchOfWarehouse($this->warehouseKept($bill, $data)) ?? $bill->branch_id,
                 'trx_date' => $trxDate->toDateString(),
                 'due_on' => $data['due_on'] ?? null,
                 'supplier_bill_no' => $billNo,
@@ -613,8 +621,8 @@ final class PurchaseBillService
      * ([[capitalisedBringingIn()]]), তাই বাকিটুকু কোথাও না বসালে
      * টাকাটা দুই খাতার মাঝখানে হারিয়ে যেত।
      *
-     * @param  \Illuminate\Support\Collection<int, PurchaseBillLine>  $direct
-     * @return array<int, string>  সারির id → তার ভাগ
+     * @param  Collection<int, PurchaseBillLine>  $direct
+     * @return array<int, string> সারির id → তার ভাগ
      */
     private function bringingInShares(PurchaseBill $bill, $direct): array
     {
@@ -700,6 +708,36 @@ final class PurchaseBillService
     private function postBringingIn(PurchaseBill $bill, array &$lines): void
     {
         $cost = $this->capitalisedBringingIn($bill);
+
+        /*
+         * ⛔ চালানের মালের ভাড়া — পুনঃনিরীক্ষা, ৯ অক্টোবর ২০২৬।
+         *
+         * ⚠️ ভাড়া মালের দামে বসে কেবল চালান-ছাড়া সারিতে ([[bringingInShares()]]); বিলের সব সারির পেছনে চালান
+         * থাকলে ভাড়াটা **কোথাওই** বসত না — গাড়িওয়ালার পাওনা খাতায় নেই, অথচ বিলে লেখা। ⭐ এখন যতটা মালের
+         * দামে বসেনি, ততটা ক্রয়-দর-পার্থক্যে (৫১৫০) আর পাওনা পরিবহনের প্রদেয়-তে।
+         * ⓘ মালের দামে তোলা (চালানের স্তর নতুন করে দামি করা) মজুদের খরচের ইঞ্জিনের কাজ
+         * ([[CostLayerService]]) — ওটা না হওয়া পর্যন্ত খরচটা অন্তত খাতায় সত্যি থাকে, আর মজুদের খাতা স্তরের
+         * সাথে মেলে।
+         */
+        $notInStock = bcsub($this->bringingInCost($bill), $cost, 4);
+
+        if (bccomp($notInStock, '0', 4) > 0) {
+            $narration = __('purchase::message.bringing_in_not_in_stock', ['no' => $bill->document_no]);
+
+            $lines[] = [
+                'account_id' => $this->account(StandardChart::PURCHASE_PRICE_VARIANCE)->id,
+                'debit' => $notInStock,
+                'narration' => $narration,
+            ];
+
+            $lines[] = [
+                'account_id' => $this->account(StandardChart::TRANSPORT_PAYABLE)->id,
+                'credit' => $notInStock,
+                'party_type' => $bill->carrier_id !== null ? 'supplier' : null,
+                'party_id' => $bill->carrier_id,
+                'narration' => $narration,
+            ];
+        }
 
         if (bccomp($cost, '0', 4) <= 0) {
             return;
@@ -1093,6 +1131,18 @@ final class PurchaseBillService
             : (int) $data['warehouse_id'];
     }
 
+    /** গুদামটা যে শাখার — শাখাহীন গুদাম বা গুদাম না থাকলে null। */
+    private function branchOfWarehouse(mixed $warehouseId): ?int
+    {
+        if ($warehouseId === null || $warehouseId === '') {
+            return null;
+        }
+
+        $branch = Warehouse::query()->whereKey((int) $warehouseId)->value('branch_id');
+
+        return $branch === null ? null : (int) $branch;
+    }
+
     /**
      * নিশ্চিত বিল সম্পাদনা — উল্টে, বদলে, আবার বসিয়ে।
      *
@@ -1119,7 +1169,41 @@ final class PurchaseBillService
 
         $reason = __('purchase::message.edited_after_posting', ['no' => $bill->document_no]);
 
+        /*
+         * ⛔ অঙ্ক বাড়লে সইয়ের নিয়ম আবার — পুনঃনিরীক্ষা, ৯ অক্টোবর ২০২৬।
+         *
+         * ⚠️ আগে নিশ্চিত বিলের সম্পাদনা সইয়ের নিয়ম আর দেখত না: ৫০ হাজারে সই পাওয়া বিল বদলে
+         * ৫ লাখ করা যেত, কারও সই ছাড়াই। ⓘ নতুন মোট জানতে সারিগুলো একবার শুকনো বসিয়ে দেখা হয়
+         * ([[newTotalOf()]]), তারপর সই চাওয়া হয় **লেনদেনের বাইরে** — নিশ্চিত করার মতোই, যাতে
+         * অনুরোধটা ইনবক্সে টিকে থাকে আর বিল যেমন ছিল তেমনই থাকে।
+         */
+        $newTotal = $this->newTotalOf($bill, $lines);
+
+        if (bccomp($newTotal, (string) $bill->total, 4) > 0) {
+            $this->approvals->assertClear(
+                document: $bill,
+                module: 'purchase',
+                action: 'bill',
+                field: 'status',
+                amount: $newTotal,
+                reason: $bill->narration,
+            );
+        }
+
         return DB::transaction(function () use ($bill, $data, $lines, $reason) {
+            /*
+             * ⛔ তালা, আর তাজা অবস্থা — পুনঃনিরীক্ষা, ৯ অক্টোবর ২০২৬। ⚠️ আগে তালা ছিল না, তাই সম্পাদনার
+             * মাঝে একটা পরিশোধ বসে যেতে পারত, আর নিচের "পরিশোধের কম নয়" যাচাই পুরনো সংখ্যা দেখত।
+             * ⓘ পরিশোধ নিশ্চিত করার সময়ও বিলের সারিতে তালা পড়ে ([[PaymentService]]), তাই দুইটা পালা করে চলে।
+             */
+            $this->lockFresh($bill);
+
+            if ($bill->status !== DocumentStatus::CONFIRMED) {
+                throw ValidationException::withMessages([
+                    'status' => __('purchase::validation.only_draft_confirms', ['no' => $bill->document_no]),
+                ]);
+            }
+
             $date = now();
 
             $this->takeBackDirectLines($bill, $date, $reason);
@@ -1143,6 +1227,8 @@ final class PurchaseBillService
 
             $bill->update([
                 'warehouse_id' => $this->warehouseKept($bill, $data),
+                // ⛔ গুদাম বদলালে শাখাও — create()-এর একই নিয়ম (পুনঃনিরীক্ষা, ৯ অক্টোবর ২০২৬)
+                'branch_id' => $this->branchOfWarehouse($this->warehouseKept($bill, $data)) ?? $bill->branch_id,
                 'trx_date' => $trxDate->toDateString(),
                 'due_on' => $data['due_on'] ?? null,
                 'supplier_bill_no' => $billNo,
@@ -1154,12 +1240,60 @@ final class PurchaseBillService
 
             $fresh = $bill->fresh(['lines']);
 
+            /*
+             * ⛔ যা শোধ বা ফেরত হয়ে গেছে, নতুন মোট তার নিচে নয় — পুনঃনিরীক্ষা, ৯ অক্টোবর ২০২৬।
+             * ⚠️ আগে ১ লাখের বিলে ৮০ হাজার শোধের পর বিলটা ৫০ হাজার করা যেত: ৩০ হাজার তখন কোনো
+             * বিলের নামে নয়, ব্যাখ্যাহীন অগ্রিম। ⓘ যোগফল গোটা কোম্পানির ([[PurchaseBill::paidAmount()]]),
+             * আর লেনদেনটা ফিরে যায় — উল্টানো, মাল ফেরত, কিছুই বসে থাকে না।
+             */
+            $settled = bcadd($fresh->paidAmount(), $fresh->returnedAmount(), 4);
+
+            if (bccomp((string) $fresh->total, $settled, 4) < 0) {
+                throw ValidationException::withMessages([
+                    'lines' => __('purchase::validation.edit_below_settled', [
+                        'no' => $bill->document_no,
+                        'total' => Money::format((string) $fresh->total),
+                        'settled' => Money::format($settled),
+                    ]),
+                ]);
+            }
+
             $this->bringInDirectLines($fresh);
             $this->postToLedger($fresh);
             $this->applySalesPrices($fresh);
 
             return $fresh->fresh(['lines']);
         });
+    }
+
+    /**
+     * সারিগুলো বসালে বিলের মোট কত দাঁড়াত — কিছু না রেখে।
+     *
+     * ⓘ মোট গোনার নিয়ম একটাই জায়গায় ([[replaceLines()]]: একক, প্যাক, ভ্যাট, ছাড়); এখানে দ্বিতীয়বার
+     * লিখলে একদিন সইয়ের অঙ্ক আর বিলের অঙ্ক আলাদা হত। ⭐ তাই একটা লেনদেনে বসিয়ে মোটটা পড়ে নিয়ে
+     * পুরোটা ফিরিয়ে দেওয়া হয় — ডাটাবেজে কোনো দাগ থাকে না।
+     *
+     * @param  list<array<string, mixed>>  $lines
+     */
+    private function newTotalOf(PurchaseBill $bill, array $lines): string
+    {
+        $total = null;
+
+        try {
+            DB::transaction(function () use ($bill, $lines, &$total): void {
+                $copy = PurchaseBill::query()->whereKey($bill->id)->firstOrFail();
+                $this->replaceLines($copy, $lines);
+                $total = (string) $copy->fresh()->total;
+
+                throw new \RuntimeException('dry-run');
+            });
+        } catch (\RuntimeException $e) {
+            if ($total === null) {
+                throw $e;
+            }
+        }
+
+        return bcadd((string) $total, '0', 4);
     }
 
     /**
@@ -1197,7 +1331,7 @@ final class PurchaseBillService
                 throw ValidationException::withMessages([
                     'status' => __('purchase::validation.cancel_paid_bill', [
                         'no' => $bill->document_no,
-                        'paid' => \App\Core\Support\Money::format($locked->paidAmount()),
+                        'paid' => Money::format($locked->paidAmount()),
                     ]),
                 ]);
             }

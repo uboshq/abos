@@ -45,6 +45,7 @@ return [
     'bucket_30' => '31–60 days',
     'bucket_60' => '61–90 days',
     'bucket_90' => '90+ days',
+    'advance_given' => 'Advance given',
 
     // কোম্পানির নিষ্পত্তির কাগজ
     'goods_in' => 'Goods in',
