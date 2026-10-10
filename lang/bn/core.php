@@ -1398,6 +1398,7 @@ return [
             'status' => 'অপেক্ষায়', 'level' => '২', 'stock_level' => '১২', 'product' => 'চা পাতা ৫০০ গ্রাম',
         ],
         'var_unknown' => 'এই চলকগুলো অনুমোদিত তালিকায় নেই: :names',
+        'number_needed' => 'এই ঘরে একটা সংখ্যা লিখুন।',
         'channel_name' => ['email' => 'ইমেইল', 'web_push' => 'ব্রাউজারের পুশ', 'mobile_push' => 'মোবাইল পুশ', 'sms' => 'SMS'],
         'frequency' => ['instant' => 'সাথে সাথে', 'daily' => 'দিনে একবার, একসাথে', 'weekly' => 'সপ্তাহে একবার, একসাথে'],
         'digest_subject' => [

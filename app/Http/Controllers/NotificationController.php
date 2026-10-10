@@ -6,6 +6,7 @@ namespace App\Http\Controllers;
 
 use App\Core\Notifications\ChannelRegistry;
 use App\Core\Notifications\PreferenceBook;
+use App\Core\Notifications\PreferenceWriter;
 use App\Core\Services\MenuBuilder;
 use App\Core\Services\NotificationAudit;
 use App\Core\Services\NotificationService;
@@ -15,8 +16,6 @@ use App\Core\Support\NotificationKinds;
 use App\Models\Notification;
 use App\Models\NotificationChannel;
 use App\Models\NotificationChoice;
-use App\Models\NotificationPreference;
-use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -107,26 +106,12 @@ class NotificationController extends Controller
     {
         $user = $request->user();
 
-        // ⭐ ধাপ ৩ — নিজের পছন্দ আগে যাচাই, যাতে ভুল মানে অর্ধেক বদল সংরক্ষিত না হয়
-        $pref = $request->validate([
-            'pref' => ['nullable', 'array'],
-            'pref.channels' => ['nullable', 'array'], 'pref.channels.*' => [Rule::in(NotificationChannel::ALL)],
-            'pref.muted' => ['nullable', 'array'], 'pref.muted.*' => [Rule::in(NotificationKinds::CATEGORIES)],
-            'pref.frequency' => ['nullable', Rule::in(NotificationPreference::FREQUENCIES)],
-            'pref.digest_hour' => ['nullable', 'integer', 'min:0', 'max:23'],
-            'pref.digest_day' => ['nullable', 'integer', 'min:0', 'max:6'],
-            'pref.quiet_enabled' => ['nullable', 'boolean'],
-            'pref.quiet_start' => ['nullable', 'date_format:H:i', 'required_if:pref.quiet_enabled,1'],
-            'pref.quiet_end' => ['nullable', 'date_format:H:i', 'required_if:pref.quiet_enabled,1', 'different:pref.quiet_start'],
-            'pref.timezone' => ['nullable', Rule::in(NotificationPreference::ZONES)],
-            'pref.delegate_user_id' => ['nullable', 'integer', Rule::in(array_keys($this->colleagues((int) $user->id)))],
-            'pref.delegate_from' => ['nullable', 'date', 'required_with:pref.delegate_user_id'],
-            'pref.delegate_until' => ['nullable', 'date', 'after_or_equal:pref.delegate_from', 'required_with:pref.delegate_user_id'],
-        ])['pref'] ?? null;
-
-        if (is_array($pref)) {
-            $this->savePreferences((int) $user->id, $pref);
+        // ⭐ ধাপ ৩ — নিজের পছন্দ আগে যাচাই, যাতে ভুল মানে অর্ধেক বদল সংরক্ষিত না হয় ([[PreferenceWriter]])
+        if (is_array($request->input('pref'))) {
+            $writer = app(PreferenceWriter::class);
+            $writer->save((int) $user->id, $writer->validate((int) $user->id, (array) $request->input('pref'), 'pref.'));
         }
+
         $wanted = array_map('strval', (array) $request->input('kinds', []));
         $byMail = array_map('strval', (array) $request->input('mailed', []));
 
@@ -166,46 +151,10 @@ class NotificationController extends Controller
         return back()->with('saved', __('core.notify.settings_saved'));
     }
 
-    /**
-     * ⭐ নিজের পছন্দ সংরক্ষণ — না-টিক মাধ্যম মানে বন্ধ; বাকি সব ফর্ম থেকে (ধাপ ৩)।
-     *
-     * @param  array<string, mixed>  $pref
-     */
-    private function savePreferences(int $userId, array $pref): void
-    {
-        $on = (array) ($pref['channels'] ?? []);
-        $channels = [];
-
-        foreach (NotificationChannel::ALL as $channel) {
-            $channels[$channel] = in_array($channel, $on, true);
-        }
-
-        NotificationPreference::query()->updateOrCreate(
-            ['company_id' => CompanyContext::id(), 'user_id' => $userId],
-            [
-                'channels' => $channels,
-                'muted_categories' => array_values(array_unique((array) ($pref['muted'] ?? []))) ?: null,
-                'frequency' => $pref['frequency'] ?? 'instant',
-                'digest_hour' => (int) ($pref['digest_hour'] ?? 9),
-                'digest_day' => (int) ($pref['digest_day'] ?? 0),
-                'quiet_enabled' => (bool) ($pref['quiet_enabled'] ?? false),
-                'quiet_start' => ($pref['quiet_start'] ?? null) ?: null,
-                'quiet_end' => ($pref['quiet_end'] ?? null) ?: null,
-                'timezone' => ($pref['timezone'] ?? null) ?: null,
-                'delegate_user_id' => ($pref['delegate_user_id'] ?? null) ?: null,
-                'delegate_from' => ($pref['delegate_user_id'] ?? null) ? ($pref['delegate_from'] ?? null) : null,
-                'delegate_until' => ($pref['delegate_user_id'] ?? null) ? ($pref['delegate_until'] ?? null) : null,
-            ],
-        );
-    }
-
     /** @return array<int, string> এই কোম্পানির সক্রিয় সহকর্মী — নিজে বাদ */
     private function colleagues(int $self): array
     {
-        return User::query()->withoutGlobalScope('company')
-            ->whereHas('companies', fn ($q) => $q->whereKey(CompanyContext::id()))
-            ->where('users.is_active', true)->where('users.id', '!=', $self)
-            ->orderBy('name')->pluck('name', 'users.id')->all();
+        return PreferenceWriter::colleagues($self);
     }
 
     /** কত খবর এক পাতায় */

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Notification\Http\Controllers;
 
+use App\Core\Notifications\RecipientChoices;
 use App\Core\Notifications\RecipientResolver;
 use App\Core\Services\MenuBuilder;
 use App\Core\Services\NotificationAudit;

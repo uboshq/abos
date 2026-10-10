@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Modules\Notification\Http\Controllers;
+namespace App\Core\Notifications;
 
 use App\Core\Support\CompanyContext;
 use App\Models\Branch;

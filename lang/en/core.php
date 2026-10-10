@@ -1233,6 +1233,7 @@ return [
             'status' => 'Waiting', 'level' => '2', 'stock_level' => '12', 'product' => 'Tea leaves 500 g',
         ],
         'var_unknown' => 'These variables are not on the approved list: :names',
+        'number_needed' => 'Write a number in this field.',
         'channel_name' => ['email' => 'E-mail', 'web_push' => 'Browser push', 'mobile_push' => 'Mobile push', 'sms' => 'SMS'],
         'frequency' => ['instant' => 'Right away', 'daily' => 'Once a day, together', 'weekly' => 'Once a week, together'],
         'digest_subject' => [
