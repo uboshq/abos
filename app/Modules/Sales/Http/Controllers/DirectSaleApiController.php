@@ -112,6 +112,9 @@ class DirectSaleApiController extends Controller implements HasMiddleware
             'depositMethods' => $this->publicMethods(),
             'carriers' => $this->publicCarriers(),
 
+            // ⭐ ভাড়া কে দিলেন — ব্যাংক বা MFS-এ বাছার তালিকা; নগদে লগইন করা মানুষ নিজেই (ওয়েবের একই, [[DirectSaleOptions::farePayers()]])
+            'farePayers' => $this->publicFarePayers(),
+
             // ⓘ বিল বাতিলের কারণ — ওয়েবের পপ-আপের একই তালিকা (`sales::field.cancel_reasons`)
             'voidReasons' => array_values(array_filter(explode('|', (string) __('sales::field.cancel_reasons')))),
         ]);
@@ -416,9 +419,35 @@ class DirectSaleApiController extends Controller implements HasMiddleware
             $out['resume_invoice_id'] = $this->idOf(SalesInvoice::class, $in['resume'], 'resume');
         }
 
-        unset($out['customer'], $out['warehouse'], $out['carrier'], $out['resume']);
+        /*
+         * ⭐ ভাড়া কোন খাত থেকে, কে দিলেন — ফোনেও ওয়েবের একই নিয়ম (মালিক, ৭ অক্টোবর ২০২৬; [[FarePayment::stamp()]])।
+         * ⛔ পুরো ERP অডিট, ৯ অক্টোবর ২০২৬: *"ফোনের কাউন্টারে ভাড়া এখনো Main Counter থেকে; সার্ভার `_id` ঘর ফেলে দেয়, তাই
+         * খাত পৌঁছায় না"*। ⓘ খাত আর কে দিলেন public_id হয়ে আসে (`fare_account`, `fare_payer`); `fare_when` আর
+         * `fare_reference` সরাসরি। ⓘ কে দিলেন অন্য কোম্পানির কেউ হলে সেবা থামায় ([[FarePayment::moneyFrom()]])।
+         */
+        if (filled($in['fare_account'] ?? null)) {
+            $out['fare_account_id'] = $this->idOf(Account::class, $in['fare_account'], 'fare_account');
+        }
+        if (filled($in['fare_payer'] ?? null)) {
+            $out['fare_payer_id'] = $this->idOf(\App\Models\User::class, $in['fare_payer'], 'fare_payer');
+        }
+
+        unset($out['customer'], $out['warehouse'], $out['carrier'], $out['resume'], $out['fare_account'], $out['fare_payer']);
 
         return $out;
+    }
+
+    /**
+     * ভাড়া কে দিলেন — ওয়েবের তালিকা, id-গুলো public_id (ক্রমিক নয়)।
+     *
+     * @return list<array{id: string, label: string}>
+     */
+    private function publicFarePayers(): array
+    {
+        $rows = $this->options->farePayers();
+        $ids = \App\Models\User::query()->whereKey(array_map(fn ($r) => (int) $r['id'], $rows))->pluck('public_id', 'id');
+
+        return array_map(fn (array $r): array => ['id' => (string) ($ids[(int) $r['id']] ?? ''), 'label' => $r['label']], $rows);
     }
 
     /** @return list<array<string, mixed>> */

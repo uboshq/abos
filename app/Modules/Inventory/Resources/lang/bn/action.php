@@ -52,4 +52,6 @@ return [
     'dispose' => 'বাতিল মাল বিনাশ',
     'add_split_place' => '+ আরেক জায়গা',
     'remove_split_place' => 'মুছুন',
+    // ⭐ ফেরত পিস — দেখে গুদামে ফেরত (মজুদ ছ৩)
+    'serial_back_to_stock' => 'দেখে গুদামে ফেরত নিন',
 ];

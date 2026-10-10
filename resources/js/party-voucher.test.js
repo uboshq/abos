@@ -341,3 +341,26 @@ describe('partyVoucher — কোন বিলের বিপরীতে', () 
         expect(box.pickedId).toBe('42')
     })
 })
+
+/*
+ * ⭐ বাছা বিলের রেডিওতে দাগ — `isPicked()` (১০ অক্টোবর ২০২৬)। ⛔ আগে ব্লেডে `String(b.id) === pickedId` ছিল, আর CSP-Alpine
+ * বৈশ্বিক `String` চেনে না — দাগটা কখনো পড়ত না। ⓘ আইডি সংখ্যা হলেও মেলে, ধরন আলাদা হলে মেলে না, কিছু বাছা না থাকলে না।
+ */
+describe('partyVoucher — বাছা বিলের দাগ', () => {
+    it('marks only the picked bill, by id and kind', () => {
+        const box = make()
+        const invoice = { against_type: 'sales_invoice', id: 7 }
+        const order = { against_type: 'sales_order', id: 7 }
+
+        expect(box.isBillPicked(invoice)).toBe(false)
+
+        box.pickedType = 'sales_invoice'
+        box.pickedId = '7'
+        expect(box.isBillPicked(invoice)).toBe(true)
+        expect(box.isBillPicked(order)).toBe(false)
+        expect(box.isBillPicked({ against_type: 'sales_invoice', id: 8 })).toBe(false)
+
+        box.unpick()
+        expect(box.isBillPicked(invoice)).toBe(false)
+    })
+})

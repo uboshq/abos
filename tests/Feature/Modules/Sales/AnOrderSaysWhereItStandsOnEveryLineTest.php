@@ -124,16 +124,13 @@ final class AnOrderSaysWhereItStandsOnEveryLineTest extends TestCase
         $this->assertProgress($order, S::CONFIRMED, S::FULL, S::PARTIAL);
 
         $this->bill($second, '6');
-        $this->assertProgress($order, S::CONFIRMED, S::FULL, S::FULL);
 
-        // ⭐ পুরো বিলের পরে বন্ধ — কারণ লাগে না; বন্ধের সাথে ঘরগুলোও তাজা
-        app(SalesOrderService::class)->close($order->fresh());
+        // ⭐ পুরো বিল হতেই আদেশ নিজে বন্ধ — কারণ ছাড়া, মানুষ ছাড়া (সমন্বয়ক, ৬ অক্টোবর ২০২৬); ঘরগুলোও তাজা
         $closed = $order->fresh(['lines']);
-        $this->assertSame(S::CLOSED, $closed->status);
+        $this->assertSame(S::CLOSED, $closed->status, '⛔ পুরো বিল হয়েও আদেশ খোলা।');
         $this->assertNull($closed->close_reason);
-        $this->assertSame((int) $this->owner->id, (int) $closed->closed_by, '⛔ কে বন্ধ করলেন, লেখা নেই।');
+        $this->assertNull($closed->closed_by, '⛔ নিজে বন্ধ আদেশে কারো নাম বসেছে।');
         $this->assertSame([S::FULL, S::FULL], [$closed->delivery_status, $closed->billing_status]);
-        $this->assertSame(S::LINE_CLOSED, $closed->lines->first()->line_status);
         $this->assertSame(0, bccomp('0', (string) $closed->lines->first()->rejected_qty, 4), '⛔ পুরো যাওয়া লাইনে "আর দেওয়া হবে না" বসেছে।');
         $this->assertProgress($order, S::CLOSED, S::FULL, S::FULL);
 
@@ -505,6 +502,27 @@ final class AnOrderSaysWhereItStandsOnEveryLineTest extends TestCase
         app(SalesOrderService::class)->cancel($order->fresh(), 'বাকি নেবেন না');
         $this->assertSame(0, bccomp(bcsub($before, '6', 4), $reserved(), 4),
             '⛔ বাতিলে কেবল না-বেরোনো ৬টা ছাড়ার কথা — গেটের অপেক্ষার ৪টা ধরা থাকবে। আগে '.$before.', পরে '.$reserved());
+    }
+
+    /**
+     * ⭐ পুরো বিল হলে আদেশ নিজেই বন্ধ — কারণ ছাড়া, মানুষ ছাড়া; আংশিক বিলে খোলা (সমন্বয়ক, ৬ অক্টোবর ২০২৬; ধাপ ১৪-এর পর্দার পরীক্ষা)।
+     */
+    public function test_an_order_closes_itself_once_everything_is_billed(): void
+    {
+        $order = $this->approved([[$this->product, '4']]);
+        $challan = $this->deliver($order, ['first' => '4']);
+
+        $this->bill($challan->fresh(['lines']), '2');
+        $this->assertSame(S::CONFIRMED, $order->fresh()->status, '⛔ অর্ধেক বিলেই আদেশ বন্ধ হয়ে গেল।');
+
+        $this->bill($challan->fresh(['lines']), '2');
+        $closed = $order->fresh();
+        $this->assertSame(S::CLOSED, $closed->status, '⛔ পুরো বিল হয়েও আদেশ খোলা রইল।');
+        $this->assertNull($closed->closed_by, 'নিজে বন্ধ — কোনো মানুষের নামে নয়।');
+        $this->assertNull($closed->close_reason);
+        $this->assertNotNull($closed->closed_at);
+        // ⭐ হাতে বন্ধের একই পথ — লাইনগুলোও বন্ধ ([[SalesOrderService::close()]]-এর `itself`)
+        $this->assertSame([S::LINE_CLOSED], $closed->lines()->pluck('line_status')->unique()->values()->all(), '⛔ আদেশ বন্ধ, অথচ লাইন খোলা।');
     }
 
     /**

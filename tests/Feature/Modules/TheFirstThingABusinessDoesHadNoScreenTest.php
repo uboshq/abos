@@ -69,9 +69,15 @@ class TheFirstThingABusinessDoesHadNoScreenTest extends TestCase
 
     private function cashAccount(): Account
     {
+        /*
+         * ⓘ নাম ধরে নয়, ধরন ধরে — মূলধনের টাকা এখন কেবল সত্যিকারের টাকার খাতে নামে ([[CapitalService::post()]]-এর `money()` পাহারা,
+         * পুরো-ERP পুনঃঅডিট ৯ অক্টোবর ২০২৬)। "Cash" নামের প্রথম পোস্টযোগ্য খাত টাকার খাত না-ও হতে পারে (main-এর লাল সারাই, ১০ অক্টোবর ২০২৬)।
+         */
         return Account::query()
+            ->money()
             ->postable()
-            ->where('name_en', 'like', '%Cash%')
+            ->active()
+            ->where('money_kind', Account::CASH)
             ->orderBy('code')
             ->firstOrFail();
     }
@@ -244,9 +250,13 @@ class TheFirstThingABusinessDoesHadNoScreenTest extends TestCase
         $this->assertSame(CapitalEntry::INVESTMENT, $entry->entry_type);
         $this->assertSame(0, bccomp((string) $entry->share_percent, '40', 4));
 
-        $this->post(route('finance.capital.post', $entry), [
-            'received_into_account_id' => $this->cashAccount()->id,
-        ])->assertRedirect();
+        /*
+         * ⛔ পুরনো `finance.capital.post` ঠিকানা আর নেই — সই ছাড়া, যেকোনো খাতে বসানোর দরজা ছিল (অডিট গ১৫,
+         * ৪ অক্টোবর ২০২৬)। ⓘ পর্দা টাকা নেয় রসিদে; এখানে সেবার পথ, যা এখন রসিদের একই সই মানে।
+         */
+        $this->assertFalse(\Illuminate\Support\Facades\Route::has('finance.capital.post'), '⛔ মূলধন পোস্টের পুরনো দরজা এখনো খোলা।');
+
+        app(CapitalService::class)->post($entry, $this->cashAccount());
 
         $this->assertSame(CapitalEntry::POSTED, $entry->fresh()->status);
     }

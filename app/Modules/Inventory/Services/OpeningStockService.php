@@ -86,6 +86,7 @@ final class OpeningStockService
         ?int $supplierId = null,
     ): StockMovement {
         $this->assertSane($product, $warehouse, $qty, $unitCost, $batch, false, $date ?? now());
+        $this->assertWhole($product, $qty);
 
         return DB::transaction(function () use ($product, $warehouse, $qty, $unitCost, $date, $narration, $batch, $supplierId) {
             $movement = $this->stock->move(
@@ -234,6 +235,7 @@ final class OpeningStockService
         // ⭐ ফ্রি — খরচ ছাড়া, একই লটে (ক্রয়ের মতো); খরচের স্তরে বসে না
         $free = trim((string) ($row['free_qty'] ?? ''));
         $free = is_numeric($free) && bccomp($free, '0', 4) > 0 ? bcadd($free, '0', 4) : '0';
+        $this->assertWhole($product, $qty, $free);
 
         $movement = $this->stock->move(
             product: $product,
@@ -547,6 +549,26 @@ final class OpeningStockService
          */
         $day = Carbon::parse($date)->toDateString();
 
+        /*
+         * ⛔ (ঘ) অন্য গুদামেও — খোলার দিনে বা পরে কোনো বের হওয়া (পুরো-ERP অডিট, ৯ অক্টোবর ২০২৬, মজুদ ⓘ;
+         * [[OpeningStockFollowsTheWholeCompanyTest]])। ⓘ খরচের স্তর গোটা কোম্পানির, পণ্য ধরে, তারিখের ক্রমে
+         * ([[CostLayerService::issue()]]); অন্য গুদামের সেই বিক্রি তখন পরের স্তর খেয়েছে, আর পেছনের তারিখে খোলার স্তর
+         * সারির মাথায় বসলে FIFO বলত তার এই সস্তা মালই যাওয়ার কথা ছিল — খরচ আর লাভ চুপচাপ ভুল। ⚠️ দেয়াল ছাড়া খোঁজা:
+         * গুদাম-সীমিত মানুষের চোখে অন্য গুদাম পড়ে না, অথচ স্তর পড়ে।
+         */
+        $elsewhere = StockMovement::query()->withoutGlobalScopes(StockService::VIEW_WALLS)
+            ->where('company_id', $product->company_id)
+            ->where('product_id', $product->id)
+            ->where('warehouse_id', '!=', $warehouse->id)
+            ->whereNotIn('source_type', [self::SOURCE_TYPE, self::CORRECTED])
+            ->whereDate('trx_date', '>=', $day)
+            ->whereRaw('(floor_change + unplaced_change + free_change + unplaced_free_change) < 0')
+            ->exists();
+
+        if ($elsewhere) {
+            return false;
+        }
+
         return ! $moves->where(fn ($q) => $q
             ->whereDate('trx_date', '<', $day)
             ->orWhereRaw('(floor_change + unplaced_change + free_change + unplaced_free_change) < 0')
@@ -580,6 +602,22 @@ final class OpeningStockService
         }
 
         $product->update($update);
+    }
+
+    /**
+     * ⛔ পিস-বাক্সে আধা খোলা মজুদ নয়, কেজি-লিটারে চলে — কাগজের লাইন, গণনা আর সমন্বয়ের একই নিয়ম ([[PackConversion::toStockQty()]];
+     * মালিক, ৬ অক্টোবর ২০২৬; পুরো-ERP অডিট মজুদ ⚠️১২, এই দরজা 69da3114-এ বাদ পড়েছিল; [[NoHalfPieceComesInAsOpeningStockTest]])।
+     *
+     * ⓘ কেবল নতুন খোলা মজুদে ([[bringIn()]], [[bringInRow()]]) — [[correct()]]-এ নয়: নিয়মের আগে বসা ভগ্নাংশের পুরনো সারি যেন
+     * ঠিক করা বা মোছা যায়, আটকে না থাকে। ⓘ অন্য এককে লেখা পরিমাণ এখানে আসে ভিত্তি এককে, ভাগ হয় কি না তা আগেই রূপান্তর দেখে।
+     */
+    private function assertWhole(Product $product, string ...$quantities): void
+    {
+        foreach ($quantities as $qty) {
+            if (bccomp($qty, '0', 4) > 0) {
+                app(PackConversion::class)->toStockQty($product, $qty);
+            }
+        }
     }
 
     private function assertSane(

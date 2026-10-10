@@ -19,4 +19,6 @@ return [
     'rental' => 'Rent deposit, monthly rent and refund',
     'bank_facility' => 'Running loan brought in',
     'capitalise' => 'Year-end profit moved to capital',
+    // Re-audit, 9 Oct 2026 ([[InsuranceClaimService]])
+    'insurance_claim' => 'Insurance claim — approval, money received, closing',
 ];

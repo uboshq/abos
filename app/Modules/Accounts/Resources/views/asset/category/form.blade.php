@@ -86,9 +86,10 @@
                             :value="old('capitalisation_threshold', $category->capitalisation_threshold)"
                             :hint="__('accounts::asset.category_threshold_hint')" />
 
-                {{-- ⭐ করের অবচয় — মালিকের বসানো হার; আইনের হার কোডে নেই (ধাপ ৫) --}}
+                {{-- ⭐ করের অবচয় — মালিকের বসানো হার; আইনের হার কোডে নেই (ধাপ ৫)। নতুন শ্রেণিতে হ্রাসমান জের — আয়কর আইনের
+                     তৃতীয় তফসিল (মালিক, ১১ অক্টোবর ২০২৬) --}}
                 <x-ui.select name="tax_method" :label="__('accounts::asset.tax_method')" placeholder="—"
-                             :selected="old('tax_method', $category->tax_method)"
+                             :selected="old('tax_method', $category->exists ? $category->tax_method : \App\Modules\Accounts\Services\AssetTaxService::REDUCING)"
                              :options="collect(\App\Modules\Accounts\Services\AssetTaxService::METHODS)->mapWithKeys(fn ($m) => [$m => __('accounts::asset.tax_method_'.$m)])->all()" />
 
                 <x-ui.field name="tax_rate" type="number" numeric :label="__('accounts::asset.tax_rate')"

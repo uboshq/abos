@@ -46,7 +46,7 @@ final class TheCancelledSaleWentToOtherTest extends TestCase
             'unit_id' => Unit::query()->orderBy('id')->firstOrFail()->id, 'is_active' => true]);
         $warehouse = Warehouse::query()->orderBy('id')->firstOrFail();
 
-        foreach ([['opening_stock', '20'], ['delivery_challan', '-10'], ['delivery_challan:cancel', '4']] as $i => [$source, $qty]) {
+        foreach ([[\App\Modules\Inventory\Services\OpeningStockService::SOURCE_TYPE, '20'], ['delivery_challan', '-10'], ['delivery_challan:cancel', '4']] as $i => [$source, $qty]) {
             StockMovement::query()->create(['company_id' => $this->company->id, 'branch_id' => $warehouse->branch_id,
                 'product_id' => $product->id, 'warehouse_id' => $warehouse->id, 'trx_date' => '2026-09-10',
                 'floor_change' => $qty, 'source_type' => $source, 'source_id' => $i + 1]);

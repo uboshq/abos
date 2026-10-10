@@ -256,8 +256,8 @@
                 <form method="GET" action="{{ route('hr.employee.show', $employee) }}#attendance" class="flex items-end gap-2">
                     <label class="flex flex-col gap-1 text-2xs text-(--color-ink-muted)">
                         {{ __('hr::profile.month') }}
-                        <input type="month" name="month" value="{{ $month->format('Y-m') }}"
-                               class="h-10 rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-2 text-sm text-(--color-ink)">
+                        <x-ui.month name="month" :value="$month->format('Y-m')"
+                                    class="h-10 rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-2 text-sm text-(--color-ink)" />
                     </label>
                     <x-ui.button type="submit">{{ __('hr::profile.show') }}</x-ui.button>
                 </form>

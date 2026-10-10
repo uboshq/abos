@@ -44,9 +44,10 @@ class PacksRebase extends Command
 
         $apply = (bool) $this->option('apply');
         $found = 0;
+        $refused = 0;
 
         foreach ($this->companies() as $company) {
-            CompanyContext::forCompany($company->id, function () use ($company, $per, $apply, $rebase, &$found) {
+            CompanyContext::forCompany($company->id, function () use ($company, $per, $apply, $rebase, &$found, &$refused) {
                 $product = Product::query()->where('code', $this->argument('code'))->first();
                 $to = Unit::query()->where('code', $this->option('to'))->first();
 
@@ -72,7 +73,9 @@ class PacksRebase extends Command
                 }
 
                 if (bccomp($report['value_before'], $report['value_after'], 4) !== 0) {
+                    // ⓘ সেবা নিজেই ফিরিয়ে দেয় ([[PackRebase::run()]]) — তাই কথাটা এখন সত্যি (মজুদ ছ১৪)
                     $this->error('    ⛔ মূল্য বদলে গেছে — এটা হওয়ার কথা নয়, লেখা হয়নি।');
+                    $refused++;
                 }
             });
         }
@@ -94,6 +97,12 @@ class PacksRebase extends Command
          */
         $this->line('ⓘ পুরনো কাগজে "পরিমাণ × দর" বিলের অঙ্কের চেয়ে পয়সার ভগ্নাংশ আলাদা দেখাতে পারে — বিলের টাকা অপরিবর্তিত।');
         $this->newLine();
+        if ($apply && $refused > 0) {
+            $this->error("{$refused}টা কোম্পানিতে মূল্য নড়ছিল — সেখানে কিছুই লেখা হয়নি।");
+
+            return self::FAILURE;
+        }
+
         $this->info($apply ? 'লেখা শেষ।' : 'কিছুই লেখা হয়নি (--apply দিলে লিখবে)।');
 
         return self::SUCCESS;

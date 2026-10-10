@@ -44,14 +44,19 @@ final class AccountAnalysis
 
         /*
          * ⭐ হেডারে বাছা শাখায় (৩০ সেপ্টেম্বর ২০২৬) — [[ViewedBranch]]। ⚠️ খোলা জের আর নড়াচড়া
-         * একই নিয়মে — এক শাখা, নইলে গোটা কোম্পানি — নাহলে বন্ধ জের খোলার সাথে মিলত না।
+         * একই নিয়মে — নাহলে বন্ধ জের খোলার সাথে মিলত না।
+         *
+         * ⛔ পুরো-ERP পুনঃঅডিট, ৯ অক্টোবর ২০২৬: আগে কেবল `ViewedBranch::one()` — "সব শাখা"-তে গোটা কোম্পানি, নাগাল না মেনে;
+         * এক শাখায় আটকানো কর্মী অন্য শাখার জের দেখতেন। এখন দেখার পুরো নিয়ম ([[ViewedBranch::narrow()]]): এক শাখা → সেটা,
+         * "সব শাখা" → নাগাল + শাখাহীন। খোলা জেরও একই ছাঁকনিতে, খতিয়ান থেকে — [[Account::balanceOn()]] একটাই শাখা নেয়।
          */
-        $branch = ViewedBranch::one();
+        $narrowed = fn () => ViewedBranch::narrow(LedgerEntry::query(), 'ledger_entries.branch_id')->whereIn('account_id', $ids);
 
-        $opening = $account->balanceOn(Carbon::parse($from)->subDay()->toDateString(), $branch);
+        $before = $narrowed()->where('trx_date', '<', $from)
+            ->selectRaw('COALESCE(SUM(debit), 0) as d, COALESCE(SUM(credit), 0) as c')->first();
+        $opening = bcmul(bcsub((string) ($before->d ?? '0'), (string) ($before->c ?? '0'), 4), $sign, 4);
 
-        $base = fn () => LedgerEntry::query()->whereIn('account_id', $ids)->whereBetween('trx_date', [$from, $to])
-            ->when($branch, fn ($q, int $b) => $q->where('branch_id', $b));
+        $base = fn () => $narrowed()->whereBetween('trx_date', [$from, $to]);
 
         $byMonth = $base()
             ->selectRaw("DATE_FORMAT(trx_date, '%Y-%m') as ym, SUM(debit) as d, SUM(credit) as c, COUNT(*) as n")

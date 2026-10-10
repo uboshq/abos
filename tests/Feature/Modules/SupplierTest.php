@@ -559,7 +559,8 @@ class SupplierTest extends TestCase
             'company_id' => $supplier->company_id,
             'branch_id' => $supplier->branch_id,
             'financial_year_id' => $this->company->currentFinancialYear()?->id,
-            'account_id' => 1,
+            // ⓘ দেনার খাতে — "দেনা" কেবল দেনার খাত-পরিবার গোনে (ক্রয় ⚠️১২, মালিক, ১০ অক্টোবর ২০২৬)
+            'account_id' => Supplier::payableAccountIds()[0],
             'party_type' => Supplier::drillSourceType(),
             'party_id' => $supplier->id,
             'trx_date' => $date,

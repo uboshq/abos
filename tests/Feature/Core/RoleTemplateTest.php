@@ -43,7 +43,9 @@ class RoleTemplateTest extends TestCase
         $this->assertTrue($sr->hasPermissionTo('sales.order.create'));       // Sales থেকে
         $this->assertTrue($sr->hasPermissionTo('inventory.product.view'));   // Inventory থেকে
         $this->assertTrue($sr->hasPermissionTo('hr.attendance.self'));       // Hr থেকে
-        $this->assertTrue($sr->hasPermissionTo('customer.create'));          // Customer থেকে
+        $this->assertTrue($sr->hasPermissionTo('customer.view'));            // Customer থেকে
+        // ⛔ মালিক, ২৬ সেপ্টেম্বর ২০২৬: "বিক্রয়কর্মী কিছুই তৈরি করতে পারবেন না — কেবল অর্ডার দেবেন" (Customer/module.php)
+        $this->assertFalse($sr->hasPermissionTo('customer.create'), 'মাঠের বিক্রয়কর্মী আবার ডিলার বসাতে পারছেন।');
 
         $this->assertTrue($this->role('Warehouse')->hasPermissionTo('inventory.stock.view'));
         $this->assertTrue($this->role('HR')->hasPermissionTo('hr.employee.view'));

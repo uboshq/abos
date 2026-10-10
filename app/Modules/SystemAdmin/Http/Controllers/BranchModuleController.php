@@ -199,7 +199,7 @@ class BranchModuleController extends Controller implements HasMiddleware
     /**
      * এই শাখার জন্য মডিউলের সারিগুলো।
      *
-     * @return list<array{code: string, label: string, on: bool, company_on: bool, locked: bool, off_elsewhere: int}>
+     * @return list<array{code: string, label: string, on: bool, company_on: bool, locked: bool, off_elsewhere: int, screens: int}>
      */
     private function modulesFor(Branch $branch): array
     {
@@ -235,6 +235,12 @@ class BranchModuleController extends Controller implements HasMiddleware
                 'company_on' => $companyOn,
                 'locked' => $this->nailedDown($module->code),
                 'off_elsewhere' => (int) ($offElsewhere[$module->code] ?? 0),
+
+                /*
+                 * ⭐ বন্ধ করলে কয়টা পর্দা মেনু থেকে সরে — সিস্টেম পর্দার নকশা §৪/§৬, ১০ অক্টোবর ২০২৬: *"বন্ধ করলে কী হবে বলা
+                 * নেই"*। ⓘ কন্ট্রোল প্যানেলের একই গোনা ([[MenuSwitches::tree()]]): মেনুর সারি, এখনো-না-বানানো (`planned`) বাদ।
+                 */
+                'screens' => collect($module->menu)->flatten(1)->reject(fn ($item) => (bool) ($item['planned'] ?? false))->count(),
             ];
         }
 

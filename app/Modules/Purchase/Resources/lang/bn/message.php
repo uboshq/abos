@@ -10,6 +10,7 @@ return [
     'bill_clears_pending' => ':no — অপেক্ষমাণ দায় নিষ্পত্তি',
     'input_vat' => ':no — উপকরণ ভ্যাট',
     'price_variance' => ':no — ক্রয়মূল্যের পার্থক্য',
+    'price_to_stock' => ':no — বিলের দামে মালের দাম (তাকে আর বিক্রীত)',
     'bringing_in_cost' => ':no — মাল আনার খরচ, মালের দামে',
     'payable_to_supplier' => ':no — সরবরাহকারীর প্রদেয়',
     'order_created' => 'ক্রয় আদেশ তৈরি হয়েছে।',

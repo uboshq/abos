@@ -326,8 +326,10 @@ class AttendanceAndLeaveTest extends TestCase
 
         $run = app(PayrollService::class)->build('2026-08-01');
 
-        // ২০০০০ × ২৮ ÷ ৩১ = ১৮০৬৪.৫০
-        $this->assertSame(0, bccomp((string) $run->gross_total, '18064.5000', 2));
+        // ২০০০০ × ২৮ ÷ ৩১ = ১৮০৬৪.৫১৬… → পয়সায় গোল ১৮০৬৪.৫২ — বেতনশিট, খাতা আর ব্যাংক-ফাইল একই অঙ্ক (২ অক্টোবরের অডিট,
+        // [[TheBankFileAndTheBooksPaidTheSameSalaryTest]]; পুরনো ১৮০৬৪.৫০ সেই নিয়মের আগের, main-এর লাল সারাই ১০ অক্টোবর ২০২৬)
+        $this->assertSame('18064.52', \App\Core\Support\Money::round((string) $run->gross_total, 2));
+        $this->assertSame(0, bccomp((string) $run->gross_total, '18064.52', 4), '⛔ মোট বেতন পয়সায় গোল নয়');
     }
 
     /** সুইচ বন্ধ থাকলে অনুপস্থিতি থাকলেও বেতন কাটে না। */

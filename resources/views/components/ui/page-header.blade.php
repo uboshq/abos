@@ -1,4 +1,10 @@
-@props(['title', 'subtitle' => null])
+@props(['title', 'subtitle' => null, 'more' => []])
+{{--
+    ⭐ পাতার মাথার এক ছাঁচ — পাতা সাজানোর পরিকল্পনা ধাপ ১, ১০ অক্টোবর ২০২৬: "কোথায় আছি" (লেআউট নিজেই উপরে বসায়,
+    [[shell/page-path]]) → শিরোনাম → এক লাইনের ব্যাখ্যা (`subtitle`) → ডান কোণে **একটাই** প্রধান বোতাম (`actions`
+    স্লট) → বাকি কাজ "⋯"-এ (`more`, [[ui/row-actions]]-এর একই তালিকা: label, url, method, tone)।
+    ⓘ পুরনো ডাক (কেবল `actions`) হুবহু চলে — পাতা ধরে ধরে বাকি বোতামগুলো `more`-এ যাবে (ধাপ ২)।
+--}}
 
 {{--
     পাতার শিরোনাম ও Productivity Bar — সেকশন ১৫.১৬।
@@ -36,9 +42,13 @@
     <div data-gold-hairline aria-hidden="true"
          class="gold-hairline mt-3 rounded-full"></div>
 
-    @isset($actions)
-        <div class="print-hide flex flex-wrap items-center gap-2">
-            {{ $actions }}
+    @if (isset($actions) || $more !== [])
+        <div class="print-hide flex flex-wrap items-center gap-2" data-page-actions>
+            {{ $actions ?? '' }}
+
+            @if ($more !== [])
+                <x-ui.row-actions :items="$more" />
+            @endif
         </div>
-    @endisset
+    @endif
 </div>

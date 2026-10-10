@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Sales\Services;
 
+use App\Core\Support\Money;
 use App\Core\Services\SettingsService;
 use App\Modules\MasterData\Models\Tax;
 use Illuminate\Validation\ValidationException;
@@ -91,10 +92,28 @@ trait CalculatesSalesLines
         $variance = null;
 
         if ($tax === null || $tax === '') {
-            $tax = $standard?->amountOn($net) ?? '0.0000';
+            /*
+             * ⛔ ভ্যাট পয়সায় গোল — ২৭ সেপ্টেম্বর ২০২৬ (পাঁচ-মিলের পরীক্ষা)।
+             *
+             * ⚠️ ৪১৮.৫০ × ১৫% = ৬২.৭৭৫ — চার দশমিকে খাতায় বসত ৪৮১.২৭৫০,
+             * আর ছাপা বিলে ৪৮১.২৮। ক্রেতা ছাপা অঙ্ক দিলে আধা পয়সা চিরকাল
+             * বকেয়া (বা জমা) থাকত। ⓘ ড্রয়ারে আধা পয়সা নেই, তাই হিসাবটাই
+             * পয়সায় — অর্ধেক হলে উপরে ([[Money::round()]])।
+             *
+             * ⓘ এখানে, [[Tax::amountOn()]]-এ নয়: ক্রয়ও ওটা ডাকে, আর সেখানে
+             * সরবরাহকারীর বিলের অঙ্কই শেষ কথা।
+             */
+            $tax = $this->paisa($standard?->amountOn($net) ?? '0.0000');
             $inclusive = (bool) $standard?->is_inclusive;
         } else {
             $tax = $this->money($tax);
+
+            /*
+             * ⛔ হাতে দেওয়া অঙ্কেও ধরন পণ্যের হারের — Sales অডিট ১০ অক্টোবর ২০২৬।
+             * ⚠️ আগে এই পথে `$inclusive` মিথ্যাই থাকত: দামের ভেতরের ভ্যাটের বিল খুলে আবার সংরক্ষণ করলে
+             * পর্দা পুরনো ভ্যাট ফেরত পাঠাত, আর ভ্যাটটা মোটের উপর দ্বিতীয়বার বসত।
+             */
+            $inclusive = (bool) $standard?->is_inclusive;
 
             /*
              * হাতে দেওয়া অঙ্কটা হারের অঙ্ক থেকে কতটা সরে আছে।
@@ -113,7 +132,8 @@ trait CalculatesSalesLines
              * নেই — কোথা থেকে সরল? তখন `null` মানে "মাপার কিছু ছিল না"।
              */
             if ($standard !== null) {
-                $expected = $standard->amountOn($net);
+                // ⓘ একই গোল করা অঙ্কের সাথে মেলানো — নাহলে পয়সায় লেখা ঠিক অঙ্কও "সরে গেছে" দেখাত
+                $expected = $this->paisa($standard->amountOn($net));
 
                 if (bccomp($tax, $expected, 4) !== 0) {
                     $variance = bcsub($tax, $expected, 4);
@@ -143,6 +163,12 @@ trait CalculatesSalesLines
             'tax' => bcadd($totals['tax'], $figures['tax'], 4),
             'total' => bcadd($totals['total'], $figures['amount'], 4),
         ];
+    }
+
+    /** পয়সা পর্যন্ত গোল, চার দশমিকের রূপে — খাতার ঘরগুলো চার দশমিকের। */
+    private function paisa(string $amount): string
+    {
+        return bcadd(Money::round($amount, 2), '0', 4);
     }
 
     /** টাকার ঘর — খালি মানে শূন্য, ঋণাত্মক নয়। */

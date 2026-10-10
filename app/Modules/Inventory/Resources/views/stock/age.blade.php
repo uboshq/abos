@@ -27,7 +27,8 @@
                              ? 'border-(--color-brand-600) bg-(--color-brand-50)'
                              : 'border-(--color-border) bg-(--color-surface-card)' }}">
                     <span class="block text-xs text-(--color-ink-muted)">
-                        {{ $b }} {{ __('inventory::analysis.days', ['count' => '']) }}
+                        {{-- ⛔ `__()` বহুবচনের লেখাটা বাছে না — ঘরে বহুবচনের কাঁচা নিয়মটাই ছাপা হত (পাতা-ঝাড়ু ধাপ ০, ১০ অক্টোবর ২০২৬) --}}
+                        {{ trans_choice('inventory::analysis.days', 2, ['count' => $b]) }}
                     </span>
                     @if ($showsCost && $totals[$b] !== null)
                         <span class="num block text-lg font-bold text-(--color-ink)">

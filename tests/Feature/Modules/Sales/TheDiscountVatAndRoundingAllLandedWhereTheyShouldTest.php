@@ -476,6 +476,25 @@ final class TheDiscountVatAndRoundingAllLandedWhereTheyShouldTest extends TestCa
         ]);
     }
 
+    /**
+     * ⛔ দামের ভেতরের ভ্যাট হাতে পাঠালেও মোট বাড়ে না — বিল খুলে আবার সংরক্ষণের পথ (Sales অডিট ১০ অক্টোবর ২০২৬)।
+     *
+     * ⓘ বিপজ্জনক ইনপুট: সারি সম্পাদক পুরনো ভ্যাটটা (১৩৫) ফেরত পাঠায়। হাতে গোনা: ৫ × ২৩০ − ১১৫ = ১,০৩৫,
+     * ভ্যাট ১৩৫ ভেতরেই → মোট ১,০৩৫। ⚠️ আগে বসত ১,১৭০ — ভ্যাট দুইবার।
+     */
+    public function test_vat_inside_the_price_sent_back_by_hand_is_not_added_twice(): void
+    {
+        $oil = $this->product('DVR-VATIN3', '230', $this->vat15(true)->id, '20', '150');
+
+        $invoice = app(\App\Modules\Sales\Services\SalesInvoiceService::class)->create([
+            'customer_id' => $this->dealer->id,
+            'trx_date' => now()->toDateString(),
+        ], [['product_id' => $oil->id, 'qty' => '5', 'rate' => '230', 'discount' => '115', 'tax' => '135']]);
+
+        $this->assertSame([0, 0], [bccomp((string) $invoice->tax, '135', 4), bccomp((string) $invoice->total, '1035', 4)],
+            '⛔ ভেতরের ভ্যাট হাতে ফেরত এলে ভ্যাট '.$invoice->tax.', মোট '.$invoice->total.' — ভ্যাট মোটের উপর আবার বসেছে।');
+    }
+
     // ══ চ · বিলের ছাড় ছাড়ের অনুমোদন এড়ায় না ═══════════════════════════════
 
     /**

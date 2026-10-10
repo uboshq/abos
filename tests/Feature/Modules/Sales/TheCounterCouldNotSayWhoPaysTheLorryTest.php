@@ -16,6 +16,7 @@ use App\Modules\Sales\Models\SalesInvoice;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Tests\Concerns\PutsMoneyInTheTill;
 use Tests\TestCase;
 
 /**
@@ -30,7 +31,11 @@ use Tests\TestCase;
  */
 final class TheCounterCouldNotSayWhoPaysTheLorryTest extends TestCase
 {
+    use PutsMoneyInTheTill;
     use RefreshDatabase;
+
+    /** ⓘ ভাড়া যে টিল থেকে — পুরনো পথ (Main Counter নিজে থেকে) নতুন বিক্রিতে বন্ধ, ৭ অক্টোবর ২০২৬ ([[FarePayment]]) */
+    private \App\Modules\Accounts\Models\Account $till;
 
     private Product $biscuit;
 
@@ -53,13 +58,17 @@ final class TheCounterCouldNotSayWhoPaysTheLorryTest extends TestCase
         $this->warehouse = Warehouse::query()->where('is_default', true)->firstOrFail();
         $this->customer = Customer::query()->where('name_en', 'Rahim Traders')->firstOrFail();
         $this->customer->forceFill(['credit_limit' => '1000000'])->save();
+
+        $till = app(\App\Modules\Accounts\Services\CashTillService::class)->create(['code' => 'LRY-F', 'name_en' => 'Lorry fare till']);
+        $this->till = \App\Modules\Accounts\Models\Account::query()->findOrFail($till->account_id);
+        $this->putMoneyIn($this->till, '1000');
     }
 
     public function test_prepaid_is_our_expense_and_not_on_the_bill(): void
     {
         [$challan, $invoice] = $this->sell('us');
 
-        $this->assertSame('100.0000', $this->booked(StandardChart::VEHICLE_HIRE, 'debit', DeliveryChallan::STOCK_SOURCE, $challan->id));
+        $this->assertSame('100.0000', $this->fareExpense($challan));
         $this->assertSame('20.0000', (string) $invoice->total);
         $this->assertSame('0.0000', $this->booked(StandardChart::FREIGHT_INCOME, 'credit', SalesInvoice::drillSourceType(), $invoice->id));
     }
@@ -69,7 +78,7 @@ final class TheCounterCouldNotSayWhoPaysTheLorryTest extends TestCase
     {
         [$challan, $invoice] = $this->sell('us_add_to_bill');
 
-        $this->assertSame('100.0000', $this->booked(StandardChart::VEHICLE_HIRE, 'debit', DeliveryChallan::STOCK_SOURCE, $challan->id),
+        $this->assertSame('100.0000', $this->fareExpense($challan),
             '⛔ আমরা চালককে দিয়েছি — খরচ খাতায় নেই।');
         $this->assertSame('100.0000', (string) $invoice->freight_charge);
         $this->assertSame('120.0000', (string) $invoice->total, '⛔ বিলের মোটে ভাড়া নেই।');
@@ -141,9 +150,23 @@ final class TheCounterCouldNotSayWhoPaysTheLorryTest extends TestCase
             'driver_phone' => '01711000000',
             'transport_cost' => '100',
             'fare_paid_by' => $farePaidBy,
+            // ⓘ কোন খাত থেকে — কাউন্টারের পর্দা সবসময় পাঠায় ([[FarePayment::stamp()]])
+            'fare_when' => 'now',
+            'fare_account_id' => $this->till->id,
             'lines' => [['product_id' => $this->biscuit->id, 'qty' => '2', 'rate' => '10', 'free_qty' => '0']],
             ...$extra,
         ];
+    }
+
+    /** ভাড়ার খরচ — চালানে বাঁধা খরচ ভাউচারের ৫২১৭-এর ডেবিট ([[FarePayment::payOnConfirm()]]) */
+    private function fareExpense(DeliveryChallan $challan): string
+    {
+        $voucherId = $challan->fresh()->fare_voucher_id;
+
+        return bcadd((string) DB::table('ledger_entries as le')->join('accounts as a', 'a.id', '=', 'le.account_id')
+            ->where('a.code', StandardChart::VEHICLE_HIRE)
+            ->where('le.source_type', \App\Modules\Accounts\Models\Voucher::SOURCE_TYPES[\App\Modules\Accounts\Models\Voucher::EXPENSE])
+            ->where('le.source_id', (int) $voucherId)->sum('le.debit'), '0', 4);
     }
 
     private function booked(string $code, string $side, string $sourceType, int $sourceId): string

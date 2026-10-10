@@ -45,4 +45,13 @@ return [
     'who_pays' => 'Pick who pays the fare.',
     'needs_amount' => 'Enter the fare amount.',
     'nothing_due' => 'There is no unpaid fare on this challan.',
+
+    // trip — one truck, one fare (decision d)
+    'trip_amount' => 'Truck fare',
+    'trip_hint' => 'The fare is for the whole truck and is booked when the truck leaves. A trip with a fare cannot carry a challan that has its own fare.',
+    'trip_narration' => 'Truck fare — trip :trip (challans :challans), vehicle :vehicle, carrier or driver :by',
+    'trip_paid_narration' => 'Truck fare paid — trip :trip, carrier :by',
+    'state_trip_waits' => 'Booked when the truck leaves',
+    'challan_on_trip' => 'This challan is on trip :trip, which has its fare recorded. The same truck\'s fare cannot be recorded twice.',
+    'trip_challan_has_fare' => 'These challans have their own fare: :documents. With a fare on the trip the same truck would be paid twice. Remove them, or leave the trip fare empty.',
 ];

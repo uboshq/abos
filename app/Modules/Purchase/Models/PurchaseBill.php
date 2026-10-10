@@ -352,7 +352,13 @@ class PurchaseBill extends Model implements Drillable, \App\Core\Contracts\Settl
      * দেখা যেত। একটা বদলালে অন্যটাও বদলাতে হবে — PaymentServiceTest
      * দুই পথেই একই ফল আসছে কি না দেখে।
      */
-    public function scopeWithPaid(Builder $query): Builder
+    /**
+     * বিলের তিন কাটার উপ-কোয়েরি — পরিশোধ, পরিশোধ-ভাউচার আর পাকা ফেরত ([[scopeWithPaid()]], [[scopeStillOwed()]] দুজনেই নেয়, যাতে
+     * তালিকার অঙ্ক আর ছাঁকনির অঙ্ক কখনো আলাদা না হয়)।
+     *
+     * @return array{0: Builder, 1: Builder, 2: Builder}
+     */
+    private static function owedParts(): array
     {
         /*
          * ⛔ শাখার দেয়াল ছাড়া — পুরো ERP অডিট, ক্রয় ⚠️৯ (৬ অক্টোবর ২০২৬)। ⓘ পরিশোধ বসে লেখকের শাখায়, বিল গুদামের শাখায়;
@@ -381,6 +387,30 @@ class PurchaseBill extends Model implements Drillable, \App\Core\Contracts\Settl
             ->selectRaw('COALESCE(SUM(total), 0)')
             ->whereColumn('pur_returns.purchase_bill_id', 'pur_bills.id')
             ->whereIn('status', \App\Core\Support\DocumentStatus::POSTED);
+
+        return [$paid, $byVoucher, $returned];
+    }
+
+    /**
+     * ⭐ যে বিলে এখনো টাকা বাকি — ছাঁকনিটা ডাটাবেজে (পুরো ERP অডিট, ক্রয় ⚠️১৩, ৬ অক্টোবর ২০২৬)।
+     *
+     * ⛔ আগে পরিশোধের পর্দা সাম্প্রতিক ২০০টা নিশ্চিত বিল এনে তারপর PHP-তে বাকিগুলো রাখত — তাই পুরনো বাকি বিল কখনো তালিকায়
+     * আসত না, অথচ পুরনো বাকি শোধই সবচেয়ে দরকারি। ⓘ বাকি = মোট − পরিশোধ − ভাউচারে দেওয়া − পাকা ফেরত, [[dueAmount()]]-এর
+     * হুবহু, [[owedParts()]] থেকে।
+     */
+    public function scopeStillOwed(Builder $query): Builder
+    {
+        [$paid, $byVoucher, $returned] = self::owedParts();
+
+        return $query->whereRaw(
+            'pur_bills.total - ('.$paid->toSql().') - ('.$byVoucher->toSql().') - ('.$returned->toSql().') > 0',
+            [...$paid->getBindings(), ...$byVoucher->getBindings(), ...$returned->getBindings()],
+        );
+    }
+
+    public function scopeWithPaid(Builder $query): Builder
+    {
+        [$paid, $byVoucher, $returned] = self::owedParts();
 
         // pur_bills.* না দিলে addSelect শুধু সাব-কোয়েরিটাই আনত
         return $query->addSelect([

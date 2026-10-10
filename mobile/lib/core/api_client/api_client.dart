@@ -124,6 +124,9 @@ class ApiClient {
   /// reason at all.
   static Future<String>? _inFlightRefresh;
 
+  /// শেষ নবায়নে যে refresh টোকেন পাঠানো হয়েছিল — ব্যর্থ হলে মিলিয়ে দেখার জন্য ([[_someoneElseRefreshed]])
+  static String? _sentRefresh;
+
   static Future<String?> _refreshAccessToken() async {
     final existing = _inFlightRefresh;
     if (existing != null) {
@@ -144,7 +147,7 @@ class ApiClient {
         debugPrintStack(stackTrace: stackTrace);
         return true;
       }());
-      return null;
+      return _someoneElseRefreshed();
     } finally {
       if (_inFlightRefresh == started) {
         _inFlightRefresh = null;
@@ -152,11 +155,24 @@ class ApiClient {
     }
   }
 
+  /// ⭐ নবায়ন ব্যর্থ, কিন্তু এর মধ্যে আরেক isolate (পটভূমির সিঙ্ক) একই টোকেনে নবায়ন করে নতুন জোড়া রেখে গেছে —
+  /// সার্ভার একটা টোকেন একবারই মানে (৯ অক্টোবর ২০২৬), তাই দুজনের একজন ৪০১ পায়। তখন storage মুছে মানুষকে বের করে
+  /// দেওয়া ভুল হত — জেতা জোড়াটাই মুছে যেত। storage-এর refresh টোকেন পাঠানোটার থেকে আলাদা হলে নতুন access টোকেন
+  /// নিয়ে আবার চেষ্টা; একই থাকলে সত্যিই শেষ (null)।
+  static Future<String?> _someoneElseRefreshed() async {
+    final sent = _sentRefresh;
+    final stored = await TokenStorage.instance.refreshToken();
+    if (sent == null || stored == null || stored.isEmpty || stored == sent) return null;
+    final access = await TokenStorage.instance.reloadAccessToken();
+    return (access == null || access.isEmpty) ? null : access;
+  }
+
   static Future<String> _performRefresh() async {
     final refreshToken = await TokenStorage.instance.refreshToken();
     if (refreshToken == null || refreshToken.isEmpty) {
       throw StateError('No refresh token stored');
     }
+    _sentRefresh = refreshToken;
 
     // ⛔ ০.৪.৮ পর্যন্ত টোকেন কেবল body-তে যেত, হেডার ছাড়া, deviceId ছাড়া — সার্ভারের দরজা হেডার পড়ে, তাই প্রতিটা
     // নবায়ন ৪০১ আর ৩০ মিনিট পরে ফোন চুপ (মালিক, ৪ অক্টোবর ২০২৬)। এখন হেডারে, আর deviceId সাথে; body-তেও থাকে,

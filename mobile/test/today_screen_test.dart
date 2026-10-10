@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:intl/intl.dart';
 
 import 'package:abos_mobile/core/records/today_record.dart';
 import 'package:abos_mobile/core/theme/app_colors.dart';
@@ -61,7 +62,9 @@ void main() {
     expect(find.textContaining('প্রধান শাখা'), findsOneWidget);
     // A stale figure looks exactly like a fresh one.
     expect(find.textContaining('হিসাব'), findsWidgets);
-    expect(find.textContaining('06:04 PM'), findsOneWidget);
+    // ⓘ যন্ত্রের নিজের সময়-অঞ্চলে — পর্দা তা-ই দেখায় (ঢাকায় 06:04 PM); পরীক্ষা যেকোনো অঞ্চলের যন্ত্রে চলে
+    final local = DateFormat('hh:mm a').format(DateTime.parse('2026-09-16T18:04:11+06:00').toLocal());
+    expect(find.textContaining(local), findsOneWidget);
   });
 
   testWidgets('a figure the person may not see draws no card at all',

@@ -10,7 +10,7 @@ use App\Core\Concerns\IsAudited;
 use App\Core\Concerns\ListedInViewedBranch;
 use App\Core\Contracts\Drillable;
 use App\Core\Contracts\SettledByAVoucher;
-use App\Models\User;
+use App\Core\Contracts\SettlementTerms;
 /*
  * ⚠️ এই import-টা ছাড়া `Account::class` নিজের namespace-এ খোঁজা হত —
  * `App\Modules\Finance\Models\Account`, যেটা নেই। ⛔ ফল: মূলধনের পাতা
@@ -21,8 +21,11 @@ use App\Models\User;
  * বাদ পড়েছিল। ⭐ `accounts` module.php-এর `depends_on`-এ ঘোষিত, তাই
  * সীমানা ভাঙে না।
  */
+use App\Models\Approval;
+use App\Models\User;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Models\Voucher;
+use App\Modules\Finance\Support\OpensOnlyInReach;
 use App\Modules\MasterData\Models\Person;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -39,13 +42,14 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * নয় আসেনি। "বাতিল" রাখলে একটা না-আসা টাকার সারি চিরকাল তালিকায়
  * থেকে যেত, আর কেউ বলতে পারত না ওটা আসবে না কি ভুলে গেছে।
  */
-class CapitalEntry extends Model implements Drillable, SettledByAVoucher, \App\Core\Contracts\SettlementTerms
+class CapitalEntry extends Model implements Drillable, SettledByAVoucher, SettlementTerms
 {
     use BelongsToCompany;
     use HasFactory;
     use HasPublicId;
     use IsAudited;
     use ListedInViewedBranch;
+    use OpensOnlyInReach;
 
     public const OWNER = 'owner';
 
@@ -304,12 +308,12 @@ class CapitalEntry extends Model implements Drillable, SettledByAVoucher, \App\C
     public function settlementTerms(): array
     {
         // ⓘ সইয়ের অপেক্ষায় বা ফেরত পাওয়া কাগজ খোলা নয় — সইয়ের পথ ভাউচার দিয়ে এড়ানো যায় না
-        $latest = \App\Models\Approval::query()
+        $latest = Approval::query()
             ->where('approvable_type', static::class)
             ->where('approvable_id', $this->getKey())
             ->latest('id')
             ->first();
-        $signed = $latest === null || $latest->status === \App\Models\Approval::APPROVED;
+        $signed = $latest === null || $latest->status === Approval::APPROVED;
 
         return [
             'voucher_type' => 'receipt',

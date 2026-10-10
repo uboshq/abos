@@ -12,6 +12,8 @@ use App\Core\Services\PermissionSyncer;
 use App\Core\Support\CompanyContext;
 use App\Core\Support\DateFormat;
 use App\Core\Support\DocumentStatus;
+use App\Core\Support\ViewedBranch;
+use App\Models\Branch;
 use App\Models\Company;
 use App\Models\FinancialYear;
 use App\Models\LedgerEntry;
@@ -94,7 +96,7 @@ final class YearEndService
     /**
      * প্রতিটা বছরের শেষ সমাপনীর নম্বর — বছরশেষের তালিকার লিঙ্কের জন্য ([[YearEndController::index()]])।
      *
-     * @return array<int, string>  বছরের id => নম্বর
+     * @return array<int, string> বছরের id => নম্বর
      */
     public function closingNumbers(): array
     {
@@ -123,14 +125,18 @@ final class YearEndService
      * ⭐ সমাপনী ভাউচারের কাগজ — পাতা আর ছাপা একই তথ্যে ([[YearEndController::closing()]])।
      *
      * ⓘ প্রতিটা দাখিলা আলাদা: বন্ধের সমাপনী, আর বছর আবার খুললে তার উল্টো (একই নম্বর বহন করে, [[reopen()]])। আবার বন্ধ করলে
-     * নতুন নম্বরে নতুন সমাপনী। সারিগুলো সব শাখার — সমাপনী গোটা কোম্পানির কাগজ।
+     * নতুন নম্বরে নতুন সমাপনী।
+     * ⛔ সারিগুলো দেখার শাখার দেয়ালে — পুরো-ERP পুনঃঅডিট, ৯ অক্টোবর ২০২৬ (হিসাব, ঠিক ৩)। ⚠️ আগে সব শাখার সারি যেত, তাই শাখা A-তে
+     * সীমিত মানুষ পাতায় আর ছাপায় অন্য শাখার আয়-ব্যয় দেখতেন। ⓘ সমাপনী গোটা কোম্পানির দাখিলা, কিন্তু এটা **দেখার** কাগজ —
+     * স্থিতিপত্রের নিয়মই ([[DataScope::inView()]]): এক শাখা বাছা → সেটা; "সব শাখা" → নাগাল আর শাখাহীন সারি; মালিক → সব।
+     * বছর বন্ধের যাচাই এটা ডাকে না।
      *
      * @return list<array{kind: string, document_no: string, date: string, narration: string, debit: string, credit: string,
      *     lines: list<array{account: string, branch: string, debit: string, credit: string}>}>
      */
     public function closingPaper(FinancialYear $year): array
     {
-        $rows = LedgerEntry::query()
+        $rows = ViewedBranch::narrow(LedgerEntry::query(), 'ledger_entries.branch_id')
             ->whereIn('source_type', self::closingSources())
             ->where('source_id', $year->id)
             ->orderBy('id')
@@ -141,7 +147,7 @@ final class YearEndService
         }
 
         $accounts = Account::query()->whereKey($rows->pluck('account_id')->unique())->get()->keyBy('id');
-        $branches = \App\Models\Branch::query()->whereKey($rows->pluck('branch_id')->filter()->unique())->get()->keyBy('id');
+        $branches = Branch::query()->whereKey($rows->pluck('branch_id')->filter()->unique())->get()->keyBy('id');
 
         $papers = [];
 

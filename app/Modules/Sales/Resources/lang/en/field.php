@@ -53,7 +53,7 @@ return [
     'narration' => 'Narration',
     'notes' => 'Notes',
     'status' => 'Status',
-    'order' => 'Purchase order',
+    'order' => 'Sales order',
     'receipt' => 'Receipt',
     'unit' => 'Unit',
     'line_no' => 'No',

@@ -451,7 +451,7 @@
                                     <td class="p-2">
                                         <input type="radio" name="bill_pick"
                                                :aria-label="b.no"
-                                               :checked="String(b.id) === pickedId && b.against_type === pickedType"
+                                               :checked="isBillPicked(b)"
                                                x-on:change="pick(b)">
                                     </td>
                                     <td class="p-2 font-medium" x-text="b.no"></td>

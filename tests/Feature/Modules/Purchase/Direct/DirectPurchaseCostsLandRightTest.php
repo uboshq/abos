@@ -255,6 +255,26 @@ final class DirectPurchaseCostsLandRightTest extends TestCase
         ]);
     }
 
+    /**
+     * ⛔ ভিতরের ভ্যাট হাতে লেখা হলেও মোট বাড়ে না — উপরের একই হিসাব, কেবল `tax` ঘরটা পাঠানো (Sales অডিট
+     * ১০ অক্টোবর ২০২৬, ক্রয়ের একই জায়গা)। ⚠️ আগে মোট বসত ১১০০ + ১৪৩.৪৭৮৩ — ভ্যাট দুইবার।
+     */
+    public function test_vat_inside_the_price_typed_by_hand_is_not_added_twice(): void
+    {
+        $tax = Tax::query()->create([
+            'company_id' => $this->company->id, 'code' => 'VAT15-IN2', 'name_en' => 'VAT 15% inclusive',
+            'name_bn' => 'ভ্যাট ১৫% ভিতরে', 'rate' => '15', 'kind' => 'vat', 'is_inclusive' => true, 'is_active' => true,
+        ]);
+        $this->a->forceFill(['tax_id' => $tax->id])->save();
+
+        $bill = $this->buy(['lines' => [
+            ['product_id' => $this->a->id, 'qty' => '10', 'rate' => '115', 'sales_price' => '115', 'discount' => '50', 'tax' => '143.4783'],
+        ]]);
+
+        $this->assertSame([0, 0], [bccomp((string) $bill->tax, '143.4783', 4), bccomp((string) $bill->total, '1100', 4)],
+            "⛔ ভিতরের ভ্যাট হাতে লেখা হলে ভ্যাট {$bill->tax}, মোট {$bill->total} — ভ্যাট মোটের উপর আবার বসেছে।");
+    }
+
     // ── ৫ক · গোটা বিলের ছাড় (মালিকের সিদ্ধান্ত ক, ২৭ সেপ্টেম্বর ২০২৬) ───────
 
     /**

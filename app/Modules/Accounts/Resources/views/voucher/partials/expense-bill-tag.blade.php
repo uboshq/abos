@@ -153,7 +153,8 @@
                             </td>
                             <td class="num p-2 text-end">{{ \App\Core\Support\Money::quantity($bill->total_qty) }}</td>
                             <td class="num p-2 text-end text-(--color-ink-muted)">
-                                {{ bccomp((string) $bill->already_charged, '0', 4) > 0 ? number_format((string) $bill->already_charged, 2) : '—' }}
+                                {{-- ⛔ লাখের কমা — টাকার নিজের লেখক ([[Money::format()]]); `number_format` হাজারের কমা দিত (পুনঃঅডিট, ৯ অক্টোবর ২০২৬) --}}
+                                {{ bccomp((string) $bill->already_charged, '0', 4) > 0 ? \App\Core\Support\Money::format($bill->already_charged) : '—' }}
                             </td>
                             <td class="p-2 text-end">
                                 {{--

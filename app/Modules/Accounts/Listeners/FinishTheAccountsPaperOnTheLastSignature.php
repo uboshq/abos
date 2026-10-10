@@ -11,6 +11,8 @@ use App\Modules\Accounts\Models\CashTill;
 use App\Modules\Accounts\Models\Cheque;
 use App\Modules\Accounts\Models\FixedAsset;
 use App\Modules\Accounts\Models\InterCompanyTransfer;
+use App\Modules\Accounts\Models\LoanInstalment;
+use App\Modules\Accounts\Models\LoanMovement;
 use App\Modules\Accounts\Models\MoneyTransfer;
 use App\Modules\Accounts\Models\Note;
 use App\Modules\Accounts\Models\TillHandover;
@@ -19,6 +21,7 @@ use App\Modules\Accounts\Services\AssetEventService;
 use App\Modules\Accounts\Services\ChequeService;
 use App\Modules\Accounts\Services\FixedAssetService;
 use App\Modules\Accounts\Services\InterCompanyService;
+use App\Modules\Accounts\Services\LoanService;
 use App\Modules\Accounts\Services\MoneyTransferService;
 use App\Modules\Accounts\Services\NoteService;
 use App\Modules\Accounts\Services\OpeningBalanceService;
@@ -57,9 +60,13 @@ final class FinishTheAccountsPaperOnTheLastSignature
         $type = Relation::getMorphedModel((string) $approval->approvable_type) ?? (string) $approval->approvable_type;
         $paper = class_exists($type) ? $type::query()->withoutGlobalScope('user-branch')->find($approval->approvable_id) : null;
 
-        // ⓘ সম্পদের সই ফেরত — ঘটনা বাতিল, অপেক্ষার নিবন্ধন মুছে যায়; নইলে সম্পদ চিরকাল আটকে থাকত (fixed-assets রিভিউ, ১১ অক্টোবর ২০২৬)
+        /*
+         * ⓘ সই ফেরত — খাতায় কিছুই ওঠেনি: ঋণের অপেক্ষার সারি প্রত্যাখ্যাত (অডিট, ১০ অক্টোবর ২০২৬); সম্পদের ঘটনা বাতিল, অপেক্ষার
+         * নিবন্ধন মুছে যায়, নইলে সম্পদ চিরকাল আটকে থাকত (fixed-assets রিভিউ, ১১ অক্টোবর ২০২৬)।
+         */
         if ($approval->status === Approval::REJECTED) {
             match (true) {
+                $paper instanceof LoanMovement => app(LoanService::class)->rejectSigned($paper),
                 $paper instanceof AssetEvent => app(AssetEventService::class)->rejectSigned($paper),
                 $paper instanceof FixedAsset && in_array($approval->action, [AccountsSignature::FIXED_ASSET_REGISTER, AccountsSignature::FIXED_ASSET_OPENING], true)
                     => app(FixedAssetService::class)->rejectRegistered($paper),
@@ -70,6 +77,24 @@ final class FinishTheAccountsPaperOnTheLastSignature
         }
 
         if ($approval->status !== Approval::APPROVED) {
+            return;
+        }
+
+        // ⭐ ঋণের তোলা, শোধ, সুদ — অপেক্ষার সারি এবার খাতায় ([[LoanService::finishSigned()]])
+        if ($paper instanceof LoanMovement) {
+            app(LoanService::class)->finishSigned($paper);
+
+            return;
+        }
+
+        // ⭐ ঋণের কিস্তি — সই চাওয়ার মুহূর্তের তথ্যেই, আর কেবল এখনো বাকি থাকলে (একই সই দুইবার এলে কিছুই নয়)
+        if ($paper instanceof LoanInstalment) {
+            $signed = (array) ($approval->payload ?? []);
+
+            if (! $paper->isPaid()) {
+                app(LoanService::class)->payInstalment($paper, (int) ($signed['from_account_id'] ?? 0), $signed['on'] ?? null, isset($signed['amount']) ? (string) $signed['amount'] : null);
+            }
+
             return;
         }
 

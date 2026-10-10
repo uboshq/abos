@@ -39,9 +39,17 @@ return [
     'send' => 'Send',
 
     'status' => 'Status',
-    'pending' => 'We are checking',
+    // ⭐ জমার বিজ্ঞপ্তি / Payment Advice — চার অবস্থা (টাকার পরিকল্পনা ১, ৭ অক্টোবর ২০২৬); ফোন একই নাম পায় (`status_label`)
+    'pending' => 'Submitted',
+    'verifying' => 'Under verification',
     'accepted' => 'Accepted',
-    'rejected' => 'Not found',
+    'rejected' => 'Rejected',
+    'start_verifying' => 'Start verifying',
+    'already_verifying' => 'Verification has already started on this one.',
+    // ⛔ একই স্লিপ দুইবার নয় — টাকার পরিকল্পনা ৪, ৭ অক্টোবর ২০২৬
+    // ⛔ যিনি পাঠালেন তিনি নিজে গ্রহণ করেন না — টাকার পরিকল্পনা ৩
+    'own_advice' => 'You sent this payment advice yourself — someone else must check and accept it.',
+    'reference_taken' => 'A payment advice with this reference on this bank account has already been sent — the same money cannot be paid in twice.',
 
     'claim_raised' => 'Thank you — we will check it against the bank.',
     'accepted_message' => 'Accepted, and the collection is on the books.',
@@ -54,7 +62,7 @@ return [
     'already_decided' => 'This one has already been decided.',
 
     // ডিপোর দিক
-    'desk_title' => 'Deposit claims',
+    'desk_title' => 'Payment advice',
     'desk_subtitle' => 'What customers say they have paid — check it against the bank before you accept.',
     'customer' => 'Customer',
     'claimed' => 'They say',

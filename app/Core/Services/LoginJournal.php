@@ -58,6 +58,24 @@ class LoginJournal
         return $this->write($identifier, null, true, null, $companyId);
     }
 
+    /**
+     * ⛔ অচেনা নাম খাতায় ঢাকা — ৩০ সেপ্টেম্বরের নিরীক্ষা (Core #login-identifier-raw), ১০ অক্টোবর ২০২৬।
+     *
+     * ⚠️ নামের ঘরে কেউ ভুলে পাসওয়ার্ড টাইপ করলে কোনো ব্যবহারকারী মেলে না — আর ঠিক সেই সারিটাই আগে
+     * কাঁচা বসত। ⓘ তাই অচেনা নামের প্রথম দুই অক্ষর আর একটা চাবি-বাঁধা ছাপ: পড়া যায় না, তবু একই
+     * নামে বারবার চেষ্টা একই ছাপে পড়ে, তাই [[LoginLock]] আগের মতোই গোনে।
+     */
+    public static function unknownKey(string $identifier): string
+    {
+        $normal = mb_strtolower(trim($identifier));
+
+        // ⓘ পোর্টালের দরজা নিজের নামে লেখে (`portal:…`) — দরজার নামটা গোপন নয়, তাই থাকে; ঢাকা হয় তার পরেরটুকু
+        $door = str_starts_with($normal, 'portal:') ? 'portal:' : '';
+        $typed = mb_substr($normal, mb_strlen($door));
+
+        return $door.mb_substr($typed, 0, 2).'…#'.substr(hash_hmac('sha256', $normal, (string) config('app.key')), 0, 12);
+    }
+
     private function write(string $identifier, ?User $user, bool $succeeded, ?string $reason, ?int $companyId = null): ?LoginAttempt
     {
         try {
@@ -82,11 +100,13 @@ class LoginJournal
                  * যা টাইপ করা হয়েছিল — ১৯১ অক্ষরে ছাঁটা।
                  *
                  * কেউ ঘরটায় দশ হাজার অক্ষর পাঠালে সেটা যেন খাতা লেখার
-                 * সময় ভেঙে না পড়ে। পাসওয়ার্ড কখনো এখানে বসে না, এমনকি
-                 * ভুলটাও নয়: মানুষ প্রায়ই আসল পাসওয়ার্ড ভুল ঘরে টাইপ
-                 * করে, আর তখন খাতাটাই পাসওয়ার্ডের তালিকা হয়ে যেত।
+                 * সময় ভেঙে না পড়ে। ⛔ অচেনা নাম ঢাকা ([[unknownKey()]]):
+                 * মানুষ প্রায়ই আসল পাসওয়ার্ড ভুল ঘরে টাইপ করে, আর তখন
+                 * খাতাটাই পাসওয়ার্ডের তালিকা হয়ে যেত।
                  */
-                'identifier' => mb_substr(trim($identifier), 0, 191),
+                'identifier' => $reason === LoginAttempt::UNKNOWN
+                    ? self::unknownKey($identifier)
+                    : mb_substr(trim($identifier), 0, 191),
 
                 'succeeded' => $succeeded,
                 'reason' => $reason,

@@ -95,6 +95,29 @@ final class ASyncConflictWasSettledByAReaderTest extends TestCase
 
     // ── যন্ত্রপাতি ──────────────────────────────────────────────────────
 
+    /**
+     * ⭐ দ্বন্দ্বের তালিকা পাতায় — একবারে সব নয় (পুরো-ERP অডিট, ফোন; fe, ১০ অক্টোবর ২০২৬; [[SyncService::conflicts()]])।
+     * ⓘ শরীর আগের মতোই তালিকা (আজকের ফোন `List` পড়ে); মোট আর "আরও আছে" মাথায়।
+     */
+    public function test_the_conflict_list_comes_in_pages_newest_first_and_keeps_its_shape(): void
+    {
+        $per = \App\Core\Engines\Sync\SyncService::CONFLICTS_PER_PAGE;
+        foreach (range(1, $per + 3) as $i) {
+            $this->conflict()->forceFill(['detected_at' => now()->subMinutes($i)])->save();
+        }
+
+        Sanctum::actingAs($this->userWith(['governance.audit.view']), [AuthController::ACCESS]);
+
+        $first = $this->getJson(route('api.sync.conflicts'))->assertOk()
+            ->assertHeader('X-Total-Count', (string) ($per + 3))->assertHeader('X-Has-More', '1');
+        $this->assertTrue(array_is_list($first->json()), '⛔ উত্তরের আকার বদলাল — আজকের ফোন তালিকা পড়তে পারবে না।');
+        $this->assertCount($per, $first->json(), '⛔ প্রথম পাতায় সব দ্বন্দ্ব একসাথে এল।');
+
+        $second = $this->getJson(route('api.sync.conflicts', ['page' => 2]))->assertOk()->assertHeader('X-Has-More', '0');
+        $this->assertCount(3, $second->json());
+        $this->assertGreaterThan($second->json()[0]['detectedAt'], $first->json()[$per - 1]['detectedAt'], '⛔ নতুনটা আগে নয়।');
+    }
+
     private function conflict(): SyncConflict
     {
         return SyncConflict::query()->create([

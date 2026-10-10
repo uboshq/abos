@@ -37,12 +37,28 @@ class LoanMovement extends Model implements Drillable
     /** সুদ বসানো — টাকা নড়ে না, ধার বাড়ে। */
     public const INTEREST = 'interest';
 
+    /*
+     * ⭐ সইয়ের অবস্থা — অডিট ⛔ (সমন্বয়ক, ১০ অক্টোবর ২০২৬): ঋণের টাকা তোলা, শোধ আর সুদ এখন সইয়ের পেছনে
+     * ([[LoanService]], [[AccountsSignature]])। ⓘ খাতায় বসা সারি "posted" — আগের সব সারিও তাই (মাইগ্রেশনের ডিফল্ট);
+     * ছক থামালে "awaiting", শেষ সইয়ে "posted"; "না" এলে "rejected" — খাতায় কিছু ওঠেনি।
+     */
+    public const POSTED = 'posted';
+
+    public const AWAITING = 'awaiting';
+
+    public const REJECTED = 'rejected';
+
     protected $table = 'acc_loan_movements';
 
     protected $fillable = [
         'company_id', 'branch_id', 'loan_id', 'kind', 'document_no',
-        'trx_date', 'amount', 'counter_account_id', 'narration', 'created_by',
+        'trx_date', 'amount', 'counter_account_id', 'narration', 'created_by', 'status',
     ];
+
+    public function isAwaiting(): bool
+    {
+        return $this->status === self::AWAITING;
+    }
 
     protected function casts(): array
     {

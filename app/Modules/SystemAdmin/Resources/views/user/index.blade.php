@@ -133,6 +133,21 @@
             'render' => fn ($u) => view('system_admin::user.partials.two-step', ['user' => $u]),
         ],
         [
+            /*
+             * ⭐ শেষ ঢোকা — সিস্টেম পর্দার নকশা, ১০ অক্টোবর ২০২৬ (C-তে কেবল রোলের চিপ আর এই কলাম; বাকি কলাম ২২ সেপ্টেম্বরের মতোই
+             * আলাদা)। ⓘ কে অনেকদিন ঢোকেননি, বা কখনো ঢোকেননি — নিষ্ক্রিয় করার আগে এটাই প্রথম প্রশ্ন। ঘরটা CredentialCheck প্রতিটা
+             * সফল লগইনে বসায়; কখনো না ঢুকলে "কখনো না", ফাঁকা ড্যাশ নয় — ড্যাশ পড়ত "জানা নেই"।
+             */
+            'key' => 'last_login',
+            'label' => __('system_admin::field.last_login'),
+            'width' => '9rem',
+            'render' => fn ($u) => $u->last_login_at
+                ? new \Illuminate\Support\HtmlString('<span class="num whitespace-nowrap">'
+                    .e(\App\Core\Support\DateFormat::formatWithTime($u->last_login_at)).'</span>')
+                : new \Illuminate\Support\HtmlString('<span class="text-(--color-ink-muted)">'
+                    .e(__('system_admin::field.never_signed_in')).'</span>'),
+        ],
+        [
             'key' => 'actions',
             'label' => __('core.table.actions'),
             'width' => '6rem',

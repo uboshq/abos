@@ -47,8 +47,8 @@
                 <p class="w-full text-sm font-semibold">{{ __('accounts::asset.usage_title') }}</p>
                 <label class="flex flex-col gap-1">
                     <span class="text-sm font-medium">{{ __('accounts::asset.run_month') }}</span>
-                    <input type="month" name="month" required value="{{ now()->subMonthNoOverflow()->format('Y-m') }}"
-                           class="h-(--spacing-field) rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-app) px-2">
+                    <x-ui.month name="month" required :value="now()->subMonthNoOverflow()->format('Y-m')"
+                                class="h-(--spacing-field) rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-app) px-2" />
                 </label>
                 <x-ui.field name="units" type="number" numeric :label="__('accounts::asset.units_used')" required />
                 <x-ui.field name="note" :label="__('core.table.narration')" />

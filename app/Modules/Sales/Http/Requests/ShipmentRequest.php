@@ -38,6 +38,17 @@ class ShipmentRequest extends FormRequest
             'narration' => ['nullable', 'string', 'max:500'],
 
             /*
+             * ⭐ ট্রিপের ভাড়া — এক ট্রাক, এক ভাড়া (মালিক, ৭ অক্টোবর ২০২৬; সিদ্ধান্ত ঘ; [[FarePayment::stamp()]])। ⓘ এখানে
+             * কেবল আকার; আসল নিয়ম (খাত, নিজের টিল, TrxID, পরে দিলে বাহক) সেবায়।
+             */
+            'transport_cost' => ['nullable', 'numeric', 'min:0'],
+            'carrier_id' => ['nullable', 'integer', Rule::exists('suppliers', 'id')->where('company_id', $companyId)],
+            'fare_when' => ['nullable', 'in:now,later'],
+            'fare_account_id' => ['nullable', 'integer'],
+            'fare_reference' => ['nullable', 'string', 'max:64'],
+            'fare_payer_id' => ['nullable', 'integer'],
+
+            /*
              * চালান ছাড়া ট্রিপ লেখা যায় — কিন্তু বেরোতে পারে না।
              *
              * সকালে কাগজটা খোলা হয় আর চালান একটা একটা করে ওঠে; খালি
@@ -59,6 +70,8 @@ class ShipmentRequest extends FormRequest
             'trx_date', 'warehouse_id', 'vehicle_id', 'vehicle_no',
             'driver_name', 'driver_phone', 'helper_name', 'carrier_name',
             'route_location_id', 'opening_km', 'narration',
+            // ⭐ ভাড়ার ঘর — পাঠানো হলে তবেই ([[ShipmentService::stampFare()]])
+            'transport_cost', 'carrier_id', 'fare_when', 'fare_account_id', 'fare_reference', 'fare_payer_id',
         ]);
     }
 

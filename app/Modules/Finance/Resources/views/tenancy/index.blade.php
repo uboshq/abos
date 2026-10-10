@@ -72,8 +72,8 @@
                         @csrf
                         <label class="grid gap-0.5">
                             <span class="block text-2xs text-(--color-ink-muted)">{{ __('finance::tenancy.month') }}</span>
-                            <input type="month" name="month" required value="{{ now()->format('Y-m') }}" max="{{ now()->format('Y-m') }}"
-                                   class="h-(--spacing-field-compact) rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-app) px-2 text-sm">
+                            <x-ui.month name="month" required :value="now()->format('Y-m')" :max="now()->format('Y-m')"
+                                        class="h-(--spacing-field-compact) rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-app) px-2 text-sm" />
                         </label>
                         <x-ui.button type="submit" tone="secondary">{{ __('finance::tenancy.charge_run') }}</x-ui.button>
                         <span class="text-2xs text-(--color-ink-muted)">{{ __('finance::tenancy.charge_note') }}</span>

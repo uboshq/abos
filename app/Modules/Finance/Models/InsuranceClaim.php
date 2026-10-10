@@ -13,6 +13,7 @@ use App\Core\Contracts\SettledByAVoucher;
 use App\Core\Contracts\SettlementTerms;
 use App\Modules\Accounts\Models\Voucher;
 use App\Modules\Finance\Services\InsuranceClaimService;
+use App\Modules\Finance\Support\OpensOnlyInReach;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -33,6 +34,7 @@ class InsuranceClaim extends Model implements Drillable, SettledByAVoucher, Sett
     use HasPublicId;
     use IsAudited;
     use ListedInViewedBranch;
+    use OpensOnlyInReach;
 
     public const LODGED = 'lodged';
 

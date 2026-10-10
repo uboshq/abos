@@ -36,6 +36,7 @@ use Tests\TestCase;
  *  - "আমরা, এখনই": খসড়ায় নতুন নিয়ম বসে; পাকা করলে বাছা টিল থেকে EV — Main Counter নয়।
  *  - খাত ছাড়া থামে, কিছুই বসে না; পরে দেব বাহক ছাড়া থামে, বাহকসহ পাকা করলে ২১১৬-এ বাহকের নামে।
  *  - সম্পাদনায় "ক্রেতা দেবেন" বাছলে নতুন নিয়ম উঠে যায়, খাতায় কিছু নয়।
+ *  - পর্দার ঘর ছাড়া অনুরোধ — ভাড়া আমাদের, বাহক নেই — তৈরি আর সম্পাদনায় থামে; প্রধান টিল অক্ষত।
  */
 final class TheOfficeChallanAsksForTheFareLikeTheCounterTest extends TestCase
 {
@@ -122,6 +123,45 @@ final class TheOfficeChallanAsksForTheFareLikeTheCounterTest extends TestCase
         $this->assertNull($challan->fresh()->fare_voucher_id);
         $this->assertFalse(LedgerEntry::query()->where('source_type', DeliveryChallan::STOCK_SOURCE)->where('source_id', $challan->id)->exists(),
             '⛔ ক্রেতার ভাড়া আমাদের খাতায় বসল।');
+    }
+
+    /**
+     * ⛔ পর্দার ঘর ছাড়া অনুরোধ (হাতে বানানো, বা পুরনো খোলা পাতা) — ভাড়া আমাদের, বাহক নেই: আগে পাকা হলে প্রধান টিল থেকে
+     * নিজে থেকে কাটত। এখন তৈরি আর সম্পাদনা, দুই দরজাতেই থামে; বাহক থাকলে বা ক্রেতা দিলে চলে, প্রধান টিল অক্ষত
+     * (পুরো ভাড়া-প্রবাহ যাচাই, ১০ অক্টোবর ২০২৬)।
+     */
+    public function test_a_request_without_the_fare_fields_cannot_reach_the_main_counter(): void
+    {
+        $main = app(CashTillService::class)->ensurePrimaryTill()->account;
+        $mainBefore = $main->balanceOn();
+        $count = DeliveryChallan::query()->count();
+
+        $this->post(route('sales.challan.store'), $this->form(['fare_paid_by' => 'us']))
+            ->assertSessionHasErrors(['fare_account_id' => __('sales::fare.needs_account')]);
+        // ⓘ "কে দেবে" না পাঠালেও খালি মানে আমরা — একই থামা
+        $this->post(route('sales.challan.store'), $this->form([]))
+            ->assertSessionHasErrors(['fare_account_id' => __('sales::fare.needs_account')]);
+        $this->assertSame($count, DeliveryChallan::query()->count(), '⛔ থেমে যাওয়া চালান থেকে গেল।');
+
+        // ⓘ সম্পাদনার দরজাও — ক্রেতার ভাড়ার খসড়ায় ঘর ছাড়া "আমরা" পাঠালে থামে, খসড়া বদলায় না
+        $this->post(route('sales.challan.store'), $this->form(['fare_paid_by' => 'customer']))->assertSessionHasNoErrors();
+        $customerPays = DeliveryChallan::query()->latest('id')->firstOrFail();
+        $this->put(route('sales.challan.update', $customerPays), $this->form(['fare_paid_by' => 'us']))
+            ->assertSessionHasErrors(['fare_account_id' => __('sales::fare.needs_account')]);
+        $this->assertSame('customer', $customerPays->fresh()->fare_paid_by, '⛔ থেমে যাওয়া সম্পাদনা খসড়া বদলে দিল।');
+        $this->post(route('sales.challan.confirm', $customerPays))->assertSessionHasNoErrors();
+
+        $carrier = Supplier::query()->create(['code' => 'TR-OLD', 'name_en' => 'Old Door Transport',
+            'party_type_id' => PartyType::query()->where('code', 'TRANSPORT')->firstOrFail()->id]);
+        $this->post(route('sales.challan.store'), $this->form(['fare_paid_by' => 'us', 'carrier_id' => $carrier->id]))->assertSessionHasNoErrors();
+        $withCarrier = DeliveryChallan::query()->latest('id')->firstOrFail();
+        $this->post(route('sales.challan.confirm', $withCarrier))->assertSessionHasNoErrors();
+        $this->assertTrue(LedgerEntry::query()->join('accounts as a', 'a.id', '=', 'ledger_entries.account_id')
+            ->where('a.code', StandardChart::TRANSPORT_PAYABLE)->where('ledger_entries.source_type', DeliveryChallan::STOCK_SOURCE)
+            ->where('ledger_entries.source_id', $withCarrier->id)->where('ledger_entries.party_id', $carrier->id)->where('ledger_entries.credit', '150.0000')->exists(),
+            '⛔ বাহকসহ পুরনো দরজার ভাড়া বাহকের দেনায় বসেনি।');
+
+        $this->assertSame(0, bccomp($mainBefore, $main->fresh()->balanceOn(), 4), '⛔ প্রধান টিল থেকে ভাড়া কাটল।');
     }
 
     /**

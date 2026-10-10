@@ -78,6 +78,19 @@
     <title>{{ isset($title) ? $title . ' — ABOS' : 'ABOS' }}</title>
 
     <link rel="icon" href="{{ asset('favicon.ico') }}" sizes="any">
+
+    {{-- ⭐ রিয়েল-টাইম সিঙ্ক — পাতা কোন মুহূর্তের তথ্য দেখাচ্ছে, আর জিজ্ঞাসার চাবি ([[LiveStamp]], মালিক, ১০ অক্টোবর ২০২৬) --}}
+    @if (auth()->check() && \App\Core\Support\CompanyContext::id() !== null)
+        @php
+            $live = app(\App\Core\Services\LiveStamp::class);
+            $liveCompany = (int) \App\Core\Support\CompanyContext::id();
+        @endphp
+        <meta name="abos-live"
+              content="{{ route('live.pulse', ['key' => $live->key($liveCompany)]) }}"
+              data-stamp="{{ $live->read($liveCompany) }}"
+              data-message="{{ __('live.fresh') }}"
+              data-action="{{ __('live.refresh') }}">
+    @endif
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 
     {{--
@@ -382,6 +395,15 @@
                      ~৯৫px করে ফাঁকা রাখত — মাপা: tools/screen-sweep-1080.py --sidebar collapsed, ২৯২-র ২৯২টা
                      পাতায় খোলসের কলাম ১৬০০/১৭৮৯px = ৮৯.৫%; সীমা তুলে মাপলে ২৯০টা ঠিক। ⓘ পপআপের (পিক) সীমা উপরে আলাদা, অক্ষত। --}}
                 <div class="w-full">
+                    {{-- ⭐ যন্ত্রের লাল সতর্কতা — নিচের বার থেকে এখানে, হলুদে, একবার বন্ধ করা যায় (পাতা সাজানো ধাপ ১,
+                         ১০ অক্টোবর ২০২৬; [[StatusNotices::forBanner()]]) --}}
+                    <x-shell.notice-banner />
+
+                    {{-- ⭐ "কোথায় আছি" — ABOS রূপে পাতার মাথার উপরে (পাতা সাজানো ধাপ ১, ১০ অক্টোবর ২০২৬); বাকি রূপের নিজের crumbbar --}}
+                    @if ($shellLook === 'navy')
+                        <x-shell.page-path :menu="$menu ?? []" />
+                    @endif
+
                     @if ($commandPlacement !== 'bar')
                         @isset($header)
                             <div class="mb-4">{{ $header }}</div>

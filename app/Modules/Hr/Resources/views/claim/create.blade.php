@@ -44,8 +44,7 @@
 
             <div x-show="kind === 'expense'">
                 <label for="claim-receipt" class="mb-1 block text-sm font-medium">{{ __('hr::claim.receipt') }}</label>
-                <input id="claim-receipt" type="file" name="receipt" accept="image/*,application/pdf"
-                       class="w-full text-sm file:me-2 file:rounded-(--radius-field) file:border file:border-(--color-border) file:bg-(--color-surface-app) file:px-3 file:py-1.5 file:text-sm">
+                <x-ui.file-input id="claim-receipt" name="receipt" accept="image/*,application/pdf" />
                 <span class="mt-1 block text-2xs text-(--color-ink-muted)">{{ __('hr::claim.receipt_hint') }}</span>
             </div>
 

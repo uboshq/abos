@@ -41,8 +41,8 @@
         <form method="GET" action="{{ route('accounts.asset.run.preview') }}" class="flex flex-wrap items-end gap-3">
             <label class="flex flex-col gap-1">
                 <span class="text-sm font-medium">{{ __('accounts::asset.run_month') }}</span>
-                <input type="month" name="month" required value="{{ $month->format('Y-m') }}"
-                       class="h-(--spacing-field) rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-app) px-2">
+                <x-ui.month name="month" required :value="$month->format('Y-m')"
+                            class="h-(--spacing-field) rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-app) px-2" />
             </label>
             <x-ui.button type="submit" tone="secondary">{{ __('accounts::asset.run_preview') }}</x-ui.button>
         </form>

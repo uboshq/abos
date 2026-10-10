@@ -397,12 +397,17 @@ class NoticeController extends Controller
      *
      * @return array<string, string>
      */
+    /*
+     * ⭐ চাবি ভিতরের নাম (যা `notice_roles`-এ বসে), লেখা বাংলা নাম — সিস্টেম পর্দার নকশা §৫, ১০ অক্টোবর ২০২৬: *"রোলের নাম
+     * বাংলায় (super_admin নয়)"*। ⓘ [[RoleLabel::for()]], ব্যবহারকারী আর রোলের পর্দার একই মানচিত্র।
+     */
     private function roles(): array
     {
         return Role::query()
             ->where('company_id', CompanyContext::id())
             ->orderBy('name')
-            ->pluck('name', 'name')
+            ->pluck('name')
+            ->mapWithKeys(fn (string $name) => [$name => \App\Core\Support\RoleLabel::for($name)])
             ->all();
     }
 

@@ -78,6 +78,7 @@ class _CounterScreenState extends State<CounterScreen> {
   final _moneyReference = TextEditingController();
   final _carrierName = TextEditingController();
   final _fareText = TextEditingController();
+  final _fareReference = TextEditingController();
   final _shipTo = TextEditingController();
   final _voidReason = TextEditingController();
 
@@ -109,6 +110,7 @@ class _CounterScreenState extends State<CounterScreen> {
       _moneyReference,
       _carrierName,
       _fareText,
+      _fareReference,
       _shipTo,
       _voidReason
     ]) {
@@ -542,12 +544,25 @@ class _CounterScreenState extends State<CounterScreen> {
     if (saved != null && mounted) setState(() => _deposits = saved);
   }
 
+  /// বাছা খাত নগদ নয় (ব্যাংক বা MFS) — তখন TrxID আর "কে দিলেন" লাগে
+  static bool _isNonCash(CounterSetup? setup, String? accountId) {
+    if (setup == null || accountId == null) return false;
+    for (final a in setup.moneyAccounts) {
+      if (a.id == accountId) return a.kind != 'cash';
+    }
+    return false;
+  }
+
   /// গাড়ি ও ভাড়া — কার গাড়ি, বাহক, ভাড়া কত, কে দেবে
   Future<void> _vehicleAndFare() async {
     final setup = _setup;
     var owner = _delivery.vehicleOwner;
     var carrier = _delivery.carrierId;
     var paidBy = _delivery.farePaidBy;
+    var when = _delivery.fareWhen ?? 'now';
+    var account = _delivery.fareAccount;
+    var payer = _delivery.farePayer;
+    final reference = _fareReference..text = _delivery.fareReference ?? '';
     final name = _carrierName..text = _delivery.carrierName ?? '';
     final fare = _fareText
       ..text = _delivery.fare > 0 ? _delivery.fare.toStringAsFixed(2) : '';
@@ -623,6 +638,65 @@ class _CounterScreenState extends State<CounterScreen> {
                 ],
                 onChanged: (v) => setSheet(() => paidBy = v),
               ),
+              /*
+               * ⭐ ভাড়া আমরা দিলে — কখন, কোন খাত থেকে, TrxID আর কে দিলেন (ওয়েবের কাউন্টারের একই নিয়ম; a5, সার্ভার 272141b9)।
+               * ⓘ নগদে TrxID আর "কে দিলেন" নেই — সার্ভার লগইন করা মানুষকেই ধরে; পরে দিলে বাহক লাগে।
+               */
+              if (paidBy == 'us' || paidBy == 'us_add_to_bill') ...[
+                const SizedBox(height: AppSpacing.sm),
+                SegmentedButton<String>(
+                  key: const ValueKey('counter-fare-when'),
+                  segments: const [
+                    ButtonSegment(value: 'now', label: Text('এখনই দিলাম')),
+                    ButtonSegment(value: 'later', label: Text('পরে দেব')),
+                  ],
+                  selected: {when},
+                  onSelectionChanged: (s) => setSheet(() => when = s.first),
+                ),
+                if (when == 'now' && setup != null) ...[
+                  DropdownButtonFormField<String>(
+                    key: const ValueKey('counter-fare-account'),
+                    initialValue: account,
+                    isExpanded: true,
+                    decoration: const InputDecoration(labelText: 'কোন খাত থেকে দিলেন'),
+                    items: [
+                      for (final a in setup.moneyAccounts)
+                        DropdownMenuItem(value: a.id, child: Text(a.label, overflow: TextOverflow.ellipsis)),
+                    ],
+                    onChanged: (v) => setSheet(() => account = v),
+                  ),
+                  if (_isNonCash(setup, account)) ...[
+                    TextField(
+                      key: const ValueKey('counter-fare-reference'),
+                      controller: reference,
+                      decoration: const InputDecoration(labelText: 'লেনদেন নম্বর (TrxID)'),
+                    ),
+                    if (setup.farePayers.isNotEmpty)
+                      DropdownButtonFormField<String>(
+                        key: const ValueKey('counter-fare-payer'),
+                        initialValue: payer,
+                        isExpanded: true,
+                        decoration: const InputDecoration(labelText: 'কে দিলেন'),
+                        items: [
+                          for (final p in setup.farePayers)
+                            DropdownMenuItem(value: p.id, child: Text(p.label, overflow: TextOverflow.ellipsis)),
+                        ],
+                        onChanged: (v) => setSheet(() => payer = v),
+                      ),
+                  ],
+                ],
+                if (when == 'later' && setup != null && setup.carriers.isNotEmpty && owner != 'hired')
+                  DropdownButtonFormField<String>(
+                    key: const ValueKey('counter-fare-carrier'),
+                    initialValue: carrier,
+                    isExpanded: true,
+                    decoration: const InputDecoration(labelText: 'বাহক — যাঁকে পরে দেবেন'),
+                    items: [
+                      for (final c in setup.carriers) DropdownMenuItem(value: c.id, child: Text(c.label))
+                    ],
+                    onChanged: (v) => setSheet(() => carrier = v),
+                  ),
+              ],
               const SizedBox(height: AppSpacing.sm),
               FilledButton(
                 key: const ValueKey('counter-vehicle-save'),
@@ -640,12 +714,17 @@ class _CounterScreenState extends State<CounterScreen> {
             shipTo: _delivery.shipTo,
             shipDate: _delivery.shipDate,
             vehicleOwner: owner,
-            carrierId: owner == 'hired' ? carrier : null,
+            // ⓘ ভাড়া পরে দিলে বাহক লাগে — নিজের গাড়ি হলেও (ওয়েবের একই)
+            carrierId: (owner == 'hired' || ((paidBy == 'us' || paidBy == 'us_add_to_bill') && when == 'later')) ? carrier : null,
             carrierName: owner == 'hired' ? name.text : null,
             fare: (owner == 'none' || owner == 'customer')
                 ? 0
                 : (double.tryParse(fare.text.trim()) ?? 0),
             farePaidBy: paidBy,
+            fareWhen: when,
+            fareAccount: when == 'now' ? account : null,
+            fareReference: when == 'now' && _isNonCash(setup, account) ? reference.text.trim() : null,
+            farePayer: when == 'now' && _isNonCash(setup, account) ? payer : null,
           ));
     }
   }
@@ -727,15 +806,10 @@ class _CounterScreenState extends State<CounterScreen> {
       ),
     );
     if (saved == true && mounted) {
-      setState(() => _delivery = CounterDelivery(
+      setState(() => _delivery = _delivery.copyWith(
             mode: mode,
             shipTo: mode == 'send_later' ? address.text.trim() : null,
             shipDate: mode == 'send_later' ? date : null,
-            vehicleOwner: _delivery.vehicleOwner,
-            carrierId: _delivery.carrierId,
-            carrierName: _delivery.carrierName,
-            fare: _delivery.fare,
-            farePaidBy: _delivery.farePaidBy,
           ));
     }
   }

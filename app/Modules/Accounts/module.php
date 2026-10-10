@@ -186,28 +186,6 @@ return [
             ['label' => 'accounts::menu.cheque_register', 'icon' => 'book', 'route' => 'accounts.report.show',
                 'route_params' => ['slug' => 'cheque-register'], 'permission' => 'accounts.report'],
 
-            // ⭐ স্থায়ী সম্পদের কাগজ — নিবন্ধন, অবচয়, চলাচল, খাতা বনাম কর (স্থায়ী সম্পদ ধাপ ৫)
-            ['label' => 'accounts::menu.asset_register', 'icon' => 'building', 'route' => 'accounts.report.show',
-                'route_params' => ['slug' => 'asset-register'], 'permission' => 'accounts.report'],
-            ['label' => 'accounts::menu.asset_schedule', 'icon' => 'building', 'route' => 'accounts.report.show',
-                'route_params' => ['slug' => 'asset-depreciation'], 'permission' => 'accounts.report'],
-            ['label' => 'accounts::menu.asset_movement', 'icon' => 'building', 'route' => 'accounts.report.show',
-                'route_params' => ['slug' => 'asset-movement'], 'permission' => 'accounts.report'],
-            ['label' => 'accounts::menu.asset_nbv', 'icon' => 'building', 'route' => 'accounts.report.show',
-                'route_params' => ['slug' => 'asset-nbv'], 'permission' => 'accounts.report'],
-            ['label' => 'accounts::menu.asset_disposals', 'icon' => 'building', 'route' => 'accounts.report.show',
-                'route_params' => ['slug' => 'asset-disposals'], 'permission' => 'accounts.report'],
-            ['label' => 'accounts::menu.asset_fully_depreciated', 'icon' => 'building', 'route' => 'accounts.report.show',
-                'route_params' => ['slug' => 'asset-fully-depreciated'], 'permission' => 'accounts.report'],
-            ['label' => 'accounts::menu.asset_expiring', 'icon' => 'building', 'route' => 'accounts.report.show',
-                'route_params' => ['slug' => 'asset-expiring'], 'permission' => 'accounts.report'],
-            ['label' => 'accounts::menu.asset_variance', 'icon' => 'building', 'route' => 'accounts.report.show',
-                'route_params' => ['slug' => 'asset-variance'], 'permission' => 'accounts.report'],
-            ['label' => 'accounts::menu.asset_book_vs_tax', 'icon' => 'building', 'route' => 'accounts.report.show',
-                'route_params' => ['slug' => 'asset-book-vs-tax'], 'permission' => 'accounts.report'],
-            ['label' => 'accounts::menu.asset_maintenance', 'icon' => 'building', 'route' => 'accounts.report.show',
-                'route_params' => ['slug' => 'asset-maintenance'], 'permission' => 'accounts.report'],
-
             // ⭐ খরচের বিশ্লেষণ — কোন খাতে হঠাৎ বাড়ল, সবচেয়ে বড় খরচ কত (রিপোর্ট সেন্টার ধাপ ৪)
             ['label' => 'accounts::expense.title', 'icon' => 'reports', 'route' => 'accounts.report.show',
                 'route_params' => ['slug' => 'expense-analysis'], 'permission' => 'accounts.report'],
@@ -319,11 +297,7 @@ return [
             ['label' => 'accounts::note.title', 'icon' => 'challan', 'route' => 'accounts.note.index', 'permission' => 'accounts.note.view'],
 
             ['label' => 'accounts::menu.reconciliations', 'icon' => 'check-circle', 'route' => 'accounts.reconciliation.index', 'permission' => 'accounts.reconciliation.view'],
-            ['label' => 'accounts::menu.assets', 'icon' => 'building', 'route' => 'accounts.asset.index', 'permission' => 'accounts.asset.view'],
-            // ⭐ সম্পদের শ্রেণি — পাঁচ খাত আর ডিফল্ট আয়ু (স্থায়ী সম্পদ ধাপ ১)
-            ['label' => 'accounts::menu.asset_dashboard', 'icon' => 'dashboard', 'route' => 'accounts.asset.dashboard', 'permission' => 'accounts.asset.view'],
-            ['label' => 'accounts::menu.asset_verifications', 'icon' => 'building', 'route' => 'accounts.asset.verify.index', 'permission' => 'accounts.asset.view'],
-            ['label' => 'accounts::menu.asset_categories', 'icon' => 'building', 'route' => 'accounts.asset.category.index', 'permission' => 'accounts.asset.manage'],
+            // ⓘ স্থায়ী সম্পদের পর্দা আর রিপোর্ট নিজের রেলে — সিস্টেম অ্যাডমিনের ঠিক নিচে ([[FixedAssets/module.php]]; মালিক, ১০ অক্টোবর ২০২৬)
             ['label' => 'accounts::menu.periods', 'icon' => 'clock', 'route' => 'accounts.period.index', 'permission' => 'accounts.period.close'],
             ['label' => 'accounts::menu.year_end', 'route' => 'accounts.year_end.index', 'permission' => 'accounts.report.final'],
             ['label' => 'accounts::menu.settings', 'route' => 'accounts.settings', 'permission' => 'accounts.manage'],
@@ -740,6 +714,11 @@ return [
         'fixed_asset_impair' => 'accounts::approval.fixed_asset_impair',
         // ⭐ ক্যাশবাক্সের দায়িত্ব হস্তান্তর (অডিট ম৮)
         'till_handover' => 'accounts::approval.till_handover',
+        // ⛔ ঋণের টাকা — সই ছাড়া নড়ত (অডিট, ১০ অক্টোবর ২০২৬; [[LoanService]])
+        'loan_draw' => 'accounts::approval.loan_draw',
+        'loan_instalment' => 'accounts::approval.loan_instalment',
+        'loan_repay' => 'accounts::approval.loan_repay',
+        'loan_interest' => 'accounts::approval.loan_interest',
     ],
 
     /*
@@ -754,7 +733,7 @@ return [
      * মিলিয়ে দেখে। ⛔ একটা টাইপো নীরবে কাগজটাকে bulk-এ
      * ঢুকিয়ে দিত।
      */
-    'moves_money' => ['expense', 'counter_deposit', 'counter_payment', 'transfer', 'receipt', 'payment', 'journal', 'contra', 'year_end', 'note', 'cheque_clear', 'cheque_bounce', 'inter_company', 'till_opening', 'fixed_asset_register', 'fixed_asset_dispose', 'till_handover', 'fixed_asset_opening', 'fixed_asset_addition', 'fixed_asset_repair', 'fixed_asset_revalue', 'fixed_asset_impair'],
+    'moves_money' => ['expense', 'counter_deposit', 'counter_payment', 'transfer', 'receipt', 'payment', 'journal', 'contra', 'year_end', 'note', 'cheque_clear', 'cheque_bounce', 'inter_company', 'till_opening', 'fixed_asset_register', 'fixed_asset_dispose', 'till_handover', 'loan_draw', 'loan_instalment', 'loan_repay', 'loan_interest', 'fixed_asset_opening', 'fixed_asset_addition', 'fixed_asset_repair', 'fixed_asset_revalue', 'fixed_asset_impair'],
 
     // রিপোর্ট সরবরাহকারী — কোর নিজে থেকে ডেকে নেবে (সেকশন ১৯.৩)।
     // কোর ফাইলে মডিউলের নাম লিখতে হয় না।
@@ -964,7 +943,8 @@ return [
             'super_admin_only' => true,
             'label' => 'accounts::settings.asset_capitalisation_threshold',
             'type' => 'number',
-            'default' => 0,
+            // ⭐ মালিক: ৳১০,০০০-এর নিচের কেনা খরচ, সম্পদ নয় (fe-র মাধ্যমে, ১১ অক্টোবর ২০২৬); শ্রেণির নিজের সীমা থাকলে সেটা
+            'default' => 10000,
             'group' => 'entry',
         ],
         [

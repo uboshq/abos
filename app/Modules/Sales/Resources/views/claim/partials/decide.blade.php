@@ -10,9 +10,17 @@
     <a href="{{ route('sales.claim.slip', $claim) }}" target="_blank" data-slip-link
        class="mb-1 inline-block text-sm text-(--color-brand-500) hover:underline">{{ __('sales::slip.view') }}</a>
 @endif
-@if ($claim->isPending())
+{{-- ⭐ খোলা মানে পাঠানো বা যাচাই চলছে — দুটো থেকেই সিদ্ধান্ত (টাকার পরিকল্পনা ১, ৭ অক্টোবর ২০২৬) --}}
+@if ($claim->isOpen())
     @can('sales.claim.decide')
         <div class="flex flex-wrap items-end gap-2">
+            @if ($claim->isPending())
+                <form method="POST" action="{{ route('sales.claim.verify', $claim) }}" data-start-verifying>
+                    @csrf
+                    <x-ui.button type="submit">{{ __('sales::portal.start_verifying') }}</x-ui.button>
+                </form>
+            @endif
+
             <form method="POST" action="{{ route('sales.claim.accept', $claim) }}"
                   class="flex flex-wrap items-end gap-2">
                 @csrf

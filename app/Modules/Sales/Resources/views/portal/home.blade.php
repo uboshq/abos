@@ -68,6 +68,7 @@
                         <x-ui.badge :tone="match ($claim->status) {
                             'accepted' => 'success',
                             'rejected' => 'danger',
+                            'verifying' => 'info',
                             default => 'pending',
                         }">
                             {{ __('sales::portal.'.$claim->status) }}

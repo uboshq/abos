@@ -6,6 +6,7 @@ use App\Http\Controllers\Auth\LoginController;
 use App\Http\Middleware\ContentSecurityPolicy;
 use App\Http\Middleware\ExportListing;
 use App\Http\Middleware\NormalizeUnicodeInput;
+use App\Http\Middleware\NudgePhonesAfterWrite;
 use App\Http\Middleware\OneSubmitPerForm;
 use App\Http\Middleware\PeekVaries;
 use App\Http\Middleware\RemembersOpenedPapers;
@@ -300,6 +301,9 @@ return Application::configure(basePath: dirname(__DIR__))
              * ⓘ উত্তর তৈরি হওয়ার পরে কাজ করে, আর ব্যর্থ হলেও পাতা ভাঙে না।
              */
             RemembersOpenedPapers::class,
+
+            // ⭐ লেখার পরে ঐ কোম্পানির ফোনে নীরব ডাক — রিয়েল-টাইম সিঙ্ক (মালিক, ১০ অক্টোবর ২০২৬)
+            NudgePhonesAfterWrite::class,
         ]);
 
         /*
@@ -308,6 +312,8 @@ return Application::configure(basePath: dirname(__DIR__))
          */
         $middleware->api(append: [
             RefuseInactiveAccounts::class,
+            // ⭐ ফোন থেকে লেখাও বাকি ফোনগুলোকে ডাকে ([[SyncNudge]])
+            NudgePhonesAfterWrite::class,
         ]);
 
         /*

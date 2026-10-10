@@ -30,6 +30,10 @@ return [
     'fixed_asset_dispose' => 'Fixed asset sold or written off',
     'fixed_asset_opening' => 'Fixed asset brought in from before ABOS',
     'till_handover' => 'Handover of a cash box',
+    'loan_draw' => 'Loan drawdown',
+    'loan_instalment' => 'Loan instalment payment',
+    'loan_repay' => 'Loan repayment',
+    'loan_interest' => 'Loan interest charge',
 
     // ⭐ Fixed assets phase 3
     'fixed_asset_addition' => 'Fixed asset addition',

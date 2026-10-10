@@ -32,6 +32,14 @@ class StockTransferRequest extends FormRequest
             'lines.*.product_id' => ['required', 'integer',
                 Rule::exists('inv_products', 'id')->where('company_id', $companyId)],
             'lines.*.qty' => ['required', 'numeric', 'gt:0'],
+
+            /*
+             * ⭐ কোন প্যাকে লেখা — খালি মানে পণ্যের নিজের একক (পুরো-ERP অডিট, ৬ অক্টোবর ২০২৬, মজুদ ⓘ১৬;
+             * [[ATransferLineKeepsItsPackTest]])। ⛔ নিয়মে ঘরটা ছিল না, তাই `validated()` এককটা ফেলে দিত — "২ কার্টন" লিখলে
+             * সেবা ([[StockTransferService::replaceLines()]], যে প্যাক বোঝে) পেত "২ পিস"। ক্রয়ের ফর্মগুলোর একই নিয়ম।
+             */
+            'lines.*.unit_id' => ['nullable', 'integer',
+                Rule::exists('mdm_units', 'id')->where('company_id', $companyId)],
         ];
     }
 
@@ -50,10 +58,12 @@ class StockTransferRequest extends FormRequest
      */
     public function lineData(): array
     {
+        // ⓘ পরিমাণ লেখা হিসেবেই তুলনা, float নয় — টাকা আর পরিমাণ কখনো float নয় ([[MoneyIsNeverAFloatTest]]; ⓘ১৬)
         return array_values(array_filter(
             $this->validated()['lines'] ?? [],
             fn (array $line) => filled($line['product_id'] ?? null)
-                && (float) ($line['qty'] ?? 0) > 0,
+                && is_numeric($line['qty'] ?? null)
+                && bccomp((string) $line['qty'], '0', 4) > 0,
         ));
     }
 }

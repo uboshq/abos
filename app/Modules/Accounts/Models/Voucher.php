@@ -544,6 +544,25 @@ class Voucher extends Model implements Drillable, RepostsAfterRevision, ShowsIts
         return $this->isDraft();
     }
 
+    /**
+     * ⭐ তালিকার মোটে যে অঙ্ক যায় — কেবল পাকা ভাউচারের; বাতিল আর খসড়া শূন্য (পাতা-ঝাড়ু ধাপ ০, ১০ অক্টোবর ২০২৬)।
+     *
+     * ⛔ আগে রসিদের তালিকার মোট ৫,১২,৩৩৯-এর ৫,০৫,০০০ ছিল বাতিল রসিদের — খাতায় যা নেই, মোটে তা যোগ হত। ⓘ সারিগুলো আগের মতোই
+     * দেখায়; কেবল মোট বদলায়। পাতার মোট এটা নেয়, আর সব পাতার সর্বমোট [[countedAmountSql()]]।
+     */
+    public function countedAmount(): string
+    {
+        return in_array($this->status, \App\Core\Support\DocumentStatus::POSTED, true) ? (string) $this->amount : '0';
+    }
+
+    /** ⓘ একই নিয়ম সর্বমোটের SQL-এ ([[GrandTotals]]); `$alias` — উপ-কোয়েরির নাম */
+    public static function countedAmountSql(string $alias = 't'): string
+    {
+        $posted = implode(', ', array_map(fn (string $s) => "'".$s."'", \App\Core\Support\DocumentStatus::POSTED));
+
+        return "CASE WHEN {$alias}.status IN ({$posted}) THEN {$alias}.amount ELSE 0 END";
+    }
+
     public function typeLabel(): string
     {
         // ⭐ "সমন্বয় জাবেদা" — পাতা, ছাপা, সারাংশ আর সইয়ের পাতা একই নাম পায় (ভাউচারের পরিকল্পনা ৩ঘ)

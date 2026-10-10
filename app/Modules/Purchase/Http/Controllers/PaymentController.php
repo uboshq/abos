@@ -228,11 +228,16 @@ class PaymentController extends Controller implements HasMiddleware
                  * আরও ২০০ কোয়েরি হত; মাপা পাতায় দেখা গেছে আটবার।
                  */
                 ->withPaid()
-                ->orderByDesc('trx_date')
-                ->limit(200)
-                ->get()
-                ->filter(fn (PurchaseBill $bill) => bccomp($bill->dueAmount(), '0', 4) > 0)
-                ->values(),
+                /*
+                 * ⭐ বাকি থাকা বিল ডাটাবেজেই ছাঁকা, তারপর সীমা — ক্রয় ⚠️১৩ (৬ অক্টোবর ২০২৬; [[PurchaseBill::scopeStillOwed()]])।
+                 * ⛔ আগে সাম্প্রতিক ২০০টা এনে PHP-তে ছাঁকা হত, তাই পুরনো বাকি বিল কোনোদিন আসত না। ⓘ পুরনোটা আগে — আগে
+                 * পুরনো বাকি শোধ।
+                 */
+                ->stillOwed()
+                ->orderBy('trx_date')
+                ->orderBy('id')
+                ->limit(500)
+                ->get(),
         ];
     }
 

@@ -12,6 +12,7 @@ use App\Core\Contracts\Drillable;
 use App\Core\Support\DocumentStatus;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Models\Loan;
+use App\Modules\Finance\Support\OpensOnlyInReach;
 use App\Modules\MasterData\Models\Person;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -59,6 +60,7 @@ class Deposit extends Model implements Drillable
     use HasPublicId;
     use IsAudited;
     use ListedInViewedBranch;
+    use OpensOnlyInReach;
 
     /** ব্যবসার নামে — স্থিতিপত্রে সম্পদ */
     public const BUSINESS = 'business';
@@ -246,7 +248,7 @@ class Deposit extends Model implements Drillable
      * ⭐ যে ব্যাংক ঋণের বিপরীতে এই জমাটা বন্ধক — ব্যাংক ঋণের নিজের খাতায় ([[BankFacility]]; অর্থ-মডিউলের পরিকল্পনা ৪.৫,
      * ৬ অক্টোবর ২০২৬)। ⓘ নতুন বন্ধক এখানেই; পুরনো [[pledgedToLoan()]] পড়া থাকে, যতদিন পুরনো তথ্য আছে।
      *
-     * @return BelongsTo<\App\Modules\Finance\Models\BankFacility, $this>
+     * @return BelongsTo<BankFacility, $this>
      */
     public function pledgedToFacility(): BelongsTo
     {
