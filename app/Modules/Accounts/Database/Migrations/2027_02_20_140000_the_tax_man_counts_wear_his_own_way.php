@@ -19,30 +19,35 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::table('acc_asset_categories', function (Blueprint $table): void {
-            $table->string('tax_method', 16)->nullable()->after('capitalisation_threshold');
-            $table->decimal('tax_rate', 8, 4)->nullable()->after('tax_method');
-        });
+        // ⓘ আধা-চলা বা দ্বিতীয়বার চালানো — যা আছে তা আবার বসে না (fixed-assets রিভিউ, ১১ অক্টোবর ২০২৬; MariaDB প্রতিটা বদল নিজে commit করে)
+        if (! Schema::hasColumn('acc_asset_categories', 'tax_method')) {
+            Schema::table('acc_asset_categories', function (Blueprint $table): void {
+                $table->string('tax_method', 16)->nullable()->after('capitalisation_threshold');
+                $table->decimal('tax_rate', 8, 4)->nullable()->after('tax_method');
+            });
+        }
 
-        Schema::create('acc_asset_tax_years', function (Blueprint $table): void {
-            $table->id();
-            $table->publicId();
-            $table->foreignId('company_id')->constrained('companies')->cascadeOnDelete();
-            $table->foreignId('fixed_asset_id')->constrained('acc_fixed_assets')->cascadeOnDelete();
-            $table->foreignId('branch_id')->nullable()->constrained('branches')->nullOnDelete();
-            $table->date('year_start');
-            $table->date('year_end');
-            $table->string('method', 16);
-            $table->decimal('rate', 8, 4);
-            $table->decimal('opening_wdv', 18, 4);
-            $table->decimal('amount', 18, 4);
-            $table->decimal('closing_wdv', 18, 4);
-            $table->foreignId('created_by')->nullable()->constrained('users')->nullOnDelete();
-            $table->timestamps();
+        if (! Schema::hasTable('acc_asset_tax_years')) {
+            Schema::create('acc_asset_tax_years', function (Blueprint $table): void {
+                $table->id();
+                $table->publicId();
+                $table->foreignId('company_id')->constrained('companies')->cascadeOnDelete();
+                $table->foreignId('fixed_asset_id')->constrained('acc_fixed_assets')->cascadeOnDelete();
+                $table->foreignId('branch_id')->nullable()->constrained('branches')->nullOnDelete();
+                $table->date('year_start');
+                $table->date('year_end');
+                $table->string('method', 16);
+                $table->decimal('rate', 8, 4);
+                $table->decimal('opening_wdv', 18, 4);
+                $table->decimal('amount', 18, 4);
+                $table->decimal('closing_wdv', 18, 4);
+                $table->foreignId('created_by')->nullable()->constrained('users')->nullOnDelete();
+                $table->timestamps();
 
-            $table->unique(['fixed_asset_id', 'year_end'], 'acc_asset_tax_once');
-            $table->index(['company_id', 'year_end'], 'acc_asset_tax_year');
-        });
+                $table->unique(['fixed_asset_id', 'year_end'], 'acc_asset_tax_once');
+                $table->index(['company_id', 'year_end'], 'acc_asset_tax_year');
+            });
+        }
     }
 
     public function down(): void

@@ -19,58 +19,65 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('acc_asset_verifications', function (Blueprint $table): void {
-            $table->id();
-            $table->publicId();
-            $table->foreignId('company_id')->constrained('companies')->cascadeOnDelete();
-            $table->foreignId('branch_id')->constrained('branches')->cascadeOnDelete();
-            $table->string('document_no', 40);
-            $table->string('title', 191)->nullable();
-            $table->date('started_on');
-            $table->date('closed_on')->nullable();
-            $table->string('status', 16);
-            $table->foreignId('created_by')->nullable()->constrained('users')->nullOnDelete();
-            $table->foreignId('closed_by')->nullable()->constrained('users')->nullOnDelete();
-            $table->timestamps();
+        // ⓘ আধা-চলা বা দ্বিতীয়বার চালানো — যা আছে তা আবার বসে না (fixed-assets রিভিউ, ১১ অক্টোবর ২০২৬; MariaDB প্রতিটা বদল নিজে commit করে)
+        if (! Schema::hasTable('acc_asset_verifications')) {
+            Schema::create('acc_asset_verifications', function (Blueprint $table): void {
+                $table->id();
+                $table->publicId();
+                $table->foreignId('company_id')->constrained('companies')->cascadeOnDelete();
+                $table->foreignId('branch_id')->constrained('branches')->cascadeOnDelete();
+                $table->string('document_no', 40);
+                $table->string('title', 191)->nullable();
+                $table->date('started_on');
+                $table->date('closed_on')->nullable();
+                $table->string('status', 16);
+                $table->foreignId('created_by')->nullable()->constrained('users')->nullOnDelete();
+                $table->foreignId('closed_by')->nullable()->constrained('users')->nullOnDelete();
+                $table->timestamps();
 
-            $table->unique(['company_id', 'document_no'], 'acc_asset_verify_no');
-            $table->index(['company_id', 'branch_id', 'status'], 'acc_asset_verify_open');
-        });
+                $table->unique(['company_id', 'document_no'], 'acc_asset_verify_no');
+                $table->index(['company_id', 'branch_id', 'status'], 'acc_asset_verify_open');
+            });
+        }
 
-        Schema::create('acc_asset_verification_lines', function (Blueprint $table): void {
-            $table->id();
-            $table->publicId();
-            $table->foreignId('company_id')->constrained('companies')->cascadeOnDelete();
-            $table->foreignId('verification_id')->constrained('acc_asset_verifications')->cascadeOnDelete();
-            $table->foreignId('fixed_asset_id')->constrained('acc_fixed_assets')->cascadeOnDelete();
-            // ⓘ অভিযানের শুরুতে কোথায় আর কার কাছে থাকার কথা — পরে সম্পদ সরলেও গোনার দিনের ছবি বদলায় না
-            $table->string('expected_location', 120)->nullable();
-            $table->unsignedBigInteger('expected_custodian_id')->nullable();
-            $table->string('result', 20)->nullable();
-            $table->string('found_location', 120)->nullable();
-            $table->string('note', 500)->nullable();
-            $table->foreignId('checked_by')->nullable()->constrained('users')->nullOnDelete();
-            $table->timestamp('checked_at')->nullable();
-            $table->timestamps();
+        if (! Schema::hasTable('acc_asset_verification_lines')) {
+            Schema::create('acc_asset_verification_lines', function (Blueprint $table): void {
+                $table->id();
+                $table->publicId();
+                $table->foreignId('company_id')->constrained('companies')->cascadeOnDelete();
+                $table->foreignId('verification_id')->constrained('acc_asset_verifications')->cascadeOnDelete();
+                $table->foreignId('fixed_asset_id')->constrained('acc_fixed_assets')->cascadeOnDelete();
+                // ⓘ অভিযানের শুরুতে কোথায় আর কার কাছে থাকার কথা — পরে সম্পদ সরলেও গোনার দিনের ছবি বদলায় না
+                $table->string('expected_location', 120)->nullable();
+                $table->unsignedBigInteger('expected_custodian_id')->nullable();
+                $table->string('result', 20)->nullable();
+                $table->string('found_location', 120)->nullable();
+                $table->string('note', 500)->nullable();
+                $table->foreignId('checked_by')->nullable()->constrained('users')->nullOnDelete();
+                $table->timestamp('checked_at')->nullable();
+                $table->timestamps();
 
-            $table->unique(['verification_id', 'fixed_asset_id'], 'acc_asset_check_once');
-        });
+                $table->unique(['verification_id', 'fixed_asset_id'], 'acc_asset_check_once');
+            });
+        }
 
-        Schema::create('acc_asset_acknowledgements', function (Blueprint $table): void {
-            $table->id();
-            $table->publicId();
-            $table->foreignId('company_id')->constrained('companies')->cascadeOnDelete();
-            $table->foreignId('fixed_asset_id')->constrained('acc_fixed_assets')->cascadeOnDelete();
-            // ⓘ কর্মী HR-এর — কোর পক্ষের তালিকা দিয়ে চেনা, অন্য মডিউলের টেবিলে বিদেশি চাবি নয়
-            $table->unsignedBigInteger('employee_id');
-            $table->foreignId('user_id')->nullable()->constrained('users')->nullOnDelete();
-            $table->timestamp('acknowledged_at');
-            $table->string('condition', 20);
-            $table->string('note', 500)->nullable();
-            $table->timestamps();
+        if (! Schema::hasTable('acc_asset_acknowledgements')) {
+            Schema::create('acc_asset_acknowledgements', function (Blueprint $table): void {
+                $table->id();
+                $table->publicId();
+                $table->foreignId('company_id')->constrained('companies')->cascadeOnDelete();
+                $table->foreignId('fixed_asset_id')->constrained('acc_fixed_assets')->cascadeOnDelete();
+                // ⓘ কর্মী HR-এর — কোর পক্ষের তালিকা দিয়ে চেনা, অন্য মডিউলের টেবিলে বিদেশি চাবি নয়
+                $table->unsignedBigInteger('employee_id');
+                $table->foreignId('user_id')->nullable()->constrained('users')->nullOnDelete();
+                $table->timestamp('acknowledged_at');
+                $table->string('condition', 20);
+                $table->string('note', 500)->nullable();
+                $table->timestamps();
 
-            $table->index(['fixed_asset_id', 'employee_id'], 'acc_asset_ack_who');
-        });
+                $table->index(['fixed_asset_id', 'employee_id'], 'acc_asset_ack_who');
+            });
+        }
     }
 
     public function down(): void
