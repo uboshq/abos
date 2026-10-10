@@ -44,6 +44,8 @@
     if (! $isDocumentTab) {
         $columns[] = ['key' => 'narration', 'label' => __('core.table.narration')];
         $columns[] = ['key' => 'amount', 'total' => 'money', 'label' => __('accounts::field.amount'), 'numeric' => true, 'width' => '10rem',
+            // ⓘ মোটে কেবল পাকা ভাউচার — বাতিল আর খসড়া শূন্য ([[Voucher::countedAmount()]])
+            'raw' => fn ($v) => $v->countedAmount(),
             'render' => fn ($v) => \App\Core\Support\Money::format($v->amount)];
         $columns[] = ['key' => 'status', 'label' => __('accounts::field.state'), 'width' => '8rem',
             'render' => fn ($v) => view('accounts::voucher.partials.status', ['voucher' => $v])];

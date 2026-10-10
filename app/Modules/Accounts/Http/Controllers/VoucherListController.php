@@ -156,7 +156,8 @@ class VoucherListController extends Controller implements HasMiddleware
             'counts' => $this->counts($request),
             'vouchers' => (clone $query)->paginate(50)->withQueryString(),
             // ⭐ যোগফলের পট্টি — গোটা ছাঁকনির অঙ্ক, পাতার নয় (মালিক, ৫ অক্টোবর ২০২৬)
-            'grand' => $this->grandTotals($query, ['amount' => 't.amount']),
+            // ⓘ কেবল পাকা ভাউচার মোটে — বাতিল আর খসড়া নয় ([[Voucher::countedAmount()]])
+            'grand' => $this->grandTotals($query, ['amount' => \App\Modules\Accounts\Models\Voucher::countedAmountSql()]),
             'q' => $request->query('q'),
             'sort' => $sort,
             'sortOptions' => [
