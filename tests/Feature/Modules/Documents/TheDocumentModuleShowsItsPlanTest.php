@@ -72,7 +72,8 @@ final class TheDocumentModuleShowsItsPlanTest extends TestCase
 
         $pages = $this->menuPages();
 
-        $this->assertCount(21, $pages, 'DOC-এর মেনুতে ২১টা পাতা থাকার কথা — পাওয়া গেল '.count($pages).'টা।');
+        // ⓘ ১৯ — "ইনবক্স" আর "প্রিয়" (এখনো "আসছে") মেনু থেকে সরানো, আসল না হওয়া পর্যন্ত (fe, ১১ অক্টোবর ২০২৬)
+        $this->assertCount(19, $pages, 'DOC-এর মেনুতে ১৯টা পাতা থাকার কথা — পাওয়া গেল '.count($pages).'টা।');
 
         $person = User::factory()->create(['current_company_id' => $company->id]);
         $person->companies()->attach($company->id);
@@ -93,7 +94,7 @@ final class TheDocumentModuleShowsItsPlanTest extends TestCase
         ]));
 
         /* ── একই মানুষ, এবার চাবিসহ ── */
-        // ⓘ আপলোডের সারি নিজের চাবি চায় (§১৩) — সেটাও, যাতে সাইডবারে ২১টা সারিই আসে
+        // ⓘ আপলোডের সারি নিজের চাবি চায় (§১৩) — সেটাও, যাতে সাইডবারে ১৯টা সারিই আসে
         Permission::findOrCreate('documents.upload', 'web');
         Permission::findOrCreate('documents.admin', 'web');
         foreach (['documents.templates', 'documents.report', 'documents.audit'] as $key) {
@@ -173,7 +174,13 @@ final class TheDocumentModuleShowsItsPlanTest extends TestCase
 
         $rows = collect($doc['groups'])->flatten(1);
 
-        $this->assertCount(21, $rows, 'মেনুতে DOC-এর সারি ২১টা নয়।');
+        $this->assertCount(19, $rows, 'মেনুতে DOC-এর সারি ১৯টা নয়।');
+
+        // ⛔ "আসছে" পাতা মেনুতে নেই — আসল না হওয়া পর্যন্ত
+        foreach (['inbox', 'favourite'] as $planned) {
+            $this->assertFalse($rows->contains(fn ($row) => str_contains((string) ($row['url'] ?? ''), '/'.$planned)),
+                "⛔ পরিকল্পনার পাতা «{$planned}» এখনো মেনুতে।");
+        }
         $this->assertSame(0, $rows->where('url', null)->count(), 'DOC-এর কোনো সারি নিভে আছে (ঠিকানা নেই)।');
     }
 

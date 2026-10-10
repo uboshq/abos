@@ -106,9 +106,13 @@ class TheMenuStandsInTheOrderTheOwnerAskedForTest extends TestCase
          */
         ['system', 'master_data'],
 
-        // ⭐ ডকুমেন্ট মাস্টার ডাটা আর প্রশাসনের মাঝে — মালিক, ৩০ সেপ্টেম্বর ২০২৬: *"DOC system r MDM er majkhane dibe"*
-        ['system', 'documents'],
         ['system', 'system_admin'],
+
+        /*
+         * ⭐ ডকুমেন্ট প্রশাসনের ঠিক নিচে — মালিক, ১০ অক্টোবর ২০২৬: নতুন মডিউলগুলো সিস্টেম প্রশাসনের নিচে। ⓘ আগের নির্দেশ ছিল
+         * মাস্টার ডাটা আর প্রশাসনের মাঝে (৩০ সেপ্টেম্বর: *"DOC system r MDM er majkhane dibe"*) — নতুন নির্দেশ সেটা বদলেছে।
+         */
+        ['system', 'documents'],
 
         /*
          * ⭐ ব্যাকআপ সবার শেষে — মালিকের সিদ্ধান্ত।

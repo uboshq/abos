@@ -60,10 +60,11 @@ return [
     'version' => '1.0.0',
 
     /*
-     * ⭐ সাইডবারে মাস্টার ডাটা (৫) আর সিস্টেম অ্যাডমিনের (১০) মাঝখানে — মালিক, ৩০ সেপ্টেম্বর ২০২৬:
-     * *"DOC system r MDM er majkhane dibe"*।
+     * ⭐ সাইডবারে সিস্টেম অ্যাডমিনের (১০) ঠিক নিচে — মালিক, ১০ অক্টোবর ২০২৬: নতুন মডিউলগুলো (ডকুমেন্ট, মালিকের কেন্দ্র, স্থায়ী
+     * সম্পদ, নোটিফিকেশন) সিস্টেম প্রশাসনের নিচে। ⓘ আগের নির্দেশ (৩০ সেপ্টেম্বর: *"DOC system r MDM er majkhane dibe"*, ক্রম ৭)
+     * এতে বদলেছে। ১১ — বাকি নতুন মডিউলের জন্য ১২–১৯ খালি, ব্যাকআপ (২০) সবার নিচে।
      */
-    'nav' => ['section' => 'system', 'order' => 7],
+    'nav' => ['section' => 'system', 'order' => 11],
 
     /*
      * ⓘ যে ব্যবস্থাগুলোর কথা পাতায় লেখা (অনুমোদন, অডিট, নম্বর সিরিজ…) সবই কোরের।
@@ -95,8 +96,7 @@ return [
             // ⭐ প্রথম ধাপের আসল পর্দা (৮ অক্টোবর ২০২৬) — সেন্টার, আপলোড, আমার, সাম্প্রতিক
             ['label' => 'documents::menu.center', 'icon' => 'building', 'route' => 'documents.index',
                 'permission' => 'documents.view'],
-            ['label' => 'documents::menu.inbox', 'icon' => 'inbox', 'route' => 'documents.screen',
-                'route_params' => ['screen' => 'inbox'], 'permission' => 'documents.view'],
+            // ⛔ "ইনবক্স" আর "প্রিয়" এখনো পরিকল্পনার পাতা ("আসছে") — আসল না হওয়া পর্যন্ত মেনুতে নয় (fe, ১১ অক্টোবর ২০২৬)
             ['label' => 'documents::menu.upload', 'icon' => 'attachment', 'route' => 'documents.create',
                 'permission' => 'documents.upload'],
             // ⭐ স্ক্যান ও OCR (পঞ্চম ধাপ) — লেখা পড়া ব্যবহারকারীর ব্রাউজারে, নিজের সার্ভারের ফাইলে
@@ -111,8 +111,6 @@ return [
                 'permission' => 'documents.view'],
             ['label' => 'documents::menu.recent', 'icon' => 'clock', 'route' => 'documents.recent',
                 'permission' => 'documents.view'],
-            ['label' => 'documents::menu.favourite', 'icon' => 'star', 'route' => 'documents.screen',
-                'route_params' => ['screen' => 'favourite'], 'permission' => 'documents.view'],
             // ⭐ সপ্তম ধাপ — ছাঁচ আর সম্পাদক (ABOS-এর ছাপার যন্ত্রে PDF)
             ['label' => 'documents::menu.templates', 'icon' => 'columns', 'route' => 'documents.templates',
                 'permission' => 'documents.view'],
