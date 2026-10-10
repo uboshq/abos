@@ -122,4 +122,10 @@ return [
     'this_invoice' => 'এই বিল',
     'previous_short' => 'আগের',
     'bill_short' => 'বিল',
+    'previous_balance' => 'আগের জের',
+    'received_today' => 'আজ জমা',
+    'received_short' => 'জমা',
+    'closing_short' => 'সমাপনী',
+    'owed_by_customer' => 'গ্রাহকের দেনা',
+    'paid_by_customer' => 'গ্রাহকের জমা',
 ];

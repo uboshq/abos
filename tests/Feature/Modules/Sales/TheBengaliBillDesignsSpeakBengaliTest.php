@@ -34,10 +34,10 @@ final class TheBengaliBillDesignsSpeakBengaliTest extends TestCase
 
     public function test_the_accounts_designs_carry_no_hard_written_english(): void
     {
-        foreach (['acct_card', 'acct_classic', 'special_db'] as $design) {
+        foreach (['acct_card', 'acct_classic', 'special_db', 'acct_tiles', 'acct_sidebar_light', 'acct_t_account'] as $design) {
             $paper = (string) $this->get(route('sales.invoice_sample', ['design' => $design]))->assertOk()->getContent();
 
-            foreach (['Closing balance', 'This invoice', 'Special for DB', '>Previous ', '+ Bill '] as $english) {
+            foreach (['Closing balance', 'This invoice', 'Special for DB', '>Previous ', '+ Bill ', 'Previous balance', 'Received today', 'owed by customer', 'paid by customer', '− Received '] as $english) {
                 $this->assertStringNotContainsString($english, $paper, "⛔ বাংলা বিলে ({$design}) ইংরেজি «{$english}» ছাপা হলো");
             }
         }

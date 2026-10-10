@@ -113,4 +113,10 @@ return [
     'this_invoice' => 'This invoice',
     'previous_short' => 'Previous',
     'bill_short' => 'Bill',
+    'previous_balance' => 'Previous balance',
+    'received_today' => 'Received today',
+    'received_short' => 'Received',
+    'closing_short' => 'Closing',
+    'owed_by_customer' => 'owed by customer',
+    'paid_by_customer' => 'paid by customer',
 ];
