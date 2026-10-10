@@ -55,9 +55,20 @@ final class DocumentExpiry
             $out['reviewing'] += (int) ($submitted->status === DocumentCatalog::UNDER_REVIEW);
         }
 
+        /*
+         * ⛔ শেষ ধাপের খবর (মেয়াদ পেরোনো, ধাপ ০) একবার গেলে কাগজটা আর প্রতি ঘণ্টায় পড়া হয় না (১১ অক্টোবর ২০২৬, documents রিভিউ ⚠️১৮)।
+         * ⓘ আগে নিচের সীমা ছিল না — মেয়াদ পেরোনো প্রতিটা কাগজ প্রতি ঘণ্টায় তোলা হত, প্রত্যেকটার নিজের ট্রানজ্যাকশন আর FOR UPDATE সহ,
+         * আর খরচটা চিরকাল বাড়ত। একই মেয়াদে নতুন তারিখ (নবায়ন) বসলে খবরগুলো আবার শুরু হয়, কারণ শর্তটা তারিখ ধরে।
+         * ⓘ উৎস কেবল ডকুমেন্টের নিজের টেবিল (`dms_documents`), পুরনো জোড়া ফাইল (`attachments`) নয় — লাইভে প্রথম রানে টেবিলটা খালি,
+         * তাই "আগে থেকে মেয়াদ পেরোনো" কাগজের ইমেইল-বন্যা হয় না ([[AnExpiringDocumentIsToldOnceAtEachStepTest]])।
+         */
         $due = $this->papers($companyId)
             ->whereNotNull('expiry_date')
             ->whereDate('expiry_date', '<=', $today->copy()->addDays(self::THRESHOLDS[0])->toDateString())
+            ->whereNotExists(fn ($q) => $q->selectRaw('1')->from('dms_expiry_notices as n')
+                ->whereColumn('n.document_id', 'dms_documents.id')
+                ->whereColumn('n.expiry_date', 'dms_documents.expiry_date')
+                ->where('n.threshold', 0))
             ->orderBy('id')
             ->get();
 
